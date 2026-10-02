@@ -14,31 +14,21 @@ namespace sw
 {
     namespace
     {
-        /**
-         * @brief 노드 타입 ↔ 이름 표입니다. **이름을 짓는 쪽과 읽는 쪽이 같은 표를 봅니다.**
-         * @details 예전에는 `nodeTypeName` 의 switch 와 `parseNodeType` 의 if 사슬이 따로 있었습니다.
-         *          열거자를 하나 더하고 한쪽만 고치면, 그 이름은 저장은 되는데 읽을 때 조용히
-         *          `Dialogue` 로 떨어집니다. 파일은 멀쩡한데 대화만 달라집니다.
-         */
         struct DialogueGraphAssetInternal
         {
-            /** @brief 타입 하나와 그 JSON 이름입니다. */
-            struct NodeTypeName
+            /** @brief 특성 표가 타입 값 순서대로인지 봅니다. `findNodeTraits` 가 값으로 바로 찾습니다. */
+            static constexpr bool isTraitsTableOrdered()
             {
-                DialogueAssetNodeType _type;  /**< 노드 타입입니다. */
-                const utf8*           _pName; /**< JSON 에 적히는 이름입니다. */
-            };
-
-            /** @brief 저장 · 해석에 함께 쓰는 유일한 표입니다. */
-            static constexpr NodeTypeName kArrNodeTypeName[] = {
-                {   DialogueAssetNodeType::Start,    "Start"},
-                {DialogueAssetNodeType::Dialogue, "Dialogue"},
-                {  DialogueAssetNodeType::Choice,   "Choice"},
-                {  DialogueAssetNodeType::Branch,   "Branch"},
-                {  DialogueAssetNodeType::Action,   "Action"},
-                {     DialogueAssetNodeType::End,      "End"},
-            };
+                for ( size_t index = 0; index < SW_COUNT_OF( kArrDialogueNodeTraits ); ++index )
+                {
+                    if ( kArrDialogueNodeTraits[index]._type != static_cast<DialogueAssetNodeType>( index ) )
+                        return false;
+                }
+                return true;
+            }
         };
+
+        static_assert( DialogueGraphAssetInternal::isTraitsTableOrdered(), "kArrDialogueNodeTraits must be ordered by DialogueAssetNodeType" );
     } // namespace
 } // namespace sw
 
@@ -252,22 +242,26 @@ namespace sw
 
     const utf8* DialogueGraphAsset::nodeTypeName( DialogueAssetNodeType type )
     {
-        for ( const DialogueGraphAssetInternal::NodeTypeName& entry : DialogueGraphAssetInternal::kArrNodeTypeName )
-        {
-            if ( entry._type == type )
-                return entry._pName;
-        }
-        return "Unknown";
+        const DialogueNodeTraits* pTraits = findNodeTraits( type );
+        return pTraits != nullptr ? pTraits->_pName : "Unknown";
     }
 
     DialogueAssetNodeType DialogueGraphAsset::parseNodeType( string_view typeStr )
     {
-        for ( const DialogueGraphAssetInternal::NodeTypeName& entry : DialogueGraphAssetInternal::kArrNodeTypeName )
+        for ( const DialogueNodeTraits& traits : kArrDialogueNodeTraits )
         {
-            if ( typeStr == entry._pName )
-                return entry._type;
+            if ( typeStr == traits._pName )
+                return traits._type;
         }
         return DialogueAssetNodeType::Dialogue;
+    }
+
+    const DialogueNodeTraits* DialogueGraphAsset::findNodeTraits( DialogueAssetNodeType type )
+    {
+        const size_t index = static_cast<size_t>( type );
+        if ( index >= SW_COUNT_OF( kArrDialogueNodeTraits ) )
+            return nullptr;
+        return &kArrDialogueNodeTraits[index];
     }
 
     string DialogueGraphAsset::resolveLocalizedText( string_view textOrKey )

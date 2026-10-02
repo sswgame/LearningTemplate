@@ -7,6 +7,11 @@
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 
+namespace sw
+{
+    struct DialogueStepInput;
+} // namespace sw
+
 namespace sw::editor
 {
     /** @brief imgui-node-editor 로 만든 대화 · 퀘스트 노드 그래프 편집 패널입니다. */
@@ -55,12 +60,18 @@ namespace sw::editor
         /** @brief 대화 그래프를 JSON 파일로 저장합니다. */
         [[nodiscard]] bool saveGraphData();
 
-        /** @brief 지정한 타입의 노드를 추가합니다. */
-        void addNode( DialogueAssetNodeType type, const utf8* pSpeaker = "", const utf8* pText = "" );
-        /** @brief 미리보기 재생을 한 틱 진행합니다. */
+        /** @brief 지정한 타입의 노드를 특성 표의 기본값으로 추가합니다. */
+        void addNode( DialogueAssetNodeType type );
+        /** @brief 노드 하나의 머리 · 핀 · 본문 요약을 그립니다. 모양은 특성 표(`kArrDialogueNodeTraits`)가 정합니다. */
+        void drawNodeBody( const DialogueNode& node );
+        /** @brief 선택한 노드의 편집 칸을 그립니다. 어떤 칸을 보일지는 특성 표가 정합니다. */
+        void drawNodeFields( DialogueNode& node, const DialogueNodeTraits& traits );
+        /** @brief 미리보기 재생을 한 틱 진행합니다. 기다리지 않는 노드는 곧바로 지납니다. */
         void tickPreview( float32 deltaSeconds );
-        /** @brief 미리보기를 다음 노드로 보냅니다. */
-        void previewAdvance( int32 pinOffset = 2 );
+        /** @brief 미리보기를 다음 노드로 보냅니다. 다음 노드는 러너와 같은 `DialogueCursor::step` 이 정합니다. */
+        void previewStep( const DialogueStepInput& input );
+        /** @brief 미리보기를 그 노드로 옮깁니다. 대사 · 선택지 노드면 뷰포트에 보이고, 끝 노드 · 없는 노드면 멈춥니다. */
+        void enterPreviewNode( const DialogueGraphAsset& asset, int32 nodeId );
         /** @brief 미리보기 툴바를 그립니다. */
         void drawPreviewToolbar();
 

@@ -5,7 +5,16 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Dialogue/DialogueCursor.h"
+
 #include "GameFramework/Base/SaveGame.h"
+
+#if defined( __clang__ )
+    // `executeNode` 의 switch 는 `DialogueAssetNodeType` 을 빠짐없이 적는다. 이 저장소는 `default:` 를 요구하므로(-Wswitch-default)
+    // -Wswitch 는 빠진 종류를 짚지 못한다 — 이 파일만 -Wswitch-enum 을 오류로 켜서, 종류를 늘리고 여기를 빠뜨리면 빌드가 선다.
+    #pragma clang diagnostic push
+    #pragma clang diagnostic error "-Wswitch-enum"
+#endif
 
 namespace sw
 {
@@ -104,6 +113,7 @@ namespace sw
         , _onFinished{}
         , _state{ DialogueRunnerState::Idle }
         , _currentNodeId{ 0 }
+        , _transitionSerial{ 0 }
     {
     }
 
@@ -131,6 +141,11 @@ namespace sw
     bool DialogueRunnerComponent::loadGraphJson( string_view jsonContent )
     {
         return _graph.parseJson( jsonContent );
+    }
+
+    void DialogueRunnerComponent::setGraph( DialogueGraphAsset graph )
+    {
+        _graph = std::move( graph );
     }
 
     bool DialogueRunnerComponent::startDialogue( int32 startNodeId )
@@ -163,7 +178,7 @@ namespace sw
         if ( _state != DialogueRunnerState::ShowingDialogue )
             return false;
 
-        executeNode( _graph.findDefaultNextNodeId( _currentNodeId ) );
+        stepFrom( _currentNodeId, DialogueStepInput{}, 0 );
         return true;
     }
 
@@ -172,7 +187,10 @@ namespace sw
         if ( _state != DialogueRunnerState::WaitingForChoice )
             return false;
 
-        const int32 nextId = _graph.findChoiceNextNodeId( _currentNodeId, choiceIndex );
+        const DialogueAssetNode* pNode = _graph.findNode( _currentNodeId );
+        DialogueStepInput        input{};
+        input._choiceIndex = choiceIndex;
+        const int32 nextId = ( pNode != nullptr ) ? DialogueCursor::step( _graph, *pNode, input ) : 0;
         if ( nextId > 0 )
         {
             executeNode( nextId );
@@ -185,6 +203,7 @@ namespace sw
 
     void DialogueRunnerComponent::stopDialogue()
     {
+        ++_transitionSerial;
         const bool bWasActive = ( _state != DialogueRunnerState::Idle && _state != DialogueRunnerState::Finished );
         _state                = DialogueRunnerState::Idle;
         _currentNodeId        = 0;
@@ -351,22 +370,33 @@ namespace sw
         }
     }
 
+    void DialogueRunnerComponent::finishDialogue()
+    {
+        _state = DialogueRunnerState::Finished;
+        if ( _onFinished.isBound() )
+            _onFinished();
+    }
+
+    void DialogueRunnerComponent::stepFrom( int32 nodeId, const DialogueStepInput& input, int32 recursionDepth )
+    {
+        // 노드를 다시 찾는다 — Action 핸들러가 그래프를 갈았으면 앞서 찾은 노드 참조는 죽은 메모리다.
+        const DialogueAssetNode* pNode = _graph.findNode( nodeId );
+        executeNode( pNode != nullptr ? DialogueCursor::step( _graph, *pNode, input ) : 0, recursionDepth );
+    }
+
     void DialogueRunnerComponent::executeNode( int32 nodeId, int32 recursionDepth )
     {
+        ++_transitionSerial;
         if ( recursionDepth > 64 )
         {
             SW_LOG_WARNING( "DialogueRunner: Cyclic node transition detected at node %#; breaking loop.", nodeId );
-            _state = DialogueRunnerState::Finished;
-            if ( _onFinished.isBound() )
-                _onFinished();
+            finishDialogue();
             return;
         }
 
         if ( nodeId <= 0 )
         {
-            _state = DialogueRunnerState::Finished;
-            if ( _onFinished.isBound() )
-                _onFinished();
+            finishDialogue();
             return;
         }
 
@@ -374,59 +404,73 @@ namespace sw
         if ( pNode == nullptr )
         {
             SW_LOG_WARNING( "Node %# not found in graph.", nodeId );
-            _state = DialogueRunnerState::Finished;
-            if ( _onFinished.isBound() )
-                _onFinished();
+            finishDialogue();
             return;
         }
 
         _currentNodeId                = nodeId;
         const DialogueAssetNode& node = *pNode;
+        DialogueStepInput        input{};
 
-        if ( node._type == DialogueAssetNodeType::Start )
+        switch ( node._type )
         {
-            executeNode( _graph.findDefaultNextNodeId( nodeId ), recursionDepth + 1 );
-        }
-        else if ( node._type == DialogueAssetNodeType::Dialogue )
-        {
-            _state          = DialogueRunnerState::ShowingDialogue;
-            _currentSpeaker = DialogueGraphAsset::resolveLocalizedText( node._speaker );
-            _currentText    = DialogueGraphAsset::resolveLocalizedText( node._text );
-            _listCurrentChoice.clear();
-            notifyLine();
-        }
-        else if ( node._type == DialogueAssetNodeType::Choice )
-        {
-            _state          = DialogueRunnerState::WaitingForChoice;
-            _currentSpeaker = DialogueGraphAsset::resolveLocalizedText( node._speaker );
-            _currentText    = DialogueGraphAsset::resolveLocalizedText( node._text );
-            _listCurrentChoice.clear();
-            _listCurrentChoice.reserve( node._listChoice.size() );
-            for ( const string& choice : node._listChoice )
-                _listCurrentChoice.push_back( DialogueGraphAsset::resolveLocalizedText( choice ) );
-
-            notifyChoices();
-        }
-        else if ( node._type == DialogueAssetNodeType::Branch )
-        {
-            const bool bConditionMet = evaluateCondition( node._condition );
-            int32      nextId        = _graph.findBranchNextNodeId( nodeId, bConditionMet );
-            if ( nextId <= 0 )
-                nextId = _graph.findDefaultNextNodeId( nodeId );
-            executeNode( nextId, recursionDepth + 1 );
-        }
-        else if ( node._type == DialogueAssetNodeType::Action )
-        {
-            executeAction( node._actionCommand );
-            if ( _state == DialogueRunnerState::Idle || _state == DialogueRunnerState::Finished )
+            case DialogueAssetNodeType::Start:
+                break;
+            case DialogueAssetNodeType::Dialogue:
+            {
+                _state          = DialogueRunnerState::ShowingDialogue;
+                _currentSpeaker = DialogueGraphAsset::resolveLocalizedText( node._speaker );
+                _currentText    = DialogueGraphAsset::resolveLocalizedText( node._text );
+                _listCurrentChoice.clear();
+                notifyLine();
                 return;
-            executeNode( _graph.findDefaultNextNodeId( nodeId ), recursionDepth + 1 );
+            }
+            case DialogueAssetNodeType::Choice:
+            {
+                _state          = DialogueRunnerState::WaitingForChoice;
+                _currentSpeaker = DialogueGraphAsset::resolveLocalizedText( node._speaker );
+                _currentText    = DialogueGraphAsset::resolveLocalizedText( node._text );
+                _listCurrentChoice.clear();
+                _listCurrentChoice.reserve( node._listChoice.size() );
+                for ( const string& choice : node._listChoice )
+                    _listCurrentChoice.push_back( DialogueGraphAsset::resolveLocalizedText( choice ) );
+
+                notifyChoices();
+                return;
+            }
+            case DialogueAssetNodeType::Branch:
+            {
+                input._bConditionMet = evaluateCondition( node._condition );
+                break;
+            }
+            case DialogueAssetNodeType::Action:
+            {
+                // 핸들러가 그 안에서 대화를 멈추거나 · 다시 시작하거나 · 진행시켰으면 여기서 더 가지 않는다.
+                // 상태 값으로는 알 수 없다 — 첫 대사 전의 Action 은 원래 Idle 에서 돈다.
+                const uint32 serialBeforeAction = _transitionSerial;
+                executeAction( node._actionCommand );
+                if ( _transitionSerial != serialBeforeAction )
+                    return;
+                break;
+            }
+            case DialogueAssetNodeType::End:
+            {
+                finishDialogue();
+                return;
+            }
+            case DialogueAssetNodeType::Count:
+            default:
+            {
+                SW_LOG_WARNING( "DialogueRunner: node %# has unknown type %#; finishing the dialogue.", nodeId, static_cast<uint32>( node._type ) );
+                finishDialogue();
+                return;
+            }
         }
-        else if ( node._type == DialogueAssetNodeType::End )
-        {
-            _state = DialogueRunnerState::Finished;
-            if ( _onFinished.isBound() )
-                _onFinished();
-        }
+
+        stepFrom( nodeId, input, recursionDepth + 1 );
     }
 } // namespace sw
+
+#if defined( __clang__ )
+    #pragma clang diagnostic pop
+#endif

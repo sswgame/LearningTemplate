@@ -2,7 +2,10 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+
+#include "GameFramework/UI/DialogueRunnerComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -53,6 +56,57 @@ namespace
         asset._listLink.push_back( DialogueAssetLink{ 3,
                                                       DialogueGraphAsset::encodeChoicePin( 2, 1 ),
                                                       DialogueGraphAsset::encodePin( 4, DialogueGraphAsset::kPinOffsetIn ) } );
+        return asset;
+    }
+
+    /** @brief `makeProbeGraph` 의 노드 2 를 지날 때 쓰는 입력입니다(선택지 1, 조건 참). */
+    DialogueStepInput makeProbeInput()
+    {
+        DialogueStepInput input{};
+        input._choiceIndex   = 1;
+        input._bConditionMet = true;
+        return input;
+    }
+
+    /**
+     * @brief 노드 2(종류 `type`)의 모든 출력 핀을 서로 다른 대사 노드로 잇습니다.
+     * @details Out → 10, True → 11, False → 12, 선택지 0 → 13, 선택지 1 → 14. 대사 노드들은 끝(나가는 링크 없음)입니다.
+     *          조건식은 비어 있어 러너가 참으로 평가합니다(`makeProbeInput` 과 같은 입력).
+     */
+    DialogueGraphAsset makeProbeGraph( DialogueAssetNodeType type )
+    {
+        DialogueGraphAsset asset;
+
+        DialogueAssetNode probeNode{};
+        probeNode._id            = 2;
+        probeNode._type          = type;
+        probeNode._text          = "probe";
+        probeNode._actionCommand = "noop";
+        probeNode._listChoice    = { "a", "b" };
+        asset._listNode.push_back( probeNode );
+
+        const int32 arrTargetId[] = { 10, 11, 12, 13, 14 };
+        for ( int32 targetId : arrTargetId )
+        {
+            DialogueAssetNode target{};
+            target._id   = targetId;
+            target._type = DialogueAssetNodeType::Dialogue;
+            target._text = "target";
+            asset._listNode.push_back( target );
+        }
+
+        const int32 arrFromPin[] = {
+            DialogueGraphAsset::encodePin( 2, DialogueGraphAsset::kPinOffsetOut ),
+            DialogueGraphAsset::encodePin( 2, DialogueGraphAsset::kPinOffsetTrue ),
+            DialogueGraphAsset::encodePin( 2, DialogueGraphAsset::kPinOffsetFalse ),
+            DialogueGraphAsset::encodeChoicePin( 2, 0 ),
+            DialogueGraphAsset::encodeChoicePin( 2, 1 ),
+        };
+        for ( int32 linkIndex = 0; linkIndex < static_cast<int32>( SW_COUNT_OF( arrFromPin ) ); ++linkIndex )
+        {
+            const int32 toPin = DialogueGraphAsset::encodePin( arrTargetId[linkIndex], DialogueGraphAsset::kPinOffsetIn );
+            asset._listLink.push_back( DialogueAssetLink{ linkIndex + 1, arrFromPin[linkIndex], toPin } );
+        }
         return asset;
     }
 } // namespace
@@ -188,4 +242,173 @@ SW_TEST_CASE( DialogueGraphTest, PlainTextResolvesToItself )
     const string plainText = "이건 로컬라이즈 키가 아니라 그냥 대사다.";
     SW_EXPECT_EQUAL( plainText, DialogueGraphAsset::resolveLocalizedText( plainText ) );
     SW_EXPECT_TRUE( DialogueGraphAsset::resolveLocalizedText( "" ).empty() );
+}
+
+// ------------------------------------------------------------------------------
+// 2) 노드 종류 표 · DialogueCursor · 러너 — 진행 규칙이 한 곳에 있는지
+// ------------------------------------------------------------------------------
+
+/**
+ * @brief [DialogueGraphTest] 특성 표가 노드 타입마다 한 줄이고 순서가 값 순서인지 검증
+ */
+SW_TEST_CASE( DialogueGraphTest, NodeTraitsCoverEveryType )
+{
+    for ( uint32 typeIndex = 0; typeIndex < static_cast<uint32>( DialogueAssetNodeType::Count ); ++typeIndex )
+    {
+        const DialogueAssetNodeType type    = static_cast<DialogueAssetNodeType>( typeIndex );
+        const DialogueNodeTraits*   pTraits = DialogueGraphAsset::findNodeTraits( type );
+        SW_ASSERT_NOT_NULL( pTraits );
+        SW_EXPECT_TRUE( pTraits->_type == type );
+        SW_EXPECT_TRUE( DialogueGraphAsset::parseNodeType( pTraits->_pName ) == type );
+    }
+    SW_EXPECT_NULL( DialogueGraphAsset::findNodeTraits( DialogueAssetNodeType::Count ) );
+    SW_EXPECT_EQUAL( string_view( "Unknown" ), string_view( DialogueGraphAsset::nodeTypeName( DialogueAssetNodeType::Count ) ) );
+}
+
+/**
+ * @brief [DialogueGraphTest] 러너가 모든 노드 종류에서 `DialogueCursor::step` 과 같은 다음 노드로 가는지 검증
+ * @details 에디터 미리보기는 `DialogueCursor::step` 을 그대로 부르므로, 러너가 커서와 같으면 미리보기와 게임이 같은 길을 간다.
+ *          종류마다 기대 노드도 못박는다(Start · Dialogue · Action → Out, Choice → 선택지 1, Branch → 참, End → 끝).
+ *          첫 대사 전의 Action 은 러너가 Idle 상태에서 돌린다 — 상태 값으로 "핸들러가 멈췄는가" 를 보면 여기서 대화가 조용히 선다.
+ */
+SW_TEST_CASE( DialogueGraphTest, RunnerAndCursorAgreeOnEveryType )
+{
+    const int32 arrExpectedNextId[] = { 10, 10, 14, 11, 10, 0 };
+    static_assert( SW_COUNT_OF( arrExpectedNextId ) == static_cast<size_t>( DialogueAssetNodeType::Count ), "노드 종류마다 기대 값 하나" );
+
+    for ( uint32 typeIndex = 0; typeIndex < static_cast<uint32>( DialogueAssetNodeType::Count ); ++typeIndex )
+    {
+        const DialogueAssetNodeType type   = static_cast<DialogueAssetNodeType>( typeIndex );
+        const DialogueGraphAsset    asset  = makeProbeGraph( type );
+        const DialogueAssetNode*    pProbe = asset.findNode( 2 );
+        SW_ASSERT_NOT_NULL( pProbe );
+        const int32 cursorNextId = DialogueCursor::step( asset, *pProbe, makeProbeInput() );
+        SW_EXPECT_EQUAL( arrExpectedNextId[typeIndex], cursorNextId );
+
+        DialogueRunnerComponent runner;
+        runner.setGraph( asset );
+        uint32 finishedCount{ 0 };
+        runner.setOnDialogueFinished( [&finishedCount]()
+        { ++finishedCount; } );
+        SW_EXPECT_TRUE( runner.startDialogue( 2 ) );
+
+        const DialogueNodeTraits* pTraits = DialogueGraphAsset::findNodeTraits( type );
+        SW_ASSERT_NOT_NULL( pTraits );
+        if ( pTraits->_flow == DialogueNodeFlow::WaitAdvance )
+        {
+            SW_EXPECT_EQUAL( 2, runner.getCurrentNodeId() );
+            SW_EXPECT_TRUE( runner.advance() );
+        }
+        else if ( pTraits->_flow == DialogueNodeFlow::WaitChoice )
+        {
+            SW_EXPECT_EQUAL( 2, runner.getCurrentNodeId() );
+            SW_EXPECT_TRUE( runner.selectChoice( 1 ) );
+        }
+
+        if ( cursorNextId > 0 )
+        {
+            SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::ShowingDialogue ), static_cast<uint8>( runner.getState() ) );
+            SW_EXPECT_EQUAL( cursorNextId, runner.getCurrentNodeId() );
+        }
+        else
+        {
+            SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::Finished ), static_cast<uint8>( runner.getState() ) );
+            SW_EXPECT_EQUAL( 1u, finishedCount );
+        }
+    }
+}
+
+/**
+ * @brief [DialogueGraphTest] 이어지지 않은 선택지 · 분기 핀은 기본 출력 핀으로 가는지 검증
+ * @details 러너와 미리보기가 이 규칙을 따로 들고 있으면, 미리보기만 "연결 없음" 으로 멈추고 게임은 기본 출력으로 간다.
+ */
+SW_TEST_CASE( DialogueGraphTest, UnlinkedChoiceAndBranchPinsFallBackToOut )
+{
+    const DialogueAssetNodeType arrType[] = { DialogueAssetNodeType::Choice, DialogueAssetNodeType::Branch };
+    for ( DialogueAssetNodeType type : arrType )
+    {
+        DialogueGraphAsset asset = makeProbeGraph( type );
+        asset._listLink.resize( 1 ); // Out(→10) 만 남긴다
+        const DialogueAssetNode* pProbe = asset.findNode( 2 );
+        SW_ASSERT_NOT_NULL( pProbe );
+        SW_EXPECT_EQUAL( 10, DialogueCursor::step( asset, *pProbe, makeProbeInput() ) );
+        SW_EXPECT_EQUAL( 10, DialogueCursor::step( asset, *pProbe, DialogueStepInput{} ) );
+    }
+}
+
+/**
+ * @brief [DialogueGraphTest] 표에 없는 노드 타입을 만나면 러너가 대화를 끝내는지 검증
+ * @details 모르는 타입에서 아무 갈래도 타지 않으면 상태가 그대로 남고 끝 알림도 없이 대화가 멈춰 있다.
+ */
+SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeFinishesTheDialogue )
+{
+    const DialogueAssetNodeType arrUnknownType[] = { DialogueAssetNodeType::Count, static_cast<DialogueAssetNodeType>( 42 ) };
+    for ( DialogueAssetNodeType unknownType : arrUnknownType )
+    {
+        DialogueGraphAsset       asset  = makeProbeGraph( unknownType );
+        const DialogueAssetNode* pProbe = asset.findNode( 2 );
+        SW_ASSERT_NOT_NULL( pProbe );
+        SW_EXPECT_EQUAL( 0, DialogueCursor::step( asset, *pProbe, makeProbeInput() ) );
+
+        DialogueRunnerComponent runner;
+        runner.setGraph( std::move( asset ) );
+        uint32 finishedCount{ 0 };
+        runner.setOnDialogueFinished( [&finishedCount]()
+        { ++finishedCount; } );
+        SW_EXPECT_TRUE( runner.startDialogue( 2 ) );
+        SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::Finished ), static_cast<uint8>( runner.getState() ) );
+        SW_EXPECT_EQUAL( 1u, finishedCount );
+    }
+}
+
+/**
+ * @brief [DialogueGraphTest] 첫 대사 전의 Action 뒤로 대화가 이어지는지 검증(Start → Action → Dialogue)
+ */
+SW_TEST_CASE( DialogueGraphTest, ActionBeforeFirstLineContinues )
+{
+    const utf8* pJson = R"({
+		"nodes": [
+			{ "id": 1, "type": "Start" },
+			{ "id": 2, "type": "Action", "action": "open_curtain" },
+			{ "id": 3, "type": "Dialogue", "speaker": "NPC", "text": "Welcome" }
+		],
+		"links": [
+			{ "from": 102, "to": 201 },
+			{ "from": 202, "to": 301 }
+		]
+	})";
+
+    DialogueRunnerComponent runner;
+    SW_EXPECT_TRUE( runner.loadGraphJson( pJson ) );
+    string eventCommand;
+    runner.setOnDialogueEvent( [&eventCommand]( const string& command )
+    { eventCommand = command; } );
+    SW_EXPECT_TRUE( runner.startDialogue() );
+    SW_EXPECT_EQUAL( "open_curtain", eventCommand );
+    SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::ShowingDialogue ), static_cast<uint8>( runner.getState() ) );
+    SW_EXPECT_EQUAL( "Welcome", runner.getCurrentText() );
+}
+
+/**
+ * @brief [DialogueGraphTest] 새 노드의 기본 본문이 그 종류가 편집하는 칸에 들어가는지 검증
+ * @details Branch 의 기본 조건식 · Action 의 기본 명령이 `_text` 에 들어가면 러너는 빈 조건(참) · 빈 명령을 본다.
+ */
+SW_TEST_CASE( DialogueGraphTest, MakeNodeFillsTheBodyField )
+{
+    const DialogueAssetNode branchNode = DialogueCursor::makeNode( DialogueAssetNodeType::Branch, 7 );
+    SW_EXPECT_EQUAL( 7, branchNode._id );
+    SW_EXPECT_FALSE( branchNode._condition.empty() );
+    SW_EXPECT_TRUE( branchNode._text.empty() );
+
+    const DialogueAssetNode actionNode = DialogueCursor::makeNode( DialogueAssetNodeType::Action, 8 );
+    SW_EXPECT_FALSE( actionNode._actionCommand.empty() );
+    SW_EXPECT_TRUE( actionNode._text.empty() );
+
+    const DialogueAssetNode choiceNode = DialogueCursor::makeNode( DialogueAssetNodeType::Choice, 9 );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( choiceNode._listChoice.size() ) );
+    SW_EXPECT_EQUAL( "Option 1", choiceNode._listChoice[0] );
+
+    const DialogueAssetNode dialogueNode = DialogueCursor::makeNode( DialogueAssetNodeType::Dialogue, 10 );
+    SW_EXPECT_FALSE( dialogueNode._speaker.empty() );
+    SW_EXPECT_FALSE( dialogueNode._text.empty() );
 }

@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
+#include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 
 #include <imgui.h>
@@ -40,7 +41,6 @@ namespace sw::editor
             static constexpr int32 kPinOutputOffset = DialogueGraphAsset::kPinOffsetOut;
             static constexpr int32 kPinTrueOffset   = DialogueGraphAsset::kPinOffsetTrue;
             static constexpr int32 kPinFalseOffset  = DialogueGraphAsset::kPinOffsetFalse;
-            static constexpr int32 kPinChoiceBase   = DialogueGraphAsset::kPinOffsetChoiceBase;
 
             static int32 pinIn( int32 nodeId )
             {
@@ -112,36 +112,19 @@ namespace sw::editor
     {
         if ( EditorChrome::beginToolbar( "##DialogueToolbar" ) )
         {
-            if ( ImGui::Button( "+ Dialogue" ) )
+            for ( const DialogueNodeTraits& traits : kArrDialogueNodeTraits )
             {
-                addNode( DialogueAssetNodeType::Dialogue, "NPC", "Enter dialogue text..." );
-                notifyDocumentEdited( "Add Dialogue Node" );
+                if ( traits._bAddable == false )
+                    continue;
+                fixed_string<constant::kMaxBuffer64> label;
+                formatstring( label.data(), label.capacity(), "+ %#", traits._pName );
+                if ( ImGui::Button( label.c_str() ) )
+                {
+                    addNode( traits._type );
+                    notifyDocumentEdited( "Add Dialogue Node" );
+                }
+                ImGui::SameLine();
             }
-            ImGui::SameLine();
-            if ( ImGui::Button( "+ Choice" ) )
-            {
-                addNode( DialogueAssetNodeType::Choice, "", "Player options" );
-                notifyDocumentEdited( "Add Dialogue Node" );
-            }
-            ImGui::SameLine();
-            if ( ImGui::Button( "+ Branch" ) )
-            {
-                addNode( DialogueAssetNodeType::Branch, "", "flag.visited == 1" );
-                notifyDocumentEdited( "Add Dialogue Node" );
-            }
-            ImGui::SameLine();
-            if ( ImGui::Button( "+ Action" ) )
-            {
-                addNode( DialogueAssetNodeType::Action, "", "give_item:potion:1" );
-                notifyDocumentEdited( "Add Dialogue Node" );
-            }
-            ImGui::SameLine();
-            if ( ImGui::Button( "+ End" ) )
-            {
-                addNode( DialogueAssetNodeType::End );
-                notifyDocumentEdited( "Add Dialogue Node" );
-            }
-            ImGui::SameLine();
             EditorWidgets::drawToolbarSeparator();
             if ( ImGui::Button( "Save" ) )
                 (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
@@ -214,90 +197,7 @@ namespace sw::editor
             const ed::NodeId nodeId = toNodeId( node._id );
             ed::BeginNode( nodeId );
 
-            switch ( node._type )
-            {
-                case DialogueAssetNodeType::Start:
-                {
-                    ImGui::TextColored( ImVec4( 0.2f, 0.9f, 0.3f, 1.0f ), "[START]" );
-                    drawOutputPin( DialogueGraphPanelInternal::pinOut( node._id ), "Next ->" );
-                    break;
-                }
-                case DialogueAssetNodeType::Dialogue:
-                {
-                    ImGui::TextColored( ImVec4( 0.4f, 0.7f, 1.0f, 1.0f ), "[DIALOGUE: %s]", node._speaker.empty() ? "(No Speaker)" : node._speaker.c_str() );
-                    drawInputPin( node._id );
-                    ImGui::SameLine();
-                    drawOutputPin( DialogueGraphPanelInternal::pinOut( node._id ), "Next ->" );
-
-                    if ( node._text.empty() == false )
-                    {
-                        if ( node._text.size() > 40 )
-                        {
-                            StringBuilder<constant::kMaxBuffer64> previewBuilder;
-                            previewBuilder.append( string_view{ node._text.data(), 37 } );
-                            previewBuilder.append( "..." );
-                            ImGui::TextDisabled( "\"%s\"", previewBuilder.c_str() );
-                        }
-                        else
-                        {
-                            ImGui::TextDisabled( "\"%s\"", node._text.c_str() );
-                        }
-                    }
-                    break;
-                }
-                case DialogueAssetNodeType::Choice:
-                {
-                    ImGui::TextColored( ImVec4( 0.8f, 0.5f, 1.0f, 1.0f ), "[CHOICE]" );
-                    drawInputPin( node._id );
-
-                    if ( node._listChoice.empty() )
-                    {
-                        drawOutputPin( DialogueGraphPanelInternal::pinOut( node._id ), "Choice 0 ->" );
-                    }
-                    else
-                    {
-                        for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
-                        {
-                            ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinChoice( node._id, static_cast<int32>( choiceIndex ) ) ), ed::PinKind::Output );
-                            ImGui::Text( "#%zu: %s ->", choiceIndex + 1, node._listChoice[choiceIndex].c_str() );
-                            ed::EndPin();
-                        }
-                    }
-                    break;
-                }
-                case DialogueAssetNodeType::Branch:
-                {
-                    ImGui::TextColored( ImVec4( 1.0f, 0.8f, 0.2f, 1.0f ), "[BRANCH]" );
-                    drawInputPin( node._id );
-                    ImGui::TextDisabled( "if (%s)", node._condition.c_str() );
-
-                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinBranchTrue( node._id ) ), ed::PinKind::Output );
-                    ImGui::TextColored( ImVec4( 0.3f, 1.0f, 0.4f, 1.0f ), "True ->" );
-                    ed::EndPin();
-                    ImGui::SameLine();
-                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinBranchFalse( node._id ) ), ed::PinKind::Output );
-                    ImGui::TextColored( ImVec4( 1.0f, 0.4f, 0.4f, 1.0f ), "False ->" );
-                    ed::EndPin();
-                    break;
-                }
-                case DialogueAssetNodeType::Action:
-                {
-                    ImGui::TextColored( ImVec4( 0.2f, 0.9f, 0.9f, 1.0f ), "[ACTION]" );
-                    drawInputPin( node._id );
-                    ImGui::SameLine();
-                    drawOutputPin( DialogueGraphPanelInternal::pinOut( node._id ), "Next ->" );
-                    ImGui::TextDisabled( "cmd: %s", node._actionCommand.c_str() );
-                    break;
-                }
-                case DialogueAssetNodeType::End:
-                {
-                    ImGui::TextColored( ImVec4( 0.9f, 0.3f, 0.3f, 1.0f ), "[END]" );
-                    drawInputPin( node._id );
-                    break;
-                }
-                default:
-                    break;
-            }
+            drawNodeBody( node );
 
             ed::EndNode();
 
@@ -383,62 +283,9 @@ namespace sw::editor
             ImGui::TextColored( ImVec4( 0.2f, 0.8f, 1.0f, 1.0f ), "Node #%d (%s)", pSelectedNode->_id, DialogueGraphAsset::nodeTypeName( pSelectedNode->_type ) );
             ImGui::Separator();
 
-            if ( pSelectedNode->_type == DialogueAssetNodeType::Dialogue )
-            {
-                EditorWidgets::drawTextField( "Speaker", pSelectedNode->_speaker );
-                if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-
-                fixed_string<constant::kMaxBuffer512> textBuf{ pSelectedNode->_text.c_str() };
-                if ( ImGui::InputTextMultiline( "Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
-                    pSelectedNode->_text = textBuf.c_str();
-                if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-            }
-            else if ( pSelectedNode->_type == DialogueAssetNodeType::Choice )
-            {
-                EditorWidgets::drawTextField( "Prompt", pSelectedNode->_text );
-                if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-
-                ImGui::Text( "Choices (%zu):", pSelectedNode->_listChoice.size() );
-                for ( size_t choiceIndex = 0; choiceIndex < pSelectedNode->_listChoice.size(); ++choiceIndex )
-                {
-                    ImGui::PushID( static_cast<int32>( choiceIndex ) );
-                    EditorWidgets::drawTextField( "##Choice", pSelectedNode->_listChoice[choiceIndex] );
-                    if ( ImGui::IsItemDeactivatedAfterEdit() )
-                        notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-                    ImGui::SameLine();
-                    if ( ImGui::Button( "X" ) )
-                    {
-                        pSelectedNode->_listChoice.erase( pSelectedNode->_listChoice.begin() + choiceIndex );
-                        notifyDocumentEdited( "Edit Dialogue Node" );
-                        ImGui::PopID();
-                        break;
-                    }
-                    ImGui::PopID();
-                }
-
-                if ( ImGui::Button( "+ Add Choice Option" ) )
-                {
-                    pSelectedNode->_listChoice.push_back( "New choice option" );
-                    notifyDocumentEdited( "Edit Dialogue Node" );
-                }
-            }
-            else if ( pSelectedNode->_type == DialogueAssetNodeType::Branch )
-            {
-                EditorWidgets::drawTextField( "Condition", pSelectedNode->_condition );
-                if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-                ImGui::TextDisabled( "Ex: flag.boss_defeated == 1" );
-            }
-            else if ( pSelectedNode->_type == DialogueAssetNodeType::Action )
-            {
-                EditorWidgets::drawTextField( "Command", pSelectedNode->_actionCommand );
-                if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-                ImGui::TextDisabled( "Ex: give_item:potion:3" );
-            }
+            const DialogueNodeTraits* pTraits = DialogueGraphAsset::findNodeTraits( pSelectedNode->_type );
+            if ( pTraits != nullptr )
+                drawNodeFields( *pSelectedNode, *pTraits );
         }
 
         EditorChrome::endSection();
@@ -543,49 +390,59 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Play Preview" ) )
         {
-            DialogueGraphAsset       asset  = captureGraphData();
+            const DialogueGraphAsset asset  = captureGraphData();
             const DialogueAssetNode* pStart = asset.findStartNode();
-            _previewNodeId                  = ( pStart != nullptr ) ? pStart->_id : 0;
             _bPreviewPlaying                = SW_TRUE;
-            _previewHoldSeconds             = 0.0f;
-            if ( pStart != nullptr )
-                EditorViewportPreview::applyDialogueLine( pStart->_speaker, pStart->_text );
+            enterPreviewNode( asset, pStart != nullptr ? pStart->_id : 0 );
         }
         ImGui::SameLine();
         if ( ImGui::Button( "Advance Preview" ) )
-            previewAdvance();
+            previewStep( DialogueStepInput{} );
         ImGui::SameLine();
         if ( ImGui::Button( "Stop Preview" ) )
         {
             _bPreviewPlaying = SW_FALSE;
             _previewNodeId   = 0;
         }
-        if ( _previewNodeId > 0 )
+        if ( _previewNodeId <= 0 )
+            return;
+
+        ImGui::SameLine();
+        ImGui::TextDisabled( "Preview node #%d", _previewNodeId );
+        const DialogueGraphAsset  asset   = captureGraphData();
+        const DialogueAssetNode*  pNode   = asset.findNode( _previewNodeId );
+        const DialogueNodeTraits* pTraits = pNode != nullptr ? DialogueGraphAsset::findNodeTraits( pNode->_type ) : nullptr;
+        if ( pTraits == nullptr )
+            return;
+
+        // 기다리는 노드만 사람이 고른다. 고른 값은 러너와 같은 `DialogueCursor::step` 의 입력이 된다.
+        if ( pTraits->_flow == DialogueNodeFlow::WaitChoice )
         {
-            ImGui::SameLine();
-            ImGui::TextDisabled( "Preview node #%d", _previewNodeId );
-            DialogueGraphAsset       asset = captureGraphData();
-            const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
-            if ( pNode != nullptr && pNode->_type == DialogueAssetNodeType::Choice )
+            for ( int32 choiceIndex = 0; choiceIndex < static_cast<int32>( pNode->_listChoice.size() ); ++choiceIndex )
             {
-                for ( int32 choiceIndex = 0; choiceIndex < static_cast<int32>( pNode->_listChoice.size() ); ++choiceIndex )
+                ImGui::SameLine();
+                fixed_string<constant::kMaxBuffer64> label;
+                formatstring( label.data(), label.capacity(), "Choice %#", choiceIndex );
+                if ( ImGui::SmallButton( label.c_str() ) )
                 {
-                    ImGui::SameLine();
-                    fixed_string<constant::kMaxBuffer64> label;
-                    formatstring( label.data(), label.capacity(), "Choice %#", choiceIndex );
-                    if ( ImGui::SmallButton( label.c_str() ) )
-                        previewAdvance( DialogueGraphPanelInternal::kPinChoiceBase + choiceIndex );
+                    DialogueStepInput input{};
+                    input._choiceIndex = choiceIndex;
+                    previewStep( input );
                 }
             }
-            if ( pNode != nullptr && pNode->_type == DialogueAssetNodeType::Branch )
+        }
+        if ( pTraits->_flow == DialogueNodeFlow::Condition )
+        {
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( "True" ) )
             {
-                ImGui::SameLine();
-                if ( ImGui::SmallButton( "True" ) )
-                    previewAdvance( DialogueGraphPanelInternal::kPinTrueOffset );
-                ImGui::SameLine();
-                if ( ImGui::SmallButton( "False" ) )
-                    previewAdvance( DialogueGraphPanelInternal::kPinFalseOffset );
+                DialogueStepInput input{};
+                input._bConditionMet = true;
+                previewStep( input );
             }
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( "False" ) )
+                previewStep( DialogueStepInput{} );
         }
     }
 
@@ -593,64 +450,241 @@ namespace sw::editor
     {
         if ( _bPreviewPlaying == SW_FALSE || _previewNodeId <= 0 )
             return;
-        DialogueGraphAsset       asset = captureGraphData();
-        const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
-        if ( pNode == nullptr )
+        const DialogueGraphAsset  asset   = captureGraphData();
+        const DialogueAssetNode*  pNode   = asset.findNode( _previewNodeId );
+        const DialogueNodeTraits* pTraits = pNode != nullptr ? DialogueGraphAsset::findNodeTraits( pNode->_type ) : nullptr;
+        if ( pTraits == nullptr )
         {
             _bPreviewPlaying = SW_FALSE;
             return;
         }
-        if ( pNode->_type == DialogueAssetNodeType::Choice || pNode->_type == DialogueAssetNodeType::Branch )
-            return;
-        _previewHoldSeconds += deltaSeconds;
-        if ( _previewHoldSeconds < 0.9f )
-            return;
-        _previewHoldSeconds = 0.0f;
-        previewAdvance();
+
+        switch ( pTraits->_flow )
+        {
+            case DialogueNodeFlow::PassThrough:
+            {
+                previewStep( DialogueStepInput{} );
+                return;
+            }
+            case DialogueNodeFlow::WaitAdvance:
+            {
+                _previewHoldSeconds += deltaSeconds;
+                if ( _previewHoldSeconds < 0.9f )
+                    return;
+                previewStep( DialogueStepInput{} );
+                return;
+            }
+            case DialogueNodeFlow::Finish:
+            {
+                _bPreviewPlaying = SW_FALSE;
+                return;
+            }
+            case DialogueNodeFlow::WaitChoice: // 사람이 툴바 버튼으로 고른다
+            case DialogueNodeFlow::Condition:
+            default:
+                return;
+        }
     }
 
-    void DialogueGraphPanel::previewAdvance( int32 pinOffset )
+    void DialogueGraphPanel::previewStep( const DialogueStepInput& input )
     {
-        DialogueGraphAsset asset = captureGraphData();
+        const DialogueGraphAsset asset = captureGraphData();
         if ( _previewNodeId <= 0 )
         {
             const DialogueAssetNode* pStart = asset.findStartNode();
-            _previewNodeId                  = ( pStart != nullptr ) ? pStart->_id : 0;
+            enterPreviewNode( asset, pStart != nullptr ? pStart->_id : 0 );
             return;
         }
-        int32 nextId{ 0 };
-        if ( pinOffset == DialogueGraphPanelInternal::kPinOutputOffset )
-            nextId = asset.findDefaultNextNodeId( _previewNodeId );
-        else
-            nextId = asset.findLinkedNodeId( _previewNodeId, pinOffset );
-        if ( nextId <= 0 )
+        const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
+        enterPreviewNode( asset, pNode != nullptr ? DialogueCursor::step( asset, *pNode, input ) : 0 );
+    }
+
+    void DialogueGraphPanel::enterPreviewNode( const DialogueGraphAsset& asset, int32 nodeId )
+    {
+        _previewHoldSeconds               = 0.0f;
+        const DialogueAssetNode*  pNode   = asset.findNode( nodeId );
+        const DialogueNodeTraits* pTraits = pNode != nullptr ? DialogueGraphAsset::findNodeTraits( pNode->_type ) : nullptr;
+        if ( pTraits == nullptr )
         {
             _bPreviewPlaying = SW_FALSE;
             return;
         }
-        _previewNodeId                 = nextId;
-        const DialogueAssetNode* pNext = asset.findNode( nextId );
-        if ( pNext != nullptr )
-            EditorViewportPreview::applyDialogueLine( pNext->_speaker, pNext->_text );
-        if ( pNext != nullptr && pNext->_type == DialogueAssetNodeType::End )
+
+        _previewNodeId = nodeId;
+        // 러너가 알리는 노드(대사 · 선택지)만 뷰포트에 보인다.
+        if ( pTraits->_flow == DialogueNodeFlow::WaitAdvance || pTraits->_flow == DialogueNodeFlow::WaitChoice )
+            EditorViewportPreview::applyDialogueLine( pNode->_speaker, pNode->_text );
+        if ( pTraits->_flow == DialogueNodeFlow::Finish )
             _bPreviewPlaying = SW_FALSE;
     }
 
-    void DialogueGraphPanel::addNode( DialogueAssetNodeType type, const utf8* pSpeaker, const utf8* pText )
+    void DialogueGraphPanel::addNode( DialogueAssetNodeType type )
     {
-        DialogueNode node{};
-        node._id          = nextNodeId();
-        node._type        = type;
-        node._speaker     = pSpeaker;
-        node._text        = pText;
+        DialogueNode node = DialogueCursor::makeNode( type, nextNodeId() );
         node._position._x = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );
         node._position._y = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
+        _selectedNodeId   = node._id;
+        _listNode.push_back( std::move( node ) );
+    }
 
-        if ( type == DialogueAssetNodeType::Choice )
-            node._listChoice = { "Option 1", "Option 2" };
+    void DialogueGraphPanel::drawNodeBody( const DialogueNode& node )
+    {
+        const DialogueNodeTraits* pTraits = DialogueGraphAsset::findNodeTraits( node._type );
+        if ( pTraits == nullptr )
+        {
+            ImGui::TextDisabled( "[Unknown %u]", static_cast<uint32>( node._type ) );
+            return;
+        }
 
-        _listNode.push_back( node );
-        _selectedNodeId = node._id;
+        const ImVec4 headerColor( pTraits->_color._x, pTraits->_color._y, pTraits->_color._z, pTraits->_color._w );
+        if ( pTraits->_bHasSpeaker )
+            ImGui::TextColored( headerColor, "[%s: %s]", pTraits->_pName, node._speaker.empty() ? "(No Speaker)" : node._speaker.c_str() );
+        else
+            ImGui::TextColored( headerColor, "[%s]", pTraits->_pName );
+
+        if ( pTraits->_bHasInputPin )
+            drawInputPin( node._id );
+
+        switch ( pTraits->_output )
+        {
+            case DialogueNodeOutput::Next:
+            {
+                if ( pTraits->_bHasInputPin )
+                    ImGui::SameLine();
+                drawOutputPin( DialogueGraphPanelInternal::pinOut( node._id ), "Next ->" );
+                break;
+            }
+            case DialogueNodeOutput::Branch:
+            {
+                ImGui::TextDisabled( "if (%s)", node._condition.c_str() );
+                ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinBranchTrue( node._id ) ), ed::PinKind::Output );
+                ImGui::TextColored( ImVec4( 0.3f, 1.0f, 0.4f, 1.0f ), "True ->" );
+                ed::EndPin();
+                ImGui::SameLine();
+                ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinBranchFalse( node._id ) ), ed::PinKind::Output );
+                ImGui::TextColored( ImVec4( 1.0f, 0.4f, 0.4f, 1.0f ), "False ->" );
+                ed::EndPin();
+                return;
+            }
+            case DialogueNodeOutput::Choice:
+            {
+                // 선택지가 없으면 기본 출력 핀 하나를 보인다 — 이어지지 않은 선택지는 기본 출력 핀으로 간다(`DialogueCursor::step`).
+                if ( node._listChoice.empty() )
+                {
+                    drawOutputPin( DialogueGraphPanelInternal::pinOut( node._id ), "Choice 0 ->" );
+                    return;
+                }
+                for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
+                {
+                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinChoice( node._id, static_cast<int32>( choiceIndex ) ) ), ed::PinKind::Output );
+                    ImGui::Text( "#%zu: %s ->", choiceIndex + 1, node._listChoice[choiceIndex].c_str() );
+                    ed::EndPin();
+                }
+                return;
+            }
+            case DialogueNodeOutput::None:
+            default:
+                break;
+        }
+
+        switch ( pTraits->_body )
+        {
+            case DialogueNodeBody::Text:
+            {
+                if ( node._text.empty() )
+                    break;
+                if ( node._text.size() > 40 )
+                {
+                    StringBuilder<constant::kMaxBuffer64> previewBuilder;
+                    previewBuilder.append( string_view{ node._text.data(), 37 } );
+                    previewBuilder.append( "..." );
+                    ImGui::TextDisabled( "\"%s\"", previewBuilder.c_str() );
+                }
+                else
+                {
+                    ImGui::TextDisabled( "\"%s\"", node._text.c_str() );
+                }
+                break;
+            }
+            case DialogueNodeBody::Action:
+            {
+                ImGui::TextDisabled( "cmd: %s", node._actionCommand.c_str() );
+                break;
+            }
+            case DialogueNodeBody::Condition:
+            case DialogueNodeBody::None:
+            default:
+                break;
+        }
+    }
+
+    void DialogueGraphPanel::drawNodeFields( DialogueNode& node, const DialogueNodeTraits& traits )
+    {
+        if ( traits._bHasSpeaker )
+        {
+            EditorWidgets::drawTextField( "Speaker", node._speaker );
+            if ( ImGui::IsItemDeactivatedAfterEdit() )
+                notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+        }
+
+        switch ( traits._body )
+        {
+            case DialogueNodeBody::Text:
+            {
+                fixed_string<constant::kMaxBuffer512> textBuf{ node._text.c_str() };
+                if ( ImGui::InputTextMultiline( "Text", textBuf.data(), textBuf.capacity(), ImVec2( -1, 100 ) ) )
+                    node._text = textBuf.c_str();
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                break;
+            }
+            case DialogueNodeBody::Condition:
+            {
+                EditorWidgets::drawTextField( "Condition", node._condition );
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                ImGui::TextDisabled( "Ex: flag.boss_defeated == 1" );
+                break;
+            }
+            case DialogueNodeBody::Action:
+            {
+                EditorWidgets::drawTextField( "Command", node._actionCommand );
+                if ( ImGui::IsItemDeactivatedAfterEdit() )
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                ImGui::TextDisabled( "Ex: give_item:potion:3" );
+                break;
+            }
+            case DialogueNodeBody::None:
+            default:
+                break;
+        }
+
+        if ( traits._output != DialogueNodeOutput::Choice )
+            return;
+
+        ImGui::Text( "Choices (%zu):", node._listChoice.size() );
+        for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
+        {
+            ImGui::PushID( static_cast<int32>( choiceIndex ) );
+            EditorWidgets::drawTextField( "##Choice", node._listChoice[choiceIndex] );
+            if ( ImGui::IsItemDeactivatedAfterEdit() )
+                notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+            ImGui::SameLine();
+            if ( ImGui::Button( "X" ) )
+            {
+                node._listChoice.erase( node._listChoice.begin() + choiceIndex );
+                notifyDocumentEdited( "Edit Dialogue Node" );
+                ImGui::PopID();
+                break;
+            }
+            ImGui::PopID();
+        }
+
+        if ( ImGui::Button( "+ Add Choice Option" ) )
+        {
+            node._listChoice.push_back( "New choice option" );
+            notifyDocumentEdited( "Edit Dialogue Node" );
+        }
     }
 
     void DialogueGraphPanel::drawInputPin( int32 nodeId )

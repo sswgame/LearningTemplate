@@ -11,6 +11,8 @@
 
 namespace sw
 {
+    struct DialogueStepInput;
+
     class IFlagStore;
 
     ENUM()
@@ -62,6 +64,8 @@ namespace sw
 
         [[nodiscard]] bool loadGraphFile( string_view jsonPath );
         [[nodiscard]] bool loadGraphJson( string_view jsonContent );
+        /** @brief 이미 만든 그래프를 씁니다(코드로 지은 그래프 · 에디터에서 넘긴 그래프). 진행 중인 대화는 멈추지 않습니다. */
+        void setGraph( DialogueGraphAsset graph );
 
         FUNCTION( Category = "Playback", DisplayName = "Start Dialogue", CallInEditor )
         bool startDialogue( int32 startNodeId = -1 );
@@ -91,7 +95,15 @@ namespace sw
          *          읽지 못한 식(정수가 아닌 오른쪽, 표에 없는 연산자 글자)은 경고하고 거짓입니다.
          */
         bool evaluateCondition( const string& condition ) const;
+        /**
+         * @brief 노드 하나를 실행합니다. 노드 종류별 할 일은 빠짐없는 switch 이고, 다음 노드는 `DialogueCursor::step` 이 정합니다.
+         * @details 모르는 타입은 경고하고 대화를 끝냅니다(멈춘 채 남지 않습니다).
+         */
         void executeNode( int32 nodeId, int32 recursionDepth = 0 );
+        /** @brief 노드를 지나 다음 노드를 실행합니다. 노드가 그새 사라졌으면 대화를 끝냅니다. */
+        void stepFrom( int32 nodeId, const DialogueStepInput& input, int32 recursionDepth );
+        /** @brief 상태를 Finished 로 두고 `_onFinished` 를 부릅니다. */
+        void finishDialogue();
         void executeAction( string actionCmd );
         /**
          * @brief `_onLine` 을 **사본으로** 부릅니다. 핸들러가 그 안에서 진행시켜도 안전합니다.
@@ -114,5 +126,7 @@ namespace sw
         OnDialogueFinishedFunc _onFinished;
         DialogueRunnerState    _state;
         int32                  _currentNodeId;
+        /** @brief 노드에 들어가거나 대화를 멈출 때마다 늘어납니다. Action 핸들러가 그 안에서 대화를 옮겼는지 봅니다. */
+        uint32 _transitionSerial;
     };
 } // namespace sw
