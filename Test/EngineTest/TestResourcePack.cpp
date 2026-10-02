@@ -483,7 +483,7 @@ SW_TEST_CASE( ResourcePackTest, LooseFileOverrideOption )
     sw::createTestPackFile( packPath, 0, sw::PackCompressionType::None, {
                                                                             { "test_loose_file.xml", "CONTENT_IN_PACK" }
     } );
-    sw::FileUtil::writeTextFile( loosePath, "CONTENT_ON_DISK" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( loosePath, "CONTENT_ON_DISK" ) );
 
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();

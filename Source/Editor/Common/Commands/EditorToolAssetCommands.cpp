@@ -206,15 +206,21 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorToolAssetCommands::loadTileMap( string_view assetRelativePath, TileMapXmlData& outData, string& outStatus )
+    ToolAssetLoadResult EditorToolAssetCommands::loadTileMap( string_view assetRelativePath, TileMapXmlData& outData, string& outStatus )
     {
+        if ( assetRelativePath.empty() || ResourceUtil::hasResource( assetRelativePath ) == false )
+        {
+            outStatus = "No file yet: " + string{ assetRelativePath };
+            return ToolAssetLoadResult::Missing;
+        }
         if ( outData.load( assetRelativePath ) == false )
         {
-            outStatus = "Not found: " + string{ assetRelativePath };
-            return false;
+            outStatus = "Failed to read " + string{ assetRelativePath };
+            SW_LOG_WARNING( "Could not read tile map '%#' (malformed or a newer format)", assetRelativePath );
+            return ToolAssetLoadResult::Malformed;
         }
         outStatus = string( "Loaded " ) + string( assetRelativePath );
-        return true;
+        return ToolAssetLoadResult::Loaded;
     }
 
     bool EditorToolAssetCommands::saveTileMap( string_view assetRelativePath, const TileMapXmlData& data )
@@ -228,7 +234,7 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorToolAssetCommands::loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path )
+    ToolAssetLoadResult EditorToolAssetCommands::loadSpriteClip( EditorSpriteClipData& outData, string& outStatus, string_view path )
     {
         outData._listFrame.clear();
         outData._listKey.clear();
@@ -243,25 +249,21 @@ namespace sw::editor
             {
                 outData._atlasPath = string{ path };
                 outStatus          = "Atlas from focused texture";
-                return true;
+                return ToolAssetLoadResult::Loaded;
             }
             outStatus = resolved.empty() ? string{ "No sprite clip file yet" } : ( "No file yet: " + resolved );
-            return false;
+            return ToolAssetLoadResult::Missing;
         }
 
         JsonDocument doc;
-        if ( doc.loadFile( resolved ) == false )
+        if ( doc.loadFile( resolved ) == false || parseSpriteClip( doc.dump( -1 ), outData ) == false )
         {
             outStatus = "Failed to read " + resolved;
-            return false;
-        }
-        if ( parseSpriteClip( doc.dump( -1 ), outData ) == false )
-        {
-            outStatus = "Failed to parse " + resolved;
-            return false;
+            SW_LOG_WARNING( "Could not read sprite clip '%#' (malformed or a newer format)", resolved );
+            return ToolAssetLoadResult::Malformed;
         }
         outStatus = "Loaded " + resolved;
-        return true;
+        return ToolAssetLoadResult::Loaded;
     }
 
     bool EditorToolAssetCommands::saveSpriteClip( const EditorSpriteClipData& data, string_view path )
@@ -351,12 +353,9 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorToolAssetCommands::loadSequence( SequenceAsset& outAsset, string_view path )
+    ToolAssetLoadResult EditorToolAssetCommands::loadSequence( SequenceAsset& outAsset, string_view path )
     {
-        const string resolved = EditorToolAssetInternal::resolveExistingOrRelativePath( path );
-        if ( resolved.empty() )
-            return false;
-        return outAsset.loadFromFile( resolved );
+        return EditorToolAssetInternal::loadToolAssetFile( outAsset, EditorToolAssetInternal::resolveExistingOrRelativePath( path ), "sequence" );
     }
 
     bool EditorToolAssetCommands::saveSequence( const SequenceAsset& asset, string_view path )
@@ -505,7 +504,12 @@ namespace sw::editor
                     vector<uint8> bytes;
                     SerializerUtil::serializeValueBinary( pSrc, pProp->_typeName, bytes, ctx );
                     size_t local{ 0 };
-                    SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, bytes.data(), bytes.size(), local, ctx );
+                    // 값을 옮기지 못했으면 되돌렸다고 표시하지 않는다(예전에는 실패해도 "되돌림" 으로 표시하고 되돌리기 기록을 남겼다).
+                    if ( SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, bytes.data(), bytes.size(), local, ctx ) == false )
+                    {
+                        SW_LOG_WARNING( "Prefab override '%#.%#' could not be reverted", item._componentName.c_str(), item._propertyName.c_str() );
+                        return;
+                    }
                 }
                 const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pInstance );
                 EditorTransaction::recordModify( pInstance, beforeSnapshot, afterSnapshot, "Revert Prefab Override" );

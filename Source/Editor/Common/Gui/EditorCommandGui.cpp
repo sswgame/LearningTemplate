@@ -72,7 +72,7 @@ namespace sw::editor
             static void commandNewScene()
             {
                 // 실패 사유(플레이 중 · SceneManager 없음)는 tryCreateNewScene 이 자체 처리한다.
-                EditorAssetCommands::tryCreateNewScene();
+                (void)EditorAssetCommands::tryCreateNewScene();
             }
 
             static void commandOpenScene()
@@ -293,16 +293,29 @@ namespace sw::editor
                 EditorTransformCommands::distributeSelectedObjects( TAxis );
             }
 
-            static void commandApplyPrefabOverrides()
+            /** @brief 선택한 오브젝트가 스폰된 프리팹의 경로입니다. 프리팹 인스턴스가 아니면 비어 있습니다. */
+            static string findSelectedPrefabPath( GameObject*& pOutObj )
             {
                 EditorContext* pContext = EditorContext::get();
-                if ( pContext == nullptr )
+                pOutObj                 = ( pContext != nullptr ) ? pContext->getSelectionManager().getPrimaryObject() : nullptr;
+                if ( pOutObj == nullptr )
+                    return {};
+                return pContext->getWorkspace().getGameObjectPrefabPath( pOutObj->getObjectId() );
+            }
+
+            static void commandApplyPrefabOverrides()
+            {
+                // **선택한 인스턴스의 프리팹에만** 쓴다. 예전에는 포커스된 에셋 경로(콘텐츠 브라우저에서 마지막에 클릭한 것 — 씬 · 머티리얼 · 텍스처)를
+                // 먼저 써서, 그 파일을 프리팹으로 덮어썼다.
+                GameObject*  pObj = nullptr;
+                const string path = findSelectedPrefabPath( pObj );
+                if ( path.empty() )
+                {
+                    SW_LOG_WARNING( "Apply Overrides needs a selected prefab instance - nothing was written" );
                     return;
-                GameObject* pObj = pContext->getSelectionManager().getPrimaryObject();
-                string      path = pContext->getWorkspace().getFocusedAssetPath();
-                if ( path.empty() && pObj != nullptr )
-                    path = pContext->getWorkspace().getGameObjectPrefabPath( pObj->getObjectId() );
-                EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, path );
+                }
+                if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, path ) == false )
+                    SW_LOG_ERROR( "Apply Overrides could not write '%#'", path.c_str() );
             }
 
             // ------------------------------------------------------------------------------
@@ -336,6 +349,12 @@ namespace sw::editor
             static bool hasMultiSelection()
             {
                 return selectedObjectCount() >= 2;
+            }
+
+            static bool hasPrefabInstanceSelected()
+            {
+                GameObject* pObj = nullptr;
+                return findSelectedPrefabPath( pObj ).empty() == false;
             }
 
             // ------------------------------------------------------------------------------
@@ -395,7 +414,7 @@ namespace sw::editor
                 {         "transform.distributeY",           "Distribute Y Evenly",                         "", "Transform",                                                              "",                   "Evenly space selected objects on Y",                                                                    {},                                                              {},               &commandDistribute<AlignAxis::Y>,            &hasMultiSelection,  true},
                 {         "transform.distributeZ",           "Distribute Z Evenly",                         "", "Transform",                                                              "",                   "Evenly space selected objects on Z",                                                                    {},                                                              {},               &commandDistribute<AlignAxis::Z>,            &hasMultiSelection,  true},
 
-                {         "prefab.applyOverrides",               "Apply Overrides",                         "",    "Prefab",                                                              "", "Write instance overrides back to the prefab template",                                                                    {},                                                              {},                   &commandApplyPrefabOverrides,                       nullptr,  true}
+                {         "prefab.applyOverrides",               "Apply Overrides",                         "",    "Prefab",                                                              "", "Write instance overrides back to the prefab template",                                                                    {},                                                              {},                   &commandApplyPrefabOverrides,    &hasPrefabInstanceSelected,  true}
             };
 
             // ------------------------------------------------------------------------------

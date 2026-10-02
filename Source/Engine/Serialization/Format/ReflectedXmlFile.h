@@ -36,7 +36,7 @@ namespace sw
          *          로그만 보고는 알 수 없습니다. 타입 이름을 함께 찍으므로 어느 리소스인지 드러납니다.
          */
         template <typename DescType>
-        static bool loadDesc( string_view assetRelativePath, DescType& outDesc )
+        [[nodiscard]] static bool loadDesc( string_view assetRelativePath, DescType& outDesc )
         {
             return loadDescInternal( assetRelativePath, &outDesc, engine::getTypeRegistry().findType<DescType>() );
         }
@@ -47,15 +47,15 @@ namespace sw
          * @return 성공 여부.
          */
         template <typename DescType>
-        static bool saveDesc( string_view assetRelativePath, const DescType& desc )
+        [[nodiscard]] static bool saveDesc( string_view assetRelativePath, const DescType& desc )
         {
             return saveDescInternal( assetRelativePath, &desc, engine::getTypeRegistry().findType<DescType>() );
         }
 
     private:
         /** @brief 템플릿을 얇게 두려고 타입을 지운 실제 구현입니다(`XmlSerializer` 는 .cpp 에서만 봅니다). */
-        static bool loadDescInternal( string_view assetRelativePath, void* pDesc, const TypeInfo* pTypeInfo );
+        [[nodiscard]] static bool loadDescInternal( string_view assetRelativePath, void* pDesc, const TypeInfo* pTypeInfo );
         /** @brief 쓰기 쪽의 같은 구현입니다. */
-        static bool saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo );
+        [[nodiscard]] static bool saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo );
     };
 } // namespace sw

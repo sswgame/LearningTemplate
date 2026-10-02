@@ -231,9 +231,9 @@ namespace sw
         void beginFrame( const float4& clearColor ) override;
         void endFrame( bool vsync = true, bool bPresent = true ) override;
 
-        void   setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
-        uint32 getTimestampSlotCount() const override;
-        bool   readTimestampsMicros( vector<float32>& outListMicro ) override;
+        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        uint32             getTimestampSlotCount() const override;
+        [[nodiscard]] bool readTimestampsMicros( vector<float32>& outListMicro ) override;
 
         /** @brief 타임스탬프 쿼리 힙을 반환합니다. 준비되지 않았으면 nullptr 입니다. */
         ID3D12QueryHeap* getTimestampHeap() const { return _timestampHeap.Get(); }

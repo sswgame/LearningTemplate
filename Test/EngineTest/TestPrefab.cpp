@@ -22,7 +22,7 @@ namespace sw
     <GameObject _name="SampleHero">
     </GameObject>
 </Prefab>)";
-                sw::FileUtil::writeTextFile( path, pXmlContent );
+                (void)sw::FileUtil::writeTextFile( path, pXmlContent ); // 못 쓰면 뒤의 로드가 실패로 드러난다
             }
 
             // 쿠킹본(.prefab.bin)도 같이 만들어 둔다. PrefabManager::getOrLoad 는 Shipping 에서
@@ -34,7 +34,7 @@ namespace sw
             {
                 sw::PrefabAsset cooked;
                 if ( cooked.loadFromXmlFile( path ) )
-                    cooked.saveToBinaryFile( binPath );
+                    (void)cooked.saveToBinaryFile( binPath ); // 못 쓰면 Shipping 의 로드가 실패로 드러난다
             }
             return path;
         }
@@ -283,6 +283,35 @@ SW_TEST_CASE( PrefabTest, RevertKeepsTheInstancesPlaceAndParent )
     SW_EXPECT_TRUE( pRoot->getLocalPosition() == sw::float3( 9.0f, 8.0f, 7.0f ) );
     SW_EXPECT_TRUE( pRoot->getLocalRotation() == sw::float3( 0.0f, 1.0f, 0.0f ) );
     SW_EXPECT_TRUE( pRoot->getLocalScale() == sw::float3( 2.0f, 2.0f, 2.0f ) );
+}
+
+/**
+ * @brief [PrefabTest] 프리팹 저장은 경로가 정한 형식으로 쓰고, 프리팹이 아닌 경로에는 쓰지 않는다
+ * @details "Apply to Prefab" 이 늘 XML 로 써서 `.prefab.json` 에 XML 이 들어갔고(그 프리팹은 다시 읽히지 않았다), "Apply Overrides" 는 콘텐츠
+ *          브라우저에서 마지막에 클릭한 에셋(씬 · 머티리얼)을 프리팹으로 덮었다. 쓰는 길은 이제 `PrefabAsset::saveToFile` 하나다.
+ */
+SW_TEST_CASE( PrefabTest, SaveToFileWritesThePathsFormatAndRefusesOtherPaths )
+{
+    const sw::PrefabAsset crate    = sw::makeCratePrefab();
+    const sw::string      jsonPath = test::makeTempPath( "crate_save.prefab.json" );
+    const sw::string      xmlPath  = test::makeTempPath( "crate_save.prefab.xml" );
+    SW_ASSERT_TRUE( crate.saveToFile( jsonPath ) );
+    SW_ASSERT_TRUE( crate.saveToFile( xmlPath ) );
+    sw::PrefabAsset fromJson;
+    sw::PrefabAsset fromXml;
+    SW_EXPECT_TRUE( fromJson.loadFromJsonFile( jsonPath ) );
+    SW_EXPECT_TRUE( fromXml.loadFromXmlFile( xmlPath ) );
+
+    const sw::string scenePath = test::makeTempPath( "level.scene.xml" );
+    const sw::string kScene    = "<Scene name=\"Level\"/>\n";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( scenePath, kScene ) );
+    {
+        test::ScopedDefensiveTestLog expected( "a scene path is not a prefab path" );
+        SW_EXPECT_FALSE( crate.saveToFile( scenePath ) );
+    }
+    sw::string sceneAfter;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( scenePath, sceneAfter ) );
+    SW_EXPECT_STREQ( kScene.c_str(), sceneAfter.c_str() );
 }
 
 /**

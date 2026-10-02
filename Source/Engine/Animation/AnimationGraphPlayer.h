@@ -24,7 +24,7 @@ namespace sw
         AnimationGraphPlayer();
 
         /** @brief JSON 그래프를 로드합니다. */
-        bool loadGraph( string_view path );
+        [[nodiscard]] bool loadGraph( string_view path );
         /** @brief 이미 파싱된 그래프를 설정합니다. */
         void setGraph( const AnimationGraphAsset& graph );
         /** @brief 노드 이름에 클립을 연결합니다. 같은 이름은 덮어씁니다. */

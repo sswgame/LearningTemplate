@@ -24,7 +24,7 @@ namespace sw
         /** @brief 인스턴스를 만들지 않습니다. open 만 부르십시오. */
         WindowsFileDialog() = delete;
         /** @brief 네이티브 다이얼로그를 열고, 고른 경로를 outListPath 에 담습니다. */
-        static bool open( const FileDialogParams& params, vector<string>& outListPath );
+        [[nodiscard]] static bool open( const FileDialogParams& params, vector<string>& outListPath );
     };
 } // namespace sw
 

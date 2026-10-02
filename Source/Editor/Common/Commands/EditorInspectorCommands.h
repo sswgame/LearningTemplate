@@ -27,9 +27,9 @@ namespace sw::editor
         /** @brief 문자열 프로퍼티 전/후 값을 Undo에 올립니다. */
         static void pushStringEdit( string* pPtr, string before, string after, string_view label, uint64 selectedObjectId );
         /** @brief 선택 오브젝트 상태를 프리팹 XML로 저장합니다. */
-        static bool applyToPrefab( GameObject* pObj, string_view prefabPath );
+        [[nodiscard]] static bool applyToPrefab( GameObject* pObj, string_view prefabPath );
         /** @brief 프리팹 상태로 되돌리고 Undo에 기록합니다. */
-        static bool revertToPrefab( GameObject* pObj, string_view prefabPath );
+        [[nodiscard]] static bool revertToPrefab( GameObject* pObj, string_view prefabPath );
         /** @brief 오브젝트와 프리팹 연결을 끊습니다. */
         static void unlinkPrefab( GameObject* pObj );
     };

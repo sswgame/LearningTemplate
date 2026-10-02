@@ -155,8 +155,8 @@ SW_TEST_CASE( SceneComponentTest, LargeWorldCoordinatesHierarchy )
     SW_ASSERT_NOT_NULL( childSc );
     SW_ASSERT_NOT_NULL( grandChildSc );
 
-    childSc->attachToComponent( rootSc );
-    grandChildSc->attachToComponent( childSc );
+    SW_ASSERT_TRUE( childSc->attachToComponent( rootSc ) );
+    SW_ASSERT_TRUE( grandChildSc->attachToComponent( childSc ) );
 
     // 로컬 좌표 설정
     rootSc->setLocalPosition( float3( 100.0f, 200.0f, 300.0f ) );
@@ -204,7 +204,7 @@ SW_TEST_CASE( SceneHierarchyTest, TransformDirtyPropagationAndEarlyOut )
     SW_ASSERT_NOT_NULL( pParentSc );
     SW_ASSERT_NOT_NULL( pChildSc );
 
-    pChildSc->attachToComponent( pParentSc );
+    SW_ASSERT_TRUE( pChildSc->attachToComponent( pParentSc ) );
 
     pParentSc->setLocalPosition( sw::float3( 10.0f, 0.0f, 0.0f ) );
     pChildSc->setLocalPosition( sw::float3( 5.0f, 0.0f, 0.0f ) );

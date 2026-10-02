@@ -205,7 +205,7 @@ namespace sw
                             }
 
                             string itemText;
-                            backend.readText( itemText );
+                            (void)backend.readText( itemText ); // 없으면 빈 글 — 아래 파싱이 실패로 알린다
                             if ( parseTextValueCoerced( pElemPtr, nested._elementTypeName, itemText, ctx ) == false )
                                 recordCoerceFailure( pOutListOrphan, bOutFieldError, propForOrphan, itemText );
                             return true;
@@ -225,7 +225,7 @@ namespace sw
                         bAny = true;
 
                         string keyText;
-                        backend.readAttribute( kXmlKeyAttr, keyText );
+                        (void)backend.readAttribute( kXmlKeyAttr, keyText ); // 없으면 빈 키 — 아래 키 파싱이 거른다
 
                         pMapWrap->defaultConstructKey( listKBuf.data() );
                         pMapWrap->defaultConstructValue( listVBuf.data() );
@@ -251,7 +251,7 @@ namespace sw
                             else
                             {
                                 string valText;
-                                backend.readText( valText );
+                                (void)backend.readText( valText ); // 없으면 빈 글 — 아래 파싱이 실패로 알린다
                                 vOk = parseTextValueCoerced( listVBuf.data(), nested._elementTypeName, valText, ctx );
                                 if ( vOk == false )
                                     recordCoerceFailure( pOutListOrphan, bOutFieldError, propForOrphan, valText );
@@ -914,7 +914,8 @@ namespace sw
             if ( pVer != nullptr )
             {
                 uint64 ver{ 0 };
-                StringUtil::parseUint64( pVer, ver, 10 );
+                if ( StringUtil::parseUint64( pVer, ver, 10 ) == false )
+                    SW_LOG_WARNING( "_schemaVersion '%#' is not a number - reading as version 0", pVer );
                 *pOutVersion = static_cast<uint32>( ver );
             }
         }

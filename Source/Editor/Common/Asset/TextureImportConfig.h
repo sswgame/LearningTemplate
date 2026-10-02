@@ -72,10 +72,10 @@ namespace sw::editor
         ~TextureImportConfig() = default;
 
         /** @brief 파일에서 설정을 로드하고 프리셋 상속 트리를 해석합니다. */
-        bool loadFromFile( string_view configPath );
+        [[nodiscard]] bool loadFromFile( string_view configPath );
 
         /** @brief JSON 문자열에서 설정을 파싱합니다. */
-        bool loadFromJsonString( string_view jsonString );
+        [[nodiscard]] bool loadFromJsonString( string_view jsonString );
 
         /**
          * @brief 상대 텍스처 경로(예: "editor/textures_raw/splash.jpg")에 처음으로 일치하는 규칙을 찾습니다.

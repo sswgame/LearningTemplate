@@ -10,6 +10,18 @@
 
 namespace sw::editor
 {
+    /**
+     * @brief 도구 문서를 읽은 결과 — "새 문서" 와 "읽지 못한 파일" 을 가른다. 문서 패널은 이것으로 저장을 막는다(`EditorDocumentPanel::reloadDocument`).
+     * @details 타입에 `[[nodiscard]]` 가 붙어 있다 — 이것을 돌려주는 로드의 결과를 버리면 컴파일러가 짚는다. 예전에는 다섯 로더 중 셋이 bool 이라
+     *          "없음" 과 "깨짐" 이 섞였고, 두 패널은 그 bool 마저 버린 채 읽었다고 표시해 깨진 파일을 앞 문서로 덮었다.
+     */
+    enum class [[nodiscard]] ToolAssetLoadResult : uint8
+    {
+        Loaded,    ///< 읽었다
+        Missing,   ///< 파일이 없다 — 새 문서(기본값으로 시작하고 저장하면 만든다)
+        Malformed, ///< 파일은 있는데 읽지 못했다(깨졌거나 더 새 형식) — 덮으면 안 된다
+    };
+
     /** @brief 에디터가 구분하는 애셋 종류. 한 경로가 여러 종류에 걸릴 수 있습니다. */
     enum class EditorAssetKind : uint8
     {

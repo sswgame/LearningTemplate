@@ -85,8 +85,9 @@ namespace sw::editor
         if ( readInput( pState, generation, input ) == false )
             return;
 
+        // 읽지 못한 언어 파일은 경고가 남고 그 칸만 빈다 — 나머지는 그대로 보인다(저장은 그 파일을 덮지 않는다).
         vector<LocalizationRecord> listRecord;
-        EditorDataTableCommands::loadLocalization( listRecord );
+        (void)EditorDataTableCommands::loadLocalization( listRecord );
 
         publish( pState, generation, std::move( listRecord ) );
     }

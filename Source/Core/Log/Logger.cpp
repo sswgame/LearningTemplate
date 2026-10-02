@@ -116,8 +116,9 @@ namespace sw
             std::scoped_lock<mutex> lock{ _mutex };
             for ( unique_ptr<ILogOutput>& output : _listOutput )
             {
+                // 열지 못한 출력은 쓰기를 무시한다 — 로거에는 자기 실패를 남길 곳이 없다.
                 if ( output != nullptr )
-                    output->open();
+                    (void)output->open();
             }
         }
 
@@ -311,7 +312,7 @@ namespace sw
 
         const bool bNeedsOpen = _bInitialized;
         if ( bNeedsOpen )
-            output->open();
+            (void)output->open(); // 위와 같다 — 열지 못한 출력은 쓰기를 무시한다
 
         std::scoped_lock<mutex> lock{ _mutex };
         _listOutput.push_back( std::move( output ) );

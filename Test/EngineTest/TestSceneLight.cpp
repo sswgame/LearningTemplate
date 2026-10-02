@@ -61,7 +61,7 @@ namespace
         sw::GameObject*       pParent = manager.createGameObject( sw::hashed_string( "LightParent" ) );
         sw::SceneComponent*   pRoot   = pParent->addComponent<sw::SceneComponent>();
         TLight*               pLight  = addLightObject<TLight>( &manager, "RotatedLight" );
-        pLight->attachToComponent( pRoot );
+        SW_EXPECT_TRUE( pLight->attachToComponent( pRoot ) );
         pRoot->setLocalRotation( sw::float3{ 0.0f, parentYaw, 0.0f } );
         return pLight->getLightDirection();
     }

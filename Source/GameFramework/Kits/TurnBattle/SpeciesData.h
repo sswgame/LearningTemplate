@@ -92,7 +92,7 @@ namespace sw
         SpeciesCatalog& operator=( const SpeciesCatalog& ) = delete;
 
         /** @brief 리소스 경로에서 기술 · 종족을 로드합니다. 실패하면 최소 폴백을 심습니다. */
-        bool loadFromResource( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromResource( string_view assetRelativePath );
 
         /** @brief ID 로 종족 정의를 찾습니다. 못 찾으면 첫 종족, **표가 비었으면 nullptr** 입니다. */
         const SpeciesDef* findSpecies( const utf8* pId ) const;

@@ -55,7 +55,9 @@ namespace sw::editor
     {
         if ( _bLocalizationDirty == SW_TRUE )
         {
-            EditorDataTableCommands::loadLocalization( _listLocalizationRecord );
+            // 읽지 못한 언어 파일은 표에 비어 보이고, 저장은 그 파일을 덮지 않는다(`saveLocalization`).
+            if ( EditorDataTableCommands::loadLocalization( _listLocalizationRecord ) == false )
+                SW_LOG_WARNING( "Some localization files could not be read - see the warnings above" );
             _bLocalizationLoaded = SW_TRUE;
             _bLocalizationDirty  = SW_FALSE;
             syncDocumentDirty();
@@ -370,7 +372,9 @@ namespace sw::editor
 
     void DataTablePanel::saveLocalization()
     {
-        EditorDataTableCommands::saveLocalization( _listLocalizationRecord );
+        // 하나라도 쓰지 못했으면 dirty 를 지우지 않는다 — 저장 확인이 다시 묻는다.
+        if ( EditorDataTableCommands::saveLocalization( _listLocalizationRecord ) == false )
+            return;
         _bLocalizationDirty = SW_FALSE;
         syncDocumentDirty();
     }
@@ -387,9 +391,21 @@ namespace sw::editor
             return;
 
         const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
-        FileUtil::readTextFile( entry._absolutePath, _selectedGameDataRawText );
-        _savedGameDataRawText = _selectedGameDataRawText;
-        _bGameDataDirty       = SW_FALSE;
+        // 읽지 못하면 고르지 않는다. 예전에는 실패해도 앞 파일의 글을 그대로 들고 "깨끗함" 으로 보여, 저장하면 **앞 파일의 내용을 이 파일에** 썼다.
+        string text;
+        if ( FileUtil::readTextFile( entry._absolutePath, text ) == false )
+        {
+            SW_LOG_ERROR( "Could not read game data table '%#' - it is not opened", entry._absolutePath.c_str() );
+            _selectedGameDataIndex = -1;
+            _selectedGameDataRawText.clear();
+            _savedGameDataRawText.clear();
+            _bGameDataDirty = SW_FALSE;
+            syncDocumentDirty();
+            return;
+        }
+        _selectedGameDataRawText = std::move( text );
+        _savedGameDataRawText    = _selectedGameDataRawText;
+        _bGameDataDirty          = SW_FALSE;
         syncDocumentDirty();
     }
 
@@ -400,7 +416,10 @@ namespace sw::editor
 
         const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
         if ( FileUtil::writeTextFile( entry._absolutePath, _selectedGameDataRawText ) == false )
+        {
+            SW_LOG_ERROR( "Could not write game data table '%#'", entry._absolutePath.c_str() );
             return;
+        }
         _savedGameDataRawText = _selectedGameDataRawText;
         _bGameDataDirty       = SW_FALSE;
         syncDocumentDirty();

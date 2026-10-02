@@ -21,7 +21,7 @@ namespace sw
         SequencePlayer();
 
         /** @brief JSON 시퀀스를 로드합니다. */
-        bool loadFromFile( string_view path );
+        [[nodiscard]] bool loadFromFile( string_view path );
         /** @brief 이미 파싱된 에셋을 설정합니다. */
         void setAsset( const SequenceAsset& asset );
 

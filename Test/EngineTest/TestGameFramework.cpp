@@ -1122,7 +1122,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterDataCatalogAndStats )
 {
     // 1) MonsterDataCatalog fallback 및 조회 검증
     MonsterDataCatalog catalog;
-    catalog.loadFromResource( "non_existent_monster.xml" );
+    (void)catalog.loadFromResource( "non_existent_monster.xml" ); // 없는 리소스 — 폴백 표가 심어지는지를 아래에서 본다
     const MonsterDef* pMonster = catalog.findMonster( "default_monster" );
     SW_ASSERT_NOT_NULL( pMonster );
     SW_EXPECT_EQUAL( string( "default_monster" ), pMonster->_id );
@@ -2054,7 +2054,7 @@ SW_TEST_CASE( GameFrameworkTest, EndedBattleReturnsToInactiveByItself )
     {
         // 리소스가 없으면 최소 폴백 표를 심는다 — 이 테스트에는 그것으로 충분하다.
         test::ScopedLogSuppressor suppressor;
-        catalog.loadFromResource( "no_such_species_catalog.xml" );
+        (void)catalog.loadFromResource( "no_such_species_catalog.xml" ); // 없는 리소스 — 폴백 표를 쓴다
     }
     game::bindLocalService<SpeciesCatalog>( &catalog );
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, []()

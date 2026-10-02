@@ -64,9 +64,9 @@ namespace sw
         RenderPipelineResource& operator=( const RenderPipelineResource& ) = delete;
 
         /** @brief 리소스 상대 경로에서 파이프라인 XML 을 로드합니다. */
-        bool loadFromXmlFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromXmlFile( string_view assetRelativePath );
         /** @brief 파이프라인 XML 을 저장합니다. */
-        bool saveToXmlFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToXmlFile( string_view assetRelativePath ) const;
         /** @brief 파이프라인 XML 을 비동기로 로드합니다. */
         TaskHandle loadFromXmlFileAsync( string_view assetRelativePath );
 

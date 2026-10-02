@@ -53,13 +53,13 @@ namespace sw
         void saveToArchive( Archive& outArchive ) const;
 
         /** @brief Archive 에서 동적 문자열 표를 읽어 풀을 채웁니다. */
-        bool loadFromArchive( Archive& inArchive );
+        [[nodiscard]] bool loadFromArchive( Archive& inArchive );
 
         /** @brief 동적으로 등록된 문자열 표만 바이트 벡터에 기록합니다. */
         void saveToBinaryBuffer( vector<uint8>& outBytes ) const;
 
         /** @brief 바이너리 버퍼에서 동적 문자열 표를 읽어 옵니다. */
-        bool loadFromBinaryBuffer( const uint8* pData, size_t dataSize, size_t& inoutOffset );
+        [[nodiscard]] bool loadFromBinaryBuffer( const uint8* pData, size_t dataSize, size_t& inoutOffset );
 
     private:
         void initializePredefined();

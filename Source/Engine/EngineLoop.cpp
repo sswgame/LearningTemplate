@@ -269,17 +269,18 @@ namespace sw
 
         BLOCK( "EngineData 로드 및 RHI 백엔드 선정 & 초기화" )
         {
-            if ( pEngineConfig->_engineData.empty() == false )
-                _owned._pEngineData->loadFromResource( pEngineConfig->_engineData );
-            else
-                _owned._pEngineData->loadFromResource();
+            const bool bEngineDataLoaded = ( pEngineConfig->_engineData.empty() == false ) ? _owned._pEngineData->loadFromResource( pEngineConfig->_engineData )
+                                                                                           : _owned._pEngineData->loadFromResource();
+            if ( bEngineDataLoaded == false )
+                SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
 
             bool bBakeShaders = false;
             if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_SHADERS, bBakeShaders ) && bBakeShaders )
             {
                 _bHeadless = true;
                 SW_LOG_INFO( "Starting Headless (BakeShaders)..." );
-                ShaderBakeDriver::bakeAllShaders();
+                const ShaderBakeSummary summary = ShaderBakeDriver::bakeAllShaders();
+                _bHeadlessTaskFailed            = summary.isClean() == false;
                 return true;
             }
 
@@ -753,8 +754,8 @@ namespace sw
         if ( _frameRenderer != nullptr )
             _frameRenderer->initialize( &_rhi->getDevice(), _owned._pTaskManager.get() );
 
-        if ( _renderThread != nullptr )
-            _renderThread->attach( &_rhi->getDevice(), _frameRenderer.get() );
+        if ( _renderThread != nullptr && _renderThread->attach( &_rhi->getDevice(), _frameRenderer.get() ) == false )
+            SW_LOG_ERROR( "Render thread could not attach to the new device" );
 
         if ( _owned._pSceneManager != nullptr )
             _owned._pSceneManager->setRhiDevice( &_rhi->getDevice() );

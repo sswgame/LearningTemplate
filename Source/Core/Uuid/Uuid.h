@@ -26,7 +26,7 @@ namespace sw
         static Uuid generate();
 
         /** @brief 하이픈이 들어간 UUID 문자열을 파싱합니다. 실패하면 false 입니다. */
-        static bool tryParse( string_view text, Uuid& outUuid );
+        [[nodiscard]] static bool tryParse( string_view text, Uuid& outUuid );
 
         /** @brief 하이픈이 들어간 소문자 16진수 표준 형식 문자열을 반환합니다. */
         string toString() const;

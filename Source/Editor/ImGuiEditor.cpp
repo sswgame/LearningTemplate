@@ -64,7 +64,8 @@ namespace sw::editor
                 if ( pEngineData == nullptr )
                     return;
                 SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
-                pPass->loadFromXmlFile( pEngineData->_defaultRenderPass );
+                if ( pPass->loadFromXmlFile( pEngineData->_defaultRenderPass ) == false )
+                    SW_LOG_WARNING( "Splash: could not read %#", pEngineData->_defaultRenderPass.c_str() );
             }
 
             static void loadSplashForwardPipeline( const TaskArgs& args )
@@ -76,7 +77,8 @@ namespace sw::editor
                 if ( pEngineData == nullptr )
                     return;
                 SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
-                pPipeline->loadFromXmlFile( pEngineData->_defaultForwardPipeline );
+                if ( pPipeline->loadFromXmlFile( pEngineData->_defaultForwardPipeline ) == false )
+                    SW_LOG_WARNING( "Splash: could not read %#", pEngineData->_defaultForwardPipeline.c_str() );
             }
         };
     } // namespace
@@ -141,7 +143,8 @@ namespace sw::editor
         {
             EditorConfig::loadFromHost();
             _editorData = make_unique<EditorData>();
-            _editorData->loadFromHostPath();
+            if ( _editorData->loadFromHostPath() == false )
+                SW_LOG_WARNING( "Editor data could not be read - using defaults" );
             editor::setEditorData( _editorData.get() );
         }
 #endif

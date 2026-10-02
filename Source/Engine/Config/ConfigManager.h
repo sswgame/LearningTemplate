@@ -48,7 +48,7 @@ namespace sw
          * @details 표에 이미 같은 타입이 있으면 덮어씁니다.
          */
         template <typename T>
-        bool loadConfig( const string& filePath )
+        [[nodiscard]] bool loadConfig( const string& filePath )
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
@@ -74,7 +74,7 @@ namespace sw
 
         /** @brief 설정 하나를 JSON 본문에서 읽어 등록합니다. */
         template <typename T>
-        bool loadConfigFromJson( const string& jsonStr, [[maybe_unused]] const utf8* pSourceLabel = "json" )
+        [[nodiscard]] bool loadConfigFromJson( const string& jsonStr, [[maybe_unused]] const utf8* pSourceLabel = "json" )
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 

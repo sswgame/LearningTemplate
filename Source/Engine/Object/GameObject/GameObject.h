@@ -106,7 +106,7 @@ namespace sw
          *          (총알 둘이 같은 적을 같은 프레임에 맞히는) 흔한 경우입니다. 없애는 쪽은 반드시
          *          이 함수가 `true` 를 준 스레드 **하나만** 진행해야 합니다.
          */
-        bool tryMarkPendingDestroy();
+        [[nodiscard]] bool tryMarkPendingDestroy();
 
         /** @brief 삭제 예정인지 확인합니다. */
         bool isPendingDestroy() const { return _bIsPendingDestroy.load( std::memory_order_acquire ); }
@@ -132,7 +132,7 @@ namespace sw
          * @details primary SceneComponent 계층을 공유합니다. 병렬 트랜스폼 구간에서는 미룹니다.
          * @return 성공하면 true 입니다. 미룬 경우에도 true 입니다.
          */
-        bool attachToParent( GameObject* pParent );
+        [[nodiscard]] bool attachToParent( GameObject* pParent );
 
         /** @brief 부모에서 뗍니다. */
         void detachFromParent();

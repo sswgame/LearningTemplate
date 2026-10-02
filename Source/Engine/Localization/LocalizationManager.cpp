@@ -312,8 +312,11 @@ namespace sw
 
             // 언어 테이블을 인코딩한다
             vector<uint8> tableBuffer;
-            if ( pTable != nullptr )
-                pTable->saveToBinaryBuffer( tableBuffer );
+            if ( pTable != nullptr && pTable->saveToBinaryBuffer( tableBuffer ) == false )
+            {
+                SW_LOG_ERROR( "Language table '%#' could not be encoded - the pack is not written", langCode );
+                return false;
+            }
 
             const uint32 tableSize = static_cast<uint32>( tableBuffer.size() );
             appendBytes( &tableSize, sizeof( tableSize ) );

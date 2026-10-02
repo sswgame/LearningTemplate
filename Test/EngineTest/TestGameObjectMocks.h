@@ -87,7 +87,7 @@ namespace sw
             if ( _pTickRemoveOwner != nullptr && _pTickRemoveComp != nullptr )
                 _pTickRemoveOwner->removeComponent( _pTickRemoveComp );
             if ( _pTickAttachChild != nullptr && _pTickAttachParent != nullptr )
-                _pTickAttachChild->attachToComponent( _pTickAttachParent );
+                (void)_pTickAttachChild->attachToComponent( _pTickAttachParent ); // 붙었는지는 시험이 계층으로 본다
         }
     };
 

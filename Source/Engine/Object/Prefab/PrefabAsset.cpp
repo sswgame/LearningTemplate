@@ -321,17 +321,25 @@ namespace sw
 
         XmlDocument xmlDoc;
         XmlNode     root = xmlDoc.appendRoot( PrefabAssetInternal::kRoot );
-        root.appendAttribute( "formatVersion", 0u );
+        root.appendAttribute( "formatVersion", static_cast<uint32>( AssetFormatVersions::kPrefab ) );
         root.appendAttribute( PrefabAssetInternal::kName, _name );
         if ( xmlBody.empty() == false )
         {
             XmlDocument bodyDoc;
-            if ( bodyDoc.parse( xmlBody ) )
+            const bool  bBodyParsed = bodyDoc.parse( xmlBody );
+            XmlNode     bodyRoot    = bBodyParsed ? bodyDoc.getRoot() : XmlNode{};
+            if ( bodyRoot.isValid() == false )
             {
-                XmlNode bodyRoot = bodyDoc.getRoot();
-                if ( bodyRoot.isValid() )
-                    root.appendClone( bodyRoot );
+                SW_LOG_ERROR( "Prefab '%#' has a state that cannot be written as XML - '%#' is left as it was", _name, assetRelativePath );
+                return false;
             }
+            root.appendClone( bodyRoot );
+        }
+        else if ( _stateData.empty() == false )
+        {
+            // 상태가 있는데 XML 로 옮기지 못했다(타입이 빠진 JSON 본문 등). 예전에는 빈 `<Prefab>` 을 쓰고 성공이라 했다 — 파일의 내용이 사라졌다.
+            SW_LOG_ERROR( "Prefab '%#' could not be converted to XML - '%#' is left as it was", _name, assetRelativePath );
+            return false;
         }
 
         // 상위 폴더가 없으면 쓰기가 실패한다. 로더는 실패를 모두 로그하는데 세이버는 조용히 false 만
@@ -362,7 +370,7 @@ namespace sw
             // 상태를 읽지 못했다(타입이 빠진 본문 등). 본문을 그대로 싸서 잃지 않는다.
             JsonDocument doc;
             JsonValue    root = doc.makeObject();
-            root.set( "formatVersion" ).setInt( 0 );
+            root.set( "formatVersion" ).setInt( static_cast<int32>( AssetFormatVersions::kPrefab ) );
             root.set( "name" ).setString( _name );
             root.set( "xmlBody" ).setString( _stateData );
             jsonStr = doc.dump( 1 );
@@ -382,6 +390,18 @@ namespace sw
             engine::getResourceManager().getAssetDatabase().ensureMeta( assetRelativePath );
         SW_LOG_INFO( "Saved '%#' JSON %#", _name, absPath );
         return true;
+    }
+
+    bool PrefabAsset::saveToFile( string_view assetRelativePath ) const
+    {
+        // 형식은 경로가 정한다 — 쿠커(`cookAllPrefabs`)와 로더(`loadPrefab`)가 읽는 규칙과 같다. 예전에는 "Apply to Prefab" 이 늘 XML 로 써서
+        // `.prefab.json` 에 XML 이 들어가 그 프리팹이 다시는 읽히지 않았고, 프리팹이 아닌 경로(씬 · 머티리얼)도 그대로 덮었다.
+        if ( StringUtil::endsWith( assetRelativePath, ".prefab.json", true ) )
+            return saveToJsonFile( assetRelativePath );
+        if ( StringUtil::endsWith( assetRelativePath, ".prefab.xml", true ) )
+            return saveToXmlFile( assetRelativePath );
+        SW_LOG_ERROR( "'%#' is not a prefab source path (.prefab.xml / .prefab.json) - nothing was written", assetRelativePath );
+        return false;
     }
 
     bool PrefabAsset::saveToBinaryFile( string_view assetRelativePath ) const
@@ -576,8 +596,9 @@ namespace sw
         {
             GameObjectManager* pManager = pInstance->getManager();
             Component*         pParent  = ( pManager != nullptr && parentHandle.isValid() ) ? pManager->resolveComponent( parentHandle ) : nullptr;
-            if ( pParent != nullptr && pParent->isSceneComponent() && pNewRoot->getParent() != pParent )
-                pNewRoot->attachToComponent( static_cast<SceneComponent*>( pParent ) );
+            if ( pParent != nullptr && pParent->isSceneComponent() && pNewRoot->getParent() != pParent &&
+                 pNewRoot->attachToComponent( static_cast<SceneComponent*>( pParent ) ) == false )
+                SW_LOG_WARNING( "Revert of '%#' could not re-attach it to its parent - it stays at the root", name.c_str() );
             if ( bHadRoot )
             {
                 pNewRoot->setLocalPosition( position );

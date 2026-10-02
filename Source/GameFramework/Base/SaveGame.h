@@ -44,7 +44,7 @@ namespace sw
 
         /** @brief 임의의 리플렉션 객체를 SAV1 바이너리 파일로 저장합니다. */
         template <typename T>
-        static bool saveGameToSlot( const T& saveObject, string_view path )
+        [[nodiscard]] static bool saveGameToSlot( const T& saveObject, string_view path )
         {
             Archive payloadArch;
             if ( payloadArch.serializeObject( saveObject ) == false )
@@ -65,7 +65,7 @@ namespace sw
 
         /** @brief SAV1 바이너리 파일로부터 임의의 리플렉션 객체를 복원합니다. */
         template <typename T>
-        static bool loadGameFromSlot( T& outSaveObject, string_view path )
+        [[nodiscard]] static bool loadGameFromSlot( T& outSaveObject, string_view path )
         {
             Archive fileArch( path, true );
             if ( fileArch.getSize() < 16 )
@@ -118,8 +118,8 @@ namespace sw
         SaveGame& operator=( SaveGame&& ) noexcept = default;
 
         /** @brief 리플렉션 바이너리 포맷으로 파일에 저장합니다. */
-        virtual bool saveToFile( string_view path ) const;
+        [[nodiscard]] virtual bool saveToFile( string_view path ) const;
         /** @brief 바이너리 파일에서 리플렉션 역직렬화로 불러옵니다. */
-        virtual bool loadFromFile( string_view path );
+        [[nodiscard]] virtual bool loadFromFile( string_view path );
     };
 } // namespace sw

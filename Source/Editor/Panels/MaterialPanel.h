@@ -17,15 +17,16 @@ namespace sw::editor
     public:
         MaterialPanel();
 
-        void drawContent() override;
-        bool saveDocument() override;
+        void               drawContent() override;
+        [[nodiscard]] bool saveDocument() override;
 
     private:
         string captureDocumentText() const override;
         void   applyDocumentText( string_view text ) override;
-        void   loadFromFocusedPath();
-        void   syncNameBuffers();
-        void   applyLivePreview();
+        /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
+        ToolAssetLoadResult loadDocument() override;
+        void                syncNameBuffers();
+        void                applyLivePreview();
 
     private:
         shared_ptr<Material>                  _material; ///< 편집 사본. Material 은 create() 로만 만들 수 있습니다

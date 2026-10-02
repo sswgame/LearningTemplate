@@ -111,7 +111,7 @@ namespace sw::editor
         }
 
         /** @brief 워커에서 부릅니다. 세대가 아직 유효하면 입력을 복사합니다. 낡은 세대면 false 입니다. */
-        static bool readInput( const shared_ptr<State>& pState, uint32 generation, TInput& outInput )
+        [[nodiscard]] static bool readInput( const shared_ptr<State>& pState, uint32 generation, TInput& outInput )
         {
             if ( pState == nullptr )
                 return false;

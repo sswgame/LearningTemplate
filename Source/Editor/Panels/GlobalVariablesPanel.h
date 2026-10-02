@@ -47,9 +47,9 @@ namespace sw::editor
         /** @brief 기본 창 크기를 반환합니다. */
         float2 getInitialPanelSize() const override { return float2{ 680.0f, 480.0f }; }
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
-        bool isToolPanel() const override { return true; }
-        bool saveDocument() override;
-        void revertDocument() override;
+        bool               isToolPanel() const override { return true; }
+        [[nodiscard]] bool saveDocument() override;
+        void               revertDocument() override;
 
     private:
         /** @brief 단일 전역 변수의 편집 컨트롤을 그립니다. */

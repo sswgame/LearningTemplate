@@ -1664,7 +1664,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 | 원인 | 대표 결함 | 구조로 막는 법 | 상태 |
 |------|-----------|----------------|------|
 | R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
-| R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + 게이트, 검사하는 파싱 한 벌 | 다음 |
+| R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ (3절) — 남은 것 아래 |
 | R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 남음 |
 | R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 남음 |
 | R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 남음 |
@@ -1672,18 +1672,11 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 
 **남은 확인 결함(감사 결과 — 다음 단위들의 입력).** 줄 번호는 2026-10-02 기준이다.
 
-- **R2** — 실패할 수 있는 동사(load · save · parse · apply · …)의 상태 반환 함수 약 506 개 중 `[[nodiscard]]` 0, 결과를 버리는 호출 155 곳
-  (Editor 67 · Engine 77 · GF 7). 확인된 결함: ① "Prefab › Apply Overrides" 가 **마지막에 클릭한 에셋**(씬 · 머티리얼)을 프리팹으로 덮는다
-  (`EditorCommandGui.cpp` `commandApplyPrefabOverrides` 가 `getFocusedAssetPath` 를 먼저, 술어 없음) ② Apply to Prefab 이 `.prefab.json` 에 XML 을
-  쓴다(`EditorInspectorCommands::applyToPrefab` 이 늘 `saveToXmlFile`; `saveToXmlFile` 은 변환 실패에도 빈 `<Prefab>` + true) ③ 셰이더 컴파일 실패를
-  최신 굽기로 도장(`ShaderBakeDriver.cpp` 104-135, `EngineLoop.cpp` 282 결과 버림 → 종료 코드 0) ④ 언어 파일 하나가 깨지면 저장 때 그 언어를 통째로
-  지운다(`EditorDataTableCommands.cpp` 58-148) ⑤ TileMap · SpriteClip 패널이 로드 실패를 버리고 `markDocumentLoaded`(다른 파일 내용으로 덮어쓴다)
-  ⑥ `DataTablePanel.cpp` 390 `readTextFile` 결과 버림 ⑦ 에셋 삭제가 실패해도 `.meta` 를 지운다(`EditorAssetCommands.cpp` 648) ⑧ 모르는 컴포넌트
-  타입을 세 형식 모두 **조용히** 버리고 다음 저장이 지운다(`ObjectStateSerializer.cpp` `bLogWarning=false`). 조용한 강제 변환: bool 은 아무 글이나
-  받는다(`SerializeContext.cpp` 358 · XML/JSON 비트필드 · CLI · 전역 변수), 숫자 아닌 글은 경고 없이 고아(Ignore 정책), 머티리얼 파싱이 ⑪ · 61 을
-  되풀이(`MaterialPacking.cpp` 198-235 · `MaterialXml.cpp`), ActionMap 의 `static_cast<uint8>(getAttributeInt)`(pad "256" → 0), 대화 조건(`flag.gold>=10`),
-  `XmlNode::getAttributeInt/Float` 의 조용한 폴백. 그리고 JSON 쓰기가 `"0,0,0"` 같은 값이 스칼라인지 보려고 파싱해 보며 **오류 로그**를 남긴다
-  (`JsonSerializer.cpp` 53 — float3 하나마다 `[Error]`).
+- **R2 에서 남은 것**(구조 ⑥ 뒤) — bool 은 아무 글이나 받는다(`SerializeContext.cpp` `parseBool( s, false )` 뒤 true · XML/JSON 비트필드 · CLI · 전역 변수 —
+  "ture" 가 false), 숫자 아닌 글은 경고 없이 고아가 되어 Ignore 정책에 묻힌다(XML · JSON 로더 — 고아가 생기면 로드마다 한 번 경고할 것), JSON 쓰기가
+  `"0,0,0"` 같은 값이 스칼라인지 보려고 파싱해 보며 **`[Error]` 로그**를 남긴다(`JsonSerializer.cpp` 53 — 로그 없는 시도 파싱으로), ActionMap 의
+  `static_cast<uint8>( getAttributeInt )`(pad "256" → 0 · "-1" → 255), `XmlNode::getAttributeBool` 의 조용한 폴백, 대화 조건이 `>=` 를 모르고 통째로 키로 읽는다,
+  `FileUtil::removeFile` · `copyFile` 같은 "remove · copy · create" 동사는 아직 게이트 밖이다(늘리려면 동사 표에 더하고 빌드가 짚는 자리를 정리).
 - **R3** — 에디터의 컴포넌트 값 쓰기(붙여넣기 · 새로 붙여넣기 · 프리셋 · 오버라이드 하나 되돌리기 · 기본값)가 `finishLoad` 를 우회해 트랜스폼이 더티가
   되지 않고 렌더 에셋을 다시 풀지 않는다(`EditorTransformCommands.cpp` 91-196 · `EditorToolAssetCommands.cpp` 469-516 · `InspectorPanel.cpp` 528).
   메시 id 를 바꿔도 다시 풀지 않는다(`MeshComponent.cpp` 79-124). 바이너리 읽기만 엄격(모르는 필드 하나에 오브젝트 통째 실패) · enum 을 값으로 저장.
@@ -2112,6 +2105,43 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-02 (구조 ⑥ 실패는 버릴 수 없다 — `[[nodiscard]]` + 빌드 오류 + 게이트, 실패를 삼키던 여덟 결함 — 1-0j 의 R2)
+
+실패할 수 있는 동사(load · save · read · write · parse · deserialize · serialize · apply · restore · import · export · cook · compile · bake · revert ·
+convert · try · open · attach · spawn · instantiate · reload)의 bool 함수 362 개 가운데 `[[nodiscard]]` 가 0 이었고, 결과를 버리는 호출이 182 곳이었다.
+그 가운데 실제 결함이 여덟이었다:
+- **"Prefab › Apply Overrides" 가 마지막에 클릭한 에셋을 덮었다** — 포커스된 에셋 경로(씬 · 머티리얼)를 먼저 써서 그 파일을 프리팹으로 덮었고, 술어가 없어
+  늘 켜져 있었다. 이제 선택한 인스턴스의 프리팹에만 쓰고 그때만 켜진다.
+- **Apply to Prefab 이 `.prefab.json` 에 XML 을 썼다**(그 프리팹은 다시 읽히지 않았다). `saveToXmlFile` 은 변환에 실패해도 빈 `<Prefab>` 을 쓰고 성공이라 했다.
+  쓰는 길은 `PrefabAsset::saveToFile` 하나 — 확장자로 형식을 고르고 프리팹 경로가 아니면 쓰지 않는다. 적용 뒤 캐시를 비운다.
+- **셰이더 컴파일 실패를 최신 굽기로 도장 찍었다** — 옛 바이너리 위에 지금 소스의 해시가 찍혀 다음 베이크도 건너뛰었고 `--bake-shaders` 는 종료 코드 0.
+  `bakeAllShaders` 가 `ShaderBakeSummary`(구운 수 · 실패 수 · 계약 위반 수)를 돌려주고, 실패한 소스는 도장에서 빠지며, 실패 · 위반이 있으면 종료 코드가 실패다.
+- **깨진 언어 파일 하나가 저장 때 그 언어를 통째로 지웠다**(읽기는 조용히 건너뛰어 칸이 비었고, 저장이 빈 칸으로 다시 썼다 — 로그는 "모두 저장"). 이제
+  읽지 못한 언어 파일은 덮지 않고, 저장은 실패로 끝나며 고친 표시가 남는다(`saveLocalizationTo` — 폴더를 받아 시험할 수 있다).
+- **문서 패널 둘(TileMap · SpriteClip)이 읽기 결과를 버리고 "읽었다" 로 표시했다**(깨진 파일을 앞 문서로 덮는 길). 구조로 막았다: 다섯 툴 에셋 로더가 같은 세
+  갈래 결과(`ToolAssetLoadResult` — 타입 자체가 `[[nodiscard]]`)를 돌려주고, 문서 패널은 `loadDocument()` 로 내용만 채우며 **표시는 기반이 결과로 한다**
+  (`reloadDocument` · `ensureDocumentLoaded`, 표시 함수는 private). 시퀀서는 읽기 실패 때 표시 없이 돌아가 프레임마다 다시 읽고 있었다.
+- 게임 데이터 표 패널이 읽기 실패 때 앞 파일의 글을 "깨끗함" 으로 들고 있어 저장하면 앞 파일 내용을 이 파일에 썼다 → 고르지 않는다.
+- 에셋 삭제가 실패해도 `.meta` 를 지웠다(남은 에셋이 새 GUID 를 받고 참조가 끊겼다) → `AssetDatabase::deleteAssetFile`(`.meta` 를 만드는 쪽과 같은 자리).
+- 모르는 컴포넌트 타입을 세 형식 모두 경고 없이 버렸다 → 어느 오브젝트의 어느 타입인지 경고한다(보존은 R4 에서).
+
+구조로 막은 것:
+- **선언** — 362 개에 `[[nodiscard]]`(스크립트로 붙임 · `friend` 와 C-ABI `RuntimeAPI` 는 제외). 게이트 `CheckFallibleNodiscard.py` 가 새 선언을 본다(자기 시험 둘).
+- **빌드** — `-Werror=unused-result`(Clang.cmake · GCC.cmake). 결과를 버리면 빌드가 선다 — 경고로 두면 로그에 한 번 보이고 사라진다(컴파일러 경고는 한 번만 보인다).
+- **자리 182 곳**을 하나씩: 실패를 전파 · 알리거나, 의도된 버림은 `(void)` + 이유. `Archive` 의 읽기 연산자는 끈적한 오류 상태(`isError`)라 버림이 맞다.
+- **제자리 로드의 원자성** — 읽기 전 상태를 찍어 두고 실패하면 되돌린다(`ObjectLoadContext::_bRestorePreviousOnFailure`). 예전에는 컴포넌트를 먼저 비워
+  실패하면 빈 오브젝트가 남았고, 되돌리기 · 복제 · 프리팹 되돌리기가 결과를 버려 그대로 저장되었다.
+- **"없음" 과 "못 읽음" 을 섞던 반환을 가름** — `applyPropertyDefault` 는 void 로(선언된 기본값을 못 읽으면 경고), `XmlNode::getAttributeInt/Float` ·
+  `getChildInt/Float` · `KeyValueFile::getInt/Float` 는 글이 있는데 숫자가 아니면 경고. 머티리얼 파싱(⑪ · 61 의 형제) · 대화 조건 · 세이브 플래그도 알린다.
+- 같이 드러난 것: `TestComponentTick` 의 "부모-자식 계층" 시험 둘은 씬 컴포넌트가 없어 **붙이기가 처음부터 늘 실패**하고 있었다(결과를 버려 몰랐다) —
+  계층을 실제로 만든다. 핫 리로드 스냅샷은 오브젝트 하나를 못 써도 개수를 이미 적은 채 성공이라 했다 → 실패로. 프리팹 격리 편집은 저장에 실패해도 격리를
+  끝냈다 → 남는다. 인스펙터 · 입력 맵 · 전역 변수 프리셋이 실패해도 dirty 를 지우거나 "적용했다" 를 찍었다 → 고침.
+
+**검증.** 새 시험 7(모두 이전 코드에서 진다): `PrefabTest.SaveToFileWritesThePathsFormatAndRefusesOtherPaths`, `ObjectStateRoundTripTest.FailedInPlaceLoadLeavesTheObjectAsItWas`,
+`ResourceTest.DeletingAnAssetKeepsItsMetaUntilTheAssetIsGone`(Windows 는 열어 둔 파일, POSIX 는 쓰기 권한 없는 폴더), `ShaderBakerTest.FailedSourcesAreLeftOutOfTheBakeStamp`,
+`EditorToolAssetCommandsTest.EveryToolAssetLoadTellsMissingFromMalformed` · `ApplyToPrefabWritesThePrefabsFormatAndNothingElse`,
+`EditorDataTableCommandsTest.SaveDoesNotOverwriteALanguageFileItCouldNotRead`(새 파일 — EditorTest 가 `EditorDataTableCommands.cpp` 를 링크한다).
 
 ### 2026-10-02 (구조 ⑤ 오브젝트 상태는 묶음으로 복원하고, 부모는 id 로 가리킨다 — 1-0j 의 R1)
 

@@ -35,20 +35,13 @@ namespace sw::editor
     void SpriteClipPanel::drawContent()
     {
         updateFocusedDocument();
-        if ( isDocumentLoaded() == false )
-        {
-            if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, getLoadedAssetPath().c_str() ) )
-                _atlasPath = getLoadedAssetPath().c_str();
-            else
-                loadJson();
-            markDocumentLoaded();
-        }
+        ensureDocumentLoaded();
 
         ImGui::InputText( "Atlas", _atlasPath.data(), _atlasPath.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sprite Clip", "sprite-clip" );
         if ( ImGui::Button( "Load" ) )
-            loadJson();
+            reloadDocument();
         ImGui::SameLine();
         if ( ImGui::Button( "Save" ) )
         {
@@ -157,11 +150,18 @@ namespace sw::editor
         EditorWidgets::drawPanelStatus( _status.c_str() );
     }
 
-    void SpriteClipPanel::loadJson()
+    ToolAssetLoadResult SpriteClipPanel::loadDocument()
     {
-        EditorSpriteClipData data;
-        if ( EditorToolAssetCommands::loadSpriteClip( data, _status, getLoadedAssetPath() ) == false )
-            return;
+        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, getLoadedAssetPath().c_str() ) )
+        {
+            _atlasPath = getLoadedAssetPath().c_str();
+            return ToolAssetLoadResult::Loaded;
+        }
+
+        EditorSpriteClipData      data;
+        const ToolAssetLoadResult result = EditorToolAssetCommands::loadSpriteClip( data, _status, getLoadedAssetPath() );
+        if ( result != ToolAssetLoadResult::Loaded )
+            return result;
 
         if ( data._atlasPath.empty() == false )
             _atlasPath = data._atlasPath.c_str();
@@ -169,7 +169,7 @@ namespace sw::editor
         _listKey       = std::move( data._listKey );
         _selectedFrame = _listFrame.empty() ? -1 : 0;
         _selectedKey   = _listKey.empty() ? -1 : 0;
-        syncDocumentUndoBaseline();
+        return ToolAssetLoadResult::Loaded;
     }
 
     void SpriteClipPanel::saveJson()
@@ -213,8 +213,8 @@ namespace sw::editor
     void SpriteClipPanel::applyDocumentText( string_view text )
     {
         EditorSpriteClipData restored;
-        if ( text.empty() == false )
-            EditorToolAssetCommands::parseSpriteClip( text, restored );
+        if ( text.empty() == false && EditorToolAssetCommands::parseSpriteClip( text, restored ) == false )
+            SW_LOG_WARNING( "Sprite clip undo snapshot could not be read - showing an empty clip" );
         if ( restored._atlasPath.empty() == false )
             _atlasPath = restored._atlasPath.c_str();
         _listFrame     = std::move( restored._listFrame );

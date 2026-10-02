@@ -222,7 +222,7 @@ namespace sw
                 case WM_CLOSE:
                 {
                     if ( pThis->_bRecreating == SW_FALSE )
-                        pThis->tryBeginClose();
+                        (void)pThis->tryBeginClose(); // 거절되면(저장 확인) 창이 그대로다
                     return 0;
                 }
 

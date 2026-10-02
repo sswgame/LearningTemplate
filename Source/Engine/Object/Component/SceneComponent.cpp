@@ -366,8 +366,9 @@ namespace sw
             {
                 SceneComponent* pSelf           = static_cast<SceneComponent*>( pManager->resolveComponent( selfHandle ) );
                 SceneComponent* pResolvedParent = parentHandle.isValid() ? static_cast<SceneComponent*>( pManager->resolveComponent( parentHandle ) ) : nullptr;
+                // 미루기 전에 붙일 수 있는지 봤다(`canAttachTo`). 그사이 부모가 죽어 가면 붙지 않는다.
                 if ( pSelf != nullptr )
-                    pSelf->attachToComponent( pResolvedParent );
+                    (void)pSelf->attachToComponent( pResolvedParent );
             } );
             return true;
         }

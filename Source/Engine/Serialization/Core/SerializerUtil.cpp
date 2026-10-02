@@ -597,13 +597,15 @@ namespace sw
         return false;
     }
 
-    bool SerializerUtil::applyPropertyDefault( void* pPropPtr, const PropertyInfo& prop, const SerializeContext& ctx )
+    void SerializerUtil::applyPropertyDefault( void* pPropPtr, const PropertyInfo& prop, const SerializeContext& ctx )
     {
         if ( pPropPtr == nullptr || prop._bIsContainer != SW_FALSE )
-            return false;
+            return;
         if ( prop._metadata._defaultValue.empty() )
-            return false;
-        return SerializerUtil::parseTextValue( pPropPtr, prop._typeName, prop._metadata._defaultValue, ctx );
+            return;
+        if ( SerializerUtil::parseTextValue( pPropPtr, prop._typeName, prop._metadata._defaultValue, ctx ) == false )
+            SW_LOG_WARNING( "Default '%#' of property '%#' (%#) cannot be read - the field keeps its current value", prop._metadata._defaultValue,
+                            prop._name.c_str(), prop._typeName.c_str() );
     }
 
     bool SerializerUtil::keysEqual( string_view left, string_view right, bool bIgnoreCase )

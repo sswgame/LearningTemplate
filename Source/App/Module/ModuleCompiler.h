@@ -42,13 +42,13 @@ namespace sw
          * @param targetName 빌드할 CMake 타깃 이름
          * @return 이미 컴파일 중이면 false, 작업을 시작했으면 true
          */
-        virtual bool compileModule( string_view targetName ) override;
+        [[nodiscard]] virtual bool compileModule( string_view targetName ) override;
 
         /**
          * @brief 모든 모듈을 비동기로 컴파일합니다.
          * @return 이미 컴파일 중이면 false, 작업을 시작했으면 true
          */
-        virtual bool compileAll() override;
+        [[nodiscard]] virtual bool compileAll() override;
 
         /** @brief 진행 중인 빌드 프로세스를 취소합니다. */
         virtual void cancel() override;

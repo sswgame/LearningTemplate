@@ -318,7 +318,7 @@ namespace sw::editor
 
         ImGui::SameLine();
         if ( ImGui::Button( "Save XML" ) )
-            saveToFile();
+            (void)saveToFile(); // 실패는 saveToFile 이 알리고 dirty 가 남는다
 
         ImGui::SameLine();
         if ( ImGui::Button( "Revert All to Default" ) )
@@ -919,11 +919,17 @@ namespace sw::editor
 
         ImGui::SameLine();
         if ( ImGui::Button( "Save Replay" ) )
-            _replay.saveToFile( _replayFilePath.c_str() );
+        {
+            if ( _replay.saveToFile( _replayFilePath.c_str() ) == false )
+                SW_LOG_ERROR( "Could not save input replay '%#'", _replayFilePath.c_str() );
+        }
 
         ImGui::SameLine();
         if ( ImGui::Button( "Load Replay" ) )
-            _replay.loadFromFile( _replayFilePath.c_str() );
+        {
+            if ( _replay.loadFromFile( _replayFilePath.c_str() ) == false )
+                SW_LOG_ERROR( "Could not load input replay '%#'", _replayFilePath.c_str() );
+        }
 
         ImGui::Separator();
 
@@ -1119,7 +1125,12 @@ namespace sw::editor
 
     void InputMapEditorPanel::reloadFromFile()
     {
-        _actionMap.loadFromResource( _inputMapPath.c_str() );
+        // 못 읽으면 편집 중인 바인딩과 dirty 를 그대로 둔다(예전에는 실패해도 dirty 를 지우고 "다시 읽었다" 고 했다).
+        if ( _actionMap.loadFromResource( _inputMapPath.c_str() ) == false )
+        {
+            SW_LOG_ERROR( "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
+            return;
+        }
         clearDocumentDirty();
         SW_LOG_INFO( "Reloaded InputMap from %#", _inputMapPath.c_str() );
     }

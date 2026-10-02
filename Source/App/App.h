@@ -63,7 +63,7 @@ namespace sw
         /** @brief gv_rhiBackend 변경 이벤트 훅입니다. */
         void onBackendVariableChanged( const GlobalVariableInfo* pInfo );
         /** @brief 모듈을 내리고 디바이스를 다시 만든 뒤 모듈을 세웁니다. 실패하면 false. */
-        bool applyPendingChange();
+        [[nodiscard]] bool applyPendingChange();
 
     private:
         EngineLoop* _pEngineLoop; // 소유하지 않는다

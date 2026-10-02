@@ -143,28 +143,32 @@ namespace sw
         SW_API static void serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
                                                  vector<uint8>& listBuffer, const SerializeContext& ctx );
         /** @brief 바이너리에서 값을 역직렬화합니다. */
-        SW_API static bool deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
-                                                   const uint8* pData, size_t dataSize, size_t& offset,
-                                                   const SerializeContext& ctx );
+        [[nodiscard]] SW_API static bool deserializeValueBinary( void* pValuePtr, const hashed_string& typeName,
+                                                                 const uint8* pData, size_t dataSize, size_t& offset,
+                                                                 const SerializeContext& ctx );
 
         /** @brief 중첩 컨테이너를 바이너리로 직렬화합니다. */
         SW_API static void serializeNestedContainerBinary( const void* pContainerPtr, const NestedContainerInfo& nested,
                                                            vector<uint8>& listBuffer, const SerializeContext& ctx );
         /** @brief 바이너리에서 중첩 컨테이너를 역직렬화합니다. */
-        SW_API static bool deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
-                                                             const uint8* pData, size_t dataSize, size_t& offset,
-                                                             const SerializeContext& ctx );
+        [[nodiscard]] SW_API static bool deserializeNestedContainerBinary( void* pContainerPtr, const NestedContainerInfo& nested,
+                                                                           const uint8* pData, size_t dataSize, size_t& offset,
+                                                                           const SerializeContext& ctx );
 
         /** @brief 값을 텍스트로 씁니다(중첩 타입은 중첩 문자열). 바깥 따옴표는 붙이지 않습니다. XML · JSON · SchemaMigrate 가 함께 쓰는 기본 조각입니다. */
         static void valueToText( StringBuilder<constant::kMaxBuffer8192>& ss, const void* pValPtr, const hashed_string& typeName,
                                  const SerializeContext& ctx );
 
         /** @brief 텍스트 토큰을 값으로 파싱합니다. */
-        static bool parseTextValue( void* pValPtr, const hashed_string& typeName, string_view valStr,
-                                    const SerializeContext& ctx );
+        [[nodiscard]] static bool parseTextValue( void* pValPtr, const hashed_string& typeName, string_view valStr,
+                                                  const SerializeContext& ctx );
 
-        /** @brief 프로퍼티 기본값을 적용합니다. */
-        static bool applyPropertyDefault( void* pPropPtr, const PropertyInfo& prop, const SerializeContext& ctx );
+        /**
+         * @brief 프로퍼티에 선언된 기본값(PROPERTY `Default=`)이 있으면 적용합니다. 없으면 아무것도 하지 않습니다.
+         * @details 예전에는 "기본값 없음"(정상)과 "선언된 기본값을 읽지 못함"(코드 결함)을 같은 false 로 돌려줬고, 다섯 호출자가 모두 버렸습니다.
+         *          뒤의 것은 이제 경고합니다 — 그 필드는 지금 값을 지킵니다.
+         */
+        static void applyPropertyDefault( void* pPropPtr, const PropertyInfo& prop, const SerializeContext& ctx );
 
         /** @brief 컨테이너 TypeInfo 이름을 태그로 바꿉니다(`vector`, `map`). */
         static const utf8* containerTypeTagName( hashed_string typeName );

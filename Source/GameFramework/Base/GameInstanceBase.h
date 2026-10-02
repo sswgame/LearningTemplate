@@ -38,22 +38,22 @@ namespace sw
         // 런타임 상태 직렬화 / 스냅샷 (Dev LiveReload & Shipping 체크포인트/세이브)
         // --------------------------------------------------------------------------
         /** @brief C-ABI: 활성 씬과 파생 클래스의 커스텀 리플렉션 상태를 통합 바이너리로 직렬화합니다. */
-        bool serializeState( void* pOutBuffer, uint32* pInOutSize ) override;
+        [[nodiscard]] bool serializeState( void* pOutBuffer, uint32* pInOutSize ) override;
 
         /** @brief C-ABI: 바이너리 버퍼에서 씬과 커스텀 리플렉션 상태를 복원합니다. */
-        bool deserializeState( const void* pInBuffer, uint32 size ) override;
+        [[nodiscard]] bool deserializeState( const void* pInBuffer, uint32 size ) override;
 
         /** @brief Shipping/Gameplay: 현재 씬과 게임 상태를 인메모리 스냅샷 버퍼에 캡처합니다 (체크포인트/타임리와인드용). */
         bool captureSnapshot( vector<uint8>& outBytes );
 
         /** @brief Shipping/Gameplay: 인메모리 스냅샷 버퍼로부터 씬과 게임 상태를 즉시 복원합니다. */
-        bool restoreSnapshot( const vector<uint8>& inBytes );
+        [[nodiscard]] bool restoreSnapshot( const vector<uint8>& inBytes );
 
         /** @brief Shipping/Gameplay: 씬과 게임 상태 전체를 바이너리 파일로 저장합니다. */
-        bool saveStateToFile( string_view filePath );
+        [[nodiscard]] bool saveStateToFile( string_view filePath );
 
         /** @brief Shipping/Gameplay: 바이너리 파일로부터 씬과 게임 상태 전체를 복원합니다. */
-        bool loadStateFromFile( string_view filePath );
+        [[nodiscard]] bool loadStateFromFile( string_view filePath );
 
     protected:
         /** @brief 파생 클래스가 팩 루트 · 부트스트랩을 설정합니다. */
@@ -93,9 +93,9 @@ namespace sw
          * @details 오브젝트마다 상태 앞에 런타임 id(`ObjectIdentity`)를 싣습니다. 같은 프로세스에서 되살리면(핫 리로드)
          *          `GameObjectHandle` · `ComponentHandle` 이 그 너머로도 이어집니다.
          */
-        bool serializeSceneObjects( vector<uint8>& outBytes );
+        [[nodiscard]] bool serializeSceneObjects( vector<uint8>& outBytes );
         /** @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 되살릴지를 알려 줍니다. */
-        bool deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format );
+        [[nodiscard]] bool deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format );
 
         BootstrapConfig _bootstrap{};           ///< 팩 루트와 gamedata
         IWindow*        _pWindow{ nullptr };    ///< 호스트 윈도우 (App 이 소유)

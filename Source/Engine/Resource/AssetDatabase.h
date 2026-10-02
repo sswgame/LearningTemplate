@@ -35,6 +35,13 @@ namespace sw
         /** @brief 리소스 상대 에셋의 사이드카 경로입니다(`foo.png` → `foo.png.meta`). */
         static string metaPathFor( string_view relativePath );
 
+        /**
+         * @brief 에셋 파일과 그 사이드카(`.meta`)를 지웁니다. `.meta` 는 **에셋이 실제로 지워진 뒤에만** 지웁니다 — 실패하면 둘 다 그대로이고 false 입니다.
+         * @details 예전 에디터 삭제는 에셋 삭제가 실패해도(잠긴 파일) `.meta` 를 지워, 남은 에셋이 다음에 새 GUID 를 받고 그 GUID 로 가리키던 참조
+         *          (씬의 프리팹 · 머티리얼)가 끊겼다. `.meta` 를 만드는 쪽(`ensureMeta`)과 지우는 쪽이 한 자리에 있다.
+         */
+        [[nodiscard]] static bool deleteAssetFile( string_view absolutePath );
+
         // ------------------------------------------------------------------------------
         // 3) 등록 · 조회
         // ------------------------------------------------------------------------------
@@ -60,10 +67,10 @@ namespace sw
          *          호출부 다섯 곳은 모두 받자마자 값을 복사하고 있었으므로, 빌려 주는 쪽을
          *          없앴습니다.
          */
-        bool tryGetGuid( string_view relativePath, Uuid& outGuid ) const;
+        [[nodiscard]] bool tryGetGuid( string_view relativePath, Uuid& outGuid ) const;
 
         /** @brief GUID 의 상대 경로를 찾아 복사합니다(스레드 안전). */
-        bool tryGetPath( const Uuid& guid, string& outPath ) const;
+        [[nodiscard]] bool tryGetPath( const Uuid& guid, string& outPath ) const;
 
         /** @brief 등록된 에셋 총 개수를 반환합니다. */
         size_t getAssetCount() const;
@@ -98,10 +105,10 @@ namespace sw
         // 4) .meta I/O
         // ------------------------------------------------------------------------------
         /** @brief .meta 파일을 씁니다. */
-        bool writeMetaFile( string_view relativePath, const Uuid& guid, bool bImported ) const;
+        [[nodiscard]] bool writeMetaFile( string_view relativePath, const Uuid& guid, bool bImported ) const;
 
         /** @brief .meta 파일을 로드합니다. */
-        bool loadMetaFile( string_view relativePath, Uuid& outGuid, bool* pOutImported = nullptr ) const;
+        [[nodiscard]] bool loadMetaFile( string_view relativePath, Uuid& outGuid, bool* pOutImported = nullptr ) const;
 
     private:
         mutable std::shared_mutex      _mutex;

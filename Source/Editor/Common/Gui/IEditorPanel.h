@@ -67,7 +67,7 @@ namespace sw::editor
          *          하면 됩니다.
          * @return 저장에 성공했으면 true. false 면 dirty 는 그대로 남습니다.
          */
-        bool saveDocumentAndClearDirty()
+        [[nodiscard]] bool saveDocumentAndClearDirty()
         {
             if ( canSaveDocument() == false )
                 return false;
@@ -77,7 +77,7 @@ namespace sw::editor
             return true;
         }
         /** @brief dirty면 저장합니다. 깨끗하거나 저장에 실패하면 false입니다. */
-        bool trySaveDirtyDocument()
+        [[nodiscard]] bool trySaveDirtyDocument()
         {
             if ( _bDocumentDirty == false )
                 return false;
@@ -130,7 +130,7 @@ namespace sw::editor
         /** @brief 저장·되돌리기 직후 dirty를 지웁니다. */
         void clearDocumentDirty() { _bDocumentDirty = false; }
         /** @brief 문서를 디스크에 씁니다. 성공하면 true입니다. 문서가 없는 패널은 구현하지 않습니다. */
-        virtual bool saveDocument() { return false; }
+        [[nodiscard]] virtual bool saveDocument() { return false; }
         /**
          * @brief 지금 저장해도 되는가 — 아니면 `saveDocumentAndClearDirty` 가 `saveDocument` 를 부르지 않고 false 입니다.
          * @details 문서를 읽지 못한 패널(깨졌거나 새 형식)은 앞 문서의 데이터를 들고 있다 — 그대로 쓰면 읽지 못한 파일을 앞 문서로

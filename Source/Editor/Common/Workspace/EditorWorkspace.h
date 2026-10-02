@@ -160,13 +160,13 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 9) 컴포넌트 복사/붙여넣기 & 프리셋 (에디터 클립보드)
         // ------------------------------------------------------------------------------
-        void          copyComponent( const Component* pComp );
-        bool          hasCopiedComponent() const;
-        const string& getCopiedComponentTypeName() const { return _copiedComponentTypeName; }
-        bool          pasteComponentValues( Component* pTargetComp );
-        Component*    pasteComponentAsNew( GameObject* pTargetObj );
-        bool          saveComponentPreset( const Component* pComp, string_view presetName );
-        bool          loadComponentPreset( Component* pComp, string_view presetFilePath );
+        void               copyComponent( const Component* pComp );
+        bool               hasCopiedComponent() const;
+        const string&      getCopiedComponentTypeName() const { return _copiedComponentTypeName; }
+        bool               pasteComponentValues( Component* pTargetComp );
+        Component*         pasteComponentAsNew( GameObject* pTargetObj );
+        [[nodiscard]] bool saveComponentPreset( const Component* pComp, string_view presetName );
+        [[nodiscard]] bool loadComponentPreset( Component* pComp, string_view presetFilePath );
 
         // 정렬 · 분배 · 바닥 스냅은 여기 전달자를 두지 않는다. 뷰포트 툴바가 유일한 호출자였고
         // 지금은 커맨드 레지스트리(transform.*)를 거친다. 로직은 EditorTransformCommands 에 있다.

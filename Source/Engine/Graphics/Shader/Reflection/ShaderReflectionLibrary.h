@@ -39,14 +39,14 @@ namespace sw
          * @brief 매니페스트를 파일로 굽습니다(베이커 전용).
          * @param absDirectory 매니페스트를 놓을 절대 디렉터리(`.../shaders/bin/<rhi>`)
          */
-        static bool save( const EntryMap& mapEntry, string_view absDirectory );
+        [[nodiscard]] static bool save( const EntryMap& mapEntry, string_view absDirectory );
 
         /**
          * @brief 셰이더 하나의 리플렉션을 조회합니다.
          * @details 매니페스트는 경로별로 한 번만 읽어 캐시합니다. 팩 · 낱개 파일을 가리지 않고 읽습니다.
          * @return 매니페스트에 없거나 (개발 빌드에서) 지금 소스와 맞지 않으면 false 입니다. 부르는 쪽이 폴백(개발 빌드 한정)을 정합니다.
          */
-        static bool tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection );
+        [[nodiscard]] static bool tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection );
 
         /**
          * @brief 리플렉션을 구합니다. 구운 매니페스트가 기준이고, 개발 빌드는 런타임 리플렉션으로 폴백합니다.

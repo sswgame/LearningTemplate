@@ -55,9 +55,9 @@ namespace sw
         void forgetRhi( IRHIDevice* pDevice ) override;
 
         /** @brief 오버라이드만 있는 MaterialInstanceDesc XML 을 로드합니다. 부모는 따로 설정합니다. */
-        bool loadFromFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromFile( string_view assetRelativePath );
         /** @brief 인스턴스 XML 을 저장합니다. */
-        bool saveToFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToFile( string_view assetRelativePath ) const;
         /**
          * @brief CPU 버퍼(부모 기본값 + 오버라이드)를 만들고 인스턴스 CB 를 만들거나 갱신합니다.
          * @return 인스턴스 CB 와 bindless 인덱스가 준비됐으면 true 입니다. 부모가 없거나 부모 버퍼가 비었거나 버퍼를 만들지 못하면 false 입니다.
@@ -161,7 +161,7 @@ namespace sw
          */
         uint32 findTextureSlot( hashed_string name ) const;
         /** @brief XML 텍스트에서 인스턴스를 로드합니다. */
-        bool loadFromXml( string_view xmlText );
+        [[nodiscard]] bool loadFromXml( string_view xmlText );
 
         Material*            _pParentMaterial;
         MaterialInstanceDesc _desc;

@@ -443,10 +443,10 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
     const utf8* xmlJa  = R"(<?xml version="1.0" encoding="UTF-8"?><StringTable><String key="UI_PLAY" value="プレイ"/><String key="UI_QUIT" value="終了"/><String key="UI_SAVE" value="セーブ"/></StringTable>)";
     const utf8* kvZh   = "UI_PLAY = 开始游戏\nUI_QUIT = 退出\nUI_SAVE = 保存\n";
 
-    sw::FileUtil::writeTextFile( pathKo, jsonKo );
-    sw::FileUtil::writeTextFile( pathEn, jsonEn );
-    sw::FileUtil::writeTextFile( pathJa, xmlJa );
-    sw::FileUtil::writeTextFile( pathZh, kvZh );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathKo, jsonKo ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathEn, jsonEn ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathJa, xmlJa ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathZh, kvZh ) );
 
     // initialize 실행 (기본: ko_KR, 폴백: en_US)
     const bool bSetup = sw::GameStrings::initialize( packDir, "ko_KR", "en_US" );

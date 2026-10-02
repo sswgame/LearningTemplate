@@ -151,7 +151,7 @@ namespace sw::editor
 
         if ( item._category == "Scene" )
         {
-            EditorAssetCommands::tryOpenScene( item._path );
+            (void)EditorAssetCommands::tryOpenScene( item._path ); // 실패는 tryOpenScene 이 알린다
             return;
         }
 

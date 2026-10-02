@@ -101,13 +101,13 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     const sw::string shaderAbs  = sw::FileUtil::joinPath( engineFolder, "shaders/livereloadprobe.hlsl" );
 
     sw::FileUtil::createParentDirectory( shaderAbs );
-    sw::FileUtil::writeTextFile( includeAbs, "#define SW_PROBE_SCALE 1.0\n" );
-    sw::FileUtil::writeTextFile( shaderAbs,
-                                 "#include \"livereloadprobe.hlsli\"\n"
-                                 "float4 VSMain( float3 pos : POSITION ) : SV_POSITION\n"
-                                 "{\n"
-                                 "    return float4( pos * SW_PROBE_SCALE, 1.0 );\n"
-                                 "}\n" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( includeAbs, "#define SW_PROBE_SCALE 1.0\n" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( shaderAbs,
+                                                 "#include \"livereloadprobe.hlsli\"\n"
+                                                 "float4 VSMain( float3 pos : POSITION ) : SV_POSITION\n"
+                                                 "{\n"
+                                                 "    return float4( pos * SW_PROBE_SCALE, 1.0 );\n"
+                                                 "}\n" ) );
 
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [includeAbs, shaderAbs]()
     {
@@ -145,7 +145,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     SW_ASSERT_FALSE( first._bytecode.empty() );
 
     // `.hlsli` 만 고친다 — `.hlsl` 의 mtime 은 그대로다.
-    sw::FileUtil::writeTextFile( includeAbs, "#define SW_PROBE_SCALE 7.0\n" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( includeAbs, "#define SW_PROBE_SCALE 7.0\n" ) );
 
     // `FileUtil::getFileTimestamp` 는 **초 단위**라, 같은 초에 두 번 쓰면 값이 같다. 테스트가
     // 실행 속도에 따라 흔들리지 않도록 수정 시각을 명시적으로 밀어 둔다.
@@ -182,7 +182,7 @@ SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
     const sw::string engineFolder = sw::ResourceUtil::getDomainFolderPath( "engine" );
     SW_ASSERT_FALSE( engineFolder.empty() );
     const sw::string shaderAbs = sw::FileUtil::joinPath( engineFolder, "shaders/livecodegenprobe.hlsl" );
-    sw::FileUtil::writeTextFile( shaderAbs, "float4 VSMain( float3 pos : POSITION ) : SV_POSITION { return float4( pos * 3.0, 1.0 ); }\n" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( shaderAbs, "float4 VSMain( float3 pos : POSITION ) : SV_POSITION { return float4( pos * 3.0, 1.0 ); }\n" ) );
 
     sw::ShaderCompileDesc desc{};
     desc._filePath   = "engine/shaders/livecodegenprobe.hlsl";

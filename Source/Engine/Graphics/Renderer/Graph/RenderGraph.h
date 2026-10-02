@@ -204,7 +204,7 @@ namespace sw
          * @brief 렌더 패스 사이의 의존성을 검사하고 위상 정렬합니다.
          * @return 성공하면 true 입니다.
          */
-        bool compile();
+        [[nodiscard]] bool compile();
 
         /**
          * @brief 컴파일된 위상 순서로 패스 콜백을 실행합니다.

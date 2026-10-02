@@ -74,7 +74,7 @@ namespace sw
          * @param outBytes 읽은 데이터 버퍼
          * @return 파일을 읽고 무결성 검증에 성공하면 true 입니다.
          */
-        bool readFile( string_view relativePath, vector<uint8>& outBytes ) const;
+        [[nodiscard]] bool readFile( string_view relativePath, vector<uint8>& outBytes ) const;
 
         /**
          * @brief 마운트된 팩에서 텍스트(UTF-8) 파일을 로드합니다.
@@ -82,7 +82,7 @@ namespace sw
          * @param outText 읽은 본문
          * @param pOutMountedPackPath 실제로 그 파일을 읽은 .pack 파일 경로(nullptr 가능)
          */
-        bool readTextFile( string_view relativePath, string& outText, string* pOutMountedPackPath = nullptr ) const;
+        [[nodiscard]] bool readTextFile( string_view relativePath, string& outText, string* pOutMountedPackPath = nullptr ) const;
 
         /**
          * @brief DLC 소유권 검증 콜백을 등록합니다.

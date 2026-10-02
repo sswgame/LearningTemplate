@@ -84,10 +84,11 @@ namespace sw::editor
                 const EditorPendingSceneAction action = ws.getPendingSceneAction();
                 const string                   path   = ws.getPendingSceneActionPath();
                 ws.clearPendingSceneAction();
+                // 실패는 각 함수가 알린다(읽지 못한 씬 · 플레이 중).
                 if ( action == EditorPendingSceneAction::Load )
-                    EditorAssetCommands::loadScene( path );
+                    (void)EditorAssetCommands::loadScene( path );
                 else if ( action == EditorPendingSceneAction::New )
-                    EditorAssetCommands::tryCreateNewScene();
+                    (void)EditorAssetCommands::tryCreateNewScene();
                 else if ( action == EditorPendingSceneAction::Quit )
                 {
                     IWindow* pWindow = IWindow::getActiveWindow();
@@ -462,7 +463,7 @@ namespace sw::editor
     {
         IWindow* pWindow = IWindow::getActiveWindow();
         if ( pWindow != nullptr )
-            pWindow->tryBeginClose();
+            (void)pWindow->tryBeginClose(); // 닫기를 거절해도(저장 확인 중) 여기서 할 일이 없다
     }
 
     void EditorAssetCommands::focusPath( string_view relativePath )
@@ -541,7 +542,7 @@ namespace sw::editor
 
         if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pPath ) )
         {
-            tryOpenScene( pPath );
+            (void)tryOpenScene( pPath ); // 실패는 tryOpenScene 이 알린다
             return;
         }
 
@@ -551,7 +552,7 @@ namespace sw::editor
             return;
         }
 
-        openPath( pPath );
+        (void)openPath( pPath ); // 실패는 openPath 가 알린다
     }
 
     bool EditorAssetCommands::saveActiveScene( string_view path )
@@ -648,14 +649,7 @@ namespace sw::editor
 
     bool EditorAssetCommands::deleteAsset( string_view absolutePath )
     {
-        if ( absolutePath.empty() )
-            return false;
-        const string abs{ absolutePath };
-        const bool   bRemoved = FileUtil::removeFile( abs );
-        const string metaPath = abs + path::kMetaExtension;
-        if ( FileUtil::fileExists( metaPath ) )
-            FileUtil::removeFile( metaPath );
-        return bRemoved;
+        return AssetDatabase::deleteAssetFile( absolutePath );
     }
 
     bool EditorAssetCommands::showInFileExplorer( string_view absolutePath )
@@ -838,8 +832,12 @@ namespace sw::editor
         if ( pManager != nullptr )
             pRoot = pManager->findGameObjectById( frame._rootObjectId );
 
-        if ( bSaveToPrefab && pRoot != nullptr )
-            EditorInspectorCommands::applyToPrefab( pRoot, frame._prefabPath );
+        // 저장하지 못하면 격리를 끝내지 않는다 — 끝내면 편집한 프리팹 내용이 저장 없이 사라진다.
+        if ( bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( pRoot, frame._prefabPath ) == false )
+        {
+            SW_LOG_ERROR( "Prefab isolation could not save '%#' - still editing it", frame._prefabPath.c_str() );
+            return false;
+        }
 
         EditorAssetCommandsInternal::restoreIsolationHidden( pManager, frame._listHidden );
 

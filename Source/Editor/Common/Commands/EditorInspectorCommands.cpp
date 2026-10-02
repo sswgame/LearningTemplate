@@ -120,11 +120,16 @@ namespace sw::editor
         if ( pObj == nullptr || prefabPath.empty() )
             return false;
 
+        // 형식은 경로가 정한다(`.prefab.json` 에는 JSON) — 프리팹 경로가 아니면 쓰지 않는다.
         PrefabAsset asset;
         asset.setFromGameObject( pObj );
-        if ( asset.saveToXmlFile( prefabPath ) == false )
+        if ( asset.saveToFile( prefabPath ) == false )
             return false;
 
+        // 캐시된 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽도록 한다.
+        ResourceManager* pResources = editor::getService<ResourceManager>();
+        if ( pResources != nullptr )
+            pResources->getPrefabManager().reload( prefabPath, nullptr );
         SW_LOG_INFO( "Saved prefab changes to %#", string{ prefabPath }.c_str() );
         return true;
     }

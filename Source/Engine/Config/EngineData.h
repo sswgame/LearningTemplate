@@ -79,6 +79,6 @@ namespace sw
 
         /** @brief 리소스 경로(XML)에서 엔진 테이블을 로드합니다. 빈 경로면 path::kEngineData 를 씁니다. */
 
-        bool loadFromResource( string_view assetRelativePath = {} );
+        [[nodiscard]] bool loadFromResource( string_view assetRelativePath = {} );
     };
 } // namespace sw

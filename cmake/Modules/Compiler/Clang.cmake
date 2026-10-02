@@ -37,6 +37,9 @@ target_compile_options(sw_compiler_clang INTERFACE
 	# 경고 활성화
 	-Wall
 	-Wextra
+	# 실패를 알리는 결과([[nodiscard]])를 버리면 빌드가 선다. 실패할 수 있는 동사(load · save · parse · apply …)는 선언에 [[nodiscard]] 를
+	# 붙이고(`CheckFallibleNodiscard` 게이트), 일부러 버릴 때는 `(void)` 와 이유를 쓴다. 경고로 두면 빌드 로그에 한 번 보이고 사라진다.
+	-Werror=unused-result
 
 	# 경고 비활성화 (C++17+ 표준 및 엔진 아키텍처 지원, 알파벳 정렬)
 	-Wno-c++98-compat # C++17+ 타깃 프로젝트이므로 C++98 하위 호환성 경고 억제

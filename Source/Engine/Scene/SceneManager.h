@@ -55,7 +55,7 @@ namespace sw
          * @brief 활성 씬의 루트를 씬 XML 로 저장합니다.
          * @param path 리소스 상대 또는 절대 경로. 비어 있으면 씬 소스 경로를 씁니다.
          */
-        bool saveActiveScene( string_view path = {} );
+        [[nodiscard]] bool saveActiveScene( string_view path = {} );
         /**
          * @brief 씬 저장을 막거나(사유) 풉니다(빈 문자열).
          * @details 호스트가 모듈 컴포넌트를 씬에서 걷어 낸 채 아직 되돌리지 못한 동안 세웁니다(게임 모듈 리로드 · 그 실패). 그 사이에 저장하면

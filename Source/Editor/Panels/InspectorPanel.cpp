@@ -243,12 +243,12 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", prefabPath.c_str() );
 
         if ( ImGui::Button( "Apply to Prefab" ) )
-            EditorInspectorCommands::applyToPrefab( pObj, prefabPath );
+            (void)EditorInspectorCommands::applyToPrefab( pObj, prefabPath ); // 실패는 프리팹 저장이 알린다
         EditorWidgets::drawTooltip( "현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다" );
 
         ImGui::SameLine();
-        if ( ImGui::Button( "Revert to Prefab" ) )
-            EditorInspectorCommands::revertToPrefab( pObj, prefabPath );
+        if ( ImGui::Button( "Revert to Prefab" ) && EditorInspectorCommands::revertToPrefab( pObj, prefabPath ) == false )
+            SW_LOG_WARNING( "Revert to Prefab failed for '%#' (%#)", pObj->getName().c_str(), prefabPath.c_str() );
         EditorWidgets::drawTooltip( "프리팹 원본 파일의 내용으로 현재 오브젝트를 되돌립니다" );
 
         ImGui::SameLine();
@@ -354,9 +354,15 @@ namespace sw::editor
                     ImGui::SameLine();
                     if ( ImGui::Button( "Save" ) && s_presetNameBuf.empty() == false )
                     {
-                        workspace.saveComponentPreset( pComp, s_presetNameBuf.c_str() );
-                        s_presetNameBuf.clear();
-                        _bComponentPresetDirty = SW_TRUE;
+                        if ( workspace.saveComponentPreset( pComp, s_presetNameBuf.c_str() ) )
+                        {
+                            s_presetNameBuf.clear();
+                            _bComponentPresetDirty = SW_TRUE;
+                        }
+                        else
+                        {
+                            SW_LOG_ERROR( "Could not save component preset '%#'", s_presetNameBuf.c_str() );
+                        }
                     }
                     ImGui::Separator();
 
@@ -385,7 +391,8 @@ namespace sw::editor
                             if ( StringUtil::endsWith( displayPreset, ".preset.xml" ) )
                                 displayPreset = displayPreset.substr( 0, displayPreset.size() - 11 );
                             if ( ImGui::MenuItem( displayPreset.c_str() ) )
-                                workspace.loadComponentPreset( pComp, presetFile );
+                                if ( workspace.loadComponentPreset( pComp, presetFile ) == false )
+                                    SW_LOG_ERROR( "Could not apply component preset '%#'", presetFile.c_str() );
                         }
                     }
                     if ( bFoundPresets == false )
@@ -535,7 +542,8 @@ namespace sw::editor
                             {
                                 fixed_string<constant::kMaxBuffer256> jsonWrap;
                                 formatstring( jsonWrap.data(), jsonWrap.capacity(), "{\"%#\":%#}", prop->_name.c_str(), prop->_metadata._defaultValue.c_str() );
-                                JsonSerializer::deserialize( pInstance, *pTypeInfo, jsonWrap.c_str() );
+                                if ( JsonSerializer::deserialize( pInstance, *pTypeInfo, jsonWrap.c_str() ) == false )
+                                    SW_LOG_WARNING( "Reset to Default could not apply '%#' to %#", prop->_metadata._defaultValue.c_str(), prop->_name.c_str() );
                             }
                         }
                         if ( ImGui::MenuItem( "Copy Property Name" ) )

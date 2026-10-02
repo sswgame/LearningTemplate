@@ -343,9 +343,9 @@ namespace sw
         /** @brief Normal 큐에 넣습니다. 워커면 자기 데크(가득 차면 전역 큐), 아니면 전역 큐에 넣습니다. */
         void pushToNormalQueue( uintptr_t item );
         /** @brief 큐 순서(High → 내 데크 → Normal 전역 → 훔치기 → Low)대로 항목 하나를 가져옵니다. @p workerId 가 음수면 워커가 아닙니다. */
-        bool tryTakeItem( int32 workerId, uintptr_t& outItem );
+        [[nodiscard]] bool tryTakeItem( int32 workerId, uintptr_t& outItem );
         /** @brief 이 스레드가 가져올 수 있는 항목 하나를 가져와 실행합니다. 기다리는 동안 다른 일을 돕는 곳입니다. */
-        bool tryHelpAndExecute();
+        [[nodiscard]] bool tryHelpAndExecute();
 
     private:
         /**

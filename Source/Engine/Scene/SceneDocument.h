@@ -43,15 +43,15 @@ namespace sw
         bool               _bValid{ false };
 
         /** @brief 빌드(Shipping/Dev)와 파일 존재 여부에 따라 알맞은 포맷(바이너리 우선)으로 로드합니다. */
-        SW_API bool load( string_view path );
+        [[nodiscard]] SW_API bool load( string_view path );
         /** @brief 리소스 상대/절대 경로에서 XML 을 로드합니다. */
-        SW_API bool loadXml( string_view path );
+        [[nodiscard]] SW_API bool loadXml( string_view path );
         /** @brief XML 을 리소스 상대/절대 경로에 저장합니다. */
-        SW_API bool saveXml( string_view path ) const;
+        [[nodiscard]] SW_API bool saveXml( string_view path ) const;
         /** @brief 리소스 상대/절대 경로에서 바이너리(SCN1)를 로드합니다. */
-        SW_API bool loadBinary( string_view path );
+        [[nodiscard]] SW_API bool loadBinary( string_view path );
         /** @brief 바이너리(SCN1)를 리소스 상대/절대 경로에 저장합니다. */
-        SW_API bool saveBinary( string_view path ) const;
+        [[nodiscard]] SW_API bool saveBinary( string_view path ) const;
 
         /** @brief id 가 없는 엔티티(옛 문서)에 이 문서 안에서 겹치지 않는 id 를 줍니다. 쿠커가 굽기 전에 부릅니다. */
         SW_API void assignMissingFileIds();

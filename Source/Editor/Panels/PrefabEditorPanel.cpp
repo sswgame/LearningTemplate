@@ -112,17 +112,21 @@ namespace sw::editor
 
         if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f, 0.0f ) ) )
         {
-            EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
+            if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
+                SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
+            else
+                SW_LOG_ERROR( "Could not apply overrides to template %s", _selectedPrefabPath.c_str() );
             scanPrefabOverrides( _selectedPrefabPath.c_str() );
-            SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
         }
 
         ImGui::SameLine();
         if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f, 0.0f ) ) )
         {
-            EditorToolAssetCommands::revertAllPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath );
+            if ( EditorToolAssetCommands::revertAllPrefabOverrides( PrefabEditorPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
+                SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
+            else
+                SW_LOG_ERROR( "Could not revert overrides on %s", _selectedInstanceName.c_str() );
             scanPrefabOverrides( _selectedPrefabPath.c_str() );
-            SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
         }
 
         if ( bEditsAllowed == false )

@@ -108,7 +108,13 @@ namespace sw
         for ( GameObject* pObj : listValidObject )
         {
             ObjectStateSerializer::writeIdentity( ObjectStateSerializer::captureIdentity( pObj ), outBytes );
-            ObjectStateSerializer::saveToBinaryBuffer( pObj, outBytes );
+            // 개수를 이미 앞에 적었다 — 하나라도 못 쓰면 개수와 본문이 어긋나므로 통째로 실패한다(예전에는 버리고 성공이라 했다).
+            if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, outBytes ) == false )
+            {
+                SW_LOG_ERROR( "Scene object '%#' could not be serialized - the snapshot is not taken", pObj->getName().c_str() );
+                outBytes.clear();
+                return false;
+            }
         }
 
         return true;

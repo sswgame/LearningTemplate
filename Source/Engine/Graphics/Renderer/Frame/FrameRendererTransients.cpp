@@ -230,7 +230,7 @@ namespace sw
     float4 FrameRenderer::getAttachmentClearColorOrDefault( string_view attachmentName, const float4& fallback ) const
     {
         float4 clearColor = fallback;
-        tryGetAttachmentClearColor( attachmentName, clearColor );
+        (void)tryGetAttachmentClearColor( attachmentName, clearColor ); // 선언이 없으면 fallback
         return clearColor;
     }
 

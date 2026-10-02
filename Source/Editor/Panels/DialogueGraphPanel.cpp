@@ -88,8 +88,7 @@ namespace sw::editor
     void DialogueGraphPanel::drawContent()
     {
         updateFocusedDocument();
-        if ( isDocumentLoaded() == false )
-            loadGraphData();
+        ensureDocumentLoaded();
 
         tickPreview( ImGui::GetIO().DeltaTime );
 
@@ -143,10 +142,10 @@ namespace sw::editor
             ImGui::SameLine();
             EditorWidgets::drawToolbarSeparator();
             if ( ImGui::Button( "Save" ) )
-                saveGraphData();
+                (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
             ImGui::SameLine();
             if ( ImGui::Button( "Reload" ) )
-                loadGraphData();
+                reloadDocument();
             ImGui::SameLine();
             if ( ImGui::Button( "Reset Default" ) )
             {
@@ -496,7 +495,7 @@ namespace sw::editor
         _listLink.push_back( DialogueLink{ 5, DialogueGraphPanelInternal::pinOut( 4 ), DialogueGraphPanelInternal::pinIn( 5 ) } );
     }
 
-    void DialogueGraphPanel::loadGraphData()
+    ToolAssetLoadResult DialogueGraphPanel::loadDocument()
     {
         DialogueGraphAsset        data;
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadDialogueGraph( data, getLoadedAssetPath() );
@@ -514,11 +513,8 @@ namespace sw::editor
         _bGraphLayoutReady = SW_FALSE;
         _previewNodeId     = 0;
         _bPreviewPlaying   = SW_FALSE;
-        if ( result == ToolAssetLoadResult::Malformed )
-            markDocumentLoadFailed( "malformed or newer format" );
-        else
-            markDocumentLoaded();
         _nodeGraph.requestContentFit();
+        return result;
     }
 
     bool DialogueGraphPanel::saveGraphData()

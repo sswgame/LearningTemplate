@@ -39,7 +39,7 @@ namespace sw::editor
                 uint32          filled{ 0 };
                 for ( ; filled < count && filled < tokenCount; ++filled )
                 {
-                    StringUtil::parseFloat( splitter.getSplitList()[filled], pOut[filled] );
+                    (void)StringUtil::parseFloat( splitter.getSplitList()[filled], pOut[filled] ); // 화면 표시 — 못 읽은 칸은 0
                 }
                 return filled;
             }
@@ -128,7 +128,7 @@ namespace sw::editor
                     case MaterialPropertyType::Int:
                     {
                         int32 iVal{ 0 };
-                        StringUtil::parseInt( prop._value, iVal );
+                        (void)StringUtil::parseInt( prop._value, iVal ); // 화면 표시 — 못 읽으면 0
                         const bool bChanged = ImGui::DragInt( pLabel, &iVal );
                         if ( bChanged )
                             prop._value = to_string( iVal );
@@ -137,7 +137,7 @@ namespace sw::editor
                     case MaterialPropertyType::Enum:
                     {
                         int32 selected{ 0 };
-                        StringUtil::parseInt( prop._value, selected );
+                        (void)StringUtil::parseInt( prop._value, selected ); // 화면 표시 — 못 읽으면 첫 항목
                         const utf8* pPreview = prop._value.c_str();
                         for ( const MaterialEnumEntry& entry : prop._listEnumEntry )
                         {
@@ -212,8 +212,7 @@ namespace sw::editor
     void MaterialPanel::drawContent()
     {
         updateFocusedDocument();
-        if ( isDocumentLoaded() == false )
-            loadFromFocusedPath();
+        ensureDocumentLoaded();
 
         if ( getLoadedAssetPath().empty() )
         {
@@ -223,10 +222,10 @@ namespace sw::editor
 
         ImGui::TextDisabled( "%s", getLoadedAssetPath().c_str() );
         if ( ImGui::Button( "Reload" ) )
-            loadFromFocusedPath();
+            reloadDocument();
         ImGui::SameLine();
         if ( ImGui::Button( "Save" ) )
-            saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다(읽지 못한 문서는 막힌다)
+            (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다(읽지 못한 문서는 막힌다) — 실패는 그것이 알린다
         ImGui::SameLine();
         if ( ImGui::Button( "Apply to Selection" ) )
             applyLivePreview();
@@ -299,24 +298,23 @@ namespace sw::editor
         return true;
     }
 
-    void MaterialPanel::loadFromFocusedPath()
+    ToolAssetLoadResult MaterialPanel::loadDocument()
     {
         string path = getLoadedAssetPath();
         if ( path.empty() )
             path = string{ getMatchingFocusedPath() };
         if ( path.empty() )
-            return;
+            return ToolAssetLoadResult::Missing;
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
         if ( _material->loadFromFile( path ) == false )
         {
             _status = "Load failed - saving is disabled so the file is not overwritten";
-            markDocumentLoadFailed( "parse or format upgrade failed" );
-            return;
+            return ToolAssetLoadResult::Malformed;
         }
         syncNameBuffers();
         _status = "Loaded";
-        markDocumentLoaded();
+        return ToolAssetLoadResult::Loaded;
     }
 
     void MaterialPanel::syncNameBuffers()
@@ -334,7 +332,8 @@ namespace sw::editor
     {
         if ( text.empty() )
             return;
-        _material->loadFromXml( text );
+        if ( _material->loadFromXml( text ) == false )
+            SW_LOG_WARNING( "Material undo snapshot could not be read - the material is left as it was" );
         syncNameBuffers();
         applyLivePreview();
     }

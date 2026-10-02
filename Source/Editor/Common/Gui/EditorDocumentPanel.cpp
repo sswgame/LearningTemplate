@@ -106,6 +106,21 @@ namespace sw::editor
         return _bLoaded == SW_TRUE;
     }
 
+    void EditorDocumentPanel::reloadDocument()
+    {
+        const ToolAssetLoadResult result = loadDocument();
+        if ( result == ToolAssetLoadResult::Malformed )
+            markDocumentLoadFailed( "malformed or newer format" );
+        else
+            markDocumentLoaded();
+    }
+
+    void EditorDocumentPanel::ensureDocumentLoaded()
+    {
+        if ( isDocumentLoaded() == false )
+            reloadDocument();
+    }
+
     void EditorDocumentPanel::syncDocumentUndoBaseline()
     {
         _documentUndoBaseline  = captureDocumentText();

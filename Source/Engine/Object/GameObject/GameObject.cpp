@@ -158,7 +158,7 @@ namespace sw
 
     void GameObject::markPendingDestroy()
     {
-        tryMarkPendingDestroy();
+        (void)tryMarkPendingDestroy(); // 이미 표시돼 있어도 된다
     }
 
     bool GameObject::tryMarkPendingDestroy()
@@ -225,8 +225,9 @@ namespace sw
             {
                 GameObject* pChildObj  = pManager->findGameObjectById( childId );
                 GameObject* pParentObj = pManager->findGameObjectById( parentId );
+                // 미루기 전에 붙일 수 있는지 봤다(`canAttachTo`). 그사이 부모가 죽어 가면 붙지 않는다.
                 if ( pChildObj != nullptr && pParentObj != nullptr )
-                    pChildObj->attachToParent( pParentObj );
+                    (void)pChildObj->attachToParent( pParentObj );
             } );
             return true;
         }

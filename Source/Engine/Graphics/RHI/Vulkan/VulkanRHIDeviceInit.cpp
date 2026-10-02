@@ -509,8 +509,9 @@ namespace sw
 
         vector<uint8> listCacheData;
         const string  cachePath = "Saved/ShaderCache/vk_pipeline_cache.bin";
+        // 못 읽으면 빈 캐시로 시작한다 — 파이프라인을 다시 만들 뿐이다.
         if ( FileUtil::fileExists( cachePath ) )
-            FileUtil::readFile( cachePath, listCacheData );
+            (void)FileUtil::readFile( cachePath, listCacheData );
 
         VkPipelineCacheCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -547,8 +548,10 @@ namespace sw
             if ( vkGetPipelineCacheData( _device, _pipelineCache, &dataSize, listCacheData.data() ) == VK_SUCCESS )
             {
                 FileUtil::ensureDirectoryExists( "Saved/ShaderCache" );
-                FileUtil::writeFile( "Saved/ShaderCache/vk_pipeline_cache.bin", listCacheData.data(), static_cast<uint64>( listCacheData.size() ) );
-                SW_LOG_INFO( "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
+                if ( FileUtil::writeFile( "Saved/ShaderCache/vk_pipeline_cache.bin", listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
+                    SW_LOG_INFO( "Saved pipeline cache (%# bytes).", static_cast<uint32>( dataSize ) );
+                else
+                    SW_LOG_WARNING( "Could not save the pipeline cache - the next run builds pipelines from scratch" );
             }
         }
 

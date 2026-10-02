@@ -29,8 +29,8 @@ namespace sw
 
     void DialogueRunnerComponent::onBeginPlay()
     {
-        if ( _graphPath.empty() == false && _graph._listNode.empty() )
-            loadGraphFile( _graphPath );
+        if ( _graphPath.empty() == false && _graph._listNode.empty() && loadGraphFile( _graphPath ) == false )
+            SW_LOG_WARNING( "Dialogue graph '%#' could not be loaded", _graphPath );
     }
 
     void DialogueRunnerComponent::onEndPlay()
@@ -215,7 +215,8 @@ namespace sw
         {
             flagKey            = condition.substr( 0, eqPos );
             const string right = condition.substr( eqPos + 2 );
-            StringUtil::parseInt( right, expectedVal );
+            if ( StringUtil::parseInt( StringUtil::trim( right ), expectedVal ) == false )
+                SW_LOG_WARNING( "Dialogue condition '%#' compares with '%#', which is not a number", condition, right );
         }
         else
         {
@@ -224,7 +225,8 @@ namespace sw
             {
                 flagKey            = condition.substr( 0, neqPos );
                 const string right = condition.substr( neqPos + 2 );
-                StringUtil::parseInt( right, expectedVal );
+                if ( StringUtil::parseInt( StringUtil::trim( right ), expectedVal ) == false )
+                    SW_LOG_WARNING( "Dialogue condition '%#' compares with '%#', which is not a number", condition, right );
                 bEqualsComparison = false;
             }
         }
@@ -260,8 +262,8 @@ namespace sw
                 const size_t colon = rest.find( ':' );
                 const string key   = ( colon != string::npos ) ? rest.substr( 0, colon ) : string{ rest };
                 int32        val{ 1 };
-                if ( colon != string::npos )
-                    StringUtil::parseInt( rest.substr( colon + 1 ), val );
+                if ( colon != string::npos && StringUtil::parseInt( rest.substr( colon + 1 ), val ) == false )
+                    SW_LOG_WARNING( "Dialogue action '%#' sets a value that is not a number - using 1", rest );
                 _pFlagStore->setFlag( key, val );
             }
         }

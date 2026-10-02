@@ -60,8 +60,8 @@ namespace sw
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
 
-        bool loadGraphFile( string_view jsonPath );
-        bool loadGraphJson( string_view jsonContent );
+        [[nodiscard]] bool loadGraphFile( string_view jsonPath );
+        [[nodiscard]] bool loadGraphJson( string_view jsonContent );
 
         FUNCTION( Category = "Playback", DisplayName = "Start Dialogue", CallInEditor )
         bool startDialogue( int32 startNodeId = -1 );

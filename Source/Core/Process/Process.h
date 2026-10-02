@@ -72,7 +72,7 @@ namespace sw
          * @param outLine 읽은 줄을 담을 버퍼
          * @return 읽었으면 true, EOF 이거나 파이프가 닫혔으면 false
          */
-        bool readOutputLine( string& outLine );
+        [[nodiscard]] bool readOutputLine( string& outLine );
 
         /**
          * @brief 프로세스가 끝나기를 기다리고 종료 코드를 반환합니다.

@@ -74,7 +74,7 @@ namespace sw
 
     private:
         /** @brief 한 칸 이동을 시도합니다. */
-        bool tryStep( int32 deltaX, int32 deltaY );
+        [[nodiscard]] bool tryStep( int32 deltaX, int32 deltaY );
 
     private:
         TileMap*               _pTileMap;

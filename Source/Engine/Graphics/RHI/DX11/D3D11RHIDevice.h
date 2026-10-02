@@ -103,9 +103,9 @@ namespace sw
         /** @brief 프레임을 닫고 Present 합니다(bPresent=false 면 Present 를 생략합니다). */
         void endFrame( bool vsync = true, bool bPresent = true ) override;
 
-        void   setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
-        uint32 getTimestampSlotCount() const override;
-        bool   readTimestampsMicros( vector<float32>& outListMicro ) override;
+        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        uint32             getTimestampSlotCount() const override;
+        [[nodiscard]] bool readTimestampsMicros( vector<float32>& outListMicro ) override;
         /**
          * @brief 커맨드 리스트가 **자기 Deferred Context 에** 타임스탬프를 겁니다.
          * @details 칸 번호는 패스 인덱스로 고정이라 쿼리 객체 하나를 두 컨텍스트가 건드릴 일이 없습니다.

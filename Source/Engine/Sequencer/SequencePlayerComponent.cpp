@@ -30,8 +30,8 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
         _player.setFramesPerSecond( _framesPerSecond );
         _player.setLoop( _bLoop == SW_TRUE );
-        if ( _sequencePath.empty() == false )
-            _player.loadFromFile( _sequencePath );
+        if ( _sequencePath.empty() == false && _player.loadFromFile( _sequencePath ) == false )
+            SW_LOG_WARNING( "Sequence '%#' could not be loaded - '%#' plays nothing", _sequencePath, getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
         if ( _bAutoPlay == SW_TRUE )
             play();
     }

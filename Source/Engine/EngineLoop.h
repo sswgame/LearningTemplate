@@ -98,7 +98,7 @@ namespace sw
         void endFrame();
 
         /** @brief 대기 중인 RHI 핫스왑을 수행합니다. */
-        bool applyPendingBackendChange();
+        [[nodiscard]] bool applyPendingBackendChange();
 
         // ----------------------------------------------------------------------
         // 도우미

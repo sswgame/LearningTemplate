@@ -41,11 +41,11 @@ namespace sw
         AnimationGraphAsset() = default;
 
         /** @brief JSON 파일을 읽습니다. */
-        bool loadFromFile( string_view path );
+        [[nodiscard]] bool loadFromFile( string_view path );
         /** @brief JSON 파일을 씁니다. */
-        bool saveToFile( string_view path ) const;
+        [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief JSON 본문을 파싱합니다. */
-        bool parseJson( string_view json );
+        [[nodiscard]] bool parseJson( string_view json );
         /** @brief JSON 본문을 만듭니다. */
         string toJson() const;
         /** @brief 노드 이름 목록을 채웁니다. */

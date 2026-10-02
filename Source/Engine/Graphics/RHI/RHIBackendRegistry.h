@@ -60,7 +60,7 @@ namespace sw
         // 3) MODULE — createRHIDevice export DLL, 언로드 전 디바이스 파괴 필수
         // ------------------------------------------------------------------------------
         /** @brief createRHIDevice 를 export 하는 DLL 을 골라 로드합니다. */
-        bool tryLoadModule( RHIBackend backend, string_view modulePath );
+        [[nodiscard]] bool tryLoadModule( RHIBackend backend, string_view modulePath );
 
         /**
          * @brief MODULE 팩토리를 지운 뒤 FreeLibrary 합니다.

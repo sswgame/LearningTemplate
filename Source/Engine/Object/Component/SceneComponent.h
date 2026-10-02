@@ -160,7 +160,7 @@ namespace sw
         void updateWorldTransformFromParent();
 
         /** @brief 부모 SceneComponent 에 붙입니다. 붙일 수 없는 부모(`canAttachTo` 가 false)면 아무것도 하지 않고 false 입니다. */
-        bool attachToComponent( SceneComponent* pParent );
+        [[nodiscard]] bool attachToComponent( SceneComponent* pParent );
         /**
          * @brief @p pParent 에 붙일 수 있는지 봅니다. 붙이는 길(직접 · 틱 중 미룸 · 오브젝트 단위)이 모두 이것을 먼저 묻습니다.
          * @details 안 되는 것: 자기 자신 · null · **다른 매니저(씬)의 부모**(계층이 두 매니저에 걸치면 한쪽의 더티 루트 목록에 다른 쪽

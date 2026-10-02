@@ -30,7 +30,7 @@ namespace sw
         Texture2D& operator=( const Texture2D& ) = delete;
 
         /** @brief 리소스 상대 경로(전역 id, 예: engine/textures/random/grass.dds)의 DDS 를 GPU 에 올립니다. */
-        bool loadFromResource( IRHIDevice* pDevice, string_view relativePath );
+        [[nodiscard]] bool loadFromResource( IRHIDevice* pDevice, string_view relativePath );
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 텍스처를 돌려줍니다. */
         void releaseRhi( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 잊습니다. */

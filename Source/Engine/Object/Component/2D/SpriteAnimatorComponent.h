@@ -53,9 +53,9 @@ namespace sw
         bool  isPaused() const;
 
     private:
-        void tryLoadAnimationGraph();
-        bool tryAdvanceGraphNode();
-        void updateSpriteFrame();
+        void               tryLoadAnimationGraph();
+        [[nodiscard]] bool tryAdvanceGraphNode();
+        void               updateSpriteFrame();
 
         PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "Animation graph asset used by this animator" )
         string              _animationGraphPath;

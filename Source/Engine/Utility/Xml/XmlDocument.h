@@ -211,19 +211,19 @@ namespace sw
          * @brief XML 전체 문서를 파싱합니다 (내부 버퍼에 복사).
          * @param sourceName 오류에 적는 이름(대개 경로)입니다. 비우면 `<memory>` 입니다.
          */
-        bool parse( string_view xmlText, string_view sourceName = {} );
+        [[nodiscard]] bool parse( string_view xmlText, string_view sourceName = {} );
 
         /** @brief 절대 경로를 읽고 파싱합니다. */
-        bool loadFile( string_view absPath );
+        [[nodiscard]] bool loadFile( string_view absPath );
 
         /** @brief 리소스 상대 경로를 해석한 뒤 읽고 파싱합니다. */
-        bool loadResource( string_view relativePath, string* pOutAbsPath = nullptr );
+        [[nodiscard]] bool loadResource( string_view relativePath, string* pOutAbsPath = nullptr );
 
         /**
          * @brief 절대 경로 · 작업 경로에 파일이 있으면 loadFile, 없으면 loadResource 로 읽습니다.
          * @details 에셋 상대 경로와 에디터 절대 경로를 한 호출로 처리합니다.
          */
-        bool loadPath( string_view path, string* pOutAbsPath = nullptr );
+        [[nodiscard]] bool loadPath( string_view path, string* pOutAbsPath = nullptr );
 
         /**
          * @brief 마지막 parse · load 가 실패한 이유입니다(성공했으면 빈 문자열).
@@ -243,7 +243,7 @@ namespace sw
         /** @brief 현재 문서를 XML 문자열로 직렬화합니다. */
         string saveToString() const;
         /** @brief 현재 문서를 절대 경로에 씁니다. */
-        bool saveFile( string_view absPath ) const;
+        [[nodiscard]] bool saveFile( string_view absPath ) const;
 
         // ------------------------------------------------------------------------------
         // 6) 문자열 유틸 — escape, unescape

@@ -806,7 +806,7 @@ namespace sw
     {
         // 복사본은 원본에서 막 복사했으므로 SONAME 은 늘 원본 이름이다. 처음 한 번 읽어 둔다(의존 모듈의 NEEDED 가 이 이름을 적고 있다).
         if ( ctx._soname._original.empty() )
-            ModuleImagePatch::readSoname( inoutBytes, ctx._soname._original );
+            (void)ModuleImagePatch::readSoname( inoutBytes, ctx._soname._original ); // 못 읽으면(ELF 가 아님) 이름이 비어 아래가 건너뛴다
 
         if ( ctx._soname._original.empty() == false )
         {

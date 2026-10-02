@@ -85,7 +85,7 @@ namespace sw
         // 2) 파이프라인 · 실행: XML 로드, execute / executePacket
         // ------------------------------------------------------------------------------
         /** @brief RenderPipeline XML 에서 그래프를 다시 만듭니다(동기 로드). 패스 콜백은 한 번 바인딩합니다. */
-        bool loadPipeline( string_view pipelineXmlPath );
+        [[nodiscard]] bool loadPipeline( string_view pipelineXmlPath );
         /** @brief 컴파일된 그래프를 실행합니다. scene 이 있으면 자기 빌더로 스냅샷을 만들어 패킷 경로와 같은 길로 올립니다. */
         bool execute( IRHIDevice* pDevice, Scene* pScene = nullptr );
         /** @brief 렌더 스레드 경로입니다. 미리 만든 packet 의 GpuScene 을 씁니다(Scene 에 접근하지 않습니다). */
@@ -157,7 +157,7 @@ namespace sw
 
     private:
         /** @brief 읽어 온 바이트를 PPM(P6) 파일로 씁니다. 트랜지언트 덤프와 Present 캡처 덤프가 같이 씁니다. */
-        static bool writePpm( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, string_view outFilePath );
+        [[nodiscard]] static bool writePpm( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, string_view outFilePath );
 
     public:
         /**
@@ -448,7 +448,7 @@ namespace sw
         // 6) 어태치먼트 · PSO
         // ------------------------------------------------------------------------------
         /** @brief 어태치먼트 클리어 색을 찾습니다. */
-        bool tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const;
+        [[nodiscard]] bool tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const;
         /** @brief 어태치먼트 클리어 색을 반환하거나, 없으면 기본값을 반환합니다. */
         float4 getAttachmentClearColorOrDefault( string_view attachmentName, const float4& fallback ) const;
         /**

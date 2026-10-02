@@ -37,11 +37,11 @@ namespace sw::editor
         /**
          * @brief 파일 경로의 이미지를 읽어 4채널(RGBA) 버퍼로 디코딩합니다.
          */
-        static bool loadImage( string_view filePath, RawImageData& outImage );
+        [[nodiscard]] static bool loadImage( string_view filePath, RawImageData& outImage );
 
         /**
          * @brief 메모리 버퍼의 이미지를 4채널(RGBA) 버퍼로 디코딩합니다.
          */
-        static bool loadImageFromMemory( const uint8* pBuffer, size_t bufferSize, RawImageData& outImage );
+        [[nodiscard]] static bool loadImageFromMemory( const uint8* pBuffer, size_t bufferSize, RawImageData& outImage );
     };
 } // namespace sw::editor

@@ -35,8 +35,8 @@ namespace sw::editor
          *          못했습니다), 종료 확인도 이 편집을 세지 않아 편집이 조용히 사라졌습니다. 이제 기반 클래스가 dirty 비트를
          *          듭니다.
          */
-        bool saveDocument() override;
-        void revertDocument() override;
+        [[nodiscard]] bool saveDocument() override;
+        void               revertDocument() override;
 
     private:
         void drawActionMapTab();
@@ -70,8 +70,8 @@ namespace sw::editor
         void drawCaptureModal();
         void drawGamepadStickVisualizer( const utf8* pLabel, float32 stickX, float32 stickY, float32 deadzone );
 
-        void reloadFromFile();
-        bool saveToFile();
+        void               reloadFromFile();
+        [[nodiscard]] bool saveToFile();
 
     private:
         static constexpr size_t kPlotSampleCount = 120;

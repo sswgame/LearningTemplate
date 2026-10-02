@@ -268,8 +268,9 @@ namespace sw::editor
                 ImGui::SetClipboardText( entry._absolutePath.c_str() );
 
             ImGui::Separator();
+            // 실패는 deleteAsset 이 알린다(파일과 .meta 를 그대로 둔다).
             if ( ImGui::MenuItem( "Delete" ) )
-                EditorAssetCommands::deleteAsset( entry._absolutePath );
+                (void)EditorAssetCommands::deleteAsset( entry._absolutePath );
             ImGui::EndPopup();
         }
     }
@@ -961,7 +962,7 @@ namespace sw::editor
 
         selectAsset( entry );
         SW_LOG_TRACE( "Open: %#", entry._relativePath.c_str() );
-        EditorAssetCommands::openPath( entry._relativePath );
+        (void)EditorAssetCommands::openPath( entry._relativePath ); // 실패는 openPath 가 알린다
     }
 
     void ContentBrowserPanel::importFilesFromDialog()

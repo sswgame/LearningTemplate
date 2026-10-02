@@ -127,13 +127,12 @@ namespace sw::editor
     void SequencerPanel::drawContent()
     {
         updateFocusedDocument();
-        if ( isDocumentLoaded() == false )
-            loadFromFocusedPath();
+        ensureDocumentLoaded();
 
         if ( EditorChrome::beginToolbar( "##SequencerToolbar" ) )
         {
             if ( ImGui::Button( "Load" ) )
-                loadFromFocusedPath();
+                reloadDocument();
             ImGui::SameLine();
             if ( ImGui::Button( "Save" ) )
                 saveToLoadedPath();
@@ -221,25 +220,24 @@ namespace sw::editor
             notifyDocumentEdited( "Edit Sequence Timeline", "sequence-timeline" );
     }
 
-    void SequencerPanel::loadFromFocusedPath()
+    ToolAssetLoadResult SequencerPanel::loadDocument()
     {
         if ( _sequence == nullptr )
-            return;
-
+            return ToolAssetLoadResult::Missing;
         string path = getLoadedAssetPath();
         if ( path.empty() )
             path = string{ getMatchingFocusedPath() };
         if ( path.empty() )
-            return;
+            return ToolAssetLoadResult::Missing;
 
-        SequenceAsset asset;
-        if ( EditorToolAssetCommands::loadSequence( asset, path ) == false )
-            return;
-
+        // 읽지 못하면 그대로 둔다 — 예전에는 표시 없이 돌아가 프레임마다 다시 읽고(로그가 쌓였다), 저장도 막지 않았다.
+        SequenceAsset             asset;
+        const ToolAssetLoadResult result = EditorToolAssetCommands::loadSequence( asset, path );
         if ( getLoadedAssetPath().empty() )
             acceptFocusedDocument();
-        applyAsset( asset );
-        markDocumentLoaded();
+        if ( result == ToolAssetLoadResult::Loaded )
+            applyAsset( asset );
+        return result;
     }
 
     void SequencerPanel::saveToLoadedPath()
@@ -290,8 +288,8 @@ namespace sw::editor
     void SequencerPanel::applyDocumentText( string_view text )
     {
         SequenceAsset restored;
-        if ( text.empty() == false )
-            restored.parseJson( text );
+        if ( text.empty() == false && restored.parseJson( text ) == false )
+            SW_LOG_WARNING( "Sequence undo snapshot could not be read - showing an empty sequence" );
         applyAsset( restored );
     }
 

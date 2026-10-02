@@ -67,6 +67,12 @@ namespace sw
         uint64 _savedId{ 0 };
         /** @brief false 면 다른 오브젝트로의 부착을 읽지 않습니다 — 프리팹(루트에 부모가 없다). 오브젝트 안의 부착은 그대로 잇습니다. */
         bool _bExternalParentAllowed{ true };
+        /**
+         * @brief 읽기에 실패하면 오브젝트를 읽기 전 상태로 되돌립니다(기본). 되돌리는 로드 자신만 끕니다.
+         * @details 제자리 로드는 컴포넌트를 먼저 비우므로, 예전에는 읽기가 실패하면 **빈 오브젝트**가 남았다 — 되돌리기 · 복제 · 프리팹 되돌리기가
+         *          결과를 버려 그대로 저장되었다.
+         */
+        bool _bRestorePreviousOnFailure{ true };
     };
 
     /**
@@ -178,7 +184,7 @@ namespace sw
         [[maybe_unused]] static string saveToJsonString( const GameObject* pGameObject, const ObjectSaveOptions& options = {} );
 
         /** @brief GameObject 상태를 바이너리 버퍼로 빠르게 직렬화합니다(핫 리로드 · 프리팹용). */
-        static bool saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer, const ObjectSaveOptions& options = {} );
+        [[nodiscard]] static bool saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer, const ObjectSaveOptions& options = {} );
 
         /**
          * @brief XML 문자열에서 GameObject 상태를 복원합니다(ObjectId 제외).
@@ -187,15 +193,15 @@ namespace sw
          *          매니저의 런타임 id 로 찾습니다). 여러 오브젝트를 읽을 때는 묶음을 주고 모두 읽은 뒤 `ObjectStateBatch::finish` 를 부릅니다 —
          *          그래야 자식이 부모보다 먼저 읽혀도 부모를 찾습니다.
          */
-        static bool                  loadFromXmlString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context = {} );
-        [[maybe_unused]] static bool loadFromJsonString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context = {} );
+        [[nodiscard]] static bool loadFromXmlString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context = {} );
+        [[nodiscard]] static bool loadFromJsonString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context = {} );
 
         /**
          * @brief 바이너리 버퍼에서 GameObject 상태를 복원하고 읽은 바이트 수를 반환합니다(실패하면 0).
          * @param context `loadFromXmlString` 과 같습니다.
          * @details 본문 앞의 부모 이름(옛 세이브 형식의 칸)은 읽고 버립니다 — 부모는 상태의 부착 필드가 id 로 듭니다.
          */
-        static size_t loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, const ObjectLoadContext& context = {} );
+        [[nodiscard]] static size_t loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, const ObjectLoadContext& context = {} );
 
         // ------------------------------------------------------------------------------
         // 2) 런타임 ID: 같은 오브젝트를 되살릴 때 핸들이 이어지게 한다(`ObjectIdentity`)
@@ -226,7 +232,7 @@ namespace sw
         static string saveToText( const GameObject* pGameObject, const ObjectSaveOptions& options );
         /** @brief 리플렉션 문자열 포맷 하나에서 복원합니다. `loadFromXmlString` · `loadFromJsonString` 의 몸통입니다. */
         template <typename TSerializer>
-        static bool loadFromText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context );
+        [[nodiscard]] static bool loadFromText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context );
         /**
          * @brief 오브젝트의 상태를 제자리에서 다시 읽습니다. 세 로더(XML · JSON · 바이너리)는 포맷 읽기만 `deserializeState( version, ctx )` 로 넘깁니다.
          * @details 자식 연결을 적어 두고 컴포넌트를 비운 뒤, 컴포넌트 ID 를 되살리는 범위 안에서 읽습니다. 읽으면 묶음에 적고(묶음이 없으면 한 개짜리
@@ -234,6 +240,6 @@ namespace sw
          *          정의는 .cpp 에만 있습니다(ID 범위가 `GameObject` 의 비공개 타입이라 이 클래스의 멤버여야 합니다).
          */
         template <typename DeserializeStateFunc>
-        static bool loadStateInPlace( GameObject* pGameObject, const ObjectLoadContext& context, DeserializeStateFunc&& deserializeState );
+        [[nodiscard]] static bool loadStateInPlace( GameObject* pGameObject, const ObjectLoadContext& context, DeserializeStateFunc&& deserializeState );
     };
 } // namespace sw

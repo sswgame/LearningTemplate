@@ -116,7 +116,7 @@ namespace sw
             return true;
         }
 
-        bool readString( string& outStr )
+        [[nodiscard]] bool readString( string& outStr )
         {
             uint32 size{ 0 };
             if ( read( size ) == false )
@@ -133,7 +133,7 @@ namespace sw
             return true;
         }
 
-        bool readStringView( string_view& outView )
+        [[nodiscard]] bool readStringView( string_view& outView )
         {
             uint32 size{ 0 };
             if ( read( size ) == false )
@@ -150,28 +150,28 @@ namespace sw
             return true;
         }
 
-        bool readVarUint( uint64& outValue )
+        [[nodiscard]] bool readVarUint( uint64& outValue )
         {
             return VarIntUtil::decodeVarUint64( _pData, _size, _offset, outValue );
         }
 
-        bool readVarUint( uint32& outValue )
+        [[nodiscard]] bool readVarUint( uint32& outValue )
         {
             return VarIntUtil::decodeVarUint32( _pData, _size, _offset, outValue );
         }
 
-        bool readVarInt( int64& outValue )
+        [[nodiscard]] bool readVarInt( int64& outValue )
         {
             return VarIntUtil::decodeVarInt64( _pData, _size, _offset, outValue );
         }
 
-        bool readVarInt( int32& outValue )
+        [[nodiscard]] bool readVarInt( int32& outValue )
         {
             return VarIntUtil::decodeVarInt32( _pData, _size, _offset, outValue );
         }
 
         template <typename T>
-        bool read( T& outValue )
+        [[nodiscard]] bool read( T& outValue )
         {
             if ( _offset + sizeof( T ) > _size )
                 return false;
@@ -180,7 +180,7 @@ namespace sw
             return true;
         }
 
-        bool readBytes( vector<uint8>& outBytes )
+        [[nodiscard]] bool readBytes( vector<uint8>& outBytes )
         {
             uint32 size{ 0 };
             if ( read( size ) == false )

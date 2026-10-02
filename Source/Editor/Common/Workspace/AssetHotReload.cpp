@@ -73,7 +73,8 @@ namespace sw::editor
                 // 설정은 매번 읽는다. 작은 JSON 이고, 사람이 이미지를 저장했을 때만 온다.
                 // 한 번 읽어 캐시하면 임포트 규칙을 고쳐도 재시작 전까지 반영되지 않는다.
                 TextureImportConfig config{};
-                config.loadFromFile( EditorUtil::resolveEditorConfigFile( getEditorData()._textureImportConfigFile.c_str() ) );
+                // 설정 파일이 없으면 기본 규칙이다. 깨졌으면 로드가 알리고 기본 규칙으로 굽는다.
+                (void)config.loadFromFile( EditorUtil::resolveEditorConfigFile( getEditorData()._textureImportConfigFile.c_str() ) );
                 if ( TextureBaker::bakeTextureWithConfig( normalized, outputPath, config ) == false )
                 {
                     SW_LOG_ERROR( "텍스처 베이크 실패: %#", relativePath );

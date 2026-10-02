@@ -61,7 +61,7 @@ namespace
             sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "Chain" ) );
             pObj->addComponent<sw::SceneComponent>();
             if ( pPrev != nullptr )
-                pObj->attachToParent( pPrev );
+                SW_EXPECT_TRUE( pObj->attachToParent( pPrev ) );
             else
                 pRoot = pObj;
             pPrev = pObj;
@@ -222,7 +222,7 @@ SW_TEST_CASE( GameObjectBenchTest, SetActiveDeepChain )
         sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "Chain" ) );
         pObj->addComponent<sw::SceneComponent>();
         if ( pPrev != nullptr )
-            pObj->attachToParent( pPrev );
+            SW_EXPECT_TRUE( pObj->attachToParent( pPrev ) );
         else
             pRoot = pObj;
         pPrev = pObj;

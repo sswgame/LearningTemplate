@@ -256,10 +256,10 @@ namespace sw
         RenderPassResource& operator=( const RenderPassResource& ) = delete;
 
         /** @brief XML 파일에서 렌더 패스 디스크립터를 로드합니다. */
-        bool loadFromXmlFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromXmlFile( string_view assetRelativePath );
 
         /** @brief 렌더 패스 디스크립터를 XML 파일로 저장합니다. */
-        bool saveToXmlFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToXmlFile( string_view assetRelativePath ) const;
 
         /** @brief XML 로드를 비동기 작업으로 예약합니다. */
         TaskHandle loadFromXmlFileAsync( string_view assetRelativePath );

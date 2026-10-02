@@ -34,17 +34,22 @@ namespace sw
         PrefabAsset();
 
         /** @brief XML 에서 프리팹을 로드합니다(<Prefab formatVersion="0" name="...">). */
-        bool loadFromXmlFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromXmlFile( string_view assetRelativePath );
         /** @brief JSON 에서 프리팹을 로드합니다(표준 JSON 또는 래퍼 JSON). */
-        bool loadFromJsonFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromJsonFile( string_view assetRelativePath );
         /** @brief 바이너리에서 프리팹을 로드합니다(쿠킹된 PFB2). */
-        bool loadFromBinaryFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromBinaryFile( string_view assetRelativePath );
         /** @brief XML 로 저장합니다(<Prefab formatVersion="0" name="...">). */
-        bool saveToXmlFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToXmlFile( string_view assetRelativePath ) const;
         /** @brief JSON 으로 저장합니다({ "formatVersion": 0, "name": "...", "GameObject": { ... } }). */
-        bool saveToJsonFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToJsonFile( string_view assetRelativePath ) const;
+        /**
+         * @brief 경로의 확장자로 형식을 골라 저장합니다(`.prefab.xml` · `.prefab.json`). 프리팹 경로가 아니면 쓰지 않고 false 입니다.
+         * @details 에디터가 프리팹을 쓰는 길(Apply to Prefab · 격리 편집 저장)은 이것만 씁니다 — 로더 · 쿠커와 같은 규칙입니다.
+         */
+        [[nodiscard]] bool saveToFile( string_view assetRelativePath ) const;
         /** @brief Shipping 쿠킹용 PFB2 바이너리로 저장합니다(magic + version + name + 상태 데이터). */
-        bool saveToBinaryFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToBinaryFile( string_view assetRelativePath ) const;
         /** @brief GameObject 상태에서 프리팹을 채웁니다. */
         void setFromGameObject( const GameObject* pGameObject );
 
@@ -61,7 +66,7 @@ namespace sw
          *          다른 오브젝트로의 부착은 읽지 않습니다 — 프리팹 루트에는 부모가 없습니다(옛 프리팹에 남은 것도).
          * @param pIdentity 있으면 다시 만드는 컴포넌트가 그 id 를 되찾습니다(되돌리기 — 인스턴스의 컴포넌트를 가리키던 핸들이 이어진다).
          */
-        bool applyStateTo( GameObject* pTarget, const ObjectIdentity* pIdentity = nullptr ) const;
+        [[nodiscard]] bool applyStateTo( GameObject* pTarget, const ObjectIdentity* pIdentity = nullptr ) const;
         /** @brief 로드에 성공했으면 true 입니다. */
         bool isValid() const { return _bValid == SW_TRUE; }
         /** @brief 상태 XML/JSON 안의 `.prefab` 경로를 수집합니다. */
@@ -106,7 +111,7 @@ namespace sw
          * @details 유니티 `PrefabUtility.RevertPrefabInstance` 와 같은 규칙입니다(루트의 위치 · 회전은 늘 인스턴스의 것, 스케일은 되돌린다). 예전에는
          *          상태를 통째로 읽어 넣어, 다른 오브젝트에 붙어 있던 인스턴스가 루트로 떨어지고 이름 · 자리가 프리팹의 것으로 바뀌었습니다.
          */
-        bool revertInstance( GameObject* pInstance, string_view assetRelativePath );
+        [[nodiscard]] bool revertInstance( GameObject* pInstance, string_view assetRelativePath );
         /**
          * @brief 프리팹을 스폰합니다. instanceDiff 가 있으면 루트 GameObject 에 적용합니다.
          */

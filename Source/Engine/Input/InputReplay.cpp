@@ -323,7 +323,12 @@ namespace sw
 
             if ( snapSize > 0 && pCursor + snapSize <= pEnd )
             {
-                frame._snapshot.deserialize( pCursor, snapSize );
+                // 깨진 프레임에서 멈춘다 — 그 뒤를 읽으면 엉뚱한 입력이 재생된다.
+                if ( frame._snapshot.deserialize( pCursor, snapSize ) == false )
+                {
+                    SW_LOG_WARNING( "Input replay has a corrupt frame - refusing to load: %#", filePath );
+                    return false;
+                }
                 pCursor += snapSize;
             }
 

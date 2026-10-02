@@ -45,7 +45,7 @@ namespace sw
          * @param pInOutSize 버퍼의 크기 (입력/출력)
          * @return 지원하면 true
          */
-        virtual bool serializeState( void* pOutBuffer, uint32* pInOutSize )
+        [[nodiscard]] virtual bool serializeState( void* pOutBuffer, uint32* pInOutSize )
         {
             (void)pOutBuffer;
             (void)pInOutSize;
@@ -55,7 +55,7 @@ namespace sw
         /**
          * @brief 게임의 상태를 버퍼로부터 복원(역직렬화)합니다.
          */
-        virtual bool deserializeState( const void* pInBuffer, uint32 size )
+        [[nodiscard]] virtual bool deserializeState( const void* pInBuffer, uint32 size )
         {
             (void)pInBuffer;
             (void)size;

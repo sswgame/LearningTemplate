@@ -117,7 +117,8 @@ namespace sw
 
             // 경로에 지금 소스의 유효 해시가 들어 있으므로 다음 getOrCompile 이 이 바이트코드를 집는다
             // (ShaderCache 의 1순위가 이 로컬 라이브 캐시다).
-            FileUtil::writeFile( localPath, newResult._bytecode.data(), newResult._bytecode.size() );
+            if ( FileUtil::writeFile( localPath, newResult._bytecode.data(), newResult._bytecode.size() ) == false )
+                SW_LOG_WARNING( "Could not write the live shader cache '%#' - the next run recompiles it", localPath );
 
             ++changed;
             if ( _onAnyRecompiled.isBound() )

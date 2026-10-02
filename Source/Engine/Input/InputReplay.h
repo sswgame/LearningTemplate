@@ -76,10 +76,10 @@ namespace sw
         void updatePlayback( float32 deltaTime, InputManager* pInput );
 
         /** @brief 바이너리 파일(.swreplay)로 저장합니다. */
-        bool saveToFile( string_view filePath ) const;
+        [[nodiscard]] bool saveToFile( string_view filePath ) const;
 
         /** @brief 바이너리 파일(.swreplay)에서 리플레이를 로드합니다. */
-        bool loadFromFile( string_view filePath );
+        [[nodiscard]] bool loadFromFile( string_view filePath );
 
         /** @brief 녹화된 모든 프레임 버퍼를 비웁니다. */
         void clear();

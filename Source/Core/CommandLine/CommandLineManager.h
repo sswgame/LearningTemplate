@@ -185,7 +185,7 @@ namespace sw
          *          한 번만 꺼냅니다.
          */
         template <typename T>
-        static bool readValue( const ArgumentInfo& argument, T& outValue );
+        [[nodiscard]] static bool readValue( const ArgumentInfo& argument, T& outValue );
 
         /** @brief 보류표에 담을 키의 접두어입니다. 이것으로 시작하는 미등록 키만 남깁니다. */
         static constexpr auto kGlobalVariablePrefix = "gv_";

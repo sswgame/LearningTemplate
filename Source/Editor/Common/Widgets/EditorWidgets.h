@@ -191,7 +191,7 @@ namespace sw::editor
         /**
          * @brief BeginDragDropTarget 안에서 애셋 경로 페이로드를 받습니다.
          */
-        static bool tryAcceptAssetPayload( string& outPath );
+        [[nodiscard]] static bool tryAcceptAssetPayload( string& outPath );
 
         /**
          * @brief 현재 아이템을 애셋 드롭 타깃으로 만들고 경로를 받습니다.

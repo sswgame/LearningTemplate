@@ -112,7 +112,7 @@ namespace sw
          */
         bool acquireUploadStaging( uint64 sizeBytes, uint64 alignment, uint32& outSlotIndex, uint64& outOffset, void*& pOutMapped );
         /** @brief 현재 프레임 링 슬롯의 복사 리스트만 엽니다(스테이징 없이. readback 처럼 소스가 다른 곳일 때 씁니다). */
-        bool openUploadSlot( uint32& outSlotIndex );
+        [[nodiscard]] bool openUploadSlot( uint32& outSlotIndex );
         /** @brief 지금까지 큐에 넣은 작업이 끝날 때까지 CPU 를 세웁니다(readback 전용이며 프레임 경로에서 부르지 말 것). */
         bool waitForQueueDrain();
 

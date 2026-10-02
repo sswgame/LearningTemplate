@@ -284,8 +284,10 @@ namespace sw
         const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
         if ( pValue == nullptr )
             return fallback;
+        // 글이 있는데 숫자가 아니면 알린다 — 예전에는 조용히 폴백이라 "abc" · "1.5" 가 기본값으로 읽혔다.
         int32 val{ fallback };
-        StringUtil::parseInt( pValue, val );
+        if ( StringUtil::parseInt( pValue, val ) == false )
+            SW_LOG_WARNING( "Attribute '%#' has an unreadable integer '%#' - using %#", pName, pValue, fallback );
         return val;
     }
 
@@ -295,7 +297,8 @@ namespace sw
         if ( pValue == nullptr )
             return fallback;
         float32 val{ fallback };
-        StringUtil::parseFloat( pValue, val );
+        if ( StringUtil::parseFloat( pValue, val ) == false )
+            SW_LOG_WARNING( "Attribute '%#' has an unreadable number '%#' - using %#", pName, pValue, fallback );
         return val;
     }
 
@@ -339,7 +342,8 @@ namespace sw
         if ( pText == nullptr )
             return fallback;
         int32 val{ fallback };
-        StringUtil::parseInt( pText, val );
+        if ( StringUtil::parseInt( pText, val ) == false )
+            SW_LOG_WARNING( "Element '%#' has an unreadable integer '%#' - using %#", pName, pText, fallback );
         return val;
     }
 
@@ -349,7 +353,8 @@ namespace sw
         if ( pText == nullptr )
             return fallback;
         float32 val{ fallback };
-        StringUtil::parseFloat( pText, val );
+        if ( StringUtil::parseFloat( pText, val ) == false )
+            SW_LOG_WARNING( "Element '%#' has an unreadable number '%#' - using %#", pName, pText, fallback );
         return val;
     }
 

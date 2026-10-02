@@ -144,8 +144,8 @@ namespace
         {
             const sw::string genCpp = sw::FileUtil::joinPath( outGenDir, header._fileStem + ".gen.cpp" );
             sw::string       generated;
-            if ( sw::FileUtil::fileExists( genCpp ) )
-                sw::FileUtil::readTextFile( genCpp, generated );
+            if ( sw::FileUtil::fileExists( genCpp ) && sw::FileUtil::readTextFile( genCpp, generated ) == false )
+                generated.clear(); // 못 읽은 산출물은 빈 것으로 본다 — 시험이 내용으로 진다
             result._listGeneratedCpp.push_back( generated );
         }
         return result;

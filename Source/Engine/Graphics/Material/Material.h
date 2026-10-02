@@ -76,15 +76,15 @@ namespace sw
         bool isRhiValid() const { return _constantBuffer != 0; }
 
         /** @brief 파일에서 머티리얼을 로드합니다. */
-        bool loadFromFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromFile( string_view assetRelativePath );
         /** @brief 파일을 비동기로 로드합니다. */
         TaskHandle loadFromFileAsync( string_view assetRelativePath );
         /** @brief 파일로 저장합니다. */
-        bool saveToFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToFile( string_view assetRelativePath ) const;
         /** @brief 현재 디스크립터를 XML 문자열로 만듭니다. */
         string saveToString() const;
         /** @brief XML 텍스트에서 머티리얼을 로드합니다. */
-        bool loadFromXml( string_view xmlText );
+        [[nodiscard]] bool loadFromXml( string_view xmlText );
         /** @brief 셰이더 리플렉션에 맞춰 프로퍼티 목록을 맞춥니다. */
         bool syncPropertiesFromReflection( const ShaderReflectionData& reflectionData );
         /**

@@ -6,6 +6,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/DdsLoader.h"
@@ -168,7 +169,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
 )";
 
     sw::XmlDocument doc;
-    doc.parse( kCurrent );
+    SW_ASSERT_TRUE( doc.parse( kCurrent ) );
     sw::XmlNode root = doc.getRoot( "MaterialDesc" );
     SW_ASSERT_TRUE( root.isValid() );
 
@@ -627,6 +628,36 @@ SW_TEST_CASE( ResourceTest, AbsolutePathPreservation )
  *          **소스 트리 Resource/ 에 써서**, Shipping 실기동 한 번에 defaultmaterial.material->meta 의 GUID 가 바뀌었다.
  *          실제 에셋으로 "파일이 바뀌지 않았다" 를 mtime 으로 보고, 배포 빌드에서는 null GUID 가 나오는 것까지 본다.
  */
+SW_TEST_CASE( ResourceTest, DeletingAnAssetKeepsItsMetaUntilTheAssetIsGone )
+{
+    // 에셋 삭제가 실패하면(잠긴 파일) .meta 는 그대로다. 예전에는 실패해도 지워, 남은 에셋이 새 GUID 를 받고 참조가 끊겼다.
+    const sw::string dir       = test::makeTempDirectory( "delete_asset" );
+    const sw::string assetPath = sw::FileUtil::joinPath( dir, "crate.png" );
+    const sw::string metaPath  = assetPath + ".meta";
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( assetPath, "png" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( metaPath, "guid=0b7c2a9e-4f1d-4c3a-9e8b-1d2c3b4a5f61\n" ) );
+    {
+        // 지울 수 없게 만든다 — Windows 는 열어 둔 파일(공유 삭제 없이)을, POSIX 는 쓰기 권한이 없는 폴더의 항목을 지우지 못한다.
+#if defined( SW_PLATFORM_WINDOWS )
+        std::ifstream lockedAsset( assetPath.c_str() );
+        SW_ASSERT_TRUE( lockedAsset.is_open() );
+#else
+        std::filesystem::permissions( dir.c_str(), std::filesystem::perms::owner_write, std::filesystem::perm_options::remove );
+#endif
+        test::ScopedDefensiveTestLog expected( "the asset itself cannot be removed" );
+        SW_EXPECT_FALSE( sw::AssetDatabase::deleteAssetFile( assetPath ) );
+#if defined( SW_PLATFORM_WINDOWS ) == false
+        std::filesystem::permissions( dir.c_str(), std::filesystem::perms::owner_write, std::filesystem::perm_options::add );
+#endif
+    }
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( assetPath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( metaPath ) );
+
+    SW_EXPECT_TRUE( sw::AssetDatabase::deleteAssetFile( assetPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( assetPath ) );
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( metaPath ) );
+}
+
 SW_TEST_CASE( ResourceTest, EnsureMetaNeverRewritesExistingMetaFile )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
@@ -772,7 +803,7 @@ SW_TEST_CASE( ResourceTest, OutOfRangeFormatVersionIsRejected )
         const sw::string xml = sw::string( "<MaterialDesc formatVersion=\"" ) + pVersion +
                                "\" name=\"M\" shaderPath=\"engine/shaders/forwardlit.hlsl\" blendMode=\"Opaque\"><_properties/></MaterialDesc>";
         sw::XmlDocument doc;
-        doc.parse( xml.c_str() );
+        SW_ASSERT_TRUE( doc.parse( xml.c_str() ) );
         sw::XmlNode root = doc.getRoot( "MaterialDesc" );
         SW_ASSERT_TRUE( root.isValid() );
         test::ScopedLogSuppressor suppressor;

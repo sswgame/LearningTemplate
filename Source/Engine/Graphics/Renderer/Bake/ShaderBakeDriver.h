@@ -18,6 +18,21 @@
 namespace sw
 {
     /**
+     * @struct ShaderBakeSummary
+     * @brief 일괄 베이크가 한 일입니다. 실패 · 계약 위반이 하나라도 있으면 `App --bake-shaders` 는 실패로 끝납니다.
+     * @details 예전에는 구운 개수만 돌려줘 컴파일 실패를 알 길이 없었고, 그 셰이더의 옛 바이너리 위에 지금 소스의 해시로 도장을 찍어 다음 베이크도
+     *          건너뛰었다 — 문법 오류가 든 셰이더가 경고 한 줄 뒤 종료 코드 0 으로 지나가 배포본에 옛 바이너리가 실렸다.
+     */
+    struct [[nodiscard]] ShaderBakeSummary
+    {
+        uint32 _bakedCount{ 0 };             ///< 새로 구운 바이너리 수
+        uint32 _failedCount{ 0 };            ///< 컴파일에 실패한 (요청, 포맷) 수 — 그 소스는 도장에서 빠져 다음 베이크가 다시 시도한다
+        uint32 _contractViolationCount{ 0 }; ///< 바인딩 계약 위반 수
+        /** @brief 실패도 위반도 없으면 true 입니다. */
+        bool isClean() const { return _failedCount == 0 && _contractViolationCount == 0; }
+    };
+
+    /**
      * @struct ShaderBakeDriver
      * @brief 요청 수집과 일괄 베이크입니다. `App --bake-shaders` 와 테스트가 부릅니다.
      */
@@ -29,11 +44,11 @@ namespace sw
          * @param resourceRoot 리소스 루트 디렉터리(비어 있으면 ResourceUtil 기준으로 자동 탐색)
          * @param targetFormat 대상 포맷(Count 면 DX11, DX12, Vulkan, OpenGL 모두 굽기)
          * @param bForceAll true 면 내용 해시와 상관없이 모두 다시 컴파일
-         * @return 성공적으로 구운 바이너리 파일 총 개수
+         * @return 구운 수 · 실패 수 · 계약 위반 수
          */
-        static uint32 bakeAllShaders( string_view        resourceRoot = {},
-                                      ShaderTargetFormat targetFormat = ShaderTargetFormat::Count,
-                                      bool               bForceAll    = false );
+        static ShaderBakeSummary bakeAllShaders( string_view        resourceRoot = {},
+                                                 ShaderTargetFormat targetFormat = ShaderTargetFormat::Count,
+                                                 bool               bForceAll    = false );
 
         /**
          * @brief 이 리소스 트리가 구워야 할 요청을 모두 모읍니다(파이프라인 XML + 머티리얼).

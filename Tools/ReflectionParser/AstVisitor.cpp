@@ -130,8 +130,10 @@ namespace sw
                 if ( it != s_mapPathToContent.end() )
                     return it->second;
 
+                // 못 읽으면 빈 글로 캐시한다 — 그 헤더의 애노테이션을 찾지 못하니 알린다.
                 string content;
-                FileUtil::readTextFile( path, content );
+                if ( FileUtil::readTextFile( path, content ) == false )
+                    SW_LOG_ERROR( "Could not read '%#' - annotations in it are not seen", path );
                 return s_mapPathToContent.emplace( path, std::move( content ) ).first->second;
             }
 

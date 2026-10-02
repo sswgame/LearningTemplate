@@ -24,7 +24,7 @@ namespace sw
         using LanguageChangedCallback = sw::Delegate<void( string_view oldLanguage, string_view newLanguage )>;
 
         /** @brief Resource 상대 경로에서 단일 언어 또는 기본(default) 언어 파일을 로드합니다(.xml · .json · .ini · .kv 자동 감지). */
-        static bool loadFromResource( string_view assetRelativePath );
+        [[nodiscard]] static bool loadFromResource( string_view assetRelativePath );
 
         /**
          * @brief 언어 팩 디렉터리 또는 기본 리소스 파일을 훑어 로드하고, 커맨드라인 · 기본 · 폴백 언어를 자동으로 활성화합니다.
@@ -35,13 +35,13 @@ namespace sw
         static bool initialize( string_view directoryOrResourcePath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
 
         /** @brief Resource 상대 경로에서 특정 언어 코드(예: "ko_KR", "en_US")의 언어 파일을 로드합니다. */
-        static bool loadLanguage( string_view languageCode, string_view assetRelativePath );
+        [[nodiscard]] static bool loadLanguage( string_view languageCode, string_view assetRelativePath );
 
         /** @brief 파일 시스템 경로에서 특정 언어 코드의 언어 파일을 로드합니다. */
-        static bool loadLanguageFile( string_view languageCode, string_view filePath );
+        [[nodiscard]] static bool loadLanguageFile( string_view languageCode, string_view filePath );
 
         /** @brief 특정 디렉터리 안의 모든 언어 파일(예: ko_kr.json, en_us.json 등)을 파일명을 언어 코드로 삼아 한꺼번에 로드합니다. */
-        static bool loadLanguageDirectory( string_view directoryPath, string_view filterExtension = ".json", bool bRecursive = false );
+        [[nodiscard]] static bool loadLanguageDirectory( string_view directoryPath, string_view filterExtension = ".json", bool bRecursive = false );
 
         /** @brief 현재 활성 언어를 설정합니다(언어가 바뀌면 등록된 UI 콜백들에 알림이 갑니다). */
         static bool setLanguage( string_view languageCode );

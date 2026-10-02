@@ -93,8 +93,9 @@ namespace sw::editor
         void applyDocumentText( string_view text ) override
         {
             AssetType restored;
-            if ( text.empty() == false )
-                restored.parseJson( text );
+            // 되돌리기 텍스트는 이 패널이 쓴 JSON 이다 — 못 읽으면 결함이라 알리고 기본 그래프로 둔다.
+            if ( text.empty() == false && restored.parseJson( text ) == false )
+                SW_LOG_WARNING( "Graph undo snapshot could not be read - showing the default graph" );
 
             _listNode = std::move( restored._listNode );
             _listLink = std::move( restored._listLink );

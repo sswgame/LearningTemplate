@@ -81,10 +81,10 @@ namespace sw
         TileMap();
 
         /** @brief Resource 상대 XML 에서 타일맵을 불러옵니다. */
-        bool loadFromXml( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromXml( string_view assetRelativePath );
 
         /** @brief Resource 상대 XML 로 타일맵을 저장합니다. */
-        bool saveToXml( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToXml( string_view assetRelativePath ) const;
         /** @brief 맵 데이터를 비웁니다. */
         void clear();
         /** @brief 맵 크기를 변경합니다. */

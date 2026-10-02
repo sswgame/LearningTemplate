@@ -78,11 +78,11 @@ namespace sw
          */
         virtual bool initializeXmlDeserialization( string_view xmlStr, const utf8* pRootTagName ) = 0;
         /** @brief XML 자식 요소에서 값을 읽습니다. */
-        virtual bool readValue( const utf8* pTagName, string& outValue ) = 0;
+        [[nodiscard]] virtual bool readValue( const utf8* pTagName, string& outValue ) = 0;
         /** @brief 현재 부모 요소의 XML 속성을 읽습니다. */
-        virtual bool readAttribute( const utf8* pAttrName, string& outValue ) = 0;
+        [[nodiscard]] virtual bool readAttribute( const utf8* pAttrName, string& outValue ) = 0;
         /** @brief 속성을 먼저 보고, 없으면 자식 요소에서 읽습니다(호환 로드). */
-        virtual bool readValueOrAttribute( const utf8* pName, string& outValue )
+        [[nodiscard]] virtual bool readValueOrAttribute( const utf8* pName, string& outValue )
         {
             if ( readAttribute( pName, outValue ) )
                 return true;
@@ -111,7 +111,7 @@ namespace sw
         /** @brief 현재 노드의 텍스트를 설정합니다. */
         virtual void writeText( const utf8* pText ) { (void)pText; }
         /** @brief 현재 노드의 텍스트를 읽습니다. */
-        virtual bool readText( string& outText )
+        [[nodiscard]] virtual bool readText( string& outText )
         {
             (void)outText;
             return false;
@@ -183,9 +183,9 @@ namespace sw
         /** @brief XML 역직렬화를 시작합니다. */
         bool initializeXmlDeserialization( string_view xmlStr, const utf8* pRootTagName ) override;
         /** @brief XML 자식 요소에서 값을 읽습니다. */
-        bool readValue( const utf8* pTagName, string& outValue ) override;
+        [[nodiscard]] bool readValue( const utf8* pTagName, string& outValue ) override;
         /** @brief 현재 부모 요소의 XML 속성을 읽습니다. */
-        bool readAttribute( const utf8* pAttrName, string& outValue ) override;
+        [[nodiscard]] bool readAttribute( const utf8* pAttrName, string& outValue ) override;
         /** @brief 배열 요소를 순회합니다. */
         bool iterateArray( const utf8* pTagName, const XmlArrayItemDelegate& callback ) override;
         /** @brief 맵 항목을 순회합니다. */
@@ -199,7 +199,7 @@ namespace sw
         /** @brief 현재 노드의 텍스트를 설정합니다. */
         void writeText( const utf8* pText ) override;
         /** @brief 현재 노드의 텍스트를 읽습니다. */
-        bool readText( string& outText ) override;
+        [[nodiscard]] bool readText( string& outText ) override;
         /** @brief 현재 노드의 자식 요소를 순서대로 방문합니다. */
         bool iterateChildren( const XmlChildVisitDelegate& callback ) override;
 
@@ -233,39 +233,39 @@ namespace sw
                                  IXmlBackend&            backend,
                                  const SerializeContext& ctx = SerializeContext::getDefault() );
         /** @brief 지정한 백엔드로 XML 에서 객체를 역직렬화합니다. */
-        static bool deserialize( void* pInstance, const TypeInfo& typeInfo,
-                                 IXmlBackend& backend, string_view xmlStr,
-                                 const SerializeContext& ctx = SerializeContext::getDefault() );
+        [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo,
+                                               IXmlBackend& backend, string_view xmlStr,
+                                               const SerializeContext& ctx = SerializeContext::getDefault() );
 
         /** @brief 기본 XmlDocumentBackend 로 객체를 XML 로 직렬화합니다. */
         static string serialize( const void* pInstance, const TypeInfo& typeInfo,
                                  const SerializeContext& ctx = SerializeContext::getDefault() );
         /** @brief 기본 XmlDocumentBackend 로 XML 에서 객체를 역직렬화합니다. */
-        static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
-                                 const SerializeContext& ctx = SerializeContext::getDefault() );
+        [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
+                                               const SerializeContext& ctx = SerializeContext::getDefault() );
 
         /** @brief 객체를 XML 로 직렬화해 Archive 에 기록합니다. */
-        static bool serializeToArchive( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
-                                        const SerializeContext& ctx = SerializeContext::getDefault() );
+        [[nodiscard]] static bool serializeToArchive( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
+                                                      const SerializeContext& ctx = SerializeContext::getDefault() );
 
         /** @brief Archive 에서 XML 문자열을 읽어 객체로 역직렬화합니다. */
-        static bool deserializeFromArchive( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
-                                            const SerializeContext& ctx = SerializeContext::getDefault() );
+        [[nodiscard]] static bool deserializeFromArchive( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
+                                                          const SerializeContext& ctx = SerializeContext::getDefault() );
 
         /** @brief XML 을 절대 경로에 씁니다. */
-        static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
-                              const SerializeContext& ctx = SerializeContext::getDefault() );
+        [[nodiscard]] static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
+                                            const SerializeContext& ctx = SerializeContext::getDefault() );
         /** @brief 절대 · 리소스 경로에서 XML 을 읽어 역직렬화합니다. */
-        static bool loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo,
-                              const SerializeContext& ctx = SerializeContext::getDefault() );
+        [[nodiscard]] static bool loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo,
+                                            const SerializeContext& ctx = SerializeContext::getDefault() );
 
         // ------------------------------------------------------------------------------
         // 5) Soft · 버전: orphan 수집, 루트 _schemaVersion
         // ------------------------------------------------------------------------------
         /** @brief Soft 역직렬화입니다. 변환하지 못한 필드를 orphan 으로 모읍니다. */
-        static bool deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
-                                     vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
-                                     const SerializeContext& ctx = SerializeContext::getDefault() );
+        [[nodiscard]] static bool deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
+                                                   vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
+                                                   const SerializeContext& ctx = SerializeContext::getDefault() );
 
         /** @brief 루트 속성 `_schemaVersion` 을 붙여 XML 로 직렬화합니다. */
         static string serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
@@ -276,10 +276,10 @@ namespace sw
                                             const SerializeContext& ctx = SerializeContext::getDefault() );
 
         /** @brief 버전을 읽고 soft 역직렬화한 뒤, 필요하면 migrate 를 부릅니다. */
-        static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
-                                          uint32 currentVersion = 0, SchemaMigrateFn migrate = nullptr,
-                                          const TypeInfo*         pLegacyTypeInfo = nullptr,
-                                          const SerializeContext& ctx             = SerializeContext::getDefault() );
+        [[nodiscard]] static bool deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
+                                                        uint32 currentVersion = 0, SchemaMigrateFn migrate = nullptr,
+                                                        const TypeInfo*         pLegacyTypeInfo = nullptr,
+                                                        const SerializeContext& ctx             = SerializeContext::getDefault() );
     };
 
 } // namespace sw

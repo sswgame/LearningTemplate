@@ -82,7 +82,7 @@ namespace sw
          *          아니다, **읽었는데 `<Monster>` 가 하나도 없다.** 마지막 것이 한동안 성공으로
          *          취급돼서, 태그 철자를 틀리면 텅 빈 카탈로그가 조용히 만들어졌습니다.
          */
-        bool loadFromResource( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromResource( string_view assetRelativePath );
 
         /** @brief 몬스터 ID 로 정의를 조회합니다. */
         const MonsterDef* findMonster( const hashed_string& id ) const;

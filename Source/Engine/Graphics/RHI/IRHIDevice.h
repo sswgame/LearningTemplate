@@ -128,7 +128,7 @@ namespace sw
          *          것이 다르기 때문입니다(DX12 · DX11 은 지난 사이클 값, Vulkan · GL 은 미가용).
          *          부르는 쪽은 음수가 하나라도 낀 구간을 통째로 버려야 합니다.
          */
-        virtual bool readTimestampsMicros( vector<float32>& outListMicro )
+        [[nodiscard]] virtual bool readTimestampsMicros( vector<float32>& outListMicro )
         {
             outListMicro.clear();
             return false;

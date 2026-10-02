@@ -247,7 +247,8 @@ namespace sw
             if ( key.size() > prefixLen && key.compare( 0, prefixLen, kFlagPrefix ) == 0 )
             {
                 int32 flagVal{ 0 };
-                StringUtil::parseInt( val, flagVal );
+                if ( StringUtil::parseInt( val, flagVal ) == false )
+                    SW_LOG_WARNING( "Save flag '%#' has an unreadable value '%#' - using 0", key, val );
                 _mapFlag[key.substr( prefixLen )] = flagVal;
             }
         }

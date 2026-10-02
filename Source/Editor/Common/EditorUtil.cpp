@@ -101,8 +101,8 @@ namespace sw::editor
             return nullptr;
         }
 
-        if ( pParent != nullptr )
-            pSpawned->attachToParent( pParent );
+        if ( pParent != nullptr && pSpawned->attachToParent( pParent ) == false )
+            SW_LOG_WARNING( "Spawned prefab could not be put under '%#' - it stays at the root", pParent->getName().c_str() );
 
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )

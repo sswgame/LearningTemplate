@@ -23,8 +23,8 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         void shutdown( IRHIDevice* pRhiDevice ) override;
         /** @brief 대화 노드 그래프 UI를 렌더링합니다. */
-        void drawContent() override;
-        bool saveDocument() override;
+        void               drawContent() override;
+        [[nodiscard]] bool saveDocument() override;
 
     private:
         /** @brief 노드 추가·저장·줌 등 그래프 툴바를 그립니다. */
@@ -50,10 +50,10 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 기본 샘플 노드들을 구성합니다. */
         void ensureDefaults() override;
-        /** @brief 대화 그래프 JSON 파일을 불러옵니다. */
-        void loadGraphData();
+        /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
+        ToolAssetLoadResult loadDocument() override;
         /** @brief 대화 그래프를 JSON 파일로 저장합니다. */
-        bool saveGraphData();
+        [[nodiscard]] bool saveGraphData();
 
         /** @brief 지정한 타입의 노드를 추가합니다. */
         void addNode( DialogueAssetNodeType type, const utf8* pSpeaker = "", const utf8* pText = "" );

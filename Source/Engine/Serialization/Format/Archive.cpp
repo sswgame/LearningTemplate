@@ -374,69 +374,71 @@ namespace sw
         return *this;
     }
 
+    // 아래 읽기 연산자들은 `readBytes` 의 결과를 버린다 — 실패는 끈적한 오류 상태(`isError`)에 남고, 부른 쪽이 읽기를 마친 뒤 그것을 본다
+    // (iostream 과 같은 관용). 연산자마다 검사하면 체인(`arch >> a >> b`)을 쓸 수 없다.
     Archive& Archive::operator>>( bool& outData )
     {
-        readBytes( &outData, sizeof( bool ) );
+        (void)readBytes( &outData, sizeof( bool ) );
         return *this;
     }
 
     Archive& Archive::operator>>( uint8& outData )
     {
-        readBytes( &outData, sizeof( uint8 ) );
+        (void)readBytes( &outData, sizeof( uint8 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( uint16& outData )
     {
-        readBytes( &outData, sizeof( uint16 ) );
+        (void)readBytes( &outData, sizeof( uint16 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( uint32& outData )
     {
-        readBytes( &outData, sizeof( uint32 ) );
+        (void)readBytes( &outData, sizeof( uint32 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( uint64& outData )
     {
-        readBytes( &outData, sizeof( uint64 ) );
+        (void)readBytes( &outData, sizeof( uint64 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( int8& outData )
     {
-        readBytes( &outData, sizeof( int8 ) );
+        (void)readBytes( &outData, sizeof( int8 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( int16& outData )
     {
-        readBytes( &outData, sizeof( int16 ) );
+        (void)readBytes( &outData, sizeof( int16 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( int32& outData )
     {
-        readBytes( &outData, sizeof( int32 ) );
+        (void)readBytes( &outData, sizeof( int32 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( int64& outData )
     {
-        readBytes( &outData, sizeof( int64 ) );
+        (void)readBytes( &outData, sizeof( int64 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( float32& outData )
     {
-        readBytes( &outData, sizeof( float32 ) );
+        (void)readBytes( &outData, sizeof( float32 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( float64& outData )
     {
-        readBytes( &outData, sizeof( float64 ) );
+        (void)readBytes( &outData, sizeof( float64 ) );
         return *this;
     }
 
@@ -459,7 +461,7 @@ namespace sw
                 return *this;
             }
             outData.resize( len );
-            readBytes( outData.data(), len );
+            (void)readBytes( outData.data(), len );
         }
         else
         {
@@ -487,7 +489,7 @@ namespace sw
                 return *this;
             }
             outBytes.resize( len );
-            readBytes( outBytes.data(), len );
+            (void)readBytes( outBytes.data(), len );
         }
         else
         {
@@ -498,25 +500,25 @@ namespace sw
 
     Archive& Archive::operator>>( float2& outData )
     {
-        readBytes( &outData, sizeof( float2 ) );
+        (void)readBytes( &outData, sizeof( float2 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( float3& outData )
     {
-        readBytes( &outData, sizeof( float3 ) );
+        (void)readBytes( &outData, sizeof( float3 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( float4& outData )
     {
-        readBytes( &outData, sizeof( float4 ) );
+        (void)readBytes( &outData, sizeof( float4 ) );
         return *this;
     }
 
     Archive& Archive::operator>>( float4x4& outData )
     {
-        readBytes( &outData, sizeof( float4x4 ) );
+        (void)readBytes( &outData, sizeof( float4x4 ) );
         return *this;
     }
 

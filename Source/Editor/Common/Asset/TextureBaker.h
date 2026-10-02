@@ -53,7 +53,7 @@ namespace sw::editor
          * @param pOutResult 베이킹 결과 세부 정보(선택)
          * @return 성공하면 true
          */
-        static bool bakeTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureBakeResult* pOutResult = nullptr );
+        [[nodiscard]] static bool bakeTexture( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, TextureBakeResult* pOutResult = nullptr );
 
         /** @brief 스위즐 · 그린 채널 반전 같은 채널 조작을 적용합니다. */
         static void applyChannelManipulations( RawImageData& rawImage, const TextureImportRule& rule, size_t totalPixels );
@@ -61,6 +61,6 @@ namespace sw::editor
         /**
          * @brief TextureImportConfig 에서 상대 경로에 맞는 규칙을 골라 굽습니다.
          */
-        static bool bakeTextureWithConfig( string_view sourcePath, string_view outputPath, const TextureImportConfig& config, TextureBakeResult* pOutResult = nullptr );
+        [[nodiscard]] static bool bakeTextureWithConfig( string_view sourcePath, string_view outputPath, const TextureImportConfig& config, TextureBakeResult* pOutResult = nullptr );
     };
 } // namespace sw::editor

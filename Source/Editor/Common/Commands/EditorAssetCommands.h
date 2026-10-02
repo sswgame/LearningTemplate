@@ -55,19 +55,19 @@ namespace sw::editor
     {
     public:
         /** @brief 등록된 애셋 에디터를 열거나 씬/머티리얼을 처리합니다. */
-        static bool openPath( string_view relativePath );
+        [[nodiscard]] static bool openPath( string_view relativePath );
         /** @brief 씬을 비동기 로드하고 선택을 지웁니다. */
-        static bool loadScene( string_view path );
+        [[nodiscard]] static bool loadScene( string_view path );
         /** @brief dirty면 확인을 띄우고, 아니면 로드합니다. 플레이 중이면 false입니다. */
-        static bool tryOpenScene( string_view path );
+        [[nodiscard]] static bool tryOpenScene( string_view path );
         /** @brief dirty면 확인을 띄우고, 아니면 빈 씬으로 바꿉니다. */
-        static bool tryCreateNewScene();
+        [[nodiscard]] static bool tryCreateNewScene();
         /** @brief 포커스된 더티 도구 문서를 저장하거나 활성 씬을 저장합니다. */
         static void saveFocusedOrScene();
         /** @brief "저장하지 않은 변경" 확인 창에서 고른 것을 적용합니다. */
         static void applyUnsavedSceneChoice( EditorUnsavedChoice choice );
         /** @brief dirty면 확인을 띄우고, 아니면 종료를 허용합니다. */
-        static bool tryBeginQuit();
+        [[nodiscard]] static bool tryBeginQuit();
         /** @brief 창 닫기를 시도합니다. dirty면 확인 모달이 뜹니다. */
         static void requestExit();
         /** @brief 활성 씬 세대가 바뀌면 dirty/프리팹 맵을 동기화합니다. */
@@ -82,13 +82,13 @@ namespace sw::editor
         /** @brief 뷰포트에 드롭한 것을 스폰하거나 로드합니다. 히트 위치는 부르는 쪽이 구합니다. */
         static void dropAt( GameObjectManager* pManager, const utf8* pPath, const float3& spawnPos );
         /** @brief 활성 씬을 XML로 저장합니다. path가 비면 씬 소스 경로를 씁니다. */
-        static bool saveActiveScene( string_view path = {} );
+        [[nodiscard]] static bool saveActiveScene( string_view path = {} );
         /** @brief 소스 경로가 있으면 저장하고, 없으면 Save As 대화상자를 엽니다. */
         static void saveActiveSceneOrPrompt();
         /** @brief 파일을 Content Browser 폴더로 복사하고 메타를 만듭니다. */
         static uint32 importFiles( string_view destFolderAbs, const vector<string>& listSourcePath );
         /** @brief 애셋 파일과 짝 .meta를 삭제합니다. */
-        static bool deleteAsset( string_view absolutePath );
+        [[nodiscard]] static bool deleteAsset( string_view absolutePath );
 
         /**
          * @brief 파일 탐색기에서 이 경로를 선택한 채로 엽니다.

@@ -90,7 +90,8 @@ namespace sw
         if ( StringUtil::isNullOrEmpty( pValue ) )
             return fallback;
         int32 val{ fallback };
-        StringUtil::parseInt( pValue, val );
+        if ( StringUtil::parseInt( pValue, val ) == false )
+            SW_LOG_WARNING( "Key '%#' has an unreadable integer '%#' - using %#", key, pValue, fallback );
         return val;
     }
 
@@ -100,7 +101,8 @@ namespace sw
         if ( StringUtil::isNullOrEmpty( pValue ) )
             return fallback;
         float32 val{ fallback };
-        StringUtil::parseFloat( pValue, val );
+        if ( StringUtil::parseFloat( pValue, val ) == false )
+            SW_LOG_WARNING( "Key '%#' has an unreadable number '%#' - using %#", key, pValue, fallback );
         return val;
     }
 

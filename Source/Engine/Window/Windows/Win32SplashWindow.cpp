@@ -87,7 +87,7 @@ namespace sw
 
         // 채널 뒤집기는 여기 있지 않다. `loadSplashImage()` 가 **모든 플랫폼에** BGRA 를 보장한다.
         // 이 자리에만 두었던 탓에 리눅스는 같은 보정을 받지 못하고 있었다.
-        loadSplashImage();
+        (void)loadSplashImage(); // 이미지가 없으면 빈 스플래시다 — 로드가 이유를 알린다
 
         HINSTANCE hInstance = GetModuleHandleW( nullptr );
 

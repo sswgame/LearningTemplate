@@ -21,8 +21,8 @@ namespace sw::editor
         // 1) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
         /** @brief 스프라이트 클립 편집 UI를 그립니다. */
-        void drawContent() override;
-        bool saveDocument() override;
+        void               drawContent() override;
+        [[nodiscard]] bool saveDocument() override;
 
     private:
         string               captureDocumentText() const override;
@@ -39,8 +39,8 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 3) SpriteClip.json 로드/저장
         // ------------------------------------------------------------------------------
-        /** @brief SpriteClip.json을 불러옵니다. */
-        void loadJson();
+        /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
+        ToolAssetLoadResult loadDocument() override;
         /** @brief SpriteClip.json을 저장합니다. */
         void saveJson();
 

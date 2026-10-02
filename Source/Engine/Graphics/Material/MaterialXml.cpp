@@ -44,7 +44,8 @@ namespace sw
                     if ( valueText.empty() == false )
                     {
                         uint64 val{ 0 };
-                        StringUtil::parseUint64( valueText, val, 0 );
+                        if ( StringUtil::parseUint64( valueText, val, 0 ) == false )
+                            SW_LOG_WARNING( "Material value '%#' is not an unsigned integer - using 0", valueText );
                         entry._value = static_cast<uint32>( val );
                     }
                     if ( entry._name.empty() == false )
@@ -136,10 +137,10 @@ namespace sw
         prop._shaderKeyword = MaterialUtil::fieldText( item, "shaderKeyword" );
         const string minStr = MaterialUtil::fieldText( item, "min" );
         const string maxStr = MaterialUtil::fieldText( item, "max" );
-        if ( minStr.empty() == false )
-            StringUtil::parseFloat( minStr, prop._min );
-        if ( maxStr.empty() == false )
-            StringUtil::parseFloat( maxStr, prop._max );
+        if ( minStr.empty() == false && StringUtil::parseFloat( minStr, prop._min ) == false )
+            SW_LOG_WARNING( "Material parameter '%#' has an unreadable min '%#' - no lower bound", prop._name, minStr );
+        if ( maxStr.empty() == false && StringUtil::parseFloat( maxStr, prop._max ) == false )
+            SW_LOG_WARNING( "Material parameter '%#' has an unreadable max '%#' - no upper bound", prop._name, maxStr );
         prop._bHdr      = MaterialUtil::parseBoolField( item, "bHdr", false );
         prop._bSrgb     = MaterialUtil::parseBoolField( item, "bSrgb", true );
         prop._bHidden   = MaterialUtil::parseBoolField( item, "bHidden", false );
@@ -206,7 +207,8 @@ namespace sw
         if ( lod.empty() == false )
         {
             uint64 lodVal{ 0 };
-            StringUtil::parseUint64( lod, lodVal, 10 );
+            if ( StringUtil::parseUint64( lod, lodVal, 10 ) == false )
+                SW_LOG_WARNING( "Material shader LOD '%#' is not a number - using 0", lod );
             out._shaderLOD = static_cast<uint32>( lodVal );
         }
         const string usage = MaterialUtil::fieldText( permutationsNode, "usage" );
@@ -321,7 +323,8 @@ namespace sw
         std::scoped_lock<mutex> lock{ state->_mutex };
         if ( state->_pMaterial == nullptr )
             return;
-        state->_pMaterial->loadFromFile( args.get<string>( 1 ) );
+        if ( state->_pMaterial->loadFromFile( args.get<string>( 1 ) ) == false )
+            SW_LOG_WARNING( "Could not load material '%#'", args.get<string>( 1 ) );
     }
 
     bool Material::saveToFile( string_view assetRelativePath ) const

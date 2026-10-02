@@ -108,7 +108,9 @@ namespace sw::editor
             {
                 ObjectLoadContext context{};
                 context._pIdentity = &snapshot._identity;
-                ObjectStateSerializer::loadFromXmlString( pTarget, snapshot._xml, context );
+                // 실패하면 로드가 오브젝트를 읽기 전 상태로 되돌린다 — 되돌리기 하나가 빠졌다고 알린다.
+                if ( ObjectStateSerializer::loadFromXmlString( pTarget, snapshot._xml, context ) == false )
+                    SW_LOG_WARNING( "Undo/redo could not restore '%#' - it is left as it was", pTarget->getName().c_str() );
             }
 
             /** @brief 활성 씬에서 대상을 다시 찾아 XML 스냅샷을 되읽습니다. 대상이 없으면 아무것도 하지 않습니다. */

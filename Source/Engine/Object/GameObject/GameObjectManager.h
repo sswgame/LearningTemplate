@@ -562,9 +562,9 @@ namespace sw
             /** @brief id 의 칸 번호입니다. */
             static constexpr uint64 getSlotIndex( uint64 objectId ) { return objectId & ( kObjectSlotCount - 1 ); }
             /** @brief 칸이 비었으면 씁니다. 다른 오브젝트가 쓰고 있으면 false — 부르는 쪽이 맵에 넣습니다. 매니저 락을 쥔 채 부르십시오. */
-            bool tryStore( uint64 objectId, GameObject* pObject );
+            [[nodiscard]] bool tryStore( uint64 objectId, GameObject* pObject );
             /** @brief 칸이 이 오브젝트를 들고 있으면 비웁니다. 아니면 false — 맵에 든 것입니다. 매니저 락을 쥔 채 부르십시오. */
-            bool tryRemove( uint64 objectId, const GameObject* pObject );
+            [[nodiscard]] bool tryRemove( uint64 objectId, const GameObject* pObject );
             /** @brief 칸이 **그 id 의** 오브젝트를 들고 있으면 반환합니다. **락이 필요 없습니다.** 비었거나 다른 id 면 nullptr 입니다. */
             GameObject* load( uint64 objectId ) const;
             /** @brief 모든 슬롯을 비웁니다. 락 없이 읽는 쪽이 있을 수 있어 청크는 그대로 둡니다. */

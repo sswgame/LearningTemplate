@@ -209,7 +209,7 @@ namespace sw
              *          뺀 바이트로 계산합니다(`computeContentHash`). 판정 쪽과 같은 함수입니다.
              * @param binDirectory 매니페스트를 쓴 폴더(`<domain>/shaders/bin/<rhi>`)
              */
-            static void writeBakeStamp( string_view binDirectory )
+            static void writeBakeStamp( string_view binDirectory, const unordered_set<string>* pFailedSource )
             {
                 // <domain>/shaders/bin/<rhi> → <domain>/shaders
                 const string rhiDir     = FileUtil::normalizeSeparators( binDirectory );
@@ -231,6 +231,8 @@ namespace sw
                         continue;
                     if ( normSource.size() <= shadersDir.size() + 1 )
                         continue;
+                    if ( pFailedSource != nullptr && pFailedSource->find( normSource ) != pFailedSource->end() )
+                        continue; // 이번에 굽지 못했다 — 최신이 아니다
 
                     // 해싱과 키 만들기는 **판정 쪽과 같은 함수**를 쓴다. 스탬프와 판정이 다른 규칙을
                     // 쓰던 것이 이 파일이 고치는 버그였다. 줄 끝 정규화 사연은 computeContentHash 주석에 있다.
@@ -266,9 +268,9 @@ namespace sw
 {
     SW_LOG_CALLER( "ShaderBaker" );
 
-    void ShaderBaker::writeBakeStamp( string_view binDirectory )
+    void ShaderBaker::writeBakeStamp( string_view binDirectory, const unordered_set<string>* pFailedSource )
     {
-        ShaderBakeStampInternal::writeBakeStamp( binDirectory );
+        ShaderBakeStampInternal::writeBakeStamp( binDirectory, pFailedSource );
     }
 
     void ShaderBaker::invalidateSharedHeaderCache()

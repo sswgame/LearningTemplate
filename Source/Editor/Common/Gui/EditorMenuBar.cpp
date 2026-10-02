@@ -300,7 +300,7 @@ namespace sw::editor
         if ( pContext->getWorkspace().consumeLoadScene( scenePath ) == false )
             return;
 
-        EditorAssetCommands::tryOpenScene( scenePath );
+        (void)EditorAssetCommands::tryOpenScene( scenePath ); // 실패는 tryOpenScene 이 알린다
     }
 
     void EditorMenuBar::processSceneSession()

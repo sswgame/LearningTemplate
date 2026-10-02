@@ -40,24 +40,27 @@ namespace sw::editor
         void updateFocusedDocument();
 
         const string& getLoadedAssetPath() const { return _loadedAssetPath; }
-        void          markDocumentLoaded();
         bool          isDocumentLoaded() const;
+        bool          isDocumentLoadFailed() const { return _bLoadFailed == SW_TRUE; }
+        bool          canSaveDocument() const override { return _bLoadFailed == SW_FALSE; }
+
         /**
-         * @brief 문서를 읽지 못했다 — 다시 읽으려 하지 않고(`isDocumentLoaded`), **저장을 막습니다**(`canSaveDocument`).
-         * @details 예전에는 실패해도 `markDocumentLoaded` 를 불러, 패널이 앞 문서의 데이터를 들고 새 경로를 제목으로 띄웠다. 저장을 누르면
-         *          읽지 못한 파일(깨졌거나 더 새 형식)을 앞 문서의 내용으로 덮었다. 다른 문서로 바꾸거나 다시 읽어 성공하면 풀린다.
-         * @param reason 로그에 남길 까닭(예: "malformed or newer format")
+         * @brief 이 패널의 문서를 (다시) 읽어 내용을 채웁니다. **읽음 · 못 읽음 표시는 기반이 결과로 합니다**(`reloadDocument`) — 패널은 표시하지 않습니다.
+         * @details `Missing` 은 새 문서(기본값으로 시작하고 저장하면 만든다), `Malformed` 는 저장을 막는다(읽지 못한 파일을 앞 문서로 덮지 않게).
+         *          예전에는 패널마다 "읽었다" 표시를 직접 불렀고, 둘(TileMap · SpriteClip)은 읽기 결과를 버린 채 늘 읽었다고 표시했다.
          */
-        void markDocumentLoadFailed( string_view reason );
-        bool isDocumentLoadFailed() const { return _bLoadFailed == SW_TRUE; }
-        bool canSaveDocument() const override { return _bLoadFailed == SW_FALSE; }
+        virtual ToolAssetLoadResult loadDocument() = 0;
+        /** @brief 문서를 읽고 결과를 표시합니다. 첫 그리기(`ensureDocumentLoaded`)와 패널의 Load · Reload 단추가 부릅니다. */
+        void reloadDocument();
+        /** @brief 아직 읽지 않았으면 읽습니다. 그리기 머리(`updateFocusedDocument` 다음)에서 부릅니다. */
+        void ensureDocumentLoaded();
 
         /**
          * @brief 현재 문서를 디스크에 저장합니다. 성공하면 true입니다.
          * @details 기반(IEditorPanel)에는 "문서 없음" 기본 구현이 있지만, 문서 패널은 반드시 구현해야 하므로 여기서 다시 순수
          *          가상으로 선언합니다. 구현을 잊으면 컴파일이 막힙니다.
          */
-        bool saveDocument() override = 0;
+        [[nodiscard]] bool saveDocument() override = 0;
         /** @brief 편집 단위 Undo를 남기고 dirty로 표시합니다. */
         void notifyDocumentEdited( string_view label, string_view coalesceKey = {} );
         /** @brief 로드/저장 직후 Undo 기준 텍스트를 맞춥니다. */
@@ -79,6 +82,10 @@ namespace sw::editor
     private:
         void drawUnsavedDocumentPopup();
         void restoreDocumentFromUndo( string_view text );
+        /** @brief 읽었다(또는 새 문서) — 저장을 허용하고 되돌리기 기준을 맞춥니다. */
+        void markDocumentLoaded();
+        /** @brief 읽지 못했다 — 다시 읽으려 하지 않고(`isDocumentLoaded`), **저장을 막습니다**(`canSaveDocument`). 다른 문서로 바꾸거나 다시 읽어 성공하면 풀린다. */
+        void markDocumentLoadFailed( string_view reason );
 
         EditorAssetKind        _kind;
         string                 _loadedAssetPath;

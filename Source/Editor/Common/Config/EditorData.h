@@ -109,6 +109,6 @@ namespace sw::editor
          * @brief 프로젝트 루트 기준 Host 경로에서 에디터 시드를 로드합니다.
          * @param hostRelativePath 비어 있으면 `config::kFileRuntimeEditorData`(Config/Editor/editordata.json)
          */
-        bool loadFromHostPath( string_view hostRelativePath = {} );
+        [[nodiscard]] bool loadFromHostPath( string_view hostRelativePath = {} );
     };
 } // namespace sw::editor

@@ -44,9 +44,9 @@ namespace sw::editor
         static Component* pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, const vector<uint8>& bytes, string_view xmlFallback = {} );
         static Component* pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, string_view xml );
         /** @brief 컴포넌트 프리셋을 Resource 프리셋 폴더에 저장합니다. */
-        static bool saveComponentPreset( const Component* pComp, string_view presetName );
+        [[nodiscard]] static bool saveComponentPreset( const Component* pComp, string_view presetName );
         /** @brief 프리셋 XML을 컴포넌트에 적용합니다. */
-        static bool loadComponentPreset( Component* pComp, string_view presetFilePath );
+        [[nodiscard]] static bool loadComponentPreset( Component* pComp, string_view presetFilePath );
         /** @brief 선택 오브젝트를 지면(Y)에 맞춥니다(`snapObjectsToGround`). */
         static void snapSelectedToGround();
         /** @brief 선택 오브젝트를 축 기준으로 정렬합니다(`alignObjects`). */

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
@@ -303,6 +304,29 @@ SW_TEST_CASE( ShaderBakerTest, CachedSourceHashNoticesEditedFile )
 }
 
 /**
+ * @brief [ShaderBakerTest] 굽지 못한 소스는 도장에서 빠진다 — 다음 베이크가 그것을 최신으로 보지 않고 다시 굽는다
+ * @details 컴파일에 실패해도 베이크가 폴더 전체의 지금 소스 해시로 도장을 찍어, 그 셰이더의 **옛 바이너리**가 최신으로 판정됐다 — 다음 베이크도
+ *          건너뛰었고 `--bake-shaders` 는 종료 코드 0 이라 배포본에 옛 바이너리가 실렸다.
+ */
+SW_TEST_CASE( ShaderBakerTest, FailedSourcesAreLeftOutOfTheBakeStamp )
+{
+    const sw::string shadersDir = sw::FileUtil::joinPath( test::makeTempDirectory( "bake_stamp" ), "shaders" );
+    const sw::string binDir     = sw::FileUtil::joinPath( sw::FileUtil::joinPath( shadersDir, "bin" ), "dx12" );
+    const sw::string goodPath   = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( shadersDir, "good.hlsl" ) );
+    const sw::string brokenPath = sw::FileUtil::normalizeSeparators( sw::FileUtil::joinPath( shadersDir, "broken.hlsl" ) );
+    sw::FileUtil::ensureDirectoryExists( binDir );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( goodPath, "float4 main() : SV_Target { return 1; }\n" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, "float4 main() : SV_Target { return }\n" ) );
+
+    const sw::unordered_set<sw::string> uniqueFailedSource{ brokenPath };
+    sw::ShaderBaker::writeBakeStamp( binDir, &uniqueFailedSource );
+    sw::ShaderBaker::invalidateSharedHeaderCache(); // 도장 읽기 캐시를 비워 방금 쓴 도장을 읽게 한다
+
+    SW_EXPECT_TRUE( sw::ShaderBaker::isBakedOutputCurrent( binDir, goodPath ) );
+    SW_EXPECT_FALSE( sw::ShaderBaker::isBakedOutputCurrent( binDir, brokenPath ) );
+}
+
+/**
  * @brief [ShaderBakerTest] 잘못된 파일 경로 및 디렉터리에 대한 방어적 실패 처리 검증
  */
 SW_TEST_CASE( ShaderBakerTest, DefensiveFileOperations )
@@ -322,11 +346,11 @@ SW_TEST_CASE( ShaderBakerTest, DefensiveFileOperations )
     SW_EXPECT_FALSE( bBakeInvalid );
     SW_EXPECT_FALSE( result._bSuccess == SW_TRUE );
 
-    const uint32 bakedCount = sw::ShaderBakeDriver::bakeAllShaders(
+    const sw::ShaderBakeSummary summary = sw::ShaderBakeDriver::bakeAllShaders(
         "invalid_resource_root_path_99999",
         sw::ShaderTargetFormat::DXIL_D3D12,
         false );
-    SW_EXPECT_EQUAL( 0u, bakedCount );
+    SW_EXPECT_EQUAL( 0u, summary._bakedCount );
 }
 
 /**

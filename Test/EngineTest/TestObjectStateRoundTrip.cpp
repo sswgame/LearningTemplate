@@ -320,6 +320,35 @@ SW_TEST_CASE( ObjectStateRoundTripTest, AttachmentInsideAnObjectStaysInsideItsCo
 }
 
 /**
+ * @brief [ObjectStateRoundTripTest] 제자리 로드가 실패하면 오브젝트는 읽기 전 그대로다 — 빈 오브젝트를 남기지 않는다
+ * @details 제자리 로드는 컴포넌트를 먼저 비우고 읽는다. 예전에는 읽기가 실패하면 **빈 오브젝트**가 남았고, 되돌리기 · 복제 · 프리팹 되돌리기가
+ *          결과를 버려 그 상태로 저장되었다. 이제 읽기 전 상태를 찍어 두고 실패하면 그것으로 되돌린다(컴포넌트 id 도 그대로).
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, FailedInPlaceLoadLeavesTheObjectAsItWas )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pObj  = manager.createGameObject( sw::hashed_string( "Keeper" ) );
+    sw::SceneComponent*   pRoot = pObj->addComponent<sw::SceneComponent>();
+    sw::SceneComponent*   pArm  = pObj->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pArm->attachToComponent( pRoot ) );
+    pRoot->setLocalPosition( sw::float3( 1.0f, 2.0f, 3.0f ) );
+    const sw::ComponentHandle rootHandle = pRoot->getHandle();
+
+    {
+        test::ScopedDefensiveTestLog expected( "a malformed state is not applied" );
+        SW_EXPECT_FALSE( sw::ObjectStateSerializer::loadFromXmlString( pObj, "<GameObject _name=\"Broken\"><_listComponent><SceneComponent" ) );
+        SW_EXPECT_FALSE( sw::ObjectStateSerializer::loadFromJsonString( pObj, "{ \"_name\": " ) );
+    }
+
+    SW_EXPECT_TRUE( pObj->getName() == sw::hashed_string( "Keeper" ) );
+    sw::SceneComponent* pRestoredRoot = pObj->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pRestoredRoot );
+    SW_EXPECT_TRUE( pRestoredRoot->getLocalPosition() == sw::float3( 1.0f, 2.0f, 3.0f ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), pRestoredRoot->getChildren().size() );
+    SW_EXPECT_TRUE( manager.resolveComponent( rootHandle ) == pRestoredRoot ); // 같은 컴포넌트 id
+}
+
+/**
  * @brief [ObjectStateXmlSerializerTest] XML 문자열 저장·로드
  */
 SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )

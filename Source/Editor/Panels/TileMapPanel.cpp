@@ -12,6 +12,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Resource/ResourceUtil.h"
+
 #include <imgui.h>
 
 namespace sw::editor
@@ -64,12 +66,8 @@ namespace sw::editor
     {
         updateFocusedDocument();
         if ( isDocumentLoaded() == false )
-        {
             _pathBuffer = getLoadedAssetPath().c_str();
-            if ( getLoadedAssetPath().empty() == false )
-                loadXml( _pathBuffer.c_str() );
-            markDocumentLoaded();
-        }
+        ensureDocumentLoaded();
 
         drawTileMapFileControls();
         ImGui::Checkbox( "Erase", &_bErase );
@@ -179,8 +177,11 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Load" ) )
         {
-            if ( loadXml( _pathBuffer.c_str() ) == false )
-                SW_LOG_WARNING( "%#", _status.c_str() );
+            // 적어 넣은 경로에 파일이 없으면 지금 맵을 그대로 둔다(새 문서로 표시하면 편집 중인 맵이 저장 안 한 채 깨끗해진다).
+            if ( ResourceUtil::hasResource( _pathBuffer.c_str() ) )
+                reloadDocument();
+            else
+                SW_LOG_WARNING( "No tile map at '%#'", _pathBuffer.c_str() );
         }
         ImGui::SameLine();
         if ( ImGui::Button( "Save" ) )
@@ -263,11 +264,20 @@ namespace sw::editor
         _listWarp.clear();
     }
 
-    bool TileMapPanel::loadXml( string_view assetRelativePath )
+    ToolAssetLoadResult TileMapPanel::loadDocument()
     {
-        TileMapXmlData data;
-        if ( EditorToolAssetCommands::loadTileMap( assetRelativePath, data, _status ) == false )
-            return false;
+        // 경로가 없으면 새 맵(기본 8x8)이다. 경로 칸은 첫 로드 때 열린 문서로, Load 단추 때는 적어 넣은 경로로 채워져 있다.
+        if ( _pathBuffer.empty() )
+            return ToolAssetLoadResult::Missing;
+        return loadXml( _pathBuffer.c_str() );
+    }
+
+    ToolAssetLoadResult TileMapPanel::loadXml( string_view assetRelativePath )
+    {
+        TileMapXmlData            data;
+        const ToolAssetLoadResult result = EditorToolAssetCommands::loadTileMap( assetRelativePath, data, _status );
+        if ( result != ToolAssetLoadResult::Loaded )
+            return result;
 
         _nameBuffer         = data._name.c_str();
         _width              = data._width;
@@ -285,8 +295,7 @@ namespace sw::editor
         _spawnX             = data._spawnX;
         _spawnY             = data._spawnY;
         _pathBuffer         = string( assetRelativePath ).c_str();
-        syncDocumentUndoBaseline();
-        return true;
+        return ToolAssetLoadResult::Loaded;
     }
 
     bool TileMapPanel::saveXml( string_view assetRelativePath )
@@ -349,8 +358,8 @@ namespace sw::editor
     void TileMapPanel::applyDocumentText( string_view text )
     {
         TileMapXmlData restored;
-        if ( text.empty() == false )
-            restored.loadFromXml( text );
+        if ( text.empty() == false && restored.loadFromXml( text ) == false )
+            SW_LOG_WARNING( "Tile map undo snapshot could not be read - showing an empty map" );
         applyMapData( restored );
     }
 

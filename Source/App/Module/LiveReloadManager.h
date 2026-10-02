@@ -56,7 +56,7 @@ namespace sw
         static constexpr uint32      kEngineAbiStampDigits = 40;
 
         /** @brief 동적 섹션의 DT_SONAME 을 읽습니다. ELF64 LE 가 아니거나 SONAME 이 없으면 false 입니다. */
-        static bool readSoname( const vector<uint8>& bytes, string& outSoname );
+        [[nodiscard]] static bool readSoname( const vector<uint8>& bytes, string& outSoname );
 
         /**
          * @brief 동적 섹션에서 태그가 @p tag 인 항목 중 문자열이 @p from 인 것을 @p to 로 바꾸고, 바꾼 항목 수를 반환합니다.
@@ -173,7 +173,7 @@ namespace sw
          *          올리기 전에 엔진 ABI 도장을 대조합니다. 이미지는 프로세스가 끝날 때까지 둡니다(의존 모듈의 import 가 그 이미지를 가리킨다).
          * @return 올렸거나 이 매니저가 이미 올렸으면 true. 파일이 없으면(그 모듈을 쓰지 않는 구성) 아무것도 하지 않고 true 입니다.
          */
-        bool loadSharedModule( string_view moduleName );
+        [[nodiscard]] bool loadSharedModule( string_view moduleName );
 
         /** @brief 해당 모듈(과 그것에 의존하는 모듈)의 리로드를 예약합니다. */
         void triggerReload( string_view moduleName );
@@ -268,7 +268,7 @@ namespace sw
         };
 
         /** @brief 섀도 복사본을 LoadLibrary 합니다. */
-        bool loadShadowCopyModule( ModuleContext& ctx );
+        [[nodiscard]] bool loadShadowCopyModule( ModuleContext& ctx );
         /** @brief 섀도 복사본을 만들고 로드만 합니다(아직 교체하지 않습니다). */
         bool prepareShadowCopy( ModuleContext& ctx, PreparedShadow& out );
         /** @brief 섀도 핸들로 교체하고 콜백을 부릅니다. */

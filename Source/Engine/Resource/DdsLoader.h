@@ -56,16 +56,16 @@ namespace sw
         /**
          * @brief 디스크의 실제 파일 경로에서 DDS 텍스처를 로드합니다.
          */
-        static bool loadFromFile( string_view filePath, DdsImageData& outImage );
+        [[nodiscard]] static bool loadFromFile( string_view filePath, DdsImageData& outImage );
 
         /**
          * @brief VFS 리소스 상대 경로(예: "textures/splash.dds")에서 DDS 텍스처를 로드합니다(.pack 아카이브와 낱개 파일 모두 같은 방식으로).
          */
-        static bool loadFromResource( string_view relativePath, DdsImageData& outImage );
+        [[nodiscard]] static bool loadFromResource( string_view relativePath, DdsImageData& outImage );
 
         /**
          * @brief 메모리 버퍼에서 DDS 텍스처를 로드합니다.
          */
-        static bool loadFromMemory( const uint8* pBuffer, size_t bufferSize, DdsImageData& outImage );
+        [[nodiscard]] static bool loadFromMemory( const uint8* pBuffer, size_t bufferSize, DdsImageData& outImage );
     };
 } // namespace sw

@@ -183,9 +183,9 @@ namespace sw
         /** @brief 프레임을 닫습니다(vkQueueSubmit, bPresent 면 vkQueuePresentKHR). */
         void endFrame( bool vsync, bool bPresent = true ) override;
 
-        void   setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
-        uint32 getTimestampSlotCount() const override;
-        bool   readTimestampsMicros( vector<float32>& outListMicro ) override;
+        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        uint32             getTimestampSlotCount() const override;
+        [[nodiscard]] bool readTimestampsMicros( vector<float32>& outListMicro ) override;
 
         /** @brief 타임스탬프 쿼리 풀입니다. 준비되지 않았으면 VK_NULL_HANDLE 입니다. */
         VkQueryPool getTimestampPool() const { return _timestampPool; }

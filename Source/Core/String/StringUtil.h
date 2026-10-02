@@ -218,37 +218,37 @@ namespace sw
          * @brief true/false/1/0/yes/no/on/off 토큰을 bool 로 파싱합니다(대소문자 무시).
          * @details 앞뒤 공백을 자른 뒤 비교합니다. 비어 있거나 알 수 없는 값이면 bFallback 을 반환합니다.
          */
-        static bool parseBool( string_view token, bool bFallback = false );
+        [[nodiscard]] static bool parseBool( string_view token, bool bFallback = false );
 
         /**
          * @brief string_view 토큰을 32비트 실수로 파싱합니다(할당 없음).
          * @return 성공하면 true, 실패하면 false(outValue 는 바꾸지 않습니다)
          */
-        static bool parseFloat( string_view token, float32& outValue );
+        [[nodiscard]] static bool parseFloat( string_view token, float32& outValue );
 
         /**
          * @brief string_view 토큰을 64비트 실수로 파싱합니다(할당 없음).
          * @return 성공하면 true, 실패하면 false(outValue 는 바꾸지 않습니다)
          */
-        static bool parseDouble( string_view token, float64& outValue );
+        [[nodiscard]] static bool parseDouble( string_view token, float64& outValue );
 
         /**
          * @brief string_view 토큰을 32비트 정수로 파싱합니다(할당 없음).
          * @return 성공하면 true, 실패하면 false(outValue 는 바꾸지 않습니다)
          */
-        static bool parseInt( string_view token, int32& outValue, int32 base = 10 );
+        [[nodiscard]] static bool parseInt( string_view token, int32& outValue, int32 base = 10 );
 
         /**
          * @brief string_view 토큰을 64비트 정수로 파싱합니다(할당 없음).
          * @return 성공하면 true, 실패하면 false(outValue 는 바꾸지 않습니다)
          */
-        static bool parseInt64( string_view token, int64& outValue, int32 base = 10 );
+        [[nodiscard]] static bool parseInt64( string_view token, int64& outValue, int32 base = 10 );
 
         /**
          * @brief string_view 토큰을 64비트 부호 없는 정수로 파싱합니다(할당 없음).
          * @return 성공하면 true, 실패하면 false(outValue 는 바꾸지 않습니다)
          */
-        static bool parseUint64( string_view token, uint64& outValue, int32 base = 10 );
+        [[nodiscard]] static bool parseUint64( string_view token, uint64& outValue, int32 base = 10 );
 
         /**
          * @brief 정수 · 부동소수점 숫자를 할당 없이 버퍼에 포맷하고, 쓴 길이를 반환합니다.

@@ -50,7 +50,8 @@ namespace sw
         RenderPassResource* pResource = args.get<RenderPassResource*>( 0 );
         if ( pResource == nullptr )
             return;
-        pResource->loadFromXmlFile( args.get<string>( 1 ) );
+        if ( pResource->loadFromXmlFile( args.get<string>( 1 ) ) == false )
+            SW_LOG_WARNING( "Could not load '%#'", args.get<string>( 1 ) );
     }
 
 } // namespace sw

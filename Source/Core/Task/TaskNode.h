@@ -210,7 +210,7 @@ namespace sw
          *          훑은 뒤라 후속이 영영 풀리지 않거나(유실), 붙이는 쪽이 의존 수를 올리기 전에 완료 쪽이 내려 **너무 일찍** 돌았습니다.
          *          언리얼 `FGraphEvent::AddSubsequent` 도 같은 방식(닫힌 목록 = 이미 끝남)입니다.
          */
-        bool tryPushBack( TaskNode* pNode )
+        [[nodiscard]] bool tryPushBack( TaskNode* pNode )
         {
             lock();
             if ( _bClosed )

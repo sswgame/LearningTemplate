@@ -142,7 +142,7 @@ namespace sw::editor
         /** @brief FirstUseEver 크기를 다음 패널에 적용합니다. */
         static void setNextPanelSize( const float2& size );
         /** @brief 메인 뷰포트 위치/크기를 얻습니다. */
-        static bool tryGetMainViewportRect( float2& outPos, float2& outSize );
+        [[nodiscard]] static bool tryGetMainViewportRect( float2& outPos, float2& outSize );
 
         /** @brief 섹션을 엽니다. 반환값과 관계없이 endSection() 을 불러야 합니다. */
         static bool beginSection( const EditorSectionDesc& desc );

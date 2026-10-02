@@ -30,7 +30,7 @@ namespace sw
          * @param packFilePath .pack 파일의 실제 경로
          * @return 유효한 SWPK 아카이브이고 인덱스를 읽었으면 true 입니다.
          */
-        bool open( string_view packFilePath );
+        [[nodiscard]] bool open( string_view packFilePath );
 
         /**
          * @brief 열려 있는 팩 파일을 닫고 인덱스 메모리를 해제합니다.
@@ -56,13 +56,13 @@ namespace sw
          * @param outBytes 압축을 푼 원본 데이터 버퍼
          * @return 파일을 읽고 CRC32 무결성 검증에 성공하면 true 입니다.
          */
-        bool readFile( uint64 pathHash, vector<uint8>& outBytes ) const;
+        [[nodiscard]] bool readFile( uint64 pathHash, vector<uint8>& outBytes ) const;
 
         /** @brief 가상 상대 경로로 파일을 읽습니다. */
-        bool readFile( string_view relativePath, vector<uint8>& outBytes ) const;
+        [[nodiscard]] bool readFile( string_view relativePath, vector<uint8>& outBytes ) const;
 
         /** @brief 가상 상대 경로로 텍스트 파일(UTF-8)을 읽습니다. */
-        bool readTextFile( string_view relativePath, string& outText ) const;
+        [[nodiscard]] bool readTextFile( string_view relativePath, string& outText ) const;
 
         /** @brief 팩 헤더를 반환합니다. */
         const PackHeader& getHeader() const;
@@ -86,9 +86,9 @@ namespace sw
          */
         bool validateHeaderGeometry( uint64& outFileSize ) const;
         /** @brief FAT 항목 하나가 파일 안을 가리키는지, 크기가 다룰 만한지 봅니다. */
-        bool validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const;
-        bool loadIndexTable();
-        bool decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize ) const;
+        bool               validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const;
+        [[nodiscard]] bool loadIndexTable();
+        bool               decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize ) const;
         /**
          * @brief @p other 의 파일 · 헤더 · 인덱스를 넘겨받고 @p other 의 파일 핸들을 비웁니다. 두 쪽의 `_fileMutex` 를 잡은 채로 부릅니다.
          * @details 이동 생성자와 이동 대입이 같은 여섯 줄을 각자 들고 있었습니다. 멤버를 하나 더하면 두 곳을 다 고쳐야 했습니다.

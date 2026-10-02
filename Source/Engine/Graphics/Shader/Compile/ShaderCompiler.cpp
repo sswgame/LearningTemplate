@@ -199,8 +199,9 @@ namespace sw
                 if ( cacheDir.empty() )
                     return "";
 
+                // 못 읽으면 내용 없이 해시한다 — 컴파일도 같은 파일을 읽다 실패하므로 그 캐시 자리는 쓰이지 않는다.
                 vector<uint8> sourceBytes;
-                FileUtil::readFile( absPathStr, sourceBytes );
+                (void)FileUtil::readFile( absPathStr, sourceBytes );
 
                 uint64 hash = StringUtil::computeHash64( desc._filePath, false );
                 hash        = StringUtil::computeHash64( desc._entryPoint, false, hash );
@@ -302,7 +303,8 @@ namespace sw
             if ( ShaderCompilerInternal::s_bDiskCacheEnabled.load( std::memory_order_relaxed ) && cachePath.empty() == false && bytecode.empty() == false )
             {
                 FileUtil::createParentDirectory( cachePath );
-                FileUtil::writeFile( cachePath, bytecode.data(), bytecode.size() );
+                if ( FileUtil::writeFile( cachePath, bytecode.data(), bytecode.size() ) == false )
+                    SW_LOG_WARNING( "Could not write the shader cache '%#'", cachePath );
             }
         };
 

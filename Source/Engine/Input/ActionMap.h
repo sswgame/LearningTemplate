@@ -265,7 +265,7 @@ namespace sw
         /** @brief 액션 · 레이어 · 바인딩을 모두 비웁니다. */
         void clear();
         /** @brief 리소스 상대 경로에서 InputMap XML 을 로드합니다. */
-        bool loadFromResource( string_view relativePath );
+        [[nodiscard]] bool loadFromResource( string_view relativePath );
         /** @brief 엔진 기본 폴백 바인딩을 등록합니다(Ctrl+F6/F7/F8, WASD, Space 등). */
         void bindDefaultFallback();
         /** @brief 한 프레임의 입력 상태를 평가하고 델리게이트를 디스패치합니다. */
@@ -382,9 +382,9 @@ namespace sw
         /** @brief 모든 액션의 바인딩을 기본값으로 한꺼번에 되돌립니다. */
         void resetAllBindingsToDefault();
         /** @brief 유저 키 바인딩을 XML 파일로 저장합니다. */
-        bool saveUserBindings( string_view filePath ) const;
+        [[nodiscard]] bool saveUserBindings( string_view filePath ) const;
         /** @brief 저장된 유저 키 바인딩 XML 파일을 로드해 적용합니다. */
-        bool loadUserBindings( string_view filePath );
+        [[nodiscard]] bool loadUserBindings( string_view filePath );
 
         // ------------------------------------------------------------------------------
         // 8) 입력 장치 연결 · 임계값 · 디버그

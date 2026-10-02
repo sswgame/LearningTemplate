@@ -84,21 +84,21 @@ namespace sw
         void setReadModeAndResetPosition( bool bReadMode );
 
         /** @brief 현재 버퍼 내용을 파일로 저장합니다. */
-        bool saveFile( string_view fileName ) const;
+        [[nodiscard]] bool saveFile( string_view fileName ) const;
 
         /** @brief 지정된 크기만큼 바이트를 씁니다. */
         void writeBytes( const void* pBuffer, uint64 byteSize );
         /** @brief 지정된 크기만큼 바이트를 읽어 옵니다. */
-        bool readBytes( void* pOutBuffer, uint64 byteSize );
+        [[nodiscard]] bool readBytes( void* pOutBuffer, uint64 byteSize );
         /** @brief 메모리 버퍼에서 데이터를 복사하지 않고 포인터 뷰를 읽어 옵니다(읽기 모드 전용). */
         const uint8* readBytesView( uint64 byteSize );
 
         /** @brief 문자열을 길이 접두사와 함께 기록합니다. */
         void writeString( string_view str );
         /** @brief 길이 접두사가 붙은 문자열을 읽어 옵니다. */
-        bool readString( string& outStr );
+        [[nodiscard]] bool readString( string& outStr );
         /** @brief 길이 접두사가 붙은 문자열을 복사 없이 뷰로 읽어 옵니다(읽기 모드 전용). */
-        bool readStringView( string_view& outView );
+        [[nodiscard]] bool readStringView( string_view& outView );
 
         /** @brief 현재 버퍼 데이터의 CRC32 체크섬을 계산합니다. */
         uint32 computeChecksum() const;
@@ -129,7 +129,7 @@ namespace sw
         /** @brief 크기 헤더와 함께 페이로드 바이트 블록을 기록합니다. */
         void writeSection( const void* pData, uint32 byteSize );
         /** @brief 크기 헤더를 읽고 그 크기만큼 페이로드 바이트 블록을 읽어 옵니다. */
-        bool readSection( vector<uint8>& outBytes );
+        [[nodiscard]] bool readSection( vector<uint8>& outBytes );
 
         /** @brief 값을 바이트 그대로 기록합니다. */
         Archive& operator<<( bool data );
@@ -205,13 +205,13 @@ namespace sw
         // 1) 기본 바이너리 직렬화/역직렬화 (BinarySerializer 연계)
         // ------------------------------------------------------------------------------
         /** @brief 타입 정보를 이용해 객체를 직렬화합니다. */
-        bool serializeObject( void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool serializeObject( void* pInstance, const TypeInfo& typeInfo );
         /** @brief 타입 정보를 이용해 객체를 역직렬화합니다. */
-        bool deserializeObject( void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool deserializeObject( void* pInstance, const TypeInfo& typeInfo );
 
         /** @brief REFLECT 타입을 직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
         template <typename T>
-        bool serializeObject( const T& instance )
+        [[nodiscard]] bool serializeObject( const T& instance )
         {
             const TypeInfo* pTypeInfo = T::StaticType();
             return pTypeInfo != nullptr && serializeObject( const_cast<T*>( &instance ), *pTypeInfo );
@@ -219,7 +219,7 @@ namespace sw
 
         /** @brief REFLECT 타입을 역직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
         template <typename T>
-        bool deserializeObject( T& instance )
+        [[nodiscard]] bool deserializeObject( T& instance )
         {
             const TypeInfo* pTypeInfo = T::StaticType();
             return pTypeInfo != nullptr && deserializeObject( &instance, *pTypeInfo );
@@ -229,23 +229,23 @@ namespace sw
         // 2) 압축 섹션 및 압축 객체 직렬화 (CompressionStream / BinarySerializer 연계)
         // ------------------------------------------------------------------------------
         /** @brief 압축 코덱을 적용해 페이로드 블록을 기록합니다. */
-        bool writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecType codecType = CompressionCodecType::RLE );
+        [[nodiscard]] bool writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecType codecType = CompressionCodecType::RLE );
         /** @brief 압축된 페이로드 블록을 읽고 원본 바이트로 복원합니다. */
-        bool readCompressedSection( vector<uint8>& outBytes );
+        [[nodiscard]] bool readCompressedSection( vector<uint8>& outBytes );
 
         /** @brief 객체를 압축 바이너리로 직렬화해 기록합니다. */
-        bool serializeCompressedObject( const void* pInstance, const TypeInfo& typeInfo, CompressionCodecType codecType = CompressionCodecType::RLE );
+        [[nodiscard]] bool serializeCompressedObject( const void* pInstance, const TypeInfo& typeInfo, CompressionCodecType codecType = CompressionCodecType::RLE );
         /** @brief 아카이브의 압축 바이너리에서 객체를 역직렬화합니다. */
-        bool deserializeCompressedObject( void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool deserializeCompressedObject( void* pInstance, const TypeInfo& typeInfo );
 
         template <typename T>
-        bool serializeCompressedObject( const T& instance, CompressionCodecType codecType = CompressionCodecType::RLE )
+        [[nodiscard]] bool serializeCompressedObject( const T& instance, CompressionCodecType codecType = CompressionCodecType::RLE )
         {
             return serializeCompressedObject( &instance, *T::StaticType(), codecType );
         }
 
         template <typename T>
-        bool deserializeCompressedObject( T& instance )
+        [[nodiscard]] bool deserializeCompressedObject( T& instance )
         {
             return deserializeCompressedObject( &instance, *T::StaticType() );
         }
@@ -254,19 +254,19 @@ namespace sw
         // 3) 버전 관리 객체 직렬화 (BinarySerializer + SchemaMigrate 연계)
         // ------------------------------------------------------------------------------
         /** @brief 버전 헤더를 붙여 객체를 직렬화합니다. */
-        bool serializeVersionedObject( uint32 version, const void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool serializeVersionedObject( uint32 version, const void* pInstance, const TypeInfo& typeInfo );
         /** @brief 버전 헤더를 검증하고 필요하면 이관하며 객체를 역직렬화합니다. */
-        bool deserializeVersionedObject( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
-                                         uint32 currentVersion = 0, SchemaMigrateFn migrate = nullptr, const TypeInfo* pLegacyTypeInfo = nullptr );
+        [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
+                                                       uint32 currentVersion = 0, SchemaMigrateFn migrate = nullptr, const TypeInfo* pLegacyTypeInfo = nullptr );
 
         template <typename T>
-        bool serializeVersionedObject( uint32 version, const T& instance )
+        [[nodiscard]] bool serializeVersionedObject( uint32 version, const T& instance )
         {
             return serializeVersionedObject( version, &instance, *T::StaticType() );
         }
 
         template <typename T>
-        bool deserializeVersionedObject( uint32& outVersion, T& instance, uint32 currentVersion = 0, SchemaMigrateFn migrate = nullptr, const TypeInfo* pLegacyTypeInfo = nullptr )
+        [[nodiscard]] bool deserializeVersionedObject( uint32& outVersion, T& instance, uint32 currentVersion = 0, SchemaMigrateFn migrate = nullptr, const TypeInfo* pLegacyTypeInfo = nullptr )
         {
             return deserializeVersionedObject( outVersion, &instance, *T::StaticType(), currentVersion, migrate, pLegacyTypeInfo );
         }
@@ -275,24 +275,24 @@ namespace sw
         // 4) JSON 임베딩 및 상호 변환 (JsonSerializer 연계)
         // ------------------------------------------------------------------------------
         /** @brief 객체를 JSON 문자열로 직렬화해 아카이브에 넣습니다. */
-        bool serializeJsonObject( const void* pInstance, const TypeInfo& typeInfo, bool bPretty = false );
+        [[nodiscard]] bool serializeJsonObject( const void* pInstance, const TypeInfo& typeInfo, bool bPretty = false );
         /** @brief 아카이브에 넣어 둔 JSON 문자열에서 객체를 역직렬화합니다. */
-        bool deserializeJsonObject( void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool deserializeJsonObject( void* pInstance, const TypeInfo& typeInfo );
 
         template <typename T>
-        bool serializeJsonObject( const T& instance, bool bPretty = false )
+        [[nodiscard]] bool serializeJsonObject( const T& instance, bool bPretty = false )
         {
             return serializeJsonObject( &instance, *T::StaticType(), bPretty );
         }
 
         template <typename T>
-        bool deserializeJsonObject( T& instance )
+        [[nodiscard]] bool deserializeJsonObject( T& instance )
         {
             return deserializeJsonObject( &instance, *T::StaticType() );
         }
 
         /** @brief JSON 문자열을 콤팩트 바이너리로 바꿔 기록합니다. */
-        bool convertJsonToBinary( string_view jsonStr, const TypeInfo& typeInfo );
+        [[nodiscard]] bool convertJsonToBinary( string_view jsonStr, const TypeInfo& typeInfo );
         /** @brief 아카이브의 바이너리 객체를 JSON 문자열로 바꿔 반환합니다. */
         string convertBinaryToJson( const TypeInfo& typeInfo, bool bPretty = false );
 
@@ -300,24 +300,24 @@ namespace sw
         // 5) XML 임베딩 및 상호 변환 (XmlSerializer 연계)
         // ------------------------------------------------------------------------------
         /** @brief 객체를 XML 문자열로 직렬화해 아카이브에 넣습니다. */
-        bool serializeXmlObject( const void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool serializeXmlObject( const void* pInstance, const TypeInfo& typeInfo );
         /** @brief 아카이브에 넣어 둔 XML 문자열에서 객체를 역직렬화합니다. */
-        bool deserializeXmlObject( void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool deserializeXmlObject( void* pInstance, const TypeInfo& typeInfo );
 
         template <typename T>
-        bool serializeXmlObject( const T& instance )
+        [[nodiscard]] bool serializeXmlObject( const T& instance )
         {
             return serializeXmlObject( &instance, *T::StaticType() );
         }
 
         template <typename T>
-        bool deserializeXmlObject( T& instance )
+        [[nodiscard]] bool deserializeXmlObject( T& instance )
         {
             return deserializeXmlObject( &instance, *T::StaticType() );
         }
 
         /** @brief XML 문자열을 콤팩트 바이너리로 바꿔 기록합니다. */
-        bool convertXmlToBinary( string_view xmlStr, const TypeInfo& typeInfo );
+        [[nodiscard]] bool convertXmlToBinary( string_view xmlStr, const TypeInfo& typeInfo );
         /** @brief 아카이브의 바이너리 객체를 XML 문자열로 바꿔 반환합니다. */
         string convertBinaryToXml( const TypeInfo& typeInfo );
 
@@ -331,13 +331,13 @@ namespace sw
 
         /** @brief LEB128 인코딩된 64비트 부호 없는 정수를 읽습니다. */
 
-        bool readVarUint( uint64& outValue );
+        [[nodiscard]] bool readVarUint( uint64& outValue );
         /** @brief LEB128 인코딩된 32비트 부호 없는 정수를 읽습니다. */
-        bool readVarUint( uint32& outValue );
+        [[nodiscard]] bool readVarUint( uint32& outValue );
         /** @brief ZigZag + LEB128 인코딩된 64비트 부호 있는 정수를 읽습니다. */
-        bool readVarInt( int64& outValue );
+        [[nodiscard]] bool readVarInt( int64& outValue );
         /** @brief ZigZag + LEB128 인코딩된 32비트 부호 있는 정수를 읽습니다. */
-        bool readVarInt( int32& outValue );
+        [[nodiscard]] bool readVarInt( int32& outValue );
 
         // ------------------------------------------------------------------------------
         // 7) 문자열 풀링 (StringPool / Interning)
@@ -345,7 +345,7 @@ namespace sw
         /** @brief 문자열을 풀에 등록하고 풀 인덱스(VarUInt)를 기록합니다. */
         void writePooledString( string_view str );
         /** @brief 풀 인덱스를 읽어 그 문자열을 반환합니다. */
-        bool readPooledString( string& outStr );
+        [[nodiscard]] bool readPooledString( string& outStr );
 
         /** @brief 아카이브에 내장된 StringPool 을 반환합니다. */
         StringPool&       getStringPool() { return _stringPool; }
@@ -354,24 +354,24 @@ namespace sw
         /** @brief StringPool 테이블 전체를 아카이브에 기록합니다. */
         void saveStringPool();
         /** @brief 아카이브에서 StringPool 테이블 전체를 읽어 옵니다. */
-        bool loadStringPool();
+        [[nodiscard]] bool loadStringPool();
 
         // ------------------------------------------------------------------------------
         // 8) 적응형 컴팩트 직렬화 (Presence Bitmask & Sparse Index)
         // ------------------------------------------------------------------------------
         /** @brief 객체를 적응형 컴팩트 바이너리(Dense Bitmask 또는 Sparse Index)로 직렬화합니다. */
-        bool serializeCompactObject( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx = SerializeContext::getDefault() );
+        [[nodiscard]] bool serializeCompactObject( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx = SerializeContext::getDefault() );
         /** @brief 아카이브에서 적응형 컴팩트 바이너리를 역직렬화합니다. */
-        bool deserializeCompactObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx = SerializeContext::getDefault() );
+        [[nodiscard]] bool deserializeCompactObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx = SerializeContext::getDefault() );
 
         template <typename T>
-        bool serializeCompactObject( const T& instance, const SerializeContext& ctx = SerializeContext::getDefault() )
+        [[nodiscard]] bool serializeCompactObject( const T& instance, const SerializeContext& ctx = SerializeContext::getDefault() )
         {
             return serializeCompactObject( &instance, *T::StaticType(), ctx );
         }
 
         template <typename T>
-        bool deserializeCompactObject( T& instance, const SerializeContext& ctx = SerializeContext::getDefault() )
+        [[nodiscard]] bool deserializeCompactObject( T& instance, const SerializeContext& ctx = SerializeContext::getDefault() )
         {
             return deserializeCompactObject( &instance, *T::StaticType(), ctx );
         }

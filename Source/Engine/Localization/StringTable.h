@@ -28,17 +28,17 @@ namespace sw
         /** @brief 텍스트 형식으로 읽을 수 있는 확장자 목록입니다. 디렉터리를 훑을 때 이 순서로 시도합니다. */
         static const vector<string_view>& getTextExtensions();
 
-        bool        loadFromFile( const string& filePath );
-        bool        loadFromJsonText( string_view jsonText );
-        bool        loadFromXmlText( string_view xmlText );
-        bool        loadFromKeyValueText( string_view kvText );
-        bool        loadFromResource( string_view assetRelativePath );
-        bool        saveToBinaryFile( string_view filePath ) const;
-        bool        loadFromBinaryFile( string_view filePath );
-        bool        saveToBinaryBuffer( vector<uint8>& outBytes ) const;
-        bool        loadFromBinaryBuffer( const uint8* pData, size_t size );
-        const utf8* getString( const hashed_string& key ) const;
-        const utf8* getString( const hashed_string& key, const utf8* pDefaultText ) const;
+        [[nodiscard]] bool loadFromFile( const string& filePath );
+        [[nodiscard]] bool loadFromJsonText( string_view jsonText );
+        [[nodiscard]] bool loadFromXmlText( string_view xmlText );
+        [[nodiscard]] bool loadFromKeyValueText( string_view kvText );
+        [[nodiscard]] bool loadFromResource( string_view assetRelativePath );
+        [[nodiscard]] bool saveToBinaryFile( string_view filePath ) const;
+        [[nodiscard]] bool loadFromBinaryFile( string_view filePath );
+        [[nodiscard]] bool saveToBinaryBuffer( vector<uint8>& outBytes ) const;
+        [[nodiscard]] bool loadFromBinaryBuffer( const uint8* pData, size_t size );
+        const utf8*        getString( const hashed_string& key ) const;
+        const utf8*        getString( const hashed_string& key, const utf8* pDefaultText ) const;
         /**
          * @brief 키를 **intern 하지 않고** 조회합니다. 없으면 nullptr 입니다.
          * @details 표는 해시로만 열리므로 조회에 intern 이 필요 없습니다. 키가 아닐 수도 있는 텍스트로

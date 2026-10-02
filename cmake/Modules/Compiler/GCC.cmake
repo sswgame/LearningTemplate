@@ -25,6 +25,7 @@ target_compile_options(sw_compiler_gcc INTERFACE
 	# 경고
 	-Wall # 기본 표준 경고 활성화
 	-Wextra # 추가 정밀 경고 활성화
+	-Werror=unused-result # [[nodiscard]] 결과를 버리면 빌드가 선다(Clang.cmake 와 같은 규칙)
 	>
 )
 

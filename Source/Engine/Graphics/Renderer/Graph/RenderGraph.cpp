@@ -538,7 +538,7 @@ namespace sw
             }
         }
 
-        compile();
+        (void)compile(); // 실패(순환)는 compile 이 패스 이름으로 알리고 실행 목록이 빈다
     }
 
     /**

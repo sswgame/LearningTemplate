@@ -7,6 +7,12 @@
 
 #include "Engine/Animation/AnimationGraphAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Sequencer/SequenceAsset.h"
+#include "Engine/Utility/Xml/TileMapXml.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -129,4 +135,60 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, GraphLoadTellsMissingFromMalformed )
         DialogueGraphAsset dialogue;
         SW_EXPECT_TRUE( EditorToolAssetCommands::loadDialogueGraph( dialogue, brokenPath ) == ToolAssetLoadResult::Malformed );
     }
+}
+
+/**
+ * @brief [EditorToolAssetCommandsTest] 타일맵 · 스프라이트 클립 · 시퀀스도 그래프와 같은 세 갈래로 답한다
+ * @details 다섯 로더 가운데 셋이 bool 이라 "없음(새 문서)" 과 "있는데 읽지 못함" 이 섞였고, 타일맵 · 스프라이트 클립 패널은 그 bool 마저 버린 채
+ *          늘 "읽었다" 로 표시했다 — 깨진 파일을 앞 문서의 내용으로 덮는 길이었다. 이제 다섯이 같은 결과 타입이고, 문서 패널 기반이 그 결과로
+ *          저장을 막는다(`EditorDocumentPanel::reloadDocument`).
+ */
+SW_TEST_CASE( EditorToolAssetCommandsTest, EveryToolAssetLoadTellsMissingFromMalformed )
+{
+    const string folder = test::makeTempDirectory( "sw_tool_load" );
+    const string broken = FileUtil::joinPath( folder, "broken.txt" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( broken, "<<< merge conflict { not a document" ) );
+    const string missing = FileUtil::joinPath( folder, "never_written.txt" );
+
+    string         status;
+    TileMapXmlData tileMap;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadTileMap( missing, tileMap, status ) == ToolAssetLoadResult::Missing );
+    EditorSpriteClipData clip;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadSpriteClip( clip, status, missing ) == ToolAssetLoadResult::Missing );
+    SequenceAsset sequence;
+    SW_EXPECT_TRUE( EditorToolAssetCommands::loadSequence( sequence, missing ) == ToolAssetLoadResult::Missing );
+    {
+        test::ScopedDefensiveTestLog expected( "tool documents that cannot be read" );
+        SW_EXPECT_TRUE( EditorToolAssetCommands::loadTileMap( broken, tileMap, status ) == ToolAssetLoadResult::Malformed );
+        SW_EXPECT_TRUE( EditorToolAssetCommands::loadSpriteClip( clip, status, broken ) == ToolAssetLoadResult::Malformed );
+        SW_EXPECT_TRUE( EditorToolAssetCommands::loadSequence( sequence, broken ) == ToolAssetLoadResult::Malformed );
+    }
+}
+
+/**
+ * @brief [EditorToolAssetCommandsTest] 프리팹에 적용하기는 프리팹 경로의 형식으로 쓰고, 프리팹이 아닌 경로는 덮지 않는다
+ * @details "Apply to Prefab" 이 `.prefab.json` 에 XML 을 써서 그 프리팹이 다시는 읽히지 않았다. "Apply Overrides" 는 포커스된 에셋 경로(콘텐츠
+ *          브라우저에서 마지막에 클릭한 씬 · 머티리얼)를 먼저 써서 그 파일을 프리팹으로 덮었다.
+ */
+SW_TEST_CASE( EditorToolAssetCommandsTest, ApplyToPrefabWritesThePrefabsFormatAndNothingElse )
+{
+    GameObjectManager manager;
+    GameObject*       pObj = manager.createGameObject( hashed_string( "Crate" ) );
+    SW_ASSERT_NOT_NULL( pObj->addComponent<SceneComponent>() );
+
+    const string jsonPath = test::makeTempPath( "crate.prefab.json" );
+    SW_ASSERT_TRUE( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, jsonPath ) );
+    PrefabAsset reloaded;
+    SW_EXPECT_TRUE( reloaded.loadFromJsonFile( jsonPath ) );
+
+    const string scenePath = test::makeTempPath( "level.scene.xml" );
+    const string kScene    = "<Scene name=\"Level\"/>\n";
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( scenePath, kScene ) );
+    {
+        test::ScopedDefensiveTestLog expected( "a scene path is not a prefab path" );
+        SW_EXPECT_FALSE( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, scenePath ) );
+    }
+    string sceneAfter;
+    SW_ASSERT_TRUE( FileUtil::readTextFile( scenePath, sceneAfter ) );
+    SW_EXPECT_STREQ( kScene.c_str(), sceneAfter.c_str() );
 }

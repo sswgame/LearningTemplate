@@ -43,19 +43,19 @@ namespace sw
         // 2) 로딩 및 등록
         // ------------------------------------------------------------------------------
         /** @brief 파일 확장자(.json, .xml, .ini, .kv, .bin 등)로 형식을 골라 언어 파일을 로드합니다. */
-        bool loadLanguageFile( string_view languageCode, string_view filePath );
+        [[nodiscard]] bool loadLanguageFile( string_view languageCode, string_view filePath );
 
         /** @brief 리소스 상대 경로에서 언어 파일을 로드합니다. */
-        bool loadLanguageResource( string_view languageCode, string_view assetRelativePath );
+        [[nodiscard]] bool loadLanguageResource( string_view languageCode, string_view assetRelativePath );
 
         /** @brief JSON 텍스트에서 언어 테이블을 로드합니다. */
-        bool loadLanguageJson( string_view languageCode, string_view jsonText );
+        [[nodiscard]] bool loadLanguageJson( string_view languageCode, string_view jsonText );
 
         /** @brief XML 텍스트에서 언어 테이블을 로드합니다(<GameStrings><string key="...">...</string></GameStrings>). */
-        bool loadLanguageXml( string_view languageCode, string_view xmlText );
+        [[nodiscard]] bool loadLanguageXml( string_view languageCode, string_view xmlText );
 
         /** @brief KeyValue/INI 텍스트에서 언어 테이블을 로드합니다(key=value). */
-        bool loadLanguageKeyValue( string_view languageCode, string_view kvText );
+        [[nodiscard]] bool loadLanguageKeyValue( string_view languageCode, string_view kvText );
 
         /**
          * @brief 디렉터리 안의 언어 파일(예: ko_kr.json, en_us.json)을 파일 이름을 언어 코드로 삼아 한꺼번에 로드합니다.
@@ -63,7 +63,7 @@ namespace sw
          * @param filterExtension 탐색할 확장자(기본 ".json", "" 면 모든 파일)
          * @param bRecursive 하위 폴더 포함 여부
          */
-        bool loadLanguageDirectory( string_view directoryPath, string_view filterExtension = ".json", bool bRecursive = false );
+        [[nodiscard]] bool loadLanguageDirectory( string_view directoryPath, string_view filterExtension = ".json", bool bRecursive = false );
 
         /**
          * @brief 언어 팩 디렉터리나 리소스 파일을 찾아 언어 팩들을 로드하고 활성 · 폴백 언어를 정합니다.
@@ -75,9 +75,9 @@ namespace sw
         bool initialize( string_view directoryOrResourcePath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
 
         /** @brief 등록된 모든 언어 테이블을 바이너리 로컬라이제이션 팩(LOC1) 파일 하나로 저장합니다. */
-        bool saveToBinaryPack( string_view filePath ) const;
+        [[nodiscard]] bool saveToBinaryPack( string_view filePath ) const;
         /** @brief 바이너리 로컬라이제이션 팩(LOC1) 파일 하나에서 모든 언어 테이블을 로드합니다. */
-        bool loadFromBinaryPack( string_view filePath );
+        [[nodiscard]] bool loadFromBinaryPack( string_view filePath );
 
         /** @brief 언어 테이블을 직접 등록하거나 기존 테이블을 대체합니다. */
         void registerLanguageTable( string_view languageCode, unique_ptr<StringTable> pStringTable );

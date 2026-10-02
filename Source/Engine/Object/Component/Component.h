@@ -307,7 +307,7 @@ namespace sw
         uint64 getComponentId() const { return _componentId; }
 
         /** @brief 삭제 예정(묘비) 표시를 세웁니다. */
-        void markPendingDestroy() { tryMarkPendingDestroy(); }
+        void markPendingDestroy() { (void)tryMarkPendingDestroy(); } // 이미 표시돼 있어도 된다
 
         /**
          * @brief 삭제 예정 표시를 **이 호출이 처음으로 세웠는지** 반환합니다.
@@ -317,7 +317,7 @@ namespace sw
          *          (총알 둘이 같은 적을 같은 프레임에 맞히는) 흔한 경우입니다. 없애는 쪽은 반드시
          *          이 함수가 `true` 를 준 스레드 **하나만** 진행해야 합니다.
          */
-        bool tryMarkPendingDestroy() { return _bIsPendingDestroy.exchange( true, std::memory_order_acq_rel ) == false; }
+        [[nodiscard]] bool tryMarkPendingDestroy() { return _bIsPendingDestroy.exchange( true, std::memory_order_acq_rel ) == false; }
 
         /** @brief 삭제 예정인지 확인합니다. */
         bool isPendingDestroy() const { return _bIsPendingDestroy.load( std::memory_order_acquire ); }

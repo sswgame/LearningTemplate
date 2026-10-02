@@ -70,10 +70,10 @@ namespace sw
          * @details 바이너리는 wireTypeHint(비우면 orphan 에 적힌 기록 타입)로 해석합니다. 그 타입이 프로퍼티 타입과 같으면
          *          제자리로 읽고, 다르면 `tryCoerceBinaryPayload` 로 옮깁니다(본 역직렬화 경로와 같은 규칙입니다).
          */
-        bool applyOrphanTo( hashed_string propName, hashed_string wireTypeHint = {} ) const;
+        [[nodiscard]] bool applyOrphanTo( hashed_string propName, hashed_string wireTypeHint = {} ) const;
 
         /** @brief 점으로 이은 경로(`_stats._hp`)로 orphan 을 적용합니다. 바이너리 규칙은 `applyOrphanTo` 와 같습니다. */
-        bool applyOrphanToPath( const utf8* pDottedPath, hashed_string wireTypeHint = {} ) const;
+        [[nodiscard]] bool applyOrphanToPath( const utf8* pDottedPath, hashed_string wireTypeHint = {} ) const;
 
         // ------------------------------------------------------------------------------
         // 4) 구조 이동: 옛 프로퍼티 → 현재 프로퍼티, 텍스트로 강제 설정
@@ -135,16 +135,16 @@ namespace sw
      *                     정수와 실수를 가를 수 없습니다(`sizeof(float32) == sizeof(int32)`).
      * @return 적용에 성공하면 true 입니다.
      */
-    SW_API bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName,
-                                        const uint8* pPayload, size_t payloadSize,
-                                        const SerializeContext& ctx,
-                                        hashed_string           wireTypeName = hashed_string{} );
+    [[nodiscard]] SW_API bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName,
+                                                      const uint8* pPayload, size_t payloadSize,
+                                                      const SerializeContext& ctx,
+                                                      hashed_string           wireTypeName = hashed_string{} );
 
     /**
      * @brief 텍스트 토큰을 대상 타입으로 파싱합니다(따옴표 제거 · 숫자↔문자열 강제 변환).
      */
-    SW_API bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
-                                       const SerializeContext& ctx );
+    [[nodiscard]] SW_API bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
+                                                     const SerializeContext& ctx );
 
     /** @brief 점 경로로 프로퍼티 포인터를 찾습니다. */
     SW_API bool resolvePropertyPath( void* pRoot, const TypeInfo& typeInfo, const utf8* pDottedPath,

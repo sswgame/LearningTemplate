@@ -249,7 +249,7 @@ namespace sw
         };
 
         /** @brief 루트의 대기 플래그를 잡아 본 목록에 올립니다. 이미 잡혀 있으면 false. */
-        static bool tryMarkQueued( SceneComponent* pRoot );
+        [[nodiscard]] static bool tryMarkQueued( SceneComponent* pRoot );
         /** @brief 더티 루트 목록을 비우며 각 루트의 대기 플래그를 내립니다(플러시 · clear). */
         void releaseDirtyRoots();
         /** @brief 모든 슬롯의 쓰기 큐와 대기 칸 목록을 비웁니다(적용 뒤). */
@@ -262,15 +262,15 @@ namespace sw
          *          114 us 가 통째로 사라진 자리). 계층이 있는 것은 소유 컴포넌트를 거쳐 더티를 세우고 루트를 워커 스크래치에 올립니다.
          * @return 잎 루트라 여기서 합성했으면 true 입니다.
          */
-        static bool applyLocalChange( SceneTransformPage& page, uint32 pageIndex, PrimitiveRegistry* pRegistry );
+        [[nodiscard]] static bool applyLocalChange( SceneTransformPage& page, uint32 pageIndex, PrimitiveRegistry* pRegistry );
         /** @brief 칸 하나의 틱 대기 값을 로컬 값으로 옮기고 월드를 맞춥니다. 워커에서 불립니다. 값이 실제로 바뀌었으면 true 입니다. */
-        static bool applyPendingSlot( SceneTransformStorage& storage, uint32 transformSlot, PrimitiveRegistry& registry );
+        [[nodiscard]] static bool applyPendingSlot( SceneTransformStorage& storage, uint32 transformSlot, PrimitiveRegistry& registry );
         /**
          * @brief 쓰기 한 건을 컴포넌트에 적용합니다. 워커에서 불립니다. 값이 같으면 아무것도 하지 않고 false 입니다.
          * @details 뒤처리는 `applyLocalChange` 입니다. 잎 루트였으면 컴포넌트의 더티도 내립니다 — 이미 더티 목록에 있던 루트를 플러시가
          *          다시 합성하지 않게 합니다(컴포넌트를 이미 만진 길이라 값이 싸다). 구조 변경(attach · detach)이 없는 구간에서만 부릅니다.
          */
-        static bool applyWrite( SceneComponent& target, const SceneTransformWrite& write );
+        [[nodiscard]] static bool applyWrite( SceneComponent& target, const SceneTransformWrite& write );
         /**
          * @brief 쓰기 [start, end) 를 순서대로 적용합니다. 워커에서 불립니다. 죽었거나 씬 컴포넌트가 아닌 건은 건너뜁니다.
          * @param bUseCachedTarget 건이 든 `_pTarget` 을 믿고 핸들을 풀지 않을지 여부. 같은 `tick()` 안에서 쌓이고 적용되는 틱 큐만 true 입니다.

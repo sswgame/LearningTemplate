@@ -72,8 +72,8 @@ namespace sw
          * @param pOutAbsPath 실제로 쓴 절대 경로(nullptr 가능)
          * @return 파일을 읽었으면 true 입니다.
          */
-        static bool readTextResource( string_view relativePath, string& outText,
-                                      string* pOutAbsPath = nullptr );
+        [[nodiscard]] static bool readTextResource( string_view relativePath, string& outText,
+                                                    string* pOutAbsPath = nullptr );
 
         /**
          * @brief 상대 리소스 경로의 바이너리 데이터를 로드합니다. 찾는 순서는 `readTextResource` 와 같습니다.
@@ -81,7 +81,7 @@ namespace sw
          * @param outBytes 읽은 바이너리 데이터
          * @return 파일을 읽었으면 true 입니다.
          */
-        static bool readBinaryResource( string_view relativePath, vector<uint8>& outBytes );
+        [[nodiscard]] static bool readBinaryResource( string_view relativePath, vector<uint8>& outBytes );
 
         /**
          * @brief 리소스가 있는지 검사합니다(VFS 팩 또는 로컬 디스크 파일).

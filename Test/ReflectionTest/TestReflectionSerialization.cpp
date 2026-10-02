@@ -814,7 +814,8 @@ SW_TEST_CASE( ReflectionSerializationTest, CustomSerializeContext )
         []( void* pPtr, std::string_view s )
     {
         int32 val{ 0 };
-        sw::StringUtil::parseInt( s, val );
+        if ( sw::StringUtil::parseInt( s, val ) == false )
+            return false;
         *static_cast<int32*>( pPtr ) = val / 10;
         return true;
     } );
@@ -2369,7 +2370,7 @@ SW_TEST_CASE( ReflectionSerializationTest, OutOfRangeIntegerTextIsRejectedNotWra
     NarrowFields value;
     {
         test::ScopedDefensiveTestLog expected( "integers that do not fit their fields" );
-        sw::JsonSerializer::deserialize( &value, info, R"({"_narrow":300,"_wide":4000000000,"_signedByte":-129})" );
+        (void)sw::JsonSerializer::deserialize( &value, info, R"({"_narrow":300,"_wide":4000000000,"_signedByte":-129})" ); // 결과보다 필드가 그대로인지를 본다
     }
     SW_EXPECT_EQUAL( 7, static_cast<int32>( value._narrow ) );
     SW_EXPECT_EQUAL( 5, value._wide );

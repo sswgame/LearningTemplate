@@ -1240,7 +1240,7 @@ SW_TEST_CASE( GameObjectTest, DirtyRootListSurvivesIndexedRemoval )
     }
 
     // 붙이면 제 루트(0 번)가 대신 오르고 자기는 빠진다. 떼면 다시 루트로 오른다 — 되돌아온 뒤에도 플러시된다.
-    listRoot[3]->attachToComponent( listRoot[0] );
+    SW_ASSERT_TRUE( listRoot[3]->attachToComponent( listRoot[0] ) );
     SW_EXPECT_EQUAL( size_t( 1 ), manager.getTransformHierarchy().getDirtyRootCount() );
     listRoot[3]->detachFromComponent();
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getTransformHierarchy().getDirtyRootCount() );
@@ -1560,7 +1560,7 @@ SW_TEST_CASE( GameObjectTest, ApplyTransformBatchMatchesSetters )
             sw::SceneComponent* pComp = pObj->addComponent<sw::SceneComponent>();
             // 절반은 부모 아래에 붙인다 — 자손 더티 전파를 본다.
             if ( ( index % 2 ) == 0 )
-                pComp->attachToComponent( pParentComp );
+                SW_EXPECT_TRUE( pComp->attachToComponent( pParentComp ) );
             outListComp.push_back( pComp );
         }
         manager.flushSceneTransforms();
@@ -1656,13 +1656,13 @@ SW_TEST_CASE( GameObjectTest, TickSettersQueueAndApplyAfterTick )
         pComp->_bWriteScaleOnTick         = SW_TRUE;
         pComp->_bWriteTwiceOnTick         = ( index % 3 == 0 ) ? SW_TRUE : SW_FALSE;
         if ( ( index % 2 ) == 0 )
-            pComp->attachToComponent( pParentComp );
+            SW_EXPECT_TRUE( pComp->attachToComponent( pParentComp ) );
         listTickComp.push_back( pComp );
 
         sw::GameObject*     pReferenceObj  = managerReference.createGameObject( sw::hashed_string( name.c_str() ) );
         sw::SceneComponent* pReferenceComp = pReferenceObj->addComponent<sw::SceneComponent>();
         if ( ( index % 2 ) == 0 )
-            pReferenceComp->attachToComponent( pReferenceParentComp );
+            SW_EXPECT_TRUE( pReferenceComp->attachToComponent( pReferenceParentComp ) );
         pReferenceComp->setLocalPosition( pComp->_tickLocalPos );
         pReferenceComp->setLocalScale( pComp->_tickLocalScale );
         listReferenceComp.push_back( pReferenceComp );
@@ -2267,7 +2267,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
         pObj->addComponent<sw::MockMeshComponent>();
 
         if ( index > 0 && ( index % 3 != 0 ) )
-            pObj->attachToParent( listAliveObject[index / 2] );
+            (void)pObj->attachToParent( listAliveObject[index / 2] );
 
         listAliveObject.push_back( pObj );
     }
@@ -2290,7 +2290,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
             {
                 // 1) 부모 재지정 시도 (A -> B)
                 if ( pObjA != pObjB )
-                    pObjA->attachToParent( pObjB );
+                    (void)pObjA->attachToParent( pObjB );
             }
             else if ( actionType == 1 )
             {
@@ -2324,7 +2324,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
                     pNewObj->addComponent<sw::MockMeshComponent>();
 
                     if ( listAliveObject.empty() == false )
-                        pNewObj->attachToParent( listAliveObject.back() );
+                        (void)pNewObj->attachToParent( listAliveObject.back() );
                     listAliveObject.push_back( pNewObj );
                 }
             }
@@ -2486,8 +2486,8 @@ SW_TEST_CASE( GameObjectHierarchyTest, ActiveInHierarchyCompoundEvaluation )
     sw::SceneComponent* pParentSc      = pParent->addComponent<sw::SceneComponent>();
     sw::SceneComponent* pChildSc       = pChild->addComponent<sw::SceneComponent>();
 
-    pParentSc->attachToComponent( pGrandparentSc );
-    pChildSc->attachToComponent( pParentSc );
+    SW_ASSERT_TRUE( pParentSc->attachToComponent( pGrandparentSc ) );
+    SW_ASSERT_TRUE( pChildSc->attachToComponent( pParentSc ) );
 
     // 1) 초기 상태: 모두 활성
     SW_EXPECT_TRUE( pGrandparent->isActiveInHierarchy() );

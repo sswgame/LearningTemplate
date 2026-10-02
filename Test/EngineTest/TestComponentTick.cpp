@@ -81,21 +81,25 @@ SW_TEST_CASE( ComponentTickGroupTest, ParentChildHierarchyHeterogeneousTickGroup
     sw::RegisterMockComponents( manager );
 
     // 1) 루트 부모 (PrePhysics 단계에서 기본 체력 연산)
-    sw::GameObject*            pParentObj = manager.createGameObject( sw::hashed_string( "PipelineParent" ) );
-    sw::MockBasePawnComponent* pPawn      = pParentObj->addComponent<sw::MockBasePawnComponent>();
+    // 계층은 씬 컴포넌트 사이에서 맺어진다 — 예전에는 씬 컴포넌트가 없어 붙이기가 늘 실패했고(결과를 버려 몰랐다) 이 시험에 계층이 없었다.
+    sw::GameObject* pParentObj = manager.createGameObject( sw::hashed_string( "PipelineParent" ) );
+    SW_ASSERT_NOT_NULL( pParentObj->addComponent<sw::SceneComponent>() );
+    sw::MockBasePawnComponent* pPawn = pParentObj->addComponent<sw::MockBasePawnComponent>();
     pPawn->setTickGroup( sw::TickGroup::PrePhysics );
     pPawn->_pawnHealth = 100;
 
     // 2) 자식 (DuringPhysics 단계에서 부모 체력에 기반하여 최대 속도 산출)
     sw::GameObject* pChildObj = manager.createGameObject( sw::hashed_string( "PipelineChild" ) );
-    pChildObj->attachToParent( pParentObj );
+    SW_ASSERT_NOT_NULL( pChildObj->addComponent<sw::SceneComponent>() );
+    SW_ASSERT_TRUE( pChildObj->attachToParent( pParentObj ) );
     sw::MockVehicleComponent* pVehicle = pChildObj->addComponent<sw::MockVehicleComponent>();
     pVehicle->setTickGroup( sw::TickGroup::DuringPhysics );
     pVehicle->_maxSpeed = 0.0f;
 
     // 3) 손자 (PostUpdate 단계에서 자식 속도에 기반하여 비행 고도 산출)
     sw::GameObject* pGrandObj = manager.createGameObject( sw::hashed_string( "PipelineGrand" ) );
-    pGrandObj->attachToParent( pChildObj );
+    SW_ASSERT_NOT_NULL( pGrandObj->addComponent<sw::SceneComponent>() );
+    SW_ASSERT_TRUE( pGrandObj->attachToParent( pChildObj ) );
     sw::MockFlyingVehicleComponent* pFlying = pGrandObj->addComponent<sw::MockFlyingVehicleComponent>();
     pFlying->setTickGroup( sw::TickGroup::PostUpdate );
     pFlying->_maxAltitude = 0.0f;
@@ -354,9 +358,12 @@ SW_TEST_CASE( ComponentSubTickHybridTest, DeepHierarchyMultiComponentMultiSubTic
     sw::GameObject* pGrandparent = manager.createGameObject( sw::hashed_string( "Grandparent" ) );
     sw::GameObject* pParent      = manager.createGameObject( sw::hashed_string( "Parent" ) );
     sw::GameObject* pChild       = manager.createGameObject( sw::hashed_string( "Child" ) );
+    // 계층은 씬 컴포넌트 사이에서 맺어진다(위 시험과 같은 사연 — 예전에는 붙이기가 늘 실패했다).
+    for ( sw::GameObject* pObj : { pGrandparent, pParent, pChild } )
+        SW_ASSERT_NOT_NULL( pObj->addComponent<sw::SceneComponent>() );
 
-    pParent->attachToParent( pGrandparent );
-    pChild->attachToParent( pParent );
+    SW_ASSERT_TRUE( pParent->attachToParent( pGrandparent ) );
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
 
     vector<string> listTickOrder;
 
@@ -557,10 +564,10 @@ SW_TEST_CASE( ComponentSubTickHybridTest, HierarchySubtreeDeactivationAndReparen
     setupActor( pBranch2, "Branch2" );
     setupActor( pLeaf2, "Leaf2" );
 
-    pBranch1->attachToParent( pRoot );
-    pLeaf1->attachToParent( pBranch1 );
-    pBranch2->attachToParent( pRoot );
-    pLeaf2->attachToParent( pBranch2 );
+    SW_ASSERT_TRUE( pBranch1->attachToParent( pRoot ) );
+    SW_ASSERT_TRUE( pLeaf1->attachToParent( pBranch1 ) );
+    SW_ASSERT_TRUE( pBranch2->attachToParent( pRoot ) );
+    SW_ASSERT_TRUE( pLeaf2->attachToParent( pBranch2 ) );
 
     // Frame 1: 5개 액터 전체 활성 (각 2개 서브틱 = 총 10개)
     manager.tick( 0.016f );
@@ -574,7 +581,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, HierarchySubtreeDeactivationAndReparen
 
     // Frame 3: Leaf1을 비활성화된 Branch1에서 활성화된 Branch2 밑으로 Reparent
     listTickOrder.clear();
-    pLeaf1->attachToParent( pBranch2 );
+    SW_ASSERT_TRUE( pLeaf1->attachToParent( pBranch2 ) );
     SW_EXPECT_TRUE( pLeaf1->isActiveInHierarchy() );
     manager.tick( 0.016f );
     // Root, Branch2, Leaf2, Leaf1 = 총 8개 실행 (Branch1만 스킵)

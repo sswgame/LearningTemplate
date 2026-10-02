@@ -45,20 +45,20 @@ namespace sw
         // 2) 파싱 · 로드
         // ------------------------------------------------------------------------------
         /** @brief 텍스트를 outMap 에 파싱합니다(먼저 비웁니다). */
-        static bool parse( string_view text, KeyValueMap& outMap, KeyValueParseOptions opt = {} );
+        [[nodiscard]] static bool parse( string_view text, KeyValueMap& outMap, KeyValueParseOptions opt = {} );
 
         /** @brief 절대 경로를 읽고 파싱합니다. */
-        static bool loadFile( string_view absPath, KeyValueMap& outMap, KeyValueParseOptions opt = {} );
+        [[nodiscard]] static bool loadFile( string_view absPath, KeyValueMap& outMap, KeyValueParseOptions opt = {} );
 
         /** @brief ResourceUtil로 해석한 뒤 loadFile합니다. */
-        static bool loadResource( string_view relativePath, KeyValueMap& outMap, KeyValueParseOptions opt = {},
-                                  string* pOutAbsPath = nullptr );
+        [[nodiscard]] static bool loadResource( string_view relativePath, KeyValueMap& outMap, KeyValueParseOptions opt = {},
+                                                string* pOutAbsPath = nullptr );
 
         /**
          * @brief 절대 경로 · 작업 경로에 파일이 있으면 loadFile, 없으면 loadResource 로 읽습니다.
          */
-        static bool loadPath( string_view path, KeyValueMap& outMap, KeyValueParseOptions opt = {},
-                              string* pOutAbsPath = nullptr );
+        [[nodiscard]] static bool loadPath( string_view path, KeyValueMap& outMap, KeyValueParseOptions opt = {},
+                                            string* pOutAbsPath = nullptr );
 
         // ------------------------------------------------------------------------------
         // 3) 조회
@@ -82,8 +82,8 @@ namespace sw
          */
         static string dump( const KeyValueMap& mapData, string_view headerComment = {}, string_view sectionName = {} );
         /** @brief dump 결과를 절대 경로에 씁니다. */
-        static bool saveFile( string_view absPath, const KeyValueMap& mapData, string_view headerComment = {},
-                              string_view sectionName = {} );
+        [[nodiscard]] static bool saveFile( string_view absPath, const KeyValueMap& mapData, string_view headerComment = {},
+                                            string_view sectionName = {} );
 
         /**
          * @brief 비어 있지 않고 주석이 아닌 각 줄에 callback(trimmedLine)을 호출합니다.

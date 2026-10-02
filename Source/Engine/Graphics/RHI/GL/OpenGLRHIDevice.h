@@ -80,9 +80,9 @@ namespace sw
         /** @brief 프레임을 닫고, bPresent 면 플랫폼 컨텍스트로 백버퍼를 내보냅니다(SwapBuffers 등). */
         void endFrame( bool vsync, bool bPresent = true ) override;
 
-        void   setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
-        uint32 getTimestampSlotCount() const override;
-        bool   readTimestampsMicros( vector<float32>& outListMicro ) override;
+        void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
+        uint32             getTimestampSlotCount() const override;
+        [[nodiscard]] bool readTimestampsMicros( vector<float32>& outListMicro ) override;
         /**
          * @brief 커맨드 리스트가 부르는 기록 지점입니다. GL 은 커맨드 버퍼가 없어 그 자리에서 발행합니다.
          * @details 그래서 락이 없습니다. GL 호출은 컨텍스트를 쥔 한 스레드에서만 나갑니다.

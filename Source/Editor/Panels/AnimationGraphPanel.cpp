@@ -78,8 +78,7 @@ namespace sw::editor
     void AnimationGraphPanel::drawContent()
     {
         updateFocusedDocument();
-        if ( isDocumentLoaded() == false )
-            loadGraphData();
+        ensureDocumentLoaded();
 
         tickPreview( ImGui::GetIO().DeltaTime );
 
@@ -121,10 +120,10 @@ namespace sw::editor
             }
             ImGui::SameLine();
             if ( ImGui::Button( "Load" ) )
-                loadGraphData();
+                reloadDocument();
             ImGui::SameLine();
             if ( ImGui::Button( "Save" ) )
-                saveGraphData();
+                (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
             ImGui::SameLine();
             if ( ImGui::Button( "Play" ) )
             {
@@ -249,7 +248,7 @@ namespace sw::editor
         _listLink.push_back( GraphLink{ 100, 1, 2 } );
     }
 
-    void AnimationGraphPanel::loadGraphData()
+    ToolAssetLoadResult AnimationGraphPanel::loadDocument()
     {
         AnimationGraphAsset       data;
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadAnimationGraph( data, getLoadedAssetPath() );
@@ -266,11 +265,8 @@ namespace sw::editor
         _bGraphLayoutReady = SW_FALSE;
         _previewPlayer.stop();
         _bPreviewPlaying = SW_FALSE;
-        if ( result == ToolAssetLoadResult::Malformed )
-            markDocumentLoadFailed( "malformed or newer format" );
-        else
-            markDocumentLoaded();
         _nodeGraph.requestContentFit();
+        return result;
     }
 
     bool AnimationGraphPanel::saveGraphData()

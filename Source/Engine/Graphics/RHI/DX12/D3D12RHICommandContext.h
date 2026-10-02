@@ -94,7 +94,7 @@ namespace sw
          */
         bool flushSlotTables( bool bCompute );
         /** @brief 슬롯 배열을 온라인 블록에 복사하고 테이블 GPU 핸들을 반환합니다. 안 걸린 슬롯은 nullView 로 채웁니다. */
-        bool writeSlotTable( const D3D12_CPU_DESCRIPTOR_HANDLE* pSlots, uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE nullView, D3D12_GPU_DESCRIPTOR_HANDLE& outTable );
+        [[nodiscard]] bool writeSlotTable( const D3D12_CPU_DESCRIPTOR_HANDLE* pSlots, uint32 count, D3D12_CPU_DESCRIPTOR_HANDLE nullView, D3D12_GPU_DESCRIPTOR_HANDLE& outTable );
         /** @brief 이 리스트의 온라인 블록에서 count 개를 bump 할당합니다. 블록이 차면 디바이스에서 하나 더 빌립니다. */
         bool allocateOnlineDescriptors( uint32 count, uint32& outBase );
         /** @brief 걸어 둔 메시 정점버퍼를 겁니다. 핸들이 풀리지 않으면(이미 부서졌다) 아무것도 걸지 않고 false 를 반환합니다. */

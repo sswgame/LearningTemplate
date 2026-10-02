@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -24,9 +25,9 @@ namespace sw
 {
     SW_LOG_CALLER( "ShaderBaker" );
 
-    uint32 ShaderBakeDriver::bakeAllShaders( string_view        resourceRoot,
-                                             ShaderTargetFormat targetFormat,
-                                             bool               bForceAll )
+    ShaderBakeSummary ShaderBakeDriver::bakeAllShaders( string_view        resourceRoot,
+                                                        ShaderTargetFormat targetFormat,
+                                                        bool               bForceAll )
     {
         string rootDir = string( resourceRoot );
         if ( rootDir.empty() )
@@ -39,7 +40,9 @@ namespace sw
         if ( FileUtil::directoryExists( rootDir ) == false )
         {
             SW_LOG_ERROR( "Resource root directory does not exist: %#", rootDir.c_str() );
-            return 0;
+            ShaderBakeSummary nothingBaked{};
+            nothingBaked._failedCount = 1; // 굽지 못했다 — 실패로 센다(`App --bake-shaders` 가 실패로 끝난다)
+            return nothingBaked;
         }
 
         SW_LOG_INFO( "Starting batch shader bake across all domains in '%#'...", rootDir.c_str() );
@@ -62,12 +65,13 @@ namespace sw
         vector<ShaderBakeRequest> listRequest;
         collectAllRequests( rootDir, listRequest );
 
-        uint32 totalBaked = 0;
+        ShaderBakeSummary summary{};
+        // 컴파일에 실패한 소스(정규화한 절대 경로)를 RHI 폴더마다 적는다 — 그 소스는 도장에서 빼서 다음 베이크가 다시 시도한다.
+        unordered_map<string, unordered_set<string>> mapFailedSourceByDir;
 
         // 리플렉션은 RHI 폴더마다 파일 하나로 모은다. 셰이더마다 사이드카를 두면 팩 엔트리와
         // 압축 해제가 셰이더 수만큼 늘어난다(상용 엔진의 셰이더 라이브러리와 같은 이유).
         unordered_map<string, ShaderReflectionLibrary::EntryMap> mapManifest;
-        uint32                                                   contractViolationCount{ 0 };
 
         // 3) 요청 · 타깃 포맷마다 굽는다
         for ( const ShaderBakeRequest& request : listRequest )
@@ -108,7 +112,15 @@ namespace sw
                 {
                     ShaderBakeResult result{};
                     if ( ShaderBaker::bakeShader( absPath, outPath, request._entryPoint, request._stage, fmt, &request._listPermutation, &result ) )
-                        ++totalBaked;
+                    {
+                        ++summary._bakedCount;
+                    }
+                    else
+                    {
+                        ++summary._failedCount;
+                        mapFailedSourceByDir[outDir].insert( normPath );
+                        SW_LOG_ERROR( "Shader bake failed: %# (%#) -> %#", normPath, request._entryPoint, outPath );
+                    }
                 }
 
                 // 새로 구웠든 이미 최신이든 매니페스트에는 항상 넣는다. 바이너리만 최신이고
@@ -120,7 +132,7 @@ namespace sw
                     {
                         ShaderReflectionData reflection = ShaderReflection::reflect( bytecode, fmt );
                         // 구운 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름 · 숫자로 드러난다.
-                        contractViolationCount += ShaderBindingContract::validate( reflection, fmt, outPath );
+                        summary._contractViolationCount += ShaderBindingContract::validate( reflection, fmt, outPath );
                         mapManifest[outDir].emplace( fileName, std::move( reflection ) );
                     }
                 }
@@ -130,14 +142,23 @@ namespace sw
         // 4) RHI 폴더별 리플렉션 매니페스트를 쓴다
         for ( const auto& manifestPair : mapManifest )
         {
-            ShaderReflectionLibrary::save( manifestPair.second, manifestPair.first );
-            ShaderBaker::writeBakeStamp( manifestPair.first );
+            if ( ShaderReflectionLibrary::save( manifestPair.second, manifestPair.first ) == false )
+            {
+                // 매니페스트를 못 쓰면 이 폴더는 최신이 아니다 — 도장을 찍지 않는다(다음 베이크가 다시 판정한다).
+                SW_LOG_ERROR( "Shader reflection manifest could not be written: %#", manifestPair.first );
+                ++summary._failedCount;
+                continue;
+            }
+            const auto failedIt = mapFailedSourceByDir.find( manifestPair.first );
+            ShaderBaker::writeBakeStamp( manifestPair.first, ( failedIt != mapFailedSourceByDir.end() ) ? &failedIt->second : nullptr );
         }
         ShaderReflectionLibrary::clearCache();
 
-        if ( contractViolationCount > 0 )
-            SW_LOG_ERROR( "바인딩 계약 위반 %#건 — 위 [바인딩 계약] 로그를 보고 셰이더 선언이나 bindingslots.hlsli 를 고치십시오.", contractViolationCount );
-        SW_LOG_INFO( "Shader baking completed: %# binaries generated/updated.", totalBaked );
-        return totalBaked;
+        if ( summary._contractViolationCount > 0 )
+            SW_LOG_ERROR( "바인딩 계약 위반 %#건 — 위 [바인딩 계약] 로그를 보고 셰이더 선언이나 bindingslots.hlsli 를 고치십시오.", summary._contractViolationCount );
+        if ( summary._failedCount > 0 )
+            SW_LOG_ERROR( "Shader baking failed for %# shader(s) - their sources are left out of bake.stamp so the next bake retries them.", summary._failedCount );
+        SW_LOG_INFO( "Shader baking completed: %# binaries generated/updated.", summary._bakedCount );
+        return summary;
     }
 } // namespace sw

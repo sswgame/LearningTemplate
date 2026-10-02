@@ -37,7 +37,7 @@ namespace sw
         uint32 serialize( uint8* pOutBuffer, uint32 bufferSize ) const;
 
         /** @brief 바이너리 버퍼에서 역직렬화합니다. */
-        bool deserialize( const uint8* pBuffer, uint32 bufferSize );
+        [[nodiscard]] bool deserialize( const uint8* pBuffer, uint32 bufferSize );
     };
 
     /**

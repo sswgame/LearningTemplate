@@ -29,8 +29,8 @@ namespace sw::editor
         /** @brief 노드 추가·저장·줌 툴바를 그립니다. */
         void drawAnimationToolbar();
         /** @brief 노드 그래프 캔버스를 그립니다. */
-        void drawAnimationCanvas();
-        bool saveDocument() override;
+        void               drawAnimationCanvas();
+        [[nodiscard]] bool saveDocument() override;
 
     private:
         using GraphNode = NodeType;
@@ -41,10 +41,10 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 기본 노드가 없으면 넣습니다. */
         void ensureDefaults() override;
-        /** @brief 그래프 데이터를 불러옵니다. */
-        void loadGraphData();
+        /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
+        ToolAssetLoadResult loadDocument() override;
         /** @brief 그래프 데이터를 저장합니다. */
-        bool saveGraphData();
+        [[nodiscard]] bool saveGraphData();
         /** @brief 주어진 이름의 노드를 추가합니다. */
         void addNamedNode( const utf8* pName );
         /** @brief 미리보기 플레이어에 현재 그래프를 넣습니다. */

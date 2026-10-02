@@ -55,6 +55,22 @@ namespace sw
         return rel;
     }
 
+    bool AssetDatabase::deleteAssetFile( string_view absolutePath )
+    {
+        if ( absolutePath.empty() )
+            return false;
+        const string abs{ absolutePath };
+        if ( FileUtil::removeFile( abs ) == false )
+        {
+            SW_LOG_ERROR( "Could not delete '%#' - it and its .meta are kept", abs );
+            return false;
+        }
+        const string metaPath = metaPathFor( abs );
+        if ( FileUtil::fileExists( metaPath ) && FileUtil::removeFile( metaPath ) == false )
+            SW_LOG_WARNING( "Deleted '%#' but its .meta could not be removed", abs );
+        return true;
+    }
+
     string AssetDatabase::metaPathFor( string_view relativePath )
     {
         string p( relativePath );

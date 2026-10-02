@@ -130,7 +130,8 @@ namespace sw
             static void collectAllRequests( string_view rootDir, vector<ShaderBakeRequest>& outListRequest )
             {
                 EngineData engineData;
-                engineData.loadFromResource();
+                if ( engineData.loadFromResource() == false )
+                    SW_LOG_WARNING( "Engine data could not be read - baking with the built-in default passes" );
 
                 vector<MeshPassInfo>        listMeshPass;
                 vector<MaterialVariantInfo> listMaterialVariant;

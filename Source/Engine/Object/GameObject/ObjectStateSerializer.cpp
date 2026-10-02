@@ -84,8 +84,9 @@ namespace sw
                                         pGameObject->getName().c_str(), pChild->getOwner() != nullptr ? pChild->getOwner()->getName().c_str() : "?" );
                         continue;
                     }
-                    if ( pChild->getParent() != pParent )
-                        pChild->attachToComponent( pParent );
+                    if ( pChild->getParent() != pParent && pChild->attachToComponent( pParent ) == false )
+                        SW_LOG_WARNING( "In-place load of '%#' could not re-attach child '%#'", pGameObject->getName().c_str(),
+                                        pChild->getOwner() != nullptr ? pChild->getOwner()->getName().c_str() : "?" );
                 }
             }
 
@@ -116,13 +117,21 @@ namespace sw
                 return ( context._pIdentity != nullptr ) ? context._pIdentity->_objectId : 0;
             }
 
-            /** @brief 이름으로 컴포넌트를 만들어 소유자에 붙입니다(역직렬화 팩토리). */
+            /**
+             * @brief 이름으로 컴포넌트를 만들어 소유자에 붙입니다(역직렬화 팩토리).
+             * @details 모르는 타입(게임 모듈이 안 올라왔다 · 이름을 바꿨는데 별칭이 없다)은 만들지 못하고 그 데이터는 버려진다. 예전에는 **경고 없이**
+             *          버려, 그 상태로 저장하면 컴포넌트가 파일에서 영영 사라졌다. 이제 어느 오브젝트의 어느 타입인지 경고한다.
+             */
             static void* createOwnedComponent( void* pOuter, hashed_string typeName )
             {
                 GameObject* pGameObject = static_cast<GameObject*>( pOuter );
                 if ( pGameObject == nullptr || pGameObject->getManager() == nullptr )
                     return nullptr;
-                return pGameObject->getManager()->addComponentByName( pGameObject, typeName, false );
+                Component* pCreated = pGameObject->getManager()->addComponentByName( pGameObject, typeName, false );
+                if ( pCreated == nullptr )
+                    SW_LOG_WARNING( "'%#' has a component of unknown type '%#' - it is not created and saving now would drop it",
+                                    pGameObject->getName().c_str(), typeName.c_str() );
+                return pCreated;
             }
 
             static const TypeInfo* getComponentRuntimeTypeInfo( const void* pInstance )
@@ -178,6 +187,16 @@ namespace sw
         const hashed_string                              oldName = pGameObject->getName();
         vector<ObjectStateSerializerInternal::ChildLink> listChildLink;
         ObjectStateSerializerInternal::captureChildLinks( pGameObject, listChildLink );
+
+        // 읽기 전 상태를 찍어 둔다 — 실패하면 그것으로 되돌린다. 컴포넌트가 없는 오브젝트(새로 만든 것 — 씬 로드 · 복제)는 찍을 것이 없다.
+        vector<uint8>  previousBytes;
+        ObjectIdentity previousIdentity;
+        if ( context._bRestorePreviousOnFailure && pGameObject->getComponents().empty() == false )
+        {
+            previousIdentity = captureIdentity( pGameObject );
+            if ( saveToBinaryBuffer( pGameObject, previousBytes ) == false )
+                previousBytes.clear();
+        }
         pGameObject->clearComponents();
 
         const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, context._pIdentity );
@@ -201,6 +220,15 @@ namespace sw
                 single.add( pGameObject, savedId, savedName, context._bExternalParentAllowed );
                 single.finish();
             }
+        }
+        else if ( previousBytes.empty() == false )
+        {
+            SW_LOG_WARNING( "State of '%#' could not be read - it is restored to what it was before the load", oldName.c_str() );
+            ObjectLoadContext restoreContext{};
+            restoreContext._pIdentity                 = &previousIdentity;
+            restoreContext._bRestorePreviousOnFailure = false;
+            if ( loadFromBinaryBuffer( pGameObject, previousBytes.data(), previousBytes.size(), restoreContext ) == 0 )
+                SW_LOG_ERROR( "State of '%#' could not be restored either - the object is left empty", oldName.c_str() );
         }
         ObjectStateSerializerInternal::restoreChildLinks( pGameObject, listChildLink );
         return bLoaded;

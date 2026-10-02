@@ -31,8 +31,8 @@ namespace sw::editor
         /** @brief 경로·이름·크기·읽기/쓰기 컨트롤을 그립니다. */
         void drawTileMapFileControls();
         /** @brief 레이어 선택과 엣지 워프 프리셋을 그립니다. */
-        void drawLayerControls();
-        bool saveDocument() override;
+        void               drawLayerControls();
+        [[nodiscard]] bool saveDocument() override;
 
     private:
         string         captureDocumentText() const override;
@@ -59,10 +59,12 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 맵 크기를 변경합니다. */
         void resize( int32 width, int32 height );
-        /** @brief Resource 상대 경로의 TileMap XML을 불러옵니다. */
-        bool loadXml( string_view assetRelativePath );
+        /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
+        ToolAssetLoadResult loadDocument() override;
+        /** @brief 타일맵 XML 을 읽어 내용을 채웁니다. */
+        ToolAssetLoadResult loadXml( string_view assetRelativePath );
         /** @brief Resource 상대 경로로 TileMap XML을 저장합니다. */
-        bool saveXml( string_view assetRelativePath );
+        [[nodiscard]] bool saveXml( string_view assetRelativePath );
         /** @brief 지정 셀에 현재 레이어를 페인트합니다. */
         void paintCell( int32 x, int32 y );
         /** @brief 가장자리 워프를 페인트합니다. */

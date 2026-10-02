@@ -30,7 +30,7 @@ namespace sw
         /** @brief TypeInfo와 값 포인터로 ReflectAny를 만듭니다. */
         static ReflectAny makeFrom( const TypeInfo& info, const void* pValue );
         /** @brief 저장된 값을 대상 TypeInfo로 꺼냅니다. */
-        bool tryGetFrom( const TypeInfo& info, void* pOut ) const;
+        [[nodiscard]] bool tryGetFrom( const TypeInfo& info, void* pOut ) const;
 
         /** @brief 리플렉트 타입 T 의 값으로 ReflectAny 를 만듭니다. */
         template <typename T>
@@ -49,7 +49,7 @@ namespace sw
 
         /** @brief 저장된 값을 T로 꺼냅니다. */
         template <typename T>
-        bool tryGet( T& out ) const
+        [[nodiscard]] bool tryGet( T& out ) const
         {
             if constexpr ( HasReflectStaticType<T>::value )
             {

@@ -605,7 +605,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveByteVectorAndTemplateObjectSerialization )
     playerWrite._level = 99;
     playerWrite._name  = "HeroKnight";
     playerWrite._gold  = 9876543210123ll;
-    writeArch.serializeObject( playerWrite );
+    SW_ASSERT_TRUE( writeArch.serializeObject( playerWrite ) );
 
     sw::Archive readArch( writeArch.getData(), writeArch.getSize() );
 

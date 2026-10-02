@@ -46,7 +46,7 @@ namespace sw
          *          다시 부른다. 벤치 오브젝트는 스냅샷 직전에 despawn 으로 걷히므로 복원 뒤 씬에 없다.
          * @return 실제로 만들었으면 true. 플래그가 없거나 0 이면 false.
          */
-        bool spawnFromGlobals();
+        [[nodiscard]] bool spawnFromGlobals();
 
         /**
          * @brief 벤치가 만든 오브젝트(큐브 · 주광)를 씬에서 걷습니다. 멱등입니다.

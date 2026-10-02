@@ -36,12 +36,12 @@ namespace sw
         static MaterialPropertyType shaderTypeFromReflectionName( string_view typeName, uint32 byteSize );
         static uint32               alignOffset( uint32 offset, uint32 typeSize );
 
-        static bool parseBoolToken( string_view token );
-        static bool packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer );
+        [[nodiscard]] static bool parseBoolToken( string_view token );
+        static bool               packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer );
 
-        static string           fieldText( XmlNode node, const utf8* pName );
-        static bool             parseBoolField( XmlNode node, const utf8* pName, bool defaultValue );
-        static MaterialProperty parsePropertyNode( XmlNode item );
+        static string             fieldText( XmlNode node, const utf8* pName );
+        [[nodiscard]] static bool parseBoolField( XmlNode node, const utf8* pName, bool defaultValue );
+        static MaterialProperty   parsePropertyNode( XmlNode item );
 
         static void appendAttribute( XmlNode parent, const utf8* pName, string_view value );
         static void appendBoolAttr( XmlNode parent, const utf8* pName, bool value );

@@ -208,7 +208,8 @@ namespace sw
             const string localDir = FileUtil::getDirectoryPart( localCachePath );
             if ( localDir.empty() == false )
                 FileUtil::ensureDirectoryExists( localDir );
-            FileUtil::writeFile( localCachePath, compiledResult._bytecode.data(), compiledResult._bytecode.size() );
+            if ( FileUtil::writeFile( localCachePath, compiledResult._bytecode.data(), compiledResult._bytecode.size() ) == false )
+                SW_LOG_WARNING( "Could not write the shader cache '%#' - the next run recompiles it", localCachePath );
 
             storeEntry( std::move( cacheKey ), desc, compiledResult, currentSourceHash );
         }

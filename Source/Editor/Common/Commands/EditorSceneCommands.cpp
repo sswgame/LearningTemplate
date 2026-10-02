@@ -65,8 +65,8 @@ namespace sw::editor
             return nullptr;
 
         pCreated->addComponent<SceneComponent>();
-        if ( pParent != nullptr )
-            pCreated->attachToParent( pParent );
+        if ( pParent != nullptr && pCreated->attachToParent( pParent ) == false )
+            SW_LOG_WARNING( "New object could not be put under '%#' - it is created at the root", pParent->getName().c_str() );
 
         EditorTransaction::recordCreation( pCreated, "Create GameObject" );
         select( pCreated, SelectionMode::Replace );

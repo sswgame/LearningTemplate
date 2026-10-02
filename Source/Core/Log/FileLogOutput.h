@@ -31,7 +31,7 @@ namespace sw
          * @brief 로그 폴더를 만들고, 크래시 리포트 폴더도 같은 곳으로 맞춥니다.
          * @details 파일 자체는 첫 `write` 때 엽니다. 한 줄도 남기지 않고 끝나는 실행에서 빈 파일을 만들지 않기 위해서입니다.
          */
-        bool open() override;
+        [[nodiscard]] bool open() override;
         /** @brief 열려 있는 파일을 비우고 닫습니다. */
         void close() override;
         /** @brief 시각이 바뀌었으면 파일을 새로 연 뒤 한 줄을 씁니다. */

@@ -70,7 +70,7 @@ namespace sw
          *          기준이 매번 **지금 값**이라 그 아래 움직임은 쌓이지도 않습니다. 한 프레임에 1e-3 보다 조금씩 가는 물체는 영원히 제자리에
          *          있었습니다. 세터 · 틱 뒤 적용 · 배치 쓰기가 모두 이 규칙 하나를 씁니다.
          */
-        bool writeLocalValue( uint32 pageIndex, uint8 bit, const float3& value )
+        [[nodiscard]] bool writeLocalValue( uint32 pageIndex, uint8 bit, const float3& value )
         {
             float3& current = getLocalValueRef( pageIndex, bit );
             if ( float3::getDistanceSquared( current, value ) <= MathUtil::EpsilonSquared )

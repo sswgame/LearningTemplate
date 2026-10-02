@@ -53,16 +53,16 @@ namespace sw
          * @details 예전에는 문서를 읽은 뒤 **다시 문자열로 덤프해 재파싱**했습니다. 같은 파일을
          *          두 번 파싱하는 일이었습니다. 지금은 읽은 문서를 그대로 읽습니다.
          */
-        bool loadFromFile( string_view path );
+        [[nodiscard]] bool loadFromFile( string_view path );
         /** @brief JSON 파일을 씁니다. */
-        bool saveToFile( string_view path ) const;
+        [[nodiscard]] bool saveToFile( string_view path ) const;
         /**
          * @brief JSON 본문을 파싱합니다.
          * @details **실패하면 빈 에셋이 남습니다.** 예전에는 `_listItem` 만 비우고 실패해서
          *          앞 시퀀스의 프레임 범위와 노트가 그대로 남았습니다. 트랙 없는 옛 시퀀스가
          *          새 시퀀스인 척했습니다.
          */
-        bool parseJson( string_view json );
+        [[nodiscard]] bool parseJson( string_view json );
         /** @brief JSON 본문을 만듭니다. */
         string toJson() const;
         /** @brief 그 프레임에 걸쳐 있는 트랙 항목을 채웁니다. */
@@ -70,7 +70,7 @@ namespace sw
 
     private:
         /** @brief 파싱된 루트 하나를 읽습니다. 파일 경로와 문자열 경로가 모이는 자리입니다. */
-        bool parseRoot( const JsonValue& root );
+        [[nodiscard]] bool parseRoot( const JsonValue& root );
 
     public:
         int32                     _frameMin{ 0 };

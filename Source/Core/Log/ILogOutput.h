@@ -38,7 +38,7 @@ namespace sw
          * @brief 장치를 엽니다(콘솔 핸들 확보, 로그 폴더 생성 등).
          * @return 이후 `write` 가 제대로 동작하면 true
          */
-        virtual bool open() = 0;
+        [[nodiscard]] virtual bool open() = 0;
         /** @brief 장치를 닫고 버퍼를 비웁니다. `open` 없이 불려도 안전해야 합니다. */
         virtual void close() = 0;
         /** @brief 완성된 한 줄을 씁니다. 포맷과 타임스탬프는 이미 `record` 안에 있습니다. */

@@ -363,11 +363,11 @@ SW_TEST_CASE( EditorCommandStackTest, GameObjectBinarySnapshotUndoRedoTransactio
         cmd._label = "MoveStep_" + to_string( stepIndex );
         cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pObject, afterBytes]()
          {
-            ObjectStateSerializer::loadFromBinaryBuffer( pObject, afterBytes.data(), afterBytes.size() );
+            SW_EXPECT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pObject, afterBytes.data(), afterBytes.size() ) > 0 );
         } );
         cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pObject, beforeBytes]()
          {
-            ObjectStateSerializer::loadFromBinaryBuffer( pObject, beforeBytes.data(), beforeBytes.size() );
+            SW_EXPECT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pObject, beforeBytes.data(), beforeBytes.size() ) > 0 );
         } );
 
         stack.push( std::move( cmd ) );
@@ -447,7 +447,7 @@ SW_TEST_CASE( EditorCommandStackTest, EditorPlaySessionBinaryHierarchySnapshotSt
         SceneComponent* pChildSc = pChild->addComponent<SceneComponent>();
         SW_ASSERT_NOT_NULL( pChildSc );
         pChildSc->setLocalPosition( float3{ 1.0f, 2.0f, 3.0f } );
-        pChildSc->attachToComponent( pRootSc );
+        SW_ASSERT_TRUE( pChildSc->attachToComponent( pRootSc ) );
 
         vector<uint8> rootBytes;
         SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pRoot, rootBytes ) );

@@ -199,11 +199,14 @@ namespace sw
                     uint32   count = need / 4;
                     for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
                     {
-                        float32 component{ 0.0f };
+                        // 글이 모자란 칸은 기본값(색의 알파는 1)이다. 있는데 못 읽은 칸은 알리고 0 이다(예전에는 조용히 0).
+                        float32 component = ( propIndex == 3 && shaderType == MaterialPropertyType::Color ) ? 1.0f : 0.0f;
                         if ( propIndex < tokens.size() )
-                            StringUtil::parseFloat( tokens[propIndex], component );
-                        else
-                            component = ( propIndex == 3 && shaderType == MaterialPropertyType::Color ) ? 1.0f : 0.0f;
+                        {
+                            component = 0.0f;
+                            if ( StringUtil::parseFloat( tokens[propIndex], component ) == false )
+                                SW_LOG_WARNING( "Material value '%#' has an unreadable number '%#' - packed as 0", value, tokens[propIndex] );
+                        }
                         pPtr[propIndex] = component;
                     }
                     return true;
@@ -215,8 +218,8 @@ namespace sw
                     for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
                     {
                         uint64 component{ 0 };
-                        if ( propIndex < tokens.size() )
-                            StringUtil::parseUint64( tokens[propIndex], component, 10 );
+                        if ( propIndex < tokens.size() && StringUtil::parseUint64( tokens[propIndex], component, 10 ) == false )
+                            SW_LOG_WARNING( "Material value '%#' has an unreadable integer '%#' - packed as 0", value, tokens[propIndex] );
                         pPtr[propIndex] = static_cast<uint32>( component );
                     }
                     return true;
@@ -228,8 +231,8 @@ namespace sw
                     for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
                     {
                         int32 component{ 0 };
-                        if ( propIndex < tokens.size() )
-                            StringUtil::parseInt( tokens[propIndex], component, 10 );
+                        if ( propIndex < tokens.size() && StringUtil::parseInt( tokens[propIndex], component, 10 ) == false )
+                            SW_LOG_WARNING( "Material value '%#' has an unreadable integer '%#' - packed as 0", value, tokens[propIndex] );
                         pPtr[propIndex] = component;
                     }
                     return true;
@@ -465,7 +468,8 @@ namespace sw
             case MaterialPropertyType::Range:
             {
                 float32 floatVal{ 0.0f };
-                StringUtil::parseFloat( prop._value, floatVal );
+                if ( StringUtil::parseFloat( prop._value, floatVal ) == false )
+                    SW_LOG_WARNING( "Material parameter '%#' has an unreadable number '%#' - using 0", prop._name, prop._value );
                 if ( prop._min < prop._max )
                     floatVal = MathUtil::clamp( floatVal, prop._min, prop._max );
                 return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &floatVal, sizeof( floatVal ) );

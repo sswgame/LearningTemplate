@@ -271,7 +271,7 @@ namespace sw::editor
 
             ImGui::SameLine();
             if ( ImGui::Button( "Save Session" ) )
-                trySaveDirtyDocument();
+                (void)trySaveDirtyDocument(); // 실패는 저장이 알리고 dirty 가 남는다
 
             ImGui::SameLine();
             if ( ImGui::Button( "Presets..." ) )
@@ -290,10 +290,16 @@ namespace sw::editor
                     const string presetPath = FileUtil::joinPath(
                         EditorGlobalVariableCommands::getPresetFolderPath(),
                         string( _presetNameBuf.c_str() ) + ".gvpreset.xml" );
-                    EditorGlobalVariableCommands::savePreset( presetPath, _presetNameBuf.c_str() );
-                    _presetNameBuf.clear();
-                    _bPresetListDirty = SW_TRUE;
-                    clearDocumentDirty();
+                    // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다 — 세션의 dirty 는 건드리지 않는다(예전에는 실패해도 지웠다).
+                    if ( EditorGlobalVariableCommands::savePreset( presetPath, _presetNameBuf.c_str() ) )
+                    {
+                        _presetNameBuf.clear();
+                        _bPresetListDirty = SW_TRUE;
+                    }
+                    else
+                    {
+                        SW_LOG_ERROR( "Could not save preset '%#'", presetPath.c_str() );
+                    }
                 }
 
                 ImGui::Separator();
@@ -329,8 +335,9 @@ namespace sw::editor
 
                         if ( ImGui::MenuItem( displayName.c_str() ) )
                         {
-                            EditorGlobalVariableCommands::loadPreset( presetFile );
-                            clearDocumentDirty();
+                            // 읽은 프리셋이 지금 값이 된다 — 저장된 세션과 다르므로 dirty 다. 못 읽으면 값이 그대로다.
+                            if ( EditorGlobalVariableCommands::loadPreset( presetFile ) == false )
+                                SW_LOG_ERROR( "Could not load preset '%#'", presetFile.c_str() );
                         }
                     }
                 }

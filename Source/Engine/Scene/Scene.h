@@ -39,9 +39,9 @@ namespace sw
          * @details 모든 엔티티를 하나의 묶음(`ObjectStateBatch`, 파일 id 공간)으로 읽고 끝에서 한 번에 잇습니다 — 자식이 부모보다 앞에 적혀도 된다.
          *          엔티티의 파일 id 는 오브젝트의 런타임 id 와 짝지어 들고 있다가(`collectSavedIdMap`) 저장할 때 같은 값을 다시 씁니다.
          */
-        bool instantiate( const SceneDocument& doc );
+        [[nodiscard]] bool instantiate( const SceneDocument& doc );
         /** @brief 현재 씬의 오브젝트 상태를 씬 문서(SceneDocument)로 직렬화합니다. 부착은 부모의 파일 id 로 적습니다. */
-        bool serializeToDocument( SceneDocument& outDoc ) const;
+        [[nodiscard]] bool serializeToDocument( SceneDocument& outDoc ) const;
         /**
          * @brief 살아 있는 오브젝트마다의 파일 id 표(런타임 id → 파일 id)를 채웁니다. id 가 없는 오브젝트(새로 만든 것)에는 여기서 줍니다.
          * @details 파일 id 는 한 번 정하면 그 오브젝트가 사라져도 다시 쓰지 않습니다 — 남은 참조가 새 오브젝트를 가리키지 않게. 쿠커 · 저장이 씁니다.

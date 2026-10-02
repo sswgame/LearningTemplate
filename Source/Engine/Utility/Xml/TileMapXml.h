@@ -75,11 +75,11 @@ namespace sw
         vector<Encounter> _listEncounterEntry{};
 
         /** @brief Resource 상대 또는 절대 경로에서 타일맵 XML을 읽습니다. */
-        SW_API bool load( string_view path );
+        [[nodiscard]] SW_API bool load( string_view path );
         /** @brief XML 본문에서 타일맵을 읽습니다. */
-        SW_API bool loadFromXml( string_view xml );
+        [[nodiscard]] SW_API bool loadFromXml( string_view xml );
         /** @brief Resource 상대 또는 절대 경로로 타일맵 XML을 씁니다. */
-        SW_API bool save( string_view path ) const;
+        [[nodiscard]] SW_API bool save( string_view path ) const;
         /**
          * @brief 타일맵 XML 본문을 만듭니다.
          * @details `<t>` 는 언제나 `_width × _height` 개를 적습니다. 네 타일 배열이 그보다 짧으면

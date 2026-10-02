@@ -594,7 +594,7 @@ namespace sw
         }
 
         /** @brief 이름을 값으로 바꿉니다. 대소문자는 무시하고, 비트플래그는 `A|B` 도 허용합니다. */
-        bool tryParse( string_view name, int64& outValue ) const
+        [[nodiscard]] bool tryParse( string_view name, int64& outValue ) const
         {
             if ( name.empty() )
                 return false;
@@ -639,7 +639,7 @@ namespace sw
          *          "바인딩 없음" 이다) 읽기도 그 이름을 받아야 왕복이 맞는다. 이름을 해시로 바꾸지 않는다 — 에셋 글을 전역 이름표에 넣지
          *          않는다.
          */
-        bool tryParseText( string_view text, int64& outValue ) const
+        [[nodiscard]] bool tryParseText( string_view text, int64& outValue ) const
         {
             const string_view trimmed = StringUtil::trim( text );
             // 비트플래그의 빈 글은 "아무 비트도 없음" 이다(손으로 쓴 에셋). 쓰는 쪽은 0 을 `None` 으로 적는다(`toStringFlags`).
@@ -679,7 +679,7 @@ namespace sw
 
     private:
         /** @brief `A | B` 를 읽습니다. 토큰마다 알려진 이름(대소문자 무시)이어야 합니다 — 하나라도 모르면 false. 표식 값 검사는 부르는 쪽이 합니다. */
-        bool tryParseFlags( string_view text, int64& outValue ) const
+        [[nodiscard]] bool tryParseFlags( string_view text, int64& outValue ) const
         {
             int64  result{ 0 };
             size_t startPos{ 0 };

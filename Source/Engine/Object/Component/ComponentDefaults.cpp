@@ -311,7 +311,8 @@ namespace sw
             Memory::copy( pPropPtr, patch._arrByte.data(), patch._arrByte.size() );
             return;
         }
-        parseTextValueCoerced( pPropPtr, patch._pProperty->_typeName, patch._text, SerializeContext::getDefault() );
+        if ( parseTextValueCoerced( pPropPtr, patch._pProperty->_typeName, patch._text, SerializeContext::getDefault() ) == false )
+            SW_LOG_WARNING( "Component default '%#' of '%#' cannot be read - the field keeps its constructor value", patch._text, patch._pProperty->_name.c_str() );
     }
 
     void ComponentDefaults::setPath( string_view path )

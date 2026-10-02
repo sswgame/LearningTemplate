@@ -26,18 +26,19 @@ namespace sw::editor
         SequencerPanel();
         ~SequencerPanel() override;
 
-        void drawContent() override;
-        bool saveDocument() override;
+        void               drawContent() override;
+        [[nodiscard]] bool saveDocument() override;
 
     private:
-        string        captureDocumentText() const override;
-        void          applyDocumentText( string_view text ) override;
-        void          loadFromFocusedPath();
-        void          saveToLoadedPath();
-        void          applyAsset( const SequenceAsset& asset );
-        SequenceAsset captureAsset() const;
-        void          syncPreviewPlayer();
-        void          tickPreview( float32 deltaSeconds );
+        string captureDocumentText() const override;
+        void   applyDocumentText( string_view text ) override;
+        /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
+        ToolAssetLoadResult loadDocument() override;
+        void                saveToLoadedPath();
+        void                applyAsset( const SequenceAsset& asset );
+        SequenceAsset       captureAsset() const;
+        void                syncPreviewPlayer();
+        void                tickPreview( float32 deltaSeconds );
 
     private:
         fixed_string<constant::kMaxBuffer512> _cinematicNote;

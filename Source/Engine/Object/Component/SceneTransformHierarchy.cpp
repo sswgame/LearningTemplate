@@ -336,7 +336,7 @@ namespace sw
 
         // 잎 루트의 컴포넌트가 이미 더티였다면(틱 전에 쓰였고 플러시 전) 더티 목록에 올라 있어 플러시가 한 번 더 합성한다. 값은 같다.
         // 그 더티를 내리려면 컴포넌트를 만져야 하는데, 이 길은 그것을 피하려고 칸만 본다.
-        applyLocalChange( page, pageIndex, &registry );
+        (void)applyLocalChange( page, pageIndex, &registry ); // 값은 이미 바뀌었다(위) — 뒤처리의 결과는 여기서 쓰지 않는다
         return true;
     }
 

@@ -63,7 +63,7 @@ namespace sw
         bool getCustomPropertyBool( string_view key, bool bFallback = false ) const;
 
         /** @brief 리소스 경로(XML)에서 부트스트랩 테이블을 로드합니다. */
-        bool loadFromResource( string_view assetRelativePath = {} );
+        [[nodiscard]] bool loadFromResource( string_view assetRelativePath = {} );
     };
 
     // ------------------------------------------------------------------------------
@@ -86,6 +86,6 @@ namespace sw
         string resolve( string_view packRelative ) const;
 
         /** @brief `{packRoot}/data/gamedata.xml` 을 읽고, 그 경로를 컴포넌트 기본값 경로(`Component::setDefaultGamedataPath`)로 등록합니다. */
-        bool load( string_view gamedataFileName = "data/gamedata.xml" );
+        [[nodiscard]] bool load( string_view gamedataFileName = "data/gamedata.xml" );
     };
 } // namespace sw

@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -73,16 +74,20 @@ namespace sw
          * @param pOutResult 베이킹 결과 상세 정보(선택)
          * @return 성공하면 true 입니다.
          */
-        static bool bakeShader( string_view sourcePath, string_view outputPath, string_view entryPoint,
-                                ShaderStage stage, ShaderTargetFormat targetFormat,
-                                const vector<string>* pListPermutation = nullptr,
-                                ShaderBakeResult*     pOutResult       = nullptr );
+        [[nodiscard]] static bool bakeShader( string_view sourcePath, string_view outputPath, string_view entryPoint,
+                                              ShaderStage stage, ShaderTargetFormat targetFormat,
+                                              const vector<string>* pListPermutation = nullptr,
+                                              ShaderBakeResult*     pOutResult       = nullptr );
 
         // "무엇을 구울지" 와 "모두 굽기" 는 여기 없다. 파이프라인 XML · 패스 종류를 아는 렌더러의 정책이라
         // `Renderer/Bake/ShaderBakeDriver` 에 있다. 여기는 한 장을 굽는 법과 이름 짓기 · 최신 판정만 든다.
 
-        /** @brief `bin/<rhi>/bake.stamp` 를 지금 소스의 내용 해시로 다시 씁니다(베이크가 끝난 뒤). */
-        static void writeBakeStamp( string_view binDirectory );
+        /**
+         * @brief `bin/<rhi>/bake.stamp` 를 지금 소스의 내용 해시로 다시 씁니다(베이크가 끝난 뒤).
+         * @param pFailedSource 이번 베이크에서 컴파일에 실패한 소스(정규화한 절대 경로)입니다. 도장에서 빠져 다음 베이크가 다시 시도합니다 —
+         *                      예전에는 실패한 셰이더의 옛 바이너리 위에 지금 소스의 해시를 찍어, 그 셰이더가 영영 최신으로 판정됐다.
+         */
+        static void writeBakeStamp( string_view binDirectory, const unordered_set<string>* pFailedSource = nullptr );
 
         /** @brief 셰이더 파일의 스템을 소문자로 반환합니다. 구운 파일 이름의 앞부분입니다(`computeBinaryFileName` 의 짝). */
         static string getStemLower( string_view filePath );

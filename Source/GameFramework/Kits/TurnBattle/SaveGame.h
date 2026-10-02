@@ -55,9 +55,9 @@ namespace sw
         void setFlag( string_view key, int32 value ) override;
 
         /** @brief 세이브 데이터를 파일로 저장합니다. */
-        bool saveToFile( string_view path ) const override;
+        [[nodiscard]] bool saveToFile( string_view path ) const override;
         /** @brief 파일에서 세이브 데이터를 불러옵니다. */
-        bool loadFromFile( string_view path ) override;
+        [[nodiscard]] bool loadFromFile( string_view path ) override;
     };
 
     namespace turnbattle

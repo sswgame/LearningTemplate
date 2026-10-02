@@ -37,7 +37,7 @@ namespace sw
     const utf8* getRenderPassInputRoleName( RenderPassInputRole role );
 
     /** @brief 역할 이름(`getRenderPassInputRoleName` 의 글, Invalid 제외)을 역할로 읽습니다. 모르는 이름이면 false 입니다. */
-    bool tryParseRenderPassInputRole( string_view roleName, RenderPassInputRole& outRole );
+    [[nodiscard]] bool tryParseRenderPassInputRole( string_view roleName, RenderPassInputRole& outRole );
 
     /**
      * @brief 첨부의 역할을 정합니다. 첨부가 선언한 역할(`RenderPassAttachment::_role`)이 먼저입니다.

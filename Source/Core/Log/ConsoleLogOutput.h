@@ -26,7 +26,7 @@ namespace sw
         ConsoleLogOutput& operator=( const ConsoleLogOutput& ) = delete;
 
         /** @brief 콘솔 코드 페이지를 UTF-8 로 맞추고, 핸들과 기본 색상을 캐시합니다. */
-        bool open() override;
+        [[nodiscard]] bool open() override;
         /** @brief 표준 출력을 비웁니다(핸들은 이 장치가 연 것이 아니므로 닫지 않습니다). */
         void close() override;
         /** @brief 수준별 색으로 한 줄을 씁니다. Error 는 바로 flush 합니다. */

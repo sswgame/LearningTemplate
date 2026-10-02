@@ -51,6 +51,6 @@ namespace sw
          * @brief 그래픽스 요청의 정점 · (있으면) 픽셀 스테이지를 컴파일합니다. DX12 · GL · Vulkan 이 같은 일곱 줄을 각자 들고 있었습니다.
          * @return 정점 스테이지가 성공했고, 픽셀은 없거나 성공했으면 true. 실패한 쪽의 메시지는 그 결과에 남습니다.
          */
-        static bool compileGraphics( const RHIGraphicsShaderRequest& request, ShaderCompileResult& outVertex, ShaderCompileResult& outPixel );
+        [[nodiscard]] static bool compileGraphics( const RHIGraphicsShaderRequest& request, ShaderCompileResult& outVertex, ShaderCompileResult& outPixel );
     };
 } // namespace sw

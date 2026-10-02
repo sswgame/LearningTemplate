@@ -12,7 +12,7 @@
 namespace sw
 {
     /** @brief 식별자 문자열을 ContainerKind로 파싱합니다. */
-    inline bool tryParseContainerKind( string_view spelling, ContainerKind& out ) noexcept
+    [[nodiscard]] inline bool tryParseContainerKind( string_view spelling, ContainerKind& out ) noexcept
     {
 #define REGISTER_CONTAINER_KIND( Name ) \
     if ( spelling == #Name )            \
@@ -84,7 +84,7 @@ namespace sw
     }
 
     /** @brief 식별자 문자열을 FunctionNetRole로 파싱합니다. */
-    inline bool tryParseFunctionNetRole( string_view spelling, FunctionNetRole& out ) noexcept
+    [[nodiscard]] inline bool tryParseFunctionNetRole( string_view spelling, FunctionNetRole& out ) noexcept
     {
 #define REGISTER_FUNCTION_NET_ROLE( Name ) \
     if ( spelling == #Name )               \

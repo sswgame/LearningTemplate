@@ -47,7 +47,7 @@ namespace sw
         /** @brief 바디 AABB 를 갱신합니다. */
         void setAabb( BodyHandle handle, const AABB& aabb );
         /** @brief 핸들이 유효하면 out 에 복사하고 true 를 반환합니다. */
-        bool tryGetBody( BodyHandle handle, PhysicsBody& out ) const;
+        [[nodiscard]] bool tryGetBody( BodyHandle handle, PhysicsBody& out ) const;
         /**
          * @brief 바디 쌍의 겹침을 다시 재고, 지난 step 과 달라진 쌍을 시작 · 끝 이벤트로 냅니다(`getOverlapEvents`).
          * @details 유니티 `OnTriggerEnter2D/Exit2D` · 언리얼 `BeginOverlap/EndOverlap` 의 자리입니다. 계속 겹친 쌍은 다시 내지 않고, 바디가 사라진
