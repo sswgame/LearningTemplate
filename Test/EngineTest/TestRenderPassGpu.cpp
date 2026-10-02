@@ -3468,3 +3468,120 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceOverridesReachTheGpuOnEveryBackend )
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend for the instance override test" );
 }
+
+/**
+ * @brief [RenderPassGpuTest] 깊이 프리패스를 넣어도 같은 그림이 나온다 — 깊이 첨부 이름을 바꿔도
+ * @details 깊이 프리패스는 동작하지 않는 상태였다. (1) 프리패스가 그림자와 같은 셰이더 변형으로 그려 장면 깊이에 **광원 공간**의 깊이를 썼고,
+ *          (2) Vulkan · GL 은 깊이 비교가 Less 라 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 모두 탈락했다(DX 는 LessEqual). 프리패스를 넣은
+ *          파이프라인이 하나도 없어 드러나지 않았고, ㊼ 의 "뎁스 로드 연산을 실제로 거는 뎁스로" 도 그래서 시험할 수 없었다. 언리얼 EarlyZ · 유니티
+ *          Depth Priming 처럼 `forwardprepasspipeline.xml` 을 두고, 프리패스 없는 포워드와 픽셀을 맞춘다. 깊이 첨부 이름만 바꾼 판도 맞춘다 —
+ *          기본 패스가 프리패스의 깊이를 지우지 않고 이어 받아야(Load) 같은 그림이다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, DepthPrepassRendersTheSameImage )
+{
+    sw::string prepassText;
+    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardprepasspipeline.xml", prepassText ) );
+    SW_ASSERT_TRUE( prepassText.find( "_type=\"DepthPrepass\"" ) != sw::string::npos );
+    const sw::string renamedPath = test::makeTempPath( "renamedprepasspipeline.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( renamedPath, sw::StringUtil::replace( prepassText, "SceneDepth", "MainDepth" ) ) );
+
+    uint32 comparedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+
+        LitCubeScene          cube;
+        sw::vector<uint8>     listReference;
+        sw::vector<uint8>     listPrepass;
+        sw::vector<uint8>     listRenamed;
+        sw::RHITextureMipSpan layoutReference{};
+        sw::RHITextureMipSpan layoutPrepass{};
+        sw::RHITextureMipSpan layoutRenamed{};
+        const utf8*           pName = device->getBackendName();
+        bool                  bOk   = cube.populate();
+        if ( bOk )
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", listReference, layoutReference );
+        if ( bOk )
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardprepasspipeline.xml", listPrepass, layoutPrepass );
+        if ( bOk )
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, renamedPath.c_str(), listRenamed, layoutRenamed );
+
+        if ( bOk && layoutReference._width == layoutPrepass._width && layoutReference._width == layoutRenamed._width )
+        {
+            ++comparedCount;
+            const CaptureDifference prepassDifference = compareCaptures( listReference, listPrepass );
+            const CaptureDifference renamedDifference = compareCaptures( listReference, listRenamed );
+            SW_EXPECT_TRUE_MSG( prepassDifference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( prepassDifference.isSameImage(),
+                                ( sw::string( pName ) + ": 깊이 프리패스를 넣었더니 그림이 다르다 (" + prepassDifference.describe() + ")" ).c_str() );
+            SW_EXPECT_TRUE_MSG( renamedDifference.isSameImage(),
+                                ( sw::string( pName ) + ": 프리패스의 깊이 첨부 이름만 바꿨는데 그림이 다르다 (" + renamedDifference.describe() + ")" ).c_str() );
+        }
+        else if ( bOk == false )
+            SW_LOG_WARNING( "DepthPrepassRendersTheSameImage: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
+
+        cube.releaseRhi( device.get() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the prepass pipelines" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 그림자 패스가 바닥에 그림자를 드리운다 — 네 백엔드 모두
+ * @details DX11 은 깊이 전용 PSO(픽셀 스테이지 없음)의 드로우를 통째로 버리고 있었다(그리기 때 PS 까지 요구했다). 그림자 맵이 클리어 값뿐이라
+ *          DX11 화면에만 그림자가 없었는데, 그림자를 다루는 시험은 모두 두 판을 서로 맞추기만 해서(둘 다 그림자가 없으면 같다) 잡지 못했다.
+ *          그림자 패스의 깊이 쓰기만 끈 판(그림자 맵이 비는 판)과 **달라야** 한다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ShadowPassCastsOnEveryBackend )
+{
+    sw::string pipelineText;
+    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipeline.xml", pipelineText ) );
+    constexpr sw::string_view kDepthWriteOn  = "_bEnableDepthWrite=\"true\"";
+    constexpr sw::string_view kDepthWriteOff = "_bEnableDepthWrite=\"false\"";
+    const size_t              shadowPassAt   = pipelineText.find( "_type=\"Shadow\"" );
+    SW_ASSERT_TRUE( shadowPassAt != sw::string::npos );
+    const size_t depthWriteAt = pipelineText.find( kDepthWriteOn.data(), shadowPassAt );
+    SW_ASSERT_TRUE( depthWriteAt != sw::string::npos );
+    pipelineText.replace( depthWriteAt, kDepthWriteOn.size(), kDepthWriteOff.data() );
+    const sw::string emptyShadowPath = test::makeTempPath( "emptyshadowpipeline.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( emptyShadowPath, pipelineText ) );
+
+    uint32 comparedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+
+        LitCubeScene          cube;
+        sw::vector<uint8>     listShadow;
+        sw::vector<uint8>     listEmptyShadow;
+        sw::RHITextureMipSpan layoutShadow{};
+        sw::RHITextureMipSpan layoutEmptyShadow{};
+        const utf8*           pName = device->getBackendName();
+        bool                  bOk   = cube.populate();
+        if ( bOk )
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, "engine/pipeline/forwardpipeline.xml", listShadow, layoutShadow );
+        if ( bOk )
+            bOk = renderPresentCaptureOf( device.get(), cube._scene, emptyShadowPath.c_str(), listEmptyShadow, layoutEmptyShadow );
+
+        if ( bOk && layoutShadow._width == layoutEmptyShadow._width )
+        {
+            ++comparedCount;
+            const CaptureDifference difference = compareCaptures( listShadow, listEmptyShadow );
+            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( sw::string( pName ) + ": 기준 그림이 배경뿐입니다" ).c_str() );
+            SW_EXPECT_FALSE_MSG( difference.isSameImage(),
+                                 ( sw::string( pName ) + ": 그림자 맵을 비워도 그림이 같다 — 그림자 패스가 아무것도 그리지 않는다 (" + difference.describe() + ")" ).c_str() );
+        }
+        else if ( bOk == false )
+            SW_LOG_WARNING( "ShadowPassCastsOnEveryBackend: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
+
+        cube.releaseRhi( device.get() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the shadow pipelines" );
+}

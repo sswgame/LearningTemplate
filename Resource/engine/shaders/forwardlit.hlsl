@@ -31,8 +31,9 @@ PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
 	float3 localPos;
 	float3 localNormal;
 	SwLoadMorphedVertex(inst.meshBatchIndex, vid, input.pos, input.nrm, localPos, localNormal);
-	float4 worldPos = mul(float4(localPos, 1.0f), inst.world);
-	output.pos = mul(worldPos, g_ViewProj);
+	// 위치는 깊이 프리패스와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 LessEqual 을 통과한다(binding.hlsli).
+	float4 worldPos = SwWorldPositionOf(localPos, inst.world);
+	output.pos = SwClipPositionOf(worldPos, g_ViewProj);
 	output.wpos = worldPos.xyz;
 	output.col = input.col;
 	// UV 는 정점 속성이다. 예전엔 `localPos.xy * 0.5 + 0.5` 로 **지어내고** 있어서 — 노멀과 같은

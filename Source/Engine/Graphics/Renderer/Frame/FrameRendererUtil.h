@@ -52,6 +52,13 @@ namespace sw
      */
     inline constexpr const utf8* kPassGBufferDefine = "SW_PASS_GBUFFER=1";
 
+    /**
+     * @brief 깊이 프리패스가 그림자와 같은 셰이더 파일(shadowdepth.hlsl)을 **카메라** 행렬로 그리게 하는 define 입니다.
+     * @details 예전에는 이 구분이 없어 프리패스가 그림자와 같은 광원 행렬(`g_LightViewProj`)로 그렸고, 장면 깊이에 광원 공간의 깊이가 들어갔다 —
+     *          프리패스를 넣은 파이프라인이 하나도 없어서 드러나지 않았다. 언리얼의 EarlyZ 패스 · 유니티 URP 의 Depth Priming 자리다.
+     */
+    inline constexpr const utf8* kPassDepthPrepassDefine = "SW_PASS_DEPTH_PREPASS=1";
+
     /** @brief FrameRenderer TU 들이 함께 쓰는 패스 · 어태치먼트 이름과 도우미입니다. */
     struct FrameRendererUtil
     {
@@ -289,6 +296,8 @@ namespace sw
             vector<string> listDefine;
             if ( passType == RenderPassType::GBuffer )
                 listDefine.push_back( string{ kPassGBufferDefine } );
+            else if ( passType == RenderPassType::DepthPrepass )
+                listDefine.push_back( string{ kPassDepthPrepassDefine } );
             return listDefine;
         }
 

@@ -169,10 +169,12 @@ namespace sw
             pipelineRp = _pDevice->_renderPass;
 
         VkPipelineDepthStencilStateCreateInfo depthStencil{};
-        depthStencil.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depthStencil.depthTestEnable       = desc._bEnableDepthTest ? VK_TRUE : VK_FALSE;
-        depthStencil.depthWriteEnable      = ( depthStencil.depthTestEnable != VK_FALSE && desc._bEnableDepthWrite ) ? VK_TRUE : VK_FALSE;
-        depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS;
+        depthStencil.sType            = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthStencil.depthTestEnable  = desc._bEnableDepthTest ? VK_TRUE : VK_FALSE;
+        depthStencil.depthWriteEnable = ( depthStencil.depthTestEnable != VK_FALSE && desc._bEnableDepthWrite ) ? VK_TRUE : VK_FALSE;
+        // LessEqual — DX11 · DX12 와 같다. 예전에는 Vulkan · GL 만 Less 여서, 깊이 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 **두 백엔드에서만
+        // 모두 탈락**했다(그리고 같은 깊이의 겹친 면은 백엔드마다 먼저 그린 것 · 나중 그린 것이 갈렸다).
+        depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
         depthStencil.depthBoundsTestEnable = VK_FALSE;
         depthStencil.stencilTestEnable     = VK_FALSE;
 

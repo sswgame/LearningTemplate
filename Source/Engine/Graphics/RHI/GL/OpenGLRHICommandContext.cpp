@@ -94,7 +94,7 @@ namespace sw
         if ( pRecord->_bEnableDepthTest )
         {
             glEnable( GL_DEPTH_TEST );
-            glDepthFunc( GL_LESS );
+            glDepthFunc( GL_LEQUAL ); // DX11 · DX12 · Vulkan 과 같은 LessEqual — 깊이 프리패스 뒤 같은 깊이를 다시 그린다
             glDepthMask( pRecord->_bEnableDepthWrite ? GL_TRUE : GL_FALSE );
         }
         else

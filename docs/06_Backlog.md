@@ -2074,6 +2074,28 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (구조 ④ 렌더 — 깊이 프리패스가 처음으로 돈다, DX11 은 깊이 전용 드로우를 하나도 내지 않고 있었다)
+
+㊼ 의 남은 한계: 뎁스 로드 연산 수정을 볼 수 없었다 — 깊이 프리패스를 쓰는 파이프라인이 없었다. 언리얼 EarlyZ(`r.EarlyZPass`) · 유니티 URP Depth
+Priming 처럼 `forwardprepasspipeline.xml`(포워드 앞에 DepthPrepass)을 두고 돌려 보니 프리패스는 **네 백엔드 어디서도** 맞게 동작하지 않았다.
+- 프리패스가 그림자와 같은 셰이더 변형(광원 행렬)으로 그려 장면 깊이에 광원 공간의 깊이를 썼다 → shadowdepth.hlsl 에 패스 define
+  `SW_PASS_DEPTH_PREPASS`(카메라 행렬, `FrameRendererUtil::getPassDefine` — 베이크도 같은 함수에 묻는다). 위치 계산은 `SwWorldPositionOf` ·
+  `SwClipPositionOf`(binding.hlsli, precise) 하나를 forwardlit · gbuffer · shadowdepth 가 같이 쓴다 — 언리얼이 depth-only 와 base pass 에 같은 정점
+  팩토리 코드를 쓰는 이유와 같다.
+- Vulkan · GL 만 깊이 비교가 Less 였다 → 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 두 백엔드에서 모두 탈락했다. LessEqual 로 통일(DX 와 같다).
+- **DX11 은 깊이 전용 PSO 의 드로우를 하나도 내지 않았다.** `bindGraphicsPipelineForDraw` 가 PS 까지 요구했는데 깊이 전용 PSO 는 픽셀 스테이지를
+  붙이지 않는다. 그래서 그림자 맵이 클리어 값뿐이라 **DX11 화면에만 그림자가 없었고**, 프리패스는 아무것도 쓰지 못해 깊이 쓰기를 끈 기본 패스가
+  배치 순서대로 덮었다. 배치 순서가 프로세스마다 달라 시험이 가끔만 졌다(처음에는 FXC 의 정점 불변성으로 오인했다 — 같은 프로세스 안에서는
+  결정적이고 프로세스마다 갈리면 순서를 의심할 것). 그리기 때는 VS 만 요구하고(`PSSetShader( nullptr )` 가 앞 드로우의 PS 를 뗀다), 셰이더를 못 만든
+  PSO 는 다른 세 백엔드처럼 핸들 0 을 돌려준다 — 예전에는 셰이더가 빠진 레코드를 돌려주고 그 실패를 드로우 때 삼켰는데, 그 검사가 원래 PS 가 없는
+  PSO 까지 막은 것이다.
+
+**검증.** `RenderPassGpuTest.DepthPrepassRendersTheSameImage`(네 백엔드 — 프리패스 없는 포워드와 같은 그림, 깊이 첨부 이름을 MainDepth 로 바꾼 판도 같은
+그림: 기본 패스가 프리패스의 깊이를 Load 해야 맞는다), `RenderPassGpuTest.ShadowPassCastsOnEveryBackend`(네 백엔드 — 그림자 패스의 깊이 쓰기만 끈 판과
+**달라야** 한다. 그림자를 다루던 시험은 모두 두 판을 서로 맞추기만 해서, 둘 다 그림자가 없는 DX11 을 통과시켰다), `RenderPassTest.ShippedPipelinesValidateClean`
+에 새 파이프라인. 변이 여섯(프리패스가 광원 행렬 · Vulkan Less · GL Less · ㊼ 이전의 이름으로 정한 깊이 로드 · DX11 이 PS 요구 ×2 시험)이 모두 실패했다.
+셰이더를 다시 구웠다(프리패스 변형 4 개 × 백엔드 4). Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (구조 ③ 보완 — 미룬 Play 시험이 Shipping 에서 졌다, 시험 씬을 쿠킹한 바이너리로도 쓴다)
 
 구조 ③ 의 시험은 비동기로 열 씬을 XML 로만 썼다. Shipping 은 쿠킹한 바이너리 씬(같은 이름의 `.bin`)만 읽어(`Shipping requires cooked binary scene`) 로드가 실패했고,

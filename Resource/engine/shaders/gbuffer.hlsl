@@ -21,8 +21,9 @@ PSInput VSMain(SwVertexInput input, uint vid : SV_VertexID)
 	float3 localNormal;
 	SwLoadMorphedVertex(inst.meshBatchIndex, vid, input.pos, input.nrm, localPos, localNormal);
 	float4x4 world = inst.world;
-	float4 worldPos = mul(float4(localPos, 1.0f), world);
-	output.pos = mul(worldPos, g_ViewProj);
+	// 위치는 깊이 프리패스와 **같은 함수**로 만든다(binding.hlsli SwWorldPositionOf).
+	float4 worldPos = SwWorldPositionOf(localPos, world);
+	output.pos = SwClipPositionOf(worldPos, g_ViewProj);
 	output.col = input.col;
 	output.nrm = normalize(mul(float4(localNormal, 0.0f), world).xyz);
 	return output;

@@ -85,7 +85,9 @@ namespace sw
         };
 
         registerPso( RenderPassType::Shadow, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
-        registerPso( RenderPassType::DepthPrepass, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true );
+        // 깊이 프리패스는 그림자와 같은 셰이더 파일을 **카메라** 행렬로 그린다(패스 define, 셰이더가 행렬을 고른다). 베이크도 같은 함수에 묻는다.
+        const vector<string> listPrepassDefine = FrameRendererUtil::getPassDefine( RenderPassType::DepthPrepass );
+        registerPso( RenderPassType::DepthPrepass, engineData._shaderShadowDepth.c_str(), true, 0, nullptr, false, true, &listPrepassDefine );
         registerPso( RenderPassType::ForwardOpaque, engineData._shaderForwardLit.c_str(), true );
         registerPso( RenderPassType::ForwardOpaqueNoDepthWrite, engineData._shaderForwardLit.c_str(), true, 1, nullptr, false, false );
         // 반투명 패스는 블렌드를 켜고 뎁스 쓰기를 끄는 것까지가 **패스의 몫**이다. 어떤 셰이더 퍼뮤테이션으로

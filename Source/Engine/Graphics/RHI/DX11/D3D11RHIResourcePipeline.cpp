@@ -36,31 +36,33 @@ namespace sw
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
         if ( desc._vertexShaderPath.empty() == false )
         {
-            ShaderCompileResult res = RHIShaderRequest::compile( request._vertex );
-            if ( res._bSuccess )
+            // 셰이더를 못 만들면 PSO 도 만들지 않는다(핸들 0). 다른 세 백엔드와 같은 규칙이다. 예전에는 셰이더가 빠진 레코드를 돌려주고
+            // 그리기 때 "PS 가 없으면 건너뛴다" 로 그 실패를 삼켰는데, 그 검사가 **원래 PS 가 없는** 깊이 전용 PSO(그림자 · 깊이 프리패스)의
+            // 드로우까지 모두 버렸다(bindGraphicsPipelineForDraw 참고). 뎁스 전용(RT 0 개)이면 경로가 있어도 PS 를 붙이지 않는다.
+            ShaderCompileResult vsResult{};
+            ShaderCompileResult psResult{};
+            if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) == false ||
+                 FAILED( _pDevice->_device->CreateVertexShader( vsResult._bytecode.data(), vsResult._bytecode.size(), nullptr, pso._vs.GetAddressOf() ) ) ||
+                 ( request._bHasPixelShader != SW_FALSE &&
+                   FAILED( _pDevice->_device->CreatePixelShader( psResult._bytecode.data(), psResult._bytecode.size(), nullptr, pso._ps.GetAddressOf() ) ) ) )
             {
-                _pDevice->_device->CreateVertexShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._vs.GetAddressOf() );
-                // 입력 레이아웃은 **공용 표**(constant::arrVertexAttribute)에서 만든다. DX12 · Vulkan · GL 과 같은 표다.
-                D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::kVertexAttributeCount]{};
-                for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
-                {
-                    const RHIVertexAttribute& attribute                  = constant::arrVertexAttribute[attributeIndex];
-                    arrInputElement[attributeIndex].SemanticName         = attribute._pSemanticName;
-                    arrInputElement[attributeIndex].Format               = toDxgiVertexFormat( attribute );
-                    arrInputElement[attributeIndex].AlignedByteOffset    = attribute._byteOffset;
-                    arrInputElement[attributeIndex].InputSlot            = attribute._inputSlot;
-                    arrInputElement[attributeIndex].InputSlotClass       = ( attribute._bPerInstance != SW_FALSE ) ? D3D11_INPUT_PER_INSTANCE_DATA : D3D11_INPUT_PER_VERTEX_DATA;
-                    arrInputElement[attributeIndex].InstanceDataStepRate = ( attribute._bPerInstance != SW_FALSE ) ? 1u : 0u;
-                }
-                _pDevice->_device->CreateInputLayout( arrInputElement, constant::kVertexAttributeCount, res._bytecode.data(), res._bytecode.size(), pso._inputLayout.GetAddressOf() );
+                SW_LOG_WARNING( "createPipelineState: shader compile/create failed (vs=%# ps=%#) %#", vsResult._bSuccess, psResult._bSuccess,
+                                desc._vertexShaderPath.c_str() );
+                return 0;
             }
-        }
-        // 뎁스 전용(RT 0 개)이면 경로가 있어도 PS 를 붙이지 않는다. 다른 세 백엔드와 같은 규칙이다.
-        if ( request._bHasPixelShader != SW_FALSE )
-        {
-            ShaderCompileResult res = RHIShaderRequest::compile( request._pixel );
-            if ( res._bSuccess )
-                _pDevice->_device->CreatePixelShader( res._bytecode.data(), res._bytecode.size(), nullptr, pso._ps.GetAddressOf() );
+            // 입력 레이아웃은 **공용 표**(constant::arrVertexAttribute)에서 만든다. DX12 · Vulkan · GL 과 같은 표다.
+            D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::kVertexAttributeCount]{};
+            for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+            {
+                const RHIVertexAttribute& attribute                  = constant::arrVertexAttribute[attributeIndex];
+                arrInputElement[attributeIndex].SemanticName         = attribute._pSemanticName;
+                arrInputElement[attributeIndex].Format               = toDxgiVertexFormat( attribute );
+                arrInputElement[attributeIndex].AlignedByteOffset    = attribute._byteOffset;
+                arrInputElement[attributeIndex].InputSlot            = attribute._inputSlot;
+                arrInputElement[attributeIndex].InputSlotClass       = ( attribute._bPerInstance != SW_FALSE ) ? D3D11_INPUT_PER_INSTANCE_DATA : D3D11_INPUT_PER_VERTEX_DATA;
+                arrInputElement[attributeIndex].InstanceDataStepRate = ( attribute._bPerInstance != SW_FALSE ) ? 1u : 0u;
+            }
+            _pDevice->_device->CreateInputLayout( arrInputElement, constant::kVertexAttributeCount, vsResult._bytecode.data(), vsResult._bytecode.size(), pso._inputLayout.GetAddressOf() );
         }
         if ( desc._computeShaderPath.empty() == false )
         {

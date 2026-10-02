@@ -385,6 +385,7 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
     const std::string_view arrPipeline[] = {
         "engine/pipeline/forwardpipeline.xml",
         "engine/pipeline/deferredpipeline.xml",
+        "engine/pipeline/forwardprepasspipeline.xml",
     };
     for ( std::string_view path : arrPipeline )
     {

@@ -211,6 +211,25 @@ float3 SwLoadMorphPosition( uint batchIndex, uint vertexId, float3 restPosition 
 	return ( element == SW_INVALID_INDEX ) ? restPosition : g_SwMorphVertices[element * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
 }
 
+/**
+ * @brief 로컬 위치를 월드로 옮긴다. 정점 위치를 만드는 **모든** 지오메트리 패스가 이것과 SwClipPositionOf 를 쓴다.
+ * @details 깊이 프리패스와 기본 패스가 같은 정점에서 **비트까지 같은 깊이**를 내야 기본 패스의 LessEqual 이 통과한다(언리얼은 depth-only 패스와
+ *          base pass 가 같은 정점 팩토리 코드를 쓴다). 셰이더마다 같은 식을 따로 적으면 컴파일러가 곱셈 · 덧셈을 다르게 묶을 수 있어(FMA)
+ *          `precise` 로 묶음을 고정하고 한 함수로 모은다.
+ */
+float4 SwWorldPositionOf( float3 localPosition, float4x4 world )
+{
+	precise float4 worldPosition = mul( float4( localPosition, 1.0f ), world );
+	return worldPosition;
+}
+
+/** @brief 월드 위치를 클립 공간으로 옮긴다(카메라는 g_ViewProj, 그림자는 g_LightViewProj). SwWorldPositionOf 와 같은 이유로 precise 다. */
+float4 SwClipPositionOf( float4 worldPosition, float4x4 viewProj )
+{
+	precise float4 clipPosition = mul( worldPosition, viewProj );
+	return clipPosition;
+}
+
 // GPU 컬링이 압축해 넣은 가시 인스턴스 번호 목록. 컬링이 꺼져 있거나 못 만들면 안 걸린다.
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVisibleInstanceIds, SW_SLOT_VISIBLE_INSTANCE_SRV );
 
