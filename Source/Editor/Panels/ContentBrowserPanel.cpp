@@ -42,17 +42,8 @@ namespace sw::editor
             {
                 if ( bIsDirectory )
                     return "Folder";
-                uint32                          filterCount{ 0 };
-                const EditorAssetBrowserFilter* pFilter = EditorAssetTypeRegistry::getBrowserFilters( filterCount );
-                for ( uint32 index = 0; index < filterCount; ++index )
-                {
-                    if ( pFilter[index]._kind == EditorAssetKind::Unknown )
-                        continue;
-                    if ( EditorAssetTypeRegistry::matches( pFilter[index]._kind, path ) == false )
-                        continue;
-                    return pFilter[index]._pLabel;
-                }
-                return "File";
+                const EditorAssetKindInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( EditorAssetTypeRegistry::findKind( path ) );
+                return pInfo != nullptr ? pInfo->_pBrowserLabel : "File";
             }
         };
     } // namespace

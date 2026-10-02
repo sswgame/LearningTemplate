@@ -9,7 +9,9 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -27,19 +29,13 @@ namespace sw::editor
     {
         struct QuickLauncherPopupInternal
         {
-            static ImVec4 getCategoryColor( string_view category )
+            /** @brief 배지 색 — 파일 항목은 콘텐츠 브라우저와 같은 종류 색(애셋 종류 표)이다. */
+            static ImVec4 getCategoryColor( const QuickLauncherItem& item )
             {
-                if ( category == "Scene" )
-                    return ImVec4( 0.25f, 0.85f, 0.45f, 1.0f );
-                if ( category == "Prefab" )
-                    return ImVec4( 0.30f, 0.65f, 1.0f, 1.0f );
-                if ( category == "Texture" )
-                    return ImVec4( 0.95f, 0.65f, 0.25f, 1.0f );
-                if ( category == "Shader" )
-                    return ImVec4( 0.85f, 0.40f, 0.95f, 1.0f );
-                if ( category == "GameObject" )
+                if ( item._category == "GameObject" )
                     return ImVec4( 0.95f, 0.85f, 0.30f, 1.0f );
-                return ImVec4( 0.60f, 0.65f, 0.75f, 1.0f );
+                const Color4 color = EditorThemeUtil::getAssetKindColor( item._kind );
+                return ImVec4( color._r, color._g, color._b, color._a );
             }
         };
     } // namespace
@@ -128,6 +124,7 @@ namespace sw::editor
         for ( const EditorResourceIndexEntry& entry : listFileEntry )
         {
             QuickLauncherItem item{};
+            item._kind     = entry._kind;
             item._category = entry._category;
             item._title    = entry._title;
             item._detail   = entry._detail;
@@ -149,7 +146,7 @@ namespace sw::editor
             return;
         }
 
-        if ( item._category == "Scene" )
+        if ( item._kind == EditorAssetKind::Scene )
         {
             (void)EditorAssetCommands::tryOpenScene( item._path ); // 실패는 tryOpenScene 이 알린다
             return;
@@ -226,7 +223,7 @@ namespace sw::editor
                                         IM_COL32( 80, 140, 240, 255 ), 4.0f );
                 }
 
-                const ImVec4                         categoryColor = QuickLauncherPopupInternal::getCategoryColor( pItem->_category );
+                const ImVec4                         categoryColor = QuickLauncherPopupInternal::getCategoryColor( *pItem );
                 fixed_string<constant::kMaxBuffer32> badge;
                 formatstring( badge.data(), badge.capacity(), "[%s]", pItem->_category.c_str() );
 

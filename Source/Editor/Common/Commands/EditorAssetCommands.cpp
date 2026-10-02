@@ -97,47 +97,6 @@ namespace sw::editor
                 }
             }
 
-            static bool tryClassifyResourceFile( string_view absPath, EditorResourceIndexEntry& outEntry )
-            {
-                const string file{ absPath };
-                const string filename = FileUtil::getFileNamePart( file );
-                // 콘텐츠 브라우저 · 끌어 놓기와 같은 형태(리소스 id)로 든다. 예전에는 프로젝트 기준 `Resource/…` 라 씬 열기 · 에셋 포커스가 다른 경로를 받았다.
-                const string resourceId = ResourceUtil::toResourceId( file );
-                if ( resourceId.empty() )
-                    return false;
-
-                outEntry._path   = resourceId;
-                outEntry._title  = filename;
-                outEntry._detail = resourceId;
-
-                if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, file.c_str() ) )
-                {
-                    outEntry._category = "Scene";
-                    return true;
-                }
-                if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, file.c_str() ) )
-                {
-                    outEntry._category = "Prefab";
-                    return true;
-                }
-                if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, file.c_str() ) )
-                {
-                    outEntry._category = "Texture";
-                    return true;
-                }
-                if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Shader, file.c_str() ) )
-                {
-                    outEntry._category = "Shader";
-                    return true;
-                }
-                if ( FileUtil::hasAnyExtension( file, { ".xml", ".json" } ) )
-                {
-                    outEntry._category = "Data";
-                    return true;
-                }
-                return false;
-            }
-
             static void appendFolderListingEntry( vector<EditorFolderListingEntry>& outList, const string& path, bool bIsDirectory,
                                                   const string& rootNorm )
             {
@@ -689,26 +648,6 @@ namespace sw::editor
         return true;
     }
 
-    void EditorAssetCommands::collectResourceIndex( vector<EditorResourceIndexEntry>& outList )
-    {
-        outList.clear();
-
-        const string& resourceFolder = ResourceUtil::getRootFolderPath();
-        if ( resourceFolder.empty() )
-            return;
-
-        vector<string> listAllFile;
-        FileUtil::collectFiles( resourceFolder, "", listAllFile, true );
-
-        outList.reserve( listAllFile.size() );
-        for ( const string& file : listAllFile )
-        {
-            EditorResourceIndexEntry entry{};
-            if ( EditorAssetCommandsInternal::tryClassifyResourceFile( file, entry ) )
-                outList.push_back( std::move( entry ) );
-        }
-    }
-
     void EditorAssetCommands::collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList )
     {
         outList.clear();
@@ -738,29 +677,6 @@ namespace sw::editor
         FileUtil::collectFolders( folderAbs, outList, false );
         for ( string& child : outList )
             child = FileUtil::normalizeSeparators( child );
-    }
-
-    void EditorAssetCommands::collectResourceCatalogCounts( EditorResourceCatalogCounts& outCounts )
-    {
-        const string& resourceRootPath = ResourceUtil::getRootFolderPath();
-        if ( resourceRootPath.empty() )
-            return;
-
-        // 종류 판정은 에셋 종류 등록부 하나다 — 예전에는 여기서 확장자 하나씩(`.prefab.xml` · `.png` · `.hlsl`)으로 따로 셌다.
-        // 리소스 루트는 위에서 비어 있지 않음을 봤다. 폴더가 그새 사라졌으면 개수가 0 이다.
-        vector<string> listScene;
-        vector<string> listPrefab;
-        vector<string> listTexture;
-        vector<string> listShader;
-        (void)EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Scene, resourceRootPath, listScene );     // 없으면 0 개
-        (void)EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Prefab, resourceRootPath, listPrefab );   // 없으면 0 개
-        (void)EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Texture, resourceRootPath, listTexture ); // 없으면 0 개
-        (void)EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Shader, resourceRootPath, listShader );   // 없으면 0 개
-
-        outCounts._sceneCount   = listScene.size();
-        outCounts._prefabCount  = listPrefab.size();
-        outCounts._textureCount = listTexture.size();
-        outCounts._shaderCount  = listShader.size();
     }
 
     bool EditorAssetCommands::enterPrefabIsolation( string_view prefabPath )

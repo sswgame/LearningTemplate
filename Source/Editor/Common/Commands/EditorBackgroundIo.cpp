@@ -141,7 +141,7 @@ namespace sw::editor
             return;
 
         vector<EditorResourceIndexEntry> listEntry;
-        EditorAssetCommands::collectResourceIndex( listEntry );
+        EditorResourceIndex::collectEntries( listEntry );
 
         publish( pState, generation, std::move( listEntry ) );
     }
@@ -198,12 +198,8 @@ namespace sw::editor
             return;
 
         EditorResourceCatalogCounts counts{};
-        EditorAssetCommands::collectResourceCatalogCounts( counts );
+        EditorResourceIndex::collectCatalogCounts( counts );
 
-        // `std::move` 는 여기서 **필요하다.** `publish` 가 rvalue 참조로 받기 때문이다. clang-tidy 의
-        // `performance-move-const-arg` 는 "자명하게 복사 가능해서 효과가 없다" 고 짚지만, 그것을 떼면 오버로드가 맞지 않아
-        // 컴파일이 깨진다.
-        // NOLINTNEXTLINE(performance-move-const-arg)
         publish( pState, generation, std::move( counts ) );
     }
 } // namespace sw::editor

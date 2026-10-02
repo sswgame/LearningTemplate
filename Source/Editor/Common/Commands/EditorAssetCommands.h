@@ -19,15 +19,6 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief Resource 폴더 스캔으로 만든 퀵 런처용 파일 항목 */
-    struct EditorResourceIndexEntry
-    {
-        string _category;
-        string _title;
-        string _detail;
-        string _path;
-    };
-
     /** @brief Content Browser 폴더 한 항목 */
     struct EditorFolderListingEntry
     {
@@ -36,15 +27,6 @@ namespace sw::editor
         string _absolutePath;
         string _extension;
         bool   _bIsDirectory{ false };
-    };
-
-    /** @brief 프로파일러 리소스 카탈로그 개수 */
-    struct EditorResourceCatalogCounts
-    {
-        size_t _sceneCount{ 0 };
-        size_t _prefabCount{ 0 };
-        size_t _textureCount{ 0 };
-        size_t _shaderCount{ 0 };
     };
 
     /**
@@ -97,14 +79,10 @@ namespace sw::editor
          *          직접 띄웁니다.
          */
         static bool showInFileExplorer( string_view absolutePath );
-        /** @brief Resource 트리에서 씬/프리팹/텍스처/셰이더/데이터를 분류해 채웁니다. */
-        static void collectResourceIndex( vector<EditorResourceIndexEntry>& outList );
         /** @brief 폴더의 직속 하위 폴더/파일을 채웁니다. .meta는 제외합니다. */
         static void collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList );
         /** @brief 폴더의 직속 하위 폴더 절대 경로를 채웁니다. */
         static void collectChildFolders( string_view folderAbs, vector<string>& outList );
-        /** @brief Resource 아래 씬/프리팹/텍스처/셰이더 파일 개수를 셉니다. */
-        static void collectResourceCatalogCounts( EditorResourceCatalogCounts& outCounts );
         /** @brief 현재 씬에서 해당 프리팹만 보이게 합니다. 중첩이면 스택에 쌓습니다. */
         static bool enterPrefabIsolation( string_view prefabPath );
         /** @brief 프리팹 Isolation을 종료하고 숨겼던 오브젝트를 복원합니다. bSaveToPrefab이면 루트를 템플릿에 씁니다. */

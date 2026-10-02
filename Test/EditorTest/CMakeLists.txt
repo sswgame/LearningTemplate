@@ -20,6 +20,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorListFilter.cpp
 		TestEditorPanelDocument.cpp
 		TestEditorPlaySession.cpp
+		TestEditorResourceIndex.cpp
 		TestEditorSceneCommands.cpp
 		TestEditorSessionPolicy.cpp
 		TestEditorTransaction.cpp
@@ -34,6 +35,7 @@ sw_addTestExecutable(EditorTest
 		TestTexturePipeline.cpp
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorCommandRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorDataTableCommands.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorResourceIndex.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorGlobalVariableCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorSceneCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorViewportPick.cpp"

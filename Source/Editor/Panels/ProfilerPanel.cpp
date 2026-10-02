@@ -130,10 +130,8 @@ namespace sw::editor
             if ( ImGui::Button( "Scan Resources" ) )
                 _bCatalogDirty = SW_TRUE;
 
-            ImGui::BulletText( "Scenes: %zu", _catalogCounts._sceneCount );
-            ImGui::BulletText( "Prefabs: %zu", _catalogCounts._prefabCount );
-            ImGui::BulletText( "Textures: %zu", _catalogCounts._textureCount );
-            ImGui::BulletText( "Shaders: %zu", _catalogCounts._shaderCount );
+            for ( const EditorResourceCatalogCount& row : _catalogCounts._listKindCount )
+                ImGui::BulletText( "%s: %zu", row._pLabel, row._count );
         }
 
         ImGui::Separator();

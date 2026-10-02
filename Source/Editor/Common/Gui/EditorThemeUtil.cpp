@@ -663,61 +663,31 @@ namespace sw::editor
         return bOpened ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER;
     }
 
+    const utf8* EditorThemeUtil::getAssetKindIcon( EditorAssetKind kind )
+    {
+        const EditorAssetKindInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
+        return pInfo != nullptr ? pInfo->_pIcon : ICON_FA_FILE;
+    }
+
+    Color4 EditorThemeUtil::getAssetKindColor( EditorAssetKind kind )
+    {
+        const EditorAssetKindInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
+        if ( pInfo == nullptr )
+            return getTextMutedColor();
+        return pInfo->_bAccentColor ? getAccentColor() : pInfo->_color;
+    }
+
     const utf8* EditorThemeUtil::getAssetIconForPath( string_view path, bool bIsDirectory )
     {
         if ( bIsDirectory )
             return ICON_FA_FOLDER;
-
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, path ) )
-            return ICON_FA_CLAPPERBOARD;
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, path ) )
-            return ICON_FA_CUBES;
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, path ) )
-            return ICON_FA_IMAGE;
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Material, path ) )
-            return ICON_FA_DROPLET;
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Shader, path ) )
-            return ICON_FA_CODE;
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Audio, path ) )
-            return ICON_FA_MUSIC;
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::AnimationGraph, path ) || EditorAssetTypeRegistry::matches( EditorAssetKind::SpriteClip, path ) )
-            return ICON_FA_PERSON_RUNNING;
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::DialogueGraph, path ) )
-            return ICON_FA_COMMENTS;
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::TileMap, path ) )
-            return ICON_FA_BORDER_ALL;
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Data, path ) )
-            return ICON_FA_TABLE;
-
-        return ICON_FA_FILE;
+        return getAssetKindIcon( EditorAssetTypeRegistry::findKind( path ) );
     }
 
     Color4 EditorThemeUtil::getAssetColorForPath( string_view path, bool bIsDirectory )
     {
         if ( bIsDirectory )
             return getFolderColor();
-
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, path ) )
-            return getAccentColor();
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, path ) )
-            return Color4{ 0.35f, 0.70f, 1.0f, 1.0f };
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, path ) )
-            return Color4{ 0.35f, 0.85f, 0.45f, 1.0f };
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Material, path ) )
-            return Color4{ 0.80f, 0.45f, 0.95f, 1.0f };
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Shader, path ) )
-            return Color4{ 0.95f, 0.45f, 0.35f, 1.0f };
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Audio, path ) )
-            return Color4{ 0.95f, 0.85f, 0.25f, 1.0f };
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::AnimationGraph, path ) || EditorAssetTypeRegistry::matches( EditorAssetKind::SpriteClip, path ) )
-            return Color4{ 1.0f, 0.60f, 0.20f, 1.0f };
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::DialogueGraph, path ) )
-            return Color4{ 0.40f, 0.75f, 1.0f, 1.0f };
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::TileMap, path ) )
-            return Color4{ 0.45f, 0.85f, 0.50f, 1.0f };
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Data, path ) )
-            return Color4{ 0.60f, 0.75f, 0.95f, 1.0f };
-
-        return getTextMutedColor();
+        return getAssetKindColor( EditorAssetTypeRegistry::findKind( path ) );
     }
 } // namespace sw::editor

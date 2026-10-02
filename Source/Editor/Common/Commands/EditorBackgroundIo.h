@@ -13,6 +13,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorBackgroundJob.h"
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
+#include "Editor/Common/Commands/EditorResourceIndex.h"
 
 namespace sw
 {

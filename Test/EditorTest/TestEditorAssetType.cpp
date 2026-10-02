@@ -306,3 +306,80 @@ SW_TEST_CASE( EditorAssetTypeTest, EveryReloadCacheNameIsRegisteredInTheEngine )
             SW_EXPECT_TRUE( kindName == pCache->getAssetKindName() );
     }
 }
+
+/**
+ * @brief [EditorAssetTypeTest] 종류 표는 모든 종류에 이름 · 브라우저 라벨 · 아이콘을 하나씩 준다
+ * @details 아이콘 · 색 · 퀵 런처 분류가 종류별 분기 체인으로 따로 적혀 있으면 새 종류는 체인마다 빠진다(시퀀스는 아이콘 체인에 없어 Data 아이콘으로
+ *          보였다). 표 하나에서 읽으므로 칸이 빠지면 컴파일이 멈추고(static_assert), 여기서는 공개 API 로 같은 것을 본다.
+ */
+SW_TEST_CASE( EditorAssetTypeTest, EveryKindHasIconColorAndCategory )
+{
+    using sw::editor::EditorAssetKind;
+    using sw::editor::EditorAssetKindInfo;
+    using sw::editor::EditorAssetTypeRegistry;
+
+    uint32                           infoCount{ 0 };
+    const EditorAssetKindInfo* const pInfo = EditorAssetTypeRegistry::getKindInfos( infoCount );
+    SW_ASSERT_NOT_NULL( pInfo );
+    SW_EXPECT_EQUAL( static_cast<uint32>( EditorAssetKind::Count ) - 1, infoCount );
+
+    for ( uint32 kindValue = 1; kindValue < static_cast<uint32>( EditorAssetKind::Count ); ++kindValue )
+    {
+        const EditorAssetKindInfo* pKindInfo = EditorAssetTypeRegistry::findKindInfo( static_cast<EditorAssetKind>( kindValue ) );
+        SW_ASSERT_NOT_NULL( pKindInfo );
+        SW_EXPECT_TRUE( sw::StringUtil::isNullOrEmpty( pKindInfo->_pDisplayName ) == false );
+        SW_EXPECT_TRUE( sw::StringUtil::isNullOrEmpty( pKindInfo->_pBrowserLabel ) == false );
+        SW_EXPECT_TRUE( sw::StringUtil::isNullOrEmpty( pKindInfo->_pIcon ) == false );
+        const bool bHasColor = pKindInfo->_bAccentColor || pKindInfo->_color._a > 0.0f;
+        SW_EXPECT_TRUE_MSG( bHasColor, pKindInfo->_pDisplayName );
+    }
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKindInfo( EditorAssetKind::Unknown ) == nullptr );
+}
+
+/**
+ * @brief [EditorAssetTypeTest] 경로의 종류는 판정 표의 첫 일치 줄 하나다
+ * @details 아이콘 · 색 · 퀵 런처 분류 · 카탈로그 · 썸네일 · 열기 · 드롭이 모두 `findKind` 로 종류를 정한다. 겹치는 접미사에서 어느 종류가
+ *          이기는지를 못 박는다 — `.seq.json` 은 Data 가 아니라 Sequence 다.
+ */
+SW_TEST_CASE( EditorAssetTypeTest, FindKindTakesTheFirstMatchingRow )
+{
+    using sw::editor::EditorAssetKind;
+    using sw::editor::EditorAssetTypeRegistry;
+
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/town.scene.xml" ) == EditorAssetKind::Scene );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "prefabs/hero.prefab.json" ) == EditorAssetKind::Prefab );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "sprites/hero.png" ) == EditorAssetKind::Texture );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "anim/idle.anim.json" ) == EditorAssetKind::AnimationGraph );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "cut/intro.seq.json" ) == EditorAssetKind::Sequence );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/overworld.tilemap.xml" ) == EditorAssetKind::TileMap );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "config/input.ini" ) == EditorAssetKind::Data );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "notes/todo.txt" ) == EditorAssetKind::Unknown );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "" ) == EditorAssetKind::Unknown );
+}
+
+/**
+ * @brief [EditorAssetTypeTest] 임포트 대화상자의 확장자는 종류 표의 임포트 칸이 정한다
+ * @details 씬 · 데이터의 접미사는 임포트 목록에 없다(씬은 열기, 데이터는 `.json` · `.txt` 만 따로 더한다). 예외 종류를 이름으로 적지 않고 표의 칸으로 둔다.
+ */
+SW_TEST_CASE( EditorAssetTypeTest, ImportExtensionsFollowTheImportableColumn )
+{
+    sw::vector<sw::string> listExtension{};
+    sw::editor::EditorAssetTypeRegistry::appendImportExtensions( listExtension );
+    const auto hasExtension = [&listExtension]( sw::string_view extension )
+    {
+        for ( const sw::string& candidate : listExtension )
+        {
+            if ( candidate == extension )
+                return true;
+        }
+        return false;
+    };
+    SW_EXPECT_TRUE( hasExtension( ".png" ) );
+    SW_EXPECT_TRUE( hasExtension( ".prefab.xml" ) );
+    SW_EXPECT_TRUE( hasExtension( ".material" ) );
+    SW_EXPECT_TRUE( hasExtension( ".json" ) );
+    SW_EXPECT_FALSE( hasExtension( ".scene.xml" ) );
+    SW_EXPECT_FALSE( hasExtension( ".ini" ) );
+    SW_EXPECT_FALSE( hasExtension( ".kv" ) );
+    SW_EXPECT_FALSE( hasExtension( ".xml" ) );
+}

@@ -17,11 +17,12 @@ namespace sw::editor
     /** @brief 퀵 런처 검색 항목 */
     struct QuickLauncherItem
     {
-        string _category; /**< "Scene", "Prefab", "Texture", "Shader", "Data", "GameObject" */
-        string _title;
-        string _detail;
-        string _path;
-        uint64 _targetObjectId{ 0 };
+        EditorAssetKind _kind{};   ///< 파일 항목의 애셋 종류. 게임 오브젝트 항목은 `Unknown`
+        string          _category; ///< 배지 문구 — 애셋 종류의 단수 이름(`EditorAssetKindInfo::_pDisplayName`) 또는 "GameObject"
+        string          _title;
+        string          _detail;
+        string          _path;
+        uint64          _targetObjectId{ 0 };
     };
 
     /**

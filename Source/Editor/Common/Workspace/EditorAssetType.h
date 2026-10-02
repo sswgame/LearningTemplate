@@ -8,6 +8,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Widgets/EditorColor.h"
+
 namespace sw::editor
 {
     /**
@@ -37,7 +39,8 @@ namespace sw::editor
         DialogueGraph,
         SpriteClip,
         TileMap,
-        Sequence
+        Sequence,
+        Count ///< 종류 수(종류가 아님). 종류 표(EditorAssetType.cpp)가 모든 종류를 한 번씩 담는지 컴파일 때 본다
     };
 
     /** @brief 소스 파일을 굽는 임포터입니다. 처리했으면(구웠거나 굽지 않는다고 알렸으면) true — 그 파일의 캐시 리로드는 하지 않습니다. */
@@ -51,6 +54,25 @@ namespace sw::editor
     {
         const utf8*             _pCacheKindName{ nullptr };  ///< 다시 읽을 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아닙니다
         AssetSourceImporterFunc _pfnImportSource{ nullptr }; ///< 캐시가 읽기 전에 돌리는 임포터. nullptr 이면 바로 캐시가 다시 읽습니다
+    };
+
+    /**
+     * @struct EditorAssetKindInfo
+     * @brief 애셋 종류 하나를 **보여 주는** 데 필요한 전부입니다(이름 · 아이콘 · 색 · 패널 · 필터 · 임포트).
+     * @details 종류를 더하면 이 표에 한 줄을 더한다. 아이콘 · 색 · 퀵 런처 분류 · 카탈로그를 종류별 분기로 따로 적지 않는다.
+     *          빈 칸이 있으면 컴파일이 멈춘다(EditorAssetType.cpp 의 static_assert).
+     */
+    struct EditorAssetKindInfo
+    {
+        EditorAssetKind _kind;
+        const utf8*     _pDisplayName;   ///< 단수 이름 — 퀵 런처 분류 · 배지
+        const utf8*     _pBrowserLabel;  ///< 콘텐츠 브라우저 필터 · 리소스 카탈로그 라벨
+        const utf8*     _pPanelTitle;    ///< 전용 도구 패널 제목. nullptr 이면 패널이 없습니다
+        const utf8*     _pIcon;          ///< Font Awesome 글리프(UTF-8)
+        Color4          _color;          ///< 목록 · 배지 색. `_bAccentColor` 이면 쓰지 않습니다
+        bool            _bAccentColor;   ///< 고정 색 대신 테마 액센트 색을 씁니다
+        bool            _bOtherExcluded; ///< 브라우저 "Other" 필터에서 뺄지
+        bool            _bImportable;    ///< 임포트 대화상자의 확장자 목록에 넣을지
     };
 
     /** @brief 확장자/접미사 → 도구 패널 종류 */
@@ -89,6 +111,17 @@ namespace sw::editor
         static bool matchesAny( string_view path );
         /** @brief 브라우저의 Other 필터입니다. 전용 종류에 걸리지 않으면 true 입니다. */
         static bool matchesOther( string_view path );
+
+        /**
+         * @brief 경로가 속한 종류 하나입니다. 걸리는 종류가 없으면 `Unknown` 입니다.
+         * @details 판정 표의 순서대로 처음 맞는 줄이 이긴다 — `.anim.json` 은 Data 보다 앞선 AnimationGraph, 이미지는 SpriteClip 보다 앞선 Texture 다.
+         *          아이콘 · 색 · 퀵 런처 분류 · 카탈로그 · 썸네일 · 열기 · 드롭이 모두 이것 하나로 종류를 정한다.
+         */
+        static EditorAssetKind findKind( string_view path );
+        /** @brief 종류의 표시 정보입니다. `Unknown` · `Count` 면 nullptr 입니다. */
+        static const EditorAssetKindInfo* findKindInfo( EditorAssetKind kind );
+        /** @brief 종류 표 전체(표시 순서)입니다. outCount 에 개수를 씁니다. */
+        static const EditorAssetKindInfo* getKindInfos( uint32& outCount );
 
         /** @brief 도구 패널 제목입니다. 전용 패널이 없으면 빈 문자열입니다. */
         static const utf8* getPanelTitle( EditorAssetKind kind );

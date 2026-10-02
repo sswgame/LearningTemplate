@@ -9,6 +9,8 @@
 
 namespace sw::editor
 {
+    enum class EditorAssetKind : uint8;
+
     /** @brief 에디터 테마 프리셋 */
     enum class EditorThemePreset : uint8
     {
@@ -130,6 +132,11 @@ namespace sw::editor
 
         /** @brief 열림 · 닫힘 상태에 맞는 폴더 아이콘 문자열을 반환합니다(ICON_FA_FOLDER_OPEN / ICON_FA_FOLDER). */
         static const utf8* getFolderIcon( bool bOpened = false );
+
+        /** @brief 종류의 Font Awesome 아이콘입니다(애셋 종류 표). `Unknown` 이면 일반 파일 아이콘입니다. */
+        static const utf8* getAssetKindIcon( EditorAssetKind kind );
+        /** @brief 종류의 색입니다(애셋 종류 표, 액센트 종류는 테마 액센트). `Unknown` 이면 흐린 글자색입니다. */
+        static Color4 getAssetKindColor( EditorAssetKind kind );
 
         /** @brief 경로(확장자)에 맞는 Font Awesome 애셋 아이콘을 반환합니다. */
         static const utf8* getAssetIconForPath( string_view path, bool bIsDirectory = false );
