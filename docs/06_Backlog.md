@@ -1665,9 +1665,9 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 |------|-----------|----------------|------|
 | R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
 | R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ · 만들기 · 지우기 · 옮기기 동사 ✅ ⑥ 잇기 · 버린 값 · 범위 · 불리언 · 대화 조건 ✅ (3절) — 남은 것 아래 |
-| R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ · 바이너리 enum 은 열거자로 ✅ (3절) — 남은 것 아래 |
-| R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ · 모르는 컴포넌트 보존 ✅ ⑯ (3절) — 소비 없는 컴포넌트는 결정 거리 |
-| R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 비우기 · 상태 읽기 · 미룸 순서 ✅ ⑫ · 태그 · 스폰 · 이름 · 틱 설정 ✅ ⑮ (3절) — 서브틱 남음 |
+| R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ · 바이너리 enum 은 열거자로 · 에디터 씬 · 프리팹 판정 · CheckSourceGlob Shipping ✅ (3절) — 남은 것 아래 |
+| R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ · 모르는 컴포넌트 보존 ✅ ⑯ · 모듈 PROPERTY 판정 ✅ (3절) — 소비 없는 킷 기능은 만든다(사용자 결정 2026-10-03, 진행 중) |
+| R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 비우기 · 상태 읽기 · 미룸 순서 ✅ ⑫ · 태그 · 스폰 · 이름 · 틱 설정 ✅ ⑮ · 서브틱 · 죽은 가드 ✅ (3절) |
 | R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 루트 하나 · 부착 규칙 · lookAt ✅ ⑬ · 월드 값 이동 · 월드 상자 ✅ ⑭ · 셰이더 노멀 · 단위 메타 ✅ (3절) — 남은 것 아래 |
 
 **남은 확인 결함(감사 결과 — 다음 단위들의 입력).** 줄 번호는 2026-10-02 기준이다.
@@ -1681,17 +1681,15 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 - **R3**(구조 ⑦~⑩ · 바이너리 enum 뒤) — enum **타입 자체가 지워진** 뒤 그 칸이 4 바이트 스칼라로 바뀌면 기록 타입을 몰라 여전히 크기로 짐작한다.
   컨테이너 안 원소 하나가 모르는 열거자면 그 컨테이너 칸 전체가 실패한다(XML 은 원소 단위로 계속 읽는다). 한 enum 안의 이름 해시 충돌은 등록 때 검사하지
   않는다. Shipping 쿠킹이 `game/empty/prefabs/old/testprop.prefab.bin` 없음 오류를 낸다(씬이 옛 프리팹 경로를 가리킴 — 2026-10-03 enum 작업 중 확인).
-  에디터의 에셋 종류 판정(`EditorAssetType.cpp` 접미사 표)은 아직 따로다 — `AssetCookPath` 의 소스 접미사와 겹치는 부분을 한 표로 묶을 것.
-  린트 `CheckSourceGlob` 은 Shipping 트리에서 **늘 진다**(편집기 · 핫 리로드 소스 95 개 "compile_commands 에 없음") — Shipping 이 무엇을 빼는지를 CMake 와 따로
-  모른다(2026-10-02 확인; 그래서 Shipping 은 `-L hostgpu` 만 돌려 왔다). 빌드 트리의 `SW_SHIPPING_BUILD` 를 읽어 같은 규칙을 쓰거나 Shipping 에선 등록하지 말 것.
-- **R4**(구조 ⑪ · ⑯ 뒤) — PROPERTY 판정 시험(`EveryPropertyHasATypeTheSerializersCanCarry`)은
-  ReflectionTest 가 등록하는 타입만 본다 — 게임 모듈 · GameFramework 타입은 모듈을 올리는 시험(AppTest)에서도 돌릴 것.
-  **만들지 지울지 결정이 필요한 것**(값은 있는데 읽는 곳이 없다 — 결함이 아니라 끝나지 않은 킷 기능, 2026-10-03 확인): `SpriteAnimatorComponent` 는
+  씬 저장 대화상자에 기본 확장자가 없어 "level" 로 저장하면 굽지 않는 이름이 되고, `SceneManager::saveActiveScene` 의 폴백 `DefaultScene.scene` 도 굽지 않는
+  이름이다. `CheckSourceGlob` 에 남은 하드코딩: `Graphics/RHI/Modules/` 늘 무시, OS 별 무시, 활성 게임 이름 필터(WSL 은 확인 못 함).
+- **R4**(구조 ⑪ · ⑯ 뒤) — **만들기로 결정(2026-10-03)** — 진행 중: 투사체 맞음 처리 · 스프라이트 클립 · 월드 UI 그리기 · GameData 부트스트랩.
+  **원래 목록**(값은 있는데 읽는 곳이 없다 — 결함이 아니라 끝나지 않은 킷 기능, 2026-10-03 확인): `SpriteAnimatorComponent` 는
   `SpriteComponent::_spriteName` 에 `<애니>-<프레임>` 을 쓰지만 읽는 곳이 없다(렌더러에 아틀라스 영역 · UV 가 없다 — 만들려면 GpuScene 인스턴스 UV + 스프라이트
   셰이더 + 런타임 스프라이트 클립 에셋), `ProjectileComponent::_damage` 는 세터뿐이고 투사체의 맞음 처리가 없다, HPBar · DamageUI · Effect 는 비율을 움직이지만
   그리는 것이 없다(UI 렌더 경로 없음), `GameData` 의 부트스트랩 칸 아홉(시작 맵 · 타이틀 씬 · 기본 언어 · 입력 맵 …)은 읽는 곳이 없다(커스텀 맵만 읽힌다).
-- **R5**(구조 ⑫ · ⑮ 뒤) — 틱 안의 서브틱 등록(`registerSubTick` 이 `_listSubTick` 벡터를 늘린다 — 틱 등록부가 그 사이 읽는지 확인 후 같은 큐로),
-  `TaskManager::isInsideParallelTask` 는 쓰는 곳이 없다(죽은 가드 — 지우거나 단언에 쓸 것). `forEachGameObject` 재진입은 이미 `WalkScope` 단언이 막는다(2026-10-03 확인).
+- **R5**(구조 ⑫ · ⑮ · 서브틱 뒤) — id 64 번부터의 서브틱은 활성이 목록에만 있어 틱 중 끄기 · 해제가 틱 뒤에야 반영된다(헤더에 적음).
+  `forEachGameObject` 재진입은 이미 `WalkScope` 단언이 막는다(2026-10-03 확인).
 - **R6**(구조 ⑬ · ⑭ · 셰이더 노멀 뒤) — 거울 변환(음수 행렬식)에서 컬 모드를 뒤집지 않는다 — 뒤집힌 메시가 안쪽 면으로 그려진다. gbuffernormal.hlsl
   (MRT 없는 폴백)은 네 백엔드가 MRT 라 시험 밖. `float3::transformNormal` 은 실은 방향(w=0) 변환이다(쓰는 곳은 방향이라 맞음 — 이름과
   `MathTest.VectorTransformNormalNonUniformScale` 가 오해를 부른다). `UnitStatsComponent::_moveSpeed` 는 `Units=m/s` 인데 툴팁은 "tiles/sec"(읽는 곳 없음).
@@ -2104,6 +2102,31 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (도구 · 정리 다섯 — 에디터 씬 · 프리팹 판정 단일화, CheckSourceGlob 의 Shipping, 모듈 PROPERTY 판정, 틱 중 서브틱, 죽은 병렬 가드 — 1-0j 의 R3 · R4 · R5 남은 것)
+
+- **에디터가 쿠커가 굽지 않는 이름도 씬 · 프리팹으로 봤다** — `EditorAssetType.cpp` 가 접미사를 따로 들어 `.scene` 이 어디든 든 `.xml`(`forest.scenery.xml`) ·
+  `_scene.xml` · 확장자 없는 `.scene` · `.prefab` 을 열고 저장하고 퀵 런처에 띄웠다(배포본은 "Shipping requires cooked binary"), 쿠킹본 `.prefab.bin` 은
+  프리팹 편집기로 열렸지만 저장이 거절됐다. 이제 `AssetCookPath` 표에 종류를 싣고(`isCookableSource( path, kind )` · `appendSourceSuffixes`) 에디터의 씬 ·
+  프리팹 줄이 그 표를 쓴다(판정 · 패널 · 핫 리로드 감시 · 임포트). 씬 대화상자 필터(`.xml` 뺌)와 리소스 카탈로그(확장자 하나씩 세어 JSON 프리팹 · `.jpg` ·
+  `.hlsli` 를 빠뜨렸다 → `EditorAssetTypeRegistry::collectFiles`)도 같은 판정. `.prefab.bin` · `.scene.bin` 은 이제 콘텐츠 브라우저에서 "Other" 다.
+- **`CheckSourceGlob` 이 Shipping 트리에서 늘 졌다(95 건)** — 구성이 일부러 짓지 않는 것(에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드 · 지연 로드 훅)을 CMake 와
+  따로 몰랐다. 이제 빼는 자리가 적고(`sw_excludeUnbuiltSources` · `sw_declareUnbuiltSources`) 구성 끝에 `sw_writeUnbuiltSourceList` 가
+  `<빌드>/generated/sw/config/UnbuiltSources.txt` 에 쓴다 — 게이트는 그 목록만 읽는다(`DelayLoadNotifyHook` 하드코딩 걷음). 다른 타겟으로 옮겨 짓는 것은
+  적지 않는다. 자가 시험이 생겼다(가짜 트리의 compile_commands — 목록이 있어도 빠진 소스는 잡는다).
+- **PROPERTY 판정이 ReflectionTest 의 타입만 봤다** — 판정 루프를 `TestFramework/TestPropertyCoverage` 로 옮기고 SmokeTest 가 자식 프로세스에서 공용 모듈 →
+  킷 셋 → SWGame → EditorModule 을 올려 같은 판정을 돈다(모듈마다 타입이 올라왔는지 먼저 본다). 지금 걸리는 모듈 PROPERTY 는 없다.
+- **틱 안의 서브틱 등록 · 해제 · 선행 조건 · 활성이 다른 워커가 읽는 `_listSubTick` 을 바로 고쳤다** — 등록부는 틱 시작의 refresh 에서만 읽어 겹치지 않지만,
+  그 컴포넌트를 틱하는 워커가 읽는다(64 번부터의 활성 · 자기 틱 안의 등록 · 해제). 다른 오브젝트의 틱이 늘리면 재할당으로 해제된 메모리를 읽고 두 워커의
+  `push_back` 이 겹쳤다. 넷을 `deferIfStructureFrozen` 으로(부른 순서). 1~63 의 원자 마스크는 그대로 즉시 — 틱 중 끈 서브틱이 곧바로 건너뛰는 계약
+  (`MidTickSubTickDeactivationAndCancellation`)을 지킨다.
+- `TaskManager::isInsideParallelTask` · `ensureInsideParallelTask` 는 부르는 곳이 없어 지웠다(쓸 단언 자리도 없다 — 틱 중 구조 변경은 큐로 미룬다).
+  `ParallelTaskScope` 는 "실행 중인 태스크" 를 비우는 일만 남았다.
+
+**검증.** 새 시험 3: `EditorAssetTypeTest.SceneAndPrefabFollowTheCookersSourceRule`, `ModuleApiTest.EveryModulePropertyHasATypeTheSerializersCanCarry`
+(+ 자식 역할 `ModulePropertyChildChecksEveryType`), `GameObjectTest.SubTickChangesDuringTickApplyAfterIt`, 그리고 `CheckSourceGlob` 의 자가 시험.
+변이 17 모두 죽음(씬 · 프리팹 3, 모듈 PROPERTY 3, 서브틱 5, CheckSourceGlob 6). worktree 에서 Debug nogpu 30/30, Shipping 구성 뒤 `-R CheckSourceGlob` 통과.
+커밋 다섯(정리 · 서브틱 · 씬 판정 · 모듈 판정 · 이 커밋) — 이 항목은 마지막 커밋에 실었다.
 
 ### 2026-10-03 (구조 — 바이너리는 enum 을 값이 아니라 열거자로 싣는다, 판은 스트림 머리마다 — 1-0j 의 R3)
 

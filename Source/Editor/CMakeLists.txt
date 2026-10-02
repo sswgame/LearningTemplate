@@ -8,9 +8,14 @@
 #    유니티 빌드: TU 내부 도우미는 모두 익명 네임스페이스의 *Internal 구조체로 묶여 있다
 #    Vulkan 백엔드 TU: Types.h 별칭이 PCH 와 union 멤버에서 충돌하므로 그 파일만 PCH 에서 뺀다
 # ------------------------------------------------------------------------------
-if(NOT SW_SHIPPING_BUILD)
-	file(GLOB_RECURSE EDITOR_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+file(GLOB_RECURSE EDITOR_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 
+# 배포는 에디터를 짓지 않는다 — 소스 검사 게이트가 알도록 적는다(`sw_declareUnbuiltSources`). EditorTest 가 가져가는 몇 개는 그대로 지어진다.
+if(SW_SHIPPING_BUILD)
+	sw_declareUnbuiltSources(${EDITOR_SOURCES})
+endif()
+
+if(NOT SW_SHIPPING_BUILD)
 	add_library(EditorModule MODULE ${EDITOR_SOURCES})
 
 	target_include_directories(EditorModule PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")

@@ -7,8 +7,9 @@ file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 
 # 핫 리로드는 Dev 전용이다. Shipping 은 모듈을 정적으로 링크하므로 갈아 끼울 것이 없다.
 # 코드가 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다.
+# 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
 if(SW_SHIPPING_BUILD)
-	list(FILTER APP_SOURCES EXCLUDE REGEX "Module/LiveReloadManager\\.(cpp|h)$")
+	sw_excludeUnbuiltSources(APP_SOURCES "Module/LiveReloadManager\\.(cpp|h)$")
 endif()
 
 add_executable(App ${APP_SOURCES})

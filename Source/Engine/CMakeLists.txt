@@ -32,12 +32,6 @@ set(coreExclude
     "Module/DelayLoadNotifyHook.cpp"
 )
 
-# 셰이더 라이브 리로드는 개발 도구다. Shipping 은 구워진 셰이더만 읽으므로 감시할 것이 없다.
-# 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다.
-if(SW_SHIPPING_BUILD)
-    list(APPEND coreExclude "Graphics/Shader/Compile/LiveShaderManager\.(cpp|h)$")
-endif()
-
 if(SW_RHI_AS_MODULES OR SW_SHIPPING_BUILD)
     foreach(src IN LISTS SW_RHI_ALL_DEVICE_SOURCES)
         file(RELATIVE_PATH rel "${CMAKE_CURRENT_SOURCE_DIR}" "${src}")
@@ -57,6 +51,13 @@ file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 foreach(exPattern IN LISTS coreExclude)
     list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
 endforeach()
+
+# 셰이더 라이브 리로드는 개발 도구다. Shipping 은 구워진 셰이더만 읽으므로 감시할 것이 없다.
+# 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다. 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
+# (위 `coreExclude` 는 다른 타겟이 짓는 것 — RHI 모듈 · 지연 로드 훅 — 이라 적지 않는다.)
+if(SW_SHIPPING_BUILD)
+    sw_excludeUnbuiltSources(ENGINE_SOURCES "Graphics/Shader/Compile/LiveShaderManager\\.(cpp|h)$")
+endif()
 
 # ResourcePackReader 가 uncompress 를 직접 부른다.
 find_package(ZLIB REQUIRED)
@@ -183,6 +184,12 @@ if(NOT SW_RHI_AS_MODULES)
             target_link_libraries(Engine PUBLIC sw_graphics_gl_libs)
             target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_OPENGL)
         endif()
+
+        # 고르지 않은 백엔드는 이 구성에서 아무도 짓지 않는다 — 소스 검사 게이트가 알도록 적는다. 고른 것은 Engine 의 소스 목록이 답한다.
+        get_target_property(listEngineSource Engine SOURCES)
+        set(listUnbuiltRhiSource ${SW_RHI_ALL_DEVICE_SOURCES})
+        list(REMOVE_ITEM listUnbuiltRhiSource ${listEngineSource})
+        sw_declareUnbuiltSources(${listUnbuiltRhiSource})
     else()
         if(TARGET sw_graphics_libs)
             target_link_libraries(Engine PUBLIC sw_graphics_libs)

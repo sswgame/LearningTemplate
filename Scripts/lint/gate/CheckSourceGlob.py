@@ -13,6 +13,13 @@ CMake 소스 GLOB 누락 및 컴파일 데이터베이스 일치 검사.
 증상은 모듈의 미정의 심볼로 나온다(실제로 `VulkanRHIRenderPassCache.cpp` 가 빠져 `vkCreateRenderPass`
 미정의가 났다). 목록과 디스크를 양방향으로 맞춘다.
 
+**구성이 일부러 짓지 않는 소스는 CMake 가 적은 목록으로 안다** (`<빌드>/generated/sw/config/UnbuiltSources.txt`).
+배포 구성은 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드를 짓지 않는다. 예전에는 이 게이트가 그것을 따로 몰라 Shipping 트리에서
+**늘 졌다**(95 개 "compile_commands 에 없음" — 그래서 Shipping 은 `-L hostgpu` 만 돌려 왔다). 무엇을 빼는지는 CMake 가 정하므로
+빼는 자리가 직접 적고(`sw_declareUnbuiltSources` · `sw_excludeUnbuiltSources`, `cmake/Engine/TargetRules.cmake`), 여기서는 그 목록만
+읽는다 — 규칙을 두 벌 두지 않는다. 지연 로드 훅도 그렇다(부탁한 타겟이 없으면 CMake 가 적는다). 목록에 없는데 지어지지 않은 소스는
+여전히 위반이다.
+
 (Ninja 빌드는 SW_GLOB_CONFIGURE_DEPENDS로 자동 감지하지만,
  CI 파이프라인이나 CONFIGURE_DEPENDS=OFF 환경, pre-commit 단계에서
  전체 빌드 없이 빠른 소스 누락 방지 검증을 위해 사용됩니다.)
@@ -59,8 +66,12 @@ _kIgnoreSubdirsAlways = ("Graphics/RHI/Modules/",)
 # OS 전용 소스는 **그 OS 가 아닐 때만** 빠져 있는 게 정상이다. 예전엔 이 목록이 Windows 기준으로
 # 고정돼 있어서(리눅스/맥 것만 무시) 리눅스 빌드에서 DX11/DX12/Windows 소스 23개가 통째로
 # "빠졌다"고 잡혔다. 반대로 리눅스에서 빌드하면서 /Linux/ 를 무시하면 진짜 누락도 놓친다 —
-# 그래서 호스트에 따라 반대편만 무시한다.
-_kIgnoreSubdirsNonWindows = ("/Windows/", "/DX11/", "/DX12/", "DelayLoadNotifyHook")
+# 그래서 호스트에 따라 반대편만 무시한다. (지연 로드 훅은 여기 없다 — CMake 가 짓지 않는 소스 목록에 적는다.)
+_kIgnoreSubdirsNonWindows = ("/Windows/", "/DX11/", "/DX12/")
+
+#: CMake 가 "이 구성이 일부러 짓지 않는 소스" 를 적는 자리(빌드 트리 기준). `cmake/Engine/TargetRules.cmake` 의
+#: `SW_UNBUILT_SOURCE_LIST` 와 같은 경로다. 한 줄에 저장소 기준 경로 하나.
+_kUnbuiltSourceListPath = "generated/sw/config/UnbuiltSources.txt"
 # Linux 와 macOS 가 함께 쓰는 POSIX 소스 — Windows 에서만 빠져 있는 것이 정상이다.
 _kIgnoreSubdirsWindowsOnly = ("/Posix/",)
 _kIgnoreSubdirsNonLinux = ("/Linux/", "/X11")
@@ -79,6 +90,15 @@ def buildIgnoreSubdirsInternal() -> tuple[str, ...]:
     if sys.platform != "darwin":
         ignores.extend(_kIgnoreSubdirsNonMac)
     return tuple(ignores)
+
+
+def readUnbuiltSourcesInternal(buildDir: Path) -> set[str] | None:
+    """빌드 트리의 "짓지 않는 소스" 목록(저장소 기준 경로, 소문자). 목록 파일이 없으면 None — 이 변경 전에 구성한 트리다."""
+    listPath = buildDir / _kUnbuiltSourceListPath
+    if listPath.is_file() is False:
+        return None
+    lines = listPath.read_text(encoding="utf-8", errors="ignore").splitlines()
+    return {line.strip().replace("\\", "/").lower() for line in lines if line.strip()}
 
 
 def pickBuildDirInternal(repo: Path) -> Path | None:
@@ -156,9 +176,9 @@ class CheckSourceGlobGate(LintGate):
     """
     빌드가 실제로 컴파일하는 목록과 디스크의 소스를 대조한다.
 
-    본 검사는 **빌드 트리의 compile_commands.json** 과 대조하는 것이라 임시 트리로는 성립하지
-    않는다(빌드 없이 돌리면 스스로 "소스 목록만 보고" 하고 0 을 돌려준다).
-    RHI 백엔드 목록 검사는 양방향 탐침으로 확인했다(2026-09-14 백로그 참고).
+    본 검사는 **빌드 트리의 compile_commands.json** 과 대조한다(빌드 없이 돌리면 스스로 "소스 목록만 보고" 하고 0 을 돌려준다).
+    자가 시험은 임시 트리에 `build/compile_commands.json` 을 직접 써서 돌린다 — "짓지 않는 소스" 목록이 있어도 거기 없는
+    빠진 소스는 잡는지 본다(목록이 게이트를 눈멀게 하지 않는지). RHI 백엔드 목록 검사는 양방향 탐침으로 확인했다(2026-09-14 백로그 참고).
     """
 
     description = "소스 GLOB 누락 검사"
@@ -167,8 +187,20 @@ class CheckSourceGlobGate(LintGate):
     preCommitSkipReason = "빌드 디렉터리(--build)가 있어야 글롭과 대조할 수 있다 — 커밋 훅은 그것을 모른다"
     listCtestArgument = ("--build", "${CMAKE_BINARY_DIR}", "--active-game", "${SW_ACTIVE_GAME}")
     maxViolationShown = 40
-    hint = "  reconfigure 가 필요하거나, RhiBackendSources.cmake 의 경로가 디스크와 어긋났습니다."
-    selfTestSkipReason = "compile_commands.json 이 있는 실제 빌드 트리가 필요하다"
+    hint = ("  reconfigure 가 필요하거나, RhiBackendSources.cmake 의 경로가 디스크와 어긋났습니다. 이 구성이 일부러 짓지 않는 소스라면\n"
+            "  빼는 자리에서 sw_excludeUnbuiltSources · sw_declareUnbuiltSources 로 적으세요(cmake/Engine/TargetRules.cmake).")
+    selfTestCases = [
+        {
+            "name": "짓지 않는 소스 목록에 없는데 compile_commands 에도 없는 소스",
+            "files": {
+                "cmake/Engine/RhiBackendSources.cmake": 'set(SW_RHI_VULKAN_DEVICE_SOURCES\n    "${swRhiRoot}/Vulkan/Probe.cpp"\n)\n',
+                "Source/Engine/Graphics/RHI/Vulkan/Probe.cpp": "// 아무도 짓지 않는다\n",
+                "Source/Editor/Declared.cpp": "// 이 구성이 짓지 않는다고 적혀 있다\n",
+                "build/compile_commands.json": "[]\n",
+                "build/generated/sw/config/UnbuiltSources.txt": "Source/Editor/Declared.cpp\n",
+            },
+        },
+    ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--build", type=Path, default=None, help="compile_commands.json 이 있는 빌드 디렉터리")
@@ -201,6 +233,13 @@ class CheckSourceGlobGate(LintGate):
                 summary=summary,
             )
 
+        listNote: list[str] = []
+        unbuiltSources = readUnbuiltSourcesInternal(buildDir)
+        if unbuiltSources is None:
+            listNote.append(f"{buildDir.name} 에 {_kUnbuiltSourceListPath} 가 없습니다 — 이 구성이 일부러 짓지 않는 소스를 모릅니다"
+                            f"(다시 구성하면 생깁니다)")
+            unbuiltSources = set()
+
         compiledFiles: set[str] = set()
         for entry in data:
             filePath = Path(entry.get("file", "")).resolve()
@@ -219,12 +258,16 @@ class CheckSourceGlobGate(LintGate):
             if startsWithPathComponent(relativeSourcePath, kDirSourceGames):
                 if f"/{args.active_game}/" not in relativeSourcePath:
                     continue
+            if relativeSourcePath.lower() in unbuiltSources:
+                continue
             if relativeSourcePath.lower() not in compiledFiles:
                 violations.append(f"compile_commands 에 없음: {relativeSourcePath}")
 
         return GateResult(
             listViolation=violations,
-            summary=f"{len(sources)} sources referenced in {buildDir}, RHI backend list matches disk",
+            listNote=listNote,
+            summary=f"{len(sources)} sources referenced in {buildDir} ({len(unbuiltSources)} declared unbuilt by CMake), "
+                    f"RHI backend list matches disk",
         )
 
 

@@ -61,6 +61,7 @@ cmake/
 | `sw_configureAppDependencies` | App 타겟의 RHI 모듈, SWGame 딜레이로드/정적링크, CookAssets 의존성 자동 구성 |
 | `sw_addRhiBackendModule` | RHI 그래픽스 백엔드(`RHI_DX11` 등) MODULE 타겟 정의 및 공통 속성 바인딩 |
 | `sw_registerDynamicModule` / `sw_getDynamicModules` | 동적 모듈 레지스트리. **모듈 이름을 적는 곳은 타겟을 만드는 자리 하나뿐이다** — App·EngineTest·SmokeTest 는 목록을 묻는다 (`KINDS rhi` 처럼 종류로 고른다) |
+| `sw_excludeUnbuiltSources` / `sw_declareUnbuiltSources` | 이 구성이 **일부러 짓지 않는** 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드)를 빼는 자리에서 적는다. 구성 끝에 `sw_writeUnbuiltSourceList` 가 빌드 트리(`generated/sw/config/UnbuiltSources.txt`)에 쓰고 `CheckSourceGlob` 이 읽는다 — 게이트가 빼기 규칙을 따로 들지 않는다. 다른 타겟으로 옮겨 짓는 것에는 쓰지 않는다 |
 | `sw_addGameFrameworkKit` | GameFramework 장르 키트(`GF_Overworld` 등) 라이브러리 정의 및 리플렉션/딜레이로드 자동화 |
 | `sw_registerLintTests` | 린트 CTest 일괄 등록. **목록은 여기 없다** — `Scripts/lint/gate/` · `selftest/` 폴더가 목록이고, `GenerateLintTargets.py` 가 만든 `LintTargets.cmake` 를 부른다 |
 | `sw_addReflectionStep` | ReflectionParser 코드 생성 스텝 자동 연결 |

@@ -83,6 +83,9 @@ sw_verifyDynamicModuleRegistry()
 # App 타겟의 RHI 플러그인, 게임 모듈(SWGame), 에셋 쿠킹 빌드 순서 및 링크 의존성 자동 구성
 sw_configureAppDependencies(App)
 
+# 이 구성이 일부러 짓지 않는 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드 …)를 빌드 트리에 적는다 — `CheckSourceGlob` 이 읽는다.
+sw_writeUnbuiltSourceList()
+
 # ------------------------------------------------------------------------------
 # 5) 테스트 — GPU 불필요 lint는 nogpu 라벨
 # ------------------------------------------------------------------------------
