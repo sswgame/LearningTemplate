@@ -64,7 +64,9 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
 `string` 은 explicit 이라 동적 텍스트를 intern 하는 자리는 호출부에 `hashed_string( text )` 로 보인다. 같은 이름에 `string_view`
 판을 나란히 두지 않는다 — 매개변수 수가 같으면 리터럴 호출이 모호하다(린트 `NamePair`). intern 하면 안 되는 조회(키가 아닐
 수 있는 텍스트)는 이름을 따로 갖는다: `findStringByText( string_view )`. `setX()` 와 짝인 게터는 `getX()`/`isX()` 이지 맨이름
-`x()` 가 아니다(린트 `BareGetter`).
+`x()` 가 아니다(린트 `BareGetter`). `hashed_string` 은 언리얼 `FName` 규칙이다 — `==` · `getHash()` 는 대소문자를 무시하고,
+`c_str()` 은 적은 철자 그대로다("이름이 바뀌었나" 는 `isEqual( other, NameCase::CaseSensitive )`). `operator<` 는 없다 — 사람 · 파일이
+보는 정렬은 `HashedStringLexicalLess`, 찾기용은 `HashedStringFastLess`(intern 순서 — 실행마다 다르다).
 | GPU 리소스 수명 | `initRhi` / `updateRhi` / `releaseRhi` / `forgetRhi` / `isRhiValid` | 그 밖의 모든 것 |
 
 **3) 술어는 질문처럼 읽힌다.** `is` / `has` / `was` / `can` / `should` 로 시작하거나 3인칭 동사를 쓴다

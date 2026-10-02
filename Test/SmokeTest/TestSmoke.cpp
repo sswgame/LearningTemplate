@@ -399,7 +399,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadRegistrarContentLifecycle )
         {
             listFqn.push_back( info._fullyQualifiedName );
         } );
-        std::sort( listFqn.begin(), listFqn.end() );
+        std::sort( listFqn.begin(), listFqn.end(), sw::HashedStringFastLess{} ); // 찾기용 정렬이다 — 순서에 뜻은 없다
         return listFqn;
     };
 
@@ -420,7 +420,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadRegistrarContentLifecycle )
     bool              bHasSample{ false };
     for ( const sw::hashed_string& fqn : afterRegister )
     {
-        if ( std::binary_search( baseTypes.begin(), baseTypes.end(), fqn ) == false )
+        if ( std::binary_search( baseTypes.begin(), baseTypes.end(), fqn, sw::HashedStringFastLess{} ) == false )
         {
             sampleFqn  = fqn;
             bHasSample = true;

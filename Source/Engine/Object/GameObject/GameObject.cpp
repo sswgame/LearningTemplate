@@ -172,7 +172,8 @@ namespace sw
      */
     void GameObject::setName( hashed_string name )
     {
-        if ( name == _name )
+        // 철자까지 같을 때만 할 일이 없다 — `==` 는 대소문자를 무시하므로(FName) 그것으로 보면 `hero` → `Hero` 가 아무 일도 하지 않았다.
+        if ( name.isEqual( _name, NameCase::CaseSensitive ) )
             return;
         // 틱 중이면 틱 뒤로 미룬다 — 다른 워커가 이 이름을 읽고(`getName`), 이름 표는 매니저의 것이다. addTag · setActive 와 같다.
         if ( isComponentMutationFrozen() )

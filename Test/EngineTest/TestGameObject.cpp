@@ -2877,3 +2877,19 @@ SW_TEST_CASE( GameObjectTest, CameraLookAtUnderARotatedParentFacesTheTarget )
     SW_EXPECT_NEAR_EQUAL( 0.0f, forward._x, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, forward._z, 1e-3f );
 }
+
+/**
+ * @brief [GameObjectTest] 대소문자만 바꾸는 이름 바꾸기도 바뀐다 — 찾기는 여전히 대소문자를 무시한다
+ * @details `setName` 은 `==`(대소문자 무시)로 "같은 이름이면 할 일 없음" 을 봤고, 표시도 처음 intern 된 철자였다 — `hero` → `Hero` 가 아무 일도
+ *          하지 않았다(인스펙터 · 계층 패널의 이름 바꾸기). 이제 철자까지 같을 때만 건너뛴다(FName 의 `IsEqual( …, CaseSensitive )`).
+ */
+SW_TEST_CASE( GameObjectTest, CaseOnlyRenameChangesTheName )
+{
+    GameObjectManager manager;
+    GameObject*       pObj = manager.createGameObject( hashed_string( "caserenamehero" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    pObj->setName( hashed_string( "CaseRenameHero" ) );
+    SW_EXPECT_STREQ( "CaseRenameHero", pObj->getName().c_str() );
+    SW_EXPECT_TRUE( manager.findGameObjectByName( hashed_string( "caserenamehero" ) ) == pObj );
+    SW_EXPECT_TRUE( manager.findGameObjectByName( hashed_string( "CASERENAMEHERO" ) ) == pObj );
+}

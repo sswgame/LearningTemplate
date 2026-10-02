@@ -115,6 +115,10 @@ able to guess the rest; that is the whole point.
   dynamic text is visible at the call site (`hashed_string( text )`). Never declare a `string_view` overload next to
   the `hashed_string` one — with the same parameter count a literal call is ambiguous. A lookup that must **not**
   intern (free text that may not be a key) gets its own name: `findStringByText( string_view )`.
+  `hashed_string` follows Unreal `FName`: `==` and `getHash()` ignore case, `c_str()` is the spelling you wrote
+  (`isEqual( other, NameCase::CaseSensitive )` compares the spelling — use it for "did the name change?"), and there is
+  no `operator<`: sort with `HashedStringLexicalLess` (stable, for output people or files see) or `HashedStringFastLess`
+  (intern order, lookup only).
 
 - **A predicate reads as a question.** Start with `is` / `has` / `was` / `can` / `should`, or use a
   third-person verb (`supportsX`, `usesX`, `requiresX`, `matchesX`, `allowsX`, `overlapsX`).

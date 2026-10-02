@@ -14,10 +14,11 @@
 
   <!-- sw::basic_hashed_string -->
   <Type Name="sw::basic_hashed_string&lt;*,*&gt;">
-    <DisplayString Condition="_stringKeyIndex == 0">"" (None)</DisplayString>
-    <DisplayString>Index = {_stringKeyIndex}</DisplayString>
+    <DisplayString Condition="_comparisonIndex == 0">"" (None)</DisplayString>
+    <DisplayString>Name = {_comparisonIndex}, Spelling = {_displayIndex}</DisplayString>
     <Expand>
-      <Item Name="Index">_stringKeyIndex</Item>
+      <Item Name="ComparisonIndex">_comparisonIndex</Item>
+      <Item Name="DisplayIndex">_displayIndex</Item>
     </Expand>
   </Type>
 

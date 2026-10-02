@@ -2101,6 +2101,24 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-03 (구조 — `hashed_string` 은 언리얼 FName 규칙: 같음은 대소문자 무시 · 표시는 적은 철자 · 순서는 고른다, 사용자 요청)
+
+- **처음 intern 된 철자가 모두에게 보였다** — `"Hero"` 를 먼저 만들면 `hashed_string( "hero" ).c_str()` 도 "Hero" 였다. 그래서 에디터의 `hero` → `Hero`
+  이름 바꾸기가 아무 일도 하지 않았고(`setName` 이 대소문자를 무시한 `==` 로 "같은 이름" 이라 건너뛰었다), 대소문자만 다른 enum 열거자 둘이 로그에 같은
+  철자로 찍혔다. 이제 FName 처럼 두 인덱스를 든다 — 비교 인덱스(ComparisonIndex: 같음 · 해시 · 미리 정의된 이름)와 표시 인덱스(DisplayIndex: `c_str()`).
+  intern 표는 이름 표(대소문자 무시)와 철자 표(그대로)를 두고, 새 철자는 기존 이름을 가리키는 엔트리로 더한다. `isEqual( other, NameCase::CaseSensitive )`
+  (FName `IsEqual( …, ENameCase::CaseSensitive )`), `setName` 은 이것으로 본다.
+- **`operator<` 가 intern 순서인데 "사전순" 이라 적혀 있었다**(실행마다 다른 순서). 순서 연산자를 지우고 FName 처럼 고르게 했다 — `HashedStringLexicalLess`
+  (대소문자 무시 사전순) · `HashedStringFastLess`(비교 인덱스 순, 찾기용). 쓰던 곳은 시험 하나였다.
+- **FName 과 일부러 다른 셋**: 해시는 대소문자를 무시한 FNV 그대로(실행이 바뀌어도 같다 — 바이너리 칸 이름 · 열거자 · 지역화 표 · RPC 가 저장한다), 철자 보존은
+  모든 구성에서(언리얼은 에디터만 — 여기서는 저장되는 철자가 빌드마다 달라지지 않게), 숫자 꼬리(`Actor_12` = "Actor" + 13)는 두지 않았다 — `c_str()` 의 영구
+  포인터를 쥔 곳이 많고(`TagID` · 프로파일러 · 반환 함수 넷), 같은 이름의 번호는 `GameObjectManager` 가 다시 써 intern 증가가 이미 묶여 있다.
+- 쓰는 곳 없는 `hashed_wstring`(시작마다 UTF-16 표를 하나 더 세웠다)은 지웠다. 크기는 4 → 8 바이트(크기 · 배치에 기대는 곳 없음 — 정적 단언 · GPU · C-ABI ·
+  인덱스 직렬화 모두 없다, 조사 확인). natvis 는 두 인덱스를 보인다.
+
+**검증.** 새 시험 2(이전 코드에서 진다): `StringTest.HashedStringFollowsFNameRules`(같음 · 해시 · 철자 · 찾기 전용 조회는 철자를 넣지 않음 · 해시 맵 키 · 사전순 정렬),
+`GameObjectTest.CaseOnlyRenameChangesTheName`. 변이 4 모두 죽음(표시가 첫 철자 · 이름 바꾸기가 `==` · 사전순이 intern 순 · 새 철자를 새 이름으로). Debug nogpu · lint 전부.
+
 ### 2026-10-03 (R3 남은 것 — 이름 해시가 같은데 값이 다른 열거자는 등록 때 알린다)
 
 - **바이너리가 enum 을 이름 해시로 싣게 된 뒤, 한 enum 안의 해시 충돌을 아무도 보지 않았다** — 대소문자만 다른 두 이름(`Red` · `RED`)은 intern 에서 한 이름이

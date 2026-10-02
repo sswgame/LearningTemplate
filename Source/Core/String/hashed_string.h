@@ -2,6 +2,17 @@
  * @file hashed_string.h
  * @brief 해시 기반 intern 문자열(basic_hashed_string)과 미리 정의된 이름의 열거형입니다.
  *
+ * **규칙은 언리얼 FName 과 같습니다.**
+ * - 같음은 **대소문자를 무시**합니다(`"Hero" == "hero"`) — 비교 인덱스(FName 의 ComparisonIndex) 정수 비교.
+ * - 표시는 **적은 철자 그대로**입니다(`c_str()` 은 "hero" 로 만든 것이면 "hero") — 표시 인덱스(FName 의 DisplayIndex). 예전에는 처음
+ *   intern 된 철자가 모두에게 보여, 에디터에서 `hero` → `Hero` 로 고치는 이름 바꾸기가 아무 일도 하지 않았다. 철자까지 묻는 곳은
+ *   `isEqual( other, NameCase::CaseSensitive )`(FName 의 `IsEqual( …, ENameCase::CaseSensitive )`).
+ * - 순서는 고른다 — `lexicalLess`(대소문자 무시 사전순, `FNameLexicalLess`) · `fastLess`(비교 인덱스 순, `FNameFastLess`). 예전의 `operator<`
+ *   는 intern 순서였는데 "사전순" 이라 적혀 있었다(실행마다 달라지는 순서).
+ * - FName 과 다른 둘: 해시는 대소문자를 무시한 **FNV**(실행이 바뀌어도 같다 — 바이너리 칸 이름 · 열거자 · 지역화 표가 이 값을 저장한다),
+ *   철자 보존은 **모든 구성**에서다(언리얼은 에디터만 — 여기서는 저장되는 철자가 빌드에 따라 달라지지 않게 한다). FName 의 숫자 꼬리
+ *   (`Actor_12` = "Actor" + 13)는 두지 않았다 — `c_str()` 의 영구 포인터를 쥔 곳이 많고, 같은 이름의 번호는 `GameObjectManager` 가 다시 쓴다.
+ *
  * lock-free 청크 테이블과 문자열 아레나 위에 만든 intern 문자열입니다.
  * - c_str() · size() · getHash() 는 락 없이 O(1) 포인터 역참조로 바로 반환합니다.
  * - 문자열은 64KB 연속 아레나 블록에 모아 담아, 메모리 단편화와 문자열마다의 malloc 을 없앱니다.
@@ -61,13 +72,20 @@ namespace sw
 namespace sw
 {
 
+    /** @brief 이름을 비교할 때 대소문자를 볼지입니다(FName 의 ENameCase). 기본 비교(`==`)는 `IgnoreCase` 입니다. */
+    enum class NameCase : uint8
+    {
+        CaseSensitive, ///< 철자까지 같아야 같다
+        IgnoreCase     ///< 대소문자는 무시한다(`==` 와 같다)
+    };
+
     // ------------------------------------------------------------------------------
-    // 1) basic_hashed_string — intern 인덱스만 들고 있고, 비교는 4바이트 정수 비교
+    // 1) basic_hashed_string — 비교 인덱스 · 표시 인덱스를 들고 있고, 같음은 비교 인덱스 정수 비교(FName)
     // ------------------------------------------------------------------------------
     template <typename T, typename N = uint32>
     /**
      * @class basic_hashed_string
-     * @brief intern 테이블 인덱스로 O(1) 정수 비교를 하는 불변 문자열입니다.
+     * @brief intern 테이블 인덱스로 O(1) 정수 비교를 하는 불변 문자열입니다. 같음은 대소문자를 무시하고, 표시는 적은 철자 그대로입니다.
      */
     class basic_hashed_string
     {
@@ -92,24 +110,26 @@ namespace sw
 
         /** @brief NameType_None 인덱스인 빈 이름으로 둡니다. */
         basic_hashed_string() noexcept
-            : _stringKeyIndex{ static_cast<uint32>( PredefinedNameType::NameType_None ) } {}
+            : _comparisonIndex{ static_cast<uint32>( PredefinedNameType::NameType_None ) }
+            , _displayIndex{ static_cast<uint32>( PredefinedNameType::NameType_None ) } {}
 
         /** @brief 미리 정의된 이름 타입으로 바로 만듭니다(O(1)). */
         explicit basic_hashed_string( PredefinedNameType type ) noexcept
-            : _stringKeyIndex{ static_cast<uint32>( type ) } {}
+            : _comparisonIndex{ static_cast<uint32>( type ) }
+            , _displayIndex{ static_cast<uint32>( type ) } {}
 
         /** @brief 문자열을 length 만큼 intern 하고 그 인덱스를 가집니다. */
         basic_hashed_string( const value_type* pStr, const size_type length ) noexcept
-            : _stringKeyIndex{ helper( pStr, length ) } {}
+            : basic_hashed_string{ helper( pStr, length ) } {}
 
         /** @brief string_view 를 intern 하고 그 인덱스를 가집니다. */
         explicit basic_hashed_string( const std::basic_string_view<value_type> sv ) noexcept
-            : _stringKeyIndex{ helper( sv.data(), static_cast<size_type>( sv.size() ) ) } {}
+            : basic_hashed_string{ helper( sv.data(), static_cast<size_type>( sv.size() ) ) } {}
 
         /** @brief 배열 버퍼를 intern 하고 그 인덱스를 가집니다. */
         template <size_t U>
         explicit basic_hashed_string( const std::array<value_type, U>& scopedString ) noexcept
-            : _stringKeyIndex{ helper( scopedString.data() ) } {}
+            : basic_hashed_string{ helper( scopedString.data() ) } {}
 
         /**
          * @brief 리터럴 배열을 intern 하고 그 인덱스를 가집니다. **암시적 변환**이라 `isActionDown( "Jump" )` 처럼 쓸 수 있습니다.
@@ -121,11 +141,11 @@ namespace sw
          */
         template <size_type U>
         basic_hashed_string( const value_type ( &str )[U] ) noexcept
-            : _stringKeyIndex{ helper( str ) } {}
+            : basic_hashed_string{ helper( str ) } {}
 
         /** @brief 널 종료 문자열을 intern 하고 그 인덱스를 가집니다. */
         explicit basic_hashed_string( const T* pStr ) noexcept
-            : _stringKeyIndex{ helper( pStr ) } {}
+            : basic_hashed_string{ helper( pStr ) } {}
 
         /**
          * @brief intern 된 문자 수(널 제외)입니다. 락 없이 O(1) 로 조회합니다.
@@ -175,31 +195,61 @@ namespace sw
         static uint32 getInternedCount() noexcept { return getAllocationInfo()._entryCount.load( std::memory_order_acquire ); }
 
         /** @brief 비어 있는지 반환합니다. */
-        bool empty() const noexcept { return _stringKeyIndex == static_cast<uint32>( PredefinedNameType::NameType_None ) || size() == 0; }
+        bool empty() const noexcept { return _comparisonIndex == static_cast<uint32>( PredefinedNameType::NameType_None ) || size() == 0; }
 
-        /** @brief intern 인덱스를 반환합니다. */
-        uint32 getIndex() const noexcept { return _stringKeyIndex; }
+        /** @brief 비교 인덱스(대소문자를 무시한 이름의 번호 — FName 의 ComparisonIndex)입니다. 같은 이름이면 철자가 달라도 같습니다. */
+        uint32 getIndex() const noexcept { return _comparisonIndex; }
+
+        /** @brief 표시 인덱스(적은 철자의 번호 — FName 의 DisplayIndex)입니다. 철자까지 같아야 같습니다. */
+        uint32 getDisplayIndex() const noexcept { return _displayIndex; }
+
+        /** @brief 같은 이름인지 봅니다(FName 의 `IsEqual`). 기본은 `==` 와 같이 대소문자를 무시하고, `CaseSensitive` 면 철자까지 봅니다. */
+        bool isEqual( const basic_hashed_string& other, NameCase nameCase = NameCase::IgnoreCase ) const noexcept
+        {
+            return nameCase == NameCase::CaseSensitive ? _displayIndex == other._displayIndex : _comparisonIndex == other._comparisonIndex;
+        }
+
+        /** @brief 대소문자를 무시한 사전순으로 앞인지 봅니다(FName 의 `LexicalLess`). 정렬 결과를 사람이 보거나 파일에 쓸 때 씁니다. */
+        bool lexicalLess( const basic_hashed_string& other ) const noexcept
+        {
+            return _comparisonIndex != other._comparisonIndex && StringUtil::compare( view(), other.view(), true ) < 0;
+        }
+
+        /** @brief 비교 인덱스 순으로 앞인지 봅니다(FName 의 `FastLess`). 빠르지만 순서에 뜻이 없고 실행마다 다릅니다 — 찾기용 정렬에만 씁니다. */
+        bool fastLess( const basic_hashed_string& other ) const noexcept { return _comparisonIndex < other._comparisonIndex; }
 
         /** @brief 지정한 미리 정의된 이름 타입인지 확인합니다. */
         bool isPredefinedType( PredefinedNameType type ) const noexcept
         {
-            return _stringKeyIndex == static_cast<uint32>( type );
+            return _comparisonIndex == static_cast<uint32>( type );
         }
 
         /** @brief 미리 정의된 이름 타입을 반환합니다. 미리 정의된 이름이 아니면 NameType_None 입니다. */
         PredefinedNameType getPredefinedType() const noexcept
         {
-            if ( _stringKeyIndex < static_cast<uint32>( PredefinedNameType::Count ) )
-                return static_cast<PredefinedNameType>( _stringKeyIndex );
+            if ( _comparisonIndex < static_cast<uint32>( PredefinedNameType::Count ) )
+                return static_cast<PredefinedNameType>( _comparisonIndex );
             return PredefinedNameType::NameType_None;
         }
 
     private:
+        /** @brief intern 한 이름의 두 인덱스입니다. */
+        struct InternedIndex
+        {
+            uint32 _comparisonIndex{ static_cast<uint32>( PredefinedNameType::NameType_None ) };
+            uint32 _displayIndex{ static_cast<uint32>( PredefinedNameType::NameType_None ) };
+        };
+
+        /** @brief intern 결과로 만듭니다. */
+        explicit basic_hashed_string( const InternedIndex& interned ) noexcept
+            : _comparisonIndex{ interned._comparisonIndex }
+            , _displayIndex{ interned._displayIndex } {}
+
         /** @brief 문자열의 intern 인덱스를 구합니다. */
-        static uint32 helper( const T* pStr ) noexcept { return helper( pStr, StringUtil::strlen( pStr ) ); }
+        static InternedIndex helper( const T* pStr ) noexcept { return helper( pStr, StringUtil::strlen( pStr ) ); }
 
         /** @brief 전역 intern 테이블에서 인덱스를 찾거나 넣습니다. */
-        static uint32 helper( const T* pStr, size_type length ) noexcept;
+        static InternedIndex helper( const T* pStr, size_type length ) noexcept;
 
     public:
         /** @brief intern 맵 · 청크 테이블 · 아레나 저장소입니다. */
@@ -211,43 +261,35 @@ namespace sw
 
         /** @brief 지정한 intern 테이블에 넣고 그 인덱스를 가집니다(미리 정의된 이름용). */
         basic_hashed_string( AllocationInfo& info, const T* pStr ) noexcept
-            : _stringKeyIndex{ helper_internal( info, pStr, StringUtil::strlen( pStr ) ) } {}
+            : basic_hashed_string{ helper_internal( info, pStr, StringUtil::strlen( pStr ) ) } {}
 
-        /** @brief info 테이블에서 찾거나 사본을 넣어 인덱스를 반환합니다. */
-        static uint32 helper_internal( AllocationInfo& info, const T* pStr, size_type length ) noexcept;
+        /** @brief info 테이블에서 찾거나 사본을 넣어 인덱스를 반환합니다. 새 철자면 표시 엔트리를 더하고, 새 이름이면 비교 엔트리도 그것이다. */
+        static InternedIndex helper_internal( AllocationInfo& info, const T* pStr, size_type length ) noexcept;
 
-        /** @brief utf8 · utf16 전역 intern 테이블입니다. */
+        /** @brief 전역 intern 테이블입니다. */
         static AllocationInfo& getAllocationInfo() noexcept;
 
-        uint32 _stringKeyIndex;
+        /** @brief 청크 엔트리입니다(정의는 아래 — 이 자리에서는 완전할 필요가 없다). */
+        struct Entry;
+
+        /** @brief 엔트리를 락 없이 O(1) 로 찾습니다. 없는 인덱스면 nullptr 입니다. */
+        static const Entry* findEntry( uint32 entryIndex ) noexcept;
+
+        uint32 _comparisonIndex; ///< 대소문자를 무시한 이름의 엔트리(같음 · 해시 · 미리 정의된 이름)
+        uint32 _displayIndex;    ///< 적은 철자의 엔트리(`c_str()` · `size()`)
     };
 
-    /** @brief 같은지 비교합니다(인덱스 정수 비교). */
+    /** @brief 같은 이름인지 비교합니다(비교 인덱스 정수 비교 — 대소문자 무시). 철자까지는 `isEqual( other, NameCase::CaseSensitive )`. */
     template <typename T>
     bool operator==( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() == rhs.getIndex(); }
 
-    /** @brief 다른지 비교합니다. */
+    /** @brief 다른 이름인지 비교합니다. */
     template <typename T>
     bool operator!=( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() != rhs.getIndex(); }
 
-    /** @brief 사전순으로 작은지 비교합니다. */
-    template <typename T>
-    bool operator<( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() < rhs.getIndex(); }
+    // 순서 연산자(<, <=, >, >=)는 두지 않는다 — FName 처럼 고른다. 사람이 보는 순서는 `HashedStringLexicalLess`, 찾기용은 `HashedStringFastLess`.
 
-    /** @brief 작거나 같은지 비교합니다. */
-    template <typename T>
-    bool operator<=( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() <= rhs.getIndex(); }
-
-    /** @brief 사전순으로 큰지 비교합니다. */
-    template <typename T>
-    bool operator>( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() > rhs.getIndex(); }
-
-    /** @brief 크거나 같은지 비교합니다. */
-    template <typename T>
-    bool operator>=( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() >= rhs.getIndex(); }
-
-    using hashed_string  = basic_hashed_string<utf8>;
-    using hashed_wstring = basic_hashed_string<utf16>;
+    using hashed_string = basic_hashed_string<utf8>;
 
     // ------------------------------------------------------------------------------
     // 2) intern 테이블 — Engine.dll(Core OBJECT)만 소유하고, 모든 모듈은 이 export 만 쓴다
@@ -263,9 +305,6 @@ namespace sw
 
     template <>
     SW_API hashed_string::AllocationInfo& hashed_string::getAllocationInfo() noexcept;
-
-    template <>
-    SW_API hashed_wstring::AllocationInfo& hashed_wstring::getAllocationInfo() noexcept;
 } // namespace sw
 
 namespace sw
@@ -289,13 +328,28 @@ namespace sw
             }
         };
 
-        /** @brief 대소문자를 무시하고 같은지 비교합니다(해시 → 길이 → 문자열 순서로 빠르게 검사). */
-        bool operator==( const StringKey& rhs ) const noexcept
+        /** @brief 대소문자를 무시하고 같은지 비교합니다(해시 → 길이 → 문자열 순서로 빠르게 검사). 비교 엔트리 표의 같음입니다. */
+        struct EqualIgnoreCase
         {
-            if ( _hash != rhs._hash || _stringLength != rhs._stringLength )
-                return false;
-            return StringUtil::equals( std::basic_string_view<T>( _pStr, _stringLength ), std::basic_string_view<T>( rhs._pStr, rhs._stringLength ), true );
-        }
+            bool operator()( const StringKey& lhs, const StringKey& rhs ) const noexcept
+            {
+                if ( lhs._hash != rhs._hash || lhs._stringLength != rhs._stringLength )
+                    return false;
+                return StringUtil::equals( std::basic_string_view<T>( lhs._pStr, lhs._stringLength ),
+                                           std::basic_string_view<T>( rhs._pStr, rhs._stringLength ), true );
+            }
+        };
+
+        /** @brief 철자까지 같은지 비교합니다. 표시 엔트리 표의 같음입니다(해시는 대소문자를 무시하므로 철자만 다른 것은 같은 버킷이다). */
+        struct EqualExact
+        {
+            bool operator()( const StringKey& lhs, const StringKey& rhs ) const noexcept
+            {
+                if ( lhs._hash != rhs._hash || lhs._stringLength != rhs._stringLength )
+                    return false;
+                return std::char_traits<T>::compare( lhs._pStr, rhs._pStr, lhs._stringLength ) == 0;
+            }
+        };
     };
 
     // ------------------------------------------------------------------------------
@@ -316,24 +370,31 @@ namespace sw
      *   여러 스레드에서 intern 요청이 몰릴 때 락 하나에 경합이 생기지 않도록, 해시 상위 비트로 32개의 독립된
      *   `shared_mutex` 와 `unordered_map` 에 나눠 처리합니다.
      */
+    /** @brief 청크 엔트리입니다. 락 없이 읽을 수 있도록 바뀌지 않는 데이터 슬롯입니다. */
+    template <typename T, typename N>
+    struct basic_hashed_string<T, N>::Entry
+    {
+        const value_type* _pStr{ nullptr };      ///< 아레나에 적재된 불변 C 문자열 포인터
+        size_type         _stringLength{ 0 };    ///< 문자열 길이(널 제외)
+        hash_type         _hash{ 0 };            ///< 미리 계산한 FNV 해시 값(대소문자 무시 — 철자가 달라도 같다)
+        uint32            _comparisonIndex{ 0 }; ///< 이 철자가 속한 이름의 비교 엔트리(처음 intern 된 철자면 자기 자신)
+    };
+
     template <typename T, typename N>
     struct basic_hashed_string<T, N>::AllocationInfo
     {
         friend class basic_hashed_string<T, N>;
 
-        /** @brief 청크 엔트리입니다. 락 없이 읽을 수 있도록 바뀌지 않는 데이터 슬롯입니다. */
-        struct Entry
-        {
-            const value_type* _pStr{ nullptr };   ///< 아레나에 적재된 불변 C 문자열 포인터
-            size_type         _stringLength{ 0 }; ///< 문자열 길이(널 제외)
-            hash_type         _hash{ 0 };         ///< 미리 계산한 FNV 해시 값
-        };
+        using Entry = typename basic_hashed_string<T, N>::Entry;
 
         /** @brief 32개로 나눈 맵 샤드입니다(각자 shared_mutex 로 보호합니다). */
         struct Shard
         {
-            mutable std::shared_mutex                                      _mutex;         ///< 이 샤드 전용 읽기/쓰기 락
-            unordered_map<StringKey, uint32, typename StringKey::HashFunc> _mapKeyToIndex; ///< 문자열 키 → 청크 인덱스 해시맵
+            mutable std::shared_mutex _mutex; ///< 이 샤드 전용 읽기/쓰기 락
+            unordered_map<StringKey, uint32, typename StringKey::HashFunc, typename StringKey::EqualIgnoreCase>
+                _mapKeyToIndex; ///< 이름(대소문자 무시) → 비교 엔트리 인덱스
+            unordered_map<StringKey, uint32, typename StringKey::HashFunc, typename StringKey::EqualExact>
+                _mapExactKeyToIndex; ///< 철자 → 표시 엔트리 인덱스
         };
 
         atomic<Entry*> _arrChunk[kMaxChunks]{}; /**< 1024 단위 엔트리 청크의 원자 포인터 배열(락 없는 O(1) 조회) */
@@ -369,9 +430,8 @@ namespace sw
 
             createPredefinedNameTypes();
 
-            // 두 이름이 대소문자만 다르면 intern 테이블이 둘을 하나로 합치고(비교와 해시가 대소문자를 무시한다), 그 뒤 이름의
-            // 인덱스가 한 칸씩 밀려 열거값과 어긋난다. 번호가 줄 순서와 맞는지는 static_assert 가 확인하지만, 합쳐진 것은
-            // 여기서만 보인다.
+            // 두 이름이 대소문자만 다르면 둘째는 첫째의 표시 엔트리가 되어(같음은 대소문자를 무시한다) 비교 인덱스가 열거값과
+            // 어긋난다. 번호가 줄 순서와 맞는지는 static_assert 가 확인하지만, 합쳐진 것은 여기서만 보인다.
             SW_ASSERT( _entryCount.load( std::memory_order_relaxed ) == static_cast<uint32>( PredefinedNameType::Count ) );
         }
 
@@ -383,6 +443,7 @@ namespace sw
             {
                 arrShardLock[shardIndex] = std::unique_lock<std::shared_mutex>( _arrShard[shardIndex]._mutex );
                 _arrShard[shardIndex]._mapKeyToIndex.clear();
+                _arrShard[shardIndex]._mapExactKeyToIndex.clear();
             }
 
             std::scoped_lock<mutex> globalLock{ _globalAppendMutex };
@@ -446,70 +507,48 @@ namespace sw
         /** @brief PredefinedNameType.xxx 의 이름들을 intern 합니다. */
         void createPredefinedNameTypes()
         {
-            if constexpr ( std::is_same_v<T, utf16> )
-            {
-#define REGISTER_NAME( index, name ) basic_hashed_string<T, N> predefined_##name{ *this, SW_CONCAT( L, #name ) };
-#include "Core/Predefined/PredefinedNameType.xxx"
-#undef REGISTER_NAME
-            }
-            else
-            {
+            static_assert( std::is_same_v<T, utf8>, "hashed_string 은 UTF-8 하나다(쓰지 않던 UTF-16 판은 지웠다)" );
 #define REGISTER_NAME( index, name ) basic_hashed_string<T, N> predefined_##name{ *this, #name };
 #include "Core/Predefined/PredefinedNameType.xxx"
 #undef REGISTER_NAME
-            }
         }
     };
 
-    /** @brief intern 된 문자열의 길이를 락 없이 O(1) 로 반환합니다. */
+    /** @brief 엔트리를 락 없이 O(1) 로 찾습니다. 없는 인덱스면 nullptr 입니다. */
+    template <typename T, typename N>
+    const typename basic_hashed_string<T, N>::Entry* basic_hashed_string<T, N>::findEntry( uint32 entryIndex ) noexcept
+    {
+        auto&        info       = getAllocationInfo();
+        const uint32 chunkIndex = entryIndex >> kChunkShift;
+        const uint32 offset     = entryIndex & kChunkMask;
+        if ( chunkIndex >= kMaxChunks )
+            return nullptr;
+        const auto* chunk = info._arrChunk[chunkIndex].load( std::memory_order_acquire );
+        return ( chunk != nullptr ) ? &chunk[offset] : nullptr;
+    }
+
+    /** @brief 적은 철자의 길이를 락 없이 O(1) 로 반환합니다. */
     template <typename T, typename N>
     typename basic_hashed_string<T, N>::size_type basic_hashed_string<T, N>::size() const noexcept
     {
-        auto&        info       = getAllocationInfo();
-        const uint32 chunkIndex = _stringKeyIndex >> kChunkShift;
-        const uint32 offset     = _stringKeyIndex & kChunkMask;
-
-        if ( chunkIndex < kMaxChunks )
-        {
-            const auto* chunk = info._arrChunk[chunkIndex].load( std::memory_order_acquire );
-            if ( chunk != nullptr )
-                return chunk[offset]._stringLength;
-        }
-        return 0;
+        const auto* pEntry = findEntry( _displayIndex );
+        return ( pEntry != nullptr ) ? pEntry->_stringLength : 0;
     }
 
-    /** @brief 널 종료 C 문자열 포인터를 락 없이 O(1) 로 반환합니다. */
+    /** @brief 적은 철자의 널 종료 C 문자열 포인터를 락 없이 O(1) 로 반환합니다(영구 — 테이블이 살아 있는 동안). */
     template <typename T, typename N>
     const typename basic_hashed_string<T, N>::value_type* basic_hashed_string<T, N>::c_str() const noexcept
     {
-        auto&        info       = getAllocationInfo();
-        const uint32 chunkIndex = _stringKeyIndex >> kChunkShift;
-        const uint32 offset     = _stringKeyIndex & kChunkMask;
-
-        if ( chunkIndex < kMaxChunks )
-        {
-            const auto* chunk = info._arrChunk[chunkIndex].load( std::memory_order_acquire );
-            if ( chunk != nullptr )
-                return chunk[offset]._pStr;
-        }
-        return nullptr;
+        const auto* pEntry = findEntry( _displayIndex );
+        return ( pEntry != nullptr ) ? pEntry->_pStr : nullptr;
     }
 
-    /** @brief intern 키의 FNV 해시 값을 락 없이 O(1) 로 반환합니다. */
+    /** @brief 이름의 FNV 해시 값(대소문자 무시 — 철자가 달라도 같다)을 락 없이 O(1) 로 반환합니다. */
     template <typename T, typename N>
     typename basic_hashed_string<T, N>::hash_type basic_hashed_string<T, N>::getHash() const noexcept
     {
-        auto&        info       = getAllocationInfo();
-        const uint32 chunkIndex = _stringKeyIndex >> kChunkShift;
-        const uint32 offset     = _stringKeyIndex & kChunkMask;
-
-        if ( chunkIndex < kMaxChunks )
-        {
-            const auto* chunk = info._arrChunk[chunkIndex].load( std::memory_order_acquire );
-            if ( chunk != nullptr )
-                return chunk[offset]._hash;
-        }
-        return 0;
+        const auto* pEntry = findEntry( _displayIndex );
+        return ( pEntry != nullptr ) ? pEntry->_hash : 0;
     }
 
     template <typename T, typename N>
@@ -526,28 +565,44 @@ namespace sw
         StringKey       lookupKey{ hash, text.data(), static_cast<size_type>( text.size() ) };
 
         std::shared_lock<std::shared_mutex> readLock{ shard._mutex };
-        const auto                          iter = shard._mapKeyToIndex.find( lookupKey );
+        // 그 철자가 있으면 그것을, 없고 이름만 있으면 이름의 첫 철자를 돌려준다(철자를 새로 넣지 않는다 — 찾기만 한다).
+        const auto exactIter = shard._mapExactKeyToIndex.find( lookupKey );
+        if ( exactIter != shard._mapExactKeyToIndex.end() )
+        {
+            const auto* pEntry      = findEntry( exactIter->second );
+            result._comparisonIndex = ( pEntry != nullptr ) ? pEntry->_comparisonIndex : exactIter->second;
+            result._displayIndex    = exactIter->second;
+            return result;
+        }
+        const auto iter = shard._mapKeyToIndex.find( lookupKey );
         if ( iter != shard._mapKeyToIndex.end() )
-            result._stringKeyIndex = iter->second;
+        {
+            result._comparisonIndex = iter->second;
+            result._displayIndex    = iter->second;
+        }
         return result;
     }
 
     /** @brief 전역 intern 테이블에서 인덱스를 찾거나 넣습니다. */
     template <typename T, typename N>
-    uint32 basic_hashed_string<T, N>::helper( const T* str, const size_type length ) noexcept
+    typename basic_hashed_string<T, N>::InternedIndex basic_hashed_string<T, N>::helper( const T* str, const size_type length ) noexcept
     {
         auto& info = getAllocationInfo();
         return helper_internal( info, str, length );
     }
 
     /**
-     * @brief 32개 샤드의 공유 락으로 빠르게 조회하고, 새 문자열만 아레나에 적재해 청크에 등록합니다.
+     * @brief 32개 샤드의 공유 락으로 빠르게 조회하고, 새 철자만 아레나에 적재해 청크에 등록합니다.
+     * @details 철자 표에 있으면 그 철자의 엔트리와 그것이 속한 이름의 비교 엔트리를 돌려준다. 없으면 엔트리를 하나 더한다 — 이름이 처음이면
+     *          그 엔트리가 비교 엔트리이기도 하고, 이름은 있고 철자만 새로우면 표시 엔트리만 더해 기존 비교 엔트리를 가리킨다(FName 의
+     *          DisplayIndex 가 다른 철자를, ComparisonIndex 가 같은 이름을 말하는 것과 같다).
      */
     template <typename T, typename N>
-    uint32 basic_hashed_string<T, N>::helper_internal( AllocationInfo& info, const T* str, size_type length ) noexcept
+    typename basic_hashed_string<T, N>::InternedIndex basic_hashed_string<T, N>::helper_internal( AllocationInfo& info, const T* str,
+                                                                                                  size_type length ) noexcept
     {
         if ( str == nullptr || length == 0 )
-            return static_cast<uint32>( PredefinedNameType::NameType_None );
+            return {};
 
         hash_type hash{};
         if constexpr ( std::is_same_v<hash_type, uint32> )
@@ -559,21 +614,32 @@ namespace sw
         auto&        shard      = info._arrShard[shardIndex];
         StringKey    lookupKey{ hash, str, length };
 
-        // 1단계: 샤드 공유 락으로 빠르게 조회한다(이미 등록된 문자열은 대부분 여기서 끝난다)
+        const auto makeResult = []( uint32 displayIndex ) -> InternedIndex
+        {
+            const auto* pEntry = findEntry( displayIndex );
+            return InternedIndex{ ( pEntry != nullptr ) ? pEntry->_comparisonIndex : displayIndex, displayIndex };
+        };
+
+        // 1단계: 샤드 공유 락으로 빠르게 조회한다(이미 등록된 철자는 대부분 여기서 끝난다)
         {
             std::shared_lock<std::shared_mutex> readLock{ shard._mutex };
-            const auto                          iter = shard._mapKeyToIndex.find( lookupKey );
-            if ( iter != shard._mapKeyToIndex.end() )
-                return iter->second;
+            const auto                          iter = shard._mapExactKeyToIndex.find( lookupKey );
+            if ( iter != shard._mapExactKeyToIndex.end() )
+                return makeResult( iter->second );
         }
 
-        // 2단계: 새 문자열 등록. 샤드 배타 락 + 전역 할당 락
+        // 2단계: 새 철자 등록. 샤드 배타 락 + 전역 할당 락
         std::unique_lock<std::shared_mutex> writeLock{ shard._mutex };
 
         // 다시 확인한다(double-check)
-        const auto iter = shard._mapKeyToIndex.find( lookupKey );
-        if ( iter != shard._mapKeyToIndex.end() )
-            return iter->second;
+        const auto exactIter = shard._mapExactKeyToIndex.find( lookupKey );
+        if ( exactIter != shard._mapExactKeyToIndex.end() )
+            return makeResult( exactIter->second );
+
+        // 같은 이름(대소문자 무시)이 이미 있으면 이 철자는 그 이름의 표시 엔트리다.
+        const auto   nameIter       = shard._mapKeyToIndex.find( lookupKey );
+        const bool   bKnownName     = nameIter != shard._mapKeyToIndex.end();
+        const uint32 knownNameIndex = bKnownName ? nameIter->second : 0;
 
         std::scoped_lock<mutex> allocLock{ info._globalAppendMutex };
 
@@ -581,7 +647,7 @@ namespace sw
         if ( newIndex >= kMaxChunks * kChunkSize )
         {
             SW_LOG_ASSERT( false, "hashed_string 풀 용량(1,048,576개)을 초과했습니다!" );
-            return static_cast<uint32>( PredefinedNameType::NameType_None );
+            return {};
         }
 
         const uint32 chunkIndex = newIndex >> kChunkShift;
@@ -596,19 +662,34 @@ namespace sw
             info._arrChunk[chunkIndex].store( chunk, std::memory_order_release );
         }
 
-        const value_type* internedStr = info.allocateString( str, length );
-
-        chunk[offset]._pStr         = internedStr;
-        chunk[offset]._stringLength = length;
-        chunk[offset]._hash         = hash;
+        const value_type* internedStr  = info.allocateString( str, length );
+        const uint32      nameIndex    = bKnownName ? knownNameIndex : newIndex;
+        chunk[offset]._pStr            = internedStr;
+        chunk[offset]._stringLength    = length;
+        chunk[offset]._hash            = hash;
+        chunk[offset]._comparisonIndex = nameIndex;
 
         info._entryCount.store( newIndex + 1, std::memory_order_release );
 
         StringKey internedKey{ hash, internedStr, length };
-        shard._mapKeyToIndex.emplace( internedKey, newIndex );
+        shard._mapExactKeyToIndex.emplace( internedKey, newIndex );
+        if ( bKnownName == false )
+            shard._mapKeyToIndex.emplace( internedKey, newIndex );
 
-        return newIndex;
+        return InternedIndex{ nameIndex, newIndex };
     }
+
+    /** @brief 대소문자를 무시한 사전순 비교 함수 객체입니다(FName 의 `FNameLexicalLess`). */
+    struct HashedStringLexicalLess
+    {
+        bool operator()( const hashed_string& lhs, const hashed_string& rhs ) const noexcept { return lhs.lexicalLess( rhs ); }
+    };
+
+    /** @brief 비교 인덱스 순 비교 함수 객체입니다(FName 의 `FNameFastLess`). 순서에 뜻이 없고 실행마다 다릅니다. */
+    struct HashedStringFastLess
+    {
+        bool operator()( const hashed_string& lhs, const hashed_string& rhs ) const noexcept { return lhs.fastLess( rhs ); }
+    };
 } // namespace sw
 
 namespace std

@@ -152,6 +152,57 @@ SW_TEST_CASE( StringTest, HashedString )
 }
 
 /**
+ * @brief [StringTest] hashed_string 은 FName 규칙이다 — 같음은 대소문자 무시, 표시는 적은 철자 그대로, 순서는 사전순 · 빠른 순을 고른다
+ * @details 처음 intern 된 철자가 모두에게 보였다 — "Hero" 를 먼저 만들면 `hashed_string( "hero" ).c_str()` 도 "Hero" 였다(에디터의 `hero` → `Hero`
+ *          이름 바꾸기가 아무 일도 하지 않은 까닭). `operator<` 는 intern 순서인데 "사전순" 이라 적혀 있었다(실행마다 다른 순서).
+ */
+SW_TEST_CASE( StringTest, HashedStringFollowsFNameRules )
+{
+    const sw::hashed_string upper( "FNameRuleHero" );
+    const sw::hashed_string lower( "fnamerulehero" );
+
+    // 같음 · 해시는 대소문자를 무시한다(FName 의 ComparisonIndex)
+    SW_EXPECT_TRUE( upper == lower );
+    SW_EXPECT_EQUAL( upper.getIndex(), lower.getIndex() );
+    SW_EXPECT_EQUAL( upper.getHash(), lower.getHash() );
+    SW_EXPECT_EQUAL( sw::hashed_string::computeHash( "FNAMERULEHERO" ), lower.getHash() ); // 저장되는 해시는 철자와 무관하다
+
+    // 표시는 적은 철자 그대로다(FName 의 DisplayIndex)
+    SW_EXPECT_STREQ( "FNameRuleHero", upper.c_str() );
+    SW_EXPECT_STREQ( "fnamerulehero", lower.c_str() );
+    SW_EXPECT_TRUE( upper.getDisplayIndex() != lower.getDisplayIndex() );
+    SW_EXPECT_TRUE( upper.isEqual( lower ) );
+    SW_EXPECT_FALSE( upper.isEqual( lower, sw::NameCase::CaseSensitive ) );
+    SW_EXPECT_TRUE( upper.isEqual( sw::hashed_string( "FNameRuleHero" ), sw::NameCase::CaseSensitive ) );
+
+    // 찾기만 하는 조회는 철자를 새로 넣지 않는다 — 있는 철자면 그것, 없으면 그 이름의 첫 철자
+    SW_EXPECT_STREQ( "fnamerulehero", sw::hashed_string::findInterned( "fnamerulehero" ).c_str() );
+    const uint32            countBefore = sw::hashed_string::getInternedCount();
+    const sw::hashed_string found       = sw::hashed_string::findInterned( "FNAMERULEHERO" );
+    SW_EXPECT_TRUE( found == upper );
+    SW_EXPECT_STREQ( "FNameRuleHero", found.c_str() );
+    SW_EXPECT_EQUAL( countBefore, sw::hashed_string::getInternedCount() );
+
+    // 해시 맵 키 — 철자가 달라도 같은 칸
+    sw::unordered_map<sw::hashed_string, int32> mapNameToValue;
+    mapNameToValue[upper] = 1;
+    mapNameToValue[lower] = 2;
+    SW_EXPECT_EQUAL( size_t( 1 ), mapNameToValue.size() );
+
+    // 순서는 고른다 — 사전순(대소문자 무시)은 실행과 무관하고, 같은 이름은 어느 쪽도 앞이 아니다
+    sw::vector<sw::hashed_string> listName{ sw::hashed_string( "FNameRuleCharlie" ), sw::hashed_string( "fnameRuleAlpha" ),
+                                            sw::hashed_string( "FNAMERULEBRAVO" ) };
+    std::sort( listName.begin(), listName.end(), sw::HashedStringLexicalLess{} );
+    SW_EXPECT_STREQ( "fnameRuleAlpha", listName[0].c_str() );
+    SW_EXPECT_STREQ( "FNAMERULEBRAVO", listName[1].c_str() );
+    SW_EXPECT_STREQ( "FNameRuleCharlie", listName[2].c_str() );
+    SW_EXPECT_FALSE( upper.lexicalLess( lower ) );
+    SW_EXPECT_FALSE( lower.lexicalLess( upper ) );
+    SW_EXPECT_FALSE( upper.fastLess( lower ) );
+    SW_EXPECT_FALSE( lower.fastLess( upper ) );
+}
+
+/**
  * @brief [StringTest] string_splitter
  */
 SW_TEST_CASE( StringTest, StringSplitter )
