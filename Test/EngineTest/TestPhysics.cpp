@@ -539,6 +539,24 @@ namespace
         return box;
     }
 
+    /** @brief (x, y) 에서 시작하는 크기 1 상자입니다(z 0..1). */
+    AABB makeBoxAt( float32 x, float32 y )
+    {
+        AABB box;
+        box._min = float3( x, y, 0.0f );
+        box._max = float3( x + 1.0f, y + 1.0f, 1.0f );
+        return box;
+    }
+
+    /** @brief x 에서 두께 0.1 인 세로 벽입니다(y -5..15) — 한 step 에 10 을 가는 상자가 통째로 건너뛴다. */
+    AABB makeWallBox( float32 x )
+    {
+        AABB box;
+        box._min = float3( x, -5.0f, 0.0f );
+        box._max = float3( x + 0.1f, 15.0f, 1.0f );
+        return box;
+    }
+
     /** @brief 이벤트 목록에서 두 오브젝트 쌍의 시작(true) · 끝(false) 이벤트 수를 셉니다(순서 무관). */
     uint32 countOverlapEvent( const vector<PhysicsOverlapEvent>& listEvent, uint64 objectA, uint64 objectB, bool bBegin )
     {
@@ -599,4 +617,81 @@ SW_TEST_CASE( PhysicsTest, StepRespectsTheLayerMatrix )
     world.addBody( makeUnitBox( 0.5f ), 1, 22 );
     world.step( 0.016f );
     SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
+}
+
+/**
+ * @brief [PhysicsTest] 연속 바디는 한 step 에 건너뛴 얇은 바디와도 겹친다 — 그 step 에 시작하고 다음 step 에 끝난다
+ * @details 겹침 이벤트는 step 마다 끝 자리만 봤다. 한 프레임에 두께 0.1 벽보다 멀리 가는 총알은 벽과 한 번도 겹치지 않아 맞음 처리가 불리지
+ *          않았다(터널링). 연속 바디는 지난 step 의 자리에서 지금 자리까지 쓸린다(`CCD::sweepAabb`). 같은 길을 간 이산 바디는 여전히 지나치고,
+ *          레이어가 막은 벽은 쓸려도 닿지 않는다. 지나간 뒤 더 가도 다시 닿지 않는다 — 출발점은 지난 step 의 자리다(더한 자리가 아니다).
+ */
+SW_TEST_CASE( PhysicsTest, ContinuousBodyOverlapsWhatItPassedThroughInOneStep )
+{
+    PhysicsWorld world;
+    world.layers().setLayerCollision( 0, 1, false );
+    world.addBody( makeWallBox( 5.0f ), 0, 1 );
+    world.addBody( makeWallBox( 7.0f ), 1, 2 ); // 레이어가 막은 벽
+    const PhysicsWorld::BodyHandle fast = world.addBody( makeBoxAt( 0.0f, 0.0f ), 0, 3, true );
+    const PhysicsWorld::BodyHandle slow = world.addBody( makeBoxAt( 0.0f, 10.0f ), 0, 4 );
+    world.step( 0.016f );
+    SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
+
+    // 한 step 에 x 0 → 10 — 두 바디 모두 벽 둘을 통째로 건너뛴다.
+    world.setAabb( fast, makeBoxAt( 10.0f, 0.0f ) );
+    world.setAabb( slow, makeBoxAt( 10.0f, 10.0f ) );
+    world.step( 0.016f );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( world.getOverlapEvents().size() ) );
+    SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, true ) );
+    // 앞면에 닿은 때 — 중심 0.5 가 부푼 벽(4.5)에 닿을 때까지 10 가운데 4 를 갔다.
+    SW_EXPECT_NEAR_EQUAL( 0.4f, world.getOverlapEvents()[0]._time, 1e-4f );
+
+    // 이미 지나갔으니 다음 step 에 끝난다.
+    world.step( 0.016f );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( world.getOverlapEvents().size() ) );
+    SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, false ) );
+
+    // 더 가도 다시 닿지 않는다.
+    world.setAabb( fast, makeBoxAt( 20.0f, 0.0f ) );
+    world.step( 0.016f );
+    SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
+}
+
+/**
+ * @brief [PhysicsTest] 겹쳐 있던 연속 바디가 떠나면 그 step 에 끝난다 — 출발점의 겹침(닿은 때 0)은 쓸림으로 치지 않는다
+ * @details 쓸림 검사는 출발점이 이미 겹쳐 있으면 닿은 때 0 을 낸다. 그것까지 이번 step 의 겹침으로 치면 떠난 쌍이 한 step 더 겹친 채로 남아
+ *          끝이 늦는다.
+ */
+SW_TEST_CASE( PhysicsTest, ContinuousBodyLeavingAnOverlapEndsItInThatStep )
+{
+    PhysicsWorld world;
+    world.addBody( makeWallBox( 5.0f ), 0, 1 );
+    const PhysicsWorld::BodyHandle fast = world.addBody( makeBoxAt( 4.6f, 0.0f ), 0, 3, true );
+    world.step( 0.016f );
+    SW_ASSERT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, true ) );
+
+    world.setAabb( fast, makeBoxAt( 30.0f, 0.0f ) );
+    world.step( 0.016f );
+    SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, false ) );
+}
+
+/**
+ * @brief [PhysicsTest] 한 step 에 둘을 지나간 연속 바디의 겹침은 먼저 닿은 것부터 온다
+ * @details 이벤트는 쌍(핸들) 순서로 나갔다. 총알이 한 step 에 적 둘을 지나가면 받는 쪽은 첫 이벤트에 반응해 사라지므로, 핸들이 앞선 **뒤의**
+ *          적이 맞을 수 있었다. 이제 목록은 닿은 때(`_time`) 순서다. 먼 벽을 먼저 더해 핸들 순서와 거리 순서를 거꾸로 둔다.
+ */
+SW_TEST_CASE( PhysicsTest, SweptOverlapsComeInTheOrderTheyWereTouched )
+{
+    PhysicsWorld world;
+    world.addBody( makeWallBox( 8.0f ), 0, 1 );
+    world.addBody( makeWallBox( 4.0f ), 0, 2 );
+    const PhysicsWorld::BodyHandle fast = world.addBody( makeBoxAt( 0.0f, 0.0f ), 0, 3, true );
+    world.step( 0.016f );
+
+    world.setAabb( fast, makeBoxAt( 10.0f, 0.0f ) );
+    world.step( 0.016f );
+    const vector<PhysicsOverlapEvent>& listEvent = world.getOverlapEvents();
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listEvent.size() ) );
+    const bool bNearWallFirst = listEvent[0]._objectA == 2ull || listEvent[0]._objectB == 2ull;
+    SW_EXPECT_TRUE( bNearWallFirst );
+    SW_EXPECT_TRUE( listEvent[0]._time < listEvent[1]._time );
 }

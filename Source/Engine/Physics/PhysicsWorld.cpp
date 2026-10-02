@@ -173,15 +173,29 @@ namespace sw
         } );
     }
 
+    void PhysicsWorld::gatherStepCandidates( const CellRange& range, vector<BodyHandle>& outListHandle ) const
+    {
+        if ( shouldScanAllBodies( range ) == false )
+        {
+            gatherCandidateHandles( range, outListHandle );
+            return;
+        }
+        outListHandle.clear();
+        _bodies.forEachHandle( [&outListHandle]( SlotHandle handle, const PhysicsBody& )
+        { outListHandle.push_back( handle ); } );
+    }
+
     /**
      * @brief 새 물리 바디를 월드에 등록하고 공간 그리드에 배치합니다.
      */
-    PhysicsWorld::BodyHandle PhysicsWorld::addBody( const AABB& aabb, uint8 layer, uint64 objectId )
+    PhysicsWorld::BodyHandle PhysicsWorld::addBody( const AABB& aabb, uint8 layer, uint64 objectId, bool bContinuous )
     {
         PhysicsBody body{};
-        body._aabb     = aabb;
-        body._layer    = layer;
-        body._objectId = objectId;
+        body._aabb        = aabb;
+        body._stepAabb    = aabb; // 출발점은 더한 자리다 — 더하기 전 어딘가에서 쓸려 오지 않는다
+        body._layer       = layer;
+        body._objectId    = objectId;
+        body._bContinuous = bContinuous ? SW_TRUE : SW_FALSE;
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         BodyHandle                          handle = _bodies.insert( body );
         insertBodyToGrid( handle, aabb );
@@ -209,8 +223,24 @@ namespace sw
         PhysicsBody*                        pBody = _bodies.get( handle );
         if ( pBody == nullptr )
             return;
+        setAabbLocked( handle, *pBody, aabb );
+    }
 
-        const AABB oldAABB = pBody->_aabb;
+    void PhysicsWorld::updateBody( BodyHandle handle, const AABB& aabb, uint8 layer, bool bContinuous )
+    {
+        std::unique_lock<std::shared_mutex> lock{ _mutex };
+        PhysicsBody*                        pBody = _bodies.get( handle );
+        if ( pBody == nullptr )
+            return;
+        // 레이어는 그리드와 무관하다 — 쌍을 재는 `step` 이 읽는다. 바뀌면 다음 step 에서 걸러진 쌍이 끝난다.
+        pBody->_layer       = layer;
+        pBody->_bContinuous = bContinuous ? SW_TRUE : SW_FALSE;
+        setAabbLocked( handle, *pBody, aabb );
+    }
+
+    void PhysicsWorld::setAabbLocked( BodyHandle handle, PhysicsBody& body, const AABB& aabb )
+    {
+        const AABB oldAABB = body._aabb;
         if ( oldAABB.isValid() && aabb.isValid() )
         {
             // 지름길: 덮는 셀이 그대로면 그리드를 건드릴 필요가 없다. 이 판단이 삽입 · 제거와 **같은
@@ -219,13 +249,13 @@ namespace sw
             const CellRange newRange = CellRange::fromAabb( aabb, kCellSize );
             if ( oldRange == newRange )
             {
-                pBody->_aabb = aabb;
+                body._aabb = aabb;
                 return;
             }
         }
 
-        removeBodyFromGrid( handle, pBody->_aabb );
-        pBody->_aabb = aabb;
+        removeBodyFromGrid( handle, body._aabb );
+        body._aabb = aabb;
         insertBodyToGrid( handle, aabb );
     }
 
@@ -245,7 +275,7 @@ namespace sw
     }
 
     /**
-     * @brief 물리 시뮬레이션 한 단계의 자리입니다. 지금은 아무것도 하지 않습니다(적분하는 솔버가 없습니다).
+     * @brief 바디 쌍의 겹침을 다시 재 지난 step 과 달라진 쌍을 이벤트로 냅니다. 적분하는 솔버는 없습니다(강체가 없다).
      */
     void PhysicsWorld::step( float32 deltaTime )
     {
@@ -269,17 +299,7 @@ namespace sw
         {
             if ( entry._body._aabb.isValid() == false )
                 continue;
-            const CellRange range = CellRange::fromAabb( entry._body._aabb, kCellSize );
-            if ( shouldScanAllBodies( range ) )
-            {
-                listCandidate.clear();
-                for ( const BodyEntry& other : listBody )
-                    listCandidate.push_back( other._handle );
-            }
-            else
-            {
-                gatherCandidateHandles( range, listCandidate );
-            }
+            gatherStepCandidates( CellRange::fromAabb( entry._body._aabb, kCellSize ), listCandidate );
             for ( const BodyHandle candidate : listCandidate )
             {
                 // 쌍마다 한 번 — 작은 핸들 쪽에서만 센다.
@@ -288,10 +308,17 @@ namespace sw
                 const PhysicsBody* pOther = _bodies.get( candidate );
                 if ( pOther == nullptr || queryOverlaps( entry._body._aabb, entry._body._layer, pOther->_aabb, pOther->_layer, _layers ) == false )
                     continue;
-                _listScratchPair.push_back( OverlapPair{ entry._handle, candidate, entry._body._objectId, pOther->_objectId } );
+                _listScratchPair.push_back( OverlapPair{ entry._handle, candidate, entry._body._objectId, pOther->_objectId, 1.0f } );
             }
+            if ( entry._body._bContinuous == SW_TRUE )
+                addSweptPairs( entry._handle, entry._body, listCandidate );
         }
-        std::sort( _listScratchPair.begin(), _listScratchPair.end() );
+        // 같은 쌍이 제자리 겹침 · 쓸림(연속 바디 둘이면 양쪽 쓸림)으로 여러 번 들 수 있다 — 쌍 순서로 줄 세우고 가장 먼저 닿은 하나만 남긴다.
+        std::sort( _listScratchPair.begin(), _listScratchPair.end(), &OverlapPair::isEarlierInOrder );
+        _listScratchPair.erase( std::unique( _listScratchPair.begin(), _listScratchPair.end(),
+                                             []( const OverlapPair& lhs, const OverlapPair& rhs )
+        { return lhs.isSamePair( rhs ); } ),
+                                _listScratchPair.end() );
 
         // 지난 쌍과 견줘 달라진 것만 낸다(둘 다 정렬돼 있다).
         _listOverlapEvent.clear();
@@ -310,13 +337,49 @@ namespace sw
             if ( bHasCurrent && ( bHasPrevious == false || _listScratchPair[currentIndex] < _listOverlapPair[previousIndex] ) )
             {
                 const OverlapPair& pair = _listScratchPair[currentIndex++];
-                _listOverlapEvent.push_back( PhysicsOverlapEvent{ pair._firstObjectId, pair._secondObjectId, SW_TRUE } );
+                _listOverlapEvent.push_back( PhysicsOverlapEvent{ pair._firstObjectId, pair._secondObjectId, pair._time, SW_TRUE } );
                 continue;
             }
             const OverlapPair& pair = _listOverlapPair[previousIndex++];
-            _listOverlapEvent.push_back( PhysicsOverlapEvent{ pair._firstObjectId, pair._secondObjectId, SW_FALSE } );
+            _listOverlapEvent.push_back( PhysicsOverlapEvent{ pair._firstObjectId, pair._secondObjectId, 1.0f, SW_FALSE } );
         }
+        // **먼저 닿은 것이 먼저 간다.** 빠른 총알이 한 step 에 적 둘을 지나가면 받는 쪽은 앞의 이벤트에 반응해 사라진다 — 핸들 순서로 두면
+        // 뒤의 적이 맞을 수 있었다. 같은 때끼리는 쌍 순서 그대로다(안정 정렬).
+        std::stable_sort( _listOverlapEvent.begin(), _listOverlapEvent.end(), []( const PhysicsOverlapEvent& lhs, const PhysicsOverlapEvent& rhs )
+        { return lhs._time < rhs._time; } );
+
+        // 이번 자리가 다음 step 의 출발점이다(연속 바디가 여기서부터 쓸린다).
+        _bodies.forEachHandle( []( SlotHandle, PhysicsBody& body )
+        { body._stepAabb = body._aabb; } );
         _listOverlapPair.swap( _listScratchPair );
+    }
+
+    void PhysicsWorld::addSweptPairs( BodyHandle handle, const PhysicsBody& body, vector<BodyHandle>& inoutListCandidate )
+    {
+        const AABB& from = body._stepAabb;
+        if ( from.isValid() == false || body._aabb.isValid() == false )
+            return;
+        const float3 displacement = body._aabb.getCenter() - from.getCenter();
+        if ( displacement.getLengthSquared() <= 0.0f )
+            return; // 움직이지 않았으면 제자리 겹침이 전부다
+
+        gatherStepCandidates( CellRange::fromAabb( from.unionWith( body._aabb ), kCellSize ), inoutListCandidate );
+        for ( const BodyHandle candidate : inoutListCandidate )
+        {
+            if ( candidate == handle )
+                continue;
+            const PhysicsBody* pOther    = _bodies.get( candidate );
+            const bool         bCanTouch = pOther != nullptr && pOther->_aabb.isValid() && _layers.shouldCollide( body._layer, pOther->_layer );
+            if ( bCanTouch == false )
+                continue;
+            // 닿은 때 0 은 출발점에서 이미 겹쳐 있던 것이다 — 그 겹침은 지난 step 이 쟀고, 지금도 겹치면 제자리 겹침이 잇는다. 넣으면 떠난 쌍의
+            // 끝이 한 step 늦는다.
+            SweepHit   hit{};
+            const bool bEnteredWhileMoving = CCD::sweepAabb( from, displacement, pOther->_aabb, hit ) && hit._time > 0.0f;
+            if ( bEnteredWhileMoving == false )
+                continue;
+            _listScratchPair.push_back( OverlapPair::makeOrdered( handle, body._objectId, candidate, pOther->_objectId, hit._time ) );
+        }
     }
 
     /**

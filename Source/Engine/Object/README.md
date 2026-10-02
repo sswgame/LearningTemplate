@@ -172,21 +172,29 @@ void MonsterComponent::fireProjectile()
 {
     GameObjectManager* mgr = /* 활성 씬의 매니저 */;
     const float3 spawnPos = /* ... */;
+    // 쏜 쪽은 핸들로 넘긴다 — 총알이 날아가는 동안 쏜 쪽이 사라질 수 있다.
+    const GameObjectHandle shooter = getOwner()->getHandle();
 
     // 동결 중이면 프레임 끝으로 미루고, 아니면 즉시 실행
-    mgr->executeOrDeferPostTick( [mgr, spawnPos]()
+    mgr->executeOrDeferPostTick( [mgr, spawnPos, shooter]()
     {
         GameObject* bullet = mgr->createGameObject( hashed_string( "Bullet" ) );
-        SceneComponent* sc = bullet->addComponent<SceneComponent>();
-        sc->setLocalPosition( spawnPos );
+        // 맞음 판정은 콜라이더 겹침이다. 투사체가 시작할 때 연속 충돌로 켜 얇은 적도 건너뛰지 않는다.
+        BoxCollider2DComponent* box = bullet->addComponent<BoxCollider2DComponent>();
+        box->setOffsetScale( float2{ 0.2f, 0.2f } );
+        box->setLocalPosition( spawnPos );
 
         ProjectileComponent* proj = bullet->addComponent<ProjectileComponent>();
         // 여기에서는 포인터가 유효합니다 (동결이 풀린 뒤)
-        proj->ensureProjectileData()->damage = 10;
-        bullet->addTag( "Bullet"_tag );
+        proj->setDamage( 10 );
+        proj->setVelocity( float2{ 12.0f, 0.0f } );
+        proj->setInstigator( shooter ); // 쏜 쪽은 맞지 않고, 피해 이벤트(`DamageAppliedEvent`)의 instigator 가 된다
     } );
 }
 ```
+
+닿은 유닛은 `UnitStatsComponent::takeDamage` 로 피해를 받고(방어력 · 무적 · 이벤트는 거기서), 총알은 그 틱 끝에 사라집니다.
+`"Bullet"` 태그는 투사체가 시작할 때 스스로 붙입니다.
 
 | API | 언제 쓰나 |
 |-----|-----------|

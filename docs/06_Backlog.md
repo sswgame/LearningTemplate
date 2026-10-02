@@ -1666,7 +1666,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 | R1 파일 안 참조가 **이름**이고, 오브젝트마다 읽는 즉시 풀고, 저장 때 살아 있는 포인터에서 다시 만든다 | 56 · 69 · ㊾ · ㉗ | 부모는 id, 복원은 묶음(`ObjectStateBatch`), 못 푼 참조는 보존 | ✅ 구조 ⑤ (3절) |
 | R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ · 만들기 · 지우기 · 옮기기 동사 ✅ ⑥ 잇기 · 버린 값 · 범위 · 불리언 · 대화 조건 ✅ (3절) — 남은 것 아래 |
 | R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ · 바이너리 enum 은 열거자로 · 에디터 씬 · 프리팹 판정 · CheckSourceGlob Shipping ✅ (3절) — 남은 것 아래 |
-| R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ · 모르는 컴포넌트 보존 ✅ ⑯ · 모듈 PROPERTY 판정 ✅ (3절) · GameData 부트스트랩 ✅ ⑰ — 소비 없는 킷 기능은 만든다(사용자 결정 2026-10-03, 진행 중) |
+| R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ · 모르는 컴포넌트 보존 ✅ ⑯ · 모듈 PROPERTY 판정 ✅ (3절) · GameData 부트스트랩 ✅ ⑰ · 투사체 · 공격 피해 ✅ ⑱ — 소비 없는 킷 기능은 만든다(사용자 결정 2026-10-03, 진행 중) |
 | R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 비우기 · 상태 읽기 · 미룸 순서 ✅ ⑫ · 태그 · 스폰 · 이름 · 틱 설정 ✅ ⑮ · 서브틱 · 죽은 가드 ✅ (3절) |
 | R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 루트 하나 · 부착 규칙 · lookAt ✅ ⑬ · 월드 값 이동 · 월드 상자 ✅ ⑭ · 셰이더 노멀 · 단위 메타 ✅ (3절) — 남은 것 아래 |
 
@@ -1678,7 +1678,10 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 - **R3**(구조 ⑦~⑩ · 바이너리 enum 뒤) — enum **타입 자체가 지워진** 뒤 그 칸이 4 바이트 스칼라로 바뀌면 기록 타입을 몰라 여전히 크기로 짐작한다.
   컨테이너 안 원소 하나가 모르는 열거자면 그 컨테이너 칸 전체가 실패한다(XML 은 원소 단위로 계속 읽는다). 한 enum 안의 이름 해시 충돌은 등록 때 검사하지
   않는다. `CheckSourceGlob` 에 남은 하드코딩: `Graphics/RHI/Modules/` 늘 무시, OS 별 무시, 활성 게임 이름 필터(WSL 은 확인 못 함).
-- **R4**(구조 ⑪ · ⑯ · ⑰ 뒤) — **만들기로 결정(2026-10-03)** — 진행 중: 투사체 맞음 처리 · 스프라이트 클립 · 월드 UI 그리기(GameData 부트스트랩은 ⑰).
+- **R4**(구조 ⑪ · ⑯ · ⑰ · ⑱ 뒤) — **만들기로 결정(2026-10-03)** — 진행 중: 스프라이트 클립 · 월드 UI 그리기(GameData 는 ⑰, 투사체 · 공격은 ⑱).
+  투사체: 상대는 그 step 의 자리에 선 것으로 본다(길을 가로질러 건너간 상대는 안 맞는다), 연속 바디 순간이동은 그 길도 쓸린다(전용 API 없음), 기본 레이어
+  행렬은 전부 부딪혀 트리거성 콜라이더도 총알을 멈춘다(게임이 레이어로 정할 것), `ProjectileComponent::_instigator` 는 raw id 로 저장된다(플레이 중 씬 저장 시
+  낡은 id), 룸 이벤트 셋(RoomCleared 등)은 여전히 내는 곳이 없다.
   `GameEvents.h` 의 세이브 · 레벨 요청 이벤트 열둘은 여전히 어휘뿐이다(발행자 · 구독자 없음 — 헤더 경고대로). `GameModeStateMachine` 은 쓰는 곳이 없다.
   **원래 목록**(값은 있는데 읽는 곳이 없다 — 결함이 아니라 끝나지 않은 킷 기능, 2026-10-03 확인): `SpriteAnimatorComponent` 는
   `SpriteComponent::_spriteName` 에 `<애니>-<프레임>` 을 쓰지만 읽는 곳이 없다(렌더러에 아틀라스 영역 · UV 가 없다 — 만들려면 GpuScene 인스턴스 UV + 스프라이트
@@ -2098,6 +2101,26 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (킷 ⑱ 투사체 · 공격 판정이 피해를 준다 — 콜라이더 겹침 + 연속 충돌 바디, 피해는 `takeDamage` 한 길, `DamageAppliedEvent` — 1-0j 의 R4)
+
+- **투사체가 아무것도 맞히지 않았다** — `ProjectileComponent::_damage` 는 세터뿐이었고 제품 코드에 `takeDamage` 를 부르는 곳이 없었다(총알은 적을 지나 수명까지
+  날았다). 이제 같은 오브젝트의 `BoxCollider2DComponent` 겹침으로 맞음을 알고(언리얼 ProjectileMovement + OnComponentHit + ApplyDamage), 쏜 쪽(핸들,
+  `setInstigator`)과 거기 붙은 것 · 다른 투사체는 지나치고, 스탯이 있으면 `takeDamage( 피해, 쏜 쪽 )`, 레이어가 부딪히게 둔 것(벽 포함)에 닿으면 사라진다. 관통 수.
+- **빠른 총알이 얇은 적을 건너뛰었다(터널링)** — 겹침은 step 마다 끝 자리만 봤다. 물리에 연속 바디(`PhysicsBody::_bContinuous` · `_stepAabb`,
+  `BoxCollider2DComponent::setContinuous` — 투사체가 켠다): step 이 지난 자리에서 지금 자리까지 `CCD::sweepAabb` 로 쓸어 처음 닿은 바디도 겹침으로 낸다(t=0 은 빼
+  떠난 쌍의 끝이 늦지 않게). 이벤트는 닿은 때(`_time`) 순서 — 핸들 순서로는 한 step 에 적 둘을 지난 총알이 뒤의 적을 맞힐 수 있었다. `sweepTest` 는 쓰지 않았다
+  (가장 가까운 하나만 내고 자기 · 쏜 쪽을 못 뺀다).
+- **피해 이벤트가 없었다** — HP 가 깎이는 자리(`UnitStatsComponent::applyTakeDamage`) 하나에서 `DamageAppliedEvent`(instigator · target · amount · remainingHp ·
+  bKilled)를 "game" 채널 큐(`push`)에 싣는다. 틱 중 미룬 피해도 instigator 를 들고 간다. HP 바 · 피해 숫자는 이것을 구독하면 된다.
+- **`AttackBaseComponent` 도 피해를 주지 않았다** — 같은 오브젝트 콜라이더가 판정: 휘두르기 전부터 겹친 유닛은 `beginAttack` 에서, 들어온 유닛은 들어올 때,
+  한 번 휘두를 때 유닛마다 한 번, 공격자 계층 제외, instigator 는 맨 위 조상.
+- 같이 본 결함: 바디 레이어가 더할 때 한 번만 적혀 시작한 뒤 `setColliderType` 이 겹침에 닿지 않았다 → `PhysicsWorld::updateBody` 가 매 step 맞춘다.
+  `Engine/Object/README.md` 투사체 예제가 없는 API(`ensureProjectileData()`)를 쓰고 있었다.
+
+**검증.** 새 시험 13(PhysicsTest 3 · BoxCollider2DTest 1 · GameFrameworkTest 9 — 모두 이전 코드에서 진다). 변이 23 모두 죽음(쓸림 · 시간 순서 · t=0 · 출발점 갱신 ·
+쓸림 레이어 · updateBody 레이어 · 연속 안 켬 · instigator 둘 · 투사체끼리 · 파괴 · 벽 · 관통 · 피해 · 이벤트 셋 · 무적 · 공격 판정 다섯). worktree 에서 Debug
+`-LE hostgpu` 30/30, 메인에서 ⑰ · R2 와 합친 뒤 다시 nogpu 전부(모듈 PROPERTY 판정이 새 `vector<GameObjectHandle>` 칸도 본다).
 
 ### 2026-10-03 (R2 남은 것 — JSON 컴포넌트 안의 못 읽은 칸은 그 칸만, 이름으로)
 

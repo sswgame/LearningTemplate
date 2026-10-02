@@ -36,6 +36,7 @@ namespace sw
         , _physicsBody{}
         , _colliderType{ 0 }
         , _colliderIndex{ kNotRegistered }
+        , _bContinuous{ false }
     {
     }
 
@@ -173,12 +174,13 @@ namespace sw
         const AABB  box   = BoxCollider2DComponentInternal::makeColliderAabb( minB, maxB );
         const uint8 layer = static_cast<uint8>( _colliderType );
 
+        // 레이어 · 연속 여부도 매번 맞춘다 — 예전에는 더할 때 한 번 적혀, 시작한 뒤 바꾼 콜라이더 종류가 겹침에 닿지 않았다.
         if ( _physicsBody.isValid() )
         {
-            _pPhysics->setAabb( _physicsBody, box );
+            _pPhysics->updateBody( _physicsBody, box, layer, _bContinuous );
             return;
         }
-        _physicsBody = _pPhysics->addBody( box, layer, pOwner->getObjectId() );
+        _physicsBody = _pPhysics->addBody( box, layer, pOwner->getObjectId(), _bContinuous );
     }
 
 } // namespace sw

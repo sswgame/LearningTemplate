@@ -38,8 +38,17 @@ namespace sw
         /** @brief 바디를 빼고 물리 월드 참조 · 콜라이더 목록 자리를 놓습니다. */
         void onUnregister( GameObjectManager& manager ) override;
 
+        /** @brief 물리 레이어입니다(`CollisionLayers`). 시작한 뒤에 바꿔도 다음 step 부터 겹침이 그 레이어로 걸러집니다. */
         int32 getColliderType() const { return _colliderType; }
         void  setColliderType( int32 type ) { _colliderType = type; }
+
+        /**
+         * @brief 연속 충돌(CCD)로 판정하는지입니다(유니티 `Rigidbody2D.collisionDetectionMode = Continuous` · 언리얼 `bUseCCD`).
+         * @details 켜면 물리가 지난 step 의 자리에서 지금 자리까지 상자를 쓸어, 한 프레임에 얇은 콜라이더를 건너뛴 것도 겹침으로 냅니다
+         *          (`PhysicsWorld::step`). 빠른 것(투사체)에만 켭니다 — 순간이동도 그 길을 쓸어 지나간 것과 닿습니다.
+         */
+        bool isContinuous() const { return _bContinuous; }
+        void setContinuous( bool bContinuous ) { _bContinuous = bContinuous; }
 
         /** @brief 소유자 위치를 기준으로 한 콜라이더 중심 오프셋입니다. */
         float2 getOffsetPosition() const { return _offsetPos; }
@@ -60,7 +69,7 @@ namespace sw
 
     private:
         void unregisterPhysicsBody();
-        /** @brief 바디를 지금 상자에 맞춥니다. 시작 전이거나 꺼져 있으면 바디를 뺍니다(겹침에 들지 않는다). */
+        /** @brief 바디를 지금 상자 · 레이어 · 연속 여부에 맞춥니다. 시작 전이거나 꺼져 있으면 바디를 뺍니다(겹침에 들지 않는다). */
         void syncPhysicsBody();
 
         /**
@@ -81,5 +90,7 @@ namespace sw
         PROPERTY( Category = "Collider", DisplayName = "Collider Type", Tooltip = "Physics collider type index" )
         int32  _colliderType;
         uint32 _colliderIndex; ///< 매니저의 콜라이더 목록 자리(`GameObjectManager::registerCollider`). 없으면 `kNotRegistered`
+        PROPERTY( Category = "Collider", DisplayName = "Continuous", Tooltip = "Sweep the box from its last physics step so a fast mover cannot pass through a thin collider" )
+        bool _bContinuous;
     };
 } // namespace sw

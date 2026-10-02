@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/map.h"
+#include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -8,21 +9,27 @@
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSnapshot.h"
+#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "EngineTest/TestGameObjectMocks.h"
+
 #include "GameFramework/Base/DontDestroyOnLoadComponent.h"
 #include "GameFramework/Base/EffectBaseComponent.h"
+#include "GameFramework/Base/GameEvents.h"
 #include "GameFramework/Base/GameInstanceBase.h"
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/Base/GravityComponent.h"
 #include "GameFramework/Base/SaveGame.h"
 #include "GameFramework/Data/GameData.h"
 #include "GameFramework/Data/GameStrings.h"
+#include "GameFramework/Kits/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/ActionCombat/ActionRoom.h"
+#include "GameFramework/Kits/ActionCombat/AttackBaseComponent.h"
 #include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
 #include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
@@ -39,6 +46,38 @@
 #include "GameFramework/UI/RuntimeHud.h"
 
 #include "TestFramework/TestFramework.h"
+
+namespace sw
+{
+    /** @brief 틱 **안에서** 대상 유닛에 피해를 한 번 주는 컴포넌트입니다 — 틱 직후로 미뤄진 피해가 쏜 쪽(instigator)을 들고 가는지 봅니다. */
+    class MockStrikeInTickComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        UnitStatsComponent* _pTarget{ nullptr };
+        GameObjectHandle    _instigator;
+        int32               _damage{ 0 };
+        int32               _hpSeenInTick{ -1 }; ///< 피해를 준 **직후**(아직 틱 안) 본 HP — 미뤄졌으면 그대로다
+
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
+        void            onTick( float32 deltaTime ) override
+        {
+            Component::onTick( deltaTime );
+            if ( _pTarget == nullptr )
+                return;
+            _pTarget->takeDamage( _damage, _instigator );
+            _hpSeenInTick = _pTarget->getHp();
+            _pTarget      = nullptr;
+        }
+    };
+
+    inline const TypeInfo* MockStrikeInTickComponent::StaticType()
+    {
+        return makeMockComponentTypeInfo( hashed_string( "MockStrikeInTickComponent" ), hashed_string( "sw::MockStrikeInTickComponent" ),
+                                          sizeof( MockStrikeInTickComponent ) );
+    }
+} // namespace sw
 
 using namespace sw;
 
@@ -68,6 +107,68 @@ namespace
         ScopedSceneGameService( const ScopedSceneGameService& )            = delete;
         ScopedSceneGameService& operator=( const ScopedSceneGameService& ) = delete;
     };
+
+    /** @brief 이 시험 동안만 이벤트 버스를 게임 서비스로 겁니다 — 피해 이벤트가 여기로 온다. 어서션이 빠져나가도 풀린다. */
+    struct ScopedEventDispatcherService
+    {
+        explicit ScopedEventDispatcherService( EventDispatcher& dispatcher ) { game::bindLocalService<EventDispatcher>( &dispatcher ); }
+        ~ScopedEventDispatcherService() { game::unbindLocalService<EventDispatcher>(); }
+
+        ScopedEventDispatcherService( const ScopedEventDispatcherService& )            = delete;
+        ScopedEventDispatcherService& operator=( const ScopedEventDispatcherService& ) = delete;
+    };
+
+    /** @brief @p size 크기 콜라이더를 primary 씬 컴포넌트로 단 오브젝트를 (x, y) 에 만듭니다. */
+    GameObject* spawnColliderObject( GameObjectManager& manager, const utf8* pName, float32 x, float32 y, const float2& size )
+    {
+        GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
+        if ( pObject == nullptr )
+            return nullptr;
+        BoxCollider2DComponent* pBox = pObject->addComponent<BoxCollider2DComponent>();
+        if ( pBox == nullptr )
+            return nullptr;
+        pBox->setOffsetScale( size );
+        pBox->setLocalPosition( float3( x, y, 0.0f ) );
+        return pObject;
+    }
+
+    /** @brief 크기 1 콜라이더와 스탯(HP @p hp · 방어 @p defense · 맞은 뒤 무적 @p invincibleTime 초)을 단 유닛을 (x, 0) 에 만듭니다. */
+    UnitStatsComponent* spawnUnit( GameObjectManager& manager, const utf8* pName, float32 x, int32 hp, int32 defense, float32 invincibleTime )
+    {
+        GameObject* pObject = spawnColliderObject( manager, pName, x, 0.0f, float2( 1.0f, 1.0f ) );
+        if ( pObject == nullptr )
+            return nullptr;
+        UnitStatsComponent* pStats = pObject->addComponent<UnitStatsComponent>();
+        if ( pStats != nullptr )
+            pStats->setStats( hp, hp, 0, defense, 0.0f, invincibleTime );
+        return pStats;
+    }
+
+    /** @brief 크기 0.2 콜라이더와 투사체(+X 로 초당 @p speed, 피해 @p damage)를 단 총알을 (x, y) 에 만듭니다. */
+    ProjectileComponent* spawnBullet( GameObjectManager& manager, float32 x, float32 y, float32 speed, int32 damage )
+    {
+        GameObject* pObject = spawnColliderObject( manager, "Bullet", x, y, float2( 0.2f, 0.2f ) );
+        if ( pObject == nullptr )
+            return nullptr;
+        ProjectileComponent* pProjectile = pObject->addComponent<ProjectileComponent>();
+        if ( pProjectile == nullptr )
+            return nullptr;
+        pProjectile->setVelocity( float2( speed, 0.0f ) );
+        pProjectile->setDamage( damage );
+        return pProjectile;
+    }
+
+    /** @brief 유닛의 HP 가 @p hp 에서 바뀔 때까지(최대 @p maxFrame 번) @p deltaTime 씩 틱하고, 바뀐 프레임 번호를 돌려줍니다(안 바뀌면 -1). */
+    int32 tickUntilHpChanges( GameObjectManager& manager, const UnitStatsComponent& stats, int32 hp, float32 deltaTime, int32 maxFrame )
+    {
+        for ( int32 frameIndex = 0; frameIndex < maxFrame; ++frameIndex )
+        {
+            manager.tick( deltaTime );
+            if ( stats.getHp() != hp )
+                return frameIndex;
+        }
+        return -1;
+    }
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -2653,4 +2754,295 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameDataIsBoundAndApplied )
 
     instance.shutdown();
     SW_EXPECT_NULL( game::getService<GameData>() );
+}
+
+// ------------------------------------------------------------------------------
+// ActionCombat 피해 — 투사체 · 공격 판정이 `UnitStatsComponent::takeDamage` 한 길로 피해를 주고 `DamageAppliedEvent` 를 낸다
+// ------------------------------------------------------------------------------
+
+/**
+ * @brief [GameFrameworkTest] 투사체가 스탯 있는 유닛에 닿으면 피해를 한 번 주고 그 틱 끝에 사라진다
+ * @details `ProjectileComponent::_damage` 는 세터뿐이었고 맞음 처리가 없었다 — 총알은 적을 지나 수명이 다할 때까지 날았고, 제품 코드에
+ *          `takeDamage` 를 부르는 곳이 하나도 없었다. 이제 같은 오브젝트의 콜라이더 겹침으로 맞음을 알고 `takeDamage( 피해, 쏜 쪽 )` 뒤 사라진다.
+ *          피해는 방어력을 뺀 값이다(25 − 5 = 20). 사라짐은 표시만이 아니라 그 틱의 파괴 단계에서 매니저에서 빠진다.
+ */
+SW_TEST_CASE( GameFrameworkTest, ProjectileDamagesTheUnitItHitsOnceAndIsGoneAfterThatTick )
+{
+    GameObjectManager    manager;
+    UnitStatsComponent*  pTarget     = spawnUnit( manager, "Target", 3.0f, 100, 5, 0.0f );
+    ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 25 );
+    SW_ASSERT_TRUE( pTarget != nullptr && pProjectile != nullptr );
+    SW_EXPECT_EQUAL( 25, pProjectile->getDamage() );
+    const uint64 bulletId = pProjectile->getOwner()->getObjectId();
+
+    manager.beginPlay();
+    SW_ASSERT_TRUE_MSG( tickUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 ) >= 0, "the bullet never hit the unit" );
+    SW_EXPECT_EQUAL( 80, pTarget->getHp() );
+    SW_EXPECT_TRUE( manager.findGameObjectById( bulletId ) == nullptr );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), manager.getAllGameObjects().size() );
+
+    // 더 흘려도 다시 깎이지 않는다.
+    for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+        manager.tick( 0.1f );
+    SW_EXPECT_EQUAL( 80, pTarget->getHp() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [GameFrameworkTest] 투사체는 쏜 쪽과 거기 붙은 것을 지나쳐 앞의 유닛을 맞힌다
+ * @details 총구에서 나온 총알은 처음에 쏜 몸과 몸에 붙은 총의 콜라이더에 겹쳐 있다. 쏜 쪽을 모르면 첫 step 에 쏜 몸을 맞히고, 몸에 붙은 총(스탯
+ *          없음 — 벽처럼 막는다)에 걸려 사라진다. 쏜 쪽은 핸들로 든다(`setInstigator`) — 총알이 나는 동안 쏜 쪽이 사라져도 매달린 포인터가 없다.
+ */
+SW_TEST_CASE( GameFrameworkTest, ProjectilePassesItsInstigatorAndWhatIsAttachedToIt )
+{
+    GameObjectManager   manager;
+    UnitStatsComponent* pShooter = spawnUnit( manager, "Shooter", 0.0f, 100, 0, 0.0f );
+    UnitStatsComponent* pTarget  = spawnUnit( manager, "Target", 4.0f, 100, 0, 0.0f );
+    GameObject*         pGun     = spawnColliderObject( manager, "Gun", 0.0f, 0.0f, float2( 1.0f, 0.4f ) );
+    SW_ASSERT_TRUE( pShooter != nullptr && pTarget != nullptr && pGun != nullptr );
+    SW_ASSERT_TRUE( pGun->attachToParent( pShooter->getOwner() ) );
+    // 첫 틱 뒤에도 몸 · 총과 겹쳐 있을 만큼 느리게 쏜다(한 틱 0.2).
+    ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 2.0f, 10 );
+    SW_ASSERT_NOT_NULL( pProjectile );
+    pProjectile->setInstigator( pShooter->getOwner()->getHandle() );
+    SW_EXPECT_TRUE( pProjectile->getInstigator() == pShooter->getOwner()->getHandle() );
+
+    manager.beginPlay();
+    SW_ASSERT_TRUE_MSG( tickUntilHpChanges( manager, *pTarget, 100, 0.1f, 40 ) >= 0, "the bullet never reached the target" );
+    SW_EXPECT_EQUAL( 100, pShooter->getHp() );
+    SW_EXPECT_EQUAL( 90, pTarget->getHp() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [GameFrameworkTest] 투사체는 레이어 행렬이 막은 유닛을 지나친다 — 맞히지도, 막히지도 않는다
+ * @details 무엇에 맞고 막힐지는 레이어 행렬(`CollisionLayers`)이 정한다. 같은 편 유닛 · 장식 콜라이더를 거르는 규칙을 투사체가 따로 들지 않는다.
+ */
+SW_TEST_CASE( GameFrameworkTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWith )
+{
+    GameObjectManager manager;
+    manager.getPhysicsWorld().layers().setLayerCollision( 1, 2, false );
+    UnitStatsComponent*  pAlly       = spawnUnit( manager, "Ally", 3.0f, 100, 0, 0.0f );
+    ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 10 );
+    SW_ASSERT_TRUE( pAlly != nullptr && pProjectile != nullptr );
+    pAlly->getOwner()->getComponent<BoxCollider2DComponent>()->setColliderType( 2 );
+    pProjectile->getOwner()->getComponent<BoxCollider2DComponent>()->setColliderType( 1 );
+    const uint64 bulletId = pProjectile->getOwner()->getObjectId();
+
+    manager.beginPlay();
+    for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+        manager.tick( 0.1f );
+    SW_EXPECT_EQUAL( 100, pAlly->getHp() );
+    SW_EXPECT_TRUE( manager.findGameObjectById( bulletId ) != nullptr );
+    manager.endPlay();
+}
+
+/**
+ * @brief [GameFrameworkTest] 한 프레임에 얇은 유닛을 통째로 건너뛰는 빠른 투사체도 맞힌다(터널링 없음)
+ * @details 겹침은 step 마다 끝 자리만 봤다 — 초당 600 으로 나는 총알은 한 프레임(1/60 초)에 10 을 가서 두께 0.1 인 유닛과 한 번도 겹치지
+ *          않았다. 투사체는 시작할 때 제 콜라이더를 연속 충돌로 켜고(`setContinuous`), 물리가 지난 자리에서 지금 자리까지 쓸어 지나간 유닛과의
+ *          겹침을 낸다(`PhysicsWorld::step`).
+ */
+SW_TEST_CASE( GameFrameworkTest, FastProjectileHitsAThinUnitItCrossesInOneFrame )
+{
+    GameObjectManager    manager;
+    UnitStatsComponent*  pTarget     = spawnUnit( manager, "ThinTarget", 5.0f, 100, 0, 0.0f );
+    ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 600.0f, 30 );
+    SW_ASSERT_TRUE( pTarget != nullptr && pProjectile != nullptr );
+    pTarget->getOwner()->getComponent<BoxCollider2DComponent>()->setOffsetScale( float2( 0.1f, 1.0f ) );
+    const BoxCollider2DComponent* pBulletBox = pProjectile->getOwner()->getComponent<BoxCollider2DComponent>();
+    SW_ASSERT_NOT_NULL( pBulletBox );
+    SW_EXPECT_FALSE( pBulletBox->isContinuous() );
+
+    manager.beginPlay();
+    SW_EXPECT_TRUE( pBulletBox->isContinuous() );
+    manager.tick( 1.0f / 60.0f );
+    SW_EXPECT_EQUAL( 70, pTarget->getHp() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), manager.getAllGameObjects().size() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [GameFrameworkTest] 피해는 "game" 채널에 `DamageAppliedEvent` 를 낸다 — 쏜 쪽 · 맞은 쪽 · 들어간 피해 · 남은 HP · 죽음
+ * @details `ActionCombatEvents.h` 에는 룸 이벤트 셋뿐이었고 그마저 내는 곳이 없었다 — HP 바 · 피해 숫자가 받을 것이 없었다. 피해가 HP 에 닿는
+ *          자리(`UnitStatsComponent`) 하나에서 내므로, 틱 안의 게임 코드가 부르든(틱 직후로 미뤄진다) 투사체로 맞든 같은 모양으로 온다. 미룬 피해도
+ *          쏜 쪽을 들고 간다. 큐 쪽(`push`)이라 구독자는 `processEvents` 에서 받는다. 죽인 피해는 남았던 HP 보다 크게 실린다(넘친 피해).
+ */
+SW_TEST_CASE( GameFrameworkTest, DamagePublishesAnEventWithInstigatorTargetAmountAndRemainingHp )
+{
+    EventDispatcher                    dispatcher;
+    const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
+    vector<DamageAppliedEvent>         listReceived;
+    dispatcher.subscribe<DamageAppliedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const DamageAppliedEvent& )>, [&listReceived]( const DamageAppliedEvent& event )
+    { listReceived.push_back( event ); } ) );
+
+    GameObjectManager   manager;
+    GameObject*         pShooter = manager.createGameObject( hashed_string( "Shooter" ) );
+    UnitStatsComponent* pTarget  = spawnUnit( manager, "Target", 3.0f, 30, 5, 0.0f );
+    GameObject*         pStriker = manager.createGameObject( hashed_string( "Striker" ) );
+    SW_ASSERT_TRUE( pShooter != nullptr && pTarget != nullptr && pStriker != nullptr );
+    MockStrikeInTickComponent* pStrike = pStriker->addComponent<MockStrikeInTickComponent>();
+    SW_ASSERT_NOT_NULL( pStrike );
+    pStrike->_pTarget    = pTarget;
+    pStrike->_instigator = pShooter->getHandle();
+    pStrike->_damage     = 25;
+
+    // 1) 틱 안의 피해 — 틱 직후로 미뤄지고, 이벤트는 다음 processEvents 에 온다.
+    manager.beginPlay();
+    manager.tick( 0.1f );
+    SW_EXPECT_EQUAL( 30, pStrike->_hpSeenInTick );
+    SW_EXPECT_EQUAL( 10, pTarget->getHp() );
+    SW_EXPECT_TRUE( listReceived.empty() );
+    dispatcher.processEvents();
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listReceived.size() );
+    SW_EXPECT_TRUE( listReceived[0]._instigator == pShooter->getHandle() );
+    SW_EXPECT_TRUE( listReceived[0]._target == pTarget->getOwner()->getHandle() );
+    SW_EXPECT_EQUAL( 20, listReceived[0]._amount );
+    SW_EXPECT_EQUAL( 10, listReceived[0]._remainingHp );
+    SW_EXPECT_TRUE( listReceived[0]._bKilled == SW_FALSE );
+
+    // 2) 투사체로 죽인다 — 같은 모양, 쏜 쪽은 투사체의 instigator.
+    ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 25 );
+    SW_ASSERT_NOT_NULL( pProjectile );
+    pProjectile->setInstigator( pShooter->getHandle() );
+    SW_ASSERT_TRUE( tickUntilHpChanges( manager, *pTarget, 10, 0.1f, 20 ) >= 0 );
+    dispatcher.processEvents();
+    SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), listReceived.size() );
+    SW_EXPECT_TRUE( listReceived[1]._instigator == pShooter->getHandle() );
+    SW_EXPECT_TRUE( listReceived[1]._target == pTarget->getOwner()->getHandle() );
+    SW_EXPECT_EQUAL( 20, listReceived[1]._amount );
+    SW_EXPECT_EQUAL( 0, listReceived[1]._remainingHp );
+    SW_EXPECT_TRUE( listReceived[1]._bKilled == SW_TRUE );
+    manager.endPlay();
+}
+
+/**
+ * @brief [GameFrameworkTest] 같은 프레임에 닿은 투사체 둘은 둘 다 사라지지만 피해는 무적 시간 때문에 한 번만 깎인다
+ * @details 두 총알의 맞음은 같은 물리 step 의 겹침 이벤트로 차례로 온다. 첫 피해가 건 무적(0.5 초)이 둘째를 막는다 — 투사체는 HP 를 직접
+ *          깎지 않고 무적 · 방어력을 지나는 한 길(`takeDamage`)로만 간다.
+ */
+SW_TEST_CASE( GameFrameworkTest, TwoProjectilesInOneFrameRespectTheInvincibilityWindow )
+{
+    GameObjectManager    manager;
+    UnitStatsComponent*  pTarget = spawnUnit( manager, "Target", 3.0f, 100, 0, 0.5f );
+    ProjectileComponent* pUpper  = spawnBullet( manager, 0.0f, 0.3f, 6.0f, 10 );
+    ProjectileComponent* pLower  = spawnBullet( manager, 0.0f, -0.3f, 6.0f, 10 );
+    SW_ASSERT_TRUE( pTarget != nullptr && pUpper != nullptr && pLower != nullptr );
+
+    manager.beginPlay();
+    SW_ASSERT_TRUE( tickUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 ) >= 0 );
+    SW_EXPECT_EQUAL( 90, pTarget->getHp() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), manager.getAllGameObjects().size() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [GameFrameworkTest] 스탯 없는 콜라이더(벽)는 투사체를 멈추고, 다른 투사체는 멈추지 않는다
+ * @details 무엇에 막힐지는 레이어가 정한다 — 부딪히게 둔 벽은 피해 없이 총알을 지운다(언리얼 투사체가 막는 것에 닿으면 멈추는 것과 같다).
+ *          투사체끼리는 지나친다: 한 자리에서 나란히 나는 총알(산탄)은 처음부터 서로 겹쳐 있어, 서로를 벽으로 보면 쏘자마자 모두 사라진다.
+ */
+SW_TEST_CASE( GameFrameworkTest, WallsStopProjectilesButProjectilesPassEachOther )
+{
+    GameObjectManager    manager;
+    GameObject*          pWall   = spawnColliderObject( manager, "Wall", 3.0f, 2.0f, float2( 0.5f, 1.0f ) );
+    UnitStatsComponent*  pTarget = spawnUnit( manager, "Target", 3.0f, 100, 0, 0.0f );
+    ProjectileComponent* pFirst  = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 10 );
+    ProjectileComponent* pSecond = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 10 );
+    ProjectileComponent* pWalled = spawnBullet( manager, 0.0f, 2.0f, 6.0f, 10 );
+    SW_ASSERT_TRUE( pWall != nullptr && pTarget != nullptr && pFirst != nullptr && pSecond != nullptr && pWalled != nullptr );
+
+    manager.beginPlay();
+    for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+        manager.tick( 0.1f );
+    // 나란히 난 둘은 서로를 지나쳐 유닛에 닿았다(무적 0 이라 둘 다 깎는다). 벽 줄의 총알은 벽에서 멈췄다 — 남은 것은 벽과 유닛뿐이다.
+    SW_EXPECT_EQUAL( 80, pTarget->getHp() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), manager.getAllGameObjects().size() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [GameFrameworkTest] 관통 수만큼 유닛을 꿰뚫고 날다가, 다 쓰면 다음 유닛에서 사라진다
+ */
+SW_TEST_CASE( GameFrameworkTest, PiercingProjectilePassesThroughAsManyUnitsAsItsPierceCount )
+{
+    GameObjectManager    manager;
+    UnitStatsComponent*  pFirst      = spawnUnit( manager, "First", 2.0f, 100, 0, 0.0f );
+    UnitStatsComponent*  pSecond     = spawnUnit( manager, "Second", 4.0f, 100, 0, 0.0f );
+    UnitStatsComponent*  pThird      = spawnUnit( manager, "Third", 6.0f, 100, 0, 0.0f );
+    ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 10 );
+    SW_ASSERT_TRUE( pFirst != nullptr && pSecond != nullptr && pThird != nullptr && pProjectile != nullptr );
+    pProjectile->setPierceCount( 1 );
+    SW_EXPECT_EQUAL( 1, pProjectile->getPierceCount() );
+
+    manager.beginPlay();
+    for ( int32 frameIndex = 0; frameIndex < 20; ++frameIndex )
+        manager.tick( 0.1f );
+    SW_EXPECT_EQUAL( 90, pFirst->getHp() );
+    SW_EXPECT_EQUAL( 90, pSecond->getHp() );
+    SW_EXPECT_EQUAL( 100, pThird->getHp() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), manager.getAllGameObjects().size() );
+    manager.endPlay();
+}
+
+/**
+ * @brief [GameFrameworkTest] 공격 판정은 휘두르는 동안 닿은 유닛마다 한 번 피해를 준다 — 이미 서 있던 유닛도, 들어온 유닛도, 공격자 자신은 빼고
+ * @details `AttackBaseComponent` 는 `beginAttack` · `isAttackActive` · `getDamage` 만 있고 아무에게도 피해를 주지 않았다(값은 있는데 읽는 곳이 없다).
+ *          이제 같은 오브젝트의 콜라이더가 판정이다. 휘두르기 전부터 판정 안에 있던 유닛은 시작할 때, 휘두르는 동안 들어온 유닛은 들어올 때 맞고,
+ *          한 번 휘두를 때 유닛마다 한 번이다(나갔다 다시 들어와도). 공격자 계층(판정이 붙은 몸)은 맞지 않고, 피해 이벤트의 instigator 는 그 몸이다.
+ *          판정이 꺼진 뒤 들어온 유닛은 맞지 않는다.
+ */
+SW_TEST_CASE( GameFrameworkTest, AttackHitsEachUnitInItsHitboxOncePerSwing )
+{
+    EventDispatcher                    dispatcher;
+    const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
+    vector<DamageAppliedEvent>         listReceived;
+    dispatcher.subscribe<DamageAppliedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const DamageAppliedEvent& )>, [&listReceived]( const DamageAppliedEvent& event )
+    { listReceived.push_back( event ); } ) );
+
+    GameObjectManager   manager;
+    UnitStatsComponent* pAttacker = spawnUnit( manager, "Attacker", 0.0f, 100, 0, 0.0f );
+    GameObject*         pHitbox   = spawnColliderObject( manager, "Hitbox", 1.0f, 0.0f, float2( 2.0f, 1.0f ) ); // x 0..2 — 몸(-0.5..0.5)과도 겹친다
+    UnitStatsComponent* pStanding = spawnUnit( manager, "Standing", 1.5f, 100, 0, 0.0f );
+    UnitStatsComponent* pWalker   = spawnUnit( manager, "Walker", 6.0f, 100, 0, 0.0f );
+    SW_ASSERT_TRUE( pAttacker != nullptr && pHitbox != nullptr && pStanding != nullptr && pWalker != nullptr );
+    SW_ASSERT_TRUE( pHitbox->attachToParent( pAttacker->getOwner(), AttachRule::KeepWorld ) );
+    AttackBaseComponent* pAttack = pHitbox->addComponent<AttackBaseComponent>();
+    SW_ASSERT_NOT_NULL( pAttack );
+    SceneComponent* pWalkerBody = pWalker->getOwner()->getPrimarySceneComponent();
+    SW_ASSERT_NOT_NULL( pWalkerBody );
+
+    manager.beginPlay();
+    manager.tick( 0.1f ); // 판정이 몸 · 서 있는 유닛과의 겹침을 받는다 — 아직 휘두르지 않았다
+    SW_EXPECT_EQUAL( 100, pStanding->getHp() );
+
+    // 휘두르기 전부터 서 있던 유닛은 시작할 때 맞는다. 몸은 맞지 않는다.
+    pAttack->beginAttack( 10, 1.0f );
+    SW_EXPECT_EQUAL( 90, pStanding->getHp() );
+    SW_EXPECT_EQUAL( 100, pAttacker->getHp() );
+    dispatcher.processEvents();
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listReceived.size() );
+    SW_EXPECT_TRUE( listReceived[0]._instigator == pAttacker->getOwner()->getHandle() );
+
+    // 휘두르는 동안 들어온 유닛은 들어올 때 맞고, 나갔다 다시 들어와도 다시 맞지 않는다.
+    pWalkerBody->setLocalPosition( float3( 1.2f, 0.0f, 0.0f ) );
+    manager.tick( 0.1f );
+    SW_EXPECT_EQUAL( 90, pWalker->getHp() );
+    pWalkerBody->setLocalPosition( float3( 6.0f, 0.0f, 0.0f ) );
+    manager.tick( 0.1f );
+    pWalkerBody->setLocalPosition( float3( 1.2f, 0.0f, 0.0f ) );
+    manager.tick( 0.1f );
+    SW_EXPECT_EQUAL( 90, pWalker->getHp() );
+    SW_EXPECT_EQUAL( 90, pStanding->getHp() );
+
+    // 판정이 꺼진 뒤 들어온 유닛은 맞지 않는다.
+    for ( int32 frameIndex = 0; frameIndex < 20 && pAttack->isAttackActive(); ++frameIndex )
+        manager.tick( 0.1f );
+    SW_ASSERT_FALSE( pAttack->isAttackActive() );
+    pWalkerBody->setLocalPosition( float3( 6.0f, 0.0f, 0.0f ) );
+    manager.tick( 0.1f );
+    pWalkerBody->setLocalPosition( float3( 1.2f, 0.0f, 0.0f ) );
+    manager.tick( 0.1f );
+    SW_EXPECT_EQUAL( 90, pWalker->getHp() );
+    SW_EXPECT_EQUAL( 100, pAttacker->getHp() );
+    manager.endPlay();
 }

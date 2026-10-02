@@ -19,7 +19,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 별도 타겟:
 
 - **Kits**: 키트끼리 링크하지 않음. 공유 타입은 Base/UI 로.
-  - `ActionCombat`: 공격 히트박스(`AttackBaseComponent`), 투사체, 유닛 스탯, 액션 룸
+  - `ActionCombat`: 공격 히트박스(`AttackBaseComponent`), 투사체, 유닛 스탯, 액션 룸.
+    피해는 한 길이다 — 투사체(`ProjectileComponent`)와 공격 판정은 같은 오브젝트의 `BoxCollider2DComponent` 겹침으로 맞음을 알고
+    `UnitStatsComponent::takeDamage( 피해, 쏜 쪽 )` 을 부르며, HP 가 깎인 그 자리에서 `DamageAppliedEvent`("game" 채널)가 나간다.
   - `Overworld`: 오픈월드형 필드 탐색 시스템
   - `TurnBattle`: 턴제 전투 시스템
 

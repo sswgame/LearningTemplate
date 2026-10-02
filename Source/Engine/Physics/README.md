@@ -98,9 +98,23 @@ if ( physicsWorld.sweepTest( projectileAABB, velocity * deltaTime, 0, hit ) )
 
 `GameObjectManager` 가 틱 · 트랜스폼 적용이 끝난 뒤 게임 스레드에서 한 번 부릅니다(`stepPhysics`):
 
-1. 등록된 콜라이더(`BoxCollider2DComponent`)의 바디를 그 프레임의 월드 자리로 한 번에 맞춘다 — 시작 전이거나 꺼진 콜라이더는 빠진다.
+1. 등록된 콜라이더(`BoxCollider2DComponent`)의 바디를 그 프레임의 월드 자리 · 레이어 · 연속 여부로 한 번에 맞춘다(`updateBody`) — 시작 전이거나 꺼진
+   콜라이더는 빠진다.
 2. `step` 해 이벤트를 받는다.
 3. 이벤트마다 두 오브젝트의 켜진 컴포넌트에 `onOverlapBegin( pOther )` / `onOverlapEnd( pOther )` 를 부른다(상대가 사라졌으면 nullptr).
 
 콜라이더는 틱하지 않습니다. 예전에는 병렬 틱에서 제 바디를 맞춰, 같은 그룹에서 겹침을 묻는 쪽이 스케줄에 따라 옛 · 새 자리를 봤습니다.
 틱 안의 질의(`queryAabb` · `sweepTest`)는 지난 step 의 자리를 봅니다(유니티 물리 질의와 같다).
+
+### 4.1 연속 바디 — 겹침 이벤트에서 터널링 막기
+
+이산 겹침은 step 마다 **끝 자리**만 봅니다. 한 프레임에 얇은 적보다 멀리 가는 총알은 1 절의 그림처럼 겹친 적 없이 지나갑니다. 콜라이더를
+연속으로 두면(`BoxCollider2DComponent::setContinuous` — 투사체는 시작할 때 스스로 켠다) `step` 이 그 바디를 **지난 step 의 자리**(`PhysicsBody::_stepAabb`)에서
+지금 자리까지 `CCD::sweepAabb` 로 쓸어, 그 사이에 처음 닿은 바디도 이번 step 의 겹침으로 칩니다(유니티 `CollisionDetectionMode2D.Continuous`).
+
+- 지나간 쌍은 이번 step 에 시작하고, 다음 step 에(이미 떨어졌으면) 끝납니다.
+- 이벤트 목록은 **닿은 때(`PhysicsOverlapEvent::_time`) 순서**입니다. 총알이 한 step 에 적 둘을 지나가면 앞의 적이 먼저 오고, 총알은 거기서 사라지므로
+  뒤의 적은 맞지 않습니다. 끝 이벤트와 제자리 겹침은 `_time = 1` 입니다.
+- 출발점에서 이미 겹쳐 있던 쌍(닿은 때 0)은 쓸림으로 더하지 않습니다 — 그 겹침은 지난 step 이 쟀습니다. 넣으면 떠난 쌍의 끝이 한 step 늦습니다.
+- 상대는 **이번 step 의 자리**에 서 있는 것으로 봅니다(언리얼 투사체 이동 스윕과 같다). 프레임 사이에 총알 길을 가로질러 건너편으로 간 상대는 닿지 않습니다.
+- 출발점은 바디를 더한 자리부터 잡힙니다. 연속 바디를 순간이동시키면 그 길도 쓸립니다 — 빠른 것에만 켭니다.

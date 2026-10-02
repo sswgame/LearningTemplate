@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -20,7 +21,13 @@ namespace sw
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
 
-        void takeDamage( int32 amount );
+        /**
+         * @brief 피해를 줍니다 — 투사체 · 공격 판정 · 게임 코드가 모두 이 하나를 지납니다(언리얼 `AActor::TakeDamage`).
+         * @details 방어력을 빼고 최소 1 을 깎은 뒤 무적 시간을 겁니다. 죽었거나 무적이면 아무것도 하지 않습니다. HP 가 깎였으면
+         *          `DamageAppliedEvent` 를 "game" 채널 큐에 싣습니다. 틱 중(구조 동결)이면 틱 직후로 미루고, 미룬 것도 @p instigator 를 들고 갑니다.
+         * @param instigator 피해를 낸 쪽(쏜 · 휘두른 오브젝트). 이벤트에 그대로 실립니다. 모르면 무효 핸들
+         */
+        void takeDamage( int32 amount, GameObjectHandle instigator = GameObjectHandle{} );
         void heal( int32 amount );
 
         FUNCTION( Category = "Actions", DisplayName = "Heal 20 HP", CallInEditor )
@@ -44,7 +51,8 @@ namespace sw
         }
 
     private:
-        void applyTakeDamage( int32 amount );
+        /** @brief 피해를 지금 적용하고 깎였으면 `DamageAppliedEvent` 를 냅니다. 피해가 HP 에 닿는 유일한 자리입니다. */
+        void applyTakeDamage( int32 amount, GameObjectHandle instigator );
         void applyHeal( int32 amount );
 
         PROPERTY( Category = "Stats", DisplayName = "HP", Tooltip = "Current Health Points", Min = 0.0, Meta = "Units=HP", Alias = "hp" )

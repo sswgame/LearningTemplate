@@ -193,3 +193,28 @@ SW_TEST_CASE( BoxCollider2DTest, OverlapEventsReachBothObjectsAfterTheTick )
     SW_EXPECT_EQUAL( 0ull, b._pListener->_listEndOther.back() );
     manager.endPlay();
 }
+
+/**
+ * @brief [BoxCollider2DTest] 시작한 뒤 바꾼 콜라이더 종류(레이어)도 겹침에 닿는다
+ * @details 바디의 레이어는 더할 때 한 번 적혔고, 그 뒤로 매 step 맞추는 것은 상자뿐이었다 — 플레이 중 `setColliderType` 으로 레이어를 바꿔도
+ *          (튕겨 낸 총알이 편을 바꾸는 식) 겹침은 옛 레이어로 걸러졌다. 이제 step 직전 동기화가 상자 · 레이어 · 연속 여부를 함께 맞춘다.
+ */
+SW_TEST_CASE( BoxCollider2DTest, ColliderTypeChangedDuringPlayFiltersTheNextStep )
+{
+    sw::GameObjectManager manager;
+    manager.getPhysicsWorld().layers().setLayerCollision( 0, 1, false );
+    const OverlapProbe a = spawnProbe( manager, "A", 0.0f );
+    const OverlapProbe b = spawnProbe( manager, "B", 0.5f );
+    SW_ASSERT_NOT_NULL( a._pListener );
+    SW_ASSERT_NOT_NULL( b._pListener );
+
+    manager.beginPlay();
+    manager.tick( 0.016f );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), a._pListener->_listBeginOther.size() );
+
+    // B 를 A 와 부딪히지 않는 레이어로 옮기면 다음 step 에 겹침이 끝난다.
+    b._pCollider->setColliderType( 1 );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), a._pListener->_listEndOther.size() );
+    manager.endPlay();
+}
