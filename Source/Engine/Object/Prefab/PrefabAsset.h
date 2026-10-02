@@ -17,6 +17,13 @@ namespace sw
     class GameObject;
     class GameObjectManager;
 
+    /// @brief 프리팹 상태 본문의 형식입니다. 읽을 때 한 번 정하고, 상태를 쓰는 쪽은 이것을 봅니다(본문 첫 글자로 다시 짐작하지 않습니다).
+    enum class PrefabStateFormat : uint8
+    {
+        Xml,
+        Json,
+    };
+
     /// @brief 프리팹 에셋입니다(루트 GameObject 상태 템플릿).
     class SW_API PrefabAsset
     {
@@ -41,16 +48,31 @@ namespace sw
 
         /** @brief 프리팹 이름을 반환합니다. */
         const string& getName() const { return _name; }
-        /** @brief 직렬화된 본문 상태 데이터(XML 또는 JSON)를 반환합니다. */
+        /** @brief 직렬화된 본문 상태 데이터(XML 또는 JSON — `getStateFormat`)를 반환합니다. */
         const string& getStateData() const { return _stateData; }
+        /** @brief 상태 본문의 형식입니다(읽을 때 정했습니다). */
+        PrefabStateFormat getStateFormat() const { return _stateFormat; }
+        /**
+         * @brief 프리팹 상태를 오브젝트에 읽어 넣습니다. 오브젝트의 컴포넌트는 모두 다시 만들어집니다(오브젝트는 매니저에 속해야 합니다).
+         * @details 스폰 · 되돌리기 · 오버라이드 비교(CDO) · 형식 변환이 모두 이것을 씁니다. 예전에는 다섯 자리가 본문 첫 글자('{')로 형식을 짐작했고,
+         *          되돌리기 둘은 XML 로만 읽어 JSON 프리팹의 인스턴스를 비웠습니다(컴포넌트를 지운 뒤 읽기에 실패).
+         */
+        bool applyStateTo( GameObject* pTarget ) const;
         /** @brief 로드에 성공했으면 true 입니다. */
         bool isValid() const { return _bValid == SW_TRUE; }
         /** @brief 상태 XML/JSON 안의 `.prefab` 경로를 수집합니다. */
         void collectReferencedPrefabPaths( vector<string>& outListPath ) const;
 
     private:
-        string _name;
-        string _stateData;
+        /**
+         * @brief 상태를 다른 형식의 텍스트로 옮깁니다(XML ↔ JSON). 매니저가 있는 임시 오브젝트를 거칩니다.
+         * @details 예전에는 매니저 없는 `GameObject` 를 거쳐, 컴포넌트를 만들 팩토리가 없어 **컴포넌트를 모두 버린** 본문을 썼습니다.
+         */
+        string convertState( PrefabStateFormat targetFormat ) const;
+
+        string            _name;
+        string            _stateData;
+        PrefabStateFormat _stateFormat;
         // `_bValid` 라는 이름은 이 저장소에서 **두 가지**다 — 여기와 `RenderFramePacket` 은
         // `uint8 : 1` 비트필드이고, `EditorWorkspace` 와 `SceneDocument` 는 진짜 `bool` 이다.
         // `Style/BitfieldBoolean` 린트는 이름으로만 판정하므로 그런 이름은 **일부러 건너뛴다**
@@ -75,6 +97,12 @@ namespace sw
 
         /** @brief 프리팹을 로드합니다. Dev 는 XML/JSON 저작본을, Shipping 은 쿠킹된 .prefab.bin 만 읽습니다. 캐시 키는 확장자를 뺀 정규화 경로입니다. */
         PrefabAsset* loadPrefab( string_view assetRelativePath );
+        /**
+         * @brief 인스턴스를 프리팹 상태로 되돌립니다. 인스턴스의 자리 — 부모 · 이름 · 루트의 위치와 회전 — 는 지킵니다.
+         * @details 유니티 `PrefabUtility.RevertPrefabInstance` 와 같은 규칙입니다(루트의 위치 · 회전은 늘 인스턴스의 것, 스케일은 되돌린다). 예전에는
+         *          상태를 통째로 읽어 넣어, 다른 오브젝트에 붙어 있던 인스턴스가 루트로 떨어지고 이름 · 자리가 프리팹의 것으로 바뀌었습니다.
+         */
+        bool revertInstance( GameObject* pInstance, string_view assetRelativePath );
         /**
          * @brief 프리팹을 스폰합니다. instanceDiff 가 있으면 루트 GameObject 에 적용합니다.
          */

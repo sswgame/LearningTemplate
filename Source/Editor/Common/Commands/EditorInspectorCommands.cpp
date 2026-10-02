@@ -140,13 +140,10 @@ namespace sw::editor
         if ( pResources == nullptr )
             return false;
 
-        PrefabAsset* pLoaded = pResources->getPrefabManager().loadPrefab( prefabPath );
-        if ( pLoaded == nullptr || pLoaded->isValid() == false )
-            return false;
-
+        // 되돌리기는 엔진이 한다 — 형식(XML · JSON)과 인스턴스의 자리(부모 · 이름 · 루트 위치 · 회전)를 프리팹 쪽이 안다.
         const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
-        ObjectStateSerializer::loadFromXmlString( pObj, pLoaded->getStateData() );
-        pObj->applyLoadedHierarchy();
+        if ( pResources->getPrefabManager().revertInstance( pObj, prefabPath ) == false )
+            return false;
         const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
         EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, "Revert to Prefab" );
         return true;

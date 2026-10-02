@@ -407,30 +407,14 @@ namespace sw::editor
         if ( pInstance == nullptr )
             return;
 
-        Scene* pScene = editor::getActiveScene();
-        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+        // 비교용 원형(CDO)은 **씬 밖**에서 만든다 — 언리얼 CDO 처럼 월드에 들지 않는다. 예전에는 활성 씬 매니저 안에 임시 오브젝트로 만들어
+        // 지울 때까지 씬 쪽(틱 · 계층 · 저장)에 보였다.
+        GameObjectManager scratch;
+        GameObject*       pCdo = scratch.createGameObject( hashed_string( "__PrefabDiffCdo" ) );
+        if ( pLoaded->applyStateTo( pCdo ) == false )
             return;
-
-        GameObjectManager* pManager = pScene->getObjectManager();
-        GameObject*        pCdo     = pManager->createGameObject( hashed_string( "__PrefabDiffCdo" ) );
-        if ( pCdo == nullptr )
-            return;
-
-        const string body{ StringUtil::trim( pLoaded->getStateData() ) };
-        bool         bLoadedCdo{ false };
-        if ( body.empty() == false && body.front() == '{' )
-            bLoadedCdo = ObjectStateSerializer::loadFromJsonString( pCdo, pLoaded->getStateData() );
-        else if ( body.empty() == false )
-            bLoadedCdo = ObjectStateSerializer::loadFromXmlString( pCdo, pLoaded->getStateData() );
-        if ( bLoadedCdo == false )
-        {
-            pManager->destroyObject( pCdo );
-            return;
-        }
 
         collectComponentOverrides( pInstance, pCdo, outOverride );
-
-        pManager->destroyObject( pCdo );
     }
 
     void EditorToolAssetCommands::collectComponentOverrides( GameObject* pInstance, GameObject* pCdo, vector<PrefabOverrideItem>& outListOverride )
@@ -498,14 +482,12 @@ namespace sw::editor
         if ( pLoaded == nullptr )
             return;
 
-        GameObjectManager* pManager = editor::getActiveObjectManager();
-        if ( pManager == nullptr )
+        // 비교용 원형(CDO)은 씬 밖에서 만든다(위 `collectPrefabOverrides` 설명). 형식은 프리팹이 안다 — 예전에는 XML 로만 읽어 JSON 프리팹의
+        // 원형이 비었고, 되돌릴 값을 찾지 못했다.
+        GameObjectManager scratch;
+        GameObject*       pCdo = scratch.createGameObject( hashed_string( "__PrefabRevertCdo" ) );
+        if ( pLoaded->applyStateTo( pCdo ) == false )
             return;
-
-        GameObject* pCdo = pManager->createGameObject( hashed_string( "__PrefabRevertCdo" ) );
-        if ( pCdo == nullptr )
-            return;
-        ObjectStateSerializer::loadFromXmlString( pCdo, pLoaded->getStateData() );
 
         Component* pInstanceComponent = pInstance->findComponentByTypeName( hashed_string{ item._componentName } );
         Component* pCdoComp           = pCdo->findComponentByTypeName( hashed_string{ item._componentName } );
@@ -531,7 +513,6 @@ namespace sw::editor
                 item._bModified       = false;
             }
         }
-        pManager->destroyObject( pCdo );
     }
 
     bool EditorToolAssetCommands::applyPrefabOverridesToTemplate( GameObject* pInstance, string_view prefabPath )

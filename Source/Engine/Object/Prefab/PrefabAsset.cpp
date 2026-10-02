@@ -5,6 +5,7 @@
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -113,13 +114,18 @@ namespace sw
                 }
             }
 
-            static bool upgradePrefabXmlBody( string& xmlBody )
+            /** @brief 형식을 모르는 본문(쿠킹한 바이너리 · 직접 준 텍스트)의 형식입니다. 읽을 때 **한 번만** 부릅니다. */
+            static PrefabStateFormat detectStateFormat( string_view stateData )
+            {
+                const string_view trimmed = StringUtil::trim( stateData );
+                return ( trimmed.empty() == false && trimmed.front() == '{' ) ? PrefabStateFormat::Json : PrefabStateFormat::Xml;
+            }
+
+            static bool upgradePrefabXmlBody( string& xmlBody, PrefabStateFormat format )
             {
                 if ( xmlBody.empty() )
                     return false;
-
-                string bodyTrimmed{ StringUtil::trim( xmlBody ) };
-                if ( bodyTrimmed.empty() == false && bodyTrimmed.front() == '{' )
+                if ( format == PrefabStateFormat::Json )
                     return true; // JSON 본문은 XML 업그레이드 대상이 아니다
 
                 string wrapped = "<Prefab>";
@@ -154,6 +160,7 @@ namespace sw
     PrefabAsset::PrefabAsset()
         : _name{}
         , _stateData{}
+        , _stateFormat{ PrefabStateFormat::Xml }
         , _bValid{ SW_FALSE }
         , _reserved{ 0 } {}
 
@@ -215,7 +222,8 @@ namespace sw
         if ( _name.empty() )
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
-        _bValid = SW_TRUE;
+        _stateFormat = PrefabStateFormat::Xml;
+        _bValid      = SW_TRUE;
         SW_LOG_INFO( "Loaded '%#' from %#", _name, absPath );
         return true;
     }
@@ -251,7 +259,8 @@ namespace sw
         if ( _name.empty() )
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
-        _bValid = SW_TRUE;
+        _stateFormat = PrefabStateFormat::Json;
+        _bValid      = SW_TRUE;
         return true;
     }
 
@@ -292,7 +301,8 @@ namespace sw
             return false;
         }
 
-        if ( PrefabAssetInternal::upgradePrefabXmlBody( _stateData ) == false )
+        _stateFormat = PrefabAssetInternal::detectStateFormat( _stateData );
+        if ( PrefabAssetInternal::upgradePrefabXmlBody( _stateData, _stateFormat ) == false )
         {
             SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
             return false;
@@ -307,16 +317,7 @@ namespace sw
     {
         const string absPath = ResourceUtil::getWritePath( assetRelativePath );
 
-        string xmlBody = _stateData;
-        string trimmed{ StringUtil::trim( xmlBody ) };
-
-        // JSON 이면 GameObject 를 거쳐 XML 로 바꾼다
-        if ( trimmed.empty() == false && trimmed.front() == '{' )
-        {
-            GameObject tempObj( hashed_string( _name.c_str() ) );
-            if ( ObjectStateSerializer::loadFromJsonString( &tempObj, trimmed ) )
-                xmlBody = ObjectStateSerializer::saveToXmlString( &tempObj );
-        }
+        const string xmlBody = ( _stateFormat == PrefabStateFormat::Xml ) ? _stateData : convertState( PrefabStateFormat::Xml );
 
         XmlDocument xmlDoc;
         XmlNode     root = xmlDoc.appendRoot( PrefabAssetInternal::kRoot );
@@ -355,27 +356,16 @@ namespace sw
     {
         const string absPath = ResourceUtil::getWritePath( assetRelativePath );
 
-        string jsonStr;
-        string trimmed{ StringUtil::trim( _stateData ) };
-        if ( trimmed.empty() == false && trimmed.front() == '{' )
+        string jsonStr = ( _stateFormat == PrefabStateFormat::Json ) ? _stateData : convertState( PrefabStateFormat::Json );
+        if ( jsonStr.empty() )
         {
-            jsonStr = _stateData;
-        }
-        else
-        {
-            // XML 이면 GameObject 를 거쳐 JSON 으로 직렬화한다
-            GameObject tempObj( hashed_string( _name.c_str() ) );
-            if ( ObjectStateSerializer::loadFromXmlString( &tempObj, _stateData ) )
-                jsonStr = ObjectStateSerializer::saveToJsonString( &tempObj );
-            else
-            {
-                JsonDocument doc;
-                JsonValue    root = doc.makeObject();
-                root.set( "formatVersion" ).setInt( 0 );
-                root.set( "name" ).setString( _name );
-                root.set( "xmlBody" ).setString( _stateData );
-                jsonStr = doc.dump( 1 );
-            }
+            // 상태를 읽지 못했다(타입이 빠진 본문 등). 본문을 그대로 싸서 잃지 않는다.
+            JsonDocument doc;
+            JsonValue    root = doc.makeObject();
+            root.set( "formatVersion" ).setInt( 0 );
+            root.set( "name" ).setString( _name );
+            root.set( "xmlBody" ).setString( _stateData );
+            jsonStr = doc.dump( 1 );
         }
 
         FileUtil::createParentDirectory( absPath );
@@ -420,9 +410,28 @@ namespace sw
             _bValid = SW_FALSE;
             return;
         }
-        _name      = pGameObject->getName().c_str();
-        _stateData = ObjectStateSerializer::saveToXmlString( pGameObject );
-        _bValid    = _stateData.empty() == false ? SW_TRUE : SW_FALSE;
+        _name        = pGameObject->getName().c_str();
+        _stateData   = ObjectStateSerializer::saveToXmlString( pGameObject );
+        _stateFormat = PrefabStateFormat::Xml;
+        _bValid      = _stateData.empty() == false ? SW_TRUE : SW_FALSE;
+    }
+
+    bool PrefabAsset::applyStateTo( GameObject* pTarget ) const
+    {
+        if ( pTarget == nullptr || _stateData.empty() )
+            return false;
+        return ( _stateFormat == PrefabStateFormat::Json ) ? ObjectStateSerializer::loadFromJsonString( pTarget, _stateData )
+                                                           : ObjectStateSerializer::loadFromXmlString( pTarget, _stateData );
+    }
+
+    string PrefabAsset::convertState( PrefabStateFormat targetFormat ) const
+    {
+        // 컴포넌트는 매니저가 이름으로 만든다(역직렬화 팩토리). 쓰고 버리는 매니저 안에서 읽고 다른 형식으로 쓴다 — 씬 쿠커와 같은 방법이다.
+        GameObjectManager scratch;
+        GameObject*       pTemp = scratch.createGameObject( hashed_string( _name.c_str() ) );
+        if ( applyStateTo( pTemp ) == false )
+            return {};
+        return ( targetFormat == PrefabStateFormat::Json ) ? ObjectStateSerializer::saveToJsonString( pTemp ) : ObjectStateSerializer::saveToXmlString( pTemp );
     }
 
     void PrefabAsset::collectReferencedPrefabPaths( vector<string>& outListPath ) const
@@ -431,7 +440,7 @@ namespace sw
         const string trimmed{ StringUtil::trim( _stateData ) };
         if ( trimmed.empty() )
             return;
-        if ( trimmed.front() == '{' )
+        if ( _stateFormat == PrefabStateFormat::Json )
         {
             JsonDocument doc;
             if ( doc.parse( trimmed ) == false )
@@ -531,6 +540,40 @@ namespace sw
         return pCached;
     }
 
+    bool PrefabManager::revertInstance( GameObject* pInstance, string_view assetRelativePath )
+    {
+        if ( pInstance == nullptr )
+            return false;
+        const PrefabAsset* pAsset = loadPrefab( assetRelativePath );
+        if ( pAsset == nullptr || pAsset->isValid() == false )
+            return false;
+
+        // 인스턴스의 자리를 적어 둔다. 상태를 읽으면 컴포넌트가 모두 새로 만들어지고 이름 · 부착 · 트랜스폼이 프리팹의 것이 된다.
+        const hashed_string   name     = pInstance->getName();
+        GameObject*           pParent  = pInstance->getParent();
+        const SceneComponent* pOldRoot = pInstance->getPrimarySceneComponent();
+        const bool            bHadRoot = pOldRoot != nullptr;
+        const float3          position = bHadRoot ? pOldRoot->getLocalPosition() : float3{};
+        const float3          rotation = bHadRoot ? pOldRoot->getLocalRotation() : float3{};
+
+        if ( pAsset->applyStateTo( pInstance ) == false )
+            return false;
+
+        pInstance->setName( name );
+        SceneComponent* pNewRoot = pInstance->getPrimarySceneComponent();
+        if ( pNewRoot != nullptr )
+        {
+            if ( pParent != nullptr && pInstance->getParent() != pParent )
+                pInstance->attachToParent( pParent );
+            if ( bHadRoot )
+            {
+                pNewRoot->setLocalPosition( position );
+                pNewRoot->setLocalRotation( rotation );
+            }
+        }
+        return true;
+    }
+
     GameObject* PrefabManager::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName,
                                       const uint8* pInstanceDiff, size_t instanceDiffSize )
     {
@@ -577,18 +620,9 @@ namespace sw
         if ( pGameObject == nullptr )
             return nullptr;
 
-        if ( pAsset->getStateData().empty() == false )
+        if ( StringUtil::trim( pAsset->getStateData() ).empty() == false )
         {
-            bool   bLoadSuccess{ false };
-            string bodyStr{ StringUtil::trim( pAsset->getStateData() ) };
-            if ( bodyStr.empty() == false && bodyStr.front() == '{' )
-                bLoadSuccess = ObjectStateSerializer::loadFromJsonString( pGameObject, pAsset->getStateData() );
-            else if ( bodyStr.empty() == false )
-                bLoadSuccess = ObjectStateSerializer::loadFromXmlString( pGameObject, pAsset->getStateData() );
-            else
-                bLoadSuccess = true;
-
-            if ( bLoadSuccess == false )
+            if ( pAsset->applyStateTo( pGameObject ) == false )
             {
                 SW_LOG_ERROR( "ObjectState apply failed for '%#' — spawn aborted", pInstanceNameUtf8 );
                 pGameObjectManager->destroyObject( pGameObject );
