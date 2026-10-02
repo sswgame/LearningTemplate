@@ -1,7 +1,9 @@
 #include "pch.h"
 
 #include "Core/Container/map.h"
+#include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
@@ -17,6 +19,7 @@
 
 #include "GameFramework/Base/DontDestroyOnLoadComponent.h"
 #include "GameFramework/Base/EffectBaseComponent.h"
+#include "GameFramework/Base/GameEvents.h"
 #include "GameFramework/Base/GameInstanceBase.h"
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/Base/GravityComponent.h"
@@ -68,6 +71,16 @@ namespace
 
         ScopedSceneGameService( const ScopedSceneGameService& )            = delete;
         ScopedSceneGameService& operator=( const ScopedSceneGameService& ) = delete;
+    };
+
+    /** @brief "game" 채널 이벤트가 이 디스패처로 가게 게임 로컬 서비스로 묶습니다(`GameEventUtil::send` 가 여기서 찾습니다). */
+    struct ScopedGameEventDispatcher
+    {
+        explicit ScopedGameEventDispatcher( EventDispatcher& dispatcher ) { game::bindLocalService<EventDispatcher>( &dispatcher ); }
+        ~ScopedGameEventDispatcher() { game::unbindLocalService<EventDispatcher>(); }
+
+        ScopedGameEventDispatcher( const ScopedGameEventDispatcher& )            = delete;
+        ScopedGameEventDispatcher& operator=( const ScopedGameEventDispatcher& ) = delete;
     };
 } // namespace
 
@@ -578,6 +591,131 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
     SW_EXPECT_TRUE( fileRestoredInstance.loadStateFromFile( tempStateFile ) );
     SW_EXPECT_EQUAL( 77777, fileRestoredInstance._customState._score );
     SW_EXPECT_EQUAL( string( "BossRoom_03" ), fileRestoredInstance._customState._stageName );
+}
+
+/**
+ * @brief [GameFrameworkTest] `GameInstanceBase` 의 세이브 · 로드는 끝난 자리에서 "game" 채널에 `SaveCompletedEvent` · `LoadCompletedEvent` 를 낸다
+ * @details 성공 · 실패 모두 경로와 결과를 싣는다. 경로가 정해지지 않은 저장(인자 없음 · GameData 기본 경로 없음)은 시도가 아니므로 내지 않는다.
+ */
+SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSaveAndLoadCompleted )
+{
+    class PlainGameInstance : public GameInstanceBase
+    {
+    };
+
+    EventDispatcher                 dispatcher;
+    const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
+    vector<SaveCompletedEvent>      listSaved;
+    vector<LoadCompletedEvent>      listLoaded;
+    dispatcher.subscribe<SaveCompletedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const SaveCompletedEvent& )>, [&listSaved]( const SaveCompletedEvent& event )
+    { listSaved.push_back( event ); } ) );
+    dispatcher.subscribe<LoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const LoadCompletedEvent& )>, [&listLoaded]( const LoadCompletedEvent& event )
+    { listLoaded.push_back( event ); } ) );
+
+    PlainGameInstance gameInstance;
+    const string      savePath = test::makeTempPath( "events_state.sav" );
+    SW_EXPECT_TRUE( gameInstance.saveStateToFile( savePath ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), listSaved.size() );
+    SW_EXPECT_EQUAL( savePath, listSaved[0]._savePath );
+    SW_EXPECT_TRUE( listSaved[0]._bSuccess );
+
+    SW_EXPECT_TRUE( gameInstance.loadStateFromFile( savePath ) );
+    const string missingPath = test::makeTempPath( "no_such_state.sav" );
+    SW_EXPECT_FALSE( gameInstance.loadStateFromFile( missingPath ) );
+    SW_ASSERT_EQUAL( size_t( 2 ), listLoaded.size() );
+    SW_EXPECT_EQUAL( savePath, listLoaded[0]._savePath );
+    SW_EXPECT_TRUE( listLoaded[0]._bSuccess );
+    SW_EXPECT_EQUAL( missingPath, listLoaded[1]._savePath );
+    SW_EXPECT_FALSE( listLoaded[1]._bSuccess );
+
+    {
+        test::ScopedDefensiveTestLog expected( "a save with no path and no default save path" );
+        SW_EXPECT_FALSE( gameInstance.saveStateToFile() );
+    }
+    SW_EXPECT_EQUAL( size_t( 1 ), listSaved.size() );
+}
+
+/**
+ * @brief [GameFrameworkTest] `GameInstanceBase` 가 맡긴 씬 로드는 맡긴 자리에서 `LevelLoadRequestedEvent`, 끝난 뒤 첫 `update` 에서 `LevelLoadCompletedEvent` 를 낸다
+ * @details 성공이면 완료 이벤트가 올 때 그 씬이 이미 활성 씬이다. 읽지 못한 씬은 실패(`_bSuccess` false)로 끝난다.
+ */
+SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesLevelLoadEvents )
+{
+    class SceneGameInstance : public GameInstanceBase
+    {
+    public:
+        void setEntranceScene( const string& scenePath ) { _bootstrap._data._entranceScene = scenePath; }
+    };
+
+    const string scenePath = test::makeTempPath( "level_events.scene.xml" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( scenePath, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                                                        "<Scene formatVersion=\"0\" name=\"LevelEvents\">\n"
+                                                        "  <entities>\n"
+                                                        "    <entity name=\"Hero\"/>\n"
+                                                        "  </entities>\n"
+                                                        "</Scene>\n" ) );
+
+    SceneManager sceneManager;
+    SW_ASSERT_TRUE( sceneManager.initialize() );
+    const ScopedSceneGameService    scopedScene{ sceneManager };
+    EventDispatcher                 dispatcher;
+    const ScopedGameEventDispatcher scopedDispatcher{ dispatcher };
+    vector<string>                  listRequested;
+    vector<LevelLoadCompletedEvent> listCompleted;
+    string                          activeSceneAtCompletion;
+    dispatcher.subscribe<LevelLoadRequestedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const LevelLoadRequestedEvent& )>, [&listRequested]( const LevelLoadRequestedEvent& event )
+    { listRequested.push_back( event._levelName ); } ) );
+    dispatcher.subscribe<LevelLoadCompletedEvent>( gameEventChannel(), SW_DELEGATE_LAMBDA( Delegate<void( const LevelLoadCompletedEvent& )>, [&]( const LevelLoadCompletedEvent& event )
+    {
+        listCompleted.push_back( event );
+        const Scene* pActive    = sceneManager.getActiveScene();
+        activeSceneAtCompletion = ( pActive != nullptr ) ? pActive->getName() : string{};
+    } ) );
+
+    // 로드가 끝날 때까지 워커를 기다리며 씬 교체를 돌린다(App 메인 루프의 tickTransitions 자리).
+    const auto drainLoads = [&sceneManager]()
+    {
+        TaskManager& tasks = engine::getTaskManager();
+        for ( int32 stepIndex = 0; stepIndex < 200 && sceneManager.isTransitioning(); ++stepIndex )
+        {
+            tasks.waitAll();
+            sceneManager.tickTransitions();
+        }
+        sceneManager.tickTransitions();
+    };
+
+    SceneGameInstance gameInstance;
+    gameInstance.setEntranceScene( scenePath );
+    SW_ASSERT_EQUAL( scenePath, gameInstance.getEntranceScene() );
+    SW_ASSERT_TRUE( gameInstance.requestEntranceScene() );
+    SW_ASSERT_EQUAL( size_t( 1 ), listRequested.size() );
+    SW_EXPECT_EQUAL( scenePath, listRequested[0] );
+    SW_EXPECT_TRUE( listCompleted.empty() ); // 아직 끝나지 않았다
+
+    drainLoads();
+    gameInstance.update( 0.016f );
+    SW_ASSERT_EQUAL( size_t( 1 ), listCompleted.size() );
+    SW_EXPECT_EQUAL( scenePath, listCompleted[0]._levelName );
+    SW_EXPECT_TRUE( listCompleted[0]._bSuccess );
+    SW_EXPECT_EQUAL( string( "LevelEvents" ), activeSceneAtCompletion );
+    gameInstance.update( 0.016f ); // 한 번만 알린다
+    SW_EXPECT_EQUAL( size_t( 1 ), listCompleted.size() );
+
+    // 읽지 못하는 씬은 요청은 알리고 실패로 끝난다.
+    const string missingPath = test::makeTempPath( "no_such_level.scene.xml" );
+    gameInstance.setEntranceScene( missingPath );
+    {
+        test::ScopedDefensiveTestLog expected( "a scene file that does not exist" );
+        SW_ASSERT_TRUE( gameInstance.requestEntranceScene() );
+        drainLoads();
+        gameInstance.update( 0.016f );
+    }
+    SW_EXPECT_EQUAL( size_t( 2 ), listRequested.size() );
+    SW_ASSERT_EQUAL( size_t( 2 ), listCompleted.size() );
+    SW_EXPECT_EQUAL( missingPath, listCompleted[1]._levelName );
+    SW_EXPECT_FALSE( listCompleted[1]._bSuccess );
+
+    sceneManager.shutdown();
 }
 
 /**

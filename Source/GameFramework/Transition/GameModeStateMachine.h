@@ -66,6 +66,9 @@ namespace sw
     /**
      * @class GameModeStateMachine
      * @brief 장르에 매이지 않고 게임 상태 모드 사이의 수명주기를 관리하는 범용 FSM 입니다.
+     * @details `GameModes::paused()` 로 들어가면 `GamePausedEvent`, 거기서 나가면(다른 모드로 · `reset` · 현재 모드의 `unregisterHandler`)
+     *          `GameResumedEvent` 를 "game" 채널에 냅니다 — 언리얼 `AGameModeBase::SetPause` · `ClearPause` 의 자리입니다. 핸들러 · 모드 변경
+     *          델리게이트가 불린 뒤에 냅니다.
      */
     class SW_GF_API GameModeStateMachine
     {
@@ -113,6 +116,8 @@ namespace sw
          *          콜백이 끝날 때까지는 살아 있습니다.
          */
         shared_ptr<IGameModeHandler> findHandler( const hashed_string& mode ) const;
+        /** @brief @p oldMode 에서 @p newMode 로 옮긴 것이 일시정지에 들어가거나 나간 것이면 `GamePausedEvent` · `GameResumedEvent` 를 냅니다. */
+        static void publishPauseChange( const hashed_string& oldMode, const hashed_string& newMode );
 
         hashed_string                                              _currentMode;
         hashed_string                                              _previousMode;

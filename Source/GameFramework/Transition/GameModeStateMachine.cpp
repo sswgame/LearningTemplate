@@ -4,6 +4,8 @@
 
 #include "Core/Log/Logger.h"
 
+#include "GameFramework/Base/GameEventUtil.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "GameModeStateMachine" );
@@ -49,6 +51,7 @@ namespace sw
         {
             _currentMode = {};
             pHandler->onExit( GameModes::none() );
+            publishPauseChange( mode, GameModes::none() );
         }
     }
 
@@ -96,6 +99,7 @@ namespace sw
             _onModeChanged( oldMode, newMode );
 
         SW_LOG_INFO( "Mode transitioned: %# -> %#", oldMode.c_str(), newMode.c_str() );
+        publishPauseChange( oldMode, newMode );
         return true;
     }
 
@@ -112,10 +116,24 @@ namespace sw
 
         // 상태를 **먼저** 옮기고 알린다. 핸들러가 `onExit` 안에서 이 객체를 들여다볼 수 있고,
         // 그때 보이는 것은 "이미 나간 뒤" 여야 한다.
-        _previousMode = _currentMode;
-        _currentMode  = {};
+        const hashed_string oldMode = _currentMode;
+        _previousMode               = _currentMode;
+        _currentMode                = {};
         if ( pHandler != nullptr )
             pHandler->onExit( GameModes::none() );
+        publishPauseChange( oldMode, GameModes::none() );
+    }
+
+    void GameModeStateMachine::publishPauseChange( const hashed_string& oldMode, const hashed_string& newMode )
+    {
+        const bool bWasPaused = ( oldMode == GameModes::paused() );
+        const bool bIsPaused  = ( newMode == GameModes::paused() );
+        if ( bWasPaused == bIsPaused )
+            return;
+        if ( bIsPaused )
+            GameEventUtil::send( GamePausedEvent{} );
+        else
+            GameEventUtil::send( GameResumedEvent{} );
     }
 
     IGameModeHandler* GameModeStateMachine::getCurrentHandler() const

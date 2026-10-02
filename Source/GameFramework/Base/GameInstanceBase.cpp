@@ -16,6 +16,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
+#include "GameFramework/Base/GameEventUtil.h"
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/Data/GameStrings.h"
 
@@ -40,25 +41,6 @@ namespace sw
                     return nullptr;
                 Scene* pActiveScene = pSceneManager->getActiveScene();
                 return ( pActiveScene != nullptr ) ? pActiveScene->getObjectManager() : nullptr;
-            }
-
-            /** @brief 씬 로드를 요청합니다. 경로가 비었으면 조용히 false, 요청이 실패하면 알리고 false 입니다. */
-            static bool requestSceneLoad( const string& scenePath, const utf8* pWhich )
-            {
-                if ( scenePath.empty() )
-                    return false;
-                SceneManager* pSceneManager = game::getService<SceneManager>();
-                if ( pSceneManager == nullptr )
-                {
-                    SW_LOG_WARNING( "The %# scene '%#' is not opened - no SceneManager service", pWhich, scenePath.c_str() );
-                    return false;
-                }
-                if ( pSceneManager->requestLoadAsync( scenePath ) == false )
-                {
-                    SW_LOG_ERROR( "The %# scene '%#' could not be requested", pWhich, scenePath.c_str() );
-                    return false;
-                }
-                return true;
             }
         };
 
@@ -104,6 +86,7 @@ namespace sw
         // 다른 인스턴스(리로드가 먼저 만든 새 것)가 묶은 것은 건드리지 않는다.
         if ( game::getService<GameData>() == &_bootstrap._data )
             game::unbindLocalService<GameData>();
+        _listPendingSceneLoad.clear();
         _pWindow    = nullptr;
         _pRhiDevice = nullptr;
     }
@@ -149,16 +132,64 @@ namespace sw
 
     bool GameInstanceBase::requestFirstScene()
     {
-        return GameInstanceBaseInternal::requestSceneLoad( getFirstScene(), "first" );
+        return requestSceneLoad( getFirstScene(), "first" );
     }
 
     bool GameInstanceBase::requestEntranceScene()
     {
-        return GameInstanceBaseInternal::requestSceneLoad( getEntranceScene(), "entrance" );
+        return requestSceneLoad( getEntranceScene(), "entrance" );
+    }
+
+    bool GameInstanceBase::requestSceneLoad( const string& scenePath, const utf8* pWhich )
+    {
+        if ( scenePath.empty() )
+            return false;
+        SceneManager* pSceneManager = game::getService<SceneManager>();
+        if ( pSceneManager == nullptr )
+        {
+            SW_LOG_WARNING( "The %# scene '%#' is not opened - no SceneManager service", pWhich, scenePath.c_str() );
+            return false;
+        }
+        TaskFuture<Scene*> future = pSceneManager->requestLoadFuture( scenePath );
+        if ( future.isValid() == false )
+        {
+            SW_LOG_ERROR( "The %# scene '%#' could not be requested", pWhich, scenePath.c_str() );
+            return false;
+        }
+        _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, std::move( future ) } );
+
+        LevelLoadRequestedEvent event{};
+        event._levelName = scenePath;
+        GameEventUtil::send( event );
+        return true;
+    }
+
+    void GameInstanceBase::publishFinishedSceneLoads()
+    {
+        // 끝난 것만 순서를 지키며 뺀다. 대기열에서 밀린 요청은 nullptr 로 끝나 실패로 알린다.
+        size_t keptCount = 0;
+        for ( size_t index = 0; index < _listPendingSceneLoad.size(); ++index )
+        {
+            PendingSceneLoad& pending = _listPendingSceneLoad[index];
+            if ( pending._future.isReady() == false )
+            {
+                if ( keptCount != index )
+                    _listPendingSceneLoad[keptCount] = std::move( pending );
+                ++keptCount;
+                continue;
+            }
+            LevelLoadCompletedEvent event{};
+            event._levelName = pending._scenePath;
+            event._bSuccess  = ( pending._future.get() != nullptr );
+            GameEventUtil::send( event );
+        }
+        _listPendingSceneLoad.resize( keptCount );
     }
 
     void GameInstanceBase::update( float32 deltaTime )
     {
+        if ( _listPendingSceneLoad.empty() == false )
+            publishFinishedSceneLoads();
         onUpdate( deltaTime );
     }
 
@@ -432,9 +463,13 @@ namespace sw
             return false;
         }
         vector<uint8> snapshotBytes;
-        if ( captureSnapshot( snapshotBytes ) == false )
-            return false;
-        return FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
+        const bool    bSaved = captureSnapshot( snapshotBytes ) && FileUtil::writeFile( path, snapshotBytes.data(), snapshotBytes.size() );
+
+        SaveCompletedEvent event{};
+        event._savePath = string( path );
+        event._bSuccess = bSaved;
+        GameEventUtil::send( event );
+        return bSaved;
     }
 
     bool GameInstanceBase::loadStateFromFile( string_view filePath )
@@ -446,8 +481,12 @@ namespace sw
             return false;
         }
         vector<uint8> snapshotBytes;
-        if ( FileUtil::readFile( path, snapshotBytes ) == false )
-            return false;
-        return restoreSnapshot( snapshotBytes );
+        const bool    bLoaded = FileUtil::readFile( path, snapshotBytes ) && restoreSnapshot( snapshotBytes );
+
+        LoadCompletedEvent event{};
+        event._savePath = string( path );
+        event._bSuccess = bLoaded;
+        GameEventUtil::send( event );
+        return bLoaded;
     }
 } // namespace sw
