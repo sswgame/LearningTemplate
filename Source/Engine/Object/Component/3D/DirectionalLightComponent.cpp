@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Shader/Binding/GpuLight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -88,5 +89,13 @@ namespace sw
         const float32 farPlane  = _shadowDistance + _shadowExtent;
         return float4x4::createLookAt( eye, float3::Zero, up ) *
                float4x4::createOrthographic( extent, extent, nearPlane, farPlane );
+    }
+
+    void DirectionalLightComponent::writeGpuLightKindFields( GpuLight& outLight ) const
+    {
+        const float3 direction     = getLightDirection();
+        outLight._directionType._x = direction._x;
+        outLight._directionType._y = direction._y;
+        outLight._directionType._z = direction._z;
     }
 } // namespace sw

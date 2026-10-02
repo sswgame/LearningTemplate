@@ -50,6 +50,10 @@ namespace sw
         /** @brief 빛이 나아가는 방향(정규화)입니다. 기본 방향(아래)을 월드 회전으로 돌린 것입니다. */
         float3 getLightDirection() const;
 
+    protected:
+        /** @brief 위치 · 반경 · 방향과 원뿔의 코사인(`_params.yz`)을 씁니다. */
+        void writeGpuLightKindFields( GpuLight& outLight ) const override;
+
     private:
         PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Meta = "Units=m" )
         float32 _radius;

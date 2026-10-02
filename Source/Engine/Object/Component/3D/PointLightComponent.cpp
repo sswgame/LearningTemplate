@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Shader/Binding/GpuLight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -35,5 +36,11 @@ namespace sw
         // 반경 0 은 셰이더에서 0 으로 나누는 자리다. 아주 작은 값으로 막는다.
         _radius = MathUtil::max( radius, 0.01f );
         onPropertyChanged( hashed_string( "_radius" ) );
+    }
+
+    void PointLightComponent::writeGpuLightKindFields( GpuLight& outLight ) const
+    {
+        const float3 position    = getLightPosition();
+        outLight._positionRadius = float4{ position._x, position._y, position._z, _radius };
     }
 } // namespace sw

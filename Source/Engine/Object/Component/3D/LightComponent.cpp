@@ -8,6 +8,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Shader/Binding/GpuLight.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/LightRegistry.h"
 
@@ -36,6 +37,14 @@ namespace sw
     {
         const float4x4 world = getWorldMatrix();
         return float3{ world._41, world._42, world._43 };
+    }
+
+    void LightComponent::writeGpuLight( GpuLight& outLight ) const
+    {
+        outLight                 = GpuLight{};
+        outLight._colorIntensity = float4{ _color._x, _color._y, _color._z, _intensity };
+        outLight._directionType  = float4{ 0.0f, 0.0f, 0.0f, static_cast<float32>( _lightType ) };
+        writeGpuLightKindFields( outLight );
     }
 
     float3 LightComponent::computeLightDirection( const float3& defaultLocalDirection ) const

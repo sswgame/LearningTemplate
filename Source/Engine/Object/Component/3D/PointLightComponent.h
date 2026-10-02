@@ -37,6 +37,10 @@ namespace sw
         /** @brief 반경을 설정합니다. */
         void setRadius( float32 radius );
 
+    protected:
+        /** @brief 월드 위치와 반경(`_positionRadius`)을 씁니다. */
+        void writeGpuLightKindFields( GpuLight& outLight ) const override;
+
     private:
         PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Meta = "Units=m" )
         float32 _radius;

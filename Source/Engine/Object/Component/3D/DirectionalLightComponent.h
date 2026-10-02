@@ -58,6 +58,10 @@ namespace sw
         /** @brief 이 라이트의 그림자 view-projection 행렬을 만듭니다. */
         float4x4 buildShadowViewProj() const;
 
+    protected:
+        /** @brief 방향(`_directionType.xyz`)을 씁니다. */
+        void writeGpuLightKindFields( GpuLight& outLight ) const override;
+
     private:
         PROPERTY( Category = "Light", DisplayName = "Ambient", Min = 0.0, Tooltip = "Ambient term" )
         float32 _ambient;

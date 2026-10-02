@@ -11,13 +11,15 @@
 
 namespace sw
 {
+    struct GpuLight;
+
     /**
      * @class LightComponent
      * @brief 빛 하나의 공통 부분입니다. 종류(방향광 · 점광 · 스포트)는 파생이 정하고, 등록부와 수집이 그 종류로 나눕니다.
      * @details 언리얼 `ULightComponent` 의 자리입니다. 예전에는 세 빛이 색 · 세기의 세터 · 등록과 해제 · 위치 · 방향 함수를 각자 들었고,
      *          등록부도 종류마다 add · remove · getAll 세 벌이었습니다 — 빛 종류 하나를 더하면 여덟 자리를 고쳐야 했습니다. 방향 함수
-     *          두 벌은 같은 결함(아래)을 같이 갖고 있었습니다. 이제 새 종류는 파생 하나 + 수집(`collectSceneLights`)의 분기 하나 + 셰이더
-     *          분기 하나입니다.
+     *          두 벌은 같은 결함(아래)을 같이 갖고 있었습니다. 새 종류는 파생 하나(GPU 원소의 자기 칸은 `writeGpuLightKindFields`
+     *          재정의) + 셰이더 분기 하나입니다. 수집(`collectSceneLights`)은 종류를 모릅니다.
      *
      *          **방향 규약.** 파생의 기본 방향은 **로컬** 방향이고, 월드 회전(부모 포함)이 그것을 돌립니다. 회전이 없는 루트 빛은 기본
      *          방향을 그대로 씁니다. 예전에는 "로컬 회전이 0 이면 기본 방향, 아니면 전방(+Z)" 이었습니다 — 부모의 회전을 무시했고,
@@ -51,6 +53,13 @@ namespace sw
         /** @brief 이 빛의 월드 위치입니다. */
         float3 getLightPosition() const;
 
+        /**
+         * @brief 이 빛 하나를 GPU 원소로 씁니다. 공통 칸(색 · 세기 · 종류)은 여기서, 종류마다 다른 칸은 파생의 `writeGpuLightKindFields` 가 채웁니다.
+         * @details 그림자 플래그(`_params.x`)는 쓰지 않습니다 — 그림자 맵의 빛은 씬이 하나 고르므로(`Scene::findShadowCastingDirectionalLight`)
+         *          모으는 쪽이 켭니다. @p outLight 의 다른 칸은 모두 덮어씁니다.
+         */
+        void writeGpuLight( GpuLight& outLight ) const;
+
         /** @brief 씬에 붙을 때 빛 등록부의 자기 종류 칸에 자기를 등록합니다. */
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 씬에서 떨어질 때 등록을 해제합니다. */
@@ -70,6 +79,12 @@ namespace sw
          * @details 스케일이 0 이라 방향이 사라지면 기본 방향을 그대로 돌려줍니다. 회전에 대해 연속이고 부모를 따릅니다.
          */
         float3 computeLightDirection( const float3& defaultLocalDirection ) const;
+
+        /**
+         * @brief 종류마다 다른 GPU 칸(위치 · 반경 · 방향 · 원뿔)을 씁니다. `writeGpuLight` 가 공통 칸을 채운 뒤 부릅니다.
+         * @details 방향은 `_directionType` 의 xyz 만 씁니다 — w 는 종류이고 이미 채워져 있습니다.
+         */
+        virtual void writeGpuLightKindFields( GpuLight& outLight ) const = 0;
 
     private:
         PROPERTY( Category = "Light", DisplayName = "Color", Meta = "Color", Tooltip = "Light color" )

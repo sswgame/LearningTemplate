@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Shader/Binding/GpuLight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -64,5 +65,18 @@ namespace sw
     float3 SpotLightComponent::getLightDirection() const
     {
         return computeLightDirection( SpotLightComponentInternal::kDefaultDirection );
+    }
+
+    void SpotLightComponent::writeGpuLightKindFields( GpuLight& outLight ) const
+    {
+        const float3 position      = getLightPosition();
+        const float3 direction     = getLightDirection();
+        outLight._positionRadius   = float4{ position._x, position._y, position._z, _radius };
+        outLight._directionType._x = direction._x;
+        outLight._directionType._y = direction._y;
+        outLight._directionType._z = direction._z;
+        // 원뿔은 **코사인으로** 보낸다. 셰이더가 픽셀마다 acos 를 하지 않게 하려는 것이다.
+        outLight._params._y = MathUtil::cos( _outerConeAngle );
+        outLight._params._z = MathUtil::cos( _innerConeAngle );
     }
 } // namespace sw
