@@ -2079,6 +2079,26 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (결함 59 인스펙터 — 상속받은 프로퍼티가 보이지 않았고, 확장이 본문을 그리면 반사 프로퍼티를 통째로 감췄다: 상속 단계로 조립한다)
+
+(B) 스물다섯째의 남은 것 "에디터 인스펙터의 상속 단계별 조립". 기능 공백이 아니라 결함이었다.
+- 인스펙터가 타입의 **자기** 프로퍼티만 모았다 — 스프라이트에는 트랜스폼(SceneComponent) · 메시 칸(MeshComponent)이 없었다. 구조체 필드도 같았다.
+- 인스펙터 확장을 **정확한 타입 이름**으로만 찾았다 — 게임이 만든 SceneComponent 파생에는 트랜스폼 칸이 없었고, 메시 · 카메라 확장은 트랜스폼을 각자
+  복사해 그렸다.
+- 확장이 본문을 그리면(`drawBody` 가 true) 반사 프로퍼티를 **통째로** 감췄다 — 메시의 Mesh Asset · Bounds Radius · Blend Mode · GPU Spin Seed,
+  카메라의 Priority · Role 을 인스펙터에서 고칠 수 없었다.
+
+언리얼 Details 패널(상속 UPROPERTY 를 모두 보이고 `IDetailCustomization` 이 하위 클래스에도 걸리며 자기가 그린 것만 `HideProperty`) · 유니티
+`CustomEditor( editorForChildClasses: true )` · `DrawDefaultInspector` 와 같은 모양으로 바꿨다. 확장(`IInspectorComponent`)은 이제 타입 사슬 전부에서
+기반 → 파생 순으로 모이고(`InspectorComponentManager::collectForType`) 자기 구역을 더 그린 뒤(`drawSection`) 직접 그린 프로퍼티 이름만 알린다
+(`collectDrawnProperties`). 나머지 반사 프로퍼티는 상속분까지, 카테고리는 기반부터 처음 나온 순서로 그린다 — 이 배치 규칙은 ImGui 없는
+`InspectorPropertyLayout` 에 두어 EditorTest 가 본다. 트랜스폼은 SceneComponent 단계 하나가 그린다(메시 · 카메라의 복사본을 걷었다).
+
+**검증.** `InspectorPropertyLayoutTest.DerivedComponentShowsInheritedPropertiesOnce`(스프라이트에 트랜스폼 · 메시 · 자기 칸이 한 번씩, 트랜스폼 묶음이
+먼저) · `PropertiesDrawnByAnExtensionAreLeftOut`(카메라 — 그린 것만 빠지고 Priority · Role 은 남는다) · `TypeChainRunsFromBaseToDerived`. 변이
+셋(자기 프로퍼티만 · 그린 것 무시 · 사슬이 파생부터)이 모두 실패했다. 에디터 스모크(`-EnableEditor -gv_editorPanelDump=25 -gv_profileFrames=60`)
+종료 코드 0. Debug 29 + hostgpu 2.
+
 ### 2026-10-02 (결함 58 태그 — 틱 안의 `clearTags` 만 미루지 않고 바로 지웠다)
 
 (B) 스물다섯째의 남은 것 "틱 안 자기 변경". `addTag` · `removeTag` 는 틱 중이면 틱 뒤로 미루는데 `clearTags` 만 바로 `TagComponent` 를 비워, 병렬 틱의

@@ -9,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -24,10 +25,10 @@ namespace sw::editor
     {
         struct InspectorComponentManagerInternal
         {
-            static bool drawTransformInspector( SceneComponent* pSceneComp )
+            static void drawTransformInspector( SceneComponent* pSceneComp )
             {
                 if ( pSceneComp == nullptr )
-                    return false;
+                    return;
 
                 ImGui::SeparatorText( "Transform" );
 
@@ -49,29 +50,39 @@ namespace sw::editor
                                      static_cast<float64>( world._x ),
                                      static_cast<float64>( world._y ),
                                      static_cast<float64>( world._z ) );
-                return true;
             }
 
-            /** @brief SceneComponent 전용 트랜스폼 및 기즈모 컨트롤 */
+            /** @brief SceneComponent 와 그 하위 타입 전부의 트랜스폼 및 기즈모 컨트롤 */
             class SceneComponentInspector : public IInspectorComponent
             {
             public:
-                bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+                void drawSection( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
                 {
-                    return drawTransformInspector( static_cast<SceneComponent*>( pComponent ) );
+                    drawTransformInspector( static_cast<SceneComponent*>( pComponent ) );
+                }
+
+                void collectDrawnProperties( vector<hashed_string>& outListName ) const override
+                {
+                    static const hashed_string s_arrName[] = { hashed_string( "_localPosition" ), hashed_string( "_localRotation" ),
+                                                               hashed_string( "_localScale" ) };
+                    outListName.insert( outListName.end(), std::begin( s_arrName ), std::end( s_arrName ) );
                 }
             };
 
-            /** @brief CameraComponent 전용 트랜스폼 및 카메라 투영 컨트롤 */
+            /** @brief CameraComponent 의 투영 컨트롤(트랜스폼은 SceneComponent 단계가 그린다) */
             class CameraComponentInspector : public IInspectorComponent
             {
             public:
-                bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+                void collectDrawnProperties( vector<hashed_string>& outListName ) const override
+                {
+                    static const hashed_string s_arrName[] = { hashed_string( "_fovY" ), hashed_string( "_nearZ" ), hashed_string( "_farZ" ),
+                                                               hashed_string( "_bOrthographic" ), hashed_string( "_orthoHeight" ) };
+                    outListName.insert( outListName.end(), std::begin( s_arrName ), std::end( s_arrName ) );
+                }
+
+                void drawSection( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
                 {
                     auto* pCameraComp = static_cast<CameraComponent*>( pComponent );
-                    if ( drawTransformInspector( pCameraComp ) == false )
-                        return false;
-
                     ImGui::SeparatorText( "Camera" );
                     float32 fovDeg = MathUtil::toDegree( pCameraComp->getFieldOfViewY() );
                     if ( ImGui::SliderFloat( "FOV (Deg)", &fovDeg, 10.0f, 140.0f, "%.1f" ) )
@@ -95,7 +106,6 @@ namespace sw::editor
                         if ( ImGui::DragFloat( "Ortho Height", &orthoH, 0.1f, 0.1f, 100.0f ) )
                             pCameraComp->setOrthoHeight( orthoH );
                     }
-                    return true;
                 }
             };
 
@@ -139,20 +149,16 @@ namespace sw::editor
                 }
             };
 
-            /** @brief MeshComponent 전용 트랜스폼 + 가시성 */
+            /** @brief MeshComponent 의 가시성(반사 프로퍼티가 아니다 — 트랜스폼은 SceneComponent 단계가, 메시 칸은 반사 프로퍼티가 그린다) */
             class MeshComponentInspector : public IInspectorComponent
             {
             public:
-                bool drawBody( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+                void drawSection( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
                 {
                     MeshComponent* pMeshComp = static_cast<MeshComponent*>( pComponent );
-                    if ( drawTransformInspector( pMeshComp ) == false )
-                        return false;
-
-                    bool bVisible = pMeshComp->isVisible();
+                    bool           bVisible  = pMeshComp->isVisible();
                     if ( ImGui::Checkbox( "Visible", &bVisible ) )
                         pMeshComp->setVisible( bVisible );
-                    return true;
                 }
             };
         };
@@ -172,6 +178,19 @@ namespace sw::editor
         if ( it != _mapInspector.end() )
             return it->second.get();
         return nullptr;
+    }
+
+    void InspectorComponentManager::collectForType( const TypeInfo& type, vector<IInspectorComponent*>& outListInspector ) const
+    {
+        outListInspector.clear();
+        vector<const TypeInfo*> listType;
+        InspectorPropertyLayout::collectTypeChain( type, listType );
+        for ( const TypeInfo* pType : listType )
+        {
+            IInspectorComponent* pInspector = find( pType->_name.c_str() );
+            if ( pInspector != nullptr )
+                outListInspector.push_back( pInspector );
+        }
     }
 
     void InspectorComponentManager::registerDefaults()

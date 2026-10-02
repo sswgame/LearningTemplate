@@ -24,6 +24,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorToolAssetCommands.cpp
 		TestEditorViewportMath.cpp
 		TestEditorWorkspaceGuid.cpp
+		TestInspectorPropertyLayout.cpp
 		TestEditorViewportPick.cpp
 		TestReloadFileManager.cpp
 		TestSelectionManager.cpp
@@ -40,6 +41,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPlaySession.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorListFilter.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetType.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorContext.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorService.cpp"

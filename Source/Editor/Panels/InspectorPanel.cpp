@@ -20,6 +20,7 @@
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
+#include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
@@ -63,15 +64,6 @@ namespace sw::editor
                 const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
                 edit();
                 EditorSceneCommands::commitModify( pObj, beforeSnapshot, undoLabel );
-            }
-
-            static const utf8* propLabel( const PropertyInfo& prop )
-            {
-                if ( prop._metadata._displayName.empty() == false )
-                    return prop._metadata._displayName.c_str();
-                if ( prop._listAlias.empty() == false && prop._listAlias.front().empty() == false )
-                    return prop._listAlias.front().c_str();
-                return prop._name.c_str();
             }
 
             static bool isSupportedMethodArgType( string_view typeName )
@@ -231,8 +223,7 @@ namespace sw::editor
         if ( pTypeInfo != nullptr )
         {
             _pEditTargetObject = pObj;
-            ImGui::SeparatorText( "Reflected Properties" );
-            drawTypeProperties( pObj, pTypeInfo );
+            drawTypeProperties( pObj, pTypeInfo, "Reflected Properties", {} );
             ImGui::SeparatorText( "Methods" );
             drawTypeMethods( pObj, pTypeInfo );
             _pEditTargetObject = nullptr;
@@ -462,69 +453,61 @@ namespace sw::editor
 
         ImGui::TextDisabled( "ID: %u", static_cast<uint32>( pComp->getComponentId() ) );
 
-        const TypeInfo*      pTypeInfo  = pComp->getTypeInfo();
-        IInspectorComponent* pInspector = ( pTypeInfo != nullptr )
-                                            ? pContext->getInspectorComponentManager().find( pTypeInfo->_name.c_str() )
-                                            : nullptr;
-
-        if ( pInspector != nullptr )
-            pInspector->drawHeader( pComp );
-
-        bool bHandledByCustomBody{ false };
-        if ( pInspector != nullptr )
-            bHandledByCustomBody = pInspector->drawBody( pComp, pRhiDevice );
-
-        if ( bHandledByCustomBody == false )
+        const TypeInfo* pTypeInfo = pComp->getTypeInfo();
+        if ( pTypeInfo == nullptr )
         {
-            if ( pTypeInfo != nullptr )
-            {
-                _pEditTargetComponent = pComp;
-                ImGui::SeparatorText( "Properties" );
-                drawTypeProperties( pComp, pTypeInfo );
-                ImGui::SeparatorText( "Methods" );
-                drawTypeMethods( pComp, pTypeInfo );
-                _pEditTargetComponent = nullptr;
-            }
-            else
-                EditorWidgets::drawEmptyHint( "No TypeInfo registered for this component." );
+            EditorWidgets::drawEmptyHint( "No TypeInfo registered for this component." );
+            return;
         }
 
-        if ( pInspector != nullptr )
+        // 확장은 이 타입과 그 기반들에 등록된 것 전부다(기반 → 파생). 각자 자기 구역을 그리고 직접 그린 반사 프로퍼티만 감춘다 — 나머지 반사
+        // 프로퍼티는 상속분까지 아래에서 그린다(언리얼 Details 의 `IDetailCustomization` · `HideProperty`).
+        vector<IInspectorComponent*> listInspector;
+        pContext->getInspectorComponentManager().collectForType( *pTypeInfo, listInspector );
+        vector<hashed_string> listDrawnName;
+        for ( IInspectorComponent* pInspector : listInspector )
+            pInspector->drawHeader( pComp );
+        for ( IInspectorComponent* pInspector : listInspector )
+        {
+            pInspector->drawSection( pComp, pRhiDevice );
+            pInspector->collectDrawnProperties( listDrawnName );
+        }
+
+        _pEditTargetComponent = pComp;
+        drawTypeProperties( pComp, pTypeInfo, "Properties", listDrawnName );
+        ImGui::SeparatorText( "Methods" );
+        drawTypeMethods( pComp, pTypeInfo );
+        _pEditTargetComponent = nullptr;
+
+        for ( IInspectorComponent* pInspector : listInspector )
             pInspector->drawFooter( pComp, pRhiDevice );
     }
 
-    void InspectorPanel::drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo )
+    void InspectorPanel::drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName )
     {
         if ( pInstance == nullptr || pTypeInfo == nullptr )
             return;
 
-        map<string, vector<const PropertyInfo*>> grouped;
-        const EditorListFilter                   filter{ _propertyFilter.c_str() };
-
-        pTypeInfo->forEachProperty( [&]( const PropertyInfo& prop )
-        {
-            if ( prop._metadata._bHideInInspector == SW_TRUE )
-                return;
-
-            if ( filter.matchesAny( { string_view{ prop._name.c_str() },
-                                      string_view{ InspectorPanelInternal::propLabel( prop ) },
-                                      string_view{ prop._metadata._category.c_str() } } ) == false )
-                return;
-
-            const string category =
-                prop._metadata._category.empty() ? "General" : string( prop._metadata._category.c_str() );
-            grouped[category].push_back( &prop );
-        } );
+        // 무엇을 어떤 순서로 그릴지는 `InspectorPropertyLayout` 이 정한다 — 상속분까지, 카테고리는 기반부터 처음 나온 순서(예전에는 자기 프로퍼티만,
+        // 카테고리는 알파벳 순이었다).
+        const EditorListFilter         filter{ _propertyFilter.c_str() };
+        vector<InspectorPropertyGroup> listGroup;
+        InspectorPropertyLayout::collectPropertyGroups( *pTypeInfo, listDrawnName, filter, listGroup );
 
         // 검색어가 아무 프로퍼티도 맞히지 못하면 그렇다고 알려 준다. 예전에는 빈 공간이었다.
-        if ( grouped.empty() && filter.isActive() )
+        if ( listGroup.empty() )
         {
-            EditorWidgets::drawNoSearchResultHint( filter.getText() );
+            if ( filter.isActive() )
+                EditorWidgets::drawNoSearchResultHint( filter.getText() );
             return;
         }
 
-        for ( const auto& [category, props] : grouped )
+        if ( pSectionTitle != nullptr )
+            ImGui::SeparatorText( pSectionTitle );
+        for ( const InspectorPropertyGroup& group : listGroup )
         {
+            const string& category = group._category;
+            const auto&   props    = group._listProperty;
             if ( ImGui::CollapsingHeader( category.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) == false )
                 continue;
 
@@ -539,7 +522,7 @@ namespace sw::editor
                     ImGui::TableNextColumn();
 
                     ImGui::AlignTextToFramePadding();
-                    ImGui::TextUnformatted( InspectorPanelInternal::propLabel( *prop ) );
+                    ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( *prop ) );
                     EditorWidgets::drawTooltip( prop->_metadata._tooltip.c_str() );
 
                     if ( ImGui::BeginPopupContextItem( "PropCtx" ) )
@@ -860,12 +843,12 @@ namespace sw::editor
             {
                 ImGui::PushID( nestedProp._name.c_str() );
                 ImGui::AlignTextToFramePadding();
-                ImGui::BulletText( "%s", InspectorPanelInternal::propLabel( nestedProp ) );
+                ImGui::BulletText( "%s", InspectorPropertyLayout::getPropertyLabel( nestedProp ) );
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( -FLT_MIN );
                 drawPropertyWidget( pNestedPtr, nestedProp );
                 ImGui::PopID();
-            } );
+            }, true ); // 구조체의 기반 필드도 그린다(컴포넌트와 같은 규칙)
             ImGui::TreePop();
         }
         return;

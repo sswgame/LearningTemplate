@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
@@ -65,8 +66,11 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 3) 리플렉션 위젯
         // ------------------------------------------------------------------------------
-        /** @brief 타입의 프로퍼티 목록을 그립니다. */
-        void drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo );
+        /**
+         * @brief 타입의 반사 프로퍼티를 상속분까지 카테고리별로 그립니다(`InspectorPropertyLayout`). 그릴 것이 있을 때만 @p pSectionTitle 구분선을 둡니다.
+         * @param listDrawnName 인스펙터 확장이 이미 그린 프로퍼티 이름 — 다시 그리지 않습니다.
+         */
+        void drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName );
         /** @brief 단일 프로퍼티 위젯을 그립니다. 값이 바뀌면 편집 대상에 통지합니다. */
         void drawPropertyWidget( void* pInstance, const PropertyInfo& prop );
         /** @brief 위젯 본문. 통지 판정은 감싸는 drawPropertyWidget 이 합니다. */
