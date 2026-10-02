@@ -148,10 +148,10 @@ namespace sw
         if ( _listGameObject.empty() == false )
             tickComponentsPhase( deltaTime );
 
-        // 지연된 계층 변경(attach · detach)을 인스턴스가 살아 있는 동안 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
+        // 지연된 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성)을 **부른 순서대로** 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.deferredTransforms" );
-            _deferredTransformQueue.drain();
+            _deferredStructuralQueue.drain();
         }
 
         // 틱 중의 세터가 쓴 것(대기 칸 · 쓰기 큐)을 적용한다. 구조 변경(위의 지연 attach · detach)이 끝난 뒤라 부모 사슬이 안정됐다.
@@ -339,15 +339,15 @@ namespace sw
             return;
 
         // 이 스레드가 스크래치 슬롯을 받지 못했다(도우미 칸이 다 찬 드문 경우). 계층 변경과 같은 지연 경로로 가서, 틱 뒤에 한 건짜리 배치로 적용한다.
-        deferTransformUpdate( [this, write]()
+        deferStructuralChange( [this, write]()
         {
             _transformHierarchy.applyBatch( *this, &write, 1 );
         } );
     }
 
-    void GameObjectManager::deferTransformUpdate( TransformUpdateDelegate func )
+    void GameObjectManager::deferStructuralChange( StructuralChangeDelegate func )
     {
-        _deferredTransformQueue.push( std::move( func ) );
+        _deferredStructuralQueue.push( std::move( func ) );
     }
 
     void GameObjectManager::deferPostTick( PostTickDelegate func )

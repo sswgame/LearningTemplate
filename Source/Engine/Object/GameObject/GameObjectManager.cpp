@@ -102,7 +102,7 @@ namespace sw
         , _beginPlayMutex{}
         , _listPendingBeginPlay{}
         , _listProcessingBeginPlay{}
-        , _deferredTransformQueue{}
+        , _deferredStructuralQueue{}
         , _deferredPostTickQueue{}
         , _mapFactory{}
         , _mapFactoryModule{}
@@ -510,6 +510,8 @@ namespace sw
     {
         if ( pComp == nullptr )
             return;
+        // 해체는 틱 밖에서만 한다 — 틱 중의 제거 · 비우기는 미뤄져 틱 뒤의 지연 파괴가 여기로 온다.
+        SW_ASSERT( isStructuralMutationFrozen() == false );
 
         // **컴포넌트 해체는 여기 하나다** — 등록 해제 → 파괴 콜백 → 소유자 끊기 → 소멸 → 반납.
         // 등록부는 raw 포인터를 들고 있다(렌더 경로가 프레임마다 전부 훑으므로 핸들은 비싸다). 그래서 메모리를 실제로 놓는
@@ -637,7 +639,7 @@ namespace sw
                 _listPendingBeginPlay.clear();
             }
 
-            _deferredTransformQueue.clear();
+            _deferredStructuralQueue.clear();
             _deferredPostTickQueue.clear();
 
             _listGameObject.clear();

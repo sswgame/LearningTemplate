@@ -297,7 +297,7 @@ namespace sw
     {
         GameObjectManager*        pManager = _pManager;
         const sw::ComponentHandle handle   = getHandle();
-        pManager->deferTransformUpdate( [pManager, handle, pMethod]()
+        pManager->deferStructuralChange( [pManager, handle, pMethod]()
         {
             SceneComponent* pSelf = static_cast<SceneComponent*>( pManager->resolveComponent( handle ) );
             if ( pSelf != nullptr )
@@ -362,7 +362,7 @@ namespace sw
             GameObjectManager*        pManager     = _pManager;
             const sw::ComponentHandle selfHandle   = getHandle();
             const sw::ComponentHandle parentHandle = ( pParent != nullptr ) ? pParent->getHandle() : sw::ComponentHandle{};
-            pManager->deferTransformUpdate( [pManager, selfHandle, parentHandle]()
+            pManager->deferStructuralChange( [pManager, selfHandle, parentHandle]()
             {
                 SceneComponent* pSelf           = static_cast<SceneComponent*>( pManager->resolveComponent( selfHandle ) );
                 SceneComponent* pResolvedParent = parentHandle.isValid() ? static_cast<SceneComponent*>( pManager->resolveComponent( parentHandle ) ) : nullptr;

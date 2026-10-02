@@ -240,7 +240,7 @@ namespace sw
             }
         }
 
-        /** @brief 소유 컴포넌트를 모두 해제합니다(직렬화 복원용). */
+        /** @brief 소유 컴포넌트를 모두 해제합니다(직렬화 복원용). 컴포넌트 틱 중이면 `removeComponent` 처럼 틱 뒤로 미룹니다. */
         void clearComponents();
 
         /**
@@ -318,8 +318,11 @@ namespace sw
          *          잠금을 두 번 잡았습니다.
          */
         void destroyOwnedComponent( Component* pComp );
-        /** @brief 틱이 끝난 뒤 이 오브젝트에 @p func 를 돌립니다(그때까지 살아 있으면). id 로 다시 찾습니다. */
-        void deferOnSelfPostTick( Delegate<void( GameObject& )> func );
+        /**
+         * @brief 틱이 끝난 뒤 이 오브젝트에 @p func 를 돌립니다(그때까지 살아 있으면). id 로 다시 찾습니다.
+         * @details 구조 변경 큐(`GameObjectManager::deferStructuralChange`)에 들어간다 — 부착 · 떼기와 같은 큐라 부른 순서대로 적용된다.
+         */
+        void deferOnSelfStructural( Delegate<void( GameObject& )> func );
         /** @brief 우리 씬 컴포넌트에 붙은 @p pChildComp 가 자식 오브젝트의 primary 면 그 오브젝트를, 아니면(같은 오브젝트 안의 부착 · 다른 컴포넌트) nullptr 를 반환합니다. */
         GameObject* findChildObjectAttachedTo( const SceneComponent* pChildComp ) const;
         /**
@@ -403,7 +406,7 @@ namespace sw
         {
             // 틱 중이다. 인자를 값으로 싸 두었다가 틱 뒤에 자기 자신에게 다시 부른다. 그 사이 죽었으면 아무 일도 없다.
             auto packedArgs = std::make_tuple( std::decay_t<Args>( std::forward<Args>( args ) )... );
-            deferOnSelfPostTick( Delegate<void( GameObject& )>( [packedArgs = std::move( packedArgs )]( GameObject& self ) mutable
+            deferOnSelfStructural( Delegate<void( GameObject& )>( [packedArgs = std::move( packedArgs )]( GameObject& self ) mutable
             {
                 std::apply( [&self]( auto&&... forwarded )
                 { self.addComponent<T>( std::forward<decltype( forwarded )>( forwarded )... ); },

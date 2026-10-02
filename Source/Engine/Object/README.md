@@ -73,8 +73,9 @@ flowchart TD
   B --> C[beginTick<br/>구조 변경 동결]
   C --> D[컴포넌트 onTick<br/>병렬 실행]
   D --> E[finishTick<br/>동결 해제]
-  E --> F[틱 중 쓰기 큐 적용<br/>슬롯별 트랜스폼 쓰기 배치]
-  F --> G[deferPostTick 실행<br/>스폰·addComponent·데미지 등]
+  E --> E2[구조 변경 큐 실행 — 부른 순서<br/>addComponent·attach·detach·태그·활성]
+  E2 --> F[틱 중 쓰기 큐 적용<br/>슬롯별 트랜스폼 쓰기 배치]
+  F --> G[deferPostTick 실행<br/>스폰·데미지 등]
   G --> H[pending GO 병합]
   H --> I[필요 시 트랜스폼 재 flush]
   I --> J[지연 삭제 처리]
@@ -135,7 +136,7 @@ flowchart LR
     A2 --> A3["반환값 = nullptr"]
   end
   subgraph after ["finishTick 이후"]
-    C1["deferPostTick 실행"]
+    C1["구조 변경 큐 실행(부른 순서)"]
     C1 --> C3["컴포넌트 실제로 생김"]
   end
   during --> after
@@ -368,7 +369,8 @@ mgr->destroyComponentDeferred( comp );
 | 실수 | 결과 | 올바른 방법 |
 |------|------|-------------|
 | `onTick`에서 `addComponent` 후 바로 `->` | `nullptr` 역참조 | `executeOrDeferPostTick` 안에 생성+초기화 |
-| tick 중 `attachToParent` | 레이스 / 크래시 | 틱 밖 또는 지연 큐 (계층 API는 동결 중 거부) |
+| tick 중 `attachToParent` 의 결과를 바로 기대 | 아직 안 붙어 있다 | 동결 중에는 **미뤄진다** — 틱 직후 구조 변경 큐가 부른 순서대로 붙인다(같은 틱에 붙인 씬 컴포넌트 뒤에) |
+| tick 중 상태 읽기(`ObjectStateSerializer::load*` 제자리) | 거절(false + 오류) | 컴포넌트를 모두 다시 만드는 일이라 틱 중에는 못 한다 — `executeOrDeferPostTick` 으로 감쌀 것 |
 | Games에서 `engine::getResourceManager` | 레이어 위반 | `game::getResourceManager()` |
 | 태그 추가 직후 같은 프레임에 `findByTag` | 아직 안 보일 수 있음 | post-tick 이후, 또는 같은 deferred 블록 안에서 처리 |
 
@@ -384,10 +386,13 @@ flowchart TB
     DM["UnitStats takeDamage / heal<br/>게임프레임워크"]
   end
   subgraph when ["동결 중이면"]
+    SC["GameObjectManager::deferStructuralChange<br/>(부른 순서, 틱 직후 먼저)"]
     PT["GameObjectManager::deferPostTick"]
   end
-  AC --> PT
-  TG --> PT
+  AC --> SC
+  TG --> SC
+  AT["attachToParent / detachFromParent"] --> SC
+  RM["removeComponent · clearComponents"] --> DD["지연 파괴 목록(틱 뒤 처리)"]
   DM --> PT
 ```
 

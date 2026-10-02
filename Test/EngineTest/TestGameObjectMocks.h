@@ -16,6 +16,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
@@ -55,8 +56,15 @@ namespace sw
         float3             _tickMovePos{};
         GameObjectManager* _pBeginPlaySpawnManager{ nullptr }; ///< 설정되면 onBeginPlay 가 이 매니저에 오브젝트 하나를 만든다
         int32              _beginPlayCount{ 0 };
-        string             _meshNameAtBeginPlay;      ///< onBeginPlay 가 본 `_meshName`(붙인 뒤 세팅한 값을 보는지)
-        int32*             _pEndPlayCount{ nullptr }; ///< onEndPlay 횟수를 적을 곳 — 컴포넌트가 사라진 뒤에도 읽도록 밖에 둔다
+        string             _meshNameAtBeginPlay;               ///< onBeginPlay 가 본 `_meshName`(붙인 뒤 세팅한 값을 보는지)
+        int32*             _pEndPlayCount{ nullptr };          ///< onEndPlay 횟수를 적을 곳 — 컴포넌트가 사라진 뒤에도 읽도록 밖에 둔다
+        GameObject*        _pTickClearOwner{ nullptr };        ///< 설정되면 틱이 그 오브젝트의 컴포넌트를 모두 비운다(`clearComponents`)
+        size_t             _componentCountAfterTickClear{ 0 }; ///< 비운 **직후**(아직 틱 안) 그 오브젝트의 목록 길이 — 미뤄졌으면 그대로다
+        GameObject*        _pTickLoadTarget{ nullptr };        ///< 설정되면 틱이 그 오브젝트에 `_tickLoadXml` 을 제자리로 읽는다
+        string             _tickLoadXml;
+        int32              _tickLoadResult{ -1 };       ///< 그 결과(1 성공 · 0 실패 · -1 안 함)
+        GameObject*        _pTickAdoptChild{ nullptr }; ///< 설정되면 틱이 이 오브젝트에 씬 컴포넌트를 붙이고 이어 `_pTickAdoptParent` 에 붙인다
+        GameObject*        _pTickAdoptParent{ nullptr };
 
         /** @brief 부른 횟수를 세고, 설정된 매니저가 있으면 오브젝트 하나를 만듭니다(onBeginPlay 안의 스폰). */
         void onBeginPlay() override
@@ -88,6 +96,18 @@ namespace sw
                 _pTickRemoveOwner->removeComponent( _pTickRemoveComp );
             if ( _pTickAttachChild != nullptr && _pTickAttachParent != nullptr )
                 (void)_pTickAttachChild->attachToComponent( _pTickAttachParent ); // 붙었는지는 시험이 계층으로 본다
+            if ( _pTickClearOwner != nullptr )
+            {
+                _pTickClearOwner->clearComponents();
+                _componentCountAfterTickClear = _pTickClearOwner->getComponents().size(); // 삭제 대기도 센다 — 해제됐으면 목록에서 빠졌다
+            }
+            if ( _pTickLoadTarget != nullptr )
+                _tickLoadResult = ObjectStateSerializer::loadFromXmlString( _pTickLoadTarget, _tickLoadXml ) ? 1 : 0;
+            if ( _pTickAdoptChild != nullptr && _pTickAdoptParent != nullptr )
+            {
+                (void)_pTickAdoptChild->addComponent<SceneComponent>();      // 틱 중이라 미뤄진다(nullptr)
+                (void)_pTickAdoptChild->attachToParent( _pTickAdoptParent ); // 이것도 미뤄진다 — 붙었는지는 시험이 본다
+            }
         }
     };
 

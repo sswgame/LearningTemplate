@@ -204,6 +204,15 @@ namespace sw
     template <typename DeserializeStateFunc>
     bool ObjectStateSerializer::loadStateInPlace( GameObject* pGameObject, const ObjectLoadContext& context, DeserializeStateFunc&& deserializeState )
     {
+        // 제자리 읽기는 컴포넌트를 모두 비우고 다시 만든다 — 컴포넌트 틱 중에는 할 수 없다(다른 워커가 그 컴포넌트를 틱한다). 결과를 바로 돌려줘야
+        // 하므로 미루지 않고 거절한다. 틱 안에서는 `GameObjectManager::executeOrDeferPostTick` 으로 감싸 부를 것.
+        const GameObjectManager* pManager = pGameObject->getManager();
+        if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
+        {
+            SW_LOG_ERROR( "State of '%#' cannot be loaded during the component tick - defer it (executeOrDeferPostTick)", pGameObject->getName().c_str() );
+            return false;
+        }
+
         const hashed_string                              oldName = pGameObject->getName();
         vector<ObjectStateSerializerInternal::ChildLink> listChildLink;
         ObjectStateSerializerInternal::captureChildLinks( pGameObject, listChildLink );

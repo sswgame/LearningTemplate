@@ -188,7 +188,7 @@ namespace sw
         // 틱 중(병렬 onTick — 시퀀서가 대상을 켜고 끈다)이면 다른 오브젝트의 계층 상태를 워커가 쓰지 않게 틱 뒤로 미룬다. addTag 와 같다.
         if ( isComponentMutationFrozen() )
         {
-            deferOnSelfPostTick( Delegate<void( GameObject& )>( [bActive]( GameObject& self )
+            deferOnSelfStructural( Delegate<void( GameObject& )>( [bActive]( GameObject& self )
             { self.setActive( bActive ); } ) );
             return;
         }
@@ -221,7 +221,7 @@ namespace sw
         {
             const uint64 childId  = _objectId;
             const uint64 parentId = pParent->getObjectId();
-            pManager->deferTransformUpdate( [pManager, childId, parentId]()
+            pManager->deferStructuralChange( [pManager, childId, parentId]()
             {
                 GameObject* pChildObj  = pManager->findGameObjectById( childId );
                 GameObject* pParentObj = pManager->findGameObjectById( parentId );
@@ -250,7 +250,7 @@ namespace sw
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             const uint64 childId = _objectId;
-            pManager->deferTransformUpdate( [pManager, childId]()
+            pManager->deferStructuralChange( [pManager, childId]()
             {
                 GameObject* pChildObj = pManager->findGameObjectById( childId );
                 if ( pChildObj != nullptr )
@@ -411,7 +411,7 @@ namespace sw
         if ( isComponentMutationFrozen() )
         {
             const TagID tagCopy = tag;
-            deferOnSelfPostTick( Delegate<void( GameObject& )>( [tagCopy]( GameObject& self )
+            deferOnSelfStructural( Delegate<void( GameObject& )>( [tagCopy]( GameObject& self )
             { self.addTag( tagCopy ); } ) );
             return;
         }
@@ -428,7 +428,7 @@ namespace sw
         if ( isComponentMutationFrozen() )
         {
             const TagID tagCopy = tag;
-            deferOnSelfPostTick( Delegate<void( GameObject& )>( [tagCopy]( GameObject& self )
+            deferOnSelfStructural( Delegate<void( GameObject& )>( [tagCopy]( GameObject& self )
             { self.removeTag( tagCopy ); } ) );
             return;
         }
@@ -444,7 +444,7 @@ namespace sw
         // 비웠다(유니티 DOTS `EntityCommandBuffer` · 언리얼 Mass 명령 버퍼처럼 병렬 구간의 변경은 동기점에서 한다).
         if ( isComponentMutationFrozen() )
         {
-            deferOnSelfPostTick( Delegate<void( GameObject& )>( []( GameObject& self )
+            deferOnSelfStructural( Delegate<void( GameObject& )>( []( GameObject& self )
             { self.clearTags(); } ) );
             return;
         }
@@ -608,13 +608,13 @@ namespace sw
         t_componentIdRestore._cursor    = _previousCursor;
     }
 
-    void GameObject::deferOnSelfPostTick( Delegate<void( GameObject& )> func )
+    void GameObject::deferOnSelfStructural( Delegate<void( GameObject& )> func )
     {
         if ( _pOwnerManager == nullptr || func.isBound() == false )
             return;
         const uint64       objectId = _objectId;
         GameObjectManager* pManager = _pOwnerManager;
-        pManager->deferPostTick( [pManager, objectId, deferred = std::move( func )]()
+        pManager->deferStructuralChange( [pManager, objectId, deferred = std::move( func )]()
         {
             GameObject* pObj = pManager->findGameObjectById( objectId );
             if ( pObj != nullptr )
@@ -624,6 +624,18 @@ namespace sw
 
     void GameObject::clearComponents()
     {
+        // 컴포넌트 틱 중에는 형제(`removeComponent`)와 같이 미룬다 — 다른 워커가 지금 이 컴포넌트들을 틱하고 있을 수 있다. 예전에는 여기만 바로
+        // 해제해, 틱 안에서 부르면(제자리 상태 읽기가 부른다) 해제한 컴포넌트를 다른 워커가 계속 틱했다.
+        if ( isComponentMutationFrozen() )
+        {
+            for ( Component* pComp : _listComponent )
+            {
+                if ( pComp != nullptr && pComp->isPendingDestroy() == false )
+                    _pOwnerManager->destroyComponent( pComp );
+            }
+            return;
+        }
+
         // 인라인 네 칸을 그대로 복사한다. 힙을 만지지 않는다(다섯 개 이상일 때만 만진다).
         ComponentList listOwned( _listComponent.begin(), _listComponent.end() );
         _listComponent.clear();

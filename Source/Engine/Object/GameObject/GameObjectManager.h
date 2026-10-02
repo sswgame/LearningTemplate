@@ -234,11 +234,15 @@ namespace sw
          */
         bool isStructuralMutationFrozen() const { return _bTicking.load( std::memory_order_acquire ); }
 
-        using TransformUpdateDelegate = DeferredDelegateQueue::Callback;
-        using PostTickDelegate        = DeferredDelegateQueue::Callback;
+        using StructuralChangeDelegate = DeferredDelegateQueue::Callback;
+        using PostTickDelegate         = DeferredDelegateQueue::Callback;
 
-        /** @brief 트랜스폼/계층 구조 변경을 지연 큐에 넣습니다. */
-        void deferTransformUpdate( TransformUpdateDelegate func );
+        /**
+         * @brief 틱 중의 구조 변경(컴포넌트 추가 · 부착 · 떼기 · 태그 · 활성)을 **부른 순서대로** 지연 큐에 넣습니다. 틱 직후 가장 먼저 돕니다.
+         * @details 예전에는 부착 · 떼기만 이 큐에 들어가고 컴포넌트 추가 · 태그 · 활성은 뒤의 post-tick 큐로 갔다. 틱 안에서 씬 컴포넌트를 붙이고
+         *          (미뤄짐) 이어 부모에 붙이면, 부착이 먼저 돌아 붙일 씬 컴포넌트가 없었고 오브젝트는 루트로 남았다. 구조 변경은 이 큐 하나다.
+         */
+        void deferStructuralChange( StructuralChangeDelegate func );
 
         /**
          * @brief 병렬 틱 중의 트랜스폼 쓰기 한 건을 슬롯 큐에 올립니다. 세터가 `isStructuralMutationFrozen()` 일 때 부릅니다.
@@ -623,7 +627,7 @@ namespace sw
         mutex                   _beginPlayMutex;          ///< 시작 줄을 지킵니다(비동기 씬 로드는 워커에서 붙입니다)
         vector<ComponentHandle> _listPendingBeginPlay;    ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
         vector<ComponentHandle> _listProcessingBeginPlay; ///< 도는 중인 시작 줄(할당 재사용)
-        DeferredDelegateQueue   _deferredTransformQueue;  ///< 틱이 미룬 계층 변경(attach · detach). 틱 직후 가장 먼저 돈다
+        DeferredDelegateQueue   _deferredStructuralQueue; ///< 틱이 미룬 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성), 부른 순서. 틱 직후 가장 먼저 돈다
         DeferredDelegateQueue   _deferredPostTickQueue;   ///< 틱이 미룬 스폰 · 데미지 · 태그(`deferPostTick`)
 
         unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactory;

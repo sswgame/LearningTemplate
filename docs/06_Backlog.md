@@ -1667,7 +1667,7 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
 | R2 실패가 조용하다 — 결과를 버리고, 틀린 입력을 받아들인다 | 57 · ⑲ · 61 · ㉒ · ⑪ | `[[nodiscard]]` + `-Werror=unused-result` + 게이트, 제자리 로드의 원자성 | ✅ 구조 ⑥ (3절) — 남은 것 아래 |
 | R3 같은 규칙이 여러 벌 | 56 · 57 · 60 · 72 · 74 · 54 | 쓰기 · 경로 · 경계를 한 창구로 | 값 쓰기 ✅ ⑦ · 쿠킹 이름 · 레지스트리 ✅ ⑧ · 편집기 경로 ✅ ⑨ · 모르는 칸 ✅ ⑩ (3절) — 남은 것 아래 |
 | R4 선언만 있고 저장 · 소비가 없다 | 62 · ㊺ · 68 · 69 · 71 | 모든 PROPERTY 왕복 시험, 저장되는 상태는 PROPERTY | 저장 ✅ 구조 ⑪ (3절) — 소비 없는 컴포넌트 · 모르는 컴포넌트 보존은 남음 |
-| R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 남음 |
+| R5 틱 중 변경 계약이 형제마다 다르다 | 58 · 55 · 71 · 52 | 변경 지점의 단언 + 순서 있는 미룸 큐 하나 | 비우기 · 상태 읽기 · 미룸 순서 ✅ 구조 ⑫ (3절) — 남은 것 아래 |
 | R6 공간 · 단위 혼동 | 60 · 64 · 54 · 70 | 부착 규칙 인자, 크기는 월드 경계 하나 | 남음 |
 
 **남은 확인 결함(감사 결과 — 다음 단위들의 입력).** 줄 번호는 2026-10-02 기준이다.
@@ -1688,9 +1688,8 @@ App(DX12, 큐브 8000, 무버): 컴포넌트 틱 avg 188 → 173 us · p99 393 �
   `SpriteComponent::_spriteName` 에 `<애니>-<프레임>` 을 쓰지만 읽는 곳이 없다(렌더러에 아틀라스 영역 · UV 가 없다 — 만들려면 GpuScene 인스턴스 UV + 스프라이트
   셰이더 + 런타임 스프라이트 클립 에셋), `ProjectileComponent::_damage` 는 세터뿐이고 투사체의 맞음 처리가 없다, HPBar · DamageUI · Effect 는 비율을 움직이지만
   그리는 것이 없다(UI 렌더 경로 없음), `GameData` 의 부트스트랩 칸 아홉(시작 맵 · 타이틀 씬 · 기본 언어 · 입력 맵 …)은 읽는 곳이 없다(커스텀 맵만 읽힌다).
-- **R5** — `clearComponents` · `destroyComponentInstance` · 상태 로드를 틱 안에서 부르면 해제 후 사용(형제 `removeComponent` 는 미룬다),
-  `TagComponent` 쓰기 · `getOrCreateTags` 가 살아 있는 컨테이너, 미룬 일의 순서(부착 큐가 addComponent 큐보다 먼저 — 틱 안의 생성 + 부착이 루트로
-  남는다; README "거부" 는 틀림), 틱 안 프리팹 스폰이 상태를 버림, `PrimitiveRegistry` add/remove, `forEachGameObject` 공유 잠금 재진입 교착 가능,
+- **R5**(구조 ⑫ 뒤) — `TagComponent` 쓰기 · `getOrCreateTags` 가 살아 있는 컨테이너, 틱 안 프리팹 스폰이 상태를 버림, `PrimitiveRegistry` add/remove,
+  `forEachGameObject` 공유 잠금 재진입 교착 가능,
   `setName` · 서브틱 · 컴포넌트 비트필드. `TaskManager::isInsideParallelTask` 는 쓰는 곳이 없다(죽은 가드).
 - **R6** — 같은 오브젝트의 둘째 씬 컴포넌트가 primary 에 붙지 않아 원점에 남는다(`editortest.scene.xml` 의 TestCollider · `testprop.prefab.xml`
   데이터가 이미 그렇다), 재부모 · 부모 떼기가 월드 자리를 지키지 않는다(KeepWorld 없음), `CameraComponent::lookAt` 이 월드 방향을 로컬 회전에 쓴다,
@@ -2104,6 +2103,19 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 ## 3. 최근에 끝낸 일 (2026-09-08 ~ 12)
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
+
+### 2026-10-03 (구조 ⑫ 틱 중 구조 변경은 한 규칙 · 한 큐 — 비우기는 미루고, 제자리 상태 읽기는 거절하고, 미룬 것은 부른 순서대로 — 1-0j 의 R5 첫 단위)
+
+- **틱 안의 `clearComponents` 가 다른 워커가 틱하는 컴포넌트를 해제했다**(해제 후 사용) — 형제 `removeComponent` 는 미뤘는데 이것만 바로 해제했고,
+  제자리 상태 읽기(되돌리기 · 스냅샷 · 프리팹 되돌리기가 쓰는 길)가 그것을 부른다. 이제 비우기는 제거처럼 지연 파괴로 가고, **결과를 바로 돌려줘야 하는 제자리
+  상태 읽기는 틱 중이면 오류와 함께 거절**한다(`executeOrDeferPostTick` 으로 감쌀 것). 해체(`destroyComponentInstance`)는 틱 밖임을 단언한다.
+- **틱 안에서 씬 컴포넌트를 붙이고 이어 부모에 붙이면 오브젝트가 루트로 남았다** — 부착 · 떼기는 틱 직후 먼저 도는 큐에, 컴포넌트 추가 · 태그 · 활성은 뒤의
+  post-tick 큐에 들어가 부착이 먼저 돌았다. 구조 변경은 이제 **큐 하나**(`deferStructuralChange` — 옛 `deferTransformUpdate`)이고 부른 순서대로 돈다;
+  게임 쪽 `deferPostTick`(스폰 · 데미지)은 그 뒤 그대로. README 가 틱 중 부착을 "거부" 한다고 적었던 것도 바로잡았다(미룬다).
+
+**검증.** 새 시험 2(이전 코드에서 진다): `GameObjectTest.StructuralChangesDuringTickFollowOneRule`(틱 **안에서** 본 목록 길이 — 해제됐으면 0, 미뤘으면 그대로;
+상태 읽기는 거절), `GameObjectTest.StructuralChangesDuringTickApplyInCallOrder`. 변이 3 모두 죽음. 처음 쓴 시험은 `getComponentCount` 로 봤는데 그것은 삭제 대기를
+빼고 세어 미룸과 해제를 가르지 못했다 — 목록 길이로 바꿨다. Debug 32/32, Shipping nogpu · hostgpu 10/10.
 
 ### 2026-10-03 (결함 — 오버월드 카메라 컨트롤러가 카메라를 원점에 박았다 · 1-0j 의 R4)
 

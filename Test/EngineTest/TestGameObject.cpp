@@ -563,6 +563,69 @@ SW_TEST_CASE( GameObjectTest, TickRemoveOtherSameTypeComponent )
 }
 
 /**
+ * @brief [GameObjectTest] 틱 중의 구조 변경은 한 규칙이다 — 비우기는 제거처럼 틱 뒤로 미루고, 제자리 상태 읽기는 거절한다
+ * @details 형제(`removeComponent`)는 틱 중이면 미뤘지만 `clearComponents` 는 바로 해제했고, 제자리 상태 읽기(되돌리기 · 스냅샷 · 프리팹 되돌리기가
+ *          쓰는 길)는 그것을 불렀다. 틱 안에서 부르면 다른 워커가 **해제한 컴포넌트를 계속 틱했다**(해제 후 사용). 이제 비우기는 틱 뒤에 적용되고
+ *          (틱 안에서는 아직 그대로), 결과를 바로 돌려줘야 하는 상태 읽기는 오류와 함께 거절한다(`executeOrDeferPostTick` 으로 감쌀 것).
+ */
+SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickFollowOneRule )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+
+    GameObject* keeper = manager.createGameObject( hashed_string( "TickClearer" ) );
+    GameObject* victim = manager.createGameObject( hashed_string( "TickCleared" ) );
+    GameObject* loaded = manager.createGameObject( hashed_string( "TickLoaded" ) );
+    keeper->addComponent<MockMeshComponent>();
+    victim->addComponent<MockMeshComponent>();
+    victim->addComponent<MockAudioComponent>();
+    loaded->addComponent<MockAudioComponent>();
+    MockMeshComponent* keeperMesh = keeper->getComponent<MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( keeperMesh );
+    SW_ASSERT_EQUAL( 2u, victim->getComponentCount() );
+
+    keeperMesh->_pTickClearOwner = victim;
+    keeperMesh->_pTickLoadTarget = loaded;
+    keeperMesh->_tickLoadXml     = ObjectStateSerializer::saveToXmlString( victim );
+    {
+        test::ScopedDefensiveTestLog expected( "a state load during the component tick" );
+        manager.tick( 0.016f );
+    }
+
+    SW_EXPECT_EQUAL( size_t( 2 ), keeperMesh->_componentCountAfterTickClear ); // 틱 안에서는 아직 그대로
+    SW_EXPECT_EQUAL( 0u, victim->getComponentCount() );                        // 틱 뒤에 비워졌다
+    SW_EXPECT_EQUAL( 0, keeperMesh->_tickLoadResult );                         // 거절했다
+    SW_EXPECT_NOT_NULL( loaded->getComponent<MockAudioComponent>() );          // 그대로다
+    SW_EXPECT_NULL( loaded->getComponent<MockMeshComponent>() );
+}
+
+/**
+ * @brief [GameObjectTest] 틱 안에서 부른 구조 변경은 부른 순서대로 적용된다 — 씬 컴포넌트를 붙이고 이어 부모에 붙이면 붙는다
+ * @details 부착 · 떼기는 틱 직후 먼저 도는 큐에, 컴포넌트 추가 · 태그 · 활성은 뒤의 post-tick 큐에 들어갔다. 그래서 부착이 먼저 돌아 붙일 씬
+ *          컴포넌트가 없었고 오브젝트는 **루트로 남았다**(README 는 틱 중 부착을 "거부" 한다고 적었지만 실제로는 미뤘다). 이제 구조 변경은 큐 하나다.
+ */
+SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickApplyInCallOrder )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+
+    GameObject* keeper = manager.createGameObject( hashed_string( "TickAdopter" ) );
+    GameObject* parent = manager.createGameObject( hashed_string( "TickParent" ) );
+    GameObject* child  = manager.createGameObject( hashed_string( "TickOrphan" ) );
+    keeper->addComponent<MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( parent->addComponent<SceneComponent>() );
+    MockMeshComponent* keeperMesh = keeper->getComponent<MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( keeperMesh );
+    keeperMesh->_pTickAdoptChild  = child;
+    keeperMesh->_pTickAdoptParent = parent;
+
+    manager.tick( 0.016f );
+
+    SW_EXPECT_NOT_NULL( child->getPrimarySceneComponent() );
+    SW_EXPECT_TRUE( child->getParent() == parent );
+}
+
+/**
  * @brief [GameObjectTest] 같은 엔티티의 서로 다른 컴포넌트도 모두 tick된다
  */
 SW_TEST_CASE( GameObjectTest, SameEntityComponentsBothTick )
@@ -2108,7 +2171,7 @@ SW_TEST_CASE( GameObjectTest, GameObjectMassiveCreationAndDestructionStressTest 
 }
 
 /**
- * @brief [GameObjectTest] 병렬 틱(Parallel Tick) 중 구조 변경 지연 큐(deferPostTick/deferTransformUpdate) 동시성 스트레스 테스트
+ * @brief [GameObjectTest] 병렬 틱(Parallel Tick) 중 구조 변경 지연 큐(deferPostTick/deferStructuralChange) 동시성 스트레스 테스트
  */
 SW_TEST_CASE( GameObjectTest, ParallelTickStructuralMutationStressTest )
 {
@@ -2134,7 +2197,7 @@ SW_TEST_CASE( GameObjectTest, ParallelTickStructuralMutationStressTest )
             postTickExecutedCount.fetch_add( 1, std::memory_order_relaxed );
         } ) );
 
-        manager.deferTransformUpdate( SW_DELEGATE_LAMBDA( sw::GameObjectManager::TransformUpdateDelegate, [&transformUpdateExecutedCount]()
+        manager.deferStructuralChange( SW_DELEGATE_LAMBDA( sw::GameObjectManager::StructuralChangeDelegate, [&transformUpdateExecutedCount]()
         {
             transformUpdateExecutedCount.fetch_add( 1, std::memory_order_relaxed );
         } ) );
