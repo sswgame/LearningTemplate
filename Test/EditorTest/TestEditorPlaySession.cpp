@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "TestFramework/TestFramework.h"
@@ -39,7 +40,14 @@ namespace
         const sw::string path = test::makeTempPath( pFileName );
         const sw::string text = sw::string( "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"0\" name=\"" ) + pSceneName +
                                 "\">\n  <entities>\n    <entity name=\"Boss\"/>\n  </entities>\n</Scene>\n";
-        return sw::FileUtil::writeTextFile( path, text ) ? path : sw::string{};
+        // 쿠킹한 바이너리도 같은 이름으로 둔다 — Shipping 은 바이너리 씬(.bin)만 읽는다.
+        sw::SceneDocument             doc{};
+        sw::SceneDocument::EntityNode boss{};
+        doc._name  = pSceneName;
+        boss._name = "Boss";
+        doc._listEntityNode.push_back( std::move( boss ) );
+        const bool bWritten = sw::FileUtil::writeTextFile( path, text ) && doc.saveBinary( sw::FileUtil::replaceExtension( path, ".bin" ) );
+        return bWritten ? path : sw::string{};
     }
 
     /** @brief 에디터 프레임을 흉내 냅니다 — 태스크를 비우고, 끝난 로드를 들이고(tickTransitions), 플레이 세션을 갱신합니다. */

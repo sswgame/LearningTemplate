@@ -2074,6 +2074,12 @@ find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name
 
 무엇을 이미 해결했는지 알아야 같은 것을 다시 파지 않는다.
 
+### 2026-10-02 (구조 ③ 보완 — 미룬 Play 시험이 Shipping 에서 졌다, 시험 씬을 쿠킹한 바이너리로도 쓴다)
+
+구조 ③ 의 시험은 비동기로 열 씬을 XML 로만 썼다. Shipping 은 쿠킹한 바이너리 씬(같은 이름의 `.bin`)만 읽어(`Shipping requires cooked binary scene`) 로드가 실패했고,
+로드가 끝나 미룬 시작이 돌긴 했지만 스냅샷이 편집하던 씬의 것이었다. Debug 만 돌렸으면 못 봤다(Shipping 확인을 푸시 전에 둔 이유). 시험 도우미가
+`SceneDocument::saveBinary` 로 같은 이름의 `.bin` 도 쓴다(`SceneAsyncTest` 와 같은 방식). Debug EditorTest 87/87, Shipping 10/10.
+
 ### 2026-10-02 (구조 ③ 에디터 플레이 — 씬을 여는 중에 누른 Play 를 미뤘다가 로드가 끝난 프레임에 시작한다, 상태 전환을 시험할 수 있게)
 
 ㊿ 의 남은 한계: "씬을 여는 중에는 Play 를 시작하지 않는다(경고)" 는 거절이었고 — 사용자가 다시 눌러야 했다 — 시험이 없었다(상태 전환이 EditorContext 를
