@@ -22,7 +22,6 @@ namespace sw
         thread_local uint32 t_helperSlotOwnerId  = 0;  ///< 위 번호를 준 매니저의 `_instanceId`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
         /// @brief 매니저 인스턴스 번호를 나눠 주는 카운터입니다(0 은 "없음").
         atomic<uint32>         s_nextInstanceId{ 1 };
-        thread_local bool      t_bInsideParallelTask = false;   ///< 지금 병렬 그룹의 본문을 실행 중인지 여부
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드
 
         /// @brief 대기 함수(waitStage/waitAll/runParallel)가 잠들기 전에 도는 `cpuPause` 횟수(약 2 us)입니다. 기다리는 동안에는 다른 일을 돕습니다.
@@ -56,31 +55,28 @@ namespace sw
         constexpr uintptr_t kTicketTagBit = 1;
 
         /**
-         * @brief 병렬 그룹의 본문을 도는 동안 `t_bInsideParallelTask` 를 세우는 RAII 스코프입니다. 중첩되면 바깥 값을 되돌립니다.
-         * @details 티켓 하나(청크 여러 개)마다 한 번 세우므로 청크당 비용은 없습니다.
+         * @brief 병렬 그룹의 본문을 도는 동안 "지금 실행 중인 태스크" 를 비워 두는 RAII 스코프입니다. 끝나면 바깥 값을 되돌립니다.
+         * @details 병렬 본문은 어느 태스크의 본문도 아니다. 예전에는 이 스레드가 **돕고 있던** 태스크를 그대로 물려받아, 본문에서 만든 태스크가
+         *          엉뚱한 태스크의 자식이 됐다(씬 로드 태스크가 게임 틱의 소리 재생 태스크를 기다리는 식). 어느 스레드가 티켓을 가져가느냐에 따라
+         *          부모가 달라졌다. 본문에서 만든 태스크는 최상위다. 티켓 하나(청크 여러 개)마다 한 번 세우므로 청크당 비용은 없습니다.
+         *
+         *          예전에는 "병렬 본문 안인가" 표시(`isInsideParallelTask`)도 함께 세웠다 — 그것으로 스스로를 지키는 함수가 하나도 없어
+         *          지웠다(2026-10-03). 틱 중 구조 변경은 단언이 아니라 구조 변경 큐로 미룬다(`GameObjectManager::deferStructuralChange`).
          */
         struct ParallelTaskScope
         {
-            explicit ParallelTaskScope( bool bInside )
-                : _bPrevious{ t_bInsideParallelTask }
-                , _pPreviousRunningTask{ t_pCurrentRunningTask }
+            ParallelTaskScope()
+                : _pPreviousRunningTask{ t_pCurrentRunningTask }
             {
-                t_bInsideParallelTask = bInside;
-                // 병렬 본문은 어느 태스크의 본문도 아니다. 예전에는 이 스레드가 **돕고 있던** 태스크를 그대로 물려받아, 본문에서 만든 태스크가
-                // 엉뚱한 태스크의 자식이 됐다(씬 로드 태스크가 게임 틱의 소리 재생 태스크를 기다리는 식). 어느 스레드가 티켓을 가져가느냐에 따라
-                // 부모가 달라졌다. 본문에서 만든 태스크는 최상위다.
-                if ( bInside )
-                    t_pCurrentRunningTask = nullptr;
+                t_pCurrentRunningTask = nullptr;
             }
             ~ParallelTaskScope()
             {
-                t_bInsideParallelTask = _bPrevious;
                 t_pCurrentRunningTask = _pPreviousRunningTask;
             }
             ParallelTaskScope( const ParallelTaskScope& )            = delete;
             ParallelTaskScope& operator=( const ParallelTaskScope& ) = delete;
 
-            bool      _bPrevious;
             TaskNode* _pPreviousRunningTask;
         };
 
@@ -327,16 +323,6 @@ namespace sw
     void TaskManager::ensureWorkerThread() const
     {
         SW_ASSERT( isWorkerThread() );
-    }
-
-    bool TaskManager::isInsideParallelTask() const
-    {
-        return t_bInsideParallelTask;
-    }
-
-    void TaskManager::ensureInsideParallelTask() const
-    {
-        SW_ASSERT( isInsideParallelTask() );
     }
 
     uint32 TaskManager::getCurrentThreadScratchSlot()
@@ -623,11 +609,11 @@ namespace sw
         if ( count == 0 || body.isBound() == false )
             return;
         // 문턱값 아래이거나 워커가 없으면 이 스레드가 한 번에 실행한다. 나누는 비용이 일보다 크다.
-        // 그래도 병렬 본문으로 표시한다. 표시가 개수 · 워커 수에 따라 달라지면 "병렬 본문에서 부르지 말 것" 단정이 큰 입력에서만 문다.
+        // 그래도 병렬 본문이다 — 본문에서 만든 태스크가 최상위인 것이 개수 · 워커 수에 따라 달라지지 않게 한다.
         const uint32 workerCount = getWorkerCount();
         if ( _bInitialized == false || workerCount == 0 || count < serialThreshold )
         {
-            const ParallelTaskScope insideScope{ true };
+            const ParallelTaskScope bodyScope{};
             body( 0, count );
             return;
         }
@@ -635,7 +621,7 @@ namespace sw
         const ParallelSplit split = ParallelSplit::compute( count, workerCount, true );
         if ( split._ticketCount == 0 )
         {
-            const ParallelTaskScope insideScope{ true };
+            const ParallelTaskScope bodyScope{};
             body( 0, count );
             return;
         }
@@ -677,9 +663,7 @@ namespace sw
         // 빈 큐의 size 는 위치 두 개를 읽는 것이라 청크마다 확인해도 비용이 거의 없다.
         if ( _globalHighQueue.empty() )
             return;
-        // High 태스크는 병렬 본문이 아니다. 도는 동안만 표시를 내리고 끝나면 되돌린다.
-        const ParallelTaskScope outsideScope{ false };
-        uintptr_t               item{ 0 };
+        uintptr_t item{ 0 };
         while ( _globalHighQueue.dequeue( item ) )
         {
             executeItem( item );
@@ -688,7 +672,7 @@ namespace sw
 
     void TaskManager::runGroupChunks( ParallelGroup* pGroup )
     {
-        const ParallelTaskScope insideScope{ true };
+        const ParallelTaskScope bodyScope{};
         const uint32            end       = pGroup->_rangeEnd;
         const uint32            chunkSize = pGroup->_chunkSize;
         for ( ;; )
@@ -974,12 +958,10 @@ namespace sw
     {
         if ( pNode->_bCancelled.load( std::memory_order_acquire ) == false )
         {
-            // 일반 태스크 본문은 병렬 본문이 아니다. 병렬 본문 안에서 기다리다 이 태스크를 도와도 표시를 물려받지 않게 내린다. 스코프는
-            // "지금 실행 중인 태스크" 를 **바꾸기 전에** 만든다 — 끝날 때 그 값을 되돌리므로, 바꾼 뒤에 만들면 끝난 태스크가 이 스레드의
-            // 현재 태스크로 남아 뒤에 만드는 태스크가 그 자식이 된다(영영 끝나지 않는다).
-            const ParallelTaskScope outsideScope{ false };
-            TaskNode*               pPrevRunningTask = t_pCurrentRunningTask;
-            t_pCurrentRunningTask                    = pNode;
+            // 끝나면 "지금 실행 중인 태스크" 를 되돌린다 — 남겨 두면 끝난 태스크가 이 스레드의 현재 태스크로 남아 뒤에 만드는 태스크가 그
+            // 자식이 된다(영영 끝나지 않는다).
+            TaskNode* pPrevRunningTask = t_pCurrentRunningTask;
+            t_pCurrentRunningTask      = pNode;
 
             BLOCK( "Execute Task Delegate" )
             {
@@ -1283,7 +1265,6 @@ namespace sw
             _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
         }
 
-        t_currentWorkerIndex  = -1;
-        t_bInsideParallelTask = false;
+        t_currentWorkerIndex = -1;
     }
 } // namespace sw

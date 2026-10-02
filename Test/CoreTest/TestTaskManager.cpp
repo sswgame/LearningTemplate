@@ -218,58 +218,6 @@ SW_TEST_CASE( TaskManagerTest, IsCompletedWaitsForTheBodyAndItsChildren )
 }
 
 /**
- * @brief [TaskManagerTest] isInsideParallelTask 는 병렬 본문 안에서만 true 다
- * @details 병렬 본문에서 부르면 안 되는 함수의 단정이 기대는 값이다. 그래서 **나눠 돌든 한 번에 돌든** 같아야 한다 —
- *          문턱 아래의 `runParallel` 도 병렬 본문이다. 보통 태스크 본문과 호출 스레드의 전후는 밖이다.
- */
-SW_TEST_CASE( TaskManagerTest, InsideParallelTaskIsTrueOnlyInParallelBodies )
-{
-    sw::TaskManager manager;
-    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
-
-    SW_EXPECT_FALSE( manager.isInsideParallelTask() );
-
-    sw::atomic<uint32> insideCount{ 0 };
-    sw::atomic<uint32> outsideCount{ 0 };
-
-    const sw::ParallelBlockDelegate blockBody = SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&manager, &insideCount, &outsideCount]( uint32 start, uint32 end )
-    {
-        if ( manager.isInsideParallelTask() )
-            insideCount.fetch_add( end - start, std::memory_order_relaxed );
-        else
-            outsideCount.fetch_add( end - start, std::memory_order_relaxed );
-    } );
-
-    manager.runParallel( 4096, 16, blockBody ); // 나눠 돈다(호출 스레드도 청크를 집는다)
-    manager.runParallel( 8, 16, blockBody );    // 문턱 아래 — 호출 스레드가 한 번에 돈다
-    SW_EXPECT_FALSE( manager.isInsideParallelTask() );
-
-    sw::TaskHandle indexed = manager.emplaceParallel( "InsideIndex", 256, SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [&manager, &insideCount, &outsideCount]( uint32 )
-    {
-        if ( manager.isInsideParallelTask() )
-            insideCount.fetch_add( 1, std::memory_order_relaxed );
-        else
-            outsideCount.fetch_add( 1, std::memory_order_relaxed );
-    } ) );
-    indexed.submit();
-
-    sw::atomic<int32> plainInside{ -1 };
-
-    sw::TaskHandle plain = manager.emplaceTask( "Plain", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &plainInside]()
-    {
-        plainInside.store( manager.isInsideParallelTask() ? 1 : 0, std::memory_order_relaxed );
-    } ) );
-    plain.submit();
-
-    SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
-    SW_EXPECT_EQUAL( 4096u + 8u + 256u, insideCount.load() );
-    SW_EXPECT_EQUAL( 0u, outsideCount.load() );
-    SW_EXPECT_EQUAL( 0, plainInside.load() );
-
-    manager.shutdown();
-}
-
-/**
  * @brief [TaskManagerTest] 병렬 분할이 모든 인덱스를 **정확히 한 번씩** 덮는다
  * @details 빠뜨리면 조용히 일부가 계산되지 않고, 겹치면 같은 자리를 두 번 쓴다. 둘 다 결과가
  *          "대체로 맞아" 보이므로 인덱스별 횟수를 세어야 드러난다.

@@ -254,16 +254,14 @@ TaskFuture<int32>         any = whenAnyFuture( listFuture );  // 가장 먼저 �
 ```cpp
 tm.isMainThread();
 tm.isWorkerThread();
-tm.isInsideParallelTask();          // emplaceParallel* · runParallel 본문 안인지 (문턱 아래로 한 번에 돌아도 true)
 tm.getCurrentThreadScratchSlot();   // 스레드마다 하나씩 쓰는 스크래치 칸(워커 번호, 아니면 도우미 번호)
 
 tm.ensureMainThread();              // Debug에서 아니면 assert
 tm.ensureWorkerThread();
-tm.ensureInsideParallelTask();
-
-// 병렬 본문에서 부르면 안 되는 함수는 스스로를 지킨다 (UE 의 IsInParallelRenderingThread 같은 검사)
-SW_ASSERT( tm.isInsideParallelTask() == false );
 ```
+
+"병렬 본문 안인가" 를 묻는 함수는 없다(2026-10-03 에 지웠다 — 그것으로 스스로를 지키는 함수가 하나도 없었다). 틱 중에 부르면
+안 되는 구조 변경은 단언하지 않고 틱 뒤로 미룬다(`GameObjectManager::deferStructuralChange`).
 
 끝났는지 **묻기만** 하려면 `TaskHandle::isCompleted()` — 본문과 그 안에서 만든 자식이 모두 끝나면 true
 (Unity `JobHandle.IsCompleted` · UE `FGraphEvent::IsComplete()` 자리). 빈 핸들은 true 입니다.

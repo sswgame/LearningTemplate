@@ -215,17 +215,6 @@ namespace sw
         bool isWorkerThread() const;
         /** @brief Debug: 워커 스레드가 아니면 assert 합니다. */
         void ensureWorkerThread() const;
-        /**
-         * @brief 현재 스레드가 병렬 그룹(`emplaceParallel*` · `runParallel`)의 본문을 실행 중인지 반환합니다.
-         * @details 병렬 본문에서 부르면 안 되는 함수(부모 바꾸기 · 컴포넌트 추가 같은 구조 변경)가
-         *          `SW_ASSERT( isInsideParallelTask() == false )` 로 스스로를 지키는 데 씁니다. UE 가 `FTaskTagScope` 로 병렬
-         *          작업 구간을 표시하고 `IsInParallelRenderingThread()` 같은 검사를 두는 것과 같은 자리입니다. `runParallel` 이
-         *          문턱 아래라 호출 스레드가 한 번에 돌 때도 병렬 본문으로 봅니다(검사가 개수 · 워커 수에 따라 달라지지 않게).
-         *          청크 사이에 High 큐 태스크를 돌리는 동안은 병렬 본문 밖으로 봅니다(그 태스크는 병렬 본문이 아닙니다).
-         */
-        bool isInsideParallelTask() const;
-        /** @brief Debug: 병렬 태스크 본문 안이 아니면 assert 합니다. */
-        void ensureInsideParallelTask() const;
 
         /**
          * @brief 태스크 본문을 실행할 수 있는 스레드의 최대 수입니다. 워커 수 + 기다리는 동안 다른 일을 돕는 스레드 몫(`kMaxHelperThreadCount`).
