@@ -1186,7 +1186,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterDataCatalogAndStats )
 
     // 2) UnitStatsComponent 기본 수명주기 및 대미지/회복 로직 검증
     UnitStatsComponent stats;
-    stats.setStats( 100, 100, 15, 5, 200.0f, 0.5f );
+    stats.setStats( 100, 100, 15, 5, 4.0f, 0.5f ); // 이동 속도는 m/s
     SW_EXPECT_EQUAL( 100, stats.getHp() );
     SW_EXPECT_EQUAL( 100, stats.getMaxHp() );
     SW_EXPECT_FALSE( stats.isDead() );

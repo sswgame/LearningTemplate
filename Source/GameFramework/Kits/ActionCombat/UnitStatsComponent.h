@@ -49,10 +49,11 @@ namespace sw
         FUNCTION( Category = "Actions", DisplayName = "Heal 20 HP", CallInEditor )
         void heal20() { heal( 20 ); }
 
-        int32   getHp() const { return _hp; }
-        int32   getMaxHp() const { return _maxHp; }
-        int32   getAttack() const { return _attack; }
-        int32   getDefense() const { return _defense; }
+        int32 getHp() const { return _hp; }
+        int32 getMaxHp() const { return _maxHp; }
+        int32 getAttack() const { return _attack; }
+        int32 getDefense() const { return _defense; }
+        /** @brief 기본 이동 속도입니다 — 초당 월드 유닛(m/s)입니다. 이동 코드는 프레임 시간을 곱해 씁니다(`getMoveSpeed() * deltaTime`). */
         float32 getMoveSpeed() const { return _moveSpeed; }
         bool    isDead() const { return _bIsDead; }
 
@@ -88,7 +89,7 @@ namespace sw
         int32 _attack;
         PROPERTY( Category = "Stats", DisplayName = "Defense", Tooltip = "Defense rating", Min = 0.0, Alias = "defense" )
         int32 _defense;
-        PROPERTY( Category = "Movement", DisplayName = "Move Speed", Tooltip = "Base movement speed in tiles/sec", Min = 0.0, Max = 50.0, Meta = "Units=m/s", Alias = "moveSpeed" )
+        PROPERTY( Category = "Movement", DisplayName = "Move Speed", Tooltip = "Base movement speed in world units per second", Min = 0.0, Max = 50.0, Meta = "Units=m/s", Alias = "moveSpeed" )
         float32 _moveSpeed;
         PROPERTY( Category = "Combat", DisplayName = "Invincibility Timer", Tooltip = "Remaining invincibility time", Transient, ReadOnly, Meta = "Units=s", Alias = "invincibilityTime" )
         float32 _invincibilityTime;

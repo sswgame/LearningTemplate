@@ -52,6 +52,24 @@ namespace
         return false;
     }
 
+    /** @brief `Units` 하나와, 툴팁에 있으면 다른 단위를 말하는 낱말입니다 — 툴팁과 `Units` 중 하나가 틀린 것입니다. */
+    struct ConflictingUnitWord
+    {
+        const utf8* _pUnits;
+        const utf8* _pWord;
+    };
+
+    constexpr ConflictingUnitWord kArrConflictingUnitWord[] = {
+        {  "m",        "tile"},
+        {  "m",       "pixel"},
+        {"m/s",        "tile"},
+        {"m/s",       "pixel"},
+        {"m/s",   "per frame"},
+        {  "s", "millisecond"},
+        {  "s",   "per frame"},
+        {"rad",      "degree"},
+    };
+
     /** @brief 실수 칸인가(배율로 보이는 단위는 실수에만 건다). */
     bool isFloatType( const sw::hashed_string& typeName )
     {
@@ -63,10 +81,11 @@ namespace
  * @brief [PropertyMetaHintTest] PROPERTY 의 `Units` 는 값이 저장된 단위를 말한다 — 등록된 모든 타입(엔진 · GameFramework · 킷)
  * @details 인스펙터는 `Units` 로 보이는 값 · 드래그 속도 · 단위 글자를 정한다(`InspectorPropertyLayout::getDisplayUnit`). 그래서 메타가 틀리면 값이
  *          틀리게 보이고 틀린 속도로 움직인다. 두 번 그랬다 — 트랜스폼 회전은 라디안을 `Units=deg` 라고 적었고(결함 64), HP 바의 0..1 비율 셋은
- *          `Units=%` 라고 적어 0.5 를 "0.5 %" 로 읽게 했다. 규칙은 넷이다.
+ *          `Units=%` 라고 적어 0.5 를 "0.5 %" 로 읽게 했다. 규칙은 다섯이다.
  *          (1) `deg` 는 없다 — 엔진의 각도는 라디안이다(`setLocalRotation` · FOV · 원뿔 각). (2) 이름이 각도(angle · rotation · fov)인 실수 칸은
  *          `rad` 다. (3) `%` 는 0..100 값이다 — 위 경계가 1 이하면 비율이므로 `ratio` 다. (4) `ratio` 의 위 경계는 1 이하, `rad` 의 위 경계는 2π 이하다
- *          (도 범위를 라디안이라 적은 것을 잡는다).
+ *          (도 범위를 라디안이라 적은 것을 잡는다). (5) 툴팁이 `Units` 와 다른 단위를 말하지 않는다 — `Units=m/s` 인 이동 속도의 툴팁이
+ *          "tiles/sec" 이면 값을 넣는 사람은 어느 단위로 넣을지 모른다(`kArrConflictingUnitWord`).
  */
 SW_TEST_CASE( PropertyMetaHintTest, UnitsMatchHowValuesAreStored )
 {
@@ -112,6 +131,11 @@ SW_TEST_CASE( PropertyMetaHintTest, UnitsMatchHowValuesAreStored )
             }
             if ( units == "rad" && bMax && maxAt > kMaxRadian )
                 offenders += where + "Max is above 2*pi — the range looks like degrees\n";
+            for ( const ConflictingUnitWord& conflict : kArrConflictingUnitWord )
+            {
+                if ( units == conflict._pUnits && sw::StringUtil::stristr( prop._metadata._tooltip.c_str(), conflict._pWord ) != nullptr )
+                    offenders += where + "the tooltip says '" + conflict._pWord + "' — tooltip and Units must name the same unit\n";
+            }
         }
     }
     // 규칙이 아무것도 보지 않으면 이 시험은 아무것도 지키지 않는다 — 회전 · FOV · 원뿔 각 둘 · HP 바 비율 셋이 있다.
