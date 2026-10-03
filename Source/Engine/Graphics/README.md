@@ -311,7 +311,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 - `Graphics`(Renderer 제외)는 티어 5, `Graphics/Renderer` 는 티어 8 이다 — RHI · Shader · Material 이 Renderer 나 Object · Scene 을
   include 하면 실패한다. 컴포넌트가 채우는 GPU 값 묶음(`GpuLight` · `GpuSpriteInstanceData`)이 `Shader/Binding/` 에 있는 이유다.
 - Graphics → Editor / GameFramework / Games **금지**. 둘 다 `CheckEngineLayers.py` 가 강제한다([Engine/README.md](../README.md) 티어 표).
-- RHI 모듈 DLL (`SW_RHI_AS_MODULES`) 시 백엔드는 별도 모듈 엔트리 (`RHI/Modules/`)
+- Dev 의 RHI 백엔드는 모듈 DLL 이고 엔트리는 `RHI/Modules/` 에 있다(Shipping 은 하나를 Engine 에 정적 링크)
 
 ---
 

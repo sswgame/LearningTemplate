@@ -7,7 +7,7 @@ CMake 소스 GLOB 누락 및 컴파일 데이터베이스 일치 검사.
 새로 추가된 .cpp/.c 파일이 빌드 타겟 및 LSP 인덱서에 정상 등록되었는지 검사합니다.
 
 **RHI 백엔드 목록도 함께 본다** (`cmake/Engine/RhiBackendSources.cmake`).
-그 파일은 백엔드 .cpp 를 손으로 나열하고, `SW_RHI_AS_MODULES=ON` 일 때 어느 .cpp 가 `RHI_*` MODULE 로
+그 파일은 백엔드 .cpp 를 손으로 나열하고, Dev 에서 어느 .cpp 가 `RHI_*` MODULE 로
 가는지를 정한다. 목록에서 빠진 파일은 **컴파일이 안 되는 게 아니라 Engine 타겟의 glob 이 주워간다** —
 즉 모듈이 아니라 Engine.dll 로 들어간다. 그래서 compile_commands 대조로는 절대 안 잡히고(실험으로 확인),
 증상은 모듈의 미정의 심볼로 나온다(실제로 `VulkanRHIRenderPassCache.cpp` 가 빠져 `vkCreateRenderPass`

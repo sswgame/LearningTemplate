@@ -9,24 +9,15 @@
 #include "Engine/Graphics/RHI/Modules/RHIModuleAbi.h"
 #include "Engine/Graphics/RHI/RHI.h"
 
-#if !defined( SW_RHI_AS_MODULES )
-    #if defined( SW_SHIPPING )
-        #if defined( SW_RHI_TARGET_DX12 )
-            #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
-        #elif defined( SW_RHI_TARGET_DX11 )
-            #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
-        #elif defined( SW_RHI_TARGET_VULKAN )
-            #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
-        #elif defined( SW_RHI_TARGET_OPENGL )
-            #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
-        #endif
-    #else
-        #if defined( SW_PLATFORM_WINDOWS )
-            #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
-            #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
-        #endif
-        #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
+#if defined( SW_SHIPPING )
+    #if defined( SW_RHI_TARGET_DX12 )
+        #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
+    #elif defined( SW_RHI_TARGET_DX11 )
+        #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
+    #elif defined( SW_RHI_TARGET_VULKAN )
         #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
+    #elif defined( SW_RHI_TARGET_OPENGL )
+        #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
     #endif
 #endif
 
@@ -36,52 +27,29 @@ namespace sw
     {
         struct RHIBackendRegistryInternal
         {
-#if !defined( SW_RHI_AS_MODULES )
-    #if defined( SW_SHIPPING )
-        #if defined( SW_RHI_TARGET_DX12 )
+#if defined( SW_SHIPPING )
+    #if defined( SW_RHI_TARGET_DX12 )
             static sw::unique_ptr<IRHIDevice> createD3D12Device()
             {
                 return make_unique<D3D12RHIDevice>();
             }
-        #elif defined( SW_RHI_TARGET_DX11 )
+    #elif defined( SW_RHI_TARGET_DX11 )
             static sw::unique_ptr<IRHIDevice> createD3D11Device()
             {
                 return make_unique<D3D11RHIDevice>();
             }
-        #elif defined( SW_RHI_TARGET_VULKAN )
+    #elif defined( SW_RHI_TARGET_VULKAN )
             static sw::unique_ptr<IRHIDevice> createVulkanDevice()
             {
                 return make_unique<VulkanRHIDevice>();
             }
-        #elif defined( SW_RHI_TARGET_OPENGL )
-            static sw::unique_ptr<IRHIDevice> createOpenGLDevice()
-            {
-                return make_unique<OpenGLRHIDevice>();
-            }
-        #endif
-    #else
-        #if defined( SW_PLATFORM_WINDOWS )
-            static sw::unique_ptr<IRHIDevice> createD3D11Device()
-            {
-                return make_unique<D3D11RHIDevice>();
-            }
-            static sw::unique_ptr<IRHIDevice> createD3D12Device()
-            {
-                return make_unique<D3D12RHIDevice>();
-            }
-        #endif
-            static sw::unique_ptr<IRHIDevice> createVulkanDevice()
-            {
-                return make_unique<VulkanRHIDevice>();
-            }
+    #elif defined( SW_RHI_TARGET_OPENGL )
             static sw::unique_ptr<IRHIDevice> createOpenGLDevice()
             {
                 return make_unique<OpenGLRHIDevice>();
             }
     #endif
-#endif
-
-#if defined( SW_RHI_AS_MODULES )
+#else
             [[nodiscard]] static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
             {
                 RHIBackendRegistry& reg           = engine::getRHIBackendRegistry();
@@ -135,23 +103,14 @@ namespace sw
 
     RHIBackendRegistry::RHIBackendRegistry()
     {
-#if !defined( SW_RHI_AS_MODULES )
-    #if defined( SW_SHIPPING )
-        #if defined( SW_RHI_TARGET_DX12 )
+#if defined( SW_SHIPPING )
+    #if defined( SW_RHI_TARGET_DX12 )
         registerBackend( RHIBackend::DirectX12, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createD3D12Device ), RHIAvailability::query( RHIBackend::DirectX12 ) );
-        #elif defined( SW_RHI_TARGET_DX11 )
+    #elif defined( SW_RHI_TARGET_DX11 )
         registerBackend( RHIBackend::DirectX11, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createD3D11Device ), RHIAvailability::query( RHIBackend::DirectX11 ) );
-        #elif defined( SW_RHI_TARGET_VULKAN )
+    #elif defined( SW_RHI_TARGET_VULKAN )
         registerBackend( RHIBackend::Vulkan, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createVulkanDevice ), RHIAvailability::query( RHIBackend::Vulkan ) );
-        #elif defined( SW_RHI_TARGET_OPENGL )
-        registerBackend( RHIBackend::OpenGL, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createOpenGLDevice ), RHIAvailability::query( RHIBackend::OpenGL ) );
-        #endif
-    #else
-        #if defined( SW_PLATFORM_WINDOWS )
-        registerBackend( RHIBackend::DirectX11, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createD3D11Device ), RHIAvailability::query( RHIBackend::DirectX11 ) );
-        registerBackend( RHIBackend::DirectX12, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createD3D12Device ), RHIAvailability::query( RHIBackend::DirectX12 ) );
-        #endif
-        registerBackend( RHIBackend::Vulkan, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createVulkanDevice ), RHIAvailability::query( RHIBackend::Vulkan ) );
+    #elif defined( SW_RHI_TARGET_OPENGL )
         registerBackend( RHIBackend::OpenGL, SW_DELEGATE_FUNCTION( RHIDeviceFactoryDelegate, RHIBackendRegistryInternal::createOpenGLDevice ), RHIAvailability::query( RHIBackend::OpenGL ) );
     #endif
 #endif
@@ -200,7 +159,7 @@ namespace sw
 
     unique_ptr<IRHIDevice> RHIBackendRegistry::createDevice( RHIBackend backend ) const
     {
-#if defined( SW_RHI_AS_MODULES )
+#if !defined( SW_SHIPPING )
         RHIBackendRegistryInternal::ensureBackendModuleLoaded( backend );
 #endif
 

@@ -10,8 +10,8 @@
 # ------------------------------------------------------------------------------
 # 1) 라이브러리 타입 · RHI 소스 목록
 # Dev: SHARED / Shipping: STATIC
-# RHI MODULE 엔트리(Modules/)는 항상 Engine GLOB에서 제외
-# SW_RHI_AS_MODULES=ON 이면 device .cpp도 Engine에서 빼고 RHI_*가 동일 리스트를 씀
+# RHI MODULE 엔트리(Modules/)와 백엔드 device .cpp 는 항상 Engine GLOB 에서 뺀다.
+# Dev 는 RHI_* MODULE 이, Shipping 은 아래 3) 이 고른 백엔드 하나를 같은 목록에서 가져다 짓는다.
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD)
     set(coreLibType STATIC)
@@ -32,13 +32,11 @@ set(coreExclude
     "Module/DelayLoadNotifyHook.cpp"
 )
 
-if(SW_RHI_AS_MODULES OR SW_SHIPPING_BUILD)
-    foreach(src IN LISTS SW_RHI_ALL_DEVICE_SOURCES)
-        file(RELATIVE_PATH rel "${CMAKE_CURRENT_SOURCE_DIR}" "${src}")
-        string(REPLACE "." "\\." relEsc "${rel}")
-        list(APPEND coreExclude "${relEsc}")
-    endforeach()
-endif()
+foreach(src IN LISTS SW_RHI_ALL_DEVICE_SOURCES)
+    file(RELATIVE_PATH rel "${CMAKE_CURRENT_SOURCE_DIR}" "${src}")
+    string(REPLACE "." "\\." relEsc "${rel}")
+    list(APPEND coreExclude "${relEsc}")
+endforeach()
 
 # ------------------------------------------------------------------------------
 # 2) Engine 타겟 — include 전파, Core_objects 재사용
@@ -153,48 +151,42 @@ if(TARGET sw_third_party_includes)
 endif()
 
 # ------------------------------------------------------------------------------
-# 3) RHI 링크 — MODULE이 아니면 Shipping은 백엔드 하나, Dev는 모놀리식
+# 3) RHI 링크 — Shipping 은 백엔드 하나를 Engine 에 정적 링크, Dev 는 RHI_* MODULE 을 런타임에 로드
 # ------------------------------------------------------------------------------
-if(NOT SW_RHI_AS_MODULES)
-    if(SW_SHIPPING_BUILD)
-        if(NOT SW_SHIPPING_RHI_BACKEND)
-            if(WIN32)
-                set(SW_SHIPPING_RHI_BACKEND "DX12" CACHE STRING "Shipping용 대상 RHI 백엔드")
-            else()
-                set(SW_SHIPPING_RHI_BACKEND "Vulkan" CACHE STRING "Shipping용 대상 RHI 백엔드")
-            endif()
-        endif()
-
-        message(STATUS "[Engine] Shipping monolithic RHI backend: ${SW_SHIPPING_RHI_BACKEND}")
-
-        if(SW_SHIPPING_RHI_BACKEND STREQUAL "DX12" AND TARGET sw_graphics_dx12_libs)
-            target_sources(Engine PRIVATE ${SW_RHI_DX12_DEVICE_SOURCES})
-            target_link_libraries(Engine PUBLIC sw_graphics_dx12_libs)
-            target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_DX12)
-        elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "DX11" AND TARGET sw_graphics_dx11_libs)
-            target_sources(Engine PRIVATE ${SW_RHI_DX11_DEVICE_SOURCES})
-            target_link_libraries(Engine PUBLIC sw_graphics_dx11_libs)
-            target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_DX11)
-        elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "Vulkan" AND TARGET sw_graphics_vulkan_libs)
-            target_sources(Engine PRIVATE ${SW_RHI_VULKAN_DEVICE_SOURCES})
-            target_link_libraries(Engine PUBLIC sw_graphics_vulkan_libs)
-            target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_VULKAN)
-        elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "OpenGL" AND TARGET sw_graphics_gl_libs)
-            target_sources(Engine PRIVATE ${SW_RHI_GL_DEVICE_SOURCES})
-            target_link_libraries(Engine PUBLIC sw_graphics_gl_libs)
-            target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_OPENGL)
-        endif()
-
-        # 고르지 않은 백엔드는 이 구성에서 아무도 짓지 않는다 — 소스 검사 게이트가 알도록 적는다. 고른 것은 Engine 의 소스 목록이 답한다.
-        get_target_property(listEngineSource Engine SOURCES)
-        set(listUnbuiltRhiSource ${SW_RHI_ALL_DEVICE_SOURCES})
-        list(REMOVE_ITEM listUnbuiltRhiSource ${listEngineSource})
-        sw_declareUnbuiltSources(${listUnbuiltRhiSource})
-    else()
-        if(TARGET sw_graphics_libs)
-            target_link_libraries(Engine PUBLIC sw_graphics_libs)
+if(SW_SHIPPING_BUILD)
+    if(NOT SW_SHIPPING_RHI_BACKEND)
+        if(WIN32)
+            set(SW_SHIPPING_RHI_BACKEND "DX12" CACHE STRING "Shipping용 대상 RHI 백엔드")
+        else()
+            set(SW_SHIPPING_RHI_BACKEND "Vulkan" CACHE STRING "Shipping용 대상 RHI 백엔드")
         endif()
     endif()
+
+    message(STATUS "[Engine] Shipping monolithic RHI backend: ${SW_SHIPPING_RHI_BACKEND}")
+
+    if(SW_SHIPPING_RHI_BACKEND STREQUAL "DX12" AND TARGET sw_graphics_dx12_libs)
+        target_sources(Engine PRIVATE ${SW_RHI_DX12_DEVICE_SOURCES})
+        target_link_libraries(Engine PUBLIC sw_graphics_dx12_libs)
+        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_DX12)
+    elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "DX11" AND TARGET sw_graphics_dx11_libs)
+        target_sources(Engine PRIVATE ${SW_RHI_DX11_DEVICE_SOURCES})
+        target_link_libraries(Engine PUBLIC sw_graphics_dx11_libs)
+        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_DX11)
+    elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "Vulkan" AND TARGET sw_graphics_vulkan_libs)
+        target_sources(Engine PRIVATE ${SW_RHI_VULKAN_DEVICE_SOURCES})
+        target_link_libraries(Engine PUBLIC sw_graphics_vulkan_libs)
+        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_VULKAN)
+    elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "OpenGL" AND TARGET sw_graphics_gl_libs)
+        target_sources(Engine PRIVATE ${SW_RHI_GL_DEVICE_SOURCES})
+        target_link_libraries(Engine PUBLIC sw_graphics_gl_libs)
+        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_OPENGL)
+    endif()
+
+    # 고르지 않은 백엔드는 이 구성에서 아무도 짓지 않는다 — 소스 검사 게이트가 알도록 적는다. 고른 것은 Engine 의 소스 목록이 답한다.
+    get_target_property(listEngineSource Engine SOURCES)
+    set(listUnbuiltRhiSource ${SW_RHI_ALL_DEVICE_SOURCES})
+    list(REMOVE_ITEM listUnbuiltRhiSource ${listEngineSource})
+    sw_declareUnbuiltSources(${listUnbuiltRhiSource})
 endif()
 
 # ------------------------------------------------------------------------------
@@ -230,13 +222,6 @@ if(WIN32)
     )
 endif()
 
-if(SW_RHI_AS_MODULES)
-    target_compile_definitions(Engine PRIVATE SW_RHI_AS_MODULES)
-    message(STATUS "[Engine] SW_RHI_AS_MODULES=ON -> RHI device sources excluded; loading RHI_* modules")
-else()
-    message(STATUS "[Engine] SW_RHI_AS_MODULES=OFF -> RHI device sources linked into Engine")
-endif()
-
 # ------------------------------------------------------------------------------
 # 5) Unity — 제외 목록이 **없다.** 그게 정상이고, 다시 만들지 말 것
 #
@@ -265,10 +250,10 @@ sw_addReflectionStep(Engine
 )
 sw_addReflectBuiltinsGen(Engine)
 
-# 선택적 RHI 백엔드 MODULE 플러그인 (DX는 Windows 전용, GL/Vulkan은 전 플랫폼)
-# 모듈을 짓지 않는 구성은 모듈 엔트리(Modules/<백엔드>/ModuleEntry.cpp)를 짓지 않는다 — 소스 검사 게이트에 적는다.
-if(SW_RHI_AS_MODULES)
-    add_subdirectory(Graphics/RHI/Modules)
-else()
+# RHI 백엔드 MODULE 플러그인 (DX는 Windows 전용, GL/Vulkan은 전 플랫폼) — Dev 만 짓는다.
+# Shipping 은 모듈 엔트리(Modules/<백엔드>/ModuleEntry.cpp)를 짓지 않는다 — 소스 검사 게이트에 적는다.
+if(SW_SHIPPING_BUILD)
     sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RHI/Modules")
+else()
+    add_subdirectory(Graphics/RHI/Modules)
 endif()

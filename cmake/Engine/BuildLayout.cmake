@@ -43,9 +43,7 @@ target_compile_definitions(sw_global_options INTERFACE "SW_BUILD_CONFIG_NAME=\"$
 
 if(SW_SHIPPING_BUILD)
 	target_compile_definitions(sw_global_options INTERFACE SW_SHIPPING)
-	set(SW_RHI_AS_MODULES OFF CACHE BOOL "RHI 백엔드(DX11/DX12/GL/Vulkan)를 MODULE 플러그인으로 빌드" FORCE)
-	message(STATUS "[BuildConfig] Shipping: Engine/SWGame STATIC, Editor off (SW_SHIPPING_BUILD=ON)")
-	message(STATUS "[BuildConfig] SW_RHI_AS_MODULES=OFF (CACHE FORCE)")
+	message(STATUS "[BuildConfig] Shipping: Engine/SWGame STATIC, RHI backend linked into Engine, Editor off (SW_SHIPPING_BUILD=ON)")
 else()
 	message(STATUS "[BuildConfig] Dev: Engine SHARED, Editor/SWGame MODULE (type=${CMAKE_BUILD_TYPE})")
 endif()

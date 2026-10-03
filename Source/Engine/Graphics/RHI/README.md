@@ -84,7 +84,7 @@ RHI/
 
 - **`RHIModuleAbi.h` 를 바꾸면** 엔진과 `RHI_*` DLL 을 **모두 함께** 다시 빌드해야 합니다.
   낡은 백엔드 DLL 은 함수 포인터가 어긋나 즉시 크래시합니다.
-- `SW_RHI_AS_MODULES` (기본 ON) 이면 백엔드는 별도 DLL 입니다. 그래서 Engine 의 전역 변수를
+- Dev 에서 백엔드는 별도 DLL(`RHI_*` MODULE)입니다(Shipping 은 하나를 Engine 에 정적 링크). 그래서 Engine 의 전역 변수를
   백엔드에서 그냥 `extern` 으로 참조할 수 없습니다 — 정책은 Engine 이 정하고 디바이스는
   메커니즘만 갖는 형태로 넘깁니다(`IRHIDevice::setImmediateSubmit` 참고).
 - **기록 중의 상수버퍼 갱신은 커맨드 리스트로 갑니다**(`IRHICommandList::updateConstantBuffer`, 언리얼 `RHIUpdateUniformBuffer` 와 같은 자리).

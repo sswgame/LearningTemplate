@@ -56,7 +56,6 @@ option(SW_ENABLE_TESTING "단위/통합 테스트 프로젝트 빌드 및 CTest 
 option(SW_ENABLE_UNITY_BUILD "대형 라이브러리 타겟에 CMake UNITY_BUILD(소스 묶음 컴파일) 사용" OFF)
 option(SW_GLOB_CONFIGURE_DEPENDS "소스 파일 추가/삭제를 빌드 시스템이 자동 감지하도록 CONFIGURE_DEPENDS 활성화 (Ninja 권장)" ON)
 option(SW_REQUIRE_REFLECTION "Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구" ON)
-option(SW_RHI_AS_MODULES "RHI 그래픽스 백엔드(DX11/DX12/GL/Vulkan)를 MODULE DLL 플러그인으로 분리 빌드" ON)
 option(SW_USE_SCCACHE "사용 가능 시 sccache 컴파일러 캐시를 활성화하여 빌드 가속" ON)
 
 # 2-2) 도구 및 vcpkg 부트스트랩 옵션

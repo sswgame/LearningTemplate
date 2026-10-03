@@ -198,7 +198,7 @@ endfunction()
 # 등록된 동적 모듈 중 **실제로 타겟이 있는 것**을 OUT_VAR 에 담습니다.
 #
 # `KINDS` 를 주면 그 종류만, 생략하면 전부. 타겟이 없는 이름은 거른다 — 배포 빌드는 RHI 를
-# Engine 에 정적 링크하므로(`SW_RHI_AS_MODULES=OFF`) 등록만 되고 타겟은 없는 상태가 정상이다.
+# Engine 에 정적 링크하므로 등록만 되고 타겟은 없는 상태가 정상이다.
 function(sw_getDynamicModules OUT_VAR)
 	cmake_parse_arguments(ARG "" "" "KINDS" ${ARGN})
 

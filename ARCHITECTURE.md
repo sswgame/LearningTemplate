@@ -24,8 +24,8 @@ App (exe)  — Engine + RuntimeAPI만 링크. GameFramework는 링크하지 않�
 Core (STATIC)     — 로그·파일·문자열·메모리. OBJECT를 Engine과 공유 컴파일.
                     ReflectionParser는 Core만 링크 (Engine.dll 순환 방지).
 ```
-- **Dev 모드**: `Engine` SHARED, `Editor`/`SWGame`/키트/`RHI_*`(`SW_RHI_AS_MODULES=ON`, 기본값)는 MODULE. App을 끄지 않고 핫리로드할 수 있습니다.
-- **Shipping 모드**: `Editor` 제외. `Engine`/`SWGame` STATIC. `SW_RHI_AS_MODULES`는 CACHE FORCE로 OFF.
+- **Dev 모드**: `Engine` SHARED, `Editor`/`SWGame`/키트/`RHI_*`는 MODULE. App을 끄지 않고 핫리로드할 수 있습니다.
+- **Shipping 모드**: `Editor` 제외. `Engine`/`SWGame` STATIC. RHI 백엔드는 `SW_SHIPPING_RHI_BACKEND` 로 고른 하나를 Engine 에 정적 링크.
 
 ### 엔진 기동 · 종료
 - 기동 순서는 **단계 표 하나**(`Source/Engine/EngineStartupStepList.xxx`)입니다. 줄마다 단계 하나와 그 단계가 기다리는 단계 목록(`{ A, B }`, 컴파일 때 검사)을 적고,
@@ -70,7 +70,7 @@ App은 게임이나 에디터 클래스를 직접 알지 못하며 오직 C-ABI(
 
 ### 3. RHI (Render Hardware Interface)
 DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입니다.
-- **동작 원리**: `IRHIDevice` 인터페이스를 통해 RHI 백엔드를 DLL 형태로 동적으로 불러옵니다(`SW_RHI_AS_MODULES=ON`).
+- **동작 원리**: `IRHIDevice` 인터페이스를 통해 RHI 백엔드를 DLL 형태로 동적으로 불러옵니다(Dev. Shipping 은 하나를 정적 링크).
 - **Caps**: 현재 모든 백엔드는 Bindless(바인드리스) 텍스처 접근과 Compute Root Constants(작은 UBO/CB)를 에뮬레이션 또는 네이티브로 지원합니다. Vulkan 은 1.3 이상(셰이더 굽기 타깃)인 물리 디바이스만 고릅니다.
 - **수명**: 디바이스 종료는 `IRHIDevice::shutdown` 템플릿 메서드가 공통 단계 순서를 갖고, 백엔드는 단계 훅만 구현합니다. 엔진 밖 모듈(에디터)은 백엔드 클래스로 캐스팅하지 않고
   판 번호 든 `RHINativeHandles` 를 디바이스에서 조회하며, 다 쓴 네이티브 자원은 `IRHIDevice::enqueueGpuRelease` 로 백엔드 해제 큐(GPU 펜스 뒤)에 넘깁니다
