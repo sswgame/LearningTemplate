@@ -61,6 +61,10 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
+        /** @brief 읽어 들인 `_graphPath` 로 그래프를 다시 엽니다 — 플레이 전(에디터)에도 Start Dialogue 가 그 그래프를 돌립니다. */
+        void onPostLoad() override;
+        /** @brief `_graphPath` 가 바뀌면 그 그래프를 다시 엽니다. */
+        void onPropertyChanged( hashed_string propertyName ) override;
 
         [[nodiscard]] bool loadGraphFile( string_view jsonPath );
         [[nodiscard]] bool loadGraphJson( string_view jsonContent );
@@ -95,6 +99,8 @@ namespace sw
          *          읽지 못한 식(정수가 아닌 오른쪽, 표에 없는 연산자 글자)은 경고하고 거짓입니다.
          */
         bool evaluateCondition( const string& condition ) const;
+        /** @brief `_graphPath` 의 그래프를 엽니다. 경로가 비었으면 아무것도 하지 않고, 못 열면 경고합니다. */
+        void loadGraphFromPath();
         /**
          * @brief 노드 하나를 실행합니다. 노드 종류별 할 일은 빠짐없는 switch 이고, 다음 노드는 `DialogueCursor::step` 이 정합니다.
          * @details 모르는 타입은 경고하고 대화를 끝냅니다(멈춘 채 남지 않습니다).

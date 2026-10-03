@@ -119,8 +119,31 @@ namespace sw
 
     void DialogueRunnerComponent::onBeginPlay()
     {
-        if ( _graphPath.empty() == false && _graph._listNode.empty() && loadGraphFile( _graphPath ) == false )
-            SW_LOG_WARNING( "Dialogue graph '%#' could not be loaded", _graphPath );
+        if ( _graph._listNode.empty() )
+            loadGraphFromPath();
+    }
+
+    void DialogueRunnerComponent::onPostLoad()
+    {
+        Component::onPostLoad();
+        loadGraphFromPath();
+    }
+
+    void DialogueRunnerComponent::onPropertyChanged( hashed_string propertyName )
+    {
+        Component::onPropertyChanged( propertyName );
+        static const hashed_string s_graphPathName( "_graphPath" );
+        if ( propertyName == s_graphPathName )
+            loadGraphFromPath();
+    }
+
+    void DialogueRunnerComponent::loadGraphFromPath()
+    {
+        if ( _graphPath.empty() )
+            return;
+        const string path = _graphPath;
+        if ( loadGraphFile( path ) == false )
+            SW_LOG_WARNING( "Dialogue graph '%#' could not be loaded", path );
     }
 
     void DialogueRunnerComponent::onEndPlay()

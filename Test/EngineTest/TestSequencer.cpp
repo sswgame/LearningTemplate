@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
@@ -595,4 +596,41 @@ SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCrossedEvents )
     SW_ASSERT_EQUAL( size_t( 2 ), listFirst.size() );
     SW_EXPECT_EQUAL( "Close", listFirst[1] );
     SW_EXPECT_EQUAL( size_t( 1 ), listSecond.size() );
+}
+
+/**
+ * @brief [SequencerTest] 상태를 읽어 들인 플레이어 컴포넌트는 플레이 전에도 그 시퀀스를 든다
+ * @details 상태 읽기는 프로퍼티를 직접 쓰고 `onPostLoad` 만 부른다(onBeginPlay 는 월드가 플레이 중일 때만). 시퀀스를 onBeginPlay 에서만 열면
+ *          에디터에서 읽은 컴포넌트의 Play(CallInEditor)가 빈 플레이어를 돌린다.
+ */
+SW_TEST_CASE( SequencerTest, PlayerComponentReopensItsSequenceAfterStateLoad )
+{
+    const sw::string  path  = test::makeTempPath( "sw_test_state_sequence.json" );
+    sw::SequenceAsset asset = sw::makeSequenceWithFirstFrameEvent();
+    SW_ASSERT_TRUE( asset.saveToFile( path ) );
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string{ "Director" } );
+    SW_ASSERT_NOT_NULL( pSource );
+    sw::SequencePlayerComponent* pSourcePlayer = pSource->addComponent<sw::SequencePlayerComponent>();
+    SW_ASSERT_NOT_NULL( pSourcePlayer );
+    pSourcePlayer->setSequencePath( path );
+
+    const sw::string xml = sw::ObjectStateSerializer::saveToXmlString( pSource );
+    SW_ASSERT_FALSE( xml.empty() );
+    sw::GameObject* pTarget = manager.createGameObject( sw::hashed_string{ "LoadedDirector" } );
+    SW_ASSERT_NOT_NULL( pTarget );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pTarget, xml ) );
+
+    sw::SequencePlayerComponent* pLoaded = pTarget->getComponent<sw::SequencePlayerComponent>();
+    SW_ASSERT_NOT_NULL( pLoaded );
+    SW_EXPECT_EQUAL( path, pLoaded->getSequencePath() );
+    SW_EXPECT_FALSE( pLoaded->hasBegunPlay() );
+
+    sw::vector<sw::string> listEvent;
+    pLoaded->registerSequenceEvent( [&listEvent]( const sw::SequenceTrackItem& item )
+    { listEvent.push_back( item._name ); } );
+    pLoaded->play();
+    SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() );
+    SW_EXPECT_EQUAL( "FirstFrameEvent", listEvent[0] );
 }

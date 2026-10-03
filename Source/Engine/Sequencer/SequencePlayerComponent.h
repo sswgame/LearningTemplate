@@ -28,6 +28,10 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
+        /** @brief 읽어 들인 `_sequencePath` 로 시퀀스를 다시 엽니다 — 플레이 전(에디터)에도 Play 가 그 시퀀스를 돌립니다. */
+        void onPostLoad() override;
+        /** @brief `_sequencePath` 가 바뀌면 그 시퀀스를 다시 엽니다. */
+        void onPropertyChanged( hashed_string propertyName ) override;
 
         FUNCTION( Category = "Playback", DisplayName = "Play", CallInEditor )
         void play();
@@ -40,6 +44,10 @@ namespace sw
 
         /** @brief 재생할 시퀀스를 바꿉니다(코드로 지은 시퀀스). 재생 위치는 그 시퀀스의 처음입니다. */
         void setSequence( const SequenceAsset& asset );
+        /** @brief 재생할 시퀀스 파일을 바꾸고 바로 엽니다. 못 열면 경고하고 빈 시퀀스입니다. */
+        void setSequencePath( string_view path );
+        /** @brief 재생할 시퀀스 파일 경로입니다. */
+        const string& getSequencePath() const { return _sequencePath; }
         /**
          * @brief 이벤트 항목을 지날 때 부를 델리게이트를 겁니다(언리얼 시퀀서 이벤트 트랙 · 유니티 Timeline Signal 에 해당).
          * @details 한 갱신에 지난 이벤트를 시간 순서로(루프를 되감았으면 되감기 전 끝 구간부터) 모두 알립니다. 로그와 달리 Shipping 에서도 불립니다.
@@ -50,6 +58,8 @@ namespace sw
 
     private:
         void applyTimeline();
+        /** @brief `_sequencePath` 의 시퀀스를 플레이어에 엽니다. 경로가 비었으면 아무것도 하지 않고, 못 열면 경고합니다. */
+        void loadSequenceFromPath();
 
         PROPERTY( Category = "Sequence", DisplayName = "Sequence", AssetPath, AssetType = "Sequence", Tooltip = "Sequence asset (.seq / .seq.json)" )
         string _sequencePath;

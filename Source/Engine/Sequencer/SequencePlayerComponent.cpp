@@ -31,10 +31,37 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
         _player.setFramesPerSecond( _framesPerSecond );
         _player.setLoop( _bLoop == SW_TRUE );
-        if ( _sequencePath.empty() == false && _player.loadFromFile( _sequencePath ) == false )
-            SW_LOG_WARNING( "Sequence '%#' could not be loaded - '%#' plays nothing", _sequencePath, getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
+        loadSequenceFromPath();
         if ( _bAutoPlay == SW_TRUE )
             play();
+    }
+
+    void SequencePlayerComponent::onPostLoad()
+    {
+        Component::onPostLoad();
+        loadSequenceFromPath();
+    }
+
+    void SequencePlayerComponent::onPropertyChanged( hashed_string propertyName )
+    {
+        Component::onPropertyChanged( propertyName );
+        static const hashed_string s_sequencePathName( "_sequencePath" );
+        if ( propertyName == s_sequencePathName )
+            loadSequenceFromPath();
+    }
+
+    void SequencePlayerComponent::setSequencePath( string_view path )
+    {
+        _sequencePath = string( path );
+        loadSequenceFromPath();
+    }
+
+    void SequencePlayerComponent::loadSequenceFromPath()
+    {
+        if ( _sequencePath.empty() )
+            return;
+        if ( _player.loadFromFile( _sequencePath ) == false )
+            SW_LOG_WARNING( "Sequence '%#' could not be loaded - '%#' plays nothing", _sequencePath, getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
     }
 
     void SequencePlayerComponent::onEndPlay()

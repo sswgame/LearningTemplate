@@ -4,6 +4,9 @@
 
 #include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
 #include "GameFramework/UI/DialogueRunnerComponent.h"
 
@@ -411,4 +414,35 @@ SW_TEST_CASE( DialogueGraphTest, MakeNodeFillsTheBodyField )
     const DialogueAssetNode dialogueNode = DialogueCursor::makeNode( DialogueAssetNodeType::Dialogue, 10 );
     SW_EXPECT_FALSE( dialogueNode._speaker.empty() );
     SW_EXPECT_FALSE( dialogueNode._text.empty() );
+}
+
+/**
+ * @brief [DialogueGraphTest] 상태를 읽어 들인 러너는 플레이 전에도 그 그래프를 든다
+ * @details 상태 읽기는 프로퍼티를 직접 쓰고 `onPostLoad` 만 부른다. 그래프를 onBeginPlay 에서만 열면 에디터에서 읽은 러너의
+ *          Start Dialogue(CallInEditor)가 "No valid nodes" 로 끝난다.
+ */
+SW_TEST_CASE( DialogueGraphTest, RunnerReopensItsGraphAfterStateLoad )
+{
+    const string filePath = test::makeTempPath( "test_state_dialogue_graph.json" );
+    SW_ASSERT_TRUE( makeChoiceGraph().saveToFile( filePath ) );
+
+    GameObjectManager manager;
+    GameObject*       pSource = manager.createGameObject( hashed_string( "Npc" ) );
+    SW_ASSERT_NOT_NULL( pSource );
+    DialogueRunnerComponent* pSourceRunner = pSource->addComponent<DialogueRunnerComponent>();
+    SW_ASSERT_NOT_NULL( pSourceRunner );
+    pSourceRunner->_graphPath = filePath;
+
+    const string xml = ObjectStateSerializer::saveToXmlString( pSource );
+    SW_ASSERT_FALSE( xml.empty() );
+    GameObject* pTarget = manager.createGameObject( hashed_string( "LoadedNpc" ) );
+    SW_ASSERT_NOT_NULL( pTarget );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pTarget, xml ) );
+
+    DialogueRunnerComponent* pLoaded = pTarget->getComponent<DialogueRunnerComponent>();
+    SW_ASSERT_NOT_NULL( pLoaded );
+    SW_EXPECT_EQUAL( filePath, pLoaded->_graphPath );
+    SW_EXPECT_FALSE( pLoaded->hasBegunPlay() );
+    SW_EXPECT_TRUE( pLoaded->startDialogue() );
+    SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::WaitingForChoice ), static_cast<uint8>( pLoaded->getState() ) );
 }
