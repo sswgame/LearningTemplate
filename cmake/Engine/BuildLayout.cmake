@@ -29,10 +29,8 @@ endif()
 add_library(sw_global_options INTERFACE)
 
 # 컴파일 플래그 모듈(Architecture/Platform/Compiler/BuildType/Options)이 만든 INTERFACE 타겟을
-# 여기서 한 번 흡수한다. 예전엔 sw_flag_libraries 가 **리스트 변수**라 타겟마다
-#   if(sw_flag_libraries) target_link_libraries(t PRIVATE ${sw_flag_libraries}) endif()
-# 를 다시 써야 했다(11곳). 리스트가 비어 있을 수 있어 가드까지 필요했다. 타겟 하나로 묶으면
-# sw_global_options 만 걸면 되고, 새 플래그 모듈이 늘어도 소비자는 고칠 게 없다.
+# 여기서 한 번 흡수한다. sw_flag_libraries 는 비어 있을 수 있는 **리스트 변수**라 소비자마다 가드와 함께
+# 다시 걸어야 하지만, 타겟 하나로 묶으면 sw_global_options 만 걸면 되고 새 플래그 모듈이 늘어도 소비자는 고칠 게 없다.
 if(sw_flag_libraries)
 	target_link_libraries(sw_global_options INTERFACE ${sw_flag_libraries})
 endif()
@@ -65,8 +63,7 @@ endif()
 # ------------------------------------------------------------------------------
 set(sw_ipo_supported FALSE)
 
-# `SW_ENABLE_LTO` 가 여기도 걸린다. 예전엔 이 전역 IPO 에 스위치가 없어서, 옵션을 OFF 로 줘도
-# Release 는 여전히 LTO 로 갔다 — 옵션 설명("Shipping 배포 빌드 시")과도 어긋났다. 이제 한 스위치다.
+# `SW_ENABLE_LTO` 가 여기도 걸린다 — 이 전역 IPO 와 Shipping LTO 는 한 스위치다(빼면 OFF 를 줘도 Release 가 LTO 로 간다).
 if(SW_ENABLE_LTO AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel"))
 	sw_checkIpoSupport(sw_ipo_supported sw_ipo_error)
 

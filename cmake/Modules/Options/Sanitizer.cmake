@@ -10,8 +10,8 @@ endif()
 add_library(sw_sanitizer INTERFACE)
 
 # ------------------------------------------------------------------------------
-# 0) ThreadSanitizer — 데이터 경쟁 탐지. 이번 결함 점검에서 동시성 결함 다섯 건(태스크 후속 목록 · 렌더 스레드 깨움 · 게임/렌더 스레드
-#    맵 경쟁 등)이 이것 하나로 잡힐 종류였다. GNU/Clang 전용이고 ASan 과 함께 켤 수 없다.
+# 0) ThreadSanitizer — 데이터 경쟁 탐지(태스크 후속 목록 · 렌더 스레드 깨움 · 게임/렌더 스레드 맵 경쟁 같은 동시성 결함이
+#    이것 하나로 잡힌다). GNU/Clang 전용이고 ASan 과 함께 켤 수 없다.
 # ------------------------------------------------------------------------------
 if(SW_SANITIZER_KIND STREQUAL "thread")
 	if(MSVC OR CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
@@ -82,7 +82,7 @@ if(MSVC OR sw_is_clang_cl)
 	# `annotate_string` / `annotate_vector` / `annotate_optional` 표시를 심는다
 	# (`__msvc_sanitizer_annotate_container.hpp`). vcpkg 라이브러리는 ASan 없이 빌드되어 0 이므로
 	# 또 링크가 선다. 우산 매크로 하나로 전부 끈다 — 개별 매크로를 나열하면 STL 이 주석 대상을
-	# 늘릴 때마다 같은 링크 오류를 다시 만난다(실제로 string·vector 를 막자 optional 이 나왔다).
+	# 늘릴 때마다 같은 링크 오류를 다시 만난다(string · vector 를 막으면 optional 이 나오는 식).
 	# 잃는 것은 STL 컨테이너 오버플로 탐지뿐이고, 힙·스택·use-after-free 검사는 그대로다.
 	target_compile_definitions(sw_sanitizer INTERFACE _DISABLE_STL_ANNOTATION)
 

@@ -46,10 +46,8 @@ endfunction()
 # 하나도 안 붙고, SaveGame 의 리플렉션 왕복이 깨진다. 그래서 리플렉션을 담은 정적 라이브러리는
 # 통째로 링크한다.
 #
-# 플래그는 링커마다 다르다. 예전엔 `/WHOLEARCHIVE` 하나가 `WIN32` 가드 안에 있었고, 그래서
-# 리눅스 Shipping 은 등록된 열거형이 **둘뿐인 채로** 테스트를 돌렸다(EngineTest_NoGPU 11건 —
-# docs/06_Backlog.md 2026-09-21). 로컬에서 재현이 안 됐던 이유도 같다: WSL 에서 돌린 것은
-# `CI-Debug`(Engine 이 SHARED)뿐이었다.
+# 플래그는 링커마다 다르다. 주의: 한쪽(`/WHOLEARCHIVE`)만 `WIN32` 가드 안에 두면 리눅스 Shipping 은 등록된 열거형이
+# 거의 없는 채로 테스트를 돈다 — 그리고 `CI-Debug`(Engine 이 SHARED)만 돌려서는 재현되지 않는다.
 #
 #   | 링커                  | 플래그                                     |
 #   | --------------------- | ------------------------------------------ |
@@ -84,15 +82,7 @@ endfunction()
 # ------------------------------------------------------------------------------
 # 동적 모듈 레지스트리 — **만드는 자리가 등록하고, 쓰는 자리는 묻는다**
 #
-# 예전에는 이 목록이 세 가지 방식으로 관리되고 있었다:
-#
-# | 모듈 | 등록 방식 |
-# | --- | --- |
-# | `GF_*` 키트 | `sw_addGameFrameworkKit` **안에서** `SW_DYNAMIC_MODULES` 에 append |
-# | `GameFramework` · `SWGame` | **호출부**에서 직접 append (`Source/GameFramework/CMakeLists.txt` 등) |
-# | `RHI_*` · `EditorModule` | **등록 안 됨** — 이름 넷을 소비하는 세 곳이 각자 리터럴로 들고 있었다 |
-#
-# 등록을 호출부에 맡기면 새 모듈이 조용히 빠진다(실제로 `EditorModule` 이 그랬다). 그래서 등록은
+# 등록을 호출부에 맡기거나 소비자가 이름을 리터럴로 들면 새 모듈이 조용히 빠진다. 그래서 등록은
 # **타겟을 만드는 함수 안에서만** 한다. 종류(`KIND`)를 같이 받아 두면 소비자가 필요한 것만 고를 수
 # 있다 — App 은 전부, EngineTest 는 `rhi` 만.
 #
@@ -373,9 +363,8 @@ function(sw_addGameFrameworkKit KIT_NAME)
 	set_target_properties(${KIT_NAME} PROPERTIES FOLDER "Source/GameFramework/Kits")
 
 	# 헤더 목록을 넘기지 않는다. sw_addReflectionStep 이 REFLECT/ENUM 매크로를 가진 헤더를
-	# **재귀로** 찾아낸다. 예전에는 여기서 GLOB 으로 키트 루트의 *.h 만 모았는데, 소스는
-	# GLOB_RECURSE 였다 — 키트 안에 하위 폴더를 만들면 .cpp 는 컴파일되고 그 안의 REFLECT()
-	# 타입만 조용히 등록되지 않았다.
+	# **재귀로** 찾아낸다. 주의: 여기서 키트 루트의 *.h 만 모으면(소스는 GLOB_RECURSE) 하위 폴더의 .cpp 는
+	# 컴파일되는데 그 안의 REFLECT() 타입만 조용히 등록되지 않는다.
 	sw_addReflectionStep(${KIT_NAME}
 		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 	)
@@ -452,10 +441,9 @@ endfunction()
 # ------------------------------------------------------------------------------
 # ASan 테스트 보정 — 등록된 CTest 이름 하나에 적용한다.
 #
-# `sw_addTestExecutable` 안에만 두었다가 **손으로 add_test 한 테스트가 빠졌다**
-# (EngineTest_NoGPU). 그쪽만 평시 타임아웃을 써서 ASan 에서 혼자 타임아웃으로 떨어졌고,
-# 스위트 전체 시간은 198초인데 한 테스트가 시간 초과라는 모순된 결과가 나왔다.
-# 그래서 한 곳으로 빼고 양쪽이 부른다 — 새 테스트를 손으로 등록해도 이 줄만 부르면 된다.
+# `sw_addTestExecutable` 안에만 두면 **손으로 add_test 한 테스트가 빠져** 그쪽만 평시 타임아웃으로
+# ASan 에서 혼자 시간 초과가 난다. 그래서 한 곳으로 빼고 양쪽이 부른다 — 새 테스트를 손으로 등록해도
+# 이 줄만 부르면 된다.
 # ------------------------------------------------------------------------------
 function(sw_applySanitizerTestProperties TEST_NAME)
 	cmake_parse_arguments(ARG "" "" "ASAN_OPTIONS" ${ARGN})
@@ -509,9 +497,8 @@ endfunction()
 # sw_registerTestRun — 테스트 실행 파일 하나를 ctest 항목 하나로 등록한다
 #
 # 작업 폴더는 **구성과 무관하게 `Bin`** 이다. 테스트는 거기서 위로 올라가며 `Resource/` 를 찾고, 배포 구성은
-# 실행 파일만 `TestBin` 으로 뺀다(`Bin` 에 테스트와 DXC 가 섞이지 않게). 예전에는 이 등록이 실행 파일이 나가는
-# 폴더를 작업 폴더로 써서, Shipping 의 라벨 없는 항목(`CoreTest` · `AppTest` …)만 `TestBin` 에서 돌았다 —
-# 문서와 손으로 등록한 `_NoGPU` 짝은 `Bin` 이었고, `AppTest` 는 거기서 `App.exe` 를 못 찾아 졌다.
+# 실행 파일만 `TestBin` 으로 뺀다(`Bin` 에 테스트와 DXC 가 섞이지 않게). 주의: 실행 파일이 나가는 폴더를 작업 폴더로
+# 쓰면 Shipping 에서 `TestBin` 에서 돌게 되고, `AppTest` 는 거기서 `App.exe` 를 못 찾아 진다.
 # ------------------------------------------------------------------------------
 function(sw_registerTestRun TEST_NAME TARGET_NAME)
 	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "ARGS;LABELS;ASAN_OPTIONS" ${ARGN})
@@ -540,15 +527,14 @@ endfunction()
 #   HOST_SPLIT    호스트 스위트(`SW_TEST_REQUIRES_HOST`)가 있는 실행 파일. ctest 항목을 둘로 가른다 —
 #                 `<타깃>_NoGPU`(`--host_suites=exclude`, 라벨 `nogpu`, CI 가 도는 집합)와
 #                 `<타깃>_HostOnly`(`--host_suites=only`, 라벨 `hostgpu`, 직렬). 어느 스위트가 호스트인지는
-#                 **코드의 선언이 정한다** — 여기에 스위트 이름을 적지 않는다. 예전에는 같은 집합을 두 필터
-#                 문자열로 손으로 적고(빼는 목록 · 고르는 목록) 린트가 주석 마커와 대조했다. 그리고 갈라진
-#                 두 항목 말고 **전체 실행도 하나 더** 등록돼 있어서, 라벨 없는 `ctest` 가 EngineTest 를 두 번 돌았다.
+#                 **코드의 선언이 정한다** — 여기에 스위트 이름을 적지 않는다. 갈라진 두 항목 말고 전체 실행을
+#                 하나 더 등록하지 말 것(라벨 없는 `ctest` 가 같은 시험을 두 번 돈다).
 #   HOST_TIMEOUT  `_HostOnly` 의 제한 시간(기본: TIMEOUT).
 #   SHARDS        ctest 항목을 이 수만큼 `<타깃>_Shard<k>` 로 갈라 병렬로 돌린다(`--test_shard=<k-1>/<n>`). 케이스는 **스위트 안에서 번갈아**
 #                 나뉘므로 느린 스위트 하나가 끝을 정하는 실행 파일에 쓴다(ReflectionTest — 파서를 차례로 띄우는 스위트가 시간의 거의 전부).
 #                 스위트 이름을 적지 않는다. HOST_SPLIT 과는 아직 함께 쓰지 않는다.
-#   RUN_SERIAL    다른 테스트와 겹치면 안 되는 실행 파일. **지금 쓰는 타겟은 없다** — EngineTest · SmokeTest 가 들고 있었지만 겹치면 안 될
-#                 이유(같은 파일 · 같은 장치)가 없어서 2026-10-01 에 걷었다(그 둘의 CMakeLists 참고). 쓸 때는 그 이유를 옆에 적는다.
+#   RUN_SERIAL    다른 테스트와 겹치면 안 되는 실행 파일(같은 파일 · 같은 장치를 쓰는 경우). **지금 쓰는 타겟은 없다.**
+#                 쓸 때는 그 이유를 옆에 적는다.
 # ------------------------------------------------------------------------------
 function(sw_addTestExecutable TARGET_NAME)
 	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT;SHARDS" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
@@ -587,7 +573,7 @@ function(sw_addTestExecutable TARGET_NAME)
 
 	# App 과 같은 이유로 테스트 실행 파일도 리플렉션 정적 라이브러리를 통째로 링크한다 —
 	# 왜 그래야 하는지, 플랫폼마다 무슨 플래그인지는 `sw_linkWholeArchive` 머리말에 있다.
-	# 플랫폼 가드는 여기 두지 않는다: 한때 `WIN32` 가 여기 있어서 리눅스 Shipping 만 조용히 깨졌다.
+	# 플랫폼 가드는 여기 두지 않는다: `WIN32` 로 가드하면 리눅스 Shipping 만 조용히 깨진다.
 	if(SW_SHIPPING_BUILD)
 		sw_linkWholeArchive(${TARGET_NAME} ${ARG_LIBS})
 	endif()
@@ -742,10 +728,9 @@ function(sw_addDelayloadHook TARGET_NAME)
 		get_property(swHookSrc TARGET Engine PROPERTY SW_DELAYLOAD_HOOK_SOURCE)
 	endif()
 
-	# 속성이 **있는데 그 파일이 없으면** 그것은 설정 실수다. 조용히 넘어가면 안 된다 —
-	# 실제로 파일이 Utility/Module/ 에서 Module/ 로 옮겨간 뒤 속성만 옛 경로에 남아 있었고,
-	# 아래 폴백이 매번 대신 고쳐 주는 바람에 아무도 눈치채지 못했다. 속성을 두는 이유가
-	# "훅 소스의 위치를 한 곳에서 안다" 인데, 그 한 곳이 틀린 채로 굳어 있었다.
+	# 속성이 **있는데 그 파일이 없으면** 그것은 설정 실수다. 조용히 넘어가면 안 된다 — 파일을 옮기고 속성을
+	# 놓치면 아래 폴백이 매번 대신 고쳐 주어 아무도 눈치채지 못한다. 속성을 두는 이유가 "훅 소스의 위치를
+	# 한 곳에서 안다" 이므로, 그 한 곳이 틀리면 여기서 멈춘다.
 	if(swHookSrc AND NOT EXISTS "${swHookSrc}")
 		message(FATAL_ERROR "[sw_addDelayloadHook] SW_DELAYLOAD_HOOK_SOURCE points at a file that does not exist: ${swHookSrc}")
 	endif()

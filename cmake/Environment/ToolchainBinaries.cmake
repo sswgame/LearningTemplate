@@ -3,16 +3,14 @@
 # @brief 아카이버(llvm-lib / llvm-ar) 바인딩과 IPO(LTO) 지원 판정 — 플랫폼 공통
 # ==============================================================================
 #
-# **여기가 "아카이버를 누구로 쓸 것인가" 의 한 자리다.**
-# 예전에는 같은 판단이 세 군데 있었다: `FindWindowsTools.cmake` 와 (잠깐 존재했던)
-# `FindPosixTools.cmake` 가 각자 `toolchain_config.json` 을 직접 읽어 `llvm_path` 를 뒤졌고,
-# 정작 그 일을 하는 `sw_findLlvmBin` 이 이미 옆 파일(`FindLlvmBin.cmake`)에 있었다.
+# **여기가 "아카이버를 누구로 쓸 것인가" 의 한 자리다.** 플랫폼별 파일이 `toolchain_config.json` 을 직접
+# 읽어 `llvm_path` 를 뒤지지 않는다 — 그 일은 `sw_findLlvmBin`(`FindLlvmBin.cmake`)이 한다.
 #
 # 왜 아카이버가 중요한가: clang 이 `-flto` 로 내는 `.obj`/`.o` 는 LLVM 비트코드다.
 # 그것을 묶으려면 LLVM 아카이버여야 한다. 짝이 어긋나면 **LTO 가 통째로, 조용히 꺼진다** —
 # Windows 는 `LNK1107`, 리눅스는 `"CMAKE_CXX_COMPILER_AR-NOTFOUND"` 로 죽고, CMake 는 그 실패를
-# "이 컴파일러는 IPO 를 지원하지 않는다" 로 보고한다. `SW_ENABLE_LTO=ON` 인데 `-flto` 가 한 TU 에도
-# 안 걸린 상태로 오래 있었던 것이 그 때문이다(2026-09-14 실측).
+# "이 컴파일러는 IPO 를 지원하지 않는다" 로 보고한다. 그러면 `SW_ENABLE_LTO=ON` 인데 `-flto` 가 한 TU 에도
+# 안 걸리고 아무 오류도 나지 않는다.
 
 include("${CMAKE_CURRENT_LIST_DIR}/FindLlvmBin.cmake")
 
@@ -22,8 +20,8 @@ include("${CMAKE_CURRENT_LIST_DIR}/FindLlvmBin.cmake")
 # **실제로 쓰는 컴파일러 옆을 먼저 본다.** 아카이버는 컴파일러가 낸 비트코드를 읽어야 하므로
 # 둘은 같은 LLVM 에서 와야 한다. `sw_findLlvmBin` 은 "컴파일러를 어디서 찾을까" 에 답하는 함수라
 # **시스템 설치를 프로젝트 Tools 보다 먼저** 본다(최초 clone 시 Tools 가 없어도 되도록). 그 우선순위를
-# 아카이버에 그대로 쓰면 어긋난다 — 리눅스에서 실제로 그랬다: 시스템 clang 이 잡혀 `/usr/bin` 을
-# 돌려주고, 거기엔 llvm-ar 이 없어 LTO 가 조용히 꺼졌다(2026-09-14 WSL 실측).
+# 아카이버에 그대로 쓰면 어긋난다 — 리눅스에서 시스템 clang 이 잡히면 `/usr/bin` 을 돌려주고,
+# 거기엔 llvm-ar 이 없어 LTO 가 조용히 꺼진다.
 # ------------------------------------------------------------------------------
 function(sw_pinnedArchiverPath OUT_VAR)
 	set(${OUT_VAR} "" PARENT_SCOPE)

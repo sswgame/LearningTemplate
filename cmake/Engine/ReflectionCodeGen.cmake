@@ -119,7 +119,7 @@ function(sw_addReflectionStep TARGET_NAME)
     configure_file("${swReflectInputList}.in" "${swReflectInputList}" COPYONLY)
 
     # 반사된 헤더가 include 한 **반사되지 않은** 헤더(예: `using ScoreList = …`)가 바뀌어도 이 단계가 다시 돌게 한다. 파서가 실행마다
-    # include 목록을 이 파일에 쓰고 ninja 가 읽는다. 예전에는 DEPENDS 가 반사된 헤더뿐이라 생성 코드가 옛 컨테이너 래퍼로 남았다.
+    # include 목록을 이 파일에 쓰고 ninja 가 읽는다. DEPENDS 가 반사된 헤더뿐이면 생성 코드가 낡은 타입 정보로 남는다.
     set(swReflectDepfile "${ARG_OUTPUT_DIR}/ReflectionParser.d")
 
     add_custom_command(
@@ -147,10 +147,9 @@ function(sw_addReflectionStep TARGET_NAME)
 
     # ENUM(Flags) 트레이트 우산은 **조건 없이** 강제 include 한다.
     #
-    # 예전에는 여기서 `ENUM( Flags` 를 정규식으로 훑어 플래그 열거형이 있을 때만 붙였다. 그런데
-    # 파서는 `AnnotationMeta.txt` 의 동의어를 전부 받는다(Flags · BitFlag · FLAG · Bitwise) —
-    # 한 타깃의 플래그 열거형이 전부 `BitFlag` 철자였다면 우산은 만들어지는데 `/FI` 는 안 붙어
-    # "invalid operands to binary expression" 으로 깨졌다. **두 곳이 같은 판정을 따로 내리고 있었다.**
+    # 주의: 여기서 `ENUM( Flags` 를 정규식으로 훑어 조건부로 붙이지 말 것. 파서는 `AnnotationMeta.txt` 의 동의어를
+    # 전부 받으므로(Flags · BitFlag · FLAG · Bitwise) 철자 하나가 다르면 우산은 만들어지는데 `/FI` 는 안 붙어
+    # "invalid operands to binary expression" 으로 깨진다 — 같은 판정을 두 곳이 따로 내리면 안 된다.
     # 플래그가 없는 타깃의 우산은 사실상 빈 파일이라 붙여도 비용이 없다.
     if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
         target_compile_options(${TARGET_NAME} PUBLIC "/FI${swFlagOpsHeader}")
@@ -166,7 +165,7 @@ function(sw_addReflectionStep TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 2) sw_addReflectBuiltinsGen — ReflectBuiltins.h → TypeRegistrar .gen.cpp
+# 2) sw_addReflectBuiltinsGen — Engine/Reflection/ReflectBuiltins.xxx → TypeRegistrar .gen.cpp
 # Engine 전용. Unity 배치에서 제외
 # ------------------------------------------------------------------------------
 function(sw_addReflectBuiltinsGen TARGET_NAME)
@@ -192,10 +191,10 @@ function(sw_addReflectBuiltinsGen TARGET_NAME)
     # 플레이스홀더는 target_sources 가 설정 시점에 붙일 파일이 있어야 해서 쓴다. 그런데 이걸
     # 그냥 쓰면 **출력이 이미 존재하고 의존물보다 새것**이 되어 ninja 가 커스텀 커맨드를 영영
     # 돌리지 않는다 — 생성 파일을 지우면 플레이스홀더가 최종 산출물로 굳어 링크가
-    # `forceLinkBuiltinTypes` 미정의로 깨진다(실제로 겪었다. 리컨피그해도 같은 덫이 다시 놓인다).
+    # `forceLinkBuiltinTypes` 미정의로 깨진다(리컨피그해도 같은 덫이 다시 놓인다).
     # 그래서 스탬프를 함께 출력물로 두고, 플레이스홀더를 새로 쓴 경우엔 스탬프를 지운다.
     # sw_addReflectionStep 쪽은 파서의 isUpToDate 가 플레이스홀더를 알아보고 다시 생성하므로
-    # 이 문제가 없다 — 여기만 그 검사가 없었다.
+    # 이 문제가 없다.
     set(swBuiltinStamp "${genFile}.stamp")
 
     if(NOT EXISTS "${genFile}")

@@ -34,15 +34,14 @@ function(sw_findWindowsArchiveAndMt OUT_AR OUT_MT)
 	set(swAr "")
 	set(swMt "")
 
-	# SDK/MSVC 경로는 `DetectToolchain` 이 include 한 생성 파일(ToolchainVars.cmake)이 준다.
-	# 예전에는 여기서 toolchain_config.json 을 **다시** 읽었고, 키 이름을 리터럴로 적어서
-	# DetectToolchain 의 `SW_KEY_*` 상수와 철자가 갈라져 있었다.
+	# SDK/MSVC 경로는 `DetectToolchain` 이 include 한 생성 파일(ToolchainVars.cmake)이 준다 —
+	# 여기서 toolchain_config.json 을 다시 읽지 않는다(키 철자가 갈라진다).
 	set(swSdkDir "${SW_TOOLCHAIN_WINDOWS_SDK_DIR}")
 	set(swSdkVer "${SW_TOOLCHAIN_WINDOWS_SDK_VERSION}")
 	set(swMsvcTools "${SW_TOOLCHAIN_MSVC_TOOLS_DIR}")
 
 	# **고정 LLVM 의 llvm-lib 을 가장 먼저 본다** (왜 그래야 하는지는 ToolchainBinaries.cmake 머리 주석).
-	# 예전엔 환경변수 둘만 보고 없으면 MSVC lib.exe 로 떨어졌는데, 정작 컴파일러는 Tools/LLVM 것을 쓴다.
+	# 컴파일러가 Tools/LLVM 것이므로 MSVC lib.exe 는 고정 llvm-lib 이 없을 때의 폴백일 뿐이다.
 	sw_pinnedArchiverPath(swPinnedAr)
 
 	if(swPinnedAr)
@@ -72,10 +71,10 @@ macro(sw_bindClangClWindowsTools)
 	if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		set(swArTool "")
 
-		# **먼저 찾고, 있으면 그것을 쓴다.** 예전엔 이미 설정된 `CMAKE_AR` 을 먼저 봤는데, 그 값은
+		# **먼저 찾고, 있으면 그것을 쓴다.** 이미 설정된 `CMAKE_AR` 을 먼저 보면 안 된다 — 그 값은
 		# 바로 위 `project()` 가 다시 채워 넣은 MSVC lib.exe 다(DetectToolchain 이 llvm-lib 으로
-		# FORCE 해 두어도 덮인다). 그래서 이 매크로가 존재하는 이유 자체 — "project() 뒤에 다시
-		# 묶는다" — 가 무력했고, LTO 는 계속 꺼져 있었다. 탐색이 아무것도 못 찾을 때만 물려받는다.
+		# FORCE 해 두어도 덮인다). 그러면 "project() 뒤에 다시 묶는다" 는 이 매크로가 무력해지고
+		# LTO 가 꺼진다. 탐색이 아무것도 못 찾을 때만 물려받는다.
 		sw_findWindowsArchiveAndMt(swFoundAr swFoundMt)
 
 		if(swFoundAr)
@@ -95,7 +94,7 @@ macro(sw_bindClangClWindowsTools)
 
 			# **캐시만 고치면 안 된다.** `project()` 의 컴파일러 탐지가 같은 이름의 **일반 변수**를
 			# 최상위 스코프에 만들어 두고, 일반 변수는 캐시를 가린다. 그래서 캐시엔 llvm-lib 이
-			# 적혀 있는데 정작 읽는 쪽은 MSVC lib.exe 를 보는 상태가 됐다(2026-09-14 에 확인).
+			# 적혀 있는데 정작 읽는 쪽은 MSVC lib.exe 를 보는 상태가 된다.
 			# 이 매크로는 호출자 스코프에서 펼쳐지므로 여기서 덮으면 그 그림자가 걷힌다.
 			set(CMAKE_AR "${swArTool}")
 			set(CMAKE_C_COMPILER_AR "${swArTool}")

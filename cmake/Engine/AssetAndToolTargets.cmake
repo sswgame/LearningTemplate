@@ -67,9 +67,9 @@ if(Python3_Interpreter_FOUND)
 	# 프리팹·씬 쿠킹 산출물은 소스 트리(Resource/)가 아니라 빌드 폴더에 스테이징한다 — 소스 옆에 두면
 	# 낡은 .bin 이 남아 Dev 런타임이 그것으로 물러나 실패를 가린다. 팩 안 경로는 같다(cookPack 이 병합).
 	# 씬 쿠킹은 엔진 안(App --cook-scenes)에서 돈다 — 리플렉션이 필요해서다. 그래서 이 타겟은 App **뒤**에
-	# 와야 하고, App 경로는 빌드 폴더를 뒤지지 않고 CMake 가 그대로 넘긴다. 예전에는 Shipping App 이
-	# CookAssets 에 의존했는데(팩을 먼저), 그러면 깨끗한 트리(CI)에서는 아직 없는 App 을 찾다가 죽었다 —
-	# 로컬에서는 다른 프리셋의 낡은 App.exe 가 우연히 있어 지나갔다. 의존 방향은 sw_configureAppDependencies 가 건다.
+	# 와야 하고, App 경로는 빌드 폴더를 뒤지지 않고 CMake 가 그대로 넘긴다. 주의: 방향을 거꾸로(App 이 CookAssets 에
+	# 의존) 걸면 깨끗한 트리(CI)에서 아직 없는 App 을 찾다가 죽는다 — 로컬에서는 다른 프리셋의 낡은 App.exe 가
+	# 우연히 있어 지나간다. 의존 방향은 sw_configureAppDependencies 가 건다.
 	set(swCookArgs --all --output "${swPackOutputDir}" --cooked-dir "${CMAKE_BINARY_DIR}/Cooked" --app "$<TARGET_FILE:App>")
 	if(SW_SHIPPING_BUILD)
 		list(APPEND swCookArgs --verify-shaders)
@@ -83,12 +83,11 @@ if(Python3_Interpreter_FOUND)
 
 	# 린트 타깃·CTest 등록은 파이썬이 만든다 — 목록의 출처는 `Scripts/lint/gate/` 와
 	# `Scripts/lint/selftest/` 폴더 그 자체이고, 린트마다 다른 값(설명·타임아웃·추가 인자)은
-	# 각 린트가 직접 든다. 예전에는 이 파일이 열한 덩이를 손으로 들고 있었고, 스크립트 경로
-	# 상수 열셋이 Constants.py -> ConfigVars.cmake 를 타고 따라다녔다.
+	# 각 린트가 직접 든다. 이 파일에 린트를 손으로 나열하지 않는다.
 	#
 	# **폴더가 목록이므로 폴더를 감시해야 한다.** 이 GLOB 의 결과는 쓰지 않는다 — `CONFIGURE_DEPENDS`
 	# 가 그 디렉터리를 빌드마다 다시 보게 만드는 것이 목적이다. 없으면 `gate/` 에 파일을 놓아도
-	# 아무 일이 없다: 예전에는 CMakeLists 를 같이 고쳐야 했고 그게 곧 reconfigure 트리거였다.
+	# 아무 일이 없다(고칠 CMakeLists 가 없으니 reconfigure 를 부를 것도 없다).
 	file(GLOB swLintScriptWatch CONFIGURE_DEPENDS
 		"${CMAKE_SOURCE_DIR}/Scripts/lint/gate/*.py"
 		"${CMAKE_SOURCE_DIR}/Scripts/lint/selftest/*.py"

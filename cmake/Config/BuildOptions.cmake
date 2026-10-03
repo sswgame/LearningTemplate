@@ -47,10 +47,9 @@ option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 �
 set(SW_SANITIZER_KIND "address" CACHE STRING "SW_ENABLE_SANITIZER 가 켤 새니타이저: address | thread")
 set_property(CACHE SW_SANITIZER_KIND PROPERTY STRINGS address thread)
 
-# 배포 빌드의 산출물 디렉터리에 테스트 실행 파일이 섞이면 안 된다. 한때 Shipping 에서 테스트를
-# 통째로 껐는데, 그러면 CI 가 Shipping 을 CoreTest 로 스모크하는 경로(`--target App CoreTest`)가
-# 사라져 배포 구성이 실제로 도는지 아무도 확인하지 않게 된다. 테스트는 어디서든 빌드하고,
-# 대신 Shipping 에서는 실행 파일을 Bin 이 아니라 TestBin 으로 뺀다(sw_addTestExecutable).
+# 배포 빌드의 산출물 디렉터리에 테스트 실행 파일이 섞이면 안 된다. 그렇다고 Shipping 에서 테스트를
+# 끄면 배포 구성이 실제로 도는지 아무도 확인하지 않게 된다(CI 는 Shipping 에서도 같은 시험 집합을 돈다).
+# 테스트는 어디서든 빌드하고, Shipping 에서는 실행 파일을 Bin 이 아니라 TestBin 으로 뺀다(sw_addTestExecutable).
 # 테스트가 끌고 오는 개발용 DLL 은 각 호출부의 SW_SHIPPING_BUILD 가드가 이미 막고 있다.
 option(SW_ENABLE_TESTING "단위/통합 테스트 프로젝트 빌드 및 CTest 등록" ON)
 option(SW_ENABLE_UNITY_BUILD "대형 라이브러리 타겟에 CMake UNITY_BUILD(소스 묶음 컴파일) 사용" OFF)

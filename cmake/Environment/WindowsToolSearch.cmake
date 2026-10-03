@@ -2,8 +2,8 @@
 # @file cmake/Environment/WindowsToolSearch.cmake
 # @brief MSVC lib.exe · Windows SDK mt.exe 를 폴더 규칙대로 찾는 함수 둘 (본 프로젝트와 vcpkg 포트 툴체인이 함께 쓴다)
 # ==============================================================================
-# 예전에는 `FindWindowsTools.cmake`(본 프로젝트)와 `Modules/Toolchain/Vcpkg/VcpkgPortsToolchain.cmake`(포트 빌드)가 이 두 탐색을
-# 글자 그대로 한 벌씩 들고 있었다(22 줄 + 9 줄). 어느 쪽을 고치면 다른 쪽이 남는다. 무엇을 먼저 볼지(고정 llvm-lib · llvm-mt 등)는
+# `FindWindowsTools.cmake`(본 프로젝트)와 `Modules/Toolchain/Vcpkg/VcpkgPortsToolchain.cmake`(포트 빌드)가 둘 다 부른다 — 탐색을
+# 한 벌씩 따로 들면 어느 쪽을 고칠 때 다른 쪽이 남는다. 무엇을 먼저 볼지(고정 llvm-lib · llvm-mt 등)는
 # 부르는 쪽마다 다르므로 여기 두지 않는다 — 여기 있는 것은 "MSVC · SDK 폴더 안에서 어디를 보는가" 뿐이다.
 include_guard(GLOBAL)
 

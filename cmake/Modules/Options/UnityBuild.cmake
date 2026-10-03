@@ -34,8 +34,7 @@ endfunction()
 # ------------------------------------------------------------------------------
 # 2) sw_skipUnitySources — 지정 소스를 Unity 배치에서 제외
 #
-# **지금 부르는 곳이 없다(2026-09-13).** Engine 이 TU 19 개를 여기로 빼 두고 있었는데, 그 목록은
-# TU 를 나눌 때마다 같이 고쳐야 해서 계속 썩었다(아래 FATAL_ERROR 가 그래서 붙었다). 이름이 부딪치는
+# **지금 부르는 곳이 없다.** 제외 목록은 TU 를 나눌 때마다 같이 고쳐야 해서 썩는다. 이름이 부딪치는
 # 문제는 목록이 아니라 **이름 규칙**으로 막는 것이 맞다 — 익명 네임스페이스 헬퍼는 TU 이름을 따고
 # (AGENTS.md) `CheckCodeConventions` 의 `Naming/DuplicateInternalHelper` 가 검사한다.
 #
@@ -48,8 +47,7 @@ function(sw_skipUnitySources TARGET_NAME)
 		return()
 	endif()
 
-	# 없는 경로를 조용히 건너뛰면 파일이 옮겨졌을 때 제외가 무효가 된 걸 아무도 모른다
-	# (Renderer 재편 뒤 FrameRenderer 제외 6개가 그렇게 죽어 있었다). 경로가 틀리면 즉시 실패한다.
+	# 없는 경로를 조용히 건너뛰면 파일이 옮겨졌을 때 제외가 무효가 된 걸 아무도 모른다. 경로가 틀리면 즉시 실패한다.
 	foreach(src IN LISTS ARGN)
 		if(NOT EXISTS "${src}")
 			message(FATAL_ERROR "[UnityBuild] sw_skipUnitySources(${TARGET_NAME}): 없는 경로 -> ${src}")

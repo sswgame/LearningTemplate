@@ -33,8 +33,8 @@ sw_executePythonScript(
 # 2) toolchain_config.json 파싱 및 project() 호출 전 빌드 환경 주입
 # ------------------------------------------------------------------------------
 # toolchain_config.json 을 CMake 가 다시 파싱하지 않는다. 그 파일을 쓰는 쪽이 파이썬이니
-# 읽는 모양도 파이썬이 준다 — 키 하나당 `string(JSON ... GET)` + `if(jsonErr)` 블록이 일곱 벌
-# 있었고, 같은 키를 FindWindowsTools 는 리터럴 문자열로 적고 있었다.
+# 읽는 모양도 파이썬이 준다 — CMake 가 키마다 `string(JSON ... GET)` 블록을 두면 같은 키를 곳마다
+# 다른 철자(상수 · 리터럴)로 적게 된다.
 # 값이 없으면 변수도 없다(= 빈 값). 아래 `if(X AND EXISTS ...)` 가 그대로 동작한다.
 set(SW_GENERATED_TOOLCHAIN_VARS "${CMAKE_BINARY_DIR}/generated/sw/config/ToolchainVars.cmake")
 sw_executePythonScript("Scripts/generate/GenerateToolchainCMake.py"
