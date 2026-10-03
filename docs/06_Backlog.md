@@ -96,7 +96,7 @@ cd build/Ninja-Debug/Bin
 ### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
 
 - **불필요 코드 삭제(진행 중, 사용자 지시 10-04)** — 조사 보고서는 세션 스크래치 `deadcode/report.md`(1,615 줄: 호출자 없음 354 · 구조 개선 잔여물 39 · 중복 11 묶음 ·
-  경위 주석 ~2,300 블록). 코드 묶음 A(에디터 −352 줄) · B(RHI · 렌더러, Dev 모놀리식 RHI 갈래 · `SW_RHI_AS_MODULES` 제거, ABI v23) · D(Core · App · 도구 · 스크립트 · cmake −842/+341, 누수 추적 켬)는 끝났고, C · E 가 진행 중이고, C(셰이더 데이터 · EngineData — 굽기 필요) ·
+  경위 주석 ~2,300 블록). 코드 묶음 A(에디터 −352 줄) · B(RHI · 렌더러, Dev 모놀리식 RHI 갈래 · `SW_RHI_AS_MODULES` 제거, ABI v23) · D(Core · App · 도구 · 스크립트 · cmake −842/+341, 누수 추적 켬) · C(셰이더 데이터 · EngineData) · E(Engine 나머지 −2186/+289)는 끝났고, F 가 진행 중이고, C(셰이더 데이터 · EngineData — 굽기 필요) ·
   E(Engine 나머지: `PropertyMetaHint` · XML 백엔드 배열/맵 API · LocalizationManager 형식 셋 · SerializeContext 객체 id 표 · ActionMap 기본 바인딩 폴백) ·
   F(GameFramework · 시험: `BattleEvents.h` · TurnBattle 옛 세이브 · GPU 시험 준비 코드 43 곳 합치기)가 그다음, 주석 · 문서 2 차(G1~G5)는 코드 묶음을 합친 뒤.
   사용자 결정: macOS · LocalizationManager 형식 셋 · SerializeContext id 표 · Dev 모놀리식 RHI 갈래 · ActionMap 폴백은 지움, 누수 추적(`enableMemoryLeakChecks`)은 켬,
@@ -145,6 +145,12 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
+- **common 셰이더는 engine 헤더를 고쳐도 다시 구워지지 않는다** — common 셰이더가 engine 의 `common.hlsli` · `binding.hlsli` 를 include 하는데 `isBakedOutputCurrent` ·
+  `writeBakeStamp` 는 자기 도메인 `shaders/` 아래 `.hlsli` 만 해시한다(`CookAssets --verify-shaders` 도 같다). 스탬프가 include 를 따라가게 할 것. 베이커는 요청에서 빠진
+  바이너리를 지우지 않는다 — 지금은 `ShaderBakeRequestTest.BakedFoldersHoldOnlyRequestedBinaries` 가 잡는다.
+- **디퍼드 파이프라인이 톤맵을 두 번 거는 것으로 보인다(코드 읽기, 픽셀 미측정)** — Tonemap 패스 뒤 `_shaderPath` 없는 Present 의 기본 셰이더 `fullscreenblit.hlsl` 이
+  `tonemap.hlsl` 과 바이트까지 같은 Reinhard 다. Present 를 진짜 블릿으로 바꿀지 — 바꾸면 staged forward 의 Present 톤맵 · 골든 이미지도 함께.
+
 - **`.hdr` 원본 굽기가 없다** — 지금 굽기는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
 - **GPU 메모리 측정(사용자 요청 2026-10-03, gfxfix 워크트리 병합 뒤)** — (1) 드라이버 총량 · 예산: DXGI `QueryVideoMemoryInfo`(DX12 · DX11), `VK_EXT_memory_budget`(Vulkan),
@@ -188,6 +194,8 @@ cd build/Ninja-Debug/Bin
   내보내는 일이다. 쓰는 모듈이 생기면 그때.
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
+
+- **`GameStrings.h:26` 주석이 ".xml · .json · .ini · .kv 자동 감지" 라고 적는다** — 언어 파일은 이제 JSON 하나뿐이다(묶음 F 에서 고친다).
 
 - **TurnBattle 세이브가 옛 형식(pp0/pp1 두 칸)을 아직 읽는다** — `SaveGame.cpp` 의 `ppCount` 없을 때 갈래. 별칭 · 옛 형식 제거 결정대로 지우고 시험 픽스처를 지금 형식으로.
 
@@ -480,6 +488,8 @@ cd build/Ninja-Debug/Bin
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
+
+- **`git mv` 로 옮긴 시험 파일은 pre-commit 의 `CheckIncludeOrder` · `CheckTestSuites` 가 "변경 없음" 으로 건너뛴다** — 옮긴 뒤에는 `ctest -L lint` 로 확인할 것.
 
 - **같은 클래스가 `#if` / `#else` 로 헤더에 두 번 있으면 `CheckCodeConventions` 의 헤더 기본값 검사가 그 클래스를 건너뛴다** — D3D11 · D3D12 비Windows 스텁을 지우자
   숨어 있던 위반 9 건이 드러났다. 다른 플랫폼 스텁이 있는 헤더도 같은 사각일 수 있다.
@@ -862,7 +872,7 @@ cd build/Ninja-Debug/Bin
 - **되돌리기** — 자식 있는 오브젝트는 서브트리를 후위 순서로 한 트랜잭션에(`recordDestruction`), 생성 · 삭제는 `recordObjectLifetime` 한 절차. 제자리 로드는 지우기 전에 다른 오브젝트의
   자식을 (자식 핸들, 부모 **안정 키**)로 적고 되붙인다. 오브젝트 → GUID 표와 GUID → 오브젝트 표는 서로의 역이어야 한다(`EditorWorkspace::setGuid`). 모듈 DLL 주소(람다)는 모듈이 내려가기 전에 걷는다.
 - **인스펙터** — 타입 사슬 전부의 확장을 기반 → 파생 순으로(`collectForType`), 확장은 자기가 그린 프로퍼티만 알린다. 각도는 라디안으로 저장하고 에디터만 도로 보인다(`Units=rad`),
-  0..1 비율은 `Units=ratio`, `PropertyMetaHintTest.UnitsMatchHowValuesAreStored` 가 본다. 검색은 `EditorListFilter`, 0 건 안내는 `drawNoSearchResultHint`(손으로 쓴 `stristr` 술어는 빈 필터에서
+  0..1 비율은 `Units=ratio`, `PropertyUnitsTest.UnitsMatchHowValuesAreStored` 가 본다. 검색은 `EditorListFilter`, 0 건 안내는 `drawNoSearchResultHint`(손으로 쓴 `stristr` 술어는 빈 필터에서
   목록을 지운다).
 - **ImGui 수명 짝** — 플랫폼 백엔드 `shutdown()` 은 `BackendPlatformUserData` 를 확인한 뒤에만, 초기화 실패 경로도 전역을 걷는다, 팝업에 `p_open=&_bOpen` 을 넘기지 말 것(X 버튼이 `onClose`
   를 건너뛴다). 모달이 떠 있으면 키가 `InputManager` 까지 오지 않는다. 에디터 draw 스냅샷은 획득 → present **또는 포기**(`abandonPendingDraw`)로 끝난다. 입력 위젯은 `drawTextField` 하나.
@@ -995,6 +1005,9 @@ cd build/Ninja-Debug/Bin
   Core 에 인스턴스가 필요하면 Logger 모양 — 인스턴스는 `EngineLoop`, Core 에는 포인터 슬롯.
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
+
+- **언어 파일은 JSON(`StringTable::kFileExtension`) 하나뿐이다** — 쿠킹된 로컬라이제이션 형식은 없고, 다른 확장자는 표를 만들기 전에 거절한다. 셸 InputMap 을 못 읽으면
+  오류를 알리고 빈 맵이다(손 바인딩으로 바꿔 끼우지 않는다). 입력 리플레이 파일은 `RawInputEvent` 를 통째로 적으므로 배치가 바뀌면 `kReplayVersion` 을 올린다(지금 3).
 
 - **통합 `ActionMap` 은 `InputManager::beginFrame` 이 갱신한다** — 게임 코드가 `update()` 를 다시 부르면 한 프레임에 두 번 흐른다(Input README 예제가 그랬다).
 
