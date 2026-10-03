@@ -439,7 +439,8 @@ SW_TEST_CASE( PrefabTest, RevertKeepsTheSocketAndTheComponentIds )
 /**
  * @brief [PrefabTest] 자식 인스턴스로 만든 프리팹에는 옛 부모가 실리지 않는다 — 스폰한 인스턴스는 같은 이름의 오브젝트에 붙지 않는다
  * @details 오브젝트 상태는 부모를 부착 필드로 든다. 그대로 실으면 플레이어 밑의 총으로 만든 프리팹에 "Player" 가 실려, 스폰할 때마다 그 씬에서
- *          이름이 "Player" 인 오브젝트에 옛 오프셋으로 붙는다. 프리팹 루트에는 부모가 없다 — 쓸 때 싣지 않고, 파일에 남은 것도 읽지 않는다.
+ *          이름이 "Player" 인 오브젝트에 옛 오프셋으로 붙는다. 프리팹 루트에는 부모가 없다 — 쓸 때 싣지 않는다. 부모가 실린 프리팹 파일은 프리팹을
+ *          쓰는 쪽이 만들지 않는 모양이라, 읽을 때 붙이지 않고 경고로 알린다.
  */
 SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
 {
@@ -458,26 +459,41 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
     SW_ASSERT_TRUE( asset.saveToXmlFile( xmlPath ) );
     SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
 
-    // 부모를 실은 채 저장된 프리팹 — 읽을 때 부모를 무시해야 한다.
-    const sw::string legacyPath = test::makeTempPath( "gun_legacy.prefab.xml" );
-    const sw::string legacyText = sw::string( "<Prefab formatVersion=\"0\" name=\"Gun\">" ) + sw::ObjectStateSerializer::saveToXmlString( pGun ) + "</Prefab>";
-    SW_ASSERT_TRUE( legacyText.find( "Player" ) != sw::string::npos );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( legacyPath, legacyText ) );
-    SW_ASSERT_TRUE( sw::writeCookedBeside( legacyPath, false ) );
+    // 부모를 실은 프리팹 파일(프리팹을 쓰는 쪽은 만들지 않는다) — 붙이지 않고 경고한다.
+    const sw::string parentedPath = test::makeTempPath( "gun_parented.prefab.xml" );
+    const sw::string parentedText = sw::string( "<Prefab formatVersion=\"0\" name=\"Gun\">" ) + sw::ObjectStateSerializer::saveToXmlString( pGun ) + "</Prefab>";
+    SW_ASSERT_TRUE( parentedText.find( "Player" ) != sw::string::npos );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( parentedPath, parentedText ) );
+    SW_ASSERT_TRUE( sw::writeCookedBeside( parentedPath, false ) );
 
     sw::GameObjectManager world;
     sw::GameObject*       pWorldPlayer = world.createGameObject( sw::hashed_string( "Player" ) );
     SW_ASSERT_NOT_NULL( pWorldPlayer->addComponent<sw::SceneComponent>() );
     sw::PrefabManager prefabs;
-    for ( const sw::string& path : { xmlPath, legacyPath } )
+    for ( const sw::string& path : { xmlPath, parentedPath } )
     {
-        sw::GameObject* pInstance = prefabs.spawn( &world, path, "Pickup" );
+        uint32                   parentWarningCount = 0;
+        const sw::DelegateHandle handle             = sw::Logger::addGlobalListener(
+            SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&parentWarningCount]( const sw::LogEntry& entry )
+                    {
+            if ( entry._level == sw::LogLevel::Warning && entry._message.find( "a prefab root has no parent" ) != sw::string::npos )
+                ++parentWarningCount;
+        } ) );
+        sw::GameObject* pInstance       = nullptr;
+        sw::GameObject* pBesideOriginal = nullptr;
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "a prefab file that carries a parent reference" );
+            pInstance = prefabs.spawn( &world, path, "Pickup" );
+            // 원래 부모가 살아 있는 매니저(프리팹을 만든 씬에 바로 놓는 경우)에서도 붙지 않는다 — 이 프리팹에는 그 부모의 id 까지 실려 있다.
+            pBesideOriginal = prefabs.spawn( &authoring, path, "PickupBesideOriginal" );
+        }
+        sw::Logger::removeGlobalListener( handle );
         SW_ASSERT_NOT_NULL( pInstance );
-        SW_EXPECT_TRUE_MSG( pInstance->getParent() == nullptr, path.c_str() );
-        // 원래 부모가 살아 있는 매니저(프리팹을 만든 씬에 바로 놓는 경우)에서도 붙지 않는다 — 이 프리팹에는 그 부모의 id 까지 실려 있다.
-        sw::GameObject* pBesideOriginal = prefabs.spawn( &authoring, path, "PickupBesideOriginal" );
         SW_ASSERT_NOT_NULL( pBesideOriginal );
+        SW_EXPECT_TRUE_MSG( pInstance->getParent() == nullptr, path.c_str() );
         SW_EXPECT_TRUE_MSG( pBesideOriginal->getParent() == nullptr, path.c_str() );
+        // 프리팹을 쓰는 쪽이 만든 파일은 조용하고, 부모가 실린 파일은 스폰마다 알린다.
+        SW_EXPECT_TRUE_MSG( parentWarningCount == ( path == parentedPath ? 2u : 0u ), path.c_str() );
     }
 }
 

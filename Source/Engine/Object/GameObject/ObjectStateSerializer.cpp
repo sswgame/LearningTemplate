@@ -323,7 +323,7 @@ namespace sw
         const bool                                bLoaded = deserializeState( version, ctx );
         if ( bLoaded )
         {
-            // 상태에 적힌 이름 — 매니저가 유일하게 바꾸기(`finishLoad`) 전에 잡는다. 자기 안의 부착에 이 이름이 적혀 있을 수 있다.
+            // 상태에 적힌 이름 — 매니저가 유일하게 바꾸기(`finishLoad`) 전에 잡는다. 같은 묶음의 이름만 남은 참조가 이 이름으로 찾는다.
             const hashed_string savedName = pGameObject->getName();
             ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
             const uint64 savedId = ObjectStateSerializerInternal::resolveSavedId( context );
@@ -676,10 +676,11 @@ namespace sw
     {
         if ( ownerId == 0 )
         {
-            // 소유자 칸이 비었으면 자기다. 자기 안의 부착에 자기 이름이 적혀 있으면 읽기 전 이름(저장된 이름)과 견준다.
-            if ( ownerName.empty() || ownerName == entry._savedName )
+            // 소유자 칸이 비었으면 자기다(같은 오브젝트 안의 부착은 소유자 칸을 비워 쓴다).
+            if ( ownerName.empty() )
                 return entry._pObject;
-            // id 가 없는 데이터. **이 묶음의 저장된 이름**에서만 찾는다 — 매니저에서 찾으면 유일하게 바뀐 이름 때문에 다른 오브젝트에 붙는다.
+            // 이름만 남은 다른 오브젝트의 부모다 — 찾지 못한 참조를 다른 id 공간으로 옮겨 적으면 id 를 비운다(`SceneComponent::syncAttachSerializeFields`).
+            // **이 묶음의 저장된 이름**에서만 찾는다 — 매니저에서 찾으면 유일하게 바뀐 이름 때문에 다른 오브젝트에 붙는다.
             return findBySavedName( ownerName );
         }
         if ( ownerId == entry._savedId )
@@ -713,7 +714,13 @@ namespace sw
             GameObject* pOwner    = findAttachOwner( entry, reference._ownerName, reference._ownerId );
             const bool  bExternal = pOwner != pObject;
             if ( bExternal && entry._bExternalParentAllowed == false )
-                continue; // 프리팹 — 루트에는 부모가 없다
+            {
+                // 프리팹 루트에는 부모가 없다 — 프리팹을 쓰는 쪽은 다른 오브젝트로의 부착을 싣지 않는다(`ObjectSaveOptions::_bOmitExternalParent`).
+                SW_LOG_WARNING( "Prefab state of '%#' carries a parent reference to '%#' (id %#, %#) - a prefab root has no parent, the reference is dropped",
+                                pObject->getName().c_str(), reference._ownerName.empty() ? "?" : reference._ownerName.c_str(), reference._ownerId,
+                                reference._componentKey.c_str() );
+                continue;
+            }
 
             Component*      pParentComp = ( pOwner != nullptr ) ? ComponentStableKey::findComponent( pOwner, reference._componentKey.c_str() ) : nullptr;
             SceneComponent* pParent     = ( pParentComp != nullptr && pParentComp->isSceneComponent() ) ? static_cast<SceneComponent*>( pParentComp ) : nullptr;

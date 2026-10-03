@@ -356,7 +356,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, InPlaceReloadKeepsOtherObjectsChildren )
  * @brief [ObjectStateRoundTripTest] 오브젝트 안의 부착(소켓)은 복사본 안에서 잇는다 — 이름이 바뀐 복사본이 원본에 붙지 않는다
  * @details 오브젝트 안의 부착은 소유자 칸을 비운다(= 자기). 소유자 이름을 적으면 원본이 살아 있는 매니저에 같은 상태를 읽을 때(복제 · 같은
  *          프리팹 두 번 · 영속 이월) 복사본의 이름이 유일하게 바뀌어(`Rig` → `Rig_2`) 이름으로 **원본**을 찾아, 복사본의 팔이 원본의 루트에 붙는다.
- *          자기 이름을 적은 데이터는 읽기 전 이름과 견준다. 세 형식이 같은 경로다.
+ *          세 형식이 같은 경로다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, AttachmentInsideAnObjectStaysInsideItsCopy )
 {
@@ -399,25 +399,59 @@ SW_TEST_CASE( ObjectStateRoundTripTest, AttachmentInsideAnObjectStaysInsideItsCo
         expectArmOnOwnRoot( pBinaryCopy, "바이너리" );
     }
 
-    BLOCK( "옛 데이터 — 자기 안의 부착에 자기 이름을 적었고 id 칸이 없다" )
-    {
-        // 빈 이름은 "None" 으로 적힌다(읽으면 빈 값). 같은 오브젝트의 부모에 소유자 이름을 적은 데이터도 읽혀야 한다.
-        const sw::string kIdField    = "_attachOwnerId=\"0\"";
-        const sw::string kEmptyOwner = "_attachOwner=\"None\"";
-        sw::string       legacy      = xml;
-        SW_ASSERT_TRUE( legacy.find( kIdField ) != sw::string::npos );
-        for ( size_t found = legacy.find( kIdField ); found != sw::string::npos; found = legacy.find( kIdField ) )
-            legacy.erase( found, kIdField.size() );
-        for ( size_t found = legacy.find( kEmptyOwner ); found != sw::string::npos; found = legacy.find( kEmptyOwner ) )
-            legacy.replace( found, kEmptyOwner.size(), "_attachOwner=\"Rig\"" );
-        SW_ASSERT_TRUE( legacy.find( "_attachOwner=\"Rig\"" ) != sw::string::npos );
-        sw::GameObject* pLegacyCopy = manager.createGameObject( sw::hashed_string( "Rig" ) );
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pLegacyCopy, legacy ) );
-        expectArmOnOwnRoot( pLegacyCopy, "옛 데이터" );
-    }
-
     SW_EXPECT_TRUE( pArm->getParent() == pRoot ); // 원본은 그대로
     SW_EXPECT_EQUAL( size_t( 1 ), pRoot->getChildren().size() );
+}
+
+/**
+ * @brief [ObjectStateRoundTripTest] 이름만 남은 부모 참조는 자기 이름과 같아도 다른 오브젝트를 가리킨다 — 묶음의 그 이름에 붙는다
+ * @details 찾지 못한 부모 참조를 다른 id 공간으로 옮겨 적으면(되돌리기 스냅샷에서 씬 파일로) id 는 비고 이름만 남는다. 같은 오브젝트 안의 부착은
+ *          소유자 칸을 비워 쓰므로, 소유자 이름이 적힌 참조는 늘 다른 오브젝트다. 자기 이름과 같다고 자기로 읽으면 부모(문서의 같은 이름 엔티티)를
+ *          두고 자기 루트에 붙으려다 실패해 루트로 남는다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, NameOnlyParentReferenceIsNeverTheObjectItself )
+{
+    // 1) 같은 실행의 상태(런타임 id)로 부모를 가리킨다. 부모가 없는 매니저에서 읽으면 참조를 남겨 둔다.
+    GameObjectManager authoring;
+    GameObject*       pRig     = authoring.createGameObject( hashed_string( "Rig" ) );
+    GameObject*       pGun     = authoring.createGameObject( hashed_string( "Gun" ) );
+    SceneComponent*   pRigRoot = pRig->addComponent<SceneComponent>();
+    SceneComponent*   pGunRoot = pGun->addComponent<SceneComponent>();
+    SW_ASSERT_TRUE( pRigRoot != nullptr && pGunRoot != nullptr );
+    SW_ASSERT_TRUE( pGunRoot->attachToComponent( pRigRoot ) );
+    const string rigXml     = ObjectStateSerializer::saveToXmlString( pRig );
+    const string liveGunXml = ObjectStateSerializer::saveToXmlString( pGun );
+
+    GameObjectManager editing;
+    GameObject*       pKept = editing.createGameObject( hashed_string( "Gun" ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a parent reference whose parent is not loaded is kept" );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pKept, liveGunXml ) );
+    }
+    SW_ASSERT_NOT_NULL( pKept->getPrimarySceneComponent() );
+    SW_EXPECT_NULL( pKept->getPrimarySceneComponent()->getParent() );
+    pKept->setName( hashed_string( "Rig" ) ); // 부모와 같은 이름
+
+    // 2) 씬 파일(파일 id)로 쓴다 — 남겨 둔 런타임 id 는 파일 id 공간이 아니라 비우고 이름만 남는다.
+    const ObjectSavedIdMap mapSavedId{
+        { pKept->getObjectId(), 2 }
+    };
+    ObjectSaveOptions options{};
+    options._pSavedIdMap  = &mapSavedId;
+    const string sceneXml = ObjectStateSerializer::saveToXmlString( pKept, options );
+    SW_ASSERT_TRUE( sceneXml.find( "_attachOwner=\"Rig\"" ) != string::npos );
+    SW_ASSERT_TRUE( sceneXml.find( "_attachOwnerId=\"0\"" ) != string::npos );
+
+    // 3) 같은 이름의 부모 엔티티와 한 묶음으로 읽는다 — 이름으로 그 엔티티를 찾아 붙는다.
+    GameObjectManager world;
+    GameObject*       pWorldRig = world.createGameObject( hashed_string( "Rig" ) );
+    GameObject*       pWorldGun = world.createGameObject( hashed_string( "Rig" ) );
+    ObjectStateBatch  batch( ObjectIdSpace::Saved );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pWorldRig, rigXml, { nullptr, &batch, 1 } ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pWorldGun, sceneXml, { nullptr, &batch, 2 } ) );
+    batch.finish();
+    SW_ASSERT_TRUE( pWorldRig->getPrimarySceneComponent() != nullptr && pWorldGun->getPrimarySceneComponent() != nullptr );
+    SW_EXPECT_TRUE( pWorldGun->getPrimarySceneComponent()->getParent() == pWorldRig->getPrimarySceneComponent() );
 }
 
 /**
