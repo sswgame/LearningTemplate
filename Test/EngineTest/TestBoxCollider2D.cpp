@@ -284,3 +284,64 @@ SW_TEST_CASE( BoxCollider2DTest, TriggerCollidersReportOverlapsAndSaySo )
     SW_EXPECT_FALSE( sensor._pListener->_listBeginOtherTrigger[0] );
     manager.endPlay();
 }
+
+/**
+ * @brief [BoxCollider2DTest] 순수 기하(`overlapsBounds`)와 레이어 반영 겹침(`isTouching`)은 각자 바디 등록 전후로 같은 답이고, 레이어가 막는 쌍에서 서로 다르다
+ * @details 판정 하나가 바디 등록 여부로 갈렸다 — 시작 전(에디터 · 시험)은 상자만, 시작 뒤(플레이)는 물리의 레이어 행렬까지 봤다. 같은 쌍을 물어도 Play 를
+ *          누르면 답이 바뀌었다. 유니티처럼 `Bounds.Intersects`(기하) 와 `Collider2D.IsTouching`(물리 규칙) 을 이름이 다른 두 함수로 둔다.
+ */
+SW_TEST_CASE( BoxCollider2DTest, GeometricAndLayerOverlapAnswerTheSameBeforeAndAfterBodiesExist )
+{
+    sw::GameObjectManager manager;
+    manager.getPhysicsWorld().layers().setLayerCollision( 1, 2, false );
+    const OverlapProbe blocked = spawnProbe( manager, "Blocked", 0.0f );
+    const OverlapProbe blocker = spawnProbe( manager, "Blocker", 0.5f );
+    const OverlapProbe allowed = spawnProbe( manager, "Allowed", -0.5f );
+    const OverlapProbe faraway = spawnProbe( manager, "Faraway", 10.0f );
+    SW_ASSERT_NOT_NULL( blocked._pCollider );
+    SW_ASSERT_NOT_NULL( blocker._pCollider );
+    SW_ASSERT_NOT_NULL( allowed._pCollider );
+    SW_ASSERT_NOT_NULL( faraway._pCollider );
+    blocked._pCollider->setColliderType( 1 );
+    blocker._pCollider->setColliderType( 2 );
+    allowed._pCollider->setColliderType( 1 );
+
+    for ( int32 phaseIndex = 0; phaseIndex < 2; ++phaseIndex )
+    {
+        // 0: 시작 전(바디 없음) · 1: 시작해 한 번 step 한 뒤(바디 있음)
+        SW_EXPECT_TRUE( blocked._pCollider->overlapsBounds( blocker._pCollider ) );
+        SW_EXPECT_FALSE( blocked._pCollider->isTouching( blocker._pCollider ) );
+        SW_EXPECT_FALSE( blocker._pCollider->isTouching( blocked._pCollider ) );
+        SW_EXPECT_TRUE( blocked._pCollider->overlapsBounds( allowed._pCollider ) );
+        SW_EXPECT_TRUE( blocked._pCollider->isTouching( allowed._pCollider ) );
+        SW_EXPECT_FALSE( blocked._pCollider->overlapsBounds( faraway._pCollider ) );
+        SW_EXPECT_FALSE( blocked._pCollider->isTouching( faraway._pCollider ) );
+        SW_EXPECT_FALSE( blocked._pCollider->isTouching( nullptr ) );
+        SW_EXPECT_FALSE( blocked._pCollider->overlapsBounds( nullptr ) );
+
+        if ( phaseIndex == 0 )
+        {
+            manager.beginPlay();
+            manager.tick( 0.016f );
+            // 바디가 생겼다는 증거: 허용된 쌍은 겹침 이벤트를 받았고, 막힌 쌍은 받지 않았다.
+            SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), allowed._pListener->_listBeginOther.size() );
+            SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), blocker._pListener->_listBeginOther.size() );
+        }
+    }
+    manager.endPlay();
+
+    // 매니저에 등록되지 않은 콜라이더(물리 월드 없음)는 기본 행렬(모든 쌍 허용)로 잰다.
+    sw::BoxCollider2DComponent looseA;
+    sw::BoxCollider2DComponent looseB;
+    looseA.setOffsetScale( sw::float2{ 1.0f, 1.0f } );
+    looseB.setOffsetScale( sw::float2{ 1.0f, 1.0f } );
+    looseA.setColliderType( 1 );
+    looseB.setColliderType( 2 );
+    SW_EXPECT_TRUE( looseA.isTouching( &looseB ) );
+
+    // 점 · 사각형 판정은 경계를 포함한다.
+    SW_EXPECT_TRUE( blocked._pCollider->containsPoint( sw::float2{ 0.5f, 0.0f } ) );
+    SW_EXPECT_FALSE( blocked._pCollider->containsPoint( sw::float2{ 0.6f, 0.0f } ) );
+    SW_EXPECT_TRUE( blocked._pCollider->overlapsBounds( sw::float2{ 0.5f, 0.5f }, sw::float2{ 2.0f, 2.0f } ) );
+    SW_EXPECT_FALSE( blocked._pCollider->overlapsBounds( sw::float2{ 0.6f, 0.0f }, sw::float2{ 2.0f, 2.0f } ) );
+}

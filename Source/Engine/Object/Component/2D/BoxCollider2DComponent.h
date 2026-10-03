@@ -74,9 +74,21 @@ namespace sw
         bool getWorldBounds( float3& outCenter, float32& outRadius ) const override;
         /** @brief 물리가 판정하는 그 상자(`getBounds`)입니다. 깊이는 없습니다(월드 Z 한 점). */
         bool getWorldBox( AABB& outBox ) const override;
-        bool intersects( const BoxCollider2DComponent* pOther ) const;
-        bool intersects( const float2& point ) const;
-        bool intersects( const float2& minB, const float2& maxB ) const;
+        /**
+         * @brief 두 상자(`getBounds`)가 겹치는지입니다 — 순수 기하, 레이어를 보지 않습니다(유니티 `Bounds.Intersects`).
+         * @details 바디 등록 여부와 무관하게 지금 상자로 잽니다. 에디터 히트 테스트 · 배치 검사처럼 "공간이 겹치는가" 를 물을 때 씁니다.
+         */
+        bool overlapsBounds( const BoxCollider2DComponent* pOther ) const;
+        /** @brief 상자가 [@p minB, @p maxB] 와 겹치는지입니다(경계 포함, 순수 기하). */
+        bool overlapsBounds( const float2& minB, const float2& maxB ) const;
+        /** @brief 상자가 @p point 를 담는지입니다(경계 포함, 순수 기하). */
+        bool containsPoint( const float2& point ) const;
+        /**
+         * @brief 두 콜라이더가 물리 규칙으로 겹치는지입니다 — 상자가 겹치고 레이어 행렬이 그 쌍을 허용해야 합니다(유니티 `Collider2D.IsTouching`).
+         * @details 물리 step 과 같은 판정(`queryOverlaps` · `PhysicsWorld::layers`)을 지금 상자로 합니다. 바디가 아직 없어도(시작 전 · 에디터) 같은 답을
+         *          냅니다. 레이어 행렬은 등록된 물리 월드의 것이고, 어느 쪽도 매니저에 없으면 기본 행렬(모든 쌍 허용)입니다.
+         */
+        bool isTouching( const BoxCollider2DComponent* pOther ) const;
 
     private:
         void unregisterPhysicsBody();

@@ -125,21 +125,33 @@ namespace sw
         SceneComponent::onUnregister( manager );
     }
 
-    bool BoxCollider2DComponent::intersects( const BoxCollider2DComponent* pOther ) const
+    bool BoxCollider2DComponent::overlapsBounds( const BoxCollider2DComponent* pOther ) const
     {
         if ( pOther == nullptr )
             return false;
-        if ( _pPhysics != nullptr && _physicsBody.isValid() && pOther->_physicsBody.isValid() )
-            return _pPhysics->overlaps( _physicsBody, pOther->_physicsBody );
+        float2 bMin{}, bMax{};
+        pOther->getBounds( bMin, bMax );
+        return overlapsBounds( bMin, bMax );
+    }
+
+    bool BoxCollider2DComponent::isTouching( const BoxCollider2DComponent* pOther ) const
+    {
+        if ( pOther == nullptr )
+            return false;
+
+        // 바디(지난 step 의 상자)가 아니라 지금 상자로 잰다 — 등록 전후로 답이 갈리지 않는다. 판정 식은 물리 step 의 것 그대로다.
+        static const CollisionLayers s_defaultLayers{};
+        const PhysicsWorld*          pPhysics = _pPhysics != nullptr ? _pPhysics : pOther->_pPhysics;
+        const CollisionLayers&       layers   = pPhysics != nullptr ? pPhysics->layers() : s_defaultLayers;
 
         float2 aMin{}, aMax{}, bMin{}, bMax{};
         getBounds( aMin, aMax );
         pOther->getBounds( bMin, bMax );
-        return ( aMin._x <= bMax._x && aMax._x >= bMin._x &&
-                 aMin._y <= bMax._y && aMax._y >= bMin._y );
+        return queryOverlaps( BoxCollider2DComponentInternal::makeColliderAabb( aMin, aMax ), static_cast<uint8>( _colliderType ),
+                              BoxCollider2DComponentInternal::makeColliderAabb( bMin, bMax ), static_cast<uint8>( pOther->_colliderType ), layers );
     }
 
-    bool BoxCollider2DComponent::intersects( const float2& point ) const
+    bool BoxCollider2DComponent::containsPoint( const float2& point ) const
     {
         float2 aMin{}, aMax{};
         getBounds( aMin, aMax );
@@ -147,7 +159,7 @@ namespace sw
                  point._y >= aMin._y && point._y <= aMax._y );
     }
 
-    bool BoxCollider2DComponent::intersects( const float2& minB, const float2& maxB ) const
+    bool BoxCollider2DComponent::overlapsBounds( const float2& minB, const float2& maxB ) const
     {
         float2 aMin{}, aMax{};
         getBounds( aMin, aMax );
