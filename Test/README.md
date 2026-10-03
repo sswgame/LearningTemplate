@@ -114,7 +114,7 @@ cd build/Ninja-Debug/Bin
 ### 구성마다 도는 케이스 수가 다르다
 
 `ctest` 는 어느 구성에서든 똑같이 "Passed" 라고만 말한다. 실제로 도는 양은 이렇게 다르다
-(`--test_list` 실측 — 등록된 케이스, 괄호 안은 그중 호스트 스위트(`--host_suites=only`) 케이스. 케이스가 늘면 숫자는 바뀐다):
+(`--test_list` 로 센 등록 케이스, 괄호 안은 그중 호스트 스위트(`--host_suites=only`) 케이스 — 시험이 늘면 수는 달라지고 구성 간 차이의 이유는 그대로다):
 
 | 실행 파일 | Debug | Shipping |
 | --- | ---: | ---: |
@@ -126,7 +126,7 @@ cd build/Ninja-Debug/Bin
 | EditorUiTest | 2 | 2 |
 | **AppTest** | **17 (11)** | **9 (3)** |
 
-SmokeTest 가 52 → 3 이 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
+SmokeTest 가 47 → 3 이 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
 Shipping 스모크는 정적 `exportGameApi` 경로만 본다(`Test/SmokeTest/CMakeLists.txt` 참고). AppTest 가 17 → 9 인 것도
 같은 이유다 — 에디터 실기동 · 백엔드 교체 · 메모리 태그 보고 케이스는 배포본에 에디터와 그 창구가 없어 아예 컴파일되지 않는다.
 EngineTest · EditorTest 의 차이도 Dev 전용 경로(모듈 코드 해제 · 셰이더 라이브 컴파일 · 인스펙터 메타데이터) 케이스다.

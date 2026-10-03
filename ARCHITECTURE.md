@@ -107,10 +107,12 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
 엔진 구조상 다음과 같은 행위를 하면 크래시나 버그가 발생할 수 있습니다. 코드를 짤 때 항상 유의해 주세요.
 
 > [!CAUTION]
-> **병렬 틱(Tick) 도중 계층 구조 변경 금지**
-> `GameObjectManager::tick` 구간에서는 여러 오브젝트가 멀티스레드로 동시에 `onTick()`을 돕니다. 이때 **자신이나 다른 오브젝트의 부모/자식(Parent/Child) 관계를 수정(`attachToParent`, `detach`)해서는 절대 안 됩니다.**
+> **병렬 틱(Tick) 도중의 계층 · 구조 변경은 틱 뒤로 미뤄집니다**
+> `GameObjectManager::tick` 구간에서는 여러 오브젝트가 멀티스레드로 동시에 `onTick()`을 돕니다. 이때 부모/자식 관계 변경(`attachToParent` · `detachFromParent`)과
+> `addComponent` · `addTag` 같은 구조 변경은 그 자리에서 적용되지 않고 구조 변경 큐(`GameObjectManager::deferStructuralChange`)에 쌓였다가
+> **틱 직후 부른 순서대로** 적용됩니다. 그러니 같은 틱 안에서 바뀐 계층 · 붙은 컴포넌트를 기대하면 안 됩니다.
 >
-> **구조 변경은 자동 지연됩니다.** `GameObject::addComponent`나 `addTag` 등 구조 변경 작업은 tick 중 `deferPostTick`으로 미룹니다. tick 중 `addComponent`는 `nullptr`을 반환하므로, 생성 직후 필드를 채워야 하면 `GameObjectManager::executeOrDeferPostTick`으로 스폰+초기화를 한 블록에 묶으세요.
+> tick 중 `addComponent`는 `nullptr`을 반환하므로, 생성 직후 필드를 채워야 하면 `GameObjectManager::executeOrDeferPostTick`으로 스폰+초기화를 한 블록에 묶으세요.
 
 > [!WARNING]
 > **RHI DLL 스탬프 불일치 방지**

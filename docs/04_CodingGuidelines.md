@@ -16,7 +16,7 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
 | **멤버 변수** | `_camelCase` | `_bInitialized`, `_gameRenderTarget` |
 | **지역 변수** | `camelCase` | `consolasPath`, `deltaTime` |
 | **상수** | `k` + `PascalCase` | `kMaxPathSize`, `kFontSize` |
-| **전역 변수** | `gv_` + `camelCase` | `gv_rhiBackend`, `gv_enableVSync` |
+| **전역 변수** | `gv_` + `camelCase` | `gv_rhiBackend`, `gv_useRenderThread` |
 | **정적(static) 변수** | `s_` / private은 `_s_` | `s_activeWindow`, `_s_nextObjectId` |
 | **매크로** | `SW_SCREAMING_CASE` | `SW_API`, `SW_LOG_INFO` |
 | **출력 매개변수 (Out Param)** | `out` + PascalCase / 포인터는 `pOut`, 이중 포인터는 `ppOut` | `outConfig`, `pOutBuffer`, `ppOutObject`, `outListItem` |
@@ -82,10 +82,10 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 `isX()` 이지 맨이름 `x()` 가 아니다.
 
 **4) `on*` 은 "일어났다" 는 알림이다.** 핸들러를 **등록**하는 함수가 아니다. 등록은 `register*` /
-`unregister*` 다 — `GameStrings::onLanguageChanged` 가 핸들 값을 돌려주고 있던 것이 이 규칙이 생긴 이유다.
+`unregister*` 다 — 핸들을 돌려주는 등록 함수에 `onLanguageChanged` 라는 이름을 붙이면 알림 핸들러로 읽힌다.
 
-**축약어는 이 저장소의 타입 이름이 줄여 쓸 때만 쓴다.** `XmlNode::attr()` 은 옆에 있는 타입이
-`XmlAttribute` 라서 틀렸고(`attribute()` 로 고쳤다), `TagQueryExpr::…Expr` 과 `ShaderEngineCbMember` 의
+**축약어는 이 저장소의 타입 이름이 줄여 쓸 때만 쓴다.** `XmlNode` 의 접근자는 옆에 있는 타입이
+`XmlAttribute` 이므로 `attr()` 이 아니라 `attribute()` 이고, `TagQueryExpr::…Expr` 과 `ShaderEngineCbMember` 의
 `…Cb…` 는 타입이 같은 약어를 들고 있으므로 맞다.
 
 ### DLL Export / Import (API) 매크로 규칙

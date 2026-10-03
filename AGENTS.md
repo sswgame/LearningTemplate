@@ -74,8 +74,7 @@ cmake --build --preset Ninja-Debug
   as `i`, `j`, or `k` (use at least `index`).
 - **GPU resource verbs are a closed vocabulary.** A class that owns RHI resources derives from
   `RHIRenderResource` and names its device-lifecycle methods from this table only. Do not invent
-  synonyms (`upload`, `applyToGpu`, `shutdownAllGpu`, `isUploaded`, `isReady`, `releaseGpu` were all
-  renamed away for this reason):
+  synonyms (`upload`, `applyToGpu`, `shutdownAllGpu`, `isUploaded`, `isReady`, `releaseGpu`):
 
   | Verb | Meaning |
   | --- | --- |
@@ -100,8 +99,8 @@ and bare getters (`BareGetter`). The `on*` and spell-it-out rules are kept by re
 - **An acronym inside a function name is one camelCase word**, not a run of capitals: `initRhi`,
   `queryAabb`, `bindComputeUav`, `exportGameApi`, `updateUi`, `isValidUtf8`, `parseUint64`.
   **Type names keep their established spelling** (`IRHIDevice`, `AABB`, `TagID`) — the rule is about
-  `camelCase` identifiers, where a capital run hides the word boundary. `queryAABB` sitting next to
-  `queryAabb` was the state this rule ended.
+  `camelCase` identifiers, where a capital run hides the word boundary — without it `queryAABB` and
+  `queryAabb` end up side by side.
 - **One verb per concept.** Picking a synonym is how two names for one thing get born:
 
   | Concept | Verb | Never |
@@ -127,11 +126,11 @@ and bare getters (`BareGetter`). The `on*` and spell-it-out rules are kept by re
   `check*` is not a predicate — a `check*` that returns `bool` is an `is*`/`has*`, and one that returns
   `void` and asserts is an `assert*`. A getter paired with `setX()` is `getX()` / `isX()`, never bare `x()`.
 - **`on*` means "this happened"** — a notification handler, never the call that registers one. Registering
-  is `register*` / `unregister*` (`GameStrings::onLanguageChanged` returning a handle was the bug this
-  rule names).
-- **Spell the word out** unless one of this repo's own type names abbreviates it. `XmlNode::attr()` was
-  wrong because the type beside it is `XmlAttribute`; `TagQueryExpr::…Expr` and `ShaderEngineCbMember`'s
-  `…Cb…` are fine because the type carries the same short form.
+  is `register*` / `unregister*` (a registration call named `onLanguageChanged` that returns a handle
+  reads as the notification it registers for).
+- **Spell the word out** unless one of this repo's own type names abbreviates it. `XmlNode` spells
+  `attribute()`, not `attr()`, because the type beside it is `XmlAttribute`; `TagQueryExpr::…Expr` and
+  `ShaderEngineCbMember`'s `…Cb…` are fine because the type carries the same short form.
 
 ### Python
 

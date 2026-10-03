@@ -801,4 +801,4 @@ py -3 -m Scripts test SceneTest.*                                      # 이름�
 | **`EditorUiTest`** | 2 | ImGui 컨텍스트가 필요한 에디터 시험 |
 | **`AppTest`** | 17 (호스트 11) | 런처 로직 + **진짜 `App.exe` 를 네 백엔드 × 에디터 유무로 띄우는 스모크**, 골든 이미지 비교, 에디터 자체 시험(`-gv_editorSelfTest`) |
 
-케이스 수는 main `8445bdea` Debug 빌드의 `--test_list` 실측입니다(괄호는 `hostgpu` 로 갈리는 케이스). 구성마다 수가 다릅니다 — Test/README.md 의 표를 보십시오.
+케이스 수는 Debug 빌드의 `--test_list` 로 센 값입니다(괄호는 `hostgpu` 로 갈리는 케이스). 시험이 늘면 달라지므로 정확한 수는 `--test_list` 로 다시 세십시오. 구성마다 수가 다릅니다 — Test/README.md 의 표를 보십시오.
