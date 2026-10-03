@@ -20,7 +20,6 @@
 /**
  * @brief [ProcessTest] 프로세스 생성 및 표준 출력 라인 읽기
  */
-
 SW_TEST_CASE( ProcessTest, LaunchAndReadOutput )
 {
     sw::Process proc;

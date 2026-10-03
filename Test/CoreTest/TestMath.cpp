@@ -12,7 +12,6 @@
 /**
  * @brief [MathTest] float2 전체
  */
-
 SW_TEST_CASE( MathTest, Float2FullTest )
 {
 

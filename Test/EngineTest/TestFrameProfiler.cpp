@@ -12,7 +12,6 @@
  *          넘어간다 — 탐색을 `kMaxScope` 로 자르지 않으면 **고정 배열 밖**을 읽는다. 배열 바로 뒤에 있는 것이
  *          `_scopeCount` 자신이라, 그 비트가 `const utf8*` 로 읽혀 문자열 비교에 들어간다.
  */
-
 SW_TEST_CASE( FrameProfilerTest, ScopeOverflowDoesNotReadPastTable )
 {
     sw::FrameProfiler profiler;

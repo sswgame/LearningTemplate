@@ -30,7 +30,6 @@ SW_TEST_REQUIRES_HOST( LiveShaderTest, "recompiles shaders with DXC and edits th
  *          그 표를 채우는 호출부가 없을 때 `ReloadShaders`(Ctrl+F8) 단축키가 빈 표를 돌고 아무 일도 하지 않는다.
  *          `update()` 만 불러 빈 큐를 도는 시험은 그 상태에서도 초록이다.
  */
-
 SW_TEST_CASE( LiveShaderTest, ReloadTargetsComeFromShaderCache )
 {
     sw::ShaderCompileDesc vsDesc{};

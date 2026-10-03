@@ -18,7 +18,6 @@
 /**
  * @brief [ReflectionTypeRegistryTest] 등록된 클래스 조회
  */
-
 SW_TEST_CASE( ReflectionTypeRegistryTest, FindRegisteredClass )
 {
     const sw::TypeInfo* info =

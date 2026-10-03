@@ -22,7 +22,6 @@
 /**
  * @brief [ResourceTest] 없는 리소스 경로는 빈 문자열
  */
-
 SW_TEST_CASE( ResourceTest, GetResourcePathEmptyForNonexistent )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );

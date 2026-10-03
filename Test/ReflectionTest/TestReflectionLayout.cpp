@@ -14,7 +14,6 @@
 /**
  * @brief [ReflectionContainersTest] Vector 래퍼
  */
-
 SW_TEST_CASE( ReflectionContainersTest, VectorWrapper )
 {
     sw::vector<int32>                    vec = { 10, 20, 30 };

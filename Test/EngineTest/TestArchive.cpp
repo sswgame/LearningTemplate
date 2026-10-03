@@ -122,7 +122,6 @@ namespace
 /**
  * @brief [ArchiveTest] Archive 바이너리 기본 타입 직렬화/역직렬화
  */
-
 SW_TEST_CASE( ArchiveTest, MemoryArchiveBinarySerialization )
 {
     sw::Archive arch;

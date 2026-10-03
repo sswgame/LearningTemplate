@@ -19,7 +19,6 @@
 /**
  * @brief [LocalizationManagerTest] 독립적인 복수 인스턴스 생성 및 비-싱글톤 동작 검증
  */
-
 SW_TEST_CASE( LocalizationManagerTest, NonSingletonIndependence )
 {
     sw::LocalizationManager locManager1;

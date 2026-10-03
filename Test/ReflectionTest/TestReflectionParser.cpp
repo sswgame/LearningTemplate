@@ -179,7 +179,6 @@ namespace
 /**
  * @brief [ReflectionParserTest] 주석 내에 있는 매크로 문자열은 파싱되지 않아야 함
  */
-
 SW_TEST_CASE( ReflectionParserTest, FallbackCommentTest )
 {
     const sw::TypeInfo* info = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::TestScriptComponent" ) );

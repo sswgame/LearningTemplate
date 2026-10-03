@@ -6,7 +6,7 @@
 스위트 이름은 장식이 아니다. CI 가 못 돌리는 것은 **스위트 단위로** 선언되어 빠지고(`SW_TEST_REQUIRES_HOST`),
 `--test_filter` 도 스위트 단위로 고른다. 그래서 이름이 흔들리면 그 둘이 흔들린다.
 
-강제 규칙 여섯:
+강제 규칙 일곱:
 
   1) 스위트 이름은 `XxxTest` — 대문자로 시작하고 `Test` 로 끝나며 밑줄이 없다.
      관례가 섞이면 필터가 흔들린다 — `Core` 라는 스위트가 있으면 `--test_filter=Core*` 가 `Core_String` 까지 끌어온다.
@@ -39,6 +39,9 @@
      include 하지 않고, 코드에서 `engine::` 를 부르지 않는다(주석은 보지 않는다). 엔진 타입이 필요한 시험은 EngineTest 에 둔다.
      include 경로로는 막을 수 없다: 공용 `TestFramework` 가 Engine 을 PUBLIC 링크하고 `TestFramework.h` 가 `EngineMinimal.h` 를
      끌어온다. 그래서 이 규칙이 보는 것은 CoreTest 파일이 **직접** 쓰는 것이다.
+
+  7) 태그를 단 시험 doc 블록(`@brief [스위트] …`)은 **자기 `SW_TEST_CASE` 바로 위**에 있고, 태그는 그 케이스의 스위트 이름이다.
+     블록과 케이스 사이에 빈 줄이 끼거나 블록 둘이 겹치면, 블록을 옮기거나 케이스를 지울 때 블록만 남아 다른 케이스를 설명하게 된다.
 
   python Scripts/lint/gate/CheckTestSuites.py [--root <repo>]
 """
@@ -76,6 +79,7 @@ _kCoreTestForbiddenIncludeRe = re.compile(r"^[ \t]*#[ \t]*include[ \t]*[<\"]((?:
 _kEngineNamespaceRe = re.compile(r"\bengine::\w+")
 _kBlockCommentRe = re.compile(r"/\*.*?\*/", re.S)
 _kLineCommentRe = re.compile(r"//[^\n]*")
+_kDocBlockTagRe = re.compile(r"@brief\s+\[(\w+)\]")
 
 
 def collectCases(rootDir: Path) -> tuple[list[tuple[str, str, str]], list[str]]:
@@ -185,6 +189,35 @@ def checkCoreTestIsEngineFree(rootDir: Path) -> list[str]:
     return errors
 
 
+def checkTestDocBlocks(rootDir: Path) -> list[str]:
+    """태그(`@brief [스위트]`)를 단 doc 블록이 자기 `SW_TEST_CASE` 바로 위에 있고 태그가 그 스위트인지 봅니다."""
+    errors: list[str] = []
+    for path in sorted((rootDir / _kTestRoot).rglob("*.cpp")):
+        relPath = path.relative_to(rootDir).as_posix()
+        lines = path.read_text(encoding="utf-8", errors="ignore").split("\n")
+        lineIndex = 0
+        while lineIndex < len(lines):
+            stripped = lines[lineIndex].strip()
+            if stripped.startswith("/**") is False or stripped.startswith("/**<"):
+                lineIndex += 1
+                continue
+            beginIndex = lineIndex
+            while lineIndex < len(lines) and "*/" not in lines[lineIndex]:
+                lineIndex += 1
+            tagMatch = _kDocBlockTagRe.search("\n".join(lines[beginIndex : lineIndex + 1]))
+            lineIndex += 1
+            if tagMatch is None:
+                continue
+            tag = tagMatch.group(1)
+            caseMatch = _kCaseRe.match(lines[lineIndex]) if lineIndex < len(lines) else None
+            if caseMatch is None:
+                errors.append(f"{relPath}:{beginIndex + 1}: `[{tag}]` doc 블록이 자기 SW_TEST_CASE 바로 위에 있지 않습니다 "
+                              f"(사이의 빈 줄 · 다른 블록을 지우거나, 설명할 케이스가 없으면 블록을 지우세요)")
+            elif caseMatch.group(1) != tag:
+                errors.append(f"{relPath}:{beginIndex + 1}: doc 블록 태그 `[{tag}]` 가 케이스의 스위트 `{caseMatch.group(1)}` 와 다릅니다")
+    return errors
+
+
 def check(rootDir: Path) -> tuple[list[str], int, int]:
     cases, missed = collectCases(rootDir)
     errors: list[str] = list(missed)
@@ -257,6 +290,9 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
     # 6) CoreTest 는 엔진을 직접 쓰지 않는다
     errors += checkCoreTestIsEngineFree(rootDir)
 
+    # 7) 시험 doc 블록은 제 케이스 바로 위, 태그는 그 스위트
+    errors += checkTestDocBlocks(rootDir)
+
     return errors, len(homes), len(cases)
 
 
@@ -285,6 +321,14 @@ class CheckTestSuitesGate(LintGate):
     # 한 실패는 넣은 위반 때문이다. 주의: 바탕부터 다른 규칙(예: EditorTest 소스 목록이 빈 것)에 걸리는 조각은
     # 넣은 규칙이 죽어도 실패하므로 증거가 아니다.
     selfTestCases = [
+        {
+            "name": "doc 블록과 케이스 사이에 빈 줄",
+            "files": {**_kCleanFixture, "Test/EngineTest/TestProbe.cpp": "/**\n * @brief [ProbeTest] 설명\n */\n\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n"},
+        },
+        {
+            "name": "doc 블록 태그가 다른 스위트",
+            "files": {**_kCleanFixture, "Test/EngineTest/TestProbe.cpp": "/**\n * @brief [OtherTest] 설명\n */\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n"},
+        },
         {
             "name": "스위트 이름이 XxxTest 가 아님",
             "files": {**_kCleanFixture, "Test/EngineTest/TestProbe.cpp": "SW_TEST_CASE( Probe_Bad, Something )\n{\n}\n"},

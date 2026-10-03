@@ -17,7 +17,6 @@
 /**
  * @brief [InputReplayTest] 입력 녹화, 프레임 스크러빙 및 결정론적 재생 검증
  */
-
 SW_TEST_CASE( InputReplayTest, RecordingAndPlaybackWorkflow )
 {
     sw::InputReplay replay;

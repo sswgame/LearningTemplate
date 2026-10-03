@@ -10,7 +10,6 @@
 /**
  * @brief [JsonDocumentTest] 파싱·탐색과 대소문자 무시 키
  */
-
 SW_TEST_CASE( JsonDocumentTest, ParseAndNavigateIgnoreCaseKeys )
 {
     sw::JsonDocument doc;

@@ -216,8 +216,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
 
-- **"부모-자식-손자 다계층 합성 활성" 시험이 없다** — 그것을 설명하던 doc 블록(`[GameObjectHierarchy]`)만 남아 있어 G1 에서 지웠다. 시험 공백인지 확인하고 필요하면 더한다.
-- **시험 doc 블록 규칙을 린트로** — 블록은 제 `SW_TEST_CASE` 바로 위(겹친 앞 블록은 떨어진 블록), `@brief [태그]` 는 실제 스위트 이름. G1 이 손으로 11 곳 · 18 곳을 고쳤다.
 
 - **`gv_benchMaterialInstances` 설명 문자열 `"(DX12 크래시 재현용)"` 이 낡아 보인다**(`Games/Empty/BenchScene.cpp`) — 원인(`updateStructuredBuffer` 업로드
   얼로케이터 이중 Reset)은 `29da82bb` 에서 고쳐졌다. DX12 + `-gv_benchMaterialInstances=1` 로 한 번 돌려 확인한 뒤 문자열을 고친다(주석은 G4 에서 고쳤다).

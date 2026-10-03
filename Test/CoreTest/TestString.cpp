@@ -17,7 +17,6 @@
  *          맞되 **폭은 CharT 를 따라야** 한다.
  * @note 부호 확장 쪽 주장은 `NonAsciiBytesAreUnsigned` 가 든다.
  */
-
 SW_TEST_CASE( StringTest, WideCharHashIsNotTruncatedToOneByte )
 {
     // 상위 바이트만 다르고 하위 바이트는 둘 다 0 이다.
@@ -66,7 +65,6 @@ SW_TEST_CASE( StringTest, ClearedInternTableIsRebuiltNotLeftEmpty )
 /**
  * @brief [StringTest] StringUtil 기본
  */
-
 SW_TEST_CASE( StringTest, StringUtilBasic )
 {
     SW_EXPECT_TRUE( sw::StringUtil::isNullOrEmpty( static_cast<const utf8*>( nullptr ) ) );

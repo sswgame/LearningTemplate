@@ -23,7 +23,6 @@
 /**
  * @brief [ShaderStageTest] 8대 스테이지 플래그 변환 및 경계값/오버플로 엣지 케이스 검증
  */
-
 SW_TEST_CASE( ShaderStageTest, StageFlagConversionAndBoundary )
 {
     // 1) 8대 정상 스테이지가 각각 올바른 1 << N 비트플래그로 1:1 변환되는지 검증

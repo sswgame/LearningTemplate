@@ -37,7 +37,6 @@ namespace
  *
  *          그래서 그래프가 정본이다. 여기서는 그 추론만 따로 본다(커맨드 리스트 없이).
  */
-
 SW_TEST_CASE( RenderGraphTest, RenderGraphInfersOnlyChangedBarriers )
 {
     sw::RenderGraph         graph;

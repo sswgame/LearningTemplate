@@ -17,7 +17,6 @@
 /**
  * @brief [ReflectionEnumBitFlagTest] 비트플래그 감지와 ToString
  */
-
 SW_TEST_CASE( ReflectionEnumBitFlagTest, BitFlagDetectionAndToString )
 {
     const sw::EnumInfo* info =

@@ -14,7 +14,6 @@
 /**
  * @brief [ComponentStableKeyTest] 같은 타입이 둘이면 몇 번째인지로 갈리고, 키는 되찾기와 왕복한다
  */
-
 SW_TEST_CASE( ComponentStableKeyTest, KeyRoundTripsThroughFind )
 {
     sw::GameObjectManager manager;

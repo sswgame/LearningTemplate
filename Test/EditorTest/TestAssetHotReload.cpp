@@ -21,7 +21,6 @@
  * @details 컴포넌트에는 리로드 전용 코드가 없다 — 에디터가 `PROPERTY( AssetPath )` 값을 보고 인스펙터 편집과 같은 알림을 보낸다.
  *          경로 구분자가 달라도 같은 에셋이다.
  */
-
 SW_TEST_CASE( AssetHotReloadTest, ReloadedAssetReachesComponentsThroughTheirAssetPathProperty )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );

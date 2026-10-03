@@ -10,7 +10,6 @@
 /**
  * @brief [TimeTest] CPUTimer 기본
  */
-
 SW_TEST_CASE( TimeTest, CPUTimerBasic )
 {
     sw::CpuTimer timer;

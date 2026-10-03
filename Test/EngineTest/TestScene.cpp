@@ -105,7 +105,6 @@ namespace sw
  *          **`_embeddedXml` 이 비어 있다는 것이 이 테스트의 핵심이다** — 마지막에 컴포넌트가
  *          되살아났다면 그것은 바이너리 경로로만 올 수 있다.
  */
-
 SW_TEST_CASE( SceneTest, CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad )
 {
     const sw::TagID  kTagCooked    = sw::TagID::request( "Cook.Marked" );
@@ -166,7 +165,6 @@ SW_TEST_CASE( SceneTest, CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad )
 /**
  * @brief [SceneTest] 빈 매니저에서 createScene 이 활성 씬을 설정
  */
-
 SW_TEST_CASE( SceneTest, CreateSceneSetsActiveWhenEmpty )
 {
     sw::SceneManager manager;

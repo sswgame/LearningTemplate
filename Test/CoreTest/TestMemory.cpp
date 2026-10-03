@@ -18,7 +18,6 @@
 /**
  * @brief [MemoryTest] FrameArenaAllocator 동작
  */
-
 SW_TEST_CASE( MemoryTest, FrameArenaAllocatorOperations )
 {
     sw::FrameArenaAllocator arena( 1024 );

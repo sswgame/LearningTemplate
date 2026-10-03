@@ -77,7 +77,6 @@ namespace
 /**
  * @brief [DataStructureTest] DynamicBitset 기본
  */
-
 SW_TEST_CASE( DataStructureTest, DynamicBitsetBasic )
 {
     sw::DynamicBitset bitset( 100 );

@@ -11,7 +11,6 @@
  * @details 이름(`SW_BUILD_CONFIG_NAME` · `SW_PLATFORM_NAME`)과 분기용 매크로(`SW_SHIPPING` · `SW_DEBUG` · `SW_PLATFORM_*`)는 CMake 의 다른 줄에서
  *          정의되므로 한쪽만 바뀌면 크래시 리포트가 엉뚱한 구성을 적는다.
  */
-
 SW_TEST_CASE( BuildInfoTest, NamesAgreeWithTheBuildMacros )
 {
 #if defined( SW_SHIPPING )

@@ -2669,6 +2669,10 @@ SW_TEST_CASE( GameObjectTest, MultiLevelComponentGameObjectPolymorphicLookup )
     SW_EXPECT_NEAR_EQUAL( 30.0f, worldPos._z, 1e-4f );
 }
 
+/**
+ * @brief [GameObjectHierarchyTest] 조부모 · 부모 · 자식 3 단에서 활성은 자기 비트와 모든 조상의 비트를 함께 본다
+ * @details 한 단씩 끄고 켜며, 자기가 켜져 있어도 조상 하나가 꺼져 있으면 꺼진 것으로 보이는지와 조상을 되살리면 모두 돌아오는지 본다.
+ */
 SW_TEST_CASE( GameObjectHierarchyTest, ActiveInHierarchyCompoundEvaluation )
 {
     sw::GameObjectManager manager;

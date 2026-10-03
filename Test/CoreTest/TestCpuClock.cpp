@@ -12,7 +12,6 @@
  * @details 엔진의 모든 시간 측정(프로파일러 · 태스크 대기 · 로거 기한)이 이 시계 하나를 쓴다. 카운터 → 나노초 변환이 넘치면
  *          (counter * 1e9 를 그대로 곱하면 며칠 만에 int64 를 넘는다) 시각이 거꾸로 가거나 음수가 된다.
  */
-
 SW_TEST_CASE( CpuClockTest, ClockStopwatchAndDeadlineFollowRealTime )
 {
     const int64 first  = sw::CpuClock::nowNanoseconds();

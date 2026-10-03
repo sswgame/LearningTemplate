@@ -18,7 +18,6 @@
  * @details 에디터의 Rebind(`InputMapEditorPanel::rebindSelectedAction`)가 이것을 불러 이미 쓰는 키로 바꾸는 것을 알린다.
  *          계약을 여기서 고정한다.
  */
-
 SW_TEST_CASE( ActionMapTest, DetectsBindingConflictInSameLayer )
 {
     sw::ActionMap actionMap;

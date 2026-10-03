@@ -24,7 +24,6 @@ namespace
 /**
  * @brief [FileTest] FileUtil 경로 동작
  */
-
 SW_TEST_CASE( FileTest, FileUtilPathOperations )
 {
     sw::string fullPath = "Projects/Sample/TestFile.txt";

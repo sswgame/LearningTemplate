@@ -46,7 +46,6 @@ namespace
 /**
  * @brief [RHIReleaseQueueTest] 지연 해제
  */
-
 SW_TEST_CASE( RHIReleaseQueueTest, LatencyRelease )
 {
     sw::RHIReleaseQueue queue( 3 );

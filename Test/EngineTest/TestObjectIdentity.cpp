@@ -21,7 +21,6 @@
  * @details 물러서는 이유: 옛 오브젝트가 삭제 대기인 채로 같은 id 를 쓰면, 나중에 옛 것의 지연 파괴가 id 로 정리하는
  *          항목(슬롯 표 · 에디터 GUID 맵)을 새 것 몫까지 지운다.
  */
-
 SW_TEST_CASE( ObjectIdentityTest, CreateWithIdReusesFreedIdOnly )
 {
     sw::GameObjectManager manager;

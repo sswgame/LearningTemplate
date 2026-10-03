@@ -78,7 +78,6 @@ namespace
  *          `removeFile` 이 다른 쪽이 방금 쓴 파일을 지울 수 있다. 확장자는 그대로 남아야
  *          한다 — 로더가 그것으로 형식을 고른다.
  */
-
 SW_TEST_CASE( TestFrameworkTest, TempPathIsUniquePerProcessAndPerCase )
 {
     const sw::string path = test::makeTempPath( "sample.wav" );

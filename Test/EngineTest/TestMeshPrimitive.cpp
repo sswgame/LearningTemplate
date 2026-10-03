@@ -45,7 +45,6 @@
  *          `createPrimitive` 가 매번 새로 만드는 성질도 같이 지킨다 — 벤치가 그것으로 도형 변종을
  *          갈라 배치를 일부러 나눈다(`BenchScene`).
  */
-
 SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIdWhileCreateMakesNew )
 {
     // 1. 같은 id -> 같은 객체.
@@ -153,7 +152,6 @@ SW_TEST_CASE( MeshPrimitiveTest, WorldBoxFollowsTheMeshAndItsParents )
  *          보여서 렌더러 버그로 오인하기 쉬우므로, 기하 자체를 CPU 에서 본다. 원점 중심 볼록 도형이면
  *          각 삼각형의 면 법선이 그 삼각형 중심과 같은 쪽을 향해야 한다(dot > 0).
  */
-
 SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
 {
     struct PrimitiveCase

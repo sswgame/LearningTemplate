@@ -10,7 +10,6 @@
 /**
  * @brief [CommandLineTest] Width 기본값 존재
  */
-
 SW_TEST_CASE( CommandLineTest, WindowSizeHasNoCommandLineDefault )
 {
     sw::CommandLineManager cmdManager;
