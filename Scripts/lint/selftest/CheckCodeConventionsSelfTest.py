@@ -4,7 +4,7 @@
 `CheckCodeConventions` 가 아직 살아 있는지 검사합니다 (음성 테스트).
 
 **린트는 조용히 죽는다.** 규칙 하나가 정규식 한 글자 때문에 아무것도 못 잡게 되어도 결과는 "위반 0건"
-이라 통과처럼 보인다. 이 저장소는 실제로 그런 일을 겪었다 — 그래서 규칙마다 **일부러 어긴 조각**을 두고
+이라 통과처럼 보인다. 그래서 규칙마다 **일부러 어긴 조각**을 두고
 그것이 잡히는지 본다. 잡히지 않으면 그 규칙은 죽은 것이다.
 
   python Scripts/lint/selftest/CheckCodeConventionsSelfTest.py [--root <repo>] [--verbose]
@@ -106,13 +106,10 @@ _kWholeScanCases: list[tuple[str, dict[str, str]]] = [
 # 2) 주체 × 어휘 교차표 — **드리프트를 막는 자리다**
 #
 # 위의 카테고리 검사는 "이 카테고리가 한 번은 잡히는가"만 본다. 그래서 같은 규칙이 주체마다
-# 다르게 적혀 있어도 **하나만 살아 있으면 통과했다**. 실제로 그 상태로 오래 있었다:
+# 다르게 적혀 있어도 **하나만 살아 있으면 통과한다** — `inoutListActors` 가 매개변수면 잡히고 지역변수면
+# 통과하거나, `vector<uint8> listBuffer` / `_listBuffer` 에 정반대 판정이 나와도 모른다.
 #
-#   * `inoutListActors` 는 매개변수면 잡히고 지역변수면 통과했다
-#   * `vector<uint8> listBuffer` 는 매개변수에선 "`list` 를 빼라", 멤버 `_listBuffer` 는 통과 —
-#     같은 이름에 **정반대 판정**이 나왔다
-#
-# 지금은 판정이 `kMapContainerVocabulary` 한 곳에 있으니 그런 일이 나올 수 없다. 이 표는 그게
+# 판정은 `kMapContainerVocabulary` 한 곳에 있다. 이 표는 그게
 # **계속** 그런지 본다: 어휘 넷을 주체 셋에 각각 물어, 하나라도 조용하면 실패한다.
 # 표는 손으로 들지 않는다 — 두 목록의 곱이라 어휘나 주체가 늘면 칸도 같이 는다.
 # ------------------------------------------------------------------------------
@@ -154,8 +151,7 @@ def checkSubjectMatrixInternal(tempRoot: Path, bVerbose: bool) -> list[str]:
     """
     주체 셋 × 어휘 넷 — 열두 칸이 전부 무언가를 잡아야 합니다.
 
-    어느 칸이 조용하면 그 주체가 그 어휘를 안 보고 있다는 뜻이다. 예전의 드리프트가 정확히
-    그 모양이었다.
+    어느 칸이 조용하면 그 주체가 그 어휘를 안 보고 있다는 뜻이다 — 주체마다 표가 갈라지는 드리프트가 그 모양이다.
     """
     listError: list[str] = []
 
@@ -215,10 +211,10 @@ _kCleanCase: tuple[str, str] = (
 # 전체 스캔 전용 규칙(`Style/BitfieldBoolean` · `Naming/DuplicateInternalHelper` ·
 # `Style/HeaderMemberInitializer`)이 아예 돌지 않는다 — **그 규칙들의 오탐은 아무도 보고 있지 않았다.**
 #
-# `_buttonMask` 가 여기 있는 이유: `Style/BitfieldBoolean` 이 예전에는 이름을 `_b` + 아무 글자로 봐서
-# **`_b` 다음이 소문자인 평범한 이름**(비트마스크·바이트 버퍼)까지 "uint8 불리언" 으로 읽었다.
+# `_buttonMask` 가 여기 있는 이유: `Style/BitfieldBoolean` 이 이름을 `_b` + 아무 글자로 보면
+# **`_b` 다음이 소문자인 평범한 이름**(비트마스크·바이트 버퍼)까지 "uint8 불리언" 으로 읽는다.
 # 게다가 이름 집합이 트리 전역이라, 한 파일의 `uint8 _buttonMask` 가 **다른 파일의 `uint64
-# _buttonMask` 까지** 불리언으로 만들었다(실제로 `MouseDevice` 가 `InputSnapshot` 을 그렇게 걸었다).
+# _buttonMask` 까지** 불리언으로 만든다. 이 조각이 그 오탐을 막는다.
 _kWholeScanCleanCase: dict[str, str] = {
     # 같은 상수 이름이라도 `XxxInternal` 구조체 안 · 함수 지역이면 그 구조체 · 함수가 가린다 — `Naming/DuplicateAnonymousConstant` 가 아니다.
     "Source/Probe/GammaLimit.cpp": (
@@ -272,7 +268,7 @@ def resetPathMapCacheInternal() -> None:
 
     그 맵은 **처음 한 번만** 채워지는 모듈 전역이다(정상 실행에서는 루트가 하나라 맞는 설계다).
     여기서는 조각마다 임시 루트가 다르므로, 비우지 않으면 앞 조각의 맵으로 판정해
-    `Include/PathCasing` 같은 규칙이 조용히 안 걸린다 — 실제로 한 번 그랬다.
+    `Include/PathCasing` 같은 규칙이 조용히 안 걸린다.
     """
     CheckCodeConventions._s_exactPathMap = {}
 

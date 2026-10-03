@@ -6,24 +6,22 @@ Scripts/lint/gate/CheckPythonMinimumVersion.py
 이 저장소의 파이썬이 **CI 가 들고 있는 파이썬에서도 파싱되는지** 검사합니다.
 
 [왜 필요한가 — 로컬에서는 절대 보이지 않는 종류다]
-2026-09-19 에 리눅스 CI 가 통째로 멈췄다. 빌드도 테스트도 아니고 **CMake configure** 에서였다:
+f-string **식 안의 백슬래시**는 Python 3.12 의 PEP 701 부터 허용된다:
 
-    File "Scripts/lint/gate/CheckIncludeOrder.py", line 156
-        includeFull = f"{includeType}{includeName}{'>' if includeType == '<' else '\\"'}"
-    SyntaxError: f-string expression part cannot include a backslash
+    includeFull = f"{includeType}{includeName}{'>' if includeType == '<' else '\\"'}"
+    SyntaxError: f-string expression part cannot include a backslash      ← 3.10 에서만
 
-f-string **식 안의 백슬래시**는 Python 3.12 의 PEP 701 부터 허용된다. 그 줄을 쓴 기계의 파이썬은
-3.14 라 아무 문제가 없었고, 커밋 훅도 린트도 전부 초록이었다. CI 러너(ubuntu-22.04)의 `python3`
-만 3.10 이라 거기서만 죽었다 — 그리고 그 자리가 `sw_executePythonScript` 라서 **설정 자체가
-실패**해, 리눅스 잡 넷이 한 줄도 컴파일하지 못하고 끝났다.
+새 파이썬을 쓰는 기계에서는 커밋 훅도 린트도 전부 초록인데, CI 러너(ubuntu-22.04)의 `python3` 는 3.10 이다.
+그리고 이런 스크립트는 `sw_executePythonScript` 로 **CMake configure** 중에 돌기도 해서, 거기서 죽으면 설정 자체가
+실패해 리눅스 잡 전체가 한 줄도 컴파일하지 못한다.
 
 즉 이것은 "실수했는데 못 봤다" 가 아니라 **"내 기계에서는 볼 방법이 없다"** 는 종류다. 그래서
 사람의 주의가 아니라 게이트가 맡는다.
 
 [왜 `ast.parse(feature_version=...)` 이 아닌가 — 해 봤고, 안 잡는다]
 `ast.parse(src, feature_version=(3, 10))` 은 이 구문을 **그대로 통과시킨다.** PEP 701 은 문법
-규칙이 아니라 **토크나이저**를 바꾼 것이라, 새 토크나이저로 읽는 이상 옛 제약이 되살아나지 않는다.
-(2026-09-19 에 3.10·3.11·3.12 셋 다 통과하는 것을 확인했다.) 그래서 f-string 의 식 부분을
+규칙이 아니라 **토크나이저**를 바꾼 것이라, 새 토크나이저로 읽는 이상 옛 제약이 되살아나지 않는다
+(feature_version 3.10 · 3.11 · 3.12 모두 통과시킨다). 그래서 f-string 의 식 부분을
 **소스에서 직접 잘라** 본다.
 
 [무엇을 잡는가]

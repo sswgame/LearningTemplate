@@ -3,17 +3,11 @@
 """
 게이트 하나 = 클래스 하나.
 
-`gate/` 의 린트들은 하는 일이 제각각이지만 **껍데기는 늘 같았다**: UTF-8 출력을 켜고, `--root` 를
-받고, 저장소 루트를 정하고, 위반 목록을 찍고, 있으면 1 · 없으면 0 을 돌려준다. 여덟 파일이 그
-열댓 줄을 각자 적고 있었고, 그래서 **각자 조금씩 달랐다**:
-
-- `--root` 기본값이 두 종류였다. `CheckRenderOwnership` · `CheckTestSuites` 는
-  `parents[2]` — `Scripts/` 였다(저장소 루트는 `parents[3]` 이다). 문서에 적힌 대로
-  `py -3 Scripts/lint/gate/CheckRenderOwnership.py` 를 치면 `Scripts/` 를 훑고 "헤더가 없습니다"
-  로 실패했다. CMake·PreCommitLint 가 늘 `--root` 를 줘서 아무도 몰랐을 뿐이다.
-- 절반은 `main()` 이 `parse_args()` 를 인자 없이 불러 **프로그램에서 부를 수 없었다**
-  (`CheckEngineLayers` · `CheckDataFileReferences` · `CheckResourceCasing` · `CheckSourceGlob`).
-- 위반 줄이 어디는 stdout, 어디는 stderr 로 갔고, 머리말도 `  - ` 와 `  ` 가 섞여 있었다.
+`gate/` 의 린트들은 하는 일이 제각각이지만 **껍데기는 늘 같다**: UTF-8 출력을 켜고, `--root` 를
+받고, 저장소 루트를 정하고, 위반 목록을 찍고, 있으면 1 · 없으면 0 을 돌려준다. 게이트마다 이것을 적으면
+각자 조금씩 달라진다 — `--root` 기본값이 저장소가 아니라 `Scripts/` 를 가리키거나(CMake · 훅은 늘 `--root` 를
+줘서 손으로 돌릴 때만 드러난다), `main()` 이 인자 없이 `parse_args()` 를 불러 프로그램에서 부를 수 없거나,
+위반 줄이 stdout · stderr 로 갈린다.
 
 그래서 껍데기를 여기 한 번만 적는다. 게이트가 쓰는 것은 **`scan()` 하나**다.
 
@@ -65,7 +59,7 @@ class GateError(Exception):
     검사가 **성립하지 않는다** — 위반(1)이 아니라 오류(2)로 끝냅니다.
 
     "위반이 없다" 와 "검사할 수 없었다" 는 다른 답이다. 후자를 0 으로 돌려주면 게이트가 조용히
-    죽고(이 저장소가 이미 겪었다), 1 로 돌려주면 코드를 고쳐도 통과하지 않는다.
+    죽고, 1 로 돌려주면 코드를 고쳐도 통과하지 않는다.
     """
 
 
@@ -98,9 +92,8 @@ class LintGate:
     - `selfTestCases`    : 이 게이트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive` 가 읽어 간다.
     - `selfTestSkipReason`: 조각을 만들 수 없는 이유. 이유 없는 예외는 없다.
 
-    CMake 가 이 게이트를 타깃·CTest 로 등록할 때 묻는 것 셋도 여기 있다. 예전에는 그 셋이
-    `cmake/Engine/AssetAndToolTargets.cmake` 에 손으로 적혀 있었다 — 게이트를 하나 더하면
-    파이썬과 CMake 두 곳을 고쳐야 했고, 둘은 언제든 어긋날 수 있었다(`Scripts/lint/LintCatalog.py`).
+    CMake 가 이 게이트를 타깃·CTest 로 등록할 때 묻는 것 셋도 여기 있다 — CMake 에 따로 적으면 파이썬과 어긋난다
+    (`Scripts/lint/LintCatalog.py` 가 읽어 간다).
 
     - `buildComment`     : ninja 가 이 타깃을 만들 때 찍는 줄. **영어다** — 이 저장소의 빌드 출력은
                            전부 영어이고, Windows 콘솔 코드페이지에서 한글이 깨진 전례가 있다.
@@ -123,12 +116,8 @@ class LintGate:
 
     # --- 커밋 훅이 묻는 것 ---------------------------------------------------
     #
-    # `PreCommitLint` 는 게이트 여섯을 **이름으로 import** 하고 있었다. 게이트가 열둘인데 여섯만
-    # 돌았고(`CheckEngineLayers` · `CheckDataFileReferences` · `CheckSourceGlob` 은 처음부터
-    # 빠져 있었다), 게다가 그 여섯조차 `if stagedCppFiles:` 안에 있어서 **`.cmake` 나 `.py` 만
-    # 커밋하면 아무 게이트도 돌지 않았다.** 실제로 그 상태로 커밋이 통과했다.
-    #
-    # 그래서 훅도 폴더를 훑는다. 훅이 알아야 하는 것은 게이트마다 다르므로 게이트가 든다 —
+    # 훅도 폴더를 훑는다 — 게이트를 이름으로 import 하면 새 게이트가 빠지고, C++ 가 staged 됐을 때만 돌리면
+    # **`.cmake` 나 `.py` 만 커밋할 때 아무 게이트도 돌지 않는다.** 훅이 알아야 하는 것은 게이트마다 다르므로 게이트가 든다 —
     # `LintCatalog` 가 CMake 등록 정보를 게이트에서 가져가는 것과 같은 방식이다.
     #
     # - `preCommitPattern`     : 이 패턴에 맞는 파일이 staged 되었을 때만 돈다 (`fnmatch`,
@@ -218,8 +207,8 @@ class LintGate:
         - `listScanRoot`(저장소 기준, `""` 은 전체) 밖의 파일은 뺀다.
         - `--files` 의 상대 경로는 **저장소 루트 기준**으로 풀고, 거기 없으면 현재 폴더 기준으로 푼다. 저장소 밖 파일은 뺀다.
 
-        예전에는 게이트마다 이 일을 따로 했다. `--files` 의 상대 경로를 어떤 게이트는 저장소 기준, 어떤 게이트는 현재 폴더 기준으로
-        풀었고, 제외 목록은 다섯 벌이 서로 달랐고, `--files` 에는 제외를 걸지 않아 **커밋 훅과 전체 검사가 서로 다른 파일을 봤다.**
+        게이트마다 이 일을 따로 하지 말 것 — 상대 경로를 푸는 기준과 제외 목록이 갈리고, `--files` 에 제외를 빠뜨리면
+        **커밋 훅과 전체 검사가 서로 다른 파일을 본다.**
         """
         listScanRoot = tuple(listScanRoot)
         setExcluded = set(excludedDirNames)

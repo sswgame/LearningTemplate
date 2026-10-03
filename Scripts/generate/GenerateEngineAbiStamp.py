@@ -17,8 +17,8 @@ import sys
 
 # 핫 리로드가 갈아 끼우지 않는 쪽의 헤더다 — Core · Engine, 모듈과 호스트의 계약(RuntimeAPI), 공용 모듈(GameFramework — 섀도 복사 없이 한 번
 # 올리고 다시 올리지 않는다). 키트(GameFramework/Kits)는 스스로 리로드되는 모듈이라 뺀다. X 매크로 표(.xxx)도 넣는다 — `EngineServiceList.xxx` 가
-# 서비스 색인과 `EngineServices` 배치를, `PredefinedNameType.xxx` 가 예약 이름 색인을 정한다. 예전에는 셋 다 빠져, 거기에 줄을 더한 모듈이
-# 같은 도장으로 옛 엔진에 올라 `getService<T>()` 가 엉뚱한 서비스를 돌려줄 수 있었다.
+# 서비스 색인과 `EngineServices` 배치를, `PredefinedNameType.xxx` 가 예약 이름 색인을 정한다. 주의: 표를 빼면 거기에 줄을 더한 모듈이
+# 같은 도장으로 옛 엔진에 올라 `getService<T>()` 가 엉뚱한 서비스를 돌려준다.
 kHeaderRoots = ("Source/Core", "Source/Engine", "Source/RuntimeAPI", "Source/GameFramework")
 kExcludedRoots = ("Source/GameFramework/Kits",)
 kHeaderExtensions = (".h", ".hpp", ".inl", ".xxx")

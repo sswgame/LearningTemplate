@@ -1,8 +1,8 @@
 """
 Scripts/common/AssetPipeline.py
 
-SW Engine 에셋 쿠킹 및 바이너리 직렬화 공통 파이프라인 모듈:
-  - resolveDefaultOutputDir: 가장 최근에 빌드된 산출물 디렉터리(build/*/Bin) 동적 탐색
+쿠커가 쓰는 출력 위치 도우미:
+  - resolveDefaultOutputDir: 가장 최근에 구성된 빌드의 산출물 디렉터리(build/*/Bin/<subDir>) 탐색
 """
 
 from __future__ import annotations

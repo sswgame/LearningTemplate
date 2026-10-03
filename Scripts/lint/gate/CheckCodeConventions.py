@@ -75,9 +75,8 @@ class LineScanContext:
     """
     줄 하나를 볼 때 규칙이 필요로 하는 것 전부.
 
-    규칙을 이 타입 하나만 받는 함수로 만들면 **규칙마다 독립**이 된다. 예전에는 규칙 스물둘이
-    496 줄짜리 한 함수 안에서 `inBlockComment` · `classStack` · 중괄호 깊이를 공유하며 얽혀 있었다 —
-    규칙 하나를 고치려면 그 전체를 읽어야 했고, 규칙의 정규식은 900 줄 떨어진 곳에 있었다.
+    규칙을 이 타입 하나만 받는 함수로 만들면 **규칙마다 독립**이 된다 — 규칙끼리 `inBlockComment` · `classStack` ·
+    중괄호 깊이 같은 상태를 직접 나눠 쓰지 않으므로, 규칙 하나를 고칠 때 그 규칙만 읽으면 된다.
     """
     relPath: str
     rootDir: Path
@@ -160,13 +159,8 @@ class ConventionRule:
 # --- 3. 명명 어휘 — 주체 셋이 함께 쓰는 단 하나의 표 -------------------------
 #
 # 멤버 · 매개변수 · 지역변수는 **같은 접두어 표**를 쓴다 (`AGENTS.md` 의 컨테이너/포인터 규칙).
-# 예전에는 그 표가 세 벌로 적혀 있었다 — `checkParameterItemInternal` 252줄,
-# `checkLocalVariableItemInternal` 376줄, `ClassMemberNamingRule` 130줄이 각자 정규식과
-# 접두어 목록과 메시지 문구를 들었다. 그리고 **실제로 어긋났다**:
-#
-#   * `inoutListActors`  — 매개변수면 잡히고 지역변수면 통과했다 (지역 쪽이 `inoutList` 를 빠뜨렸다)
-#   * `vector<uint8> listBuffer` — 매개변수는 "`list` 를 빼라", 멤버 `_listBuffer` 는 통과.
-#     같은 이름에 **정반대 판정**이 나왔다 (멤버 쪽만 'buffer' 를 바이트 버퍼 단어로 안 쳤다)
+# 주의: 주체마다 표를 따로 적으면 반드시 어긋난다 — 같은 이름이 매개변수면 잡히고 지역변수면 통과하거나
+# (`inoutListActors`), 매개변수와 멤버에 정반대 판정이 나온다(`vector<uint8> listBuffer` / `_listBuffer`).
 #
 # 그래서 **판정은 여기 한 곳에만 있다.** 주체마다 다른 것은 선언을 찾아내는 방법(파싱)뿐이고,
 # 찾아낸 이름을 어떻게 볼지는 셋이 이 표를 함께 읽는다. 규칙을 하나 바꾸면 세 주체에 동시에 반영된다.
@@ -262,8 +256,8 @@ kMapNamingSubject: dict[str, NamingSubject] = {
     )
 }
 
-#: 컨테이너 타입을 알아보는 정규식 — 주체 셋이 같은 것을 본다. 예전에는 매개변수·지역·멤버가
-#: 각자 적어서 `deque` 가 한 곳에만 있거나 `sw::` 접두어가 빠지는 식으로 갈렸다.
+#: 컨테이너 타입을 알아보는 정규식 — 주체 셋(매개변수 · 지역 · 멤버)이 같은 것을 본다. 따로 적으면
+#: `deque` 가 한 곳에만 있거나 `sw::` 접두어가 빠지는 식으로 갈린다.
 _kAnyVectorRe = re.compile(r'\b(?:(?:sw::)?(?:vector|list|deque))\s*<([^>]+)>')
 _kAnyMapRe = re.compile(r'\b(?:(?:sw::)?(?:unordered_map|map))\s*<')
 _kAnySetRe = re.compile(r'\b(?:(?:sw::)?(?:unordered_set|set))\s*<')
@@ -349,7 +343,8 @@ _kIncludePathRe = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]')
 #   - \s*$             : 같은 줄에 다른 토큰이 없는 순수 선언만 (전방 선언/한 줄 정의 제외)
 # 용도: 유니티 빌드(SW_ENABLE_UNITY_BUILD, CI-Debug/CI-Shipping)는 .cpp 여러 개를 한 TU 로 묶는다.
 #       익명 네임스페이스라도 같은 TU 안에서는 같은 이름이 재정의로 충돌한다 — 같은 클래스를 여러 .cpp 로
-#       나눠 구현할 때 헬퍼를 클래스 이름으로 지으면 실제로 부딪힌다(VulkanRHIResourceInternal 사례).
+#       나눠 구현할 때 헬퍼를 클래스 이름으로 지으면 부딪힌다 — 헬퍼는 파일 이름으로 짓는다
+#       (`VulkanRHIResourcePipeline.cpp` → `VulkanRHIResourcePipelineInternal`).
 _kAnonHelperStructRe = re.compile(r'^\s*struct\s+(\w+Internal)\s*$', re.MULTILINE)
 # 익명 네임스페이스 바로 안(구조체 · 함수 안이 아닌 곳)의 상수 선언 — `constexpr int32 kLimit = 4;` · `const string s_empty{};` · 배열.
 _kBareConstantDeclRe = re.compile(r'^\s*(?:static\s+)?(?:inline\s+)?(?:constexpr|const)\b[^;(]*?\b([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)?(?:=|\{)')
@@ -361,8 +356,8 @@ def getExactPathMapInternal(projectRoot: Path) -> dict[str, str]:
     """
     저장소 내 모든 소스/헤더 파일의 실제 대소문자 경로 맵을 생성합니다(Source · Test · Tools 기준 상대 경로와 저장소 기준 경로 둘을 열쇠로).
 
-    내려받은 외부 도구(`Tools/vcpkg` · `Tools/LLVM` …)로는 내려가지 않습니다(`collectRepositoryFiles`). 예전에는 그것까지 걸어 폴더 6894 개를
-    훑었고, 파일 셋만 검사해도 1.6 초를 썼습니다. 이 맵은 따옴표 include 에만 쓰이고 외부 헤더는 꺾쇠로 include 하므로 결과는 같습니다.
+    내려받은 외부 도구(`Tools/vcpkg` · `Tools/LLVM` …)로는 내려가지 않습니다(`collectRepositoryFiles`) — 거기까지 걸으면 폴더가 수천 개라
+    파일 셋만 검사해도 1 초를 넘깁니다. 이 맵은 따옴표 include 에만 쓰이고 외부 헤더는 꺾쇠로 include 하므로 결과는 같습니다.
     """
     global _s_exactPathMap
     if not _s_exactPathMap:
@@ -447,11 +442,8 @@ _kFormatterCallRe = re.compile(
 )
 # 이 포매터가 파싱하지 못하는 printf 스펙.
 #
-# 예전에는 플래그·폭·정밀도가 붙은 스펙(`%.3f`, `%05d`)을 **전부** 막았다. 포매터가 맨 변환 문자만
-# 알아봐서 `%.3f` 를 쓰면 `%.` 까지만 먹고 `3f` 가 글자로 남았기 때문이다. 지금은 포매터가
-# `% [flags] [width] [.precision] [length] conversion` 을 그대로 읽으므로 그 규칙은 필요 없다.
-#
-# 남은 것은 정말로 못 읽는 둘이다:
+# 포매터는 `% [flags] [width] [.precision] [length] conversion` 을 그대로 읽으므로 `%.3f` · `%05d` 는 허용한다.
+# 막는 것은 정말로 못 읽는 둘이다:
 #  - `*` (인자로 주는 동적 폭/정밀도) — 인자 개수가 서식에 따라 달라져 타입세이프 경로와 맞지 않는다.
 #  - `%a` / `%A` (16진 부동소수) — 변환 자체가 구현되어 있지 않다.
 # `%n` 은 값을 쓰는 스펙이라 애초에 지원 대상이 아니고 보안상으로도 막는다.
@@ -494,8 +486,8 @@ def isPluralWordInternal(word: str) -> bool:
 
 
 # [줄마다 부르는 정규식 — 미리 컴파일한다]
-# 예전에는 함수 안에서 `re.search( r"...", x )` 로 문자열을 넘겼다. 정규식 모듈이 캐시해 두긴 하지만 부를 때마다 그 캐시를
-# 찾는다 — 전체 스캔 한 번에 145 만 번이었다(프로파일 기준 1.5 s). 패턴은 그대로 옮겼다.
+# 함수 안에서 `re.search( r"...", x )` 로 문자열을 넘기면 부를 때마다 정규식 모듈의 캐시를 찾는다 — 전체 스캔 한 번에
+# 백만 번이 넘어 초 단위가 된다. 줄마다 부르는 패턴은 여기서 미리 컴파일한다.
 _kTrailingArraySuffixRe = re.compile(r'\[[^\]]*\]$')
 _kTrailingIdentifierRe = re.compile(r'([A-Za-z0-9_]+)$')
 _kParameterTypeRe = re.compile(r'^(?:(?:const|volatile|register)\s+)?(?:[A-Za-z0-9_:]+(?:<[^>]+>)?(?:\s*[*&]+)?\s*)+$')
@@ -756,7 +748,7 @@ def checkPointerNamingInternal(
             if rest and rest[0].isupper():
                 return []
             # 이름이 접두어 그 자체인 경우(`T* p`)는 둔다 — `Core/Container/vector.h` 처럼
-            # STL 시그니처를 그대로 흉내 내는 자리가 있고, 예전 검사도 이것만은 통과시켰다.
+            # STL 시그니처를 그대로 흉내 내는 자리가 있다.
             if not rest and not subject.bMember:
                 return []
 
@@ -1294,9 +1286,9 @@ class SourceTextCache:
     """
     검사 한 번 동안 **파일마다 한 번만 읽는다.** 바이트를 들고 있다가 자리마다 원하는 인코딩 · 오류 처리로 풉니다.
 
-    예전에는 파일별 검사 · 짝 헤더 멤버 · 헬퍼 이름 중복 · 헤더 멤버 초기값 · 비트필드 불리언이 같은 파일을 각자 열어, 전체 스캔 한 번에
-    파일 1064 개를 4842 번 열었다(윈도우는 여는 것이 느리다 — 필터 드라이버). 풀 때는 `Path.read_text` 와 같게 줄끝(CRLF · CR)을
-    LF 로 바꾼다 — 텍스트 모드 읽기가 하던 일이다.
+    파일별 검사 · 짝 헤더 멤버 · 헬퍼 이름 중복 · 헤더 멤버 초기값 · 비트필드 불리언이 같은 파일을 각자 열면 파일마다 네다섯 번
+    열게 된다(윈도우는 여는 것이 느리다 — 필터 드라이버). 풀 때는 `Path.read_text` 와 같게 줄끝(CRLF · CR)을 LF 로 바꾼다
+    — 텍스트 모드 읽기가 하는 일이다.
     """
 
     def __init__(self) -> None:
@@ -1783,9 +1775,9 @@ def checkHeaderMemberInitializersInternal(filesToScan: list[Path], projectRoot: 
 
 
 # `_b` **다음 글자가 대문자**여야 불리언 이름이다 — 저장소 규칙이 `_bPascalCase` 이기 때문이다.
-# 예전에는 `_b\w+` 라서 `_buttonMask` · `_bytes` 같은 평범한 이름까지 "uint8 불리언" 으로 읽혔고,
+# 주의: `_b\w+` 로 넓히면 `_buttonMask` · `_bytes` 같은 평범한 이름까지 "uint8 불리언" 으로 읽히고,
 # 그 이름이 어딘가에 `uint8` 로 한 번이라도 선언돼 있으면(예: `MouseDevice::_buttonMask`)
-# **다른 파일의 `uint64 _buttonMask` 까지** 같이 지적당했다.
+# **다른 파일의 `uint64 _buttonMask` 까지** 같이 지적당한다.
 _kBoolNamePattern = r"(_b[A-Z]\w*)"
 _kU8BoolDeclRe = re.compile(
     r"^\s*(?:\[\[[^\]]*\]\]\s*|mutable\s+|static\s+)*uint8\s+" + _kBoolNamePattern + r"\s*(?::\s*\d+\s*)?"
@@ -1808,9 +1800,7 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
     선언 타입을 알아야 하므로 **전체 스캔에서만** 돕니다. 같은 이름이 다른 곳에서 `bool` 이나 더 넓은
     정수로도 선언돼 있으면 어느 쪽인지 단정할 수 없으므로 건너뜁니다(오탐보다 누락이 낫다).
 
-    이름은 `_b` **다음이 대문자**여야 봅니다 — 저장소 규칙이 `_bPascalCase` 이기 때문입니다. 예전에는
-    `_b` 뒤에 아무 글자나 받아서 `_buttonMask` 같은 평범한 이름이 걸렸고, 그것이 어딘가에 `uint8` 로 선언돼 있으면
-    (`MouseDevice::_buttonMask`) **다른 파일의 `uint64 _buttonMask` 까지** 지적당했다.
+    이름은 `_b` **다음이 대문자**여야 봅니다 — 저장소 규칙이 `_bPascalCase` 이기 때문입니다(`_kBoolNamePattern` 의 주의 참고).
     """
     mapU8: set[str] = set()
     mapBool: set[str] = set()
@@ -2522,8 +2512,8 @@ class SingleAnonymousNamespaceRule( ConventionRule ):
 
     def __init__(self) -> None:
         # **파일별로 나눠 둔다.** 규칙 객체는 하나인데 게이트는 파일을 **동시에** 훑는다 — 상태를
-        # 객체에 그냥 두면 파일 사이에 섞여 같은 트리에서 결과가 매번 달라진다(실제로 2·3·3 이
-        # 나왔다). 한 파일의 줄은 한 일꾼이 순서대로 보므로, 경로로 칸을 나누면 그 안은 안전하다.
+        # 객체에 그냥 두면 파일 사이에 섞여 같은 트리에서 결과가 매번 달라진다. 한 파일의 줄은
+        # 한 일꾼이 순서대로 보므로, 경로로 칸을 나누면 그 안은 안전하다.
         self._stateByFile: dict[str, list[int]] = {}
 
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:

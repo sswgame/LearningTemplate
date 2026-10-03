@@ -191,7 +191,7 @@ def checkBundledLinker() -> None:
     `libxml2.so.2: cannot open shared object file` 이다).
 
     배포판이 libxml2 를 새 soname 으로 올리면 그대로 이 일이 난다 — Ubuntu 26.04 는
-    `libxml2.so.16` 을 싣고 `.so.2` 를 더 이상 주지 않아서 실제로 겪었다. 시스템에 lld 가 있으면
+    `libxml2.so.16` 을 싣고 `.so.2` 를 주지 않는다. 시스템에 lld 가 있으면
     그것을 쓰면 되므로, 여기서 미리 알려 주고 쓰는 법까지 적는다.
     """
     bundledLinker = Path(__file__).resolve().parents[2] / "Tools" / "LLVM" / "bin" / "ld.lld"
@@ -219,7 +219,7 @@ def checkBundledLinker() -> None:
     host = "WSL" if isWslInternal() else "Linux"
     systemLinker = next((name for name in ("ld.lld", "ld.lld-21", "ld.lld-20") if shutil.which(name)), None)
     # 셋을 **다 줘야 한다.** 빠뜨리면 그 종류만 남아서 실패한다 — RHI 백엔드는 MODULE 이라
-    # EXE/SHARED 만 바꾸면 `libRHI_GL.so` 링크에서 똑같이 터진다(실제로 겪었다).
+    # EXE/SHARED 만 바꾸면 `libRHI_GL.so` 링크에서 똑같이 터진다.
     remedy = (
         "cmake <빌드디렉터리> "
         + " ".join(

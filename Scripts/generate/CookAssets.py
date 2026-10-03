@@ -55,10 +55,9 @@ from common import (
 
 # ------------------------------------------------------------------------------
 # .pack 바이너리 포맷 계약 — Config/Engine/PackFormat.json 이 단일 출처다.
-# 레이아웃을 여기서 손으로 들고 있지 않는다. 예전에는 쿠커와 C++ 헤더 생성기가 각자 레이아웃을
-# 갖고 있다가 헤더가 offset 8 부터 어긋나, 리더가 fileCount 를 0 으로 읽는 "빈 팩"이 만들어지고
-# 있었다. 계약을 읽는 일은 이제 `Scripts/common/PackFormat.py` 한 곳이고, 같은 객체를 헤더
-# 생성기(GeneratePackFormat.py)도 쓴다.
+# 레이아웃을 여기서 손으로 들고 있지 않는다 — 쿠커와 C++ 헤더 생성기가 각자 레이아웃을 들면 오프셋이
+# 어긋나 리더가 fileCount 를 0 으로 읽는 "빈 팩"이 생긴다. 계약을 읽는 일은 `Scripts/common/PackFormat.py`
+# 한 곳이고, 같은 객체를 헤더 생성기(GeneratePackFormat.py)도 쓴다.
 # ------------------------------------------------------------------------------
 _gPackFormat = PackFormatSpec.load()
 
@@ -74,16 +73,14 @@ _gCookContract = CookContractSpec.load()
 def cookScenes(resourceRoot: Path | None = None, cookedDir: Path | None = None, appExePath: Path | None = None) -> int:
     """씬과 프리팹을 `App.exe --cook-scenes` 로 굽습니다 (씬은 엔티티 상태까지 바이너리로, 프리팹은 XML · JSON 모두).
 
-    **프리팹도 여기다.** 예전에는 이 스크립트가 PFB2 형식을 따로 들고 `.prefab.xml` 만 구웠다 — `.prefab.json` 은 쿠킹본이
-    없어 배포본에서 스폰이 실패했고, 엔진의 쿠킹 함수는 쓰이지 않았다. 형식을 쓰는 곳은 이제 엔진(`PrefabAsset::saveToBinaryFile`)
-    하나다. 산출물은 소스 옆이 아니라 스테이징 폴더에 쓴다 — 소스 옆에 두면 `.gitignore` 로 가려야 하고, 소스가 옮겨지거나
+    **프리팹도 여기다.** 프리팹 바이너리 형식을 쓰는 곳은 엔진(`PrefabAsset::saveToBinaryFile`) 하나다 — 파이썬이 형식을
+    따로 들면 엔진과 어긋나고 한쪽 원본 형식(`.prefab.json` 등)을 빠뜨려 배포본에서 스폰이 실패한다. 산출물은 소스 옆이 아니라 스테이징 폴더에 쓴다 — 소스 옆에 두면 `.gitignore` 로 가려야 하고, 소스가 옮겨지거나
     지워진 뒤에도 낡은 .bin 이 남아 Dev 런타임이 그것으로 물러나 실패를 가린다.
 
-    **왜 파이썬이 직접 안 쓰는가.** 예전에는 여기서 SCN1 을 직접 썼는데, 그 파일은 엔티티마다
-    `<GameObject ...>` **XML 문자열을 그대로** 담고 있었다 — 쿠킹이 바깥 파싱만 줄이고 정작
-    비싼 엔티티 생성 단계는 하나도 못 줄였다(로드의 75%). 상태를 진짜 바이너리로 만들려면
+    **왜 파이썬이 직접 안 쓰는가.** 파이썬이 쓸 수 있는 것은 엔티티마다 XML 문자열을 그대로 담은 컨테이너뿐이라,
+    로드에서 비싼 엔티티 생성 단계(로드의 대부분)를 줄이지 못한다. 상태를 진짜 바이너리로 만들려면
     리플렉션이 필요하고 그것은 엔진 안에만 있으므로, 이 단계는 셰이더 베이크와 같은 방식으로
-    엔진에 넘긴다. 같은 포맷을 두 곳에서 쓰던 것도 이것으로 하나가 된다.
+    엔진에 넘긴다. 포맷을 쓰는 곳도 그래서 하나다.
     """
     projectRoot = getProjectRoot()
     cookedDir = cookedDir or resolveDefaultOutputDir(projectRoot, "Cooked")
@@ -383,7 +380,7 @@ def hasStagedAssetRegistryInternal(stagedDir: Path | None) -> bool:
     """엔진 쿠킹 단계(App --cook-scenes)가 이 도메인의 GUID 레지스트리를 스테이징했는가.
 
     레지스트리는 엔진이 쓴다(`AssetDatabase::writeRegistryFiles`) — 경로는 `.meta` 가 놓인 자리이고, Dev 런타임과 같은 규칙이다.
-    예전에는 여기서 `.meta` 안의 `sourcePath=` 칸으로 만들어, 탐색기 · git 으로 옮긴 에셋이 배포본에서만 옛 경로를 가리켰다.
+    주의: `.meta` 안에 적힌 경로로 만들면 탐색기 · git 으로 옮긴 에셋이 배포본에서만 옛 경로를 가리킨다.
     """
     return stagedDir is not None and (stagedDir / _kAssetRegistryFileName).is_file()
 
@@ -392,10 +389,7 @@ class PackWriter:
     """
     팩 하나를 쌓아 올리는 동안의 상태 — 담긴 항목 · 데이터 커서 · TOC · 스트링 풀.
 
-    예전에는 `cookPack` 이 150줄 한 함수 안에서 그 넷을 동시에 굴렸다. 오프셋 커서(`dataOffset`)가
-    한 루프 안에서 정렬·패딩·증가를 다 겪고, 같은 루프가 TOC 레코드와 페이로드 블롭을 각각 모으고,
-    스트링 풀은 **그보다 앞선 별도의 루프**에서 쌓인 뒤 인덱스로 다시 맞춰졌다 — 두 루프가 같은
-    순서로 돈다는 전제가 코드 어디에도 적혀 있지 않았다.
+    네 상태를 한 함수가 루프 여러 개로 나눠 굴리면 "루프들이 같은 순서로 돈다" 는 전제가 코드에 안 보이게 숨는다.
 
     여기서는 순서가 메서드 이름이다: `add*` 로 담고 `writeTo` 로 굽는다. 스트링 풀도 TOC 와 같은
     루프에서 같은 순서로 쌓이므로 인덱스를 맞출 일이 없다.
@@ -555,7 +549,7 @@ def cookPack(
         if packConfig and not shouldIncludeFile(rel, packConfig, targetRhi=targetRhi):
             continue
         if isCookedArtifact(rel):
-            # 산출물은 이제 스테이징에만 있다. 소스 트리에 남은 것은 옛 쿠킹의 잔재이고, Dev 런타임이 소스가
+            # 산출물은 스테이징에만 있다. 소스 트리에 남은 것은 낡은 쿠킹 잔재이고, Dev 런타임이 소스가
             # 없을 때 그것으로 물러나 실패를 가리므로 팩에 넣지 않고 이름을 찍어 지우게 한다.
             staleCooked.append(rel)
             continue

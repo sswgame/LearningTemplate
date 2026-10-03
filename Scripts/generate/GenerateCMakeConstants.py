@@ -5,13 +5,9 @@ Scripts/generate/GenerateCMakeConstants.py
 
 `Scripts/common/Constants.py` 의 상수를 CMake 가 그대로 읽는 `set(SW_...)` 목록으로 찍습니다.
 
-**목록을 여기서 들지 않는다.** 예전에는 `set(SW_...)` 서른여섯 줄을 손으로 적어 두고, 그 줄마다
-CMake 변수 이름과 파이썬 상수 이름을 **두 번** 철자했다. 상수 여든여섯 개 중 서른여섯 개만 나갔고,
-어느 것이 왜 빠졌는지는 주석으로만 남아 있었다. 바로 옆 `GenerateToolchainCMake.py` 는 이미
-"키 목록을 여기서도 들지 않는다" 고 적어 놓고 JSON 키를 그대로 변환해 찍는다 — 같은 문제에 같은
-저장소가 두 가지 답을 들고 있었다.
-
-이제 `Constants.py` 의 `k*` 는 **전부** 나간다. 이름은 기계적으로 바뀐다:
+**목록을 여기서 들지 않는다.** `set(SW_...)` 줄을 손으로 적으면 CMake 변수 이름과 파이썬 상수 이름을 **두 번**
+철자하게 되고, 어느 상수가 왜 빠졌는지 알 수 없게 된다(옆 `GenerateToolchainCMake.py` 도 같은 이유로 JSON 키를
+그대로 변환해 찍는다). `Constants.py` 의 `k*` 는 **전부** 나간다. 이름은 기계적으로 바뀐다:
 
     kDirConfigEnv       -> SW_DIR_CONFIG_ENV
     kFileToolchainConfig -> SW_FILE_TOOLCHAIN_CONFIG
@@ -20,12 +16,9 @@ CMake 변수 이름과 파이썬 상수 이름을 **두 번** 철자했다. 상�
 
 상수를 하나 더하면 CMake 에서 바로 쓸 수 있다 — 여기 고칠 것이 없다.
 
-**경로를 합치지 않는다.** 예전에는 `SW_FILE_PARSER_CONFIG` 만 `kDirConfigEnv` 를 앞에 붙여
-내보냈다. 그래서 같은 이름이 파이썬에서는 `parser_config.json`, CMake 에서는
-`Config/Environment/parser_config.json` 을 뜻했고, 그 둘이 다르다는 걸 모르는 자리에서
-`${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_CONFIG}` 로 **디렉터리를 두 번** 붙였다
-(`cmake/Engine/ReflectionCodeGen.cmake`). 그 경로는 존재하지 않으니 `if(EXISTS)` 가 조용히
-걸러 냈고, 결과적으로 **`parser_config.json` 이 바뀌어도 리플렉션 코드젠이 다시 돌지 않았다.**
+**경로를 합치지 않는다.** 같은 이름은 파이썬과 CMake 에서 같은 값(파일 이름)을 뜻해야 한다. 한 상수만 디렉터리를
+붙여 내보내면, 그걸 모르는 자리가 `${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_CONFIG}` 로 **디렉터리를 두 번** 붙이고,
+없는 경로를 `if(EXISTS)` 가 조용히 걸러 내 **`parser_config.json` 이 바뀌어도 리플렉션 코드젠이 다시 돌지 않는다.**
 합치는 일은 합칠 줄 아는 쪽(`ConfigConstants.h.in` · 호출부)이 한다.
 
 Usage:

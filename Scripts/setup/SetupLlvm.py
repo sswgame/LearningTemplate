@@ -50,7 +50,7 @@ from common import (
 
 # llvm-lib / llvm-ar 는 **LTO 때문에** 필요하다. clang 이 -flto 로 내는 .obj 는 LLVM 비트코드라
 # MSVC lib.exe 가 못 읽고(LNK1107), 그러면 CMake 의 `check_ipo_supported` 가 실패해 IPO 가 통째로
-# 꺼진다 — `SW_ENABLE_LTO=ON` 인데도 -flto 가 한 TU 에도 안 걸리는 상태로 오래 있었다(2026-09-14).
+# 꺼진다 — `SW_ENABLE_LTO=ON` 인데도 -flto 가 한 TU 에도 안 걸리고, 아무 오류도 나지 않는다.
 _kWinKeepBinExes: set[str] = {
     "clang-cl.exe",
     "clang.exe",

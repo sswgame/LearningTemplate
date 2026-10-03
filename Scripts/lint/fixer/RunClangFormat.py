@@ -25,7 +25,7 @@ from fixer import FormatForwardDeclarations
 from LintFixer import addFileArguments, selectTargetFiles
 from common import getProjectRoot, runClangFormatBatch, useUtf8Stdout
 
-# 파일을 고쳐 쓰므로 `fixer/` 에 있다(예전에는 "찍기만 하는" `report/` 에 있었다). 변환이 clang-format 이라 파이썬 변환(`FixPass`)이 없다.
+# 파일을 고쳐 쓰므로 `report/` 가 아니라 `fixer/` 에 있다. 변환이 clang-format 이라 파이썬 변환(`FixPass`)이 없다.
 kFixerSkipReason = "파이썬 변환(FixPass)이 아니라 clang-format 을 부르는 실행기다 — 대상 파일 고르기만 LintFixer 와 같다"
 
 

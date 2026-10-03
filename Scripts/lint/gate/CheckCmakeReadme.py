@@ -6,12 +6,9 @@ Scripts/lint/gate/CheckCmakeReadme.py
 `cmake/README.md` 가 **아직 사실인지** 검사합니다.
 
 `cmake/README.md` 는 스스로를 정본이라고 말한다 (루트 `CMakeLists.txt` 머리 주석: "cmake/ 의 계층과
-각 파일의 역할은 cmake/README.md 가 정본이다"). 그런데 그 문서를 검사하는 것이 없어서 **조용히
-낡았다** — `sw_registerLintTests` 를 "`CheckEngineLayers` · `CheckIncludeOrder` · `CheckSourceGlob`
-일괄 등록" 이라고 적어 두었는데, 그 목록은 이미 두 커밋 전에 사라졌다(폴더가 목록이 되었다).
-
-`lint/` 폴더에는 린트가 살아 있는지 보는 `CheckLintsAreAlive.py` 가 있다. `cmake/` 에는 그런 것이
-없었다. 이 게이트가 그 자리다.
+각 파일의 역할은 cmake/README.md 가 정본이다"). 검사하지 않는 정본 문서는 **조용히 낡는다** — 코드에서 사라진
+함수 · 목록을 계속 사실처럼 적는다. `lint/` 에 린트가 살아 있는지 보는 `CheckLintsAreAlive.py` 가 있듯,
+이 게이트가 `cmake/` 문서의 그 자리다.
 
 검사 규칙 — **문서가 하는 말 중 기계가 확인할 수 있는 것만** 본다:
 

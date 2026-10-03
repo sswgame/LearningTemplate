@@ -61,7 +61,7 @@ def findClangTidy() -> str:
     PATH → 저장소가 부트스트랩한 Tools/LLVM → 흔한 LLVM 설치 위치 → **Visual Studio 가 함께
     설치하는 LLVM** 순으로 본다. 마지막 후보가 필요한 이유: 이 저장소가 받아 두는 Tools/LLVM 은
     clang-tidy 를 포함하지 않는 축소판이라, 별도 LLVM 을 설치하지 않은 PC 에서는 정적 분석을
-    아예 돌릴 수 없었다("clang-tidy 를 찾지 못했습니다" 로 끝났다). VS 를 깔면 대개 같이 있다.
+    아예 돌릴 수 없다("clang-tidy 를 찾지 못했습니다"). VS 를 깔면 대개 같이 있다.
     """
     candidates: list[str] = ["clang-tidy"]
     candidates.append(str(getProjectRoot() / "Tools" / "LLVM" / "bin" / "clang-tidy.exe"))
@@ -153,8 +153,8 @@ def main() -> int:
 
     buildDir = projectRoot / "build" / args.preset
     tidyExe = args.clangTidy or findClangTidy()
-    # 버전을 함께 찍는다. **검사 목록이 버전마다 다르다** — 예전에 두 PC 가 같은 코드에서
-    # "0건" 과 "72건" 이라는 다른 답을 받아 서로를 의심했다. 숫자만으로는 비교할 수 없다.
+    # 버전을 함께 찍는다. **검사 목록이 버전마다 다르다** — 판이 다른 두 PC 는 같은 코드에서
+    # "0건" 과 "72건" 처럼 다른 답을 받는다. 숫자만으로는 비교할 수 없다.
     print(f"[RunClangTidy] {tidyExe}")
     print(f"[RunClangTidy] {getClangTidyVersionInternal(tidyExe)}")
 

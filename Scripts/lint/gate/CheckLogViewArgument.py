@@ -11,8 +11,6 @@
   SW_LOG_ERROR( "failed: %#", path.data() );   // 뷰 끝을 넘어 읽는다
   SW_LOG_ERROR( "failed: %#", path );          // 길이만큼만 읽는다
 
-2026-09-20 에 세어 보니 열네 자리가 그러고 있었다(Editor 4 · Engine 10).
-
 `.c_str()` 은 잡지 않는다 — `string` 은 언제나 널로 끝나므로 그쪽은 안전하다.
 
   python Scripts/lint/gate/CheckLogViewArgument.py [--root <repo>] [--files a.cpp b.cpp]

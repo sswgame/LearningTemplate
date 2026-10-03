@@ -29,8 +29,8 @@ def buildHeaderLookupInternal(repositoryRoot: Path, baseName: str) -> dict[str, 
     """
     `baseName`(Source · Test · Tools) 아래 헤더를 이름 · 소문자 상대 경로로 찾는 표입니다. 이름이 겹치는 헤더(pch.h 등)는 모호하므로 뺍니다.
 
-    내려받은 외부 도구(`Tools/vcpkg` · `Tools/LLVM` …)로는 내려가지 않습니다(`collectRepositoryFiles`). 예전에는 `glob("**/*.h")` 로
-    그것까지 걸어 도구 표 3604 칸 대부분이 vcpkg 헤더였고, 파일 셋만 검사해도 표를 짓느라 1.4 초를 썼습니다. 이 표는 따옴표 include 의
+    내려받은 외부 도구(`Tools/vcpkg` · `Tools/LLVM` …)로는 내려가지 않습니다(`collectRepositoryFiles`) — `glob("**/*.h")` 로 걸으면
+    표 대부분이 vcpkg 헤더가 되고 파일 셋만 검사해도 표를 짓느라 1 초를 넘깁니다. 이 표는 따옴표 include 의
     경로 복원에만 쓰이고 외부 헤더는 꺾쇠로 include 하므로 결과는 같습니다.
     """
     baseDir = repositoryRoot / baseName
@@ -300,10 +300,9 @@ class CheckIncludeOrderGate(LintGate):
     """
     기본은 **검사만** 한다. 고치려면 `--fix` 를 준다.
 
-    예전에는 정반대였다: 인자가 `--root` 뿐이라 `main()` 이 늘 **고치는 모드**로 돌았고, 위반을
-    찍은 뒤에도 무조건 `0` 을 돌려줬다. 그래서 CTest 에 "게이트" 로 등록돼 있는데도
-    **실패할 수가 없었고**, 대신 소스를 조용히 고쳐 놓았다(2026-09-14 에 음성 테스트가 잡았다).
-    고치는 일은 `FormatModified.py` 가 `processFile(...)` 을 직접 불러서 한다 — 그쪽은 그대로다.
+    주의: 게이트의 기본 모드가 고치는 모드면 위반을 고쳐 놓고 `0` 을 돌려주므로 CTest 에 게이트로 등록돼 있어도
+    **실패할 수가 없다**. 기본은 검사, 고치기는 `--fix` 로만 둔다(자가 검사 조각이 이것을 지킨다).
+    포맷 단계의 고치기는 `FormatModified.py` 가 `processFile(...)` 을 직접 불러서 한다.
     """
 
     description = "Include 순서 검사"

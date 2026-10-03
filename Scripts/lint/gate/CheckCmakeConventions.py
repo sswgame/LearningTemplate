@@ -5,8 +5,8 @@ Scripts/lint/gate/CheckCmakeConventions.py
 
 `AGENTS.md` 의 **CMake** 명명 규칙을 검사합니다.
 
-Python 과 같은 이유로 여기 있다 — `AGENTS.md` 는 CMake 규칙을 네 줄 적어 두었지만 어떤 게이트도
-`.cmake` 를 열어 본 적이 없다. 빌드 시스템 5,000 줄이 검사 밖에 있었다.
+Python 과 같은 이유로 여기 있다 — C++ 게이트는 `.cmake` 를 열지 않으므로, 이 게이트가 없으면 빌드 시스템
+수천 줄이 `AGENTS.md` 의 CMake 규칙 밖에 남는다.
 
 검사 규칙 (`AGENTS.md` → "### CMake", `cmake/README.md` → "네이밍 컨벤션"):
 

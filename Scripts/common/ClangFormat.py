@@ -3,11 +3,9 @@ Scripts/common/ClangFormat.py
 
 clang-format 을 찾고, 고정 버전이 없으면 설치합니다. **포맷을 돌리는 쪽과 설치하는 쪽이 같은 규칙을 쓰도록 한 곳에 둡니다.**
 
-예전에는 둘로 나뉘어 있었습니다. 설치하는 쪽(`setup/SetupLlvm.py`)은 "고정 버전만 쓴다" 는 규칙으로 버전을 확인했지만,
-포맷을 돌리는 쪽(`common/Host.py` 의 `resolveClangFormat` — `FormatModified` · pre-commit 훅 · `RunClangFormat` 이 부른다)은
-toolchain 의 LLVM 경로를 **버전 확인 없이** 먼저 쓰고, 그다음 PATH 를 보고, 고정본(`Tools/LLVM/bin`)은 그 뒤에야 봤습니다.
-그래서 toolchain 이 시스템 LLVM(21.1.1)을 가리키는 PC 는 고정 버전(20.1.8)이 설치돼 있어도 21 로 포맷했습니다
-(2026-09-30 에 찾음). 게다가 `common` 이 `setup` 을 함수 안에서 import 하는 역방향 의존이었습니다.
+주의: 두 쪽이 규칙을 따로 들면 포맷하는 쪽이 toolchain 의 LLVM 경로나 PATH 를 **버전 확인 없이** 먼저 쓰게 된다 —
+toolchain 이 시스템 LLVM(21.x)을 가리키는 PC 는 고정 버전(`Tools/LLVM/bin`, 20.1.8)이 설치돼 있어도 다른 판으로 포맷한다.
+그래서 고정본을 먼저 보는 규칙이 여기 하나뿐이고, `setup` 도 이 모듈을 부른다(`common` 은 `setup` 을 import 하지 않는다).
 
   resolveClangFormat()   포맷을 돌릴 clang-format — 고정본 우선, 없으면 설치, 그래도 없으면 경고와 함께 아무 것
   ensureClangFormat()    설치까지 하는 같은 규칙(부트스트랩이 부른다)
@@ -193,7 +191,7 @@ def resolveClangFormat(llvmPath: str = "", *, allowDownload: bool = True) -> str
     toolchain_config.json 의 것을 씁니다.
 
     `.clang-format` 은 규칙만 고정하지 **도구 버전은 고정하지 못합니다.** 한쪽에서 커밋한 줄을 다른 쪽 pre-commit 훅이
-    거부하고, 고쳐서 올리면 원래 PC 가 다시 되돌리는 왕복을 실제로 겪었습니다(이어붙인 줄의 정렬 칸 수가 달랐습니다).
+    거부하고, 고쳐서 올리면 원래 PC 가 다시 되돌리는 왕복이 생깁니다(판마다 이어붙인 줄의 정렬 칸 수가 다릅니다).
     """
     if not llvmPath:
         llvmPath = str(loadToolchainConfig().get(kKeyLlvmPath, "") or "")

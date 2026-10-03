@@ -17,8 +17,8 @@ Scripts/lint/fixer/FormatBranchBraces.py
   - 한 문장짜리 본문은 그대로 둔다 — `case A: return X;` 도, 라벨 다음 줄에 문장 하나가
     오는 형태도 대상이 아니다. 폴스루 라벨(본문이 없는 라벨)도 마찬가지다.
   - `break;` 는 본문의 한 문장으로 센다. 그래서 `문장 하나 + break;` 에는 중괄호가 붙는다.
-    이미 중괄호가 있던 자리들이 예외 없이 `break;` 를 중괄호 **안**에 두고 있었다 —
-    이 저장소에서 break 는 본문의 일부지 라벨의 종결자가 아니다.
+    중괄호를 쓴 case 는 `break;` 를 중괄호 **안**에 둔다 — 이 저장소에서 break 는 본문의 일부지
+    라벨의 종결자가 아니다.
   - 인자를 줄바꿈한 호출처럼 한 문장이 여러 줄에 걸친 것은 한 문장으로 센다.
 
 clang-format 은 둘 다 표현하지 못한다. RemoveBracesLLVM 은 for/while 까지 같이 벗겨내고,
@@ -342,7 +342,7 @@ def insertCaseBraces(text: str) -> tuple[str, bool]:
             continue
         if any(listMasked[index].strip().startswith("#") for index in listBodyIndex):
             # 전처리기 지시문이 끼어 있으면 본문의 끝이 글자만으로 정해지지 않는다. 여는 중괄호와
-            # 닫는 중괄호가 #if 의 반대편에 놓여 한쪽 빌드에서만 짝이 맞는 일이 실제로 있었다.
+            # 닫는 중괄호가 #if 의 반대편에 놓이면 한쪽 빌드에서만 짝이 맞는다.
             continue
         if any(listRaw[index].rstrip().endswith("\\") for index in listBodyIndex):
             continue  # 매크로 줄바꿈 — 중괄호를 끼우면 이어붙던 줄이 끊긴다.

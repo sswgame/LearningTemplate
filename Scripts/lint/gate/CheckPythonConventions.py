@@ -5,10 +5,8 @@ Scripts/lint/gate/CheckPythonConventions.py
 
 `AGENTS.md` 의 **Python** 명명 규칙을 검사합니다.
 
-**이 저장소의 파이썬은 아무도 보고 있지 않았다.** `AGENTS.md` 는 세 언어(C++ · CMake · Python)의
-규칙을 적어 두었는데 게이트는 `kCppAllExtensions` 만 훑는다 — 즉 **린트를 만드는 코드가 린트를
-받지 않는 상태**로 12,000 줄이 쌓였다. 실제로 어긴 자리가 이미 있었다(`Scripts/dev/BackendSmoke.py`
-의 `ppm_stats` · `BACKENDS` · `BACKGROUND`).
+`AGENTS.md` 는 세 언어(C++ · CMake · Python)의 규칙을 적어 두었는데 C++ 게이트는 `kCppAllExtensions` 만
+훑는다 — 이 게이트가 없으면 **린트를 만드는 코드가 린트를 받지 않는다**.
 
 검사 규칙 (`AGENTS.md` → "### Python"):
 

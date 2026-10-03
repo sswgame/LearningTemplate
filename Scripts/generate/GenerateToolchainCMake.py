@@ -5,16 +5,8 @@ Scripts/generate/GenerateToolchainCMake.py
 
 `Config/Environment/toolchain_config.json` 을 CMake 가 바로 읽을 수 있는 `set()` 목록으로 찍습니다.
 
-**왜 CMake 에서 여기로 옮겼나.** 이 JSON 은 `SetupEnvironment.py` 가 **쓰는** 파일인데, CMake 쪽이
-그걸 다시 **파싱**하고 있었다 — 그것도 여러 곳에서, 서로 다른 철자로:
-
-| 읽는 곳 | 키를 적는 방식 |
-| --- | --- |
-| `DetectToolchain.cmake` | `SW_KEY_*` 상수 일곱 + `if(jsonErr) set("")` 블록 일곱 |
-| `FindWindowsTools.cmake` | **리터럴** `"windows_sdk_dir"` · `"windows_sdk_version"` · `"msvc_tools_dir"` |
-| `Tools/ReflectionParser/CMakeLists.txt` | `SW_KEY_LLVM_PATH` 와 **리터럴** `"libclang_dll_path"` 섞어서 |
-
-같은 키를 두 가지로 적고 있으면 한쪽만 바뀌는 날이 온다. 쓰는 쪽이 파이썬이니 **읽는 모양도
+**왜 CMake 가 JSON 을 직접 파싱하지 않나.** 이 JSON 은 `SetupEnvironment.py` 가 **쓰는** 파일이다. CMake 여러 곳이
+각자 파싱하면 같은 키를 상수와 리터럴 두 가지로 적게 되고, 한쪽만 바뀌는 날이 온다. 쓰는 쪽이 파이썬이니 **읽는 모양도
 파이썬이 준다** — 이 저장소가 `Constants.py` → `ConfigVars.cmake` · 린트 목록 → `LintTargets.cmake`
 로 하고 있는 것과 같다.
 

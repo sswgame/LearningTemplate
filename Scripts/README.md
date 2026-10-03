@@ -31,7 +31,7 @@ Scripts/
   │     ├── Parallel.py               # 동시 처리 한 자리 — 워커 수 정책과 map/flatMap (스레드인 이유가 적혀 있다)
   │     ├── TranslationUnits.py       # 컴파일 DB 를 읽어 TU 를 골라 하나씩 돌리는 자리 (clang-tidy · 경고 스윕)
   │     ├── AppBinary.py              # 빌드된 App 을 찾고 헤드리스로 셰이더를 굽는 자리
-  │     ├── AssetPipeline.py          # 멀티스레드 에셋 쿠킹 & 원자적 바이너리 변경 감지(writeBinaryIfChanged)
+  │     ├── AssetPipeline.py          # 쿠커의 기본 출력 폴더 찾기 — 가장 최근에 구성된 build/*/Bin/<subDir>
   │     ├── CookContract.py           # 쿠킹 표(`Config/Engine/CookContract.json`)를 읽은 결과 — 헤더 생성기 · 쿠커 · 게이트가 같은 객체를 쓴다
   │     └── PackFormat.py             # `.pack` 바이너리 계약(Config/Engine/PackFormat.json)을 읽은 결과
   │

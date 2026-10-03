@@ -3,20 +3,17 @@
 """
 빌드 트리의 컴파일 DB 를 읽어 **TU 를 골라 하나씩 돌리는** 자리.
 
-`report/` 의 두 스크립트가 같은 일을 각자 적고 있었다 — `RunClangTidy` 는 clang-tidy 를,
-`RunBuildWarnings` 는 `-fsyntax-only` 컴파일을 TU 마다 돌린다. 도구만 다를 뿐 앞뒤는 같았다:
+`report/` 의 `RunClangTidy` 는 clang-tidy 를, `RunBuildWarnings` 는 `-fsyntax-only` 컴파일을 TU 마다 돌린다.
+도구만 다를 뿐 앞뒤가 같으므로 그 앞뒤를 여기 `TranslationUnitSweep` 이 맡는다:
 
-| | 두 스크립트가 각자 적던 것 |
+| | 맡는 것 |
 | --- | --- |
 | 컴파일 DB 읽기 | `buildDir / "compile_commands.json"` 존재 확인 · `json.loads` |
 | TU 거르기 | `/generated/` · `*.gen.cpp` 제외, `--filter` 부분 문자열 |
-| 동시 실행 | `ThreadPoolExecutor` + `as_completed` + `if index % N == 0: print` |
+| 동시 실행 | `common.Parallel.mapConcurrent`(진행률 콜백 포함) |
 | 결과 | 출력 문자열 이어 붙이기 |
 
-**`common.Parallel` 이 "동시 처리 한 자리" 인데 이 둘만 빠져 있었다** — 진행률을 찍어야 해서
-직접 풀을 열고 있었기 때문이다. 그래서 진행률 콜백을 `mapConcurrent` 에 더하고(정책은 그대로),
-나머지는 여기 `TranslationUnitSweep` 이 맡는다. 두 스크립트에 남는 것은 **자기 도구를 어떻게
-부르는가**와 **결과를 어떻게 묶어 읽히는가** 뿐이다.
+두 스크립트에 남는 것은 **자기 도구를 어떻게 부르는가**와 **결과를 어떻게 묶어 읽히는가** 뿐이다.
 """
 
 from __future__ import annotations

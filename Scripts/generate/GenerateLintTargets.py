@@ -6,15 +6,10 @@ Scripts/generate/GenerateLintTargets.py
 `Scripts/lint/gate/` · `Scripts/lint/selftest/` 에 무엇이 있는지 보고, CMake 가 그대로
 `include()` 할 린트 타깃·CTest 등록 파일(LintTargets.cmake)을 만듭니다.
 
-**왜 CMake 에서 여기로 옮겼나.** 린트 열한 개의 등록이 `cmake/Engine/AssetAndToolTargets.cmake`
-에 손으로 적혀 있었다 — `sw_addRepoPythonTarget` 열한 덩이(50줄)와 `add_test` +
-`set_tests_properties` 열한 덩이(85줄). 전부 같은 모양이고, 다른 것은 이름·설명·타임아웃뿐이었다.
-거기에 스크립트 경로 상수 열셋이 `Constants.py` → `GenerateCMakeConstants.py` → `ConfigVars.cmake`
-를 타고 따라다녔다.
-
-그래서 게이트를 하나 더하려면 **네 곳**을 고쳐야 했다. 그중 셋은 첫 번째에서 기계적으로 유도되는
-것이다 — "`gate/` 에 놓으면 그것이 게이트다" 라고 해 놓고 목록을 세 벌 더 들고 있던 셈이다.
-이제 폴더가 목록이고, 린트마다 다른 값은 린트 자신이 든다(`Scripts/lint/LintCatalog.py`).
+**왜 CMake 가 아니라 여기인가.** 린트마다 타깃 · CTest 등록은 같은 모양이고 다른 것은 이름 · 설명 · 타임아웃뿐이다.
+CMake 에 손으로 적으면 게이트 하나를 더할 때 등록 블록 · 경로 상수 · 생성 상수까지 여러 곳을 고쳐야 하고, 그것들은
+전부 "`gate/` 에 놓으면 그것이 게이트다" 에서 기계적으로 유도된다. 그래서 폴더가 목록이고, 린트마다 다른 값은
+린트 자신이 든다(`Scripts/lint/LintCatalog.py`).
 
 이 저장소가 이미 `Constants.py` → `ConfigVars.cmake` 로 하고 있는 방식과 같다: **파이썬이 알고,
 CMake 는 결과를 읽는다.**

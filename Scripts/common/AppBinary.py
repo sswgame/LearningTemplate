@@ -3,25 +3,13 @@
 """
 빌드된 `App.exe` 를 찾고 헤드리스로 셰이더를 굽는 자리.
 
-**두 곳이 같은 목록을 각자 들고 있었고, 이미 갈라져 있었다.**
-
-| | `CookAssets.bakeShadersInternal` | `PreCommitLint.checkStagedShadersInternal` |
-| --- | --- | --- |
-| Ninja-Debug/Bin | 본다 | 본다 |
-| Ninja-Release/Bin | 본다 | 본다 |
-| **Ninja-Shipping/Bin** | **본다** | **안 본다** |
-| Bin (배포 레이아웃) | 본다 | 본다 |
-
-Shipping 이 목록에 있는 이유는 쿠커 쪽 주석에 적혀 있었다 — *"Shipping App 도 베이커를 링크한다
-(로그만 안 남는다). 두 번째 Shipping 빌드부터는 이 경로가 살아 있어서 Dev 빌드 없이도 스스로 다시
-굽는다."* 그런데 커밋 훅은 그 줄을 못 봤으므로, **Shipping 만 빌드해 둔 사람은** 셰이더를 고쳐
-커밋할 때 "App.exe를 찾을 수 없어 검증을 건너뜁니다" 를 받고 지나갔다.
-
-목록이 둘이면 이렇게 갈라진다. 여기가 그 목록의 한 자리다.
+**후보 목록은 여기 한 자리다**(쿠커 `CookAssets` 와 커밋 훅 `PreCommitLint` 가 같이 쓴다). 목록이 둘이면 갈라진다 —
+한쪽만 Ninja-Shipping 을 빼먹으면 **Shipping 만 빌드해 둔 사람은** 셰이더를 고쳐 커밋할 때 검증을 건너뛴다.
+Shipping 이 후보에 있는 이유: Shipping App 도 베이커를 링크하므로(로그만 안 남는다) Dev 빌드 없이도 스스로 다시 굽는다.
 
 **찾는 순서.** 부르는 쪽이 경로를 알면(CMake 는 `$<TARGET_FILE:App>` 을 안다) 그것을 쓴다 — 빌드 폴더를
 뒤지는 것은 사람이 손으로 스크립트를 돌릴 때의 편의다. 후보에는 리눅스 이름(확장자 없는 `App`)과
-CI 프리셋 폴더도 있다: 리눅스 CI 는 `App.exe` 만 찾다가 씬 쿠킹에서 "App 을 먼저 빌드하세요" 로 죽었다.
+CI 프리셋 폴더도 있다 — `App.exe` 만 찾으면 리눅스 CI 가 씬 쿠킹에서 "App 을 먼저 빌드하세요" 로 죽는다.
 """
 
 from __future__ import annotations

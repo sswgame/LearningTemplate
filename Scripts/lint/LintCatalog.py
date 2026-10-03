@@ -3,16 +3,8 @@
 """
 어떤 린트가 있고 어떻게 돌리는가 — **한 곳**.
 
-`gate/` 에 파일을 놓는 것이 규칙이라고 해 놓고, 정작 CMake 쪽은 목록을 손으로 들고 있었다.
-린트 하나를 더하려면 네 곳을 고쳐야 했다:
-
-1. `lint/gate/` 에 파일을 놓는다                           ← 여기까지가 "자리가 규칙"
-2. `Scripts/common/Constants.py` 에 `kScriptLintCheckXxx` 경로 상수를 더한다
-3. `GenerateCMakeConstants.py` 에 `set(SW_SCRIPT_LINT_CHECK_XXX ...)` 한 줄을 더한다
-4. `cmake/Engine/AssetAndToolTargets.cmake` 에 `sw_addRepoPythonTarget` 한 덩이와
-   `add_test` + `set_tests_properties` 한 덩이를 더한다 (11개가 그렇게 쌓여 135줄이었다)
-
-2~4 는 1 에서 **기계적으로 유도되는 것**이다. 그래서 여기서 유도하고, CMake 는 그 결과를
+**린트를 더하는 것은 `lint/gate/` 에 파일을 놓는 것뿐이다.** 경로 상수 · CMake 상수 · 타깃 · CTest 등록은
+그 파일에서 **기계적으로 유도되는 것**이라 손으로 적지 않는다. 여기서 유도하고, CMake 는 그 결과를
 `include()` 한다(`Scripts/generate/GenerateLintTargets.py` → `generated/sw/config/LintTargets.cmake`).
 이 저장소가 이미 `Constants.py` → `ConfigVars.cmake` 로 하고 있는 방식 그대로다.
 

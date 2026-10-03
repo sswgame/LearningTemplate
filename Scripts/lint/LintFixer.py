@@ -3,22 +3,8 @@
 """
 픽서 하나 = 클래스 하나. `LintGate` 의 형제다.
 
-`gate/` 를 정리하고 나서 `fixer/` 를 보니 같은 일이 벌어져 있었다 — 이쪽은 더 노골적이다.
-**대상 파일을 고르는 스무 줄이 세 스크립트에 글자 그대로 복사돼 있었다**
-(`FormatBranchBraces` · `FormatForwardDeclarations` · `RunClangFormat`):
-
-```python
-    if args.files:
-        fileList = [Path(f).resolve() for f in args.files if Path(f).is_file()]
-    elif args.all:
-        fileList = collectSourceFiles(getLintSearchDirs(root))
-    else:
-        modifiedFiles = getModifiedCppFiles(root)
-        ...
-```
-
-거기에 `--all`/`--check` argparse 블록, `flatMapConcurrent` 배치 함수, "위반이 있고 --check 면 1"
-종료 규칙까지 같았다. 다른 것은 **설명 문자열과 로그 태그뿐**이었다.
+픽서들은 껍데기가 같다 — 대상 파일 고르기(명시 경로 > `--all` > git 수정분 > 전부), `--all`/`--check` 인자,
+동시 처리, "위반이 있고 --check 면 1" 종료 규칙. 다른 것은 **설명 문자열과 변환뿐**이므로 껍데기는 여기 한 번만 적는다.
 
 픽서가 쓰는 것은 `listPass` 하나다 — 텍스트를 받아 `(새 텍스트, 바뀌었는가)` 를 돌려주는 변환과,
 그 변환이 잡은 것을 검사 모드와 수정 모드에서 각각 뭐라고 부를지. 파일 읽기·쓰기는 기반이 맡는다

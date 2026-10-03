@@ -83,8 +83,8 @@ def expandSelfReferencesInternal(config: dict[str, Any]) -> dict[str, Any]:
     설정 안의 `${key}` 를 **같은 설정의 최상위 스칼라 값**으로 치환합니다.
 
     도구 버전이 URL 안에 두 번씩 박혀 있으면(`llvmorg-20.1.8/clang+llvm-20.1.8-…`) 올릴 때마다
-    여러 줄을 손대야 하고, 플랫폼 하나를 빠뜨리면 그때부터 PC 마다 다른 버전을 쓰게 된다 —
-    실제로 Windows 20.1.8 / Linux 18.1.8 로 갈려 있었다. 버전을 키 하나로 두고 URL 은 그것을
+    여러 줄을 손대야 하고, 플랫폼 하나를 빠뜨리면 그때부터 PC 마다 다른 버전을 쓰게 된다(Windows 20 /
+    Linux 18 처럼). 버전을 키 하나로 두고 URL 은 그것을
     참조하게 하면 올릴 자리가 한 곳뿐이다.
 
     `${sourceDir}`·`${ProgramFiles}` 처럼 여기서 값을 알 수 없는 것은 **건드리지 않는다** —
@@ -116,11 +116,9 @@ def loadSearchPaths() -> dict[str, Any]:
     - 로컬 파일의 값이 기본값을 덮어씁니다(리스트는 통째로 교체, 없는 키는 기본값 유지).
     - search_paths.defaults.json 이 존재하지 않거나 유효하지 않으면 예외를 발생시킵니다.
 
-    예전엔 defaults 를 **통째로 복사**해 두었다. 그러면 로컬 파일이 모든 키를 갖게 되고, 로컬이
-    우선이므로 defaults 를 아무리 고쳐도 그 PC 에는 **영원히 닿지 않는다** — 손으로 나열한
-    `/usr/lib/llvm-20 … llvm-14` 같은 목록이 새 배포판에서 비켜가도 고칠 방법이 없었다.
-    이제 로컬 파일에는 사용자가 실제로 바꾼 것만 남으므로, 나머지는 defaults 를 따라 개선된다.
-    (이미 통째로 복사된 파일이 있다면 지우면 기본값으로 돌아온다 — 도구 캐시일 뿐 잃을 것이 없다.)
+    주의: defaults 를 **통째로 복사**해 두면 로컬 파일이 모든 키를 갖게 되고, 로컬이 우선이므로 defaults 를
+    아무리 고쳐도 그 PC 에는 **영원히 닿지 않는다**. 그래서 로컬 파일에는 사용자가 실제로 바꾼 것만 남기고,
+    나머지는 defaults 를 따른다. (통째로 복사된 파일이 있다면 지우면 기본값으로 돌아온다 — 도구 캐시일 뿐 잃을 것이 없다.)
     """
     configDir = getProjectRoot() / kDirConfigEnv
     jsonPath = configDir / kFileSearchPaths

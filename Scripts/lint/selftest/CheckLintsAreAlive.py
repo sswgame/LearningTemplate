@@ -4,8 +4,8 @@
 게이트 린트들이 아직 무언가를 잡는지 검사합니다 (음성 테스트).
 
 **린트는 조용히 죽는다.** 정규식 한 글자, 경로 한 조각이 어긋나면 아무것도 못 잡게 되는데 결과는
-"위반 0건" 이라 통과처럼 보인다. 이 저장소는 실제로 겪었다 — 죽은 사본 검사가 자기 독스트링을
-참조로 세어 통과한 적이 있고, 소유 검사가 구조체 이름 다섯 개만 보고 있던 적도 있다.
+"위반 0건" 이라 통과처럼 보인다 — 예: 죽은 사본 검사가 자기 독스트링을 참조로 세어 통과하거나,
+소유 검사가 나열한 구조체 이름만 보고 새 구조체를 놓친다.
 
 **증거는 린트가 직접 든다.** 각 게이트 클래스가 `selfTestCases` 에 "이건 반드시 잡아야 한다" 는 조각을
 적어 두고, 이 장치가 임시 트리에 그것을 써서 린트를 돌린다. 0 이 아닌 종료 코드가 나와야 통과다.
@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
         listJob += [(script, case) for case in cases]
 
     # 조각마다 하위 프로세스 하나다. 기다리는 일이라 스레드로 동시에 돌리고(`getProcessWorkerCount`), 보고는 조각 순서대로 한다.
-    # 예전에는 34 조각을 차례로 돌려 이 검사 하나가 린트 CTest 에서 8.7 s 였다.
+    # 차례로 돌리면 이 검사 하나가 린트 CTest 에서 수 초를 쓴다.
     listResult = list(mapConcurrent(lambda index: (index, *runCaseInternal(*listJob[index])), range(len(listJob)),
                                     workerCount=getProcessWorkerCount(len(listJob))))
     listResult.sort(key=lambda result: result[0])

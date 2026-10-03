@@ -4,9 +4,8 @@
 함수 이름 어휘 검사 — 한 개념에 이름 하나.
 
 **같은 일을 하는 함수가 두 이름을 갖는 것은 규칙이 없어서가 아니라 아무도 세지 않아서다.**
-이 저장소는 실제로 `queryAABB` 와 `queryAabb`, `alloc*` 과 `allocate*`, `setup*` 과 `initialize*`
-를 동시에 갖고 있었다. 읽는 사람은 둘 중 어느 쪽이 맞는지 알 수 없고, 다음 사람은 방금 본 쪽을
-따라 쓴다. 그렇게 갈라진다.
+세지 않으면 `queryAABB` 와 `queryAabb`, `alloc*` 과 `allocate*`, `setup*` 과 `initialize*` 가 나란히
+생긴다. 읽는 사람은 둘 중 어느 쪽이 맞는지 알 수 없고, 다음 사람은 방금 본 쪽을 따라 쓴다.
 
 규칙은 AGENTS.md "Function names" 에 적혀 있고 여기서 강제한다.
 

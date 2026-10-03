@@ -9,33 +9,30 @@
 강제 규칙 여섯:
 
   1) 스위트 이름은 `XxxTest` — 대문자로 시작하고 `Test` 로 끝나며 밑줄이 없다.
-     예전에는 한 저장소 안에 세 관례가 섞여 있었다(2026-09-13 기준 123 개 중 접두어형 45 · 접미어형 66 ·
-     맨이름 12). `Core` 라는 스위트가 있어서 `--test_filter=Core*` 가 `Core_String` 까지 끌어왔다.
+     관례가 섞이면 필터가 흔들린다 — `Core` 라는 스위트가 있으면 `--test_filter=Core*` 가 `Core_String` 까지 끌어온다.
      계층 접두어(`Core_` · `Engine_`)는 **실행 파일 이름이 이미 말한다** — CoreTest.exe 안의 `Core_String` 은
-     같은 말을 두 번 한다. 게다가 그 접두어는 믿을 수도 없었다: `Engine_Event` 는 CoreTest 에 있었다.
+     같은 말을 두 번 하고, 파일이 옮겨지면 접두어가 거짓말이 된다(`Engine_Event` 가 CoreTest 에 있는 식).
 
   2) 한 스위트는 **한 파일에만** 산다. 갈라져 있으면 "이 스위트를 고치려면 어디를 여나" 에 답이 둘이 된다.
 
   3) CI 가 못 돌리는 스위트는 자기 파일에서 `SW_TEST_REQUIRES_HOST( 스위트, "이유" );` 로 선언한다.
      **선언이 곧 분류다** — 테스트 실행 파일이 그 선언을 들고 있다가 `--host_suites=exclude|only` 로 가르고,
      `sw_addTestExecutable( ... HOST_SPLIT )` 가 그 둘을 `<타깃>_NoGPU` · `<타깃>_HostOnly` 로 등록한다.
-     예전에는 같은 집합을 주석 마커 · NoGPU 필터 · HostOnly 필터 세 곳에 적고 이 검사가 셋을 대조했다.
-     이제 이 검사가 보는 것은 선언이 **실제로 효력이 있는가** 다:
+     이 검사가 보는 것은 선언이 **실제로 효력이 있는가** 다:
        - 선언한 스위트가 그 파일에 있는가(이름을 바꾸고 선언을 놓치면 그 스위트가 CI 로 들어간다).
        - 그 폴더의 실행 파일이 `HOST_SPLIT` 으로 등록되는가(아니면 선언을 아무도 읽지 않는다 — CI 가 그것을 돈다).
        - 거꾸로 `HOST_SPLIT` 인데 선언이 하나도 없으면 `_HostOnly` 는 빈 그물이다.
-       - 옛 주석 마커(`// SW_TEST_REQUIRES_HOST( X ): ...`)는 아무 효력이 없으므로 남아 있으면 실패다.
+       - 주석 형태의 마커(`// SW_TEST_REQUIRES_HOST( X ): ...`)는 아무 효력이 없으므로 있으면 실패다.
 
   4) 마커가 붙은 스위트가 있는 파일에는 **다른 스위트를 두지 않는다.**
-     예전엔 `TestRHI.cpp` 가 `RHITest`(CI 제외)와 Support 세 스위트(CI 실행)를 같이 들고 있었고,
-     `TestShader.cpp` 도 마찬가지였다. 한 파일에 섞여 있으면 새 케이스를 옆 스위트에 붙이기가 너무 쉽다 —
+     호스트 스위트와 CI 스위트가 한 파일에 섞여 있으면 새 케이스를 옆 스위트에 붙이기가 너무 쉽다 —
      그 순간 GPU 가 필요한 케이스가 CI 로 들어간다.
 
   5) `EditorTest` 가 끌어오는 Editor 소스는 **존재해야 하고, ImGui 헤더를 include 하지 않아야 한다.**
      `EditorModule` 은 MODULE DLL 이라 링크할 수 없어서, 테스트가 필요한 `.cpp` 만 손으로 나열해 같이
      컴파일한다. 그 목록이 "Editor/Common 전부" 도 "ImGui 안 쓰는 것 전부" 도 아니라 **테스트가 실제로
      링크해야 하는 것** 이라 기계가 대신 고를 수 없다. 그래서 목록 자체는 손으로 두되, 썩는 두 방향만 막는다:
-     파일이 옮겨져 경로가 죽는 것(실제로 있었다)과, ImGui 를 타는 파일이 섞여 들어오는 것
+     파일이 옮겨져 경로가 죽는 것과, ImGui 를 타는 파일이 섞여 들어오는 것
      (EditorTest 는 ImGui 를 링크하지 않으므로 그 순간 빌드가 깨진다).
 
   6) `CoreTest` 는 **엔진 없이** Core 를 시험한다 — `Test/CoreTest` 의 파일은 Engine · GameFramework · Editor · Games · App 헤더를
@@ -61,8 +58,8 @@ from LintGate import GateResult, LintGate  # noqa: E402
 _kTestRoot = "Test"
 _kEditorTestCMake = "Test/EditorTest/CMakeLists.txt"
 
-# 줄 맨 앞만 보면 안 된다 — `namespace sw::editor { ... }` 안에 들여쓴 케이스가 실제로 있었고,
-# 그 파일이 검사에서 통째로 빠져 밑줄 든 스위트 이름이 그대로 살아 있었다(2026-09-13).
+# 줄 맨 앞만 보면 안 된다 — `namespace sw::editor { ... }` 안에 들여쓴 케이스가 있으면 그 파일이 검사에서
+# 통째로 빠진다.
 _kCaseRe = re.compile(r"^[ 	]*SW_TEST_CASE\(\s*(\w+)\s*,\s*(\w+)\s*\)", re.M)
 # 위 정규식이 놓치는 표기가 생기면 조용히 줄어들 뿐이라, 토큰을 따로 세어 대조한다.
 _kCaseTokenRe = re.compile(r"\bSW_TEST_CASE\s*\(")
@@ -285,8 +282,8 @@ class CheckTestSuitesGate(LintGate):
     timeoutSeconds = 15
     preCommitPattern = ("Test/*",)
     # 조각마다 **위반 하나만** 넣는다 — 나머지는 깨끗한 바탕(`_kCleanFixture`)이라, 이 검사가 그 바탕에서 통과하는
-    # 한 실패는 넣은 위반 때문이다. 예전 조각들은 바탕부터 다른 규칙(EditorTest 소스 목록이 비었다)에 걸려 있어서
-    # 넣은 규칙이 죽어도 실패했다 — 증거가 아니었다.
+    # 한 실패는 넣은 위반 때문이다. 주의: 바탕부터 다른 규칙(예: EditorTest 소스 목록이 빈 것)에 걸리는 조각은
+    # 넣은 규칙이 죽어도 실패하므로 증거가 아니다.
     selfTestCases = [
         {
             "name": "스위트 이름이 XxxTest 가 아님",

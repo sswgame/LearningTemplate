@@ -5,14 +5,12 @@ X-macro 목록 파일(`*.xxx`)이 실제로 참조되는지 검사한다.
 
 왜 필요한가:
   이 저장소는 열거형·인자·서비스 목록을 `.xxx` 파일 하나에 모아 두고 여러 번 include 해서
-  전개한다. 그 파일이 **복사되어 두 곳에 있으면**, 고쳐도 아무 일이 일어나지 않는 덫이 된다.
-  실제로 그런 사본이 여섯 개 있었다. 가장 나쁜 사례:
+  전개한다. 그 파일이 **복사되어 두 곳에 있으면**, 고쳐도 아무 일이 일어나지 않는 덫이 된다. 예:
 
     Source/Core/CommandLine/ArgumentList.xxx   (죽은 사본 — 폴더 이름상 먼저 찾게 되는 자리)
     Source/Core/Predefined/ArgumentList.xxx    (진짜 — 코드가 include 하는 것)
 
-  죽은 쪽은 LANGUAGE·BAKE_SHADERS 가 빠진 낡은 상태였고, 거기서 창 크기 기본값을 고쳐도
-  빌드 결과는 바뀌지 않았다.
+  죽은 쪽에서 창 크기 기본값을 고쳐도 빌드 결과는 바뀌지 않는다.
 
 규칙:
   `Source/**` 와 `Tools/**` 의 모든 `*.xxx` 는 다음 중 하나로 참조되어야 한다.
@@ -95,13 +93,12 @@ class CheckDataFileReferencesGate(LintGate):
         if not dataFiles:
             return GateResult(summary="검사할 .xxx 파일이 없습니다")
 
-        # 대상 파일의 `resolve()` 와 저장소 기준 경로는 **미리 한 번만** 구한다.
-        # 예전에는 참조 파일마다 안쪽 루프에서 다시 구했다 — 참조 파일 × 대상 파일만큼의 파일시스템
-        # 질의가 되어, 파일이 늘수록 제곱으로 느려지는 자리였다.
+        # 대상 파일의 `resolve()` 와 저장소 기준 경로는 **미리 한 번만** 구한다 — 안쪽 루프에서 구하면
+        # 참조 파일 × 대상 파일만큼의 파일시스템 질의가 되어 파일이 늘수록 제곱으로 느려진다.
         dataEntries = [(dataFile.resolve(), dataFile.relative_to(repositoryRoot).as_posix()) for dataFile in dataFiles]
 
         # 이 스크립트 자신은 참조로 세지 않는다. 위 독스트링이 죽은 사본의 경로를 **예시로** 적고
-        # 있어서, 그것을 참조로 인정하면 그 파일이 되살아나도 검사가 통과한다(실제로 한 번 그랬다).
+        # 있어서, 그것을 참조로 인정하면 그 파일이 되살아나도 검사가 통과한다.
         selfPath = Path(__file__).resolve()
 
         def scanReferenceFileInternal(referenceFile: Path) -> list[Path]:

@@ -273,8 +273,8 @@ class EnvironmentSetupManager:
         """
         로컬 parser_config.json 에 **이 기계에 딸린 값만** 씁니다 — paths.* 와 parser_args.extra · force_include 중 기본값과 다른 것.
 
-        예전에는 기본값 전체에 로컬을 덮은 사본을 썼고, 파서는 로컬을 키마다 이기게 읽었다. 그래서 나중에 커밋된 기본값을 고쳐도
-        이 기계는 옛 값을 계속 썼다(flag_ops_marker 가 바뀐 뒤 Engine 빌드가 깨진 일). 파서도 같은 규칙으로 읽는다
+        주의: 기본값 전체를 로컬에 복사하면 로컬이 키마다 이기므로, 나중에 커밋된 기본값을 고쳐도 이 기계는 옛 값을 계속 쓴다
+        (예: `flag_ops_marker` 가 바뀌면 옛 로컬 값 때문에 FlagOps 우산이 비어 Engine 빌드가 깨진다). 파서도 같은 규칙으로 읽는다
         (ParserConfig::load — 다른 키는 경고하고 버린다). 나머지는 모두 parser_config.defaults.json 에서 온다.
         """
         defaultsFile = self.project_root / kDirConfigEnv / kFileParserDefaults

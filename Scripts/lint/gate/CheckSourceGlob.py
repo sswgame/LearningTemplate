@@ -75,10 +75,9 @@ def pickBuildDirInternal(repo: Path) -> Path | None:
     """
     compile_commands.json 을 읽을 빌드 트리를 고릅니다.
 
-    예전엔 `sorted(..., reverse=True)[0]`, 즉 **역알파벳순 첫 번째**였다. 그건 아무 의미도 담지
-    않은 순서라 build/ 에 디렉터리가 하나 늘어나는 것만으로 대상이 바뀐다. 실제로 Test-Unity 가
-    생기자 그쪽을 읽어 210개를 "빠졌다"고 오탐했다(Unity 빌드에는 개별 .cpp 가 없다).
-    이제 .clangd 가 가리키는 트리를 먼저 보고, 없으면 가장 최근에 갱신된 것을 쓴다.
+    .clangd 가 가리키는 트리를 먼저 보고, 없으면 가장 최근에 갱신된 것을 쓴다. 주의: 이름순 같은 의미 없는
+    순서로 고르면 build/ 에 디렉터리가 하나 늘어나는 것만으로 대상이 바뀐다 — Unity 빌드 트리를 고르면
+    (개별 .cpp 가 없다) 수백 개를 "빠졌다" 고 오탐한다.
     """
     rootDb = repo / "build" / "compile_commands.json"
     if rootDb.is_file():
@@ -148,7 +147,7 @@ class CheckSourceGlobGate(LintGate):
 
     본 검사는 **빌드 트리의 compile_commands.json** 과 대조한다(빌드 없이 돌리면 스스로 "소스 목록만 보고" 하고 0 을 돌려준다).
     자가 시험은 임시 트리에 `build/compile_commands.json` 을 직접 써서 돌린다 — "짓지 않는 소스" 목록이 있어도 거기 없는
-    빠진 소스는 잡는지 본다(목록이 게이트를 눈멀게 하지 않는지). RHI 백엔드 목록 검사는 양방향 탐침으로 확인했다(2026-09-14 백로그 참고).
+    빠진 소스는 잡는지 본다(목록이 게이트를 눈멀게 하지 않는지).
     """
 
     description = "소스 GLOB 누락 검사"

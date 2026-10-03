@@ -5,9 +5,8 @@ Scripts/lint/gate/CheckShaderConventions.py
 
 `AGENTS.md` 의 **HLSL** 명명 규칙을 검사합니다 — C++ 규칙을 셰이더에 옮긴 것이다.
 
-**셰이더는 아무 게이트도 보지 않았다.** `CheckCodeConventions` 는 C++ 확장자만 훑는다. 그래서 셰이더는 제 나름의 모양
-(PascalCase 함수 · `SW_` 로 시작하는 함수 · 한 글자 지역 변수 · `_t` 타입 · `pos`/`nrm`/`col` 필드)으로 쌓였다.
-사용자 요청(2026-10-03): 셰이더 이름도 가능하면 C++ 와 같은 규칙.
+`CheckCodeConventions` 는 C++ 확장자만 훑으므로 셰이더는 이 게이트가 맡는다. 원칙은 셰이더 이름도 가능하면 C++ 와 같은 규칙이다
+— 게이트가 없으면 셰이더는 제 나름의 모양(PascalCase 함수 · 한 글자 지역 변수 · `_t` 타입 · `pos`/`nrm`/`col` 필드)으로 쌓인다.
 
 검사 규칙 (`AGENTS.md` → "### HLSL"):
 
@@ -21,7 +20,7 @@ Scripts/lint/gate/CheckShaderConventions.py
 
 **정규식으로 본다.** HLSL 파서를 두지 않는다 — 셰이더 문법은 작고, 이 게이트가 보는 것은 선언의 이름뿐이다. 먼저 주석 · 문자열을
 지우고(예시 코드를 위반으로 읽지 않게), 중괄호 깊이와 선언은 전처리 지시문까지 지운 글로 센다 — 매크로 본문의 짝 없는 `{`
-(`SW_ROOT_CONSTANTS_BEGIN`)가 파일 나머지를 "구조체 안" 으로 만들던 것이 초안의 오판이었다(함수 지역 변수가 필드로 읽혔다).
+(`SW_ROOT_CONSTANTS_BEGIN`)가 파일 나머지를 "구조체 안" 으로 만들어 함수 지역 변수를 필드로 읽기 때문이다.
 """
 
 from __future__ import annotations

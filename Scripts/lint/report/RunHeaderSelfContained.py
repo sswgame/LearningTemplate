@@ -8,20 +8,16 @@
 있으면 빌드는 통과한다. 그러다 그 "다른 헤더" 가 정리되는 날 **내 코드를 한 줄도 안 고쳤는데**
 빌드가 깨진다. 그리고 그 깨짐은 늘 엉뚱한 파일에서 난다.
 
-[이 검사는 오래 무의미했다]
-`ReflectionParser` 가 만들던 `FlagOps.gen.h` 우산이 `/FI` 로 타깃 **전 TU** 에 강제 include 되면서
-`RHITypes.h` · `MaterialTypes.h` · `ShaderCompiler.h` · `ResourcePackTypes.h` 를 끌고 들어왔다.
-그 넷이 다시 `Engine/Common/Common.h`(File · Math · String · Time · ResourceUtil 우산)까지 끌어오니,
-웬만한 이름은 전부 "이미 있는" 것이 되어 누락이 보이지 않았다. 게다가 그 우산의 내용은 "플래그
-열거형을 가진 헤더가 무엇이냐" 에 따라 바뀌므로, **오늘 서는 헤더가 내 코드를 안 고쳐도 내일 못 설
-수 있었다.** 2026-09-18 에 우산을 걷어내고(비트 연산자 트레이트는 이제 열거형 헤더와 함께 다닌다 —
-`CheckFlagEnumTraitInclude.py` 가 지킨다) 다시 재니 Engine 헤더 230 개 중 5 개가 서지 못했다.
+[강제 include 는 얇아야 이 검사가 뜻이 있다]
+`ReflectionParser` 가 만드는 `FlagOps.gen.h` 는 `/FI` 로 타깃 **전 TU** 에 강제 include 된다. 그것이 무엇이든
+include 하면 그 이름은 어디서나 "이미 있는" 것이 되어 누락이 보이지 않고, 그 내용은 "플래그 열거형을 가진 헤더가
+무엇이냐" 에 따라 바뀌므로 **오늘 서는 헤더가 내 코드를 안 고쳐도 내일 못 선다.** 그래서 `FlagOps.gen.h` 와 그것이
+include 하는 `*.gen.h` 는 불투명 열거형 전방 선언과 `IsBitFlagEnum` 특수화만 든다(엔진 헤더를 include 하지 않는다).
 
 [게이트가 아니다]
 `Run*` 은 보고하고 `Check*` 이 막는다(`RunBuildWarnings.py` 와 같은 규칙). 막지 않는 이유는 비용이다 —
 헤더 하나에 컴파일러를 한 번씩 부르므로 6코어에서 전 트리 약 3 분이 걸린다. 린트 스위트 전체가
-30 초인데 여기에 3 분을 얹으면 아무도 린트를 돌리지 않게 된다. 대신 **되돌아오는 길을 막는 것**은
-게이트가 한다: `CheckFlagEnumTraitInclude.py` 가 우산이 다시 생기는 것을 막는다.
+30 초인데 여기에 3 분을 얹으면 아무도 린트를 돌리지 않게 된다.
 
 [플래그는 진짜 빌드에서 그대로 빌려 온다]
 `compile_commands.json` 에서 그 헤더와 경로가 가장 많이 겹치는 TU 를 골라 그 명령줄을 쓴다 —

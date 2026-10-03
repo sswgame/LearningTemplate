@@ -7,9 +7,8 @@ Git pre-commit 훅에서 호출되어 staged 파일에 게이트·픽서·포맷
 검사에 실패하면 커밋을 중단시킵니다.
 
 **게이트 목록을 들지 않는다.** `gate/` 폴더를 훑고, 무엇이 staged 되었을 때 도는지는 게이트가
-`LintGate.preCommitPattern` 으로 스스로 답한다. 예전에는 여기서 게이트 여섯을 이름으로 import
-했고, 그래서 (1) 게이트 열둘 중 여섯만 돌았으며 (2) 그 여섯조차 `if stagedCppFiles:` 안에 있어
-**`.cmake` 나 `.py` 만 커밋하면 아무 게이트도 돌지 않았다.**
+`LintGate.preCommitPattern` 으로 스스로 답한다. 게이트를 이름으로 import 하면 새 게이트가 빠지고,
+C++ 파일이 staged 됐을 때만 돌리면 **`.cmake` 나 `.py` 만 커밋할 때 아무 게이트도 돌지 않는다.**
 """
 
 from __future__ import annotations
@@ -118,8 +117,8 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
             rel = s
         print(f"    * {rel}")
 
-    # 후보 목록은 `common.AppBinary` 한 곳이다 — 예전에는 여기와 쿠커가 각자 들고 있었고,
-    # 이쪽만 Ninja-Shipping 을 빼먹어서 Shipping 만 빌드해 둔 사람은 이 검증을 통째로 건너뛰었다.
+    # 후보 목록은 `common.AppBinary` 한 곳이다 — 여기서 따로 들면 프리셋 하나를 빼먹어(예: Ninja-Shipping)
+    # 그 프리셋만 빌드해 둔 사람은 이 검증을 통째로 건너뛴다.
     appExe = findAppExecutable(projectRoot)
     if appExe is None:
         print("  [Warning] App.exe를 찾을 수 없어 셰이더 베이킹 검증을 건너뜁니다. (빌드 후 다시 시도하세요)")
@@ -173,10 +172,7 @@ def main() -> int:
 
     # --- 게이트 — `gate/` 폴더가 목록이다 --------------------------------------
     #
-    # 예전에는 여기서 게이트 여섯을 **이름으로 import** 했다. 게이트는 열둘이었고, 그중 셋은
-    # 처음부터 빠져 있었으며(`CheckEngineLayers` · `CheckDataFileReferences` · `CheckSourceGlob`),
-    # 나머지도 `if stagedCppFiles:` 안에 있어서 **`.cmake` 나 `.py` 만 커밋하면 아무 게이트도
-    # 돌지 않았다.** 폴더를 훑고, 무엇이 staged 되었을 때 도는지는 게이트가 스스로 답한다.
+    # 폴더를 훑고, 무엇이 staged 되었을 때 도는지는 게이트가 스스로 답한다(모듈 독스트링 참고).
     if runGatesInternal(projectRoot, allStagedFiles):
         hasErrors = True
 

@@ -10,9 +10,8 @@ Engine 레이어 금지 include 검사.
   3) Engine 내부 티어: 아래 티어가 위 티어를 include 하지 못한다 (_kEngineTier).
      `Graphics/Renderer` 만 최상위 폴더보다 잘게 본다 — 그리는 쪽은 씬 위, 나머지 Graphics 는 컴포넌트 아래.
 
-티어는 **include 그래프에서 계산한 것**이다. 예전에는 손으로 고른 네 쌍(Utility->Graphics 등)만
-경고로 찍고 실패시키지 않았다 — 근거 없는 목록이라 늘릴 기준도 없고, 실패하지 않으니 쌓여도
-아무도 몰랐다. 지금은 전체 그래프를 Tarjan SCC 로 줄이고 위상 순서를 티어로 쓴다.
+티어는 **include 그래프에서 계산한 것**이다 — 손으로 고른 금지 쌍은 늘릴 기준이 없다. 전체 그래프를
+Tarjan SCC 로 줄이고 위상 순서를 티어로 쓰며, 위반은 경고가 아니라 실패다.
 
   python Scripts/lint/gate/CheckEngineLayers.py [--root <repo>]
 """
@@ -85,12 +84,9 @@ _kGraphicsRendererLayerName = "Graphics/Renderer"
 # 이 표는 include 그래프를 위상 정렬해서 얻었다(`Scripts/lint/report/RunEngineLayerGraph.py` 가 같은
 # 규칙으로 다시 계산한다). 손으로 고른 순서가 아니므로, 코드가 바뀌면 표도 다시 계산해야 한다.
 #
-# **강결합 묶음은 없다 (2026-09-21).** 그래프가 DAG 라 모든 폴더에 참인 순서가 있다. 예전에는 티어 4
-# 가 일곱 폴더(Graphics·Module·Object·Resource·Scene·Sequencer·Window)의 묶음이었고, 그 안에서는
-# 순서를 주장하지 않았다. 묶음을 푼 엣지 다섯은 전부 "위층 것을 아래층이 들고 있던" 모양이었다 —
-# Object 가 SceneManager 에게 활성 씬을 묻고, RHI 디바이스가 렌더 패스 에셋 캐시를 소유하고, RHI 가
-# IWindow 전역을 읽고, SceneManager 가 FrameRenderer 를 들고, 셰이더 컴파일 폴더가 렌더러의 패스
-# 지식을 include 했다. 자세한 것은 Source/Engine/README.md 와 docs/07_EngineStructureVsCommercial.md.
+# **강결합 묶음은 없다.** 그래프가 DAG 라 모든 폴더에 참인 순서가 있다. 묶음이 다시 생기면 대개 "위층 것을
+# 아래층이 드는" 모양이다 — Object 가 SceneManager 에게 활성 씬을 묻거나, RHI 디바이스가 렌더 패스 에셋 캐시를
+# 소유하거나, RHI 가 IWindow 전역을 읽는 식. 처방은 Source/Engine/README.md 와 docs/07_EngineStructureVsCommercial.md.
 #
 # `Graphics` 만 최상위 폴더보다 잘게 본다: `Graphics/Renderer`(FrameRenderer · RenderGraph · GpuScene ·
 # RenderThread · Bake)는 씬과 컴포넌트를 **읽어서 그리는 쪽**이라 그 위(8)이고, 나머지 `Graphics`(RHI ·
@@ -246,7 +242,7 @@ class CheckEngineLayersGate(LintGate):
             },
         },
         {
-            # 액터 층이 월드 관리자를 아는 방향 — 2026-09-21 에 뗀 엣지가 되돌아오면 잡아야 한다.
+            # 액터 층이 월드 관리자를 아는 방향 — 가장 되돌아오기 쉬운 엣지다.
             "name": "Object 가 Scene 을 include (아래층이 위층을)",
             "files": {
                 "Source/Engine/Object/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Scene/SceneManager.h"\n',
