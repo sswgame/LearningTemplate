@@ -23,17 +23,24 @@ namespace sw
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostPhysics );
 
-        _currentTimer = 0.0f;
-        _currentAlpha = 1.0f;
-        _listBaseAlpha.clear();
-
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr )
-        {
             pOwner->addTag( "VFX"_tag );
+
+        // 흐른 시간이 있으면 페이드 중에 다시 읽은 상태다 — 타이머 · 알파 · 기준을 그대로 이어 간다. 스프라이트 알파는 이미 흐려져 있어
+        // 기준으로 다시 잡으면 안 된다.
+        const bool bResumingFade = _currentTimer > 0.0f;
+        if ( bResumingFade == false )
+        {
+            _currentTimer = 0.0f;
+            _currentAlpha = 1.0f;
+            _listBaseAlpha.clear();
             // 기준은 시작할 때의 알파다 — 반투명으로 만든 이펙트가 흐려지기 시작할 때 불투명으로 튀지 않게.
-            pOwner->forEachComponentOfType<SpriteComponent>( [this]( SpriteComponent* pSprite )
-            { _listBaseAlpha.push_back( pSprite->getTint()._w ); } );
+            if ( pOwner != nullptr )
+            {
+                pOwner->forEachComponentOfType<SpriteComponent>( [this]( SpriteComponent* pSprite )
+                { _listBaseAlpha.push_back( pSprite->getTint()._w ); } );
+            }
         }
         applyAlphaToSprites();
     }

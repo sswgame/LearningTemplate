@@ -5,6 +5,7 @@
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimPlayer.h"
+#include "Engine/Animation/AnimationGraphAsset.h"
 #include "Engine/Animation/BlendSpace.h"
 #include "Engine/Animation/DualQuaternion.h"
 #include "Engine/Animation/Skeleton.h"
@@ -13,11 +14,41 @@
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
+
+namespace
+{
+    /** @brief 이름 붙은 노드만 가진 그래프를 @p path 에 씁니다(링크 없음). */
+    bool writeNamedGraph( const string& path, std::initializer_list<const utf8*> listName )
+    {
+        AnimationGraphAsset graph;
+        int32               nodeId = 1;
+        for ( const utf8* pName : listName )
+        {
+            AnimationGraphNode node{};
+            node._id   = nodeId++;
+            node._name = pName;
+            graph._listNode.push_back( node );
+        }
+        return graph.saveToFile( path );
+    }
+
+    /** @brief 애니메이터의 그래프 경로 PROPERTY 를 쓰고, 인스펙터 · 에셋 핫 리로드처럼 바뀐 칸을 알립니다. */
+    bool writeGraphPath( SpriteAnimatorComponent* pAnimator, const string& path )
+    {
+        const PropertyInfo* pProperty = pAnimator->getTypeInfo()->findPropertyInHierarchy( hashed_string( "_animationGraphPath" ) );
+        if ( pProperty == nullptr )
+            return false;
+        pProperty->setValue<string>( pAnimator, path );
+        pAnimator->onPropertyChanged( hashed_string( "_animationGraphPath" ) );
+        return true;
+    }
+} // namespace
 
 // ------------------------------------------------------------------------------
 // 1) AnimationTest — 클립 샘플링, 루프 및 크로스페이드 검증
@@ -392,6 +423,40 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorComponent_PlaybackAndFrameSafety )
     SW_EXPECT_EQUAL( 0, animator.getCurrentFrame() );
     animator.setFrame( -3 );
     SW_EXPECT_EQUAL( 0, animator.getCurrentFrame() );
+}
+
+/**
+ * @brief [AnimationTest] 재생 중에 그래프 경로를 바꾸면 애니메이터가 새 그래프를 읽는다 — 지금 애니메이션이 새 그래프에 있으면 잇고, 없으면 새 첫 애니메이션으로
+ * @details 그래프는 `onBeginPlay` 에서만 열렸다. 인스펙터로 경로를 고치거나 그래프 파일을 고쳐 에셋 핫 리로드가 그 칸을 알려도(`onPropertyChanged`, 값이
+ *          같아도) 옛 그래프 · 옛 애니메이션 목록이 남아, "끝나면 다음" 이 옛 그래프를 따라갔다.
+ */
+SW_TEST_CASE( AnimationTest, SpriteAnimatorReopensItsGraphWhenThePathChanges )
+{
+    const string graphA = test::makeTempPath( "animator_a.animgraph.json" );
+    const string graphB = test::makeTempPath( "animator_b.animgraph.json" );
+    SW_ASSERT_TRUE( writeNamedGraph( graphA, { "Idle", "Run" } ) );
+    SW_ASSERT_TRUE( writeNamedGraph( graphB, { "Jump", "Fall" } ) );
+
+    GameObjectManager manager;
+    GameObject*       pObject = manager.createGameObject( hashed_string( "Hero" ) );
+    SW_ASSERT_NOT_NULL( pObject );
+    SpriteAnimatorComponent* pAnimator = pObject->addComponent<SpriteAnimatorComponent>();
+    SW_ASSERT_NOT_NULL( pAnimator );
+    SW_ASSERT_TRUE( writeGraphPath( pAnimator, graphA ) );
+    pAnimator->dispatchBeginPlay();
+    SW_EXPECT_EQUAL( string( "Idle" ), pAnimator->getCurrentAnimation() );
+
+    // 다른 그래프 — 지금 애니메이션(Idle)이 없으니 새 그래프의 첫 애니메이션부터.
+    SW_ASSERT_TRUE( writeGraphPath( pAnimator, graphB ) );
+    SW_EXPECT_EQUAL( string( "Jump" ), pAnimator->getCurrentAnimation() );
+    SW_EXPECT_TRUE( pAnimator->isPlaying() );
+
+    // 같은 경로의 파일이 바뀌었다(핫 리로드 알림은 값이 같다) — 지금 애니메이션(Jump)이 남아 있으면 그대로 잇는다.
+    SW_ASSERT_TRUE( writeNamedGraph( graphB, { "Land", "Jump" } ) );
+    pAnimator->setFrame( 0 );
+    SW_ASSERT_TRUE( writeGraphPath( pAnimator, graphB ) );
+    SW_EXPECT_EQUAL( string( "Jump" ), pAnimator->getCurrentAnimation() );
+    SW_EXPECT_TRUE( pAnimator->isPlaying() );
 }
 
 /**

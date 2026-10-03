@@ -66,7 +66,13 @@ namespace sw
         /** @brief 흔들림을 뺀 카메라 자리입니다. 매 틱 주인의 위치에서 다시 구하는 런타임 값이라 저장하지 않습니다. */
         PROPERTY( Alias = "currentPos", Transient )
         float2 _currentPos;
-        float2 _appliedShake; ///< 지난 틱에 주인 위치에 얹은 흔들림. 다음 틱에 걷어 내고 기준을 구한다
+        /**
+         * @brief 지난 틱에 주인 위치에 얹은 흔들림입니다. 다음 틱에 걷어 내고 기준을 구합니다.
+         * @details 저장합니다 — 주인 위치(씬 컴포넌트 상태)에는 이 흔들림이 얹힌 채 저장되므로, 흔들리는 중에 상태를 다시 읽으면(플레이 중
+         *          되돌리기 · 핫 리로드) 이것도 같이 돌아와야 다음 틱이 걷어 냅니다. 빠지면 그 오프셋이 카메라 자리에 영영 남습니다.
+         */
+        PROPERTY( HideInInspector )
+        float2 _appliedShake;
         PROPERTY( Alias = "followSpeed" )
         float32 _followSpeed;
         PROPERTY( Alias = "shakeIntensity" )

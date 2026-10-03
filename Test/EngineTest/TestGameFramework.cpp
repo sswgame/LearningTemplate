@@ -18,6 +18,8 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "EngineTest/StateReloadTestUtil.h"
+
 #include "GameFramework/Base/DontDestroyOnLoadComponent.h"
 #include "GameFramework/Base/EffectBaseComponent.h"
 #include "GameFramework/Base/GameEvents.h"
@@ -2561,6 +2563,42 @@ SW_TEST_CASE( GameFrameworkTest, CameraControllerKeepsItsPlaceAndFollowsOnlyWhen
         pController->onTick( kFrame );
     SW_EXPECT_NEAR_EQUAL( 20.0f, pScene->getLocalPosition()._x, 0.05f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
+}
+
+/**
+ * @brief [GameFrameworkTest] 흔들리는 중에 상태를 다시 읽은 카메라도 흔들림이 끝나면 놓인 자리로 돌아온다
+ * @details 주인 위치에는 지난 틱의 흔들림이 얹힌 채 저장된다. 얹은 흔들림(`_appliedShake`)을 저장하지 않으면 다시 읽은 컨트롤러가 그것을 걷어 내지 못해
+ *          그 오프셋이 카메라 자리에 영영 남는다(플레이 중 되돌리기 · 핫 리로드).
+ */
+SW_TEST_CASE( GameFrameworkTest, CameraShakeOffsetDoesNotSurviveAStateReload )
+{
+    GameObjectManager          manager;
+    GameObject*                pCamera     = manager.createGameObject( hashed_string( "OverworldCamera" ) );
+    SceneComponent*            pScene      = pCamera->addComponent<SceneComponent>();
+    CameraControllerComponent* pController = pCamera->addComponent<CameraControllerComponent>();
+    SW_ASSERT_TRUE( pScene != nullptr && pController != nullptr );
+    pScene->setLocalPosition( float3( 5.0f, 3.0f, -10.0f ) );
+    manager.beginPlay();
+
+    constexpr float32 kFrame = 1.0f / 60.0f;
+    pController->shake( 2.0f, 0.5f );
+    for ( int32 frameIndex = 0; frameIndex < 5; ++frameIndex )
+        pController->onTick( kFrame );
+    const float3 shaken = pScene->getLocalPosition();
+    SW_ASSERT_TRUE_MSG( MathUtil::abs( shaken._x - 5.0f ) > 1e-3f || MathUtil::abs( shaken._y - 3.0f ) > 1e-3f, "흔들림이 위치에 얹히지 않았습니다" );
+
+    SW_ASSERT_TRUE( StateReloadTestUtil::reloadInPlace( pCamera ) );
+    pScene      = pCamera->getComponent<SceneComponent>();
+    pController = pCamera->getComponent<CameraControllerComponent>();
+    SW_ASSERT_TRUE( pScene != nullptr && pController != nullptr );
+    SW_EXPECT_TRUE( pController->isShaking() );
+
+    for ( int32 frameIndex = 0; frameIndex < 60; ++frameIndex )
+        pController->onTick( kFrame );
+    SW_EXPECT_FALSE( pController->isShaking() );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pScene->getLocalPosition()._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -10.0f, pScene->getLocalPosition()._z, 1e-4f );
 }
 
 /**

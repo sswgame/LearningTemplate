@@ -32,19 +32,15 @@ namespace sw
         Component::onBeginPlay();
         setTickGroup( TickGroup::PostUpdate );
 
-        _currentLife = 0.0f;
-        _alpha       = 1.0f;
+        // 흐른 수명은 처음으로 되돌리지 않는다 — 떠 있는 동안 상태를 다시 읽은 숫자(플레이 중 되돌리기 · 핫 리로드)가 수명을 다시 시작하지 않게.
+        // 새로 만든 숫자는 0 이다. 알파는 흐른 수명에서 다시 구한다.
+        _currentLife = MathUtil::max( _currentLife, 0.0f );
+        _alpha       = computeAlpha();
 
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr )
-        {
             pOwner->addTag( "UI"_tag );
-            // 클립을 못 읽으면 로더가 이유를 남겼다. 숫자 없이 수명만 돈다(오브젝트는 그대로 지워진다).
-            _digitClip                  = SpriteClipCache::acquire( _digitClipPath );
-            GameObjectManager* pManager = pOwner->getManager();
-            if ( _digitClip != nullptr && pManager != nullptr && _spriteBatch.initialize( *pManager, _digitClip->_atlasPath, kMaxGlyphCount ) == false )
-                SW_LOG_WARNING( "Damage number sprites could not be created" );
-        }
+        acquireGlyphSprites();
         layoutSprites();
     }
 
@@ -62,7 +58,7 @@ namespace sw
         _currentLife += deltaTime;
         if ( _lifeTime > 0.0f )
         {
-            _alpha             = MathUtil::saturate( 1.0f - ( _currentLife / _lifeTime ) );
+            _alpha             = computeAlpha();
             GameObject* pOwner = getOwner();
             if ( pOwner == nullptr )
                 return;
@@ -89,8 +85,31 @@ namespace sw
     void DamageUIComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
-        if ( hasBegunPlay() )
-            layoutSprites();
+        if ( hasBegunPlay() == false )
+            return;
+        // 글리프 클립 경로를 바꾸면(인스펙터 · 에셋 핫 리로드 알림 — 값이 같아도) 클립을 다시 잡고 스프라이트를 새 아틀라스로 다시 만든다.
+        // 스프라이트를 만드는 것은 구조 변경이라 틱 밖에서 한다.
+        static const hashed_string s_digitClipPathName( "_digitClipPath" );
+        if ( propertyName == s_digitClipPathName )
+        {
+            GameObject*        pOwner   = getOwner();
+            GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+            if ( pManager != nullptr )
+            {
+                const ComponentHandle handle = getHandle();
+                pManager->executeOrDeferPostTick( [pManager, handle]()
+                {
+                    Component* pComponent = pManager->resolveComponent( handle );
+                    if ( pComponent == nullptr )
+                        return;
+                    DamageUIComponent* pDamage = static_cast<DamageUIComponent*>( pComponent );
+                    pDamage->acquireGlyphSprites();
+                    pDamage->layoutSprites();
+                } );
+                return;
+            }
+        }
+        layoutSprites();
     }
 
     void DamageUIComponent::onOwnerActiveInHierarchyChanged()
@@ -132,6 +151,22 @@ namespace sw
         for ( uint32 digitIndex = digitCount; digitIndex > 0 && glyphCount < kMaxGlyphCount; --digitIndex )
             outArrFrame[glyphCount++] = arrReversed[digitIndex - 1];
         return glyphCount;
+    }
+
+    float32 DamageUIComponent::computeAlpha() const
+    {
+        return ( _lifeTime > 0.0f ) ? MathUtil::saturate( 1.0f - ( _currentLife / _lifeTime ) ) : 1.0f;
+    }
+
+    void DamageUIComponent::acquireGlyphSprites()
+    {
+        _spriteBatch.shutdown();
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
+        // 클립을 못 읽으면 로더가 이유를 남겼다. 숫자 없이 수명만 돈다(오브젝트는 그대로 지워진다).
+        _digitClip = SpriteClipCache::acquire( _digitClipPath );
+        if ( _digitClip != nullptr && pManager != nullptr && _spriteBatch.initialize( *pManager, _digitClip->_atlasPath, kMaxGlyphCount ) == false )
+            SW_LOG_WARNING( "Damage number sprites could not be created" );
     }
 
     void DamageUIComponent::scheduleLayout()

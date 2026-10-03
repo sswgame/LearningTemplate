@@ -13,6 +13,8 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Resource/SpriteClipCache.h"
 
+#include "EngineTest/StateReloadTestUtil.h"
+
 #include "GameFramework/Base/EffectBaseComponent.h"
 #include "GameFramework/UI/DamageUIComponent.h"
 #include "GameFramework/UI/HPBarBaseComponent.h"
@@ -237,4 +239,114 @@ SW_TEST_CASE( WorldUiTest, EffectFadesTheSpritesOfItsObject )
 
     pEffect->setCurrentAlpha( 0.25f );
     SW_EXPECT_NEAR_EQUAL( 0.2f, pGlow->getTint()._w, 1e-5f );
+}
+
+/**
+ * @brief [WorldUiTest] 페이드 중에 상태를 다시 읽은 이펙트는 흐른 시간과 기준 알파를 이어 간다
+ * @details 플레이 중 되돌리기 · 핫 리로드는 컴포넌트를 다시 만들고 `onBeginPlay` 를 다시 부른다. 타이머를 0 으로 돌리고 이미 흐려진 스프라이트 알파를
+ *          기준으로 다시 잡으면, 반쯤 흐려진 이펙트가 그 알파에서 처음부터 다시 흐려진다(0.8 → 0.4 에서 시작해 수명의 두 배를 산다).
+ */
+SW_TEST_CASE( WorldUiTest, EffectResumesItsFadeAfterTheStateIsReadAgain )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::GameObjectManager manager;
+    sw::GameObject*       pSpark = manager.createGameObject( sw::hashed_string( "Spark" ) );
+    SW_ASSERT_NOT_NULL( pSpark );
+    sw::SpriteComponent* pGlow = pSpark->addComponent<sw::SpriteComponent>();
+    SW_ASSERT_NOT_NULL( pGlow );
+    pGlow->setTint( sw::float4{ 1.0f, 0.5f, 0.0f, 0.8f } );
+    sw::EffectBaseComponent* pEffect = pSpark->addComponent<sw::EffectBaseComponent>();
+    SW_ASSERT_NOT_NULL( pEffect );
+    SW_ASSERT_TRUE( setReflectedValue( pEffect, "duration", 1.0f ) );
+    manager.beginPlay();
+    SW_ASSERT_TRUE( pEffect->hasBegunPlay() );
+
+    pEffect->onTick( 0.5f );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, pGlow->getTint()._w, 1e-5f );
+
+    SW_ASSERT_TRUE( sw::StateReloadTestUtil::reloadInPlace( pSpark ) );
+    pEffect = pSpark->getComponent<sw::EffectBaseComponent>();
+    pGlow   = pSpark->getComponent<sw::SpriteComponent>();
+    SW_ASSERT_NOT_NULL( pEffect );
+    SW_ASSERT_NOT_NULL( pGlow );
+    SW_ASSERT_TRUE( pEffect->hasBegunPlay() );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pEffect->getCurrentTimer(), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pEffect->getCurrentAlpha(), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, pGlow->getTint()._w, 1e-5f );
+
+    // 기준은 처음의 0.8 그대로다 — 남은 반을 마저 흐린다.
+    pEffect->onTick( 0.25f );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, pEffect->getCurrentAlpha(), 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.2f, pGlow->getTint()._w, 1e-5f );
+}
+
+/**
+ * @brief [WorldUiTest] 떠 있는 동안 상태를 다시 읽은 데미지 숫자는 남은 수명을 이어 간다
+ * @details `onBeginPlay` 가 수명을 0 · 알파를 1 로 돌리면, 플레이 중 되돌리기 · 핫 리로드 때마다 떠 있던 숫자가 처음부터 다시 떠오른다.
+ */
+SW_TEST_CASE( WorldUiTest, DamageNumberKeepsItsLifeAfterTheStateIsReadAgain )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::GameObjectManager manager;
+    sw::GameObject*       pHit = spawnAnchoredObject( manager, "Hit", sw::float3{ 0.0f, 1.0f, 0.0f } );
+    SW_ASSERT_NOT_NULL( pHit );
+    sw::DamageUIComponent* pDamage = pHit->addComponent<sw::DamageUIComponent>();
+    SW_ASSERT_NOT_NULL( pDamage );
+    SW_ASSERT_TRUE( setReflectedValue( pDamage, "lifeTime", 1.0f ) );
+    pDamage->setDamageValue( 42 );
+    manager.beginPlay();
+    pDamage->onTick( 0.5f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pDamage->getAlpha(), 1e-5f );
+
+    SW_ASSERT_TRUE( sw::StateReloadTestUtil::reloadInPlace( pHit ) );
+    pDamage = pHit->getComponent<sw::DamageUIComponent>();
+    SW_ASSERT_NOT_NULL( pDamage );
+    SW_ASSERT_TRUE( pDamage->hasBegunPlay() );
+    SW_EXPECT_EQUAL( 42, pDamage->getDamageValue() );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pDamage->getAlpha(), 1e-5f );
+    const sw::MeshInstanceBatch* pBatch = pDamage->getSpriteBatch().getBatch();
+    SW_ASSERT_NOT_NULL( pBatch );
+    SW_EXPECT_TRUE( pBatch->isEntryVisible( 0 ) );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, pBatch->getEntry( 0 )._sprite.getTint()._w, 1.0f / 255.0f );
+
+    // 남은 반이 지나면 지운다.
+    pDamage->onTick( 0.6f );
+    SW_EXPECT_TRUE( pHit->isPendingDestroy() );
+}
+
+/**
+ * @brief [WorldUiTest] 플레이 중에 글리프 클립 경로를 바꾸면 데미지 숫자가 새 클립의 프레임으로 다시 그린다
+ * @details 클립은 `onBeginPlay` 에서만 열렸다 — 인스펙터로 경로를 고치거나 에셋 핫 리로드가 그 칸을 알려도(`onPropertyChanged`) 옛 클립 · 옛 아틀라스가 남았다.
+ */
+SW_TEST_CASE( WorldUiTest, DamageNumberReopensItsGlyphClipWhenThePathChanges )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const sw::string    clipPath = test::makeTempPath( "glyphs_alt.sprite.json" );
+    sw::SpriteClipAsset altGlyphs;
+    altGlyphs._atlasPath = "engine/textures/test/quadrants.dds";
+    altGlyphs._listFrame.resize( 8 );
+    altGlyphs._listFrame[7]._uvRect = sw::float4{ 0.625f, 0.5f, 0.125f, 0.25f };
+    SW_ASSERT_TRUE( altGlyphs.saveToFile( clipPath ) );
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       pHit = spawnAnchoredObject( manager, "Hit", sw::float3{ 0.0f, 1.0f, 0.0f } );
+    SW_ASSERT_NOT_NULL( pHit );
+    sw::DamageUIComponent* pDamage = pHit->addComponent<sw::DamageUIComponent>();
+    SW_ASSERT_NOT_NULL( pDamage );
+    pDamage->setDamageValue( 7 );
+    pDamage->dispatchBeginPlay();
+    const sw::MeshInstanceBatch* pBatch = pDamage->getSpriteBatch().getBatch();
+    SW_ASSERT_NOT_NULL( pBatch );
+    SW_ASSERT_TRUE( pBatch->isEntryVisible( 0 ) );
+    SW_EXPECT_TRUE( pBatch->getEntry( 0 )._sprite.getUvRect()._x < 0.6f || pBatch->getEntry( 0 )._sprite.getUvRect()._x > 0.65f ); // 기본 클립의 7
+
+    SW_ASSERT_TRUE( setReflectedValue( pDamage, "_digitClipPath", clipPath ) );
+    pDamage->onPropertyChanged( sw::hashed_string( "_digitClipPath" ) );
+    pBatch = pDamage->getSpriteBatch().getBatch();
+    SW_ASSERT_NOT_NULL( pBatch );
+    SW_ASSERT_TRUE( pBatch->isEntryVisible( 0 ) );
+    const sw::float4 shown = pBatch->getEntry( 0 )._sprite.getUvRect();
+    SW_EXPECT_NEAR_EQUAL( 0.625f, shown._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, shown._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.125f, shown._z, 1e-4f );
 }

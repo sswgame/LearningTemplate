@@ -36,13 +36,17 @@ namespace sw
         DamageUIComponent();
         virtual ~DamageUIComponent() override = default;
 
-        /** @brief 수명 · 알파를 처음으로 두고, 글리프 클립을 읽어 자릿수 스프라이트를 만듭니다. */
+        /**
+         * @brief 글리프 클립을 읽어 자릿수 스프라이트를 만들고, 알파를 흐른 수명에서 구합니다.
+         * @details 흐른 수명(`_currentLife`)은 되돌리지 않습니다 — 떠 있는 동안 상태를 다시 읽은 숫자(플레이 중 되돌리기 · 핫 리로드)는 남은 수명을
+         *          이어 갑니다. 새로 만든 숫자는 0 에서 시작합니다.
+         */
         void onBeginPlay() override;
         /** @brief 스프라이트를 놓습니다. */
         void onEndPlay() override;
         /** @brief 떠오르고 흐려지며, 수명이 다하면 오브젝트를 지웁니다. 틱 뒤에 글자 자리를 잡게 합니다. */
         void onTick( float32 deltaTime ) override;
-        /** @brief 값 · 색 · 크기 칸을 고치면 글자를 다시 잡습니다. */
+        /** @brief 값 · 색 · 크기 칸을 고치면 글자를 다시 잡습니다. 글리프 클립 경로면(값이 같아도) 클립과 스프라이트를 다시 만듭니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
         /** @brief 소유 오브젝트가 꺼지면 글자를 숨깁니다. */
         void onOwnerActiveInHierarchyChanged() override;
@@ -71,6 +75,10 @@ namespace sw
         const SpriteInstanceBatch& getSpriteBatch() const { return _spriteBatch; }
 
     private:
+        /** @brief 흐른 수명에 맞는 흐림(1 → 0)입니다. 수명이 0 이면(사라지지 않는 숫자) 1 입니다. */
+        float32 computeAlpha() const;
+        /** @brief `_digitClipPath` 의 클립을 잡고 그 아틀라스로 자릿수 스프라이트를 (다시) 만듭니다. 클립을 못 읽으면 스프라이트 없이 둡니다. */
+        void acquireGlyphSprites();
         /** @brief 틱 직후(트랜스폼 적용 뒤) 게임 스레드에서 글자 자리를 잡게 합니다. 틱 밖이면 바로 잡습니다. */
         void scheduleLayout();
         /** @brief 소유 오브젝트 자리를 가운데로 글자를 늘어놓습니다. 클립이 없거나 꺼졌으면 모두 숨깁니다. */

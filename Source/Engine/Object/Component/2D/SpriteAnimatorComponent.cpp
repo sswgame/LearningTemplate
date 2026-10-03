@@ -108,6 +108,21 @@ namespace sw
         applyTransformKeys();
     }
 
+    void SpriteAnimatorComponent::onPropertyChanged( hashed_string propertyName )
+    {
+        SceneComponent::onPropertyChanged( propertyName );
+        static const hashed_string s_graphPathName( "_animationGraphPath" );
+        if ( propertyName != s_graphPathName )
+            return;
+
+        tryLoadAnimationGraph();
+        if ( _bPlaying == SW_FALSE || _bGraphLoaded == SW_FALSE )
+            return;
+        // 지금 애니메이션이 새 그래프에도 있으면 그대로 잇는다. 없으면 그 이름은 이제 "끝나면 다음" 을 찾지 못한다 — 새 목록의 처음으로.
+        if ( _graph.findNodeByName( _currentAnimation ) == nullptr && _listAnimation.empty() == false )
+            play( _listAnimation[0], _bRepeat == SW_TRUE );
+    }
+
     void SpriteAnimatorComponent::play( const string& animName )
     {
         _currentAnimation = animName;

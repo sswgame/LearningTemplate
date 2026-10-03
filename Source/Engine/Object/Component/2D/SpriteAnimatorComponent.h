@@ -43,6 +43,11 @@ namespace sw
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
+        /**
+         * @brief 그래프 경로(`_animationGraphPath`)가 바뀌면(인스펙터 · 에셋 핫 리로드 알림 — 값이 같아도) 그래프를 다시 읽습니다.
+         * @details 재생 중이면 지금 애니메이션이 새 그래프에도 있을 때 그대로 잇고, 없으면 새 목록의 첫 애니메이션을 처음부터 재생합니다.
+         */
+        void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 이름의 구간을 처음부터 재생합니다. 반복 여부는 클립의 구간이 정합니다(이름 없는 옛 클립은 반복). */
         void play( const string& animName );
