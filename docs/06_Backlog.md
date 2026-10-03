@@ -122,8 +122,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-1. 직렬화 · 리플렉션
 
-- **Shipping `App --cook-scenes` 와 에디터 `-gv_editorStartupScene` 이 GF 타입 · 엔진 데이터 등록 전에 씬을 읽는다** — spriteui 의 GF 컴포넌트가 MissingComponent 로
-  구워지고(`enginedata.xml not found` · 프리팹 `.bin` 없음 경고도 같은 쿠킹), 에디터 시작 씬은 GameFramework.dll 로드 전에 읽혀 게임 시작 씬에 덮인다(GameConfig.h 주석과 반대).
 - **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
@@ -163,6 +161,8 @@ cd build/Ninja-Debug/Bin
   `io.ConfigDpiScaleFonts` · `ConfigDpiScaleViewports` 를 본다.
 
 ### 1-5. 핫 리로드 · 모듈
+
+- **RHI 백엔드 교체 경로(`reinitializeAfterRhiSwap`)는 아직 에디터 → 게임 순으로 인스턴스를 다시 세운다** — 기동은 게임 → 에디터로 바뀌었다. 같은 순서로 맞출 것.
 
 - **바깥 빌드(터미널 · IDE)의 리로드 트리거는 여전히 mtime 디바운스뿐이다** — 에디터가 시킨 빌드는 성공 뒤에만 올린다(`LiveReloadManager::notifyBuildStarted/Finished`).
   바깥 빌드도 "빌드 성공" 신호(ninja 종료 · 스탬프 파일)를 받으려면 빌드 쪽 협조가 필요하다.
@@ -832,6 +832,12 @@ cd build/Ninja-Debug/Bin
 - **패널 시각 검증 사각** — 피킹 클릭 · 기즈모 우선순위는 사람이 눌러야 보인다. 그리기 회귀는 `Game View` 정점 수로 전후를 비교한다.
 
 ### 3-9. 핫 리로드 · 모듈 · 엔진 서비스
+
+- **씬은 기동 단계 `ModuleTypes` 뒤에만 읽는다** — `TypeRegistry::areAllModuleTypesRegistered()` 가 거짓이면 `SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes` 가
+  거절한다. 모듈 이미지 · 타입 등록은 그 단계에서 App 로더(`ModuleHost::loadModuleImages`)가 하고, 인스턴스는 RHI 뒤에 **게임 → 에디터** 순(그래야
+  `-gv_editorStartupScene` 이 마지막 요청이 된다). Shipping 통째 링크(/WHOLEARCHIVE) 목록은 `sw_configureAppDependencies`(모듈 등록 뒤)에서만 읽는다 — App 이 GF · 게임보다
+  먼저 add_subdirectory 되어 GF · 킷 · 게임의 등록기가 배포본에서 빠져 있었다. 쿠킹은 `ContentSource::SourceTree`(팩은 산출물이라 입력이 아니다)이고, MissingComponent 가
+  든 씬은 굽지 않고 실패(종료 코드 → CookAssets)로 센다.
 
 - **엔진 기동 · 종료 순서는 `EngineStartupStepList.xxx` 의 의존 칸이 정하고, 표는 그 순서대로 적는다**(UE `USubsystem` 의존 선언). 의존은 식별자 목록
   `{ A, B }` 라 오타 · 아래 줄 의존은 컴파일 오류(static_assert), 정렬은 의존만 보고 동점은 이름 순, 그 결과가 줄 순서와 같은지
