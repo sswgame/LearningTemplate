@@ -25,9 +25,12 @@ H 와 짝인 `.cpp` 에 그 include 를 옮겨 넣는다. 다른 TU 가 그 incl
 from __future__ import annotations
 
 import argparse
+import concurrent.futures as futures
 import os
 import re
+import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -204,10 +207,17 @@ def findCandidates(listHeader: list[Path], cache: dict[Path, HeaderDefinitions])
     for header in listHeader:
         raw = header.read_text(encoding="utf-8", errors="replace")
         text = stripCode(raw)
+        # 스스로 정의하는 것이 없는 헤더(CoreMinimal · pch 같은 우산)의 include 는 다시 내보내는 것이 목적이다.
+        if header not in cache:
+            cache[header] = parseDefinitions(header)
+        bUmbrella = cache[header].definesAnything() is False
         for m in _kInclude.finditer(raw):
             includePath = m.group(1)
             included = resolveInclude(includePath)
             if included is None or included == header:
+                continue
+            # X-매크로 표(`.xxx`)는 펼치려고 include 하고, `#undef` 헤더는 부작용(앞선 OS 헤더의 매크로 지우기)이 목적이다 — 이름 쓰임으로 볼 수 없다.
+            if bUmbrella or includePath.endswith(".xxx") or "#undef" in included.read_text(encoding="utf-8", errors="replace"):
                 continue
             if included not in cache:
                 cache[included] = parseDefinitions(included)
@@ -323,6 +333,57 @@ def applyCandidate(candidate: Candidate) -> bool:
     return True
 
 
+def verifyUnusedIncludes(listUnused: list[tuple[Path, str]], buildDir: Path) -> dict[str, list[tuple[Path, str, str]]]:
+    """
+    "쓰임을 못 찾은 include" 를 실제 컴파일로 가린다 — 헤더를 그대로 한 번, 그 include 줄을 뺀 사본으로 한 번 단독 컴파일한다(`-fsyntax-only`).
+
+    글자로만 보면 그 헤더를 **거쳐** 들어오는 이름(헤더가 다시 include 하는 것)에 기대는 include 와 정말 안 쓰는 include 를 가를 수 없다.
+    결과: "removable"(빼도 선다) · "needed"(빼면 선다지 못한다 — 거쳐 오는 이름이 있다, 첫 오류를 함께) · "unknown"(원래 헤더부터 혼자 서지 못한다).
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import RunHeaderSelfContained as selfContained  # noqa: E402 — 같은 폴더의 보고서가 컴파일 명령을 만든다
+
+    seeds = selfContained.makeSeedIndex(selfContained.loadCompileDatabase(buildDir))
+    result: dict[str, list[tuple[Path, str, str]]] = {"removable": [], "needed": [], "unknown": []}
+    if not seeds:
+        print("[ForwardDeclaration] 컴파일 DB 가 없습니다: %s — 먼저 그 프리셋을 configure 하세요" % buildDir)
+        return result
+
+    def compileText(header: Path, text: str, probeDir: Path, tag: str) -> str | None:
+        entry = selfContained.findSeedEntry(selfContained.normalizePath(str(header.resolve())), seeds)
+        if entry is None:
+            return "컴파일 DB 에 가까운 TU 가 없다"
+        stem = header.relative_to(kSourceRoot).as_posix().replace("/", "_")[:-2]
+        copy = probeDir / ("%s_%s.h" % (stem, tag))
+        copy.write_text(text, encoding="utf-8")
+        probe = probeDir / ("%s_%s_probe.cpp" % (stem, tag))
+        probe.write_text('#include "%s"\n' % copy.as_posix(), encoding="utf-8")
+        completed = subprocess.run(" ".join(selfContained.makeSyntaxOnlyCommand(entry, probe)), shell=True,
+                                   capture_output=True, text=True, errors="replace", cwd=str(buildDir))
+        if completed.returncode == 0:
+            return None
+        reasons = re.findall(r"error: (.+)", (completed.stdout or "") + (completed.stderr or ""))
+        return reasons[0].strip() if reasons else "컴파일 실패"
+
+    def classify(item: tuple[int, Path, str], probeDir: Path) -> tuple[str, Path, str, str]:
+        index, header, includePath = item
+        raw = header.read_text(encoding="utf-8", errors="replace")
+        baseline = compileText(header, raw, probeDir, "base%d" % index)
+        if baseline is not None:
+            return "unknown", header, includePath, baseline
+        without = re.sub(r'^[ \t]*#include[ \t]+"%s"[ \t]*\r?\n' % re.escape(includePath), "", raw, count=1, flags=re.M)
+        error = compileText(header, without, probeDir, "without%d" % index)
+        return ("removable", header, includePath, "") if error is None else ("needed", header, includePath, error)
+
+    with tempfile.TemporaryDirectory(prefix="swUnusedInclude") as probeDirName:
+        probeDir = Path(probeDirName)
+        listItem = [(index, header, inc) for index, (header, inc) in enumerate(listUnused)]
+        with futures.ThreadPoolExecutor(max_workers=max(1, (os.cpu_count() or 4) - 1)) as pool:
+            for kind, header, inc, detail in pool.map(lambda item: classify(item, probeDir), listItem):
+                result[kind].append((header, inc, detail))
+    return result
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="전방 선언으로 바꿀 수 있는 include 후보를 보고합니다")
     parser.add_argument("--filter", default="", help="경로에 이 문자열이 든 헤더만")
@@ -330,6 +391,9 @@ def main() -> int:
     parser.add_argument("--only", nargs="*", default=[], help="이 헤더들만 (저장소 상대 경로)")
     parser.add_argument("--skip", nargs="*", default=[], help="경로에 이 문자열이 든 헤더는 뺀다")
     parser.add_argument("--show-unused", action="store_true", help="정의된 이름의 쓰임을 못 찾은 include 도 보인다 (우산 · 기본형 헤더가 섞여 시끄럽다)")
+    parser.add_argument("--verify-unused", action="store_true",
+                        help="쓰임을 못 찾은 include 를 실제로 빼고 단독 컴파일해 '빼도 선다' 만 보인다 (컴파일 DB 필요, 몇 분)")
+    parser.add_argument("--build", default="build/Ninja-Debug", help="--verify-unused 가 쓸 컴파일 DB 의 빌드 폴더")
     args = parser.parse_args()
 
     listHeader = sorted(p for p in kSourceRoot.rglob("*.h") if ".gen." not in p.name)
@@ -348,7 +412,18 @@ def main() -> int:
     for c in listCandidate:
         names = ", ".join(n for n, _, _ in c.listName)
         print("  %s  ←  %s  [%s]" % (c.header.relative_to(kRepositoryRoot).as_posix(), c.included.relative_to(kSourceRoot).as_posix(), names))
-    if listUnused and args.show_unused and not args.apply:
+    if listUnused and args.verify_unused and not args.apply:
+        buildDir = Path(args.build)
+        if not buildDir.is_absolute():
+            buildDir = kRepositoryRoot / buildDir
+        verified = verifyUnusedIncludes(listUnused, buildDir)
+        print("\n  쓰임을 못 찾은 include %d건을 컴파일로 가렸다: 빼도 선다 %d · 거쳐 오는 이름이 있다 %d · 헤더가 혼자 서지 못한다 %d"
+              % (len(listUnused), len(verified["removable"]), len(verified["needed"]), len(verified["unknown"])))
+        for header, inc, _ in sorted(verified["removable"]):
+            print("  빼도 선다  %s  ←  %s" % (header.relative_to(kRepositoryRoot).as_posix(), inc))
+        for header, inc, detail in sorted(verified["unknown"]):
+            print("  모름      %s  ←  %s  (%s)" % (header.relative_to(kRepositoryRoot).as_posix(), inc, detail))
+    elif listUnused and args.show_unused and not args.apply:
         print("\n  쓰임을 못 찾은 include (자동으로 바꾸지 않는다 — 손으로 볼 것):")
         for header, inc in listUnused:
             print("  %s  ←  %s" % (header.relative_to(kRepositoryRoot).as_posix(), inc))

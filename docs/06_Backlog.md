@@ -215,7 +215,9 @@ cd build/Ninja-Debug/Bin
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
 - **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
   결과(열거값)로 바꾸는 그래픽스 쪽 수정.
-- **`RunForwardDeclarationCandidates.py --show-unused` 의 거짓 "쓰임 없음" 208 건** — 보고 전용이라 손으로 걸러야 한다.
+- **헤더의 안 쓰는 include 119 건** — `py -3 Scripts/lint/report/RunForwardDeclarationCandidates.py --verify-unused` 가 빼고 단독 컴파일해 "빼도 선다" 로 가린 것
+  (Types.h 20 · Macros.h 20 · Defines.h 16 · EnginePlatformHeaders.h 13 · string.h 13 …). 지우면 그 include 를 **거쳐** 이름을 받던 소비자 TU 가 깨질 수 있으니
+  지운 뒤 Debug · Release · Shipping · WSL 전체 빌드 + `RunHeaderSelfContained.py` 로 확인한다.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
 - **옛 시험 산출물 정리**(사용자 폴더라 두었다): `%TEMP%` 의 `sw_*`, `build/*/Bin` · `TestBin` 의 `prefab_test/` · `TestTemp/` · `temp_gen_*` · `temp_collide/`.
   옛 규칙으로 지은 바이너리가 남은 프리셋은 다시 지어야 새 규칙을 따른다.
