@@ -192,18 +192,16 @@ namespace sw
 
     int32 DialogueGraphAsset::decodePinNodeId( int32 pin )
     {
-        if ( pin <= 0 )
-            return 0;
-        const int32 scale = ( pin >= kPinScale ) ? kPinScale : 10;
-        return pin / scale;
+        if ( pin < kPinScale )
+            return 0; // 노드 id 는 1 부터라 핀 값은 kPinScale 이상이다
+        return pin / kPinScale;
     }
 
     int32 DialogueGraphAsset::decodePinOffset( int32 pin )
     {
-        if ( pin <= 0 )
+        if ( pin < kPinScale )
             return 0;
-        const int32 scale = ( pin >= kPinScale ) ? kPinScale : 10;
-        return pin % scale;
+        return pin % kPinScale;
     }
 
     int32 DialogueGraphAsset::findLinkedNodeId( int32 fromNodeId, int32 pinOffset ) const

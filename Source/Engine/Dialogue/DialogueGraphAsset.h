@@ -174,7 +174,7 @@ namespace sw
         /** @brief 한 노드가 가질 수 있는 최대 선택지 개수입니다. */
         static constexpr int32 getMaxChoiceCount() { return kPinScale - kPinOffsetChoiceBase; }
 
-        /** @brief 핀 값에서 노드 id 를 꺼냅니다(nodeId*100+offset, 레거시 *10). */
+        /** @brief 핀 값(nodeId * kPinScale + offset)에서 노드 id 를 꺼냅니다. kPinScale 보다 작은 값은 핀이 아니라 0 입니다. */
         static int32 decodePinNodeId( int32 pin );
         /** @brief 핀 값에서 오프셋을 꺼냅니다. */
         static int32 decodePinOffset( int32 pin );

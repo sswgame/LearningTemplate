@@ -129,9 +129,9 @@ SW_TEST_CASE( DialogueGraphTest, PinEncodeAndDecodeRoundTrip )
     SW_EXPECT_EQUAL( 12, DialogueGraphAsset::decodePinNodeId( choicePin ) );
     SW_EXPECT_EQUAL( DialogueGraphAsset::kPinOffsetChoiceBase + 3, DialogueGraphAsset::decodePinOffset( choicePin ) );
 
-    // 레거시 인코딩(노드 id * 10)도 계속 읽힌다.
-    SW_EXPECT_EQUAL( 1, DialogueGraphAsset::decodePinNodeId( 12 ) );
-    SW_EXPECT_EQUAL( 2, DialogueGraphAsset::decodePinOffset( 12 ) );
+    // kPinScale 보다 작은 값은 핀이 아니다(노드 id 는 1 부터) — 노드 id * 10 으로 짐작해 읽지 않는다.
+    SW_EXPECT_EQUAL( 0, DialogueGraphAsset::decodePinNodeId( 12 ) );
+    SW_EXPECT_EQUAL( 0, DialogueGraphAsset::decodePinOffset( 12 ) );
 }
 
 /**
