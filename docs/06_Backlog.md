@@ -117,7 +117,8 @@ cd build/Ninja-Debug/Bin
   `TextureImportRule` 과 짝), `BakeShippingHostDefaults.py`→`GenerateShippingHostDefaults.py`, 주석 · 문서의 "굽다"도 같은 구분으로. `ResourceManager`→`AssetManager`
   ("Resource" 는 디스크 트리 · 팩, "Asset" 은 읽은 객체), `EngineData`/`GameData`/`EditorData`→`EngineDefaultAssets`/`GameSettings`/`EditorToolDefaults`.
   CLI 철자도 하나로: `ArgumentList.xxx` 가 `"bake-shaders", "bakeshaders"` · `"cook-scenes", "cookscenes"` · `"cooked-dir", "cookeddir"` 처럼 하이픈 없는 철자를 같이
-  받는다 — 별칭 금지 결정대로 하이픈 철자 하나만 남긴다(스크립트 · CI · 문서의 사용처도).
+  받는다 — 별칭 금지 결정대로 하이픈 철자 하나만 남긴다(스크립트 · CI · 문서의 사용처도). 리플렉션 주석 키도 같다: `AnnotationMeta.txt` 가
+  `Alias` 를 `PreviousName` · `PreviousNames` 로도 받는다(사용처 0) — `Alias` 하나로.
 - **case 중괄호 일관성 규칙**(한 switch 안에서 한 case 라도 중괄호면 모두) — 픽서 패치 준비됨(스크래치), 39 파일 다시 쓰기 + AGENTS.md · 04 규칙 문장.
 - **한 파일에 클래스가 여럿이면 클래스마다 `namespace sw { }` 블록을 나눈다** — 규칙 + 가능하면 게이트, 트리 전체 적용.
 - **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
@@ -231,7 +232,6 @@ cd build/Ninja-Debug/Bin
 - **`TestRenderPassGpu.cpp` 의 남은 같은 줄**("큐브 하나 든 씬" · "한 프레임 돌리기")은 같은 모양의 케이스가 늘면 도우미로.
 - **옛 시험 산출물 정리**(사용자 폴더라 두었다): `%TEMP%` 의 `sw_*`, `build/*/Bin` · `TestBin` 의 `prefab_test/` · `TestTemp/` · `temp_gen_*` · `temp_collide/`.
   옛 규칙으로 지은 바이너리가 남은 프리셋은 다시 지어야 새 규칙을 따른다.
-- **`Graphics/README.md` 의 "알려진 보강 후보" 처럼 사실과 다른 문서 줄**은 그 영역을 고칠 때 같이 고친다(1-4 참고).
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
@@ -960,6 +960,8 @@ cd build/Ninja-Debug/Bin
   Core 에 인스턴스가 필요하면 Logger 모양 — 인스턴스는 `EngineLoop`, Core 에는 포인터 슬롯.
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
+
+- **통합 `ActionMap` 은 `InputManager::beginFrame` 이 갱신한다** — 게임 코드가 `update()` 를 다시 부르면 한 프레임에 두 번 흐른다(Input README 예제가 그랬다).
 
 - **마우스 `getSmoothDelta` 는 프레임당 한 번 `IInputDevice::onEventsDispatched( dt )` 에서 정해진다** — `setSmoothing(f)` 는 1/60 초 동안 남기는 비율
   (τ = -(1/60)/ln f, 60 Hz 에서 옛 계수와 같다). 이벤트 처리기 안에서 스무딩을 다시 돌리면 폴링 레이트마다 감각이 달라진다. 프레임 이동은 `getMovementDelta()` 하나.

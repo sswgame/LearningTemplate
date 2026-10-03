@@ -11,7 +11,7 @@
  * - 둘째 칸은 그 단계의 초기화가 할당하는 메모리의 용도(`MemoryTag`)입니다. 초기화를 부르는 동안 그 태그가 걸립니다(`EngineStartupSequence`).
  * - 단계 본문은 호스트가 줄마다 구조체 하나로 줍니다: `<단계>StartupStep` 의 `initialize` · `shutdown` · `destroy`
  *   (`EngineStartupStepDefaults` 를 상속해 필요한 것만 정의 — `EngineLoop.cpp`, 시험 하네스). 구조체가 없으면 컴파일 오류입니다.
- *   로거 · 명령줄 · 서비스 생성과 바인딩은 이 표 앞의 고정 부트스트랩이고, 그 종료는 표의 해제 뒤(`EngineLoop::shutdownBootstrap`)입니다.
+ *   로거 · 명령줄 · 서비스 생성과 바인딩은 이 표 앞의 고정 부트스트랩이고, 그 종료는 표의 해제 뒤(`EngineBootstrap::shutdown`)입니다.
  */
 
 //                      단계           태그        먼저 서야 하는 단계                     // 왜
