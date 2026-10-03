@@ -111,6 +111,9 @@ namespace sw
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
+        , _profileSession{}
+        , _startup{}
+        , _pEngineConfig{ nullptr }
     {
     }
 
@@ -119,9 +122,6 @@ namespace sw
     bool EngineLoop::initialize( int32 argc, utf8* pArgv[] )
     {
         HashedStringPool::initialize();
-
-        /** @brief 설정 블록에서 채우고, 아래 RHI · EngineData 블록이 이어서 읽습니다. */
-        const EngineConfig* pEngineConfig = nullptr;
 
         BLOCK( "Logger / DeadlockDetector / MemoryProfiler / CommandLine / GVM 초기화" )
         {
@@ -180,9 +180,7 @@ namespace sw
 
         BLOCK( "Core Services 생성 및 바인딩" )
         {
-            // 목록(`EngineServiceList.xxx`)의 `owned=1` 은 여기서 **한 줄로** 만들어진다. 예전에는
-            // 이 자리에 make_unique 스무 줄과 대입 스무 줄이 있었고, 같은 두 벌이 테스트 하네스에도
-            // 있었다. 목록에 줄을 더하고 한쪽을 잊으면 `areEngineServicesBound()` 가 조용히 false 가 됐다.
+            // 목록(`EngineServiceList.xxx`)의 `owned=1` 은 여기서 **한 줄로** 만들어진다. 생성자는 서로를 보지 않으므로 순서가 없다.
             _owned.createAll();
 
             // 만드는 방법이 특별한 것만 손으로 남는다(목록의 owned=0 셋).
@@ -195,18 +193,6 @@ namespace sw
             _frameRenderer  = make_unique<FrameRenderer>();
             _gpuUploadQueue = make_unique<GpuUploadQueue>();
 
-            // 만든 **뒤에** 해야 하는 일들이다. 순서는 생성기가 모르므로 여기가 정본이다.
-            //
-            // 압축 레지스트리는 여기가 소유하고, Core 의 CompressionStream 이 볼 수 있도록 슬롯에 연결한다.
-            // 스트림이 Core 에 있어서 엔진 서비스 테이블에는 닿지 못한다(Logger::setGlobalSink 와 같은 모양).
-            _owned._pCompressionCodecRegistry->initialize();
-            CompressionCodecRegistry::setActive( _owned._pCompressionCodecRegistry.get() );
-            // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil).
-            // 여기에 손으로 적고 있었을 때 Zlib 이 빠져 있었다 — 클래스도 열거값도 있는데 아무도
-            // 등록하지 않아 스트림에서 쓸 수 없었다.
-            EngineCompressionCodecUtil::registerAll( *_owned._pCompressionCodecRegistry );
-            _owned._pShaderCache->initialize();
-
             EngineServices services{};
             _owned.bindInto( services );
             // owned=0 인 자리만 손으로 연결한다.
@@ -217,184 +203,17 @@ namespace sw
             services._pFrameRenderer = _frameRenderer.get();
 
             engine::bindEngineServices( services );
-            engine::registerModuleTypes( "Engine" );
-            // GameFramework 는 여기서 등록하지 않는다. 개발 구성에서는 이 시점에 아직 올라와 있지 않아(키트 · SWGame 이 링크한다) 아무것도
-            // 등록하지 못했고, 배포 구성은 정적 링크라 위의 "Engine" 이 이미 다 모았다. 올리며 제 이름으로 등록하는 것은
-            // `LiveReloadManager::loadSharedModule` 이다(`ModuleHost` 가 키트보다 먼저 부른다).
         }
 
-        // 설정은 리소스 초기화보다 **먼저** 읽는다.
-        //
-        // ConfigManager 가 필요한 것은 `ResourceUtil` 이 이미 찾아 둔 프로젝트 루트 하나뿐이다.
-        // 반대로 `ResourceManager::mountContent` 는 GameConfig 의 `_packRoot` 가 정해져 있어야
-        // 팩을 제대로 마운트하고 게임 도메인의 `assetregistry.txt` 를 읽을 수 있다.
-        //
-        // 예전에는 순서가 반대였고, 그래서 리소스를 먼저 세운 뒤 설정을 읽고 **팩 마운트와 레지스트리
-        // 로드를 한 번 더** 해서 메웠다. 보정이 필요하다는 것 자체가 순서가 틀렸다는 신호였다.
-        BLOCK( "엔진 설정 로드 (리소스 초기화보다 먼저)" )
-        {
-            // Config/ 는 프로젝트 루트에 있고 실행 파일은 build/<preset>/Bin 에서 돈다. 작업 디렉터리
-            // 기준으로만 찾으면 모두 "없음" 이 되어 조용히 기본값으로 떨어진다. Resource/ 를 찾을 때
-            // 이미 알아낸 프로젝트 루트를 기준으로 넘겨준다.
-            _configManager->setRootDirectory( ResourceUtil::getProjectFolderPath() );
-
-            pEngineConfig = _configManager->ensureConfig<EngineConfig>(
-                config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
-            if ( pEngineConfig == nullptr )
-                return false;
-
-            const GameConfig* pGameConfig = _configManager->ensureConfig<GameConfig>(
-                config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
-            if ( pGameConfig != nullptr )
-                GameConfig::setActive( *pGameConfig );
-        }
-
-        BLOCK( "Task / Resource / Scene 초기화" )
-        {
-            if ( _owned._pResourceManager->initialize() == false )
-                return false;
-
-            // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다. 그 전제는 이제
-            // `mountContent` 의 인자에 드러나 있다. 설정의 우선순위 목록이 비어 있으면 지금 것을 쓴다.
-            _owned._pResourceManager->mountContent( pEngineConfig->_listResourcePriority );
-
-            if ( _owned._pTaskManager->initialize() == false )
-                return false;
-            if ( _owned._pSceneManager->initialize() == false )
-                return false;
-            if ( _owned._pInputManager->initialize() == false )
-                return false;
-            if ( _audioSystem->initialize() == false )
-                return false;
-        }
-
-        BLOCK( "EngineData 로드 및 RHI 백엔드 선정 & 초기화" )
-        {
-            const bool bEngineDataLoaded = ( pEngineConfig->_engineData.empty() == false ) ? _owned._pEngineData->loadFromResource( pEngineConfig->_engineData )
-                                                                                           : _owned._pEngineData->loadFromResource();
-            if ( bEngineDataLoaded == false )
-                SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
-
-            bool bBakeShaders = false;
-            if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_SHADERS, bBakeShaders ) && bBakeShaders )
-            {
-                _bHeadless = true;
-                SW_LOG_INFO( "Starting Headless (BakeShaders)..." );
-                const ShaderBakeSummary summary = ShaderBakeDriver::bakeAllShaders();
-                _bHeadlessTaskFailed            = summary.isClean() == false;
-                return true;
-            }
-
-            // 씬 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고,
-            // 그것은 엔진 안에만 있어서 `CookAssets.py` 가 이쪽으로 넘겨준다.
-            bool bCookScenes = false;
-            if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes ) && bCookScenes )
-            {
-                _bHeadless = true;
-                string cookedDir;
-                _owned._pCommandLineManager->getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
-                SW_LOG_INFO( "Starting Headless (CookScenes) -> '%#'...", cookedDir );
-                const string& resourceRoot     = ResourceUtil::getRootFolderPath();
-                uint32        sceneFailedCount = 0;
-                const uint32  sceneCount       = SceneCooker::cookAllScenes( resourceRoot, cookedDir, sceneFailedCount );
-                // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다(예전에는 파이썬이 PFB2 를 따로 들고 XML 만
-                // 구웠고, 레지스트리는 `.meta` 의 `sourcePath=` 칸으로 경로를 정해 옮긴 에셋을 옛 경로로 실었다).
-                uint32                        prefabFailedCount   = 0;
-                [[maybe_unused]] const uint32 prefabCount         = PrefabManager::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );
-                uint32                        registryFailedCount = 0;
-                [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
-                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures).", sceneCount, sceneFailedCount, prefabCount,
-                             prefabFailedCount, registryCount, registryFailedCount );
-                _bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0;
-                return true;
-            }
-
-            // 커맨드라인이 백엔드를 명시하지 않았을 때만 설정 기본값이 이긴다.
-            RHIBackend commandLineBackend{};
-            if ( RHIBackendUtil::findCommandLineBackend( *_owned._pCommandLineManager, commandLineBackend ) == false )
-                gv_rhiBackend = pEngineConfig->_window._defaultRHI;
-
-            if ( IWindow::getActiveWindow() == nullptr )
-            {
-                uint32 windowWidth  = pEngineConfig->_window._width;
-                uint32 windowHeight = pEngineConfig->_window._height;
-                // 인자를 주지 않으면 getArgument 가 false 를 돌려주므로 설정값이 그대로 남는다.
-                _owned._pCommandLineManager->getArgument( CommandLineArgument::WIDTH, windowWidth );
-                _owned._pCommandLineManager->getArgument( CommandLineArgument::HEIGHT, windowHeight );
-
-                unique_ptr<IWindow> defaultWindow = IWindow::createPlatformWindow();
-                if ( defaultWindow != nullptr && defaultWindow->initializeWindow( pEngineConfig->_window._title.c_str(), windowWidth, windowHeight ) )
-                {
-                    // 소유권은 App::initialize 가 IWindow::getActiveWindow() 로 넘겨받는다.
-                    // (App 이 없는 임베드 시나리오라면 부르는 쪽이 getActiveWindow() 를 직접 소유해야 한다.)
-                    IWindow::setActiveWindow( defaultWindow.release() );
-                }
-            }
-
-            _rhi = make_unique<RHI>();
-            _rhi->setPreferredVSync( pEngineConfig->_window._bVSync );
-            // RHI 는 창 시스템을 모른다. 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 들고 있다.
-            if ( _rhi->initialize( IWindow::getActiveWindow() ) == false )
-                return false;
-            // 백엔드가 정해졌으니 크래시 리포트에 남긴다. 이 저장소는 백엔드가 넷이라 "어느
-            // 백엔드에서 났는가" 가 범위를 좁히는 첫 질문이다.
-            CrashHandler::setContextValue( "RHI", _rhi->getDevice().getBackendName() );
-
-#if defined( SW_DEBUG )
-            // 셰이더 라이브 리로드는 개발 도구다. Debug 에서만 만든다(Shipping 에는 코드 자체가 없다).
-            _liveShaderManager = make_unique<LiveShaderManager>();
-            if ( _liveShaderManager->initialize( "Shaders" ) == false )
-            {
-                SW_LOG_ERROR( "Failed to initialize LiveShaderManager!" );
-                _liveShaderManager.reset();
-            }
-#endif
-
-            // `-gv_crashTest=1`: 크래시 리포트 경로를 실제로 확인하는 유일한 방법이다. 리포트는
-            // 크래시가 나야만 만들어지므로, 일부러 한 번 죽여 보지 않으면 배포 뒤에야 안 되는 것을 안다.
-            if ( gv_crashTest != 0 )
-                CrashHandler::crashForTest( static_cast<CrashTestKind>( gv_crashTest ) );
-
-            // GT 쪽 GpuScene 이 배치를 만든다. 텍스처를 인덱스로 고를 수 있는 백엔드면 머티리얼이 달라도
-            // 셰이더 타입 단위로 합친다(언리얼 GPUScene).
-            _gpuSceneBuilder->setMergeBatchesAcrossMaterials( _rhi->getDevice().supportsNativeBindlessSampling() );
-            if ( _gpuUploadQueue != nullptr )
-                _gpuUploadQueue->bindDevice( &_rhi->getDevice(), _owned._pTaskManager.get() );
-
-            if ( _frameRenderer->initialize( &_rhi->getDevice(), _owned._pTaskManager.get() ) == false )
-            {
-                SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
-                return false;
-            }
-            // LiveShaderManager 는 SW_DEBUG 에서만 만들어진다. 없으면 건너뛴다.
-            if ( LiveShaderManager* pLiveShaderManager = getLiveShaderManager() )
-            {
-                // 렌더 스레드를 먼저 세운 뒤에 재컴파일을 반영한다.
-                //
-                // onShaderRecompiled 는 셰이더 바인딩 레이아웃 캐시 항목을 **파괴**하는데,
-                // FrameRenderer::_mapPsoLayout 과 패스 컨텍스트의 1-entry 캐시가 그 실체를 가리키는
-                // 생포인터를 들고 있다. 이 콜백은 게임 스레드(tick 의 핫 리로드 블록)에서 불리고
-                // 렌더 스레드는 직전 패킷을 그리는 중이라, 그냥 부르면 그리는 쪽이 해제된 레이아웃을
-                // 참조한다. 재컴파일은 개발 중 가끔 일어나는 일이라 이때의 스톨은 문제가 되지 않는다.
-                auto onRecompiled = [this]( string_view shaderPath, const ShaderCompileResult& result )
-                {
-                    if ( _renderThread != nullptr )
-                        _renderThread->waitIdle();
-                    _frameRenderer->onShaderRecompiled( shaderPath, result );
-                };
-                pLiveShaderManager->setOnAnyShaderRecompiled( SW_DELEGATE_LAMBDA( ShaderRecompiledDelegate, onRecompiled ) );
-            }
-
-            _renderThread = make_unique<RenderThread>();
-            if ( _renderThread->attach( &_rhi->getDevice(), _frameRenderer.get() ) == false )
-            {
-                SW_LOG_ERROR( "Failed to attach RenderThread!" );
-                return false;
-            }
-
-            if ( _owned._pSceneManager != nullptr )
-                _owned._pSceneManager->setRhiDevice( &_rhi->getDevice() );
-        }
+        // 초기화(`initialize()`)의 순서는 손으로 적지 않는다. 단계마다 먼저 서야 하는 단계를 `EngineStartupStepList.xxx` 에 적고,
+        // 여기서는 위상 순서로 본문(`initializeStartupStep`)을 부른다. 종료는 그 역순이다(`shutdown`).
+        const bool bStarted = _startup.initializeAll( SW_DELEGATE_METHOD( EngineStartupSequence::InitializeStepDelegate, &EngineLoop::initializeStartupStep, this ),
+                                                      SW_DELEGATE_METHOD( EngineStartupSequence::ShutdownStepDelegate, &EngineLoop::shutdownStartupStep, this ) );
+        if ( bStarted == false )
+            return false;
+        // 헤드리스 작업(베이크 · 쿠킹)은 RHI 이후 단계를 건너뛰고 여기서 끝난다.
+        if ( _bHeadless )
+            return true;
 
         _profileSession.begin();
 
@@ -403,62 +222,340 @@ namespace sw
         return true;
     }
 
-    void EngineLoop::shutdown()
+    EngineStartupResult EngineLoop::initializeStartupStep( EngineStartupStep step )
     {
-        BLOCK( "RHI / Window 정리" )
+        switch ( step )
         {
-            if ( _owned._pSceneManager != nullptr )
-                _owned._pSceneManager->setRhiDevice( nullptr );
-            if ( _renderThread != nullptr )
+            case EngineStartupStep::Audio:
+                return _audioSystem->initialize() ? EngineStartupResult::Succeeded : EngineStartupResult::Failed;
+            case EngineStartupStep::Compression:
             {
-                _renderThread->waitIdle();
-                _renderThread->stop();
+                // 압축 레지스트리는 여기가 소유하고, Core 의 CompressionStream 이 볼 수 있도록 슬롯에 연결한다.
+                // 스트림이 Core 에 있어서 엔진 서비스 테이블에는 닿지 못한다(Logger::setGlobalSink 와 같은 모양).
+                _owned._pCompressionCodecRegistry->initialize();
+                CompressionCodecRegistry::setActive( _owned._pCompressionCodecRegistry.get() );
+                // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil).
+                EngineCompressionCodecUtil::registerAll( *_owned._pCompressionCodecRegistry );
+                return EngineStartupResult::Succeeded;
             }
-            // GT 쪽 GpuScene 도 스냅샷의 소유(머티리얼 · 인스턴스)를 들고 있다. 렌더러와 같은 시점에 놓는다.
-            // 소멸자에 맡기면 디바이스가 사라진 뒤에 놓게 된다.
-            _gpuSceneBuilder->clear();
-            if ( _frameRenderer != nullptr )
-                _frameRenderer->shutdown();
-            if ( _rhi != nullptr )
+            case EngineStartupStep::Config:
+                return initializeConfigStep();
+            case EngineStartupStep::EngineData:
             {
+                const bool bEngineDataLoaded = ( _pEngineConfig->_engineData.empty() == false ) ? _owned._pEngineData->loadFromResource( _pEngineConfig->_engineData )
+                                                                                                : _owned._pEngineData->loadFromResource();
+                if ( bEngineDataLoaded == false )
+                    SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
+                return EngineStartupResult::Succeeded;
+            }
+            case EngineStartupStep::FrameRenderer:
+            {
+                // GT 쪽 GpuScene 이 배치를 만든다. 텍스처를 인덱스로 고를 수 있는 백엔드면 머티리얼이 달라도
+                // 셰이더 타입 단위로 합친다(언리얼 GPUScene).
+                _gpuSceneBuilder->setMergeBatchesAcrossMaterials( _rhi->getDevice().supportsNativeBindlessSampling() );
+                if ( _gpuUploadQueue != nullptr )
+                    _gpuUploadQueue->bindDevice( &_rhi->getDevice(), _owned._pTaskManager.get() );
+
+                if ( _frameRenderer->initialize( &_rhi->getDevice(), _owned._pTaskManager.get() ) == false )
+                {
+                    SW_LOG_ERROR( "Failed to initialize FrameRenderer!" );
+                    return EngineStartupResult::Failed;
+                }
+                return EngineStartupResult::Succeeded;
+            }
+            case EngineStartupStep::Headless:
+                return initializeHeadlessStep();
+            case EngineStartupStep::Input:
+                return _owned._pInputManager->initialize() ? EngineStartupResult::Succeeded : EngineStartupResult::Failed;
+            case EngineStartupStep::LiveShader:
+            {
+                initializeLiveShaderStep();
+                return EngineStartupResult::Succeeded;
+            }
+            case EngineStartupStep::ModuleImages:
+                // 모듈은 App 이 이 뒤에 올린다. 이 단계는 종료 쪽 자리(모듈을 내리는 구간)를 순서에 박아 둔다.
+                return EngineStartupResult::Succeeded;
+            case EngineStartupStep::RHI:
+                return initializeRhiStep();
+            case EngineStartupStep::Reflection:
+            {
+                // GameFramework 는 여기서 등록하지 않는다. 개발 구성에서는 이 시점에 아직 올라와 있지 않아(키트 · SWGame 이 링크한다) 아무것도
+                // 등록하지 못하고, 배포 구성은 정적 링크라 "Engine" 이 이미 다 모은다. 올리며 제 이름으로 등록하는 것은
+                // `LiveReloadManager::loadSharedModule` 이다(`ModuleHost` 가 키트보다 먼저 부른다).
+                engine::registerModuleTypes( "Engine" );
+                return EngineStartupResult::Succeeded;
+            }
+            case EngineStartupStep::RenderThread:
+            {
+                _renderThread = make_unique<RenderThread>();
+                if ( _renderThread->attach( &_rhi->getDevice(), _frameRenderer.get() ) == false )
+                {
+                    SW_LOG_ERROR( "Failed to attach RenderThread!" );
+                    return EngineStartupResult::Failed;
+                }
+                return EngineStartupResult::Succeeded;
+            }
+            case EngineStartupStep::Resource:
+            {
+                if ( _owned._pResourceManager->initialize() == false )
+                    return EngineStartupResult::Failed;
+                // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다. 그 전제는 `mountContent` 의 인자에 드러나 있다.
+                // 설정의 우선순위 목록이 비어 있으면 지금 것을 쓴다.
+                _owned._pResourceManager->mountContent( _pEngineConfig->_listResourcePriority );
+                return EngineStartupResult::Succeeded;
+            }
+            case EngineStartupStep::Scene:
+                return _owned._pSceneManager->initialize() ? EngineStartupResult::Succeeded : EngineStartupResult::Failed;
+            case EngineStartupStep::SceneRhi:
+            {
+                _owned._pSceneManager->setRhiDevice( &_rhi->getDevice() );
+                return EngineStartupResult::Succeeded;
+            }
+            case EngineStartupStep::ShaderCache:
+                return _owned._pShaderCache->initialize() ? EngineStartupResult::Succeeded : EngineStartupResult::Failed;
+            case EngineStartupStep::Task:
+                return _owned._pTaskManager->initialize() ? EngineStartupResult::Succeeded : EngineStartupResult::Failed;
+            case EngineStartupStep::Count:
+            default:
+                break;
+        }
+        return EngineStartupResult::Failed;
+    }
+
+    EngineStartupResult EngineLoop::initializeConfigStep()
+    {
+        // 설정은 리소스 초기화보다 먼저 읽는다(Resource 의 의존 칸). `ResourceManager::mountContent` 는 GameConfig 의 `_packRoot` 가
+        // 정해져 있어야 팩을 제대로 마운트하고 게임 도메인의 `assetregistry.txt` 를 읽는다.
+        // Config/ 는 프로젝트 루트에 있고 실행 파일은 build/<preset>/Bin 에서 돈다. 작업 디렉터리 기준으로만 찾으면
+        // 모두 "없음" 이 되어 조용히 기본값으로 떨어지므로, Resource/ 를 찾을 때 알아낸 프로젝트 루트를 넘긴다.
+        _configManager->setRootDirectory( ResourceUtil::getProjectFolderPath() );
+
+        _pEngineConfig = _configManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
+        if ( _pEngineConfig == nullptr )
+            return EngineStartupResult::Failed;
+
+        const GameConfig* pGameConfig = _configManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
+        if ( pGameConfig != nullptr )
+            GameConfig::setActive( *pGameConfig );
+        return EngineStartupResult::Succeeded;
+    }
+
+    EngineStartupResult EngineLoop::initializeHeadlessStep()
+    {
+        bool bBakeShaders = false;
+        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_SHADERS, bBakeShaders ) && bBakeShaders )
+        {
+            _bHeadless = true;
+            SW_LOG_INFO( "Starting Headless (BakeShaders)..." );
+            const ShaderBakeSummary summary = ShaderBakeDriver::bakeAllShaders();
+            _bHeadlessTaskFailed            = summary.isClean() == false;
+            return EngineStartupResult::SkipDependents;
+        }
+
+        // 씬 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고,
+        // 그것은 엔진 안에만 있어서 `CookAssets.py` 가 이쪽으로 넘겨준다.
+        bool bCookScenes = false;
+        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes ) && bCookScenes )
+        {
+            _bHeadless = true;
+            string cookedDir;
+            _owned._pCommandLineManager->getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
+            SW_LOG_INFO( "Starting Headless (CookScenes) -> '%#'...", cookedDir );
+            const string& resourceRoot     = ResourceUtil::getRootFolderPath();
+            uint32        sceneFailedCount = 0;
+            const uint32  sceneCount       = SceneCooker::cookAllScenes( resourceRoot, cookedDir, sceneFailedCount );
+            // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다.
+            uint32                        prefabFailedCount   = 0;
+            [[maybe_unused]] const uint32 prefabCount         = PrefabManager::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );
+            uint32                        registryFailedCount = 0;
+            [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
+            SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures).", sceneCount, sceneFailedCount, prefabCount,
+                         prefabFailedCount, registryCount, registryFailedCount );
+            _bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0;
+            return EngineStartupResult::SkipDependents;
+        }
+        return EngineStartupResult::Succeeded;
+    }
+
+    EngineStartupResult EngineLoop::initializeRhiStep()
+    {
+        // 커맨드라인이 백엔드를 명시하지 않았을 때만 설정 기본값이 이긴다.
+        RHIBackend commandLineBackend{};
+        if ( RHIBackendUtil::findCommandLineBackend( *_owned._pCommandLineManager, commandLineBackend ) == false )
+            gv_rhiBackend = _pEngineConfig->_window._defaultRHI;
+
+        if ( IWindow::getActiveWindow() == nullptr )
+        {
+            uint32 windowWidth  = _pEngineConfig->_window._width;
+            uint32 windowHeight = _pEngineConfig->_window._height;
+            // 인자를 주지 않으면 getArgument 가 false 를 돌려주므로 설정값이 그대로 남는다.
+            _owned._pCommandLineManager->getArgument( CommandLineArgument::WIDTH, windowWidth );
+            _owned._pCommandLineManager->getArgument( CommandLineArgument::HEIGHT, windowHeight );
+
+            unique_ptr<IWindow> defaultWindow = IWindow::createPlatformWindow();
+            if ( defaultWindow != nullptr && defaultWindow->initializeWindow( _pEngineConfig->_window._title.c_str(), windowWidth, windowHeight ) )
+            {
+                // 소유권은 App::initialize 가 IWindow::getActiveWindow() 로 넘겨받는다.
+                // (App 이 없는 임베드 시나리오라면 부르는 쪽이 getActiveWindow() 를 직접 소유해야 한다.)
+                IWindow::setActiveWindow( defaultWindow.release() );
+            }
+        }
+
+        _rhi = make_unique<RHI>();
+        _rhi->setPreferredVSync( _pEngineConfig->_window._bVSync );
+        // RHI 는 창 시스템을 모른다. 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 들고 있다.
+        if ( _rhi->initialize( IWindow::getActiveWindow() ) == false )
+            return EngineStartupResult::Failed;
+        // 백엔드가 정해졌으니 크래시 리포트에 남긴다. 이 저장소는 백엔드가 넷이라 "어느
+        // 백엔드에서 났는가" 가 범위를 좁히는 첫 질문이다.
+        CrashHandler::setContextValue( "RHI", _rhi->getDevice().getBackendName() );
+
+        // `-gv_crashTest=1`: 크래시 리포트 경로를 실제로 확인하는 유일한 방법이다. 리포트는
+        // 크래시가 나야만 만들어지므로, 일부러 한 번 죽여 보지 않으면 배포 뒤에야 안 되는 것을 안다.
+        if ( gv_crashTest != 0 )
+            CrashHandler::crashForTest( static_cast<CrashTestKind>( gv_crashTest ) );
+        return EngineStartupResult::Succeeded;
+    }
+
+    void EngineLoop::initializeLiveShaderStep()
+    {
+#if defined( SW_DEBUG )
+        // 셰이더 라이브 리로드는 개발 도구다. Debug 에서만 만든다(Shipping 에는 코드 자체가 없다).
+        _liveShaderManager = make_unique<LiveShaderManager>();
+        if ( _liveShaderManager->initialize( "Shaders" ) == false )
+        {
+            SW_LOG_ERROR( "Failed to initialize LiveShaderManager!" );
+            _liveShaderManager.reset();
+        }
+#endif
+        LiveShaderManager* pLiveShaderManager = getLiveShaderManager();
+        if ( pLiveShaderManager == nullptr )
+            return;
+        // onShaderRecompiled 는 셰이더 바인딩 레이아웃 캐시 항목을 **파괴**하는데,
+        // FrameRenderer::_mapPsoLayout 과 패스 컨텍스트의 1-entry 캐시가 그 실체를 가리키는
+        // 생포인터를 들고 있다. 이 콜백은 게임 스레드(tick 의 핫 리로드 블록)에서 불리고
+        // 렌더 스레드는 직전 패킷을 그리는 중이라, 렌더 스레드를 세운 뒤에 반영한다.
+        // 재컴파일은 개발 중 가끔 일어나는 일이라 이때의 스톨은 문제가 되지 않는다.
+        auto onRecompiled = [this]( string_view shaderPath, const ShaderCompileResult& result )
+        {
+            if ( _renderThread != nullptr )
+                _renderThread->waitIdle();
+            _frameRenderer->onShaderRecompiled( shaderPath, result );
+        };
+        pLiveShaderManager->setOnAnyShaderRecompiled( SW_DELEGATE_LAMBDA( ShaderRecompiledDelegate, onRecompiled ) );
+    }
+
+    void EngineLoop::shutdownStartupStep( EngineStartupStep step )
+    {
+        switch ( step )
+        {
+            case EngineStartupStep::Audio:
+            {
+                if ( _audioSystem != nullptr )
+                    _audioSystem->shutdown();
+                break;
+            }
+            case EngineStartupStep::FrameRenderer:
+            {
+                // GT 쪽 GpuScene 도 스냅샷의 소유(머티리얼 · 인스턴스)를 들고 있다. 렌더러와 같은 시점에 놓는다.
+                // 소멸자에 맡기면 디바이스가 사라진 뒤에 놓게 된다.
+                _gpuSceneBuilder->clear();
+                if ( _frameRenderer != nullptr )
+                    _frameRenderer->shutdown();
+                break;
+            }
+            case EngineStartupStep::Input:
+            {
+                if ( _owned._pInputManager != nullptr )
+                    _owned._pInputManager->shutdown();
+                break;
+            }
+            case EngineStartupStep::LiveShader:
+#if !defined( SW_SHIPPING )
+                if ( _liveShaderManager != nullptr )
+                    _liveShaderManager->shutdown();
+#endif
+                break;
+            case EngineStartupStep::ModuleImages:
+            {
+                // 씬은 방금 사라졌고 서비스는 아직 살아 있다. 모듈 DLL 을 내리기에 알맞은 유일한 자리다.
+                // Engine 은 거기서 무슨 일이 일어나는지 모른다(App 이 핫 리로드를 건다).
+                if ( _onScenesReleased.isBound() )
+                    _onScenesReleased();
+                break;
+            }
+            case EngineStartupStep::RHI:
+            {
+                if ( _rhi == nullptr )
+                    break;
                 // 디바이스 생성이 실패하면 RHI 객체는 있어도 **디바이스가 없다.** getDevice() 는
-                // 널 참조를 역참조하므로 hasDevice() 로 먼저 막는다. 이것이 없어서 "요청한 백엔드가
-                // 이 빌드에 없다" 는 정상적인 실패가 종료 경로에서 SEGFAULT 로 끝났다.
+                // 널 참조를 역참조하므로 hasDevice() 로 먼저 막는다.
                 if ( _rhi->hasDevice() )
                     _rhi->getDevice().waitIdle();
                 // GPU 자원을 든 객체들은 여기서 손으로 훑지 않는다. IRHIDevice::shutdown 이 내려가기 직전에
                 // 등록부 전체에 releaseRhi 를 부른다(RHIRenderResource).
                 _rhi->shutdown();
+                break;
             }
+            case EngineStartupStep::RenderThread:
+            {
+                if ( _renderThread == nullptr )
+                    break;
+                _renderThread->waitIdle();
+                _renderThread->stop();
+                break;
+            }
+            case EngineStartupStep::Scene:
+            {
+                if ( _owned._pSceneManager != nullptr )
+                    _owned._pSceneManager->shutdown();
+                break;
+            }
+            case EngineStartupStep::SceneRhi:
+            {
+                if ( _owned._pSceneManager != nullptr )
+                    _owned._pSceneManager->setRhiDevice( nullptr );
+                break;
+            }
+            case EngineStartupStep::ShaderCache:
+            {
+                if ( _owned._pShaderCache != nullptr )
+                    _owned._pShaderCache->shutdown();
+                break;
+            }
+            case EngineStartupStep::Task:
+            {
+                if ( _owned._pTaskManager != nullptr )
+                    _owned._pTaskManager->shutdown();
+                break;
+            }
+            // 종료할 것이 없다. 코덱 레지스트리 · ResourceManager 는 shutdown() 의 끝 정리(객체 해제)에서 내린다 — 슬롯을 끊고
+            // 없애는 것, 다른 매니저의 소멸자가 에셋을 놓은 뒤 캐시를 비우는 것은 해제 순서에 묶여 있다.
+            case EngineStartupStep::Compression:
+            case EngineStartupStep::Config:
+            case EngineStartupStep::EngineData:
+            case EngineStartupStep::Headless:
+            case EngineStartupStep::Reflection:
+            case EngineStartupStep::Resource:
+            case EngineStartupStep::Count:
+            default:
+                break;
         }
+    }
 
-        BLOCK( "매니저 종료 및 언바인드" )
+    void EngineLoop::shutdown()
+    {
+        // 초기화한 단계만 초기화의 역순으로 내린다(`EngineStartupStepList.xxx` 가 정한다): 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI →
+        // 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
+        _startup.shutdownAll();
+
+        BLOCK( "부트스트랩 종료 · 객체 해제 및 언바인드" )
         {
-            if ( _owned._pSceneManager != nullptr )
-                _owned._pSceneManager->shutdown();
-            if ( _owned._pInputManager != nullptr )
-                _owned._pInputManager->shutdown();
-            if ( _audioSystem != nullptr )
-                _audioSystem->shutdown();
-
-            // 씬은 방금 사라졌고 서비스는 아직 살아 있다. 모듈 DLL 을 내리기에 알맞은 유일한 자리다.
-            // Engine 은 거기서 무슨 일이 일어나는지 모른다(App 이 핫 리로드를 건다).
-            if ( _onScenesReleased.isBound() )
-                _onScenesReleased();
-#if !defined( SW_SHIPPING )
-            if ( _liveShaderManager != nullptr )
-                _liveShaderManager->shutdown();
-#endif
-
-            if ( _owned._pTaskManager != nullptr )
-                _owned._pTaskManager->shutdown();
             if ( _owned._pGlobalVariableManager != nullptr )
                 _owned._pGlobalVariableManager->shutdown();
             if ( _memoryProfiler != nullptr )
                 _memoryProfiler->shutdown();
-            if ( _owned._pShaderCache != nullptr )
-                _owned._pShaderCache->shutdown();
-            // 코덱 레지스트리는 여기서 shutdown 하지 않는다. 아래 reset 블록에서 슬롯을 끊고 통째로
+            // 코덱 레지스트리는 여기서 shutdown 하지 않는다. 아래에서 슬롯을 끊고 통째로
             // 없앤다. 모듈이 등록한 코덱을 거두는 것은 등록한 모듈의 책임이다(registerCodec 주석 참고).
             if ( _logger != nullptr )
                 _logger->shutdown();

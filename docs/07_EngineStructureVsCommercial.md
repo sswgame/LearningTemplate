@@ -37,7 +37,7 @@
 | 월드 | `UWorld` → `AActor` → `UActorComponent`. 액터는 `GWorld` 전역으로 월드를 찾는다 | Godot `SceneTree` → `Node` | `Scene` → `Object`(GameObject · Component) | **고쳤다.** 핸들 해석이 활성 씬을 `SceneManager` 에게 물어 Object 가 Scene 을 include 했다 → 슬롯은 Object 가 갖고 Scene 이 채운다(`GameObjectManager::setActiveManager`). |
 | 월드 ↔ 렌더러 | `UWorld` 는 `FScene`(렌더 씬 인터페이스)만 안다. 렌더러 본체를 모른다 | Godot 노드는 `RenderingServer` 에 RID 로만 말한다 | `SceneManager` | **고쳤다.** 에디터 툴바 하나 때문에 `FrameRenderer*` 를 들고 있었다 → 렌더러는 호스트가 내주는 선택 서비스(`EngineServiceList.xxx`). |
 | 기능 모듈 | `LevelSequence` · `MovieScene` 은 `Engine` 위의 모듈 — 액터를 알고, 액터는 모른다 | Godot `AnimationPlayer` 는 `scene/` 안의 노드 | `Sequencer` | **고쳤다.** `SequencePlayerComponent` 가 `Object/` 에 있어 Object ↔ Sequencer 가 순환했다 → `Sequencer/` 로. |
-| 서브시스템 수명 | `FEngineLoop` + `UEngineSubsystem`(자동 수집) | `PlayerLoop` | `EngineLoop` + `EngineServiceList.xxx`(X-macro 등록표, `owned` 열로 생성·바인딩 생성) | **같은 자리, 다른 수단.** 초기화·종료 **순서**는 손으로 남겼다(백로그 1-0e). 언리얼도 순서는 `Initialize` 안에서 `Collection.InitializeDependency` 로 손으로 적는다. |
+| 서브시스템 수명 | `FEngineLoop` + `UEngineSubsystem`(자동 수집) | `PlayerLoop` | `EngineLoop` + `EngineServiceList.xxx`(X-macro 등록표, `owned` 열로 생성·바인딩 생성) + `EngineStartupStepList.xxx`(기동 단계와 의존) | **같은 모양.** 언리얼은 `USubsystem::Initialize` 안에서 `FSubsystemCollectionBase::InitializeDependency` 로 먼저 설 서브시스템을 적고 컬렉션이 그 순서로 초기화 · 역순으로 `Deinitialize` 한다. 여기도 단계마다 의존을 표에 적고 `EngineStartupSequence` 가 위상 정렬해 초기화 · 역순 종료한다(순환 · 모르는 이름은 기동 오류). 호스트(`EngineLoop` · 시험 하네스)는 단계 본문만 준다. 객체 해제(`reset`) 순서는 표 밖의 끝 정리로 남았다 — `ResourceManager::shutdown` 처럼 "다른 매니저의 소멸자 뒤" 가 필요한 것이 있어 초기화의 역순과 맞지 않는다. |
 | 창·입력 | `ApplicationCore` (창) · `InputCore` — RHI 위 | Godot `DisplayServer` | `Window` · `Input` | **같다(고친 뒤).** Window 는 Resource(스플래시 그림) 위, Input 은 Window 위. RHI 는 이제 둘 다 모른다. |
 | 병렬 | `ParallelFor` · `TaskGraph` | Unity Jobs | `Core/Task` + `engine::runParallel` | **같다.** 병렬 시스템의 모양이 하나다(트랜스폼 계층이 첫 예). |
 
@@ -82,8 +82,9 @@ RHI → Renderer)는 자가 검사 조각으로 못박았다(`selfTestCases`).
 - **렌더러가 컴포넌트를 읽는다 (Graphics/Renderer → Object · Scene).** `GpuSceneBuilder` 가 `PrimitiveRegistry` ·
   `LightRegistry` 를 훑는 것은 언리얼 `FScene` 이 프리미티브 프록시를 훑는 것과 같은 방향이다. 영속 렌더 씬(`FScene`
   모델)은 2026-09 에 재 보고 기각했다(커밋 `c6777ae3`).
-- **`EngineLoop` 이 크다.** `FEngineLoop::Init` 도 그렇다. 서비스 생성·바인딩은 이미 표에서 생성되고, 남은 것은 순서다 —
-  순서를 선언으로 옮길 값이 있는지는 백로그 1-0e 의 판단 그대로다.
+- **`EngineLoop` 이 크다.** `FEngineLoop::Init` 도 그렇다. 서비스 생성·바인딩은 표(`EngineServiceList.xxx`)에서, 초기화 · 종료 순서는
+  기동 단계 표(`EngineStartupStepList.xxx`)의 의존 칸에서 나온다. 남은 크기는 단계 본문이고, 본문은 단계마다 하는 일이 정말 달라 나누지 않는다.
+  표는 이름 순으로 적는다 — 줄 위치가 순서가 되면 의존 칸이 빠져도 아무것도 잡지 못한다(`EngineStartupSequenceTest`).
 - **`Scene` 이 기본 머티리얼을 든다.** 언리얼은 `UMaterial::GetDefaultMaterial` 이 엔진 에셋이라 월드가 모른다. 여기는
   씬이 인스턴스화할 때 머티리얼 없는 메시에 채워 준다 — 결과는 같고, 엣지는 Scene → Graphics 저층(허용 방향)이다.
 - **`Dialogue` · `Sequencer` · `Localization` 이 Engine 안에 있다.** 언리얼은 모듈/플러그인이지만 전부 Engine 위의

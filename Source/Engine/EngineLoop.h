@@ -9,12 +9,14 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/EngineOwnedServices.h"
+#include "Engine/EngineStartupSequence.h"
 #include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Utility/Debug/FrameProfileSession.h"
 
 namespace sw
 {
     struct DebugOverlayState;
+    struct EngineConfig;
     struct EngineData;
     struct RenderFramePacket;
 
@@ -152,6 +154,19 @@ namespace sw
         /** @brief 셰이더 강제 리로드 핫키를 처리합니다. Engine 자신의 개발 도구이므로 여기서 끝냅니다. */
         void pollShaderReloadHotkey();
 
+        /** @brief 기동 단계 하나의 초기화 본문입니다. 순서는 `_startup`(표의 의존)이 정합니다. */
+        EngineStartupResult initializeStartupStep( EngineStartupStep step );
+        /** @brief 기동 단계 하나의 종료 본문입니다. 초기화한 단계만 역순으로 불립니다. */
+        void shutdownStartupStep( EngineStartupStep step );
+        /** @brief 엔진 · 게임 설정을 읽어 `_pEngineConfig` 를 채우고 GameConfig 를 활성화합니다. */
+        EngineStartupResult initializeConfigStep();
+        /** @brief `--bake-shaders` · `--cook-scenes` 면 그 작업을 하고 RHI 이후 단계를 건너뛰게 합니다. */
+        EngineStartupResult initializeHeadlessStep();
+        /** @brief 백엔드를 고르고, 창이 없으면 만들고, RHI 디바이스를 세웁니다. */
+        EngineStartupResult initializeRhiStep();
+        /** @brief 셰이더 라이브 리로드(Debug)를 만들고 재컴파일 콜백을 겁니다. */
+        void initializeLiveShaderStep();
+
     private:
         /**
          * @brief 목록(`EngineServiceList.xxx`)의 `owned=1` 서비스 저장소입니다. 생성 · 바인딩이 여기서 나옵니다.
@@ -198,5 +213,9 @@ namespace sw
 
         /** @brief `-gv_profileFrames` 계측 한 회분입니다. 판정은 모두 이 안에 있고 루프는 두 줄만 부릅니다. */
         FrameProfileSession _profileSession;
+        /** @brief 기동 단계의 순서(`EngineStartupStepList.xxx` 를 위상 정렬)와 초기화한 단계입니다. */
+        EngineStartupSequence _startup;
+        /** @brief Config 단계가 읽은 엔진 설정입니다(`_configManager` 소유). Resource · EngineData · RHI 단계가 읽습니다. */
+        const EngineConfig* _pEngineConfig;
     };
 } // namespace sw

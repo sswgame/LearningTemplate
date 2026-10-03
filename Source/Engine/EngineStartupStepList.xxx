@@ -1,0 +1,48 @@
+/**
+ * @file Engine/EngineStartupStepList.xxx
+ * @brief 엔진 기동 · 종료 단계와 그 의존의 단일 등록표입니다(X-macro). `EngineStartupSequence` 가 위상 정렬합니다.
+ * @details include 하기 전에 `SW_ENGINE_STARTUP_STEP` 을 정의합니다(#pragma once 없음).
+ *
+ * SW_ENGINE_STARTUP_STEP( Name, "Dependency Dependency ..." )
+ *   Name 은 의존 칸(공백으로 구분한 단계 이름)의 단계가 모두 초기화된 **뒤에** 초기화되고, 그것들보다 **먼저** 종료됩니다.
+ *   모르는 이름 · 순환은 기동이 시작될 때 오류입니다(`EngineStartupSequence::computeGraph`).
+ *
+ * **줄은 이름 순입니다**(`EngineStartupSequenceTest.StepListIsSortedByName`). 의존이 없는 단계끼리는 이 표의 줄 순서로 가므로
+ * 줄 위치를 순서에 쓰면 안 됩니다 — 순서가 중요하면 의존 칸에 적습니다. 그래서 의존을 하나 빼면 순서가 바뀌고
+ * `EngineStartupSequenceTest.InitializeOrderMatchesDump` 가 집니다.
+ *
+ * 단계의 본문은 호스트가 줍니다(`EngineLoop::initializeStartupStep` · `shutdownStartupStep`, 시험 하네스). 본문이 없는 단계는 순서의 자리만 차지합니다.
+ * 로거 · 크래시 핸들러 · 명령줄 · 서비스 생성과 바인딩은 이 표 앞의 고정 부트스트랩이고, 객체 해제(`reset`)는 이 표 뒤의 끝 정리입니다.
+ */
+
+// 음성 스트리밍이 태스크를 쓴다(오디오는 태스크보다 먼저 내린다). 모듈이 건 콜백을 들 수 있어 모듈 이미지가 있는 동안 내린다.
+SW_ENGINE_STARTUP_STEP( Audio, "ModuleImages Task" )
+// 코덱 레지스트리 초기화 + Core 슬롯(`CompressionCodecRegistry::setActive`) + 외부 코덱 등록.
+SW_ENGINE_STARTUP_STEP( Compression, "" )
+// 설정 역직렬화가 TypeInfo 를 쓴다.
+SW_ENGINE_STARTUP_STEP( Config, "Reflection" )
+SW_ENGINE_STARTUP_STEP( EngineData, "Reflection Resource" )
+SW_ENGINE_STARTUP_STEP( FrameRenderer, "RHI Task" )
+// 셰이더 베이크 · 씬 쿠킹. 하면 의존하는 단계(창 · RHI · 렌더러)를 돌리지 않는다(`EngineStartupResult::SkipDependents`).
+// 쿠킹은 씬 · 프리팹 직렬화를 쓰므로 씬까지 선 뒤에 온다.
+SW_ENGINE_STARTUP_STEP( Headless, "EngineData Scene ShaderCache" )
+// 모듈이 등록한 장치 · 콜백을 들 수 있어 모듈 이미지가 있는 동안 내린다.
+SW_ENGINE_STARTUP_STEP( Input, "ModuleImages" )
+// 재컴파일 콜백이 렌더 스레드를 세우고 렌더러에 알린다(Debug 에서만 만든다).
+SW_ENGINE_STARTUP_STEP( LiveShader, "FrameRenderer RenderThread" )
+// 모듈 DLL 이 올라와 있는 구간. 종료가 모듈을 내린다(`EngineLoop::setOnScenesReleased`). 내리는 동안 타입 · 코덱 · 에셋 캐시 등록을
+// 떼고 태스크를 기다리므로 그 서비스들이 살아 있어야 한다.
+SW_ENGINE_STARTUP_STEP( ModuleImages, "Compression Reflection Resource Task" )
+// 백엔드 선택 · 창(없으면) · 디바이스.
+SW_ENGINE_STARTUP_STEP( RHI, "Config Headless" )
+SW_ENGINE_STARTUP_STEP( Reflection, "" )
+SW_ENGINE_STARTUP_STEP( RenderThread, "FrameRenderer" )
+// 팩 마운트와 레지스트리가 GameConfig 의 팩 루트를 쓰고, 팩 스트림이 코덱을 쓴다.
+// `ResourceManager::shutdown` 은 이 표가 아니라 끝 정리에 있다 — 다른 매니저의 소멸자가 에셋을 놓은 **뒤에** 캐시를 비운다.
+SW_ENGINE_STARTUP_STEP( Resource, "Compression Config" )
+// 씬 종료가 진행 중인 비동기 로드를 태스크로 기다리고, 컴포넌트가 입력 · 오디오 · 모듈 코드 · 에셋을 든다.
+SW_ENGINE_STARTUP_STEP( Scene, "Audio Input ModuleImages Resource Task" )
+// 씬에 디바이스를 건다. 종료는 디바이스를 떼는 것이 가장 먼저다.
+SW_ENGINE_STARTUP_STEP( SceneRhi, "RHI Scene" )
+SW_ENGINE_STARTUP_STEP( ShaderCache, "" )
+SW_ENGINE_STARTUP_STEP( Task, "" )
