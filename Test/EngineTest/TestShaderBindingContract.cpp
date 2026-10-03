@@ -747,6 +747,35 @@ SW_TEST_CASE( ShaderBindingContractTest, EveryBoundNameIsInBakedReflection )
  *        (DX11 은 g_SwSlot0Sampler=s0, DX12 는 g_SwSampler0=s0 처럼 서로 다른 셰이더에 산다) 여기서
  *        따지지 않고 AllBakedShadersMatchContract 가 실제 바이너리로 잡는다.
  */
+/**
+ * @brief [ShaderBindingContractTest] 씬 구조버퍼 슬롯(t4 · t9..t13)은 모두 계약 표에 있다
+ * @details validate 는 표에 없는 이름을 건너뛴다. 표에서 빠진 슬롯은 셰이더가 엉뚱한 레지스터에 선언해도 아무 검사도 지지 않는다.
+ */
+SW_TEST_CASE( ShaderBindingContractTest, EverySceneStructuredBufferSlotIsReserved )
+{
+    const uint32 arrSlot[] = {
+        sw::shaderslot::kInstanceBuffer,
+        sw::shaderslot::kMaterialBuffer,
+        sw::shaderslot::kVisibleInstanceBuffer,
+        sw::shaderslot::kMorphVertexBuffer,
+        sw::shaderslot::kLightBuffer,
+        sw::shaderslot::kBatchBuffer,
+    };
+    const sw::vector<sw::ShaderReservedBinding>& list = sw::ShaderBindingContract::getReservedBindings();
+    for ( const uint32 slot : arrSlot )
+    {
+        bool bFound = false;
+        for ( const sw::ShaderReservedBinding& reserved : list )
+        {
+            const bool bSameSlot = reserved._kind == sw::ShaderBindingKind::StructuredBuffer && reserved._dx12._bDeclared &&
+                                   reserved._dx12._space == 0 && reserved._dx12._bind == slot;
+            if ( bSameSlot )
+                bFound = true;
+        }
+        SW_EXPECT_TRUE_MSG( bFound, ( "t" + sw::to_string( slot ) + " 구조버퍼가 계약 표에 없다" ).c_str() );
+    }
+}
+
 SW_TEST_CASE( ShaderBindingContractTest, ReservedTableIsConsistent )
 {
     const sw::vector<sw::ShaderReservedBinding>& list = sw::ShaderBindingContract::getReservedBindings();

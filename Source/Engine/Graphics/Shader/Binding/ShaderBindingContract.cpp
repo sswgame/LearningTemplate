@@ -325,6 +325,11 @@ namespace sw
                 add( shaderslot::resname::kVisibleInstances, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kVisibleInstanceBuffer ), slotB( shaderslot::kVisibleInstanceBuffer ),
                      vkT( shaderslot::kVisibleInstanceBuffer ), slotB( shaderslot::kVisibleInstanceBuffer ) );
+                // GPU 가 변형한 정점 풀 t11 · 씬 라이트 목록 t12 (네 백엔드 공통).
+                add( shaderslot::resname::kMorphVertices, ShaderBindingKind::StructuredBuffer,
+                     slotB( shaderslot::kMorphVertexBuffer ), slotB( shaderslot::kMorphVertexBuffer ), vkT( shaderslot::kMorphVertexBuffer ), slotB( shaderslot::kMorphVertexBuffer ) );
+                add( shaderslot::resname::kLights, ShaderBindingKind::StructuredBuffer,
+                     slotB( shaderslot::kLightBuffer ), slotB( shaderslot::kLightBuffer ), vkT( shaderslot::kLightBuffer ), slotB( shaderslot::kLightBuffer ) );
                 // 씬 배치 표: 그래픽스 t13 (네 백엔드 공통). 정점 셰이더가 자기 배치 번호로 읽는다.
                 add( shaderslot::resname::kBatches, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kBatchBuffer ), slotB( shaderslot::kBatchBuffer ), vkT( shaderslot::kBatchBuffer ), slotB( shaderslot::kBatchBuffer ) );

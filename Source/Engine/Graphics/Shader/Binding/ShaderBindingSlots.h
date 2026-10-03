@@ -194,6 +194,7 @@ namespace sw
             inline constexpr const utf8* kRwTextureSlot      = "g_SwRWSlot";             ///< + 0..3 (DX11/GL 컴퓨트 RW 텍스처 슬롯)
             inline constexpr const utf8* kVisibleInstances   = "g_SwVisibleInstanceIds"; ///< t10(그래픽스). 컬링이 만든 가시 목록
             inline constexpr const utf8* kMorphVertices      = "g_SwMorphVertices";      ///< t11(그래픽스). GPU 가 변형한 정점 풀
+            inline constexpr const utf8* kLights             = "g_SwLights";             ///< t12(그래픽스). 씬 라이트 목록
             inline constexpr const utf8* kBatches            = "g_SwBatches";            ///< t13(그래픽스). 씬 배치 표
             inline constexpr const utf8* kMorphRestVertices  = "g_RestVertices";         ///< meshmorph t0. 레스트 포즈
             inline constexpr const utf8* kMorphVerticesRw    = "g_MorphVerticesRW";      ///< meshmorph u0. 변형 결과
