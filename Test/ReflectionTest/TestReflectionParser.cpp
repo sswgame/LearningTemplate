@@ -540,6 +540,46 @@ SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
 }
 
 /**
+ * @brief [ReflectionParserTest] 한 타입의 애노테이션 오류는 첫 하나에서 멈추지 않고 모두 알린다
+ * @details 오류마다 빌드를 한 번씩 되풀이하지 않게 한 번의 실행이 그 타입의 오류를 전부 적는다. 오류 난 멤버는 코드젠에 넣지 않으므로
+ *          실행은 여전히 실패로 끝난다.
+ */
+SW_TEST_CASE( ReflectionParserTest, EveryAnnotationErrorOfATypeIsReported )
+{
+#if defined( SW_DEBUG )
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "ManyErrorsSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct ManyErrorsSampleActor\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tPROPERTY( Colr )\n"
+                                                       "\t\tint32 _first{ 0 };\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tuint8 _second : 2;\n"
+                                                       "\t\tPROPERTY( Min = 0.5f )\n"
+                                                       "\t\tfloat32 _third{ 0.0f };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "unknown token 'Colr'" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "bit width 2" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "sw::ManyErrorsSampleActor::_third" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp.empty() || run._listGeneratedCpp[0].empty(), "an errored header must not emit code" );
+#else
+    SW_TEST_SKIP( "ReflectionParser diagnostic logging is compiled out in Shipping builds" );
+#endif
+}
+
+/**
  * @brief [ReflectionParserTest] 값 참조를 돌려주는 메서드의 PROPERTY 는 오프셋 대신 값 접근자를 낸다
  * @details 씬 컴포넌트의 로컬 TRS 가 트랜스폼 저장소로 옮겨 가며 생긴 모양이다. 값은 객체 밖에 있고 이름(`Name`)은 옛 필드 이름을
  *          이어 쓴다. 모양이 틀리면(값으로 돌려준다 — 쓸 자리가 없다) 조용히 넘기지 않고 멈춘다.

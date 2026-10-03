@@ -888,7 +888,11 @@ namespace sw
                 }
             }
 
-            /** @brief REFLECT 타입 멤버를 한 번의 자식 순회로 수집합니다. */
+            /**
+             * @brief REFLECT 타입 멤버를 한 번의 자식 순회로 수집합니다.
+             * @details 오류가 나도 순회를 멈추지 않는다 — 한 번의 실행이 그 타입의 오류를 모두 알린다. 오류 난 멤버는 수집 함수가 목록에
+             *          넣기 전에 돌아오므로 반쯤 찬 DTO 가 코드젠에 들어가지 않고, `_bHasError` 가 헤더를 실패로 만든다.
+             */
             static CXChildVisitResult memberCollectVisitor( CXCursor cursor, CXCursor, CXClientData data )
             {
                 MemberCollector&   collector = *static_cast<MemberCollector*>( data );
@@ -901,7 +905,7 @@ namespace sw
                     collectField( cursor, collector );
                 else if ( bFunction )
                     collectFunctionMember( cursor, kind, collector );
-                return collector._bHasError == SW_TRUE ? CXChildVisit_Break : CXChildVisit_Continue;
+                return CXChildVisit_Continue;
             }
 
             // ------------------------------------------------------------------------------
