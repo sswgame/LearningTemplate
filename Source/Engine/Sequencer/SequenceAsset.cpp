@@ -3,6 +3,7 @@
 #include "Engine/Sequencer/SequenceAsset.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
@@ -45,12 +46,27 @@ namespace sw
                 obj.set( "y" ).setFloat( static_cast<float64>( value._y ) );
                 obj.set( "z" ).setFloat( static_cast<float64>( value._z ) );
             }
+
+            /** @brief 종류 표가 값 순서인지 봅니다. `findItemKindTraits` 가 값으로 바로 찾습니다. */
+            static constexpr bool isKindTableOrdered()
+            {
+                for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceItemKindTraits ); ++kindIndex )
+                {
+                    if ( kArrSequenceItemKindTraits[kindIndex]._kind != static_cast<SequenceItemKind>( kindIndex ) )
+                        return false;
+                }
+                return true;
+            }
         };
+
+        static_assert( SequenceAssetInternal::isKindTableOrdered(), "kArrSequenceItemKindTraits must be ordered by SequenceItemKind" );
     } // namespace
 } // namespace sw
 
 namespace sw
 {
+    SW_LOG_CALLER( "SequenceAsset" );
+
     bool SequenceAsset::loadFromFile( string_view path )
     {
         *this = SequenceAsset{};
@@ -104,11 +120,15 @@ namespace sw
             item._targetObject = itemJson.get( "target" ).asString();
             item._start        = SequenceAssetInternal::clampFrame( itemJson.get( "start" ).asInt( 0 ) );
             item._end          = SequenceAssetInternal::clampFrame( itemJson.get( "end" ).asInt( 10 ) );
-            item._type         = static_cast<int32>( itemJson.get( "type" ).asInt( 0 ) );
-            item._color        = static_cast<uint32>( itemJson.get( "color" ).asUint( 0xFFAA8080u ) );
-            item._translation  = SequenceAssetInternal::readVec3( itemJson, "translation", float3{} );
-            item._rotation     = SequenceAssetInternal::readVec3( itemJson, "rotation", float3{} );
-            item._scale        = SequenceAssetInternal::readVec3( itemJson, "scale", float3{ 1.0f, 1.0f, 1.0f } );
+            // 종류는 정수 그대로 둔다 — 모르는 값(새 버전이 쓴 종류)도 다시 쓸 때 잃지 않고, 적용만 하지 않는다.
+            const int64 rawKind = itemJson.get( "type" ).asInt( 0 );
+            item._kind          = static_cast<SequenceItemKind>( static_cast<int32>( MathUtil::clamp<int64>( rawKind, MathUtil::MinInt32, MathUtil::MaxInt32 ) ) );
+            if ( findItemKindTraits( item._kind ) == nullptr )
+                SW_LOG_WARNING( "Sequence item '%#' has unknown type %# - it is kept but not applied", item._name, rawKind );
+            item._color       = static_cast<uint32>( itemJson.get( "color" ).asUint( 0xFFAA8080u ) );
+            item._translation = SequenceAssetInternal::readVec3( itemJson, "translation", float3{} );
+            item._rotation    = SequenceAssetInternal::readVec3( itemJson, "rotation", float3{} );
+            item._scale       = SequenceAssetInternal::readVec3( itemJson, "scale", float3{ 1.0f, 1.0f, 1.0f } );
             _listItem.push_back( std::move( item ) );
         } );
         return true;
@@ -132,7 +152,7 @@ namespace sw
             itemJson.set( "target" ).setString( item._targetObject );
             itemJson.set( "start" ).setInt( item._start );
             itemJson.set( "end" ).setInt( item._end );
-            itemJson.set( "type" ).setInt( item._type );
+            itemJson.set( "type" ).setInt( static_cast<int32>( item._kind ) );
             itemJson.set( "color" ).setUint( item._color );
             SequenceAssetInternal::writeVec3( itemJson, "translation", item._translation );
             SequenceAssetInternal::writeVec3( itemJson, "rotation", item._rotation );
@@ -140,6 +160,14 @@ namespace sw
         }
 
         return doc.dump( 2 );
+    }
+
+    const SequenceItemKindTraits* SequenceAsset::findItemKindTraits( SequenceItemKind kind )
+    {
+        const int32 kindIndex = static_cast<int32>( kind );
+        if ( kindIndex < 0 || kindIndex >= static_cast<int32>( SequenceItemKind::Count ) )
+            return nullptr;
+        return &kArrSequenceItemKindTraits[kindIndex];
     }
 
     void SequenceAsset::collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outListItem ) const

@@ -20,6 +20,7 @@ namespace sw
         , _bAutoPlay{ SW_TRUE }
         , _reserved{ 0 }
         , _player{}
+        , _sequenceEventMulticast{}
     {
         setCanEverTick( true );
     }
@@ -74,6 +75,21 @@ namespace sw
         _player.resume();
     }
 
+    void SequencePlayerComponent::setSequence( const SequenceAsset& asset )
+    {
+        _player.setAsset( asset );
+    }
+
+    DelegateHandle SequencePlayerComponent::registerSequenceEvent( const OnSequenceEventDelegate& delegate )
+    {
+        return _sequenceEventMulticast.add( delegate );
+    }
+
+    void SequencePlayerComponent::unregisterSequenceEvent( DelegateHandle handle )
+    {
+        _sequenceEventMulticast.remove( handle );
+    }
+
     void SequencePlayerComponent::applyTimeline()
     {
         GameObject* pOwner = getOwner();
@@ -84,6 +100,17 @@ namespace sw
             return;
 
         // 루프를 되감은 갱신이면 끝 구간 이벤트까지 본다(`applyPlayback`).
-        SequenceTimelineUtil::applyPlayback( pManager, _player );
+        vector<const SequenceTrackItem*> listCrossed;
+        SequenceTimelineUtil::applyPlayback( pManager, _player, &listCrossed );
+        if ( listCrossed.empty() )
+            return;
+
+        // **사본으로 알린다.** 지난 항목은 플레이어가 든 에셋의 원소라, 핸들러가 다른 시퀀스를 걸면(`setSequence`) 남은 포인터가 죽는다.
+        vector<SequenceTrackItem> listEvent;
+        listEvent.reserve( listCrossed.size() );
+        for ( const SequenceTrackItem* pItem : listCrossed )
+            listEvent.push_back( *pItem );
+        for ( const SequenceTrackItem& event : listEvent )
+            _sequenceEventMulticast.broadcast( event );
     }
 } // namespace sw

@@ -10,6 +10,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class JsonValue;
@@ -24,18 +26,48 @@ namespace sw
      */
     constexpr int32 kSequenceFrameLimit = MathUtil::MaxInt32 / 2;
 
+    /**
+     * @brief 시퀀서 트랙 항목의 종류입니다. JSON 에는 정수(`"type"`)로 적힙니다 — 값을 바꾸면 기존 시퀀스 파일이 다른 종류로 읽힙니다.
+     * @details 종류를 더하면 값 하나와 `kArrSequenceItemKindTraits` 의 줄 하나를 더합니다(static_assert 가 짚습니다).
+     */
+    ENUM()
+    enum class SequenceItemKind : int32
+    {
+        Clip  = 0, /**< 구간 동안 대상을 켜고 트랜스폼을 보간합니다. */
+        Event = 1, /**< 시작 프레임을 지날 때 한 번 알립니다(`SequencePlayerComponent::registerSequenceEvent`). */
+        Count      /**< 표식입니다. 종류가 아닙니다. */
+    };
+
+    /** @brief 항목 종류 하나가 타임라인에 무엇을 하는지입니다. */
+    struct SequenceItemKindTraits
+    {
+        SequenceItemKind _kind;          /**< 종류입니다. 표의 순번과 같아야 합니다. */
+        uint32           _defaultColor;  /**< 에디터에서 새 항목에 칠하는 색(0xAABBGGRR)입니다. */
+        bool             _bDrivesTarget; /**< 구간 동안 대상 오브젝트의 활성 · 트랜스폼을 정하는지입니다. */
+        bool             _bFiresOnCross; /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */
+    };
+
+    /** @brief 항목 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceItemKind` 값 순서입니다.** */
+    inline constexpr SequenceItemKindTraits kArrSequenceItemKindTraits[] = {
+        { SequenceItemKind::Clip, 0xFF80AA80u,  true, false},
+        {SequenceItemKind::Event, 0xFF8080AAu, false,  true},
+    };
+
+    static_assert( SW_COUNT_OF( kArrSequenceItemKindTraits ) == static_cast<size_t>( SequenceItemKind::Count ),
+                   "SequenceItemKind 를 늘렸으면 kArrSequenceItemKindTraits 에도 줄을 더할 것" );
+
     /** @brief 시퀀서 트랙 항목입니다(클립 또는 이벤트). */
     struct SequenceTrackItem
     {
-        string _name;
-        string _targetObject;
-        float3 _translation{};
-        float3 _rotation{};
-        float3 _scale{ 1.0f, 1.0f, 1.0f };
-        int32  _start{ 0 };
-        int32  _end{ 10 };
-        int32  _type{ 0 };
-        uint32 _color{ 0xFFAA8080 };
+        string           _name;
+        string           _targetObject;
+        float3           _translation{};
+        float3           _rotation{};
+        float3           _scale{ 1.0f, 1.0f, 1.0f };
+        int32            _start{ 0 };
+        int32            _end{ 10 };
+        uint32           _color{ 0xFFAA8080 };
+        SequenceItemKind _kind{ SequenceItemKind::Clip }; /**< 표에 없는 값(새 버전 파일)은 읽고 다시 쓰지만 적용하지 않습니다. */
     };
 
     /**
@@ -65,6 +97,8 @@ namespace sw
         [[nodiscard]] bool parseJson( string_view json );
         /** @brief JSON 본문을 만듭니다. */
         string toJson() const;
+        /** @brief 종류의 특성 줄입니다. 표에 없는 값이면 nullptr 입니다. */
+        static const SequenceItemKindTraits* findItemKindTraits( SequenceItemKind kind );
         /** @brief 그 프레임에 걸쳐 있는 트랙 항목을 채웁니다. */
         void collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outListItem ) const;
 

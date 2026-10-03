@@ -37,10 +37,8 @@ namespace sw
          *                      `kNoPreviousFrame` 이면 이벤트를 보지 않습니다.
          * @param pOutListCrossedEvent nullptr 가 아니면 이번에 지나간 이벤트 항목들로 **채웁니다**(먼저 비웁니다).
          *                             가리키는 `SequenceTrackItem` 은 @p asset 안의 원소이므로 에셋보다 오래 살지 않습니다.
-         * @details **이벤트에 반응하는 유일한 방법이 이 출력입니다.** 예전에는 지나간 이벤트를
-         *          `SW_LOG_INFO` 한 줄로만 알렸는데, 그 매크로는 **배포본에서 통째로 사라집니다.**
-         *          즉 출시된 게임에서 시퀀서 이벤트 트랙은 아무 일도 하지 않았고, 그 사실이
-         *          Dev 에서는 로그가 보이니 드러나지도 않았습니다. 로그는 Dev 편의로 남겨 둡니다.
+         * @details 이벤트에 반응하는 길은 이 출력입니다. `SequencePlayerComponent` 는 이것을 `registerSequenceEvent` 델리게이트로 냅니다.
+         *          함께 남기는 `SW_LOG_INFO` 는 Dev 편의이고 배포본에서는 사라집니다.
          */
         static void applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame,
                                 int32                             previousFrame        = kNoPreviousFrame,

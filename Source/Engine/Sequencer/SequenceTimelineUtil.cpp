@@ -28,12 +28,26 @@ namespace sw
                 return MathUtil::clamp( t, 0.0f, 1.0f );
             }
 
-            /** @brief 그 대상을 덮는 활성 클립(종류 0)이 하나라도 있으면 true 입니다. */
+            /** @brief 구간 동안 대상의 활성 · 트랜스폼을 정하는 종류인지 반환합니다. 표에 없는 종류는 아무것도 하지 않습니다. */
+            static bool drivesTarget( const SequenceTrackItem& item )
+            {
+                const SequenceItemKindTraits* pTraits = SequenceAsset::findItemKindTraits( item._kind );
+                return pTraits != nullptr && pTraits->_bDrivesTarget;
+            }
+
+            /** @brief 시작 프레임을 지날 때 알리는 종류인지 반환합니다. */
+            static bool firesOnCross( const SequenceTrackItem& item )
+            {
+                const SequenceItemKindTraits* pTraits = SequenceAsset::findItemKindTraits( item._kind );
+                return pTraits != nullptr && pTraits->_bFiresOnCross;
+            }
+
+            /** @brief 그 대상을 덮는 활성 클립이 하나라도 있으면 true 입니다. */
             static bool isTargetCovered( const vector<const SequenceTrackItem*>& listActive, const string& targetObject )
             {
                 for ( const SequenceTrackItem* pActive : listActive )
                 {
-                    if ( pActive != nullptr && pActive->_type == 0 && pActive->_targetObject == targetObject )
+                    if ( pActive != nullptr && drivesTarget( *pActive ) && pActive->_targetObject == targetObject )
                         return true;
                 }
                 return false;
@@ -96,7 +110,7 @@ namespace sw
         // 클립이 둘인 대상은 매 프레임 꺼졌다 켜졌고(렌더 집합이 두 번 흔들렸다) 모든 대상을 매 프레임 다시 썼다.
         for ( const SequenceTrackItem& item : asset._listItem )
         {
-            if ( item._type != 0 || item._targetObject.empty() )
+            if ( SequenceTimelineUtilInternal::drivesTarget( item ) == false || item._targetObject.empty() )
                 continue;
             GameObject* pTarget = SequenceTimelineUtilInternal::findTarget( pManager, item._targetObject );
             if ( pTarget == nullptr )
@@ -108,7 +122,7 @@ namespace sw
 
         for ( const SequenceTrackItem* pItem : listActive )
         {
-            if ( pItem == nullptr || pItem->_targetObject.empty() || pItem->_type != 0 )
+            if ( pItem == nullptr || pItem->_targetObject.empty() || SequenceTimelineUtilInternal::drivesTarget( *pItem ) == false )
                 continue;
             GameObject* pTarget = SequenceTimelineUtilInternal::findTarget( pManager, pItem->_targetObject );
             if ( pTarget != nullptr )
@@ -125,7 +139,7 @@ namespace sw
     {
         for ( const SequenceTrackItem& item : asset._listItem )
         {
-            if ( item._type != 1 )
+            if ( SequenceTimelineUtilInternal::firesOnCross( item ) == false )
                 continue;
             // 지나갔는가: 이전 프레임에는 아직 닿지 않았고 이번 프레임에는 닿았다.
             if ( previousFrame >= item._start || item._start > frame )

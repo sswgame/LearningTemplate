@@ -3,12 +3,15 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
+#include "Engine/Sequencer/SequencePlayerComponent.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -43,7 +46,7 @@ namespace sw
             clip._start        = 0;
             clip._end          = 20;
             clip._translation  = float3{ 4.0f, 0.0f, 0.0f };
-            clip._type         = 0;
+            clip._kind         = sw::SequenceItemKind::Clip;
             asset._listItem.push_back( std::move( clip ) );
 
             SequenceTrackItem event{};
@@ -51,7 +54,7 @@ namespace sw
             event._targetObject = "SeqTarget";
             event._start        = 0;
             event._end          = 0;
-            event._type         = 1;
+            event._kind         = sw::SequenceItemKind::Event;
             asset._listItem.push_back( std::move( event ) );
 
             return asset;
@@ -148,7 +151,7 @@ SW_TEST_CASE( SequencerTest, MultiClipTargetDoesNotFlicker )
         clip._targetObject = "Flicker";
         clip._start        = clipIndex == 0 ? 0 : 20;
         clip._end          = clipIndex == 0 ? 10 : 30;
-        clip._type         = 0;
+        clip._kind         = sw::SequenceItemKind::Clip;
         asset._listItem.push_back( std::move( clip ) );
     }
 
@@ -201,7 +204,7 @@ SW_TEST_CASE( SequencerTest, JsonRoundTripThroughFileKeepsValues )
         SW_EXPECT_STREQ( source._listItem[index]._name.c_str(), loaded._listItem[index]._name.c_str() );
         SW_EXPECT_EQUAL( source._listItem[index]._start, loaded._listItem[index]._start );
         SW_EXPECT_EQUAL( source._listItem[index]._end, loaded._listItem[index]._end );
-        SW_EXPECT_EQUAL( source._listItem[index]._type, loaded._listItem[index]._type );
+        SW_EXPECT_TRUE( source._listItem[index]._kind == loaded._listItem[index]._kind );
         SW_EXPECT_NEAR_EQUAL( source._listItem[index]._translation._x, loaded._listItem[index]._translation._x, 0.0001f );
     }
 }
@@ -249,7 +252,7 @@ SW_TEST_CASE( SequencerTest, LoadedAssetResetsPlaybackToItsOwnStart )
     event._targetObject = "SeqTarget";
     event._start        = 50; // 새 자산의 시작보다 앞 — 지나간 적이 없어야 한다.
     event._end          = 50;
-    event._type         = 1;
+    event._kind         = sw::SequenceItemKind::Event;
     later._listItem.push_back( std::move( event ) );
 
     player.setAsset( later );
@@ -309,7 +312,7 @@ SW_TEST_CASE( SequencerTest, LoopWrapFiresTailAndLastFrameEvents )
         event._targetObject = "SeqTarget";
         event._start        = frame;
         event._end          = frame;
-        event._type         = 1;
+        event._kind         = sw::SequenceItemKind::Event;
         asset._listItem.push_back( std::move( event ) );
     }
 
@@ -380,4 +383,216 @@ SW_TEST_CASE( SequencerTest, NonLoopingSequenceReachesItsLastFrame )
             }
         }
     }
+}
+
+// ------------------------------------------------------------------------------
+// 항목 종류 표 · 이벤트 델리게이트
+// ------------------------------------------------------------------------------
+
+/**
+ * @brief [SequencerTest] 종류 표가 종류마다 한 줄이고, 표에 없는 정수는 nullptr 이다
+ */
+SW_TEST_CASE( SequencerTest, ItemKindTableCoversEveryKind )
+{
+    for ( int32 kindIndex = 0; kindIndex < static_cast<int32>( sw::SequenceItemKind::Count ); ++kindIndex )
+    {
+        const sw::SequenceItemKindTraits* pTraits = sw::SequenceAsset::findItemKindTraits( static_cast<sw::SequenceItemKind>( kindIndex ) );
+        SW_ASSERT_NOT_NULL( pTraits );
+        SW_EXPECT_EQUAL( kindIndex, static_cast<int32>( pTraits->_kind ) );
+    }
+    // 에디터 트랙 이름은 리플렉션 enum 이름이다.
+    SW_EXPECT_STREQ( "Clip", sw::engine::getTypeRegistry().enumToString( sw::SequenceItemKind::Clip ) );
+    SW_EXPECT_STREQ( "Event", sw::engine::getTypeRegistry().enumToString( sw::SequenceItemKind::Event ) );
+    SW_EXPECT_NULL( sw::SequenceAsset::findItemKindTraits( sw::SequenceItemKind::Count ) );
+    SW_EXPECT_NULL( sw::SequenceAsset::findItemKindTraits( static_cast<sw::SequenceItemKind>( -1 ) ) );
+}
+
+/**
+ * @brief [SequencerTest] 종류를 enum 으로 바꾼 뒤에도 시퀀스 파일이 같은 바이트로 왕복한다(종류는 정수 그대로)
+ * @details 아래 문서는 종류가 `int32 _type` 이던 때의 `toJson` 출력이다(저장소에 시퀀스 파일이 없어 시험 안에 둔다). 세 번째 항목의
+ *          종류 7 은 이 버전이 모르는 값이다 — 경고하고, 지우지 않고 다시 쓴다.
+ */
+SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsIntegerKinds )
+{
+    const sw::string_view kSequenceJson = R"({
+  "frameMin": 0,
+  "frameMax": 48,
+  "note": "golden",
+  "items": [
+    {
+      "name": "Walk",
+      "target": "Hero",
+      "start": 0,
+      "end": 24,
+      "type": 0,
+      "color": 4289364096,
+      "translation": {
+        "x": 2.0,
+        "y": 0.0,
+        "z": 0.5
+      },
+      "rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      }
+    },
+    {
+      "name": "Door",
+      "target": "Gate",
+      "start": 12,
+      "end": 12,
+      "type": 1,
+      "color": 4286611626,
+      "translation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      }
+    },
+    {
+      "name": "Future",
+      "target": "",
+      "start": 30,
+      "end": 40,
+      "type": 7,
+      "color": 4289364096,
+      "translation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      }
+    }
+  ]
+})";
+
+    sw::SequenceAsset asset;
+    {
+        test::ScopedDefensiveTestLog expected( "unknown sequence item type 7" );
+        SW_ASSERT_TRUE( asset.parseJson( kSequenceJson ) );
+    }
+    SW_ASSERT_EQUAL( size_t( 3 ), asset._listItem.size() );
+    SW_EXPECT_TRUE( asset._listItem[0]._kind == sw::SequenceItemKind::Clip );
+    SW_EXPECT_TRUE( asset._listItem[1]._kind == sw::SequenceItemKind::Event );
+    SW_EXPECT_EQUAL( 7, static_cast<int32>( asset._listItem[2]._kind ) );
+    SW_EXPECT_TRUE_MSG( asset.toJson() == kSequenceJson, "시퀀스 파일을 읽고 다시 쓰면 바이트가 달라진다" );
+}
+
+/**
+ * @brief [SequencerTest] 종류마다 적용이 다르다 — 클립은 대상을 몰고, 이벤트는 지날 때 알리고, 모르는 종류는 아무것도 하지 않는다
+ */
+SW_TEST_CASE( SequencerTest, EachItemKindAppliesItsOwnWay )
+{
+    sw::SequenceAsset asset;
+    asset._frameMin                        = 0;
+    asset._frameMax                        = 30;
+    const sw::SequenceItemKind arrKind[]   = { sw::SequenceItemKind::Clip, sw::SequenceItemKind::Event, static_cast<sw::SequenceItemKind>( 7 ) };
+    const utf8*                arrTarget[] = { "ClipTarget", "EventTarget", "FutureTarget" };
+    for ( size_t itemIndex = 0; itemIndex < SW_COUNT_OF( arrKind ); ++itemIndex )
+    {
+        sw::SequenceTrackItem item{};
+        item._name         = arrTarget[itemIndex];
+        item._targetObject = arrTarget[itemIndex];
+        item._kind         = arrKind[itemIndex];
+        item._start        = 5;
+        item._end          = 20;
+        asset._listItem.push_back( std::move( item ) );
+    }
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       arrObject[SW_COUNT_OF( arrTarget )] = {};
+    for ( size_t itemIndex = 0; itemIndex < SW_COUNT_OF( arrTarget ); ++itemIndex )
+    {
+        arrObject[itemIndex] = manager.createGameObject( sw::hashed_string{ arrTarget[itemIndex] } );
+        SW_ASSERT_NOT_NULL( arrObject[itemIndex] );
+    }
+    manager.mergePendingAdds();
+
+    // 구간 밖: 클립 대상만 꺼진다.
+    sw::vector<const sw::SequenceTrackItem*> listCrossed;
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 0, sw::SequenceTimelineUtil::kNoPreviousFrame, &listCrossed );
+    SW_EXPECT_FALSE( arrObject[0]->isActive() );
+    SW_EXPECT_TRUE( arrObject[1]->isActive() );
+    SW_EXPECT_TRUE( arrObject[2]->isActive() );
+
+    // 시작 프레임을 지남: 클립 대상이 켜지고, 이벤트만 알린다.
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 10, 0, &listCrossed );
+    SW_EXPECT_TRUE( arrObject[0]->isActive() );
+    SW_ASSERT_EQUAL( size_t( 1 ), listCrossed.size() );
+    SW_EXPECT_TRUE( listCrossed[0]->_kind == sw::SequenceItemKind::Event );
+}
+
+/**
+ * @brief [SequencerTest] SequencePlayerComponent 가 지난 이벤트를 걸린 델리게이트 모두에 알린다(로그가 없는 Shipping 에서도 같은 길)
+ * @details 컴포넌트는 지난 이벤트를 받을 출력 없이 타임라인을 적용해서, 이벤트 트랙은 Dev 로그 한 줄 말고는 아무 데도 나가지 않았다.
+ */
+SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCrossedEvents )
+{
+    sw::SequenceAsset asset;
+    asset._frameMin = 0;
+    asset._frameMax = 30;
+    for ( const auto& [pName, frame] : {
+              std::pair<const utf8*, int32>{ "Open",  0},
+              {"Close", 10}
+    } )
+    {
+        sw::SequenceTrackItem event{};
+        event._name  = pName;
+        event._kind  = sw::SequenceItemKind::Event;
+        event._start = frame;
+        event._end   = frame;
+        asset._listItem.push_back( std::move( event ) );
+    }
+
+    sw::GameObjectManager manager;
+    sw::GameObject*       pDirector = manager.createGameObject( sw::hashed_string{ "Director" } );
+    SW_ASSERT_NOT_NULL( pDirector );
+    manager.mergePendingAdds();
+    sw::SequencePlayerComponent* pPlayer = pDirector->addComponent<sw::SequencePlayerComponent>();
+    SW_ASSERT_NOT_NULL( pPlayer );
+    pPlayer->setSequence( asset );
+
+    sw::vector<sw::string> listFirst;
+    sw::vector<sw::string> listSecond;
+    pPlayer->registerSequenceEvent( [&listFirst]( const sw::SequenceTrackItem& item )
+    { listFirst.push_back( item._name ); } );
+    const sw::DelegateHandle secondHandle =
+        pPlayer->registerSequenceEvent( [&listSecond]( const sw::SequenceTrackItem& item )
+    { listSecond.push_back( item._name ); } );
+
+    pPlayer->play();
+    SW_ASSERT_EQUAL( size_t( 1 ), listFirst.size() );
+    SW_EXPECT_EQUAL( "Open", listFirst[0] );
+    SW_EXPECT_EQUAL( size_t( 1 ), listSecond.size() );
+
+    pPlayer->unregisterSequenceEvent( secondHandle );
+    pPlayer->onTick( 12.0f / 30.0f );
+    SW_ASSERT_EQUAL( size_t( 2 ), listFirst.size() );
+    SW_EXPECT_EQUAL( "Close", listFirst[1] );
+    SW_EXPECT_EQUAL( size_t( 1 ), listSecond.size() );
 }

@@ -9,9 +9,11 @@
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
 
@@ -49,11 +51,13 @@ namespace sw::editor
         }
         int32 GetItemTypeCount() const override
         {
-            return 2;
+            return static_cast<int32>( SequenceItemKind::Count );
         }
         const utf8* GetItemTypeName( int32 typeIndex ) const override
         {
-            return typeIndex == 0 ? "Clip" : "Event";
+            const TypeRegistry* pRegistry = editor::getService<TypeRegistry>();
+            const utf8*         pName     = pRegistry != nullptr ? pRegistry->enumToString( static_cast<SequenceItemKind>( typeIndex ) ) : nullptr;
+            return pName != nullptr ? pName : "?";
         }
         const utf8* GetItemLabel( int32 itemIndex ) const override
         {
@@ -72,7 +76,7 @@ namespace sw::editor
             if ( ppEnd != nullptr )
                 *ppEnd = &item._end;
             if ( pType != nullptr )
-                *pType = item._type;
+                *pType = static_cast<int32>( item._kind );
             if ( pColor != nullptr )
                 *pColor = item._color;
         }
@@ -80,13 +84,13 @@ namespace sw::editor
         void Add( int32 type ) override
         {
             SequenceTrackItem item{};
-            item._type  = type;
-            item._start = _frameMin;
-            item._end   = _frameMin + 10;
-            item._color = type == 0 ? 0xFF80AA80u : 0xFF8080AAu;
-            item._name  = type == 0
-                            ? ( "Clip " + to_string( _listItem.size() ) )
-                            : ( "Event " + to_string( _listItem.size() ) );
+            item._kind                            = static_cast<SequenceItemKind>( type );
+            item._start                           = _frameMin;
+            item._end                             = _frameMin + 10;
+            const SequenceItemKindTraits* pTraits = SequenceAsset::findItemKindTraits( item._kind );
+            if ( pTraits != nullptr )
+                item._color = pTraits->_defaultColor;
+            item._name = string( GetItemTypeName( type ) ) + " " + to_string( _listItem.size() );
             _listItem.push_back( item );
         }
 
@@ -117,8 +121,8 @@ namespace sw::editor
         , _firstFrame{ 0 }
         , _bExpanded{ true }
     {
-        _sequence->Add( 0 );
-        _sequence->Add( 1 );
+        _sequence->Add( static_cast<int32>( SequenceItemKind::Clip ) );
+        _sequence->Add( static_cast<int32>( SequenceItemKind::Event ) );
         _sequence->_listItem[0]._name  = "Intro";
         _sequence->_listItem[1]._name  = "Cut";
         _sequence->_listItem[1]._start = 20;
