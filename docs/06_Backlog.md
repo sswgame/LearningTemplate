@@ -151,8 +151,8 @@ cd build/Ninja-Debug/Bin
 
 ### 1-4. 에디터
 
-- **Vulkan 에디터: 게임 뷰 리사이즈의 `unregisterTexture` 가 `ImGui_ImplVulkan_RemoveTexture` 를 즉시 불러 비행 중인 디스크립터 세트를 놓는다**(검증 레이어 Error,
-  `-vk -EnableEditor` 4 회 중 1 회). `EditorContext::destroyGameView` 경로. 해제를 프레임 펜스 뒤로 미룰 것(렌더 스레드 동기화 확인).
+- **imgui Vulkan 백엔드가 UI 스레드에서 `vkQueueSubmit` 을 부른다** — 글꼴 아틀라스 업로드(`ImGui_ImplVulkan_UpdateTexture`) · 보조 뷰포트(`RenderPlatformWindowsDefault`)가
+  렌더 스레드와 같은 큐에 엔진 `_queueMutex` 밖에서 제출한다(큐 외부 동기화 위반). ImGui 의 아틀라스 파괴(`ImGui_ImplVulkan_DestroyTexture`)도 즉시 해제다.
 
 - **에디터 자체 시험(`SW_EDITOR_SELF_TEST`)이 입력을 흉내 내지 못한다** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 툴팁 호버 · 드래그 드롭은
   ImGui 입력 이벤트를 넣는 창구(`ImGuiIO::AddMousePosEvent` 류를 프레임 단계에서 주입)가 있어야 덮인다.
@@ -178,8 +178,8 @@ cd build/Ninja-Debug/Bin
 
 ### 1-7. Core · 태스크
 
-- **sw 할당자 밖 ~1 MB(Debug App 기동 직후)** — `std::allocator`, `PagedArray` · `SceneTransformStorage` 페이지의 `new T[]`, pugixml · nlohmann. 태그로 볼 수 없다.
-  sw 할당자로 옮길지 미정. 에디터 실행의 Unknown ~110 KB(App 의 LiveReloadManager · ModuleCompiler 생성으로 추정, 미확인).
+- **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는
+  표준 API 라 줄이려면 Win32 · POSIX 순회로 바꾼다. 상주량은 1 KB 미만이라 전역 operator new 교체는 하지 않는다(사용자 결정).
 
 - **`runParallel` 합류 대기가 남의 태스크(IO 등)를 도와 실행할 수 있다.** 프로파일에 보이면 IO 레인을 따로 둔다(조건부).
 - **TaskManager 스테이지 디버그 이름** — 프로파일러에 연결할 때 넣는다(지금은 연결돼 있지 않다).
@@ -671,6 +671,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-7. 그래픽스 · RHI · 셰이더
 
+- **주의: DX12 `enqueueGpuRelease`(`_fenceValue`)** — 다른 스레드의 `waitForQueueDrain` 이 같은 값을 먼저 Signal 하면 기록 중인 프레임이 제출되기 전에 해제가 돌 수 있다.
+  기존 DX12 해제 경로 전부에 해당한다(열린 일).
+
 - **셰이더 굽기는 패스 종류 표 전체 × (머티리얼 없음 + 머티리얼) × `RenderViewMode` 를 굽는다** — 파이프라인 XML 에 나오는 패스만 곱하면 런타임
   (`ensurePassResources`)이 만드는 변형이 빠진다. 뷰 모드 define 의 정본은 `FrameRendererUtil::findViewModeDefine`, `ShaderBakeRequestTest.BakedManifestHoldsEveryRequest` 가
   커밋된 매니페스트를 대조한다. Vulkan 최소 판과 굽기 타깃(`-fspv-target-env`)은 `VulkanRHIApiVersion.h` 하나 — 1.3 미만 디바이스는 고르지 않는다(SPIR-V 1.6).
@@ -789,6 +792,10 @@ cd build/Ninja-Debug/Bin
 
 ### 3-8. 에디터
 
+- **에디터가 UI 스레드에서 놓는 GPU 자원(ImGui 텍스처 · 게임 뷰 렌더 타깃)은 `EditorDrawReleaseQueue` 에 맡긴다** — 렌더 스레드는 같은 draw 스냅샷을 여러 패킷에
+  다시 그리므로 UI 스레드에서 읽은 펜스 값으로는 모자란다. 그 스냅샷 번호 이상을 그리는 프레임에서 `IRHIDevice::enqueueGpuRelease`(렌더 스레드에서만)로 넘긴다.
+  새 렌더 타깃은 그리기 전 패킷이 샘플링할 수 있어 만들 때 클리어 색으로 채운다(Vulkan UNDEFINED 레이아웃).
+
 - **Undo 의 오브젝트 편집은 엔진 데이터 명령(`ObjectSnapshotCommand` — 오브젝트 id · 이름 · 스냅샷)으로 기록한다** — 리로드를 넘어야 할 기록은 Engine 코드로 만든다.
   모듈 람다 명령은 에디터 리로드 때 `CommandStack::releaseCodeWithin` 이 뗀다(묶음은 안쪽 하나라도 걸리면 통째로). 대상 조회는 id, 같은 프레임에 지우고 되살린
   오브젝트는 지연 파괴 때문에 새 id 를 받으므로 이름으로 다시 찾는다. 선택 · dirty 는 `ObjectEditListener` 로.
@@ -887,6 +894,10 @@ cd build/Ninja-Debug/Bin
   (리플렉션 등록 → 설정 → ResourceManager).
 
 ### 3-10. Core · 태스크 · 메모리
+
+- **보고의 "(sw 할당자 밖)" 은 CRT 합 − 태그 합**이라 프로파일러보다 먼저 잡힌 sw 블록도 들어간다 — MemoryProfiler 는 부트스트랩 맨 앞에서 선다. 새 스레드는 Unknown
+  에서 시작하므로 띄운 쪽의 태그를 인자로 넘겨 첫 줄에서 건다. 배열은 `sw_new_array` · `make_unique<T[]>`(맨 `new` 는 `Style/RawNew` 가 막는다). 외부 라이브러리는
+  공개 설정 지점으로만 sw 할당자에 잇는다(pugixml `set_memory_management_functions`, nlohmann 할당자 인자, zlib zalloc · zstd advanced · LZ4 extState, stb STBI_*).
 
 - **메모리 태그(UE LLM 식)는 Debug 전용이다.** 거는 자리는 셋 — 기동 단계 표(`EngineStartupStepList.xxx`)의 태그 칸, 서비스 생성의 `kServiceMemoryTag<Type>`,
   하위 시스템 진입점의 `SW_MEMORY_SCOPE`. 태스크 · 병렬 청크는 **만든 쪽의 태그를 상속**한다(`TaskNode` · `ParallelGroup` 의 패딩 자리, 크기 그대로). 분포와 sw 할당자 밖
