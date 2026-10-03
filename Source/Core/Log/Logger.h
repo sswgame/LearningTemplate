@@ -150,8 +150,8 @@ namespace sw
         /**
          * @brief 런타임 상세도를 정합니다. 이 수준보다 덜 심각한 줄은 버려집니다.
          * @details 컴파일 타임 상한(SW_LOG_COMPILED_VERBOSITY)이 "무엇을 남길 수 있나" 를 정하고, 이 값이 "지금 무엇을 남길까"
-         *          를 정합니다. 언리얼의 카테고리 기본 상세도와 같은 역할입니다. 배포본에서 사용자에게 `-logVerbosity=trace` 로
-         *          실행해 달라고 해서 재현 로그를 받는 것이 이 값의 용도입니다.
+         *          를 정합니다. 언리얼의 카테고리 기본 상세도와 같은 역할입니다. 명령줄 인자 · 전역 변수로는 바꿀 수
+         *          없고 코드에서 부릅니다.
          */
         static void setRuntimeVerbosity( LogLevel level );
         /** @brief setRuntimeVerbosity 로 정한 값입니다(기본값 Info). */
