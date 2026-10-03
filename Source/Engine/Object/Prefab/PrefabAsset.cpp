@@ -515,17 +515,14 @@ namespace sw
         }
         else
         {
+            // 소스를 읽는 구성은 소스(XML/JSON)만 본다. 소스가 없을 때 옆에 남은 쿠킹본(.bin)을 대신 읽으면 옮기거나 지운 프리팹이
+            // 낡은 내용으로 살아나 실패가 가려진다(언리얼 · 유니티의 에디터도 쿠킹 데이터를 보지 않는다).
             const bool bJson         = FileUtil::hasExtension( resolvedPath, ".json" );
             const bool bSourceLoaded = bJson ? asset->loadFromJsonFile( resolvedPath ) : asset->loadFromXmlFile( resolvedPath );
             if ( bSourceLoaded == false )
             {
-                if ( asset->loadFromBinaryFile( binPath ) == false )
-                    return nullptr;
-                // Dev 는 소스(XML/JSON)가 기준이다. 여기로 왔다는 것은 소스가 옮겨졌거나 지워졌는데 낡은 쿠킹 산출물
-                // (.gitignore 된 .bin)이 소스 트리에 남아 있다는 뜻이다. 조용히 쓰면 실패가 가려진다(프리팹을 옮기는
-                // 실험에서 옛 .bin 이 "Not found" 를 그대로 삼켰다). 언리얼 · 유니티의 에디터는 쿠킹 데이터를 아예 보지 않는다.
-                // 여기는 폴백을 남기되 두 경로를 다 적어 왜 그 내용이 나왔는지 바로 보이게 한다.
-                SW_LOG_WARNING( "Source prefab missing - loaded stale cooked binary instead: %# (source %#)", binPath, resolvedPath );
+                SW_LOG_ERROR( "Prefab source could not be loaded: %#", resolvedPath );
+                return nullptr;
             }
         }
 

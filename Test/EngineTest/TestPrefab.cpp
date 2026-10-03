@@ -107,6 +107,34 @@ SW_TEST_CASE( PrefabTest, XmlJsonBinaryRoundtrip )
 }
 
 /**
+ * @brief [PrefabTest] 소스를 읽는 구성(Dev)은 소스가 없을 때 옆에 남은 쿠킹본을 대신 읽지 않는다 — 배포 구성은 쿠킹본만 읽는다
+ * @details 소스를 옮기거나 지웠는데 쿠킹본(.prefab.bin)이 남아 있으면, Dev 가 그것을 읽어 낡은 프리팹이 살아나고 "없음" 실패가 가려진다.
+ */
+SW_TEST_CASE( PrefabTest, MissingSourceDoesNotFallBackToCookedBinaryInDev )
+{
+    const sw::string srcXmlPath = sw::ensureSamplePrefabXml();
+    sw::PrefabAsset  src;
+    SW_ASSERT_TRUE( src.loadFromXmlFile( srcXmlPath ) );
+
+    // 소스는 없고 쿠킹본만 있는 프리팹.
+    const sw::string orphanSourcePath = test::makeTempPath( "orphan.prefab.xml" );
+    SW_ASSERT_TRUE( src.saveToBinaryFile( sw::AssetCookPath::toCookedPath( orphanSourcePath ) ) );
+    SW_ASSERT_FALSE( sw::FileUtil::fileExists( orphanSourcePath ) );
+
+    sw::PrefabManager manager;
+    sw::PrefabAsset*  pLoaded{ nullptr };
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "prefab whose source is gone" );
+        pLoaded = manager.loadPrefab( orphanSourcePath );
+    }
+#if defined( SW_SHIPPING )
+    SW_EXPECT_NOT_NULL( pLoaded );
+#else
+    SW_EXPECT_NULL( pLoaded );
+#endif
+}
+
+/**
  * @brief [PrefabTest] 경로 구분자·확장자가 달라도 같은 캐시 엔트리
  */
 /**
