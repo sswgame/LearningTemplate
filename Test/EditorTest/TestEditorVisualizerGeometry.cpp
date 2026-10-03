@@ -18,8 +18,8 @@ using namespace sw::editor;
 
 /**
  * @brief [EditorVisualizerGeometryTest] 콜라이더 시각화는 물리가 판정하는 상자(월드 스케일 · 회전을 받은 것)를 그린다
- * @details 시각화가 `getWorldPosition() + offset` 에 로컬 크기의 절반을 더해 그려, 키운 콜라이더가 물리 상자보다 작게 보였다(오프셋도 스케일을 받지
- *          않았다). 이제 `getWorldBox` 의 상자를 그린다. 시각화는 씬 전체가 아니라 매니저의 콜라이더 등록부를 본다.
+ * @details `getWorldBox` 의 상자를 그린다. `getWorldPosition() + offset` 에 로컬 크기의 절반을 더해 그리면 키운 콜라이더가 물리 상자보다
+ *          작게 보인다(오프셋도 스케일을 받아야 한다). 시각화는 씬 전체가 아니라 매니저의 콜라이더 등록부를 본다.
  */
 SW_TEST_CASE( EditorVisualizerGeometryTest, ColliderOutlineIsThePhysicsBox )
 {
@@ -63,8 +63,7 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, ColliderOutlineIsThePhysicsBox )
 
 /**
  * @brief [EditorVisualizerGeometryTest] 디버그 큐의 선은 그대로, 구는 대원 세 개의 선분으로 나온다
- * @details `DebugDrawQueue` 는 게임 코드가 채우고 `EngineLoop` 가 비우지만 읽는 쪽이 없었다(`getLines` · `getSpheres` 호출 0). 뷰포트 시각화
- *          (`debug_draw`)가 이 선분을 투영해 그린다.
+ * @details `DebugDrawQueue` 는 게임 코드가 채우고 `EngineLoop` 가 비운다. 뷰포트 시각화(`debug_draw`)가 이 선분을 투영해 그린다.
  */
 SW_TEST_CASE( EditorVisualizerGeometryTest, DebugDrawQueueBecomesWorldSegments )
 {

@@ -23,8 +23,8 @@ namespace
 
 /**
  * @brief [EditorAssetTypeActionsTest] 등록자는 종류로 등록하고, 경로는 그 종류의 동작을 찾는다
- * @details 썸네일 · 열기 · 뷰포트 드롭이 콘텐츠 브라우저와 `EditorAssetCommands` 에서 종류별 if-체인이었다(그중 머티리얼 열기 분기는 패널이 먼저
- *          받아 닿지 않는 죽은 코드였다). 이제 종류의 코드 파일이 등록하고 부르는 쪽은 `findActionsForPath` 하나로 찾는다.
+ * @details 썸네일 · 열기 · 뷰포트 드롭은 종류의 코드 파일이 등록하고, 부르는 쪽(콘텐츠 브라우저 · `EditorAssetCommands`)은 종류별 if-체인 없이
+ *          `findActionsForPath` 하나로 찾는다.
  */
 SW_TEST_CASE( EditorAssetTypeActionsTest, RegistrarRegistersByKindAndPathFindsIt )
 {

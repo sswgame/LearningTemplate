@@ -30,12 +30,11 @@ SW_TEST_CASE( EditorHotReloadTest, ReloadFileManagerLifecycle )
 
 /**
  * @brief [EditorHotReloadTest] 콜백이 감시를 더 걸어도 전달이 무너지지 않는다
- * @details 전달은 `_listWatch` 를 범위 for 로 돌면서 콜백을 불렀다. 리로드 콜백이 자기 감시를
- *          다시 거는 것은 흔한 일인데(에셋을 다시 읽고 다시 arm 한다), 그러면 벡터가 순회 도중
- *          재할당돼 **참조가 뜬 메모리를 가리킨다.** 인덱스로 돌고 델리게이트를 부르기 전에
- *          복사하는 것으로 고쳤다 — `MulticastDelegate::broadcast` 와 같은 모양이다.
+ * @details 전달은 인덱스로 돌고 델리게이트를 부르기 전에 복사한다 — `MulticastDelegate::broadcast` 와 같은 모양이다.
+ *          리로드 콜백이 자기 감시를 다시 거는 것은 흔한 일인데(에셋을 다시 읽고 다시 arm 한다), `_listWatch` 를
+ *          범위 for 로 돌면 벡터가 순회 도중 재할당돼 **참조가 뜬 메모리를 가리킨다.**
  *
- *          콜백 하나가 감시를 넉넉히 더 걸어 재할당을 **반드시** 일으킨다. 고치기 전 코드는
+ *          콜백 하나가 감시를 넉넉히 더 걸어 재할당을 **반드시** 일으킨다. 범위 for 로 돌면
  *          ASAN 빌드에서 해제된 메모리 접근으로 그 자리에서 죽는다.
  */
 SW_TEST_CASE( EditorHotReloadTest, DispatchSurvivesWatchesAddedFromItsOwnCallback )

@@ -33,11 +33,7 @@ using namespace sw::editor;
 // 도구 애셋 저장 커맨드 — **실패를 소리 내어 말하는가.**
 //
 // 이 커맨드들의 반환값을 호출부(패널)가 자주 버린다. 그래서 실패가 조용하면 사용자에게는
-// 아무 일도 없었던 것처럼 보이고, 실제로 그 조합이 편집을 잃게 만들었다(2026-09-18).
-// 다섯 커맨드가 실패를 알리는 방식이 제각각이었던 것도 같이 맞췄다:
-//   · saveAnimationGraph · saveDialogueGraph — 성공에만 로그, 실패 둘은 침묵
-//   · saveSpriteClip — 성공만 말함
-//   · saveSequence · saveTileMap — 로그가 아예 없음
+// 아무 일도 없었던 것처럼 보이고 편집을 잃는다. 다섯 커맨드는 실패를 같은 모양으로 알린다.
 
 namespace
 {
@@ -117,9 +113,8 @@ namespace
 
 /**
  * @brief [EditorToolAssetCommandsTest] 애니메이션 그래프 저장 실패는 에러 로그를 남긴다
- * @details 예전에는 성공에만 `SW_LOG_INFO( "Saved …" )` 가 있고 실패 두 경로는 **로그 없이**
- *          `false` 만 돌려줬다. 그리고 `AnimationGraphPanel` 이 그 값을 버린 채 dirty 까지
- *          지웠으므로, 저장이 실패해도 사용자에게는 아무 신호가 없었다.
+ * @details 실패 경로가 **로그 없이** `false` 만 돌려주면, 패널이 그 값을 버리는 순간 저장이 실패해도
+ *          사용자에게는 아무 신호가 없다.
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, AnimationGraphSaveFailureIsReported )
 {
@@ -164,8 +159,8 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, SuccessfulSaveIsQuiet )
 
 /**
  * @brief [EditorToolAssetCommandsTest] 그래프 문서를 읽으면 "없음(새 문서)" · "읽음" · "있는데 읽지 못함" 을 가른다
- * @details 예전에는 셋 다 bool 하나였다. 패널은 없는 파일과 깨진 파일을 가를 수 없어 둘 다 앞 문서의 그래프를 든 채 저장할 수 있게
- *          두었다 — 깨진(또는 더 새 형식의) 파일을 앞 문서로 덮는 길이었다.
+ * @details 셋을 bool 하나로 답하면 패널이 없는 파일과 깨진 파일을 가를 수 없어, 둘 다 앞 문서의 그래프를 든 채 저장할 수 있게
+ *          둔다 — 깨진(또는 더 새 형식의) 파일을 앞 문서로 덮는다.
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, GraphLoadTellsMissingFromMalformed )
 {
@@ -192,9 +187,8 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, GraphLoadTellsMissingFromMalformed )
 
 /**
  * @brief [EditorToolAssetCommandsTest] 타일맵 · 스프라이트 클립 · 시퀀스도 그래프와 같은 세 갈래로 답한다
- * @details 다섯 로더 가운데 셋이 bool 이라 "없음(새 문서)" 과 "있는데 읽지 못함" 이 섞였고, 타일맵 · 스프라이트 클립 패널은 그 bool 마저 버린 채
- *          늘 "읽었다" 로 표시했다 — 깨진 파일을 앞 문서의 내용으로 덮는 길이었다. 이제 다섯이 같은 결과 타입이고, 문서 패널 기반이 그 결과로
- *          저장을 막는다(`EditorDocumentPanel::reloadDocument`).
+ * @details 다섯 로더가 같은 결과 타입이고, 문서 패널 기반이 그 결과로 저장을 막는다(`EditorDocumentPanel::reloadDocument`). bool 로 답하는
+ *          로더는 "없음(새 문서)" 과 "있는데 읽지 못함" 을 섞어, 깨진 파일을 앞 문서의 내용으로 덮게 한다.
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, EveryToolAssetLoadTellsMissingFromMalformed )
 {
@@ -220,8 +214,8 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EveryToolAssetLoadTellsMissingFromMal
 
 /**
  * @brief [EditorToolAssetCommandsTest] 프리팹에 적용하기는 프리팹 경로의 형식으로 쓰고, 프리팹이 아닌 경로는 덮지 않는다
- * @details "Apply to Prefab" 이 `.prefab.json` 에 XML 을 써서 그 프리팹이 다시는 읽히지 않았다. "Apply Overrides" 는 포커스된 에셋 경로(콘텐츠
- *          브라우저에서 마지막에 클릭한 씬 · 머티리얼)를 먼저 써서 그 파일을 프리팹으로 덮었다.
+ * @details "Apply to Prefab" 이 `.prefab.json` 에 XML 을 쓰면 그 프리팹이 다시는 읽히지 않는다. "Apply Overrides" 가 포커스된 에셋 경로(콘텐츠
+ *          브라우저에서 마지막에 클릭한 씬 · 머티리얼)를 먼저 쓰면 그 파일을 프리팹으로 덮는다.
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, ApplyToPrefabWritesThePrefabsFormatAndNothingElse )
 {
@@ -248,9 +242,9 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, ApplyToPrefabWritesThePrefabsFormatAn
 
 /**
  * @brief [EditorToolAssetCommandsTest] 오버라이드는 컴포넌트를 안정 키로 짝짓고, 되돌리기는 그 컴포넌트의 그 비트만 바꾼다
- * @details 예전에는 컴포넌트를 타입 이름으로 짝지어 같은 타입의 둘째 컴포넌트(소켓)가 첫째의 원형과 비교됐고(바꾸지 않은 위치가 오버라이드로
- *          보였다), 되돌리기는 첫째에 적용됐다. 비트필드는 바이트째 견주고 옮겨, 같은 바이트의 런타임 플래그(재생 중)가 다르면 반복 설정이
- *          오버라이드로 보였고, 되돌리면 재생이 멈췄다. 되돌린 값은 알리지 않아 위치가 월드 행렬에 들지 않았다.
+ * @details 컴포넌트를 타입 이름으로 짝지으면 같은 타입의 둘째 컴포넌트(소켓)가 첫째의 원형과 비교되어 바꾸지 않은 위치가 오버라이드로 보이고,
+ *          되돌리기가 첫째에 적용된다. 비트필드를 바이트째 견주고 옮기면 같은 바이트의 런타임 플래그(재생 중)가 다를 때 반복 설정이
+ *          오버라이드로 보이고, 되돌리면 재생이 멈춘다. 되돌린 값을 알리지 않으면 위치가 월드 행렬에 들지 않는다.
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, OverridesPairComponentsByKeyAndRevertOnlyTheirOwnValue )
 {
@@ -374,8 +368,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
 
 /**
  * @brief [EditorToolAssetCommandsTest] 다섯 도구 문서의 저장 실패는 같은 모양의 오류 한 줄이다
- * @details 저장 커맨드 다섯이 실패를 제각각 알렸다(문구 · 언어 · 경로 표기가 달랐다). 지금은 `saveToolDocument` 한 벌이 알리므로
- *          종류 이름만 다르고 모양은 같다: `Failed to save the <종류> to '<경로>'`.
+ * @details `saveToolDocument` 한 벌이 알리므로 종류 이름만 다르고 모양은 같다: `Failed to save the <종류> to '<경로>'`.
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, EverySaveFailureHasTheSameShape )
 {
@@ -423,8 +416,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EverySaveFailureHasTheSameShape )
 
 /**
  * @brief [EditorToolAssetCommandsTest] 다섯 도구 문서는 읽지 못한 파일을 같은 경고로 알리고, 상태 문구도 같은 모양이다
- * @details 스프라이트 클립은 커맨드가 경고를 남기지 않았고 타일맵은 다른 문구였다. 상태 문구가 있는 둘(타일맵 · 스프라이트 클립)은
- *          `No file yet: ` · `Failed to read ` · `Loaded ` 로 같은 모양이다.
+ * @details 상태 문구가 있는 둘(타일맵 · 스프라이트 클립)은 `No file yet: ` · `Failed to read ` · `Loaded ` 로 같은 모양이다.
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, EveryUnreadableDocumentIsReportedTheSameWay )
 {
@@ -463,7 +455,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EveryUnreadableDocumentIsReportedTheS
 
 /**
  * @brief [EditorToolAssetCommandsTest] 스프라이트 클립에 이미지를 주면 문서로 읽지 않고 아틀라스로 쓴다 — 파일이 있어도
- * @details 아틀라스 폴백이 "파일이 없을 때" 안에 있어, 실제로 있는 이미지는 클립 문서로 읽으려다 `Malformed` 가 됐다(없는 이미지만 아틀라스가 됐다).
+ * @details 아틀라스 폴백을 "파일이 없을 때" 안에 두면 실제로 있는 이미지를 클립 문서로 읽으려다 `Malformed` 가 된다.
  */
 SW_TEST_CASE( EditorToolAssetCommandsTest, SpriteClipTakesAnExistingImageAsTheAtlas )
 {

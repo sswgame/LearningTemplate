@@ -277,11 +277,9 @@ namespace sw::editor
 
     /**
      * @brief [EditorTexturePipelineTest] 스위즐이 바이트를 섞는 방식과 그 결과를 부르는 포맷 이름이 한 자리에서 나온다
-     * @details 예전에는 둘이 따로 있었다 — 섞기는 `applyChannelManipulations` 의 if 사슬이,
-     *          포맷 이름은 `bakeTexture` 의 `_swizzle == BGRA ? BGRA : RGBA` 삼항이 정했다.
-     *          그래서 `ARGB` 는 섞기 쪽만 알고 포맷 쪽은 몰랐다 — 바이트는 옮겨졌는데 결과물은
-     *          "RGBA 다" 라고 적혀 나가서 색이 깨졌다. 게다가 그 섞기 자체가 왼쪽 회전이라
-     *          RGBA 를 GBAR 로 만들었다(ARGB 는 어떤 읽기로도 그게 아니다).
+     * @details 섞기와 포맷 이름을 따로 정하면 한쪽만 아는 스위즐이 생긴다 — 바이트는 옮겨졌는데 결과물은
+     *          "RGBA 다" 라고 적혀 나가 색이 깨진다. `ARGB` 섞기가 왼쪽 회전이면 RGBA 를 GBAR 로 만든다
+     *          (ARGB 는 어떤 읽기로도 그게 아니다).
      */
     SW_TEST_CASE( EditorTexturePipelineTest, SwizzleLayoutAndFormatAgree )
     {
@@ -346,12 +344,10 @@ namespace sw::editor
 
     /**
      * @brief [EditorTexturePipelineTest] 그린 반전이 어떤 스위즐에서도 초록에 걸린다
-     * @details 예전 `ARGB` 는 바이트를 왼쪽으로 한 칸 돌려 초록을 0번으로 보내 놓고, 반전은
-     *          그대로 1번을 뒤집었다 — **파랑을 뒤집고 초록은 그대로 남겼다.** 이 테스트가
-     *          보는 것이 그것이다.
-     * @note 반전을 섞기 **앞**으로 옮긴 것은 동작이 아니라 가정을 없앤 것이다. 지금 스위즐들은
-     *       모두 초록을 1번에 두므로 순서를 바꿔도 결과가 같고, 그래서 **이 테스트는 순서를
-     *       구별하지 못한다.** 새 스위즐이 초록을 옮기는 순간 조용히 틀리는 자리를 미리 막은 것이다.
+     * @details 스위즐이 초록을 0번으로 보낸 뒤 반전이 그대로 1번을 뒤집으면 **파랑을 뒤집고 초록은 그대로 남긴다.**
+     *          이 테스트가 보는 것이 그것이다.
+     * @note 반전은 섞기 **앞**에 한다. 지금 스위즐들은 모두 초록을 1번에 두므로 순서를 바꿔도 결과가 같고,
+     *       그래서 **이 테스트는 순서를 구별하지 못한다.** 새 스위즐이 초록을 옮기면 순서가 결과를 가른다.
      */
     SW_TEST_CASE( EditorTexturePipelineTest, InvertGreenHitsGreenUnderEverySwizzle )
     {
@@ -387,10 +383,9 @@ namespace sw::editor
 
     /**
      * @brief [EditorTexturePipelineTest] 찾지 못한 inherits 는 조용히 넘어가지 않는다
-     * @details `inherits` 해석은 프리셋 쪽과 규칙 쪽에 **복사본 둘**로 있었고 둘 다 못 찾으면
-     *          그냥 넘어갔다. 그래서 이름 오타나 **부모를 아래쪽에 적는 것**(찾기는 그 시점까지
-     *          파싱된 프리셋만 본다)이 상속을 통째로 지웠고, 그 텍스처는 아무 말 없이 기본값으로
-     *          구워졌다. 한 자리로 모으고 경고를 남기게 했다.
+     * @details `inherits` 해석은 프리셋 쪽과 규칙 쪽이 한 자리를 쓰고, 못 찾으면 경고를 남긴다. 그냥 넘어가면
+     *          이름 오타나 **부모를 아래쪽에 적는 것**(찾기는 그 시점까지 파싱된 프리셋만 본다)이 상속을 통째로
+     *          지우고, 그 텍스처는 아무 말 없이 기본값으로 구워진다.
      */
     SW_TEST_CASE( EditorTexturePipelineTest, UnresolvedInheritsIsReported )
     {
@@ -452,12 +447,12 @@ namespace sw::editor
     /**
      * @brief [EditorTexturePipelineTest] 규칙 배열의 **관대한 파싱을 유지**하되, 그 결과를 짚어 준다
      * @details `rules` 배열은 객체가 아닌 원소도 그대로 규칙으로 만든다 — 에디터에서만 쓰이는 손으로
-     *          적는 파일이라 그 관대함을 **일부러 남겼다**(2026-09-19 결정, `TextureImportConfig.cpp`
-     *          주석 참고). 이 케이스는 그 결정을 못박는 동시에, 그때 무슨 일이 일어나는지도 못박는다:
+     *          적는 파일이라 그 관대함을 **일부러 둔다**(`TextureImportConfig.cpp` 주석 참고). 이 케이스는
+     *          그 결정을 못박는 동시에, 그때 무슨 일이 일어나는지도 못박는다:
      *          필드를 하나도 못 읽은 규칙은 **조건이 없어 모든 경로에 매칭**되고, 매칭은 "첫 승" 이라
      *          **그 뒤 규칙이 전부 죽는다.** 그 사실을 `findShadowingRuleIndex` 가 짚는다.
      * @note 그러므로 이 케이스가 깨졌다면 둘 중 하나다 — 파싱을 엄격하게 바꿨거나(그러면 결정을
-     *       뒤집은 것이니 주석·백로그도 같이 고칠 것), 가리는 규칙을 못 찾게 됐거나.
+     *       뒤집은 것이니 `TextureImportConfig.cpp` 주석도 같이 고칠 것), 가리는 규칙을 못 찾게 됐거나.
      */
     SW_TEST_CASE( EditorTexturePipelineTest, LenientRuleParsingIsKeptButShadowingIsReported )
     {

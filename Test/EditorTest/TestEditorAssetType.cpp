@@ -26,10 +26,10 @@ SW_TEST_CASE( EditorAssetTypeTest, MatchesKnownSuffixes )
 
 /**
  * @brief [EditorAssetTypeTest] 씬 · 프리팹 판정은 쿠커의 규칙 하나다(`AssetCookPath`)
- * @details 에디터가 접미사 표를 따로 들어, 쿠커가 굽지 않는 이름도 씬 · 프리팹으로 봤다 — `.scene` 이 어디든 든 `.xml`(`forest.scenery.xml`),
- *          `_scene.xml`, 확장자 없는 `.scene` · `.prefab`. 에디터에서는 열리고 저장되고 퀵 런처 · 카탈로그에 떴지만 쿠커가 굽지 않아 배포본에서는
- *          "Shipping requires cooked binary" 로 멈췄다. 쿠킹본 `.prefab.bin` 은 프리팹 편집기로 열렸지만 저장이 거절됐다(`PrefabAsset::saveToFile` 은
- *          소스만 쓴다). 리소스 카탈로그는 프리팹을 `.prefab.xml` 하나로 세어 JSON 프리팹을 빠뜨렸다.
+ * @details 에디터가 접미사 표를 따로 들면 쿠커가 굽지 않는 이름도 씬 · 프리팹으로 본다 — `.scene` 이 어디든 든 `.xml`(`forest.scenery.xml`),
+ *          `_scene.xml`, 확장자 없는 `.scene` · `.prefab`. 그런 파일은 에디터에서는 열리고 저장되지만 배포본에서는 "Shipping requires cooked binary"
+ *          로 멈춘다. 쿠킹본 `.prefab.bin` 이 프리팹 편집기로 열리면 저장이 거절되고(`PrefabAsset::saveToFile` 은 소스만 쓴다), 카탈로그가 프리팹을
+ *          `.prefab.xml` 하나로 세면 JSON 프리팹이 빠진다.
  */
 SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
 {
@@ -177,15 +177,14 @@ SW_TEST_CASE( EditorAssetTypeTest, AllAssetKindsAndMatchesAny )
 
 /**
  * @brief [EditorAssetTypeTest] 계층 뱃지는 리플렉션 Category 에서 나온다
- * @details 예전에는 Hierarchy 패널이 타입 이름 7개를 if/else 로 비교했다 — 게임이 자기
- *          컴포넌트를 넣으면 뱃지가 없고, 엔진이 컴포넌트를 늘리면 패널을 같이 고쳐야 했다.
- *          Category 를 쓰면 등록된 어떤 컴포넌트든 뱃지가 붙는다. 그 규약을 여기서 고정한다.
+ * @details 패널이 타입 이름을 하나씩 비교해 뱃지를 붙이면 게임이 만든 컴포넌트에는 뱃지가 없고, 엔진이 컴포넌트를 늘릴 때마다
+ *          패널을 같이 고쳐야 한다. Category 를 쓰면 등록된 어떤 컴포넌트든 뱃지가 붙는다. 그 규약을 여기서 고정한다.
  */
 SW_TEST_CASE( EditorAssetTypeTest, HierarchyBadgeComesFromReflectionCategory )
 {
     sw::string badge;
 
-    // Category 가 없으면 아무것도 붙지 않는다 (예전의 else 분기와 같다).
+    // Category 가 없으면 아무것도 붙지 않는다.
     sw::editor::EditorUtil::appendCategoryBadge( "", badge );
     SW_EXPECT_TRUE( badge.empty() );
 
@@ -207,10 +206,8 @@ SW_TEST_CASE( EditorAssetTypeTest, HierarchyBadgeComesFromReflectionCategory )
 
 /**
  * @brief [EditorAssetTypeTest] 프로젝트 상대 경로 해석은 이미 절대인 경로를 건드리지 않는다
- * @details 이 다섯 줄이 설정 파일을 다루는 **세 곳에 복사**되어 있었고(EditorConfig 의 load/save,
- *          EditorData::loadFromHostPath), 셋 다 "절대 경로인가" 를 손으로 다시 적었다 —
- *          그 손 판정은 `FileUtil::isAbsolutePath` 와 **달랐다**(드라이브 문자가 글자인지 보지
- *          않는다). 한 자리로 모으면서 진짜 판정을 쓰게 했다.
+ * @details 설정 파일을 다루는 세 곳(EditorConfig 의 load/save, `EditorData::loadFromHostPath`)이 이 함수 하나를 쓴다.
+ *          "절대 경로인가" 를 손으로 다시 적으면 `FileUtil::isAbsolutePath` 와 어긋나기 쉽다(드라이브 문자가 글자인지 보지 않는 식).
  */
 SW_TEST_CASE( EditorAssetTypeTest, ProjectRelativePathLeavesAbsoluteAlone )
 {
@@ -309,8 +306,8 @@ SW_TEST_CASE( EditorAssetTypeTest, EveryReloadCacheNameIsRegisteredInTheEngine )
 
 /**
  * @brief [EditorAssetTypeTest] 종류 표는 모든 종류에 이름 · 브라우저 라벨 · 아이콘을 하나씩 준다
- * @details 아이콘 · 색 · 퀵 런처 분류가 종류별 분기 체인으로 따로 적혀 있으면 새 종류는 체인마다 빠진다(시퀀스는 아이콘 체인에 없어 Data 아이콘으로
- *          보였다). 표 하나에서 읽으므로 칸이 빠지면 컴파일이 멈추고(static_assert), 여기서는 공개 API 로 같은 것을 본다.
+ * @details 아이콘 · 색 · 퀵 런처 분류가 종류별 분기 체인으로 따로 적혀 있으면 새 종류는 체인마다 빠진다(아이콘 체인에서 빠진
+ *          종류는 Data 아이콘으로 보인다). 표 하나에서 읽으므로 칸이 빠지면 컴파일이 멈추고(static_assert), 여기서는 공개 API 로 같은 것을 본다.
  */
 SW_TEST_CASE( EditorAssetTypeTest, EveryKindHasIconColorAndCategory )
 {

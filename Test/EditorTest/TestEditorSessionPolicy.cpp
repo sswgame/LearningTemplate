@@ -67,9 +67,8 @@ SW_TEST_CASE( EditorSessionPolicyTest, PrefabIsolationDoesNotRequireCleanScene )
 
 /**
  * @brief [EditorSessionPolicyTest] 축 하나만 움직여도 **움직인 것**이다
- * @details 그래프 패널 둘이 이 판단을 각자 적고 있었고 연산자가 서로 달랐다 — 애니메이션은 `||`,
- *          대화는 `&&`. `&&` 쪽에서는 노드를 정확히 수평으로만(또는 수직으로만) 옮기면 "안 움직였다"
- *          가 되어 그 레이아웃 변경이 dirty 로 잡히지 않고 **조용히 사라졌다.** 캔버스 정렬이
+ * @details 그래프 패널들이 이 판단을 이 함수 하나로 한다. `&&` 로 적으면 노드를 정확히 수평으로만(또는 수직으로만)
+ *          옮길 때 "안 움직였다" 가 되어 그 레이아웃 변경이 dirty 로 잡히지 않고 **조용히 사라진다.** 캔버스 정렬이
  *          축 하나만 움직이는 일을 흔하게 만들므로 드문 경우도 아니다.
  * @note 그래서 이 케이스의 핵심은 아래 **한 축만 움직인 두 줄**이다. 둘 다 true 여야 한다.
  */
@@ -96,9 +95,8 @@ SW_TEST_CASE( EditorSessionPolicyTest, NodeCountsAsMovedWhenEitherAxisChanges )
 
 /**
  * @brief 컨테이너 원소 편집은 **두 조건이 모두** 맞아야 열린다.
- * @details 인스펙터는 이 둘을 따로 물었고, 그래서 `ReadOnly` 컨테이너의 원소가 그대로 편집됐다
- *          (읽기 전용 표시는 `+ Add`·`Clear` 버튼만 가리고 있었다). 연관 컨테이너에서는 그 편집이
- *          정렬 키를 제자리에서 바꾸는 일이라 트리를 깨뜨린다.
+ * @details 둘을 따로 물으면 `ReadOnly` 컨테이너의 원소가 그대로 편집된다(읽기 전용 표시가 `+ Add`·`Clear`
+ *          버튼만 가린다). 연관 컨테이너에서는 그 편집이 정렬 키를 제자리에서 바꾸는 일이라 트리를 깨뜨린다.
  */
 SW_TEST_CASE( EditorSessionPolicyTest, ContainerElementEditsNeedBothConditions )
 {

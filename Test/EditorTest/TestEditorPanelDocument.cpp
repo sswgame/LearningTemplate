@@ -39,8 +39,8 @@ namespace
         /**
          * @brief 파생이 하는 일은 **쓰고, 됐는지 답하는 것**이 전부다.
          * @details 일부러 `clearDocumentDirty()` 를 부르지 않는다 — dirty 를 지우는 것은 기반의
-         *          `saveDocumentAndClearDirty()` 몫이다. 예전에는 그 순서를 파생 아홉이 각자
-         *          구현해서 서로 달랐다(둘은 실패해도 지웠고, 하나는 성공해도 안 지웠다).
+         *          `saveDocumentAndClearDirty()` 몫이다. 그 순서를 파생이 각자 구현하면 서로 달라진다
+         *          (실패해도 지우거나, 성공해도 안 지우거나).
          */
         bool saveDocument() override
         {
@@ -71,9 +71,9 @@ namespace
 
 /**
  * @brief [EditorPanelDocumentTest] 편집을 알리기만 하면 dirty 상태가 잡히는지 검증
- * @details InputMapEditorPanel 이 자기 `_bDirty` 만 들고 계약을 구현하지 않아, 화면에는 미저장
- *          표시를 띄우면서 Ctrl+S(`saveFocusedOrScene`)와 종료 확인에는 보이지 않았다. 이제
- *          비트를 기반이 들기 때문에 그 반쪽 상태가 존재할 수 없다.
+ * @details 패널이 자기 dirty 비트만 들고 계약을 구현하지 않으면 화면에는 미저장 표시를 띄우면서
+ *          Ctrl+S(`saveFocusedOrScene`)와 종료 확인에는 보이지 않는다. 비트를 기반이 들기 때문에 그 반쪽
+ *          상태가 존재할 수 없다.
  */
 SW_TEST_CASE( EditorPanelDocumentTest, MarkDirtyIsVisibleToBaseContract )
 {
@@ -148,11 +148,9 @@ SW_TEST_CASE( EditorPanelDocumentTest, PanelWithoutDocumentStaysClean )
 
 /**
  * @brief [EditorPanelDocumentTest] 파생이 지우지 않아도 성공한 저장은 dirty 를 지운다
- * @details "저장했으면 dirty 를 지운다" 는 순서를 파생 아홉이 각자 구현하고 있었고, 그래서
- *          서로 달랐다 — `AnimationGraphPanel` · `DialogueGraphPanel` 은 **실패해도 무조건**
- *          지우고 `true` 를 돌려줬고(문서를 바꾸거나 닫을 때 확인 없이 편집이 사라진다),
- *          `TileMapPanel` 은 **성공해도 지우지 않았다**(저장했는데 계속 미저장으로 남는다).
- *          순서를 기반(`saveDocumentAndClearDirty`)이 들면 둘 다 존재할 수 없다.
+ * @details "저장했으면 dirty 를 지운다" 는 순서를 파생이 각자 구현하면 서로 달라진다 — **실패해도 무조건**
+ *          지우고 `true` 를 돌려주면 문서를 바꾸거나 닫을 때 확인 없이 편집이 사라지고, **성공해도 지우지 않으면**
+ *          저장했는데 계속 미저장으로 남는다. 순서를 기반(`saveDocumentAndClearDirty`)이 들면 둘 다 존재할 수 없다.
  */
 SW_TEST_CASE( EditorPanelDocumentTest, BaseClearsDirtyOnSuccessfulSave )
 {
@@ -175,8 +173,8 @@ SW_TEST_CASE( EditorPanelDocumentTest, BaseClearsDirtyOnSuccessfulSave )
 
 /**
  * @brief [EditorPanelDocumentTest] 저장해도 되지 않는 문서는 `saveDocument` 를 부르지 않고, dirty 도 그대로 남는다
- * @details 문서를 읽지 못한 패널은 앞 문서의 데이터를 들고 있다(`EditorDocumentPanel::markDocumentLoadFailed`). 예전에는 그 상태에서도
- *          저장을 눌러 읽지 못한 파일을 앞 문서로 덮었다.
+ * @details 문서를 읽지 못한 패널은 앞 문서의 데이터를 들고 있다(`EditorDocumentPanel::markDocumentLoadFailed`). 그 상태에서 저장하면
+ *          읽지 못한 파일을 앞 문서로 덮는다.
  */
 SW_TEST_CASE( EditorPanelDocumentTest, SaveIsRefusedWhenTheDocumentCannotBeSaved )
 {

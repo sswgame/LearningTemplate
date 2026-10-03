@@ -64,11 +64,10 @@ namespace
 
 /**
  * @brief [EditorTransactionTest] 커맨드 스택 서비스가 없어도 트랜잭션이 터지지 않는다
- * @details `editor::getService<T>()` 는 **문서대로 nullptr 을 돌려줄 수 있다.** 그런데 이 파일의
- *          일곱 자리가 그 값을 확인 없이 `->` 로 따라가고 있었다(2026-09-18 수정). 커맨드 스택은
+ * @details `editor::getService<T>()` 는 **문서대로 nullptr 을 돌려줄 수 있다.** 커맨드 스택은
  *          `EngineLoop` 소유라 EditorModule 보다 오래 살고 **종료할 때 서비스 결합이 먼저 풀리므로**,
- *          그 창에서 트랜잭션이 하나라도 돌면 널 역참조였다.
- *          이 테스트 환경이 바로 그 상태다 — 고치기 전에는 이 케이스가 **프로세스를 죽였다**.
+ *          그 창에서 트랜잭션이 확인 없이 `->` 로 따라가면 널 역참조다.
+ *          이 테스트 환경이 바로 그 상태다 — 확인이 빠지면 이 케이스가 **프로세스를 죽인다**.
  */
 SW_TEST_CASE( EditorTransactionTest, NoCommandStackServiceIsSafe )
 {
@@ -115,10 +114,9 @@ SW_TEST_CASE( EditorTransactionTest, BoundCommandStackReceivesPush )
 
 /**
  * @brief [EditorTransactionTest] 스택이 없어도 씬 dirty 표시는 남는다
- * @details 고치는 중에 한 번 잘못 고쳤던 자리다. `recordModify` 계열에서 스택이 없으면 곧장
- *          `return` 하게 했더니 뒤따르는 `markActiveSceneDirty()` 까지 건너뛰었다 — **씬은 이미
- *          바뀌었고 되돌리기 기록만 못 남기는 것**이므로 dirty 는 찍혀야 한다. 조기 반환 대신
- *          push 만 감싸는 것이 맞다.
+ * @details `recordModify` 계열에서 스택이 없을 때 곧장 `return` 하면 뒤따르는 `markActiveSceneDirty()` 까지
+ *          건너뛴다 — **씬은 이미 바뀌었고 되돌리기 기록만 못 남기는 것**이므로 dirty 는 찍혀야 한다. 조기 반환
+ *          대신 push 만 감싸는 것이 맞다.
  * @note 활성 씬이 없는 테스트 환경에서는 `markActiveSceneDirty()` 가 `EditorContext` 를 찾지 못해
  *       조용히 돌아간다. 그래서 이 케이스가 보는 것은 **그 경로를 끝까지 지나간다**는 것이다 —
  *       조기 반환이 들어오면 지나가지 않는다.
@@ -139,14 +137,13 @@ SW_TEST_CASE( EditorTransactionTest, RecordModifyRunsToTheEndWithoutStack )
 /**
  * @brief [EditorTransactionTest] 생성과 삭제의 Undo/Redo 는 **서로의 거울**이다
  * @details 생성과 삭제는 같은 두 절차("없앤다" · "저장해 둔 XML 로 되살린다")를 **반대로 이은 것**이다.
- *          예전에는 그 두 절차가 `recordCreation` 과 `recordDestruction` 에 네 벌로 복사돼 있었다 —
- *          없애기 두 벌, 되살리기 두 벌, 바이트까지 같았다. 되살리기 쪽을 한 번 고치면 나머지 방향이
+ *          두 절차를 `recordCreation` 과 `recordDestruction` 에 따로 복사해 두면 한쪽을 고칠 때 나머지 방향이
  *          조용히 뒤처지고, 증상은 **"Undo 는 되는데 Redo 는 안 된다"** 로 나온다. 사용자가 작업을
  *          잃는 방식이면서, 로그에는 아무것도 남지 않는 종류다.
  *
  *          이 케이스는 두 방향을 **실제로 실행해** 확인한다 — `SceneManager` 를 지역 서비스로 걸면
- *          `editor::getActiveScene()` 이 답하므로 Undo/Redo 델리게이트가 끝까지 지나간다(그 전까지
- *          이 스위트의 다른 케이스들은 씬이 없어 델리게이트가 곧장 돌아가고 있었다).
+ *          `editor::getActiveScene()` 이 답하므로 Undo/Redo 델리게이트가 끝까지 지나간다(씬이 없으면
+ *          델리게이트가 곧장 돌아간다).
  */
 SW_TEST_CASE( EditorTransactionTest, ObjectLifetimeUndoRedoAreMirrors )
 {
@@ -205,8 +202,8 @@ SW_TEST_CASE( EditorTransactionTest, ObjectLifetimeUndoRedoAreMirrors )
 
 /**
  * @brief [EditorTransactionTest] 지운 오브젝트를 되돌리면 그 오브젝트와 컴포넌트의 핸들이 다시 풀린다
- * @details 되살린 오브젝트가 **원래 id** 를 받기 때문이다(`createGameObjectWithId`, 컴포넌트는 `ObjectIdentity`). 예전에는
- *          새 id 를 받아 핸들이 끊겼고, 이름으로 찾던 `GameObjectPtr` 가 그 자리를 메웠다 — 이름을 바꾸면 끊기는 방식으로.
+ * @details 되살린 오브젝트가 **원래 id** 를 받기 때문이다(`createGameObjectWithId`, 컴포넌트는 `ObjectIdentity`). 새 id 를 받으면
+ *          핸들이 끊긴다. 이름으로 찾는 참조로 메우면 이름을 바꿀 때 끊긴다.
  */
 SW_TEST_CASE( EditorTransactionTest, HandlesSurviveUndoOfDestruction )
 {
@@ -297,9 +294,9 @@ SW_TEST_CASE( EditorTransactionTest, ComponentHandleSurvivesModifyUndo )
 
 /**
  * @brief [EditorTransactionTest] 자식이 있는 오브젝트를 지우고 되돌리면 자식 · 손자까지 원래 계층으로 돌아온다
- * @details 삭제(`destroyObject`)는 자식까지 지우는데, 기록은 그 오브젝트 **하나의** 스냅샷만 남겼다. 되돌리면 부모만 돌아오고
- *          자식은 영영 사라졌다 — 그대로 저장하면 파일에서도. 이제 서브트리를 자식부터 기록해 한 묶음으로 넣는다(묶음의
- *          되돌리기는 역순이라 부모가 먼저 살아나고, 자식은 이름으로 부모를 찾아 다시 붙는다).
+ * @details 삭제(`destroyObject`)는 자식까지 지우므로 기록이 그 오브젝트 **하나의** 스냅샷만 남기면 되돌릴 때 부모만 돌아오고
+ *          자식은 영영 사라진다 — 그대로 저장하면 파일에서도. 그래서 서브트리를 자식부터 기록해 한 묶음으로 넣는다(묶음의
+ *          되돌리기는 역순이라 부모가 먼저 살아나고, 자식은 부모의 런타임 id 로 다시 붙는다).
  */
 SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyBringsBackTheWholeSubtree )
 {
@@ -365,7 +362,7 @@ SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyBringsBackTheWholeSubtree )
 /**
  * @brief [EditorTransactionTest] 지운 계층을 되돌리면 자식은 **원래** 부모에 붙는다 — 그사이 같은 이름으로 생긴 오브젝트가 아니라
  * @details 엔진은 쓸 만한 게임 카메라가 없으면 프레임마다 "GameCamera" 를 만든다(`Scene::ensureDefaultCameras`). 하나뿐인 게임 카메라를 자식째 지우면
- *          다음 프레임에 새 "GameCamera" 가 생기고, 되돌리면 원래 것은 `GameCamera_2` 로 돌아오는데 자식은 이름으로 부모를 찾아 **새 것**에 붙었다
+ *          다음 프레임에 새 "GameCamera" 가 생기고, 되돌리면 원래 것은 `GameCamera_2` 로 돌아온다 — 자식이 이름으로 부모를 찾으면 **새 것**에 붙는다
  *          (저장하면 게임 카메라 둘이 굳는다). 되돌리기는 같은 실행의 스냅샷이라 부모의 런타임 id 로 찾는다.
  */
 SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyReattachesToTheOriginalParentNotANamesake )
@@ -409,8 +406,8 @@ SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyReattachesToTheOriginalParentN
 
 /**
  * @brief [EditorTransactionTest] 되돌리기 · 다시 하기도 씬을 dirty 로 만든다
- * @details 예전에는 기록할 때만 dirty 를 표시했다. 편집 → 저장 → Ctrl+Z 하면 씬은 바뀌었는데 깨끗하다고 해서, 그대로 끄거나 다른
- *          씬을 열면 묻지도 않고 되돌린 상태를 잃었다(유니티 · 언리얼은 되돌리기도 수정으로 친다).
+ * @details 기록할 때만 dirty 를 표시하면 편집 → 저장 → Ctrl+Z 했을 때 씬은 바뀌었는데 깨끗하다고 해서, 그대로 끄거나 다른
+ *          씬을 열면 묻지도 않고 되돌린 상태를 잃는다(유니티 · 언리얼은 되돌리기도 수정으로 친다).
  */
 SW_TEST_CASE( EditorTransactionTest, UndoAndRedoMarkTheSceneDirty )
 {
@@ -432,7 +429,7 @@ SW_TEST_CASE( EditorTransactionTest, UndoAndRedoMarkTheSceneDirty )
     pManager->mergePendingAdds();
 
     SW_ASSERT_TRUE( EditorSceneCommands::rename( pTarget, "DirtyRenamed" ) );
-    SW_EXPECT_TRUE( workspace.isSceneDirty() ); // 기록 — 예전에도 됐다
+    SW_EXPECT_TRUE( workspace.isSceneDirty() ); // 기록
 
     workspace.clearSceneDirty(); // 저장한 셈
     stack.undo();
@@ -447,8 +444,8 @@ SW_TEST_CASE( EditorTransactionTest, UndoAndRedoMarkTheSceneDirty )
 
 /**
  * @brief [EditorTransactionTest] 컴포넌트 제거는 기록되고(되돌리면 돌아온다) 씬을 dirty 로 만든다
- * @details 예전 `EditorSceneCommands::destroyComponent` 는 기록도 dirty 도 없었다 — 인스펙터 · 계층 창의 "Remove Component" 를
- *          되돌릴 수 없었고, 그대로 다른 씬을 열면 묻지도 않고 사라졌다.
+ * @details `EditorSceneCommands::destroyComponent` 가 기록도 dirty 도 남기지 않으면 인스펙터 · 계층 창의 "Remove Component" 를
+ *          되돌릴 수 없고, 그대로 다른 씬을 열면 묻지도 않고 사라진다.
  */
 SW_TEST_CASE( EditorTransactionTest, RemovingAComponentCanBeUndone )
 {

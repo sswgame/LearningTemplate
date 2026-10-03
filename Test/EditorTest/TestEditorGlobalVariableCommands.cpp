@@ -53,8 +53,8 @@ SW_TEST_CASE( EditorGlobalVariableCommandsTest, SavedPresetSkipsTestOnlyVariable
 }
 
 /**
- * @brief [EditorGlobalVariableCommandsTest] 테스트용 값을 담은 옛 프리셋을 불러와도 그 값은 적용하지 않는다
- * @details 필터가 생기기 전에 저장한 프리셋(세션 프리셋 포함)은 테스트용 변수를 담고 있다.
+ * @brief [EditorGlobalVariableCommandsTest] 테스트용 값을 담은 프리셋을 불러와도 그 값은 적용하지 않는다
+ * @details 저장 쪽 필터만으로는 모자란다 — 손으로 쓰거나 저장 필터를 거치지 않은 프리셋 파일(세션 프리셋 포함)은 테스트용 변수를 담을 수 있다.
  */
 SW_TEST_CASE( EditorGlobalVariableCommandsTest, LoadedPresetSkipsTestOnlyVariables )
 {

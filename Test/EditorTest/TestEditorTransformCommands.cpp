@@ -20,8 +20,8 @@ using namespace sw::editor;
 
 /**
  * @brief [EditorTransformCommandsTest] 정렬은 월드 위치로 한다 — 돌고 커진 부모 아래의 오브젝트도 맞춘 축에 선다
- * @details 정렬 · 분배가 월드 축의 차이를 **로컬** 축에 더했다. 부모가 Y 로 90° 돌고 두 배로 커지면 로컬 X 는 월드 -Z 방향이고 두 배로
- *          움직여, 맞춘 값과 다른 자리로 갔다. 이제 월드 위치를 고쳐 쓴다(`SceneComponent::setWorldPosition`).
+ * @details 월드 위치를 고쳐 쓴다(`SceneComponent::setWorldPosition`). 월드 축의 차이를 **로컬** 축에 더하면, 부모가 Y 로 90° 돌고 두 배로
+ *          커졌을 때 로컬 X 는 월드 -Z 방향이고 두 배로 움직여 맞춘 값과 다른 자리로 간다.
  */
 SW_TEST_CASE( EditorTransformCommandsTest, AlignUsesWorldPositionsUnderARotatedScaledParent )
 {
@@ -48,7 +48,7 @@ SW_TEST_CASE( EditorTransformCommandsTest, AlignUsesWorldPositionsUnderARotatedS
 
 /**
  * @brief [EditorTransformCommandsTest] 바닥 붙이기는 월드 Y 로 한다 — 부모 아래의 오브젝트도 월드 바닥에 선다
- * @details 월드 위치를 읽고 **로컬** 칸에 써서, 부모가 위로 옮겨져 있기만 해도 그만큼 떠 있었다. 크기도 로컬 스케일로 쟀다.
+ * @details 월드 위치를 읽고 **로컬** 칸에 쓰면 부모가 위로 옮겨져 있기만 해도 그만큼 뜬다. 크기도 월드로 잰다.
  */
 SW_TEST_CASE( EditorTransformCommandsTest, SnapToGroundPutsAParentedObjectOnWorldGround )
 {
@@ -71,9 +71,9 @@ SW_TEST_CASE( EditorTransformCommandsTest, SnapToGroundPutsAParentedObjectOnWorl
 
 /**
  * @brief [EditorTransformCommandsTest] 붙여 넣은 값 · 프리셋은 컴포넌트에 알려진다 — 위치는 월드 행렬에, 메시 id 는 그리는 메시에 든다
- * @details 붙여넣기 · 프리셋은 직렬화기로 반사 값을 바로 쓰고 알리지 않았다. 위치는 트랜스폼 칸에 들어갔지만 더티가 아니라 월드 행렬 · 화면 ·
- *          기즈모가 옛 자리였고, 메시 id 를 붙여 넣어도 옛 메시를 그렸다. 이제 `Component::notifyStateWritten` 이 프로퍼티마다
- *          `onPropertyChanged` 를, 그다음 `onPostLoad` 를 부른다(씬 로드 · 되돌리기와 같은 길).
+ * @details `Component::notifyStateWritten` 이 프로퍼티마다 `onPropertyChanged` 를, 그다음 `onPostLoad` 를 부른다(씬 로드 · 되돌리기와 같은 경로).
+ *          직렬화기로 반사 값을 바로 쓰고 알리지 않으면 위치는 트랜스폼 칸에 들어가도 더티가 아니라 월드 행렬 · 화면 · 기즈모가 옛 자리이고,
+ *          메시 id 를 붙여 넣어도 옛 메시를 그린다.
  */
 SW_TEST_CASE( EditorTransformCommandsTest, PastedValuesAndPresetsReachTheWorldTransformAndTheMesh )
 {
@@ -141,8 +141,8 @@ SW_TEST_CASE( EditorTransformCommandsTest, PastingValuesKeepsTheTargetsComponent
 
 /**
  * @brief [EditorTransformCommandsTest] 프리셋 이름 규칙은 하나다 — 이름으로 저장한 것은 목록이 같은 이름으로 읽고, 대화상자는 고른 파일에 그대로 쓴다
- * @details 예전에는 저장 대화상자가 고른 파일 이름에서 `.xml` 만 떼어 이름 규칙에 넘겨, 고른 폴더는 버려지고 `MyPreset.preset.xml` 이 프리셋 폴더의
- *          `<타입>_MyPreset.preset.preset.xml` 이 됐다. 인스펙터 목록은 접미사 길이 11 을 손으로 세어 이름을 잘랐다.
+ * @details 저장 대화상자가 고른 파일 이름을 다시 이름 규칙에 넘기면 고른 폴더는 버려지고 `MyPreset.preset.xml` 이 프리셋 폴더의
+ *          `<타입>_MyPreset.preset.preset.xml` 이 된다. 목록도 접미사 길이를 손으로 세지 않고 같은 규칙으로 이름을 읽는다.
  */
 SW_TEST_CASE( EditorTransformCommandsTest, PresetNamesFollowOneRule )
 {
@@ -168,7 +168,7 @@ SW_TEST_CASE( EditorTransformCommandsTest, PresetNamesFollowOneRule )
 
 /**
  * @brief [EditorTransformCommandsTest] 바닥 붙이기는 메시의 실제 크기로 잰다 — 평면은 바닥에 눕고, 단위 상자가 아닌 메시도 바닥에 선다
- * @details "메시면 월드 스케일 × 단위 상자" 로 바닥까지를 셈해, 두께 없는 평면이 반 칸(0.5) 떠 있었다. 이제 오브젝트의 월드 상자(`GameObject::getWorldBox`)다.
+ * @details 오브젝트의 월드 상자(`GameObject::getWorldBox`)로 잰다. "메시면 월드 스케일 × 단위 상자" 로 셈하면 두께 없는 평면이 반 칸(0.5) 뜬다.
  */
 SW_TEST_CASE( EditorTransformCommandsTest, SnapToGroundMeasuresTheMeshNotAUnitBox )
 {

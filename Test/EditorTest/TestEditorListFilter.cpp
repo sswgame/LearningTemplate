@@ -8,8 +8,8 @@ using sw::editor::EditorListFilter;
 
 /**
  * @brief 빈 필터는 전부 통과시킨다 — 손으로 막던 함정을 구조가 막는지 본다.
- * @details 패널마다 있던 `if ( isNullOrEmpty( pFilter ) ) return true;` 가드를 빼먹으면
- *          `stristr( x, "" )` 이 nullptr 을 주므로 목록이 **전부** 사라졌다. 여기서 고정한다.
+ * @details 패널마다 `if ( isNullOrEmpty( pFilter ) ) return true;` 가드를 두는 식이면, 빼먹은 패널은
+ *          `stristr( x, "" )` 이 nullptr 을 주므로 목록이 **전부** 사라진다. 여기서 고정한다.
  */
 SW_TEST_CASE( EditorListFilterTest, EmptyFilterPassesEverything )
 {

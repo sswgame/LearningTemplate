@@ -95,9 +95,9 @@ SW_TEST_CASE( EditorSceneCommandsTest, ApplyTransformAndSnapshotSafety )
 
 /**
  * @brief [EditorSceneCommandsTest] 복제는 서브트리 전체를 복제하고, 복제본 안의 부착(소켓 · 자식)은 복제본끼리 잇는다
- * @details 예전 복제는 선택한 오브젝트 하나만 복제했다 — 씬은 자식을 자기 엔티티로 저장하므로 자식은 원본 밑에 남았다. 그리고 복제본 안의 부착을
- *          이름으로 풀어, 이름이 유일하게 바뀐 복제본(`Rig` → `Rig_2`)의 팔이 **원본**의 루트에 붙었다. 복제본의 루트는 원본의 부모 primary 에 다시
- *          붙어 소켓을 잃었다. 이제 묶음이 원본 id 로 복제본끼리 잇고, 묶음 밖의 부모(원본과 같은 부모 · 같은 소켓)는 런타임 id 로 찾는다.
+ * @details 묶음이 원본 id 로 복제본끼리 잇고, 묶음 밖의 부모(원본과 같은 부모 · 같은 소켓)는 런타임 id 로 찾는다. 선택한 오브젝트 하나만 복제하면
+ *          자식이 원본 밑에 남고(씬은 자식을 자기 엔티티로 저장한다), 복제본 안의 부착을 이름으로 풀면 이름이 유일하게 바뀐 복제본(`Rig` → `Rig_2`)의
+ *          팔이 **원본**의 루트에 붙는다. 복제본의 루트를 원본 부모의 primary 에 다시 붙이면 소켓을 잃는다.
  */
 SW_TEST_CASE( EditorSceneCommandsTest, DuplicateCopiesTheSubtreeAndKeepsItsAttachmentsInside )
 {
@@ -149,9 +149,9 @@ SW_TEST_CASE( EditorSceneCommandsTest, DuplicateCopiesTheSubtreeAndKeepsItsAttac
 
 /**
  * @brief [EditorSceneCommandsTest] 컴포넌트 분포는 리플렉션으로 세고 인스턴스 단위로 센다
- * @details 예전에는 ProfilerPanel 이 타입 이름 5개를 손으로 나열하고 `getComponent<T>()` 로 셌다.
- *          그래서 (1) 게임이 만든 컴포넌트는 표에 안 나왔고, (2) 한 오브젝트에 같은 타입이 여럿이어도
- *          1 로 세서 "Active Instances" 라는 열 이름과 맞지 않았다. 그 두 가지를 여기서 고정한다.
+ * @details 타입 이름을 손으로 나열하고 `getComponent<T>()` 로 세면 (1) 게임이 만든 컴포넌트는 표에 안 나오고,
+ *          (2) 한 오브젝트에 같은 타입이 여럿이어도 1 로 세어 "Active Instances" 라는 열 이름과 맞지 않는다.
+ *          그 두 가지를 여기서 고정한다.
  */
 SW_TEST_CASE( EditorSceneCommandsTest, SceneStatisticsCountsEveryComponentInstance )
 {
@@ -177,7 +177,7 @@ SW_TEST_CASE( EditorSceneCommandsTest, SceneStatisticsCountsEveryComponentInstan
     SW_ASSERT_NOT_NULL( pRootScene );
     SW_ASSERT_NOT_NULL( pChildScene );
 
-    // 같은 타입을 한 오브젝트에 둘 붙인다 — 예전 방식이라면 1 로 셌을 자리다.
+    // 같은 타입을 한 오브젝트에 둘 붙인다 — `getComponent<T>()` 로 세면 1 이 되는 자리다.
     SceneComponent* pExtraScene = pRoot->addComponent<SceneComponent>();
     SW_ASSERT_NOT_NULL( pExtraScene );
 
@@ -208,8 +208,8 @@ SW_TEST_CASE( EditorSceneCommandsTest, SceneStatisticsCountsEveryComponentInstan
 
 /**
  * @brief [EditorSceneCommandsTest] 계층 패널의 "컴포넌트 추가" 는 되돌릴 수 있고, 붙인 메시는 바로 그려진다
- * @details 예전에는 매니저에 바로 붙여 되돌리기 기록도 씬 dirty 도 없었고(Ctrl+Z 가 듣지 않고, 저장을 묻지 않고 사라졌다), 새 메시
- *          컴포넌트는 메시를 풀지 않아 플레이 전까지 그려지지 않았다. 이제 `EditorSceneCommands::addComponent` 가 기록하고 `onPostLoad` 를 부른다.
+ * @details `EditorSceneCommands::addComponent` 가 기록하고 `onPostLoad` 를 부른다. 매니저에 바로 붙이면 되돌리기 기록도 씬 dirty 도 없어
+ *          Ctrl+Z 가 듣지 않고 저장을 묻지 않고 사라지며, 새 메시 컴포넌트가 메시를 풀지 않아 플레이 전까지 그려지지 않는다.
  */
 SW_TEST_CASE( EditorSceneCommandsTest, AddComponentIsUndoableAndResolvesItsMesh )
 {
@@ -238,7 +238,7 @@ SW_TEST_CASE( EditorSceneCommandsTest, AddComponentIsUndoableAndResolvesItsMesh 
 
 /**
  * @brief [EditorSceneCommandsTest] 계층 창의 재부모 · 부모 떼기는 오브젝트를 놓인 자리에 둔다
- * @details 붙이기가 로컬을 지켜, 끌어 놓은 오브젝트가 새 부모의 위치 · 회전 · 크기만큼 튀었다(유니티 계층 창 · 언리얼 아웃라이너는 월드를 지킨다).
+ * @details 붙이기가 로컬을 지키면 끌어 놓은 오브젝트가 새 부모의 위치 · 회전 · 크기만큼 튄다(유니티 계층 창 · 언리얼 아웃라이너는 월드를 지킨다).
  */
 SW_TEST_CASE( EditorSceneCommandsTest, ReparentAndUnparentKeepTheWorldPlace )
 {
@@ -273,7 +273,7 @@ SW_TEST_CASE( EditorSceneCommandsTest, ReparentAndUnparentKeepTheWorldPlace )
 
 /**
  * @brief [EditorSceneCommandsTest] 표면 붙이기는 다른 오브젝트의 월드 윗면에 올린다 — 부모가 키운 바닥도
- * @details 다른 메시의 윗면을 **로컬** 스케일 × 단위 상자로 셈해, 부모가 두 배로 키운 바닥의 윗면을 절반 높이로 잡았다(파묻혔다).
+ * @details 다른 메시의 윗면을 **로컬** 스케일 × 단위 상자로 셈하면 부모가 두 배로 키운 바닥의 윗면을 절반 높이로 잡아 파묻힌다.
  */
 SW_TEST_CASE( EditorSceneCommandsTest, SurfaceSnapLandsOnTheWorldTopOfAScaledFloor )
 {

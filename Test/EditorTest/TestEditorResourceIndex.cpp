@@ -10,8 +10,8 @@ using namespace sw::editor;
 
 /**
  * @brief [EditorResourceIndexTest] 퀵 런처의 분류는 애셋 종류 표와 같다 — Data 도 표의 Data 다
- * @details 퀵 런처가 분류를 따로 적어 "Data" 가 `.xml` · `.json` 둘이었다. 표의 Data 는 `.xml .json .ini .kv` 라 `.ini` · `.kv` 는 런처에 없었고,
- *          `.anim.json` · `.tilemap.xml` 은 자기 종류 대신 Data 로 떴으며, 머티리얼 · 오디오는 아예 색인되지 않았다.
+ * @details 퀵 런처가 분류를 따로 적으면 표와 어긋난다 — 표의 Data(`.xml .json .ini .kv`) 일부가 런처에서 빠지고, `.anim.json` · `.tilemap.xml` 이
+ *          자기 종류 대신 Data 로 뜨고, 표에 있는 종류(머티리얼 · 오디오)가 색인되지 않는다.
  */
 SW_TEST_CASE( EditorResourceIndexTest, CategoryComesFromTheKindTable )
 {
@@ -59,7 +59,7 @@ SW_TEST_CASE( EditorResourceIndexTest, CategoryComesFromTheKindTable )
 
 /**
  * @brief [EditorResourceIndexTest] 리소스 카탈로그는 종류 표의 모든 종류를 한 줄씩 센다
- * @details 카탈로그가 종류 넷(씬 · 프리팹 · 텍스처 · 셰이더)을 구조체 필드와 호출 넷으로 따로 적어, 종류가 늘어도 카탈로그에는 나오지 않았다.
+ * @details 카탈로그가 종류를 구조체 필드와 호출로 따로 적으면 종류가 늘어도 카탈로그에는 나오지 않는다.
  */
 SW_TEST_CASE( EditorResourceIndexTest, CatalogCountsEveryKindOfTheTable )
 {

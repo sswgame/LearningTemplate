@@ -68,8 +68,8 @@ namespace
 
 /**
  * @brief [EditorPlaySessionTest] 플레이 중에 활성 씬이 바뀌면 Stop 이 편집하던 씬을 다시 세워 되돌린다 — 지금 씬에 섞지 않는다
- * @details 스냅샷은 Play 때의 활성 씬을 찍는다. 예전에는 Stop 이 그때 활성인 씬(플레이 중에 게임 코드가 연 다음 레벨)에 그대로 되돌려 두 씬의
- *          오브젝트가 섞였고, 활성 씬은 그 레벨의 소스 경로를 든 채라 저장하면 **그 레벨 파일**을 편집하던 씬의 내용으로 덮어썼다.
+ * @details 스냅샷은 Play 때의 활성 씬을 찍는다. Stop 이 그때 활성인 씬(플레이 중에 게임 코드가 연 다음 레벨)에 그대로 되돌리면 두 씬의
+ *          오브젝트가 섞이고, 활성 씬은 그 레벨의 소스 경로를 든 채라 저장하면 **그 레벨 파일**을 편집하던 씬의 내용으로 덮어쓴다.
  *          다시 세운 씬에는 오브젝트가 원래 id 로 돌아오고, 씬이 매어 둔 프리팹 연결도 돌아와야 한다(저장하면 프리팹 참조로 나간다).
  */
 SW_TEST_CASE( EditorPlaySessionTest, StopAfterSceneChangeRebuildsTheEditedScene )
@@ -153,9 +153,8 @@ SW_TEST_CASE( EditorPlaySessionTest, StopWithoutSceneChangeRestoresInPlace )
 
 /**
  * @brief [EditorPlaySessionTest] 플레이 중에 부모와 자식이 모두 지워져도 Stop 이 계층째 되살린다 — 자식이 부모보다 먼저 되살아나도
- * @details 되살리기는 스냅샷 순서(만든 순서)대로 오브젝트를 읽고, 읽을 때 부모를 이름으로 찾아 붙인다. 자식을 먼저 만들었으면 자식을 읽는 순간
- *          부모가 아직 없어 루트로 남았다. 오브젝트를 다 읽은 뒤 계층을 한 번 더 잇는 단계는 XML 폴백에만 있었는데, 그 폴백은 바이너리 저장이 실패할
- *          때만(오브젝트가 null) 타서 실제로는 돌지 않았다. 씬 로드(`Scene::instantiate`)와 같이, 모두 읽은 뒤 계층을 다시 잇는다.
+ * @details 되살리기는 스냅샷 순서(만든 순서)대로 오브젝트를 읽는다. 읽을 때 부모를 붙이면 자식을 먼저 만든 경우 자식을 읽는 순간 부모가 아직
+ *          없어 루트로 남는다. 그래서 씬 로드(`Scene::instantiate`)와 같이, 모두 읽은 뒤 계층을 다시 잇는다.
  */
 SW_TEST_CASE( EditorPlaySessionTest, StopRestoresAHierarchyWhoseChildWasCreatedFirst )
 {
@@ -196,9 +195,9 @@ SW_TEST_CASE( EditorPlaySessionTest, StopRestoresAHierarchyWhoseChildWasCreatedF
 
 /**
  * @brief [EditorPlaySessionTest] 플레이 중에 이름을 서로 바꿔도 Stop 이 자식을 원래 부모에 붙이고 이름도 되돌린다
- * @details 되살리기는 오브젝트마다 상태를 읽으며 부모를 이름으로 찾았다. 플레이 중 A("Left") 가 "Tmp" 로, B("Right") 가 "Left" 로 바뀌면, A 를 되돌리는
- *          순간 "Left" 는 아직 B 의 것이라 A 는 영영 `Left_2` 가 됐고, A 의 자식은 이름 "Left" 로 **B** 를 찾아 붙었다. 이제 부모는 원래 id 로 찾고,
- *          모두 읽은 뒤 비어 있는 저장된 이름을 되찾는다.
+ * @details 되살리기가 부모를 이름으로 찾으면, 플레이 중 A("Left") 가 "Tmp" 로, B("Right") 가 "Left" 로 바뀐 경우 A 를 되돌리는 순간 "Left" 는
+ *          아직 B 의 것이라 A 는 `Left_2` 가 되고, A 의 자식은 이름 "Left" 로 **B** 를 찾아 붙는다. 부모는 원래 id 로 찾고, 모두 읽은 뒤 비어 있는
+ *          저장된 이름을 되찾는다.
  */
 SW_TEST_CASE( EditorPlaySessionTest, StopRestoresParentsByIdAfterPlayRenames )
 {
@@ -244,8 +243,8 @@ SW_TEST_CASE( EditorPlaySessionTest, StopRestoresParentsByIdAfterPlayRenames )
 
 /**
  * @brief [EditorPlaySessionTest] 멈춤에서 일시정지를 거쳐 Play 해도 월드가 켜지고 스냅샷이 찍힌다 — Stop 이 편집 씬을 되돌린다
- * @details 예전에는 멈춤 → 플레이만 월드를 켜서, 멈춤 → 일시정지 → 플레이는 스냅샷도 onBeginPlay 도 없이 플레이가 돌았고 Stop 이 편집 씬을
- *          되돌리지 못했다(고쳤지만 EditorContext 를 세울 수 없어 시험이 없었다 — 상태 전환 본체가 상태를 인자로 받으면서 생겼다).
+ * @details 멈춤 → 플레이에서만 월드를 켜면, 멈춤 → 일시정지 → 플레이는 스냅샷도 onBeginPlay 도 없이 플레이가 돌고 Stop 이 편집 씬을
+ *          되돌리지 못한다. 상태 전환 본체가 상태를 인자로 받으므로 EditorContext 없이 시험한다.
  */
 SW_TEST_CASE( EditorPlaySessionTest, PauseFromStoppedThenPlayStartsTheWorld )
 {
@@ -278,9 +277,8 @@ SW_TEST_CASE( EditorPlaySessionTest, PauseFromStoppedThenPlayStartsTheWorld )
 
 /**
  * @brief [EditorPlaySessionTest] 씬을 여는 중에 누른 Play 는 미뤄졌다가 로드가 끝난 프레임에 그 씬으로 시작한다
- * @details 지금 시작하면 스냅샷이 곧 내려갈 씬을 찍고 플레이 중에 로드가 끝나 씬이 바뀐다. 예전(㊿)에는 그때 거절했고(경고), 그 전에는 그냥 시작했다.
- *          언리얼 `RequestPlaySession` 처럼 요청을 걸어 두고 다음 틱에 시작한다. 이 시험이 돌 수 있게 상태 전환 본체가 상태를 인자로 받는다(EditorTest 는
- *          EditorContext 를 만들 수 없다).
+ * @details 로드 중에 바로 시작하면 스냅샷이 곧 내려갈 씬을 찍고 플레이 중에 로드가 끝나 씬이 바뀐다. 언리얼 `RequestPlaySession` 처럼 요청을 걸어
+ *          두고 로드가 끝난 다음 틱에 시작한다. 이 시험이 돌 수 있게 상태 전환 본체가 상태를 인자로 받는다(EditorTest 는 EditorContext 를 만들 수 없다).
  */
 SW_TEST_CASE( EditorPlaySessionTest, PlayRequestedWhileASceneLoadsStartsAfterTheLoad )
 {

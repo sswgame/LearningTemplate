@@ -21,8 +21,8 @@ using namespace sw::editor;
 
 /**
  * @brief [EditorViewportPreviewTest] 미리보기 메서드는 메타로 찾는다 — 이름만 같은 타입은 찾지 않는다
- * @details `EditorViewportPreview` 는 타입 이름 `"DialogueRunnerComponent"` 를 문자열로 비교해 대사 러너를 찾았다(EditorModule 이
- *          GameFramework 를 링크하지 않아서). 그래서 다른 모듈의 컴포넌트는 미리보기를 받을 수 없었고, 이름만 같은 타입은 받았다.
+ * @details EditorModule 은 GameFramework 를 링크하지 않는다. 타입 이름(`"DialogueRunnerComponent"`)을 문자열로 비교해 찾으면 다른 모듈의
+ *          컴포넌트는 미리보기를 받을 수 없고, 이름만 같은 타입은 받는다.
  */
 SW_TEST_CASE( EditorViewportPreviewTest, FindsPreviewMethodByMetaNotByTypeName )
 {

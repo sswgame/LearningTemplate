@@ -75,7 +75,7 @@ SW_TEST_CASE( EditorCommandRegistryTest, ShortcutLabelUsesFixedModifierOrder )
 
     EditorCommandDesc ctrlAlt{};
     ctrlAlt._shortcut = EditorCommandShortcut{ EditorCommandKey::F11, commandmod::kCtrl | commandmod::kAlt };
-    // 보조 조합은 수정자 없이 F7 하나다 — 예전에는 이 키가 어느 라벨에도 없어서 아무도 몰랐다.
+    // 보조 조합은 수정자 없이 F7 하나다 — 라벨에서 보조 조합이 빠지면 이 키는 메뉴 어디에도 보이지 않는다.
     ctrlAlt._altShortcut = EditorCommandShortcut{ EditorCommandKey::F7, commandmod::kNone };
     EditorCommandRegistry::formatShortcutLabel( ctrlAlt, label );
     SW_EXPECT_STREQ( "Ctrl+Alt+F11 / F7", label.c_str() );
@@ -152,8 +152,8 @@ SW_TEST_CASE( EditorCommandRegistryTest, DisabledCommandIsNotExecuted )
 
 /**
  * @brief [EditorCommandRegistryTest] 같은 조합을 두 커맨드가 주장하면 validate 가 잡는지 검증
- * @details 표면이 셋으로 갈려 있던 동안 Ctrl+Z 를 전역 처리기와 Inspector 가 각각 처리해 두 번
- *          되돌아갔다. 정의를 한곳에 모은 지금은 그 충돌이 기계에 걸린다.
+ * @details 같은 조합을 두 처리기가 받으면(전역 처리기와 Inspector 가 각각 Ctrl+Z) 한 번 눌러 두 번 되돌아간다. 정의가 표 한곳에
+ *          모여 있으므로 그 충돌을 validate 가 잡는다.
  */
 SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesDuplicateIdAndChord )
 {
@@ -225,9 +225,9 @@ SW_TEST_CASE( EditorCommandRegistryTest, DisplayOnlyShortcutIsNeverHandled )
 
 /**
  * @brief [EditorCommandRegistryTest] 메뉴 · 항목 순서 · 구분선이 커맨드 표의 메뉴 경로 · 순서 칸에서 나온다
- * @details 메뉴바가 메뉴마다 `drawMenuItem( "<id>" )` 를 손으로 나열했고, 표 줄의 분류 칸은 메뉴를 몰지 않았다. 커맨드를 더하면 표와
- *          메뉴바 두 곳을 고쳐야 했다. 이제 표의 경로 · 순서 칸이 메뉴를 만든다 — 등록 순서와 무관하게 순서 칸으로 줄 서고, 백의 자리가
- *          바뀌는 자리에 구분선이 들어가며, 메뉴끼리는 가장 작은 순서로 줄 선다.
+ * @details 메뉴바가 항목을 id 로 손으로 나열하면 커맨드를 더할 때 표와 메뉴바 두 곳을 고쳐야 한다. 표의 경로 · 순서 칸이 메뉴를
+ *          만든다 — 등록 순서와 무관하게 순서 칸으로 줄 서고, 백의 자리가 바뀌는 자리에 구분선이 들어가며, 메뉴끼리는 가장 작은 순서로
+ *          줄 선다.
  */
 SW_TEST_CASE( EditorCommandRegistryTest, MenusComeFromMenuPathAndOrderColumns )
 {
@@ -271,7 +271,7 @@ SW_TEST_CASE( EditorCommandRegistryTest, MenusComeFromMenuPathAndOrderColumns )
 
 /**
  * @brief [EditorCommandRegistryTest] 한 메뉴의 같은 순서 자리를 두 커맨드가 차지하면 validate 가 잡는다
- * @details 같은 순서는 둘 중 무엇이 위인지를 등록 순서에 맡긴다. 표가 메뉴를 정하는 지금은 그것도 표의 오류다.
+ * @details 같은 순서는 둘 중 무엇이 위인지를 등록 순서에 맡긴다. 표가 메뉴를 정하므로 그것도 표의 오류다.
  */
 SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesTwoCommandsInOneMenuSlot )
 {
@@ -289,8 +289,8 @@ SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesTwoCommandsInOneMenuSlot
 
 /**
  * @brief [EditorCommandRegistryTest] 메인 메뉴바에도, 코드가 그리는 경로 목록에도 없는 메뉴 경로는 validate 가 잡는다
- * @details 메인 메뉴바는 부모가 `MainMenu` 인 메뉴만 그리고, 그 밖의 메뉴는 코드가 경로로 부를 때만 그려진다(`drawMenuItems`). 표 줄의 경로를
- *          잘못 적거나(`MainMenu/File/Recent` 같은 하위 메뉴) 그리는 코드가 없는 경로를 적으면 그 항목은 경고 없이 어디에도 나오지 않았다.
+ * @details 메인 메뉴바는 부모가 `MainMenu` 인 메뉴만 그리고, 그 밖의 메뉴는 코드가 경로로 부를 때만 그려진다(`EditorCommandGui::drawMenuItems`). 표 줄의
+ *          경로를 잘못 적거나(`MainMenu/File/Recent` 같은 하위 메뉴) 그리는 코드가 없는 경로를 적으면 그 항목은 경고 없이 어디에도 나오지 않는다.
  */
 SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesMenuPathsNothingDraws )
 {

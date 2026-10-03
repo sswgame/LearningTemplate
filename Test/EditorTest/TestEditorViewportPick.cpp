@@ -75,9 +75,8 @@ SW_TEST_CASE( EditorViewportPickTest, TypedProviderTableIsNotEmpty )
 
 /**
  * @brief [EditorViewportPickTest] 전용 종류가 없는 컴포넌트도 집히는지 검증
- * @details 이것이 예전에 안 되던 것이다. 예전 폴백은 `getPrimarySceneComponent()` **하나만** 봤고,
- *          종류별 함수는 엔진 타입 넷을 손으로 나열했다 — 그래서 게임이 만든 컴포넌트는 주
- *          컴포넌트가 아니면 뷰포트에서 클릭으로 집을 수 없었다.
+ * @details 폴백이 `getPrimarySceneComponent()` **하나만** 보거나 종류별 함수가 엔진 타입을 손으로 나열하면,
+ *          게임이 만든 컴포넌트는 주 컴포넌트가 아닐 때 뷰포트에서 클릭으로 집을 수 없다.
  */
 SW_TEST_CASE( EditorViewportPickTest, PlainSceneComponentIsPickable )
 {
@@ -100,7 +99,7 @@ SW_TEST_CASE( EditorViewportPickTest, PlainSceneComponentIsPickable )
 /**
  * @brief [EditorViewportPickTest] 주 컴포넌트가 아닌 SceneComponent 도 후보가 되는지 검증
  * @details 게임이 컴포넌트를 여럿 붙인 오브젝트에서, 클릭한 자리에 있는 컴포넌트가 잡혀야 한다.
- *          예전에는 주 컴포넌트만 봤으므로 떨어져 있는 두 번째 컴포넌트는 집히지 않았다.
+ *          주 컴포넌트만 보면 떨어져 있는 두 번째 컴포넌트는 집히지 않는다.
  */
 SW_TEST_CASE( EditorViewportPickTest, NonPrimarySceneComponentIsPickable )
 {
@@ -131,8 +130,8 @@ SW_TEST_CASE( EditorViewportPickTest, NonPrimarySceneComponentIsPickable )
 
 /**
  * @brief [EditorViewportPickTest] 부모가 키운 메시는 커진 만큼 집힌다 — 경계는 컴포넌트가 월드로 선언한다
- * @details 피킹이 메시의 **로컬** 스케일만 봐서, 부모 스케일 10 아래의 메시(월드 반지름 8.66)는 중심에서 5 떨어진 클릭에 집히지 않았다
- *          (반지름 0.866 · 기본 반지름 0.35 모두 빗나간다). 이제 `SceneComponent::getWorldBounds` 가 월드 행렬로 답하고, 피킹 · GPU 컬링이
+ * @details 피킹이 메시의 **로컬** 스케일만 보면 부모 스케일 10 아래의 메시(월드 반지름 8.66)가 중심에서 5 떨어진 클릭에 집히지 않는다
+ *          (반지름 0.866 · 기본 반지름 0.35 모두 빗나간다). `SceneComponent::getWorldBounds` 가 월드 행렬로 답하고, 피킹 · GPU 컬링이
  *          같은 답을 쓴다(언리얼 `CalcBounds`, 유니티 `Renderer.bounds`).
  */
 SW_TEST_CASE( EditorViewportPickTest, ParentScaleGrowsTheMeshPickBounds )

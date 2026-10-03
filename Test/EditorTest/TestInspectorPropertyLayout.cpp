@@ -50,8 +50,8 @@ namespace
 
 /**
  * @brief [InspectorPropertyLayoutTest] 파생 컴포넌트도 상속받은 프로퍼티를 한 번씩 보인다 — 기반의 카테고리가 먼저 온다
- * @details 인스펙터가 타입의 **자기** 프로퍼티만 모아, 스프라이트에는 트랜스폼(SceneComponent) · 메시 칸(MeshComponent)이 없었다. 카테고리는
- *          알파벳 순이었다. 언리얼 Details · 유니티 기본 인스펙터처럼 상속분까지, 기반부터 첫 등장 순서로 묶는다.
+ * @details 타입의 **자기** 프로퍼티만 모으면 스프라이트에 트랜스폼(SceneComponent) · 메시 칸(MeshComponent)이 없다. 언리얼 Details · 유니티
+ *          기본 인스펙터처럼 상속분까지, 카테고리는 알파벳 순이 아니라 기반부터 첫 등장 순서로 묶는다.
  */
 SW_TEST_CASE( InspectorPropertyLayoutTest, DerivedComponentShowsInheritedPropertiesOnce )
 {
@@ -72,7 +72,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, DerivedComponentShowsInheritedPropert
 
 /**
  * @brief [InspectorPropertyLayoutTest] 인스펙터 확장이 직접 그린 프로퍼티만 빠진다 — 나머지는 그대로 보인다
- * @details 확장이 본문을 그리면 반사 프로퍼티를 통째로 감춰, 카메라의 Priority · Role 과 메시의 Bounds Radius · Blend Mode 를 고칠 수 없었다.
+ * @details 확장이 본문을 그릴 때 반사 프로퍼티를 통째로 감추면 카메라의 Priority · Role 과 메시의 Bounds Radius · Blend Mode 를 고칠 수 없다.
  *          언리얼 `IDetailCustomization::HideProperty` 처럼 확장이 그린 것만 뺀다.
  */
 SW_TEST_CASE( InspectorPropertyLayoutTest, PropertiesDrawnByAnExtensionAreLeftOut )
@@ -92,7 +92,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, PropertiesDrawnByAnExtensionAreLeftOu
 
 /**
  * @brief [InspectorPropertyLayoutTest] 타입 사슬은 기반 → 파생 순서다 — 확장도 이 순서로 찾고 그린다
- * @details 확장을 정확한 타입 이름으로만 찾아, 게임이 만든 SceneComponent 파생에는 트랜스폼 칸이 없었다.
+ * @details 확장을 정확한 타입 이름으로만 찾으면 게임이 만든 SceneComponent 파생에는 트랜스폼 칸이 없다.
  */
 SW_TEST_CASE( InspectorPropertyLayoutTest, TypeChainRunsFromBaseToDerived )
 {
@@ -115,7 +115,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, TypeChainRunsFromBaseToDerived )
 
 /**
  * @brief [InspectorPropertyLayoutTest] 라디안으로 저장한 각도는 도로 보인다 — 트랜스폼 회전 · FOV 가 같은 규칙이다
- * @details 트랜스폼 회전은 라디안으로 저장되는데 메타가 `Units=deg` 라고 적었고, 인스펙터는 그 라디안을 1 픽셀에 0.5(약 29 도)씩 움직였다.
+ * @details 트랜스폼 회전은 라디안으로 저장된다. 메타가 그것을 `Units=deg` 로 적으면 인스펙터가 그 라디안을 1 픽셀에 0.5(약 29 도)씩 움직인다.
  *          언리얼 Details(FRotator · FOV) · 유니티 인스펙터(`localEulerAngles` · `fieldOfView`)는 각도를 도로 보인다. 저장은 그대로 라디안이다.
  */
 SW_TEST_CASE( InspectorPropertyLayoutTest, RadianAnglesAreShownInDegrees )
@@ -150,8 +150,8 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, RadianAnglesAreShownInDegrees )
 
 /**
  * @brief [InspectorPropertyLayoutTest] 0..1 비율(`Units=ratio`)은 백분율로 보이고, 단위 글자의 `%` 는 서식을 깨지 않는다
- * @details HP 바의 비율 셋(0..1, 슬라이더)이 `Units=%` 라고 적혀 있었다 — 0.5 가 "0.5 %" 라는 뜻이 되고, 그 `%` 는 printf 서식에 그대로 붙어
- *          짝 없는 변환 지정자가 됐다(UCRT 는 조용히 버려 단위가 화면에 나오지도 않았다). 비율은 `ratio` 로 적고 × 100 · "%" 로 보이며,
+ * @details 0..1 비율을 `Units=%` 로 적으면 0.5 가 "0.5 %" 라는 뜻이 되고, 그 `%` 는 printf 서식에 그대로 붙어 짝 없는 변환 지정자가
+ *          된다(UCRT 는 조용히 버려 단위가 화면에 나오지도 않는다). 비율은 `ratio` 로 적고 × 100 · "%" 로 보이며,
  *          서식에는 `%%` 로 들어간다. 저장 값은 그대로 0..1 이다.
  */
 SW_TEST_CASE( InspectorPropertyLayoutTest, RatiosAreShownAsPercent )

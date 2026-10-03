@@ -92,8 +92,8 @@ SW_TEST_CASE( InspectorBuiltinValueTest, EveryBuiltinTypeHasWidget )
 
 /**
  * @brief [InspectorBuiltinValueTest] 내장 타입은 CallInEditor 인자와 반환에서 같은 판정을 받는다
- * @details 인자 지원 판정 · 인자 위젯 · `TaskArgs::add` · 반환 형식화가 따로 된 if-체인 넷이었다. 인자는 다섯 타입만 받았고 float64 는 반환만
- *          됐다. 지금은 `InspectorBuiltinValue` 표 한 줄이 넷을 모두 정한다.
+ * @details `InspectorBuiltinValue` 표 한 줄이 인자 지원 판정 · 인자 위젯 · `TaskArgs::add` · 반환 형식화 넷을 모두 정한다. 따로 된 if-체인이면
+ *          한쪽에만 있는 타입이 생긴다(인자로는 못 받고 반환만 되는 float64 같은).
  */
 SW_TEST_CASE( InspectorBuiltinValueTest, MethodArgAndReturnShareOneJudgment )
 {
