@@ -825,6 +825,51 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
 }
 
 /**
+ * @brief [SceneTest] 씬 쿠킹은 모르는 타입의 컴포넌트가 든 씬을 굽지 않고 실패로 센다
+ * @details 모르는 타입은 `MissingComponent` 가 원문을 맡아 바이너리 왕복 검증을 통과했고, 쿠킹은 경고 한 줄과 함께 성공했다 — 배포본에는 동작하지
+ *          않는 컴포넌트가 실렸다(GameFramework 타입 없이 구운 spriteui 의 HPBar · DamageUI · Effect). 이제 그 씬은 쓰지 않고, 실패가 빌드를 세운다.
+ */
+SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
+{
+    const sw::string root   = test::makeTempDirectory( "scene_cook_unknown_root" );
+    const sw::string cooked = test::makeTempDirectory( "scene_cook_unknown_out" );
+
+    sw::string xml;
+    {
+        sw::GameObjectManager scratch;
+        sw::GameObject*       pSource = scratch.createGameObject( sw::hashed_string( "Lamp" ) );
+        SW_ASSERT_TRUE( pSource->addComponent<sw::SceneComponent>() != nullptr );
+        xml                   = sw::ObjectStateSerializer::saveToXmlString( pSource );
+        const size_t listOpen = xml.find( "<_listComponent>" );
+        SW_ASSERT_TRUE( listOpen != sw::string::npos );
+        xml.insert( listOpen + sw::string_view( "<_listComponent>" ).size(), "<NotLoadedCookLampDriver _flicker=\"0.25\" />" );
+    }
+    sw::SceneDocument doc;
+    doc._name = "UnknownType";
+    sw::SceneDocument::EntityNode node{};
+    node._name        = "Lamp";
+    node._embeddedXml = xml;
+    doc._listEntityNode.push_back( node );
+    const sw::string scenePath = sw::FileUtil::joinPath( root, "game/demo/maps/unknown.scene.xml" );
+    sw::FileUtil::ensureParentDirectoryExists( scenePath );
+    SW_ASSERT_TRUE( doc.saveXml( scenePath ) );
+
+    uint32 missingComponentCount{ 0 };
+    uint32 cookedCount{ 0 };
+    uint32 failedCount{ 0 };
+    {
+        test::ScopedDefensiveTestLog expected( "a scene with a component type that is not loaded" );
+        sw::SceneDocument            direct = doc;
+        (void)sw::SceneCooker::cookEntityState( direct, &missingComponentCount );
+        cookedCount = sw::SceneCooker::cookAllScenes( root, cooked, failedCount );
+    }
+    SW_EXPECT_EQUAL( 1u, missingComponentCount );
+    SW_EXPECT_EQUAL( 0u, cookedCount );
+    SW_EXPECT_EQUAL( 1u, failedCount );
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( sw::FileUtil::joinPath( cooked, "game/demo/maps/unknown.scene.bin" ) ) );
+}
+
+/**
  * @brief [SceneTest] 쿠킹한 씬에서도 부모보다 앞에 적힌 자식이 부모의 소켓에 붙는다 — 쿠커가 연결을 지우지 않는다
  * @details 쿠커가 엔티티를 하나씩 따로 읽어, 부모가 문서에서 뒤에 있는 자식은 부모를 찾지 못했고 바이너리로 쓸 때 그 연결을 지웠다(저장은 살아 있는
  *          부모 포인터에서 부착 필드를 다시 만든다). 검증은 컴포넌트 타입 목록만 봐서 통과했고, 쿠킹한 바이너리만 읽는 배포본에서 자식이 루트가

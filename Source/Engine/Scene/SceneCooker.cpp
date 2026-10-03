@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Component/MissingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -47,6 +48,34 @@ namespace sw
                 options._pSavedIdMap = &mapSavedId;
                 return ObjectStateSerializer::saveToXmlString( pObject, options );
             }
+
+            /**
+             * @brief 씬에서 모르는 타입으로 지어진 컴포넌트(`MissingComponent`)를 오브젝트 · 원래 타입 이름과 함께 오류로 알리고 그 수를 돌려줍니다.
+             * @details 그 컴포넌트는 원문 그대로 구워져 배포본에서도 `MissingComponent` 로 읽힌다 — 동작하지 않는 컴포넌트가 실린다.
+             */
+            static uint32 reportMissingComponents( const Scene& scene )
+            {
+                const GameObjectManager* pManager = scene.getObjectManager();
+                if ( pManager == nullptr )
+                    return 0;
+                uint32              missingCount{ 0 };
+                vector<GameObject*> listObject;
+                pManager->getAllGameObjects( listObject );
+                for ( const GameObject* pObject : listObject )
+                {
+                    if ( pObject == nullptr )
+                        continue;
+                    for ( const Component* pComp : pObject->getComponents() )
+                    {
+                        if ( pComp == nullptr || pComp->getTypeInfo() != MissingComponent::StaticType() )
+                            continue;
+                        SW_LOG_ERROR( "Scene cook: '%#' has a component of type '%#' that no loaded module registers", pObject->getName().c_str(),
+                                      static_cast<const MissingComponent*>( pComp )->getOriginalTypeName().c_str() );
+                        ++missingCount;
+                    }
+                }
+                return missingCount;
+            }
         };
     } // namespace
 } // namespace sw
@@ -55,8 +84,10 @@ namespace sw
 {
     SW_LOG_CALLER( "SceneCooker" );
 
-    uint32 SceneCooker::cookEntityState( SceneDocument& inoutDoc )
+    uint32 SceneCooker::cookEntityState( SceneDocument& inoutDoc, uint32* pOutMissingComponentCount )
     {
+        if ( pOutMissingComponentCount != nullptr )
+            *pOutMissingComponentCount = 0;
         // **런타임이 읽는 그대로 짓고 굽는다.** 예전에는 엔티티를 하나씩 따로 읽어, 부모가 문서에서 뒤에 있는 자식은 부모를 찾지 못했고 저장이
         // 그 연결을 지웠다(배포본에서 자식이 루트가 됐다). 검증도 컴포넌트 타입 목록만 봐서 값이 어긋나도 통과했다. 이제 문서 전체를
         // `Scene::instantiate`(프리팹 스폰 · 묶음 부착까지 런타임과 같은 길)로 짓고, 구운 문서를 다시 지어 엔티티마다 상태 전체를 견준다.
@@ -67,6 +98,9 @@ namespace sw
         Scene source{ "SceneCooker.Source" };
         if ( source.instantiate( inoutDoc ) == false )
             return 0;
+        const uint32 missingComponentCount = SceneCookerInternal::reportMissingComponents( source );
+        if ( pOutMissingComponentCount != nullptr )
+            *pOutMissingComponentCount = missingComponentCount;
         unordered_map<uint64, GameObject*> mapSourceByFileId;
         SceneCookerInternal::makeObjectByFileId( source, mapSourceByFileId );
 
@@ -187,7 +221,15 @@ namespace sw
                     ++statefulCount;
             }
 
-            const uint32 cookedCount = cookEntityState( doc );
+            uint32       missingComponentCount{ 0 };
+            const uint32 cookedCount = cookEntityState( doc, &missingComponentCount );
+            // 모르는 타입의 컴포넌트는 원문 그대로 구워져 배포본에서도 동작하지 않는다. 그 씬은 쓰지 않고 실패로 센다 — 빌드가 선다.
+            if ( missingComponentCount > 0 )
+            {
+                SW_LOG_ERROR( "Scene cook: '%#' has %# components of unknown type - not cooked", scenePath, missingComponentCount );
+                ++outFailedCount;
+                continue;
+            }
             // 이 비교는 **모든 빌드에서** 돌아야 한다. 아래 요약은 `SW_LOG_INFO` 라 Shipping 에서
             // 통째로 사라지는데, "구웠다고 했지만 실은 XML 그대로" 는 그때도 알아야 할 일이다.
             if ( cookedCount < statefulCount )

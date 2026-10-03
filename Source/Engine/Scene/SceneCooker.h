@@ -29,21 +29,22 @@ namespace sw
         /**
          * @brief 문서의 각 엔티티 XML 을 바이너리 상태로 굽습니다.
          * @param inoutDoc 대상 문서. 성공한 엔티티는 `_embeddedStateBytes` 가 차고 `_embeddedXml` 이 비워집니다.
+         * @param pOutMissingComponentCount 주면, 모르는 타입으로 지어진 컴포넌트(`MissingComponent`) 수를 받습니다. 하나마다 오류 로그를 남깁니다.
          * @return 바이너리로 바꾼 엔티티 수입니다.
          *
-         * @details **왕복으로 검증하고 나서만 바꿉니다.** 구운 바이트를 즉시 되읽어 컴포넌트 구성이
-         *          같은지 본 뒤에 XML 을 버립니다. 모르는 컴포넌트 타입(예: 이 프로세스에 올라오지 않은
-         *          게임 모듈의 것)이 섞이면 검증이 실패하고 그 엔티티는 **XML 그대로 남습니다.**
-         *          쿠킹이 조용히 컴포넌트를 떨어뜨리는 일은 없습니다.
+         * @details **왕복으로 검증하고 나서만 바꿉니다.** 구운 바이트를 즉시 되읽어 엔티티 상태 전체가 같은지 본 뒤에 XML 을 버립니다.
+         *          모르는 컴포넌트 타입(이 프로세스에 올라오지 않은 모듈의 것 · 이름이 바뀐 타입)은 `MissingComponent` 가 원문을 맡아 왕복을
+         *          통과하므로 검증으로는 걸러지지 않습니다 — 그 수를 @p pOutMissingComponentCount 로 받아 쿠킹을 실패시킵니다(`cookAllScenes`).
          */
-        SW_API static uint32 cookEntityState( SceneDocument& inoutDoc );
+        SW_API static uint32 cookEntityState( SceneDocument& inoutDoc, uint32* pOutMissingComponentCount = nullptr );
 
         /**
          * @brief @p sourceRoot 아래의 모든 `*.scene.xml` 을 `<cookedDir>/<상대경로>/<이름>.scene.bin` 으로 굽습니다(이름은 `AssetCookPath`).
          * @param sourceRoot 리소스 루트(절대 경로)입니다. 쿠킹본의 상대 경로가 여기서 정해집니다.
          * @param cookedDir 산출물 스테이징 디렉터리(절대 경로). 비어 있으면 아무것도 하지 않고 실패 하나로 셉니다. 모든 타입 공급자가 등록을 끝내기
          *                  전(`TypeRegistry::areAllModuleTypesRegistered` — 기동 단계 `ModuleTypes` 전)에 불러도 그렇습니다.
-         * @param outFailedCount 읽거나 쓰지 못한 씬 수입니다. 하나라도 있으면 배포본에 그 씬이 없다 — 쿠킹은 실패다.
+         * @param outFailedCount 읽거나 쓰지 못한 씬 수입니다. 모르는 타입의 컴포넌트가 든 씬도 쓰지 않고 셉니다. 하나라도 있으면 배포본에 그 씬이 없다 —
+         *                       쿠킹은 실패다.
          * @return 기록한 씬 파일 수입니다.
          *
          * @details 산출물을 소스 옆에 두지 않습니다 — 소스가 옮겨진 뒤 낡은 `.bin` 이 남아 Dev 런타임이 그것으로 물러나 실패를 가립니다.
