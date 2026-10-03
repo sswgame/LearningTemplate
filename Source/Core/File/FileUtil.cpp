@@ -1054,7 +1054,7 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return replaceExtension( libraryPath, ".pdb" );
-#elif defined( SW_PLATFORM_MACOS ) || defined( SW_PLATFORM_APPLE )
+#elif defined( SW_PLATFORM_MACOS )
         StringBuilder<constant::kMaxBuffer256> sb;
         sb.append( libraryPath ).append( ".dSYM" );
         return string( sb.view() );

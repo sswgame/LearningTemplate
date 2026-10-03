@@ -487,10 +487,3 @@ namespace sw::engine
     /** @brief 전역 TypeRegistry 인스턴스를 반환합니다. */
     SW_API TypeRegistry& getTypeRegistry();
 } // namespace sw::engine
-
-#ifndef SW_TYPE_MODULE_HEAD
-    #define SW_TYPE_MODULE_HEAD() ( ::sw::TypeRegistrar::getHead() )
-#endif
-#ifndef SW_ENUM_MODULE_HEAD
-    #define SW_ENUM_MODULE_HEAD() ( ::sw::EnumRegistrar::getHead() )
-#endif

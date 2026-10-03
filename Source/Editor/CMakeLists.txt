@@ -36,7 +36,6 @@ if(NOT SW_SHIPPING_BUILD)
 		PRIVATE
 			"SW_LOG_TAG=\"Editor\""
 			SW_MODULE_EXPORTS
-			SW_EDITOR_INTERNAL
 	)
 	sw_configurePch(EditorModule "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 

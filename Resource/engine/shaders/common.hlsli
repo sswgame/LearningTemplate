@@ -40,11 +40,6 @@
 #define SW_GL_BINDING( slot )
 #endif
 
-#if defined( __spirv__ )
-#define SW_VK_COMBINED [[vk::combinedImageSampler]]
-#else
-#define SW_VK_COMBINED
-#endif
 
 // ------------------------------------------------------------------------------
 // 2) 상수버퍼 — 네 백엔드 공통 `cbuffer name : register(b#)`. 필드는 맨이름으로 쓴다.

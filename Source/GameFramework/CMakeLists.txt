@@ -31,7 +31,6 @@ target_link_libraries(GameFramework
 target_compile_definitions(GameFramework
 	PRIVATE
 	"SW_LOG_TAG=\"GameFramework\""
-	SW_GAME_INTERNAL
 )
 sw_configurePch(GameFramework "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 

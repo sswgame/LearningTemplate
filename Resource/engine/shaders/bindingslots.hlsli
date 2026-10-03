@@ -62,7 +62,6 @@
 #define SW_SLOT_ENGINE_TEX2            2
 #define SW_SLOT_ENGINE_TEX3            3
 #define SW_ENGINE_TEXTURE_SLOT_COUNT   4
-#define SW_FALLBACK_SRV_COUNT          4   // = SW_ENGINE_TEXTURE_SLOT_COUNT (옛 이름)
 
 // GPUScene 인스턴스 구조버퍼 (per-instance world/material). 엔진 텍스처 슬롯 바로 다음. 네 백엔드 공통.
 #define SW_SLOT_INSTANCE_SRV           4

@@ -151,9 +151,7 @@ void sw_delete_array_func( T* pPtr )
     }
 }
 
-#define sw_malloc( size ) sw::Memory::allocate( size )
-#define sw_free( pPtr )   sw::Memory::free( pPtr )
-#define sw_new            new ( sw::MemoryAllocTag{} )
+#define sw_new new ( sw::MemoryAllocTag{} )
 // `static_cast<void*>` 를 끼운다. T 가 포인터일 때(`vector<char*>` 등) `char**` → `void*` 가 암시적 다단 포인터
 // 변환이 되어, 의도한 것인지 읽는 사람이 알 수 없기 때문이다.
 #define sw_placement_new( pPtr ) new ( static_cast<void*>( pPtr ) )

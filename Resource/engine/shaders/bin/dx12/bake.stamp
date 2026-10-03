@@ -1,6 +1,5 @@
 SWBAKE 3
 00366b6bd91c13af taa.hlsl
-0b950334bb7223c1 common.hlsli
 101df098b6e9a07e binding.hlsli
 111f7515f60bf571 postbloom.hlsli
 18912cf2a9b4c732 gbuffer.hlsl
@@ -13,12 +12,13 @@ SWBAKE 3
 94c48c72e58dff6e postoutline.hlsl
 980c18c4c174d3fb postoutline.hlsli
 9d56604bd35346ce instanceanim.hlsl
+a29044f6df9a530f common.hlsli
 b54c618d8734fa38 fullscreenblit.hlsl
 b54c618d8734fa38 tonemap.hlsl
 bc692b0fc7ffb61b fullscreentriangle.hlsl
 bfc1abf7672a9a07 ssao.hlsl
-c813b78d861f96e5 bindingslots.hlsli
 d38de88a21415ca3 postbloom.hlsl
+d4bce0e09dc85cfb bindingslots.hlsli
 d9ebc7fcf8fd364b shadowdepth.hlsl
 e1458c1a780701b4 instancesort.hlsl
 ea62b823a0e6d198 sprite2d.hlsl

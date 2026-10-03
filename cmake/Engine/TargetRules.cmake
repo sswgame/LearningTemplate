@@ -406,7 +406,6 @@ function(sw_addGameModule TARGET_NAME)
 	target_compile_definitions(${TARGET_NAME}
 		PRIVATE
 		"SW_LOG_TAG=\"Game\""
-		SW_GAME_INTERNAL
 	)
 
 	if(gameLibType STREQUAL "MODULE")
