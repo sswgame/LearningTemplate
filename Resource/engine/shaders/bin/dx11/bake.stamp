@@ -6,6 +6,7 @@ SWBAKE 3
 26f8a5b98197b7ef instancedata.hlsli
 361b476c65945fac forwardlit.hlsl
 547cc3a3fdea0ea0 deferredlighting.hlsl
+6bc8630ddd593955 bindingslots.hlsli
 7be542d929482371 postchain.hlsl
 89ca675f4380c825 lighting.hlsli
 8f7da44e57e77ff4 meshmorph.hlsl
@@ -18,7 +19,6 @@ b54c618d8734fa38 tonemap.hlsl
 bc692b0fc7ffb61b fullscreentriangle.hlsl
 bfc1abf7672a9a07 ssao.hlsl
 d38de88a21415ca3 postbloom.hlsl
-d4bce0e09dc85cfb bindingslots.hlsli
 d9ebc7fcf8fd364b shadowdepth.hlsl
 e1458c1a780701b4 instancesort.hlsl
 ea62b823a0e6d198 sprite2d.hlsl

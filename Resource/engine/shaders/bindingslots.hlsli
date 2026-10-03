@@ -47,7 +47,6 @@
 #define SW_SLOT_MATERIAL_CB      1
 #define SW_SLOT_COMPUTE_CB       0
 #define SW_CB_SLOT_COUNT         3   // b0..b2 — b2 는 DX11/GL 루트 상수 에뮬 자리(SW_SLOT_ROOT_CB_EMUL)
-#define SW_MAX_CONSTANT_BUFFER   16
 
 // 루트/푸시 상수 — DX12 b0 space2 (32비트 루트 상수), Vulkan 푸시 상수, DX11/GL 은 UBO 에뮬. setComputeRootConstants 전용.
 #define SW_SLOT_ROOT_CB          0
