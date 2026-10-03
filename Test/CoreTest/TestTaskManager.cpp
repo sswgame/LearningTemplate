@@ -20,6 +20,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/CpuClock.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -861,5 +862,85 @@ SW_TEST_CASE( TaskManagerTest, HelperSlotIsRecycledWhenThreadEnds )
             firstSlot = slot;
         SW_EXPECT_EQUAL( firstSlot, slot );
     }
+    manager.shutdown();
+}
+
+/**
+ * @brief [TaskManagerTest] 태스크 · 병렬 청크는 **만든 쪽의** 할당 태그로 실행된다
+ * @details 태그는 스레드 로컬이라 그대로 두면 워커에서 하는 할당(비동기 씬 로드 · 에셋 스트리밍)이 모두 Unknown 으로 샌다. 태스크 노드와 병렬
+ *          그룹이 만든 스레드의 태그를 담아 실행하는 동안 그 태그를 쓴다. 기다리는 스레드가 대신 실행하는 경우도 본다 — 그 스레드의 태그(Mesh)가
+ *          아니라 만든 쪽의 태그(Texture)여야 한다. `runParallel` 은 호출 스레드의 첫 청크가 워커의 청크를 기다려, 워커 경로를 반드시 지난다.
+ */
+SW_TEST_CASE( TaskManagerTest, TaskInheritsCreatorMemoryTag )
+{
+    if constexpr ( sw::kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+
+    sw::TaskManager manager;
+    SW_ASSERT_TRUE( manager.initialize( kWorkerCount ) );
+
+    constexpr uint32  kCount = 256;
+    sw::atomic<int32> taskRunCount{ 0 };
+    sw::atomic<int32> taskWrongTagCount{ 0 };
+    sw::atomic<int32> groupRunCount{ 0 };
+    sw::atomic<int32> groupWrongTagCount{ 0 };
+
+    sw::TaskHandle task;
+    sw::TaskHandle group;
+    {
+        SW_MEMORY_SCOPE( Texture );
+        task  = manager.emplaceTask( "TagTask", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&taskRunCount, &taskWrongTagCount]()
+         {
+            if ( sw::MemoryProfiler::getCurrentMemoryTag() != sw::MemoryTag::Texture )
+                taskWrongTagCount.fetch_add( 1, std::memory_order_relaxed );
+            taskRunCount.fetch_add( 1, std::memory_order_relaxed );
+        } ) );
+        group = manager.emplaceParallel( "TagGroup", kCount, SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [&groupRunCount, &groupWrongTagCount]( uint32 )
+        {
+            if ( sw::MemoryProfiler::getCurrentMemoryTag() != sw::MemoryTag::Texture )
+                groupWrongTagCount.fetch_add( 1, std::memory_order_relaxed );
+            groupRunCount.fetch_add( 1, std::memory_order_relaxed );
+        } ) );
+    }
+    {
+        // 이 스레드가 기다리며 대신 실행해도 Mesh 가 아니라 Texture 여야 한다.
+        SW_MEMORY_SCOPE( Mesh );
+        task.submit();
+        group.submit();
+        SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
+    }
+    SW_EXPECT_EQUAL( 1, taskRunCount.load() );
+    SW_EXPECT_EQUAL( 0, taskWrongTagCount.load() );
+    SW_EXPECT_EQUAL( static_cast<int32>( kCount ), groupRunCount.load() );
+    SW_EXPECT_EQUAL( 0, groupWrongTagCount.load() );
+
+    sw::atomic<int32>     stackRunCount{ 0 };
+    sw::atomic<int32>     stackWrongTagCount{ 0 };
+    sw::atomic<int32>     workerChunkCount{ 0 };
+    const std::thread::id callerId = std::this_thread::get_id();
+    {
+        SW_MEMORY_SCOPE( Material );
+        manager.runParallel( kCount, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&stackRunCount, &stackWrongTagCount, &workerChunkCount, callerId]( uint32 start, uint32 end )
+        {
+            if ( std::this_thread::get_id() == callerId )
+            {
+                // 워커가 청크 하나를 실행할 때까지 호출 스레드를 붙든다 — 청크가 모두 호출 스레드에서 돌면 상속을 보지 못한다.
+                const sw::CpuDeadline deadline = sw::CpuDeadline::afterMilliseconds( kWaitTimeoutMs );
+                while ( workerChunkCount.load( std::memory_order_acquire ) == 0 && deadline.isExpired() == false )
+                    std::this_thread::yield();
+            }
+            else
+            {
+                workerChunkCount.fetch_add( 1, std::memory_order_acq_rel );
+            }
+            if ( sw::MemoryProfiler::getCurrentMemoryTag() != sw::MemoryTag::Material )
+                stackWrongTagCount.fetch_add( 1, std::memory_order_relaxed );
+            stackRunCount.fetch_add( static_cast<int32>( end - start ), std::memory_order_relaxed );
+        } ) );
+    }
+    SW_EXPECT_EQUAL( static_cast<int32>( kCount ), stackRunCount.load() );
+    SW_EXPECT_TRUE( workerChunkCount.load() > 0 );
+    SW_EXPECT_EQUAL( 0, stackWrongTagCount.load() );
+
     manager.shutdown();
 }

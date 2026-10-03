@@ -9,27 +9,11 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/MemoryTag.h"
 #include "Core/Process/CallStackCapture.h"
 
 namespace sw
 {
-    // ------------------------------------------------------------------------------
-    // 1) MemoryTag — 할당 분류(스레드 로컬)
-    //    ScopedMemoryTag / SW_MEMORY_SCOPE 가 TLS 값을 바꿨다가 되돌린다
-    // ------------------------------------------------------------------------------
-    enum class MemoryTag : uint32
-    {
-        Unknown = 0,
-        Core,
-        Engine,
-        Graphics,
-        Physics,
-        Audio,
-        Game,
-        Editor,
-        MaxTags
-    };
-
     /** @brief 태그별 할당 · 해제 누적 통계입니다. */
     struct MemoryProfileStats
     {
@@ -63,8 +47,8 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 2) MemoryProfiler — 할당 추적 · 콜 스택 집계(엔진 인스턴스)
-    //    누수 검사(아래 3)와는 별개다. CRT/LSan 은 프로세스 전역이다
+    // 1) MemoryProfiler — 할당 추적 · 콜 스택 집계(엔진 인스턴스)
+    //    누수 검사(아래 2)와는 별개다. CRT/LSan 은 프로세스 전역이다
     // ------------------------------------------------------------------------------
     class SW_API MemoryProfiler
     {
@@ -75,8 +59,14 @@ namespace sw
         static void setCurrentMemoryTag( MemoryTag tag );
         /** @brief 현재 스레드의 할당 태그를 반환합니다. */
         static MemoryTag getCurrentMemoryTag();
+        /**
+         * @brief 플랫폼 힙(CRT)이 지금 들고 있는 바이트입니다. sw 할당자를 거치지 않은 할당(외부 라이브러리 · `std::allocator`)까지 포함합니다.
+         * @details 태그 합과 견주면 태그가 볼 수 없는 몫이 나옵니다. sw 블록도 CRT 에서 오므로 그 헤더(블록당 48 바이트)까지 이 값에 들어 있습니다.
+         *          Windows Debug CRT 에서만 잴 수 있고, 그 밖에서는 0 입니다.
+         */
+        static uint64 getPlatformHeapBytes();
         // ------------------------------------------------------------------------------
-        // 3) 플랫폼 누수 검사 — CRT(Windows) / LSan(그 밖)
+        // 2) 플랫폼 누수 검사 — CRT(Windows) / LSan(그 밖)
         //    enable → (수명 할당) → captureBaseline → shutdown 뒤 report
         // ------------------------------------------------------------------------------
         /** @brief 프로세스 시작 직후에 플랫폼 누수 추적을 켭니다. */
@@ -158,15 +148,17 @@ namespace sw
     };
 
     /**
-     * @brief 스코프 동안 TLS 할당 태그를 바꿨다가 되돌립니다.
+     * @brief 스코프 동안 현재 스레드의 할당 태그를 바꿨다가 되돌립니다.
+     * @details `kMemoryTagScopesEnabled` 가 아니면 아무 일도 하지 않습니다(TLS 를 읽지도 쓰지도 않습니다).
      */
     struct SW_API ScopedMemoryTag
     {
-        /** @brief 현재 태그를 저장하고 tag 로 바꿉니다. */
-        ScopedMemoryTag( MemoryTag tag )
+        /** @brief 현재 태그를 저장하고 @p tag 로 바꿉니다. */
+        explicit ScopedMemoryTag( MemoryTag tag )
+            : _prevTag{ kMemoryTagScopesEnabled ? MemoryProfiler::getCurrentMemoryTag() : MemoryTag::Unknown }
         {
-            _prevTag = MemoryProfiler::getCurrentMemoryTag();
-            MemoryProfiler::setCurrentMemoryTag( tag );
+            if constexpr ( kMemoryTagScopesEnabled )
+                MemoryProfiler::setCurrentMemoryTag( tag );
         }
 
         /** @brief 복사를 금지합니다. */
@@ -175,16 +167,20 @@ namespace sw
         ScopedMemoryTag& operator=( const ScopedMemoryTag& ) = delete;
 
         /** @brief 들어오기 전의 태그로 되돌립니다. */
-        ~ScopedMemoryTag() { MemoryProfiler::setCurrentMemoryTag( _prevTag ); }
+        ~ScopedMemoryTag()
+        {
+            if constexpr ( kMemoryTagScopesEnabled )
+                MemoryProfiler::setCurrentMemoryTag( _prevTag );
+        }
 
     private:
         MemoryTag _prevTag;
     };
 } // namespace sw
 
-/** @brief 스코프 동안 할당을 MemoryTag::tag 로 분류합니다. Release 에서는 아무 일도 하지 않습니다. */
+/** @brief 스코프 동안 할당을 `MemoryTag::tag` 로 분류합니다. `kMemoryTagScopesEnabled` 가 아닌 구성에서는 아무 일도 하지 않습니다. */
 #if defined( SW_DEBUG )
-    #define SW_MEMORY_SCOPE( tag ) sw::ScopedMemoryTag _scopedMemoryTag_##__LINE__( sw::MemoryTag::tag )
+    #define SW_MEMORY_SCOPE( tag ) const sw::ScopedMemoryTag SW_CONCAT( _swMemoryScope_, __LINE__ )( sw::MemoryTag::tag )
 #else
     #define SW_MEMORY_SCOPE( tag ) ( (void)0 )
 #endif

@@ -2,6 +2,7 @@
 
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryProfiler.h"
 
 #include "TestFramework/TestFramework.h"
@@ -95,12 +96,12 @@ SW_TEST_CASE( MemoryProfilerTest, TotalAllocationCountSurvivesFrees )
     void*        pDummy      = reinterpret_cast<void*>( 0x2468'ACE0 );
     for ( uint32 round = 0; round < 3; ++round )
     {
-        const uint64 hash = profiler.recordAllocation( pDummy, 256, MemoryTag::Core );
-        profiler.recordFree( pDummy, 256, MemoryTag::Core, hash );
+        const uint64 hash = profiler.recordAllocation( pDummy, 256, MemoryTag::EngineMisc );
+        profiler.recordFree( pDummy, 256, MemoryTag::EngineMisc, hash );
     }
 
     SW_EXPECT_EQUAL( uint64( 3 ), profiler.getTotalAllocationCount() - totalBefore );
-    SW_EXPECT_EQUAL( uint64( 0 ), profiler.getStats( MemoryTag::Core )._currentAllocationCount.load() );
+    SW_EXPECT_EQUAL( uint64( 0 ), profiler.getStats( MemoryTag::EngineMisc )._currentAllocationCount.load() );
 
     const vector<CallStackAllocInfo> listByChurn = profiler.getTopCallStacks( TopCallStackOrder::TotalCount );
     SW_ASSERT_FALSE( listByChurn.empty() );
@@ -148,4 +149,67 @@ SW_TEST_CASE( MemoryProfilerTest, TopCallStackQueryDoesNotDriftLiveCounters )
     // 다른 스레드의 할당이 섞여 들 수 있어 정확히 같을 필요는 없다. 예전 결함은 호출마다 버퍼 한 벌씩 줄어 64 벌 줄었다.
     const uint64 drift = ( after < before ) ? ( before - after ) : 0;
     SW_EXPECT_TRUE_MSG( drift < static_cast<uint64>( lastBytes ) * 8, "현재 사용량이 조회할 때마다 줄었습니다" );
+}
+
+// ------------------------------------------------------------------------------
+// 2) MemoryProfilerTest — 태그 스코프
+// ------------------------------------------------------------------------------
+/**
+ * @brief [MemoryProfilerTest] 태그 스코프 안의 할당은 그 태그로 세고, 스코프를 나가면 태그가 되돌아간다
+ * @details 해제는 할당 헤더에 적힌 태그로 뺀다 — 스코프 밖(다른 태그 아래)에서 풀어도 같은 줄에서 빠진다.
+ *          한 블록에 스코프 둘을 나란히 두는 것도 컴파일돼야 한다(변수 이름에 줄 번호가 붙는다).
+ */
+SW_TEST_CASE( MemoryProfilerTest, ScopedTagAttributesAllocationsAndRestores )
+{
+    if constexpr ( kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+    if ( pProfiler == nullptr )
+        SW_TEST_SKIP( "no active memory profiler in this host" );
+    const bool bWasTracking = pProfiler->isTrackingEnabled();
+    pProfiler->setTrackingEnabled( true );
+
+    constexpr size_t kBlockBytes = 64 * 1024;
+    const MemoryTag  outerTag    = MemoryProfiler::getCurrentMemoryTag();
+    const uint64     textureBase = pProfiler->getStats( MemoryTag::Texture )._currentAllocatedBytes.load();
+    const uint64     meshBase    = pProfiler->getStats( MemoryTag::Mesh )._currentAllocatedBytes.load();
+
+    void* pTextureBlock{ nullptr };
+    void* pMeshBlock{ nullptr };
+    {
+        SW_MEMORY_SCOPE( Texture );
+        SW_EXPECT_TRUE( MemoryProfiler::getCurrentMemoryTag() == MemoryTag::Texture );
+        pTextureBlock = Memory::allocate( kBlockBytes );
+        {
+            SW_MEMORY_SCOPE( Mesh );
+            SW_MEMORY_SCOPE( Mesh );
+            SW_EXPECT_TRUE( MemoryProfiler::getCurrentMemoryTag() == MemoryTag::Mesh );
+            pMeshBlock = Memory::allocate( kBlockBytes );
+        }
+        SW_EXPECT_TRUE( MemoryProfiler::getCurrentMemoryTag() == MemoryTag::Texture );
+    }
+    SW_EXPECT_TRUE( MemoryProfiler::getCurrentMemoryTag() == outerTag );
+
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Texture )._currentAllocatedBytes.load() >= textureBase + kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Mesh )._currentAllocatedBytes.load() >= meshBase + kBlockBytes );
+
+    // 스코프 밖에서 풀어도 할당한 태그에서 빠진다.
+    Memory::free( pTextureBlock );
+    Memory::free( pMeshBlock );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Texture )._currentAllocatedBytes.load() < textureBase + kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Mesh )._currentAllocatedBytes.load() < meshBase + kBlockBytes );
+
+    pProfiler->setTrackingEnabled( bWasTracking );
+}
+
+/**
+ * @brief [MemoryProfilerTest] 태그마다 표시 이름이 있다(이름 표가 `MemoryTag` 와 같은 순서 · 같은 줄 수)
+ */
+SW_TEST_CASE( MemoryProfilerTest, EveryTagHasAName )
+{
+    SW_EXPECT_STREQ( "Unknown", MemoryProfiler::getMemoryTagName( MemoryTag::Unknown ) );
+    SW_EXPECT_STREQ( "Texture", MemoryProfiler::getMemoryTagName( MemoryTag::Texture ) );
+    SW_EXPECT_STREQ( "RenderCpu", MemoryProfiler::getMemoryTagName( MemoryTag::RenderCpu ) );
+    SW_EXPECT_STREQ( "Game", MemoryProfiler::getMemoryTagName( MemoryTag::Game ) );
+    SW_EXPECT_STREQ( "Invalid", MemoryProfiler::getMemoryTagName( MemoryTag::MaxTags ) );
 }

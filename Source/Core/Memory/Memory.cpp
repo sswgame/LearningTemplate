@@ -18,13 +18,15 @@ namespace sw
     struct alignas( 16 ) AllocHeader
     {
         size_t    _size;      ///< 요청한 사용자 데이터 크기(바이트)
-        MemoryTag _tag;       ///< 메모리 서브시스템 분류 태그(Graphics, Audio, Physics 등)
-        uint32    _pad;       ///< 16바이트 경계 정렬용 패딩
+        MemoryTag _tag;       ///< 할당 시점 스레드의 용도 태그(`MemoryTag`). 해제는 이 값으로 뺀다
+        uint8     _arrPad[7]; ///< 16바이트 경계 정렬용 패딩
         uint64    _hash;      ///< 할당 시점 콜 스택의 해시
         uint64    _magic;     ///< 유효성 검증용 매직 넘버
         void*     _pRawPtr;   ///< OS 가 준 원래 할당 시작 주소(정렬 패딩 이전)
         void*     _pReserved; ///< 헤더를 48바이트(16의 배수)로 맞추는 패딩
     };
+
+    static_assert( sizeof( AllocHeader ) == 48, "AllocHeader must stay 48 bytes (a multiple of 16)" );
 
     /** @brief 엔진이 할당한 블록인지 식별하는 64비트 매직 상수입니다. */
     static constexpr uint64 kAllocMagic = 0x5C09B10CDA7A0000;
@@ -192,6 +194,15 @@ namespace sw
         else
             MemoryInternal::reportForeignFree( pPtr );
 #endif // SW_SHIPPING
+    }
+
+    size_t Memory::getAllocationHeaderSize()
+    {
+#if defined( SW_SHIPPING )
+        return 0;
+#else
+        return sizeof( AllocHeader );
+#endif
     }
 
     void* Memory::copy( void* pDest, const void* pSrc, size_t size )

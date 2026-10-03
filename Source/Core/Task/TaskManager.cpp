@@ -7,6 +7,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/Task/TaskNode.h"
 #include "Core/Task/TaskNodePool.h"
@@ -423,6 +424,9 @@ namespace sw
         pNode->_clearEpoch = _clearEpoch.load( std::memory_order_acquire );
         pNode->setName( name );
         pNode->_affinity = affinity;
+        // 실행하는 스레드가 이 태그로 할당하게 만든 쪽의 태그를 담는다(워커에서 하는 로드가 Unknown 으로 새지 않게).
+        if constexpr ( kMemoryTagScopesEnabled )
+            pNode->_memoryTag = MemoryProfiler::getCurrentMemoryTag();
 
         // 태스크 본문 안에서 만든 태스크는 그 본문의 자식이다. 부모는 자식이 모두 끝나야 완료된다.
         if ( t_pCurrentRunningTask != nullptr )
@@ -593,6 +597,8 @@ namespace sw
         pGroup->_pBlockBody = pGroup->_blockBody.isBound() ? &pGroup->_blockBody : nullptr;
         pGroup->_rangeEnd   = end;
         pGroup->_chunkSize  = split._chunkSize;
+        if constexpr ( kMemoryTagScopesEnabled )
+            pGroup->_memoryTag = MemoryProfiler::getCurrentMemoryTag();
         pGroup->_nextChunkStart.store( start, std::memory_order_relaxed );
         pGroup->_join.reset();
 
@@ -632,6 +638,8 @@ namespace sw
         group._pBlockBody = &body;
         group._rangeEnd   = count;
         group._chunkSize  = split._chunkSize;
+        if constexpr ( kMemoryTagScopesEnabled )
+            group._memoryTag = MemoryProfiler::getCurrentMemoryTag();
         group._nextChunkStart.store( 0, std::memory_order_relaxed );
         group._join.addPending( split._ticketCount );
 
@@ -674,6 +682,7 @@ namespace sw
     void TaskManager::runGroupChunks( ParallelGroup* pGroup )
     {
         const ParallelTaskScope bodyScope{};
+        const ScopedMemoryTag   groupMemoryTag{ pGroup->_memoryTag };
         const uint32            end       = pGroup->_rangeEnd;
         const uint32            chunkSize = pGroup->_chunkSize;
         for ( ;; )
@@ -961,6 +970,7 @@ namespace sw
             // 자식이 된다(영영 끝나지 않는다).
             TaskNode* pPrevRunningTask = t_pCurrentRunningTask;
             t_pCurrentRunningTask      = pNode;
+            const ScopedMemoryTag taskMemoryTag{ pNode->_memoryTag };
 
             BLOCK( "Execute Task Delegate" )
             {

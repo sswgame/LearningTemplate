@@ -41,6 +41,9 @@ namespace sw
         // 일반 할당 함수
         static void* allocate( size_t size );
         static void  free( void* pPtr );
+
+        /** @brief 할당 블록 하나가 사용자 크기 앞에 더 잡는 헤더 바이트입니다(크기 · 태그 · 콜스택 해시). 배포본은 헤더가 없어 0 입니다. */
+        static size_t getAllocationHeaderSize();
     };
 
     struct MemoryAllocTag

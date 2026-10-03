@@ -77,6 +77,28 @@ namespace sw
                 std::fputc( '\n', stderr );
             }
 
+            /** @brief `MemoryTag` 값 순서의 표시 이름입니다. */
+            static constexpr const utf8* kArrTagName[] = {
+                "Unknown",
+                "EngineMisc",
+                "Task",
+                "Reflection",
+                "Asset",
+                "Scene",
+                "Texture",
+                "Mesh",
+                "Material",
+                "Shader",
+                "Animation",
+                "Audio",
+                "Physics",
+                "RenderCpu",
+                "Editor",
+                "Game",
+            };
+            static_assert( sizeof( kArrTagName ) / sizeof( kArrTagName[0] ) == static_cast<size_t>( MemoryTag::MaxTags ),
+                           "kArrTagName must have one name per MemoryTag" );
+
             static inline thread_local bool       t_bIsInsideProfiler = false;
             static inline atomic<MemoryProfiler*> s_activeProfiler{ nullptr };
             static inline thread_local MemoryTag  t_currentMemoryTag = MemoryTag::Unknown;
@@ -88,28 +110,10 @@ namespace sw
 {
     const utf8* MemoryProfiler::getMemoryTagName( MemoryTag tag )
     {
-        switch ( tag )
-        {
-            case MemoryTag::Unknown:
-                return "Unknown";
-            case MemoryTag::Core:
-                return "Core";
-            case MemoryTag::Engine:
-                return "Engine";
-            case MemoryTag::Graphics:
-                return "Graphics";
-            case MemoryTag::Physics:
-                return "Physics";
-            case MemoryTag::Audio:
-                return "Audio";
-            case MemoryTag::Game:
-                return "Game";
-            case MemoryTag::Editor:
-                return "Editor";
-            case MemoryTag::MaxTags:
-                return "MaxTags";
-        }
-        return "Invalid";
+        const uint32 tagIndex = static_cast<uint32>( tag );
+        if ( tagIndex >= static_cast<uint32>( MemoryTag::MaxTags ) )
+            return "Invalid";
+        return MemoryProfilerInternal::kArrTagName[tagIndex];
     }
 
     void MemoryProfiler::setCurrentMemoryTag( MemoryTag tag )
@@ -120,6 +124,17 @@ namespace sw
     MemoryTag MemoryProfiler::getCurrentMemoryTag()
     {
         return MemoryProfilerInternal::t_currentMemoryTag;
+    }
+
+    uint64 MemoryProfiler::getPlatformHeapBytes()
+    {
+#if defined( SW_HAS_CRT_LEAK_CHECK )
+        _CrtMemState state{};
+        _CrtMemCheckpoint( &state );
+        return static_cast<uint64>( state.lSizes[_NORMAL_BLOCK] ) + static_cast<uint64>( state.lSizes[_CLIENT_BLOCK] );
+#else
+        return 0;
+#endif
     }
 
     void MemoryProfiler::enableMemoryLeakChecks()

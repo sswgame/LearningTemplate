@@ -14,6 +14,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryTag.h"
 #include "Core/Task/TaskTypes.h"
 
 namespace sw
@@ -155,7 +156,8 @@ namespace sw
         const ParallelBlockDelegate* _pBlockBody{ nullptr };
         uint32                       _rangeEnd{ 0 };
         uint32                       _chunkSize{ 1 };
-        TaskNode*                    _pParent{ nullptr }; ///< 풀 그룹: 티켓이 모두 끝나면 의존성을 풀 부모(참조를 하나 잡는다). 스택 그룹은 null
+        TaskNode*                    _pParent{ nullptr };              ///< 풀 그룹: 티켓이 모두 끝나면 의존성을 풀 부모(참조를 하나 잡는다). 스택 그룹은 null
+        MemoryTag                    _memoryTag{ MemoryTag::Unknown }; ///< 그룹을 만든 스레드의 할당 태그. 청크를 실행하는 동안 그 스레드의 태그가 된다
         /** @brief 다음에 가져갈 청크의 시작입니다. 64비트인 이유: 티켓마다 끝을 지나서 한 번 더 더하므로 32비트는 넘칠 수 있습니다. */
         alignas( 64 ) atomic<uint64> _nextChunkStart{ 0 };
         alignas( 64 ) JoinCounter _join; ///< 아직 끝나지 않은 티켓 수 + 기다리는 스레드
@@ -327,5 +329,10 @@ namespace sw
          */
         atomic<int32> _pendingChildren{ 1 };
         atomic<int32> _refCount{ 1 };
+        /**
+         * @brief 만든 스레드의 할당 태그입니다. 본문을 실행하는 동안 실행 스레드의 태그가 됩니다(워커의 로드가 Unknown 으로 새지 않게).
+         * @details 마지막 카운터 뒤의 패딩 자리에 둡니다 — 노드 크기가 늘지 않습니다(프레임마다 수백 개를 기록하는 노드다).
+         */
+        MemoryTag _memoryTag{ MemoryTag::Unknown };
     };
 } // namespace sw
