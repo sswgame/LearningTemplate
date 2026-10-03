@@ -2381,6 +2381,10 @@ def runConventionsCheck(rootDir: Path | None = None,
         _s_textCache = None
 
 
+#: 검사하지 않는 폴더 이름(저장소 아래 경로의 폴더 하나와 같을 때).
+_kExcludedDirNames: frozenset[str] = frozenset({"ThirdParty", "build", ".vcpkg"})
+
+
 def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] | None) -> list[ConventionViolation]:
     projectRoot = rootDir or Path(getProjectRoot())
     getExactPathMapInternal(projectRoot)
@@ -2391,8 +2395,12 @@ def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] |
             filePath = Path(fileString).resolve()
             if not filePath.is_file():
                 continue
-            normPath = filePath.as_posix()
-            if "ThirdParty" in normPath or "build" in normPath or ".vcpkg" in normPath:
+            # 저장소 **아래** 경로의 폴더 이름으로 거른다 — 절대 경로의 부분 문자열로 보면 `.../bl-buildlint/` 같은 체크아웃에서 전부 빠진다.
+            try:
+                listPart = filePath.relative_to(projectRoot.resolve()).parts[:-1]
+            except ValueError:
+                listPart = filePath.parts[:-1]
+            if _kExcludedDirNames.intersection(listPart):
                 continue
             if filePath.suffix.lower() not in kCppAllExtensions:
                 continue
@@ -2408,9 +2416,7 @@ def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] |
         return allViolations
 
     searchDirs = getLintSearchDirs(projectRoot)
-    filesToScan = collectSourceFiles(
-        searchDirs, excludeSubdirs=["ThirdParty", "build", ".vcpkg"]
-    )
+    filesToScan = collectSourceFiles(searchDirs, excludeSubdirs=_kExcludedDirNames)
     # 파일별 검사는 파이썬 정규식이 대부분이라 스레드로는 한 코어다 — 프로세스 덩어리로 나눈다(`flatMapInProcesses`, 7.5 → 2.3 s).
     allViolations.extend(
         flatMapInProcesses(functools.partial(checkFileConventionsInternal, rootDir=projectRoot), filesToScan)

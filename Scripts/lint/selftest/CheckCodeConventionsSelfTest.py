@@ -215,6 +215,25 @@ def checkSubjectMatrixInternal(tempRoot: Path, bVerbose: bool) -> list[str]:
     return listError
 
 
+def checkCheckoutPathWithExcludedWordInternal(tempRoot: Path) -> list[str]:
+    """
+    저장소가 `.../wt-buildlint/` 처럼 제외 폴더 이름(`build`)을 이름에 품은 폴더에 있어도 전체 스캔 · `--files` 가 파일을 본다.
+
+    제외를 절대 경로의 부분 문자열로 보면 그런 체크아웃에서 **모든 파일이 빠져** 위반 0 으로 통과한다(조용히 죽은 게이트).
+    """
+    caseRoot = tempRoot / "wt-buildlint"
+    path = writeFixtureInternal(caseRoot, "Source/Probe/ParamInBuildCheckout.cpp",
+                                '#include "pch.h"\n\nvoid probe( int32 _count )\n{\n    (void)_count;\n}\n')
+    listError: list[str] = []
+    resetPathMapCacheInternal()
+    if "Naming/ParameterNoUnderscore" not in categoriesForTreeInternal(caseRoot):
+        listError.append("경로에 'build' 가 든 체크아웃: 전체 스캔이 파일을 보지 않습니다 (제외를 절대 경로 부분 문자열로 보고 있습니까?)")
+    resetPathMapCacheInternal()
+    if "Naming/ParameterNoUnderscore" not in categoriesForFileInternal(caseRoot, path):
+        listError.append("경로에 'build' 가 든 체크아웃: --files 가 파일을 거릅니다 (제외를 절대 경로 부분 문자열로 보고 있습니까?)")
+    return listError
+
+
 # 아무 규칙도 건드리면 안 되는 조각. 오탐이 생기면 여기서 잡힌다.
 # 반복자 쌍 생성자는 소괄호가 맞다(`Style/ConstructorBraces` 의 예외) — 중괄호는 initializer_list 로 빠진다.
 _kCleanCase: tuple[str, str] = (
@@ -382,6 +401,9 @@ def main(argv: list[str] | None = None) -> int:
 
         # --- 주체 × 어휘 교차표 ---
         errors.extend(checkSubjectMatrixInternal(tempRoot, args.verbose))
+
+        # --- 체크아웃 경로에 제외 폴더 이름(`build`)이 든 저장소 ---
+        errors.extend(checkCheckoutPathWithExcludedWordInternal(tempRoot))
 
         # --- 오탐 확인 (파일 단위) ---
         cleanRoot = tempRoot / "clean"

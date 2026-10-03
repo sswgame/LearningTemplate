@@ -32,13 +32,14 @@ def collectSourceFiles(roots: Iterable[Path],
     Args:
         roots: 탐색할 루트 디렉터리 목록
         extensions: 대상 파일 확장자 집합 (기본값: kCppAllExtensions)
-        excludeSubdirs: 제외할 경로 서브스트링 목록
+        excludeSubdirs: 제외할 폴더 이름 목록 — 루트 **아래** 경로의 폴더 하나와 같으면 뺀다. 절대 경로의 부분 문자열로 보면
+                        저장소가 `.../bl-buildlint/` 처럼 그 말을 이름에 품은 폴더에 있을 때 파일이 전부 빠진다.
 
     Returns:
         정렬된 Path 객체 리스트
     """
     targetExtensions = extensions if extensions is not None else kCppAllExtensions
-    excludePatterns = tuple(excludeSubdirs) if excludeSubdirs else ()
+    setExcludedDirName = set(excludeSubdirs) if excludeSubdirs else set()
     resultList: list[Path] = []
     for root in roots:
         if not root.is_dir():
@@ -48,8 +49,7 @@ def collectSourceFiles(roots: Iterable[Path],
                 continue
             if path.suffix.lower() not in targetExtensions:
                 continue
-            posixPath = path.as_posix()
-            if any(exclude in posixPath for exclude in excludePatterns):
+            if setExcludedDirName and setExcludedDirName.intersection(path.relative_to(root).parts[:-1]):
                 continue
             resultList.append(path)
     return sorted(resultList)
