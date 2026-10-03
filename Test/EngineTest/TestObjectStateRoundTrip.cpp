@@ -975,3 +975,26 @@ SW_TEST_CASE( ObjectStateRoundTripTest, JsonComponentFieldThatDoesNotReadIsNamed
     SW_EXPECT_TRUE_MSG( logs.countContaining( "_noSuchField" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "_listComponent" ) == 0, logs.joined().c_str() );
 }
+
+/**
+ * @brief [ObjectStateRoundTripTest] 바이너리 오브젝트 상태는 본문 크기(uint32) + 본문뿐이다 — 부모를 이름으로 적던 칸이 앞에 없다
+ * @details 부모는 상태 안의 부착 필드(`_attachOwnerId` · `_attachComponent`)가 id 로 든다. 읽는 쪽이 버리기만 하던 부모 이름 칸을 쓰지 않는다.
+ */
+SW_TEST_CASE( ObjectStateRoundTripTest, BinaryStateIsBodySizeThenBody )
+{
+    GameObjectManager manager;
+    GameObject*       pParent = manager.createGameObject( hashed_string( "Parent" ) );
+    GameObject*       pChild  = manager.createGameObject( hashed_string( "Child" ) );
+    SW_ASSERT_TRUE( pParent->addComponent<SceneComponent>() != nullptr && pChild->addComponent<SceneComponent>() != nullptr );
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pChild, bytes ) );
+    SW_ASSERT_TRUE( bytes.size() > sizeof( uint32 ) );
+    uint32 bodySize{ 0 };
+    Memory::copy( &bodySize, bytes.data(), sizeof( uint32 ) );
+    SW_EXPECT_EQUAL( bytes.size() - sizeof( uint32 ), static_cast<size_t>( bodySize ) );
+
+    GameObject* pCopy = manager.createGameObject( hashed_string( "Copy" ) );
+    SW_EXPECT_EQUAL( bytes.size(), ObjectStateSerializer::loadFromBinaryBuffer( pCopy, bytes.data(), bytes.size() ) );
+}

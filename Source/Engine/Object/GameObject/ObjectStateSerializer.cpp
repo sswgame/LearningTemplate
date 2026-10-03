@@ -391,13 +391,7 @@ namespace sw
 
         BinaryStreamWriter writer( outBuffer );
 
-        // **바깥의 부모 이름은 옛 세이브 형식의 칸일 뿐이다.** 부모는 씬 컴포넌트의 부착 필드(`_attachOwnerId` · `_attachComponent`)로
-        // 상태 안에 든다 — 읽는 쪽은 이 칸을 읽고 버린다. 세이브 · 핫 리로드 스냅샷의 형식을 바꾸지 않으려고 그대로 쓴다.
-        string parentName;
-        if ( pGameObject->getParent() != nullptr )
-            parentName = pGameObject->getParent()->getName().c_str();
-        writer.writeString( parentName );
-
+        // 부모는 따로 적지 않는다 — 씬 컴포넌트의 부착 필드(`_attachOwnerId` · `_attachComponent`)로 상태 안에 든다.
         // 본문 크기를 앞에 둔다. 세이브 게임은 오브젝트를 이어 붙여 놓고 하나씩 끊어 읽는다.
         const size_t sizeHeaderPos = writer.getOffset();
         writer.write( static_cast<uint32>( 0 ) );
@@ -422,11 +416,7 @@ namespace sw
             return 0;
 
         BinaryStreamReader reader( pData, size );
-        string             legacyParentName; // 옛 칸 — 읽고 버린다(`saveToBinaryBuffer` 설명)
-        if ( reader.readString( legacyParentName ) == false )
-            return 0;
-
-        uint32 bodySize{ 0 };
+        uint32             bodySize{ 0 };
         if ( reader.read( bodySize ) == false )
             return 0;
 

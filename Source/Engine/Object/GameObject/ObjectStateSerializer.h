@@ -232,7 +232,7 @@ namespace sw
         /**
          * @brief 바이너리 버퍼에서 GameObject 상태를 복원하고 읽은 바이트 수를 반환합니다(실패하면 0).
          * @param context `loadFromXmlString` 과 같습니다.
-         * @details 본문 앞의 부모 이름(옛 세이브 형식의 칸)은 읽고 버립니다 — 부모는 상태의 부착 필드가 id 로 듭니다.
+         * @details 버퍼는 본문 크기(uint32) + 본문입니다. 부모는 상태의 부착 필드가 id 로 듭니다.
          */
         [[nodiscard]] static size_t loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, const ObjectLoadContext& context = {} );
 
