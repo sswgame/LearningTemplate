@@ -5,7 +5,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/2D/SpriteComponent.h"
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw
@@ -24,8 +23,6 @@ namespace sw
         setTickGroup( TickGroup::PostPhysics );
 
         GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr )
-            pOwner->addTag( "VFX"_tag );
 
         // 흐른 시간이 있으면 페이드 중에 다시 읽은 상태다 — 타이머 · 알파 · 기준을 그대로 이어 간다. 스프라이트 알파는 이미 흐려져 있어
         // 기준으로 다시 잡으면 안 된다.

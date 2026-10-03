@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/GameEventUtil.h"
@@ -85,10 +84,6 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::DuringPhysics );
-
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr )
-            pOwner->addTag( "Stats"_tag );
         syncHealthBar( true );
     }
 

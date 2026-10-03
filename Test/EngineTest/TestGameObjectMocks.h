@@ -57,6 +57,7 @@ namespace sw
         SceneComponent*    _pTickMoveComp{ nullptr };
         float3             _tickMovePos{};
         GameObjectManager* _pBeginPlaySpawnManager{ nullptr }; ///< 설정되면 onBeginPlay 가 이 매니저에 오브젝트 하나를 만든다
+        bool               _bBeginPlayAddsTag{ false };        ///< 켜면 onBeginPlay 가 소유자에 태그 "BeginPlayAdded" 를 붙인다(태그 컴포넌트가 붙는다)
         int32              _beginPlayCount{ 0 };
         string             _meshNameAtBeginPlay;               ///< onBeginPlay 가 본 `_meshName`(붙인 뒤 세팅한 값을 보는지)
         int32*             _pEndPlayCount{ nullptr };          ///< onEndPlay 횟수를 적을 곳 — 컴포넌트가 사라진 뒤에도 읽도록 밖에 둔다
@@ -109,6 +110,8 @@ namespace sw
             _meshNameAtBeginPlay = _meshName;
             if ( _pBeginPlaySpawnManager != nullptr )
                 _pBeginPlaySpawnManager->createGameObject( hashed_string( "SpawnedInBeginPlay" ) );
+            if ( _bBeginPlayAddsTag && getOwner() != nullptr )
+                getOwner()->addTag( "BeginPlayAdded"_tag );
         }
 
         void onEndPlay() override

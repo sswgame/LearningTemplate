@@ -6,7 +6,6 @@
 
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/SpriteClipCache.h"
@@ -36,10 +35,6 @@ namespace sw
         // 새로 만든 숫자는 0 이다. 알파는 흐른 수명에서 다시 구한다.
         _currentLife = MathUtil::max( _currentLife, 0.0f );
         _alpha       = computeAlpha();
-
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr )
-            pOwner->addTag( "UI"_tag );
         acquireGlyphSprites();
         layoutSprites();
     }

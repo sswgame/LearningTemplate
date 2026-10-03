@@ -11,7 +11,12 @@
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSnapshot.h"
+#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
+#include "Engine/Object/Component/2D/ColliderTileComponent.h"
+#include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
+#include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -31,6 +36,7 @@
 #include "GameFramework/Data/GameData.h"
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Kits/ActionCombat/ActionRoom.h"
+#include "GameFramework/Kits/ActionCombat/AttackBaseComponent.h"
 #include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
 #include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
@@ -43,7 +49,9 @@
 #include "GameFramework/Kits/TurnBattle/SaveGame.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
 #include "GameFramework/Transition/ScreenTransitionManager.h"
+#include "GameFramework/UI/DamageUIComponent.h"
 #include "GameFramework/UI/DialogueRunnerComponent.h"
+#include "GameFramework/UI/HPBarBaseComponent.h"
 #include "GameFramework/UI/RuntimeHud.h"
 
 #include "TestFramework/TestFramework.h"
@@ -86,6 +94,28 @@ namespace
         ScopedGameEventDispatcher( const ScopedGameEventDispatcher& )            = delete;
         ScopedGameEventDispatcher& operator=( const ScopedGameEventDispatcher& ) = delete;
     };
+
+    /**
+     * @brief 플레이 중인 @p manager 에 @p TComponent 하나만 단 오브젝트를 스폰하고 틱해 onBeginPlay 를 부릅니다.
+     * @return onBeginPlay 가 불렸고, 오브젝트에 태그 컴포넌트가 붙지 않았고, 컴포넌트 수가 그대로면 true 입니다.
+     */
+    template <typename TComponent>
+    bool spawnsWithoutTagComponent( GameObjectManager& manager, const utf8* pName )
+    {
+        GameObject* pObject = manager.createGameObject( hashed_string( pName ) );
+        if ( pObject == nullptr )
+            return false;
+        TComponent* pComponent = pObject->addComponent<TComponent>();
+        if ( pComponent == nullptr )
+            return false;
+        const size_t countBefore = pObject->getComponentCount();
+        manager.tick( 0.016f ); // 플레이 중에 붙은 컴포넌트는 다음 틱 단계에서 시작한다
+        manager.tick( 0.016f ); // 그 안에서 미룬 구조 변경까지 적용된다
+        const bool bBegun   = pComponent->hasBegunPlay();
+        const bool bNoTag   = pObject->getComponent<TagComponent>() == nullptr;
+        const bool bNoExtra = pObject->getComponentCount() == countBefore;
+        return bBegun && bNoTag && bNoExtra;
+    }
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -3005,4 +3035,38 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameDataIsBoundAndApplied )
 
     instance.shutdown();
     SW_EXPECT_NULL( game::getService<GameData>() );
+}
+
+/**
+ * @brief [GameFrameworkTest] 엔진 · 킷 컴포넌트는 onBeginPlay 에서 소유자에 태그를 붙이지 않는다 — 스폰마다 태그 컴포넌트가 생기지 않는다
+ * @details 콜라이더 · 스프라이트 · 투사체 등 열두 컴포넌트가 시작할 때 "Collider" · "Bullet" 같은 태그를 붙여, 스폰마다 태그 컴포넌트가 하나씩 더 생겼다.
+ *          언리얼 · 유니티는 엔진이 태그를 붙이지 않고 타입으로 찾는다(`GetAllActorsOfClass` · `FindObjectsOfType`). 여기서는
+ *          `GameObjectManager::forEachComponentOfType<T>` · `GameObject::getComponent<T>` 가 그 자리다. 태그는 게임이 뜻을 붙일 때만 쓴다.
+ */
+SW_TEST_CASE( GameFrameworkTest, BeginPlayAddsNoOwnershipTags )
+{
+    GameObjectManager manager;
+    manager.beginPlay();
+
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<BoxCollider2DComponent>( manager, "Collider" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<ColliderTileComponent>( manager, "TileCollider" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<SpriteComponent>( manager, "Sprite" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<SpriteAnimatorComponent>( manager, "Animator" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<DontDestroyOnLoadComponent>( manager, "Persistent" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<EffectBaseComponent>( manager, "Effect" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<GravityComponent>( manager, "Gravity" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<AttackBaseComponent>( manager, "Attack" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<ProjectileComponent>( manager, "Bullet" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<UnitStatsComponent>( manager, "Stats" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<DamageUIComponent>( manager, "Damage" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<HPBarBaseComponent>( manager, "HPBar" ) );
+
+    // 타입으로 찾는다 — 태그 없이도 투사체 오브젝트를 고른다.
+    size_t projectileCount{ 0 };
+    manager.forEachComponentOfType<ProjectileComponent>( [&projectileCount]( ProjectileComponent* )
+    {
+        ++projectileCount;
+    } );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), projectileCount );
+    manager.endPlay();
 }

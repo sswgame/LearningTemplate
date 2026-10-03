@@ -2,8 +2,6 @@
 
 #include "GameFramework/Base/GravityComponent.h"
 
-#include "Engine/Object/Component/TagSystem.h"
-
 namespace sw
 {
     GravityComponent::GravityComponent()
@@ -18,10 +16,6 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::DuringPhysics );
-
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr )
-            pOwner->addTag( "Physics"_tag );
     }
 
     void GravityComponent::onEndPlay()

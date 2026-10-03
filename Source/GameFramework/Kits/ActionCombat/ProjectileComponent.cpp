@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
@@ -31,7 +30,6 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr )
         {
-            pOwner->addTag( "Bullet"_tag );
             // 투사체는 빠르다 — 한 프레임에 얇은 적을 건너뛰어도 지나간 길에서 맞게 콜라이더를 연속 충돌로 둔다(언리얼 투사체 이동이 늘 쓸며 가는 것과 같다).
             // 콜라이더가 없으면 겹침이 오지 않는다 — 날기만 하고 아무것도 맞히지 못한다. 조용히 두면 "총알이 안 맞는다" 가 원인 없이 보인다.
             BoxCollider2DComponent* pCollider = pOwner->getComponent<BoxCollider2DComponent>();

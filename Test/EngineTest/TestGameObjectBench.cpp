@@ -17,6 +17,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -390,4 +391,60 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
     test::logBenchSamples( "first tick (merge) of a 1000-deep chain", listFirstTick );
     test::logBenchSamples( "destroyObject(root) + process on a 1000-deep chain", listDestroy );
     test::logBenchSamples( "manager teardown with a 1000-deep chain", listTeardown );
+}
+
+/**
+ * @brief [GameObjectBenchTest] 플레이 중 콜라이더 오브젝트 8000 스폰 · 그 onBeginPlay 를 부르는 다음 틱 · 파괴
+ * @details 투사체가 거듭 생기는 모양이다. 엔진 컴포넌트가 onBeginPlay 에서 하는 일(바디 등록)의 스폰당 비용을 본다.
+ */
+SW_TEST_CASE( GameObjectBenchTest, SpawnCollidersDuringPlay )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    manager.beginPlay();
+
+    sw::vector<sw::GameObject*> listObject;
+    listObject.reserve( kObjectCount );
+    sw::vector<int64> listSpawn;
+    sw::vector<int64> listBeginTick;
+    sw::vector<int64> listDestroy;
+    size_t            componentCount{ 0 };
+    for ( uint32 round = 0; round < 7; ++round )
+    {
+        listObject.clear();
+        const auto spawnStart = std::chrono::steady_clock::now();
+        for ( uint32 index = 0; index < kObjectCount; ++index )
+        {
+            sw::GameObject*             pObj = manager.createGameObject( sw::hashed_string( "Bullet" ) );
+            sw::BoxCollider2DComponent* pBox = pObj != nullptr ? pObj->addComponent<sw::BoxCollider2DComponent>() : nullptr;
+            if ( pBox != nullptr )
+            {
+                pBox->setOffsetScale( sw::float2{ 0.2f, 0.2f } );
+                pBox->setLocalPosition( sw::float3{ static_cast<float32>( index ) * 2.0f, 0.0f, 0.0f } );
+            }
+            listObject.push_back( pObj );
+        }
+        listSpawn.push_back( test::getElapsedMicroseconds( spawnStart ) );
+
+        const auto tickStart = std::chrono::steady_clock::now();
+        manager.tick( 0.016f );
+        listBeginTick.push_back( test::getElapsedMicroseconds( tickStart ) );
+        componentCount = listObject.front() != nullptr ? listObject.front()->getComponentCount() : 0;
+
+        const auto destroyStart = std::chrono::steady_clock::now();
+        for ( sw::GameObject* pObj : listObject )
+        {
+            if ( pObj != nullptr )
+                manager.destroyObject( pObj );
+        }
+        manager.processDeferredDestruction();
+        listDestroy.push_back( test::getElapsedMicroseconds( destroyStart ) );
+    }
+    manager.endPlay();
+
+    SW_LOG_INFO( "[Bench] components per spawned collider object after onBeginPlay: %#", componentCount );
+    test::logBenchSamples( "spawn 8000 collider objects during play", listSpawn );
+    test::logBenchSamples( "next tick (onBeginPlay + body add + step) of 8000 colliders", listBeginTick );
+    test::logBenchSamples( "destroy 8000 collider objects + process", listDestroy );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
 }

@@ -194,7 +194,7 @@ void MonsterComponent::fireProjectile()
 ```
 
 닿은 유닛은 `UnitStatsComponent::takeDamage` 로 피해를 받고(방어력 · 무적 · 이벤트는 거기서), 총알은 그 틱 끝에 사라집니다.
-`"Bullet"` 태그는 투사체가 시작할 때 스스로 붙입니다.
+엔진 · 킷 컴포넌트는 태그를 스스로 붙이지 않습니다 — 총알은 타입으로 찾습니다(`forEachComponentOfType<ProjectileComponent>`, 아래 "찾기").
 
 | API | 언제 쓰나 |
 |-----|-----------|
@@ -213,7 +213,6 @@ public:
     void onBeginPlay() override
     {
         setTickGroup( TickGroup::DuringPhysics ); // tick 받을 그룹
-        getOwner()->addTag( "MyTag"_tag );
     }
 
     void onTick( float32 deltaTime ) override
@@ -250,14 +249,20 @@ mgr->findGameObjectsByTag( "Monster"_tag, monsters );
 UnitStatsComponent* pStats = player->getComponent<UnitStatsComponent>(); // 빌린 포인터 — 이번 호출 안에서만
 if ( pStats != nullptr )
     pStats->takeDamage( 10 );
+
+// 종류로 찾기(언리얼 `GetAllActorsOfClass` · 유니티 `FindObjectsOfType`) — 태그가 필요 없다
+mgr->forEachComponentOfType<ProjectileComponent>( []( ProjectileComponent* pProjectile ) { /* ... */ } );
 ```
+
+태그는 게임이 뜻을 붙일 때(`"Player"`, `"Monster"`)만 씁니다. 엔진 · 킷 컴포넌트는 소유자에 태그를 붙이지 않습니다 — 스폰마다 태그 컴포넌트가
+하나씩 더 생기기 때문입니다.
 
 ### 5) 태그
 
 ```cpp
 go->addTag( "Player"_tag );           // 리터럴 → 컴파일 타임 해시
 go->addTag( TagID::request( "custom" ) ); // 런타임 문자열
-bool hit = go->hasTag( "Bullet"_tag );
+bool isPlayer = go->hasTag( "Player"_tag );
 ```
 
 틱 중 `addTag`도 엔진이 post-tick으로 미룹니다.  

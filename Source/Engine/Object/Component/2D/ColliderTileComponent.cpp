@@ -3,7 +3,6 @@
 #include "Engine/Object/Component/2D/ColliderTileComponent.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw
@@ -18,10 +17,6 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::DuringPhysics );
-
-        GameObject* pGameObject = getOwner();
-        if ( pGameObject != nullptr )
-            pGameObject->addTag( "TileCollider"_tag );
     }
 
     void ColliderTileComponent::onEndPlay()

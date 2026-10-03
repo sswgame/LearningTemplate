@@ -6,7 +6,6 @@
 
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
-#include "Engine/Object/Component/TagSystem.h"
 
 namespace sw
 {
@@ -37,10 +36,6 @@ namespace sw
     {
         SceneComponent::onBeginPlay();
         setTickGroup( TickGroup::PostPhysics );
-
-        GameObject* pGameObject = getOwner();
-        if ( pGameObject != nullptr )
-            pGameObject->addTag( "Animator"_tag );
 
         tryLoadAnimationGraph();
 

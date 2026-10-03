@@ -7,7 +7,6 @@
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -1014,8 +1013,7 @@ SW_TEST_CASE( GameObjectTest, StandaloneObjectHasInvalidId )
 /**
  * @brief onBeginPlay 가 컴포넌트를 붙이거나 오브젝트를 만들어도 beginPlay 가 멈추지 않는다.
  * @details 예전 `GameObjectManager::beginPlay` 는 `forEachGameObject` 의 공유 잠금을 쥔 채 onBeginPlay 를 불렀다. onBeginPlay 가 태그를 붙이면
- *          (`BoxCollider2DComponent` 등 열두 컴포넌트) `addComponent<TagComponent>` 가 같은 잠금을 배타로 잡으려다 **제 스레드를 기다려**
- *          에디터 Play 가 멈췄다. 그리고 `GameObject::beginPlay` 는 범위 for 로 돌아, 컴포넌트가 이미 네 개인 오브젝트에 태그 컴포넌트가
+ *          `addComponent<TagComponent>` 가 같은 잠금을 배타로 잡으려다 **제 스레드를 기다려** 에디터 Play 가 멈췄다. 그리고 `GameObject::beginPlay` 는 범위 for 로 돌아, 컴포넌트가 이미 네 개인 오브젝트에 태그 컴포넌트가
  *          붙으면 인라인 칸이 힙으로 옮겨 가 반복자가 풀린 칸을 읽었다.
  */
 SW_TEST_CASE( GameObjectTest, BeginPlayMayAddComponentsAndSpawn )
@@ -1023,15 +1021,20 @@ SW_TEST_CASE( GameObjectTest, BeginPlayMayAddComponentsAndSpawn )
     sw::GameObjectManager manager;
     sw::RegisterMockComponents( manager );
 
-    sw::GameObject* pCollider = manager.createGameObject( sw::hashed_string( "ColliderOwner" ) );
-    SW_ASSERT_NOT_NULL( pCollider->addComponent<sw::BoxCollider2DComponent>() );
+    // onBeginPlay 안에서 태그를 붙인다 — 태그 컴포넌트가 붙는다.
+    sw::GameObject*        pTagged = manager.createGameObject( sw::hashed_string( "TaggedOwner" ) );
+    sw::MockMeshComponent* pTagger = pTagged->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( pTagger );
+    pTagger->_bBeginPlayAddsTag = true;
 
-    // 컴포넌트가 이미 네 개(인라인 칸 전부) — 태그 컴포넌트가 다섯 번째로 붙으며 목록이 힙으로 옮겨 간다.
+    // 컴포넌트가 이미 네 개(인라인 칸 전부) — 태그 컴포넌트가 붙으며 목록이 힙으로 옮겨 간다.
     sw::GameObject* pFull = manager.createGameObject( sw::hashed_string( "FullOwner" ) );
     pFull->addComponent<sw::MockMeshComponent>();
     pFull->addComponent<sw::MockAudioComponent>();
     pFull->addComponent<sw::MockCallbackComponent>();
-    SW_ASSERT_NOT_NULL( pFull->addComponent<sw::BoxCollider2DComponent>() );
+    sw::MockMeshComponent* pFullTagger = pFull->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_NOT_NULL( pFullTagger );
+    pFullTagger->_bBeginPlayAddsTag  = true;
     sw::MockMeshComponent* pLateMesh = pFull->addComponent<sw::MockMeshComponent>();
     SW_ASSERT_NOT_NULL( pLateMesh );
 
@@ -1042,8 +1045,8 @@ SW_TEST_CASE( GameObjectTest, BeginPlayMayAddComponentsAndSpawn )
     manager.tick( 0.016f );
 
     manager.beginPlay();
-    SW_EXPECT_TRUE( pCollider->hasTag( "Collider"_tag ) );
-    SW_EXPECT_TRUE( pFull->hasTag( "Collider"_tag ) );
+    SW_EXPECT_TRUE( pTagged->hasTag( "BeginPlayAdded"_tag ) );
+    SW_EXPECT_TRUE( pFull->hasTag( "BeginPlayAdded"_tag ) );
     SW_EXPECT_EQUAL( 1, pLateMesh->_beginPlayCount );
     SW_EXPECT_EQUAL( 1, pSpawn->_beginPlayCount );
     SW_EXPECT_NOT_NULL( manager.findGameObjectByName( sw::hashed_string( "SpawnedInBeginPlay" ) ) );

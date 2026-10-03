@@ -5,7 +5,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -58,7 +57,6 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr )
         {
-            pOwner->addTag( "UI"_tag );
             GameObjectManager* pManager = pOwner->getManager();
             // 바탕만 있는 단색 조각이라 텍스처가 없다(머티리얼의 흰색 × 조각 색).
             if ( pManager != nullptr && _spriteBatch.initialize( *pManager, {}, kEntryCount ) == false )

@@ -8,7 +8,6 @@
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Resource/SpriteClipCache.h"
 
 namespace sw
@@ -31,10 +30,6 @@ namespace sw
     {
         MeshComponent::onBeginPlay();
         setTickGroup( TickGroup::PrePhysics );
-
-        GameObject* pGameObject = getOwner();
-        if ( pGameObject != nullptr )
-            pGameObject->addTag( "Sprite"_tag );
     }
 
     void SpriteComponent::onEndPlay()

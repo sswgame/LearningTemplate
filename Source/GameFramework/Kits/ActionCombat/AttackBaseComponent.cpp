@@ -5,7 +5,6 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/VectorUtil.h"
 
-#include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
@@ -26,10 +25,6 @@ namespace sw
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::DuringPhysics );
-
-        GameObject* pOwner = getOwner();
-        if ( pOwner != nullptr )
-            pOwner->addTag( "Combat"_tag );
 
         _currentDuration = 0.0f;
     }
