@@ -10,6 +10,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
 #include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
@@ -755,4 +757,66 @@ SW_TEST_CASE( ShaderBindingContractTest, ReservedTableIsConsistent )
         for ( size_t indexB = indexA + 1; indexB < list.size(); ++indexB )
             SW_EXPECT_TRUE_MSG( sw::string( list[indexA]._name ) != list[indexB]._name, list[indexA]._name );
     }
+}
+
+/**
+ * @brief [ShaderBindingContractTest] PSO 가 거는 정점 속성은 정점 셰이더가 읽는 것뿐이다 — 구운 Vulkan 정점 셰이더마다 마스크 = 리플렉션 입력
+ * @details 셰이더는 모두 `SwVertexInput` 을 선언하지만 컴파일러가 안 쓰는 입력을 뗀다. Vulkan PSO 가 표 전체를 걸면 검증 레이어가
+ *          "Vertex attribute at location N not consumed by vertex shader" 를 PSO 마다 낸다. 풀스크린 삼각형은 위치만 읽고, 씬 셰이더는
+ *          위치 · 노멀 · 인스턴스 슬롯을 읽는다. 셰이더가 읽는 속성을 마스크가 빠뜨리면(반대 방향) 미정의라, 비트 수가 입력 수와 같은지도 본다.
+ */
+SW_TEST_CASE( ShaderBindingContractTest, ConsumedVertexAttributeMaskFollowsShaderInputs )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const sw::string binDir = sw::FileUtil::joinPath(
+        sw::FileUtil::joinPath( sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" ), "bin" ),
+        sw::string( sw::ShaderBaker::getSubfolderForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) ) );
+    auto maskOf = [&binDir]( const utf8* pFileName, uint32& outInputCount ) -> uint32
+    {
+        sw::vector<uint8> bytecode;
+        if ( sw::FileUtil::readFile( sw::FileUtil::joinPath( binDir, pFileName ), bytecode ) == false )
+            return 0u;
+        outInputCount = static_cast<uint32>( sw::ShaderReflection::reflect( bytecode, sw::ShaderTargetFormat::SPIRV_Vulkan )._listVertexInput.size() );
+        return sw::RHIShaderRequest::computeConsumedVertexAttributeMask( bytecode, sw::ShaderTargetFormat::SPIRV_Vulkan );
+    };
+    auto bitOf = []( const utf8* pSemantic ) -> uint32
+    {
+        for ( uint32 attributeIndex = 0; attributeIndex < sw::constant::kVertexAttributeCount; ++attributeIndex )
+        {
+            if ( sw::string( sw::constant::arrVertexAttribute[attributeIndex]._pSemanticName ) == pSemantic )
+                return 1u << attributeIndex;
+        }
+        return 0u;
+    };
+
+    uint32       fullscreenInputCount{ 0 };
+    const uint32 fullscreenMask = maskOf( "fullscreentriangle_vs.spv", fullscreenInputCount );
+    SW_EXPECT_TRUE( ( fullscreenMask & bitOf( "POSITION" ) ) != 0 );
+    SW_EXPECT_TRUE_MSG( ( fullscreenMask & bitOf( "NORMAL" ) ) == 0, "풀스크린 셰이더는 노멀을 읽지 않는데 PSO 가 건다" );
+    SW_EXPECT_TRUE_MSG( ( fullscreenMask & bitOf( "TEXCOORD" ) ) == 0, "풀스크린 셰이더는 UV 를 읽지 않는데 PSO 가 건다" );
+
+    uint32       sceneInputCount{ 0 };
+    const uint32 sceneMask = maskOf( "forwardlit_vs.spv", sceneInputCount );
+    SW_EXPECT_TRUE( ( sceneMask & bitOf( "POSITION" ) ) != 0 );
+    SW_EXPECT_TRUE( ( sceneMask & bitOf( "NORMAL" ) ) != 0 );
+    SW_EXPECT_TRUE( ( sceneMask & bitOf( "SW_INSTANCESLOT" ) ) != 0 );
+
+    // 구운 Vulkan 정점 셰이더 전부: 셰이더가 읽는 입력은 모두 마스크에 있다(입력 수 = 비트 수).
+    sw::vector<sw::string> listFile;
+    sw::FileUtil::collectFiles( binDir, sw::string( sw::ShaderBaker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) ), listFile, false );
+    uint32 checkedCount{ 0 };
+    for ( const sw::string& path : listFile )
+    {
+        if ( path.find( "_vs" ) == sw::string::npos )
+            continue;
+        const sw::string fileName = sw::FileUtil::getFileNamePart( path );
+        uint32           inputCount{ 0 };
+        const uint32     mask = maskOf( fileName.c_str(), inputCount );
+        uint32           bitCount{ 0 };
+        for ( uint32 attributeIndex = 0; attributeIndex < sw::constant::kVertexAttributeCount; ++attributeIndex )
+            bitCount += ( mask >> attributeIndex ) & 1u;
+        SW_EXPECT_TRUE_MSG( bitCount == inputCount, ( fileName + ": 셰이더가 읽는 정점 입력 중 PSO 가 걸지 않는 것이 있다" ).c_str() );
+        ++checkedCount;
+    }
+    SW_EXPECT_TRUE( checkedCount >= 3 );
 }

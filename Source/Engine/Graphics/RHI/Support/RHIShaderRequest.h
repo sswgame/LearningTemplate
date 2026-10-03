@@ -52,5 +52,13 @@ namespace sw
          * @return 정점 스테이지가 성공했고, 픽셀은 없거나 성공했으면 true. 실패한 쪽의 메시지는 그 결과에 남습니다.
          */
         [[nodiscard]] static bool compileGraphics( const RHIGraphicsShaderRequest& request, ShaderCompileResult& outVertex, ShaderCompileResult& outPixel );
+
+        /**
+         * @brief 정점 셰이더가 실제로 읽는 정점 속성을 `constant::arrVertexAttribute` 의 인덱스 비트로 반환합니다(리플렉션의 location 으로 대조).
+         * @details 셰이더는 모두 `SwVertexInput` 을 선언하지만 컴파일러가 안 쓰는 입력을 떼므로(풀스크린 셰이더의 노멀 · UV), PSO 가 표 전체를
+         *          걸면 Vulkan 검증 레이어가 "Vertex attribute at location N not consumed" 를 낸다. 셰이더가 읽는데 PSO 가 빼면 미정의라
+         *          빼는 쪽만 이 마스크로 한다. 리플렉션은 SPIR-V · DXIL · DXBC 모두 된다.
+         */
+        static uint32 computeConsumedVertexAttributeMask( const vector<uint8>& vertexBytecode, ShaderTargetFormat targetFormat );
     };
 } // namespace sw

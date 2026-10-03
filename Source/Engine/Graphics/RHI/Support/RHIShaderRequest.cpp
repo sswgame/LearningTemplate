@@ -5,6 +5,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 
 namespace sw
 {
@@ -70,5 +71,23 @@ namespace sw
         if ( request._bHasPixelShader != SW_FALSE )
             outPixel = compile( request._pixel );
         return outVertex._bSuccess && ( request._bHasPixelShader == SW_FALSE || outPixel._bSuccess );
+    }
+
+    uint32 RHIShaderRequest::computeConsumedVertexAttributeMask( const vector<uint8>& vertexBytecode, ShaderTargetFormat targetFormat )
+    {
+        static_assert( constant::kVertexAttributeCount <= 32u, "정점 속성 마스크가 uint32 를 넘는다" );
+        const ShaderReflectionData reflection = ShaderReflection::reflect( vertexBytecode, targetFormat );
+        uint32                     mask{ 0 };
+        for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
+        {
+            for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
+            {
+                if ( input._location != constant::arrVertexAttribute[attributeIndex]._location )
+                    continue;
+                mask |= ( 1u << attributeIndex );
+                break;
+            }
+        }
+        return mask;
     }
 } // namespace sw

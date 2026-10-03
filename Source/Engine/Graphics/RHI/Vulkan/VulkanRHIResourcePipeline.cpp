@@ -95,23 +95,29 @@ namespace sw
         arrBindingDescription[1].stride    = constant::kInstanceSlotStreamStride;
         arrBindingDescription[1].inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
-        // 정점 속성은 **공용 표**(constant::arrVertexAttribute)에서 만든다. DX11 · DX12 · GL 과 같은 표다.
+        // 정점 속성은 **공용 표**(constant::arrVertexAttribute)에서 만든다. DX11 · DX12 · GL 과 같은 표다. 셰이더가 읽지 않는 속성(컴파일러가
+        // 뗀 입력)은 빼고 건다 — 걸어 두면 검증 레이어가 "not consumed" 를 PSO 마다 낸다.
+        const uint32                      consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::SPIRV_Vulkan );
         VkVertexInputAttributeDescription arrAttributeDescription[constant::kVertexAttributeCount]{};
+        uint32                            attributeCount{ 0 };
         for ( uint32 attributeIndex = 0; attributeIndex < constant::kVertexAttributeCount; ++attributeIndex )
         {
-            const RHIVertexAttribute& attribute              = constant::arrVertexAttribute[attributeIndex];
-            arrAttributeDescription[attributeIndex].binding  = attribute._inputSlot;
-            arrAttributeDescription[attributeIndex].location = attribute._location;
-            arrAttributeDescription[attributeIndex].format   = ( attribute._bUint != SW_FALSE )   ? VK_FORMAT_R32_UINT
-                                                             : ( attribute._componentCount == 4 ) ? VK_FORMAT_R32G32B32A32_SFLOAT
-                                                             : ( attribute._componentCount == 2 ) ? VK_FORMAT_R32G32_SFLOAT
-                                                                                                  : VK_FORMAT_R32G32B32_SFLOAT;
-            arrAttributeDescription[attributeIndex].offset   = attribute._byteOffset;
+            if ( ( consumedMask & ( 1u << attributeIndex ) ) == 0 )
+                continue;
+            const RHIVertexAttribute&          attribute   = constant::arrVertexAttribute[attributeIndex];
+            VkVertexInputAttributeDescription& description = arrAttributeDescription[attributeCount++];
+            description.binding                            = attribute._inputSlot;
+            description.location                           = attribute._location;
+            description.format                             = ( attribute._bUint != SW_FALSE )   ? VK_FORMAT_R32_UINT
+                                                           : ( attribute._componentCount == 4 ) ? VK_FORMAT_R32G32B32A32_SFLOAT
+                                                           : ( attribute._componentCount == 2 ) ? VK_FORMAT_R32G32_SFLOAT
+                                                                                                : VK_FORMAT_R32G32B32_SFLOAT;
+            description.offset                             = attribute._byteOffset;
         }
 
         vertexInputInfo.vertexBindingDescriptionCount   = 2;
         vertexInputInfo.pVertexBindingDescriptions      = arrBindingDescription;
-        vertexInputInfo.vertexAttributeDescriptionCount = constant::kVertexAttributeCount;
+        vertexInputInfo.vertexAttributeDescriptionCount = attributeCount;
         vertexInputInfo.pVertexAttributeDescriptions    = arrAttributeDescription;
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
