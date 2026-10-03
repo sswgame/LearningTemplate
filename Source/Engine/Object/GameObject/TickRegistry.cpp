@@ -73,13 +73,11 @@ namespace sw
             }
 
             /**
-             * @brief 선행 조건이 뒤 그룹에 있는 후보를 그 그룹으로 옮깁니다. 사슬을 따라 옮깁니다(언리얼 `QueueTickFunction` 의 `ActualStartTickGroup`).
-             * @details 모든 그룹의 후보를 한 그래프로 보고 위상 순서(Kahn)로 걸으며 "내 그룹 = max(내 그룹, 선행의 그룹)" 을 적습니다. 앞 그룹의
-             *          선행 조건은 이미 끝났으므로 아무것도 바꾸지 않습니다. 예전에는 그룹마다 따로 DAG 를 지어 다른 그룹의 선행 조건을 "찾을 수
-             *          없음" 으로 버렸습니다 — PrePhysics 의 기수가 PostPhysics 의 말보다 먼저 돌았습니다. 순환에 걸린 후보(와 그 뒤)는 위상
-             *          순서가 없으니 제 그룹에 둡니다(순환은 그룹 안에서 순서 키로 방어합니다).
+             * @brief 후보들의 선행 조건 그래프(인접 목록 · 진입 차수)를 짓습니다. 간선 하나라도 그룹을 넘으면 true 입니다.
+             * @details 선행 조건은 늘 서브틱을 가리키므로(`SubTickHandle::isValid`) 서브틱 후보만 찾는 표에 넣습니다. 찾을 수 없는 선행
+             *          조건과 자기 자신은 순서를 만들지 않습니다.
              */
-            static void raiseGroupsToPrerequisites( vector<StageCandidate>& listCandidate )
+            static bool buildPrerequisiteGraph( const vector<StageCandidate>& listCandidate, vector<vector<size_t>>& outListAdjacent, vector<uint32>& outListInDegree )
             {
                 const size_t                                            count = listCandidate.size();
                 unordered_map<SubTickHandle, size_t, SubTickHandleHash> mapLookup;
@@ -90,9 +88,9 @@ namespace sw
                         mapLookup[{ listCandidate[index]._componentId, listCandidate[index]._item._subTickId }] = index;
                 }
 
-                vector<vector<size_t>> listAdjacent( count );
-                vector<uint32>         listInDegree( count, 0 );
-                bool                   bCrossesGroup = false;
+                outListAdjacent.assign( count, vector<size_t>{} );
+                outListInDegree.assign( count, 0 );
+                bool bCrossesGroup = false;
                 for ( size_t index = 0; index < count; ++index )
                 {
                     const vector<SubTickHandle>* pListPrerequisite = listCandidate[index]._pListPrerequisite;
@@ -103,13 +101,28 @@ namespace sw
                         const auto found = mapLookup.find( prerequisite );
                         if ( found == mapLookup.end() || found->second == index )
                             continue;
-                        listAdjacent[found->second].push_back( index );
-                        ++listInDegree[index];
+                        outListAdjacent[found->second].push_back( index );
+                        ++outListInDegree[index];
                         bCrossesGroup = bCrossesGroup || listCandidate[found->second]._item._group != listCandidate[index]._item._group;
                     }
                 }
+                return bCrossesGroup;
+            }
+
+            /**
+             * @brief 선행 조건이 뒤 그룹에 있는 후보를 그 그룹으로 옮깁니다. 사슬을 따라 옮깁니다(언리얼 `QueueTickFunction` 의 `ActualStartTickGroup`).
+             * @details 모든 그룹의 후보를 한 그래프로 보고 위상 순서(Kahn)로 걸으며 "내 그룹 = max(내 그룹, 선행의 그룹)" 을 적습니다. 앞 그룹의
+             *          선행 조건은 이미 끝났으므로 아무것도 바꾸지 않습니다. 예전에는 그룹마다 따로 DAG 를 지어 다른 그룹의 선행 조건을 "찾을 수
+             *          없음" 으로 버렸습니다 — PrePhysics 의 기수가 PostPhysics 의 말보다 먼저 돌았습니다. 순환에 걸린 후보(와 그 뒤)는 위상
+             *          순서가 없으니 제 그룹에 둡니다(순환은 그룹 안에서 순서 키로 방어합니다).
+             */
+            static void raiseGroupsToPrerequisites( vector<StageCandidate>& listCandidate )
+            {
+                const size_t           count = listCandidate.size();
+                vector<vector<size_t>> listAdjacent;
+                vector<uint32>         listInDegree;
                 // 모든 선행 조건이 같은 그룹 안이면(보통) 옮길 것이 없다. 사슬이 그룹을 넘으려면 어느 간선 하나는 그룹을 넘는다.
-                if ( bCrossesGroup == false )
+                if ( buildPrerequisiteGraph( listCandidate, listAdjacent, listInDegree ) == false )
                     return;
 
                 vector<size_t> listReady;
@@ -141,30 +154,9 @@ namespace sw
                 if ( count == 0 )
                     return;
 
-                // SubTickHandle -> 후보 인덱스. 선행이 가리키는 상대를 찾는다.
-                unordered_map<SubTickHandle, size_t, SubTickHandleHash> mapLookup;
-                mapLookup.reserve( count );
-                for ( size_t index = 0; index < count; ++index )
-                {
-                    mapLookup[{ listCandidate[index]._componentId, listCandidate[index]._item._subTickId }] = index;
-                }
-
-                vector<vector<size_t>> listAdjacent( count );
-                vector<uint32>         listInDegree( count, 0 );
-                for ( size_t index = 0; index < count; ++index )
-                {
-                    const vector<SubTickHandle>* pListPrerequisite = listCandidate[index]._pListPrerequisite;
-                    if ( pListPrerequisite == nullptr )
-                        continue;
-                    for ( const SubTickHandle& prerequisite : *pListPrerequisite )
-                    {
-                        const auto found = mapLookup.find( prerequisite );
-                        if ( found == mapLookup.end() || found->second == index )
-                            continue; // 없는 상대(적혀는 있지만 찾을 수 없는 선행 조건)와 자기 자신은 순서를 만들지 않는다
-                        listAdjacent[found->second].push_back( index );
-                        ++listInDegree[index];
-                    }
-                }
+                vector<vector<size_t>> listAdjacent;
+                vector<uint32>         listInDegree;
+                (void)buildPrerequisiteGraph( listCandidate, listAdjacent, listInDegree );
 
                 auto sortLevel = [&listCandidate]( vector<size_t>& listLevel )
                 {
