@@ -82,6 +82,48 @@ namespace sw
         return true;
     }
 
+    uint32 InputManager::releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    {
+        (void)outKeepImageMapped;
+        uint32 releasedCount{ 0 };
+        if ( _onActiveDeviceChanged.isCodeWithin( pBegin, pEnd ) )
+        {
+            _onActiveDeviceChanged = {};
+            ++releasedCount;
+        }
+        if ( _onGamepadConnectionChanged.isCodeWithin( pBegin, pEnd ) )
+        {
+            _onGamepadConnectionChanged = {};
+            ++releasedCount;
+        }
+        if ( _onTextInput.isCodeWithin( pBegin, pEnd ) )
+        {
+            _onTextInput = {};
+            ++releasedCount;
+        }
+        if ( _onTextComposition.isCodeWithin( pBegin, pEnd ) )
+        {
+            _onTextComposition = {};
+            ++releasedCount;
+        }
+
+        // 모듈이 등록한 장치는 vtable 이 그 이미지에 있다 — 내린 뒤 폴링하면 내려간 코드로 뛴다. 소멸자가 아직 있는 지금 내린다.
+        vector<IInputDevice*> listModuleDevice;
+        for ( const unique_ptr<IInputDevice>& pDevice : _listDevice )
+        {
+            if ( isAddressWithin( findVtableAddress( pDevice.get() ), pBegin, pEnd ) )
+                listModuleDevice.push_back( pDevice.get() );
+            else
+                releasedCount += pDevice->releaseCodeWithin( pBegin, pEnd );
+        }
+        for ( IInputDevice* pDevice : listModuleDevice )
+        {
+            unregisterDevice( pDevice );
+            ++releasedCount;
+        }
+        return releasedCount;
+    }
+
     void InputManager::shutdown()
     {
         if ( _bInitialized == SW_FALSE )

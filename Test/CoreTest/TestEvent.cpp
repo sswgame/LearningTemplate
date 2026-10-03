@@ -64,6 +64,22 @@ namespace
     {
         ++s_releaseProbeCount;
     }
+
+    /** @brief 이미지 범위 풀기에서 남는 쪽 이벤트입니다(`DestructorCountingEvent` 와 다른 vtable). */
+    struct KeptProbeEvent final : sw::IEvent
+    {
+        int32 _value{ 0 };
+
+        SW_DECLARE_GAMEPLAY_EVENT( KeptProbeEvent );
+    };
+
+    int32 s_keptProbeSum{ 0 };
+
+    /** @brief 받은 `KeptProbeEvent` 의 값을 더합니다. */
+    void onKeptProbe( const KeptProbeEvent& event )
+    {
+        s_keptProbeSum += event._value;
+    }
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -391,4 +407,90 @@ SW_TEST_CASE( EventTest, BusThreadIsTheThreadThatProcessesEvents )
     { bOtherThreadAfterOwner = dispatcher.isBusThread(); } );
     after.join();
     SW_EXPECT_FALSE( bOtherThreadAfterOwner );
+}
+
+/**
+ * @brief [EventTest] 큐에 쌓인 이벤트 가운데 내리려는 이미지가 정의한 것은 그 자리에서 파괴되고 빠진다 — 나머지는 순서대로 남아 발행된다
+ * @details 모듈이 `push` 한 이벤트의 소멸자 · 타입 조회는 그 모듈 이미지의 vtable 을 지난다. 이미지를 내린 뒤 `processEvents` · 디스패처 소멸이 그 이벤트를
+ *          만지면 내려간 코드로 뛴다. 여기서는 범위를 한 이벤트 타입의 vtable 하나로 좁힌다.
+ */
+SW_TEST_CASE( EventTest, ReleaseQueuedEventsDestroysTheEventsTheImageDefined )
+{
+    sw::EventDispatcher dispatcher;
+    DestructorCountingEvent::s_liveCount = 0;
+    s_keptProbeSum                       = 0;
+    using KeptDelegate                   = sw::Delegate<void( const KeptProbeEvent& )>;
+    dispatcher.subscribe<KeptProbeEvent>( SW_DELEGATE_FUNCTION( KeptDelegate, onKeptProbe ) );
+    {
+        DestructorCountingEvent dropped;
+        dispatcher.push( dropped );
+        KeptProbeEvent kept;
+        kept._value = 3;
+        dispatcher.push( kept );
+        dispatcher.push( dropped );
+        kept._value = 4;
+        dispatcher.push( kept );
+
+        const uint8* pVtable = static_cast<const uint8*>( sw::IModuleCodeHolder::findVtableAddress( &dropped ) );
+        SW_EXPECT_EQUAL( 3, DestructorCountingEvent::s_liveCount );
+        SW_EXPECT_EQUAL( 2u, dispatcher.releaseQueuedEventsWithin( pVtable, pVtable + 1 ) );
+        SW_EXPECT_EQUAL( 1, DestructorCountingEvent::s_liveCount ); // 큐의 둘은 소멸자가 불렸다
+        SW_EXPECT_EQUAL( size_t( 2 ), dispatcher.getPendingEventCount() );
+    }
+
+    dispatcher.processEvents();
+    SW_EXPECT_EQUAL( 7, s_keptProbeSum );
+    SW_EXPECT_EQUAL( 0, DestructorCountingEvent::s_liveCount );
+    dispatcher.clear();
+}
+
+/**
+ * @brief [EventTest] 내리려는 이미지가 만든 채널을 다른 코드가 아직 구독하면 "이미지를 내리지 말라" 고 답하고, 구독이 없으면 채널을 치운다
+ * @details 채널 항목의 브로드캐스트 함수는 그 이벤트 타입을 처음 구독한 쪽의 이미지에 인스턴스화된다. 다른 이미지의 구독이 남았는데 내리면 다음 발행이
+ *          내려간 코드로 뛴다(`releaseModuleCode` 의 keep-mapped 길). 범위는 이 실행 파일의 이미지를 구독 스텁 앞 · 뒤 둘로 나눈 것이다 — 브로드캐스트 함수는
+ *          둘 중 한쪽에 들고 구독 스텁은 어느 쪽에도 들지 않으니, 그 한쪽이 "채널을 만든 이미지" 이고 구독은 "다른 코드" 다.
+ */
+SW_TEST_CASE( EventTest, ChannelCreatedByTheImageKeepsItMappedWhileOtherCodeSubscribes )
+{
+    using KeptDelegate = sw::Delegate<void( const KeptProbeEvent& )>;
+    sw::EventDispatcher dispatcher;
+    s_keptProbeSum                                          = 0;
+    const KeptDelegate                           subscriber = SW_DELEGATE_FUNCTION( KeptDelegate, onKeptProbe );
+    const sw::EventDispatcher::EventSubscription token      = dispatcher.subscribe<KeptProbeEvent>( subscriber );
+
+    const void* pImageBegin{ nullptr };
+    const void* pImageEnd{ nullptr };
+    SW_ASSERT_TRUE( sw::FileUtil::findLoadedImageRange( subscriber.getCodeAddress(), pImageBegin, pImageEnd ) );
+    const uint8* pStub = static_cast<const uint8*>( subscriber.getCodeAddress() );
+    const void*  arrRangeBegin[2]{ pImageBegin, pStub + 1 };
+    const void*  arrRangeEnd[2]{ pStub, pImageEnd };
+
+    uint32 keepIndex{ 2 };
+    for ( uint32 rangeIndex = 0; rangeIndex < 2; ++rangeIndex )
+    {
+        bool bKeepImageMapped{ false };
+        SW_EXPECT_EQUAL( 0u, dispatcher.releaseModuleCodeWithin( arrRangeBegin[rangeIndex], arrRangeEnd[rangeIndex], bKeepImageMapped ) );
+        if ( bKeepImageMapped )
+        {
+            SW_EXPECT_EQUAL( 2u, keepIndex ); // 한쪽에서만
+            keepIndex = rangeIndex;
+        }
+    }
+    SW_ASSERT_TRUE_MSG( keepIndex < 2u, "the channel's broadcast function was in neither half of the image" );
+
+    // 구독은 그대로 받는다.
+    KeptProbeEvent event;
+    event._value = 5;
+    dispatcher.publish( event );
+    SW_EXPECT_EQUAL( 5, s_keptProbeSum );
+
+    // 구독이 빠지면 같은 범위가 채널을 치우고 이미지를 내려도 된다고 답한다. 다시 구독하면 새 채널로 돈다.
+    dispatcher.unsubscribe( token );
+    bool bKeepImageMapped{ false };
+    (void)dispatcher.releaseModuleCodeWithin( arrRangeBegin[keepIndex], arrRangeEnd[keepIndex], bKeepImageMapped );
+    SW_EXPECT_FALSE( bKeepImageMapped );
+    dispatcher.subscribe<KeptProbeEvent>( subscriber );
+    dispatcher.publish( event );
+    SW_EXPECT_EQUAL( 10, s_keptProbeSum );
+    dispatcher.clear();
 }

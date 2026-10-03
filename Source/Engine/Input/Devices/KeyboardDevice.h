@@ -55,6 +55,9 @@ namespace sw
         void notifyTextInput( string_view text );
         void setTextInputCallback( TextInputDelegate callback ) { _onTextInput = std::move( callback ); }
 
+        /** @brief 글자 입력 콜백의 스텁이 범위 안이면 풉니다. */
+        uint32 releaseCodeWithin( const void* pBegin, const void* pEnd ) override;
+
     private:
         static constexpr size_t kKeyCount  = static_cast<size_t>( Key::Count );
         static constexpr size_t kWordCount = ( kKeyCount + 63 ) / 64;

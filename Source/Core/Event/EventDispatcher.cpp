@@ -200,6 +200,40 @@ namespace sw
         const uint32 releasedCount = releaseCodeWithin( pBegin, pEnd, remainingEntryCount );
         if ( remainingEntryCount > 0 )
             outKeepImageMapped = true;
+        return releasedCount + releaseQueuedEventsWithin( pBegin, pEnd );
+    }
+
+    uint32 EventDispatcher::releaseQueuedEventsWithin( const void* pBegin, const void* pEnd )
+    {
+        uint32                     releasedCount{ 0 };
+        std::scoped_lock<SpinLock> lock{ _queueSpinLock };
+        for ( auto& [channel, list] : _mapChannelQueue )
+        {
+            // 목록은 새것 → 옛것 순의 단일 연결이다. 남는 것끼리 같은 순서로 다시 잇는다. 메모리는 프레임 아레나 · 넘침 목록의 것이라 다음 되감기가 거둔다.
+            IEvent* pKeptHead{ nullptr };
+            IEvent* pKeptTail{ nullptr };
+            IEvent* pCurrent = list->_pHead.load( std::memory_order_relaxed );
+            while ( pCurrent != nullptr )
+            {
+                IEvent* pNext = pCurrent->_next.load( std::memory_order_relaxed );
+                if ( IModuleCodeHolder::isAddressWithin( IModuleCodeHolder::findVtableAddress( pCurrent ), pBegin, pEnd ) )
+                {
+                    pCurrent->~IEvent();
+                    ++releasedCount;
+                }
+                else
+                {
+                    pCurrent->_next.store( nullptr, std::memory_order_relaxed );
+                    if ( pKeptTail == nullptr )
+                        pKeptHead = pCurrent;
+                    else
+                        pKeptTail->_next.store( pCurrent, std::memory_order_relaxed );
+                    pKeptTail = pCurrent;
+                }
+                pCurrent = pNext;
+            }
+            list->_pHead.store( pKeptHead, std::memory_order_release );
+        }
         return releasedCount;
     }
 

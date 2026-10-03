@@ -9,6 +9,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Delegate/ModuleCodeHolder.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
@@ -37,8 +38,10 @@ namespace sw
     /**
      * @class InputManager
      * @brief 다형 IInputDevice 들을 등록 · 관리하고, 락프리 원시 이벤트 큐로 OS 메시지를 프레임에 맞추는 중앙 허브입니다.
+     * @details 모듈이 단 콜백(장치 변경 · 게임패드 연결 · 글자 입력 · 조합)과 모듈이 등록한 장치를 드므로 `IModuleCodeHolder` 입니다 — 모듈 이미지를
+     *          내리기 전에 그 범위의 콜백을 풀고 그 범위에 vtable 이 있는 장치를 내립니다(`releaseModuleCodeWithin`).
      */
-    class SW_API InputManager
+    class SW_API InputManager final : public IModuleCodeHolder
     {
     public:
         using ActiveDeviceChangedDelegate = Delegate<void( InputDeviceType )>;
@@ -46,7 +49,7 @@ namespace sw
         using TextInputDelegate           = Delegate<void( string_view )>;
 
         InputManager();
-        ~InputManager();
+        ~InputManager() override;
 
         InputManager( const InputManager& )            = delete;
         InputManager& operator=( const InputManager& ) = delete;
@@ -106,6 +109,14 @@ namespace sw
         void            setGamepadConnectionCallback( GamepadConnectionDelegate callback ) { _onGamepadConnectionChanged = std::move( callback ); }
         void            setTextInputCallback( TextInputDelegate callback ) { _onTextInput = std::move( callback ); }
         void            setTextCompositionCallback( TextInputDelegate callback ) { _onTextComposition = std::move( callback ); }
+
+        /** @brief 보유자 목록의 이름입니다. */
+        const utf8* getModuleCodeHolderName() const override { return "input callbacks"; }
+        /**
+         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안인 콜백(이 관리자의 넷 · 장치마다의 것)을 풀고, vtable 이 그 범위에 있는 장치를 등록에서 내립니다.
+         * @details 장치 소멸자는 아직 올라와 있는 그 이미지의 코드라 지금 내려야 합니다. 뗀 것의 수(콜백 + 장치)를 반환합니다.
+         */
+        uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
         bool wasAnyInputPressed() const;
         void onTextInput( string_view text );

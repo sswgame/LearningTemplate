@@ -121,6 +121,9 @@ namespace sw
         void setAxis( uint16 axisIndex, float32 value );
         void setConnectionCallback( GamepadConnectionDelegate callback ) { _onConnectionChanged = std::move( callback ); }
 
+        /** @brief 연결 콜백의 스텁이 범위 안이면 풉니다. */
+        uint32 releaseCodeWithin( const void* pBegin, const void* pEnd ) override;
+
     protected:
         GamepadConnectionDelegate _onConnectionChanged;
         uint32                    _deviceIndex;               /**< 컨트롤러 슬롯 인덱스(로컬 멀티플레이어 0~3번 패드). */

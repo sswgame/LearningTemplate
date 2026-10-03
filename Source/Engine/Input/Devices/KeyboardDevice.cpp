@@ -129,4 +129,12 @@ namespace sw
         if ( _onTextInput.isBound() )
             _onTextInput( text );
     }
+
+    uint32 KeyboardDevice::releaseCodeWithin( const void* pBegin, const void* pEnd )
+    {
+        if ( _onTextInput.isCodeWithin( pBegin, pEnd ) == false )
+            return 0;
+        _onTextInput = {};
+        return 1;
+    }
 } // namespace sw

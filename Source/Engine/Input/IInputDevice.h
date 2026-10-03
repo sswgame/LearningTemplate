@@ -112,5 +112,16 @@ namespace sw
         virtual bool wasControlReleased( uint16 controlIndex ) const = 0;
         /** @brief 아날로그 축이나 압력 값을 반환합니다(기본 0.0 ~ 1.0). */
         virtual float32 getControlValue( uint16 controlIndex ) const { return isControlDown( controlIndex ) ? 1.0f : 0.0f; }
+
+        /**
+         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 콜백을 풉니다. 푼 수를 반환합니다.
+         * @details 모듈 이미지를 내리기 전에 `InputManager` 가 장치마다 부릅니다(`IModuleCodeHolder`). 콜백을 드는 장치만 재정의합니다.
+         */
+        virtual uint32 releaseCodeWithin( const void* pBegin, const void* pEnd )
+        {
+            (void)pBegin;
+            (void)pEnd;
+            return 0;
+        }
     };
 } // namespace sw

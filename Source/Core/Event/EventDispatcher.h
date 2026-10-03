@@ -189,10 +189,17 @@ namespace sw
          */
         uint32 releaseCodeWithin( const void* pBegin, const void* pEnd, uint32& outRemainingEntryCount );
 
+        /**
+         * @brief 큐에 쌓인 이벤트 가운데 vtable 이 [@p pBegin, @p pEnd) 안인 것을 파괴하고 큐에서 뺍니다. 뺀 수를 반환합니다. 아무 스레드에서나 부를 수 있습니다.
+         * @details 모듈이 `push` 한 이벤트는 그 모듈이 인스턴스화한 vtable(소멸자 · 타입 조회)을 듭니다. 이미지를 내린 뒤 `processEvents` 나 디스패처
+         *          소멸이 그 이벤트를 만지면 내려간 코드로 뜁니다. 소멸자는 이미지가 아직 올라와 있는 지금 부릅니다. 남은 이벤트의 순서는 그대로입니다.
+         */
+        uint32 releaseQueuedEventsWithin( const void* pBegin, const void* pEnd );
+
         /** @brief 보유자 목록의 이름입니다. */
         const utf8* getModuleCodeHolderName() const override { return "event subscriptions"; }
         /**
-         * @brief `releaseCodeWithin` 입니다. 그 범위가 만든 채널을 다른 코드가 아직 구독하면 @p outKeepImageMapped 를 true 로 둡니다 —
+         * @brief `releaseCodeWithin` + `releaseQueuedEventsWithin` 입니다. 그 범위가 만든 채널을 다른 코드가 아직 구독하면 @p outKeepImageMapped 를 true 로 둡니다 —
          *        채널의 브로드캐스트 함수와 멀티캐스트의 해제자가 그 이미지의 코드라, 내리면 다음 발행 · 디스패처 소멸이 내려간 코드로 뜁니다.
          */
         uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
