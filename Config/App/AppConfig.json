@@ -144,6 +144,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_BattleRoyale",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
