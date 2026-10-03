@@ -188,6 +188,33 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetMultiBlockShift )
 }
 
 /**
+ * @brief [DataStructureTest] 크기가 다른 DynamicBitset 의 &= · |= · ^= 는 단언하고 아무것도 바꾸지 않는다
+ * @details 크기 검사가 없으면 짧은 쪽 블록 목록의 범위 밖을 읽는다(배포본에서 메모리 오류). Debug 의 단언은 가로채기 안에서 센다.
+ */
+SW_TEST_CASE( DataStructureTest, DynamicBitsetSizeMismatchLeavesTheTargetUnchanged )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "DynamicBitset rejects a bitwise operation between different sizes" );
+    test::ScopedAssertCapture assertCapture;
+
+    const sw::DynamicBitset shorter( 64 ); // 전부 0
+    sw::DynamicBitset       target( 192 );
+    target.set();
+    const sw::DynamicBitset original = target;
+
+    target &= shorter;
+    SW_EXPECT_TRUE( target == original );
+    target |= shorter;
+    SW_EXPECT_TRUE( target == original );
+    target ^= shorter;
+    SW_EXPECT_TRUE( target == original );
+    SW_EXPECT_EQUAL( 192u, target.size() );
+    SW_EXPECT_EQUAL( 192u, target.count() );
+
+    if ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 3u, assertCapture.getCount() );
+}
+
+/**
  * @brief [DataStructureTest] DynamicBitset 전체 커버리지
  */
 SW_TEST_CASE( DataStructureTest, DynamicBitsetFullCoverage )
