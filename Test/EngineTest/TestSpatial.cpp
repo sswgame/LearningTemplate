@@ -283,10 +283,8 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DAABBCircleAndRayQueries )
 
 /**
  * @brief [SpatialTest] 광선 질의가 **스치지도 않은 것**을 돌려주지 않는다
- * @details `queryRay` 만 좁힘 판정이 없어서, 광선이 지나간 **셀** 안의 핸들을 전부 담았다.
- *          형제 둘은 처음부터 각자의 판정을 거친다 — `queryAabb` 는 `intersects`,
- *          `queryCircle` 은 가장 가까운 점까지의 거리. 이름이 `queryRay` 인데 후보 목록을
- *          내놓고 있었으므로, 걸러 주지 않는 호출부는 틀린 답을 받았다.
+ * @details 형제 둘처럼 `queryRay` 도 좁힘 판정을 거친다 — `queryAabb` 는 `intersects`, `queryCircle` 은 가장 가까운
+ *          점까지의 거리. 좁힘이 없으면 광선이 지나간 **셀** 안의 핸들을 전부 담아, 걸러 주지 않는 호출부가 틀린 답을 받는다.
  * @note 셀 크기(64)보다 작은 상자 둘을 **같은 셀**에 넣고 그 중 하나만 지나는 광선을 쏜다.
  *       좁힘이 없으면 같은 셀에 있다는 이유로 둘 다 나온다.
  */
@@ -417,8 +415,8 @@ SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
     if ( listRay.empty() == false )
         SW_EXPECT_EQUAL( eNear1, listRay[0] );
 
-    // 방향이 단위 길이가 아니어도 사거리의 뜻은 같아야 한다 — 예전에는 슬랩 판정이 maxDist 를
-    // 방향 벡터의 배수로 써서, 길이 4 짜리 방향이 사거리를 네 배로 늘렸다.
+    // 방향이 단위 길이가 아니어도 사거리의 뜻은 같아야 한다 — 슬랩 판정이 maxDist 를 방향 벡터의 배수로 쓰면
+    // 길이 4 짜리 방향이 사거리를 네 배로 늘린다.
     sw::vector<sw::SlotHandle> listLongRay;
     bvh.queryRay( sw::float3{ 1.0f, 1.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 4.0f }, 20.0f, listLongRay );
     SW_EXPECT_EQUAL( listRay.size(), listLongRay.size() );
@@ -465,11 +463,9 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2D_SpanningMultiCellsDuplicateFilterin
 
 /**
  * @brief [SpatialTest] update 가 실패하면 원소는 있던 자리에 그대로 남는다
- * @details `SpatialTree::update` 는 지우고 다시 넣는다. 그런데 새 경계가 월드 밖이면
- *          `insert` 가 실패하는데, 그때 원소는 **이미 지워진 뒤**였다 — 호출부는 false 를
- *          받고 "그대로겠지" 로 읽지만 실제로는 사라진다. 월드를 벗어나는 오브젝트에서
- *          바로 일어나는 일이다. 형제 둘(`SpatialHashGrid2D` · `BVHTree3D`)의 update 는
- *          그냥 insert 에 맡겨서 이런 구멍이 없다 — 셋 중 하나만 원소를 잃었다.
+ * @details `SpatialTree::update` 는 지우고 다시 넣는다. 새 경계가 월드 밖이면 `insert` 가 실패하는데, 그때 원소가
+ *          **이미 지워진 뒤**면 호출부는 false 를 받고 "그대로겠지" 로 읽지만 실제로는 사라진다. 월드를 벗어나는 오브젝트에서
+ *          바로 일어나는 일이다. 형제 둘(`SpatialHashGrid2D` · `BVHTree3D`)의 update 와 같은 약속이어야 한다.
  */
 SW_TEST_CASE( SpatialTest, FailedUpdateKeepsElement )
 {
@@ -521,7 +517,7 @@ SW_TEST_CASE( SpatialTest, FailedUpdateKeepsElement )
  * @details 셀 범위는 **호출부가 준 좌표에서** 나온다. 상한이 없으면 큰 상자 하나가 수천만 개의
  *          셀을 요구하고, 삽입이 그만큼 돌면서 해시 표를 채운다 — 이 모듈이 스스로 제공하는
  *          `AABB2D::infinite()` 가 바로 그런 값이다. 넘치는 핸들은 목록 하나에 모아 두고 질의가
- *          그 목록을 항상 함께 본다. `PhysicsWorld` 는 같은 이유로 이미 상한을 두고 있었다.
+ *          그 목록을 항상 함께 본다. `PhysicsWorld` 도 같은 이유로 상한을 둔다.
  */
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2DOversizedBoundsStayQueryable )
 {
@@ -596,11 +592,9 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInfiniteBoundsTerminate )
 
 /**
  * @brief [SpatialTest] 모든 질의가 결과 벡터를 먼저 비운다
- * @details 세 갈래가 서로 달랐다. `SpatialHashGrid2D` 와 `PhysicsWorld` 는 비우고 시작했고,
- *          `BVHTree3D` 와 `SpatialTree` 는 **덧붙이기만** 했으며, 게다가 `BVHTree3D` 는 트리가
- *          비면 벡터를 아예 건드리지 않고 돌아갔다 — 벡터 하나를 프레임마다 돌려 쓰는 호출부에
- *          **지난 프레임의 답이 이번 답인 척** 남는다. 기존 테스트들이 질의마다 새 벡터를 넘겨서
- *          아무도 눈치채지 못했다.
+ * @details `SpatialHashGrid2D` · `PhysicsWorld` · `BVHTree3D` · `SpatialTree` 가 같은 약속이다. 어느 하나가 **덧붙이기만** 하거나
+ *          트리가 빌 때 벡터를 아예 건드리지 않고 돌아가면, 벡터 하나를 프레임마다 돌려 쓰는 호출부에 **지난 프레임의 답이 이번
+ *          답인 척** 남는다. 질의마다 새 벡터를 넘기는 시험은 이것을 못 잡는다.
  */
 SW_TEST_CASE( SpatialTest, QueriesOverwriteTheOutListInsteadOfAppending )
 {
@@ -629,7 +623,7 @@ SW_TEST_CASE( SpatialTest, QueriesOverwriteTheOutListInsteadOfAppending )
         bvh.querySphere( sw::float3{ 1.5f, 1.5f, 1.5f }, 1.0f, listHit );
         SW_EXPECT_EQUAL( size_t( 1 ), listHit.size() );
 
-        // 빈 트리에 물으면 빈 답이어야 한다 — 이 경로가 이른 반환으로 벡터를 안 건드렸다.
+        // 빈 트리에 물으면 빈 답이어야 한다 — 이른 반환으로 벡터를 안 건드리면 안 된다.
         bvh.clear();
         bvh.queryAabb( probe, listHit );
         SW_EXPECT_TRUE( listHit.empty() );
@@ -717,7 +711,7 @@ SW_TEST_CASE( SpatialTest, BVHTree3DFrustumQueryKeepsOnlyVisibleBoxes )
 
 /**
  * @brief [SpatialTest] 셀 번호가 int32 끝에 닿는 항목도 넣고 찾고 뺄 수 있다(순회가 끝난다)
- * @details `PhysicsWorld` 와 같은 순회 넘침이 여기에도 있었다.
+ * @details `PhysicsWorld` 와 같은 순회 넘침 함정이다(셀 순회가 int32 로 돌면 `++` 가 넘친다).
  */
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2DEntityAtTheCellLimitDoesNotHang )
 {

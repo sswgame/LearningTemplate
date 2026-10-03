@@ -28,8 +28,8 @@
 #include <thread>
 
 // ActionCombat 킷의 피해 — 투사체 · 공격 판정이 `UnitStatsComponent::takeDamage` 한 길로 피해를 주고 `DamageAppliedEvent` 를 내며, 액션 룸이
-// 상태가 바뀔 때 룸 이벤트를 낸다. 예전에는 `GameFrameworkTest` 의 끝에 있었다 — 다른 단위들도 그 끝에 시험을 더하므로, 병합이 같은 자리에서
-// 부딪히지 않게 킷의 시험을 따로 둔다.
+// 상태가 바뀔 때 룸 이벤트를 낸다. 다른 단위들이 `GameFrameworkTest` 의 끝에 시험을 더하므로, 병합이 같은 자리에서 부딪히지 않게 킷의 시험을
+// 따로 둔다.
 
 namespace sw
 {
@@ -140,8 +140,8 @@ namespace
 
 /**
  * @brief [ActionCombatTest] 투사체가 스탯 있는 유닛에 닿으면 피해를 한 번 주고 그 틱 끝에 사라진다
- * @details `ProjectileComponent::_damage` 는 세터뿐이었고 맞음 처리가 없었다 — 총알은 적을 지나 수명이 다할 때까지 날았고, 제품 코드에
- *          `takeDamage` 를 부르는 곳이 하나도 없었다. 이제 같은 오브젝트의 콜라이더 겹침으로 맞음을 알고 `takeDamage( 피해, 쏜 쪽 )` 뒤 사라진다.
+ * @details 같은 오브젝트의 콜라이더 겹침으로 맞음을 알고 `takeDamage( 피해, 쏜 쪽 )` 뒤 사라진다 — 맞음 처리가 없으면 총알은 적을 지나 수명이
+ *          다할 때까지 난다.
  *          피해는 방어력을 뺀 값이다(25 − 5 = 20). 사라짐은 표시만이 아니라 그 틱의 파괴 단계에서 매니저에서 빠진다.
  */
 SW_TEST_CASE( ActionCombatTest, ProjectileDamagesTheUnitItHitsOnceAndIsGoneAfterThatTick )
@@ -217,8 +217,8 @@ SW_TEST_CASE( ActionCombatTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWi
 
 /**
  * @brief [ActionCombatTest] 한 프레임에 얇은 유닛을 통째로 건너뛰는 빠른 투사체도 맞힌다(터널링 없음)
- * @details 겹침은 step 마다 끝 자리만 봤다 — 초당 600 으로 나는 총알은 한 프레임(1/60 초)에 10 을 가서 두께 0.1 인 유닛과 한 번도 겹치지
- *          않았다. 투사체는 시작할 때 제 콜라이더를 연속 충돌로 켜고(`setContinuous`), 물리가 지난 자리에서 지금 자리까지 쓸어 지나간 유닛과의
+ * @details 겹침을 step 마다 끝 자리만 보면 초당 600 으로 나는 총알은 한 프레임(1/60 초)에 10 을 가서 두께 0.1 인 유닛과 한 번도 겹치지
+ *          않는다. 투사체는 시작할 때 제 콜라이더를 연속 충돌로 켜고(`setContinuous`), 물리가 지난 자리에서 지금 자리까지 쓸어 지나간 유닛과의
  *          겹침을 낸다(`PhysicsWorld::step`).
  */
 SW_TEST_CASE( ActionCombatTest, FastProjectileHitsAThinUnitItCrossesInOneFrame )
@@ -242,8 +242,8 @@ SW_TEST_CASE( ActionCombatTest, FastProjectileHitsAThinUnitItCrossesInOneFrame )
 
 /**
  * @brief [ActionCombatTest] 피해는 "game" 채널에 `DamageAppliedEvent` 를 낸다 — 쏜 쪽 · 맞은 쪽 · 들어간 피해 · 남은 HP · 죽음
- * @details `ActionCombatEvents.h` 에는 룸 이벤트 셋뿐이었고 그마저 내는 곳이 없었다 — HP 바 · 피해 숫자가 받을 것이 없었다. 피해가 HP 에 닿는
- *          자리(`UnitStatsComponent`) 하나에서 내므로, 틱 안의 게임 코드가 부르든(틱 직후로 미뤄진다) 투사체로 맞든 같은 모양으로 온다. 미룬 피해도
+ * @details HP 바 · 피해 숫자가 받는 이벤트다. 피해가 HP 에 닿는 자리(`UnitStatsComponent`) 하나에서 내므로, 틱 안의 게임 코드가
+ *          부르든(틱 직후로 미뤄진다) 투사체로 맞든 같은 모양으로 온다. 미룬 피해도
  *          쏜 쪽을 들고 간다. 죽인 피해는 남았던 HP 보다 크게 실린다(넘친 피해). 버스 스레드에서 적용되므로 구독자는 그 틱 안에 받는다.
  */
 SW_TEST_CASE( ActionCombatTest, DamagePublishesAnEventWithInstigatorTargetAmountAndRemainingHp )
@@ -362,8 +362,7 @@ SW_TEST_CASE( ActionCombatTest, PiercingProjectilePassesThroughAsManyUnitsAsItsP
 
 /**
  * @brief [ActionCombatTest] 공격 판정은 휘두르는 동안 닿은 유닛마다 한 번 피해를 준다 — 이미 서 있던 유닛도, 들어온 유닛도, 공격자 자신은 빼고
- * @details `AttackBaseComponent` 는 `beginAttack` · `isAttackActive` · `getDamage` 만 있고 아무에게도 피해를 주지 않았다(값은 있는데 읽는 곳이 없다).
- *          이제 같은 오브젝트의 콜라이더가 판정이다. 휘두르기 전부터 판정 안에 있던 유닛은 시작할 때, 휘두르는 동안 들어온 유닛은 들어올 때 맞고,
+ * @details 같은 오브젝트의 콜라이더가 판정이다. 휘두르기 전부터 판정 안에 있던 유닛은 시작할 때, 휘두르는 동안 들어온 유닛은 들어올 때 맞고,
  *          한 번 휘두를 때 유닛마다 한 번이다(나갔다 다시 들어와도). 공격자 계층(판정이 붙은 몸)은 맞지 않고, 피해 이벤트의 instigator 는 그 몸이다.
  *          판정이 꺼진 뒤 들어온 유닛은 맞지 않는다.
  */
@@ -424,8 +423,8 @@ SW_TEST_CASE( ActionCombatTest, AttackHitsEachUnitInItsHitboxOncePerSwing )
 
 /**
  * @brief [ActionCombatTest] 프레임 사이에 투사체 길을 가로질러 건너간 유닛도 맞는다(상대 운동)
- * @details 연속 충돌은 상대를 이번 step 의 자리에 세워 두고 쟀다 — 총알이 한 프레임에 x 로 10 을 가는 동안 y 로 길을 건너간 유닛은 끝 자리가 길
- *          밖이라 맞지 않았다. 이제 물리가 두 바디의 이동 차이로 쓴다(Box2D 총알 TOI · 유니티 Continuous Dynamic).
+ * @details 연속 충돌이 상대를 이번 step 의 자리에 세워 두고 재면 총알이 한 프레임에 x 로 10 을 가는 동안 y 로 길을 건너간 유닛은 끝 자리가 길
+ *          밖이라 맞지 않는다. 그래서 물리가 두 바디의 이동 차이로 쓴다(Box2D 총알 TOI · 유니티 Continuous Dynamic).
  */
 SW_TEST_CASE( ActionCombatTest, ProjectileHitsAUnitThatCrossesItsPathBetweenFrames )
 {
@@ -448,7 +447,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectileHitsAUnitThatCrossesItsPathBetweenFram
 
 /**
  * @brief [ActionCombatTest] 투사체는 트리거를 지나쳐 뒤의 몸을 맞힌다 — 트리거만 가진 유닛은 맞지 않는다
- * @details 겹침 훅이 상대 오브젝트만 넘겨, 투사체는 감지 범위 · 구역 볼륨(트리거)에도 벽처럼 막혔다. 이제 `OverlapInfo::_bOtherTrigger` 로 가른다
+ * @details 겹침 훅이 상대 오브젝트만 넘기면 투사체가 감지 범위 · 구역 볼륨(트리거)에도 벽처럼 막힌다. `OverlapInfo::_bOtherTrigger` 로 가른다
  *          (유니티 `isTrigger` · 언리얼 Overlap 반응) — 트리거는 막지도 맞지도 않는다.
  */
 SW_TEST_CASE( ActionCombatTest, ProjectilePassesTriggersAndHitsTheBodyBehind )
@@ -471,7 +470,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectilePassesTriggersAndHitsTheBodyBehind )
 
 /**
  * @brief [ActionCombatTest] 요격탄은 다른 쪽 투사체를 맞혀 함께 사라진다 — 같은 쪽 산탄과 요격탄이 아닌 투사체는 서로 지나친다
- * @details "투사체끼리는 지나친다" 가 고정 규칙이라 요격탄을 만들 수 없었다. 이제 데이터다(`setInterceptor` — 언리얼의 채널별 충돌 반응). 같은
+ * @details "투사체끼리는 지나친다" 를 고정 규칙으로 두면 요격탄을 만들 수 없다. 그래서 데이터다(`setInterceptor` — 언리얼의 채널별 충돌 반응). 같은
  *          쪽이 쏜 것끼리는 요격탄이어도 지나친다(한 자리에서 퍼지는 산탄).
  */
 SW_TEST_CASE( ActionCombatTest, InterceptorDestroysAnEnemyProjectileButPelletsPassEachOther )
@@ -523,8 +522,8 @@ SW_TEST_CASE( ActionCombatTest, InterceptorDestroysAnEnemyProjectileButPelletsPa
 
 /**
  * @brief [ActionCombatTest] 피해는 그 프레임에 구독자에게 닿는다 — 컴포넌트 델리게이트는 그 자리에서, 채널은 버스 스레드면 그 자리에서 · 아니면 큐로
- * @details 피해 이벤트는 늘 큐(`push`)로 실려 HP 바 · 피해 숫자가 한 프레임 늦게 받았다. 언리얼 `OnTakeAnyDamage` 는 `ApplyDamage` 안에서 바로
- *          불린다. 이제 `UnitStatsComponent::registerDamageApplied` 가 HP 가 깎인 자리에서 불리고, "game" 채널은 버스 스레드(큐를 비우는 스레드)에서
+ * @details 피해 이벤트가 늘 큐(`push`)로 실리면 HP 바 · 피해 숫자가 한 프레임 늦게 받는다. 언리얼 `OnTakeAnyDamage` 는 `ApplyDamage` 안에서 바로
+ *          불린다. `UnitStatsComponent::registerDamageApplied` 가 HP 가 깎인 자리에서 불리고, "game" 채널은 버스 스레드(큐를 비우는 스레드)에서
  *          적용됐으면 바로 · 다른 스레드에서 적용됐으면 다음 `processEvents` 에 받는다(`GameEventUtil::send`). 뗀 델리게이트는 다시 불리지 않는다.
  */
 SW_TEST_CASE( ActionCombatTest, DamageReachesSubscribersInTheSameFrame )
@@ -573,7 +572,7 @@ SW_TEST_CASE( ActionCombatTest, DamageReachesSubscribersInTheSameFrame )
 /**
  * @brief [ActionCombatTest] 콜라이더 없는 투사체는 시작할 때 경고한다 — 날기만 하고 아무것도 맞힐 수 없다
  * @details 맞음은 같은 오브젝트의 콜라이더 겹침으로만 온다. 콜라이더를 빠뜨린 프리팹의 총알은 조용히 모든 것을 통과해 "총알이 안 맞는다" 가 원인
- *          없이 보였다. 콜라이더가 있으면 경고하지 않는다.
+ *          없이 보인다. 콜라이더가 있으면 경고하지 않는다.
  */
 SW_TEST_CASE( ActionCombatTest, ProjectileWithoutAColliderWarnsAtBeginPlay )
 {
@@ -596,8 +595,8 @@ SW_TEST_CASE( ActionCombatTest, ProjectileWithoutAColliderWarnsAtBeginPlay )
 
 /**
  * @brief [ActionCombatTest] 씬을 플레이 중에 저장했다 다시 열어도 핸들 PROPERTY 는 같은 오브젝트를 가리킨다 — 파일에 없는 것은 없음이 된다
- * @details 핸들 PROPERTY(`ProjectileComponent::_instigator` · `AttackBaseComponent::_listHitTarget`)는 런타임 id 가 그대로 파일에 들어갔다. 다시 연
- *          씬의 오브젝트는 새 id 를 받으므로 그 값은 아무것도 아니거나, 우연히 같은 값을 받은 **다른 오브젝트**였다. 이제 부모 부착과 같은 규칙이다 —
+ * @details 핸들 PROPERTY(`ProjectileComponent::_instigator` · `AttackBaseComponent::_listHitTarget`)에 런타임 id 를 그대로 파일에 넣으면, 다시 연
+ *          씬의 오브젝트는 새 id 를 받으므로 그 값은 아무것도 아니거나 우연히 같은 값을 받은 **다른 오브젝트**다. 그래서 부모 부착과 같은 규칙이다 —
  *          쓸 때 그 오브젝트의 파일 id 로(파일에 없으면 0), 읽을 때 묶음이 이 실행의 오브젝트로 옮긴다(`ObjectStateBatch`). 언리얼의 Instigator 처럼
  *          파일 밖을 가리키는 런타임 참조는 남지 않는다.
  */
@@ -688,8 +687,8 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesKeepTheirTargetWhenReloadedInPla
 /**
  * @brief [ActionCombatTest] 파일 상태의 핸들이 묶음에 없는 id 를 가리키면 없음이 되고, 프리팹은 핸들을 싣지 않는다
  * @details 파일 id 는 그 파일(묶음) 안에서만 뜻이 있다 — 묶음에 없는 값을 그대로 두면 이 실행에서 우연히 같은 값을 받은 오브젝트를 가리킨다(부모
- *          부착이 이름 · id 로 겪은 것과 같은 결함). 프리팹은 여러 번 스폰되므로 다른 오브젝트를 가리키는 것을 싣지 않는다 — 실으면 스폰한 인스턴스가
- *          모두 원본을 만든 실행의 오브젝트를 가리켰다.
+ *          부착과 같은 함정). 프리팹은 여러 번 스폰되므로 다른 오브젝트를 가리키는 것을 싣지 않는다 — 실으면 스폰한 인스턴스가
+ *          모두 원본을 만든 실행의 오브젝트를 가리킨다.
  */
 SW_TEST_CASE( ActionCombatTest, ObjectReferencesOutsideTheirFileBecomeNone )
 {
@@ -729,9 +728,9 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesOutsideTheirFileBecomeNone )
 
 /**
  * @brief [ActionCombatTest] 공격 판정은 접촉마다 기억하고, 판정 안에서 사라진 유닛은 잊는다 — 남은 접촉 · 새로 들어온 유닛은 제대로 맞는다
- * @details 판정은 겹친 상대를 핸들로 기억해 휘두를 때 맞힌다. 상대가 판정 안에서 사라지면 끝 이벤트가 상대 없이 와 그 핸들이 남았고, 목록은 줄지
- *          않았다. 이제 풀리지 않는 핸들을 덜어 낸다. 또 상대 하나가 콜라이더 둘로 겹치면 접촉 둘로 기억한다 — 하나만 떨어져도 남은 접촉으로 맞는다
- *          (예전에는 오브젝트당 하나라, 한 콜라이더가 떨어지면 다른 콜라이더가 겹쳐 있어도 잊었다). 상대의 트리거(감지 범위)는 접촉이 아니다.
+ * @details 판정은 겹친 상대를 핸들로 기억해 휘두를 때 맞힌다. 상대가 판정 안에서 사라지면 끝 이벤트가 상대 없이 오므로 풀리지 않는 핸들을 덜어
+ *          낸다(아니면 핸들이 남고 목록이 줄지 않는다). 또 상대 하나가 콜라이더 둘로 겹치면 접촉 둘로 기억한다 — 하나만 떨어져도 남은 접촉으로 맞는다
+ *          (오브젝트당 하나로 기억하면 한 콜라이더가 떨어질 때 다른 콜라이더가 겹쳐 있어도 잊는다). 상대의 트리거(감지 범위)는 접촉이 아니다.
  */
 SW_TEST_CASE( ActionCombatTest, AttackTracksEachContactAndForgetsUnitsThatDieInside )
 {
@@ -778,8 +777,8 @@ SW_TEST_CASE( ActionCombatTest, AttackTracksEachContactAndForgetsUnitsThatDieIns
 
 /**
  * @brief [ActionCombatTest] 액션 룸은 상태가 바뀔 때 룸 이벤트를 낸다 — 시작에 게이트 닫힘, 클리어에 결과와 게이트 열림, 패배에 복귀와 게이트 열림
- * @details 룸 이벤트 셋(`RoomClearedEvent` · `PlayerDefeatedInRoomEvent` · `ClearGateStateChangedEvent`)은 선언만 있고 내는 곳이 없었다. 이제 룸이
- *          상태가 바뀌는 자리에서 낸다(언리얼 GameMode 의 브로드캐스트). 어느 맵 · 존의 룸인지는 룸을 연 게임이 준다(`ActionRoomSite`). 클리어는 한
+ * @details 룸 이벤트 셋(`RoomClearedEvent` · `PlayerDefeatedInRoomEvent` · `ClearGateStateChangedEvent`)은 룸이 상태가 바뀌는 자리에서 낸다
+ *          (언리얼 GameMode 의 브로드캐스트). 어느 맵 · 존의 룸인지는 룸을 연 게임이 준다(`ActionRoomSite`). 클리어는 한
  *          번만 알린다. 패배는 HP 를 가진 게임이 알린다(`onPlayerDefeated`) — 활성이 아닌 룸은 아무것도 내지 않는다.
  */
 SW_TEST_CASE( ActionCombatTest, ActionRoomAnnouncesGateClearAndDefeat )
@@ -849,7 +848,7 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomAnnouncesGateClearAndDefeat )
 
 /**
  * @brief [ActionCombatTest] 유닛은 같은 오브젝트의 HP 바를 몰고 간다 — 시작 · 피해 · 회복 · 스탯 재설정이 비율을 맞춘다
- * @details HP 바는 그릴 줄은 알게 됐지만(⑳) `setTargetRatio` 를 부르는 곳이 없어 늘 가득 차 있었다. HP 가 바뀌는 자리(`UnitStatsComponent`)가 맞춘다.
+ * @details HP 가 바뀌는 자리(`UnitStatsComponent`)가 HP 바의 `setTargetRatio` 를 맞춘다 — 부르는 곳이 없으면 HP 바는 늘 가득 차 있다.
  */
 SW_TEST_CASE( ActionCombatTest, UnitDrivesItsHealthBar )
 {
@@ -875,7 +874,7 @@ SW_TEST_CASE( ActionCombatTest, UnitDrivesItsHealthBar )
 
 /**
  * @brief [ActionCombatTest] 데미지 숫자를 켠 유닛은 깎인 피해만큼의 숫자를 머리 위에 띄운다 — 끈 유닛은 띄우지 않는다
- * @details 데미지 숫자 컴포넌트는 그릴 줄은 알게 됐지만(⑳) 값을 넣고 띄우는 곳이 없었다. 숫자는 요청한 피해가 아니라 방어력을 뺀 실제 피해다.
+ * @details 피해가 들어간 자리에서 데미지 숫자 컴포넌트에 값을 넣고 띄운다. 숫자는 요청한 피해가 아니라 방어력을 뺀 실제 피해다.
  */
 SW_TEST_CASE( ActionCombatTest, UnitSpawnsDamageNumbersWhenAsked )
 {

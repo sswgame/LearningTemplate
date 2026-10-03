@@ -27,9 +27,9 @@ namespace
 } // namespace
 
 /**
- * @brief [SpriteClipAssetTest] 에디터가 써 온 옛 파일을 그대로 읽고, 이름 없는 클립은 어떤 이름이든 프레임 전체가 반복 구간이다
- * @details 예전에는 이 형식을 에디터 구조체(`EditorSpriteClipData`)만 알았고 런타임 타입이 없었다 — 클립을 만들어도 게임에서 읽는 곳이 없었다.
- *          파서를 런타임 하나로 옮겼으므로 옛 파일이 같은 값으로 읽혀야 하고, 다시 쓴 글에는 "animations" 키가 생기지 않아야 한다(옛 파일과 같은 모양).
+ * @brief [SpriteClipAssetTest] 에디터가 쓰는 클립 파일을 그대로 읽고, 이름 없는 클립은 어떤 이름이든 프레임 전체가 반복 구간이다
+ * @details 파서는 런타임 하나다(에디터와 게임이 같이 쓴다). "animations" 키가 없는 파일이 같은 값으로 읽혀야 하고, 다시 쓴 글에도
+ *          "animations" 키가 생기지 않아야 한다(읽은 파일과 같은 모양).
  */
 SW_TEST_CASE( SpriteClipAssetTest, LegacyEditorFileReadsAsOneWholeClipAnimation )
 {
@@ -46,7 +46,7 @@ SW_TEST_CASE( SpriteClipAssetTest, LegacyEditorFileReadsAsOneWholeClipAnimation 
     SW_EXPECT_NEAR_EQUAL( 45.0f, clip._listKey[0]._angleDeg, 1e-6f );
     SW_EXPECT_TRUE( clip._listAnimation.empty() );
 
-    // 이름 붙은 구간이 없으면 어떤 이름이든 프레임 전체 · 반복이다(클립 하나 = 애니메이션 하나이던 뜻).
+    // 이름 붙은 구간이 없으면 어떤 이름이든 프레임 전체 · 반복이다(클립 하나 = 애니메이션 하나).
     sw::SpriteClipAnimation range{};
     SW_ASSERT_TRUE( clip.findFrameRange( "whatever", range ) );
     SW_EXPECT_EQUAL( 0, range._firstFrame );

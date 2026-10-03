@@ -513,11 +513,10 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
 
 /**
  * @brief [SceneAsyncTest] 대기열에 들어간 요청도 자기 씬을 받는다
- * @details 이미 로드가 도는 중에 다시 요청하면 그 요청은 대기열로 간다. 그런데 돌려주던
- *          future 는 **도는 중인 로드의 것**이었고, `tickTransitions` 는 대기열 때문에 그
- *          로드를 버리면서 같은 약속에 nullptr 을 넣었다 — 그래서 대기열에 넣은 쪽은
- *          자기 씬이 멀쩡히 활성이 되는데도 "실패" 를 받았다. 그리고 세 번째 요청이 오면
- *          두 번째는 `_queuedPath` 가 덮이면서 **아무 통지도 없이** 사라졌다.
+ * @details 이미 로드가 도는 중에 다시 요청하면 그 요청은 대기열로 간다. 돌려주는 future 가 **도는 중인 로드의 것**이면
+ *          `tickTransitions` 가 대기열 때문에 그 로드를 버리면서 같은 약속에 nullptr 을 넣어, 대기열에 넣은 쪽은 자기 씬이
+ *          멀쩡히 활성이 되는데도 "실패" 를 받는다. 세 번째 요청이 와서 `_queuedPath` 가 덮이면 두 번째는 **아무 통지도 없이**
+ *          사라지면 안 된다.
  */
 SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
 {
@@ -654,7 +653,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQue
 
 /**
  * @brief [SceneAsyncTest] 저장이 막혀 있으면 활성 씬을 저장하지 않고, 풀면 저장한다
- * @details 게임 모듈 리로드가 게임 컴포넌트를 걷어 낸 채 실패하면 호스트가 막는다. 그 상태로 저장하면 컴포넌트가 빠진 씬이 저장됐다.
+ * @details 게임 모듈 리로드가 게임 컴포넌트를 걷어 낸 채 실패하면 호스트가 막는다. 그 상태로 저장하면 컴포넌트가 빠진 씬이 저장된다.
  */
 SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 {
@@ -689,8 +688,8 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 
 /**
  * @brief [SceneAsyncTest] 씬은 쿠커가 굽는 이름으로만 저장된다 — 확장자 없는 이름은 `.scene.xml` 이 붙고, 경로가 전혀 없으면 쓰지 않는다
- * @details 저장 대화상자에 "level" 을 적으면 그 이름 그대로 저장돼 에디터에서는 열리는데 쿠커가 굽지 않아 배포본에 없었다. 경로도 출처도 없는 씬은
- *          `Resource/` 밖의 `Assets/Scenes/DefaultScene.scene`(굽지 않는 이름)을 지어내 썼다.
+ * @details 저장 대화상자에 "level" 을 적은 이름을 그대로 저장하면 에디터에서는 열리는데 쿠커가 굽지 않아 배포본에 없다. 경로도 출처도 없는 씬에
+ *          `Resource/` 밖의 이름을 지어내 쓰면 안 된다.
  */
 SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
 {

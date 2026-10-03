@@ -63,8 +63,7 @@ SW_TEST_CASE( AnimationGraphTest, JsonRoundTripKeepsNodesAndLinks )
 
 /**
  * @brief [AnimationGraphTest] loadFromFile 이 parseJson 과 같은 결과를 내는지 검증
- * @details loadFromFile 은 읽어 둔 문서를 다시 문자열로 덤프해 parseJson 에 넘기고 있었다.
- *          같은 JSON 을 두 번 파싱하던 것을 한 번으로 줄였으므로, 결과가 같음을 못박아 둔다.
+ * @details loadFromFile 은 읽어 둔 문서를 다시 문자열로 덤프하지 않고 한 번만 파싱한다. 두 경로의 결과가 같음을 못박아 둔다.
  */
 SW_TEST_CASE( AnimationGraphTest, LoadFromFileMatchesParseJson )
 {
@@ -100,8 +99,8 @@ SW_TEST_CASE( AnimationGraphTest, PlayStartsAtEntryNode )
 
 /**
  * @brief [AnimationGraphTest] 클립이 없는 노드로 넘어가면 재생도 같이 비는지 검증
- * @details 예전에는 플레이어를 그대로 두어서, getCurrentNodeName() 은 새 노드를 말하는데
- *          evaluate() 는 이전 노드의 포즈를 계속 돌려줬다 — 둘이 다른 말을 하고 있었다.
+ * @details 플레이어를 그대로 두면 getCurrentNodeName() 은 새 노드를 말하는데 evaluate() 는 이전 노드의 포즈를
+ *          계속 돌려준다 — 둘이 다른 말을 한다.
  */
 SW_TEST_CASE( AnimationGraphTest, AdvanceToCliplessNodeClearsPlayback )
 {

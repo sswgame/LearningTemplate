@@ -66,9 +66,8 @@ namespace sw
 /**
  * @brief [SequencerTest] 시퀀스의 첫 프레임에 걸린 이벤트도 발화한다
  * @details 이벤트는 "이전 프레임에는 아직 안 지났고 이번 프레임에는 지났다" 로 판정한다.
- *          그런데 play() 가 _previousFrame 을 _frameMin 으로 두었기 때문에 첫 프레임에
- *          걸린 이벤트는 처음부터 "이미 지난 것" 이었다 — 영영 발화하지 않았다. 루프가
- *          한 바퀴 돌 때마다 같은 일이 반복된다.
+ *          play() 가 _previousFrame 을 _frameMin 으로 두면 첫 프레임에 걸린 이벤트는 처음부터
+ *          "이미 지난 것" 이라 영영 발화하지 않는다. 루프가 한 바퀴 돌 때마다 같은 일이 반복된다.
  */
 SW_TEST_CASE( SequencerTest, FirstFrameEventFires )
 {
@@ -102,7 +101,7 @@ SW_TEST_CASE( SequencerTest, EventDoesNotRefireOnSameFrame )
     const int32 frame = player.getCurrentFrame();
     sw::SequenceTimelineUtil::applyFrame( &manager, player.getAsset(), frame, player.getPreviousFrame() );
 
-    // 두 번째 적용의 이전 프레임은 이제 이번 프레임과 같다 — 지나간 적이 없다.
+    // 두 번째 적용의 이전 프레임은 이번 프레임과 같다 — 지나간 적이 없다.
     sw::vector<const sw::SequenceTrackItem*> listCrossed;
     sw::SequenceTimelineUtil::applyFrame( &manager, player.getAsset(), frame, frame, &listCrossed );
     SW_EXPECT_FALSE( sw::containsEvent( listCrossed, "FirstFrameEvent" ) );
@@ -137,8 +136,8 @@ SW_TEST_CASE( SequencerTest, ClipTogglesTargetAndAppliesTransform )
 
 /**
  * @brief [SequencerTest] 클립이 둘인 대상은 프레임마다 꺼졌다 켜지지 않고, 대상의 컴포넌트를 꺼 두면 그대로다
- * @details 예전 applyFrame 은 클립마다 대상을 끄고(덮지 않는 클립) 켰다(덮는 클립) — 클립이 둘인 대상은 매 프레임 꺼졌다 켜져 렌더
- *          집합이 두 번 흔들렸다. 그리고 오브젝트 토글이 컴포넌트의 자기 비트를 덮어써, 꺼 둔 컴포넌트가 다음 프레임에 켜졌다.
+ * @details applyFrame 이 클립마다 대상을 끄고(덮지 않는 클립) 켜면(덮는 클립) 클립이 둘인 대상은 매 프레임 꺼졌다 켜져 렌더
+ *          집합이 두 번 흔들린다. 오브젝트 토글이 컴포넌트의 자기 비트를 덮어쓰면 꺼 둔 컴포넌트가 다음 프레임에 켜진다.
  */
 SW_TEST_CASE( SequencerTest, MultiClipTargetDoesNotFlicker )
 {
@@ -182,9 +181,7 @@ SW_TEST_CASE( SequencerTest, MultiClipTargetDoesNotFlicker )
 
 /**
  * @brief [SequencerTest] JSON 왕복이 값을 잃지 않는다 (파일 경유 포함)
- * @details loadFromFile 은 문서를 읽은 뒤 다시 문자열로 덤프해 재파싱하고 있었다.
- *          값은 살아남았지만 전체 파일을 두 번 파싱하는 일이었다 — 지금은 읽은 문서를
- *          그대로 읽는다. 이 테스트는 그 경로가 여전히 같은 결과를 내는지 본다.
+ * @details loadFromFile 은 읽은 문서를 다시 문자열로 덤프하지 않고 그대로 읽는다. 이 테스트는 그 경로가 같은 결과를 내는지 본다.
  */
 SW_TEST_CASE( SequencerTest, JsonRoundTripThroughFileKeepsValues )
 {
@@ -212,8 +209,8 @@ SW_TEST_CASE( SequencerTest, JsonRoundTripThroughFileKeepsValues )
 
 /**
  * @brief [SequencerTest] 파싱이 실패하면 애셋에 반쯤 남은 상태가 없다
- * @details 예전 parseJson 은 _listItem 만 비우고 실패해서, 앞 시퀀스의 프레임 범위와
- *          노트가 그대로 남았다 — 트랙 없는 옛 시퀀스가 새 시퀀스인 척했다.
+ * @details parseJson 이 _listItem 만 비우고 실패하면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아,
+ *          트랙 없는 옛 시퀀스가 새 시퀀스인 척한다.
  */
 SW_TEST_CASE( SequencerTest, FailedParseLeavesNothingBehind )
 {
@@ -234,10 +231,10 @@ SW_TEST_CASE( SequencerTest, FailedParseLeavesNothingBehind )
 
 /**
  * @brief [SequencerTest] 새 자산을 넣으면 재생 위치가 **그 자산의** 시작으로 돌아간다
- * @details setAsset/loadFromFile 은 자산을 바꾸기 **전에** stop() 을 불렀다. stop() 안의
- *          `_previousFrame = _asset._frameMin` 이 아직 옛 자산을 보고 있었으므로, 100 프레임에서
- *          시작하는 자산을 넣으면 이전 프레임만 0 에 남고 현재 프레임은 100 이 된다 — 첫 적용이
- *          `applyFrame(100, 0)` 이라 100 이하의 이벤트가 전부 한꺼번에 발화했다.
+ * @details setAsset/loadFromFile 이 자산을 바꾸기 **전에** stop() 을 부르면 stop() 안의
+ *          `_previousFrame = _asset._frameMin` 이 아직 옛 자산을 보므로, 100 프레임에서
+ *          시작하는 자산을 넣을 때 이전 프레임만 0 에 남고 현재 프레임은 100 이 된다 — 첫 적용이
+ *          `applyFrame(100, 0)` 이라 100 이하의 이벤트가 전부 한꺼번에 발화한다.
  */
 SW_TEST_CASE( SequencerTest, LoadedAssetResetsPlaybackToItsOwnStart )
 {
@@ -294,8 +291,8 @@ SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersCannotOverflowSpans )
 
 /**
  * @brief [SequencerTest] 루프가 되감길 때 끝 구간 이벤트와 마지막 프레임 이벤트도 발화한다
- * @details 되감으면 이전 프레임이 `_frameMin - 1` 로 돌아가 (직전 프레임, `_frameMax`] 구간을 아무도 보지 않았다 — 끝쪽 이벤트가 루프마다
- *          빠졌고 `_frameMax` 의 이벤트는 루프 중에 한 번도 뜨지 않았다.
+ * @details 되감을 때 이전 프레임을 `_frameMin - 1` 로 돌리기만 하면 (직전 프레임, `_frameMax`] 구간을 아무도 보지 않는다 — 끝쪽 이벤트가 루프마다
+ *          빠지고 `_frameMax` 의 이벤트는 루프 중에 한 번도 뜨지 않는다.
  */
 SW_TEST_CASE( SequencerTest, LoopWrapFiresTailAndLastFrameEvents )
 {
@@ -346,9 +343,9 @@ SW_TEST_CASE( SequencerTest, LoopWrapFiresTailAndLastFrameEvents )
 
 /**
  * @brief [SequencerTest] 반복 안 하는 시퀀스는 끝 프레임에 닿고, 프레임으로 찾아가면 그 프레임이다(float32 경계 반올림)
- * @details 끝에서 멈춘 시간은 span/fps 인데 float32 로는 경계 바로 아래라(63/30*30 = 62.999996) 잘라서 한 프레임 모자랐다. 30 fps 의
- *          63 · 125 · 126 · 127, 25 fps 의 53 · 59 프레임 길이가 그랬다 — 그 프레임에서 끝나는 클립은 끝까지 가지 않았고, 거기 놓인
- *          이벤트는 발화하지 않았다.
+ * @details 끝에서 멈춘 시간은 span/fps 인데 float32 로는 경계 바로 아래라(63/30*30 = 62.999996) 자르면 한 프레임 모자란다. 30 fps 의
+ *          63 · 125 · 126 · 127, 25 fps 의 53 · 59 프레임 길이가 그렇다 — 그 프레임에서 끝나는 클립은 끝까지 가지 않고, 거기 놓인
+ *          이벤트는 발화하지 않는다.
  */
 SW_TEST_CASE( SequencerTest, NonLoopingSequenceReachesItsLastFrame )
 {
@@ -550,7 +547,7 @@ SW_TEST_CASE( SequencerTest, EachItemKindAppliesItsOwnWay )
 
 /**
  * @brief [SequencerTest] SequencePlayerComponent 가 지난 이벤트를 걸린 델리게이트 모두에 알린다(로그가 없는 Shipping 에서도 같은 길)
- * @details 컴포넌트는 지난 이벤트를 받을 출력 없이 타임라인을 적용해서, 이벤트 트랙은 Dev 로그 한 줄 말고는 아무 데도 나가지 않았다.
+ * @details 컴포넌트가 지난 이벤트를 받을 출력 없이 타임라인을 적용하면 이벤트 트랙은 Dev 로그 한 줄 말고는 아무 데도 나가지 않는다.
  */
 SW_TEST_CASE( SequencerTest, PlayerComponentBroadcastsCrossedEvents )
 {

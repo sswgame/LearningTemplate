@@ -99,9 +99,8 @@ namespace sw
 /**
  * @brief [SceneTest] 쿠킹된 바이너리 엔티티 상태가 파일을 건너 살아남고, 로더가 그것을 쓰는지 검증
  *
- * @details 쿠킹된 씬은 오래도록 엔티티마다 `<GameObject ...>` **XML 문자열**을 담고 있었다 —
- *          바깥 파싱만 줄이고 정작 비싼 생성 단계는 하나도 못 줄였다(로드의 75%).
- *          이제 `SceneCooker` 가 그 XML 을 리플렉션 바이너리로 굽고 XML 을 비운다.
+ * @details `SceneCooker` 는 엔티티마다 든 `<GameObject ...>` XML 을 리플렉션 바이너리로 굽고 XML 을 비운다.
+ *          쿠킹된 씬이 XML 문자열을 그대로 담으면 바깥 파싱만 줄고 비싼 생성 단계는 그대로 남는다.
  *
  *          **`_embeddedXml` 이 비어 있다는 것이 이 테스트의 핵심이다** — 마지막에 컴포넌트가
  *          되살아났다면 그것은 바이너리 경로로만 올 수 있다.
@@ -186,8 +185,8 @@ SW_TEST_CASE( SceneTest, CreateSceneSetsActiveWhenEmpty )
 
 /**
  * @brief [SceneTest] 월드가 플레이 중이면 활성 씬이 시작하고, 활성 씬이 바뀌면 나가는 씬은 끝나고 들어오는 씬이 시작한다
- * @details 예전에는 에디터 Play 버튼이 활성 씬의 매니저에 직접 `beginPlay` 를 불렀다 — App · Shipping 에서는 아무도 부르지 않았고,
- *          플레이 중에 연 씬은 시작하지 않았다. 이제 `SceneManager` 가 "월드 플레이 중" 을 들고 활성 씬 교체 때 넘긴다.
+ * @details `SceneManager` 가 "월드 플레이 중" 을 들고 활성 씬 교체 때 넘긴다. 에디터 Play 버튼이 활성 씬의 매니저에 직접
+ *          `beginPlay` 를 부르면 App · Shipping 에서는 아무도 부르지 않고, 플레이 중에 연 씬은 시작하지 않는다.
  */
 SW_TEST_CASE( SceneTest, WorldPlayingFollowsTheActiveScene )
 {
@@ -217,7 +216,7 @@ SW_TEST_CASE( SceneTest, WorldPlayingFollowsTheActiveScene )
     sceneManager.setWorldPlaying( false );
     SW_EXPECT_FALSE( pSecond->getObjectManager()->hasBegunPlay() );
 
-    // 플레이 중에 내리면 활성 씬이 **살아 있는 동안** 끝난다. 예전 순서(씬을 지운 뒤 활성을 비움)면 풀린 씬을 만진다.
+    // 플레이 중에 내리면 활성 씬이 **살아 있는 동안** 끝난다. 씬을 지운 뒤 활성을 비우는 순서면 풀린 씬을 만진다.
     sw::RegisterMockComponents();
     int32                  shutdownEndCount = 0;
     sw::MockMeshComponent* pLast            = pSecond->getObjectManager()->createGameObject( sw::hashed_string( "Last" ) )->addComponent<sw::MockMeshComponent>();
@@ -392,7 +391,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
     if ( sw::engine::areEngineServicesBound() )
         SW_EXPECT_STREQ( "prefabs/new_hero.prefab.xml", loadedDoc._listEntityNode[0]._prefab.c_str() );
 
-    // 바이너리(SCN1)도 같은 풀이를 지난다 — 두 로더가 GUID 풀이를 각자 들고 있었고, Dev 에서는 바이너리 쪽을 지나는 테스트가 없었다.
+    // 바이너리(SCN1)도 같은 풀이를 지난다 — 두 로더가 GUID 풀이를 각자 들면 한쪽만 어긋나도 Dev 테스트로는 드러나지 않는다.
     const sw::string tempSceneBin = test::makeTempPath( "guid_scene.scene.bin" );
     SW_ASSERT_TRUE( doc.saveBinary( tempSceneBin ) );
     sw::SceneDocument loadedBinaryDoc{};
@@ -407,7 +406,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
  * @brief [SceneTest] 커밋된 테스트 씬의 TestProp 은 옛 경로(old/)를 가리키지만 GUID 로 실제 프리팹을 찾는다.
  * @details 시작 시점 AssetDatabase(.meta 스캔 / 배포본은 assetregistry.txt)가 있어야 통과한다 — 로드된 적 없는
  *          에셋의 GUID 를 알아야 하므로. 배포본의 같은 경로는 SCN1 이 prefabGuid 를 실어야 열린다(쿠커가 그것을
- *          빠뜨리고 있었다). GPU 가 필요 없다(nogpu).
+ *          빠뜨리면 배포본에서만 깨진다). GPU 가 필요 없다(nogpu).
  */
 SW_TEST_CASE( SceneTest, EditorTestSceneResolvesMovedPrefabByGuid )
 {
@@ -429,8 +428,8 @@ SW_TEST_CASE( SceneTest, EditorTestSceneResolvesMovedPrefabByGuid )
 
 /**
  * @brief [SceneTest] 주광 조회가 등록부를 보고, 활성/파괴를 따라간다
- * @details 예전에는 매 프레임 **모든 GameObject** 를 훑어 주광을 찾았다(중단도 없었다). 등록부로
- *          바꾸면서 조회 결과가 달라지지 않는지 고정한다 — 없음 · 있음 · 비활성 · 파괴 네 상태다.
+ * @details 주광은 매 프레임 **모든 GameObject** 를 훑지 않고 등록부에서 찾는다. 조회 결과가 씬을 훑은 것과 같은지
+ *          고정한다 — 없음 · 있음 · 비활성 · 파괴 네 상태다.
  */
 SW_TEST_CASE( SceneTest, DirectionalLightLookupFollowsRegistry )
 {
@@ -471,8 +470,8 @@ SW_TEST_CASE( SceneTest, DirectionalLightLookupFollowsRegistry )
 
 /**
  * @brief [SceneTest] 게임 카메라는 프레임마다 등록부의 규칙으로 다시 골라진다 — 늦게 생긴 높은 우선순위, 끄기, 역할 변경, 파괴 대기, 동률, 직접 지정
- * @details 예전에는 처음 한 번만 씬 전체를 훑어 골라 캐시했다. 나중에 생긴 더 높은 우선순위의 카메라는 선택되지 않았고, 꺼 둔 카메라가
- *          계속 선택됐다. 그리고 첫 호출이 이미 있는 "GameCamera" 의 위치 · 렌즈를 기본값으로 되돌렸다(씬 파일에 둔 카메라가 첫 프레임에 옮겨졌다).
+ * @details 처음 한 번 고른 결과를 캐시하면 나중에 생긴 더 높은 우선순위의 카메라는 선택되지 않고, 꺼 둔 카메라가 계속 선택된다.
+ *          첫 호출이 이미 있는 "GameCamera" 의 위치 · 렌즈를 기본값으로 되돌리면 씬 파일에 둔 카메라가 첫 프레임에 옮겨진다.
  *          에디터 카메라도 같은 규칙(`CameraRegistry::selectCamera`)을 쓴다.
  */
 SW_TEST_CASE( SceneTest, GameCameraSelectionFollowsTheRegistry )
@@ -539,8 +538,8 @@ SW_TEST_CASE( SceneTest, GameCameraSelectionFollowsTheRegistry )
     scene.ensureDefaultCameras();
     SW_EXPECT_TRUE( scene.getActiveGameCamera() == pTie );
 
-    // 진 쪽을 제자리에서 다시 읽어도(되돌리기 · 플레이 종료 복원 — 다시 등록돼 목록 끝으로 간다) 선택은 그대로다. 등록 순서로 가르던
-    // 때는 여기서 뒤집혔다.
+    // 진 쪽을 제자리에서 다시 읽어도(되돌리기 · 플레이 종료 복원 — 다시 등록돼 목록 끝으로 간다) 선택은 그대로다. 등록 순서로 가르면
+    // 여기서 뒤집힌다.
     const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pDefaultObj );
     SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pDefaultObj, sw::ObjectStateSerializer::saveToXmlString( pDefaultObj ), { &identity } ) );
     scene.ensureDefaultCameras();
@@ -549,11 +548,10 @@ SW_TEST_CASE( SceneTest, GameCameraSelectionFollowsTheRegistry )
 
 /**
  * @brief [SceneTest] 그림자 행렬의 **깊이 범위**가 씬을 실제로 담는다
- * @details 그림자가 한 번도 진 적이 없었다. 직교 투영의 near/far 를 `(-거리, +거리)` 로 잡고 있었는데,
- *          라이트 카메라는 원점에서 **거리만큼 떨어져** 원점을 보므로 씬의 뷰 z 는 거리 언저리다 —
- *          `z' = (z_view - near)/(far - near)` 로는 씬 전체가 z' ≈ 1(원평면)에 뭉쳤고, 깊이 비교가
- *          늘 "가려지지 않음" 이 됐다. 로그도 경고도 없었고 그림에서만 드러난다(그림자를 받을 바닥이
- *          없으면 그마저도 안 보인다). 그래서 **행렬 자체**를 여기서 고정한다.
+ * @details 라이트 카메라는 원점에서 **거리만큼 떨어져** 원점을 보므로 씬의 뷰 z 는 거리 언저리다. 직교 투영의
+ *          near/far 를 `(-거리, +거리)` 로 잡으면 `z' = (z_view - near)/(far - near)` 로 씬 전체가 z' ≈ 1(원평면)에
+ *          뭉치고, 깊이 비교가 늘 "가려지지 않음" 이 되어 그림자가 지지 않는다. 로그도 경고도 없고 그림에서만
+ *          드러나므로(그림자를 받을 바닥이 없으면 그마저도 안 보인다) **행렬 자체**를 여기서 고정한다.
  * @note 검사는 "원점이 깊이 구간 한가운데로 간다" 다 — 볼륨의 중심이 원점이므로 정의상 0.5 여야 한다.
  */
 SW_TEST_CASE( SceneTest, ShadowMatrixDepthRangeContainsScene )
@@ -660,9 +658,8 @@ SW_TEST_CASE( SceneTest, SceneLightCollectionCarriesTypeAndShadowFlag )
 
 /**
  * @brief [SceneTest] 바이너리 씬이 말하는 엔티티 수를 그대로 믿지 않는다
- * @details 개수는 **파일에서 온 값**이다. 예전에는 검사 없이 `reserve` 로 들어갔다 —
- *          엔티티 하나가 문자열 넷이라 4,294,967,295 개면 수백 기가짜리 요청이 된다.
- *          읽기는 어차피 그 아래에서 실패하지만, 그 전에 할당이 먼저 터진다.
+ * @details 개수는 **파일에서 온 값**이다. 검사 없이 `reserve` 로 넘기면 엔티티 하나가 문자열 넷이라
+ *          4,294,967,295 개면 수백 기가짜리 요청이 된다. 읽기는 어차피 그 아래에서 실패하지만, 그 전에 할당이 먼저 터진다.
  */
 SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
 {
@@ -700,8 +697,8 @@ SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
 
 /**
  * @brief [SceneTest] 씬을 저장하면 다른 오브젝트에 붙은 자식 오브젝트도 남고, 다시 읽으면 같은 부모 아래 같은 자리에 붙는다
- * @details 저장이 부모가 있는 오브젝트를 건너뛰었다. 오브젝트 상태에는 자식 목록이 없다 — 자식은 자기 엔티티로 적히고 `_attachOwner` 로
- *          되붙는다(`instantiate` 의 두 번째 단계). 그래서 계층 아래의 오브젝트는 저장할 때마다 파일에서 사라졌다. 언리얼 레벨 · 유니티 씬
+ * @details 오브젝트 상태에는 자식 목록이 없다 — 자식은 자기 엔티티로 적히고 `_attachOwner` 로 되붙는다(`instantiate` 의 두 번째 단계).
+ *          그래서 저장이 부모가 있는 오브젝트를 건너뛰면 계층 아래의 오브젝트는 저장할 때마다 파일에서 사라진다. 언리얼 레벨 · 유니티 씬
  *          (`m_Father`)처럼 계층 전체를 적는다.
  */
 SW_TEST_CASE( SceneTest, SavedSceneKeepsChildObjects )
@@ -747,8 +744,8 @@ SW_TEST_CASE( SceneTest, SavedSceneKeepsChildObjects )
 
 /**
  * @brief [SceneTest] 씬 쿠킹은 굽지 못한 씬을 센다 — 하나라도 있으면 쿠킹이 실패다
- * @details 예전에는 읽거나 쓰지 못한 씬을 건너뛰기만 했고, 쿠킹 단계는 "구운 씬이 0 개" 일 때만 실패였다. 깨진 씬 하나는 배포본에 없었고, 그 씬을 열 때에야
- *          "Shipping requires cooked binary scene" 으로 멈췄다(프리팹 쿠커는 실패를 셌다). 쿠킹본 이름도 이제 로더와 같은 규칙(`AssetCookPath`)이다.
+ * @details 읽거나 쓰지 못한 씬을 건너뛰기만 하고 "구운 씬이 0 개" 일 때만 실패로 보면, 깨진 씬 하나가 배포본에서 빠지고 그 씬을 열 때에야
+ *          "Shipping requires cooked binary scene" 으로 멈춘다. 쿠킹본 이름은 로더와 같은 규칙(`AssetCookPath`)이다.
  */
 SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
 {
@@ -776,8 +773,8 @@ SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
 
 /**
  * @brief [SceneTest] 모든 타입 공급자가 등록을 끝내기 전(기동 단계 `ModuleTypes` 전)에는 씬을 읽지 않는다 — 로드 요청도 쿠킹도 거절한다
- * @details 씬 쿠킹과 에디터 시작 씬이 GameFramework 타입이 오르기 전에 씬을 읽어 그 컴포넌트를 `MissingComponent` 로 지었다. 읽는 쪽이 "타입 등록
- *          완료" 를 확인하므로 기동 순서가 다시 어긋나면 씬이 조용히 망가지는 대신 오류로 멈춘다. 등록이 끝나기 전의 레지스트리를 서비스 표에 꽂아 본다.
+ * @details GameFramework 타입이 오르기 전에 씬을 읽으면 그 컴포넌트가 `MissingComponent` 로 지어진다(씬 쿠킹 · 에디터 시작 씬). 읽는 쪽이 "타입 등록
+ *          완료" 를 확인하므로 기동 순서가 어긋나면 씬이 조용히 망가지는 대신 오류로 멈춘다. 등록이 끝나기 전의 레지스트리를 서비스 표에 꽂아 본다.
  */
 SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
 {
@@ -826,8 +823,8 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
 
 /**
  * @brief [SceneTest] 씬 쿠킹은 모르는 타입의 컴포넌트가 든 씬을 굽지 않고 실패로 센다
- * @details 모르는 타입은 `MissingComponent` 가 원문을 맡아 바이너리 왕복 검증을 통과했고, 쿠킹은 경고 한 줄과 함께 성공했다 — 배포본에는 동작하지
- *          않는 컴포넌트가 실렸다(GameFramework 타입 없이 구운 spriteui 의 HPBar · DamageUI · Effect). 이제 그 씬은 쓰지 않고, 실패가 빌드를 세운다.
+ * @details 모르는 타입은 `MissingComponent` 가 원문을 맡아 바이너리 왕복 검증을 통과하므로, 경고 한 줄로 넘기면 배포본에 동작하지 않는
+ *          컴포넌트가 실린다(GameFramework 타입 없이 구운 spriteui 의 `HPBarBaseComponent` · `DamageUIComponent` 등). 그 씬은 쓰지 않고, 실패가 빌드를 세운다.
  */
 SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
 {
@@ -871,9 +868,9 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
 
 /**
  * @brief [SceneTest] 쿠킹한 씬에서도 부모보다 앞에 적힌 자식이 부모의 소켓에 붙는다 — 쿠커가 연결을 지우지 않는다
- * @details 쿠커가 엔티티를 하나씩 따로 읽어, 부모가 문서에서 뒤에 있는 자식은 부모를 찾지 못했고 바이너리로 쓸 때 그 연결을 지웠다(저장은 살아 있는
- *          부모 포인터에서 부착 필드를 다시 만든다). 검증은 컴포넌트 타입 목록만 봐서 통과했고, 쿠킹한 바이너리만 읽는 배포본에서 자식이 루트가
- *          됐다 — 로컬 위치가 월드 위치로 읽혔다. 에디터에서 자식을 먼저 만들고 부모 밑에 끌어 놓는 것만으로 생긴다.
+ * @details 쿠커가 엔티티를 하나씩 따로 읽으면 부모가 문서에서 뒤에 있는 자식은 부모를 찾지 못하고, 바이너리로 쓸 때 그 연결이 지워진다(저장은
+ *          살아 있는 부모 포인터에서 부착 필드를 다시 만든다). 컴포넌트 타입 목록만 보는 검증은 통과하고, 쿠킹한 바이너리만 읽는 배포본에서 자식이
+ *          루트가 된다 — 로컬 위치가 월드 위치로 읽힌다. 에디터에서 자식을 먼저 만들고 부모 밑에 끌어 놓는 것만으로 생긴다.
  */
 SW_TEST_CASE( SceneTest, CookedSceneKeepsAChildWrittenBeforeItsParent )
 {
@@ -925,9 +922,8 @@ SW_TEST_CASE( SceneTest, CookedSceneKeepsAChildWrittenBeforeItsParent )
 
 /**
  * @brief [SceneTest] 씬 파일을 건넌 여러 줄 글은 줄바꿈을 지킨다
- * @details 씬 문서는 엔티티 상태 서브트리를 손으로 다시 써(`appendNodeXml`) 속성 값의 줄바꿈을 그대로 적었고, 그것을 다시 읽는 XML 은 속성
- *          값을 정규화해 줄바꿈이 공백이 됐다 — 여러 줄 대사 · 설명이 씬을 열 때마다 한 줄이 됐다. XML 을 쓰는 규칙이 두 벌이었다. 이제 서브트리는
- *          XML 문서가 쓴다(`XmlNode::toString`).
+ * @details 엔티티 상태 서브트리는 XML 문서가 쓴다(`XmlNode::toString`). 씬 문서가 서브트리를 손으로 다시 쓰며 속성 값의 줄바꿈을 그대로
+ *          적으면, 다시 읽는 XML 이 속성 값을 정규화해 줄바꿈이 공백이 된다 — 여러 줄 대사 · 설명이 씬을 열 때마다 한 줄이 된다.
  */
 SW_TEST_CASE( SceneTest, MultiLineTextKeepsItsLineBreaksThroughASceneFile )
 {
@@ -1020,8 +1016,8 @@ SW_TEST_CASE( SceneTest, FileIdsStayTheSameAcrossSaveAndReload )
 
 /**
  * @brief [SceneTest] 이름이 같은 엔티티 둘의 자식이 저마다 제 부모에 붙는다
- * @details 매니저는 이름을 유일하게 바꾸므로(`Enemy` → `Enemy_2`) 이름이 같은 엔티티가 든 문서(옛 저장 · 병합 · 손 편집)를 읽으면, 이름으로 부모를
- *          찾던 자식들이 모두 앞의 것에 붙었다 — 그대로 저장하면 그것이 굳었다. 부착은 이제 부모의 파일 id 로 가리킨다.
+ * @details 매니저는 이름을 유일하게 바꾸므로(`Enemy` → `Enemy_2`) 이름이 같은 엔티티가 든 문서(병합 · 손 편집)를 읽을 때 자식이 이름으로
+ *          부모를 찾으면 모두 앞의 것에 붙고, 그대로 저장하면 그것이 굳는다. 부착은 부모의 파일 id 로 가리킨다.
  */
 SW_TEST_CASE( SceneTest, ChildrenOfSameNamedEntitiesFindTheirOwnParent )
 {
@@ -1072,9 +1068,9 @@ SW_TEST_CASE( SceneTest, ChildrenOfSameNamedEntitiesFindTheirOwnParent )
 
 /**
  * @brief [SceneTest] 프리팹을 찾지 못한 엔티티의 자식은 저장해도 부모 참조를 잃지 않는다 — 프리팹이 돌아오면 다시 붙는다
- * @details 프리팹을 찾지 못한 엔티티는 오브젝트로 만들지 않고 문서 그대로 들고 있다가 다시 쓴다("Missing Prefab"). 그런데 그 **자식**은 읽을 때 부모가
- *          없어 루트로 남았고, 저장이 살아 있는 부모 포인터(없음)에서 부착 필드를 다시 만들어 연결을 지웠다 — 프리팹을 되찾아 다시 열어도 자식은 루트였다.
- *          찾지 못한 참조는 이제 그대로 남는다(유니티의 missing reference).
+ * @details 프리팹을 찾지 못한 엔티티는 오브젝트로 만들지 않고 문서 그대로 들고 있다가 다시 쓴다("Missing Prefab"). 그 **자식**은 읽을 때 부모가 없어
+ *          루트로 남는데, 저장이 살아 있는 부모 포인터(없음)에서 부착 필드를 다시 만들면 연결이 지워져 프리팹을 되찾아 다시 열어도 자식은 루트다.
+ *          찾지 못한 참조는 그대로 남는다(유니티의 missing reference).
  */
 SW_TEST_CASE( SceneTest, ChildOfAMissingPrefabEntityKeepsItsParentReference )
 {
@@ -1147,7 +1143,7 @@ SW_TEST_CASE( SceneTest, ChildOfAMissingPrefabEntityKeepsItsParentReference )
 
 /**
  * @brief [SceneTest] 다시 연 씬의 메시가 저장된 머티리얼 참조를 받는다 — 참조가 없는 메시만 씬 기본 머티리얼이다
- * @details 메시의 머티리얼이 저장되지 않아 씬을 다시 열면 모든 메시가 씬 기본 머티리얼이었다. 씬 초기화(`Scene::initialize`)가 메시마다
+ * @details 메시의 머티리얼이 저장되지 않으면 씬을 다시 열 때 모든 메시가 씬 기본 머티리얼이 된다. 씬 초기화(`Scene::initialize`)가 메시마다
  *          `_materialPath` 를 풀고, 참조가 없는 것에만 기본을 건다.
  */
 SW_TEST_CASE( SceneTest, InitializedSceneBindsSavedMeshMaterials )
@@ -1192,8 +1188,8 @@ SW_TEST_CASE( SceneTest, InitializedSceneBindsSavedMeshMaterials )
 
 /**
  * @brief [SceneTest] 영속으로 표시한 루트는 플레이 중 씬 전환 너머로 자식 · 정체(id) · 소켓 부착 그대로 넘어가고, 나머지는 사라진다
- * @details 유니티 `Object.DontDestroyOnLoad`(루트를 영속 씬으로 옮긴다) · 언리얼 심리스 트래블의 액터 목록 자리다. 예전에는
- *          `DontDestroyOnLoadComponent` 가 태그 하나만 붙였고 그 태그를 읽는 곳이 없어, 씬을 바꾸면 그 오브젝트도 같이 사라졌다.
+ * @details 유니티 `Object.DontDestroyOnLoad`(루트를 영속 씬으로 옮긴다) · 언리얼 심리스 트래블의 액터 목록 자리다.
+ *          `DontDestroyOnLoadComponent` 가 태그만 붙이고 씬 전환이 그것을 읽지 않으면 씬을 바꿀 때 그 오브젝트도 같이 사라진다.
  *          플레이를 멈추면 표시를 잊는다(유니티는 플레이 모드를 나가면 영속 씬을 비운다).
  */
 SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
@@ -1276,9 +1272,9 @@ SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
 
 /**
  * @brief [SceneTest] 저장된 상태가 있는 프리팹 인스턴스는 그 상태로 **한 번** 짓는다 — 프리팹 상태를 지었다가 통째로 덮지 않는다
- * @details 씬은 프리팹 인스턴스도 전체 상태를 저장하고, 읽을 때 그 상태가 기준이다(덮어쓴 값 · 지운 컴포넌트까지). 예전에는 프리팹을 먼저
- *          스폰해(컴포넌트를 모두 만들고) 그 위에 저장된 상태를 읽어 컴포넌트를 모두 지우고 다시 만들었다 — 인스턴스마다 두 번 지었다.
- *          프리팹이 있는지는 여전히 본다(없으면 "Missing Prefab" 으로 남긴다), 저장할 때 프리팹 경로도 그대로 적는다.
+ * @details 씬은 프리팹 인스턴스도 전체 상태를 저장하고, 읽을 때 그 상태가 기준이다(덮어쓴 값 · 지운 컴포넌트까지). 프리팹을 먼저 스폰한
+ *          (컴포넌트를 모두 만든) 위에 저장된 상태를 읽으면 컴포넌트를 모두 지우고 다시 만들어 인스턴스마다 두 번 짓는다.
+ *          프리팹이 있는지는 본다(없으면 "Missing Prefab" 으로 남긴다), 저장할 때 프리팹 경로도 그대로 적는다.
  */
 SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
 {
@@ -1326,9 +1322,8 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
 
 /**
  * @brief [SceneTest] 프리팹을 찾지 못한 엔티티도 저장하면 그대로 남는다(유니티의 "Missing Prefab" 과 같은 자리)
- * @details 예전에는 스폰이 실패하면 경고 한 줄을 남기고 엔티티를 버렸다. 씬을 열고 저장하면 그 엔티티 · 덮어쓴 값 · 프리팹 GUID 가
- *          파일에서 영영 사라졌다 — 프리팹을 `.meta` 없이 옮겼거나 잠깐 없던 것만으로. 이제 풀지 못한 엔티티는 문서 그대로 들고 있다가
- *          저장 때 다시 써 넣는다.
+ * @details 풀지 못한 엔티티는 문서 그대로 들고 있다가 저장 때 다시 써 넣는다. 스폰 실패 때 엔티티를 버리면 씬을 열고 저장하는 것만으로
+ *          그 엔티티 · 덮어쓴 값 · 프리팹 GUID 가 파일에서 영영 사라진다 — 프리팹을 `.meta` 없이 옮겼거나 잠깐 없던 것만으로.
  */
 SW_TEST_CASE( SceneTest, EntityWhosePrefabIsMissingSurvivesSave )
 {
@@ -1373,8 +1368,8 @@ SW_TEST_CASE( SceneTest, EntityWhosePrefabIsMissingSurvivesSave )
 
 /**
  * @brief [SceneTest] 깨진 씬 파일은 "없다" 가 아니라 어디가 틀렸는지(`경로:줄:열`)로 알린다
- * @details `SceneDocument::loadXml` 은 읽기 실패를 모두 "File not found" 로 알렸다 — 파일이 바로 거기 있는데. 구문 오류의 자리는 XML 로그의
- *          오프셋뿐이었다.
+ * @details `SceneDocument::loadXml` 이 읽기 실패를 모두 "File not found" 로 알리면 파일이 바로 거기 있어도 그렇게 나오고, 구문 오류의 자리는
+ *          XML 로그의 오프셋뿐이다.
  */
 SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
 {
@@ -1414,7 +1409,7 @@ SW_TEST_CASE( SceneTest, XmlAssetsLoadWithoutEngineServices )
                                                             "</Scene>\n" ) );
     const sw::string futureScenePath = test::makeTempPath( "future.scene.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( futureScenePath, "<Scene formatVersion=\"999\" name=\"Future\"/>\n" ) );
-    // 판 속성이 없는 문서는 0 판이고, 0 판을 1 판으로 올리는 단계는 없다 — 저장소의 씬은 모두 1 판으로 다시 썼다.
+    // 판 속성이 없는 문서는 0 판이고, 0 판을 1 판으로 올리는 단계는 없다 — 저장소의 씬은 모두 1 판이다.
     const sw::string oldScenePath = test::makeTempPath( "unversioned.scene.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( oldScenePath, "<Scene name=\"Unversioned\"/>\n" ) );
     const sw::string prefabPath = test::makeTempPath( "standalone.prefab.xml" );

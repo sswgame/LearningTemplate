@@ -309,10 +309,9 @@ SW_TEST_CASE( PhysicsTest, CCD_CornerGrazingAndParallelMiss )
 
 /**
  * @brief [PhysicsTest] 빗나간 스윕이 결과 구조체에 이전 충돌을 남기지 않는지 검증
- * @details 결과 구조체를 재사용해 여러 대상을 훑는 것은 자연스러운 쓰임이다. 그런데
- *          `sweepAabb` 만 시작할 때 결과를 비우지 않아서, 빗나가고도 **이전 호출의 `_bHit` 이
- *          그대로 남았다** — 형제 함수 `sweepSphere` 는 처음부터 비우고 있었다. 둘이 다른 약속을
- *          하고 있으면 어느 쪽 관례로 쓰는지가 호출자마다 달라진다.
+ * @details 결과 구조체를 재사용해 여러 대상을 훑는 것은 자연스러운 쓰임이다. `sweepAabb` 가 시작할 때 결과를
+ *          비우지 않으면 빗나가고도 **이전 호출의 `_bHit` 이 그대로 남는다** — 형제 함수 `sweepSphere` 와 같은
+ *          약속이어야 호출자마다 관례가 갈리지 않는다.
  */
 SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
 {
@@ -349,8 +348,8 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
 
 /**
  * @brief [PhysicsTest] 여러 셀에 걸친 바디는 **걸친 셀 어디서든** 찾아진다
- * @details 그리드 셀은 64 단위인데 이 스위트의 기존 바디는 전부 10~20 단위였다 — 즉 **한 셀 안에만**
- *          있었고, "AABB 가 여러 셀을 덮을 때" 의 범위 계산은 한 번도 태워지지 않았다.
+ * @details 그리드 셀은 64 단위다. 10~20 단위 바디는 **한 셀 안에만** 있어 "AABB 가 여러 셀을 덮을 때" 의 범위 계산을
+ *          태우지 않으므로, 여기서는 셀에 걸친 바디를 쓴다.
  *
  *          삽입이 범위를 덜 훑으면 바디가 실제로 겹치는 셀에 등록되지 않고, 그 셀을 보는 질의가
  *          **바디를 못 찾는다** — 충돌을 놓치는 쪽이라 틀린 답이 조용히 나온다. 작은 질의 박스를
@@ -409,10 +408,9 @@ SW_TEST_CASE( PhysicsTest, MultiCellBodyIsFoundInEveryCellItSpans )
 
 /**
  * @brief [PhysicsTest] 큰 바디 하나가 셀 표를 불리지 않는지, 그러면서도 여전히 찾아지는지 검증
- * @details 질의 쪽에는 셀 상한(`kMaxQueryCellCount`)이 있는데 **삽입 쪽에는 없었다.**
- *          `insertBodyToGrid` 는 AABB 가 덮는 모든 셀에 핸들을 적으므로, 20,000 유닛짜리 바닥
- *          콜라이더 하나면 64 유닛 셀 기준으로 셀 표에 **십만 칸 가까이** 생긴다 — 바디는
- *          하나인데. `setAabb` 로 움직이면 그만큼을 매번 지웠다 다시 적는다.
+ * @details 질의 쪽의 셀 상한(`kMaxQueryCellCount`)처럼 **삽입 쪽에도** 상한이 있어야 한다. `insertBodyToGrid` 가 AABB 가 덮는
+ *          모든 셀에 핸들을 적으면 20,000 유닛짜리 바닥 콜라이더 하나가 64 유닛 셀 기준으로 셀 표에 **십만 칸 가까이** 생긴다 —
+ *          바디는 하나인데. `setAabb` 로 움직이면 그만큼을 매번 지웠다 다시 적는다.
  *
  *          큰 바디는 그리드에 흩뿌리는 대신 목록 하나에 모으고, 그리드로 가는 질의가 그것을
  *          항상 함께 본다. 그래서 이 케이스는 **둘 다** 본다: 표가 작게 남는가, 그리고
@@ -438,7 +436,7 @@ SW_TEST_CASE( PhysicsTest, OversizedBodyDoesNotInflateTheGrid )
     const PhysicsWorld::BodyHandle crateHandle = world.addBody( crate, 0, 2 );
     SW_ASSERT_TRUE( crateHandle.isValid() );
 
-    // 고치기 전에는 여기가 십만 가까이 됐다. 지금은 상자가 차지한 셀들뿐이다.
+    // 흩뿌리면 여기가 십만 가까이 된다. 상자가 차지한 셀들뿐이어야 한다.
     SW_EXPECT_TRUE( world.getGridCellCount() < 16 );
 
     // 그런데도 바닥은 여전히 찾아져야 한다 — 셀에 없다는 것이 답을 바꾸면 안 된다.
@@ -472,10 +470,10 @@ SW_TEST_CASE( PhysicsTest, OversizedBodyDoesNotInflateTheGrid )
 
 /**
  * @brief [PhysicsTest] 셀 번호 범위를 넘는 좌표의 바디도 질의에 잡힌다
- * @details 셀 번호는 `floor(좌표 / 셀크기)` 를 int32 로 캐스팅해 구했다. 그 캐스팅은 값이 int32
- *          범위를 벗어나면 **정의되지 않은 동작**이고, x86 에서는 넘치든 모자라든 똑같이 int32
+ * @details 셀 번호를 `floor(좌표 / 셀크기)` 의 int32 캐스팅으로 구하면, 그 캐스팅은 값이 int32
+ *          범위를 벗어날 때 **정의되지 않은 동작**이고, x86 에서는 넘치든 모자라든 똑같이 int32
  *          최솟값으로 붙는다 — 그래서 아주 넓은 AABB 의 최소와 최대가 **같은 셀 번호**가 되어
- *          폭이 1 로 읽혔다. "너무 크다"(`kMaxBodyCellCount`) 판정을 통과해 버리고, 그 바디는
+ *          폭이 1 로 읽힌다. "너무 크다"(`kMaxBodyCellCount`) 판정을 통과해 버리고, 그 바디는
  *          원점과 아무 상관 없는 셀 하나에만 등록된다 — 겹치는 자리를 보는 질의가 바디를 **못
  *          찾는다.** 터지지 않고 답만 조용히 틀리는 종류다.
  */
@@ -520,8 +518,8 @@ SW_TEST_CASE( PhysicsTest, BodyBeyondCellCoordinateRangeIsStillFound )
 
 /**
  * @brief [PhysicsTest] 셀 번호가 int32 끝에 닿는 바디도 등록 · 질의가 끝난다
- * @details 셀 번호는 int32 끝으로 접히는데(아주 먼 좌표 · +inf), 셀 순회가 int32 로 돌아 `++` 가 넘치고 `<= INT32_MAX` 가 영원히
- *          참이었다 — 게임 스레드가 락을 쥔 채 멈추고 셀 표가 끝없이 자랐다. 이 케이스가 다시 멈추면 CTest 시간 초과로 드러난다.
+ * @details 셀 번호는 int32 끝으로 접히는데(아주 먼 좌표 · +inf), 셀 순회가 int32 로 돌면 `++` 가 넘치고 `<= INT32_MAX` 가 영원히
+ *          참이다 — 게임 스레드가 락을 쥔 채 멈추고 셀 표가 끝없이 자란다. 이 케이스가 멈추면 CTest 시간 초과로 드러난다.
  */
 SW_TEST_CASE( PhysicsTest, BodyAtTheCellRangeLimitDoesNotHang )
 {
@@ -602,8 +600,7 @@ namespace
 
 /**
  * @brief [PhysicsTest] step 은 겹침을 다시 재고 지난 step 과 달라진 쌍을 시작 · 끝 이벤트로 낸다(유니티 OnTriggerEnter2D/Exit2D · 언리얼 Begin/EndOverlap)
- * @details 예전 `step` 은 빈 함수였고 부르는 곳도 없었다 — 겹침은 매번 물어야만 알 수 있었고 "들어왔다 · 나갔다" 를 알려 주는 곳이 없었다.
- *          바디가 사라지면 그 쌍은 끝난다(언리얼은 컴포넌트를 내릴 때 EndOverlap 을 낸다). 계속 겹친 쌍은 다시 내지 않는다.
+ * @details 바디가 사라지면 그 쌍은 끝난다(언리얼은 컴포넌트를 내릴 때 EndOverlap 을 낸다). 계속 겹친 쌍은 다시 내지 않는다.
  */
 SW_TEST_CASE( PhysicsTest, StepReportsOverlapsThatBeginAndEnd )
 {
@@ -650,8 +647,8 @@ SW_TEST_CASE( PhysicsTest, StepRespectsTheLayerMatrix )
 
 /**
  * @brief [PhysicsTest] 연속 바디는 한 step 에 건너뛴 얇은 바디와도 겹친다 — 그 step 에 시작하고 다음 step 에 끝난다
- * @details 겹침 이벤트는 step 마다 끝 자리만 봤다. 한 프레임에 두께 0.1 벽보다 멀리 가는 총알은 벽과 한 번도 겹치지 않아 맞음 처리가 불리지
- *          않았다(터널링). 연속 바디는 지난 step 의 자리에서 지금 자리까지 쓸린다(`CCD::sweepAabb`). 같은 길을 간 이산 바디는 여전히 지나치고,
+ * @details 겹침을 step 마다 끝 자리만 보면 한 프레임에 두께 0.1 벽보다 멀리 가는 총알은 벽과 한 번도 겹치지 않아 맞음 처리가 불리지
+ *          않는다(터널링). 연속 바디는 지난 step 의 자리에서 지금 자리까지 쓸린다(`CCD::sweepAabb`). 같은 길을 간 이산 바디는 여전히 지나치고,
  *          레이어가 막은 벽은 쓸려도 닿지 않는다. 지나간 뒤 더 가도 다시 닿지 않는다 — 출발점은 지난 step 의 자리다(더한 자리가 아니다).
  */
 SW_TEST_CASE( PhysicsTest, ContinuousBodyOverlapsWhatItPassedThroughInOneStep )
@@ -705,8 +702,8 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyLeavingAnOverlapEndsItInThatStep )
 
 /**
  * @brief [PhysicsTest] 한 step 에 둘을 지나간 연속 바디의 겹침은 먼저 닿은 것부터 온다
- * @details 이벤트는 쌍(핸들) 순서로 나갔다. 총알이 한 step 에 적 둘을 지나가면 받는 쪽은 첫 이벤트에 반응해 사라지므로, 핸들이 앞선 **뒤의**
- *          적이 맞을 수 있었다. 이제 목록은 닿은 때(`_time`) 순서다. 먼 벽을 먼저 더해 핸들 순서와 거리 순서를 거꾸로 둔다.
+ * @details 목록은 닿은 때(`_time`) 순서다. 쌍(핸들) 순서로 내면 총알이 한 step 에 적 둘을 지나갈 때 받는 쪽이 첫 이벤트에 반응해 사라지므로,
+ *          핸들이 앞선 **뒤의** 적이 맞을 수 있다. 먼 벽을 먼저 더해 핸들 순서와 거리 순서를 거꾸로 둔다.
  */
 SW_TEST_CASE( PhysicsTest, SweptOverlapsComeInTheOrderTheyWereTouched )
 {
@@ -727,8 +724,8 @@ SW_TEST_CASE( PhysicsTest, SweptOverlapsComeInTheOrderTheyWereTouched )
 
 /**
  * @brief [PhysicsTest] 연속 바디는 그 step 에 자기 길을 가로질러 건너편으로 간 바디와도 겹친다(상대 운동)
- * @details 쓸림은 상대를 이번 step 의 자리에 세워 두고 쟀다 — 총알이 x 로 가는 동안 y 로 길을 가로질러 건너간 적은 끝 자리가 길 밖이라 닿지
- *          않았다. 이제 둘 다 지난 step 의 자리에서 출발해 이동의 차이만큼 쓴다(Box2D 총알 TOI · 유니티 Continuous Dynamic). 적의 지금 자리는 총알이
+ * @details 쓸림이 상대를 이번 step 의 자리에 세워 두고 재면 총알이 x 로 가는 동안 y 로 길을 가로질러 건너간 적은 끝 자리가 길 밖이라 닿지
+ *          않는다. 그래서 둘 다 지난 step 의 자리에서 출발해 이동의 차이만큼 쓴다(Box2D 총알 TOI · 유니티 Continuous Dynamic). 적의 지금 자리는 총알이
  *          쓸린 범위의 그리드 셀 밖이라(바디가 많아 그리드로 후보를 모을 때), 후보 범위도 이번 step 에 가장 많이 움직인 거리만큼 넓혀야 찾는다.
  */
 SW_TEST_CASE( PhysicsTest, ContinuousBodyMeetsABodyThatCrossesItsPathInOneStep )
@@ -760,7 +757,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyMeetsABodyThatCrossesItsPathInOneStep )
 
 /**
  * @brief [PhysicsTest] 순간이동한 연속 바디는 옛 자리에서 새 자리까지를 쓸지 않는다 — 같은 이동을 그냥 하면 쓴다
- * @details 연속 바디는 지난 step 의 자리부터 쓸리므로, 리스폰 · 문 통과 같은 순간이동도 그 길에 놓인 것과 겹쳤다. 언리얼 `TeleportPhysics` ·
+ * @details 연속 바디는 지난 step 의 자리부터 쓸리므로, 그대로 두면 리스폰 · 문 통과 같은 순간이동도 그 길에 놓인 것과 겹친다. 언리얼 `TeleportPhysics` ·
  *          유니티 `Rigidbody.position` 대입처럼 순간이동(`BodyMoveType::Teleport`)은 새 자리를 다음 쓸림의 출발점으로 둔다.
  */
 SW_TEST_CASE( PhysicsTest, TeleportedContinuousBodyDoesNotSweepTheGap )
@@ -783,8 +780,8 @@ SW_TEST_CASE( PhysicsTest, TeleportedContinuousBodyDoesNotSweepTheGap )
 
 /**
  * @brief [PhysicsTest] 겹침 이벤트는 어느 쪽 바디가 트리거인지 싣는다 — 시작과 끝 모두
- * @details 이벤트는 두 오브젝트 id 만 실어, 받는 쪽은 상대가 감지 범위(트리거)인지 몸(막는 콜라이더)인지 알 수 없었다 — 투사체가 적의 감지 범위에
- *          막혔다. 끝 이벤트는 바디가 이미 사라졌을 수 있어 겹쳐 있던 때의 값을 싣는다.
+ * @details 이벤트가 두 오브젝트 id 만 실으면 받는 쪽은 상대가 감지 범위(트리거)인지 몸(막는 콜라이더)인지 알 수 없어, 투사체가 적의 감지 범위에
+ *          막힌다. 끝 이벤트는 바디가 이미 사라졌을 수 있어 겹쳐 있던 때의 값을 싣는다.
  */
 SW_TEST_CASE( PhysicsTest, OverlapEventsSayWhichBodyIsATrigger )
 {

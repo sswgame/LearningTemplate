@@ -132,8 +132,8 @@ SW_TEST_CASE( TileMapXmlTest, RoundTripKeepsEveryField )
 
 /**
  * @brief [TileMapXmlTest] 같은 맵을 두 번 쓰면 같은 바이트가 나오고, 다시 읽어도 같다
- * @details 입력 바인딩에서 실제로 났던 함정이다 — 저장할 때마다 바이트가 달라지면 버전 관리가
- *          매번 diff 를 만들고, 그 diff 를 보고 "누가 맵을 건드렸다" 고 읽게 된다.
+ * @details 저장할 때마다 바이트가 달라지면 버전 관리가 매번 diff 를 만들고, 그 diff 를 보고
+ *          "누가 맵을 건드렸다" 고 읽게 된다.
  */
 SW_TEST_CASE( TileMapXmlTest, SavingTwiceProducesTheSameBytes )
 {
@@ -276,7 +276,7 @@ SW_TEST_CASE( TileMapXmlTest, SizeBeyondTheTileLimitIsRejected )
 
 /**
  * @brief [TileMapXmlTest] 0~255 칸(높이 · 색)이 범위를 넘으면 묶는다 — 잘라 넣지 않는다
- * @details `int32` 로 읽어 그대로 잘라 넣어, 색 "300" 이 44 · "-1" 이 255 가 됐다. 유니티 `Color32` 처럼 0 · 255 로 묶는다.
+ * @details `int32` 로 읽어 그대로 잘라 넣으면 색 "300" 이 44 · "-1" 이 255 가 된다. 유니티 `Color32` 처럼 0 · 255 로 묶는다.
  */
 SW_TEST_CASE( TileMapXmlTest, OutOfRangeByteAttributesAreClamped )
 {
@@ -345,9 +345,9 @@ SW_TEST_CASE( TileMapXmlTest, EveryFlagLayerRoundTripsAlone )
 }
 
 /**
- * @brief [TileMapXmlTest] 레이어 표로 바꾼 쓰기가 기존 형식과 같은 바이트를 낸다
- * @details 아래 두 문서는 레이어가 필드마다 따로 있던 때의 `toXml` 출력이다(저장소에 타일맵 파일이 없어 시험 안에 둔다).
- *          하나는 칸마다 다른 맵, 하나는 높이 · 틴트 없이 `enc` · `pt` 만 적힌 옛 손글 맵을 읽어 다시 쓴 것이다.
+ * @brief [TileMapXmlTest] 레이어 표로 하는 쓰기가 기준 형식과 같은 바이트를 낸다
+ * @details 아래 두 문서는 기준 출력이다(저장소에 타일맵 파일이 없어 시험 안에 둔다). 하나는 칸마다 다른 맵,
+ *          하나는 높이 · 틴트 없이 `enc` · `pt` 만 적힌 손글 맵을 읽어 다시 쓴 것이다.
  */
 SW_TEST_CASE( TileMapXmlTest, SavedBytesMatchTheExistingFormat )
 {

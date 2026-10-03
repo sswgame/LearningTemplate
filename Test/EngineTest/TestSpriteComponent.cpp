@@ -43,9 +43,9 @@ namespace
 
 /**
  * @brief [SpriteComponentTest] 스프라이트는 스프라이트 머티리얼을 입은 사각형으로 그려지고, 텍스처는 그 머티리얼의 인스턴스가 덮어쓴다
- * @details 예전에는 스프라이트가 메시 컴포넌트의 기본을 그대로 따라 **씬 기본 머티리얼의 단위 큐브**로 그려졌다. 텍스처 · 메시 · 머티리얼 이름 칸은
- *          저장만 되고 읽는 곳이 없었고, `sprite2d.material` 과 그 셰이더는 구워지기만 했다. 유니티 `SpriteRenderer`(스프라이트 기본 머티리얼 ·
- *          텍스처는 머티리얼 프로퍼티 블록) · 언리얼 Paper2D(`UPaperSpriteComponent` — 사각형 + 스프라이트 머티리얼 + 텍스처)와 같은 모양으로 바꿨다.
+ * @details 유니티 `SpriteRenderer`(스프라이트 기본 머티리얼 · 텍스처는 머티리얼 프로퍼티 블록) · 언리얼 Paper2D(`UPaperSpriteComponent` — 사각형 +
+ *          스프라이트 머티리얼 + 텍스처)와 같은 모양이다. 스프라이트가 메시 컴포넌트의 기본을 그대로 따르면 **씬 기본 머티리얼의 단위 큐브**로
+ *          그려지고 `sprite2d.material` 과 그 셰이더는 구워지기만 한다.
  */
 SW_TEST_CASE( SpriteComponentTest, SpriteDrawsATexturedQuadWithTheSpriteMaterial )
 {
@@ -54,8 +54,8 @@ SW_TEST_CASE( SpriteComponentTest, SpriteDrawsATexturedQuadWithTheSpriteMaterial
     sw::SpriteComponent*  pSprite = spawnSprite( manager, "Torch", kTextureA );
     SW_ASSERT_NOT_NULL( pSprite );
 
-    // 양면 스프라이트 사각형(면마다 삼각형 둘 — 정점 열둘, `MeshUtil::createSpriteQuad`). 예전에는 빈 메시 id 가 큐브로 풀렸고, 그다음에는
-    // 한 면짜리 3D 쿼드라 보이는 쪽에서 텍스처가 좌우로 뒤집혔다.
+    // 양면 스프라이트 사각형(면마다 삼각형 둘 — 정점 열둘, `MeshUtil::createSpriteQuad`). 빈 메시 id 가 큐브로 풀리거나 한 면짜리
+    // 3D 쿼드면 보이는 쪽에서 텍스처가 좌우로 뒤집힌다.
     SW_ASSERT_NOT_NULL( pSprite->getRawMesh() );
     SW_EXPECT_EQUAL( 12u, pSprite->getRawMesh()->getVertexCount() );
     SW_EXPECT_TRUE( pSprite->getMesh() == sw::MeshUtil::acquirePrimitive( "Sprite" ) );

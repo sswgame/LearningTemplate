@@ -632,7 +632,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentChainLoopDoesNotHang )
     const sw::TypeInfo* pLoopA = registry.findType( sw::hashed_string( "swtest::LoopA" ) );
     SW_ASSERT_NOT_NULL( pLoopA );
 
-    // 고치기 전에는 이 줄에서 영원히 돈다 — 없는 이름을 물으면 체인이 끝나지 않는다.
+    // 순환을 막지 않으면 이 줄에서 영원히 돈다 — 없는 이름을 물으면 체인이 끝나지 않는다.
     SW_EXPECT_FALSE( pLoopA->isDerivedFrom( sw::hashed_string( "swtest::NotThere" ) ) );
     // 재귀였던 둘은 스택을 넘긴다.
     SW_EXPECT_TRUE( pLoopA->findPropertyInHierarchy( sw::hashed_string( "nope" ) ) == nullptr );

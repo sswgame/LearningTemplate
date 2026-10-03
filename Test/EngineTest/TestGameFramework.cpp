@@ -106,7 +106,7 @@ namespace
 
     /**
      * @brief 게임 서비스에 씬 매니저만 겁니다 — `GameInstanceBase` · `DontDestroyOnLoadComponent` 가 활성 씬을 여기서 찾습니다.
-     * @details 어서션이 중간에 빠져나가도 풀리게 RAII 로 둡니다. 시험 셋이 같은 가드를 각자 들고 있었습니다.
+     * @details 어서션이 중간에 빠져나가도 풀리게 RAII 로 둡니다.
      *          (`EngineTest/GameTestUtil.h` 의 같은 가드는 `sw::test` 를 들여와 이 파일의 `test::makeTempPath` 와 이름이 부딪힌다.)
      */
     struct ScopedSceneGameService
@@ -157,7 +157,7 @@ namespace
 } // namespace
 
 // ------------------------------------------------------------------------------
-// 1) FadeServiceTest — 화면 페이드 아웃/인 수명주기 및 알파 보간 검증
+// 1) 페이드 서비스(FadeService) — 화면 페이드 아웃/인 수명주기 및 알파 보간 검증
 // ------------------------------------------------------------------------------
 
 /**
@@ -208,7 +208,7 @@ SW_TEST_CASE( GameFrameworkTest, FadeServiceLifecycle )
 }
 
 // ------------------------------------------------------------------------------
-// 2) ScreenTransitionManagerTest — 범용 화면 전환 FSM 및 수명주기 훅 검증
+// 2) 화면 전환(ScreenTransitionManager) — 범용 화면 전환 FSM 및 수명주기 훅 검증
 // ------------------------------------------------------------------------------
 
 /**
@@ -292,7 +292,7 @@ SW_TEST_CASE( GameFrameworkTest, ScreenTransitionManagerReset )
 }
 
 // ------------------------------------------------------------------------------
-// 3) SaveGameTest — 플래그 관리 및 파일 직렬화/역직렬화 검증
+// 3) 세이브 게임(SaveGameSerializer) — 플래그 관리 및 파일 직렬화/역직렬화 검증
 // ------------------------------------------------------------------------------
 
 /**
@@ -548,9 +548,9 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentEditorTool100ScaleFormat
 
 /**
  * @brief [GameFrameworkTest] 대화 Branch 조건이 비교 연산자 여섯을 모두 안다 — `>=` 가 든 식을 통째로 플래그 키로 읽지 않는다
- * @details 조건 평가는 `==` 와 `!=` 만 손으로 찾았다. `flag.gold >= 10` 은 연산자를 못 찾아 **식 전체를 키**("gold >= 10")로 읽었고,
- *          그런 플래그는 없으니 늘 0 — 금화가 충분해도 늘 거짓 쪽 분기로 갔다(`<=` · `>` · `<` 도 같다). 이제 연산자는 표 하나가 정하고
- *          (두 글자를 먼저), 읽지 못한 식(정수가 아닌 오른쪽, 표에 없는 `=` 하나)은 경고하고 거짓이다 — 예전에는 `!= lots` 가 1 과 비교돼 참이었다.
+ * @details 평가가 `==` 와 `!=` 만 찾으면 `flag.gold >= 10` 은 **식 전체를 키**("gold >= 10")로 읽고, 그런 플래그는 없으니 늘 0 이라
+ *          금화가 충분해도 거짓 쪽 분기로 간다(`<=` · `>` · `<` 도 같다). 연산자는 표 하나가 정하고(두 글자를 먼저), 읽지 못한 식
+ *          (정수가 아닌 오른쪽, 표에 없는 `=` 하나)은 경고하고 거짓이다 — `!= lots` 를 1 과 비교해 참으로 읽으면 안 된다.
  */
 SW_TEST_CASE( GameFrameworkTest, DialogueConditionUnderstandsEveryComparison )
 {
@@ -597,7 +597,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueConditionUnderstandsEveryComparison )
 }
 
 // ------------------------------------------------------------------------------
-// 6) GameInstanceBaseStateTest — 런타임 스냅샷/세이브 파일 직렬화 검증
+// 4) 게임 인스턴스 상태(GameInstanceBase) — 런타임 스냅샷/세이브 파일 직렬화 검증
 // ------------------------------------------------------------------------------
 /**
  * @brief [GameFrameworkTest] GameInstanceBase 스냅샷 캡처 및 인메모리 복원 / 파일 입출력 검증
@@ -1016,7 +1016,7 @@ SW_TEST_CASE( GameFrameworkTest, SceneObjectCountBeyondTheDataIsNotReserved )
 
 /**
  * @brief [GameFrameworkTest] 봉투(SWST) 없는 상태 · 지금 판이 아닌 봉투는 읽지 않는다 — 스냅샷은 `serializeState` 가 쓴 지금 판만 받는다
- * @details 봉투 없는 버퍼를 오브젝트 상태만 실린 옛 형식으로 짐작해 읽던 갈래가 있었다. 그 형식을 쓰는 곳은 없다(핫 리로드 · 세이브 모두 봉투를 쓴다).
+ * @details 봉투 없는 버퍼를 오브젝트 상태만 실린 형식으로 짐작해 읽지 않는다. 그 형식을 쓰는 곳은 없다(핫 리로드 · 세이브 모두 봉투를 쓴다).
  */
 SW_TEST_CASE( GameFrameworkTest, SnapshotWithoutTheCurrentEnvelopeIsRefused )
 {
@@ -1027,7 +1027,7 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotWithoutTheCurrentEnvelopeIsRefused )
     GameInstanceBase instance;
     SW_TEST_DEFENSIVE_SCOPE( "a state snapshot without the current envelope" );
 
-    // 봉투 없이 오브젝트 0 개 — 옛 형식으로 짐작하면 빈 씬으로 "성공" 한다.
+    // 봉투 없이 오브젝트 0 개 — 봉투 없는 형식으로 짐작하면 빈 씬으로 "성공" 한다.
     const uint8 arrBare[4] = { 0x00, 0x00, 0x00, 0x00 };
     SW_EXPECT_FALSE( instance.deserializeState( arrBare, static_cast<uint32>( sizeof( arrBare ) ) ) );
 
@@ -1041,8 +1041,8 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotWithoutTheCurrentEnvelopeIsRefused )
 
 /**
  * @brief [GameFrameworkTest] 스냅샷 복원은 부모보다 먼저 읽힌 자식을 원래 **소켓**에 다시 붙인다 — 핫 리로드 · 다른 실행의 세이브 둘 다
- * @details 복원은 오브젝트를 모두 읽은 뒤 바깥 칸의 부모 이름으로 부모를 찾아 `attachToParent`(부모의 primary)로 붙였다. 손(소켓)에 든 무기가 몸통으로
- *          옮겨 갔고 오프셋이 몸통 기준이 됐다. 이제 상태의 부착 필드(부모의 id · 컴포넌트 키)를 묶음이 잇는다 — 씬 로드와 같은 규칙이다.
+ * @details 복원이 바깥 칸의 부모 이름으로 부모를 찾아 `attachToParent`(부모의 primary)로 붙이면 손(소켓)에 든 무기가 몸통으로
+ *          옮겨 가고 오프셋이 몸통 기준이 된다. 상태의 부착 필드(부모의 id · 컴포넌트 키)를 묶음이 잇는다 — 씬 로드와 같은 규칙이다.
  */
 SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreKeepsASocketChildReadBeforeItsParent )
 {
@@ -1089,8 +1089,8 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreKeepsASocketChildReadBeforeItsPa
 
 /**
  * @brief [GameFrameworkTest] `DontDestroyOnLoadComponent` 를 단 오브젝트는 플레이 중 씬을 바꿔도 남는다
- * @details 예전에는 시작할 때 태그(`DontDestroyOnLoad`)만 붙였고 그 태그를 읽는 곳이 없어, 씬을 바꾸면 그 오브젝트도 같이 사라졌다.
- *          이제 시작이 씬 매니저에 루트를 영속으로 표시한다(유니티 `Object.DontDestroyOnLoad`) — 옮겨 심는 쪽은 `SceneTest.PersistentRootsCarryIntoTheNextScene`.
+ * @details 시작할 때 태그(`DontDestroyOnLoad`)만 붙이면 그 태그를 읽는 곳이 없어, 씬을 바꿀 때 그 오브젝트도 같이 사라진다.
+ *          시작이 씬 매니저에 루트를 영속으로 표시한다(유니티 `Object.DontDestroyOnLoad`) — 옮겨 심는 쪽은 `SceneTest.PersistentRootsCarryIntoTheNextScene`.
  */
 SW_TEST_CASE( GameFrameworkTest, DontDestroyOnLoadComponentKeepsItsOwnerAcrossScenes )
 {
@@ -1121,7 +1121,7 @@ SW_TEST_CASE( GameFrameworkTest, DontDestroyOnLoadComponentKeepsItsOwnerAcrossSc
 }
 
 /**
- * @brief [TileMapTest] 런타임 TileMap 이 레이어 표의 모든 레이어를 칸 단위로 다루고 getFlags 비트로 내는지 검증
+ * @brief [GameFrameworkTest] 런타임 TileMap 이 레이어 표의 모든 레이어를 칸 단위로 다루고 getFlags 비트로 내는지 검증
  */
 SW_TEST_CASE( GameFrameworkTest, TileMap_EveryFlagLayerIsSetAndReported )
 {
@@ -1151,7 +1151,7 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_EveryFlagLayerIsSetAndReported )
 }
 
 /**
- * @brief [TileMapTest] TileMap Warp O(1) 해시 인덱싱 및 findWarp/setOrUpdateWarp/removeWarp 일관성 검증
+ * @brief [GameFrameworkTest] TileMap Warp O(1) 해시 인덱싱 및 findWarp/setOrUpdateWarp/removeWarp 일관성 검증
  */
 SW_TEST_CASE( GameFrameworkTest, TileMap_WarpLookupAndIndexCache )
 {
@@ -1187,7 +1187,7 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_WarpLookupAndIndexCache )
 }
 
 /**
- * @brief [DialogueTest] Action 실행 중 stopDialogue 호출 시 후속 노드 미실행 및 Idle 상태 보존 검증
+ * @brief [GameFrameworkTest] Action 실행 중 stopDialogue 호출 시 후속 노드 미실행 및 Idle 상태 보존 검증
  */
 SW_TEST_CASE( GameFrameworkTest, DialogueRunner_StopDialogueDuringAction )
 {
@@ -1273,9 +1273,8 @@ SW_TEST_CASE( GameFrameworkTest, SpeciesCatalog_InvalidLookupAndNegativeIndexSaf
 
 /**
  * @brief [GameFrameworkTest] 기술 슬롯 수를 데이터가 정하는지 — 2칸 고정이 아니어야 한다
- * @details 이 키트는 "턴제 전투" 라는 장르의 공통 뼈대인데, 예전에는 SpeciesDef 가 `_move0`/`_move1`
- *          두 칸, PartyMember 가 `_pp0`/`_pp1` 두 칸으로 **게임 하나의 스키마를 박아** 두고 있었다.
- *          기술이 넷인 턴제 게임은 이 키트로 만들 수 없었다. 슬롯 수가 데이터를 따라가는지 본다.
+ * @details 이 키트는 "턴제 전투" 라는 장르의 공통 뼈대다. `SpeciesDef` · `PartyMember` 가 기술 · PP 를 두 칸으로 고정하면
+ *          **게임 하나의 스키마를 박는** 것이라 기술이 넷인 턴제 게임을 이 키트로 만들 수 없다. 슬롯 수가 데이터를 따라가는지 본다.
  */
 SW_TEST_CASE( GameFrameworkTest, SpeciesCatalog_MoveSlotCountFollowsData )
 {
@@ -1432,7 +1431,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterDataCatalogAndStats )
 
 /**
  * @brief [GameFrameworkTest] 몬스터 카탈로그는 미터 단위이고, 한 종의 스탯이 UnitStatsComponent 로 1:1 옮겨진다
- * @details 카탈로그 기본값이 픽셀 시절 값(속도 150 · 순찰 200 · 감지 400 · 공격 50)이면 m/s · m 로 읽는 유닛 스탯에서 150 m/s 가 된다 — 유닛 스탯의
+ * @details 카탈로그 기본값이 픽셀 단위 값(속도 150 · 순찰 200 · 감지 400 · 공격 50)이면 m/s · m 로 읽는 유닛 스탯에서 150 m/s 가 된다 — 유닛 스탯의
  *          Move Speed 상한(50)보다 크다. 그 값을 쓰는 데이터 파일은 로드가 경고해야 한다.
  */
 SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReachUnitStats )
@@ -1714,8 +1713,8 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_NetcodeSnapshotAndHistoryBuffer )
 
 /**
  * @brief [GameFrameworkTest] 같은 입력은 언제나 같은 바이트로 직렬화되는지 검증
- * @details 예전에는 구조체를 통째로 `memcpy` 했다. `_tickNumber` 뒤의 정렬 패딩 4바이트는 아무도
- *          값을 정하지 않으므로, **같은 입력을 두 번 저장해도 파일 바이트가 달라질 수 있었다** —
+ * @details 구조체를 통째로 `memcpy` 하면 `_tickNumber` 뒤의 정렬 패딩 4바이트는 아무도
+ *          값을 정하지 않으므로, **같은 입력을 두 번 저장해도 파일 바이트가 달라질 수 있다** —
  *          리플레이 비교·체크섬·중복 제거가 성립하지 않고, 네트워크로 나가면 그 자리에 있던
  *          메모리가 함께 나간다. 여기서는 서로 다른 쓰레기로 더럽힌 두 스냅샷에 같은 값을 넣고
  *          같은 바이트가 나오는지 본다.
@@ -2003,11 +2002,11 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_UnifiedActionPipeline_Axis1DAndVe
 
 /**
  * @brief [GameFrameworkTest] 수명이 다한 이펙트 오브젝트가 실제로 풀로 돌아오는지 검증
- * @details 만료 경로가 `markPendingDestroy()` 만 부르고 있었다. 그것은 **무덤 표시일 뿐**이라
+ * @details 만료 경로가 `markPendingDestroy()` 만 부르면 그것은 **무덤 표시일 뿐**이라
  *          파괴 목록에 들어가지 않는다 — 오브젝트는 틱과 조회에서 빠지지만 `_listGameObject`
- *          에 영원히 남아 풀로 돌아오지 않는다. 같은 모양이 `ProjectileComponent`(총알 수명)
- *          와 `DamageUIComponent`(데미지 숫자 페이드)에도 있었고, 그 셋은 게임에서 가장 자주
- *          났다 사라지는 것들이라 플레이할수록 프레임마다 훑는 양이 단조 증가했다.
+ *          에 영원히 남아 풀로 돌아오지 않는다. `ProjectileComponent`(총알 수명) ·
+ *          `DamageUIComponent`(데미지 숫자 페이드)의 만료도 같은 자리이고, 셋 다 게임에서 가장 자주
+ *          났다 사라지는 것들이라 새면 플레이할수록 프레임마다 훑는 양이 단조 증가한다.
  *
  *          컴포넌트의 `onTick` 을 직접 불러 만료만 떼어 본다 — 틱 스테이지 배선이 아니라
  *          "만료가 무엇을 하는가" 가 검사 대상이다.
@@ -2040,26 +2039,9 @@ SW_TEST_CASE( GameFrameworkTest, ExpiredEffectObjectReturnsToThePool )
 }
 
 /**
- * @brief [GameFrameworkTest] 세이브가 말한 기술 슬롯 수를 그대로 잡지 않는다
- * @details 텍스트 세이브에서 파티 수는 이미 잘라 쓰고 있었는데 **바로 옆의 `ppCount` 는 자르지
- *          않았다.** 세이브 파일은 손으로 고칠 수 있고 망가질 수도 있으므로,
- *          `party0.ppCount=2000000000` 한 줄이 8 GB 짜리 `assign` 이 된다 — 게임이 그 자리에서
- *          죽는다. 형제 규칙(파티 수 자르기)을 그대로 옮겼다.
- */
-/**
- * @brief [GameFrameworkTest] 붙지 않은 게임 서비스는 nullptr 로 돌아온다 — 죽지 않는다
- * @details `game::getService<T>()` 의 실패 자리에 `SW_ASSERT( false )` 가 있었다. `SW_ASSERT` 는
- *          Debug 에서 디버거 브레이크이고 Debug 밖에서는 사라지므로, "없으면 nullptr" 이라는
- *          계약이 **Debug 에서만 프로세스를 죽이는** 계약이었다. 호출하는 자리가 전부
- *          `== nullptr` 을 확인하는데 그 가드는 Debug 에서 도달할 수 없었다. 짝인
- *          `editor::getService<T>()` 는 처음부터 조용히 nullptr 을 돌려준다.
- * @note 이 테스트가 죽으면(단언 실패가 아니라 **프로세스가 사라지면**) 그 단언이 돌아온 것이다.
- */
-/**
  * @brief [GameFrameworkTest] 대시가 맞고 얻은 무적을 **깎지 않는다**
- * @details 대시는 `_invulnTimer` 에 자기 몫(0.22초)을 **그냥 대입**했다. 맞아서 받은 무적은
- *          0.7초라서, 맞은 직후 대시하면 무적이 0.7 → 0.22 로 **줄었다.** 피해를 덜 보라고
- *          있는 동작이 오히려 더 보게 만들고 있었다. 두 값 중 **긴 쪽**을 남긴다.
+ * @details 맞아서 받은 무적은 0.7초다. 대시가 `_invulnTimer` 에 자기 몫(0.22초)을 **그냥 대입**하면 맞은 직후 대시할 때
+ *          무적이 0.7 → 0.22 로 **줄어**, 피해를 덜 보라고 있는 동작이 오히려 더 보게 만든다. 두 값 중 **긴 쪽**을 남긴다.
  */
 SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashDoesNotShortenHitInvulnerability )
 {
@@ -2090,8 +2072,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashDoesNotShortenHitInvulnerability
 
 /**
  * @brief [GameFrameworkTest] 대시 게이지가 쿨다운과 **같은 속도로** 찬다
- * @details 게이지를 만드는 `getDashFill()` 이 쿨다운 값을 **자기 몫으로 또 들고** 있었다
- *          (`kDashCd = 0.85f`). 한쪽만 바꾸면 게이지가 거짓말을 한다.
+ * @details 게이지를 만드는 `getDashFill()` 이 쿨다운 값을 **자기 몫으로 또 들면** 한쪽만 바꿀 때 게이지가 거짓말을 한다.
  * @note 양 끝(0 과 1)만 보면 이 어긋남이 **안 잡힌다** — 이른 반환과 `saturate` 때문에 분모가
  *       무엇이든 끝점은 같다. 그래서 **중간 지점**을 본다. 쿨다운 길이는 테스트가 직접 재서
  *       쓴다(숫자를 여기 다시 적으면 그것도 세 번째 사본이 된다).
@@ -2131,9 +2112,8 @@ SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashGaugeFillsAtTheCooldownRate )
 
 /**
  * @brief [GameFrameworkTest] 역할을 경로로 묻든 글자로 묻든 **같은 답**이 나온다
- * @details 같은 대응이 세 곳에 각각 적혀 있었다 — 글자 → 역할, 경로 → 역할, 역할 → 태그.
- *          그리고 이미 어긋나 있었다: 글자 쪽은 대소문자를 무시하는데 경로 쪽은 맨 `find`
- *          라서 구별했다. `Dungeon_01` 은 던전이 아니고 `dungeon_01` 만 던전이었다.
+ * @details 글자 → 역할, 경로 → 역할, 역할 → 태그가 같은 대응을 쓴다. 따로 적으면 어긋난다 — 글자 쪽은 대소문자를 무시하는데
+ *          경로 쪽이 맨 `find` 면 `Dungeon_01` 은 던전이 아니고 `dungeon_01` 만 던전이 된다.
  */
 SW_TEST_CASE( GameFrameworkTest, ZoneRole_PathAndTextAgreeAndIgnoreCase )
 {
@@ -2156,7 +2136,7 @@ SW_TEST_CASE( GameFrameworkTest, ZoneRole_PathAndTextAgreeAndIgnoreCase )
 
 /**
  * @brief [GameFrameworkTest] 역할 → 태그 이름이 역할을 읽을 때 쓰는 이름과 **같다**
- * @details 역할을 태그로 미러하는 `switch` 가 이름을 따로 들고 있었다. 태그 이름과 경로에서
+ * @details 역할을 태그로 미러하는 쪽이 이름을 따로 들면 안 된다. 태그 이름과 경로에서
  *          역할을 읽는 이름이 어긋나면 `hasActiveZoneTag( "dungeon" )` 이 던전에서 거짓이 된다.
  *          이 테스트는 **한 바퀴 돌아 제자리로 오는지**를 본다(이름을 여기 다시 적지 않는다).
  */
@@ -2182,10 +2162,9 @@ SW_TEST_CASE( GameFrameworkTest, ZoneRole_TagNameRoundTripsBackToTheSameRole )
 
 /**
  * @brief [GameFrameworkTest] 한 칸 걷는 동안 상태가 **실제로** `Walk` 다
- * @details `PlayerController::update` 가 걸음을 시작한 그 프레임에 곧바로
- *          `notifyStepFinished()` 로 취소했다. `Walk` 는 한 프레임도 살지 못했고 바깥에서
- *          한 번도 관측되지 않았다 — 걷는 애니메이션을 고를 근거가 통째로 죽어 있었다.
- *          실제 입력 잠금은 옆에 따로 있던 같은 길이의 `_stepCooldown` 이 하고 있었다.
+ * @details `PlayerController::update` 가 걸음을 시작한 그 프레임에 곧바로 `notifyStepFinished()` 로 취소하면
+ *          `Walk` 는 한 프레임도 살지 못하고 바깥에서 한 번도 관측되지 않는다 — 걷는 애니메이션을 고를 근거가
+ *          통째로 죽는다. 입력 잠금은 걸음 상태 자체가 한다.
  */
 SW_TEST_CASE( GameFrameworkTest, PlayerLocomotion_StepStaysInWalkForItsDuration )
 {
@@ -2208,9 +2187,9 @@ SW_TEST_CASE( GameFrameworkTest, PlayerLocomotion_StepStaysInWalkForItsDuration 
 
 /**
  * @brief [GameFrameworkTest] 조우 확률 0 은 **끄는** 값이다
- * @details `rate > 0.01f` 가 거짓일 때 주기를 3 으로 놓고 있었다. 그래서 야생 조우를 끄려고
- *          `setEncounterRate( 0 )` 을 부르면 **세 걸음마다** 났다 — 끄는 값이 켜는 값이었다.
- *          1 을 넘는 값도 `1/rate` 를 정수로 자르면 0 이 돼 같은 자리로 떨어졌다.
+ * @details `rate > 0.01f` 가 거짓일 때 주기를 기본값(3)으로 놓으면 야생 조우를 끄려고 `setEncounterRate( 0 )` 을
+ *          부를 때 **세 걸음마다** 난다 — 끄는 값이 켜는 값이 된다. 1 을 넘는 값도 `1/rate` 를 정수로 자르면 0 이 돼
+ *          같은 자리로 떨어진다.
  */
 SW_TEST_CASE( GameFrameworkTest, PlayerController_ZeroEncounterRateNeverEncounters )
 {
@@ -2220,7 +2199,7 @@ SW_TEST_CASE( GameFrameworkTest, PlayerController_ZeroEncounterRateNeverEncounte
         SW_ASSERT_TRUE( shouldEncounterOnStep( -1.0f, stepCount ) == false );
     }
 
-    // 1 이상은 매 걸음이다 — 예전에는 여기가 "세 걸음마다" 로 떨어졌다.
+    // 1 이상은 매 걸음이다 — "세 걸음마다" 로 떨어지면 안 된다.
     for ( uint32 stepCount = 1; stepCount <= 10; ++stepCount )
     {
         SW_EXPECT_TRUE_MSG( shouldEncounterOnStep( 1.0f, stepCount ), "확률 1 인데 조우가 안 납니다" );
@@ -2239,10 +2218,9 @@ SW_TEST_CASE( GameFrameworkTest, PlayerController_ZeroEncounterRateNeverEncounte
 
 /**
  * @brief [GameFrameworkTest] 액션 전투 킷과 오버월드 킷을 **한 번역 단위에서 같이** 쓸 수 있다
- * @details `enum class FacingDir` 이 `ActionRoom.h` 와 `PlayerLocomotion.h` 양쪽에 똑같이
- *          적혀 있었다. 둘 다 `namespace sw` 라서 두 헤더를 같이 넣으면
- *          `error: redefinition of 'FacingDir'` 로 **빌드가 안 됐다** — 두 킷을 한 게임에서
- *          같이 쓸 수 없었다는 뜻이고, 킷이 따로 빌드되는 동안은 아무도 부딪히지 않았다.
+ * @details 같은 타입(`enum class FacingDir`)을 두 킷 헤더(`ActionRoom.h` · `PlayerLocomotion.h`)가 각자 적으면 둘 다
+ *          `namespace sw` 라서 두 헤더를 같이 넣을 때 `error: redefinition of 'FacingDir'` 로 **빌드가 안 된다** —
+ *          두 킷을 한 게임에서 같이 쓸 수 없고, 킷이 따로 빌드되는 동안은 아무도 부딪히지 않는다.
  * @note 이 케이스의 값어치는 **컴파일된다는 것 자체**다. 이 파일 맨 위가 두 헤더를 모두
  *       넣고 있고, 아래 두 줄은 그 하나의 `FacingDir` 이 양쪽 API 에 그대로 통한다는 것을 든다.
  */
@@ -2265,10 +2243,9 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatAndOverworldKitsShareOneFacingDir )
 
 /**
  * @brief [GameFrameworkTest] 대화 핸들러가 **그 안에서** 진행시켜도 받은 값이 그대로다
- * @details 델리게이트는 `const string&` · `const vector<string>&` 를 받는데, 그것이 러너의
- *          멤버를 그대로 가리키고 있었다. 대화 UI 에서 가장 흔한 사용법 — "이 줄을 보고 바로
- *          `advance()`", "선택지를 돌면서 `selectChoice()`" — 이 곧 **자기가 받은 참조를
- *          바꾸거나 비우는** 일이었다. 핸들러는 돌아와서 다음 줄을 방금 받은 줄로 읽는다.
+ * @details 델리게이트는 `const string&` · `const vector<string>&` 를 받는다. 그것이 러너의 멤버를 그대로 가리키면
+ *          대화 UI 에서 가장 흔한 사용법 — "이 줄을 보고 바로 `advance()`", "선택지를 돌면서 `selectChoice()`" — 이 곧
+ *          **자기가 받은 참조를 바꾸거나 비우는** 일이 되어, 핸들러는 돌아와서 다음 줄을 방금 받은 줄로 읽는다.
  */
 SW_TEST_CASE( GameFrameworkTest, DialogueRunner_HandlerArgumentsSurviveReentrantAdvance )
 {
@@ -2311,9 +2288,8 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_HandlerArgumentsSurviveReentrant
 
 /**
  * @brief [GameFrameworkTest] 선택지 핸들러가 **목록을 돌면서** 고를 수 있다
- * @details `_onChoices` 가 `_listCurrentChoice` 를 그대로 넘겨서, 핸들러가 돌면서
- *          `selectChoice()` 를 부르면 그 순간 목록이 비워지고 다시 채워졌다 —
- *          순회 중 컨테이너 변경이다.
+ * @details `_onChoices` 가 `_listCurrentChoice` 를 그대로 넘기면 핸들러가 돌면서 `selectChoice()` 를 부를 때
+ *          그 순간 목록이 비워지고 다시 채워진다 — 순회 중 컨테이너 변경이다.
  */
 SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhileIterating )
 {
@@ -2356,10 +2332,9 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhile
 
 /**
  * @brief [GameFrameworkTest] 기술이 하나뿐인 적도 몰리면 **때린다**
- * @details 체력이 절반 아래면 무조건 1 번 슬롯을 골랐다. 슬롯 수는 데이터가 정하므로 기술이
- *          하나뿐인 종족이 있을 수 있고, 그러면 `applyMove` 가 없는 슬롯으로 보고 "no PP" 만
- *          찍는다 — 적은 절반 이하로 떨어지는 순간부터 **한 대도 못 때렸다.** 몰려야 할 때
- *          오히려 무해해졌다.
+ * @details 슬롯 수는 데이터가 정하므로 기술이 하나뿐인 종족이 있을 수 있다. 체력이 절반 아래일 때 무조건 1 번 슬롯을
+ *          고르면 `applyMove` 가 없는 슬롯으로 보고 "no PP" 만 찍는다 — 적은 절반 이하로 떨어지는 순간부터 **한 대도
+ *          못 때리고**, 몰려야 할 때 오히려 무해해진다.
  */
 SW_TEST_CASE( GameFrameworkTest, BattleFoeWithOneMoveStillAttacksWhenLow )
 {
@@ -2379,9 +2354,8 @@ SW_TEST_CASE( GameFrameworkTest, BattleFoeWithOneMoveStillAttacksWhenLow )
 
 /**
  * @brief [GameFrameworkTest] 끝난 전투는 **스스로** 비활성으로 돌아온다
- * @details `update` 의 첫 줄이 `Ended` 도 같이 걸러 냈다. 그런데 아래 `Ended` 분기가
- *          `Inactive` 로 돌리는 유일한 자리다 — 그 분기는 한 번도 돌지 않았고, `Ended` 에
- *          들어가며 건 0.4 초 타이머도 영영 안 끝났다. 전투가 스스로 끝나기를 기다리는 쪽은
+ * @details `update` 의 `Ended` 분기가 `Inactive` 로 돌리는 유일한 자리다. 첫 줄이 `Ended` 도 같이 걸러 내면 그 분기는
+ *          한 번도 돌지 않고, `Ended` 에 들어가며 건 0.4 초 타이머도 영영 안 끝난다 — 전투가 스스로 끝나기를 기다리는 쪽은
  *          `endBattle()` 을 따로 부르지 않는 한 영원히 기다린다.
  */
 SW_TEST_CASE( GameFrameworkTest, EndedBattleReturnsToInactiveByItself )
@@ -2418,11 +2392,10 @@ SW_TEST_CASE( GameFrameworkTest, EndedBattleReturnsToInactiveByItself )
 
 /**
  * @brief [GameFrameworkTest] 전환 액션이 **그 안에서 새 전환**을 걸어도 덮이지 않는다
- * @details 액션을 부른 뒤 `_phase = FadeIn` 과 `beginFadeIn()` 을 **조건 없이** 실행했다.
- *          액션이 "다음 맵을 읽고, 그 맵이 또 전환을 건다" 는 흔한 일을 하면 방금 걸린
- *          페이드 아웃이 곧바로 페이드 인으로 덮이고 **그쪽 액션은 영영 안 불린다.**
- *          게다가 액션은 `_pendingAction` 을 통해 불리고 있어서, 새 전환이 그 델리게이트를
- *          **실행 중에** 갈아 끼웠다.
+ * @details 액션을 부른 뒤 `_phase = FadeIn` 과 `beginFadeIn()` 을 **조건 없이** 실행하면, 액션이 "다음 맵을 읽고,
+ *          그 맵이 또 전환을 건다" 는 흔한 일을 할 때 방금 걸린 페이드 아웃이 곧바로 페이드 인으로 덮이고
+ *          **그쪽 액션은 영영 안 불린다.** 액션을 `_pendingAction` 에서 바로 부르면 새 전환이 그 델리게이트를
+ *          **실행 중에** 갈아 끼운다.
  */
 SW_TEST_CASE( GameFrameworkTest, TransitionActionCanStartAnotherTransition )
 {
@@ -2454,10 +2427,9 @@ SW_TEST_CASE( GameFrameworkTest, TransitionActionCanStartAnotherTransition )
 
 /**
  * @brief [GameFrameworkTest] 못 읽은 값은 **fallback 이 된다** — 조용히 0 이 되지 않는다
- * @details 세 조회 헬퍼가 `StringUtil` 의 파서를 두고 손수 풀고 있었다. `strtol` · `strtof` 는
- *          실패를 0 으로 돌려주므로 `maxPartySize=six` 같은 오타가 조용히 0 이 됐다 —
- *          fallback 이 있는데도 쓰이지 않았다. bool 은 `true`/`True`/`1` 만 알아서
- *          `TRUE` · `yes` · `on` 은 전부 fallback 으로 떨어졌다.
+ * @details 세 조회 헬퍼는 `StringUtil` 의 파서를 쓴다. `strtol` · `strtof` 로 손수 풀면 실패를 0 으로 돌려주므로
+ *          `maxPartySize=six` 같은 오타가 조용히 0 이 된다 — fallback 이 있는데도 쓰이지 않는다. bool 도 `true`/`True`/`1` 만
+ *          알면 `TRUE` · `yes` · `on` 은 전부 fallback 으로 떨어진다.
  */
 SW_TEST_CASE( GameFrameworkTest, GameData_UnreadableValueFallsBackInsteadOfBecomingZero )
 {
@@ -2471,7 +2443,7 @@ SW_TEST_CASE( GameFrameworkTest, GameData_UnreadableValueFallsBackInsteadOfBecom
     gameData._mapCustomProperty["paddedInt"]   = "  12  ";
     gameData._mapCustomProperty["typoBool"]    = "ture";
 
-    // 못 읽은 값은 fallback 이 되고 **알린다**(예전에는 말없이 fallback 이었다). 빈 값 · 없는 키는 조용하다.
+    // 못 읽은 값은 fallback 이 되고 **알린다**. 빈 값 · 없는 키는 조용하다.
     test::ScopedLogCollector logs;
     {
         test::ScopedDefensiveTestLog expected( "custom properties that do not parse" );
@@ -2501,10 +2473,9 @@ SW_TEST_CASE( GameFrameworkTest, GameData_UnreadableValueFallsBackInsteadOfBecom
 
 /**
  * @brief [GameFrameworkTest] `shake()` 는 **실제로 떨리고** 0 으로 잦아든다
- * @details `shake()` 가 `_shakeFrequency` 를 건드리지 않았다. 그 값의 기본은 0 이고 코드에서
- *          넣을 창구가 없었으므로(리플렉션 프로퍼티뿐), 코드로 부른 흔들림은 `sin( t * 0 ) = 0`
- *          · `cos( t * 0 ) = 1` 이 되어 **떨리지 않고 한쪽으로 밀린 채** 있다가 툭 돌아왔다.
- *          그리고 위상을 남은 시간으로 계산해서 끝나기 직전이 가장 크게 튀었다.
+ * @details `_shakeFrequency` 의 기본은 0 이다. `shake()` 가 그것을 정하지 않으면 코드로 부른 흔들림은 `sin( t * 0 ) = 0`
+ *          · `cos( t * 0 ) = 1` 이 되어 **떨리지 않고 한쪽으로 밀린 채** 있다가 툭 돌아온다. 위상을 남은 시간으로
+ *          계산하면 끝나기 직전이 가장 크게 튄다.
  */
 SW_TEST_CASE( GameFrameworkTest, CameraShakeOscillatesAndDecaysToZero )
 {
@@ -2545,9 +2516,9 @@ SW_TEST_CASE( GameFrameworkTest, CameraShakeOscillatesAndDecaysToZero )
 
 /**
  * @brief [GameFrameworkTest] 카메라 컨트롤러는 놓인 자리를 지키고, 흔들림은 끝나면 그 자리로 돌아오며, 따라가기는 시킬 때만 한다
- * @details 컨트롤러는 매 틱 `_currentPos`(기본 (0,0))를 주인의 위치로 썼고, 따라가는 속도의 기본이 0 이며 목표 · 속도를 코드에서 넣을 창구가 없었다 —
- *          이 컴포넌트를 단 카메라는 놓은 자리와 상관없이 **원점에 박혔다.** 이제 기준은 주인이 놓인 자리(지난 틱의 흔들림을 걷어 낸 자리)이고,
- *          목표 쪽으로는 속도를 줄 때만 간다(`setTargetPosition` · `setFollowSpeed`).
+ * @details 기준은 주인이 놓인 자리(지난 틱의 흔들림을 걷어 낸 자리)이고, 목표 쪽으로는 속도를 줄 때만 간다(`setTargetPosition` ·
+ *          `setFollowSpeed`). 컨트롤러가 자기 위치 사본(기본 원점)을 매 틱 주인에 덮어쓰면 이 컴포넌트를 단 카메라는 놓은 자리와 상관없이
+ *          **원점에 박힌다.**
  */
 SW_TEST_CASE( GameFrameworkTest, CameraControllerKeepsItsPlaceAndFollowsOnlyWhenAsked )
 {
@@ -2620,8 +2591,8 @@ SW_TEST_CASE( GameFrameworkTest, CameraShakeOffsetDoesNotSurviveAStateReload )
 
 /**
  * @brief [GameFrameworkTest] 움직이는 컴포넌트는 월드 값으로 움직인다 — 부모 아래에서도 월드 땅에 서고, 월드 방향으로 난다
- * @details 중력 · 투사체 · 피해 숫자 · 카메라 컨트롤러가 월드 값(땅 높이 · 속도 · 목표)을 **로컬** 위치에 더하고 비교했다. 루트 오브젝트에서는 같아
- *          드러나지 않았지만, 발판 위 캐릭터는 부모 높이만큼 떠서 멈췄고, 돌아간 부모 아래 투사체는 부모의 축을 따라 날았다.
+ * @details 중력 · 투사체 · 피해 숫자 · 카메라 컨트롤러가 월드 값(땅 높이 · 속도 · 목표)을 **로컬** 위치에 더하고 비교하면, 루트 오브젝트에서는 같아
+ *          드러나지 않지만 발판 위 캐릭터는 부모 높이만큼 떠서 멈추고, 돌아간 부모 아래 투사체는 부모의 축을 따라 난다.
  */
 SW_TEST_CASE( GameFrameworkTest, MovementComponentsMoveInWorldSpaceUnderAParent )
 {
@@ -2667,9 +2638,8 @@ SW_TEST_CASE( GameFrameworkTest, MovementComponentsMoveInWorldSpaceUnderAParent 
 
 /**
  * @brief [GameFrameworkTest] 땅에 닿은 뒤에도 **다시 떨어질 수 있다**
- * @details `_bIsGrounded` 는 한 번 참이 되면 영영 참이었다. 점프든 리프트든 순간이동이든
- *          무엇이 올려 놓아도 중력이 다시는 안 걸렸고, 코드에서 되돌릴 창구조차 없었다
- *          (리플렉션 프로퍼티뿐이었다). 땅을 "붙잡은 기억" 이 아니라 지금 위치로 판정한다.
+ * @details 땅을 "붙잡은 기억" 이 아니라 지금 위치로 판정한다. `_bIsGrounded` 가 한 번 참이 되면 영영 참이면 점프든 리프트든
+ *          순간이동이든 무엇이 올려 놓아도 중력이 다시는 안 걸린다.
  */
 SW_TEST_CASE( GameFrameworkTest, GroundedObjectFallsAgainAfterBeingLifted )
 {
@@ -2697,7 +2667,7 @@ SW_TEST_CASE( GameFrameworkTest, GroundedObjectFallsAgainAfterBeingLifted )
     SW_ASSERT_TRUE( pGravity->isGrounded() );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pSceneComp->getLocalPosition()._y, 1e-3f );
 
-    // 2) 무엇이 위로 올려 놓았다 — 그러면 다시 떨어져야 한다.
+    // 2) 무엇이 위로 올려 놓는다 — 그러면 다시 떨어져야 한다.
     pSceneComp->setLocalPosition( float3{ 0.0f, 5.0f, 0.0f } );
     pGravity->onTick( 1.0f / 60.0f );
     SW_EXPECT_TRUE_MSG( pGravity->isGrounded() == false, "위로 올렸는데 여전히 땅에 붙어 있습니다" );
@@ -2714,10 +2684,9 @@ SW_TEST_CASE( GameFrameworkTest, GroundedObjectFallsAgainAfterBeingLifted )
 
 /**
  * @brief [GameFrameworkTest] 조회는 **읽기만 한다** — `clear()` 가 뜻을 갖는다
- * @details `findSpecies()` · `findMove()` 가 비어 있으면 그 자리에서 `const_cast` 로 자기
- *          자신을 고쳐 폴백을 심었다. 둘 다 `const` 이고 이 카탈로그는 서비스라 여러
- *          스레드가 동시에 읽는다 — 읽기인 줄 알고 부른 함수가 **벡터를 키우고** 있었다.
- *          그리고 `clear()` 가 아무 뜻도 없었다: 다음 조회가 곧바로 다시 채웠다.
+ * @details `findSpecies()` · `findMove()` 는 `const` 이고 이 카탈로그는 서비스라 여러 스레드가 동시에 읽는다. 비어 있을 때
+ *          `const_cast` 로 자기 자신을 고쳐 폴백을 심으면 읽기인 줄 알고 부른 함수가 **벡터를 키우고**, `clear()` 가 아무
+ *          뜻도 없어진다(다음 조회가 곧바로 다시 채운다).
  */
 SW_TEST_CASE( GameFrameworkTest, SpeciesCatalogLookupDoesNotReseedItself )
 {
@@ -2776,6 +2745,13 @@ SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeLevelIsCapped )
     SW_EXPECT_TRUE( wild._expNext > 0 );
 }
 
+/**
+ * @brief [GameFrameworkTest] 붙지 않은 게임 서비스는 nullptr 로 돌아온다 — 죽지 않는다
+ * @details `game::getService<T>()` 의 실패 자리에 `SW_ASSERT( false )` 를 두면, `SW_ASSERT` 는 Debug 에서 디버거 브레이크이고
+ *          Debug 밖에서는 사라지므로 "없으면 nullptr" 이라는 계약이 **Debug 에서만 프로세스를 죽이는** 계약이 된다 — 호출하는 자리의
+ *          `== nullptr` 가드가 Debug 에서 도달할 수 없다. 짝인 `editor::getService<T>()` 도 조용히 nullptr 을 돌려준다.
+ * @note 이 테스트가 죽으면(단언 실패가 아니라 **프로세스가 사라지면**) 그 단언이 돌아온 것이다.
+ */
 SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking )
 {
     // EngineTest 프로세스에는 게임이 붙어 있지 않다.
@@ -2790,6 +2766,11 @@ SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking 
     SW_EXPECT_TRUE( game::getService<GameData>() == nullptr );
 }
 
+/**
+ * @brief [GameFrameworkTest] 세이브가 말한 기술 슬롯 수를 그대로 잡지 않는다
+ * @details 세이브 파일은 손으로 고칠 수 있고 망가질 수도 있다. 파티 수처럼 `ppCount` 도 잘라 써야 한다 —
+ *          `party0.ppCount=2000000000` 한 줄이 8 GB 짜리 `assign` 이 되어 게임이 그 자리에서 죽는다.
+ */
 SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeMoveSlotCountIsCapped )
 {
     const string savePath = test::makeTempPath( "sw_turnbattle_huge_pp.sav" );
@@ -2858,8 +2839,8 @@ SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_MoveSlotsNeedPpCount )
 
 /**
  * @brief [GameFrameworkTest] 감당할 수 없는 크기의 resize 는 거절한다
- * @details 상한은 `TileMapXmlData` 가 정본이고 로더와 에디터가 이미 그것을 본다. `TileMap::resize`
- *          만 안 보고 있어서, 코드로 맵을 만들 때 `100000 x 100000` 한 줄이 10^10 칸 요청이 됐다.
+ * @details 상한은 `TileMapXmlData` 가 정본이고 로더 · 에디터 · `TileMap::resize` 가 모두 그것을 본다. `resize` 가 안 보면
+ *          코드로 맵을 만들 때 `100000 x 100000` 한 줄이 10^10 칸 요청이 된다.
  */
 SW_TEST_CASE( GameFrameworkTest, TileMap_ResizeBeyondTheTileLimitIsRejected )
 {
@@ -2888,8 +2869,8 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_ResizeBeyondTheTileLimitIsRejected )
 
 /**
  * @brief [GameFrameworkTest] 스냅샷의 오브젝트 하나라도 못 읽으면 복원은 실패다 — 성공이라 하고 반쯤 빈 씬을 남기지 않는다
- * @details 예전에는 못 읽은 자리에서 `break` 하고도 true 를 돌려줬다. 핫 리로드(`ModuleHost::restoreGameState`)는 그것을 믿고 스냅샷을
- *          버리며 저장 막기를 풀었다 — 씬은 이미 비운 뒤라, 컴포넌트 레이아웃이 바뀐 오브젝트부터 뒤가 사라진 채 저장할 수 있었다.
+ * @details 못 읽은 자리에서 `break` 하고도 true 를 돌려주면 핫 리로드(`ModuleHost::restoreGameState`)가 그것을 믿고 스냅샷을
+ *          버리며 저장 막기를 푼다 — 씬은 이미 비운 뒤라, 컴포넌트 레이아웃이 바뀐 오브젝트부터 뒤가 사라진 채 저장할 수 있다.
  */
 SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreThatStopsHalfwayFails )
 {
@@ -2928,8 +2909,8 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreThatStopsHalfwayFails )
 
 /**
  * @brief [GameFrameworkTest] GameData 의 칸은 읽힌다 — 서비스로 묶이고, 다국어 · 입력 맵이 적용되고, 씬 흐름 · 세이브 경로 · 턴제 시작 맵이 그것을 쓴다
- * @details `GameInstanceBase` 는 gamedata 를 읽기만 했다 — 표준 칸 아홉은 읽는 곳이 없었고, 서비스로 묶지 않아 커스텀 칸을 읽는 킷 코드
- *          (`TurnBattleSaveGame` 의 파티 상한)조차 제품에서 늘 기본값이었다. 게임플레이 입력 맵은 읽지도 갱신하지도 않았다.
+ * @details `GameInstanceBase` 가 gamedata 를 읽기만 하고 서비스로 묶지 않으면 커스텀 칸을 읽는 킷 코드(`TurnBattleSaveGame` 의 파티 상한)조차
+ *          제품에서 늘 기본값이고, 표준 칸은 읽는 곳이 없다. 게임플레이 입력 맵도 읽고 갱신해야 한다.
  */
 SW_TEST_CASE( GameFrameworkTest, BootstrapGameDataIsBoundAndApplied )
 {

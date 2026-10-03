@@ -16,7 +16,7 @@ namespace
 {
     /**
      * @brief PCM 16비트 모노 44.1kHz WAV 파일을 하나 만듭니다.
-     * @details 예전에는 이 27줄이 두 케이스에 글자 그대로 복사돼 있었다.
+     * @details 두 케이스가 같이 쓴다.
      */
     bool writeTestWav( const sw::string& path, uint32 dataByteCount )
     {
@@ -185,8 +185,8 @@ SW_TEST_CASE( AudioSystemTest, WavParsingAndMalformedData )
 
 /**
  * @brief [AudioSystemTest] 볼륨 설정과 클램프를 IAudioSystem 으로 읽어 검증
- * @details 예전에는 getter 가 XAudio2System 에만 있어서 **IAudioSystem 을 든 누구도 읽을 수
- *          없었다** — 그래서 "설정한 값이 실제로 들어갔는지" 를 아무도 확인하지 못했다.
+ * @details getter 가 구현(XAudio2System)에만 있으면 **IAudioSystem 을 든 누구도 읽을 수 없어** "설정한 값이 실제로
+ *          들어갔는지" 를 확인하지 못한다. 그래서 인터페이스로 읽는다.
  */
 SW_TEST_CASE( AudioSystemTest, VolumeControls )
 {
@@ -342,14 +342,12 @@ SW_TEST_CASE( AudioSystemTest, MultithreadedAudioDecodeAndPlayback )
  *          **먼저** 내리므로, `XAudio2System::shutdown()` 이 도는 동안 워커가 아직
  *          `playDecodedClipTask` 안에 있을 수 있다.
  *
- *          그런데 `shutdown()` 만 `_voiceMutex` 를 잡지 않고 보이스 목록을 훑었다 —
- *          `_voiceMutex` 의 주석이 처음부터 "보이스를 지킨다" 고 적고 있었는데 여기만 어겼다.
- *          워커의 `push_back` 이 `_listActiveVoice` 를 재할당하면 그 순회 참조가 그대로
- *          **해제된 메모리**를 가리킨다. 게다가 뒤늦게 잠금을 얻은 워커는 이미 `Release()` 한
- *          `_pXAudio` 로 보이스를 만들려 든다.
+ *          `shutdown()` 도 `_voiceMutex` 를 잡고 보이스 목록을 훑어야 한다. 잡지 않으면 워커의 `push_back` 이
+ *          `_listActiveVoice` 를 재할당할 때 그 순회 참조가 **해제된 메모리**를 가리킨다. 그리고 뒤늦게 잠금을 얻은
+ *          워커가 이미 `Release()` 한 `_pXAudio` 로 보이스를 만들려 들면 안 된다.
  *
- *          바로 위 `MultithreadedAudioDecodeAndPlayback` 은 `waitAll()` 을 **먼저** 부르고
- *          내려서 이 구간을 통째로 비껴갔다 — 그래서 오래 안 보였다. 여기서는 일부러 안 기다린다.
+ *          바로 위 `MultithreadedAudioDecodeAndPlayback` 은 `waitAll()` 을 **먼저** 부르고 내려서 이 구간을
+ *          통째로 비껴간다. 여기서는 일부러 안 기다린다.
  *          (객체 자체는 `waitAll()` 뒤에 부순다. 그건 다른 이야기이고 엔진도 그 순서다.)
  */
 SW_TEST_CASE( AudioSystemTest, ShutdownWhileDecodeTasksAreStillInFlight )
@@ -395,8 +393,8 @@ SW_TEST_CASE( AudioSystemTest, ShutdownWhileDecodeTasksAreStillInFlight )
 
 /**
  * @brief [AudioSystemTest] 부동소수 · 확장형(24 비트 다채널) WAV 도 디코드된다
- * @details 파서가 `WAVE_FORMAT_PCM` 태그만 받아, DAW 가 흔히 내보내는 부동소수 · 확장형 WAV 가 "디코드 실패" 경고 하나만 남기고 소리가
- *          나지 않았다. 재생은 비동기라 결과를 볼 수 없어 `preload`(동기 디코드)로 잰다. 소리를 내지 않는 구성(Null)은 파일이 있는지만 본다.
+ * @details 파서가 `WAVE_FORMAT_PCM` 태그만 받으면 DAW 가 흔히 내보내는 부동소수 · 확장형 WAV 가 "디코드 실패" 경고 하나만 남기고 소리가
+ *          나지 않는다. 재생은 비동기라 결과를 볼 수 없어 `preload`(동기 디코드)로 잰다. 소리를 내지 않는 구성(Null)은 파일이 있는지만 본다.
  */
 SW_TEST_CASE( AudioSystemTest, FloatAndExtensibleWavsDecode )
 {

@@ -61,7 +61,7 @@ namespace
 
 /**
  * @brief [WorldUiTest] HP 바는 채움 · 흔적 · 바탕 세 조각을 겹치지 않게 그리고, 맞으면 채움이 바로 줄고 흔적이 따라 줄며, 차오를 때는 흔적이 없다
- * @details 예전 HP 바는 비율 셋을 보간하기만 하고 그리는 곳이 없었다(`_hpRatio` 는 시작 뒤 한 번도 바뀌지 않았다). 지금은 참 비율(`setTargetRatio`)이 입력이고
+ * @details 참 비율(`setTargetRatio`)이 입력이고
  *          채움은 줄 때 바로 · 늘 때 차오르며, 흔적은 채움까지 줄어든다. 조각은 [0, hp] · [hp, remain] · [remain, 1] 이라 겹치지 않는다 — 같은 깊이의
  *          반투명 조각이 겹치면 순서를 카메라 거리 정렬에 맡기게 된다. 숨기거나 소유 오브젝트를 끄면 조각도 숨는다.
  */
@@ -140,7 +140,7 @@ SW_TEST_CASE( WorldUiTest, HPBarDrawsFillTrailAndBackgroundWithoutOverlap )
 
 /**
  * @brief [WorldUiTest] 데미지 숫자는 값의 자릿수마다 글리프 아틀라스의 프레임을 보이고, 남는 자리는 숨기며, 알파는 수명에 따라 흐려진다
- * @details 예전 데미지 UI 는 수명 · 알파 · 떠오름만 계산하고 그리지 않았고 값을 넣는 세터도 없었다. 글리프 배치(칸 · 순서)는 생성 스크립트가 쓴 클립
+ * @details 글리프 배치(칸 · 순서)는 생성 스크립트가 쓴 클립
  *          (`engine/textures/ui/digits.sprite.json`, 프레임 0..9 숫자 · 10 '-')에만 있고 컴포넌트는 프레임 번호만 안다. 자릿수가 바뀌어도 구조 변경
  *          없이 자리를 숨기고 보인다 — 틱 중에 값을 바꿔도 된다.
  */
@@ -209,7 +209,7 @@ SW_TEST_CASE( WorldUiTest, DamageNumberShowsItsDigitsFromTheGlyphAtlas )
 
 /**
  * @brief [WorldUiTest] 이펙트의 흐림은 같은 오브젝트 스프라이트들의 색 알파에 곱해진다 — 시작할 때의 알파가 기준이다
- * @details 예전에는 `_currentAlpha` 를 계산만 하고 읽는 곳이 없었다(`getCurrentAlpha` 호출 0). 반투명으로 만든 스프라이트(알파 0.8)는 0.8 에서 0 으로
+ * @details 흐림은 계산만으로 끝나지 않고 스프라이트 색에 실려야 한다. 반투명으로 만든 스프라이트(알파 0.8)는 0.8 에서 0 으로
  *          흐려져야 한다 — 흐림을 그대로 넣으면 시작 순간 불투명으로 튄다. 색은 GPU 인스턴스 칸으로 가므로 배치는 그대로다.
  */
 SW_TEST_CASE( WorldUiTest, EffectFadesTheSpritesOfItsObject )
@@ -316,7 +316,7 @@ SW_TEST_CASE( WorldUiTest, DamageNumberKeepsItsLifeAfterTheStateIsReadAgain )
 
 /**
  * @brief [WorldUiTest] 플레이 중에 글리프 클립 경로를 바꾸면 데미지 숫자가 새 클립의 프레임으로 다시 그린다
- * @details 클립은 `onBeginPlay` 에서만 열렸다 — 인스펙터로 경로를 고치거나 에셋 핫 리로드가 그 칸을 알려도(`onPropertyChanged`) 옛 클립 · 옛 아틀라스가 남았다.
+ * @details 클립을 `onBeginPlay` 에서만 열면 인스펙터로 경로를 고치거나 에셋 핫 리로드가 그 칸을 알려도(`onPropertyChanged`) 옛 클립 · 옛 아틀라스가 남는다.
  */
 SW_TEST_CASE( WorldUiTest, DamageNumberReopensItsGlyphClipWhenThePathChanges )
 {

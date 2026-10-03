@@ -95,12 +95,12 @@ SW_TEST_CASE( GameModeStateMachineTest, Lifecycle )
 
 /**
  * @brief [GameModeStateMachineTest] 핸들러가 `onExit` 안에서 **자신을 해제**해도 살아남는다
- * @details 표가 `shared_ptr` 로 핸들러를 쥐는데, 부르는 자리가 전부 반복자나 생포인터를 썼다.
- *          핸들러가 `onExit` 안에서 자신을 해제하면 (1) 들고 있던 반복자가 죽은 채로
+ * @details 표가 `shared_ptr` 로 핸들러를 쥔다. 부르는 자리가 반복자나 생포인터를 쓰면
+ *          핸들러가 `onExit` 안에서 자신을 해제할 때 (1) 들고 있던 반복자가 죽은 채로
  *          `erase( it )` 에 들어가고 (2) 표가 쥔 **마지막 참조**가 사라져 아직 실행 중인
  *          `onExit` 의 `this` 가 파괴된다. 모드를 떠나면서 자기 핸들러를 정리하는 것은
  *          이상한 일이 아니다.
- * @note 고치기 전이라면 ASAN 이 해제 후 사용으로 잡거나 그 자리에서 죽는다.
+ * @note 부르는 동안 참조를 잡지 않으면 ASAN 이 해제 후 사용으로 잡거나 그 자리에서 죽는다.
  */
 SW_TEST_CASE( GameModeStateMachineTest, HandlerCanUnregisterItselfWhileExiting )
 {
@@ -119,7 +119,7 @@ SW_TEST_CASE( GameModeStateMachineTest, HandlerCanUnregisterItselfWhileExiting )
             ++_exitCount;
             if ( _pFsm != nullptr )
                 _pFsm->unregisterHandler( _mode );
-            // 표에서 떨어진 **뒤에** 자기 멤버를 읽는다 — 고치기 전이라면 여기서 이미 죽었다.
+            // 표에서 떨어진 **뒤에** 자기 멤버를 읽는다 — 상태를 바로 파괴하면 여기서 이미 죽는다.
             _valueReadAfterRemoving = _exitCount;
         }
     };
@@ -139,7 +139,7 @@ SW_TEST_CASE( GameModeStateMachineTest, HandlerCanUnregisterItselfWhileExiting )
         SW_EXPECT_TRUE( fsm.getCurrentHandler() == nullptr );
     }
 
-    // 2) 바깥에서 뗄 때도 마찬가지다 — 예전에는 죽은 반복자로 `erase` 했다.
+    // 2) 바깥에서 뗄 때도 마찬가지다 — 죽은 반복자로 `erase` 하면 안 된다.
     {
         sw::GameModeStateMachine fsm;
         auto                     handler = sw::make_shared<SelfRemovingHandler>();

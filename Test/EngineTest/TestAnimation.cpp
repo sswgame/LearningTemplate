@@ -308,8 +308,8 @@ SW_TEST_CASE( AnimationTest, DualQuaternionKeepsRotationOfScaledMatrix )
 
 /**
  * @brief [AnimationTest] BlendSpace1D 가 표본 사이에서도 스케일을 유지하는지 검증
- * @details 예전에는 표본 지점에서만 원본 포즈를 돌려주고 그 사이에서는 스케일이 1 로 주저앉아,
- *          파라미터를 조금 옮기는 것만으로 포즈가 튀었다.
+ * @details 표본 사이의 블렌드가 스케일을 섞지 않으면 그 사이에서 스케일이 1 로 주저앉아,
+ *          파라미터를 조금 옮기는 것만으로 포즈가 튄다.
  */
 SW_TEST_CASE( AnimationTest, BlendSpace1DKeepsScaleBetweenSamples )
 {
@@ -332,8 +332,8 @@ SW_TEST_CASE( AnimationTest, BlendSpace1DKeepsScaleBetweenSamples )
 
 /**
  * @brief [AnimationTest] BlendSpace2D 가 33번째 이후 표본도 쓰는지 검증
- * @details 예전에는 가중치를 `float[32]` 에 담고 표본 수를 그 길이로 min 해서, 33번째부터
- *          아무 말 없이 버렸다. 목표 바로 옆에 둔 표본이 33번째면 결과가 통째로 달라진다.
+ * @details 가중치를 고정 길이 배열(`float[32]`)에 담고 표본 수를 그 길이로 min 하면 33번째부터
+ *          아무 말 없이 버려진다. 목표 바로 옆에 둔 표본이 33번째면 결과가 통째로 달라진다.
  */
 SW_TEST_CASE( AnimationTest, BlendSpace2DUsesSamplesBeyondThirtyTwo )
 {
@@ -352,7 +352,7 @@ SW_TEST_CASE( AnimationTest, BlendSpace2DUsesSamplesBeyondThirtyTwo )
 /**
  * @brief [AnimationTest] Skeleton 이 아직 없는 본을 부모로 받지 않는지 검증
  * @details `updateCharacterSpaceTransforms` 는 배열을 앞에서 뒤로 한 번만 훑는다. 부모가 뒤에
- *          있으면 그 본을 루트로 취급해 계층이 통째로 사라지는데, 예전에는 로그조차 없었다.
+ *          있으면 그 본을 루트로 취급해 계층이 통째로 사라진다 — 그래서 받지 않고 알린다.
  */
 SW_TEST_CASE( AnimationTest, SkeletonRejectsParentThatDoesNotExistYet )
 {
@@ -402,7 +402,7 @@ SW_TEST_CASE( AnimationTest, AnimPlayerClampsNegativeSpeed )
 
 /**
  * @brief [AnimationTest] 클립이 없는 애니메이터는 프레임 하나에 머문다 — 재생 · 틱 · 프레임 지정이 범위를 벗어나지 않는다
- * @details 프레임 수는 이제 손으로 넣지 않고 스프라이트의 클립에서 온다. 붙은 스프라이트 · 클립이 없으면 구간은 프레임 하나다.
+ * @details 프레임 수는 손으로 넣지 않고 스프라이트의 클립에서 온다. 붙은 스프라이트 · 클립이 없으면 구간은 프레임 하나다.
  */
 SW_TEST_CASE( AnimationTest, SpriteAnimatorComponent_PlaybackAndFrameSafety )
 {
@@ -427,8 +427,8 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorComponent_PlaybackAndFrameSafety )
 
 /**
  * @brief [AnimationTest] 재생 중에 그래프 경로를 바꾸면 애니메이터가 새 그래프를 읽는다 — 지금 애니메이션이 새 그래프에 있으면 잇고, 없으면 새 첫 애니메이션으로
- * @details 그래프는 `onBeginPlay` 에서만 열렸다. 인스펙터로 경로를 고치거나 그래프 파일을 고쳐 에셋 핫 리로드가 그 칸을 알려도(`onPropertyChanged`, 값이
- *          같아도) 옛 그래프 · 옛 애니메이션 목록이 남아, "끝나면 다음" 이 옛 그래프를 따라갔다.
+ * @details 그래프를 `onBeginPlay` 에서만 열면 인스펙터로 경로를 고치거나 그래프 파일을 고쳐 에셋 핫 리로드가 그 칸을 알려도(`onPropertyChanged`, 값이
+ *          같아도) 옛 그래프 · 옛 애니메이션 목록이 남아, "끝나면 다음" 이 옛 그래프를 따라간다.
  */
 SW_TEST_CASE( AnimationTest, SpriteAnimatorReopensItsGraphWhenThePathChanges )
 {
@@ -451,7 +451,7 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorReopensItsGraphWhenThePathChanges )
     SW_EXPECT_EQUAL( string( "Jump" ), pAnimator->getCurrentAnimation() );
     SW_EXPECT_TRUE( pAnimator->isPlaying() );
 
-    // 같은 경로의 파일이 바뀌었다(핫 리로드 알림은 값이 같다) — 지금 애니메이션(Jump)이 남아 있으면 그대로 잇는다.
+    // 같은 경로의 파일이 바뀐다(핫 리로드 알림은 값이 같다) — 지금 애니메이션(Jump)이 남아 있으면 그대로 잇는다.
     SW_ASSERT_TRUE( writeNamedGraph( graphB, { "Land", "Jump" } ) );
     pAnimator->setFrame( 0 );
     SW_ASSERT_TRUE( writeGraphPath( pAnimator, graphB ) );
@@ -461,8 +461,7 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorReopensItsGraphWhenThePathChanges )
 
 /**
  * @brief [AnimationTest] 애니메이터의 프레임 수 · 프레임마다의 시간 · 반복은 스프라이트 클립에서 오고, 넘긴 프레임은 스프라이트의 UV 사각형이 된다
- * @details 예전 애니메이터는 프레임 수를 손으로 받았고(`setTotalFrames`), 넘긴 프레임을 "<애니>-<프레임>" 글로 스프라이트의 읽는 곳 없는 칸에
- *          적었다 — 화면은 그대로였다. 지금은 이름이 클립의 구간을 고르고(`run` = 프레임 2..4), 프레임마다 그 프레임의 시간(ms)만큼 머물며,
+ * @details 이름이 클립의 구간을 고르고(`run` = 프레임 2..4), 프레임마다 그 프레임의 시간(ms)만큼 머물며,
  *          스프라이트가 그 프레임의 UV 사각형을 GPU 인스턴스 칸에 싣는다. 구간이 반복이 아니면 마지막 프레임에서 멈춘다.
  */
 SW_TEST_CASE( AnimationTest, SpriteAnimatorTakesFrameCountAndTimingFromTheClip )
@@ -514,7 +513,7 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorTakesFrameCountAndTimingFromTheClip )
     SW_EXPECT_EQUAL( 1, pAnimator->getCurrentFrame() );
     SW_EXPECT_EQUAL( 3, pSprite->getClipFrame() );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pSprite->getSpriteInstanceData().getUvRect()._x, 1e-4f );
-    // 프레임 3 은 300 ms — 200 ms 로는 그대로다(프레임 속도 10fps 였다면 넘어갔다).
+    // 프레임 3 은 300 ms — 200 ms 로는 그대로다(고정 프레임 속도 10fps 로 넘기면 넘어간다).
     pAnimator->onTick( 0.2f );
     SW_EXPECT_EQUAL( 3, pSprite->getClipFrame() );
     // 끝까지 가면 반복하지 않고 마지막 프레임(4)에서 멈춘다.
@@ -637,8 +636,8 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
 
 /**
  * @brief [AnimationTest] BlendSpace2D 는 표본 범위 밖 파라미터를 범위로 가둬, 첫 표본이 아니라 가장 가까운 모서리를 낸다
- * @details 1/d² 를 그대로 더해 절대값 1e-6 과 견줘, cm/s 단위(표본 0~600)에서 대시 2500 이면 합이 그보다 작아 **처음 넣은 표본**(Idle)으로
- *          튀었다. 언리얼 블렌드 스페이스처럼 파라미터를 범위로 가둔다.
+ * @details 1/d² 를 그대로 더해 절대값 1e-6 과 견주면 cm/s 단위(표본 0~600)에서 대시 2500 일 때 합이 그보다 작아 **처음 넣은 표본**(Idle)으로
+ *          튄다. 언리얼 블렌드 스페이스처럼 파라미터를 범위로 가둔다.
  */
 SW_TEST_CASE( AnimationTest, BlendSpace2DClampsFarParametersToTheSampleRange )
 {
@@ -655,7 +654,7 @@ SW_TEST_CASE( AnimationTest, BlendSpace2DClampsFarParametersToTheSampleRange )
 
 /**
  * @brief [AnimationTest] 오래 돈 반복 재생도 시간이 한 바퀴 안에 있어 프레임마다 앞으로 간다
- * @details 시간이 끝없이 커져 10^6 초 근처에서는 0.01 초를 더해도 float32 값이 움직이지 않았다(애니메이션이 멈춘다).
+ * @details 시간이 끝없이 커지면 10^6 초 근처에서는 0.01 초를 더해도 float32 값이 움직이지 않는다(애니메이션이 멈춘다).
  */
 SW_TEST_CASE( AnimationTest, AnimPlayerLongLoopKeepsAdvancing )
 {

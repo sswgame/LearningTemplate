@@ -17,8 +17,7 @@ using namespace sw;
 // ------------------------------------------------------------------------------
 // 1) DialogueGraphTest — 핀 번호 계약, 노드 타입 왕복, 그래프 따라가기
 //
-//    이 애셋에는 테스트가 하나도 없었다. 그런데 여기서 잘못되면 증상이 "가끔 다른 대사가
-//    나온다" 라서, 재현도 추적도 가장 어려운 종류다.
+//    여기서 잘못되면 증상이 "가끔 다른 대사가 나온다" 라서, 재현도 추적도 가장 어려운 종류다.
 // ------------------------------------------------------------------------------
 
 namespace
@@ -116,8 +115,8 @@ namespace
 
 /**
  * @brief [DialogueGraphTest] 핀 번호 인코딩·디코딩이 서로 되돌리는지 검증
- * @details 핀 번호는 **디스크에 저장되는 계약**이다. 예전에는 에디터가 인코딩을, 애셋이 디코딩을
- *          각자 적고 있었다 — 한쪽만 바뀌면 대화가 조용히 엉뚱한 분기를 탄다.
+ * @details 핀 번호는 **디스크에 저장되는 계약**이다. 에디터의 인코딩과 애셋의 디코딩을 각자 적으면 한쪽만 바뀔 때
+ *          대화가 조용히 엉뚱한 분기를 탄다.
  */
 SW_TEST_CASE( DialogueGraphTest, PinEncodeAndDecodeRoundTrip )
 {
@@ -209,8 +208,7 @@ SW_TEST_CASE( DialogueGraphTest, FollowsChoiceAndDefaultPins )
 
 /**
  * @brief [DialogueGraphTest] JSON 왕복과 loadFromFile 이 같은 결과를 내는지 검증
- * @details loadFromFile 은 읽어 둔 문서를 다시 문자열로 덤프해 parseJson 에 넘기고 있었다.
- *          같은 JSON 을 두 번 파싱하던 것을 한 번으로 줄였으므로 결과가 같음을 못박아 둔다.
+ * @details loadFromFile 은 읽어 둔 문서를 다시 문자열로 덤프하지 않고 한 번만 파싱한다. 두 경로의 결과가 같음을 못박아 둔다.
  */
 SW_TEST_CASE( DialogueGraphTest, JsonRoundTripAndLoadFromFileAgree )
 {
@@ -237,8 +235,8 @@ SW_TEST_CASE( DialogueGraphTest, JsonRoundTripAndLoadFromFileAgree )
 
 /**
  * @brief [DialogueGraphTest] 로컬라이즈 키가 아닌 원문은 그대로 돌려주는지 검증
- * @details 이 조회는 **키가 아닐 수도 있는 텍스트**로 물어본다. 예전에는 그 원문으로
- *          `hashed_string` 을 만들어 물어서, 대사가 intern 아레나에 영구히 남았다.
+ * @details 이 조회는 **키가 아닐 수도 있는 텍스트**로 물어본다. 그 원문으로 `hashed_string` 을 만들어 물으면
+ *          대사가 intern 아레나에 영구히 남는다.
  */
 SW_TEST_CASE( DialogueGraphTest, PlainTextResolvesToItself )
 {
