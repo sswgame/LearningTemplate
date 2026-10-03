@@ -43,9 +43,9 @@ namespace sw
 
         // 깊이 텍스처는 DEPTH|STENCIL 두 aspect 뷰로는 샘플 디스크립터를 못 만든다. DEPTH 단일 aspect 뷰
         // (_sampleView) 를 쓰고, 샘플 시점 레이아웃(prepareTextureForShaderRead 가 옮기는
-        // DEPTH_STENCIL_READ_ONLY_OPTIMAL) 을 디스크립터에도 같이 적는다. 예전에는 여기서 그냥 거부했다.
-        // 그러면 g_ShadowMapIndex 가 INVALID 가 되고 bindless 배열 범위 밖 읽기가 0 을 반환해, Vulkan 만
-        // 모든 픽셀이 "완전 그림자"(x0.56) 로 어두웠다(검증 에러 없음, 큐브는 다 보인다).
+        // DEPTH_STENCIL_READ_ONLY_OPTIMAL) 을 디스크립터에도 같이 적는다. 주의: 여기서 거부하면 g_ShadowMapIndex 가
+        // INVALID 가 되고 bindless 배열 범위 밖 읽기가 0 을 반환해, Vulkan 만 모든 픽셀이 "완전 그림자"(x0.56) 로
+        // 어두워진다(검증 에러 없음, 큐브는 다 보인다).
         const bool        bDepth       = pResolved->_bDepthStencil != SW_FALSE;
         const VkImageView sampleView   = bDepth ? pResolved->_sampleView : pResolved->_imageView;
         const uint32      sampleLayout = static_cast<uint32>( bDepth ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
@@ -80,7 +80,7 @@ namespace sw
             return kInvalidDescriptorIndex;
 
         // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer · 오프셋은 슬롯 세트를 쓰는 순간(flushSlotSet)에 푼다.
-        // 링 상수버퍼의 프레임 오프셋도 그때 더한다. 예전에는 여기서 프레임 슬롯마다 세트를 만들었다.
+        // 링 상수버퍼의 프레임 오프셋도 그때 더한다.
         std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
         return allocateFreeListIndex( _pDevice->_listBindlessSourceBuffer, _pDevice->_listBindlessFree, buffer );
     }

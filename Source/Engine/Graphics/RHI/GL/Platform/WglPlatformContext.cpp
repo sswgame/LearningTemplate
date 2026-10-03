@@ -184,7 +184,7 @@ namespace sw
         if ( _pDeviceContext == nullptr )
             return;
 
-        // 멀티 뷰포트가 DC 를 바꿨을 수 있으니 스왑 직전에 한 번 더 되찾는다(예전 코드와 같다).
+        // 멀티 뷰포트가 DC 를 바꿨을 수 있으니 스왑 직전에 한 번 더 되찾는다.
         reacquireForFrame();
         SwapBuffers( static_cast<HDC>( _pDeviceContext ) );
     }

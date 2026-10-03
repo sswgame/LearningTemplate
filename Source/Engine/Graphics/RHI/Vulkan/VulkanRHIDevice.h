@@ -24,9 +24,9 @@ namespace sw
      * @struct VulkanDescriptorPoolSet
      * @brief 커맨드 버퍼 하나가 슬롯 세트(set 0)를 할당받는 풀 묶음입니다. 언리얼 `FVulkanDescriptorPoolSetContainer` 와 같은 자리입니다.
      * @details VkDescriptorPool 은 외부 동기화 대상이라, 여러 리스트가 여러 스레드에서 동시에 기록하려면 **풀도 리스트마다
-     *          따로**여야 합니다(커맨드 풀과 같은 제약). 예전에는 프레임 링 슬롯마다 풀 체인 하나를 두고 디바이스 전역
-     *          뮤텍스로 잠갔습니다. 바인딩이 바뀌는 드로우마다 락이 걸려 레벨 병렬 기록이 직렬화됐습니다.
-     *          이제 커맨드 버퍼 쌍(VulkanCommandListEntry)이 자기 풀 묶음을 들고 다니고, 그 버퍼가 GPU 펜스를 통과해
+     *          따로**여야 합니다(커맨드 풀과 같은 제약). 디바이스 전역 풀을 뮤텍스로 잠그면 바인딩이 바뀌는 드로우마다
+     *          락이 걸려 레벨 병렬 기록이 직렬화됩니다.
+     *          그래서 커맨드 버퍼 쌍(VulkanCommandListEntry)이 자기 풀 묶음을 들고 다니고, 그 버퍼가 GPU 펜스를 통과해
      *          재사용 풀로 돌아온 뒤에야 통째로 리셋됩니다. 락이 없습니다. 디바이스 프레임 스트림은 링 슬롯마다 하나를 씁니다.
      *          풀 하나가 차면 다음 풀을 만듭니다(kMaxPoolsPerDescriptorPoolSet 까지).
      */
@@ -78,10 +78,9 @@ namespace sw
     /**
      * @struct VulkanRecordingState
      * @brief "지금 이 커맨드 버퍼에 무엇이 걸려 있나" 입니다. 커맨드 버퍼(=기록 스트림)마다 있어야 하는 상태입니다.
-     * @details 예전에는 이 필드들이 `VulkanRHIDevice` 에 있었습니다. 커맨드 버퍼가 프레임당 하나뿐이라는
-     *          전제에서는 문제가 없었지만, 그 전제 때문에 여러 리스트가 동시에 기록할 수 없었습니다
-     *          (서로의 바인딩 캐시를 덮어씁니다). DX12 의 `D3D12RecordingState` 와 같은 역할이며,
-     *          "기록 상태는 리스트가 소유하고 디바이스는 진짜 전역 자원만 갖는다" 는 구조로 맞춘 것입니다.
+     * @details 디바이스에 두면 여러 리스트가 동시에 기록할 때 서로의 바인딩 캐시를 덮어씁니다.
+     *          DX12 의 `D3D12RecordingState` 와 같은 역할이며, "기록 상태는 리스트가 소유하고 디바이스는
+     *          진짜 전역 자원만 갖는다" 는 구조입니다.
      */
     struct VulkanRecordingState
     {
@@ -323,7 +322,7 @@ namespace sw
         const VulkanBufferRecord* resolveAllocatedBuffer( RHIBufferHandle handle ) const;
         /**
          * @brief 링 상수버퍼의 `slot` 칸에 씁니다. `_bindlessMutex` 를 (읽기로라도) 쥐고 부릅니다.
-         * @details 만들 때 크기를 넘는 쓰기는 자릅니다. 예전에는 그대로 매핑 · 복사해 다음 칸(다음 프레임의 값)까지 덮었습니다.
+         * @details 만들 때 크기를 넘는 쓰기는 자릅니다. 자르지 않으면 다음 칸(다음 프레임의 값)까지 덮습니다.
          */
         void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
         /** @brief 링이 넘어온 칸에 옛 값이 남은 상수버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferShadow`). 칸의 펜스를 지난 뒤 부릅니다. */
@@ -448,8 +447,8 @@ namespace sw
 
         /**
          * @brief 텍스처를 `targetLayout` 으로 전이합니다. **확인 · 배리어 · 기록이 한 덩어리입니다.**
-         * @details 예전에는 호출 지점마다 "현재 레이아웃을 읽고 → 배리어를 쏘고 → 레코드를 갱신" 을
-         *          손으로 복사해 뒀습니다(7곳). 병렬 패스 기록에서는 그 셋이 갈라지면 두 스레드가 같은
+         * @details "현재 레이아웃을 읽고 → 배리어를 쏘고 → 레코드를 갱신" 을 호출 지점에서 따로 하지 않습니다.
+         *          병렬 패스 기록에서는 그 셋이 갈라지면 두 스레드가 같은
          *          "이전 레이아웃" 을 보고 각자 배리어를 쏘거나, 한쪽이 이미 바꿔 놓은 뒤라 실제
          *          레이아웃과 기록이 어긋납니다. `vkQueueSubmit` 이 "이 이미지가 X 레이아웃일 것으로
          *          기대했는데 아니다" 로 거부합니다.
@@ -493,14 +492,14 @@ namespace sw
         VkCommandPool _commandPool;         ///< 프레임 버퍼 · 프레임 세그먼트용. 렌더 스레드만 쓴다.
         /**
          * @brief 프레임 밖 일회성 제출(텍스처 업로드 · 리드백 · 초기 버퍼 복사) 전용 풀입니다. `_oneShotMutex` 가 지킵니다.
-         * @details 커맨드 풀은 외부 동기화 대상입니다. 예전에는 게임 · 로더 스레드의 업로드가 렌더 스레드가 프레임 버퍼를 기록하는
-         *          `_commandPool` 에서 할당 · 해제해, 에디터가 없는 빌드에서 스트리밍 텍스처가 프레임 기록과 겹치면 풀이 깨졌습니다.
+         * @details 커맨드 풀은 외부 동기화 대상입니다. 게임 · 로더 스레드의 업로드가 렌더 스레드가 프레임 버퍼를 기록하는
+         *          `_commandPool` 에서 할당 · 해제하면, 스트리밍 텍스처가 프레임 기록과 겹칠 때 풀이 깨집니다.
          */
         VkCommandPool _oneShotCommandPool;
         mutex         _oneShotMutex;
         /**
          * @brief `_graphicsQueue` 를 쓰는 모든 호출(`vkQueueSubmit` · `vkQueueWaitIdle` · `vkQueuePresentKHR` · `vkDeviceWaitIdle`)을 지킵니다.
-         * @details VkQueue 는 외부 동기화 대상입니다. 렌더 스레드의 프레임 제출과 게임 스레드의 일회성 업로드 제출이 락 없이 겹쳤습니다.
+         * @details VkQueue 는 외부 동기화 대상입니다. 렌더 스레드의 프레임 제출과 게임 스레드의 일회성 업로드 제출이 겹칠 수 있습니다.
          */
         mutable mutex _queueMutex;
 
@@ -513,7 +512,7 @@ namespace sw
          * @brief 살아 있는 커맨드 리스트입니다(소유하지 않습니다). 종료할 때 연결을 끊어 줍니다.
          * @details 렌더 그래프가 리스트를 프레임 너머 들고 있으므로 디바이스가 먼저 내려갈 수 있습니다. 끊지 않으면
          *          리스트 소멸자가 죽은 디바이스에 쌍을 반납하려 들고, 쌍의 풀은 새어 검증 레이어가 잡습니다.
-         *          DX12 · DX11 은 이 보호를 갖고 있었고 Vulkan 만 없었습니다.
+         *          DX12 · DX11 도 같은 보호를 둡니다.
          */
         mutex                         _liveCmdListMutex;
         vector<VulkanRHICommandList*> _listLiveCmd;
@@ -525,8 +524,8 @@ namespace sw
         /**
          * @struct StructuredUploadSlot
          * @brief updateStructuredBufferRegions 가 쓰는 프레임 슬롯별 호스트 가시 스테이징(bump 할당)입니다.
-         * @details 예전에는 목적 버퍼에 vkMapMemory 로 직접 썼습니다. GPU 가 직전 프레임을 아직 읽는 중인
-         *          메모리를 CPU 가 덮어써 프레임 간 찢어짐이 남아 있었습니다. 이제 스테이징에 쓰고
+         * @details 목적 버퍼에 vkMapMemory 로 직접 쓰면 GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가
+         *          덮어써 프레임 간 찢어짐이 생깁니다. 그래서 스테이징에 쓰고
          *          vkCmdCopyBuffer 를 프레임 커맨드버퍼에 기록하므로, 복사는 GPU 큐 순서로 앞 프레임의
          *          읽기 뒤 · 이번 프레임의 드로우 앞에 놓입니다(DX12 와 같은 모델). 슬롯은 beginFrame 이
          *          그 슬롯의 펜스를 기다린 뒤에만 다시 쓰이고, 같은 펜스 구간 안에서는 오프셋을 이어 씁니다.

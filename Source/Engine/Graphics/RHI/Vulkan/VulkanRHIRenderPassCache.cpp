@@ -132,7 +132,7 @@ namespace sw
         subpass.pDepthStencilAttachment = bHasDepth ? &depthRef : nullptr;
 
         // 바깥(앞선 제출)의 컬러 쓰기 → 이 패스의 컬러 쓰기. 깊이가 있으면 초기 프래그먼트 테스트 단계도 같이 건다.
-        // 예전엔 자리마다 이 마스크가 달랐다(깊이 없는 패스에도 깊이 단계를 걸거나, 깊이 패스에 빼먹거나).
+        // 이 마스크는 여기 한 곳에서만 정한다(자리마다 적으면 깊이 없는 패스에 깊이 단계를 걸거나 깊이 패스에 빼먹는다).
         VkSubpassDependency dependency{};
         dependency.srcSubpass    = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass    = 0;

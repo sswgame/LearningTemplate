@@ -25,8 +25,8 @@ namespace sw
      * @brief "지금 GL 컨텍스트에 무엇이 걸려 있나" 를 담는 바인딩 캐시 한 자리입니다.
      * @details **다른 백엔드와 달리 이것은 디바이스가 소유합니다. 그게 맞습니다.** DX12 · Vulkan · DX11 은
      *          리스트마다 독립된 기록 스트림(커맨드 리스트 / Deferred Context)을 갖고 기록을 나중에
-     *          재생하므로 캐시도 리스트마다 있어야 합니다. 전역이면 서로의 캐시를 덮습니다(DX11 에서
-     *          실제로 그 일이 일어났습니다). OpenGL 은 커맨드 버퍼가 없는 **스레드 종속 상태 머신**이고
+     *          재생하므로 캐시도 리스트마다 있어야 합니다. 전역이면 서로의 캐시를 덮습니다.
+     *          OpenGL 은 커맨드 버퍼가 없는 **스레드 종속 상태 머신**이고
      *          `OpenGLRHICommandList` 는 호출을 즉시 GL API 로 흘려보냅니다. 실제 상태가 하나뿐이므로
      *          그것을 비추는 캐시도 하나여야 합니다. 리스트마다 두면 캐시가 진짜 GL 상태와 어긋납니다.
      *          (그래서 GL 은 `_bParallelCommandRecording = 0` 입니다.)
@@ -120,10 +120,10 @@ namespace sw
         /** @brief 백엔드 이름 문자열을 반환합니다. */
         const utf8* getBackendName() const override { return "OpenGL (glad 4.6 Core)"; }
 
-        /** @brief 플랫폼 디바이스 컨텍스트(HDC · Display* · NSView)를 반환합니다. */
+        /** @brief 플랫폼 디바이스 컨텍스트(HDC · Display*)를 반환합니다. */
         void* getNativeDevice() const override { return _pHDC; }
 
-        /** @brief 플랫폼 렌더 컨텍스트(HGLRC · GLXContext · NSOpenGLContext)를 반환합니다. */
+        /** @brief 플랫폼 렌더 컨텍스트(HGLRC · GLXContext)를 반환합니다. */
         void* getNativeContext() const override { return _pHRC; }
 
         bool requiresExclusiveContextThread() const override { return true; }
@@ -359,10 +359,9 @@ namespace sw
     /**
      * @struct ScopedOpenGLContext
      * @brief 배타적 GL 컨텍스트 바인딩이 필요한 작업 동안 컨텍스트를 가져오고 놓는 RAII 가드입니다.
-     * @details 컨텍스트가 **이미 이 스레드에 current 면 아무것도 하지 않습니다.** 예전에는 무조건 바인딩하고
-     *          무조건 풀어서, 렌더 스레드(또는 디바이스를 초기화한 스레드)가 걸어 둔 바인딩을 첫
-     *          createTexture2D 가 지워 버렸습니다. 그 뒤의 createConstantBuffer 는 가드 없이 glGenBuffers 를
-     *          불러 0 을 받았습니다. 앱에서는 beginFrame 이 매 프레임 다시 바인딩해 가려졌고 RHITest 에서 드러났습니다.
+     * @details 컨텍스트가 **이미 이 스레드에 current 면 아무것도 하지 않습니다.** 주의: 무조건 바인딩하고 무조건
+     *          풀면 렌더 스레드(또는 디바이스를 초기화한 스레드)가 걸어 둔 바인딩을 가드 하나가 지워, 뒤이은 가드 없는
+     *          glGen* 이 0 을 받습니다. 앱에서는 beginFrame 이 매 프레임 다시 바인딩해 가려지고 RHITest 에서만 드러납니다.
      */
     struct ScopedOpenGLContext
     {
@@ -376,7 +375,7 @@ namespace sw
             if ( _pDevice != nullptr && _pDevice->requiresExclusiveContextThread() && _pDevice->isGraphicsContextCurrent() == false )
             {
                 // **기다려서** 가져온다. 한 번 시도하고 포기하면 `_bNeedsUnbind` 만 false 가 되고 본문은
-                // 그대로 실행돼서, 컨텍스트 없이 glGen* 이 나가 리소스가 조용히 만들어지지 않았다.
+                // 그대로 실행돼서, 컨텍스트 없이 glGen* 이 나가 리소스가 조용히 만들어지지 않는다.
                 // 렌더 워커가 프레임 끝마다 놓으므로 차례를 기다리는 편이 맞다.
                 _bNeedsUnbind = _pDevice->acquireGraphicsContextBlocking();
             }

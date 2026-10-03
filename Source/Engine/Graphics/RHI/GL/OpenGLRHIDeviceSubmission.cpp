@@ -91,8 +91,8 @@ namespace sw
             _platformContext->reacquireForFrame();
 
         // 백버퍼(FBO 0) 바인딩과 클리어는 여기서 하지 않는다. beginFrame 은 프레임 수명주기(GL 은
-        // 컨텍스트 확보)만 맡고, 백버퍼 타깃팅은 beginRenderPass(핸들 0) 가 명시적으로 한다
-        // (docs/05_RHI_FrameContract.md S2). 뷰포트만 창 크기 전체로 되돌려 둔다.
+        // 컨텍스트 확보)만 맡고, 백버퍼를 바인딩 · 클리어하는 것은 RenderThread 가 여는 명시적
+        // beginRenderPass(핸들 0) 뿐이다. 뷰포트만 창 크기 전체로 되돌려 둔다.
         (void)clearColor;
         glViewport( 0, 0, static_cast<GLsizei>( _width ), static_cast<GLsizei>( _height ) );
 
@@ -125,7 +125,7 @@ namespace sw
         }
 
         // 스왑 직전 컨텍스트 되찾기는 플랫폼이 필요할 때만 한다(WGL 은 ImGui 멀티 뷰포트 때문에
-        // 반드시 필요하고, GLX · NSGL 은 예전에도 하지 않았다).
+        // 반드시 필요하고, GLX 는 하지 않는다).
         if ( _platformContext != nullptr )
             _platformContext->present();
         _releaseQueue.tickFrame();

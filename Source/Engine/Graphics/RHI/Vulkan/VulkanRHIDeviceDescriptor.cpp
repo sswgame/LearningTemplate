@@ -362,7 +362,7 @@ namespace sw
 
     VkDescriptorPool VulkanRHIDevice::createSlotPool()
     {
-        // 세트 하나가 b/t/u 슬롯을 모두 걸 수 있게 잡는다. 예전에는 SSBO 를 세트당 6개로 잡아 컴퓨트 패스가 많으면 maxSets 전에 바닥났다.
+        // 세트 하나가 b/t/u 슬롯을 모두 걸 수 있게 잡는다. 종류별로 덜 잡으면 컴퓨트 패스가 많을 때 maxSets 전에 바닥난다.
         VkDescriptorPoolSize arrPoolSize[] = {
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,                             kSlotSetsPerPool * shaderslot::kConstantBufferSlotCount},
             {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, kSlotSetsPerPool * ( shaderslot::kSrvSlotCount + shaderslot::kComputeUavSlotCount )},

@@ -26,8 +26,7 @@ namespace sw
     RHIPipelineStateHandle VulkanRHIResource::createPipelineState( const RHIPipelineStateDesc& desc )
     {
         // 서술체 해석(진입점 기본값 · define · 깊이 전용 판정 · RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
-        // 예전에는 여기서 직접 읽으면서 define 을 아예 안 옮겨, Vulkan 만 SW_FORWARD · 머티리얼 퍼뮤테이션 · SW_VIEWMODE_UNLIT 을
-        // 컴파일러에 넘긴 적이 없었다. 네 곳에 복사된 규칙은 한 곳만 빠져도 그렇게 조용히 어긋난다.
+        // 백엔드가 desc 를 직접 읽으면 define(SW_FORWARD · 머티리얼 퍼뮤테이션 · SW_VIEWMODE_UNLIT)을 빠뜨려도 조용히 어긋난다.
         const RHIGraphicsShaderRequest request         = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_Vulkan );
         const ShaderCompileDesc&       vsDesc          = request._vertex;
         const ShaderCompileDesc&       psDesc          = request._pixel;
@@ -68,8 +67,8 @@ namespace sw
         vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         vertShaderStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
         vertShaderStageInfo.module = vertShaderModule;
-        // 컴파일에 쓴 진입점과 같은 이름이어야 한다. 예전에는 "VSMain" 으로 박혀 있어 파이프라인 XML 이 다른 진입점을
-        // 쓰는 순간 Vulkan 만 파이프라인 생성에 실패할 자리였다(desc 는 이 함수가 끝날 때까지 살아 있다).
+        // 컴파일에 쓴 진입점과 같은 이름이어야 한다. "VSMain" 으로 박으면 파이프라인 XML 이 다른 진입점을 쓰는 순간
+        // Vulkan 만 파이프라인 생성에 실패한다(desc 는 이 함수가 끝날 때까지 살아 있다).
         vertShaderStageInfo.pName = vsDesc._entryPoint.c_str();
 
         VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
@@ -178,8 +177,8 @@ namespace sw
         depthStencil.sType            = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         depthStencil.depthTestEnable  = desc._bEnableDepthTest ? VK_TRUE : VK_FALSE;
         depthStencil.depthWriteEnable = ( depthStencil.depthTestEnable != VK_FALSE && desc._bEnableDepthWrite ) ? VK_TRUE : VK_FALSE;
-        // LessEqual — DX11 · DX12 와 같다. 예전에는 Vulkan · GL 만 Less 여서, 깊이 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 **두 백엔드에서만
-        // 모두 탈락**했다(그리고 같은 깊이의 겹친 면은 백엔드마다 먼저 그린 것 · 나중 그린 것이 갈렸다).
+        // LessEqual — 네 백엔드가 같다. Less 로 두면 깊이 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 **모두 탈락**하고,
+        // 같은 깊이의 겹친 면은 백엔드마다 먼저 그린 것 · 나중 그린 것이 갈린다.
         depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
         depthStencil.depthBoundsTestEnable = VK_FALSE;
         depthStencil.stencilTestEnable     = VK_FALSE;
@@ -239,8 +238,7 @@ namespace sw
         csInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         csInfo.codeSize = csResult._bytecode.size();
         csInfo.pCode    = reinterpret_cast<const uint32*>( csResult._bytecode.data() );
-        // 예전에는 초기화도 하지 않은 핸들에 결과를 받아 검사 없이 썼다. 생성이 실패하면 쓰레기
-        // 값을 파이프라인 생성에 넘기고 vkDestroyShaderModule 까지 불렀다.
+        // 핸들을 초기화하고 결과를 검사한다. 실패를 그냥 쓰면 쓰레기 값을 파이프라인 생성과 vkDestroyShaderModule 에 넘긴다.
         VkShaderModule compShaderModule{ VK_NULL_HANDLE };
         if ( vkCreateShaderModule( _pDevice->_device, &csInfo, nullptr, &compShaderModule ) != VK_SUCCESS ||
              compShaderModule == VK_NULL_HANDLE )

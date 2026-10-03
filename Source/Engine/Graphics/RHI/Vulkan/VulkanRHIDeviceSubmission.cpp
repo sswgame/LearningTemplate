@@ -100,7 +100,7 @@ namespace sw
         if ( _width == 0 || _height == 0 )
             return;
 
-        // 재생성이 성공할 때만 표시를 내린다. 예전에는 실패해도 내려, 복원 도중 한 번 실패하면 스왑체인 없이 프레임을 **영영** 건너뛰었다
+        // 재생성이 성공할 때만 표시를 내린다. 실패해도 내리면 복원 도중 한 번 실패한 뒤 스왑체인 없이 프레임을 **영영** 건너뛴다
         // (창이 검은 채로 멈춤).
         if ( _bSwapChainDirty && recreateSwapChain() )
             _bSwapChainDirty = 0;
@@ -205,7 +205,7 @@ namespace sw
         vkCmdSetScissor( _activeFrameBuffer, 0, 1, &scissor );
 
         // 백버퍼 렌더패스는 여기서 열지 않는다. beginFrame 은 프레임 수명주기 전용이고, 백버퍼
-        // 타깃팅은 beginRenderPass(핸들 0) 가 명시적으로 한다(docs/05_RHI_FrameContract.md S2).
+        // 타깃팅은 RenderThread 가 여는 beginRenderPass(핸들 0) 가 명시적으로 한다.
         // 클리어도 그 렌더패스의 loadOp 이 맡는다.
         (void)clearColor;
     }
@@ -286,8 +286,7 @@ namespace sw
     VkCommandBuffer VulkanRHIDevice::currentCommandBuffer() const
     {
         // 스트림은 하나지만 리스트가 제출될 때마다 세그먼트로 잘린다. 지금 열려 있는 세그먼트를
-        // 반환한다. 예전에는 오프스크린 전용 버퍼로 갈라졌고 그쪽은 매 프레임 자체 제출 + 펜스
-        // 블로킹을 했다(S3 에서 사라졌다).
+        // 반환한다. 오프스크린도 같은 스트림이다(별도 버퍼 · 자체 제출 · 펜스 블로킹 없음).
         if ( _bFrameStarted == SW_TRUE )
             return _activeFrameBuffer;
         return VK_NULL_HANDLE;

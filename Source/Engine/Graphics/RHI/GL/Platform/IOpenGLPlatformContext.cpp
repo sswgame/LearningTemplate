@@ -16,8 +16,7 @@ namespace sw
 
     unique_ptr<IOpenGLPlatformContext> IOpenGLPlatformContext::create()
     {
-        // 플랫폼을 하나 더 지원하려면 **여기 한 줄과 파일 한 쌍**이면 된다. 예전에는 디바이스의
-        // 멤버 함수 여섯 곳에 흩어진 #if 사다리를 모두 찾아 고쳐야 했다.
+        // 플랫폼을 하나 더 지원하려면 **여기 한 줄과 파일 한 쌍**이면 된다.
 #if defined( SW_PLATFORM_WINDOWS )
         return make_unique<WglPlatformContext>();
 #elif defined( SW_PLATFORM_LINUX )

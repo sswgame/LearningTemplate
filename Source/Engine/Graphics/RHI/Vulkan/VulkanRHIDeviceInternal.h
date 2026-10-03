@@ -2,10 +2,8 @@
  * @file VulkanRHIDeviceInternal.h
  * @brief Vulkan 백엔드의 여러 TU 가 함께 쓰는 내부 도우미와 플랫폼 헤더 묶음입니다.
  * @details `VulkanRHIDevice.cpp` 하나가 2,700 줄이라 초기화 · 디스크립터 · 렌더패스로 나눴는데,
- *          그 조각들이 같은 도우미(`toVulkanTextureFormat`)와 같은 플랫폼 헤더 묶음을 씁니다.
- *          예전에는 익명 네임스페이스에 있어서 TU 를 나누는 순간 보이지 않게 됐고,
- *          실제로 `VulkanRHIResource.cpp` 는 같은 변환 함수를 따로 복사해 갖고 있었습니다.
- *          포맷을 하나 추가하면 두 곳을 고쳐야 했다는 뜻입니다.
+ *          그 조각들과 `VulkanRHIResource.cpp` 가 같은 도우미(`toVulkanTextureFormat`)와 같은 플랫폼 헤더 묶음을 씁니다.
+ *          익명 네임스페이스에 두면 TU 마다 사본이 생겨 포맷을 더할 때 한쪽만 고치게 됩니다.
  * @note 백엔드 내부 전용입니다. RHI 경계 밖으로 나가면 안 됩니다.
  */
 #pragma once

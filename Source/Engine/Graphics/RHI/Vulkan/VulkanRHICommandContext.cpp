@@ -740,8 +740,8 @@ namespace sw
         else if ( _pState->_bActiveSwapchainRT == SW_FALSE && _pDevice->_offscreenPipeline != VK_NULL_HANDLE )
         {
             // 등록된 PSO 가 없을 때의 폴백. 판단 기준은 "지금 열린 렌더패스가 백버퍼인가" 여야 한다.
-            // 예전에는 _activeOffscreenTarget 으로 판단했는데, 깊이 전용 패스처럼 컬러 타깃을 갱신하지
-            // 않는 패스에서는 그 값이 직전 패스의 것이라 엉뚱한 파이프라인을 골랐다.
+            // 주의: "마지막으로 건 컬러 타깃" 으로 판단하면, 깊이 전용 패스처럼 컬러 타깃을 갱신하지 않는 패스에서
+            // 그 값이 직전 패스의 것이라 엉뚱한 파이프라인을 고른다.
             pipeline = _pDevice->_offscreenPipeline;
         }
 
@@ -750,7 +750,7 @@ namespace sw
 
         vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline );
         // 슬롯 세트(set 0)는 여기서 굳힌다. 드로우 진입점 모두가 이 함수를 거치므로 각자 다시 부를 일이 없다.
-        // (예전에는 drawInstanced 만 세트를 굳히지 않아 씬 드로우가 세트 없이 나갔고, Vulkan 은 아무것도 그리지 않았다.)
+        // (세트를 굳히지 않은 드로우는 세트 없이 나가 Vulkan 에서 아무것도 그리지 않는다.)
         flushSlotSet( false );
         return true;
     }
@@ -766,7 +766,7 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        // b0/b1 은 부르는 쪽이 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 슬롯 상태에 걸었다. 세트로 굳히는 것은 위의 bindActiveGraphicsPipeline 이 했다.
+        // b0/b1 은 부르는 쪽이 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 슬롯 상태에 건다. 세트로 굳히는 것은 위의 bindActiveGraphicsPipeline 이다.
         bindMeshVertexBufferOrFallback();
 
         vkCmdDraw( cmd, vertexCount, 1, startVertex, 0 );
@@ -887,9 +887,9 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        // 바인딩 0(메시 정점)과 1(인스턴스 슬롯 스트림)을 다른 드로우와 같은 도우미로 함께 건다. 예전에는 여기만 바인딩 0 을
-        // 직접 걸어, 파이프라인이 늘 선언하는 바인딩 1 이 이 커맨드 버퍼에서 한 번도 안 걸렸으면 정의되지 않은 값을 읽었다
-        // (엔진에서 부르는 곳이 없어 드러나지 않았다. RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream 이 잡는다).
+        // 바인딩 0(메시 정점)과 1(인스턴스 슬롯 스트림)을 다른 드로우와 같은 도우미로 함께 건다. 주의: 바인딩 0 만 직접 걸면
+        // 파이프라인이 늘 선언하는 바인딩 1 이 이 커맨드 버퍼에서 한 번도 안 걸렸을 때 정의되지 않은 값을 읽는다
+        // (엔진에서 부르는 곳이 없어 RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream 만 이 경로를 지킨다).
         bindMeshVertexBufferOrFallback();
 
         const VkIndexType indexType = ( _pState->_boundIndexStride == 2 ) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
@@ -922,7 +922,7 @@ namespace sw
         if ( bindActiveGraphicsPipeline() == false )
             return;
 
-        // 정점버퍼를 거는 것은 단일 경로에만 있었다. 합치면서 두 경우 모두 건다.
+        // count 버퍼가 있든 없든 정점버퍼를 건다.
         bindMeshVertexBufferOrFallback();
 
         constexpr uint32 stride = sizeof( RHIDrawIndirectCommand );

@@ -175,11 +175,11 @@ namespace sw
         //    이래야 SceneColor 를 읽거나 다시 샘플링할 때 백엔드끼리 그림이 일치한다.
         //  - 기본 프레임버퍼(fbo 0): GL_LOWER_LEFT. 창에 보여줄 때 GL 은 y=0 을 **아래**로 표시한다.
         //    여기에도 UPPER_LEFT 를 걸면 NDC 위쪽이 창 아래로 가서 화면만 상하가 뒤집힌다.
-        //    (오프스크린만 재던 스크린샷 검증은 이것을 못 잡았다. 읽어 온 텍스처는 이미 맞아 있었다.)
+        //    주의: 오프스크린 텍스처만 읽는 스크린샷 검증으로는 이 반전이 보이지 않는다(읽은 텍스처는 맞다).
         // 풀스크린 블릿의 uv 는 DX 규약(NDC 위쪽 = uv.y 0)이라, 위 조합이면 두 경로 모두 바로 선다.
         if ( glad_glClipControl != nullptr )
             glClipControl( fbo == 0 ? GL_LOWER_LEFT : GL_UPPER_LEFT, GL_ZERO_TO_ONE );
-        // bindShaderResource 가 실제로 바인딩한 유닛만 언바인드한다(예전에는 0..15 모두를 방어적으로 언바인드했다).
+        // bindShaderResource 가 실제로 바인딩한 유닛만 언바인드한다.
         const uint32 unbindMask = _pDevice->_recordingState._boundTextureUnitMask;
         for ( uint32 unit = 0; unit < 32 && unbindMask != 0; ++unit )
         {
@@ -229,12 +229,9 @@ namespace sw
 
             // 첨부마다 **드로우 버퍼 상태를 건드리지 않고** 지운다.
             //
-            // 예전에는 지울 첨부를 고르려고 `glDrawBuffers( 1, &drawBuf )` 로 목록을 하나로 좁혔고,
-            // **되돌리지 않았다.** 그래서 이 루프가 끝나면 드로우 버퍼가 "마지막으로 지운 첨부" 하나만
-            // 남고, 이어지는 지오메트리의 `SV_TARGET0` 이 그 첨부로 가고 `SV_TARGET1` 은 버려졌다.
-            // G버퍼 패스(둘 다 클리어)에서는 알베도가 노멀 첨부에 써지고 알베도 첨부는 클리어 값
-            // 그대로 남았다. 디퍼드 조명이 알베도 0 을 읽어 **OpenGL 만 화면이 거의 검게** 나왔다.
-            // MRT 를 쓰는 파이프라인이 디퍼드뿐이라 오래 드러나지 않았다.
+            // 주의: 지울 첨부를 고르려고 `glDrawBuffers` 로 목록을 하나로 좁히고 되돌리지 않으면, 드로우 버퍼가
+            // "마지막으로 지운 첨부" 하나만 남아 이어지는 지오메트리의 `SV_TARGET0` 이 그 첨부로 가고 `SV_TARGET1` 은
+            // 버려진다. G버퍼 패스에서는 알베도가 노멀 첨부에 써져 디퍼드 조명이 **OpenGL 만 거의 검게** 나온다.
             //
             // `glClearBufferfv` 는 드로우 버퍼 **인덱스**로 직접 지우므로 목록을 바꿀 이유가 없다.
             for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount; ++attachmentIndex )
@@ -315,10 +312,9 @@ namespace sw
         // 인덱스는 **UAV 등록부의 것**이다. 그 등록부는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는
         // 레코드가 말해 준다. 다른 등록부를 넘겨짚지 않는다.
         //
-        // 예전에는 여기도 추측이 있었다: UAV 등록부에서 못 찾으면 **bindless(SRV) 등록부**로 흘러내려
-        // 거기 같은 번호의 버퍼를 `slot` 에 걸었다(`kUavBinding0 + slot` 이 아니라!). 세 등록부가 각자
+        // 주의: UAV 등록부에서 못 찾았다고 **bindless(SRV) 등록부**로 흘러내리면 안 된다. 세 등록부가 각자
         // 0 부터 번호를 발급하므로 그 넘겨짚기는 언젠가 맞아떨어지고, 그때 **엉뚱한 버퍼가 엉뚱한
-        // binding 에** 걸린다. 조용히 틀리는 자리라 지운다.
+        // binding 에** 조용히 걸린다.
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
             return;
 
@@ -363,15 +359,11 @@ namespace sw
     {
         // **텍스처 전용이다.** 버퍼는 `bindStructuredBuffer` 가 건다.
         //
-        // 예전에는 여기서 텍스처 등록부를 먼저 찍어 보고, 없으면 버퍼 등록부로 흘러내렸다. 그런데
-        // 텍스처 · 버퍼 · UAV 는 **각자 0 부터 시작하는 별개의 프리리스트**다. 같은 번호가 셋 다 유효할
-        // 수 있다. 그래서 버퍼 인덱스를 넘겨도 그 번호에 살아 있는 **텍스처**가 있으면 그쪽이 걸리고
-        // 함수가 끝났다. 부르는 쪽은 종류를 이미 알고 그에 맞는 함수를 부르는데, 여기서 다시 추측한 것이다.
-        //
-        // 실제 피해: 모프 정점 버퍼(t11)가 텍스처로 걸려 정점 셰이더가 SSBO 11 에서 0 을 읽었고,
-        // 삼각형이 퇴화해 **OpenGL 에서만** 기하가 사라졌다. 인스턴스(t4) · 가시 목록(t10)은 일찍
-        // 등록돼 번호가 안 겹쳤기에 멀쩡했다. 그래서 "정점 스테이지 SSBO 가 GL 에서 안 된다" 로
-        // 오래 오해했다. 다른 세 백엔드는 이 추측을 하지 않는다(DX11 은 텍스처 등록부만 본다).
+        // 주의: 텍스처 등록부에 없다고 버퍼 등록부로 흘러내리면 안 된다. 텍스처 · 버퍼 · UAV 는 **각자 0 부터
+        // 시작하는 별개의 프리리스트**라 같은 번호가 셋 다 유효할 수 있고, 그러면 버퍼 인덱스가 그 번호의
+        // **텍스처**로 걸린다(모프 정점 버퍼 t11 이 텍스처로 걸리면 정점 셰이더가 SSBO 11 에서 0 을 읽어
+        // **OpenGL 에서만** 기하가 사라진다). 부르는 쪽은 종류를 이미 알고 그에 맞는 함수를 부른다.
+        // 다른 세 백엔드도 추측하지 않는다(DX11 은 텍스처 등록부만 본다).
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
             return;
 
@@ -547,9 +539,9 @@ namespace sw
     void OpenGLRHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
         // 상수버퍼는 HLSL b# 가 **SPIR-V binding #** 로 그대로 나온다.
-        // `-fvk-b-shift 16 0` 은 명시 `[[vk::binding]]` 이 있으면 적용되지 않는데(common.hlsli 가 항상 명시한다),
-        // 엔진만 16+# 에 걸고 있었다. 그래서 셰이더가 PassCB 를 영영 못 읽어 g_ViewProj 가 0 이었고
-        // OpenGL 은 메시를 하나도 그리지 못했다(드로우는 정상적으로 나가고 GL 에러도 없어 오래 걸렸다).
+        // `-fvk-b-shift 16 0` 은 명시 `[[vk::binding]]` 이 있으면 적용되지 않는다(common.hlsli 가 항상 명시한다).
+        // 주의: 엔진이 16+# 에 걸면 셰이더가 PassCB 를 못 읽어 g_ViewProj 가 0 이 되고, 드로우도 GL 에러도
+        // 정상인 채로 메시가 하나도 그려지지 않는다.
         // 확인 방법: 구운 .spv 의 OpDecorate 를 읽으면 `PassCB DescriptorSet 0 Binding 0` 이 그대로 보인다.
         if ( _pDevice->_bInitialized == SW_FALSE || constantBufferIndex == kInvalidDescriptorIndex ||
              constantBufferIndex >= static_cast<RHIDescriptorIndex>( _pDevice->_listRegisteredBindless.size() ) )
@@ -561,7 +553,7 @@ namespace sw
 
     void OpenGLRHICommandContext::bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot )
     {
-        // **버퍼 전용이다.** 텍스처는 `bindShaderResource` 가 건다(위 주석의 사연 참고).
+        // **버퍼 전용이다.** 텍스처는 `bindShaderResource` 가 건다(그쪽 주의 참고).
         // t# 는 시프트 없이 그대로 GL SSBO binding # 이다(common.hlsli SW_GL_BINDING).
         if ( _pDevice->_bInitialized == SW_FALSE || index == kInvalidDescriptorIndex )
             return;
@@ -583,9 +575,9 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
 
-        // 컴퓨트는 **컴퓨트 PSO** 의 프로그램으로 디스패치해야 한다. 예전에는 그래픽스 PSO(또는 디바이스
-        // 기본 프로그램)를 다시 걸고 디스패치해서 gpucull 이 매 프레임 GL_INVALID_OPERATION
-        // ("no active compute program") 을 냈다. 컬링 결과는 CPU 가 채운 인자 그대로라 화면은 멀쩡했다.
+        // 컴퓨트는 **컴퓨트 PSO** 의 프로그램으로 디스패치해야 한다. 그래픽스 PSO(또는 디바이스 기본 프로그램)로
+        // 디스패치하면 GL_INVALID_OPERATION("no active compute program") 이 나는데, 컬링 결과가 CPU 가 채운
+        // 인자 그대로 남아 화면에는 드러나지 않는다.
         const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundComputePso );
         if ( pPso == nullptr || pPso->_program == 0 )
             return;
@@ -746,7 +738,7 @@ namespace sw
 
     void OpenGLRHICommandContext::prepareTextureForShaderRead( RHITextureHandle texture )
     {
-        // FBO 로 그린 결과를 텍스처로 샘플링하기 전에 필요한 배리어(예전 endOffscreenPass 가 하던 일).
+        // FBO 로 그린 결과를 텍스처로 샘플링하기 전에 필요한 배리어.
         // FBO 0 재바인딩은 여기서 하지 않는다. 다음 beginRenderPass 가 타깃을 명시적으로 정한다.
         (void)texture;
         if ( _pDevice->_bInitialized == SW_FALSE )

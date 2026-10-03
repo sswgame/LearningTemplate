@@ -21,8 +21,8 @@ namespace sw
     {
         /**
          * @brief KHR_debug 메시지를 엔진 로그로 보냅니다. DX11/DX12 디버그 레이어(flushDebugMessages) · Vulkan 검증 레이어와 같은 자리입니다.
-         * @details 예전에는 GL 오류가 어디에도 나오지 않았습니다(glGetError 호출 0곳, 디버그 콜백 없음). 드로우가 정상으로 나가고
-         *          화면만 비는 종류의 결함이 GL 에서 유독 오래 살아남은 이유입니다. 이제 스모크의 `[Error]` 수가 GL 에서도 뜻을 가집니다.
+         * @details GL 오류가 로그에 나오는 통로는 이것뿐입니다(엔진은 glGetError 를 부르지 않습니다). 이 콜백이 있어야 드로우가 정상으로
+         *          나가고 화면만 비는 결함이 스모크의 `[Error]` 수로 드러납니다.
          *          알림(NOTIFICATION)은 드라이버 잡담("Buffer detailed info")이라 glDebugMessageControl 로 아예 끕니다.
          */
         void APIENTRY onOpenGLDebugMessage( GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* pMessage,
@@ -52,8 +52,7 @@ namespace sw
         _height = desc._height;
         _pHWnd  = desc._pWindowHandle;
 
-        // 플랫폼 컨텍스트 생성은 GL/Platform 이 안다. 예전에는 WGL · GLX · NSGL 세 갈래가 여기
-        // 225줄로 들어앉아 있었다.
+        // 플랫폼 컨텍스트 생성(WGL · GLX)은 GL/Platform 이 맡는다. 디바이스는 플랫폼 분기를 갖지 않는다.
         _platformContext = IOpenGLPlatformContext::create();
         if ( _platformContext == nullptr )
             return false;
@@ -77,10 +76,10 @@ namespace sw
             // **이 호출은 선택이 아니다.** 빠지면 GL 만 프레임버퍼 원점이 좌하단이라 SceneColor 의 행 순서가 다른 세
             // 백엔드와 반대로 쌓인다. 풀스크린 블릿은 DX 규약(NDC 위쪽 = uv.y 0)을 백엔드 분기 없이 쓰므로 화면과
             // 스크린샷이 통째로 상하 반전된다. 깊이도 [-1,1] 로 남아 [0,1] 을 내보내는 투영이 버퍼의 절반만 쓴다.
-            // 예전에는 이 블록이 `#ifdef GL_CLIP_CONTROL` 로 감싸여 있었다. 그런 GL 토큰은 없다(실제 토큰은
-            // GL_CLIP_ORIGIN / GL_CLIP_DEPTH_MODE 이고 GL_CLIP_CONTROL 은 함수 이름일 뿐이다). 그래서 4.6 컨텍스트에서도
-            // 블록이 통째로 컴파일에서 빠져 한 번도 불리지 않았고, 로그도 남지 않아 오래 드러나지 않았다.
-            // 이제 함수 포인터로 판단하고, 실제로 걸렸는지 GL 에 되물어 확인한다.
+            // 주의: 가능 여부를 `#ifdef GL_CLIP_CONTROL` 로 가리면 안 된다. 그런 GL 토큰은 없다(실제 토큰은
+            // GL_CLIP_ORIGIN / GL_CLIP_DEPTH_MODE 이고 GL_CLIP_CONTROL 은 함수 이름일 뿐이다). 그러면 4.6 컨텍스트에서도
+            // 블록이 통째로 컴파일에서 빠져 로그 없이 한 번도 불리지 않는다.
+            // 그래서 함수 포인터로 판단하고, 실제로 걸렸는지 GL 에 되물어 확인한다.
             if ( glad_glClipControl != nullptr )
             {
                 glClipControl( GL_UPPER_LEFT, GL_ZERO_TO_ONE );
@@ -474,7 +473,7 @@ namespace sw
             return true;
 
         // 렌더 워커가 프레임 끝마다 놓는다. 조용히 다시 집는다. 시도마다 로그를 남기면 정상
-        // 경합이 오류로 보인다(실제로 -gl -EnableEditor 의 ERROR_BUSY 2건이 그것이었다).
+        // 경합이 오류로 보인다(-gl -EnableEditor 의 ERROR_BUSY 가 그런 정상 경합이다).
         const CpuDeadline deadline = CpuDeadline::afterMilliseconds( timeoutMs );
         while ( deadline.isExpired() == false )
         {

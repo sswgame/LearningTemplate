@@ -2,13 +2,11 @@
  * @file IOpenGLPlatformContext.h
  * @brief OpenGL 컨텍스트의 플랫폼 의존부(생성 · 바인딩 · 프레젠트 · VSync)입니다.
  *
- * @details GL 만 컨텍스트를 OS 가 만들어 줍니다(DX · Vulkan 은 API 가 직접 만듭니다). 그래서 WGL / GLX /
- *          NSOpenGL 세 갈래가 필요한데, 예전에는 그 분기가 `OpenGLRHIDevice` 의 멤버 함수 **여섯
- *          곳에 `#if` 사다리로** 흩어져 있었습니다(14개 분기). 플랫폼을 하나 더 지원하려면 그 여섯
- *          곳을 모두 찾아 고쳐야 했습니다. 지금은 **한 파일을 더하고 팩토리에 한 줄** 추가합니다.
+ * @details GL 만 컨텍스트를 OS 가 만들어 줍니다(DX · Vulkan 은 API 가 직접 만듭니다). 그래서 WGL / GLX
+ *          갈래가 필요하고, 그 분기를 `OpenGLRHIDevice` 에 두지 않고 플랫폼마다 구현 파일 하나로 가릅니다.
+ *          플랫폼을 하나 더 지원하려면 **한 파일을 더하고 팩토리에 한 줄** 추가합니다.
  *
- *          같은 이유로 `Window/Windows|Linux|Mac` 과 `Core/File/Windows|Linux|Mac` 이 이미 폴더로
- *          갈라져 있습니다. 이 폴더는 그 형태를 GL 에 적용한 것입니다.
+ *          `Window/Windows|Linux` 와 `Core/File/Windows|Linux` 가 폴더로 갈라진 것과 같은 형태입니다.
  *
  * @note 디바이스는 핸들을 **불투명 `void*`** 로만 들고 있습니다(`getNativeDevice` 가 HDC 를 반환하는
  *       계약 때문). 그래서 이 인터페이스도 `OpenGLContextHandles` 로 값만 넘깁니다. 플랫폼 타입이
@@ -73,8 +71,7 @@ namespace sw
         /**
          * @brief 프레임 시작에 컨텍스트를 되찾습니다. 필요 없는 플랫폼은 아무것도 하지 않습니다.
          * @details WGL 은 ImGui 멀티 뷰포트가 DC 를 바꿔 놓을 수 있어 매 프레임 되찾아야 합니다.
-         *          GLX 는 예전 코드도 여기서 아무것도 하지 않았으므로 그대로 둡니다. 동작을
-         *          바꾸지 않으려고 "필요하면 한다" 를 플랫폼이 정하게 했습니다.
+         *          GLX 는 아무것도 하지 않습니다. 되찾을지는 플랫폼이 정합니다.
          */
         virtual void reacquireForFrame() = 0;
 

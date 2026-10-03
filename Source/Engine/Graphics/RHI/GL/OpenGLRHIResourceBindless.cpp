@@ -91,8 +91,7 @@ namespace sw
 
     void OpenGLRHIResource::unregisterBindlessUav( RHIDescriptorIndex index )
     {
-        // **여기가 원래 가드가 없던 자리다.** 이중 해제가 그대로 통과해 같은 인덱스가
-        // 프리리스트에 두 번 들어갔다. 이제 도우미가 막는다.
+        // 이중 해제는 도우미가 막는다. 막지 않으면 같은 인덱스가 프리리스트에 두 번 들어간다.
         releaseFreeListIndex( _pDevice->_listRegisteredUAV, _pDevice->_listUavFree, index,
                               OpenGLRHIDevice::BindlessResourceRecord{}, "uav" );
     }

@@ -52,11 +52,11 @@ namespace sw
 
     private:
         /** @brief _meshVao 를 바인딩하고, 공용 정점 속성 표(constant::arrVertexAttribute)대로 vbo 와 인스턴스 슬롯 스트림의 속성을 겁니다.
-         *         드로우 진입점마다 복사돼 있던 블록을 합친 것입니다. draw 뒤의 언바인드는 부르는 쪽이 각자 맡습니다. */
+         *         모든 드로우 진입점이 이것을 씁니다. draw 뒤의 언바인드는 부르는 쪽이 각자 맡습니다. */
         void bindMeshVaoAttribs( uint32 vbo );
         /**
          * @brief 드로우가 쓸 프로그램과 토폴로지를 고릅니다. PSO 가 정하고, PSO 가 없으면 디바이스 기본 프로그램과 GL_TRIANGLES 입니다.
-         * @details 드로우 진입점 넷이 같은 열 줄을 각자 들고 있었습니다(예전 멀티 드로우 경로는 이것을 빠뜨리고 GL_TRIANGLES 로 굳혔었습니다).
+         * @details 드로우 진입점 넷이 모두 이것을 씁니다. 따로 고르는 진입점은 PSO 토폴로지를 놓쳐 GL_TRIANGLES 로 굳기 쉽습니다.
          * @return 프로그램이 0 이라 그릴 수 없으면 false.
          */
         bool resolveDrawProgram( uint32& outProgram, uint32& outMode ) const;

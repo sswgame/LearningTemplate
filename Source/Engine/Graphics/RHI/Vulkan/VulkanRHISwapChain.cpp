@@ -220,8 +220,7 @@ namespace sw
             return false;
         }
 
-        // 백버퍼 개수도 백엔드 간 계약이다. 예전에는 이 값을 무시하고 minImageCount + 1 을 썼다.
-        // 요청값을 존중하되 서피스 능력으로 클램프한다.
+        // 백버퍼 개수도 백엔드 간 계약이다. 요청값을 존중하되 서피스 능력으로 클램프한다.
         uint32 imageCount = ( _requestedBufferCount > 0 ) ? _requestedBufferCount : ( capabilities.minImageCount + 1 );
         if ( imageCount < capabilities.minImageCount )
             imageCount = capabilities.minImageCount;
@@ -252,9 +251,9 @@ namespace sw
         createInfo.imageExtent      = extent;
         createInfo.imageArrayLayers = 1;
         // 백버퍼는 그리기(COLOR_ATTACHMENT)만이 아니라 **블릿의 목적지**(포스트 체인의 마지막 블릿 · 오프스크린 → 백버퍼)와
-        // **읽기의 출처**(스크린샷 · 리드백)로도 쓰인다. 예전에는 COLOR_ATTACHMENT 만 줘서 백버퍼로 블릿하는 프레임마다
-        // 검증 레이어가 "TRANSFER_DST 없이 TRANSFER_DST_OPTIMAL 레이아웃" 을 찍었다(RenderPassGpuTest.FusedPostChainMatchesStaged
-        // 의 Vulkan 구간에서 [Error] 12 줄). 서피스가 허락하는 것만 더한다.
+        // **읽기의 출처**(스크린샷 · 리드백)로도 쓰인다. COLOR_ATTACHMENT 만 주면 백버퍼로 블릿하는 프레임마다
+        // 검증 레이어가 "TRANSFER_DST 없이 TRANSFER_DST_OPTIMAL 레이아웃" 을 찍는다(RenderPassGpuTest.FusedPostChainMatchesStaged
+        // 의 Vulkan 구간). 서피스가 허락하는 것만 더한다.
         VkImageUsageFlags imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         if ( ( capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT ) != 0 )
             imageUsage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -351,8 +350,8 @@ namespace sw
     bool VulkanRHISwapChain::createSemaphores( VkDevice device, uint32 frameCountInFlight )
     {
         // acquire 세마포어는 프레임 슬롯으로, renderFinished 세마포어는 이미지 인덱스로 센다.
-        // 두 개수는 다를 수 있으므로 각자 맞는 크기로 잡는다. 예전에는 둘 다 이미지 수로 잡아서,
-        // 드라이버가 인플라이트 프레임 수보다 적은 이미지를 주면 범위 밖 접근이 될 수 있었다.
+        // 두 개수는 다를 수 있으므로 각자 맞는 크기로 잡는다. 둘 다 이미지 수로 잡으면 드라이버가 인플라이트
+        // 프레임 수보다 적은 이미지를 줄 때 범위 밖 접근이 된다.
         _listImageAvailableSemaphore.resize( frameCountInFlight );
         _listRenderFinishedSemaphore.resize( _listImage.size() );
 

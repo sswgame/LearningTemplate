@@ -198,8 +198,7 @@ namespace sw
     void VulkanRHIDevice::destroyOffscreenFramebuffer( VulkanTextureRecord& record )
     {
         // 즉시 파괴하면 안 된다. 아직 실행 중인 프레임의 커맨드버퍼가 이 프레임버퍼를 참조할 수
-        // 있다(게임뷰 리사이즈가 대표적인 경로다). 예전에는 오프스크린 경로가 매 프레임 블로킹
-        // 제출을 해서 우연히 안전했을 뿐이고, 그 스톨을 걷어내자 곧바로 in-use 위반이 드러났다.
+        // 있다(게임뷰 리사이즈가 대표적인 경로다). 즉시 파괴하면 검증 레이어가 in-use 위반을 낸다.
         // 면별 프레임버퍼의 0 번은 `_framebuffer` 와 같다 — 한 번만 놓는다.
         for ( size_t slice = 1; slice < record._listSliceFramebuffer.size(); ++slice )
             enqueueFramebufferRelease( record._listSliceFramebuffer[slice], VK_NULL_HANDLE );

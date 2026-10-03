@@ -24,9 +24,8 @@ namespace sw
          * @class VulkanOneShotCommands
          * @brief 일회용 커맨드 버퍼 하나입니다. 할당 · 시작은 생성자가, **해제는 소멸자가** 합니다.
          *
-         * @details 텍스처 업로드와 리드백이 같은 열다섯 줄을 각자 적고 있었습니다(할당 → begin → … →
-         *          end → submit → waitIdle → free). 지금은 그 사이에 `return` 이 없어 새는 자리가
-         *          없지만, **누군가 중간에 검사를 하나 더하는 날 커맨드 버퍼가 샙니다.** 풀에서 조용히
+         * @details 텍스처 업로드와 리드백이 같이 씁니다(할당 → begin → … → end → submit → waitIdle → free).
+         *          해제를 손으로 적으면 **중간에 검사(`return`)를 하나 더하는 날 커맨드 버퍼가 샙니다.** 풀에서 조용히
          *          자라다가 나중에 할당이 실패합니다. 해제를 소멸자에 두면 그 실수가 생길 수 없습니다.
          *
          * @note 장치 핸들과 락을 인자로 받습니다. `VulkanRHIDevice` 의 그 멤버들은 private 이고
@@ -113,7 +112,7 @@ namespace sw
         /**
          * @brief 2D 색 이미지의 **전체 밉 체인** 배리어 뼈대입니다. 레이아웃과 접근 마스크만 채우면 됩니다.
          * @details `transitionImageLayout` 은 밉 하나만 다루므로 업로드 · 리드백은 전체 밉 배리어를
-         *          직접 씁니다. 그 뼈대 열 줄이 두 곳에 복사돼 있었습니다. `aspectMask` 나 `layerCount` 를
+         *          직접 씁니다. `aspectMask` 나 `layerCount` 를
          *          빠뜨린 새 배리어는 검증 계층이 잡아 주지만, **잡히는 곳이 배리어를 건 자리가 아니라
          *          그 뒤의 전이**라 읽기 나쁩니다. 고정값은 한 곳에 둡니다.
          */
@@ -278,9 +277,8 @@ namespace sw
     void VulkanRHIResource::updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
                                                            const RHIBufferCopyRegion* pRegions, uint32 regionCount )
     {
-        // 예전에는 목적 버퍼를 직접 vkMapMemory 해서 썼다. 링 오프셋 버그(71cd9755)를 걷어낸 뒤에도
-        // "GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가 덮어쓰는" 해저드가 남아 있었다.
-        // 지금은 스테이징 슬롯에 쓰고 복사를 프레임 커맨드버퍼에 기록한다. 큐 순서가 곧 해저드 해결이고,
+        // 스테이징 슬롯에 쓰고 복사를 프레임 커맨드버퍼에 기록한다. 목적 버퍼를 직접 vkMapMemory 해서 쓰면
+        // "GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가 덮어쓰는" 해저드가 생긴다. 큐 순서가 곧 해저드 해결이고,
         // "바뀐 게 없으면 업로드 생략" 같은 상위 로직도 단일 목적 버퍼 그대로 유효하다.
         VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
         if ( pRecord == nullptr || pBaseSource == nullptr || pRegions == nullptr || regionCount == 0 ||
@@ -288,7 +286,7 @@ namespace sw
             return;
 
         // **조각을 모두 한 스테이징에 모아 배리어 한 쌍 · 복사 한 번으로 끝낸다.** 조각마다 부르면
-        // 스테이징 확보와 제출이 그만큼 되풀이된다(DX12 에서 호출당 ~3.3 us 로 재었다).
+        // 스테이징 확보와 제출이 그만큼 되풀이된다(DX12 에서 호출당 ~3.3 us).
         // `vkCmdCopyBuffer` 는 영역 배열을 그대로 받으므로 여기서는 나눌 이유가 아예 없다.
         constexpr uint32     kCopyAlignment = 4;
         vector<VkBufferCopy> listRegion;
@@ -318,7 +316,7 @@ namespace sw
             if ( region._size == 0 || region._dstOffset >= pRecord->_size )
                 continue;
 
-            // 클램프는 **오프셋을 포함해서** 해야 한다. 앞에서부터 쓸 때만 맞던 식이었다.
+            // 클램프는 **오프셋을 포함해서** 해야 한다(크기만 보면 앞에서부터 쓸 때만 맞는다).
             uint32 copySize = region._size;
             if ( copySize > pRecord->_size - region._dstOffset )
                 copySize = static_cast<uint32>( pRecord->_size - region._dstOffset );
@@ -342,7 +340,7 @@ namespace sw
         const bool      bOneShot = ( cmd == VK_NULL_HANDLE );
 
         // 프레임 밖이면 일회성 커맨드버퍼를 쓴다. **해제는 소멸자가 하므로** 나중에 이 사이에 검사가
-        // 하나 더 생겨도 커맨드 버퍼가 새지 않는다 (같은 절차가 이 파일에 세 벌 있었다).
+        // 하나 더 생겨도 커맨드 버퍼가 새지 않는다.
         std::optional<VulkanOneShotCommands> oneShot;
         if ( bOneShot )
         {
@@ -393,8 +391,8 @@ namespace sw
 
     RHIBufferHandle VulkanRHIResource::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
     {
-        // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 예전 기본 구현은 구조버퍼를 만들었는데, 그 버퍼에는
-        // VK_BUFFER_USAGE_INDEX_BUFFER_BIT 가 없어 vkCmdBindIndexBuffer 에 거는 것이 용도 위반이었다.
+        // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 구조버퍼에는 VK_BUFFER_USAGE_INDEX_BUFFER_BIT 가 없어
+        // vkCmdBindIndexBuffer 에 거는 것이 용도 위반이므로 인덱스 용도로 따로 만든다.
         (void)indexStride;
         if ( pData == nullptr )
             return 0;
@@ -403,8 +401,7 @@ namespace sw
 
     RHIBufferHandle VulkanRHIResource::createVertexBuffer( const void* pData, uint32 sizeBytes )
     {
-        // 인덱스 버퍼와 같은 경로다. 예전에는 디바이스의 `createVulkanBuffer` 를 통째로 옮겨 적은 마흔 줄이었고, 그 사본은 용도(`_usage`)를
-        // 기록에 남기지 않았다.
+        // 인덱스 버퍼와 같은 경로다(디바이스의 `createVulkanBuffer` 가 용도 `_usage` 까지 기록에 남긴다).
         if ( pData == nullptr )
             return 0;
         return _pDevice->createVulkanBuffer( sizeBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, pData );
@@ -415,7 +412,7 @@ namespace sw
         if ( buffer == 0 )
             return;
         // 렌더 스레드의 기록 상태(`_recordingState` 의 묶인 정점 · 인덱스 버퍼)는 여기서 지우지 않는다. 이 함수는 게임 스레드에서도 불리는데 그 값은
-        // 렌더 스레드만 쓴다(예전엔 여기서 써서 경쟁이었다). 핸들은 세대가 있어 다시 쓰이지 않으므로 지운 핸들은 드로우에서 풀리지 않고,
+        // 렌더 스레드만 쓴다(여기서 쓰면 경쟁이다). 핸들은 세대가 있어 다시 쓰이지 않으므로 지운 핸들은 드로우에서 풀리지 않고,
         // 정점 버퍼는 풀스크린 버퍼로 떨어진다(bindVertexBuffers).
         {
             std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -712,9 +709,8 @@ namespace sw
 
     bool VulkanRHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
-        // **여기의 실패는 모두 소리를 낸다.** 예전에는 네 자리가 말없이 false 를 반환했는데, 리드백은
-        // 오프스크린 렌더 문제가 드러나는 통로라 "false 인데 이유가 없다" 가 곧 긴 추적이 된다
-        // (형제인 uploadTexture2D 는 같은 자리에서 모두 로그를 남기고 있었다).
+        // **여기의 실패는 모두 소리를 낸다**(형제인 uploadTexture2D 와 같다). 리드백은 오프스크린 렌더 문제가
+        // 드러나는 통로라 "false 인데 이유가 없다" 가 곧 긴 추적이 된다.
         VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
              _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE )
