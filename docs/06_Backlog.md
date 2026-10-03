@@ -95,6 +95,13 @@ cd build/Ninja-Debug/Bin
 
 ### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
 
+- **불필요 코드 삭제(진행 중, 사용자 지시 10-04)** — 조사 보고서는 세션 스크래치 `deadcode/report.md`(1,615 줄: 호출자 없음 354 · 구조 개선 잔여물 39 · 중복 11 묶음 ·
+  경위 주석 ~2,300 블록). 코드 묶음 A(에디터) · B(RHI · 렌더러) · D(Core · App · 도구 · 스크립트 · cmake)가 진행 중이고, C(셰이더 데이터 · EngineData — 굽기 필요) ·
+  E(Engine 나머지: `PropertyMetaHint` · XML 백엔드 배열/맵 API · LocalizationManager 형식 셋 · SerializeContext 객체 id 표 · ActionMap 기본 바인딩 폴백) ·
+  F(GameFramework · 시험: `BattleEvents.h` · TurnBattle 옛 세이브 · GPU 시험 준비 코드 43 곳 합치기)가 그다음, 주석 · 문서 2 차(G1~G5)는 코드 묶음을 합친 뒤.
+  사용자 결정: macOS · LocalizationManager 형식 셋 · SerializeContext id 표 · Dev 모놀리식 RHI 갈래 · ActionMap 폴백은 지움, 누수 추적(`enableMemoryLeakChecks`)은 켬,
+  `RuntimeHud` 는 남김, 로그 상세도 인자는 더하지 않음(주석만 고침). 이 묶음은 이름 일관화보다 먼저 한다.
+
 - **클래스 이름 일관화 — 감사 목록 전부**(사용자: "일관되게 바꿔봐"). **별칭은 두지 않는다**(사용자: 아직 실제 게임이 없다) — 씬 · 데이터 XML 의 타입 · 루트 이름,
   스크립트 · CI 의 CLI 플래그까지 새 이름으로 다시 쓰고 옛 이름은 어디에도 남기지 않는다.
   묶음: (1) `IRHIResource`→`IRHIResourceFactory`(`getResourceFactory`), `ActionMap`→`InputMap`, `InputDeviceType`→`InputGlyphStyle`,
@@ -266,7 +273,7 @@ cd build/Ninja-Debug/Bin
 
 - **100 줄 넘는 함수 정리.** 분해는 총량을 줄이지 않는다. 중복을 먼저 없애고, 그래도 문제면 본다. 목록이 필요하면 여러 줄 시그니처를 중괄호 깊이로 재는 스크립트로
   뽑는다(단순 정규식은 틀린다).
-- **macOS — 2026-09-24 부터 지원 대상이 아니고 어디서도 컴파일되지 않는다.** 되살릴 때 순서: `ci.yml` macOS 잡 복원 → configure 실패 → `CocoaWindow` 가 `_onResize` 를
+- **macOS 코드는 10-04 에 지운다(사용자 결정 — 리팩터링 묶음 A · B · D · E · F 가 영역별로).** 되살리려면 그 커밋 전 git 기록에서 꺼낸다. 그때의 순서: `ci.yml` macOS 잡 복원 → configure 실패 → `CocoaWindow` 가 `_onResize` 를
   부르지 않음(스왑체인이 안 따라감) → `CocoaSplashWindow` 가 창을 만들지 않음 → `applyWindowVisibility` 이름 변경 컴파일 → `PosixCallStackCapture` 의 폴트 PC
   (Linux 만) · `Posix*` 의 macOS 가드 · `Mac` 파일워처.
 - **`SetupVcpkg.py --install` 이 `vcpkg.cmake` 만 보고 "찾았다" 고 끝낸다.** 윈도우에서 클론한 트리를 리눅스에서 쓰면 `vcpkg` 바이너리 없이 성공을 보고한다
