@@ -6,14 +6,12 @@
 #include "Core/Process/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
 
-#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+#if defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
 
-    #if defined( SW_PLATFORM_LINUX )
-        // 시그널 컨텍스트의 레지스터 인덱스(REG_RIP 등)가 여기에 있다(glibc 는 _GNU_SOURCE 를 요구한다).
-        #include <sys/ucontext.h>
-        #include <ucontext.h>
-    #endif
+    // 시그널 컨텍스트의 레지스터 인덱스(REG_RIP 등)가 여기에 있다(glibc 는 _GNU_SOURCE 를 요구한다).
+    #include <sys/ucontext.h>
+    #include <ucontext.h>
 
 namespace sw
 {
@@ -26,27 +24,19 @@ namespace sw
 
         /**
          * @brief 시그널 컨텍스트에서 폴트가 난 명령의 주소를 꺼냅니다.
-         * @return 모르는 아키텍처이거나 컨텍스트가 없으면 nullptr
-         * @details **이 파일에서 OS 마다 달라지는 곳은 여기뿐입니다.** 나머지(backtrace · dladdr · 디맹글 · 해시)는 POSIX 라 두
-         *          플랫폼이 같은 코드를 씁니다. macOS 는 지금 nullptr 을 반환하고, 그러면 아래 captureFromContext 가 앞부분을
-         *          잘라 내지 않고 그대로 담습니다. 합치기 전과 같은 동작입니다.
+         * @return 컨텍스트가 없으면 nullptr
+         * @details 레지스터 이름만 아키텍처마다 다릅니다. 나머지(backtrace · dladdr · 디맹글 · 해시)는 POSIX 공통 코드입니다.
          */
         void* faultProgramCounterInternal( const void* pPlatformContext )
         {
             if ( pPlatformContext == nullptr )
                 return nullptr;
 
-    #if defined( SW_PLATFORM_LINUX )
             const ucontext_t* pContext = static_cast<const ucontext_t*>( pPlatformContext );
-        #if defined( SW_X64 )
+    #if defined( SW_X64 )
             return reinterpret_cast<void*>( pContext->uc_mcontext.gregs[REG_RIP] );
-        #elif defined( SW_ARM64 )
+    #elif defined( SW_ARM64 )
             return reinterpret_cast<void*>( pContext->uc_mcontext.pc );
-        #endif
-    #else
-            // macOS 의 폴트 PC 추출은 아직 없다(Darwin 의 mcontext 는 구조가 다르다). 없으면 앞부분 잘라 내기만 건너뛰고
-            // 스택 자체는 그대로 남으므로, 리포트가 비지는 않는다.
-            return nullptr;
     #endif
         }
 

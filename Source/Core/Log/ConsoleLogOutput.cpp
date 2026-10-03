@@ -88,7 +88,7 @@ namespace sw
                 std::fflush( stdout );
             OutputDebugStringA( pMessage );
         }
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+#elif defined( SW_PLATFORM_LINUX )
         // Linux · POSIX ANSI 이스케이프: 굵은 빨강(Error), 굵은 노랑(Warning), 굵은 초록(Info), 회색(Trace)
         static constexpr const utf8* arrAnsiColor[] =
             {

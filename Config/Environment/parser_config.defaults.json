@@ -19,8 +19,7 @@
                 "-fms-compatibility-version=19",
                 "-fms-extensions"
             ],
-            "linux": [],
-            "darwin": []
+            "linux": []
         },
         "extra": [
             "-fno-spell-checking"

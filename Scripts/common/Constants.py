@@ -99,7 +99,6 @@ kKeyMsvcToolsDir = "msvc_tools_dir"
 kKeyVcpkgRoot = "vcpkg_root"
 kKeyNinjaPath = "ninja_path"
 kKeySccachePath = "sccache_path"
-kKeySystemIncludeDirs = "system_include_dirs"
 
 # Search Roots & Downloads (search_paths.json)
 kKeyNinjaToolsSubdir = "ninja_tools_subdir"

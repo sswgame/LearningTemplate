@@ -15,7 +15,7 @@ namespace sw
      * @struct CrashContextStore
      * @brief 크래시 리포트에 함께 적을 키-값을 고정 버퍼에 들고 있습니다.
      * @details **크래시 시점에는 힙을 믿을 수 없습니다.** 접근 위반이 힙 손상에서 왔다면 그 안에서 하는 할당이 다시 죽습니다.
-     *          그래서 값은 미리 고정 크기 문자열에 복사해 두고, 핸들러는 읽기만 합니다. 플랫폼 세 구현(Windows · Linux · Mac)이
+     *          그래서 값은 미리 고정 크기 문자열에 복사해 두고, 핸들러는 읽기만 합니다. 플랫폼 구현(Windows · Linux)이
      *          같은 저장소를 씁니다.
      */
     struct SW_API CrashContextStore

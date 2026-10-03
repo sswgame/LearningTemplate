@@ -1,10 +1,8 @@
 /**
  * @file TestFileWatcher.cpp
- * @brief 세 플랫폼 워처가 공유하는 큐 규칙 — 상한 · 오버플로 리스캔 · 연속 중복 접기.
- * @details 이 로직은 예전에 Windows · Linux · macOS 구현에 **세 벌**로 적혀 있었고 테스트가 없었다.
- *          그래서 macOS 만 연속 중복 접기가 빠진 채로 남아 있었는데, 이 저장소는 macOS 를 빌드하지
- *          않으므로 드러날 길이 없었다. `IFileWatcher` 로 모은 뒤부터는 **플랫폼과 무관하게** 검사할 수
- *          있다 — 여기서 OS 를 전혀 건드리지 않고 규칙만 확인한다.
+ * @brief 플랫폼 워처가 공유하는 큐 규칙 — 상한 · 오버플로 리스캔 · 연속 중복 접기.
+ * @details 규칙은 `IFileWatcher` 한 곳에 있으므로 **플랫폼과 무관하게** 검사한다 — 여기서 OS 를 전혀 건드리지 않고
+ *          규칙만 확인한다.
  */
 #include "pch.h"
 
@@ -31,7 +29,7 @@ namespace
             pushChange( action, _directoryPath, filename );
         }
 
-        /** @brief 디렉터리까지 직접 정해 넣습니다 — macOS 구현이 하는 모양입니다. */
+        /** @brief 디렉터리까지 직접 정해 넣습니다 — 이벤트마다 그 파일의 디렉터리를 주는 워처의 모양입니다. */
         void pushFrom( sw::FileWatcherAction action, sw::string_view directory, sw::string_view filename )
         {
             pushChange( action, directory, filename );
@@ -43,7 +41,6 @@ namespace
  * @brief [FileWatcherTest] 같은 파일에 같은 동작이 **연달아** 오면 하나로 접는다
  * @details 저장 한 번에 OS 가 변경 알림을 둘씩 준다(리눅스의 IN_MODIFY + IN_CLOSE_WRITE, 윈도우의
  *          LAST_WRITE + SIZE). 접지 않으면 리로드가 두 번 돌고 큐도 그만큼 빨리 찬다.
- *          **macOS 구현에만 이 규칙이 없었다.**
  */
 SW_TEST_CASE( FileWatcherTest, ConsecutiveDuplicatesCollapse )
 {
@@ -119,11 +116,9 @@ SW_TEST_CASE( FileWatcherTest, QueueCapCollapsesIntoSingleRescan )
 
 /**
  * @brief [FileWatcherTest] 디렉터리가 다르면 이름이 같아도 접지 않는다
- * @details 연속 중복 접기가 `_action` 과 `_filename` 만 봤다. Windows · Linux 는 감시 루트 하나를
- *          `directory` 로 주고 하위 경로를 `filename` 에 담으므로 이름만으로 갈렸지만, macOS 는
- *          이벤트마다 그 파일이 있는 디렉터리를 준다 — 서로 다른 폴더의 같은 이름이 잇달아 오면
- *          뒤엣것이 **조용히 사라진다.** 이 저장소는 macOS 를 빌드하지 않아 드러날 길이 없었고,
- *          그래서 공유 코드 쪽에서 한 번 더 보게 했다.
+ * @details Windows · Linux 는 감시 루트 하나를 `directory` 로 주고 하위 경로를 `filename` 에 담지만,
+ *          이벤트마다 그 파일이 있는 디렉터리를 주는 워처라면 서로 다른 폴더의 같은 이름이 잇달아 온다 —
+ *          `_action` 과 `_filename` 만 보면 뒤엣것이 **조용히 사라진다.**
  */
 SW_TEST_CASE( FileWatcherTest, SameNameInDifferentDirectoriesIsNotCollapsed )
 {

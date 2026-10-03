@@ -270,7 +270,7 @@ namespace sw
                 const nlohmann::json& argsSection = *itArgs;
                 appendUnique( outList, collectStringArray( argsSection.value( jsonKeyConstants::kArgsDefault, nlohmann::json{} ) ) );
 
-#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
                 {
                     const auto            itPlatform  = argsSection.find( jsonKeyConstants::kArgsPlatform );
                     const nlohmann::json& platformSrc = ( itPlatform != argsSection.end() && itPlatform->is_object() )
@@ -376,8 +376,6 @@ namespace sw
         constexpr const utf8* kPlatformParserKey = "windows";
 #elif defined( SW_PLATFORM_LINUX )
         constexpr const utf8* kPlatformParserKey = "linux";
-#elif defined( SW_PLATFORM_MACOS )
-        constexpr const utf8* kPlatformParserKey = "darwin";
 #else
         constexpr const utf8* kPlatformParserKey = "";
 #endif
@@ -445,8 +443,6 @@ namespace sw
             _listBaseArg.emplace_back( "-DSW_PLATFORM_WINDOWS" );
 #elif defined( SW_PLATFORM_LINUX )
             _listBaseArg.emplace_back( "-DSW_PLATFORM_LINUX" );
-#elif defined( SW_PLATFORM_MACOS )
-            _listBaseArg.emplace_back( "-DSW_PLATFORM_MACOS" );
 #endif
 #if defined( SW_X64 )
             _listBaseArg.emplace_back( "-DSW_X64" );

@@ -19,8 +19,6 @@
     #include "Core/File/Linux/LinuxFileDialog.h"
 
     #include <link.h>
-#elif defined( SW_PLATFORM_MACOS )
-    #include "Core/File/Mac/MacFileDialog.h"
 #endif
 
 namespace sw
@@ -733,18 +731,6 @@ namespace sw
 
             listPathBuffer.resize( listPathBuffer.size() * 2 );
         }
-#elif defined( SW_PLATFORM_MACOS )
-        utf8   arrPathBuf[constant::kMaxBuffer1024];
-        uint32 bufSize = sizeof( arrPathBuf );
-        if ( _NSGetExecutablePath( arrPathBuf, &bufSize ) == 0 )
-        {
-            std::error_code ec;
-            auto            pathObj = std::filesystem::canonical( arrPathBuf, ec );
-            if ( ec.value() == 0 )
-                return string{ pathObj.generic_string().c_str() };
-            return string{ arrPathBuf };
-        }
-        return string{};
 #else
         std::error_code ec;
         auto            pathObj = std::filesystem::canonical( "/proc/self/exe", ec );
@@ -935,8 +921,6 @@ namespace sw
             bSuccess = WindowsFileDialog::open( params, listResult );
 #elif defined( SW_PLATFORM_LINUX )
             bSuccess = LinuxFileDialog::open( params, listResult );
-#elif defined( SW_PLATFORM_MACOS )
-            bSuccess = MacFileDialog::open( params, listResult );
 #else
             (void)params;
             SW_LOG_WARNING( "openFileDialog is not supported on this platform." );
@@ -1044,8 +1028,6 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return ".dll";
-#elif defined( SW_PLATFORM_MACOS )
-        return ".dylib";
 #else
         return ".so";
 #endif
@@ -1062,10 +1044,6 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return replaceExtension( libraryPath, ".pdb" );
-#elif defined( SW_PLATFORM_MACOS )
-        StringBuilder<constant::kMaxBuffer256> sb;
-        sb.append( libraryPath ).append( ".dSYM" );
-        return string( sb.view() );
 #else
         return replaceExtension( libraryPath, ".debug" );
 #endif

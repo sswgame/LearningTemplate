@@ -26,8 +26,6 @@
 
     #include <csetjmp>
     #include <csignal>
-#elif defined( SW_PLATFORM_MACOS )
-    #include "Core/File/Mac/MacFileWatcher.h"
 #endif
 
 namespace sw
@@ -444,8 +442,6 @@ namespace sw
               make_unique<WindowsFileWatcher>()
 #elif defined( SW_PLATFORM_LINUX )
               make_unique<LinuxFileWatcher>()
-#elif defined( SW_PLATFORM_MACOS )
-              make_unique<MacFileWatcher>()
 #else
               nullptr
 #endif

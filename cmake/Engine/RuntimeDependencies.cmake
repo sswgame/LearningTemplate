@@ -22,8 +22,6 @@ macro(sw_getVcpkgPaths OUT_INC_DIRS OUT_BIN_DIRS)
     if(NOT DEFINED VCPKG_TARGET_TRIPLET OR VCPKG_TARGET_TRIPLET STREQUAL "")
         if(WIN32)
             set(triplet "x64-windows")
-        elseif(APPLE)
-            set(triplet "x64-osx")
         else()
             set(triplet "x64-linux")
         endif()
@@ -65,7 +63,7 @@ endfunction()
 # ------------------------------------------------------------------------------
 # 3) 런타임 복사 큐 — 실제 POST_BUILD는 sw_emitRuntimeCopies
 # sw_copyVcpkgFile: bin 디렉터리의 지정 파일
-# sw_copyVcpkgSharedLib: 플랫폼별 .dll / .dylib / .so
+# sw_copyVcpkgSharedLib: 플랫폼별 .dll / .so
 # ------------------------------------------------------------------------------
 # vcpkg bin의 지정 파일을 런타임 복사 큐에 넣습니다.
 function(sw_copyVcpkgFile TARGET_NAME FILE_NAME)
@@ -88,8 +86,6 @@ endfunction()
 function(sw_copyVcpkgSharedLib TARGET_NAME LIB_BASE_NAME)
     if(WIN32)
         set(libName "${LIB_BASE_NAME}.dll")
-    elseif(APPLE)
-        set(libName "lib${LIB_BASE_NAME}.dylib")
     else()
         set(libName "lib${LIB_BASE_NAME}.so")
     endif()

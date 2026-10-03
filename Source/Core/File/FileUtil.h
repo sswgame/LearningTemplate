@@ -94,7 +94,7 @@ namespace sw
         static bool isAbsolutePath( string_view path );
         /**
          * @brief 비교 · 맵 키용으로 경로를 정규화합니다(`\` 를 `/` 로 바꾸고 소문자로).
-         * @note Linux · macOS 의 파일 I/O 에는 쓰지 마십시오. 파일을 열 때는 normalizeSeparators 나 실제 파일 시스템 경로를 씁니다.
+         * @note Linux 의 파일 I/O 에는 쓰지 마십시오. 파일을 열 때는 normalizeSeparators 나 실제 파일 시스템 경로를 씁니다.
          */
         static string normalizePath( string_view path );
         /** @brief I/O 용으로 구분자만 정규화합니다(`\` 를 `/` 로). 대소문자는 그대로 둡니다. */
@@ -231,7 +231,7 @@ namespace sw
         static string formatSharedLibraryName( string_view baseName );
         /**
          * @brief 라이브러리에 대응하는 별도 디버그 심볼 파일의 경로를 반환합니다.
-         * @note Windows: `.pdb` / macOS: `.dSYM` / Linux: `.debug`(없으면 DWARF 가 .so 안에 들어 있는 경우가 많습니다)
+         * @note Windows: `.pdb` / Linux: `.debug`(없으면 DWARF 가 .so 안에 들어 있는 경우가 많습니다)
          */
         static string getDebugSymbolPath( string_view libraryPath );
 

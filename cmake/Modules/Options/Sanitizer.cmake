@@ -118,12 +118,10 @@ else()
 	target_compile_options(sw_sanitizer INTERFACE
 		$<$<CXX_COMPILER_ID:GNU>:-fsanitize=address,undefined>
 		$<$<CXX_COMPILER_ID:Clang>:-fsanitize=address,undefined>
-		$<$<CXX_COMPILER_ID:AppleClang>:-fsanitize=address,undefined>
 	)
 	target_link_options(sw_sanitizer INTERFACE
 		$<$<CXX_COMPILER_ID:GNU>:-fsanitize=address,undefined>
 		$<$<CXX_COMPILER_ID:Clang>:-fsanitize=address,undefined>
-		$<$<CXX_COMPILER_ID:AppleClang>:-fsanitize=address,undefined>
 	)
 	message(STATUS "[Sanitizer] Address+UBSanitizer (GNU/Clang)")
 endif()

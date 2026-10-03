@@ -4,7 +4,7 @@
 
 CMake 가 판정해 정의한다(`cmake/Modules/Platform` · `Architecture` · `Compiler`):
 
-    SW_PLATFORM_WINDOWS · SW_PLATFORM_LINUX · SW_PLATFORM_MACOS
+    SW_PLATFORM_WINDOWS · SW_PLATFORM_LINUX(macOS 는 지원하지 않는다)
     SW_X64 · SW_ARM64
     SW_COMPILER_CLANG(clang-cl 포함) · SW_COMPILER_MSVC(cl.exe) · SW_COMPILER_GCC
 
@@ -41,7 +41,7 @@ _kMapBuiltinToReplacement = {
     "_WIN64": "SW_PLATFORM_WINDOWS",
     "__linux__": "SW_PLATFORM_LINUX",
     "__linux": "SW_PLATFORM_LINUX",
-    "__APPLE__": "SW_PLATFORM_MACOS",
+    "__APPLE__": "지원하지 않는 플랫폼(Windows · Linux 만 짓는다)",
     "__MINGW32__": "지원하지 않는 툴체인(Windows 는 MS ABI 만 짓는다)",
     "__MINGW64__": "지원하지 않는 툴체인(Windows 는 MS ABI 만 짓는다)",
     "_M_X64": "SW_X64",
@@ -103,7 +103,7 @@ class CheckTargetMacrosGate(LintGate):
     violationHeader = "컴파일러 내장 매크로 사용"
     hint = (
         "  플랫폼 · 아키텍처 · 컴파일러는 CMake 가 정의하는 SW_ 매크로로 묻습니다:\n"
-        "      SW_PLATFORM_WINDOWS · SW_PLATFORM_LINUX · SW_PLATFORM_MACOS · SW_X64 · SW_ARM64\n"
+        "      SW_PLATFORM_WINDOWS · SW_PLATFORM_LINUX · SW_X64 · SW_ARM64\n"
         "      SW_COMPILER_CLANG(clang-cl 포함) · SW_COMPILER_MSVC(cl.exe) · SW_COMPILER_GCC\n"
         f"  내장 매크로를 읽는 곳은 {_kCheckHeader} 하나뿐입니다(CMake 판정과 실제 컴파일러를 대조한다)."
     )

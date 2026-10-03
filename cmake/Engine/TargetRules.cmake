@@ -54,7 +54,6 @@ endfunction()
 #   | 링커                  | 플래그                                     |
 #   | --------------------- | ------------------------------------------ |
 #   | link.exe · lld-link   | `/WHOLEARCHIVE:<lib>`                      |
-#   | ld64 (Apple)          | `-force_load <lib>`                        |
 #   | GNU ld · lld · gold   | `--whole-archive <lib> --no-whole-archive` |
 #
 # 링크 옵션은 오브젝트보다 앞에 놓이지만 문제없다 — 통째로 올라온 멤버가 필요로 하는 심볼은 뒤에
@@ -75,8 +74,6 @@ function(sw_linkWholeArchive TARGET_NAME)
 
 		if(MSVC)
 			target_link_options(${TARGET_NAME} PRIVATE "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:${reflLib}>")
-		elseif(APPLE)
-			target_link_options(${TARGET_NAME} PRIVATE "LINKER:-force_load,$<TARGET_FILE:${reflLib}>")
 		else()
 			target_link_options(${TARGET_NAME} PRIVATE
 				"LINKER:--whole-archive,$<TARGET_FILE:${reflLib}>,--no-whole-archive")

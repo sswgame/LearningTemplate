@@ -7,7 +7,7 @@
  *          플랫폼을 하나 더 지원할 때 세 파일을 모두 찾아내 빠짐없이 고쳐야 합니다. 그래서 원시 연산은 여기 한 곳에만 둡니다.
  *
  * @note 지금은 분기가 한 줄짜리라 이 `.cpp` 하나가 세 플랫폼을 모두 담습니다. 비동기 IO 나 메모리 매핑처럼 플랫폼별 코드가
- *       커지면 `File/Windows` · `File/Linux` · `File/Mac` 으로 옮기면 됩니다(FileDialog · FileWatcher 가 이미 그 형태입니다).
+ *       커지면 `File/Windows` · `File/Linux` 로 옮기면 됩니다(FileDialog · FileWatcher 가 이미 그 형태입니다).
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"

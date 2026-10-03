@@ -14,6 +14,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 
 > 💡 모든 빌드/테스트 매트릭스의 실시간 실행 상태와 로그는 [GitHub Actions CI](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)에서 확인하실 수 있습니다.
 > CI 는 `nogpu` 레이블 시험만 돌립니다. GPU · 창 · DXC 가 필요한 `hostgpu` 시험은 GPU 가 있는 기계에서 직접 돌려야 합니다([7절](#7-자동화-테스트-스위트)).
+> 지원 플랫폼은 Windows · Linux 둘입니다. **macOS 는 지원하지 않습니다** — Apple 호스트에서는 CMake 구성이 멈춥니다.
 
 | OS / 플랫폼 | 컴파일러 / 툴체인 | 빌드 프리셋 & 검증 항목 | CI 상태 링크 |
 | :--- | :--- | :--- | :---: |

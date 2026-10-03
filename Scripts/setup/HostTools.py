@@ -183,28 +183,6 @@ def findWindowsSdkPath() -> tuple[str, str]:
     return "", ""
 
 
-def findSystemIncludeDirs() -> list[str]:
-    """
-    시스템 컴파일러(GCC/Clang) 또는 MSVC의 기본 시스템 Include 디렉터리 목록을 반환합니다.
-    (IntelliSense 및 ReflectionParser 참고용)
-
-    Returns:
-        시스템 Include 경로 문자열 리스트
-    """
-    includeDirs: list[str] = []
-    if platform.system() != "Darwin":
-        return includeDirs
-    try:
-        sdkPath = subprocess.check_output(["xcrun", "--show-sdk-path"], text=True).strip()
-        if sdkPath and Path(sdkPath).exists():
-            usrIncludeDir = Path(sdkPath) / "usr" / "include"
-            if usrIncludeDir.is_dir():
-                includeDirs.append(normalizePath(usrIncludeDir))
-    except Exception:
-        pass
-    return includeDirs
-
-
 # ==============================================================================
 # 빌드 도구 탐색 및 다운로드 (Ninja / Sccache)
 # ==============================================================================

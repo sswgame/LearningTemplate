@@ -27,7 +27,5 @@ SW_TEST_CASE( BuildInfoTest, NamesAgreeWithTheBuildMacros )
     SW_EXPECT_STREQ( "Windows", sw::build::kPlatformName );
 #elif defined( SW_PLATFORM_LINUX )
     SW_EXPECT_STREQ( "Linux", sw::build::kPlatformName );
-#elif defined( SW_PLATFORM_MACOS )
-    SW_EXPECT_STREQ( "macOS", sw::build::kPlatformName );
 #endif
 }

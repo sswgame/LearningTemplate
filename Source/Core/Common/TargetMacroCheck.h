@@ -15,11 +15,11 @@
  */
 #pragma once
 // ------------------------------------------------------------------------------
-// 1) 플랫폼 — Windows / Linux / macOS 중 정확히 하나
+// 1) 플랫폼 — Windows / Linux 중 정확히 하나(macOS 는 지원하지 않는다)
 // ------------------------------------------------------------------------------
 
-#if ( defined( SW_PLATFORM_WINDOWS ) + defined( SW_PLATFORM_LINUX ) + defined( SW_PLATFORM_MACOS ) ) != 1
-    #error "Exactly one of SW_PLATFORM_WINDOWS / SW_PLATFORM_LINUX / SW_PLATFORM_MACOS must be defined (cmake/Modules/Platform via sw_global_options)."
+#if ( defined( SW_PLATFORM_WINDOWS ) + defined( SW_PLATFORM_LINUX ) ) != 1
+    #error "Exactly one of SW_PLATFORM_WINDOWS / SW_PLATFORM_LINUX must be defined (cmake/Modules/Platform via sw_global_options)."
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS ) && !defined( _WIN32 )
@@ -32,10 +32,6 @@
 
 #if defined( SW_PLATFORM_LINUX ) && !defined( __linux__ )
     #error "SW_PLATFORM_LINUX is defined but the compiler does not target Linux (__linux__)."
-#endif
-
-#if defined( SW_PLATFORM_MACOS ) && !defined( __APPLE__ )
-    #error "SW_PLATFORM_MACOS is defined but the compiler does not target Apple (__APPLE__)."
 #endif
 
 // ------------------------------------------------------------------------------

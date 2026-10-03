@@ -45,7 +45,7 @@ SW_TEST_CASE( CpuClockTest, CountConversionDoesNotOverflowAfterLongUptime )
     SW_EXPECT_EQUAL( kThirtyDays * 1'000'000'000LL + 300, sw::CpuClock::countsToNanoseconds( kThirtyDays * kQpcFrequency + 3, kQpcFrequency ) );
     // 비정수 비율(예: 3 MHz)도 나머지를 버리지 않는다.
     SW_EXPECT_EQUAL( 1'000'000'333LL, sw::CpuClock::countsToNanoseconds( 3'000'001, 3'000'000 ) );
-    // 이미 나노초인 카운터(Linux · macOS)는 그대로다.
+    // 이미 나노초인 카운터(Linux)는 그대로다.
     SW_EXPECT_EQUAL( 123LL, sw::CpuClock::countsToNanoseconds( 123, 1'000'000'000LL ) );
 }
 

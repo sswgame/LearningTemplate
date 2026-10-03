@@ -61,10 +61,6 @@ set(listPosixSource
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixCrashHandler.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixProcess.cpp"
 )
-set(listMacSource
-	"${CMAKE_CURRENT_SOURCE_DIR}/File/Mac/MacFileDialog.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/File/Mac/MacFileWatcher.cpp"
-)
 set(listLinuxSource
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileDialog.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileWatcher.cpp"
@@ -73,13 +69,10 @@ set(listLinuxSource
 # 고르지 않은 OS 의 것은 소스 검사 게이트에 "이 구성이 짓지 않는다" 로 적는다(`sw_declareUnbuiltSources`).
 if(WIN32)
 	list(APPEND cfSources ${listWindowsSource})
-	sw_declareUnbuiltSources(${listPosixSource} ${listMacSource} ${listLinuxSource})
-elseif(APPLE)
-	list(APPEND cfSources ${listMacSource} ${listPosixSource})
-	sw_declareUnbuiltSources(${listWindowsSource} ${listLinuxSource})
+	sw_declareUnbuiltSources(${listPosixSource} ${listLinuxSource})
 elseif(UNIX)
 	list(APPEND cfSources ${listLinuxSource} ${listPosixSource})
-	sw_declareUnbuiltSources(${listWindowsSource} ${listMacSource})
+	sw_declareUnbuiltSources(${listWindowsSource})
 endif()
 
 # ------------------------------------------------------------------------------
@@ -107,8 +100,6 @@ endif()
 
 if(WIN32)
 	target_link_libraries(Core_objects PUBLIC comdlg32 ole32 shell32 dbghelp synchronization)
-elseif(APPLE)
-	target_link_libraries(Core_objects PUBLIC "-framework CoreServices" "-framework CoreFoundation")
 endif()
 
 target_compile_definitions(Core_objects PRIVATE "SW_LOG_TAG=\"Engine\"")
@@ -131,8 +122,6 @@ target_link_libraries(Core PUBLIC sw_third_party_includes)
 
 if(WIN32)
 	target_link_libraries(Core PUBLIC comdlg32 ole32 shell32 dbghelp synchronization)
-elseif(APPLE)
-	target_link_libraries(Core PUBLIC "-framework CoreServices" "-framework CoreFoundation")
 endif()
 
 # Engine 이 $<TARGET_OBJECTS:Core_objects> 를 가져갈 수 있도록 의존성을 드러낸다

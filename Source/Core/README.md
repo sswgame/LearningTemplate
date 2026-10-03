@@ -21,7 +21,7 @@
 - **Event/**: `EventDispatcher` · `EventType`(엔진 예약 이벤트 ID — 이벤트 타입은 그 개념이 사는 층에 둔다)
 - **Module/**: `IModuleCodeHolder`(`ModuleCodeHolder.h`) — 모듈 이미지를 내리기 전에 그 코드(델리게이트 스텁 · vtable)를 떼야 하는 등록부의 공통 계약과 목록.
   같은 수명 계약의 Engine 쪽은 `Engine/Module`, App 쪽(라이브 리로드)은 `App/Module` 이다.
-- **File/**: `FileUtil` · `PlatformFileUtil` · `IFileWatcher` + 플랫폼 폴더(`Windows/` · `Linux/` · `Mac/` — 파일 다이얼로그 · 워처)
+- **File/**: `FileUtil` · `PlatformFileUtil` · `IFileWatcher` + 플랫폼 폴더(`Windows/` · `Linux/` — 파일 다이얼로그 · 워처)
 - **Process/**: `Process` · `CallStackCapture` · `CrashContext` · `CrashHandler` + 플랫폼 폴더(`Windows/` · `Posix/`).
   `Process::terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불러도 된다(pid 는 원자). 자식은 출력 파이프 하나만 물려받는다(남의 핸들 · 서술자 상속 없음). 기다리지 않는 실행은 `Process::launchDetached`.
 - **Compression/**: `ICompressionCodec` · `CompressionCodecRegistry` · `CompressionStream` · `NullCompressionCodec` · `RleCompressionCodec`
@@ -44,7 +44,7 @@
 
 | 표면 크기 | 두는 곳 | 예 |
 |---|---|---|
-| 타입·클래스 단위로 다르다 | `File/Windows` · `File/Linux` · `File/Mac` 처럼 **플랫폼 폴더** | `WindowsFileDialog`, `WindowsFileWatcher` |
+| 타입·클래스 단위로 다르다 | `File/Windows` · `File/Linux` 처럼 **플랫폼 폴더** | `WindowsFileDialog`, `WindowsFileWatcher` |
 | 함수 이름만 다르다 | 원시 연산 하나를 감싸는 **`*Util` 한 곳** | `PlatformFileUtil::openFile` / `seekTo` / `tellPosition` |
 
 - `PlatformFileUtil` 은 이름이 다른 원시 연산만 담는다 — `openFile`(Windows 는 UTF-16 경로 · 공유 열기 `_wfsopen`) ·
@@ -55,7 +55,7 @@
 - 플랫폼 · 아키텍처 · 컴파일러는 아래 "타깃 매크로" 의 `SW_*` 매크로로만 묻는다.
 
 ## 타깃 매크로
-- 코드는 `SW_PLATFORM_WINDOWS` / `_LINUX` / `_MACOS` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 만 읽는다. 판정은
+- 코드는 `SW_PLATFORM_WINDOWS` / `_LINUX` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 만 읽는다. 판정은
   `cmake/Modules/{Platform,Architecture,Compiler}/` 가 한다.
 - 컴파일러 내장 매크로(`_WIN32` · `_MSC_VER` · `__clang__` · `__x86_64__` …)를 읽는 곳은 `Common/TargetMacroCheck.h` 하나뿐이다
   (`Scripts/lint/gate/CheckTargetMacros.py` 게이트). 이 헤더는 `Macros.h` 맨 위에서 포함되어 CMake 판정이 실제 컴파일러와 어긋나면 빌드를 세운다.

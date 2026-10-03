@@ -58,7 +58,7 @@ _kNotConditionMacro = frozenset({"defined", "__has_include"})
 
 
 def conditionFamilyInternal(macroName: str) -> str:
-    """플랫폼 매크로는 하나의 사슬(`#if WINDOWS / #elif LINUX / #elif MACOS`)로 다루므로 같은 계열로 묶는다."""
+    """플랫폼 매크로는 하나의 사슬(`#if WINDOWS / #elif LINUX`)로 다루므로 같은 계열로 묶는다."""
     if macroName.startswith("SW_PLATFORM_"):
         return "SW_PLATFORM_*"
     return macroName

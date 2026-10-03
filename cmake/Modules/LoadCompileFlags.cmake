@@ -14,8 +14,12 @@ include("${swModulesRoot}/Architecture/DetectArchitecture.cmake")
 include("${swModulesRoot}/Architecture/ARM64.cmake")
 include("${swModulesRoot}/Architecture/X64.cmake")
 
+# 지원 플랫폼은 Windows · Linux 둘이다. macOS 는 지원하지 않는다 — 플랫폼 매크로(SW_PLATFORM_*)를 정할 모듈이 없으므로 여기서 멈춘다.
+if(APPLE)
+	message(FATAL_ERROR "[Platform] macOS is not a supported platform. The engine builds on Windows and Linux only.")
+endif()
+
 include("${swModulesRoot}/Platform/Linux.cmake")
-include("${swModulesRoot}/Platform/MacOS.cmake")
 include("${swModulesRoot}/Platform/Windows.cmake")
 
 include("${swModulesRoot}/Compiler/Clang.cmake")

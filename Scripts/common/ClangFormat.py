@@ -107,8 +107,6 @@ def resolveClangFormatWheelUrlInternal(version: str) -> str:
     bArm = machine in ("arm64", "aarch64")
     if system == "Windows":
         listTag = ["win_amd64"] if machine.endswith("64") else ["win32"]
-    elif system == "Darwin":
-        listTag = ["macosx", "arm64"] if bArm else ["macosx", "x86_64"]
     else:
         listTag = ["manylinux", "aarch64"] if bArm else ["manylinux", "x86_64"]
 

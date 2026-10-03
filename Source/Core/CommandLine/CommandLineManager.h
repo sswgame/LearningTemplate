@@ -99,7 +99,7 @@ namespace sw
         void shutdown() {}
 
         /**
-         * @brief main 함수가 받은 UTF-8 인자 목록을 파싱합니다(Linux · Mac 또는 표준 C++).
+         * @brief main 함수가 받은 UTF-8 인자 목록을 파싱합니다(Linux 또는 표준 C++).
          * @param argc 인자 개수
          * @param pPpArgv 문자열 포인터 배열(UTF-8)
          */

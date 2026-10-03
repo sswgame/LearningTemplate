@@ -277,7 +277,7 @@ def expandSearchRootGlobsInternal(roots: list[str]) -> list[str]:
 
 def platformSearchRoots(search: dict[str, Any], rootsKey: str) -> list[str]:
     """
-    설정 파일(search_paths.json)에서 현재 OS 플랫폼(windows, linux, darwin)에 해당하는 탐색 경로 목록을 가져옵니다.
+    설정 파일(search_paths.json)에서 현재 OS 플랫폼(windows, linux)에 해당하는 탐색 경로 목록을 가져옵니다.
 
     `*` 가 든 항목은 실제 디렉터리로 펼쳐진다(자연순 내림차순).
     """

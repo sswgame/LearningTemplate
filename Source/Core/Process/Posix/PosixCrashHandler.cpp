@@ -10,7 +10,7 @@
 #include <csignal>
 #include <ctime>
 
-#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+#if defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
 
     #include <pthread.h>
@@ -22,19 +22,12 @@ namespace sw
     namespace
     {
         /**
-         * @brief 현재 스레드의 64비트 ID 입니다. **이 파일에서 OS 마다 달라지는 곳은 여기뿐입니다.**
-         * @details Linux 의 `pthread_t` 는 정수라 그대로 캐스팅되지만, macOS 의 것은 불투명 포인터라 전용 API 로 받아야 합니다.
-         *          나머지(sigaction · SA_SIGINFO · 대체 시그널 스택)는 POSIX 라 두 플랫폼이 같은 코드를 씁니다.
+         * @brief 현재 스레드의 64비트 ID 입니다.
+         * @details Linux 의 `pthread_t` 는 정수라 그대로 캐스팅합니다.
          */
         uint64 currentThreadId64Internal()
         {
-    #if defined( SW_PLATFORM_MACOS )
-            uint64_t threadId64{ 0 };
-            ::pthread_threadid_np( nullptr, &threadId64 );
-            return static_cast<uint64>( threadId64 );
-    #else
             return static_cast<uint64>( ::pthread_self() );
-    #endif
         }
 
         atomic<bool> s_bInstalled{ false };

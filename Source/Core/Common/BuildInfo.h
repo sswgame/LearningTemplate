@@ -16,6 +16,6 @@ namespace sw::build
 {
     /** @brief 빌드 구성 이름입니다("Debug" · "Release" · "Shipping"). */
     inline constexpr const utf8* kConfigName = SW_BUILD_CONFIG_NAME;
-    /** @brief 플랫폼 이름입니다("Windows" · "Linux" · "macOS"). */
+    /** @brief 플랫폼 이름입니다("Windows" · "Linux"). */
     inline constexpr const utf8* kPlatformName = SW_PLATFORM_NAME;
 } // namespace sw::build

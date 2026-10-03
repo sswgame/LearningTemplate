@@ -27,7 +27,7 @@ cmake/
 │   ├── BuildType/               — Debug.cmake, Release.cmake
 │   ├── Compiler/                — Clang.cmake, MSVC.cmake, GCC.cmake (SW_COMPILER_* 정의, `-Werror=switch` · `-Werror=unused-result` 등 경고 정책)
 │   ├── Options/                 — CppStandard.cmake, Sanitizer.cmake, UnityBuild.cmake
-│   ├── Platform/                — Windows.cmake, Linux.cmake, MacOS.cmake (SW_PLATFORM_* 정의 — 코드는 컴파일러 내장 매크로 대신 이것을 묻는다)
+│   ├── Platform/                — Windows.cmake, Linux.cmake (SW_PLATFORM_* 정의, macOS 는 지원하지 않는다 — 코드는 컴파일러 내장 매크로 대신 이것을 묻는다)
 │   └── Toolchain/Vcpkg/         — vcpkg 에게 건네는 파일: triplet · 포트 툴체인 · 포트 컴파일 규칙
 │
 └── Engine/                      [4계층: 엔진 빌드 파이프라인 및 타겟 헬퍼 (project() 이후)]

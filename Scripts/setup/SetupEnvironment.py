@@ -46,7 +46,6 @@ from common import (
     kKeyParserArgsSection,
     kKeyPaths,
     kKeySccachePath,
-    kKeySystemIncludeDirs,
     kKeyTuning,
     kKeyVcpkgAutoBootstrap,
     kKeyVcpkgRoot,
@@ -60,7 +59,6 @@ from common import (
 from setup.HostTools import (
     findDxcDlls,
     findMsvcPath,
-    findSystemIncludeDirs,
     findWindowsSdkPath,
     setupNinja,
     setupSccache,
@@ -115,7 +113,6 @@ class EngineConfig:
     vcpkg_root: str
     ninja_path: str
     sccache_path: str
-    system_include_dirs: list[str]
 
 
 # ==============================================================================
@@ -171,7 +168,7 @@ class EnvironmentSetupManager:
         msvcPath = getOrFindCached(self.existing_config, kKeyMsvcToolsDir, findMsvcPath)
         return sdkDirectory, sdkVersion, foundDxc, foundDxil, msvcPath
 
-    def resolveToolsInternal(self) -> tuple[str, str, str, list[str]]:
+    def resolveToolsInternal(self) -> tuple[str, str, str]:
         cachedVcpkg = self.existing_config.get(kKeyVcpkgRoot, "")
         if cachedVcpkg and isVcpkgRoot(cachedVcpkg):
             vcpkgPath = normalizePath(str(cachedVcpkg))
@@ -203,17 +200,8 @@ class EnvironmentSetupManager:
             lambda: normalizePath(setupSccache() or ""),
         )
         sccachePath = normalizePath(str(sccacheFound)) if sccacheFound else ""
-        systemIncludes = self.safeCallInternal(
-            "FindSystemIncludes",
-            getOrFindCached,
-            self.existing_config,
-            kKeySystemIncludeDirs,
-            findSystemIncludeDirs,
-        )
-        if isinstance(systemIncludes, list) == False:
-            systemIncludes = []
 
-        return vcpkgPath, ninjaPath, sccachePath, systemIncludes
+        return vcpkgPath, ninjaPath, sccachePath
 
     def runLinuxSetupInternal(self) -> None:
         if platform.system() == "Linux":
@@ -236,7 +224,7 @@ class EnvironmentSetupManager:
     def run(self) -> EngineConfig:
         llvmPath, libclangPath = self.resolveLlvmInternal()
         sdkDirectory, sdkVersion, dxcPath, dxilPath, msvcPath = self.resolveWindowsSdkInternal()
-        vcpkgPath, ninjaPath, sccachePath, systemIncludes = self.resolveToolsInternal()
+        vcpkgPath, ninjaPath, sccachePath = self.resolveToolsInternal()
 
         config = EngineConfig(
             target_platform=platform.system().lower(),
@@ -251,7 +239,6 @@ class EnvironmentSetupManager:
             vcpkg_root=vcpkgPath,
             ninja_path=ninjaPath,
             sccache_path=sccachePath,
-            system_include_dirs=systemIncludes,
         )
 
         newJson = json.dumps(asdict(config), indent=4)

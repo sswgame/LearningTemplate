@@ -75,26 +75,21 @@ def expandPathTemplate(template: str, extras: Optional[Dict[str, str]] = None) -
 
 def platformKey() -> str:
     """
-    현재 시스템에 대한 플랫폼 키('windows', 'darwin', 'linux')를 반환합니다.
+    현재 시스템에 대한 플랫폼 키('windows', 'linux')를 반환합니다.
     """
     systemName = platform.system().lower()
     if systemName.startswith("win"):
         return "windows"
-    if systemName == "darwin":
-        return "darwin"
     return "linux"
 
 
 def sharedLibraryNames(baseName: str) -> list[str]:
     """
-    플랫폼별 동적 라이브러리 파일명 목록을 반환합니다 (.dll, .dylib, .so).
+    플랫폼별 동적 라이브러리 파일명 목록을 반환합니다 (.dll, .so).
     """
     match platform.system():
         case "Windows":
             return [f"{baseName}.dll"]
-        case "Darwin":
-            name = baseName if baseName.startswith("lib") else f"lib{baseName}"
-            return [f"{name}.dylib"]
         case _:
             name = baseName if baseName.startswith("lib") else f"lib{baseName}"
             return [f"{name}.so", f"{name}.so.1"]

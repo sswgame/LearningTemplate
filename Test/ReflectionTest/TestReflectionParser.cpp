@@ -628,10 +628,8 @@ SW_TEST_CASE( ReflectionParserTest, ParserDefinesTargetMacros )
 
 #if defined( SW_PLATFORM_WINDOWS )
     const sw::string platformMacro = "SW_PLATFORM_WINDOWS";
-#elif defined( SW_PLATFORM_LINUX )
-    const sw::string platformMacro = "SW_PLATFORM_LINUX";
 #else
-    const sw::string platformMacro = "SW_PLATFORM_MACOS";
+    const sw::string platformMacro = "SW_PLATFORM_LINUX";
 #endif
 #if defined( SW_X64 )
     const sw::string architectureMacro = "SW_X64";

@@ -442,7 +442,7 @@ def makeParseArgumentsInternal(entry: dict, listExtraDefine: tuple[str, ...]) ->
 def findLibClangInternal(compilerPath: str) -> Path | None:
     """컴파일러 옆 libclang — 빌드와 같은 버전이어야 레이아웃이 같다."""
     binDir = Path(compilerPath).parent
-    for candidate in (binDir / "libclang.dll", binDir.parent / "lib" / "libclang.so", binDir.parent / "lib" / "libclang.dylib"):
+    for candidate in (binDir / "libclang.dll", binDir.parent / "lib" / "libclang.so"):
         if candidate.is_file():
             return candidate
     return None

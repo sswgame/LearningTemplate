@@ -249,7 +249,7 @@ namespace sw
                 if ( wcstombs_s( &convertedSize, pOutBuffer, bufferSize, pInput, bufferSize ) != 0 )
                     return kConversionFailed;
                 return convertedSize;
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+#elif defined( SW_PLATFORM_LINUX )
                 const size_t writtenSize = wcstombs( pOutBuffer, pInput, bufferSize );
                 if ( writtenSize == kConversionFailed )
                     return kConversionFailed;
@@ -272,7 +272,7 @@ namespace sw
                 if ( mbstowcs_s( &convertedSize, pOutBuffer, bufferSize, pInput, bufferSize ) != 0 )
                     return kConversionFailed;
                 return convertedSize;
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+#elif defined( SW_PLATFORM_LINUX )
                 const size_t writtenSize = mbstowcs( pOutBuffer, pInput, bufferSize );
                 if ( writtenSize == kConversionFailed )
                     return kConversionFailed;

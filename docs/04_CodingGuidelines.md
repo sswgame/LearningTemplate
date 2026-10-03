@@ -140,7 +140,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 
   | 묻는 것 | 매크로 | 정의하는 곳 |
   | :--- | :--- | :--- |
-  | 플랫폼 | `SW_PLATFORM_WINDOWS` · `SW_PLATFORM_LINUX` · `SW_PLATFORM_MACOS` | `cmake/Modules/Platform/` |
+  | 플랫폼 | `SW_PLATFORM_WINDOWS` · `SW_PLATFORM_LINUX`(macOS 는 지원하지 않는다) | `cmake/Modules/Platform/` |
   | 아키텍처 | `SW_X64` · `SW_ARM64` | `cmake/Modules/Architecture/` (컴파일러가 겨냥하는 아키텍처로 판정) |
   | 컴파일러 | `SW_COMPILER_CLANG`(clang-cl 포함) · `SW_COMPILER_MSVC`(cl.exe) · `SW_COMPILER_GCC` | `cmake/Modules/Compiler/` |
 

@@ -1,10 +1,8 @@
 /**
  * @file IFileWatcher.cpp
- * @brief 세 플랫폼 워처가 공유하는 큐입니다. 넣기(pushChange)와 꺼내기(pollEvents)를 맡습니다.
- * @details 플랫폼 파일에는 그 OS 만 아는 것(디렉터리 핸들 · inotify · FSEvents 런 루프)만 남기고, "무엇을 큐에 넣고
- *          넘침을 어떻게 알리는가" 는 여기 한 곳에 모읍니다. 이 저장소는 Windows 와 Linux 만 빌드하므로(macOS 는 어디서도
- *          컴파일되지 않습니다) 플랫폼 코드가 적을수록 썩을 곳이 줄어듭니다. 실제로 macOS 쪽만 연속 중복 합치기가 빠져
- *          있었습니다.
+ * @brief 플랫폼 워처(Windows · Linux)가 공유하는 큐입니다. 넣기(pushChange)와 꺼내기(pollEvents)를 맡습니다.
+ * @details 플랫폼 파일에는 그 OS 만 아는 것(디렉터리 핸들 · inotify)만 남기고, "무엇을 큐에 넣고 넘침을 어떻게 알리는가" 는
+ *          여기 한 곳에 모읍니다. 플랫폼 코드가 적을수록 썩을 곳이 줄어듭니다.
  */
 #include "pch.h"
 
@@ -29,9 +27,8 @@ namespace sw
         {
             const FileChangeEvent& last = _listEventQueue.back();
             // **디렉터리까지 같아야 같은 변경이다.** Windows · Linux 는 감시 루트 하나를 `directory` 로 주고 하위 경로를
-            // `filename` 에 담으므로 이름만 봐도 구별됐다. 하지만 macOS 는 이벤트마다 그 파일이 있는 디렉터리를 준다. 서로 다른
-            // 폴더의 같은 이름(`config.json` 두 개)이 잇달아 오면 뒤의 것이 조용히 사라진다. 여기서 디렉터리까지 보면 어느
-            // 플랫폼이 무엇을 넘기든 결과가 맞는다(앞의 두 플랫폼은 값이 항상 같으므로 동작이 달라지지 않는다).
+            // `filename` 에 담지만, 이벤트마다 그 파일이 있는 디렉터리를 주는 워처라면 서로 다른 폴더의 같은 이름(`config.json`
+            // 두 개)이 잇달아 온다. 디렉터리까지 보면 워처가 무엇을 넘기든 뒤의 것이 조용히 사라지지 않는다.
             if ( last._action == action && last._filename == filename && last._directory == directory )
                 return;
         }

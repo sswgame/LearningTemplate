@@ -12,12 +12,12 @@
 // ASan 빌드에서는 CRT 누수 검사를 쓰지 않는다. ASan 이 힙을 자기 것으로 바꾸므로 `_CrtSetDbgFlag` 류가 모두 효과가 없고,
 // 검사가 **도는 척만 하고 아무것도 잡지 못한다.** 증상도 조용했다. `_CrtSetDbgFlag( flags )` 와
 // `_CrtMemDumpStatistics( &diff )` 가 인자를 쓰지 않게 되어 "set but not used" 경고 두 개로만 드러났다(Windows ASan
-// 빌드를 처음 돌려 보고서야 보였다). Linux/macOS 쪽은 아래에서 이미 ASan 이면 LSAN 을 쓰도록 나눠 두었는데 Windows 만
+// 빌드를 처음 돌려 보고서야 보였다). Linux 쪽은 아래에서 이미 ASan 이면 LSAN 을 쓰도록 나눠 두었는데 Windows 만
 // 빠져 있었다. Windows ASan 에는 LSAN 이 없으므로 여기서는 누수 검사가 **없는 것으로** 둔다.
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING ) && !defined( SW_SANITIZER_ADDRESS )
     #define SW_HAS_CRT_LEAK_CHECK 1
-#elif ( defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS ) ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING )
+#elif defined( SW_PLATFORM_LINUX ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING )
     #if defined( __has_feature )
         #if __has_feature( address_sanitizer )
             #define SW_HAS_LSAN_LEAK_CHECK 1

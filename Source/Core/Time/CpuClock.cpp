@@ -4,34 +4,9 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
-#elif defined( SW_PLATFORM_MACOS )
-    #include <mach/mach_time.h>
 #else
     #include <time.h>
 #endif
-
-namespace sw
-{
-    namespace
-    {
-        struct CpuClockInternal
-        {
-#if defined( SW_PLATFORM_MACOS )
-            /** @brief `mach_absolute_time` 의 틱 → 나노초 비율입니다(프로세스에서 한 번 읽습니다). */
-            static const mach_timebase_info_data_t& getTimebase() noexcept
-            {
-                static const mach_timebase_info_data_t s_timebase = []()
-                {
-                    mach_timebase_info_data_t info{};
-                    mach_timebase_info( &info );
-                    return info;
-                }();
-                return s_timebase;
-            }
-#endif
-        };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -45,9 +20,6 @@ namespace sw
         timespec time{};
         clock_gettime( CLOCK_MONOTONIC, &time );
         return static_cast<int64>( time.tv_sec ) * constant::kNanosecondsPerSecond + static_cast<int64>( time.tv_nsec );
-#elif defined( SW_PLATFORM_MACOS )
-        const mach_timebase_info_data_t& timebase = CpuClockInternal::getTimebase();
-        return static_cast<int64>( mach_absolute_time() * timebase.numer / timebase.denom );
 #else
     #error "Unsupported platform"
 #endif
@@ -64,7 +36,7 @@ namespace sw
         }();
         return s_countsPerSecond;
 #else
-        return constant::kNanosecondsPerSecond; // Linux · macOS 는 readCounter 가 이미 나노초다
+        return constant::kNanosecondsPerSecond; // Linux 는 readCounter 가 이미 나노초다
 #endif
     }
 

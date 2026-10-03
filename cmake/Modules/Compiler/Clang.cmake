@@ -1,12 +1,9 @@
 # ==============================================================================
 # @file cmake/Modules/Compiler/Clang.cmake
-# @brief Clang / AppleClang 컴파일러 플래그 INTERFACE
+# @brief Clang 컴파일러 플래그 INTERFACE
 # ==============================================================================
 
-if(
-	NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
-	AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang"
-)
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	return()
 endif()
 

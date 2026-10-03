@@ -211,7 +211,7 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   they meet the need.
 - **Ask platform, architecture and compiler questions with the macros CMake defines**, never with compiler
   built-ins (`_WIN32`, `__linux__`, `_MSC_VER`, `__clang__`, `__GNUC__`, `_M_X64`, `__x86_64__`, `__aarch64__`, ...):
-  `SW_PLATFORM_WINDOWS` / `SW_PLATFORM_LINUX` / `SW_PLATFORM_MACOS`, `SW_X64` / `SW_ARM64`, and
+  `SW_PLATFORM_WINDOWS` / `SW_PLATFORM_LINUX` (macOS is not a supported platform), `SW_X64` / `SW_ARM64`, and
   `SW_COMPILER_CLANG` (clang-cl included) / `SW_COMPILER_MSVC` (cl.exe only) / `SW_COMPILER_GCC`. clang-cl defines both
   `__clang__` and `_MSC_VER`, so "may I use an MSVC extension" (`__forceinline`, `__declspec`, MS intrinsics,
   `__FUNCSIG__`) is `SW_PLATFORM_WINDOWS` — Windows builds only with an MS-ABI toolchain — not `SW_COMPILER_MSVC`.

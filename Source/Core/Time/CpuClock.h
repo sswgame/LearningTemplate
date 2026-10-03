@@ -1,7 +1,7 @@
 /**
  * @file CpuClock.h
  * @brief 엔진의 단조 시계 하나입니다 — 지금 시각(`CpuClock`) · 경과 시간(`CpuStopwatch`) · 기한(`CpuDeadline`).
- * @details `CpuTimer`(프레임 델타)와 같은 OS 카운터(Windows QPC · Linux `CLOCK_MONOTONIC` · macOS `mach_absolute_time`)를 읽습니다.
+ * @details `CpuTimer`(프레임 델타)와 같은 OS 카운터(Windows QPC · Linux `CLOCK_MONOTONIC`)를 읽습니다.
  *          엔진 코드에서 `std::chrono::steady_clock::now()` 를 직접 읽지 말고 이것을 씁니다 — 시계가 하나여야 프로파일러 · 로그 ·
  *          기한이 같은 시각을 봅니다. 로거를 include 하지 않는 가벼운 헤더라 동시성 · 컨테이너 헤더에서도 씁니다.
  */

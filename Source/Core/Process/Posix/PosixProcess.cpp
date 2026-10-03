@@ -4,7 +4,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 
-#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+#if defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
 
     #include <cerrno>

@@ -31,9 +31,9 @@
     #include <wrl/client.h>
 
 // ------------------------------------------------------------------------------
-// 2) POSIX — Linux / macOS 공통 + 플랫폼별
+// 2) POSIX — Linux
 // ------------------------------------------------------------------------------
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+#elif defined( SW_PLATFORM_LINUX )
     #include <cxxabi.h>
     #include <dirent.h>
     #include <dlfcn.h>
@@ -48,22 +48,14 @@
     #include <sys/wait.h>
     #include <unistd.h>
 
-    #if defined( SW_PLATFORM_LINUX )
-        #include <X11/Xatom.h>
-        #include <X11/Xlib.h>
-        #include <X11/Xutil.h>
-        #include <X11/keysym.h>
-        #include <sys/eventfd.h>
-        #include <sys/inotify.h>
+    #include <X11/Xatom.h>
+    #include <X11/Xlib.h>
+    #include <X11/Xutil.h>
+    #include <X11/keysym.h>
+    #include <sys/eventfd.h>
+    #include <sys/inotify.h>
 
-        #include "Core/Common/X11MacroUndef.h"
-    #elif defined( SW_PLATFORM_MACOS )
-        #include <CoreServices/CoreServices.h>
-        #include <mach-o/dyld.h>
-        #include <objc/message.h>
-        #include <objc/runtime.h>
-        #include <pwd.h>
-    #endif
+    #include "Core/Common/X11MacroUndef.h"
 #else
     #error "NOT SUPPORTED PLATFORM"
 #endif
