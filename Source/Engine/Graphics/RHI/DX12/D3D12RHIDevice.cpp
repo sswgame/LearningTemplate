@@ -39,6 +39,9 @@ namespace sw
         , _onlineBlockMutex{}
         , _listFreeOnlineBlock{}
         , _frameRing{}
+        , _timestampFrequency{ 0 }
+        , _timestampWrittenMask{ 0 }
+        , _arrTimestampMask{}
         , _gpuBuffers{}
         , _gpuTextures{}
         , _resourceStateMutex{}
@@ -59,6 +62,7 @@ namespace sw
         , _reservedPassFlags{ 0 }
         , _bBlitMismatchLogged{ SW_FALSE }
         , _bOnlineHeapExhaustedLogged{ SW_FALSE }
+        , _bTimestampEnabled{ SW_FALSE }
         , _frameStreamState{}
         , _listRegisteredBindless{}
         , _listFreeBindless{}
@@ -101,6 +105,15 @@ namespace sw
     {
         const Microsoft::WRL::ComPtr<ID3D12Resource>* slot = _gpuTextures.get( handle );
         return slot != nullptr ? slot->Get() : nullptr;
+    }
+
+    D3D12_RESOURCE_STATES D3D12RHIDevice::getTrackedTextureState( RHITextureHandle texture )
+    {
+        std::scoped_lock<mutex> lock{ _resourceStateMutex };
+        const auto              offscreenIt = _mapOffscreenTexture.find( texture );
+        if ( offscreenIt == _mapOffscreenTexture.end() )
+            return D3D12_RESOURCE_STATE_COMMON;
+        return offscreenIt->second._state;
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenRtvHandle( uint32 rtvIndex ) const

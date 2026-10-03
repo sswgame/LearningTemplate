@@ -102,20 +102,6 @@ namespace sw
 
         SW_LOG_ERROR( "No Linux Vulkan WSI selected during instance creation." );
         return false;
-#elif defined( SW_PLATFORM_MACOS )
-        (void)pDisplayHandle;
-        (void)linuxWsi;
-
-        VkMetalSurfaceCreateInfoEXT createInfo{};
-        createInfo.sType  = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
-        createInfo.pLayer = pWindowHandle;
-
-        if ( vkCreateMetalSurfaceEXT( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
-        {
-            SW_LOG_ERROR( "Failed to create Metal window surface!" );
-            return false;
-        }
-        return true;
 #else
         (void)instance;
         (void)pWindowHandle;

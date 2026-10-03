@@ -58,11 +58,10 @@ namespace sw
          */
         RHIDescriptorIndex acquireBindlessIndex( const std::unique_lock<std::shared_mutex>& lock );
 
-        /** @brief 힙 인덱스 하나가 가리키는 세 디스크립터입니다. 온라인 힙의 CPU/GPU 핸들과 오프라인 힙의 CPU 핸들입니다. */
+        /** @brief 힙 인덱스 하나가 가리키는 두 디스크립터입니다. 온라인 힙의 CPU 핸들과 오프라인 힙의 CPU 핸들입니다. */
         struct BindlessHandleSet
         {
             D3D12_CPU_DESCRIPTOR_HANDLE _cpu{};
-            D3D12_GPU_DESCRIPTOR_HANDLE _gpu{};
             D3D12_CPU_DESCRIPTOR_HANDLE _offline{};
         };
         /**

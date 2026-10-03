@@ -14,7 +14,7 @@ namespace sw
     class IRHIDevice;
 
     /** @brief 숫자 버전입니다. 도장의 `v<N>` 과 같아야 합니다. 예전에는 도장만 v16 까지 올리고 이 값은 6 에 머물러 둘이 다른 것을 셌습니다. */
-    inline constexpr uint32 kRHIModuleAbiVersion = 22;
+    inline constexpr uint32 kRHIModuleAbiVersion = 23;
     /** @brief 불투명 표면 지문입니다. 커맨드 리스트 · 디바이스 ABI 가 바뀌면 문자열을 바꿉니다.
      *         v3: IRHICommandList/ICommandReplayTarget 에 bindConstantBuffer/bindStructuredBuffer 추가.
      *         v4: drawInstanced (인스턴스드 드로우, GPUScene 인스턴스 버퍼) 추가.
@@ -49,8 +49,9 @@ namespace sw
      *         v21: IRHIDevice::shutdown 이 비가상 템플릿 메서드가 됐고 종료 3 단계 훅 detachCommandRecordingInternal 이 생겼다(vtable 이 바뀐다).
      *         v22: IRHIDevice::queryNativeHandlesInternal 가상 훅 + RHINativeHandles(판 번호 든 POD). 에디터가 VulkanRHIDevice 로 캐스팅해
      *              부르던 VulkanRHIDevice::queryNativeHandles 를 지웠다. RHINativeHandles 의 레이아웃도 이 도장이 덮는다(Engine ↔ RHI_*),
-     *              Engine ↔ 부르는 모듈은 구조체의 _version · _byteSize 로 대조한다. */
-    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v22-2026-10";
+     *              Engine ↔ 부르는 모듈은 구조체의 _version · _byteSize 로 대조한다.
+     *         v23: FrameResourceRing 이 펜스 링만 남았다(업로드 bump 할당 · 용량 인자 삭제, D3D12RHIDevice 레이아웃이 바뀐다). */
+    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v23-2026-10";
 
     namespace RHIModuleAbiInternal
     {

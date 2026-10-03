@@ -72,8 +72,5 @@ namespace sw
 
         /** @brief 등록된 객체 전부에게 `initRhi` 를 보냅니다. 디바이스가 새로 생긴 직후에 부릅니다. */
         static void initAllFor( IRHIDevice* pDevice );
-
-        /** @brief 현재 등록된 객체 수입니다(진단·테스트용). */
-        static uint32 getRegisteredCount();
     };
 } // namespace sw

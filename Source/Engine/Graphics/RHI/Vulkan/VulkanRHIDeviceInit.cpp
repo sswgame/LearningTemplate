@@ -147,13 +147,6 @@ namespace sw
             SW_LOG_ERROR( "Install libxcb1-dev / libx11-xcb-dev, and rebuild vcpkg vulkan-loader with [xcb,xlib]." );
             return false;
         }
-#elif defined( SW_PLATFORM_MACOS )
-        if ( VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_METAL_SURFACE_EXTENSION_NAME ) == false )
-        {
-            SW_LOG_ERROR( "VK_EXT_metal_surface is not available." );
-            return false;
-        }
-        listExtension.push_back( VK_EXT_METAL_SURFACE_EXTENSION_NAME );
 #endif
         if ( _bEnableValidationLayers == SW_TRUE && VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) )
             listExtension.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );

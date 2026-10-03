@@ -65,6 +65,5 @@ namespace sw
         // (병렬 커맨드 기록에서 layoutForPso 포인터가 재배치로 무효화되면 데이터 레이스).
         mutable mutex                                        _mutex;
         unordered_map<hashed_string, unique_ptr<CacheEntry>> _mapEntry;
-        ShaderBindingLayout                                  _emptyLayout;
     };
 } // namespace sw

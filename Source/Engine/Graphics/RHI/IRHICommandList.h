@@ -73,7 +73,7 @@ namespace sw
          * @brief 컴퓨트 루트 · 푸시 상수를 씁니다.
          * @details 백엔드마다 실제 용량(dword)이 다릅니다. DX11=64, OpenGL=64, DX12/Vulkan=16 입니다(루트 · 푸시 상수,
          *          bindingslots.hlsli 의 SW_ROOT_DWORD_COUNT). 네 백엔드 모두에서 안전한
-         *          상한은 constant::kMinComputeRootConstantDwords 이고, 그보다 크면 조용히 잘립니다.
+         *          상한은 shaderslot::kRootConstantDwords 이고, 그보다 크면 조용히 잘립니다.
          */
         virtual void setComputeRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
         /**
@@ -81,7 +81,7 @@ namespace sw
          * @details 언리얼이 `FMeshDrawCommand` 의 느슨한 파라미터를 드로우별로 싣는 자리와 같습니다. 상수버퍼로
          *          나르면 드로우마다 버퍼를 새로 잡거나(할당 · 디스크립터) 덮어써야 하는데(덮어쓰면 GPU 는 마지막
          *          값만 봅니다), 루트 · 푸시 상수는 커맨드 리스트에 값이 그대로 실려 그 문제가 없습니다.
-         *          용량은 `constant::kMinComputeRootConstantDwords` 까지가 네 백엔드 공통 안전선입니다.
+         *          용량은 `shaderslot::kRootConstantDwords` 까지가 네 백엔드 공통 안전선입니다.
          *          DX12 는 루트 상수, Vulkan 은 푸시 상수, DX11/GL 은 계약 슬롯 b2 의 상수버퍼로 흉내 냅니다.
          */
         virtual void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;

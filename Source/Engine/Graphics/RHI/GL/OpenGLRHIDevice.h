@@ -65,7 +65,7 @@ namespace sw
         /** @brief 컨텍스트와 GL 객체를 정리합니다. */
         virtual ~OpenGLRHIDevice() override;
 
-        /** @brief 플랫폼 GL 컨텍스트(WGL · GLX · NSGL)를 만들고 glad 로 GL 함수를 불러옵니다. */
+        /** @brief 플랫폼 GL 컨텍스트(WGL · GLX)를 만들고 glad 로 GL 함수를 불러옵니다. */
         bool initializeInternal( const RHISwapChainDesc& desc ) override;
 
         /** @brief GL 객체와 컨텍스트를 해제합니다. */
@@ -176,8 +176,8 @@ namespace sw
         OpenGLTextureRecord*       resolveTexture( RHITextureHandle handle );
         const OpenGLTextureRecord* resolveTexture( RHITextureHandle handle ) const;
 
-        /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. RHITypes.h 의
-         *         constant::kMinComputeRootConstantDwords(DX12 기준, 네 백엔드 공통 안전값) 참고. */
+        /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. 네 백엔드 공통 안전값은
+         *         shaderslot::kRootConstantDwords(DX12 · Vulkan 의 루트 · 푸시 상수 크기)입니다. */
         static constexpr uint32 kMaxComputeRootConstantDwords = 64;
 
         /// @brief 드로우 때 바인드할 버퍼 · 텍스처 슬롯입니다.
@@ -294,7 +294,7 @@ namespace sw
             uint8             _reserved : 7;
         };
 
-        /** @brief 플랫폼 GL 컨텍스트(WGL · GLX · NSGL)입니다. 생성 · 바인딩 · 프레젠트 · VSync 를 모두 여기가 압니다. */
+        /** @brief 플랫폼 GL 컨텍스트(WGL · GLX)입니다. 생성 · 바인딩 · 프레젠트 · VSync 를 모두 여기가 압니다. */
         unique_ptr<IOpenGLPlatformContext> _platformContext;
 
         /** @brief getNativeDevice 계약용 복사본입니다. 실제 소유는 _platformContext 입니다. */

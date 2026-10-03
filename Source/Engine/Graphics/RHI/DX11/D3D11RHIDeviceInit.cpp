@@ -232,14 +232,8 @@ namespace sw
 
     bool D3D11RHIDevice::bindGraphicsContext()
     {
-        // 즉시 컨텍스트에는 MakeCurrent 가 없다. 배타성은 이 스레드가 소유했다는 표시뿐이다.
-        _contextOwnerThread = std::this_thread::get_id();
+        // 즉시 컨텍스트에는 MakeCurrent 가 없다. 묶을 것이 없으므로 컨텍스트가 있는지만 답한다.
         return _deviceContext != nullptr;
-    }
-
-    void D3D11RHIDevice::unbindGraphicsContext()
-    {
-        _contextOwnerThread = std::thread::id{};
     }
 } // namespace sw
 #endif

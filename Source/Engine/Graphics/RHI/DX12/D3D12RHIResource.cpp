@@ -375,15 +375,8 @@ namespace sw
         D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
         ID3D12GraphicsCommandList*            pList = slot._copyCommandList.Get();
 
-        // 렌더 타깃이면 추적 중인 상태에서, 아니면 COMMON 에서 출발해 같은 상태로 돌아간다. 그래야 기존 SRV
-        // 바인딩 경로(COMMON 암묵 승격)가 그대로 맞는다.
-        D3D12_RESOURCE_STATES stateBefore = D3D12_RESOURCE_STATE_COMMON;
-        {
-            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
-            const auto              offscreenIt = _pDevice->_mapOffscreenTexture.find( texture );
-            if ( offscreenIt != _pDevice->_mapOffscreenTexture.end() )
-                stateBefore = offscreenIt->second._state;
-        }
+        // 추적 상태에서 출발해 같은 상태로 돌아간다(getTrackedTextureState).
+        const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
 
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -469,13 +462,7 @@ namespace sw
             return false;
         ID3D12GraphicsCommandList* pList = _pDevice->_arrStructuredUploadSlot[slotIndex]._copyCommandList.Get();
 
-        D3D12_RESOURCE_STATES stateBefore = D3D12_RESOURCE_STATE_COMMON;
-        {
-            std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
-            const auto              offscreenIt = _pDevice->_mapOffscreenTexture.find( texture );
-            if ( offscreenIt != _pDevice->_mapOffscreenTexture.end() )
-                stateBefore = offscreenIt->second._state;
-        }
+        const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
 
         D3D12_RESOURCE_BARRIER barrier{};
         barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;

@@ -376,8 +376,6 @@ namespace sw
         hashed_string _outlineColor{ FrameRendererUtil::Attachment::kOutlineColor };
         hashed_string _transparentColor{ FrameRendererUtil::Attachment::kTransparentColor };
         hashed_string _taaColor{ FrameRendererUtil::Attachment::kTaaColor };
-        hashed_string _aoColor{ "AOColor" };
-        hashed_string _tonemapColor{ "TonemapColor" };
 
         /// 셰이더가 보는 이름입니다(어태치먼트 이름과 다를 수 있습니다. registerPassTexture 의 canonical 인자).
         /// 값은 RenderPassInputRole 의 이름과 같습니다. 역할로 걸고 셰이더가 `g_<Role>Index` 로 읽습니다.

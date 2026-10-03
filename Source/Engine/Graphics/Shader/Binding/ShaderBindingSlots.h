@@ -26,7 +26,6 @@ namespace sw
         inline constexpr uint32 kMaterialConstantBuffer  = SW_SLOT_MATERIAL_CB;
         inline constexpr uint32 kComputeConstantBuffer   = SW_SLOT_COMPUTE_CB;
         inline constexpr uint32 kConstantBufferSlotCount = SW_CB_SLOT_COUNT;
-        inline constexpr uint32 kMaxConstantBuffer       = SW_MAX_CONSTANT_BUFFER;
         /// @brief setComputeRootConstants 전용 루트/푸시 상수입니다. DX12 b0 space2, Vulkan 푸시 상수, DX11 · GL 은 UBO 에뮬.
         inline constexpr uint32 kRootConstantRegister = SW_SLOT_ROOT_CB;
         inline constexpr uint32 kRootConstantSpace    = SW_SPACE_ROOT_CB;

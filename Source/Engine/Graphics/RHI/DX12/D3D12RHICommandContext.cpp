@@ -746,8 +746,7 @@ namespace sw
 
         D3D12_CPU_DESCRIPTOR_HANDLE rtvHandles[kMaxColorAttachments]{};
         uint32                      rtCount{ 0 };
-        _pState->_activeColorTargetCount = 0;
-        _pState->_bActiveSwapchainRT     = SW_FALSE;
+        _pState->_bActiveSwapchainRT = SW_FALSE;
 
         const uint32 colorBindCount = ( beginInfo._colorTargetCount > 0 ) ? beginInfo._colorTargetCount : ( bBindColor ? 1u : 0u );
         for ( uint32 attachmentIndex = 0; attachmentIndex < colorBindCount && attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
@@ -821,7 +820,6 @@ namespace sw
             }
         }
 
-        _pState->_activeColorTargetCount = rtCount;
         if ( rtCount > 0 )
             commandListForRecord()->OMSetRenderTargets( rtCount, rtvHandles, FALSE, pDsv );
         else if ( pDsv != nullptr )
@@ -842,9 +840,8 @@ namespace sw
 
     void D3D12RHICommandContext::endRenderPass()
     {
-        _pState->_activeColorTargetCount = 0;
-        _pState->_activeDepthTarget      = 0;
-        _pState->_bActiveSwapchainRT     = SW_FALSE;
+        _pState->_activeDepthTarget  = 0;
+        _pState->_bActiveSwapchainRT = SW_FALSE;
     }
 
     void D3D12RHICommandContext::setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride, uint32 offset )

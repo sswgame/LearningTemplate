@@ -171,7 +171,7 @@ namespace sw
 
         _commandList->Close();
         _frameStreamState._bRecording = SW_FALSE;
-        _frameRing.reset( 0 );
+        _frameRing.reset();
 
         _swapChain.createBackBuffers( _device.Get(), _rtvHeap.Get(), _rtvDescriptorSize );
 

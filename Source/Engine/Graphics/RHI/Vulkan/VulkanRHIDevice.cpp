@@ -22,8 +22,6 @@
     #include <vulkan/vulkan_xcb.h>
     #include <vulkan/vulkan_xlib.h>
     #include <xcb/xcb.h>
-#elif defined( SW_PLATFORM_MACOS )
-    #include <vulkan/vulkan_metal.h>
 #endif
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 

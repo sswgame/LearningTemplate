@@ -25,9 +25,9 @@ namespace sw
     /** @brief 플랫폼이 만들어 낸 불투명 컨텍스트 핸들 한 쌍입니다. */
     struct OpenGLContextHandles
     {
-        /** @brief HDC(Windows) · Display*(Linux) · NSView(macOS). */
+        /** @brief HDC(Windows) · Display*(Linux). */
         void* _pDeviceContext{ nullptr };
-        /** @brief HGLRC(Windows) · GLXContext(Linux) · NSOpenGLContext(macOS). */
+        /** @brief HGLRC(Windows) · GLXContext(Linux). */
         void* _pRenderContext{ nullptr };
     };
 
@@ -73,7 +73,7 @@ namespace sw
         /**
          * @brief 프레임 시작에 컨텍스트를 되찾습니다. 필요 없는 플랫폼은 아무것도 하지 않습니다.
          * @details WGL 은 ImGui 멀티 뷰포트가 DC 를 바꿔 놓을 수 있어 매 프레임 되찾아야 합니다.
-         *          GLX · NSGL 은 예전 코드도 여기서 아무것도 하지 않았으므로 그대로 둡니다. 동작을
+         *          GLX 는 예전 코드도 여기서 아무것도 하지 않았으므로 그대로 둡니다. 동작을
          *          바꾸지 않으려고 "필요하면 한다" 를 플랫폼이 정하게 했습니다.
          */
         virtual void reacquireForFrame() = 0;

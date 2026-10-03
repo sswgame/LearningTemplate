@@ -223,13 +223,13 @@ namespace sw
 
         /**
          * @brief 부르는 스레드에 그래픽스 컨텍스트를 붙입니다(RenderThread 진입).
-         * @details OpenGL 은 wglMakeCurrent · glXMakeCurrent 입니다. DX11 은 소유 표시만 합니다(컨텍스트에
+         * @details OpenGL 은 wglMakeCurrent · glXMakeCurrent 입니다. DX11 은 묶을 것이 없습니다(컨텍스트에
          *          MakeCurrent 가 없어, 다른 스레드에서 부르지 않는 것이 곧 배타성입니다).
          *          DX12 · Vulkan 은 할 일이 없습니다.
          */
         virtual bool bindGraphicsContext() { return true; }
 
-        /** @brief 스레드 바인딩을 풉니다(OpenGL 은 MakeCurrent(null), DX11 은 소유 표시 해제). */
+        /** @brief 스레드 바인딩을 풉니다(OpenGL 은 MakeCurrent(null)). */
         virtual void unbindGraphicsContext() {}
 
         /** @brief 백엔드 이름 문자열을 반환합니다. */

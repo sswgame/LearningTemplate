@@ -174,10 +174,8 @@ namespace sw
 
         /** @brief 즉시 컨텍스트는 소유 스레드에서만 쓰므로 true 입니다. */
         bool requiresExclusiveContextThread() const override { return true; }
-        /** @brief 부르는 스레드에 컨텍스트 소유를 표시합니다. */
+        /** @brief 즉시 컨텍스트가 있는지 답합니다. MakeCurrent 가 없어 묶을 것은 없습니다. */
         bool bindGraphicsContext() override;
-        /** @brief 그래픽스 컨텍스트 바인딩을 해제합니다. */
-        void unbindGraphicsContext() override;
 
         /** @brief D3D11 은 커맨드 큐 객체가 없어 nullptr 을 반환합니다. */
         void* getNativeCommandQueue() const override { return nullptr; }
@@ -286,8 +284,8 @@ namespace sw
         /** @brief TextureRecord 를 핸들 표에 넣고 핸들을 반환합니다. */
         RHITextureHandle storeTexture( TextureRecord record );
 
-        /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. RHITypes.h 의
-         *         constant::kMinComputeRootConstantDwords(=DX12 기준, 네 백엔드 공통 안전값) 참고. */
+        /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. 네 백엔드 공통 안전값은
+         *         shaderslot::kRootConstantDwords(DX12 · Vulkan 의 루트 · 푸시 상수 크기)입니다. */
         static constexpr uint32 kMaxComputeRootConstantDwords = kRootConstantDwordCount;
 
         /// @brief VS/PS 와 래스터 · 블렌드 · 깊이 상태 묶음입니다.
@@ -312,9 +310,7 @@ namespace sw
 
         Microsoft::WRL::ComPtr<ID3D11Device>        _device;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> _deviceContext;
-        /** @brief 즉시 컨텍스트 API 를 불러도 되는 스레드입니다(0 = 묶이지 않음 · GT 초기화). */
-        std::thread::id _contextOwnerThread;
-        RHIFormat       _backBufferFormat; ///< 스왑체인 백버퍼 포맷 (DXGI 는 요청값 그대로)
+        RHIFormat                                   _backBufferFormat; ///< 스왑체인 백버퍼 포맷 (DXGI 는 요청값 그대로)
         /// @brief 창 하나의 백버퍼입니다. 백버퍼 RTV · 크기 · Present 가 모두 여기 모여 있습니다.
         D3D11RHISwapChain _swapChain;
 
@@ -361,12 +357,12 @@ namespace sw
          *          아직이면 이번 바퀴는 건너뜁니다. 기다리면 재려던 파이프라인을 멈춰 세웁니다.
          */
         D3D11TimestampFrame _arrTimestampFrame[constant::kMaxFrameCountInFlight];
-        uint32              _timestampFrameIndex{ 0 };
+        uint32              _timestampFrameIndex;
         /// @brief 이번 프레임에 적힌 칸 비트입니다. 패스가 병렬로 기록하므로 원자입니다.
-        atomic<uint32> _timestampWrittenMask{ 0 };
-        uint8          _bTimestampEnabled{ SW_FALSE }; ///< 엔진이 켜기 전에는 쿼리도 만들지 않음
-        uint8          _bTimestampReady{ SW_FALSE };
-        uint8          _bTimestampFrameOpen{ SW_FALSE };
+        atomic<uint32> _timestampWrittenMask;
+        uint8          _bTimestampEnabled; ///< 엔진이 켜기 전에는 쿼리도 만들지 않음
+        uint8          _bTimestampReady;
+        uint8          _bTimestampFrameOpen;
         /// @brief 드라이버가 커맨드 리스트를 네이티브로 지원하면 SW_TRUE 입니다. 병렬 기록 능력의 근거입니다.
         uint8           _bDriverCommandLists;
         vector<float32> _listTimestampMicro;
@@ -402,45 +398,4 @@ namespace sw
     };
 } // namespace sw
 
-#else
-namespace sw
-{
-    /** @brief Windows 가 아닌 환경용 스텁 D3D11RHIDevice 입니다. */
-    class D3D11RHIDevice : public IRHIDevice
-    {
-        friend class D3D11RHICommandContext;
-
-    public:
-        /** @brief Windows 가 아닌 환경용 스텁입니다. initialize 는 언제나 실패합니다. */
-        D3D11RHIDevice() = default;
-        /** @brief 스텁 소멸자입니다. */
-        ~D3D11RHIDevice() = default;
-
-        bool initializeInternal( const RHISwapChainDesc& ) override { return false; }
-        void shutdownInternal() override {}
-        void resizeInternal( uint32, uint32 ) override {}
-        void beginFrame( const float4& ) override {}
-        void endFrame( bool, bool = true ) override {}
-
-        RHIBackend  getBackendType() const override { return RHIBackend::DirectX11; }
-        const utf8* getBackendName() const override { return "Direct3D 11 (Not Supported on non-Windows)"; }
-
-        void* getNativeDevice() const override { return nullptr; }
-        void* getNativeContext() const override { return nullptr; }
-        void* getNativeCommandQueue() const override { return nullptr; }
-
-        IRHIResource*       getResource() override { return nullptr; }
-        IRHICommandContext* getFrameStreamContext() override { return nullptr; }
-
-        /** @brief 스텁은 프레임을 그리지 않으므로 기다릴 GPU 작업이 없습니다. 곧바로 부릅니다. */
-        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override
-        {
-            if ( releaseDelegate.isBound() )
-                releaseDelegate();
-        }
-
-        sw::unique_ptr<IRHICommandList> createCommandList() override { return nullptr; }
-        void                            executeCommandList( IRHICommandList* ) override {}
-    };
-} // namespace sw
 #endif

@@ -109,10 +109,4 @@ namespace sw
             (void)pResource->initRhi( pDevice );
         } );
     }
-
-    uint32 RHIRenderResource::getRegisteredCount()
-    {
-        std::scoped_lock<mutex> lock{ registryMutexInternal() };
-        return static_cast<uint32>( registryInternal().size() );
-    }
 } // namespace sw

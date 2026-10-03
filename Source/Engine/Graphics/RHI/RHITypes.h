@@ -482,16 +482,6 @@ namespace sw
     /** @brief beginRenderPass · PSO 가 동시에 걸 수 있는 컬러 RT 최대 개수입니다(MRT). */
     inline constexpr uint32 kMaxColorAttachments = 4;
 
-    namespace constant
-    {
-        /**
-         * @brief setComputeRootConstants 가 네 백엔드 모두에서 안전하게 쓸 수 있는 최대 dword 수입니다.
-         * @details DX11=64(D3D11RHIDevice.h) · OpenGL=64(OpenGLRHIDevice.h)는 UBO 로 흉내 냅니다. DX12 · Vulkan 은
-         *          루트 · 푸시 상수 16 dword 입니다(bindingslots.hlsli 의 SW_ROOT_DWORD_COUNT). 가장 작은 값을 공통 안전값으로 둡니다.
-         */
-        inline constexpr uint32 kMinComputeRootConstantDwords = 16;
-    } // namespace constant
-
     /**
      * @struct RHIPipelineStateDesc
      * @brief 그래픽스 · 컴퓨트 파이프라인 상태 생성 서술체입니다.

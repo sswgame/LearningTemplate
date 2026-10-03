@@ -62,12 +62,16 @@ namespace sw
     D3D11RHIDevice::D3D11RHIDevice()
         : _device{ nullptr }
         , _deviceContext{ nullptr }
-        , _contextOwnerThread{}
         , _backBufferFormat{ constant::kBackBufferFormat }
         , _swapChain{}
         , _vertexBuffer{ nullptr }
         , _gpuBuffers{}
         , _gpuTextures{}
+        , _timestampFrameIndex{ 0 }
+        , _timestampWrittenMask{ 0 }
+        , _bTimestampEnabled{ SW_FALSE }
+        , _bTimestampReady{ SW_FALSE }
+        , _bTimestampFrameOpen{ SW_FALSE }
         , _bDriverCommandLists{ SW_FALSE }
         , _listRegisteredBindless{}
         , _listBindlessFree{}

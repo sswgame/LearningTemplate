@@ -8,8 +8,6 @@
     #include "Engine/Graphics/RHI/GL/Platform/WglPlatformContext.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include "Engine/Graphics/RHI/GL/Platform/GlxPlatformContext.h"
-#elif defined( SW_PLATFORM_MACOS )
-    #include "Engine/Graphics/RHI/GL/Platform/NsglPlatformContext.h"
 #endif
 
 namespace sw
@@ -24,8 +22,6 @@ namespace sw
         return make_unique<WglPlatformContext>();
 #elif defined( SW_PLATFORM_LINUX )
         return make_unique<GlxPlatformContext>();
-#elif defined( SW_PLATFORM_MACOS )
-        return make_unique<NsglPlatformContext>();
 #else
         SW_LOG_ERROR( "이 플랫폼에는 OpenGL 컨텍스트 구현이 없습니다." );
         return nullptr;

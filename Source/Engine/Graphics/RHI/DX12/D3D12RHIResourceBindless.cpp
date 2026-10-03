@@ -25,8 +25,6 @@ namespace sw
         BindlessHandleSet handle{};
         handle._cpu = _pDevice->_cbvHeap->GetCPUDescriptorHandleForHeapStart();
         handle._cpu.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
-        handle._gpu = _pDevice->_cbvHeap->GetGPUDescriptorHandleForHeapStart();
-        handle._gpu.ptr += static_cast<SIZE_T>( index ) * _pDevice->_cbvDescriptorSize;
         handle._offline = _pDevice->offlineDescriptorAt( index );
         return handle;
     }
@@ -223,7 +221,7 @@ namespace sw
             listRegistry.resize( index + 1 );
 
         D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
-        record                                         = { pResource, handle._cpu, handle._gpu, handle._offline };
+        record                                         = { pResource, handle._cpu, handle._offline };
         record._buffer                                 = buffer;
         record._texture                                = texture;
     }

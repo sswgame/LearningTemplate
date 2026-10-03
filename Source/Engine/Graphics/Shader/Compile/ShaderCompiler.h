@@ -159,10 +159,9 @@ namespace sw
      */
     struct ShaderCompileResult
     {
-        vector<uint8> _bytecode;               ///< 컴파일된 바이트코드
-        string        _errorMessage;           ///< 실패했을 때의 컴파일러 오류 메시지
-        string        _normalizedRelativePath; ///< 정규화된 자원 상대 경로
-        bool          _bSuccess{ false };      ///< 컴파일 성공 여부
+        vector<uint8> _bytecode;          ///< 컴파일된 바이트코드
+        string        _errorMessage;      ///< 실패했을 때의 컴파일러 오류 메시지
+        bool          _bSuccess{ false }; ///< 컴파일 성공 여부
     };
 
     /**

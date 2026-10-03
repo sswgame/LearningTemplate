@@ -233,11 +233,6 @@ namespace sw
         void executeCommandList( IRHICommandList* pCmdList ) override;
         void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
 
-        /** @brief 네이티브 Vulkan 핸들 접근자입니다. */
-        VkInstance       getInstance() const { return _instance; }
-        VkPhysicalDevice getPhysicalDevice() const { return _physicalDevice; }
-        VkDevice         getDevice() const { return _device; }
-
         /** @brief 서피스 제약으로 계약 포맷을 못 냈을 수 있으므로 실제 채택한 포맷을 보고합니다. */
         RHIFormat getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
 
@@ -345,7 +340,7 @@ namespace sw
         static constexpr uint32 kSlotSetsPerPool = 4096;
         /** @brief 풀 묶음 하나가 가질 수 있는 최대 풀 수입니다. 넘으면 에러 로그 후 직전 세트로 그립니다. */
         static constexpr uint32 kMaxPoolsPerDescriptorPoolSet = 16;
-        /** @brief setComputeRootConstants 용량(dword)입니다. 푸시 상수 크기이며, RHITypes.h 의 constant::kMinComputeRootConstantDwords 와 같습니다. */
+        /** @brief setComputeRootConstants 용량(dword)입니다. 푸시 상수 크기이며 네 백엔드 공통 안전값이기도 합니다. */
         static constexpr uint32 kMaxComputeRootConstantDwords = shaderslot::kRootConstantDwords;
 
         /// @brief VkBuffer 와 메모리 · 사용 플래그입니다.

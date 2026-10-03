@@ -75,7 +75,6 @@ namespace sw
         RHIPipelineStateHandle _boundNativeGraphicsPso;
         RHITextureHandle       _arrActiveColorTarget[kMaxColorAttachments];
         RHITextureHandle       _activeDepthTarget;
-        uint32                 _activeColorTargetCount;
         uint8                  _bActiveSwapchainRT : 1;
         uint8                  _bRecording         : 1;
         /**
@@ -104,7 +103,6 @@ namespace sw
             , _boundNativeGraphicsPso{ 0 }
             , _arrActiveColorTarget{}
             , _activeDepthTarget{ 0 }
-            , _activeColorTargetCount{ 0 }
             , _bActiveSwapchainRT{ SW_FALSE }
             , _bRecording{ SW_FALSE }
             , _bRecordedAny{ SW_FALSE }
@@ -310,6 +308,12 @@ namespace sw
         ID3D12Resource* resolveBuffer( RHIBufferHandle handle ) const;
         /** @brief 불투명 텍스처 핸들을 GPU 리소스로 풉니다. */
         ID3D12Resource* resolveTexture( RHITextureHandle handle ) const;
+        /**
+         * @brief 텍스처의 추적 상태입니다. 상태를 추적하는 것은 오프스크린 렌더 타깃뿐이라 그 밖의 텍스처는 COMMON 입니다.
+         * @details `_resourceStateMutex` 를 잡고 읽습니다. 복사 전이는 이 상태에서 출발해 같은 상태로 돌아와야 SRV 바인딩
+         *          경로(COMMON 암묵 승격)가 그대로 맞습니다.
+         */
+        D3D12_RESOURCE_STATES getTrackedTextureState( RHITextureHandle texture );
         /** @brief RTV 힙의 `rtvIndex` 번 디스크립터입니다(스왑체인 버퍼 수를 포함한 절대 번호). */
         D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenRtvHandle( uint32 rtvIndex ) const;
         /** @brief DSV 힙의 `dsvIndex` 번 디스크립터입니다. */
@@ -367,7 +371,7 @@ namespace sw
                        "루트 파라미터 배치가 shaderslot::dx12 예산 계산과 어긋난다" );
         /// @brief 슬롯 테이블 하나의 최대 원소 수입니다(t 테이블과 u 테이블 중 큰 쪽).
         static constexpr uint32 kMaxSlotTableSize = shaderslot::kSrvSlotCount > shaderslot::kComputeUavSlotCount ? shaderslot::kSrvSlotCount : shaderslot::kComputeUavSlotCount;
-        /** @brief setComputeRootConstants 용량(dword)입니다. RHITypes.h 의 constant::kMinComputeRootConstantDwords 가 이 값을 기준으로 합니다. */
+        /** @brief setComputeRootConstants 용량(dword)입니다. 루트 상수 크기이며 네 백엔드 공통 안전값이기도 합니다. */
         static constexpr uint32 kMaxComputeRootConstantDwords = shaderslot::kRootConstantDwords;
 
         /// @brief 오프스크린 텍스처와 RTV · SRV 핸들입니다.
@@ -421,8 +425,7 @@ namespace sw
         struct BindlessResourceRecord
         {
             Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
-            D3D12_CPU_DESCRIPTOR_HANDLE            _cpuHandle{}; ///< 셰이더 가시 힙 (텍스처 배열이 인덱스로 읽는 자리)
-            D3D12_GPU_DESCRIPTOR_HANDLE            _gpuHandle{};
+            D3D12_CPU_DESCRIPTOR_HANDLE            _cpuHandle{};        ///< 셰이더 가시 힙 (텍스처 배열이 인덱스로 읽는 자리)
             D3D12_CPU_DESCRIPTOR_HANDLE            _offlineCpuHandle{}; ///< 오프라인 힙의 같은 뷰. 슬롯 테이블 복사 원본(가시 힙은 복사 원본이 못 됨)
             RHIBufferHandle                        _buffer{ 0 };
             RHITextureHandle                       _texture{ 0 };
@@ -518,11 +521,11 @@ namespace sw
          */
         Microsoft::WRL::ComPtr<ID3D12QueryHeap> _timestampHeap;
         Microsoft::WRL::ComPtr<ID3D12Resource>  _timestampReadback;
-        uint64                                  _timestampFrequency{ 0 };
+        uint64                                  _timestampFrequency;
         /// @brief 이번 프레임에 실제로 적힌 슬롯 비트입니다. 패스가 병렬로 기록하므로 원자입니다.
-        atomic<uint32> _timestampWrittenMask{ 0 };
+        atomic<uint32> _timestampWrittenMask;
         /// @brief 링 슬롯별로 굳힌 비트입니다. 그 슬롯이 다시 돌아왔을 때 어느 칸이 진짜 값인지 가립니다.
-        uint32               _arrTimestampMask[constant::kMaxFrameCountInFlight]{};
+        uint32               _arrTimestampMask[constant::kMaxFrameCountInFlight];
         vector<float32>      _listTimestampMicro;
         StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
 
@@ -558,7 +561,7 @@ namespace sw
         uint8 _bBlitMismatchLogged;
         uint8 _bOnlineHeapExhaustedLogged; ///< 온라인 힙이 바닥났다는 경고를 한 번만 남기기 위한 래치입니다
         /// @brief 엔진이 켜기 전에는 힙도 만들지 않습니다. 계측은 공짜가 아닙니다.
-        uint8 _bTimestampEnabled{ SW_FALSE };
+        uint8 _bTimestampEnabled;
 
         /// @brief 디바이스 프레임 스트림(스왑체인 begin/endFrame 과 백버퍼 패스)의 기록 상태입니다.
         /// @details 예전에는 '레거시' 라고 불렀지만, S2/S3 이후 RenderThread 가 백버퍼 렌더 패스를 여는
@@ -597,43 +600,4 @@ namespace sw
     };
 } // namespace sw
 
-#else
-namespace sw
-{
-    /** @brief Windows 가 아닌 환경용 스텁 D3D12RHIDevice 입니다. */
-    class D3D12RHIDevice : public IRHIDevice
-    {
-    public:
-        /** @brief Windows 가 아닌 환경용 스텁입니다. initialize 는 언제나 실패합니다. */
-        D3D12RHIDevice() = default;
-        /** @brief 스텁 소멸자입니다. */
-        ~D3D12RHIDevice() override = default;
-
-        bool initializeInternal( const RHISwapChainDesc& ) override { return false; }
-        void shutdownInternal() override {}
-        void resizeInternal( uint32, uint32 ) override {}
-        void beginFrame( const float4& ) override {}
-        void endFrame( bool, bool = true ) override {}
-
-        RHIBackend  getBackendType() const override { return RHIBackend::DirectX12; }
-        const utf8* getBackendName() const override { return "Direct3D 12 (Not Supported on non-Windows)"; }
-
-        void* getNativeDevice() const override { return nullptr; }
-        void* getNativeContext() const override { return nullptr; }
-        void* getNativeCommandQueue() const override { return nullptr; }
-
-        IRHIResource*       getResource() override { return nullptr; }
-        IRHICommandContext* getFrameStreamContext() override { return nullptr; }
-
-        /** @brief 스텁은 프레임을 그리지 않으므로 기다릴 GPU 작업이 없습니다. 곧바로 부릅니다. */
-        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override
-        {
-            if ( releaseDelegate.isBound() )
-                releaseDelegate();
-        }
-
-        sw::unique_ptr<IRHICommandList> createCommandList() override { return nullptr; }
-        void                            executeCommandList( IRHICommandList* ) override {}
-    };
-} // namespace sw
 #endif
