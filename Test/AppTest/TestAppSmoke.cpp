@@ -197,6 +197,7 @@ namespace
         return true;
     }
 
+#if !defined( SW_SHIPPING )
     /**
      * @brief `-gv_profileFrames` 보고의 태그 줄에서 @p tagName 줄의 KB 정수부를 읽습니다. 줄이 없으면(그 태그가 0 바이트) 0 입니다.
      * @details 줄 모양: `[Profile]   Editor  15538.7 KB  77.6%  2383 blocks`. `runApp` 에 표식 `"[Profile]   "` 을 주고 돌린 결과를 넘깁니다.
@@ -241,6 +242,7 @@ namespace
      * @brief "sw 할당자 밖" 의 상한(KB)입니다. 프로파일러가 로거 · 이름 풀보다 늦게 서면 그 블록(~870 KB)이 이 줄로 갑니다.
      */
     constexpr uint64 kMaxOutsideAllocatorKilobytes = 128;
+#endif
 
     /** @brief PPM(P6) 한 장 — 폭 · 높이와 RGB 8비트 픽셀. */
     struct PpmImage
