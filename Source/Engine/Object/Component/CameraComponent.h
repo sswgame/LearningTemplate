@@ -48,7 +48,6 @@ namespace sw
         /** @brief 기본 소멸자입니다. */
         virtual ~CameraComponent() override = default;
 
-        void onBeginPlay() override;
         /** @brief 씬에 붙을 때 카메라 등록부에 자기를 등록합니다. */
         void onRegister( GameObjectManager& manager ) override;
         /** @brief 씬에서 떨어질 때 등록을 해제합니다. */

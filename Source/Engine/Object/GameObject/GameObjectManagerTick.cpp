@@ -26,7 +26,7 @@ namespace sw
          */
         thread_local const GameObject* t_pTickingObject = nullptr;
         /**
-         * @brief 이 스레드에서 지금 도는 틱의 주인 오브젝트입니다(`GameObjectManager::getTickWriter`). 두 틱 길(오브젝트 그룹 · 선행 조건 스테이지)이
+         * @brief 이 스레드에서 지금 도는 틱의 주인 오브젝트입니다. 틱 밖에서는 nullptr 입니다. 두 틱 길(오브젝트 그룹 · 선행 조건 스테이지)이
          *          모두 채웁니다. 다른 오브젝트에 쓴 건의 순서 키가 됩니다 — 대기 칸 길을 고르는 `t_pTickingObject` 와 달리 스테이지 길에서도 채웁니다.
          */
         thread_local const GameObject* t_pTickWriter = nullptr;
@@ -335,14 +335,9 @@ namespace sw
         return t_pTickingObject;
     }
 
-    const GameObject* GameObjectManager::getTickWriter()
-    {
-        return t_pTickWriter;
-    }
-
     void GameObjectManager::queueTransformWrite( const SceneTransformWrite& write )
     {
-        // 순서 키는 이 쓰기를 낸 틱의 주인 오브젝트다(`getTickWriter`) — 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 id 가 큰 쪽이 이긴다.
+        // 순서 키는 이 쓰기를 낸 틱의 주인 오브젝트다(`t_pTickWriter`) — 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 id 가 큰 쪽이 이긴다.
         const uint64 writerId = ( t_pTickWriter != nullptr ) ? t_pTickWriter->getObjectId() : 0;
         if ( _transformHierarchy.queueWriteParallel( write, writerId ) )
             return;

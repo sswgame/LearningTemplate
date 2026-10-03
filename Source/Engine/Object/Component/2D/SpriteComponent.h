@@ -38,7 +38,6 @@ namespace sw
         virtual ~SpriteComponent() override = default;
 
         void onBeginPlay() override;
-        void onEndPlay() override;
         /** @brief 메시 · 머티리얼을 풀고 클립 · 텍스처 인스턴스 · 프레임을 맞춥니다. */
         void resolveRenderAssets() override;
         /**

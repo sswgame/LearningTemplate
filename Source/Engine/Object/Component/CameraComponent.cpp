@@ -48,11 +48,6 @@ namespace sw
         return pCam;
     }
 
-    void CameraComponent::onBeginPlay()
-    {
-        SceneComponent::onBeginPlay();
-    }
-
     void CameraComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );

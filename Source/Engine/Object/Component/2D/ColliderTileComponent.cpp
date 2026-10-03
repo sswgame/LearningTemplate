@@ -19,16 +19,6 @@ namespace sw
         setTickGroup( TickGroup::DuringPhysics );
     }
 
-    void ColliderTileComponent::onEndPlay()
-    {
-        Component::onEndPlay();
-    }
-
-    void ColliderTileComponent::onTick( float32 deltaTime )
-    {
-        Component::onTick( deltaTime );
-    }
-
     int32 ColliderTileComponent::getTileType() const
     {
         return _tileType;

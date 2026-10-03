@@ -21,8 +21,6 @@ namespace sw
         virtual ~ColliderTileComponent() override = default;
 
         void onBeginPlay() override;
-        void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
 
         int32 getTileType() const;
         void  setTileType( int32 type );

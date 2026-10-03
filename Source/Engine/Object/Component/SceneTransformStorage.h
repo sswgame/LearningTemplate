@@ -49,8 +49,6 @@ namespace sw
             kLocalRotation = 1u << 1,
             kLocalScale    = 1u << 2,
         };
-        /** @brief `LocalValueBit` 전부입니다. 비트를 차례로 돌 때 씁니다(`for ( bit = kLocalPosition; bit <= kLocalScale; bit <<= 1 )`). */
-        static constexpr uint8 kAllLocalValues = kLocalPosition | kLocalRotation | kLocalScale;
 
         /** @brief 비트 하나가 가리키는 로컬 값의 자리입니다. */
         float3& getLocalValueRef( uint32 pageIndex, uint8 bit )

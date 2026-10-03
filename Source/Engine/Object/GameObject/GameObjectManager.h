@@ -239,12 +239,6 @@ namespace sw
          *          칸의 대기 자리에 잠금 없이 바로 쓰고, 아니면(다른 오브젝트의 컴포넌트 · 선행 조건 스테이지 경로) 쓰기 큐로 갑니다.
          */
         static const GameObject* getTickingObject();
-        /**
-         * @brief 이 스레드에서 지금 도는 틱의 주인 오브젝트입니다. 오브젝트 그룹 · 선행 조건 스테이지 두 길 모두에서 채워지고, 틱 밖에서는 nullptr 입니다.
-         * @details 다른 오브젝트의 컴포넌트에 쓴 건의 순서 키(`SceneTransformWrite::_writerId`)입니다 — 여러 오브젝트의 틱이 한 컴포넌트를 쓰면
-         *          id 가 큰 쪽이 이깁니다(스레드 배정과 무관).
-         */
-        static const GameObject* getTickWriter();
 
         /**
          * @brief 병렬 틱이 끝난 뒤 메인 스레드에서 실행할 작업을 넣습니다.

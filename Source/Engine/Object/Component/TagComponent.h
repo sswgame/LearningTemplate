@@ -23,8 +23,6 @@ namespace sw
         TagComponent( const TagComponent& )            = delete;
         TagComponent& operator=( const TagComponent& ) = delete;
 
-        void onBeginPlay() override;
-
         /** @brief 태그 컨테이너입니다. 읽기 전용 — 쓰기는 아래 셋을 지난다(틱 중이면 미룬다). */
         const TagContainer& getTags() const;
 

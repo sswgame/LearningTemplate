@@ -32,11 +32,6 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
     }
 
-    void SpriteComponent::onEndPlay()
-    {
-        MeshComponent::onEndPlay();
-    }
-
     void SpriteComponent::resolveRenderAssets()
     {
         MeshComponent::resolveRenderAssets();

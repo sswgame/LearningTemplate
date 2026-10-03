@@ -12,11 +12,6 @@ namespace sw
     {
     }
 
-    void TagComponent::onBeginPlay()
-    {
-        Component::onBeginPlay();
-    }
-
     const TagContainer& TagComponent::getTags() const
     {
         return _tags;

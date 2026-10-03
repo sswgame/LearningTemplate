@@ -169,7 +169,7 @@ namespace sw
          *          **힙에 만들고** 뮤텍스 하나에 줄을 서서 지연 큐에 넣었고, 틱 뒤에 게임 스레드가 건마다 핸들을 다시 풀어
          *          세터를 **직렬로** 돌렸습니다. 큐브 8000 개가 틱 안에서 움직이면 틱 2.9 ms + 재적용 1.0 ms 였습니다(Release).
          *          같은 슬롯의 직전 건이 같은 컴포넌트면 합칩니다(위치 · 스케일을 잇따라 부르는 흔한 모양).
-         *          @p writerId 는 이 쓰기를 낸 틱의 주인 오브젝트(`GameObjectManager::getTickWriter`)이고 순서 키가 됩니다 — 같은 컴포넌트에 여러
+         *          @p writerId 는 이 쓰기를 낸 틱의 주인 오브젝트(`GameObjectManager::queueTransformWrite` 가 그 스레드의 틱 주인에서 구합니다)이고 순서 키가 됩니다 — 같은 컴포넌트에 여러
          *          오브젝트의 틱이 썼으면 (쓴 오브젝트 id, 그 스레드의 순번) 순으로 적용해 마지막이 이깁니다(유니티 `EntityCommandBuffer.ParallelWriter`
          *          의 sortKey). 키는 건(`SceneTransformWrite`)이 아니라 슬롯의 키 목록에 둡니다 — 건은 바깥 배치도 쓰는 64 바이트라, 키를 넣어
          *          80 바이트가 되자 배치 8000 건이 읽는 양이 25% 늘었습니다.
