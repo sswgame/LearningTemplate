@@ -57,7 +57,6 @@ namespace sw
          * @brief 남은 소유를 놓습니다.
          * @details **정의는 `.cpp` 에 있습니다.** 여기서 인라인으로 두면 이 헤더를 include 하는 모든 TU 가
          *          서비스 스무 개의 완전한 타입을 알아야 합니다(unique_ptr 의 소멸자가 그렇습니다).
-         *          실제로 그렇게 두었다가 엔진 곳곳이 컴파일되지 않았습니다.
          */
         ~EngineOwnedServices();
 

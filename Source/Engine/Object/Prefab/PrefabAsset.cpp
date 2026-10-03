@@ -26,7 +26,7 @@ namespace sw
         {
             /**
              * @brief 프리팹 참조(경로 또는 GUID 문자열)를 경로로 풉니다. GUID 가 아니거나 데이터베이스에 없으면 받은 그대로 반환합니다.
-             * @details 로드와 스폰이 이 열두 줄을 각자 들고 있었습니다. 한쪽만 GUID 를 풀면 같은 참조가 로드는 되고 스폰은 안 됩니다.
+             * @details 로드와 스폰이 함께 씁니다 — 한쪽만 GUID 를 풀면 같은 참조가 로드는 되고 스폰은 안 됩니다.
              */
             static string resolvePrefabPath( string_view assetReference )
             {

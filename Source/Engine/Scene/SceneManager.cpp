@@ -555,7 +555,7 @@ namespace sw
                     carried._bytes.clear(); // 아래 로드가 실패로 알린다
             }
             // 옮겨 심은 것끼리의 부착(부모 · 소켓 · 오브젝트 안)은 묶음이 **원래 id** 로 잇는다. 이름으로 찾지 않는다 — 들어오는 씬에 같은
-            // 이름이 있으면 옮긴 오브젝트의 이름이 바뀌어(`MusicPlayer_2`), 이름으로 찾으면 들어오는 씬의 것에 붙었다.
+            // 이름이 있으면 옮긴 오브젝트의 이름이 바뀌어(`MusicPlayer_2`), 이름으로 찾으면 들어오는 씬의 것에 붙는다.
             ObjectStateBatch batch( ObjectIdSpace::Live );
             for ( CarriedObject& carried : listCarried )
             {

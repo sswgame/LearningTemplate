@@ -136,8 +136,7 @@ namespace sw
             /**
              * @brief 경로를 가진 팩을 찾아 `visit( mounted, pathHash, pathInPack )` 을 부릅니다. 방문자가 true 를 반환하면 멈춥니다.
              * @details 두 단계입니다. 전체 경로의 해시로 모든 팩을 보고, 그다음 경로가 도메인으로 시작하면(`engine/…`) 그 도메인 팩에서
-             *          나머지 경로로 봅니다. `hasFile` · `readFile` · `readTextFile` 이 이 스무 줄을 각자 들고 있었습니다. 조회 규칙이
-             *          바뀌면 셋을 같이 고쳐야 했습니다. 잠금은 부르는 쪽이 쥡니다.
+             *          나머지 경로로 봅니다. `hasFile` · `readFile` · `readTextFile` 이 함께 씁니다. 잠금은 부르는 쪽이 쥡니다.
              * @return 방문자가 true 를 반환한 적이 있으면 true 입니다.
              */
             template <typename VisitFn>

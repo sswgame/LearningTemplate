@@ -443,9 +443,8 @@ namespace sw
 
     void BVHTree3D::queryAabb( const AABB& queryBox, vector<SlotHandle>& outListHandle ) const
     {
-        // **먼저 비운다.** 이 네 질의는 결과를 덧붙이기만 했고, 게다가 트리가 비면 아무것도 건드리지
-        // 않고 돌아갔다. 부르는 쪽이 벡터 하나를 돌려 쓰면 지난 질의의 답이 이번 답인 척 남는다.
-        // 형제들(`SpatialHashGrid2D` · `PhysicsWorld`)은 이미 비우고 시작한다.
+        // **먼저 비운다**(트리가 비어도). 덧붙이기만 하면 부르는 쪽이 벡터 하나를 돌려 쓸 때 지난 질의의 답이 이번 답인 척 남는다.
+        // 형제들(`SpatialHashGrid2D` · `PhysicsWorld`)도 비우고 시작한다.
         outListHandle.clear();
         BVHTree3DInternal::collectOverlapping( _listNode, _rootIndex, [&queryBox]( const AABB& box )
         { return box.intersects( queryBox ); },
@@ -460,8 +459,7 @@ namespace sw
 
         // **방향을 단위 길이로 맞춘다.** `maxDist` 는 이름 그대로 거리인데, 슬랩 판정은 `tMax = maxDist` 를 방향 벡터
         // 배수로 쓴다. 정규화하지 않으면 같은 인자가 방향 길이에 따라 다른 사거리를 뜻한다(길이 2 짜리 방향이면 사거리가
-        // 두 배가 된다). 형제 `SpatialHashGrid2D::queryRay` 는 이미 정규화하고 있었고, 두 자료구조의 같은 인자가 서로
-        // 다른 뜻이었다.
+        // 두 배가 된다). 형제 `SpatialHashGrid2D::queryRay` 도 정규화한다 — 두 자료구조의 같은 인자가 같은 뜻이어야 한다.
         float3 unitDirection = direction;
         if ( unitDirection.getLengthSquared() <= MathUtil::Epsilon )
             return;

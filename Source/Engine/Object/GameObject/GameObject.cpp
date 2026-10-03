@@ -117,7 +117,7 @@ namespace sw
     void GameObject::beginPlay()
     {
         // **자리로 돈다.** onBeginPlay 가 컴포넌트를 붙이면(`addTag` 가 TagComponent 를) 목록이 자라고, 인라인 네 칸을 넘으면 힙으로
-        // 옮겨 가 범위 for 의 반복자가 풀린 칸을 읽었다. 크기는 매번 다시 읽는다 — 새로 붙은 것도 돈다. 활성 여부와 무관하다(짝은 비트가 맞춘다).
+        // 옮겨 가 범위 for 의 반복자가 풀린 칸을 읽는다. 크기는 매번 다시 읽는다 — 새로 붙은 것도 돈다. 활성 여부와 무관하다(짝은 비트가 맞춘다).
         for ( size_t compIndex = 0; compIndex < _listComponent.size(); ++compIndex )
         {
             Component* pComp = _listComponent[compIndex];

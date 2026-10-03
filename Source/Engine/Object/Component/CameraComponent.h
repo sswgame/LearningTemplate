@@ -39,8 +39,8 @@ namespace sw
 
         /**
          * @brief 그 이름의 오브젝트에 카메라가 있게 하고(없으면 오브젝트 · 컴포넌트를 만듭니다) 역할 · 위치 · 시선 · 기본 렌즈를 맞춥니다.
-         * @details 엔진의 기본 게임 카메라(`Scene::ensureDefaultCameras`)와 에디터 카메라가 이 스무 줄을 각자 들고, 기본 렌즈
-         *          값(`kDefaultFovY` · `kDefaultNearZ` · `kDefaultFarZ`)을 리터럴로 다시 적고 있었습니다.
+         * @details 엔진의 기본 게임 카메라(`Scene::ensureDefaultCameras`)와 에디터 카메라가 함께 씁니다(기본 렌즈 값
+         *          `kDefaultFovY` · `kDefaultNearZ` · `kDefaultFarZ` 를 리터럴로 다시 적지 않게).
          * @return 매니저가 없거나 만들 수 없으면(틱 중에는 `addComponent` 가 지연됩니다) nullptr 입니다.
          */
         static CameraComponent* findOrCreateNamed( GameObjectManager* pObjectManager, hashed_string objectName, CameraRole role,

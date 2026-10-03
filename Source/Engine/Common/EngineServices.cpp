@@ -35,7 +35,7 @@ namespace sw
 
             // 빠뜨린 것을 **여기서 한 번** 분명하게 알린다. 이것이 없으면 증상은 바인딩이 아니라 한참 뒤
             // 엉뚱한 자리에서 나타난다. `areEngineServicesBound()` 로 게이팅되는 스무 곳이 모두
-            // 조용히 폴백으로 가기 때문이다(배포본에서 셰이더 캐시를 건너뛰고 DXC 를 부르다 죽었다).
+            // 조용히 폴백으로 가기 때문이다(배포본이면 셰이더 캐시를 건너뛰고 DXC 를 부르다 죽는다).
             const utf8* pMissing = findUnboundRequiredServiceName( s_services );
             s_bServicesBound.store( pMissing == nullptr, std::memory_order_release );
             if ( pMissing != nullptr )

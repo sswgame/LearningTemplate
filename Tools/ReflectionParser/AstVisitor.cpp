@@ -1245,21 +1245,12 @@ namespace sw
                 enumInfo._invalidEnumerator = enumInfo._countEnumerator;
         }
 
-        // **비트플래그인지는 선언이 정한다. 값의 모양이 아니다.**
+        // **비트플래그인지는 선언이 정한다. 값의 모양이 아니다.** 비트플래그 열거형은 `ENUM( Flags )` 로 **명시한다.**
         //
-        // 처음부터(초기 커밋) "0 이 아닌 값이 모두 2의 거듭제곱이면 BitFlag" 라는 자동 감지가
-        // 있었는데, 그 조건은 `{ Game = 0, Editor = 1, Custom = 2 }` 같은 **평범한 연속 열거형**
-        // 에도 그대로 맞는다. 실제로 `CameraRole` · `PackEncryptionType` · `SampleStatus` 셋이
-        // 비트플래그로 등록돼 있었고, 그러면 문자열 변환이 `toStringFlags` 로 가고 인스펙터가
-        // 콤보 대신 체크박스를 그린다.
-        //
-        // 더 얄궂은 것은 **같은 파싱이 같은 질문에 두 답을 냈다는 점**이다. C++ 트레이트
-        // (`IsBitFlagEnum<>`)는 명시한 `ENUM( Flags )` 로만 나가므로 그 셋에는 없었다.
-        // 등록부는 "플래그다", 트레이트는 "아니다" 였다.
-        //
-        // 그래서 자동 감지를 없앤다. 비트플래그 열거형은 `ENUM( Flags )` 로 **명시한다.**
-        // 명시하지 않아 놓친 쪽은 비트 연산자가 없어 컴파일이 그 자리에서 막히지만, 명시하지
-        // 않았는데 켜지는 쪽은 조용히 틀린다.
+        // 주의: "0 이 아닌 값이 모두 2의 거듭제곱이면 BitFlag" 같은 자동 감지를 두지 말 것 — `{ Game = 0, Editor = 1, Custom = 2 }`
+        // 같은 **평범한 연속 열거형**에도 맞아 문자열 변환이 `toStringFlags` 로 가고 인스펙터가 콤보 대신 체크박스를 그리며,
+        // C++ 트레이트(`IsBitFlagEnum<>`, 명시한 `ENUM( Flags )` 로만 나간다)와 등록부가 다른 답을 낸다. 명시하지 않아 놓친 쪽은
+        // 비트 연산자가 없어 컴파일이 그 자리에서 막히지만, 명시하지 않았는데 켜지는 쪽은 조용히 틀린다.
 
         SW_LOG_INFO( "ENUM          : %#  (%# values, _bIsBitFlag=%# aliases=%#)",
                      enumInfo._fullyQualifiedName, enumInfo._listEnumerator.size(), enumInfo._bIsBitFlag ? "true" : "false",

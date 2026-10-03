@@ -432,7 +432,7 @@ namespace sw
             hashed_string{ PredefinedNameType::NameType_hashed_string },
         };
 
-        // 부모의 프로퍼티까지 본다. 자기 것만 보면 부모가 문자열 · 컨테이너를 든 타입도 통째 복사로 갔다.
+        // 부모의 프로퍼티까지 본다. 자기 것만 보면 부모가 문자열 · 컨테이너를 든 타입도 통째 복사로 간다.
         _bIsPODFastPath = SW_TRUE;
         for ( const PropertyInfo& prop : getPropertiesWithBase() )
         {
@@ -1147,7 +1147,7 @@ namespace sw
     {
         // **순환에서 멈춘다.** 걸음 수를 세는 것이 방문 목록보다 싸고(할당 없음), 체인은 보통 다섯을
         // 넘지 않는다. 부모가 미등록이어도 `_parentFQN` 이 같으면 파생으로 본다 — 모듈이 아직 안
-        // 올라온 동안 이름으로 묻는 쪽(직렬화)이 그것에 기대 왔다.
+        // 올라온 동안 이름으로 묻는 쪽(직렬화)이 그것에 기댄다.
         const TypeInfo* pCurrent = this;
         for ( uint32 depth = 0; depth < constants::reflection::kMaxParentChainDepth && pCurrent != nullptr; ++depth )
         {

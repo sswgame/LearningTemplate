@@ -27,7 +27,7 @@ namespace sw
      * @details `GameObjectManager::applyTransformBatch` 가 받습니다. 세터를 컴포넌트마다 부르는 대신 한 프레임의 쓰기를
      *          모아 워커에 나눕니다. Unity 의 `TransformAccessArray` + `IJobParallelForTransform`, 언리얼 ISM 의
      *          `BatchUpdateInstancesTransforms` 가 있는 자리입니다. 세터 하나가 ~24 ns 라 큐브 8000 에 세터 둘이면
-     *          프레임당 380 us 였고, 그것이 8000 규모 게임 스레드의 가장 큰 항목이었습니다.
+     *          프레임당 380 us 로, 8000 규모 게임 스레드의 가장 큰 항목이 됩니다.
      */
     struct SceneTransformWrite
     {

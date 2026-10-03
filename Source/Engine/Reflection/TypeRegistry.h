@@ -105,7 +105,7 @@ namespace sw
         /**
          * @brief fqn 의 TypeInfo 입니다. 찾아 둔 포인터가 있으면 그것(해제됐으면 nullptr), 없으면 `findSlow` 로 찾습니다. 미등록이면 nullptr 입니다.
          * @details 적중 경로는 여기 인라인입니다. 캐스트마다 `StaticType()` 과 `getTypeInfo()` 로 두 번 오는 자리라
-         *          DLL 경계 호출 하나가 곧 비용이었습니다.
+         *          DLL 경계 호출 하나가 곧 비용입니다.
          */
         const TypeInfo* find( const hashed_string& fqn ) const
         {
@@ -210,7 +210,7 @@ namespace sw
          * @brief 이 타입이 **실제로 무엇으로 등록됐는지** 사람이 읽는 글로 돌려줍니다(진단용).
          * @details 모듈 · 크기 · 부모 사슬, 그리고 사슬의 단계마다 선언된 프로퍼티(타입 · 이 빌드의 실제 자리 — 오프셋, 비트필드 바이트 ·
          *          마스크, 접근자 — 컨테이너 · 범위 · 플래그 · 별칭)와 함수. "왜 인스펙터에 없나 · 왜 씬이 이 값을 못 읽나 · 부모가 왜
-         *          안 붙나" 를 물을 곳이 없었다(`forEachType` 을 부르는 곳이 하나도 없었다). 파서 쪽 짝은 `ReflectionParser --dump` 다.
+         *          안 붙나" 를 묻는 자리다. 파서 쪽 짝은 `ReflectionParser --dump` 다.
          *          `-gv_dumpReflection=이름,이름` 이면 첫 프레임에 로그로 남긴다. 등록되지 않았으면 그렇다고 적는다.
          */
         string describeType( const hashed_string& nameOrFqn ) const;

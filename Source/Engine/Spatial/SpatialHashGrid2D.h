@@ -61,7 +61,7 @@ namespace sw
         /**
          * @struct CellRange
          * @brief 경계 상자 하나가 덮는 셀 범위입니다. **삽입 · 제거 · 질의가 같은 집합을 보게 하는 자리**입니다.
-         * @details 이 계산이 네 군데에 복사돼 있었습니다(삽입 · 제거 · `queryAabb` · `queryCircle`).
+         * @details 삽입 · 제거 · `queryAabb` · `queryCircle` 이 이 계산 하나를 씁니다.
          *          삽입이 덜 훑으면 그 핸들을 **질의가 찾지 못하고**, 제거가 덜 훑으면 죽은 핸들이 셀에
          *          남아 표가 끝없이 자랍니다. 둘 다 그 자리에서 터지지 않습니다.
          */

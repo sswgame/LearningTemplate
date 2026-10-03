@@ -46,8 +46,8 @@ namespace sw
 
     const ContainerTypeRule* ContainerTypeMap::match( const string_view clangTypeSpelling ) const
     {
-        // 바깥 템플릿 이름이 규칙과 **같아야** 맞는다(`ParserUtil::outerTemplateName` 설명 — 부분 문자열로 맞추던 때는 `TextureAsset` 이
-        // set 이었다).
+        // 바깥 템플릿 이름이 규칙과 **같아야** 맞는다(`ParserUtil::outerTemplateName` 설명 — 부분 문자열로 맞추면 `TextureAsset` 이
+        // set 이 된다).
         const string_view templateName = ParserUtil::outerTemplateName( clangTypeSpelling );
         if ( templateName.empty() )
             return nullptr;

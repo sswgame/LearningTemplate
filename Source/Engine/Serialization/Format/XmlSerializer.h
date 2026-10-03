@@ -175,10 +175,8 @@ namespace sw
 
         /**
          * @brief 역직렬화 중인 문서의 **루트 노드**입니다. 초기화 전이면 무효 노드입니다.
-         * @details 이것이 없어서 `XmlSerializer::deserializeSoft` 가 **같은 문자열을 두 번
-         *          파싱했습니다.** 한 번은 자기 `XmlDocument` 로 버전 속성과 orphan 자식을
-         *          훑으려고, 또 한 번은 이 백엔드가 값을 읽으려고. 형제인
-         *          `JsonSerializer::deserializeSoft` 는 처음부터 문서 하나로 셋을 다 합니다.
+         * @details `XmlSerializer::deserializeSoft` 가 이것으로 버전 속성과 orphan 자식을 훑습니다 — 같은 문자열을 두 번
+         *          파싱하지 않게(형제 `JsonSerializer::deserializeSoft` 도 문서 하나로 셋을 다 합니다).
          * @warning 반환된 노드는 **이 백엔드가 살아 있는 동안만** 유효합니다(문서를 이쪽이 쥡니다).
          */
         XmlNode getDeserializationRoot() const;

@@ -91,7 +91,7 @@ namespace sw
         bool               decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize ) const;
         /**
          * @brief @p other 의 파일 · 헤더 · 인덱스를 넘겨받고 @p other 의 파일 핸들을 비웁니다. 두 쪽의 `_fileMutex` 를 잡은 채로 부릅니다.
-         * @details 이동 생성자와 이동 대입이 같은 여섯 줄을 각자 들고 있었습니다. 멤버를 하나 더하면 두 곳을 다 고쳐야 했습니다.
+         * @details 이동 생성자와 이동 대입이 함께 씁니다. 멤버를 더하면 여기 한 곳만 고칩니다.
          */
         void takeFromLocked( ResourcePackReader& other );
 

@@ -72,7 +72,7 @@ namespace sw
     {
         _initializeStartMicro = CpuClock::nowMicroseconds();
         // 리소스 루트 탐색은 EngineLoop 가 로거를 세운 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단이
-        // 사라지고, 반환값도 여기서는 쓸 곳이 없었다.
+        // 사라지고, 반환값도 여기서는 쓸 곳이 없다.
 
         // 1. 코어 매니저는 모두 EngineLoop 가 초기화한다(헤드리스 작업 처리 포함). 타입 공급자 모듈은 그 기동 단계(`ModuleTypes`)에서 이 App 이 올린다.
         _engineLoop.setModuleTypeLoader( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ) );

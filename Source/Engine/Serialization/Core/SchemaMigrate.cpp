@@ -136,12 +136,9 @@ namespace sw
             /**
              * @brief 기록 타입(wire type)을 아는 POD payload 를 **그 타입의** 텍스트로 만듭니다.
              * @details **크기만으로는 타입을 가를 수 없습니다.** `sizeof(float32) == sizeof(int32)` 이고
-             *          `sizeof(float64) == sizeof(int64)` 입니다. 그래서 크기로만 고르던 `formatPodToString`
-             *          에서는 `float32` 분기가 **한 번도 돌지 않았고**(앞의 int32 분기가 먼저 걸립니다),
-             *          `float32` 프로퍼티를 문자열로 바꾸는 스키마 이관이 `1.5f` 를 비트값
-             *          `"1069547520"` 으로 적었습니다. 기록 타입은 바이너리 태그(`wireTypeHash`)와
-             *          `SchemaOrphanValue._wireTypeHash` 가 **이미 들고 있었습니다.** 여기까지
-             *          넘겨 주지 않았을 뿐입니다.
+             *          `sizeof(float64) == sizeof(int64)` 입니다. 크기로만 고르면 `float32` 분기가 돌지 않아(앞의 int32 분기가
+             *          먼저 걸린다) `float32` 프로퍼티를 문자열로 바꾸는 스키마 이관이 `1.5f` 를 비트값 `"1069547520"` 으로 적습니다.
+             *          기록 타입은 바이너리 태그(`wireTypeHash`)와 `SchemaOrphanValue._wireTypeHash` 가 들고 있습니다.
              * @return 기록 타입을 모르거나, 스칼라가 아니거나, payload 크기가 그 타입과 다르면 false 입니다.
              */
             static bool formatWirePodToString( const uint8* pPayload, size_t payloadSize, hashed_string wireTypeName, string& out )

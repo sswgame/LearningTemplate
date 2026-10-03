@@ -97,7 +97,7 @@ namespace sw
     void GamepadDevice::onPolled()
     {
         // 리셋(포커스 잃음 · 리플레이 재동기화)은 눌림 상태를 0 으로 만든다. 그 뒤 첫 폴링이 **계속 누르고 있던** 버튼을 읽으면
-        // 직전 값 0 과 비교해 "이번 프레임에 눌렸다" 가 된다 — 창을 오가기만 해도 점프가 나갔다. 첫 폴링 값을 직전 값으로 삼는다.
+        // 직전 값 0 과 비교해 "이번 프레임에 눌렸다" 가 된다 — 창을 오가기만 해도 점프가 나간다. 첫 폴링 값을 직전 값으로 삼는다.
         if ( _bSuppressEdgeOnce == SW_FALSE )
             return;
         _prevButtonMask    = _buttonMask;

@@ -101,7 +101,7 @@ namespace sw
     private:
         /** @brief 씬을 언로드하고 목록에서 제거합니다. */
         void unloadScene( Scene* pScene );
-        /** @brief 활성 씬을 바꿉니다. `_pActiveScene` 대입은 모두 여기로 옵니다(대입 자리가 다섯이라 한곳으로 모았습니다). */
+        /** @brief 활성 씬을 바꿉니다. `_pActiveScene` 대입은 모두 여기로 옵니다. */
         void activateScene( Scene* pScene );
         /** @brief 표시된 영속 루트와 그 자손을 @p pFrom 에서 @p pTo 로 같은 id 로 옮겨 심습니다. 사라진 루트는 표시에서 뺍니다. */
         void carryPersistentObjects( Scene* pFrom, Scene* pTo );

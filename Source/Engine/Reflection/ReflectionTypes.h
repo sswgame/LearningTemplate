@@ -764,10 +764,8 @@ namespace sw
         mutable unordered_map<hashed_string, const FunctionInfo*> _mapNameToMethod;
         /**
          * @brief `_parentFQN` 을 한 번 풀어 둔 부모 `TypeInfo` 입니다. 없거나 아직 풀지 못했으면 nullptr 입니다.
-         * @details `isDerivedFrom` 이 조상마다 `findType(_parentFQN)` 을 불렀습니다. 조상 하나당
-         *          shared_mutex 잠금 + 해시맵 조회입니다. 캐스트가 실패하는 흔한 경우에는 사슬 끝까지 그것을
-         *          두 번 걸었습니다. 등록 배치 끝(`TypeRegistry::buildLookupCaches`)에서 한 번 풀어 두면
-         *          걷는 일은 포인터 역참조 몇 번입니다.
+         * @details `isDerivedFrom` 이 조상마다 `findType(_parentFQN)`(shared_mutex 잠금 + 해시맵 조회)을 부르지 않도록,
+         *          등록 배치 끝(`TypeRegistry::buildLookupCaches`)에서 한 번 풀어 둡니다. 걷는 일은 포인터 역참조 몇 번입니다.
          *
          *          **해제 때 비워집니다.** `TypeInfo` 의 주소는 고정이라 옮겨지지는 않지만, 모듈 해제 뒤에는
          *          묘비가 된 부모를 가리킬 수 있습니다. 그래서 해제가 남은 타입 모두의 이 칸을 비우고, 비어 있으면
@@ -959,8 +957,8 @@ namespace sw
         /**
          * @brief 묘비로 남길 때 모듈이 든 내용을 비웁니다. 이름 · id · 모듈만 남습니다.
          * @details 프로퍼티 · 메서드 목록은 그 모듈의 코드(델리게이트 · `$ctor` · 소멸 함수)를 가리킵니다. 모듈이 내려간 뒤에
-         *          이것을 파괴하면(재등록 대입 · 레지스트리 소멸) 사라진 코드를 부릅니다. SmokeTest 의 핫 리로드가 그렇게
-         *          죽었습니다. 그래서 해제 시점, **모듈이 아직 살아 있을 때** 여기서 비웁니다.
+         *          이것을 파괴하면(재등록 대입 · 레지스트리 소멸) 사라진 코드를 부릅니다. 그래서 해제 시점, **모듈이 아직 살아 있을 때**
+         *          여기서 비웁니다.
          */
         void clearContent();
 

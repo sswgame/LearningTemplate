@@ -269,7 +269,7 @@ namespace sw
             return string{ textOrKey };
 
         // **키가 아닐 수도 있는 텍스트로 물어본다.** `hashed_string` 을 만들어 물으면 그 대사 원문이
-        // intern 아레나에 영구히 남는다. 대화가 늘수록 함께 늘어나는 누수였다. 표는 해시로만
+        // intern 아레나에 영구히 남는다(대화가 늘수록 함께 늘어나는 누수). 표는 해시로만
         // 열리므로 intern 없이 물어볼 수 있다.
         const utf8* pResolved = engine::getLocalizationManager().getStringByText( textOrKey, nullptr );
         if ( StringUtil::isNullOrEmpty( pResolved ) )

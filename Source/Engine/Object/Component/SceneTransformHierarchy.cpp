@@ -545,7 +545,7 @@ namespace sw
         else if ( SceneTransformHierarchyInternal::hasStrictlyIncreasingTargets( pWrite, count ) )
         {
             // 빠른 길: 대상이 엄격히 늘어나면(만든 순서대로 모은 배열 — 벤치 씬 · 인스턴스 갱신의 모양) 같은 핸들이 둘일 수 없다. 연속 구간으로
-            // 나눠도 한 대상은 한 구간에만 있으므로 버킷 목록을 채우지 않는다(잎 루트 8000 건에서 그 패스가 ~35 us 였다).
+            // 나눠도 한 대상은 한 구간에만 있으므로 버킷 목록을 채우지 않는다(잎 루트 8000 건에서 그 패스가 ~35 us 다).
             struct RangeWriteJob
             {
                 GameObjectManager*         _pManager{ nullptr };

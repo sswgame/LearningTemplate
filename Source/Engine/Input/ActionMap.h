@@ -549,7 +549,7 @@ namespace sw
         /**
          * @brief 활성 레이어의 코드(chord) 바인딩 중 수식 키가 눌려 있고 방아쇠 키가 조건을 만족하는 것이 있는지 봅니다.
          * @param bTriggerJustPressed true 면 방아쇠 키가 **이번 프레임에 눌렸는지**(`wasChordTriggered`), false 면 눌려 있는지(`isChordDown`)
-         * @details 두 질의가 방아쇠 키를 묻는 한 줄만 다르고 나머지 열세 줄이 같았습니다.
+         * @details 두 질의(`wasChordTriggered` · `isChordDown`)는 방아쇠 키를 묻는 한 줄만 다릅니다.
          */
         bool             hasActiveChord( const hashed_string& action, bool bTriggerJustPressed ) const;
         bool             isLayerActiveInternal( const hashed_string& layer ) const;

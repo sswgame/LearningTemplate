@@ -30,8 +30,8 @@ namespace sw
 
         /**
          * @brief 표에서 만든 사용법을 표준 출력에 씁니다.
-         * @details 로그가 아니라 `fwrite` 다 — 배포본은 Info 로그를 컴파일하지 않아(`SW_LOG_COMPILED_VERBOSITY`), 로그로 남기던 때는
-         *          Shipping 파서의 `--help` 가 아무것도 찍지 않았다.
+         * @details 로그가 아니라 `fwrite` 다 — 배포본은 Info 로그를 컴파일하지 않아(`SW_LOG_COMPILED_VERBOSITY`), 로그로 남기면
+         *          Shipping 파서의 `--help` 가 아무것도 찍지 않는다.
          */
         static void printUsage();
 

@@ -77,9 +77,7 @@ namespace sw
         // **표 크기로 자른다.** 표가 꽉 찬 뒤에도 아래 `fetch_add` 는 카운터를 계속 올리므로
         // 그 값이 `kMaxScope` 를 넘어간다 — 자르지 않으면 이 순회가 고정 배열 **밖**을 읽고,
         // 배열 바로 뒤에 있는 것이 `_scopeCount` 자신이라 그 비트가 `const utf8*` 로 읽혀
-        // 문자열 비교에 들어간다(프로세스가 죽는다). 이 파일의 다른 세 순회
-        // (`endFrame` · `report` · `reset`)는 전부 이미 자르고 있었는데, 넘침을 **만드는**
-        // 이 함수만 자르지 않았다.
+        // 문자열 비교에 들어간다(프로세스가 죽는다). 이 파일의 다른 세 순회(`endFrame` · `report` · `reset`)도 자른다.
         const uint32 count = MathUtil::min( _scopeCount.load( std::memory_order_acquire ), kMaxScope );
         for ( uint32 index = 0; index < count; ++index )
         {

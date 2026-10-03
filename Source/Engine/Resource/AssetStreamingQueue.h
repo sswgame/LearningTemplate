@@ -90,8 +90,8 @@ namespace sw
         void processAssetTask( const TaskArgs& args );
         /**
          * @brief 요청을 태스크로 내거나, 엔진 서비스가 없으면(테스트 · 툴) 그 자리에서 끝냅니다. `_mutex` 를 쥔 채 부릅니다.
-         * @details `requestAsset` · `requestAssetData` 가 태스크 내기와 동기 폴백을 각자 들고 있었고, 두 폴백이 완료를 절반씩만
-         *          했습니다(하나는 존재 콜백만, 하나는 데이터 콜백만 비웠습니다).
+         * @details `requestAsset` · `requestAssetData` 가 함께 씁니다 — 폴백을 따로 들면 완료를 절반씩만 하게 됩니다(존재 콜백만 ·
+         *          데이터 콜백만 비우기).
          */
         void startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData, StreamingPriority priority );
         /** @brief 결과를 적고 진행 표를 지운 뒤 두 콜백 목록을 완료 큐로 옮깁니다. 태스크 완료와 동기 폴백이 같은 길을 씁니다. `_mutex` 를 쥔 채 부릅니다. */
@@ -109,10 +109,9 @@ namespace sw
         /**
          * @brief 진행 중인 요청 가운데 **바이트까지 읽는** 것들입니다.
          * @details `requestAsset`(있는지만 봅니다)과 `requestAssetData`(바이트를 읽습니다)가 같은
-         *          `_uniqueActiveRequest` 를 함께 씁니다. 그래서 존재 확인이 진행 중일 때 데이터
-         *          요청이 들어오면 **그 태스크에 편승**했는데, 그 태스크는 파일을 읽지 않습니다.
-         *          데이터 콜백이 `bSuccess = true` 와 **빈 버퍼**를 받았습니다. 성공이라고 말하면서
-         *          아무것도 주지 않는, 가장 나쁜 모양의 틀린 답입니다.
+         *          `_uniqueActiveRequest` 를 함께 씁니다. 존재 확인이 진행 중일 때 들어온 데이터 요청이
+         *          **그 태스크에 편승**하면, 그 태스크는 파일을 읽지 않으므로 데이터 콜백이 `bSuccess = true` 와
+         *          **빈 버퍼**를 받습니다. 그래서 바이트까지 읽는 요청을 따로 셉니다.
          *
          *          진행 중인 것이 어느 쪽인지 알아야 "편승해도 되는가" 를 가릴 수 있습니다.
          */

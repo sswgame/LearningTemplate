@@ -36,8 +36,7 @@ namespace sw
 
             /**
              * @brief 프리팹 GUID 로 경로를 다시 풉니다. 파일 이동 · 이름 변경을 자동으로 따라갑니다.
-             * @details XML 로더와 바이너리 로더가 같은 아홉 줄을 각자 들고 있었습니다. 한쪽만 고치면 그 포맷으로 읽은 씬만
-             *          옮긴 프리팹을 못 찾습니다.
+             * @details XML 로더와 바이너리 로더가 함께 씁니다 — 한쪽만 고치면 그 포맷으로 읽은 씬만 옮긴 프리팹을 못 찾습니다.
              */
             static void resolvePrefabPathByGuid( SceneDocument::EntityNode& node )
             {

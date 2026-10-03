@@ -20,7 +20,7 @@ namespace sw
         {
             /**
              * @brief 프로퍼티 이름, 안 되면 별칭 순으로 `tryName( pName )` 을 불러 처음 성공하면 true 입니다.
-             * @details 자식 요소 들어가기(컨테이너 · 중첩 구조체)와 속성 읽기가 같은 "이름 → 별칭" 루프를 세 벌 들고 있었습니다.
+             * @details 자식 요소 들어가기(컨테이너 · 중첩 구조체)와 속성 읽기가 이 "이름 → 별칭" 루프 하나를 씁니다.
              */
             template <typename TryNameFunc>
             [[nodiscard]] static bool tryNameOrAlias( const PropertyInfo& prop, TryNameFunc&& tryName )

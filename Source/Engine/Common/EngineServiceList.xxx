@@ -44,8 +44,8 @@ SW_ENGINE_SERVICE( _pAssetStreamingQueue, class, AssetStreamingQueue, getAssetSt
 // CommandStack 은 에디터 Undo/Redo 전용이라 Shipping 에서는 아예 만들지 않는다
 // (EngineLoop 의 #if !defined(SW_SHIPPING) 참고). 그런데 Required 면
 // areEngineServicesBound() 가 Shipping 에서 영영 false 가 되고, 그 함수로 게이팅되는 경로가
-// 모두 무력화된다. 실제로 셰이더 캐시를 건너뛰고 런타임 컴파일러를 직접 부르다가
-// (Shipping 에는 DXC 가 없어서) 죽었다. 이것을 쓰는 곳은 이미 모두 Shipping 에서 빠져 있다.
+// 모두 무력화된다(셰이더 캐시를 건너뛰고 런타임 컴파일러를 직접 부르다 Shipping 에는 DXC 가 없어 죽는다).
+// 이것을 쓰는 곳은 모두 Shipping 에서 빠져 있다.
 SW_ENGINE_SERVICE( _pCommandStack, class, CommandStack, getCommandStack, Optional, HostOnly, HostCreated )
 SW_ENGINE_SERVICE( _pDebugOverlayState, struct, DebugOverlayState, getDebugOverlayState, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pDebugDrawQueue, class, DebugDrawQueue, getDebugDrawQueue, Required, GameVisible, EngineCreated )

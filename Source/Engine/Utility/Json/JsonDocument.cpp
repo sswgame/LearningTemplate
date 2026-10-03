@@ -225,8 +225,7 @@ namespace sw
             return fallback;
         if ( pValue->is_number_float() )
             return pValue->get<float64>();
-        // 부호 없는 쪽이 먼저다(이유는 `asInt` 참고). 순서가 뒤집혀 있어서
-        // `18446744073709551615` 가 `-1.0` 으로 돌아왔다.
+        // 부호 없는 쪽이 먼저다(이유는 `asInt` 참고). 순서가 뒤집히면 `18446744073709551615` 가 `-1.0` 으로 돌아온다.
         if ( pValue->is_number_unsigned() )
             return static_cast<float64>( pValue->get<uint64>() );
         if ( pValue->is_number_integer() )

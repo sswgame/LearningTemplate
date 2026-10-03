@@ -77,8 +77,8 @@ namespace sw
     {
         // **활성 창이 죽으면 전역 포인터도 같이 끊는다.** 그러지 않으면 뒤에
         // `getActiveWindow()` 를 부르는 쪽(RHI 초기화 · 에디터 명령 · 프레임 트랜지언트)이
-        // 죽은 포인터를 받는다. `App::shutdown` 은 파괴 전에 손으로 끊고 있었지만 그것은
-        // **한 경로의 규율**이었다. `EngineLoop` 은 App 이 없는 임베드 시나리오에서 창을
+        // 죽은 포인터를 받는다. 부르는 쪽이 파괴 전에 손으로 끊는 것은 **한 경로의 규율**일 뿐이다.
+        // `EngineLoop` 은 App 이 없는 임베드 시나리오에서 창을
         // 전역에 놓아둔 채 소유를 부르는 쪽에 넘긴다(`EngineLoop::initialize` 의 `setActiveWindow`
         // 바로 위 주석). 여기서 끊으면 어느 경로로 죽어도 참이다.
         if ( s_pActiveWindow == this )

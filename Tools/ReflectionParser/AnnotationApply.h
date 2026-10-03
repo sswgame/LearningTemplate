@@ -2,8 +2,7 @@
  * @file AnnotationApply.h
  * @brief REFLECT/PROPERTY/FUNCTION/ENUM 어노테이션 문자열을 Parsed* 필드에 적용합니다.
  * @details 토큰의 철자는 AnnotationMeta.txt 가 정규 필드명으로 바꾸고, 값을 넣는 일은 필드 표(`AnnotationFields`)가
- *          합니다. 스코프마다 따로 있던 적용 함수 넷은 표를 도는 루프 하나가 되었습니다 — 새 필드는
- *          PredefinedAnnotationField.xxx 에 한 줄을 더하면 됩니다.
+ *          합니다. 네 스코프가 표를 도는 루프 하나를 씁니다 — 새 필드는 PredefinedAnnotationField.xxx 에 한 줄을 더하면 됩니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
