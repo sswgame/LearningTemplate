@@ -97,6 +97,30 @@ def removeIncompleteVcpkgTreeInternal(toolsDir: Path) -> None:
     shutil.rmtree(toolsDir, ignore_errors=True)
 
 
+def hasVcpkgExecutable(vcpkgRoot: Path) -> bool:
+    """
+    이 OS 의 vcpkg 실행 파일(윈도우 `vcpkg.exe`, 그 밖 `vcpkg`)이 루트에 있는지 봅니다.
+
+    `isVcpkgRoot` 는 `vcpkg.cmake` 만 본다 — 윈도우에서 부트스트랩한 트리를 리눅스에서 쓰면 그 파일은 있지만 리눅스 실행 파일은 없다.
+    """
+    return (vcpkgRoot / ("vcpkg.exe" if platformKey() == "windows" else "vcpkg")).is_file()
+
+
+def runBootstrapScriptInternal(vcpkgRoot: Path) -> bool:
+    """이미 있는 vcpkg 트리에서 이 OS 의 bootstrap 스크립트만 돌립니다(클론 · 지우기 없음). 성공하면 True 입니다."""
+    bootstrap = vcpkgRoot / ("bootstrap-vcpkg.bat" if platformKey() == "windows" else "bootstrap-vcpkg.sh")
+    if not bootstrap.is_file():
+        sys.stderr.write(f"[SetupVcpkg Error] bootstrap script missing: {bootstrap}\n")
+        return False
+    print(f"[SetupVcpkg] Running {bootstrap.name} in {vcpkgRoot} (no vcpkg executable for this OS)...", file=sys.stderr)
+    process = subprocess.run(platformScriptCommand(bootstrap), cwd=str(vcpkgRoot), capture_output=True, text=True, check=False)
+    if process.returncode != 0 or not hasVcpkgExecutable(vcpkgRoot):
+        sys.stderr.write(f"[SetupVcpkg Error] bootstrap failed (exit {process.returncode}):\n"
+                         f"{process.stderr.strip() or process.stdout.strip()}\n")
+        return False
+    return True
+
+
 def bootstrapVcpkgInternal(toolsDir: Path, gitUrl: str, gitCommit: str, gitExe: str) -> bool:
     """
     vcpkg Git 저장소를 Tools/vcpkg로 클론하고 bootstrap 스크립트를 실행하여 빌드 환경을 구축합니다.
@@ -175,6 +199,15 @@ def setupVcpkg(allowBootstrap: bool = False) -> Path | None:
             if gitExe is not None and gitCommit:
                 pinVcpkgCommitInternal(toolsDir, gitCommit, gitExe)
             print(f"[SetupVcpkg] Using project kit: {toolsDir}", file=sys.stderr)
+        # 다른 OS 에서 부트스트랩한 트리면 이 OS 의 실행 파일이 없다. 설치를 요청받았으면 그 자리에서 부트스트랩하고, 아니면 알리기만 한다
+        # (CMake 툴체인이 configure 때 스스로 부트스트랩한다).
+        if not hasVcpkgExecutable(Path(foundRoot)):
+            if autoBootstrapEnabled(allowBootstrap, kKeyVcpkgAutoBootstrap, kEnvSwVcpkgAutoBootstrap, search=search):
+                if not runBootstrapScriptInternal(Path(foundRoot)):
+                    return None
+            else:
+                sys.stderr.write(f"[SetupVcpkg] {foundRoot} has no vcpkg executable for this OS — "
+                                 "run with --install to bootstrap it here (CMake configure also bootstraps it).\n")
         return Path(recordEnginePath(kKeyVcpkgRoot, foundRoot))
 
     if not autoBootstrapEnabled(
