@@ -95,7 +95,7 @@ cd build/Ninja-Debug/Bin
 
 ### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
 
-- **불필요 코드 삭제 — 코드 묶음 여섯(A~F)은 10-04 에 끝났다**(조사 보고서는 세션 스크래치 `deadcode/report.md`). 남은 것: **주석 · 문서 2 차(G1~G5)** —
+- **불필요 코드 삭제 — 코드 묶음 여섯(A~F)은 10-04 에 끝났다**(조사 보고서는 세션 스크래치 `deadcode/report.md`). 남은 것: **주석 · 문서 2 차(G1~G5, G3 Graphics · 셰이더는 10-04 끝 — 경위 ~410 · 없는 대상 ~45)** —
   경위 서술("예전에는 …") ~2,300 블록 · 없는 대상을 가리키는 줄 ~330(보고서 4 장; 문서 최신화 뒤라 다시 grep 해서 셀 것), 영역은 G1 시험 · G2 Engine(Graphics 제외) ·
   App · RuntimeAPI · ReflectionParser · G3 Graphics · 셰이더 · G4 Core · Editor · GameFramework · G5 문서 · 스크립트 · CI. 보고서가 "판단 필요" 로 남긴 것
   (`transcodeBinaryToXml` 시험 전용, `GameModes::cutscene`, `seedFallback`, 1-C 접근자 등)은 그대로다. `RuntimeHud` 는 남긴다(사용자 결정).
@@ -146,7 +146,8 @@ cd build/Ninja-Debug/Bin
 
 - **common 셰이더는 engine 헤더를 고쳐도 다시 구워지지 않는다** — common 셰이더가 engine 의 `common.hlsli` · `binding.hlsli` 를 include 하는데 `isBakedOutputCurrent` ·
   `writeBakeStamp` 는 자기 도메인 `shaders/` 아래 `.hlsli` 만 해시한다(`CookAssets --verify-shaders` 도 같다). 스탬프가 include 를 따라가게 할 것. 베이커는 요청에서 빠진
-  바이너리를 지우지 않는다 — 지금은 `ShaderBakeRequestTest.BakedFoldersHoldOnlyRequestedBinaries` 가 잡는다.
+  바이너리를 지우지 않는다 — 지금은 `ShaderBakeRequestTest.BakedFoldersHoldOnlyRequestedBinaries` 가 잡는다. 강제로 다시 굽는 CLI 플래그가 없어, common 이 engine
+  헤더를 따라가는지 볼 때는 `Resource/common/shaders/bin/*/` 의 해당 바이너리를 지우고 `--bake-shaders` 한다.
 - **디퍼드 파이프라인이 톤맵을 두 번 거는 것으로 보인다(코드 읽기, 픽셀 미측정)** — Tonemap 패스 뒤 `_shaderPath` 없는 Present 의 기본 셰이더 `fullscreenblit.hlsl` 이
   `tonemap.hlsl` 과 바이트까지 같은 Reinhard 다. Present 를 진짜 블릿으로 바꿀지 — 바꾸면 staged forward 의 Present 톤맵 · 골든 이미지도 함께.
 
@@ -230,8 +231,8 @@ cd build/Ninja-Debug/Bin
 - **`-gv_rhiBackend` 는 숫자만 받는다**(0 DX11 · 1 DX12 · 2 Vulkan · 3 GL) — `Vulkan` 처럼 이름을 주면 경고만 내고 DX11 로 돈다. enum 전역 변수가 리플렉션 열거자
   이름을 받게 하거나, 모르는 값이면 실행을 멈출 것.
 
-- **문서 최신화(10-04)에서 남은 정리 셋** — (1) 코드 주석이 `docs/05_RHI_FrameContract.md` 의 재설계 전 절 이름(R2 · S2 · S3 · "실패기록 5차")을 가리킨다:
-  주석을 현재형으로 바꾸면 docs/05 의 1~3 · 7 절을 지운다. (2) `ArgumentList.xxx` 의 `IP` · `PORT` 는 읽는 곳이 없다. (3) `CheckTestSuites.py` docstring 이 "규칙
+- **문서 최신화(10-04)에서 남은 정리 셋** — (1) 코드 주석의 `docs/05_RHI_FrameContract.md` 재설계 전 절 참조(R2 · S2 · S3 · "실패기록 5차")는 G3 에서 0 이 됐다 —
+  docs/05 의 1~3 · 7 절을 지운다(G5, 루트 `README.md:41` 의 링크도). (2) `ArgumentList.xxx` 의 `IP` · `PORT` 는 읽는 곳이 없다. (3) `CheckTestSuites.py` docstring 이 "규칙
   다섯" 이라며 여섯을 나열한다. 주석의 경위 서술 예: `CompressionCodecRegistry.h`, `RenderThread.cpp`, `ArgumentList.xxx`, `CheckFallibleNodiscard.py` · `CheckFunctionVocabulary.py`.
 
 - **`Test/README.md` 의 "구성마다 도는 케이스 수" 표(2026-10-01 실측)가 낡았다** — 다시 잰다(Debug CoreTest 만 해도 348 개).
