@@ -96,7 +96,7 @@ cd build/Ninja-Debug/Bin
 ### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
 
 - **불필요 코드 삭제(진행 중, 사용자 지시 10-04)** — 조사 보고서는 세션 스크래치 `deadcode/report.md`(1,615 줄: 호출자 없음 354 · 구조 개선 잔여물 39 · 중복 11 묶음 ·
-  경위 주석 ~2,300 블록). 코드 묶음 A(에디터) · B(RHI · 렌더러) · D(Core · App · 도구 · 스크립트 · cmake)가 진행 중이고, C(셰이더 데이터 · EngineData — 굽기 필요) ·
+  경위 주석 ~2,300 블록). 코드 묶음 A(에디터)는 끝났고(−352 줄), B(RHI · 렌더러) · D(Core · App · 도구 · 스크립트 · cmake) · E 가 진행 중이고, C(셰이더 데이터 · EngineData — 굽기 필요) ·
   E(Engine 나머지: `PropertyMetaHint` · XML 백엔드 배열/맵 API · LocalizationManager 형식 셋 · SerializeContext 객체 id 표 · ActionMap 기본 바인딩 폴백) ·
   F(GameFramework · 시험: `BattleEvents.h` · TurnBattle 옛 세이브 · GPU 시험 준비 코드 43 곳 합치기)가 그다음, 주석 · 문서 2 차(G1~G5)는 코드 묶음을 합친 뒤.
   사용자 결정: macOS · LocalizationManager 형식 셋 · SerializeContext id 표 · Dev 모놀리식 RHI 갈래 · ActionMap 폴백은 지움, 누수 추적(`enableMemoryLeakChecks`)은 켬,
@@ -160,6 +160,10 @@ cd build/Ninja-Debug/Bin
   `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
 
 ### 1-4. 에디터
+
+- **에디터 단축키 판정이 `io.KeySuper` 를 Ctrl 로 친다**(`EditorCommandGui.cpp`, macOS Cmd 용으로 넣은 것). macOS 를 지웠으니 Windows 에서 Win 키가 Ctrl 처럼 동작하는
+  셈이다 — 지울지 결정(지우면 동작이 바뀐다).
+- **`EditorTexturePipelineTest.SwizzleLayoutAndFormatAgree` 가 `_expectedDxgiFormat` 칸을 채우기만 하고 단언하지 않는다** — DDS 를 구워 형식을 대조하거나 칸을 지운다.
 
 - **imgui Vulkan 백엔드가 UI 스레드에서 `vkQueueSubmit` 을 부른다** — 글꼴 아틀라스 업로드(`ImGui_ImplVulkan_UpdateTexture`) · 보조 뷰포트(`RenderPlatformWindowsDefault`)가
   렌더 스레드와 같은 큐에 엔진 `_queueMutex` 밖에서 제출한다(큐 외부 동기화 위반). ImGui 의 아틀라스 파괴(`ImGui_ImplVulkan_DestroyTexture`)도 즉시 해제다.
@@ -814,6 +818,8 @@ cd build/Ninja-Debug/Bin
 - **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 굽지 않는다(8 비트 경로).
 
 ### 3-8. 에디터
+
+- **오른쪽 클릭 메뉴의 확장 지점은 `EditorCommandRegistry` / `SW_EDITOR_*` 하나다** — 등록이 하나도 없던 `EditorActionMenuManager` 는 지웠다.
 
 - **에디터가 UI 스레드에서 놓는 GPU 자원(ImGui 텍스처 · 게임 뷰 렌더 타깃)은 `EditorDrawReleaseQueue` 에 맡긴다** — 렌더 스레드는 같은 draw 스냅샷을 여러 패킷에
   다시 그리므로 UI 스레드에서 읽은 펜스 값으로는 모자란다. 그 스냅샷 번호 이상을 그리는 프레임에서 `IRHIDevice::enqueueGpuRelease`(렌더 스레드에서만)로 넘긴다.
