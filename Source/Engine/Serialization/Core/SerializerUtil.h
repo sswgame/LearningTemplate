@@ -102,7 +102,7 @@ namespace sw
     using SoftDeserializeFn = Delegate<bool( void*, const TypeInfo&, vector<SchemaOrphanValue>&, uint32& )>;
 
     /**
-     * @brief `deserializeVersioned` 의 **공통 절차**입니다. 세 포맷에 글자까지 같게 있던 스무 줄입니다.
+     * @brief `deserializeVersioned` 의 **공통 절차**입니다. 세 포맷이 함께 씁니다.
      *
      * @param outVersion `SchemaVersionSource::Stream` 이면 이미 읽어 온 버전을 넣어 들어옵니다.
      *                   `Payload` 면 0 으로 들어와 이 함수가 채웁니다.
@@ -110,8 +110,6 @@ namespace sw
      *                        `Stream` 포맷은 버전 출력을 건드리지 않습니다.
      * @details 하는 일: 레거시 스테이징 인스턴스 준비 → (있으면) 레거시로 soft 역직렬화 →
      *          현재 타입으로 soft 역직렬화 → 버전 확정 → `runSchemaMigrateStep`.
-     *          예전에는 이 절차가 JSON · XML 에 **주석까지 똑같이** 복사돼 있었고 Binary 에 한 벌 더
-     *          있었습니다. 한쪽을 고치면 다른 쪽은 그대로인 구조였습니다.
      */
     SW_API bool runVersionedDeserialize( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
                                          uint32 currentVersion, SchemaMigrateFn migrate,
@@ -161,15 +159,14 @@ namespace sw
 
         /**
          * @brief 프로퍼티에 선언된 기본값(PROPERTY `Default=`)이 있으면 적용합니다. 없으면 아무것도 하지 않습니다.
-         * @details 예전에는 "기본값 없음"(정상)과 "선언된 기본값을 읽지 못함"(코드 결함)을 같은 false 로 돌려줬고, 다섯 호출자가 모두 버렸습니다.
-         *          뒤의 것은 이제 경고합니다 — 그 필드는 지금 값을 지킵니다. 값은 `applyPropertyText` 로 씁니다(비트필드는 그 비트만 — 예전에는
-         *          값 주소에 bool 을 통째로 써 같은 바이트의 다른 플래그까지 지웠다).
+         * @details "선언된 기본값을 읽지 못함"(코드 결함)은 경고합니다 — 그 필드는 지금 값을 지킵니다. 값은 `applyPropertyText` 로 씁니다
+         *          (비트필드는 그 비트만 — 값 주소에 bool 을 통째로 쓰면 같은 바이트의 다른 플래그까지 지운다).
          */
         static void applyPropertyDefault( const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx );
 
         // ------------------------------------------------------------------------------
-        // 프로퍼티 값 하나 — 비트필드 · 컨테이너 · 값의 세 갈래를 한 벌로. 예전에는 직렬화기 셋 · 프리팹 오버라이드 도구 · 인스펙터가 각자 들었고,
-        // 오버라이드 도구는 비트필드를 바이트째 견주고 옮겨(같은 바이트의 다른 플래그까지 바뀌었다) 컨테이너는 되돌리지 못했다.
+        // 프로퍼티 값 하나 — 비트필드 · 컨테이너 · 값의 세 갈래를 한 벌로. 직렬화기 셋 · 프리팹 오버라이드 도구 · 인스펙터가 함께 쓴다
+        // (비트필드를 바이트째 견주고 옮기면 같은 바이트의 다른 플래그까지 바뀐다).
         // ------------------------------------------------------------------------------
         /** @brief 한 인스턴스의 프로퍼티 값을 다른 인스턴스로 옮깁니다(같은 타입). 비트필드는 그 비트만, 컨테이너는 원소째 옮깁니다. */
         [[nodiscard]] SW_API static bool copyPropertyValue( const PropertyInfo& prop, const void* pSrcInstance, void* pDstInstance, const SerializeContext& ctx );
@@ -179,7 +176,7 @@ namespace sw
         [[nodiscard]] SW_API static bool applyPropertyText( const PropertyInfo& prop, void* pInstance, string_view text, const SerializeContext& ctx );
         /**
          * @brief 이 프로퍼티의 값을 세 형식(XML · JSON · 바이너리)이 모두 실어 나를 수 있으면 true 입니다 — 직렬화기의 분기와 같은 판정입니다.
-         * @details 직렬화기는 다룰 줄 모르는 타입을 **조용히** 텍스트 `null` · 바이너리 0 바이트로 썼고, 읽을 때는 그 칸이 기본값이 됐다(저장한 줄 알았던
+         * @details 직렬화기는 다룰 줄 모르는 타입을 **조용히** 텍스트 `null` · 바이너리 0 바이트로 쓰고, 읽을 때는 그 칸이 기본값이 된다(저장한 줄 알았던
          *          값이 사라진다). 컨테이너는 원소 · 키 타입을, 소유 포인터 원소는 런타임 팩토리를 믿습니다. 모든 PROPERTY 를 이것으로 훑는 시험이 있다.
          */
         SW_API static bool canCarryProperty( const PropertyInfo& prop, const SerializeContext& ctx );
@@ -193,9 +190,8 @@ namespace sw
         static bool keysEqual( string_view left, string_view right, bool bIgnoreCase );
 
         /**
-         * @brief Alias · 옛 이름을 `SerializeContext` 핸들러가 아는 정본 이름(`_name`)으로 바꿉니다.
-         * @details 두 TU(`SerializerUtil` · `JsonSerializer`)가 같은 열세 줄을 각자 들고 있었습니다.
-         *          핸들러 조회 규칙이 바뀌면 모두를 같이 고쳐야 했습니다.
+         * @brief Alias 로 들어온 이름을 `SerializeContext` 핸들러가 아는 정본 이름(`_name`)으로 바꿉니다.
+         * @details `SerializerUtil` · `JsonSerializer` 가 함께 쓰는 핸들러 조회 규칙입니다.
          */
         SW_API static hashed_string resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& ctx );
 

@@ -186,7 +186,7 @@ namespace sw
                             void*               pObj     = ( pType != nullptr ) ? ctx.createOwnedPointer( typeName ) : nullptr;
                             if ( pObj == nullptr || pType == nullptr )
                             {
-                                // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 예전처럼 건너뛴다.
+                                // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다.
                                 string rawXml;
                                 if ( backend.readCurrentNodeXml( rawXml ) )
                                 {
@@ -194,7 +194,7 @@ namespace sw
                                     opaque._typeName = tagName;
                                     opaque._format   = SerializeContext::OpaqueFormat::Xml;
                                     opaque._text     = rawXml;
-                                    (void)ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다(예전과 같다)
+                                    (void)ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
                                 }
                                 return;
                             }
@@ -439,7 +439,7 @@ namespace sw
 
                         if ( readOk )
                         {
-                            // 비트필드는 그 비트만 쓴다. 불리언이 아닌 글("ture")은 예전처럼 false 로 삼키지 않고 실패로 남긴다.
+                            // 비트필드는 그 비트만 쓴다. 불리언이 아닌 글("ture")은 false 로 삼키지 않고 실패로 남긴다.
                             if ( prop._bIsBitField == SW_TRUE )
                             {
                                 if ( SerializerUtil::applyPropertyText( prop, pInstance, strValue, ctx ) == false )
@@ -852,10 +852,8 @@ namespace sw
         if ( xmlStr.empty() )
             return false;
 
-        // **문서 하나로 셋을 다 한다.** 버전 속성 · 값 읽기 · orphan 자식 훑기.
-        // 예전에는 여기서 자기 `XmlDocument` 를 따로 파싱하고, 아래 백엔드가 **같은 문자열을
-        // 한 번 더** 파싱했다. 씬 · 프리팹 로드가 엔티티마다 이 경로로 간다. 형제인
-        // `JsonSerializer::deserializeSoft` 는 처음부터 문서 하나만 쓴다.
+        // **문서 하나로 셋을 다 한다.** 버전 속성 · 값 읽기 · orphan 자식 훑기 — 같은 문자열을 두 번 파싱하지 않는다.
+        // 씬 · 프리팹 로드가 엔티티마다 이 경로로 간다(형제 `JsonSerializer::deserializeSoft` 도 문서 하나만 쓴다).
         const bool         bIgnore = ctx.ignoresCaseKeys();
         XmlDocumentBackend backend;
         backend.setIgnoreCaseKeys( bIgnore );

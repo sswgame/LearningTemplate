@@ -22,8 +22,7 @@ namespace sw
              * @brief 프로퍼티 중복 검사를 **비트마스크로 할 수 있는 한계**입니다. `uint64` 의 비트 수입니다.
              * @details 이보다 많으면 해시 집합으로 넘어갑니다. 엄격 · 소프트 두 역직렬화 경로가 **같은 값을
              *          써야 합니다.** 한쪽만 바꾸면 그 경로만 다른 자료구조로 중복을 세게 되고, 프로퍼티가
-             *          64개 언저리인 타입에서만 갈리는 재현하기 어려운 차이가 됩니다. 예전에는 소프트 쪽이
-             *          리터럴 `64` 를 적고 있었습니다(값은 같아 증상은 없었습니다).
+             *          64개 언저리인 타입에서만 갈리는 재현하기 어려운 차이가 됩니다.
              */
             static constexpr size_t kFastPropBitmaskThreshold = 64;
 
@@ -72,7 +71,7 @@ namespace sw
                 }
 
                 // `bRequireExactConsume`: 엄격 역직렬화는 페이로드를 한 바이트도 남기지 않고 읽었는지까지 본다(남으면 스트림이
-                // 이 필드를 다른 모양으로 적은 것이다). 소프트 · 아카이브 경로는 읽힌 만큼만 믿는다(예전 동작 그대로).
+                // 이 필드를 다른 모양으로 적은 것이다). 소프트 · 아카이브 경로는 읽힌 만큼만 믿는다.
                 size_t local = payloadStart;
                 bool   bRead = false;
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
@@ -103,8 +102,8 @@ namespace sw
 
             /**
              * @brief 엄격한 읽기가 읽지 못한 칸을 건너뛸 때(`allowsUnknownProperties`) 알립니다 — 타입 · 칸마다 한 번.
-             * @details 지금 타입에 있는 칸인데 값을 읽지 못했다(모르는 열거자 이름 · 바뀐 타입). XML · JSON 은 그 칸만 남기고 나머지를 읽는다 — 예전에는 바이너리만
-             *          그 컴포넌트를, 그래서 소유 포인터 목록의 **뒤 컴포넌트까지** 버렸다.
+             * @details 지금 타입에 있는 칸인데 값을 읽지 못했다(모르는 열거자 이름 · 바뀐 타입). XML · JSON 과 같이 그 칸만 남기고 나머지를 읽는다 —
+             *          컴포넌트째 실패하면 소유 포인터 목록의 **뒤 컴포넌트까지** 버린다.
              */
             static void warnUnreadableFieldOnce( const TypeInfo& typeInfo, const PropertyInfo& prop )
             {
@@ -136,13 +135,12 @@ namespace sw
 
             /**
              * @brief 태그 스트림(개수 · [태그 해시 · 기록 타입 해시 · 크기 · 페이로드]…)을 읽어 인스턴스에 쓰는 **하나의** 루프입니다.
-             * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 이 60여 줄을 **각자** 들고 있었고, 셋째 사본
-             *          (`applyPropertyPayload` 의 세 분기)까지 있었습니다. 둘이 다른 것은 정책 셋뿐입니다.
+             * @details 엄격(`deserialize`)과 소프트(`deserializeSoft`)가 함께 씁니다. 둘이 다른 것은 정책 셋뿐입니다.
              *          (1) 모르는 프로퍼티: 엄격은 `allowsUnknownProperties` 면 건너뛰고 아니면 실패, 소프트는 orphan 으로 싣습니다.
              *          (2) 읽지 못한 프로퍼티: 엄격은 `allowsUnknownProperties` 면 그 칸만 건너뛰고(XML · JSON 과 같다) 아니면 실패, 소프트는 orphan.
              *          (3) 페이로드를 끝까지 읽었는지: 엄격만 봅니다.
              *          기록 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 갑니다. 기록 타입을 아는 스칼라는 이관이 값으로
-             *          옮기고, 나머지는 제 타입으로 끝까지 읽히는지부터 봅니다. 소프트는 이관도 안 되면 예전처럼 끝까지 읽히지
+             *          옮기고, 나머지는 제 타입으로 끝까지 읽히는지부터 봅니다. 소프트는 이관도 안 되면 끝까지 읽히지
              *          않아도 읽힌 만큼은 받습니다(레거시 관용은 남깁니다). 다만 값으로만 옮기는 쌍(`isValueOnlyCoercion` — 스칼라 · 다른 enum)은
              *          예외입니다. 제 타입으로 다시 읽으면 비트가 재해석되므로(float32 1.5 → int32 1069547520, 열거자 이름 해시 → 수) orphan 으로 남깁니다.
              *          신뢰할 수 없는 스트림의 경계 검사가 이 안에 있습니다. 사본이 하나여야 그 검사가 한쪽에서만 빠지는 일이 없습니다.
@@ -224,8 +222,8 @@ namespace sw
                     {
                         void*               pPropPtr     = prop.getRawPtr( pInstance );
                         const hashed_string wireTypeName = findWireTypeName( wireTypeHash );
-                        // 기록 타입을 모르면(지운 enum · 타입) 바이트의 뜻을 모른다 — 크기로 짐작해 읽지 않는다. 예전에는 지운 enum 의 열거자 이름 해시
-                        // (4 바이트)가 int32 로 바뀐 칸에 그대로 읽혔다.
+                        // 기록 타입을 모르면(지운 enum · 타입) 바이트의 뜻을 모른다 — 크기로 짐작해 읽지 않는다(지운 enum 의 열거자 이름 해시
+                        // 4 바이트가 int32 로 바뀐 칸에 그대로 읽히게 된다).
                         if ( wireTypeName.empty() == false )
                         {
                             bApplied = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName, wireVersion );
@@ -295,7 +293,7 @@ namespace sw
                     return false;
 
                 // 프로퍼티가 더 많은 새 스키마로 쓴 스트림도 읽는다. 모르는 인덱스는 건너뛴다. 쓰는 쪽이 적지 않는 프로퍼티(Transient ·
-                // 직렬화 제외)를 가리키는 페이로드도 건너뛴다 — 예전에는 희소 모드가 아무 인덱스에나 써, 망가진 스트림이 런타임 전용 값을 덮었다.
+                // 직렬화 제외)를 가리키는 페이로드도 건너뛴다 — 망가진 스트림이 런타임 전용 값을 덮지 않게.
                 if ( propIndex < listProp.size() && SerializerUtil::shouldSerializeProperty( listProp[static_cast<size_t>( propIndex )] ) )
                 {
                     if ( applyPropertyPayload( pInstance, listProp[static_cast<size_t>( propIndex )],
@@ -814,7 +812,7 @@ namespace sw
             //  ① `(totalProps + 7) / 8` 이 거대한 할당이 되고, uint64 끝자락에서는 덧셈이 넘쳐
             //     **0 바이트** 마스크가 나온다.
             //  ② 그 0 바이트 마스크를 `testBit` 이 그대로 읽는다. 첫 바퀴에 버퍼 밖이다.
-            //  ③ 순회 변수가 `uint32` 였다. 4,294,967,295 를 넘으면 되감겨 **끝나지 않았다.**
+            //  ③ 순회 변수가 `uint32` 면 4,294,967,295 를 넘을 때 되감겨 **끝나지 않는다.**
             // 비트마스크는 프로퍼티 여덟 개당 한 바이트이므로, 남은 바이트로 마스크조차 채울 수
             // 없는 수는 어떤 스키마에서도 거짓이다(더 많은 프로퍼티를 가진 새 스키마는 허용된다).
             const uint64 remainingBytes = static_cast<uint64>( dataSize - reader.getOffset() );

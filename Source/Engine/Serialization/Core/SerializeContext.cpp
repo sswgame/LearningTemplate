@@ -61,7 +61,7 @@ namespace sw
 
             /**
              * @brief 필드 타입의 범위를 넘는 정수 글자를 거절합니다. 값은 그대로 둡니다(대개 멤버 초기값) — 읽는 쪽이 orphan 으로 남기거나 실패로 알립니다.
-             * @details 예전에는 64 비트로 읽은 뒤 잘라 넣어 "300" 이 uint8 44, "4000000000" 이 int32 음수가 됐다. 쓰는 쪽은 늘 범위 안의 값을 적으므로
+             * @details 64 비트로 읽은 뒤 잘라 넣으면 "300" 이 uint8 44, "4000000000" 이 int32 음수가 된다. 쓰는 쪽은 늘 범위 안의 값을 적으므로
              *          왕복은 그대로다(모르는 enum 이름을 다루는 `SerializerUtil::parseTextValue` 와 같은 규칙).
              */
             static bool rejectOutOfRange( string_view token, size_t byteSize )
@@ -230,7 +230,7 @@ namespace sw
 
         SerializeContext derived;
         derived._pHandlerFallback = &defaultCtx;
-        // 표만 빌리고 **설정은 물려받는다.** 예전 `= getDefault()` 와 같은 동작이어야 한다.
+        // 표만 빌리고 **설정은 물려받는다**(`= getDefault()` 와 같은 동작).
         derived.setIgnoreCaseKeys( defaultCtx.ignoresCaseKeys() );
         derived.setAllowUnknownProperties( defaultCtx.allowsUnknownProperties() );
         return derived;
@@ -352,7 +352,7 @@ namespace sw
 
             auto boolWrite = []( const void* pPtr )
             { return *static_cast<const bool*>( pPtr ) ? "true" : "false"; };
-            // 불리언 글이 아니면 실패다(값은 그대로) — 예전에는 무엇이든 받아 "ture" 가 조용히 false 가 됐다. 읽는 쪽이 고아 · 실패로 알린다.
+            // 불리언 글이 아니면 실패다(값은 그대로) — "ture" 가 조용히 false 가 되지 않게. 읽는 쪽이 고아 · 실패로 알린다.
             auto boolRead = []( void* pPtr, string_view strView )
             {
                 return StringUtil::tryParseBool( strView, *static_cast<bool*>( pPtr ) );

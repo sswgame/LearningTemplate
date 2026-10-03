@@ -53,11 +53,9 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief XML 역직렬화를 시작합니다.
-         * @note XML 을 **`string_view` 로** 받습니다. 예전에는 `const utf8*` 였는데, 부르는 쪽이
-         *       `string_view::data()` 를 넘기면서 길이가 사라졌습니다. 뷰가 더 큰 버퍼의 일부면
-         *       널 종단이 없어 파서가 끝을 넘어 읽습니다. `XmlDocument::parse` 는 원래부터
-         *       `string_view` 를 받아 `load_buffer(data, size)` 로 안전하게 읽으므로,
-         *       이 중간 계층이 길이를 버리던 것이 유일한 구멍이었습니다.
+         * @note XML 을 **`string_view` 로** 받습니다. `const utf8*` 로 받으면 부르는 쪽이 `string_view::data()` 를 넘기며
+         *       길이가 사라지고, 뷰가 더 큰 버퍼의 일부면 널 종단이 없어 파서가 끝을 넘어 읽습니다. `XmlDocument::parse` 도
+         *       `string_view` 를 받아 `load_buffer(data, size)` 로 읽습니다.
          */
         virtual bool initializeXmlDeserialization( string_view xmlStr, const utf8* pRootTagName ) = 0;
         /** @brief XML 자식 요소에서 값을 읽습니다. */

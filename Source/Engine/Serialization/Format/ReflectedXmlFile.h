@@ -4,13 +4,12 @@
  *
  * [왜 있는가]
  * 렌더 리소스 둘(`RenderPassResource` · `RenderPipelineResource`)이 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로 오간다" 는
- * **같은 일**을 각자 적고 있었습니다: `findType<Desc>()` · 널 검사 · 경로 해석 · `XmlSerializer` 호출 · 실패 로그. 한쪽만 고치면
- * 다른 쪽이 조용히 다르게 동작했습니다(경로 해석 규칙을 바꿨는데 한 곳만 반영되는 경우).
+ * **같은 일**을 합니다: `findType<Desc>()` · 널 검사 · 경로 해석 · `XmlSerializer` 호출 · 실패 로그. 둘이 따로 들면 한쪽만 고쳐
+ * 다른 쪽이 조용히 다르게 동작합니다.
  *
  * [왜 여기인가]
- * 렌더러 옆(`Graphics/Renderer/Pipeline/RenderResourceXml`)에 있었습니다 — 만들 때 직렬화(티어 2)가 `Resource`(티어 4)를 볼 수
- * 없었기 때문입니다. 지금은 `Resource/ResourceUtil.h` 가 어느 티어에서든 쓸 수 있는 경로 헬퍼라(`CheckEngineLayers` 의 예외) 그
- * 이유가 없어졌고, 렌더러와 무관한 일이라 직렬화로 옮겼습니다(언리얼 `FJsonObjectConverter` 가 Core 의 직렬화에 있는 것과 같은 자리).
+ * 렌더러와 무관한 일이라 직렬화에 둡니다. `Resource/ResourceUtil.h` 는 어느 티어에서든 쓸 수 있는 경로 헬퍼입니다(`CheckEngineLayers` 의
+ * 예외). 언리얼 `FJsonObjectConverter` 가 Core 의 직렬화에 있는 것과 같은 자리입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

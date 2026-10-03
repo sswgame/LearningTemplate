@@ -76,8 +76,8 @@ namespace sw
 
         /**
          * @brief 오프셋을 직접 설정합니다. 데이터 끝을 넘으면 옮기지 않고 false 를 반환합니다.
-         * @details 읽기 함수들은 `_offset <= _dataSize` 를 믿고 `_dataSize - _offset` 로 남은 양을 셉니다. 예전에는 검사 없이 넣어, 끝을 넘긴
-         *          위치에서 그 뺄셈이 돌아 다음 읽기가 버퍼 밖을 읽었습니다.
+         * @details 읽기 함수들은 `_offset <= _dataSize` 를 믿고 `_dataSize - _offset` 로 남은 양을 셉니다 — 끝을 넘긴 위치를 받으면 그 뺄셈이
+         *          돌아 다음 읽기가 버퍼 밖을 읽습니다.
          */
         bool setOffset( uint64 offset );
         /** @brief 읽기/쓰기 모드를 바꾸고 오프셋을 처음으로 되돌립니다. */

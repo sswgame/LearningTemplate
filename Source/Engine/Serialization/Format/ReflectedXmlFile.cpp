@@ -18,8 +18,8 @@ namespace sw
             return false;
         }
 
-        // PROPERTY 그래프를 그대로 읽는다. 예전엔 필드마다 손으로 childText 를 뒤졌는데, 필드를 하나
-        // 추가할 때마다 파서와 라이터를 같이 고쳐야 했고 하나만 빠뜨리면 조용히 빈 값이 됐다.
+        // PROPERTY 그래프를 그대로 읽는다 — 필드를 손으로 읽으면 필드를 더할 때마다 파서와 라이터를 같이 고쳐야 하고,
+        // 하나만 빠뜨리면 조용히 빈 값이 된다.
         if ( XmlSerializer::loadFile( assetRelativePath, pDesc, *pTypeInfo ) == false )
         {
             SW_LOG_ERROR( "XML 로드 실패: %# (%#)", assetRelativePath, pTypeInfo->_name.c_str() );

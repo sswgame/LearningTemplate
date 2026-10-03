@@ -35,8 +35,8 @@ namespace sw
         };
         /**
          * @brief 등록되지 않은 타입의 다형 원소 하나의 **원문**입니다(모듈이 안 뜬 컴포넌트 · 지운 타입).
-         * @details 예전에는 세 직렬화기가 이런 원소를 건너뛰었고, 다음 저장에서 영영 사라졌다(유니티는 "Missing Script" 로 들고 있다 그대로 쓴다).
-         *          이제 읽을 때 맡기고(`keepOpaqueElement`), 쓸 때 같은 형식이면 원문 그대로 다시 쓴다(`queryOpaqueElement`).
+         * @details 읽을 때 맡기고(`keepOpaqueElement`), 쓸 때 같은 형식이면 원문 그대로 다시 쓴다(`queryOpaqueElement`) — 건너뛰면 다음 저장에서
+         *          영영 사라진다(유니티는 "Missing Script" 로 들고 있다 그대로 쓴다).
          */
         struct OpaqueElementView
         {
@@ -156,7 +156,7 @@ namespace sw
             return *this;
         }
 
-        /** @brief 모르는 원소를 맡깁니다. 맡을 곳이 없거나 거절하면 false — 예전처럼 건너뜁니다. */
+        /** @brief 모르는 원소를 맡깁니다. 맡을 곳이 없거나 거절하면 false — 부르는 쪽은 건너뜁니다. */
         bool keepOpaqueElement( const OpaqueElementView& element ) const
         {
             return _pOpaqueKeepFn != nullptr && _pOpaqueKeepFn( _pOuterInstance, element );

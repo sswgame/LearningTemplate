@@ -146,7 +146,7 @@ namespace sw
      *          스크래치 인스턴스 파괴는 부르는 쪽 책임입니다.
      *          **orphan 의 운명이 정해지는 유일한 자리**이기도 합니다. 로드가 성공으로 끝나는데 migrate 가 찾아 보지 않은 orphan
      *          (읽지 못한 값 · 타입에 없는 칸)이 남으면 그 값은 버려진 것이므로, 타입 이름과 칸 이름을 담아 **로드마다 한 번** 경고합니다.
-     *          예전에는 JSON · XML 의 Ignore 정책이 그것을 조용히 버려, 숫자 칸의 "abc" 가 아무 말 없이 기본값으로 남았습니다.
+     *          JSON · XML 의 Ignore 정책도 여기서 알립니다(숫자 칸의 "abc" 가 말없이 기본값으로 남지 않게).
      *          옛 TypeInfo 를 스테이징했으면 두 타입 중 하나라도 아는 이름은 스테이징된 쪽이 실어 날랐다고 보고 빼고 셉니다.
      * @param bWarnWhenNoMigrate migrate 가 없고 이 값이 true 이면 경고한 뒤 false 를 반환합니다(버전 · orphan 정책은 부르는 쪽이 계산합니다).
      */
@@ -198,8 +198,8 @@ namespace sw
 
     /**
      * @brief 바이너리 태그의 기록 타입 해시를 이름으로 돌려줍니다 — 등록된 타입(정본 이름), 아니면 enum(FQN). 모르면 빈 이름입니다.
-     * @details 타입 표(`canonicalTypeNameByHash`)는 enum 을 모릅니다. 예전에는 enum 필드의 타입이 바뀌면 기록 타입을 몰라 크기로 짐작했다 —
-     *          열거자 이름 해시(4 바이트)가 int32 · float32 로 그대로 읽히는 길이었다.
+     * @details 타입 표(`canonicalTypeNameByHash`)는 enum 을 모르므로 enum 은 여기서 찾습니다. 기록 타입을 몰라 크기로 짐작하면 열거자 이름
+     *          해시(4 바이트)가 int32 · float32 로 그대로 읽힌다.
      */
     SW_API hashed_string findWireTypeName( uint32 wireTypeHash );
 

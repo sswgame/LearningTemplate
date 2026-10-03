@@ -214,8 +214,8 @@ namespace sw
             /**
              * @brief orphan 의 바이너리 값을 프로퍼티 자리에 적용합니다. `applyOrphanTo` 와 `applyOrphanToPath` 가 함께 씁니다.
              * @details 기록 타입이 프로퍼티 타입과 **같을 때만** 제자리로 읽습니다. 다르면 곧바로 이관(`tryCoerceBinaryPayload`)으로
-             *          보냅니다. 본 역직렬화 경로(`BinarySerializer` 의 태그 루프)와 같은 규칙입니다. 예전에는 기록 타입으로 프로퍼티
-             *          자리에 먼저 읽었습니다. 모양이 다른 타입(int32 → int16 · string 등)이면 그 자리와 이웃 필드를 덮어썼습니다.
+             *          보냅니다. 본 역직렬화 경로(`BinarySerializer` 의 태그 루프)와 같은 규칙입니다. 주의: 기록 타입으로 프로퍼티 자리에
+             *          먼저 읽으면 모양이 다른 타입(int32 → int16 · string 등)에서 그 자리와 이웃 필드를 덮어쓴다.
              * @param wireTypeName 기록 타입. 모르면 비웁니다(그때는 이관이 제 타입 읽기부터 합니다).
              */
             [[nodiscard]] static bool applyOrphanBinary( void* pPropPtr, hashed_string propTypeName, const SchemaOrphanValue& orphan,
@@ -236,8 +236,8 @@ namespace sw
             /**
              * @brief orphan 값을 경로 `pPath` 의 프로퍼티에 적용합니다. `applyOrphanTo` 와 `applyOrphanToPath` 는 orphan 을 찾는 법만 다릅니다.
              * @details 텍스트가 있으면 텍스트로, 없으면 바이너리로 적용합니다. 바이너리의 기록 타입은 `wireTypeHint`, 비었으면 orphan 에
-             *          남은 기록 타입 해시로 정합니다. 예전에는 경로 판이 힌트가 없을 때 프로퍼티 타입을 기록 타입으로 가정해,
-             *          타입이 바뀐 orphan(int32 → float32 등)을 그 비트 그대로 제자리에 읽었습니다.
+             *          남은 기록 타입 해시로 정합니다. 프로퍼티 타입을 기록 타입으로 가정하면 타입이 바뀐 orphan(int32 → float32 등)을
+             *          그 비트 그대로 제자리에 읽게 됩니다.
              */
             [[nodiscard]] static bool applyOrphanAt( void* pInstance, const TypeInfo& typeInfo, const utf8* pPath, const SchemaOrphanValue& orphan,
                                                      hashed_string wireTypeHint, const SerializeContext& ctx )
@@ -284,7 +284,7 @@ namespace sw
              * @details 이관 함수가 찾아 본 orphan(`_bClaimed`)은 그 함수가 처리했으므로 뺍니다. 옛 TypeInfo 를 스테이징했으면 같은 본문을
              *          두 타입으로 읽어 한쪽만 아는 칸은 반드시 다른 쪽의 orphan 이 되므로, 두 타입 중 하나라도 아는 이름은 스테이징된
              *          인스턴스가 실어 날랐다고 보고 뺍니다. 이름은 칸마다 한 번만 적습니다(컨테이너 원소가 여럿 실패해도 칸 하나).
-             *          예전에는 JSON · XML 의 Ignore 정책이 이것을 말없이 버려, 숫자 칸의 "abc" 가 기본값으로 남은 것을 아무도 몰랐습니다.
+             *          JSON · XML 의 Ignore 정책도 여기서 알립니다 — 숫자 칸의 "abc" 가 말없이 기본값으로 남지 않게.
              */
             static void warnDroppedOrphans( const TypeInfo& typeInfo, const TypeInfo* pLegacyTypeInfo, const vector<SchemaOrphanValue>& listOrphan )
             {
@@ -447,7 +447,7 @@ namespace sw
 
     bool SchemaMigrateContext::applyOrphanToPath( const utf8* pDottedPath, hashed_string wireTypeHint ) const
     {
-        // `applyOrphanTo` 와 같은 검사. 예전에는 인스턴스 · 타입을 보지 않고 `*_pTypeInfo` 를 읽었다.
+        // `applyOrphanTo` 와 같은 검사.
         if ( pDottedPath == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr )
             return false;
         const vector<string> listPart = SchemaMigrateInternal::splitPath( pDottedPath );
@@ -537,9 +537,9 @@ namespace sw
 
         // 값으로만 옮기는 쌍이면(`isValueOnlyCoercion`) 기록 값을 글로 만들어 대상 타입으로 다시 읽는다(JSON · XML 과 같은 규칙이다).
         //  - 기록 타입을 아는 스칼라 → 다른 스칼라 · 문자열. 아래의 제 타입 읽기를 먼저 하면 크기가 같은 스칼라는 비트가 그대로 재해석되고
-        //    (int32 100 → float32 1.4e-43), 문자열은 int32 0 을 길이 0 으로 읽어 "" 가 됐다. 값으로 못 옮기면(float32 1.5 → int32) 실패다.
+        //    (int32 100 → float32 1.4e-43), 문자열은 int32 0 을 길이 0 으로 읽어 "" 가 된다. 값으로 못 옮기면(float32 1.5 → int32) 실패다.
         //  - 기록 타입이 다른 enum → 열거자 이름. 문자열은 이름을, 같은 이름이 있는 enum 은 그 열거자를 받고, 수는 받지 않는다(XML 에 적힌 이름과 같다).
-        //    제 타입 읽기로 가면 열거자 이름 해시(4 바이트)가 int32 · float32 로 그대로 읽혔다.
+        //    제 타입 읽기로 가면 열거자 이름 해시(4 바이트)가 int32 · float32 로 그대로 읽힌다.
         // payload 크기가 기록 타입과 안 맞아도(손상) 재해석하지 않고 실패로 끝낸다.
         if ( isValueOnlyCoercion( targetTypeName, wireTypeName ) )
         {

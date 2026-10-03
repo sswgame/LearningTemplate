@@ -321,7 +321,7 @@ namespace sw
                 void*               pObj     = ( pType != nullptr ) ? ctx.createOwnedPointer( typeName ) : nullptr;
                 if ( pObj == nullptr )
                 {
-                    // 모르는(만들 수 없는) 타입이다 — 이름 · 본문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 예전처럼 건너뛴다(위에서 이미 그만큼 밀어 두었다).
+                    // 모르는(만들 수 없는) 타입이다 — 이름 · 본문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다(위에서 이미 그만큼 밀어 두었다).
                     SerializeContext::OpaqueElementView opaque{};
                     opaque._typeName  = typeNameText;
                     opaque._format    = SerializeContext::OpaqueFormat::Binary;
@@ -433,7 +433,7 @@ namespace sw
         const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
         if ( pEnumInfo != nullptr )
         {
-            // 값이 아니라 열거자 정체성(이름 해시)으로 싣는다 — 예전에는 int64 값이라 열거자 순서가 바뀌면 세이브 · 스냅샷의 뜻이 바뀌었다.
+            // 값이 아니라 열거자 정체성(이름 해시)으로 싣는다 — 값으로 실으면 열거자 순서가 바뀔 때 세이브 · 스냅샷의 뜻이 바뀐다.
             SerializerUtilInternal::writeEnumBinary( *pEnumInfo, pValuePtr, listBuffer );
             return;
         }
@@ -523,9 +523,8 @@ namespace sw
         if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
             return;
 
-        // 다형 소유 포인터는 값이 아니라 **런타임 타입 + 본문**으로 실린다. XML · JSON 은 진작
-        // 그렇게 하고 있었고 바이너리만 빠져 있었다. 빠진 쪽은 `serializeValueBinary` 로
-        // 흘러 들어가 0 바이트 하나만 적고 컴포넌트를 통째로 버렸다.
+        // 다형 소유 포인터는 값이 아니라 **런타임 타입 + 본문**으로 실린다(XML · JSON 과 같다). 이 분기를 빠뜨리면
+        // `serializeValueBinary` 로 흘러 들어가 0 바이트 하나만 적고 컴포넌트를 통째로 버린다.
         const bool bOwnedPtr = SerializerUtil::isOwnedPointerElementType( nested._elementTypeName );
 
         ISequenceContainerWrapper* pSeq = nested._wrapper->asSequence();
@@ -605,8 +604,8 @@ namespace sw
 
             pSeq->reserve( pContainerPtr, MathUtil::min( count, static_cast<uint32>( MathUtil::MaxUInt16 ) ) );
 
-            // 모르는 열거자는 그 원소의 바이트를 끝까지 읽고 실패한다 — 그 원소만 기본값으로 두고 나머지를 읽는다(XML 과 같다). 예전에는 첫 실패에서
-            // 멈춰 **그 뒤 원소를 모두 잃었다.** 칸은 여전히 실패로 알린다(스칼라 enum 과 같다). 그 밖의 실패는 스트림이 망가진 것이라 멈춘다.
+            // 모르는 열거자는 그 원소의 바이트를 끝까지 읽고 실패한다 — 그 원소만 기본값으로 두고 나머지를 읽는다(XML 과 같다). 첫 실패에서
+            // 멈추면 **그 뒤 원소를 모두 잃는다.** 칸은 여전히 실패로 알린다(스칼라 enum 과 같다). 그 밖의 실패는 스트림이 망가진 것이라 멈춘다.
             const bool bEnumElement = nested._elementNested == nullptr && engine::getTypeRegistry().findEnum( nested._elementTypeName ) != nullptr;
             bool       bElementFailed{ false };
 

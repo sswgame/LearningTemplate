@@ -201,17 +201,16 @@ namespace sw
                         void*               pObj     = ( pType != nullptr ) ? ctx.createOwnedPointer( typeName ) : nullptr;
                         if ( pObj == nullptr )
                         {
-                            // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 예전처럼 건너뛴다.
+                            // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다.
                             const string                        rawJson = elem.dump();
                             SerializeContext::OpaqueElementView opaque{};
                             opaque._typeName = listKey[0];
                             opaque._format   = SerializeContext::OpaqueFormat::Json;
                             opaque._text     = rawJson;
-                            (void)ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다(예전과 같다)
+                            (void)ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
                             continue;
                         }
-                        // 원소 안의 못 읽은 칸은 바깥 orphan 목록으로 — 예전에는 엄격하게 읽어 칸 하나가 `_listComponent` 칸 **전체**를 실패로 만들었고,
-                        // 로드는 "_listComponent 를 버렸다" 고 알렸다(컴포넌트는 읽혔는데). XML 은 처음부터 바깥 목록을 내려 줬다.
+                        // 원소 안의 못 읽은 칸은 바깥 orphan 목록으로(XML 과 같다) — 엄격하게 읽으면 칸 하나가 `_listComponent` 칸 **전체**를 실패로 만든다.
                         if ( JsonSerializer::readObject( elem.get( listKey[0], false ), pObj, *pType, pOutListOrphan, nullptr, ctx ) == false )
                             bOk = false;
                     }
@@ -335,7 +334,7 @@ namespace sw
                 const EnumInfo* pEnumInfo = engine::getTypeRegistry().findEnum( typeName );
                 if ( pEnumInfo != nullptr )
                 {
-                    // 모르는 이름 · 값이면 쓰지 않고 실패한다(XML 과 같다 — `EnumInfo::tryParseText`). 예전에는 0 을 썼다.
+                    // 모르는 이름 · 값이면 쓰지 않고 실패한다(XML 과 같다 — `EnumInfo::tryParseText`).
                     int64        parsedValue{ 0 };
                     const string text = src.isString() ? string( src.asString() ) : sw::to_string( src.asInt( 0 ) );
                     if ( ( src.isString() || src.isNumber() ) && pEnumInfo->tryParseText( text, parsedValue ) )
@@ -388,7 +387,7 @@ namespace sw
             {
                 if ( prop._bIsBitField == SW_TRUE )
                 {
-                    // 불리언 · 숫자 · 불리언 글만 받는다. 예전에는 그 밖의 것("ture" · 오브젝트 · null)을 조용히 false 로 썼다.
+                    // 불리언 · 숫자 · 불리언 글만 받는다. 그 밖의 것("ture" · 오브젝트 · null)은 실패다.
                     bool bVal = false;
                     if ( field.isBool() )
                         bVal = field.asBool();
