@@ -43,6 +43,12 @@ namespace sw
     }
 
     ResourcePackReader::ResourcePackReader( ResourcePackReader&& other ) noexcept
+        : _fileMutex{}
+        , _pFileHandle{ nullptr }
+        , _packFilePath{}
+        , _header{}
+        , _mapEntry{}
+        , _stringPoolBytes{}
     {
         std::scoped_lock<mutex> lock( other._fileMutex );
         takeFromLocked( other );

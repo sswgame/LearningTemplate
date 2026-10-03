@@ -114,6 +114,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - 부울(bool) 타입이 아닌 포인터 등은 명시적으로 `== nullptr` 혹은 `== false` 로 비교하세요. `!_bValid` 보다는 `_bValid == false` 를 권장합니다.
 - 비트 필드(bit field) 플래그(예: `uint8 _bFlag : 1;`)는 `true`/`false` 대신 `SW_TRUE`(1) / `SW_FALSE`(0)를 사용하여 대입 및 비교합니다.
 - 생성자에서 멤버를 초기화할 때는 선언 순서대로 정렬해야 하며, 중괄호 `{}` 초기화를 사용하세요(반복자 쌍만은 소괄호 — `_listValue( list.begin(), list.end() )`. 중괄호면 `initializer_list` 생성자가 골라져 반복자 둘이 원소로 담긴다, `Style/IteratorPairBraces`). 한 줄에 1개 멤버씩 초기화하며 다음 줄에 `,`로 시작합니다.
+- 기본 초기화가 값을 정하지 않는 필드(정수 · 실수 · `bool` · 열거형 · 포인터 · 그 배열 · `atomic<스칼라>` · 비트필드)는 값이 **어딘가에** 있어야 합니다. 초기화 목록을 가진 생성자(복사 · 이동 생성자 포함)는 그 필드를 전부 목록에 두거나, 그 필드에 헤더 기본값이 있어야 합니다. 기본 생성자가 `= default` 인 클래스는 헤더 기본값을 주고, 비트필드는 C++17 에서 헤더 기본값을 가질 수 없으니 생성자를 씁니다. `-Wreorder-ctor` 와 `Style/ConstructorOrder` 는 목록에 **있는** 필드의 순서만 봅니다 — 빠진 필드는 쓰레기 값으로 시작하고 아무도 알아채지 못합니다. 버퍼로 쓰는 바이트 배열(`utf8 _arrStaticBuffer[N]`)은 예외입니다. `CheckCodeConventions.py` 의 `Style/ConstructorInitializesEveryField`(전체 스캔 전용)가 검사하며, 글자로 판정할 수 없는 타입(구조체 · 뜻이 둘인 별칭)은 추측하지 않고 건너뜁니다.
 - 범위(Range) 비교 시 변수를 안쪽(중간)에 위치하도록 작성하여 수학적 범위 표기법($min \le value \ \&\&\ value \le max$)을 따릅니다 (`kMin <= value && value <= kMax`).
 - 비트 패딩(Byte Padding) 낭비가 발생하지 않도록 변수 선언 순서를 최적화하세요.
 

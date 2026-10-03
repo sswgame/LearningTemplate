@@ -19,13 +19,12 @@ namespace sw
     }
 
     SceneTransformStorage::SceneTransformStorage()
-        : _listFreeSlot{}
+        : _arrPage{}
+        , _listFreeSlot{}
         , _nextSlot{ 0 }
         , _liveSlotCount{ 0 }
         , _mutex{}
     {
-        for ( atomic<SceneTransformPage*>& page : _arrPage )
-            page.store( nullptr, std::memory_order_relaxed );
     }
 
     SceneTransformStorage::~SceneTransformStorage()

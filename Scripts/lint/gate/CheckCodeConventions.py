@@ -1871,6 +1871,496 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
 
 
 
+# --- 생성자가 필드를 빠뜨리지 않는가 (Style/ConstructorInitializesEveryField) ------------------
+#
+# 기본 초기화가 값을 정하지 않는 필드(정수 · 실수 · bool · 열거형 · 포인터 · 그 배열 · 스칼라 atomic · 비트필드)는 헤더 기본값이나
+# 생성자 초기화 목록 중 **한 곳**에 값이 있어야 한다. `-Wreorder-ctor` 와 `Style/ConstructorOrder` 는 목록에 **있는** 필드의 순서만
+# 본다 — 목록에서 **빠진** 필드는 아무도 보지 않아 쓰레기 값으로 남는다. 타입을 글자로 판정하므로 모르는 타입(구조체 · 별칭이 여러 뜻인 이름)은
+# 건너뛴다(오탐보다 누락이 낫다). 클래스 정의와 생성자 정의가 다른 파일에 있으므로 **전체 스캔에서만** 돈다.
+
+#: 기본 초기화가 값을 정하지 않는 내장 타입 이름.
+_kCtorScalarBuiltinName: frozenset[str] = frozenset({
+    "bool", "char", "wchar_t", "char8_t", "char16_t", "char32_t", "short", "int", "long", "unsigned", "signed", "float", "double",
+    "size_t", "ptrdiff_t", "intptr_t", "uintptr_t", "int8_t", "int16_t", "int32_t", "int64_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t",
+    "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32", "uint64", "float32", "float64", "utf8", "utf16", "utf32", "byte",
+})
+#: 버퍼로 쓰는 배열의 원소 타입 — 이 배열은 일부러 비워 둔다.
+_kCtorByteElementName: frozenset[str] = frozenset({"char", "utf8", "uint8", "int8", "byte", "uint8_t", "char8_t"})
+_kCtorEnumDeclRe = re.compile(r"\benum\s+(?:class\s+|struct\s+)?([A-Za-z_]\w*)\s*(?::\s*[\w:\s]+?)?\s*[{;]")
+_kCtorAliasRe = re.compile(r"\busing\s+([A-Za-z_]\w*)\s*=\s*([^;{}()=]+?)\s*;")
+_kCtorTypedefRe = re.compile(r"\btypedef\s+([^;{}()]+?)\s+([A-Za-z_]\w*)\s*;")
+_kCtorRecordNameRe = re.compile(r"(?<!enum\s)\b(?:class|struct|union)\s+(?:(?:SW_\w+|alignas\s*\([^)]*\)|\[\[[^\]]*\]\])\s+)*([A-Za-z_]\w*)\s*(?:final\b\s*)?[:{]")
+_kCtorClassHeadRe = re.compile(
+    r"^\s*(?:template\s*<.*>\s*)?(?:class|struct)\s+(?:(?:SW_\w+|alignas\s*\([^)]*\)|\[\[[^\]]*\]\])\s+)*([A-Za-z_]\w*(?:::[A-Za-z_]\w*)*)\s*(?:final\b)?\s*(?::(?!:)[^;{]*)?(?:\{.*)?$")
+_kCtorMultiMemberRe = re.compile(r"^\s+(?P<decl>(?!return\b|using\b|typedef\b|static\b|friend\b)[A-Za-z_][\w:<>\s]*?)\s(?P<names>_\w+(?:\s*,\s*_\w+)+)\s*;\s*$")
+_kCtorOutOfLineRe = re.compile(
+    r"^\s*(?:template\s*<.*>\s*)?(?:(?:inline|constexpr)\s+)*((?:[A-Za-z_]\w*(?:<[^<>]*>)?::)*)([A-Za-z_]\w*)(?:<[^<>]*>)?::(\2)\s*\(")
+
+
+def stripCodeForCtorScanInternal(content: str) -> list[str]:
+    """
+    주석 · 문자열 · 문자 리터럴을 지운 줄 목록(줄 번호는 그대로). 중괄호 깊이와 초기화 목록을 글자 단위로 세려면 필요하다.
+    """
+    listOut: list[str] = []
+    current: list[str] = []
+    index = 0
+    length = len(content)
+    bInBlockComment = False
+    while index < length:
+        character = content[index]
+        if bInBlockComment:
+            if content.startswith("*/", index):
+                bInBlockComment = False
+                index += 2
+                continue
+            if character == "\n":
+                listOut.append("".join(current))
+                current = []
+            index += 1
+            continue
+        if content.startswith("/*", index):
+            bInBlockComment = True
+            index += 2
+            continue
+        if content.startswith("//", index):
+            newline = content.find("\n", index)
+            index = length if newline < 0 else newline
+            continue
+        if character == "R" and content.startswith('R"', index) and (index == 0 or not (content[index - 1].isalnum() or content[index - 1] == "_")):
+            openParen = content.find("(", index + 2)
+            if openParen > 0:
+                delimiter = ")" + content[index + 2:openParen] + '"'
+                closeAt = content.find(delimiter, openParen)
+                if closeAt > 0:
+                    current.append('""')
+                    listOut.extend([""] * content.count("\n", index, closeAt))
+                    index = closeAt + len(delimiter)
+                    continue
+        if character in ('"', "'"):
+            quote = character
+            index += 1
+            while index < length and content[index] != quote and content[index] != "\n":
+                index += 2 if content[index] == "\\" else 1
+            index += 1
+            current.append('""' if quote == '"' else "' '")
+            continue
+        if character == "\n":
+            listOut.append("".join(current))
+            current = []
+            index += 1
+            continue
+        current.append(character)
+        index += 1
+    listOut.append("".join(current))
+
+    return listOut
+
+
+#: 줄마다 걸린 전처리 조건 — (조건 글자, 참인 쪽인가) 의 튜플.
+CtorConditionStack = tuple[tuple[str, bool], ...]
+
+
+def blankPreprocessorLinesInternal(listLine: list[str]) -> list[CtorConditionStack]:
+    """
+    전처리 줄(이어지는 `\\` 줄 포함)을 비우고, 줄마다 걸린 `#if` 조건을 돌려준다. 매크로 본문의 중괄호가 깊이를 흔들지 않게 하고,
+    `#if A` 의 필드를 `#else` 쪽 생성자에 요구하지 않으려는 것이다(`#elif` 는 가지마다 다른 조건으로 본다).
+    """
+    listStack: list[CtorConditionStack] = []
+    stack: list[tuple[str, bool]] = []
+    bContinuation = False
+    for lineIndex, line in enumerate(listLine):
+        stripped = line.strip()
+        if bContinuation or stripped.startswith("#"):
+            if bContinuation is False:
+                directive = re.match(r"#\s*(\w+)\s*(.*)$", stripped)
+                keyword = directive.group(1) if directive else ""
+                condition = "".join((directive.group(2) if directive else "").rstrip("\\").split())
+                if keyword == "if":
+                    stack.append((condition, True))
+                elif keyword == "ifdef":
+                    stack.append((f"defined({condition})", True))
+                elif keyword == "ifndef":
+                    stack.append((f"defined({condition})", False))
+                elif keyword == "elif" and stack:
+                    stack[-1] = (f"elif:{condition}", True)
+                elif keyword == "else" and stack:
+                    stack[-1] = (stack[-1][0], stack[-1][1] is False)
+                elif keyword == "endif" and stack:
+                    stack.pop()
+            bContinuation = stripped.endswith("\\")
+            listLine[lineIndex] = ""
+        listStack.append(tuple(stack))
+    return listStack
+
+
+def areConditionsCompatibleInternal(first: CtorConditionStack, second: CtorConditionStack) -> bool:
+    """두 줄이 한 구성에서 함께 컴파일될 수 있는가 — 같은 조건을 반대 쪽으로 쓰고 있으면 아니다."""
+    mapConditionToPolarity = dict(first)
+    return all(mapConditionToPolarity.get(condition, polarity) == polarity for condition, polarity in second)
+
+
+@dataclass
+class CtorScanMember:
+    name: str
+    typeText: str
+    lineNum: int
+    bHasDefault: bool
+    bIsBitfield: bool
+    bIsArray: bool
+    bIsRawStorage: bool
+    conditions: CtorConditionStack = ()
+
+
+@dataclass
+class CtorScanConstructor:
+    lineNum: int
+    relPath: str
+    kind: str                     # "definition" · "defaulted" · "declaration" · "deleted"
+    bIsDefaultConstructor: bool
+    bDelegating: bool
+    uniqueInitialized: set[str]
+    conditions: CtorConditionStack = ()
+
+
+@dataclass
+class CtorScanClass:
+    chain: tuple[str, ...]        # 바깥 클래스부터의 이름
+    relPath: str
+    listMember: list[CtorScanMember] = field(default_factory=list)
+    listConstructor: list[CtorScanConstructor] = field(default_factory=list)
+
+
+def findMatchingCloseInternal(text: str, openIndex: int) -> int:
+    """`text[openIndex]` 의 `(` · `{` · `<` 짝이 닫히는 자리(없으면 -1)."""
+    pairs = {"(": ")", "{": "}", "[": "]"}
+    stack: list[str] = []
+    for index in range(openIndex, len(text)):
+        character = text[index]
+        if character in pairs:
+            stack.append(pairs[character])
+        elif stack and character == stack[-1]:
+            stack.pop()
+            if not stack:
+                return index
+        elif character in ")}]":
+            return -1
+    return -1
+
+
+def parseConstructorTailInternal(text: str, openParenIndex: int, className: str) -> tuple[str, bool, set[str]] | None:
+    """
+    생성자 이름 뒤 `(` 부터 읽어 (종류, 위임 생성자인가, 초기화 목록의 이름들) 을 돌려준다. 모양을 모르면 None.
+    """
+    closeParen = findMatchingCloseInternal(text, openParenIndex)
+    if closeParen < 0:
+        return None
+    cursor = closeParen + 1
+    tailMatch = re.compile(r"\s*(?:noexcept\s*(?:\([^()]*\))?\s*|SW_\w+\s*)*").match(text, cursor)
+    cursor = tailMatch.end() if tailMatch else cursor
+    rest = text[cursor:].lstrip()
+    if rest.startswith(";"):
+        return ("declaration", False, set())
+    if re.match(r"=\s*default\b", rest):
+        return ("defaulted", False, set())
+    if re.match(r"=\s*delete\b", rest):
+        return ("deleted", False, set())
+    if rest.startswith("{"):
+        return ("definition", False, collectBodyAssignmentsInternal(text, text.index("{", cursor)))
+    if not rest.startswith(":"):
+        return None
+    cursor = text.index(":", cursor) + 1
+    uniqueName: set[str] = set()
+    bDelegating = False
+    bFirst = True
+    nameRe = re.compile(r"\s*((?:[A-Za-z_]\w*(?:<[^<>]*>)?::)*[A-Za-z_]\w*)(?:<[^<>]*>)?\s*")
+    while True:
+        nameMatch = nameRe.match(text, cursor)
+        if nameMatch is None:
+            return None
+        name = nameMatch.group(1).split("::")[-1]
+        cursor = nameMatch.end()
+        if cursor >= len(text) or text[cursor] not in "({":
+            return None
+        closeAt = findMatchingCloseInternal(text, cursor)
+        if closeAt < 0:
+            return None
+        if bFirst and name == className:
+            bDelegating = True
+        bFirst = False
+        uniqueName.add(name)
+        cursor = closeAt + 1
+        while cursor < len(text) and text[cursor] in " \t\r\n":
+            cursor += 1
+        # `#if` 가지마다 목록을 `:` 로 다시 여는 생성자(`FunctionMetadata`)도 있다 — 전처리 줄을 비운 글자에서는 `:` 가 이음표로 보인다.
+        if cursor < len(text) and text[cursor] in ",:":
+            cursor += 1
+            continue
+        if cursor < len(text) and text[cursor] == "{":
+            return ("definition", bDelegating, uniqueName | collectBodyAssignmentsInternal(text, cursor))
+        return None
+
+
+_kCtorBodyAssignmentRe = re.compile(r"(?<![\w.>:])(_[A-Za-z]\w*)\s*(?:=(?!=)|\.store\s*\()")
+
+
+def collectBodyAssignmentsInternal(text: str, openBraceIndex: int) -> set[str]:
+    """생성자 본문에서 값을 대입하는 필드 — 원본 객체를 잠근 뒤 옮기는 이동 생성자처럼 목록에 둘 수 없는 경우를 받는다."""
+    closeBrace = findMatchingCloseInternal(text, openBraceIndex)
+    body = text[openBraceIndex:closeBrace if closeBrace > 0 else len(text)]
+    return set(_kCtorBodyAssignmentRe.findall(body))
+
+
+def isDefaultConstructorParameterListInternal(text: str, openParenIndex: int) -> bool:
+    closeParen = findMatchingCloseInternal(text, openParenIndex)
+    if closeParen < 0:
+        return False
+    inner = text[openParenIndex + 1:closeParen].strip()
+    return inner in ("", "void")
+
+
+def scanCtorFileInternal(relPath: str, listLine: list[str], listCondition: list[CtorConditionStack]) -> tuple[list[CtorScanClass], list[tuple[tuple[str, ...], CtorScanConstructor]]]:
+    """
+    파일 하나에서 클래스(멤버 · 클래스 안 생성자)와 클래스 밖 생성자 정의(`A::B::B(`)를 모은다.
+    """
+    listClass: list[CtorScanClass] = []
+    listOutOfLine: list[tuple[tuple[str, ...], CtorScanConstructor]] = []
+    classStack: list[tuple[CtorScanClass, int]] = []    # (클래스, 여는 중괄호 앞 깊이)
+    depth = 0
+    pendingName: str | None = None
+
+    for lineIndex, line in enumerate(listLine):
+        lineNum = lineIndex + 1
+        stripped = line.strip()
+        depthAtStart = depth
+
+        if stripped:
+            headMatch = _kCtorClassHeadRe.match(line)
+            if headMatch is not None and not stripped.endswith(";") and not re.match(r"^\s*enum\b", line) \
+                    and not re.search(r"\bfriend\b", line):
+                pendingName = headMatch.group(1)
+
+            topClass = classStack[-1][0] if classStack else None
+            bAtMemberDepth = topClass is not None and depthAtStart == classStack[-1][1] + 1
+            if bAtMemberDepth:
+                className = topClass.chain[-1]
+                ctorMatch = re.match(r"^\s*(?:(?:explicit|constexpr|inline|SW_\w+)\s+)*(?:explicit\s*\([^)]*\)\s*)?" + re.escape(className) + r"\s*\(", line)
+                if ctorMatch is not None:
+                    joined = "\n".join(listLine[lineIndex:lineIndex + 80])
+                    openParen = ctorMatch.end() - 1
+                    parsed = parseConstructorTailInternal(joined, openParen, className)
+                    if parsed is not None:
+                        kind, bDelegating, uniqueInit = parsed
+                        topClass.listConstructor.append(CtorScanConstructor(
+                            lineNum, relPath, kind, isDefaultConstructorParameterListInternal(joined, openParen), bDelegating, uniqueInit,
+                            listCondition[lineIndex]))
+                elif line.count("{") == line.count("}"):
+                    multiMatch = _kCtorMultiMemberRe.match(line.rstrip())
+                    if multiMatch is not None:
+                        # `float32 _31, _32, _33, _34;` — 한 줄에 여럿을 선언한 필드.
+                        for name in re.findall(r"_\w+", multiMatch.group("names")):
+                            topClass.listMember.append(CtorScanMember(
+                                name=name, typeText=multiMatch.group("decl").strip(), lineNum=lineNum, bHasDefault=False,
+                                bIsBitfield=False, bIsArray=False, bIsRawStorage=False, conditions=listCondition[lineIndex]))
+                    memberMatch = _kHeaderMemberRe.match(line.rstrip()) if multiMatch is None else None
+                    if memberMatch is not None and "(" not in memberMatch.group("decl") and "operator" not in memberMatch.group("decl"):
+                        decl = memberMatch.group("decl").strip()
+                        attr = memberMatch.group("attr") or ""
+                        listWord = decl.split()
+                        bStatic = any(word in ("static", "constexpr", "typedef", "using", "return") for word in listWord)
+                        bIsArray = bool((memberMatch.group("arr") or "").strip())
+                        # 바이트 배열은 버퍼다 — 쓰는 쪽이 길이와 함께 채운다(`StringBuilder::_arrStaticBuffer`). 0 으로 미리 채우면 낭비다.
+                        bIsByteBuffer = bIsArray and listWord and listWord[-1].split("::")[-1] in _kCtorByteElementName
+                        if not bStatic:
+                            topClass.listMember.append(CtorScanMember(
+                                name=memberMatch.group("name"),
+                                typeText=decl,
+                                lineNum=lineNum,
+                                bHasDefault=bool(memberMatch.group("init")),
+                                bIsBitfield=memberMatch.group("bits") is not None,
+                                bIsArray=bIsArray,
+                                bIsRawStorage=bool(bIsByteBuffer) or (bIsArray and ("alignas" in attr or "alignas" in decl)),
+                                conditions=listCondition[lineIndex],
+                            ))
+            elif not classStack or depthAtStart <= classStack[-1][1]:
+                outMatch = _kCtorOutOfLineRe.match(line)
+                if outMatch is not None:
+                    chain = tuple(part.split("<")[0] for part in outMatch.group(1).split("::") if part) + (outMatch.group(2),)
+                    joined = "\n".join(listLine[lineIndex:lineIndex + 80])
+                    openParen = outMatch.end() - 1
+                    parsed = parseConstructorTailInternal(joined, openParen, outMatch.group(2))
+                    if parsed is not None:
+                        kind, bDelegating, uniqueInit = parsed
+                        listOutOfLine.append((chain, CtorScanConstructor(
+                            lineNum, relPath, kind, isDefaultConstructorParameterListInternal(joined, openParen), bDelegating, uniqueInit,
+                            listCondition[lineIndex])))
+
+        for character in line:
+            if character == "{":
+                if pendingName is not None:
+                    outerChain = classStack[-1][0].chain if classStack else ()
+                    # `struct Outer::Impl` 처럼 바깥 이름을 붙여 정의하면 그 이름들이 사슬이 된다(pImpl).
+                    scanned = CtorScanClass(chain=outerChain + tuple(pendingName.split("::")), relPath=relPath)
+                    listClass.append(scanned)
+                    classStack.append((scanned, depth))
+                    pendingName = None
+                depth += 1
+            elif character == "}":
+                depth -= 1
+                while classStack and depth <= classStack[-1][1]:
+                    classStack.pop()
+            elif character == ";" and pendingName is not None and depth == depthAtStart:
+                pendingName = None
+    return listClass, listOutOfLine
+
+
+def collectCtorScalarNamesInternal(mapPathToLine: dict[Path, list[str]]) -> set[str]:
+    """
+    기본 초기화가 값을 정하지 않는 타입 이름 — 내장 타입 · 열거형 · 그것들의 별칭. 같은 이름이 레코드로도 선언돼 있으면 뺀다.
+    """
+    uniqueEnum: set[str] = set()
+    uniqueRecord: set[str] = set()
+    listAlias: list[tuple[str, str]] = []
+    for listLine in mapPathToLine.values():
+        text = "\n".join(listLine)
+        uniqueEnum.update(_kCtorEnumDeclRe.findall(text))
+        uniqueRecord.update(_kCtorRecordNameRe.findall(text))
+        listAlias.extend(_kCtorAliasRe.findall(text))
+        listAlias.extend((name, target) for target, name in _kCtorTypedefRe.findall(text))
+
+    uniqueScalar = set(_kCtorScalarBuiltinName) | uniqueEnum
+    mapAliasToTarget: dict[str, set[str]] = {}
+    for name, target in listAlias:
+        mapAliasToTarget.setdefault(name, set()).add(" ".join(target.split()))
+    bChanged = True
+    while bChanged:
+        bChanged = False
+        for name, uniqueTarget in mapAliasToTarget.items():
+            if name in uniqueScalar:
+                continue
+            if all(isCtorScalarTypeTextInternal(target, uniqueScalar) for target in uniqueTarget):
+                uniqueScalar.add(name)
+                bChanged = True
+    # 열거형 이름이 레코드 이름과 겹치면(다른 네임스페이스의 같은 이름) 어느 쪽인지 단정할 수 없다.
+    return uniqueScalar - (uniqueRecord - set(_kCtorScalarBuiltinName))
+
+
+def isCtorScalarTypeTextInternal(typeText: str, uniqueScalar: set[str]) -> bool:
+    """선언의 타입 부분이 기본 초기화로 값이 정해지지 않는 타입인가."""
+    text = re.sub(r"\b(?:const|volatile|mutable|inline|typename|struct|class|enum)\b", " ", typeText).strip()
+    angleDepth = 0
+    for character in text:
+        if character == "<":
+            angleDepth += 1
+        elif character == ">":
+            angleDepth -= 1
+        elif character == "*" and angleDepth == 0:
+            return True
+    if "&" in text:
+        return False
+    templateMatch = re.match(r"^(?:std::|sw::)?atomic\s*<\s*(.+)\s*>$", text)
+    if templateMatch is not None:
+        return isCtorScalarTypeTextInternal(templateMatch.group(1), uniqueScalar)
+    if "<" in text:
+        return False
+    listWord = text.split()
+    if not listWord:
+        return False
+    return all(word.split("::")[-1] in uniqueScalar for word in listWord)
+
+
+def checkConstructorInitializesEveryFieldInternal(filesToScan: list[Path], projectRoot: Path) -> list[ConventionViolation]:
+    """
+    생성자가 있는 클래스에서 값이 정해지지 않는 필드(스칼라 · 포인터 · 열거형 · 비트필드)가 헤더 기본값도, 생성자 초기화 목록도 없는지 검사합니다.
+
+    - 초기화 목록을 가진 생성자(복사 · 이동 생성자 포함, 위임 생성자 제외)는 그런 필드를 **전부** 목록에 둬야 한다.
+    - `X() = default` 인 클래스는 그런 필드에 헤더 기본값이 있어야 한다 — 비트필드는 헤더 기본값을 가질 수 없으니 생성자를 쓴다.
+    `alignas` 를 단 원시 저장 배열(인라인 버퍼)은 일부러 비워 둔 것이라 보지 않는다.
+    """
+    mapPathToLine: dict[Path, list[str]] = {}
+    mapPathToCondition: dict[Path, list[CtorConditionStack]] = {}
+    for filePath in filesToScan:
+        if filePath.suffix.lower() not in kCppAllExtensions:
+            continue
+        try:
+            content = readSourceTextInternal(filePath, "utf-8", "ignore")
+        except OSError:
+            continue
+        listLine = stripCodeForCtorScanInternal(content)
+        mapPathToCondition[filePath] = blankPreprocessorLinesInternal(listLine)
+        mapPathToLine[filePath] = listLine
+    uniqueScalar = collectCtorScalarNamesInternal(mapPathToLine)
+
+    mapDirStemToClass: dict[tuple[Path, str], list[CtorScanClass]] = {}
+    listOutOfLineSite: list[tuple[Path, tuple[str, ...], CtorScanConstructor]] = []
+    listAllClass: list[CtorScanClass] = []
+    for filePath, listLine in mapPathToLine.items():
+        try:
+            relPath = normalizePath(filePath.relative_to(projectRoot))
+        except ValueError:
+            relPath = normalizePath(filePath)
+        listClass, listOutOfLine = scanCtorFileInternal(relPath, listLine, mapPathToCondition[filePath])
+        listAllClass.extend(listClass)
+        mapDirStemToClass.setdefault((filePath.parent, filePath.stem), []).extend(listClass)
+        listOutOfLineSite.extend((filePath, chain, constructor) for chain, constructor in listOutOfLine)
+
+    # 클래스 밖 생성자를 그 클래스에 붙인다: 같은 파일, 또는 같은 폴더에서 이름이 파일 이름의 앞부분인 헤더(FrameRendererCompute.cpp → FrameRenderer.h).
+    for filePath, chain, constructor in listOutOfLineSite:
+        listCandidate: list[CtorScanClass] = []
+        for (directory, stem), listClass in mapDirStemToClass.items():
+            if directory != filePath.parent or filePath.stem.startswith(stem) is False:
+                continue
+            listCandidate.extend(scanned for scanned in listClass if scanned.chain[-len(chain):] == chain)
+        if not listCandidate:
+            # 정의가 다른 이름의 파일에 있다(RHITypes.h 의 `RHITextureDesc` → RHI.cpp). 트리 전체에서 그 이름이 하나뿐일 때만 붙인다.
+            listCandidate = [scanned for scanned in listAllClass if scanned.chain[-len(chain):] == chain]
+            if len(listCandidate) != 1:
+                continue
+        # 같은 헤더 묶음 안의 같은 이름은 `#if` 가지마다 다시 적은 같은 클래스다(D3D12RHIDevice 의 비 Windows 껍데기) — 모두에 붙인다.
+        for scanned in listCandidate:
+            scanned.listConstructor.append(constructor)
+
+    violations: list[ConventionViolation] = []
+    for scanned in listAllClass:
+        if not scanned.listConstructor:
+            continue
+        listNeedsInit = [member for member in scanned.listMember
+                         if member.bHasDefault is False and member.bIsRawStorage is False
+                         and (member.bIsBitfield or isCtorScalarTypeTextInternal(member.typeText, uniqueScalar))]
+        if not listNeedsInit:
+            continue
+        qualifiedName = "::".join(scanned.chain)
+        for constructor in scanned.listConstructor:
+            if constructor.kind == "definition" and constructor.bDelegating is False:
+                listMissing = [member.name for member in listNeedsInit
+                               if member.name not in constructor.uniqueInitialized
+                               and areConditionsCompatibleInternal(member.conditions, constructor.conditions)]
+                if listMissing:
+                    violations.append(ConventionViolation(
+                        file_path=constructor.relPath,
+                        line_number=constructor.lineNum,
+                        rule_category="Style/ConstructorInitializesEveryField",
+                        message=(f"'{qualifiedName}' 생성자가 기본값 없는 필드 {', '.join(repr(name) for name in listMissing)} 를 "
+                                 "초기화 목록에 두지 않습니다. 그 필드는 쓰레기 값으로 시작합니다."),
+                        snippet=qualifiedName,
+                        suggested_fix="빠진 필드를 초기화 목록에 **선언 순서대로** 넣으세요(본문 대입이 아니라 목록).",
+                    ))
+            elif constructor.kind == "defaulted" and constructor.bIsDefaultConstructor:
+                for member in listNeedsInit:
+                    if areConditionsCompatibleInternal(member.conditions, constructor.conditions) is False:
+                        continue
+                    violations.append(ConventionViolation(
+                        file_path=scanned.relPath,
+                        line_number=member.lineNum,
+                        rule_category="Style/ConstructorInitializesEveryField",
+                        message=(f"'{qualifiedName}' 의 기본 생성자는 `= default` 인데 '{member.name}' 에 헤더 기본값이 없습니다. "
+                                 "그 필드는 쓰레기 값으로 시작합니다."),
+                        snippet=member.name,
+                        suggested_fix=("헤더 기본값을 주세요." if member.bIsBitfield is False
+                                       else "비트필드는 헤더 기본값을 가질 수 없습니다 — 생성자를 쓰고 초기화 목록에 넣으세요."),
+                    ))
+    return violations
+
+
 # --- 줄 단위 규칙 구현 ---------------------------------------------------------
 
 class IncludePathCasingRule( ConventionRule ):
@@ -2521,6 +3011,7 @@ def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] |
     allViolations.extend(checkDuplicateAnonymousConstantsInternal(filesToScan, projectRoot))
     allViolations.extend(checkHeaderMemberInitializersInternal(filesToScan, projectRoot))
     allViolations.extend(checkBitfieldBooleanLiteralsInternal(filesToScan, projectRoot))
+    allViolations.extend(checkConstructorInitializesEveryFieldInternal(filesToScan, projectRoot))
 
     return allViolations
 

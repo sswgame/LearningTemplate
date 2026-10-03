@@ -45,11 +45,8 @@ namespace sw
 
         /** @brief 청크 없이 시작합니다. */
         PagedArray()
+            : _arrChunk{}
         {
-            for ( atomic<T*>& chunk : _arrChunk )
-            {
-                chunk.store( nullptr, std::memory_order_relaxed );
-            }
         }
 
         /** @brief 모든 청크를 해제합니다. */

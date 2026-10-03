@@ -381,12 +381,11 @@ namespace sw
     };
 
     float4x4::float4x4( const float32* pArray ) noexcept
+        : float4x4{}
     {
-        // nullptr 이면 예전에는 원소를 채우지 않아 쓰레기 값이 남았다. 기본 생성과 같은 항등 행렬로 둔다.
+        // 기본 생성(항등 행렬)에 위임해 두고, 배열이 있으면 덮어쓴다. nullptr 이면 항등 행렬로 남는다.
         if ( pArray != nullptr )
             Memory::copy( &_11, pArray, sizeof( float32 ) * 16 );
-        else
-            *this = Identity;
     }
 
     float4x4 float4x4::createTranslation( const float3& position ) noexcept

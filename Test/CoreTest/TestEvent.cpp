@@ -2,6 +2,7 @@
 
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -517,4 +518,26 @@ SW_TEST_CASE( EventTest, ChannelCreatedByTheImageKeepsItMappedWhileOtherCodeSubs
     dispatcher.publish( event );
     SW_EXPECT_EQUAL( 10, s_keptProbeSum );
     dispatcher.clear();
+}
+
+/**
+ * @brief [EventTest] 복사 · 이동으로 만든 이벤트는 어느 큐에도 매달리지 않은 상태(`_next == nullptr`)로 시작한다
+ * @details 큐 링크는 복사하지 않는 것이 계약이다. 생성자가 링크를 목록에 두지 않으면 사본은 그 메모리에 있던 값을 링크로 들고 시작한다 —
+ *          그래서 0xFF 로 채운 메모리 위에 만들어 본다.
+ */
+SW_TEST_CASE( EventTest, CopiedEventStartsUnlinked )
+{
+    const CloseProbeEvent source{};
+
+    alignas( CloseProbeEvent ) uint8 arrStorage[sizeof( CloseProbeEvent )];
+    sw::Memory::set( arrStorage, 0xFF, sizeof( arrStorage ) );
+    CloseProbeEvent* pCopy = sw_placement_new( arrStorage ) CloseProbeEvent( source );
+    SW_EXPECT_TRUE( pCopy->_next.load() == nullptr );
+    pCopy->~CloseProbeEvent();
+
+    sw::Memory::set( arrStorage, 0xFF, sizeof( arrStorage ) );
+    CloseProbeEvent  moveSource{};
+    CloseProbeEvent* pMoved = sw_placement_new( arrStorage ) CloseProbeEvent( std::move( moveSource ) );
+    SW_EXPECT_TRUE( pMoved->_next.load() == nullptr );
+    pMoved->~CloseProbeEvent();
 }

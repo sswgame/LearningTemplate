@@ -56,6 +56,23 @@ _kWholeScanCases: list[tuple[str, dict[str, str]]] = [
         },
     ),
     (
+        # 초기화 목록을 가진 생성자가 기본값 없는 포인터 · 비트필드를 빠뜨린다.
+        "Style/ConstructorInitializesEveryField",
+        {
+            "Source/Probe/CtorMissing.h": ("#pragma once\n\nclass CtorMissing\n{\npublic:\n    CtorMissing();\n\nprivate:\n"
+                                           "    Widget* _pWidget;\n    int32 _count;\n    uint8 _bReady : 1;\n};\n"),
+            "Source/Probe/CtorMissing.cpp": '#include "pch.h"\n\nCtorMissing::CtorMissing()\n    : _count{ 0 }\n{\n}\n',
+        },
+    ),
+    (
+        # `= default` 기본 생성자인데 스칼라 필드에 헤더 기본값이 없다.
+        "Style/ConstructorInitializesEveryField",
+        {
+            "Source/Probe/CtorDefaulted.h": ("#pragma once\n\nenum class ProbeMode : uint8\n{\n    Off,\n};\n\nstruct CtorDefaulted\n{\n"
+                                             "    CtorDefaulted() = default;\n\n    ProbeMode _mode;\n    float32 _scale{ 1.0f };\n};\n"),
+        },
+    ),
+    (
         "Style/BitfieldBoolean",
         {
             "Source/Probe/Bitfield.h": "#pragma once\n\nclass Bitfield\n{\nprivate:\n    uint8 _bReady : 1;\n};\n",
@@ -331,8 +348,9 @@ def main(argv: list[str] | None = None) -> int:
                               f"조각이 낡았습니다 (잡힌 것: {sorted(found) if found else '없음'})")
 
         # --- 트리 전체를 봐야 아는 규칙 ---
-        for category, files in _kWholeScanCases:
-            caseRoot = tempRoot / category.replace("/", "_")
+        for caseIndex, (category, files) in enumerate(_kWholeScanCases):
+            # 같은 카테고리의 조각이 여럿이면(규칙의 갈래마다 하나) 서로 다른 폴더에 둔다 — 한 폴더면 하나만 살아 있어도 둘 다 잡힌 것으로 보인다.
+            caseRoot = tempRoot / f"{category.replace('/', '_')}_{caseIndex}"
             for relPath, content in files.items():
                 writeFixtureInternal(caseRoot, relPath, content)
             resetPathMapCacheInternal()

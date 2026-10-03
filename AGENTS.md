@@ -296,6 +296,14 @@ namespace sw
   the only place the value can live: a class whose default constructor is `= default` or
   defined inline in the header, a delegating constructor (`: Self( ... )` cannot carry
   member initializers — the target carries them), and a type with no constructor at all.
+- A field that default-initialization leaves indeterminate (integer, float, `bool`, enum, pointer, an array of those,
+  `atomic<scalar>`, a bit-field) has its value **somewhere**: every constructor with an initializer list (copy and move
+  constructors included) lists it, or it has a header default. A class whose default constructor is `= default` needs
+  header defaults for them — a bit-field cannot have one before C++20, so such a class writes its constructor.
+  `-Wreorder-ctor` and `Style/ConstructorOrder` only order the fields that are listed; a field missing from the list
+  starts as garbage and nothing else notices. Byte arrays used as buffers (`utf8 _arrStaticBuffer[N]`) are exempt.
+  Enforced by `CheckCodeConventions.py` (`Style/ConstructorInitializesEveryField`, full-scan only); a type it cannot
+  classify from the text (a struct, an alias with two meanings) is skipped rather than guessed.
 - Arrange fields to minimize byte padding; use bit packing where appropriate.
 - Do not compare booleans through negation: write explicit comparisons such as
   `if (_bValid == false)`. Explicitly compare pointers to `nullptr` when needed.

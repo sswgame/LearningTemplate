@@ -76,8 +76,11 @@ private:                                                            \
     {
         /** @brief 다음 포인터만 비운 상태로 만듭니다. */
         IEvent();
-        /** @brief 큐 링크는 복사하지 않습니다. */
-        IEvent( const IEvent& ) {}
+        /** @brief 큐 링크는 복사하지 않습니다 — 사본은 어느 큐에도 매달리지 않은 상태로 시작합니다. */
+        IEvent( const IEvent& )
+            : _next{ nullptr }
+        {
+        }
         /** @brief 큐 링크는 복사하지 않고 자기 링크를 유지합니다. */
         IEvent& operator=( const IEvent& ) { return *this; }
         /**
@@ -86,7 +89,10 @@ private:                                                            \
          *       보장을 지키려고 **이동 대신 복사**를 씁니다. 이 두 함수는 본문이 비어 있어 예외를 던질 수 없는데도 그 표시가
          *       없었습니다.
          */
-        IEvent( IEvent&& ) noexcept {}
+        IEvent( IEvent&& ) noexcept
+            : _next{ nullptr }
+        {
+        }
         /** @brief 큐 링크는 가져오지 않고 자기 링크를 유지합니다. */
         IEvent& operator=( IEvent&& ) noexcept { return *this; }
         /** @brief 가상 소멸자라 파생 이벤트를 안전하게 지울 수 있습니다. */
