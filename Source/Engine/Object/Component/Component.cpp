@@ -148,7 +148,7 @@ namespace sw
         {
             if ( _listSubTick[index]._subTickId == subTickId )
             {
-                _listSubTick.erase( _listSubTick.begin() + index );
+                _listSubTick.erase( _listSubTick.begin() + static_cast<ptrdiff_t>( index ) );
                 if ( _pOwner != nullptr )
                     _pOwner->markTickOrderDirty();
                 return true;

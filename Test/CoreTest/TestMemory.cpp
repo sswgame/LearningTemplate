@@ -473,6 +473,7 @@ SW_TEST_CASE( MemoryTest, AllocatorRejectsElementCountThatOverflows )
     }
     SW_EXPECT_TRUE_MSG( bThrew, "곱이 뒤집히는 개수에 블록을 내줬습니다 — 호출부가 그 밖으로 나갑니다" );
 
+#if !defined( SW_ENABLE_STL_CONTAINER ) // 아래는 커스텀 vector 의 한계다 — std::vector 는 `length_error` 를 던진다
     // vector 가 말하는 한계와 실제로 같은 자리인지 못박는다.
     sw::vector<int64> listValue;
     SW_EXPECT_EQUAL( ~size_t( 0 ) / sizeof( int64 ), listValue.max_size() );
@@ -494,6 +495,7 @@ SW_TEST_CASE( MemoryTest, AllocatorRejectsElementCountThatOverflows )
     listValue.push_back( 42 );
     SW_EXPECT_EQUAL( size_t( 1 ), listValue.size() );
     SW_EXPECT_EQUAL( int64( 42 ), listValue[0] );
+#endif
 }
 
 /**

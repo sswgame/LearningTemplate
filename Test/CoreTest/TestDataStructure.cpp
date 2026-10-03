@@ -40,6 +40,7 @@ namespace
         }
     };
 
+#if !defined( SW_ENABLE_STL_CONTAINER ) // sw::pair 의 EBO 시험에만 쓴다
     struct EmptyTestHasher
     {
         size_t operator()( int32 val ) const noexcept { return static_cast<size_t>( static_cast<uint32>( val ) * 2654435761u ); }
@@ -49,6 +50,7 @@ namespace
     {
         bool operator()( int32 a, int32 b ) const noexcept { return a == b; }
     };
+#endif
 
     /**
      * @brief 모든 키를 같은 버킷으로 보내는 해시입니다.
@@ -897,14 +899,15 @@ SW_TEST_CASE( DataStructureTest, PairBasicAndStructuredBinding )
  */
 SW_TEST_CASE( DataStructureTest, PairEmptyBaseOptimization )
 {
-#if !defined( SW_ENABLE_STL_CONTAINER )
+#if defined( SW_ENABLE_STL_CONTAINER )
+    SW_TEST_SKIP( "sw::pair is std::pair in the STL container build (no EBO accessors)" );
+#else
     // 1) 일반 타입 쌍: 8 바이트
     static_assert( sizeof( sw::pair<int32, int32> ) == 8, "pair<int, int> must be 8 bytes" );
     // 2) 빈 클래스 1개 + 포인터: EBO 압축으로 8 바이트
     static_assert( sizeof( sw::pair<EmptyTestHasher, int32*> ) == sizeof( int32* ), "Empty + pointer must be pointer size (EBO)" );
     // 3) 빈 클래스 2개: EBO 압축으로 최소 크기 1 바이트
     static_assert( sizeof( sw::pair<EmptyTestHasher, EmptyTestEqual> ) == 1, "Empty + Empty must be 1 byte (EBO)" );
-#endif
 
     sw::pair<EmptyTestHasher, int32> pEmptyFirst{ EmptyTestHasher{}, 1234 };
     SW_EXPECT_EQUAL( 1234, pEmptyFirst.second );
@@ -917,6 +920,7 @@ SW_TEST_CASE( DataStructureTest, PairEmptyBaseOptimization )
 
     sw::pair<EmptyTestHasher, EmptyTestEqual> pBothEmpty{};
     SW_EXPECT_TRUE( pBothEmpty.second()( 5, 5 ) );
+#endif
 }
 
 /**
@@ -1293,6 +1297,9 @@ SW_TEST_CASE( DataStructureTest, HashMapOddReserveGrowAndEraseStaysConsistent )
  */
 SW_TEST_CASE( DataStructureTest, StringHashAgreesAcrossKeyFormsAndSeparatesKeys )
 {
+#if defined( SW_ENABLE_STL_CONTAINER )
+    SW_TEST_SKIP( "std::hash<sw::string> is the standard (non-transparent) hash in the STL container build" );
+#else
     const std::hash<sw::string> hasher{};
     sw::unordered_set<uint64>   setHash;
     for ( uint32 length = 0; length < 40; ++length )
@@ -1321,6 +1328,7 @@ SW_TEST_CASE( DataStructureTest, StringHashAgreesAcrossKeyFormsAndSeparatesKeys 
     SW_EXPECT_TRUE( mapName.find( sw::string_view( "engine/materials/glassmaterial.material" ) ) != mapName.end() );
     SW_EXPECT_TRUE( mapName.find( sw::string( "engine/materials/glassmaterial.material" ) ) != mapName.end() );
     SW_EXPECT_TRUE( mapName.find( sw::string_view( "engine/materials/glassmaterial.materia" ) ) == mapName.end() );
+#endif
 }
 
 /**
@@ -1330,6 +1338,9 @@ SW_TEST_CASE( DataStructureTest, StringHashAgreesAcrossKeyFormsAndSeparatesKeys 
  */
 SW_TEST_CASE( DataStructureTest, VectorResizeByOneGrowsGeometrically )
 {
+#if defined( SW_ENABLE_STL_CONTAINER )
+    SW_TEST_SKIP( "the growth policy under test is the custom vector; the standard library picks its own factor" );
+#else
     sw::vector<uint32> listValue;
     size_t             lastCapacity   = listValue.capacity();
     uint32             capacityChange = 0;
@@ -1357,6 +1368,7 @@ SW_TEST_CASE( DataStructureTest, VectorResizeByOneGrowsGeometrically )
     sw::vector<uint32> listOnce;
     listOnce.resize( 1000 );
     SW_EXPECT_EQUAL( size_t( 1000 ), listOnce.capacity() );
+#endif
 }
 
 /**

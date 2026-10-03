@@ -215,6 +215,7 @@ namespace sw
         basic_fixed_string& append( const basic_fixed_string<T, M>& str ) { return append( str.c_str() ); }
         basic_fixed_string& append( uint32 count, T c );
         basic_fixed_string& append( const std::basic_string_view<T>& str );
+        basic_fixed_string& append( const std::basic_string<T>& str ) { return append( std::basic_string_view<T>( str ) ); }
 
         /** @brief pos 부터 C 문자열이 처음 나오는 위치를 찾습니다. */
         uint32 find( const T* pStr, uint32 pos = 0 ) const;

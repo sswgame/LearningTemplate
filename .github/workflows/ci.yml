@@ -67,6 +67,12 @@ jobs:
             os: ubuntu-22.04
             preset: CI-Debug-TSAN
 
+          # `SW_ENABLE_STL_CONTAINER` 구성(표준 컨테이너 · 할당자)이 컴파일되는지 지킨다. 기본 빌드가 쓰지 않는 옵션이라 돌리지 않으면 썩는다.
+          # 다른 잡과 나란히 돌아 벽시계 시간은 늘지 않고, Windows Debug 잡 하나만큼 러너 시간이 는다.
+          - name: Build Windows STL containers (clang-cl)
+            os: windows-2022
+            preset: CI-Debug-STL
+
           - name: Build Windows Shipping (clang-cl)
             os: windows-2022
             preset: CI-Shipping

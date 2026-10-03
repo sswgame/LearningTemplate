@@ -772,6 +772,8 @@ namespace sw
     };
 } // namespace sw
 
+// `SW_ENABLE_STL_CONTAINER` 이면 sw::string 이 std::string 그 자체라 표준 특수화와 겹친다 — 그때는 표준 해시를 쓴다.
+#if !defined( SW_ENABLE_STL_CONTAINER )
 namespace std
 {
     /**
@@ -807,3 +809,4 @@ namespace std
         size_t operator()( const utf16* s ) const noexcept { return operator()( std::wstring_view{ s } ); }
     };
 } // namespace std
+#endif // !SW_ENABLE_STL_CONTAINER

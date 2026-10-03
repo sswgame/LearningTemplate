@@ -14,12 +14,24 @@
 namespace sw
 {
 #if defined( SW_ENABLE_STL_CONTAINER )
-    // 기본 비교자를 `std::less<>`(transparent)로 둔다. 커스텀 구현과 같은 값이어야 한다.
-    // 예전에는 이쪽만 `std::less<Key>` 여서, `find( string_view )` 같은 이종 검색이 기본 빌드에서는 되고
-    // `SW_ENABLE_STL_CONTAINER` 를 켜면 컴파일되지 않았다. 같은 코드가 빌드 옵션에 따라 달라지는 것, 바로
-    // `unordered_map.h` 가 피하려고 적어 둔 상황이다.
+    /**
+     * @brief std::set 에 커스텀 구현과 같은 `contains` 를 더한 것입니다(`SW_ENABLE_STL_CONTAINER`).
+     * @details 기본 비교자는 `std::less<>`(transparent)라 이종 키 `find` 가 그대로 된다. C++17 에는 `contains` 가 없어 여기서 더한다.
+     */
     template <typename Key, typename Compare = std::less<>, typename Allocator = std::allocator<Key>>
-    using set = std::set<Key, Compare, Allocator>;
+    class set : public std::set<Key, Compare, Allocator>
+    {
+        using Base = std::set<Key, Compare, Allocator>;
+
+    public:
+        using Base::Base;
+
+        template <typename K>
+        bool contains( const K& key ) const
+        {
+            return Base::find( key ) != Base::end();
+        }
+    };
 #else
     /** @brief 정렬된 벡터로 구현한 집합입니다. 조회는 이진 검색이고, 삽입할 때 정렬을 유지합니다. */
     template <typename Key, typename Compare = std::less<void>, typename Allocator = Allocator<Key>>

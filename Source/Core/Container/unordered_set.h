@@ -14,8 +14,48 @@
 namespace sw
 {
 #if defined( SW_ENABLE_STL_CONTAINER )
+    /**
+     * @brief std::unordered_set 에 밀집 구현과 같은 조회 API(이종 키 `find` · `count` · `contains`)를 더한 것입니다(`SW_ENABLE_STL_CONTAINER`).
+     * @details C++17 의 std 해시 컨테이너에는 이종 조회와 `contains` 가 없다. 이종 키(`string_view` 등)는 키 타입으로 바꿔 찾는다 — 임시 키 하나가
+     *          생기지만 STL 모드는 할당자 · 레이스 탐지를 빼고 표준 구현과 견주는 진단 구성이다.
+     */
     template <typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = std::allocator<Key>>
-    using unordered_set = std::unordered_set<Key, Hash, KeyEqual, Allocator>;
+    class unordered_set : public std::unordered_set<Key, Hash, KeyEqual, Allocator>
+    {
+        using Base = std::unordered_set<Key, Hash, KeyEqual, Allocator>;
+        template <typename K>
+        using EnableIfOtherKey = std::enable_if_t<std::is_same_v<std::decay_t<K>, Key> == false && std::is_constructible_v<Key, const K&>>;
+
+    public:
+        using typename Base::const_iterator;
+        using typename Base::iterator;
+        using typename Base::size_type;
+        using Base::Base;
+        using Base::count;
+        using Base::find;
+
+        template <typename K, typename = EnableIfOtherKey<K>>
+        iterator find( const K& key )
+        {
+            return Base::find( Key( key ) );
+        }
+        template <typename K, typename = EnableIfOtherKey<K>>
+        const_iterator find( const K& key ) const
+        {
+            return Base::find( Key( key ) );
+        }
+        template <typename K, typename = EnableIfOtherKey<K>>
+        size_type count( const K& key ) const
+        {
+            return Base::count( Key( key ) );
+        }
+        bool contains( const Key& key ) const { return Base::find( key ) != Base::end(); }
+        template <typename K, typename = EnableIfOtherKey<K>>
+        bool contains( const K& key ) const
+        {
+            return Base::find( Key( key ) ) != Base::end();
+        }
+    };
 #else
     /** @brief 밀집 배열 기반 해시 집합입니다. erase 하면 이터레이터가 무효화될 수 있습니다. */
     template <typename Key, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = Allocator<Key>>

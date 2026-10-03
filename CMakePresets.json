@@ -153,6 +153,15 @@
       }
     },
     {
+      "name": "CI-Debug-STL",
+      "displayName": "CI Debug + STL containers (Ninja)",
+      "description": "CI Debug with SW_ENABLE_STL_CONTAINER (std containers and std::allocator) so the option keeps compiling",
+      "inherits": "CI-Debug",
+      "cacheVariables": {
+        "SW_ENABLE_STL_CONTAINER": "ON"
+      }
+    },
+    {
       "name": "CI-Debug-TSAN",
       "displayName": "CI Debug + TSan (Ninja, Linux Clang)",
       "description": "CI Debug with ThreadSanitizer enabled (GNU/Clang only)",
@@ -202,6 +211,10 @@
     {
       "name": "CI-Debug-ASAN",
       "configurePreset": "CI-Debug-ASAN"
+    },
+    {
+      "name": "CI-Debug-STL",
+      "configurePreset": "CI-Debug-STL"
     },
     {
       "name": "CI-Debug-TSAN",

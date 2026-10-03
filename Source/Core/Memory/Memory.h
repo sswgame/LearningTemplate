@@ -205,6 +205,11 @@ namespace sw
     template <typename T>
     using weak_ptr = std::weak_ptr<T>;
 
+#if defined( SW_ENABLE_STL_CONTAINER )
+    // 표준 할당자 구성이다. 표준 함수를 그대로 들여야 std 컨테이너 인자의 ADL 이 같은 함수를 찾는다(따로 정의하면 호출이 모호해진다).
+    using std::make_shared;
+#else
     template <typename T, typename... Args>
     shared_ptr<T> make_shared( Args&&... args ) { return std::allocate_shared<T>( sw::Allocator<T>{}, std::forward<Args>( args )... ); }
+#endif
 } // namespace sw

@@ -25,8 +25,48 @@
 namespace sw
 {
 #if defined( SW_ENABLE_STL_CONTAINER )
+    /**
+     * @brief std::unordered_map 에 밀집 구현과 같은 조회 API(이종 키 `find` · `count` · `contains`)를 더한 것입니다(`SW_ENABLE_STL_CONTAINER`).
+     * @details C++17 의 std 해시 컨테이너에는 이종 조회와 `contains` 가 없다. 이종 키(`string_view` 등)는 키 타입으로 바꿔 찾는다 — 임시 키 하나가
+     *          생기지만 STL 모드는 할당자 · 레이스 탐지를 빼고 표준 구현과 견주는 진단 구성이다.
+     */
     template <typename Key, typename T, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<>, typename Allocator = std::allocator<pair<const Key, T>>>
-    using unordered_map = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
+    class unordered_map : public std::unordered_map<Key, T, Hash, KeyEqual, Allocator>
+    {
+        using Base = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
+        template <typename K>
+        using EnableIfOtherKey = std::enable_if_t<std::is_same_v<std::decay_t<K>, Key> == false && std::is_constructible_v<Key, const K&>>;
+
+    public:
+        using typename Base::const_iterator;
+        using typename Base::iterator;
+        using typename Base::size_type;
+        using Base::Base;
+        using Base::count;
+        using Base::find;
+
+        template <typename K, typename = EnableIfOtherKey<K>>
+        iterator find( const K& key )
+        {
+            return Base::find( Key( key ) );
+        }
+        template <typename K, typename = EnableIfOtherKey<K>>
+        const_iterator find( const K& key ) const
+        {
+            return Base::find( Key( key ) );
+        }
+        template <typename K, typename = EnableIfOtherKey<K>>
+        size_type count( const K& key ) const
+        {
+            return Base::count( Key( key ) );
+        }
+        bool contains( const Key& key ) const { return Base::find( key ) != Base::end(); }
+        template <typename K, typename = EnableIfOtherKey<K>>
+        bool contains( const K& key ) const
+        {
+            return Base::find( Key( key ) ) != Base::end();
+        }
+    };
 #else
     /**
      * @class unordered_map
