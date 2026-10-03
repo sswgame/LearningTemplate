@@ -223,7 +223,7 @@ namespace sw
 
     bool BenchScene::spawnFromGlobals()
     {
-        // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager gameAllowed=0), 이 스위치는 이제
+        // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는 이제
         // **이 모듈이 선언한다**(이 파일 위). 그래서 이름으로 조회하지 않고 그대로 읽는다 —
         // 예전 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽혔다.
         if ( gv_benchMeshes <= 0 )

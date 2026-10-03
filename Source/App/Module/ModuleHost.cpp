@@ -21,6 +21,7 @@
 
 #include "RuntimeAPI/ABI/ModuleAbi.h"
 #include "RuntimeAPI/Service/ModuleService.h"
+#include "RuntimeAPI/Service/ServiceListColumns.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -68,17 +69,17 @@ namespace sw
                 return true;
             }
 
-            /** @brief 호스트가 제공하는 서비스 테이블을 만듭니다. 게임 모듈에는 gameAllowed=1 인 것만 노출합니다. */
+            /** @brief 호스트가 제공하는 서비스 테이블을 만듭니다. 게임 모듈에는 GameVisible 인 것만 노출합니다. */
             template <Target TargetModule>
             static void fillModuleService( const ModuleHost* pHost, ModuleService& outService )
             {
                 engine::fillModuleServices( outService, TargetModule == Target::Game );
 
-#define SW_HOST_SERVICE( member, Tag, Type, getter, gameAllowed )                             \
-    if constexpr ( TargetModule == Target::Editor || ( ( gameAllowed ) == 1 ) )               \
-    {                                                                                         \
-        outService.arrServices[internal::toRawServiceId( internal::ModuleServiceId::Type )] = \
-            ( pHost != nullptr ) ? pHost->getter() : nullptr;                                 \
+#define SW_HOST_SERVICE( member, Tag, Type, getter, visibility )                                         \
+    if constexpr ( TargetModule == Target::Editor || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) ) \
+    {                                                                                                    \
+        outService.arrServices[internal::toRawServiceId( internal::ModuleServiceId::Type )] =            \
+            ( pHost != nullptr ) ? pHost->getter() : nullptr;                                            \
     }
 
 #include "RuntimeAPI/Service/HostServiceList.xxx"

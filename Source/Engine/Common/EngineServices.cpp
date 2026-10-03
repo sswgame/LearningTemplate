@@ -5,6 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 
 #include "RuntimeAPI/Service/ModuleService.h"
+#include "RuntimeAPI/Service/ServiceListColumns.h"
 
 // 서비스 **타입의 정의는 하나도 필요 없다.** 이 파일이 하는 일은 포인터를 담아 두고 참조로
 // 돌려주는 것뿐이라 전방 선언(EngineServices.h 가 목록에서 생성한다)으로 충분하다. 예전에는
@@ -55,14 +56,14 @@ namespace sw
         const utf8* findUnboundRequiredServiceName( const EngineServices& services )
         {
             // 행 순서가 곧 보고 순서다. 같은 표를 두 번 물으면 같은 이름이 나온다.
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned ) \
-    if constexpr ( ( required ) != 0 )                                               \
-    {                                                                                \
-        if ( services.member == nullptr )                                            \
-            return #Type;                                                            \
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator ) \
+    if constexpr ( SW_SERVICE_IS_REQUIRED( requirement ) != 0 )                          \
+    {                                                                                    \
+        if ( services.member == nullptr )                                                \
+            return #Type;                                                                \
     }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -90,37 +91,37 @@ namespace sw
             using namespace sw::internal;
             outService = {};
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )         \
-    if ( bGameModuleOnly == false || ( ( gameAllowed ) == 1 ) )                              \
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )     \
+    if ( bGameModuleOnly == false || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) )     \
     {                                                                                        \
         outService.arrServices[toRawServiceId( ModuleServiceId::Type )] = s_services.member; \
     }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) \
-    SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned ) \
-    SW_ENGINE_SERVICE( member, Tag, Type, getter, 0, gameAllowed, owned )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) \
+    SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator ) \
+    SW_ENGINE_SERVICE( member, Tag, Type, getter, Optional, visibility, creator )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
         }
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned ) \
-    Type& getter()                                                                   \
-    {                                                                                \
-        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );        \
-        return *s_services.member;                                                   \
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator ) \
+    Type& getter()                                                                       \
+    {                                                                                    \
+        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );            \
+        return *s_services.member;                                                       \
     }
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) \
-    const Type& getter()                                                                   \
-    {                                                                                      \
-        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );              \
-        return *s_services.member;                                                         \
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) \
+    const Type& getter()                                                                       \
+    {                                                                                          \
+        SW_LOG_ASSERT( s_services.member != nullptr, #Type " is not bound" );                  \
+        return *s_services.member;                                                             \
     }
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned ) \
-    Type* getter()                                                             \
-    {                                                                          \
-        return s_services.member;                                              \
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator ) \
+    Type* getter()                                                              \
+    {                                                                           \
+        return s_services.member;                                               \
     }
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE

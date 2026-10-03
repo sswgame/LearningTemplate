@@ -8,22 +8,25 @@
 그것이 호스트마다 한 벌씩 있다(`EngineLoop::initialize`, `Test/TestFramework/main.cpp`). 목록이 하나여도
 채우는 곳이 둘이면 한쪽만 늘어난다.
 
-빠뜨렸을 때 무슨 일이 나는지가 이 검사의 이유다. `required=1` 인 서비스가 하나라도 비면
+빠뜨렸을 때 무슨 일이 나는지가 이 검사의 이유다. `Required` 인 서비스가 하나라도 비면
 `areEngineServicesBound()` 가 **영영 false** 가 되고, 그 함수로 게이팅되는 경로가 통째로 무력화된다 —
 실제로 그렇게 셰이더 캐시를 건너뛰고 런타임 컴파일러를 직접 부르다가 (배포본에 DXC 가 없어서) 죽은 적이
 있다(`EngineServiceList.xxx` 의 CommandStack 주석). 증상이 "빌드가 아니라 실행에서, 그것도 엉뚱한
 자리에서" 나타나므로 컴파일러는 도와주지 않는다.
 
 강제 규칙 — 셋이다:
-  1) `owned=1` 인 행은 `EngineOwnedServices` 가 채운다. 그러니 호스트는 **그 저장소의 `bindInto(`** 를
+  1) `EngineCreated` 인 행은 `EngineOwnedServices` 가 채운다. 그러니 호스트는 **그 저장소의 `bindInto(`** 를
      부르거나, 부르지 않겠다면 그 멤버들을 직접 대입해야 한다.
-  2) `owned=0` 이면서 `required=1` 인 행(팩토리·구성별 조건부)은 호스트가 **직접** 대입해야 한다.
+  2) `HostCreated` 이면서 `Required` 인 행(팩토리·구성별 조건부)은 호스트가 **직접** 대입해야 한다.
   3) 표에 없는 멤버를 대입하면 안 된다 (이름이 바뀐 뒤 남은 죽은 줄).
+
+표의 칸은 숫자가 아니라 낱말이다(`Required` / `Optional`, `GameVisible` / `HostOnly`, `EngineCreated` / `HostCreated`).
+이 검사가 읽지 못한 행(모르는 낱말 · 숫자로 되돌린 칸)은 위반이다 — 읽지 못한 행은 검사에서 조용히 빠지기 때문이다.
 
 **호스트 목록을 적지 않는다** — `bindEngineServices(` 를 부르는 파일이 곧 호스트다. 새 호스트(도구·하네스)가
 생겨도 자동으로 검사 대상이 된다.
 
-선택(`required=0` · `SW_ENGINE_SERVICE_OPT`)은 강제하지 않는다. 그것이 선택인 이유가 "이 호스트에는 없을
+선택(`Optional` · `SW_ENGINE_SERVICE_OPT`)은 강제하지 않는다. 그것이 선택인 이유가 "이 호스트에는 없을
 수 있다" 이기 때문이다(Shipping 의 CommandStack, 툴의 RenderTargetRegistry).
 
   python Scripts/lint/gate/CheckEngineServiceBinding.py [--root <repo>]
@@ -47,18 +50,20 @@ _kHostSearchRoot = ("Source", "Test", "Tools")
 
 _kRequiredRow = re.compile(
     r"^\s*SW_ENGINE_SERVICE(?P<const>_CONST)?\s*\(\s*(?P<member>_p\w+)\s*,[^,]+,[^,]+,[^,]+,"
-    r"\s*(?P<required>[01])\s*,[^,]+,\s*(?P<owned>[01])\s*\)",
+    r"\s*(?P<required>Required|Optional)\s*,\s*(?:GameVisible|HostOnly)\s*,\s*(?P<owned>EngineCreated|HostCreated)\s*\)",
     re.M,
 )
+# 칸이 무엇이든 행이기는 한 줄. `_kRequiredRow` 가 읽지 못한 행을 찾는 데 쓴다.
+_kAnyRequiredRow = re.compile(r"^\s*SW_ENGINE_SERVICE(?:_CONST)?\s*\(\s*(?P<member>_p\w+)\s*,", re.M)
 _kOptionalRow = re.compile(r"^\s*SW_ENGINE_SERVICE_OPT\s*\(\s*(?P<member>_p\w+)\s*,", re.M)
 _kBindCall = re.compile(r"\bbindEngineServices\s*\(")
-# 생성된 저장소가 owned=1 을 대신 꽂아 주는 자리 (`EngineOwnedServices::bindInto`).
+# 생성된 저장소가 EngineCreated 행을 대신 꽂아 주는 자리 (`EngineOwnedServices::bindInto`).
 _kGeneratedBindCall = re.compile(r"\bbindInto\s*\(")
 _kAssignment = re.compile(r"\.(?P<member>_p\w+)\s*=")
 
 
-def readServiceRows(rootDir: Path) -> tuple[list[str], list[str], set[str]]:
-    """(호스트가 직접 채워야 하는 필수 멤버, 저장소가 채우는 필수 멤버, 표에 있는 모든 멤버)."""
+def readServiceRows(rootDir: Path) -> tuple[list[str], list[str], set[str], list[str]]:
+    """(호스트가 직접 채워야 하는 필수 멤버, 저장소가 채우는 필수 멤버, 표에 있는 모든 멤버, 칸을 읽지 못한 멤버)."""
     path = rootDir / _kServiceListPath
     if path.exists() is False:
         raise GateError(f"{_kServiceListPath} 가 없습니다 — 서비스 표가 옮겨졌다면 이 검사도 같이 옮기세요.")
@@ -70,18 +75,19 @@ def readServiceRows(rootDir: Path) -> tuple[list[str], list[str], set[str]]:
     for match in _kRequiredRow.finditer(text):
         member = match.group("member")
         setKnown.add(member)
-        if match.group("required") != "1":
+        if match.group("required") != "Required":
             continue
-        if match.group("owned") == "1":
+        if match.group("owned") == "EngineCreated":
             listStorageFilled.append(member)
         else:
             listHandFilled.append(member)
     for match in _kOptionalRow.finditer(text):
         setKnown.add(match.group("member"))
+    listUnreadable = [match.group("member") for match in _kAnyRequiredRow.finditer(text) if match.group("member") not in setKnown]
 
     if not listHandFilled and not listStorageFilled:
-        raise GateError(f"{_kServiceListPath} 에서 required=1 인 줄을 하나도 읽지 못했습니다 — 검사가 헛돌고 있습니다.")
-    return listHandFilled, listStorageFilled, setKnown
+        raise GateError(f"{_kServiceListPath} 에서 Required 인 줄을 하나도 읽지 못했습니다 — 검사가 헛돌고 있습니다.")
+    return listHandFilled, listStorageFilled, setKnown, listUnreadable
 
 
 def findBindingHosts(rootDir: Path) -> list[Path]:
@@ -99,12 +105,16 @@ def findBindingHosts(rootDir: Path) -> list[Path]:
 
 
 def checkHosts(rootDir: Path) -> tuple[list[str], int]:
-    listHandFilled, listStorageFilled, setKnown = readServiceRows(rootDir)
+    listHandFilled, listStorageFilled, setKnown, listUnreadable = readServiceRows(rootDir)
     listHost = findBindingHosts(rootDir)
     if not listHost:
         raise GateError("bindEngineServices 를 부르는 파일을 하나도 찾지 못했습니다 — 검사가 헛돌고 있습니다.")
 
-    errors: list[str] = []
+    errors: list[str] = [
+        f"{_kServiceListPath}: `{member}` 행의 칸을 읽지 못했습니다 — requirement · visibility · creator 칸은 "
+        f"`Required`/`Optional`, `GameVisible`/`HostOnly`, `EngineCreated`/`HostCreated` 중 하나여야 합니다"
+        for member in listUnreadable
+    ]
     for host in listHost:
         text = host.read_text(encoding="utf-8", errors="ignore")
         setAssigned = {match.group("member") for match in _kAssignment.finditer(text)}
@@ -115,7 +125,7 @@ def checkHosts(rootDir: Path) -> tuple[list[str], int]:
             if member in setAssigned:
                 continue
             errors.append(
-                f"{relPath}: 필수 서비스 `{member}` 를 채우지 않습니다 — 목록에 owned=0 으로 적혀 있어 "
+                f"{relPath}: 필수 서비스 `{member}` 를 채우지 않습니다 — 목록에 HostCreated 로 적혀 있어 "
                 f"**호스트가 직접** 꽂아야 합니다(팩토리·구성별 조건부). 빠지면 areEngineServicesBound() 가 "
                 f"영영 false 가 되고 그 함수로 게이팅되는 경로가 통째로 죽습니다"
             )
@@ -128,7 +138,7 @@ def checkHosts(rootDir: Path) -> tuple[list[str], int]:
                 continue
             errors.append(
                 f"{relPath}: `EngineOwnedServices::bindInto()` 도 부르지 않고 필수 서비스 `{member}` 도 "
-                f"채우지 않습니다 — 저장소를 쓰거나(권장) 목록의 owned=1 행을 전부 직접 꽂아야 합니다"
+                f"채우지 않습니다 — 저장소를 쓰거나(권장) 목록의 EngineCreated 행을 전부 직접 꽂아야 합니다"
             )
         for member in sorted(setAssigned - setKnown):
             errors.append(
@@ -150,8 +160,8 @@ class CheckEngineServiceBindingGate(LintGate):
             "name": "호스트가 필수 서비스를 빠뜨림",
             "files": {
                 _kServiceListPath: (
-                    "SW_ENGINE_SERVICE( _pTaskManager, class, TaskManager, getTaskManager, 1, 0, 0 )\n"
-                    "SW_ENGINE_SERVICE( _pSceneManager, class, SceneManager, getSceneManager, 1, 1, 0 )\n"
+                    "SW_ENGINE_SERVICE( _pTaskManager, class, TaskManager, getTaskManager, Required, HostOnly, HostCreated )\n"
+                    "SW_ENGINE_SERVICE( _pSceneManager, class, SceneManager, getSceneManager, Required, GameVisible, HostCreated )\n"
                 ),
                 "Source/App/Probe.cpp": (
                     "void probe()\n"
@@ -166,13 +176,30 @@ class CheckEngineServiceBindingGate(LintGate):
         {
             "name": "표에서 사라진 멤버에 대입",
             "files": {
-                _kServiceListPath: "SW_ENGINE_SERVICE( _pTaskManager, class, TaskManager, getTaskManager, 1, 0, 0 )\n",
+                _kServiceListPath: "SW_ENGINE_SERVICE( _pTaskManager, class, TaskManager, getTaskManager, Required, HostOnly, HostCreated )\n",
                 "Source/App/Probe.cpp": (
                     "void probe()\n"
                     "{\n"
                     "    EngineServices services{};\n"
                     "    services._pTaskManager = nullptr;\n"
                     "    services._pGoneManager = nullptr;\n"
+                    "    engine::bindEngineServices( services );\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "칸을 숫자로 되돌린 행(읽지 못하면 검사에서 빠진다)",
+            "files": {
+                _kServiceListPath: (
+                    "SW_ENGINE_SERVICE( _pTaskManager, class, TaskManager, getTaskManager, Required, HostOnly, HostCreated )\n"
+                    "SW_ENGINE_SERVICE( _pSceneManager, class, SceneManager, getSceneManager, 1, 1, 0 )\n"
+                ),
+                "Source/App/Probe.cpp": (
+                    "void probe()\n"
+                    "{\n"
+                    "    EngineServices services{};\n"
+                    "    services._pTaskManager = nullptr;\n"
                     "    engine::bindEngineServices( services );\n"
                     "}\n"
                 ),

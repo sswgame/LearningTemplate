@@ -207,7 +207,7 @@ int main( int32 argc, utf8* argv[] )
     // ------------------------------------------------------------------------------
     // 0) 코어 매니저 — 로거·프로파일러·커맨드라인·엔진 서비스
     // ------------------------------------------------------------------------------
-    // 목록(`EngineServiceList.xxx`)의 `owned=1` 서비스는 이 저장소가 만든다 — 하네스가 스무 줄을
+    // 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스는 이 저장소가 만든다 — 하네스가 스무 줄을
     // 따로 적던 자리다. 목록에 줄을 더하면 여기도 같이 자란다(엔진 호스트와 같은 기계).
     sw::EngineOwnedServices owned;
     owned.createAll();
@@ -247,7 +247,7 @@ int main( int32 argc, utf8* argv[] )
 
     sw::EngineServices services{};
     owned.bindInto( services );
-    // owned=0 인 자리만 손으로 꽂는다(팩토리 · 구성별 조건부).
+    // HostCreated 인 자리만 손으로 꽂는다(팩토리 · 구성별 조건부).
     services._pAudioSystem    = host._audioSystem.get();
     services._pMemoryProfiler = memoryProfiler.get();
     services._pCommandStack   = host._commandStack.get();

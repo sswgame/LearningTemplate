@@ -170,7 +170,7 @@ namespace sw
 
     private:
         /**
-         * @brief 목록(`EngineServiceList.xxx`)의 `owned=1` 서비스 저장소입니다. 생성 · 바인딩이 여기서 나옵니다.
+         * @brief 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스 저장소입니다. 생성 · 바인딩이 여기서 나옵니다.
          * @details 목록에 줄을 더하면 이 저장소가 같이 자랍니다. 만드는 방법이 특별한 셋
          *          (팩토리 · 구성별 조건부)만 아래에 손으로 남아 있습니다.
          */
@@ -205,7 +205,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
         unique_ptr<LiveShaderManager> _liveShaderManager;
 #endif
-        /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 owned=0). */
+        /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack>   _commandStack;
         unique_ptr<GpuUploadQueue> _gpuUploadQueue;
 

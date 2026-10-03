@@ -547,10 +547,10 @@ namespace sw
 
         BLOCK( "Core Services 생성 및 바인딩" )
         {
-            // 목록(`EngineServiceList.xxx`)의 `owned=1` 은 여기서 **한 줄로** 만들어진다. 생성자는 서로를 보지 않으므로 순서가 없다.
+            // 목록(`EngineServiceList.xxx`)의 `EngineCreated` 은 여기서 **한 줄로** 만들어진다. 생성자는 서로를 보지 않으므로 순서가 없다.
             _owned.createAll();
 
-            // 만드는 방법이 특별한 것만 손으로 남는다(목록의 owned=0 셋).
+            // 만드는 방법이 특별한 것만 손으로 남는다(목록의 HostCreated 셋).
             _audioSystem = IAudioSystem::create();
 #if !defined( SW_SHIPPING )
             _commandStack = make_unique<CommandStack>();
@@ -560,7 +560,7 @@ namespace sw
 
             EngineServices services{};
             _owned.bindInto( services );
-            // owned=0 인 자리만 손으로 연결한다.
+            // HostCreated 인 자리만 손으로 연결한다.
             services._pAudioSystem    = _audioSystem.get();
             services._pMemoryProfiler = _memoryProfiler.get();
             services._pCommandStack   = _commandStack.get();

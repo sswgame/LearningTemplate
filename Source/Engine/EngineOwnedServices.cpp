@@ -34,7 +34,7 @@ namespace sw
     {
         struct EngineOwnedServicesInternal
         {
-            /** @brief `owned=1` 멤버 하나를 놓습니다(`destroyAll` 이 역순으로 부릅니다). */
+            /** @brief `EngineCreated` 멤버 하나를 놓습니다(`destroyAll` 이 역순으로 부릅니다). */
             template <auto pMember>
             static void resetMember( EngineOwnedServices& owned )
             {
@@ -44,9 +44,9 @@ namespace sw
     } // namespace
 } // namespace sw
 
-// owned 열에 따라 표에 넣거나 뺀다(`SW_CONCAT` 으로 0/1 을 붙여 고른다 — 헤더의 다른 자리와 같은 방식).
-#define SW_ENGINE_OWNED_RESET_ENTRY_0( member )
-#define SW_ENGINE_OWNED_RESET_ENTRY_1( member ) &EngineOwnedServicesInternal::resetMember<&EngineOwnedServices::member>,
+// creator 칸에 따라 표에 넣거나 뺀다(`SW_CONCAT` 으로 낱말을 붙여 고른다 — 헤더의 다른 자리와 같은 방식).
+#define SW_ENGINE_OWNED_RESET_ENTRY_HostCreated( member )
+#define SW_ENGINE_OWNED_RESET_ENTRY_EngineCreated( member ) &EngineOwnedServicesInternal::resetMember<&EngineOwnedServices::member>,
 
 namespace sw
 {
@@ -56,9 +56,9 @@ namespace sw
 
     void EngineOwnedServices::createAll()
     {
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )       SW_CONCAT( SW_ENGINE_OWNED_CREATE_, owned )( member, Type )
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) SW_CONCAT( SW_ENGINE_OWNED_CREATE_, owned )( member, Type )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )             SW_CONCAT( SW_ENGINE_OWNED_CREATE_, owned )( member, Type )
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_CONCAT( SW_ENGINE_OWNED_CREATE_, creator )( member, Type )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_CONCAT( SW_ENGINE_OWNED_CREATE_, creator )( member, Type )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_CONCAT( SW_ENGINE_OWNED_CREATE_, creator )( member, Type )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -85,9 +85,9 @@ namespace sw
         // X-macro 는 목록 순서로만 펼쳐지므로 멤버마다 해제 함수를 표로 모아 거꾸로 돈다.
         using ResetMemberFunction                              = void ( * )( EngineOwnedServices& );
         static constexpr ResetMemberFunction kArrResetMember[] = {
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )       SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, owned )( member )
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, owned )( member )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )             SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, owned )( member )
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, creator )( member )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, creator )( member )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, creator )( member )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST

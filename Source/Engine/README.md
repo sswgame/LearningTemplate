@@ -77,7 +77,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
     핫리로드가 디바이스를 **인자로** 받는 것도 그 계약이다 — 캐시가 마지막으로 본 디바이스를 들고 있으면
     백엔드를 바꾼 뒤 죽은 포인터가 된다.
   - **모듈(게임·에디터·키트)도 자기 에셋 종류를 올릴 수 있다.** 창구는 이미 열려 있다 —
-    `ResourceManager` 는 게임 모듈에도 노출되는 서비스이고(`EngineServiceList.xxx` 의 `gameAllowed=1`),
+    `ResourceManager` 는 게임 모듈에도 노출되는 서비스이고(`EngineServiceList.xxx` 의 `GameVisible`),
     `IAssetCache.h` 는 모듈이 그냥 include 하면 된다. 규칙은 하나뿐이고 그것이 전부다:
 
     ```cpp

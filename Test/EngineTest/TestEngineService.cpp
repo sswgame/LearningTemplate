@@ -6,6 +6,7 @@
 #include "Engine/EngineOwnedServices.h"
 
 #include "RuntimeAPI/Service/ModuleService.h"
+#include "RuntimeAPI/Service/ServiceListColumns.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -14,13 +15,13 @@ using namespace sw;
 // ------------------------------------------------------------------------------
 // 1) EngineServiceTest — 서비스 표가 게임 모듈에 무엇을 보여 주는지
 //
-//    `EngineServiceList.xxx` 의 `gameAllowed` 열은 **게임 모듈이 손댈 수 있는 것과 없는 것의
+//    `EngineServiceList.xxx` 의 `visibility` 열은 **게임 모듈이 손댈 수 있는 것과 없는 것의
 //    경계**인데, 그때까지 아무 테스트도 그 경계를 보고 있지 않았다. 열을 잘못 바꿔도 빌드는
 //    통과하고 아무도 모른다. 그래서 검사도 같은 목록에서 생성한다 — 목록이 정본이다.
 // ------------------------------------------------------------------------------
 
 /**
- * @brief [EngineServiceTest] 게임 모듈용 표에 gameAllowed=0 인 서비스가 하나도 없는지 검증
+ * @brief [EngineServiceTest] 게임 모듈용 표에 HostOnly 인 서비스가 하나도 없는지 검증
  */
 SW_TEST_CASE( EngineServiceTest, GameModuleTableHidesHostOnlyServices )
 {
@@ -29,18 +30,18 @@ SW_TEST_CASE( EngineServiceTest, GameModuleTableHidesHostOnlyServices )
     engine::fillModuleServices( editorTable, false );
     engine::fillModuleServices( gameTable, true );
 
-#define SW_CHECK_SERVICE_VISIBILITY( Type, gameAllowed )                                     \
+#define SW_CHECK_SERVICE_VISIBILITY( Type, visibility )                                      \
     {                                                                                        \
         const uint32 rawId = internal::toRawServiceId( internal::ModuleServiceId::Type );    \
-        if constexpr ( ( gameAllowed ) == 0 )                                                \
+        if constexpr ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 0 )                       \
             SW_EXPECT_NULL( gameTable.arrServices[rawId] );                                  \
         else                                                                                 \
             SW_EXPECT_EQUAL( editorTable.arrServices[rawId], gameTable.arrServices[rawId] ); \
     }
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )       SW_CHECK_SERVICE_VISIBILITY( Type, gameAllowed )
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) SW_CHECK_SERVICE_VISIBILITY( Type, gameAllowed )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )             SW_CHECK_SERVICE_VISIBILITY( Type, gameAllowed )
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
@@ -136,9 +137,9 @@ SW_TEST_CASE( EngineServiceTest, MissingRequiredServiceIsReportedByName )
 }
 
 /**
- * @brief [EngineServiceTest] 저장소는 목록의 `owned=1` 을 전부 만들고 표에 꽂는다
+ * @brief [EngineServiceTest] 저장소는 목록의 `EngineCreated` 을 전부 만들고 표에 꽂는다
  * @details 검사도 **같은 목록에서 생성한다** — 여기에 이름을 다시 적으면 그 목록이 세 번째가 된다.
- *          `owned=0` 자리를 건드리지 않는 것도 같이 본다. 건드리면 호스트가 팩토리로 만든 것을
+ *          `HostCreated` 자리를 건드리지 않는 것도 같이 본다. 건드리면 호스트가 팩토리로 만든 것을
  *          덮어쓰고(오디오), 배포본에 없어야 할 것을 만들어 낸다(커맨드 스택).
  */
 SW_TEST_CASE( EngineServiceTest, OwnedStorageFillsExactlyTheOwnedRows )
@@ -149,19 +150,19 @@ SW_TEST_CASE( EngineServiceTest, OwnedStorageFillsExactlyTheOwnedRows )
     EngineServices table{};
     owned.bindInto( table );
 
-#define SW_CHECK_OWNED_ROW( member, Type, owned )                                                        \
-    if constexpr ( ( owned ) == 1 )                                                                      \
-    {                                                                                                    \
-        SW_EXPECT_TRUE_MSG( table.member != nullptr, #Type " (owned=1) 을 저장소가 채우지 않았습니다" ); \
-    }                                                                                                    \
-    else                                                                                                 \
-    {                                                                                                    \
-        SW_EXPECT_TRUE_MSG( table.member == nullptr, #Type " (owned=0) 을 저장소가 건드렸습니다" );      \
+#define SW_CHECK_OWNED_ROW( member, Type, creator )                                                            \
+    if constexpr ( SW_SERVICE_IS_ENGINE_CREATED( creator ) == 1 )                                              \
+    {                                                                                                          \
+        SW_EXPECT_TRUE_MSG( table.member != nullptr, #Type " (EngineCreated) 를 저장소가 채우지 않았습니다" ); \
+    }                                                                                                          \
+    else                                                                                                       \
+    {                                                                                                          \
+        SW_EXPECT_TRUE_MSG( table.member == nullptr, #Type " (HostCreated) 를 저장소가 건드렸습니다" );        \
     }
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )       SW_CHECK_OWNED_ROW( member, Type, owned )
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) SW_CHECK_OWNED_ROW( member, Type, owned )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )             SW_CHECK_OWNED_ROW( member, Type, owned )
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_CHECK_OWNED_ROW( member, Type, creator )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_CHECK_OWNED_ROW( member, Type, creator )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_CHECK_OWNED_ROW( member, Type, creator )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
