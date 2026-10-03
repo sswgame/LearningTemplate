@@ -5,7 +5,9 @@
 #endif
 #include "App/Module/ModuleHost.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -48,6 +50,83 @@ SW_TEST_CASE( ModuleHostTest, SurvivesAnRhiThatHasNoDevice )
 }
 
 #if !defined( SW_SHIPPING )
+namespace
+{
+    /** @brief 가짜 에디터 API 가 불린 순서. */
+    vector<const utf8*> s_listEditorCall;
+
+    void recordStopSimulation( EditorHandle ) { s_listEditorCall.push_back( "stopSimulation" ); }
+    void recordShutdown( EditorHandle ) { s_listEditorCall.push_back( "shutdown" ); }
+    void recordDestroy( EditorHandle ) { s_listEditorCall.push_back( "destroy" ); }
+
+    /** @brief 멈춤 · 종료 · 파괴만 채운 가짜 에디터 API 표. */
+    EditorAPI makeRecordingEditorApi()
+    {
+        EditorAPI api{};
+        api.stopSimulation = &recordStopSimulation;
+        api.shutdown       = &recordShutdown;
+        api.destroy        = &recordDestroy;
+        return api;
+    }
+} // namespace
+
+/**
+ * @brief [ModuleHostTest] 모듈을 내릴 때(핫 리로드 · 백엔드 교체) 에디터 시뮬레이션을 **먼저** 멈춘다 — 게임만 내려도 그렇다
+ * @details 월드 플레이 상태는 에디터보다 오래 사는 SceneManager 에 있다. 멈추지 않고 에디터를 내리면 새 에디터는 멈춤으로 시작하는데
+ *          월드는 플레이 중으로 남는다(플레이 스냅샷도 되돌리지 않는다). 멈춤은 에디터 컨텍스트가 살아 있는 동안 — shutdown 앞이어야 한다.
+ */
+SW_TEST_CASE( ModuleHostTest, SuspendStopsTheEditorSimulationBeforeTearingDown )
+{
+    RHI rhi; // 디바이스 없음 — 워커 비우기는 그냥 지나간다.
+
+    const ModuleScope arrScope[] = { ModuleScope::Editor, ModuleScope::Game, ModuleScope::Both };
+    for ( const ModuleScope scope : arrScope )
+    {
+        ModuleHost host;
+        SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true, {} ) );
+        int32 editorToken = 0;
+        host.attachEditorInstance( makeRecordingEditorApi(), &editorToken );
+
+        s_listEditorCall.clear();
+        host.suspendModules( scope, false );
+
+        SW_ASSERT_FALSE( s_listEditorCall.empty() );
+        SW_EXPECT_STREQ( "stopSimulation", s_listEditorCall[0] );
+        if ( scope != ModuleScope::Game )
+        {
+            // 에디터를 내리는 경우: 멈춤 → shutdown → destroy.
+            SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), s_listEditorCall.size() );
+        }
+        host.shutdown();
+    }
+}
+
+/**
+ * @brief [ModuleHostTest] 멈춤 창구가 없는 에디터를 내려도 월드가 플레이 중으로 남지 않는다
+ */
+SW_TEST_CASE( ModuleHostTest, SuspendingAnEditorWithoutStopLeavesTheWorldStopped )
+{
+    if ( engine::areEngineServicesBound() == false )
+        SW_TEST_SKIP( "engine services are not bound in this executable" );
+
+    RHI        rhi;
+    ModuleHost host;
+    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true, {} ) );
+    EditorAPI api      = makeRecordingEditorApi();
+    api.stopSimulation = nullptr;
+    int32 editorToken  = 0;
+    host.attachEditorInstance( api, &editorToken );
+
+    SceneManager& sceneManager     = engine::getSceneManager();
+    const bool    bWasWorldPlaying = sceneManager.isWorldPlaying();
+    sceneManager.setWorldPlaying( true );
+    host.suspendModules( ModuleScope::Editor, false );
+    SW_EXPECT_FALSE( sceneManager.isWorldPlaying() );
+
+    sceneManager.setWorldPlaying( bWasWorldPlaying );
+    host.shutdown();
+}
+
 // 아래 케이스는 **개발 구성 전용**이다 — `LiveReloadManager` 는 배포 빌드에 아예 들어가지 않는다
 // (모듈이 전부 정적 링크라 다시 올릴 것이 없다. `Test/SmokeTest/CMakeLists.txt` 의 소스 목록 참고).
 /**

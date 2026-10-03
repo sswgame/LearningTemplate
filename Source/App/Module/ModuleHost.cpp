@@ -590,6 +590,12 @@ namespace sw
             destroyGameInstance( bReleaseApiTable );
     }
 
+    void ModuleHost::attachEditorInstance( const EditorAPI& editorApi, EditorHandle editor )
+    {
+        _editorApi = editorApi;
+        _editor    = editor;
+    }
+
     bool ModuleHost::reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule )
     {
         if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
