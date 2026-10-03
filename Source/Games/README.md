@@ -7,8 +7,9 @@
 
 ## 핫리로드 대상 모듈은 어디서 정하는가
 
-`Config/App/AppConfig.json` 의 `_listGameKitModule` 이 정본입니다. App 이 부팅할 때 이 목록을
-읽어 `LiveReloadManager` 에 키트를 등록합니다(`App::startModules` → `ModuleHost::initialize`).
+`Config/App/AppConfig.json` 의 `_listGameKitModule` 이 정본입니다. 엔진 기동 단계 `ModuleTypes` 에서 App 이 이 목록을
+읽어 `LiveReloadManager` 에 키트를 등록하고 이미지를 올립니다(`App::loadModuleImages` → `ModuleHost::loadModuleImages`,
+GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `SWGame` 인스턴스는 기동이 끝난 뒤 에디터보다 먼저 만듭니다(`ModuleHost::initialize`).
 
 ```json
 {
@@ -27,8 +28,8 @@
 ## 새로운 게임 추가하는 방법
 
 1. **템플릿 복사하기**: `Source/Games/Empty/` 를 `Source/Games/MyGame/` 으로 복사합니다.
-2. **벤치 하네스 지우기**: `BenchScene.h` / `BenchScene.cpp` 를 지우고, `EmptyGame` 의
-   `_benchScene` 멤버와 그것을 쓰는 두 줄을 지웁니다. 이건 측정용이고 게임 코드가 아닙니다
+2. **벤치 하네스 지우기**: `BenchScene.*` · `BenchMoverComponent.*` 를 지우고, `EmptyGame` 의
+   `_benchScene` 멤버와 그것을 쓰는 곳(초기화 · 업데이트 · 상태 직렬화 전후)을 지웁니다. 이건 측정용이고 게임 코드가 아닙니다
    (아래 "Empty 는 왜 비어 있지 않은가" 참고).
 3. **필요한 키트 연결하기**: `MyGame/CMakeLists.txt` 의 `sw_addGameModule(SWGame KITS ...)` 에
    필요한 키트를 적습니다.
@@ -48,5 +49,6 @@
 여기 있습니다. `Scripts/dev/BackendSmoke.py` 와 `Engine/Graphics/README.md` 의 측정 조건이 이
 플래그에 기대고 있어 타깃·플래그 이름은 바꾸지 않습니다.
 
-그래서 파일을 나눠 두었습니다 — `EmptyGame` 은 ~40줄 템플릿이고, 벤치는 `BenchScene` 한 쌍에
-전부 들어 있습니다. 새 게임을 시작할 때 지울 경계가 파일 경계와 같아야 하기 때문입니다.
+그래서 파일을 나눠 두었습니다 — `EmptyGame` 은 작은 템플릿이고, 벤치는 `BenchScene`(+ 틱 안에서 위치를 쓰는
+`BenchMoverComponent`, `-gv_benchTickMovers=N`)에 전부 들어 있습니다. 새 게임을 시작할 때 지울 경계가 파일 경계와 같아야 하기 때문입니다.
+벤치가 아니면 `EmptyGame` 은 첫 씬을 요청합니다(`requestFirstScene`). 에디터가 뜨면 에디터의 시작 씬 요청이 나중이라 그쪽이 열립니다.

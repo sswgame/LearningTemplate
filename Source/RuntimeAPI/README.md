@@ -11,12 +11,35 @@
 | 폴더 | 헤더 | 누가 include | 용도 |
 |------|------|--------------|------|
 | **ABI/** | `RuntimeHandles.h`, `GameAPI.h`, `EditorAPI.h`, `ModuleAbi.h` | App, 모듈, 테스트 | 호스트 ↔ 모듈 C-ABI 함수 테이블·불투명 핸들, 모듈 ABI 버전 · 스탬프(App 과 모듈이 같은 헤더로 빌드됐는지 로드 때 대조) |
-| **Service/** | `ModuleService.h`, `HostServiceList.xxx`, `IModuleCompiler.h` | App, 모듈 | 호스트 ↔ 모듈 C-ABI 단일 통합 서비스 테이블 (`GameService.h`, `EditorService.h`는 각 모듈에 위치). `IModuleCompiler` 는 에디터 안 백그라운드 컴파일러 서비스 — C-ABI 가 아니라 C++ 가상 함수 테이블이다 |
+| **Service/** | `ModuleService.h`, `HostServiceList.xxx`, `ServiceListColumns.h`, `IModuleCompiler.h` | App, 모듈 | 호스트 ↔ 모듈 C-ABI 단일 통합 서비스 테이블 (`GameService.h`, `EditorService.h`는 각 모듈에 위치). `ServiceListColumns.h` 는 서비스 목록의 낱말 칸을 값으로 바꾸는 매크로(아래). `IModuleCompiler` 는 에디터 안 백그라운드 컴파일러 서비스 — C-ABI 가 아니라 C++ 가상 함수 테이블이다 |
 | **Export/** | `GameModuleExports.h`, `EditorModuleExports.h`, `ModuleForwardUtil.h` | 모듈 `.cpp`만 | `SW_IMPLEMENT_*_MODULE` 매크로. `Memory.h`와 로케이터 bind를 끌어옴. `ModuleForwardUtil` 은 불투명 핸들 → 구현 인스턴스 전달(널 검사 한 곳) |
 
 - Game 모듈은 `ABI/GameAPI.h`, `GameFramework/Base/GameService.h`, `Export/GameModuleExports.h`만 include 한다.
 - Editor 모듈은 `ABI/EditorAPI.h`, `Editor/Common/Workspace/EditorService.h`, `Export/EditorModuleExports.h`를 include 한다.
 - 모듈 구현 `.cpp`는 `Export/*ModuleExports.h`만 있으면 테이블 export 매크로까지 포함된다.
 
+## C-ABI 경계
+
+- 모듈이 내보내는 진입점은 `extern "C"` + `SW_MODULE_API` 함수뿐이다 — `get<Game|Editor>ModuleAbiVersion` · `get…ModuleAbiStamp` ·
+  `export<Game|Editor>Api`(함수 포인터 표 `GameAPI` · `EditorAPI` 를 채운다). 에디터 모듈은 헤드리스 텍스처 굽기 진입점
+  `bakeEditorTextures`(`kBakeEditorTexturesSymbol`, `App --bake-textures` · `--check-textures`)도 내보낸다.
+- 호스트는 표를 받기 전에 버전 · 스탬프(`ABI/ModuleAbi.h` 의 `kModuleAbiVersion` · `kModuleAbiStamp`)를 대조하고, 다르면 그 이미지를 쓰지 않는다.
+  주의: `GameAPI` · `EditorAPI` 에 항목을 더하거나 순서를 바꾸면 `kModuleAbiVersion` 을 올리고 스탬프를 고친다.
+- 경계를 넘는 객체는 불투명 핸들(`ABI/RuntimeHandles.h` — `WindowHandle` · `RHIDeviceHandle` · `EditorHandle` · `GameHandle` · `TextureHandle`)이다.
+- export 매크로는 서로 바꿔 쓰지 않는다: `SW_API`(Engine.dll 심볼) · `SW_MODULE_API`(모듈의 C-ABI 진입점) · `SW_GF_API`(GameFramework.dll 클래스) ·
+  `SW_GAMESERVICE_API`(GameService 로케이터).
+
+## 서비스 표
+
+`ModuleService` 는 서비스 id(`internal::ModuleServiceId`) 순서의 포인터 배열 하나다. id 는 엔진 서비스 목록(`Engine/Common/EngineServiceList.xxx`)과
+호스트 서비스 목록(`Service/HostServiceList.xxx`)에서 생성된다. 호스트가 모듈 인스턴스를 만들 때 채워 넘기며(`ModuleHost` 가 엔진 칸은 `engine::fillModuleServices` 로, 호스트 칸은 직접),
+게임 모듈에는 `GameVisible` 칸만 채운다(나머지는 nullptr).
+
+목록의 칸은 숫자가 아니라 **낱말**이다 — `requirement`(`Required` · `Optional`), `visibility`(`GameVisible` · `HostOnly`),
+`creator`(`EngineCreated` · `HostCreated`, 엔진 목록만). 값이 필요한 자리(`if constexpr` 등)는 `ServiceListColumns.h` 의
+`SW_SERVICE_IS_REQUIRED` · `SW_SERVICE_IS_GAME_VISIBLE` · `SW_SERVICE_IS_ENGINE_CREATED` 로 바꾼다. 모르는 낱말(오타)은 정의되지 않은
+매크로 이름이 되어 컴파일 오류다.
+
 ## 핵심 규칙
-- **구현체 없음**: 뼈대(인터페이스 선언)와 타입만 둔다. 동작 코드는 `Engine`, `Editor`, `SWGame` 쪽에 구현한다.
+- **구현체 없음**: 뼈대(인터페이스 선언)와 타입만 둔다. 동작 코드는 `Engine`, `Editor`, `SWGame` 쪽에 구현한다
+  (`Export/` 의 매크로 본문은 모듈의 `.cpp` 안에서 펼쳐진다).
