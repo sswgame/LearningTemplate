@@ -251,6 +251,8 @@ namespace sw
         if ( pTex != nullptr )
             pSrv = pTex->_srv.Get();
         _pContext->PSSetShaderResources( slot, 1, &pSrv );
+        if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
+            _pState->_arrPixelSrvTexture[slot] = ( pSrv != nullptr ) ? texture : 0;
         if ( _pDevice->_linearSampler )
         {
             // 샘플러는 **텍스처와 같은 번호**에 건다. 셰이더가 t#/s# 짝으로 선언하기 때문이다
@@ -386,6 +388,9 @@ namespace sw
             return;
         _pContext->VSSetShaderResources( slot, 1, &pSrv );
         _pContext->PSSetShaderResources( slot, 1, &pSrv );
+        // 버퍼가 그 슬롯의 텍스처를 덮었다.
+        if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
+            _pState->_arrPixelSrvTexture[slot] = 0;
     }
 
     void D3D11RHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
@@ -548,6 +553,24 @@ namespace sw
 
         ID3D11ShaderResourceView* arrNullSrv[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
         _pContext->PSSetShaderResources( 0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, arrNullSrv );
+        if ( _pState != nullptr )
+            Memory::set( _pState->_arrPixelSrvTexture, 0, sizeof( _pState->_arrPixelSrvTexture ) );
+    }
+
+    void D3D11RHICommandContext::prepareTextureForRenderTarget( RHITextureHandle texture )
+    {
+        // D3D11 은 상태를 전이하지 않는다. 대신 같은 리소스가 입력과 출력에 함께 걸리면 OMSetRenderTargets 가 SRV 쪽을 NULL 로
+        // 강제한다(해저드 경고). 첨부로 쓰기 전에 이 텍스처가 걸린 PS SRV 슬롯만 뗀다. 백버퍼(0)는 SRV 로 걸리지 않는다.
+        if ( _pContext == nullptr || _pState == nullptr || texture == 0 )
+            return;
+        ID3D11ShaderResourceView* pNull{ nullptr };
+        for ( uint32 slot = 0; slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT; ++slot )
+        {
+            if ( _pState->_arrPixelSrvTexture[slot] != texture )
+                continue;
+            _pContext->PSSetShaderResources( slot, 1, &pNull );
+            _pState->_arrPixelSrvTexture[slot] = 0;
+        }
     }
 
     ID3DUserDefinedAnnotation* D3D11RHICommandContext::getAnnotation()

@@ -29,8 +29,12 @@ namespace sw
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) override;
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void prepareTextureForShaderRead( RHITextureHandle texture ) override;
-        /** @brief D3D11 은 리소스 상태를 추적하지 않아 의도적으로 아무것도 하지 않습니다. */
-        void prepareTextureForRenderTarget( RHITextureHandle texture ) override { (void)texture; }
+        /**
+         * @brief D3D11 에 상태 전이는 없지만 바인딩 해저드는 있습니다 — 이 텍스처가 걸린 PS SRV 슬롯을 뗍니다.
+         * @details 그대로 두면 뒤따르는 `OMSetRenderTargets` 가 그 SRV 를 NULL 로 강제하고 디버그 레이어가 해저드를 냅니다
+         *          ("still bound on input"). 그래프가 첨부로 쓰기 전에 이것을 부르므로(레벨 프롤로그 · 직렬 패스 앞) 패스의 바인딩을 지우지 않습니다.
+         */
+        void prepareTextureForRenderTarget( RHITextureHandle texture ) override;
         /** @brief D3D11 은 UAV 해저드를 런타임이 풀어 의도적으로 아무것도 하지 않습니다. */
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) override { (void)texture; }
         void bindComputeUav( RHIDescriptorIndex index, uint32 slot ) override;

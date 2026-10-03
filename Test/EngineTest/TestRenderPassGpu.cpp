@@ -565,7 +565,7 @@ SW_TEST_CASE( RenderPassGpuTest, RenderGraphExecuteParallelRunsOnRealDevice )
  * @details forwardpipeline 은 Shadow→ForwardOpaque→…→Present 완전 체인이라 레벨이 전부 1개다.
  *          즉 병렬 기록 경로가 있어도 실제로 동시에 도는 패스가 없었고, 그래서 패스 콜백이 만지는
  *          FrameRenderer 공유 상태(_listClearedThisFrame, 프레임 래치 플래그)의 레이스가 드러나지
- *          않았다. deferredpipeline 은 레벨 0 = {Shadow, GBuffer}, 이후 {Transparent, SSAO} 가
+ *          않았다. deferredpipeline 은 레벨 0 = {Shadow, GBuffer}, 레벨 1 = {Shading, SSAO} 가
  *          동시에 기록된다. 메시가 있어야 드로우 경로까지 들어가므로 큐브를 넣고 여러 프레임 돌린다.
  *
  *          이 테스트를 처음 넣었을 때 곧바로 DX12 GPU 행(3번째 프레임에서 fence wait timeout →
@@ -3855,6 +3855,87 @@ SW_TEST_CASE( RenderPassGpuTest, NormalsStayPerpendicularUnderNonUniformScale )
 
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run the deferred pipeline for the normal test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 깊이 첨부를 거는 패스 앞에서 그 깊이를 읽던 SRV 가 떨어진다 — D3D11 해저드 경고 0, 그래프가 깊이 첨부를 안다 (4 백엔드 × 포워드 · 디퍼드)
+ * @details 디퍼드의 투명 패스는 SceneDepth 를 쓰지 않고 깊이 테스트에만 DSV 로 건다. 그래프에는 읽기로만 선언돼 있어 레벨 프롤로그가 첨부 전이를
+ *          내지 않았고, D3D11 은 앞 패스(SSAO)가 t3 에 걸어 둔 SceneDepth SRV 를 그대로 둔 채 OMSetRenderTargets 를 받아 프레임마다
+ *          "still bound on input" · "Forcing PS shader resource slot 3 to NULL" 을 냈다. 투명 셰이더(forwardlit)는 깊이를 샘플링하지 않아
+ *          그림은 같았다. 이제 `FrameRenderer::bindPassCallbacks` 가 깊이 첨부를 그래프의 쓰기로 선언하고(첨부 전이) D3D11 의
+ *          `prepareTextureForRenderTarget` 가 그 텍스처가 걸린 PS SRV 슬롯을 뗀다. 해저드 메시지는 디버그 레이어(SW_DEBUG)에서만 로그로 오므로
+ *          배포 빌드에서는 그래프 선언만 본다. 디퍼드에서 SSAO 는 투명 패스보다 먼저 선언돼 불투명 깊이를 읽고 Shading 과 같은 레벨에 남는다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, DepthAttachmentUnbindsItsShaderInputs )
+{
+    const utf8* const kArrPipeline[] = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" };
+
+    uint32 checkedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        const sw::string backendName( device->getBackendName() );
+
+        for ( const utf8* pPipeline : kArrPipeline )
+        {
+            const sw::string label = backendName + " " + pPipeline + ": ";
+            LitCubeScene     cube;
+            SW_ASSERT_TRUE_MSG( cube.populate(), ( label + "씬을 만들지 못했다" ).c_str() );
+
+            test::ScopedLogCollector logs;
+            sw::FrameRenderer        renderer;
+            const bool               bReady = renderer.initialize( device.get(), pPipeline ) && renderer.isReady();
+            SW_EXPECT_TRUE_MSG( bReady, ( label + "파이프라인을 만들지 못했다" ).c_str() );
+            if ( bReady )
+            {
+                // 투명 패스는 SceneDepth 를 깊이 첨부로 건다 — 그래프가 그것을 접근(쓰기)으로 알아야 프롤로그가 첨부 전이를 낸다.
+                const sw::string graphText = renderer.getGraph().exportToMermaid();
+                SW_EXPECT_TRUE_MSG( graphText.find( "Transparent --> SceneDepth" ) != sw::string::npos,
+                                    ( label + "그래프가 투명 패스의 깊이 첨부를 모른다" + graphText ).c_str() );
+
+                // 디퍼드의 SSAO 는 불투명 깊이를 읽는다 — 투명 패스의 첨부 쓰기 뒤로 밀리지 않고 Shading 과 같은 레벨에서 기록된다.
+                const sw::vector<sw::vector<sw::hashed_string>>& listLevel = renderer.getGraph().getExecutionLevels();
+                auto                                             findLevel = [&listLevel]( const utf8* pPass ) -> size_t
+                {
+                    const sw::hashed_string passName( pPass );
+                    for ( size_t levelIndex = 0; levelIndex < listLevel.size(); ++levelIndex )
+                    {
+                        for ( const sw::hashed_string& name : listLevel[levelIndex] )
+                        {
+                            if ( name == passName )
+                                return levelIndex;
+                        }
+                    }
+                    return listLevel.size();
+                };
+                if ( findLevel( "SSAO" ) < listLevel.size() )
+                {
+                    SW_EXPECT_TRUE_MSG( findLevel( "SSAO" ) == findLevel( "Shading" ) && findLevel( "SSAO" ) < findLevel( "Transparent" ),
+                                        ( label + "SSAO 가 Shading 과 같은 레벨 · 투명 패스 앞이 아니다\n" + renderer.getGraph().describeCompiledOrder() ).c_str() );
+                }
+
+                constexpr uint32 kFrameCount = 3;
+                for ( uint32 frameIndex = 0; frameIndex < kFrameCount; ++frameIndex )
+                {
+                    device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                    SW_EXPECT_TRUE( renderer.execute( device.get(), &cube._scene ) );
+                    device->endFrame( false, false );
+                    device->waitIdle();
+                }
+                ++checkedCount;
+                const uint32 hazardCount = logs.countContaining( "still bound on input" ) + logs.countContaining( "Forcing PS shader resource" );
+                SW_EXPECT_TRUE_MSG( hazardCount == 0,
+                                    ( label + "깊이를 첨부로 걸 때 SRV 로도 걸려 있었다 (해저드 " + sw::to_string( hazardCount ) + " 줄)" + logs.joined() ).c_str() );
+            }
+            renderer.shutdown();
+            cube.releaseRhi( device.get() );
+        }
+    }
+
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the pipelines for the depth hazard test" );
 }
 
 /**

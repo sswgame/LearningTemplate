@@ -46,6 +46,13 @@ namespace sw
             {
                 listOutput.emplace_back( out.c_str() );
             }
+            // 깊이 첨부도 그래프가 아는 접근이다. 깊이를 쓰지 않는 패스(투명)도 그것을 DSV 로 거므로 "첨부" 상태가 필요하다. 출력에 없으면
+            // 여기서 더한다 — 그래야 레벨 프롤로그가 첨부 전이(prepareTextureForRenderTarget)를 미리 내고, 앞 패스가 SRV 로 걸어 둔 깊이를
+            // D3D11 이 떼며(OMSetRenderTargets 해저드), 뒤에서 깊이를 읽는 패스가 다시 읽기 전이를 받는다(언리얼 RDG 의 깊이 첨부 접근).
+            // 일정은 쓰기 사슬을 따른다: 이 패스보다 **먼저 선언한** 읽는 패스는 앞 판을 읽고 이 패스 앞에 온다.
+            if ( pass._resolvedDepthAttachment.empty() == false &&
+                 std::find( listOutput.begin(), listOutput.end(), pass._resolvedDepthAttachment ) == listOutput.end() )
+                listOutput.push_back( pass._resolvedDepthAttachment );
 
             RenderGraphPassExecuteFn execute =
                 SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FrameRenderer::onGraphPassExecute, this );

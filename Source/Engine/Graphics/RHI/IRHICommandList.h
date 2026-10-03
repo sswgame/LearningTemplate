@@ -134,7 +134,8 @@ namespace sw
          *          스레드에서 결정하던 구조는 이 프로젝트에서 실제로 여러 번 깨졌습니다.
          * @note 컬러인지 뎁스인지는 **백엔드가 자기 텍스처 레코드를 보고 판단합니다.** 부르는 쪽이
          *       그것을 알아내려면 첨부 포맷을 다시 뒤져야 하고, 그러다 틀리면 배리어가 어긋납니다.
-         * @note DX11/GL 은 상태리스라 아무 일도 하지 않습니다.
+         * @note GL 은 상태리스라 아무 일도 하지 않습니다. DX11 은 전이가 없지만 이 텍스처가 걸린 PS SRV 슬롯을 뗍니다 — 그대로 두면
+         *       첨부로 걸 때 런타임이 SRV 를 NULL 로 강제하고 해저드 경고를 냅니다.
          */
         virtual void prepareTextureForRenderTarget( RHITextureHandle texture ) = 0;
 

@@ -63,6 +63,23 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="SSAO"
+		                     _type="SSAO"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Back"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>GBufferNormal</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>AOColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Transparent"
 		                     _type="Transparent"
 		                     _depthAttachment="SceneDepth"
@@ -78,23 +95,6 @@
 			</_listInput>
 			<_listOutput>
 				<item>LitColor</item>
-			</_listOutput>
-			<_listPermutation />
-		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="SSAO"
-		                     _type="SSAO"
-		                     _vertexEntryPoint="VSMain"
-		                     _pixelEntryPoint="PSMain"
-		                     _cullMode="Back"
-		                     _bEnableDepthTest="true"
-		                     _bEnableDepthWrite="true"
-		                     _bEnableBlend="false">
-			<_listInput>
-				<item>GBufferNormal</item>
-				<item>SceneDepth</item>
-			</_listInput>
-			<_listOutput>
-				<item>AOColor</item>
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>

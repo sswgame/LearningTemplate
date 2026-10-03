@@ -67,6 +67,13 @@ namespace sw
          *          어떤 버퍼가 걸려 있는지 기록해 두고 transitionBuffer 가 읽기 상태로 돌릴 때 뗍니다.
          */
         RHIBufferHandle _arrComputeUavBuffer[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
+        /**
+         * @brief PS SRV 슬롯마다 지금 걸려 있는 텍스처입니다(0 = 없음 · 버퍼).
+         * @details 같은 리소스를 입력(SRV)과 출력(RTV · DSV)에 동시에 걸면 `OMSetRenderTargets` 가 **SRV 를 NULL 로 강제하고** 경고만 냅니다.
+         *          `prepareTextureForRenderTarget` 가 이 표를 보고 그 텍스처가 걸린 슬롯만 뗍니다(언리얼 D3D11 RHI 의
+         *          `ConditionalClearShaderResource` 자리).
+         */
+        RHITextureHandle _arrPixelSrvTexture[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
     };
 
     /**
