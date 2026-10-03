@@ -42,13 +42,20 @@ namespace sw
 
         /** @brief 표면(`setRenderSurface`)에서 스왑체인 서술(크기 · 백버퍼 3 개 · 포맷 · VSync)을 채워 `initializeInternal` 을 부릅니다. */
         virtual bool initialize();
-        /** @brief 디바이스를 종료합니다. 자원을 든 쪽에는 내리기 전에 알립니다. */
-        virtual void shutdown();
+        /**
+         * @brief 디바이스를 종료합니다. 단계 순서는 이 함수 하나가 정하고, 백엔드는 단계 훅만 채웁니다.
+         * @details 1) 자원을 든 쪽에 알린다(`RHIRenderResource::releaseAllFor` — 디바이스가 살아 있어 돌려줄 수 있다)
+         *          2) GPU 를 기다리고 해제 큐를 비운다(`waitIdleInternal` — 1 이 넘긴 자원이 여기서 실제로 사라진다)
+         *          3) 프레임 스트림 컨텍스트를 놓고 살아 있는 커맨드 리스트를 디바이스에서 뗀다(`detachCommandRecordingInternal`)
+         *          4) 백엔드 자원 · 스왑체인 · 네이티브 디바이스를 내린다(`shutdownInternal`).
+         *          렌더 스레드는 이미 멈춰 있어야 합니다 — 여기서는 렌더 스레드를 비우지 않습니다(`waitIdle` 과 다른 점).
+         */
+        void shutdown();
 
         /** @brief RHI 디바이스와 스왑체인을 초기화합니다. */
         virtual bool initializeInternal( const RHISwapChainDesc& desc ) = 0;
 
-        /** @brief 디바이스를 종료하고 관련 리소스를 정리합니다. */
+        /** @brief 종료 4 단계: 백엔드 자원 · 스왑체인 · 네이티브 디바이스를 내립니다. GPU 대기와 커맨드 리스트 떼기는 이미 끝나 있습니다. */
         virtual void shutdownInternal() = 0;
 
         /** @brief 백버퍼(스왑체인)를 새 크기로 다시 만듭니다. `resize` 가 크기를 적은 뒤 부릅니다. */
@@ -315,8 +322,13 @@ namespace sw
         void reportBarrierDuringRecording( const utf8* pWhat ) const;
 
     protected:
-        /** @brief 백엔드의 실제 GPU 대기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤 부릅니다. */
+        /** @brief 백엔드의 실제 GPU 대기 + 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2 단계로 부릅니다. */
         virtual void waitIdleInternal() {}
+        /**
+         * @brief 종료 3 단계: 프레임 스트림 컨텍스트를 놓고 살아 있는 커맨드 리스트를 디바이스에서 뗍니다.
+         * @details 리스트는 디바이스보다 오래 살 수 있습니다(렌더 그래프가 프레임 너머 듭니다). 떼지 않으면 그쪽 소멸자가 내려간 디바이스에 반납하려 듭니다.
+         */
+        virtual void detachCommandRecordingInternal() {}
 
         IRenderSurface*           _pSurface;
         RenderThreadDrainFunction _pfnRenderThreadDrain;

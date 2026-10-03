@@ -101,6 +101,9 @@ namespace sw
         /** @brief D3D11 자원을 해제합니다. */
         void shutdownInternal() override;
 
+        /** @brief 종료 3 단계: 프레임 스트림 컨텍스트를 놓고 살아 있는 커맨드 리스트를 뗍니다. */
+        void detachCommandRecordingInternal() override;
+
         /** @brief 스왑체인 백버퍼를 새 크기로 다시 만듭니다. */
         void resizeInternal( uint32 width, uint32 height ) override;
 

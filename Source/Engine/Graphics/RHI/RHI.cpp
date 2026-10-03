@@ -237,8 +237,6 @@ namespace sw
 
     void RHI::shutdown()
     {
-#if defined( SW_DEBUG )
-#endif
         if ( _device != nullptr )
         {
             _device->shutdown();

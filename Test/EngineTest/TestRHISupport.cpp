@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferShadow.h"
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
@@ -8,11 +9,36 @@
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 
+#include "EngineTest/RHIFakeDevice.h"
+
 #include "TestFramework/TestFramework.h"
+
+namespace
+{
+    /** @brief `releaseRhi` 를 받으면 디바이스의 종료 단계 목록에 적는 시험 자원입니다. */
+    class ShutdownStepRecordingResource final : public sw::RHIRenderResource
+    {
+    public:
+        explicit ShutdownStepRecordingResource( test::FakeRHIDevice* pDevice )
+            : _pDevice{ pDevice }
+        {
+        }
+
+        void releaseRhi( sw::IRHIDevice* pDevice ) override
+        {
+            if ( pDevice == _pDevice )
+                _pDevice->_listShutdownStep.push_back( "releaseRhi" );
+        }
+        void forgetRhi( sw::IRHIDevice* ) override {}
+
+    private:
+        test::FakeRHIDevice* _pDevice;
+    };
+} // namespace
 
 // Engine/Graphics/RHI/Support — 디바이스 없이 도는 RHI 보조 자료구조.
 // 핸들 표의 세대 무효화 · 해제 큐의 지연과 펜스 · 셰이더 요청 해석.
-// 디바이스를 만드는 케이스는 TestRHIDevice.cpp 에 있다 (CI 가 못 돌린다).
+// 가짜 디바이스로 보는 종료 단계 순서(RHIDeviceShutdownTest)도 여기 있다. 실제 디바이스를 만드는 케이스는 TestRHIDevice.cpp 에 있다 (CI 가 못 돌린다).
 /**
  * @brief [RHIReleaseQueueTest] 지연 해제
  */
@@ -289,4 +315,23 @@ SW_TEST_CASE( RHIConstantBufferShadowTest, FillsStaleSlotsOnceAndForgets )
     for ( uint32 slot = 0; slot < kSlotCount; ++slot )
         shadow.fillSlot( slot, writeSlot );
     SW_EXPECT_EQUAL( writeCountBeforeForget, writeCount );
+}
+
+/**
+ * @brief [RHIDeviceShutdownTest] `IRHIDevice::shutdown` 이 종료 단계를 정한 순서로 한 번씩 부르는지.
+ * @details 자원 통보(디바이스가 살아 있을 때) → GPU 대기 · 해제 큐 비우기 → 프레임 스트림 · 커맨드 리스트 떼기 → 백엔드 자원 · 디바이스.
+ *          백엔드는 이 순서를 다시 적지 않고 훅만 채운다 — 순서가 바뀌면 해제 큐에 넘긴 자원이 GPU 대기 없이 사라지거나,
+ *          리스트가 내려간 디바이스에 반납하려 든다.
+ */
+SW_TEST_CASE( RHIDeviceShutdownTest, StepsRunInContractOrder )
+{
+    test::FakeRHIDevice           device;
+    ShutdownStepRecordingResource resource( &device );
+
+    device.shutdown();
+
+    const utf8* const arrExpected[] = { "releaseRhi", "waitIdleInternal", "detachCommandRecordingInternal", "shutdownInternal" };
+    SW_ASSERT_EQUAL( static_cast<size_t>( std::size( arrExpected ) ), device._listShutdownStep.size() );
+    for ( size_t index = 0; index < std::size( arrExpected ); ++index )
+        SW_EXPECT_STREQ( arrExpected[index], device._listShutdownStep[index] );
 }

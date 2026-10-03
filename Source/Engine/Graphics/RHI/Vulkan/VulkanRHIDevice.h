@@ -170,6 +170,9 @@ namespace sw
         /** @brief Vulkan 파이프라인과 자원을 해제합니다. */
         void shutdownInternal() override;
 
+        /** @brief 종료 3 단계: 프레임 스트림 컨텍스트를 놓고 살아 있는 커맨드 리스트를 뗍니다. */
+        void detachCommandRecordingInternal() override;
+
         /** @brief GPU 가 끝날 때까지 기다리고(vkDeviceWaitIdle) 지연 해제 큐를 비웁니다. */
         void waitIdleInternal() override;
 

@@ -7,6 +7,7 @@
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Support/RHILiveCommandListUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResource.h"
@@ -280,29 +281,17 @@ namespace sw
         { writeConstantBufferSlot( buffer, slot, pData, size ); } );
     }
 
+    void VulkanRHIDevice::detachCommandRecordingInternal()
+    {
+        // 뗀 리스트는 제 커맨드 버퍼 쌍을 부순다. 안 그러면 그쪽 소멸자가 죽은 디바이스에 반납하려 들고, 풀은 새어 검증 레이어가 잡는다.
+        _frameStreamContext.reset();
+        RHILiveCommandListUtil::detachAll( _liveCmdListMutex, _listLiveCmd );
+    }
+
     void VulkanRHIDevice::shutdownInternal()
     {
         if ( _device )
         {
-            {
-                std::scoped_lock<mutex> queueLock{ _queueMutex };
-                vkDeviceWaitIdle( _device );
-            }
-            _releaseQueue.flushAll();
-            _frameStreamContext.reset();
-
-            // 리스트는 디바이스보다 오래 살 수 있다(렌더 그래프가 프레임 너머 든다). 여기서 연결을 끊고 쌍을 부순다.
-            // 안 그러면 그쪽 소멸자가 죽은 디바이스에 반납하려 들고, 풀은 새어 검증 레이어가 잡는다.
-            {
-                std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-                for ( VulkanRHICommandList* pLiveList : _listLiveCmd )
-                {
-                    if ( pLiveList != nullptr )
-                        pLiveList->detachFromDevice();
-                }
-                _listLiveCmd.clear();
-            }
-
             if ( _commandPool )
             {
                 vkDestroyCommandPool( _device, _commandPool, nullptr );

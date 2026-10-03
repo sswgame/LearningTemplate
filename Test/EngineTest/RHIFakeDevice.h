@@ -78,7 +78,9 @@ namespace test
     {
     public:
         bool                    initializeInternal( const sw::RHISwapChainDesc& ) override { return true; }
-        void                    shutdownInternal() override {}
+        void                    shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
+        void                    waitIdleInternal() override { _listShutdownStep.push_back( "waitIdleInternal" ); }
+        void                    detachCommandRecordingInternal() override { _listShutdownStep.push_back( "detachCommandRecordingInternal" ); }
         void                    resizeInternal( uint32, uint32 ) override {}
         void                    beginFrame( const sw::float4& ) override {}
         void                    endFrame( bool, bool ) override {}
@@ -108,5 +110,6 @@ namespace test
         uint32                          _maxCreatable{ 0xFFFFFFFFu }; /**< 이만큼 만든 뒤로는 만들지 못한다 */
         uint32                          _createdCount{ 0 };           /**< 지금까지 만든 리스트 수 */
         sw::vector<FakeRHICommandList*> _listExecuted;                /**< 제출된 순서 그대로의 리스트 */
+        sw::vector<const utf8*>         _listShutdownStep;            /**< 불린 종료 단계 훅 이름(부른 순서) — 시험 자원의 `releaseRhi` 도 여기 적는다 */
     };
 } // namespace test

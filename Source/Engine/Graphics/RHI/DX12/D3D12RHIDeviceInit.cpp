@@ -10,6 +10,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
+    #include "Engine/Graphics/RHI/Support/RHILiveCommandListUtil.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -187,24 +188,14 @@ namespace sw
         return true;
     }
 
+    void D3D12RHIDevice::detachCommandRecordingInternal()
+    {
+        _frameStreamContext.reset();
+        RHILiveCommandListUtil::detachAll( _liveCmdListMutex, _listLiveCmd );
+    }
+
     void D3D12RHIDevice::shutdownInternal()
     {
-        waitForPreviousFrame();
-        _releaseQueue.flushAll();
-
-        // 커맨드 리스트는 디바이스보다 오래 살 수 있다. 여기서 연결을 끊지 않으면 그쪽 소멸자가
-        // 이미 파괴된 이 디바이스에 리스트·온라인 블록을 반납하려 든다. DX11 은 이 보호를 갖고
-        // 있었는데 DX12 에는 없었다.
-        {
-            std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-            for ( D3D12RHICommandList* pLiveList : _listLiveCmd )
-            {
-                if ( pLiveList != nullptr )
-                    pLiveList->detachFromDevice();
-            }
-            _listLiveCmd.clear();
-        }
-
         _mapOffscreenTexture.clear();
         _pipelineStates.clear();
         _listRenderPass.clear();
@@ -243,8 +234,7 @@ namespace sw
             _listFreeCmdListEntry.clear();
         }
         _frameStreamState._bRecording = SW_FALSE;
-        _frameStreamContext.reset();
-        _bBindlessRootSignature = SW_FALSE;
+        _bBindlessRootSignature       = SW_FALSE;
         _fence.Reset();
         _commandQueue.Reset();
         _device.Reset();

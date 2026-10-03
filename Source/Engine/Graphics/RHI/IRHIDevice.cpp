@@ -130,10 +130,11 @@ namespace sw
 
     void IRHIDevice::shutdown()
     {
-        // **자원을 내리기 전에** 알린다. 아직 디바이스가 살아 있으므로 든 쪽이 제대로 돌려줄 수 있다.
-        // 언리얼의 FRenderResource::ReleaseRHI 와 같은 자리다. 죽은 뒤에 "살아 있었나" 를 되묻지 않아도 되는 이유가 이것이다.
+        // 순서가 계약이다(헤더 참고). 백엔드는 이 순서를 다시 적지 않고 단계 훅만 채운다.
+        // 1 은 **자원을 내리기 전에** 알린다 — 언리얼 FRenderResource::ReleaseRHI 자리. 든 쪽이 해제 큐에 넘긴 자원은 2 가 GPU 를 기다린 뒤 비운다.
         RHIRenderResource::releaseAllFor( this );
-
+        waitIdleInternal();
+        detachCommandRecordingInternal();
         shutdownInternal();
     }
 } // namespace sw

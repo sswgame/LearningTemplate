@@ -15,6 +15,7 @@
     #include "Engine/Config/EngineData.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiTearing.h"
+    #include "Engine/Graphics/RHI/Support/RHILiveCommandListUtil.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -176,22 +177,14 @@ namespace sw
         return true;
     }
 
+    void D3D11RHIDevice::detachCommandRecordingInternal()
+    {
+        _frameStreamContext.reset();
+        RHILiveCommandListUtil::detachAll( _liveCmdListMutex, _listLiveCmd );
+    }
+
     void D3D11RHIDevice::shutdownInternal()
     {
-        _releaseQueue.flushAll();
-        _frameStreamContext.reset();
-
-        // 커맨드 리스트는 디바이스보다 오래 살 수 있다. 여기서 연결을 끊지 않으면 그쪽 소멸자가
-        // 이미 파괴된 이 디바이스의 등록 목록을 잠그려 든다.
-        {
-            std::scoped_lock<mutex> lock{ _liveCmdListMutex };
-            for ( D3D11RHICommandList* pLiveList : _listLiveCmd )
-            {
-                pLiveList->detachFromDevice();
-            }
-            _listLiveCmd.clear();
-        }
-
         _swapChain.shutdown();
         _gpuTextures.clear();
         _gpuBuffers.clear();

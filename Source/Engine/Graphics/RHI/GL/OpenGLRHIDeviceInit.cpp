@@ -263,6 +263,11 @@ namespace sw
         return true;
     }
 
+    void OpenGLRHIDevice::detachCommandRecordingInternal()
+    {
+        _frameStreamContext.reset();
+    }
+
     void OpenGLRHIDevice::shutdownInternal()
     {
         if ( _bInitialized == SW_FALSE )
@@ -271,9 +276,6 @@ namespace sw
         // GL 자원을 지우기 전에 컨텍스트를 되찾는다 (플랫폼이 필요 없으면 아무것도 하지 않는다).
         if ( _platformContext != nullptr )
             _platformContext->reacquireForFrame();
-
-        _releaseQueue.flushAll();
-        _frameStreamContext.reset();
 
         if ( _defaultSampler )
         {

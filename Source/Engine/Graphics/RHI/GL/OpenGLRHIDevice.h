@@ -71,6 +71,9 @@ namespace sw
         /** @brief GL 객체와 컨텍스트를 해제합니다. */
         void shutdownInternal() override;
 
+        /** @brief 종료 3 단계: 프레임 스트림 컨텍스트를 놓고 살아 있는 커맨드 리스트를 뗍니다. */
+        void detachCommandRecordingInternal() override;
+
         /** @brief 크기를 적고 glViewport 를 맞춥니다. */
         void resizeInternal( uint32 width, uint32 height ) override;
 

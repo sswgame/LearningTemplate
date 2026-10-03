@@ -150,6 +150,9 @@ namespace sw
         /** @brief D3D12 자원과 펜스 동기화 객체를 해제합니다. */
         void shutdownInternal() override;
 
+        /** @brief 종료 3 단계: 프레임 스트림 컨텍스트를 놓고 살아 있는 커맨드 리스트를 뗍니다. */
+        void detachCommandRecordingInternal() override;
+
         /** @brief GPU 가 제출된 명령을 모두 끝낼 때까지 펜스로 기다립니다. */
         void waitIdleInternal() override;
 
