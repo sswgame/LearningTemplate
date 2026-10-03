@@ -92,6 +92,7 @@ Scripts/
   │     │     ├── RunBuildWarnings.py         # 트리에 남아 있는 컴파일러 경고 (`--fail-on error` 를 명시하면 CI 가 막는 데 쓴다)
   │     │     ├── RunClangTidy.py
   │     │     ├── RunHeaderSelfContained.py   # 혼자 서지 못하는 헤더
+  │     │     ├── RunPaddingReport.py         # 레코드별 패딩 · 필드 재배치로 줄일 수 있는 크기 (libclang, `--preset` · `--define SW_SHIPPING`)
   │     │     ├── RunForwardDeclarationCandidates.py # 전방 선언으로 바꿀 수 있는 include (`--apply` 는 고쳐 쓴다)
   │     │     ├── RunDuplicateCode.py         # 복사돼 있는 코드 블록 (C++ · `--language py` · `--language cmake`)
   │     │     └── RunEngineLayerGraph.py      # Engine 폴더 간 include 그래프 · 강결합 묶음
