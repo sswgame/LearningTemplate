@@ -3,6 +3,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/RHIBackendType.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -121,4 +122,27 @@ SW_TEST_CASE( GlobalVariableMacroTest, TestOnlyVariablesAreMarkedAndDroppedInShi
     const sw::GlobalVariableInfo* pRuntime = manager.findVariable( "gv_testInt" );
     SW_ASSERT_TRUE( pRuntime != nullptr );
     SW_EXPECT_FALSE( pRuntime->_bTestOnly );
+}
+
+/**
+ * @brief [GlobalVariableMacroTest] 엔진의 enum 전역 변수는 리플렉션 열거자 이름을 받는다
+ * @details 기동이 리플렉션 enum 표를 파서로 건다(`engine::bindGlobalVariableEnumNames`). 걸리지 않으면 `-gv_rhiBackend=Vulkan` ·
+ *          콘솔의 `gv_rhiBackend Vulkan` 이 숫자만 받아 거절된다.
+ */
+SW_TEST_CASE( GlobalVariableMacroTest, EngineEnumVariableTakesEnumeratorNames )
+{
+    sw::GlobalVariableInfo* pInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_rhiBackend" );
+    SW_ASSERT_NOT_NULL( pInfo );
+    const int32 valueBefore = pInfo->getValueAsInt();
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [pInfo, valueBefore]()
+    {
+        (void)pInfo->setValueAsInt( valueBefore );
+    } ) );
+
+    SW_EXPECT_TRUE( pInfo->setValueFromString( "Vulkan" ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( sw::RHIBackend::Vulkan ), pInfo->getValueAsInt() );
+    SW_EXPECT_TRUE( pInfo->setValueFromString( "DirectX11" ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( sw::RHIBackend::DirectX11 ), pInfo->getValueAsInt() );
+    SW_EXPECT_FALSE( pInfo->setValueFromString( "NoSuchBackend" ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( sw::RHIBackend::DirectX11 ), pInfo->getValueAsInt() );
 }

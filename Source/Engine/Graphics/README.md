@@ -324,7 +324,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 | 프레임 스트림 컨텍스트 = 커맨드 리스트 | 프레임 스트림은 디바이스가 소유하고 `endFrame` 에서 제출되며, 리스트는 패스마다 만들어 `executeCommandList` 로 잇는다 — 위 표 참고 |
 | gen/머티리얼 XML을 코드에 하드코딩 | `Resource/engine/` 파이프라인·머티리얼 에셋 사용 |
 | DX11/GL `prepareTextureForShaderRead` · `transitionBuffer` 를 빈 함수로 두기 | DX11 은 슬롯 해저드(SRV ↔ RTV · UAV)를 여기서 풀고 GL 은 메모리 배리어를 낸다 — 비우면 그 백엔드만 0 을 읽는다 |
-| 명령줄에 백엔드를 안 주고 원하는 백엔드로 돌았다고 믿기 | 명령줄이 고르지 않으면 `EngineConfig` 의 `_defaultRHI` 가 이긴다. `-dx11` / `-dx12` / `-vk` / `-gl`(또는 `-gv_rhiBackend=<0..3>`)로 명시하고, 로그의 백엔드 이름으로 확인한다 |
+| 명령줄에 백엔드를 안 주고 원하는 백엔드로 돌았다고 믿기 | 명령줄이 고르지 않으면 `EngineConfig` 의 `_defaultRHI` 가 이긴다. `-dx11` / `-dx12` / `-vk` / `-gl`(또는 `-gv_rhiBackend=Vulkan` 처럼 열거자 이름 · 숫자 — 모르는 이름이면 기동이 멈춘다)로 명시하고, 로그의 백엔드 이름으로 확인한다 |
 | 백엔드 패리티를 "실행 성공" 으로 판정 | `RenderPassGpuTest.FrameRendererParityAllBackends` 는 SceneColor 를 읽어 큐브 픽셀과 평균을 비교한다 — 픽셀을 보지 않는 스모크는 아무것도 증명하지 않는다 |
 
 ---

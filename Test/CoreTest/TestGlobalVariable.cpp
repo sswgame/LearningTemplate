@@ -180,6 +180,57 @@ SW_TEST_CASE( GlobalVariableTest, CommandLineIntegration )
 }
 
 /**
+ * @brief [GlobalVariableTest] enum 변수는 명령줄에서 열거자 이름을 받고, 모르는 이름이면 적용을 실패로 알린다
+ * @details 명령줄은 리플렉션보다 먼저 파싱되므로 이름은 받아 두었다가 파서가 걸린 뒤 적용한다(`applyPendingEnumText`). 숫자만 받으면
+ *          `-gv_rhiBackend=Vulkan` 이 경고 한 줄과 함께 기본 백엔드로 돈다.
+ */
+SW_TEST_CASE( GlobalVariableTest, EnumTakesEnumeratorNamesFromTheCommandLine )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "an unknown enumerator name on the command line is reported" );
+    sw::GlobalVariableManager manager;
+    int32                     namedValue{ 0 };
+    int32                     unknownValue{ 0 };
+    SW_ASSERT_TRUE( manager.registerVariable( "gv_testEnumByName", sw::GlobalVariableType::Enum, &namedValue, int32{ 0 }, "", "TestMode" ) );
+    SW_ASSERT_TRUE( manager.registerVariable( "gv_testEnumUnknown", sw::GlobalVariableType::Enum, &unknownValue, int32{ 0 }, "", "TestMode" ) );
+
+    sw::CommandLineManager cmd;
+    cmd.initialize();
+    manager.registerToCommandLine( &cmd );
+    utf8  arg0[] = "CoreTest";
+    utf8  arg1[] = "gv_testEnumByName=Second";
+    utf8  arg2[] = "gv_testEnumUnknown=Bogus";
+    utf8* argv[] = { arg0, arg1, arg2 };
+    cmd.parse( 3, argv );
+    manager.updateFromCommandLine( &cmd );
+    SW_EXPECT_EQUAL( 0, namedValue ); // 파서가 걸리기 전에는 이름을 적용하지 않는다
+
+    sw::GlobalVariableManager::setEnumTextParser( SW_DELEGATE_LAMBDA( sw::GlobalVariableEnumTextParser, []( sw::string_view enumType, sw::string_view text, int32& outValue ) -> bool
+    {
+        if ( enumType != "TestMode" || text != "Second" )
+            return false;
+        outValue = 2;
+        return true;
+    } ) );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, []()
+    {
+        sw::GlobalVariableManager::setEnumTextParser( sw::GlobalVariableEnumTextParser{} );
+    } ) );
+
+    SW_EXPECT_FALSE( manager.applyPendingEnumText() ); // Bogus
+    SW_EXPECT_EQUAL( 2, namedValue );
+    SW_EXPECT_EQUAL( 0, unknownValue );
+    SW_EXPECT_TRUE( manager.applyPendingEnumText() ); // 한 번 적용하면 비운다
+
+    // 콘솔 · 에디터 입력도 같은 이름과 숫자를 받는다.
+    SW_EXPECT_TRUE( manager.setValueFromString( "gv_testEnumUnknown", "Second" ) );
+    SW_EXPECT_EQUAL( 2, unknownValue );
+    SW_EXPECT_TRUE( manager.setValueFromString( "gv_testEnumUnknown", "1" ) );
+    SW_EXPECT_EQUAL( 1, unknownValue );
+    SW_EXPECT_FALSE( manager.setValueFromString( "gv_testEnumUnknown", "Bogus" ) );
+    SW_EXPECT_EQUAL( 1, unknownValue );
+}
+
+/**
  * @brief [GlobalVariableTest] 미등록 변수 조회 및 안전성 검증
  */
 SW_TEST_CASE( GlobalVariableTest, NonExistentVariableHandling )

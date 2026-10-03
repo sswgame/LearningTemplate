@@ -11,6 +11,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -30,6 +31,21 @@ namespace sw
         {
             static unordered_map<string, ModuleHeadRecord> s_mapModuleHead;
             return s_mapModuleHead;
+        }
+
+        /**
+         * @brief enum 전역 변수의 글 값을 리플렉션 열거자로 읽습니다(`GlobalVariableEnumTextParser`).
+         * @details 타입 이름은 정의 매크로의 `#enumType` 이라 인턴해도 된다. `findInterned` 로 찾으면 그 이름을 아직 아무도 인턴하지 않은
+         *          기동 시점(App)에 빈 해시가 나와 모든 이름이 "없다" 가 된다 — 시험 프로세스는 다른 시험이 먼저 인턴해 두어 가려진다.
+         */
+        [[nodiscard]] bool parseGlobalVariableEnumText( string_view enumType, string_view text, int32& outValue )
+        {
+            const EnumInfo* pEnum = engine::getTypeRegistry().findEnum( hashed_string( enumType.data(), static_cast<uint32>( enumType.size() ) ) );
+            int64           value{ 0 };
+            if ( pEnum == nullptr || pEnum->tryParseText( text, value ) == false )
+                return false;
+            outValue = static_cast<int32>( value );
+            return true;
         }
     } // namespace
 
@@ -98,6 +114,17 @@ namespace sw
                     scene->getObjectManager()->markTickStagesDirty();
                 }
             }
+        }
+
+        bool bindGlobalVariableEnumNames()
+        {
+            GlobalVariableManager::setEnumTextParser( SW_DELEGATE_FUNCTION( GlobalVariableEnumTextParser, parseGlobalVariableEnumText ) );
+            return getGlobalVariableManager().applyPendingEnumText();
+        }
+
+        void unbindGlobalVariableEnumNames()
+        {
+            GlobalVariableManager::setEnumTextParser( GlobalVariableEnumTextParser{} );
         }
 
 #if !defined( SW_SHIPPING )

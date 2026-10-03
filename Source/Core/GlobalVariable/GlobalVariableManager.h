@@ -18,6 +18,8 @@ namespace sw
     /** @brief 등록된 전역 변수 한 항목입니다. */
     struct GlobalVariableInfo;
     SW_DECLARE_DELEGATE( void, GlobalVariableChangedDelegate, GlobalVariableInfo* );
+    /** @brief enum 타입 이름과 글(열거자 이름)을 받아 정수 값을 냅니다. 모르는 이름이면 false 입니다. */
+    SW_DECLARE_DELEGATE( bool, GlobalVariableEnumTextParser, string_view, string_view, int32& );
 
     // ------------------------------------------------------------------------------
     // 1) GlobalVariableType / GlobalVariableInfo — 이름 · 타입 · 기본값 · 콜백
@@ -116,8 +118,25 @@ namespace sw
         /** @brief 커맨드라인 매니저에 변수들을 인자로 등록합니다. */
         void registerToCommandLine( class CommandLineManager* pCmdLineManager );
 
-        /** @brief 커맨드라인 인자 값으로 전역 변수들을 갱신합니다. */
+        /**
+         * @brief 커맨드라인 인자 값으로 전역 변수들을 갱신합니다.
+         * @details enum 변수는 숫자 또는 열거자 이름을 받습니다. 이름은 파서가 걸린 뒤에 적용하므로(`applyPendingEnumText`) 그때까지 받아만 둡니다 —
+         *          명령줄은 리플렉션 등록보다 먼저 파싱됩니다.
+         */
         void updateFromCommandLine( const CommandLineManager* pCmdLineManager );
+
+        /**
+         * @brief enum 변수의 글 값(열거자 이름)을 정수로 바꾸는 파서를 겁니다. 빈 델리게이트를 주면 뗍니다.
+         * @details Core 는 리플렉션을 모르므로 enum 표를 든 쪽(Engine — `engine::bindGlobalVariableEnumNames`)이 겁니다. 걸기 전에는 enum
+         *          변수가 숫자만 받습니다. 프로세스에 하나이고 기동 · 종료 단계에서만 바꿉니다.
+         */
+        static void setEnumTextParser( const GlobalVariableEnumTextParser& parser );
+
+        /**
+         * @brief 명령줄에서 숫자가 아닌 글로 받아 둔 enum 변수 값을 지금 적용합니다. 파서를 건 뒤에 부릅니다.
+         * @return 모르는 열거자가 하나라도 있으면 false 입니다(오류로 알리고, 그 값은 적용하지 않습니다).
+         */
+        [[nodiscard]] bool applyPendingEnumText();
 
         /** @brief 새 전역 변수를 등록합니다. @p bTestOnly 는 테스트용 매크로로 선언한 변수면 true 입니다. */
         bool registerVariable( string_view name, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, string_view description, string_view enumType = "", string_view moduleName = "", uint32 typeSize = 4, bool bTestOnly = false );
@@ -165,6 +184,8 @@ namespace sw
          *          `CommandLineManager` 를 서비스로 받을 수 없으므로(HostOnly) 보류값을 꺼내는 경로는 이 포인터뿐입니다.
          */
         class CommandLineManager* _pCmdLineManager{ nullptr };
+        /** @brief 명령줄에서 글로 받아 파서를 기다리는 enum 변수 값입니다(이름 → 글). `applyPendingEnumText` 가 비웁니다. */
+        unordered_map<string, string> _mapPendingEnumText;
     };
 
     // ------------------------------------------------------------------------------

@@ -89,9 +89,15 @@ namespace
                 sw::engine::registerModuleTypes( "Engine" );
                 sw::engine::registerModuleTypes( "GameFramework" );
                 host._pOwned->_pTypeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
+                if ( sw::engine::bindGlobalVariableEnumNames() == false )
+                    return sw::EngineStartupResult::Failed;
                 return sw::EngineStartupResult::Succeeded;
             }
-            static void destroy( TestHost& host ) { host._pOwned->_pTypeRegistry.reset(); }
+            static void destroy( TestHost& host )
+            {
+                sw::engine::unbindGlobalVariableEnumNames();
+                host._pOwned->_pTypeRegistry.reset();
+            }
         };
 
         struct ConfigStartupStep : Defaults

@@ -28,6 +28,13 @@ namespace sw
             }
 
             static inline std::shared_mutex s_stringVarMutex;
+
+            /** @brief enum 글 값 파서 슬롯입니다(`GlobalVariableManager::setEnumTextParser`). */
+            static GlobalVariableEnumTextParser& getEnumTextParser()
+            {
+                static GlobalVariableEnumTextParser s_parser;
+                return s_parser;
+            }
         };
     } // namespace
 } // namespace sw
@@ -212,10 +219,20 @@ namespace sw
                 return setValueAsBool( bVal );
             }
             case GlobalVariableType::Int32:
-            case GlobalVariableType::Enum:
             {
                 int32 val{ 0 };
                 if ( StringUtil::parseInt( strValue, val ) )
+                    return setValueAsInt( val );
+                return false;
+            }
+            case GlobalVariableType::Enum:
+            {
+                // 숫자(`2`) 또는 열거자 이름(`Vulkan`). 이름은 enum 표를 든 쪽이 건 파서가 바꾼다.
+                int32 val{ 0 };
+                if ( StringUtil::parseInt( strValue, val ) )
+                    return setValueAsInt( val );
+                const GlobalVariableEnumTextParser& parser = GlobalVariableInternal::getEnumTextParser();
+                if ( parser.isBound() && parser( _enumType, strValue, val ) )
                     return setValueAsInt( val );
                 return false;
             }
@@ -304,7 +321,10 @@ namespace sw
 
         for ( const auto& [name, info] : _mapVariable )
         {
-            if ( std::holds_alternative<int32>( info->_defaultValue ) )
+            // enum 은 숫자 또는 열거자 이름이라 글로 받는다. 정수로 받으면 `Vulkan` 이 파싱 경고 한 줄과 함께 버려진다.
+            if ( info->_type == GlobalVariableType::Enum )
+                pCmdLineManager->addArgument<string>( { info->_name }, string{}, false );
+            else if ( std::holds_alternative<int32>( info->_defaultValue ) )
                 pCmdLineManager->addArgument<int32>( { info->_name }, std::get<int32>( info->_defaultValue ), true );
             else if ( std::holds_alternative<float32>( info->_defaultValue ) )
                 pCmdLineManager->addArgument<float32>( { info->_name }, std::get<float32>( info->_defaultValue ), true );
@@ -329,16 +349,19 @@ namespace sw
         {
             if ( info->_pData == nullptr )
                 continue;
-            if ( info->_type == GlobalVariableType::Int32 || info->_type == GlobalVariableType::Enum )
+            if ( info->_type == GlobalVariableType::Enum )
+            {
+                // 숫자는 바로 적용하고, 파서가 아직 없어 못 읽은 이름은 `applyPendingEnumText` 까지 받아 둔다.
+                string text;
+                if ( pCmdLineManager->getArgument( name, text ) && text.empty() == false && info->setValueFromString( text ) == false )
+                    _mapPendingEnumText[name] = std::move( text );
+            }
+            else if ( info->_type == GlobalVariableType::Int32 )
             {
                 int32 val{ 0 };
                 if ( pCmdLineManager->getArgument( name, val ) )
                 {
-                    if ( info->_type == GlobalVariableType::Enum )
-                        GlobalVariableInternal::writeEnumValue( info->_pData, info->_typeSize, val );
-                    else
-                        *static_cast<int32*>( info->_pData ) = val;
-
+                    *static_cast<int32*>( info->_pData ) = val;
                     if ( info->_onValueChanged.isBound() )
                         info->_onValueChanged( info.get() );
                 }
@@ -569,6 +592,27 @@ namespace sw
      *
      * std::shared_lock 이라 여러 스레드가 동시에 읽을 수 있고, 이종 조회라 임시 string 을 만들지 않습니다.
      */
+    void GlobalVariableManager::setEnumTextParser( const GlobalVariableEnumTextParser& parser )
+    {
+        GlobalVariableInternal::getEnumTextParser() = parser;
+    }
+
+    bool GlobalVariableManager::applyPendingEnumText()
+    {
+        bool bAllApplied{ true };
+        for ( const auto& [name, text] : _mapPendingEnumText )
+        {
+            GlobalVariableInfo* pInfo = findVariable( name );
+            if ( pInfo == nullptr || pInfo->setValueFromString( text ) == false )
+            {
+                SW_LOG_ERROR( "-%#=%# : %# has no enumerator of that name", name.c_str(), text.c_str(), pInfo != nullptr ? pInfo->_enumType.c_str() : "the variable" );
+                bAllApplied = false;
+            }
+        }
+        _mapPendingEnumText.clear();
+        return bAllApplied;
+    }
+
     GlobalVariableInfo* GlobalVariableManager::findVariable( string_view name )
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };

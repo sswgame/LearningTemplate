@@ -324,7 +324,7 @@ namespace
 /**
  * @brief [AppSmokeTest] 네 백엔드에서 기동 → 프레임 → 종료가 깨끗한가
  * @details 백엔드마다 따로 본다 — 한 판에 묶으면 "어느 백엔드가 깨졌나" 를 로그에서 다시 찾아야 한다.
- *          백엔드는 `-dx12 / -dx11 / -vk / -gl` 스위치로 고른다(숫자인 `-gv_rhiBackend` 보다 로그에서 읽기 쉽다).
+ *          백엔드는 `-dx12 / -dx11 / -vk / -gl` 스위치로 고른다(쿠킹 표의 별칭과 같은 철자).
  */
 SW_TEST_CASE( AppSmokeTest, EveryBackendStartsRendersAndExitsCleanly )
 {

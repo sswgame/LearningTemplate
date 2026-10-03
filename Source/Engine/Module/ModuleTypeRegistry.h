@@ -28,6 +28,14 @@ namespace sw
             EnumRegistrar*           pEnumHead,
             GlobalVariableRegistrar* pVariableHead );
 
+        /**
+         * @brief enum 전역 변수가 열거자 이름(`-gv_rhiBackend=Vulkan`)을 받도록 리플렉션 enum 표를 파서로 겁니다. 엔진 타입을 등록한 뒤 부릅니다.
+         * @return 명령줄에서 받아 둔 이름 가운데 모르는 열거자가 있으면 false 입니다 — 기동은 멈춥니다(모르는 값으로 기본값을 쓰며 돌지 않게).
+         */
+        [[nodiscard]] SW_API bool bindGlobalVariableEnumNames();
+        /** @brief `bindGlobalVariableEnumNames` 가 건 파서를 뗍니다. TypeRegistry 를 놓기 전에 부릅니다. */
+        SW_API void unbindGlobalVariableEnumNames();
+
 #if !defined( SW_SHIPPING )
         // 모듈을 **내리는** 쪽은 Dev 에만 있다. Shipping 은 모듈을 정적 링크해 프로세스가 끝날 때까지 그대로 있으므로
         // 등록 해제가 할 일이 없다. 그래서 코드도 두지 않는다. 등록(registerModuleTypes)은 Shipping 도 쓴다.

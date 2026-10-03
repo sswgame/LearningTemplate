@@ -76,7 +76,7 @@ cd build/Ninja-Debug/Bin
 **함정**
 
 - 백엔드는 `-dx11 / -dx12 / -vk / -gl` 로 고른다. 명시한 백엔드를 쓸 수 없으면 폴백하지 않고 에러로 선다(`RHIBackendUtil::findCommandLineBackend`
-  한 자리 — `-gv_rhiBackend=N` 도 같은 판정을 지난다). 실제로 뜬 백엔드는 로그 `Initializing RHI with backend:` 로 확인한다.
+  한 자리 — `-gv_rhiBackend=Vulkan`(열거자 이름 또는 숫자, 모르는 이름이면 기동이 멈춘다)도 같은 판정을 지난다). 실제로 뜬 백엔드는 로그 `Initializing RHI with backend:` 로 확인한다.
 - 에디터는 `-EnableEditor` 를 줘야 뜬다. 없이 돌린 검증은 에디터 OFF 검증이다 — 로그로 실제로 로드됐는지 본다.
 - Shipping 테스트 바이너리는 `build/Ninja-Shipping/TestBin/` 에 있고 작업 디렉터리는 `Bin/` 이다. `Bin/` 에 남은 낡은 테스트 exe 사본을
   실행하지 말 것.
@@ -228,9 +228,6 @@ cd build/Ninja-Debug/Bin
 
 - **`gv_benchMaterialInstances` 설명 문자열 `"(DX12 크래시 재현용)"` 이 낡아 보인다**(`Games/Empty/BenchScene.cpp`) — 원인(`updateStructuredBuffer` 업로드
   얼로케이터 이중 Reset)은 `29da82bb` 에서 고쳐졌다. DX12 + `-gv_benchMaterialInstances=1` 로 한 번 돌려 확인한 뒤 문자열을 고친다(주석은 G4 에서 고쳤다).
-
-- **`-gv_rhiBackend` 는 숫자만 받는다**(0 DX11 · 1 DX12 · 2 Vulkan · 3 GL) — `Vulkan` 처럼 이름을 주면 경고만 내고 DX11 로 돈다. enum 전역 변수가 리플렉션 열거자
-  이름을 받게 하거나, 모르는 값이면 실행을 멈출 것.
 
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
@@ -561,7 +558,7 @@ cd build/Ninja-Debug/Bin
 - **바이너리 Archive 읽기는 읽은 만큼 자리를 옮긴다**(이어 쓴 객체를 차례로 읽는다). 같은 자리를 다시 보려면 새 Archive 를 만든다.
 - **set 원소 편집은 `replaceElement`(지우고 다시 넣기)로만** — 같은 값이 되면 하나로 합쳐진다. 맵은 `forEachMutable` · `eraseAt`, 고정 배열은 `appendElement` 가
   원소 순번의 칸을 채운다(칸보다 많으면 실패).
-- **머티리얼 enum · 플래그 글은 `EnumInfo::tryParseText`** — 모르는 이름 · 표식 값(`Count`)은 경고하고 값을 쓰지 않는다. enum 타입 이름은 `findInterned` 로만.
+- **머티리얼 enum · 플래그 글은 `EnumInfo::tryParseText`** — 모르는 이름 · 표식 값(`Count`)은 경고하고 값을 쓰지 않는다. enum 타입 이름은 `findInterned` 로만(에셋 글일 때). 코드가 준 이름(전역 변수의 `#enumType`)은 `hashed_string` 생성자로 찾는다 — 아직 아무도 인턴하지 않은 기동 시점에 `findInterned` 는 빈 해시를 내고, 시험 프로세스는 다른 시험이 먼저 인턴해 두어 그것을 가린다.
 
 - **저장되는 상태는 PROPERTY 이고, 모든 PROPERTY 타입은 직렬화기가 실어 나를 수 있어야 한다**(`SerializerUtil::canCarryProperty`,
   `ReflectionSerializationTest.EveryPropertyHasATypeTheSerializersCanCarry`, 모듈판은 SmokeTest 의 `ModuleApiTest`). enum 에 `ENUM()` 이 없으면 `"null"` 로 저장된다.

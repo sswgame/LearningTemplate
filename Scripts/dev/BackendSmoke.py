@@ -11,7 +11,7 @@
 네 백엔드의 평균이 서로 1.0 이내이고 non-bg 픽셀 수가 0 이 아니면 정상이다.
 
 백엔드는 쿠킹 표(Config/Engine/CookContract.json)의 줄마다 첫 별칭 플래그(-dx11 / -dx12 / -vk / -gl)로 고른다.
-`-gv_rhiBackend=<n>` 도 같은 RHIBackendUtil::findCommandLineBackend 를 지나지만 숫자라 읽기 나쁘다.
+`-gv_rhiBackend=<이름|숫자>`(예: `Vulkan`)도 같은 RHIBackendUtil::findCommandLineBackend 를 지난다.
 """
 import argparse
 import os

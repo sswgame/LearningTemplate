@@ -123,10 +123,17 @@ namespace sw
             // 여기서는 이미 이 프로세스에 올라온 등록기만 모은다. 배포 구성은 GameFramework · 킷 · 게임이 정적 링크라 "Engine" 이 다 모으고,
             // 개발 구성의 모듈 DLL 은 `ModuleTypes` 단계에서 호스트 로더가 올리며 제 이름으로 등록한다.
             engine::registerModuleTypes( "Engine" );
+            // 명령줄의 enum 이름(`-gv_rhiBackend=Vulkan`)은 enum 표가 선 지금 적용한다. 모르는 이름이면 기본값으로 돌지 않고 멈춘다.
+            if ( engine::bindGlobalVariableEnumNames() == false )
+                return EngineStartupResult::Failed;
             return EngineStartupResult::Succeeded;
         }
         // 설정 · 에셋 · 씬 객체는 이 단계에 의존하므로 모두 먼저 해제된다.
-        static void destroy( EngineLoop& loop ) { loop._owned._pTypeRegistry.reset(); }
+        static void destroy( EngineLoop& loop )
+        {
+            engine::unbindGlobalVariableEnumNames();
+            loop._owned._pTypeRegistry.reset();
+        }
     };
 
     struct EngineLoop::ConfigStartupStep : EngineStartupStepDefaults<EngineLoop>
