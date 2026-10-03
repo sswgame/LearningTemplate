@@ -206,7 +206,6 @@ namespace sw::editor
         , _inputMapPath{ "engine/input/default.input.xml" }
         , _replayFilePath{ "engine/replay/demo_01.swreplay" }
         , _newActionName{ "" }
-        , _newLayerName{ "" }
         , _selectedAction{ "" }
         , _testComboPattern{ "236P" }
         , _arrPlotLeftStickX{}

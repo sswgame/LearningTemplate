@@ -105,20 +105,6 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorGlobalVariableCommands::collectPresetFiles( vector<string>& outList )
-    {
-        outList.clear();
-        FileUtil::collectFiles( getPresetFolderPath(), ".gvpreset.xml", outList, false );
-        return true;
-    }
-
-    bool EditorGlobalVariableCommands::collectComponentPresetFiles( vector<string>& outList )
-    {
-        outList.clear();
-        FileUtil::collectFiles( getComponentPresetFolderPath(), ".preset.xml", outList, false );
-        return true;
-    }
-
     string EditorGlobalVariableCommands::getSessionPresetPath()
     {
         return FileUtil::joinPath( getPresetFolderPath(), "editor_session.gvpreset.xml" );

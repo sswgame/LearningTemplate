@@ -90,7 +90,7 @@ SW_TEST_CASE( EditorSceneCommandsTest, ApplyTransformAndSnapshotSafety )
 
     // nullptr 안전성
     EditorSceneCommands::applyLocalTransform( nullptr, targetPos, targetRot, targetScale );
-    SW_EXPECT_TRUE( EditorSceneCommands::captureSnapshot( nullptr )._xml.empty() );
+    SW_EXPECT_TRUE( EditorTransaction::captureSnapshot( nullptr )._xml.empty() );
 }
 
 /**

@@ -69,7 +69,6 @@ namespace sw::editor
         string                    _savedGameDataRawText;
         EditorLocalizationLoadJob _localizationJob;
         EditorGameDataScanJob     _gameDataJob;
-        int32                     _activeTab;
         int32                     _selectedGameDataIndex;
         uint8                     _bLocalizationLoaded : 1;
         uint8                     _bGameDataLoaded     : 1;

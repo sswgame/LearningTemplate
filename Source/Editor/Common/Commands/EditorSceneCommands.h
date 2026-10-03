@@ -52,8 +52,6 @@ namespace sw::editor
         static void select( GameObject* pObj, SelectionMode mode = SelectionMode::Replace );
         /** @brief pNewParent가 pChild의 자손이면 true입니다. */
         static bool wouldCreateParentCycle( GameObject* pChild, GameObject* pNewParent );
-        /** @brief 오브젝트 스냅샷(XML + 런타임 id)을 캡처합니다. nullptr 이면 빈 스냅샷입니다. */
-        static ObjectSnapshot captureSnapshot( GameObject* pObj );
         /** @brief 로컬 트랜스폼을 적용합니다. */
         static void applyLocalTransform( GameObject* pObj, const float3& translation, const float3& rotationRad,
                                          const float3& scale );

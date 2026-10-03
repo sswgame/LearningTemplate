@@ -81,7 +81,6 @@ namespace sw::editor
         string                 _inputMapPath;
         string                 _replayFilePath;
         string                 _newActionName;
-        string                 _newLayerName;
         string                 _selectedAction;
         string                 _testComboPattern;
         float32                _arrPlotLeftStickX[kPlotSampleCount];

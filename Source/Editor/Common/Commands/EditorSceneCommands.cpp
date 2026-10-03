@@ -289,11 +289,6 @@ namespace sw::editor
         return pNewParent->isDescendantOf( pChild );
     }
 
-    ObjectSnapshot EditorSceneCommands::captureSnapshot( GameObject* pObj )
-    {
-        return EditorTransaction::captureSnapshot( pObj );
-    }
-
     void EditorSceneCommands::applyLocalTransform( GameObject* pObj, const float3& translation, const float3& rotationRad,
                                                    const float3& scale )
     {

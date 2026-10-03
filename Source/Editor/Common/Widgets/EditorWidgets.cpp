@@ -354,22 +354,6 @@ namespace sw::editor
         return bChanged;
     }
 
-    bool EditorWidgets::drawSplitter( const utf8* pId, bool bVertical, float32 thickness, float32* pSize1, float32* pSize2,
-                                      float32 minSize1, float32 minSize2 )
-    {
-        ImGuiContext& g       = *GImGui;
-        ImGuiWindow*  pWindow = g.CurrentWindow;
-        ImGuiID       id      = pWindow->GetID( pId );
-        ImRect        bb;
-        bb.Min = ImVec2{ pWindow->DC.CursorPos.x + ( bVertical ? *pSize1 : 0.0f ),
-                         pWindow->DC.CursorPos.y + ( bVertical ? 0.0f : *pSize1 ) };
-        const ImVec2 size =
-            ImGui::CalcItemSize( bVertical ? ImVec2{ thickness, -1.0f } : ImVec2{ -1.0f, thickness }, 0.0f, 0.0f );
-        bb.Max = ImVec2{ bb.Min.x + size.x, bb.Min.y + size.y };
-        return ImGui::SplitterBehavior( bb, id, bVertical ? ImGuiAxis_X : ImGuiAxis_Y, pSize1, pSize2, minSize1, minSize2,
-                                        0.0f );
-    }
-
     bool EditorWidgets::drawColorEdit( const utf8* pLabel, Color4& color, float32 labelWidth )
     {
         ImGui::PushID( pLabel );

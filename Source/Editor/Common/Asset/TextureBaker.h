@@ -91,11 +91,6 @@ namespace sw::editor
         static void applyChannelManipulations( RawImageData& rawImage, const TextureImportRule& rule, size_t totalPixels );
 
         /**
-         * @brief TextureImportConfig 에서 상대 경로에 맞는 규칙을 골라 굽습니다.
-         */
-        [[nodiscard]] static bool bakeTextureWithConfig( string_view sourcePath, string_view outputPath, const TextureImportConfig& config, TextureBakeResult* pOutResult = nullptr );
-
-        /**
          * @brief 핫 리로드가 넘긴 텍스처 파일이 소스 이미지면 굽습니다(`textures_raw/` 아래 → 옆 `textures/` 의 DDS).
          * @details 런타임은 DDS 만 읽으므로 소스 이미지는 굽는 것이 리로드입니다. 구운 DDS 의 쓰기가 다음 감시 이벤트로 와서
          *          텍스처 캐시가 다시 읽습니다. 임포트 설정은 매번 읽습니다(규칙을 고치면 재시작 없이 반영됩니다).

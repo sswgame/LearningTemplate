@@ -42,7 +42,6 @@ namespace sw::editor
         /** @brief id 로 찾습니다. 없으면 nullptr 입니다. */
         const EditorRegistration*                findRegistration( string_view id ) const { return _registered.findByName( id ); }
         const vector<const EditorRegistration*>& getRegistrations() const { return _registered.getItems(); }
-        const utf8*                              getKindName() const { return _pKindName; }
 
     private:
         const utf8*                                _pKindName;

@@ -17,6 +17,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Viewport/EditorCamera.h"
@@ -167,7 +168,6 @@ namespace sw::editor
         , _bRulerActive{ SW_FALSE }
         , _bGizmoTracking{ SW_FALSE }
         , _reservedGizmo{ 0 }
-        , _cameraMode{ CameraControlMode::Fly }
     {
         // 어떤 시각화가 기본으로 켜지는지는 시각화 표가 정한다.
         _toolbarSettings._visualizerMask = EditorViewportVisualizer::getDefaultMask();
@@ -258,15 +258,9 @@ namespace sw::editor
             }
 
             if ( io.KeyAlt )
-            {
-                _cameraMode = CameraControlMode::Orbit;
                 processOrbitInput();
-            }
             else if ( io.MouseDown[1] )
-            {
-                _cameraMode = CameraControlMode::Fly;
                 processFlyInput( deltaTime );
-            }
         }
 
         CameraComponent* pCam = EditorViewportClientInternal::getGameViewCamera();
@@ -534,7 +528,7 @@ namespace sw::editor
 
         if ( _bGizmoTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
         {
-            _gizmoUndoBefore = EditorSceneCommands::captureSnapshot( pRaw );
+            _gizmoUndoBefore = EditorTransaction::captureSnapshot( pRaw );
             _gizmoObject     = pRaw->getHandle();
         }
 
@@ -625,7 +619,7 @@ namespace sw::editor
                 for ( GameObject* pObj : listGizmo )
                 {
                     _listGizmoObject.push_back( pObj->getHandle() );
-                    _listGizmoUndo.push_back( EditorSceneCommands::captureSnapshot( pObj ) );
+                    _listGizmoUndo.push_back( EditorTransaction::captureSnapshot( pObj ) );
                     _listGizmoRelativeWorld.push_back( pObj->getPrimarySceneComponent()->getWorldMatrix() * invGroup );
                 }
             }

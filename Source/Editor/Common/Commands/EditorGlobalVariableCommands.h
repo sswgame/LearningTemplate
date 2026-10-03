@@ -32,12 +32,8 @@ namespace sw::editor
         [[nodiscard]] static bool savePreset( const string& filePath, const string& presetName );
         /** @brief 프리셋 XML을 읽어 전역 변수에 적용합니다. */
         [[nodiscard]] static bool loadPreset( const string& filePath );
-        /** @brief .gvpreset.xml 파일 경로 목록을 채웁니다. */
-        static bool collectPresetFiles( vector<string>& outList );
         /** @brief 프리셋 폴더 절대 경로를 반환합니다. */
         static string getPresetFolderPath();
-        /** @brief 컴포넌트 프리셋(.preset.xml) 폴더를 스캔합니다. */
-        static bool collectComponentPresetFiles( vector<string>& outList );
         /** @brief 컴포넌트 프리셋 폴더 절대 경로를 반환합니다. */
         static string getComponentPresetFolderPath();
         /** @brief 에디터 세션 프리셋 파일 절대 경로를 반환합니다. */

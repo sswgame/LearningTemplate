@@ -13,16 +13,6 @@
 
 namespace sw::editor
 {
-    namespace
-    {
-        struct ImGuiDX11RendererBackendInternal
-        {
-        };
-    } // namespace
-} // namespace sw::editor
-
-namespace sw::editor
-{
     SW_LOG_CALLER( "ImGuiDX11" );
 
     bool ImGuiDX11RendererBackend::initialize( class IRHIDevice* pRhiDevice )

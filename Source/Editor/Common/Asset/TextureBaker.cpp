@@ -538,15 +538,6 @@ namespace sw::editor
         }
     }
 
-    bool TextureBaker::bakeTextureWithConfig( string_view sourcePath, string_view outputPath, const TextureImportConfig& config, TextureBakeResult* pOutResult )
-    {
-        TextureImportRule rule;
-        if ( config.findMatchingRule( sourcePath, rule ) == false )
-            SW_LOG_WARNING( "No matching rule found in config for %#; using default rule.", sourcePath );
-
-        return bakeTexture( sourcePath, outputPath, rule, pOutResult );
-    }
-
     bool TextureBaker::importChangedSourceImage( string_view relativePath )
     {
         if ( FileUtil::hasExtension( relativePath, ".dds" ) )

@@ -136,12 +136,6 @@ namespace sw::editor
                                    float32 labelWidth = 120.0f );
 
         /**
-         * @brief 패널 사이의 영역 크기를 조절할 수 있는 스플리터를 그립니다.
-         */
-        static bool drawSplitter( const utf8* pId, bool bVertical, float32 thickness, float32* pSize1, float32* pSize2,
-                                  float32 minSize1 = 50.0f, float32 minSize2 = 50.0f );
-
-        /**
          * @brief Color4 색상을 편집할 수 있는 일관된 색상 편집기 위젯을 그립니다.
          */
         static bool drawColorEdit( const utf8* pLabel, Color4& color, float32 labelWidth = 120.0f );

@@ -30,7 +30,6 @@ namespace sw::editor
         , _savedGameDataRawText{}
         , _localizationJob{}
         , _gameDataJob{}
-        , _activeTab{ 0 }
         , _selectedGameDataIndex{ -1 }
         , _bLocalizationLoaded{ SW_FALSE }
         , _bGameDataLoaded{ SW_FALSE }
@@ -125,14 +124,12 @@ namespace sw::editor
         {
             if ( ImGui::BeginTabItem( "Localization Strings" ) )
             {
-                _activeTab = 0;
                 drawLocalizationTab();
                 ImGui::EndTabItem();
             }
 
             if ( ImGui::BeginTabItem( "Game Data XML Tables" ) )
             {
-                _activeTab = 1;
                 drawGameDataTab();
                 ImGui::EndTabItem();
             }

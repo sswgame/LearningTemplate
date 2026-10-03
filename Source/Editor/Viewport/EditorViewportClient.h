@@ -20,14 +20,6 @@ struct ImDrawList;
 
 namespace sw::editor
 {
-    /** @brief 에디터 카메라 제어 모드 */
-    enum class CameraControlMode : uint8
-    {
-        Fly = 0, ///< WASD + RMB 회전 (Unreal 스타일)
-        Orbit,   ///< Alt + LMB 회전, Alt + RMB 줌 (Maya/Unity 스타일)
-        Ortho2D  ///< 2D 휠 줌 & MMB 패닝
-    };
-
     /**
      * @class EditorViewportClient
      * @brief 뷰포트 캔버스 렌더링, 카메라 조작, 기즈모, 상단 툴바를 함께 관리하는 클라이언트입니다.
@@ -111,6 +103,5 @@ namespace sw::editor
         uint8                    _bRulerActive   : 1;
         uint8                    _bGizmoTracking : 1;
         [[maybe_unused]] uint8   _reservedGizmo  : 6;
-        CameraControlMode        _cameraMode;
     };
 } // namespace sw::editor
