@@ -1379,7 +1379,7 @@ SW_TEST_CASE( StringTest, FormatStringHugeFloatAndDirectWrite )
  * @brief [StringTest] strncpy 가 플랫폼과 무관하게 **언제나 끝을 맺고** 넘치면 자르는지 검증
  * @details 예전에는 플랫폼마다 답이 달랐다. Windows 는 `strncpy_s( dst, length, src, length )`
  *          라 원본이 종결자까지 들어가지 않으면 목적지를 **빈 문자열로 만들고** 잘못된 파라미터
- *          핸들러를 부른다. Linux · macOS 는 `::strncpy` 라 `length` 글자를 복사하고 **종결자를
+ *          핸들러를 부른다. Linux 는 `::strncpy` 라 `length` 글자를 복사하고 **종결자를
  *          붙이지 않는다** — 뒤이어 읽는 쪽이 버퍼 밖까지 훑는다. 이름은 "안전하게 복사" 인데
  *          어느 쪽도 그렇지 않았고, 같은 코드가 WSL 빌드에서 다르게 움직였다.
  */
