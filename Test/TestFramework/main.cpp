@@ -2,11 +2,8 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
-#include "Core/Concurrency/DeadlockDetector.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Memory/MemoryProfiler.h"
-#include "Core/Process/CrashHandler.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -16,6 +13,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/EngineBootstrap.h"
 #include "Engine/EngineOwnedServices.h"
 #include "Engine/EngineStartupSequence.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
@@ -78,7 +76,8 @@ namespace
                 sw::CompressionCodecRegistry::setActive( host._pOwned->_pCompressionCodecRegistry.get() );
                 return sw::EngineStartupResult::Succeeded;
             }
-            static void shutdown( TestHost& host ) { host._pOwned->_pCompressionCodecRegistry->shutdown(); }
+            // `EngineLoop` 과 같이 종료는 하지 않는다 — Core 슬롯이 이 레지스트리를 가리키는 동안 코덱을 비우면 뒤 단계의 해제(팩 내리기)가
+            // 빈 레지스트리를 본다. 슬롯을 끊고 통째로 없애는 것은 해제다.
             static void destroy( TestHost& host ) { host._pOwned->destroyCompressionCodecRegistry(); }
         };
 
@@ -202,91 +201,53 @@ namespace
 
 int main( int32 argc, utf8* argv[] )
 {
-    sw::HashedStringPool::initialize();
-
     // ------------------------------------------------------------------------------
-    // 0) 코어 매니저 — 로거·프로파일러·커맨드라인·엔진 서비스
+    // 0) 부트스트랩 — `EngineLoop` 과 같은 것(이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 진단 도구 · 명령줄 · 전역 변수)
     // ------------------------------------------------------------------------------
-    // 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스는 이 저장소가 만든다 — 하네스가 스무 줄을
-    // 따로 적던 자리다. 목록에 줄을 더하면 여기도 같이 자란다(엔진 호스트와 같은 기계).
+    // 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스는 저장소가 만든다. 선언 순서가 소멸 순서의 역이다:
+    // 저장소 → 부트스트랩 → 호스트(단계가 소유하는 하네스 몫) 순으로 두어, 어디서 돌아가도 호스트 · 부트스트랩 · 저장소 순으로 사라진다.
     sw::EngineOwnedServices owned;
-    owned.createAll();
+    sw::EngineBootstrap     bootstrap;
+    TestHost                host{};
+    host._pOwned = &owned;
 
-    // 단계가 소유하는 하네스 몫(설정 · 오디오 · 커맨드 스택)은 호스트가 든다 — 해제가 같은 표의 역순이다.
-    TestHost host{};
-    host._pOwned       = &owned;
+    // 시험 실행 파일은 진단 도구(교착 감지기 · 메모리 프로파일러)를 늘 켠다.
+    if ( bootstrap.initialize( owned, true ) == false )
+        return -1;
+    // 프레임워크 전용 플래그를 먼저 소비해 CommandLineManager 가 미지 인자를 경고하지 않게 한다.
+    sw::vector<utf8*> listApplicationArg = test::TestRegistry::getInstance().configureFromArgs( argc, argv );
+    bootstrap.parseCommandLine( static_cast<int32>( listApplicationArg.size() ), listApplicationArg.data() );
+
+    owned.createAll();
     host._audioSystem  = sw::IAudioSystem::create();
     host._commandStack = sw::make_unique<sw::CommandStack>();
 
-    sw::unique_ptr<sw::Logger>           logger           = sw::make_unique<sw::Logger>();
-    sw::unique_ptr<sw::DeadlockDetector> deadlockDetector = sw::make_unique<sw::DeadlockDetector>();
-    sw::unique_ptr<sw::MemoryProfiler>   memoryProfiler   = sw::make_unique<sw::MemoryProfiler>();
-    logger->initialize();
-    // 로거 직후에 설치해야 이후 어디서 죽든 콜 스택이 남는다(EngineLoop 과 같은 자리). 예전에는 테스트 실행 파일에
-    // 핸들러가 없어서 간헐 세그폴트가 "SEGFAULT" 한 단어로만 남았다 — 세 번을 보고도 자리를 몰랐다.
-    sw::CrashHandler::initialize();
-    // 리소스 루트는 로거 다음에 찾는다(EngineLoop 과 같은 순서) — 실패했을 때의 진단이 남아야 하고,
-    // 아래 `configManager->setRootDirectory` 가 여기서 정해지는 프로젝트 루트를 바로 쓴다.
-    // 예전에는 `owned._pResourceManager->initialize()` 가 대신 불러 줬는데, 그건 설정보다 뒤였다.
-    if ( sw::ResourceUtil::initialize() == false )
-    {
-        SW_LOG_ERROR( "리소스 루트를 찾지 못했습니다 — Resource/ 가 있는 위치에서 실행하십시오." );
-        return -1;
-    }
-    deadlockDetector->initialize();
-    memoryProfiler->initialize();
-    owned._pCommandLineManager->initialize();
-    owned._pGlobalVariableManager->registerPendingVariables( "Engine", sw::GlobalVariableRegistrar::getHead() );
-    sw::GlobalVariableRegistrar::getHead() = nullptr;
-    owned._pGlobalVariableManager->registerToCommandLine( owned._pCommandLineManager.get() );
-
-    // 프레임워크 전용 플래그를 먼저 소비해 CommandLineManager 가 미지 인자를 경고하지 않게 한다.
-    sw::vector<utf8*> listApplicationArg = test::TestRegistry::getInstance().configureFromArgs( argc, argv );
-    owned._pCommandLineManager->parse( static_cast<int32>( listApplicationArg.size() ), listApplicationArg.data() );
-    owned._pGlobalVariableManager->updateFromCommandLine( owned._pCommandLineManager.get() );
-
     sw::EngineServices services{};
-    owned.bindInto( services );
+    bootstrap.fillServices( services );
     // HostCreated 인 자리만 손으로 꽂는다(팩토리 · 구성별 조건부).
-    services._pAudioSystem    = host._audioSystem.get();
-    services._pMemoryProfiler = memoryProfiler.get();
-    services._pCommandStack   = host._commandStack.get();
+    services._pAudioSystem  = host._audioSystem.get();
+    services._pCommandStack = host._commandStack.get();
     sw::engine::bindEngineServices( services );
 
     // ------------------------------------------------------------------------------
     // 1) 기동 단계 — 리플렉션 · 설정 · 리소스 · 태스크 · 입력 · 씬
     // ------------------------------------------------------------------------------
     // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 표(`EngineStartupStepList.xxx`)를 위상 정렬한 순서로 단계 구조체(`TestHost::<단계>StartupStep`)를
-    // 부른다 — 하네스가 앱과 다른 순서로 서는 일이 구조로 막힌다. 종료와 해제는 아래 `shutdownAll` · `destroyAll` 이 그 역순으로 한다.
+    // 부른다 — 하네스가 앱과 다른 순서로 서는 일이 구조로 막힌다. 종료와 해제는 아래 `destroyAll` 이 그 역순으로 한다.
     sw::EngineStartupSequence startup;
-    if ( startup.initializeAll( host ) == false )
-        return -1;
-
-    SW_LOG_INFO( "Core services initialized. Running tests..." );
-    SW_LOG_INFO( " Tip: --test_filter=Suite.*  --test_filter=-RHITest.*  --test_list" );
-    int32 result = test::TestRegistry::getInstance().runAllTests();
+    int32                     result = -1;
+    if ( startup.initializeAll( host ) )
+    {
+        SW_LOG_INFO( "Core services initialized. Running tests..." );
+        SW_LOG_INFO( " Tip: --test_filter=Suite.*  --test_filter=-RHITest.*  --test_list" );
+        result = test::TestRegistry::getInstance().runAllTests();
+    }
 
     // ------------------------------------------------------------------------------
-    // 2) 종료 — 단계 종료 · 해제(표의 역순), 그 뒤 표 밖 부트스트랩(`EngineLoop::shutdownBootstrap` 과 같은 순서)
+    // 2) 종료 — 단계 종료 · 해제(표의 역순), 그 뒤 부트스트랩(`EngineLoop::shutdown` 과 같은 끝 정리)
     // ------------------------------------------------------------------------------
     startup.shutdownAll();
     startup.destroyAll();
-
-    owned._pGlobalVariableManager->shutdown();
-    // 단계에 속하지 않는 서비스를 목록의 역순으로 놓는다.
-    owned.destroyAll();
-    sw::engine::unbindEngineServices();
-
-    // 로거 스레드를 **먼저** 세운다. 그 스레드도 메모리를 풀며 프로파일러를 부르기 때문이다(`Memory::free` → `recordFree`).
-    logger->shutdown();
-    memoryProfiler->shutdown();
-    deadlockDetector->shutdown();
-    memoryProfiler.reset();
-    deadlockDetector.reset();
-
-    sw::HashedStringPool::shutdown();
-    sw::CrashHandler::shutdown();
-    logger.reset();
-
+    bootstrap.shutdown();
     return result;
 }

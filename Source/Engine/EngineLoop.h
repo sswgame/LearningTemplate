@@ -8,6 +8,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/EngineBootstrap.h"
 #include "Engine/EngineOwnedServices.h"
 #include "Engine/EngineStartupSequence.h"
 #include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
@@ -28,7 +29,6 @@ namespace sw
     class ComponentDefaults;
     class CompressionCodecRegistry;
     class ConfigManager;
-    class DeadlockDetector;
     class DebugDrawQueue;
     class EventDispatcher;
     class FrameProfiler;
@@ -41,8 +41,6 @@ namespace sw
     class IRHIDevice;
     class LiveShaderManager;
     class LocalizationManager;
-    class Logger;
-    class MemoryProfiler;
     class RenderTargetRegistry;
     class RenderThread;
     class ResourceManager;
@@ -154,12 +152,6 @@ namespace sw
         /** @brief 셰이더 강제 리로드 핫키를 처리합니다. Engine 자신의 개발 도구이므로 여기서 끝냅니다. */
         void pollShaderReloadHotkey();
 
-        /**
-         * @brief 표 밖 부트스트랩(전역 변수 · 표 밖 서비스 · 서비스 표 · 로거 · 메모리 프로파일러 · 크래시 핸들러 · 이름 풀)을 역순으로 내립니다.
-         * @details 기동 단계의 종료 · 해제(`_startup`) 뒤에 부릅니다.
-         */
-        void shutdownBootstrap();
-
         // 기동 단계의 본문이다(`EngineLoop.cpp`). 표(`EngineStartupStepList.xxx`)의 줄마다 `<단계>StartupStep` 하나이고, 빠지면 컴파일 오류다.
         // 중첩 타입이라 이 클래스의 private 을 그대로 쓰고, 바깥에서는 본문 표(`EngineStartupStepTable`)만 이름을 본다.
 #define SW_ENGINE_STARTUP_STEP( Name, ... ) struct Name##StartupStep;
@@ -176,15 +168,14 @@ namespace sw
          */
         EngineOwnedServices _owned;
 
-        unique_ptr<Logger>           _logger;
-        unique_ptr<DeadlockDetector> _deadlockDetector;
-        unique_ptr<MemoryProfiler>   _memoryProfiler;
-        unique_ptr<ConfigManager>    _configManager;
-        unique_ptr<RHI>              _rhi;
-        unique_ptr<ActionMap>        _mapDebugAction;
-        unique_ptr<IAudioSystem>     _audioSystem;
-        unique_ptr<FrameRenderer>    _frameRenderer;
-        unique_ptr<RenderThread>     _renderThread;
+        /** @brief 기동 표 밖의 부트스트랩(로거 · 크래시 핸들러 · 진단 도구 · 명령줄 · 전역 변수)입니다. 시험 하네스와 같은 것을 쓴다. `_owned` 보다 먼저 사라진다. */
+        EngineBootstrap           _bootstrap;
+        unique_ptr<ConfigManager> _configManager;
+        unique_ptr<RHI>           _rhi;
+        unique_ptr<ActionMap>     _mapDebugAction;
+        unique_ptr<IAudioSystem>  _audioSystem;
+        unique_ptr<FrameRenderer> _frameRenderer;
+        unique_ptr<RenderThread>  _renderThread;
         /** @brief GT 쪽 씬 스냅샷 빌더입니다. buildFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다. FrameRenderer 단계가 만들고 해제합니다
          *         (헤드리스 작업에는 없습니다).
          *         프레임마다 CPU 스냅샷만 exportCpuSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘깁니다.

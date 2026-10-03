@@ -57,8 +57,8 @@ _kRequiredRow = re.compile(
 _kAnyRequiredRow = re.compile(r"^\s*SW_ENGINE_SERVICE(?:_CONST)?\s*\(\s*(?P<member>_p\w+)\s*,", re.M)
 _kOptionalRow = re.compile(r"^\s*SW_ENGINE_SERVICE_OPT\s*\(\s*(?P<member>_p\w+)\s*,", re.M)
 _kBindCall = re.compile(r"\bbindEngineServices\s*\(")
-# 생성된 저장소가 EngineCreated 행을 대신 꽂아 주는 자리 (`EngineOwnedServices::bindInto`).
-_kGeneratedBindCall = re.compile(r"\bbindInto\s*\(")
+# 생성된 저장소가 EngineCreated 행을 대신 꽂아 주는 자리 (`EngineOwnedServices::bindInto`, 그것을 부르는 `EngineBootstrap::fillServices`).
+_kGeneratedBindCall = re.compile(r"\b(?:bindInto|fillServices)\s*\(")
 _kAssignment = re.compile(r"\.(?P<member>_p\w+)\s*=")
 
 

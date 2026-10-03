@@ -3,9 +3,7 @@
 #include "Engine/EngineLoop.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Common/BuildInfo.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
-#include "Core/Concurrency/DeadlockDetector.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -481,9 +479,7 @@ namespace sw
     };
 
     EngineLoop::EngineLoop()
-        : _logger{ nullptr }
-        , _deadlockDetector{ nullptr }
-        , _memoryProfiler{ nullptr }
+        : _bootstrap{}
         , _configManager{ nullptr }
         , _rhi{ nullptr }
         , _mapDebugAction{ nullptr }
@@ -507,50 +503,15 @@ namespace sw
 
     bool EngineLoop::initialize( int32 argc, utf8* pArgv[] )
     {
-        HashedStringPool::initialize();
-
-        BLOCK( "Logger / DeadlockDetector / MemoryProfiler / CommandLine / GVM 초기화" )
-        {
-            _logger = make_unique<Logger>();
-            _logger->initialize();
-
-            // 로거 직후에 설치해야 이후 어디서 죽든 콜 스택이 남는다.
-            CrashHandler::initialize();
-
-            // 리소스 루트는 **로거 · 크래시 핸들러 다음**에 찾는다. 예전에는 `App::initialize` 맨 앞,
-            // 그러니까 로거가 서기도 전에 불렀다. 루트를 찾지 못했을 때의 진단(`RootFolder` 로그와
-            // assert 메시지)이 통째로 사라졌고, 반환값도 보지 않아 실패가 조용했다.
-            // `initialize()` 는 once_flag 라 두 번째 호출은 아무것도 다시 찍지 않으므로,
-            // **첫 호출이 로거 뒤에 와야** 진단이 남는다.
-            if ( ResourceUtil::initialize() == false )
-            {
-                SW_LOG_ERROR( "리소스 루트를 찾지 못했습니다 — Resource/ 가 있는 위치에서 실행하십시오." );
-                return false;
-            }
-
-            // 크래시 리포트에 함께 나갈 값들이다. 덤프만으로는 알 수 없는 것들이다.
-            // 백엔드는 RHI 초기화 뒤에 다시 덮어쓴다(여기서는 아직 정해지지 않았을 수 있다).
-            CrashHandler::setContextValue( "Build", build::kConfigName );
-            CrashHandler::setContextValue( "Platform", build::kPlatformName );
-
+        // 이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 진단 도구(Debug) · 명령줄 · 전역 변수 — 시험 하네스와 같은 부트스트랩이다.
 #if defined( SW_DEBUG )
-            _deadlockDetector = make_unique<DeadlockDetector>();
-            _deadlockDetector->initialize();
-
-            _memoryProfiler = make_unique<MemoryProfiler>();
-            _memoryProfiler->initialize();
+        constexpr bool kDiagnostics = true;
+#else
+        constexpr bool kDiagnostics = false;
 #endif
-
-            _owned._pCommandLineManager = make_unique<CommandLineManager>();
-            _owned._pCommandLineManager->initialize();
-
-            _owned._pGlobalVariableManager = make_unique<GlobalVariableManager>();
-            _owned._pGlobalVariableManager->registerPendingVariables( "Engine", GlobalVariableRegistrar::getHead() );
-            GlobalVariableRegistrar::getHead() = nullptr;
-            _owned._pGlobalVariableManager->registerToCommandLine( _owned._pCommandLineManager.get() );
-            _owned._pCommandLineManager->parse( argc, pArgv );
-            _owned._pGlobalVariableManager->updateFromCommandLine( _owned._pCommandLineManager.get() );
-        }
+        if ( _bootstrap.initialize( _owned, kDiagnostics ) == false )
+            return false;
+        _bootstrap.parseCommandLine( argc, pArgv );
 
         BLOCK( "Core Services 생성 및 바인딩" )
         {
@@ -566,11 +527,10 @@ namespace sw
             _frameRenderer = make_unique<FrameRenderer>();
 
             EngineServices services{};
-            _owned.bindInto( services );
+            _bootstrap.fillServices( services );
             // HostCreated 인 자리만 손으로 연결한다.
-            services._pAudioSystem    = _audioSystem.get();
-            services._pMemoryProfiler = _memoryProfiler.get();
-            services._pCommandStack   = _commandStack.get();
+            services._pAudioSystem  = _audioSystem.get();
+            services._pCommandStack = _commandStack.get();
             // 렌더러는 씬이 아니라 **호스트**가 내준다. 에디터가 뷰 모드를 바꾸려고 찾는 창구다.
             services._pFrameRenderer = _frameRenderer.get();
 
@@ -600,32 +560,10 @@ namespace sw
         // 단계가 소유한 객체를 표의 역순으로 해제한다(`<단계>StartupStep::destroy`): 렌더러 쪽 → RHI → 씬 → 입력 · 오디오 → 태스크 → 셰이더 캐시 →
         // 엔진 데이터 → 리소스 → 설정 → 리플렉션 → 압축. 기동이 어디서 멈췄든 모든 단계를 해제한다.
         _startup.destroyAll();
-        shutdownBootstrap();
+        // 표 밖 부트스트랩을 세운 역순으로 내린다(시험 하네스와 같은 끝 정리).
+        _bootstrap.shutdown();
 
         MemoryProfiler::reportMemoryLeaks( "EngineLoop::shutdown" );
-    }
-
-    void EngineLoop::shutdownBootstrap()
-    {
-        // 표 밖에서 `initialize` 앞부분이 세운 것만 남았다. 세운 역순으로 내리고, 줄마다 순서의 이유가 있다.
-        // 변수를 기본값으로 되돌린다. 값 변경 콜백을 부르므로 콜백을 건 쪽(App 의 백엔드 교체)은 그 전에 떼어 두었다.
-        if ( _owned._pGlobalVariableManager != nullptr )
-            _owned._pGlobalVariableManager->shutdown();
-        // 단계에 속하지 않는 서비스(이벤트 · 지역화 · 디버그 도구 · 프로파일러 · 백엔드 등록부 · 전역 변수 · 명령줄)를 목록의 역순으로 놓는다.
-        _owned.destroyAll();
-        // 표가 가리키던 것이 모두 사라졌다. 이 뒤로 `engine::get*` 은 쓰지 않는다.
-        engine::unbindEngineServices();
-        // 로거 스레드도 메모리를 풀며 프로파일러를 부른다(`Memory::free` → `recordFree`). 프로파일러보다 먼저 세운다.
-        if ( _logger != nullptr )
-            _logger->shutdown();
-        if ( _memoryProfiler != nullptr )
-            _memoryProfiler->shutdown();
-        _memoryProfiler.reset();
-        _deadlockDetector.reset();
-        // 이름 풀은 hashed_string 을 든 객체가 모두 사라진 뒤에 내린다.
-        HashedStringPool::shutdown();
-        CrashHandler::shutdown();
-        _logger.reset();
     }
 
     void EngineLoop::beginFrame( float32 deltaSeconds )
