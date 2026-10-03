@@ -10,9 +10,8 @@
  * (`SW_INSTANCESLOT` — 간접 인자의 startInstanceLocation + 서수)으로 `g_SwVisibleInstanceIds[slot]` 을 읽어 자기 인스턴스를 찾는다
  * (`swResolveInstanceId`).
  *
- * 예전 버전은 배치마다 스레드 하나를 두고 보이는 **개수만** 세어 `instanceCount` 에 넣었다. 그러면
- * 드로우는 늘 배치 앞쪽 N 개를 그린다 — 앞이 안 보이고 뒤가 보이는 상황에서 **보이는 쪽이 사라지고
- * 안 보이는 쪽이 그려졌다**. 개수만으로는 무엇을 그릴지 고를 수가 없다. 압축 목록이 그 답이다.
+ * 주의: 보이는 **개수만** 세어 `instanceCount` 에 넣으면 드로우는 늘 배치 앞쪽 N 개를 그린다 — 앞이 안 보이고 뒤가
+ * 보이는 상황에서 **보이는 쪽이 사라지고 안 보이는 쪽이 그려진다**. 개수만으로는 무엇을 그릴지 고를 수 없어 압축 목록을 만든다.
  *
  * 개수는 디스패치 전에 0 이어야 한다 — GpuScene 이 컬링이 켜져 있을 때 0 을 올린다.
  *
@@ -20,7 +19,7 @@
  * 가시 ID 쓰기 u1.
  */
 
-// 인스턴스 원소(SwInstanceData)는 그래픽스와 같은 정의 하나를 쓴다. 예전에는 여기 베낀 구조체가 있었고 계약 검사가 보지 않았다.
+// 인스턴스 원소(SwInstanceData)는 그래픽스와 같은 정의 하나를 쓴다(베낀 구조체는 계약 검사가 보지 않는다).
 #include "instancedata.hlsli"
 
 // C++ RHIDrawIndirectCommand 와 레이아웃 일치. 여기서 쓰는 것은 instanceCount 뿐이다 — startVertexLocation 는 정점 풀 시작,

@@ -1,8 +1,8 @@
 /**
- * binding.hlsli — 리플렉션 구동 바인딩용 셰이더 헬퍼 (bindless.hlsli 대체).
+ * binding.hlsli — 리플렉션 구동 바인딩용 셰이더 헬퍼.
  *
  * - 셰이더는 `#include "binding.hlsli"` 하나만 하고, `g_ViewProj` / `g_World` 등 PassCB 필드와
- *   `swSampleShadow(uv)` / `swSampleSource(uv)` 등 헬퍼를 바로 쓴다. (예전 `GetPassCB()` 인다이렉션 없음)
+ *   `swSampleShadow(uv)` / `swSampleSource(uv)` 등 헬퍼를 바로 쓴다(접근 함수 인다이렉션 없음).
  * - 엔진(C++ ShaderBindingBinder)이 ShaderReflection 으로 PassCB 멤버 이름을 읽어 값을 채운다.
  *   따라서 이 파일의 PassCB 를 고치면 C++ 는 자동으로 따라온다 (미러 없음).
  * - 텍스처는 이름 규약: `uint g_<Name>Index` (PassCB) ↔ 엔진 리소스 `"<Name>"`.
@@ -132,11 +132,9 @@ SwBatchData swLoadBatch( uint batchIndex )
 //      버퍼 하나를 할당해 나눠 쓰는 것과 같다. 그래야 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약).
 // ------------------------------------------------------------------------------
 // **구조체가 아니라 평면 float4 배열이다.** 정점 하나가 원소 둘 — [2i] 위치, [2i+1] 노멀(w 는 안 쓴다).
-// 처음엔 `struct { float4 pos; float4 nrm; }` 였고 레이아웃도 네 백엔드가 같았다(ArrayStride 32 ·
-// 오프셋 0/16). 그런데 OpenGL 만 **같은 원소의 두 멤버를 다른 원소에서 읽었다** — 원소 번호를 노멀
-// 자리에 적어 올리면 번호는 맞는데 위치는 옆 원소 것이었고, 그 값이 셰이더를 어떻게 짜느냐에
-// 따라 달라졌다. 엔진이 준 바이트는 되읽어 전부 확인했으므로 남는 건 드라이버의 SPIR-V 경로가
-// 구조체 멤버 로드를 다루는 방식이다. 평면 배열은 멤버가 없으니 그 자리가 아예 없다.
+// 주의: `struct { float4 pos; float4 nrm; }` 로 두면 레이아웃이 네 백엔드에서 같아도(ArrayStride 32 · 오프셋 0/16)
+// OpenGL 만 **같은 원소의 두 멤버를 다른 원소에서 읽는다**(셰이더 모양에 따라 달라진다 — 드라이버의 SPIR-V 경로가
+// 구조체 멤버 로드를 다루는 방식). 평면 배열은 멤버가 없으니 그 자리가 아예 없다.
 // 색은 담지 않는다 — 정점 셰이더가 색·UV 는 **입력 스트림에서** 읽고 풀에서는 위치와 노멀만 가져간다.
 #define SW_MORPH_FLOAT4_PER_VERTEX 2u
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SRV );
@@ -147,19 +145,17 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SR
  *          (3) 예산이 모자라 이 메시가 풀에 못 들어갔을 수 있다. 셋 다 "레스트 포즈로 그린다" 로
  *          끝나야 한다 — 언리얼도 스킨 캐시가 차면 일반 경로로 되돌아간다.
  */
-// **분기 없는 한 식이어야 한다.** 처음엔 `if (base == INVALID || …) return INVALID;` 로 시작하는 평범한
-// early-return 이었다. DXC 는 그것을 SPIR-V 의 `OpSwitch(0){ default: … }` 구조로 내는데, OpenGL 드라이버가
-// 그 모양을 잘못 컴파일해 **같은 인보케이션에서 같은 UBO 멤버를 두 번 읽어 다른 값**(0 과 -1)을 냈다 —
-// 결과는 정점마다 한 칸 앞 원소를 읽는 것. DX12·DX11·Vulkan 은 같은 소스로 멀쩡했다.
-// 여기서 분기를 없애자 GL 도 같아졌다. 이 함수를 고칠 일이 있으면 분기 없이 유지할 것 —
-// 회귀는 RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 픽셀로 잡는다.
+// **분기 없는 한 식이어야 한다.** 주의: `if (base == INVALID || …) return INVALID;` 같은 early-return 을 DXC 는
+// SPIR-V 의 `OpSwitch(0){ default: … }` 구조로 내는데, OpenGL 드라이버가 그 모양을 잘못 컴파일해 **같은 인보케이션에서
+// 같은 UBO 멤버를 두 번 읽어 다른 값**(0 과 -1)을 낸다 — 결과는 정점마다 한 칸 앞 원소를 읽는 것(DX12·DX11·Vulkan 은
+// 같은 소스로 멀쩡하다). 회귀는 RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 픽셀로 잡는다.
 uint swComputeMorphElement( uint batchIndex, uint vertexId )
 {
 	const SwBatchData batch = swLoadBatch( batchIndex );
 	// **API 차이 — 이 메시의 로컬 정점 번호.** 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는지가 백엔드마다 다르다:
 	// Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 포함하고, D3D11·D3D12 는 드로우 안의 0 기반 번호다.
-	// RHITest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D 가 네 백엔드에서 이 기대를 실측한다 — 처음엔 넷 다 포함한다고 믿고
-	// 빼기만 했고, DX 에서 정점 풀 첫 메시만 모프됐다(RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 DX 에서만 떨어졌다).
+	// RHIDeviceTest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D 가 네 백엔드에서 이 기대를 실측한다 — 넷 다 포함한다고 보고
+	// 빼기만 하면 DX 에서 정점 풀 첫 메시만 모프된다(RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 DX 에서만 진다).
 	// 셰이더 파일에 백엔드 분기는 없다 — 이 헤더가 흡수한다.
 #if defined( DX11 ) || defined( DX12 )
 	const uint local = vertexId;
@@ -175,9 +171,7 @@ uint swComputeMorphElement( uint batchIndex, uint vertexId )
 
 /**
  * @brief 이 정점의 위치·노멀 — 모프 대상이면 GPU 가 변형한 값을, 아니면 입력 스트림 값을 돌려준다.
- * @details 위치와 노멀을 **함께** 돌려주는 이유는 둘이 같이 변하기 때문이다. 예전에는 위치만
- *          바꿔 주는 함수였는데, 그때는 셰이더가 노멀을 위치로 지어내고 있어서(`DemoCubeNormal`)
- *          모프된 위치에서 다시 지어내면 얼추 맞아떨어졌다. 이제 노멀이 정점 속성이므로 그냥 두면
+ * @details 위치와 노멀을 **함께** 돌려주는 이유는 둘이 같이 변하기 때문이다. 노멀은 정점 속성이므로 위치만 바꾸면
  *          **레스트 포즈의 노멀**이 남아 변형된 표면이 원래 모양대로 칠해진다.
  */
 void swLoadMorphedVertex( uint batchIndex, uint vertexId, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal )
@@ -224,10 +218,10 @@ float4 swComputeClipPosition( float4 worldPosition, float4x4 viewProj )
  * @brief 로컬 노멀을 월드로 옮겨 정규화한다. 노멀을 내보내는 **모든** 지오메트리 패스(forwardlit · gbuffer · gbuffernormal)가 이것을 쓴다.
  * @details 노멀은 위치처럼 월드 행렬로 옮기면 안 된다. 행 벡터 규약(`p' = p · M`)에서 접선은 `t · M` 으로 가므로, 수직을 지키는 노멀은
  *          `n · (M⁻¹)ᵀ` 다. 균등 스케일 · 회전뿐이면 두 식의 방향이 같아 드러나지 않지만, 비균등 스케일(스케일한 부모 아래 회전한 자식도)에서는
- *          노멀이 늘어난 축 **쪽으로** 기울어 조명이 틀린다 — 예전 식(`mul( float4( n, 0 ), world )`)이 그랬다.
+ *          노멀이 늘어난 축 **쪽으로** 기울어 조명이 틀린다(`mul( float4( n, 0 ), world )` 가 그렇다).
  *          역행렬은 필요 없다. 3x3 의 `(M⁻¹)ᵀ = cof(M) / det(M)` 이고 여인수 행렬의 행은 월드 행 셋의 외적 셋(r1×r2, r2×r0, r0×r1)이다.
  *          정규화하므로 행렬식은 **부호만** 남긴다 — 거울 변환(det < 0)에서 노멀이 안쪽을 보지 않게 한다. 한 축이 0 인 납작한 물체도
- *          보이는 면의 노멀이 남는다(월드 행렬을 곱하면 그 면의 노멀이 0 이 되어 NaN 이었다). 언리얼의 로컬 정점 팩토리도 노멀을
+ *          보이는 면의 노멀이 남는다(월드 행렬을 곱하면 그 면의 노멀이 0 이 되어 NaN 이다). 언리얼의 로컬 정점 팩토리도 노멀을
  *          역스케일 · 행렬식 부호로 옮긴다. 회귀는 RenderPassGpuTest.NormalsStayPerpendicularUnderNonUniformScale 가 G버퍼 노멀로 잡는다.
  */
 float3 swComputeWorldNormal( float3 localNormal, float4x4 world )
@@ -625,8 +619,8 @@ float swSampleAmbientOcclusion( float2 uv )
 // ------------------------------------------------------------------------------
 // 4) 픽셀 출력 — **같은 머티리얼 셰이더가 포워드와 G버퍼 양쪽에 쓰인다.**
 //    머티리얼이 셰이더 경로를 정하므로(usesMaterialShader) G버퍼 패스도 머티리얼의 .hlsl 로 그린다.
-//    그 셰이더가 SV_TARGET 하나만 내면 **G버퍼의 노멀 타깃이 클리어 값 그대로 남는다** — 실제로
-//    그랬고, 디퍼드 조명은 모든 픽셀을 같은 노멀로 계산하고 있었다(오류도 경고도 없이).
+//    그 셰이더가 SV_TARGET 하나만 내면 **G버퍼의 노멀 타깃이 클리어 값 그대로 남아**, 디퍼드 조명이 모든 픽셀을
+//    같은 노멀로 계산한다(오류도 경고도 없이).
 //    언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 자리다. 여기서는 패스가 define 을
 //    얹고(SW_PASS_GBUFFER), 출력 서명이 그 define 을 따라간다.
 // ------------------------------------------------------------------------------

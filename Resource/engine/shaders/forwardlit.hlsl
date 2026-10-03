@@ -7,8 +7,8 @@ struct PSInput
 	float2 uv                          : TEXCOORD0;
 	float3 normal                      : TEXCOORD1;
 	nointerpolation uint materialIndex : TEXCOORD2; // GPUScene 인스턴스가 준 머티리얼 원소
-	// 월드 위치를 넘긴다 — 점광의 거리 감쇠와 그림자 투영이 둘 다 이걸 쓴다. 예전엔 그림자를
-	// **로컬 좌표로 만든 UV**(localPosition.xy*0.5+0.5)로 읽고 있었다. 그건 그림자가 아니라 무늬다.
+	// 월드 위치를 넘긴다 — 점광의 거리 감쇠와 그림자 투영이 둘 다 이걸 쓴다(로컬 좌표로 만든 UV 로 그림자를 읽으면
+	// 그림자가 아니라 무늬다).
 	float3 worldPosition : TEXCOORD3;
 };
 
@@ -36,21 +36,19 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 	output.position = swComputeClipPosition(worldPosition, g_ViewProj);
 	output.worldPosition = worldPosition.xyz;
 	output.color = input.color;
-	// UV 는 정점 속성이다. 예전엔 `localPosition.xy * 0.5 + 0.5` 로 **지어내고** 있어서 — 노멀과 같은
-	// 함정이다 — 원점 중심 단위 도형이 아니면 텍스처가 엉뚱하게 붙고, 도형의 옆면과 뚜껑이
-	// 같은 자리를 물었다(도형이 XY 평면에 투영되므로 앞뒤가 겹친다).
+	// UV 는 정점 속성이다. 주의: `localPosition.xy * 0.5 + 0.5` 로 **지어내면** — 노멀과 같은 함정이다 — 원점 중심
+	// 단위 도형이 아닐 때 텍스처가 엉뚱하게 붙고, 도형의 옆면과 뚜껑이 같은 자리를 문다(XY 평면 투영이라 앞뒤가 겹친다).
 	output.uv = input.uv;
-	// 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli swComputeWorldNormal). 예전엔 "인스턴스는
-	// 균등 스케일" 이라 믿고 월드 행렬을 그대로 곱했는데, 트랜스폼은 비균등 스케일을 받으므로 늘린 메시의 조명이 틀렸다.
+	// 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli swComputeWorldNormal). 트랜스폼은
+	// 비균등 스케일을 받으므로 월드 행렬을 그대로 곱하면 늘린 메시의 조명이 틀린다.
 	output.normal = swComputeWorldNormal(localNormal, instance.world);
 	output.materialIndex = instance.materialIndex;
 	return output;
 }
 
 // 반환 타입이 **패스에 따라 갈린다** — 포워드는 SV_TARGET 하나, G버퍼 패스는 알베도·노멀 둘.
-// 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 이 파일로 그린다. 예전엔 여기가 늘
-// float4 하나였고, 그래서 **G버퍼의 노멀 타깃이 클리어 값 그대로** 남아 디퍼드 조명이 화면 전체를
-// 같은 노멀로 계산했다. 자세한 사연은 binding.hlsli 4 절.
+// 머티리얼이 셰이더 경로를 정하므로 디퍼드의 G버퍼 패스도 이 파일로 그린다. float4 하나로 고정하면 **G버퍼의 노멀
+// 타깃이 클리어 값 그대로** 남는다(binding.hlsli 4 절).
 SW_SURFACE_OUTPUT PSMain(PSInput input)
 {
 	float3 normal = normalize(input.normal);

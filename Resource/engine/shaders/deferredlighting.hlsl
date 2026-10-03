@@ -4,7 +4,7 @@
  * deferredlighting.hlsl — G버퍼를 읽어 씬의 모든 라이트로 셰이딩하는 풀스크린 패스.
  *
  * 조명 식은 포워드와 **같은 함수**(lighting.hlsli 의 swShadeLights)를 부른다. 두 경로가 각자
- * 식을 들고 있으면 반드시 갈라진다 — 이 저장소에서 "경로마다 다른 그림"이 가장 비싼 버그였다.
+ * 식을 들고 있으면 반드시 갈라진다("경로마다 다른 그림").
  *
  * 월드 위치는 깊이에서 복원한다(swComputeWorldPositionFromDepth). G버퍼에 위치를 굽지 않는 이유는
  * 첨부 하나를 통째로 아끼기 때문이고, 언리얼도 같은 선택을 한다.
@@ -36,8 +36,7 @@ float4 PSMain(PSInput input) : SV_TARGET
 	float  depth         = swSampleDepth(input.uv).r;
 	float3 worldPosition = swComputeWorldPositionFromDepth(input.uv, depth);
 
-	// 그림자는 월드 위치를 **라이트 클립 공간으로 투영해** 읽는다. 예전에는 그림자 맵을 화면 UV로
-	// 그냥 샘플하고 있었다 — 카메라를 움직이면 그늘이 물체를 따라오지 않고 화면에 붙어 있었다.
+	// 그림자는 월드 위치를 **라이트 클립 공간으로 투영해** 읽는다(화면 UV 로 샘플하면 그늘이 물체를 따라오지 않고 화면에 붙는다).
 	float  shadow = swSampleShadowAtWorld(worldPosition);
 	float3 lit    = swShadeLights(albedo, worldPosition, normal, shadow);
 

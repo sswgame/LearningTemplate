@@ -2,8 +2,7 @@
  * instancedata.hlsli — GPUScene 인스턴스 원소 하나(SwInstanceData). C++ `GpuInstance`(GpuSceneSnapshot.h)와 바이트까지 같다(112 바이트).
  *
  * 그래픽스(binding.hlsli 가 g_SwInstances 로 건다)와 컴퓨트 셋(gpucull · instancesort 는 읽고, instanceanim 은 고쳐 쓴다)이
- * **이 파일 하나**를 include 한다. 예전에는 컴퓨트 셋이 같은 구조체를 각자 베껴 들고 있었고, 그 셋의 버퍼 이름(g_Instances ·
- * g_InstancesRW)은 레이아웃 계약 검사가 보지 않아 한쪽만 고치면 원소가 아무 말 없이 어긋났다.
+ * **이 파일 하나**를 include 한다. 구조체를 셰이더마다 베끼면 한쪽만 고쳤을 때 원소가 아무 말 없이 어긋난다.
  * ShaderBindingContractTest.InstanceElementLayoutMatchesCpuStruct 가 세 이름을 모두 구운 바이너리로 대조한다.
  *
  * 스프라이트 칸(uvStart · uvEnd · tint)은 **머티리얼 인스턴스를 만들지 않고** 인스턴스마다 다른 값을 싣는 자리다(언리얼 Custom Primitive

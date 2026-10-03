@@ -7,8 +7,7 @@ struct PSInput
 };
 
 // b1(MaterialCB)을 네 백엔드에서 모두 실제 상수 버퍼로 쓸 수 있는지 지키는 픽스처다 (GPUScene 을 거치지 않는 드로우).
-// Vulkan 이 이 슬롯을 푸시 상수로 우회하던 시절에는 파이프라인 레이아웃에 없는 디스크립터를
-// 참조해 RHITest 가 segfault 했다.
+// 한 백엔드가 이 슬롯을 푸시 상수 등으로 우회하면 파이프라인 레이아웃에 없는 디스크립터를 참조해 RHIDeviceTest 가 죽는다.
 SW_DECLARE_CBUFFER( MaterialCB, SW_SLOT_MATERIAL_CB )
 {
 	float4 g_MaterialColor;

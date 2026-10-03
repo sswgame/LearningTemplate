@@ -2,8 +2,7 @@
  * lighting.hlsli — 씬 라이트 목록과 **조명 식 하나**.
  *
  * 포워드(`forwardlit.hlsl`)와 디퍼드(`deferredlighting.hlsl`)가 이 파일의 같은 함수를 부른다.
- * 조명 식을 두 벌 두면 둘은 반드시 갈라진다 — 이 저장소에서 "백엔드/경로마다 다른 그림"이 가장
- * 비싼 버그였다. 언리얼도 포워드와 디퍼드가 같은 `FDeferredLightingCommon` 을 나눠 쓴다.
+ * 조명 식을 두 벌 두면 둘은 반드시 갈라진다("경로마다 다른 그림"). 언리얼도 포워드와 디퍼드가 같은 `FDeferredLightingCommon` 을 나눠 쓴다.
  *
  * 라이트는 상수버퍼가 아니라 **구조버퍼**(t12, `SW_SLOT_LIGHT_SRV`)다 — 개수가 씬마다 다르고,
  * 패스당 한 번 걸면 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약).
@@ -35,9 +34,8 @@ SW_DECLARE_STRUCTURED_BUFFER( SwLightData, g_SwLights, SW_SLOT_LIGHT_SRV );
 
 /**
  * @brief 이 픽셀이 그림자 맵에서 얼마나 가려졌는지 — 1 이면 빛을 다 받고, 0 에 가까울수록 그늘이다.
- * @details 월드 위치를 **라이트 클립 공간으로 투영해** 샘플한다. 예전에는 그림자 맵을 화면 UV로
- *          (포워드는 심지어 로컬 좌표에서 만든 UV로) 읽었다 — 그건 그림자가 아니라 "깊이 텍스처를
- *          화면에 붙인 무늬" 다. 카메라가 움직이면 그늘이 물체를 따라오지 않고 화면에 붙어 있었다.
+ * @details 월드 위치를 **라이트 클립 공간으로 투영해** 샘플한다. 그림자 맵을 화면 UV 로 읽으면 그림자가 아니라
+ *          "깊이 텍스처를 화면에 붙인 무늬" 라, 카메라가 움직이면 그늘이 물체를 따라오지 않고 화면에 붙는다.
  * @note 맵 밖은 1(가려지지 않음)이다. 0 으로 두면 그림자 볼륨 밖이 통째로 검게 죽는다.
  */
 float swSampleShadowAtWorld( float3 worldPosition )
@@ -80,7 +78,7 @@ float3 swComputeWorldPositionFromDepth( float2 uv, float deviceDepth )
  * @param normal   월드 노멀 (정규화되어 있어야 한다)
  * @param shadow   `swSampleShadowAtWorld` 가 준 값 — `params.x` 가 켜진 빛에만 곱한다
  * @details 라이트 버퍼가 안 걸렸으면(`kInvalidIndex`) PassCB 의 키라이트 하나로 폴백한다 —
- *          라이트 컴포넌트가 없는 씬도 예전과 같은 그림이 나온다.
+ *          라이트 컴포넌트가 없는 씬도 키라이트 하나로 그려진다.
  */
 float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow )
 {

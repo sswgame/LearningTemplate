@@ -17,7 +17,7 @@
  */
 
 // binding.hlsli 의 g_SwMorphVertices 와 **같은 배치여야 한다** — 정점 하나 = float4 둘([2i] 위치,
-// [2i+1] 노멀). 구조체가 아니라 평면 배열인 이유는 그쪽 주석에 있다(OpenGL 이 구조체 멤버를 옆 원소에서 읽었다).
+// [2i+1] 노멀). 구조체가 아니라 평면 배열인 이유는 그쪽 주석에 있다(OpenGL 이 구조체 멤버를 옆 원소에서 읽는다).
 #define SW_MORPH_FLOAT4_PER_VERTEX 2u
 
 SW_DECLARE_CBUFFER( MorphParams, SW_SLOT_COMPUTE_CB )
@@ -42,8 +42,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 	const float4 restPositionElement = g_RestVertices[element];
 	const float4 restNormalElement   = g_RestVertices[element + 1u];
 
-	// 변형은 **정점 노멀 방향**으로 민다. 예전엔 원점 기준 방향을 법선 대신 썼다 — 정점에 노멀이
-	// 없던 시절의 대용이고, 원점 중심 도형에만 맞는 가정이었다(바닥 평면 같은 건 엉뚱하게 밀린다).
+	// 변형은 **정점 노멀 방향**으로 민다(원점 기준 방향은 원점 중심 도형에만 맞아 바닥 평면 같은 건 엉뚱하게 밀린다).
 	const float3 restPosition = restPositionElement.xyz;
 	const float3 restNormal   = normalize(restNormalElement.xyz);
 

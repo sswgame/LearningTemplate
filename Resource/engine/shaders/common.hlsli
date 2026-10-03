@@ -19,8 +19,8 @@
 
 #include "bindingslots.hlsli"
 
-// 토큰 붙이기(##)는 인자를 매크로 확장하기 **전에** 붙인다. 그래서 register( SW_CAT( t, slot ) ) 에는 리터럴만 넘길 수
-// 있었고, binding.hlsli 는 슬롯 번호를 손으로 다시 적어야 했다(어긋나면 엉뚱한 슬롯을 읽는다). 한 겹 더
+// 토큰 붙이기(##)는 인자를 매크로 확장하기 **전에** 붙인다. 한 겹으로는 register( SW_CAT( t, slot ) ) 에 리터럴만 넘길 수
+// 있어 슬롯 번호를 손으로 다시 적어야 한다(어긋나면 엉뚱한 슬롯을 읽는다). 한 겹 더
 // 감싸면 인자가 먼저 확장된다 — SW_CAT( t, SW_SLOT_INSTANCE_SRV ) → t4. 아래 선언 매크로는 전부 이걸 쓴다.
 #define SW_CAT_( a, b ) a##b
 #define SW_CAT( a, b )  SW_CAT_( a, b )
@@ -49,8 +49,8 @@
 
 // ------------------------------------------------------------------------------
 // 3) 구조버퍼 / 바이트주소버퍼 — 읽기 t#, 쓰기 u#.
-//    GL: u 는 명시 binding 을 두지 않고 DXC -fvk-u-shift(= SW_GL_UAV_BINDING0) 에 맡긴다. 예전엔 u0 도 binding 0 이라
-//    gpucull 의 g_Instances(t0) 와 g_IndirectArgs(u0) 가 같은 SSBO 자리를 다퉜다(검증 에러 없음, 컬링 결과가 조용히 깨짐).
+//    GL: u 는 명시 binding 을 두지 않고 DXC -fvk-u-shift(= SW_GL_UAV_BINDING0) 에 맡긴다. u0 를 binding 0 에 두면
+//    t0 과 u0 이 같은 SSBO 자리를 다툰다(검증 에러 없음, 컬링 결과가 조용히 깨짐).
 // ------------------------------------------------------------------------------
 #define SW_DECLARE_STRUCTURED_BUFFER( elemType, bufName, slot ) \
 	SW_GL_BINDING( slot ) StructuredBuffer<elemType> bufName : register( SW_CAT( t, slot ) )
@@ -144,9 +144,8 @@ struct SwVertexInput
 	// 나간다(간접 인자의 startInstance 가 배치 시작이고 입력 어셈블러가 네 API 모두에서 그 원소를 준다).
 	uint instanceSlot : SW_INSTANCESLOT;
 };
-// 풀스크린 셰이더도 이 구조체를 쓴다 — 예전 `struct VSInput { float3 pos; float4 col; }` 은 Vulkan·GL 에서
-// col 이 location 1(노멀) 을 읽었다. fullscreentriangle 이 그래서 검은 삼각형을 그렸고, 오프스크린 readback
-// 테스트(RHITest.OffscreenDrawIsReadable)가 두 백엔드에서 "클리어조차 안 보인다" 로 떨어졌다. 리플렉션 계약
-// 검사(ShaderBindingContract 5번 규칙)가 이제 이 어긋남을 바이너리에서 잡는다.
+// 풀스크린 셰이더도 이 구조체를 쓴다 — 자기 구조체(`struct VSInput { float3 pos; float4 col; }` 등)를 두면 Vulkan·GL 에서
+// col 이 location 1(노멀) 을 읽는다(RHIDeviceTest.OffscreenDrawIsReadable 이 픽셀로 잡는다). 리플렉션 계약
+// 검사(ShaderBindingContract 5번 규칙)가 이 어긋남을 바이너리에서 잡는다.
 
 #endif // SW_ENGINE_COMMON_HLSLI
