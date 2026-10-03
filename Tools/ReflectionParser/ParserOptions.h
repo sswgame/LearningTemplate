@@ -1,8 +1,7 @@
 /**
  * @file ParserOptions.h
  * @brief ReflectionParser 의 명령줄 인자입니다. 플래그 하나는 ParserOptions.cpp 의 표 한 줄입니다.
- * @details 예전에는 `main` 곁의 if 사슬이 플래그마다 같은 세 줄을 되풀이했고, 사용법 문구는 따로 손으로 적어
- *          `--include` · `--source-root` 가 빠져 있었습니다. 이제 표 한 줄이 읽기와 사용법을 함께 만듭니다.
+ * @details 표 한 줄이 읽기와 사용법을 함께 만듭니다 — 사용법 문구를 따로 손으로 적으면 플래그가 빠집니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"

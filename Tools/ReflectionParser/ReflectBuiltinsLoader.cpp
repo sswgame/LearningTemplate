@@ -54,7 +54,7 @@ namespace sw
 
             /**
              * @brief builtins 표를 읽어 TYPE · CONTAINER 줄을 적힌 순서대로 돌려줍니다. 주석 · 전처리 줄은 건너뜁니다.
-             * @details 예전에는 맵 채우기와 `ReflectBuiltins.gen.cpp` 쓰기가 파일 읽기 · 줄 모으기 · 매크로 풀기를 각자 했습니다.
+             * @details 맵 채우기와 `ReflectBuiltins.gen.cpp` 쓰기가 함께 씁니다.
              */
             static bool readRows( const string_view absPath, vector<BuiltinRow>& outListRow )
             {

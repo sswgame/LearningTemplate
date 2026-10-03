@@ -39,7 +39,6 @@ namespace sw
 
         /**
          * @brief 메모리 속 골격을 확장합니다. `$$` 는 `$` 하나, `$Name` · `${Name}` 은 변수입니다.
-         * @details 예전에는 이 함수가 변수 표의 꼴(맵 · 초기화 목록)마다 한 벌씩 두 벌 있었고, 맵 쪽은 쓰는 곳이 없었습니다.
          */
         static string expand( const string_view tpl, TemplateVars vars );
 

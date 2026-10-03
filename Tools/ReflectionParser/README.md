@@ -186,15 +186,15 @@ ReflectionParser/
 
 ## 생성되는 것
 
-헤더 `MonsterComponent.h` 가 리플렉션 대상이면 대략:
+헤더 `MeshComponent.h` 가 리플렉션 대상이면 대략:
 
 ```text
-…/MonsterComponent.gen.cpp
+…/MeshComponent.gen.cpp
   - TypeInfo (프로퍼티 이름, 오프셋, 플래그)
   - StaticType() 정의 (REFLECT_BODY 시)
   - TypeRegistrar / EnumRegistrar
   - Component면 TypeInfo 의 생성 칸 `info._addComponent = &GameObject::addComponentTo<T>` (이름으로 만드는 길은 이 칸만 본다)
-…/MonsterComponent.gen.h   (필요 시 enum 비트 연산자 등)
+…/MeshComponent.gen.h      (필요 시 enum 비트 연산자 등)
 …/FlagOps.gen.h            (ENUM(Flags) 비트 연산자 우산)
 ```
 

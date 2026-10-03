@@ -37,7 +37,7 @@ namespace sw
             /**
              * @brief 스탬프에 적은 쓰기 시각을 **부호 없는** 64 비트로 읽습니다.
              * @details 리눅스(libstdc++)의 파일 시계는 기원이 2174 년이라 지금 시각이 음수이고, 그것을 부호 없이 옮겨 적은 값은 int64 를 넘는다.
-             *          예전에는 `parseInt64` 로 읽어 리눅스에서 늘 실패했다 — 스탬프가 옛 꼴로 읽혀 매 실행이 모두 다시 파싱했고 depfile 의 의존이 비었다.
+             *          `parseInt64` 로 읽으면 리눅스에서 늘 실패한다 — 스탬프가 시각 없는 꼴로 읽혀 매 실행이 모두 다시 파싱하고 depfile 의 의존이 빈다.
              */
             static bool parseWriteTime( string_view text, uint64& outTime )
             {
@@ -56,7 +56,7 @@ namespace sw
             }
 
             /**
-             * @brief 스탬프 글을 읽습니다 — 첫 줄 원본 경로, `input <시각>`, 그리고 `dep <시각> <경로>` 줄들. 옛 꼴(시각 없음)이면 false.
+             * @brief 스탬프 글을 읽습니다 — 첫 줄 원본 경로, `input <시각>`, 그리고 `dep <시각> <경로>` 줄들. 시각이 없으면 false.
              * @details 경로에는 공백이 있을 수 있어 `dep` 줄은 시각 다음의 **나머지 전부**가 경로다.
              */
             static bool parseStamp( string_view text, StampRecord& outRecord )
@@ -260,13 +260,12 @@ namespace sw
         // 헤더를 **옮기기만** 하면 내용도 시각도 그대로라 시각 비교는 "최신" 이라고 답한다. 그런데 .gen.cpp 는 원본을 절대
         // 경로로 #include 하므로 그대로 두면 없는 경로를 가리켜 빌드가 깨진다. 스탬프에 적힌 원본 경로를 대조해 이동을 잡는다.
         //
-        // 예전에는 .gen.cpp 머리말(`// Source: …`)을 대조했는데, 리플렉트된 타입이 **없는** 헤더의 산출물에는 그 머리말이
-        // 없어서 그런 헤더는 한 번도 "최신" 이 되지 못하고 **파서가 돌 때마다 다시 파싱**됐다(Engine 의 TypeRegistry.h ·
-        // ReflectionMacros.h, GameFramework 의 한 개 — Engine 파서 호출마다 약 1 초).
+        // .gen.cpp 머리말(`// Source: …`)로 대조하면 안 된다 — 리플렉트된 타입이 **없는** 헤더의 산출물에는 그 머리말이 없어서
+        // 그런 헤더는 한 번도 "최신" 이 되지 못하고 **파서가 돌 때마다 다시 파싱**된다.
         string stampText;
         if ( FileUtil::readTextFile( paths._stampPath, stampText ) == false )
             return false;
-        // 첫 줄은 원본 경로, 다음은 `input <파싱 전에 본 쓰기 시각>` 과 `dep <시각> <경로>` 줄들. 옛 꼴(경로 한 줄)은 시각이 없으니 한 번 다시 만든다.
+        // 첫 줄은 원본 경로, 다음은 `input <파싱 전에 본 쓰기 시각>` 과 `dep <시각> <경로>` 줄들. 경로 한 줄뿐이면 시각이 없으니 한 번 다시 만든다.
         GeneratedFilesInternal::StampRecord record;
         if ( GeneratedFilesInternal::parseStamp( stampText, record ) == false || record._sourcePath != string_view( inputFile ) )
             return false;

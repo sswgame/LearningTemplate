@@ -2,12 +2,9 @@
  * @file ParserSession.h
  * @brief 파서 실행 한 번이 들고 다니는 표 묶음입니다. `main` 이 소유하고 아래로 내려 줍니다.
  *
- * @details 이 넷은 예전에 각자 `instance()` 싱글턴이었습니다. 파서가 `main` 하나짜리 실행 파일이라 당장의 해는
- *          없었지만, 표를 채우는 곳(ReflectBuiltinsLoader)과 읽는 곳(AstVisitor · CodeGenerator · AnnotationApply)이
- *          서로를 모르는 채로 전역을 통해 이어져 있어서, 무엇이 언제 채워지는지가 호출 그래프에 드러나지 않았습니다.
- *
- *          `TypeNameMap::normalize` 를 감싸던 `normalizeTypeName()` 자유 함수는 없앴습니다. 호출부 열아홉 곳이 전역을
- *          쓴다는 사실 자체를 감추고 있었습니다.
+ * @details 싱글턴으로 두지 않습니다 — 표를 채우는 곳(ReflectBuiltinsLoader)과 읽는 곳(AstVisitor · CodeGenerator · AnnotationApply)이
+ *          전역을 통해 이어지면 무엇이 언제 채워지는지가 호출 그래프에 드러나지 않습니다. 같은 이유로 `TypeNameMap::normalize` 를
+ *          감싸는 자유 함수도 두지 않습니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"

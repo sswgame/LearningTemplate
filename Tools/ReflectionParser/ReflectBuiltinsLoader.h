@@ -1,6 +1,6 @@
 /**
  * @file ReflectBuiltinsLoader.h
- * @brief ReflectBuiltins.h 스캔 → TypeNameMap/ContainerTypeMap + TypeRegistrar .gen.cpp emit.
+ * @brief ReflectBuiltins.xxx 스캔 → TypeNameMap/ContainerTypeMap + TypeRegistrar .gen.cpp emit.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -10,7 +10,7 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) parse — ReflectBuiltins.h 스캔 → TypeNameMap / ContainerTypeMap
+    // 1) parse — ReflectBuiltins.xxx 스캔 → TypeNameMap / ContainerTypeMap
     // ------------------------------------------------------------------------------
     /** @brief 맵을 비운 뒤 builtins 헤더에서 등록을 채웁니다. */
     bool loadReflectBuiltins( const string_view absPath, ParserSession& outSession );

@@ -31,8 +31,8 @@ namespace sw
 
                 if ( token[valueStart] == '"' )
                 {
-                    // 따옴표 안의 이스케이프를 푼다(`\"` · `\\` · `\n` · `\t` · `\r`). 예전에는 첫 안쪽 따옴표에서 값이 끝나
-                    // `Tooltip = "Say \"hi\""` 가 `Say \` 로 조용히 잘렸다. 생성기는 값을 다시 C++ 문자열로 이스케이프한다(`CodeEmit::escapeCppString`).
+                    // 따옴표 안의 이스케이프를 푼다(`\"` · `\\` · `\n` · `\t` · `\r`) — 첫 안쪽 따옴표에서 값을 끝내면
+                    // `Tooltip = "Say \"hi\""` 가 `Say \` 로 조용히 잘린다. 생성기는 값을 다시 C++ 문자열로 이스케이프한다(`CodeEmit::escapeCppString`).
                     for ( size_t charIndex = valueStart + 1; charIndex < token.size(); ++charIndex )
                     {
                         const utf8 character = token[charIndex];
@@ -91,7 +91,7 @@ namespace sw
         for ( size_t charIndex = 0; charIndex < args.size(); ++charIndex )
         {
             const utf8 character = args[charIndex];
-            // 따옴표 안의 `\"` 는 따옴표를 닫지 않는다. 예전에는 닫는 것으로 세어, 그 뒤의 쉼표에서 토큰이 갈라졌다(뒷조각은 "모르는 토큰").
+            // 따옴표 안의 `\"` 는 따옴표를 닫지 않는다 — 닫는 것으로 세면 그 뒤의 쉼표에서 토큰이 갈라진다(뒷조각은 "모르는 토큰").
             if ( character == '\\' && bInQuote )
             {
                 ++charIndex;
@@ -124,8 +124,7 @@ namespace sw
 
     /**
      * @details 토큰 하나는 두 꼴입니다 — 단독 토큰 `X`(플래그 · 넷 역할)와 `key = value`. 철자는 AnnotationMeta.txt 가 정규
-     *          필드명으로 바꾸고, 그 이름의 줄이 값을 넣습니다. 예전에는 스코프마다 이 루프가 한 벌씩 있었고 서로 조금씩
-     *          달랐습니다(`X = false` 를 PROPERTY 만 받고 나머지는 버렸다).
+     *          필드명으로 바꾸고, 그 이름의 줄이 값을 넣습니다. 네 스코프가 이 루프 하나를 씁니다(같은 철자가 스코프마다 다르게 동작하지 않게).
      */
     template <typename TParsed>
     void AnnotationApply::apply( const string_view annotationSpelling, TParsed& target, const AnnotationMeta& meta,
@@ -173,7 +172,7 @@ namespace sw
             const AnnotationField<TParsed>* pField = scope.findField( fieldId );
             if ( pField == nullptr )
                 continue;
-            // 숫자를 받는 줄에 숫자가 아닌 값(`Min = 0.5f` · `Max = ten`)은 거절한다. 예전에는 변환 실패를 무시해 조용히 0 이 됐다.
+            // 숫자를 받는 줄에 숫자가 아닌 값(`Min = 0.5f` · `Max = ten`)은 거절한다(조용히 0 이 되지 않게).
             float32 number{ 0.0f };
             if ( pField->_value == AnnotationValue::Float && StringUtil::parseFloat( value, number ) == false )
             {

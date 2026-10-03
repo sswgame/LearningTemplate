@@ -95,9 +95,9 @@ namespace sw
 
         /**
          * @brief 타입 표기의 **바깥 템플릿 이름**입니다(`const sw::unordered_map<K, V>` → "unordered_map"). 템플릿이 아니면 빈 값입니다.
-         * @details 컨테이너 규칙은 이것과 **같아야** 맞는다. 예전에는 표기 어디에든 규칙 이름이 들어 있으면 맞았다 — `TextureAsset` ·
+         * @details 컨테이너 규칙은 이것과 **같아야** 맞는다 — 표기 어디에든 규칙 이름이 들어 있으면 맞다고 보면 `TextureAsset` ·
          *          `Offset2D` 에 set, `Bitmap` 에 map, `Playlist` 에 list 가 들어 있어 그 프로퍼티가 `SetWrapper` · `MapWrapper` 로 나가
-         *          생성 파일 안에서 빌드가 깨졌다(컨테이너 원소 타입도 같은 길이었다).
+         *          생성 파일 안에서 빌드가 깨진다(컨테이너 원소 타입도 같다).
          */
         static string_view outerTemplateName( string_view typeSpelling )
         {

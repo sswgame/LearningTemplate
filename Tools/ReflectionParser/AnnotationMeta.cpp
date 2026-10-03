@@ -40,8 +40,7 @@ namespace sw
             return;
         const uint64 hash = hashScopeAndKey( scope, alias );
 
-        // flag 한 줄이 두 형태를 함께 맡는다. 단독 토큰 `X` 와 `X=true` 다. 예전에는 파일이 `flag.X`
-        // 와 `bool.X` 를 따로 적었고 그 둘이 어긋나 있었다(플래그 열셋 중 여섯에 bool 줄이 없었다).
+        // flag 한 줄이 두 형태를 함께 맡는다. 단독 토큰 `X` 와 `X=true` 다. 두 형태를 따로 적으면 어긋나기 쉽고,
         // 그러면 `PROPERTY( Polymorphic = true )` 가 _mapKey 에 없어 경고 없이 버려진다.
         if ( binding._kind == AnnotationBinding::Kind::Flag )
         {

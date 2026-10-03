@@ -31,7 +31,7 @@ namespace sw
 
         /**
          * @brief 애노테이션 문자열의 토큰을 대상 DTO 에 넣습니다. 스코프는 DTO 타입이 정합니다.
-         * @param outListUnknownToken AnnotationMeta.txt 에 없는 토큰을 받습니다. 예전에는 **조용히 버렸습니다** —
+         * @param outListUnknownToken AnnotationMeta.txt 에 없는 토큰을 받습니다(조용히 버리지 않습니다) —
          *        호출하는 쪽이 어느 타입 · 멤버인지 붙여 오류로 알립니다.
          */
         template <typename TParsed>

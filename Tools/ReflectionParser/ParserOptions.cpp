@@ -112,7 +112,7 @@ namespace sw
                 this->*pRow->_pValue = pValue;
         }
 
-        // 사용법만 묻는 실행 — 필수 인자를 따지지 않는다(예전에는 `--help` 가 "Unknown argument" 오류였다).
+        // 사용법만 묻는 실행 — 필수 인자를 따지지 않는다.
         if ( _bHelp )
             return true;
 

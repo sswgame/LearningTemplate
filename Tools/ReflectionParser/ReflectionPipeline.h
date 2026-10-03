@@ -1,8 +1,8 @@
 /**
  * @file ReflectionPipeline.h
  * @brief 입력 헤더 목록 → 산출물까지, 파서 실행 한 번의 흐름입니다.
- * @details 증분 판정 → 키워드 거르기 → 파싱 · 수집 → 코드젠 · 쓰기 → FlagOps 우산. 예전에는 이 흐름이 `main` 곁의 도우미
- *          묶음에 섞여 있었고, CLI · 증분 판정 · 쓰기가 한 파일에 붙어 있어 어느 하나만 다시 쓸 수 없었습니다.
+ * @details 증분 판정 → 키워드 거르기 → 파싱 · 수집 → 코드젠 · 쓰기 → FlagOps 우산. CLI(`ParserOptions`) · 증분 판정(`GeneratedFiles`)은
+ *          따로 있어 어느 하나만 다시 쓸 수 있습니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"

@@ -88,9 +88,8 @@ namespace sw
             // ------------------------------------------------------------------------------
             // B) 애노테이션 찾기 — 자식 속성(AnnotateAttr)이 정본이고, 소스 텍스트는 그것이 빠졌을 때의 폴백이다
             //
-            // 예전에는 같은 질문을 다섯 벌로 물었다: 자식 속성 검색 두 종류(하나 · 여럿), 소스 폴백 두 종류(있나 ·
-            // 읽기), 그리고 그 조합을 호출부마다 손으로. 접두사와 매크로 철자도 따로 들고 다녀서, 소스 폴백은 접두사로
-            // 표를 다시 뒤져 매크로 철자를 찾았다. 이제 애노테이션 한 벌(`ReflectAnnotationDesc`)을 넘긴다.
+            // 묻는 쪽은 애노테이션 한 벌(`ReflectAnnotationDesc` — 접두사와 매크로 철자)을 넘긴다. 자식 속성 검색과 소스 폴백을
+            // 호출부마다 조합하지 않는다.
             // ------------------------------------------------------------------------------
             struct AttrSearch
             {
@@ -229,8 +228,8 @@ namespace sw
 
             /**
              * @brief 매크로와 커서 사이에 다른 선언의 경계(`;` `{` `}`)가 없는지 봅니다. 있으면 그 매크로는 앞 선언의 것입니다.
-             * @details 따옴표 안(애노테이션 문자열)은 경계가 아닙니다. 예전에는 따옴표 안도 셌다 — `Tooltip = "…; …"` 하나로 그 타입의
-             *          `REFLECT()` 가 "앞 선언의 것" 이 되어, 멤버마다 "REFLECT() 가 없다" 는 엉뚱한 오류로 빌드가 섰다.
+             * @details 따옴표 안(애노테이션 문자열)은 경계가 아닙니다 — 따옴표 안도 세면 `Tooltip = "…; …"` 하나로 그 타입의
+             *          `REFLECT()` 가 "앞 선언의 것" 이 되어, 멤버마다 "REFLECT() 가 없다" 는 엉뚱한 오류로 빌드가 선다.
              */
             static bool hasNoDeclarationBoundary( const string_view text )
             {
@@ -343,9 +342,8 @@ namespace sw
 
             /**
              * @brief 애노테이션 토큰을 DTO 에 넣고, AnnotationMeta.txt 에 없는 토큰이 있으면 알립니다.
-             * @details 예전에는 모르는 토큰을 **조용히 버렸습니다.** 조명 컴포넌트 셋의 `PROPERTY( …, Color, … )` 가 그렇게
-             *          사라져 있었습니다 — 에디터 색 선택기 요청의 철자는 `Meta = "Color"` 이고, 멤버 이름에 color 가 들어 있어
-             *          인스펙터의 이름 휴리스틱이 증상을 가리고 있었습니다.
+             * @details 모르는 토큰을 **조용히 버리지 않습니다** — 예: 에디터 색 선택기 요청의 철자는 `Meta = "Color"` 인데 `PROPERTY( …, Color, … )`
+             *          로 적으면 버려지고, 멤버 이름에 color 가 들어 있으면 인스펙터의 이름 휴리스틱이 증상을 가립니다.
              * @return 모르는 토큰이 없으면 true
              */
             template <typename TParsed>
@@ -512,8 +510,8 @@ namespace sw
 
             /**
              * @brief 프로퍼티 타입이 사용자 별칭(`using` · `typedef`)이면 **알려진 이름**이 나올 때까지 벗겨 그 타입을 돌려줍니다.
-             * @details 예전에는 적힌 이름만 봐서 `using ScoreList = sw::vector<int32>;` · `using Health = int32;` 로 적은 프로퍼티가 모르는 타입 이름
-             *          (`ScoreList` · `Health`)으로 남았다 — 컨테이너로도 스칼라로도 읽히지 않아 직렬화가 그 값을 쓰지 못했다(JSON 에는 `"null"`).
+             * @details 적힌 이름만 보면 `using ScoreList = sw::vector<int32>;` · `using Health = int32;` 로 적은 프로퍼티가 모르는 타입 이름
+             *          (`ScoreList` · `Health`)으로 남는다 — 컨테이너로도 스칼라로도 읽히지 않아 직렬화가 그 값을 쓰지 못한다(JSON 에는 `"null"`).
              *          한 겹씩 벗기다가 컨테이너 · 표에 있는 이름(`int32` · `string` · `float3` …)이 나오면 거기서 멈추고, 별칭이 아닌 타입(구조체 ·
              *          enum)에 닿으면 그것을 쓴다. 그래서 `int32` · `sw::string` 처럼 이미 알려진 별칭은 이름 그대로다.
              */
@@ -582,9 +580,9 @@ namespace sw
 
             /**
              * @brief 베이스 지정자(`: public X`)가 가리키는 **클래스** 선언입니다. 별칭(`using` · `typedef`)은 풀어 냅니다.
-             * @details 적힌 타입의 선언을 바로 물으면 `using Base = Component; struct X : Base` 의 답은 별칭 선언이다. 예전에는 그래서 부모 FQN 이
-             *          별칭 이름(`sw::Base`)이 되어 실행 중에 부모를 못 찾았고(상속 병합 · 캐스트가 사슬 중간에서 멈춘다), 컴포넌트 판별도 별칭에서
-             *          멈춰 팩토리가 생기지 않았다. 정규 타입(canonical)은 별칭을 벗긴 레코드 타입이다.
+             * @details 적힌 타입의 선언을 바로 물으면 `using Base = Component; struct X : Base` 의 답은 별칭 선언이다 — 그러면 부모 FQN 이
+             *          별칭 이름(`sw::Base`)이 되어 실행 중에 부모를 못 찾고(상속 병합 · 캐스트가 사슬 중간에서 멈춘다), 컴포넌트 판별도 별칭에서
+             *          멈춰 팩토리가 생기지 않는다. 정규 타입(canonical)은 별칭을 벗긴 레코드 타입이다.
              */
             static CXCursor getBaseClassDeclaration( const CXCursor baseSpecifier )
             {
@@ -699,7 +697,7 @@ namespace sw
                     return;
                 }
                 // 위에서 const 가 아님을 확인했으므로 철자에 한정자가 붙지 않는다. `clang_getUnqualifiedType` 은 libclang 16 부터라 리눅스 CI 의
-                // libclang 에는 없다(2026-09-29 CI 가 잡았다).
+                // libclang 에는 없다 — 쓰지 말 것.
                 prop._typeName = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( valueType ) ) );
 
                 if ( applyAnnotation( spelling, prop, session, owner ) == false )
@@ -953,7 +951,7 @@ namespace sw
                 ParsedEnumeratorInfo enumerator;
                 enumerator._name = getCursorSpelling( cursor );
                 // 밑바탕이 부호 없는 enum 은 부호 없는 값으로 읽는다 — `clang_getEnumConstantDeclValue` 는 늘 부호 있게 넓혀 `uint8` 의 200 이
-                // -56 이 됐다(생성 코드는 컴파일러 식으로 내므로 맞지만, `--dump` 와 파서 안의 판단이 이 값을 본다).
+                // -56 이 된다(생성 코드는 컴파일러 식으로 내므로 맞지만, `--dump` 와 파서 안의 판단이 이 값을 본다).
                 const CXType integerType = clang_getCanonicalType( clang_getEnumDeclIntegerType( parent ) );
                 const bool   bUnsigned   = integerType.kind == CXType_Bool || integerType.kind == CXType_Char_U || integerType.kind == CXType_UChar ||
                                        integerType.kind == CXType_UShort || integerType.kind == CXType_UInt || integerType.kind == CXType_ULong ||
@@ -1007,7 +1005,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // G) AstVisitor — visit / onStructDecl / onEnumDecl
+    // G) AstVisitor — visit / onStructDeclaration / onEnumDeclaration
     // ------------------------------------------------------------------------------
     bool AstVisitor::visit()
     {
@@ -1028,8 +1026,8 @@ namespace sw
     }
 
     /**
-     * @details 오류는 헤더 단위로 남긴다. 예전에는 검증 오류가 순회 전체를 멈췄는데(`CXChildVisit_Break`), 헤더 여럿을 한 TU 로
-     *          묶으면 한 헤더의 오타가 나머지 헤더의 수집까지 막는다. 이제 그 헤더만 실패로 두고 계속 돌아, 오류도 헤더마다 다 나온다.
+     * @details 오류는 헤더 단위로 남긴다. 순회 전체를 멈추면(`CXChildVisit_Break`) 헤더 여럿을 한 TU 로 묶을 때 한 헤더의 오타가
+     *          나머지 헤더의 수집까지 막는다. 그 헤더만 실패로 두고 계속 돌아, 오류도 헤더마다 다 나온다.
      */
     void AstVisitor::markHeaderError( ParsedHeader& header )
     {
@@ -1038,9 +1036,9 @@ namespace sw
     }
 
     /**
-     * @details 매크로가 만든 선언은 매크로를 **쓴** 자리(전개 위치)의 파일로 셉니다. 예전에는 `clang_Location_isFromMainFile`
-     *          로 물어 매크로 위치를 통째로 밖으로 쳤는데, 그러면 `REFLECT_BODY()` 가 만드는 마커 함수가 한 번도 검사되지 않아
-     *          "REFLECT_BODY() 인데 REFLECT() 가 없다" 는 검사가 죽어 있었습니다. 여러 헤더를 한 TU 로 묶을 때도 같은 질문이면 됩니다.
+     * @details 매크로가 만든 선언은 매크로를 **쓴** 자리(전개 위치)의 파일로 셉니다. `clang_Location_isFromMainFile` 로 물으면 매크로
+     *          위치를 통째로 밖으로 쳐서 `REFLECT_BODY()` 가 만드는 마커 함수가 검사되지 않고, "REFLECT_BODY() 인데 REFLECT() 가 없다"
+     *          검사가 죽습니다. 여러 헤더를 한 TU 로 묶을 때도 같은 질문이면 됩니다.
      */
     int32 AstVisitor::findTargetIndex( const CXCursor cursor ) const
     {
@@ -1170,7 +1168,7 @@ namespace sw
                 return;
             }
             // 추상 타입(REFLECT(Abstract) · C++ 추상)은 팩토리를 내지 않는다 — 팩토리는 `addComponent<T>()` 로 T 를 만든다. 공통 기반
-            // 컴포넌트(`LightComponent`)가 첫 예다. 예전에는 컴포넌트에서 파생했으면 무조건 내 그런 기반을 둘 수 없었다.
+            // 컴포넌트(`LightComponent`)가 그 예다.
             const bool bRequiresFactory = AstVisitorInternal::isDerivedFromComponent( cursor, _pSession->_config );
             const bool bFactory         = bRequiresFactory && typeInfo._bAbstract == SW_FALSE;
             typeInfo._bReflectBody      = collector._bBodyFound == SW_TRUE ? SW_TRUE : SW_FALSE;
@@ -1215,7 +1213,7 @@ namespace sw
         BLOCK( "Collect forward-declaration facts" )
         {
             // ENUM(Flags) 의 비트 연산자 트레이트는 이 열거형을 **전방 선언** 한 뒤 특수화한다
-            // (`CodeGenerator::emitGeneratedHeader`). 그래서 기반 정수 타입이 필요하다. 정본 철자로
+            // (`CodeGenerator::makeHeaderText`). 그래서 기반 정수 타입이 필요하다. 정본 철자로
             // 받아야 `uint8` 같은 별칭이 아니라 `unsigned char` 가 나와 재선언이 어긋나지 않는다.
             enumInfo._underlyingType = AstVisitorInternal::takeString(
                 clang_getTypeSpelling( clang_getCanonicalType( clang_getEnumDeclIntegerType( cursor ) ) ) );

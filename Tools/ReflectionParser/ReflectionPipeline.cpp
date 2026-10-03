@@ -197,8 +197,7 @@ namespace sw
 
             /**
              * @brief 소스 텍스트에 리플렉션 매크로 키워드(`kSourceKeywordScan`)가 있는지 봅니다.
-             * @details 없으면 무거운 libclang 파싱을 통째로 건너뛰고 빈 산출물을 씁니다. 예전에는 키워드 표가 따로 있는데도
-             *          이 함수가 첫 글자 네 개와 철자를 손으로 들고 있었습니다.
+             * @details 없으면 무거운 libclang 파싱을 통째로 건너뛰고 빈 산출물을 씁니다. 키워드는 표(`kSourceKeywordScan`) 하나에서 옵니다.
              */
             static bool hasReflectionKeywords( const string_view source )
             {
@@ -267,7 +266,7 @@ namespace sw
                 continue;
             }
 
-            // 리플렉션 매크로가 지워진 뒤에도 예전 registrar 가 남아 계속 컴파일되지 않도록 빈 산출물을 쓴다.
+            // 리플렉션 매크로가 지워진 뒤에도 이전 registrar 가 남아 계속 컴파일되지 않도록 빈 산출물을 쓴다.
             if ( ReflectionPipelineInternal::hasReflectionKeywords( content ) == false )
             {
                 SW_LOG_TRACE( "No reflection annotations found, emitting empty output: %#", inputFile );
@@ -469,10 +468,8 @@ namespace sw
 
     /**
      * @details 이 파일은 타깃의 모든 TU 에 `/FI` 로 강제 include 됩니다. 트레이트는 열거형이 보이는 곳이면 어디서나 함께
-     *          보여야 하기 때문입니다. 그래서 **원본 헤더는 절대 들이지 않습니다.** 예전에는 `#include "<원본>.h"` 와
-     *          `#include "<원본>.gen.h"` 를 쌍으로 적었고, 그 바람에 Graphics 헤더 넷(다시 `Engine/Common/Common.h` 까지)이
-     *          모든 TU 에 들어가 다른 헤더들의 include 누락을 통째로 가렸습니다. 지금은 `.gen.h` 자신이 열거형을 전방 선언하므로
-     *          그것 하나만 모으면 됩니다.
+     *          보여야 하기 때문입니다. 그래서 **원본 헤더는 절대 들이지 않습니다** — 들이면 그 헤더가 끌어오는 것이 모든 TU 에 들어가
+     *          다른 헤더들의 include 누락을 통째로 가립니다. `.gen.h` 자신이 열거형을 전방 선언하므로 그것 하나만 모으면 됩니다.
      */
     bool ReflectionPipeline::writeDepfile() const
     {

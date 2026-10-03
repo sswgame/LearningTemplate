@@ -66,7 +66,7 @@ namespace sw
     }; // struct pathConstants
 
     // ------------------------------------------------------------------------------
-    // 4) parse — CLI 플래그 (CMake Reflection.cmake 계약)
+    // 4) parse — CLI 플래그 (cmake/Engine/ReflectionCodeGen.cmake 계약)
     // ------------------------------------------------------------------------------
     struct cliConstants
     {

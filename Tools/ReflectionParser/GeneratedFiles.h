@@ -1,8 +1,8 @@
 /**
  * @file GeneratedFiles.h
  * @brief 입력 헤더 하나가 만드는 산출물(.gen.cpp · .gen.h · 스탬프)의 경로 · 쓰기 · 증분 판정입니다.
- * @details 예전에는 "내용이 같으면 쓰지 않기" 가 세 곳(.gen.cpp · .gen.h · FlagOps 우산)에, 머리말의 원본 경로 읽기가 두 곳
- *          (증분 판정 · 이름 충돌 검사)에 각자 있었고, 두 읽기는 공백을 다르게 잘랐습니다.
+ * @details "내용이 같으면 쓰지 않기"(.gen.cpp · .gen.h · FlagOps 우산)와 머리말의 원본 경로 읽기(증분 판정 · 이름 충돌 검사)가
+ *          여기 한 벌입니다 — 벌마다 두면 공백을 다르게 자르는 식으로 어긋납니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -20,7 +20,7 @@ namespace sw
         /**
          * @brief 마지막으로 **성공한 생성**의 시각을 담는 빈 파일(`<.gen.cpp>.stamp`)입니다.
          * @details 산출물은 내용이 같으면 다시 쓰지 않습니다 — 쓰면 그 파일을 include 하는 TU 가 전부 다시 컴파일됩니다. 그래서
-         *          산출물의 시각은 "마지막 생성" 이 아니라 "내용이 마지막으로 바뀐 때" 이고, 예전처럼 그것으로 최신인지 물으면
+         *          산출물의 시각은 "마지막 생성" 이 아니라 "내용이 마지막으로 바뀐 때" 이고, 그것으로 최신인지 물으면
          *          파서 · 템플릿 · 설정을 고친 뒤로 **모든 파서 실행이 내용이 안 바뀐 헤더를 매번 다시 파싱**합니다(실측: 아무것도
          *          안 바뀐 Engine 재실행이 Debug 에서 2.2 초). 스탬프 이름은 CMake 의 `ReflectBuiltins.gen.cpp.stamp` 와 같은 규칙입니다.
          */
@@ -30,8 +30,8 @@ namespace sw
     /**
      * @brief 산출물이 기대는 파일 하나 — 입력이 include 한 헤더와 그것을 본 쓰기 시각입니다(스탬프의 `dep <시각> <경로>` 줄).
      * @details 산출물은 입력 헤더만이 아니라 그 헤더가 include 한 헤더에도 기댄다 — `PROPERTY() ScoreList _scores;` 의 컨테이너 종류는 다른 헤더의
-     *          `using ScoreList = …` 가 정한다. 예전에는 그 헤더가 바뀌어도 ninja 도(의존이 반사된 헤더뿐) 파서도(스탬프가 입력만 봄) 다시 돌지 않아,
-     *          생성 코드가 옛 컨테이너 래퍼로 직렬화했다.
+     *          `using ScoreList = …` 가 정한다. 이것을 적지 않으면 그 헤더가 바뀌어도 ninja 도 파서도 다시 돌지 않아 생성 코드가 옛 컨테이너
+     *          래퍼로 직렬화한다.
      */
     struct StampDependency
     {
@@ -53,12 +53,12 @@ namespace sw
         /**
          * @brief 스탬프를 씁니다. 내용은 원본 경로 한 줄과 `input <쓰기 시각>` 한 줄입니다.
          * @details `inputWriteTime` 은 **파싱하려고 읽기 전에** 잰 입력의 쓰기 시각입니다. 다음 실행은 이 값이 지금 시각과 **같을 때만** 최신으로
-         *          봅니다(`IncrementalCheck::isUpToDate`). 예전에는 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 봐서, 파싱하는 동안
-         *          저장한 편집이 "스탬프보다 오래됐다" 며 다음 실행에서도 무시됐다 — 그 헤더를 다시 저장할 때까지.
+         *          봅니다(`IncrementalCheck::isUpToDate`). 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 보면 파싱하는 동안 저장한
+         *          편집이 "스탬프보다 오래됐다" 며 다음 실행에서도 무시된다 — 그 헤더를 다시 저장할 때까지.
          */
         static bool writeStamp( const string& stampPath, const string& inputFile, uint64 inputWriteTime, const vector<StampDependency>& listDependency );
 
-        /** @brief 스탬프에 적힌 의존(`dep` 줄)의 경로를 `outListPath` 에 더합니다. 스탬프가 없거나 옛 꼴이면 false 입니다. depfile 을 모을 때 씁니다. */
+        /** @brief 스탬프에 적힌 의존(`dep` 줄)의 경로를 `outListPath` 에 더합니다. 스탬프가 없거나 시각이 없는 꼴이면 false 입니다. depfile 을 모을 때 씁니다. */
         static bool readStampDependencies( const string& stampPath, vector<string>& outListPath );
 
         /**
@@ -74,7 +74,7 @@ namespace sw
         /** @brief 산출물 머리말(`// Source: …`)에 적힌 원본 경로입니다. 없으면 빈 뷰입니다. */
         static string_view findRecordedSourcePath( const string_view generatedText, const ParserConfig& config );
 
-        /** @brief CMake 가 구성 때 심어 둔 빈 자리 표시자(또는 등록이 하나도 없는 옛 파서 산출물)인지 봅니다. */
+        /** @brief CMake 가 구성 때 심어 둔 빈 자리 표시자(또는 등록이 하나도 없는 파서 산출물)인지 봅니다. */
         static bool isPlaceholder( const string_view generatedText, const ParserConfig& config );
     };
 

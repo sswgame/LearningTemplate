@@ -37,9 +37,8 @@ namespace sw
 
             /**
              * @brief 그대로 넣는 줄(`REGISTER_ANNOTATION_FIELD`)의 값 변환입니다.
-             * @details 단독 토큰은 값이 비어 있고, 빈 값은 참입니다(`PROPERTY( ReadOnly )`). `X = false` 는 거짓을 넣습니다 —
-             *          예전에는 PROPERTY 만 그랬고 나머지 세 스코프는 `X = false` 를 **무시**해서, 같은 철자가 스코프마다
-             *          다르게 동작했습니다.
+             * @details 단독 토큰은 값이 비어 있고, 빈 값은 참입니다(`PROPERTY( ReadOnly )`). `X = false` 는 거짓을 넣습니다 — 네 스코프
+             *          모두 같은 규칙입니다.
              */
             template <typename TMember>
             static TMember convertValue( const string_view value )
@@ -98,7 +97,7 @@ namespace sw
             // ------------------------------------------------------------------------------
             // C) 손으로 넣는 줄(`REGISTER_ANNOTATION_FIELD_FN`)의 Fn
             // ------------------------------------------------------------------------------
-            /** @brief 쉼표 · 세미콜론으로 나눈 옛 이름들을 붙입니다. `Alias = "OldA, OldB"`. */
+            /** @brief 쉼표 · 세미콜론으로 나눈 별칭(이름을 바꾸기 전의 이름)들을 붙입니다. `Alias = "OldA, OldB"`. */
             template <typename TParsed>
             static void appendAlias( TParsed& target, const string_view value )
             {
@@ -134,7 +133,7 @@ namespace sw
                 }
             }
 
-            /** @brief `Old:Current` 목록을 열거자 옛 이름으로 붙입니다. `ValueAlias = "OldIdle:Idle"`. */
+            /** @brief `Old:Current` 목록을 열거자 별칭으로 붙입니다. `ValueAlias = "OldIdle:Idle"`. */
             static void appendValueAlias( ParsedEnumInfo& target, const string_view value )
             {
                 const string_splitter parts( value, { ",", ";" } );

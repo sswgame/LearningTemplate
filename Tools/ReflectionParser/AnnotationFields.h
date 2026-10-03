@@ -3,11 +3,8 @@
  * @brief 애노테이션 필드 표입니다. `PredefinedAnnotationField.xxx` 한 줄이 필드 하나의 적용 · 코드젠 · 검증을 모두 정합니다.
  * @details 스코프(REFLECT · ENUM · PROPERTY · FUNCTION)마다 표가 하나 있고, 수집 DTO 타입으로 꺼냅니다
  *          (`getAnnotationScope<ParsedPropertyInfo>()`). 토큰을 넣는 쪽(`AnnotationApply`)과 생성 코드를 쓰는 쪽
- *          (`CodeGenerator`)이 **같은 표를 돕니다** — 둘 다 필드 이름을 손으로 들지 않습니다.
- *
- *          예전에는 표가 적용에만 쓰이고, 코드젠은 플래그 열몇 개를 `emit.flagIf( prop._bReadOnly … )` 로 손으로
- *          나열했습니다. README 는 "emit 순서도 그 줄에서 전개된다" 고 적었지만 사실이 아니어서, 문서대로 `.xxx` 한 줄과
- *          DTO 멤버만 더하면 **파서는 값을 읽고 코드젠은 아무 말 없이 버렸습니다.**
+ *          (`CodeGenerator`)이 **같은 표를 돕니다** — 둘 다 필드 이름을 손으로 들지 않습니다. 그래서 `.xxx` 한 줄과 DTO 멤버만
+ *          더하면 읽기와 코드젠이 함께 따라옵니다(코드젠이 필드를 손으로 나열하면 파서는 값을 읽고 코드젠은 아무 말 없이 버린다).
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -101,8 +98,7 @@ namespace sw
     {
         /**
          * @brief Editor · Runtime 필드를 표 순서대로 씁니다.
-         * @details Editor 묶음은 쓸 것이 있을 때만 `#if !defined( SW_SHIPPING )` 로 감쌉니다(예전에는 비어 있어도 빈 블록을
-         *          남겼습니다).
+         * @details Editor 묶음은 쓸 것이 있을 때만 `#if !defined( SW_SHIPPING )` 로 감쌉니다(빈 블록을 남기지 않습니다).
          * @param prefix 생성 코드의 대상 식. 예: "p._metadata." · "info._metadata." · "info."
          */
         template <typename TParsed>

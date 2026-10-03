@@ -2,8 +2,7 @@
  * @file ParserConfig.h
  * @brief parser_config.defaults.json(+ 로컬 parser_config.json)과 toolchain_config.json 에서 읽은 설정입니다.
  * @details clang 인자 · SDK 경로 · 코드젠 표식 · 모듈 규칙 · 튜닝이 여기 있습니다. 파서 실행 한 번에 한 번 읽어
- *          `ParserSession::_config` 로 내려 보냅니다. 예전에는 `ParserContext::getSharedConfig()` 라는 프로세스 전역이었고,
- *          표 넷을 싱글턴에서 세션으로 옮긴 뒤에도 이것 하나가 남아 호출부 스무 곳이 전역을 통해 이어져 있었습니다.
+ *          `ParserSession::_config` 로 내려 보냅니다(프로세스 전역으로 두지 않습니다).
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -56,9 +55,9 @@ namespace sw
         vector<string> _listTypeStripPrefix;
         /**
          * @brief 실제로 읽은 설정 파일들입니다.
-         * @details **설정도 산출물의 입력입니다.** 코드젠 표식 · 금지 타입 메시지 · 모듈 규칙이 여기서 오는데, 예전에는 증분
-         *          판정이 이 파일들의 시각을 보지 않아 설정을 고쳐도 산출물이 옛 모양으로 남았습니다(CMake 는 DEPENDS 로 파서를
-         *          다시 부르지만 파서가 스스로 "최신" 이라며 건너뛰었습니다).
+         * @details **설정도 산출물의 입력입니다.** 코드젠 표식 · 금지 타입 메시지 · 모듈 규칙이 여기서 오므로 증분 판정이 이 파일들의
+         *          시각도 봅니다 — 보지 않으면 설정을 고쳐도 산출물이 옛 모양으로 남습니다(CMake 는 DEPENDS 로 파서를 다시 부르지만
+         *          파서가 스스로 "최신" 이라며 건너뛴다).
          */
         vector<string>          _listLoadedFile;
         uint32                  _sourceLookbackBytes;
