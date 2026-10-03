@@ -130,10 +130,9 @@ namespace sw
             _mapMonster[hashed_string( monsterDef._id.c_str() )] = monsterDef;
         }
 
-        // **읽었는데 하나도 없으면 실패다.** 위의 두 실패 길(파일 없음 · 루트 없음)은 폴백을
-        // 심는데 여기만 안 심어서, `<Monster>` 를 `<monster>` 로 적은 오타 하나가 "0 개 로드"
-        // 라는 밝은 Info 한 줄과 **텅 빈 카탈로그**가 됐다. 그러면 모든 `findMonster` 가
-        // nullptr 이고, 그 널을 다루는 쪽이 조용히 아무것도 안 한다.
+        // **읽었는데 하나도 없으면 실패다.** 위의 두 실패 길(파일 없음 · 루트 없음)처럼 폴백을
+        // 심는다. 주의: 여기서 성공으로 넘기면 `<Monster>` 를 `<monster>` 로 적은 오타 하나가
+        // **텅 빈 카탈로그**가 되고, 모든 `findMonster` 가 nullptr 이라 그 널을 다루는 쪽이 조용히 아무것도 안 한다.
         if ( _mapMonster.empty() )
         {
             SW_LOG_WARNING( "No <Monster> entries in %# — using fallback monster definitions.", absPath );

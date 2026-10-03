@@ -15,10 +15,9 @@ namespace sw
         : _listMove{}
         , _listSpecies{}
     {
-        // **여기서 심는다.** 예전에는 `findSpecies()` · `findMove()` 가 비어 있으면 그 자리에서
-        // `const_cast` 로 자기 자신을 고쳐 폴백을 심었다. 그 둘은 `const` 이고 이 카탈로그는
-        // 서비스라 여러 스레드가 동시에 읽는다. 읽기인 줄 알고 부른 함수가 벡터를 키우고
-        // 있었다. 게다가 `clear()` 가 아무 뜻도 없었다(다음 조회가 다시 채운다).
+        // **여기서 심는다.** `findSpecies()` · `findMove()` 는 `const` 이고 이 카탈로그는 서비스라
+        // 여러 스레드가 동시에 읽는다 — 조회가 폴백을 심으면(`const_cast`) 읽기인 줄 알고 부른 함수가
+        // 벡터를 키우고, `clear()` 도 뜻을 잃는다(다음 조회가 다시 채운다).
         seedFallback();
     }
 
@@ -125,8 +124,8 @@ namespace sw
                     if ( StringUtil::isNullOrEmpty( pMoveId ) )
                         break;
 
-                    // 모르는 기술 id 는 **말하고 나서** 0 번으로 떨어진다. 예전에는 조용히
-                    // 떨어져서, 철자 하나 틀리면 그 종족의 기술이 모두 첫 기술로 바뀌었다.
+                    // 모르는 기술 id 는 **말하고 나서** 0 번으로 떨어진다 — 조용히 떨어지면
+                    // 철자 하나 틀렸을 때 그 종족의 기술이 모두 첫 기술로 바뀐 것을 모른다.
                     const int32 moveIndex = findMoveIndex( pMoveId );
                     if ( moveIndex < 0 )
                         SW_LOG_WARNING( "Unknown move id '%#' on species '%#' — using the first move.", pMoveId, def._id );

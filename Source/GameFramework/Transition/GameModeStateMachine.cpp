@@ -38,9 +38,8 @@ namespace sw
 
     void GameModeStateMachine::unregisterHandler( const hashed_string& mode )
     {
-        // **먼저 표에서 뗀 다음에 알린다.** 예전에는 `onExit` 을 부르고 나서 그때까지 들고 있던
-        // 반복자로 `erase` 했다. 핸들러가 `onExit` 안에서 무엇이든 등록 · 해제하면 그 반복자는
-        // 이미 죽은 것이다. 그리고 `shared_ptr` 를 **지역 변수로 받아** 두어야 한다. 표에서
+        // **먼저 표에서 뗀 다음에 알린다.** `onExit` 을 부르고 나서 그때까지 들고 있던 반복자로
+        // `erase` 하면, 핸들러가 `onExit` 안에서 무엇이든 등록 · 해제했을 때 그 반복자는 이미 죽은 것이다. 그리고 `shared_ptr` 를 **지역 변수로 받아** 두어야 한다. 표에서
         // 떼는 순간이 마지막 참조면 핸들러는 `onExit` 을 **실행하는 도중에** 파괴된다.
         shared_ptr<IGameModeHandler> pHandler = findHandler( mode );
         if ( pHandler == nullptr )
@@ -81,7 +80,7 @@ namespace sw
         // 그리고 **나가는 중에는 어느 모드에도 있지 않다.** 여기서 `_currentMode` 를 비우지
         // 않으면, `onExit` 안에서 `unregisterHandler( oldMode )` 를 부를 때 그쪽이 "아직 현재
         // 모드다" 로 보고 `onExit` 을 **한 번 더** 부른다. 나머지 두 나가는 길
-        // (`unregisterHandler` · `reset`)은 이미 상태를 먼저 옮기고 알린다. 여기만 달랐다.
+        // (`unregisterHandler` · `reset`)도 상태를 먼저 옮기고 알린다.
         const shared_ptr<IGameModeHandler> pOldHandler = findHandler( oldMode );
         _previousMode                                  = oldMode;
         _currentMode                                   = {};

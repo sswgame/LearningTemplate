@@ -31,9 +31,8 @@ namespace sw
 
     /**
      * @brief 종족 한 행입니다(기초 스탯 + 기술 슬롯).
-     * @details 기술 슬롯 수는 **데이터가 정합니다.** 예전에는 `_move0` / `_move1` 두 칸 고정이라
-     *          기술이 넷인 턴제 게임을 이 킷으로 만들 수 없었습니다. 장르 공통 뼈대가 게임 하나의
-     *          스키마를 박아 두고 있던 셈입니다. XML 은 `move0`, `move1`, ... 를 없을 때까지 읽습니다.
+     * @details 기술 슬롯 수는 **데이터가 정합니다** — 장르 공통 뼈대가 게임 하나의 스키마(슬롯 두 칸 등)를
+     *          박아 두지 않습니다. XML 은 `move0`, `move1`, ... 를 없을 때까지 읽습니다.
      */
     struct SpeciesDef
     {
@@ -122,9 +121,7 @@ namespace sw
 
         /**
          * @brief id → 행 인덱스입니다. 벡터가 기준이고 이것은 조회용입니다.
-         * @details 예전에는 id 조회가 벡터 선형 탐색 + string 비교였습니다. 형제 킷인 ActionCombat 의
-         *          MonsterDataCatalog 는 같은 문제를 이미 hashed_string 맵으로 풀고 있었는데,
-         *          한 프레임워크 안에서 같은 일을 두 방식으로 하고 있었습니다. 인덱스는 SpeciesDef 에
+         * @details 형제 킷인 ActionCombat 의 MonsterDataCatalog 와 같은 hashed_string 맵 조회입니다. 인덱스는 SpeciesDef 에
          *          적혀 직렬화되므로 **벡터의 자리는 그대로 두고** 맵만 곁에 둡니다.
          */
         unordered_map<hashed_string, size_t> _mapMoveIndex;

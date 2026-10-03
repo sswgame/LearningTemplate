@@ -54,7 +54,7 @@ namespace sw
         void  setPierceCount( int32 pierceCount );
         /**
          * @brief 다른 쪽이 쏜 투사체를 맞혀 지우는 요격탄인지입니다(기본 아님 — 언리얼의 투사체 채널 반응을 Block 으로 둔 것).
-         * @details 예전에는 "투사체끼리는 지나친다" 가 고정 규칙이라 요격탄을 만들 수 없었습니다. 같은 쪽이 쏜 것끼리는 이 값과 무관하게 지나칩니다.
+         * @details 같은 쪽이 쏜 것끼리는 이 값과 무관하게 지나칩니다.
          */
         bool isInterceptor() const { return _bInterceptor; }
         void setInterceptor( bool bInterceptor );

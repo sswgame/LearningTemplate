@@ -17,11 +17,9 @@ namespace sw
     {
         /**
          * @brief 이 킷의 조절 값입니다. **한 자리에 모아 둡니다.**
-         * @details 여기 흩어져 있던 숫자 중 `0.85` 는 두 자리에 각각 적혀 있었습니다. `update()` 가
-         *          대시할 때 `_dashCooldown = 0.85f` 로 넣고, 게이지를 만드는 `getDashFill()` 이
-         *          **자기 몫으로 또 `kDashCd = 0.85f` 를 들고** 나눗셈을 했습니다. 값을 바꾸면
-         *          한쪽만 따라가서 **게이지가 거짓말을 합니다.** 쿨다운을 1.2 초로 늘리면
-         *          게이지는 0.85 초에 이미 가득 찹니다. 나머지도 같은 이유로 함께 모았습니다.
+         * @details 같은 값을 두 자리에 적지 말 것 — 예컨대 대시 쿨다운은 `update()` 가 넣는 값이자
+         *          `getDashFill()` 의 분모라, 한쪽만 바꾸면 **게이지가 거짓말을 합니다**(쿨다운을 1.2 초로
+         *          늘렸는데 게이지는 0.85 초에 가득 차는 식).
          */
         struct ActionRoomTuning
         {
@@ -175,7 +173,7 @@ namespace sw
         {
             _dashCooldown = ActionRoomTuning::kDashCooldown;
             // **줄이지 않는다.** 그냥 대입하면 맞고 얻은 0.7 초짜리 무적이 대시 한 번에
-            // 0.22 초로 **깎인다.** 대시가 피해를 덜 보게 해야 하는데 오히려 더 보게 했다.
+            // 0.22 초로 **깎인다.** 대시가 피해를 덜 보게 해야 하는데 오히려 더 보게 된다.
             _invulnTimer         = MathUtil::max( _invulnTimer, ActionRoomTuning::kDashInvulnerable );
             result._bDashStarted = SW_TRUE;
         }

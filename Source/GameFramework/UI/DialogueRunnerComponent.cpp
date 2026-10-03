@@ -34,9 +34,8 @@ namespace sw
 
             /**
              * @brief 조건식이 아는 비교 연산자 표입니다. 연산자는 **이 표 하나가** 정합니다.
-             * @details 예전에는 `==` 와 `!=` 를 손으로 따로 찾아, 표에 없는 `>=` · `<=` · `>` · `<` 가 든 식(`flag.gold >= 10`)은 **식 전체가
-             *          플래그 키**로 읽혀 늘 거짓이었다. 같은 자리에서는 앞에 적힌 것이 이기므로 두 글자 연산자를 먼저 둔다 — `>=` 의 `>` 를
-             *          먼저 맞추면 오른쪽이 `=10` 이 된다.
+             * @details 표에 없는 연산자가 든 식(`flag.gold >= 10`)은 **식 전체가 플래그 키**로 읽혀 늘 거짓이 된다. 같은 자리에서는
+             *          앞에 적힌 것이 이기므로 두 글자 연산자를 먼저 둔다 — `>=` 의 `>` 를 먼저 맞추면 오른쪽이 `=10` 이 된다.
              */
             static constexpr CompareOpToken kArrCompareOp[] = {
                 {">=", CompareOp::GreaterEqual},
@@ -332,7 +331,7 @@ namespace sw
         {
             keyText                 = conditionView.substr( 0, opPos );
             const string_view right = StringUtil::trim( conditionView.substr( opPos + string_view{ pOpToken->_pToken }.size() ) );
-            // 읽지 못한 식은 거짓이다 — 예전에는 알리기만 하고 기본값 1 과 비교해, `!=` 식은 오히려 참 쪽으로 갔다.
+            // 읽지 못한 식은 거짓이다 — 알리기만 하고 기본값과 비교하면 `!=` 식이 오히려 참 쪽으로 간다.
             if ( StringUtil::parseInt( right, expectedVal ) == false )
             {
                 SW_LOG_WARNING( "Dialogue condition '%#' compares with '%#', which is not a number - the condition is false", condition, right );
@@ -342,7 +341,7 @@ namespace sw
         }
 
         string_view flagKey = StringUtil::trim( keyText );
-        // 표에 없는 연산자 글자(`=` 하나 · `!flag`)가 남았으면 키가 아니다 — 예전처럼 식 전체를 키로 읽으면 늘 0 이라 말없이 거짓이었다.
+        // 표에 없는 연산자 글자(`=` 하나 · `!flag`)가 남았으면 키가 아니다 — 식 전체를 키로 읽으면 늘 0 이라 말없이 거짓이 된다.
         if ( flagKey.empty() || flagKey.find_first_of( "=<>!" ) != string_view::npos )
         {
             SW_LOG_WARNING( "Dialogue condition '%#' is not understood (operators: == != >= <= > <) - the condition is false", condition );
@@ -362,8 +361,8 @@ namespace sw
         if ( actionCmd.empty() )
             return;
 
-        // **값으로 받는다.** 예전에는 `const string&` 라서 `node._actionCommand` 를, 곧 `_graph`
-        // 가 쥔 문자열을 가리켰다. 아래 `_onEvent` 핸들러가 `loadGraphFile()` 로 그래프를 갈면
+        // **값으로 받는다.** `const string&` 로 받으면 `node._actionCommand`, 곧 `_graph` 가 가진
+        // 문자열을 가리킨다. 아래 `_onEvent` 핸들러가 `loadGraphFile()` 로 그래프를 갈면
         // 그 참조는 죽은 메모리가 되는데, **그 뒤로도 계속 읽는다**(`startsWith` · `substr`).
         SW_LOG_TRACE( "Execute Action: %#", actionCmd );
         if ( _onEvent.isBound() )

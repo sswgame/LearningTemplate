@@ -20,14 +20,12 @@ namespace sw
         return fallback;
     }
 
-    // 셋 다 `StringUtil` 의 파서를 쓴다. 예전에는 여기서 손수 풀었는데 그 사본들이 공통으로
-    // 두 가지를 잃고 있었다.
-    //   (1) **못 읽은 것과 0 을 구별 못 했다.** `strtol`/`strtof` 는 실패를 0 으로 반환하므로
-    //       `maxPartySize=six` 같은 오타가 조용히 0 이 됐다. fallback 이 있는데도 안 쓰였다.
-    //   (2) **대소문자를 반만 봤다.** bool 은 `true`/`True`/`1` 만 알아서 `TRUE` · `yes` · `on`
-    //       은 모두 fallback 으로 떨어졌다. `StringUtil::parseBool` 은 처음부터 그것들을 안다.
-    // 덤으로 손수 푸는 쪽은 매번 `string` 을 하나씩 만들었다(파서는 `string_view` 로 받는다).
-    // 값이 있는데 못 읽으면 알린다(없거나 빈 값은 조용히 fallback) — `KeyValueFile` 의 형제 조회와 같은 규칙이다. 예전에는 셋 다 말없이 fallback 이었다.
+    // 셋 다 `StringUtil` 의 파서를 쓴다. 손수 풀지 말 것 — 주의할 것 둘:
+    //   (1) **못 읽은 것과 0 을 구별해야 한다.** `strtol`/`strtof` 는 실패를 0 으로 반환하므로
+    //       `maxPartySize=six` 같은 오타가 조용히 0 이 되고 fallback 이 안 쓰인다.
+    //   (2) **bool 은 대소문자를 가리지 않는다.** `StringUtil::parseBool` 은 `TRUE` · `yes` · `on` 도 안다.
+    // 파서는 `string_view` 로 받으므로 `string` 을 만들지 않는다.
+    // 값이 있는데 못 읽으면 알린다(없거나 빈 값은 조용히 fallback) — `KeyValueFile` 의 형제 조회와 같은 규칙이다.
     int32 GameData::getCustomPropertyInt( string_view key, int32 fallback ) const
     {
         const string_view text = getCustomProperty( key );
@@ -74,8 +72,8 @@ namespace sw
         if ( ResourceUtil::hasResource( path ) == false )
             return false;
 
-        // **먼저 비운다.** 형제인 `SpeciesCatalog::loadFromResource` 는 처음부터 그렇게 한다.
-        // 여기만 안 비워서, 팩을 바꿔 다시 읽으면 앞 팩의 커스텀 프로퍼티가 그대로 남았다.
+        // **먼저 비운다.** 형제인 `SpeciesCatalog::loadFromResource` 도 그렇게 한다.
+        // 주의: 안 비우면 팩을 바꿔 다시 읽을 때 앞 팩의 커스텀 프로퍼티가 그대로 남아,
         // 새 팩에 없는 키를 물으면 **없어진 팩의 값**이 나온다.
         *this = GameData{};
 

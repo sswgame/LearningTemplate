@@ -23,8 +23,7 @@ namespace sw
         void setGroundY( float32 groundY ) { _groundY = groundY; }
         /**
          * @brief 위로 튕겨 냅니다. 땅에 붙어 있던 상태를 **뗍니다.**
-         * @details 이 창구가 없었습니다. `_bIsGrounded` 는 리플렉션 프로퍼티일 뿐이어서, 한 번
-         *          땅에 닿으면 코드로는 다시 떨어뜨릴 방법이 없었습니다.
+         * @details 코드에서 땅에 붙은 상태를 떼는 창구입니다(`_bIsGrounded` 는 리플렉션 프로퍼티일 뿐입니다).
          */
         void jump( float32 speed )
         {

@@ -81,7 +81,7 @@ namespace sw
      *          - 전투 시작(`beginEntrance` · `beginHall` · `beginBoss`) — 게이트가 닫힌다(`ClearGateStateChangedEvent` 잠김 · 진입 트리거).
      *          - 클리어 — `RoomClearedEvent`(보스였는지) 뒤 게이트가 열린다.
      *          - 플레이어 패배(`onPlayerDefeated`) — `PlayerDefeatedInRoomEvent` 뒤 게이트가 열리고 룸이 비워진다.
-     *          예전에는 세 이벤트가 선언만 있고 내는 곳이 없었다 — HUD · 오버월드가 결과를 매 프레임 `update` 의 반환값에서 되물어야 했다.
+     *          HUD · 오버월드는 결과를 `update` 의 반환값에서 되묻지 않고 이 이벤트로 받는다.
      */
     class SW_GF_API ActionRoom
     {

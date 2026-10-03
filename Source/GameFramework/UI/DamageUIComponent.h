@@ -17,10 +17,9 @@ namespace sw
      * @class DamageUIComponent
      * @brief 소유 오브젝트 자리에 데미지 숫자를 띄웁니다. 위로 떠오르며 흐려지고, 수명이 다하면 오브젝트를 지웁니다.
      * @details 숫자는 글리프 아틀라스 클립(`_digitClipPath`, 기본 `engine/textures/ui/digits.sprite.json`)의 프레임으로 그립니다 — 프레임 0..9 가
-     *          숫자, 10 이 '-' 입니다. 아틀라스와 클립은 `Scripts/generate/GenerateUiGlyphAtlas.py` 가 함께 만듭니다(배치 규칙이 한 곳에만 있습니다).
+     *          숫자, 10 이 '-' 입니다. 아틀라스와 클립은 `Scripts/generate/GenerateSpriteTextures.py` 가 함께 만듭니다(배치 규칙이 한 곳에만 있습니다).
      *          자릿수마다 스프라이트 하나(`SpriteInstanceBatch`, 최대 `kMaxGlyphCount` 장)이고 쓰지 않는 자리는 숨깁니다 — 값이 바뀌어도 구조
-     *          변경이 없어 틱 중에 바꿔도 됩니다. 알파는 `_alpha`(수명에 따라 1 → 0)를 색의 알파에 곱합니다. 예전에는 수명 · 알파 · 위치만 계산하고
-     *          그리는 곳이 없었고, 값을 넣는 세터도 없었습니다.
+     *          변경이 없어 틱 중에 바꿔도 됩니다. 알파는 `_alpha`(수명에 따라 1 → 0)를 색의 알파에 곱합니다.
      */
     REFLECT( Category = "UI", DisplayName = "Damage UI Component", Tooltip = "Floating damage number drawn with a glyph atlas" )
     class SW_GF_API DamageUIComponent : public Component

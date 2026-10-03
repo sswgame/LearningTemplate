@@ -28,7 +28,7 @@ namespace sw
         {
             /**
              * @brief 활성 씬의 오브젝트 매니저를 반환합니다. 게임 서비스가 묶이지 않았거나 활성 씬이 없으면 nullptr 입니다.
-             * @details 씬 저장과 복원이 이 열다섯 줄을 각자 들고 있었습니다. `areGameServicesBound()` 가 바로 이 서비스(SceneManager 슬롯)를
+             * @details 씬 저장과 복원이 함께 씁니다. `areGameServicesBound()` 가 바로 이 서비스(SceneManager 슬롯)를
              *          보므로 아래 널 검사는 사실상 닿지 않지만, `game::getService<T>()` 가 nullptr 을 반환할 수 있는 함수라
              *          `CheckNullableServiceUse` 린트가 요구하는 모양을 예외 없이 지킵니다.
              */
@@ -213,7 +213,7 @@ namespace sw
         for ( GameObject* pObj : listValidObject )
         {
             ObjectStateSerializer::writeIdentity( ObjectStateSerializer::captureIdentity( pObj ), outBytes );
-            // 개수를 이미 앞에 적었다 — 하나라도 못 쓰면 개수와 본문이 어긋나므로 통째로 실패한다(예전에는 버리고 성공이라 했다).
+            // 개수를 이미 앞에 적었다 — 하나라도 못 쓰면 개수와 본문이 어긋나므로 통째로 실패한다(버리고 성공이라 하지 않는다).
             if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, outBytes ) == false )
             {
                 SW_LOG_ERROR( "Scene object '%#' could not be serialized - the snapshot is not taken", pObj->getName().c_str() );
@@ -254,11 +254,11 @@ namespace sw
         listRestoredObject.reserve( MathUtil::min( static_cast<size_t>( count ), maxPossibleObject ) );
 
         // 모든 게임오브젝트를 만들고 읽은 뒤 묶음이 계층을 한 번에 잇는다. 같은 프로세스의 스냅샷이면 원래 id 로 만들고 컴포넌트 id 도
-        // 되살린다. 부착은 상태의 부착 필드(부모의 **id** · 컴포넌트 키)로 잇는다 — 예전에는 바깥 칸의 부모 이름으로 찾아 부모의 primary 에
-        // 붙여, 부모보다 먼저 읽힌 소켓 자식(손에 든 무기)이 몸통으로 옮겨 갔다. 다른 실행의 세이브는 id 를 되살리지 않지만, 스트림에 적힌
+        // 되살린다. 부착은 상태의 부착 필드(부모의 **id** · 컴포넌트 키)로 잇는다 — 주의: 부모 이름으로 찾아 부모의 primary 에 붙이면
+        // 부모보다 먼저 읽힌 소켓 자식(손에 든 무기)이 몸통으로 옮겨 간다. 다른 실행의 세이브는 id 를 되살리지 않지만, 스트림에 적힌
         // 그때의 id 로 묶음 안에서 찾는다.
-        // **하나라도 못 읽으면 실패다.** 예전에는 `break` 로 멈추고도 끝에서 true 를 돌려줘, 핫 리로드가 스냅샷을 버리고 저장 막기를
-        // 풀었다 — 씬은 이미 비운 뒤라 못 읽은 오브젝트부터 뒤가 사라진 채 저장할 수 있었다(빈 "GameObject" 하나도 남았다).
+        // **하나라도 못 읽으면 실패다.** 주의: 멈추고도 true 를 돌려주면 핫 리로드가 스냅샷을 버리고 저장 막기를 푼다 — 씬은 이미
+        // 비운 뒤라 못 읽은 오브젝트부터 뒤가 사라진 채 저장할 수 있다.
         const bool       bRestoreIdentity = ( format == SceneObjectFormat::RestoreIdentity );
         bool             bComplete        = true;
         ObjectStateBatch batch( bRestoreIdentity ? ObjectIdSpace::Live : ObjectIdSpace::Saved );
@@ -323,8 +323,8 @@ namespace sw
         //
         // **씬이 없는 것은 실패가 아니다.** 씬 없이 커스텀 상태만 스냅샷하는 것은 지원되는 사용법이라
         // (GameFrameworkTest.GameInstanceBaseSnapshotAndFileRoundTrip 이 그렇게 쓴다) 여기서 끊으면 안 된다.
-        // 다만 예전에는 반환값을 **아무 흔적 없이** 버렸다. 씬이 있어야 할 상황에서 오브젝트가 하나도 없는
-        // 세이브가 나와도 로드할 때까지 아무도 몰랐다. 빈 섹션은 그대로 쓰되 실마리는 남긴다.
+        // 다만 반환값을 흔적 없이 버리면 씬이 있어야 할 상황에서 오브젝트가 하나도 없는 세이브가 나와도
+        // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 실마리는 남긴다.
         vector<uint8> bytesScene;
         if ( serializeSceneObjects( bytesScene ) == false )
         {

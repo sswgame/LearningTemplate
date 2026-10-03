@@ -24,9 +24,7 @@ namespace sw
      * @brief 이번 걸음에 야생 조우가 나는지 판정합니다. `PlayerController` 가 쓰는 판정 그대로입니다.
      * @param encounterRate 0 ~ 1. **0 이면 언제나 false** 이고, 1 이상이면 매 걸음 true.
      * @param stepCount 조우 타일을 밟은 누적 걸음 수(1 부터).
-     * @details 예전에는 이 판정이 `tryStep` 안에 한 줄로 묻혀 있었고, `rate <= 0.01` 을 주기
-     *          3 으로 바꿔 놓아서 **끄려고 넣은 0 이 세 걸음마다 켜는 값**이었습니다. 밖으로 꺼내
-     *          이름을 주고 테스트가 직접 물을 수 있게 했습니다.
+     * @details 테스트가 직접 물을 수 있게 `tryStep` 밖에 둡니다. **끄려고 넣은 0 은 끄는 값이어야** 합니다.
      */
     SW_GF_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount );
 
@@ -44,7 +42,6 @@ namespace sw
         /**
          * @brief 조우 타일에서 전투가 날 확률을 설정합니다. **0 이면 나지 않습니다.**
          * @details 0 ~ 1 로 읽습니다. 0.33 이면 세 걸음마다 한 번꼴이고, 1 이상이면 매 걸음입니다.
-         *          예전에는 0 이 "세 걸음마다" 였습니다. 끄려고 부른 값이 켜는 값이었습니다.
          */
         void setEncounterRate( float32 rate ) { _encounterRate = rate; }
         /** @brief 타일 좌표를 설정합니다. */

@@ -33,10 +33,9 @@ namespace sw
      * @brief 적이 쓸 기술 슬롯을 고릅니다. **가진 슬롯 안에서** 고릅니다.
      * @param hp 적의 남은 체력. @param hpMax 적의 최대 체력.
      * @param moveSlotCount 적이 실제로 가진 기술 슬롯 수(`PartyMember::_listPp` 의 길이).
-     * @details 예전에는 체력이 절반 아래면 무조건 1 번 슬롯이었습니다. 슬롯 수는 **데이터가
-     *          정하므로** 기술이 하나뿐인 종족이 있을 수 있고, 그러면 `applyMove` 가 없는
-     *          슬롯으로 보고 "no PP" 만 찍습니다. 적이 절반 이하로 떨어지는 순간부터 한 대도
-     *          못 때렸습니다. 판정을 밖으로 꺼내 테스트가 직접 물을 수 있게 했습니다.
+     * @details 슬롯 수는 **데이터가 정하므로** 기술이 하나뿐인 종족이 있을 수 있습니다. 없는 슬롯을
+     *          고르면 `applyMove` 가 "no PP" 만 찍어 적이 한 대도 못 때립니다. 테스트가 직접 물을 수
+     *          있게 밖에 둡니다.
      */
     SW_GF_API int32 pickFoeMoveSlot( int32 hp, int32 hpMax, size_t moveSlotCount );
 

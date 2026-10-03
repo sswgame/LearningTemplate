@@ -155,7 +155,7 @@ namespace sw
         }
 
         // 피해가 HP 에 닿는 자리는 여기 하나다 — 알림도 여기서 한 번 낸다(깎인 값 · 남은 HP 를 아는 곳이 여기뿐이다). 컴포넌트의 구독자는 그 자리에서,
-        // "game" 채널은 버스 스레드면 그 자리에서 · 아니면 다음 processEvents 에 받는다(`GameEventUtil::send`). 예전에는 늘 큐에 실어 한 프레임 늦었다.
+        // "game" 채널은 버스 스레드면 그 자리에서 · 아니면 다음 processEvents 에 받는다(`GameEventUtil::send`).
         GameObject*        pOwner = getOwner();
         DamageAppliedEvent event;
         event._instigator  = instigator;

@@ -9,12 +9,9 @@ namespace sw
 {
     /**
      * @brief 2D 액션 캐릭터가 바라보는 4방향입니다.
-     * @details 이것이 `ActionRoom.h` 와 `PlayerLocomotion.h` **양쪽에 똑같이** 적혀 있었습니다.
-     *          둘 다 `namespace sw` 라서, 두 킷을 같이 쓰려고 두 헤더를 한 번역 단위에 넣으면
-     *          `error: redefinition of 'FacingDir'` 로 **컴파일이 안 됐습니다.** 액션 전투와
-     *          오버월드를 한 게임에서 같이 쓸 수 없었다는 뜻입니다. 각 킷이 따로 빌드되는 동안
-     *          아무도 부딪히지 않아서 드러나지 않았습니다.
-     * @note 값과 순서는 두 사본이 똑같았습니다. 여기로 옮기면서 바뀐 것은 없습니다.
+     * @details `ActionRoom.h` 와 `PlayerLocomotion.h` 가 함께 씁니다. 킷마다 따로 선언하지 말 것 —
+     *          둘 다 `namespace sw` 라서 두 킷의 헤더를 한 번역 단위에 넣으면 `redefinition of 'FacingDir'` 로
+     *          컴파일이 안 되고, 각 킷이 따로 빌드되는 동안은 드러나지 않습니다.
      */
     enum class FacingDir : uint8
     {

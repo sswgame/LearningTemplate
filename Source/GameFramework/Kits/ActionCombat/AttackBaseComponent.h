@@ -39,7 +39,7 @@ namespace sw
         int32 getDamage() const { return _damage; }
         /**
          * @brief 지금 판정과 겹친 접촉 수입니다(콜라이더 쌍 하나가 하나 — 상대 하나가 콜라이더 둘로 겹치면 둘).
-         * @details 사라진 상대는 끝 이벤트(상대 없음)에서 덜어 냅니다 — 예전에는 그 핸들이 남아 휘두를 때마다 풀어 보고 버렸고, 목록은 줄지 않았다.
+         * @details 사라진 상대는 끝 이벤트(상대 없음)에서 덜어 냅니다 — 남겨 두면 휘두를 때마다 풀어 보고 버리며 목록이 줄지 않는다.
          */
         uint32 getOverlapCount() const { return static_cast<uint32>( _listOverlapping.size() ); }
         /**

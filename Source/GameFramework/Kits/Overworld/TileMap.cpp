@@ -73,8 +73,7 @@ namespace sw
         if ( total <= 0.0f )
             return _data._listEncounterEntry[0]._speciesId;
 
-        // 누적 가중치 선택. 예전에는 합계를 구해놓고 함수 지역 static 라운드로빈을 써서
-        // XML 의 확률 가중치가 통째로 무시됐고, static 이 모든 타일맵/스레드에 공유됐다.
+        // 누적 가중치 선택 — XML 의 확률 가중치를 따른다. 함수 지역 static 상태를 두지 말 것(모든 타일맵/스레드가 공유한다).
         const float32 pick = MathUtil::getRandomRange( 0.0f, total );
 
         float32 accumulated{ 0.0f };

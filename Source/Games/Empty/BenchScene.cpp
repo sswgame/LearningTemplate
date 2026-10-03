@@ -45,8 +45,8 @@ namespace sw
         constexpr const utf8* kArrChurnFogOption[] = { "FOG_OFF", "FOG_LINEAR", "FOG_EXP" };
         /**
          * @brief 벤치가 섞어 쓸 도형 — `MeshUtil::createPrimitive` 가 아는 이름이다.
-         * @note 큐브가 **첫 번째**여야 한다. `-gv_benchMeshShapes=1`(기본)이 예전과 같은 그림을 내야
-         *       기존 측정·스크린샷이 그대로 유효하다.
+         * @note 큐브가 **첫 번째**여야 한다. `-gv_benchMeshShapes=1`(기본)이 큐브만 그려야
+         *       기존 측정·스크린샷과 비교할 수 있다.
          */
         constexpr const utf8* kArrBenchShape[] = { "Cube", "Sphere", "Cylinder", "Capsule", "Cone" };
     } // namespace
@@ -64,9 +64,8 @@ namespace sw
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
      * @details 배치 키가 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우
      *          경로에 실제 부하를 거는 유일한 방법이다.
-     * @warning **DX12 에서 100% 크래시한다.** 렌더 중 상수버퍼를 만들면서 커맨드 얼로케이터가
-     *          사용 중에 Reset 되는 기존 버그(간헐 3/8)를 확실히 터뜨린다. 그래서 기본은 꺼 두되,
-     *          그 버그를 재현·수정할 때 쓰라고 남겨 둔다. DX11/Vulkan/GL 은 정상이다.
+     * @note 기본은 꺼 둔다 — 배치가 하나인 기본 측정과 부하 모양이 다르다. 프레임마다 구조버퍼 업로드가
+     *       여러 번 도는 경로라 DX12 업로드 얼로케이터의 펜스 구간 처리(`updateStructuredBuffer`)를 시험하기에 좋다.
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMaterialInstances, 0, "벤치 큐브마다 MaterialInstance 부여 (DX12 크래시 재현용)" );
 
@@ -119,7 +118,7 @@ namespace sw
      *          축에 정렬돼 있어 래스터화·보간·컬링을 거의 흔들지 않는다 — 곡면을 섞으면 배치마다
      *          **정점 수가 크게 달라져서** 간접 인자·정점 버퍼 바인딩·바운드 반경이 전부 다른 값을 탄다.
      * @note 기본이 1 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다. 도형을 섞으면 그림이
-     *       달라지므로 예전 수치와 직접 비교할 수 없다.
+     *       달라지므로 큐브만 쓴 수치와 직접 비교할 수 없다.
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMeshShapes, 1, "벤치가 섞어 쓸 도형 수 (1=큐브만 · 최대 5: 큐브·구·실린더·캡슐·원뿔)" );
 
@@ -139,15 +138,15 @@ namespace sw
      * @details **기하가 있는 씬을 픽셀로 비교하려면 이것이 필요하다.** 벤치는 두 가지를 시간으로
      *          움직인다 — 컴퓨트(instanceanim)가 만드는 회전과, `update()` 의 사인파가 만드는 상하
      *          이동·스케일이다. 둘 다 벽시계 델타에서 나오므로 같은 `-gv_screenshotFrame` 으로 두 번
-     *          찍어도 그림이 다르다. 실제로 같은 설정 두 실행이 **1.5%** 어긋났고, 그 위에서 셰이더
-     *          변경의 0.5% 차이를 "다르다" 고 읽을 뻔했다 — 손대지 않은 대조군이 움직이면 하니스를
-     *          먼저 의심할 것. 회전만 멈춰서는 부족하다(사인파가 남아 여전히 0.05% 흔들렸다).
+     *          찍어도 그림이 다르다(같은 설정 두 실행이 **1.5%** 어긋난다 — 셰이더 변경의 0.5% 차이를 가린다).
+     *          손대지 않은 대조군이 움직이면 하니스를 먼저 의심할 것. 회전만 멈춰서는 부족하다(사인파가 남아
+     *          0.05% 흔들린다).
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_benchAnimate, 1, "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)", SW_KEEP_IN_SHIPPING );
 
     /**
      * @brief `-gv_benchMovePercent=<퍼센트>` — 프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (기본 100 = 전부).
-     * @details "일부만 움직이는 씬" 을 재기 위한 것이다 — 트랜스폼 플러시가 더티 루트만 돌게 된 뒤(2026-09-22) 그 이득은
+     * @details "일부만 움직이는 씬" 을 재기 위한 것이다 — 트랜스폼 플러시는 더티 루트만 돌므로 그 이득은
      *          전부 움직이는 벤치에서는 보이지 않는다. 10 이면 열 개 중 하나만 쓴다(index % 100 < percent).
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMovePercent, 100, "프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (퍼센트, 기본 100)" );
@@ -180,14 +179,14 @@ namespace sw
      * @brief `-gv_benchGround=1` — 격자 아래에 바닥 평면을 깝니다.
      * @details **그림자를 눈으로 확인하려면 받을 면이 있어야 한다.** 큐브만 떠 있으면 그림자는 다른
      *          큐브 위에만 지고, 그것도 큐브가 서로 떨어져 있어 거의 보이지 않는다 — 그림자 투영이
-     *          맞는지 그림으로 판단할 수가 없었다.
+     *          맞는지 그림으로 판단할 수 없다.
      * @note 기본이 0 인 이유는 **기존 측정과 스크린샷을 그대로 두기 위해서**다.
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_benchGround, 0, "격자 아래에 바닥 평면을 깝니다 (그림자를 받는 면)" );
 
     /**
      * @brief `-gv_benchTickMovers=N` — 큐브마다 틱하는 무버 컴포넌트를 N 개 붙이고, 첫 번째가 **틱 안에서** 위치·스케일을 씁니다.
-     * @details 0 이면 예전처럼 게임 스레드가 틱 밖에서 배치로 쓴다. 1 은 게임플레이의 보통 모양(`onTick` 안의 세터 —
+     * @details 0 이면 게임 스레드가 틱 밖에서 배치로 쓴다. 1 은 게임플레이의 보통 모양(`onTick` 안의 세터 —
      *          병렬 틱 중이라 지연 경로를 탄다)을 재고, 2 이상은 한 오브젝트에 틱 컴포넌트가 여럿일 때의 틱 디스패치
      *          비용을 잰다(나머지 무버는 틱만 돈다). 두 경로의 그림은 같다.
      */
@@ -223,9 +222,9 @@ namespace sw
 
     bool BenchScene::spawnFromGlobals()
     {
-        // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는 이제
+        // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는
         // **이 모듈이 선언한다**(이 파일 위). 그래서 이름으로 조회하지 않고 그대로 읽는다 —
-        // 예전 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽혔다.
+        // 주의: 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽힌다.
         if ( gv_benchMeshes <= 0 )
             return false;
 
@@ -314,7 +313,7 @@ namespace sw
         uint32 meshVariantCount = static_cast<uint32>( MathUtil::max( 1, gv_benchMeshVariants ) );
         meshVariantCount        = MathUtil::min( meshVariantCount, meshCount );
 
-        // 도형을 몇 종 섞을지. 1 이면 예전 그대로 큐브만 쓴다(기존 측정·스크린샷 보존).
+        // 도형을 몇 종 섞을지. 1 이면 큐브만 쓴다(기존 측정·스크린샷 보존).
         const uint32 shapeCount = static_cast<uint32>(
             MathUtil::clamp( gv_benchMeshShapes, 1, static_cast<int32>( SW_COUNT_OF( kArrBenchShape ) ) ) );
 
@@ -354,8 +353,8 @@ namespace sw
             ( gv_benchTransparent > 0 ) ? static_cast<uint32>( MathUtil::min( gv_benchTransparent, 100 ) ) : 0u;
 
         // 투명은 **별도 머티리얼 에셋**이다 — 블렌드 모드가 머티리얼의 성질이고 알파 사용 여부가
-        // 셰이더 퍼뮤테이션(MATERIAL_BLEND_TRANSLUCENT)을 가르기 때문이다. 메시에 플래그를 세우는
-        // 방식이었을 때는 불투명으로 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 됐다.
+        // 셰이더 퍼뮤테이션(MATERIAL_BLEND_TRANSLUCENT)을 가르기 때문이다. 주의: 메시에 플래그를 세우면
+        // 불투명으로 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 된다.
         //
         // 인스턴스는 **소수만 만들어 돌려 쓴다** — 큐브마다 하나씩 주면 배치가 인스턴스마다 갈려 한
         // 배치에 투명 인스턴스가 하나뿐이 되고, 그러면 배치 안의 정렬(instancesort 가 되돌리는 그 순서)이
@@ -432,9 +431,7 @@ namespace sw
             // 큐브마다 자기 머티리얼 인스턴스를 준다. 색이 달라지는 것도 목적이지만, 배치 키가
             // 인스턴스 포인터를 포함하므로 배치가 1개에서 N개로 갈라진다 — 배치·드로우 경로가
             // 그제야 실제 부하를 받는다(전부 같은 인스턴스면 drawInstanced 한 번으로 끝난다).
-            //
-            // 다만 DX12 에서는 이게 기존 커맨드 얼로케이터 버그를 100% 터뜨린다(아래 참고).
-            // 기본 벤치가 네 백엔드에서 다 돌아야 하므로 옵트인으로 둔다.
+            // 기본 측정과 부하 모양이 달라 옵트인으로 둔다.
             if ( bPerCubeMaterial && pSceneMaterial != nullptr )
             {
                 shared_ptr<MaterialInstance> instance = MaterialInstance::create( pSceneMaterial );
@@ -492,7 +489,7 @@ namespace sw
         pMesh->setLocalPosition( position );
 
         // GPU 가 이 큐브를 돌린다 — 시드가 각속도와 방향을 정하므로 큐브마다 속도가 다르다.
-        // 0 은 "돌리지 않음"이라 인덱스에 1 을 더한다. CPU 는 이제 회전을 계산하지 않는다.
+        // 0 은 "돌리지 않음"이라 인덱스에 1 을 더한다. CPU 는 회전을 계산하지 않는다.
         // `-gv_benchAnimate=0` 이면 시드를 주지 않는다 — 각도가 벽시계 시간에서 나와 같은 프레임을
         // 찍어도 그림이 달라지므로, 픽셀 비교 검증에는 멈춘 격자가 필요하다.
         if ( gv_benchAnimate != 0 )
@@ -674,7 +671,7 @@ namespace sw
         const float32 size = halfExtent * 2.6f;
         pMesh->setMesh( MeshUtil::createPlane( 24 ) );
         pMesh->setLocalScale( float3{ size, 1.0f, size } );
-        // 평면의 면은 이제 로컬 y = 0 이다 — 큐브 아랫면(-0.5)보다 조금 더 아래로 내린다.
+        // 평면의 면은 로컬 y = 0 이다 — 큐브 아랫면(-0.5)보다 조금 더 아래로 내린다.
         pMesh->setLocalPosition( float3{ 0.0f, -0.6f, 0.0f } );
         pMesh->setVisible( true );
         _listBenchExtra.push_back( pMesh->getHandle() );
@@ -692,7 +689,7 @@ namespace sw
 
         // 씬의 **모든** 카메라를 맞춘다. 에디터 GameView 는 게임 카메라가 아니라 자기 뷰포트
         // 카메라로 그리므로(App::getEditorViewCamera), 게임 카메라만 옮기면 에디터에서는
-        // 아무것도 안 보인다 — 실제로 그 이유로 한참 헤맸다.
+        // 아무것도 안 보인다.
         for ( CameraComponent* pCam : pObjects->getCameraRegistry().getAll() )
             frameOneCamera( pCam, side, spacing );
     }
@@ -750,12 +747,12 @@ namespace sw
         updateSpawnChurn( pObjects, pScene );
 
         // 멈춰 세운 격자는 프레임마다 같은 그림을 낸다 — 픽셀 비교 검증의 전제다.
-        // 회전(컴퓨트)만 끄고 이 사인파를 남기면 여전히 흔들린다. 실제로 그렇게 재다 틀릴 뻔했다.
+        // 회전(컴퓨트)만 끄고 이 사인파를 남기면 여전히 흔들린다.
         if ( gv_benchAnimate == 0 )
             return;
 
-        // **쓰기를 모아 배치로 넘긴다** (Unity 의 IJobParallelForTransform 자리). 예전에는 큐브마다 핸들을 풀고
-        // 세터 둘을 불렀다 — 세터 하나 ~24 ns, 8000 개면 프레임당 380 us 였고 8000 규모 게임 스레드의 가장 큰 항목이었다.
+        // **쓰기를 모아 배치로 넘긴다** (Unity 의 IJobParallelForTransform 자리). 주의: 큐브마다 핸들을 풀고
+        // 세터 둘을 부르면 세터 하나 ~24 ns, 8000 개면 프레임당 ~380 us 로 게임 스레드의 가장 큰 항목이 된다.
         // 배치는 핸들 해석·필드 쓰기·더티 표시를 워커에 나누고 세대를 한 번만 올린다.
         const uint32  count       = _listInstanceBatch.empty() ? static_cast<uint32>( _listBenchMesh.size() ) : _instanceCubeCount;
         const uint32  side        = MathUtil::max( _benchGridSide, 1u );
@@ -796,7 +793,7 @@ namespace sw
             const float32 phase = static_cast<float32>( index ) * 0.37f;
             const float32 wave  = MathUtil::sin( _benchElapsed + phase );
 
-            // 격자 자리는 생성 때와 같은 식으로 — 핸들을 풀어 읽지 않는다(그 읽기가 배치로 옮긴 비용의 3 분의 1 이었다).
+            // 격자 자리는 생성 때와 같은 식으로 — 핸들을 풀어 읽지 않는다(그 읽기가 배치 쓰기 비용의 3 분의 1 쯤 된다).
             _listTransformWrite.emplace_back();
             SceneTransformWrite& write = _listTransformWrite.back();
             write._handle              = _listBenchMesh[index];
@@ -804,9 +801,8 @@ namespace sw
                                            wave * 0.75f,
                                            origin + static_cast<float32>( index / side ) * kBenchSpacing };
             write._bSetPosition        = SW_TRUE;
-            // 회전은 **컴퓨트가 만든다**(instanceanim.hlsl). 예전엔 여기서 전부 45도/초로 돌렸는데,
-            // 속도가 하나뿐이라 큐브가 몇 천 개여도 한 덩어리처럼 보였다. 지금은 시드 해시가
-            // 인스턴스마다 속도와 방향을 갈라 준다. CPU 가 여기서 회전을 다시 쓰면 GPU 가 쓴 값을
+            // 회전은 **컴퓨트가 만든다**(instanceanim.hlsl) — 시드 해시가 인스턴스마다 속도와 방향을 갈라 준다
+            // (속도가 하나면 큐브가 몇 천 개여도 한 덩어리처럼 보인다). CPU 가 여기서 회전을 다시 쓰면 GPU 가 쓴 값을
             // 다음 업로드가 덮어써 도로 균일해진다 — 그래서 회전은 CPU 가 손대지 않는다.
 
             // 스케일도 흔든다 — 위치·회전만 바꾸면 월드 행렬의 회전/이동 성분만 갱신되므로

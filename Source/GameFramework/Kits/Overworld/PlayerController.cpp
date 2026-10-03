@@ -13,12 +13,11 @@ namespace sw
 
     SW_GF_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount )
     {
-        // 0 이면 **안 난다.** 예전에는 `rate > 0.01f` 가 거짓일 때 주기를 3 으로 놓아서,
-        // 야생 조우를 끄려고 `setEncounterRate( 0 )` 을 부르면 오히려 **세 걸음마다** 났다.
+        // 0 이면 **안 난다** — 야생 조우를 끄려고 `setEncounterRate( 0 )` 을 부르는 자리다.
         if ( encounterRate <= 0.0f )
             return false;
         // 1 이상이면 매 걸음이다. 1/rate 를 uint32 로 자르면 그 구간이 통째로 0 이 돼
-        // "주기 0" 이 되고, 예전 코드는 그것을 다시 3 으로 바꿔 **높은 확률이 낮은 빈도**가 됐다.
+        // "주기 0" 이 된다. 그것을 다른 주기로 바꾸면 **높은 확률이 낮은 빈도**가 된다.
         if ( encounterRate >= 1.0f )
             return true;
 
@@ -52,9 +51,8 @@ namespace sw
 
     void PlayerController::update( float32 deltaTime, InputManager& input )
     {
-        // 걸음·상호작용이 끝나는 것은 **로코모션 하나가 판정한다.** 예전에는 여기에 같은
-        // 길이의 `_stepCooldown` 이 따로 있었고, 걸음을 시작하자마자 `notifyStepFinished()`
-        // 로 취소해 버려서 실제 잠금은 그 쿨다운이 하고 `Walk` 는 죽은 상태였다.
+        // 걸음·상호작용이 끝나는 것은 **로코모션 하나가 판정한다.** 여기에 쿨다운을 따로 두거나
+        // 걸음을 시작하자마자 `notifyStepFinished()` 로 끝내면 `Walk` 상태가 관측되지 않는다.
         _loco.update( deltaTime );
 
         if ( _bInputEnabled == SW_FALSE )

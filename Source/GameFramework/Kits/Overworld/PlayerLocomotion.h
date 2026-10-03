@@ -31,8 +31,8 @@ namespace sw
     public:
         /**
          * @brief 한 칸을 밟는 데 걸리는 시간(초)입니다. **여기가 기준입니다.**
-         * @details `PlayerController` 가 다음 입력을 막는 시간으로 같은 `0.18` 을 따로 들고
-         *          있었습니다. 한쪽만 바꾸면 걷는 연출과 입력 잠금이 어긋납니다.
+         * @details `PlayerController` 가 다음 입력을 막는 시간도 이 값입니다. 따로 들면 한쪽만 바뀌어
+         *          걷는 연출과 입력 잠금이 어긋납니다.
          */
         static constexpr float32 kStepDuration = 0.18f;
 
@@ -47,10 +47,9 @@ namespace sw
         /**
          * @brief 타일 스텝을 **지금 당장** 끝냅니다. 텔레포트처럼 걷는 시간이 없을 때만 씁니다.
          * @warning 걸음을 시작한 그 프레임에 이것을 부르면 `Walk` 상태가 **한 프레임도 살지
-         *          못합니다.** 예전 `PlayerController::update` 가 정확히 그렇게 해서
-         *          `LocomotionState::Walk` 는 바깥에서 **한 번도 관측되지 않았습니다.** 걷는
-         *          애니메이션을 고를 근거가 통째로 죽어 있었습니다. 보통은 이것을 부르지 말고
-         *          `update( deltaTime )` 이 `kStepDuration` 뒤에 스스로 끝내게 둡니다.
+         *          못해** `LocomotionState::Walk` 가 바깥에서 관측되지 않고, 걷는 애니메이션을 고를
+         *          근거가 사라집니다. 보통은 이것을 부르지 말고 `update( deltaTime )` 이
+         *          `kStepDuration` 뒤에 스스로 끝내게 둡니다.
          */
         void notifyStepFinished();
         /** @brief 상호작용 상태를 시작합니다. */

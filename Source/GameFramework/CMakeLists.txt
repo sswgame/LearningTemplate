@@ -46,9 +46,9 @@ if(COMMAND sw_setUnityBuild)
 	sw_setUnityBuild(GameFramework BATCH_SIZE 8)
 endif()
 
-# 리플렉션 대상 헤더는 소스와 **같은 규칙**으로 모은다. 예전에는 Base/Data/Transition/UI 네
-# 폴더를 이름으로 적어 두었는데, 최상위 폴더를 하나 더 만들면 그 안의 REFLECT() 타입이
-# 조용히 등록되지 않았다 — 컴파일은 되고 역직렬화만 실패하므로 찾기 어렵다.
+# 리플렉션 대상 헤더는 소스와 **같은 규칙**으로 모은다. 주의: 폴더를 이름으로 적어 모으면
+# 최상위 폴더를 하나 더 만들 때 그 안의 REFLECT() 타입이 조용히 등록되지 않는다 —
+# 컴파일은 되고 역직렬화만 실패하므로 찾기 어렵다.
 file(GLOB_RECURSE GF_HEADERS CONFIGURE_DEPENDS
 	"${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 	"${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"

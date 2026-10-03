@@ -76,7 +76,7 @@ namespace sw
         void applyHeal( int32 amount );
         /**
          * @brief 같은 오브젝트의 HP 바(`HPBarBaseComponent`)를 지금 HP 비율로 맞춥니다. @p bReset 이면 흔적 없이(시작 · 스탯 재설정), 아니면 목표만(피해 · 회복).
-         * @details HP 가 바뀌는 자리(피해 · 회복 · 스탯 설정 · 시작)가 이것을 부른다 — 예전에는 HP 바를 아무도 움직이지 않았다(`setTargetRatio` 를 부르는 곳이 없었다).
+         * @details HP 가 바뀌는 자리(피해 · 회복 · 스탯 설정 · 시작)가 이것을 부른다 — HP 바(`setTargetRatio`)를 움직이는 곳은 여기 하나다.
          */
         void syncHealthBar( bool bReset );
         /** @brief 깎인 피해 @p amount 를 데미지 숫자 오브젝트로 띄웁니다(`_bShowDamageNumbers` 일 때). */

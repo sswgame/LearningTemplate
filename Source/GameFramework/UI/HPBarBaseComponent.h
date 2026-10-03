@@ -21,7 +21,7 @@ namespace sw
      *
      *          그리기는 `SpriteInstanceBatch`(조각 셋)이고 `onBeginPlay` 에서 만듭니다 — 저장되는 컴포넌트를 만들지 않습니다. 자리는 이번 프레임의
      *          트랜스폼 쓰기가 적용된 **뒤에** 잡습니다(틱 직후 큐) — 틱 안에서 읽는 월드 자리는 지난 프레임 것이라 움직이는 캐릭터를 한 프레임 늦게
-     *          따라갔을 것입니다. 예전에는 비율을 보간하기만 하고 그리는 곳이 없었습니다.
+     *          따라갑니다.
      */
     REFLECT( Category = "UI", DisplayName = "HP Bar Base Component", Tooltip = "Smooth lerping HP Bar floating UI component" )
     class SW_GF_API HPBarBaseComponent : public Component

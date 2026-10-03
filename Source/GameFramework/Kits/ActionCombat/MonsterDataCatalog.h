@@ -59,8 +59,7 @@ namespace sw
 
         /**
          * @brief 처치 보상입니다(보상 이름 → 수량).
-         * @details 예전에는 `_dropExp` / `_dropGold` 두 칸이었습니다. 액션 게임의 보상이 경험치와 금화
-         *          둘뿐이라고 정해 둔 셈이라, 소울 · 탄약 · 파편을 주는 게임은 이 킷을 못 썼습니다.
+         * @details 보상 종류를 코드가 정하지 않습니다 — 소울 · 탄약 · 파편을 주는 게임도 이 킷을 씁니다.
          *          `<Drop exp="10" gold="5" souls="3"/>` 처럼 **속성 이름이 곧 보상 이름**입니다.
          *          같은 프레임워크의 RuntimeHud 가 게이지를 이름 맵으로 다루는 것과 같은 방식입니다.
          */
@@ -88,8 +87,8 @@ namespace sw
          * @brief XML 에서 몬스터 정의 테이블을 로드합니다. 에셋 상대 경로 또는 실제 파일 경로입니다(`XmlDocument::loadPath`).
          * @return 하나라도 읽었으면 true. 그 밖에는 **최소 폴백을 심고** false 입니다.
          * @details 실패는 셋이고 셋 다 같게 다룹니다. 파일이 없다, 루트가 `<MonsterCatalog>` 가
-         *          아니다, **읽었는데 `<Monster>` 가 하나도 없다.** 마지막 것이 한동안 성공으로
-         *          취급돼서, 태그 철자를 틀리면 텅 빈 카탈로그가 조용히 만들어졌습니다.
+         *          아니다, **읽었는데 `<Monster>` 가 하나도 없다.** 마지막 것을 성공으로 취급하면
+         *          태그 철자를 틀렸을 때 텅 빈 카탈로그가 조용히 만들어진다.
          */
         [[nodiscard]] bool loadFromResource( string_view assetRelativePath );
 

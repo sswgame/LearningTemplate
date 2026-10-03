@@ -36,9 +36,8 @@ namespace sw
 
             /**
              * @brief 세이브에서 읽은 수를 그대로 믿지 않기 위한 하드 상한입니다.
-             * @details 세이브 파일은 손으로 고칠 수 있고 망가질 수도 있습니다. 파티 수는 이미 잘라
-             *          쓰고 있었는데 **바로 옆의 `ppCount` 는 자르지 않아서**,
-             *          `party0.ppCount=2000000000` 한 줄이 8 GB 짜리 `assign` 이 됩니다.
+             * @details 세이브 파일은 손으로 고칠 수 있고 망가질 수도 있습니다. 파티 수와 함께 **`ppCount` 도
+             *          자릅니다** — 안 자르면 `party0.ppCount=2000000000` 한 줄이 8 GB 짜리 `assign` 이 됩니다.
              *          데이터가 정하는 `maxPartySize` 도 데이터가 망가지면 같은 문제이므로 함께 자릅니다.
              */
             static constexpr int32 kHardPartyCap = 64;
@@ -155,8 +154,8 @@ namespace sw
             sb.append( "flag." ).append( key.c_str() ).append( '=' ).append( val ).append( '\n' );
         }
 
-        // `writeTextFile` 이 임시 파일 → 결과 확인 → 바꿔 끼우기를 한다. 예전에는 여기서 ".tmp" 에 쓰고 원본에 **복사**했는데, 그 임시 쓰기가
-        // 실패를 알리지 않아(`fwrite` · `fclose` 결과를 보지 않았다) 잘린 파일이 멀쩡한 세이브를 덮을 수 있었고, 복사 자체도 원자적이지 않았다.
+        // `writeTextFile` 이 임시 파일 → 결과 확인 → 바꿔 끼우기를 한다. 주의: 손으로 임시 파일에 쓰고 원본에 복사하면, 쓰기 실패를
+        // 놓쳤을 때 잘린 파일이 멀쩡한 세이브를 덮고 복사 자체도 원자적이지 않다.
         if ( FileUtil::writeTextFile( path, sb.view() ) == false )
         {
             SW_LOG_ERROR( "Failed to save %# — the previous save was left untouched", path );

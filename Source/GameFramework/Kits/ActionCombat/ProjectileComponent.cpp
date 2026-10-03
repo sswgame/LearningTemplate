@@ -62,7 +62,7 @@ namespace sw
         if ( pSceneComp == nullptr )
             return;
 
-        // 속도는 월드 값이다 — 월드 자리로 옮긴다(돌아간 부모 아래에서 로컬로 더하면 부모의 축을 따라 엉뚱한 방향으로 날았다).
+        // 속도는 월드 값이다 — 월드 자리로 옮긴다(돌아간 부모 아래에서 로컬로 더하면 부모의 축을 따라 엉뚱한 방향으로 난다).
         float3 pos = pSceneComp->getWorldPosition();
         pos._x += _velocity._x * deltaTime;
         pos._y += _velocity._y * deltaTime;
@@ -78,7 +78,7 @@ namespace sw
         GameObject* pOther = overlap._pOther;
         if ( pOwner == nullptr || pOther == nullptr )
             return;
-        // 상대가 트리거(감지 범위 · 구역 볼륨)면 막히지도 맞히지도 않는다. 예전에는 겹친 상대 오브젝트만 알아, 적의 감지 범위가 총알을 먹었다.
+        // 상대가 트리거(감지 범위 · 구역 볼륨)면 막히지도 맞히지도 않는다 — 안 그러면 적의 감지 범위가 총알을 먹는다.
         if ( overlap._bOtherTrigger == SW_TRUE )
             return;
 

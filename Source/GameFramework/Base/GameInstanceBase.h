@@ -34,8 +34,8 @@ namespace sw
         /**
          * @brief configureBootstrap 으로 부트스트랩을 채우고(GameConfig 의 팩 루트가 있으면 그것이 우선) gamedata 를 읽은 뒤 onInitialize 를 부릅니다.
          * @details 읽은 `GameData` 를 게임 서비스로 묶고(`game::getService<GameData>()`), 다국어(`_localizationDirectory` · `_stringsData`)와
-         *          게임플레이 입력 맵(`_inputMap`)을 여기서 적용합니다. 예전에는 읽기만 하고 아무 칸도 쓰지 않았고 서비스로도 묶지 않아,
-         *          커스텀 칸을 읽는 킷 코드(`TurnBattleSaveGame` 의 파티 상한 · 스타터)가 제품에서 늘 기본값을 썼습니다.
+         *          게임플레이 입력 맵(`_inputMap`)을 여기서 적용합니다. 커스텀 칸을 읽는 킷 코드(`TurnBattleSaveGame` 의 파티 상한 · 스타터)는
+         *          이 서비스로 읽습니다 — 서비스로 묶지 않으면 제품에서 늘 기본값을 씁니다.
          */
         bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) final;
         /** @brief onShutdown 뒤에 `GameData` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */

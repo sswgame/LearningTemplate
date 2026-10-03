@@ -117,8 +117,8 @@ namespace sw
     private:
         /**
          * @brief 벤치 큐브의 핸들. 씬이 큐브를 소유하고, 여기에는 주소가 없다.
-         * @details 생포인터를 들었을 때 RHI 교체가 여기서 죽었다 — 새 게임 인스턴스가 onInitialize 에서 큐브를
-         *          만든 직후 상태 복원이 씬을 통째로 지웠고, 다음 update 가 죽은 주소에 setLocalPosition 을 했다.
+         * @details 주의: 생포인터를 들면 RHI 교체가 여기서 죽는다 — 새 게임 인스턴스가 onInitialize 에서 큐브를
+         *          만든 직후 상태 복원이 씬을 통째로 지우고, 다음 update 가 죽은 주소에 setLocalPosition 을 한다.
          *          핸들은 해석이 nullptr 로 끝날 뿐 죽은 주소가 될 수 없다.
          */
         vector<ComponentHandle> _listBenchMesh;
@@ -138,10 +138,9 @@ namespace sw
         ComponentHandle _keyLight;
         /**
          * @brief 벤치가 만든 **큐브가 아닌** 것들의 핸들 — 흩뿌린 라이트와 바닥 평면.
-         * @details 이것들이 아무 데도 안 적혀 있어서 `despawn()` 이 큐브와 주광만 걷었다.
-         *          모듈 리로드 · RHI 교체는 `despawn()` → `spawnFromGlobals()` 를 한 쌍으로
-         *          도는데, 그때마다 **라이트와 바닥이 한 벌씩 더 쌓였다.** 이 벤치가 존재하는
-         *          이유가 바로 그 경로를 재는 것이라, 재려는 대상이 측정을 망가뜨리고 있었다.
+         * @details 모듈 리로드 · RHI 교체는 `despawn()` → `spawnFromGlobals()` 를 한 쌍으로
+         *          돈다. 주의: 벤치가 만든 것을 여기 적지 않으면 `despawn()` 이 걷지 못해 그때마다
+         *          **한 벌씩 더 쌓이고**, 재려는 경로가 측정을 망가뜨린다.
          */
         vector<ComponentHandle> _listBenchExtra;
         /** @brief 반투명 큐브가 쓰는 머티리얼 에셋 (블렌드 모드·퍼뮤테이션이 불투명과 다르다). */
