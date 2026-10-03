@@ -52,7 +52,7 @@ namespace sw
         _status = StringUtil::isNullOrEmpty( pInitialStatus ) ? "Initializing..." : pInitialStatus;
         _width  = width;
         _height = height;
-        loadSplashImage();
+        (void)loadSplashImage(); // 이미지가 없으면 빈 스플래시다 — 로드가 이유를 알린다
         buildScaledImage();
 
         Display* pDisplay = XOpenDisplay( nullptr );
