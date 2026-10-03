@@ -142,8 +142,7 @@ namespace sw
             const PartyMember& m = _listParty[partyIndex];
             sb.append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".speciesId=" ).append( m._speciesId.c_str() ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".nickname=" ).append( m._nickname.c_str() ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".level=" ).append( m._level ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".hp=" ).append( m._hp ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".hpMax=" ).append( m._hpMax ).append( '\n' ).append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".exp=" ).append( m._exp ).append( '\n' );
 
-            // 슬롯 수가 데이터에 달렸으므로 개수를 함께 적는다. 예전 세이브는 pp0/pp1 두 칸이었고
-            // 읽는 쪽이 ppCount 가 없으면 그 형식으로 폴백한다.
+            // 슬롯 수가 데이터에 달렸으므로 개수를 함께 적는다 — 읽는 쪽은 ppCount 가 말한 칸만 읽는다.
             sb.append( "party" ).append( static_cast<int32>( partyIndex ) ).append( ".ppCount=" ).append( static_cast<int32>( m._listPp.size() ) ).append( '\n' );
             for ( size_t slot = 0; slot < m._listPp.size(); ++slot )
             {
@@ -220,24 +219,20 @@ namespace sw
             m._hpMax = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "hpMax" ).c_str(), m._hpMax );
             m._exp   = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "exp" ).c_str(), m._exp );
 
-            // ppCount 가 없으면 pp0/pp1 두 칸이던 예전 세이브다.
-            const int32 ppCount = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "ppCount" ).c_str(), -1 );
-            if ( ppCount >= 0 )
+            // 슬롯 수는 ppCount 가 정한다. 없으면 기술 슬롯 없이 읽는다 — `pp0` · `pp1` 칸이 있어도 개수 없이는 읽지 않는다.
+            int32 ppCount = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "ppCount" ).c_str(), -1 );
+            if ( ppCount < 0 )
             {
-                // **파일이 말한 수를 그대로 잡지 않는다.** 바로 위 파티 수와 같은 규칙이다.
-                const size_t slotCount = MathUtil::min( static_cast<size_t>( ppCount ), SaveGameInternal::ppCap() );
-                m._listPp.assign( slotCount, 0 );
-                for ( size_t slot = 0; slot < slotCount; ++slot )
-                {
-                    const string key = string( "pp" ) + to_string( static_cast<int32>( slot ) );
-                    m._listPp[slot] =
-                        KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, key.c_str() ).c_str(), 0 );
-                }
+                SW_LOG_WARNING( "Save %# party%# has no ppCount - loading it with no move slots", path, itemIndex );
+                ppCount = 0;
             }
-            else
+            // **파일이 말한 수를 그대로 잡지 않는다.** 바로 위 파티 수와 같은 규칙이다.
+            const size_t slotCount = MathUtil::min( static_cast<size_t>( ppCount ), SaveGameInternal::ppCap() );
+            m._listPp.assign( slotCount, 0 );
+            for ( size_t slot = 0; slot < slotCount; ++slot )
             {
-                m._listPp = { KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "pp0" ).c_str(), 35 ),
-                              KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, "pp1" ).c_str(), 30 ) };
+                const string key = string( "pp" ) + to_string( static_cast<int32>( slot ) );
+                m._listPp[slot]  = KeyValueFile::getInt( map, SaveGameInternal::partyKey( itemIndex, key.c_str() ).c_str(), 0 );
             }
 
             if ( m._nickname.empty() )

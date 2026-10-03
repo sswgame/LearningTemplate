@@ -2805,6 +2805,9 @@ SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeLevelIsCapped )
     text += "partyCount=1\n";
     text += "party0.speciesId=huge\n";
     text += "party0.level=2000000000\n";
+    text += "party0.ppCount=2\n";
+    text += "party0.pp0=35\n";
+    text += "party0.pp1=30\n";
     SW_ASSERT_TRUE( FileUtil::writeTextFile( savePath, text ) );
 
     TurnBattleSaveGame loaded;
@@ -2862,6 +2865,47 @@ SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeMoveSlotCountIsCapped )
     SW_EXPECT_TRUE_MSG( slotCount <= 16, "세이브가 말한 슬롯 수를 그대로 잡았습니다" );
     SW_EXPECT_TRUE( slotCount > 0 );
     SW_EXPECT_EQUAL( int32( 11 ), loaded._listParty[0]._listPp[0] );
+}
+
+/**
+ * @brief [GameFrameworkTest] 텍스트 세이브의 PP 칸은 ppCount 가 정한다 — 개수 없이 pp0 · pp1 만 있으면 슬롯 없이 읽고 경고한다
+ * @details 세이브 형식은 하나(`ppCount` + `pp0..pp{n-1}`)다. 개수 없는 두 칸을 따로 읽는 갈래를 두지 않는다.
+ */
+SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_MoveSlotsNeedPpCount )
+{
+    const string savePath = test::makeTempPath( "sw_turnbattle_no_ppcount.sav.txt" );
+    string       text;
+    text += "map=Levels/Field.scene\n";
+    text += "partyCount=1\n";
+    text += "party0.speciesId=critter_a\n";
+    text += "party0.level=5\n";
+    text += "party0.pp0=11\n";
+    text += "party0.pp1=12\n";
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( savePath, text ) );
+
+    test::ScopedLogCollector logs;
+    TurnBattleSaveGame       loaded;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "save without ppCount" );
+        SW_ASSERT_TRUE( loaded.loadFromFile( savePath ) );
+    }
+    SW_ASSERT_EQUAL( size_t( 1 ), loaded._listParty.size() );
+    SW_EXPECT_TRUE_MSG( loaded._listParty[0]._listPp.empty(), "ppCount 없는 세이브의 pp0 · pp1 을 읽었습니다" );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "has no ppCount" ) == 1, logs.joined().c_str() );
+
+    // 지금 형식으로 쓴 세이브는 그 칸을 그대로 돌려준다.
+    PartyMember member{};
+    member._speciesId = "critter_a";
+    member._nickname  = "Critter";
+    member._listPp    = { 7, 8, 9 };
+    TurnBattleSaveGame saved;
+    saved.setPartyFrom( { member } );
+    const string roundTripPath = test::makeTempPath( "sw_turnbattle_ppcount_roundtrip.sav.txt" );
+    SW_ASSERT_TRUE( saved.saveToFile( roundTripPath ) );
+    TurnBattleSaveGame reloaded;
+    SW_ASSERT_TRUE( reloaded.loadFromFile( roundTripPath ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), reloaded._listParty.size() );
+    SW_EXPECT_TRUE( reloaded._listParty[0]._listPp == member._listPp );
 }
 
 /**
