@@ -1427,16 +1427,14 @@ SW_TEST_CASE( StringTest, FormatStringWithZeroCapacityWritesNothing )
     sw::formatstring( oneBuffer.data(), 1, "hello" );
     SW_EXPECT_EQUAL( utf8{ 0 }, oneBuffer[0] );
 
-#if defined( SW_DEBUG )
-    // 용량 0 은 Debug 에서 `SW_ASSERT` 가 먼저 울려 프로세스를 세운다 — **그것이 의도다.**
-    // 아래 가드는 단언이 통째로 사라지는 빌드를 위한 것이라 거기서만 잴 수 있다.
-    SW_TEST_SKIP( "SW_ASSERT stops the process in Debug; the zero-capacity guard only matters where the assert is gone." );
-#else
+    // 용량 0 은 Debug 에서 `SW_ASSERT` 가 먼저 울린다 — 단언 가로채기 안에서 불러 그 뒤의 가드까지 지나가게 한다.
     // 딱 한 칸짜리 힙 버퍼 — 넘치면 ASAN 이 그 자리에서 잡고, 값으로도 드러난다.
-    sw::vector<utf8> tinyBuffer( 1, utf8{ 'Z' } );
+    test::ScopedAssertCapture assertCapture;
+    sw::vector<utf8>          tinyBuffer( 1, utf8{ 'Z' } );
     sw::formatstring( tinyBuffer.data(), 0, "hello world %#", 42 );
     SW_EXPECT_EQUAL( utf8{ 'Z' }, tinyBuffer[0] );
-#endif
+    if ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
 }
 
 /**

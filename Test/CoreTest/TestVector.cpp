@@ -392,12 +392,9 @@ SW_TEST_CASE( VectorTest, InsertMoveAcceptsAnElementOfItself )
  */
 SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
 {
-#if defined( SW_DEBUG )
-    // Debug 에서는 `SW_ASSERT( _size > 0 )` 가 먼저 울려 프로세스를 세운다 — **그것이 의도다.**
-    // 이 가드는 단언이 통째로 사라지는 빌드를 위한 것이라 거기서만 잴 수 있다.
-    SW_TEST_SKIP( "SW_ASSERT stops the process in Debug; the guard only matters where the assert is gone." );
-#else
-    sw::vector<sw::string> list;
+    // Debug 에서는 `SW_ASSERT( _size > 0 )` 가 먼저 울린다 — 단언 가로채기 안에서 불러 그 뒤의 가드까지 지나가게 한다.
+    test::ScopedAssertCapture assertCapture;
+    sw::vector<sw::string>    list;
     list.pop_back();
     SW_EXPECT_EQUAL( size_t( 0 ), list.size() );
 
@@ -405,7 +402,8 @@ SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
     list.pop_back();
     list.pop_back();
     SW_EXPECT_EQUAL( size_t( 0 ), list.size() );
-#endif
+    if ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 2u, assertCapture.getCount() );
 }
 
 /**
