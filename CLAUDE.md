@@ -67,8 +67,10 @@ build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (
   suite's own file. That declaration is the whole classification — an executable registered with
   `sw_addTestExecutable( ... HOST_SPLIT )` gets two CTest entries, `<Target>_NoGPU` (`--host_suites=exclude`,
   label `nogpu`, what CI runs) and `<Target>_HostOnly` (`--host_suites=only`, label `hostgpu`). No suite name
-  is written in CMake. Today `EngineTest` and `AppTest` split this way; the other executables are one entry each.
-  **A test that creates an RHI device belongs in `RenderPassGpuTest`.**
+  is written in CMake. Today `EngineTest` and `AppTest` split this way; the others are one entry each, except
+  `ReflectionTest`, which is sharded (below). **A test that creates an RHI device belongs in `RenderPassGpuTest`.**
+  A host-suite case fails on any unexpected `[Error]` log line, since validation-layer and driver errors only log;
+  wrap a deliberate rejection in `SW_TEST_DEFENSIVE_SCOPE( "reason" )`.
 - **`-L hostgpu` is the part CI can never run. Run it in Shipping before you call work done**, on the
   machine with the GPU. Nothing else covers it: CI skips those suites and local habit is Debug-only, which is
   how two `RenderPassGpuTest` failures and two `ShaderCompilerTest` failures sat in the tree unnoticed (see
@@ -77,14 +79,16 @@ build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (
 - **Suite names are a convention, and `CheckTestSuites.py` enforces it**: every suite is `XxxTest`
   (no underscore), lives in exactly one file, a host suite has its file to itself, and every
   `SW_TEST_REQUIRES_HOST` sits in a folder whose CMakeLists says `HOST_SPLIT` (otherwise nothing reads it and
-  CI runs the suite).
+  CI runs the suite). The same gate keeps `CoreTest` free of Engine headers and `engine::` calls (Engine tests go
+  in `EngineTest`) and checks that the Editor sources `EditorTest` lists by hand exist and do not include ImGui.
 - **A slow executable is split with `SHARDS <n>`** in `sw_addTestExecutable`: it registers `<Target>_Shard1..n`, each with
   `--test_shard=<k>/<n>`, and cases are dealt out **within each suite** so one slow suite is halved (`ReflectionTest` — its
   parser suite was ~21 s of a 30 s limit). A suite split across shards is not judged by the "every case skipped" check, so a
   suite whose cases skip when a prerequisite is missing keeps one case that asserts the prerequisite
   (`ReflectionParserTest.ParserExecutableIsBuilt`).
-- Labels: `nogpu` (CI-safe), `hostgpu` (GPU/display/DXC — CI cannot), `lint`, `unit`, `core`, `engine`, `editor`, `module`, `reflection`.
-- Cases are declared with `SW_TEST_CASE(Suite, Name)` and assert via `SW_EXPECT_*` / `SW_ASSERT_*`.
+- Labels: `nogpu` (CI-safe), `hostgpu` (GPU/display/DXC — CI cannot), `lint`, `unit`, `core`, `engine`, `editor`, `app`, `module`, `reflection`.
+- Cases are declared with `SW_TEST_CASE(Suite, Name)` and assert via `SW_EXPECT_*` / `SW_ASSERT_*`. To test a path
+  that trips an engine assert (`SW_ASSERT` / `SW_LOG_ASSERT` break in Debug), hold a `test::ScopedAssertCapture`.
 
 ## Linting
 
@@ -122,9 +126,8 @@ staged subset and the full scan; it never descends into `kNotOurDirNames` — bu
 **The commit hook has no lint list either.** `PreCommitLint.py` walks `gate/` the same way, and each gate
 says when it should run: `preCommitPattern` (fnmatch globs against staged repo-relative paths — empty
 means always), `preCommitFileArgument` (`"--files"`, `"positional"`, or `""` for whole-tree gates), and
-`preCommitSkipReason` for a gate the hook cannot run (`CheckSourceGlob` needs a build directory). Before
-this, the hook imported six gates by name out of twelve, and those six sat inside `if stagedCppFiles:` —
-so a commit touching only `.cmake` or `.py` ran no gate at all.
+`preCommitSkipReason` for a gate the hook cannot run (`CheckSourceGlob` needs a build directory). A commit
+that touches only `.cmake`, `.py` or data still runs every gate whose pattern matches it.
 
 **Adding a fixer is dropping a file into `lint/fixer/`.** A fixer is one `LintFixer` subclass whose
 `listPass` holds its text transforms (`(text) -> (newText, bChanged)`) plus what to call each one under
@@ -145,12 +148,16 @@ py -3 Scripts/lint/gate/CheckIncludeOrder.py                   # check only; `--
 py -3 Scripts/lint/gate/CheckEngineLayers.py                   # Engine must not include Editor/GameFramework/Games
 py -3 Scripts/lint/gate/CheckResourceCasing.py                 # everything under Resource/ must be lowercase
 py -3 Scripts/lint/gate/CheckFunctionVocabulary.py            # one verb per concept; acronyms are camelCase words
+py -3 Scripts/lint/gate/CheckFallibleNodiscard.py              # bool-returning fallible verbs (load/save/apply…) are [[nodiscard]]
+py -3 Scripts/lint/gate/CheckTargetMacros.py                   # platform/arch/compiler via SW_* macros, never compiler built-ins
+py -3 Scripts/lint/gate/CheckTextureFolders.py                 # textures/ holds DDS only; source images live in textures_raw/
 py -3 Scripts/lint/fixer/FormatBranchBraces.py --check         # if/case 중괄호 규칙 검사
 py -3 Scripts/lint/fixer/FormatModified.py                     # clang-format the working-tree changes
 py -3 Scripts/lint/report/RunBuildWarnings.py                  # compiler warnings still in the tree
 py -3 Scripts/lint/report/RunHeaderSelfContained.py            # headers that only compile thanks to someone else
 py -3 Scripts/lint/report/RunForwardDeclarationCandidates.py  # includes a header could replace with a forward declaration (`--apply` rewrites; then build + RunHeaderSelfContained)
 py -3 Scripts/lint/report/RunClangTidy.py                      # static analysis
+py -3 Scripts/lint/report/RunPaddingReport.py                  # per-record size, padding and the reorder floor (libclang)
 py -3 Scripts/lint/selftest/CheckLintsAreAlive.py              # do the gates still bite? (CI gate)
 py -3 Scripts/lint/selftest/CheckFixersAreAlive.py             # do the fixers still rewrite — and still hold back? (CI gate)
 py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its rules still bite? (CI gate)
@@ -161,11 +168,10 @@ py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its rules st
   tidied and the break lands in an unrelated file. `RunHeaderSelfContained.py` compiles each header on
   its own (`-fsyntax-only`, real flags borrowed from the nearest TU in the compile DB) and names the
   ones that do not stand. ~3 min for `Source/`, so it is a report, not a gate — run it after a folder
-  sweep or an include cleanup. **Why this went unmeasured for so long:** the generated `FlagOps.gen.h`
-  is force-included (`/FI`) into every TU of a target, and it used to `#include` the four Graphics
-  headers that declare flag enums — so their whole transitive closure was "already there" everywhere
-  and no omission could be seen. That umbrella now carries only opaque enum forward declarations plus
-  the `IsBitFlagEnum` specializations, which is all the trait needs.
+  sweep or an include cleanup. **Keep force-included headers thin:** the generated `FlagOps.gen.h` is
+  force-included (`/FI`) into every TU of a target, so anything it `#include`s is "already there" everywhere
+  and hides every omission. It carries only opaque enum forward declarations plus the `IsBitFlagEnum`
+  specializations, which is all the trait needs.
 - **Grepping a build for `warning:` does not work.** A warning is printed only when that TU is compiled,
   and ninja never recompiles unchanged files — so an existing warning is invisible on every build after
   the one that introduced it. `RunBuildWarnings.py` re-asks the question over the whole tree
@@ -194,10 +200,19 @@ implementations. Everything crossing App ↔ module goes through it. Export macr
 interchangeable: `SW_API` (Engine.dll symbols), `SW_MODULE_API` (C-ABI entry points of any loadable plugin),
 `SW_GF_API` (GameFramework.dll classes), `SW_GAMESERVICE_API` (the RuntimeAPI GameService locator only).
 
-**Engine internal layers.** `Source/Engine` is one link unit but include direction is one-way and linted:
-Utility → Reflection → Object/Scene/Serialization → Graphics → Input/Window/Audio/Physics/Animation.
-Engine code must never include `Editor/`, `GameFramework/`, or `Games/`; reach the editor through
-RuntimeAPI, delegates, or events instead. See `Source/Engine/README.md`.
+**Engine internal layers.** `Source/Engine` is one link unit but its folder include graph is a DAG, linted by
+`CheckEngineLayers.py`: Common/Compression/Physics → Audio/Reflection/Spatial/Utility → Animation/Localization/
+Serialization → Config/Dialogue → Resource → Graphics (RHI, shaders, GPU assets)/Window → Input/Object →
+Scene/Sequencer → Graphics/Renderer/Module → root files (`EngineLoop`). The RHI does not know the window, the
+world does not know the renderer, the renderer reads the scene. Engine code must never include `Editor/`,
+`GameFramework/`, or `Games/`; reach the editor through RuntimeAPI, delegates, or events instead. The tier
+table is in `Source/Engine/README.md` (recompute it with `Scripts/lint/report/RunEngineLayerGraph.py`).
+
+**Startup and shutdown are one table.** `Source/Engine/EngineStartupStepList.xxx` lists every step with the
+steps it waits for; `EngineStartupSequence` sorts it, brings steps up in that order and down in reverse, and each
+step is one struct (`initialize` / `shutdown` / `destroy`). `EngineLoop` and the test harness share
+`EngineBootstrap`. Scenes load only after `ModuleTypes` (every type provider registered), and `ModuleHost` brings
+the game up before the editor. Engine services are the rows of `Source/Engine/Common/EngineServiceList.xxx`.
 
 **Reflection codegen.** `REFLECT` / `PROPERTY` / `FUNCTION` / `ENUM` macros in headers are parsed by
 `Tools/ReflectionParser` (libclang) into `build/<preset>/generated/**/*.gen.cpp`, driven by
@@ -210,8 +225,11 @@ To see what the parser extracted from a header (why a property is missing, a ran
 **Resources.** `Resource/` splits into `engine/`, `common/`, and `game/<active game>/`. Paths are global ids
 including the domain (`engine/pipeline/forward.xml`) and are lowercased via `normalizePath` at lookup —
 hence the enforced lowercase rule. Rendering separates `RenderPassResource` (bind template: formats/clears,
-under `renderpass/`) from `RenderPipelineResource` (the frame graph ordering passes, under `pipeline/`),
-which `RenderGraph` topologically sorts at runtime.
+under `renderpass/`) from `RenderPipelineResource` (the frame graph ordering passes, under `pipeline/`);
+`FrameRenderer` builds a `RenderGraph` from the pipeline and topologically sorts it at runtime. Textures are read
+as DDS only — source images live in `textures_raw/` and are baked with `App --bake-textures`. Data is read in
+its current shape only: no `Alias` / `ValueAlias`, no old-format readers — a rename rewrites the data
+(`ResourceDataSchemaTest`). Command-line arguments are listed in `Source/Core/Predefined/ArgumentList.xxx`.
 
 ## Gotchas
 
