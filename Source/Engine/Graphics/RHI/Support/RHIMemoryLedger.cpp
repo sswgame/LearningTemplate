@@ -25,6 +25,9 @@ namespace sw
             /** @brief 깊이 첨부(D24S8)의 텍셀 바이트입니다. 네 백엔드 모두 24 비트 깊이 + 8 비트 스텐실 한 칸으로 만듭니다. */
             static constexpr uint64 kDepthStencilTexelBytes = 4;
 
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
+            // 보고(`report`)만 쓰는 도우미다. 보고는 Info 로그로만 나가므로 그것이 빠지는 구성(Shipping)에는 두지 않는다.
+
             /** @brief 바이트를 MB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
             static constexpr uint64 toMegabytesX10( uint64 bytes ) { return ( bytes * 10 ) / ( 1024ull * 1024ull ); }
 
@@ -39,6 +42,7 @@ namespace sw
                 const uint64 megabytesX10 = toMegabytesX10( bytes );
                 formatstring( pOut, capacity, "%#.%# MB", megabytesX10 / 10, megabytesX10 % 10 );
             }
+#endif
         };
     } // namespace
 } // namespace sw
