@@ -27,6 +27,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -128,5 +129,7 @@ namespace sw
          *          맨 나중에 사라집니다.
          */
         void destroyAll();
+        /** @brief `destroyAll` 이 놓는 순서(멤버 이름)입니다. 같은 해제 표 · 같은 순서 함수로 만듭니다(시험이 순서를 본다). */
+        static vector<const utf8*> makeDestroyOrder();
     };
 } // namespace sw

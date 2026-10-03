@@ -27,6 +27,10 @@
 // 이 정의들을 헤더에 두면 `EngineLoop.h` 를 include 하는 모든 TU 가 서비스 스무 개의 헤더를 끌고 들어온다
 // (실제로 그렇게 두었다가 엔진 곳곳이 컴파일되지 않았다). 목록에 줄을 더하면 **여기 include 한 줄**이
 // 같이 필요하고, 잊으면 컴파일러가 그 자리에서 알려 준다. 조용히 넘어가지 않는다.
+// creator 칸에 따라 해제 표에 넣거나 뺀다(`SW_CONCAT` 으로 낱말을 붙여 고른다 — 헤더의 다른 자리와 같은 방식).
+
+#define SW_ENGINE_OWNED_RESET_ENTRY_HostCreated( member )
+#define SW_ENGINE_OWNED_RESET_ENTRY_EngineCreated( member ) { #member, &resetMember<&EngineOwnedServices::member> },
 
 namespace sw
 {
@@ -34,19 +38,36 @@ namespace sw
     {
         struct EngineOwnedServicesInternal
         {
-            /** @brief `EngineCreated` 멤버 하나를 놓습니다(`destroyAll` 이 역순으로 부릅니다). */
+            /** @brief `EngineCreated` 멤버 하나를 놓습니다. */
             template <auto pMember>
             static void resetMember( EngineOwnedServices& owned )
             {
                 ( owned.*pMember ).reset();
             }
+
+            /** @brief 해제 표의 칸 하나입니다(멤버 이름과 해제 함수). */
+            struct ResetEntry
+            {
+                const utf8* _pName;
+                void ( *_pReset )( EngineOwnedServices& );
+            };
+
+            /** @brief `EngineCreated` 행을 목록 순서로 담은 해제 표입니다. 놓는 순서는 `getResetIndex` 가 정합니다. */
+            static constexpr ResetEntry kArrResetEntry[] = {
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, creator )( member )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, creator )( member )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, creator )( member )
+#include "Engine/Common/EngineServiceList.xxx"
+#undef SW_ENGINE_SERVICE
+#undef SW_ENGINE_SERVICE_CONST
+#undef SW_ENGINE_SERVICE_OPT
+            };
+
+            /** @brief @p order 번째로 놓을 칸의 자리입니다 — 목록의 역순(소멸자와 같은 순서). `destroyAll` 과 `makeDestroyOrder` 가 함께 쓴다. */
+            static constexpr size_t getResetIndex( size_t order ) { return SW_COUNT_OF( kArrResetEntry ) - 1 - order; }
         };
     } // namespace
 } // namespace sw
-
-// creator 칸에 따라 표에 넣거나 뺀다(`SW_CONCAT` 으로 낱말을 붙여 고른다 — 헤더의 다른 자리와 같은 방식).
-#define SW_ENGINE_OWNED_RESET_ENTRY_HostCreated( member )
-#define SW_ENGINE_OWNED_RESET_ENTRY_EngineCreated( member ) &EngineOwnedServicesInternal::resetMember<&EngineOwnedServices::member>,
 
 namespace sw
 {
@@ -82,18 +103,17 @@ namespace sw
 
     void EngineOwnedServices::destroyAll()
     {
-        // X-macro 는 목록 순서로만 펼쳐지므로 멤버마다 해제 함수를 표로 모아 거꾸로 돈다.
-        using ResetMemberFunction                              = void ( * )( EngineOwnedServices& );
-        static constexpr ResetMemberFunction kArrResetMember[] = {
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, creator )( member )
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, creator )( member )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, creator )( member )
-#include "Engine/Common/EngineServiceList.xxx"
-#undef SW_ENGINE_SERVICE
-#undef SW_ENGINE_SERVICE_CONST
-#undef SW_ENGINE_SERVICE_OPT
-        };
-        for ( size_t memberIndex = SW_COUNT_OF( kArrResetMember ); memberIndex > 0; --memberIndex )
-            kArrResetMember[memberIndex - 1]( *this );
+        // X-macro 는 목록 순서로만 펼쳐지므로 해제 표를 만들어 거꾸로 돈다.
+        for ( size_t order = 0; order < SW_COUNT_OF( EngineOwnedServicesInternal::kArrResetEntry ); ++order )
+            EngineOwnedServicesInternal::kArrResetEntry[EngineOwnedServicesInternal::getResetIndex( order )]._pReset( *this );
+    }
+
+    vector<const utf8*> EngineOwnedServices::makeDestroyOrder()
+    {
+        vector<const utf8*> listName;
+        listName.reserve( SW_COUNT_OF( EngineOwnedServicesInternal::kArrResetEntry ) );
+        for ( size_t order = 0; order < SW_COUNT_OF( EngineOwnedServicesInternal::kArrResetEntry ); ++order )
+            listName.push_back( EngineOwnedServicesInternal::kArrResetEntry[EngineOwnedServicesInternal::getResetIndex( order )]._pName );
+        return listName;
     }
 } // namespace sw

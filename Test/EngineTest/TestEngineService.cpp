@@ -195,3 +195,62 @@ SW_TEST_CASE( EngineServiceTest, CreateAllKeepsWhatTheHostMadeFirst )
                         "createAll 이 호스트가 먼저 만든 것을 덮어썼습니다 — 명령줄 파싱 결과가 사라집니다" );
     SW_EXPECT_NOT_NULL( owned._pTaskManager );
 }
+
+/**
+ * @brief [EngineServiceTest] `destroyAll` 이 목록의 **역순**으로 놓는지 검증(소멸자와 같은 순서)
+ * @details 기대값은 같은 목록에서 생성한다. 정방향이면 `TaskManager`(목록 앞쪽)가 `AssetStreamingQueue` 보다 먼저 사라지고,
+ *          `~AssetStreamingQueue` 의 `getTaskManager().waitAll()` 이 해제된 객체를 읽는다. 명령줄 · 전역 변수가 맨 나중이다.
+ */
+SW_TEST_CASE( EngineServiceTest, DestroyAllReleasesInReverseListOrder )
+{
+    vector<const utf8*> listExpected;
+#define SW_COLLECT_ENGINE_CREATED( member, creator )              \
+    if constexpr ( SW_SERVICE_IS_ENGINE_CREATED( creator ) == 1 ) \
+    {                                                             \
+        listExpected.insert( listExpected.begin(), #member );     \
+    }
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_COLLECT_ENGINE_CREATED( member, creator )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) SW_COLLECT_ENGINE_CREATED( member, creator )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )                SW_COLLECT_ENGINE_CREATED( member, creator )
+#include "Engine/Common/EngineServiceList.xxx"
+#undef SW_ENGINE_SERVICE
+#undef SW_ENGINE_SERVICE_CONST
+#undef SW_ENGINE_SERVICE_OPT
+#undef SW_COLLECT_ENGINE_CREATED
+
+    const vector<const utf8*> listOrder = EngineOwnedServices::makeDestroyOrder();
+    SW_ASSERT_TRUE( listOrder.size() == listExpected.size() );
+    size_t queueOrder = listOrder.size();
+    size_t taskOrder  = listOrder.size();
+    for ( size_t order = 0; order < listOrder.size(); ++order )
+    {
+        SW_EXPECT_STREQ( listExpected[order], listOrder[order] );
+        if ( string_view{ listOrder[order] } == "_pAssetStreamingQueue" )
+            queueOrder = order;
+        if ( string_view{ listOrder[order] } == "_pTaskManager" )
+            taskOrder = order;
+    }
+    SW_EXPECT_TRUE_MSG( queueOrder < taskOrder, "AssetStreamingQueue must be released before the TaskManager its destructor waits on" );
+    SW_EXPECT_STREQ( "_pCommandLineManager", listOrder.back() );
+}
+
+/**
+ * @brief [EngineServiceTest] 표가 꽂힌 채로 `destroyAll` 해도 `~AssetStreamingQueue` 가 살아 있는 TaskManager 를 기다리는지 검증
+ * @details 저장소의 서비스를 표에 꽂고 해제한다. 해제 순서가 틀리면 소멸자가 해제된 TaskManager 를 읽는다(ASAN 구성에서 heap-use-after-free).
+ */
+SW_TEST_CASE( EngineServiceTest, DestroyAllWhileBoundKeepsTaskManagerForStreamingQueue )
+{
+    const EngineServices saved = engine::getBoundEngineServices();
+
+    EngineOwnedServices owned;
+    owned.createAll();
+    EngineServices table = saved;
+    owned.bindInto( table );
+    test::rebindEngineServices( table );
+    SW_EXPECT_TRUE( engine::areEngineServicesBound() );
+
+    owned.destroyAll();
+    test::rebindEngineServices( saved );
+    SW_EXPECT_NULL( owned._pTaskManager.get() );
+    SW_EXPECT_NULL( owned._pAssetStreamingQueue.get() );
+}
