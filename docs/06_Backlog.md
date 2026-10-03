@@ -97,9 +97,6 @@ cd build/Ninja-Debug/Bin
 
 2026-10-03 감사로 찾은 14 곳. 끝난 줄은 지운다. "진행 중" 은 워크트리에서 하고 있는 것이다.
 
-- **(진행 중) 렌더 패스 종류** — 패스 하나의 사실이 7 곳(registerPso 목록 · `EngineData` 셰이더 필드 · `ShaderBakeRequest` 문자열 체인 · `executePass`
-  else-if · `FrameRendererUtil` 술어 다섯 · 입력 계약 · 트랜지언트 특례)에 흩어져 있다. 베이크 체인이 `"PostBloom"`(enum 은 `Bloom`) · 지운 별칭
-  `"Shading"` 을 비교한다. → `RenderPassTypeTraits` 표 하나를 런타임과 베이커가 enum 으로 훑는다.
 - **에디터 확장 지점을 손으로 채운다** — 패널(`EditorPanelManager.cpp` include 18 + 등록 18), 팝업(`EditorPopupManager.cpp`), 컴포넌트 인스펙터
   (`InspectorComponentManager.cpp` 에 클래스 넷이 다 들어 있다), 뷰포트 시각화(`EditorViewportVisualizer.cpp`), 명령 표 27 줄 + 메뉴 배치 손 목록
   (`EditorMenuBar.cpp` — 줄의 `_pCategory` 가 메뉴를 몰지 않는다). GameFramework · 킷 컴포넌트는 에디터 중앙 파일을 고치지 않고는 인스펙터 · 시각화를
@@ -107,18 +104,10 @@ cd build/Ninja-Debug/Bin
 - **대화 노드 종류** — `DialogueGraphPanel.cpp` 의 추가 메뉴 · 그리기 switch · 프로퍼티 체인 · 미리보기 진행과 `DialogueRunnerComponent.cpp:386-430`
   (빠짐없지 않은 if — 새 종류면 대화가 조용히 멈춘다)가 진행 규칙을 따로 구현한다. → 엔진 쪽 종류별 특성 줄 + 러너 · 미리보기가 같이 쓰는
   `DialogueCursor::step` + 빠짐없는 switch.
-- **내장 값 타입의 에디터 위젯 · CallInEditor 인자** — 직렬화는 `ReflectBuiltins.xxx` 를 읽는데 `InspectorPropertyManager.cpp` 는 23 중 13 만 등록
-  (int8 · int16 · uint16 · uint64 · float4x4 · quaternion · TagID · 핸들은 "No inspector"). `InspectorPanel.cpp` 의 CallInEditor 인자 · 반환 체인 넷이
-  서로 다르다(float64 는 반환만 됨). → `MethodArgKind` 표 하나 + `ReflectBuiltins.xxx` 로 위젯 등록.
 - **타일맵 플래그 레이어** — Walkable · Encounter · PassThrough(+ Visual · Warp)가 `TileMapXmlData` · `TileMapPanel` · 런타임 `TileMap` 에 필드마다
   복사된다(이름 배열이 `PaintLayer` 순서와 맞아야 함). → `TileFlagLayer` enum + `{이름, XML 속성, 색}` 표 + 플래그 벡터 배열(XML 속성 `enc` · `pt` 유지).
 - **시퀀서 항목 종류가 매직 정수** — `SequenceTrackItem::_type` 0=Clip · 1=Event 를 `SequenceTimelineUtil.cpp` · `SequencerPanel.cpp` 가 리터럴로 본다.
   → `ENUM() SequenceItemKind`(JSON 은 정수 그대로) + 종류별 적용 표.
-- **C++ 와 Python 에 같은 목록이 두 벌** — `CookAssets.py:378` 셰이더 bin 폴더 필터가 `opengl` 을 빠뜨려 GL 아닌 팩에도 GL 바이너리가 실린다;
-  백엔드 별칭이 `ArgumentList.xxx` · `ShaderBaker.cpp:171` · `CookAssets.py:184` 세 벌; 쿠킹 산출물 이름을 `CookAssets.py:329` 가 `AssetFormat.cpp`
-  `kArrCookSuffix` 와 따로 유도. → `Config/Engine/PackFormat.json` + `GeneratePackFormat.py` 모양의 JSON 하나를 두 언어가 읽는다.
-- **`EditorViewportPreview.cpp:63` 이 타입 이름 `"DialogueRunnerComponent"` 를 문자열로 비교한다**(EditorModule 이 GameFramework 를 링크하지 않아서).
-  → 리플렉션 함수 메타(예: `FUNCTION( EditorPreview = DialogueLine )`)로 찾는다.
 
 ### 1-1. 직렬화 · 리플렉션
 
@@ -256,6 +245,11 @@ cd build/Ninja-Debug/Bin
 - **ReflectionParser 강제 include PCH**(`CoreMinimal.h` 를 PCH 로 — 타깃당 ~0.4 s). 캐시 위치 · 무효화가 필요하다. 값이 작아 보류.
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
+
+- **`Style/ConstructorBraces` 가 반복자 쌍 생성자에도 중괄호를 강제한다** — `vector{ first, last }` 는 initializer_list 생성자로 빠져 반복자 두 개를 값으로
+  담는다(`TaskArgs` 가 그렇게 깨져 있었다). 린트에 반복자 쌍 예외를 두거나 그 모양을 따로 짚는다.
+- **백엔드 목록이 `Config/Engine/CookContract.json` 밖에 둘 남았다** — `Scripts/dev/BackendSmoke.py` 의 `kListBackend`, `EngineConfig::_window._defaultRHI`
+  (`RHIBackend::DirectX12` 고정 — 표의 `default_rhi_backend` 와 따로, `gv_rhiBackend` 만 `SW_RHI_BACKEND_DEFAULT` 를 쓴다).
 
 - **코드 · 문서 29 곳이 옛 백로그의 날짜 항목 · 옛 절 번호를 가리킨다**(`ci.yml:156` · `TargetRules.cmake:51` · `GameEvents.h:12` "1-0c" · `docs/07` "1-0e" ·
   `FrameRendererCompute.cpp` "백로그 1-4" 등). 주석 정리(현재형 핵심만)와 함께 고친다 — 날짜 사연은 지우고, 남길 지식은 이 문서 3절 위치나
@@ -532,6 +526,10 @@ cd build/Ninja-Debug/Bin
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
 
+- **RHI 백엔드 표(이름 · 별칭 · 셰이더 폴더 · 포맷)와 쿡 접미사 표의 정본은 `Config/Engine/CookContract.json`** — `GenerateCookContract.py` 가 C++ X-macro
+  (`sw/config/CookContract.gen.h`)를 만들고 Python 은 `Scripts/common/CookContract.py` 로 읽는다. `CheckCookContract` 게이트가 쿠커 함수를 표와 대조한다.
+  두 언어에 목록을 따로 적지 말 것(`PackFormat.json` 과 같은 모양).
+
 - **소스 목록 중 손 목록이 셋 있다** — `Source/Core/CMakeLists.txt`(`cfSources`, 빠지면 ReflectionParser 링크에서 깨진다), `cmake/Engine/RhiBackendSources.cmake`(빠지면
   Engine GLOB 이 주워 **모듈의 미정의 심볼**로 나타난다), `Test/EditorTest/CMakeLists.txt`. `CheckSourceGlob` 이 디스크와 대조한다. 구성이 일부러 짓지 않는 소스는
   `sw_excludeUnbuiltSources` · `sw_declareUnbuiltSources` 로 적는다(`<빌드>/generated/sw/config/UnbuiltSources.txt`). 파일을 옮기면 경로를 문자열로 적은 곳은 컴파일러가 안 잡는다.
@@ -693,6 +691,12 @@ cd build/Ninja-Debug/Bin
   태그 ID 를 만들고, 계층 비교(`Faction` → `Faction.Player`)에는 문자열이 같이 필요하다.
 
 ### 3-7. 그래픽스 · RHI · 셰이더
+
+- **패스 종류 하나 = `RenderPassType` 한 값 + `RenderPassTypeTraits.cpp` 의 case 하나**(기본 셰이더 · define · 포맷 · 클리어 · 입력 계약 · 플래그). 전용 실행이
+  필요할 때만 `executePass` 의 switch 에 case. 런타임 PSO 와 베이커가 같은 `selectRenderPassShader` 를 부른다. 마지막 열거자를 바꾸면
+  `kRenderPassTypeCount` 를 직접 고친다(`RenderPassTest.TypeTraitsTableCoversEveryEnumValue` 가 잡는다). 리플렉션 매니페스트는 키 순서로 쓴다(결정적).
+- **인스펙터 위젯 · CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나**(`InspectorBuiltinValue.h`) — 내장 타입을 더하면 `InspectorWidgetFor<T>` 특수화가
+  없으면 컴파일이 선다. .xxx 의 문자열 줄은 `std::string`, 프로퍼티는 `sw::string`(`InspectorBuiltinCppType` 이 메운다).
 
 - **셰이더 이름 규칙은 C++ 와 같다**(AGENTS.md "### HLSL", `CheckShaderConventions` 게이트): 함수 camelCase(공유 헤더는 `sw…`), 타입 PascalCase
   (공유 헤더는 `Sw…`, `_t` 없음), 필드는 C++ 멤버 이름에서 `_` 를 뺀 것. `g_*` · cbuffer · 시맨틱 · 진입점(`VSMain` · `PSMain` · `CSMain`)은 C++ 가
