@@ -16,8 +16,6 @@
     #include <vulkan/vulkan_xcb.h>
     #include <vulkan/vulkan_xlib.h>
     #include <xcb/xcb.h>
-#elif defined( SW_PLATFORM_MACOS )
-    #include <vulkan/vulkan_metal.h>
 #endif
 
 namespace sw::editor
@@ -189,15 +187,6 @@ namespace sw::editor
             create_info.connection                = pConnection;
             create_info.window                    = window;
             return static_cast<int32>( pCreateXcb( instance, &create_info, pAllocators, reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) ) );
-        };
-#elif defined( SW_PLATFORM_MACOS )
-        platform_io.Platform_CreateVkSurface = []( ImGuiViewport* pVp, ImU64 vulkanInstance, const void* pVkAllocators, ImU64* pOutVkSurface ) -> int32
-        {
-            VkMetalSurfaceCreateInfoEXT create_info = {};
-            create_info.sType                       = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
-            create_info.pLayer                      = pVp->PlatformHandleRaw;
-            VkResult result                         = vkCreateMetalSurfaceEXT( reinterpret_cast<VkInstance>( vulkanInstance ), &create_info, static_cast<const VkAllocationCallbacks*>( pVkAllocators ), reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) );
-            return static_cast<int32>( result );
         };
 #endif
 

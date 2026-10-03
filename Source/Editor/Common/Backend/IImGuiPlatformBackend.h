@@ -17,7 +17,7 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief ImGui 창 · 입력 백엔드입니다(Win32 / OSX / X11). */
+    /** @brief ImGui 창 · 입력 백엔드입니다(Win32 / X11). */
     class IImGuiPlatformBackend
     {
     public:

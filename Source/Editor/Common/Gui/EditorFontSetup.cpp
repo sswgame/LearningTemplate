@@ -45,21 +45,6 @@ namespace sw::editor
                 appendIfDirectory( listDir, "/usr/local/share/fonts" );
                 if ( const utf8* pHome = std::getenv( "HOME" ) )
                     appendIfDirectory( listDir, FileUtil::joinPath( pHome, ".local/share/fonts" ) );
-
-#elif defined( SW_PLATFORM_MACOS )
-                appendIfDirectory( listDir, "/System/Library/Fonts" );
-                appendIfDirectory( listDir, "/Library/Fonts" );
-                if ( const utf8* pHome = std::getenv( "HOME" ) )
-                {
-                    appendIfDirectory( listDir, FileUtil::joinPath( pHome, "Library/Fonts" ) );
-                }
-                else
-                {
-                    struct passwd* pPw = getpwuid( getuid() );
-                    if ( pPw != nullptr && pPw->pw_dir != nullptr )
-                        appendIfDirectory( listDir, FileUtil::joinPath( pPw->pw_dir, "Library/Fonts" ) );
-                }
-
 #endif
                 return listDir;
             }

@@ -11,8 +11,6 @@
     #include "Core/File/Windows/WindowsFileWatcher.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/File/Linux/LinuxFileWatcher.h"
-#elif defined( SW_PLATFORM_MACOS )
-    #include "Core/File/Mac/MacFileWatcher.h"
 #endif
 
 namespace sw
@@ -85,11 +83,9 @@ namespace sw
         _fileWatcher = make_unique<WindowsFileWatcher>();
 #elif defined( SW_PLATFORM_LINUX )
         _fileWatcher = make_unique<LinuxFileWatcher>();
-#elif defined( SW_PLATFORM_MACOS )
-        _fileWatcher = make_unique<MacFileWatcher>();
 #endif
 
-#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
         const string& rootPath = ResourceUtil::getRootFolderPath();
         if ( rootPath.empty() == false )
         {

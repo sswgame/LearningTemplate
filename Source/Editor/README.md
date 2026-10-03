@@ -17,7 +17,7 @@
   어느 한쪽 폴더가 아니라 `Common/` 바로 아래에 둡니다
 - **Backend/**: ImGui 백엔드 인터페이스 (`IImGuiPlatformBackend`, `IImGuiRendererBackend`), 렌더 스레드가 그릴 draw 데이터 사본
   (`EditorDrawDataSnapshot`), UI 스레드가 놓은 GPU 자원의 해제 순서(`EditorDrawReleaseQueue` — 아래 절)
-  - `Backend/Platform/`: Win32 / OSX / X11
+  - `Backend/Platform/`: Win32 / X11
   - `Backend/Render/`: DX11 / DX12 / Vulkan / OpenGL. 네이티브 객체는 `IRHIDevice` 가 판 번호를 대조해 내주는 `RHINativeHandles`
     로만 받습니다 — 백엔드 디바이스 클래스로 캐스팅하지 않습니다.
 - **Gui/**: ImGui 를 **직접 그리는** 공용 셸 — `EditorChrome`, `EditorMenuBar`, `EditorDockLayout`,

@@ -596,8 +596,6 @@ namespace sw::editor
                 ch = '\\';
         }
         command = "explorer.exe /select,\"" + windowsPath + "\"";
-#elif defined( SW_PLATFORM_MACOS )
-        command = "open -R \"" + path + "\"";
 #else
         // 리눅스 파일 관리자에는 "선택한 채로 열기" 가 표준이 아니다. 그래서 폴더까지만 연다.
         command = "xdg-open \"" + FileUtil::getDirectoryPart( path ) + "\"";
