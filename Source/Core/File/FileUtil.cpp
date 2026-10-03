@@ -1095,8 +1095,15 @@ namespace sw
             if ( hModule != nullptr )
                 return hModule;
         }
-        const string nativeName = toNativeSeparators( libraryName );
-        return LoadLibraryA( nativeName.c_str() );
+        const string  nativeName = toNativeSeparators( libraryName );
+        const HMODULE hModule    = LoadLibraryA( nativeName.c_str() );
+        if ( hModule == nullptr )
+        {
+            // 실패 이유는 GetLastError 하나뿐이다 — 남기지 않으면 부르는 쪽은 "로드 실패" 밖에 모른다(126 의존 DLL 없음, 1114 DllMain 실패 등).
+            const DWORD errorCode = GetLastError();
+            SW_LOG_WARNING( "LoadLibrary failed for %# (Win32 error %#)", nativeName.c_str(), static_cast<uint32>( errorCode ) );
+        }
+        return hModule;
 #else
         string absPath;
         if ( makeAbsolutePath( libraryName, absPath ) && fileExists( absPath ) )
@@ -1106,7 +1113,13 @@ namespace sw
                 return pHandle;
         }
         const string libraryNameNt( libraryName );
-        return dlopen( libraryNameNt.c_str(), RTLD_NOW | RTLD_LOCAL );
+        void*        pHandle = dlopen( libraryNameNt.c_str(), RTLD_NOW | RTLD_LOCAL );
+        if ( pHandle == nullptr )
+        {
+            const utf8* pReason = dlerror(); // 실패 이유는 이것 하나뿐이다
+            SW_LOG_WARNING( "dlopen failed for %#: %#", libraryNameNt.c_str(), ( pReason != nullptr ) ? pReason : "(no reason)" );
+        }
+        return pHandle;
 #endif
     }
 
