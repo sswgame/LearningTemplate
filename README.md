@@ -412,7 +412,7 @@ public:
 
 - 헤더에 처음 `REFLECT` · `ENUM` 을 넣었으면 **다시 configure** 해야 파서가 그 헤더를 봅니다(증상은 `X::StaticType()` 링크 오류).
 - 메타 키는 파서의 필드 표가 정한 것만 받습니다 — 모르는 키는 코드젠 오류입니다(`Tools/ReflectionParser/README.md`).
-  이름을 바꿀 때 옛 이름 호환(`Alias`)을 두지 않고 데이터를 새 이름으로 다시 씁니다.
+  이름을 바꿀 때는 옛 이름 호환(`Alias` · `ValueAlias`)을 두지 않고 데이터를 새 이름으로 다시 씁니다 — 별칭은 다시 쓸 수 없는 데이터(배포한 세이브 등)가 생긴 뒤의 창구입니다.
 
 - **JSON 직렬화**: `JsonSerializer::serialize(&stats, *pTypeInfo)`
 - **XML 직렬화**: `XmlSerializer::serialize(&stats, *pTypeInfo)`

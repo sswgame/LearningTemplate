@@ -228,7 +228,7 @@ hence the enforced lowercase rule. Rendering separates `RenderPassResource` (bin
 under `renderpass/`) from `RenderPipelineResource` (the frame graph ordering passes, under `pipeline/`);
 `FrameRenderer` builds a `RenderGraph` from the pipeline and topologically sorts it at runtime. Textures are read
 as DDS only — source images live in `textures_raw/` and are baked with `App --bake-textures`. Data is read in
-its current shape only: no `Alias` / `ValueAlias`, no old-format readers — a rename rewrites the data
+its current shape only: no old-format readers, and a rename rewrites the data instead of adding `Alias` / `ValueAlias` (those are for after shipped data exists)
 (`ResourceDataSchemaTest`). Command-line arguments are listed in `Source/Core/Predefined/ArgumentList.xxx`.
 
 ## Gotchas

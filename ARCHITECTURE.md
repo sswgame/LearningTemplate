@@ -89,7 +89,7 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
 ### 5. 리플렉션과 직렬화 (Reflection & Serialization)
 - **리플렉션 생성**: C++ 소스 코드에 `REFLECT`, `PROPERTY` 매크로를 달아두면 `Tools/ReflectionParser`가 코드를 읽어서 `*.gen.cpp`(메타데이터)를 만들어줍니다.
 - **직렬화**: 이렇게 만들어진 데이터를 통해 JSON, XML, Binary 등으로 오브젝트의 상태를 저장하고 불러옵니다(Scene 로딩). `ObjectDiffSerializer`를 통해 바뀐 값만 따로 델타(Delta) 저장도 가능합니다.
-- **지금 형식만 읽습니다.** 옛 판 · 옛 모양을 짐작해 읽는 갈래와 이름 별칭(`Alias` · `ValueAlias`)을 두지 않습니다 — 이름이나 형식을 바꾸면 `Resource/` 데이터를
+- **지금 형식만 읽습니다.** 옛 판 · 옛 모양을 짐작해 읽는 갈래를 두지 않고, 엔진 · 게임 코드는 이름 별칭(`Alias` · `ValueAlias` — 다시 쓸 수 없는 데이터가 생긴 뒤의 창구)을 쓰지 않습니다 — 이름이나 형식을 바꾸면 `Resource/` 데이터를
   새 모양으로 다시 씁니다. 모르는 이름(orphan)은 텍스트 형식에서는 알리고 건너뛰고, 바이너리 형식에서는 거절합니다(`SchemaMigrate.h` 계약).
   `ResourceDataSchemaTest` 가 `Resource/` 데이터 전부가 모르는 이름 없이 읽히는지 단언합니다.
 
