@@ -75,9 +75,7 @@ namespace sw
         bool hasPlayerWon() const { return _bPlayerWon != SW_FALSE; }
         /** @brief 현재 전투 페이즈를 반환합니다. */
         BattlePhase getPhase() const { return _phase; }
-        /** @brief 적 닉네임을 반환합니다. */
-        const utf8* getFoeName() const { return _foe._nickname.c_str(); }
-        /** @brief HUD용 상태 텍스트를 반환합니다. */
+        /** @brief HUD 한 줄(조우 · 기술 사용 · 기절 · 도망 알림)입니다. 페이즈가 바뀔 때마다 다시 씁니다. */
         const utf8* getStatusText() const { return _statusText.c_str(); }
         /** @brief 플레이어 선두를 반환합니다. */
         const PartyMember& player() const { return _player; }

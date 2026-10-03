@@ -3070,3 +3070,39 @@ SW_TEST_CASE( GameFrameworkTest, BeginPlayAddsNoOwnershipTags )
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), projectileCount );
     manager.endPlay();
 }
+
+/**
+ * @brief [GameFrameworkTest] 전투의 HUD 한 줄(`BattleState::getStatusText`)이 조우 · 도망 · 종료를 따라간다
+ * @details 킷이 HUD 에 내놓는 유일한 출력이다(적 이름은 `foe()._nickname`). 문자열 표가 없으면 각 줄의 기본 영어 문장이다.
+ */
+SW_TEST_CASE( GameFrameworkTest, BattleStatusTextFollowsTheBattle )
+{
+    SpeciesCatalog catalog;
+    {
+        test::ScopedLogSuppressor suppressor;
+        (void)catalog.loadFromResource( "no_such_species_catalog.xml" ); // 없는 리소스 — 폴백 표를 쓴다
+    }
+    game::bindLocalService<SpeciesCatalog>( &catalog );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( Delegate<void()>, []()
+    {
+        game::unbindLocalService<SpeciesCatalog>();
+    } ) );
+
+    BattleState battle;
+    SW_EXPECT_STREQ( "", battle.getStatusText() );
+
+    battle.startWildEncounter();
+    SW_ASSERT_TRUE( battle.isActive() );
+    const string foeName( battle.foe()._nickname.c_str() );
+    SW_ASSERT_FALSE( foeName.empty() );
+    const string_view appeared( battle.getStatusText() );
+    SW_EXPECT_TRUE_MSG( appeared.find( foeName.c_str() ) != string_view::npos, "조우 줄에 적 이름이 없습니다" );
+
+    battle.update( 1.0f );
+    SW_ASSERT_EQUAL( static_cast<uint8>( BattlePhase::PlayerChoice ), static_cast<uint8>( battle.getPhase() ) );
+    battle.selectRun();
+    SW_EXPECT_STREQ( "Got away safely!", battle.getStatusText() );
+
+    battle.endBattle();
+    SW_EXPECT_STREQ( "", battle.getStatusText() );
+}

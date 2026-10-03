@@ -10,7 +10,6 @@ namespace sw
         : _arrKeyMask{}
         , _arrPressedMask{}
         , _arrReleasedMask{}
-        , _onTextInput{}
         , _bAnyKeyPressed{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -122,19 +121,5 @@ namespace sw
             if ( bWasDown )
                 _arrReleasedMask[word] |= bit;
         }
-    }
-
-    void KeyboardDevice::notifyTextInput( string_view text )
-    {
-        if ( _onTextInput.isBound() )
-            _onTextInput( text );
-    }
-
-    uint32 KeyboardDevice::releaseCodeWithin( const void* pBegin, const void* pEnd )
-    {
-        if ( _onTextInput.isCodeWithin( pBegin, pEnd ) == false )
-            return 0;
-        _onTextInput = {};
-        return 1;
     }
 } // namespace sw

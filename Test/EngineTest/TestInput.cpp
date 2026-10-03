@@ -45,10 +45,17 @@ namespace
         s_inputProbeValue += 1000;
     }
 
-    void onProbeKeyboardText( sw::string_view )
+    sw::string s_lastTextInput; ///< 글자 입력 콜백이 마지막으로 받은 글자
+
+    void onRecordTextInput( sw::string_view text )
     {
-        s_inputProbeValue += 10000;
+        s_lastTextInput = sw::string( text );
     }
+
+    /** @brief 마우스 장치 하나를 더 꽂는 자리 — 모듈이 등록한 장치처럼 vtable 이 이 실행 파일에 있다. */
+    class SecondMouseDevice final : public sw::MouseDevice
+    {
+    };
 
     /** @brief 모듈이 등록한 장치 자리 — vtable 이 이 실행 파일에 있다. */
     class ProbeInputDevice final : public sw::IInputDevice
@@ -1201,8 +1208,8 @@ SW_TEST_CASE( RawInputEventTest, TextPayloadTruncatesAtUtf8Boundary )
 }
 
 /**
- * @brief [InputManagerTest] 모듈 이미지를 내리기 전의 정리는 입력 관리자의 콜백 넷 · 장치의 콜백 · 모듈이 등록한 장치를 뗀다
- * @details 입력 관리자는 모듈보다 오래 산다. 모듈이 단 콜백(장치 변경 · 게임패드 연결 · 글자 입력 · 조합, 키보드의 글자 입력)과 모듈이 등록한 장치(vtable 이
+ * @brief [InputManagerTest] 모듈 이미지를 내리기 전의 정리는 입력 관리자의 콜백 넷 · 모듈이 등록한 장치를 뗀다
+ * @details 입력 관리자는 모듈보다 오래 산다. 모듈이 단 콜백(장치 변경 · 게임패드 연결 · 글자 입력 · 조합)과 모듈이 등록한 장치(vtable 이
  *          그 이미지)는 이미지를 내린 뒤 부르면 내려간 코드로 뛴다. 범위는 콜백 스텁 · 장치 vtable 하나씩으로 좁힌다 — 배포 구성은 엔진까지 한 실행
  *          파일이라 이미지 통째로 주면 엔진의 장치까지 내린다. 범위 밖(엔진이 단 게임패드 슬롯의 연결 콜백 · 엔진 장치)은 그대로 남아야 한다.
  */
@@ -1214,16 +1221,14 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
     SW_ASSERT_TRUE( input.initialize() );
     SW_ASSERT_NOT_NULL( input.getKeyboard() );
 
-    const sw::InputManager::ActiveDeviceChangedDelegate onActive       = SW_DELEGATE_FUNCTION( sw::InputManager::ActiveDeviceChangedDelegate, onProbeActiveDeviceChanged );
-    const sw::InputManager::GamepadConnectionDelegate   onConnection   = SW_DELEGATE_FUNCTION( sw::InputManager::GamepadConnectionDelegate, onProbeGamepadConnection );
-    const sw::InputManager::TextInputDelegate           onText         = SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onProbeTextInput );
-    const sw::InputManager::TextInputDelegate           onComposition  = SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onProbeTextComposition );
-    const sw::KeyboardDevice::TextInputDelegate         onKeyboardText = SW_DELEGATE_FUNCTION( sw::KeyboardDevice::TextInputDelegate, onProbeKeyboardText );
+    const sw::InputManager::ActiveDeviceChangedDelegate onActive      = SW_DELEGATE_FUNCTION( sw::InputManager::ActiveDeviceChangedDelegate, onProbeActiveDeviceChanged );
+    const sw::InputManager::GamepadConnectionDelegate   onConnection  = SW_DELEGATE_FUNCTION( sw::InputManager::GamepadConnectionDelegate, onProbeGamepadConnection );
+    const sw::InputManager::TextInputDelegate           onText        = SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onProbeTextInput );
+    const sw::InputManager::TextInputDelegate           onComposition = SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onProbeTextComposition );
     input.setActiveDeviceChangedCallback( onActive );
     input.setGamepadConnectionCallback( onConnection );
     input.setTextInputCallback( onText );
     input.setTextCompositionCallback( onComposition );
-    input.getKeyboard()->setTextInputCallback( onKeyboardText );
     sw::unique_ptr<ProbeInputDevice> pProbe    = sw::make_unique<ProbeInputDevice>();
     ProbeInputDevice*                pProbeRaw = pProbe.get();
     const uint8*                     pVtable   = static_cast<const uint8*>( sw::IModuleCodeHolder::findVtableAddress( static_cast<const sw::IInputDevice*>( pProbeRaw ) ) );
@@ -1231,8 +1236,7 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
     SW_EXPECT_TRUE( input.getDevice( sw::InputDeviceKind::Custom ) == pProbeRaw );
 
     bool        bKeepImageMapped{ false };
-    const void* arrCode[] = { onActive.getCodeAddress(), onConnection.getCodeAddress(), onText.getCodeAddress(), onComposition.getCodeAddress(),
-                              onKeyboardText.getCodeAddress() };
+    const void* arrCode[] = { onActive.getCodeAddress(), onConnection.getCodeAddress(), onText.getCodeAddress(), onComposition.getCodeAddress() };
     for ( const void* pCode : arrCode )
     {
         const uint8* pStub = static_cast<const uint8*>( pCode );
@@ -1247,7 +1251,6 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
     s_inputProbeValue = 0;
     input.onTextInput( "a" );
     input.onTextComposition( "b" );
-    input.getKeyboard()->notifyTextInput( "c" );
     input.setActiveDeviceType( sw::InputDeviceType::GamepadXbox );
     SW_EXPECT_EQUAL( 0, s_inputProbeValue );
     for ( const void* pCode : arrCode )
@@ -1255,5 +1258,75 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
         const uint8* pStub = static_cast<const uint8*>( pCode );
         SW_EXPECT_EQUAL( 0u, input.releaseModuleCodeWithin( pStub, pStub + 1, bKeepImageMapped ) );
     }
+    input.shutdown();
+}
+
+#if defined( SW_PLATFORM_WINDOWS )
+/**
+ * @brief [InputManagerTest] WM_CHAR 의 글자가 다음 프레임에 `InputManager::setTextInputCallback` 콜백으로 UTF-8 로 온다
+ * @details 글자 입력의 창구는 이것 하나다(언리얼 `FSlateApplication::OnKeyChar` 자리). 메시지 펌프가 원시 이벤트로 넣고 `beginFrame` 이 콜백을 부른다.
+ *          제어 문자(백스페이스 등)는 글자가 아니므로 오지 않는다.
+ */
+SW_TEST_CASE( InputManagerTest, WmCharReachesTheTextInputCallback )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.setTextInputCallback( SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onRecordTextInput ) );
+    s_lastTextInput.clear();
+
+    sw::NativeWindowEvent charEvent{};
+    charEvent._message = WM_CHAR;
+    charEvent._wParam  = 0xAC00; // '가'
+    input.processNativeEvent( charEvent );
+    SW_EXPECT_TRUE( s_lastTextInput.empty() ); // 프레임이 시작해야 적용된다
+    input.beginFrame( 0.016f );
+    SW_EXPECT_TRUE( s_lastTextInput == "\xEA\xB0\x80" );
+    input.endFrame();
+
+    s_lastTextInput.clear();
+    charEvent._wParam = 0x08; // 백스페이스
+    input.processNativeEvent( charEvent );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_TRUE( s_lastTextInput.empty() );
+    input.endFrame();
+
+    input.setTextInputCallback( {} );
+    input.shutdown();
+}
+#endif
+
+/**
+ * @brief [InputManagerTest] 장치를 등록에서 내리면 목록에서 빠지고, 대표 장치였으면 남은 같은 종류의 장치가 대표가 된다
+ * @details 모듈이 꽂은 장치를 그 모듈이 스스로 내리는 창구다(유니티 `InputSystem.RemoveDevice`). 모듈 이미지를 내릴 때의 정리
+ *          (`releaseModuleCodeWithin`)도 같은 함수를 지난다.
+ */
+SW_TEST_CASE( InputManagerTest, UnregisterDeviceFallsBackToTheRemainingDeviceOfThatKind )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::MouseDevice* pEngineMouse = input.getMouse();
+    SW_ASSERT_NOT_NULL( pEngineMouse );
+
+    sw::unique_ptr<SecondMouseDevice> pSecond    = sw::make_unique<SecondMouseDevice>();
+    SecondMouseDevice*                pSecondRaw = pSecond.get();
+    input.registerDevice( std::move( pSecond ) );
+    SW_EXPECT_TRUE( input.getMouse() == pEngineMouse ); // 먼저 온 장치가 대표다
+
+    input.unregisterDevice( pEngineMouse );
+    SW_EXPECT_TRUE( input.getMouse() == pSecondRaw );
+    SW_EXPECT_TRUE( input.getDevice( sw::InputDeviceKind::Mouse ) == pSecondRaw );
+
+    // 대표가 바뀐 뒤에도 마우스 이벤트가 그 장치에 닿는다.
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 30, 40 ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_EQUAL( 30, pSecondRaw->getPositionX() );
+    input.endFrame();
+
+    input.unregisterDevice( nullptr ); // 아무것도 하지 않는다
+    input.unregisterDevice( pSecondRaw );
+    SW_EXPECT_TRUE( input.getMouse() == nullptr );
+    SW_EXPECT_TRUE( input.getDevice( sw::InputDeviceKind::Mouse ) == nullptr );
+    input.beginFrame( 0.016f ); // 마우스가 없어도 프레임이 돈다
+    input.endFrame();
     input.shutdown();
 }
