@@ -281,7 +281,9 @@ namespace sw
 
 - Follow `.clang-format`.
 - When a constructor exists, initialize fields in the constructor (not in the
-  header), in declaration order. Use brace initialization. Put one initializer
+  header), in declaration order. Use brace initialization — except an iterator pair, which takes
+  parentheses (`_listValue( list.begin(), list.end() )`): braces pick the `initializer_list` constructor and store
+  the two iterators as elements (`Style/IteratorPairBraces`). Put one initializer
   per line, with subsequent lines beginning with `,`. An initial value has exactly
   one home: writing it in both places hides which one wins (the constructor does) and
   invites changing only one of them. Enforced by `CheckCodeConventions.py`

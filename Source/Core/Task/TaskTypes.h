@@ -232,14 +232,11 @@ namespace sw
 
         /**
          * @brief 값 목록으로 채웁니다(`TaskArgs{ a, b }`).
-         * @note 반복자 쌍을 `_listValue{ begin, end }` 로 넘기면 vector 의 initializer_list 생성자가 이겨, 반복자(`const TaskValue*`)
-         *       둘이 그대로 TaskValue 두 개로 담긴다. 그래서 본문에서 `assign` 한다.
+         * @note 반복자 쌍은 소괄호로 넘긴다. `_listValue{ begin, end }` 면 vector 의 initializer_list 생성자가 이겨 반복자
+         *       (`const TaskValue*`) 둘이 그대로 TaskValue 두 개로 담긴다(`Style/IteratorPairBraces` 가 막는다).
          */
         TaskArgs( std::initializer_list<TaskValue> listValue )
-            : _listValue{}
-        {
-            _listValue.assign( listValue.begin(), listValue.end() );
-        }
+            : _listValue( listValue.begin(), listValue.end() ) {}
 
         template <typename T>
         /** @brief 값을 하나 추가합니다. */

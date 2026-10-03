@@ -209,10 +209,16 @@ def checkSubjectMatrixInternal(tempRoot: Path, bVerbose: bool) -> list[str]:
 
 
 # 아무 규칙도 건드리면 안 되는 조각. 오탐이 생기면 여기서 잡힌다.
+# 반복자 쌍 생성자는 소괄호가 맞다(`Style/ConstructorBraces` 의 예외) — 중괄호는 initializer_list 로 빠진다.
 _kCleanCase: tuple[str, str] = (
     "Source/Probe/Clean.cpp",
     '#include "pch.h"\n\nnamespace\n{\n    constexpr int32 kProbeLimit = 4;\n} // namespace\n\n'
-    "void probe( int32 count )\n{\n    (void)count;\n}\n",
+    "void probe( int32 count )\n{\n    (void)count;\n}\n\n"
+    "Probe::Probe( std::initializer_list<int32> listValue, const int32* pBegin, const int32* pEnd )\n"
+    "    : _listValue( listValue.begin(), listValue.end() )\n"
+    "    , _listCopy( pBegin, pEnd )\n"
+    "    , _listOther( std::begin( listValue ), std::end( listValue ) )\n"
+    "{\n}\n",
 )
 
 # 트리 전체를 봐야 아는 규칙의 **오탐**을 잡는 조각. 위 `_kCleanCase` 는 파일 하나만 넘기므로

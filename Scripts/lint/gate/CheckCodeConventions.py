@@ -489,6 +489,73 @@ _kConstructorDefinitionLineRe = re.compile(r"^\s*([A-Z]\w*)::\1\s*\(")
 _kPointerNamePrefixRe = re.compile(r'^_?p[A-Z]')
 _kBoolNamePrefixRe = re.compile(r'^_?b[A-Z]')
 
+# [반복자 쌍 인자]
+# `x.begin(), x.end()` · `x->cbegin(), x->cend()` · `std::begin( x ), std::end( x )` — 같은 대상의 시작 · 끝 호출.
+# `first, last` · `pBegin, pEnd` 처럼 이름 끝 단어가 Begin/First 와 End/Last 인 식별자 둘도 반복자 쌍으로 본다(소괄호 예외에만).
+_kIteratorBeginMemberCallRe = re.compile(r'^(?P<object>[A-Za-z_][\w.:\->\[\]]*?)\s*(?:\.|->)\s*c?r?begin\s*\(\s*\)$')
+_kIteratorEndMemberCallRe = re.compile(r'^(?P<object>[A-Za-z_][\w.:\->\[\]]*?)\s*(?:\.|->)\s*c?r?end\s*\(\s*\)$')
+_kIteratorBeginFreeCallRe = re.compile(r'^(?:std::)?c?r?begin\s*\(\s*(?P<object>[^()]+?)\s*\)$')
+_kIteratorEndFreeCallRe = re.compile(r'^(?:std::)?c?r?end\s*\(\s*(?P<object>[^()]+?)\s*\)$')
+_kIteratorBeginNameRe = re.compile(r'^(?:[a-z]\w*(?:Begin|First)|begin|first)$')
+_kIteratorEndNameRe = re.compile(r'^(?:[a-z]\w*(?:End|Last)|end|last)$')
+_kBraceGroupRe = re.compile(r'\{([^{}]*)\}')
+
+
+def splitTopLevelCommasInternal(text: str) -> list[str]:
+    """괄호 · 대괄호 · 중괄호 밖의 쉼표로 나눕니다(꺾쇠는 `->` 와 섞여 세지 않는다)."""
+    listPart: list[str] = []
+    depth = 0
+    start = 0
+    for index, ch in enumerate(text):
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}" and depth > 0:
+            depth -= 1
+        elif ch == "," and depth == 0:
+            listPart.append(text[start:index].strip())
+            start = index + 1
+    listPart.append(text[start:].strip())
+    return listPart
+
+
+def isIteratorCallPairInternal(argumentText: str) -> bool:
+    """인자가 같은 대상의 begin/end 호출 두 개인지 봅니다(`x.begin(), x.end()`)."""
+    listPart = splitTopLevelCommasInternal(argumentText)
+    if len(listPart) != 2:
+        return False
+    for beginRe, endRe in ((_kIteratorBeginMemberCallRe, _kIteratorEndMemberCallRe),
+                           (_kIteratorBeginFreeCallRe, _kIteratorEndFreeCallRe)):
+        beginMatch = beginRe.match(listPart[0])
+        endMatch = endRe.match(listPart[1])
+        if beginMatch is not None and endMatch is not None and beginMatch.group("object") == endMatch.group("object"):
+            return True
+    return False
+
+
+def isIteratorPairInternal(argumentText: str) -> bool:
+    """인자가 반복자 쌍인지 봅니다 — begin/end 호출 쌍이거나 `first, last` 같은 이름 쌍."""
+    if isIteratorCallPairInternal(argumentText):
+        return True
+    listPart = splitTopLevelCommasInternal(argumentText)
+    return (len(listPart) == 2
+            and _kIteratorBeginNameRe.match(listPart[0]) is not None
+            and _kIteratorEndNameRe.match(listPart[1]) is not None)
+
+
+def extractParenthesizedInternal(text: str) -> str | None:
+    """`( ... )` 로 시작하는 텍스트에서 짝이 맞는 괄호 안쪽을 돌려줍니다. 짝이 없으면 None."""
+    if text.startswith("(") is False:
+        return None
+    depth = 0
+    for index, ch in enumerate(text):
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return text[1:index]
+    return None
+
 
 # --- 5. 명명 판정 — 어휘 표를 읽는 단 한 벌의 검사 ---------------------------
 #
@@ -1381,7 +1448,10 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
                 initVar = initMatch.group(1)
                 initVal = initMatch.group(2)
                 if initVal.startswith("(") and not initVar.startswith("super") and not initVar.endswith("Base"):
-                    if "_" in initVar:
+                    # 반복자 쌍은 소괄호여야 한다 — 중괄호면 initializer_list 생성자가 이겨 반복자 자체를 값으로 담는다.
+                    initArgument = extractParenthesizedInternal(trimmed[initMatch.start(2):])
+                    bIteratorPair = initArgument is not None and isIteratorPairInternal(initArgument)
+                    if "_" in initVar and bIteratorPair is False:
                         violations.append(
                             ConventionViolation(
                                 file_path=relPath,
@@ -2059,6 +2129,37 @@ class PlacementNewRule( ConventionRule ):
             )
             break
         return violations
+
+
+class IteratorPairBracesRule( ConventionRule ):
+    """Style/IteratorPairBraces"""
+    category = "Style/IteratorPairBraces"
+    badSampleFile = "Source/Probe/IteratorPairBraces.cpp"
+    badSample = (
+        '#include "pch.h"\n\nProbe::Probe( std::initializer_list<int32> listValue )\n'
+        '    : _listValue{ listValue.begin(), listValue.end() }\n{\n}\n'
+    )
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        # 반복자 쌍을 중괄호로 넘기면 받는 쪽에 initializer_list 생성자가 있을 때 그것이 이긴다 — 반복자 둘이 원소 둘로
+        # 담긴다(값 타입이 반복자로부터 만들어질 수 있으면 컴파일도 된다). 반복자 쌍은 소괄호로 넘긴다.
+        if ctx.trimmed.startswith("#"):
+            return []
+        for braceMatch in _kBraceGroupRe.finditer(ctx.codeWithoutStrings):
+            if isIteratorCallPairInternal(braceMatch.group(1)):
+                return [
+                    ConventionViolation(
+                        file_path=ctx.relPath,
+                        line_number=ctx.lineNum,
+                        rule_category=self.category,
+                        message=(
+                            "반복자 쌍은 소괄호로 넘기세요: `( x.begin(), x.end() )`. 중괄호면 initializer_list 생성자가 "
+                            "골라져 반복자 둘이 원소로 담길 수 있습니다."
+                        ),
+                        snippet=ctx.trimmed,
+                    )
+                ]
+        return []
 
 
 class TriplePointerRule( ConventionRule ):

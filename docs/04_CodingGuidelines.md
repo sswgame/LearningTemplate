@@ -113,7 +113,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - `switch` 의 `case` / `default` 는 본문이 **두 문장 이상이면 중괄호를 씌우고**, 한 문장이면 씌우지 않습니다. `break;` 도 한 문장으로 세므로 `case A:` 아래에 문장 하나와 `break;` 가 오면 중괄호를 씌우며, `case A: return X;` 는 그대로 둡니다. `break;` 는 중괄호 **안**에 둡니다. 본문에 전처리기 지시문이 끼어 있으면 건드리지 않습니다 — 본문의 끝이 글자만으로 정해지지 않아 여는 중괄호와 닫는 중괄호가 `#if` 의 반대편에 놓일 수 있습니다. 같은 스크립트가 자동 정리하며, clang-format 의 `InsertBraces` 는 case 라벨을 보지 않아 이 규칙을 표현하지 못합니다.
 - 부울(bool) 타입이 아닌 포인터 등은 명시적으로 `== nullptr` 혹은 `== false` 로 비교하세요. `!_bValid` 보다는 `_bValid == false` 를 권장합니다.
 - 비트 필드(bit field) 플래그(예: `uint8 _bFlag : 1;`)는 `true`/`false` 대신 `SW_TRUE`(1) / `SW_FALSE`(0)를 사용하여 대입 및 비교합니다.
-- 생성자에서 멤버를 초기화할 때는 선언 순서대로 정렬해야 하며, 중괄호 `{}` 초기화를 사용하세요. 한 줄에 1개 멤버씩 초기화하며 다음 줄에 `,`로 시작합니다.
+- 생성자에서 멤버를 초기화할 때는 선언 순서대로 정렬해야 하며, 중괄호 `{}` 초기화를 사용하세요(반복자 쌍만은 소괄호 — `_listValue( list.begin(), list.end() )`. 중괄호면 `initializer_list` 생성자가 골라져 반복자 둘이 원소로 담긴다, `Style/IteratorPairBraces`). 한 줄에 1개 멤버씩 초기화하며 다음 줄에 `,`로 시작합니다.
 - 범위(Range) 비교 시 변수를 안쪽(중간)에 위치하도록 작성하여 수학적 범위 표기법($min \le value \ \&\&\ value \le max$)을 따릅니다 (`kMin <= value && value <= kMax`).
 - 비트 패딩(Byte Padding) 낭비가 발생하지 않도록 변수 선언 순서를 최적화하세요.
 
