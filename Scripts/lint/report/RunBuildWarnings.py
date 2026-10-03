@@ -236,6 +236,9 @@ def main() -> int:
     for presetName in listPreset:
         sweep = TranslationUnitSweep(projectRoot / "build" / presetName, tag="RunBuildWarnings")
         listEntry = sweep.selectUnits(args.filter)
+        if sweep.listMissingFile:
+            print(f"[RunBuildWarnings] {presetName}: 컴파일 DB 의 TU {len(sweep.listMissingFile)}개가 디스크에 없어 건너뜁니다(낡은 DB — "
+                  f"`cmake --build --preset {presetName}` 한 번이면 맞춰집니다). 첫 파일: {sweep.listMissingFile[0]}")
         if not listEntry:
             print(f"[RunBuildWarnings] {presetName}: compile_commands.json 이 없거나 대상 TU 가 없습니다 "
                   f"— `cmake --preset {presetName}` 으로 configure 하세요. 건너뜁니다.")

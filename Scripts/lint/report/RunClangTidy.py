@@ -166,6 +166,8 @@ def main() -> int:
     # 같은 .cpp 가 여러 타깃의 DB 항목으로 들어오므로 **파일 단위로 유일화**해서 넘긴다 —
     # clang-tidy 에게 필요한 것은 파일 경로뿐이고, 같은 파일을 두 번 보면 지적도 두 번 나온다.
     listUnit = sorted({entry["file"] for entry in sweep.selectUnits(args.filter, requirePathPart="/Source/")})
+    if sweep.listMissingFile:
+        print(f"[RunClangTidy] 컴파일 DB 의 TU {len(sweep.listMissingFile)}개가 디스크에 없어 건너뜁니다(낡은 DB). 첫 파일: {sweep.listMissingFile[0]}")
     if not listUnit:
         print("[RunClangTidy] 검사할 TU 가 없습니다.")
         return 0

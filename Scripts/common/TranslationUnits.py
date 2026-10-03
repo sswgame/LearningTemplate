@@ -49,6 +49,8 @@ class TranslationUnitSweep:
         self.buildDir = buildDir
         self.databasePath = buildDir / kCompileDatabaseFileName
         self._tag = tag
+        #: 마지막 `selectUnits` 가 건너뛴, 디스크에 없는 TU(낡은 컴파일 DB — 이름을 바꾸고 그 프리셋을 다시 안 지었을 때).
+        self.listMissingFile: list[str] = []
 
     @property
     def bHasDatabase(self) -> bool:
@@ -62,7 +64,9 @@ class TranslationUnitSweep:
         생성 코드와 PCH 더미는 언제나 뺀다 — 우리가 고칠 대상이 아니다.
         `requirePathPart` 를 주면 그 조각이 든 경로만 남긴다(예: `/Source/`).
         `pathFilter` 는 사용자가 `--filter` 로 주는 부분 문자열이다.
+        디스크에 없는 TU(낡은 DB)는 건너뛰고 `listMissingFile` 에 남긴다 — 컴파일러가 "파일 없음" 을 오류로 내면 경고 보고가 그 줄로 덮인다.
         """
+        self.listMissingFile = []
         if not self.bHasDatabase:
             return []
 
@@ -76,6 +80,12 @@ class TranslationUnitSweep:
             if filePath.endswith(_kAlwaysSkipSuffix):
                 continue
             if pathFilter and pathFilter.lower() not in filePath.lower():
+                continue
+            sourcePath = Path(filePath)
+            if sourcePath.is_absolute() is False:
+                sourcePath = Path(str(entry.get("directory", ""))) / sourcePath
+            if sourcePath.is_file() is False:
+                self.listMissingFile.append(filePath)
                 continue
             listEntry.append(entry)
         return listEntry
