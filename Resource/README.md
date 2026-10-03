@@ -16,3 +16,13 @@
 - 전역 ID: `engine/pipeline/forwardpipeline.xml`, `common/shaders/postoutline.hlsl`, `game/<pack>/maps/level01.xml`, `editor/textures/splash.dds`
 - 팩 상대 키: `pipeline/forwardpipeline.xml` → `game/<pack>/` → `common/` → `engine/` → `editor/` 순으로 검색
 - 셸 InputMap: `engine/input/default.input.xml` (폴백). 게임플레이: `game/<pack>/input/default.input.xml`
+
+## 텍스처
+
+- 런타임은 **DDS 만** 읽습니다(BC 압축 · 밉이 이미 된 것). `textures/` 에는 `.dds` 와 데이터(`.sprite.json` · `.meta`)만 둡니다.
+- 원본 이미지(PNG · JPG · TGA …)는 같은 도메인의 `textures_raw/` 에 같은 상대 경로로 둡니다(`editor/textures_raw/splash.jpg` →
+  `editor/textures/splash.dds`). 규칙(포맷 · sRGB · 밉)은 `Config/Editor/TextureImportConfig.json` 이 정합니다. 쿠킹은 `textures_raw/` 를 팩에서 뺍니다.
+- 원본을 고치면 `build/Ninja-Debug/Bin/App.exe --bake-textures` 로 굽고 DDS 와 `textures_raw/bake.stamp` 를 함께 커밋합니다(에디터가 떠
+  있으면 핫 리로드가 굽습니다). `App.exe --check-textures` · `TextureBakeStampTest` 가 원본 · 규칙 · DDS 의 어긋남을 내용 해시로 잡습니다.
+  BC7 은 Debug 에서 느리므로 큰 원본은 Release App 으로 굽습니다. `.hdr` 은 아직 굽지 못합니다(8비트 디코더).
+- 참조하는 곳이 없는 원본은 옮기지 말고 지웁니다. `CheckTextureFolders.py` 게이트가 폴더 규칙을 지킵니다.

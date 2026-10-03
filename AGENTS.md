@@ -180,6 +180,11 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
 ### Resource Assets
 
 - All files and directories under `Resource/` MUST use strictly lowercase names (`[a-z0-9_.-]+`, e.g. `inventory.anim`, `0.title.scene.xml`, `ghost.prefab.json`). Uppercase characters are strictly prohibited (except documentation `README.md`). Enforced automatically by `CheckResourceCasing.py` and Git pre-commit hooks.
+- The runtime reads textures only as DDS. A runtime texture folder (`textures/`) holds `.dds` and data (`.sprite.json`,
+  `.meta`) only; source images (PNG, JPG, TGA, ...) live under `textures_raw/` at the same relative path and are baked
+  with `App --bake-textures` (the editor bakes on hot reload too). Commit the DDS together with `textures_raw/bake.stamp`;
+  `TextureBakeStampTest` (and `App --check-textures`) fails when a source, its import rule or its DDS drifts. Delete a
+  source nothing references instead of moving it. Enforced by `CheckTextureFolders.py`.
 
 ## C++ structure and includes
 
