@@ -74,7 +74,7 @@ namespace sw
         {
             string xmlStr = "<Scene formatVersion=\"1\" name=\"";
             xmlStr += pSceneName;
-            xmlStr += "\">\n  <entities>\n    <entity name=\"Speaker\">\n      <GameObject _schemaVersion=\"0\" _name=\"Speaker\" _bActive=\"true\">\n"
+            xmlStr += "\">\n  <entities>\n    <entity id=\"1\" name=\"Speaker\">\n      <GameObject _schemaVersion=\"0\" _name=\"Speaker\" _bActive=\"true\">\n"
                       "        <_listComponent>\n          <";
             xmlStr += pComponentName;
             xmlStr += " />\n        </_listComponent>\n      </GameObject>\n    </entity>\n  </entities>\n</Scene>\n";
@@ -114,8 +114,8 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
         "<Scene formatVersion=\"1\" name=\"AsyncTown\">\n"
         "  <entities>\n"
-        "    <entity name=\"PlayerSpawn\"/>\n"
-        "    <entity name=\"Npc\"/>\n"
+        "    <entity id=\"101\" name=\"PlayerSpawn\"/>\n"
+        "    <entity id=\"102\" name=\"Npc\"/>\n"
         "  </entities>\n"
         "</Scene>\n";
 
@@ -126,10 +126,12 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
     sw::SceneDocument doc{};
     doc._name = "AsyncTown";
     sw::SceneDocument::EntityNode entA{};
-    entA._name = "PlayerSpawn";
+    entA._name   = "PlayerSpawn";
+    entA._fileId = 1;
     doc._listEntityNode.push_back( std::move( entA ) );
     sw::SceneDocument::EntityNode entB{};
-    entB._name = "Npc";
+    entB._name   = "Npc";
+    entB._fileId = 2;
     doc._listEntityNode.push_back( std::move( entB ) );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -159,12 +161,13 @@ SW_TEST_CASE( SceneAsyncTest, CarriedChildKeepsItsParentWhenTheNextSceneHasTheSa
 {
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_carry.scene.xml" );
     const sw::string binPath = test::makeTempPath( "sw_test_scene_carry.scene.bin" );
-    const sw::string xmlStr  = "<Scene formatVersion=\"1\" name=\"Dungeon\"><entities><entity name=\"MusicPlayer\"/></entities></Scene>";
+    const sw::string xmlStr  = "<Scene formatVersion=\"1\" name=\"Dungeon\"><entities><entity id=\"103\" name=\"MusicPlayer\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     sw::SceneDocument doc{};
     doc._name = "Dungeon";
     sw::SceneDocument::EntityNode decoy{};
-    decoy._name = "MusicPlayer";
+    decoy._name   = "MusicPlayer";
+    decoy._fileId = 3;
     doc._listEntityNode.push_back( std::move( decoy ) );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -212,7 +215,7 @@ SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGpu )
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_desc.scene.xml" );
     const sw::string binPath = test::makeTempPath( "sw_test_scene_desc.scene.bin" );
     const sw::string xmlStr =
-        "<Scene formatVersion=\"1\" name=\"DescOnly\"><entities><entity name=\"A\"/></entities></Scene>";
+        "<Scene formatVersion=\"1\" name=\"DescOnly\"><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath,
                                              reinterpret_cast<const uint8*>( xmlStr.data() ),
                                              static_cast<uint64>( xmlStr.size() ) ) );
@@ -220,7 +223,8 @@ SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGpu )
     sw::SceneDocument docSetup{};
     docSetup._name = "DescOnly";
     sw::SceneDocument::EntityNode entA{};
-    entA._name = "A";
+    entA._name   = "A";
+    entA._fileId = 4;
     docSetup._listEntityNode.push_back( std::move( entA ) );
     SW_ASSERT_TRUE( docSetup.saveBinary( binPath ) );
 
@@ -242,12 +246,14 @@ SW_TEST_CASE( SceneAsyncTest, DocumentBinaryRoundTrip )
     originalDoc._name = "BinaryTestScene";
     sw::SceneDocument::EntityNode entA{};
     entA._name        = "Hero";
+    entA._fileId      = 5;
     entA._prefab      = "game/empty/prefabs/hero.prefab";
     entA._embeddedXml = "<GameObjectState><Name>Hero</Name></GameObjectState>";
     originalDoc._listEntityNode.push_back( std::move( entA ) );
 
     sw::SceneDocument::EntityNode entB{};
     entB._name   = "Monster";
+    entB._fileId = 6;
     entB._prefab = "game/empty/prefabs/monster.prefab";
     originalDoc._listEntityNode.push_back( std::move( entB ) );
 
@@ -275,9 +281,9 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
     const sw::string townB = test::makeTempPath( "sw_test_warp_b.scene.xml" );
     const sw::string binB  = test::makeTempPath( "sw_test_warp_b.scene.bin" );
     const sw::string xmlA =
-        "<Scene formatVersion=\"1\" name=\"TownA\"><entities><entity name=\"A\"/></entities></Scene>";
+        "<Scene formatVersion=\"1\" name=\"TownA\"><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
     const sw::string xmlB =
-        "<Scene formatVersion=\"1\" name=\"TownB\"><entities><entity name=\"B1\"/><entity name=\"B2\"/></entities></Scene>";
+        "<Scene formatVersion=\"1\" name=\"TownB\"><entities><entity id=\"104\" name=\"B1\"/><entity id=\"105\" name=\"B2\"/></entities></Scene>";
 
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( townA,
                                              reinterpret_cast<const uint8*>( xmlA.data() ),
@@ -289,17 +295,20 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
     sw::SceneDocument docA{};
     docA._name = "TownA";
     sw::SceneDocument::EntityNode entA{};
-    entA._name = "A";
+    entA._name   = "A";
+    entA._fileId = 7;
     docA._listEntityNode.push_back( std::move( entA ) );
     SW_ASSERT_TRUE( docA.saveBinary( binA ) );
 
     sw::SceneDocument docB{};
     docB._name = "TownB";
     sw::SceneDocument::EntityNode entB1{};
-    entB1._name = "B1";
+    entB1._name   = "B1";
+    entB1._fileId = 8;
     docB._listEntityNode.push_back( std::move( entB1 ) );
     sw::SceneDocument::EntityNode entB2{};
-    entB2._name = "B2";
+    entB2._name   = "B2";
+    entB2._fileId = 9;
     docB._listEntityNode.push_back( std::move( entB2 ) );
     SW_ASSERT_TRUE( docB.saveBinary( binB ) );
 
@@ -326,7 +335,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncSwapUnloadsPreviousActive )
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_replace.scene.xml" );
     const sw::string binPath = test::makeTempPath( "sw_test_scene_replace.scene.bin" );
     const sw::string xmlStr =
-        "<Scene formatVersion=\"1\" name=\"Replaced\"><entities><entity name=\"Only\"/></entities></Scene>";
+        "<Scene formatVersion=\"1\" name=\"Replaced\"><entities><entity id=\"106\" name=\"Only\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath,
                                              reinterpret_cast<const uint8*>( xmlStr.data() ),
                                              static_cast<uint64>( xmlStr.size() ) ) );
@@ -334,7 +343,8 @@ SW_TEST_CASE( SceneAsyncTest, AsyncSwapUnloadsPreviousActive )
     sw::SceneDocument doc{};
     doc._name = "Replaced";
     sw::SceneDocument::EntityNode ent{};
-    ent._name = "Only";
+    ent._name   = "Only";
+    ent._fileId = 10;
     doc._listEntityNode.push_back( std::move( ent ) );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -365,9 +375,9 @@ SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
     const sw::string binPath2   = test::makeTempPath( "test_rapid_2.scene.bin" );
 
     const sw::string xmlStr1 =
-        "<Scene formatVersion=\"1\" name=\"SceneFirst\"><entities><entity name=\"E1\"/></entities></Scene>";
+        "<Scene formatVersion=\"1\" name=\"SceneFirst\"><entities><entity id=\"107\" name=\"E1\"/></entities></Scene>";
     const sw::string xmlStr2 =
-        "<Scene formatVersion=\"1\" name=\"SceneSecond\"><entities><entity name=\"E2\"/></entities></Scene>";
+        "<Scene formatVersion=\"1\" name=\"SceneSecond\"><entities><entity id=\"108\" name=\"E2\"/></entities></Scene>";
 
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( scenePath1, reinterpret_cast<const uint8*>( xmlStr1.data() ), xmlStr1.size() ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( scenePath2, reinterpret_cast<const uint8*>( xmlStr2.data() ), xmlStr2.size() ) );
@@ -375,14 +385,16 @@ SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
     sw::SceneDocument doc1{};
     doc1._name = "SceneFirst";
     sw::SceneDocument::EntityNode ent1{};
-    ent1._name = "E1";
+    ent1._name   = "E1";
+    ent1._fileId = 11;
     doc1._listEntityNode.push_back( std::move( ent1 ) );
     SW_ASSERT_TRUE( doc1.saveBinary( binPath1 ) );
 
     sw::SceneDocument doc2{};
     doc2._name = "SceneSecond";
     sw::SceneDocument::EntityNode ent2{};
-    ent2._name = "E2";
+    ent2._name   = "E2";
+    ent2._fileId = 12;
     doc2._listEntityNode.push_back( std::move( ent2 ) );
     SW_ASSERT_TRUE( doc2.saveBinary( binPath2 ) );
 
@@ -413,7 +425,7 @@ SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
         "<Scene formatVersion=\"1\" name=\"FutureTown\">\n"
         "  <entities>\n"
-        "    <entity name=\"Hero\"/>\n"
+        "    <entity id=\"109\" name=\"Hero\"/>\n"
         "  </entities>\n"
         "</Scene>\n";
 
@@ -424,7 +436,8 @@ SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
     sw::SceneDocument doc{};
     doc._name = "FutureTown";
     sw::SceneDocument::EntityNode ent{};
-    ent._name = "Hero";
+    ent._name   = "Hero";
+    ent._fileId = 13;
     doc._listEntityNode.push_back( std::move( ent ) );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -472,13 +485,14 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
         const sw::string xmlPath = test::makeTempPath( ( name + ".scene.xml" ).c_str() );
         const sw::string binPath = test::makeTempPath( ( name + ".scene.bin" ).c_str() );
 
-        const sw::string xmlStr = "<Scene formatVersion=\"1\" name=\"" + name + "\"><entities><entity name=\"E\"/></entities></Scene>";
+        const sw::string xmlStr = "<Scene formatVersion=\"1\" name=\"" + name + "\"><entities><entity id=\"110\" name=\"E\"/></entities></Scene>";
         SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), xmlStr.size() ) );
 
         sw::SceneDocument doc{};
         doc._name = name;
         sw::SceneDocument::EntityNode ent{};
-        ent._name = "E";
+        ent._name   = "E";
+        ent._fileId = 14;
         doc._listEntityNode.push_back( std::move( ent ) );
         SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -542,7 +556,8 @@ SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
         sw::SceneDocument doc{};
         doc._name = nameAndPath.first;
         sw::SceneDocument::EntityNode node{};
-        node._name = "Root";
+        node._name   = "Root";
+        node._fileId = 15;
         doc._listEntityNode.push_back( std::move( node ) );
         SW_ASSERT_TRUE( doc.saveBinary( *nameAndPath.second ) );
     }
@@ -658,7 +673,7 @@ SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQue
 SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 {
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_save_block.scene.xml" );
-    const sw::string xmlStr  = "<Scene formatVersion=\"1\" name=\"SaveBlock\"><entities><entity name=\"A\"/></entities></Scene>";
+    const sw::string xmlStr  = "<Scene formatVersion=\"1\" name=\"SaveBlock\"><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_block.scene.bin" );
     sw::SceneDocument cooked{};
@@ -694,7 +709,7 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
 SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
 {
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_save_name.scene.xml" );
-    const sw::string xmlStr  = "<Scene formatVersion=\"1\" name=\"SaveName\"><entities><entity name=\"A\"/></entities></Scene>";
+    const sw::string xmlStr  = "<Scene formatVersion=\"1\" name=\"SaveName\"><entities><entity id=\"1\" name=\"A\"/></entities></Scene>";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_name.scene.bin" );
     sw::SceneDocument cooked{};

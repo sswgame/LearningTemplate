@@ -130,6 +130,7 @@ SW_TEST_CASE( SceneTest, CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad )
     doc._name = "CookedScene";
     sw::SceneDocument::EntityNode node{};
     node._name        = "CookedHero";
+    node._fileId      = 1;
     node._embeddedXml = sourceXml;
     doc._listEntityNode.push_back( node );
 
@@ -370,6 +371,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
 
     sw::SceneDocument::EntityNode node{};
     node._name              = "HeroInstance";
+    node._fileId            = 2;
     node._prefab            = "prefabs/old_hero.prefab.xml";
     const sw::Uuid heroGuid = sw::Uuid::generate();
     node._prefabGuid        = heroGuid.toString();
@@ -655,6 +657,46 @@ SW_TEST_CASE( SceneTest, SceneLightCollectionCarriesTypeAndShadowFlag )
 }
 
 /**
+ * @brief [SceneTest] 엔티티 id 가 없는 씬은 읽지도 쓰지도 굽지도 않는다 — 파일의 엔티티는 늘 0 이 아닌 id 를 든다
+ * @details 부착 · 핸들은 부모를 파일 id 로 가리키고 쿠커는 그 id 로 엔티티를 찾는다. 씬을 쓰는 쪽(`Scene::serializeToDocument`)은 모든 엔티티에
+ *          id 를 주므로 id 없는 엔티티는 지금 형식이 아니다 — 읽는 쪽이 id 를 지어 주지 않고 거절한다.
+ */
+SW_TEST_CASE( SceneTest, SceneEntityWithoutAnIdIsRejected )
+{
+    const sw::string kHead  = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"1\" name=\"NoIds\">\n  <entities>\n";
+    const sw::string kTail  = "  </entities>\n</Scene>\n";
+    const sw::string withId = kHead + "    <entity id=\"1\" name=\"Kept\"/>\n" + kTail;
+    const sw::string noId   = kHead + "    <entity id=\"1\" name=\"Kept\"/>\n    <entity name=\"NoId\"/>\n" + kTail;
+    const sw::string zeroId = kHead + "    <entity id=\"0\" name=\"ZeroId\"/>\n" + kTail;
+
+    const sw::string withIdPath = test::makeTempPath( "with_id.scene.xml" );
+    const sw::string noIdPath   = test::makeTempPath( "no_id.scene.xml" );
+    const sw::string zeroIdPath = test::makeTempPath( "zero_id.scene.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( withIdPath, withId ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( noIdPath, noId ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( zeroIdPath, zeroId ) );
+
+    sw::SceneDocument doc;
+    SW_ASSERT_TRUE( doc.loadXml( withIdPath ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), doc._listEntityNode.size() );
+    SW_EXPECT_EQUAL( uint64( 1 ), doc._listEntityNode[0]._fileId );
+
+    sw::SceneDocument::EntityNode noIdEntity{};
+    noIdEntity._name = "NoId";
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a scene entity without an id" );
+        SW_EXPECT_FALSE( doc.loadXml( noIdPath ) );
+        SW_EXPECT_TRUE( doc._listEntityNode.empty() ); // 반쯤 읽은 문서를 남기지 않는다
+        SW_EXPECT_FALSE( doc.loadXml( zeroIdPath ) );
+
+        SW_ASSERT_TRUE( doc.loadXml( withIdPath ) );
+        doc._listEntityNode.push_back( noIdEntity );
+        SW_EXPECT_FALSE( doc.saveXml( test::makeTempPath( "no_id_written.scene.xml" ) ) );
+        SW_EXPECT_EQUAL( 0u, sw::SceneCooker::cookEntityState( doc ) );
+    }
+}
+
+/**
  * @brief [SceneTest] 바이너리 씬이 말하는 엔티티 수를 그대로 믿지 않는다
  * @details 개수는 **파일에서 온 값**이다. 검사 없이 `reserve` 로 넘기면 엔티티 하나가 문자열 넷이라
  *          4,294,967,295 개면 수백 기가짜리 요청이 된다. 읽기는 어차피 그 아래에서 실패하지만, 그 전에 할당이 먼저 터진다.
@@ -666,7 +708,8 @@ SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
     sw::SceneDocument doc{};
     doc._name = "BoundedScene";
     sw::SceneDocument::EntityNode node{};
-    node._name = "Root";
+    node._name   = "Root";
+    node._fileId = 3;
     doc._listEntityNode.push_back( std::move( node ) );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -843,6 +886,7 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
     doc._name = "UnknownType";
     sw::SceneDocument::EntityNode node{};
     node._name        = "Lamp";
+    node._fileId      = 4;
     node._embeddedXml = xml;
     doc._listEntityNode.push_back( node );
     const sw::string scenePath = sw::FileUtil::joinPath( root, "game/demo/maps/unknown.scene.xml" );
@@ -1301,6 +1345,7 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
     sw::SceneDocument             doc;
     sw::SceneDocument::EntityNode entity;
     entity._name        = "Lifecycle";
+    entity._fileId      = 5;
     entity._prefab      = prefabPath;
     entity._embeddedXml = savedState;
     doc._listEntityNode.push_back( entity );
@@ -1333,12 +1378,14 @@ SW_TEST_CASE( SceneTest, EntityWhosePrefabIsMissingSurvivesSave )
     sw::SceneDocument             doc;
     sw::SceneDocument::EntityNode ghost;
     ghost._name        = "Ghost";
+    ghost._fileId      = 6;
     ghost._prefab      = "prefabs/test_missing_for_scene_test.prefab.xml";
     ghost._prefabGuid  = "0b7c2a9e-4f1d-4c3a-9e8b-1d2c3b4a5f60";
     ghost._embeddedXml = "<GameObject _name=\"Ghost\" />";
     doc._listEntityNode.push_back( ghost );
     sw::SceneDocument::EntityNode plain;
-    plain._name = "Plain";
+    plain._name   = "Plain";
+    plain._fileId = 7;
     doc._listEntityNode.push_back( plain );
 
     {

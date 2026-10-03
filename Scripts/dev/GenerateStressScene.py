@@ -30,7 +30,8 @@ from common import getProjectRoot, useUtf8Stdout
 # `MeshUtil::createPrimitive` 가 아는 이름들. 정점 수가 서로 달라야 섞는 의미가 있다.
 _kListShape = ("Cube", "Sphere", "Cylinder", "Capsule", "Cone", "Quad")
 
-_kCameraEntity = """\t\t<entity name="GameCamera">
+# 엔티티마다 0 이 아닌 파일 id(`id`)를 적는다 — 씬 로더는 id 없는 엔티티를 받지 않는다. 카메라 1, 빛 2, 메시는 3 부터.
+_kCameraEntity = """\t\t<entity id="1" name="GameCamera">
 \t\t\t<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 \t\t\t\t<_listComponent>
 \t\t\t\t\t<CameraComponent _localPosition="0,40,-90"
@@ -50,7 +51,7 @@ _kCameraEntity = """\t\t<entity name="GameCamera">
 \t\t</entity>
 """
 
-_kLightEntity = """\t\t<entity name="KeyLight">
+_kLightEntity = """\t\t<entity id="2" name="KeyLight">
 \t\t\t<GameObject _schemaVersion="0" _name="KeyLight" _bActive="true">
 \t\t\t\t<_listComponent>
 \t\t\t\t\t<DirectionalLightComponent _localPosition="0,10,0"
@@ -68,7 +69,7 @@ _kLightEntity = """\t\t<entity name="KeyLight">
 def buildMeshEntity(index: int, x: float, y: float, z: float, shape: str) -> str:
     """메시 엔티티 하나를 만듭니다."""
     return (
-        '\t\t<entity name="Mesh_%d">\n'
+        '\t\t<entity id="%d" name="Mesh_%d">\n'
         '\t\t\t<GameObject _schemaVersion="0" _name="Mesh_%d" _bActive="true">\n'
         "\t\t\t\t<_listComponent>\n"
         '\t\t\t\t\t<MeshComponent _localPosition="%g,%g,%g"\n'
@@ -82,7 +83,7 @@ def buildMeshEntity(index: int, x: float, y: float, z: float, shape: str) -> str
         '\t\t\t\t\t               _gpuSpinSeed="%d" />\n'
         "\t\t\t\t</_listComponent>\n"
         "\t\t\t</GameObject>\n"
-        "\t\t</entity>\n" % (index, index, x, y, z, (index % 8) * 0.39, shape, index + 1)
+        "\t\t</entity>\n" % (index + 3, index, index, x, y, z, (index % 8) * 0.39, shape, index + 1)
     )
 
 

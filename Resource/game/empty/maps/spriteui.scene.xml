@@ -1,6 +1,6 @@
 <Scene formatVersion="1" name="SpriteUi">
 	<entities>
-		<entity name="GameCamera">
+		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
 					<CameraComponent _localPosition="0,0,-6"
@@ -18,7 +18,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity name="AnimatedSprite">
+		<entity id="2" name="AnimatedSprite">
 			<GameObject _schemaVersion="0" _name="AnimatedSprite" _bActive="true">
 				<_listComponent>
 					<SpriteComponent _localPosition="-1.8,0.6,0"
@@ -36,7 +36,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity name="Enemy">
+		<entity id="3" name="Enemy">
 			<GameObject _schemaVersion="0" _name="Enemy" _bActive="true">
 				<_listComponent>
 					<SpriteComponent _localPosition="1.6,0.3,0"
@@ -52,7 +52,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity name="DamageNumber">
+		<entity id="4" name="DamageNumber">
 			<GameObject _schemaVersion="0" _name="DamageNumber" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="1.6,-1.1,0"
@@ -67,7 +67,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity name="EffectReference">
+		<entity id="5" name="EffectReference">
 			<GameObject _schemaVersion="0" _name="EffectReference" _bActive="true">
 				<_listComponent>
 					<SpriteComponent _localPosition="-1.2,-1.1,0"
@@ -81,7 +81,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity name="FadingEffect">
+		<entity id="6" name="FadingEffect">
 			<GameObject _schemaVersion="0" _name="FadingEffect" _bActive="true">
 				<_listComponent>
 					<SpriteComponent _localPosition="-2.4,-1.1,0"

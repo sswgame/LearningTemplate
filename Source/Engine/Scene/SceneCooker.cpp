@@ -91,8 +91,15 @@ namespace sw
         // **런타임이 읽는 그대로 짓고 굽는다.** 엔티티를 하나씩 따로 읽으면 부모가 문서에서 뒤에 있는 자식이 부모를 찾지 못하고 저장이
         // 그 연결을 지운다(배포본에서 자식이 루트가 된다). 그래서 문서 전체를 `Scene::instantiate`(프리팹 스폰 · 묶음 부착까지 런타임과
         // 같은 길)로 짓고, 구운 문서를 다시 지어 엔티티마다 상태 전체를 견준다(컴포넌트 타입 목록만 보면 값이 어긋나도 통과한다).
-        // id 가 없는 문서는 먼저 id 를 준다 — 구운 상태의 부착은 파일 id 로만 부모를 가리킨다.
-        inoutDoc.assignMissingFileIds();
+        // 엔티티는 파일 id 로 찾는다 — 구운 상태의 부착도 파일 id 로만 부모를 가리킨다. id 없는 엔티티는 읽는 쪽이 받지 않는 문서다.
+        for ( const SceneDocument::EntityNode& entity : inoutDoc._listEntityNode )
+        {
+            if ( entity._fileId == 0 )
+            {
+                SW_LOG_ERROR( "Scene cook: entity '%#' of '%#' has no id - nothing is cooked", entity._name, inoutDoc._name );
+                return 0;
+            }
+        }
 
         // 쿠킹 전용 씬이다. 실제 씬 매니저의 것을 쓰면 굽는 동안 만든 임시 오브젝트가 실제 씬에 남는다.
         Scene source{ "SceneCooker.Source" };

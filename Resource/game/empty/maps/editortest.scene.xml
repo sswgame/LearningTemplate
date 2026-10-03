@@ -1,6 +1,6 @@
 <Scene formatVersion="1" name="EditorTest">
 	<entities>
-		<entity name="GameCamera">
+		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
 				<_listComponent>
 					<CameraComponent _localPosition="0,1.2,3.2"
@@ -18,7 +18,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity name="TestMesh">
+		<entity id="2" name="TestMesh">
 			<GameObject _schemaVersion="0" _name="TestMesh" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localPosition="0,0,0"
@@ -33,7 +33,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity name="TestSprite">
+		<entity id="3" name="TestSprite">
 			<GameObject _schemaVersion="0" _name="TestSprite" _bActive="true">
 				<_listComponent>
 					<SpriteComponent _localPosition="-2.5,0,0"
@@ -51,7 +51,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity name="TestCollider">
+		<entity id="4" name="TestCollider">
 			<GameObject _schemaVersion="0" _name="TestCollider" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="2.5,0,0"
@@ -70,7 +70,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity name="TestGameCamera">
+		<entity id="5" name="TestGameCamera">
 			<GameObject _schemaVersion="0" _name="TestGameCamera" _bActive="true">
 				<_listComponent>
 					<CameraComponent _localPosition="0,1.5,-6"
@@ -88,7 +88,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity name="TestKeyLight">
+		<entity id="6" name="TestKeyLight">
 			<GameObject _schemaVersion="0" _name="TestKeyLight" _bActive="true">
 				<_listComponent>
 					<DirectionalLightComponent _localPosition="0,4,0"
@@ -105,7 +105,7 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity name="TestParent">
+		<entity id="7" name="TestParent">
 			<GameObject _schemaVersion="0" _name="TestParent" _bActive="true">
 				<_listComponent>
 					<SceneComponent _localPosition="0,2.5,0"
@@ -118,6 +118,6 @@
 		</entity>
 		<!-- 옮긴 프리팹을 GUID 로 찾는지 보는 항목: 경로는 일부러 옛 위치(old/)이고 GUID 가 정본이다.
 		     Dev 는 시작 시 .meta 스캔으로, 배포본은 팩의 assetregistry.txt 로 prefabs/testprop 을 찾아야 한다. -->
-		<entity name="TestProp" prefab="game/empty/prefabs/old/testprop.prefab.xml" prefabGuid="deb66c15-3534-4b79-b3de-a2080d7c5ffe" />
+		<entity id="8" name="TestProp" prefab="game/empty/prefabs/old/testprop.prefab.xml" prefabGuid="deb66c15-3534-4b79-b3de-a2080d7c5ffe" />
 	</entities>
 </Scene>

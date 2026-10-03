@@ -3,7 +3,6 @@
 #include "Engine/Scene/SceneDocument.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Uuid/Uuid.h"
 
@@ -106,10 +105,16 @@ namespace sw
                 if ( pName != nullptr )
                     node._name = pName;
 
-                // 파일 id 를 못 읽으면 0(없음)으로 두고 알린다 — 그 엔티티를 가리키는 부착은 풀리지 않고 남는다.
+                // 엔티티마다 0 이 아닌 파일 id 가 있다(`Scene::serializeToDocument` 가 늘 적는다). 없거나 못 읽는 문서는 받지 않는다 —
+                // 부착 · 핸들이 이 값으로 부모를 가리키고, 쿠커는 이 값으로 엔티티를 찾는다.
                 const utf8* pFileId = entityNode.findAttribute( SceneDocumentInternal::kFileId );
-                if ( pFileId != nullptr && StringUtil::parseUint64( pFileId, node._fileId ) == false )
-                    SW_LOG_WARNING( "Entity '%#' has an unreadable id '%#' in %# - its children may stay unattached", node._name, pFileId, absPath );
+                if ( pFileId == nullptr || StringUtil::parseUint64( pFileId, node._fileId ) == false || node._fileId == 0 )
+                {
+                    SW_LOG_ERROR( "Entity '%#' has no valid id ('%#') in %# - the scene is not loaded", node._name, pFileId != nullptr ? pFileId : "",
+                                  absPath );
+                    *this = {};
+                    return false;
+                }
 
                 const utf8* pPrefabGuid = entityNode.findAttribute( "prefabGuid" );
                 if ( pPrefabGuid != nullptr )
@@ -153,13 +158,16 @@ namespace sw
 
         for ( const EntityNode& entity : _listEntityNode )
         {
-            XmlNode entityNode = entities.appendChild( SceneDocumentInternal::kEntity );
-            if ( entity._fileId != 0 )
+            // 읽는 쪽(`loadXml`)이 받지 않는 모양은 쓰지 않는다.
+            if ( entity._fileId == 0 )
             {
-                utf8         arrFileIdText[constant::kMaxBuffer32]{};
-                const uint32 fileIdLength = StringUtil::formatNumber( arrFileIdText, constant::kMaxBuffer32, entity._fileId, 10 );
-                entityNode.appendAttribute( SceneDocumentInternal::kFileId, string_view( arrFileIdText, fileIdLength ) );
+                SW_LOG_ERROR( "Entity '%#' has no id - scene '%#' is not saved", entity._name, _name );
+                return false;
             }
+            XmlNode      entityNode = entities.appendChild( SceneDocumentInternal::kEntity );
+            utf8         arrFileIdText[constant::kMaxBuffer32]{};
+            const uint32 fileIdLength = StringUtil::formatNumber( arrFileIdText, constant::kMaxBuffer32, entity._fileId, 10 );
+            entityNode.appendAttribute( SceneDocumentInternal::kFileId, string_view( arrFileIdText, fileIdLength ) );
             entityNode.appendAttribute( SceneDocumentInternal::kName, entity._name );
             if ( entity._prefab.empty() == false )
                 entityNode.appendAttribute( SceneDocumentInternal::kPrefab, entity._prefab );
@@ -365,21 +373,4 @@ namespace sw
 #endif
     }
 
-    void SceneDocument::assignMissingFileIds()
-    {
-        uint64 nextFileId = getMaxFileId() + 1;
-        for ( EntityNode& entity : _listEntityNode )
-        {
-            if ( entity._fileId == 0 )
-                entity._fileId = nextFileId++;
-        }
-    }
-
-    uint64 SceneDocument::getMaxFileId() const
-    {
-        uint64 maxFileId = 0;
-        for ( const EntityNode& entity : _listEntityNode )
-            maxFileId = MathUtil::max( maxFileId, entity._fileId );
-        return maxFileId;
-    }
 } // namespace sw

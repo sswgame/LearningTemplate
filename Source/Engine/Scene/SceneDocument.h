@@ -19,7 +19,7 @@ namespace sw
         struct EntityNode
         {
             /**
-             * @brief 이 파일 안에서 엔티티를 가리키는 id 입니다(유니티의 fileID 자리). 0 이면 id 가 없는 문서입니다.
+             * @brief 이 파일 안에서 엔티티를 가리키는 id 입니다(유니티의 fileID 자리). 파일에 적힌 엔티티는 늘 0 이 아닙니다.
              * @details 다른 엔티티의 부착(`SceneComponent::_attachOwnerId`)이 이 값으로 부모를 가리킵니다. 런타임 오브젝트 id 와 다른 공간입니다 —
              *          씬이 런타임 id ↔ 파일 id 표를 들고 저장할 때마다 같은 값을 다시 씁니다(저장할 때마다 파일이 흔들리지 않게).
              */
@@ -58,11 +58,6 @@ namespace sw
         [[nodiscard]] SW_API bool loadBinary( string_view path );
         /** @brief 바이너리(SCN1)를 리소스 상대/절대 경로에 저장합니다. */
         [[nodiscard]] SW_API bool saveBinary( string_view path ) const;
-
-        /** @brief id 가 없는 엔티티에 이 문서 안에서 겹치지 않는 id 를 줍니다. 쿠커가 굽기 전에 부릅니다. */
-        SW_API void assignMissingFileIds();
-        /** @brief 이 문서의 엔티티 id 중 가장 큰 것입니다. 없으면 0 입니다. */
-        SW_API uint64 getMaxFileId() const;
     };
 
 } // namespace sw

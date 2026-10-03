@@ -690,7 +690,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesLevelLoadEvents )
     SW_ASSERT_TRUE( FileUtil::writeTextFile( scenePath, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
                                                         "<Scene formatVersion=\"1\" name=\"LevelEvents\">\n"
                                                         "  <entities>\n"
-                                                        "    <entity name=\"Hero\"/>\n"
+                                                        "    <entity id=\"101\" name=\"Hero\"/>\n"
                                                         "  </entities>\n"
                                                         "</Scene>\n" ) );
     // Shipping 은 XML 대신 같은 이름의 바이너리(.scene.bin)를 읽는다 — 둘 다 둔다(SceneAsyncTest 와 같다).
