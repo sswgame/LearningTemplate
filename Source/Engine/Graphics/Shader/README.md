@@ -9,7 +9,7 @@
 Shader/
   Compile/      소스 → 바이트코드 (컴파일 · 디스크 캐시 · 오프라인 베이크 · 핫리로드)
   Reflection/   바이트코드 → 바인딩 메타 (백엔드별 리플렉션 + 구운 매니페스트)
-  Binding/      메타 → 계약 (슬롯 정본 · 병합 레이아웃 · 구운 바이너리 대조)
+  Binding/      메타 → 계약 (슬롯 정본 · 병합 레이아웃 · 구운 바이너리 대조 · 셰이더가 읽는 꼴 그대로의 GPU 값 묶음)
 ```
 
 ### Compile/ — 소스에서 바이트코드로
@@ -52,6 +52,9 @@ Shader/
   핫리로드 시 `invalidateByShaderPath` 로 무효화합니다.
 - `ShaderBindingContract` — **구운 바이너리의 리플렉션이 계약과 맞는지** 검사합니다.
   `EngineTest --test_filter=ShaderBindingContractTest.*` 가 nogpu 로 이걸 돌립니다.
+- `GpuLight.h` · `GpuSpriteInstanceData.h` — 셰이더가 읽는 꼴 그대로 묶은 값(라이트 64 바이트 · 스프라이트 인스턴스 12 바이트).
+  컴포넌트(Object 층)가 직접 채우므로 Object 가 include 할 수 있는 자리여야 합니다 — `Graphics/Renderer` 는 Object 위 티어라 거기 둘 수 없고,
+  셰이더 계약을 두는 이 폴더가 Object 아래의 가장 가까운 자리입니다.
 
 ## 함정
 

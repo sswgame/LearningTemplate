@@ -65,7 +65,8 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 
 ## 주요 시스템 디렉터리 구조
 - **Object/**: GameObject · Component · Prefab. 틱/구조 동결·사용법은 [Object/README.md](Object/README.md)
-- **Scene/**: Scene · SceneManager · 2D/3D 공간 분할 가속 구조체 ([Scene/README.md](Scene/README.md))
+- **Scene/**: Scene · SceneManager · SceneDocument · SceneCooker · ObjectSnapshotCommand ([Scene/README.md](Scene/README.md))
+- **Spatial/**: 2D/3D 공간 분할 가속 구조체(BVHTree3D · SpatialHashGrid2D · SpatialQuadTree · SpatialOctree) ([Spatial/README.md](Spatial/README.md))
 - **Reflection/**: 매크로 · TypeRegistry · Builtins. [Reflection/README.md](Reflection/README.md) · 생성기 [ReflectionParser](../../Tools/ReflectionParser/README.md)
 - **Graphics/**: RHI · Material · Shader · FrameRenderer. [Graphics/README.md](Graphics/README.md)
 - **Input/**: InputManager · ActionMap · 장치(Keyboard/Mouse/Gamepad) 추상화. [Input/README.md](Input/README.md)
@@ -90,11 +91,16 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
     내리지 않고 사라지면 다음 비우기가 죽은 코드로 뛴다(엔진 쪽 "Statics die on hot reload" 와 같은 함정).
     두고 가면 종료가 **이름으로** 경고한다 — 등록 시점에 이름을 복사해 두므로 그 진단은 죽은
     포인터를 건드리지 않는다.
+  - **티어 때문에 Resource 에 사는 것 둘**: `SpriteClipCache` 는 `IAssetCache` 를 구현하므로 Animation(티어 2)이 아니라 Resource(티어 4)에,
+    `PackCompressionUtil` 은 팩 타입(`ResourcePackTypes.h`)을 쓰므로 Compression(티어 0)이 아니라 Resource 에 둔다.
 - **Serialization/**: 직렬화 (BinarySerializer · JsonSerializer · XmlSerializer · Archive)
-- **Module/**: LiveReloadManager · ModuleTypeRegistry · ReloadFileManager. DLL 핫스왑과 그에 따른
-  TypeInfo 재결합을 담당합니다. 예전에는 `Utility/Module` 에 있었지만, 모든 로드된 Scene 의
-  GameObjectManager 를 다시 묶는 **상위 서브시스템**이라 `Utility`(최하위 티어)가 아닙니다.
+- **Module/**: 모듈 DLL 쪽 계약만 둔다 — `ModuleTypeRegistry`(로드한 모듈의 타입 · 전역 변수 등록과 정리) · `ModuleHandleProvider`(지연 로드 훅이
+  섀도 복사본을 묻는 창구) · `DelayLoadNotifyHook.cpp`(모듈 DLL 마다 컴파일되는 지연 로드 훅) · `EngineAbiStamp`(핫 리로드의 엔진 ABI 도장).
+  감시 · 섀도 복사 · 다시 로드(`LiveReloadManager`)는 App 의 `App/Module`, 에셋 파일 감시(`ReloadFileManager`)는 에디터의
+  `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleCodeHolder`)은 `Core/Module` 이다.
 - **Utility/**: Format (KeyValueFile), Json, Xml, CommandStack, Debug — 진짜 최하위 헬퍼만 둡니다.
+- **루트 파일**: `EngineLoop`(메인 루프) · `EngineStartupStepList.xxx`(기동 · 종료 단계와 의존의 등록표) · `EngineStartupSequence`(그 표를 위상 정렬해
+  초기화하고 역순으로 종료) · `EngineOwnedServices`(호스트가 소유하는 서비스 저장소, `EngineServiceList.xxx` 에서 생성) · `EngineMinimal.h`(prelude)
 - **Task 시스템**: Core의 [Task/README.md](../Core/Task/README.md) (`TaskManager` / `TaskHandle`)
 
 ## 동작 방식

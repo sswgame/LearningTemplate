@@ -39,14 +39,17 @@ flowchart LR
 |------|------|
 | `ReflectionMacros.h` | `REFLECT`, `PROPERTY`, `FUNCTION`, `ENUM`, `REFLECT_BODY` |
 | `ReflectionCore.h` | 위 + Cast/Containers/Types/Registry **우산 헤더** |
-| `ReflectionTypes.h` | `TypeInfo`, `PropertyInfo`, `FunctionInfo` 등 |
+| `ReflectionTypes.h` | `TypeInfo`(컴포넌트 생성 칸 `_addComponent` 포함), `PropertyInfo`, `FunctionInfo` 등 |
 | `TypeRegistry.h` | 등록·조회·별칭·enum 문자열 변환 |
 | `ReflectionCast.h` | 리플렉션 기반 캐스트 헬퍼 |
 | `ReflectionContainers.h` | Sequence/Map 래퍼 |
-| `ReflectBuiltins.h` | int/string/vector 등 빌트인 목록 |
+| `ReflectBuiltins.xxx` | int/string/vector 등 빌트인 타입의 단일 등록표(X-매크로 — 엔진이 include 하고 ReflectionParser 가 읽는다) |
+| `ReflectionConstants.h` | 리플렉션과 `PropertyMetaHint` 가 함께 쓰는 상수 · 데이터 표 |
+| `ReflectionEnumNames.h` | `ContainerKind` · `FunctionNetRole` ↔ 식별자 문자열(정본은 `Core/Predefined/*.xxx`) |
+| `PropertyMetaHint.*` | 프로퍼티 메타데이터 → 인스펙터 위젯 유형 · 서식 힌트 |
 | `ReflectGenerated.h` | `*.gen.cpp` preamble |
 | `ReflectAny.*` | 타입 소거 값 상자 |
-| `Rpc/` | RPC용 리플렉션 보조 |
+| `Rpc/` | RPC용 리플렉션 보조(`ReflectionRpc.h`) |
 
 보통은 `#include "Engine/Reflection/ReflectionCore.h"` 또는 컴포넌트 헤더가 끌어오는 매크로만 쓰면 됩니다.
 

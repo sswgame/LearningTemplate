@@ -1,13 +1,27 @@
 # Core (코어 유틸리티)
 
 엔진의 가장 밑바닥(Foundation)에 해당하는 정적 라이브러리(STATIC) 모듈입니다.
-문자열, 로그, 파일, 델리게이트, 컨테이너 래퍼, 동시성, 메모리 진단이 여기 있습니다. `Handle/`은 없습니다.
+문자열, 로그, 파일, 델리게이트, 컨테이너 래퍼, 동시성, 메모리 진단이 여기 있습니다.
 
 ## 디렉터리
-- **Memory/**: `allocateAligned`, `LinearAllocator`, `FrameArenaAllocator`(+ `FrameDoubleBuffer`), `MemoryProfiler`(누수 검사 포함), `CallStackCapture`
-- **Concurrency/**: `LockFreeObjectPool`, `LockFreeQueue`, `ConcurrentQueue`, `WorkStealingDeque`, `DeadlockDetector`, `DataRaceDetector`
-- **Task/**: `TaskManager` · `TaskHandle` · `TaskFuture` (워커 풀 + DAG 스케줄러)
-- **Container/**: `DynamicBitset` · `RegistrationList`(등록부의 공통 모양 — 중복 거절 · 정렬 · 이름 찾기 · 이름 사본) · **String/** · **File/** · **Event/** · **Delegate/**
+- **Common/**: `Types.h` · `Macros.h` · `Defines.h`(버퍼 크기 상수) · `StdHeaders.h` · `PlatformOsHeaders.h` · `EnumUtil.h` · `VarIntUtil.h`(LEB128 · ZigZag)
+- **Predefined/**: 엔진과 ReflectionParser 가 함께 include 하는 X-매크로 표(`*.xxx` — 명령줄 인자 · 고정 이름 · 컨테이너 종류 · 애노테이션 종류)와 `AnnotationMeta.txt`
+- **Memory/**: `allocateAligned`(`Memory.h`), `LinearAllocator`, `FrameArenaAllocator`(+ `FrameDoubleBuffer`), `PoolAllocator`, `MemoryProfiler`(누수 검사 포함)
+- **Concurrency/**: `LockFreeObjectPool`, `LockFreeQueue`, `ConcurrentQueue`, `WorkStealingDeque`, `SpinLock`, `Futex`, `DeadlockDetector`, `DataRaceDetector`
+- **Task/**: `TaskManager` · `TaskHandle` · `TaskFuture` (워커 풀 + DAG 스케줄러, `Task/README.md`)
+- **Container/**: 표준 컨테이너 별칭(`vector.h` · `unordered_map.h` …) · `sparse_set` · `DynamicBitset` · `PagedArray`(주소가 옮겨지지 않는 청크 배열) ·
+  `InlineAllocator`(SBO) · 핸들(`SlotHandle` · `SlotHandleTable` · `GameObjectHandle` · `ComponentHandle`) · `RegistrationList`(등록부의 공통 모양 —
+  중복 거절 · 정렬 · 이름 찾기 · 이름 사본)
+- **String/**: `StringUtil` · `StringBuilder` · `fixed_string` · `hashed_string` · `formatString` · `string_splitter` · `TagID`
+- **Delegate/**: `Delegate`
+- **Event/**: `EventDispatcher` · `EventType`(엔진 예약 이벤트 ID — 이벤트 타입은 그 개념이 사는 층에 둔다)
+- **Module/**: `IModuleCodeHolder` — 모듈 이미지를 내리기 전에 그 코드(델리게이트 스텁 · vtable)를 떼야 하는 등록부의 공통 계약과 목록.
+  같은 수명 계약의 Engine 쪽은 `Engine/Module`, App 쪽(라이브 리로드)은 `App/Module` 이다.
+- **File/**: `FileUtil` · `PlatformFileUtil` · `IFileWatcher` + 플랫폼 폴더(`Windows/` · `Linux/` · `Mac/` — 파일 다이얼로그 · 워처)
+- **Process/**: `Process` · `CallStackCapture` · `CrashContext` · `CrashHandler` + 플랫폼 폴더(`Windows/` · `Posix/`)
+- **Compression/**: `ICompressionCodec` · `CompressionCodecRegistry` · `CompressionStream` · `NullCompressionCodec` · `RleCompressionCodec`
+- **Math/**: `VectorMath` · `MatrixMath` · `MathUtil` · `Frustum`
+- **Time/**: `CpuTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE_*`)
 - **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.
   - `ILogSink` / `Logger` — 매크로가 말을 거는 파사드. 포맷 · 타임스탬프 · 리스너 · 비동기 큐 · 상세도 ·
     Caller 표를 맡는다. 테스트 프레임워크는 이 인터페이스를 구현해 기존 싱크를 **감싼다**(로그 가로채기).

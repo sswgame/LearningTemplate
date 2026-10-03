@@ -32,6 +32,7 @@ Scripts/
   │     ├── TranslationUnits.py       # 컴파일 DB 를 읽어 TU 를 골라 하나씩 돌리는 자리 (clang-tidy · 경고 스윕)
   │     ├── AppBinary.py              # 빌드된 App 을 찾고 헤드리스로 셰이더를 굽는 자리
   │     ├── AssetPipeline.py          # 멀티스레드 에셋 쿠킹 & 원자적 바이너리 변경 감지(writeBinaryIfChanged)
+  │     ├── CookContract.py           # 쿠킹 표(`Config/Engine/CookContract.json`)를 읽은 결과 — 헤더 생성기 · 쿠커 · 게이트가 같은 객체를 쓴다
   │     └── PackFormat.py             # `.pack` 바이너리 계약(Config/Engine/PackFormat.json)을 읽은 결과
   │
   ├── setup/                          # [환경 구성] 외부 도구를 찾고, 없으면 받아 설치한다
@@ -43,14 +44,17 @@ Scripts/
   │     ├── InstallGitHooks.py        # Git pre-commit 훅 설치
   │     └── AddDefenderExclusions.py  # Windows Defender 빌드 폴더 예외 등록
   │
-  ├── generate/                       # [생성] 정본(JSON · Constants.py · 폴더 목록)에서 파일을 만들어 낸다 — CMake 가 부른다
+  ├── generate/                       # [생성] 정본(JSON · Constants.py · 폴더 목록)에서 파일을 만들어 낸다 — 대부분 구성 · 빌드가 부르고,
+  │                                   #        결과를 커밋하는 것(GenerateSpriteTextures)은 손으로 돌린다
   │     ├── CookAssets.py             # ★ Prefab, Scene, Resource Pack을 일괄/선택 쿠킹하는 단일 통합 쿠커
   │     ├── BakeShippingHostDefaults.py # 런타임 JSON → Shipping 용 C++ 헤더
   │     ├── GeneratePackFormat.py     # PackFormat.json → C++ 헤더
+  │     ├── GenerateCookContract.py   # CookContract.json → C++ X-매크로 헤더(RHI 백엔드 표 · 쿡 접미사 표)
   │     ├── GenerateCMakeConstants.py # Constants.py → CMake set() 목록
   │     ├── GenerateToolchainCMake.py # toolchain_config.json → CMake set() 목록
   │     ├── GenerateLintTargets.py    # lint/gate · selftest 폴더 → CMake 린트 타깃 · 테스트
   │     ├── GenerateEngineAbiStamp.py # Core · Engine 헤더 지문 → 핫 리로드 ABI 도장 헤더
+  │     ├── GenerateSpriteTextures.py # 엔진 스프라이트 텍스처(DDS) · 클립 — 손으로 돌리고 결과를 커밋한다
   │     └── GenerateDocs.py           # Doxygen 레퍼런스 생성
   │
   ├── lint/                           # [정적 검사 및 코드 스타일] — 폴더가 곧 성격이다
@@ -67,10 +71,13 @@ Scripts/
   │     │     ├── CheckLogViewArgument.py     # 로그 인자의 string_view::data()
   │     │     ├── CheckGlobalVariableKinds.py # 전역 변수 정의와 extern 참조의 종류 일치
   │     │     ├── CheckRenderOwnership.py     # 렌더 스냅샷 소유 규칙
-  │     │     ├── CheckTestSuites.py          # 스위트 명명 · 한 파일 한 스위트 · CI 경계 표식
+  │     │     ├── CheckTestSuites.py          # 스위트 명명 · 한 파일 한 스위트 · CI 경계 표식 · CoreTest 는 엔진을 직접 쓰지 않음
+  │     │     ├── CheckFallibleNodiscard.py   # 실패를 bool 로 알리는 함수 선언의 `[[nodiscard]]`
   │     │     ├── CheckSourceGlob.py          # CMake GLOB 소스 누락 + RHI 백엔드 목록
   │     │     ├── CheckDataFileReferences.py  # 아무도 include 하지 않는 죽은 데이터 파일
   │     │     ├── CheckResourceCasing.py      # 리소스 소문자 명명
+  │     │     ├── CheckCookContract.py        # 쿠커가 쿠킹 표대로 고르는지
+  │     │     ├── CheckShaderConventions.py   # HLSL 명명 규칙(AGENTS.md 의 HLSL 절)
   │     │     ├── CheckCmakeConventions.py    # CMake 명명 규칙
   │     │     ├── CheckCmakeReadme.py         # cmake/README.md 가 가리키는 파일 · 함수가 실재하는지
   │     │     ├── CheckPythonConventions.py   # 파이썬 명명 규칙
@@ -91,7 +98,7 @@ Scripts/
   │     └── selftest/                 # 코드가 아니라 **린트** 를 본다
   │           ├── CheckLintsAreAlive.py       # gate/ 를 훑어 각 게이트가 아직 무는지 확인
   │           ├── CheckFixersAreAlive.py      # fixer/ 가 아직 고치는지, 고치면 안 되는 것은 안 고치는지
-  │           └── CheckCodeConventionsSelfTest.py # 규칙 30종이 아직 무는지 확인
+  │           └── CheckCodeConventionsSelfTest.py # CheckCodeConventions 의 규칙마다 아직 무는지 확인
   │
   ├── dev/                            # [개발 실험] 사람이 가끔 손으로 돌린다 — 빌드 · CI 가 부르지 않는다
   │     ├── BackendSmoke.py           # 네 백엔드로 같은 씬을 그려 SceneColor 를 비교

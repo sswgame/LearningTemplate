@@ -55,6 +55,8 @@ classDiagram
 1. **`Scene`**: 단일 게임 월드 인스턴스. 고유의 `GameObjectManager`, 활성 **게임** 카메라(`ActiveGameCamera`), 머티리얼 캐시 참조를 소유합니다. 에디터 뷰포트 카메라는 Editor 모듈이 소유하며 씬 직렬화에서 제외됩니다.
 2. **`SceneDocument`**: 씬 파일(`.scene.xml`, `.scene.bin`)의 데이터 모델. 씬 메타데이터와 엔티티 노드(`SceneDocument::EntityNode`) 목록을 담으며, XML 및 바이너리(SCN1) 포맷 직렬화/역직렬화를 담당합니다.
 3. **`SceneManager`**: 로드된 씬들의 수명주기, 활성 씬(`ActiveScene`) 추적 및 멀티스레드 비동기 씬 로딩/트랜지션을 제어하는 중앙 관리자입니다.
+4. **`ObjectSnapshotCommand`**: 오브젝트 상태 스냅샷을 되돌리는 Undo 명령(`CommandStack` 의 명령)입니다. 되돌릴 때 씬과 그 매니저를 찾아야 하므로
+   (`Scene.h` · `SceneManager.h`) `Utility/CommandStack` 옆(티어 1)이 아니라 씬(티어 7)에 둡니다.
 
 ---
 

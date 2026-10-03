@@ -1,6 +1,8 @@
 # Scripts/generate (자동화 및 데이터/코드 생성 스크립트)
 
-빌드 환경 구성이 아닌, **데이터 쿠킹(Cooking/Baking), C++ 코드 생성 및 워크플로우 자동화**를 목적으로 하는 스크립트들이 모여있습니다.
+**정본(JSON · `Constants.py` · 폴더 목록 · 리소스)에서 파일을 만들어 내는** 스크립트가 모여 있습니다 — 데이터 쿠킹, C++ 헤더 · CMake 목록 생성,
+문서. 대부분은 구성 · 빌드 시점에 CMake 가 부르지만, 결과를 커밋하는 것(`GenerateSpriteTextures.py`)과 문서(`GenerateDocs.py`, `SW_BUILD_DOCS` 일 때만
+타깃)는 손으로 돌립니다. 부르는 쪽이 아니라 **파일을 만든다는 것**이 이 폴더의 정의입니다.
 
 ## 주요 역할 및 스크립트
 
@@ -10,6 +12,7 @@
 | `BakeShippingHostDefaults.py` | 커밋된 런타임 JSON 설정을 읽어 Shipping 및 Fallback용 C++ 헤더로 베이킹 | `build/.../ShippingHostDefaults.h` |
 | `GenerateDocs.py` | Doxygen을 구동하여 C++ API 레퍼런스 문서 생성 | `Docs/Doxygen/html/index.html` |
 | `GeneratePackFormat.py` | 팩 바이너리 계약(`Config/Engine/PackFormat.json`)을 C++ 헤더로 | `build/.../PackFormat.gen.h` |
+| `GenerateCookContract.py` | 쿠킹 표(`Config/Engine/CookContract.json`)를 C++ X-매크로 헤더로 — RHI 백엔드 표 · 쿡 접미사 표 (구성 시점). 쿠커는 같은 표를 `common/CookContract.py` 로 읽는다 | `build/.../CookContract.gen.h` |
 | `GenerateCMakeConstants.py` | `Scripts/common/Constants.py` 의 상수를 CMake `set()` 목록으로 (구성 시점) | `build/.../ConfigVars.cmake` |
 | `GenerateToolchainCMake.py` | `Config/Environment/toolchain_config.json` 을 CMake `set()` 목록으로 (구성 시점) | `build/.../ToolchainVars.cmake` |
 | `GenerateLintTargets.py` | `lint/gate` · `lint/selftest` 폴더를 CMake 린트 타깃 · 테스트로 (구성 시점) | `build/.../LintTargets.cmake` |

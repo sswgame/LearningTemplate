@@ -10,9 +10,9 @@
 
 | 폴더 | 헤더 | 누가 include | 용도 |
 |------|------|--------------|------|
-| **ABI/** | `RuntimeHandles.h`, `GameAPI.h`, `EditorAPI.h` | App, 모듈, 테스트 | 호스트 ↔ 모듈 C-ABI 함수 테이블·불투명 핸들 |
-| **Service/** | `ModuleService.h`, `HostServiceList.xxx` | App, 모듈 | 호스트 ↔ 모듈 C-ABI 단일 통합 서비스 테이블 (`GameService.h`, `EditorService.h`는 각 모듈에 위치) |
-| **Export/** | `GameModuleExports.h`, `EditorModuleExports.h` | 모듈 `.cpp`만 | `SW_IMPLEMENT_*_MODULE` 매크로. `Memory.h`와 로케이터 bind를 끌어옴 |
+| **ABI/** | `RuntimeHandles.h`, `GameAPI.h`, `EditorAPI.h`, `ModuleAbi.h` | App, 모듈, 테스트 | 호스트 ↔ 모듈 C-ABI 함수 테이블·불투명 핸들, 모듈 ABI 버전 · 스탬프(App 과 모듈이 같은 헤더로 빌드됐는지 로드 때 대조) |
+| **Service/** | `ModuleService.h`, `HostServiceList.xxx`, `IModuleCompiler.h` | App, 모듈 | 호스트 ↔ 모듈 C-ABI 단일 통합 서비스 테이블 (`GameService.h`, `EditorService.h`는 각 모듈에 위치). `IModuleCompiler` 는 에디터 안 백그라운드 컴파일러 서비스 — C-ABI 가 아니라 C++ 가상 함수 테이블이다 |
+| **Export/** | `GameModuleExports.h`, `EditorModuleExports.h`, `ModuleForwardUtil.h` | 모듈 `.cpp`만 | `SW_IMPLEMENT_*_MODULE` 매크로. `Memory.h`와 로케이터 bind를 끌어옴. `ModuleForwardUtil` 은 불투명 핸들 → 구현 인스턴스 전달(널 검사 한 곳) |
 
 - Game 모듈은 `ABI/GameAPI.h`, `GameFramework/Base/GameService.h`, `Export/GameModuleExports.h`만 include 한다.
 - Editor 모듈은 `ABI/EditorAPI.h`, `Editor/Common/Workspace/EditorService.h`, `Export/EditorModuleExports.h`를 include 한다.

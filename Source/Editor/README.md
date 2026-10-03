@@ -13,6 +13,8 @@
 
 - **EditorUtil**: 폰트·프로젝트/설정 경로, 프리팹 스폰, 편집 허용 여부
   (애셋 종류 판별은 여기가 아니라 `Workspace/EditorAssetType` 의 `EditorAssetTypeRegistry` 가 정본입니다)
+- **EditorColor.h**: ImGui 없는 색 값 타입(`Color4`)과 공통 색 상수(`style`) — 상태(`Workspace/EditorAssetType`)와 위젯이 함께 쓰므로
+  어느 한쪽 폴더가 아니라 `Common/` 바로 아래에 둡니다
 - **Backend/**: ImGui 백엔드 인터페이스 (`IImGuiPlatformBackend`, `IImGuiRendererBackend`)
   - `Backend/Platform/`: Win32 / OSX / X11
   - `Backend/Render/`: DX11 / DX12 / Vulkan / OpenGL
@@ -22,7 +24,8 @@
   인터페이스 `IEditorPanel` / `IEditorPopup`
 - **Widgets/**: 검색, 헤더, 툴바 구분선, 노드 그래프 캔버스(`EditorNodeGraph`), 뷰포트 입력 오버레이
 - **Workspace/**: ImGui 없는 **상태** — 컨텍스트·선택·트랜잭션(Undo)·서비스 로케이터·애셋 종류 ·
-  플레이(PIE) 세션(`EditorPlaySession`, `EditorSessionPolicy`)
+  플레이(PIE) 세션(`EditorPlaySession`, `EditorSessionPolicy`) · 에디터 확장 등록부의 공통 모양(`EditorRegistry<T>` · `EditorRegistrar<T>`) ·
+  에셋 파일 감시(`AssetHotReload` · `ReloadFileManager`)
 - **Commands/**: 패널이 쓰는 **ImGui 없는 로직** — 애셋/씬/트랜스폼/데이터테이블 변이와 파일 IO,
   그리고 커맨드 정의를 담는 `EditorCommandRegistry`.
   패널은 UI 만, 실제 동작은 여기입니다 (그래서 테스트가 붙습니다)
@@ -35,11 +38,14 @@
   Sequencer, Animation Graph, Dialogue Graph, Prefab Editor, Tile Map, Sprite Clip
   - `Panels/Inspector/`: 프로퍼티·컴포넌트 인스펙터 확장 — 컴포넌트 확장은 `<Component>Inspector.cpp` 하나씩
 - **Viewport/**: 뷰포트 클라이언트, 툴바, 에디터 카메라(`EditorCamera`),
-  화면 투영(`EditorViewportProjection`), 컴포넌트 시각화 등록부(`EditorViewportVisualizer`)
+  화면 투영(`EditorViewportProjection`), 컴포넌트 시각화 등록부(`EditorViewportVisualizer`),
+  시각화가 그릴 월드 도형(`EditorVisualizerGeometry` — ImGui 없이 만들어 EditorTest 가 검증한다)
   - `Viewport/Visualizers/`: 시각화 하나에 파일 하나
 - **Popups/**: 커맨드 팔레트, 퀵 런처, 본 계층 팝업
-- **AssetActions/**: 애셋 종류별 에디터 동작(썸네일 · 열기 · 뷰포트 드롭) — 종류마다 파일 하나
-- **SelfTest/**: 에디터 안에서 도는 시험(`SW_EDITOR_SELF_TEST`)과 실행기(`-gv_editorSelfTest`)
+- **AssetActions/**: 애셋 종류별 에디터 동작(썸네일 · 열기 · 뷰포트 드롭) — 인터페이스와 등록부(`EditorAssetTypeActions`) +
+  종류마다 파일 하나. 다른 확장(패널 · 인스펙터 · 시각화)처럼 계약과 구현이 한 폴더에 있다
+- **SelfTest/**: 에디터 안에서 도는 시험(`SW_EDITOR_SELF_TEST`)과 실행기(`-gv_editorSelfTest`), 등록부 덤프
+  (`EditorRegistryDump` — `-gv_editorRegistryDump=1`, ImGui 없이 로그로 남겨 `AppSmokeTest` 가 대조한다)
 
 ### 어디에 두나
 

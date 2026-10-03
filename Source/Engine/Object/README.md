@@ -43,6 +43,7 @@ Object/
 │  ├─ DeferredDelegateQueue.*   # 틱이 미룬 일(계층 변경 · 틱 뒤 작업)의 큐 — 넣기는 아무 스레드, 비우기는 게임 스레드
 │  ├─ PrimitiveRegistry.* · LightRegistry.*  # 빛 등록부는 종류(방향광 · 점광 · 스포트)마다 칸 하나
 │  ├─ CameraRegistry.*          # 카메라 등록부 + 역할 · 우선순위 선택 규칙 하나(게임 · 에디터 카메라가 같이 쓴다)
+│  ├─ MeshInstanceBatch.* · SpriteInstanceBatch.*  # 컴포넌트 없이 인스턴스 N 개를 드는 렌더 프리미티브(PrimitiveRegistry 에 등록)
 │  └─ ObjectStateSerializer.*
 ├─ Component/           # 기반 Component + 엔진 기본 컴포넌트
 │  ├─ Component.h
@@ -50,9 +51,9 @@ Object/
 │  ├─ SceneTransformStorage.*  # 전역 트랜스폼 칸 — 로컬 TRS · 월드 행렬 · LWC 가 값마다 연속 배열(페이지 256 칸)
 │  ├─ SceneTransformHierarchy.*  # 씬마다: 더티 루트 · 플러시 · 틱 중 쓰기(대기 칸 목록 · 쓰기 큐)
 │  ├─ ComponentStableKey.*  # `이름(없으면 타입)#n` 키 — 씬 파일의 부착 대상과 에디터 선택 복원이 같은 키
-│  ├─ TagSystem.*       # TagID / TagContainer
+│  ├─ TagSystem.*       # TagContainer · TagQuery (`TagID` 자체는 Core/String/TagID.h)
 │  └─ 2D/ · 3D/         # Sprite, Mesh, Collider, 빛(`LightComponent` 기반 — 색 · 세기 · 방향 규약 · 등록) 등
-└─ Resource/Prefab/     # 프리팹 로드·스폰
+└─ Prefab/             # PrefabAsset(로드 · 저장 · 스폰) · PrefabManager(프리팹 에셋 캐시, `PrefabAsset.h`) · PrefabOverrides(인스턴스 차이 뽑기 · 다시 얹기)
 ```
 
 게임 코드(`Source/Games`)는 항상 **`GameObject` / `GameObjectManager` API**를 통해 컴포넌트를 부착하고 수명을 관리합니다.

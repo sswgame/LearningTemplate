@@ -12,8 +12,8 @@
 
 | 폴더명 | 테스트 성격 | 주요 특징 |
 |---|---|---|
-| **`CoreTest`** | 순수 코어 유닛 테스트 | 엔진(`Engine`) 라이브러리에 전혀 의존하지 않으며, `Math`, `String`, `DataStructure`, `Delegate` 등 가장 밑바닥 논리들을 매우 빠르게 검증합니다. |
-| **`EngineTest`** | 엔진 코어/렌더링 유닛 테스트 | `GameObject`, `Scene`, `RHI`, `Material` 등 실제 엔진 객체들의 동작을 검증합니다. (GPU를 타지 않는 `nogpu` 필터링도 지원합니다) |
+| **`CoreTest`** | 순수 코어 유닛 테스트 | `Source/Core` 만 시험합니다 — `Math`, `String`, `DataStructure`, `Delegate`, `Event`, `GlobalVariable` 등. 시험 파일은 Engine · GameFramework · Editor · Games · App 헤더를 include 하지 않고 `engine::` 서비스를 부르지 않습니다(`CheckTestSuites` 규칙 6 — 공용 `TestFramework` 가 Engine 을 링크하므로 include 경로로는 막을 수 없어 게이트가 지킵니다). 엔진 타입이 필요하면 지역 대역(이벤트 · `GlobalVariableManager`)을 쓰거나 `EngineTest` 에 둡니다. |
+| **`EngineTest`** | 엔진 · 게임 프레임워크 유닛 테스트 | `GameObject`, `Scene`, `RHI`, `Material` 등 실제 엔진 객체들과, `GameFramework` · 장르 킷(`GF_Overworld` · `GF_TurnBattle` · `GF_ActionCombat`)을 함께 검증합니다 — 그 라이브러리들을 링크하는 실행 파일이 이것 하나라서입니다. 게임 서비스 바인딩 가드는 `EngineTest/GameTestUtil.h`. GPU 가 필요한 스위트는 `_HostOnly` 로 갈립니다(아래). |
 | **`ReflectionTest`** | 빌드 파이프라인(툴체인) 테스트 | 런타임 코드가 아닌, C++ 헤더를 분석하여 `*.gen.cpp`를 올바르게 자동 생성해 내는지 `ReflectionParser` 툴의 기능을 검증합니다. |
 | **`SmokeTest`** | 런타임 모듈 통합 스모크 테스트 | 게임 DLL 핫 리로드(`LiveReloadManager`)나 RHI 모듈 동적 로드 등 시스템 전체가 런타임에 제대로 맞물려 돌아가는지를 검증합니다. |
 | **`EditorTest`** | 에디터 로직 유닛 테스트 | 커맨드 스택·선택·뷰포트 수학·문서 dirty 계약 등 `EditorModule` 의 UI 없는 부분을 검증합니다. ImGui 렌더링은 타지 않습니다. |
@@ -47,13 +47,9 @@ ctest --test-dir build/Ninja-Debug --output-on-failure
 
 ### 특정 테스트만 골라서 실행 (Label 활용)
 라벨은 `core`, `editor`, `engine`, `app`, `reflection`, `module`, `unit`, `nogpu`, `hostgpu`, `lint` 입니다.
-`lint` 는 `sw_registerLintTests`(`cmake/Engine/AssetAndToolTargets.cmake`)가 등록하는 Python 검사
-아홉입니다 — `CheckEngineLayers` · `CheckIncludeOrder` · `CheckResourceCasing` · `CheckCodeConventions` ·
-`CheckCodeConventionsSelfTest` · `CheckSourceGlob` · `CheckDataFileReferences` · `CheckRenderOwnership` ·
-`CheckTestSuites`.
-
-> 이 수는 세어서 적지 말고 `ctest --preset Ninja-Debug-lint -N` 로 확인한다. 예전에 "여섯" 이라고
-> 적힌 채 일곱이 돌고 있었다.
+`lint` 는 `Scripts/lint/gate/` 의 게이트와 `Scripts/lint/selftest/` 의 자기 검사 전부입니다. 목록은 어디에도 손으로 적지 않습니다 —
+구성 시점에 `Scripts/lint/LintCatalog.py` 가 두 폴더를 훑고 `Scripts/generate/GenerateLintTargets.py` 가 CTest 항목을 만듭니다
+(`sw_registerLintTests`, `cmake/Engine/AssetAndToolTargets.cmake`). 지금 무엇이 도는지는 `ctest --preset Ninja-Debug-lint -N` 으로 봅니다.
 
 ```powershell
 # GPU 없이 도는 것만 (CI 와 같은 집합)
@@ -148,7 +144,8 @@ ReflectionTest 는 Dev 전용 진단 경로와 배포본에 없는 메타데이�
 ### 스위트 이름 규칙 — `CheckTestSuites.py` 가 강제합니다
 
 스위트 이름은 장식이 아닙니다. CI 가 못 돌리는 것은 **스위트 단위로** 선언되어 빠지고 `--test_filter` 도
-스위트 단위로 고르므로, 이름이 흔들리면 그 둘이 흔들립니다. 규칙은 넷입니다.
+스위트 단위로 고르므로, 이름이 흔들리면 그 둘이 흔들립니다. 스위트 규칙은 넷이고, 같은 게이트가 둘을 더 봅니다 —
+`EditorTest` 가 손으로 나열한 Editor 소스가 살아 있고 ImGui 를 include 하지 않는지, `CoreTest` 가 엔진을 직접 쓰지 않는지(위 표).
 
 1. 스위트 이름은 **`XxxTest`** — 대문자로 시작하고 `Test` 로 끝나며 밑줄이 없습니다.
    계층 접두어(`Core_` · `Engine_`)는 붙이지 않습니다. **실행 파일 이름이 이미 그 말을 합니다.**

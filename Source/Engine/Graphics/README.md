@@ -24,7 +24,7 @@ DX11 · DX12 · OpenGL · Vulkan
 |------|------|
 | **RHI/** | 백엔드 추상화·구현·(옵션) RHI DLL 모듈 |
 | **Material/** | 머티리얼 정의·인스턴스·캐시. 파일이 곧 주제다 — `MaterialXml`(XML 읽기/쓰기) · `MaterialPacking`(타입 표·CB 패킹) · `MaterialPermutation`(define 조립·세대) |
-| **Shader/** | `Compile/` 컴파일·캐시·베이크·핫리로드 · `Reflection/` 리플렉션과 매니페스트 · `Binding/` 슬롯 계약 |
+| **Shader/** | `Compile/` 컴파일·캐시·베이크·핫리로드 · `Reflection/` 리플렉션과 매니페스트 · `Binding/` 슬롯 계약과 셰이더가 읽는 꼴 그대로의 값 묶음(`GpuLight` · `GpuSpriteInstanceData` — 컴포넌트가 채우므로 Renderer 아래에 둔다) |
 | **Mesh/** | CPU 메시 에셋(`Mesh`)과 기본 도형 생성기(`MeshUtil`). GPU 풀은 여기 없다 — Renderer/Scene/ |
 | **Texture/** | `Texture2D` 에셋과 `TextureCache`(참조 수 + unique_ptr) |
 | **Upload/** | `GpuUploadQueue` — 게임 스레드가 스냅샷을 내보내기 **전에** 워커가 GPU 리소스를 만든다 |
