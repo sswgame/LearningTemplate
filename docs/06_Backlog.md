@@ -96,7 +96,7 @@ cd build/Ninja-Debug/Bin
 ### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
 
 - **불필요 코드 삭제(진행 중, 사용자 지시 10-04)** — 조사 보고서는 세션 스크래치 `deadcode/report.md`(1,615 줄: 호출자 없음 354 · 구조 개선 잔여물 39 · 중복 11 묶음 ·
-  경위 주석 ~2,300 블록). 코드 묶음 A(에디터)는 끝났고(−352 줄), B(RHI · 렌더러) · D(Core · App · 도구 · 스크립트 · cmake) · E 가 진행 중이고, C(셰이더 데이터 · EngineData — 굽기 필요) ·
+  경위 주석 ~2,300 블록). 코드 묶음 A(에디터 −352 줄) · B(RHI · 렌더러, Dev 모놀리식 RHI 갈래 · `SW_RHI_AS_MODULES` 제거, ABI v23)는 끝났고, D(Core · App · 도구 · 스크립트 · cmake) · E 가 진행 중이고, C(셰이더 데이터 · EngineData — 굽기 필요) ·
   E(Engine 나머지: `PropertyMetaHint` · XML 백엔드 배열/맵 API · LocalizationManager 형식 셋 · SerializeContext 객체 id 표 · ActionMap 기본 바인딩 폴백) ·
   F(GameFramework · 시험: `BattleEvents.h` · TurnBattle 옛 세이브 · GPU 시험 준비 코드 43 곳 합치기)가 그다음, 주석 · 문서 2 차(G1~G5)는 코드 묶음을 합친 뒤.
   사용자 결정: macOS · LocalizationManager 형식 셋 · SerializeContext id 표 · Dev 모놀리식 RHI 갈래 · ActionMap 폴백은 지움, 누수 추적(`enableMemoryLeakChecks`)은 켬,
@@ -227,6 +227,9 @@ cd build/Ninja-Debug/Bin
 - **ReflectionParser 강제 include PCH**(`CoreMinimal.h` 를 PCH 로 — 타깃당 ~0.4 s). 캐시 위치 · 무효화가 필요하다. 값이 작아 보류.
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
+
+- **`-gv_rhiBackend` 는 숫자만 받는다**(0 DX11 · 1 DX12 · 2 Vulkan · 3 GL) — `Vulkan` 처럼 이름을 주면 경고만 내고 DX11 로 돈다. enum 전역 변수가 리플렉션 열거자
+  이름을 받게 하거나, 모르는 값이면 실행을 멈출 것.
 
 - **문서 최신화(10-04)에서 남은 정리 셋** — (1) 코드 주석이 `docs/05_RHI_FrameContract.md` 의 재설계 전 절 이름(R2 · S2 · S3 · "실패기록 5차")을 가리킨다:
   주석을 현재형으로 바꾸면 docs/05 의 1~3 · 7 절을 지운다. (2) `ArgumentList.xxx` 의 `IP` · `PORT` 는 읽는 곳이 없다. (3) `CheckTestSuites.py` docstring 이 "규칙
@@ -477,6 +480,9 @@ cd build/Ninja-Debug/Bin
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
+
+- **같은 클래스가 `#if` / `#else` 로 헤더에 두 번 있으면 `CheckCodeConventions` 의 헤더 기본값 검사가 그 클래스를 건너뛴다** — D3D11 · D3D12 비Windows 스텁을 지우자
+  숨어 있던 위반 9 건이 드러났다. 다른 플랫폼 스텁이 있는 헤더도 같은 사각일 수 있다.
 
 - **enum switch 는 LLVM 방식**: 모든 열거자를 다루면 `default:` 없음(`-Werror=switch` 가 빠진 case 를, `-Werror=covered-switch-default` 가 다 다룬 switch 의
   default 를 잡는다), 일부만 다루면 `default:`(`-Wno-switch-enum` · `-Wno-switch-default`). 파일별 `#pragma` 로 switch 경고를 바꾸지 않는다. 외부 헤더는 `SYSTEM`
