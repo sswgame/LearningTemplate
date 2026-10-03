@@ -659,6 +659,35 @@ namespace sw
         return getRhiFormatBlockInfo( format )._blockWidth > 1;
     }
 
+    /**
+     * @brief 렌더 타깃(컬러 첨부) 또는 깊이 첨부로 만들 수 있는 포맷인지 확인합니다 — 네 백엔드가 모두 보장하는 것만 true 입니다.
+     * @details 블록 압축 · Unknown 은 첨부가 될 수 없고, R32G32B32_FLOAT 는 D3D11 · D3D12 · Vulkan 모두 렌더 타깃 지원이 선택 사항이라 뺍니다.
+     *          포맷을 더하면 -Wswitch-enum 이 이 자리를 알립니다(열거자를 모두 적는다).
+     */
+    inline constexpr bool isRhiFormatRenderable( RHIFormat format )
+    {
+        switch ( format )
+        {
+            case RHIFormat::R8G8B8A8_UNORM:
+            case RHIFormat::B8G8R8A8_UNORM:
+            case RHIFormat::R16G16B16A16_FLOAT:
+            case RHIFormat::D24_UNORM_S8_UINT:
+            case RHIFormat::R32G32_FLOAT:
+            case RHIFormat::R32_FLOAT:
+                return true;
+            case RHIFormat::R32G32B32_FLOAT:
+            case RHIFormat::Unknown:
+            case RHIFormat::BC1_UNORM:
+            case RHIFormat::BC2_UNORM:
+            case RHIFormat::BC3_UNORM:
+            case RHIFormat::BC4_UNORM:
+            case RHIFormat::BC5_UNORM:
+            case RHIFormat::BC7_UNORM:
+            default:
+                return false;
+        }
+    }
+
     /** @brief 비압축 컬러 포맷의 픽셀당 바이트를 반환합니다. 압축 · 깊이 · Unknown 은 0 입니다. */
     inline constexpr uint32 getRhiFormatBytesPerPixel( RHIFormat format )
     {

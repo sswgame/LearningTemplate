@@ -499,6 +499,25 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         desc._listAttachment.push_back( att );
         SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
     }
+    // 4-1) 이름은 RHIFormat 이지만 첨부가 될 수 없는 포맷 — 각각 오류 하나. 렌더 가능한 포맷은 통과한다.
+    for ( const utf8* pFormat : { "Unknown", "BC1_UNORM", "BC7_UNORM", "R32G32B32_FLOAT" } )
+    {
+        sw::RenderPipelineResource res;
+        sw::RenderPassAttachment   att{};
+        att._name   = "NotRenderable";
+        att._format = pFormat;
+        res.getDesc()._listAttachment.push_back( att );
+        SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) == 1u, pFormat );
+    }
+    for ( const utf8* pFormat : { "R8G8B8A8_UNORM", "R16G16B16A16_FLOAT", "R32_FLOAT", "R32G32_FLOAT", "D24_UNORM_S8_UINT" } )
+    {
+        sw::RenderPipelineResource res;
+        sw::RenderPassAttachment   att{};
+        att._name   = "Renderable";
+        att._format = pFormat;
+        res.getDesc()._listAttachment.push_back( att );
+        SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) == 0u, pFormat );
+    }
 
     // 5) 이름은 정본 하나로 통일돼 있다 — 예전 표기(`Shading`, `PostBloom`)는 이제 오류로 잡힌다.
     //    다시 이름을 바꿔야 하면 ENUM( ValueAlias = "Old:New" ) 로 호환을 열어 주면 된다.

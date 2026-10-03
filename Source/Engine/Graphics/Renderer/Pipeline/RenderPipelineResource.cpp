@@ -55,6 +55,12 @@ namespace sw
                 SW_LOG_ERROR( "[%#] attachment '%#': 알 수 없는 포맷 '%#'", sourcePath, attachment._name, attachment._format );
                 ++issueCount;
             }
+            else if ( isRhiFormatRenderable( parsed ) == false )
+            {
+                // 이름은 맞지만 첨부가 될 수 없는 포맷(Unknown · 블록 압축 · R32G32B32_FLOAT) — 트랜지언트를 만들 때 백엔드가 실패한다.
+                SW_LOG_ERROR( "[%#] attachment '%#': 포맷 '%#' 은 렌더 타깃이 될 수 없습니다", sourcePath, attachment._name, attachment._format );
+                ++issueCount;
+            }
             for ( uint32 otherIndex = 0; otherIndex < attachmentIndex; ++otherIndex )
             {
                 if ( _desc._listAttachment[otherIndex]._name == attachment._name )
