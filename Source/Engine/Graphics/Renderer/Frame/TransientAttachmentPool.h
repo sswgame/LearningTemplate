@@ -29,9 +29,8 @@ namespace sw
     public:
         /**
          * @brief 첨부 하나입니다(텍스처와 그 bindless SRV).
-         * @details 예전에는 이름이 같은 두 맵(`_mapTransient` / `_mapTransientSrv`)에 나뉘어 있었습니다.
-         *          이름 하나로 둘 다 필요한 자리가 패스마다 여러 번 도는데 그때마다 같은 문자열을
-         *          두 번 해시했고, 한쪽에만 넣고 다른 쪽을 빠뜨리면 조용히 어긋났습니다.
+         * @details 텍스처와 SRV 를 한 맵의 한 원소로 둡니다. 이름 하나로 둘 다 필요한 자리가 패스마다 여러 번 돌고,
+         *          맵을 둘로 나누면 해시가 두 번이고 한쪽에만 넣는 실수가 조용히 어긋납니다.
          */
         struct Attachment
         {

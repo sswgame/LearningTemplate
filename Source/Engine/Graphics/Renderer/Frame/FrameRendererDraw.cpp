@@ -38,10 +38,8 @@ namespace sw
 
         _psoCache.invalidateLayoutsByShaderPath( shaderPath );
 
-        // **PSO 를 실제로 다시 만든다.** 예전에는 여기서 바인딩 레이아웃만 새로 만들었는데, PSO 는
-        // 바이트코드를 구워 넣은 객체라 그것만으로는 화면이 시작 때 컴파일된 셰이더 그대로였다.
-        // 주석은 "모두 다시 만든다" 였지만 실제로 재생성하는 releasePassResources/ensurePassResources
-        // 는 loadPipeline 과 shutdown 에서만 불렀다.
+        // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 구워 넣은
+        // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다.
         //
         // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 LiveShaderManager 가 ShaderCache 를 비웠고(수동 리로드)
         // (그래야 새 바이트코드를 집는다) EngineLoop 이 렌더 스레드를 재웠으므로(waitIdle) 안전하다.
@@ -86,7 +84,7 @@ namespace sw
         }
 
         // 컬링이 실제로 목록을 만들었을 때만 건다. 안 걸리면 셰이더가 g_SwVisibleInstanceIdsIndex 로 알아채고
-        // 예전처럼 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
+        // 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 모두 0 번 인스턴스를 그린다. 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
         const GpuCullViewResources& cullView = _gpuScene.getCullView( ctx._cullView );
         if ( _bGpuCullingActive != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
@@ -159,8 +157,8 @@ namespace sw
             return; // 레이아웃을 못 얻었다(컴파일 실패 등). 조용히 건너뛴다
 
         // 배치마다 바뀌는 값은 **루트/푸시 상수**로 싣는다. 커맨드 리스트에 값이 그대로 들어가므로 드로우끼리
-        // 덮어쓸 수 없다. 그래서 PassCB 는 패스당 하나면 충분하다(예전에는 이 둘을 PassCB 에 넣어 드로우마다
-        // 버퍼를 새로 잡아야 했다). 언리얼의 드로우별 느슨한 파라미터와 같은 자리다.
+        // 덮어쓸 수 없다. 그래서 PassCB 는 패스당 하나면 충분하다(PassCB 에 넣으면 드로우마다 버퍼를 새로 잡아야
+        // 한다). 언리얼의 드로우별 느슨한 파라미터와 같은 자리다.
         const uint32 arrDrawRootConstant[] = { ctx._drawMaterialCount };
         ctx._pCmd->setGraphicsRootConstants( 0, static_cast<uint32>( sizeof( arrDrawRootConstant ) / sizeof( arrDrawRootConstant[0] ) ),
                                              arrDrawRootConstant );
@@ -197,13 +195,9 @@ namespace sw
 
         // 그릴 메시가 하나도 없다. 상태만 맞춰 두고 나간다.
         //
-        // 예전에는 여기에 경로가 둘 더 있었다. (1) 씬을 다시 순회해 드로우 목록을 만드는 폴백과
-        // (2) 인다이렉트 대신 배치마다 drawInstanced 를 부르는 경로다. 둘 다 지웠다.
-        // (1)은 수집 조건이 GpuSceneBuilder::buildFromScene 과 같아 애초에 도달할 수 없었고(런타임 경로는
-        // _pScene 이 null 이라 더더욱), (2)는 네 백엔드가 모두 인다이렉트 드로우를 지원하는데
-        // 진단용 전역 변수로만 닿는 두 번째 드로우 루프였다. 경로가 둘이면 새 기능이 한쪽에만 들어간다.
-        // 실제로 컬링 · 정렬 · 인스턴스 애니메이션이 모두 인다이렉트 경로에만 붙어 있어서, 그 변수를 끄면
-        // 조용히 다른 그림이 나왔다.
+        // 주의: 씬을 다시 순회하는 폴백이나 배치마다 drawInstanced 를 부르는 두 번째 드로우 루프를 두지 않는다.
+        // 네 백엔드가 모두 인다이렉트 드로우를 지원하고, 경로가 둘이면 새 기능(컬링 · 정렬 · 인스턴스 애니메이션)이
+        // 한쪽에만 들어가 다른 쪽이 조용히 다른 그림을 낸다.
         if ( pso != 0 )
             ctx._pCmd->setPipelineState( pso );
 
@@ -246,16 +240,16 @@ namespace sw
         // **같은 PSO · 정점 버퍼 · 머티리얼(버퍼 · CB · 텍스처 · 원소 수)의 연속 배치는 drawIndirect 한 번(멀티 드로우)이다.** 배치마다
         // 다른 값은 배치 표(g_SwBatches)와 인스턴스 슬롯 스트림(슬롯 1)이 준다. 간접 인자의 startInstance 가 배치 시작이라 입력
         // 어셈블러가 인스턴스마다 자기 전역 자리를 넘기고, 정점은 그 인스턴스의 meshBatchIndex 로 표를 읽는다. 드로우 ID 도 루트
-        // 상수 주입도 없다(DX12 커맨드 시그니처에 루트 상수를 넣으면 ExecuteIndirect 가 두 배 느려졌다. 실측이다). 멀티 드로우가 없는
-        // 백엔드(DX11)는 하나씩 부른다. 2026-09-13 벤치: 871 배치의 드로우 루프가 RT 프레임의 41% 였고 비용은 호출 수였다.
+        // 상수 주입도 없다(DX12 커맨드 시그니처에 루트 상수를 넣으면 ExecuteIndirect 가 두 배 느려진다. 실측이다). 멀티 드로우가 없는
+        // 백엔드(DX11)는 하나씩 부른다. 드로우 루프의 비용은 호출 수라, 배치가 많은 씬에서는 RT 프레임의 큰 몫이 된다.
         const bool bMerge = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
 
         // **머티리얼 CB 를 실제로 거는 셰이더에서만** 그 값을 병합 키에 넣는다.
         //
         // GPUScene 경로의 머티리얼은 구조버퍼(`g_SwMaterials`, t9)에서 인스턴스의 `_materialIndex` 로
         // 읽는다. 그런 셰이더에는 머티리얼 CB 슬롯이 아예 없어서 `bindForDraw` 가 그 값을 걸지도
-        // 않는다. 그런데도 `_materialCb` 가 병합 키에 있어서, 깊이순으로 섞인 투명 배치들이
-        // **그리기에 아무 영향 없는 값 때문에** 하나씩 따로 그려지고 있었다
+        // 않는다. 주의: 그런 셰이더에서도 `_materialCb` 를 병합 키에 넣으면 깊이순으로 섞인 투명 배치들이
+        // **그리기에 아무 영향 없는 값 때문에** 하나씩 따로 그려진다
         // (큐브 8000 · 도형 8 종: 배치 1795 개가 드로우 1206 회. 이 값을 빼면 3 회이고 화면은 같다).
         auto layoutBindsMaterialCb = [this]( RHIPipelineStateHandle batchPso ) -> bool
         {
@@ -320,8 +314,8 @@ namespace sw
                 boundVertexBuffer = head._vertexBuffer;
             }
 
-            // **이 머티리얼의 퍼뮤테이션**으로 그린다. 예전에는 패스 PSO 하나로 모두 그려서, 머티리얼이 선언한
-            // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 구워지기만 하고 한 번도 걸리지 않았다.
+            // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
+            // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 구워지기만 하고 한 번도 걸리지 않는다.
             // 캐시는 ensureMaterialPsos 가 기록 전에 채운다. 여기서는 조회만 한다.
             const RHIPipelineStateHandle batchPso = psoForBatch( pso, head );
             if ( batchPso != boundPso && batchPso != 0 )

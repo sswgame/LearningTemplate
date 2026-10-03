@@ -255,10 +255,9 @@ namespace sw
         /**
          * @brief 이 패스에 픽셀 스테이지가 있는지 반환합니다. 컬러 출력이 하나라도 있어야 합니다.
          * @details 셰이더 베이커가 "이 패스의 PS 를 굽는가" 를 정할 때 씁니다. 런타임은 같은 규칙을
-         *          createPsoForPassType 이 RT 수로 적용합니다(RT 0 개 → PS 경로를 비웁니다). 예전에는 베이커가
-         *          타입 **문자열**로 "그림자엔 PS 없음" 을 정하고 런타임은 PS 경로를 늘 채워서, 그림자 패스에
-         *          머티리얼 define 을 얹은 변형이 DX12 에서 PS 리플렉션을 요구했고 매니페스트엔 그 조합이
-         *          없었습니다. Shipping 실기동의 `리플렉션 매니페스트에 'shadowdepth.hlsl' 가 없습니다` 가 그것입니다.
+         *          createPsoForPassType 이 RT 수로 적용합니다(RT 0 개 → PS 경로를 비웁니다). 주의: 베이커와 런타임이
+         *          다른 규칙을 쓰면 그림자 패스에 머티리얼 define 을 얹은 변형이 PS 리플렉션을 요구하는데 매니페스트엔
+         *          그 조합이 없습니다(Shipping 의 `리플렉션 매니페스트에 'shadowdepth.hlsl' 가 없습니다`).
          * @note 언리얼은 그림자 깊이에도 **마스크드 머티리얼일 때만** PS 를 붙입니다(clip 을 위해). 알파 마스크가
          *       들어오면 이 규칙에 "머티리얼이 픽셀 폐기를 요구하는가" 축이 더해져야 합니다. 베이커도 이 함수를
          *       보므로 그때도 고칠 자리는 여기 하나입니다.
@@ -358,9 +357,8 @@ namespace sw
      * @brief 어태치먼트 · 패스 리소스 이름의 hashed_string 캐시입니다.
      * @details PassConstantNames 와 같은 이유입니다. hashed_string 생성은 전역 레지스트리 intern
      *          (FNV 해시 → 32-way 샤드 뮤텍스 → 조회)입니다. 이 이름들은 모두 코드 리터럴이라
-     *          값이 고정인데, 예전에는 패스마다 · 드로우마다 새로 intern 했습니다.
-     *          특히 `commitBindlessTextureBindings` 는 DX11 · GL 경로에서 **드로우 호출마다**
-     *          네 개를 만들고 있었습니다.
+     *          값이 고정이므로 한 번만 intern 합니다. 특히 `commitBindlessTextureBindings` 는 DX11 · GL 경로에서
+     *          **드로우 호출마다** 불리므로 이름을 그 자리에서 만들면 안 됩니다.
      * @note 문자열이 필요한 자리에는 `view()` 를 씁니다. 락 없는 O(1) 포인터 역참조입니다.
      */
     struct AttachmentNames
@@ -397,8 +395,7 @@ namespace sw
      * @struct PassConstantNames
      * @brief PassCB · 리소스 이름의 hashed_string 캐시입니다.
      * @details hashed_string 생성은 전역 문자열 레지스트리에 intern 하는 작업입니다(FNV 해시 →
-     *          샤드 공유락 → 조회). 리터럴은 값이 고정이므로 매번 만들 이유가 없는데, 예전에는
-     *          `g_World` 를 드로우 호출마다 새로 만들고 있었습니다. 한 번만 만들어 다시 씁니다.
+     *          샤드 공유락 → 조회). 리터럴은 값이 고정이므로(`g_World` 처럼 드로우마다 쓰는 것도) 한 번만 만들어 다시 씁니다.
      */
     struct PassConstantNames
     {

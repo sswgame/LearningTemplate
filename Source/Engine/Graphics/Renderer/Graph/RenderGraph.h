@@ -32,9 +32,8 @@ namespace sw
     /**
      * @struct RenderGraphBarrier
      * @brief 그래프가 **추론한** 상태 전이 하나입니다. "이 자원을 이 상태로 바꿔야 한다" 를 뜻합니다.
-     * @details 예전에는 레벨이 읽고 쓰는 자원 **이름을 모두** 넘겼고, 받는 쪽이 그것을 그대로 전이 호출로
-     *          옮겼습니다. 같은 자원을 다섯 패스가 읽으면 다섯 번 불렀고, 이미 그 상태인 것도 다시 불렀습니다.
-     *          이제 그래프가 자기가 들고 있는 상태와 비교해서 **실제로 바뀌는 것만** 냅니다.
+     * @details 그래프가 자기가 들고 있는 상태와 비교해서 **실제로 바뀌는 것만** 냅니다. 같은 자원을 여러 패스가 읽어도,
+     *          이미 그 상태여도 다시 내지 않습니다.
      *
      *          `_before` 는 진단용입니다. 어디서 무엇이 어떻게 바뀌었는지 로그 · 테스트가 보려면 필요합니다.
      */
@@ -179,7 +178,7 @@ namespace sw
 
         /**
          * @brief 병렬 기록이 노드마다 들고 있는 커맨드 리스트를 놓습니다. 디바이스를 바꾸거나 놓기 **전에** 부릅니다.
-         * @details 리스트는 프레임을 넘어 다시 씁니다. 예전에는 패스마다 프레임마다 새로 만들었습니다(래퍼 + 백엔드 할당).
+         * @details 리스트는 프레임을 넘어 다시 씁니다(패스마다 프레임마다 래퍼 + 백엔드 할당을 하지 않습니다).
          *          `clear()` 도 이것을 부릅니다.
          */
         void releaseCommandLists();
@@ -261,8 +260,8 @@ namespace sw
 
         /**
          * @brief 각 리소스의 수명(처음 ~ 마지막 사용 패스 인덱스)입니다. compile() 이 계산해 둔 것을 반환합니다.
-         * @details 예전에는 부를 때마다 다시 계산했고 아무도 부르지 않았습니다. 지금은 compile() 이 채우면서
-         *          `buildResourceLifetimes` 가 그 자리에서 쓰이지 않는 · 쓰인 적 없는 자원을 검사합니다. 수명이 그래프의 산출물이 됐습니다.
+         * @details compile() 이 채우면서 `buildResourceLifetimes` 가 그 자리에서 쓰이지 않는 · 쓰인 적 없는 자원을 검사합니다.
+         *          수명은 그래프의 산출물입니다.
          */
         const vector<RenderGraphResourceLifetime>& getResourceLifetimes() const { return _listResourceLifetime; }
         /** @brief 리소스 하나의 수명입니다. 그래프가 모르는 이름이면 nullptr 입니다. */
@@ -274,7 +273,7 @@ namespace sw
         /**
          * @brief 컴파일된 순서를 레벨마다 사람이 읽는 글로 돌려줍니다(레벨 · 패스 · 읽는 자원 · 쓰는 자원).
          * @details `exportToMermaid` 는 그래프 **구성**이고, 이것은 그 **결과** — 무엇이 어떤 순서로, 무엇과 같은 레벨에서 나란히 기록되는가
-         *          — 다. "왜 이 패스가 저 패스보다 먼저 도나" 를 물을 곳이 없었다. `-gv_dumpRenderGraph` 가 이것을 로그로 남긴다.
+         *          — 다. "왜 이 패스가 저 패스보다 먼저 도나" 에 답한다. `-gv_dumpRenderGraph` 가 이것을 로그로 남긴다.
          */
         string describeCompiledOrder() const;
 

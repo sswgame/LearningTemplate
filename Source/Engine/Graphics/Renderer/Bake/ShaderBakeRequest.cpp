@@ -169,8 +169,8 @@ namespace sw
                             const string vsEntry = pass._vertexEntryPoint.empty() ? "VSMain" : pass._vertexEntryPoint;
                             appendRequestUnique( outListRequest, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine );
 
-                            // 픽셀 셰이더. 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)엔 없다. 예전에는 여기서 타입
-                            // **문자열**을 비교했다. 런타임은 출력 선언(RT 수)으로 판정하므로 둘이 어긋날 수 있었다.
+                            // 픽셀 셰이더. 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)엔 없다. 런타임과 같은 판정
+                            // (`hasPixelStage`, 출력 선언의 RT 수)을 써야 둘이 어긋나지 않는다.
                             if ( FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment ) )
                             {
                                 const string psEntry = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
@@ -258,10 +258,9 @@ namespace sw
                 FileUtil::collectFiles( rootDir, ".material", listMaterialFile, true );
                 for ( const string& matPath : listMaterialFile )
                 {
-                    // **머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다.** 예전에는 여기서 XML 의
-                    // `_alwaysDefines` 만 손으로 긁었다. 런타임은 거기에 품질 · SHADER_LOD · usage · 정적
-                    // 스위치 · 멀티 컴파일까지 얹으므로, 구운 변형은 런타임이 **한 번도 요청하지 않는**
-                    // 해시였다. 같은 함수를 부르면 어긋날 자리가 없다.
+                    // **머티리얼을 직접 읽어 런타임과 같은 define 목록을 얻는다.** 주의: XML 의 `_alwaysDefines` 만
+                    // 손으로 긁으면 런타임이 얹는 품질 · SHADER_LOD · usage · 정적 스위치 · 멀티 컴파일이 빠져,
+                    // 구운 변형이 런타임이 **한 번도 요청하지 않는** 해시가 된다. 같은 함수를 부르면 어긋날 자리가 없다.
                     const shared_ptr<Material> material = Material::create();
                     if ( material->loadFromFile( matPath ) == false )
                         continue;

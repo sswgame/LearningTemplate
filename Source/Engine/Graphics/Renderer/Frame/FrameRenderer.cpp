@@ -24,7 +24,7 @@ namespace sw
 
     /**
      * @brief `-gv_deferred=1` 이면 기본 파이프라인을 디퍼드로 고릅니다(기본은 포워드).
-     * @details 예전에는 고를 길이 자체가 없었습니다. `initialize` 의 인자를 주는 곳이 없어 늘 포워드였습니다.
+     * @details `initialize` 에 파이프라인 경로를 주지 않을 때 디퍼드를 고르는 길입니다.
      *          디퍼드는 레벨이 갈려(레벨 0 = Shadow + GBuffer) 병렬 기록이 실제로 도는 유일한 경로이기도 합니다.
      */
     SW_GLOBAL_VARIABLE_BOOL( gv_deferred, false, "기본 파이프라인을 디퍼드로 (기본 포워드)" );
@@ -156,9 +156,8 @@ namespace sw
         if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
             rpm.loadRenderPass( engineData._defaultRenderPass );
 
-        // 예전에는 파이프라인을 실행 중에 고를 길이 없었다. 인자를 주는 곳이 하나도 없어서 **언제나 포워드**였다.
-        // 그래서 디퍼드 경로(그리고 그 위의 조명)는 돌려 보려면 EngineData 를 고쳐야 했고, 실제로 거의
-        // 돌지 않았다. 측정도 검증도 스위치 하나가 없어서 막혀 있던 자리다.
+        // 인자 > `-gv_deferred` > EngineData 의 포워드 순으로 고른다. 디퍼드 경로(그리고 그 위의 조명)를
+        // 측정 · 검증하려면 `-gv_deferred=1` 을 준다.
         string_view resolvedPipeline = pipelineXmlPath;
         if ( resolvedPipeline.empty() && gv_deferred )
             resolvedPipeline = engineData._defaultDeferredPipeline;
@@ -269,7 +268,7 @@ namespace sw
 
         // 스냅샷이 든 머티리얼 · 인스턴스의 소유를 **디바이스가 살아 있을 때** 놓는다. 스냅샷은 소유를 함께
         // 실으므로(GpuScene.h) 여기서 비우지 않으면 렌더러가 죽을 때까지 그것들이 살아, 디바이스가 먼저
-        // 사라진 뒤 소멸자가 죽은 디바이스에 GPU 자원을 돌려주려 한다(ASAN 이 잡았다).
+        // 사라진 뒤 소멸자가 죽은 디바이스에 GPU 자원을 돌려주려 한다(해제 후 사용).
         _graph.releaseCommandLists();
         if ( _pDevice != nullptr )
             _gpuScene.releaseGpu( _pDevice );
@@ -435,7 +434,7 @@ namespace sw
         // 컬링 디스패치(위에서 _pCmd 에 이미 기록됨)를 먼저 닫아 GPU 큐에 제출해서, 각 패스의 독립
         // 커맨드 리스트보다 인다이렉트 인자 준비가 GPU 타임라인에서 먼저 끝나도록 순서를 보장한다
         // (같은 큐에 대한 ExecuteCommandLists 호출 순서 = 실행 순서). 첫 프레임처럼 그래프가 아직
-        // 컴파일 안 됐으면(getExecutionOrder() 가 비어 있으면) 안전하게 기존 직렬 경로로 폴백한다.
+        // 컴파일 안 됐으면(getExecutionOrder() 가 비어 있으면) 안전하게 직렬 경로로 폴백한다.
         // executeParallel 안에서 compile() 이 그때 한 번 일어난다.
         const bool bCanRunParallel = _pTaskManager != nullptr &&
                                      pDevice->getCapabilities()._bParallelCommandRecording != SW_FALSE &&
@@ -473,8 +472,8 @@ namespace sw
         collectSceneLights( pScene, _listScratchLight );
         _lightBuffer.update( pDevice, _listScratchLight );
         // 주광(그림자 행렬 · 앰비언트 · 목록이 비었을 때의 폴백)도 패킷 경로(EngineLoop)와 **같은 규칙**으로
-        // 씬에서 읽는다. 예전에는 이 경로가 주광을 채우지 않아, 테스트가 씬에 방향광을 아무리 세게 두어도
-        // 그림이 어두웠다. 조명이 필요한 픽셀 검증(블룸이 1 을 넘는 자리)이 그래서 불가능했다.
+        // 씬에서 읽는다. 주의: 이 경로가 주광을 채우지 않으면 테스트가 씬에 둔 방향광이 그림에 닿지 않아,
+        // 조명이 필요한 픽셀 검증(블룸이 1 을 넘는 자리)이 불가능해진다.
         DirectionalLightComponent* pKeyLight    = ( pScene != nullptr ) ? pScene->findActiveDirectionalLight() : nullptr;
         DirectionalLightComponent* pShadowLight = ( pScene != nullptr ) ? pScene->findShadowCastingDirectionalLight() : nullptr;
         if ( pKeyLight != nullptr )
@@ -528,9 +527,9 @@ namespace sw
         _pDevice            = pDevice;
         _pScene             = nullptr;
         _outputRenderTarget = packet._gameRenderTarget;
-        // _gpuScene 은 FrameRenderer 가 프레임 사이에 계속 소유한다(GPU 버퍼 · 핸들 · MaterialRetireQueue 보존).
-        // 패킷에서는 CPU 스냅샷(인스턴스 · 배치 목록)만 옮겨 온다. 통째로 move 하면 직전 프레임에 업로드한
-        // GPU 버퍼 · 디스크립터를 releaseGpu() 없이 잃어버려 매 프레임 새로 만드는 누수가 됐었다.
+        // _gpuScene 은 FrameRenderer 가 프레임 사이에 계속 소유한다(GPU 버퍼 · 핸들 · 머티리얼 데이터 버퍼 보존).
+        // 패킷에서는 CPU 스냅샷(인스턴스 · 배치 목록)만 옮겨 온다. 주의: 통째로 move 하면 직전 프레임에 업로드한
+        // GPU 버퍼 · 디스크립터를 releaseGpu() 없이 잃어버려 매 프레임 새로 만드는 누수가 된다.
         _gpuScene.adoptCpuSnapshot( packet._gpuScene );
 
         // 주광은 씬이 아니라 패킷으로 온다. 렌더 스레드는 씬을 볼 수 없다(_pScene = nullptr).
@@ -553,9 +552,8 @@ namespace sw
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
         resetPassCbRing();
         setIdentityWorld( _frameCtx );
-        // 예전에는 여기서 시드를 따로 채웠고, updatePassConstants 와 겹치면서도 라이트 · 블룸 · 아웃라인
-        // 색 상수는 빠져 있었다(그건 드로우 경로가 updatePassConstants 를 다시 부르며 가려 주고
-        // 있었다). 같은 함수를 쓰고, 패킷이 자기 뷰 행렬을 갖고 있을 때만 그 위에 덮어쓴다.
+        // 시드는 씬 경로와 같은 updatePassConstants 로 채운다. 따로 채우면 라이트 · 블룸 · 아웃라인 색 상수가
+        // 빠지기 쉽다. 패킷이 자기 뷰 행렬을 갖고 있을 때만 그 위에 덮어쓴다.
         // _pScene 이 null 이라 updatePassConstants 는 폴백 뷰를 세운다.
         updatePassConstants( _frameCtx );
         if ( packet._bHasViewProj != SW_FALSE )

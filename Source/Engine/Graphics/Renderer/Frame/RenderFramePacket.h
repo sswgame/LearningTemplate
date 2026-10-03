@@ -27,7 +27,7 @@ namespace sw
          * @brief 이 프레임의 **모든** 라이트(방향광 + 점광)입니다. 값으로 싣습니다.
          * @details 렌더 스레드는 씬을 볼 수 없으므로(`_pScene` 은 늘 null) 라이트도 패킷으로만 옵니다.
          *          위의 `_light*` 셋은 **키라이트 하나**로, 그림자 행렬과 앰비언트가 거기서 나옵니다.
-         *          라이트 목록이 비어도 예전과 같은 그림이 나오는 폴백 경로이기도 합니다.
+         *          라이트 목록이 비어도 키라이트 하나로 그리는 폴백 경로이기도 합니다.
          */
         vector<GpuLight> _listLight;
         RHITextureHandle _gameRenderTarget; ///< 0 = 백버퍼 경로

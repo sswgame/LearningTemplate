@@ -18,7 +18,7 @@ namespace sw
 
         /// @brief 그림자용 라이트 카메라를 원점에서 얼마나 떨어뜨릴지입니다. 직교 깊이 범위도 이 값을 씁니다.
         constexpr float32 kLightDistance = 2.0f;
-        /// @brief 라이트 직교 투영이 담는 가로 · 세로 범위입니다(기존 스케일 0.9 = 2/2.222 와 같습니다).
+        /// @brief 라이트 직교 투영이 담는 가로 · 세로 범위입니다(약 2.222).
         constexpr float32 kLightOrthoExtent = 2.0f / 0.9f;
 
         /// @brief 폴백 궤도 카메라 파라미터입니다. 약 40도 수직 화각입니다.
@@ -31,7 +31,6 @@ namespace sw
     {
         // **프레임당 한 번** 프레임 시드(_frameCtx)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
         // 가므로(onGraphPassExecute) 패스마다 다시 계산할 필요가 없고, 드로우마다는 더더욱 없다.
-        // 예전에는 commitBindlessTextureBindings 가 드로우마다 이것을 불렀다.
         //
         // 뷰 · 라이트 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다. 패킷이 자기
         // 뷰 행렬을 갖고 있으면 executePacket 이 그 위에 덮어쓴다.
@@ -93,8 +92,8 @@ namespace sw
     void FrameRenderer::buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const
     {
         (void)ctx;
-        // **이번 프레임의 라이트**를 쓴다. 예전에는 여기만 .cpp 안 constexpr 을 봤다. 패킷이 다른 방향을
-        // 실어 주면 셰이딩(_frameLight 를 쓴다)과 그림자 행렬이 서로 다른 빛을 보게 된다. 기본값은
+        // **이번 프레임의 라이트**를 쓴다. 주의: 여기서 따로 둔 상수를 보면 패킷이 다른 방향을
+        // 실어 줄 때 셰이딩(_frameLight 를 쓴다)과 그림자 행렬이 서로 다른 빛을 보게 된다. 기본값은
         // FrameLightState 의 멤버 초기값 하나뿐이다(값을 두 군데 두면 언젠가 갈라진다).
         const float4& dirIntensity = _frameLight._dirIntensity;
         float3        lightDir     = float3{ dirIntensity._x, dirIntensity._y, dirIntensity._z }.normalize();
@@ -106,11 +105,9 @@ namespace sw
         const float3 up  = MathUtil::abs( lightDir._y ) > 0.99f ? float3::Forward : float3::Up;
         const float3 eye = lightDir * -kLightDistance;
 
-        // 예전에는 view · ortho 성분을 직접 써 넣었다. createLookAt · createOrthographic 과 같은 행렬이지만
-        // 손으로 쓰면 어떤 규약(좌수, 행벡터)인지 읽어서 알아내야 하고, CameraComponent 가 쓰는 규약과
-        // 어긋나도 드러나지 않는다.
-        // 깊이 범위는 **눈을 기준으로** 잡는다. 자세한 사연은 DirectionalLightComponent::buildShadowViewProj.
-        // 여기도 같은 실수를 하고 있었다(값을 두 군데 두면 갈라진다는 위 주석의 실례다).
+        // 행렬은 createLookAt · createOrthographic 으로 만든다. view · ortho 성분을 손으로 쓰면 어떤 규약(좌수,
+        // 행벡터)인지 읽어서 알아내야 하고, CameraComponent 가 쓰는 규약과 어긋나도 드러나지 않는다.
+        // 깊이 범위는 **눈을 기준으로** 잡는다(DirectionalLightComponent::buildShadowViewProj 와 같은 규칙).
         constexpr float32 kLightOrthoHalf = kLightOrthoExtent * 0.5f;
         outMat                            = float4x4::createLookAt( eye, float3::Zero, up ) *
                  float4x4::createOrthographic( kLightOrthoExtent, kLightOrthoExtent,
@@ -120,11 +117,10 @@ namespace sw
     void FrameRenderer::buildViewProj( float4x4& outMat ) const
     {
         // CameraComponent 가 없을 때만 쓰는 폴백 궤도 카메라다. 원점을 바라본다.
-        // 예전에는 view 행렬을 직접 채웠는데 z축을 eye.normalize() 로 잡고 있었다. 그건 원점에서
-        // eye 로 향하는 방향이라 원점을 등지고 보는 셈이고, 이 엔진이 쓰는 좌수 투영
+        // CameraComponent::getViewMatrix 와 같은 createLookAt 으로 만든다. 주의: view 행렬을 직접 채우며 z축을
+        // eye.normalize() 로 잡으면 원점을 등지고 보는 셈이라, 이 엔진이 쓰는 좌수 투영
         // (createPerspectiveFieldOfView, w' = z_view)에서는 원점이 뷰 z = -|eye| 로 카메라 뒤에
-        // 떨어져 아무것도 그려지지 않는다. CameraComponent::getViewMatrix 와 같은 createLookAt 으로
-        // 맞춘다.
+        // 떨어져 아무것도 그려지지 않는다.
         constexpr float3 eye{ 2.15f, 1.55f, 2.65f };
 
         const float32 aspect = ( _transientPool.getHeight() > 0 )

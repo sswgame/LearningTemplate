@@ -103,8 +103,8 @@ namespace sw
 
                 // **파일 시간이 아니라 내용 해시로 판정한다.** 이 저장소는 구운 바이너리까지 커밋하므로
                 // `git pull` 이 소스와 산출물의 mtime 을 임의의 순서로 덮어쓴다. 소스가 바뀌었는데도
-                // "산출물이 더 새것" 이 되어 그대로 넘어간다. 실제로 `forwardlit` 이 라이트 버퍼 이전
-                // 바이너리로 커밋됐고, Vulkan 만 다른 그림을 내는 것을 백엔드 버그로 오인했다.
+                // "산출물이 더 새것" 이 되어 그대로 넘어간다. 낡은 바이너리는 한 백엔드만 다른 그림을 내
+                // 백엔드 버그처럼 보인다.
                 const bool bUpToDate = ( bForceAll == false ) && FileUtil::fileExists( outPath ) &&
                                        ShaderBaker::isBakedOutputCurrent( outDir, normPath );
 

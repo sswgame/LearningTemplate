@@ -38,8 +38,8 @@ namespace sw
             /**
              * @brief 머티리얼 원소 표의 인스턴스를 올립니다(합친 배치의 인스턴스).
              * @details 네이티브 bindless 에서는 배치를 머티리얼끼리 합치고 배치에 인스턴스를 싣지 않는다 — 인스턴스는 원소 표(`_listEntry`)에만 있다.
-             *          예전에는 여기를 아무도 돌지 않아 그 인스턴스들의 바이트가 한 번도 만들어지지 않았고, 원소 업로드가 부모 바이트로 폴백해
-             *          **DX12 · Vulkan 에서 불투명 인스턴스의 오버라이드가 통째로 사라졌다**. updateRhi 는 바뀐 것이 없으면 곧바로 돌아온다.
+             *          주의: 여기를 돌지 않으면 그 인스턴스들의 바이트가 만들어지지 않아 원소 업로드가 부모 바이트로 폴백하고,
+             *          **DX12 · Vulkan 에서 불투명 인스턴스의 오버라이드가 통째로 사라진다**. updateRhi 는 바뀐 것이 없으면 곧바로 돌아온다.
              */
             static void applyElementInstancesVal( IRHIDevice* pDevice, vector<GpuMaterialGroup>& listGroup )
             {
@@ -168,9 +168,9 @@ namespace sw
 
         // CPU 스냅샷이 그대로면 인스턴스 버퍼 재업로드를 생략한다. **간접 인자는 예외다.**
         // 컬링 컴퓨트가 개수를 InterlockedAdd 로 만드는 동안에는 매 프레임 0 으로 되돌려 놓아야 한다.
-        // 여기서 같이 건너뛰었더니 정적 씬에서 개수가 N, 2N, 3N ... 으로 끝없이 자랐다(드로우 비용이
+        // 주의: 여기서 같이 건너뛰면 정적 씬에서 개수가 N, 2N, 3N ... 으로 끝없이 자란다(드로우 비용이
         // 계속 늘고, 이번 프레임에 쓰지 않은 가시 목록 자리를 읽는다). 움직이는 벤치와 한 프레임만
-        // 그리는 테스트가 둘 다 이것을 가리고 있었다.
+        // 그리는 테스트로는 드러나지 않는다.
         // 배치 표 · 간접 인자는 스냅샷이 그대로여도 풀 오프셋이 바뀌면(_bBatchTablesDirty) 다시 올린다.
         const bool bCpuDirty = _snapshot._bCpuDirty != SW_FALSE || _instances._buffer == 0 || getIndirectArgsBuffer() == 0;
         if ( bCpuDirty == false && _bBatchTablesDirty == SW_FALSE )
@@ -283,7 +283,7 @@ namespace sw
             // 정점 풀 안의 시작. 입력 어셈블러가 그 구간을 읽는다(SV_VertexID 가 이 값을 포함하는지는 API 마다 다르다: binding.hlsli).
             cmd._startVertexLocation = _snapshot._listAllBatch[argIndex]._firstVertex;
             // 배치의 인스턴스 시작. 인스턴스 슬롯 스트림(슬롯 1)의 원소를 그만큼 건너뛴다. 셰이더는 SV_InstanceID 를 쓰지 않으므로
-            // "SPIR-V InstanceIndex 는 포함하고 DX 는 안 한다" 는 차이에 더 이상 기대지 않는다. 입력 어셈블러의 인스턴스 스텝
+            // "SPIR-V InstanceIndex 는 포함하고 DX 는 안 한다" 는 차이에 기대지 않는다. 입력 어셈블러의 인스턴스 스텝
             // 스트림은 네 API 모두 startInstance 부터 읽는다.
             cmd._startInstanceLocation = _snapshot._listAllBatch[argIndex]._instanceBase;
         }
@@ -395,8 +395,7 @@ namespace sw
             batch._materialBuffer = 0;
             batch._materialSrv    = kInvalidDescriptorIndex;
         }
-        // 슬롯이 뷰 등록 해제와 버퍼 파괴를 순서까지 맞춰 처리한다. 예전에는 여기서 손으로 스무 줄을
-        // 늘어놓았고, 뷰 하나를 빠뜨려도 컴파일은 통과했다.
+        // 슬롯이 뷰 등록 해제와 버퍼 파괴를 순서까지 맞춰 처리한다. 손으로 풀어 쓰면 뷰 하나를 빠뜨려도 컴파일은 통과한다.
         _instances.release( pDevice );
         _batchInfo.release( pDevice );
         _vertexPool.release( pDevice );
@@ -406,7 +405,7 @@ namespace sw
         _instanceSlotStreamCapacity = 0;
         for ( GpuMeshBatch& batch : _snapshot._listAllBatch )
         {
-            batch._vertexBuffer = 0; // 풀이 사라졌다. 다음 upload 가 다시 정한다
+            batch._vertexBuffer = 0; // 풀을 놓았다. 다음 upload 가 다시 정한다
             batch._firstVertex  = 0;
         }
         for ( GpuCullViewResources& view : _arrCullView )
@@ -474,8 +473,8 @@ namespace sw
             }
 
             GpuMaterialGpu& gpu = _mapMaterialGpu[group._shaderPath];
-            // 모자랄 때만 두 배로 키운다. 예전에는 "원소 수 × 2" 를 **매번** 요구해서, 16 개를 넘은 뒤로는 머티리얼이 하나 늘 때마다 다시
-            // 만들었다(용량 34 < 요구 36 → 36, 다음엔 38 …). stride 가 달라지면 슬롯이 알아서 다시 만든다. 구조버퍼의 stride 는 뷰에 박혀 있어
+            // 모자랄 때만 두 배로 키운다. 주의: "원소 수 × 2" 를 **매번** 요구하면 16 개를 넘은 뒤로는 머티리얼이 하나 늘 때마다 다시
+            // 만든다(용량 34 < 요구 36 → 36, 다음엔 38 …). stride 가 달라지면 슬롯이 알아서 다시 만든다. 구조버퍼의 stride 는 뷰에 박혀 있어
             // 셰이더 선언과 달라지면 안 된다.
             const bool   bFits            = ( gpu._slot._buffer != 0 ) && ( gpu._slot._elementSize == stride ) && ( gpu._slot._capacityElements >= elementCount );
             const uint32 capacityElements = bFits ? gpu._slot._capacityElements : MathUtil::max( elementCount * 2u, 16u );
@@ -497,8 +496,8 @@ namespace sw
         }
 
         // **그룹당 한 번 풀어 두고, 배치는 인덱스로 집는다.**
-        // 예전에는 배치마다 셰이더 **경로 문자열**로 해시 조회를 했다. 그룹은 한둘인데 배치는 수백이라
-        // 같은 답을 배치 수만큼 다시 구한 셈이다(Release 실측 프레임당 86us, RT 렌더 시간의 12%).
+        // 배치마다 셰이더 **경로 문자열**로 해시 조회를 하면 그룹은 한둘인데 배치는 수백이라 같은 답을 배치 수만큼
+        // 다시 구한다(Release 실측 프레임당 86us, RT 렌더 시간의 12%).
         // 그룹 수만큼만 조회해 표로 만들어 두면 배치 루프는 저장 몇 번으로 끝난다. 표는 멤버라 프레임마다 힙을 만지지 않는다.
         const uint32           groupCount   = static_cast<uint32>( _snapshot._listMaterialGroup.size() );
         vector<ResolvedGroup>& listResolved = _listResolvedGroupScratch;

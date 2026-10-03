@@ -1,7 +1,7 @@
 /**
  * @file ShaderBindingBinder.h
  * @brief 리플렉션 레이아웃 + 프레임 상수값 + 리소스 레지스트리로 실제 GPU 바인딩을 합니다.
- * @details FrameRenderer 가 `g_ViewProj`, `g_World`, `g_KeyLightColor`, `g_TexShadow`(=bindless idx) 등을
+ * @details FrameRenderer 가 `g_ViewProj`, `g_World`, `g_KeyLightColor`, `g_ShadowMapIndex`(=bindless idx) 등을
  *          이름으로 채우면, 이 클래스가 ShaderBindingLayout 을 읽어 CB 바이트를 조립하고 슬롯별로 바인딩합니다.
  *          C++ 미러 struct 를 두지 않습니다. 셰이더만 고치면 자동으로 따라옵니다.
  */

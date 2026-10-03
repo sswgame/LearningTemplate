@@ -66,10 +66,8 @@ namespace sw
                 _psoCache.setEnginePso( passType, pso );
         }
 
-        // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다. 예전에는 진단용 전역 변수로 끌 수 있는 두 번째
-        // 드로우 루프가 있었지만, 컬링 · 정렬 · 인스턴스 애니메이션이 모두 인다이렉트 경로에만 붙어 있어
-        // 그것을 끄면 조용히 다른 그림이 나왔다. 지원하지 않는 백엔드가 생기면 조용히 안 그리는 대신
-        // 여기서 크게 알린다.
+        // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다(컬링 · 정렬 · 인스턴스 애니메이션이 모두 그 경로에 붙어 있다).
+        // 지원하지 않는 백엔드가 생기면 조용히 안 그리는 대신 여기서 크게 알린다.
         if ( caps._bIndirectDraw == SW_FALSE )
             SW_LOG_ERROR( "이 백엔드는 인다이렉트 드로우를 지원하지 않습니다 — 씬 메시를 그릴 수 없습니다." );
 
@@ -237,7 +235,7 @@ namespace sw
 
     RHIPipelineStateHandle FrameRenderer::ensurePresentPso( RHIFormat targetFormat )
     {
-        // **조회만 한다.** 예전에는 없으면 여기서 만들었는데, 이 함수는 Present 패스 실행 중 = 태스크 워커에서
+        // **조회만 한다.** 없다고 여기서 만들면 안 된다 — 이 함수는 Present 패스 실행 중 = 태스크 워커에서
         // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더 패스 캐시(락 없음)를 건드리므로, 같은
         // 레벨의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. assertRegistryMutableNow 는 bindless
         // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 buildPresentPsoVariants 가 셋업에서 만든다.

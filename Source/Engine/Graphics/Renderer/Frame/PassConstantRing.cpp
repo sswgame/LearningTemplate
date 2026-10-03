@@ -81,8 +81,8 @@ namespace sw
 
         if ( ticket >= static_cast<uint32>( _listSlot.size() ) )
         {
-            // 슬롯이 모자라면 마지막 슬롯을 공유한다. 그 프레임은 배치 상수가 섞인다. 예전에는 0번으로
-            // 되돌렸는데 0번은 프레임 시드 전용이라(beginFrame 참고) 시드까지 덮어써 더 크게 망가졌다.
+            // 슬롯이 모자라면 마지막 슬롯을 공유한다. 그 프레임은 배치 상수가 섞인다. 0번으로 되돌리면 안 된다 —
+            // 0번은 프레임 시드 전용이라(beginFrame 참고) 시드까지 덮어써 더 크게 망가진다.
             // 경고는 프레임당 한 번만 남긴다. 드로우마다 찍으면 로그가 잠긴다.
             if ( _bExhaustedLogged.exchange( SW_TRUE ) == SW_FALSE )
             {

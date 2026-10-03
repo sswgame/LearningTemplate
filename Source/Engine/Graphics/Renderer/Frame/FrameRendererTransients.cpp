@@ -105,7 +105,7 @@ namespace sw
             return;
 
         // 히스토리는 TAA 출력의 복사본이다. CopyResource 는 포맷이 정확히 같아야 하므로 대상 첨부의 포맷을 그대로 따라간다.
-        // 대상은 TAA 패스가 선언한 출력 중 있는 것이다(실행과 같은 규칙). 예전에는 이름(TaaColor → SceneColor)으로 짐작했다.
+        // 대상은 TAA 패스가 선언한 출력 중 있는 것이다(실행과 같은 규칙). 아래 이름은 선언이 없을 때의 폴백이다.
         string_view taaTarget = _transientPool.contains( string_view{ "TaaColor" } ) ? string_view{ "TaaColor" }
                                                                                      : string_view{ FrameRendererUtil::Attachment::kSceneColor };
         for ( const hashed_string& output : pTaaPass->_listResolvedOutput )

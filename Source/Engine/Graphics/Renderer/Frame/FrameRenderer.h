@@ -102,7 +102,7 @@ namespace sw
          * @details 테스트가 씁니다. 2(컴퓨트 없이 레스트 버퍼를 정점 셰이더에 물림)의 정답은 **레스트 포즈와 같은
          *          그림**이라, 이 모드 하나로 "정점 셰이더의 풀 읽기가 네 백엔드에서 같은가" 를 픽셀로 단언할 수
          *          있습니다. OpenGL 드라이버가 early-return 모양의 `swComputeMorphElement` 를 잘못 컴파일해 한 칸 어긋난
-         *          원소를 읽던 버그가 정확히 이 단언에 걸립니다(binding.hlsli 주석 참고).
+         *          원소를 읽으면 정확히 이 단언에 걸립니다(binding.hlsli 주석 참고).
          */
         void setMeshMorphDiag( int32 mode ) { _meshMorphDiagOverride = mode; }
         /**
@@ -125,7 +125,7 @@ namespace sw
         /**
          * @brief 풀스크린 패스가 이 역할의 입력을 **걸지 않게** 합니다(쇼 플래그. 언리얼의 r.AmbientOcclusion.Levels=0 자리).
          * @details 셰이더는 그 인덱스를 kInvalidIndex 로 읽어 폴백합니다(AO 는 1). "이 입력이 실제로 그림을 바꾸는가" 를
-         *          같은 프레임 안에서 비교할 수 있습니다. SSAO 가 매 프레임 돌고 버려지던 것을 픽셀로 잡는 데 썼습니다.
+         *          같은 프레임 안에서 비교할 수 있습니다. 입력이 매 프레임 계산만 되고 그림에 안 쓰이는 결함을 픽셀로 잡습니다.
          */
         void setInputRoleEnabled( RenderPassInputRole role, bool bEnabled );
         /** @brief 초기화 · 파이프라인 상태를 반환합니다. */
@@ -170,9 +170,8 @@ namespace sw
     public:
         /**
          * @brief 화면에 나간 첨부의 이름입니다. Present 패스가 입력으로 받는 것입니다. 없으면 빈 문자열입니다.
-         * @details 스크린샷 기본값이 `"SceneColor"` 리터럴이라 **디퍼드에서는 한 장도 못 찍었습니다**
-         *          (디퍼드 첨부 목록에 그 이름이 없어서, 읽기 실패 로그만 남고 파일은 안 생겼습니다).
-         *          찍고 싶은 것은 늘 "지금 보이는 그림" 이므로 파이프라인에 물어봅니다.
+         * @details 찍고 싶은 것은 늘 "지금 보이는 그림" 이므로 파이프라인에 물어봅니다. 주의: 이름을 `"SceneColor"`
+         *          같은 리터럴로 박으면 그 이름이 없는 파이프라인(디퍼드)에서는 읽기 실패 로그만 남고 파일이 안 생깁니다.
          */
         string_view getPresentedAttachmentName() const;
         /**
@@ -217,9 +216,8 @@ namespace sw
     private:
         /**
          * @brief 패스 하나를 기록하는 동안의 로컬 상태입니다.
-         * @details 병렬 기록에서는 패스마다 하나씩 존재합니다. 예전에는 이 값들이 전부
-         *          FrameRenderer 멤버였고 onGraphPassExecute 가 _pCmd 를 저장/복원했는데,
-         *          그건 "한 번에 한 패스만 돈다" 는 전제라 병렬 기록에서 서로를 덮어썼습니다.
+         * @details 병렬 기록에서는 패스마다 하나씩 존재합니다. 주의: 이 값들을 FrameRenderer 멤버로 두고
+         *          저장/복원하면 "한 번에 한 패스만 돈다" 는 전제가 되어 병렬 기록에서 서로를 덮어씁니다.
          *          상수 버퍼도 패스마다 따로 있어야 합니다. 하나를 공유하면 기록은 지연이고
          *          버퍼 쓰기는 즉시라, replay 시점엔 마지막 writer 의 값만 남습니다.
          */
@@ -268,8 +266,8 @@ namespace sw
              * @brief "마지막으로 건 것" 캐시를 모두 잊습니다. PSO · 버퍼 핸들이 무효가 되는 자리(디바이스 교체)에서 부릅니다.
              * @details 핸들 값은 **디바이스 안에서만** 정체성입니다. 새 디바이스의 PSO 는 옛 디바이스의 PSO 와 같은 값을
              *          받을 수 있고(둘 다 첫 PSO 가 같은 번호), 그러면 `_lastLayoutPso == pso` 가 참이 되어 이미 파괴된
-             *          레이아웃(`_pLastLayout`)을 쓰고 리소스 재바인딩을 건너뜁니다. 백엔드 교체 뒤 아무것도 안 그려지던
-             *          원인입니다. 파괴와 함께 캐시도 지워야 "같은 값 = 같은 것" 이 성립합니다.
+             *          레이아웃(`_pLastLayout`)을 쓰고 리소스 재바인딩을 건너뛰어, 백엔드 교체 뒤
+             *          아무것도 안 그려집니다. 파괴와 함께 캐시도 지워야 "같은 값 = 같은 것" 이 성립합니다.
              */
             void resetBindingCache()
             {
@@ -333,9 +331,8 @@ namespace sw
         void ensureTransientResources( uint32 overrideWidth = 0, uint32 overrideHeight = 0 );
         /**
          * @brief TAA 히스토리 텍스처를 **셋업 단계에서** 만들어 둡니다.
-         * @details 예전에는 TAA 패스 콜백 안에서 처음 만들고 bindless 에 등록했습니다. 그 콜백은 병렬
-         *          기록에서 태스크 스레드가 돌리므로, 기록 중에 bindless 레지스트리가 resize 되는
-         *          셈이었습니다. 다른 스레드가 같은 레지스트리를 읽고 있는 와중에 말입니다. 파이프라인이 TAA 를
+         * @details 주의: TAA 패스 콜백은 병렬 기록에서 태스크 스레드가 돌리므로, 거기서 만들고 bindless 에 등록하면
+         *          다른 스레드가 같은 레지스트리를 읽는 와중에 레지스트리가 resize 됩니다. 파이프라인이 TAA 를
          *          선언했는지, 대상 첨부의 포맷이 무엇인지는 셋업 시점에 이미 다 알 수 있습니다.
          */
         void ensureTaaHistory();
@@ -355,8 +352,7 @@ namespace sw
          *          그 패스의 리스트). 같은 레벨의 다른 리스트는 큐 순서상 그 뒤에 실행되므로 GPU 타임라인에서도 배리어가 앞섭니다.
          *
          *          이렇게 하면 패스 콜백은 이미 맞는 상태를 보게 되어 기록 중에 리소스 상태를 바꾸지
-         *          않습니다. 배리어를 병렬 기록 스레드가 정하던 구조는 이 프로젝트에서 실제로 여러 번
-         *          깨졌습니다(중복 배리어, 레이아웃 불일치).
+         *          않습니다. 주의: 배리어를 병렬 기록 스레드가 정하게 하면 중복 배리어 · 레이아웃 불일치가 생깁니다.
          */
         void onGraphLevelPrologue( const RenderGraphLevelContext& ctx );
         /** @brief 패스 타입에 맞는 실행을 합니다. */
@@ -375,8 +371,7 @@ namespace sw
 
         /**
          * @brief 이번 프레임의 주광 값입니다. 패킷이 실어 주면 그 값, 아니면 기본값입니다.
-         * @details 예전에는 방향 · 색 · 세기 · 그림자 볼륨이 모두 .cpp 안의 constexpr 이라 씬이 커져도
-         *          그림자 볼륨이 2 유닛 그대로였습니다.
+         * @details 방향 · 색 · 세기 · 그림자 행렬은 씬의 주광에서 옵니다. 아래 기본값은 주광이 없을 때의 폴백입니다.
          */
         struct FrameLightState
         {
@@ -430,7 +425,7 @@ namespace sw
         /**
          * @brief MRT 컬러 패스를 시작합니다.
          * @return 열었으면 true. 컬러 타깃 이름 중 이번 프레임에 없는 것이 있으면 **열지 않고** false 를 돌려줍니다(오류는 한 번 남깁니다) —
-         *         없는 첨부의 핸들 0 은 백버퍼라, 예전에는 그대로 열어 패스가 화면에 그렸습니다.
+         *         없는 첨부의 핸들 0 은 백버퍼라, 그대로 열면 패스가 화면에 그립니다.
          */
         bool beginColorPassMrt( FramePassContext& ctx, const string_view* pColorNames, const float4* pTargetClearColor,
                                 const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, string_view depthName,
@@ -465,7 +460,7 @@ namespace sw
         /**
          * @brief execute() / executePacket() 공통의 뒷부분입니다. 스냅샷을 GPU 로 올리고, 기록 전에 만들어야 하는 것(콜백 · 상수버퍼
          *        슬롯 · 머티리얼 PSO)을 갖춘 뒤 그래프를 제출합니다.
-         * @details 두 진입점이 같은 여덟 걸음을 각자 들고 있었습니다. 예전에 시드 채우기가 그렇게 둘로 갈려 한쪽만 상수가 빠졌었습니다.
+         * @details 두 진입점이 이 걸음들을 각자 들면 한쪽만 빠지기 쉬워(시드 채우기가 갈리면 한쪽만 상수가 빠집니다) 하나로 둡니다.
          * @param pCallerName 오류 로그에 찍을 부르는 쪽 이름
          */
         bool uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName );
@@ -479,8 +474,7 @@ namespace sw
         float4 getAttachmentClearColorOrDefault( string_view attachmentName, const float4& fallback ) const;
         /**
          * @brief 일시 텍스처와 그 SRV 를 한 번의 조회로 찾습니다. 없으면 빈 값입니다.
-         * @details 이름 하나로 둘 다 필요한 자리(registerPassTexture)가 패스마다 여러 번 돕니다.
-         *          맵이 둘이던 시절에는 같은 문자열을 두 번 해시했습니다.
+         * @details 이름 하나로 둘 다 필요한 자리(registerPassTexture)가 패스마다 여러 번 돕니다. 조회 한 번이라 해시도 한 번입니다.
          */
         TransientAttachmentPool::Attachment findTransientAttachment( string_view name ) const;
         /** @brief 일시 텍스처 핸들을 찾습니다. 없으면 0 입니다. */
@@ -541,9 +535,8 @@ namespace sw
         IRHIDevice* _pDevice;
         /**
          * @brief 렌더 패스 · 파이프라인 에셋 캐시입니다. `initialize` 뒤에만 있고 `shutdown` 이 비웁니다.
-         * @details 예전에는 `IRHIDevice` 가 이것을 소유했습니다. 디바이스 추상(RHI)이 렌더러의 에셋 개념을
-         *          들고 있어 RHI 가 Renderer 를 include 했습니다. 언리얼의 RHI 가 렌더 패스 *에셋*을 모르듯,
-         *          소유는 렌더러의 것입니다.
+         * @details 언리얼의 RHI 가 렌더 패스 *에셋*을 모르듯, 소유는 렌더러의 것입니다. 디바이스 추상(RHI)이 이것을
+         *          들면 RHI 가 Renderer 를 include 하게 됩니다.
          */
         unique_ptr<RenderPassManager> _renderPassManager;
         IRHIDevice*                   _pCmdOwnerDevice;
@@ -567,8 +560,8 @@ namespace sw
         FramePassContext _frameCtx;
         /**
          * @brief 패스 슬롯별 컨텍스트입니다. 프레임마다 `_frameCtx` 를 **대입**해 씁니다(용량이 남아 힙을 만지지 않습니다).
-         * @details 예전에는 패스마다 지역 복사본을 만들었습니다. 상수 값 목록 · 레지스트리 맵이 프레임마다 패스 수만큼 새로
-         *          자랐습니다. 크기는 병렬 기록 **전**(`submitGraph`)에 맞춥니다. 기록 중에 늘리면 워커끼리 경합합니다.
+         * @details 패스마다 지역 복사본을 만들면 상수 값 목록 · 레지스트리 맵이 프레임마다 패스 수만큼 새로
+         *          자랍니다. 크기는 병렬 기록 **전**(`submitGraph`)에 맞춥니다. 기록 중에 늘리면 워커끼리 경합합니다.
          *          마지막 칸은 이름을 못 찾은 패스의 몫입니다.
          */
         vector<FramePassContext> _listPassContext;
@@ -589,10 +582,8 @@ namespace sw
         PassConstantRing _passCbRing;
         /**
          * @brief 이번 프레임의 뷰들입니다. 행렬 · 절두체 · 상수버퍼를 각자 소유합니다.
-         * @details 예전에는 이 셋이 `_cullMainViewProj` / `_cullShadowViewProj` / `_arrGpuCullCb` 로
-         *          흩어져 있었고, "이 값은 어느 뷰 것인가" 를 사람이 기억해야 했습니다. 그래서 두 번 틀렸습니다.
-         *          한 번은 패스 상수버퍼를 드로우들이, 한 번은 컬링 상수버퍼를 뷰들이 나눠 썼습니다.
-         *          이제 뷰를 얻으면 그 뷰의 것이 딸려 옵니다.
+         * @details 뷰를 얻으면 그 뷰의 것이 딸려 옵니다. 주의: 이 값들을 뷰 밖 멤버로 흩어 두면 "이 값은 어느 뷰
+         *          것인가" 를 사람이 기억해야 하고, 컬링 상수버퍼를 뷰끼리 나눠 쓰게 되어 뒤 업로드가 앞 디스패치를 덮어씁니다.
          */
         RenderView _arrView[static_cast<uint32>( RenderViewType::Count )];
 
@@ -618,10 +609,10 @@ namespace sw
         };
         /**
          * @brief 패스 번호 → GPU 스코프 슬롯입니다. 패스 이름이 그대로면 매 프레임 슬롯만 꺼냅니다.
-         * @details 예전에는 패스마다 매 프레임 이름을 intern 하고(해시 · 샤드 락 · 맵) 맵을 찾은 뒤 `registerScope` 가 등록된
-         *          스코프 모두(~80)를 문자열 비교로 훑었습니다. 렌더 스레드가 프레임마다 패스 수만큼 그랬습니다. 그리고 그 맵은 `string` 을
-         *          밀집 배열에 담아 자랄 때 옮겼으므로, 짧은 이름(`GPU.Shadow` 처럼 문자열 객체 안에 드는 것)은 프로파일러가 쥔
-         *          포인터가 옮겨진 뒤의 빈자리를 가리킬 수 있었습니다. 이름은 이제 intern 아레나(프로세스 끝까지 제자리)에 둡니다.
+         * @details `registerScope` 는 등록된 스코프 모두(~80)를 문자열 비교로 훑으므로 렌더 스레드가 매 프레임 부르지 않고,
+         *          칸의 패스 이름이 바뀔 때만 부릅니다. 프로파일러는 이름 **포인터**를 쥐므로 이름은 intern 아레나(프로세스 끝까지
+         *          제자리)에 둡니다. 주의: 자라며 옮겨지는 저장소의 `string` 을 넘기면 짧은 이름(`GPU.Shadow` 처럼 문자열 객체 안에
+         *          드는 것)의 포인터가 옮겨진 뒤의 빈자리를 가리킵니다.
          */
         vector<GpuPassScope> _listGpuPassScope;
         /// @brief `GPU.Compute` · `GPU.Frame` 의 프로파일러 슬롯입니다. 처음 한 번 등록합니다(프레임마다 선형 탐색을 하지 않습니다).
@@ -651,8 +642,7 @@ namespace sw
         /**
          * @brief 지난 프레임의 패스별 GPU 시간을 프로파일러에 `GPU.<패스>` 로 넣습니다.
          * @details GPU 타임스탬프가 없으면 GPU 비용을 `RT.BeginFrame`(백프레셔) 같은 대리값으로
-         *          추측하거나 패스를 지워 가며 차이로 구해야 합니다. 그렇게 재다가 "당연히 이것이겠지"
-         *          를 두 번 틀렸습니다(클리어 · 포맷). 상용 엔진이 모두 갖춘 이유가 그것입니다.
+         *          추측하거나 패스를 지워 가며 차이로 구해야 하고, 그런 추측(클리어 · 포맷 비용 같은)은 쉽게 틀립니다.
          */
         void reportGpuPassTimes( IRHIDevice* pDevice );
         /**
@@ -674,8 +664,7 @@ namespace sw
         void dispatchMeshMorph();
         /**
          * @brief 모프 풀을 이번 프레임의 배치 메시에 맞추고 배치에 풀 오프셋을 적습니다. **업로드 전에** 부릅니다.
-         * @details 오프셋은 배치 표(g_SwBatches)에 실려 upload() 가 올립니다. 예전에는 드로우 루트 상수라 업로드 뒤에 정해도 됐지만,
-         *          표는 업로드 시점에 완성돼야 합니다. 디스패치(dispatchMeshMorph)는 커맨드 리스트가 열린 뒤 따로 돕니다.
+         * @details 오프셋은 배치 표(g_SwBatches)에 실려 upload() 가 올리므로 표는 업로드 시점에 완성돼야 합니다. 디스패치(dispatchMeshMorph)는 커맨드 리스트가 열린 뒤 따로 돕니다.
          */
         void prepareMeshMorphPool();
         /** @brief 지금 적용되는 모프 진단 모드입니다. 오버라이드가 있으면 그것, 없으면 `gv_morphDiag` 입니다. */
@@ -703,8 +692,8 @@ namespace sw
          *          나가지 않게 항상 유효한 버퍼를 겁니다(언리얼의 기본 머티리얼 자리).
          *
          *          언리얼이 RDG 더미 버퍼를 `CreateStructuredDesc( sizeof( FElement ), 1 )` 로 만드는 것과 같습니다.
-         *          예전에는 256 바이트 원소 하나를 모든 셰이더에 공용으로 걸었는데, 셰이더의 `SwMaterialData` 는
-         *          24 바이트라 DX11 디버그 레이어가 드로우마다 "structure stride 256 vs 24" 를 냈습니다.
+         *          주의: 고정 크기 원소 하나를 모든 셰이더에 공용으로 걸면 셰이더의 `SwMaterialData` stride 와 어긋나
+         *          DX11 디버그 레이어가 드로우마다 "structure stride 256 vs 24" 같은 경고를 냅니다.
          *
          *          키는 stride 입니다. 셋업(ensureMaterialFallbackBuffers)에서만 만들고 기록 중에는 조회만 합니다.
          */
@@ -716,9 +705,8 @@ namespace sw
         RHITextureHandle                     _taaHistory; ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)
         /**
          * @brief Present 결과를 받아 두는 텍스처입니다(0 = 안 받음). 스크린샷이 **최종 화면**을 보게 하는 길입니다.
-         * @details 스크린샷은 트랜지언트만 읽을 수 있고 백버퍼는 핸들이 없습니다. 그래서 예전에는 Present 가
-         *          **읽는** 첨부를 찍었습니다. 즉 톤맵은 한 번도 찍힌 적이 없었고, 후처리를 Present 로
-         *          합치자 후처리 전체가 스크린샷에서 사라졌습니다. 받아 두면 둘 다 풀립니다.
+         * @details 스크린샷은 트랜지언트만 읽을 수 있고 백버퍼는 핸들이 없습니다. 주의: Present 가 **읽는** 첨부를
+         *          찍으면 톤맵과 Present 에 합친 후처리가 스크린샷에서 빠집니다. Present 결과를 받아 두면 둘 다 담깁니다.
          */
         RHITextureHandle            _presentCapture;
         string                      _statusMessage;

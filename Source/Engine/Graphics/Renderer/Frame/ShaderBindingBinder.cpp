@@ -103,12 +103,10 @@ namespace sw
 
         // 1) 엔진 CB 채우기.
         //    크기 · 멤버 키 · 자동 인덱스 키는 모두 레이아웃 빌드 때 구워 뒀다(ShaderBindingLayout::
-        //    buildBindPlan). 예전에는 드로우마다 슬롯 · 멤버를 훑어 크기를 다시 구하고, 멤버 이름으로
-        //    hashed_string 을 만들고(전역 intern 테이블 조회), canonical 이름을 string 으로 새로
-        //    할당했다. 모두 PSO 마다 한 번이면 되는 일이라 드로우 경로에서 걷어냈다.
+        //    buildBindPlan). 모두 PSO 마다 한 번이면 되는 일이라 드로우 경로에서는 슬롯 · 멤버를 훑지도,
+        //    이름을 intern 하지도 않는다.
         // 값 · 레지스트리가 그대로면 버퍼 내용도 그대로다. 다시 만들지도, 올리지도 않는다.
-        // 배치마다 바뀌는 값은 루트 상수로 나가므로(binding.hlsli 1-0) 한 패스의 두 번째 드로우부터는 늘 여기로 온다.
-        // 예전에는 드로우마다 멤버 표를 훑어 바이트를 채우고 512 바이트를 올렸다.
+        // 배치마다 바뀌는 값은 루트 상수로 나가므로(binding.hlsli) 한 패스의 두 번째 드로우부터는 늘 여기로 온다.
         const uint32 engineCbSize = layout.getEngineCbSize();
         if ( engineCbSize > 0 && engineCb._buffer != 0 && bEngineCbUpToDate == false )
         {
@@ -162,11 +160,8 @@ namespace sw
                 case ShaderBindingKind::ConstantBuffer:
                 {
                     // **예약 CB 는 리플렉션 번호가 아니라 기준 슬롯 번호로 건다.** 리플렉션이 주는
-                    // `_registerIndex` 는 백엔드마다 뜻이 달랐다. 예전 모델에서 Vulkan 은 b0/b1 을 각각 다른
-                    // 디스크립터 세트의 binding 0 으로 만들어 PassCB 와 MaterialCB 가 **둘 다 0** 이었고,
-                    // GL 은 -fvk-b-shift 때문에 16/17 이었다. 그대로 넘기면 Vulkan 은 머티리얼 CB 가
-                    // 패스 CB 자리(set 0)를 덮어써 뷰 · 투영 행렬이 통째로 깨지고(화면이 비었다),
-                    // GL 은 어느 슬롯에도 안 걸린다. 둘 다 검증 에러가 안 난다. 같은 UNIFORM_BUFFER 라서.
+                    // `_registerIndex` 는 백엔드마다 뜻이 다를 수 있다(세트 · 시프트 규약). 그대로 넘기면 한 CB 가
+                    // 다른 CB 자리를 덮어쓰거나 어느 슬롯에도 안 걸리는데, 같은 UNIFORM_BUFFER 라 검증 에러도 안 난다.
                     // bindingslots.hlsli 가 정하는 b0=PassCB / b1=MaterialCB 를 그대로 쓴다.
                     if ( slot._name == s_materialCbName )
                     {

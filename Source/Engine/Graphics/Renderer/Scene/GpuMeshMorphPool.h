@@ -3,7 +3,7 @@
  * @brief GPU 가 변형한 정점을 담는 풀입니다. 언리얼 GPU Skin Cache 가 있는 자리입니다.
  *
  * [무엇을 푸는가]
- * 정점을 실시간으로 바꾸려면 CPU 가 매 프레임 다시 올리는 수밖에 없었습니다. 그런데 `Mesh::setVertices`
+ * CPU 에서 정점을 실시간으로 바꾸면 매 프레임 다시 올려야 합니다. 그런데 `Mesh::setVertices`
  * 는 정점 버퍼를 **파괴하고 다시 만듭니다**. 메시마다, 프레임마다. 게다가 그 호출은 게임 스레드라
  * OpenGL 에서는 컨텍스트가 없습니다(`_bThreadSafeResourceCreation == false`). 그래서 GPU 가 합니다.
  *
@@ -38,9 +38,9 @@ namespace sw
     /**
      * @struct GpuMorphVertex
      * @brief 모프 풀의 정점 하나입니다. GPU 에서는 **float4 둘**로 보입니다(`g_SwMorphVertices`, binding.hlsli).
-     * @details 셰이더 쪽은 구조체가 아니라 `StructuredBuffer<float4>` 입니다. 처음에는 구조체였고 레이아웃도
-     *          네 백엔드가 같았는데 OpenGL 만 같은 원소의 두 멤버를 **다른 원소**에서 읽었습니다(사연은
-     *          binding.hlsli). 그래서 버퍼의 원소는 float4 이고 정점당 `kMorphFloat4PerVertex` 개입니다.
+     * @details 셰이더 쪽은 구조체가 아니라 `StructuredBuffer<float4>` 입니다. 주의: 구조체로 선언하면 레이아웃이 네 백엔드에서
+     *          같아도 OpenGL 만 같은 원소의 두 멤버를 **다른 원소**에서 읽습니다. 그래서 버퍼의 원소는 float4 이고 정점당
+     *          `kMorphFloat4PerVertex` 개입니다.
      *          이 구조체는 CPU 가 채우는 모양일 뿐이며, 바이트 배치는 float4 둘과 같습니다.
      */
     struct GpuMorphVertex

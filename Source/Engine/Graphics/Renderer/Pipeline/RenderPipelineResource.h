@@ -80,7 +80,6 @@ namespace sw
          *          가리키는지, 첨부 포맷 표기가 RHIFormat 으로 읽히는지, 뎁스 첨부가 실재하는 뎁스 포맷인지,
          *          컬러 출력 개수가 한계 안인지, 지오메트리 패스에 컬러 출력이 있는지, 풀스크린 패스의 입력이 타입의 계약(`RenderPassInputContract`)과
          *          맞는지를 봅니다. 여기서 못 잡은 불일치는 런타임에 조용히 어긋나거나 GPU 를 죽입니다.
-         *          실제로 그런 적이 있습니다(`ae7fb078`).
          * @return 발견한 문제 수 (0 이면 정상). 로드는 막지 않고 로그만 남깁니다.
          */
         uint32 validate( string_view sourcePath );

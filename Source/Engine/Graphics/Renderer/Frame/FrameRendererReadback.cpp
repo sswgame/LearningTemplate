@@ -93,7 +93,7 @@ namespace sw
         // **half 첨부를 바이트로 읽으면 안 된다.** HDR 첨부(R16G16B16A16_FLOAT)를 8비트로 가정하고
         // pPixel[0..2] 를 집어 오면 가수 하위 바이트가 색이 되어 **무의미한 그림**이 나온다.
         // 그런데 bytesPerPixel 은 8 이라 아래 검사도 통과한다. 디퍼드 파이프라인은 LitColor 부터
-        // TaaColor 까지 넷이 이 포맷이라, 중간 단계를 눈으로 확인할 길이 그동안 없었다.
+        // TaaColor 까지 넷이 이 포맷이라, half 를 풀지 않으면 중간 단계를 눈으로 확인할 수 없다.
         const bool                            bHalf = ( format == RHIFormat::R16G16B16A16_FLOAT );
         const bool                            bBgra = ( format == RHIFormat::B8G8R8A8_UNORM );
         StringBuilder<constant::kMaxBuffer64> header;

@@ -67,7 +67,7 @@ namespace sw
         uint32 _sortMode{ 0 };
         /**
          * @brief 모프 정점 풀에서 이 배치 메시의 시작(정점 단위)입니다. 0xFFFFFFFF = 모프 안 함.
-         * @details 예전에는 드로우마다 루트 상수로 실었습니다. 배치마다 다른 값이 표에 있어야 같은 PSO 의 배치들을 멀티 드로우
+         * @details 드로우마다 루트 상수로 싣지 않고 표에 둡니다. 배치마다 다른 값이 표에 있어야 같은 PSO 의 배치들을 멀티 드로우
          *          하나로 낼 수 있습니다. 정점 셰이더는 자기 배치 번호로 이 표(g_SwBatches, t13)를 읽습니다.
          */
         uint32 _morphVertexBase{ 0xFFFFFFFFu };
@@ -91,7 +91,7 @@ namespace sw
      * @class GpuScene
      * @brief 렌더 스레드가 영속 소유하는 씬 GPU 상태입니다. 매 프레임 패킷의 스냅샷을 받아(`adoptCpuSnapshot`) 올립니다(`upload`).
      * @details GPU 버퍼 · 핸들은 프레임을 넘어 재사용합니다. GPU 상태까지 통째로 바꿔 끼우면 직전 프레임에 올린 버퍼를
-     *          `releaseGpu` 없이 잃어 매 프레임 새로 만드는 리크가 됩니다(실제로 그랬습니다). 그래서 스냅샷만 갈아 끼우고 GPU 쪽은 여기 남깁니다.
+     *          `releaseGpu` 없이 잃어 매 프레임 새로 만드는 리크가 됩니다. 그래서 스냅샷만 갈아 끼우고 GPU 쪽은 여기 남깁니다.
      */
     class SW_API GpuScene
     {

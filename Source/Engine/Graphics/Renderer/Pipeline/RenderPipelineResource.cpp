@@ -242,8 +242,8 @@ namespace sw
                 checkSameDivisor( pass._depthAttachment );
         }
 
-        // 3-1) 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 **선언한 컬러 출력**에 그린다. 컬러 출력이 없으면 그릴 곳이 없다 —
-        //      예전에는 코드에 박힌 이름(SceneColor …)으로 그렸고, 그 첨부가 없으면 핸들 0(백버퍼)에 그렸다.
+        // 3-1) 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 **선언한 컬러 출력**에 그린다. 컬러 출력이 없으면 그릴 곳이 없다
+        //      (없는 첨부의 핸들 0 은 백버퍼라, 그대로 두면 화면에 그린다).
         for ( const RenderGraphPassDesc& pass : _desc._listPass )
         {
             const bool bGeometryColorPass = pass._resolvedType == RenderPassType::ForwardOpaque || pass._resolvedType == RenderPassType::GBuffer ||
@@ -269,8 +269,8 @@ namespace sw
         }
 
         // 4) 풀스크린 패스의 입력이 그 타입의 계약과 맞는가. "선언만 있고 아무도 안 읽는 입력" 을 여기서 잡는다.
-        //    디퍼드 XML 이 Bloom 의 입력으로 AOColor 를 적어 두었지만 Bloom 코드가 그것을 걸지 않아 SSAO 가 매 프레임
-        //    돌고 버려졌다(백로그 1-6). 이 검사가 없어서였다. 실행은 같은 해석(_listResolvedInput)을 그대로 건다.
+        //    그런 입력은 오류 없이 지나가고, 그것을 만드는 패스(예: SSAO)만 매 프레임 돌고 버려진다.
+        //    실행은 같은 해석(_listResolvedInput)을 그대로 건다.
         for ( const RenderGraphPassDesc& pass : _desc._listPass )
         {
             const RenderPassInputContract* pContract = findRenderPassInputContract( pass._resolvedType );

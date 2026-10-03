@@ -83,8 +83,7 @@ namespace sw
             return;
 
         // 그래프가 **실제로 바뀌는 전이만** 추려서 준다. 여기서는 이름을 텍스처로 풀어 그대로 건다.
-        // 예전에는 이 레벨이 읽고 쓰는 이름을 모두 받아서, 같은 자원을 여러 패스가 읽으면 그만큼
-        // 반복해서 걸고 이미 맞는 상태도 다시 걸었다.
+        // 같은 자원을 여러 패스가 읽어도, 이미 맞는 상태여도 다시 걸지 않는다.
         for ( const RenderGraphBarrier& barrier : *levelCtx._pListBarrier )
         {
             if ( barrier._after == RenderGraphResourceState::Write )
@@ -113,8 +112,8 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
 
-        // 패스 로컬 상태를 새로 만든다. 예전에는 멤버 _pCmd 를 저장 · 복원했는데, 그건
-        // "한 번에 한 패스만 돈다" 는 전제라 병렬 기록에서 서로를 덮어썼다.
+        // 패스 로컬 상태를 새로 만든다. 주의: 멤버 _pCmd 를 저장 · 복원하는 식은 "한 번에 한 패스만 돈다" 는
+        // 전제라 병렬 기록에서 서로를 덮어쓴다.
         // 프레임 시드에서 복사해 뷰 · 조명 등 프레임 공통값을 물려받는다.
         // 패스 슬롯의 컨텍스트에 프레임 시드를 **대입**한다. 복사본을 새로 만들면 값 목록 · 레지스트리가 프레임마다 다시
         // 자란다. 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다. 이름을 못 찾으면 마지막 칸이다(직렬 경로에서만 온다).
@@ -135,7 +134,7 @@ namespace sw
 
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다. 여기서 문자열을 다시 비교하면 디스패치와
-        // PSO 생성이 서로 다른 표기를 받아 줄 여지가 생긴다(그것이 `ae7fb078` 의 원인이었다).
+        // PSO 생성이 서로 다른 표기를 받아 줄 여지가 생긴다.
         RenderPassType             passType  = RenderPassType::Invalid;
         const utf8*                pPassName = graphCtx._passName.c_str() != nullptr ? graphCtx._passName.c_str() : "";
         hashed_string              depthAttachment;
@@ -243,9 +242,8 @@ namespace sw
         // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 건다.
         registerLightBuffer( ctx );
 
-        // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받던 시절에는 패스마다 여기서
-        // 다시 intern 했다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 모두 코드 리터럴이라
-        // attachmentNames() 캐시로 충분하다.
+        // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받으면 패스마다 여기서 다시 intern 하게
+        // 된다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 모두 코드 리터럴이라 attachmentNames() 캐시로 충분하다.
         auto colorLoadFor = [this]( const hashed_string& name, bool bForceLoad ) -> RHIRenderPassLoadOp
         {
             if ( bForceLoad )
@@ -273,9 +271,9 @@ namespace sw
                                           : hashed_string{};
 
         // 지오메트리 패스가 그릴 컬러 타깃: 파이프라인이 선언한 컬러 출력(로드 때 해석한 `_listResolvedColorOutput`, 선언 순서)이다 — 풀스크린
-        // 패스와 같은 규칙이다. 예전에는 이름을 코드에 박아(SceneColor · GBufferAlbedo …) 다른 이름을 쓰는 파이프라인에서 없는 첨부(핸들 0 =
-        // 백버퍼)를 열었고, 뎁스 로드 연산도 바인딩한 뎁스가 아니라 SceneDepth 의 클리어 기록으로 정했다. 선언이 없을 때만(패스 서술 없이
-        // 부르거나, 검증이 이미 오류를 낸 파이프라인) 예전 이름으로 간다.
+        // 패스와 같은 규칙이다. 뎁스 로드 연산도 바인딩한 뎁스의 클리어 기록으로 정한다. 주의: 이름을 코드에 박으면(SceneColor ·
+        // GBufferAlbedo …) 다른 이름을 쓰는 파이프라인에서 없는 첨부(핸들 0 = 백버퍼)를 연다. 선언이 없을 때만(패스 서술 없이
+        // 부르거나, 검증이 이미 오류를 낸 파이프라인) 정본 이름으로 간다.
         const vector<RenderGraphPassDesc::ResolvedAttachment>* pDeclaredColor =
             ( pPassDesc != nullptr && pPassDesc->_listResolvedColorOutput.empty() == false ) ? &pPassDesc->_listResolvedColorOutput : nullptr;
         // 선언한 컬러 출력에서 역할로 고르고, 그 역할을 받은 출력이 없으면 선언 순서(fallbackIndex)로 고른다. 이미 다른 역할로 고른 자리는 건너뛴다.
@@ -328,7 +326,7 @@ namespace sw
             {
                 case RenderPassType::Shadow:
                 {
-                    // 클리어 값은 실제로 거는 뎁스 첨부의 선언에서 읽는다(예전에는 이름 ShadowMap 으로 찾았다).
+                    // 클리어 값은 실제로 거는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
                     const float4 clearVal = getAttachmentClearColorOrDefault( passDepth.view(), float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
                     beginDepthOnlyPass( ctx, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
                     // 그림자는 라이트 절두체로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링과 같은 자리).
@@ -402,7 +400,7 @@ namespace sw
                 }
                 case RenderPassType::Transparent:
                 {
-                    // 선언한 컬러 출력이 기준이다. 선언이 없을 때만 예전 후보(TransparentColor → LitColor → SceneColor)로 간다.
+                    // 선언한 컬러 출력이 기준이다. 선언이 없을 때만 정본 이름 후보(TransparentColor → LitColor → SceneColor)로 간다.
                     const AttachmentNames& names       = attachmentNames();
                     const hashed_string&   colorTarget = pDeclaredColor != nullptr                            ? ( *pDeclaredColor )[0]._attachment
                                                        : findTransient( names._transparentColor.view() ) != 0 ? names._transparentColor
@@ -623,9 +621,9 @@ namespace sw
         if ( _pDevice == nullptr || ctx._pCmd == nullptr )
             return;
 
-        // 예전에는 여기서 updatePassConstants 를 불렀다. 이 함수는 드로우 루프 안에서 불리므로
+        // 주의: 여기서 updatePassConstants 를 부르지 않는다. 이 함수는 드로우 루프 안에서 불리므로 그러면
         // 드로우마다 라이트 · 뷰 행렬을 다시 만들고(정규화 · 외적 · 4x4 곱 두 번) 카메라를 다시 찾고
-        // hashed_string 을 여덟 개씩 intern 했다. 그 값들은 모두 프레임 상수라 execute/executePacket
+        // hashed_string 을 여덟 개씩 intern 한다. 그 값들은 모두 프레임 상수라 execute/executePacket
         // 이 프레임 시드(_frameCtx)에 한 번만 채우면 되고, 패스 컨텍스트는 그 시드를 복사해 간다.
         // 드로우마다 바뀌는 것은 g_World 하나뿐이고 그것은 bindForDraw 가 넣는다.
 
@@ -634,9 +632,8 @@ namespace sw
         if ( _pDevice->supportsNativeBindlessSampling() )
             return;
 
-        // 이 함수는 드로우 루프 안에서 불린다. 예전에는 여기서 이름 네 개를 **드로우마다** intern 했다
-        // (FNV 해시 + 32-way 샤드 뮤텍스 x 4). 바로 위 주석이 같은 문제를 한 번 고쳤다고 적어 두었는데,
-        // 정작 이 람다가 남아 있었다. 이름을 문자열로 들고 다니는 한 계속 재발한다.
+        // 이 함수는 드로우 루프 안에서 불린다. 이름은 attachmentNames() 의 intern 된 것으로 찾는다. 주의: 이름을
+        // 문자열로 받으면 **드로우마다** intern 하게 된다(FNV 해시 + 32-way 샤드 뮤텍스 x 4).
         auto srvOf = [&ctx]( const hashed_string& name ) -> RHIDescriptorIndex
         {
             const RegisteredTexture* pTex = ctx._resourceRegistry.findTexture( name );
@@ -681,7 +678,6 @@ namespace sw
     const RenderGraphPassDesc* FrameRenderer::findPassDescByType( RenderPassType passType ) const
     {
         // 표기 흔들림은 로드 시점의 _resolvedType 이 이미 흡수했다. 여기서는 값만 비교하면 된다.
-        // 예전에는 문자열을 비교하느라 별칭(`Shading` vs `Lighting`)을 놓쳤다.
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
         {
             if ( pass._resolvedType == passType )

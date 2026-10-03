@@ -70,8 +70,8 @@ namespace sw
         {
             for ( auto& [name, attachment] : _mapAttachment )
             {
-                // 텍스처 SRV 인덱스다. 예전엔 버퍼용 해제로 넘겨서 버퍼 프리리스트가 오염됐고, 그 자리를
-                // 인스턴스 구조버퍼가 차지해 살아 있는 패스 CB 슬롯이 STORAGE 세트로 바뀌었다(Vulkan 검증 에러).
+                // 텍스처 SRV 인덱스다. 주의: 버퍼용 해제로 넘기면 버퍼 프리리스트가 오염되고, 그 자리를 다른 구조버퍼가
+                // 차지해 살아 있는 패스 CB 슬롯이 STORAGE 세트로 바뀐다(Vulkan 검증 에러).
                 if ( attachment._srv != kInvalidDescriptorIndex )
                     pDevice->getResource()->unregisterBindlessTexture( attachment._srv );
                 if ( attachment._texture != 0 )

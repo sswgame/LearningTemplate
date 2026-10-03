@@ -17,10 +17,8 @@ namespace sw
     /**
      * @enum RenderPassType
      * @brief 파이프라인 XML 의 `_type` 이 가리키는 패스 종류입니다.
-     * @details 예전에는 이 값이 문자열이라 디스패치(executePass)와 PSO 생성(findPassDescByType)이
-     *          각자 문자열을 비교했습니다. 두 곳이 받아 주는 표기가 달라서 `Shading` 으로 적은 패스가
-     *          디스패치는 되는데 PSO 는 desc 를 못 찾고 기본 포맷으로 만들어졌습니다(`ae7fb078`).
-     *          표기 흔들림은 **같은 값을 갖는 별칭 열거자**로 여기 한 곳에 모읍니다. 리플렉션이
+     * @details 디스패치와 PSO 생성이 같은 값을 봅니다. 주의: 두 곳이 각자 문자열을 비교하면 받아 주는 표기가 갈려,
+     *          디스패치는 되는데 PSO 는 desc 를 못 찾고 기본 포맷으로 만들어집니다. 리플렉션이
      *          문자열 ↔ 값 변환을 제공하므로 파서도 검증도 이 표만 보면 됩니다.
      * @note 이름은 널리 쓰이는 표기 하나로 통일합니다. 아직 개발 중이라 여러 표기를
      *       받아 줄 이유가 없고, 표기가 갈리는 순간 "어느 쪽으로 적었나" 를 매번 확인해야 합니다.
@@ -91,7 +89,7 @@ namespace sw
         /**
          * @brief 이 첨부가 패스에 걸릴 때의 역할입니다(`RenderPassInputRole` 이름 — GBufferAlbedo · GBufferNormal · ShadowMap · AmbientOcclusion ·
          *        SceneDepth · SourceColor). 비어 있으면 정본 이름(GBufferAlbedo …)과 포맷으로 정합니다.
-         * @details 예전에는 역할을 **이름으로만** 정해서, G버퍼 · 그림자 맵 · AO 첨부의 이름을 바꾸면 Lighting 의 입력 계약이 깨졌다(역할 없는 컬러는
+         * @details 역할을 **이름으로만** 정하면 G버퍼 · 그림자 맵 · AO 첨부의 이름을 바꿀 때 Lighting 의 입력 계약이 깨진다(역할 없는 컬러는
          *          모두 SourceColor). 언리얼 RDG 는 패스 파라미터 구조체의 멤버로, 유니티 RenderGraph 는 셰이더 프로퍼티 이름으로 텍스처를 건다 —
          *          어느 쪽도 텍스처의 이름이 바인딩을 정하지 않는다. 여기서는 첨부가 자기 역할을 선언하고, 이름은 파이프라인이 자유롭게 짓는다.
          */
@@ -137,9 +135,9 @@ namespace sw
 
         /**
          * @brief 이 패스가 바인딩할 뎁스 첨부 이름입니다. **비어 있으면 뎁스 없이 엽니다.**
-         * @details 예전에는 패스 타입마다 코드에 박혀 있었습니다("GBuffer 면 SceneDepth"). 그러면 "이 패스는
-         *          일부러 뎁스를 쓰지 않는다" 를 표현할 방법이 없어서, DepthPrepass 를 넣거나 빼는
-         *          구성을 바꾸려면 엔진 코드를 고쳐야 했습니다. 선언으로 빼면 파이프라인 XML 만으로 바뀝니다.
+         * @details 패스 타입마다 코드에 박으면("GBuffer 면 SceneDepth") "이 패스는 일부러 뎁스를 쓰지 않는다" 를
+         *          표현할 방법이 없어, DepthPrepass 를 넣거나 빼는 구성을 바꾸려면 엔진 코드를 고쳐야 합니다.
+         *          선언으로 두면 파이프라인 XML 만으로 바뀝니다.
          * @note 읽기 · 쓰기 여부는 `_listInput` / `_listOutput` 이 따로 말합니다. Transparent 는 SceneDepth 를
          *       **입력으로 읽으면서** 뎁스로 바인딩합니다(테스트만 하고 쓰지 않습니다). 그래서 출력에서
          *       유추하지 않고 별도 필드로 둡니다.
@@ -181,8 +179,8 @@ namespace sw
          * @brief `_listOutput` 중 **컬러 첨부**만 선언 순서대로 둔 것입니다(뎁스 포맷 · 스왑체인 · 선언되지 않은 이름은 빠집니다). 역할도 함께 듭니다.
          *        XML 로드 시 RenderPipelineResource 가 채웁니다.
          * @details 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 이 목록에서 컬러 타깃을 고릅니다 — GBuffer 는 역할(GBufferAlbedo ·
-         *          GBufferNormal)로, 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)로. 예전에는 그 이름을 코드에 박아(SceneColor · GBufferAlbedo …)
-         *          다른 이름을 쓰는 파이프라인에서 없는 첨부를 열었고, 없는 첨부의 핸들 0 은 백버퍼라 화면에 그렸습니다.
+         *          GBufferNormal)로, 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)로. 주의: 첨부 이름(SceneColor · GBufferAlbedo …)을 코드에
+         *          박으면 다른 이름을 쓰는 파이프라인에서 없는 첨부를 열고, 없는 첨부의 핸들 0 은 백버퍼라 화면에 그립니다.
          */
         vector<ResolvedAttachment> _listResolvedColorOutput;
 
@@ -224,8 +222,8 @@ namespace sw
         /**
          * @brief `_type` 을 해석한 값입니다. XML 로드 시 RenderPipelineResource 가 채웁니다.
          * @details 직렬화 대상이 아닙니다(원본 철자는 `_type` 이 그대로 갖고 있습니다). 디스패치와 PSO
-         *          생성이 같은 값을 보게 하려고 한 번만 해석해 둡니다. 예전에는 두 곳이 각자 문자열을
-         *          비교하다가 서로 다른 표기를 받아 줘서 어긋났습니다.
+         *          생성이 같은 값을 보게 하려고 한 번만 해석해 둡니다(두 곳이 각자 문자열을 비교하면 받아 주는
+         *          표기가 갈려 어긋납니다).
          */
         RenderPassType _resolvedType{ RenderPassType::Invalid };
 

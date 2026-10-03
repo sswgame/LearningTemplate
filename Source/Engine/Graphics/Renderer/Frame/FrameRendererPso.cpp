@@ -115,10 +115,9 @@ namespace sw
         // 셰이더가 정한 것이고 "앞/뒤" 라는 뜻이 없으므로, 컬링을 걸면 화면이 통째로 비거나 그대로
         // 나오거나 둘 중 하나다. 고를 값이 아니다.
         //
-        // 예전에는 이 기본값이 `pPassDesc == nullptr` 일 때만 적용됐다. 그래서 **XML 에 패스를 적어 둔
-        // 파이프라인은 컬 모드를 반드시 `None` 이라고 써야** 했고, 디퍼드 XML 은 열 패스 모두
-        // `Back` 이라고 적고 있었다. 그 결과 Shading · SSAO · Bloom · Outline · TAA · Tonemap · Present 일곱
-        // 패스가 아무것도 그리지 않아 화면이 배경색뿐이었다. 오류도 경고도 없이.
+        // 주의: 이 기본값은 XML 에 패스를 적어 둔 경우에도 풀스크린 패스에 적용돼야 한다. XML 의 `Back` 을
+        // 그대로 따르면 풀스크린 패스(Shading · SSAO · Bloom · Outline · TAA · Tonemap · Present)가 오류도
+        // 경고도 없이 아무것도 그리지 않아 화면이 배경색뿐이다.
         const bool bFullscreenPass = ( FrameRendererUtil::drawsSceneMeshes( passType ) == false );
         desc._cullMode             = bFullscreenPass ? RHICullMode::None : RHICullMode::Back;
         if ( pPassDesc != nullptr )
@@ -160,10 +159,9 @@ namespace sw
         }
 
         // 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)는 픽셀 스테이지가 없다. 셰이더에 PSMain 이 있어도 붙이지
-        // 않는다. 여기서 정하지 않으면 백엔드마다 달랐다: GL · Vulkan 은 자기 판단으로 뗐고 DX12 는 PS 를 컴파일 ·
-        // 리플렉션까지 했다. 그 위에 머티리얼 define 을 얹은 변형(createMaterialPsoVariant 는 이 desc 를 그대로
-        // 물려받는다)은 베이커가 굽지 않아 Shipping 에서 매니페스트 미스로 떨어졌다. 베이커 쪽 같은 규칙은
-        // FrameRendererUtil::hasPixelStage 다.
+        // 않는다. 주의: 여기서 정하지 않으면 백엔드마다 판단이 갈리고, 그 위에 머티리얼 define 을 얹은 변형
+        // (createMaterialPsoVariant 는 이 desc 를 그대로 물려받는다)은 베이커가 굽지 않아 Shipping 에서 매니페스트 미스로
+        // 떨어진다. 베이커 쪽 같은 규칙은 FrameRendererUtil::hasPixelStage 다.
         if ( desc._numRenderTargets == 0 )
         {
             desc._pixelShaderPath.clear();

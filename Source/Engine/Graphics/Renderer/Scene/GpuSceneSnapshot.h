@@ -40,9 +40,8 @@ namespace sw
         uint32   _blendMode{ 0 }; ///< RHIBlendMode
         /**
          * @brief GPU 인스턴스 애니메이션 시드입니다. 0 이면 애니메이션이 없습니다.
-         * @details instanceanim.hlsl 이 이 값을 해시해 **인스턴스마다 다른 각속도**를 만듭니다. 예전에는 여기가
-         *          정렬용 `_pad` 였습니다. 자리를 새로 만들지 않고 그 빈칸을 씁니다(셰이더 구조체 레이아웃 불변).
-         *          CPU 가 매 프레임 회전을 계산해 올리던 것을 GPU 로 옮기는 통로입니다.
+         * @details instanceanim.hlsl 이 이 값을 해시해 **인스턴스마다 다른 각속도**를 만듭니다. 회전은 CPU 가 매 프레임
+         *          계산해 올리지 않고 GPU 가 계산합니다.
          */
         uint32 _spinSeed{ 0 };
         /**
@@ -86,8 +85,7 @@ namespace sw
         /**
          * @brief 배치가 쓰는 부모 머티리얼입니다. 셰이더 타입(머티리얼 데이터 그룹)과 텍스처 슬롯의 소유자입니다.
          * @details **소유를 함께 싣습니다.** 렌더 스레드는 이 배치가 든 패킷을 다 쓸 때까지 이 머티리얼을 역참조하므로,
-         *          게임 스레드가 먼저 놓아도 살아 있어야 합니다. 예전에는 생포인터였고 그 사이를 pin/retire 큐가
-         *          지킨다고 돼 있었지만 그 큐의 답을 읽는 곳이 없었습니다. 소유가 패킷을 따라가면 큐가 필요 없습니다.
+         *          게임 스레드가 먼저 놓아도 살아 있어야 합니다. 소유가 패킷을 따라가므로 수명을 따로 지키는 큐가 필요 없습니다.
          */
         shared_ptr<Material> _material;
         /** @brief 머티리얼 데이터 그룹(셰이더 타입) 인덱스입니다(`_listMaterialGroup`). 없으면 kInvalidMaterialGroup 입니다. */
@@ -164,8 +162,8 @@ namespace sw
      * @struct GpuShaderPermutation
      * @brief 머티리얼이 요구하는 셰이더 변형 하나(경로 + 정적 define)입니다.
      * @details 언리얼의 `FMaterialShaderMap` 이 있는 자리입니다. 같은 .hlsl 이라도 정적 스위치가 다르면 **다른 셰이더**라서
-     *          다른 PSO 로 그려야 합니다. 예전에는 셰이더 **경로**만 봐서, 유리 머티리얼처럼 always-define 을 가진 것이
-     *          불투명 머티리얼과 한 배치로 접혔습니다. 배치는 PSO 하나로 그리므로 그 정보가 그냥 버려졌습니다.
+     *          다른 PSO 로 그려야 합니다. 주의: 셰이더 **경로**만 보면 유리 머티리얼처럼 always-define 을 가진 것이
+     *          불투명 머티리얼과 한 배치로 접히고, 배치는 PSO 하나로 그리므로 그 정보가 그냥 버려집니다.
      *
      *          렌더 스레드는 씬을 못 보므로(Material* 을 따라갈 수 없습니다) 값으로 실어 나릅니다.
      */
@@ -189,8 +187,8 @@ namespace sw
         string                     _shaderPath;
         vector<GpuMaterialElement> _listEntry;
         // 원소 인덱스 표(키 → 인덱스 · 마지막 사용 빌드 · 프리리스트 · 직전 조회)는 **빌더의 것**이다
-        // (`GpuSceneBuilder::MaterialGroupState`). 스냅샷에는 RT 가 읽는 것만 싣는다. 예전에는 표까지 이 안에 있어
-        // 프레임마다 패킷으로 복사됐다(맵 하나 + 벡터 둘, 그룹마다).
+        // (`GpuSceneBuilder::MaterialGroupState`). 스냅샷에는 RT 가 읽는 것만 싣는다. 표를 여기 두면
+        // 프레임마다 패킷으로 복사된다(맵 하나 + 벡터 둘, 그룹마다).
     };
 
     /** @brief 인스턴스 배열에서 바뀐 구간 `[_start, _start + _count)` 입니다. */
@@ -220,9 +218,8 @@ namespace sw
         /**
          * @brief 인스턴스 배열입니다. **값이 아니라 공유합니다.** RT 는 읽기만 하므로 프레임마다 복사할 이유가 없습니다.
          *
-         * @details 예전에는 값이었고 `exportCpuSnapshot` 이 매 프레임 통째로 복사했습니다. 아무것도 움직이지
-         *          않는 정적 씬에서도 인스턴스당 55 ns 가 들었고(엔티티 8000 개면 441 us), 그때 그것이
-         *          **게임 스레드의 유일한 실제 작업**이었습니다(build 0 · flushTransforms 0 · update 0).
+         * @details 값으로 두면 `exportCpuSnapshot` 이 매 프레임 통째로 복사합니다. 아무것도 움직이지 않는 정적 씬에서도
+         *          인스턴스당 55 ns(엔티티 8000 개면 441 us)이고, 그것이 정적 씬에서 **게임 스레드의 유일한 실제 작업**이 됩니다.
          *
          *          배치 · 머티리얼 목록은 그대로 값입니다. **RT 가 GPU 핸들을 거기에 덧칠하므로**
          *          공유하면 안 됩니다(`GpuMeshBatch::_firstVertex` · `_materialCb` 주석 참고). 대신 개수가
@@ -235,7 +232,7 @@ namespace sw
         vector<GpuMaterialGroup>              _listMaterialGroup; ///< 셰이더 타입별 머티리얼 원소
         /**
          * @brief 퍼뮤테이션 목록입니다. 배치의 `_shaderPermutation` 이 가리킵니다. **불변 목록을 공유합니다.**
-         * @details 문자열 경로와 define 목록이 든 값이라 프레임마다 복사하면 그 문자열들이 모두 힙이었습니다(프레임당 ~30 회).
+         * @details 문자열 경로와 define 목록이 든 값이라 프레임마다 복사하면 그 문자열들이 모두 힙 할당입니다(프레임당 ~30 회).
          *          빌더는 새 퍼뮤테이션이 나타날 때만 목록을 새로 만들어 바꿔 끼웁니다(copy-on-write). RT 는 읽기만 합니다.
          */
         shared_ptr<const vector<GpuShaderPermutation>> _pListShaderPermutation;
@@ -251,8 +248,8 @@ namespace sw
         uint8 _bAllInstancesDirty{ SW_TRUE };
         /**
          * @brief 바뀐 인스턴스 구간들입니다(`_bAllInstancesDirty` 가 0 일 때만 뜻이 있습니다).
-         * @details 인스턴스 버퍼는 하나만 움직여도 **전체**를 다시 올리고 있었습니다. 8000 개 중 10 개만
-         *          움직여도 800 개를 움직일 때와 같은 100 us 였습니다. 구간이 너무 잘게 흩어지면
+         * @details 하나만 움직여도 인스턴스 버퍼 **전체**를 다시 올리면 8000 개 중 10 개만 움직여도 800 개를 움직일 때와
+         *          같은 100 us 가 듭니다. 그래서 바뀐 구간만 올립니다. 구간이 너무 잘게 흩어지면
          *          작은 업로드가 도리어 비싸므로, 빌더가 개수 상한을 넘기면 전체로 돌립니다.
          */
         vector<GpuInstanceRun> _listDirtyInstanceRun;

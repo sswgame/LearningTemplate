@@ -4,8 +4,8 @@
  * @details 언리얼에서 "어떤 셰이더를 컴파일하는가" 를 정하는 것은 머티리얼 · 버텍스 팩토리 · 렌더러이고,
  *          ShaderCore 는 한 장을 컴파일할 뿐입니다. 이 저장소도 같은 자리입니다: 한 장을 굽는 법과 이름 짓기 · 최신
  *          판정(`Shader/Compile/ShaderBaker`)은 메커니즘이고, 파이프라인 XML 과 패스 종류(`FrameRendererUtil`)를
- *          읽어 요청을 만드는 것은 렌더러의 지식입니다. 예전에는 이 둘이 `ShaderBaker` 한 구조체에 있어
- *          `Shader/` 가 `Renderer/` 를 include 했고, 그 넉 줄이 Engine 코어의 마지막 강결합 묶음이었습니다.
+ *          읽어 요청을 만드는 것은 렌더러의 지식입니다. 둘을 한 곳에 두면 `Shader/` 가 `Renderer/` 를 include 하게
+ *          됩니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -20,8 +20,8 @@ namespace sw
     /**
      * @struct ShaderBakeSummary
      * @brief 일괄 베이크가 한 일입니다. 실패 · 계약 위반이 하나라도 있으면 `App --bake-shaders` 는 실패로 끝납니다.
-     * @details 예전에는 구운 개수만 돌려줘 컴파일 실패를 알 길이 없었고, 그 셰이더의 옛 바이너리 위에 지금 소스의 해시로 도장을 찍어 다음 베이크도
-     *          건너뛰었다 — 문법 오류가 든 셰이더가 경고 한 줄 뒤 종료 코드 0 으로 지나가 배포본에 옛 바이너리가 실렸다.
+     * @details 주의: 실패한 셰이더의 소스에도 도장을 찍으면 다음 베이크가 그것을 건너뛰어, 문법 오류가 든 셰이더의 옛 바이너리가
+     *          종료 코드 0 으로 배포본에 실립니다. 실패는 세어 돌려주고 그 소스는 도장에서 뺍니다.
      */
     struct [[nodiscard]] ShaderBakeSummary
     {
