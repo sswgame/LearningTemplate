@@ -168,6 +168,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_Metroidvania",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
