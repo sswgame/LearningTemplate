@@ -7,7 +7,7 @@
 무거운 일을 워커 스레드에 맡기거나, 여러 일을 의존성(순서) 있게 이어서 실행할 때 사용합니다.
 
 경로: `Source/Core/Task/`  
-접근: App/Engine 쪽에서는 `engine::getTaskManager()` (Editor는 `editor::getTaskManager()`)
+접근: App/Engine 쪽에서는 `engine::getTaskManager()` (Editor는 `editor::getService<TaskManager>()`), 병렬 for 한 줄은 `engine::runParallel`(`Engine/Common/EngineParallel.h`)
 
 관련: [Core 개요](../README.md) · [엔진 개요](../../Engine/README.md) · [Object 틱과의 관계](../../Engine/Object/README.md)
 
@@ -21,6 +21,8 @@
 | **TaskHandle** | 만든 작업 하나. `submit` / `runBefore` / `then` 으로 연결합니다. |
 | **TaskStageHandle** | 여러 작업을 한 “단계”로 묶어 `waitStage` 로 끝날 때까지 기다립니다. |
 | **Affinity** | `Any`(아무 워커) 또는 `MainThread`(메인만). |
+| **Priority** | `High` · `Normal`(기본) · `Low` — 어느 전역 큐에 들어가는지. |
+| **메모리 태그** | 태스크는 만든 스레드의 `MemoryTag` 를 이어받아 실행합니다. |
 | **Work Helping** | `wait` 할 때 놀지 않고 **다른 대기 작업을 대신 실행**합니다. |
 
 ```text
@@ -73,10 +75,9 @@ sequenceDiagram
   participant W as 워커들
 
   Main->>TM: dispatchMainThreadTasks()
-  Main->>TM: (컴포넌트 병렬 tick 제출)
-  TM->>W: emplaceParallel / 병렬 스테이지 실행
-  Main->>TM: waitAll() / waitStage()
-  Note over Main,W: wait 중에도 Work Helping<br/>메인/워커가 남은 일을 돕습니다
+  Main->>TM: engine::runParallel(컴포넌트 병렬 tick)
+  TM->>W: 병렬 그룹 티켓 실행
+  Note over Main,W: 호출 스레드도 청크를 함께 돌고<br/>합류할 때까지 기다립니다(waitAll 은 쓰지 않음)
   W-->>Main: 완료
 ```
 
@@ -165,7 +166,9 @@ flowchart LR
   L[Load] --> B[Bake] --> U[Upload<br/>MainThread]
 ```
 
-“여러 개 다 끝나면” / “하나라도 끝나면” 은 `TaskFuture.h` 의 `whenAllFutures` / `whenAnyFuture` 입니다 (아래 7번).
+“여러 개 다 끝나면” / “하나라도 끝나면” 후속을 걸려면 `tm.whenAll( listTask, continuation )` / `tm.whenAny( listTask, continuation )`
+(핸들 목록은 `vector_reference<const TaskHandle>` — vector · array · C 배열). 값을 모으려면 `TaskFuture.h` 의
+`whenAllFutures` / `whenAnyFuture` 입니다 (아래 7번).
 
 ### 5) 스테이지로 묶어서 기다리기
 
@@ -258,13 +261,40 @@ tm.getCurrentThreadScratchSlot();   // 스레드마다 하나씩 쓰는 스크�
 
 tm.ensureMainThread();              // Debug에서 아니면 assert
 tm.ensureWorkerThread();
+tm.releaseCurrentThreadHelperSlot(); // 태스크를 기다리던 비워커 스레드가 끝나기 직전에 도우미 슬롯 반납
 ```
 
-"병렬 본문 안인가" 를 묻는 함수는 없다(2026-10-03 에 지웠다 — 그것으로 스스로를 지키는 함수가 하나도 없었다). 틱 중에 부르면
-안 되는 구조 변경은 단언하지 않고 틱 뒤로 미룬다(`GameObjectManager::deferStructuralChange`).
+- 스크래치 슬롯 수는 `getScratchSlotCount()` = 워커 수 + `kMaxHelperThreadCount`(8). 주의: 워커가 아닌 스레드(메인 · 렌더 · 로더 · 업로드)도
+  기다리는 동안 태스크를 실행하므로 스레드별 스크래치는 이 수만큼 둔다. 렌더 스레드처럼 다시 만들어지는 스레드는 끝날 때 슬롯을 반납해야 상한을 넘지 않는다.
+- "병렬 본문 안인가" 를 묻는 함수는 없다. 틱 중에 부르면 안 되는 구조 변경은 단언하지 않고 틱 뒤로 미룬다(`GameObjectManager::deferStructuralChange`).
 
 끝났는지 **묻기만** 하려면 `TaskHandle::isCompleted()` — 본문과 그 안에서 만든 자식이 모두 끝나면 true
 (Unity `JobHandle.IsCompleted` · UE `FGraphEvent::IsComplete()` 자리). 빈 핸들은 true 입니다.
+
+---
+
+## 우선순위 (`TaskPriority`)
+
+`handle.setPriority( TaskPriority::High )` 처럼 제출 전에 정합니다.
+
+| 우선순위 | 큐 | 쓰는 곳 |
+|----------|----|---------|
+| `High` | 전역 High 큐 — **모든 워커가 자기 데크보다 먼저** 봅니다. 병렬 그룹의 청크 사이에서도 비웁니다 | 렌더 스레드의 병렬 패스 기록(`RenderGraph`) |
+| `Normal` | 워커 데크 / 워커가 아닌 스레드가 넣으면 전역 Normal 큐 | 기본값 |
+| `Low` | 전역 Low 큐 — 훔쳐 올 것도 없을 때만 | 백그라운드 I/O · 통계 |
+
+게임 스레드의 대량 잡과 렌더 스레드의 기록이 같은 풀을 쓰므로, 렌더 스레드가 곧바로 기다리는 일은 `High` 로 넣어 줄 뒤에 서지 않게 합니다.
+
+## 메모리 태그 상속
+
+태스크 · 병렬 그룹을 만들 때 그 스레드의 현재 `MemoryTag` 를 노드에 담고(`TaskNode::_memoryTag` · `ParallelGroup::_memoryTag`), 실행하는 동안
+실행 스레드의 태그를 그것으로 바꿉니다(`ScopedMemoryTag`). 워커에서 하는 에셋 로드도 요청한 쪽의 줄(`Texture` · `Scene` …)에 잡힙니다.
+태그 스코프가 일하는 구성(`SW_DEBUG`)에서만 담고 바꿉니다. 태그 자체는 [Core 개요](../README.md#메모리-태그)를 보십시오.
+
+## 시간
+
+대기 시한(`waitAll( timeoutMs )`)과 워커의 스핀 구간은 `CpuStopwatch`(`Core/Time/CpuClock.h`)로 잽니다 — 엔진의 단조 시계 하나입니다.
+기다림의 상한은 횟수가 아니라 시간으로 둡니다.
 
 ---
 
@@ -302,10 +332,13 @@ tm.clear();          // 대기 중인 모든 작업을 안전하게 취소 (Shut
 tm.shutdown();
 ```
 
-- **안전한 취소 (Thread-safe Clear)**: `TaskManager::clear()`는 큐를 비울 때 반복자(iterator) 무효화나 락 경합(lock contention)을 방지하기 위해 `std::erase_if`를 사용하지 않습니다. 대신 **`Queue::steal()`을 통해 작업을 원자적으로 가져와(steal) 안전하게 메모리를 해제**합니다. 엔진 종료 시나 씬 전환 시 락 경합 없이 잔여 작업을 빠르게 비울 수 있습니다.
+- **큐 비우기**: `TaskManager::clear()` 는 워커 데크를 `steal()` 로, 메인 · 전역(High · Normal · Low) 큐를 `dequeue` 로 하나씩 꺼내 노드를 놓고,
+  활성 수를 0 으로 · 스테이지를 모두 돌려줍니다. **아무것도 돌고 있지 않을 때만** 부릅니다.
 
-- App이 `EngineLoop` 초기화 때 TaskManager를 만들고 `engine::bindEngineServices` 로 붙입니다.  
-- 게임 모듈은 보통 **직접 TaskManager를 만들지 않고**, 이미 돌아가는 엔진 서비스를 쓰거나 Object씬/리소스 API** 뒤에 숨은 비동기를 사용합니다.
+- `TaskManager` 는 엔진 서비스 표(`Engine/Common/EngineServiceList.xxx`, `EngineCreated`)의 한 줄이라 `EngineLoop` 가 만들어
+  `engine::bindEngineServices` 로 붙이고, 기동 표(`Engine/EngineStartupStepList.xxx`)의 `Task` 단계가 `initialize` · `shutdown` 합니다.
+  태스크를 기다리는 단계(`ModuleImages` · `Audio` · `Scene` · `FrameRenderer`)는 `Task` 에 의존하므로 역순 종료에서 먼저 내려갑니다.
+- 게임 모듈은 보통 **직접 TaskManager를 만들지 않고**, 이미 돌아가는 엔진 서비스를 쓰거나 Object · 씬 · 리소스 API 뒤에 숨은 비동기를 사용합니다.
 
 Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README](../../Engine/Object/README.md) / lint와 같습니다.  
 게임 쪽에서 비동기가 필요하면 엔진이 제공하는 고수준 API(씬 비동기 로드 등)를 우선하세요.
@@ -327,9 +360,10 @@ Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README]
 
 ## 엔진 안에서 이미 쓰는 곳 (참고)
 
-- **Object / GameObject**: 컴포넌트 tick 스테이지를 `emplaceParallel` + stage wait  
-- **SceneManager**: 씬 비동기 로드 태스크  
-- **RenderPass / Pipeline**: 에셋 비동기 로드  
+- **Object / GameObject**: 컴포넌트 tick 스테이지를 `engine::runParallel`(합류까지 호출 스레드가 함께 돎)  
+- **SceneManager** · **AssetStreamingQueue**: 씬 비동기 로드 · 에셋 스트리밍(`TaskFuture`)  
+- **RenderGraph**: 병렬 패스 기록(`High` + 스테이지 `waitStage`) · **GpuUploadQueue**: 메시 업로드(`emplaceParallel` + 스테이지)  
+- **RenderPassResource / RenderPipelineResource**: 에셋 비동기 로드  
 - **LiveReload / ModuleHost**: 언로드 전 `waitAll`
 
 ---
@@ -337,7 +371,7 @@ Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README]
 ## 더 볼 곳
 
 - `TaskManager.h` — API 주석  
-- `TaskTypes.h` — `TaskHandle::runBefore` / `then` / `submit`
+- `TaskTypes.h` — `TaskHandle::runBefore` / `then` / `submit` / `setPriority`
 - `TaskFuture.h` — `TaskFuture<T>` / `TaskPromise<T>` / `whenAllFutures` / `whenAnyFuture`  
 - [Object/README.md](../../Engine/Object/README.md) — 병렬 tick과 `waitAll` 타이밍  
 - [ARCHITECTURE.md](../../../ARCHITECTURE.md) — 병렬 tick Gotcha
