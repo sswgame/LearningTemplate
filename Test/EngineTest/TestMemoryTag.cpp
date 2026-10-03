@@ -17,6 +17,7 @@
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "TestFramework/TestFramework.h"
@@ -240,4 +241,37 @@ SW_TEST_CASE( MemoryTagTest, XmlDocumentParseIsTagged )
     }
     SW_EXPECT_TRUE_MSG( animationHeld >= xmlText.size(), ( sw::string( "Animation bytes held by the document: " ) + sw::to_string( animationHeld ) ).c_str() );
     SW_EXPECT_TRUE( getLiveBytes( *pProfiler, sw::MemoryTag::Animation ) < animationBefore + xmlText.size() );
+}
+
+/**
+ * @brief [MemoryTagTest] JSON 문서(nlohmann)의 객체 · 문자열은 sw 할당자로 잡혀 그때의 태그로 세인다
+ * @details JsonDocument 의 json 타입은 문자열 · 배열 · 객체 할당자로 sw 할당자를 받는다. 표준 할당자면 태그 줄에는 `JsonDocument::Impl` 만 늘어난다.
+ */
+SW_TEST_CASE( MemoryTagTest, JsonDocumentParseIsTagged )
+{
+    if constexpr ( sw::kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
+    if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
+        SW_TEST_SKIP( "no tracking memory profiler in this host" );
+
+    sw::string jsonText{ "{" };
+    for ( uint32 index = 0; index < 512; ++index )
+    {
+        if ( index > 0 )
+            jsonText += ",";
+        jsonText += "\"key" + sw::to_string( index ) + "\":\"a value longer than the small string buffer\"";
+    }
+    jsonText += "}";
+
+    const uint64 animationBefore = getLiveBytes( *pProfiler, sw::MemoryTag::Animation );
+    uint64       animationHeld{ 0 };
+    {
+        SW_MEMORY_SCOPE( Animation );
+        sw::JsonDocument document;
+        SW_ASSERT_TRUE( document.parse( jsonText, "memorytag.json" ) );
+        animationHeld = getLiveBytes( *pProfiler, sw::MemoryTag::Animation ) - animationBefore;
+    }
+    SW_EXPECT_TRUE_MSG( animationHeld >= jsonText.size(), ( sw::string( "Animation bytes held by the document: " ) + sw::to_string( animationHeld ) ).c_str() );
+    SW_EXPECT_TRUE( getLiveBytes( *pProfiler, sw::MemoryTag::Animation ) < animationBefore + jsonText.size() );
 }

@@ -16,7 +16,15 @@ namespace sw
     {
         struct JsonDocumentInternal
         {
-            using JsonImpl = nlohmann::ordered_json;
+            /** @brief json 의 문자열 타입입니다. 키 · 문자열 값 · `dump` 결과가 sw 할당자를 지납니다. */
+            using JsonString = std::basic_string<utf8, std::char_traits<utf8>, Allocator<utf8>>;
+            /**
+             * @brief `nlohmann::ordered_json` 과 같은 모양(키 순서 보존)이되 문자열 · 배열 · 객체 · 이진 값이 sw 할당자를 지나는 json 타입입니다.
+             * @details 할당자 인자만 바꾼 것이라 동작은 ordered_json 과 같습니다. nlohmann 을 include 하는 곳은 이 파일 하나입니다.
+             *          파서 내부의 작은 버퍼(토큰 바이트 · 상태 스택)는 nlohmann 이 `std::vector` 를 고정으로 써 CRT 에 남습니다.
+             */
+            using JsonImpl = nlohmann::basic_json<nlohmann::ordered_map, std::vector, JsonString, bool, int64, uint64, float64, Allocator,
+                                                  nlohmann::adl_serializer, std::vector<uint8, Allocator<uint8>>>;
 
             static JsonImpl* asJson( void* pPtr )
             {
@@ -28,14 +36,14 @@ namespace sw
                 return StringUtil::equals( lhs, rhs, bIgnoreCase );
             }
 
-            static string fromStdString( const std::string& value )
+            static string fromJsonString( const JsonString& value )
             {
                 return string( value.data(), value.size() );
             }
 
-            static std::string toStdString( string_view value )
+            static JsonString toJsonString( string_view value )
             {
-                return std::string( value.data(), value.size() );
+                return JsonString( value.data(), value.size() );
             }
 
             static JsonImpl* findMember( JsonImpl* pObj, string_view key, bool bIgnoreCase )
@@ -66,7 +74,7 @@ namespace sw
                 for ( auto it = pObj->begin(); it != pObj->end(); ++it )
                 {
                     if ( nameEquals( it.key(), key, true ) )
-                        return fromStdString( it.key() );
+                        return fromJsonString( it.key() );
                 }
                 return string( key );
             }
@@ -74,9 +82,16 @@ namespace sw
             static string dumpValue( const JsonImpl& value, int32 indent )
             {
                 if ( indent < 0 )
-                    return fromStdString( value.dump() );
-                return fromStdString( value.dump( indent ) );
+                    return fromJsonString( value.dump() );
+                return fromJsonString( value.dump( indent ) );
             }
+
+            /**
+             * @brief 실패한 글의 오류 자리를 찾을 때만 쓰는 json 타입입니다.
+             * @details nlohmann 의 `sax_parse` 는 입력 형식을 실행 중에 고르므로 이진 형식 읽기(UBJSON)까지 인스턴스를 만드는데, 그 길은 문자열 타입이
+             *          `std::string` 이어야 컴파일됩니다. 실패한 글을 한 번 더 읽는 드문 길이라 표준 할당자로 둡니다.
+             */
+            using ErrorScanJson = nlohmann::ordered_json;
 
             /**
              * @brief 실패한 글을 SAX 로 다시 읽어 오류 자리(읽은 바이트 수)와 이유를 받는 처리기입니다. 값은 만들지 않습니다.
@@ -84,18 +99,18 @@ namespace sw
              */
             struct ParseErrorRecorder
             {
-                size_t      _position{ 0 };
-                std::string _message;
+                size_t     _position{ 0 };
+                sw::string _message;
 
                 bool null() { return true; }
                 bool boolean( bool ) { return true; }
-                bool number_integer( JsonImpl::number_integer_t ) { return true; }
-                bool number_unsigned( JsonImpl::number_unsigned_t ) { return true; }
-                bool number_float( JsonImpl::number_float_t, const JsonImpl::string_t& ) { return true; }
-                bool string( JsonImpl::string_t& ) { return true; }
-                bool binary( JsonImpl::binary_t& ) { return true; }
+                bool number_integer( ErrorScanJson::number_integer_t ) { return true; }
+                bool number_unsigned( ErrorScanJson::number_unsigned_t ) { return true; }
+                bool number_float( ErrorScanJson::number_float_t, const ErrorScanJson::string_t& ) { return true; }
+                bool string( ErrorScanJson::string_t& ) { return true; }
+                bool binary( ErrorScanJson::binary_t& ) { return true; }
                 bool start_object( std::size_t ) { return true; }
-                bool key( JsonImpl::string_t& ) { return true; }
+                bool key( ErrorScanJson::string_t& ) { return true; }
                 bool end_object() { return true; }
                 bool start_array( std::size_t ) { return true; }
                 bool end_array() { return true; }
@@ -111,10 +126,10 @@ namespace sw
              * @brief 파싱에 실패한 글의 오류를 `이름:줄:열: 이유` 로 만듭니다. 실패했을 때만 부릅니다(글을 한 번 더 읽는다).
              * @details 값을 만드는 `parse( …, allow_exceptions = false )` 는 실패하면 버려진 값만 주고 자리 · 이유를 주지 않는다.
              */
-            static sw::string describeParseError( const std::string& text, string_view sourceName )
+            static sw::string describeParseError( string_view text, string_view sourceName )
             {
                 ParseErrorRecorder recorder;
-                (void)JsonImpl::sax_parse( text, &recorder );
+                (void)ErrorScanJson::sax_parse( text.data(), text.data() + text.size(), &recorder );
                 // what() 은 "[json.exception.parse_error.101] parse error at line 3, column 5: <이유>" 다. 줄 · 열은 우리 꼴로 다시 적으므로 이유만 남긴다.
                 std::string_view reason{ recorder._message };
                 const size_t     columnPos = reason.find( "column " );
@@ -137,7 +152,7 @@ namespace sw
 {
     SW_LOG_CALLER( "JsonDocument" );
 
-    using JsonImpl = nlohmann::ordered_json;
+    using JsonImpl = JsonDocumentInternal::JsonImpl;
 
     struct JsonDocument::Impl
     {
@@ -168,8 +183,8 @@ namespace sw
         if ( pValue == nullptr )
             return {};
         if ( pValue->is_string() )
-            return JsonDocumentInternal::fromStdString( pValue->get<std::string>() );
-        return JsonDocumentInternal::fromStdString( pValue->dump() );
+            return JsonDocumentInternal::fromJsonString( pValue->get_ref<const JsonDocumentInternal::JsonString&>() );
+        return JsonDocumentInternal::fromJsonString( pValue->dump() );
     }
 
     int64 JsonValue::asInt( int64 fallback ) const
@@ -244,7 +259,7 @@ namespace sw
             return listName;
         for ( auto it = pValue->begin(); it != pValue->end(); ++it )
         {
-            listName.push_back( JsonDocumentInternal::fromStdString( it.key() ) );
+            listName.push_back( JsonDocumentInternal::fromJsonString( it.key() ) );
         }
         return listName;
     }
@@ -326,7 +341,7 @@ namespace sw
     {
         JsonImpl* pJson = JsonDocumentInternal::asJson( _pValue );
         if ( pJson != nullptr )
-            *pJson = JsonDocumentInternal::toStdString( value );
+            *pJson = JsonDocumentInternal::toJsonString( value );
     }
 
     void JsonValue::setObject() const
@@ -351,7 +366,7 @@ namespace sw
         if ( pJson->is_object() == false )
             *pJson = JsonImpl::object();
         const string storedKey = JsonDocumentInternal::findExistingKey( pJson, key, bIgnoreCaseKeys );
-        JsonImpl&    child     = ( *pJson )[JsonDocumentInternal::toStdString( storedKey )];
+        JsonImpl&    child     = ( *pJson )[JsonDocumentInternal::toJsonString( storedKey )];
         return JsonValue{ &child };
     }
 
@@ -406,11 +421,10 @@ namespace sw
 
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
-        const std::string stdText = JsonDocumentInternal::toStdString( jsonText );
-        _impl->root               = JsonImpl::parse( stdText, nullptr, false, false );
+        _impl->root = JsonImpl::parse( jsonText.data(), jsonText.data() + jsonText.size(), nullptr, false, false );
         if ( _impl->root.is_discarded() )
         {
-            _lastError = JsonDocumentInternal::describeParseError( stdText, source );
+            _lastError = JsonDocumentInternal::describeParseError( jsonText, source );
             SW_LOG_ERROR( "JSON parse error at %#", _lastError );
             clear();
             return false;
@@ -428,7 +442,7 @@ namespace sw
         }
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
-        _impl->root = JsonImpl::parse( JsonDocumentInternal::toStdString( jsonText ), nullptr, false, false );
+        _impl->root = JsonImpl::parse( jsonText.data(), jsonText.data() + jsonText.size(), nullptr, false, false );
         if ( _impl->root.is_discarded() )
         {
             clear();
@@ -517,8 +531,8 @@ namespace sw
 
     string JsonDocument::escapeString( string_view value )
     {
-        const JsonImpl quoted = JsonDocumentInternal::toStdString( value );
-        string         dumped = JsonDocumentInternal::fromStdString( quoted.dump() );
+        const JsonImpl quoted = JsonDocumentInternal::toJsonString( value );
+        string         dumped = JsonDocumentInternal::fromJsonString( quoted.dump() );
         if ( dumped.size() >= 2 && dumped.front() == '"' && dumped.back() == '"' )
             dumped = dumped.substr( 1, dumped.size() - 2 );
         return dumped;
@@ -534,9 +548,9 @@ namespace sw
         quoted.push_back( '"' );
         quoted.append( value.data(), value.size() );
         quoted.push_back( '"' );
-        const JsonImpl parsed = JsonImpl::parse( JsonDocumentInternal::toStdString( quoted ), nullptr, false, false );
+        const JsonImpl parsed = JsonImpl::parse( JsonDocumentInternal::toJsonString( quoted ), nullptr, false, false );
         if ( parsed.is_discarded() == false && parsed.is_string() )
-            return JsonDocumentInternal::fromStdString( parsed.get<std::string>() );
+            return JsonDocumentInternal::fromJsonString( parsed.get_ref<const JsonDocumentInternal::JsonString&>() );
         return string( value );
     }
 
