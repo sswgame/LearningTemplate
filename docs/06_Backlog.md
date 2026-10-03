@@ -93,6 +93,28 @@ cd build/Ninja-Debug/Bin
 영역별로 묶었다. 영역 안에서는 위에 있을수록 먼저 볼 것이다. 줄 번호는 2026-10-03 기준이라 어긋날 수 있다 — 함수 이름으로 찾는다.
 "확인 필요" 가 붙은 항목은 열려 있는지부터 확인하고 시작한다.
 
+### 1-0. 대기 중 — 진행 중인 워크트리(종료 블록 · 패딩 감사)가 병합된 뒤 한꺼번에 (사용자 지시 2026-10-03)
+
+- **클래스 이름 일관화 — 감사 목록 전부**(사용자: "일관되게 바꿔봐"). 파일에 저장되는 이름은 `REFLECT( Alias = 옛이름 )`, CLI 는 옛 플래그를 별칭으로 남긴다.
+  묶음: (1) `IRHIResource`→`IRHIResourceFactory`(`getResourceFactory`), `ActionMap`→`InputMap`, `InputDeviceType`→`InputGlyphStyle`,
+  `ShaderResourceBind`→`ShaderResourceBindOp` · `ShaderResourceBinding`→`ShaderReflectedBinding`, `PrefabManager`→`PrefabCache`, `HPBarBaseComponent`→`HealthBarComponent`,
+  `AttackBaseComponent`→`MeleeHitboxComponent`, `EffectBaseComponent`→`FadeOutComponent`, `DamageUIComponent`→`DamageNumberComponent`, `ObjectSnapshotCommand`→`ObjectUndoUtil`,
+  `Cpu*` 시간 → `MonotonicClock` · `Stopwatch` · `Deadline` · `GameTimer` · `ScopedTimer`, `RenderPassManager`/`RenderPassResource`/`RenderPipelineResource`→
+  `RenderPipelineAssetCache`/`RenderPassAsset`/`RenderPipelineAsset`, `EditorAssetKind`→`EditorAssetType`, `IModuleCodeHolder`→`IModuleUnloadListener`(`onModuleUnloading`);
+  (2) 런타임 정보 행 `*Traits`→`*Info`, `ShaderBindingBinder`→`ShaderParameterBinder`, `GpuMaterialGpu`→`GpuMaterialGroupBuffer`, `RHIConstantBufferShadow`→`RHIConstantBufferMirror`,
+  `ReloadFileManager`→`FileWatchDispatcher`, `LiveShaderManager`→`ShaderRecompiler`, `FrameTimeline`→`FixedTimestep`, `FadeService`→`ScreenFade`,
+  `BackendSwapController`→`RHIBackendSwitcher`, `KeyCodes`/`MouseButtons`/`GamepadButtons`→`*Util`, `GamepadXInput`/`GamepadJoystick`→`XInputGamepadDevice`/`LinuxJoystickGamepadDevice`,
+  `CCD`→`ContinuousCollision`, `ColliderTileComponent`→`TileColliderComponent`, `OverridesOnTick`→`HasOnTickOverride`, `ShaderBindingContract`→`ShaderBindingValidator`,
+  `RenderPassInputContract`→`RenderPassInputSignature`, `EngineOwnedServices`→`EngineServiceCollection`, `EngineStartup*`→`EngineInit*`, `MonsterDataCatalog`→`MonsterCatalog`,
+  `ZoneRuntime`→`ZoneTracker`, `SelectionManager`→`EditorSelection`; (3) `AnimationGraph*`→`AnimGraph*`, `LevelLoad*Event`→`SceneLoad*Event`, `Load/SaveCompletedEvent`→
+  `SaveGameLoaded/SavedEvent`, `SceneDocument::EntityNode`→`SceneObjectNode`, `EditorBackgroundJob`→`EditorBackgroundTask`, `SpatialElement`→`SpatialElement2D`,
+  `InputMapEditorPanel`/`PrefabEditorPanel`→`InputMapPanel`/`PrefabPanel`, ReflectionParser 소문자 구조체 → 소문자 네임스페이스(`tpl`→`template`), `framres`/`commandmod`→
+  `frameresource`/`commandmodifier`; (4) Bake→Cook(`ShaderBaker`→`ShaderCooker`, `--bake-shaders`→`--cook-shaders` + 옛 플래그), `ResourceManager`→`AssetManager`
+  ("Resource" 는 디스크 트리 · 팩, "Asset" 은 읽은 객체), `EngineData`/`GameData`/`EditorData`→`EngineDefaultAssets`/`GameSettings`/`EditorToolDefaults`.
+- **case 중괄호 일관성 규칙**(한 switch 안에서 한 case 라도 중괄호면 모두) — 픽서 패치 준비됨(스크래치), 39 파일 다시 쓰기 + AGENTS.md · 04 규칙 문장.
+- **한 파일에 클래스가 여럿이면 클래스마다 `namespace sw { }` 블록을 나눈다** — 규칙 + 가능하면 게이트, 트리 전체 적용.
+- **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
+
 ### 1-1. 직렬화 · 리플렉션
 
 - **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
