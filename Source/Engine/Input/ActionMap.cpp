@@ -542,7 +542,7 @@ namespace sw
         if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
             return false;
 
-        // 종류는 그대로 두고 그 종류에서 키가 들어가는 슬롯만 바꾼다(`rebindKey` 설명). 예전에는 무엇이든 단일 키로 바꿔 수식 키 · 축이 사라졌다.
+        // 종류는 그대로 두고 그 종류에서 키가 들어가는 슬롯만 바꾼다(`rebindKey` 설명). 단일 키로 바꾸면 수식 키 · 축이 사라진다.
         ActionBinding& binding   = pEntry->_listBinding[bindIndex];
         const uint32   slotIndex = BindingKinds::getRebindSlotIndex( binding._kind );
         if ( slotIndex == BindingKinds::kNoRebindSlot )
@@ -561,8 +561,8 @@ namespace sw
         if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
             return false;
 
-        // 대상의 어느 슬롯을 바꾸는지는 `rebindSlot` 과 같은 규칙이다(Chord 는 방아쇠 · 키 하나로 못 바꾸는 종류는 거절). 예전에는 늘 0 번에 써서
-        // Chord 의 수식 키를 덮었고, 겹침도 남의 0 번 슬롯만 봐서 Chord 의 방아쇠 · 축의 양의 키와 겹쳐도 몰랐다.
+        // 대상의 어느 슬롯을 바꾸는지는 `rebindSlot` 과 같은 규칙이다(Chord 는 방아쇠 · 키 하나로 못 바꾸는 종류는 거절). 늘 0 번에 쓰면
+        // Chord 의 수식 키를 덮고, 겹침도 남의 0 번 슬롯만 보면 Chord 의 방아쇠 · 축의 양의 키와 겹쳐도 모른다.
         const uint32 targetSlot = BindingKinds::getRebindSlotIndex( pEntry->_listBinding[bindIndex]._kind );
         if ( targetSlot == BindingKinds::kNoRebindSlot )
         {
@@ -638,8 +638,8 @@ namespace sw
                 if ( binding._layer != targetLayer )
                     continue;
 
-                // 예전에는 여기 switch 가 있었고 `default:` 가 0 을 줬다. 새 종류를 더하면 충돌
-                // 검사가 그 바인딩을 **못 본 채** 지나가고, 같은 키를 두 번 걸어도 조용했다.
+                // 슬롯 수는 표에서 온다 — switch 의 `default:` 로 두면 새 종류를 더했을 때 충돌 검사가 그 바인딩을
+                // **못 본 채** 지나가고, 같은 키를 두 번 걸어도 조용하다.
                 const uint32 slotCount = BindingKinds::getConflictSlotCount( binding._kind );
 
                 for ( uint32 slotIndex = 0; slotIndex < slotCount; ++slotIndex )

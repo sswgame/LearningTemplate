@@ -284,8 +284,8 @@ namespace sw
     private:
         /**
          * @brief 글자를 페이로드에 담습니다. 넘치면 **UTF-8 글자 경계에서** 자릅니다.
-         * @details 예전에는 31 바이트에서 그냥 잘라, 한글 조합 문자열(글자당 3 바이트)이 길면 마지막 글자의 앞 바이트만 남아
-         *          받는 쪽이 깨진 UTF-8 을 받았습니다.
+         * @details 바이트 수로만 자르면 한글 조합 문자열(글자당 3 바이트)이 길 때 마지막 글자의 앞 바이트만 남아 받는 쪽이 깨진
+         *          UTF-8 을 받습니다.
          */
         static void copyTextPayload( RawInputEvent& outEvent, string_view text )
         {

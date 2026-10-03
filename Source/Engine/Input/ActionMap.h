@@ -56,12 +56,9 @@ namespace sw
      * @brief `BindingKind` 하나에 딸린 값들을 모아 둔 표입니다. 종류를 늘릴 때 고칠 곳은 **여기 한 줄**입니다.
      *
      * [왜 표인가]
-     * 예전에는 종류를 하나 더하려면 **여섯 곳**을 손으로 맞춰야 했습니다: 열거자 · 충돌 검사의 슬롯 수
-     * switch · 평가 switch · 저장 switch · 로드의 문자열 if/else 사슬 · 그리고 그 모두를 손으로
-     * 나열한 테스트. 게다가 세 switch 에 `default:` 가 있어 **빠뜨려도 컴파일러가 말해 주지 않았습니다.**
-     * 충돌 검사는 새 종류를 못 본 채 지나갔고(같은 키를 두 번 바인드해도 조용했습니다), 저장은 그 바인딩을
-     * **파일에서 통째로 빠뜨렸습니다.** 조용히 데이터를 버리는 쪽이 제일 나쁩니다.
-     * 이제 표가 기준이고, `Count` 와의 `static_assert` 가 빠진 줄을 컴파일 오류로 만듭니다.
+     * 종류마다 딸린 값(충돌 검사의 슬롯 수 · 평가 · 저장 · 로드의 이름)을 switch 여러 벌에 흩어 두면 `default:` 때문에
+     * **빠뜨려도 컴파일러가 말해 주지 않습니다** — 충돌 검사는 새 종류를 못 본 채 지나가고, 저장은 그 바인딩을
+     * **파일에서 통째로 빠뜨립니다.** 그래서 표가 기준이고, `Count` 와의 `static_assert` 가 빠진 줄을 컴파일 오류로 만듭니다.
      *
      * [왜 리플렉션이 아닌가]
      * 같은 폴더의 `KeyCodes` · `MouseButtons` 는 리플렉션 등록부로 이름을 얻습니다. 여기서는 쓰지 않습니다.
@@ -365,7 +362,7 @@ namespace sw
         /**
          * @brief 런타임에 액션의 키 바인딩을 바꿉니다. 바인딩 **종류는 그대로**입니다 — Chord 는 방아쇠만 바뀌고 수식 키는 남습니다.
          * @details 키 하나로 바꿀 수 없는 종류(합성 축 · 스틱 …)면 바꾸지 않고 경고와 함께 false 입니다(`BindingKinds::getRebindSlotIndex`).
-         *          예전에는 어떤 종류든 단일 키로 바꿔 버려, 편집기에서 `Ctrl+S` 를 다시 잡으면 수식 키가, A/D 축을 다시 잡으면 축이 사라졌다.
+         *          단일 키로 바꿔 버리면 편집기에서 `Ctrl+S` 를 다시 잡을 때 수식 키가, A/D 축을 다시 잡을 때 축이 사라진다.
          */
         bool rebindKey( const hashed_string& action, Key newKey, uint32 bindIndex = 0 );
         bool rebindSlot( const hashed_string& action, InputSlot slot, uint32 bindIndex = 0 );
@@ -561,9 +558,8 @@ namespace sw
         ActionEntry&     getOrCreateAction( const hashed_string& action, InputActionValueType valueType = InputActionValueType::Boolean );
         /**
          * @brief 바인딩 하나의 공통 머리입니다. 레이어를 보장하고 액션을 목록에 올린 뒤, 레이어 인덱스를 캐시한 빈 바인딩을 반환합니다.
-         * @details 예전에는 `bind*` 아홉이 이 열두 줄(과 아래 `commitBinding` 의 넷)을 각자 들었습니다. 바인딩 종류를 하나 더하면
-         *          그것을 복사해야 했고, 세 목록(현재 · 기본값 · 상태) 중 하나만 빠져도 바인딩과 상태의 인덱스가 어긋났습니다.
-         *          종류별 필드(슬롯 · 데드존 · 배율 …)만 부르는 쪽이 채웁니다.
+         * @details `bind*` 모두가 이것과 `commitBinding` 을 지납니다 — 세 목록(현재 · 기본값 · 상태) 중 하나만 빠져도 바인딩과 상태의
+         *          인덱스가 어긋나기 때문입니다. 종류별 필드(슬롯 · 데드존 · 배율 …)만 부르는 쪽이 채웁니다.
          */
         ActionBinding beginBinding( const hashed_string& action, BindingKind kind, ActionTrigger trigger, const hashed_string& layer );
         /** @brief 바인딩을 액션의 세 목록(현재 · 기본값 · 상태)에 **함께** 넣습니다. 그래서 셋의 인덱스가 늘 같습니다. */

@@ -199,8 +199,8 @@ namespace sw
             return;
         }
 
-        // 예전에는 비트맵을 **받아만 두고 검사하지 않아** 럼블이 없는 노드도 통과했다. 그러면
-        // setVibration 이 매번 EVIOCSFF 에서 실패한다. 지원 여부는 여기서 한 번에 가린다.
+        // 비트맵을 검사하지 않으면 럼블이 없는 노드도 통과해 setVibration 이 매번 EVIOCSFF 에서 실패한다.
+        // 지원 여부는 여기서 한 번에 가린다.
         if ( GamepadJoystickInternal::testFeatureBit( arrFeatureBits, FF_RUMBLE ) == false )
         {
             close( fd );

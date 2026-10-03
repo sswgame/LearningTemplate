@@ -82,8 +82,8 @@ namespace sw
             /**
              * @brief `pad` 속성을 슬롯 범위(0 ~ `kMaxGamepadSlot` - 1)에서 읽습니다. 없으면 0 번 패드입니다.
              * @return 정수가 아니거나 범위 밖이면 경고하고 false 입니다 — 부르는 쪽은 그 바인딩을 버립니다.
-             * @details 예전에는 `static_cast<uint8>( getAttributeInt( "pad" ) )` 라 "256" 이 0 번, "-1" 이 255 번 패드가 됐고, 4 번 이상은
-             *          없는 패드에 말없이 묶였습니다. 패드 번호를 읽는 자리 셋(리소스 스틱 · 유저 스틱 · 유저 단일 버튼)이 이 하나를 지납니다.
+             * @details 잘라 담으면 "256" 이 0 번, "-1" 이 255 번 패드가 되고 4 번 이상은 없는 패드에 말없이 묶입니다. 패드 번호를 읽는
+             *          자리 셋(리소스 스틱 · 유저 스틱 · 유저 단일 버튼)이 이 하나를 지납니다.
              */
             [[nodiscard]] static bool tryGetPadIndex( XmlNode node, uint8& outPadIndex )
             {
@@ -386,12 +386,10 @@ namespace sw
                 XmlNode bindNode = root.appendChild( "bind" );
                 bindNode.appendAttribute( "action", actionName.c_str() );
                 bindNode.appendAttribute( "layer", b._layer.c_str() );
-                // 이름은 표에서 온다. 예전에는 종류마다 리터럴을 적었고 읽는 쪽에 같은 리터럴이 따로
-                // 있어서, 한쪽만 고치면 파일이 조용히 왕복하지 않게 됐다.
+                // 이름은 표에서 온다 — 쓰는 쪽과 읽는 쪽이 리터럴을 따로 들면 한쪽만 고쳐 파일이 조용히 왕복하지 않게 된다.
                 bindNode.appendAttribute( "kind", BindingKinds::toName( b._kind ) );
 
-                // 예전에는 `default: break` 라, 종류를 늘리고 여기를 빠뜨리면 그 바인딩이 특성 하나
-                // 없이 저장돼 **조용히 사라졌다.** 이제 그 자리가 소리를 낸다(아래 default 참고).
+                // 종류를 늘리고 여기를 빠뜨리면 그 바인딩이 특성 하나 없이 저장돼 **조용히 사라진다** — 그래서 default 가 오류를 남긴다.
                 switch ( b._kind )
                 {
                     case BindingKind::SingleSlot:
@@ -484,7 +482,6 @@ namespace sw
                     {
                         // 종류를 늘리고 이 switch 를 빠뜨렸다. 이름은 표에서 왔으므로 `kind` 는
                         // 제대로 적혔지만 **딸린 특성이 하나도 없어** 다시 읽을 수 없는 줄이 된다.
-                        // 예전에는 `default: break` 라 그 사실조차 남지 않았다.
                         SW_LOG_ERROR( "저장하지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 saveUserBindings 를 빠뜨렸습니다.",
                                       BindingKinds::toName( b._kind ) );
                         break;

@@ -62,7 +62,7 @@ namespace sw
                 if ( pDisplay == nullptr || x11Window == 0 )
                     return nullptr;
 
-                // 예전에는 Display 만 비교했다. 같은 X 서버에서 창을 다시 만들면(에디터 창 재생성, 테스트가
+                // Display 만 비교하면 안 된다. 같은 X 서버에서 창을 다시 만들면(에디터 창 재생성, 테스트가
                 // 창을 반복 생성 · 파괴) 캐시된 XIC 가 **이미 파괴된 Window** 를 XNClientWindow 로 물고 있어
                 // 텍스트 입력이 조용히 죽는다. 창까지 함께 봐야 한다.
                 if ( s_pInputContext != nullptr && s_pImDisplay == pDisplay && s_imWindow == x11Window )
@@ -189,7 +189,7 @@ namespace sw
 
         const XEvent* pXev = reinterpret_cast<const XEvent*>( event._lParam );
         // 장치 상태는 여기서 바꾸지 않는다. 큐에만 넣고 `beginFrame` 이 순서대로 적용한다(Win32 와 같은 규칙,
-        // `InputManager::beginFrame` 설명 참고). 예전에는 여기서 상태를 바로 바꾸고 큐에도 넣어 엣지가 사라졌다.
+        // `InputManager::beginFrame` 설명 참고). 여기서 상태를 바로 바꾸면 엣지가 사라진다.
         switch ( pXev->type )
         {
             case KeyPress:
@@ -234,7 +234,7 @@ namespace sw
                 const bool  bDown  = ( pXev->type == ButtonPress );
                 const int32 mouseX = static_cast<int32>( pXev->xbutton.x );
                 const int32 mouseY = static_cast<int32>( pXev->xbutton.y );
-                // 버튼 이벤트에도 좌표를 실어 보낸다. 예전에는 좌표 없이(0, 0) 보내, 클릭할 때마다 커서가 창 왼쪽 위로 튀었다.
+                // 버튼 이벤트에도 좌표를 실어 보낸다 — 좌표 없이(0, 0) 보내면 클릭할 때마다 커서가 창 왼쪽 위로 튄다.
                 MouseButton button = MouseButton::Count;
                 switch ( pXev->xbutton.button )
                 {

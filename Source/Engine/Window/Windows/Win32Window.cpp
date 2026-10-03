@@ -190,7 +190,7 @@ namespace sw
                     if ( pThis->_bRecreating == SW_FALSE && pThis->_bResizing == SW_FALSE && pThis->_onResize.isBound() )
                     {
                         // 재진입한 WM_SIZE 는 위에서 크기만 적고 콜백을 건너뛴다. 그래서 콜백이 돌아온 뒤 크기가 바뀌었으면 **마지막 크기로 한 번
-                        // 더** 부른다 — 예전에는 바깥 호출이 넘긴 옛 크기로 끝나, 스왑체인이 다음 WM_SIZE 까지 옛 크기였다(DPI 변경의
+                        // 더** 부른다 — 바깥 호출이 넘긴 옛 크기로 끝나면 스왑체인이 다음 WM_SIZE 까지 옛 크기로 남는다(DPI 변경의
                         // SetWindowPos 가 바로 그 재진입이다). 끝없이 돌지 않게 횟수를 막는다.
                         pThis->_bResizing    = SW_TRUE;
                         uint32 resizedWidth  = 0;

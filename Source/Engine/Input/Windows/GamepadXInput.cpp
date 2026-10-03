@@ -189,7 +189,7 @@ namespace sw
         _rightStick._y       = rightY;
 
         // 트리거는 `setAxis`(4 · 5)를 거쳐 데드존을 적용한다. 리눅스 조이스틱 · 원시 이벤트 · 에디터 시뮬레이터와 같은 길이다.
-        // 예전에는 여기서 곧바로 대입해서 Windows 에서만 `setTriggerDeadzone` 이 아무 효과가 없었다.
+        // 곧바로 대입하면 Windows 에서만 `setTriggerDeadzone` 이 아무 효과가 없다.
         setAxis( 4, static_cast<float32>( state.Gamepad.bLeftTrigger ) / 255.0f );
         setAxis( 5, static_cast<float32>( state.Gamepad.bRightTrigger ) / 255.0f );
     }

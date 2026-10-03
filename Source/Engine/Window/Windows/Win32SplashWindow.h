@@ -39,9 +39,8 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
         /**
          * @brief `WM_PAINT` 한 번을 그립니다. 창 프로시저가 `BeginPaint` · `EndPaint` 사이에서 부릅니다.
-         * @details 늘린 배경 그림은 **처음 한 번** 메모리 DC 에 그려 두고 무효 영역만 복사합니다. 예전에는 상태 줄이 바뀔 때마다
-         *          창 전체를 HALFTONE `StretchDIBits` 로 다시 늘리고 글꼴을 새로 만들었습니다. 시작 시간 게임 스레드의 13 % 가
-         *          스플래시 다시 그리기였습니다(2026-09-23 프로파일).
+         * @details 늘린 배경 그림은 **처음 한 번** 메모리 DC 에 그려 두고 무효 영역만 복사합니다 — 상태 줄이 바뀔 때마다 창 전체를
+         *          HALFTONE `StretchDIBits` 로 다시 늘리고 글꼴을 새로 만들면 시작 시간 게임 스레드의 13 % 가 그것이 됩니다.
          */
         void paintWindow( HDC hDC, const RECT& rcPaint );
 #endif

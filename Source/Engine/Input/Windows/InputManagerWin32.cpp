@@ -38,8 +38,8 @@ namespace sw
 
         /**
          * @brief 마우스 메시지의 lParam 에서 클라이언트 좌표를 꺼냅니다. 좌표는 부호 있는 16 비트입니다(창 밖 캡처 중에는 음수).
-         * @details 장치에 적지 않습니다. 장치 상태는 `beginFrame` 이 큐를 재생할 때만 바뀝니다. 예전에는 lParam 이 0 이면 "좌표 없음"
-         *          으로 보고 장치의 마지막 위치를 썼는데, (0, 0) 은 창 왼쪽 위 픽셀이라는 정당한 좌표입니다.
+         * @details 장치에 적지 않습니다. 장치 상태는 `beginFrame` 이 큐를 재생할 때만 바뀝니다. lParam 0 을 "좌표 없음" 으로 보지
+         *          않습니다 — (0, 0) 은 창 왼쪽 위 픽셀이라는 정당한 좌표입니다.
          */
         void readMouseEventPositionInternal( LPARAM lParam, int32& outX, int32& outY )
         {
@@ -204,8 +204,8 @@ namespace sw
                 int32 mouseY = 0;
                 readMouseEventPositionInternal( event._lParam, mouseX, mouseY );
 
-                // 포인터가 창 안으로 들어온 첫 이동이다. 이탈 알림을 요청해 둬야 WM_MOUSELEAVE 가 온다. 예전에는 Windows 에서 이것을
-                // 아무도 하지 않아 `isPointerInside()` 가 늘 false 였고, 그래서 `isPointerOverRect()` 도 늘 false 였다.
+                // 포인터가 창 안으로 들어온 첫 이동이다. 이탈 알림을 요청해 둬야 WM_MOUSELEAVE 가 온다 — 요청하지 않으면
+                // `isPointerInside()` · `isPointerOverRect()` 가 늘 false 다.
                 if ( PointerTrackingInternal::s_bTrackingLeave == false && event._pNativeWindow != nullptr )
                 {
                     TRACKMOUSEEVENT trackEvent{};
@@ -283,9 +283,8 @@ namespace sw
                         if ( hImc != nullptr )
                         {
                             // `ImmGetCompositionStringW` 가 반환하는 것은 **바이트 수**이고 버퍼는
-                            // 와이드 문자 배열이다. 그래서 상한을 버퍼 길이에서 직접 계산한다.
-                            // 예전에는 `kMaxBuffer512`(바이트)와 `kMaxBuffer256`(문자) 두 상수가
-                            // 우연히 맞아떨어져 있었을 뿐이라, 어느 한쪽만 고치면 조용히 넘쳤다.
+                            // 와이드 문자 배열이다. 그래서 상한을 버퍼 길이에서 직접 계산한다(바이트 상수와 문자 상수를
+                            // 따로 두면 어느 한쪽만 고칠 때 조용히 넘친다).
                             using CompositionBuffer                  = fixed_wstring<constant::kMaxBuffer256>;
                             constexpr LONG kMaxCompositionByteLength = static_cast<LONG>( constant::kMaxBuffer256 * sizeof( utf16 ) );
 

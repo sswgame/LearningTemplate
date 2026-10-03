@@ -305,8 +305,8 @@ namespace sw
                 setActiveDeviceType( InputDeviceType::KeyboardMouse );
         }
 
-        // 5) 통합 ActionMap 을 이번 프레임 입력으로 갱신한다. 예전에는 아무도 부르지 않아 게임플레이 맵(`PlayerController` 가 읽는 맵)의
-        //    액션이 하나도 발동하지 않았다. 갱신은 맵의 주인이 한다 — 엔진 루프 · 리플레이 재동기화 · 시험이 같은 길을 탄다.
+        // 5) 통합 ActionMap 을 이번 프레임 입력으로 갱신한다(게임플레이가 읽는 맵). 갱신은 맵의 주인이 한다 — 엔진 루프 ·
+        //    리플레이 재동기화 · 시험이 같은 길을 탄다.
         if ( _pActionMap != nullptr )
             _pActionMap->update( deltaSeconds );
     }

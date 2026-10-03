@@ -492,8 +492,8 @@ namespace sw
                 return state._bReleased == SW_TRUE && state._holdDuration < ActionMapDefaults::kTapMaxTime;
             case ActionTrigger::Pulse:
             {
-                // 누른 뒤 간격마다 한 번. 예전에는 `타이머 >= 간격` 만 봐서 첫 간격이 지나면 **매 프레임** 발화했다(144 fps 면
-                // 초당 144 발, 30 fps 면 30 발 — 연사 속도가 프레임률을 따라갔다). 타이머는 뗄 때만 0 으로 돌아가므로, 이번 프레임에
+                // 누른 뒤 간격마다 한 번. `타이머 >= 간격` 만 보면 첫 간격이 지난 뒤 **매 프레임** 발화한다(연사 속도가 프레임률을
+                // 따라간다). 타이머는 뗄 때만 0 으로 돌아가므로, 이번 프레임에
                 // 간격 경계를 넘었는지로 판정한다(Repeat 과 같은 방식). 한 프레임이 간격보다 길어도 한 번만 발화한다.
                 if ( state._bDown == SW_FALSE )
                     return false;

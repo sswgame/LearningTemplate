@@ -1,8 +1,8 @@
 /**
  * @file WindowEvents.h
  * @brief 창 이벤트(크기 · 닫기 · 활성)입니다. 이벤트 버스(`EventDispatcher`)에 싣는 값 타입입니다.
- * @details 예전에는 Core 의 `Core/Event/EventType.h` 에 있었습니다. 창은 Engine 의 Window 층 개념이라 여기로 옮겼습니다. 엔진 예약
- *          ID(`kEventWindow*`)는 번호가 겹치지 않도록 한곳에서 보게 Core 의 표에 남아 있습니다.
+ * @details 창은 Engine 의 Window 층 개념이라 여기 있습니다. 엔진 예약 ID(`kEventWindow*`)는 번호가 겹치지 않도록 한곳에서 보게
+ *          Core 의 표(`Core/Event/EventType.h`)에 있습니다.
  * @note 지금 엔진의 창은 이것을 발행하지 않습니다 — 크기 · 닫기는 `IWindow` 의 델리게이트(`setResizeCallback` ·
  *       `setCloseQueryHandler`)로 알립니다. 이벤트 버스로 창 상태를 받고 싶은 쪽을 위한 타입입니다.
  */

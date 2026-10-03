@@ -26,7 +26,7 @@ namespace sw
         /**
          * @brief 스플래시 이미지를 **창 크기로** 줄여 `_listScaledPixel` 에 담습니다.
          * @details X11 에는 `StretchDIBits` 같은 것이 없습니다. `XPutImage` 는 **1:1 로만** 찍습니다.
-         *          그래서 예전에는 1376×768 원본이 480×280 창에 **좌상단만** 그려졌습니다.
+         *          줄이지 않으면 1376×768 원본이 480×280 창에 **좌상단만** 그려집니다.
          */
         void buildScaledImage();
 

@@ -62,9 +62,9 @@ namespace sw
 
         /**
          * @brief 프레임을 시작합니다. 장치를 폴링하고, 락프리 큐를 비워 이벤트를 **들어온 순서대로** 적용하고, 프레임 엣지를 맞춥니다.
-         * @details 창 메시지는 `processNativeEvent` 가 큐에 넣기만 합니다. 장치 상태를 바꾸는 길은 여기 하나입니다. 예전에는
-         *          메시지를 받을 때 상태를 바로 바꾸고 큐에도 넣어, 여기서 엣지를 지운 뒤 재생하면 이미 눌린 키라 "새로 눌림" 이
-         *          사라졌습니다(`wasKeyPressed` 가 실제 루프에서 뜨지 않았다). 끝에서 통합 ActionMap(`getActionMap()`)을 갱신합니다 —
+         * @details 창 메시지는 `processNativeEvent` 가 큐에 넣기만 합니다. 장치 상태를 바꾸는 길은 여기 하나입니다 — 메시지를 받을 때
+         *          상태를 바로 바꾸면 여기서 엣지를 지운 뒤 재생할 때 이미 눌린 키라 "새로 눌림" 이 사라집니다. 끝에서 통합
+         *          ActionMap(`getActionMap()`)을 갱신합니다 —
          *          그 맵을 따로 `update()` 하지 마십시오(한 프레임에 두 번 흐릅니다). 따로 만든 ActionMap 은 만든 쪽이 갱신합니다.
          * @param deltaSeconds 지난 프레임의 실제 시간(초). 진동 타이머 · 재연결 주기가 이 값으로 흐릅니다.
          */
@@ -129,7 +129,7 @@ namespace sw
         // 5) 게임플레이가 프레임마다 묻는 것만 여기서 답한다: 키 · 버튼 · 위치 · 델타 · 휠, 그리고 플랫폼에
         //    적용까지 해야 하는 잠금 · 커서 · 클립. 장치 설정(스무딩 · 가속)과 드문 조회(포인터 진입 · 이탈,
         //    가로 휠, 원시 델타, 잠금 모드 읽기)는 장치가 답한다: `getMouse()->setSmoothing()`.
-        //    같은 답을 두 이름으로 내지 않는다. 예전에는 마우스 API 23 개가 여기 그대로 복제돼 있었다.
+        //    같은 답을 두 이름으로 내지 않는다(마우스 API 를 여기 복제하지 않는다).
         // ------------------------------------------------------------------------------
         bool isKeyDown( Key key ) const { return _pKeyboard != nullptr ? _pKeyboard->isKeyDown( key ) : false; }
         bool wasKeyPressed( Key key ) const { return _pKeyboard != nullptr ? _pKeyboard->wasKeyPressed( key ) : false; }
@@ -146,8 +146,8 @@ namespace sw
 
         /**
          * @brief 포인터가 창 안에 있고 주어진 사각형(픽셀) 위에 있으면 true 입니다.
-         * @details 예전에는 ActionMap 에 있었습니다. 하지만 이것은 **액션이 아니라 장치 상태**이고, 쓰는 값도
-         *          모두 여기 있습니다(isPointerInside · getMousePosition). 물어볼 곳이 하나여야 합니다.
+         * @details 이것은 **액션이 아니라 장치 상태**라 ActionMap 이 아니라 여기 있습니다. 쓰는 값도 모두 여기 있습니다
+         *          (isPointerInside · getMousePosition).
          */
         bool isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const;
 
@@ -202,9 +202,8 @@ namespace sw
         /**
          * @brief 게임패드 슬롯 넷을 만들어 등록합니다. 플랫폼이 정하는 것은 **만드는 타입뿐**입니다.
          * @tparam GamepadType 슬롯 번호를 받는 게임패드 장치(`GamepadXInput` · `GamepadJoystick`).
-         * @details 슬롯 수(4) · 0번을 편의 포인터로 잡는 것 · 연결 콜백을 이어 주는 것은 **엔진 정책**인데,
-         *          예전에는 그 정책이 플랫폼 파일마다 한 벌씩 있었습니다. 슬롯 수를 늘리거나 콜백 규칙을
-         *          바꾸면 두 곳을 같이 고쳐야 했고, 한쪽만 고치면 **그 플랫폼만 조용히 다르게** 동작했습니다.
+         * @details 슬롯 수(4) · 0번을 편의 포인터로 잡는 것 · 연결 콜백을 이어 주는 것은 **엔진 정책**이라 여기 한 벌입니다 —
+         *          플랫폼 파일마다 두면 한쪽만 고쳐 **그 플랫폼만 조용히 다르게** 동작합니다.
          */
         template <typename GamepadType>
         void registerGamepadSlots()
@@ -228,7 +227,7 @@ namespace sw
         void setCursorVisiblePlatform( bool bVisible );
         /**
          * @brief 가운데 고정 잠금이면, 창이 포커스를 쥐고 있을 때 커서를 잠금 영역 가운데로 되돌립니다(beginFrame 끝의 플랫폼 훅).
-         * @details 예전에는 포커스를 얻을 때 · 창이 움직일 때만 가운데로 옮겨, 커서가 잠금 영역 가장자리에 닿으면 더 돌지 않았습니다.
+         * @details 프레임마다 되돌립니다 — 포커스를 얻을 때 · 창이 움직일 때만 옮기면 커서가 잠금 영역 가장자리에 닿아 더 돌지 않습니다.
          */
         void recenterLockedCursorPlatform();
         /** @brief 음소거와 상관없이 큐에 넣습니다. 포커스 · 포인터 진입 같은 **창 상태** 알림용입니다(입력이 아니다). */

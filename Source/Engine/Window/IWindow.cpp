@@ -90,14 +90,12 @@ namespace sw
         if ( _title.empty() )
             return false;
 
-        // 다시 만들어도 **보이던 창은 보여야 한다.** 예전 기반 구현이 이 한 줄을 빠뜨려서, 이 길로
-        // 들어온 창은 백엔드 교체 뒤 사라졌다(플랫폼 재정의 둘만 제대로 하고 있었다).
+        // 다시 만들어도 **보이던 창은 보여야 한다** — 빠뜨리면 백엔드 교체 뒤 창이 사라진다.
         //
-        // **묻는 것은 화면 상태가 아니라 의도다.** 한때 `isVisible()` 을 썼는데, X11 에서 그것은
-        // "창 관리자가 이미 매핑했는가" 를 묻는다. 방금 `showWindow(true)` 한 창도 아직 아니고,
-        // 최소화됐거나 다른 워크스페이스에 있어도 아니다. 그 상태로 다시 만들면 **창이 사라진다.**
-        // (윈도우에서는 `IsWindowVisible` 이 WS_VISIBLE 스타일이라 둘이 우연히 같았고, 그래서
-        // 리눅스에서만 깨졌다. WSL 에서 `WindowTest.RecreateKeepsVisibilityAndSize` 가 3회 모두 졌다.)
+        // **묻는 것은 화면 상태가 아니라 의도다.** `isVisible()` 은 X11 에서 "창 관리자가 이미 매핑했는가" 를 묻는다.
+        // 방금 `showWindow(true)` 한 창도 아직 아니고, 최소화됐거나 다른 워크스페이스에 있어도 아니다. 그 값으로 다시 만들면
+        // **창이 사라진다**(윈도우에서는 `IsWindowVisible` 이 WS_VISIBLE 스타일이라 둘이 같아 리눅스에서만 드러난다 —
+        // `WindowTest.RecreateKeepsVisibilityAndSize`).
         const bool bWasVisible = isVisibleRequested();
         captureRestorePosition();
 
