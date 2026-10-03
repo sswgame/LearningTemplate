@@ -10,6 +10,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -89,7 +90,7 @@ SW_TEST_CASE( GameObjectManagerTest, OwnershipReleasedAfterDeferredDestroy )
 SW_TEST_CASE( GameObjectManagerTest, SequentialAndParallelTick )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject* a = manager.createGameObject( hashed_string( "A" ) );
     GameObject* b = manager.createGameObject( hashed_string( "B" ) );
@@ -118,7 +119,7 @@ SW_TEST_CASE( GameObjectManagerTest, SequentialAndParallelTick )
 SW_TEST_CASE( GameObjectManagerTest, ParallelTickReadsStableHierarchyTransforms )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject* parentObj = manager.createGameObject( hashed_string( "Parent" ) );
     GameObject* childObj  = manager.createGameObject( hashed_string( "Child" ) );
@@ -154,7 +155,7 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTickReadsStableHierarchyTransforms 
 SW_TEST_CASE( GameObjectManagerTest, ParallelTickLeavesTransformsCleanWhenUnchanged )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject*     obj  = manager.createGameObject( hashed_string( "CleanRoot" ) );
     SceneComponent* root = obj->addComponent<SceneComponent>();
@@ -176,7 +177,7 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTickLeavesTransformsCleanWhenUnchan
 SW_TEST_CASE( GameObjectManagerTest, DestroyDuringTickIsDeferredThenApplied )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject* keeper = manager.createGameObject( hashed_string( "TickKeeper" ) );
     GameObject* victim = manager.createGameObject( hashed_string( "TickVictim" ) );
@@ -205,7 +206,7 @@ SW_TEST_CASE( GameObjectManagerTest, DestroyDuringTickIsDeferredThenApplied )
 SW_TEST_CASE( GameObjectManagerTest, DeferredTransformSkipsDestroyedComponent )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject* keeper = manager.createGameObject( hashed_string( "TransformKeeper" ) );
     GameObject* victim = manager.createGameObject( hashed_string( "TransformVictim" ) );
@@ -232,7 +233,7 @@ SW_TEST_CASE( GameObjectManagerTest, DeferredTransformSkipsDestroyedComponent )
 SW_TEST_CASE( GameObjectManagerTest, DeferredAttachDuringTickApplies )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject* parent = manager.createGameObject( hashed_string( "AttachParent" ) );
     GameObject* child  = manager.createGameObject( hashed_string( "AttachChild" ) );
@@ -283,7 +284,7 @@ SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
     if ( sw::engine::areEngineServicesBound() == false )
         SW_TEST_SKIP( "engine services are not bound" );
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     for ( uint32 index = 0; index < 4; ++index )
         manager.createGameObject( hashed_string( "ForeignWaitTicker" ) )->addComponent<MockMeshComponent>();
     manager.tick( 0.016f );
@@ -423,7 +424,7 @@ SW_TEST_CASE( GameObjectPoolTest, GameObjectPoolMemoryReuseAndStateReset )
 SW_TEST_CASE( ComponentPoolTest, PolymorphicComponentPoolIsolationAndAddressRecycle )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject* pActor = manager.createGameObject( sw::hashed_string( "TestActor" ) );
     SW_ASSERT_NOT_NULL( pActor );
@@ -466,7 +467,7 @@ SW_TEST_CASE( ComponentPoolTest, PolymorphicComponentPoolIsolationAndAddressRecy
 SW_TEST_CASE( ComponentPoolTest, ComponentPoolConstructorAndDestructorExactTracking )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::MockPoolLifecycleComponent::s_ctorCount.store( 0, std::memory_order_relaxed );
     sw::MockPoolLifecycleComponent::s_dtorCount.store( 0, std::memory_order_relaxed );
@@ -511,7 +512,7 @@ SW_TEST_CASE( ComponentPoolTest, ComponentPoolConstructorAndDestructorExactTrack
 SW_TEST_CASE( ComponentPoolTest, ComponentPoolHighFrequencyChurnStress )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject* pActor = manager.createGameObject( sw::hashed_string( "ChurnActor" ) );
     SW_ASSERT_NOT_NULL( pActor );
@@ -540,7 +541,7 @@ SW_TEST_CASE( ComponentPoolTest, ComponentPoolHighFrequencyChurnStress )
 SW_TEST_CASE( GameObjectManagerPoolTest, SceneClearAndPoolReuseLifecycle )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     // 1) 씬 1 생성: 200개 액터 및 복합 컴포넌트 구성
     constexpr uint32 kObjectCount = 200;
@@ -724,7 +725,7 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTransformFlushMatchesSerial )
     auto runScene = [&]( uint32 rootCount )
     {
         sw::GameObjectManager manager;
-        sw::RegisterMockComponents( manager );
+        sw::RegisterMockComponents();
 
         sw::vector<MockTickSceneComponent*> listChild;
         listChild.reserve( rootCount );
@@ -782,43 +783,184 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTransformFlushMatchesSerial )
     runScene( sw::SceneTransformHierarchy::kParallelFlushRootCount + 37 );
 }
 
+/**
+ * @brief [GameObjectManagerTest] 코드젠은 추상이 아닌 컴포넌트 타입에만 생성 함수(`TypeInfo::_addComponent`)를 싣는다 — 이름으로 만드는 길은 그 칸만 본다
+ * @details 컴포넌트 팩토리 표는 따로 없다(언리얼 `UClass` 가 리플렉션과 생성을 함께 든다). 추상 기반(`LightComponent`)과 컴포넌트가 아닌 반사 타입
+ *          (`EngineData`)은 칸이 비어 이름으로 만들 수 없고, "Add Component" 목록에도 없다.
+ */
+SW_TEST_CASE( GameObjectManagerTest, CodegenFillsCreationFunctionForConcreteComponentsOnly )
+{
+    const TypeRegistry& registry   = engine::getTypeRegistry();
+    const TypeInfo*     pScene     = registry.findType( hashed_string( "SceneComponent" ) );
+    const TypeInfo*     pLight     = registry.findType( hashed_string( "LightComponent" ) );
+    const TypeInfo*     pEngineDat = registry.findType( hashed_string( "EngineData" ) );
+    SW_ASSERT_TRUE( pScene != nullptr && pLight != nullptr && pEngineDat != nullptr );
+    SW_EXPECT_TRUE( pScene->_addComponent != nullptr );
+    SW_EXPECT_TRUE( pLight->_addComponent == nullptr );
+    SW_EXPECT_TRUE( pEngineDat->_addComponent == nullptr );
+
+    GameObjectManager manager;
+    GameObject*       pObj = manager.createGameObject( hashed_string( "Probe" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    Component* pByName = manager.addComponentByName( pObj, hashed_string( "SceneComponent" ) );
+    SW_ASSERT_NOT_NULL( pByName );
+    SW_EXPECT_EQUAL( pScene, pByName->getTypeInfo() );
+    SW_EXPECT_NULL( manager.addComponentByName( pObj, hashed_string( "LightComponent" ), false ) );
+    SW_EXPECT_NULL( manager.addComponentByName( pObj, hashed_string( "EngineData" ), false ) );
+
+    const vector<hashed_string> listName = GameObjectManager::getRegisteredComponentTypeNames();
+    SW_EXPECT_TRUE( std::find( listName.begin(), listName.end(), hashed_string( "SceneComponent" ) ) != listName.end() );
+    SW_EXPECT_TRUE( std::find( listName.begin(), listName.end(), hashed_string( "LightComponent" ) ) == listName.end() );
+    manager.clear();
+}
+
 #if !defined( SW_SHIPPING )
+namespace sw
+{
+    /** @brief 키트 모듈의 컴포넌트를 흉내 냅니다. 생성 코드처럼 모듈 이름을 "GameFramework" 로 구운 TypeInfo 를 씁니다. */
+    class KitProbeComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
+    };
+
+    /** @brief 짧은 이름 "ShadowProbeComponent" 를 먼저 차지하는 타입입니다(FQN `swtest::left::ShadowProbeComponent`). */
+    class ShadowProbeLeftComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
+    };
+
+    /** @brief 같은 짧은 이름으로 나중에 올라 그 이름을 가져가는 타입입니다(FQN `swtest::right::ShadowProbeComponent`). */
+    class ShadowProbeRightComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
+    };
+} // namespace sw
+
 namespace
 {
-    /** @brief 키트의 생성 코드처럼 모듈 이름을 "GameFramework" 로 구운 팩토리 등록입니다. */
-    void registerKitFactoryWithBakedNameInternal( GameObjectManager& manager )
+    /** @brief 키트의 코드젠이 만드는 것과 같은 모양의 줄입니다(구운 모듈 이름 · 생성 함수). */
+    TypeInfo makeKitProbeTypeInfo()
     {
-        manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ), hashed_string( "GameFramework" ) );
+        TypeInfo info{};
+        info._name               = hashed_string( "KitProbeComponent" );
+        info._fullyQualifiedName = hashed_string( "sw::KitProbeComponent" );
+        info._moduleName         = hashed_string( "GameFramework" );
+        info._size               = sizeof( KitProbeComponent );
+        info._addComponent       = &GameObject::addComponentTo<KitProbeComponent>;
+        return info;
+    }
+
+    /** @brief 짧은 이름이 같은 두 시험 타입의 줄입니다. 모듈 "TestShadowProbe" 로 올린다. */
+    TypeInfo makeShadowProbeTypeInfo( const utf8* pFqn, size_t size, Component* ( *addComponent )(GameObject*))
+    {
+        TypeInfo info{};
+        info._name               = hashed_string( "ShadowProbeComponent" );
+        info._fullyQualifiedName = hashed_string( pFqn );
+        info._moduleName         = hashed_string( "TestShadowProbe" );
+        info._size               = size;
+        info._addComponent       = addComponent;
+        return info;
+    }
+
+    /** @brief 키트 DLL 의 TypeRegistrar 사슬에 매달리는 등록 함수입니다. */
+    void registerKitProbeTypeInternal( TypeRegistry& registry )
+    {
+        registry.registerClass( makeKitProbeTypeInfo() );
     }
 } // namespace
 
-/**
- * @brief [GameObjectManagerTest] 팩토리는 생성 코드에 구운 이름이 아니라 **등록한 모듈**에 속한다 — 그 모듈을 내리면 지워진다
- * @details 파서의 경로 규칙이 `Source/GameFramework/Kits/<키트>` 를 "GameFramework" 로 읽어, 키트 팩토리가 그 이름으로 구워졌다. 키트를 내려도
- *          `unregisterFactoriesByModule( "GF_<키트>" )` 가 아무것도 지우지 않아, 내린 이미지의 람다가 표에 남아 다음 `addComponentByName` 이
- *          내려간 코드로 뛰었다.
- */
-SW_TEST_CASE( GameObjectManagerTest, FactoryBelongsToTheRegisteringModuleNotTheBakedName )
+const TypeInfo* sw::ShadowProbeLeftComponent::StaticType()
 {
-    static ComponentFactoryRegistrar* s_pKitHead{ nullptr };
-    static ComponentFactoryRegistrar  s_kitRegistrar{ &registerKitFactoryWithBakedNameInternal, s_pKitHead };
-    (void)MockAudioComponent::StaticType();
+    static const TypeInfo s_info = makeShadowProbeTypeInfo( "swtest::left::ShadowProbeComponent", sizeof( ShadowProbeLeftComponent ),
+                                                            &GameObject::addComponentTo<ShadowProbeLeftComponent> );
+    return &s_info;
+}
 
-    GameObjectManager manager;
-    manager.registerPendingFactories( "GF_TestKit", s_pKitHead );
+const TypeInfo* sw::ShadowProbeRightComponent::StaticType()
+{
+    static const TypeInfo s_info = makeShadowProbeTypeInfo( "swtest::right::ShadowProbeComponent", sizeof( ShadowProbeRightComponent ),
+                                                            &GameObject::addComponentTo<ShadowProbeRightComponent> );
+    return &s_info;
+}
+
+/** @brief 코드젠의 `StaticType()` 처럼 레지스트리의 줄(올린 모듈 이름이 적힌 것)을 돌려줍니다. 아직 오르지 않았거나 내려갔으면 구운 사본입니다. */
+const TypeInfo* sw::KitProbeComponent::StaticType()
+{
+    static const TypeInfo s_bakedInfo = makeKitProbeTypeInfo();
+    const TypeInfo*       pRegistered = engine::getTypeRegistry().findType( hashed_string( "sw::KitProbeComponent" ) );
+    return ( pRegistered != nullptr ) ? pRegistered : &s_bakedInfo;
+}
+
+/**
+ * @brief [GameObjectManagerTest] 생성 함수는 타입 표 하나에 있다 — 먼저 만든 매니저도 나중에 오른 모듈 타입을 만들고, 모듈을 내리면 어느 매니저도 못 만든다
+ * @details 예전에는 매니저마다 만들 때 팩토리 표를 모았다. 씬에 속하지 않은 매니저(비동기 로드의 워커 · 시험)는 나중에 오른 모듈을 몰랐고, 내린
+ *          모듈의 람다를 그대로 들었다. 그리고 생성 함수의 모듈은 구운 이름("GameFramework")이 아니라 **올린 모듈**("GF_TestKit")이다 — 그래야
+ *          키트를 내릴 때 같이 걷힌다. 걷힌 뒤에는 미리 들고 있던 `TypeInfo*` 의 칸도 비어 있어야 한다(내려간 이미지를 가리키면 안 된다).
+ */
+SW_TEST_CASE( GameObjectManagerTest, CreationFunctionLivesInTheTypeTableAndLeavesWithItsModule )
+{
+    static TypeRegistrar* s_pKitHead{ nullptr };
+    static TypeRegistrar  s_kitRegistrar{ &registerKitProbeTypeInternal, s_pKitHead };
+
+    GameObjectManager manager; // 모듈보다 먼저 만든다
+    TypeRegistry&     registry = engine::getTypeRegistry();
+    registry.registerPendingTypes( "GF_TestKit", s_pKitHead, nullptr );
+
+    const TypeInfo* pKitType = registry.findType( hashed_string( "KitProbeComponent" ) );
+    SW_ASSERT_NOT_NULL( pKitType );
+    SW_EXPECT_STREQ( "GF_TestKit", pKitType->_moduleName.c_str() );
+
     GameObject* pFirst = manager.createGameObject( hashed_string( "First" ) );
     SW_ASSERT_NOT_NULL( pFirst );
-    SW_EXPECT_NOT_NULL( manager.addComponentByName( pFirst, hashed_string( "MockAudioComponent" ) ) );
+    SW_EXPECT_NOT_NULL( manager.addComponentByName( pFirst, hashed_string( "KitProbeComponent" ) ) );
+    // 저장 이름의 `#번호` 꼬리와 FQN 으로도 같은 타입을 찾는다.
+    SW_EXPECT_NOT_NULL( manager.addComponentByName( pFirst, hashed_string( "KitProbeComponent#2" ) ) );
+    SW_EXPECT_NOT_NULL( manager.addComponentByName( pFirst, hashed_string( "sw::KitProbeComponent" ) ) );
 
-    manager.unregisterFactoriesByModule( "GF_TestKit" );
+    SW_EXPECT_EQUAL( 3u, manager.destroyComponentsOfModule( "GF_TestKit" ) );
+    registry.unregisterTypesByModule( "GF_TestKit" );
+    SW_EXPECT_TRUE_MSG( pKitType->_addComponent == nullptr, "내린 모듈의 생성 함수가 TypeInfo 에 남았습니다" );
+
     GameObject* pSecond = manager.createGameObject( hashed_string( "Second" ) );
     SW_ASSERT_NOT_NULL( pSecond );
-    SW_EXPECT_TRUE_MSG( manager.addComponentByName( pSecond, hashed_string( "MockAudioComponent" ), false ) == nullptr,
-                        "내린 키트의 팩토리가 남았습니다 — 구운 모듈 이름(GameFramework)으로 등록됐습니다" );
-
-    // `registerPendingFactories` 는 전역 모듈 헤드 표에도 적는다. 다른 케이스의 매니저가 이 헤드를 모으지 않게 뗀다.
-    GameObjectManager::unregisterModuleFactoryHead( "GF_TestKit" );
+    SW_EXPECT_TRUE_MSG( manager.addComponentByName( pSecond, hashed_string( "KitProbeComponent" ), false ) == nullptr,
+                        "내린 키트의 컴포넌트를 아직 만들 수 있습니다" );
     manager.clear();
+}
+
+/**
+ * @brief [GameObjectManagerTest] 이름으로 만들기는 타입 표의 **지금** 답을 따른다 — 같은 짧은 이름이 다른 타입으로 다시 오르면 그 타입을 만든다
+ * @details `addComponentByName` 은 스레드마다 이름 → 타입 캐시를 둔다(표 조회의 잠금 · 해시 두 번을 덜려고). 캐시는 표의 세대로 버려야 한다 —
+ *          그러지 않으면 짧은 이름을 가져간 새 타입 대신 먼저 본 타입을 계속 만든다(옛 씬이 다른 컴포넌트를 만드는 것과 같은 결함).
+ */
+SW_TEST_CASE( GameObjectManagerTest, AddComponentByNameFollowsTheTypeTableWhenANameIsTaken )
+{
+    TypeRegistry& registry = engine::getTypeRegistry();
+    registry.registerClass( *ShadowProbeLeftComponent::StaticType() );
+
+    GameObjectManager manager;
+    GameObject*       pObj = manager.createGameObject( hashed_string( "Probe" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    const Component* pFirst = manager.addComponentByName( pObj, hashed_string( "ShadowProbeComponent" ) );
+    SW_ASSERT_NOT_NULL( pFirst );
+    SW_EXPECT_STREQ( "swtest::left::ShadowProbeComponent", pFirst->getTypeInfo()->_fullyQualifiedName.c_str() );
+
+    {
+        test::ScopedDefensiveTestLog expected( "a second type takes the short name ShadowProbeComponent" );
+        registry.registerClass( *ShadowProbeRightComponent::StaticType() );
+    }
+    const Component* pSecond = manager.addComponentByName( pObj, hashed_string( "ShadowProbeComponent" ) );
+    SW_ASSERT_NOT_NULL( pSecond );
+    SW_EXPECT_STREQ( "swtest::right::ShadowProbeComponent", pSecond->getTypeInfo()->_fullyQualifiedName.c_str() );
+
+    manager.clear();
+    registry.unregisterTypesByModule( "TestShadowProbe" );
 }
 #endif
 
@@ -831,7 +973,7 @@ SW_TEST_CASE( GameObjectManagerTest, FactoryBelongsToTheRegisteringModuleNotTheB
 SW_TEST_CASE( GameObjectManagerTest, ModuleSweepSurvivesCallbacksRemovingSiblings )
 {
     GameObjectManager manager;
-    RegisterMockComponents( manager );
+    RegisterMockComponents();
     GameObject* pOwner = manager.createGameObject( hashed_string( "SweepOwner" ) );
     SW_ASSERT_NOT_NULL( pOwner );
     MockCallbackComponent* pFirst  = pOwner->addComponent<MockCallbackComponent>();

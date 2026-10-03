@@ -189,12 +189,6 @@ namespace sw
 
         for ( const ParsedTypeInfo& typeInfo : _header._listType )
         {
-            if ( typeInfo.requiresComponentFactory() )
-                emitComponentFactoryRegistrar( buffer, typeInfo );
-        }
-
-        for ( const ParsedTypeInfo& typeInfo : _header._listType )
-        {
             emitReflectTypeTraits( buffer, typeInfo );
             if ( typeInfo.requiresTypeApi() )
                 emitTypeInfoAccessors( buffer, typeInfo );
@@ -220,16 +214,6 @@ namespace sw
     {
         appendTemplate( out, tplConstants::kTypeInfoAccessors, {
                                                                    { templateKeyConstants::kFqn, typeInfo._fullyQualifiedName }
-        } );
-    }
-
-    void CodeGenerator::emitComponentFactoryRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const
-    {
-        appendTemplate( out, tplConstants::kComponentFactoryRegistrar, {
-                                                                           {        templateKeyConstants::kId, sanitizeIdentifier( typeInfo._fullyQualifiedName )},
-                                                                           {       templateKeyConstants::kFqn,                       typeInfo._fullyQualifiedName},
-                                                                           {      templateKeyConstants::kName,                                     typeInfo._name},
-                                                                           {templateKeyConstants::kModuleName,                                        _moduleName},
         } );
     }
 
@@ -503,6 +487,8 @@ namespace sw
             fe.push( 3 );
             fe.flagIf( typeInfo._bAbstract, "info._bAbstract" );
             fe.flagIf( typeInfo._bStatic, "info._bStatic" );
+            // 컴포넌트 생성 함수는 타입 줄의 칸이다(언리얼 `UClass` 의 생성자 칸과 같은 자리). 이름으로 만드는 길은 이 칸만 본다.
+            fe.flagIf( typeInfo.requiresComponentFactory(), "info._addComponent", "&::sw::GameObject::addComponentTo<" + typeInfo._fullyQualifiedName + ">" );
         }
 
         appendTemplate( out, tplConstants::kTypeRegistrarBegin, {

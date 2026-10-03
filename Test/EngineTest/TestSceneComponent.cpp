@@ -137,7 +137,7 @@ SW_TEST_CASE( SceneComponentTest, LargeWorldCoordinatesAndCameraRelativeRenderin
 SW_TEST_CASE( SceneComponentTest, LargeWorldCoordinatesHierarchy )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject* root       = manager.createGameObject( hashed_string( "LWCRoot" ) );
     GameObject* child      = manager.createGameObject( hashed_string( "LWCChild" ) );
@@ -276,7 +276,7 @@ SW_TEST_CASE( SceneComponentTest, SlowMotionIsNotSwallowedByTheChangeThreshold )
 SW_TEST_CASE( SceneComponentTest, DetachInsideTickIsDeferredUntilAfterTheTick )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject*     pParent     = manager.createGameObject( sw::hashed_string( "DeferParent" ) );
     sw::SceneComponent* pParentComp = pParent->addComponent<sw::SceneComponent>();
@@ -304,7 +304,7 @@ SW_TEST_CASE( SceneComponentTest, ClearTagsInsideTickIsDeferredUntilAfterTheTick
     constexpr TagID kProbeTag = "Status.Probe"_tag;
 
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObject*             pObj  = manager.createGameObject( sw::hashed_string( "TaggedTicker" ) );
     sw::MockTickSceneComponent* pComp = pObj->addComponent<sw::MockTickSceneComponent>();
     SW_ASSERT_NOT_NULL( pComp );
@@ -328,7 +328,7 @@ SW_TEST_CASE( SceneComponentTest, AttachInsideTickIsRejectedBeforeItIsDeferred )
 {
     sw::GameObjectManager managerChild;
     sw::GameObjectManager managerParent;
-    sw::RegisterMockComponents( managerChild );
+    sw::RegisterMockComponents();
 
     sw::GameObject* pParent = managerParent.createGameObject( sw::hashed_string( "OtherSceneParent" ) );
     SW_ASSERT_NOT_NULL( pParent->addComponent<sw::SceneComponent>() );
@@ -395,7 +395,7 @@ SW_TEST_CASE( SceneComponentTest, LazyReadDoesNotStrandDirtySiblings )
     {
         const bool            bBatch = ( pass == 0 );
         sw::GameObjectManager manager;
-        sw::RegisterMockComponents( manager );
+        sw::RegisterMockComponents();
         sw::MockTickSceneComponent* arrNode[4] = {};
         const utf8*                 arrName[4] = { "R", "N", "C1", "C2" };
         for ( uint32 index = 0; index < 4; ++index )
@@ -520,7 +520,7 @@ SW_TEST_CASE( SceneComponentTest, RotationCacheFollowsEveryRotationChange )
 SW_TEST_CASE( SceneComponentTest, TickWriteToOwnSlotIsHiddenUntilAfterTheTick )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject*             pMoverObj = manager.createGameObject( sw::hashed_string( "SlotMover" ) );
     sw::MockTickSceneComponent* pMover    = pMoverObj->addComponent<sw::MockTickSceneComponent>();

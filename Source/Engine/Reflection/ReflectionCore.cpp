@@ -301,6 +301,7 @@ namespace sw
     TypeInfo::TypeInfo() noexcept
         : _size{ 0 }
         , _destroyInstance{ nullptr }
+        , _addComponent{ nullptr }
         , _name{}
         , _fullyQualifiedName{}
         , _parentFQN{}
@@ -331,6 +332,7 @@ namespace sw
     TypeInfo::TypeInfo( const TypeInfo& other )
         : _size{ other._size }
         , _destroyInstance{ other._destroyInstance }
+        , _addComponent{ other._addComponent }
         , _name{ other._name }
         , _fullyQualifiedName{ other._fullyQualifiedName }
         , _parentFQN{ other._parentFQN }
@@ -363,6 +365,7 @@ namespace sw
     TypeInfo::TypeInfo( TypeInfo&& other ) noexcept
         : _size{ other._size }
         , _destroyInstance{ other._destroyInstance }
+        , _addComponent{ other._addComponent }
         , _name{ other._name }
         , _fullyQualifiedName{ other._fullyQualifiedName }
         , _parentFQN{ other._parentFQN }
@@ -393,6 +396,7 @@ namespace sw
         other._typeId          = 0;
         other._size            = 0;
         other._destroyInstance = nullptr;
+        other._addComponent    = nullptr;
         other._bIsCacheBuilt   = SW_FALSE;
     }
 
@@ -426,6 +430,7 @@ namespace sw
 
         _size               = other._size;
         _destroyInstance    = other._destroyInstance;
+        _addComponent       = other._addComponent;
         _name               = other._name;
         _fullyQualifiedName = other._fullyQualifiedName;
         _parentFQN          = other._parentFQN;
@@ -450,6 +455,7 @@ namespace sw
 
         _size               = other._size;
         _destroyInstance    = other._destroyInstance;
+        _addComponent       = other._addComponent;
         _name               = other._name;
         _fullyQualifiedName = other._fullyQualifiedName;
         _parentFQN          = other._parentFQN;
@@ -467,6 +473,7 @@ namespace sw
         other._typeId          = 0;
         other._size            = 0;
         other._destroyInstance = nullptr;
+        other._addComponent    = nullptr;
         other._bIsCacheBuilt   = SW_FALSE;
 
         return *this;
@@ -1242,6 +1249,7 @@ namespace sw
         _mapNameToMethod.clear();
         _metadata                   = {};
         _destroyInstance            = nullptr;
+        _addComponent               = nullptr;
         _bIsCacheBuilt              = SW_FALSE;
         _bIsPODCalculated           = SW_FALSE;
         _bIsPODFastPath             = SW_FALSE;

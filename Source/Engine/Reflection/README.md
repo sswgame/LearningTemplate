@@ -91,8 +91,9 @@ public:
 };
 ```
 
-`Component` 를 상속하고 `REFLECT_BODY()` 가 있으면 **컴포넌트 팩토리**도 생성되어  
-이름으로 `GameObjectManager::addComponentByName` / 씬 로드가 가능합니다.
+`Component` 를 상속하고 `REFLECT_BODY()` 가 있으면(추상이 아니면) 코드젠이 `TypeInfo::_addComponent` 에 **생성 함수**
+(`GameObject::addComponentTo<T>`)를 싣습니다. 이름으로 만드는 길(`GameObjectManager::addComponentByName` · 씬 · 프리팹 로드 · 에디터 "Add Component")은
+이 칸 하나를 봅니다 — 따로 든 팩토리 표는 없습니다(언리얼 `UClass` 가 리플렉션과 생성을 함께 드는 것과 같은 자리). 모듈이 내려가면 타입과 함께 걷힙니다.
 
 ### 3) Enum
 

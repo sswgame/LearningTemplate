@@ -22,9 +22,8 @@ namespace sw
     {
         struct ModuleHeadRecord
         {
-            TypeRegistrar*                 _pTypeHead{ nullptr };
-            EnumRegistrar*                 _pEnumHead{ nullptr };
-            sw::ComponentFactoryRegistrar* _pFactoryHead{ nullptr };
+            TypeRegistrar* _pTypeHead{ nullptr };
+            EnumRegistrar* _pEnumHead{ nullptr };
         };
 
         unordered_map<string, ModuleHeadRecord>& getModuleHeadCache()
@@ -42,7 +41,7 @@ namespace sw
             // 이미 등록한 모듈인데 머리에 새 등록기가 있으면 **다른 이미지**의 것이다 — 핫 리로드는 올린 직후 머리를 따로 걷어 넘기므로(인자 있는
             // 오버로드) 이 자리에서는 비어 있어야 한다. 지연 로드로 늦게 올라온 공용 모듈이 이렇게 남의 이름으로 들어갔다. 알린다.
             if ( getModuleHeadCache().contains( string{ moduleName } ) &&
-                 ( TypeRegistrar::getHead() != nullptr || sw::ComponentFactoryRegistrar::getHead() != nullptr ) )
+                 TypeRegistrar::getHead() != nullptr )
             {
                 SW_LOG_WARNING( "Registrars of another image were waiting when '%#' registered again — they are attributed to '%#'. "
                                 "Load shared modules explicitly first (LiveReloadManager::loadSharedModule).",
@@ -50,24 +49,15 @@ namespace sw
             }
             // **캐시 병합은 아래 오버로드가 한 자리에서 한다.** 예전에는 같은 18줄이 여기에도
             // 한 벌 더 있었고(조건만 뒤집힌 같은 로직), 그러고 나서 아래를 불러 또 병합했다.
-            registerModuleTypes( moduleName,
-                                 TypeRegistrar::getHead(),
-                                 EnumRegistrar::getHead(),
-                                 sw::ComponentFactoryRegistrar::getHead(),
-                                 GlobalVariableRegistrar::getHead() );
+            registerModuleTypes( moduleName, TypeRegistrar::getHead(), EnumRegistrar::getHead(), GlobalVariableRegistrar::getHead() );
 
             // 소비했으므로 비운다. 다음 DLL 이 자기 것만 매달도록.
-            TypeRegistrar::getHead()                 = nullptr;
-            EnumRegistrar::getHead()                 = nullptr;
-            sw::ComponentFactoryRegistrar::getHead() = nullptr;
-            GlobalVariableRegistrar::getHead()       = nullptr;
+            TypeRegistrar::getHead()           = nullptr;
+            EnumRegistrar::getHead()           = nullptr;
+            GlobalVariableRegistrar::getHead() = nullptr;
         }
 
-        void registerModuleTypes( string_view                    moduleName,
-                                  TypeRegistrar*                 pTypeHead,
-                                  EnumRegistrar*                 pEnumHead,
-                                  sw::ComponentFactoryRegistrar* pFactoryHead,
-                                  GlobalVariableRegistrar*       pVariableHead )
+        void registerModuleTypes( string_view moduleName, TypeRegistrar* pTypeHead, EnumRegistrar* pEnumHead, GlobalVariableRegistrar* pVariableHead )
         {
             // 전역 변수는 새로 뗀 것만 올린다(아래 캐시에 넣지 않는다). 모듈이 자기 변수를 읽기 전에 커맨드라인 보류값이 여기서 적용된다.
             if ( pVariableHead != nullptr )
@@ -89,25 +79,19 @@ namespace sw
                     it->second._pEnumHead = pEnumHead;
                 else
                     pEnumHead = it->second._pEnumHead;
-
-                if ( pFactoryHead != nullptr )
-                    it->second._pFactoryHead = pFactoryHead;
-                else
-                    pFactoryHead = it->second._pFactoryHead;
             }
-            else if ( pTypeHead != nullptr || pEnumHead != nullptr || pFactoryHead != nullptr )
+            else if ( pTypeHead != nullptr || pEnumHead != nullptr )
             {
-                cache[ownedModuleName] = ModuleHeadRecord{ pTypeHead, pEnumHead, pFactoryHead };
+                cache[ownedModuleName] = ModuleHeadRecord{ pTypeHead, pEnumHead };
             }
 
+            // 컴포넌트 생성 함수는 타입과 함께 오른다(`TypeInfo::_addComponent`) — 씬마다 팩토리 표를 다시 채울 일이 없다.
             getTypeRegistry().registerPendingTypes( moduleName, pTypeHead, pEnumHead );
-            GameObjectManager::registerModuleFactoryHead( moduleName, pFactoryHead );
 
             for ( const auto& scene : getSceneManager().getLoadedScenes() )
             {
                 if ( scene && scene->getObjectManager() )
                 {
-                    scene->getObjectManager()->registerPendingFactories( moduleName, pFactoryHead );
                     // 살아 있는 컴포넌트에 기본값을 다시 찍지 않는다 — 기본값은 만들 때 한 번이다(`ComponentDefaults`). 예전에는 여기서
                     // (`rebindAllCachedTypeInfo`) 씬의 모든 컴포넌트에 덮어써 게임이 바꾼 값이 모듈 로드마다 기본값으로 돌아갔다.
                     // TypeInfo 주소는 고정이라(`TypeRegistry`) 다시 묶을 것도 없다. 틱 항목만 다시 짓게 한다.
@@ -120,16 +104,12 @@ namespace sw
         void unregisterModuleTypes( string_view moduleName )
         {
             getModuleHeadCache().erase( string{ moduleName } );
-            GameObjectManager::unregisterModuleFactoryHead( moduleName );
             // 씬은 엔진이 소유해 모듈보다 오래 산다. 이 모듈 타입의 인스턴스가 남아 있으면 vtable 이 사라진 객체가 된다.
-            // 팩토리를 걷기 **전에** 인스턴스부터 지운다(소멸자가 아직 있는 동안).
+            // 타입(생성 함수 포함)을 걷기 **전에** 인스턴스부터 지운다(소멸자가 아직 있는 동안).
             for ( const auto& scene : getSceneManager().getLoadedScenes() )
             {
                 if ( scene && scene->getObjectManager() )
-                {
                     scene->getObjectManager()->destroyComponentsOfModule( moduleName );
-                    scene->getObjectManager()->unregisterFactoriesByModule( moduleName );
-                }
             }
             getTypeRegistry().unregisterTypesByModule( moduleName );
             getGlobalVariableManager().unregisterVariablesByModule( moduleName );

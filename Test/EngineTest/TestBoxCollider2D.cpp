@@ -34,7 +34,7 @@ namespace sw
 
     inline const TypeInfo* MockOverlapListenerComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockOverlapListenerComponent" ), hashed_string( "sw::MockOverlapListenerComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockOverlapListenerComponent>, hashed_string( "MockOverlapListenerComponent" ), hashed_string( "sw::MockOverlapListenerComponent" ),
                                           sizeof( MockOverlapListenerComponent ) );
     }
 } // namespace sw

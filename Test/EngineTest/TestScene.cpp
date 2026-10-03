@@ -194,7 +194,7 @@ SW_TEST_CASE( SceneTest, WorldPlayingFollowsTheActiveScene )
     SW_ASSERT_TRUE( sceneManager.initialize() );
     sw::Scene* pFirst = sceneManager.createScene( "PlayFirst" );
     SW_ASSERT_NOT_NULL( pFirst );
-    sw::RegisterMockComponents( *pFirst->getObjectManager() );
+    sw::RegisterMockComponents();
 
     int32                  endCount = 0;
     sw::GameObject*        pActor   = pFirst->getObjectManager()->createGameObject( sw::hashed_string( "Actor" ) );
@@ -217,7 +217,7 @@ SW_TEST_CASE( SceneTest, WorldPlayingFollowsTheActiveScene )
     SW_EXPECT_FALSE( pSecond->getObjectManager()->hasBegunPlay() );
 
     // 플레이 중에 내리면 활성 씬이 **살아 있는 동안** 끝난다. 예전 순서(씬을 지운 뒤 활성을 비움)면 풀린 씬을 만진다.
-    sw::RegisterMockComponents( *pSecond->getObjectManager() );
+    sw::RegisterMockComponents();
     int32                  shutdownEndCount = 0;
     sw::MockMeshComponent* pLast            = pSecond->getObjectManager()->createGameObject( sw::hashed_string( "Last" ) )->addComponent<sw::MockMeshComponent>();
     pLast->_pEndPlayCount                   = &shutdownEndCount;
@@ -1191,7 +1191,7 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
     sw::string       savedState;
     {
         sw::GameObjectManager authoring;
-        sw::RegisterMockComponents( authoring );
+        sw::RegisterMockComponents();
         sw::GameObject* pSource = authoring.createGameObject( sw::hashed_string( "Lifecycle" ) );
         SW_ASSERT_NOT_NULL( pSource->addComponent<sw::MockPoolLifecycleComponent>() );
         sw::PrefabAsset asset;
@@ -1206,7 +1206,7 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
     SW_ASSERT_TRUE( manager.initialize() );
     sw::Scene* pScene = manager.createScene( "PrefabOnceWorld" );
     SW_ASSERT_NOT_NULL( pScene );
-    sw::RegisterMockComponents( *pScene->getObjectManager() );
+    sw::RegisterMockComponents();
 
     sw::SceneDocument             doc;
     sw::SceneDocument::EntityNode entity;

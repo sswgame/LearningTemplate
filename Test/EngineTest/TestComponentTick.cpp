@@ -29,7 +29,7 @@ using namespace sw;
 SW_TEST_CASE( ComponentTickGroupTest, MultiLevelInheritanceTickGroupChronologicalSequence )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::vector<sw::string> listTickOrder;
 
@@ -78,7 +78,7 @@ SW_TEST_CASE( ComponentTickGroupTest, MultiLevelInheritanceTickGroupChronologica
 SW_TEST_CASE( ComponentTickGroupTest, ParentChildHierarchyHeterogeneousTickGroupDataPipeline )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     // 1) 루트 부모 (PrePhysics 단계에서 기본 체력 연산)
     // 계층은 씬 컴포넌트 사이에서 맺어진다 — 예전에는 씬 컴포넌트가 없어 붙이기가 늘 실패했고(결과를 버려 몰랐다) 이 시험에 계층이 없었다.
@@ -135,7 +135,7 @@ SW_TEST_CASE( ComponentTickGroupTest, ParentChildHierarchyHeterogeneousTickGroup
 SW_TEST_CASE( ComponentTickGroupTest, DynamicTickGroupRuntimeMigration )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::vector<sw::string> listTickOrder;
 
@@ -353,7 +353,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, CircularPrerequisiteDependencyCycleRes
 SW_TEST_CASE( ComponentSubTickHybridTest, DeepHierarchyMultiComponentMultiSubTickDAGOrder )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject* pGrandparent = manager.createGameObject( sw::hashed_string( "Grandparent" ) );
     sw::GameObject* pParent      = manager.createGameObject( sw::hashed_string( "Parent" ) );
@@ -474,7 +474,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, DeepHierarchyMultiComponentMultiSubTic
 SW_TEST_CASE( ComponentSubTickHybridTest, MidTickSubTickDeactivationAndCancellation )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject* pActorA = manager.createGameObject( sw::hashed_string( "ActorA" ) );
     sw::GameObject* pActorB = manager.createGameObject( sw::hashed_string( "ActorB" ) );
@@ -539,7 +539,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickSubTickDeactivationAndCancellat
 SW_TEST_CASE( ComponentSubTickHybridTest, MidTickDeactivationAppliesToHighSubTickIds )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject* pActorA = manager.createGameObject( sw::hashed_string( "ActorA" ) );
     sw::GameObject* pActorB = manager.createGameObject( sw::hashed_string( "ActorB" ) );
@@ -598,7 +598,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickDeactivationAppliesToHighSubTic
 SW_TEST_CASE( ComponentSubTickHybridTest, HierarchySubtreeDeactivationAndReparentingWithSubTicks )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject* pRoot    = manager.createGameObject( sw::hashed_string( "Root" ) );
     sw::GameObject* pBranch1 = manager.createGameObject( sw::hashed_string( "Branch1" ) );
@@ -661,7 +661,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, HierarchySubtreeDeactivationAndReparen
 SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDAGValidation )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     constexpr size_t kActorCount    = 100;
     constexpr size_t kTotalSubTicks = kActorCount * 6; // 600개 서브틱

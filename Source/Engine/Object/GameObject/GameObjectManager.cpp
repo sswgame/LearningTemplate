@@ -1,6 +1,6 @@
 /**
  * @file GameObjectManager.cpp
- * @brief GameObjectManager 의 수명 관리입니다(생성 · 이름 · id 표 · 조회 · 파괴 · 팩토리). 프레임 경로(tick · 트랜스폼 배치)는 `GameObjectManagerTick.cpp` 에 있습니다.
+ * @brief GameObjectManager 의 수명 관리입니다(생성 · 이름 · id 표 · 조회 · 파괴 · 이름으로 컴포넌트 만들기). 프레임 경로(tick · 트랜스폼 배치)는 `GameObjectManagerTick.cpp` 에 있습니다.
  */
 #include "pch.h"
 
@@ -15,6 +15,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {
@@ -25,16 +26,70 @@ namespace sw
             /** @brief 이 스레드가 들어가 있는 `forEachGameObject` 의 깊이입니다(`WalkScope`). */
             inline static thread_local uint32 s_walkDepth = 0;
 
-            static mutex& getModuleFactoryHeadsMutex()
+            /**
+             * @brief 이름으로 컴포넌트를 만들 타입을 리플렉션 표에서 찾습니다. 없으면 nullptr 입니다.
+             * @details 짧은 이름 · FQN · 옛 이름(`REFLECT( Alias = Old )`)을 `findType` 이 모두 받는다. 못 찾으면 `이름#번호` 꼬리(같은 타입 둘째 컴포넌트의
+             *          저장 이름)를 떼고 한 번 더 찾는다.
+             */
+            static const TypeInfo* findComponentType( hashed_string typeName )
             {
-                static mutex s_mutex;
-                return s_mutex;
+                const TypeRegistry& registry = engine::getTypeRegistry();
+                const TypeInfo*     pType    = registry.findType( typeName );
+                if ( pType != nullptr )
+                    return pType;
+
+                const utf8* pRawName = typeName.c_str();
+                if ( pRawName == nullptr )
+                    return nullptr;
+                const utf8* pHash = nullptr;
+                for ( const utf8* pCursor = pRawName; *pCursor != '\0'; ++pCursor )
+                {
+                    if ( *pCursor == '#' )
+                        pHash = pCursor;
+                }
+                if ( pHash == nullptr || pHash == pRawName )
+                    return nullptr;
+                return registry.findType( hashed_string( pRawName, static_cast<uint32>( pHash - pRawName ) ) );
             }
 
-            static unordered_map<string, ComponentFactoryRegistrar*>& getModuleFactoryHeads()
+            /**
+             * @brief 스레드마다 둔 이름 → 타입 조회 캐시입니다. 타입 표의 **캐시**일 뿐 등록부가 아닙니다 — 표의 세대가 바뀌면 통째로 버립니다.
+             * @details 씬 · 프리팹 로드는 컴포넌트마다 이름으로 찾는다. 표 조회는 공유 잠금 + 해시 두 번(짧은 이름 → FQN → 줄)이라
+             *          컴포넌트 하나에 10 ns 남짓을 더했다(Release `GameObjectBenchTest.AddComponentByName`). `TypeInfo` 주소는 고정이고
+             *          해제는 세대를 올리므로 포인터를 들고 있어도 된다. 생성 함수(`_addComponent`)는 부를 때마다 다시 읽는다.
+             */
+            struct ComponentTypeCache
             {
-                static unordered_map<string, ComponentFactoryRegistrar*> s_mapFactoryHeads;
-                return s_mapFactoryHeads;
+                static constexpr uint32 kSlotCount = 64;
+                struct Slot
+                {
+                    uint32          _nameIndex; ///< `hashed_string::getIndex()`(대소문자 무시 비교 키)
+                    const TypeInfo* _pType;     ///< 비었으면 nullptr
+                };
+                uint32 _generation; ///< 채울 때의 `TypeRegistry::getGeneration`
+                Slot   _arrSlot[kSlotCount];
+            };
+            inline static thread_local ComponentTypeCache s_typeCache{};
+
+            /** @brief `findComponentType` 의 캐시 앞단입니다. 못 찾은 이름은 적지 않습니다(다음 등록이 세대를 올리기 전이라도 매번 다시 찾는다). */
+            static const TypeInfo* findComponentTypeCached( hashed_string typeName )
+            {
+                ComponentTypeCache& cache      = s_typeCache;
+                const uint32        generation = engine::getTypeRegistry().getGeneration();
+                if ( cache._generation != generation )
+                {
+                    for ( ComponentTypeCache::Slot& slot : cache._arrSlot )
+                        slot = ComponentTypeCache::Slot{ 0, nullptr };
+                    cache._generation = generation;
+                }
+                const uint32              nameIndex = typeName.getIndex();
+                ComponentTypeCache::Slot& slot      = cache._arrSlot[nameIndex % ComponentTypeCache::kSlotCount];
+                if ( slot._pType != nullptr && slot._nameIndex == nameIndex )
+                    return slot._pType;
+                const TypeInfo* pType = findComponentType( typeName );
+                if ( pType != nullptr )
+                    slot = ComponentTypeCache::Slot{ nameIndex, pType };
+                return pType;
             }
         };
     } // namespace
@@ -46,37 +101,6 @@ namespace sw
 
     atomic<uint64> GameObjectManager::_s_nextObjectId = 1;
 
-    static ComponentFactoryRegistrar* _s_engineHead{ nullptr };
-    static bool                       _s_engineHeadSealed{ false };
-    static atomic<uint32>             _s_factoryHeadSerial{ 0 };
-
-    ComponentFactoryRegistrar*& ComponentFactoryRegistrar::getHead()
-    {
-        static ComponentFactoryRegistrar* s_pHead{ nullptr };
-        return s_pHead;
-    }
-
-    ComponentFactoryRegistrar::ComponentFactoryRegistrar( void ( *registerFunc )( GameObjectManager& ) )
-        : _registerFunc{ registerFunc }
-        , _pNext{ getHead() }
-    {
-        getHead() = this;
-        if ( _s_engineHeadSealed == false )
-            _s_engineHead = this;
-    }
-
-    ComponentFactoryRegistrar::ComponentFactoryRegistrar( void ( *registerFunc )( GameObjectManager& ), ComponentFactoryRegistrar*& moduleHead )
-        : _registerFunc{ registerFunc }
-        , _pNext{ moduleHead }
-    {
-        moduleHead = this;
-        if ( _s_engineHeadSealed == false && &moduleHead == &getHead() )
-            _s_engineHead = this;
-    }
-
-    /**
-     * @brief 엔진과 모듈의 컴포넌트 팩토리를 등록하며 만듭니다.
-     */
     GameObjectManager::GameObjectManager()
         : _poolGameObject{ 256, true }
         , _mapComponentPool{}
@@ -104,36 +128,12 @@ namespace sw
         , _listProcessingBeginPlay{}
         , _deferredStructuralQueue{}
         , _deferredPostTickQueue{}
-        , _mapFactory{}
-        , _mapFactoryModule{}
-        , _activeModuleName{}
         , _transformHierarchy{}
         , _primitiveRegistry{}
         , _lightRegistry{}
         , _cameraRegistry{}
         , _tickRegistry{}
     {
-        // 봉인(첫 모듈 등록) 뒤에는 전역 머리를 읽지 않는다. 그 뒤에 머리에 매달린 것은 **올라오는 중인 모듈**의 등록기다 — 워커에서 씬을 짓는
-        // 동안 다른 스레드가 DLL 을 올리면, 그 모듈의 팩토리를 "Engine" 으로 등록했다(내려도 지워지지 않는다). 락 없이 읽는 것이기도 했다.
-        ComponentFactoryRegistrar* pEngineHead = _s_engineHeadSealed ? _s_engineHead : ComponentFactoryRegistrar::getHead();
-        if ( pEngineHead == nullptr )
-            pEngineHead = _s_engineHead;
-        registerPendingFactories( "Engine", pEngineHead );
-
-        vector<pair<string, ComponentFactoryRegistrar*>> listModuleHead;
-        {
-            std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
-            for ( const auto& [moduleName, head] : GameObjectManagerInternal::getModuleFactoryHeads() )
-                listModuleHead.push_back( { moduleName, head } );
-        }
-        for ( const auto& [moduleName, head] : listModuleHead )
-        {
-            if ( head == nullptr )
-                continue;
-            if ( moduleName == "Engine" && pEngineHead != nullptr )
-                continue;
-            registerPendingFactories( moduleName.c_str(), head );
-        }
     }
 
     GameObjectManager::~GameObjectManager()
@@ -702,43 +702,6 @@ namespace sw
         // 틱 항목은 addComponent 가 틱에 참여하는 컴포넌트를 붙일 때 이미 더럽혔다. 병합 자체는 멤버십을 바꾸지 않는다.
     }
 
-    void GameObjectManager::registerPendingFactories( string_view moduleName, sw::ComponentFactoryRegistrar* pHead )
-    {
-        if ( pHead == nullptr )
-            return;
-
-        {
-            std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
-            GameObjectManagerInternal::getModuleFactoryHeads()[string( moduleName )] = pHead;
-        }
-        _activeModuleName                   = hashed_string( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
-        ComponentFactoryRegistrar* pCurrent = pHead;
-        while ( pCurrent != nullptr )
-        {
-            if ( pCurrent->_registerFunc != nullptr )
-                pCurrent->_registerFunc( *this );
-            pCurrent = pCurrent->_pNext;
-        }
-        _activeModuleName = hashed_string();
-    }
-
-#if !defined( SW_SHIPPING )
-    void GameObjectManager::unregisterFactoriesByModule( string_view moduleName )
-    {
-        const hashed_string hashModule( moduleName.data(), static_cast<uint32>( moduleName.size() ) );
-        for ( auto it = _mapFactoryModule.begin(); it != _mapFactoryModule.end(); )
-        {
-            if ( it->second == hashModule )
-            {
-                _mapFactory.erase( it->first );
-                it = _mapFactoryModule.erase( it );
-            }
-            else
-                ++it;
-        }
-    }
-#endif
-
 #if !defined( SW_SHIPPING )
     uint32 GameObjectManager::destroyComponentsOfModule( string_view moduleName )
     {
@@ -778,85 +741,43 @@ namespace sw
     }
 #endif
 
-    void GameObjectManager::registerModuleFactoryHead( string_view moduleName, sw::ComponentFactoryRegistrar* pHead )
-    {
-        _s_engineHeadSealed = true;
-        std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
-        if ( pHead == nullptr )
-            GameObjectManagerInternal::getModuleFactoryHeads().erase( string( moduleName ) );
-        else
-            GameObjectManagerInternal::getModuleFactoryHeads()[string( moduleName )] = pHead;
-        _s_factoryHeadSerial.fetch_add( 1, std::memory_order_release );
-    }
-
-    void GameObjectManager::unregisterModuleFactoryHead( string_view moduleName )
-    {
-        std::scoped_lock<mutex> lock{ GameObjectManagerInternal::getModuleFactoryHeadsMutex() };
-        GameObjectManagerInternal::getModuleFactoryHeads().erase( string( moduleName ) );
-        _s_factoryHeadSerial.fetch_add( 1, std::memory_order_release );
-    }
-
-    uint32 GameObjectManager::getFactoryHeadSerial()
-    {
-        return _s_factoryHeadSerial.load( std::memory_order_acquire );
-    }
-
     Component* GameObjectManager::addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning )
     {
         if ( pGameObject == nullptr )
             return nullptr;
+        if ( engine::areEngineServicesBound() == false )
+        {
+            if ( bLogWarning )
+                SW_LOG_WARNING( "Cannot create component '%#' by name - engine services (TypeRegistry) are not bound", typeName.c_str() );
+            return nullptr;
+        }
 
-        hashed_string factoryName = typeName;
-        auto          it          = _mapFactory.find( factoryName );
-        if ( it == _mapFactory.end() )
+        const TypeInfo* pType = GameObjectManagerInternal::findComponentTypeCached( typeName );
+        if ( pType == nullptr )
         {
-            const utf8* pRawName = typeName.c_str();
-            if ( pRawName != nullptr )
-            {
-                const utf8* pHash = nullptr;
-                for ( const utf8* pCursor = pRawName; *pCursor != '\0'; ++pCursor )
-                {
-                    if ( *pCursor == '#' )
-                        pHash = pCursor;
-                }
-                if ( pHash != nullptr && pHash != pRawName )
-                    factoryName = hashed_string( pRawName, static_cast<uint32>( pHash - pRawName ) );
-            }
-            it = _mapFactory.find( factoryName );
+            if ( bLogWarning )
+                SW_LOG_WARNING( "Component type '%#' is not registered (no REFLECT, its module is not loaded, or a typo)", typeName.c_str() );
+            return nullptr;
         }
-        if ( it == _mapFactory.end() && engine::areEngineServicesBound() )
+        if ( pType->_addComponent == nullptr )
         {
-            // 옛 이름(`REFLECT( Alias = Old )`)이면 지금 타입의 이름으로 다시 찾는다. 팩토리는 지금 이름으로만 등록된다 — 예전에는 이 길이
-            // 없어 이름을 바꾼 컴포넌트가 옛 씬 · 프리팹에서 **조용히 빠졌고**, 다시 저장하면 그 데이터가 지워졌다(리플렉션 README §4 가
-            // 약속한 "옛 이름도 읽힌다" 가 컴포넌트에는 지켜지지 않았다).
-            const TypeInfo* pAliasedType = engine::getTypeRegistry().findType( factoryName );
-            if ( pAliasedType != nullptr && pAliasedType->_name != factoryName )
-                it = _mapFactory.find( pAliasedType->_name );
+            if ( bLogWarning )
+                SW_LOG_WARNING( "Type '%#' cannot be created as a component (abstract, not a component, or its module was unloaded)", typeName.c_str() );
+            return nullptr;
         }
-        if ( it != _mapFactory.end() )
-        {
-            if ( it->second.isBound() == false )
-            {
-                if ( bLogWarning )
-                    SW_LOG_WARNING( "Component factory for type '%#' is unbound", typeName.c_str() );
-                return nullptr;
-            }
-            return it->second( pGameObject );
-        }
-        if ( bLogWarning )
-            SW_LOG_WARNING( "Component factory for type '%#' not found (%# factories registered)", typeName.c_str(), static_cast<uint32>( _mapFactory.size() ) );
-        return nullptr;
+        return pType->_addComponent( pGameObject );
     }
 
-    vector<hashed_string> GameObjectManager::getRegisteredComponentTypeNames() const
+    vector<hashed_string> GameObjectManager::getRegisteredComponentTypeNames()
     {
         vector<hashed_string> listName;
-        listName.reserve( _mapFactory.size() );
-        for ( const auto& [name, factory] : _mapFactory )
+        if ( engine::areEngineServicesBound() == false )
+            return listName;
+        engine::getTypeRegistry().forEachType( [&listName]( const TypeInfo& info )
         {
-            (void)factory;
-            listName.push_back( name );
-        }
+            if ( info._addComponent != nullptr )
+                listName.push_back( info._name );
+        } );
         return listName;
     }
 

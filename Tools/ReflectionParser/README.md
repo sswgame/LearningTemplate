@@ -192,7 +192,7 @@ ReflectionParser/
   - TypeInfo (프로퍼티 이름, 오프셋, 플래그)
   - StaticType() 정의 (REFLECT_BODY 시)
   - TypeRegistrar / EnumRegistrar
-  - Component면 ComponentFactoryRegistrar (자동 팩토리 등록)
+  - Component면 TypeInfo 의 생성 칸 `info._addComponent = &GameObject::addComponentTo<T>` (이름으로 만드는 길은 이 칸만 본다)
 …/MonsterComponent.gen.h   (필요 시 enum 비트 연산자 등)
 …/FlagOps.gen.h            (ENUM(Flags) 비트 연산자 우산)
 ```
@@ -267,7 +267,6 @@ LLVM이 없으면 파서 타겟이 스킵될 수 있습니다.
 | `TypeInfoAccessors.tpl` | StaticType / 접근자 |
 | `TypeRegistrarBegin/End.tpl` | 타입 등록 블록 |
 | `EnumRegistrarBegin/End.tpl` | enum 등록 |
-| `ComponentFactoryRegistrar.tpl` | 이름 → emplace 팩토리 |
 | `Builtin*.tpl` | ReflectBuiltins.gen.cpp |
 
 출력 형식을 바꿀 때는 C++보다 **tpl + CodeGenerator** 를 먼저 보는 편이 안전합니다.

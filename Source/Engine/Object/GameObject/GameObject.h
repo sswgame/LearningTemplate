@@ -193,6 +193,18 @@ namespace sw
         template <typename T, typename... Args>
         T* addComponent( Args&&... args );
 
+        /**
+         * @brief @p pOwner 에 T 를 기본 생성해 붙입니다(`addComponent<T>()`). @p pOwner 가 nullptr 이면 nullptr 입니다.
+         * @details 리플렉션 표의 생성 칸(`TypeInfo::_addComponent`)이 이 함수의 주소를 듭니다 — 코드젠이 컴포넌트 타입마다 적습니다.
+         */
+        template <typename T>
+        static Component* addComponentTo( GameObject* pOwner )
+        {
+            if ( pOwner == nullptr )
+                return nullptr;
+            return pOwner->addComponent<T>();
+        }
+
         /** @brief 소유한 Component 개수입니다. 삭제 예정(pending-destroy)은 뺍니다. */
         size_t getComponentCount() const;
 

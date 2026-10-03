@@ -1,9 +1,11 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -13,6 +15,22 @@
 
 namespace sw
 {
+    /** @brief 씬을 짓는 **동안** 올라오는 모듈의 컴포넌트입니다. 로드를 띄울 때는 표에 없습니다. */
+    class LateModuleComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
+    };
+
+    /** @brief 같은 경로가 대기열에 있는 경우를 따로 보는 둘째 모듈의 컴포넌트입니다(배포 구성은 타입을 내리지 못해 이름을 나눈다). */
+    class LateQueuedModuleComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
+    };
+
     namespace
     {
         /** @brief 비동기 씬 전환이 끝날 때까지 태스크를 비웁니다. */
@@ -29,12 +47,57 @@ namespace sw
             manager.tickTransitions();
         }
 
-        /** @brief 씬 로드 도중에 올라오는 모듈의 팩토리 등록입니다. */
-        void registerLateModuleFactoryInternal( GameObjectManager& manager )
+        /** @brief 모듈의 코드젠이 만드는 것과 같은 모양의 TypeInfo(이름 · 크기 · 생성 함수)입니다. 표에 올리지는 않습니다. */
+        TypeInfo makeLateTypeInfo( const utf8* pName, const utf8* pFqn, size_t size, Component* ( *addComponent )(GameObject*))
         {
-            manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
+            TypeInfo info{};
+            info._name               = hashed_string( pName );
+            info._fullyQualifiedName = hashed_string( pFqn );
+            info._size               = size;
+            info._addComponent       = addComponent;
+            return info;
+        }
+
+        /** @brief 씬 로드 도중에 올라오는 모듈의 타입(생성 함수 포함)을 표에 올립니다. 모듈 DLL 의 TypeRegistrar 사슬과 같은 경로입니다. */
+        void registerLateModuleTypeInternal( TypeRegistry& registry )
+        {
+            registry.registerClass( *LateModuleComponent::StaticType() );
+        }
+
+        void registerLateQueuedModuleTypeInternal( TypeRegistry& registry )
+        {
+            registry.registerClass( *LateQueuedModuleComponent::StaticType() );
+        }
+
+        /** @brief 이름 하나짜리 컴포넌트를 든 씬 XML 을 쓰고 옆에 구운 바이너리도 둡니다(배포 구성은 바이너리만 읽는다). 성공하면 true 입니다. */
+        bool writeSceneWithComponent( const string& xmlPath, const string& binPath, const utf8* pSceneName, const utf8* pComponentName )
+        {
+            string xmlStr = "<Scene formatVersion=\"0\" name=\"";
+            xmlStr += pSceneName;
+            xmlStr += "\">\n  <entities>\n    <entity name=\"Speaker\">\n      <GameObject _schemaVersion=\"0\" _name=\"Speaker\" _bActive=\"true\">\n"
+                      "        <_listComponent>\n          <";
+            xmlStr += pComponentName;
+            xmlStr += " />\n        </_listComponent>\n      </GameObject>\n    </entity>\n  </entities>\n</Scene>\n";
+            if ( FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) == false )
+                return false;
+            SceneDocument cooked{};
+            return cooked.loadXml( xmlPath ) && cooked.saveBinary( binPath );
         }
     } // namespace
+
+    const TypeInfo* LateModuleComponent::StaticType()
+    {
+        static const TypeInfo s_info = makeLateTypeInfo( "LateModuleComponent", "sw::LateModuleComponent", sizeof( LateModuleComponent ),
+                                                         &GameObject::addComponentTo<LateModuleComponent> );
+        return &s_info;
+    }
+
+    const TypeInfo* LateQueuedModuleComponent::StaticType()
+    {
+        static const TypeInfo s_info = makeLateTypeInfo( "LateQueuedModuleComponent", "sw::LateQueuedModuleComponent", sizeof( LateQueuedModuleComponent ),
+                                                         &GameObject::addComponentTo<LateQueuedModuleComponent> );
+        return &s_info;
+    }
 } // namespace sw
 
 // ------------------------------------------------------------------------------
@@ -515,83 +578,52 @@ SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
 }
 
 /**
- * @brief [SceneAsyncTest] 씬을 짓는 동안 모듈 팩토리가 등록되면 그 씬을 다시 짓는다 — 새 모듈의 컴포넌트가 빠지지 않는다
- * @details 에디터가 시작 씬을 여는 동안 키트 · SWGame 이 올라오면, 워커의 오브젝트 매니저는 **만들 때의** 팩토리로 씬을 지어 그 모듈의
- *          컴포넌트를 조용히 건너뛰었다(만들 수 없는 컴포넌트는 경고도 없다). 그 씬을 저장하면 컴포넌트가 사라졌다.
+ * @brief [SceneAsyncTest] 씬을 짓는 동안 모듈 타입이 올라오면 그 씬을 다시 짓는다 — 새 모듈의 컴포넌트가 빠지지 않는다
+ * @details 에디터가 시작 씬을 여는 동안 키트 · SWGame 이 올라오면, 워커는 그때의 타입 표로 씬을 지어 그 모듈의 컴포넌트를 만들지 못한다.
+ *          그 씬을 그대로 쓰면 저장할 때 컴포넌트가 사라진다. 로드를 띄울 때와 끝날 때 타입 표 세대(`TypeRegistry::getGeneration`)를 견준다.
  */
-SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLost )
+SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLost )
 {
-    static sw::ComponentFactoryRegistrar* s_pLateHead{ nullptr };
-    static sw::ComponentFactoryRegistrar  s_lateRegistrar{ &sw::registerLateModuleFactoryInternal, s_pLateHead };
-    (void)sw::MockAudioComponent::StaticType();
+    static sw::TypeRegistrar* s_pLateHead{ nullptr };
+    static sw::TypeRegistrar  s_lateRegistrar{ &sw::registerLateModuleTypeInternal, s_pLateHead };
 
-    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_late_factory.scene.xml" );
-    const sw::string xmlStr =
-        "<Scene formatVersion=\"0\" name=\"LateFactory\">\n"
-        "  <entities>\n"
-        "    <entity name=\"Speaker\">\n"
-        "      <GameObject _schemaVersion=\"0\" _name=\"Speaker\" _bActive=\"true\">\n"
-        "        <_listComponent>\n"
-        "          <MockAudioComponent />\n"
-        "        </_listComponent>\n"
-        "      </GameObject>\n"
-        "    </entity>\n"
-        "  </entities>\n"
-        "</Scene>\n";
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
-    // Shipping 은 구운 바이너리 씬만 읽는다. 같은 문서를 옆에 굽는다.
-    const sw::string  binPath = test::makeTempPath( "sw_test_scene_late_factory.scene.bin" );
-    sw::SceneDocument cooked{};
-    SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
-    SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_late_type.scene.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_late_type.scene.bin" );
+    SW_ASSERT_TRUE( sw::writeSceneWithComponent( xmlPath, binPath, "LateType", "LateModuleComponent" ) );
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
     SW_ASSERT_TRUE( manager.requestLoadAsync( xmlPath ) );
-    // 워커가 씬을 다 지은 뒤에(팩토리 없이) 모듈이 올라온다.
+    // 워커가 씬을 다 지은 뒤에(그 타입 없이) 모듈이 올라온다.
     sw::engine::getTaskManager().waitAll();
-    sw::GameObjectManager::registerModuleFactoryHead( "LateModule", s_pLateHead );
+    sw::engine::getTypeRegistry().registerPendingTypes( "LateModule", s_pLateHead, nullptr );
 
     sw::drainSceneTransitions( manager );
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
     sw::GameObject* pSpeaker = manager.getActiveScene()->getObjectManager()->findGameObjectByName( sw::hashed_string( "Speaker" ) );
     SW_ASSERT_NOT_NULL( pSpeaker );
-    SW_EXPECT_TRUE_MSG( pSpeaker->findComponentByTypeName( sw::hashed_string( "MockAudioComponent" ) ) != nullptr,
+    SW_EXPECT_TRUE_MSG( pSpeaker->findComponentByTypeName( sw::hashed_string( "LateModuleComponent" ) ) != nullptr,
                         "로드 도중에 등록된 모듈의 컴포넌트가 씬에서 빠졌습니다" );
 
     manager.shutdown();
-    sw::GameObjectManager::unregisterModuleFactoryHead( "LateModule" );
+#if !defined( SW_SHIPPING )
+    sw::engine::getTypeRegistry().unregisterTypesByModule( "LateModule" );
+#endif
 }
 
 /**
- * @brief [SceneAsyncTest] 같은 씬이 대기열에 있어도, 짓는 동안 모듈 팩토리가 올라오면 다시 짓는다 — 두 요청자 모두 새 씬을 받는다
- * @details 팩토리 변경 검사는 대기열이 비었을 때만 했다. 같은 경로가 대기열에 있으면 그 결과를 그대로 활성으로 썼으므로, 낡은 팩토리로 지은(새 모듈의
- *          컴포넌트가 빠진) 씬이 남았다 — 에디터가 시작 씬을 두 번 여는 흔한 순서다.
+ * @brief [SceneAsyncTest] 같은 씬이 대기열에 있어도, 짓는 동안 모듈 타입이 올라오면 다시 짓는다 — 두 요청자 모두 새 씬을 받는다
+ * @details 같은 경로가 대기열에 있으면 그 결과를 그대로 활성으로 쓰는 길이 따로 있다. 그 길에서도 세대를 견줘야 새 모듈의 컴포넌트가 빠진
+ *          씬이 남지 않는다 — 에디터가 시작 씬을 두 번 여는 흔한 순서다.
  */
-SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLostWithSamePathQueued )
+SW_TEST_CASE( SceneAsyncTest, TypesRegisteredDuringLoadAreNotLostWithSamePathQueued )
 {
-    static sw::ComponentFactoryRegistrar* s_pLateHead{ nullptr };
-    static sw::ComponentFactoryRegistrar  s_lateRegistrar{ &sw::registerLateModuleFactoryInternal, s_pLateHead };
-    (void)sw::MockAudioComponent::StaticType();
+    static sw::TypeRegistrar* s_pLateHead{ nullptr };
+    static sw::TypeRegistrar  s_lateRegistrar{ &sw::registerLateQueuedModuleTypeInternal, s_pLateHead };
 
-    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_late_factory_queued.scene.xml" );
-    const sw::string xmlStr =
-        "<Scene formatVersion=\"0\" name=\"LateFactoryQueued\">\n"
-        "  <entities>\n"
-        "    <entity name=\"Speaker\">\n"
-        "      <GameObject _schemaVersion=\"0\" _name=\"Speaker\" _bActive=\"true\">\n"
-        "        <_listComponent>\n"
-        "          <MockAudioComponent />\n"
-        "        </_listComponent>\n"
-        "      </GameObject>\n"
-        "    </entity>\n"
-        "  </entities>\n"
-        "</Scene>\n";
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
-    const sw::string  binPath = test::makeTempPath( "sw_test_scene_late_factory_queued.scene.bin" );
-    sw::SceneDocument cooked{};
-    SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
-    SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
+    const sw::string xmlPath = test::makeTempPath( "sw_test_scene_late_type_queued.scene.xml" );
+    const sw::string binPath = test::makeTempPath( "sw_test_scene_late_type_queued.scene.bin" );
+    SW_ASSERT_TRUE( sw::writeSceneWithComponent( xmlPath, binPath, "LateTypeQueued", "LateQueuedModuleComponent" ) );
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
@@ -599,15 +631,15 @@ SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLostWithSamePat
     sw::TaskFuture<sw::Scene*> second = manager.requestLoadFuture( xmlPath ); // 같은 씬이 대기열로
     SW_ASSERT_TRUE( first.isValid() );
     SW_ASSERT_TRUE( second.isValid() );
-    // 워커가 씬을 다 지은 뒤에(팩토리 없이) 모듈이 올라온다.
+    // 워커가 씬을 다 지은 뒤에(그 타입 없이) 모듈이 올라온다.
     sw::engine::getTaskManager().waitAll();
-    sw::GameObjectManager::registerModuleFactoryHead( "LateModuleQueued", s_pLateHead );
+    sw::engine::getTypeRegistry().registerPendingTypes( "LateModuleQueued", s_pLateHead, nullptr );
 
     sw::drainSceneTransitions( manager );
     SW_ASSERT_NOT_NULL( manager.getActiveScene() );
     sw::GameObject* pSpeaker = manager.getActiveScene()->getObjectManager()->findGameObjectByName( sw::hashed_string( "Speaker" ) );
     SW_ASSERT_NOT_NULL( pSpeaker );
-    SW_EXPECT_TRUE_MSG( pSpeaker->findComponentByTypeName( sw::hashed_string( "MockAudioComponent" ) ) != nullptr,
+    SW_EXPECT_TRUE_MSG( pSpeaker->findComponentByTypeName( sw::hashed_string( "LateQueuedModuleComponent" ) ) != nullptr,
                         "같은 씬이 대기열에 있을 때 로드 도중에 등록된 모듈의 컴포넌트가 빠졌습니다" );
     SW_ASSERT_TRUE( first.isReady() );
     SW_ASSERT_TRUE( second.isReady() );
@@ -615,7 +647,9 @@ SW_TEST_CASE( SceneAsyncTest, FactoriesRegisteredDuringLoadAreNotLostWithSamePat
     SW_EXPECT_EQUAL( manager.getActiveScene(), second.get() );
 
     manager.shutdown();
-    sw::GameObjectManager::unregisterModuleFactoryHead( "LateModuleQueued" );
+#if !defined( SW_SHIPPING )
+    sw::engine::getTypeRegistry().unregisterTypesByModule( "LateModuleQueued" );
+#endif
 }
 
 /**

@@ -58,7 +58,7 @@ namespace sw
 
     inline const TypeInfo* MockStrikeInTickComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockStrikeInTickComponent" ), hashed_string( "sw::MockStrikeInTickComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockStrikeInTickComponent>, hashed_string( "MockStrikeInTickComponent" ), hashed_string( "sw::MockStrikeInTickComponent" ),
                                           sizeof( MockStrikeInTickComponent ) );
     }
 } // namespace sw

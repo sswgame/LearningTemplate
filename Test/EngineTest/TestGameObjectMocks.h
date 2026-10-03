@@ -28,11 +28,14 @@ namespace sw
      * @brief 테스트 전용 TypeInfo 를 만들거나 캐시에서 반환합니다.
      * @details 캐시가 하나여야 하므로 정의는 `TestGameObjectMocks.cpp` 에 있다(파일 머리 주석 참고).
      */
-    const TypeInfo* makeMockComponentTypeInfo( hashed_string shortName, hashed_string fqn, size_t size,
+    const TypeInfo* makeMockComponentTypeInfo( Component* ( *addComponent )(GameObject*), hashed_string shortName, hashed_string fqn, size_t size,
                                                hashed_string parentFqn = hashed_string{} );
 
-    /** @brief 모의 컴포넌트 TypeInfo 와 팩토리를 매니저에 등록합니다. */
-    void RegisterMockComponents( GameObjectManager& manager );
+    /**
+     * @brief 모의 컴포넌트 TypeInfo 를 리플렉션 표에 올립니다. 생성 함수(`TypeInfo::_addComponent`)가 함께 올라 `addComponentByName` · 씬 로드가 만들 수 있습니다.
+     * @details 표는 프로세스에 하나라 매니저마다 부를 일이 없습니다. 두 번 불러도 됩니다.
+     */
+    void RegisterMockComponents();
 
     class MockMeshComponent : public Component
     {
@@ -183,7 +186,7 @@ namespace sw
     /** @brief MockMeshComponent 의 정적 TypeInfo 를 반환합니다. */
     inline const TypeInfo* MockMeshComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockMeshComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockMeshComponent>, hashed_string( "MockMeshComponent" ),
                                           hashed_string( "sw::MockMeshComponent" ), sizeof( MockMeshComponent ) );
     }
 
@@ -212,7 +215,7 @@ namespace sw
     /** @brief MockAudioComponent 의 정적 TypeInfo 를 반환합니다. */
     inline const TypeInfo* MockAudioComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockAudioComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockAudioComponent>, hashed_string( "MockAudioComponent" ),
                                           hashed_string( "sw::MockAudioComponent" ), sizeof( MockAudioComponent ) );
     }
 
@@ -265,7 +268,7 @@ namespace sw
     /** @brief MockCallbackComponent 의 정적 TypeInfo 를 반환합니다. */
     inline const TypeInfo* MockCallbackComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockCallbackComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockCallbackComponent>, hashed_string( "MockCallbackComponent" ),
                                           hashed_string( "sw::MockCallbackComponent" ),
                                           sizeof( MockCallbackComponent ) );
     }
@@ -361,7 +364,7 @@ namespace sw
     /** @brief MockTickSceneComponent 의 정적 TypeInfo 를 반환합니다. */
     inline const TypeInfo* MockTickSceneComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockTickSceneComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockTickSceneComponent>, hashed_string( "MockTickSceneComponent" ),
                                           hashed_string( "sw::MockTickSceneComponent" ),
                                           sizeof( MockTickSceneComponent ),
                                           hashed_string( "sw::SceneComponent" ) );
@@ -411,7 +414,7 @@ namespace sw
 
     inline const TypeInfo* MockRootComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockRootComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockRootComponent>, hashed_string( "MockRootComponent" ),
                                           hashed_string( "sw::MockRootComponent" ),
                                           sizeof( MockRootComponent ),
                                           hashed_string( "sw::SceneComponent" ) );
@@ -444,7 +447,7 @@ namespace sw
 
     inline const TypeInfo* MockBasePawnComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockBasePawnComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockBasePawnComponent>, hashed_string( "MockBasePawnComponent" ),
                                           hashed_string( "sw::MockBasePawnComponent" ),
                                           sizeof( MockBasePawnComponent ),
                                           hashed_string( "sw::MockRootComponent" ) );
@@ -472,7 +475,7 @@ namespace sw
 
     inline const TypeInfo* MockVehicleComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockVehicleComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockVehicleComponent>, hashed_string( "MockVehicleComponent" ),
                                           hashed_string( "sw::MockVehicleComponent" ),
                                           sizeof( MockVehicleComponent ),
                                           hashed_string( "sw::MockBasePawnComponent" ) );
@@ -500,7 +503,7 @@ namespace sw
 
     inline const TypeInfo* MockFlyingVehicleComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockFlyingVehicleComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockFlyingVehicleComponent>, hashed_string( "MockFlyingVehicleComponent" ),
                                           hashed_string( "sw::MockFlyingVehicleComponent" ),
                                           sizeof( MockFlyingVehicleComponent ),
                                           hashed_string( "sw::MockVehicleComponent" ) );
@@ -556,7 +559,7 @@ namespace sw
 
     inline const TypeInfo* MockMidTickDeactivatorComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockMidTickDeactivatorComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockMidTickDeactivatorComponent>, hashed_string( "MockMidTickDeactivatorComponent" ),
                                           hashed_string( "sw::MockMidTickDeactivatorComponent" ),
                                           sizeof( MockMidTickDeactivatorComponent ),
                                           hashed_string{} );
@@ -609,7 +612,7 @@ namespace sw
 
     inline const TypeInfo* MockSubTickStressComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockSubTickStressComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockSubTickStressComponent>, hashed_string( "MockSubTickStressComponent" ),
                                           hashed_string( "sw::MockSubTickStressComponent" ),
                                           sizeof( MockSubTickStressComponent ),
                                           hashed_string{} );
@@ -647,7 +650,7 @@ namespace sw
 
     inline const TypeInfo* MockPoolLifecycleComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockPoolLifecycleComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockPoolLifecycleComponent>, hashed_string( "MockPoolLifecycleComponent" ),
                                           hashed_string( "sw::MockPoolLifecycleComponent" ),
                                           sizeof( MockPoolLifecycleComponent ) );
     }
@@ -683,7 +686,7 @@ namespace sw
 
     inline const TypeInfo* MockSelfTickSceneComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockSelfTickSceneComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockSelfTickSceneComponent>, hashed_string( "MockSelfTickSceneComponent" ),
                                           hashed_string( "sw::MockSelfTickSceneComponent" ),
                                           sizeof( MockSelfTickSceneComponent ),
                                           hashed_string( "sw::SceneComponent" ) );
@@ -705,7 +708,7 @@ namespace sw
 
     inline const TypeInfo* MockNoTickComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockNoTickComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockNoTickComponent>, hashed_string( "MockNoTickComponent" ),
                                           hashed_string( "sw::MockNoTickComponent" ),
                                           sizeof( MockNoTickComponent ) );
     }
@@ -744,7 +747,7 @@ namespace sw
 
     inline const TypeInfo* MockPostLoadSpawnerComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockPostLoadSpawnerComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockPostLoadSpawnerComponent>, hashed_string( "MockPostLoadSpawnerComponent" ),
                                           hashed_string( "sw::MockPostLoadSpawnerComponent" ),
                                           sizeof( MockPostLoadSpawnerComponent ) );
     }
@@ -778,7 +781,7 @@ namespace sw
 
     inline const TypeInfo* MockPostLoadProbeComponent::StaticType()
     {
-        return makeMockComponentTypeInfo( hashed_string( "MockPostLoadProbeComponent" ),
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockPostLoadProbeComponent>, hashed_string( "MockPostLoadProbeComponent" ),
                                           hashed_string( "sw::MockPostLoadProbeComponent" ),
                                           sizeof( MockPostLoadProbeComponent ) );
     }

@@ -126,7 +126,7 @@ namespace sw
             atomic<bool>        _bReady{ false };
             atomic<bool>        _bAccepting{ true };
             TaskPromise<Scene*> _promise{};
-            uint32              _factoryHeadSerial{ 0 }; ///< 로드를 띄울 때의 `GameObjectManager::getFactoryHeadSerial`
+            uint32              _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
         };
 
         vector<unique_ptr<Scene>> _listLoadedScene;

@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/Scene.h"
@@ -206,8 +207,8 @@ namespace sw
     {
         _bLoadInFlight.store( true, std::memory_order_release );
         _asyncLoad->_bReady.store( false, std::memory_order_release );
-        _asyncLoad->_promise           = std::move( promise );
-        _asyncLoad->_factoryHeadSerial = GameObjectManager::getFactoryHeadSerial();
+        _asyncLoad->_promise             = std::move( promise );
+        _asyncLoad->_typeTableGeneration = engine::getTypeRegistry().getGeneration();
         SW_LOG_TRACE( "dispatchLoad: %#", path );
 
         shared_ptr<AsyncLoadSlot> slot = _asyncLoad;
@@ -369,18 +370,17 @@ namespace sw
         _bLoadInFlight.store( false, std::memory_order_release );
         _loadHandle = {};
 
-        // 짓는 동안 모듈 팩토리가 바뀌었으면(시작할 때 키트 · SWGame 이 올라오는 중에 에디터가 시작 씬을 열었다) 그 씬은 **워커가 만들 때의**
-        // 팩토리로 지어져, 새 모듈의 컴포넌트가 조용히 빠졌다(만들 수 없는 컴포넌트는 경고 없이 건너뛴다). 그대로 쓰면 저장할 때 사라진다.
-        // 버리고 같은 경로를 다시 띄운다. 대기열이 **다른** 경로면 어차피 이 결과를 버리므로 아래에 맡긴다. 대기열이 **같은** 경로면 아래는
-        // 이 결과를 그대로 쓴다 — 예전에는 그 경우를 빠뜨려 낡은 팩토리로 지은 씬이 활성이 됐다. 대기열은 그대로 두어, 다시 지은 결과가 두
-        // 요청자를 함께 채운다.
+        // 짓는 동안 타입 표가 바뀌었으면(시작할 때 키트 · SWGame 이 올라오는 중에 에디터가 시작 씬을 열었다) 그 씬은 **워커가 지을 때의**
+        // 표로 지어져, 아직 오르지 않은 모듈의 컴포넌트가 빠졌다(못 만든 컴포넌트는 `MissingComponent` 로 남는다). 버리고 같은 경로를 다시
+        // 띄운다. 대기열이 **다른** 경로면 어차피 이 결과를 버리므로 아래에 맡긴다. 대기열이 **같은** 경로면 아래는 이 결과를 그대로 쓰므로
+        // 여기서 다시 짓는다. 대기열은 그대로 두어, 다시 지은 결과가 두 요청자를 함께 채운다.
         const bool bQueuedSamePath = _queuedPath.empty() == false && pendingScene != nullptr &&
                                      FileUtil::pathsEqualNormalized( pendingScene->getSourcePath(), _queuedPath );
         if ( pendingScene != nullptr && ( _queuedPath.empty() || bQueuedSamePath ) &&
-             _asyncLoad->_factoryHeadSerial != GameObjectManager::getFactoryHeadSerial() )
+             _asyncLoad->_typeTableGeneration != engine::getTypeRegistry().getGeneration() )
         {
             const string path = pendingScene->getSourcePath();
-            SW_LOG_INFO( "Module factories changed while '%#' was loading — loading it again", path );
+            SW_LOG_INFO( "Reflected types changed while '%#' was loading — loading it again", path );
             pendingScene->shutdown();
             pendingScene.reset();
             dispatchLoad( path, std::move( _asyncLoad->_promise ) );

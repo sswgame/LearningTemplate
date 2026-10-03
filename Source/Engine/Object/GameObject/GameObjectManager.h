@@ -36,24 +36,6 @@ namespace sw
     class MeshComponent;
     class SceneComponent;
 
-    /**
-     * @struct ComponentFactoryRegistrar
-     * @brief 정적 초기화로 컴포넌트 팩토리를 체인에 연결합니다.
-     */
-    struct SW_API ComponentFactoryRegistrar
-    {
-        void ( *_registerFunc )( GameObjectManager& );
-        ComponentFactoryRegistrar* _pNext;
-
-        static ComponentFactoryRegistrar*& getHead();
-        ComponentFactoryRegistrar( void ( *registerFunc )( GameObjectManager& ) );
-        ComponentFactoryRegistrar( void ( *registerFunc )( GameObjectManager& ), ComponentFactoryRegistrar*& moduleHead );
-    };
-
-#ifndef SW_COMPONENT_FACTORY_MODULE_HEAD
-    #define SW_COMPONENT_FACTORY_MODULE_HEAD() ( ::sw::ComponentFactoryRegistrar::getHead() )
-#endif
-
     /// @brief GameObject 등록 · 지연 삭제와 씬의 등록부(트랜스폼 계층 · 프리미티브 · 빛 · 틱)를 소유합니다.
     class SW_API GameObjectManager
     {
@@ -353,14 +335,6 @@ namespace sw
         /** @brief 이번 프레임에 추가된 GameObject 를 활성 목록에 합칩니다. */
         void mergePendingAdds();
 
-        /** @brief 모듈 컴포넌트 팩토리를 이 매니저에 등록합니다. */
-        void registerPendingFactories( string_view moduleName, sw::ComponentFactoryRegistrar* pHead );
-
-#if !defined( SW_SHIPPING )
-        /** @brief 해당 모듈이 등록한 컴포넌트 팩토리를 제거합니다. */
-        void unregisterFactoriesByModule( string_view moduleName );
-#endif
-
 #if !defined( SW_SHIPPING )
         /**
          * @brief 모듈이 내려가기 전에, 그 모듈이 정의한 컴포넌트 타입의 **살아 있는 인스턴스**를 모두 지웁니다.
@@ -372,44 +346,11 @@ namespace sw
         uint32 destroyComponentsOfModule( string_view moduleName );
 #endif
 
-        /** @brief 전역 모듈 팩토리 헤드를 등록합니다. */
-        static void registerModuleFactoryHead( string_view moduleName, sw::ComponentFactoryRegistrar* pHead );
-        /** @brief 전역 모듈 팩토리 헤드를 해제합니다. */
-        static void unregisterModuleFactoryHead( string_view moduleName );
         /**
-         * @brief 모듈 팩토리 헤드가 바뀐(등록 · 해제) 횟수입니다.
-         * @details 오브젝트 매니저는 **만들 때** 그때의 헤드로 팩토리를 모읍니다. 워커에서 씬을 짓는 동안 모듈이 올라오면 그 씬에는 새 모듈의
-         *          팩토리가 없어 그 컴포넌트가 조용히 빠집니다. 비동기 씬 로드가 시작 · 끝에서 이 값을 견줘 다시 짓습니다(`SceneManager`).
+         * @brief 타입 이름(짧은 이름 · FQN · 옛 이름 별칭, `이름#번호` 꼬리는 무시)으로 컴포넌트를 만들어 붙입니다. 에디터 · 직렬화 전용이고, 게임은 addComponent<T> 를 씁니다.
+         * @details 생성 함수는 리플렉션 표 하나에서 찾습니다(`TypeRegistry::findType` → `TypeInfo::_addComponent`). 매니저가 따로 든 팩토리 표는 없으므로
+         *          모듈이 올라오거나 내려가면 모든 매니저가 그 즉시 같은 답을 냅니다.
          */
-        static uint32 getFactoryHeadSerial();
-
-        using ComponentFactoryDelegate = Delegate<Component*( GameObject* )>;
-
-        template <typename T>
-        /** @brief 타입 이름과 모듈 이름으로 T 팩토리를 등록합니다. */
-        void registerComponentType( hashed_string typeName, hashed_string moduleName = hashed_string() )
-        {
-            static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
-            _mapFactory[typeName] = []( GameObject* pGameObject ) -> Component*
-            {
-                if ( pGameObject == nullptr )
-                    return nullptr;
-                return pGameObject->addComponent<T>();
-            };
-
-            // 모듈 이름은 **지금 등록을 모으는 모듈**(`registerPendingFactories` 가 세운 `_activeModuleName`)이 먼저다. 생성 코드에 구운 이름은
-            // 파서의 경로 규칙에서 오는데, `Source/GameFramework/Kits/<키트>` 가 "GameFramework" 규칙에 걸려 키트 팩토리가 GameFramework 로
-            // 구워졌다 — 키트를 내려도 `unregisterFactoriesByModule( "GF_<키트>" )` 가 아무것도 지우지 않아, 내린 이미지의 람다가 팩토리 표에
-            // 남았다. 타입 쪽(`registerClass`)도 같은 이유로 실제 모듈 이름을 쓴다. 표의 람다는 마지막에 등록한 모듈의 것이므로 모듈도 늘 덮어쓴다.
-            if ( _activeModuleName.getHash() != 0 )
-                _mapFactoryModule[typeName] = _activeModuleName;
-            else if ( moduleName.getHash() != 0 )
-                _mapFactoryModule[typeName] = moduleName;
-            else
-                _mapFactoryModule[typeName] = hashed_string( "Engine" );
-        }
-
-        /** @brief 등록된 이름으로 컴포넌트를 추가합니다. 에디터 · 직렬화 전용입니다. 게임은 addComponent<T> 를 씁니다. */
         Component* addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning = true );
 
         /** @brief 모든 오브젝트의 틱 항목을 다음 틱 전에 다시 짓게 합니다(타입 재바인딩 · 씬 초기화). */
@@ -422,8 +363,8 @@ namespace sw
          */
         uint32 getTickStageBuildCount() const { return _tickStageBuildCount.load( std::memory_order_relaxed ); }
 
-        /** @brief 에디터 등에서 추가 가능한 컴포넌트 타입 이름 목록입니다. */
-        vector<hashed_string> getRegisteredComponentTypeNames() const;
+        /** @brief 이름으로 만들 수 있는 컴포넌트 타입(리플렉션 표에서 `_addComponent` 가 있는 타입)의 짧은 이름 목록입니다. 에디터의 "Add Component" 가 씁니다. */
+        static vector<hashed_string> getRegisteredComponentTypeNames();
 
         /**
          * @brief 물리 바디를 맞출 콜라이더를 등록합니다(`BoxCollider2DComponent::onRegister`). 매니저가 step 직전에 한 번에 맞춥니다.
@@ -631,10 +572,6 @@ namespace sw
         vector<ComponentHandle> _listProcessingBeginPlay; ///< 도는 중인 시작 줄(할당 재사용)
         DeferredDelegateQueue   _deferredStructuralQueue; ///< 틱이 미룬 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성), 부른 순서. 틱 직후 가장 먼저 돈다
         DeferredDelegateQueue   _deferredPostTickQueue;   ///< 틱이 미룬 스폰 · 데미지 · 태그(`deferPostTick`)
-
-        unordered_map<hashed_string, ComponentFactoryDelegate> _mapFactory;
-        unordered_map<hashed_string, hashed_string>            _mapFactoryModule;
-        hashed_string                                          _activeModuleName;
 
         /** @brief 트랜스폼 계층입니다. PhysicsWorld 처럼 매니저가 소유만 합니다. */
         SceneTransformHierarchy _transformHierarchy;

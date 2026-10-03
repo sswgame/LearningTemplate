@@ -26,7 +26,6 @@
 
 namespace sw
 {
-    struct ComponentFactoryRegistrar;
     struct EnumRegistrar;
     struct GlobalVariableRegistrar;
     struct TypeRegistrar;
@@ -284,17 +283,15 @@ namespace sw
 
         struct PreparedShadow
         {
-            void*                          _pHandle{ nullptr };
-            string                         _tempPath;
-            uint64                         _sourceMtime{ 0 };
-            TypeRegistrar*                 _pTypeHead{ nullptr };
-            EnumRegistrar*                 _pEnumHead{ nullptr };
-            sw::ComponentFactoryRegistrar* _pFactoryHead{ nullptr };
-            GlobalVariableRegistrar*       _pVariableHead{ nullptr };
-            TypeRegistrar*                 _pPreviousTypeHead{ nullptr };
-            EnumRegistrar*                 _pPreviousEnumHead{ nullptr };
-            sw::ComponentFactoryRegistrar* _pPreviousFactoryHead{ nullptr };
-            GlobalVariableRegistrar*       _pPreviousVariableHead{ nullptr };
+            void*                    _pHandle{ nullptr };
+            string                   _tempPath;
+            uint64                   _sourceMtime{ 0 };
+            TypeRegistrar*           _pTypeHead{ nullptr };
+            EnumRegistrar*           _pEnumHead{ nullptr };
+            GlobalVariableRegistrar* _pVariableHead{ nullptr };
+            TypeRegistrar*           _pPreviousTypeHead{ nullptr };
+            EnumRegistrar*           _pPreviousEnumHead{ nullptr };
+            GlobalVariableRegistrar* _pPreviousVariableHead{ nullptr };
         };
 
         /** @brief 섀도 복사본을 LoadLibrary 합니다. */

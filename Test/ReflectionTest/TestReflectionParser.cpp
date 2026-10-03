@@ -711,8 +711,8 @@ SW_TEST_CASE( ReflectionParserTest, AbstractComponentGetsNoFactory )
     SW_EXPECT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
     SW_ASSERT_EQUAL( size_t( 1 ), run._listGeneratedCpp.size() );
     const sw::string& generated = run._listGeneratedCpp[0];
-    SW_EXPECT_TRUE_MSG( generated.find( "registerComponentType<sw::AbstractFactorySampleConcrete>" ) != sw::string::npos, generated.c_str() );
-    SW_EXPECT_TRUE_MSG( generated.find( "registerComponentType<sw::AbstractFactorySampleBase>" ) == sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "addComponentTo<sw::AbstractFactorySampleConcrete>" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "addComponentTo<sw::AbstractFactorySampleBase>" ) == sw::string::npos, generated.c_str() );
 }
 
 /**
@@ -1154,8 +1154,8 @@ SW_TEST_CASE( ReflectionParserTest, AliasedBaseClassKeepsParentAndFactory )
     SW_EXPECT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
     SW_ASSERT_EQUAL( size_t( 1 ), run._listGeneratedCpp.size() );
     const sw::string& generated = run._listGeneratedCpp[0];
-    SW_EXPECT_TRUE_MSG( generated.find( "registerComponentType<sw::AliasedBaseSampleComponent>" ) != sw::string::npos, generated.c_str() );
-    SW_EXPECT_TRUE_MSG( generated.find( "registerComponentType<sw::AliasedBaseSampleChild>" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "addComponentTo<sw::AliasedBaseSampleComponent>" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "addComponentTo<sw::AliasedBaseSampleChild>" ) != sw::string::npos, generated.c_str() );
     // 부모는 별칭이 아니라 실제 클래스 이름이다.
     SW_EXPECT_TRUE_MSG( generated.find( "_parentFQN          = ::sw::hashed_string( \"sw::AliasedBaseSampleComponent\" )" ) != sw::string::npos,
                         generated.c_str() );

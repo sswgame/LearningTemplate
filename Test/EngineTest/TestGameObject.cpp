@@ -45,7 +45,7 @@ using namespace sw;
 SW_TEST_CASE( GameObjectTest, MultiSameComponentAttachment )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject* actorPtr = manager.createGameObject( sw::hashed_string( "TestPlayer" ) );
 
@@ -83,7 +83,7 @@ SW_TEST_CASE( GameObjectTest, MultiSameComponentAttachment )
 SW_TEST_CASE( GameObjectTest, DeferredComponentDestructionRemovesFromObject )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject*        actor = manager.createGameObject( sw::hashed_string( "DeferredCompActor" ) );
     sw::MockMeshComponent* mesh  = actor->addComponent<sw::MockMeshComponent>();
@@ -104,7 +104,7 @@ SW_TEST_CASE( GameObjectTest, DeferredComponentDestructionRemovesFromObject )
 SW_TEST_CASE( GameObjectTest, ComponentTeardownCallbacksRunExactlyOnce )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "TeardownOnce" ) );
 
     int32 unregisterCount = 0;
@@ -151,7 +151,7 @@ SW_TEST_CASE( GameObjectTest, ComponentTeardownCallbacksRunExactlyOnce )
 SW_TEST_CASE( GameObjectTest, QueuedComponentDestroySparesReusedBlock )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "ReusedBlock" ) );
 
     sw::MockMeshComponent* pOld = pObj->addComponent<sw::MockMeshComponent>();
@@ -176,7 +176,7 @@ SW_TEST_CASE( GameObjectTest, QueuedComponentDestroySparesReusedBlock )
 SW_TEST_CASE( GameObjectTest, RemoveComponentKeepsOrder )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "KeepOrder" ) );
 
     sw::Component* pFirst  = pObj->addComponent<sw::MockMeshComponent>();
@@ -199,7 +199,7 @@ SW_TEST_CASE( GameObjectTest, RemoveComponentKeepsOrder )
 SW_TEST_CASE( GameObjectTest, EditorDynamicComponentAttachment )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     const uint32 typeCountBefore = static_cast<uint32>( manager.getRegisteredComponentTypeNames().size() );
 
     const sw::vector<sw::hashed_string> factories = manager.getRegisteredComponentTypeNames();
@@ -231,7 +231,7 @@ SW_TEST_CASE( GameObjectTest, EditorDynamicComponentAttachment )
 SW_TEST_CASE( GameObjectTest, ParallelComponentTicking )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     {
         sw::vector<sw::GameObject*> actors;
@@ -263,7 +263,7 @@ SW_TEST_CASE( GameObjectTest, ParallelComponentTicking )
 SW_TEST_CASE( GameObjectTest, ReflectionSupport )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObject*        actorPtr = manager.createGameObject( sw::hashed_string( "ReflectedActor" ) );
     sw::GameObject&        actor    = *actorPtr;
     sw::MockMeshComponent* meshComp = actor.addComponent<sw::MockMeshComponent>();
@@ -307,7 +307,7 @@ SW_TEST_CASE( GameObjectTest, TagManagement )
 SW_TEST_CASE( HierarchicalActiveStateTest, SubtreeTickSkip )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObject*    actorPtr = manager.createGameObject( sw::hashed_string( "ActiveTestActor" ) );
     sw::GameObject&    actor    = *actorPtr;
     MockMeshComponent* comp     = actor.addComponent<MockMeshComponent>();
@@ -413,7 +413,7 @@ SW_TEST_CASE( GameObjectHierarchyTest, IsDescendantOfWalksParentChain )
 SW_TEST_CASE( PostEditChangePropertyTest, CallbackOnPropertyChanged )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObject*        actorPtr = manager.createGameObject( sw::hashed_string( "PropertyChangedActor" ) );
     sw::GameObject&        actor    = *actorPtr;
     MockCallbackComponent* comp     = actor.addComponent<MockCallbackComponent>();
@@ -517,7 +517,7 @@ SW_TEST_CASE( GameObjectTest, AttachToParentReparentsPrimarySceneComponent )
 SW_TEST_CASE( GameObjectTest, DeferredDestroyTwoSameTypeComponents )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject* a = manager.createGameObject( hashed_string( "DeferredA" ) );
     GameObject* b = manager.createGameObject( hashed_string( "DeferredB" ) );
@@ -541,7 +541,7 @@ SW_TEST_CASE( GameObjectTest, DeferredDestroyTwoSameTypeComponents )
 SW_TEST_CASE( GameObjectTest, TickRemoveOtherSameTypeComponent )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject* keeper = manager.createGameObject( hashed_string( "TickKeeperComp" ) );
     GameObject* victim = manager.createGameObject( hashed_string( "TickVictimComp" ) );
@@ -570,7 +570,7 @@ SW_TEST_CASE( GameObjectTest, TickRemoveOtherSameTypeComponent )
 SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickFollowOneRule )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject* keeper = manager.createGameObject( hashed_string( "TickClearer" ) );
     GameObject* victim = manager.createGameObject( hashed_string( "TickCleared" ) );
@@ -606,7 +606,7 @@ SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickFollowOneRule )
 SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickApplyInCallOrder )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject* keeper = manager.createGameObject( hashed_string( "TickAdopter" ) );
     GameObject* parent = manager.createGameObject( hashed_string( "TickParent" ) );
@@ -632,7 +632,7 @@ SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickApplyInCallOrder )
 SW_TEST_CASE( GameObjectTest, TagComponentWritesDuringTickAreDeferred )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     GameObject* keeper = manager.createGameObject( hashed_string( "TickTagger" ) );
     GameObject* tagged = manager.createGameObject( hashed_string( "TickTagged" ) );
     keeper->addComponent<MockMeshComponent>();
@@ -655,7 +655,7 @@ SW_TEST_CASE( GameObjectTest, TagComponentWritesDuringTickAreDeferred )
 SW_TEST_CASE( GameObjectTest, NameAndTickSettingsChangedDuringTickApplyAfterIt )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     GameObject* keeper = manager.createGameObject( hashed_string( "TickRenamer" ) );
     GameObject* target = manager.createGameObject( hashed_string( "TickTarget" ) );
     keeper->addComponent<MockMeshComponent>();
@@ -684,7 +684,7 @@ SW_TEST_CASE( GameObjectTest, NameAndTickSettingsChangedDuringTickApplyAfterIt )
 SW_TEST_CASE( GameObjectTest, SubTickChangesDuringTickApplyAfterIt )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     GameObject*        keeper     = manager.createGameObject( hashed_string( "SubTickChanger" ) );
     GameObject*        target     = manager.createGameObject( hashed_string( "SubTickTarget" ) );
     MockMeshComponent* keeperMesh = keeper->addComponent<MockMeshComponent>();
@@ -723,7 +723,7 @@ SW_TEST_CASE( GameObjectTest, SubTickChangesDuringTickApplyAfterIt )
 SW_TEST_CASE( GameObjectTest, SameEntityComponentsBothTick )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     GameObject* actor = manager.createGameObject( hashed_string( "SameEntityTick" ) );
     actor->addComponent<MockMeshComponent>();
@@ -1019,7 +1019,7 @@ SW_TEST_CASE( GameObjectTest, StandaloneObjectHasInvalidId )
 SW_TEST_CASE( GameObjectTest, BeginPlayMayAddComponentsAndSpawn )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     // onBeginPlay 안에서 태그를 붙인다 — 태그 컴포넌트가 붙는다.
     sw::GameObject*        pTagged = manager.createGameObject( sw::hashed_string( "TaggedOwner" ) );
@@ -1062,7 +1062,7 @@ SW_TEST_CASE( GameObjectTest, BeginPlayMayAddComponentsAndSpawn )
 SW_TEST_CASE( GameObjectTest, PlayLifecycleIsPairedAndExactlyOnce )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     int32 endCount = 0;
 
     sw::GameObject*        pActor = manager.createGameObject( sw::hashed_string( "PlayActor" ) );
@@ -1155,7 +1155,7 @@ SW_TEST_CASE( GameObjectTest, ComponentLabelIsNotItsType )
 SW_TEST_CASE( GameObjectTest, ComponentActiveBitIsIndependentOfOwner )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObject*        pParent = manager.createGameObject( sw::hashed_string( "ActiveParent" ) );
     sw::GameObject*        pChild  = manager.createGameObject( sw::hashed_string( "ActiveChild" ) );
     sw::MockMeshComponent* pTicker = pChild->addComponent<sw::MockMeshComponent>();
@@ -1457,7 +1457,7 @@ SW_TEST_CASE( GameObjectTest, DirtyRootListSurvivesIndexedRemoval )
 SW_TEST_CASE( GameObjectTest, TickStagesRebuildOnlyWhenTickWorkChanges )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "StageGate" ) );
     manager.tick( 0.016f );
     const uint32 baseCount = manager.getTickStageBuildCount();
@@ -1512,7 +1512,7 @@ SW_TEST_CASE( GameObjectTest, TickStagesRebuildOnlyWhenTickWorkChanges )
 SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     const sw::TickRegistry& registry = manager.getTickRegistry();
 
     sw::GameObject* pQuiet = manager.createGameObject( sw::hashed_string( "RegQuiet" ) );
@@ -1598,7 +1598,7 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
 SW_TEST_CASE( GameObjectTest, TickListDropsInactiveObjectsAndRestoresThem )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     const sw::TickRegistry& registry = manager.getTickRegistry();
     const uint32            kDuring  = static_cast<uint32>( sw::TickGroup::DuringPhysics );
 
@@ -1826,9 +1826,9 @@ SW_TEST_CASE( GameObjectTest, TickSettersQueueAndApplyAfterTick )
     constexpr uint32 kObjectCount = sw::SceneTransformHierarchy::kParallelWriteCount + 37;
 
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObjectManager managerReference;
-    sw::RegisterMockComponents( managerReference );
+    sw::RegisterMockComponents();
 
     sw::vector<sw::MockTickSceneComponent*> listTickComp;
     sw::vector<sw::SceneComponent*>         listReferenceComp;
@@ -2230,7 +2230,7 @@ SW_TEST_CASE( GameObjectTest, ObjectStateBinaryCarriesTagsAndAttachHierarchy )
 SW_TEST_CASE( GameObjectTest, GameObjectMassiveCreationAndDestructionStressTest )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     constexpr uint32            kObjectCount = 5000;
     sw::vector<sw::GameObject*> listObject;
@@ -2273,7 +2273,7 @@ SW_TEST_CASE( GameObjectTest, GameObjectMassiveCreationAndDestructionStressTest 
 SW_TEST_CASE( GameObjectTest, ParallelTickStructuralMutationStressTest )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     constexpr uint32 kObjectCount = 1000;
     for ( uint32 index = 0; index < kObjectCount; ++index )
@@ -2364,7 +2364,7 @@ SW_TEST_CASE( GameObjectTest, DeepHierarchyMatrixCompositionStressTest )
 SW_TEST_CASE( GameObjectTest, DeepMultiComponentCascadeDestructionAndReparenting )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     constexpr uint32            kDepth = 32;
     sw::vector<sw::GameObject*> listNode;
@@ -2448,7 +2448,7 @@ SW_TEST_CASE( GameObjectTest, DeepMultiComponentCascadeDestructionAndReparenting
 SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     constexpr uint32            kInitialObjectCount = 100;
     sw::vector<sw::GameObject*> listAliveObject;
@@ -2567,7 +2567,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
 SW_TEST_CASE( GameObjectTest, MultiLevelComponentInheritanceTypeInfoAndIsA )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "InheritanceActor" ) );
     SW_ASSERT_NOT_NULL( pObj );
@@ -2625,7 +2625,7 @@ SW_TEST_CASE( GameObjectTest, MultiLevelComponentInheritanceTypeInfoAndIsA )
 SW_TEST_CASE( GameObjectTest, MultiLevelComponentGameObjectPolymorphicLookup )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::GameObject* pObj = manager.createGameObject( sw::hashed_string( "DroneActor" ) );
     SW_ASSERT_NOT_NULL( pObj );
@@ -2905,7 +2905,7 @@ SW_TEST_CASE( GameObjectTest, CaseOnlyRenameChangesTheName )
 SW_TEST_CASE( GameObjectTest, PostLoadRunsAfterTheBatchResolvesReferences )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObject* pParent = manager.createGameObject( sw::hashed_string( "ProbeParent" ) );
     sw::GameObject* pChild  = manager.createGameObject( sw::hashed_string( "ProbeChild" ) );
     SW_ASSERT_TRUE( pParent != nullptr && pChild != nullptr );

@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    class Component;
+    class GameObject;
 
     /// @brief 함수의 네트워크 역할입니다. 목록은 PredefinedFunctionNetRole.xxx 에 있습니다.
     enum class FunctionNetRole : uint8
@@ -744,6 +746,13 @@ namespace sw
         size_t _size;
         /** @brief `$ctor` 로 placement new 한 인스턴스를 파괴합니다. 없으면 nullptr 입니다. */
         void ( *_destroyInstance )( void* ) = nullptr;
+        /**
+         * @brief 이 타입의 컴포넌트를 @p pOwner 에 붙여 만듭니다(`GameObject::addComponentTo<T>`). 만들 수 있는 컴포넌트 타입이 아니면 nullptr 입니다.
+         * @details 언리얼 `UClass` 가 리플렉션 정보와 생성(`ClassConstructor`)을 함께 드는 것과 같은 자리입니다. 이름으로 컴포넌트를 만드는 길
+         *          (`GameObjectManager::addComponentByName` — 씬 · 프리팹 로드 · 에디터)은 이 칸 하나를 봅니다. 코드젠이 추상이 아닌 컴포넌트
+         *          타입마다 채웁니다. 모듈 코드를 가리키므로 모듈 해제(`clearContent`)가 비우고, 같은 FQN 의 재등록이 새 이미지의 주소로 덮습니다.
+         */
+        Component* ( *_addComponent )( GameObject* pOwner );
         hashed_string                                             _name;
         hashed_string                                             _fullyQualifiedName;
         hashed_string                                             _parentFQN;

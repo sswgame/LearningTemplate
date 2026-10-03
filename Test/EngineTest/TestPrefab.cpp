@@ -184,7 +184,7 @@ SW_TEST_CASE( PrefabTest, InMemoryJsonPrefabCreationAndSpawn )
 SW_TEST_CASE( PrefabTest, CircularReferenceSpawnProtection )
 {
     sw::GameObjectManager authoring;
-    sw::RegisterMockComponents( authoring );
+    sw::RegisterMockComponents();
     sw::GameObject* pSource = authoring.createGameObject( sw::hashed_string( "CircularSelf" ) );
     SW_ASSERT_NOT_NULL( pSource->addComponent<sw::MockPostLoadSpawnerComponent>() );
     sw::PrefabAsset asset;
@@ -194,7 +194,7 @@ SW_TEST_CASE( PrefabTest, CircularReferenceSpawnProtection )
     SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
 
     sw::GameObjectManager objects;
-    sw::RegisterMockComponents( objects );
+    sw::RegisterMockComponents();
     sw::PrefabManager prefabs;
     sw::MockPostLoadSpawnerComponent::s_pPrefabs          = &prefabs;
     sw::MockPostLoadSpawnerComponent::s_spawnPath         = xmlPath;
@@ -254,7 +254,7 @@ SW_TEST_CASE( PrefabTest, SpawnDuringTickKeepsThePrefabsState )
     SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
 
     sw::GameObjectManager objects;
-    sw::RegisterMockComponents( objects );
+    sw::RegisterMockComponents();
     sw::PrefabManager      prefabs;
     sw::GameObject*        pSpawner = objects.createGameObject( sw::hashed_string( "Spawner" ) );
     sw::MockMeshComponent* pMock    = pSpawner->addComponent<sw::MockMeshComponent>();

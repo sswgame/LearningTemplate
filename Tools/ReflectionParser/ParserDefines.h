@@ -95,17 +95,16 @@ namespace sw
     // ------------------------------------------------------------------------------
     struct tplConstants
     {
-        inline static constexpr const utf8* kFileHeader                = "FileHeader";
-        inline static constexpr const utf8* kReflectTypeTraits         = "ReflectTypeTraits";
-        inline static constexpr const utf8* kTypeInfoAccessors         = "TypeInfoAccessors";
-        inline static constexpr const utf8* kComponentFactoryRegistrar = "ComponentFactoryRegistrar";
-        inline static constexpr const utf8* kTypeRegistrarBegin        = "TypeRegistrarBegin";
-        inline static constexpr const utf8* kTypeRegistrarEnd          = "TypeRegistrarEnd";
-        inline static constexpr const utf8* kEnumRegistrarBegin        = "EnumRegistrarBegin";
-        inline static constexpr const utf8* kEnumRegistrarEnd          = "EnumRegistrarEnd";
-        inline static constexpr const utf8* kBuiltinFileHeader         = "BuiltinFileHeader";
-        inline static constexpr const utf8* kBuiltinTypeRegistrar      = "BuiltinTypeRegistrar";
-        inline static constexpr const utf8* kBuiltinFileFooter         = "BuiltinFileFooter";
+        inline static constexpr const utf8* kFileHeader           = "FileHeader";
+        inline static constexpr const utf8* kReflectTypeTraits    = "ReflectTypeTraits";
+        inline static constexpr const utf8* kTypeInfoAccessors    = "TypeInfoAccessors";
+        inline static constexpr const utf8* kTypeRegistrarBegin   = "TypeRegistrarBegin";
+        inline static constexpr const utf8* kTypeRegistrarEnd     = "TypeRegistrarEnd";
+        inline static constexpr const utf8* kEnumRegistrarBegin   = "EnumRegistrarBegin";
+        inline static constexpr const utf8* kEnumRegistrarEnd     = "EnumRegistrarEnd";
+        inline static constexpr const utf8* kBuiltinFileHeader    = "BuiltinFileHeader";
+        inline static constexpr const utf8* kBuiltinTypeRegistrar = "BuiltinTypeRegistrar";
+        inline static constexpr const utf8* kBuiltinFileFooter    = "BuiltinFileFooter";
     }; // struct tplConstants
 
     // ------------------------------------------------------------------------------

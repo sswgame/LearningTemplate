@@ -84,6 +84,7 @@ namespace sw
             info._name               = hashed_string( "SchemaShiftComponent" );
             info._fullyQualifiedName = hashed_string( "sw::SchemaShiftComponent" );
             info._size               = sizeof( SchemaShiftComponent );
+            info._addComponent       = &GameObject::addComponentTo<SchemaShiftComponent>;
             // 지울 칸이 **앞**이다 — 그 칸에서 읽기가 멈추면 뒤의 `_kept` 가 읽히지 않아 드러난다.
             info._listProperty = {
                 {hashed_string( "_dropped" ), hashed_string( "int32" ), SW_OFFSET_OF( SchemaShiftComponent, _dropped )},
@@ -125,6 +126,7 @@ namespace sw
             info._name               = hashed_string( "EnumShiftComponent" );
             info._fullyQualifiedName = hashed_string( "sw::EnumShiftComponent" );
             info._size               = sizeof( EnumShiftComponent );
+            info._addComponent       = &GameObject::addComponentTo<EnumShiftComponent>;
             info._listProperty       = {
                 {hashed_string( "_color" ), hashed_string( "sw::StateShiftColor" ), SW_OFFSET_OF( EnumShiftComponent, _color )},
                 {hashed_string( "_after" ),               hashed_string( "int32" ), SW_OFFSET_OF( EnumShiftComponent, _after )}
@@ -621,8 +623,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, StateSavedBeforeAPropertyWasRemovedStill
     const RestoreTypeOnExit restoreComponentType{ *pComponentType };
     const RestoreTypeOnExit restoreObjectType{ *pObjectType };
 
-    GameObjectManager manager;
-    manager.registerComponentType<SchemaShiftComponent>( hashed_string( "SchemaShiftComponent" ) );
+    GameObjectManager     manager;
     GameObject*           pSaved = manager.createGameObject( hashed_string( "Saved" ) );
     SchemaShiftComponent* pComp  = pSaved->addComponent<SchemaShiftComponent>();
     SW_ASSERT_NOT_NULL( pComp );
@@ -894,9 +895,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumC
     registerStateShiftColorAsDeclared();
     const RestoreEnumOnExit restoreEnum{};
 
-    GameObjectManager manager;
-    manager.registerComponentType<EnumShiftComponent>( hashed_string( "EnumShiftComponent" ) );
-    manager.registerComponentType<SchemaShiftComponent>( hashed_string( "SchemaShiftComponent" ) );
+    GameObjectManager     manager;
     GameObject*           pSaved = manager.createGameObject( hashed_string( "Saved" ) );
     EnumShiftComponent*   pEnum  = pSaved->addComponent<EnumShiftComponent>();
     SchemaShiftComponent* pNext  = pSaved->addComponent<SchemaShiftComponent>();

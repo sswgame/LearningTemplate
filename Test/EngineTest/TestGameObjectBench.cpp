@@ -78,7 +78,7 @@ namespace
 SW_TEST_CASE( GameObjectBenchTest, SpawnTickDestroy )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::vector<sw::GameObject*> listObject;
     listObject.reserve( kObjectCount );
@@ -126,7 +126,7 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnTickDestroy )
 SW_TEST_CASE( GameObjectBenchTest, TickMovers )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::vector<sw::MockTickSceneComponent*> listMover;
     listMover.reserve( kObjectCount );
@@ -213,7 +213,7 @@ SW_TEST_CASE( GameObjectBenchTest, ApplyTransformBatch )
 SW_TEST_CASE( GameObjectBenchTest, SetActiveDeepChain )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     constexpr uint32 kDepth = 1000;
     sw::GameObject*  pRoot  = nullptr;
@@ -248,7 +248,7 @@ SW_TEST_CASE( GameObjectBenchTest, SetActiveDeepChain )
 SW_TEST_CASE( GameObjectBenchTest, GetComponentHot )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     // 찾는 것은 진짜 리플렉션 타입(`SceneComponent`)이어야 한다 — 모의 컴포넌트의 `StaticType()` 은 부를 때마다 이름을 인턴해
     // 그 비용이 조회를 가린다. 앞의 둘은 캐스트가 실패하는 모의 타입이다.
@@ -276,7 +276,7 @@ SW_TEST_CASE( GameObjectBenchTest, GetComponentHot )
 SW_TEST_CASE( GameObjectBenchTest, FindById )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
 
     sw::vector<uint64> listObjectId;
     listObjectId.reserve( kObjectCount );
@@ -325,7 +325,7 @@ SW_TEST_CASE( GameObjectBenchTest, FindById )
 SW_TEST_CASE( GameObjectBenchTest, DeepChainMove )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     sw::GameObject* pLeaf = nullptr;
     sw::GameObject* pRoot = buildDeepChain( manager, kChainDepth, pLeaf );
     manager.tick( 0.016f );
@@ -363,7 +363,7 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
         // 판마다 새 매니저다 — 하나를 돌려 쓰면 앞 판이 남긴 상태(풀 · 이름 번호)가 뒤 판을 잰다.
         {
             sw::GameObjectManager manager;
-            sw::RegisterMockComponents( manager );
+            sw::RegisterMockComponents();
             sw::GameObject* pLeaf = nullptr;
             sw::GameObject* pRoot = buildDeepChain( manager, kChainDepth, pLeaf );
 
@@ -379,7 +379,7 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
         }
         {
             sw::GameObjectManager* pManager = sw_new sw::GameObjectManager();
-            sw::RegisterMockComponents( *pManager );
+            sw::RegisterMockComponents();
             sw::GameObject* pLeaf = nullptr;
             buildDeepChain( *pManager, kChainDepth, pLeaf );
             pManager->tick( 0.016f );
@@ -400,7 +400,7 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
 SW_TEST_CASE( GameObjectBenchTest, SpawnCollidersDuringPlay )
 {
     sw::GameObjectManager manager;
-    sw::RegisterMockComponents( manager );
+    sw::RegisterMockComponents();
     manager.beginPlay();
 
     sw::vector<sw::GameObject*> listObject;
@@ -447,4 +447,41 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnCollidersDuringPlay )
     test::logBenchSamples( "next tick (onBeginPlay + body add + step) of 8000 colliders", listBeginTick );
     test::logBenchSamples( "destroy 8000 collider objects + process", listDestroy );
     SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
+}
+
+/**
+ * @brief [GameObjectBenchTest] 이름으로 컴포넌트 만들기 8000 회 — 씬 · 프리팹 로드가 컴포넌트마다 지나는 길(`addComponentByName`)입니다.
+ * @details 오브젝트를 먼저 만들어 두고 붙이는 것만 잽니다. 코드젠이 생성 함수를 준 실제 컴포넌트(`SceneComponent` · `TagComponent`)로 잽니다.
+ */
+SW_TEST_CASE( GameObjectBenchTest, AddComponentByName )
+{
+    sw::GameObjectManager       manager;
+    sw::vector<sw::GameObject*> listObject;
+    listObject.reserve( kObjectCount );
+
+    sw::vector<int64> listRound;
+    uint32            addedCount{ 0 };
+    for ( uint32 round = 0; round < 10; ++round )
+    {
+        listObject.clear();
+        for ( uint32 index = 0; index < kObjectCount; ++index )
+            listObject.push_back( manager.createGameObject( sw::hashed_string( "BenchObject" ) ) );
+
+        const auto start = std::chrono::steady_clock::now();
+        for ( sw::GameObject* pObj : listObject )
+        {
+            if ( manager.addComponentByName( pObj, sw::hashed_string( "SceneComponent" ) ) != nullptr )
+                ++addedCount;
+            if ( manager.addComponentByName( pObj, sw::hashed_string( "TagComponent" ) ) != nullptr )
+                ++addedCount;
+        }
+        listRound.push_back( test::getElapsedMicroseconds( start ) );
+
+        for ( sw::GameObject* pObj : listObject )
+            manager.destroyObject( pObj );
+        manager.processDeferredDestruction();
+    }
+
+    test::logBenchSamples( "addComponentByName x2 on 8000 objects (SceneComponent + TagComponent)", listRound );
+    SW_EXPECT_EQUAL( kObjectCount * 2u * 10u, addedCount );
 }
