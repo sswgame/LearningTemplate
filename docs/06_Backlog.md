@@ -115,18 +115,18 @@ cd build/Ninja-Debug/Bin
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
 
-- **연속 바디의 후보 범위가 그 step 의 최대 이동만큼 넓어진다.** 순간이동이 아닌 먼 이동(에디터 드래그)이 있는 step 은 모든 바디를 훑는다(답은 맞고
-  그 step 만 느리다). 상대 운동은 한 step 안 직선 이동을 가정한다. `PhysicsWorld.cpp` 의 `maxDisplacement` · `addSweptPairs`.
-- **서브틱 id 64 번부터는 활성이 목록에만 있어** 틱 중 끄기 · 해제가 틱 뒤에야 반영된다(1~63 은 원자 마스크, `Component.h` 에 적혀 있다).
-- **`SceneDocument::loadXml` 이 서비스 가드 없이 `getResourceManager()` 를 부른다.** 같은 함수의 GUID 블록과 `loadBinary` 는 `areEngineServicesBound()` 로
-  감싼다. 단독 도구 · 테스트에서 XML 씬을 읽으면 assert 다(지금 호출부는 도달하지 않는다).
-- **핫 리로드 · 메시 아닌 컴포넌트의 `onPostLoad` 활용.** `onPostLoad() override` 는 `MeshComponent` 하나뿐이다. 로드 뒤 다시 맞춰야 할 파생 상태가 있는
-  컴포넌트를 찾아 옮긴다.
-- **`getAllGameObjects()` 값 반환이 14 곳에 있다.** 프레임 경로에 들어오면 `getAllGameObjects( out )` 또는 `forEachGameObject` 로 바꾼다(조건부).
+- **상태를 다시 읽을 때(`onPostLoad`) 파생 상태를 다시 맞추지 않는 컴포넌트가 남았다** — `SpriteAnimatorComponent` · `DamageUIComponent` 는 플레이 중 에셋 경로를
+  고쳐도 다시 열지 않는다, `CameraControllerComponent` 는 흔들림 중 상태를 다시 읽으면 오프셋이 남는다(적용한 오프셋을 저장하지 않음), `EffectBaseComponent` 는
+  페이드 중 다시 읽으면 이미 어두워진 알파에서 다시 시작한다. 순서 함정 둘: 핸들 프로퍼티는 `onPostLoad` 뒤에 풀리고, 프리팹 인스턴스의 저장 diff 는 `onPostLoad`
+  뒤에 알림 없이 적용된다.
+- **`getAllGameObjects()` 값 반환이 6 곳에 있다(모두 일회성).** 프레임 경로에 들어오면 `getAllGameObjects( out )` 또는 `forEachGameObject` 로 바꾼다(조건부).
 - **`MeshInstanceBatch` 의 한계.** 항목 수가 만들 때 정해지고(resize 없음, `setEntryVisible` 로 숨기기만), 배치 하나 = 메시 · 머티리얼 하나라 항목별
   머티리얼 · 투명 정렬이 없다.
 
 ### 1-3. 그래픽스 · RHI · 셰이더
+
+- **머티리얼 XML 로더(`MaterialXml.cpp` · `MaterialInstance.cpp`)가 서비스 가드 없이 `getResourceManager()` 를 부른다** — 씬 · 프리팹처럼
+  `AssetFormatRegistry::upgradeXmlWithActiveRegistry` 로(서비스 없는 도구 · 시험에서 assert).
 
 - **엔진 슬롯 t0..t3(풀스크린 입력 · 그림자 맵)의 샘플러가 백엔드마다 다르다** — GL 최근접 · 클램프, DX11 선형 · 클램프, 네이티브는 셰이더가 고른다. 기본 벤치에서
   GL 이 DX12 와 ~11k 픽셀(큐브 모서리 · 비스듬한 윗면) 다른 원인 후보(미확인). 머티리얼 슬롯처럼 계약 샘플러 하나(`shaderslot`)로 맞춘다.
@@ -184,15 +184,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
-- **`MonsterDef` 의 값이 픽셀 시절 단위로 보인다**(`_speed` 150 · 순찰 200 · 감지 400 · 공격 50) — `UnitStatsComponent::setStats` 인자와 1:1 로 맞지만 잇는 코드가
-  없다. 단위(m · m/s)를 정하고 카탈로그 → 유닛 스탯 연결을 만든다.
-- **`OverworldEvents.h` 의 Warp 이벤트 셋에 발행자 · 구독자가 없어 보인다**(확인만 함) — `GameEvents.h` 와 같은 기준(낼 자리가 있으면 발행, 없으면 삭제)으로 정리.
 
 - **강체 · 고정 스텝 누적기가 없다.** `PhysicsWorld::step` 은 겹침 이벤트만 낸다. 강체가 생기면 적분과 누적기를 넣는다.
-- **`StreamingPriority` 가 실행 순서에 반영되지 않는다.** `AssetStreamingQueue::requestAsset*` 이 받기만 한다 — `TaskPriority` 로 옮겨 싣는다.
 - **리눅스에서 yad 만 깔린 기계에는 "All files" 필터가 없다**(`LinuxFileDialog.cpp`). `yad --file --file-filter='A | *.txt' --file-filter='All files | *'`
   가 뜨는지 확인한 뒤에만 `buildGtkStyleCommand( ..., true )` 로 바꾼다 — yad 가 인자를 거부하면 다이얼로그가 아예 안 뜬다.
-- **`Resource/engine/textures/random/blend.dds` 는 DDS 가 아니라 받다 만 GitHub HTML 이다.** 이름으로 참조하는 곳은 없다. 지우거나 진짜 텍스처로 바꾼다.
 
 ### 1-7. Core · 태스크
 
@@ -381,6 +376,8 @@ cd build/Ninja-Debug/Bin
 같은 내용이 `AGENTS.md` · 폴더 `README.md` · 코드 주석에 정본으로 있으면 그쪽을 가리킨다.
 
 ### 3-1. 측정 · 프로파일
+
+- **물리 벤치: `PhysicsBenchTest`**(Release) — 먼 이동 바디가 있는 step p50 1124~2468 → 319~330 us(없는 step 은 319~328 us 그대로).
 
 - **성능은 Release 로 잰다.** Debug 는 레이스 검출기 · 이터레이터 프록시로 컨테이너 코드를 과장한다(668 vs 87 us). 이전 · 이후 바이너리를 같은 스크립트로
   **번갈아** 2~3 회 잰다(`git stash -u` → 빌드 → 복사 → `stash pop` → 빌드). 아침 기준선과 오후 결과를 견주면 기계 상태가 결과로 읽힌다.
@@ -626,6 +623,10 @@ cd build/Ninja-Debug/Bin
 
 ### 3-6. 오브젝트 · 씬 · 틱
 
+- **경로 프로퍼티로 에셋을 여는 컴포넌트는 `onBeginPlay` 만으로 부족하다** — 상태 읽기는 `onPostLoad` 만 부르고 플레이 전이면 BeginPlay 가 없다.
+  `onPostLoad` · `onPropertyChanged`(그 경로) 양쪽에서 연다(`SequencePlayerComponent` · `DialogueRunnerComponent`).
+- **물리 후보 범위는 셀 하나 이내로 움직인 바디만으로 넓히고, 먼 이동 바디(`isFarMover`)는 하나씩 잰다** — 하나가 멀리 끌리면 모든 연속 바디가 전체를 훑었다.
+
 - **저장된 상태는 이름으로 다른 오브젝트를 가리키지 않는다**(`AGENTS.md`). 부모는 `_attachOwnerId`, 핸들 PROPERTY 는 `ObjectSaveOptions::getSavedObjectId`(프리팹은 0). 상태를 읽는
   길 아홉은 모두 `ObjectStateBatch` 를 지나고 `finish()` 가 이름 되찾기와 부착을 한 번에 한다. 못 푼 참조는 `keepUnresolvedAttach` 로 보존한다. 표는 `Source/Engine/Object/README.md`.
 - **빌리기는 포인터(이번 호출 · 프레임), 보관은 `GameObjectHandle` · `ComponentHandle` + `resolve*`.** 이름 기반 `GameObjectPtr` · `ComponentPtr` 를 되살리지 말 것. 게임 모듈은
@@ -840,6 +841,9 @@ cd build/Ninja-Debug/Bin
   (리플렉션 등록 → 설정 → ResourceManager).
 
 ### 3-10. Core · 태스크 · 메모리
+
+- **스트리밍 I/O 를 `TaskPriority::High` 에 싣지 말 것** — 그 줄은 병렬 그룹의 청크 사이에서도 비우므로 파일 읽기가 프레임 일을 막는다(High · Immediate → Normal,
+  Low · Normal → 백그라운드).
 
 - **TaskManager 약속** — 워커는 High 전역 큐 → 자기 덱 → Normal 전역 → 훔치기 → Low 순으로 본다(RT 가 곧바로 기다리는 기록 태스크는 High). 깨우기는 넣은 만큼만 — 묶음은
   `submitWithoutWake` 후 끝에 `wakeSleepingWorkers( n )` 한 번(세대도 올리지 않으므로 반드시), `notify_all` 은 2 배 손해, 모두 깨우기는 처음 읽은 유휴 마스크 안에서만(다시 잠든 워커를 쫓으면
