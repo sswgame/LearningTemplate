@@ -571,7 +571,14 @@ namespace sw
         beginInfo._colorTargetCount = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
         for ( uint32 colorTargetIndex = 0; colorTargetIndex < beginInfo._colorTargetCount; ++colorTargetIndex )
         {
-            beginInfo._arrColorTarget[colorTargetIndex] = findTransient( pColorNames[colorTargetIndex] );
+            const TransientAttachmentPool::Attachment target = findTransientAttachment( pColorNames[colorTargetIndex] );
+            beginInfo._arrColorTarget[colorTargetIndex]      = target._texture;
+            // 렌더 패스(뷰포트 · 시저)는 타깃의 크기다 — 나눗수가 있는 첨부는 프레임보다 작다. 한 패스의 타깃은 크기가 같다(검증).
+            if ( colorTargetIndex == 0 && target._texture != 0 )
+            {
+                beginInfo._width  = target._width;
+                beginInfo._height = target._height;
+            }
             // 핸들 0 은 백버퍼다. 없는 첨부를 그대로 열면 패스가 화면에 그린다 — 열지 않고 알린다(패스 경로라 한 번만).
             if ( beginInfo._arrColorTarget[colorTargetIndex] == 0 )
             {
@@ -594,13 +601,14 @@ namespace sw
         if ( ctx._pCmd == nullptr )
             return;
         RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor       = SW_FALSE;
-        beginInfo._colorTargetCount = 0;
-        beginInfo._depthTarget      = findTransient( depthName );
-        beginInfo._depthLoadOp      = depthLoad;
-        beginInfo._clearDepth       = clearDepth;
-        beginInfo._width            = _transientPool.getWidth();
-        beginInfo._height           = _transientPool.getHeight();
+        beginInfo._bBindColor                           = SW_FALSE;
+        const TransientAttachmentPool::Attachment depth = findTransientAttachment( depthName );
+        beginInfo._colorTargetCount                     = 0;
+        beginInfo._depthTarget                          = depth._texture;
+        beginInfo._depthLoadOp                          = depthLoad;
+        beginInfo._clearDepth                           = clearDepth;
+        beginInfo._width                                = depth._texture != 0 ? depth._width : _transientPool.getWidth();
+        beginInfo._height                               = depth._texture != 0 ? depth._height : _transientPool.getHeight();
         ctx._pCmd->beginRenderPass( beginInfo );
     }
 

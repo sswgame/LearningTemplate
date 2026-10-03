@@ -21,6 +21,7 @@
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Graphics/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
@@ -4515,4 +4516,134 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteFramesAndTintsArePerInstance )
 
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend available for the per-instance sprite test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 나눗수 2 로 선언한 첨부는 반 크기로 만들어지고, 그 첨부에 그리는 패스는 첨부 전체를 덮는다 — 4 백엔드
+ * @details `RenderPassAttachment::_resolutionDivisor` 는 첨부를 프레임 크기 / 나눗수로 만든다. 패스는 출력 첨부의 크기로 렌더 패스(뷰포트)를
+ *          열어야 한다 — 프레임 크기로 열면 반 크기 타깃에 화면의 왼쪽 위 4 분의 1 만 들어간다. 나눈 후처리 파이프라인의 BloomColor 를 반
+ *          크기로 바꿔 그리고, SceneColor 와 BloomColor 에서 배경이 아닌 픽셀의 무게중심을 견준다 — BloomColor 의 중심을 두 배 하면
+ *          SceneColor 의 중심이어야 한다(블룸은 원본 색 + 밝은 부분이라 배경 판정이 같다).
+ */
+SW_TEST_CASE( RenderPassGpuTest, HalfResolutionAttachmentCoversItsWholeTarget )
+{
+    sw::string pipelineText;
+    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/forwardpipelinestaged.xml", pipelineText ) );
+    const sw::string bloomDecl = "<RenderPassAttachment _name=\"BloomColor\"";
+    SW_ASSERT_TRUE( pipelineText.find( bloomDecl ) != sw::string::npos );
+    pipelineText              = sw::StringUtil::replace( pipelineText, bloomDecl, bloomDecl + " _resolutionDivisor=\"2\"" );
+    const sw::string halfPath = test::makeTempPath( "halfbloomforwardpipeline.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( halfPath, pipelineText ) );
+
+    struct Centroid
+    {
+        uint32  _count{ 0 };
+        float32 _x{ 0.0f };
+        float32 _y{ 0.0f };
+    };
+    auto computeCentroid = []( const test::RHITestImage& image ) -> Centroid
+    {
+        Centroid result{};
+        float64  sumX{ 0.0 };
+        float64  sumY{ 0.0 };
+        for ( uint32 row = 0; row < image.getHeight(); ++row )
+        {
+            for ( uint32 col = 0; col < image.getWidth(); ++col )
+            {
+                if ( test::RHITestImage::isDefaultClearBackground( image.getPixel( col, row ) ) )
+                    continue;
+                ++result._count;
+                sumX += static_cast<float64>( col ) + 0.5;
+                sumY += static_cast<float64>( row ) + 0.5;
+            }
+        }
+        if ( result._count > 0 )
+        {
+            result._x = static_cast<float32>( sumX / result._count );
+            result._y = static_cast<float32>( sumY / result._count );
+        }
+        return result;
+    };
+
+    uint32 comparedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+
+        sw::Scene                scene( "HalfResolutionScene" );
+        bool                     bOk        = scene.ensureDefaultCameras();
+        constexpr uint32         kCubeCount = 3;
+        sw::shared_ptr<sw::Mesh> arrMesh[kCubeCount];
+        for ( uint32 index = 0; index < kCubeCount && bOk; ++index )
+        {
+            arrMesh[index]             = sw::MeshUtil::createUnitCube();
+            const sw::string   name    = sw::string( "Cube" ) + sw::to_string( index );
+            sw::GameObject*    pObject = ( arrMesh[index] != nullptr )
+                                           ? scene.getObjectManager()->createGameObject( sw::hashed_string( name.c_str(), static_cast<uint32>( name.size() ) ) )
+                                           : nullptr;
+            sw::MeshComponent* pMesh   = ( pObject != nullptr ) ? pObject->addComponent<sw::MeshComponent>() : nullptr;
+            bOk                        = pMesh != nullptr;
+            if ( bOk == false )
+                break;
+            pMesh->setMesh( arrMesh[index] );
+            // 화면 가운데에서 비켜 둔다 — 왼쪽 위 4 분의 1 만 담긴 그림(프레임 크기 뷰포트)과 무게중심이 확연히 갈린다.
+            pMesh->setLocalPosition( sw::float3{ 0.8f + static_cast<float32>( index ) * 1.2f, 1.0f, 0.0f } );
+        }
+        scene.getObjectManager()->flushSceneTransforms();
+
+        test::RHITestImage sceneColor;
+        test::RHITestImage bloomColor;
+        if ( bOk )
+        {
+            sw::FrameRenderer renderer;
+            bOk = renderer.initialize( device.get(), halfPath ) && renderer.isReady();
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "반해상도 블룸 파이프라인을 만들지 못했다" ).c_str() );
+            constexpr uint32 kWarmupFrameCount = 3;
+            for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
+            {
+                device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                bOk = renderer.execute( device.get(), &scene );
+                device->endFrame( false, false );
+                device->waitIdle();
+            }
+            bOk = bOk && sceneColor.readTransient( renderer, "SceneColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+            renderer.shutdown();
+        }
+        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
+        {
+            if ( mesh != nullptr )
+                mesh->releaseRhi( device.get() );
+        }
+        if ( bOk == false )
+            continue;
+        ++comparedCount;
+
+        SW_EXPECT_EQUAL( sw::TransientAttachmentPool::computeScaledExtent( sceneColor.getWidth(), 2 ), bloomColor.getWidth() );
+        SW_EXPECT_EQUAL( sw::TransientAttachmentPool::computeScaledExtent( sceneColor.getHeight(), 2 ), bloomColor.getHeight() );
+        const Centroid full = computeCentroid( sceneColor );
+        const Centroid half = computeCentroid( bloomColor );
+        SW_LOG_INFO( "%#SceneColor %#x%# drawn %# centroid (%#, %#), BloomColor %#x%# drawn %# centroid x2 (%#, %#)", label, sceneColor.getWidth(),
+                     sceneColor.getHeight(), full._count, full._x, full._y, bloomColor.getWidth(), bloomColor.getHeight(), half._count, half._x * 2.0f,
+                     half._y * 2.0f );
+        SW_EXPECT_TRUE_MSG( full._count > 1000, ( label + "SceneColor 에 큐브가 없다" ).c_str() );
+        // 반 크기 타깃의 그려진 픽셀은 원본의 4 분의 1 근처다(가장자리 반올림 · 블룸 번짐 몫으로 넉넉히).
+        SW_EXPECT_TRUE_MSG( half._count * 3u >= full._count / 2u && half._count <= full._count / 2u,
+                            ( label + "BloomColor 의 그려진 픽셀 수 " + sw::to_string( half._count ) + " 가 원본 " + sw::to_string( full._count ) +
+                              " 의 4 분의 1 근처가 아니다" )
+                                .c_str() );
+        constexpr float32 kMaxCentroidDrift = 4.0f;
+        const float32     driftX            = sw::MathUtil::abs( half._x * 2.0f - full._x );
+        const float32     driftY            = sw::MathUtil::abs( half._y * 2.0f - full._y );
+        SW_EXPECT_TRUE_MSG( driftX <= kMaxCentroidDrift && driftY <= kMaxCentroidDrift,
+                            ( label + "반 크기 BloomColor 의 그림이 원본과 어긋난다(무게중심 차이 " + sw::to_string( static_cast<int32>( driftX ) ) + ", " +
+                              sw::to_string( static_cast<int32>( driftY ) ) + " 픽셀) — 패스가 타깃 크기가 아니라 프레임 크기로 열렸다" )
+                                .c_str() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the half-resolution bloom pipeline" );
 }

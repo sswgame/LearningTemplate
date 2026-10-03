@@ -403,7 +403,7 @@ namespace sw
         /** @brief 풀스크린 삼각형을 그립니다. */
         void drawFullscreen( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
         /** @brief 일시 텍스처를 할당합니다. */
-        void allocateTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor );
+        void allocateTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 resolutionDivisor = 1 );
         /** @brief 컬러(+깊이) 패스를 시작합니다. 열지 못하면 false 이고, 그때는 그리거나 닫지 않습니다(`beginColorPassMrt`). */
         bool beginColorPass( FramePassContext& ctx, string_view colorName, string_view depthName, const float4& clearColor,
                              RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );

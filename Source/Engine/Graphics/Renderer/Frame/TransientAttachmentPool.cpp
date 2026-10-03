@@ -24,7 +24,8 @@ namespace sw
         _height = height;
     }
 
-    bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor )
+    bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
+                                            uint32 resolutionDivisor )
     {
         if ( pDevice == nullptr || pDevice->getResource() == nullptr )
             return false;
@@ -32,8 +33,8 @@ namespace sw
             return true;
 
         RHITextureDesc desc{};
-        desc._width                   = _width;
-        desc._height                  = _height;
+        desc._width                   = computeScaledExtent( _width, resolutionDivisor );
+        desc._height                  = computeScaledExtent( _height, resolutionDivisor );
         desc._format                  = format;
         desc._bIsRenderTarget         = bDepth ? SW_FALSE : SW_TRUE;
         desc._bIsDepthStencil         = bDepth ? SW_TRUE : SW_FALSE;
@@ -47,7 +48,7 @@ namespace sw
             return false;
         }
         const RHIDescriptorIndex srv = pDevice->getResource()->registerBindlessTexture( handle );
-        _mapAttachment.emplace( name, Attachment{ handle, srv } );
+        _mapAttachment.emplace( name, Attachment{ handle, srv, desc._width, desc._height } );
         return true;
     }
 

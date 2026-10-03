@@ -19,6 +19,7 @@
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
+#include "Engine/Graphics/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
@@ -516,6 +517,50 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         att._format = "R99G99_NOPE";
         desc._listAttachment.push_back( att );
         SW_EXPECT_TRUE( res.validate( "unit-test" ) > 0u );
+    }
+    // 4-2) 첨부 나눗수: 1 · 2 · 4 만 받고, 한 패스의 출력(컬러 · 깊이)은 같은 나눗수여야 한다.
+    {
+        auto makeAttachment = []( const utf8* pName, const utf8* pFormat, uint32 divisor )
+        {
+            sw::RenderPassAttachment att{};
+            att._name              = pName;
+            att._format            = pFormat;
+            att._resolutionDivisor = divisor;
+            return att;
+        };
+        for ( uint32 divisor : { 0u, 3u, 8u } )
+        {
+            sw::RenderPipelineResource res;
+            res.getDesc()._listAttachment.push_back( makeAttachment( "Odd", "R8G8B8A8_UNORM", divisor ) );
+            SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) == 1u, sw::to_string( divisor ).c_str() );
+        }
+        auto makeHalfPass = [&]( sw::RenderPipelineResource& res, uint32 depthDivisor )
+        {
+            res.getDesc()._listAttachment.push_back( makeAttachment( "HalfColor", "R8G8B8A8_UNORM", 2 ) );
+            res.getDesc()._listAttachment.push_back( makeAttachment( "Depth", "D24_UNORM_S8_UINT", depthDivisor ) );
+            sw::RenderGraphPassDesc pass{};
+            pass._name            = "HalfOpaque";
+            pass._type            = "ForwardOpaque";
+            pass._depthAttachment = "Depth";
+            pass._listOutput.push_back( "HalfColor" );
+            pass._listOutput.push_back( "Depth" );
+            res.getDesc()._listPass.push_back( pass );
+        };
+        {
+            sw::RenderPipelineResource res;
+            makeHalfPass( res, 2 );
+            SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+        }
+        {
+            sw::RenderPipelineResource res;
+            makeHalfPass( res, 1 );
+            SW_EXPECT_TRUE( res.validate( "unit-test" ) >= 1u );
+        }
+        // 크기는 올림이고 최소 1 이다 — 홀수 창에서 반해상도가 한 줄 모자라지 않는다.
+        SW_EXPECT_EQUAL( 641u, sw::TransientAttachmentPool::computeScaledExtent( 1281u, 2u ) );
+        SW_EXPECT_EQUAL( 320u, sw::TransientAttachmentPool::computeScaledExtent( 1280u, 4u ) );
+        SW_EXPECT_EQUAL( 1u, sw::TransientAttachmentPool::computeScaledExtent( 1u, 4u ) );
+        SW_EXPECT_EQUAL( 720u, sw::TransientAttachmentPool::computeScaledExtent( 720u, 1u ) );
     }
     // 4-1) 이름은 RHIFormat 이지만 첨부가 될 수 없는 포맷 — 각각 오류 하나. 렌더 가능한 포맷은 통과한다.
     for ( const utf8* pFormat : { "Unknown", "BC1_UNORM", "BC7_UNORM", "R32G32B32_FLOAT" } )

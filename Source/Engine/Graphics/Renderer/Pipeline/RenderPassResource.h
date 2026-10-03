@@ -97,7 +97,22 @@ namespace sw
          */
         PROPERTY( SkipIfEmpty )
         string _role;
+
+        /**
+         * @brief 첨부 크기 = 프레임 크기 / 이 값(올림)입니다. 1(기본) · 2 · 4 만 받습니다(`RenderPipelineResource::validate`).
+         * @details 반해상도 후처리(블룸 · SSAO)처럼 프레임보다 작게 그려도 되는 타깃용입니다(언리얼 RDG 의 텍스처 Extent 를 뷰 크기의
+         *          분수로 잡는 자리). 한 패스의 출력(컬러 · 깊이)은 모두 같은 나눗수여야 합니다 — 렌더 패스의 타깃은 크기가 같아야 합니다.
+         *          패스는 출력 첨부의 크기로 뷰포트를 잡고, 입력은 UV 로 읽으므로 크기가 달라도 됩니다(선형 샘플러가 늘리고 줄인다).
+         */
+        PROPERTY()
+        uint32 _resolutionDivisor{ 1 };
     };
+
+    /** @brief 첨부 나눗수(`RenderPassAttachment::_resolutionDivisor`)가 받는 값인지 반환합니다(1 · 2 · 4). */
+    constexpr bool isSupportedResolutionDivisor( uint32 divisor )
+    {
+        return divisor == 1u || divisor == 2u || divisor == 4u;
+    }
 
     /**
      * @brief 렌더 파이프라인 그래프 안의 패스 노드 하나입니다.

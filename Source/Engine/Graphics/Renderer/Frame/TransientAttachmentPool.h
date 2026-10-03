@@ -37,7 +37,17 @@ namespace sw
         {
             RHITextureHandle   _texture{ 0 };
             RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
+            uint32             _width{ 0 }; ///< 이 첨부의 실제 크기(풀 크기 / 나눗수, 올림)
+            uint32             _height{ 0 };
         };
+
+        /** @brief 프레임 크기 하나를 나눗수로 줄인 크기입니다(올림, 최소 1). 나눗수 0 은 1 로 봅니다. */
+        static constexpr uint32 computeScaledExtent( uint32 extent, uint32 divisor )
+        {
+            const uint32 safeDivisor = divisor > 0u ? divisor : 1u;
+            const uint32 scaled      = ( extent + safeDivisor - 1u ) / safeDivisor;
+            return scaled > 0u ? scaled : 1u;
+        }
 
         TransientAttachmentPool();
         ~TransientAttachmentPool() = default;
@@ -52,8 +62,11 @@ namespace sw
         /** @brief 첨부가 하나도 없으면 true 입니다. */
         bool isEmpty() const { return _mapAttachment.empty(); }
 
-        /** @brief 이름으로 첨부를 만듭니다(현재 크기). 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다. */
-        bool allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor );
+        /**
+         * @brief 이름으로 첨부를 만듭니다 — 크기는 현재 크기를 `resolutionDivisor` 로 나눈 것(올림)입니다.
+         * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
+         */
+        bool allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 resolutionDivisor );
         /** @brief 이름의 첨부(텍스처 + SRV)입니다. 없으면 빈 값입니다. */
         Attachment find( string_view name ) const;
         /** @brief 이름의 텍스처 핸들입니다. 없으면 0 입니다. */

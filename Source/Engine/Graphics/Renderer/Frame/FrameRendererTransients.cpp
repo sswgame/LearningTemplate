@@ -48,7 +48,7 @@ namespace sw
         for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
         {
             const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( attachment._format );
-            allocateTransient( attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment._clearColor );
+            allocateTransient( attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment._clearColor, attachment._resolutionDivisor );
         }
 
         auto ensureNamed = [&]( string_view name )
@@ -199,9 +199,9 @@ namespace sw
         _transientPool.release( _pDevice );
     }
 
-    void FrameRenderer::allocateTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor )
+    void FrameRenderer::allocateTransient( string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 resolutionDivisor )
     {
-        _transientPool.allocate( _pDevice, name, format, bDepth, clearColor );
+        _transientPool.allocate( _pDevice, name, format, bDepth, clearColor, resolutionDivisor );
     }
 
     bool FrameRenderer::markAttachmentCleared( const hashed_string& key )
@@ -264,8 +264,8 @@ namespace sw
             info._name       = name;
             info._bPresented = ( presented.empty() == false && name == presented ) ? SW_TRUE : SW_FALSE;
             info._texture    = attachment._texture;
-            info._width      = _transientPool.getWidth();
-            info._height     = _transientPool.getHeight();
+            info._width      = attachment._width;
+            info._height     = attachment._height;
             info._format     = attachmentFormatOrDefault( name, RHIFormat::R8G8B8A8_UNORM );
             info._bDepth     = FrameRendererUtil::isDepthFormat( info._format ) ? SW_TRUE : SW_FALSE;
             listTarget.push_back( std::move( info ) );

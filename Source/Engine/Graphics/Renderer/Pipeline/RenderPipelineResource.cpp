@@ -70,6 +70,11 @@ namespace sw
                     break;
                 }
             }
+            if ( isSupportedResolutionDivisor( attachment._resolutionDivisor ) == false )
+            {
+                SW_LOG_ERROR( "[%#] attachment '%#': _resolutionDivisor %# — 1 · 2 · 4 만 받습니다", sourcePath, attachment._name, attachment._resolutionDivisor );
+                ++issueCount;
+            }
             // 역할 선언은 아는 글이어야 한다. 모르는 글을 조용히 이름 · 포맷 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다.
             RenderPassInputRole declaredRole{ RenderPassInputRole::Invalid };
             if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
@@ -208,6 +213,33 @@ namespace sw
                               sourcePath, pass._name, colorCount, static_cast<uint32>( kMaxColorAttachments ) );
                 ++issueCount;
             }
+        }
+
+        // 3-0) 한 패스의 출력(컬러 · 깊이)은 크기가 같아야 한다 — 렌더 패스의 타깃은 한 크기다. 나눗수가 다르면 D3D 는 렌더 패스를 거부하고
+        //      Vulkan 은 프레임버퍼를 못 만든다.
+        for ( const RenderGraphPassDesc& pass : _desc._listPass )
+        {
+            const RenderPassAttachment* pFirst           = nullptr;
+            auto                        checkSameDivisor = [&]( string_view attachmentName )
+            {
+                const RenderPassAttachment* pAttachment = findAttachment( attachmentName );
+                if ( pAttachment == nullptr )
+                    return;
+                if ( pFirst == nullptr )
+                {
+                    pFirst = pAttachment;
+                    return;
+                }
+                if ( pAttachment->_resolutionDivisor == pFirst->_resolutionDivisor )
+                    return;
+                SW_LOG_ERROR( "[%#] pass '%#': 출력 '%#'(나눗수 %#) 과 '%#'(나눗수 %#) 의 크기가 다릅니다 — 한 패스의 출력은 같은 크기여야 합니다",
+                              sourcePath, pass._name, pFirst->_name, pFirst->_resolutionDivisor, pAttachment->_name, pAttachment->_resolutionDivisor );
+                ++issueCount;
+            };
+            for ( const string& outputName : pass._listOutput )
+                checkSameDivisor( outputName );
+            if ( pass._depthAttachment.empty() == false )
+                checkSameDivisor( pass._depthAttachment );
         }
 
         // 3-1) 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 **선언한 컬러 출력**에 그린다. 컬러 출력이 없으면 그릴 곳이 없다 —
