@@ -38,7 +38,7 @@ cmake --build --preset Ninja-Debug
 - Outputs: `build/<preset>/Bin`. Compile DB: `build/<preset>/compile_commands.json` (`.clangd` points at `Ninja-Debug`).
 - Key cache options (all `SW_*`, declared in `cmake/Config/BuildOptions.cmake`): `SW_SHIPPING_BUILD`,
   `SW_ACTIVE_GAME` (which `Source/Games/<name>` builds as `SWGame`), `SW_SHIPPING_RHI_BACKEND` (the one RHI backend
-  Shipping links statically; Dev always loads every `RHI_*` module),
+  Shipping links statically — declared in `Source/Engine/CMakeLists.txt`; Dev always loads every `RHI_*` module),
   `SW_REQUIRE_REFLECTION`, `SW_ENABLE_PCH`, `SW_USE_SCCACHE`.
 
 ## Test
