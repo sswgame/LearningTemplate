@@ -10,9 +10,8 @@
 판정: 각 실행이 exit 0 이고, 로그의 [Error] 수와 PPM 의 평균 RGB·"배경이 아닌 픽셀 수" 를 표로 낸다.
 네 백엔드의 평균이 서로 1.0 이내이고 non-bg 픽셀 수가 0 이 아니면 정상이다.
 
-백엔드는 -dx11 / -dx12 / -vk / -gl 플래그로 고른다. `-gv_rhiBackend=<n>` 도 지금은 먹지만(둘 다
-같은 RHIBackendUtil::findCommandLineBackend 를 지난다) 숫자라 읽기 나쁘다. 예전에는 정말로 무시되어
-EngineConfig 의 _defaultRHI 가 덮어썼고, 그래서 스모크가 네 번 다 DX12 를 돌린 적이 있다.
+백엔드는 쿠킹 표(Config/Engine/CookContract.json)의 줄마다 첫 별칭 플래그(-dx11 / -dx12 / -vk / -gl)로 고른다.
+`-gv_rhiBackend=<n>` 도 같은 RHIBackendUtil::findCommandLineBackend 를 지나지만 숫자라 읽기 나쁘다.
 """
 import argparse
 import os
@@ -22,9 +21,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot
+from common import CookContractSpec, getProjectRoot
 
-kListBackend = [("DirectX12", "dx12"), ("Vulkan", "vk"), ("DirectX11", "dx11"), ("OpenGL", "gl")]
 kArrBackgroundColor = (31, 38, 46)  # forwardpipeline.xml SceneColor clearColor 0.12,0.15,0.18
 
 
@@ -64,10 +62,13 @@ def main():
     out_dir = args.out or os.path.join(repo, "build", args.preset, "smoke")
     os.makedirs(out_dir, exist_ok=True)
 
+    # (백엔드 이름, 플래그) — 쿠킹 표의 줄 순서, 플래그는 그 줄의 첫 별칭.
+    listBackend = [(backend.name, backend.listAlias[0]) for backend in CookContractSpec.load().listBackend]
+
     failed = False
     results = []
     for kind, extra, frames in (("opaque", ["-gv_benchTransparent=0"], 30), ("transparent", ["-gv_benchTransparent=25"], 30)):
-        for name, flag in kListBackend:
+        for name, flag in listBackend:
             ppm = os.path.join(out_dir, "%s_%s.ppm" % (kind, name))
             log = os.path.join(out_dir, "%s_%s.log" % (kind, name))
             if os.path.exists(ppm):

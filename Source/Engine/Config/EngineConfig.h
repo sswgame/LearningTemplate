@@ -7,6 +7,8 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "sw/config/CookContract.gen.h"
+
 namespace sw
 {
 
@@ -32,7 +34,7 @@ namespace sw
         uint32 _height{ 720 }; ///< 클라이언트 영역 높이(픽셀)
 
         PROPERTY()
-        RHIBackend _defaultRHI{ RHIBackend::DirectX12 }; ///< 명령줄이 고르지 않았을 때 쓸 백엔드
+        RHIBackend _defaultRHI{ RHIBackend::SW_RHI_BACKEND_DEFAULT }; ///< 명령줄이 고르지 않았을 때 쓸 백엔드(기본값은 쿠킹 표 `default_rhi_backend`)
 
         PROPERTY()
         bool _bVSync{ false }; ///< 수직 동기화 여부

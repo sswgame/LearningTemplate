@@ -7,6 +7,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include "sw/config/CookContract.gen.h"
+
 #include <chrono>
 
 using namespace sw;
@@ -190,7 +192,7 @@ namespace
 /**
  * @brief [AppSmokeTest] 네 백엔드에서 기동 → 프레임 → 종료가 깨끗한가
  * @details 백엔드마다 따로 본다 — 한 판에 묶으면 "어느 백엔드가 깨졌나" 를 로그에서 다시 찾아야 한다.
- *          `-gv_rhiBackend` 는 App 이 무시하므로 반드시 `-dx12 / -dx11 / -vk / -gl` 을 쓴다.
+ *          백엔드는 `-dx12 / -dx11 / -vk / -gl` 스위치로 고른다(숫자인 `-gv_rhiBackend` 보다 로그에서 읽기 쉽다).
  */
 SW_TEST_CASE( AppSmokeTest, EveryBackendStartsRendersAndExitsCleanly )
 {
@@ -200,7 +202,10 @@ SW_TEST_CASE( AppSmokeTest, EveryBackendStartsRendersAndExitsCleanly )
     // App 이 0 이 아닌 코드로 끝난다. 그래서 여기서는 스위치 없이 "이 빌드가 가진 것" 으로 돌린다.
     constexpr const utf8* kArrBackendSwitch[] = { "" };
 #else
-    constexpr const utf8* kArrBackendSwitch[] = { "-dx12", "-dx11", "-vk", "-gl" };
+    // 스위치는 쿠킹 표의 줄마다 첫 별칭이다(`-dx11` · `-dx12` · `-vk` · `-gl`) — 백엔드가 늘면 여기도 같이 는다.
+    #define SW_APP_SMOKE_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, FirstAlias, ... ) "-" FirstAlias,
+    constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_SMOKE_BACKEND_SWITCH ) };
+    #undef SW_APP_SMOKE_BACKEND_SWITCH
 #endif
     uint32 checkedCount = 0;
     for ( const utf8* pSwitch : kArrBackendSwitch )
