@@ -72,6 +72,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_Rhythm",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
