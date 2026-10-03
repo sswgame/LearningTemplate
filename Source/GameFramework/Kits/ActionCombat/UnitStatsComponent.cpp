@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/GameEventUtil.h"
+#include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
 #include "GameFramework/UI/DamageUIComponent.h"
 #include "GameFramework/UI/HPBarBaseComponent.h"
 
@@ -73,6 +74,11 @@ namespace sw
         _moveSpeed            = moveSpeed;
         _maxInvincibilityTime = maxInvincibilityTime;
         syncHealthBar( true );
+    }
+
+    void UnitStatsComponent::setStats( const MonsterDef& monsterDef )
+    {
+        setStats( monsterDef._hp, monsterDef._maxHp, monsterDef._atk, monsterDef._def, monsterDef._speed, monsterDef._invincibility );
     }
 
     void UnitStatsComponent::onBeginPlay()

@@ -1387,6 +1387,63 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterDataCatalogAndStats )
 }
 
 /**
+ * @brief [GameFrameworkTest] 몬스터 카탈로그는 미터 단위이고, 한 종의 스탯이 UnitStatsComponent 로 1:1 옮겨진다
+ * @details 카탈로그 기본값이 픽셀 시절 값(속도 150 · 순찰 200 · 감지 400 · 공격 50)이면 m/s · m 로 읽는 유닛 스탯에서 150 m/s 가 된다 — 유닛 스탯의
+ *          Move Speed 상한(50)보다 크다. 그 값을 쓰는 데이터 파일은 로드가 경고해야 한다.
+ */
+SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReachUnitStats )
+{
+    MonsterDataCatalog catalog;
+    {
+        test::ScopedLogSuppressor suppressor;
+        (void)catalog.loadFromResource( "non_existent_monster.xml" ); // 폴백 표를 본다
+    }
+    const MonsterDef* pFallback = catalog.findMonster( "default_monster" );
+    SW_ASSERT_NOT_NULL( pFallback );
+    for ( const MonsterDef& monsterDef : { *pFallback, MonsterDef{} } )
+    {
+        SW_EXPECT_TRUE( 0.0f < monsterDef._speed && monsterDef._speed <= MonsterDef::kMaxSpeed );
+        SW_EXPECT_TRUE( monsterDef._attackRange < monsterDef._detectRange && monsterDef._detectRange <= MonsterDef::kMaxSpeed );
+    }
+
+    // 카탈로그의 상한은 유닛 스탯 Move Speed 의 상한과 같다.
+    const TypeInfo* pStatsType = engine::getTypeRegistry().findType( hashed_string( "sw::UnitStatsComponent" ) );
+    SW_ASSERT_NOT_NULL( pStatsType );
+    const PropertyInfo* pMoveSpeed = pStatsType->findProperty( hashed_string( "_moveSpeed" ) );
+    SW_ASSERT_NOT_NULL( pMoveSpeed );
+    SW_EXPECT_NEAR_EQUAL( MonsterDef::kMaxSpeed, pMoveSpeed->_metadata._maxRange, 1e-4f );
+
+    MonsterDef slime{};
+    slime._hp            = 30;
+    slime._maxHp         = 40;
+    slime._atk           = 7;
+    slime._def           = 2;
+    slime._speed         = 2.5f;
+    slime._invincibility = 0.3f;
+    UnitStatsComponent stats;
+    stats.setStats( slime );
+    SW_EXPECT_EQUAL( 30, stats.getHp() );
+    SW_EXPECT_EQUAL( 40, stats.getMaxHp() );
+    SW_EXPECT_EQUAL( 7, stats.getAttack() );
+    SW_EXPECT_EQUAL( 2, stats.getDefense() );
+    SW_EXPECT_NEAR_EQUAL( 2.5f, stats.getMoveSpeed(), 1e-6f );
+    stats.takeDamage( 12 ); // 방어 2 → 10, 그리고 무적 0.3 초
+    SW_EXPECT_EQUAL( 20, stats.getHp() );
+    stats.onTick( 0.2f );
+    stats.takeDamage( 12 );
+    SW_EXPECT_EQUAL( 20, stats.getHp() );
+
+    // 픽셀로 적은 속도는 경고하고 값은 그대로 둔다.
+    const string path = test::makeTempPath( "pixel_monsters.xml" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "<MonsterCatalog>\n  <Monster id=\"bat\"><Stats speed=\"150\"/></Monster>\n</MonsterCatalog>\n" ) );
+    SW_TEST_DEFENSIVE_SCOPE( "a pixel-era speed is reported" );
+    test::ScopedLogCollector logCollector;
+    MonsterDataCatalog       pixelCatalog;
+    SW_ASSERT_TRUE( pixelCatalog.loadFromResource( path ) );
+    SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Monster 'bat': speed 150" ) == 1u, logCollector.joined().c_str() );
+}
+
+/**
  * @brief [GameFrameworkTest] monsters.xml 의 archetype 은 열거자 이름표 그대로 읽히고, 모르는 이름은 경고한다
  * @details 이름표는 리플렉션된 `MonsterArchetype` 하나다 — 열거자를 늘려도 파서를 고치지 않는다. 오타("Ranged")는 MeleePatrol 로
  *          물러나되 몬스터 id 와 함께 경고가 남아야 한다. 조용히 물러나면 원거리 몬스터가 근접 순찰로 도는 이유를 찾을 길이 없다.

@@ -25,9 +25,15 @@ namespace sw
         ChargerRush
     };
 
-    /** @brief 몬스터 한 종의 데이터 정의입니다(스탯, AI 사거리, 쿨타임, 투사체, 드롭 보상). */
+    /**
+     * @brief 몬스터 한 종의 데이터 정의입니다(스탯, AI 사거리, 쿨타임, 투사체, 드롭 보상).
+     * @details 단위는 월드 단위다 — 거리 m, 속도 m/s, 시간 s. 스탯은 `UnitStatsComponent::setStats( const MonsterDef& )` 가 1:1 로 옮긴다.
+     */
     struct SW_GF_API MonsterDef
     {
+        /** @brief 이동 속도의 상한(m/s)입니다. `UnitStatsComponent` 의 Move Speed 상한과 같고, 넘는 값은 로드가 경고합니다(픽셀 단위로 적은 값). */
+        static constexpr float32 kMaxSpeed = 50.0f;
+
         string           _id{};
         string           _name{};
         MonsterArchetype _archetype{ MonsterArchetype::MeleePatrol };
@@ -38,14 +44,14 @@ namespace sw
         int32   _maxHp{ 100 };
         int32   _atk{ 10 };
         int32   _def{ 0 };
-        float32 _speed{ 150.0f };
-        float32 _invincibility{ 0.2f };
+        float32 _speed{ 3.0f };         ///< 이동 속도(m/s)
+        float32 _invincibility{ 0.2f }; ///< 피격 뒤 무적 시간(s)
 
         // AI 파라미터
-        float32 _patrolRange{ 200.0f };
-        float32 _detectRange{ 400.0f };
-        float32 _attackRange{ 50.0f };
-        float32 _attackCoolTime{ 1.5f };
+        float32 _patrolRange{ 4.0f };    ///< 순찰 반경(m)
+        float32 _detectRange{ 8.0f };    ///< 감지 거리(m)
+        float32 _attackRange{ 1.0f };    ///< 공격 거리(m)
+        float32 _attackCoolTime{ 1.5f }; ///< 공격 간격(s)
         string  _projectilePrefab{};
 
         // 애셋 경로

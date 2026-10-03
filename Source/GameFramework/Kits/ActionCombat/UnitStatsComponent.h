@@ -11,6 +11,8 @@
 
 namespace sw
 {
+    struct MonsterDef;
+
     REFLECT( Category = "Gameplay", DisplayName = "Unit Stats Component", Tooltip = "Manages HP, Attack, Defense, Movement Speed, and Invincibility" )
     class SW_GF_API UnitStatsComponent : public Component
     {
@@ -59,6 +61,8 @@ namespace sw
 
         /** @brief 스탯을 한 번에 정합니다. 같은 오브젝트의 HP 바는 새 비율로 다시 맞춥니다(흔적 없이). */
         void setStats( int32 hp, int32 maxHp, int32 attack, int32 defense, float32 moveSpeed, float32 maxInvincibilityTime );
+        /** @brief 몬스터 카탈로그의 한 종(`MonsterDataCatalog::findMonster`)으로 스탯을 정합니다. 단위는 같습니다(이동 속도 m/s, 무적 시간 s). */
+        void setStats( const MonsterDef& monsterDef );
 
         /** @brief 깎인 피해를 데미지 숫자로 띄울지 정합니다(기본 꺼짐). 숫자는 `getDamageNumberOffset()` 만큼 위에 새 오브젝트로 뜬다. */
         void setShowDamageNumbers( bool bShow ) { _bShowDamageNumbers = bShow; }

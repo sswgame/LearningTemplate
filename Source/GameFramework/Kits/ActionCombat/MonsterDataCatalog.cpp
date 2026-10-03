@@ -33,10 +33,10 @@ namespace sw
         defaultMonster._maxHp          = 100;
         defaultMonster._atk            = 10;
         defaultMonster._def            = 0;
-        defaultMonster._speed          = 150.0f;
-        defaultMonster._patrolRange    = 200.0f;
-        defaultMonster._detectRange    = 400.0f;
-        defaultMonster._attackRange    = 50.0f;
+        defaultMonster._speed          = 3.0f;
+        defaultMonster._patrolRange    = 4.0f;
+        defaultMonster._detectRange    = 8.0f;
+        defaultMonster._attackRange    = 1.0f;
         defaultMonster._attackCoolTime = 1.5f;
 
         _mapMonster[hashed_string( defaultMonster._id.c_str() )] = defaultMonster;
@@ -88,6 +88,9 @@ namespace sw
                 monsterDef._def           = statsNode.getAttributeInt( "def", monsterDef._def );
                 monsterDef._speed         = statsNode.getAttributeFloat( "speed", monsterDef._speed );
                 monsterDef._invincibility = statsNode.getAttributeFloat( "invincibility", monsterDef._invincibility );
+                if ( monsterDef._speed > MonsterDef::kMaxSpeed )
+                    SW_LOG_WARNING( "Monster '%#': speed %# is above %# m/s - the catalog is in meters, was it written in pixels?", pIdStr, monsterDef._speed,
+                                    MonsterDef::kMaxSpeed );
             }
 
             XmlNode aiNode = node.findChild( "AI" );
