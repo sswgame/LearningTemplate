@@ -42,10 +42,10 @@ namespace sw
             /**
              * @brief 모듈이 호스트와 **같은 테이블 구조**로 빌드됐는지 대조합니다.
              * @details `GameAPI` · `EditorAPI` 는 함수 포인터를 순서대로 늘어놓은 구조체입니다. 모듈은 자기가 아는 자리에 채우고 호스트는
-             *          자기가 아는 자리에서 읽으므로, 서로 다른 헤더로 빌드되면 **호스트가 엉뚱한 함수를 부릅니다.** 예전에 이것을 막는
-             *          것은 아래의 `create != nullptr && destroy != nullptr` 뿐이었는데, 그 둘은 **맨 앞**에 있어서 가운데에 끼워 넣어도
-             *          채워집니다. 가장 위험한 어긋남을 정확히 통과시킨 셈입니다. 핫 리로드는 모듈만 다시 굽는 기능이라 이런 어긋남이
-             *          생기는 바로 그 상황입니다. RHI 경계가 `RHIModuleAbi.h` 로 하는 대조를 여기에 그대로 옮겼습니다.
+             *          자기가 아는 자리에서 읽으므로, 서로 다른 헤더로 빌드되면 **호스트가 엉뚱한 함수를 부릅니다.** 아래의
+             *          `create != nullptr && destroy != nullptr` 만으로는 막지 못합니다 — 그 둘은 **맨 앞**에 있어서 가운데에 끼워 넣어도
+             *          채워집니다. 핫 리로드는 모듈만 다시 굽는 기능이라 이런 어긋남이 생기는 바로 그 상황입니다. RHI 경계의
+             *          `RHIModuleAbi.h` 와 같은 대조입니다.
              */
             static bool matchesModuleAbi( void* pLibraryModule, const utf8* pVersionSymbol, const utf8* pStampSymbol,
                                           const utf8* pModuleName )
@@ -341,18 +341,17 @@ namespace sw
             _moduleCompiler.reset();
         }
 
-        // 에디터 · 게임을 한 번의 비우기로 내린다. 예전에는 onBefore*Reload 를 그대로 불러서 drainRenderWorkers 가 두 번 돌았고,
-        // 그래서 종료 경로에서 태스크 대기 제한 시간을 두 번까지 기다릴 수 있었다.
+        // 에디터 · 게임을 한 번의 비우기로 내린다 — onBefore*Reload 를 따로 부르면 drainRenderWorkers 가 두 번 돌아 종료 경로에서
+        // 태스크 대기 제한 시간을 두 번까지 기다릴 수 있다.
         suspendModules( ModuleScope::Both, true );
 
 #if !defined( SW_SHIPPING )
         // 콜백은 ModuleHost 의 메서드를 가리킨다. 이 객체가 사라지기 전에 떼어 낸다.
         //
-        // **모듈마다 건 것까지 뗀다.** 예전에는 이 둘만 떼고 `setOnBeforeReload`/`setOnAfterReload` 로 모듈마다 건 델리게이트는
-        // 그대로 두었다. 그것도 이 객체의 메서드를 가리킨다. `App` 은 ModuleHost 를 먼저 지우고 나중에 LiveReloadManager 를
-        // 내리므로, 그 사이에 리로드가 한 번 돌면 이미 사라진 객체를 부른다. 지금은 그런 순서로 돌지 않지만, "뗀다" 고 적어 두고
-        // 절반만 떼면 다음 사람은 모두 뗀 줄 안다. 이름을 여기에 다시 적지 않으려고 등록부 쪽에 창구를 두었다(키트 모듈은
-        // 설정에서 오므로 이 자리에서는 이름을 알 수도 없다).
+        // **모듈마다 건 것까지 뗀다.** `setOnBeforeReload`/`setOnAfterReload` 로 모듈마다 건 델리게이트도 이 객체의 메서드를
+        // 가리킨다. `App` 은 ModuleHost 를 먼저 지우고 나중에 LiveReloadManager 를 내리므로, 그 사이에 리로드가 한 번 돌면 이미
+        // 사라진 객체를 부르게 된다. 이름을 여기에 다시 적지 않으려고 등록부 쪽에 창구를 두었다(키트 모듈은 설정에서 오므로 이
+        // 자리에서는 이름을 알 수도 없다).
         if ( _pLiveReloadManager != nullptr )
         {
             _pLiveReloadManager->setDrainWorkers( {} );
@@ -441,8 +440,8 @@ namespace sw
     {
         _frameState                  = ModuleFrameState{};
         _frameState._bGameplayActive = queryGameplayActive() ? SW_TRUE : SW_FALSE;
-        // 에디터가 없으면 월드는 처음부터 플레이 중이다(에디터가 있으면 Play · Stop 이 정한다). 예전에는 이 길에서 onBeginPlay 가 한 번도
-        // 불리지 않았다. 이미 켜져 있으면 아무 일도 없다.
+        // 에디터가 없으면 월드는 처음부터 플레이 중이다(에디터가 있으면 Play · Stop 이 정한다) — 켜지 않으면 onBeginPlay 가 불리지 않는다.
+        // 이미 켜져 있으면 아무 일도 없다.
         if ( hasEditor() == false && engine::getSceneManager().isWorldPlaying() == false )
             engine::getSceneManager().setWorldPlaying( true );
     }
@@ -668,8 +667,8 @@ namespace sw
 
     void ModuleHost::onGameReloadFault( uint32 faultCode )
     {
-        // 스냅숏은 **버리지 않는다.** 게임 컴포넌트는 리로드 앞에서 이미 모든 씬에서 걷어 냈다(`destroyGameInstance`). 예전에는 여기서 비워, 그
-        // 상태로 저장하면 컴포넌트가 빠진 씬이 저장됐다. 고쳐서 다시 빌드하면 다음 리로드가 이 스냅숏을 되돌린다(게임이 없으니 새로 찍지 않는다).
+        // 스냅숏은 **버리지 않는다.** 게임 컴포넌트는 리로드 앞에서 이미 모든 씬에서 걷어 냈다(`destroyGameInstance`) — 여기서 비우면 그
+        // 상태로 저장할 때 컴포넌트가 빠진 씬이 저장된다. 고쳐서 다시 빌드하면 다음 리로드가 이 스냅숏을 되돌린다(게임이 없으니 새로 찍지 않는다).
         // 그때까지 씬 저장은 막혀 있다(`destroyGameInstance` 가 막았다).
         SW_LOG_ERROR( "Game module faulted after the reload (code 0x%#) — the game is off; fix it and rebuild, the next reload restores the %# byte snapshot (scene saving is blocked until then)",
                       Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), static_cast<uint64>( _listGameSavedState.size() ) );

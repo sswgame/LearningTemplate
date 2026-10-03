@@ -3,10 +3,8 @@
  * @brief 모듈 공유 라이브러리를 섀도 복사해 핫 리로드합니다(의존 모듈까지 연쇄로 교체합니다).
  *
  * @note **여기는 Engine 이 아니라 App 입니다.** 모듈을 로드하고 교체하는 것은 런처(App)의 일이고, Engine 은 모듈이라는 개념
- *       자체를 몰라야 합니다(Engine 레이어 규칙: Engine 은 Editor · GameFramework · Games 를 모릅니다). 예전에는 이 클래스가
- *       `Source/Engine/Module/` 에 있어 EngineLoop 가 소유했는데, 쓰는 쪽은 App(ModuleHost · ModuleCompiler · 단축키)뿐이었고
- *       Shipping 에서는 만들지도 않으면서 864줄이 바이너리에 그대로 실렸습니다. 지금은 Shipping 빌드에서 **파일째 빠집니다**
- *       (`Source/App/CMakeLists.txt` 의 제외 목록).
+ *       자체를 몰라야 합니다(Engine 레이어 규칙: Engine 은 Editor · GameFramework · Games 를 모릅니다). 쓰는 쪽은 App(ModuleHost ·
+ *       ModuleCompiler · 단축키)뿐이고, Shipping 빌드에서는 **파일째 빠집니다**(`Source/App/CMakeLists.txt` 의 제외 목록).
  *
  *       핫 리로드만 쓰는 도우미 셋도 여기 있습니다 — 섀도 복사본의 파일 바이트를 읽고 고치는 `ModuleImagePatch`, 새 모듈 코드를
  *       처음 부르는 자리를 지키는 `ModuleCallGuard`, 복사본 파일 이름을 짓고 남은 것을 치우는 `ShadowCopyName`. 쓰는 곳이 이 매니저(와
@@ -137,7 +135,7 @@ namespace sw
 
         /**
          * @brief @p directoryPath 에 남은 섀도 복사본(디버그 심볼 · 쓰다 만 임시 파일 포함) 가운데 이 프로세스 · 살아 있지 않은 프로세스 ·
-         *        옛 형식의 것을 지우고, 지운 수를 반환합니다. 다른 살아 있는 프로세스의 것은 남깁니다.
+         *        프로세스 ID 가 없는 이름의 것을 지우고, 지운 수를 반환합니다. 다른 살아 있는 프로세스의 것은 남깁니다.
          * @details 아직 올라와 있는 복사본은 OS 가 지우기를 거절하므로(Windows) 다음 정리 때 다시 지웁니다.
          */
         static uint32 removeStaleCopies( string_view directoryPath );
@@ -215,10 +213,10 @@ namespace sw
 
         /**
          * @brief 핫 리로드하지 않는 공용 모듈(GameFramework)을 섀도 복사 없이 올리고, 그 정적 등록기를 **제 이름으로** 등록합니다.
-         * @details 키트 · SWGame 이 링크하는 공용 모듈은 예전에 **처음 부르는 쪽**이 올렸습니다(Windows 지연 로드 · 리눅스 첫 키트의 DT_NEEDED).
-         *          그러면 그 정적 등록기(타입 · 컴포넌트 팩토리 · 전역 변수)가 그때 등록을 모으는 모듈(SWGame · 첫 키트)의 이름으로 들어가,
+         * @details 키트 · SWGame 이 링크하는 공용 모듈을 **처음 부르는 쪽**이 올리게 두면(Windows 지연 로드 · 리눅스 첫 키트의 DT_NEEDED)
+         *          그 정적 등록기(타입 · 컴포넌트 팩토리 · 전역 변수)가 그때 등록을 모으는 모듈(SWGame · 첫 키트)의 이름으로 들어가,
          *          SWGame 의 팩토리 캐시를 덮고(그 뒤에 만든 씬에 SWGame 컴포넌트가 없다) 첫 SWGame 리로드가 공용 모듈의 컴포넌트와 타입을 모든
-         *          씬에서 지웠습니다 — 공용 모듈은 다시 올라오지 않으므로 돌아오지 않았습니다. 그 모듈을 링크하는 모듈을 등록하기 **전에** 부릅니다.
+         *          씬에서 지운다 — 공용 모듈은 다시 올라오지 않으므로 돌아오지 않는다. 그래서 그 모듈을 링크하는 모듈을 등록하기 **전에** 부릅니다.
          *          올리기 전에 엔진 ABI 도장을 대조합니다. 이미지는 프로세스가 끝날 때까지 둡니다(의존 모듈의 import 가 그 이미지를 가리킨다).
          * @return 올렸거나 이 매니저가 이미 올렸으면 true. 파일이 없으면(그 모듈을 쓰지 않는 구성) 아무것도 하지 않고 true 입니다.
          */

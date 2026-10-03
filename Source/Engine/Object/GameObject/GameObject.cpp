@@ -353,9 +353,9 @@ namespace sw
             return nullptr;
         GameObject* pChildObj = pChildComp->getOwner();
         // **같은 오브젝트 안의 부착은 자식 오브젝트가 아니다.** 한 GameObject 의 SceneComponent 를
-        // 다른 SceneComponent 에 붙이는 것은 정상적인 구성인데(`applyAttachSerializeFields` 가
-        // 복원까지 한다), 그러면 그 자식 컴포넌트의 owner 는 자기 자신이라 여기서 **자신이
-        // 자기 자식으로** 나왔다. `refreshActiveInHierarchy` 가 그대로 무한 재귀해 스택을 넘겼다.
+        // 다른 SceneComponent 에 붙이는 것은 정상적인 구성인데(`ObjectStateBatch::finish` 가
+        // 복원까지 한다), 그러면 그 자식 컴포넌트의 owner 는 자기 자신이라 거르지 않으면 **자신이
+        // 자기 자식으로** 나와 `refreshActiveInHierarchy` 가 무한 재귀해 스택을 넘긴다.
         if ( pChildObj == nullptr || pChildObj == this )
             return nullptr;
         // 자식 오브젝트는 **primary 가 우리에게 붙은** 오브젝트다(`getParent` 의 정의). 다른 씬 컴포넌트만 붙인 오브젝트는 자식이 아니고,

@@ -908,7 +908,7 @@ namespace sw
             }
 
             // 올리기 **전에** 본다. 올리면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
-            // 도장이 **없는** 모듈도 거절한다. 예전에는 통과시켜, 도장을 굽지 않는 빌드 규칙으로 만든 모듈이 대조 없이 올라왔다(동적 모듈은 모두
+            // 도장이 **없는** 모듈도 거절한다 — 도장을 굽지 않는 빌드 규칙으로 만든 모듈이 대조 없이 올라오지 않게(동적 모듈은 모두
             // `sw_registerDynamicModule` 이 도장을 굽는다).
             string     moduleStamp;
             const bool bEngineAbiMismatch = ModuleImagePatch::findEngineAbiStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineAbiStamp();
@@ -1043,7 +1043,7 @@ namespace sw
 
             invokeAfterReload( ctx );
 
-            // 옛 이미지는 바로 내리지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(예전에는 그때 핸들을 잃어버린 채 남겨 두었다).
+            // 옛 이미지는 바로 내리지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(핸들을 잃지 않는다).
             if ( pPreviousHandle != nullptr )
                 deferImageUnload( ctx._moduleName, pPreviousHandle, previousTempModule, bKeepPreviousImage );
         }

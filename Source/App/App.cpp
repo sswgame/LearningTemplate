@@ -265,7 +265,7 @@ namespace sw
         _window->setResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &App::onResize, this ) );
         _window->setCustomMessageHandler( SW_DELEGATE_METHOD( WindowMessageHandlerDelegate, &App::onWindowMessage, this ) );
 
-        // 예전에는 루프 안에서 프레임마다 다시 만들던 것들이다. 연결 대상이 프레임마다 바뀌지 않으므로 여기서 한 번 묶고,
+        // 연결 대상이 프레임마다 바뀌지 않으므로 루프 안이 아니라 여기서 한 번 묶고,
         // 에디터 뷰 카메라는 에디터 모드에서만 묶는다. 비어 있다는 사실이 곧 "씬 카메라를 쓴다" 는 뜻이라 루프에서 모드를
         // 나눌 필요가 없다.
         if ( _bEnableEditor == SW_TRUE )
@@ -339,9 +339,8 @@ namespace sw
 
             pollReloadHotkeys( frameTime._deltaTime );
 
-            // **게임 모듈의 시간도 표에 올린다.** 예전에는 이 셋이 계측 밖이었다. 표 제목이 "frame breakdown" 인데 정작 게임 코드가
-            // 쓰는 시간은 한 줄도 없었고, 그래서 `GT.Frame` 만 보고 "프레임의 전부" 라고 읽게 됐다(벤치의 큐브 2만 개 갱신이 통째로
-            // 보이지 않았다).
+            // **게임 모듈의 시간도 표에 올린다.** 이 셋이 계측 밖이면 "frame breakdown" 표에 게임 코드가 쓰는 시간이 한 줄도 없어
+            // `GT.Frame` 만 보고 "프레임의 전부" 라고 읽게 된다.
             {
                 SW_PROFILE_SCOPE( "GT.Game.fixedUpdate" );
                 for ( uint32 stepIndex = 0; stepIndex < frameTime._fixedStepCount; ++stepIndex )
@@ -362,8 +361,7 @@ namespace sw
             // 카메라 포인터를 미리 잡아 두면 tick 안의 씬 전환 · 핫 리로드가 그 GameObject 를 파괴한 뒤 역참조하게 된다. 그래서
             // 조회 자체를 tick 안으로 넘긴다.
             //
-            // 모듈 교체는 **틱 직전**에 한다. 예전에는 EngineLoop::tick 첫머리에서 돌았고, 그 순서(게임 업데이트 뒤 · 씬 틱 앞)를
-            // 그대로 지킨다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어지기 때문이다.
+            // 모듈 교체는 **틱 직전**(게임 업데이트 뒤 · 씬 틱 앞)에 한다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어지기 때문이다.
 #if !defined( SW_SHIPPING )
             if ( _liveReloadManager != nullptr )
                 _liveReloadManager->update();
@@ -401,8 +399,7 @@ namespace sw
             SW_LOG_INFO( "%#: force EditorModule reload", ActionMapDefaults::kReloadEditorAction );
         }
 #endif
-        // Shipping 에는 리로드할 모듈이 없다. 예전에는 셸 ActionMap 을 리소스에서 올려 프레임마다 갱신했지만, 그 입력 상태를
-        // 묻는 코드가 하나도 없었다. 배포 빌드에서 아무도 읽지 않는 입력을 계속 돌리고 있었던 것이다.
+        // Shipping 에는 리로드할 모듈이 없다. 그 입력 상태를 묻는 코드가 없으므로 셸 ActionMap 도 올리지 않는다.
     }
 
     void App::onResize( const uint32 width, const uint32 height )
@@ -510,9 +507,8 @@ namespace sw
 
     void BackendSwapController::shutdown()
     {
-        // **훅부터 뗀다.** 예전에는 `_pEngineLoop == nullptr` 이면 그대로 돌아갔는데, 훅은 그 포인터와 상관없이 `initialize` 가
-        // 걸어 둔다. 루프를 받지 못한 채 초기화된 경우(도구 · 부분 초기화)에는 이미 사라진 `this` 를 가리키는 콜백이 전역 변수에
-        // 그대로 남았다. 떼는 일은 조건 없이 해야 한다.
+        // **훅부터, 조건 없이 뗀다.** 훅은 `_pEngineLoop` 와 상관없이 `initialize` 가 걸어 두므로, 루프를 받지 못한 채 초기화된
+        // 경우(도구 · 부분 초기화)에도 떼지 않으면 사라진 `this` 를 가리키는 콜백이 전역 변수에 남는다.
         GlobalVariableInfo* pBackendVariable = BackendSwapControllerInternal::findBackendVariable();
         if ( pBackendVariable != nullptr )
             pBackendVariable->_onValueChanged = {};

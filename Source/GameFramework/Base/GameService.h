@@ -56,8 +56,8 @@ namespace sw
          * @details 이름은 "서비스들이 붙었는가" 로 읽히지만 실제로 검사하는 것은
          *          `ModuleServiceId::SceneManager` **하나**입니다. 그래서 이 함수가 true 면
          *          `getService<SceneManager>()` 는 널일 수 없고, 반대로 다른 서비스에 대해서는
-         *          **아무것도 보장하지 않습니다.** 2026-09-18 에 이것을 "필수 서비스 전체를 본다" 로
-         *          잘못 읽어 도달할 수 없는 가드를 넣은 적이 있습니다. 이름만 보고 판단하지 마십시오.
+         *          **아무것도 보장하지 않습니다.** 주의: "필수 서비스 전체를 본다" 로 읽고 가드를 넣으면
+         *          그 가드는 도달할 수 없습니다. 이름만 보고 판단하지 마십시오.
          */
         SW_GAMESERVICE_API bool areGameServicesBound();
 

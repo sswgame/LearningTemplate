@@ -133,7 +133,7 @@ namespace sw
         EngineLoop _engineLoop;
         /**
          * @brief 모듈 핫 리로드입니다. **Shipping 에는 없습니다.** 그 빌드에서는 이 멤버도 클래스도 컴파일되지 않습니다.
-         * @details 모듈을 감시하고 갈아 끼우는 것은 런처의 일이라 여기 둡니다(예전에는 EngineLoop 가 들고 있었습니다).
+         * @details 모듈을 감시하고 갈아 끼우는 것은 런처의 일이라 여기 둡니다(EngineLoop 가 아니라).
          */
 #if !defined( SW_SHIPPING )
         unique_ptr<LiveReloadManager> _liveReloadManager;
