@@ -100,6 +100,12 @@ namespace sw
         /** @brief GPU 가 끝날 때까지 기다리고(glFinish) 지연 해제 큐를 비웁니다. */
         void waitIdleInternal() override;
 
+        /**
+         * @brief 벤더 확장이 있을 때만 드라이버 값을 채웁니다. `GL_NVX_gpu_memory_info` 는 총량 · 남은 양(디바이스 전체 — 다른 프로세스 몫 포함),
+         *        `GL_ATI_meminfo` 는 남은 양만 줍니다. 둘 다 없으면 false 입니다(드라이버 값은 "모름").
+         */
+        [[nodiscard]] bool queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget ) override;
+
         /** @brief 프레임 지연(`kGpuReleaseFrameLatency`) 뒤 해제 큐에 넣습니다. GL 은 펜스 대신 endFrame 횟수로 셉니다. */
         void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
 
@@ -356,8 +362,10 @@ namespace sw
         int8                   _lastVsync;         ///< -1 = 아직 안 정함, 0/1 = 마지막으로 적용한 값
         uint8                  _bTimestampEnabled; ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
         uint8                  _bTimestampReady;
-        uint8                  _bInitialized  : 1;
-        [[maybe_unused]] uint8 _reservedFlags : 7;
+        uint8                  _bInitialized   : 1;
+        uint8                  _bNvxMemoryInfo : 1; ///< GL_NVX_gpu_memory_info 가 있다(총량 · 남은 양)
+        uint8                  _bAtiMemInfo    : 1; ///< GL_ATI_meminfo 가 있다(남은 양)
+        [[maybe_unused]] uint8 _reservedFlags  : 5;
     };
 
     /**

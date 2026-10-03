@@ -88,6 +88,14 @@ namespace sw
             return false;
         }
 
+        // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다. DXGI 1.4 가 없으면 드라이버 값은 "모름" 이다.
+        {
+            Microsoft::WRL::ComPtr<IDXGIDevice>  dxgiDevice;
+            Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
+            if ( SUCCEEDED( _device.As( &dxgiDevice ) ) && SUCCEEDED( dxgiDevice->GetAdapter( adapter.GetAddressOf() ) ) )
+                adapter.As( &_memoryAdapter );
+        }
+
         // D3D11 은 디바이스와 스왑체인이 한 호출에서 함께 나온다. 만들어진 것을 넘겨 소유시킨다.
         _swapChain.attach( createdSwapChain.Get(), _pHWnd, desc._width, desc._height, swapChainDesc.Flags );
 
@@ -201,6 +209,7 @@ namespace sw
         _listUavFree.clear();
         _recordingState = D3D11RecordingState{};
         _deviceContext.Reset();
+        _memoryAdapter.Reset();
         _device.Reset();
     }
 

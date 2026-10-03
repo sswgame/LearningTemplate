@@ -129,6 +129,10 @@ namespace sw
             else
                 SW_LOG_WARNING( "glProvokingVertex 를 쓸 수 없습니다 — nointerpolation 값이 DX·Vulkan 과 다른 정점에서 옵니다." );
 
+            // GPU 메모리 총량 · 남은 양은 벤더 확장에만 있다. 없으면 드라이버 값은 "모름" 이다(queryGpuMemoryBudgetInternal).
+            _bNvxMemoryInfo = OpenGLRHIDeviceInternal::hasGlExtension( "GL_NVX_gpu_memory_info" ) ? SW_TRUE : SW_FALSE;
+            _bAtiMemInfo    = OpenGLRHIDeviceInternal::hasGlExtension( "GL_ATI_meminfo" ) ? SW_TRUE : SW_FALSE;
+
             // **정점 스테이지의 SSBO 한도를 실제로 물어본다.** GL 4.3 스펙이 요구하는 최소값은 0 이다.
             // 정점 셰이더에서 구조버퍼를 읽는 것이 보장된 기능이 아니다. 이 엔진은 정점 셰이더에서
             // 인스턴스(t4) · 가시 목록(t10) · 모프 정점(t11)을 읽으므로, 한도가 그보다 작으면 링크는

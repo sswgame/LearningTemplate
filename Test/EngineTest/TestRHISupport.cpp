@@ -548,3 +548,57 @@ SW_TEST_CASE( RHIMemoryLedgerTest, KindNamesAndOrderByLiveBytes )
     SW_EXPECT_TRUE( arrOrder[2] == sw::RHIMemoryKind::Buffer );
     SW_EXPECT_TRUE( arrOrder[3] == sw::RHIMemoryKind::RenderTarget );
 }
+
+/**
+ * @brief [RHIMemoryLedgerTest] "엔진 밖" 은 이 프로세스의 드라이버 사용량이 있을 때만 사용량 − 장부 합으로 계산한다
+ * @details 드라이버 값을 모르면(새 장부) 계산하지 않는다 — 0 으로 지어내지 않는다. 디바이스 전체 사용량(GL NVX)은 다른 프로세스 몫이 섞여 빼지 않는다.
+ *          장부가 논리 크기라 사용량보다 클 수 있어 결과는 부호가 있다.
+ */
+SW_TEST_CASE( RHIMemoryLedgerTest, SummaryComputesOutsideOnlyForProcessUsage )
+{
+    sw::RHIMemoryLedger ledger;
+    ledger.recordAllocation( sw::RHIMemoryKey::makeTexture( 1 ), sw::RHIMemoryKind::Texture, 300 );
+    ledger.recordAllocation( sw::RHIMemoryKey::makeBuffer( 1 ), sw::RHIMemoryKind::Buffer, sw::kRHIMemoryUnknownBytes );
+
+    const sw::RHIGpuMemorySummary unknown = ledger.makeSummary();
+    SW_EXPECT_TRUE( unknown._budget._bUsageKnown == SW_FALSE && unknown._budget._bBudgetKnown == SW_FALSE );
+    SW_EXPECT_TRUE( unknown._bOutsideKnown == SW_FALSE );
+    SW_EXPECT_EQUAL( 300ull, unknown._trackedBytes );
+    SW_EXPECT_EQUAL( 1u, unknown._unknownSizeCount );
+
+    sw::RHIGpuMemoryBudget processBudget{};
+    processBudget._usageBytes  = 1000;
+    processBudget._bUsageKnown = SW_TRUE;
+    processBudget._scope       = sw::RHIGpuMemoryScope::Process;
+    ledger.setDriverBudget( processBudget );
+    const sw::RHIGpuMemorySummary process = ledger.makeSummary();
+    SW_EXPECT_TRUE( process._bOutsideKnown == SW_TRUE );
+    SW_EXPECT_EQUAL( 700ll, process._outsideBytes );
+
+    processBudget._usageBytes = 100;
+    ledger.setDriverBudget( processBudget );
+    SW_EXPECT_EQUAL( -200ll, ledger.makeSummary()._outsideBytes );
+
+    sw::RHIGpuMemoryBudget deviceBudget = processBudget;
+    deviceBudget._scope                 = sw::RHIGpuMemoryScope::Device;
+    ledger.setDriverBudget( deviceBudget );
+    SW_EXPECT_TRUE( ledger.makeSummary()._bOutsideKnown == SW_FALSE );
+}
+
+/**
+ * @brief [RHIMemoryLedgerTest] 드라이버에게 물을 수 없는 백엔드는 `refreshGpuMemoryBudget` 뒤에도 모든 칸이 "모름" 이다
+ * @details 앞서 적힌 값이 있어도 이번에 묻지 못하면 지운다 — 옛 숫자를 지금 값처럼 보여 주지 않는다.
+ */
+SW_TEST_CASE( RHIMemoryLedgerTest, RefreshWithoutDriverQueryLeavesEveryFieldUnknown )
+{
+    test::FakeRHIDevice    device;
+    sw::RHIGpuMemoryBudget stale{};
+    stale._usageBytes  = 4096;
+    stale._bUsageKnown = SW_TRUE;
+    device.getMemoryLedger().setDriverBudget( stale );
+
+    device.refreshGpuMemoryBudget();
+    const sw::RHIGpuMemoryBudget budget = device.getMemoryLedger().getDriverBudget();
+    SW_EXPECT_TRUE( budget._bUsageKnown == SW_FALSE && budget._bBudgetKnown == SW_FALSE && budget._bAvailableKnown == SW_FALSE );
+    SW_EXPECT_EQUAL( 0ull, budget._usageBytes );
+}

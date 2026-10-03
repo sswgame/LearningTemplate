@@ -1777,3 +1777,60 @@ SW_TEST_CASE( RHIDeviceTest, MemoryLedgerTracksCreateAndDeferredRelease )
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the GPU memory ledger test" );
 }
+
+/**
+ * @brief [RHIDeviceTest] 드라이버의 GPU 메모리 사용량 · 예산은 물을 수 있는 백엔드에서만 "앎" 이고, 그 값은 실제 할당을 따라 움직인다(네 백엔드)
+ * @details 새 디바이스는 묻기 전에 모든 칸이 "모름" 이다. DX11 · DX12 는 DXGI 1.4(Windows 10)로 늘 묻는다. Vulkan 은 `VK_EXT_memory_budget`, GL 은
+ *          벤더 확장이 있을 때만 알고, 없으면 모든 칸이 꺼진 채 0 이다(지어내지 않는다). 이 프로세스의 사용량을 주는 DX12 · Vulkan 은 64 MB 텍스처를
+ *          만든 뒤 사용량이 적어도 그 절반만큼 오른다 — 드라이버 값이 상수가 아니라 실제 할당을 보고 있다는 뜻이다.
+ */
+SW_TEST_CASE( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereTheDriverAnswers )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string             label  = sw::string( device->getBackendName() );
+        const sw::RHIMemoryLedger&   ledger = device->getMemoryLedger();
+        const sw::RHIGpuMemoryBudget fresh  = ledger.getDriverBudget();
+        SW_EXPECT_TRUE_MSG( fresh._bUsageKnown == SW_FALSE && fresh._bBudgetKnown == SW_FALSE, ( label + ": 묻기 전부터 드라이버 값이 있다" ).c_str() );
+
+        device->refreshGpuMemoryBudget();
+        const sw::RHIGpuMemoryBudget budget = ledger.getDriverBudget();
+        SW_LOG_INFO( "%#: usage known %# (%# B), budget known %# (%# B), available known %# (%# B), scope %#", label.c_str(),
+                     static_cast<uint32>( budget._bUsageKnown ), budget._usageBytes, static_cast<uint32>( budget._bBudgetKnown ), budget._budgetBytes,
+                     static_cast<uint32>( budget._bAvailableKnown ), budget._availableBytes, static_cast<uint32>( budget._scope ) );
+
+        const sw::RHIBackend backend = device.getBackend();
+        const bool           bDxgi   = backend == sw::RHIBackend::DirectX11 || backend == sw::RHIBackend::DirectX12;
+        if ( bDxgi )
+        {
+            SW_EXPECT_TRUE_MSG( budget._bUsageKnown == SW_TRUE && budget._bBudgetKnown == SW_TRUE, ( label + ": DXGI 가 사용량 · 예산을 답하지 않았다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( budget._scope == sw::RHIGpuMemoryScope::Process, ( label + ": DXGI 사용량은 이 프로세스의 것이다" ).c_str() );
+        }
+        if ( budget._bUsageKnown == SW_FALSE )
+            SW_EXPECT_TRUE_MSG( budget._usageBytes == 0, ( label + ": 모르는 사용량에 숫자가 있다" ).c_str() );
+        if ( budget._bBudgetKnown == SW_FALSE )
+            SW_EXPECT_TRUE_MSG( budget._budgetBytes == 0, ( label + ": 모르는 예산에 숫자가 있다" ).c_str() );
+        if ( budget._bBudgetKnown == SW_TRUE )
+            SW_EXPECT_TRUE_MSG( budget._budgetBytes > 0, ( label + ": 예산이 0 이다" ).c_str() );
+
+        const bool bTracksAllocation = backend == sw::RHIBackend::DirectX12 || backend == sw::RHIBackend::Vulkan;
+        if ( bTracksAllocation && budget._bUsageKnown == SW_TRUE && budget._scope == sw::RHIGpuMemoryScope::Process )
+        {
+            sw::RHITextureDesc largeDesc{};
+            largeDesc._width                  = 4096;
+            largeDesc._height                 = 4096;
+            largeDesc._format                 = sw::RHIFormat::R8G8B8A8_UNORM;
+            constexpr uint64           kBytes = 4096ull * 4096ull * 4ull;
+            const sw::RHITextureHandle large  = device->getResource()->createTexture2D( largeDesc );
+            SW_ASSERT_TRUE( large != 0 );
+            device->refreshGpuMemoryBudget();
+            const sw::RHIGpuMemoryBudget grown = ledger.getDriverBudget();
+            SW_EXPECT_TRUE_MSG( grown._usageBytes >= budget._usageBytes + kBytes / 2, ( label + ": 64 MB 텍스처를 만들어도 드라이버 사용량이 따라 오르지 않았다" ).c_str() );
+            device->getResource()->destroyTexture( large );
+        }
+        device->waitIdle();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the driver memory budget test" );
+}

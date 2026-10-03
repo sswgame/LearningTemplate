@@ -32,6 +32,18 @@ namespace sw
 {
     SW_LOG_CALLER( "RHIMemoryLedger" );
 
+    RHIGpuMemoryBudget::RHIGpuMemoryBudget() noexcept
+        : _usageBytes{ 0 }
+        , _budgetBytes{ 0 }
+        , _availableBytes{ 0 }
+        , _scope{ RHIGpuMemoryScope::Process }
+        , _bUsageKnown{ SW_FALSE }
+        , _bBudgetKnown{ SW_FALSE }
+        , _bAvailableKnown{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
+
     const utf8* RHIMemoryLedger::getKindName( RHIMemoryKind kind )
     {
         const uint32 kindIndex = static_cast<uint32>( kind );
@@ -90,6 +102,7 @@ namespace sw
         : _mutex{}
         , _arrMapIdToEntry{}
         , _arrStat{}
+        , _driverBudget{}
         , _sizeBasis{ RHIMemorySizeBasis::Allocation }
     {
     }
@@ -176,6 +189,41 @@ namespace sw
         std::stable_sort( arrKind.begin(), arrKind.end(), [&arrLiveBytes]( RHIMemoryKind lhs, RHIMemoryKind rhs )
         { return arrLiveBytes[static_cast<uint32>( lhs )] > arrLiveBytes[static_cast<uint32>( rhs )]; } );
         return arrKind;
+    }
+
+    RHIGpuMemoryBudget RHIMemoryLedger::getDriverBudget() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _driverBudget;
+    }
+
+    void RHIMemoryLedger::setDriverBudget( const RHIGpuMemoryBudget& budget )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        _driverBudget = budget;
+    }
+
+    RHIGpuMemorySummary RHIMemoryLedger::makeSummary() const
+    {
+        RHIGpuMemorySummary summary{};
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            summary._budget    = _driverBudget;
+            summary._sizeBasis = _sizeBasis;
+            for ( const RHIMemoryKindStats& stat : _arrStat )
+            {
+                summary._trackedBytes += stat._liveBytes;
+                summary._unknownSizeCount += stat._unknownSizeCount;
+            }
+        }
+        // 디바이스 전체 사용량에는 다른 프로세스 몫이 섞여 있어 빼 봐야 "엔진 밖" 이 아니다.
+        const bool bProcessUsage = summary._budget._bUsageKnown != SW_FALSE && summary._budget._scope == RHIGpuMemoryScope::Process;
+        if ( bProcessUsage )
+        {
+            summary._outsideBytes  = static_cast<int64>( summary._budget._usageBytes ) - static_cast<int64>( summary._trackedBytes );
+            summary._bOutsideKnown = SW_TRUE;
+        }
+        return summary;
     }
 
     void RHIMemoryLedger::subtractLocked( const LiveEntry& entry )

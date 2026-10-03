@@ -367,13 +367,25 @@ namespace sw
         vulkan12Features.pNext                          = &vulkan13Features;
 
         VkDeviceCreateInfo createInfo{};
-        createInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        createInfo.pNext                   = &vulkan12Features;
-        createInfo.pQueueCreateInfos       = &queueCreateInfo;
-        createInfo.queueCreateInfoCount    = 1;
-        createInfo.pEnabledFeatures        = &deviceFeatures;
-        createInfo.enabledExtensionCount   = static_cast<uint32>( s_listDeviceExtensions.size() );
-        createInfo.ppEnabledExtensionNames = s_listDeviceExtensions.data();
+        createInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+        createInfo.pNext                = &vulkan12Features;
+        createInfo.pQueueCreateInfos    = &queueCreateInfo;
+        createInfo.queueCreateInfoCount = 1;
+        createInfo.pEnabledFeatures     = &deviceFeatures;
+        // VK_EXT_memory_budget 은 선택이다. 있으면 켜서 드라이버의 사용량 · 예산을 읽고(queryGpuMemoryBudgetInternal), 없으면 그 값은 "모름" 이다.
+        vector<const utf8*> listDeviceExtension( s_listDeviceExtensions.begin(), s_listDeviceExtensions.end() );
+        {
+            uint32 availableExtCount{ 0 };
+            vkEnumerateDeviceExtensionProperties( _physicalDevice, nullptr, &availableExtCount, nullptr );
+            vector<VkExtensionProperties> listAvailableExt( availableExtCount );
+            if ( availableExtCount > 0 )
+                vkEnumerateDeviceExtensionProperties( _physicalDevice, nullptr, &availableExtCount, listAvailableExt.data() );
+            _bMemoryBudget = VulkanRHIDeviceInternal::hasExtension( listAvailableExt, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME ) ? SW_TRUE : SW_FALSE;
+            if ( _bMemoryBudget == SW_TRUE )
+                listDeviceExtension.push_back( VK_EXT_MEMORY_BUDGET_EXTENSION_NAME );
+        }
+        createInfo.enabledExtensionCount   = static_cast<uint32>( listDeviceExtension.size() );
+        createInfo.ppEnabledExtensionNames = listDeviceExtension.data();
 
         createInfo.enabledLayerCount = 0;
 

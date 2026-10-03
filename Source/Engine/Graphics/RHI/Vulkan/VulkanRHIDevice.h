@@ -157,6 +157,12 @@ namespace sw
         /** @brief GPU 가 끝날 때까지 기다리고(vkDeviceWaitIdle) 지연 해제 큐를 비웁니다. */
         void waitIdleInternal() override;
 
+        /**
+         * @brief `VK_EXT_memory_budget` 으로 이 프로세스의 힙별 사용량 · 예산을 채웁니다. 사용량은 모든 힙의 합, 예산은 DEVICE_LOCAL 힙의 합입니다.
+         * @details 디바이스가 확장을 지원하지 않으면 false 입니다(드라이버 값은 "모름").
+         */
+        [[nodiscard]] bool queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget ) override;
+
         /** @brief 이번 프레임이 제출할 세대(`_frameFenceCounter + 1`)로 해제 큐에 넣습니다. */
         void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
 
@@ -580,8 +586,9 @@ namespace sw
         uint16                  _bSwapChainDirty         : 1; ///< resize/present 결과로 예약된 스왑체인 재생성 요청
         uint16                  _bDepthHasStencil        : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
         uint16                  _bSwapChainImageHeld     : 1; ///< 획득했지만 아직 present 하지 않은 스왑체인 이미지를 쥐고 있는가
+        uint16                  _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량 · 예산 질의)
         uint16                  _linuxWsi                : 2; ///< 0=없음, 1=xlib, 2=xcb (Linux만)
-        [[maybe_unused]] uint16 _reservedVulkan          : 3;
+        [[maybe_unused]] uint16 _reservedVulkan          : 2;
         // 1 바이트 필드는 위 비트필드 뒤에 모은다 — 8 바이트 필드 사이에 끼면 칸마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출만 겁니다).

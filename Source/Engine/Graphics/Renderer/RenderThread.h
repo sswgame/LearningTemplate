@@ -105,8 +105,11 @@ namespace sw
         bool   _bLastImmediateSubmit;
         uint8  _bScreenshotTaken;       ///< -gv_screenshot 은 한 장만 찍는다
         uint32 _screenshotFrameCounter; ///< 씬이 채워질 때까지 몇 프레임 기다린다
+        uint32 _budgetFrameCounter;     ///< 드라이버 GPU 메모리 값을 몇 프레임마다 묻는다(`_s_kBudgetRefreshFrames`)
 
         static constexpr uint32 _s_kRingCapacity{ constant::kRenderFrameQueueDepth };
+        /// @brief 드라이버 GPU 메모리 값(`IRHIDevice::refreshGpuMemoryBudget`)을 묻는 간격입니다. DXGI 질의는 커널을 거쳐 프레임마다 묻지 않습니다.
+        static constexpr uint32 _s_kBudgetRefreshFrames{ 30 };
         // 게임 스레드와 렌더 스레드가 이 링을 **동시에** 만진다. 그래서 레이스 탐지기가 붙은
         // sw::array 를 쓰지 않는다. 이유는 Core/Container/array.h 머리말에 있다.
         std::array<RenderFramePacket, _s_kRingCapacity> _arrRingBuffer;

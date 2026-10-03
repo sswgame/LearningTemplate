@@ -1,6 +1,6 @@
 /**
  * @file RHIMemoryLedger.h
- * @brief 디바이스 하나가 만든 GPU 자원의 크기를 종류별로 세는 장부입니다.
+ * @brief 디바이스 하나가 만든 GPU 자원의 크기를 종류별로 세는 장부와, 드라이버가 알려 주는 사용량 · 예산입니다.
  * @details 백엔드는 자원을 만드는 자리 하나에서 `recordAllocation`, 실제로 놓는 자리(지연 해제 콜백) 하나에서 `recordFree` 를 부릅니다.
  *          크기는 장부가 키별로 기억하므로 해제 쪽은 키만 넘기고, 더한 만큼 정확히 뺍니다. 정책(무엇을 보여 줄지)은 Engine 의 것이고
  *          백엔드는 크기와 키만 냅니다 — 백엔드는 별도 모듈이라 Engine 전역을 볼 수 없어 장부는 디바이스(`IRHIDevice`)가 소유합니다.
@@ -85,6 +85,49 @@ namespace sw
         uint32 _unknownSizeCount{ 0 }; ///< 크기를 모르는 살아 있는 자원 수 — 바이트 합에 들어 있지 않다
     };
 
+    /** @brief 드라이버 사용량이 누구의 것인지입니다. */
+    enum class RHIGpuMemoryScope : uint8
+    {
+        Process, ///< 이 프로세스의 사용량(DXGI `QueryVideoMemoryInfo` · `VK_EXT_memory_budget`)
+        Device   ///< 디바이스 전체 — 다른 프로세스 몫까지 든다(`GL_NVX_gpu_memory_info`)
+    };
+
+    /**
+     * @brief 드라이버가 알려 주는 GPU 메모리 총량 · 예산입니다. 모르는 칸은 플래그가 꺼져 있고 값은 0 입니다 — 지어내지 않습니다.
+     * @details 사용량은 로컬(비디오 메모리)과 비로컬(GPU 가 보는 시스템 메모리 — 업로드 힙)을 합한 값이고, 예산은 로컬 예산입니다.
+     *          엔진 장부도 업로드 힙 버퍼를 세므로 둘을 견줄 수 있습니다.
+     */
+    struct SW_API RHIGpuMemoryBudget
+    {
+        uint64                 _usageBytes;          ///< 드라이버가 센 사용량(로컬 + 비로컬)
+        uint64                 _budgetBytes;         ///< 로컬 메모리 예산(이를 넘으면 OS 가 내쫓기 시작한다)
+        uint64                 _availableBytes;      ///< 드라이버가 답한 남은 양
+        RHIGpuMemoryScope      _scope;               ///< 사용량이 누구의 것인가
+        uint8                  _bUsageKnown     : 1; ///< `_usageBytes` 가 드라이버 값이다
+        uint8                  _bBudgetKnown    : 1; ///< `_budgetBytes` 가 드라이버 값이다
+        uint8                  _bAvailableKnown : 1; ///< `_availableBytes` 가 드라이버 값이다
+        [[maybe_unused]] uint8 _reserved        : 5;
+
+        /** @brief 모든 칸을 "모름" 으로 둡니다. */
+        RHIGpuMemoryBudget() noexcept;
+    };
+
+    /**
+     * @brief 장부와 드라이버 값을 맞춰 본 결과입니다. 로그 보고와 에디터 패널이 같은 계산을 씁니다.
+     * @details "엔진 밖" = 드라이버 사용량 − 장부 합입니다. 스왑체인 · 드라이버 내부 · 장부에 오르지 않은 디바이스 자원이 여기에 듭니다.
+     *          사용량을 모르거나 그것이 디바이스 전체 값이면(다른 프로세스 몫이 섞인다) 계산하지 않습니다. 장부가 논리 크기면 음수가 될 수도 있어
+     *          부호 있는 값입니다.
+     */
+    struct RHIGpuMemorySummary
+    {
+        RHIGpuMemoryBudget _budget{};                                    ///< 마지막으로 읽은 드라이버 값
+        uint64             _trackedBytes{ 0 };                           ///< 장부의 바이트 합(크기 모름 칸 제외)
+        int64              _outsideBytes{ 0 };                           ///< 드라이버 사용량 − 장부 합
+        uint32             _unknownSizeCount{ 0 };                       ///< 크기를 모르는 살아 있는 자원 수(모든 줄 합)
+        RHIMemorySizeBasis _sizeBasis{ RHIMemorySizeBasis::Allocation }; ///< 장부 바이트의 기준
+        uint8              _bOutsideKnown{ SW_FALSE };                   ///< `_outsideBytes` 를 계산했는가
+    };
+
     /**
      * @class RHIMemoryLedger
      * @brief 디바이스 하나의 GPU 자원 크기를 키별로 기억하고 종류별로 합합니다. 여러 스레드(게임 · 렌더 · 로더)에서 불러도 됩니다.
@@ -108,7 +151,7 @@ namespace sw
         static uint64 computeTextureLogicalBytes( const RHITextureDesc& desc );
 
     public:
-        /** @brief 빈 장부를 만듭니다. 기준은 Allocation 입니다. */
+        /** @brief 빈 장부를 만듭니다. 기준은 Allocation 이고 드라이버 값은 모름입니다. */
         RHIMemoryLedger();
         /** @brief 복사를 금지합니다. */
         RHIMemoryLedger( const RHIMemoryLedger& ) = delete;
@@ -139,6 +182,14 @@ namespace sw
         /** @brief 백엔드가 자기 기준을 적습니다(초기화 때 한 번). */
         void setSizeBasis( RHIMemorySizeBasis basis ) { _sizeBasis = basis; }
 
+        /** @brief 마지막으로 읽은 드라이버 값입니다. */
+        RHIGpuMemoryBudget getDriverBudget() const;
+        /** @brief 드라이버 값을 적습니다(`IRHIDevice::refreshGpuMemoryBudget`). */
+        void setDriverBudget( const RHIGpuMemoryBudget& budget );
+
+        /** @brief 드라이버 값과 장부를 맞춰 "엔진 밖" 까지 계산합니다. */
+        RHIGpuMemorySummary makeSummary() const;
+
     private:
         /** @brief 키 하나가 올라 있는 동안 기억하는 값입니다. 해제는 이 값을 그대로 뺍니다. */
         struct LiveEntry
@@ -153,6 +204,7 @@ namespace sw
         mutable mutex                    _mutex;
         unordered_map<uint64, LiveEntry> _arrMapIdToEntry[kRHIMemoryKeySpaceCount];
         RHIMemoryKindStats               _arrStat[kRHIMemoryKindCount];
+        RHIGpuMemoryBudget               _driverBudget;
         RHIMemorySizeBasis               _sizeBasis;
     };
 } // namespace sw

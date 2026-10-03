@@ -154,6 +154,9 @@ namespace sw
         /** @brief GPU 가 제출된 명령을 모두 끝낼 때까지 펜스로 기다립니다. */
         void waitIdleInternal() override;
 
+        /** @brief DXGI `QueryVideoMemoryInfo` 로 이 프로세스의 사용량(로컬 + 비로컬)과 로컬 예산을 채웁니다. 어댑터를 못 찾았으면 false 입니다. */
+        [[nodiscard]] bool queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget ) override;
+
         /** @brief 이번 프레임이 Signal 할 펜스 값(`_fenceValue`)으로 해제 큐에 넣습니다. */
         void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
 
@@ -481,6 +484,7 @@ namespace sw
         mutex _uploadSlotMutex;
 
         Microsoft::WRL::ComPtr<ID3D12Device>              _device;
+        Microsoft::WRL::ComPtr<IDXGIAdapter3>             _memoryAdapter; ///< 디바이스가 쓰는 어댑터(LUID 로 찾음). GPU 메모리 사용량 · 예산 질의용
         Microsoft::WRL::ComPtr<ID3D12CommandQueue>        _commandQueue;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _rtvHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>      _dsvHeap;

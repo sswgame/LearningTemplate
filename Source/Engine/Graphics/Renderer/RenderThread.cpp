@@ -60,6 +60,7 @@ namespace sw
         , _bLastImmediateSubmit{ false }
         , _bScreenshotTaken{ SW_FALSE }
         , _screenshotFrameCounter{ 0 }
+        , _budgetFrameCounter{ 0 }
         , _arrRingBuffer{}
         , _head{ 0 }
         , _tail{ 0 }
@@ -407,6 +408,18 @@ namespace sw
             // VSync 는 **디바이스가 채택한 값**이다. 여기 true 를 못박아 두면 EngineConfig 의
             // `_window._bVSync` 와 CLI `--VSYNC` 가 둘 다 무시되고 프레임이 모니터 주사율에 붙는다.
             _pDevice->endFrame( _pDevice->isVSyncEnabled() );
+        }
+
+        {
+            // 드라이버의 GPU 메모리 사용량 · 예산을 장부에 적는다. 첫 프레임에도 묻는다 — 보고가 "모름" 으로 시작하지 않게.
+            // 프레임을 기록하는 이 스레드에서 묻는다(GL 은 컨텍스트를 쥐고 묻는다 — 다른 스레드면 이 프레임을 기다린다).
+            const bool bRefreshBudget = ( _budgetFrameCounter % _s_kBudgetRefreshFrames ) == 0;
+            ++_budgetFrameCounter;
+            if ( bRefreshBudget )
+            {
+                SW_PROFILE_SCOPE( "RT.RefreshGpuMemoryBudget" );
+                _pDevice->refreshGpuMemoryBudget();
+            }
         }
 
         // -gv_screenshot=<path> : 한 장만 찍는다.

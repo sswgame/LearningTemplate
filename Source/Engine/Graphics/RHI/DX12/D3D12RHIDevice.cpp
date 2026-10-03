@@ -13,6 +13,7 @@
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
+    #include "Engine/Graphics/RHI/DX/RHIDxgiMemoryBudget.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -21,6 +22,7 @@ namespace sw
 
     D3D12RHIDevice::D3D12RHIDevice()
         : _device{ nullptr }
+        , _memoryAdapter{ nullptr }
         , _commandQueue{ nullptr }
         , _rtvHeap{ nullptr }
         , _dsvHeap{ nullptr }
@@ -360,6 +362,11 @@ namespace sw
     #else
         (void)pStage;
     #endif
+    }
+
+    bool D3D12RHIDevice::queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget )
+    {
+        return queryDxgiMemoryBudget( _memoryAdapter.Get(), outBudget );
     }
 
     IRHIResource*       D3D12RHIDevice::getResource() { return _resourceImpl.get(); }

@@ -52,6 +52,8 @@ namespace sw
         , _bTimestampEnabled{ SW_FALSE }
         , _bTimestampReady{ SW_FALSE }
         , _bInitialized{ SW_FALSE }
+        , _bNvxMemoryInfo{ SW_FALSE }
+        , _bAtiMemInfo{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
         _resourceImpl = sw::make_unique<OpenGLRHIResource>( this );
@@ -64,6 +66,44 @@ namespace sw
 
     IRHIResource*       OpenGLRHIDevice::getResource() { return _resourceImpl.get(); }
     IRHICommandContext* OpenGLRHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
+
+    bool OpenGLRHIDevice::queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget )
+    {
+        if ( _bInitialized == SW_FALSE || ( _bNvxMemoryInfo == SW_FALSE && _bAtiMemInfo == SW_FALSE ) )
+            return false;
+
+        // 확장 값은 KB 단위이고, 다른 프로세스 몫까지 든 디바이스 전체 값이다. 그래서 장부를 빼 "엔진 밖" 을 내지 않는다(Scope Device).
+        ScopedOpenGLContext ctxScope( this );
+        constexpr uint64    kKilobyte = 1024;
+        outBudget._scope              = RHIGpuMemoryScope::Device;
+        if ( _bNvxMemoryInfo == SW_TRUE )
+        {
+            GLint totalKb{ 0 };
+            GLint currentKb{ 0 };
+            glGetIntegerv( OpenGLRHIDeviceInternal::kGpuMemoryInfoTotalAvailableNvx, &totalKb );
+            glGetIntegerv( OpenGLRHIDeviceInternal::kGpuMemoryInfoCurrentAvailableNvx, &currentKb );
+            if ( totalKb <= 0 )
+                return false;
+            const uint64 totalBytes    = static_cast<uint64>( totalKb ) * kKilobyte;
+            const uint64 currentBytes  = currentKb > 0 ? static_cast<uint64>( currentKb ) * kKilobyte : 0;
+            outBudget._budgetBytes     = totalBytes;
+            outBudget._availableBytes  = currentBytes;
+            outBudget._usageBytes      = totalBytes > currentBytes ? totalBytes - currentBytes : 0;
+            outBudget._bUsageKnown     = SW_TRUE;
+            outBudget._bBudgetKnown    = SW_TRUE;
+            outBudget._bAvailableKnown = SW_TRUE;
+            return true;
+        }
+
+        // ATI 는 풀별 [남은 양, 가장 큰 덩어리, 보조 남은 양, 보조 가장 큰 덩어리] 를 준다. 총량은 알려 주지 않는다.
+        GLint arrTextureFreeKb[4]{};
+        glGetIntegerv( OpenGLRHIDeviceInternal::kTextureFreeMemoryAti, arrTextureFreeKb );
+        if ( arrTextureFreeKb[0] <= 0 )
+            return false;
+        outBudget._availableBytes  = static_cast<uint64>( arrTextureFreeKb[0] ) * kKilobyte;
+        outBudget._bAvailableKnown = SW_TRUE;
+        return true;
+    }
 
     RHIBufferHandle OpenGLRHIDevice::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
     {

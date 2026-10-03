@@ -11,6 +11,7 @@
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
+    #include "Engine/Graphics/RHI/DX/RHIDxgiMemoryBudget.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -61,6 +62,7 @@ namespace sw
 
     D3D11RHIDevice::D3D11RHIDevice()
         : _device{ nullptr }
+        , _memoryAdapter{ nullptr }
         , _deviceContext{ nullptr }
         , _backBufferFormat{ constant::kBackBufferFormat }
         , _swapChain{}
@@ -255,6 +257,11 @@ namespace sw
         getMemoryLedger().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryLedger::classifyTexture( desc ),
                                             RHIMemoryLedger::computeTextureLogicalBytes( desc ) );
         return handle;
+    }
+
+    bool D3D11RHIDevice::queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget )
+    {
+        return queryDxgiMemoryBudget( _memoryAdapter.Get(), outBudget );
     }
 } // namespace sw
 #endif

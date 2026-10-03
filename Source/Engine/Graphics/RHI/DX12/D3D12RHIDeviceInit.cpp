@@ -10,6 +10,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineData.h"
+    #include "Engine/Graphics/RHI/DX/RHIDxgiMemoryBudget.h"
     #include "Engine/Graphics/RHI/Support/RHILiveCommandListUtil.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
@@ -62,6 +63,8 @@ namespace sw
 
         if ( FAILED( D3D12CreateDevice( nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS( _device.GetAddressOf() ) ) ) )
             return false;
+        // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다(기본 어댑터를 가정하지 않는다). 못 찾으면 드라이버 값은 "모름" 이다.
+        _memoryAdapter = findDxgiAdapterByLuid( _device->GetAdapterLuid() );
 
         D3D12_FEATURE_DATA_D3D12_OPTIONS options{};
         if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) )
@@ -241,6 +244,7 @@ namespace sw
         _bBindlessRootSignature       = SW_FALSE;
         _fence.Reset();
         _commandQueue.Reset();
+        _memoryAdapter.Reset();
         _device.Reset();
 
         if ( _fenceEvent != nullptr )

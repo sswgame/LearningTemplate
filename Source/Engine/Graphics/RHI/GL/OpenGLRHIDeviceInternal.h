@@ -39,6 +39,25 @@ namespace sw
     /** @brief OpenGL 백엔드 조각들이 함께 쓰는 내부 도우미입니다. */
     struct OpenGLRHIDeviceInternal
     {
+        // GPU 메모리 질의 토큰. glad 는 이 벤더 확장을 싣지 않아 값을 직접 둔다(GL 레지스트리의 값).
+        static constexpr GLenum kGpuMemoryInfoTotalAvailableNvx   = 0x9048; ///< GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX (KB)
+        static constexpr GLenum kGpuMemoryInfoCurrentAvailableNvx = 0x9049; ///< GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX (KB)
+        static constexpr GLenum kTextureFreeMemoryAti             = 0x87FC; ///< TEXTURE_FREE_MEMORY_ATI (KB × 4)
+
+        /** @brief 컨텍스트가 이 확장을 내놓는지 봅니다(`glGetStringi( GL_EXTENSIONS, … )`). 컨텍스트가 붙은 스레드에서 부릅니다. */
+        static bool hasGlExtension( const utf8* pName )
+        {
+            GLint extensionCount{ 0 };
+            glGetIntegerv( GL_NUM_EXTENSIONS, &extensionCount );
+            for ( GLint extensionIndex = 0; extensionIndex < extensionCount; ++extensionIndex )
+            {
+                const GLubyte* pExtension = glGetStringi( GL_EXTENSIONS, static_cast<GLuint>( extensionIndex ) );
+                if ( pExtension != nullptr && StringUtil::equals( reinterpret_cast<const utf8*>( pExtension ), pName ) )
+                    return true;
+            }
+            return false;
+        }
+
 #if defined( SW_PLATFORM_LINUX )
         static inline thread_local int32 t_glxXError{ 0 };
 

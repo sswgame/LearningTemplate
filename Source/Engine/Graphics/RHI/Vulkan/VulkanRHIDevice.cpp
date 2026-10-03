@@ -75,6 +75,7 @@ namespace sw
         , _bSwapChainDirty{ SW_FALSE }
         , _bDepthHasStencil{ SW_FALSE }
         , _bSwapChainImageHeld{ SW_FALSE }
+        , _bMemoryBudget{ SW_FALSE }
         , _linuxWsi{ 0 }
         , _reservedVulkan{ 0 }
         , _bSwapChainRecreateFailing{ SW_FALSE }
@@ -519,6 +520,41 @@ namespace sw
     const VulkanRHIDevice::VulkanTextureRecord* VulkanRHIDevice::resolveTexture( RHITextureHandle handle ) const
     {
         return _gpuTextures.get( handle );
+    }
+
+    bool VulkanRHIDevice::queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget )
+    {
+        if ( _bMemoryBudget == SW_FALSE || _physicalDevice == VK_NULL_HANDLE )
+            return false;
+
+        VkPhysicalDeviceMemoryBudgetPropertiesEXT budgetProperties{};
+        budgetProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT;
+        VkPhysicalDeviceMemoryProperties2 memoryProperties{};
+        memoryProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+        memoryProperties.pNext = &budgetProperties;
+        vkGetPhysicalDeviceMemoryProperties2( _physicalDevice, &memoryProperties );
+
+        // 사용량은 모든 힙(로컬 + 호스트 가시)의 합이다 — 장부가 호스트 가시 버퍼도 센다. 예산 · 남은 양은 로컬 힙만 본다.
+        uint64 usageBytes{ 0 };
+        uint64 localUsageBytes{ 0 };
+        uint64 localBudgetBytes{ 0 };
+        for ( uint32 heapIndex = 0; heapIndex < memoryProperties.memoryProperties.memoryHeapCount; ++heapIndex )
+        {
+            usageBytes += budgetProperties.heapUsage[heapIndex];
+            const bool bDeviceLocal = ( memoryProperties.memoryProperties.memoryHeaps[heapIndex].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT ) != 0;
+            if ( bDeviceLocal == false )
+                continue;
+            localUsageBytes += budgetProperties.heapUsage[heapIndex];
+            localBudgetBytes += budgetProperties.heapBudget[heapIndex];
+        }
+        outBudget._usageBytes      = usageBytes;
+        outBudget._budgetBytes     = localBudgetBytes;
+        outBudget._availableBytes  = localBudgetBytes > localUsageBytes ? localBudgetBytes - localUsageBytes : 0;
+        outBudget._scope           = RHIGpuMemoryScope::Process;
+        outBudget._bUsageKnown     = SW_TRUE;
+        outBudget._bBudgetKnown    = SW_TRUE;
+        outBudget._bAvailableKnown = SW_TRUE;
+        return true;
     }
 
     RHIBufferHandle VulkanRHIDevice::createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData )

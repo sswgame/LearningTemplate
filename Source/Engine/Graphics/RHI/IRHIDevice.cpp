@@ -82,6 +82,14 @@ namespace sw
         return outHandles._pDevice != nullptr;
     }
 
+    void IRHIDevice::refreshGpuMemoryBudget()
+    {
+        RHIGpuMemoryBudget budget{};
+        if ( queryGpuMemoryBudgetInternal( budget ) == false )
+            budget = RHIGpuMemoryBudget{};
+        _memoryLedger->setDriverBudget( budget );
+    }
+
     void IRHIDevice::setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadId )
     {
         _pfnRenderThreadDrain      = pfnDrain;

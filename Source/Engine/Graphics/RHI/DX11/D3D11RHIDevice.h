@@ -132,6 +132,9 @@ namespace sw
         /** @brief GPU 가 쉴 때까지 기다린 뒤 해제 큐를 비웁니다. */
         void waitIdleInternal() override;
 
+        /** @brief DXGI `QueryVideoMemoryInfo` 로 이 프로세스의 사용량(로컬 + 비로컬)과 로컬 예산을 채웁니다. 어댑터를 못 찾았으면 false 입니다. */
+        [[nodiscard]] bool queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget ) override;
+
         /** @brief 프레임 지연(`kGpuReleaseFrameLatency`) 뒤 해제 큐에 넣습니다. D3D11 은 펜스 대신 endFrame 횟수로 셉니다. */
         void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
 
@@ -312,6 +315,7 @@ namespace sw
         };
 
         Microsoft::WRL::ComPtr<ID3D11Device>        _device;
+        Microsoft::WRL::ComPtr<IDXGIAdapter3>       _memoryAdapter; ///< 디바이스가 쓰는 어댑터. GPU 메모리 사용량 · 예산 질의용
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> _deviceContext;
         RHIFormat                                   _backBufferFormat; ///< 스왑체인 백버퍼 포맷 (DXGI 는 요청값 그대로)
         /// @brief 창 하나의 백버퍼입니다. 백버퍼 RTV · 크기 · Present 가 모두 여기 모여 있습니다.

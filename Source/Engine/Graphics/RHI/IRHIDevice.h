@@ -12,6 +12,8 @@
 namespace sw
 {
 
+    struct RHIGpuMemoryBudget;
+
     class IRenderSurface;
     class IRHICommandContext;
     class IRHICommandList;
@@ -373,6 +375,13 @@ namespace sw
         RHIMemoryLedger& getMemoryLedger() { return *_memoryLedger; }
         /** @brief 읽기 전용 장부입니다. */
         const RHIMemoryLedger& getMemoryLedger() const { return *_memoryLedger; }
+        /**
+         * @brief 드라이버에게 GPU 메모리 사용량 · 예산을 물어 장부에 적습니다(`RHIMemoryLedger::getDriverBudget`). 백엔드가 물을 수 없으면 모든 칸이 "모름" 입니다.
+         * @details **프레임을 기록하는 스레드(렌더 스레드)에서 부릅니다** — GL 은 컨텍스트를 쥐고 묻는데, 다른 스레드에서 부르면 렌더 스레드가 그 프레임의
+         *          컨텍스트를 놓을 때까지 기다립니다. 엔진은 Present 뒤 몇 프레임마다 부르고(`RenderThread`), 읽는 쪽(프로파일 보고 · 에디터 패널)은
+         *          장부에 적힌 마지막 값을 봅니다.
+         */
+        void refreshGpuMemoryBudget();
 
     protected:
         /** @brief 백엔드의 실제 GPU 대기 + 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2 단계로 부릅니다. */
@@ -388,6 +397,15 @@ namespace sw
          *          더 내놓을 것이 있는 백엔드(Vulkan 의 인스턴스 · 물리 디바이스 · 큐 패밀리 · 렌더 패스)가 재정의합니다.
          */
         [[nodiscard]] virtual bool queryNativeHandlesInternal( RHINativeHandles& outHandles ) const;
+        /**
+         * @brief 백엔드가 드라이버의 GPU 메모리 사용량 · 예산을 채웁니다. `outBudget` 은 모든 칸이 "모름" 인 기본값으로 옵니다.
+         * @details 물을 수 없으면(API · 확장이 없다) false 입니다(기본). 아는 칸만 플래그를 켜고, 모르는 칸은 지어내지 않습니다.
+         */
+        [[nodiscard]] virtual bool queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget )
+        {
+            (void)outBudget;
+            return false;
+        }
 
         IRenderSurface*           _pSurface;
         RenderThreadDrainFunction _pfnRenderThreadDrain;
