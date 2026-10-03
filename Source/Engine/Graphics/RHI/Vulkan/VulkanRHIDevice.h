@@ -246,6 +246,7 @@ namespace sw
             outHandles._pInstance       = _instance;
             outHandles._pPhysicalDevice = _physicalDevice;
             outHandles._pRenderPass     = _renderPass;
+            outHandles._pQueueMutex     = &_queueMutex;
             outHandles._queueFamily     = _graphicsQueueFamilyIndex;
             // 실제 스왑체인 이미지 수를 그대로 알린다. 매직 2 를 쓰면 백버퍼 개수 계약이 바뀔 때
             // ImGui 쪽만 옛 값으로 남는다.

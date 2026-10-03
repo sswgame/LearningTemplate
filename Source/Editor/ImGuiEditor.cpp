@@ -451,6 +451,9 @@ namespace sw::editor
             {
                 // 플랫폼(OS 창) 갱신은 항상 UI 스레드에서 한다. imgui 1.92 뷰포트 관리는 단일 스레드 호출을 전제하므로 보조(플로팅)
                 // 뷰포트의 GPU 렌더 · present 는 한 스레드에서만 돌려야 하고, GL 이면 그 스레드는 렌더 스레드다(아래 render() 에서 처리).
+                // 창 생성 · 크기 변경 · 파괴와 렌더가 GPU 큐에 제출 · 대기하므로 렌더러 백엔드의 큐 잠금 안에서 한다.
+                const std::unique_lock<mutex> queueLock =
+                    ( _rendererBackend != nullptr ) ? _rendererBackend->lockSubmissionQueue() : std::unique_lock<mutex>{};
                 ImGui::UpdatePlatformWindows();
                 if ( bRenderThreadCtx == false )
                     ImGui::RenderPlatformWindowsDefault();

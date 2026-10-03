@@ -300,6 +300,12 @@ SW_TEST_CASE( RHIDeviceTest, NativeHandlesDescribeTheDevice )
             SW_EXPECT_TRUE_MSG( handles._pInstance != nullptr && handles._pPhysicalDevice != nullptr, "Vulkan: 인스턴스 · 물리 디바이스가 비었다" );
             SW_EXPECT_TRUE_MSG( handles._pGraphicsQueue != nullptr && handles._pRenderPass != nullptr, "Vulkan: 큐 · 렌더 패스가 비었다" );
             SW_EXPECT_TRUE_MSG( handles._imageCount >= 2u && handles._minImageCount >= 2u, "Vulkan: 스왑체인 이미지 수가 2 보다 작다" );
+            // ImGui 백엔드가 같은 큐에 제출할 때 쥘 잠금이다. 없으면 UI 스레드 제출이 렌더 스레드 제출과 겹친다(큐 외부 동기화 위반).
+            SW_EXPECT_TRUE_MSG( handles._pQueueMutex != nullptr, "Vulkan: 큐 제출 잠금 칸이 비었다" );
+        }
+        else
+        {
+            SW_EXPECT_TRUE_MSG( handles._pQueueMutex == nullptr, ( label + ": 큐 잠금은 Vulkan 만 알린다" ).c_str() );
         }
     }
     if ( sweep.getReadyCount() == 0 )

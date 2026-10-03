@@ -160,9 +160,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-4. 에디터
 
-- **imgui Vulkan 백엔드가 UI 스레드에서 `vkQueueSubmit` 을 부른다** — 글꼴 아틀라스 업로드(`ImGui_ImplVulkan_UpdateTexture`) · 보조 뷰포트(`RenderPlatformWindowsDefault`)가
-  렌더 스레드와 같은 큐에 엔진 `_queueMutex` 밖에서 제출한다(큐 외부 동기화 위반). ImGui 의 아틀라스 파괴(`ImGui_ImplVulkan_DestroyTexture`)도 즉시 해제다.
-
 - **에디터 자체 시험(`SW_EDITOR_SELF_TEST`)이 입력을 흉내 내지 못한다** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 툴팁 호버 · 드래그 드롭은
   ImGui 입력 이벤트를 넣는 창구(`ImGuiIO::AddMousePosEvent` 류를 프레임 단계에서 주입)가 있어야 덮인다.
 

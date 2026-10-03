@@ -87,8 +87,9 @@ namespace sw::editor
         if ( pRhiDevice->queryNativeHandles( vkNative ) == false || vkNative._backend != RHIBackend::Vulkan || vkNative._pDevice == nullptr )
             return false;
 
-        _pRHIDevice = pRhiDevice;
-        _pDevice    = static_cast<VkDevice>( vkNative._pDevice );
+        _pRHIDevice  = pRhiDevice;
+        _pDevice     = static_cast<VkDevice>( vkNative._pDevice );
+        _pQueueMutex = static_cast<mutex*>( vkNative._pQueueMutex );
 
         VkDescriptorPoolSize pool_sizes[] = {
             {               VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
@@ -210,7 +211,11 @@ namespace sw::editor
         _mapTextureId.clear();
 
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
+        {
+            // 보조 뷰포트 창을 부수며 vkDeviceWaitIdle 을 부른다 — 큐 잠금 안에서.
+            const std::unique_lock<mutex> queueLock = lockSubmissionQueue();
             ImGui_ImplVulkan_Shutdown();
+        }
 
         if ( _pSampler != nullptr && _pDevice != nullptr )
         {
@@ -224,8 +229,9 @@ namespace sw::editor
             _pImguiDescriptorPool = nullptr;
         }
 
-        _pDevice    = nullptr;
-        _pRHIDevice = nullptr;
+        _pDevice     = nullptr;
+        _pRHIDevice  = nullptr;
+        _pQueueMutex = nullptr;
     }
 
     void ImGuiVulkanRendererBackend::newFrame()
@@ -236,9 +242,18 @@ namespace sw::editor
 
     void ImGuiVulkanRendererBackend::processTextureUpdates()
     {
-        // 글꼴 아틀라스 갱신도 같은 풀에서 세트를 잡고 놓는다.
-        std::scoped_lock<mutex> lock{ _descriptorPoolMutex };
+        // 업로드는 큐에 제출하고 기다린다(큐 잠금). 글꼴 아틀라스 갱신도 같은 풀에서 세트를 잡고 놓는다(풀 잠금). 순서는 큐 → 풀이다 —
+        // 렌더 스레드가 큐 잠금 안에서 미뤄 둔 해제(풀 잠금)를 부를 수 있다.
+        const std::unique_lock<mutex> queueLock = lockSubmissionQueue();
+        std::scoped_lock<mutex>       lock{ _descriptorPoolMutex };
         updatePendingTextures( &ImGui_ImplVulkan_UpdateTexture );
+    }
+
+    std::unique_lock<mutex> ImGuiVulkanRendererBackend::lockSubmissionQueue()
+    {
+        if ( _pQueueMutex == nullptr )
+            return std::unique_lock<mutex>{};
+        return std::unique_lock<mutex>{ *_pQueueMutex };
     }
 
     void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRhiDevice, ImDrawData* pDrawData )

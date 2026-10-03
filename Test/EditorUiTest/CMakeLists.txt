@@ -15,6 +15,7 @@
 sw_addTestExecutable(EditorUiTest
 	SOURCES
 		TestImGuiPlatformBackend.cpp
+		TestImGuiTextureUpdate.cpp
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiWin32PlatformBackend.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiX11PlatformBackend.cpp"
 	LIBS

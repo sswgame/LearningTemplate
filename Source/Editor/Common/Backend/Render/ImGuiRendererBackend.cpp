@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/ImGuiTextureUpdate.h"
 #include "Editor/Common/Backend/Render/ImGuiDX11RendererBackend.h"
 #include "Editor/Common/Backend/Render/ImGuiDX12RendererBackend.h"
 #include "Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.h"
@@ -19,7 +20,7 @@ namespace sw::editor
 
         for ( ImTextureData* pTexture : ImGui::GetPlatformIO().Textures )
         {
-            if ( pTexture != nullptr && pTexture->Status != ImTextureStatus_OK )
+            if ( pTexture != nullptr && isTextureUpdateDue( *pTexture ) )
                 pUpdateTexture( pTexture );
         }
     }

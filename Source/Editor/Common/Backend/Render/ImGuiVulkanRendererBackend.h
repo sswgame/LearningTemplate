@@ -41,8 +41,10 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief ImGui Vulkan 프레임을 시작합니다. */
         void newFrame() override;
-        /** @brief 대기 중인 폰트 아틀라스/텍스처 갱신을 UI 스레드에서 처리합니다. */
+        /** @brief 대기 중인 폰트 아틀라스/텍스처 갱신을 UI 스레드에서 처리합니다. 업로드가 큐에 제출하므로 큐 잠금 안에서 합니다. */
         void processTextureUpdates() override;
+        /** @brief RHI 디바이스의 그래픽스 큐 잠금을 쥡니다. */
+        std::unique_lock<mutex> lockSubmissionQueue() override;
         /** @brief ImGui draw data를 Vulkan으로 그립니다. */
         void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) override;
 
@@ -56,6 +58,7 @@ namespace sw::editor
         VkDevice_T*                            _pDevice{ nullptr };
         VkSampler_T*                           _pSampler{ nullptr };
         IRHIDevice*                            _pRHIDevice{ nullptr };
+        mutex*                                 _pQueueMutex{ nullptr }; ///< RHI 디바이스의 큐 제출 잠금(`RHINativeHandles::_pQueueMutex`)
         unordered_map<void*, RHITextureHandle> _mapTextureId;
         /// @brief 디스크립터 풀 잠금입니다. 세트를 잡는 UI 스레드와, 미뤄 둔 해제를 부르는 렌더 스레드가 같은 풀을 씁니다.
         mutex _descriptorPoolMutex;

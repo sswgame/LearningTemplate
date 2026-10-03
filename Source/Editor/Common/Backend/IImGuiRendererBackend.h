@@ -3,7 +3,9 @@
  * @brief ImGui GPU 렌더러 백엔드의 추상 인터페이스입니다(RHI 마다 구현).
  */
 #pragma once
+#include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Backend/EditorDrawReleaseQueue.h"
@@ -54,6 +56,13 @@ namespace sw::editor
          *          false 입니다.
          */
         virtual bool requiresRenderThreadContext() const { return false; }
+
+        /**
+         * @brief UI 스레드가 ImGui 백엔드 코드로 GPU 큐에 제출 · 대기할 동안 쥘 잠금입니다(보조 뷰포트 생성 · 렌더 · 파괴, 텍스처 업로드).
+         * @details Vulkan 큐는 외부 동기화 대상이라 렌더 스레드의 제출과 겹치면 안 됩니다 — Vulkan 백엔드는 RHI 디바이스의 큐 잠금을
+         *          돌려줍니다(`RHINativeHandles::_pQueueMutex`). 다른 백엔드는 빈 잠금입니다. 다른 잠금보다 **먼저** 쥡니다.
+         */
+        virtual std::unique_lock<mutex> lockSubmissionQueue() { return std::unique_lock<mutex>{}; }
 
         // ------------------------------------------------------------------------------
         // 2) ImGui 텍스처 (Game View RT 등)

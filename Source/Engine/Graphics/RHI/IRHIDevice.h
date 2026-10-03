@@ -18,7 +18,7 @@ namespace sw
     class IRHIResource;
 
     /** @brief `RHINativeHandles` 의 판 번호입니다. 필드 · 순서 · 뜻이 바뀌면 올립니다. */
-    inline constexpr uint32 kRHINativeHandlesVersion = 1;
+    inline constexpr uint32 kRHINativeHandlesVersion = 2;
 
     /**
      * @struct RHINativeHandles
@@ -38,6 +38,7 @@ namespace sw
         void*      _pContext{ nullptr };                    ///< `getNativeContext()` 와 같은 값
         void*      _pGraphicsQueue{ nullptr };              ///< `getNativeCommandQueue()` 와 같은 값(VkQueue · ID3D12CommandQueue)
         void*      _pRenderPass{ nullptr };                 ///< 백버퍼 렌더 패스(VkRenderPass, Vulkan)
+        void*      _pQueueMutex{ nullptr };                 ///< 그래픽스 큐 제출 잠금(`sw::mutex*`, Vulkan). 큐는 외부 동기화 대상이라 외부 라이브러리가 이 큐에 제출 · 대기할 때 쥔다
         uint32     _queueFamily{ 0 };                       ///< 그래픽스 큐 패밀리 인덱스(Vulkan)
         uint32     _minImageCount{ 0 };                     ///< 스왑체인 최소 이미지 수(Vulkan)
         uint32     _imageCount{ 0 };                        ///< 스왑체인 이미지 수(Vulkan)
