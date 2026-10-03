@@ -128,19 +128,18 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
+- **엔진 슬롯 t0..t3(풀스크린 입력 · 그림자 맵)의 샘플러가 백엔드마다 다르다** — GL 최근접 · 클램프, DX11 선형 · 클램프, 네이티브는 셰이더가 고른다. 기본 벤치에서
+  GL 이 DX12 와 ~11k 픽셀(큐브 모서리 · 비스듬한 윗면) 다른 원인 후보(미확인). 머티리얼 슬롯처럼 계약 샘플러 하나(`shaderslot`)로 맞춘다.
+- **`gbuffernormal.hlsl`(MRT 없는 폴백)은 시험 밖이다** — 네 백엔드가 모두 MRT 라 이 경로를 타지 않는다. 쓰는 하드웨어가 없으면 지운다(폴백은 썩는다).
+
 - **파이프라인 검증이 렌더 타깃이 될 수 없는 포맷을 첨부 포맷으로 받는다**(`RenderPipelineResource::validate` — 리플렉션 이름이면 `Unknown` · BC* 도 통과).
   `parseAttachmentFormat` 은 모르는 이름을 R8G8B8A8_UNORM 으로 명시 폴백한다. 렌더 타깃 가능 포맷 판정(`RHIFormat` 특성)을 검증에 넣는다.
 
-- **거울 변환(음수 행렬식)에서 컬 모드를 뒤집지 않는다.** 노멀은 `swComputeWorldNormal` 가 바깥으로 맞추지만 래스터 컬은 그대로라, 뒤집힌 메시가 안쪽 면으로
-  그려진다. `gbuffernormal.hlsl`(MRT 없는 폴백)은 네 백엔드가 모두 MRT 라 시험 밖이다.
 - **런타임은 DDS 만 읽는다.** `Texture2D` → `DdsLoader` 뿐이라 에디터에서 떨군 PNG 는 경로만 걸리고 그려지지 않는다. 텍스처 임포터 · 쿠킹의 몫이다
   (`Texture2D.cpp`; 에디터 `TextureBaker::importChangedSourceImage` 는 `textures_raw/` 아래 소스만 옆 `textures/` 의 DDS 로 굽는다).
-- **GL 머티리얼 텍스처가 기본 샘플러(NEAREST · CLAMP)로 읽힌다**(`OpenGLRHIDeviceInit.cpp` 의 `defaultSampler`). 네 백엔드 스크린샷에서 GL 만 글자
-  가장자리가 다른 까닭이다.
 - **2D 정렬 레이어가 없다.** 깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다.
 - **GPU 타임스탬프는 패스 14 개까지이고, 넘으면 조용히 빠진다.** `kMaxGpuTimestampSlot`(32) 중 뒤 세 칸을 프레임 · 컴퓨트가 쓴다. `FrameRenderer.cpp` ·
   `FrameRendererPassExecute.cpp` 가 넘친 패스를 경고 없이 건너뛴다(지금 최장 10 패스). 칸을 늘리면 `RHITypes.h` 계약이 바뀌어 ABI 스탬프 + 백엔드 재빌드.
-- **DX11 디퍼드가 프레임마다 경고 둘을 낸다** — "OM DepthStencil is still bound on input", "Forcing PS shader resource slot 3 to NULL". 픽셀은 같다.
 - **Vulkan 검증 레이어의 "Vertex attribute at location 2/3 not consumed".** 풀스크린 셰이더가 노멀 · UV 를 안 써 DXC 가 떼는데 PSO 는 `arrVertexAttribute`
   전부를 건다. 잡음이다. PSO 정점 입력을 리플렉션 `_listVertexInput` 으로 거르면 된다.
 - **`shaderDemoteToHelperInvocation` 이 없는 Vulkan 디바이스에서 `discard` 가 미정의다**(`deferredlighting` · `sprite2d`). 지금은 경고만 낸다
@@ -155,7 +154,6 @@ cd build/Ninja-Debug/Bin
   순서: RHI 텍스처 차원(큐브 · 배열) → 그림자 패스 다중 뷰 → `swSampleShadowAtWorld`.
 - **후처리를 반해상도로 돌릴 수 없다.** 합친 Present 가 GPU 프레임의 절반 가까이다. 먼저 `TransientAttachmentPool` 에 부착물별 배율이 있어야 한다(지금
   `setSize` 하나). `deferredpipeline.xml` 은 아직 단계별 패스이고(`postchain` 미적용) `BloomColor` 는 FP16 이다.
-- **`kDefaultDenomiator` 오타**(`D3D11RHIDeviceInit.cpp`). 사소하다.
 
 ### 1-4. 에디터
 
@@ -675,6 +673,12 @@ cd build/Ninja-Debug/Bin
   태그 ID 를 만들고, 계층 비교(`Faction` → `Faction.Player`)에는 문자열이 같이 필요하다.
 
 ### 3-7. 그래픽스 · RHI · 셰이더
+
+- **거울 변환(월드 3x3 행렬식 < 0)은 컬을 뒤집은 PSO 변형으로 그린다** — 배치 키 · 정렬 키 · 투명 병합에 `_bReverseCulling` 이 들어 있고 PSO 변형 키의 한 축이다
+  (언리얼 `bReverseCulling`). 트랜스폼만 바뀐 프레임도 부호를 다시 구한다.
+- **깊이 첨부는 렌더 그래프의 쓰기다.** 그래프는 선언 순서상 앞선 쓰기를 생산자로 고르므로, 불투명 깊이를 읽을 패스(SSAO · 외곽선)는 투명 패스보다 **먼저 선언**한다.
+  D3D11 은 첨부 전이(`prepareTextureForRenderTarget`)가 그 텍스처가 걸린 PS SRV 슬롯을 뗀다(`D3D11RecordingState::_arrPixelSrvTexture`).
+- **머티리얼 텍스처 슬롯(t5..t8)의 샘플러는 `shaderslot::kMaterialTextureSampler`(LINEAR_WRAP) 하나** — GL 은 샘플러 객체를 유닛에 `glBindSampler`, DX11 은 정적 세트.
 
 - **패스 종류 하나 = `RenderPassType` 한 값 + `RenderPassTypeTraits.cpp` 의 case 하나**(기본 셰이더 · define · 포맷 · 클리어 · 입력 계약 · 플래그). 전용 실행이
   필요할 때만 `executePass` 의 switch 에 case. 런타임 PSO 와 베이커가 같은 `selectRenderPassShader` 를 부른다. 마지막 열거자를 바꾸면
