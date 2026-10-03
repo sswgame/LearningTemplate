@@ -137,12 +137,8 @@ namespace sw
                 XmlNode wrapRoot = wrapDoc.getRoot( kRoot );
                 if ( wrapRoot.isValid() == false )
                     return false;
-                if ( engine::areEngineServicesBound() )
-                {
-                    if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Prefab, wrapDoc, wrapRoot,
-                                                                                           AssetFormatVersions::kPrefab ) == false )
-                        return false;
-                }
+                if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::Prefab, wrapDoc, wrapRoot, AssetFormatVersions::kPrefab ) == false )
+                    return false;
                 XmlNode bodyNode = wrapRoot.findChild( kGameObject );
                 if ( bodyNode.isValid() == false )
                     return false;
@@ -178,8 +174,7 @@ namespace sw
         XmlNode root = doc.getRoot( PrefabAssetInternal::kRoot );
         if ( root.isValid() )
         {
-            if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Prefab, doc, root, AssetFormatVersions::kPrefab ) ==
-                 false )
+            if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::Prefab, doc, root, AssetFormatVersions::kPrefab ) == false )
             {
                 SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
                 return false;

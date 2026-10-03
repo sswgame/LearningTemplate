@@ -88,8 +88,7 @@ namespace sw
             return false;
         }
 
-        if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Scene, doc, root, AssetFormatVersions::kScene ) ==
-             false )
+        if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::Scene, doc, root, AssetFormatVersions::kScene ) == false )
         {
             SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
             return false;

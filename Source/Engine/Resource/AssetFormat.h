@@ -114,6 +114,13 @@ namespace sw
          */
         bool upgradeXml( AssetKind kind, XmlDocument& doc, XmlNode& root, AssetFormatVersion currentVersion, AssetFormatVersion* pOutSourceVersion = nullptr );
 
+        /**
+         * @brief 엔진 서비스가 묶여 있으면 `ResourceManager` 의 등록부로, 아니면(단독 도구 · 테스트) 내장 migrator 만 든 임시 등록부로 `upgradeXml` 을 부릅니다.
+         * @details 에셋 로더(씬 · 프리팹)는 이것을 부릅니다 — 서비스 없이 `getResourceManager()` 를 부르면 assert 입니다. 등록해 둔 migrator 는 서비스가
+         *          묶여 있을 때만 쓰이고, 지원하는 것보다 새 파일은 어느 쪽이든 거절합니다.
+         */
+        static bool upgradeXmlWithActiveRegistry( AssetKind kind, XmlDocument& doc, XmlNode& root, AssetFormatVersion currentVersion );
+
     private:
         /// @brief (종류, fromVersion) → migrator 조회 키입니다.
         struct MigratorKey

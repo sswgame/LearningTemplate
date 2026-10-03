@@ -1238,3 +1238,58 @@ SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "missing.scene.xml: not found" ) == 1, logs.joined().c_str() );
 }
+
+/**
+ * @brief [SceneTest] 엔진 서비스 없이도 XML 씬 · 프리팹을 읽고, 지원하는 것보다 새 형식은 그때도 거절한다
+ * @details 단독 도구 · 테스트는 서비스를 묶지 않고 에셋을 읽는다. 로더가 `getResourceManager()` 로 형식 등록부를 꺼내면 거기서 assert 다 —
+ *          같은 함수의 GUID 블록과 바이너리 로더는 이미 서비스가 있는지 묻는다. 서비스가 없을 때는 내장 migrator 만 든 등록부로 판정한다.
+ */
+SW_TEST_CASE( SceneTest, XmlAssetsLoadWithoutEngineServices )
+{
+    const sw::string scenePath = test::makeTempPath( "standalone.scene.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( scenePath, "<Scene name=\"Standalone\">\n"
+                                                            "  <entities>\n"
+                                                            "    <entity id=\"1\" name=\"Crate\" prefab=\"game/demo/prefabs/crate.prefab.xml\"/>\n"
+                                                            "  </entities>\n"
+                                                            "</Scene>\n" ) );
+    const sw::string futureScenePath = test::makeTempPath( "future.scene.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( futureScenePath, "<Scene formatVersion=\"999\" name=\"Future\"/>\n" ) );
+    const sw::string prefabPath = test::makeTempPath( "standalone.prefab.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( prefabPath, "<Prefab name=\"Crate\">\n  <GameObject _name=\"Crate\"/>\n</Prefab>\n" ) );
+
+    /** @brief 이 범위 동안 엔진 서비스를 풀고, 나갈 때 원래 표로 되묶는다(단언이 일찍 나가도). */
+    struct ScopedUnboundEngineServices
+    {
+        sw::EngineServices _saved;
+
+        ScopedUnboundEngineServices()
+            : _saved{ sw::engine::getBoundEngineServices() }
+        {
+            sw::engine::unbindEngineServices();
+        }
+
+        ~ScopedUnboundEngineServices() { test::rebindEngineServices( _saved ); }
+    };
+
+    SW_ASSERT_TRUE( sw::engine::areEngineServicesBound() );
+    {
+        const ScopedUnboundEngineServices unbound;
+        SW_ASSERT_FALSE( sw::engine::areEngineServicesBound() );
+
+        sw::SceneDocument document;
+        SW_EXPECT_TRUE( document.loadXml( scenePath ) );
+        SW_EXPECT_EQUAL( sw::string( "Standalone" ), document._name );
+        SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), document._listEntityNode.size() );
+        SW_EXPECT_EQUAL( sw::string( "game/demo/prefabs/crate.prefab.xml" ), document._listEntityNode[0]._prefab );
+
+        {
+            test::ScopedDefensiveTestLog expected( "a scene file newer than this build" );
+            sw::SceneDocument            futureDocument;
+            SW_EXPECT_FALSE( futureDocument.loadXml( futureScenePath ) );
+        }
+
+        sw::PrefabAsset prefab;
+        SW_EXPECT_TRUE( prefab.loadFromXmlFile( prefabPath ) );
+    }
+    SW_EXPECT_TRUE( sw::engine::areEngineServicesBound() );
+}
