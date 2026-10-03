@@ -53,7 +53,3 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 sw_emitRuntimeCopies(App)
-
-# Shipping 정적 링크에서 리플렉션 등록기를 살리는 통째 링크(`sw_linkWholeArchive`)는 여기가 아니라
-# `sw_configureAppDependencies`(루트 CMakeLists 가 모든 모듈을 add_subdirectory 한 뒤 부른다)에 있다.
-# 통째로 링크할 목록이 모듈 레지스트리이고, 이 파일이 읽히는 시점에는 GameFramework · 킷 · 게임이 아직 등록되지 않았다.

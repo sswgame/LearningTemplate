@@ -44,7 +44,7 @@ namespace sw
     /** @brief 이 실행을 식별하는 세션 ID 입니다(처음 부를 때 정해집니다). */
     SW_API const utf8* getCrashSessionId();
 
-    /** @brief 덤프 · 리포트를 쓸 폴더입니다(setReportFolder 로 정하지 않았으면 빈 문자열). */
+    /** @brief 덤프 · 리포트를 쓸 폴더입니다(setCrashReportFolder 로 정하지 않았으면 빈 문자열). */
     SW_API const utf8* getCrashReportFolder();
 
     /** @brief 덤프 · 리포트를 쓸 폴더를 정합니다. */

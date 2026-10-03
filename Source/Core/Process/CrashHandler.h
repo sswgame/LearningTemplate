@@ -86,9 +86,6 @@ namespace sw
          */
         static const utf8* getSessionId();
 
-        /** @brief 덤프 · 리포트를 쓸 폴더를 정합니다(기본값은 로그 폴더). */
-        static void setReportFolder( string_view folderPath );
-
         /**
          * @brief 크래시 보고에 줄 시한(초)입니다. 넘기면 보고를 버리고 곧장 끝냅니다. 0 이면 기본값(20 초).
          * @details 보고는 죽어 가는 프로세스 안에서 돈다. 크래시가 남긴 락(힙 손상으로 abort 한 malloc 의 락 · 막힌 stdio · 로더)을

@@ -153,8 +153,6 @@ namespace sw
         const ModuleFrameState& getFrameState() const { return _frameState; }
         /** @brief 이번 프레임 Game View 에 쓸 카메라를 에디터에서 조회합니다. */
         CameraComponent* getViewportCamera() const;
-        /** @brief 부팅할 때 정한 에디터 모드 여부입니다. */
-        bool isEditorEnabled() const { return _bEnableEditor == SW_TRUE; }
 
         /** @brief 에디터 인스턴스 핸들을 반환합니다. App 의 Present 훅이 씁니다. */
         EditorHandle getEditor() const { return _editor; }

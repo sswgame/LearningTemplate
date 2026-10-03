@@ -34,7 +34,6 @@ namespace sw
     };
 
     SW_DECLARE_DELEGATE( void, FileChangeDelegate, const FileChangeEvent& );
-    SW_DECLARE_MULTI_CAST_DELEGATE( void, FileChangeMulticastDelegate, const FileChangeEvent& );
 
     // ------------------------------------------------------------------------------
     // 2) IFileWatcher — startWatching → pollEvents(메인) → stopWatching

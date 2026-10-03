@@ -307,9 +307,6 @@ namespace sw
          */
         bool verifyModuleBindings() const;
 
-        /** @brief 지금 핫 리로드 배치를 처리 중인지 반환합니다. */
-        bool isReloadingBatch() const { return _bReloadingBatch == SW_TRUE; }
-
         /** @brief 로드된 모듈의 핸들을 반환합니다. */
         void* getModuleHandle( string_view moduleName ) const;
 
@@ -452,7 +449,6 @@ namespace sw
         vector<DeferredUnloadImage>          _listDeferredUnloadImage; ///< 언로드를 미룬 옛 이미지. 오래된 것부터
         uint32                               _reloadBatchId;           ///< 연쇄 리로드마다 오르는 배치 번호
         uint8                                _bReloadGraphBroken : 1;
-        uint8                                _bReloadingBatch    : 1;
-        [[maybe_unused]] uint8               _reserved           : 6;
+        [[maybe_unused]] uint8               _reserved           : 7;
     };
 } // namespace sw

@@ -457,7 +457,6 @@ namespace sw
         , _listDeferredUnloadImage{}
         , _reloadBatchId{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
-        , _bReloadingBatch{ SW_FALSE }
         , _reserved{ 0 }
     {
         (void)ShadowCopyName::removeStaleCopies( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
@@ -1399,7 +1398,6 @@ namespace sw
             return;
         }
 
-        _bReloadingBatch = SW_TRUE;
         ++_reloadBatchId;
 
         size_t committed{ 0 };
@@ -1417,7 +1415,6 @@ namespace sw
                 }
                 if ( committed > 0 )
                     markGraphBroken( "partial cascade commit" );
-                _bReloadingBatch = SW_FALSE;
                 return;
             }
 
@@ -1437,11 +1434,8 @@ namespace sw
 
             if ( committed > 0 || _bReloadGraphBroken == SW_FALSE )
                 markGraphBroken( "partial cascade commit" );
-            _bReloadingBatch = SW_FALSE;
             return;
         }
-
-        _bReloadingBatch = SW_FALSE;
 
         // 새 이미지가 모두 올라왔다. 의존 모듈이 옛 이미지에 묶였으면, 옛 이미지를 내린 지금 그리로 뛰는 코드가 죽는다 — 여기서 막는다.
         if ( verifyModuleBindings() == false )

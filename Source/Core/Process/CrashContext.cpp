@@ -388,9 +388,4 @@ namespace sw
     {
         return getCrashSessionId();
     }
-
-    void CrashHandler::setReportFolder( string_view folderPath )
-    {
-        setCrashReportFolder( folderPath );
-    }
 } // namespace sw

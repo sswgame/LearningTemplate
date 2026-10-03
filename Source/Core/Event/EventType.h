@@ -24,12 +24,9 @@ namespace sw
      * @details 번호가 겹치지 않도록 여기 한곳에 적습니다. 이벤트 **타입**은 그 개념이 사는 층에 둡니다 — 창 이벤트는
      *          `Engine/Window/WindowEvents.h` 입니다.
      */
-    inline constexpr EventTypeId kEventInvalid        = 0;
     inline constexpr EventTypeId kEventWindowActivate = 1;
     inline constexpr EventTypeId kEventWindowClose    = 2;
     inline constexpr EventTypeId kEventWindowResize   = 3;
-    inline constexpr EventTypeId kEventKey            = 4;
-    inline constexpr EventTypeId kEventMouse          = 5;
 
     /** @brief 컴파일 타임 FNV-1a 32비트 해시로 게임플레이 이벤트 ID 를 만듭니다. StringUtil 과 같은 상수 · 알고리즘입니다. */
     constexpr EventTypeId eventTypeIdFromString( const utf8* pStr ) noexcept

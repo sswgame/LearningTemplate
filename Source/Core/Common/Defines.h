@@ -44,8 +44,6 @@ namespace sw
 
         /** @brief 1초당 나노초 수입니다. */
         inline constexpr int64 kNanosecondsPerSecond = 1'000'000'000LL;
-        /** @brief 나노초를 초로 바꾸는 계수입니다. */
-        inline constexpr float64 kSecondsPerNanosecond = 1e-9;
 
         /** @brief 선형 할당기 기본 초기 용량 (64KB)입니다. */
         inline constexpr size_t kDefaultLinearCapacity = size_t{ 64 } * 1024;
