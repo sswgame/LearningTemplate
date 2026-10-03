@@ -95,23 +95,7 @@ cd build/Ninja-Debug/Bin
 
 ### 1-1. 직렬화 · 리플렉션
 
-- **머티리얼 파일의 enum · 플래그 글을 옛 길로 읽는다.** 모르는 이름 · 오타가 조용히 0 이 되거나 빠진다(일반 직렬화는 이미 막았다).
-  자리는 `MaterialXml.cpp`(`_permutations` 의 `usage` → `stringFlagsToValue`), `MaterialPacking.cpp` 의 `parseEnumOrFlags` · `resolveNamedValue`.
-  `resolveNamedValue` 는 에셋 글로 `hashed_string` 을 만들어 intern 한다(전역 이름 표 오염). `EnumInfo::tryParseText` + 경고 + 값 유지,
-  이름 조회는 `findInterned` 로. 함정: `tryParseText` 는 표식 값(`Invalid` · `Count`)도 받는다.
-- **리플렉션 파서는 타입 하나에서 첫 애노테이션 오류만 알린다.** 오류 수만큼 빌드를 되풀이한다. `AstVisitor.cpp` 의 `memberCollectVisitor` 가
-  `_bHasError` 면 `CXChildVisit_Break` 한다. 방문은 계속하되 오류 난 DTO 는 `_listProperty` 에 넣지 말 것(반쯤 찬 프로퍼티가 코드젠에 들어간다).
-- **맵 컨테이너 안의 핸들 · `ComponentHandle` PROPERTY 는 저장 때 id 를 옮기지 않는다.** `ObjectStateBatch::resolveObjectReference` 는 단일 ·
-  순서 컨테이너의 `GameObjectHandle` 만 다룬다. 지금은 그런 PROPERTY 가 없다 — 생기면 여기를 넓힌다.
 - **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
-- **고정 배열(`ArrayWrapper`)은 직렬화할 수 없다.** `appendElement` 가 늘 false 라 세 직렬화기가 거부한다. 인덱스로 채우는 경로(인터페이스
-  변경)가 필요하고, 코드젠도 지금은 고정 배열 프로퍼티를 내지 않는다(`ReflectionContainers.h`).
-- **인스펙터가 맵을 편집하지 못하고 set 원소는 읽기 전용이다.** `IMapContainerWrapper::forEach` 가 키 · 값을 const 로만 준다 — 가변 접근자가 필요하다.
-  set 은 "지우고 다시 넣기" 경로가 필요하다. 실제 맵 프로퍼티: `GameData::_mapCustomProperty`, TurnBattle `SaveGame::_mapFlag`. 맵 갈래는 화면으로 본 적이 없다.
-- **Archive 판 바이너리 역직렬화가 읽기 자리를 옮기지 않는다.** 형식에 길이 머리가 없어 같은 Archive 에 이어 쓴 데이터를 뒤에서 읽을 수 없다
-  (`BinarySerializer::deserializeArchiveRemainder` 주석). 알고 남긴 한계다.
-- **코드 생성기의 맨 `new ( self )`**(`Tools/ReflectionParser/CodeGenerator.cpp`)는 문자열이라 `Style/PlacementNew` 밖이다. 바꾸면 생성물 바이트가 달라져
-  일부러 두었다. 손댈 때는 생성물 비교 검증(3절)과 함께.
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
 
@@ -191,14 +175,8 @@ cd build/Ninja-Debug/Bin
 
 ### 1-7. Core · 태스크
 
-- **`SW_ENABLE_STL_CONTAINER=ON` 은 전체 빌드가 안 된다.** `Core/Container/string.h` 끝의 `std::hash<sw::string>` · `<sw::wstring>` 특수화가 가드 밖이라 표준
-  것과 겹친다. `#if !defined( SW_ENABLE_STL_CONTAINER )` 로 감싸고 옵션을 켜 전체 빌드한다(CI 가 이 옵션을 돌리지 않아 계속 썩는다).
-- **TaskManager 에 남긴 후보 셋** — ① 스핀 워커 수를 둘로 제한 + 적응 예산 ② 작은 독립 태스크를 워커별 자유 목록으로 ③ 워커 지정 태스크로 틱 쓰기 큐를
-  기록한 워커가 적용(`TaskThreadAffinity` 는 지금 `Any` · `MainThread` 뿐). 16 스레드 PC 에서 재고 정한다. ③은 훔칠 수 없는 태스크가 생겨 대기가 늘 수 있다.
 - **`runParallel` 합류 대기가 남의 태스크(IO 등)를 도와 실행할 수 있다.** 프로파일에 보이면 IO 레인을 따로 둔다(조건부).
-- **TaskManager 의 남은 정리** — 스테이지 디버그 이름(프로파일러에 연결할 때), `ITaskStateMachine` 은 구현 · 사용처 0 인데 루트 `README.md` 가 기능으로 소개한다.
-- **`vector_reference<T>`(sw::span)를 Source 함수 인자에 아직 쓰지 않는다.** 포인터+개수나 `const vector<T>&` 를 받는 함수가 후보다. C++17 별칭 템플릿이라
-  원소 타입을 생략할 수 없고, 임시 컨테이너는 const 뷰로만 받는다.
+- **TaskManager 스테이지 디버그 이름** — 프로파일러에 연결할 때 넣는다(지금은 연결돼 있지 않다).
 - **`fixed_string` 의 해시가 FNV(`computeHash64`)다.** 느리지만 프로파일에 안 보여 두었다(낮음).
 
 ### 1-8. 성능 (재고 나서 정할 것)
@@ -552,6 +530,11 @@ cd build/Ninja-Debug/Bin
 
 ### 3-5. 직렬화 · 리플렉션 · 파서
 
+- **바이너리 Archive 읽기는 읽은 만큼 자리를 옮긴다**(이어 쓴 객체를 차례로 읽는다). 같은 자리를 다시 보려면 새 Archive 를 만든다.
+- **set 원소 편집은 `replaceElement`(지우고 다시 넣기)로만** — 같은 값이 되면 하나로 합쳐진다. 맵은 `forEachMutable` · `eraseAt`, 고정 배열은 `appendElement` 가
+  원소 순번의 칸을 채운다(칸보다 많으면 실패).
+- **머티리얼 enum · 플래그 글은 `EnumInfo::tryParseText`** — 모르는 이름 · 표식 값(`Count`)은 경고하고 값을 쓰지 않는다. enum 타입 이름은 `findInterned` 로만.
+
 - **저장되는 상태는 PROPERTY 이고, 모든 PROPERTY 타입은 직렬화기가 실어 나를 수 있어야 한다**(`SerializerUtil::canCarryProperty`,
   `ReflectionSerializationTest.EveryPropertyHasATypeTheSerializersCanCarry`, 모듈판은 SmokeTest 의 `ModuleApiTest`). enum 에 `ENUM()` 이 없으면 `"null"` 로 저장된다.
   런타임 핸들(`void*`)은 `Transient`. `PROPERTY()` 를 빼먹은 필드는 매 실행 "모르는 필드" 경고를 내고 값은 기본값으로 돈다.
@@ -842,6 +825,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-10. Core · 태스크 · 메모리
 
+- **STL 구성(`SW_ENABLE_STL_CONTAINER=ON`, CI `CI-Debug-STL`)은 C++17 이라 std 해시 컨테이너에 이종 조회 · `contains` 가 없다** — sw 쪽 얇은 클래스가 메운다.
+  커스텀 컨테이너 전용 시험은 그 구성에서 건너뛴다.
+
 - **스트리밍 I/O 를 `TaskPriority::High` 에 싣지 말 것** — 그 줄은 병렬 그룹의 청크 사이에서도 비우므로 파일 읽기가 프레임 일을 막는다(High · Immediate → Normal,
   Low · Normal → 백그라운드).
 
@@ -912,6 +898,9 @@ cd build/Ninja-Debug/Bin
   서버가 "정상" 이어도 화면에 없을 수 있다 — 최종 확인은 사람 눈이다. 창의 `isVisible()`(지금 화면에 있나)과 `isVisibleRequested()`(의도)는 다른 질문이다.
 
 ### 3-12. 기각한 것 — 숫자와 함께 (다시 제안하지 말 것)
+
+- **TaskManager 후보 셋**(Release, 큐브 8000, 16 스레드, 5~8 회 번갈아): 스핀 워커 2 개 제한 + 적응 예산(GT 839→846, RT.ExecutePacket 395→436 us), 워커별 노드
+  자유 목록(GT 839→917, RT.Graph 187→237 us), 워커 지정 틱 쓰기 적용(queued 78→80 us, p99 163→212 us). 셋 다 손해 또는 잡음.
 
 - **사용자 결정**: mimalloc · SIMD 수학 · 프리페치는 쓰지 않는다. 사용처가 0 이어도 상용 엔진에 대응이 있는 공개 API 는 남긴다(남긴 기능에는 시험을 붙인다).
 - **GpuScene · 렌더**: `DrawCandidate` SoA(구조체를 78 % 키워도 불변, 거의 선형 — 예전의 "28~62 배" 는 GT 가 GPU 를 기다린 착시), 발행 배열 풀(75 vs 76~85 us), 영속 렌더 씬을 **종류** 축으로
