@@ -48,17 +48,15 @@ namespace sw
         return owner == std::thread::id{} || owner == std::this_thread::get_id();
     }
 
-#if defined( SW_DEBUG )
     void EventDispatcher::assertBusThread() const
     {
+#if defined( SW_DEBUG )
         SW_LOG_ASSERT( isBusThread(),
                        "EventDispatcher 의 버스(subscribe/unsubscribe/publish/processEvents/clear)는 "
                        "processEvents 를 부르는 스레드에서만 쓸 수 있습니다. "
                        "다른 스레드에서 이벤트를 보내려면 push 를 쓰십시오." );
-    }
-#else
-    void EventDispatcher::assertBusThread() const {}
 #endif
+    }
 
     void EventDispatcher::destroyQueuedEvents()
     {
