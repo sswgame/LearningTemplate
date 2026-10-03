@@ -386,6 +386,42 @@ SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileRebuildsPipelineStates )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 셰이더 핫 리로드(패스 자원만 다시 세움)가 TAA 히스토리를 잃지 않는지.
+ * @details TAA 히스토리는 트랜지언트 크기를 따르는 텍스처라 `ensureTransientResources` 가 만들고, 그 함수는 크기가 그대로면
+ *          아무것도 하지 않는다. 패스 자원 해제(`releasePassResources`)가 히스토리까지 놓으면, 리로드 뒤 창 크기가 바뀔 때까지
+ *          히스토리가 0 이라 TAA 패스가 지난 프레임을 읽지도 쓰지도 않는다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileKeepsTaaHistory )
+{
+    test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "No RHI backend for TAA history test" );
+
+    sw::FrameRenderer renderer;
+    SW_ASSERT_TRUE( renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) );
+    sw::Scene scene( "TaaHistoryScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+
+    const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+    device->beginFrame( clear );
+    SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
+    device->endFrame( false, false );
+    SW_ASSERT_TRUE_MSG( renderer.getTaaHistory() != 0, "디퍼드 파이프라인의 첫 프레임 뒤 TAA 히스토리가 없다" );
+
+    sw::ShaderCompileResult result{};
+    result._bSuccess = true;
+    renderer.onShaderRecompiled( "engine/shaders/forwardlit.hlsl", result );
+
+    device->beginFrame( clear );
+    SW_EXPECT_TRUE( renderer.execute( device.get(), &scene ) );
+    device->endFrame( false, false );
+    device->waitIdle();
+    SW_EXPECT_TRUE_MSG( renderer.getTaaHistory() != 0, "셰이더 리로드 뒤 TAA 히스토리가 사라졌다 — 패스 자원 해제가 트랜지언트 자원을 놓았다" );
+
+    renderer.shutdown();
+}
+
+/**
  * @brief executePacket()이 프레임마다 GpuScene GPU 버퍼를 재생성하지 않고 재사용하는지 검증.
  * @details GT/RT 소유권 분리(exportCpuSnapshot/adoptCpuSnapshot) 회귀 테스트 — 고치기 전에는
  *          FrameRenderer::_gpuScene이 매 프레임 통째로 덮어써져서 인스턴스 버퍼 핸들이 매번 바뀌었다

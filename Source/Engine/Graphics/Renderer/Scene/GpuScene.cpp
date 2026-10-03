@@ -404,10 +404,6 @@ namespace sw
             pDevice->getResource()->destroyBuffer( _instanceSlotStream );
         _instanceSlotStream         = 0;
         _instanceSlotStreamCapacity = 0;
-        if ( _instanceSlotStream != 0 && pDevice != nullptr && pDevice->getResource() != nullptr )
-            pDevice->getResource()->destroyBuffer( _instanceSlotStream );
-        _instanceSlotStream         = 0;
-        _instanceSlotStreamCapacity = 0;
         for ( GpuMeshBatch& batch : _snapshot._listAllBatch )
         {
             batch._vertexBuffer = 0; // 풀이 사라졌다. 다음 upload 가 다시 정한다

@@ -30,52 +30,13 @@ namespace sw
         _passCbRing.getSeedSlot( _frameCtx._passCb, _frameCtx._passCbIndex );
 
         // 만들지 못한 상수버퍼는 `isValid()` 가 걸러 그 디스패치만 꺼진다(그리기는 산다). 꺼진 이유는 여기서 한 번 알린다.
-        auto createComputeConstantBuffer = [this]( RHIConstantBufferSlot& slot, uint32 byteSize, string_view usage )
+        ComputeConstantBufferRow arrComputeCb[_s_kComputeConstantBufferCount]{};
+        collectComputeConstantBuffers( arrComputeCb );
+        for ( const ComputeConstantBufferRow& row : arrComputeCb )
         {
-            if ( slot.create( _pDevice, byteSize ) == false )
-                SW_LOG_ERROR( "Failed to create the %# constant buffer - its compute dispatch is skipped", usage );
-        };
-
-        struct GpuCullParams
-        {
-            float32 _planes[6][4]{};
-            uint32  _instanceCount{ 0 };
-            uint32  _batchCount{ 0 };
-            uint32  _pad[2]{};
-        };
-        // 뷰마다 하나씩. 절두체가 다르므로 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
-        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
-        {
-            RenderView& renderView = _arrView[viewIndex];
-            createComputeConstantBuffer( renderView._cullCb, sizeof( GpuCullParams ), "cull" );
+            if ( row._pSlot->create( _pDevice, row._byteSize ) == false )
+                SW_LOG_ERROR( "Failed to create the %# constant buffer - its compute dispatch is skipped", row._pUsage );
         }
-
-        struct GpuAnimParams
-        {
-            float32 _time{ 0.0f };
-            float32 _baseSpeed{ 0.0f };
-            float32 _speedRange{ 0.0f };
-            uint32  _instanceCount{ 0 };
-        };
-        createComputeConstantBuffer( _instanceAnimCb, sizeof( GpuAnimParams ), "instance animation" );
-
-        struct GpuMorphParams
-        {
-            float32 _time{ 0.0f };
-            float32 _amplitude{ 0.0f };
-            float32 _frequency{ 0.0f };
-            uint32  _vertexCount{ 0 };
-        };
-        createComputeConstantBuffer( _meshMorphCb, sizeof( GpuMorphParams ), "mesh morph" );
-
-        struct GpuSortParams
-        {
-            float32 _cameraPos[4]{};
-            uint32  _instanceCount{ 0 };
-            uint32  _batchCount{ 0 };
-            uint32  _pad[2]{};
-        };
-        createComputeConstantBuffer( _instanceSortCb, sizeof( GpuSortParams ), "instance sort" );
 
         // 엔진 PSO 는 패스 종류의 표(RenderPassTypeTraits)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
         // 표의 EngineData 경로는 마지막 폴백일 뿐이다. 셰이더 베이커가 같은 표를 훑는다.
@@ -127,34 +88,29 @@ namespace sw
                      getEnginePso( RenderPassType::Bloom ), getEnginePso( RenderPassType::Outline ), static_cast<uint32>( caps._bIndirectDraw ) );
     }
 
+    void FrameRenderer::collectComputeConstantBuffers( ComputeConstantBufferRow ( &outArrRow )[_s_kComputeConstantBufferCount] )
+    {
+        // 뷰마다 하나씩. 절두체가 다르므로 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
+        uint32 rowIndex{ 0 };
+        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
+            outArrRow[rowIndex++] = { &_arrView[viewIndex]._cullCb, sizeof( FrameRendererUtil::GpuCullParams ), "cull" };
+        outArrRow[rowIndex++] = { &_instanceAnimCb, sizeof( FrameRendererUtil::GpuAnimParams ), "instance animation" };
+        outArrRow[rowIndex++] = { &_meshMorphCb, sizeof( FrameRendererUtil::GpuMorphParams ), "mesh morph" };
+        outArrRow[rowIndex++] = { &_instanceSortCb, sizeof( FrameRendererUtil::GpuSortParams ), "instance sort" };
+        SW_LOG_ASSERT( rowIndex == _s_kComputeConstantBufferCount, "compute constant buffer table has %# rows, expected %#", rowIndex,
+                       _s_kComputeConstantBufferCount );
+    }
+
     void FrameRenderer::releasePassResources()
     {
         // PSO · 레이아웃 · 패스 CB 가 여기서 사라진다. 그것을 가리키던 드로우 캐시도 같이 잊는다.
         // (새 디바이스의 핸들이 옛 값과 겹치면 캐시가 "그대로" 라고 속는다. 백엔드 교체 뒤 빈 화면의 원인이다.)
         _frameCtx.resetBindingCache();
 
-        if ( _pDevice == nullptr )
-        {
-            _passCbRing.forget();
-            _frameCtx._passCb      = 0;
-            _frameCtx._passCbIndex = kInvalidDescriptorIndex;
-            for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
-            {
-                _arrView[viewIndex]._cullCb.forget();
-            }
-            _instanceAnimCb.forget();
-            _instanceSortCb.forget();
-            _meshMorphCb.forget();
-            _mapMaterialFallback.clear();
-            _taaHistory    = 0;
-            _taaHistorySrv = kInvalidDescriptorIndex;
-            _psoCache.forgetAll();
-            _bPassResourcesReady = SW_FALSE;
-            return;
-        }
-
+        // 목록은 하나다. 디바이스가 없으면(초기화 실패) 각 release 가 핸들만 잊는다.
         // 병렬 기록용 커맨드 리스트는 이 디바이스의 것이다. 디바이스가 살아 있을 때 놓는다.
-        _graph.releaseCommandLists();
+        if ( _pDevice != nullptr )
+            _graph.releaseCommandLists();
 
         // PSO 는 캐시가 순서대로 놓는다: 변형(소유한 것만) → 패스 → Present → 레이아웃 표.
         _psoCache.releaseAll( _pDevice );
@@ -164,25 +120,15 @@ namespace sw
         _passCbRing.release( _pDevice );
         _frameCtx._passCb      = 0;
         _frameCtx._passCbIndex = kInvalidDescriptorIndex;
-        for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
-            _arrView[viewIndex]._cullCb.release( _pDevice );
-        _instanceAnimCb.release( _pDevice );
-        _instanceSortCb.release( _pDevice );
-        // 모프 상수버퍼와 모프 풀은 여태 **한 번도 놓지 않고 있었다.** 형제(anim · sort)만 적혀 있었다.
-        // 디바이스가 바뀌면 옛 디바이스의 버퍼와 bindless 항목이 그대로 남는다.
-        _meshMorphCb.release( _pDevice );
+        ComputeConstantBufferRow arrComputeCb[_s_kComputeConstantBufferCount]{};
+        collectComputeConstantBuffers( arrComputeCb );
+        for ( const ComputeConstantBufferRow& row : arrComputeCb )
+            row._pSlot->release( _pDevice );
         _meshMorphPool.release( _pDevice );
         _lightBuffer.release( _pDevice );
         for ( auto& [fallbackStride, fallbackSlot] : _mapMaterialFallback )
             fallbackSlot.release( _pDevice );
         _mapMaterialFallback.clear();
-        // TAA 히스토리만 **텍스처**다. bindless 인덱스 공간이 버퍼와 달라 텍스처용 해제를 불러야 한다.
-        if ( _taaHistorySrv != kInvalidDescriptorIndex )
-            _pDevice->getResource()->unregisterBindlessTexture( _taaHistorySrv );
-        if ( _taaHistory != 0 )
-            _pDevice->getResource()->destroyTexture( _taaHistory );
-        _taaHistory          = 0;
-        _taaHistorySrv       = kInvalidDescriptorIndex;
         _bPassResourcesReady = SW_FALSE;
     }
 

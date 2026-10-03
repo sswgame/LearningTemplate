@@ -211,6 +211,8 @@ namespace sw
          *          차이(알파 경로가 컴파일됐는가 같은)를 테스트가 여기서 확인합니다.
          */
         bool findPsoDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
+        /** @brief TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단 · 시험용). */
+        RHITextureHandle getTaaHistory() const { return _taaHistory; }
 
     private:
         /**
@@ -283,10 +285,26 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 4) 패스 자원 · 콜백 · 드로우
         // ------------------------------------------------------------------------------
-        /** @brief 패스용 상주 GPU 자원을 확보합니다. */
+        /** @brief 패스용 상주 GPU 자원(패스 CB 링 · 컴퓨트 CB 표 · 엔진 PSO · Present 변종 · 머티리얼 폴백)을 확보합니다. */
         void ensurePassResources();
-        /** @brief 패스용 상주 GPU 자원을 해제합니다. */
+        /**
+         * @brief 패스용 상주 GPU 자원을 해제합니다. 디바이스가 없으면 각 자원이 핸들만 잊습니다(목록은 하나).
+         * @details 트랜지언트 크기를 따르는 자원(첨부 · TAA 히스토리 · Present 캡처)은 여기서 놓지 않습니다 — `releaseTransientResources` 의 것이고,
+         *          셰이더 핫 리로드처럼 패스 자원만 다시 세우는 경로에서 다시 만들어지지 않기 때문입니다.
+         */
         void releasePassResources();
+
+        /** @brief 컴퓨트 디스패치 상수버퍼 한 칸입니다. 만들기(`ensurePassResources`)와 놓기(`releasePassResources`)가 같은 표를 돕니다. */
+        struct ComputeConstantBufferRow
+        {
+            RHIConstantBufferSlot* _pSlot{ nullptr };
+            uint32                 _byteSize{ 0 };
+            const utf8*            _pUsage{ nullptr };
+        };
+        /// @brief 컴퓨트 상수버퍼 수입니다: 뷰마다 컬링 하나 + 인스턴스 애니메이션 · 메시 모프 · 인스턴스 정렬.
+        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewType::Count ) + 3;
+        /** @brief 컴퓨트 상수버퍼 표를 채웁니다. 새 컴퓨트 상수버퍼는 여기 한 줄을 더합니다 — 만들기와 놓기를 따로 적지 않습니다. */
+        void collectComputeConstantBuffers( ComputeConstantBufferRow ( &outArrRow )[_s_kComputeConstantBufferCount] );
         /**
          * @brief 파이프라인 XML 에 선언된 첨부의 포맷을 반환합니다(없으면 fallback).
          * @details 첨부와 같은 크기 · 포맷이어야 하는 보조 텍스처(TAA 히스토리 등)를 만들 때 씁니다.

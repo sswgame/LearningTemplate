@@ -61,13 +61,7 @@ namespace sw
             if ( animPso != 0 && _instanceAnimCb.isValid() &&
                  _gpuScene.getInstanceUav() != kInvalidDescriptorIndex )
             {
-                struct GpuAnimParams
-                {
-                    float32 _time{ 0.0f };
-                    float32 _baseSpeed{ 0.0f };
-                    float32 _speedRange{ 0.0f };
-                    uint32  _instanceCount{ 0 };
-                } animParams{};
+                FrameRendererUtil::GpuAnimParams animParams{};
                 animParams._time = getAnimationTime();
                 // 기준 각속도와 편차 폭(라디안/초). 편차가 기준보다 커야 "다 같은 속도"로 보이지 않는다.
                 animParams._baseSpeed     = FrameRendererUtil::kGpuSpinBaseSpeed;
@@ -194,13 +188,7 @@ namespace sw
         if ( morphPso == 0 || _meshMorphCb.isValid() == false )
             return;
 
-        struct GpuMorphParams
-        {
-            float32 _time{ 0.0f };
-            float32 _amplitude{ 0.0f };
-            float32 _frequency{ 0.0f };
-            uint32  _vertexCount{ 0 };
-        } morphParams{};
+        FrameRendererUtil::GpuMorphParams morphParams{};
         morphParams._time        = getAnimationTime();
         morphParams._amplitude   = FrameRendererUtil::kMeshMorphAmplitude;
         morphParams._frequency   = FrameRendererUtil::kMeshMorphFrequency;
@@ -246,16 +234,10 @@ namespace sw
                         continue;
                     }
 
-                    struct GpuCullParams
-                    {
-                        float32 _planes[6][4]{};
-                        uint32  _instanceCount{ 0 };
-                        uint32  _batchCount{ 0 };
-                        uint32  _pad[2]{};
-                    } cullParams{};
+                    FrameRendererUtil::GpuCullParams cullParams{};
                     // 절두체는 **뷰가 이미 들고 있다.** setViewProjection 이 행렬과 함께 갱신한다.
                     // 여기서 다시 뽑으면 행렬만 바뀌고 평면이 안 바뀌는 상태가 생길 수 있다.
-                    Memory::copy( cullParams._planes, renderView._frustum._arrPlane, sizeof( cullParams._planes ) );
+                    Memory::copy( cullParams._arrPlane, renderView._frustum._arrPlane, sizeof( cullParams._arrPlane ) );
                     cullParams._instanceCount = instanceCount;
                     cullParams._batchCount    = _gpuScene.getIndirectCommandCount();
                     renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
@@ -291,19 +273,13 @@ namespace sw
                     if ( sortPso != 0 && _instanceSortCb.isValid() &&
                          cullParams._batchCount > 0 )
                     {
-                        struct GpuSortParams
-                        {
-                            float32 _cameraPos[4]{};
-                            uint32  _instanceCount{ 0 };
-                            uint32  _batchCount{ 0 };
-                            uint32  _pad[2]{};
-                        } sortParams{};
+                        FrameRendererUtil::GpuSortParams sortParams{};
                         // 정렬 키는 **그 뷰의 눈까지의 거리**다. 뷰가 자기 위치를 들고 있다.
-                        sortParams._cameraPos[0]  = renderView._position._x;
-                        sortParams._cameraPos[1]  = renderView._position._y;
-                        sortParams._cameraPos[2]  = renderView._position._z;
-                        sortParams._instanceCount = instanceCount;
-                        sortParams._batchCount    = cullParams._batchCount;
+                        sortParams._arrCameraPos[0] = renderView._position._x;
+                        sortParams._arrCameraPos[1] = renderView._position._y;
+                        sortParams._arrCameraPos[2] = renderView._position._z;
+                        sortParams._instanceCount   = instanceCount;
+                        sortParams._batchCount      = cullParams._batchCount;
                         // 값이 뷰마다 같으므로 버퍼 하나로 충분하다. 다르게 만들 일이 생기면 컬링 CB 처럼
                         // 뷰마다 하나로 나눠야 한다(하나를 나눠 쓰면 뒤 업로드가 앞 디스패치를 덮어쓴다).
                         _instanceSortCb.update( *_pCmd, &sortParams, sizeof( sortParams ) );

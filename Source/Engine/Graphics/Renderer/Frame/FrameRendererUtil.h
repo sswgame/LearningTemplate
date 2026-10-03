@@ -117,6 +117,39 @@ namespace sw
         static constexpr float32 kMeshMorphAmplitude = 0.12f;
         static constexpr float32 kMeshMorphFrequency = 6.0f;
 
+        /** @brief 컬링 디스패치 상수(gpucull.hlsl `CullParams`, b0)입니다. 상수버퍼 크기와 올리는 값이 이 정의 하나를 씁니다. */
+        struct GpuCullParams
+        {
+            float32 _arrPlane[6][4]{};
+            uint32  _instanceCount{ 0 };
+            uint32  _batchCount{ 0 };
+            uint32  _arrPad[2]{};
+        };
+        /** @brief 인스턴스 애니메이션 디스패치 상수(instanceanim.hlsl `AnimParams`, b0)입니다. */
+        struct GpuAnimParams
+        {
+            float32 _time{ 0.0f };
+            float32 _baseSpeed{ 0.0f };
+            float32 _speedRange{ 0.0f };
+            uint32  _instanceCount{ 0 };
+        };
+        /** @brief 메시 모프 디스패치 상수(meshmorph.hlsl `MorphParams`, b0)입니다. */
+        struct GpuMorphParams
+        {
+            float32 _time{ 0.0f };
+            float32 _amplitude{ 0.0f };
+            float32 _frequency{ 0.0f };
+            uint32  _vertexCount{ 0 };
+        };
+        /** @brief 인스턴스 정렬 디스패치 상수(instancesort.hlsl `SortParams`, b0)입니다. */
+        struct GpuSortParams
+        {
+            float32 _arrCameraPos[4]{};
+            uint32  _instanceCount{ 0 };
+            uint32  _batchCount{ 0 };
+            uint32  _arrPad[2]{};
+        };
+
         static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
 
         /**
