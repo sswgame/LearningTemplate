@@ -162,7 +162,7 @@ namespace sw
         const uint32 timestampBegin = static_cast<uint32>( passIndex ) * 2u;
         const bool   bWriteGpuTime  = _pDevice != nullptr && passCtx._pCmd != nullptr &&
                                    engine::getFrameProfiler().isEnabled() &&
-                                   ( timestampBegin + 1u ) < FrameRendererUtil::kGpuTimestampPassSlotEnd &&
+                                   static_cast<uint32>( passIndex ) < FrameRendererUtil::kGpuTimedPassCapacity &&
                                    ( timestampBegin + 1u ) < _pDevice->getTimestampSlotCount();
         if ( bWriteGpuTime )
             passCtx._pCmd->writeTimestamp( timestampBegin );

@@ -82,6 +82,14 @@ namespace sw
         static constexpr uint32 kGpuTimestampSlotFrameBegin   = 31;
         /// @brief 패스 쌍이 쓸 수 있는 칸의 끝(미포함)입니다. 위 예약 칸과 겹치지 않게 합니다.
         static constexpr uint32 kGpuTimestampPassSlotEnd = kGpuTimestampSlotComputeBegin;
+        /// @brief GPU 시간을 잴 수 있는 패스 수입니다(패스마다 칸 둘). 넘는 패스는 시간이 적히지 않습니다 — 파이프라인 로드가 경고합니다.
+        static constexpr uint32 kGpuTimedPassCapacity = kGpuTimestampPassSlotEnd / 2u;
+
+        /** @brief 패스 `passCount` 개인 파이프라인에서 GPU 시간이 적히지 않는 패스 수입니다(앞에서부터 `kGpuTimedPassCapacity` 개만 잰다). */
+        static constexpr uint32 countUntimedGpuPass( size_t passCount )
+        {
+            return passCount > kGpuTimedPassCapacity ? static_cast<uint32>( passCount - kGpuTimedPassCapacity ) : 0u;
+        }
         static_assert( kGpuTimestampSlotFrameBegin < constant::kMaxGpuTimestampSlot, "타임스탬프 예약 칸이 백엔드 칸 수를 넘는다" );
         static constexpr auto    kDefaultMainPassName = "DefaultMainPass";
         static constexpr float4  kBlackClear          = { 0.0f, 0.0f, 0.0f, 1.0f };

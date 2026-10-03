@@ -17,6 +17,7 @@
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
@@ -378,8 +379,8 @@ SW_TEST_CASE( RenderPassTest, PipelineFormatNamesResolveThroughReflection )
 
 /**
  * @brief 엔진이 실제로 배포하는 파이프라인 XML 들이 스스로 모순이 없는지.
- * @details forward/deferred 둘 다 검증 0건이어야 한다. 여기가 깨지면 런타임에 포맷이 어긋나
- *          조용히 잘못 그리거나 GPU 가 죽는다(`ae7fb078` 이 그 사례였다).
+ * @details 모두 검증 0건이어야 한다. 여기가 깨지면 런타임에 포맷이 어긋나 조용히 잘못 그리거나 GPU 가 죽는다(`ae7fb078` 이 그 사례였다).
+ *          패스 수는 GPU 타임스탬프가 재는 수(`FrameRendererUtil::kGpuTimedPassCapacity`) 이하여야 한다 — 넘는 패스는 프로파일에서 빠진다.
  */
 SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
 {
@@ -387,6 +388,7 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
         "engine/pipeline/forwardpipeline.xml",
         "engine/pipeline/deferredpipeline.xml",
         "engine/pipeline/forwardprepasspipeline.xml",
+        "engine/pipeline/forwardpipelinestaged.xml",
     };
     for ( std::string_view path : arrPipeline )
     {
@@ -396,7 +398,23 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
         // 모든 패스 타입이 해석돼야 한다 — Invalid 가 남아 있으면 PSO 가 기본 포맷으로 만들어진다.
         for ( const sw::RenderGraphPassDesc& pass : res.getGraphPass() )
             SW_EXPECT_TRUE( sw::isPipelinePassType( pass._resolvedType ) );
+        SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGpuPass( res.getGraphPass().size() ) );
     }
+}
+
+/**
+ * @brief [RenderPassTest] GPU 타임스탬프가 재는 패스 수와 칸 배치가 맞다 — 넘는 패스 수를 세는 함수가 로드 경고의 근거다
+ * @details 패스는 인덱스 x 2 쌍을 쓰고 뒤쪽 칸은 프레임 · 컴퓨트 예약이다. 실행 · 보고 · 로드 경고가 모두 `kGpuTimedPassCapacity` 하나로 자른다.
+ */
+SW_TEST_CASE( RenderPassTest, GpuTimestampPassCapacityMatchesSlotLayout )
+{
+    constexpr uint32 kCapacity = sw::FrameRendererUtil::kGpuTimedPassCapacity;
+    static_assert( kCapacity * 2u <= sw::FrameRendererUtil::kGpuTimestampSlotComputeBegin, "패스 칸이 예약 칸과 겹친다" );
+    SW_EXPECT_EQUAL( 14u, kCapacity );
+    SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGpuPass( 0 ) );
+    SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGpuPass( kCapacity ) );
+    SW_EXPECT_EQUAL( 1u, sw::FrameRendererUtil::countUntimedGpuPass( kCapacity + 1u ) );
+    SW_EXPECT_EQUAL( 6u, sw::FrameRendererUtil::countUntimedGpuPass( 20 ) );
 }
 
 /**

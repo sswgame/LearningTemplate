@@ -235,10 +235,10 @@ namespace sw
         float32                            lastEndMicro{ -1.0f };
         for ( size_t passIndex = 0; passIndex < listPass.size(); ++passIndex )
         {
-            const size_t beginSlot = passIndex * 2;
-            if ( beginSlot + 1 >= FrameRendererUtil::kGpuTimestampPassSlotEnd )
+            if ( passIndex >= FrameRendererUtil::kGpuTimedPassCapacity )
                 break;
-            const float32 endMicro = reportSpan( gpuScopeSlotFor( passIndex, listPass[passIndex]._name ), beginSlot, beginSlot + 1 );
+            const size_t  beginSlot = passIndex * 2;
+            const float32 endMicro  = reportSpan( gpuScopeSlotFor( passIndex, listPass[passIndex]._name ), beginSlot, beginSlot + 1 );
             if ( endMicro > lastEndMicro )
                 lastEndMicro = endMicro;
         }
@@ -330,6 +330,18 @@ namespace sw
             SW_LOG_ERROR( "%#", _statusMessage );
             return false;
         }
+
+#if SW_PROFILE_COMPILED
+        // 타임스탬프 칸은 앞쪽 패스에만 있다. 넘는 패스는 GPU 시간(과 GPU.Frame 의 끝)이 빠지므로 로드 때 알린다.
+        const uint32 untimedPassCount = FrameRendererUtil::countUntimedGpuPass( listPass.size() );
+        if ( untimedPassCount > 0 )
+        {
+            SW_LOG_WARNING( "Pipeline '%#' has %# passes; GPU timestamps cover the first %#, so %# pass(es) from '%#' on are not timed "
+                            "(constant::kMaxGpuTimestampSlot)",
+                            _pipelineResource.getDesc()._name, listPass.size(), FrameRendererUtil::kGpuTimedPassCapacity, untimedPassCount,
+                            listPass[FrameRendererUtil::kGpuTimedPassCapacity]._name );
+        }
+#endif
 
         float4 sceneColorClear;
         if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneColor, sceneColorClear ) )
