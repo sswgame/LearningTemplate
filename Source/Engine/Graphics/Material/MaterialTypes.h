@@ -39,7 +39,7 @@ namespace sw
     };
 
     /// @brief 머티리얼 품질 레벨 종류입니다.
-    ENUM( Count = Count, ValueAlias = "Med:Medium" )
+    ENUM( Count = Count )
     enum class MaterialQualityLevel : uint8
     {
         Low    = 0,

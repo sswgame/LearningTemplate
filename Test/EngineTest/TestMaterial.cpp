@@ -983,6 +983,7 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
         SW_EXPECT_FALSE( material->setParameter( nullptr, sw::hashed_string( "usage" ), "Decal | ZqFlagTypoProbe" ) );
         SW_EXPECT_FALSE( material->setParameter( nullptr, sw::hashed_string( "quality" ), "ZqQualityTypoProbe" ) );
         SW_EXPECT_FALSE( material->setParameter( nullptr, sw::hashed_string( "quality" ), "Count" ) );
+        SW_EXPECT_FALSE( material->setParameter( nullptr, sw::hashed_string( "quality" ), "Med" ) ); // 줄인 이름은 열거자가 아니다 — 이름은 하나다
     }
     SW_EXPECT_EQUAL( 1u, readUint( "shadeMode" ) );
     SW_EXPECT_EQUAL( 3u, readUint( "flags" ) );
@@ -1002,7 +1003,7 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
     SW_EXPECT_EQUAL( 3u, readUint( "flags" ) );
     SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "usage" ), "Decal" ) );
     SW_EXPECT_EQUAL( 16u, readUint( "usage" ) );
-    SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "quality" ), "Med" ) ); // ValueAlias
+    SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "quality" ), "Medium" ) );
     SW_EXPECT_EQUAL( 1u, readUint( "quality" ) );
 
     // 에셋 글은 전역 이름 표에 들어가지 않는다.
