@@ -223,7 +223,7 @@ To see what the parser extracted from a header (why a property is missing, a ran
 `build/<preset>/BuildTools/ReflectionParser.exe --dump --input <header> ...` (full arguments in `Tools/ReflectionParser/README.md`).
 
 **Resources.** `Resource/` splits into `engine/`, `common/`, and `game/<active game>/`. Paths are global ids
-including the domain (`engine/pipeline/forward.xml`) and are lowercased via `normalizePath` at lookup —
+including the domain (`engine/pipeline/forwardpipeline.xml`) and are lowercased via `normalizePath` at lookup —
 hence the enforced lowercase rule. Rendering separates `RenderPassResource` (bind template: formats/clears,
 under `renderpass/`) from `RenderPipelineResource` (the frame graph ordering passes, under `pipeline/`);
 `FrameRenderer` builds a `RenderGraph` from the pipeline and topologically sorts it at runtime. Textures are read

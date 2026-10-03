@@ -446,9 +446,9 @@ sw::GameObject* pProp = sw::engine::getResourceManager().getPrefabManager().spaw
 
 개발 모드에서 게임 코드를 수정하고 Visual Studio / CLion / CMake에서 빌드 버튼을 누르면(또는 Ctrl+F7 · 에디터의 빌드):
 1. `LiveReloadManager`(App)가 DLL 변경을 파일 워처로 감지하고, 파일이 잠잠해질 때까지 기다립니다(빌드 중에는 모으기만 합니다).
-2. 그 모듈에 의존하는 모듈까지 묶어(연쇄 리로드) 실행 중인 워커 태스크를 비웁니다.
-3. 게임 모듈의 상태를 메모리 직렬화 버퍼로 덤프합니다.
-4. 새 DLL 을 그림자 복사본으로 올려 엔진 ABI 도장을 대조한 뒤(prepare), 옛 DLL 을 내립니다(commit).
+2. 그 모듈에 의존하는 모듈까지 묶어(연쇄 리로드), 새 DLL 을 모두 그림자 복사본으로 올리고 엔진 ABI 도장을 대조합니다(prepare).
+3. 모듈마다 실행 중인 워커 태스크를 비우고 게임 상태를 메모리 직렬화 버퍼로 덤프한 뒤 인스턴스를 내립니다(`ModuleHost::suspendModules`).
+4. 옛 DLL 을 새 이미지로 바꿉니다(commit).
 5. 리플렉션 타입(컴포넌트 생성 함수는 `TypeInfo` 의 칸)을 다시 등록하고 상태를 역직렬화하여 복원합니다.
 
 적용 전에 실패하면 옛 모듈을 그대로 두고 계속 돌고, 적용 뒤의 결함만 리로드 그래프를 막습니다. 모듈 안의 static · 싱글턴은 교체 때 사라지므로

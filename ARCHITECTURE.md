@@ -65,7 +65,7 @@ App은 게임이나 에디터 클래스를 직접 알지 못하며 오직 C-ABI(
 
 ### 2. 리소스 경로 (Resource Paths)
 `Resource/` 폴더는 실제 게임이 바라보는 가장 높은 위치입니다. 리소스를 찾을 때는 항상 상대 경로를 사용합니다.
-- **전역 ID**: `engine/pipeline/forward.xml` 같이 도메인(engine, game 등)을 포함한 명확한 식별자.
+- **전역 ID**: `engine/pipeline/forwardpipeline.xml` 같이 도메인(engine, game 등)을 포함한 명확한 식별자.
 - **경로 대소문자**: 리소스를 검색할 때 엔진 내부에서는 **모든 경로를 소문자로 정규화**(`normalizePath`)하여 매칭합니다. 그래서 `Resource/` 아래 이름은 전부 소문자여야 하고, `CheckResourceCasing.py` 가 강제합니다.
 
 ### 3. RHI (Render Hardware Interface)
