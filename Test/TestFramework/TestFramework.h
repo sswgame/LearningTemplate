@@ -93,10 +93,6 @@ namespace test
         /** @brief 현재 테스트를 실패 없이 건너뜁니다. */
         void skipCurrentTest( const sw::string& reason, const sw::string& file, int32 line );
 
-        /** @brief 현재 테스트가 실패했는지 반환합니다. */
-        bool isCurrentTestHasFailed() const { return _currentContext.hasFailed(); }
-        /** @brief 현재 테스트가 스킵되었는지 반환합니다. */
-        bool isCurrentTestSkipped() const { return _currentContext.isSkipped(); }
         /** @brief 현재 테스트의 상세 실행 컨텍스트를 반환합니다. */
         TestContext*       getCurrentContext() { return &_currentContext; }
         const TestContext* getCurrentContext() const { return &_currentContext; }

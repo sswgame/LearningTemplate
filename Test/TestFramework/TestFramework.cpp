@@ -449,7 +449,7 @@ namespace test
     void TestRegistry::skipCurrentTest( [[maybe_unused]] const sw::string& reason, [[maybe_unused]] const sw::string& file, [[maybe_unused]] int32 line )
     {
         const std::lock_guard<std::mutex> lock( getRecordMutex() );
-        _currentContext.skip( reason, file, line );
+        _currentContext.skip();
         SW_LOG_INFO( "\n  [SKIPPED] %#:%# — %#", file.c_str(), line, reason.c_str() );
     }
 

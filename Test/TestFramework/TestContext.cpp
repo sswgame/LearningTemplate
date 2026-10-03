@@ -9,7 +9,6 @@ namespace test
         _testName = testName;
         _listFailure.clear();
         _listCleanup.clear();
-        _skipReason.clear();
         _bSkipped      = false;
         _bTempPathUsed = false;
     }
@@ -42,13 +41,5 @@ namespace test
     void TestContext::addFailure( const sw::string& condition, const sw::string& file, int32 line, const sw::string& message )
     {
         _listFailure.push_back( { condition, file, line, message } );
-    }
-
-    void TestContext::skip( const sw::string& reason, const sw::string& file, int32 line )
-    {
-        _bSkipped   = true;
-        _skipReason = reason;
-        (void)file;
-        (void)line;
     }
 } // namespace test
