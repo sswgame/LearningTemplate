@@ -104,7 +104,9 @@ namespace sw
          */
         [[nodiscard]] bool loadModuleImages( LiveReloadManager* pLiveReloadManager, const vector<GameKitConfig>& listGameKitModule );
         /**
-         * @brief LiveReloadManager 에 콜백을 등록하고 에디터 · 게임 인스턴스를 만듭니다(게임 모듈 이미지는 `loadModuleImages` 가 이미 올렸다).
+         * @brief LiveReloadManager 에 콜백을 등록하고 게임 · 에디터 인스턴스를 만듭니다(게임 모듈 이미지는 `loadModuleImages` 가 이미 올렸다).
+         * @details **게임이 먼저, 에디터가 나중**입니다 — 게임이 처음 여는 씬(실행 설정의 시작 씬 · 타이틀 · 시작 맵)을 요청한 뒤에 에디터가 제 시작 씬
+         *          (`-gv_editorStartupScene`)을 요청해야, 마지막 요청을 남기는 씬 매니저에서 에디터의 것이 열립니다.
          * @param pLiveReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
          * @param pRHI 활성 RHI
          * @param pWindow 플랫폼 창

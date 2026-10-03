@@ -54,6 +54,7 @@ namespace
         string _firstErrorLine{};
         /** @brief `runApp` 에 준 표식으로 시작하는 줄들(표식부터 줄 끝까지). 표식을 주지 않으면 비어 있습니다. */
         vector<string> _listMarkedLine{};
+        uint32         _missingComponentLineCount{ 0 }; /**< `MissingComponent` 가 든 줄 수 — 씬이 모르는 타입을 만났다. */
         bool           _bLaunched{ false };
         bool           _bBackendUnusableHere{ false }; /**< 이 기계가 그 백엔드를 못 돌린다고 App 이 말했다. */
     };
@@ -140,6 +141,8 @@ namespace
             ++result._lineCount;
             if ( isBackendUnusableLine( line ) )
                 result._bBackendUnusableHere = true;
+            if ( line.find( "MissingComponent" ) != string::npos )
+                ++result._missingComponentLineCount;
 
             const size_t markerIndex = pMarker == nullptr ? string::npos : line.find( pMarker );
             if ( markerIndex != string::npos )
@@ -363,6 +366,27 @@ SW_TEST_CASE( AppSmokeTest, EditorModeStartsAndExitsCleanly )
 
     if ( checkedCount == 0 )
         SW_TEST_SKIP( "no usable RHI backend on this machine — run where a GPU and driver exist" );
+}
+
+/**
+ * @brief [AppSmokeTest] 에디터의 시작 씬(`-gv_editorStartupScene`)이 실제로 열리는 씬이고, 그 씬의 GameFramework 컴포넌트가 제 타입으로 지어진다
+ * @details 에디터가 게임보다 먼저 서서 시작 씬을 GameFramework.dll 이 오르기 전에 읽었고(그 컴포넌트가 MissingComponent), 뒤에 선 게임이
+ *          처음 여는 씬(실행 설정의 시작 씬)을 요청해 마지막 요청을 남기는 씬 매니저에서 그것이 이겼다 — `GameConfig::_startupScene` 주석과 반대였다.
+ *          이제 타입 공급자 모듈은 기동 단계 `ModuleTypes` 에서 오르고, 게임이 먼저 · 에디터가 나중에 선다. 마지막으로 바뀐 활성 씬이 에디터의
+ *          시작 씬이어야 한다.
+ */
+SW_TEST_CASE( AppSmokeTest, EditorStartupSceneIsTheSceneThatOpens )
+{
+    const AppRunResult result = runApp( "-gv_profileFrames=20 -EnableEditor -dx12 \"-gv_editorStartupScene=game/empty/maps/spriteui.scene.xml\"",
+                                        "Active scene swapped to" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
+    if ( result._bBackendUnusableHere )
+        SW_TEST_SKIP( "DX12 is not usable on this machine" );
+    SW_EXPECT_EQUAL( 0, result._exitCode );
+    SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.c_str() );
+    SW_EXPECT_EQUAL( 0u, result._missingComponentLineCount );
+    SW_ASSERT_TRUE_MSG( result._listMarkedLine.empty() == false, "no scene became active" );
+    SW_EXPECT_STREQ( "Active scene swapped to 'SpriteUi'", result._listMarkedLine.back().c_str() );
 }
 
 /**

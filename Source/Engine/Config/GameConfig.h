@@ -25,7 +25,8 @@ namespace sw
          * @brief 게임이 시작할 때 여는 씬(리소스 경로)입니다. 비면 씬 없이 뜹니다.
          * @details 예전에는 에디터 밖의 실행이 씬 없이 떴습니다. 배포본이 씬 로드 경로(SCN1 · 프리팹 GUID 해석)를 한 번도
          *          거치지 않았습니다. 지금은 테스트 씬을 걸어 둡니다(임시). 벤치(`-gv_benchMeshes`)가 켜지면 벤치 씬이
-         *          우선이고, 에디터의 `-gv_editorStartupScene` 은 나중에 큐에 들어가므로 결국 그것이 열립니다.
+         *          우선이고, 에디터의 `-gv_editorStartupScene` 은 게임 다음에 요청되므로(`ModuleHost::initialize` 가 게임을 먼저 세운다)
+         *          결국 그것이 열립니다(`AppSmokeTest.EditorStartupSceneIsTheSceneThatOpens`).
          */
         PROPERTY()
         string _startupScene{};

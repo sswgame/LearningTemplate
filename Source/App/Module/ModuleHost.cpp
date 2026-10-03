@@ -283,9 +283,25 @@ namespace sw
         }
 #endif
 
+        // 게임이 먼저, 에디터가 나중이다. 게임은 처음 여는 씬을 요청하고(`GameInstanceBase::requestFirstScene`) 에디터는 제 시작 씬
+        // (`-gv_editorStartupScene`)을 요청한다. 씬 매니저는 마지막 요청을 남기므로 나중에 요청한 에디터의 씬이 열린다(`GameConfig::_startupScene` 주석).
 #if defined( SW_SHIPPING )
         onAfterGameReload( nullptr );
 #else
+        if ( _pLiveReloadManager != nullptr )
+        {
+            BLOCK( "SWGame 인스턴스 생성" )
+            {
+                SW_MEMORY_SCOPE( Game );
+                _pLiveReloadManager->setOnAfterReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameReload, this ) );
+                if ( _pLiveReloadManager->runAfterReload( sw::config::kTargetGameModule ) == false )
+                {
+                    SW_LOG_ERROR( "SWGame instance could not be started" );
+                    return false;
+                }
+            }
+        }
+
         if ( _bEnableEditor == SW_TRUE && _pLiveReloadManager != nullptr )
         {
             BLOCK( "에디터: 뷰포트 / EditorModule 등록" )
@@ -308,20 +324,6 @@ namespace sw
                 if ( _pLiveReloadManager->isGraphBroken() )
                 {
                     SW_LOG_ERROR( "LiveReload graph broken during module registration — aborting initialize" );
-                    return false;
-                }
-            }
-        }
-
-        if ( _pLiveReloadManager != nullptr )
-        {
-            BLOCK( "SWGame 인스턴스 생성" )
-            {
-                SW_MEMORY_SCOPE( Game );
-                _pLiveReloadManager->setOnAfterReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameReload, this ) );
-                if ( _pLiveReloadManager->runAfterReload( sw::config::kTargetGameModule ) == false )
-                {
-                    SW_LOG_ERROR( "SWGame instance could not be started" );
                     return false;
                 }
             }
