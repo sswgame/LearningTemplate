@@ -108,14 +108,10 @@ namespace sw::editor
         static void drawChip( const utf8* pLabel, const Color4& color );
 
         /**
-         * @brief 프로퍼티 항목의 라벨을 왼쪽에 표시하고, 오른쪽 편집 컨트롤을 배치할 준비를 합니다.
+         * @brief 프로퍼티 행의 라벨을 왼쪽에 그리고, 다음 항목이 @p labelWidth 부터 남은 폭을 다 쓰게 합니다.
+         * @details 라벨이 붙는 위젯(`drawAssetSlot` · `drawColorEdit`)이 이것으로 라벨 열을 맞춥니다. 행을 닫는 짝은 없습니다 — 다음 항목이 행의 끝입니다.
          */
-        static bool drawPropertyRowBegin( const utf8* pLabel, float32 labelWidth = 120.0f );
-
-        /**
-         * @brief drawPropertyRowBegin() 뒤에 불러 프로퍼티 행을 마칩니다.
-         */
-        static void drawPropertyRowEnd();
+        static void drawPropertyRowBegin( const utf8* pLabel, float32 labelWidth = 120.0f );
 
         /**
          * @brief `string` 을 직접 편집하는 한 줄 텍스트 입력입니다. 값이 바뀌면 true 입니다.

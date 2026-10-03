@@ -419,13 +419,9 @@ namespace sw::editor
             if ( _toolbarSettings._bShowOrientationCube )
                 drawOrientationCube( ImGui::GetWindowDrawList(), canvasPos, canvasSize );
 
-            if ( ImGui::BeginDragDropTarget() )
-            {
-                string droppedAssetPath;
-                if ( EditorWidgets::tryAcceptAssetPayload( droppedAssetPath ) )
-                    handleViewportAssetDrop( droppedAssetPath.c_str(), canvasPos, canvasSize, arrView, arrProj );
-                ImGui::EndDragDropTarget();
-            }
+            string droppedAssetPath;
+            if ( EditorWidgets::acceptAssetDrop( droppedAssetPath ) )
+                handleViewportAssetDrop( droppedAssetPath.c_str(), canvasPos, canvasSize, arrView, arrProj );
         }
     }
 

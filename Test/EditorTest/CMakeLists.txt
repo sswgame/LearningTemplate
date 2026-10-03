@@ -29,6 +29,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorTransformCommands.cpp
 		TestEditorToolAssetCommands.cpp
 		TestEditorViewportMath.cpp
+		TestEditorWorkspace.cpp
 		TestEditorWorkspaceGuid.cpp
 		TestInspectorBuiltinValue.cpp
 		TestInspectorPropertyLayout.cpp

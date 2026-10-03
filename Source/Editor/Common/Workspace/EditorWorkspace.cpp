@@ -39,7 +39,6 @@ namespace sw::editor
         , _pendingSceneMutex{}
         , _arrCameraBookmark{}
         , _listPrefabIsolationFrame{}
-        , _mapGameObjectToPrefab{}
         , _mapObjectIdToGuid{}
         , _mapGuidToObjectId{}
         , _pendingSceneAction{ EditorPendingSceneAction::None }
@@ -199,61 +198,20 @@ namespace sw::editor
         _pendingSceneActionPath.clear();
     }
 
-    void EditorWorkspace::rebuildGameObjectPrefabMap( GameObjectManager* pManager )
-    {
-        _mapGameObjectToPrefab.clear();
-        if ( pManager == nullptr )
-            return;
-
-        Scene* pScene = editor::getActiveScene();
-        if ( pScene == nullptr )
-            return;
-
-        for ( GameObject* pGo : pManager->getAllGameObjects() )
-        {
-            if ( pGo == nullptr )
-                continue;
-            const string& path = pScene->getEntityPrefabPath( pGo->getObjectId() );
-            if ( path.empty() == false )
-                _mapGameObjectToPrefab[pGo->getObjectId()] = path;
-        }
-    }
-
-    void EditorWorkspace::clearGameObjectPrefabMap()
-    {
-        _mapGameObjectToPrefab.clear();
-    }
-
     void EditorWorkspace::setGameObjectPrefabPath( uint64 objectId, string_view prefabPath )
     {
-        if ( objectId == 0 )
-            return;
-        if ( prefabPath.empty() )
-            _mapGameObjectToPrefab.erase( objectId );
-        else
-            _mapGameObjectToPrefab[objectId] = string{ prefabPath };
-
         Scene* pScene = editor::getActiveScene();
-        if ( pScene == nullptr )
+        if ( objectId == 0 || pScene == nullptr )
             return;
         pScene->setEntityPrefabPath( objectId, prefabPath );
     }
 
     const string& EditorWorkspace::getGameObjectPrefabPath( uint64 objectId ) const
     {
-        const auto it = _mapGameObjectToPrefab.find( objectId );
-        if ( it != _mapGameObjectToPrefab.end() )
-            return it->second;
-
-        Scene* pScene = editor::getActiveScene();
+        const Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr )
             return _emptyString;
         return pScene->getEntityPrefabPath( objectId );
-    }
-
-    bool EditorWorkspace::isGameObjectPrefabInstance( uint64 objectId ) const
-    {
-        return getGameObjectPrefabPath( objectId ).empty() == false;
     }
 
     void EditorWorkspace::setCameraBookmark( uint32 slot, const CameraBookmark& bookmark )

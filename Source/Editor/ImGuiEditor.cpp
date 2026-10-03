@@ -21,7 +21,6 @@
 #include "Editor/Common/Gui/EditorPanelDump.h"
 #include "Editor/Common/Gui/EditorRegistryDump.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
-#include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"

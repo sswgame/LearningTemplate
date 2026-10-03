@@ -291,17 +291,12 @@ namespace sw::editor
         ImGui::PopStyleColor( 3 );
     }
 
-    bool EditorWidgets::drawPropertyRowBegin( const utf8* pLabel, float32 labelWidth )
+    void EditorWidgets::drawPropertyRowBegin( const utf8* pLabel, float32 labelWidth )
     {
         ImGui::AlignTextToFramePadding();
         ImGui::TextDisabled( "%s", pLabel );
         ImGui::SameLine( labelWidth );
         ImGui::SetNextItemWidth( -1.0f );
-        return true;
-    }
-
-    void EditorWidgets::drawPropertyRowEnd()
-    {
     }
 
     bool EditorWidgets::drawTextField( const utf8* pLabel, string& text, float32 width )
@@ -322,11 +317,7 @@ namespace sw::editor
         bool bChanged{ false };
 
         if ( StringUtil::isNullOrEmpty( pLabel ) == false )
-        {
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextDisabled( "%s", pLabel );
-            ImGui::SameLine( labelWidth );
-        }
+            drawPropertyRowBegin( pLabel, labelWidth );
 
         const float32 availWidth    = ImGui::GetContentRegionAvail().x;
         const float32 clearBtnWidth = 24.0f;
@@ -338,21 +329,15 @@ namespace sw::editor
         ImGui::Button( pDisplayPath, ImVec2{ inputWidth, 0.0f } );
         ImGui::PopStyleColor( 2 );
 
-        if ( ImGui::BeginDragDropTarget() )
+        string droppedPath;
+        if ( acceptAssetDrop( droppedPath ) )
         {
-            string droppedPath;
-            if ( tryAcceptAssetPayload( droppedPath ) )
+            const bool bAccept = StringUtil::isNullOrEmpty( pExpectedExt ) || FileUtil::hasExtension( droppedPath, pExpectedExt );
+            if ( bAccept )
             {
-                bool bAccept{ true };
-                if ( StringUtil::isNullOrEmpty( pExpectedExt ) == false )
-                    bAccept = FileUtil::hasExtension( droppedPath, pExpectedExt );
-                if ( bAccept )
-                {
-                    assetPath = droppedPath;
-                    bChanged  = true;
-                }
+                assetPath = droppedPath;
+                bChanged  = true;
             }
-            ImGui::EndDragDropTarget();
         }
 
         if ( assetPath.empty() == false )
@@ -389,12 +374,9 @@ namespace sw::editor
     {
         ImGui::PushID( pLabel );
         if ( StringUtil::isNullOrEmpty( pLabel ) == false )
-        {
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextDisabled( "%s", pLabel );
-            ImGui::SameLine( labelWidth );
-        }
-        ImGui::SetNextItemWidth( -1.0f );
+            drawPropertyRowBegin( pLabel, labelWidth );
+        else
+            ImGui::SetNextItemWidth( -1.0f );
         float32 arrColor[4]{ color._r, color._g, color._b, color._a };
         bool    bChanged{ false };
         if ( ImGui::ColorEdit4( "##color", arrColor, ImGuiColorEditFlags_AlphaBar ) )

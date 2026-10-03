@@ -5,7 +5,6 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 
 namespace sw
 {
@@ -16,16 +15,11 @@ namespace sw::editor
 {
     /**
      * @class EditorInspectorCommands
-     * @brief ImGui 항목 편집이 끝나면 전후 스냅샷을 Undo 스택에 올리고, 프리팹을 적용 · 복원합니다.
+     * @brief 프리팹을 적용 · 복원 · 연결 해제합니다. 프로퍼티 편집의 Undo 는 오브젝트 스냅샷(`EditorTransaction::recordModify`)이 맡습니다.
      */
     class EditorInspectorCommands
     {
     public:
-        /** @brief POD 프로퍼티 전/후 바이트를 Undo에 올립니다. */
-        static void pushPodEdit( void* pData, size_t size, vector<uint8> beforeBytes, vector<uint8> afterBytes,
-                                 string_view label, uint64 selectedObjectId );
-        /** @brief 문자열 프로퍼티 전/후 값을 Undo에 올립니다. */
-        static void pushStringEdit( string* pPtr, string before, string after, string_view label, uint64 selectedObjectId );
         /** @brief 선택 오브젝트 상태를 프리팹 XML로 저장합니다. */
         [[nodiscard]] static bool applyToPrefab( GameObject* pObj, string_view prefabPath );
         /** @brief 프리팹 상태로 되돌리고 Undo에 기록합니다. */

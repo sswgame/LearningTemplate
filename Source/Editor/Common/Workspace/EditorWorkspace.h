@@ -115,11 +115,6 @@ namespace sw::editor
         uint64 getObservedSceneGeneration() const { return _observedSceneGeneration; }
         void   setObservedSceneGeneration( uint64 generation ) { _observedSceneGeneration = generation; }
 
-        /** @brief 활성 씬 오브젝트에서 프리팹 맵을 다시 채웁니다. */
-        void rebuildGameObjectPrefabMap( GameObjectManager* pManager );
-        /** @brief 프리팹 맵과 선택을 지웁니다. */
-        void clearGameObjectPrefabMap();
-
         /** @brief 활성 씬에 저장되지 않은 에디터 변경이 있음을 표시합니다. */
         void markSceneDirty() { _bSceneDirty = SW_TRUE; }
         /** @brief 씬 dirty 플래그를 지웁니다. 저장/로드 성공 시 호출합니다. */
@@ -134,11 +129,12 @@ namespace sw::editor
         void   setScrollToComponentId( uint64 id ) { _scrollToComponentId = id; }
 
         // ------------------------------------------------------------------------------
-        // 7) 프리팹 애셋 매핑 (에디터 전용 메타데이터)
+        // 7) 프리팹 인스턴스 경로 — 활성 씬(`Scene::getEntityPrefabPath`)이 정본이고 여기는 창구일 뿐입니다
         // ------------------------------------------------------------------------------
-        void          setGameObjectPrefabPath( uint64 objectId, string_view prefabPath );
+        /** @brief 활성 씬에 오브젝트의 프리팹 경로를 적습니다. 빈 경로는 연결을 끊습니다. 활성 씬이 없으면 아무것도 하지 않습니다. */
+        void setGameObjectPrefabPath( uint64 objectId, string_view prefabPath );
+        /** @brief 활성 씬이 적어 둔 오브젝트의 프리팹 경로입니다. 프리팹 인스턴스가 아니거나 활성 씬이 없으면 빈 문자열입니다. */
         const string& getGameObjectPrefabPath( uint64 objectId ) const;
-        bool          isGameObjectPrefabInstance( uint64 objectId ) const;
 
         // ------------------------------------------------------------------------------
         // 8) 뷰포트 카메라 북마크 (0~8 인덱스, 1~9 슬롯)
@@ -183,30 +179,29 @@ namespace sw::editor
         void        clearGuidMap();
 
     private:
-        SelectionManager*             _pSelectionManager;
-        uint64                        _selectedComponentId;
-        uint64                        _observedSceneGeneration;
-        uint64                        _scrollToComponentId;
-        string                        _selectedComponentKey;
-        string                        _focusedAssetPath;
-        string                        _pendingOpenPanelTitle;
-        string                        _pendingScenePath;
-        string                        _pendingSceneActionPath;
-        string                        _emptyString;
-        string                        _copiedComponentXml;
-        string                        _copiedComponentTypeName;
-        vector<uint8>                 _copiedComponentBytes;
-        mutex                         _pendingSceneMutex;
-        array<CameraBookmark, 9>      _arrCameraBookmark;
-        vector<PrefabIsolationFrame>  _listPrefabIsolationFrame;
-        unordered_map<uint64, string> _mapGameObjectToPrefab;
-        unordered_map<uint64, Uuid>   _mapObjectIdToGuid;
-        unordered_map<Uuid, uint64>   _mapGuidToObjectId;
-        EditorPendingSceneAction      _pendingSceneAction;
-        int32                         _gizmoOperation;
-        uint8                         _bGizmoLocalSpace  : 1;
-        uint8                         _bSceneDirty       : 1;
-        uint8                         _bPrefabIsolation  : 1;
-        [[maybe_unused]] uint8        _reservedWorkspace : 4;
+        SelectionManager*            _pSelectionManager;
+        uint64                       _selectedComponentId;
+        uint64                       _observedSceneGeneration;
+        uint64                       _scrollToComponentId;
+        string                       _selectedComponentKey;
+        string                       _focusedAssetPath;
+        string                       _pendingOpenPanelTitle;
+        string                       _pendingScenePath;
+        string                       _pendingSceneActionPath;
+        string                       _emptyString;
+        string                       _copiedComponentXml;
+        string                       _copiedComponentTypeName;
+        vector<uint8>                _copiedComponentBytes;
+        mutex                        _pendingSceneMutex;
+        array<CameraBookmark, 9>     _arrCameraBookmark;
+        vector<PrefabIsolationFrame> _listPrefabIsolationFrame;
+        unordered_map<uint64, Uuid>  _mapObjectIdToGuid;
+        unordered_map<Uuid, uint64>  _mapGuidToObjectId;
+        EditorPendingSceneAction     _pendingSceneAction;
+        int32                        _gizmoOperation;
+        uint8                        _bGizmoLocalSpace  : 1;
+        uint8                        _bSceneDirty       : 1;
+        uint8                        _bPrefabIsolation  : 1;
+        [[maybe_unused]] uint8       _reservedWorkspace : 4;
     };
 } // namespace sw::editor

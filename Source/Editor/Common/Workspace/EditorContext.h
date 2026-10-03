@@ -12,7 +12,6 @@ namespace sw
 
 namespace sw::editor
 {
-    class AssetEditorManager;
     class AssetHotReload;
     class EditorActionMenuManager;
     class EditorCommandRegistry;
@@ -61,7 +60,6 @@ namespace sw::editor
         EditorCommandRegistry&     getCommandRegistry() { return *_pCommandRegistry; }
         EditorPanelManager&        getPanelManager() { return *_pPanelManager; }
         EditorPopupManager&        getPopupManager() { return *_pPopupManager; }
-        AssetEditorManager&        getAssetEditorManager() { return *_pAssetEditorManager; }
         AssetHotReload&            getAssetHotReload() { return *_pAssetHotReload; }
         InspectorComponentManager& getInspectorComponentManager() { return *_pInspectorComponentManager; }
         InspectorPropertyManager&  getInspectorPropertyManager() { return *_pInspectorPropertyManager; }
@@ -94,7 +92,6 @@ namespace sw::editor
         unique_ptr<EditorCommandRegistry>     _pCommandRegistry;
         unique_ptr<EditorPanelManager>        _pPanelManager;
         unique_ptr<EditorPopupManager>        _pPopupManager;
-        unique_ptr<AssetEditorManager>        _pAssetEditorManager;
         unique_ptr<AssetHotReload>            _pAssetHotReload;
         unique_ptr<InspectorComponentManager> _pInspectorComponentManager;
         unique_ptr<InspectorPropertyManager>  _pInspectorPropertyManager;

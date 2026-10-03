@@ -106,12 +106,8 @@ namespace sw::editor
 
                 drawInput( "##assetInput" );
 
-                if ( ImGui::BeginDragDropTarget() )
-                {
-                    if ( EditorWidgets::tryAcceptAssetPayload( outDroppedPath ) )
-                        action = AssetFieldAction::Dropped;
-                    ImGui::EndDragDropTarget();
-                }
+                if ( EditorWidgets::acceptAssetDrop( outDroppedPath ) )
+                    action = AssetFieldAction::Dropped;
 
                 ImGui::SameLine();
                 if ( ImGui::Button( "x##clear", ImVec2( kButtonWidth, 0 ) ) )

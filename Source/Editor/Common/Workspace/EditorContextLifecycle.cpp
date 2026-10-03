@@ -14,7 +14,6 @@
 #include "Editor/Common/Config/EditorData.h"
 #include "Editor/Common/Gui/EditorActionMenuManager.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -56,7 +55,6 @@ namespace sw::editor
         _pCommandRegistry           = make_unique<EditorCommandRegistry>();
         _pPanelManager              = make_unique<EditorPanelManager>();
         _pPopupManager              = make_unique<EditorPopupManager>();
-        _pAssetEditorManager        = make_unique<AssetEditorManager>();
         _pAssetHotReload            = make_unique<AssetHotReload>();
         _pInspectorComponentManager = make_unique<InspectorComponentManager>();
         _pInspectorPropertyManager  = make_unique<InspectorPropertyManager>();
@@ -64,7 +62,6 @@ namespace sw::editor
         setActive( this );
         bindLocalService( this );
 
-        _pAssetEditorManager->registerDefaultMappings();
         _pInspectorComponentManager->registerDefaults();
         _pInspectorPropertyManager->registerDefaults();
         _pPopupManager->registerDefaultPopups();
@@ -84,7 +81,6 @@ namespace sw::editor
         _pInspectorPropertyManager.reset();
         _pInspectorComponentManager.reset();
         _pAssetHotReload.reset();
-        _pAssetEditorManager.reset();
         _pPopupManager.reset();
         _pPanelManager.reset();
         _pCommandRegistry.reset();

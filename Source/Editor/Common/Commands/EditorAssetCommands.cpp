@@ -12,7 +12,6 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -216,8 +215,13 @@ namespace sw::editor
             return false;
 
         // 전용 도구 패널이 먼저다(종류 표의 패널 제목). 패널이 없는 종류는 그 종류의 동작이 연다(씬).
-        if ( pContext->getAssetEditorManager().openAssetInEditor( relativePath ) )
+        const string_view panelTitle = EditorAssetTypeRegistry::findPanelTitleForPath( relativePath );
+        if ( panelTitle.empty() == false )
+        {
+            pContext->getWorkspace().setFocusedAssetPath( string{ relativePath }.c_str() );
+            pContext->getWorkspace().requestOpenPanel( string{ panelTitle }.c_str() );
             return true;
+        }
 
         const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActionsForPath( relativePath );
         return pActions != nullptr && pActions->open( relativePath );
@@ -380,18 +384,12 @@ namespace sw::editor
          * - **프리팹 Isolation**: 격리 프레임이 옛 씬의 오브젝트 ID 를 들고 있다. 격리 중에 씬을 열면
          *   `isPrefabIsolationActive()` 가 계속 true 라 UI 는 격리 중이라고 믿고, `exitPrefabIsolation` 이 새 씬의 무관한
          *   오브젝트를 되살린다. 씬이 사라졌으니 되돌릴 것도 없다. 상태만 버린다.
-         *
-         * 프리팹 맵은 버리지 않고 아래에서 **다시 만든다**(새 씬에도 프리팹 인스턴스가 있다).
          */
         CommandStack* pCommandStack = editor::getService<CommandStack>();
         if ( pCommandStack != nullptr )
             pCommandStack->clear();
         ws.clearGuidMap();
         ws.clearPrefabIsolation();
-
-        Scene*             pScene   = pSceneManager->getActiveScene();
-        GameObjectManager* pManager = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
-        ws.rebuildGameObjectPrefabMap( pManager );
     }
 
     bool EditorAssetCommands::tryBeginQuit()
