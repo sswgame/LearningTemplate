@@ -119,9 +119,9 @@ namespace sw
         int32 _currentFrame;
         PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Frame count of the active animation, taken from the sprite clip", ReadOnly )
         int32 _totalFrames;
-        int32 _firstClipFrame; ///< 지금 구간이 시작하는 클립 프레임입니다(저장하지 않습니다 — 클립에서 다시 잡습니다)
         /// @brief 구간을 잡을 때 본 클립입니다. **정체성 비교만** 하고 역참조하지 않습니다 — 스프라이트의 클립이 바뀌면 구간을 다시 잡습니다.
         const SpriteClipAsset* _pRangeClip;
+        int32                  _firstClipFrame; ///< 지금 구간이 시작하는 클립 프레임입니다(저장하지 않습니다 — 클립에서 다시 잡습니다)
         PROPERTY( Category = "Playback", DisplayName = "Loop", Tooltip = "Loop playback when reaching the end" )
         uint8                  _bRepeat      : 1;
         uint8                  _bPlaying     : 1;

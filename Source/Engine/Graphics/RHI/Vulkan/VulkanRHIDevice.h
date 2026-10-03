@@ -104,6 +104,13 @@ namespace sw
      */
     struct VulkanRecordingState
     {
+        RHIPipelineStateHandle _activeGraphicsPso;
+
+        RHIBufferHandle _boundMeshVb;
+        uint32          _boundMeshStride;
+        uint32          _boundMeshOffset;
+        RHIBufferHandle _boundInstanceSlotVb; ///< 슬롯 1: 인스턴스 슬롯 스트림 (0 = 안 걸림)
+        uint32          _boundInstanceSlotOffset;
         /// @brief 이 스트림에 렌더패스가 열려 있는지 여부입니다.
         uint8 _bRenderPassActive : 1;
         /// @brief 텍스처 배열 세트(set 1)를 이 버퍼의 두 바인드 포인트에 이미 걸었는지 여부입니다.
@@ -112,33 +119,25 @@ namespace sw
         ///        폴백 파이프라인을 고르는 기준입니다. 렌더패스 호환성 때문에 백버퍼용과 오프스크린용이 다릅니다.
         uint8                  _bActiveSwapchainRT : 1;
         [[maybe_unused]] uint8 _reserved           : 5;
-
-        RHIPipelineStateHandle _activeGraphicsPso;
-
-        RHIBufferHandle _boundMeshVb;
-        uint32          _boundMeshStride;
-        uint32          _boundMeshOffset;
-        RHIBufferHandle _boundInstanceSlotVb; ///< 슬롯 1: 인스턴스 슬롯 스트림 (0 = 안 걸림)
-        uint32          _boundInstanceSlotOffset;
-        RHIBufferHandle _boundIndexBuffer;
-        uint32          _boundIndexStride;
-        uint32          _boundIndexOffset;
+        RHIBufferHandle        _boundIndexBuffer;
+        uint32                 _boundIndexStride;
+        uint32                 _boundIndexOffset;
 
         /// @brief 바인드 포인트별 슬롯 세트 상태입니다([0] 그래픽스, [1] 컴퓨트). 서로 독립이라 디스패치가 드로우의 바인딩을 지우지 않습니다.
         VulkanSlotState _arrSlotState[2];
 
         /** @brief 아무것도 안 걸린 상태로 시작합니다. */
         VulkanRecordingState()
-            : _bRenderPassActive{ SW_FALSE }
-            , _bTextureSetBound{ SW_FALSE }
-            , _bActiveSwapchainRT{ SW_FALSE }
-            , _reserved{ 0 }
-            , _activeGraphicsPso{ 0 }
+            : _activeGraphicsPso{ 0 }
             , _boundMeshVb{ 0 }
             , _boundMeshStride{ sizeof( RHIVertex ) }
             , _boundMeshOffset{ 0 }
             , _boundInstanceSlotVb{ 0 }
             , _boundInstanceSlotOffset{ 0 }
+            , _bRenderPassActive{ SW_FALSE }
+            , _bTextureSetBound{ SW_FALSE }
+            , _bActiveSwapchainRT{ SW_FALSE }
+            , _reserved{ 0 }
             , _boundIndexBuffer{ 0 }
             , _boundIndexStride{ 4 }
             , _boundIndexOffset{ 0 }
@@ -504,6 +503,9 @@ namespace sw
         VkDevice                 _device;
         VkQueue                  _graphicsQueue;
         uint32                   _graphicsQueueFamilyIndex;
+        /// @brief 인플라이트 프레임 슬롯(0..kMaxFrameCountInFlight-1)입니다. 스왑체인 이미지 인덱스와 **다른 값**입니다.
+        ///        이미지 인덱스는 스왑체인이 acquire 로 받아 들고 있습니다(`_swapChain.getImageIndex()`).
+        uint32 _currentFrame;
 
         /// @brief 창 하나의 서피스 · 스왑체인 · 백버퍼입니다. 이미지 · 뷰 · 프레임버퍼 · 세마포어가 모두 여기 있습니다.
         VulkanRHISwapChain _swapChain;
@@ -525,7 +527,6 @@ namespace sw
          * @details VkQueue 는 외부 동기화 대상입니다. 렌더 스레드의 프레임 제출과 게임 스레드의 일회성 업로드 제출이 락 없이 겹쳤습니다.
          */
         mutable mutex _queueMutex;
-        uint8         _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
 
         /// @brief 텍스처 레이아웃 확인 + 전이를 보호합니다(transitionTextureLayout 참고).
         mutable mutex _imageLayoutMutex;
@@ -565,8 +566,7 @@ namespace sw
         };
         StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
         uint32               _frameSegmentCursor;
-        /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출만 겁니다).
-        uint8 _bFrameAcquireWaitPending;
+        float32              _timestampPeriod; ///< 타임스탬프 한 칸의 나노초(아래 `_timestampPool` 의 값)
         /// @brief 지금 기록 중인 프레임 세그먼트. beginFrame 이 첫 세그먼트로 세운다.
         VkCommandBuffer _activeFrameBuffer;
 
@@ -576,10 +576,7 @@ namespace sw
          *          끝났음이 보장된 유일한 자리라, 재려고 파이프라인을 멈춰 세우지 않습니다.
          */
         VkQueryPool     _timestampPool; ///< 없으면 VK_NULL_HANDLE (이 헤더는 vulkan.h 를 들이지 않는다)
-        float32         _timestampPeriod;
-        uint8           _bTimestampEnabled; ///< 엔진이 켜기 전에는 풀도 만들지 않는다.
         vector<float32> _listTimestampMicro;
-        uint8           _arrTimestampSubmitted[constant::kMaxFrameCountInFlight];
 
         vector<VkCommandBuffer> _listCommandBuffer;
         vector<VkFence>         _listInFlightFence;
@@ -591,9 +588,6 @@ namespace sw
 
         void* _pHWnd;
         void* _pDisplayHandle;
-        /// @brief 인플라이트 프레임 슬롯(0..kMaxFrameCountInFlight-1)입니다. 스왑체인 이미지 인덱스와 **다른 값**입니다.
-        ///        이미지 인덱스는 스왑체인이 acquire 로 받아 들고 있습니다(`_swapChain.getImageIndex()`).
-        uint32 _currentFrame;
         /// @brief 스왑체인 제출마다 1씩 증가하는 단조 세대 번호입니다. 해제 큐가 실제 GPU 펜스 완료 기준으로
         ///        해제하도록(enqueueGpuRelease) 프레임 카운트 대신 이 값을 씁니다.
         uint64                  _frameFenceCounter;
@@ -611,6 +605,12 @@ namespace sw
         uint16                  _bSwapChainImageHeld     : 1; ///< 획득했지만 아직 present 하지 않은 스왑체인 이미지를 쥐고 있는가
         uint16                  _linuxWsi                : 2; ///< 0=없음, 1=xlib, 2=xcb (Linux만)
         [[maybe_unused]] uint16 _reservedVulkan          : 3;
+        // 1 바이트 필드는 위 비트필드 뒤에 모은다 — 8 바이트 필드 사이에 끼면 칸마다 패딩이 생긴다.
+        uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
+        /// @brief 이번 프레임의 acquire 세마포어 대기가 아직 소비되지 않았는지 여부입니다(첫 제출만 겁니다).
+        uint8 _bFrameAcquireWaitPending;
+        uint8 _bTimestampEnabled;                                       ///< 엔진이 켜기 전에는 풀도 만들지 않는다.
+        uint8 _arrTimestampSubmitted[constant::kMaxFrameCountInFlight]; ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
 
         VkSampler _defaultSampler;
 

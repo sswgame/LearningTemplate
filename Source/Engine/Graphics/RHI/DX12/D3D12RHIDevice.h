@@ -482,10 +482,6 @@ namespace sw
         vector<ID3D12CommandList*> _listPendingSubmit;
         /// @brief 프레임 스트림을 자를 때마다 풀에서 빌린 추가 세그먼트들입니다(프레임 끝에 반납).
         vector<D3D12CommandListEntry> _listFrameSegment;
-        /// @brief 지금까지 새로 만든 (리스트, 얼로케이터) 쌍 수입니다. 풀이 끝없이 늘어나는지 보기 위한 계측입니다.
-        atomic<uint32> _cmdListEntryCreated;
-        /// @brief blitTexture 포맷 · 크기 불일치 경고를 한 번만 남기기 위한 래치입니다.
-        uint8 _bBlitMismatchLogged;
         /// @brief 지금 기록 중인 프레임 세그먼트입니다. beginFrame 이 _commandList 로 시작합니다.
         ID3D12GraphicsCommandList* _pActiveFrameList;
         /// @brief 병렬 기록용 리스트 · 얼로케이터 재사용 풀입니다. 태스크 스레드에서 동시에 빌려 가므로 잠급니다.
@@ -506,7 +502,6 @@ namespace sw
         };
         vector<OnlineBlockRecycleBatch> _listPendingOnlineRecycle;
         vector<vector<uint32>>          _listOnlineRecyclePool; ///< 돌아온 빈 벡터. 용량을 남김
-        uint8                           _bOnlineHeapExhaustedLogged;
         FrameResourceRing               _frameRing;
 
         /**
@@ -518,8 +513,6 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12QueryHeap> _timestampHeap;
         Microsoft::WRL::ComPtr<ID3D12Resource>  _timestampReadback;
         uint64                                  _timestampFrequency{ 0 };
-        /// @brief 엔진이 켜기 전에는 힙도 만들지 않습니다. 계측은 공짜가 아닙니다.
-        uint8 _bTimestampEnabled{ SW_FALSE };
         /// @brief 이번 프레임에 실제로 적힌 슬롯 비트입니다. 패스가 병렬로 기록하므로 원자입니다.
         atomic<uint32> _timestampWrittenMask{ 0 };
         /// @brief 링 슬롯별로 굳힌 비트입니다. 그 슬롯이 다시 돌아왔을 때 어느 칸이 진짜 값인지 가립니다.
@@ -555,6 +548,11 @@ namespace sw
         /// 프레임 flushDebugMessages() 가 똑같은 검증 메시지 수십 줄을 끝없이 반복 출력하는 것을 막습니다.
         uint8                  _bDeviceRemovedLogged : 1;
         [[maybe_unused]] uint8 _reservedPassFlags    : 6;
+        /// @brief blitTexture 포맷 · 크기 불일치 경고를 한 번만 남기기 위한 래치입니다.
+        uint8 _bBlitMismatchLogged;
+        uint8 _bOnlineHeapExhaustedLogged; ///< 온라인 힙이 바닥났다는 경고를 한 번만 남기기 위한 래치입니다
+        /// @brief 엔진이 켜기 전에는 힙도 만들지 않습니다. 계측은 공짜가 아닙니다.
+        uint8 _bTimestampEnabled{ SW_FALSE };
 
         /// @brief 디바이스 프레임 스트림(스왑체인 begin/endFrame 과 백버퍼 패스)의 기록 상태입니다.
         /// @details 예전에는 '레거시' 라고 불렀지만, S2/S3 이후 RenderThread 가 백버퍼 렌더 패스를 여는
@@ -577,6 +575,8 @@ namespace sw
         UINT _rtvDescriptorSize;
         UINT _cbvDescriptorSize;
         UINT _allocatedDescriptorsCount;
+        /// @brief 지금까지 새로 만든 (리스트, 얼로케이터) 쌍 수입니다. 풀이 끝없이 늘어나는지 보기 위한 계측입니다.
+        atomic<uint32> _cmdListEntryCreated;
 
         HANDLE                              _fenceEvent;
         Microsoft::WRL::ComPtr<ID3D12Fence> _fence;

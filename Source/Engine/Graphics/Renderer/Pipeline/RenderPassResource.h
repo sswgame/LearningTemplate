@@ -129,14 +129,6 @@ namespace sw
         PROPERTY()
         string _type = "Opaque";
 
-        /**
-         * @brief `_type` 을 해석한 값입니다. XML 로드 시 RenderPipelineResource 가 채웁니다.
-         * @details 직렬화 대상이 아닙니다(원본 철자는 `_type` 이 그대로 갖고 있습니다). 디스패치와 PSO
-         *          생성이 같은 값을 보게 하려고 한 번만 해석해 둡니다. 예전에는 두 곳이 각자 문자열을
-         *          비교하다가 서로 다른 표기를 받아 줘서 어긋났습니다.
-         */
-        RenderPassType _resolvedType{ RenderPassType::Invalid };
-
         PROPERTY()
         vector<string> _listInput;
 
@@ -228,6 +220,14 @@ namespace sw
 
         PROPERTY()
         string _cullMode = "Back"; ///< None / Front / Back
+
+        /**
+         * @brief `_type` 을 해석한 값입니다. XML 로드 시 RenderPipelineResource 가 채웁니다.
+         * @details 직렬화 대상이 아닙니다(원본 철자는 `_type` 이 그대로 갖고 있습니다). 디스패치와 PSO
+         *          생성이 같은 값을 보게 하려고 한 번만 해석해 둡니다. 예전에는 두 곳이 각자 문자열을
+         *          비교하다가 서로 다른 표기를 받아 줘서 어긋났습니다.
+         */
+        RenderPassType _resolvedType{ RenderPassType::Invalid };
 
         PROPERTY()
         bool _bEnableDepthTest{ true };

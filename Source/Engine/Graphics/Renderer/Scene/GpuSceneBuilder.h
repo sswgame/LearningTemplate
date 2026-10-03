@@ -213,8 +213,6 @@ namespace sw
          *          않습니다. 이 값이 다르면 "아무도 안 움직였다" 는 건너뛰기를 하지 않습니다.
          */
         uint64 _lastPermutationGeneration{ 0 };
-        /// @brief 마지막으로 본 `TextureCache::getReloadGeneration()` 입니다. 다르면 머티리얼의 텍스처 인덱스를 새로 받게 합니다.
-        uint32 _lastTextureReloadGeneration{ 0 };
         /**
          * @brief 재구축 중 **퍼뮤테이션 해시** → 대표 머티리얼입니다(배치 키 합치기용).
          * @details 예전에는 셰이더 **경로**가 키였습니다. 그러면 forwardlit.hlsl 을 쓰는 유리 머티리얼과 불투명 머티리얼이
@@ -231,10 +229,10 @@ namespace sw
             float3                       _boundsCenter{};
             float32                      _boundsRadius{ 1.0f };      ///< 월드 반지름(메시 반지름 × 월드의 최대 축 스케일) — 컬링이 읽는다
             float32                      _localBoundsRadius{ 1.0f }; ///< 메시 공간 반지름. 트랜스폼만 바뀐 프레임이 월드 반지름을 다시 만든다
+            uint32                       _blendMode{ 0 };
             shared_ptr<Mesh>             _mesh;
             shared_ptr<Material>         _material;
             shared_ptr<MaterialInstance> _instance;
-            uint32                       _blendMode{ 0 };
             /// @brief GPU 회전 애니메이션 시드입니다(0 = 없음). MeshComponent 가 주고 GpuInstance::_spinSeed 로 갑니다.
             uint32 _spinSeed{ 0 };
             /**
@@ -296,6 +294,12 @@ namespace sw
                        _bReverseCulling == other._bReverseCulling;
             }
         };
+        /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역입니다. 필드 크기 합을 정렬로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 멈춥니다.
+        static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 2 +
+                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GpuSpriteInstanceData ) + sizeof( uint64 ) +
+                                                    sizeof( uint8 ) + alignof( DrawCandidate ) - 1 ) /
+                                                      alignof( DrawCandidate ) * alignof( DrawCandidate ),
+                       "DrawCandidate has padding between fields (or a field was added without adding its size here)" );
 
         /**
          * @brief 프리미티브 하나를 후보로 채웁니다. 그릴 수 없으면(안 보임 · 비활성 · 메시 없음) false 를 반환합니다.
@@ -347,8 +351,6 @@ namespace sw
          *          직전 조회 캐시도 못 맞힙니다)을 배열 읽기 하나로 바꿉니다. 전체 재구축이 채우고, 꼬리 재방출이 읽습니다.
          */
         vector<uint32> _listCandidateMaterialElement;
-        /// @brief 꼬리 재방출 중이면 true 입니다. `emitBatch` 가 원소를 표에서 다시 묻지 않고 `_listCandidateMaterialElement` 를 읽습니다.
-        uint8 _bReuseMaterialElement{ SW_FALSE };
 
         /**
          * @brief 전체 수집이 프리미티브 칸마다 남기는 표시(비트)입니다.
@@ -494,6 +496,8 @@ namespace sw
         uint32 _opaqueInstanceCount{ 0 };
         uint32 _opaqueBatchCount{ 0 };
         uint32 _opaqueElementEntryCount{ 0 };
+        /// @brief 마지막으로 본 `TextureCache::getReloadGeneration()` 입니다. 다르면 머티리얼의 텍스처 인덱스를 새로 받게 합니다.
+        uint32 _lastTextureReloadGeneration{ 0 };
 
         /** @brief 투명 정렬 키(카메라 거리², 후보 인덱스)입니다. 정렬 전에 한 번 계산해 둡니다. */
         struct TransparentSortKey
@@ -517,9 +521,11 @@ namespace sw
         vector<uint32>         _listBatchElementIndex;
         vector<GpuInstanceRun> _listBatchElementRange;
 
-        float3 _lastCameraPos{};
         /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 달라졌으면 등록부가 바뀐 것입니다. */
         uint64 _lastPrimitiveSetGeneration{ 0 };
+        float3 _lastCameraPos{};
         uint8  _bMergeAcrossMaterials{ SW_FALSE };
+        /// @brief 꼬리 재방출 중이면 true 입니다. `emitBatch` 가 원소를 표에서 다시 묻지 않고 `_listCandidateMaterialElement` 를 읽습니다.
+        uint8 _bReuseMaterialElement{ SW_FALSE };
     };
 } // namespace sw

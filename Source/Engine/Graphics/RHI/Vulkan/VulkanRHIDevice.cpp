@@ -37,6 +37,7 @@ namespace sw
         , _device{ nullptr }
         , _graphicsQueue{ nullptr }
         , _graphicsQueueFamilyIndex{ 0 }
+        , _currentFrame{ 0 }
         , _swapChain{}
         , _renderPass{ nullptr }
         , _renderPassLoad{ nullptr }
@@ -45,24 +46,19 @@ namespace sw
         , _oneShotCommandPool{ nullptr }
         , _oneShotMutex{}
         , _queueMutex{}
-        , _bSwapChainRecreateFailing{ SW_FALSE }
         , _liveCmdListMutex{}
         , _listLiveCmd{}
         , _frameSegmentCursor{ 0 }
-        , _bFrameAcquireWaitPending{ SW_FALSE }
+        , _timestampPeriod{ 0.0f }
         , _activeFrameBuffer{ nullptr }
         , _timestampPool{ nullptr }
-        , _timestampPeriod{ 0.0f }
-        , _bTimestampEnabled{ SW_FALSE }
         , _listTimestampMicro{}
-        , _arrTimestampSubmitted{}
         , _listCommandBuffer{}
         , _listInFlightFence{}
         , _listImagesInFlight{}
         , _listRingFrameNumber{}
         , _pHWnd{ nullptr }
         , _pDisplayHandle{ nullptr }
-        , _currentFrame{ 0 }
         , _frameFenceCounter{ 0 }
         , _width{ 0 }
         , _height{ 0 }
@@ -82,6 +78,10 @@ namespace sw
         , _bSwapChainImageHeld{ SW_FALSE }
         , _linuxWsi{ 0 }
         , _reservedVulkan{ 0 }
+        , _bSwapChainRecreateFailing{ SW_FALSE }
+        , _bFrameAcquireWaitPending{ SW_FALSE }
+        , _bTimestampEnabled{ SW_FALSE }
+        , _arrTimestampSubmitted{}
         , _defaultSampler{ nullptr }
         , _pipelineLayout{ nullptr }
         , _descriptorPool{ nullptr }

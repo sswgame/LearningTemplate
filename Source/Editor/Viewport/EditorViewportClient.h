@@ -94,7 +94,6 @@ namespace sw::editor
         float32                 _fovY;
         float32                 _nearZ;
         float32                 _farZ;
-        CameraControlMode       _cameraMode;
         ViewportToolbarSettings _toolbarSettings;
         ObjectSnapshot          _gizmoUndoBefore;
         GameObjectHandle        _gizmoObject; ///< `_gizmoUndoBefore` 의 대상. 드래그가 여러 프레임을 넘기므로 핸들로 듭니다
@@ -112,5 +111,6 @@ namespace sw::editor
         uint8                    _bRulerActive   : 1;
         uint8                    _bGizmoTracking : 1;
         [[maybe_unused]] uint8   _reservedGizmo  : 6;
+        CameraControlMode        _cameraMode;
     };
 } // namespace sw::editor

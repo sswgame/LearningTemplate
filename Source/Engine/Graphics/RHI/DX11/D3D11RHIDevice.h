@@ -308,6 +308,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> _deviceContext;
         /** @brief 즉시 컨텍스트 API 를 불러도 되는 스레드입니다(0 = 묶이지 않음 · GT 초기화). */
         std::thread::id _contextOwnerThread;
+        RHIFormat       _backBufferFormat; ///< 스왑체인 백버퍼 포맷 (DXGI 는 요청값 그대로)
         /// @brief 창 하나의 백버퍼입니다. 백버퍼 RTV · 크기 · Present 가 모두 여기 모여 있습니다.
         D3D11RHISwapChain _swapChain;
 
@@ -320,9 +321,6 @@ namespace sw
 
         /// @brief 즉시 컨텍스트가 쓰는 기록 상태입니다. 리스트는 각자 자기 것을 갖습니다.
         D3D11RecordingState _recordingState;
-
-        /// @brief 드라이버가 커맨드 리스트를 네이티브로 지원하면 SW_TRUE 입니다. 병렬 기록 능력의 근거입니다.
-        uint8 _bDriverCommandLists;
 
         /// @brief 디스크립터 레지스트리를 보호합니다. 커맨드 기록(D3D11RHICommandContext 의 바인드 경로)이
         /// 인덱스로 이 목록들을 읽는 동안 register/unregister 가 push_back 으로 재할당을 일으키면
@@ -359,10 +357,12 @@ namespace sw
         D3D11TimestampFrame _arrTimestampFrame[constant::kMaxFrameCountInFlight];
         uint32              _timestampFrameIndex{ 0 };
         /// @brief 이번 프레임에 적힌 칸 비트입니다. 패스가 병렬로 기록하므로 원자입니다.
-        atomic<uint32>  _timestampWrittenMask{ 0 };
-        uint8           _bTimestampEnabled{ SW_FALSE }; ///< 엔진이 켜기 전에는 쿼리도 만들지 않음
-        uint8           _bTimestampReady{ SW_FALSE };
-        uint8           _bTimestampFrameOpen{ SW_FALSE };
+        atomic<uint32> _timestampWrittenMask{ 0 };
+        uint8          _bTimestampEnabled{ SW_FALSE }; ///< 엔진이 켜기 전에는 쿼리도 만들지 않음
+        uint8          _bTimestampReady{ SW_FALSE };
+        uint8          _bTimestampFrameOpen{ SW_FALSE };
+        /// @brief 드라이버가 커맨드 리스트를 네이티브로 지원하면 SW_TRUE 입니다. 병렬 기록 능력의 근거입니다.
+        uint8           _bDriverCommandLists;
         vector<float32> _listTimestampMicro;
 
         vector<RHIBufferHandle> _listRegisteredBindless;
@@ -383,7 +383,6 @@ namespace sw
         /// @brief 정적 샘플러 세트입니다(bindingslots.hlsli 4, DX12 와 같은 표). s9..s15 에 겁니다. 셰이더가 swSampleIndexWith 의 samplerId 로 고릅니다.
         Microsoft::WRL::ComPtr<ID3D11SamplerState> _arrStaticSampler[shaderslot::kStaticSamplerArrayCount];
         HWND                                       _pHWnd;
-        RHIFormat                                  _backBufferFormat; ///< 스왑체인 백버퍼 포맷 (DXGI 는 요청값 그대로)
 
         /// @brief 살아 있는 `D3D11RHICommandList` 들입니다. **소유하지 않습니다.** 리사이즈 직전에
         ///        기록물을 버리게 하려고 듭니다(백버퍼 참조를 붙들고 있기 때문입니다).

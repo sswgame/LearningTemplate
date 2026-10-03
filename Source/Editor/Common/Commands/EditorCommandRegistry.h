@@ -128,16 +128,16 @@ namespace sw::editor
         string                _detail;   ///< 팔레트 오른쪽 설명 (영어)
         EditorCommandShortcut _shortcut;
         EditorCommandShortcut _altShortcut; ///< 같은 커맨드의 두 번째 조합. 없으면 None
-        Delegate<void()>      _action;
-        Delegate<bool()>      _enabledPredicate; ///< 바인딩되지 않으면 항상 활성입니다
-        bool                  _bPaletteVisible{ true };
-        /** @brief 이 커맨드가 놓일 메뉴 경로(`"MainMenu/File"`)입니다. 비면 어느 메뉴에도 나오지 않습니다. */
-        string _menuPath;
         /**
          * @brief 메뉴 안의 순서입니다. 작을수록 위이고, 백의 자리(`commandmenu::kGroupSpan`)가 바뀌는 자리에 구분선이 들어갑니다.
          * @details 메뉴끼리의 순서(메뉴바의 왼쪽→오른쪽)도 이 값으로 정합니다 — 가장 작은 값이 더 작은 메뉴가 앞입니다.
          */
-        int32 _menuOrder{ 0 };
+        int32            _menuOrder{ 0 };
+        Delegate<void()> _action;
+        Delegate<bool()> _enabledPredicate; ///< 바인딩되지 않으면 항상 활성입니다
+        /** @brief 이 커맨드가 놓일 메뉴 경로(`"MainMenu/File"`)입니다. 비면 어느 메뉴에도 나오지 않습니다. */
+        string _menuPath;
+        bool   _bPaletteVisible{ true };
     };
 
     /** @brief 메뉴 안의 항목 하나입니다. */

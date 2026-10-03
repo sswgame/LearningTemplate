@@ -39,8 +39,8 @@ namespace sw::editor
         , _pendingSceneMutex{}
         , _arrCameraBookmark{}
         , _listPrefabIsolationFrame{}
-        , _pendingSceneAction{ EditorPendingSceneAction::None }
         , _gizmoOperation{ 0 }
+        , _pendingSceneAction{ EditorPendingSceneAction::None }
         , _bGizmoLocalSpace{ SW_TRUE }
         , _bSceneDirty{ SW_FALSE }
         , _bPrefabIsolation{ SW_FALSE }

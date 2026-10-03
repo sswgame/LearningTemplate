@@ -68,36 +68,36 @@ namespace sw
         , _arrView{}
         , _instanceAnimCb{}
         , _meshMorphCb{}
-        , _bMorphBindsRest{ SW_FALSE }
         , _meshMorphDiagOverride{ -1 }
         , _drawMergeOverride{ -1 }
         , _vertexPoolOverride{ -1 }
-        , _animationTimeOverride{ -1.0f }
         , _indirectDrawCallCount{ 0 }
         , _gpuComputeScopeSlot{ FrameProfiler::kInvalidSlot }
         , _gpuFrameScopeSlot{ FrameProfiler::kInvalidSlot }
         , _lastIndirectDrawCallCount{ 0 }
         , _disabledInputRoleMask{ 0 }
         , _instanceSortCb{}
-        , _bGpuCullingActive{ SW_FALSE }
         , _mapMaterialFallback{}
         , _psoCache{}
+        , _outputRenderTarget{ 0 }
+        , _taaHistory{ 0 }
+        , _presentCapture{ 0 }
+        , _statusMessage{}
+        , _graphContext{}
+        , _taaHistorySrv{ kInvalidDescriptorIndex }
+        , _animationTimeOverride{ -1.0f }
+        , _bMorphBindsRest{ SW_FALSE }
+        , _bGpuCullingActive{ SW_FALSE }
+        , _bPresentCaptureEnabled{ SW_FALSE }
+        , _status{ FrameRendererStatus::Uninitialized }
+        , _bCallbacksBound{ SW_FALSE }
+        , _bPassResourcesReady{ SW_FALSE }
+        , _reservedFlags{ 0 }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _bPresentPsoMissingLogged{ 0 }
         , _bMaterialFallbackMissingLogged{ 0 }
         , _bMissingColorTargetLogged{ 0 }
-        , _outputRenderTarget{ 0 }
-        , _taaHistory{ 0 }
-        , _taaHistorySrv{ kInvalidDescriptorIndex }
-        , _presentCapture{ 0 }
-        , _bPresentCaptureEnabled{ SW_FALSE }
-        , _status{ FrameRendererStatus::Uninitialized }
-        , _statusMessage{}
-        , _bCallbacksBound{ SW_FALSE }
-        , _bPassResourcesReady{ SW_FALSE }
-        , _reservedFlags{ 0 }
         , _bHasExecutedDepthPrepass{ 0 }
-        , _graphContext{}
     {
     }
 

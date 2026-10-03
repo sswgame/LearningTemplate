@@ -33,14 +33,11 @@ namespace sw
         , _dispatchCommandSignature{ nullptr }
         , _arrCommandAllocator{}
         , _commandList{ nullptr }
-        , _cmdListEntryCreated{ 0 }
-        , _bBlitMismatchLogged{ SW_FALSE }
         , _pActiveFrameList{ nullptr }
         , _cmdListPoolMutex{}
         , _listFreeCmdListEntry{}
         , _onlineBlockMutex{}
         , _listFreeOnlineBlock{}
-        , _bOnlineHeapExhaustedLogged{ SW_FALSE }
         , _frameRing{}
         , _gpuBuffers{}
         , _gpuTextures{}
@@ -60,6 +57,8 @@ namespace sw
         , _bBindlessRootSignature{ SW_FALSE }
         , _bDeviceRemovedLogged{ SW_FALSE }
         , _reservedPassFlags{ 0 }
+        , _bBlitMismatchLogged{ SW_FALSE }
+        , _bOnlineHeapExhaustedLogged{ SW_FALSE }
         , _frameStreamState{}
         , _listRegisteredBindless{}
         , _listFreeBindless{}
@@ -67,6 +66,7 @@ namespace sw
         , _rtvDescriptorSize{ 0 }
         , _cbvDescriptorSize{ 0 }
         , _allocatedDescriptorsCount{ 0 }
+        , _cmdListEntryCreated{ 0 }
         , _fenceEvent{ nullptr }
         , _fence{ nullptr }
         , _fenceValue{ 0 }

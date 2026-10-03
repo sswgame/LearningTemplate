@@ -157,7 +157,6 @@ namespace sw::editor
         , _fovY{ 60.0f }
         , _nearZ{ 0.1f }
         , _farZ{ 1000.0f }
-        , _cameraMode{ CameraControlMode::Fly }
         , _toolbarSettings{}
         , _gizmoUndoBefore{}
         , _gizmoObject{}
@@ -168,6 +167,7 @@ namespace sw::editor
         , _bRulerActive{ SW_FALSE }
         , _bGizmoTracking{ SW_FALSE }
         , _reservedGizmo{ 0 }
+        , _cameraMode{ CameraControlMode::Fly }
     {
         // 어떤 시각화가 기본으로 켜지는지는 시각화 표가 정한다.
         _toolbarSettings._visualizerMask = EditorViewportVisualizer::getDefaultMask();

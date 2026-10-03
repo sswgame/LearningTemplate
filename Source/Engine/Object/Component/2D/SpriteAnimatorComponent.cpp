@@ -11,6 +11,13 @@ namespace sw
 {
     SW_LOG_CALLER( "SpriteAnimator" );
 
+    // 컴포넌트는 오브젝트마다 만들어진다. 필드 크기 합(베이스 + 필드 + 비트필드 한 바이트)을 정렬로 올린 값을 넘으면 필드 사이에 구멍이 생긴 것이다.
+    static_assert( sizeof( SpriteAnimatorComponent ) <= ( sizeof( SceneComponent ) + sizeof( string ) * 2 + sizeof( AnimationGraphAsset ) +
+                                                          sizeof( vector<string> ) + sizeof( float32 ) * 2 + sizeof( int32 ) * 3 +
+                                                          sizeof( const SpriteClipAsset* ) + sizeof( uint8 ) + alignof( SpriteAnimatorComponent ) - 1 ) /
+                                                            alignof( SpriteAnimatorComponent ) * alignof( SpriteAnimatorComponent ),
+                   "SpriteAnimatorComponent has padding between fields (or a field was added without adding its size here)" );
+
     SpriteAnimatorComponent::SpriteAnimatorComponent()
         : _animationGraphPath{}
         , _graph{}
@@ -20,8 +27,8 @@ namespace sw
         , _frameTimer{ 0.0f }
         , _currentFrame{ 0 }
         , _totalFrames{ 1 }
-        , _firstClipFrame{ 0 }
         , _pRangeClip{ nullptr }
+        , _firstClipFrame{ 0 }
         , _bRepeat{ SW_FALSE }
         , _bPlaying{ SW_FALSE }
         , _bPaused{ SW_FALSE }

@@ -183,8 +183,8 @@ namespace sw::editor
         mutex                        _pendingSceneMutex;
         array<CameraBookmark, 9>     _arrCameraBookmark;
         vector<PrefabIsolationFrame> _listPrefabIsolationFrame;
-        EditorPendingSceneAction     _pendingSceneAction;
         int32                        _gizmoOperation;
+        EditorPendingSceneAction     _pendingSceneAction;
         uint8                        _bGizmoLocalSpace  : 1;
         uint8                        _bSceneDirty       : 1;
         uint8                        _bPrefabIsolation  : 1;

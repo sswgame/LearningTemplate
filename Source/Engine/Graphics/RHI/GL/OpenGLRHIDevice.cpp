@@ -40,17 +40,17 @@ namespace sw
         , _arrTimestampQuery{}
         , _arrTimestampMask{}
         , _timestampFrameIndex{ 0 }
-        , _bTimestampEnabled{ SW_FALSE }
-        , _bTimestampReady{ SW_FALSE }
         , _listTimestampMicro{}
-        , _computeRootConstantUbo{ 0 }
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
         , _listRenderPass{}
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
+        , _computeRootConstantUbo{ 0 }
         , _lastVsync{ -1 }
+        , _bTimestampEnabled{ SW_FALSE }
+        , _bTimestampReady{ SW_FALSE }
         , _bInitialized{ SW_FALSE }
         , _reservedFlags{ 0 }
     {

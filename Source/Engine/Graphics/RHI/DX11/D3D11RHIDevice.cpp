@@ -63,6 +63,7 @@ namespace sw
         : _device{ nullptr }
         , _deviceContext{ nullptr }
         , _contextOwnerThread{}
+        , _backBufferFormat{ constant::kBackBufferFormat }
         , _swapChain{}
         , _vertexBuffer{ nullptr }
         , _gpuBuffers{}
@@ -81,7 +82,6 @@ namespace sw
         , _depthDisabledState{ nullptr }
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
-        , _backBufferFormat{ constant::kBackBufferFormat }
         , _releaseQueue{ constant::kGpuReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }

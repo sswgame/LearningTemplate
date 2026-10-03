@@ -364,7 +364,6 @@ namespace sw
             float4x4 _shadowViewProj{};
             uint8    _bHasShadowViewProj{ SW_FALSE };
         };
-        FrameLightState _frameLight;
         /** @brief 카메라에서 뷰 · 투영을 적용합니다. */
         void applyViewFromCamera( FramePassContext& ctx, CameraComponent* pCamera );
         /**
@@ -584,16 +583,12 @@ namespace sw
         RHIConstantBufferSlot _meshMorphCb;
         /// @brief GPU 가 변형한 정점 풀입니다. RT 소유입니다(GpuMeshMorphPool 참고).
         GpuMeshMorphPool _meshMorphPool;
-        /// @brief 진단(`-gv_morphDiag=2|3`)에서 정점 셰이더에 결과 대신 **레스트** 버퍼를 물렸는지 여부입니다.
-        uint8 _bMorphBindsRest;
         /// @brief `setMeshMorphDiag` 가 준 값입니다. 음수면 전역 변수 `gv_morphDiag` 를 따릅니다.
         int32 _meshMorphDiagOverride;
         /// @brief `setDrawMergeEnabled` 가 준 값입니다. 음수면 전역 변수 `gv_drawMerge` 를 따릅니다.
         int32 _drawMergeOverride;
         /// @brief `setVertexPoolEnabled` 가 준 값입니다. 음수면 전역 변수 `gv_vertexPool` 을 따릅니다.
         int32 _vertexPoolOverride;
-        /// @brief `setAnimationTimeOverride` 가 준 시각(초)입니다. 음수면 `_animTimer` 를 따릅니다.
-        float32 _animationTimeOverride;
         /// @brief 이번 프레임의 씬 간접 드로우 호출 수입니다. 패스가 병렬로 기록하므로 원자입니다.
         atomic<uint32> _indirectDrawCallCount;
         /** @brief 지난 프레임의 타임스탬프입니다(마이크로초, 프레임 시작 기준 누적). */
@@ -628,12 +623,6 @@ namespace sw
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 들고 있습니다.
         vector<GpuLight>      _listScratchLight;
         RHIConstantBufferSlot _instanceSortCb;
-        /**
-         * @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지 여부입니다(가시 목록이 유효한가).
-         * @details 드로우가 가시 목록을 걸지 말지 정하는 값입니다. 목록을 걸었는데 컬링이 안 돌면 셰이더가
-         *          갱신되지 않은(또는 0 으로 찬) 목록을 읽어 모두 같은 인스턴스를 그립니다.
-         */
-        uint8 _bGpuCullingActive;
 
         /** @brief 뷰 하나를 얻습니다. 그 뷰의 행렬 · 절두체 · 상수버퍼가 함께 옵니다. */
         RenderView&       view( RenderViewType type ) { return _arrView[static_cast<uint32>( type )]; }
@@ -704,7 +693,38 @@ namespace sw
          */
         unordered_map<uint32, RHIStructuredBufferSlot> _mapMaterialFallback;
         /// @brief 엔진 패스 PSO · Present PSO · 머티리얼 변형과 그 바인딩 레이아웃입니다. 소유와 해제 순서는 캐시가 압니다.
-        RenderPsoCache _psoCache;
+        RenderPsoCache                       _psoCache;
+        unordered_map<hashed_string, uint32> _mapPassNameToIndex;
+        RHITextureHandle                     _outputRenderTarget;
+        RHITextureHandle                     _taaHistory; ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)
+        /**
+         * @brief Present 결과를 받아 두는 텍스처입니다(0 = 안 받음). 스크린샷이 **최종 화면**을 보게 하는 길입니다.
+         * @details 스크린샷은 트랜지언트만 읽을 수 있고 백버퍼는 핸들이 없습니다. 그래서 예전에는 Present 가
+         *          **읽는** 첨부를 찍었습니다. 즉 톤맵은 한 번도 찍힌 적이 없었고, 후처리를 Present 로
+         *          합치자 후처리 전체가 스크린샷에서 사라졌습니다. 받아 두면 둘 다 풀립니다.
+         */
+        RHITextureHandle            _presentCapture;
+        string                      _statusMessage;
+        RenderGraphExecutionContext _graphContext;
+
+        // 아래는 8 바이트보다 작은 필드입니다. 사이에 끼면 패딩이 생기므로 큰 것부터 끝에 모아 둡니다.
+        FrameLightState    _frameLight;    ///< 크기가 8 의 배수가 아니라(100) 4 바이트 필드와 짝을 짓습니다
+        RHIDescriptorIndex _taaHistorySrv; ///< `_taaHistory` 의 bindless SRV(프레임마다 다시 등록하지 않음)
+        /// @brief `setAnimationTimeOverride` 가 준 시각(초)입니다. 음수면 `_animTimer` 를 따릅니다.
+        float32 _animationTimeOverride;
+        /// @brief 진단(`-gv_morphDiag=2|3`)에서 정점 셰이더에 결과 대신 **레스트** 버퍼를 물렸는지 여부입니다.
+        uint8 _bMorphBindsRest;
+        /**
+         * @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지 여부입니다(가시 목록이 유효한가).
+         * @details 드로우가 가시 목록을 걸지 말지 정하는 값입니다. 목록을 걸었는데 컬링이 안 돌면 셰이더가
+         *          갱신되지 않은(또는 0 으로 찬) 목록을 읽어 모두 같은 인스턴스를 그립니다.
+         */
+        uint8                  _bGpuCullingActive;
+        uint8                  _bPresentCaptureEnabled; ///< `-gv_screenshot` 실행에서만 켬(전체 화면 복사 한 번이 더 붙음).
+        FrameRendererStatus    _status;
+        uint8                  _bCallbacksBound     : 1;
+        uint8                  _bPassResourcesReady : 1;
+        [[maybe_unused]] uint8 _reservedFlags       : 5;
         /**
          * @brief 현재 보기 방식(`RenderViewMode`)입니다.
          * @details 드로우 경로가 배치마다 읽고 UI 스레드가 씁니다. 값 하나뿐이라 atomic 으로 충분합니다.
@@ -717,30 +737,12 @@ namespace sw
         /// @brief 머티리얼 폴백 stride 가 없다고 한 번만 알리기 위한 래치입니다(드로우 경로라 프레임마다 찍으면 안 됩니다).
         atomic<uint8> _bMaterialFallbackMissingLogged;
         /// @brief 컬러 타깃이 없어 패스를 건너뛴다고 한 번만 알리기 위한 래치입니다(패스 경로라 프레임마다 찍으면 안 됩니다).
-        atomic<uint8>                        _bMissingColorTargetLogged;
-        unordered_map<hashed_string, uint32> _mapPassNameToIndex;
-        RHITextureHandle                     _outputRenderTarget;
-        RHITextureHandle                     _taaHistory;    ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)
-        RHIDescriptorIndex                   _taaHistorySrv; ///< `_taaHistory` 의 bindless SRV(프레임마다 다시 등록하지 않음)
-        /**
-         * @brief Present 결과를 받아 두는 텍스처입니다(0 = 안 받음). 스크린샷이 **최종 화면**을 보게 하는 길입니다.
-         * @details 스크린샷은 트랜지언트만 읽을 수 있고 백버퍼는 핸들이 없습니다. 그래서 예전에는 Present 가
-         *          **읽는** 첨부를 찍었습니다. 즉 톤맵은 한 번도 찍힌 적이 없었고, 후처리를 Present 로
-         *          합치자 후처리 전체가 스크린샷에서 사라졌습니다. 받아 두면 둘 다 풀립니다.
-         */
-        RHITextureHandle       _presentCapture;
-        uint8                  _bPresentCaptureEnabled; ///< `-gv_screenshot` 실행에서만 켬(전체 화면 복사 한 번이 더 붙음).
-        FrameRendererStatus    _status;
-        string                 _statusMessage;
-        uint8                  _bCallbacksBound     : 1;
-        uint8                  _bPassResourcesReady : 1;
-        [[maybe_unused]] uint8 _reservedFlags       : 5;
+        atomic<uint8> _bMissingColorTargetLogged;
 
         // 아래는 패스 콜백 안에서 갱신되고, 패스 콜백은 같은 레벨끼리 병렬로 돈다
         // (RenderGraph::executeParallel). 비트필드로 두면 인접 비트를 쓰는 다른 패스와
         // 같은 바이트를 read-modify-write 해서 서로의 값을 날린다. 독립 원자 변수로 뺀다.
         /// @brief 이번 프레임에 DepthPrepass 가 실행됐는지 여부입니다(ForwardOpaque 의 PSO 선택에 씁니다).
-        atomic<uint8>               _bHasExecutedDepthPrepass;
-        RenderGraphExecutionContext _graphContext;
+        atomic<uint8> _bHasExecutedDepthPrepass;
     };
 } // namespace sw

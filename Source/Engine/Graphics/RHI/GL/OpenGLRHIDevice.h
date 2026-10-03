@@ -38,14 +38,14 @@ namespace sw
         uint32          _boundMeshOffset{ 0 };
         RHIBufferHandle _boundInstanceSlotVb{ 0 }; ///< 슬롯 1: 인스턴스 슬롯 스트림 (0 = 안 걸림)
         uint32          _boundInstanceSlotOffset{ 0 };
+        /// @brief 지금 텍스처가 걸려 있는 유닛 비트마스크(비트 i = 유닛 i)입니다. beginRenderPass 가 이 유닛들만 뗍니다.
+        uint32          _boundTextureUnitMask{ 0 };
         RHIBufferHandle _boundIndexBuffer{ 0 };
         uint32          _boundIndexStride{ 4 };
         uint32          _boundIndexOffset{ 0 };
 
         RHIPipelineStateHandle _boundGraphicsPso{ 0 };
         RHIPipelineStateHandle _boundComputePso{ 0 }; ///< setComputePipelineState 가 마지막으로 건 컴퓨트 PSO. dispatchCompute 는 이 프로그램을 쓴다
-        /// @brief 지금 텍스처가 걸려 있는 유닛 비트마스크(비트 i = 유닛 i)입니다. beginRenderPass 가 이 유닛들만 뗍니다.
-        uint32 _boundTextureUnitMask{ 0 };
     };
 
     /**
@@ -220,8 +220,8 @@ namespace sw
         struct CompositeFboKey
         {
             RHITextureHandle _arrColor[kMaxColorAttachments]{};
-            uint32           _colorCount{ 0 };
             RHITextureHandle _depth{ 0 };
+            uint32           _colorCount{ 0 };
             uint16           _arrColorSlice[kMaxColorAttachments]{}; ///< 첨부마다 붙인 면
             uint16           _depthSlice{ 0 };
             /** @brief 키가 같으면 true 를 반환합니다. */
@@ -329,11 +329,8 @@ namespace sw
         uint32          _arrTimestampQuery[constant::kMaxGpuTimestampSlot * constant::kMaxFrameCountInFlight];
         uint32          _arrTimestampMask[constant::kMaxFrameCountInFlight];
         uint32          _timestampFrameIndex;
-        uint8           _bTimestampEnabled; ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
-        uint8           _bTimestampReady;
         vector<float32> _listTimestampMicro;
 
-        uint32 _computeRootConstantUbo;
         uint32 _arrComputeRootConstantShadow[kMaxComputeRootConstantDwords];
 
         RHIHandleTable<OpenGLPipelineStateRecord> _pipelineStates;
@@ -344,7 +341,11 @@ namespace sw
         sw::unique_ptr<OpenGLRHICommandContext> _frameStreamContext;
         sw::unique_ptr<OpenGLRHIResource>       _resourceImpl;
 
-        int8                   _lastVsync; ///< -1 = 아직 안 정함, 0/1 = 마지막으로 적용한 값
+        // 8 바이트보다 작은 필드는 끝에 모은다 — 큰 필드 사이에 끼면 칸마다 패딩이 생긴다.
+        uint32                 _computeRootConstantUbo;
+        int8                   _lastVsync;         ///< -1 = 아직 안 정함, 0/1 = 마지막으로 적용한 값
+        uint8                  _bTimestampEnabled; ///< 엔진이 켜기 전에는 쿼리도 만들지 않는다.
+        uint8                  _bTimestampReady;
         uint8                  _bInitialized  : 1;
         [[maybe_unused]] uint8 _reservedFlags : 7;
     };
