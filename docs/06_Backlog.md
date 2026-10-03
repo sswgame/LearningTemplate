@@ -203,9 +203,6 @@ cd build/Ninja-Debug/Bin
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
 - **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
   결과(열거값)로 바꾸는 그래픽스 쪽 수정.
-- **헤더의 안 쓰는 include 119 건** — `py -3 Scripts/lint/report/RunForwardDeclarationCandidates.py --verify-unused` 가 빼고 단독 컴파일해 "빼도 선다" 로 가린 것
-  (Types.h 20 · Macros.h 20 · Defines.h 16 · EnginePlatformHeaders.h 13 · string.h 13 …). 지우면 그 include 를 **거쳐** 이름을 받던 소비자 TU 가 깨질 수 있으니
-  지운 뒤 Debug · Release · Shipping · WSL 전체 빌드 + `RunHeaderSelfContained.py` 로 확인한다.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
 - **옛 시험 산출물 정리**(사용자 폴더라 두었다): `%TEMP%` 의 `sw_*`, `build/*/Bin` · `TestBin` 의 `prefab_test/` · `TestTemp/` · `temp_gen_*` · `temp_collide/`.
   옛 규칙으로 지은 바이너리가 남은 프리셋은 다시 지어야 새 규칙을 따른다.
@@ -596,6 +593,9 @@ cd build/Ninja-Debug/Bin
   `AssetDatabase::writeRegistryFiles`), 파이썬 `CookAssets.py` 는 스테이징만. 쿠킹은 왕복 검증한 엔티티만 바이너리로 바꾸고 나머지는 XML 로 남기며 WARNING 을 낸다.
 - **압축** — 팩 enum `PackCompressionType` 과 스트림 enum `CompressionCodecType` 은 독립된 디스크 포맷이다(`static_cast` 로 잇지 말 것). `CompressionCodecRegistry` 는 `EngineLoop` 가 소유하고
   Core 에는 슬롯만 있다. 모듈이 등록한 코덱은 그 모듈 shutdown 에서 `unregisterCodec`. zlib 은 Windows 에서 4 GB, LZ4 는 2 GB 가 한계다.
+- **"헤더 혼자 빼도 선다" 는 "아무도 안 쓴다" 가 아니다** — `RunForwardDeclarationCandidates --verify-unused` 가 고른 120 건을 지우자 소비자 TU 에서 오류 2790 개가
+  났다(거쳐 받던 `RHIBackend` · `IRHIResource`, NOMINMAX 가 `windows.h` 보다 먼저 오던 순서가 깨져 `std::max` 가 매크로에 먹힘). 보고는 "후보" 로만 쓰고, 지울 때는
+  그 헤더를 include 하는 TU 전부를 다시 지어 본다.
 - **GPU 메모리는 `RHIMemoryLedger` 가 센다** — 생성은 핸들 표에 넣는 자리, 해제는 지연 해제 콜백에서만 적는다(destroy 요청 시점이 아니다). 새 자원 경로를
   더하면 거기서 `recordAllocation` / `recordFree` 를 부른다. Vulkan `heapUsage`(이 AMD 드라이버)는 `vkAllocateMemory` 합뿐이라 "엔진 밖" ≈ 0 — 스왑체인 몫은
   DX12 · DX11 수치로 본다. GL 은 벤더 확장이 없으면 사용량이 "모름" 이다. DX11 · GL 은 할당 크기 API 가 없어 논리 크기다.
