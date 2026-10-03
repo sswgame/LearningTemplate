@@ -4,6 +4,8 @@
 
 #include "GameFramework/Combat/Ballistics.h"
 #include "GameFramework/Combat/DamageMath.h"
+#include "GameFramework/Combat/LockOnSelector.h"
+#include "GameFramework/Combat/TurnOrder.h"
 #include "GameFramework/Combat/Weapon.h"
 
 #include "TestFramework/TestFramework.h"
@@ -81,4 +83,94 @@ SW_TEST_CASE( CombatTest, BallisticsDropsAimsArcsAndLeadsMovingTargets )
     const float3  targetThen = target + velocity * bulletTime;
     SW_EXPECT_TRUE( ( targetThen - intercept ).getLength() < 1.0e-2f );
     SW_EXPECT_FALSE( Ballistics::computeInterceptPoint( shooter, target, float3{ 0.0f, 0.0f, 80.0f }, 50.0f, intercept ) ); // 달아나는 쪽이 빠르다
+}
+
+SW_TEST_CASE( CombatTest, TurnOrderSortsRoundsByPriorityAndRunsTimelinesBySpeed )
+{
+    // 라운드제 — 우선도 → 속도. 미리 보기는 실제 순서와 같다(동속은 씨앗 난수).
+    TurnOrder rounds;
+    rounds.initialize( TurnOrderMode::Rounds, 9u );
+    rounds.addActor( 1, 50.0f );
+    rounds.addActor( 2, 90.0f );
+    rounds.addActor( 3, 70.0f );
+    rounds.addActor( 4, 70.0f );
+    rounds.setPriority( 1, 1 ); // 선제 기술
+    vector<int32> listPreview;
+    rounds.previewOrder( 8, listPreview );
+    SW_EXPECT_EQUAL( 1, listPreview[0] );
+    SW_EXPECT_EQUAL( 2, listPreview[1] );
+    for ( const int32 expected : listPreview )
+        SW_EXPECT_EQUAL( expected, rounds.next() );
+    SW_EXPECT_EQUAL( 2, rounds.getRound() );
+    rounds.removeActor( 2 );
+    rounds.restartRound();
+    SW_EXPECT_EQUAL( 1, rounds.next() );
+    SW_EXPECT_TRUE( rounds.next() != 2 );
+
+    // 타임라인제 — 두 배 빠르면 두 번. 늦추면 밀린다.
+    TurnOrder timeline;
+    timeline.initialize( TurnOrderMode::Timeline, 1u );
+    timeline.addActor( 10, 20.0f );
+    timeline.addActor( 20, 10.0f );
+    timeline.previewOrder( 6, listPreview );
+    int32 fastCount = 0;
+    for ( const int32 expected : listPreview )
+    {
+        const int32 actor = timeline.next();
+        SW_EXPECT_EQUAL( expected, actor );
+        fastCount += actor == 10 ? 1 : 0;
+    }
+    SW_EXPECT_EQUAL( 4, fastCount );
+    timeline.delayActor( 10, 1.5f ); // 한 차례 반 밀린다
+    timeline.previewOrder( 2, listPreview );
+    SW_EXPECT_EQUAL( 20, listPreview[0] );
+    timeline.setSpeed( 20, 1000.0f );
+    SW_EXPECT_EQUAL( 20, timeline.next() );
+}
+
+SW_TEST_CASE( CombatTest, LockOnPicksCentredTargetsCyclesSidewaysAndBreaksWhenLost )
+{
+    const float3            eye{ 0.0f, 0.0f, 0.0f };
+    const float3            forward{ 0.0f, 0.0f, 1.0f };
+    vector<LockOnCandidate> listCandidate;
+    listCandidate.push_back( LockOnCandidate{
+        float3{ 0.5f, 0.0f, 10.0f },
+        1, 0.0f, SW_TRUE
+    } ); // 정면
+    listCandidate.push_back( LockOnCandidate{
+        float3{ 6.0f, 0.0f, 6.0f },
+        2, 0.0f, SW_TRUE
+    } ); // 오른쪽 45°
+    listCandidate.push_back( LockOnCandidate{
+        float3{ -4.0f, 0.0f, 8.0f },
+        3, 0.0f, SW_TRUE
+    } ); // 왼쪽
+    listCandidate.push_back( LockOnCandidate{
+        float3{ 0.0f, 0.0f, -5.0f },
+        4, 0.0f, SW_TRUE
+    } ); // 뒤 — 새로 잡지 않는다
+    listCandidate.push_back( LockOnCandidate{
+        float3{ 0.0f, 0.0f, 40.0f },
+        5, 0.0f, SW_TRUE
+    } ); // 너무 멀다
+    LockOnSelector selector;
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( selector.pickBest( eye, forward, listCandidate ) ) );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( selector.cycle( eye, forward, listCandidate, 1 ) ) );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( selector.cycle( eye, forward, listCandidate, 1 ) ) ); // 더 오른쪽은 뒤(4)뿐 — 시야 밖은 넘기지 않는다
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( selector.cycle( eye, forward, listCandidate, -1 ) ) );
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( selector.cycle( eye, forward, listCandidate, -1 ) ) );
+
+    // 우선도 — 보스는 조금 비껴 있어도 먼저.
+    listCandidate[2]._priority = 2.0f;
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( selector.pickBest( eye, forward, listCandidate ) ) );
+
+    // 가려지면 잠깐은 유지, 오래면 풀린다. 멀어져도 풀린다.
+    listCandidate[2]._bVisible = SW_FALSE;
+    SW_EXPECT_TRUE( selector.update( eye, listCandidate, 0.5f ) );
+    SW_EXPECT_FALSE( selector.update( eye, listCandidate, 0.6f ) );
+    SW_EXPECT_FALSE( selector.hasTarget() );
+    (void)selector.pickBest( eye, forward, listCandidate );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( selector.getTarget() ) );
+    listCandidate[0]._position = float3{ 0.0f, 0.0f, 33.0f };
+    SW_EXPECT_FALSE( selector.update( eye, listCandidate, 0.1f ) );
 }

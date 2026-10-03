@@ -2,6 +2,7 @@
 
 #include "GameFramework/Progression/LevelProgress.h"
 #include "GameFramework/Progression/Reputation.h"
+#include "GameFramework/Progression/RunMap.h"
 #include "GameFramework/Progression/SkillTree.h"
 
 #include "TestFramework/TestFramework.h"
@@ -137,4 +138,77 @@ SW_TEST_CASE( ProgressionTest, ReputationTiersSpreadToLinkedFactionsAndDecay )
     SW_EXPECT_EQUAL( 0, state.changeValue( hashed_string( "stranger" ), -5 ) );
     SW_EXPECT_EQUAL( 7, state.changeValue( hashed_string( "stranger" ), 7 ) );
     SW_EXPECT_EQUAL( -1, state.getTierIndex( hashed_string( "stranger" ) ) );
+}
+
+SW_TEST_CASE( ProgressionTest, RunMapsConnectFloorsWithoutCrossingAndEndAtTheBoss )
+{
+    RunMapSettings settings;
+    SW_ASSERT_TRUE( RunMap::loadSettings( R"(<RunMap floors="12" columns="7" paths="6">
+        <Node kind="Battle" weight="5"/><Node kind="Elite" weight="1" minFloor="4"/><Node kind="Rest" weight="1" minFloor="3" noRepeat="true"/>
+        <Node kind="Shop" weight="1" noRepeat="true"/><Floor index="0" kind="Battle"/><Floor index="6" kind="Treasure"/><Floor index="-1" kind="Boss"/>
+      </RunMap>)",
+                                          "ProgressionTest", settings ) );
+    RunMap mapA;
+    RunMap mapB;
+    mapA.generate( settings, 42u );
+    mapB.generate( settings, 42u );
+    SW_ASSERT_TRUE( mapA.getNodes().size() == mapB.getNodes().size() ); // 씨앗이 같으면 같은 지도
+    int32 bossCount = 0;
+    for ( size_t index = 0; index < mapA.getNodes().size(); ++index )
+    {
+        const RunNode& node = mapA.getNodes()[index];
+        SW_EXPECT_TRUE( node._kind == mapB.getNodes()[index]._kind );
+        if ( node._floor == 0 )
+            SW_EXPECT_TRUE( node._kind == hashed_string( "Battle" ) );
+        if ( node._floor == 6 )
+            SW_EXPECT_TRUE( node._kind == hashed_string( "Treasure" ) );
+        if ( node._floor < 4 )
+            SW_EXPECT_TRUE( node._kind != hashed_string( "Elite" ) );
+        bossCount += node._kind == hashed_string( "Boss" ) ? 1 : 0;
+        // 위층의 같은 · 옆 열로만, 끝 층 아니면 막다른 칸이 없다.
+        if ( node._floor < 11 )
+            SW_EXPECT_FALSE( node._listNext.empty() );
+        for ( const int32 nextIndex : node._listNext )
+        {
+            const RunNode& next = mapA.getNodes()[static_cast<size_t>( nextIndex )];
+            SW_EXPECT_EQUAL( node._floor + 1, next._floor );
+            if ( next._floor < 11 )
+                SW_EXPECT_TRUE( next._column >= node._column - 1 && next._column <= node._column + 1 );
+            // 휴식 · 상점은 연달아 나오지 않는다.
+            if ( node._kind == hashed_string( "Rest" ) || node._kind == hashed_string( "Shop" ) )
+                SW_EXPECT_TRUE( next._kind != node._kind );
+        }
+    }
+    SW_EXPECT_EQUAL( 1, bossCount );
+    // 엇갈리는 선이 없다 — (f, c) → (f+1, c+1) 과 (f, c+1) → (f+1, c) 가 함께 있지 않다.
+    for ( const RunNode& node : mapA.getNodes() )
+    {
+        for ( const int32 nextIndex : node._listNext )
+        {
+            const RunNode& next = mapA.getNodes()[static_cast<size_t>( nextIndex )];
+            if ( next._column != node._column + 1 || next._floor == 11 )
+                continue;
+            for ( const RunNode& other : mapA.getNodes() )
+            {
+                if ( other._floor != node._floor || other._column != node._column + 1 )
+                    continue;
+                for ( const int32 otherNext : other._listNext )
+                    SW_EXPECT_FALSE( mapA.getNodes()[static_cast<size_t>( otherNext )]._column == node._column &&
+                                     mapA.getNodes()[static_cast<size_t>( otherNext )]._floor == node._floor + 1 );
+            }
+        }
+    }
+
+    // 걷기 — 갈 수 있는 칸만, 끝까지.
+    vector<int32> listChoice;
+    mapA.collectChoices( listChoice );
+    SW_ASSERT_TRUE( listChoice.empty() == false );
+    SW_EXPECT_FALSE( mapA.moveTo( static_cast<int32>( mapA.getNodes().size() ) + 5 ) );
+    while ( mapA.isFinished() == false )
+    {
+        mapA.collectChoices( listChoice );
+        SW_ASSERT_TRUE( listChoice.empty() == false );
+        SW_ASSERT_TRUE( mapA.moveTo( listChoice.back() ) );
+    }
+    SW_EXPECT_TRUE( mapA.findNode( mapA.getCurrent() )->_kind == hashed_string( "Boss" ) );
 }

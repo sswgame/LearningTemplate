@@ -8,9 +8,11 @@
 #include "GameFramework/Base/FixedStepTimer.h"
 #include "GameFramework/Base/GameRandom.h"
 #include "GameFramework/Base/RayMath.h"
+#include "GameFramework/Base/TimingJudge.h"
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/GameDataXml.h"
 #include "GameFramework/Data/ItemBag.h"
+#include "GameFramework/Data/StatBlock.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -175,4 +177,48 @@ SW_TEST_CASE( GameFrameworkUtilTest, CatalogKeepsOrderAndItemBagMovesItems )
     SW_EXPECT_TRUE( bag.isEmpty() );
     SW_EXPECT_TRUE( box.hasItem( "apple", 3 ) );
     SW_EXPECT_FALSE( box.moveItemTo( box, "apple", 1 ) );
+}
+
+SW_TEST_CASE( GameFrameworkUtilTest, TimingJudgeGradesNarrowestWindowFirstWithLatencyAndScale )
+{
+    TimingJudge judge;
+    SW_ASSERT_TRUE( judge.loadFromXmlText( R"(<TimingWindows>
+        <Window grade="Bad" width="0.15" score="10" breaksCombo="true"/>
+        <Window grade="Cool" early="0.03" late="0.04" score="300"/>
+        <Window grade="Good" width="0.08" score="100"/>
+      </TimingWindows>)",
+                                           "GameFrameworkUtilTest" ) );
+    SW_EXPECT_TRUE( judge.getWindows().front()._grade == hashed_string( "Cool" ) );              // 좁은 것부터
+    SW_EXPECT_TRUE( judge.judge( 10.0f, 10.035f )._pWindow->_grade == hashed_string( "Cool" ) ); // 늦은 쪽이 넓다
+    SW_EXPECT_TRUE( judge.judge( 10.0f, 9.965f )._pWindow->_grade == hashed_string( "Good" ) );
+    const TimingResult bad = judge.judge( 10.0f, 9.9f );
+    SW_EXPECT_TRUE( bad.isHit() && bad.isEarly() && bad._pWindow->_bBreaksCombo != SW_FALSE );
+    SW_EXPECT_FALSE( judge.judge( 10.0f, 10.2f ).isHit() );
+    SW_EXPECT_FALSE( judge.hasExpired( 10.0f, 10.14f ) );
+    SW_EXPECT_TRUE( judge.hasExpired( 10.0f, 10.16f ) );
+    SW_EXPECT_NEAR_EQUAL( 0.15f, judge.getEarliestWidth(), 1.0e-5f );
+
+    // 입력 지연 보정 · 창 넓히기.
+    judge.setOffset( 0.05f );
+    SW_EXPECT_TRUE( judge.judge( 10.0f, 10.05f )._pWindow->_grade == hashed_string( "Cool" ) );
+    judge.setOffset( 0.0f );
+    judge.setScale( 2.0f );
+    SW_EXPECT_TRUE( judge.judge( 10.0f, 10.07f )._pWindow->_grade == hashed_string( "Cool" ) );
+}
+
+SW_TEST_CASE( GameFrameworkUtilTest, StatBlockReadsAttributesAndMerges )
+{
+    XmlDocument doc;
+    SW_ASSERT_TRUE( doc.parse( R"(<Stats id="x" attack="5" speed="-0.5" label="fast"/>)" ) );
+    StatBlock stats;
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( stats.loadFromAttributes( doc.getRoot(), "id" ) ) ); // 숫자가 아닌 label 은 건너뛴다
+    SW_EXPECT_NEAR_EQUAL( -0.5f, stats.getValue( hashed_string( "speed" ) ), 1.0e-5f );
+    StatBlock bonus;
+    bonus.setValue( hashed_string( "attack" ), 2.0f );
+    bonus.setValue( hashed_string( "luck" ), 1.0f );
+    stats.merge( bonus, 3.0f );
+    SW_EXPECT_NEAR_EQUAL( 11.0f, stats.getValue( hashed_string( "attack" ) ), 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, stats.getValue( hashed_string( "luck" ) ), 1.0e-5f );
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( stats.getCount() ) );
+    SW_EXPECT_FALSE( stats.hasValue( hashed_string( "label" ) ) );
 }

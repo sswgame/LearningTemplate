@@ -179,7 +179,7 @@ cd build/Ninja-Debug/Bin
   `updateActiveEffects` 의 만료 검사를 주기 실행 앞으로 옮기면 `PeriodicEffectExecutesEachPeriodUntilItExpires` 가 지는지) (2) Shipping · `-L nogpu`
   (3) `-DSW_ACTIVE_GAME=AbilityArena` 로 Debug · Shipping 을 짓고 `App -gv_arenaAutoPlay=1 -gv_profileFrames=1200` 를 네 백엔드로 — 종료 코드 0, `[Error]` 0건,
   로그의 `[Arena] wave` 가 오르는지. 에디터(`-EnableEditor`)에서 Play 로 직접 조작해 HP 바 · 피해 숫자 · 화상 스택 · 대시 무적을 눈으로 본다.
-- **장르 키트 넷(`GF_Farming` · `GF_Shooter` · `GF_ThemePark` · `GF_Voxel`) · `OrientationUtil` · `PrimitiveStage` 와 시험 게임 넷의 첫 엔진 빌드 · 실행(2026-10-03).**
+- **장르 키트 넷(`GF_Farming` · `GF_Shooter`(지금은 기반 `Combat/`) · `GF_ThemePark` · `GF_Voxel`) · `OrientationUtil` · `PrimitiveStage` 와 시험 게임 넷의 첫 엔진 빌드 · 실행(2026-10-03).**
   위 항목과 같은 이유로 엔진을 짓지 못했다. 키트 로직은 엔진 밖 하네스(Core 의 수학 · XML · 해시 문자열만 링크, 테스트 매크로 흉내)로 **실제로 돌려**
   `CoasterTest` 6 · `ThemeParkTest` 5 · `FarmingTest` 5 · `ShooterTest` 5 · `VoxelTest` 7 · `OrientationUtilTest` 1 · `GameFrameworkUtilTest` 5 가 통과했고, `coasters.xml` 의 세 레이아웃은
   같은 하네스로 회로가 닫히고 한 바퀴를 돌며 평가가 나오는 것을, 공원 경제(`rides.xml` 의 처음 두 놀이기구)는 손님이 오고 돈이 느는 것을 봤다.
@@ -209,6 +209,23 @@ cd build/Ninja-Debug/Bin
 - **강체 · 고정 스텝 누적기가 없다.** `PhysicsWorld::step` 은 겹침 이벤트만 낸다. 강체가 생기면 적분과 누적기를 넣는다.
 - **리눅스에서 yad 만 깔린 기계에는 "All files" 필터가 없다**(`LinuxFileDialog.cpp`). `yad --file --file-filter='A | *.txt' --file-filter='All files | *'`
   가 뜨는지 확인한 뒤에만 `buildGtkStyleCommand( ..., true )` 로 바꾼다 — yad 가 인자를 거부하면 다이얼로그가 아예 안 뜬다.
+
+- **장르 공통 기반 · 새 키트의 첫 엔진 빌드(2026-10-03).** 위 두 항목과 같은 이유로 하네스로만 돌렸다. 기반의 새 폴더 —
+  `AI/` · `Navigation/` · `Combat/`(Shooter 키트에서 옮긴 무기 포함) · `Control/` · `Inventory/` · `Match/` · `Movement/` · `Progression/` · `Quest/` · `World/`,
+  `Base/TimingJudge` · `Base/TimerQueue` · `Data/StatBlock` — 와 키트 `GF_CityBuilder` · `GF_RealTimeStrategy`. 하네스 통과: `NavigationTest` · `AiTest` ·
+  `CityBuilderTest` · `RealTimeStrategyTest` · `CombatTest` · `InventoryTest` · `ProgressionTest` · `QuestTest` · `WorldTest` · `MatchTest` · `ControlTest` · `PlatformerTest` ·
+  `GameFrameworkUtilTest`. 할 일: 재구성(새 폴더는 GLOB 이라 CMake 수정 없음 — `GF_Shooter` 가 빠졌으니 낡은 빌드의 `GF_Shooter.dll` 을 지운다) → Debug · Shipping →
+  `EngineTest --test_filter=` 위 스위트들. `GameFramework.dll` 이 커졌으니 `SW_GF_API` 내보내기 누락(링크 오류)부터 본다.
+- **장르 키트 대기열(사용자 지시 2026-10-03, 공통 먼저 → 순서대로).** 공통에 둘 것을 먼저 기반으로 빼고(위 항목), 키트는 아래 순서로 만든다. 키트마다 시험 · 등록
+  (`Kits/CMakeLists.txt` · `Test/EngineTest/CMakeLists.txt` LIBS · `AppConfig.json`) · 린트 · 커밋.
+  (1) 시험 게임 NileCity(도시 건설) · StarSkirmish(RTS) (2) 배틀로얄(배틀그라운드) (3) 서부 오픈월드(레드 데드 리뎀션) (4) 위쳐류 RPG (5) 생물 생활(포코피아)
+  (6) SRPG(G 제네레이션 · 메탈슬러그 택틱스 — `GridReachability` · `RunMap`) (7) 카드(포커 · 고스톱 · 맞고 · 솔리테어 · 우노 · 문스톤 아일랜드식 덱 빌딩)
+  (8) 네트워크 — Core 공통 계층 + 장르별 DLL(클라이언트-서버 · 락스텝 · 턴 릴레이 · MMO) (9) 기체 대전(SD 건담 캡슐파이터 — `Match` 코스트 게이지)
+  (10) 비대칭 공포(데드 바이 데이라이트) (11) 몬스터 수집(포켓몬 — 기존 `TurnBattle` 키트와 겹침을 먼저 본다) (12) 협동 수집 공포(리썰 컴퍼니) (13) 리듬(오투잼 — `TimingJudge`)
+  (14) 인디 추천 목록 — 메트로배니아 · 소울라이크 2D(어스블레이드 · 게슈탈트 · 블라스퍼머스 2 · 더 라스트 페이스 · 클로아 · 엠버베인), 액션 플랫포머(검브렐라 · 부시덴 ·
+  리플레이스드 · 페퍼 그라인더 — `PlatformerMotor2D`), 고전 JRPG(드래곤 퀘스트 3 HD-2D · 씨 오브 스타즈 · 완다링 소드 — `TurnOrder` · `TimingJudge`), 생존 공포 · 조사(홀스틴 ·
+  애니그마 오브 피어), 횡스크롤 정복(썬즈 오브 발할라), 식당 경영(셰프 RPG), 파티 아레나(바이킹 온 트램펄린) (15) 격투(철권 — `InputCommandBuffer`, 결정적 · 롤백)
+  (16) 카트 레이싱(카트라이더 · 마리오카트) (17) 유령 사냥(루이지 맨션) (18) 액션 어드벤처(젤다 — 시간의 오카리나 · 황혼의 공주 · 야생의 숨결, `LockOnSelector`).
 
 ### 1-7. Core · 태스크
 
