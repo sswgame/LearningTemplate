@@ -240,33 +240,48 @@ SW_TEST_CASE( GlobalVariableTest, TestOnlyVariablesAreMarkedAndDroppedInShipping
 
 /**
  * @brief [GlobalVariableTest] 멀티스레드 환경에서 문자열 전역 변수 동시 읽기/쓰기 스레드 안전성 검증
+ * @details 읽는 스레드가 늦게 뜨면 쓰기 1000 번이 먼저 끝나 읽기가 한 번도 겹치지 않는다 — 그러면 아무것도 시험하지 않고 통과한다.
+ *          읽는 쪽이 돌기 시작한 뒤에 쓰고, 쓰는 동안 겹친 읽기를 세어 모자라면 더 쓰며, 겹친 횟수를 단언한다(`FileTest.ReadersNeverObserveHalfWrittenFile` 와 같은 모양).
  */
 SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
 {
     sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
     SW_ASSERT_NOT_NULL( pStrInfo );
 
-    std::atomic<bool> bRunning{ true };
-    std::thread       writer( [&]()
+    std::atomic<bool>   bWriterDone{ false };
+    std::atomic<uint32> readCount{ 0 };
+    std::atomic<uint32> badReadCount{ 0 };
+    std::thread         reader( [&]()
     {
-        for ( int32 iter = 0; iter < 1000; ++iter )
+        while ( bWriterDone.load( std::memory_order_acquire ) == false )
         {
-            sw::engine::getGlobalVariableManager().setValueFromString( "gv_testString", sw::string( "Value_" + std::to_string( iter ) ) );
-        }
-        bRunning.store( false, std::memory_order_release );
-    } );
-
-    std::thread reader( [&]()
-    {
-        while ( bRunning.load( std::memory_order_acquire ) )
-        {
-            sw::string val = pStrInfo->getValueAsString();
-            SW_EXPECT_TRUE( val.find( "Value_" ) != sw::string::npos || val == "InitialValue" );
+            const sw::string val = pStrInfo->getValueAsString();
+            if ( val.find( "Value_" ) == sw::string::npos && val != "InitialValue" )
+                badReadCount.fetch_add( 1 );
+            readCount.fetch_add( 1 );
         }
     } );
 
-    writer.join();
+    // 읽는 쪽이 돌기 시작한 뒤에 쓴다(위 설명).
+    const std::chrono::steady_clock::time_point waitStart = std::chrono::steady_clock::now();
+    while ( readCount.load() == 0 && std::chrono::steady_clock::now() - waitStart < std::chrono::seconds( 10 ) )
+        std::this_thread::yield();
+    const uint32 readBeforeWrite = readCount.load();
+
+    // 쓰는 동안 겹친 읽기가 충분해야 한다 — 1000 번을 쓰고도 모자라면 더 쓴다(상한이 있다).
+    constexpr uint32 kMinOverlappedRead = 100;
+    for ( uint32 iter = 0; iter < 200000; ++iter )
+    {
+        if ( iter >= 1000 && readCount.load() - readBeforeWrite >= kMinOverlappedRead )
+            break;
+        sw::engine::getGlobalVariableManager().setValueFromString( "gv_testString", sw::string( "Value_" ) + sw::to_string( iter ) );
+    }
+    const uint32 overlappedRead = readCount.load() - readBeforeWrite;
+    bWriterDone.store( true, std::memory_order_release );
     reader.join();
+
+    SW_EXPECT_EQUAL( 0u, badReadCount.load() );
+    SW_EXPECT_TRUE_MSG( overlappedRead >= kMinOverlappedRead, "읽기가 쓰기와 거의 겹치지 않았다 — 아무것도 시험하지 않은 것이다" );
 
     sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
 }
