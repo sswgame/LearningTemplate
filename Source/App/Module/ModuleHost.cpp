@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -394,7 +395,7 @@ namespace sw
 
         engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
         // 내리지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 올라와 있을 뿐이다 — 이유는 경고로 남는다.
-        (void)engine::unloadModuleImage( sw::config::kTargetEditorModule, pLibraryModule );
+        (void)ModuleImageUtil::unloadModuleImage( sw::config::kTargetEditorModule, pLibraryModule );
         return bSucceeded;
 #endif
     }

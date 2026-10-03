@@ -7,6 +7,7 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Task/TaskManager.h"
 
@@ -182,12 +183,12 @@ namespace sw
         // 컴파일러가 널임을 증명하지 못하게 전역에 둔다(증명하면 쓰기를 트랩 명령으로 바꾼다).
         uintptr_t s_reloadFaultAddress{ 0 };
 
-        /** @brief 델리게이트의 스텁 하나만 담는 범위로 `engine::releaseModuleCode` 를 부릅니다. */
+        /** @brief 델리게이트의 스텁 하나만 담는 범위로 `ModuleImageUtil::releaseModuleCode` 를 부릅니다. */
         template <typename TDelegate>
         uint32 releaseStubOf( const TDelegate& delegate )
         {
             const uint8* pCode = static_cast<const uint8*>( delegate.getCodeAddress() );
-            return sw::engine::releaseModuleCode( "SweepProbe", pCode, pCode + 1 );
+            return sw::ModuleImageUtil::releaseModuleCode( "SweepProbe", pCode, pCode + 1 );
         }
     } // namespace
 } // namespace sw
@@ -229,7 +230,7 @@ SW_TEST_CASE( ArchitectureTest, AllRHIModulesAbiStampExports )
         if ( pfnStamp != nullptr && pfnStamp() != nullptr )
             SW_EXPECT_STREQ( sw::kRHIModuleAbiStamp, pfnStamp() );
 
-        SW_EXPECT_TRUE( sw::engine::unloadModuleImage( modName, handle ) );
+        SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( modName, handle ) );
     }
 }
 
@@ -535,7 +536,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeSuccessPath )
 
 /**
  * @brief [ArchitectureTest] 모듈 이미지를 내리기 전의 정리는 에디터가 다는 엔진 쪽 등록부 넷을 모두 본다
- * @details `engine::releaseModuleCode` 는 모듈이 스스로 떼지 않은 것을 떼는 안전망이다. 에디터는 이벤트 구독 · 로그 리스너(콘솔 패널) ·
+ * @details `ModuleImageUtil::releaseModuleCode` 는 모듈이 스스로 떼지 않은 것을 떼는 안전망이다. 에디터는 이벤트 구독 · 로그 리스너(콘솔 패널) ·
  *          Undo 명령(트랜잭션) · 창 닫기 처리기를 달고, `ImGuiEditor::shutdown` · `~ConsolePanel` 이 손으로 뗀다. 여기서는 등록부마다
  *          하나씩 달고 범위를 그 하나의 스텁으로 좁혀 부른다 — 이 실행 파일의 다른 등록은 건드리지 않고, 등록부 하나를 빠뜨리면 진다.
  */
@@ -727,7 +728,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
 
 /**
  * @brief [ArchitectureTest] 에디터 모듈을 실제로 다시 올려도 오브젝트 편집의 Undo/Redo 가 남아 같은 결과를 낸다
- * @details 리로드는 옛 이미지를 내리기 전에 그 범위로 모든 코드 보유자를 훑는다(`engine::releaseModuleCode` — Undo 스택 포함). 오브젝트 편집은 코드가
+ * @details 리로드는 옛 이미지를 내리기 전에 그 범위로 모든 코드 보유자를 훑는다(`ModuleImageUtil::releaseModuleCode` — Undo 스택 포함). 오브젝트 편집은 코드가
  *          Engine 에 있는 데이터 명령(`ObjectSnapshotCommand`)이라 그 훑기를 지나 남아야 하고, 리로드 뒤의 undo · redo 가 리로드 전과 같은 상태를 만들어야
  *          한다. 모듈 코드를 쥔 명령이 떨어지는 쪽은 `EditorTransactionTest.ObjectEditsSurviveReleasingTheEditorCode` ·
  *          `ReleaseModuleCodeSweepsEveryRegistryTheEditorUses` 가 본다.
@@ -1370,7 +1371,7 @@ SW_TEST_CASE( ArchitectureTest, RHIBackendDynamicSwapAndReload )
             SW_ASSERT_NOT_NULL( factory );
 
             // 동적 언로드 및 해제
-            SW_EXPECT_TRUE( sw::engine::unloadModuleImage( backendName, handle ) );
+            SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( backendName, handle ) );
         }
     }
 }
@@ -1418,7 +1419,7 @@ SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
     SW_EXPECT_TRUE( pfnExport != nullptr );
     if ( pfnExport == nullptr )
     {
-        SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", handle ) );
+        SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", handle ) );
         return;
     }
 
@@ -1434,7 +1435,7 @@ SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
     sw::engine::registerModuleTypes( "SWGame" );
     sw::engine::unregisterModuleTypes( "SWGame" );
 
-    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", handle ) );
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", handle ) );
 }
 
 /**
@@ -1453,7 +1454,7 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
         if ( hOverworld != nullptr )
         {
             sw::engine::unregisterModuleTypes( "GF_Overworld" );
-            SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "GF_Overworld", hOverworld ) );
+            SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "GF_Overworld", hOverworld ) );
         }
         return;
     }
@@ -1468,9 +1469,9 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
         if ( hOverworld != nullptr )
         {
             sw::engine::unregisterModuleTypes( "GF_Overworld" );
-            SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "GF_Overworld", hOverworld ) );
+            SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "GF_Overworld", hOverworld ) );
         }
-        SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", handle ) );
+        SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", handle ) );
         return;
     }
 
@@ -1525,12 +1526,12 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
     sw::engine::getSceneManager().initialize();
 
     sw::engine::unregisterModuleTypes( "SWGame" );
-    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", handle ) );
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", handle ) );
 
     if ( hOverworld != nullptr )
     {
         sw::engine::unregisterModuleTypes( "GF_Overworld" );
-        SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "GF_Overworld", hOverworld ) );
+        SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "GF_Overworld", hOverworld ) );
     }
 }
 
@@ -1553,7 +1554,7 @@ SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
     sw::engine::registerModuleTypes( "EditorModule" );
     sw::engine::unregisterModuleTypes( "EditorModule" );
 
-    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "EditorModule", handle ) );
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "EditorModule", handle ) );
 }
 
 /**
@@ -1568,7 +1569,7 @@ SW_TEST_CASE( ModuleApiTest, GameFrameworkKitsModuleTypeRegistration )
         {
             sw::engine::registerModuleTypes( kitName );
             sw::engine::unregisterModuleTypes( kitName );
-            SW_EXPECT_TRUE( sw::engine::unloadModuleImage( kitName, handle ) );
+            SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( kitName, handle ) );
         }
     }
 }
@@ -1746,12 +1747,12 @@ SW_TEST_CASE( ModuleApiTest, GameModuleRepeatedReloadCycle )
         sw::engine::getSceneManager().initialize();
 
         sw::engine::unregisterModuleTypes( "SWGame" );
-        SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", handle ) );
+        SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", handle ) );
 
         if ( hOverworld != nullptr )
         {
             sw::engine::unregisterModuleTypes( "GF_Overworld" );
-            SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "GF_Overworld", hOverworld ) );
+            SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "GF_Overworld", hOverworld ) );
         }
     }
 }
@@ -1811,9 +1812,9 @@ SW_TEST_CASE( ModuleApiTest, UnloadChildReleasesTheChannelsItsImageCreated )
                         "GameFramework created no event channel - the case no longer exercises what it checks" );
 
     sw::engine::unregisterModuleTypes( "SWGame" );
-    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", hGame ) );
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", hGame ) );
     sw::engine::unregisterModuleTypes( "GameFramework" );
-    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "GameFramework", hFramework ) );
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "GameFramework", hFramework ) );
     SW_EXPECT_EQUAL( 0u, dispatcher.countChannelsCreatedWithin( pFrameworkBegin, pFrameworkEnd ) );
 }
 
@@ -1837,7 +1838,7 @@ SW_TEST_CASE( ModuleApiTest, UnloadReleasesTheChannelsTheImageCreated )
 /**
  * @brief [ModuleApiTest] 모듈 이미지를 내려도 그 이미지가 끌어온 의존 이미지(GameFramework)는 올라와 있다
  * @details 의존 이미지의 코드(그것이 만든 이벤트 채널 항목)를 쥔 등록은 모듈을 내릴 때 뗄 수 없다 — 의존이 함께 내려갈지는 로더만 안다. 그래서
- *          `engine::unloadModuleImage` 는 의존을 고정한다. Windows 는 지연 로드가 GameFramework 를 원래 잡고 있고, 리눅스는 `DT_NEEDED` 참조가
+ *          `ModuleImageUtil::unloadModuleImage` 는 의존을 고정한다. Windows 는 지연 로드가 GameFramework 를 원래 잡고 있고, 리눅스는 `DT_NEEDED` 참조가
  *          함께 풀려 GameFramework 가 내려간다.
  */
 SW_TEST_CASE( ModuleApiTest, UnloadKeepsTheImagesTheModulePulledIn )
@@ -1860,7 +1861,7 @@ SW_TEST_CASE( ModuleApiTest, UnloadKeepsTheImagesTheModulePulledIn )
     SW_ASSERT_TRUE( bFoundRange );
 
     sw::engine::unregisterModuleTypes( "SWGame" );
-    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", hGame ) );
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( "SWGame", hGame ) );
 
     const void* pBegin{ nullptr };
     const void* pEnd{ nullptr };

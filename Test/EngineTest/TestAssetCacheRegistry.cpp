@@ -2,10 +2,10 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleCodeHolder.h"
+#include "Core/Module/ModuleImageUtil.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/IAssetCache.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -196,7 +196,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
 
 #if !defined( SW_SHIPPING )
 /**
- * @brief [AssetCacheRegistryTest] 모듈 이미지를 내리기 전의 정리(`engine::releaseModuleCode`)는 그 이미지의 캐시를 등록부에서 내린다
+ * @brief [AssetCacheRegistryTest] 모듈 이미지를 내리기 전의 정리(`ModuleImageUtil::releaseModuleCode`)는 그 이미지의 캐시를 등록부에서 내린다
  * @details 모듈이 `unregisterAssetCache` 를 빠뜨린 채 내려가면 등록부에 vtable 이 사라진 포인터가 남고, 다음 비우기 · 종료가 내려간 코드로
  *          뛴다. 여기서는 가짜 캐시의 vtable 한 바이트를 "모듈 이미지" 로 삼는다 — 그 범위 밖인 내장 캐시는 그대로 남아야 한다.
  */
@@ -211,7 +211,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, ReleaseModuleCodeDropsCachesOfThatImage )
     const uint8* pVtable = static_cast<const uint8*>( sw::IModuleCodeHolder::findVtableAddress( static_cast<const sw::IAssetCache*>( &probe ) ) );
     SW_ASSERT_NOT_NULL( pVtable );
     test::ScopedLogCollector logCollector;
-    SW_EXPECT_TRUE( sw::engine::releaseModuleCode( "ProbeModule", pVtable, pVtable + 1 ) >= 1u );
+    SW_EXPECT_TRUE( sw::ModuleImageUtil::releaseModuleCode( "ProbeModule", pVtable, pVtable + 1 ) >= 1u );
 
     SW_EXPECT_NULL( resources.findAssetCache( "ProbeKind" ) );
     SW_EXPECT_EQUAL( registeredCount - 1, resources.getAllAssetCache().size() );

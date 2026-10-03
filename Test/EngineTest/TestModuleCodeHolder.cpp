@@ -1,8 +1,10 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleCodeHolder.h"
+#include "Core/Module/ModuleImageUtil.h"
 
-#include "Engine/Module/ModuleTypeRegistry.h"
+#include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -60,18 +62,18 @@ SW_TEST_CASE( ModuleCodeHolderTest, ReleaseModuleCodeSweepsEveryLiveHolder )
         // 범위 안: 뗀다.
         probe._pCode = &s_arrProbeImage[4];
         bool bKeepImageMapped{ true };
-        SW_EXPECT_EQUAL( 1u, sw::engine::releaseModuleCode( "ProbeModule", s_arrProbeImage, s_arrProbeImage + 16, &bKeepImageMapped ) );
+        SW_EXPECT_EQUAL( 1u, sw::ModuleImageUtil::releaseModuleCode( "ProbeModule", s_arrProbeImage, s_arrProbeImage + 16, &bKeepImageMapped ) );
         SW_EXPECT_NULL( probe._pCode );
         SW_EXPECT_FALSE( bKeepImageMapped );
 
         // 범위 밖: 그대로다.
         probe._pCode = &s_arrProbeImage[12];
-        SW_EXPECT_EQUAL( 0u, sw::engine::releaseModuleCode( "ProbeModule", s_arrProbeImage, s_arrProbeImage + 8, &bKeepImageMapped ) );
+        SW_EXPECT_EQUAL( 0u, sw::ModuleImageUtil::releaseModuleCode( "ProbeModule", s_arrProbeImage, s_arrProbeImage + 8, &bKeepImageMapped ) );
         SW_EXPECT_TRUE( probe._pCode == &s_arrProbeImage[12] );
 
         // 떼어 낼 수 없다는 보유자의 답은 부르는 쪽에 그대로 간다.
         probe._bKeepImageMapped = true;
-        SW_EXPECT_EQUAL( 0u, sw::engine::releaseModuleCode( "ProbeModule", s_arrProbeImage, s_arrProbeImage + 16, &bKeepImageMapped ) );
+        SW_EXPECT_EQUAL( 0u, sw::ModuleImageUtil::releaseModuleCode( "ProbeModule", s_arrProbeImage, s_arrProbeImage + 16, &bKeepImageMapped ) );
         SW_EXPECT_TRUE( bKeepImageMapped );
 
         // 사본도 따로 오른다(복사로 생긴 등록부가 훑기에서 빠지지 않게).
@@ -79,5 +81,55 @@ SW_TEST_CASE( ModuleCodeHolderTest, ReleaseModuleCodeSweepsEveryLiveHolder )
         SW_EXPECT_EQUAL( holderCountBefore + 2, sw::IModuleCodeHolder::getHolderCount() );
     }
     SW_EXPECT_EQUAL( holderCountBefore, sw::IModuleCodeHolder::getHolderCount() );
+}
+
+/**
+ * @brief [ModuleCodeHolderTest] RHI 백엔드 모듈을 내릴 때도 그 이미지의 코드를 쥔 등록을 뗀다
+ * @details 게임 · 에디터 모듈과 같은 창구(`ModuleImageUtil::unloadModuleImage`)를 지나는지 본다. 실행 파일 옆의 RHI 모듈 하나를
+ *          레지스트리로 올리고, 그 모듈의 `createRHIDevice` 주소를 쥔 가짜 보유자를 세운 뒤 `unloadModules` 로 내린다. 이미지를 바로 내리면
+ *          보유자는 내려간 코드를 쥔 채 남는다. 시험이 따로 올린 핸들이 이미지를 붙들어 두므로 주소는 끝까지 유효하다.
+ */
+SW_TEST_CASE( ModuleCodeHolderTest, RhiModuleUnloadReleasesItsCode )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "unloadModuleImage warns about what a probe holder kept" );
+
+    struct RhiModule
+    {
+        sw::RHIBackend _backend;
+        const utf8*    _pBaseName;
+    };
+    const RhiModule kArrRhiModule[] = {
+        {sw::RHIBackend::DirectX11,   "RHI_DX11"},
+        {sw::RHIBackend::DirectX12,   "RHI_DX12"},
+        {   sw::RHIBackend::Vulkan, "RHI_Vulkan"},
+        {   sw::RHIBackend::OpenGL,     "RHI_GL"},
+    };
+
+    const sw::string executableDir = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
+    for ( const RhiModule& rhiModule : kArrRhiModule )
+    {
+        const sw::string path = sw::FileUtil::joinPath( executableDir, sw::FileUtil::formatSharedLibraryName( rhiModule._pBaseName ) );
+        if ( sw::FileUtil::fileExists( path ) == false )
+            continue;
+        void* pKeepMapped = sw::FileUtil::loadDynamicLibrary( path );
+        if ( pKeepMapped == nullptr )
+            continue; // 드라이버 · 로더가 없는 기계(예: Vulkan 로더 없는 CI)
+        const void* pCreateDevice = sw::FileUtil::getDynamicSymbol( pKeepMapped, "createRHIDevice" );
+        SW_ASSERT_TRUE( pCreateDevice != nullptr );
+
+        {
+            sw::RHIBackendRegistry registry;
+            SW_ASSERT_TRUE( registry.tryLoadModule( rhiModule._backend, path ) );
+
+            ProbeCodeHolder probe;
+            probe._pCode = pCreateDevice;
+            registry.unloadModules();
+            SW_EXPECT_NULL( probe._pCode );
+        }
+
+        SW_EXPECT_TRUE( sw::ModuleImageUtil::unloadModuleImage( rhiModule._pBaseName, pKeepMapped ) );
+        return;
+    }
+    SW_TEST_SKIP( "no loadable RHI module next to the executable" );
 }
 #endif

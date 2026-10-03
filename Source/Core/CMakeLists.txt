@@ -19,6 +19,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Container/DynamicBitset.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Delegate/Delegate.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Module/ModuleCodeHolder.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Module/ModuleImageUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Event/EventDispatcher.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/FileUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/IFileWatcher.cpp"

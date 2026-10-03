@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
@@ -84,6 +85,7 @@ namespace sw
         {
             RHIBackend _backend{};
             void*      _pHandle{ nullptr };
+            string     _modulePath; ///< 내릴 때 로그 이름 — 종료 중에는 리플렉션 조회(`RHI::getBackendTypeName`)를 쓸 수 없다
         };
 
         vector<RHIBackendEntry> _listEntry;

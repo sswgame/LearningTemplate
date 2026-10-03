@@ -539,7 +539,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
 
 /**
  * @brief [LogTest] releaseListenerCodeWithin 은 호출 스텁이 그 범위 안인 리스너만 뗀다
- * @details 핫 리로드가 모듈 이미지를 내리기 전에 부르는 길이다(`engine::releaseModuleCode`) — 에디터 콘솔 패널이 다는 리스너가 여기 든다.
+ * @details 핫 리로드가 모듈 이미지를 내리기 전에 부르는 길이다(`ModuleImageUtil::releaseModuleCode`) — 에디터 콘솔 패널이 다는 리스너가 여기 든다.
  *          범위를 한 리스너의 스텁 하나로 좁혀, 다른 리스너는 남아 계속 받는지 본다. 두 람다의 몸통을 일부러 다르게 둔다(같으면 링커가
  *          하나로 접어 두 스텁의 주소가 같아질 수 있다).
  */

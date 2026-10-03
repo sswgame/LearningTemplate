@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Module/ModuleImageUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -191,7 +192,7 @@ namespace sw
         if ( pfnVersion == nullptr || pfnVersion() != kRHIModuleAbiVersion )
         {
             SW_LOG_ERROR( "RHI MODULE ABI version mismatch or missing getRHIModuleAbiVersion (%#)", modulePath );
-            FileUtil::unloadDynamicLibrary( pModuleHandle );
+            (void)ModuleImageUtil::unloadModuleImage( modulePath, pModuleHandle );
             return false;
         }
 
@@ -199,14 +200,14 @@ namespace sw
         if ( pfnStamp == nullptr || StringUtil::equals( pfnStamp(), kRHIModuleAbiStamp ) == false )
         {
             SW_LOG_ERROR( "RHI MODULE ABI stamp mismatch or missing getRHIModuleAbiStamp (%#; expected %#)", modulePath, kRHIModuleAbiStamp );
-            FileUtil::unloadDynamicLibrary( pModuleHandle );
+            (void)ModuleImageUtil::unloadModuleImage( modulePath, pModuleHandle );
             return false;
         }
 
         PFN_CreateRHIDevice pfnCreate = reinterpret_cast<PFN_CreateRHIDevice>( FileUtil::getDynamicSymbol( pModuleHandle, "createRHIDevice" ) );
         if ( pfnCreate == nullptr )
         {
-            FileUtil::unloadDynamicLibrary( pModuleHandle );
+            (void)ModuleImageUtil::unloadModuleImage( modulePath, pModuleHandle );
             return false;
         }
 
@@ -216,7 +217,7 @@ namespace sw
         } );
 
         registerBackend( backend, factory, RHIAvailability::query( backend ) );
-        _listLoadedModule.push_back( LoadedModule{ backend, pModuleHandle } );
+        _listLoadedModule.push_back( LoadedModule{ backend, pModuleHandle, string{ modulePath } } );
 
         SW_LOG_INFO( "Loaded module %# for backend %#", modulePath, RHI::getBackendTypeName( backend ) );
         return true;
@@ -229,11 +230,11 @@ namespace sw
 
         // FreeLibrary 전에 팩토리를 지운다. 그래야 create() 가 내려간 코드로 들어가지 않는다.
         // 이 팩토리가 만든 디바이스는 이미 파괴돼 있어야 한다(RHI::shutdown 참고).
-        for ( const auto& [backEnd, handle] : _listLoadedModule )
+        for ( const LoadedModule& module : _listLoadedModule )
         {
             for ( RHIBackendEntry& entry : _listEntry )
             {
-                if ( entry._backend == backEnd )
+                if ( entry._backend == module._backend )
                 {
                     entry._factory = {};
                     break;
@@ -241,11 +242,9 @@ namespace sw
             }
         }
 
+        // 내리지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 올라와 있을 뿐이다 — 이유는 경고로 남는다.
         for ( const LoadedModule& module : _listLoadedModule )
-        {
-            if ( module._pHandle != nullptr )
-                FileUtil::unloadDynamicLibrary( module._pHandle );
-        }
+            (void)ModuleImageUtil::unloadModuleImage( module._modulePath, module._pHandle );
         _listLoadedModule.clear();
     }
 

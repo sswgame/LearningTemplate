@@ -95,10 +95,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
 
-- **불필요 코드 삭제 — 코드 묶음 여섯(A~F)은 10-04 에 끝났다**(조사 보고서는 세션 스크래치 `deadcode/report.md`). 남은 것: **주석 · 문서 2 차(G1~G5, G1 시험 · G2 Engine · App · RuntimeAPI · ReflectionParser · G3 Graphics · 셰이더는 10-04 끝 — 경위 ~1,750 · 없는 대상 ~150; G4 · G5 진행 중)** —
-  경위 서술("예전에는 …") ~2,300 블록 · 없는 대상을 가리키는 줄 ~330(보고서 4 장; 문서 최신화 뒤라 다시 grep 해서 셀 것), 영역은 G1 시험 · G2 Engine(Graphics 제외) ·
-  App · RuntimeAPI · ReflectionParser · G3 Graphics · 셰이더 · G4 Core · Editor · GameFramework · G5 문서 · 스크립트 · CI. 보고서가 "판단 필요" 로 남긴 것
-  (`transcodeBinaryToXml` 시험 전용, `GameModes::cutscene`, `seedFallback`, 1-C 접근자 등)은 그대로다. `RuntimeHud` 는 남긴다(사용자 결정).
 - **클래스 이름 일관화 — 감사 목록 전부**(사용자: "일관되게 바꿔봐"). **별칭은 두지 않는다**(사용자: 아직 실제 게임이 없다) — 씬 · 데이터 XML 의 타입 · 루트 이름,
   스크립트 · CI 의 CLI 플래그까지 새 이름으로 다시 쓰고 옛 이름은 어디에도 남기지 않는다.
   묶음: (1) `IRHIResource`→`IRHIResourceFactory`(`getResourceFactory`), `ActionMap`→`InputMap`, `InputDeviceType`→`InputGlyphStyle`,
@@ -184,8 +180,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-5. 핫 리로드 · 모듈
 
-- **`RHIBackendRegistry::unloadModules` · `tryLoadModule` 은 아직 `unloadModuleImage` 를 쓰지 않는다** — RHI 모듈은 지금 등록을 남기지 않아 무해하다. 같은 창구로.
-
 - **RuntimeAPI 가 Engine 헤더를 include 한다** — `RuntimeAPI/Service/ModuleService.h` 가 `Engine/Common/EngineServiceList.xxx` 를 세 번 include 해 서비스 id 를 만든다.
   "RuntimeAPI 는 순수 계약" 과 어긋난다. 서비스 목록을 RuntimeAPI 쪽으로 옮기거나(Engine 이 그것을 include) 계약 문장을 사실대로 고칠지 정한다.
 
@@ -236,17 +230,11 @@ cd build/Ninja-Debug/Bin
 - **"부모-자식-손자 다계층 합성 활성" 시험이 없다** — 그것을 설명하던 doc 블록(`[GameObjectHierarchy]`)만 남아 있어 G1 에서 지웠다. 시험 공백인지 확인하고 필요하면 더한다.
 - **시험 doc 블록 규칙을 린트로** — 블록은 제 `SW_TEST_CASE` 바로 위(겹친 앞 블록은 떨어진 블록), `@brief [태그]` 는 실제 스위트 이름. G1 이 손으로 11 곳 · 18 곳을 고쳤다.
 
+- **`gv_benchMaterialInstances` 설명 문자열 `"(DX12 크래시 재현용)"` 이 낡아 보인다**(`Games/Empty/BenchScene.cpp`) — 원인(`updateStructuredBuffer` 업로드
+  얼로케이터 이중 Reset)은 `29da82bb` 에서 고쳐졌다. DX12 + `-gv_benchMaterialInstances=1` 로 한 번 돌려 확인한 뒤 문자열을 고친다(주석은 G4 에서 고쳤다).
+
 - **`-gv_rhiBackend` 는 숫자만 받는다**(0 DX11 · 1 DX12 · 2 Vulkan · 3 GL) — `Vulkan` 처럼 이름을 주면 경고만 내고 DX11 로 돈다. enum 전역 변수가 리플렉션 열거자
   이름을 받게 하거나, 모르는 값이면 실행을 멈출 것.
-
-- **문서 최신화(10-04)에서 남은 정리 셋** — (1) 코드 주석의 `docs/05_RHI_FrameContract.md` 재설계 전 절 참조(R2 · S2 · S3 · "실패기록 5차")는 G3 에서 0 이 됐다 —
-  docs/05 의 1~3 · 7 절을 지운다(G5, 루트 `README.md:41` 의 링크도). (2) `ArgumentList.xxx` 의 `IP` · `PORT` 는 읽는 곳이 없다. (3) `CheckTestSuites.py` docstring 이 "규칙
-  다섯" 이라며 여섯을 나열한다. 주석의 경위 서술 예: `CompressionCodecRegistry.h`, `RenderThread.cpp`, `ArgumentList.xxx`, `CheckFallibleNodiscard.py` · `CheckFunctionVocabulary.py`.
-
-- **코드 · 문서 29 곳이 옛 백로그의 날짜 항목 · 옛 절 번호를 가리킨다**(`ci.yml:156` · `TargetRules.cmake:51` · `GameEvents.h:12` "1-0c" · `docs/07` "1-0e" ·
-  `FrameRendererCompute.cpp` "백로그 1-4" 등). 주석 정리(현재형 핵심만)와 함께 고친다 — 날짜 사연은 지우고, 남길 지식은 이 문서 3절 위치나
-  `git show 7ce95fc8:docs/06_Backlog.md` 로. 목록은 grep `06_Backlog\|백로그` 로 다시 뽑는다. 코드 주석의 "예전에는 …" 경위 서술도 같은 정리에서 현재형 주의로
-  바꾼다(예: `Core/Memory/Memory.h:58` · `Core/Task/TaskManager.h` · `Core/Task/TaskFuture.h:268` · `App/App.cpp` · `TurnBattle/SpeciesData.h:34` — README 들은 10-04 에 정리됨).
 
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
@@ -885,7 +873,7 @@ cd build/Ninja-Debug/Bin
 
 ### 3-9. 핫 리로드 · 모듈 · 엔진 서비스
 
-- **핫 리로드가 아닌 곳에서 모듈 이미지를 내릴 때는 `engine::unloadModuleImage` 하나로** — `releaseModuleCode` 로 그 이미지 코드를 쥔 등록(디스패처 채널 등)을 떼고,
+- **핫 리로드가 아닌 곳에서 모듈 이미지를 내릴 때는 `ModuleImageUtil::unloadModuleImage`(Core) 하나로** — 게임 · 에디터 모듈과 RHI 백엔드 모듈이 같은 창구다(RHI 층은 Module 층을 include 할 수 없어 Core 에 둔다. 로그 이름은 적재 때 받은 경로로 — 종료 중 서비스 소멸자에서 리플렉션 조회(`RHI::getBackendTypeName`)를 부르면 정리 중인 TypeRegistry 를 읽어 죽는다) — `releaseModuleCode` 로 그 이미지 코드를 쥔 등록(디스패처 채널 등)을 떼고,
   떼지 못하면 내리지 않으며, 끌어온 의존 이미지는 고정한다(리눅스는 DT_NEEDED 가 함께 내려가 종료 때 남은 채널 deleter 로 SEGFAULT, Windows 는 /DELAYLOAD 가
   GameFramework 를 프로세스 끝까지 잡아 가려졌다). 섀도 사본 이름은 `<모듈>_temp_p<pid>_…` — 정리는 다른 살아 있는 프로세스의 사본을 남긴다(`Bin` 은 CTest `-j` 로 같이
   도는 프로세스들 — AppCookTest 가 띄운 App 등 — 이 함께 쓴다).
@@ -923,7 +911,7 @@ cd build/Ninja-Debug/Bin
   둘). 리눅스는 SONAME 을 같은 길이로 제자리에서 고친다(`ModuleImagePatch`). 결속은 `verifyModuleBindings` 가 본다.
 - **옛 이미지는 바로 내리지 않는다**(`deferImageUnload`, 배치 4 개, 배치 안에서는 의존하는 쪽부터). 다른 코드가 구독 중인 채널을 만든 이미지는 프로세스 끝까지 올려 둔다(언리얼도 같다 —
   되돌리지 말 것).
-- **`engine::releaseModuleCode` 는 델리게이트 스텁 주소로** 그 이미지가 단 등록을 뗀다. 뗀 것이 있다는 경고는 모듈의 손 정리가 빠졌다는 뜻이고 늘 0 이어야 한다. 시험 함정: 몸통이 같은
+- **`ModuleImageUtil::releaseModuleCode` 는 델리게이트 스텁 주소로** 그 이미지가 단 등록을 뗀다. 뗀 것이 있다는 경고는 모듈의 손 정리가 빠졌다는 뜻이고 늘 0 이어야 한다. 시험 함정: 몸통이 같은
   람다는 ICF 가 접어 주소가 겹친다.
 - **엔진 ABI 도장**(`Scripts/generate/GenerateEngineAbiStamp.py`, 엔진 헤더 + `.xxx` + RuntimeAPI + GameFramework 의 SHA-1)은 섀도 복사본을 올리기 **전에** 파일 바이트에서 대조한다. 주석만
   바꿔도 바뀌는 것은 의도다. 도장 없는 모듈은 거절한다. RHI 모듈은 `kRHIModuleAbiVersion` == 도장 `v<N>`(static_assert), GameAPI · EditorAPI 표를 바꾸면 `kModuleAbiVersion` 을 올리고

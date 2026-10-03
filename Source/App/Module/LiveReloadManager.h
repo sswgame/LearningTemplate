@@ -392,7 +392,7 @@ namespace sw
             string _tempPath;
             void*  _pHandle{ nullptr };
             uint32 _batchId{ 0 };
-            bool   _bKeepMapped{ false }; ///< 다른 코드가 아직 구독하는 이벤트 채널을 만든 이미지 — 내리지 않는다(`engine::releaseModuleCode`)
+            bool   _bKeepMapped{ false }; ///< 다른 코드가 아직 구독하는 이벤트 채널을 만든 이미지 — 내리지 않는다(`ModuleImageUtil::releaseModuleCode`)
         };
 
         /// @brief 등록된 모듈입니다(경로 · 핸들 · 의존 · 리로드 예약).

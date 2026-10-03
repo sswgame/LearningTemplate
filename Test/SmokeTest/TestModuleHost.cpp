@@ -7,6 +7,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -338,7 +339,7 @@ SW_TEST_CASE( ModuleHostTest, ImageCheckAcceptsOnlyAModuleWithTheHostsApiTable )
     SW_EXPECT_FALSE( host.isEditorImageUsable( nullptr ) );
     host.shutdown();
     engine::unregisterModuleTypes( "EditorModule" );
-    SW_EXPECT_TRUE( engine::unloadModuleImage( "EditorModule", pEditorModule ) );
+    SW_EXPECT_TRUE( ModuleImageUtil::unloadModuleImage( "EditorModule", pEditorModule ) );
 }
 #endif
 

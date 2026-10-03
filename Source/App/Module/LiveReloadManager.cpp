@@ -7,6 +7,7 @@
 #include "Core/File/IFileWatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -162,7 +163,7 @@ namespace sw
             }
 
             /**
-             * @brief 모듈 이미지 @p pHandle 의 코드를 가리키는 엔진 쪽 등록을 뗍니다(`engine::releaseModuleCode`). 이미지를 내리기 전에 부릅니다.
+             * @brief 모듈 이미지 @p pHandle 의 코드를 가리키는 엔진 쪽 등록을 뗍니다(`ModuleImageUtil::releaseModuleCode`). 이미지를 내리기 전에 부릅니다.
              * @return 이미지를 내리면 안 되면 true 입니다 — 그 이미지가 만든 이벤트 채널을 다른 코드가 아직 구독한다.
              */
             static bool releaseImageCode( string_view moduleName, void* pHandle )
@@ -172,7 +173,7 @@ namespace sw
                 if ( pHandle == nullptr || FileUtil::findDynamicLibraryRange( pHandle, pBegin, pEnd ) == false )
                     return false;
                 bool bKeepMapped{ false };
-                engine::releaseModuleCode( moduleName, pBegin, pEnd, &bKeepMapped );
+                (void)ModuleImageUtil::releaseModuleCode( moduleName, pBegin, pEnd, &bKeepMapped );
                 return bKeepMapped;
             }
         };
@@ -1174,7 +1175,7 @@ namespace sw
             const DeferredUnloadImage& deferredImage = _listDeferredUnloadImage[imageIndex - 1];
             if ( deferredImage._bKeepMapped )
             {
-                // 다른 코드가 아직 구독하는 이벤트 채널을 이 이미지가 만들었다(`engine::releaseModuleCode`). 내리지도, 파일을 지우지도 않는다.
+                // 다른 코드가 아직 구독하는 이벤트 채널을 이 이미지가 만들었다(`ModuleImageUtil::releaseModuleCode`). 내리지도, 파일을 지우지도 않는다.
                 SW_LOG_INFO( "Keeping deferred module image %# mapped (batch %#) — an event channel it created is still subscribed", deferredImage._moduleName,
                              deferredImage._batchId );
                 continue;
