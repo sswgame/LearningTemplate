@@ -215,12 +215,25 @@ namespace sw
             glSamplerParameteri( defaultSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
             glSamplerParameteri( defaultSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
             glSamplerParameteri( defaultSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE );
+            // 머티리얼 텍스처 유닛(t5..t8)은 머티리얼 샘플러(선형 · 랩, shaderslot::kMaterialTextureSampler)다. 다른 세 백엔드가 머티리얼을
+            // 그 샘플러로 읽는다(DX12 · Vulkan 정적 샘플러, DX11 슬롯 결합 샘플러). 기본 샘플러로 두면 최근접 · 클램프라 확대한 텍스처가
+            // 계단이 된다. 밉 필터는 텍스처의 밉 수가 정한다(glTexStorage2D 가 할당한 수 = 완전한 텍스처).
+            static_assert( shaderslot::kMaterialTextureSampler == SW_SAMPLER_LINEAR_WRAP, "GL 머티리얼 샘플러의 필터 · 주소가 계약과 다르다" );
+            GLuint materialSampler{ 0 };
+            glGenSamplers( 1, &materialSampler );
+            glSamplerParameteri( materialSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR );
+            glSamplerParameteri( materialSampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+            glSamplerParameteri( materialSampler, GL_TEXTURE_WRAP_S, GL_REPEAT );
+            glSamplerParameteri( materialSampler, GL_TEXTURE_WRAP_T, GL_REPEAT );
+            glSamplerParameteri( materialSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE );
             for ( uint32 unit = 0; unit < 64; ++unit )
             {
+                const bool bMaterialUnit = ( shaderslot::kMaterialTexture0 <= unit && unit < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
                 glBindTextureUnit( unit, defaultTex );
-                glBindSampler( unit, defaultSampler );
+                glBindSampler( unit, bMaterialUnit ? materialSampler : defaultSampler );
             }
-            _defaultSampler = defaultSampler;
+            _defaultSampler  = defaultSampler;
+            _materialSampler = materialSampler;
         }
 
         _frameStreamContext = sw::make_unique<OpenGLRHICommandContext>( this );
@@ -250,6 +263,11 @@ namespace sw
             }
             glDeleteSamplers( 1, &_defaultSampler );
             _defaultSampler = 0;
+        }
+        if ( _materialSampler != 0 )
+        {
+            glDeleteSamplers( 1, &_materialSampler );
+            _materialSampler = 0;
         }
         if ( _defaultTexture )
         {

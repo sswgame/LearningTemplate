@@ -25,6 +25,7 @@ namespace sw
         , _vbo{ 0 }
         , _meshVao{ 0 }
         , _defaultSampler{ 0 }
+        , _materialSampler{ 0 }
         , _defaultTexture{ 0 }
         , _gpuBuffers{}
         , _listRegisteredBindless{}

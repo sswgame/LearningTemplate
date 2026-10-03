@@ -3998,6 +3998,153 @@ SW_TEST_CASE( RenderPassGpuTest, MirroredMeshShowsItsOuterFaces )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 머티리얼 텍스처는 네 백엔드 모두 선형 필터 · 랩 주소로 읽힌다 — 체커 칸 경계의 섞인 픽셀 수가 같다
+ * @details 계약은 네이티브 bindless(DX12 · Vulkan)의 `swSampleMaterialTexture` → `swSampleIndex` = SW_SAMPLER_LINEAR_WRAP 이다. 슬롯 결합
+ *          샘플러를 쓰는 백엔드는 엔진이 머티리얼 슬롯(t5..t8)에 샘플러를 직접 건다: GL 은 기본 샘플러(NEAREST · CLAMP)가 그대로 남아 칸 경계가
+ *          계단이었고, DX11 은 선형이지만 CLAMP 라 텍스처 가장자리에서 반대편 텍셀과 섞이지 않았다. 64x64 체커(8 텍셀 칸, 양 끝 열 색이 다르다)를
+ *          화면에 크게 깔고 조명을 컴파일 아웃(Unlit)한 뒤, 쿼드 픽셀 가운데 두 색 사이(25~75%)인 픽셀을 센다 — 최근접은 0 이고, CLAMP 는
+ *          가장자리의 랩 경계만큼 적다. 기준은 첫 네이티브 bindless 백엔드의 수다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MaterialTexturesAreSampledLinearWrap )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    // 쿼드 픽셀 가운데 섞인 픽셀의 하한(%)과, 기준 백엔드와의 섞인 픽셀 수 차이 상한(%). 최근접은 0 %, CLAMP 는 기준보다 10 % 남짓 적다.
+    constexpr uint32 kMinMixedPercent = 3;
+    constexpr uint32 kMaxDriftPercent = 5;
+    constexpr uint32 kMinQuadPixel    = 20000;
+
+    struct SampleCount
+    {
+        uint32 _quadCount{ 0 };
+        uint32 _mixedCount{ 0 };
+    };
+    // SceneColor 에서 배경이 아닌 픽셀(쿼드)의 초록 채널 범위를 구하고, 그 가운데 절반 구간에 든 픽셀을 센다(파랑 칸 G 0x28 · 흰 칸 G 0xF0).
+    auto countMixed = []( sw::FrameRenderer& renderer, SampleCount& outCount ) -> bool
+    {
+        test::RHITestImage image;
+        if ( image.readTransient( renderer, "SceneColor" ) == false )
+            return false;
+        uint32 minGreen{ 255 };
+        uint32 maxGreen{ 0 };
+        for ( uint32 row = 0; row < image.getHeight(); ++row )
+        {
+            for ( uint32 col = 0; col < image.getWidth(); ++col )
+            {
+                const test::Rgba8 pixel = image.getPixel( col, row );
+                if ( test::RHITestImage::isDefaultClearBackground( pixel ) )
+                    continue;
+                minGreen = sw::MathUtil::min<uint32>( minGreen, pixel._g );
+                maxGreen = sw::MathUtil::max<uint32>( maxGreen, pixel._g );
+            }
+        }
+        const uint32 range = ( maxGreen > minGreen ) ? maxGreen - minGreen : 0u;
+        const uint32 low   = minGreen + range / 4u;
+        const uint32 high  = maxGreen - range / 4u;
+        for ( uint32 row = 0; row < image.getHeight(); ++row )
+        {
+            for ( uint32 col = 0; col < image.getWidth(); ++col )
+            {
+                const test::Rgba8 pixel = image.getPixel( col, row );
+                if ( test::RHITestImage::isDefaultClearBackground( pixel ) )
+                    continue;
+                ++outCount._quadCount;
+                if ( low < pixel._g && pixel._g < high )
+                    ++outCount._mixedCount;
+            }
+        }
+        return true;
+    };
+
+    uint32     comparedCount{ 0 };
+    uint32     referenceMixed{ 0 };
+    sw::string referenceName;
+    // 기준(네이티브 bindless)을 먼저 잰다. 목록 순서(DX11 이 먼저)를 그대로 쓰면 비교할 기준이 없다.
+    sw::vector<sw::RHIBackend> listBackend;
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        if ( backend == sw::RHIBackend::DirectX12 || backend == sw::RHIBackend::Vulkan )
+            listBackend.insert( listBackend.begin(), backend );
+        else
+            listBackend.push_back( backend );
+    }
+    for ( sw::RHIBackend backend : listBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+
+        sw::shared_ptr<sw::Material> material = sw::Material::create();
+        SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+        SW_ASSERT_TRUE( material->getMaterialTextureSrvs().empty() == false );
+        sw::shared_ptr<sw::Mesh> quad = sw::MeshUtil::createRectMesh();
+        SW_ASSERT_NOT_NULL( quad.get() );
+
+        SampleCount count{};
+        bool        bOk{ false };
+        {
+            sw::Scene scene( "MaterialSamplerScene" );
+            SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+            sw::GameObject*    pObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "CheckerQuad" ) );
+            sw::MeshComponent* pMesh   = ( pObject != nullptr ) ? pObject->addComponent<sw::MeshComponent>() : nullptr;
+            SW_ASSERT_NOT_NULL( pMesh );
+            pMesh->setMesh( quad );
+            pMesh->setMaterial( material.get() );
+            pMesh->setLocalScale( sw::float3{ 2.0f, 2.0f, 1.0f } );
+            scene.getObjectManager()->flushSceneTransforms();
+
+            sw::FrameRenderer renderer;
+            bOk = renderer.initialize( device.get(), "engine/pipeline/forwardpipeline.xml" ) && renderer.isReady();
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "포워드 파이프라인을 만들지 못했다" ).c_str() );
+            if ( bOk )
+            {
+                renderer.setViewMode( sw::RenderViewMode::Unlit );
+                sw::engine::getResourceManager().getMaterialManager().initializePending( device.get() );
+                constexpr uint32 kWarmupFrameCount = 4;
+                for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
+                {
+                    device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                    bOk = renderer.execute( device.get(), &scene );
+                    device->endFrame( false, false );
+                    device->waitIdle();
+                }
+                bOk = bOk && countMixed( renderer, count );
+                SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+            }
+            renderer.shutdown();
+        }
+        quad->releaseRhi( device.get() );
+        material->releaseRhi( device.get() );
+        if ( bOk == false )
+            continue;
+
+        SW_LOG_INFO( "%#checker quad %# px, mixed %# px", label, count._quadCount, count._mixedCount );
+        SW_EXPECT_TRUE_MSG( count._quadCount >= kMinQuadPixel, ( label + "쿼드가 작게 그려졌다 (" + sw::to_string( count._quadCount ) + " 픽셀)" ).c_str() );
+        if ( count._quadCount < kMinQuadPixel )
+            continue;
+        ++comparedCount;
+        SW_EXPECT_TRUE_MSG( count._mixedCount * 100u >= count._quadCount * kMinMixedPercent,
+                            ( label + "체커 칸 경계가 섞이지 않는다 — 머티리얼 텍스처가 선형 필터로 읽히지 않는다 (섞인 픽셀 " + sw::to_string( count._mixedCount ) +
+                              " / " + sw::to_string( count._quadCount ) + ")" )
+                                .c_str() );
+        if ( referenceName.empty() )
+        {
+            referenceName  = label;
+            referenceMixed = count._mixedCount;
+            continue;
+        }
+        const uint32 drift = ( count._mixedCount > referenceMixed ) ? count._mixedCount - referenceMixed : referenceMixed - count._mixedCount;
+        SW_EXPECT_TRUE_MSG( drift * 100u <= referenceMixed * kMaxDriftPercent,
+                            ( label + "섞인 픽셀 " + sw::to_string( count._mixedCount ) + " 이 " + referenceName + sw::to_string( referenceMixed ) +
+                              " 과 다르다 — 머티리얼 샘플러의 필터 · 주소 모드가 계약(SW_SAMPLER_LINEAR_WRAP)과 다르다" )
+                                .c_str() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could draw the checker material" );
+}
+
+/**
  * @brief [RenderPassGpuTest] 한 배치로 그린 스프라이트 여섯이 인스턴스마다 다른 아틀라스 프레임과 색을 보이고, 2D 카메라에서 텍스처가 뒤집히지 않는다 (4 백엔드)
  * @details 네 칸 텍스처(왼위 빨강 · 오위 초록 · 왼아래 파랑 · 오아래 흰색)를 나눠 쓰는 스프라이트들이 각자 다른 칸(UV 사각형)과 색을 고른다.
  *          둘은 머티리얼 인스턴스가 아니라 GPU 인스턴스(`instancedata.hlsli` 의 uvStart · uvEnd · tint)에 실리므로 모두 **반투명 배치 하나**다.

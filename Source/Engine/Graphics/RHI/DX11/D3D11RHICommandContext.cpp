@@ -258,7 +258,12 @@ namespace sw
             // 샘플러는 **텍스처와 같은 번호**에 건다. 셰이더가 t#/s# 짝으로 선언하기 때문이다
             // (common.hlsli 의 SW_DECLARE_TEXTURE2D_SAMPLER). 예전에는 s0 만 걸어서 t1 이후 슬롯은
             // D3D11 기본 샘플러 상태에 얹혀 있었고, 머티리얼 텍스처(t5..t8)를 넣자 드러났다.
-            _pContext->PSSetSamplers( slot, 1, _pDevice->_linearSampler.GetAddressOf() );
+            // 머티리얼 슬롯은 네이티브 bindless 와 같은 머티리얼 샘플러(선형 · 랩)이고, 엔진 슬롯(풀스크린 입력)은 선형 · 클램프다.
+            const bool                 bMaterialSlot = ( shaderslot::kMaterialTexture0 <= slot && slot < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
+            ID3D11SamplerState* const* ppSampler     = ( bMaterialSlot && _pDevice->_arrStaticSampler[shaderslot::kMaterialTextureSampler] != nullptr )
+                                                         ? _pDevice->_arrStaticSampler[shaderslot::kMaterialTextureSampler].GetAddressOf()
+                                                         : _pDevice->_linearSampler.GetAddressOf();
+            _pContext->PSSetSamplers( slot, 1, ppSampler );
             if ( slot != 0 )
                 _pContext->PSSetSamplers( 0, 1, _pDevice->_linearSampler.GetAddressOf() );
         }
