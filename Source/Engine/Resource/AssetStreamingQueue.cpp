@@ -56,8 +56,6 @@ namespace sw
 
     bool AssetStreamingQueue::requestAsset( string_view assetPath, StreamingPriority priority, const OnStreamingCompleteDelegate& onComplete )
     {
-        // StreamingPriority 는 아직 순서에 반영되지 않는다(헤더의 enum 주석 참고).
-        (void)priority;
         if ( assetPath.empty() )
             return false;
 
@@ -95,14 +93,12 @@ namespace sw
         if ( onComplete.isBound() )
             _mapInFlightCallback[pathStr].push_back( onComplete );
 
-        startRequestLocked( pathStr, generation, false );
+        startRequestLocked( pathStr, generation, false, priority );
         return true;
     }
 
     bool AssetStreamingQueue::requestAssetData( string_view assetPath, StreamingPriority priority, const OnStreamingDataCompleteDelegate& onComplete )
     {
-        // StreamingPriority 는 아직 순서에 반영되지 않는다(헤더의 enum 주석 참고).
-        (void)priority;
         if ( assetPath.empty() )
             return false;
 
@@ -129,7 +125,7 @@ namespace sw
         if ( onComplete.isBound() )
             _mapInFlightDataCallback[pathStr].push_back( onComplete );
 
-        startRequestLocked( pathStr, generation, true );
+        startRequestLocked( pathStr, generation, true, priority );
         return true;
     }
 
@@ -151,7 +147,22 @@ namespace sw
         return pPromise->getFuture();
     }
 
-    void AssetStreamingQueue::startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData )
+    TaskPriority AssetStreamingQueue::toTaskPriority( StreamingPriority priority )
+    {
+        switch ( priority )
+        {
+            case StreamingPriority::Low:
+            case StreamingPriority::Normal:
+                return TaskPriority::Low;
+            case StreamingPriority::High:
+            case StreamingPriority::Immediate:
+                return TaskPriority::Normal;
+            default:
+                return TaskPriority::Low;
+        }
+    }
+
+    void AssetStreamingQueue::startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData, StreamingPriority priority )
     {
         if ( engine::areEngineServicesBound() )
         {
@@ -160,6 +171,7 @@ namespace sw
                 SW_DELEGATE_METHOD( TaskArgsDelegate, &AssetStreamingQueue::processAssetTask, this ),
                 MakeTaskArgs( pathStr, generation, bFetchData ),
                 TaskThreadAffinity::Any );
+            handle.setPriority( toTaskPriority( priority ) );
             handle.submit();
             return;
         }

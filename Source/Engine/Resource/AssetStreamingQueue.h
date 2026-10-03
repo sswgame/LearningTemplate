@@ -10,11 +10,10 @@ namespace sw
     class TaskArgs;
     /**
      * @enum StreamingPriority
-     * @brief 에셋 비동기 스트리밍 우선순위입니다.
-     * @warning **지금은 순서에 반영되지 않습니다.** 요청은 받는 즉시 기본 우선순위의 태스크로 TaskManager 에
-     *          넘어갑니다. TaskManager 에는 이제 우선순위(`TaskPriority` · High 전용 큐)가 있으므로, 이 값을
-     *          거기로 옮겨 싣는 일이 남아 있습니다. 값은 부르는 쪽의 의도를 남겨 두려고 받아 둡니다.
-     *          예전에는 요청마다 이 값을 구조체에 저장했지만 읽는 곳이 없었습니다.
+     * @brief 에셋 비동기 스트리밍 우선순위입니다. 요청 태스크의 `TaskPriority` 로 옮겨 실립니다(`AssetStreamingQueue::toTaskPriority`).
+     * @details Low · Normal 은 백그라운드 I/O 줄(`TaskPriority::Low` — 워커가 다른 일이 없을 때 집는다), High · Immediate 는 일반 줄
+     *          (`TaskPriority::Normal`)이다. **`TaskPriority::High` 로는 싣지 않는다** — 그 줄은 렌더 기록 · 물리 몫이고 병렬 그룹의 청크 사이에서도
+     *          비우므로, 거기 놓인 파일 읽기는 프레임 잡을 세운다. 이미 진행 중인 같은 경로의 요청에 붙은 요청은 그 태스크의 우선순위를 따른다.
      */
     enum class StreamingPriority : uint8
     {
@@ -76,6 +75,9 @@ namespace sw
         /** @brief 끝난 요청의 수입니다. **실패한 것도 셉니다**(끝나기는 했습니다). */
         size_t getCompletedCount() const;
 
+        /** @brief 스트리밍 우선순위가 싣는 태스크 우선순위입니다(`StreamingPriority` 설명의 표). */
+        static TaskPriority toTaskPriority( StreamingPriority priority );
+
     private:
         struct CompletedItem
         {
@@ -93,7 +95,7 @@ namespace sw
          * @details `requestAsset` · `requestAssetData` 가 태스크 내기와 동기 폴백을 각자 들고 있었고, 두 폴백이 완료를 절반씩만
          *          했습니다(하나는 존재 콜백만, 하나는 데이터 콜백만 비웠습니다).
          */
-        void startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData );
+        void startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData, StreamingPriority priority );
         /** @brief 결과를 적고 진행 표를 지운 뒤 두 콜백 목록을 완료 큐로 옮깁니다. 태스크 완료와 동기 폴백이 같은 길을 씁니다. `_mutex` 를 쥔 채 부릅니다. */
         void completeRequestLocked( const string& pathStr, bool bSuccess, const vector<uint8>& bytes );
 

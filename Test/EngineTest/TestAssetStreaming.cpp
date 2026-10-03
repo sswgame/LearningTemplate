@@ -343,3 +343,93 @@ SW_TEST_CASE( AssetStreamingTest, DataRequestDoesNotPiggybackOnAnExistenceCheck 
 
     queue.shutdown();
 }
+
+/**
+ * @brief [AssetStreamingTest] 스트리밍 우선순위는 태스크 우선순위로 실린다 — High 는 Normal 줄, Low · Normal 은 백그라운드 줄, 어느 것도 High 줄이 아니다
+ */
+SW_TEST_CASE( AssetStreamingTest, StreamingPriorityMapsOntoTaskPriority )
+{
+    SW_EXPECT_TRUE( sw::AssetStreamingQueue::toTaskPriority( sw::StreamingPriority::Low ) == sw::TaskPriority::Low );
+    SW_EXPECT_TRUE( sw::AssetStreamingQueue::toTaskPriority( sw::StreamingPriority::Normal ) == sw::TaskPriority::Low );
+    SW_EXPECT_TRUE( sw::AssetStreamingQueue::toTaskPriority( sw::StreamingPriority::High ) == sw::TaskPriority::Normal );
+    SW_EXPECT_TRUE( sw::AssetStreamingQueue::toTaskPriority( sw::StreamingPriority::Immediate ) == sw::TaskPriority::Normal );
+}
+
+/**
+ * @brief [AssetStreamingTest] 나중에 낸 High 요청이 먼저 낸 Normal 요청보다 먼저 처리된다
+ * @details 워커를 모두 문 앞에 세운 채 Normal 요청 하나, High 요청 하나를 차례로 낸다. 문을 **워커 하나에게만** 열면 그 워커가 두 요청을
+ *          차례로 처리하므로 완료 순서가 곧 처리 순서다. 우선순위를 싣지 않으면 둘 다 같은 줄(FIFO)이라 Normal 이 먼저 끝난다.
+ */
+SW_TEST_CASE( AssetStreamingTest, HighPriorityRequestOvertakesAnEarlierNormalOne )
+{
+    SW_ASSERT_TRUE( sw::engine::areEngineServicesBound() );
+    sw::TaskManager& taskMgr = sw::engine::getTaskManager();
+    taskMgr.initialize();
+    const uint32 workerCount = taskMgr.getWorkerCount();
+    SW_ASSERT_TRUE( workerCount >= 1 );
+
+    const sw::string normalPath = test::makeTempPath( "sw_test_streaming_normal.dat" );
+    const sw::string highPath   = test::makeTempPath( "sw_test_streaming_high.dat" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( normalPath, "normal" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( highPath, "high" ) );
+
+    // 지역 구조체는 정적 멤버를 못 가진다 — 함수 지역 static 으로 둔다.
+    static sw::atomic<uint32> s_ticketCount{ 0 };
+    static sw::atomic<uint32> s_releasedCount{ 0 };
+    static sw::atomic<uint32> s_runningCount{ 0 };
+    s_ticketCount   = 0;
+    s_releasedCount = 0;
+    s_runningCount  = 0;
+    struct GateContext
+    {
+        /** @brief 표를 받고, 풀린 수가 그 표를 넘을 때까지 워커를 붙든다. 끝은 시간으로 잡는다(고장 나도 CI 가 매달리지 않게). */
+        static void hold()
+        {
+            const uint32 ticket = s_ticketCount.fetch_add( 1, std::memory_order_acq_rel );
+            s_runningCount.fetch_add( 1, std::memory_order_acq_rel );
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
+            while ( s_releasedCount.load( std::memory_order_acquire ) <= ticket && std::chrono::steady_clock::now() < deadline )
+                std::this_thread::yield();
+        }
+    };
+    for ( uint32 index = 0; index < workerCount; ++index )
+    {
+        sw::TaskHandle handle = taskMgr.emplaceTask( "StreamingGate", SW_DELEGATE_FUNCTION( sw::TaskDelegate, GateContext::hold ) );
+        SW_ASSERT_TRUE( handle.isValid() );
+        handle.submit();
+    }
+    {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 2 );
+        while ( s_runningCount.load( std::memory_order_acquire ) < workerCount && std::chrono::steady_clock::now() < deadline )
+            std::this_thread::yield();
+    }
+    SW_ASSERT_EQUAL( workerCount, s_runningCount.load() );
+
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
+    sw::vector<sw::string> listCompleted;
+    const auto             recordCompletion = SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, [&listCompleted]( sw::string_view path, bool )
+                { listCompleted.push_back( sw::string( path ) ); } );
+    SW_EXPECT_TRUE( queue.requestAsset( normalPath, sw::StreamingPriority::Normal, recordCompletion ) );
+    SW_EXPECT_TRUE( queue.requestAsset( highPath, sw::StreamingPriority::High, recordCompletion ) );
+
+    // 워커 하나만 푼다 — 그 워커가 두 요청을 차례로 처리한다.
+    s_releasedCount.store( 1, std::memory_order_release );
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
+    while ( listCompleted.size() < 2 && std::chrono::steady_clock::now() < deadline )
+    {
+        queue.update();
+        std::this_thread::yield();
+    }
+
+    s_releasedCount.store( workerCount, std::memory_order_release );
+    const bool bAllDone = taskMgr.waitAll( 5000 );
+    queue.shutdown();
+    if ( bAllDone == false )
+        taskMgr.clear(); // 남은 태스크를 다음 테스트가 영원히 기다리면 안 된다
+    SW_ASSERT_TRUE( bAllDone );
+
+    SW_ASSERT_EQUAL( size_t( 2 ), listCompleted.size() );
+    SW_EXPECT_EQUAL( highPath, listCompleted[0] );
+    SW_EXPECT_EQUAL( normalPath, listCompleted[1] );
+}
