@@ -365,11 +365,12 @@ namespace sw
          */
         void setCanEverTick( bool bCanEverTick );
         /**
-         * @brief 컴포넌트의 런타임 이름표를 설정합니다(기본은 타입 이름). **타입이 아니고 저장되지도 않습니다.**
-         * @details 예전에는 이 이름이 곧 동적 타입의 조회 키였습니다. 이름을 바꾸면 `getTypeInfo` · `castTo` 가 그 이름의 타입으로
-         *          답해 — 없는 이름이면 타입을 잃어 저장에서 빠지고 모듈 정리에서 빠졌고, 다른 타입의 이름이면 **엉뚱한 타입으로 캐스트**
-         *          됐습니다. 지금 타입은 만들 때 받은 `TypeInfo`(`_pTypeInfo`)이고 이름은 그와 무관합니다. 타입 이름이 필요하면 `getTypeName`.
-         * @note 풀 키도 **아닙니다.** 파괴는 `_pPool` 로 돌아갑니다.
+         * @brief 컴포넌트의 이름표를 설정합니다(기본은 타입 이름). **타입이 아닙니다.** 상태와 함께 저장됩니다.
+         * @details 오브젝트 안에서 컴포넌트를 가리키는 키(`ComponentStableKey` — 부착 대상 · 프리팹 오버라이드 · 에디터 선택 복원)가 이 이름으로
+         *          셉니다. 언리얼의 컴포넌트 이름이 참조 · 오버라이드의 키인 것과 같은 자리입니다. 이름표가 없는 옛 상태는 기본값(타입 이름)으로
+         *          읽힙니다. 타입은 만들 때 받은 `TypeInfo`(`_pTypeInfo`)이고 이름과 무관합니다 — 타입 이름이 필요하면 `getTypeName`.
+         * @note 풀 키도 **아닙니다.** 파괴는 `_pPool` 로 돌아갑니다. 이름을 바꾸면 그 컴포넌트를 키로 가리키던 저장된 참조(다른 컴포넌트의 부착 ·
+         *       프리팹 오버라이드)는 다음 로드에서 가리킬 곳을 잃습니다 — 언리얼이 컴포넌트 이름을 바꿀 때와 같습니다.
          */
         void setComponentName( hashed_string name ) { _componentName = name; }
 
@@ -448,10 +449,12 @@ namespace sw
         static atomic<uint64> _s_nextComponentId; ///< ID 생성 카운터
 
     protected:
-        GameObject*     _pOwner;        ///< 소유자 GameObject
-        uint64          _componentId;   ///< 컴포넌트 고유 일련번호
-        hashed_string   _componentName; ///< 런타임 이름표(기본은 타입 이름). 타입이 아니다 — `setComponentName`
-        const TypeInfo* _pTypeInfo;     ///< 만들 때 받은 타입. `GameObject::attachCreatedComponent` 가 한 번 적는다(공개 전이라 원자가 아니다)
+        GameObject* _pOwner;      ///< 소유자 GameObject
+        uint64      _componentId; ///< 컴포넌트 고유 일련번호
+        /** @brief 이름표(기본은 타입 이름)입니다. 저장됩니다 — 컴포넌트 키(`ComponentStableKey`)가 이것으로 셉니다. 타입이 아니다 — `setComponentName` */
+        PROPERTY( HideInInspector )
+        hashed_string   _componentName;
+        const TypeInfo* _pTypeInfo; ///< 만들 때 받은 타입. `GameObject::attachCreatedComponent` 가 한 번 적는다(공개 전이라 원자가 아니다)
         /**
          * @brief 이 인스턴스를 내준 풀입니다. 힙에서 왔으면 nullptr 입니다. 생성이 한 번 적고 파괴가 읽습니다.
          * @details 예전에는 파괴가 `getTypeInfo()->_fullyQualifiedName` 으로 풀을 **다시 찾았습니다.** 이름이 바뀌었거나(공개

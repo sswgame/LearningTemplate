@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/TagID.h"
 #include "Core/Uuid/Uuid.h"
 
@@ -14,6 +15,8 @@
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/MissingComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
@@ -27,6 +30,67 @@
 #include "EngineTest/TestGameObjectMocks.h"
 
 #include "TestFramework/TestFramework.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct SceneTestInternal
+        {
+            /** @brief 매니저의 오브젝트마다 "오브젝트 이름: 컴포넌트 이름표…" 한 줄을 이름 순으로 모읍니다. 모르는 타입(`MissingComponent`)은 뺍니다. */
+            static vector<string> collectComponentNames( const GameObjectManager* pManager )
+            {
+                vector<string>      listLine;
+                vector<GameObject*> listObject;
+                pManager->getAllGameObjects( listObject );
+                for ( const GameObject* pObject : listObject )
+                {
+                    if ( pObject == nullptr )
+                        continue;
+                    string line = pObject->getName().c_str();
+                    line += ':';
+                    for ( const Component* pComp : pObject->getComponents() )
+                    {
+                        if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->getTypeInfo() == MissingComponent::StaticType() )
+                            continue;
+                        line += ' ';
+                        line += pComp->getComponentName().c_str();
+                    }
+                    listLine.push_back( std::move( line ) );
+                }
+                std::sort( listLine.begin(), listLine.end() );
+                return listLine;
+            }
+
+            /**
+             * @brief 매니저의 컴포넌트마다 이름표를 `Named<번호>` 로 바꿉니다(모르는 타입은 뺍니다).
+             * @return 바꾸기 전 이름표가 타입 이름이 **아니던** 컴포넌트 수입니다 — 이름표가 없는 옛 파일이면 0 이어야 합니다.
+             */
+            static uint32 renameEveryComponent( const GameObjectManager* pManager )
+            {
+                uint32              nonDefaultCount = 0;
+                uint32              nameIndex       = 0;
+                vector<GameObject*> listObject;
+                pManager->getAllGameObjects( listObject );
+                for ( const GameObject* pObject : listObject )
+                {
+                    if ( pObject == nullptr )
+                        continue;
+                    for ( Component* pComp : pObject->getComponents() )
+                    {
+                        if ( pComp == nullptr || pComp->isPendingDestroy() || pComp->getTypeInfo() == MissingComponent::StaticType() )
+                            continue;
+                        if ( pComp->getComponentName() != pComp->getTypeName() )
+                            ++nonDefaultCount;
+                        const string name = "Named" + to_string( nameIndex++ );
+                        pComp->setComponentName( hashed_string( name.c_str() ) );
+                    }
+                }
+                return nonDefaultCount;
+            }
+        };
+    } // namespace
+} // namespace sw
 
 // ------------------------------------------------------------------------------
 // 1) SceneTest — 활성 씬·비동기 로드
@@ -1292,4 +1356,139 @@ SW_TEST_CASE( SceneTest, XmlAssetsLoadWithoutEngineServices )
         SW_EXPECT_TRUE( prefab.loadFromXmlFile( prefabPath ) );
     }
     SW_EXPECT_TRUE( sw::engine::areEngineServicesBound() );
+}
+
+/**
+ * @brief [SceneTest] 컴포넌트 이름표는 씬 파일(XML) · 쿠킹한 씬(SCN1 바이너리 상태)을 건너 남고, 그 이름표로 가리킨 부착도 그 자리에 붙는다
+ * @details 이름표는 오브젝트 안에서 컴포넌트를 가리키는 키다(언리얼의 컴포넌트 이름 자리). 저장하지 않으면 씬을 다시 열 때 기본값(타입 이름)으로
+ *          돌아가, 이름표로 찾던 게임 코드와 그 키로 적힌 부착이 다른 컴포넌트를 본다.
+ */
+SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    sw::Scene* pScene = manager.createScene( "NamedComponentWorld" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObjectManager* pObjects = pScene->getObjectManager();
+
+    sw::GameObject*     pGun    = pObjects->createGameObject( sw::hashed_string( "Gun" ) );
+    sw::SceneComponent* pBody   = pGun->addComponent<sw::SceneComponent>();
+    sw::SceneComponent* pMuzzle = pGun->addComponent<sw::SceneComponent>();
+    SW_ASSERT_TRUE( pBody != nullptr && pMuzzle != nullptr );
+    pMuzzle->setComponentName( sw::hashed_string( "Muzzle" ) );
+    sw::GameObject*     pFlash     = pObjects->createGameObject( sw::hashed_string( "Flash" ) );
+    sw::SceneComponent* pFlashRoot = pFlash->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pFlashRoot );
+    SW_ASSERT_TRUE( pFlashRoot->attachToComponent( pMuzzle ) );
+
+    /** @brief 다시 지은 씬의 이름표 · 부착이 처음과 같은지 봅니다. */
+    struct Check
+    {
+        static void run( const sw::Scene* pBuilt, const utf8* pWhere )
+        {
+            const sw::GameObjectManager* pBuiltObjects = pBuilt->getObjectManager();
+            sw::GameObject*              pBuiltGun     = pBuiltObjects->findGameObjectByName( sw::hashed_string( "Gun" ) );
+            sw::GameObject*              pBuiltFlash   = pBuiltObjects->findGameObjectByName( sw::hashed_string( "Flash" ) );
+            SW_ASSERT_TRUE_MSG( pBuiltGun != nullptr && pBuiltFlash != nullptr, pWhere );
+            SW_ASSERT_TRUE_MSG( pBuiltGun->getComponents().size() == 2, pWhere );
+            const sw::Component* pBuiltMuzzle = pBuiltGun->getComponents()[1];
+            SW_EXPECT_TRUE_MSG( pBuiltGun->getComponents()[0]->getComponentName() == sw::hashed_string( "SceneComponent" ), pWhere );
+            SW_EXPECT_TRUE_MSG( pBuiltMuzzle->getComponentName() == sw::hashed_string( "Muzzle" ), pWhere );
+            const sw::SceneComponent* pBuiltFlashRoot = pBuiltFlash->getPrimarySceneComponent();
+            SW_ASSERT_TRUE_MSG( pBuiltFlashRoot != nullptr, pWhere );
+            SW_EXPECT_TRUE_MSG( pBuiltFlashRoot->getParent() == pBuiltMuzzle, pWhere );
+        }
+    };
+
+    sw::SceneDocument saved;
+    SW_ASSERT_TRUE( pScene->serializeToDocument( saved ) );
+    const sw::string xmlPath = test::makeTempPath( "named_components.scene.xml" );
+    SW_ASSERT_TRUE( saved.saveXml( xmlPath ) );
+
+    sw::SceneDocument fromXml;
+    SW_ASSERT_TRUE( fromXml.loadXml( xmlPath ) );
+    sw::Scene* pFromXml = manager.createScene( "NamedComponentWorldXml" );
+    SW_ASSERT_TRUE( pFromXml->instantiate( fromXml ) );
+    Check::run( pFromXml, "xml" );
+
+    // 쿠커는 엔티티 상태를 리플렉션 바이너리로 굽는다 — 그 길에도 실려야 배포본이 같은 이름표를 본다.
+    SW_EXPECT_EQUAL( 2u, sw::SceneCooker::cookEntityState( fromXml ) );
+    const sw::string binPath = test::makeTempPath( "named_components.scene.bin" );
+    SW_ASSERT_TRUE( fromXml.saveBinary( binPath ) );
+    sw::SceneDocument fromBinary;
+    SW_ASSERT_TRUE( fromBinary.loadBinary( binPath ) );
+    SW_ASSERT_TRUE( fromBinary._listEntityNode.empty() == false && fromBinary._listEntityNode[0]._embeddedStateBytes.empty() == false );
+    sw::Scene* pFromBinary = manager.createScene( "NamedComponentWorldBinary" );
+    SW_ASSERT_TRUE( pFromBinary->instantiate( fromBinary ) );
+    Check::run( pFromBinary, "binary" );
+
+    manager.shutdown();
+}
+
+/**
+ * @brief [SceneTest] 저장소의 실제 씬 · 프리팹이 모두 읽히고(이름표가 없는 옛 파일 — 기본값은 타입 이름), 이름표를 달아 다시 쓰면 그대로 돌아온다
+ */
+SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    sw::vector<sw::string> listFile;
+    SW_ASSERT_TRUE( sw::FileUtil::collectFiles( sw::ResourceUtil::getRootFolderPath(), "", listFile, true ) );
+
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    uint32 sceneCount  = 0;
+    uint32 prefabCount = 0;
+    for ( const sw::string& filePath : listFile )
+    {
+        const sw::string path    = sw::FileUtil::normalizeSeparators( filePath );
+        const bool       bScene  = sw::StringUtil::endsWith( path, ".scene.xml", true );
+        const bool       bXml    = sw::StringUtil::endsWith( path, ".prefab.xml", true );
+        const bool       bJson   = sw::StringUtil::endsWith( path, ".prefab.json", true );
+        const sw::string tempTag = "repo_" + sw::to_string( sceneCount + prefabCount );
+        if ( bScene )
+        {
+            ++sceneCount;
+            sw::SceneDocument opened;
+            SW_ASSERT_TRUE_MSG( opened.loadXml( path ), path.c_str() );
+            sw::Scene* pOpened = manager.createScene( "RepositoryScene" );
+            SW_ASSERT_TRUE_MSG( pOpened->instantiate( opened ), path.c_str() );
+            SW_EXPECT_TRUE_MSG( sw::SceneTestInternal::renameEveryComponent( pOpened->getObjectManager() ) == 0, path.c_str() );
+            const sw::vector<sw::string> listExpected = sw::SceneTestInternal::collectComponentNames( pOpened->getObjectManager() );
+
+            sw::SceneDocument saved;
+            SW_ASSERT_TRUE( pOpened->serializeToDocument( saved ) );
+            const sw::string savedPath = test::makeTempPath( tempTag + ".scene.xml" );
+            SW_ASSERT_TRUE( saved.saveXml( savedPath ) );
+            sw::SceneDocument reread;
+            SW_ASSERT_TRUE( reread.loadXml( savedPath ) );
+            sw::Scene* pReopened = manager.createScene( "RepositorySceneReopened" );
+            SW_ASSERT_TRUE( pReopened->instantiate( reread ) );
+            SW_EXPECT_TRUE_MSG( sw::SceneTestInternal::collectComponentNames( pReopened->getObjectManager() ) == listExpected, path.c_str() );
+            continue;
+        }
+        if ( ( bXml || bJson ) == false )
+            continue;
+
+        ++prefabCount;
+        sw::PrefabAsset prefab;
+        SW_ASSERT_TRUE_MSG( bJson ? prefab.loadFromJsonFile( path ) : prefab.loadFromXmlFile( path ), path.c_str() );
+        sw::GameObjectManager authoring;
+        sw::GameObject*       pAuthored = authoring.createGameObject( sw::hashed_string( "RepositoryPrefab" ) );
+        SW_ASSERT_TRUE_MSG( prefab.applyStateTo( pAuthored ), path.c_str() );
+        SW_EXPECT_TRUE_MSG( sw::SceneTestInternal::renameEveryComponent( &authoring ) == 0, path.c_str() );
+        const sw::vector<sw::string> listExpected = sw::SceneTestInternal::collectComponentNames( &authoring );
+
+        sw::PrefabAsset resaved;
+        resaved.setFromGameObject( pAuthored );
+        const sw::string savedPath = test::makeTempPath( tempTag + ( bJson ? ".prefab.json" : ".prefab.xml" ) );
+        SW_ASSERT_TRUE( resaved.saveToFile( savedPath ) );
+        sw::PrefabAsset reread;
+        SW_ASSERT_TRUE( bJson ? reread.loadFromJsonFile( savedPath ) : reread.loadFromXmlFile( savedPath ) );
+        sw::GameObjectManager rebuilt;
+        sw::GameObject*       pRebuilt = rebuilt.createGameObject( sw::hashed_string( "RepositoryPrefab" ) );
+        SW_ASSERT_TRUE( reread.applyStateTo( pRebuilt ) );
+        SW_EXPECT_TRUE_MSG( sw::SceneTestInternal::collectComponentNames( &rebuilt ) == listExpected, path.c_str() );
+    }
+    SW_EXPECT_TRUE_MSG( sceneCount >= 2 && prefabCount >= 1, "no repository scene or prefab was found - this check saw nothing" );
+    manager.shutdown();
 }

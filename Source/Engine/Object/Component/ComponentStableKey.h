@@ -17,9 +17,10 @@ namespace sw
 
     /**
      * @class ComponentStableKey
-     * @brief 컴포넌트 안정 키(`타입이름#n`)를 만들고 해석합니다. 같은 타입끼리만 셉니다.
-     * @details 이름표(`Component::setComponentName`)는 키에 들어가지 않습니다 — 저장되지 않으므로, 이름표로 만든 키는 씬을 다시 읽으면
-     *          가리킬 곳이 없습니다. 예전에는 이름표를 단 컴포넌트를 그 이름으로 따로 셌습니다.
+     * @brief 컴포넌트 안정 키(`이름표#n`)를 만들고 해석합니다. 같은 이름표끼리만 셉니다.
+     * @details 이름표(`Component::setComponentName`, 기본은 타입 이름)는 상태와 함께 저장되므로 씬을 다시 읽어도 같은 키가 같은 컴포넌트를
+     *          가리킵니다 — 언리얼이 컴포넌트 이름으로 부착 대상 · 오버라이드를 가리키는 것과 같습니다. 이름표가 없는 옛 상태는 타입 이름으로
+     *          읽히므로 그때 적힌 키(`타입이름#n`)가 그대로 맞습니다.
      */
     class SW_API ComponentStableKey
     {
@@ -30,7 +31,7 @@ namespace sw
         /** @brief 키가 가리키는 컴포넌트입니다. 형식이 아니거나(`#` 없음 · 숫자 아님) 없으면 nullptr 입니다. */
         static Component* findComponent( GameObject* pOwner, string_view key );
 
-        /** @brief 키의 앞부분입니다. 컴포넌트 이름, 없으면 타입 이름(짧은 것 → 정규화된 것 → "Component")입니다. */
+        /** @brief 키의 앞부분입니다. 컴포넌트 이름표, 비어 있으면 타입 이름(짧은 것 → 정규화된 것 → "Component")입니다. */
         static string_view getBaseName( const Component* pComp );
     };
 } // namespace sw

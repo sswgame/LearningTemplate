@@ -110,6 +110,36 @@ SW_TEST_CASE( EditorTransformCommandsTest, PastedValuesAndPresetsReachTheWorldTr
 }
 
 /**
+ * @brief [EditorTransformCommandsTest] 붙여넣기 · 프리셋 · 새 컴포넌트로 붙여넣기는 값만 옮기고 컴포넌트 이름표는 옮기지 않는다
+ * @details 이름표는 저장되는 PROPERTY 라 직렬화기가 값과 함께 싣는다. 그대로 옮기면 붙여 넣은 컴포넌트가 원본의 이름(컴포넌트 키)을 갖게 되어,
+ *          같은 오브젝트 안에서 키가 겹치거나 대상을 가리키던 부착 · 오버라이드가 가리킬 곳을 잃는다.
+ */
+SW_TEST_CASE( EditorTransformCommandsTest, PastingValuesKeepsTheTargetsComponentName )
+{
+    GameObjectManager manager;
+    GameObject*       pSource     = manager.createGameObject( hashed_string( "Source" ) );
+    MeshComponent*    pSourceMesh = pSource->addComponent<MeshComponent>();
+    GameObject*       pTarget     = manager.createGameObject( hashed_string( "Target" ) );
+    MeshComponent*    pTargetMesh = pTarget->addComponent<MeshComponent>();
+    SW_ASSERT_TRUE( pSourceMesh != nullptr && pTargetMesh != nullptr );
+    pSourceMesh->setComponentName( hashed_string( "Barrel" ) );
+    pTargetMesh->setComponentName( hashed_string( "Stock" ) );
+    const string copied = XmlSerializer::serialize( pSourceMesh, *pSourceMesh->getTypeInfo() );
+
+    SW_ASSERT_TRUE( EditorTransformCommands::pasteComponentValues( pTargetMesh, copied ) );
+    SW_EXPECT_STREQ( "Stock", pTargetMesh->getComponentName().c_str() );
+
+    const string presetPath = test::makeTempPath( "named.preset.xml" );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( presetPath, copied ) );
+    SW_ASSERT_TRUE( EditorTransformCommands::loadComponentPreset( pTargetMesh, presetPath ) );
+    SW_EXPECT_STREQ( "Stock", pTargetMesh->getComponentName().c_str() );
+
+    Component* pPasted = EditorTransformCommands::pasteComponentAsNew( pTarget, "MeshComponent", copied );
+    SW_ASSERT_NOT_NULL( pPasted );
+    SW_EXPECT_STREQ( "MeshComponent", pPasted->getComponentName().c_str() );
+}
+
+/**
  * @brief [EditorTransformCommandsTest] 프리셋 이름 규칙은 하나다 — 이름으로 저장한 것은 목록이 같은 이름으로 읽고, 대화상자는 고른 파일에 그대로 쓴다
  * @details 예전에는 저장 대화상자가 고른 파일 이름에서 `.xml` 만 떼어 이름 규칙에 넘겨, 고른 폴더는 버려지고 `MyPreset.preset.xml` 이 프리셋 폴더의
  *          `<타입>_MyPreset.preset.preset.xml` 이 됐다. 인스펙터 목록은 접미사 길이 11 을 손으로 세어 이름을 잘랐다.

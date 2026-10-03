@@ -12,7 +12,11 @@ namespace sw
         if ( pComp == nullptr )
             return "Component";
 
-        // 타입 이름이다. 이름표(`setComponentName`)는 저장되지 않으므로, 이름표로 만든 키는 다시 읽으면 가리킬 곳이 없다.
+        // 이름표가 먼저다 — 상태와 함께 저장된다(언리얼의 컴포넌트 이름 자리). 이름표가 없는 옛 상태는 타입 이름으로 읽혀 키가 그대로다.
+        // 이름표의 글은 intern 된 저장소에 살아 뷰를 돌려줘도 된다.
+        const hashed_string componentName = pComp->getComponentName();
+        if ( componentName.empty() == false )
+            return componentName.view();
         const TypeInfo* pTypeInfo = pComp->getTypeInfo();
         if ( pTypeInfo != nullptr )
         {

@@ -479,3 +479,43 @@ SW_TEST_CASE( PrefabTest, EngineCooksXmlAndJsonPrefabs )
         SW_EXPECT_TRUE( pRoot->getLocalPosition() == sw::float3( 1.0f, 2.0f, 3.0f ) );
     }
 }
+
+/**
+ * @brief [PrefabTest] 컴포넌트 이름표는 프리팹의 세 형식(XML · JSON · 쿠킹한 PFB2)을 건너 남는다
+ * @details 이름표는 오브젝트 안에서 컴포넌트를 가리키는 키다(부착 대상 · 프리팹 오버라이드). 프리팹이 이름표를 잃으면 스폰한 인스턴스가 기본값(타입 이름)을
+ *          달고 나와, 그 이름으로 적힌 오버라이드 · 부착이 가리킬 곳을 잃는다.
+ */
+SW_TEST_CASE( PrefabTest, ComponentNameSurvivesEveryPrefabFormat )
+{
+    sw::GameObjectManager authoring;
+    sw::GameObject*       pSource = authoring.createGameObject( sw::hashed_string( "Rifle" ) );
+    SW_ASSERT_NOT_NULL( pSource->addComponent<sw::SceneComponent>() );
+    sw::SceneComponent* pGrip = pSource->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pGrip );
+    pGrip->setComponentName( sw::hashed_string( "Grip" ) );
+    sw::PrefabAsset source;
+    source.setFromGameObject( pSource );
+
+    const sw::string xmlPath  = test::makeTempPath( "named.prefab.xml" );
+    const sw::string jsonPath = test::makeTempPath( "named.prefab.json" );
+    SW_ASSERT_TRUE( source.saveToXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( source.saveToJsonFile( jsonPath ) );
+    SW_ASSERT_TRUE( sw::writeCookedBeside( jsonPath, true ) );
+
+    sw::PrefabAsset fromXml;
+    sw::PrefabAsset fromJson;
+    sw::PrefabAsset fromCooked;
+    SW_ASSERT_TRUE( fromXml.loadFromXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( fromJson.loadFromJsonFile( jsonPath ) );
+    SW_ASSERT_TRUE( fromCooked.loadFromBinaryFile( sw::AssetCookPath::toCookedPath( jsonPath ) ) );
+
+    sw::GameObjectManager check;
+    for ( const sw::PrefabAsset* pAsset : { &fromXml, &fromJson, &fromCooked } )
+    {
+        sw::GameObject* pSpawned = check.createGameObject( sw::hashed_string( "Spawned" ) );
+        SW_ASSERT_TRUE( pAsset->applyStateTo( pSpawned ) );
+        SW_ASSERT_EQUAL( size_t( 2 ), pSpawned->getComponents().size() );
+        SW_EXPECT_STREQ( "SceneComponent", pSpawned->getComponents()[0]->getComponentName().c_str() );
+        SW_EXPECT_STREQ( "Grip", pSpawned->getComponents()[1]->getComponentName().c_str() );
+    }
+}

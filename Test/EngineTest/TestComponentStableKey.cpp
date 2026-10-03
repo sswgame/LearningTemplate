@@ -7,6 +7,7 @@
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -36,11 +37,10 @@ SW_TEST_CASE( ComponentStableKeyTest, KeyRoundTripsThroughFind )
 }
 
 /**
- * @brief [ComponentStableKeyTest] 이름표는 키를 바꾸지 않는다 — 타입 이름으로 센다
- * @details 예전에는 이름표를 단 컴포넌트를 그 이름으로 따로 셌다. 그런데 이름표는 저장되지 않아, 그 키(씬 파일의 부착 대상 · 에디터 선택
- *          복원)는 씬을 다시 읽으면 가리킬 곳이 없었다.
+ * @brief [ComponentStableKeyTest] 키는 이름표로 센다 — 이름표를 단 컴포넌트는 그 이름의 첫째, 나머지는 타입 이름으로 다시 센다. 이름표는 상태와 함께 다시 읽힌다
+ * @details 이름표는 저장된다(언리얼의 컴포넌트 이름이 참조 · 오버라이드의 키인 자리). 그래서 이름표로 만든 키는 상태를 다시 읽어도 같은 컴포넌트를 가리킨다.
  */
-SW_TEST_CASE( ComponentStableKeyTest, LabelDoesNotChangeTheKey )
+SW_TEST_CASE( ComponentStableKeyTest, LabelIsTheKeyAndSurvivesAReload )
 {
     sw::GameObjectManager manager;
     sw::GameObject*       pObj = manager.createGameObject( sw::hashed_string( "KeyOwner" ) );
@@ -51,9 +51,18 @@ SW_TEST_CASE( ComponentStableKeyTest, LabelDoesNotChangeTheKey )
     SW_ASSERT_TRUE( pNamed != nullptr && pPlain != nullptr );
     pNamed->setComponentName( sw::hashed_string( "Muzzle" ) );
 
-    SW_EXPECT_EQUAL( sw::string{ "SceneComponent#0" }, sw::ComponentStableKey::makeKey( pNamed ) );
-    SW_EXPECT_EQUAL( sw::string{ "SceneComponent#1" }, sw::ComponentStableKey::makeKey( pPlain ) );
-    SW_EXPECT_TRUE( sw::ComponentStableKey::findComponent( pObj, "SceneComponent#0" ) == pNamed );
+    SW_EXPECT_EQUAL( sw::string{ "Muzzle#0" }, sw::ComponentStableKey::makeKey( pNamed ) );
+    SW_EXPECT_EQUAL( sw::string{ "SceneComponent#0" }, sw::ComponentStableKey::makeKey( pPlain ) );
+    SW_EXPECT_TRUE( sw::ComponentStableKey::findComponent( pObj, "Muzzle#0" ) == pNamed );
+    SW_EXPECT_TRUE( sw::ComponentStableKey::findComponent( pObj, "SceneComponent#0" ) == pPlain );
+
+    // 상태를 다시 읽어도 같은 키가 같은 자리를 가리킨다.
+    const sw::string state = sw::ObjectStateSerializer::saveToXmlString( pObj );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pObj, state ) );
+    sw::Component* pReloadedNamed = sw::ComponentStableKey::findComponent( pObj, "Muzzle#0" );
+    SW_ASSERT_NOT_NULL( pReloadedNamed );
+    SW_EXPECT_TRUE( pReloadedNamed == pObj->getComponents()[0] );
+    SW_EXPECT_STREQ( "Muzzle", pReloadedNamed->getComponentName().c_str() );
 }
 
 /**
