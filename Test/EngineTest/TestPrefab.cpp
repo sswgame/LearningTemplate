@@ -109,6 +109,21 @@ SW_TEST_CASE( PrefabTest, XmlJsonBinaryRoundtrip )
 /**
  * @brief [PrefabTest] 경로 구분자·확장자가 달라도 같은 캐시 엔트리
  */
+/**
+ * @brief [PrefabTest] JSON 으로 옮길 수 없는 상태는 JSON 파일을 쓰지 않고 실패한다 — 로더가 읽지 못하는 래퍼를 남기지 않는다
+ * @details 상태를 JSON 으로 바꾸지 못하면 `{formatVersion, name, xmlBody}` 로 싸서 쓰고 성공을 돌려줬는데, 그 모양을 읽는 쪽은 없었다.
+ */
+SW_TEST_CASE( PrefabTest, JsonSaveOfUnconvertibleStateWritesNothing )
+{
+    const sw::string      jsonPath = test::makeTempPath( "unconvertible.prefab.json" );
+    const sw::PrefabAsset emptyPrefab;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "prefab state that cannot be converted to JSON" );
+        SW_EXPECT_FALSE( emptyPrefab.saveToJsonFile( jsonPath ) );
+    }
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( jsonPath ) );
+}
+
 SW_TEST_CASE( PrefabTest, CacheKeyNormalizesPathAndExtension )
 {
     const sw::string srcXmlPath = sw::ensureSamplePrefabXml();

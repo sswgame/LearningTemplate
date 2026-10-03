@@ -41,7 +41,7 @@ namespace sw
         [[nodiscard]] bool loadFromBinaryFile( string_view assetRelativePath );
         /** @brief XML 로 저장합니다(<Prefab formatVersion="0" name="...">). */
         [[nodiscard]] bool saveToXmlFile( string_view assetRelativePath ) const;
-        /** @brief JSON 으로 저장합니다(GameObject 상태 JSON 그대로). 상태를 JSON 으로 옮기지 못하면 XML 본문을 `xmlBody` 로 싸 둡니다. */
+        /** @brief JSON 으로 저장합니다(GameObject 상태 JSON 그대로). 상태를 JSON 으로 옮기지 못하면 쓰지 않고 오류를 알리며 false 입니다. */
         [[nodiscard]] bool saveToJsonFile( string_view assetRelativePath ) const;
         /**
          * @brief 경로의 확장자로 형식을 골라 저장합니다(`.prefab.xml` · `.prefab.json`). 프리팹 경로가 아니면 쓰지 않고 false 입니다.

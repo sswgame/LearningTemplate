@@ -332,16 +332,12 @@ namespace sw
     {
         const string absPath = ResourceUtil::getWritePath( assetRelativePath );
 
-        string jsonStr = ( _stateFormat == PrefabStateFormat::Json ) ? _stateData : convertState( PrefabStateFormat::Json );
+        const string jsonStr = ( _stateFormat == PrefabStateFormat::Json ) ? _stateData : convertState( PrefabStateFormat::Json );
         if ( jsonStr.empty() )
         {
-            // 상태를 읽지 못했다(타입이 빠진 본문 등). 본문을 그대로 싸서 잃지 않는다.
-            JsonDocument doc;
-            JsonValue    root = doc.makeObject();
-            root.set( "formatVersion" ).setInt( static_cast<int32>( AssetFormatVersions::kPrefab ) );
-            root.set( "name" ).setString( _name );
-            root.set( "xmlBody" ).setString( _stateData );
-            jsonStr = doc.dump( 1 );
+            // 상태를 읽지 못했다(타입이 빠진 본문 등). 로더가 읽을 수 없는 파일을 쓰지 않는다 — XML 로는 그대로 저장할 수 있다.
+            SW_LOG_ERROR( "Prefab '%#' state could not be converted to JSON; nothing written: %#", _name, absPath );
+            return false;
         }
 
         FileUtil::ensureParentDirectoryExists( absPath );

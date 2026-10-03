@@ -124,8 +124,6 @@ cd build/Ninja-Debug/Bin
 
 - **Shipping `App --cook-scenes` 와 에디터 `-gv_editorStartupScene` 이 GF 타입 · 엔진 데이터 등록 전에 씬을 읽는다** — spriteui 의 GF 컴포넌트가 MissingComponent 로
   구워지고(`enginedata.xml not found` · 프리팹 `.bin` 없음 경고도 같은 쿠킹), 에디터 시작 씬은 GameFramework.dll 로드 전에 읽혀 게임 시작 씬에 덮인다(GameConfig.h 주석과 반대).
-- **남은 옛 형식 후보**: UserBindings 의 `kind` 없는 `<bind>`(시험 픽스처 `TestActionMap` 이 그 모양), `PrefabAsset::saveToJsonFile` 의 `{formatVersion, name, xmlBody}` 래퍼(읽는 쪽 없음).
-
 - **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리

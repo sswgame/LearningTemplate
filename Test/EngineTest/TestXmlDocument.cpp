@@ -153,6 +153,22 @@ SW_TEST_CASE( XmlDocumentTest, UnreadableBooleanFallsBackAndSaysSo )
 }
 
 /**
+ * @brief [XmlDocumentTest] getAttributeText 는 없는 속성에 빈 글을 준다 — string_view 를 받는 함수에 그대로 넘겨도 된다
+ */
+SW_TEST_CASE( XmlDocumentTest, AttributeTextIsEmptyWhenMissing )
+{
+    sw::XmlDocument doc;
+    SW_ASSERT_TRUE( doc.parse( R"(<bind key="A" empty=""/>)" ) );
+    const sw::XmlNode node = doc.getRoot( "bind" );
+    SW_ASSERT_TRUE( node.isValid() );
+
+    SW_EXPECT_TRUE( node.getAttributeText( "key" ) == "A" );
+    SW_EXPECT_TRUE( node.getAttributeText( "empty" ).empty() );
+    SW_EXPECT_TRUE( node.getAttributeText( "missing" ).empty() );
+    SW_EXPECT_TRUE( sw::XmlNode{}.getAttributeText( "key" ).empty() );
+}
+
+/**
  * @brief [XmlDocumentTest] 범위를 정한 정수 속성은 범위 밖 · 정수가 아닌 글을 거절하고 알린다 — 좁은 칸으로 감지 않는다
  * @details 좁은 칸에 `static_cast<uint8>( getAttributeInt( … ) )` 로 넣으면 "256" 이 0, "-1" 이 255 로 감겼다(입력 맵의 패드 번호).
  *          `tryGetAttributeIntInRange` 는 없으면 폴백으로 성공, 범위 안이면 그 값, 아니면 경고하고 false(값은 폴백)다.

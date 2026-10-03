@@ -534,6 +534,7 @@ SW_TEST_CASE( ActionMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
 {
     const sw::string stickKind    = sw::BindingKinds::toName( sw::BindingKind::GamepadStick2D );
     const sw::string shortcutKind = sw::BindingKinds::toName( sw::BindingKind::Shortcut );
+    const sw::string singleKind   = sw::BindingKinds::toName( sw::BindingKind::SingleSlot );
     const sw::string keyS         = sw::KeyCodes::toName( sw::Key::S );
 
     sw::string xml = "<UserBindings>";
@@ -543,8 +544,8 @@ SW_TEST_CASE( ActionMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
     xml += "<bind action=\"StickNoSuchPad\" kind=\"" + stickKind + "\" pad=\"4\"/>";
     xml += "<bind action=\"ShortcutOk\" kind=\"" + shortcutKind + "\" key=\"" + keyS + "\" modifierMask=\"3\"/>";
     xml += "<bind action=\"ShortcutWraps\" kind=\"" + shortcutKind + "\" key=\"" + keyS + "\" modifierMask=\"257\"/>";
-    xml += "<bind action=\"PadButtonOk\" source=\"gamepad\" code=\"A\" pad=\"2\"/>";
-    xml += "<bind action=\"PadButtonWraps\" source=\"gamepad\" code=\"A\" pad=\"256\"/>";
+    xml += "<bind action=\"PadButtonOk\" kind=\"" + singleKind + "\" source=\"gamepad\" code=\"A\" pad=\"2\"/>";
+    xml += "<bind action=\"PadButtonWraps\" kind=\"" + singleKind + "\" source=\"gamepad\" code=\"A\" pad=\"256\"/>";
     xml += "</UserBindings>";
 
     const sw::string path = test::makeTempPath( "range_checked_user_bindings.xml" );
@@ -578,6 +579,75 @@ SW_TEST_CASE( ActionMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
     // 버린 것마다 한 줄씩 알린다.
     SW_EXPECT_TRUE_MSG( logs.countContaining( "attribute 'pad'" ) == 4, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "attribute 'modifierMask'" ) == 1, logs.joined().c_str() );
+}
+
+/**
+ * @brief [ActionMapTest] 유저 바인딩은 저장 쪽이 쓰는 모양만 읽는다 — 종류(kind)가 없거나 단일 슬롯의 특성 이름이 다르면 버리고 알린다
+ * @details 저장 쪽(`saveUserBindings`)은 늘 `kind` 를 쓰고, 단일 슬롯은 `source="key" key=…` · `source="mouse" button=…` ·
+ *          `source="gamepad" code=… pad=…` 이다. 읽는 쪽이 `kind` 없는 바인딩과 `source="key" code=…` 같은 저장하지 않는 모양까지
+ *          짐작해 읽으면, 저장 형식이 바뀌어도 시험이 그 차이를 보지 못한다.
+ */
+SW_TEST_CASE( ActionMapTest, UserBindingsReadOnlyTheSavedShape )
+{
+    const sw::string singleKind = sw::BindingKinds::toName( sw::BindingKind::SingleSlot );
+
+    sw::string xml = "<UserBindings>";
+    xml += "<bind action=\"SavedKey\" kind=\"" + singleKind + "\" source=\"key\" key=\"A\"/>";
+    xml += "<bind action=\"NoKind\" source=\"key\" key=\"A\"/>";
+    xml += "<bind action=\"UnknownKind\" kind=\"NoSuchKind\" source=\"key\" key=\"A\"/>";
+    xml += "<bind action=\"CodeForKey\" kind=\"" + singleKind + "\" source=\"key\" code=\"A\"/>";
+    xml += "<bind action=\"NoSource\" kind=\"" + singleKind + "\" key=\"A\"/>";
+    xml += "</UserBindings>";
+
+    const sw::string path = test::makeTempPath( "saved_shape_user_bindings.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, xml ) );
+
+    test::ScopedLogCollector logs;
+    sw::ActionMap            actionMap;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "user bindings without kind or with an unsaved single-slot shape" );
+        SW_ASSERT_TRUE( actionMap.loadUserBindings( path ) );
+    }
+
+    SW_EXPECT_TRUE( actionMap.hasAction( "SavedKey" ) );
+    SW_EXPECT_TRUE_MSG( actionMap.hasAction( "NoKind" ) == false, "kind 없는 바인딩을 짐작해 읽었습니다" );
+    SW_EXPECT_TRUE_MSG( actionMap.hasAction( "UnknownKind" ) == false, "모르는 kind 를 단일 슬롯으로 읽었습니다" );
+    SW_EXPECT_TRUE_MSG( actionMap.hasAction( "CodeForKey" ) == false, "source=key 의 code 특성(저장하지 않는 모양)을 읽었습니다" );
+    SW_EXPECT_TRUE_MSG( actionMap.hasAction( "NoSource" ) == false, "source 없는 단일 슬롯을 읽었습니다" );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "action=NoKind" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "action=UnknownKind" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "action=NoSource" ) == 1, logs.joined().c_str() );
+}
+
+/**
+ * @brief [ActionMapTest] 유저 바인딩의 특성이 빠져도 죽지 않는다 — 모든 바인딩 종류에서 kind 만 있는 바인딩을 읽는다
+ * @details 종류별 읽기가 `KeyCodes::fromName( node.findAttribute( … ) )` 였다. 특성이 없으면 nullptr 로 `string_view` 를 만들어
+ *          strlen(nullptr) 에서 죽었다. 이제 `XmlNode::getAttributeText`(없으면 빈 글)를 넘긴다.
+ */
+SW_TEST_CASE( ActionMapTest, UserBindingsWithMissingAttributesDoNotCrash )
+{
+    sw::string xml = "<UserBindings>";
+    for ( uint32 kindIndex = 0; kindIndex < static_cast<uint32>( sw::BindingKind::Count ); ++kindIndex )
+    {
+        const sw::BindingKind kind = static_cast<sw::BindingKind>( kindIndex );
+        xml += "<bind action=\"Bare" + sw::string( sw::BindingKinds::toName( kind ) ) + "\" kind=\"" + sw::BindingKinds::toName( kind ) + "\"/>";
+    }
+    xml += "<bind action=\"BareSingleKey\" kind=\"" + sw::string( sw::BindingKinds::toName( sw::BindingKind::SingleSlot ) ) + "\" source=\"key\"/>";
+    xml += "<bind action=\"BareSingleMouse\" kind=\"" + sw::string( sw::BindingKinds::toName( sw::BindingKind::SingleSlot ) ) + "\" source=\"mouse\"/>";
+    xml += "<bind action=\"BareSingleGamepad\" kind=\"" + sw::string( sw::BindingKinds::toName( sw::BindingKind::SingleSlot ) ) + "\" source=\"gamepad\"/>";
+    xml += "</UserBindings>";
+
+    const sw::string path = test::makeTempPath( "missing_attribute_user_bindings.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, xml ) );
+
+    sw::ActionMap actionMap;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "user bindings whose kind-specific attributes are missing" );
+        SW_EXPECT_TRUE( actionMap.loadUserBindings( path ) );
+    }
+    SW_EXPECT_TRUE( actionMap.hasAction( "BareSingleKey" ) == false );
+    SW_EXPECT_TRUE( actionMap.hasAction( "BareSingleMouse" ) == false );
+    SW_EXPECT_TRUE( actionMap.hasAction( "BareSingleGamepad" ) == false );
 }
 
 /**

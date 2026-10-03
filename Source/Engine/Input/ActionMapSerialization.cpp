@@ -264,10 +264,10 @@ namespace sw
             // 2) <vector2d> 태그 파싱
             for ( XmlNode compNode = actionNode.findChild( "vector2d" ); compNode.isValid(); compNode = compNode.findNextSibling( "vector2d" ) )
             {
-                const Key     upKey          = KeyCodes::fromName( compNode.findAttribute( "up" ) );
-                const Key     downKey        = KeyCodes::fromName( compNode.findAttribute( "down" ) );
-                const Key     leftKey        = KeyCodes::fromName( compNode.findAttribute( "left" ) );
-                const Key     rightKey       = KeyCodes::fromName( compNode.findAttribute( "right" ) );
+                const Key     upKey          = KeyCodes::fromName( compNode.getAttributeText( "up" ) );
+                const Key     downKey        = KeyCodes::fromName( compNode.getAttributeText( "down" ) );
+                const Key     leftKey        = KeyCodes::fromName( compNode.getAttributeText( "left" ) );
+                const Key     rightKey       = KeyCodes::fromName( compNode.getAttributeText( "right" ) );
                 const float32 deadzone       = compNode.getAttributeFloat( "deadzone", 0.0f );
                 hashed_string compLayer      = layer;
                 const utf8*   pCompLayerAttr = compNode.findAttribute( "layer" );
@@ -283,8 +283,8 @@ namespace sw
             // 3) <axis1d> 태그 파싱
             for ( XmlNode axisNode = actionNode.findChild( "axis1d" ); axisNode.isValid(); axisNode = axisNode.findNextSibling( "axis1d" ) )
             {
-                const Key     posKey         = KeyCodes::fromName( axisNode.findAttribute( "positive" ) );
-                const Key     negativeKey    = KeyCodes::fromName( axisNode.findAttribute( "negative" ) );
+                const Key     posKey         = KeyCodes::fromName( axisNode.getAttributeText( "positive" ) );
+                const Key     negativeKey    = KeyCodes::fromName( axisNode.getAttributeText( "negative" ) );
                 hashed_string axisLayer      = layer;
                 const utf8*   pAxisLayerAttr = axisNode.findAttribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pAxisLayerAttr ) == false )
@@ -320,8 +320,8 @@ namespace sw
             // 5) <chord> 태그 파싱
             for ( XmlNode chordNode = actionNode.findChild( "chord" ); chordNode.isValid(); chordNode = chordNode.findNextSibling( "chord" ) )
             {
-                const Key     modifierKey       = KeyCodes::fromName( chordNode.findAttribute( "modifier" ) );
-                const Key     triggerKey        = KeyCodes::fromName( chordNode.findAttribute( "trigger" ) );
+                const Key     modifierKey       = KeyCodes::fromName( chordNode.getAttributeText( "modifier" ) );
+                const Key     triggerKey        = KeyCodes::fromName( chordNode.getAttributeText( "trigger" ) );
                 ActionTrigger trigger           = defaultTrigger;
                 const utf8*   pChordTriggerAttr = chordNode.findAttribute( "triggerMode" );
                 if ( StringUtil::isNullOrEmpty( pChordTriggerAttr ) == false )
@@ -519,150 +519,128 @@ namespace sw
             if ( StringUtil::isNullOrEmpty( pAction ) )
                 continue;
 
-            // 이름 → 종류는 표가 답한다. 예전에는 여기가 문자열 if/else 사슬이라 저장 쪽 리터럴과
-            // 짝이 맞는지 아무도 지켜 주지 않았고, 모르는 이름은 조용히 아래 레거시 경로로 떨어졌다.
+            // 이름 → 종류는 표가 답한다. 종류가 없거나 모르는 이름이면 그 바인딩은 읽지 않는다 — 저장 쪽은 늘 `kind` 를 쓴다.
             const BindingKind parsedKind = ( pKindStr != nullptr ) ? BindingKinds::fromName( pKindStr ) : BindingKind::Count;
-            if ( parsedKind != BindingKind::Count )
+            if ( parsedKind == BindingKind::Count )
             {
-                bool bHandled = true;
+                SW_LOG_ERROR( "바인딩 종류가 없거나 모르는 이름입니다 (action=%#, kind=%#) — 이 바인딩은 건너뜁니다.", pAction,
+                              ( pKindStr != nullptr ) ? pKindStr : "" );
+                continue;
+            }
 
-                switch ( parsedKind )
+            switch ( parsedKind )
+            {
+                case BindingKind::Axis1DComposite:
                 {
-                    case BindingKind::Axis1DComposite:
-                    {
-                        const Key negativeKey = KeyCodes::fromName( bindNode.findAttribute( "negKey" ) );
-                        const Key posKey      = KeyCodes::fromName( bindNode.findAttribute( "posKey" ) );
-                        if ( negativeKey != Key::Unknown && posKey != Key::Unknown )
-                            bindAxis1DComposite( hashed_string( pAction ), negativeKey, posKey, hashed_string( layer ) );
-                        break;
-                    }
-                    case BindingKind::Vector2DComposite:
-                    {
-                        const Key     upKey    = KeyCodes::fromName( bindNode.findAttribute( "up" ) );
-                        const Key     downKey  = KeyCodes::fromName( bindNode.findAttribute( "down" ) );
-                        const Key     leftKey  = KeyCodes::fromName( bindNode.findAttribute( "left" ) );
-                        const Key     rightKey = KeyCodes::fromName( bindNode.findAttribute( "right" ) );
-                        const float32 deadzone = bindNode.getAttributeFloat( "deadzone", 0.0f );
-                        if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
-                            bindVector2D( hashed_string( pAction ), upKey, downKey, leftKey, rightKey, deadzone, hashed_string( layer ) );
-                        break;
-                    }
-                    case BindingKind::GamepadStick2D:
-                    {
-                        uint8 pad{ 0 };
-                        if ( ActionMapSerializationInternal::tryGetPadIndex( bindNode, pad ) == false )
-                            break; // 경고했다 — 처리한 것으로 두고(레거시 경로로 떨어지지 않게) 이 바인딩을 버린다
-                        const utf8*        pStickStr     = bindNode.findAttribute( "stick" );
-                        const GamepadStick stick         = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
-                        const float32      deadzone      = bindNode.getAttributeFloat( "deadzone", 0.15f );
-                        const float32      outerDeadzone = bindNode.getAttributeFloat( "outerDeadzone", 1.0f );
-                        const float32      exp           = bindNode.getAttributeFloat( "exponent", 1.0f );
-                        bindGamepadStick2D( hashed_string( pAction ), stick, deadzone, hashed_string( layer ), pad, outerDeadzone, exp );
-                        break;
-                    }
-                    case BindingKind::MouseDelta2D:
-                    {
-                        const float32 scale = bindNode.getAttributeFloat( "scale", 1.0f );
-                        bindMouseDelta( hashed_string( pAction ), scale, hashed_string( layer ) );
-                        break;
-                    }
-                    case BindingKind::VirtualJoystick2D:
-                    {
-                        const MouseButton activationButton = MouseButtons::fromName( bindNode.findAttribute( "button" ) );
-                        const float32     radius           = bindNode.getAttributeFloat( "radius", 64.0f );
-                        const float32     deadzone         = bindNode.getAttributeFloat( "deadzone", 0.1f );
-                        const float32     outerDeadzone    = bindNode.getAttributeFloat( "outerDeadzone", 1.0f );
-                        if ( activationButton != MouseButton::Count )
-                            bindVirtualJoystick2D( hashed_string( pAction ), activationButton, radius, deadzone, hashed_string( layer ), outerDeadzone );
-                        break;
-                    }
-                    case BindingKind::Chord:
-                    {
-                        const Key modifierKey = KeyCodes::fromName( bindNode.findAttribute( "modKey" ) );
-                        const Key triggerKey  = KeyCodes::fromName( bindNode.findAttribute( "trigKey" ) );
-                        if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
-                            bindChord( hashed_string( pAction ), modifierKey, triggerKey, ActionTrigger::Pressed, hashed_string( layer ) );
-                        break;
-                    }
-                    case BindingKind::Shortcut:
-                    {
-                        uint8 modifierMask{ 0 };
-                        if ( ActionMapSerializationInternal::tryGetModifierMask( bindNode, modifierMask ) == false )
-                            break; // 경고했다 — 다른 수정 키 조합으로 묶지 않고 이 바인딩을 버린다
-                        const Key key = KeyCodes::fromName( bindNode.findAttribute( "key" ) );
-                        if ( key != Key::Unknown )
-                            bindShortcut( hashed_string( pAction ), key, modifierMask, ActionTrigger::Pressed, hashed_string( layer ) );
-                        break;
-                    }
-                    case BindingKind::AnyKey:
-                    {
-                        bindAnyKey( hashed_string( pAction ), hashed_string( layer ) );
-                        break;
-                    }
-                    case BindingKind::SingleSlot:
-                    {
-                        // 아래 레거시 경로가 읽는다. `kind="single"` 은 특성 이름(source/key/button)이
-                        // 그대로라 예전 파일과 같은 코드로 읽힌다.
-                        bHandled = false;
-                        break;
-                    }
-                    case BindingKind::Count:
-                    default:
-                    {
-                        // 표는 이름을 알았는데 여기가 모른다. 종류를 늘리고 이 switch 를 빠뜨린 것이다.
-                        SW_LOG_ERROR( "읽지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 loadUserBindings 를 빠뜨렸습니다.",
-                                      pKindStr );
-                        bHandled = false;
-                        break;
-                    }
+                    const Key negativeKey = KeyCodes::fromName( bindNode.getAttributeText( "negKey" ) );
+                    const Key posKey      = KeyCodes::fromName( bindNode.getAttributeText( "posKey" ) );
+                    if ( negativeKey != Key::Unknown && posKey != Key::Unknown )
+                        bindAxis1DComposite( hashed_string( pAction ), negativeKey, posKey, hashed_string( layer ) );
+                    break;
                 }
-
-                if ( bHandled )
-                    continue;
-            }
-
-            // 단일 슬롯 폴백 · 레거시 포맷
-            const utf8* pKeyStr    = bindNode.findAttribute( "key" );
-            const utf8* pCodeStr   = bindNode.findAttribute( "code" );
-            const utf8* pButtonStr = bindNode.findAttribute( "button" );
-            const utf8* pSourceStr = bindNode.findAttribute( "source" );
-
-            if ( pKeyStr != nullptr )
-            {
-                const Key key = KeyCodes::fromName( pKeyStr );
-                if ( key != Key::Unknown )
-                    bind( hashed_string( pAction ), key, ActionTrigger::Pressed, hashed_string( layer ) );
-            }
-            else if ( pButtonStr != nullptr )
-            {
-                const MouseButton btn = MouseButtons::fromName( pButtonStr );
-                if ( btn != MouseButton::Count )
-                    bind( hashed_string( pAction ), btn, ActionTrigger::Pressed, hashed_string( layer ) );
-            }
-            else if ( pCodeStr != nullptr && pSourceStr != nullptr )
-            {
-                if ( StringUtil::equals( pSourceStr, "key", true ) )
+                case BindingKind::Vector2DComposite:
                 {
-                    const Key key = KeyCodes::fromName( pCodeStr );
+                    const Key     upKey    = KeyCodes::fromName( bindNode.getAttributeText( "up" ) );
+                    const Key     downKey  = KeyCodes::fromName( bindNode.getAttributeText( "down" ) );
+                    const Key     leftKey  = KeyCodes::fromName( bindNode.getAttributeText( "left" ) );
+                    const Key     rightKey = KeyCodes::fromName( bindNode.getAttributeText( "right" ) );
+                    const float32 deadzone = bindNode.getAttributeFloat( "deadzone", 0.0f );
+                    if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
+                        bindVector2D( hashed_string( pAction ), upKey, downKey, leftKey, rightKey, deadzone, hashed_string( layer ) );
+                    break;
+                }
+                case BindingKind::GamepadStick2D:
+                {
+                    uint8 pad{ 0 };
+                    if ( ActionMapSerializationInternal::tryGetPadIndex( bindNode, pad ) == false )
+                        break; // 경고했다 — 이 바인딩을 버린다
+                    const utf8*        pStickStr     = bindNode.findAttribute( "stick" );
+                    const GamepadStick stick         = StringUtil::equals( pStickStr, "Right", true ) ? GamepadStick::Right : GamepadStick::Left;
+                    const float32      deadzone      = bindNode.getAttributeFloat( "deadzone", 0.15f );
+                    const float32      outerDeadzone = bindNode.getAttributeFloat( "outerDeadzone", 1.0f );
+                    const float32      exp           = bindNode.getAttributeFloat( "exponent", 1.0f );
+                    bindGamepadStick2D( hashed_string( pAction ), stick, deadzone, hashed_string( layer ), pad, outerDeadzone, exp );
+                    break;
+                }
+                case BindingKind::MouseDelta2D:
+                {
+                    const float32 scale = bindNode.getAttributeFloat( "scale", 1.0f );
+                    bindMouseDelta( hashed_string( pAction ), scale, hashed_string( layer ) );
+                    break;
+                }
+                case BindingKind::VirtualJoystick2D:
+                {
+                    const MouseButton activationButton = MouseButtons::fromName( bindNode.getAttributeText( "button" ) );
+                    const float32     radius           = bindNode.getAttributeFloat( "radius", 64.0f );
+                    const float32     deadzone         = bindNode.getAttributeFloat( "deadzone", 0.1f );
+                    const float32     outerDeadzone    = bindNode.getAttributeFloat( "outerDeadzone", 1.0f );
+                    if ( activationButton != MouseButton::Count )
+                        bindVirtualJoystick2D( hashed_string( pAction ), activationButton, radius, deadzone, hashed_string( layer ), outerDeadzone );
+                    break;
+                }
+                case BindingKind::Chord:
+                {
+                    const Key modifierKey = KeyCodes::fromName( bindNode.getAttributeText( "modKey" ) );
+                    const Key triggerKey  = KeyCodes::fromName( bindNode.getAttributeText( "trigKey" ) );
+                    if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
+                        bindChord( hashed_string( pAction ), modifierKey, triggerKey, ActionTrigger::Pressed, hashed_string( layer ) );
+                    break;
+                }
+                case BindingKind::Shortcut:
+                {
+                    uint8 modifierMask{ 0 };
+                    if ( ActionMapSerializationInternal::tryGetModifierMask( bindNode, modifierMask ) == false )
+                        break; // 경고했다 — 다른 수정 키 조합으로 묶지 않고 이 바인딩을 버린다
+                    const Key key = KeyCodes::fromName( bindNode.getAttributeText( "key" ) );
                     if ( key != Key::Unknown )
-                        bind( hashed_string( pAction ), key, ActionTrigger::Pressed, hashed_string( layer ) );
+                        bindShortcut( hashed_string( pAction ), key, modifierMask, ActionTrigger::Pressed, hashed_string( layer ) );
+                    break;
                 }
-                else if ( StringUtil::equals( pSourceStr, "mouse", true ) )
+                case BindingKind::AnyKey:
                 {
-                    const MouseButton btn = MouseButtons::fromName( pCodeStr );
-                    if ( btn != MouseButton::Count )
-                        bind( hashed_string( pAction ), btn, ActionTrigger::Pressed, hashed_string( layer ) );
+                    bindAnyKey( hashed_string( pAction ), hashed_string( layer ) );
+                    break;
                 }
-                else if ( StringUtil::equals( pSourceStr, "gamepad", true ) )
+                case BindingKind::SingleSlot:
                 {
-                    const GamepadButton btn = GamepadButtons::fromName( pCodeStr );
-                    uint8               padIndex{ 0 };
-                    if ( btn != GamepadButton::Count && ActionMapSerializationInternal::tryGetPadIndex( bindNode, padIndex ) )
+                    // 저장 쪽과 같은 모양만 읽는다: source="key" key=… · source="mouse" button=… · source="gamepad" code=… pad=…
+                    const utf8* pSourceStr = bindNode.findAttribute( "source" );
+                    if ( StringUtil::equals( pSourceStr, "key", true ) )
                     {
-                        InputSlot slot    = InputSlot::fromGamepadButton( btn );
-                        slot._deviceIndex = padIndex;
-                        bind( hashed_string( pAction ), slot, ActionTrigger::Pressed, hashed_string( layer ) );
+                        const Key key = KeyCodes::fromName( bindNode.getAttributeText( "key" ) );
+                        if ( key != Key::Unknown )
+                            bind( hashed_string( pAction ), key, ActionTrigger::Pressed, hashed_string( layer ) );
                     }
+                    else if ( StringUtil::equals( pSourceStr, "mouse", true ) )
+                    {
+                        const MouseButton btn = MouseButtons::fromName( bindNode.getAttributeText( "button" ) );
+                        if ( btn != MouseButton::Count )
+                            bind( hashed_string( pAction ), btn, ActionTrigger::Pressed, hashed_string( layer ) );
+                    }
+                    else if ( StringUtil::equals( pSourceStr, "gamepad", true ) )
+                    {
+                        const GamepadButton btn = GamepadButtons::fromName( bindNode.getAttributeText( "code" ) );
+                        uint8               padIndex{ 0 };
+                        if ( btn != GamepadButton::Count && ActionMapSerializationInternal::tryGetPadIndex( bindNode, padIndex ) )
+                        {
+                            InputSlot slot    = InputSlot::fromGamepadButton( btn );
+                            slot._deviceIndex = padIndex;
+                            bind( hashed_string( pAction ), slot, ActionTrigger::Pressed, hashed_string( layer ) );
+                        }
+                    }
+                    else
+                    {
+                        SW_LOG_ERROR( "단일 슬롯 바인딩의 source 가 없거나 모르는 값입니다 (action=%#, source=%#) — 이 바인딩은 건너뜁니다.", pAction,
+                                      ( pSourceStr != nullptr ) ? pSourceStr : "" );
+                    }
+                    break;
+                }
+                case BindingKind::Count:
+                default:
+                {
+                    // 표는 이름을 알았는데 여기가 모른다. 종류를 늘리고 이 switch 를 빠뜨린 것이다.
+                    SW_LOG_ERROR( "읽지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 loadUserBindings 를 빠뜨렸습니다.", pKindStr );
+                    break;
                 }
             }
         }

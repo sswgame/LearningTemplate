@@ -288,6 +288,12 @@ namespace sw
         return nullptr;
     }
 
+    string_view XmlNode::getAttributeText( const utf8* pName, bool bIgnoreCaseKeys ) const
+    {
+        const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
+        return ( pValue != nullptr ) ? string_view( pValue ) : string_view{};
+    }
+
     int32 XmlNode::getAttributeInt( const utf8* pName, int32 fallback, bool bIgnoreCaseKeys ) const
     {
         const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
