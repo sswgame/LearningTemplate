@@ -69,6 +69,51 @@ namespace test
         _device.reset();
     }
 
+    RHIBackendSweep::RHIBackendSweep()
+        : _device{}
+        , _listBackend( std::begin( kArrAllRhiBackend ), std::end( kArrAllRhiBackend ) )
+        , _nextIndex{ 0 }
+        , _readyCount{ 0 }
+    {
+    }
+
+    RHIBackendSweep::RHIBackendSweep( std::initializer_list<sw::RHIBackend> listBackend )
+        : _device{}
+        , _listBackend( listBackend.begin(), listBackend.end() )
+        , _nextIndex{ 0 }
+        , _readyCount{ 0 }
+    {
+    }
+
+    RHIBackendSweep::RHIBackendSweep( const sw::vector<sw::RHIBackend>& listBackend )
+        : _device{}
+        , _listBackend( listBackend.begin(), listBackend.end() )
+        , _nextIndex{ 0 }
+        , _readyCount{ 0 }
+    {
+    }
+
+    RHIBackendSweep::Iterator RHIBackendSweep::begin()
+    {
+        advance();
+        return Iterator{ this };
+    }
+
+    void RHIBackendSweep::advance()
+    {
+        _device.shutdown();
+        while ( _nextIndex < _listBackend.size() )
+        {
+            const sw::RHIBackend backend = _listBackend[_nextIndex];
+            ++_nextIndex;
+            if ( _device.initialize( backend ) )
+            {
+                ++_readyCount;
+                return;
+            }
+        }
+    }
+
     bool RHITestDevice::recreateDevice()
     {
         shutdownDevice();

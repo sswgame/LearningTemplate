@@ -87,6 +87,19 @@ namespace
     }
 
     /**
+     * @brief 씬을 한 프레임 그리고(Present 없이) GPU 가 끝날 때까지 기다립니다. `execute` 의 결과를 돌려줍니다.
+     * @details 렌더 스레드와 같은 순서다 — beginFrame → execute → endFrame. 실패해도 프레임은 닫는다.
+     */
+    bool renderSceneFrame( sw::FrameRenderer& renderer, sw::IRHIDevice* pDevice, sw::Scene& scene, const sw::float4& clear )
+    {
+        pDevice->beginFrame( clear );
+        const bool bExecuted = renderer.execute( pDevice, &scene );
+        pDevice->endFrame( false, false );
+        pDevice->waitIdle();
+        return bExecuted;
+    }
+
+    /**
      * @brief 패킷 경로로 몇 프레임 그리고(프레젠트 포함) SceneColor 에서 배경이 아닌 픽셀 수를 셉니다. 실패면 -1.
      * @details 패킷은 프레임마다 새로 만든다 — `executePacket` 이 스냅샷을 **옮겨 가므로** 같은 패킷을 두 번 내면 두 번째는
      *          빈 스냅샷이다(GT 도 프레임마다 export 한다).
@@ -522,16 +535,14 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
  */
 SW_TEST_CASE( RenderPassGpuTest, RenderGraphExecuteParallelRunsOnRealDevice )
 {
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                attemptedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         if ( device->getCapabilities()._bParallelCommandRecording == SW_FALSE )
             continue;
         ++attemptedCount;
-        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
 
         sw::TaskManager taskManager;
         SW_ASSERT_TRUE( taskManager.initialize( 2 ) );
@@ -581,19 +592,17 @@ SW_TEST_CASE( RenderPassGpuTest, RenderGraphExecuteParallelRunsOnRealDevice )
  */
 SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelLevels )
 {
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                attemptedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         // **병렬로 기록하는 백엔드는 전부 돈다 — 하나 찾고 멈추지 않는다.** 예전엔 목록이 {DX12, Vulkan}
         // 이고 첫 성공에서 break 였다. 레이스를 잡으려고 만든 테스트가 정작 레이스가 있던 DX11 을
         // 건너뛰고 있었다.
         if ( device->getCapabilities()._bParallelCommandRecording == SW_FALSE )
             continue;
         ++attemptedCount;
-        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
 
         sw::TaskManager taskManager;
         SW_ASSERT_TRUE( taskManager.initialize( 4 ) );
@@ -693,14 +702,9 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
         return false;
     };
 
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
 
@@ -739,10 +743,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
         {
             // 한 프레임을 돌려야 배치가 서고 ensureMaterialPsos 가 퍼뮤테이션 PSO 를 만든다.
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-            device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), &scene );
-            device->endFrame( false, false );
-            device->waitIdle();
+            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
         }
 
         const sw::string label = sw::string( device->getBackendName() );
@@ -817,7 +818,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
     // 형제 여덟(카메라 컬링·투명 정렬·뷰 모드 등)과 같은 규칙으로 빠진다. 예전엔 여기만 단언이라
     // **디스플레이가 없는 CI 러너에서 이 테스트 하나만 졌다** — X11 디스플레이가 없으면 창이 안 열려
     // 네 백엔드가 전부 초기화에 실패하고, 그건 결함이 아니라 그 환경에 GPU 가 없다는 뜻이다.
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for material permutation PSO test" );
 }
 
@@ -830,14 +831,9 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
 SW_TEST_CASE( RenderPassGpuTest, SpriteDrawsWithTheSpriteShader )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         sw::FrameRenderer renderer;
         bool              bOk   = renderer.initialize( device.get() ) && renderer.isReady();
         const sw::string  label = sw::string( device->getBackendName() );
@@ -864,10 +860,7 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteDrawsWithTheSpriteShader )
             if ( bOk )
             {
                 const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-                device->beginFrame( clear );
-                bOk = renderer.execute( device.get(), &scene );
-                device->endFrame( false, false );
-                device->waitIdle();
+                bOk = renderSceneFrame( renderer, device.get(), scene, clear );
                 SW_EXPECT_TRUE_MSG( bOk, ( label + ": 프레임 실행 실패" ).c_str() );
             }
             if ( bOk )
@@ -887,7 +880,7 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteDrawsWithTheSpriteShader )
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for the sprite shader test" );
 }
 
@@ -909,14 +902,9 @@ SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
     // 카메라(0, 1.2, 3.2)에서 뒤로 물려 시야 폭을 넓힌다 — 그래야 ±2.5 가 화면 안에 들어온다.
     constexpr float32 kDepthZ = -6.0f;
 
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
 
@@ -952,10 +940,7 @@ SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
         if ( bOk )
         {
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-            device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), &scene );
-            device->endFrame( false, false );
-            device->waitIdle();
+            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
         }
 
         test::RHITestImage image;
@@ -986,7 +971,7 @@ SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for camera frustum cull test" );
 }
 
@@ -1007,15 +992,10 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
     bool    bHasReference{ false };
     float32 referenceMean[3]{};
     uint32  referenceDrawn{ 0 };
-    uint32  attemptedCount{ 0 };
 
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
 
@@ -1068,10 +1048,7 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
         if ( bOk )
         {
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-            device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), &scene );
-            device->endFrame( false, false );
-            device->waitIdle();
+            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
         }
 
         test::RHITestImage image;
@@ -1135,7 +1112,7 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for transparent order test" );
 }
 
@@ -1159,14 +1136,9 @@ SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
     // 카메라 뒤(+Z 쪽 멀리)로 보내 절두체 밖에 둔다.
     constexpr float32 kBehindCameraZ = 40.0f;
 
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
 
@@ -1216,10 +1188,7 @@ SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
         if ( bOk )
         {
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-            device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), &scene );
-            device->endFrame( false, false );
-            device->waitIdle();
+            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
         }
 
         test::RHITestImage image;
@@ -1250,7 +1219,7 @@ SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for GPU-generated command test" );
 }
 
@@ -1270,14 +1239,9 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
     // 화면 오른쪽이 붉어진다.
     constexpr float32 kSideOffset = 1.2f;
 
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
 
@@ -1346,10 +1310,7 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
         if ( bOk )
         {
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
-            device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), &scene );
-            device->endFrame( false, false );
-            device->waitIdle();
+            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
         }
 
         test::RHITestImage image;
@@ -1395,7 +1356,7 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for per-batch material color test" );
 }
 
@@ -1415,14 +1376,9 @@ SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
     /// @brief 두 큐브를 카메라가 보는 원점에서 좌우로 이만큼 떼어 놓는다.
     constexpr float32 kSideOffset = 1.1f;
 
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
 
@@ -1463,10 +1419,7 @@ SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
         if ( bOk )
         {
             const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
-            device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), &scene );
-            device->endFrame( false, false );
-            device->waitIdle();
+            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
         }
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
 
@@ -1501,7 +1454,7 @@ SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for multi-batch pass test" );
 }
 
@@ -1519,16 +1472,10 @@ SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
  */
 SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
 {
-    uint32 attemptedCount{ 0 };
 
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-
-        ++attemptedCount;
-
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
 
@@ -1566,10 +1513,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
         for ( uint32 frame = 0; frame < 2 && bOk; ++frame )
         {
             const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
-            device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), &scene );
-            device->endFrame( false, false );
-            device->waitIdle();
+            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
         }
 
         if ( bOk )
@@ -1589,7 +1533,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
                             ++drawnCount;
                     }
                 }
-                const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+                const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
                 SW_EXPECT_TRUE_MSG( pixelCount > 0 && drawnCount > pixelCount / 200,
                                     ( label + ": 인스턴스 애니메이션 뒤 SceneColor 가 비었다 (drawn " + sw::to_string( drawnCount ) + "/" +
                                       sw::to_string( pixelCount ) + ") — UAV 를 떼지 않아 정점 셰이더가 인스턴스를 못 읽는지 의심하라" )
@@ -1599,10 +1543,10 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
 
         renderer.shutdown();
 
-        SW_EXPECT_TRUE_MSG( bOk, ( sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) ) + " execute" ).c_str() );
+        SW_EXPECT_TRUE_MSG( bOk, ( sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) ) + " execute" ).c_str() );
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for instance animation test" );
 }
 
@@ -1615,20 +1559,14 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
     /// @brief 큐브를 원점(카메라가 보는 지점)보다 이만큼 위에 둔다 — 그림을 세로로 비대칭하게 만들어 방향을 검사할 수 있게.
     constexpr float32 kParityCubeHeight = 1.0f;
 
-    uint32  attemptedCount{ 0 };
     uint32  okCount{ 0 };
     bool    bHasReferenceMean{ false };
     float32 referenceMean[3]{};
     uint32  referenceDrawnCount{ 0 };
 
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-
-        ++attemptedCount;
-
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
 
@@ -1671,10 +1609,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
         if ( bOk )
         {
             const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
-            device->beginFrame( clear );
-            bOk = renderer.execute( device.get(), &scene );
-            device->endFrame( false, false );
-            device->waitIdle();
+            bOk = renderSceneFrame( renderer, device.get(), scene, clear );
         }
 
         // 실행 성공만으로는 부족하다 — 실제로 큐브가 찍혔는지, 백엔드끼리 같은 그림인지 SceneColor 픽셀로 본다.
@@ -1706,7 +1641,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
                         }
                     }
                 }
-                const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+                const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
                 SW_EXPECT_TRUE_MSG( pixelCount > 0 && drawnCount > pixelCount / 200,
                                     ( label + ": SceneColor 에 큐브가 없다 (drawn " + sw::to_string( drawnCount ) + "/" + sw::to_string( pixelCount ) + ")" ).c_str() );
                 // **방향 검사** — 평균과 픽셀 수는 상하 반전에 무관하다. 큐브를 원점 위에 두었으므로 올바른 방향이면
@@ -1758,14 +1693,14 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
         if ( bOk )
             ++okCount;
         else
-            SW_LOG_ERROR( "backend %# failed", static_cast<uint32>( backend ) );
+            SW_LOG_ERROR( "backend %# failed", static_cast<uint32>( device.getBackend() ) );
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for FrameRenderer parity" );
 
     SW_EXPECT_TRUE( okCount >= 1 );
-    SW_EXPECT_EQUAL( okCount, attemptedCount );
+    SW_EXPECT_EQUAL( okCount, sweep.getReadyCount() );
 }
 
 /**
@@ -1790,14 +1725,9 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
         return false;
     };
 
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         const sw::string  label = sw::string( device->getBackendName() );
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
@@ -1926,7 +1856,7 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for view mode test" );
 }
 
@@ -2241,14 +2171,10 @@ SW_TEST_CASE( RenderPassGpuTest, MergedSceneDrawsMatchPerBatch )
         return result;
     };
 
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
 
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
@@ -2343,7 +2269,7 @@ SW_TEST_CASE( RenderPassGpuTest, MergedSceneDrawsMatchPerBatch )
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the merged draw test" );
 }
 
@@ -2386,14 +2312,10 @@ SW_TEST_CASE( RenderPassGpuTest, AmbientOcclusionReachesBloom )
         return stat;
     };
 
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
 
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) && renderer.isReady();
@@ -2465,7 +2387,7 @@ SW_TEST_CASE( RenderPassGpuTest, AmbientOcclusionReachesBloom )
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the ambient occlusion test" );
 }
 
@@ -2618,14 +2540,10 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
         return result;
     };
 
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) );
+        const sw::string label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
 
         sw::FrameRenderer renderer;
         bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
@@ -2708,7 +2626,7 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the morph pool identity test" );
 }
 #endif
@@ -2721,14 +2639,9 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
  */
 SW_TEST_CASE( RenderPassGpuTest, MeshPoolsRebuildWhenMeshContentChanges )
 {
-    int32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         {
             sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createUnitCube();
             SW_ASSERT_NOT_NULL( mesh.get() );
@@ -2761,7 +2674,7 @@ SW_TEST_CASE( RenderPassGpuTest, MeshPoolsRebuildWhenMeshContentChanges )
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the mesh pool content test" );
 }
 
@@ -2781,14 +2694,9 @@ SW_TEST_CASE( RenderPassGpuTest, MeshPoolsRebuildWhenMeshContentChanges )
  */
 SW_TEST_CASE( RenderPassGpuTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdinals )
 {
-    int32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         {
             // 텍스처가 붙은 실제 에셋이어야 한다 — 손으로 지은 XML 은 이 저장소를 여러 번 물었다.
             sw::shared_ptr<sw::Material> material = sw::Material::create();
@@ -2809,7 +2717,7 @@ SW_TEST_CASE( RenderPassGpuTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the material texture ordinal test" );
 }
 
@@ -2825,14 +2733,9 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialRequestedWithoutADeviceIsUploadedLater 
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
     sw::MaterialCache&    cache = sw::engine::getResourceManager().getMaterialManager();
 
-    int32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         sw::Material* pMaterial = cache.acquire( kPath, nullptr );
         SW_ASSERT_NOT_NULL( pMaterial );
         // 표시 전에는 올리지 않는다(미리보기 길).
@@ -2850,7 +2753,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialRequestedWithoutADeviceIsUploadedLater 
         SW_EXPECT_FALSE( cache.isCached( kPath ) );
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the deferred material upload test" );
 }
 
@@ -2863,16 +2766,11 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialRequestedWithoutADeviceIsUploadedLater 
  */
 SW_TEST_CASE( RenderPassGpuTest, ReloadedTextureIsReboundToMaterialsAndBatches )
 {
-    const sw::string kTexturePath = "engine/textures/test/checker.dds";
-    int32            attemptedCount{ 0 };
-    int32            changedIndexCount{ 0 };
-    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    const sw::string      kTexturePath = "engine/textures/test/checker.dds";
+    int32                 changedIndexCount{ 0 };
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         {
             sw::shared_ptr<sw::Material> material = sw::Material::create();
             SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
@@ -2921,7 +2819,7 @@ SW_TEST_CASE( RenderPassGpuTest, ReloadedTextureIsReboundToMaterialsAndBatches )
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the texture reload rebinding test" );
     // 지연 해제(DX12 · Vulkan)가 있으면 새 인덱스는 언제나 다르다 — 그것조차 없으면 이 시험은 아무것도 보지 못한 것이다.
     SW_EXPECT_TRUE_MSG( changedIndexCount > 0, "어느 백엔드에서도 다시 올린 텍스처의 인덱스가 바뀌지 않았습니다 — 시험이 결함을 볼 수 없습니다" );
@@ -2946,14 +2844,9 @@ SW_TEST_CASE( RenderPassGpuTest, ReloadedTextureIsReboundToMaterialsAndBatches )
  */
 SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrows )
 {
-    int32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         {
             sw::shared_ptr<sw::Material> parent = sw::Material::create();
             SW_ASSERT_TRUE( parent->initialize( device.get(), "engine/materials/defaultmaterial.material" ) );
@@ -2993,7 +2886,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the instance constant buffer growth test" );
 }
 
@@ -3023,28 +2916,24 @@ SW_TEST_CASE( RenderPassGpuTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
         return value;
     };
 
-    int32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
 
         {
             sw::shared_ptr<sw::Material> parent = sw::Material::create();
             SW_ASSERT_TRUE( parent->initialize( device.get(), "engine/materials/defaultmaterial.material" ) );
             SW_ASSERT_TRUE( parent->ensureShaderLayout( device.get() ) );
-            SW_ASSERT_TRUE( parent->isShaderLayoutSynced( backend ) );
+            SW_ASSERT_TRUE( parent->isShaderLayoutSynced( device.getBackend() ) );
 
             // 핫 리로드 — 같은 머티리얼을 프로퍼티 순서만 바꿔 다시 읽는다.
             SW_ASSERT_TRUE( parent->loadFromXml( reorderedXml ) );
-            SW_EXPECT_FALSE( parent->isShaderLayoutSynced( backend ) );
+            SW_EXPECT_FALSE( parent->isShaderLayoutSynced( device.getBackend() ) );
 
             // 인스턴스가 먼저 올라가도(GpuScene 의 순서) 셰이더 레이아웃의 바이트를 집는다.
             sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
             SW_ASSERT_TRUE( instance->updateRhi( device.get() ) );
-            SW_EXPECT_TRUE( parent->isShaderLayoutSynced( backend ) );
+            SW_EXPECT_TRUE( parent->isShaderLayoutSynced( device.getBackend() ) );
             SW_EXPECT_NEAR_EQUAL( 0.5f, readFloat( instance->getBuffer(), 16 ), 1e-6f ); // roughness 는 셰이더의 16 자리
             SW_EXPECT_NEAR_EQUAL( 0.0f, readFloat( instance->getBuffer(), 0 ), 1e-6f );  // color.x
 
@@ -3055,13 +2944,13 @@ SW_TEST_CASE( RenderPassGpuTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
 
             // 리플렉션 캐시를 비우면(다시 굽기 · 라이브 셰이더 편집) 맞춘 레이아웃은 낡은 것이다 — 다시 맞춘다.
             sw::ShaderReflectionLibrary::clearCache();
-            SW_EXPECT_FALSE( parent->isShaderLayoutSynced( backend ) );
+            SW_EXPECT_FALSE( parent->isShaderLayoutSynced( device.getBackend() ) );
             SW_EXPECT_TRUE( parent->ensureShaderLayout( device.get() ) );
-            SW_EXPECT_TRUE( parent->isShaderLayoutSynced( backend ) );
+            SW_EXPECT_TRUE( parent->isShaderLayoutSynced( device.getBackend() ) );
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the material reload layout test" );
 }
 
@@ -3078,14 +2967,9 @@ SW_TEST_CASE( RenderPassGpuTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
  */
 SW_TEST_CASE( RenderPassGpuTest, StructuredBufferRejectsSizeThatOverflows32Bit )
 {
-    int32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         {
             sw::IRHIResource* pResource = device->getResource();
             SW_ASSERT_TRUE( pResource != nullptr );
@@ -3101,7 +2985,7 @@ SW_TEST_CASE( RenderPassGpuTest, StructuredBufferRejectsSizeThatOverflows32Bit )
             // 실제로 표현할 수 있고, 만들지 말지는 드라이버가 정한다. 나머지 셋은 하위 API 가 전부
             // 32비트 크기를 받으므로 **담기지 않으면 만들지 않는 것**이 유일하게 맞는 답이다 —
             // 접힌 크기로 만들면 셰이더가 원래 개수만큼 쓰면서 버퍼 밖으로 나간다.
-            if ( backend != sw::RHIBackend::DirectX12 )
+            if ( device.getBackend() != sw::RHIBackend::DirectX12 )
             {
                 SW_EXPECT_TRUE_MSG( overflowed == 0,
                                     "32비트에 담기지 않는 크기로 구조 버퍼를 만들었습니다 — 접힌 크기입니다" );
@@ -3117,7 +3001,7 @@ SW_TEST_CASE( RenderPassGpuTest, StructuredBufferRejectsSizeThatOverflows32Bit )
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the structured buffer overflow test" );
 }
 
@@ -3137,12 +3021,9 @@ SW_TEST_CASE( RenderPassGpuTest, FusedPostChainMatchesStaged )
 {
     uint32 comparedCount{ 0 };
 
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-
         // 씬은 한 번만 만든다 — 두 파이프라인이 **같은 입력**을 받아야 비교가 성립한다.
         sw::Scene scene( "FusedPostChainScene" );
         bool      bOk = scene.ensureDefaultCameras();
@@ -3309,13 +3190,10 @@ SW_TEST_CASE( RenderPassGpuTest, RenamedAttachmentsRenderTheSameImage )
     const sw::string brokenPath = test::makeTempPath( "nocolorforwardpipeline.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, brokenText ) );
 
-    uint32 comparedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-
         // 씬은 한 번만 만든다 — 두 파이프라인이 같은 입력을 받아야 비교가 성립한다.
         LitCubeScene          cube;
         sw::vector<uint8>     listReference;
@@ -3408,13 +3286,10 @@ SW_TEST_CASE( RenderPassGpuTest, RenamedGBufferAttachmentsRenderTheSameImage )
     const sw::string renamedPath = test::makeTempPath( "renameddeferredpipeline.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( renamedPath, pipelineText ) );
 
-    uint32 comparedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-
         LitCubeScene          cube;
         sw::vector<uint8>     listReference;
         sw::vector<uint8>     listRenamed;
@@ -3454,14 +3329,10 @@ SW_TEST_CASE( RenderPassGpuTest, RenamedGBufferAttachmentsRenderTheSameImage )
  */
 SW_TEST_CASE( RenderPassGpuTest, InstanceOverridesReachTheGpuOnEveryBackend )
 {
-    const sw::string kOverrideTexture = "engine/textures/perlin.dds";
-    int32            attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } )
+    const sw::string      kOverrideTexture = "engine/textures/perlin.dds";
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
         const bool       bNativeBindless = device->supportsNativeBindlessSampling();
         const sw::string label           = sw::string( device->getBackendName() ) + ": ";
 
@@ -3539,7 +3410,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceOverridesReachTheGpuOnEveryBackend )
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the instance override test" );
 }
 
@@ -3559,13 +3430,10 @@ SW_TEST_CASE( RenderPassGpuTest, DepthPrepassRendersTheSameImage )
     const sw::string renamedPath = test::makeTempPath( "renamedprepasspipeline.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( renamedPath, sw::StringUtil::replace( prepassText, "SceneDepth", "MainDepth" ) ) );
 
-    uint32 comparedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-
         LitCubeScene          cube;
         sw::vector<uint8>     listReference;
         sw::vector<uint8>     listPrepass;
@@ -3621,13 +3489,10 @@ SW_TEST_CASE( RenderPassGpuTest, ShadowPassCastsOnEveryBackend )
     const sw::string emptyShadowPath = test::makeTempPath( "emptyshadowpipeline.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( emptyShadowPath, pipelineText ) );
 
-    uint32 comparedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-
         LitCubeScene          cube;
         sw::vector<uint8>     listShadow;
         sw::vector<uint8>     listEmptyShadow;
@@ -3683,12 +3548,10 @@ SW_TEST_CASE( RenderPassGpuTest, NormalsStayPerpendicularUnderNonUniformScale )
     constexpr uint32  kMinDrawnCount = 1000;
     const sw::float3  localNormal{ 0.0f, 0.0f, 1.0f }; // MeshUtil::createRectMesh 의 노멀
 
-    uint32 comparedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         const sw::string backendName( device->getBackendName() );
 
         sw::shared_ptr<sw::Material> material = sw::Material::create();
@@ -3777,12 +3640,10 @@ SW_TEST_CASE( RenderPassGpuTest, DepthAttachmentUnbindsItsShaderInputs )
 {
     const utf8* const kArrPipeline[] = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" };
 
-    uint32 checkedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                checkedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         const sw::string backendName( device->getBackendName() );
 
         for ( const utf8* pPipeline : kArrPipeline )
@@ -3857,12 +3718,10 @@ SW_TEST_CASE( RenderPassGpuTest, MirroredMeshShowsItsOuterFaces )
     // 다른 칸 비율의 상한(%). 바르게 그리면 0 이고, 컬링이 뒤집히지 않은 그림은 큐브 면적만큼(수 %) 다르다.
     constexpr uint32 kMaxDifferPercent = 1;
 
-    uint32 comparedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         const sw::string backendName( device->getBackendName() );
 
         for ( const utf8* pPipeline : kArrPipeline )
@@ -3971,11 +3830,9 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialTexturesAreSampledLinearWrap )
         else
             listBackend.push_back( backend );
     }
-    for ( sw::RHIBackend backend : listBackend )
+    test::RHIBackendSweep sweep( listBackend );
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         const sw::string label = sw::string( device->getBackendName() ) + ": ";
 
         sw::shared_ptr<sw::Material> material = sw::Material::create();
@@ -4007,10 +3864,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialTexturesAreSampledLinearWrap )
                 constexpr uint32 kWarmupFrameCount = 4;
                 for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
                 {
-                    device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
-                    bOk = renderer.execute( device.get(), &scene );
-                    device->endFrame( false, false );
-                    device->waitIdle();
+                    bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
                 }
                 bOk = bOk && countMixed( renderer, count );
                 SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
@@ -4098,14 +3952,12 @@ SW_TEST_CASE( RenderPassGpuTest, EngineTextureSlotsAreSampledLinearClamp )
             listBackend.push_back( backend );
     }
 
-    Capture    reference;
-    sw::string referenceName;
-    uint32     comparedCount{ 0 };
-    for ( sw::RHIBackend backend : listBackend )
+    Capture               reference;
+    sw::string            referenceName;
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep( listBackend );
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         const sw::string label = sw::string( device->getBackendName() ) + ": ";
 
         sw::Scene scene( "EngineSamplerScene" );
@@ -4169,10 +4021,7 @@ SW_TEST_CASE( RenderPassGpuTest, EngineTextureSlotsAreSampledLinearClamp )
             constexpr uint32 kWarmupFrameCount = 3;
             for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
             {
-                device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
-                bOk = renderer.execute( device.get(), &scene );
-                device->endFrame( false, false );
-                device->waitIdle();
+                bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
             }
             bOk = bOk && capture._sceneColor.readTransient( renderer, "SceneColor" ) && capture._bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
@@ -4253,13 +4102,9 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteFramesAndTintsArePerInstance )
     constexpr uint32 kSpriteCount = 6;
     constexpr int32  kWindow      = 1; // 표본 자리에서 ±1 픽셀 창의 평균
 
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
         const sw::string label = sw::string( device->getBackendName() ) + ": ";
 
         sw::FrameRenderer renderer;
@@ -4300,10 +4145,7 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteFramesAndTintsArePerInstance )
                 constexpr uint32 kWarmupFrameCount = 4;
                 for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
                 {
-                    device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
-                    bOk = renderer.execute( device.get(), &scene );
-                    device->endFrame( false, false );
-                    device->waitIdle();
+                    bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
                 }
                 SW_EXPECT_TRUE_MSG( bOk, ( label + "프레임 실행 실패" ).c_str() );
             }
@@ -4399,7 +4241,7 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteFramesAndTintsArePerInstance )
         }
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for the per-instance sprite test" );
 }
 
@@ -4450,12 +4292,10 @@ SW_TEST_CASE( RenderPassGpuTest, HalfResolutionAttachmentCoversItsWholeTarget )
         return result;
     };
 
-    uint32 comparedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                comparedCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         const sw::string label = sw::string( device->getBackendName() ) + ": ";
 
         sw::Scene                scene( "HalfResolutionScene" );
@@ -4489,10 +4329,7 @@ SW_TEST_CASE( RenderPassGpuTest, HalfResolutionAttachmentCoversItsWholeTarget )
             constexpr uint32 kWarmupFrameCount = 3;
             for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
             {
-                device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
-                bOk = renderer.execute( device.get(), &scene );
-                device->endFrame( false, false );
-                device->waitIdle();
+                bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
             }
             bOk = bOk && sceneColor.readTransient( renderer, "SceneColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );

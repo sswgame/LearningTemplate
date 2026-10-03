@@ -25,6 +25,80 @@ SW_TEST_REQUIRES_HOST( RHIDeviceTest, "creates real GPU devices on every backend
 
 namespace
 {
+    /** @brief `VSMain` · `PSMain` 이 한 파일에 있는 셰이더로 RGBA8 렌더타깃 하나에 그리는 PSO 서술입니다. */
+    sw::RHIPipelineStateDesc makeSingleTargetPsoDesc( const utf8* pShaderPath )
+    {
+        sw::RHIPipelineStateDesc psoDesc{};
+        psoDesc._vertexShaderPath = pShaderPath;
+        psoDesc._pixelShaderPath  = pShaderPath;
+        psoDesc._vertexEntryPoint = "VSMain";
+        psoDesc._pixelEntryPoint  = "PSMain";
+        psoDesc._numRenderTargets = 1;
+        psoDesc._arrRtvFormat[0]  = sw::RHIFormat::R8G8B8A8_UNORM;
+        return psoDesc;
+    }
+
+    /** @brief 그리고 되읽을 RGBA8 렌더타깃 서술입니다. 클리어 색은 (0.05, 0.05, 0.08) — 되읽으면 (13, 13, 20) 입니다. */
+    sw::RHITextureDesc makeOffscreenTargetDesc( uint32 width, uint32 height )
+    {
+        sw::RHITextureDesc desc{};
+        desc._width             = width;
+        desc._height            = height;
+        desc._format            = sw::RHIFormat::R8G8B8A8_UNORM;
+        desc._bIsRenderTarget   = SW_TRUE;
+        desc._bIsShaderResource = SW_TRUE;
+        desc._clearColor        = sw::float4{ 0.05f, 0.05f, 0.08f, 1.0f };
+        return desc;
+    }
+
+    /** @brief 열린 리스트에서 렌더타깃 전체를 뷰포트로 잡고, 그 클리어 색으로 지우며 렌더 패스를 시작합니다. */
+    void beginOffscreenRenderPass( sw::IRHICommandList& cmd, sw::RHITextureHandle renderTarget, const sw::RHITextureDesc& desc )
+    {
+        sw::RHIRenderPassBeginInfo beginInfo{};
+        beginInfo.setColorTarget( renderTarget, desc._clearColor, sw::RHIRenderPassLoadOp::Clear );
+        beginInfo._bBindColor = SW_TRUE;
+        beginInfo._width      = desc._width;
+        beginInfo._height     = desc._height;
+
+        sw::RHIViewport viewport{};
+        viewport._width  = static_cast<float32>( desc._width );
+        viewport._height = static_cast<float32>( desc._height );
+
+        cmd.setViewport( viewport );
+        cmd.beginRenderPass( beginInfo );
+    }
+
+    /** @brief 되읽은 RGBA8 픽셀을 원색별로 센 것입니다. 한 채널이 200 을 넘고 나머지 둘이 80 아래인 픽셀만 그 색으로 셉니다. */
+    struct PrimaryColorCount
+    {
+        uint32 _red{ 0 };
+        uint32 _green{ 0 };
+        uint32 _blue{ 0 };
+        uint32 _total{ 0 }; ///< 센 픽셀 전체(너비 x 높이)
+    };
+
+    /** @brief `readbackTexture2D` 로 읽은 RGBA8 픽셀을 원색별로 셉니다. */
+    PrimaryColorCount countPrimaryColorPixels( const sw::vector<uint8>& bytes, const sw::RHITextureMipSpan& layout )
+    {
+        PrimaryColorCount count{};
+        count._total = layout._width * layout._height;
+        for ( uint32 row = 0; row < layout._height; ++row )
+        {
+            const uint8* pRow = bytes.data() + static_cast<size_t>( row ) * layout._rowBytes;
+            for ( uint32 col = 0; col < layout._width; ++col )
+            {
+                const uint8* pPixel = pRow + static_cast<size_t>( col ) * 4;
+                if ( pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80 )
+                    ++count._red;
+                else if ( pPixel[1] > 200 && pPixel[0] < 80 && pPixel[2] < 80 )
+                    ++count._green;
+                else if ( pPixel[2] > 200 && pPixel[0] < 80 && pPixel[1] < 80 )
+                    ++count._blue;
+            }
+        }
+        return count;
+    }
+
     /**
      * @brief Present 없이 오프스크린 RT로 파이프라인을 검증합니다.
      * @details createTexture2D → beginRenderPass → setPSO → fullscreen draw → (선택) readback → destroy.
@@ -59,15 +133,8 @@ namespace
             return false;
         }
 
-        sw::RHITextureDesc desc{};
-        desc._width             = width;
-        desc._height            = height;
-        desc._format            = sw::RHIFormat::R8G8B8A8_UNORM;
-        desc._bIsRenderTarget   = SW_TRUE;
-        desc._bIsShaderResource = SW_TRUE;
-        desc._clearColor        = sw::float4{ 0.05f, 0.05f, 0.08f, 1.0f };
-
-        const sw::RHITextureHandle rt = pResource->createTexture2D( desc );
+        const sw::RHITextureDesc   desc = makeOffscreenTargetDesc( width, height );
+        const sw::RHITextureHandle rt   = pResource->createTexture2D( desc );
         if ( rt == 0 )
         {
             SW_LOG_WARNING( "executeOffscreenPipelineSmoke: createTexture2D failed" );
@@ -85,21 +152,10 @@ namespace
         }
         else
         {
-            sw::RHIRenderPassBeginInfo beginInfo{};
-            beginInfo.setColorTarget( rt, desc._clearColor, sw::RHIRenderPassLoadOp::Clear );
-            beginInfo._bBindColor = SW_TRUE;
-            beginInfo._width      = width;
-            beginInfo._height     = height;
-
-            sw::RHIViewport viewport{};
-            viewport._width  = static_cast<float32>( width );
-            viewport._height = static_cast<float32>( height );
-
             cmd->beginCommandList();
             if ( recordCb != 0 && pRecordData != nullptr )
                 cmd->updateConstantBuffer( recordCb, pRecordData, recordSize );
-            cmd->setViewport( viewport );
-            cmd->beginRenderPass( beginInfo );
+            beginOffscreenRenderPass( *cmd, rt, desc );
             cmd->setPipelineState( pso );
             cmd->bindConstantBuffer( materialCb, sw::shaderslot::kMaterialConstantBuffer );
             cmd->draw( 3, 0 );
@@ -195,34 +251,60 @@ SW_TEST_CASE( RHIDeviceTest, DeviceCreationAllBackends )
 }
 
 /**
+ * @brief [RHIDeviceTest] `test::RHIBackendSweep` 은 서는 백엔드마다 몸통을 한 번 돌린다 — 따로 하나씩 세워 본 목록과 같다
+ * @details 이 파일과 `RenderPassGpuTest` 의 백엔드 루프가 전부 이 범위를 쓴다. 범위가 백엔드를 빠뜨리면 그 백엔드의 검증이 조용히
+ *          사라진다. 몸통이 디바이스를 내려도(디바이스를 잃은 경우를 보는 케이스) 반복은 다음 백엔드로 간다.
+ */
+SW_TEST_CASE( RHIDeviceTest, BackendSweepVisitsEveryBackendThatStandsUp )
+{
+    sw::vector<sw::RHIBackend> listExpected;
+    for ( const sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() )
+            listExpected.push_back( backend );
+    }
+    if ( listExpected.empty() )
+        SW_TEST_SKIP( "No RHI backend for the backend sweep test" );
+
+    sw::vector<sw::RHIBackend> listVisited;
+    test::RHIBackendSweep      sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        SW_EXPECT_TRUE( device.isReady() );
+        listVisited.push_back( device.getBackend() );
+        device.shutdownDevice();
+    }
+    SW_EXPECT_EQUAL( listVisited.size(), static_cast<size_t>( sweep.getReadyCount() ) );
+    SW_EXPECT_TRUE_MSG( listVisited == listExpected, ( "visited " + sw::to_string( static_cast<uint64>( listVisited.size() ) ) + " of " +
+                                                       sw::to_string( static_cast<uint64>( listExpected.size() ) ) + " backends" )
+                                                         .c_str() );
+}
+
+/**
  * @brief [RHIDeviceTest] 네이티브 핸들 묶음(`RHINativeHandles`)이 네 백엔드에서 그 디바이스의 값을 담는다
  * @details 에디터의 ImGui 렌더러 백엔드는 이 묶음 하나로 초기화한다(구체 디바이스 클래스로 캐스팅하지 않는다). Vulkan 은 인스턴스 · 물리
  *          디바이스 · 백버퍼 렌더 패스 · 스왑체인 이미지 수까지 있어야 `ImGui_ImplVulkan_Init` 이 선다.
  */
 SW_TEST_CASE( RHIDeviceTest, NativeHandlesDescribeTheDevice )
 {
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         const sw::string     label = sw::string( device->getBackendName() );
         sw::RHINativeHandles handles{};
         SW_EXPECT_TRUE_MSG( device->queryNativeHandles( handles ), ( label + ": 네이티브 핸들 조회 실패" ).c_str() );
-        SW_EXPECT_TRUE_MSG( handles._backend == backend, ( label + ": 다른 백엔드라고 답한다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( handles._backend == device.getBackend(), ( label + ": 다른 백엔드라고 답한다" ).c_str() );
         SW_EXPECT_TRUE_MSG( handles._pDevice != nullptr && handles._pDevice == device->getNativeDevice(), ( label + ": 디바이스 칸이 비었거나 다르다" ).c_str() );
         SW_EXPECT_TRUE_MSG( handles._pGraphicsQueue == device->getNativeCommandQueue(), ( label + ": 큐 칸이 getNativeCommandQueue 와 다르다" ).c_str() );
-        if ( backend == sw::RHIBackend::Vulkan )
+        if ( device.getBackend() == sw::RHIBackend::Vulkan )
         {
             SW_EXPECT_TRUE_MSG( handles._pInstance != nullptr && handles._pPhysicalDevice != nullptr, "Vulkan: 인스턴스 · 물리 디바이스가 비었다" );
             SW_EXPECT_TRUE_MSG( handles._pGraphicsQueue != nullptr && handles._pRenderPass != nullptr, "Vulkan: 큐 · 렌더 패스가 비었다" );
             SW_EXPECT_TRUE_MSG( handles._imageCount >= 2u && handles._minImageCount >= 2u, "Vulkan: 스왑체인 이미지 수가 2 보다 작다" );
         }
     }
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the native handle test" );
 }
 
@@ -231,13 +313,10 @@ SW_TEST_CASE( RHIDeviceTest, NativeHandlesDescribeTheDevice )
  */
 SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
 {
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                okCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-
         sw::RHIRenderPassDesc       rpDesc{};
         sw::RHIRenderPassAttachment colorAtt{};
         colorAtt._format = sw::RHIFormat::R8G8B8A8_UNORM;
@@ -247,25 +326,18 @@ SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
         sw::RHIRenderPassHandle pass = device->getResource()->createRenderPass( rpDesc );
         if ( pass == 0 )
         {
-            SW_LOG_WARNING( "createRenderPass failed for backend %# — skip", static_cast<uint32>( backend ) );
+            SW_LOG_WARNING( "createRenderPass failed for backend %# — skip", static_cast<uint32>( device.getBackend() ) );
             continue;
         }
 
-        sw::RHIPipelineStateDesc psoDesc{};
-        psoDesc._vertexShaderPath      = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._pixelShaderPath       = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._vertexEntryPoint      = "VSMain";
-        psoDesc._pixelEntryPoint       = "PSMain";
-        psoDesc._numRenderTargets      = 1;
-        psoDesc._arrRtvFormat[0]       = sw::RHIFormat::R8G8B8A8_UNORM;
-        sw::RHIPipelineStateHandle pso = device->getResource()->createPipelineState( psoDesc );
+        sw::RHIPipelineStateHandle pso = device->getResource()->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         if ( pso != 0 )
         {
             // Present 없는 오프스크린 경로로 파이프라인 검증 (실패해도 RP/PSO create는 유효).
             const bool bSmoke = executeOffscreenPipelineSmoke( *device, pso );
             if ( bSmoke == false )
                 SW_LOG_WARNING( "Offscreen pipeline smoke failed (backend %#) — create path still counted",
-                                static_cast<uint32>( backend ) );
+                                static_cast<uint32>( device.getBackend() ) );
             else
                 SW_EXPECT_TRUE( bSmoke );
         }
@@ -312,14 +384,7 @@ SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
     SW_EXPECT_TRUE( rhiDevice->getCapabilities()._bOffscreenRT != SW_FALSE );
     SW_EXPECT_TRUE( executeOffscreenPipelineSmoke( *rhiDevice, 0 ) == false ); // pso==0 → false
     {
-        sw::RHIPipelineStateDesc psoDesc{};
-        psoDesc._vertexShaderPath            = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._pixelShaderPath             = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._vertexEntryPoint            = "VSMain";
-        psoDesc._pixelEntryPoint             = "PSMain";
-        psoDesc._numRenderTargets            = 1;
-        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
-        const sw::RHIPipelineStateHandle pso = rhiDevice->getResource()->createPipelineState( psoDesc );
+        const sw::RHIPipelineStateHandle pso = rhiDevice->getResource()->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         if ( pso != 0 )
         {
             const bool bSmoke = executeOffscreenPipelineSmoke( *rhiDevice, pso, descIdx );
@@ -341,12 +406,9 @@ SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
  */
 SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
 {
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         sw::IRHIResource* pResource = device->getResource();
 
         // 버퍼 셋을 먼저 등록해 두고(살아 있는 패스 CB 슬롯 역할), 텍스처 하나를 등록/해제한 뒤
@@ -393,10 +455,9 @@ SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
             pResource->unregisterBindlessResource( arrIndex[slot] );
             pResource->destroyBuffer( arrBuffer[slot] );
         }
-        ++okCount;
     }
 
-    if ( okCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for bindless index-space test" );
 }
 
@@ -461,12 +522,9 @@ SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
         arrPixel[pixelIndex * 4 + 3]   = 255;
     }
 
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         sw::IRHIResource* pResource = device->getResource();
 
         sw::RHITextureDesc texDesc{};
@@ -505,11 +563,9 @@ SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
         if ( srv != sw::kInvalidDescriptorIndex )
             pResource->unregisterBindlessTexture( srv );
         pResource->destroyTexture( texture );
-
-        ++okCount;
     }
 
-    if ( okCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for texture upload test" );
 }
 
@@ -544,12 +600,9 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
         {     sw::RHIFormat::BC1_UNORM, 8, 8, 2,  arrBc1,  sizeof( arrBc1 ),      "BC1"},
     };
 
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         sw::IRHIResource* pResource = device->getResource();
 
         for ( const Case& testCase : arrCase )
@@ -595,11 +648,9 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
             }
             pResource->destroyTexture( texture );
         }
-
-        ++okCount;
     }
 
-    if ( okCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for texture readback test" );
 }
 
@@ -612,12 +663,9 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
  */
 SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
 {
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         sw::IRHIResource* pResource = device->getResource();
 
         struct MaterialCb
@@ -630,14 +678,7 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
         const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
         SW_ASSERT_TRUE( cbIndex != sw::kInvalidDescriptorIndex );
 
-        sw::RHIPipelineStateDesc psoDesc{};
-        psoDesc._vertexShaderPath            = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._pixelShaderPath             = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._vertexEntryPoint            = "VSMain";
-        psoDesc._pixelEntryPoint             = "PSMain";
-        psoDesc._numRenderTargets            = 1;
-        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
 
         if ( pso != 0 )
         {
@@ -649,17 +690,7 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
             {
                 // 클리어는 (0.05,0.05,0.08), 드로우는 빨강 — 빨간 픽셀이 하나도 없으면 그리기가
                 // 렌더타깃에 닿지 않았거나 읽기가 그 결과를 못 보는 것이다.
-                uint32 redCount{ 0 };
-                for ( uint32 row = 0; row < layout._height; ++row )
-                {
-                    const uint8* pRow = pixels.data() + static_cast<size_t>( row ) * layout._rowBytes;
-                    for ( uint32 col = 0; col < layout._width; ++col )
-                    {
-                        const uint8* pPixel = pRow + static_cast<size_t>( col ) * 4;
-                        if ( pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80 )
-                            ++redCount;
-                    }
-                }
+                const uint32 redCount = countPrimaryColorPixels( pixels, layout )._red;
                 // 네 백엔드가 한때 전부 여기서 0 을 냈다. 공통 원인은 스모크가 draw( 3, 0, materialCb ) 로
                 // 머티리얼 CB 를 **PassCB 자리**에 넘긴 것 — b1 이 안 걸려 삼각형이 검게 나와 클리어까지
                 // 덮었다(그래서 "클리어조차 안 보임" 으로 보였다). Vulkan 은 거기에 더해 draw() 가 b1 을
@@ -677,10 +708,9 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
 
         pResource->unregisterBindlessResource( cbIndex );
         pResource->destroyBuffer( cb );
-        ++okCount;
     }
 
-    if ( okCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for offscreen readback test" );
 }
 
@@ -692,12 +722,9 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
  */
 SW_TEST_CASE( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws )
 {
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         sw::IRHIResource* pResource = device->getResource();
         const sw::string  label     = sw::string( device->getBackendName() ) + ": ";
 
@@ -709,14 +736,7 @@ SW_TEST_CASE( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws )
         const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
         SW_ASSERT_TRUE( cbIndex != sw::kInvalidDescriptorIndex );
 
-        sw::RHIPipelineStateDesc psoDesc{};
-        psoDesc._vertexShaderPath            = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._pixelShaderPath             = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._vertexEntryPoint            = "VSMain";
-        psoDesc._pixelEntryPoint             = "PSMain";
-        psoDesc._numRenderTargets            = 1;
-        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, ( label + "PSO 를 만들지 못했다" ).c_str() );
         if ( pso != 0 )
         {
@@ -726,32 +746,18 @@ SW_TEST_CASE( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws )
             SW_EXPECT_TRUE_MSG( bSmoke, ( label + "그리거나 되읽지 못했다" ).c_str() );
             if ( bSmoke )
             {
-                uint32 redCount{ 0 };
-                uint32 blueCount{ 0 };
-                for ( uint32 row = 0; row < layout._height; ++row )
-                {
-                    const uint8* pRow = pixels.data() + static_cast<size_t>( row ) * layout._rowBytes;
-                    for ( uint32 col = 0; col < layout._width; ++col )
-                    {
-                        const uint8* pPixel = pRow + static_cast<size_t>( col ) * 4;
-                        if ( pPixel[0] > 200 && pPixel[2] < 80 )
-                            ++redCount;
-                        if ( pPixel[2] > 200 && pPixel[0] < 80 )
-                            ++blueCount;
-                    }
-                }
-                SW_EXPECT_TRUE_MSG( redCount > 0 && blueCount == 0,
-                                    ( label + "리스트로 갱신한 빨강이 드로우에 닿지 않았다 (빨강 " + sw::to_string( redCount ) + " · 파랑 " +
-                                      sw::to_string( blueCount ) + ")" )
+                const PrimaryColorCount count = countPrimaryColorPixels( pixels, layout );
+                SW_EXPECT_TRUE_MSG( count._red > 0 && count._blue == 0,
+                                    ( label + "리스트로 갱신한 빨강이 드로우에 닿지 않았다 (빨강 " + sw::to_string( count._red ) + " · 파랑 " +
+                                      sw::to_string( count._blue ) + ")" )
                                         .c_str() );
             }
             pResource->destroyPipelineState( pso );
         }
         pResource->unregisterBindlessResource( cbIndex );
         pResource->destroyBuffer( cb );
-        ++okCount;
     }
-    if ( okCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for command list constant buffer test" );
 }
 
@@ -764,12 +770,10 @@ SW_TEST_CASE( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws )
  */
 SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
 {
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                okCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         sw::IRHIResource* pResource = device->getResource();
         if ( device->getCapabilities()._bOffscreenRT == SW_FALSE )
             continue;
@@ -781,25 +785,11 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
         const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
         SW_ASSERT_TRUE( cbIndex != sw::kInvalidDescriptorIndex );
 
-        sw::RHIPipelineStateDesc psoDesc{};
-        psoDesc._vertexShaderPath            = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._pixelShaderPath             = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._vertexEntryPoint            = "VSMain";
-        psoDesc._pixelEntryPoint             = "PSMain";
-        psoDesc._numRenderTargets            = 1;
-        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         SW_ASSERT_TRUE( pso != 0 );
 
-        constexpr uint32   kSize = 32;
-        sw::RHITextureDesc desc{};
-        desc._width                   = kSize;
-        desc._height                  = kSize;
-        desc._format                  = sw::RHIFormat::R8G8B8A8_UNORM;
-        desc._bIsRenderTarget         = SW_TRUE;
-        desc._bIsShaderResource       = SW_TRUE;
-        desc._clearColor              = sw::float4{ 0.05f, 0.05f, 0.08f, 1.0f };
-        const sw::RHITextureHandle rt = pResource->createTexture2D( desc );
+        const sw::RHITextureDesc   desc = makeOffscreenTargetDesc( 32, 32 );
+        const sw::RHITextureHandle rt   = pResource->createTexture2D( desc );
         SW_ASSERT_TRUE( rt != 0 );
 
         constexpr uint32 kFrameCount = sw::constant::kMaxFrameCountInFlight * 2;
@@ -810,18 +800,8 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
             sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
             SW_ASSERT_TRUE( cmd != nullptr );
 
-            sw::RHIRenderPassBeginInfo beginInfo{};
-            beginInfo.setColorTarget( rt, desc._clearColor, sw::RHIRenderPassLoadOp::Clear );
-            beginInfo._bBindColor = SW_TRUE;
-            beginInfo._width      = kSize;
-            beginInfo._height     = kSize;
-            sw::RHIViewport viewport{};
-            viewport._width  = static_cast<float32>( kSize );
-            viewport._height = static_cast<float32>( kSize );
-
             cmd->beginCommandList();
-            cmd->setViewport( viewport );
-            cmd->beginRenderPass( beginInfo );
+            beginOffscreenRenderPass( *cmd, rt, desc );
             cmd->setPipelineState( pso );
             cmd->bindConstantBuffer( cbIndex, sw::shaderslot::kMaterialConstantBuffer );
             cmd->draw( 3, 0 );
@@ -867,22 +847,12 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
  */
 SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
 {
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         sw::IRHIResource* pResource = device->getResource();
 
-        sw::RHIPipelineStateDesc psoDesc{};
-        psoDesc._vertexShaderPath            = "common/shaders/provokingvertex.hlsl";
-        psoDesc._pixelShaderPath             = "common/shaders/provokingvertex.hlsl";
-        psoDesc._vertexEntryPoint            = "VSMain";
-        psoDesc._pixelEntryPoint             = "PSMain";
-        psoDesc._numRenderTargets            = 1;
-        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "common/shaders/provokingvertex.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
 
         if ( pso != 0 )
@@ -893,37 +863,19 @@ SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
             SW_EXPECT_TRUE_MSG( bSmoke, "executeOffscreenPipelineSmoke(readback) 실패" );
             if ( bSmoke )
             {
-                uint32 redCount{ 0 };
-                uint32 greenCount{ 0 };
-                uint32 blueCount{ 0 };
-                for ( uint32 row = 0; row < layout._height; ++row )
-                {
-                    const uint8* pRow = pixels.data() + static_cast<size_t>( row ) * layout._rowBytes;
-                    for ( uint32 col = 0; col < layout._width; ++col )
-                    {
-                        const uint8* pPixel = pRow + static_cast<size_t>( col ) * 4;
-                        if ( pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80 )
-                            ++redCount;
-                        else if ( pPixel[1] > 200 && pPixel[0] < 80 && pPixel[2] < 80 )
-                            ++greenCount;
-                        else if ( pPixel[2] > 200 && pPixel[0] < 80 && pPixel[1] < 80 )
-                            ++blueCount;
-                    }
-                }
-                const uint32 total = layout._width * layout._height;
+                const PrimaryColorCount count = countPrimaryColorPixels( pixels, layout );
                 // FIRST 규약: 삼각형 전체가 정점 0 의 값(빨강). 파랑이면 LAST(정점 2), 초록이면 정점 1 이다.
-                SW_EXPECT_TRUE_MSG( redCount == total,
-                                    ( sw::string( device->getBackendName() ) + ": 프로보킹 정점이 FIRST 가 아닙니다 (red " + sw::to_string( redCount ) +
-                                      " green " + sw::to_string( greenCount ) + " blue " + sw::to_string( blueCount ) + " / " + sw::to_string( total ) + ")" )
+                SW_EXPECT_TRUE_MSG( count._red == count._total,
+                                    ( sw::string( device->getBackendName() ) + ": 프로보킹 정점이 FIRST 가 아닙니다 (red " + sw::to_string( count._red ) +
+                                      " green " + sw::to_string( count._green ) + " blue " + sw::to_string( count._blue ) + " / " +
+                                      sw::to_string( count._total ) + ")" )
                                         .c_str() );
             }
             pResource->destroyPipelineState( pso );
         }
-
-        ++okCount;
     }
 
-    if ( okCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for the provoking vertex test" );
 }
 
@@ -960,14 +912,7 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
             continue;
         sw::IRHIResource* pResource = device->getResource();
 
-        sw::RHIPipelineStateDesc psoDesc{};
-        psoDesc._vertexShaderPath            = "common/shaders/provokingvertex.hlsl";
-        psoDesc._pixelShaderPath             = "common/shaders/provokingvertex.hlsl";
-        psoDesc._vertexEntryPoint            = "VSMain";
-        psoDesc._pixelEntryPoint             = "PSMain";
-        psoDesc._numRenderTargets            = 1;
-        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "common/shaders/provokingvertex.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
 
         // 간접 레코드 하나 — startVertex 36. 정점 버퍼는 풀스크린 폴백(정점 3개)이라 위치는 SV_VertexID 로만 만든다.
@@ -987,32 +932,16 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
 
         if ( pso != 0 && argBuf != 0 )
         {
-            sw::RHITextureDesc desc{};
-            desc._width                   = 64;
-            desc._height                  = 64;
-            desc._format                  = sw::RHIFormat::R8G8B8A8_UNORM;
-            desc._bIsRenderTarget         = SW_TRUE;
-            desc._bIsShaderResource       = SW_TRUE;
-            desc._clearColor              = sw::float4{ 0.05f, 0.05f, 0.08f, 1.0f };
-            const sw::RHITextureHandle rt = pResource->createTexture2D( desc );
+            const sw::RHITextureDesc   desc = makeOffscreenTargetDesc( 64, 64 );
+            const sw::RHITextureHandle rt   = pResource->createTexture2D( desc );
             SW_EXPECT_TRUE( rt != 0 );
 
             sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
             if ( rt != 0 && cmd != nullptr )
             {
-                sw::RHIRenderPassBeginInfo beginInfo{};
-                beginInfo.setColorTarget( rt, desc._clearColor, sw::RHIRenderPassLoadOp::Clear );
-                beginInfo._bBindColor = SW_TRUE;
-                beginInfo._width      = desc._width;
-                beginInfo._height     = desc._height;
-                sw::RHIViewport viewport{};
-                viewport._width  = static_cast<float32>( desc._width );
-                viewport._height = static_cast<float32>( desc._height );
-
                 cmd->beginCommandList();
-                cmd->setViewport( viewport );
                 cmd->transitionBuffer( argBuf, sw::RHIBufferState::IndirectArgument );
-                cmd->beginRenderPass( beginInfo );
+                beginOffscreenRenderPass( *cmd, rt, desc );
                 cmd->setPipelineState( pso );
                 cmd->drawIndirect( argBuf, 0, 1 );
                 cmd->endRenderPass();
@@ -1024,18 +953,9 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
                 sw::RHITextureMipSpan layout{};
                 if ( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) )
                 {
-                    uint32 redCount{ 0 };
-                    for ( uint32 row = 0; row < layout._height; ++row )
-                    {
-                        const uint8* pRow = pixels.data() + static_cast<size_t>( row ) * layout._rowBytes;
-                        for ( uint32 col = 0; col < layout._width; ++col )
-                        {
-                            const uint8* pPixel = pRow + static_cast<size_t>( col ) * 4;
-                            if ( pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80 )
-                                ++redCount;
-                        }
-                    }
-                    const uint32 total = layout._width * layout._height;
+                    const PrimaryColorCount count    = countPrimaryColorPixels( pixels, layout );
+                    const uint32            redCount = count._red;
+                    const uint32            total    = count._total;
                     if ( expectation._bVertexIdStartsAtZero )
                     {
                         SW_EXPECT_TRUE_MSG( redCount == total,
@@ -1080,22 +1000,12 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
  */
 SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
 {
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         sw::IRHIResource* pResource = device->getResource();
 
-        sw::RHIPipelineStateDesc psoDesc{};
-        psoDesc._vertexShaderPath            = "common/shaders/instanceslotprobe.hlsl";
-        psoDesc._pixelShaderPath             = "common/shaders/instanceslotprobe.hlsl";
-        psoDesc._vertexEntryPoint            = "VSMain";
-        psoDesc._pixelEntryPoint             = "PSMain";
-        psoDesc._numRenderTargets            = 1;
-        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "common/shaders/instanceslotprobe.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
 
         // 정점 셋(위치는 셰이더가 SV_VertexID 로 만든다) · 인덱스 0 1 2 · 슬롯 스트림(값 7 하나) · 간접 인자 하나.
@@ -1120,32 +1030,16 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
 
         if ( pso != 0 && bBuffers )
         {
-            sw::RHITextureDesc desc{};
-            desc._width                   = 64;
-            desc._height                  = 64;
-            desc._format                  = sw::RHIFormat::R8G8B8A8_UNORM;
-            desc._bIsRenderTarget         = SW_TRUE;
-            desc._bIsShaderResource       = SW_TRUE;
-            desc._clearColor              = sw::float4{ 0.05f, 0.05f, 0.08f, 1.0f };
-            const sw::RHITextureHandle rt = pResource->createTexture2D( desc );
+            const sw::RHITextureDesc   desc = makeOffscreenTargetDesc( 64, 64 );
+            const sw::RHITextureHandle rt   = pResource->createTexture2D( desc );
             SW_EXPECT_TRUE( rt != 0 );
 
             sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
             if ( rt != 0 && cmd != nullptr )
             {
-                sw::RHIRenderPassBeginInfo beginInfo{};
-                beginInfo.setColorTarget( rt, desc._clearColor, sw::RHIRenderPassLoadOp::Clear );
-                beginInfo._bBindColor = SW_TRUE;
-                beginInfo._width      = desc._width;
-                beginInfo._height     = desc._height;
-                sw::RHIViewport viewport{};
-                viewport._width  = static_cast<float32>( desc._width );
-                viewport._height = static_cast<float32>( desc._height );
-
                 cmd->beginCommandList();
-                cmd->setViewport( viewport );
                 cmd->transitionBuffer( argBuf, sw::RHIBufferState::IndirectArgument );
-                cmd->beginRenderPass( beginInfo );
+                beginOffscreenRenderPass( *cmd, rt, desc );
                 cmd->setPipelineState( pso );
                 cmd->setVertexBuffer( 0, vertexBuf, static_cast<uint32>( sizeof( sw::RHIVertex ) ), 0 );
                 cmd->setVertexBuffer( sw::constant::kInstanceSlotStreamSlot, slotStream, sw::constant::kInstanceSlotStreamStride, 0 );
@@ -1160,25 +1054,11 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
                 sw::RHITextureMipSpan layout{};
                 if ( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) )
                 {
-                    uint32 greenCount{ 0 };
-                    uint32 redCount{ 0 };
-                    for ( uint32 row = 0; row < layout._height; ++row )
-                    {
-                        const uint8* pRow = pixels.data() + static_cast<size_t>( row ) * layout._rowBytes;
-                        for ( uint32 col = 0; col < layout._width; ++col )
-                        {
-                            const uint8* pPixel = pRow + static_cast<size_t>( col ) * 4;
-                            if ( pPixel[1] > 200 && pPixel[0] < 80 && pPixel[2] < 80 )
-                                ++greenCount;
-                            else if ( pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80 )
-                                ++redCount;
-                        }
-                    }
-                    const uint32 total = layout._width * layout._height;
+                    const PrimaryColorCount count = countPrimaryColorPixels( pixels, layout );
                     // 초록이 아니면: 빨강은 슬롯 1 을 못 읽은 것이고, 둘 다 0 이면 인덱스 드로우 자체가 안 그려진 것이다.
-                    SW_EXPECT_TRUE_MSG( greenCount == total,
+                    SW_EXPECT_TRUE_MSG( count._green == count._total,
                                         ( sw::string( device->getBackendName() ) + ": 인덱스 간접 드로우가 슬롯 스트림을 읽지 못했습니다 (green " +
-                                          sw::to_string( greenCount ) + " red " + sw::to_string( redCount ) + " / " + sw::to_string( total ) + ")" )
+                                          sw::to_string( count._green ) + " red " + sw::to_string( count._red ) + " / " + sw::to_string( count._total ) + ")" )
                                             .c_str() );
                 }
                 else
@@ -1198,10 +1078,9 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
             pResource->destroyBuffer( vertexBuf );
         if ( pso != 0 )
             pResource->destroyPipelineState( pso );
-        ++okCount;
     }
 
-    if ( okCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for the indexed indirect draw test" );
 }
 
@@ -1212,12 +1091,9 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
  */
 SW_TEST_CASE( RHIDeviceTest, TextureFormatQueryAndBackBufferFormat )
 {
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         sw::IRHIResource* pResource = device->getResource();
 
         const sw::RHIFormat backBuffer = device->getBackBufferFormat();
@@ -1243,11 +1119,9 @@ SW_TEST_CASE( RHIDeviceTest, TextureFormatQueryAndBackBufferFormat )
             pResource->destroyTexture( texture );
         }
         SW_EXPECT_EQUAL( static_cast<uint32>( sw::RHIFormat::Unknown ), static_cast<uint32>( pResource->getTextureFormat( 0 ) ) );
-
-        ++okCount;
     }
 
-    if ( okCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for texture format query test" );
 }
 
@@ -1290,15 +1164,9 @@ SW_TEST_CASE( RHIDeviceTest, CommandListCreationAndExecution )
  */
 SW_TEST_CASE( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoesNotLeakRecordingContext )
 {
-    const sw::RHIBackend arrBackend[] = { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan };
-    uint32               testedCount{ 0 };
-    for ( sw::RHIBackend backend : arrBackend )
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan } );
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++testedCount;
-
         for ( uint32 round = 0; round < 4; ++round )
         {
             sw::unique_ptr<sw::IRHICommandList> cmdList = device->createCommandList();
@@ -1321,7 +1189,7 @@ SW_TEST_CASE( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoesNotLeakRecordi
         }
         device->waitIdle();
     }
-    if ( testedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No parallel-recording backend (DX11/DX12/Vulkan) available" );
 }
 
@@ -1384,16 +1252,12 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
 {
     constexpr uint32 kSize = 8;
 
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    uint32                okCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         sw::IRHIResource* pResource = device->getResource();
-        const utf8*       pName     = backend == sw::RHIBackend::DirectX11 ? "DirectX11" : backend == sw::RHIBackend::DirectX12 ? "DirectX12"
-                                                                                     : backend == sw::RHIBackend::Vulkan        ? "Vulkan"
-                                                                                                                                : "OpenGL";
+        const utf8*       pName     = device->getBackendName();
 
         sw::RHITextureDesc texDesc{};
         texDesc._width                     = kSize;
@@ -1475,16 +1339,11 @@ SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
     /// @brief 몇 프레임 늦게 오므로 링 깊이보다 넉넉히 돌린다.
     constexpr uint32 kFrameCount = 12;
 
-    uint32 attemptedCount{ 0 };
     uint32 reportedCount{ 0 };
 
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-
-        ++attemptedCount;
         const utf8* pName = device->getBackendName();
 
         // 엔진이 켜 주기 전에는 백엔드가 쿼리 자원조차 만들지 않는다 — 계측 비용을 안 내기 위해서다.
@@ -1552,7 +1411,7 @@ SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
         device->waitIdle();
     }
 
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could be initialized" );
     if ( reportedCount == 0 )
         SW_TEST_SKIP( "No backend reported GPU timestamps (driver support missing)" );
@@ -1590,12 +1449,9 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
             arrVertex[vertexIndex]._arrColor[channel] = 1.0f;
     }
 
-    uint32 okCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
         sw::IRHIResource* pResource = device->getResource();
         const sw::string  label     = sw::string( device->getBackendName() ) + ": ";
 
@@ -1620,13 +1476,7 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
         const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
         const sw::RHIBufferHandle    vb      = pResource->createVertexBuffer( arrVertex, static_cast<uint32>( sizeof( arrVertex ) ) );
 
-        sw::RHIPipelineStateDesc psoDesc{};
-        psoDesc._vertexShaderPath            = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._pixelShaderPath             = "engine/shaders/fullscreentriangle.hlsl";
-        psoDesc._vertexEntryPoint            = "VSMain";
-        psoDesc._pixelEntryPoint             = "PSMain";
-        psoDesc._numRenderTargets            = 1;
-        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
+        sw::RHIPipelineStateDesc psoDesc     = makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" );
         psoDesc._depthStencilFormat          = sw::RHIFormat::D24_UNORM_S8_UINT;
         psoDesc._bEnableDepthTest            = SW_TRUE;
         psoDesc._bEnableDepthWrite           = SW_TRUE;
@@ -1796,10 +1646,9 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
         pResource->unregisterBindlessResource( cbIndex );
         pResource->destroyBuffer( cb );
         device->waitIdle();
-        ++okCount;
     }
 
-    if ( okCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for the sliced texture test" );
 }
 
@@ -1811,14 +1660,9 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
  */
 SW_TEST_CASE( RHIDeviceTest, EnqueuedGpuReleaseRunsOnceAfterItsFrame )
 {
-    uint32 attemptedCount{ 0 };
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
     {
-        test::RHITestDevice device( backend );
-        if ( device.isReady() == false )
-            continue;
-        ++attemptedCount;
-
         const sw::string label = sw::string( device->getBackendName() );
         uint32           callCount{ 0 };
         uint32*          pCallCount = &callCount;
@@ -1840,6 +1684,6 @@ SW_TEST_CASE( RHIDeviceTest, EnqueuedGpuReleaseRunsOnceAfterItsFrame )
         device->waitIdle();
         SW_EXPECT_TRUE_MSG( callCount == 1, ( label + ": waitIdle 이 이미 부른 콜백을 다시 불렀다" ).c_str() );
     }
-    if ( attemptedCount == 0 )
+    if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the GPU release test" );
 }
