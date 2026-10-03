@@ -76,9 +76,54 @@ SW_TEST_CASE( CommandLineTest, GetArgumentNotFoundReturnsFalse )
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();
 
-    sw::string ip;
-    bool       hasIP = cmdManager.getArgument( sw::CommandLineArgument::IP, ip );
-    SW_EXPECT_FALSE( hasIP );
+    sw::string cookedDir;
+    bool       hasCookedDir = cmdManager.getArgument( sw::CommandLineArgument::COOKED_DIR, cookedDir );
+    SW_EXPECT_FALSE( hasCookedDir );
+}
+
+/**
+ * @brief [CommandLineTest] 여러 낱말 인자는 하이픈 철자 하나만 받는다 — 하이픈 없는 철자는 등록되지 않은 키다
+ */
+SW_TEST_CASE( CommandLineTest, MultiWordArgumentAcceptsOnlyHyphenatedSpelling )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+
+    utf8* argv[] = {
+        const_cast<utf8*>( "TestApp.exe" ),
+        const_cast<utf8*>( "--bakeshaders" ),
+        const_cast<utf8*>( "--cookscenes" ),
+        const_cast<utf8*>( "--cookeddir=out" ),
+        const_cast<utf8*>( "--baketextures" ),
+        const_cast<utf8*>( "--checktextures" ),
+        const_cast<utf8*>( "-IP=127.0.0.1" ),
+        const_cast<utf8*>( "-PORT=7777" ),
+    };
+    cmdManager.parse( 8, argv );
+
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::BAKE_SHADERS ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOK_SCENES ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::COOKED_DIR ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::BAKE_TEXTURES ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::CHECK_TEXTURES ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( "IP" ) );
+    SW_EXPECT_FALSE( cmdManager.isArgumentProvided( "PORT" ) );
+
+    utf8* hyphenArgv[] = {
+        const_cast<utf8*>( "TestApp.exe" ),
+        const_cast<utf8*>( "--bake-shaders" ),
+        const_cast<utf8*>( "--cooked-dir=out" ),
+        const_cast<utf8*>( "--check-textures" ),
+    };
+    cmdManager.parse( 4, hyphenArgv );
+
+    bool bBakeShaders{ false };
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::BAKE_SHADERS, bBakeShaders ) );
+    SW_EXPECT_TRUE( bBakeShaders );
+    sw::string cookedDir;
+    SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::COOKED_DIR, cookedDir ) );
+    SW_EXPECT_STREQ( "out", cookedDir.c_str() );
+    SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::CHECK_TEXTURES ) );
 }
 
 /**
