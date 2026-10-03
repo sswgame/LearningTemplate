@@ -20,6 +20,14 @@
 - **File/**: `FileUtil` · `PlatformFileUtil` · `IFileWatcher` + 플랫폼 폴더(`Windows/` · `Linux/` · `Mac/` — 파일 다이얼로그 · 워처)
 - **Process/**: `Process` · `CallStackCapture` · `CrashContext` · `CrashHandler` + 플랫폼 폴더(`Windows/` · `Posix/`)
 - **Compression/**: `ICompressionCodec` · `CompressionCodecRegistry` · `CompressionStream` · `NullCompressionCodec` · `RleCompressionCodec`
+- **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
+  얹어, 싱글 게임은 그 키트를 링크하지 않는다.
+  - `BitStream`(`BitWriter` · `BitReader` — 범위 정수 · 양자화 실수 · 가변 정수, 넘침 감지), `SequenceBuffer`(16 비트 감김 시퀀스 고리), `NetTypes`(`NetAddress` ·
+    채널 · 연결 상태 · 메시지 첫 바이트 영역 `NetMessageRange`)
+  - `NetConnection` — 연결 하나의 신뢰성: 패킷 시퀀스 · ack + 32 비트 묶음, 채널(신뢰 순서 · 순서만 · 비신뢰), 재전송(RTT × 1.5), RTT · 손실률 · 대역폭
+  - `NetHost` — 서버 · 클라이언트 끝점: 요청 → 도전 → 응답 → 수락 핸드셰이크(위조 주소 방지), 프로토콜 id + 체크섬으로 남의 · 깨진 패킷 거르기, 유지 · 타임아웃 · 끊기
+  - 전송: `INetTransport`, 실제 UDP(`UdpNetTransport` — 플랫폼 차이는 `PlatformSocketUtil` 한 곳), 한 프로세스 루프백 망(`LoopbackNetwork` — 지연 · 흔들림 · 손실 ·
+    중복 · 깨짐을 씨앗으로 흉내, 시험 · 리슨 서버)
 - **Math/**: `VectorMath` · `MatrixMath` · `MathUtil` · `Frustum`
 - **Time/**: `CpuTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE_*`)
 - **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.

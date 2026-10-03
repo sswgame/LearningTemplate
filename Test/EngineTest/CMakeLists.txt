@@ -24,6 +24,10 @@ sw_addTestExecutable(EngineTest
 		GF_Voxel
 		GF_CityBuilder
 		GF_RealTimeStrategy
+		GF_NetClientServer
+		GF_NetLockstep
+		GF_NetTurnRelay
+		GF_NetMmo
 	LABELS
 		"unit;engine"
 	TIMEOUT

@@ -19,6 +19,13 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Container/DynamicBitset.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Delegate/Delegate.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Module/ModuleCodeHolder.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/BitStream.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetConnection.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetHost.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetTransport.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetTypes.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/PlatformSocketUtil.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/UdpNetTransport.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Event/EventDispatcher.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/FileUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/IFileWatcher.cpp"
@@ -106,7 +113,7 @@ if(NOT SW_SHIPPING_BUILD)
 endif()
 
 if(WIN32)
-	target_link_libraries(Core_objects PUBLIC comdlg32 ole32 shell32 dbghelp synchronization)
+	target_link_libraries(Core_objects PUBLIC comdlg32 ole32 shell32 dbghelp synchronization ws2_32)
 elseif(APPLE)
 	target_link_libraries(Core_objects PUBLIC "-framework CoreServices" "-framework CoreFoundation")
 endif()
@@ -130,7 +137,7 @@ target_link_libraries(Core PUBLIC sw_public_source_includes)
 target_link_libraries(Core PUBLIC sw_third_party_includes)
 
 if(WIN32)
-	target_link_libraries(Core PUBLIC comdlg32 ole32 shell32 dbghelp synchronization)
+	target_link_libraries(Core PUBLIC comdlg32 ole32 shell32 dbghelp synchronization ws2_32)
 elseif(APPLE)
 	target_link_libraries(Core PUBLIC "-framework CoreServices" "-framework CoreFoundation")
 endif()

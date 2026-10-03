@@ -214,13 +214,14 @@ cd build/Ninja-Debug/Bin
   `AI/` · `Navigation/` · `Combat/`(Shooter 키트에서 옮긴 무기 포함) · `Control/` · `Inventory/` · `Match/` · `Movement/` · `Progression/` · `Quest/` · `World/`,
   `Base/TimingJudge` · `Base/TimerQueue` · `Data/StatBlock` — 와 키트 `GF_CityBuilder` · `GF_RealTimeStrategy`. 하네스 통과: `NavigationTest` · `AiTest` ·
   `CityBuilderTest` · `RealTimeStrategyTest` · `CombatTest` · `InventoryTest` · `ProgressionTest` · `QuestTest` · `WorldTest` · `MatchTest` · `ControlTest` · `PlatformerTest` ·
-  `GameFrameworkUtilTest`. 할 일: 재구성(새 폴더는 GLOB 이라 CMake 수정 없음 — `GF_Shooter` 가 빠졌으니 낡은 빌드의 `GF_Shooter.dll` 을 지운다) → Debug · Shipping →
+  `GameFrameworkUtilTest`, 네트워크 — `Core/Network`(`NetworkTest` 6, 실제 UDP 로컬 송수신 포함) · 키트 `GF_NetClientServer` · `GF_NetLockstep` · `GF_NetTurnRelay` · `GF_NetMmo`
+  (`NetClientServerTest` · `NetLockstepTest` · `NetTurnRelayTest` · `NetMmoTest`). Windows 소켓 경로(`PlatformSocketUtil` 의 winsock 분기)는 **구문 검사도 못 했다**(리눅스뿐). 할 일: 재구성(새 폴더는 GLOB 이라 CMake 수정 없음 — `GF_Shooter` 가 빠졌으니 낡은 빌드의 `GF_Shooter.dll` 을 지운다) → Debug · Shipping →
   `EngineTest --test_filter=` 위 스위트들. `GameFramework.dll` 이 커졌으니 `SW_GF_API` 내보내기 누락(링크 오류)부터 본다.
-- **장르 키트 대기열(사용자 지시 2026-10-03, 공통 먼저 → 순서대로).** 공통에 둘 것을 먼저 기반으로 빼고(위 항목), 키트는 아래 순서로 만든다. 키트마다 시험 · 등록
+- **장르 키트 대기열(사용자 지시 2026-10-03, 공통 먼저 → 네트워크(끝냄) → 순서대로).** 공통에 둘 것을 먼저 기반으로 빼고(위 항목), 키트는 아래 순서로 만든다. 키트마다 시험 · 등록
   (`Kits/CMakeLists.txt` · `Test/EngineTest/CMakeLists.txt` LIBS · `AppConfig.json`) · 린트 · 커밋.
   (1) 시험 게임 NileCity(도시 건설) · StarSkirmish(RTS) (2) 배틀로얄(배틀그라운드) (3) 서부 오픈월드(레드 데드 리뎀션) (4) 위쳐류 RPG (5) 생물 생활(포코피아)
   (6) SRPG(G 제네레이션 · 메탈슬러그 택틱스 — `GridReachability` · `RunMap`) (7) 카드(포커 · 고스톱 · 맞고 · 솔리테어 · 우노 · 문스톤 아일랜드식 덱 빌딩)
-  (8) 네트워크 — Core 공통 계층 + 장르별 DLL(클라이언트-서버 · 락스텝 · 턴 릴레이 · MMO) (9) 기체 대전(SD 건담 캡슐파이터 — `Match` 코스트 게이지)
+  (9) 기체 대전(SD 건담 캡슐파이터 — `Match` 코스트 게이지)
   (10) 비대칭 공포(데드 바이 데이라이트) (11) 몬스터 수집(포켓몬 — 기존 `TurnBattle` 키트와 겹침을 먼저 본다) (12) 협동 수집 공포(리썰 컴퍼니) (13) 리듬(오투잼 — `TimingJudge`)
   (14) 인디 추천 목록 — 메트로배니아 · 소울라이크 2D(어스블레이드 · 게슈탈트 · 블라스퍼머스 2 · 더 라스트 페이스 · 클로아 · 엠버베인), 액션 플랫포머(검브렐라 · 부시덴 ·
   리플레이스드 · 페퍼 그라인더 — `PlatformerMotor2D`), 고전 JRPG(드래곤 퀘스트 3 HD-2D · 씨 오브 스타즈 · 완다링 소드 — `TurnOrder` · `TimingJudge`), 생존 공포 · 조사(홀스틴 ·

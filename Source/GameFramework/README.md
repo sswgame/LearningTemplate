@@ -59,6 +59,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   - `CityBuilder`: 도시 건설(파라오 장르) — 건물 · 물자 · 집 단계 XML(`CityCatalog`), 도로망 · 노동 · 순회 일꾼 · 수레 · 시장 · 집 진화 · 이민 · 세금 · 범람(`CitySimulation`).
   - `RealTimeStrategy`: 실시간 전략(스타크래프트 장르) — 유닛 XML(`RtsCatalog`), 명령 · 채취 · 건설 · 생산 · 테크 · 전투 · 안개 · 흐름장 무리 이동(`RtsWorld`),
     고르기 · 부대(`RtsSelection`), 행동 트리 AI(`RtsAiController`).
+  - 네트워크 방식(장르별로 골라 링크 — 싱글 게임은 링크하지 않는다, 공통 계층은 `Core/Network`). 정책은 가상 인터페이스로 게임이 바꾼다.
+    메시지 첫 바이트는 키트마다 영역이 나뉘어(`NetMessageRange`) 한 게임이 둘을 같이 써도 섞이지 않는다 — 키트의 `handleMessage` 가 제 것만 먹고 false 를 돌려준다.
+    - `NetClientServer`: 권위 서버(슈터 · 배틀로얄 · 액션 · 기체 대전 · 비대칭) — 스냅샷 델타(확인된 기준 대비 · 예산 · 우선도, `IReplicationPolicy` 관련성),
+      보간(`ReplicationClient` — 지연만큼 과거 · 시계 맞추기), 입력 겹쳐 보내기, 클라이언트 예측 되맞추기(`ClientPrediction`), 랙 보정 되감기(`LagCompensationHistory`).
+    - `NetLockstep`: 결정적 — 락스텝(`LockstepSession` — 입력 지연 · 체크섬 비동기 감지, RTS), 롤백(`RollbackSession` · `IRollbackGame` — 예측 · 되감기 · 재시뮬레이션, 격투).
+    - `NetTurnRelay`: 턴제 중계(카드 · 보드 · SRPG) — 방 · 자리 · 표, `ITurnPolicy`(차례 · 허락 · 방향), 행동 기록 방송, 재접속 시 놓친 행동.
+    - `NetMmo`: MMO — 관심 영역 격자(`InterestGrid`, 들어옴 · 나감 히스테리시스), 우선도 누적 대역폭 예산, `IInterestPolicy`(늘 보이기 · 우선도).
   - `ThemePark`: 롤러코스터 타이쿤 — 조각으로 쌓는 코스터 트랙(`CoasterTrackBuilder`: 오르막 체인 · 낙하 · 언덕 · 뱅크 회전 · 클로소이드 루프 ·
     브레이크 · 부스터, XML 레이아웃), 고정 스텝 열차 물리(`CoasterTrain`), 시험 운행으로 흥분 · 강도 · 멀미 평가(`CoasterRideAnalyzer`),
     손님 · 줄 · 표 · 입장료 · 운영비 · 공원 평점 경영 시뮬레이션(`ThemeParkSimulation`).

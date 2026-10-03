@@ -48,6 +48,30 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_NetClientServer",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
+        },
+        {
+            "_name": "GF_NetLockstep",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
+        },
+        {
+            "_name": "GF_NetTurnRelay",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
+        },
+        {
+            "_name": "GF_NetMmo",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }

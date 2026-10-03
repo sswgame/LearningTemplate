@@ -1,0 +1,170 @@
+/**
+ * @file MmoReplicator.h
+ * @brief MMO 복제 — 엔티티가 수천이어도 관찰자(플레이어)마다 "근처만, 중요한 것 먼저, 정한 바이트 안에서" 보냅니다.
+ * @details 1. 관심 영역 — 격자 버킷으로 근처를 찾고, 들어오는 반경보다 나가는 반경을 크게 해 경계에서 들락날락하지 않게 합니다(히스테리시스).
+ *          2. 들어옴 · 나감은 신뢰 메시지(전체 상태), 갱신은 비신뢰 묶음입니다(잃으면 다음 갱신이 메운다).
+ *          3. 우선도 누적 — 보이는 엔티티마다 매 틱 우선도(정책: 거리 · 중요도)를 쌓고, 예산 안에서 쌓인 것이 큰 순서로 보낸 뒤 0 으로 돌립니다.
+ *             멀거나 변하지 않는 것도 언젠가는 차례가 옵니다(굶지 않는다). 상태가 바뀐 것은 더 빨리 쌓입니다.
+ */
+#pragma once
+#include "Core/Common/Macros.h"
+#include "Core/Common/Types.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
+#include "Core/Container/vector.h"
+#include "Core/Math/Math.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+
+namespace sw
+{
+    class NetHost;
+
+    /** @brief 메시지 종류(첫 바이트)입니다. */
+    struct NetMmoMessage
+    {
+        static constexpr uint8 kEnter  = 0x40;
+        static constexpr uint8 kLeave  = 0x41;
+        static constexpr uint8 kUpdate = 0x42;
+    };
+
+    /** @brief 엔티티 하나입니다. */
+    struct MmoEntity
+    {
+        vector<uint8> _listState{};
+        float3        _position{};
+        uint32        _entityId{ 0 };
+        uint32        _typeId{ 0 };
+        float32       _importance{ 1.0f }; ///< 보스 · 다른 플레이어는 크게
+    };
+
+    /**
+     * @class InterestGrid
+     * @brief XZ 평면의 격자 버킷입니다. 반경 질의는 걸친 칸만 봅니다.
+     */
+    class SW_GF_API InterestGrid
+    {
+    public:
+        void initialize( float32 cellSize );
+        void setPosition( uint32 entityId, const float3& position );
+        void remove( uint32 entityId );
+        void queryRadius( const float3& center, float32 radius, vector<uint32>& outListEntity ) const;
+        bool findPosition( uint32 entityId, float3& outPosition ) const;
+
+    private:
+        static int64 makeCellKey( int32 x, int32 z ) { return ( static_cast<int64>( x ) << 32 ) ^ static_cast<int64>( static_cast<uint32>( z ) ); }
+        int32        computeCellCoord( float32 value ) const;
+
+        unordered_map<int64, vector<uint32>> _mapCell{};
+        unordered_map<uint32, float3>        _mapPosition{};
+        float32                              _cellSize{ 32.0f };
+    };
+
+    /**
+     * @class IInterestPolicy
+     * @brief 누가 무엇을 얼마나 원하는가 — 게임마다 바꿉니다(파티원은 늘 보이기 · 길드전 지역은 반경 넓히기).
+     */
+    class SW_GF_API IInterestPolicy
+    {
+    public:
+        virtual ~IInterestPolicy() = default;
+
+        /** @brief 반경과 상관없이 늘 보이는가입니다(파티원 · 추적 중인 퀘스트 대상). */
+        virtual bool isAlwaysRelevant( int32 connectionId, const MmoEntity& entity ) const
+        {
+            (void)connectionId;
+            (void)entity;
+            return false;
+        }
+        /** @brief 한 틱에 쌓을 우선도입니다. 기본은 중요도 / (1 + 거리 / 10). */
+        virtual float32 computePriority( int32 connectionId, const MmoEntity& entity, float32 distance ) const
+        {
+            (void)connectionId;
+            return entity._importance / ( 1.0f + distance * 0.1f );
+        }
+    };
+
+    /** @brief 복제 설정입니다. */
+    struct MmoReplicatorSettings
+    {
+        float32 _cellSize{ 32.0f };
+        float32 _enterRadius{ 60.0f };
+        float32 _leaveRadius{ 70.0f };
+        float32 _changedBoost{ 4.0f };     ///< 상태가 바뀐 엔티티의 우선도 배율
+        int32   _updateBudgetBytes{ 600 }; ///< 관찰자 · 틱마다 갱신 바이트
+        int32   _maxEnterPerTick{ 32 };    ///< 한 틱에 새로 보이는 것 상한(텔레포트 직후 몰리지 않게)
+    };
+
+    /** @brief 서버 쪽입니다. 관찰자 = 연결 + 그 연결이 조종하는 엔티티(그 자리가 관심의 중심). */
+    class SW_GF_API MmoReplicator
+    {
+    public:
+        MmoReplicator();
+
+        void initialize( NetHost* pHost, const MmoReplicatorSettings& settings, const IInterestPolicy* pPolicy = nullptr );
+        void setEntity( const MmoEntity& entity );
+        void removeEntity( uint32 entityId );
+        void setObserver( int32 connectionId, uint32 entityId );
+        void removeObserver( int32 connectionId );
+        /** @brief 관찰자마다 들어옴 · 나감 · 갱신을 보냅니다. */
+        void update( float32 deltaTime );
+
+        /** @brief 그 관찰자에게 지금 보이는 엔티티 수입니다. */
+        int32               getVisibleCount( int32 connectionId ) const;
+        uint64              getSentUpdateCount() const { return _sentUpdateCount; }
+        const InterestGrid& getGrid() const { return _grid; }
+
+    private:
+        struct VisibleEntry
+        {
+            vector<uint8> _listSentState{};
+            float32       _accumulated{ 0.0f };
+        };
+
+        struct Observer
+        {
+            unordered_map<uint32, VisibleEntry> _mapVisible{};
+            uint32                              _entityId{ 0 };
+            uint8                               _bActive{ SW_FALSE };
+        };
+
+        void updateObserver( int32 connectionId, Observer& observer, float32 deltaTime );
+
+        unordered_map<uint32, MmoEntity> _mapEntity;
+        vector<Observer>                 _listObserver;
+        InterestGrid                     _grid;
+        MmoReplicatorSettings            _settings;
+        IInterestPolicy                  _defaultPolicy;
+        NetHost*                         _pHost;
+        const IInterestPolicy*           _pPolicy;
+        uint64                           _sentUpdateCount;
+    };
+
+    /** @brief 클라이언트에서 생긴 일입니다. */
+    struct MmoClientEvent
+    {
+        enum class Kind : uint8
+        {
+            Entered = 0,
+            Left,
+            Updated
+        };
+        uint32 _entityId{ 0 };
+        Kind   _kind{ Kind::Entered };
+    };
+
+    /** @brief 클라이언트 쪽 — 보이는 엔티티의 마지막 상태입니다. */
+    class SW_GF_API MmoClientView
+    {
+    public:
+        bool handleMessage( const vector<uint8>& buffer );
+        void drainEvents( vector<MmoClientEvent>& outListEvent );
+
+        const MmoEntity* findEntity( uint32 entityId ) const;
+        int32            getEntityCount() const { return static_cast<int32>( _mapEntity.size() ); }
+
+    private:
+        unordered_map<uint32, MmoEntity> _mapEntity{};
+        vector<MmoClientEvent>           _listEvent{};
+    };
+} // namespace sw
