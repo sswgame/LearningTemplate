@@ -39,12 +39,8 @@
  * @brief [MeshPrimitiveTest] 같은 id 는 **같은 메시 객체**를 돌려주고, create 는 매번 새로 만드는지 검증
  *
  * @details 배치 키가 메시 **포인터**라, 씬에서 온 컴포넌트가 저마다 제 Mesh 를 만들면 같은 큐브
- *          8000 개가 배치 8000 개로 갈린다(GPU 정점 버퍼도 8000 벌). 실제로 그랬고, 벤치는 메시
- *          하나를 나눠 써서 배치가 2 개였기 때문에 **벤치에는 한 번도 안 보였다.**
- *
- *          고친 뒤 정적 8002 엔티티 씬에서 배치 8000 -> 6, 프레임 2469 -> 1462 us 였고,
- *          백엔드 사이 픽셀 불일치도 15~30% -> 0.1~0.8% 로 줄었다(버퍼 8000 벌이 백엔드마다
- *          다르게 무너지고 있었다).
+ *          8000 개가 배치 8000 개로 갈린다(GPU 정점 버퍼도 8000 벌). 벤치는 메시 하나를 나눠 쓰므로
+ *          **벤치로는 이것이 보이지 않는다.**
  *
  *          `createPrimitive` 가 매번 새로 만드는 성질도 같이 지킨다 — 벤치가 그것으로 도형 변종을
  *          갈라 배치를 일부러 나눈다(`BenchScene`).
@@ -84,8 +80,8 @@ SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIdWhileCreateMakesNew )
 
 /**
  * @brief [MeshPrimitiveTest] 메시는 자기 경계를 알고, 메시 컴포넌트의 경계(컬링)는 그것을 덮는다
- * @details 메시가 경계를 몰라 모든 도형이 단위 상자의 반지름(0.866)을 썼다. 그보다 큰 도형(캡슐 끝 · 평면)은 화면 가장자리에서 보이는데도 GPU 컬링에
- *          잘렸다. 이제 `setVertices` 가 경계 반지름을 구하고, 컴포넌트는 적어 둔 값과 그것 중 큰 쪽을 쓴다.
+ * @details `setVertices` 가 경계 반지름을 구하고, 컴포넌트는 적어 둔 값과 그것 중 큰 쪽을 쓴다. 모든 도형이 단위 상자의 반지름(0.866)을 쓰면
+ *          그보다 큰 도형(캡슐 끝 · 평면)이 화면 가장자리에서 보이는데도 GPU 컬링에 잘린다.
  */
 SW_TEST_CASE( MeshPrimitiveTest, MeshBoundsCoverEveryVertexOfEveryPrimitive )
 {
@@ -116,8 +112,8 @@ SW_TEST_CASE( MeshPrimitiveTest, MeshBoundsCoverEveryVertexOfEveryPrimitive )
 
 /**
  * @brief [MeshPrimitiveTest] 오브젝트의 월드 상자는 메시의 실제 크기와 부모의 회전 · 스케일을 받는다
- * @details 에디터의 붙이기 · 프레이밍이 "메시면 로컬 스케일 × 단위 상자" 로 크기를 셈했다. 평면은 두께가 없는데 반 칸 떠 있었고, 부모가 키운 바닥은
- *          부모 스케일만큼 작게 잡혔다. 이제 크기는 `GameObject::getWorldBox`(컴포넌트마다 `getWorldBox`) 하나다.
+ * @details 크기는 `GameObject::getWorldBox`(컴포넌트마다 `getWorldBox`) 하나다. "메시면 로컬 스케일 × 단위 상자" 로 셈하면 두께 없는 평면이
+ *          반 칸 뜨고, 부모가 키운 바닥은 부모 스케일만큼 작게 잡힌다.
  */
 SW_TEST_CASE( MeshPrimitiveTest, WorldBoxFollowsTheMeshAndItsParents )
 {
@@ -225,10 +221,8 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
 
 /**
  * @brief [MeshPrimitiveTest] 내장 도형의 **정점 노멀·UV** 가 쓸 만한 값인지 (GPU 불필요).
- * @details 노멀과 UV 는 오래 **셰이더가 지어내고** 있었다 — 노멀은 `DemoCubeNormal( 위치 )`, UV 는
- *          `localPos.xy * 0.5 + 0.5`. 둘 다 "원점 중심 박스형 단위 도형" 에만 맞는 가정이라 평면·구·
- *          원뿔은 조용히 틀린 빛을 받고 텍스처가 엉뚱하게 붙었다. 이제 정점 속성이므로 **생성기가
- *          제대로 채웠는지**가 유일한 실패 지점이다.
+ * @details 노멀과 UV 는 정점 속성이므로 **생성기가 제대로 채웠는지**가 유일한 실패 지점이다. 셰이더가 위치로 지어내면
+ *          "원점 중심 박스형 단위 도형" 에만 맞아 평면·구·원뿔은 조용히 틀린 빛을 받고 텍스처가 엉뚱하게 붙는다.
  * @note 바깥을 향하는지는 `normal · position >= 0` 으로 본다 — 원점 중심 볼록 도형에서만 성립하는
  *       판정이라 평면은 따로 본다(면이 원점을 지나므로 내적이 0 이다).
  */
@@ -305,8 +299,8 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
 
 /**
  * @brief [MeshPrimitiveTest] 스프라이트 사각형은 양면이고, 어느 면이든 그 면을 보는 카메라의 화면 오른쪽으로 u 가 는다(글자가 뒤집히지 않는다)
- * @details 예전 스프라이트는 3D 쿼드(+Z 한 면, u 가 +X 로 는다)를 썼다. 그 면은 -Z 를 보는 카메라에서만 보이는데 그 카메라의 화면 오른쪽은 -X 라
- *          모든 스프라이트가 좌우로 뒤집혔고(데미지 숫자 "123" 이 거울 글자였다), +Z 를 보는 2D 카메라에서는 후면 컬링으로 사라졌다.
+ * @details 3D 쿼드(+Z 한 면, u 가 +X 로 는다)를 쓰면 그 면은 -Z 를 보는 카메라에서만 보이는데 그 카메라의 화면 오른쪽은 -X 라 모든 스프라이트가
+ *          좌우로 뒤집히고(데미지 숫자 "123" 이 거울 글자가 된다), +Z 를 보는 2D 카메라에서는 후면 컬링으로 사라진다.
  *          카메라는 +Z 를 볼 때 화면 오른쪽이 +X 이고(왼손 좌표계, `CameraComponent::getViewMatrix`), -Z 를 볼 때는 -X 다. 면의 노멀이 -Z 면
  *          +Z 를 보는 카메라가 그 면을 본다. 그래서 노멀 -Z 면은 u 가 +X 로, 노멀 +Z 면은 u 가 -X 로 늘어야 한다. v 는 두 면 모두 위가 0 이다.
  *          감김은 엔진의 앞면 규약((b - a) x (c - a) 가 노멀)을 따라야 컬링이 맞는 면을 남긴다.

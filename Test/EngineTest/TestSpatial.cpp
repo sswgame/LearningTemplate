@@ -431,7 +431,7 @@ SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
 }
 
 /**
- * @brief [SpatialHashGrid2D] 복수 셀에 걸친 대형 오브젝트 쿼리 시 중복 없는 반환 및 정렬 최적화 검증
+ * @brief [SpatialTest] 복수 셀에 걸친 대형 오브젝트 쿼리 시 중복 없는 반환 및 정렬 최적화 검증
  */
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2D_SpanningMultiCellsDuplicateFiltering )
 {

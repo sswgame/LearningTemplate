@@ -101,12 +101,10 @@ namespace
 
     /**
      * @brief Present 없이 오프스크린 RT로 파이프라인을 검증합니다.
-     * @details createTexture2D → beginRenderPass → setPSO → fullscreen draw → (선택) readback → destroy.
+     * @details createTexture2D → beginRenderPass → setPipelineState → fullscreen draw → (선택) readback → destroy.
      *          pOutPixels 를 주면 그린 결과를 CPU 로 읽어 온다 — "크래시 안 났다"가 아니라 "실제로
      *          그려졌다"를 검사할 수 있다. 백엔드별 렌더타깃 경로를 같은 기준으로 비교하는 유일한 방법이다.
-     * @note 예전엔 이것이 `IRHIDevice::executeOffscreenPipelineSmoke` 라는 **엔진 API** 였다. 부르는
-     *       곳은 이 파일뿐인데 배포 바이너리까지 따라 들어갔다. 쓰는 것은 전부 공개 RHI 인터페이스라
-     *       검증 코드가 있어야 할 자리인 여기로 내렸다.
+     * @note 쓰는 것은 전부 공개 RHI 인터페이스라 엔진 API 로 두지 않는다 — 시험 코드가 배포 바이너리에 들어가지 않게.
      * @param recordCb · pRecordData · recordSize 주면 리스트를 연 뒤 드로우 전에 `IRHICommandList::updateConstantBuffer` 로 그 상수버퍼를 갱신한다.
      * @return 성공 시 true. pso==0 이면 false.
      */
@@ -399,10 +397,10 @@ SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
 
 /**
  * @brief [RHIDeviceTest] 텍스처 SRV 인덱스와 버퍼 인덱스는 다른 공간 — 텍스처 해제가 버퍼 프리리스트를 오염시키면 안 된다
- * @details 실제 사고: 트랜지언트 텍스처 SRV 0·1·2 가 unregisterBindlessResource 로 넘어가 살아 있는
- *          패스 CB 슬롯을 비운 것으로 만들었고, 다음 registerBindlessResource(인스턴스 구조버퍼)가
- *          슬롯 2 를 차지해 Vulkan set 0 에 STORAGE 세트가 걸렸다. DX11/OpenGL 도 같은 구조(텍스처 표
- *          / 버퍼 표 분리)라 조용히 엉뚱한 CB 가 바인딩된다. DX12 는 힙이 하나라 원래 무해하다.
+ * @details 섞이면: 트랜지언트 텍스처 SRV 0·1·2 가 unregisterBindlessResource 로 넘어가 살아 있는
+ *          패스 CB 슬롯을 비운 것으로 만들고, 다음 registerBindlessResource(인스턴스 구조버퍼)가
+ *          슬롯 2 를 차지해 Vulkan set 0 에 STORAGE 세트가 걸린다. DX11/OpenGL 도 같은 구조(텍스처 표
+ *          / 버퍼 표 분리)라 조용히 엉뚱한 CB 가 바인딩된다. DX12 는 힙이 하나라 무해하다.
  */
 SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
 {
@@ -464,8 +462,8 @@ SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
 #if defined( SW_PLATFORM_WINDOWS )
 /**
  * @brief [RHIDeviceTest] DX12 — 등록에 실패한 CBV 는 집은 힙 인덱스를 돌려준다
- * @details 링이 아닌 버퍼는 CBV 크기를 256 바이트로 내려 맞춘다. 256 보다 좁으면 크기가 0 이라 등록을 거부하는데, 예전에는 그 전에 집은
- *          인덱스를 돌려주지 않아 그런 등록마다 셰이더 가시 힙 슬롯이 하나씩 영영 샜다. 새 디바이스의 인덱스는 이어서 나오므로
+ * @details 링이 아닌 버퍼는 CBV 크기를 256 바이트로 내려 맞춘다. 256 보다 좁으면 크기가 0 이라 등록을 거부하는데, 그 전에 집은
+ *          인덱스를 돌려주지 않으면 그런 등록마다 셰이더 가시 힙 슬롯이 하나씩 영영 샌다. 새 디바이스의 인덱스는 이어서 나오므로
  *          (프리리스트가 비어 있다) 실패한 등록 뒤의 등록이 바로 다음 인덱스를 받아야 한다. 프리리스트가 비어 있지 않으면 건너뛴다.
  */
 SW_TEST_CASE( RHIDeviceTest, Dx12FailedCbvRegistrationReturnsItsIndex )
@@ -656,10 +654,9 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
 
 /**
  * @brief [RHIDeviceTest] 오프스크린 렌더타깃에 그린 결과가 읽기로 보이는가 — 4백엔드
- * @details `executeOffscreenPipelineSmoke` 는 오래 "크래시 안 났다"만 봤다. 그 사이 DX11/GL/Vulkan 은
- *          프레임 그래프의 트랜지언트를 읽으면 클리어 색만 나오는데 화면에는 그려지는 상태였고,
- *          "렌더타깃에 그린 게 읽히는가" 를 백엔드별로 가르는 검사가 없어서 원인을 좁힐 수 없었다.
- *          fullscreentriangle 은 정점색 x MaterialCB 라, 빨강 CB 를 주면 화면 가득 빨강이 나와야 한다.
+ * @details "크래시 안 났다" 만 보면 트랜지언트를 읽을 때 클리어 색만 나오는데 화면에는 그려지는 상태를 못 가른다.
+ *          "렌더타깃에 그린 게 읽히는가" 를 백엔드별로 가른다. fullscreentriangle 은 정점색 x MaterialCB 라,
+ *          빨강 CB 를 주면 화면 가득 빨강이 나와야 한다.
  */
 SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
 {
@@ -691,10 +688,8 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
                 // 클리어는 (0.05,0.05,0.08), 드로우는 빨강 — 빨간 픽셀이 하나도 없으면 그리기가
                 // 렌더타깃에 닿지 않았거나 읽기가 그 결과를 못 보는 것이다.
                 const uint32 redCount = countPrimaryColorPixels( pixels, layout )._red;
-                // 네 백엔드가 한때 전부 여기서 0 을 냈다. 공통 원인은 스모크가 draw( 3, 0, materialCb ) 로
-                // 머티리얼 CB 를 **PassCB 자리**에 넘긴 것 — b1 이 안 걸려 삼각형이 검게 나와 클리어까지
-                // 덮었다(그래서 "클리어조차 안 보임" 으로 보였다). Vulkan 은 거기에 더해 draw() 가 b1 을
-                // 푸시 상수로만 넘기고 set 10 을 안 걸었다. 둘 다 고쳤으므로 다시 하드 단언이다.
+                // 머티리얼 CB 를 **PassCB 자리**에 넘기거나 백엔드가 b1 을 걸지 않으면 삼각형이 검게 나와 클리어까지
+                // 덮는다("클리어조차 안 보임" 으로 보인다). 그래서 하드 단언이다.
                 SW_EXPECT_TRUE_MSG( redCount > 0, "오프스크린 드로우가 readback 에 보이지 않습니다" );
                 if ( redCount == 0 )
                 {
@@ -764,8 +759,8 @@ SW_TEST_CASE( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws )
 /**
  * @brief [RHIDeviceTest] 한 번만 쓴 상수버퍼가 링의 **모든** 프레임 칸에서 보인다 — 4백엔드
  * @details 링 상수버퍼는 프레임 칸이 `kMaxFrameCountInFlight` 개이고 `updateConstantBuffer` 는 이번 칸에만 쓴다. 값이 바뀔 때만 쓰는
- *          머티리얼 상수버퍼는 DX12 · Vulkan 에서 나머지 칸이 0 으로 남아, 세 프레임 중 두 프레임을 검게 그렸다(DX11 · GL 은 버퍼
- *          하나라 문제가 없었다). 빨강을 **한 번** 쓰고 링을 두 바퀴 돌며 매 프레임 그려 읽는다 — 어느 프레임이든 빨강이어야 한다.
+ *          머티리얼 상수버퍼는 쓰기가 나머지 칸에 퍼지지 않으면 DX12 · Vulkan 에서 나머지 칸이 0 으로 남아 세 프레임 중 두 프레임을 검게
+ *          그린다(DX11 · GL 은 버퍼 하나다). 빨강을 **한 번** 쓰고 링을 두 바퀴 돌며 매 프레임 그려 읽는다 — 어느 프레임이든 빨강이어야 한다.
  *          그리기는 실제 렌더러처럼 프레임 안에서 리스트로 내고(`executeCommandList`), Present 없이 닫은 뒤 읽는다.
  */
 SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
@@ -843,7 +838,7 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
  * @details `nointerpolation` 값은 삼각형의 정점 하나에서 오는데 어느 정점인지는 API 규약이다. DX·Vulkan 은
  *          FIRST, OpenGL 기본은 LAST 라 엔진이 GL 디바이스 초기화에서 `glProvokingVertex( FIRST )` 를 건다.
  *          엔진 셰이더의 flat 값(materialIndex)은 배치 안에서 전부 같아 그 한 줄이 실제로 그림을 바꾸는지
- *          볼 수 없었다. provokingvertex.hlsl 은 정점마다 다른 값을 실어 FIRST 면 빨강, LAST 면 파랑이 된다.
+ *          볼 수 없다. provokingvertex.hlsl 은 정점마다 다른 값을 실어 FIRST 면 빨강, LAST 면 파랑이 된다.
  */
 SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
 {
@@ -991,11 +986,10 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
 
 /**
  * @brief [RHIDeviceTest] 인덱스 간접 드로우가 네 백엔드에서 그려지고, 인스턴스 슬롯 스트림(정점 슬롯 1)을 읽는다
- * @details 엔진은 아직 인덱스 메시를 쓰지 않아 `createIndexBuffer` · `setIndexBuffer` · `drawIndexedIndirect` 가 한 번도
- *          검증되지 않았다. 그 사이에 두 가지가 썩어 있었다. (1) DX11 · DX12 · Vulkan 은 인덱스 버퍼를 구조버퍼로 만들었다.
- *          인덱스 버퍼 용도가 아니어서 Vulkan 은 검증 레이어가 용도 위반으로 잡았다(DX11 · DX12 는 드라이버가 받아 줬다).
- *          (2) Vulkan · DX12 의 `drawIndexedIndirect` 만 정점 슬롯 0 을 직접 걸고 슬롯 1 을 빠뜨렸다. 새 커맨드 리스트에서
- *          이 진입점으로 그리면 DX12 는 인스턴스 자리를 0 으로 읽어 화면 전체가 빨강이었고, Vulkan 은 검증 레이어가 잡았다.
+ * @details 엔진은 아직 인덱스 메시를 쓰지 않아 `createIndexBuffer` · `setIndexBuffer` · `drawIndexedIndirect` 는 이 시험이 아니면
+ *          검증되지 않는다(안 쓰는 경로는 조용히 썩는다). 지키는 것 둘: (1) 인덱스 버퍼는 인덱스 버퍼 용도로 만든다 — 구조버퍼로 만들면
+ *          Vulkan 검증 레이어가 용도 위반으로 잡는다(DX11 · DX12 는 드라이버가 받아 준다). (2) `drawIndexedIndirect` 도 정점 슬롯 1 을
+ *          건다 — 빠뜨리면 새 커맨드 리스트에서 이 진입점으로 그릴 때 DX12 는 인스턴스 자리를 0 으로 읽어 화면 전체가 빨강이 된다.
  *          instanceslotprobe.hlsl 은 슬롯 1 의 값이 7 이면 초록, 아니면 빨강을 낸다. 다른 드로우는 먼저 부르지 않는다.
  */
 SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )

@@ -15,7 +15,7 @@ namespace test
 {
     /**
      * @brief 네 백엔드 전부. 이 호스트에 없는 것(리눅스의 DX)은 `RHITestDevice` 가 창을 띄우기 전에 거르므로 목록을 플랫폼마다
-     *        가를 필요가 없다 — 예전에는 케이스마다 `#if defined( SW_PLATFORM_WINDOWS )` 로 가른 같은 배열을 들고 있었다.
+     *        가를 필요가 없다.
      */
     inline constexpr sw::RHIBackend kArrAllRhiBackend[] = { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan,
                                                             sw::RHIBackend::OpenGL };
@@ -45,9 +45,9 @@ namespace test
 
     /**
      * @brief 디바이스가 필요한 케이스의 창 + 디바이스 한 벌(`RHIDeviceTest` · `RenderPassGpuTest`).
-     * @details 케이스마다 창 만들기 · 디바이스 만들기 · 표면 붙이기 · 초기화 · 실패 시 되감기 12 줄과 끝의 내리기 6 줄을 손으로
-     *          들고 있었다(두 파일 50 곳 남짓). 그리고 그 사이의 `SW_ASSERT_*` 가 실패하면 **내리기에 닿지 않았다** — 디바이스는
-     *          `shutdown()` 없이 소멸자만 돌고 창은 `destroy()` 되지 않은 채 다음 케이스로 넘어갔다. 이제 소멸자가 내린다.
+     * @details 창 만들기 · 디바이스 만들기 · 표면 붙이기 · 초기화 · 실패 시 되감기를 한 곳에 모으고, 내리기는 소멸자가 한다.
+     *          케이스가 끝의 내리기를 손으로 들면 그 사이의 `SW_ASSERT_*` 가 실패할 때 **내리기에 닿지 않는다** — 디바이스는
+     *          `shutdown()` 없이 소멸자만 돌고 창은 `destroy()` 되지 않은 채 다음 케이스로 넘어간다.
      *
      *          스마트 포인터처럼 쓴다(`device->beginFrame( … )`, `renderer.initialize( device.get() )`). 디바이스가 서지
      *          않았으면 `isReady()` 가 false 이고 `get()` 은 널이다 — 그 백엔드가 이 호스트에 없거나 초기화에 실패한 것이다.
@@ -96,7 +96,7 @@ namespace test
     /**
      * @brief 백엔드 목록을 차례로 세워 도는 범위 — `for ( test::RHITestDevice& device : sweep )` 의 몸통은 **서는 백엔드마다** 한 번 돈다.
      * @details 서지 않는 백엔드(이 빌드 · 호스트에 없거나 초기화 실패)는 건너뛴다. 다음 백엔드를 세우기 전에 앞 디바이스를 내리고, 다 돌면
-     *          마지막 것도 내린다 — 몸통의 지역 디바이스가 반복마다 소멸하던 것과 같은 수명이다. 몸통의 `continue` 는 다음 백엔드로 간다.
+     *          마지막 것도 내린다 — 몸통에 지역 디바이스를 두고 반복마다 소멸시키는 것과 같은 수명이다. 몸통의 `continue` 는 다음 백엔드로 간다.
      *
      *          하나도 서지 않았으면 `getReadyCount()` 가 0 이다. `SW_TEST_SKIP` 은 케이스 몸통에서만 return 할 수 있으므로 건너뛰기는
      *          케이스가 한다(`if ( sweep.getReadyCount() == 0 ) SW_TEST_SKIP( ... );`). 범위는 한 번만 돈다.

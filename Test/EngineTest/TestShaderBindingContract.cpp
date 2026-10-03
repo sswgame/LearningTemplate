@@ -173,7 +173,7 @@ SW_TEST_CASE( ShaderBindingContractTest, SyntheticViolationsAreDetected )
         SW_EXPECT_EQUAL( 0u, sw::ShaderBindingContract::validate( ok, sw::ShaderTargetFormat::SPIRV_Vulkan, "ok.vk", &listIssue ) );
     }
 
-    // 4) Vulkan: 옛 모델(PassCB set 0 / MaterialCB set 10 / 인스턴스 set 6) — 위치 불일치 + 레이아웃 밖 세트가 잡힌다.
+    // 4) Vulkan: 계약과 다른 배치(PassCB set 0 / MaterialCB set 10 / 인스턴스 set 6) — 위치 불일치 + 레이아웃 밖 세트가 잡힌다.
     {
         sw::ShaderReflectionData bad{};
         bad._listResource.push_back( makeRes( "PassCB", "ConstantBuffer", 0, 0 ) );
@@ -251,7 +251,7 @@ SW_TEST_CASE( ShaderBindingContractTest, SyntheticViolationsAreDetected )
     }
 
     // 10) 정점 입력 — `struct VSInput { pos; col }` 처럼 중간 속성을 뺀 선언은 Vulkan·GL 에서 col 이 location 1(노멀) 을
-    //     읽는다 (fullscreentriangle 이 실제로 검게 그려졌다). DX 는 시맨틱으로 묶어 같은 선언이 위반이 아니다.
+    //     읽는다(그러면 검게 그려진다). DX 는 시맨틱으로 묶어 같은 선언이 위반이 아니다.
     {
         sw::ShaderReflectionData skipped{};
         skipped._listVertexInput.push_back( makeVertexInput( "POSITION", 0 ) );
@@ -323,7 +323,7 @@ SW_TEST_CASE( ShaderBindingContractTest, AllBakedShadersMatchContract )
                     continue;
                 const sw::ShaderReflectionData reflection = sw::ShaderReflection::reflect( bytecode, target._format );
                 // 리플렉션 불가(예: 이 플랫폼에 컴파일러 DLL 없음) — 검사 대상이 아니다. 정점 입력만 있는 VS(fullscreentriangle 처럼
-                // 상수버퍼가 PS 에만 있는 것)는 예전에 여기서 빠져 location 어긋남이 통과했다 — 세 목록이 다 비어야 건너뛴다.
+                // 상수버퍼가 PS 에만 있는 것)까지 여기서 빼면 location 어긋남이 통과한다 — 세 목록이 다 비어야 건너뛴다.
                 if ( reflection._listConstantBuffer.empty() && reflection._listResource.empty() && reflection._listVertexInput.empty() )
                     continue;
                 sw::vector<sw::ShaderBindingContractIssue> listIssue;
@@ -496,7 +496,7 @@ SW_TEST_CASE( ShaderBindingContractTest, ReflectionNamesAreUniformAcrossBackends
 /**
  * @brief [ShaderBindingContractTest] DX12 루트 시그니처 예산 — 슬롯 수를 늘려도 64 dword 안에 있어야 한다.
  * @details 루트 배치는 계약(shaderslot::dx12)에서 나온다: CB 는 루트 CBV(2 dword), t/u 슬롯과 텍스처 배열은 테이블(1 dword),
- *          루트 상수는 dword 수. 예전엔 t/u 도 루트 디스크립터라 51 이었고, 슬롯 하나가 2 dword 씩 예산을 먹었다.
+ *          루트 상수는 dword 수. t/u 를 루트 디스크립터로 두면 슬롯 하나가 2 dword 씩 예산을 먹는다.
  *          이 테스트는 "슬롯을 늘리면 예산이 느는가" 를 숫자로 고정한다 — 테이블 안의 슬롯 수는 예산에 들지 않는다.
  */
 SW_TEST_CASE( ShaderBindingContractTest, Dx12RootSignatureFitsBudget )
@@ -513,11 +513,11 @@ SW_TEST_CASE( ShaderBindingContractTest, Dx12RootSignatureFitsBudget )
 /**
  * @brief [ShaderBindingContractTest] GPUScene 인스턴스 원소 레이아웃이 C++ `GpuInstance` 와 같다 (구운 바이너리, 4 백엔드, 그래픽스 · 컴퓨트 셋).
  * @details `g_SwInstances`(t4)는 **C++ 이 쓰고 셰이더가 읽는** 유일한 구조체다 — 한쪽만 바뀌면 컴파일도 검증 레이어도
- *          아무 말을 하지 않고 월드 행렬·머티리얼 인덱스가 원소 1 부터 어긋난다(머티리얼 버퍼가 stride 0 으로 그랬던 것과 같은 함정).
+ *          아무 말을 하지 않고 월드 행렬·머티리얼 인덱스가 원소 1 부터 어긋난다(stride 가 어긋난 구조 버퍼와 같은 함정).
  *          그래서 stride 와 필드 오프셋을 구운 바이너리의 리플렉션에서 읽어 C++ 구조체와 대조한다. GPU 가 필요 없다.
- *          컴퓨트 셋(gpucull · instancesort 의 `g_Instances`, instanceanim 의 `g_InstancesRW`)도 같은 원소를 읽고 쓴다. 예전에는 그 셋이 구조체를
- *          각자 베껴 들고 있었고 이 검사가 그 이름을 보지 않았다 — 스프라이트 칸(uvStart · uvEnd · tint)을 더할 때 한 곳만 고치면 컬링 · 정렬 ·
- *          회전이 원소 1 부터 어긋났을 것이다. 지금은 셋 다 `instancedata.hlsli` 하나를 쓰고, 여기서 세 이름을 모두 대조한다. 이름마다 적어도 한
+ *          컴퓨트 셋(gpucull · instancesort 의 `g_Instances`, instanceanim 의 `g_InstancesRW`)도 같은 원소를 읽고 쓴다. 셋 다 `instancedata.hlsli`
+ *          하나를 쓰고, 여기서 세 이름을 모두 대조한다 — 구조체를 각자 베끼면 칸을 더할 때 한 곳만 고쳐 컬링 · 정렬 · 회전이 원소 1 부터
+ *          어긋난다. 이름마다 적어도 한
  *          바이너리가 있어야 한다(없으면 그 셰이더가 이름을 바꿨고 검사가 눈을 감은 것이다).
  */
 SW_TEST_CASE( ShaderBindingContractTest, InstanceElementLayoutMatchesCpuStruct )
@@ -621,7 +621,7 @@ SW_TEST_CASE( ShaderBindingContractTest, InstanceElementLayoutMatchesCpuStruct )
  * @brief [ShaderBindingContractTest] C++ 가 이름으로 묶는 셰이더 이름이 구운 리플렉션(reflection.manifest)에 **실제로 있다**.
  * @details validate 는 리플렉션의 이름을 계약 표에서 찾고, 표에 없는 이름은 **조용히 지나친다**. 그래서 셰이더 쪽에서
  *          `g_SwBatches` 를 다른 이름으로 바꾸면 그 리소스의 자리 · 종류 검사가 통째로 꺼지고(위반 0), 엔진의 이름 바인딩도
- *          아무 말 없이 빈다. 셰이더 이름을 C++ 규칙으로 고치면서(2026-10-03) 문자열로 묶인 이름이 그렇게 사라질 수 있었다.
+ *          아무 말 없이 빈다. 셰이더 이름을 고칠 때 문자열로 묶인 이름이 그렇게 사라질 수 있다.
  *          여기서는 반대 방향을 본다. C++ 가 아는 이름 — 계약 표, 계약 표 밖의 예약 리소스 이름, PassCB · 루트 상수 멤버
  *          (`PassConstantNames`), 레지스트리 이름(`g_<이름>`), 패스 텍스처 역할(`g_<역할>Index`) — 이 매니페스트 어딘가에 나와야 한다.
  *          계약 표에서 샘플러가 아닌 이름은 **그 백엔드 계약에 선언된 백엔드마다** 그 백엔드의 매니페스트에 있어야 한다.

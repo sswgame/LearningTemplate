@@ -9,10 +9,8 @@
  * @brief [FrameProfilerTest] 구간이 표를 넘쳐도 표 밖을 읽지 않는다
  * @details `registerScope` 는 같은 이름을 찾으려고 `_scopeCount` 까지 선형 탐색한다. 그런데
  *          표가 꽉 찬 뒤에도 `fetch_add` 는 계속 카운터를 올리므로 그 값이 `kMaxScope` 를
- *          넘어간다 — 그러면 다음 탐색이 **고정 배열 밖**을 읽는다. 배열 바로 뒤에 있는 것이
+ *          넘어간다 — 탐색을 `kMaxScope` 로 자르지 않으면 **고정 배열 밖**을 읽는다. 배열 바로 뒤에 있는 것이
  *          `_scopeCount` 자신이라, 그 비트가 `const utf8*` 로 읽혀 문자열 비교에 들어간다.
- *          같은 파일의 다른 세 순회(`endFrame` · `report` · `reset`)는 모두
- *          `index < kMaxScope` 로 막고 있었는데, 넘침을 만드는 이 함수만 막지 않았다.
  */
 
 SW_TEST_CASE( FrameProfilerTest, ScopeOverflowDoesNotReadPastTable )
@@ -40,8 +38,7 @@ SW_TEST_CASE( FrameProfilerTest, ScopeOverflowDoesNotReadPastTable )
         }
     }
 
-    // 넘친 **뒤에도** 이미 등록된 이름은 제 슬롯을 그대로 찾아야 한다. 예전에는 이 탐색이
-    // 배열 밖까지 훑었다.
+    // 넘친 **뒤에도** 이미 등록된 이름은 제 슬롯을 그대로 찾아야 한다(탐색이 배열 밖까지 훑으면 안 된다).
     SW_EXPECT_EQUAL( uint32( 0 ), profiler.registerScope( listName[0].c_str() ) );
     SW_EXPECT_EQUAL( sw::FrameProfiler::kMaxScope - 1,
                      profiler.registerScope( listName[sw::FrameProfiler::kMaxScope - 1].c_str() ) );
@@ -77,7 +74,7 @@ SW_TEST_CASE( FrameProfilerTest, DisabledCollectsNothingAndEnabledAccumulates )
 /**
  * @brief [FrameProfilerTest] p50 · p99 는 분포를 따라간다 — 평균은 어느 쪽도 아니다
  * @details 100 us 가 90 프레임, 10 ms 가 10 프레임이면 p50 은 100 us 칸, p99 는 10 ms 칸이다. 평균(1.09 ms)으로
- *          대신하면 둘 다 틀린다 — `RT.BeginFrame` 평균 400 us 가 실제로는 40 프레임의 1~18 ms 히치였다.
+ *          대신하면 둘 다 틀린다 — 드문 히치가 평균에 묻혀 고르게 느린 것처럼 보인다.
  *          값은 칸의 아래 끝이라 표본보다 작거나 같고 한 칸(약 12%) 안이어야 한다.
  */
 SW_TEST_CASE( FrameProfilerTest, PercentilesFollowTheDistribution )
@@ -117,8 +114,8 @@ SW_TEST_CASE( FrameProfilerTest, PercentilesFollowTheDistribution )
 
 /**
  * @brief [FrameProfilerTest] 등록한 이름은 사본으로 든다 — 부른 쪽의 버퍼가 바뀌거나 사라져도 같은 이름을 찾는다
- * @details 프로파일러는 부른 쪽의 포인터를 그대로 들었다. 이름이 임시 버퍼거나 핫 리로드되는 모듈의 문자열 상수면, 버퍼가 바뀐 뒤 · 모듈이 내려간
- *          뒤 같은 이름 찾기와 보고가 그 자리를 읽었다.
+ * @details 프로파일러가 부른 쪽의 포인터를 그대로 들면, 이름이 임시 버퍼거나 핫 리로드되는 모듈의 문자열 상수일 때 버퍼가 바뀐 뒤 · 모듈이
+ *          내려간 뒤 같은 이름 찾기와 보고가 그 자리를 읽는다.
  */
 SW_TEST_CASE( FrameProfilerTest, ScopeNameIsCopiedNotBorrowed )
 {

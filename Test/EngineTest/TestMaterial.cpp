@@ -36,9 +36,7 @@ SW_TEST_CASE( MaterialTest, MaterialLoadAndSave )
     SW_EXPECT_TRUE( color != nullptr );
     if ( color )
     {
-        // 흰색이어야 한다. forwardlit 이 MaterialCB 를 선언하기 전까지 이 값은 화면에 닿은 적이 없어
-        // 장식용 주황(1, 0.5, 0.2)이 들어 있었는데, 이제 셰이더가 정점 색에 실제로 곱한다 —
-        // 폴백 머티리얼이 색을 입히면 안 되므로 중립값으로 바꿨다.
+        // 흰색이어야 한다. 셰이더가 정점 색에 이 값을 실제로 곱하므로 폴백 머티리얼이 색을 입히면 안 된다.
         SW_EXPECT_NEAR_EQUAL( 1.0f, color[0], 1e-4f );
         SW_EXPECT_NEAR_EQUAL( 1.0f, color[1], 1e-4f );
         SW_EXPECT_NEAR_EQUAL( 1.0f, color[2], 1e-4f );
@@ -318,7 +316,7 @@ SW_TEST_CASE( MaterialTest, FastBytePackingDirectMethods )
 {
     sw::shared_ptr<sw::Material> material = sw::Material::create();
     // 아래 전부가 이 둘에 달려 있다 — 약한 기대로 넘기면 빈 버퍼를 reinterpret_cast 해서 읽는다.
-    // 실제로 그래서 세그폴트했다(리소스 루트를 못 찾는 작업 폴더에서 돌렸을 때).
+    // (리소스 루트를 못 찾는 작업 폴더에서 돌리면 그렇게 세그폴트한다.)
     SW_ASSERT_TRUE( material->loadFromFile( "engine/materials/defaultmaterial.material" ) );
 
     sw::vector<uint8> buffer = material->getBuffer();
@@ -750,14 +748,13 @@ SW_TEST_CASE( MaterialTest, ComplexMatrixAndArrayCbufferPackingStressTest )
  *          **머티리얼 XML** 의 `shaderType` 이 정한다. `syncPropertiesFromReflection` 이 둘을
  *          대부분 재매핑으로 맞춰 주지만 **고칠 수 없는 조합**에서는 경고만 남기고 `shaderType` 을
  *          그대로 둔다. 여기서는 리플렉션이 **타입 이름 없이 5바이트**를 보고하는 경우를 만든다 —
- *          낡거나 깨진 리플렉션 매니페스트에서 나올 수 있는 모양이다(백로그의 "셰이더 산출물
- *          스테일 함정"). XML 은 `ChannelMask` + `shaderType="Float4"`, 즉 쓰는 쪽은 16바이트다.
+ *          낡거나 깨진 리플렉션 매니페스트에서 나올 수 있는 모양이다. XML 은 `ChannelMask` +
+ *          `shaderType="Float4"`, 즉 쓰는 쪽은 16바이트다.
  *
- *          `writeNumericValue` 는 처음부터 `packSize < need` 를 보고 있었는데, switch 안에서 직접
- *          `Memory::copy` 하던 형제 경로들(Bool · Enum · BitFlag · ChannelMask · Texture · Range)은
- *          그 검사를 건너뛰었다. 그래서 5바이트 칸에 16바이트를 쓰고 **그 뒤에 놓인 프로퍼티의
- *          값을 덮었다** — 상수버퍼 안이라 메모리 오류로는 안 잡히고, 화면에서 "엉뚱한 색" 으로만
- *          나타난다(이 저장소가 머티리얼에서 여러 번 겪은 모양이다).
+ *          `writeNumericValue` 뿐 아니라 직접 `Memory::copy` 하는 형제 경로들(Bool · Enum · BitFlag ·
+ *          ChannelMask · Texture · Range)도 `packSize < need` 를 봐야 한다. 건너뛰면 5바이트 칸에 16바이트를
+ *          쓰고 **그 뒤에 놓인 프로퍼티의 값을 덮는다** — 상수버퍼 안이라 메모리 오류로는 안 잡히고, 화면에서
+ *          "엉뚱한 색" 으로만 나타난다.
  *
  *          그래서 검사는 "터지는가" 가 아니라 **옆 값이 살아 있는가** 로 한다.
  */
@@ -815,9 +812,9 @@ SW_TEST_CASE( MaterialTest, PackingDoesNotClobberTheNextPropertySlot )
 
 /**
  * @brief [MaterialTest] 머티리얼의 불리언이 아닌 글은 기본값을 쓰고 알린다 — 말없이 false 가 되지 않는다
- * @details `MaterialUtil::parseBoolToken` 은 `StringUtil::parseBool( token, false )` 라 읽지 못한 글이 **기본값이 아니라 false** 가 됐다.
- *          텍스처의 `bSrgb="ture"` 는 기본(true)인 sRGB 를 말없이 껐다. 이제 머티리얼의 불리언 글은 모두 `parseBoolToken( 글, 이름, 기본값 )`
- *          하나를 지나(필드 · 파라미터 값 · 키워드 define) 기본값을 쓰고 이름과 함께 경고한다.
+ * @details 머티리얼의 불리언 글은 모두 `MaterialUtil::parseBoolToken( 글, 이름, 기본값 )` 하나를 지나(필드 · 파라미터 값 · 키워드 define)
+ *          기본값을 쓰고 이름과 함께 경고한다. `StringUtil::parseBool( token, false )` 로 읽으면 읽지 못한 글이 **기본값이 아니라 false** 가
+ *          되어 텍스처의 `bSrgb="ture"` 가 기본(true)인 sRGB 를 말없이 끈다.
  */
 SW_TEST_CASE( MaterialTest, UnreadableBooleanKeepsTheDefaultAndSaysSo )
 {
@@ -848,7 +845,7 @@ SW_TEST_CASE( MaterialTest, UnreadableBooleanKeepsTheDefaultAndSaysSo )
 /**
  * @brief [MaterialTest] 다시 로드한 머티리얼은 셰이더 레이아웃을 잊는다 — 원소 stride 를 비우고 바이트 세대를 올린다
  * @details 리플렉션으로 레이아웃을 맞춘 뒤 같은 머티리얼을 다시 로드하면(에셋 핫 리로드 · 에디터 미리보기) 프로퍼티가 XML 순서로 다시
- *          쌓인다. 예전에는 "맞췄다" 는 표시가 남아 다시 맞추지 않았고, **옛 stride 와 XML 순서 바이트**가 함께 GpuScene 에 올라갔다 —
+ *          쌓인다. "맞췄다" 는 표시가 남으면 다시 맞추지 않아 **옛 stride 와 XML 순서 바이트**가 함께 GpuScene 에 올라간다 —
  *          셰이더가 color 를 읽는 자리에 roughness 가 들어간다. 실제 리플렉션으로 다시 맞추는 것은
  *          `RenderPassGpuTest.ReloadedMaterialIsLaidOutByTheShaderAgain` 이 본다.
  */
@@ -900,8 +897,8 @@ SW_TEST_CASE( MaterialTest, ReloadForgetsTheShaderLayout )
 
 /**
  * @brief [MaterialTest] 인스턴스의 텍스처 덮어쓰기는 에셋 경로다 — 저장하면 `assetPath` 로 나가고, 읽으면 다시 덮어쓰기가 된다
- * @details 예전에는 덮어쓰기가 날 디스크립터 인덱스여서 값(`value`)으로 저장됐고, 파일의 `assetPath` 는 읽고 버려 .materialinstance 에 적은 텍스처가
- *          조용히 부모 것으로 남았다. GPU 에 닿는 것은 `RenderPassGpuTest.InstanceOverridesReachTheGpuOnEveryBackend` 가 본다.
+ * @details 덮어쓰기를 날 디스크립터 인덱스로 들면 값(`value`)으로 저장되고, 파일의 `assetPath` 를 읽고 버리면 .materialinstance 에 적은 텍스처가
+ *          조용히 부모 것으로 남는다. GPU 에 닿는 것은 `RenderPassGpuTest.InstanceOverridesReachTheGpuOnEveryBackend` 가 본다.
  */
 SW_TEST_CASE( MaterialTest, InstanceTextureOverrideRoundTripsAsAnAssetPath )
 {

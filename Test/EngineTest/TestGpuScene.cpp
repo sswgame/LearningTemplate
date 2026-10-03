@@ -185,7 +185,7 @@ SW_TEST_CASE( GpuSceneTest, MeshInstanceBatchRendersWithoutComponents )
 
 /**
  * @brief 투명 정렬 순서만 바뀐 프레임: 불투명 인스턴스는 제자리, 투명 꼬리만 새 순서로 다시 앉고, 그 꼬리가 더티로 실린다.
- * @details 예전에는 투명 순서가 바뀌면 배치 전체(불투명까지)를 다시 지었다. 지금은 꼬리만 다시 방출하므로
+ * @details 투명 순서가 바뀌면 배치 전체(불투명까지)를 다시 짓지 않고 꼬리만 다시 방출하므로
  *          (1) 불투명 슬롯의 내용이 그대로여야 하고 (2) 투명은 여전히 먼 것부터여야 하며 (3) 받는 쪽이 꼬리를
  *          다시 올리도록 더티 구간이 꼬리를 덮어야 한다. 셋 중 하나라도 빠지면 화면이 조용히 어긋난다.
  */
@@ -248,7 +248,7 @@ SW_TEST_CASE( GpuSceneTest, TransparentOrderChangeKeepsOpaqueSlots )
     // (1) 불투명 슬롯은 제자리다 — x 가 0, 1 그대로.
     SW_EXPECT_TRUE( sw::MathUtil::abs( instances[0]._boundsCenter._x - 0.0f ) < 1e-4f );
     SW_EXPECT_TRUE( sw::MathUtil::abs( instances[1]._boundsCenter._x - 1.0f ) < 1e-4f );
-    // (2) 투명은 여전히 먼 것부터 — 이제 Near(-2) 가 더 멀다.
+    // (2) 투명은 여전히 먼 것부터 — 움직인 뒤에는 Near(-2) 가 더 멀다.
     SW_EXPECT_TRUE( sw::MathUtil::abs( instances[tailBase]._boundsCenter._z - ( -2.0f ) ) < 1e-4f );
     SW_EXPECT_TRUE( sw::MathUtil::abs( instances[tailBase + 1]._boundsCenter._z - ( -1.5f ) ) < 1e-4f );
     // (3) 꼬리가 더티로 실린다 — 전부 더티거나, 구간 하나가 [tailBase, 4) 를 덮는다.
@@ -330,7 +330,7 @@ SW_TEST_CASE( GpuSceneTest, InstanceRingKeepsPublishedImmutableAndCatchesUp )
     gpuScene.exportCpuSnapshot( snapshot3 );
     SW_EXPECT_EQUAL( 1u, countAtX( snapshot3.getInstances(), 200.0f ) );
 
-    // 발행본 1 을 놓는다 — 이제 그 슬롯만 "아무도 안 읽는" 슬롯이라 f4 가 그것을 되쓴다.
+    // 발행본 1 을 놓는다 — 그 슬롯만 "아무도 안 읽는" 슬롯이라 f4 가 그것을 되쓴다.
     snapshot1 = sw::GpuSceneSnapshot{};
 
     // f4: 2 번만 이동. 되쓰인 슬롯에는 f2·f3 의 변경이 없으므로 따라잡아야 한다.
@@ -515,9 +515,9 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryTracksChanges )
 
 /**
  * @brief 메시 없는 조상을 끄고 켜면 손자 메시가 빠졌다 돌아온다. 메시 없는 오브젝트만 토글하면 집합 세대도 더티도 그대로다.
- * @details 예전에는 계층 활성이 바뀐 오브젝트마다 프리미티브 **집합 세대**를 올려, 무엇을 가졌든 GpuScene 이 전체를 다시 모았다(빛 ·
- *          트리거를 켜고 끄는 프레임). 지금은 활성이 바뀐 오브젝트의 컴포넌트에 알리고 메시가 제 칸을 더티로 찍는다 — 부분 수집이 포함
- *          여부가 바뀐 것을 보고 전체 수집으로 넘어간다. 그 알림이 빠지면 조상을 꺼도 손자가 그대로 그려진다.
+ * @details 활성이 바뀐 오브젝트의 컴포넌트에 알리고 메시가 제 칸을 더티로 찍는다 — 부분 수집이 포함 여부가 바뀐 것을 보고 전체 수집으로
+ *          넘어간다. 그 알림이 빠지면 조상을 꺼도 손자가 그대로 그려진다. 반대로 계층 활성이 바뀔 때마다 **집합 세대**를 올리면 무엇을
+ *          가졌든 전체를 다시 모은다(빛 · 트리거를 켜고 끄는 프레임).
  */
 SW_TEST_CASE( GpuSceneTest, AncestorToggleReachesGrandchildMeshOnly )
 {
@@ -566,7 +566,7 @@ SW_TEST_CASE( GpuSceneTest, AncestorToggleReachesGrandchildMeshOnly )
 
 /**
  * @brief 메시 컴포넌트를 끄면 그려지지 않고, 켜면 돌아온다(소유 오브젝트는 켜진 채).
- * @details 예전 수집은 소유 오브젝트의 계층 활성만 봐서, 빛은 컴포넌트를 끄면 꺼지는데 메시는 그대로 그려졌다.
+ * @details 수집이 소유 오브젝트의 계층 활성만 보면, 빛은 컴포넌트를 끄면 꺼지는데 메시는 그대로 그려진다.
  */
 SW_TEST_CASE( GpuSceneTest, DisabledMeshComponentIsNotDrawn )
 {
@@ -601,8 +601,8 @@ SW_TEST_CASE( GpuSceneTest, DisabledMeshComponentIsNotDrawn )
 
 /**
  * @brief 컬링 반지름은 월드 스케일을 따른다 — 부모가 키운 메시도, 트랜스폼만 바뀐 프레임도
- * @details GPU 컬링(`gpucull.hlsl`)은 인스턴스의 바운드 중심 · 반지름으로 절두체를 본다. 반지름에 메시 반지름(0.866)을 그대로 실어, 부모나
- *          자기 스케일로 키운 메시는 화면에 걸쳐 있어도 중심이 절두체 밖이면 잘렸다. 언리얼 `FBoxSphereBounds::TransformBy` 처럼 월드의 최대
+ * @details GPU 컬링(`gpucull.hlsl`)은 인스턴스의 바운드 중심 · 반지름으로 절두체를 본다. 반지름에 메시 반지름(0.866)을 그대로 실으면 부모나
+ *          자기 스케일로 키운 메시가 화면에 걸쳐 있어도 중심이 절두체 밖이면 잘린다. 언리얼 `FBoxSphereBounds::TransformBy` 처럼 월드의 최대
  *          축 스케일을 곱한다. 트랜스폼만 바뀐 프레임(후보를 다시 채우지 않는 길)도 같은 값을 내야 하고, 컴포넌트가 선언한 경계와 같아야 한다.
  */
 SW_TEST_CASE( GpuSceneTest, CullingRadiusFollowsWorldScale )
@@ -798,8 +798,7 @@ SW_TEST_CASE( GpuSceneTest, TransparentDifferentKeysStaySeparate )
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
 
-    // 블렌드 모드는 **부모 머티리얼**이 정한다(GpuScene::buildFromScene). 예전에는 그 폴백이 순서 버그로 한 번도
-    // 걸리지 않아 컴포넌트의 Transparent 가 우연히 이겼다 — 이제는 투명 머티리얼을 부모로 줘야 투명 배치가 된다.
+    // 블렌드 모드는 **부모 머티리얼**이 정한다 — 투명 머티리얼을 부모로 줘야 투명 배치가 된다.
     sw::shared_ptr<sw::Material> master = sw::Material::create();
     SW_EXPECT_TRUE( master->loadFromFile( "engine/materials/glassmaterial.material" ) );
     sw::shared_ptr<sw::MaterialInstance> a = sw::MaterialInstance::create( master.get() );
@@ -831,8 +830,8 @@ SW_TEST_CASE( GpuSceneTest, TransparentDifferentKeysStaySeparate )
 /**
  * @brief [GpuSceneTest] 머티리얼 원소 인덱스가 프레임을 넘어 유지되고, 안 쓰이면 회수되는지 (GPU 불필요).
  * @details 언리얼 GPUScene 은 프리미티브·머티리얼에 등록 시점에 **영속 ID** 를 주고 더티한 것만 갱신한다.
- *          예전엔 매 빌드마다 그룹을 지우고 인스턴스마다 인덱스를 다시 부여했다 — O(인스턴스 x 머티리얼) 이고,
- *          같은 머티리얼의 인덱스가 프레임마다 달라져 "바뀐 것만 올린다" 를 할 수 없었다.
+ *          매 빌드마다 그룹을 지우고 인스턴스마다 인덱스를 다시 부여하면 O(인스턴스 x 머티리얼) 이고,
+ *          같은 머티리얼의 인덱스가 프레임마다 달라져 "바뀐 것만 올린다" 를 할 수 없다.
  *
  *          여기서 보는 것 둘: (1) 같은 머티리얼은 빌드를 반복해도 같은 인덱스를 갖는다,
  *          (2) 쓰이지 않게 된 원소는 지연 회수돼 자리가 재사용된다(자리를 **옮기지 않고**).
@@ -924,11 +923,10 @@ SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndAreFreed )
 
 /**
  * @brief [GpuSceneTest] 배치마다 **자기 머티리얼 원소**를 고르고, 값이 다르면 바이트도 다른지 (GPU 불필요).
- * @details 지금까지의 렌더 검증은 전부 씬 기본 머티리얼 하나였다 — 머티리얼 원소가 하나뿐이라 `materialIndex`
- *          가 늘 0 이었고, "배치마다 올바른 원소를 고르는가" 가 한 번도 검사되지 않았다. 영속 원소 ID 로 바꾼 뒤라
- *          특히 중요하다(인덱스가 프레임을 넘어 유지되고 회수 후 재사용된다).
+ * @details 씬 기본 머티리얼 하나로만 그리면 원소가 하나뿐이라 `materialIndex` 가 늘 0 이어서 "배치마다 올바른 원소를
+ *          고르는가" 가 검사되지 않는다. 원소 인덱스는 프레임을 넘어 유지되고 회수 후 재사용되므로 특히 중요하다.
  *
- *          픽셀로 보려 했지만 조명·톤매핑이 섞여 값이 흔들렸다. 여기서는 **CPU 스냅샷**을 본다 —
+ *          픽셀로 보면 조명·톤매핑이 섞여 값이 흔들린다. 여기서는 **CPU 스냅샷**을 본다 —
  *          두 머티리얼이 서로 다른 원소를 받는가, 그리고 프로퍼티 값이 다르면 패킹된 바이트도 다른가.
  *          백엔드 간 패킹 일치는 ShaderBindingContractTest.ReflectionNamesAreUniformAcrossBackends 가 본다.
  */
@@ -1007,8 +1005,8 @@ SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
  * @brief [GpuSceneTest] 정적 스위치가 다르면 배치가 갈리고, 그 퍼뮤테이션이 배치에 실려 나가는지 (GPU 불필요).
  * @details 배치는 **PSO 하나로** 그린다. 그래서 배치를 묶는 키에 셰이더 퍼뮤테이션이 들어 있지 않으면,
  *          같은 .hlsl 을 쓰지만 정적 스위치가 다른 두 머티리얼이 한 배치로 접히고 한쪽 퍼뮤테이션이
- *          통째로 사라진다. 예전 키는 셰이더 **경로**뿐이라 정확히 그랬다 — 머티리얼이 선언한
- *          MATERIAL_BLEND_TRANSLUCENT 같은 것이 구워지기만 하고 한 번도 걸리지 않았다.
+ *          통째로 사라진다 — 키가 셰이더 **경로**뿐이면 머티리얼이 선언한 MATERIAL_BLEND_TRANSLUCENT 같은 것이
+ *          구워지기만 하고 한 번도 걸리지 않는다.
  *
  *          화면으로는 잡기 어렵다(퍼뮤테이션이 빠져도 그림은 그럴듯하게 나온다). 그래서 배치가 갈리는지와
  *          배치가 가리키는 퍼뮤테이션의 define 을 CPU 에서 직접 본다.
@@ -1097,9 +1095,8 @@ SW_TEST_CASE( GpuSceneTest, PermutationSplitsBatchesAcrossMaterials )
 
 /**
  * @brief [GpuSceneTest] 절두체 평면을 viewProj 에서 제대로 뽑는지 (GPU 불필요).
- * @details 이 계산이 **없어서** GPU 컬링이 켜 놓고도 한 번도 아무것도 거르지 않았다. 상수버퍼의 평면
- *          배열이 0 인 채로 나갔고, 그러면 셰이더의 `dot( 0, center ) + 0 < -radius` 가 항상 거짓이라
- *          모든 인스턴스가 통과한다. 화면은 멀쩡해 보이므로 픽셀로는 잡히지 않는다 — 컬링이 안 될 뿐
+ * @details 평면 배열이 0 인 채로 나가면 셰이더의 `dot( 0, center ) + 0 < -radius` 가 항상 거짓이라 GPU 컬링을
+ *          켜 놓고도 모든 인스턴스가 통과한다. 화면은 멀쩡해 보이므로 픽셀로는 잡히지 않는다 — 컬링이 안 될 뿐
  *          그림은 맞기 때문이다. 그래서 평면 자체를 CPU 에서 본다.
  *
  *          셰이더와 같은 판정식(`dot( plane.xyz, center ) + plane.w < -radius` 면 바깥)을 그대로 쓴다.
@@ -1158,9 +1155,8 @@ SW_TEST_CASE( GpuSceneTest, FrustumPlanesFromViewProj )
 /**
  * @brief [GpuSceneTest] 많은 물체 중 하나만 움직여도 그 하나가 갱신되고 나머지는 그대로인지 검증
  *
- * @details 수집은 이제 **바뀐 프리미티브만** 다시 모은다(등록부의 더티 목록). 예전에는 8000 개 중
- *          10 개만 움직여도 8000 개를 전부 다시 모았다(수집 244 us — 전부 움직일 때와 같았다).
- *          고친 뒤 같은 조건에서 1 us 다.
+ * @details 수집은 **바뀐 프리미티브만** 다시 모은다(등록부의 더티 목록) — 8000 개 중 10 개만 움직이면
+ *          10 개만 모은다.
  *
  *          **이 최적화가 틀리는 모습은 "움직인 물체가 화면에서 얼어붙는 것"이다** — 더티 표시가
  *          빠지거나 후보 자리를 잘못 찾으면 그렇게 된다. 컴파일로도, 평균 픽셀로도 안 잡힌다.
@@ -1234,7 +1230,7 @@ SW_TEST_CASE( GpuSceneTest, PartialCollectUpdatesOnlyTheMovedPrimitive )
  * @brief [GpuSceneTest] 인스턴스 배열을 발행(공유)한 뒤에도 제자리 갱신이 움직임을 반영하는지 검증
  *
  * @details 인스턴스 배열은 값이 아니라 `shared_ptr` 로 **공유**된다 — RT 는 읽기만 하므로 안 바뀐
- *          프레임에 복사할 이유가 없다(정적 8000 엔티티에서 export 441 -> 3 us). 그래서 빌더는 다 지은
+ *          프레임에 복사할 이유가 없다. 그래서 빌더는 다 지은
  *          배열을 **옮겨서** 발행하고, 자기 작업 배열은 비운다.
  *
  *          **여기서 지키는 것은 "발행한 배열은 다시 고치지 않는다" 하나다.** 빌더가 이미 넘긴
@@ -1290,9 +1286,8 @@ SW_TEST_CASE( GpuSceneTest, InstancesStayLiveAfterPublishWhenObjectsMove )
 /**
  * @brief [GpuSceneTest] 물체 하나만 움직이면 그 인스턴스 구간 하나만 더티로 표시되는지 검증
  *
- * @details 인스턴스 버퍼는 뭐 하나라도 바뀌면 **전체**를 다시 올리고 있었다 — 8000 개 중 10 개만
- *          움직여도 800 개를 움직일 때와 같은 100 us 를 썼다. 지금은 빌더가 바뀐 구간만 적어 주고
- *          받는 쪽이 그 구간들을 **한 번의 호출**로 올린다(1/20/800 개 이동 = 16/18/34 us).
+ * @details 빌더가 바뀐 구간만 적어 주고 받는 쪽이 그 구간들을 **한 번의 호출**로 올린다 — 뭐 하나라도 바뀌면
+ *          **전체**를 다시 올리는 것보다 움직인 수에 비례해 싸다.
  *
  *          여기서 지키는 것은 그 구간 계산이다. 너무 넓게 잡으면 이득이 사라지고, **너무 좁게 잡으면
  *          움직인 물체가 화면에서 얼어붙는다** — 둘 다 컴파일로는 안 잡힌다.
@@ -1361,14 +1356,13 @@ SW_TEST_CASE( GpuSceneTest, MovingOneObjectMarksOnlyItsInstanceRun )
 
 /**
  * @brief [GpuSceneTest] CPU 스냅샷이 **퍼뮤테이션 표까지** 건너오는지 검증.
- * @details 배치의 `_shaderPermutation` 은 `GpuScene::getShaderPermutations()` 의 **인덱스**다. 표를
+ * @details 배치의 `_shaderPermutation` 은 스냅샷의 퍼뮤테이션 표(`_pListShaderPermutation`)의 **인덱스**다. 표를
  *          함께 보내지 않으면 받는 쪽에서 `findShaderPermutation` 이 늘 nullptr 을 돌려주고, 배치는
- *          퍼뮤테이션이 없는 것처럼 보인다 — 실제로 그랬다. 그 결과 패킷 경로(= 실제 앱과 에디터가
- *          쓰는 경로)에서는 머티리얼 퍼뮤테이션이 **하나도** 걸리지 않았고, 유리 머티리얼의
- *          `MATERIAL_BLEND_TRANSLUCENT` 도 화면에 닿은 적이 없었다.
+ *          퍼뮤테이션이 없는 것처럼 보인다 — 패킷 경로(= 실제 앱과 에디터가 쓰는 경로)에서 머티리얼 퍼뮤테이션이
+ *          **하나도** 걸리지 않아 유리 머티리얼의 `MATERIAL_BLEND_TRANSLUCENT` 도 화면에 닿지 않는다.
  *
  *          `MaterialPermutationDrivesBatchPso` 는 동기 `execute()` 경로만 태우므로 이 결함을 볼 수
- *          없었다 — 두 경로를 가르는 것이 이 테스트의 존재 이유다. GPU 가 필요 없다.
+ *          없다 — 두 경로를 가르는 것이 이 테스트의 존재 이유다. GPU 가 필요 없다.
  */
 SW_TEST_CASE( GpuSceneTest, CpuSnapshotCarriesShaderPermutations )
 {
@@ -1433,12 +1427,12 @@ SW_TEST_CASE( GpuSceneTest, CpuSnapshotCarriesShaderPermutations )
  * @brief [GpuSceneTest] **인스턴스**의 퍼뮤테이션을 런타임에 바꾸면 배치가 다시 갈리는지 (GPU 불필요).
  * @details `PermutationSplitsBatchesAcrossMaterials` 는 서로 다른 **머티리얼**이 갈리는지를 본다.
  *          이 테스트는 그보다 어려운 자리다 — 부모 머티리얼이 **같고** `MaterialInstance` 만 정적 스위치를
- *          바꾼 경우, 그리고 그것을 **첫 빌드 뒤에** 바꾼 경우다. 실제로 셋이 겹쳐 죽어 있었다:
- *            1. 배치 키가 퍼뮤테이션 해시 대신 "대표 머티리얼 포인터" 를 썼다 — 부모가 같으면 대표도
- *               같아서 서로 다른 셰이더로 그려야 할 것이 한 배치로 접혔다.
- *            2. 증분 경로(`hasSameBatchKey`)가 퍼뮤테이션을 보지 않아 다시 갈리지 않았다.
- *            3. 정지한 씬은 프리미티브가 더러워지지 않아 수집 자체를 건너뛰었다.
- *          그래서 런타임에 정적 스위치를 바꾸는 길이 통째로 조용히 죽어 있었다.
+ *          바꾼 경우, 그리고 그것을 **첫 빌드 뒤에** 바꾼 경우다. 셋이 모두 맞아야 한다:
+ *            1. 배치 키는 "대표 머티리얼 포인터" 가 아니라 퍼뮤테이션 해시를 쓴다 — 부모가 같으면 대표도
+ *               같아서 서로 다른 셰이더로 그려야 할 것이 한 배치로 접힌다.
+ *            2. 증분 경로(`hasSameBatchKey`)도 퍼뮤테이션을 본다.
+ *            3. 정지한 씬에서도 스위치 변경이 수집을 일으킨다(프리미티브가 더러워지지 않으면 수집을 건너뛴다).
+ *          하나라도 빠지면 런타임에 정적 스위치를 바꾸는 길이 통째로 조용히 죽는다.
  */
 SW_TEST_CASE( GpuSceneTest, InstancePermutationChangeRebuildsBatches )
 {
@@ -1511,9 +1505,9 @@ SW_TEST_CASE( GpuSceneTest, InstancePermutationChangeRebuildsBatches )
 
 /**
  * @brief [GpuSceneTest] 머티리얼 없이 인스턴스만 붙은 메시는 **인스턴스의 부모**로 묶인다
- * @details 후보의 머티리얼을 고를 때 씬 기본 머티리얼이 인스턴스의 부모보다 먼저였다. 그래서 인스턴스만 붙은 메시의
- *          배치는 머티리얼 · 그룹 · 텍스처가 기본 머티리얼 것이고 원소 바이트 · 퍼뮤테이션은 인스턴스 것이었다. 이 씬은
- *          initialize 를 부르지 않아 기본 머티리얼이 없으므로, 예전 규칙이면 배치의 머티리얼이 비어 있다.
+ * @details 후보의 머티리얼을 고를 때 씬 기본 머티리얼을 인스턴스의 부모보다 먼저 보면, 인스턴스만 붙은 메시의
+ *          배치는 머티리얼 · 그룹 · 텍스처가 기본 머티리얼 것이고 원소 바이트 · 퍼뮤테이션은 인스턴스 것이 된다. 이 씬은
+ *          initialize 를 부르지 않아 기본 머티리얼이 없으므로, 그 순서면 배치의 머티리얼이 비어 있다.
  */
 SW_TEST_CASE( GpuSceneTest, InstanceOnlyMeshUsesInstanceParent )
 {
@@ -1599,7 +1593,7 @@ SW_TEST_CASE( GpuSceneTest, ReusedCandidateSlotsCarryNoStaleData )
     // **여기서 한 번 더 짓는 것이 이 케이스의 핵심이다.** 수집이 쓰는 배열과 기준 배열은 끝에서
     // 맞바뀌므로, 첫 빌드가 끝난 시점의 수집 배열은 아직 **비어 있다**(맞바꾸기 전 기준이 비었다).
     // 두 번째 빌드를 지나야 지지난 프레임의 값이 수집 배열로 돌아온다 — 재사용이 처음 일어나는
-    // 자리가 거기다. 한 번만 짓고 검사하면 슬롯을 통째로 무시하는 구현도 통과한다(실제로 그랬다).
+    // 자리가 거기다. 한 번만 짓고 검사하면 슬롯을 통째로 무시하는 구현도 통과한다.
     pSecond->setLocalPosition( sw::float3( 3.0f, 0.5f, -4.0f ) );
     gpuScene.buildFromScene( &scene, camPos );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( gpuScene.getInstances().size() ) );
@@ -2086,8 +2080,8 @@ namespace
 
 /**
  * @brief [GpuSceneTest] 스프라이트의 프레임 · 색은 GPU 인스턴스에 실리고 배치를 가르지 않는다 — 프레임만 넘기면 그 인스턴스 하나만 더티다
- * @details 프레임 · 색을 머티리얼 인스턴스로 바꾸면(배치 키) 스프라이트마다 배치가 하나씩 생기고 프레임마다 다시 나눠야 했다. 지금은 `GpuInstance::_sprite`
- *          라서 같은 텍스처의 스프라이트 셋은 프레임 · 색이 달라도 반투명 배치 하나이고, 프레임을 넘긴 프레임은 배치를 다시 짓지 않고 그 인스턴스 한
+ * @details 프레임 · 색을 머티리얼 인스턴스로 바꾸면(배치 키) 스프라이트마다 배치가 하나씩 생기고 프레임마다 다시 나눠야 한다. `GpuInstance::_sprite`
+ *          에 실으므로 같은 텍스처의 스프라이트 셋은 프레임 · 색이 달라도 반투명 배치 하나이고, 프레임을 넘긴 프레임은 배치를 다시 짓지 않고 그 인스턴스 한
  *          칸만 더티 구간으로 올린다(`DrawCandidate::operator==` 에는 들고 `hasSameBatchKey` 에는 들지 않는다).
  */
 SW_TEST_CASE( GpuSceneTest, SpriteFrameAndTintRideTheInstanceWithoutSplittingTheBatch )

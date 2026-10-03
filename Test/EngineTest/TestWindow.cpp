@@ -75,12 +75,11 @@ SW_TEST_CASE( WindowTest, ResizeCallbackAndCustomMessageHandler )
 
 /**
  * @brief [WindowTest] 활성 창이 죽으면 전역 포인터도 같이 끊긴다
- * @details `IWindow::getActiveWindow()` 는 전역 하나를 돌려준다. 그 창이 파괴돼도 전역은
- *          그대로 남아서, 뒤에 부르는 쪽(RHI 초기화 · 에디터 명령 · 프레임 트랜지언트)이
- *          **죽은 포인터**를 받았다. `App::shutdown` 은 파괴 전에 손으로 끊고 있었지만
- *          그것은 한 경로의 규율이다 — `EngineLoop` 은 App 이 없는 임베드 시나리오에서
- *          창을 전역에 놓아둔 채 소유를 호출자에게 넘기고, 테스트도 App 을 거치지 않는다.
- *          소멸자에서 끊으면 어느 경로로 죽어도 참이 된다.
+ * @details `IWindow::getActiveWindow()` 는 전역 하나를 돌려준다. 그 창이 파괴돼도 전역이
+ *          그대로 남으면, 뒤에 부르는 쪽(RHI 초기화 · 에디터 명령 · 프레임 트랜지언트)이
+ *          **죽은 포인터**를 받는다. 파괴 전에 손으로 끊는 것은 한 경로의 규율일 뿐이다 —
+ *          `EngineLoop` 은 App 이 없는 임베드 시나리오에서 창을 전역에 놓아둔 채 소유를
+ *          호출자에게 넘기고, 테스트도 App 을 거치지 않는다. 소멸자에서 끊으면 어느 경로로 죽어도 참이 된다.
  */
 SW_TEST_CASE( WindowTest, DestroyedActiveWindowClearsGlobal )
 {
@@ -108,18 +107,14 @@ SW_TEST_CASE( WindowTest, DestroyedActiveWindowClearsGlobal )
 
 /**
  * @brief [WindowTest] 다시 만들어도 **보이던 창은 보인다** — 그리고 크기·제목을 지킨다
- * @details 이 절차는 한때 **세 벌**이었다: `Win32Window` · `X11Window` · 그리고 기반 `IWindow`.
- *          앞의 둘만 표시 상태를 되살렸고 기반의 것은 그러지 않았다 — 그 길로 들어온 창은 백엔드
- *          교체(`RHI::applyPendingChange` 가 `recreate()` 를 부른다) 뒤 **화면에서 사라진다.**
- *          셋을 한 벌로 합치면서 이 케이스를 그 자리에 둔다. 새 플랫폼이 훅만 구현하고 절차를
- *          다시 적지 않는 한, 이 계약은 모든 플랫폼에서 같다.
+ * @details 다시 만드는 절차는 기반 `IWindow::recreate()` 한 벌이고, 플랫폼은 훅만 구현한다. 절차가 플랫폼마다 따로 있으면
+ *          표시 상태를 되살리지 않는 쪽이 생기고, 그 길로 들어온 창은 백엔드 교체(`RHI::recreateDevice` 가 `recreate()` 를
+ *          부른다) 뒤 **화면에서 사라진다.**
  *
- *          **2026-09-19, 리눅스에서 이 케이스가 졌다.** 그리고 진 이유가 진짜 결함이었다 —
- *          `recreate()` 가 "보이던 창이었나" 를 `isVisible()` 로 물었는데, X11 에서 그것은
- *          "창 관리자가 이미 매핑했는가" 다. 방금 보이라고 한 창도, 최소화된 창도, 다른 워크스페이스에
- *          있는 창도 거짓이다. 그 상태로 다시 만들면 **창이 사라진다.** 윈도우에서는 `IsWindowVisible`
- *          이 WS_VISIBLE 스타일이라 둘이 우연히 같았고, 그래서 윈도우만 보면 초록이었다.
- *          이제 엔진은 **의도**(`isVisibleRequested()`)로 판단하고, 이 케이스도 그것을 단언한다.
+ *          "보이던 창이었나" 는 `isVisible()` 로 물으면 안 된다 — X11 에서 그것은 "창 관리자가 이미 매핑했는가" 라서,
+ *          방금 보이라고 한 창도, 최소화된 창도, 다른 워크스페이스에 있는 창도 거짓이다. 그 상태로 다시 만들면 **창이 사라진다.**
+ *          윈도우에서는 `IsWindowVisible` 이 WS_VISIBLE 스타일이라 둘이 같아 윈도우만 보면 초록이다.
+ *          엔진은 **의도**(`isVisibleRequested()`)로 판단하고, 이 케이스도 그것을 단언한다.
  */
 SW_TEST_CASE( WindowTest, RecreateKeepsVisibilityAndSize )
 {
@@ -134,7 +129,7 @@ SW_TEST_CASE( WindowTest, RecreateKeepsVisibilityAndSize )
     // **화면 상태를 동기로 답하는 플랫폼인지 여기서 재 둔다.** 윈도우의 `IsWindowVisible` 은
     // `ShowWindow` 가 세운 WS_VISIBLE 스타일이라 즉시 참이지만, X11 의 `IsViewable` 은 **창 관리자가
     // 실제로 매핑한 뒤**에야 참이다 — 방금 보이라고 한 창도 아직 거짓이고, 이 테스트는 이벤트 루프를
-    // 돌리지 않는다(WSL 에서 3회 모두 그랬다). 그런 플랫폼에서 화면 상태를 단언하면 **엔진이 아니라
+    // 돌리지 않는다. 그런 플랫폼에서 화면 상태를 단언하면 **엔진이 아니라
     // 창 관리자를 시험하는 것**이 된다.
     const bool bPlatformAnswersVisibilitySynchronously = window->isVisible();
 
@@ -211,8 +206,8 @@ SW_TEST_CASE( WindowTest, MinimizingDoesNotForgetTheWindowSize )
 #if defined( SW_PLATFORM_WINDOWS )
 /**
  * @brief [WindowTest] 리사이즈 콜백 안에서 다시 들어온 WM_SIZE 의 크기를 잃지 않는다 — 마지막 크기로 끝난다
- * @details 재진입한 WM_SIZE 는 크기만 적고 콜백을 건너뛰는데, 바깥 호출은 옛 크기로 끝나 스왑체인이 다음 WM_SIZE 까지 옛 크기였다(DPI 변경의
- *          `SetWindowPos` 가 콜백 안에서 그 재진입을 만든다).
+ * @details 재진입한 WM_SIZE 는 크기만 적고 콜백을 건너뛴다. 바깥 호출이 자기가 받은 크기로 끝나면 스왑체인이 다음 WM_SIZE 까지 옛 크기로
+ *          남는다(DPI 변경의 `SetWindowPos` 가 콜백 안에서 그 재진입을 만든다).
  */
 SW_TEST_CASE( WindowTest, NestedResizeEndsAtTheLastSize )
 {

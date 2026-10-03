@@ -18,7 +18,7 @@
 
 // SceneLightTest — 라이트 등록부와 그것을 읽어 GPU 원소를 만드는 CPU 절반. 디바이스 없음(nogpu).
 //
-// 이 경로는 매 프레임 두 곳(`EngineLoop` · `FrameRenderer`)이 부르는데 테스트가 하나도 없었다.
+// 이 경로는 매 프레임 두 곳(`EngineLoop` · `FrameRenderer`)이 부른다.
 // 여기가 틀리면 증상은 "빛이 하나 사라졌다 / 그림자가 엉뚱한 빛에 붙었다" 라서 셰이더를 먼저
 // 의심하게 된다 — 그 전에 걸러 낸다.
 
@@ -232,8 +232,8 @@ SW_TEST_CASE( SceneLightTest, CollectSkipsInactiveComponentsAndInactiveOwners )
  * @brief [SceneLightTest] 그림자 슬롯은 그림자를 드리우는 **첫 방향광** 하나만 가져가고, 그림자 행렬도 그 빛에서 나온다
  * @details 그림자 맵이 하나라서 생긴 규칙이다. 둘 다 플래그를 받으면 렌더러는 마지막 것의
  *          행렬로 첫 것을 그린다 — 화면에는 "그림자가 엉뚱한 방향으로 진다" 로 보인다.
- *          행렬(`EngineLoop` · `FrameRenderer`)과 플래그(`collectSceneLights`)가 **같은 선택자**를 쓰는지도 본다. 예전에는 행렬을
- *          "켜진 첫 방향광"(그림자 여부를 안 봄)에서 골라, 첫 빛이 그림자를 끄면 행렬은 비고 플래그는 뒤의 빛에 붙었다.
+ *          행렬(`EngineLoop` · `FrameRenderer`)과 플래그(`collectSceneLights`)가 **같은 선택자**를 쓰는지도 본다. 행렬을
+ *          "켜진 첫 방향광"(그림자 여부를 안 봄)에서 고르면 첫 빛이 그림자를 끌 때 행렬은 비고 플래그는 뒤의 빛에 붙는다.
  */
 SW_TEST_CASE( SceneLightTest, OnlyTheFirstShadowCastingDirectionalTakesTheShadowSlot )
 {
@@ -291,9 +291,9 @@ SW_TEST_CASE( SceneLightTest, OnlyTheFirstShadowCastingDirectionalTakesTheShadow
 
 /**
  * @brief [SceneLightTest] 빛 방향은 부모의 회전을 따르고, 회전에 대해 연속이다(방향광 · 스포트)
- * @details 예전 방향 함수(두 벌)는 **로컬** 회전이 0 이면 기본 방향을 돌려줬다 — 회전한 부모 아래의 빛은 부모를 무시했다. 그리고 회전이
- *          1e-3 라디안을 넘는 순간 기본 방향에서 전방(+Z)으로 튀었다(방향광이면 비스듬히 내리쬐던 빛이 수평이 된다). 지금은 기본
- *          방향이 로컬 방향이고 월드 회전이 그것을 돌린다. 회전이 없는 루트 빛은 예전과 같은 방향이다(지금의 씬 · 벤치 빛이 모두 그렇다).
+ * @details 기본 방향이 로컬 방향이고 월드 회전이 그것을 돌린다. **로컬** 회전이 0 일 때만 기본 방향을 돌려주면 회전한 부모 아래의 빛이
+ *          부모를 무시하고, 회전이 작은 문턱(1e-3 라디안)을 넘는 순간 기본 방향에서 전방(+Z)으로 튄다(방향광이면 비스듬히 내리쬐던 빛이
+ *          수평이 된다). 회전이 없는 루트 빛은 기본 방향 그대로다(씬 · 벤치 빛이 모두 그렇다).
  */
 SW_TEST_CASE( SceneLightTest, LightDirectionFollowsParentAndIsContinuous )
 {
@@ -405,8 +405,7 @@ SW_TEST_CASE( SceneLightTest, SpotConeAnglesStayOrdered )
 
 /**
  * @brief [SceneLightTest] 주광 조회는 켜진 빛만 돌려주고, 없으면 nullptr 이다
- * @details `EngineLoop` 이 매 프레임 부르는 자리다. 예전에는 씬 전체를 훑었고(큐브 20,000 개에서
- *          게임 스레드의 38%), 지금은 등록부만 본다 — 그 교체가 **답까지 바꾸지는 않았는지** 본다.
+ * @details `EngineLoop` 이 매 프레임 부르는 자리다. 씬 전체를 훑지 않고 등록부만 본다 — 그래도 답은 같아야 한다.
  */
 SW_TEST_CASE( SceneLightTest, FindActiveDirectionalLightSkipsInactiveOnes )
 {

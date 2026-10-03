@@ -23,9 +23,8 @@ namespace test
 
     /**
      * @brief 되읽은 이미지 한 장(`RenderPassGpuTest`).
-     * @details 픽셀을 검사하는 케이스마다 되읽기 세 변수(`bytes` · `layout` · `format`) · 행 포인터 계산 · BGRA 뒤집기
-     *          (`format == B8G8R8A8_UNORM ? p[2] : p[0]`)를 손으로 들고 있었다(열세 곳). 백엔드마다 스왑체인 형식이 달라
-     *          뒤집기를 한 곳이라도 빠뜨리면 그 백엔드에서만 빨강과 파랑이 바뀐다. 이제 `getPixel` 이 RGBA 로 준다.
+     * @details `getPixel` 이 RGBA 로 준다 — 되읽기 · 행 포인터 계산 · BGRA 뒤집기를 케이스마다 손으로 들면, 백엔드마다 스왑체인 형식이
+     *          달라 뒤집기를 한 곳이라도 빠뜨릴 때 그 백엔드에서만 빨강과 파랑이 바뀐다.
      *          반정밀도 첨부(`R16G16B16A16_FLOAT`)는 [0,1] 로 잘라 0~255 로 환산한다 — 두 판을 같은 규칙으로 견주는 데 쓴다.
      */
     class RHITestImage
@@ -35,8 +34,8 @@ namespace test
         bool readTransient( sw::FrameRenderer& renderer, sw::string_view attachmentName );
         /**
          * @brief 이미 가진 바이트를 이미지로 삼습니다 — 되읽기 없이 해석 규칙(BGRA 뒤집기 · 반정밀도)을 시험할 때.
-         * @details 이 PC 의 네 백엔드는 `SceneColor` 를 전부 RGBA8 로 되읽어서, BGRA 뒤집기를 틀려도 GPU 케이스는 하나도 지지
-         *          않는다(변이로 확인했다). 그 규칙은 `RHITestImageTest` 가 GPU 없이 지킨다.
+         * @details 네 백엔드가 `SceneColor` 를 전부 RGBA8 로 되읽는 기계에서는 BGRA 뒤집기를 틀려도 GPU 케이스가 하나도 지지
+         *          않는다. 그 규칙은 `RHITestImageTest` 가 GPU 없이 지킨다.
          */
         void assign( sw::vector<uint8> bytes, const sw::RHITextureMipSpan& layout, sw::RHIFormat format );
 

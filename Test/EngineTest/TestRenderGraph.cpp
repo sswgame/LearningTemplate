@@ -30,12 +30,12 @@ namespace
 // ------------------------------------------------------------------------------
 /**
  * @brief [RenderGraphTest] 그래프가 상태를 들고 있다가 **바뀌는 전이만** 내는지 (GPU 불필요).
- * @details 예전엔 레벨이 읽고 쓰는 자원 **이름을 전부** 넘겼다. 그래서 같은 자원을 세 패스가 읽으면
- *          읽기 전이를 세 번 걸었고, 이미 그 상태인 것도 다시 걸었다. 전이 자체는 백엔드가 걸러 주지만
- *          (DX12 는 상태가 같으면 배리어를 안 쏜다) 그건 백엔드마다 사정이 다른 이야기고, 무엇보다
- *          "누가 상태를 아는가" 가 흐려진다 — 배리어를 병렬 기록 스레드가 정하던 구조는 실제로 여러 번 깨졌다.
+ * @details 레벨이 읽고 쓰는 자원 **이름을 전부** 넘기면 같은 자원을 세 패스가 읽을 때 읽기 전이를 세 번 걸고,
+ *          이미 그 상태인 것도 다시 건다. 전이 자체는 백엔드가 걸러 주지만(DX12 는 상태가 같으면 배리어를 안 쏜다)
+ *          그건 백엔드마다 사정이 다르고, 무엇보다 "누가 상태를 아는가" 가 흐려진다 — 배리어를 병렬 기록 스레드가
+ *          정하는 구조는 깨지기 쉽다.
  *
- *          그래서 그래프가 정본이 된다. 여기서는 그 추론만 따로 본다(커맨드 리스트 없이).
+ *          그래서 그래프가 정본이다. 여기서는 그 추론만 따로 본다(커맨드 리스트 없이).
  */
 
 SW_TEST_CASE( RenderGraphTest, RenderGraphInfersOnlyChangedBarriers )
@@ -77,7 +77,7 @@ SW_TEST_CASE( RenderGraphTest, RenderGraphInfersOnlyChangedBarriers )
     SW_ASSERT_TRUE( graph.execute( context ) );
 
     // 여기가 핵심이다. PassB 가 ColorBuffer 를 읽기로 바꿔 놓았으므로 PassC 는 **낼 것이 없다**.
-    // 이름을 그대로 넘기던 시절엔 여기서 두 번 나왔다.
+    // 이름을 그대로 넘기면 여기서 두 번 나온다.
     SW_EXPECT_EQUAL( uint32( 2 ), countFor( colorBuffer ) );
     SW_EXPECT_EQUAL( uint32( 1 ), countFor( blurBuffer ) );
     SW_EXPECT_EQUAL( uint32( 1 ), countFor( uiBuffer ) );
@@ -129,8 +129,7 @@ SW_TEST_CASE( RenderGraphTest, RenderGraphReadModifyWriteAndLifetimes )
     SW_EXPECT_EQUAL( sw::string( "PassB_PostProcess" ), sw::string( order[1].c_str() ) );
     SW_EXPECT_EQUAL( sw::string( "PassC_UIOverlay" ), sw::string( order[2].c_str() ) );
 
-    // 수명은 compile() 이 계산해 둔다 — 부를 때마다 다시 세던 함수는 지웠다(아무도 부르지 않았고,
-    // 실행 순서가 정해지기 전에 부르면 뜻이 없는 값이 나왔다).
+    // 수명은 compile() 이 계산해 둔다 — 실행 순서가 정해지기 전에 세면 뜻이 없는 값이 나온다.
     const auto& listLifetimes = graph.getResourceLifetimes();
     SW_EXPECT_TRUE( listLifetimes.empty() == false );
 
@@ -151,8 +150,8 @@ SW_TEST_CASE( RenderGraphTest, RenderGraphReadModifyWriteAndLifetimes )
 
 /**
  * @brief [RenderGraphTest] 읽은 자원을 뒤에서 다시 쓰는 패스는 그 읽기 뒤에 돈다(Write-after-Read)
- * @details W 가 쓰고 A 가 읽고 B 가 다시 쓰면, 예전에는 간선이 W→B(쓰기 사슬) · W→A(읽기)뿐이라 A 와 B 가 같은 레벨이었고 B 가 먼저
- *          줄을 섰다 — A 가 B 의 출력을 읽었다. UI · 오버레이가 블룸이 읽은 SceneColor 를 다시 쓰는 모양이 그렇다.
+ * @details W 가 쓰고 A 가 읽고 B 가 다시 쓸 때 간선이 W→B(쓰기 사슬) · W→A(읽기)뿐이면 A 와 B 가 같은 레벨이 되어 B 가 먼저
+ *          줄을 설 수 있다 — A 가 B 의 출력을 읽는다. UI · 오버레이가 블룸이 읽은 SceneColor 를 다시 쓰는 모양이 그렇다.
  */
 SW_TEST_CASE( RenderGraphTest, ReaderRunsBeforeTheNextWriterOfItsInput )
 {
@@ -174,7 +173,7 @@ SW_TEST_CASE( RenderGraphTest, ReaderRunsBeforeTheNextWriterOfItsInput )
     SW_EXPECT_EQUAL( size_t( 3 ), listLevel.size() );
 
     // 소비자를 먼저 선언해도 된다(앞에 쓰는 이가 없으면 첫 쓰기가 생산자). 그 다음 쓰기만 소비자 뒤로 간다 — 선언 순서로 고르면
-    // 생산자 자신을 골라 순환이 됐다(고치던 중 한 번 그렇게 깨졌다).
+    // 생산자 자신을 골라 순환이 된다.
     sw::RenderGraph earlyConsumer;
     earlyConsumer.addPass( sw::hashed_string( "C_Reads" ), { sceneColor }, { sw::hashed_string( "COut" ) } );
     earlyConsumer.addPass( sw::hashed_string( "W1_Writes" ), {}, { sceneColor } );
@@ -215,8 +214,8 @@ SW_TEST_CASE( RenderGraphTest, DuplicatePassNameIsRejected )
 
 /**
  * @brief [RenderGraphTest] 순환이면 서로 기다리는 패스를 이름으로 말한다 — "몇 개 중 몇 개" 가 아니라
- * @details A 가 X 를 읽고 Y 를 쓰고, B 가 Y 를 읽고 X 를 쓰면 둘은 서로를 기다린다. 예전 경고는 `Cycle detected during compile — 1/3 active passes
- *          scheduled.` 뿐이라 파이프라인 XML 의 입출력을 손으로 따라가야 했다.
+ * @details A 가 X 를 읽고 Y 를 쓰고, B 가 Y 를 읽고 X 를 쓰면 둘은 서로를 기다린다. 경고가 개수(`1/3 active passes scheduled.`)만 말하면
+ *          파이프라인 XML 의 입출력을 손으로 따라가야 한다.
  */
 SW_TEST_CASE( RenderGraphTest, CycleNamesThePassesThatWaitOnEachOther )
 {
@@ -291,8 +290,8 @@ SW_TEST_CASE( RenderGraphTest, ParallelExecutionRecordsEachPassOnceInLevelOrder 
 
 /**
  * @brief [RenderGraphTest] 커맨드 리스트를 만들 수 없으면 병렬 기록은 아무것도 기록 · 제출하지 않고 실패한다 — 앞 레벨을 두 번 돌리지 않는다
- * @details 예전에는 레벨을 돌며 리스트를 만들다 실패하면 직렬 `execute` 로 넘어갔다. 앞 레벨은 이미 기록 · 제출된 뒤라 그 패스들이 두 번 돌았고(같은
- *          프레임에 두 번 그린다), 직렬 경로는 리스트 없이 기록했다(부르는 쪽은 프레임 리스트를 이미 닫았다).
+ * @details 레벨을 돌며 리스트를 만들다 실패할 때 직렬 `execute` 로 넘어가면, 앞 레벨은 이미 기록 · 제출된 뒤라 그 패스들이 두 번 돌고(같은
+ *          프레임에 두 번 그린다), 직렬 경로는 리스트 없이 기록한다(부르는 쪽은 프레임 리스트를 이미 닫았다).
  */
 SW_TEST_CASE( RenderGraphTest, ParallelExecutionSubmitsNothingWhenACommandListCannotBeMade )
 {

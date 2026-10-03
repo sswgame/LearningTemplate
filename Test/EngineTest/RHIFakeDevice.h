@@ -2,7 +2,7 @@
  * @file Test/EngineTest/RHIFakeDevice.h
  * @brief GPU 없이 도는 가짜 RHI 디바이스 · 커맨드 리스트 — 렌더 그래프의 병렬 기록 · 제출 순서를 nogpu 로 본다.
  * @details `RenderGraph::executeParallel` 은 디바이스가 있어야 돌아서, 그 경로(레벨마다 리스트를 열고 · 기록하고 · 제출하는 순서, 리스트를 만들지
- *          못할 때)는 GPU 시험(`RenderPassGpuTest`)에서만 지나갔다. 그리기는 하지 않고 기록 범위와 제출 순서만 적는다.
+ *          못할 때)는 실제 디바이스로는 GPU 시험(`RenderPassGpuTest`)에서만 지나간다. 그리기는 하지 않고 기록 범위와 제출 순서만 적는다.
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"

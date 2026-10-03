@@ -4,12 +4,11 @@
  * @details GPU 도 셰이더 컴파일러도 필요 없다 — 파이프라인 XML 과 머티리얼을 읽어 (셰이더 · 진입점 ·
  *          define) 목록을 만들고 해시를 비교할 뿐이다. 그래서 nogpu 라벨의 `EngineTest_NoGPU` 에 든다.
  *
- *          이 파일이 있는 이유: 베이커는 패스의 define 을 **파이프라인 XML 의 `_listPermutation`** 에서만
- *          읽었는데, 런타임은 G버퍼 패스에 `SW_PASS_GBUFFER=1` 을 **C++ 에서** 얹었다. 두 자리가 어긋나자
- *          런타임이 찾는 해시를 아무도 굽지 않았고, Shipping 은 런타임 컴파일이 없으므로 G버퍼 드로우가
- *          통째로 사라졌다 — 디퍼드 화면이 한 색으로 남고 SSAO 는 가림을 하나도 내지 않았다.
- *          그 증상은 GPU 스위트(`RenderPassGpuTest`)에서만 보였고, 그 스위트는 CI 가 돌리지 않는다.
- *          여기서는 그림을 그리지 않고 **목록만** 대조하므로 CI 가 잡는다.
+ *          이 파일이 있는 이유: 베이커가 패스의 define 을 **파이프라인 XML 의 `_listPermutation`** 에서만 읽고
+ *          런타임이 G버퍼 패스에 `SW_PASS_GBUFFER=1` 같은 define 을 **C++ 에서** 얹으면, 런타임이 찾는 해시를 아무도
+ *          굽지 않는다. Shipping 은 런타임 컴파일이 없으므로 G버퍼 드로우가 통째로 사라진다 — 디퍼드 화면이 한 색으로
+ *          남고 SSAO 는 가림을 하나도 내지 않는다. 그 증상은 GPU 스위트(`RenderPassGpuTest`)에서만 보이고, 그 스위트는
+ *          CI 가 돌리지 않는다. 여기서는 그림을 그리지 않고 **목록만** 대조하므로 CI 가 잡는다.
  */
 #include "pch.h"
 
@@ -70,7 +69,7 @@ namespace
 /**
  * @brief [ShaderBakeRequestTest] 패스가 C++ 에서 얹는 define 까지 요청에 든다
  * @details `FrameRendererUtil::getPassDefine` 이 런타임과 베이커가 함께 보는 **유일한 정본**이다.
- *          베이커가 그것을 안 보면(예전이 그랬다) 런타임이 요청하는 해시가 목록에 없다.
+ *          베이커가 그것을 안 보면 런타임이 요청하는 해시가 목록에 없다.
  */
 SW_TEST_CASE( ShaderBakeRequestTest, PassDefineReachesBakedRequests )
 {

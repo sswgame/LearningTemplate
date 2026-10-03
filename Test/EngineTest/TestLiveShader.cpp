@@ -26,10 +26,9 @@ SW_TEST_REQUIRES_HOST( LiveShaderTest, "recompiles shaders with DXC and edits th
 // ------------------------------------------------------------------------------
 /**
  * @brief [LiveShaderTest] 리로드 대상이 `ShaderCache` 에서 나오는지 검증.
- * @details 이 테스트의 요점은 **대상이 비어 있지 않다**는 것이다. 예전에는 `LiveShaderManager` 가
- *          `watchShader` 로 채우는 자기 등록표를 봤는데 그 함수의 호출부가 하나도 없어서,
- *          `ReloadShaders`(Ctrl+F8) 단축키가 빈 표를 돌고 아무 일도 하지 않았다. 그때도 테스트는
- *          `update()` 만 불러 빈 큐를 도는 것이 전부라 초록이었다.
+ * @details 이 테스트의 요점은 **대상이 비어 있지 않다**는 것이다. `LiveShaderManager` 가 따로 채우는 자기 등록표를 보면,
+ *          그 표를 채우는 호출부가 없을 때 `ReloadShaders`(Ctrl+F8) 단축키가 빈 표를 돌고 아무 일도 하지 않는다.
+ *          `update()` 만 불러 빈 큐를 도는 시험은 그 상태에서도 초록이다.
  */
 
 SW_TEST_CASE( LiveShaderTest, ReloadTargetsComeFromShaderCache )
@@ -82,12 +81,11 @@ SW_TEST_CASE( LiveShaderTest, ManualReloadWithNoTargetsIsNoop )
 
 /**
  * @brief [LiveShaderTest] `.hlsli` 만 고쳐도 수동 리로드가 새 바이트코드를 만드는지 검증.
- * @details 이게 이 기능의 전부다. 함정은 `ShaderCompiler` 의 디스크 캐시인데, 키가
- *          `max(.hlsl mtime, 공유 헤더 타임스탬프)` 이고 뒤쪽은
- *          `ShaderBaker::getSharedHeaderTimestamp` 의 함수 지역 static 이라 **프로세스당 한 번만**
- *          계산된다. `.hlsli` 만 고치면 두 값이 다 그대로라 옛 바이트코드가 그대로 돌아온다 —
+ * @details 이게 이 기능의 전부다. 함정은 `ShaderCompiler` 의 디스크 캐시인데, 키에 드는 공유 헤더 해시
+ *          (`ShaderBaker::getSharedHeaderContentHash`)는 `.hlsli` 집합을 한 번 훑고 **캐시된다**.
+ *          `.hlsli` 만 고치면 키가 그대로라 옛 바이트코드가 그대로 돌아온다 —
  *          로그는 "Succeeded" 를 찍는데 화면은 안 바뀌는, 가장 조용한 종류의 어긋남이다.
- *          그래서 리로드는 그 타임스탬프를 한 번 버린다 — 캐시를 통째로 우회하지는 않는다.
+ *          그래서 리로드는 그 캐시를 한 번 버린다(`invalidateSharedHeaderCache`) — 컴파일 캐시를 통째로 우회하지는 않는다.
  *          우회하면 이번 편집과 무관한 셰이더까지 전부 다시 컴파일된다.
  */
 SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
@@ -115,7 +113,7 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( shaderAbs ) );
         // **파일만 지우면 부족하다.** 공유 헤더 해시는 `.hlsli` 집합을 한 번 훑고 캐시하므로, 프로브가 있던
         // 동안의 값이 다음 테스트로 샌다 — `ShaderBakeStampTest` 가 그 값을 기준으로 잡고 스스로 무효화한 뒤
-        // 비교해서 떨어졌다. `.hlsli` 를 건드린 쪽이 자기가 더럽힌 캐시를 비운다.
+        // 비교하면 진다. `.hlsli` 를 건드린 쪽이 자기가 더럽힌 캐시를 비운다.
         sw::ShaderBaker::invalidateSharedHeaderCache();
     } ) );
 
@@ -125,9 +123,8 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
     desc._stage      = sw::ShaderStage::Vertex;
 
     // **이 케이스가 보는 것은 포맷이 아니라 "`.hlsli` 를 고치면 다시 구운 바이트코드가 달라지는가"** 다.
-    // 그런데 타깃이 `DXBC_D3D11` 로 고정돼 있었고, DXBC 를 낼 수 있는 것은 윈도우의 FXC 뿐이라
-    // **리눅스에서는 늘 졌다**(2026-09-19 WSL 에서 확인). 포맷을 플랫폼이 낼 수 있는 것으로 고르면
-    // 같은 계약을 양쪽에서 실제로 검사한다.
+    // DXBC 를 낼 수 있는 것은 윈도우의 FXC 뿐이라 타깃을 `DXBC_D3D11` 로 고정하면 **리눅스에서는 늘 진다**.
+    // 포맷을 플랫폼이 낼 수 있는 것으로 고르면 같은 계약을 양쪽에서 실제로 검사한다.
     #if defined( SW_PLATFORM_WINDOWS )
     desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
     #else
@@ -155,12 +152,12 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
         std::filesystem::last_write_time( includeAbs.c_str(), written + std::chrono::seconds( 5 ) );
     }
 
-    // 공유 헤더 타임스탬프가 얼어붙어 있으면 캐시 키가 그대로라 **옛 바이트코드가 돌아온다**.
+    // 공유 헤더 해시가 캐시돼 있으면 캐시 키가 그대로라 **옛 바이트코드가 돌아온다**.
     const sw::ShaderCompileResult stale = sw::ShaderCompiler::compileHlsl( desc );
     SW_ASSERT_TRUE( stale._bSuccess );
     SW_EXPECT_TRUE( stale._bytecode == first._bytecode );
 
-    // 수동 리로드가 하는 것과 같다 — 타임스탬프를 한 번 버리면 키가 달라져 실제로 다시 컴파일된다.
+    // 수동 리로드가 하는 것과 같다 — 공유 헤더 해시를 한 번 버리면 키가 달라져 실제로 다시 컴파일된다.
     // **캐시를 우회하지 않는다**는 점이 중요하다. 우회하면 이번 편집과 무관한 셰이더까지 전부
     // 다시 컴파일된다.
     sw::ShaderBaker::invalidateSharedHeaderCache();
@@ -172,8 +169,8 @@ SW_TEST_CASE( LiveShaderTest, EditedIncludeChangesRecompiledBytecode )
 
 /**
  * @brief [LiveShaderTest] 캐시의 실시간 컴파일과 핫 리로드가 같은 코드젠으로, 그 코드젠의 자리에 쓴다
- * @details Debug 의 실시간 컴파일은 디버그 코드젠(RenderDoc 에서 한 줄씩)인데, 캐시는 그 바이트코드를 **요청**의 자리(`-opt`)에 썼고 핫 리로드는
- *          요청 그대로(최적화) 같은 자리에 덮어썼다. `-opt` 폴더에 두 코드젠이 섞였고 리로드한 셰이더만 디버그 정보를 잃었다. 둘 다
+ * @details Debug 의 실시간 컴파일은 디버그 코드젠(RenderDoc 에서 한 줄씩)이다. 캐시가 그 바이트코드를 **요청**의 자리(`-opt`)에 쓰거나 핫 리로드가
+ *          요청 그대로(최적화) 다시 컴파일하면 `-opt` 폴더에 두 코드젠이 섞이고 리로드한 셰이더만 디버그 정보를 잃는다. 둘 다
  *          `ShaderCache::makeLiveCompileDesc` 하나로 정한다. Debug 가 아니면 두 요청이 같아 이 케이스가 볼 차이가 없다.
  */
 SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )

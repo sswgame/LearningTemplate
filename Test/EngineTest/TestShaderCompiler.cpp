@@ -31,9 +31,8 @@ namespace sw
          *          RHI 하나만 담는다(`Target RHI for shader packaging: dx12`) — 배포본은 백엔드를
          *          하나만 쓰므로 넷을 다 담을 이유가 없다. 그래서 다른 백엔드를 요구하는 케이스는
          *          배포 구성에서 **구조적으로** 통과할 수 없다. 디스크에는 있지만 팩에 없다.
-         * @note 이 조건이 없어서 `ShaderCompilerTest` 두 건이 Shipping 에서 실패로 남아 있었다.
-         *       아무도 몰랐던 이유는 이 스위트가 CI 에서 빠져 있고 배포 구성으로 돌린 적이 없어서다
-         *       (그래서 `EngineTest_HostOnly` 를 만들었다 — docs/06_Backlog.md 2026-09-17).
+         * @note 이 조건이 없으면 `ShaderCompilerTest` 가 Shipping 에서 진다. 이 스위트는 CI 에서 빠져 있으므로
+         *       배포 구성의 `EngineTest_HostOnly` 로 돌려야 그 실패가 보인다.
          */
         bool isShaderUnavailableInThisBuild( const sw::ShaderCompileResult& result )
         {

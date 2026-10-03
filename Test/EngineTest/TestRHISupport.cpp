@@ -95,7 +95,7 @@ SW_TEST_CASE( RHIReleaseQueueTest, FlushAll )
 }
 
 /**
- * @brief [RHIHandleTable] generation이 올라가면 옛 핸들은 무효이고 슬롯은 재사용된다
+ * @brief [RHIHandleTableTest] generation이 올라가면 옛 핸들은 무효이고 슬롯은 재사용된다
  */
 SW_TEST_CASE( RHIHandleTableTest, GenerationInvalidatesStaleHandles )
 {
@@ -144,10 +144,10 @@ SW_TEST_CASE( RHIReleaseQueueTest, GpuFenceRelease )
 }
 
 /**
- * @brief [RHIShaderRequestTest] 파이프라인 서술체를 컴파일 요청으로 해석하는 규칙 — 백엔드 넷이 각자 갖던 것.
+ * @brief [RHIShaderRequestTest] 파이프라인 서술체를 컴파일 요청으로 해석하는 규칙 — 네 백엔드가 같이 쓴다.
  * @details 진입점 기본값, define 은 두 스테이지에, RT 0 개 + 뎁스 테스트면 픽셀 스테이지 없음(경로가 있어도),
- *          RT 수는 뎁스 전용 0 / 그 밖 1 이상. 네 곳에 복사돼 있을 때 Vulkan 은 define 을, DX12 는 뎁스 전용 판정을
- *          빠뜨렸다 — 규칙이 한 곳이면 빠질 자리가 없다. GPU 가 필요 없다(nogpu).
+ *          RT 수는 뎁스 전용 0 / 그 밖 1 이상. 백엔드마다 규칙을 복사하면 어느 하나가 define 이나 뎁스 전용 판정을
+ *          빠뜨린다 — 규칙이 한 곳이면 빠질 자리가 없다. GPU 가 필요 없다(nogpu).
  */
 SW_TEST_CASE( RHIShaderRequestTest, ResolvesEntryPointsDefinesAndDepthOnly )
 {
@@ -206,10 +206,8 @@ SW_TEST_CASE( RHIShaderRequestTest, ResolvesEntryPointsDefinesAndDepthOnly )
  *          그 인덱스를 **서로 다른 리소스에 발급한다**. 그 뒤로는 한쪽이 다른 쪽의 디스크립터를
  *          덮어쓴다.
  *
- *          이 가드는 원래 백엔드마다 손으로 적혀 있었고 종류마다 모양이 달랐다 — DX11 · GL 의
- *          buffer/texture 는 가드 + 에러 로그, DX11 의 uav 는 조용한 반환, **GL 의 uav 는 가드가
- *          아예 없었다.** 그래서 GL 에서만 UAV 이중 해제가 통과했다. 가드를 이 헬퍼 한 자리로
- *          옮겨 지금 쓰는 곳과 앞으로 쓸 곳이 같이 막히게 했다.
+ *          가드는 이 헬퍼 한 자리에 있다 — 백엔드 · 자원 종류마다 손으로 적으면 어느 한 종류에서 가드가 빠져
+ *          그 종류의 이중 해제만 통과한다.
  */
 SW_TEST_CASE( RHIIndexFreeListTest, DoubleReleaseIsRejected )
 {
@@ -238,7 +236,7 @@ SW_TEST_CASE( RHIIndexFreeListTest, DoubleReleaseIsRejected )
     SW_EXPECT_TRUE_MSG( fresh != reused, "같은 인덱스가 두 리소스에 발급됐습니다" );
     SW_EXPECT_TRUE( fresh != indexB );
 
-    // 범위 밖은 조용히 무시한다(로그도 남기지 않는다) — 예전 동작 그대로다.
+    // 범위 밖은 조용히 무시한다(로그도 남기지 않는다).
     SW_EXPECT_EQUAL( 0u, sw::releaseFreeListIndex( listRegistered, listFree, 9999u, 0u, "test" ) );
 }
 

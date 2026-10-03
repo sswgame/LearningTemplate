@@ -336,10 +336,9 @@ SW_TEST_CASE( RenderPassTest, RenderGraphLinearChainProducesSinglePassLevels )
 
 /**
  * @brief [RenderPassTest] 파이프라인 XML 의 포맷 표기가 리플렉션으로 해석되는가 — 안 되면 **왜 안 되는지까지** 적는다
- * @details 아래 `ShippedPipelinesValidateClean` 이 리눅스 CI 에서만 일곱 건으로 졌는데, 그 일곱은 전부 한 뿌리였다:
- *          `RHIFormat` 이 리플렉션으로 해석되지 않아 첨부 포맷이 모두 "알 수 없는 포맷" 이 되고, 그러면 깊이 판정이
- *          무너져 `SceneDepth` 가 SourceColor 역할로 잡히며 입력 계약까지 연쇄로 틀어진다. 로컬(윈도우 · WSL 리눅스,
- *          유니티 ON/OFF)에서는 재현되지 않았다 — 러너 쪽 툴체인(ubuntu-22.04 의 clang · libclang)만 다르다.
+ * @details `RHIFormat` 이 리플렉션으로 해석되지 않으면 첨부 포맷이 모두 "알 수 없는 포맷" 이 되고, 그러면 깊이 판정이
+ *          무너져 `SceneDepth` 가 SourceColor 역할로 잡히며 입력 계약까지 연쇄로 틀어진다 — 아래 `ShippedPipelinesValidateClean` 이
+ *          여러 건으로 진다. 툴체인(clang · libclang 판)에 따라서만 나타날 수 있어 로컬에서는 재현되지 않을 수 있다.
  *
  *          그래서 이 케이스는 **연쇄가 시작되는 한 지점만** 보고, 졌을 때 어디가 끊겼는지 메시지에 담는다:
  *          `typeFqn` 이 무엇으로 읽혔는지 · FQN 으로 찾히는지 · 짧은 이름으로 찾히는지 · 이름표가 몇 개인지 ·
@@ -380,7 +379,7 @@ SW_TEST_CASE( RenderPassTest, PipelineFormatNamesResolveThroughReflection )
 
 /**
  * @brief 엔진이 실제로 배포하는 파이프라인 XML 들이 스스로 모순이 없는지.
- * @details 모두 검증 0건이어야 한다. 여기가 깨지면 런타임에 포맷이 어긋나 조용히 잘못 그리거나 GPU 가 죽는다(`ae7fb078` 이 그 사례였다).
+ * @details 모두 검증 0건이어야 한다. 여기가 깨지면 런타임에 포맷이 어긋나 조용히 잘못 그리거나 GPU 가 죽는다.
  *          패스 수는 GPU 타임스탬프가 재는 수(`FrameRendererUtil::kGpuTimedPassCapacity`) 이하여야 한다 — 넘는 패스는 프로파일에서 빠진다.
  */
 SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
@@ -582,7 +581,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) == 0u, pFormat );
     }
 
-    // 5) 이름은 정본 하나로 통일돼 있다 — 예전 표기(`Shading`, `PostBloom`)는 이제 오류로 잡힌다.
+    // 5) 이름은 정본 하나로 통일돼 있다 — 다른 표기(`Shading`, `PostBloom`)는 오류로 잡힌다.
     //    이름을 바꾸면 XML 을 새 이름으로 다시 쓴다(ValueAlias 는 실제 게임 데이터가 생긴 뒤의 창구다).
     {
         auto removedTypeIsRejected = []( const utf8* pRemovedType ) -> bool
@@ -600,7 +599,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         SW_EXPECT_TRUE( removedTypeIsRejected( "Shading" ) );
         SW_EXPECT_TRUE( removedTypeIsRejected( "PostBloom" ) );
         SW_EXPECT_TRUE( removedTypeIsRejected( "HBAO" ) );
-        // MRT 없는 G버퍼의 단독 PSO 슬롯은 지워졌다 — 네 백엔드가 모두 MRT 를 보장한다.
+        // MRT 없는 G버퍼의 단독 PSO 슬롯은 없다 — 네 백엔드가 모두 MRT 를 보장한다.
         SW_EXPECT_TRUE( removedTypeIsRejected( "GBufferAlbedo" ) );
         SW_EXPECT_TRUE( removedTypeIsRejected( "GBufferNormal" ) );
         // 철자 대소문자는 리플렉션이 무시하므로 "ToneMap" 은 "Tonemap" 으로 읽힌다 — 의도된 관용이다.
@@ -621,7 +620,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
     }
 
     // 7) 풀스크린 패스의 입력은 그 타입의 계약과 맞아야 한다 — "선언만 있고 아무도 안 읽는 입력" 이 오류다.
-    //    디퍼드 XML 이 Bloom 의 입력으로 AOColor 를 적어 두고도 Bloom 이 그것을 걸지 않던 것(백로그 1-6)이 이 검사가 잡는 병이다.
+    //    디퍼드 XML 이 Bloom 의 입력으로 AOColor 를 적어 두고도 Bloom 이 그것을 걸지 않는 것이 이 검사가 잡는 병이다.
     {
         auto makeDesc = []( sw::RenderPipelineResource& res )
         {
@@ -852,8 +851,8 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
 
 /**
  * @brief [RenderPassTest] 지오메트리 패스의 컬러 타깃은 선언에서 온다 — 컬러 출력만 선언 순서대로, 컬러 출력이 없으면 검증 오류
- * @details 실행(FrameRenderer)은 `_listResolvedColorOutput` 을 그대로 건다(GBuffer 는 [0] 알베도, [1] 노멀). 예전에는 이름을 코드에 박아
- *          (SceneColor · GBufferAlbedo …) 다른 이름을 쓰는 파이프라인에서 없는 첨부(핸들 0 = 백버퍼)를 열었다. 실제 그림은
+ * @details 실행(FrameRenderer)은 `_listResolvedColorOutput` 을 그대로 건다(GBuffer 는 [0] 알베도, [1] 노멀). 이름을 코드에 박으면
+ *          (SceneColor · GBufferAlbedo …) 다른 이름을 쓰는 파이프라인에서 없는 첨부(핸들 0 = 백버퍼)를 연다. 실제 그림은
  *          `RenderPassGpuTest.RenamedAttachmentsRenderTheSameImage` 가 본다.
  */
 SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
@@ -899,7 +898,7 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
         makePipeline( res, "GBuffer", { "MainAlbedo", "MainDepth" } );
         SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
     }
-    // 뎁스만 내는 ForwardOpaque 는 그릴 컬러가 없다 — 검증 오류(예전에는 SceneColor 를 짐작해 열었다).
+    // 뎁스만 내는 ForwardOpaque 는 그릴 컬러가 없다 — 검증 오류(SceneColor 를 짐작해 열지 않는다).
     {
         sw::RenderPipelineResource res;
         makePipeline( res, "ForwardOpaque", { "MainDepth" } );
@@ -916,8 +915,8 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
 
 /**
  * @brief [RenderPassTest] 첨부가 선언한 역할(`_role`)이 이름보다 먼저다 — 이름을 바꾼 G버퍼 · 그림자 맵으로 Lighting 계약이 선다
- * @details 예전에는 역할을 이름으로만 정해, `MainAlbedo` · `MainNormal` 은 SourceColor 로 읽혀 Lighting 계약이 깨졌고(가공할 컬러가 둘 ·
- *          필수 G버퍼 없음) `SunShadow` 는 SceneDepth 로 읽혔다. 모르는 역할 글은 검증 오류다. 그림은
+ * @details 역할을 이름으로만 정하면 `MainAlbedo` · `MainNormal` 은 SourceColor 로 읽혀 Lighting 계약이 깨지고(가공할 컬러가 둘 ·
+ *          필수 G버퍼 없음) `SunShadow` 는 SceneDepth 로 읽힌다. 모르는 역할 글은 검증 오류다. 그림은
  *          `RenderPassGpuTest.RenamedGBufferAttachmentsRenderTheSameImage` 가 본다.
  */
 SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )

@@ -44,7 +44,7 @@ SW_TEST_CASE( ShaderStageTest, StageFlagConversionAndBoundary )
 }
 
 /**
- * @brief [ShaderStageTest] hasShaderStage 비트 포함 여부 및 AllGraphics/All 마스킹 검증
+ * @brief [ShaderStageTest] 스테이지 비트 포함 여부(`EnumUtil::hasFlag`) 및 AllGraphics/All 마스킹 검증
  */
 SW_TEST_CASE( ShaderStageTest, HasShaderStageAndMasking )
 {
@@ -306,8 +306,8 @@ SW_TEST_CASE( ShaderBakerTest, CachedSourceHashNoticesEditedFile )
 
 /**
  * @brief [ShaderBakerTest] 굽지 못한 소스는 도장에서 빠진다 — 다음 베이크가 그것을 최신으로 보지 않고 다시 굽는다
- * @details 컴파일에 실패해도 베이크가 폴더 전체의 지금 소스 해시로 도장을 찍어, 그 셰이더의 **옛 바이너리**가 최신으로 판정됐다 — 다음 베이크도
- *          건너뛰었고 `--bake-shaders` 는 종료 코드 0 이라 배포본에 옛 바이너리가 실렸다.
+ * @details 컴파일에 실패해도 베이크가 폴더 전체의 지금 소스 해시로 도장을 찍으면 그 셰이더의 **옛 바이너리**가 최신으로 판정된다 — 다음 베이크도
+ *          건너뛰고 `--bake-shaders` 는 종료 코드 0 이라 배포본에 옛 바이너리가 실린다.
  */
 SW_TEST_CASE( ShaderBakerTest, FailedSourcesAreLeftOutOfTheBakeStamp )
 {
@@ -407,8 +407,8 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedCacheAccessStress )
 /**
  * @brief [ShaderCacheStressTest] 동시 쿼리와 clearCache 간의 레이스 컨디션 스트레스
  * @details 지우는 스레드가 **돌기 시작한 뒤에** 쿼리를 띄운다. 붐비는 기계(CI 의 ctest 병렬)에서는 스레드가 늦게 떠서, 쿼리가 다 끝날
- *          때까지 한 번도 지우지 못하면 아무것도 겨루지 않은 채 `clearsDone == 0` 으로 진다 — `FileTest.ReadersNeverObserveHalfWrittenFile`
- *          이 같은 모양으로 CI 에서 졌다(2026-10-01).
+ *          때까지 한 번도 지우지 못하면 아무것도 겨루지 않은 채 `clearsDone == 0` 으로 진다(`FileTest.ReadersNeverObserveHalfWrittenFile`
+ *          과 같은 모양).
  */
 SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
 {
@@ -465,10 +465,9 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
 
 /**
  * @brief [ShaderBakerTest] 컬러 출력이 없는 패스(그림자·뎁스 프리패스)에는 픽셀 스테이지가 없다.
- * @details Shipping 실기동의 `리플렉션 매니페스트에 'engine/shaders/shadowdepth.hlsl' 가 없습니다` 가 이 자리였다.
- *          베이커는 타입 **문자열**로 "그림자엔 PS 없음" 을 정하고, 런타임은 PS 경로를 늘 채워서 머티리얼 define 을
- *          얹은 그림자 변형이 DX12 에서 PS 리플렉션을 요구했다. 이제 둘 다 `FrameRendererUtil::hasPixelStage` 하나를
- *          본다 — 실제 파이프라인 XML 둘과 합성 선언으로 그 규칙을 고정한다. GPU 가 필요 없다(nogpu).
+ * @details 베이커와 런타임이 둘 다 `FrameRendererUtil::hasPixelStage` 하나를 본다. 베이커가 타입 **문자열**로 "그림자엔 PS 없음" 을 정하고
+ *          런타임이 PS 경로를 늘 채우면, 머티리얼 define 을 얹은 그림자 변형이 DX12 에서 PS 리플렉션을 요구해 Shipping 실기동이
+ *          "리플렉션 매니페스트에 없다" 로 진다. 실제 파이프라인 XML 둘과 합성 선언으로 그 규칙을 고정한다. GPU 가 필요 없다(nogpu).
  */
 SW_TEST_CASE( ShaderBakerTest, DepthOnlyPassesHaveNoPixelStage )
 {
@@ -534,7 +533,7 @@ SW_TEST_CASE( ShaderBakerTest, DepthOnlyPassesHaveNoPixelStage )
     SW_EXPECT_TRUE( arrFormat[1] == sw::RHIFormat::R8G8B8A8_UNORM );
     SW_EXPECT_TRUE( sw::FrameRendererUtil::hasPixelStage( mrtPass, listAttachment ) );
 
-    // 출력 선언이 없으면 타입이 정한다 — 그림자·뎁스 프리패스는 0, 그 밖은 1 (registerPso 가 넘기는 기본값과 같다).
+    // 출력 선언이 없으면 타입이 정한다 — 그림자·뎁스 프리패스는 0, 그 밖은 1 (PSO 를 만들 때 넘기는 기본값과 같다).
     sw::RenderGraphPassDesc barePass;
     barePass._resolvedType = sw::RenderPassType::DepthPrepass;
     SW_EXPECT_FALSE( sw::FrameRendererUtil::hasPixelStage( barePass, listAttachment ) );
@@ -571,10 +570,9 @@ SW_TEST_CASE( ShaderBakerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )
 
 /**
  * @brief [ShaderBakerTest] 셰이더 캐시가 읽는 파일 이름은 베이커가 쓰는 이름과 같고, 퍼뮤테이션마다 다르다.
- * @details 예전엔 캐시가 스템과 스테이지만으로 이름을 만들어 **모든 퍼뮤테이션이 해시 0 바이너리를 읽었다** —
- *          베이크 바이너리가 있는 한 SW_FORWARD·MATERIAL_BLEND_TRANSLUCENT·SW_VIEWMODE_UNLIT 이 GPU 에 닿지
- *          않았다. 리플렉션 매니페스트는 해시로 찾았으니 레이아웃만 맞고 바이트코드는 틀린 어긋남이었다.
- *          Vulkan 에서 Lit/Unlit 스크린샷이 잡음 바닥과 같게 나와 드러났다. GPU 가 필요 없다(nogpu).
+ * @details 캐시가 스템과 스테이지만으로 이름을 만들면 **모든 퍼뮤테이션이 해시 0 바이너리를 읽는다** — 베이크 바이너리가
+ *          있는 한 SW_FORWARD·MATERIAL_BLEND_TRANSLUCENT·SW_VIEWMODE_UNLIT 이 GPU 에 닿지 않는다. 리플렉션 매니페스트는
+ *          해시로 찾으므로 레이아웃만 맞고 바이트코드는 틀린 어긋남이라 그림으로만 드러난다. GPU 가 필요 없다(nogpu).
  */
 SW_TEST_CASE( ShaderBakerTest, CachePathCarriesPermutationHash )
 {
@@ -614,9 +612,8 @@ SW_TEST_CASE( ShaderBakerTest, CachePathCarriesPermutationHash )
 /**
  * @brief 구운 산출물의 신선도를 **파일 시간이 아니라 내용 해시**로 판정하는지 봅니다.
  * @details 이 저장소는 구운 바이너리까지 커밋하므로 `git pull` 이 소스와 산출물의 mtime 을 임의의
- *          순서로 덮어쓴다. 예전 판정(`산출물 mtime >= 소스 mtime`)은 그때 "이미 최신" 이라 답했고,
- *          그래서 `forwardlit` 바이너리가 라이트 버퍼 이전 것으로 커밋된 채 돌았다 — Vulkan 만 다른
- *          그림을 내는 것을 백엔드 버그로 오인해 오래 쫓았다. 여기서 막는다.
+ *          순서로 덮어쓴다. `산출물 mtime >= 소스 mtime` 으로 판정하면 그때 "이미 최신" 이라 답해 낡은 바이너리가
+ *          커밋된 채 돌고, 한 백엔드만 다른 그림을 내는 것이 백엔드 버그처럼 보인다. 여기서 막는다.
  */
 SW_TEST_CASE( ShaderBakeStampTest, FreshnessIsJudgedByContentNotFileTime )
 {
@@ -640,7 +637,7 @@ SW_TEST_CASE( ShaderBakeStampTest, FreshnessIsJudgedByContentNotFileTime )
     SW_EXPECT_TRUE( hashForward != hashTonemap );
 
     // **공유 헤더가 바뀌면 전부 낡은 것이 되어야 한다.** `.hlsl` 은 그대로인데 include 한 `.hlsli` 만
-    // 바뀌는 것이 실제로 일어난 경우다 — 파일 시간으로는 이 조합이 조용히 통과했다.
+    // 바뀌는 경우다 — 파일 시간으로는 이 조합이 조용히 통과한다.
     const sw::string tempHeader = sw::FileUtil::joinPath( shadersDir, "baketemp.hlsli" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeader, "// bake staleness test\n" ) );
     sw::ShaderBaker::invalidateSharedHeaderCache();
