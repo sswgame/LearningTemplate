@@ -13,6 +13,9 @@ clang-cl 은 `__clang__` 과 `_MSC_VER` 를 둘 다 정의해서 `_MSC_VER` 가 
 읽어서는 알 수 없다. 내장 매크로를 읽는 곳은 CMake 판정과 실제 컴파일러를 대조하는 `Source/Core/Common/TargetMacroCheck.h`
 하나뿐이다. 주석 · 문자열 안의 언급은 보지 않는다.
 
+지원하지 않는 플랫폼의 SW_ 매크로(`SW_PLATFORM_MACOS`)도 막는다. CMake 가 정의하지 않으므로 그 갈래는 어느 구성에서도 컴파일되지 않는
+죽은 코드다 — 검사 헤더도 예외가 아니다.
+
   python Scripts/lint/gate/CheckTargetMacros.py [--root <repo>] [--files a.cpp b.h]
 """
 
@@ -64,6 +67,13 @@ _kMapBuiltinToReplacement = {
 
 _kBuiltinRe = re.compile(r"(?<![\w$])(" + "|".join(re.escape(name) for name in _kMapBuiltinToReplacement) + r")(?![\w$])")
 
+#: 지원하지 않는 플랫폼의 SW_ 매크로 → 이유. 검사 헤더를 포함해 어디서도 읽지 않는다.
+_kMapUnsupportedMacroToReason = {
+    "SW_PLATFORM_MACOS": "지원하지 않는 플랫폼(Windows · Linux 만 짓는다) — CMake 가 정의하지 않아 그 갈래는 컴파일되지 않는다",
+}
+
+_kUnsupportedRe = re.compile(r"(?<![\w$])(" + "|".join(re.escape(name) for name in _kMapUnsupportedMacroToReason) + r")(?![\w$])")
+
 #: 주석 · 문자열 · 문자 리터럴 — 같은 길이의 공백으로 지워 줄 번호를 지킨다.
 _kCommentOrLiteralRe = re.compile(r"//[^\n]*|/\*.*?\*/|\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'", re.DOTALL)
 
@@ -74,21 +84,26 @@ def blankCommentsAndLiterals(text: str) -> str:
 
 
 def findBuiltinMacroUses(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
-    """검사 헤더 밖에서 내장 매크로를 읽는 줄을 위반 문자열로 돌려줍니다."""
+    """검사 헤더 밖에서 내장 매크로를 읽는 줄과, 어디서든 지원하지 않는 플랫폼 매크로를 읽는 줄을 위반 문자열로 돌려줍니다."""
     listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
     listViolation: list[str] = []
     for path, text in readTextFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if relative == _kCheckHeader:
-            continue
-        if _kBuiltinRe.search(text) is None:
+        bCheckBuiltin = relative != _kCheckHeader and _kBuiltinRe.search(text) is not None
+        bCheckUnsupported = _kUnsupportedRe.search(text) is not None
+        if bCheckBuiltin is False and bCheckUnsupported is False:
             continue
         listOriginalLine = text.splitlines()
         for lineIndex, line in enumerate(blankCommentsAndLiterals(text).splitlines(), start=1):
-            for match in _kBuiltinRe.finditer(line):
-                builtin = match.group(1)
-                listViolation.append(f"{relative}:{lineIndex}: {builtin} -> {_kMapBuiltinToReplacement[builtin]}"
-                                     f"  | {listOriginalLine[lineIndex - 1].strip()}")
+            originalLine = listOriginalLine[lineIndex - 1].strip()
+            if bCheckBuiltin:
+                for match in _kBuiltinRe.finditer(line):
+                    builtin = match.group(1)
+                    listViolation.append(f"{relative}:{lineIndex}: {builtin} -> {_kMapBuiltinToReplacement[builtin]}  | {originalLine}")
+            if bCheckUnsupported:
+                for match in _kUnsupportedRe.finditer(line):
+                    macro = match.group(1)
+                    listViolation.append(f"{relative}:{lineIndex}: {macro} -> {_kMapUnsupportedMacroToReason[macro]}  | {originalLine}")
     return listViolation
 
 
@@ -105,7 +120,8 @@ class CheckTargetMacrosGate(LintGate):
         "  플랫폼 · 아키텍처 · 컴파일러는 CMake 가 정의하는 SW_ 매크로로 묻습니다:\n"
         "      SW_PLATFORM_WINDOWS · SW_PLATFORM_LINUX · SW_X64 · SW_ARM64\n"
         "      SW_COMPILER_CLANG(clang-cl 포함) · SW_COMPILER_MSVC(cl.exe) · SW_COMPILER_GCC\n"
-        f"  내장 매크로를 읽는 곳은 {_kCheckHeader} 하나뿐입니다(CMake 판정과 실제 컴파일러를 대조한다)."
+        f"  내장 매크로를 읽는 곳은 {_kCheckHeader} 하나뿐입니다(CMake 판정과 실제 컴파일러를 대조한다).\n"
+        "  SW_PLATFORM_MACOS 는 지원하지 않는 플랫폼이라 CMake 가 정의하지 않습니다 — 그 갈래는 지웁니다."
     )
     selfTestCases = [
         {
@@ -132,6 +148,25 @@ class CheckTargetMacrosGate(LintGate):
             },
         },
         {
+            "name": "지원하지 않는 SW_PLATFORM_MACOS 갈래(Test 폴더)",
+            "files": {
+                _kCheckHeader: "#pragma once\n",
+                "Test/Probe/ProbeWindow.cpp": (
+                    "#if defined( SW_PLATFORM_WINDOWS )\n"
+                    "int probe() { return 1; }\n"
+                    "#elif defined( SW_PLATFORM_MACOS )\n"
+                    "int probe() { return 2; }\n"
+                    "#endif\n"
+                ),
+            },
+        },
+        {
+            "name": "검사 헤더 안의 SW_PLATFORM_MACOS 도 예외가 아니다",
+            "files": {
+                _kCheckHeader: "#pragma once\n#if defined( SW_PLATFORM_MACOS )\n    #error unsupported\n#endif\n",
+            },
+        },
+        {
             "name": "_WIN32 로 플랫폼을 묻는다(ReflectionParser)",
             "files": {
                 _kCheckHeader: "#pragma once\n",
@@ -148,7 +183,7 @@ class CheckTargetMacrosGate(LintGate):
         if not (repositoryRoot / _kCheckHeader).is_file():
             raise GateError(f"{_kCheckHeader} 가 없습니다 — 내장 매크로를 읽어도 되는 유일한 파일입니다. 옮겼다면 이 게이트의 _kCheckHeader 를 고치십시오.")
         violations = findBuiltinMacroUses(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Source · Test · Tools/ReflectionParser 의 내장 매크로")
+        return GateResult(listViolation=violations, summary="Source · Test · Tools/ReflectionParser 의 내장 매크로 · 지원하지 않는 플랫폼 매크로")
 
 
 main = CheckTargetMacrosGate.run
