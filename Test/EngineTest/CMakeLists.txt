@@ -34,6 +34,7 @@ sw_addTestExecutable(EngineTest
 		GF_OpenWorldWestern
 		GF_WitcherRpg
 		GF_CreatureLife
+		GF_RestaurantSim
 	LABELS
 		"unit;engine"
 	TIMEOUT

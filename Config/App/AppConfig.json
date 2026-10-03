@@ -108,6 +108,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_RestaurantSim",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
