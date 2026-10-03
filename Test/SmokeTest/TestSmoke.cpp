@@ -891,6 +891,63 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
 }
 
 /**
+ * @brief [ArchitectureTest] 이 프로세스가 시킨 빌드가 도는 동안은 모듈을 올리지 않고, 끝나면 성공일 때만 올린다
+ * @details 연쇄 빌드는 모듈 DLL 을 하나씩 다시 쓴다. 파일 감시는 mtime 이 디바운스 시간(300 ms)만큼 멈추면 올렸으므로, 의존하는 모듈의 링크가 끝나기
+ *          전의 반쯤 된 집합이 올라갈 수 있었다. 빌드 중에는 예약(강제 리로드 포함)을 모아 두기만 하고, 빌드가 성공하면 올리고 실패하면 버린다.
+ */
+SW_TEST_CASE( ArchitectureTest, ReloadWaitsForTheBuildToSucceed )
+{
+    if ( sw::FileUtil::fileExists( sw::modulePath( "SWGame" ) ) == false )
+        SW_TEST_SKIP( "SWGame MODULE not built in this config" );
+
+    sw::LiveReloadManager manager;
+    SW_ASSERT_TRUE( manager.registerModule( "SWGame" ) );
+    uint32 reloadCount{ 0 };
+    manager.setOnAfterReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnAfterReloadDelegate, [&reloadCount]( void* )
+    { ++reloadCount; } ) );
+
+    // 디바운스(300 ms)를 넉넉히 넘게 돌린다.
+    sw::Delegate<void()> pump = SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&manager]()
+    {
+        for ( int32 stepIndex = 0; stepIndex < 50; ++stepIndex )
+        {
+            std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+            manager.update();
+        }
+    } );
+
+    // 빌드 중: 예약은 올라가지 않는다.
+    manager.notifyBuildStarted();
+    manager.triggerReload( "SWGame" );
+    pump();
+    SW_EXPECT_EQUAL( 0u, reloadCount );
+
+    // 성공: 기다리던 예약이 올라간다.
+    manager.notifyBuildFinished( true, "" );
+    pump();
+    SW_EXPECT_EQUAL( 1u, reloadCount );
+
+    // 실패: 그 빌드 동안의 예약은 버린다.
+    manager.notifyBuildStarted();
+    manager.triggerReload( "SWGame" );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a failed build drops the reload it held" );
+        manager.notifyBuildFinished( false, "" );
+        pump();
+    }
+    SW_EXPECT_EQUAL( 1u, reloadCount );
+
+    // 성공한 빌드의 타깃은 바뀌지 않았어도 다시 올린다(에디터의 Compile 버튼).
+    manager.notifyBuildStarted();
+    manager.notifyBuildFinished( true, "SWGame" );
+    pump();
+    SW_EXPECT_EQUAL( 2u, reloadCount );
+
+    manager.setOnAfterReload( "SWGame", sw::LiveReloadManager::OnAfterReloadDelegate{} );
+    manager.shutdown();
+}
+
+/**
  * @brief [ArchitectureTest] 교체된 옛 이미지는 바로 내려가지 않고, 배치가 상한을 넘을 때 오래된 것부터 내려간다
  * @details 옛 코드를 가리키는 것이 남아 있어도 이미지가 올라와 있는 동안은 크래시가 아니라 옛 동작이 한 번 더 돈다. 그래서 첫 이미지에서
  *          얻은 함수 포인터를 리로드 **뒤에** 불러 본다 — 예전(바로 `FreeLibrary`)에는 이 호출이 내려간 코드로 뛰었다. 상한보다 많이

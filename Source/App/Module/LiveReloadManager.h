@@ -14,6 +14,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -175,8 +176,22 @@ namespace sw
          */
         [[nodiscard]] bool loadSharedModule( string_view moduleName );
 
-        /** @brief 해당 모듈(과 그것에 의존하는 모듈)의 리로드를 예약합니다. */
+        /** @brief 해당 모듈(과 그것에 의존하는 모듈)의 리로드를 예약합니다. 게임 스레드(`update` 를 부르는 스레드)에서 부릅니다. */
         void triggerReload( string_view moduleName );
+
+        /**
+         * @brief 이 프로세스가 시킨 빌드(`ModuleCompiler`)가 시작됐습니다. 끝날 때까지 파일 감시가 본 모듈 변경을 올리지 않습니다. 아무 스레드에서나 부릅니다.
+         * @details 연쇄 빌드는 모듈 DLL 을 하나씩 다시 씁니다. mtime 이 디바운스 시간만큼 멈췄다고 올리면, 의존하는 모듈의 링크가 아직 끝나지 않은
+         *          반쯤 된 집합이 올라갑니다(헤더가 어긋나면 ABI 도장이 막지만, 같은 헤더의 반쯤 된 집합은 막지 못한다). 언리얼 Live Coding 도 빌드가
+         *          끝난 뒤에 패치합니다. 바깥에서 돌린 빌드(터미널 · IDE)는 알 길이 없어 지금처럼 mtime 디바운스만 봅니다.
+         */
+        void notifyBuildStarted();
+        /**
+         * @brief `notifyBuildStarted` 의 빌드가 끝났습니다. 아무 스레드에서나 부릅니다 — 다음 `update` 가 게임 스레드에서 처리합니다.
+         * @param bSucceeded 성공이면 기다리던 변경을 올리고(@p targetName 이 등록된 모듈이면 그것은 바뀌지 않았어도 다시 올린다), 실패 · 취소면
+         *        그 빌드가 쓴 변경을 버립니다(반쯤 링크된 집합을 올리지 않는다 — 다음 성공한 빌드가 올린다).
+         */
+        void notifyBuildFinished( bool bSucceeded, string_view targetName );
 
         /** @brief 파일 변경을 확인하고 예약된 리로드를 실행합니다. */
         void update();
@@ -356,9 +371,23 @@ namespace sw
 
         static constexpr int32 kMtimeDebounceMs = 300;
 
+        /** @brief 빌드 쪽(`notifyBuildStarted` · `notifyBuildFinished`, 빌드 스레드)이 쓰고 `update` 가 읽는 상태입니다. `_buildMutex` 가 지킵니다. */
+        struct BuildNotice
+        {
+            string _targetName;                ///< 끝난 빌드의 타깃(비면 전체 빌드)
+            bool   _bInProgress{ false };      ///< 빌드가 도는 중이다
+            bool   _bFinishedPending{ false }; ///< 끝났는데 `update` 가 아직 처리하지 않았다
+            bool   _bSucceeded{ false };       ///< 끝난 빌드가 성공했다
+        };
+
+        /** @brief 끝난 빌드를 게임 스레드에서 처리합니다. 빌드가 도는 중이면 true 입니다(그동안 변경을 올리지 않는다). */
+        bool consumeBuildNotice();
+
         unordered_map<string, ModuleContext> _mapModule;
         vector<string>                       _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈 이름(내리지 않는다)
         unique_ptr<IFileWatcher>             _fileWatcher;
+        mutable mutex                        _buildMutex;
+        BuildNotice                          _buildNotice;
         OnBeforeCommitBatchDelegate          _onBeforeCommitBatch;
         DrainWorkersDelegate                 _drainWorkers;
         vector<DeferredUnloadImage>          _listDeferredUnloadImage; ///< 언로드를 미룬 옛 이미지. 오래된 것부터

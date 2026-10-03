@@ -76,6 +76,8 @@ namespace sw
     private:
         void   runBuildThread( const string& targetName );
         string findBuildDirectory() const;
+        /** @brief 빌드가 끝났음을 리로드 관리자에 넘깁니다(빌드 스레드에서, 모든 끝 경로가 한 번씩). */
+        void notifyBuildFinished( bool bSucceeded, const string& targetName );
 
     private:
         /// @brief 빌드가 끝나면 리로드를 걸 대상입니다. Shipping 에는 핫 리로드가 없어 아무도 읽지 않지만,

@@ -463,6 +463,8 @@ namespace sw
               nullptr
 #endif
           }
+        , _buildMutex{}
+        , _buildNotice{}
         , _onBeforeCommitBatch{}
         , _drainWorkers{}
         , _listDeferredUnloadImage{}
@@ -639,6 +641,50 @@ namespace sw
         ctx._bForceReload     = true;
     }
 
+    void LiveReloadManager::notifyBuildStarted()
+    {
+        std::scoped_lock<mutex> lock( _buildMutex );
+        _buildNotice._bInProgress = true;
+    }
+
+    void LiveReloadManager::notifyBuildFinished( bool bSucceeded, string_view targetName )
+    {
+        std::scoped_lock<mutex> lock( _buildMutex );
+        _buildNotice._bInProgress      = false;
+        _buildNotice._bFinishedPending = true;
+        _buildNotice._bSucceeded       = bSucceeded;
+        _buildNotice._targetName       = string( targetName );
+    }
+
+    bool LiveReloadManager::consumeBuildNotice()
+    {
+        BuildNotice notice;
+        {
+            std::scoped_lock<mutex> lock( _buildMutex );
+            notice                         = _buildNotice;
+            _buildNotice._bFinishedPending = false;
+        }
+        if ( notice._bFinishedPending )
+        {
+            if ( notice._bSucceeded == false )
+            {
+                // 실패한 빌드가 다시 쓴 모듈은 반쯤 된 집합일 수 있다 — 올리지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 올라간다.
+                for ( auto& [name, ctx] : _mapModule )
+                {
+                    if ( ctx._bMtimeDebouncing || ctx._bForceReload )
+                        SW_LOG_WARNING( "Build failed - %# is not reloaded from its partial output", ctx._moduleName );
+                    ctx._bMtimeDebouncing = false;
+                    ctx._bForceReload     = false;
+                }
+            }
+            else if ( notice._targetName.empty() == false && _mapModule.find( notice._targetName ) != _mapModule.end() )
+            {
+                triggerReload( notice._targetName );
+            }
+        }
+        return notice._bInProgress;
+    }
+
     void LiveReloadManager::update()
     {
         vector<FileChangeEvent> listEvent;
@@ -672,9 +718,11 @@ namespace sw
             }
         }
 
+        // 이 프로세스가 시킨 빌드가 도는 동안은 변경을 모아 두기만 한다 — 연쇄 빌드의 반쯤 된 집합을 올리지 않는다(`notifyBuildStarted`).
+        const bool bBuildInProgress = consumeBuildNotice();
         for ( auto& [name, ctx] : _mapModule )
         {
-            if ( ctx._bMtimeDebouncing == false )
+            if ( ctx._bMtimeDebouncing == false || bBuildInProgress )
                 continue;
 
             ctx._debounceTimer.updateTimer();

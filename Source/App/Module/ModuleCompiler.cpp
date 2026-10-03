@@ -63,6 +63,11 @@ namespace sw
         _buildState.store( BuildState::Compiling, std::memory_order_relaxed );
         _buildTimer.resetTimer();
         _buildTimer.startTimer();
+#if !defined( SW_SHIPPING )
+        // 빌드가 쓰는 모듈을 하나씩 올리지 않게 감시를 멈춘다 — 끝나면 `runBuildThread` 가 결과를 넘긴다.
+        if ( _pLiveReloadManager != nullptr )
+            _pLiveReloadManager->notifyBuildStarted();
+#endif
 
         _workerThread = std::thread( &ModuleCompiler::runBuildThread, this, string( targetName ) );
         return true;
@@ -121,6 +126,7 @@ namespace sw
             SW_LOG_ERROR( "Failed to find build directory for compilation!" );
             _buildState.store( BuildState::Failed, std::memory_order_relaxed );
             _lastExitCode.store( -1, std::memory_order_relaxed );
+            notifyBuildFinished( false, targetName );
             _bIsCompiling.store( false, std::memory_order_relaxed );
             return;
         }
@@ -142,6 +148,7 @@ namespace sw
             SW_LOG_ERROR( "Failed to launch CMake process! Command: %#", cmdLine.c_str() );
             _buildState.store( BuildState::Failed, std::memory_order_relaxed );
             _lastExitCode.store( -1, std::memory_order_relaxed );
+            notifyBuildFinished( false, targetName );
             _bIsCompiling.store( false, std::memory_order_relaxed );
             return;
         }
@@ -195,11 +202,6 @@ namespace sw
         {
             _buildState.store( BuildState::Success, std::memory_order_relaxed );
             SW_LOG_INFO( "Compilation succeeded in %#s (target: %#)!", Fmt( static_cast<float64>( durationSec ), Format().precision( 2 ) ), targetDisplayName.c_str() );
-
-#if !defined( SW_SHIPPING )
-            if ( _pLiveReloadManager != nullptr && targetName.empty() == false )
-                _pLiveReloadManager->triggerReload( targetName );
-#endif
         }
         else
         {
@@ -216,6 +218,19 @@ namespace sw
             }
         }
 
+        notifyBuildFinished( _buildState.load( std::memory_order_relaxed ) == BuildState::Success, targetName );
         _bIsCompiling.store( false, std::memory_order_relaxed );
+    }
+
+    void ModuleCompiler::notifyBuildFinished( bool bSucceeded, const string& targetName )
+    {
+#if !defined( SW_SHIPPING )
+        // 빌드 스레드다 — 리로드는 여기서 하지 않고 넘기기만 한다. 게임 스레드의 `LiveReloadManager::update` 가 처리한다.
+        if ( _pLiveReloadManager != nullptr )
+            _pLiveReloadManager->notifyBuildFinished( bSucceeded, targetName );
+#else
+        (void)bSucceeded;
+        (void)targetName;
+#endif
     }
 } // namespace sw
