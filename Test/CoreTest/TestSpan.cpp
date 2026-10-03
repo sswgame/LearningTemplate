@@ -48,7 +48,7 @@ namespace
 
 /**
  * @brief [SpanTest] vector_reference<const T> 인자 하나가 vector · small_vector · array · 표준 컨테이너 · C 배열 · 포인터 + 개수를 모두 받는다
- * @details `const vector<T>&` 로 받으면 `small_vector` 는 할당자가 달라 넘길 수 없었다. 이것이 span 을 둔 이유다.
+ * @details `const vector<T>&` 로 받으면 `small_vector` 는 할당자가 달라 넘길 수 없다. 이것이 span 을 둔 이유다.
  */
 SW_TEST_CASE( SpanTest, AcceptsEveryContiguousContainer )
 {

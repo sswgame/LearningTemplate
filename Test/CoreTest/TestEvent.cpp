@@ -270,8 +270,8 @@ SW_TEST_CASE( EventTest, FrameAllocatorOverflowFallback )
 
 /**
  * @brief [EventTest] `clear()` 는 큐에 남은 이벤트를 **파괴하고** 버린다
- * @details `processEvents` 는 방송한 뒤 `pEvent->~IEvent()` 를 부르는데, `clear()` 는 큐 맵만
- *          비우고 아레나를 되감았다. 이벤트는 아레나에 placement new 로 올라가므로, 소멸자를
+ * @details `processEvents` 는 방송한 뒤 `pEvent->~IEvent()` 를 부른다. `clear()` 가 큐 맵만
+ *          비우고 아레나를 되감으면 안 된다. 이벤트는 아레나에 placement new 로 올라가므로, 소멸자를
  *          부르지 않으면 **멤버가 든 힙이 그대로 샌다**(게임플레이 이벤트는 `sw::string` 을 든다).
  *          소멸자가 도는지를 살아 있는 개수로 본다.
  */
@@ -299,7 +299,7 @@ SW_TEST_CASE( EventTest, ClearDestroysQueuedEvents )
 
 /**
  * @brief [EventTest] 디스패처가 죽을 때도 큐에 남은 이벤트를 파괴한다
- * @details `clear()` 와 같은 구멍이 소멸자에도 있었다. 종료 시점에 큐가 비어 있지 않으면 그대로 샌다.
+ * @details `clear()` 와 같은 계약이다. 소멸자가 큐에 남은 이벤트를 파괴하지 않으면 종료 시점에 그대로 샌다.
  */
 SW_TEST_CASE( EventTest, DestructorDestroysQueuedEvents )
 {
@@ -412,8 +412,8 @@ SW_TEST_CASE( EventTest, ReleaseCodeWithinDropsTheSubscriptionsAndEntriesTheImag
 
 /**
  * @brief [EventTest] 버스 스레드는 큐를 비우는 스레드다 — 주인이 정해지기 전에는 어느 스레드든, 정해진 뒤에는 그 스레드만 바로 발행할 수 있다
- * @details 바로 알리고 싶은 쪽(`GameEventUtil::send`)이 `publish` 와 `push` 를 고르는 물음이다. 주인은 예전에는 Debug 에서만 기억해(단언용) 배포본에서
- *          물을 수 없었다 — 그래서 게임플레이 이벤트는 늘 큐로 실려 한 프레임 늦었다.
+ * @details 바로 알리고 싶은 쪽(`GameEventUtil::send`)이 `publish` 와 `push` 를 고르는 물음이다. 주인을 Debug 에서만 기억하면(단언용) 배포본에서
+ *          물을 수 없어 게임플레이 이벤트가 늘 큐로 실려 한 프레임 늦는다.
  */
 SW_TEST_CASE( EventTest, BusThreadIsTheThreadThatProcessesEvents )
 {

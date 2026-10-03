@@ -14,7 +14,7 @@
 SW_TEST_CASE( TimeTest, CPUTimerBasic )
 {
     sw::CpuTimer timer;
-    // 생성자는 중지 상태로 둔다 (헤더가 처음부터 그렇게 적고 있었다).
+    // 생성자는 중지 상태로 둔다(헤더의 계약).
     SW_EXPECT_TRUE( timer.isStopped() );
 
     timer.resetTimer();
@@ -45,10 +45,9 @@ SW_TEST_CASE( TimeTest, ScopeCpuTimerBasic )
 
 /**
  * @brief [TimeTest] 만들자마자 start 해도 첫 델타가 부팅 이후 시간이 되지 않는다
- * @details 생성자는 "중지 상태로 둡니다" 라고 적혀 있었는데 실제로는 **돌고 있었다**. 그래서
- *          `startTimer()` 가 `if ( _bStopped )` 에 걸려 아무 일도 하지 않았고, `_prevTime` 이 0 인 채로
- *          첫 `updateTimer()` 가 돌아 델타가 **QPC 기준점 이후 전체 시간**이 됐다. 호출부 다섯 곳이
- *          전부 `resetTimer()` 를 먼저 불러서 가려져 있었을 뿐이다.
+ * @details 생성자가 타이머를 돌고 있는 상태로 두면 `startTimer()` 가 `if ( _bStopped )` 에 걸려 아무 일도 하지 않고,
+ *          `_prevTime` 이 0 인 채로 첫 `updateTimer()` 가 돌아 델타가 **QPC 기준점 이후 전체 시간**이 된다.
+ *          호출부가 `resetTimer()` 를 먼저 부르면 가려진다.
  */
 SW_TEST_CASE( TimeTest, FreshTimerDoesNotReportTimeSinceBoot )
 {

@@ -95,8 +95,8 @@ SW_TEST_CASE( GlobalVariableTest, ModificationAndReset )
 
 /**
  * @brief [GlobalVariableTest] 불리언이 아닌 글은 불리언 변수를 바꾸지 않는다
- * @details 정수 · 실수는 읽지 못하면 실패였는데 불리언만 `parseBool( text, false )` 로 무엇이든 받아, `-gv_x=ture` · 프리셋의 "enabled" 가 조용히
- *          그 변수를 껐다. 이제 실패를 돌려주고 값은 그대로다(명령줄 적용은 실패를 경고한다).
+ * @details 불리언도 정수 · 실수처럼 읽지 못하면 실패를 돌려주고 값은 그대로다(명령줄 적용은 실패를 경고한다). `parseBool( text, false )` 로
+ *          무엇이든 받으면 `-gv_x=ture` · 프리셋의 "enabled" 가 조용히 그 변수를 끈다.
  */
 SW_TEST_CASE( GlobalVariableTest, BooleanTextThatIsNotABooleanIsRefused )
 {
@@ -152,7 +152,7 @@ SW_TEST_CASE( GlobalVariableTest, CommandLineIntegration )
 {
     GlobalVariableFixture fixture;
     // 부분 CommandLineManager 에서 GlobalVariableManager::updateFromCommandLine 을 쓰지 않는다.
-    // CLI 맵에 GV 이름이 없으면 getArgument 가 assert 한다(과거 flake/abort).
+    // CLI 맵에 GV 이름이 없으면 getArgument 가 assert 한다.
     // 테스트 대상 변수만 파싱한 뒤 setValueFromString 으로 적용한다.
     sw::CommandLineManager cmd;
     cmd.initialize();
@@ -244,7 +244,7 @@ SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
  * @details 패널은 이름을 훑어 포인터를 모아 두었다가 한 번에 그린다 — 헤더가 권하는 사용법이다.
  *          그런데 `sw::unordered_map` 은 밀집 배열이라 삽입하면 재할당으로 **모든** 원소가, 삭제하면
  *          swap-and-pop 으로 **마지막 원소가** 옮겨 간다. 값을 그대로 담고 그 주소를 내주면 그 포인터가
- *          조용히 다른 변수를 가리키거나 죽은 자리를 가리킨다. 값을 `unique_ptr` 로 들어 막았다.
+ *          조용히 다른 변수를 가리키거나 죽은 자리를 가리킨다. 그래서 값을 `unique_ptr` 로 든다.
  */
 SW_TEST_CASE( GlobalVariableTest, FoundPointerSurvivesOtherRegistrations )
 {

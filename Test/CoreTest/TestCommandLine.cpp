@@ -18,7 +18,7 @@ SW_TEST_CASE( CommandLineTest, WindowSizeHasNoCommandLineDefault )
 
     // 창 크기의 기본값은 EngineConfig 가 갖는다. 여기서 기본값을 돌려주면 호출부의
     //   h = config._window._height;  getArgument( HEIGHT, h );
-    // 가 설정값을 항상 덮어쓴다 — 실제로 1280×720 설정이 무시되고 1280×1280 으로 떴다.
+    // 가 설정값을 항상 덮어쓴다 — 1280×720 설정이 무시되고 1280×1280 으로 뜬다.
     int32 width{ -1 };
     SW_EXPECT_FALSE( cmdManager.getArgument( sw::CommandLineArgument::WIDTH, width ) );
     SW_EXPECT_EQUAL( -1, width );
@@ -252,10 +252,8 @@ SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )
 
 /**
  * @brief [CommandLineTest] 주지 않은 단독 플래그를 "주었다" 로 읽지 않는다
- * @details 백엔드 플래그 넷과 ENABLE_EDITOR 만 `bUseDefaultValue` 가 켜져 있었다. 기본값이 `false`
- *          라 값 자체는 맞았지만 `getArgument` 가 **주지 않은 인자에도 true** 를 돌려줘, 반환값만으로는
- *          어느 백엔드를 고르라는 것인지 알 수 없었다 — `RHI.cpp` 가 `getArgument(...) && bFlag` 로
- *          한 번 더 묻는 것이 그 흔적이다. 같은 파일의 VSYNC 는 처음부터 꺼져 있었다.
+ * @details 단독 플래그에 `bUseDefaultValue` 를 켜면 기본값이 `false` 라 값 자체는 맞아도 `getArgument` 가
+ *          **주지 않은 인자에도 true** 를 돌려줘, 반환값만으로는 어느 백엔드를 고르라는 것인지 알 수 없다.
  */
 SW_TEST_CASE( CommandLineTest, UnprovidedFlagIsNotReadable )
 {
@@ -280,7 +278,7 @@ SW_TEST_CASE( CommandLineTest, UnprovidedFlagIsNotReadable )
     SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::DIRECTX_12, bDx12 ) );
     SW_EXPECT_TRUE( bDx12 );
 
-    // 단독 플래그에 한해 두 질문의 답이 같아졌다.
+    // 단독 플래그에 한해 두 질문의 답이 같다.
     SW_EXPECT_TRUE( cmdManager.isArgumentProvided( sw::CommandLineArgument::DIRECTX_12 ) );
     SW_EXPECT_FALSE( cmdManager.isArgumentProvided( sw::CommandLineArgument::DIRECTX_11 ) );
 }
@@ -288,9 +286,8 @@ SW_TEST_CASE( CommandLineTest, UnprovidedFlagIsNotReadable )
 /**
  * @brief [CommandLineTest] "실제로 적혔는가" 와 "값을 읽을 수 있는가" 는 다르다
  * @details `getArgument` 는 기본값을 가진 인자라면 **안 적어도 true** 를 돌려준다. 그래서 그것만으로는
- *          "설정 파일 기본값보다 커맨드라인이 우선" 을 판단할 수 없다. 실제로 `EngineConfig` 의
- *          `_defaultRHI` 가 `-gv_rhiBackend` 를 조용히 덮고 있었다 — 커맨드라인이 아무 일도 안 하는
- *          것처럼 보였고 로그도 남지 않아, **네 백엔드를 검증했다고 믿은 것이 전부 한 백엔드**였다.
+ *          "설정 파일 기본값보다 커맨드라인이 우선" 을 판단할 수 없다. 이것으로 판단하면 설정 파일의 기본 백엔드가
+ *          `-gv_rhiBackend` 를 조용히 덮어, **네 백엔드를 검증했다고 믿은 것이 전부 한 백엔드**가 된다.
  */
 SW_TEST_CASE( CommandLineTest, ProvidedIsNotTheSameAsReadable )
 {
@@ -362,14 +359,10 @@ SW_TEST_CASE( CommandLineTest, EnumLookupMatchesStringLookup )
 
 /**
  * @brief [CommandLineTest] 값을 빠뜨린 비-bool 인자는 조용히 무시되지 않는다
- * @details 예전에는 "값 없이 적어도 되는가" 가 `_bMustHaveValue` 라는 **타입과 따로 노는 칸**이었다.
- *          `GlobalVariableManager::registerToCommandLine` 이 전역 변수 전부를 타입과 무관하게
- *          "값 없어도 됨" 으로 등록했으므로, 값을 빠뜨린 `-gv_benchMeshes` 가 int32 자리에
- *          **bool `true` 를 밀어 넣었다.** 그러면 `_bParsed` 는 켜지는데 `readValue` 의
- *          `get_if<int32>` 는 nullptr 이라, `getArgument` 가 기본값으로 돌아가지도 못하고 false 를
- *          돌려줬다 — 경고 한 줄 없이 **스위치가 아무 일도 안 했다.**
- *          이제는 값 없이 적을 수 있는 것이 bool 뿐이고(`ArgumentInfo::isFlagArgument`), 나머지는
- *          경고를 남기고 무시되므로 기본값이 그대로 살아 있다.
+ * @details 값 없이 적을 수 있는 것은 bool 뿐이고(`ArgumentInfo::isFlagArgument`), 나머지는 경고를 남기고 무시되므로
+ *          기본값이 그대로 살아 있다. "값 없이 적어도 되는가" 를 타입과 따로 정하면 값을 빠뜨린 `-gv_benchMeshes` 가
+ *          int32 자리에 **bool `true` 를 밀어 넣고**, `_bParsed` 는 켜지는데 `get_if<int32>` 가 nullptr 이라
+ *          `getArgument` 가 기본값으로 돌아가지도 못하고 false 를 돌려준다 — 경고 한 줄 없이 **스위치가 아무 일도 안 한다.**
  */
 SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
 {
@@ -381,7 +374,7 @@ SW_TEST_CASE( CommandLineTest, ValuelessNonBooleanArgumentKeepsItsType )
 
     utf8* argv[] = {
         const_cast<utf8*>( "App.exe" ),
-        const_cast<utf8*>( "-gv_benchMeshes" ),  // 값을 빠뜨렸다
+        const_cast<utf8*>( "-gv_benchMeshes" ),  // 값을 빠뜨린다
         const_cast<utf8*>( "-gv_startupScene" ), //
         const_cast<utf8*>( "-gv_lightRadius" ),  //
     };
@@ -452,8 +445,8 @@ SW_TEST_CASE( CommandLineTest, BooleanArgumentAcceptsBothForms )
  * @brief [CommandLineTest] initialize 는 앞서 넣은 인자에 밀려나지 않는다
  * @details 열거형 조회는 `_listArgument` 를 열거값으로 **바로 인덱싱**한다. 그 앞에 커스텀 인자가
  *          하나라도 들어가 있으면 표 전체가 한 칸씩 밀려 `getArgument(WIDTH)` 가 **그 커스텀 인자를
- *          읽는다.** 막는 것이 줄마다 걸린 assert 뿐이었고 그것은 Debug 에서만 산다 — Shipping 에서는
- *          아무 말 없이 다른 인자의 값이 나왔다. 이제 initialize 가 표를 먼저 비운다.
+ *          읽는다.** 줄마다 걸린 assert 는 Debug 에서만 산다 — Shipping 에서는 아무 말 없이 다른 인자의
+ *          값이 나온다. 그래서 initialize 가 표를 먼저 비운다.
  *
  *          비우기를 빼면 이 검사는 Debug 에서 assert 로 멈추고 Shipping 에서 아래 단언이 진다.
  */

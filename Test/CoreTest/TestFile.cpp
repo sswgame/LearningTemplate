@@ -90,7 +90,7 @@ SW_TEST_CASE( FileTest, CreateParentDirectoryMakesNestedFolders )
 
 /**
  * @brief [FileTest] 폴더를 만들지 못하면 false 이고 어느 폴더인지 알린다 — 길을 파일이 막고 있을 때
- * @details 예전에는 void 라 말이 없었다. 뒤따르는 쓰기가 "임시 파일을 열 수 없다" 로만 실패해 막힌 폴더를 알 수 없었다.
+ * @details 실패를 돌려주지 않으면 뒤따르는 쓰기가 "임시 파일을 열 수 없다" 로만 실패해 막힌 폴더를 알 수 없다.
  */
 SW_TEST_CASE( FileTest, DirectoryThatCannotBeCreatedSaysSo )
 {
@@ -147,10 +147,10 @@ SW_TEST_CASE( FileTest, FileStampReportsSizeAndNoticesChanges )
 /**
  * @brief [FileTest] 디렉터리 수집이 경로 대소문자 유지
  * @details collectFiles/collectFolders 는 **실제 파일시스템을 훑어** 경로를 만든다. 그래서 돌려준 경로는
- *          그대로 열 수 있어야 한다. 예전엔 결과를 normalizePath 로 통째 소문자화해서, 대소문자를 가리는
+ *          그대로 열 수 있어야 한다. 결과를 normalizePath 로 통째 소문자화하면, 대소문자를 가리는
  *          파일시스템(리눅스 CI)에서는 상위 디렉터리 이름(`/home/runner/work/LearningTemplate/.../Resource`)
- *          까지 소문자가 되어 열거한 파일을 곧바로 "File not found" 로 되돌려줬다. 윈도우에서는 파일이
- *          그냥 열려서 드러나지 않았으므로, 여기서는 **문자열이 만든 그대로인지**를 본다.
+ *          까지 소문자가 되어 열거한 파일이 곧바로 "File not found" 가 된다. 윈도우에서는 파일이
+ *          그냥 열려서 드러나지 않으므로, 여기서는 **문자열이 만든 그대로인지**를 본다.
  */
 SW_TEST_CASE( FileTest, CollectPreservesPathCase )
 {
@@ -205,8 +205,8 @@ SW_TEST_CASE( FileTest, WriteAndReadFile )
 /**
  * @brief [FileTest] 실행 파일 경로는 **실제로 있는 파일**을 가리킨다
  * @details 윈도우의 `GetModuleFileNameW` 는 버퍼가 모자라면 **잘라서** 돌려주고 그 사실을
- *          반환값으로만 알린다. 예전에는 260자 고정 버퍼에 담고 반환값을 보지 않았다 — 그보다
- *          깊은 경로에 설치되면 exe 위치가 조용히 틀려지고, 그 자리를 기준으로 찾는 모듈 DLL ·
+ *          반환값으로만 알린다. 260자 고정 버퍼에 담고 반환값을 보지 않으면 그보다
+ *          깊은 경로에 설치될 때 exe 위치가 조용히 틀려지고, 그 자리를 기준으로 찾는 모듈 DLL ·
  *          RHI 백엔드 · 셰이더 · 리소스가 **전부** "없다" 가 된다. 원인은 어디에도 남지 않는다.
  *
  *          260자를 넘는 설치 경로를 여기서 만들어 낼 수는 없으므로, 이 검사는 **정상 경로가
@@ -234,13 +234,9 @@ SW_TEST_CASE( FileTest, ExecutablePathPointsAtARealFile )
 
 /**
  * @brief [FileTest] 디렉터리 순회가 재귀·비재귀 모두 같은 규칙으로 걷는지 검증
- * @details `collectFiles` · `collectFolders` 는 같은 순회를 **네 벌**(파일/폴더 × 재귀/비재귀)로
- *          따로 적고 있었고, 넷 다 `std::error_code` 없이 순회자를 만들었다 — 권한이 없는 폴더나
- *          순회 중 지워진 폴더에서 **예외를 던진다.** 두 함수는 `bool` 로 실패를 알리는 약속이라
- *          그 예외가 호출부를 뚫고 나간다. 같은 파일의 `makeRelativePath` · `makeAbsolutePath` 는
- *          처음부터 `error_code` 를 받고 있었다.
- *
- *          넷을 헬퍼 하나로 모았으므로, 여기서는 그 헬퍼가 네 경우를 모두 예전과 같이 걷는지 본다.
+ * @details `collectFiles` · `collectFolders` 는 네 경우(파일/폴더 × 재귀/비재귀)를 헬퍼 하나로 걷는다.
+ *          순회자를 `std::error_code` 없이 만들면 권한이 없는 폴더나 순회 중 지워진 폴더에서 **예외를 던지고**,
+ *          `bool` 로 실패를 알리는 두 함수의 호출부를 뚫고 나간다. 여기서는 네 경우가 모두 같은 규칙으로 걷는지 본다.
  */
 SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
 {
@@ -316,7 +312,7 @@ SW_TEST_CASE( FileTest, LoadedImageRangeContainsTheAddress )
 
 /**
  * @brief [FileTest] 쓰기는 원자적이다: 다 쓴 뒤 바꿔 끼우고, 같은 폴더에 임시 파일을 남기지 않는다.
- * @details 예전 `writeTextFile` 은 원본을 "wb" 로 열어 그 자리에 쓰고 결과를 보지 않았다. 도중에 실패하면 원본이 빈 파일로 남았다.
+ * @details 원본을 "wb" 로 열어 그 자리에 쓰면 도중에 실패할 때 원본이 빈 파일로 남는다.
  */
 SW_TEST_CASE( FileTest, WriteReplacesAtomicallyAndLeavesNoTemporaryFile )
 {
@@ -346,7 +342,7 @@ SW_TEST_CASE( FileTest, WriteReplacesAtomicallyAndLeavesNoTemporaryFile )
 
 /**
  * @brief [FileTest] 쓰기가 실패하면 false 이고 원본은 그대로다.
- * @details 대상 자리에 폴더가 있으면 바꿔 끼울 수 없다. 예전 `writeTextFile` 은 어떤 실패에도 true 를 돌려줬다.
+ * @details 대상 자리에 폴더가 있으면 바꿔 끼울 수 없다 — 그 실패가 true 로 돌아오면 안 된다.
  */
 SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
 {
@@ -358,7 +354,7 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
     SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( blockedPath, "must-not-land" ) );
     SW_EXPECT_TRUE( sw::FileUtil::directoryExists( sw::FileUtil::joinPath( blockedPath, "child" ) ) );
 
-    // 폴더 안에 임시 파일을 남기지 않았다.
+    // 폴더 안에 임시 파일을 남기지 않는다.
     sw::vector<sw::string> listFile;
     sw::FileUtil::collectFiles( dir, "", listFile, false );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listFile.size() ) );
@@ -371,8 +367,8 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
 
 /**
  * @brief [FileTest] 한글이 들어간 경로도 쓰기 · 읽기 · 존재 확인 · 폴더 훑기가 같은 파일을 본다.
- * @details Windows 에서 좁은 문자 경로는 ANSI 코드 페이지(CP949)로 해석됐다. 읽기는 UTF-16 으로 바꿔 열어서, 사용자 폴더 이름이 한글이면
- *          `fileExists` 는 있다고 하는데 읽기는 "File not found" 였다. 실행 파일 매니페스트(activeCodePage=UTF-8)와 UTF-16 열기로 고쳤다.
+ * @details Windows 에서 좁은 문자 경로는 실행 파일 매니페스트(activeCodePage=UTF-8)가 없으면 ANSI 코드 페이지(CP949)로 해석된다. 경로 API 마다
+ *          해석이 다르면 사용자 폴더 이름이 한글일 때 `fileExists` 는 있다고 하는데 읽기는 "File not found" 가 된다.
  */
 SW_TEST_CASE( FileTest, NonAsciiPathRoundTrips )
 {
@@ -398,7 +394,7 @@ SW_TEST_CASE( FileTest, NonAsciiPathRoundTrips )
 }
 
 /**
- * @brief [FileTest] 범위 읽기의 오프셋 · 길이는 64 비트다(예전엔 uint32 라 4 GB 이상 파일이 조용히 잘렸다). 파일 끝을 넘는 오프셋은 실패다.
+ * @brief [FileTest] 범위 읽기의 오프셋 · 길이는 64 비트다(uint32 면 4 GB 이상 파일이 조용히 잘린다). 파일 끝을 넘는 오프셋은 실패다.
  */
 SW_TEST_CASE( FileTest, ReadRangeRespectsOffsetAndRejectsPastEnd )
 {
@@ -432,13 +428,12 @@ SW_TEST_CASE( FileTest, ProcessUsesUtf8AnsiCodePage )
 
 /**
  * @brief [FileTest] 다른 스레드가 읽는 동안 같은 파일을 계속 덮어써도, 읽는 쪽은 반쯤 쓴 파일을 한 번도 보지 않는다.
- * @details 예전 쓰기는 원본을 "wb" 로 열어(길이 0) 그 자리에 썼다. 그 사이에 읽으면 빈 파일이나 앞부분만 있는 파일을 "정상으로" 읽었다 —
- *          에디터가 저장하는 순간 핫 리로드 · 파일 감시가 읽으면 그렇게 됐다. 지금은 다 쓴 뒤 바꿔 끼우므로 읽는 쪽은 옛 파일 전체나 새 파일
- *          전체만 본다.
+ * @details 다 쓴 뒤 바꿔 끼우므로 읽는 쪽은 옛 파일 전체나 새 파일 전체만 본다. 원본을 "wb" 로 열어(길이 0) 그 자리에 쓰면 그 사이에
+ *          읽는 쪽이 빈 파일이나 앞부분만 있는 파일을 "정상으로" 읽는다 — 에디터가 저장하는 순간 핫 리로드 · 파일 감시가 읽으면 그렇게 된다.
  *
- *          읽기가 쓰기와 **겹쳐야** 시험이 된다. 예전에는 읽는 스레드를 띄우자마자 60 번을 썼는데, 붐비는 CI 러너(ctest 병렬)에서 그
- *          스레드가 쓰기가 다 끝날 때(65 ms)까지 한 번도 돌지 못해 "읽은 적 없음" 으로 졌다(2026-10-01, Windows Debug — 읽기 오류 줄도
- *          없었다). 이제 읽는 쪽이 돌기 시작한 뒤에 쓰고, 쓰는 동안 겹친 읽기를 세어 모자라면 더 쓴다.
+ *          읽기가 쓰기와 **겹쳐야** 시험이 된다. 주의: 읽는 스레드를 띄우자마자 쓰면 붐비는 CI 러너(ctest 병렬)에서 그 스레드가 쓰기가
+ *          다 끝날 때까지 한 번도 돌지 못해 "읽은 적 없음" 으로 진다. 그래서 읽는 쪽이 돌기 시작한 뒤에 쓰고, 쓰는 동안 겹친 읽기를 세어
+ *          모자라면 더 쓴다.
  */
 SW_TEST_CASE( FileTest, ReadersNeverObserveHalfWrittenFile )
 {

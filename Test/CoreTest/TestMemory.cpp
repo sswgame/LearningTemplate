@@ -325,8 +325,7 @@ SW_TEST_CASE( MemoryTest, FrameArenaNestedMarkers )
 
 /**
  * @brief [MemoryTest] 풀이 내주는 블록은 **16바이트 정렬**이다 (문서가 말하는 그 값)
- * @details 헤더가 오래 "포인터 크기 단위로 정렬" 이라고 적혀 있었지만 구현은 처음부터 16 이었다 —
- *          블록 크기도, 청크 헤더도, 기반 할당도 전부 16 이다. 그 차이는 SSE 타입을 담아도 되는가를
+ * @details 블록 크기도, 청크 헤더도, 기반 할당도 전부 16 이다. 이 값은 SSE 타입을 담아도 되는가를
  *          가르므로(읽는 사람이 직접 패딩을 붙이거나 아예 못 쓴다고 판단한다) 계약으로 못박는다.
  */
 SW_TEST_CASE( MemoryTest, PoolAllocatorHandsOutSixteenByteAlignedBlocks )
@@ -358,8 +357,8 @@ SW_TEST_CASE( MemoryTest, PoolAllocatorHandsOutSixteenByteAlignedBlocks )
 
 /**
  * @brief [MemoryTest] 스레드 안전 풀은 여러 스레드가 동시에 할당·해제해도 블록을 겹쳐 주지 않는다
- * @details 잠금을 `unique_lock{ mutex, defer_lock }` 으로 바꿨다 — 예전에는 이른 반환마다 unlock 을
- *          손으로 적었고(7곳) 하나만 빠져도 데드락이다. 그 교체가 상호 배제를 망가뜨리지 않았는지 본다.
+ * @details 잠금은 `unique_lock{ mutex, defer_lock }` 이다 — 이른 반환마다 unlock 을 손으로 적으면 하나만 빠져도
+ *          데드락이다. 그 잠금이 상호 배제를 지키는지 본다.
  */
 SW_TEST_CASE( MemoryTest, ThreadSafePoolNeverHandsOutTheSameBlockTwice )
 {
@@ -402,7 +401,7 @@ SW_TEST_CASE( MemoryTest, ThreadSafePoolNeverHandsOutTheSameBlockTwice )
 
 /**
  * @brief [MemoryTest] 담을 수 없는 크기는 **주소를 만들어 주지 않는다**
- * @details 할당기 셋이 모두 `size + 무언가` 로 크기를 정했다 — `size` 가 클수록 그 합이 **뒤집혀
+ * @details 할당기 셋이 모두 `size + 무언가` 로 크기를 정한다 — `size` 가 크면 그 합이 **뒤집혀
  *          작아진다.** 그러면 (1) 요청보다 작은 블록이 잡히고, (2) `오프셋 + size <= 용량` 검사가
  *          통과해 **블록 밖을 가리키는 주소**가 정상 할당인 척 돌아간다. 쓰는 순간 남의 메모리다.
  *          이런 크기는 어차피 할당될 수 없으므로 nullptr 로 끝내는 것이 맞다.
@@ -411,7 +410,7 @@ SW_TEST_CASE( MemoryTest, AbsurdSizesReturnNullInsteadOfAWrappedBlock )
 {
     constexpr size_t kNearMax = ~size_t( 0 ) - 8;
 
-    // 1) 아레나 — 예전에는 `size + alignment` 가 뒤집혀 작은 청크를 끝없이 늘렸다.
+    // 1) 아레나 — `size + alignment` 가 뒤집히면 작은 청크를 끝없이 늘린다.
     {
         sw::FrameArenaAllocator arena{ 4096 };
         SW_EXPECT_TRUE_MSG( arena.allocate( kNearMax, 64 ) == nullptr,
@@ -424,7 +423,7 @@ SW_TEST_CASE( MemoryTest, AbsurdSizesReturnNullInsteadOfAWrappedBlock )
         SW_EXPECT_TRUE( reinterpret_cast<uintptr_t>( pSmall ) % 16 == 0 );
     }
 
-    // 2) 선형 할당기 — 같은 함정이 블록 쪽에 있었다.
+    // 2) 선형 할당기 — 같은 함정이 블록 쪽에 있다.
     {
         sw::LinearAllocator linear{ 4096 };
         SW_EXPECT_TRUE_MSG( linear.allocate( kNearMax, 64 ) == nullptr,
@@ -449,10 +448,10 @@ SW_TEST_CASE( MemoryTest, AbsurdSizesReturnNullInsteadOfAWrappedBlock )
 
 /**
  * @brief [MemoryTest] 원소 개수 × 크기가 뒤집히면 **던진다** — 작은 블록을 내주지 않는다
- * @details `sw::Allocator<T>::allocate( n )` 은 `n * sizeof( T )` 로 바이트 수를 구했다. 그 곱이
+ * @details `sw::Allocator<T>::allocate( n )` 은 `n * sizeof( T )` 로 바이트 수를 구한다. 그 곱이
  *          뒤집히면 **요청보다 훨씬 작은 블록**이 잡히고, 호출부는 원소 n 개를 쓸 수 있다고 믿고
- *          그 밖으로 나간다. `vector::max_size()` 가 이미 이 한계(`SIZE_MAX / sizeof(T)`)를 말하고
- *          있었는데 아무도 강제하지 않았다. 표준 할당기가 같은 자리에서 던지는 이유가 이것이다.
+ *          그 밖으로 나간다. 한계는 `vector::max_size()` 와 같은 `SIZE_MAX / sizeof(T)` 다.
+ *          표준 할당기가 같은 자리에서 던지는 이유가 이것이다.
  */
 SW_TEST_CASE( MemoryTest, AllocatorRejectsElementCountThatOverflows )
 {
@@ -501,10 +500,10 @@ SW_TEST_CASE( MemoryTest, AllocatorRejectsElementCountThatOverflows )
 /**
  * @brief [MemoryTest] 풀의 자유 목록이 고리가 되지 않는지 검증(회귀 가드)
  * @details 같은 블록을 두 번 반납하면 `_pNext` 가 자기 자신을 가리켜 목록이 **자기 고리**가 된다 —
- *          그 뒤 모든 할당이 같은 블록을 돌려주고, 서로 다른 두 객체가 같은 주소에 앉는다. 이번
- *          훑기에서 실제로 겪었다(`GameObjectManager::destroyObject` 의 check-then-set 경쟁).
+ *          그 뒤 모든 할당이 같은 블록을 돌려주고, 서로 다른 두 객체가 같은 주소에 앉는다(파괴 경로의
+ *          check-then-set 경쟁이 이렇게 드러난다).
  *
- *          이제 Debug 에서는 `PoolAllocator::free` 가 **두 번째 반납 그 자리에서** 단언으로
+ *          Debug 에서는 `PoolAllocator::free` 가 **두 번째 반납 그 자리에서** 단언으로
  *          멈춘다(표식 하나로 O(1) 에 본다 — 목록을 훑으면 해제가 O(n) 이 된다). 그 단언은
  *          프로세스를 세우므로 테스트로 부를 수 없고, 여기서는 **정상 순환이 그대로인지**를
  *          지킨다: 한 바퀴 돌린 뒤 새로 받은 블록들이 전부 다른 주소여야 한다.
@@ -553,8 +552,8 @@ namespace
 
 /**
  * @brief [MemoryTest] `sw_new` 로 만든 과정렬 타입은 제 정렬로 잡히고, `sw_delete` 는 같은 힙 계열로 푼다.
- * @details 예전에는 `sw_new` 에 정렬 오버로드가 없어 64 바이트 정렬 타입(`ParallelGroup` 등)이 16 바이트 정렬로 잡혔고, `sw_delete` 는
- *          정렬 해제(`_aligned_free`)로 풀었다. 16 바이트 정렬 타입은 MSVC 의 `max_align_t` 가 8 이라 해제만 정렬 해제였다 — 힙이 깨진다.
+ * @details `sw_new` 에 정렬 오버로드가 없으면 64 바이트 정렬 타입(`ParallelGroup` 등)이 16 바이트 정렬로 잡힌다. 잡기와 풀기가 다른 힙 계열이면
+ *          (16 바이트 정렬 타입은 MSVC 의 `max_align_t` 가 8 이라 해제만 정렬 해제 `_aligned_free` 가 되는 식) 힙이 깨진다.
  */
 SW_TEST_CASE( MemoryTest, SwNewHonoursOverAlignmentAndMatchesSwDelete )
 {

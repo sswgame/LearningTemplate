@@ -73,7 +73,7 @@ namespace
 
 /**
  * @brief [TestFrameworkTest] 임시 파일 경로는 **프로세스마다 · 케이스마다** 다르다
- * @details 테스트들이 `%TEMP%/test_malformed.wav` 처럼 고정된 이름에 쓰고 있었다. 같은 테스트
+ * @details `%TEMP%/test_malformed.wav` 처럼 고정된 이름에 쓰면 안 된다. 같은 테스트
  *          실행 파일이 네 프리셋에서 각각 돌고 CI 는 그것들을 나란히 돌리므로, 한쪽의
  *          `removeFile` 이 다른 쪽이 방금 쓴 파일을 지울 수 있다. 확장자는 그대로 남아야
  *          한다 — 로더가 그것으로 형식을 고른다.
@@ -101,8 +101,8 @@ SW_TEST_CASE( TestFrameworkTest, TempPathIsUniquePerProcessAndPerCase )
 
 /**
  * @brief [TestFrameworkTest] 옆 케이스가 같은 파일 이름을 써도 경로가 겹치지 않는다
- * @details 실제로 `sw_test_scene_desc.bin` 을 두 케이스가 같이 쓰고 있었다. 순서대로 돌기는
- *          하지만 앞 케이스가 정리 전에 실패하면 뒤 케이스가 남은 파일을 읽는다.
+ * @details 두 케이스가 같은 파일 이름을 쓰면, 순서대로 돌기는 하지만 앞 케이스가 정리 전에 실패할 때
+ *          뒤 케이스가 남은 파일을 읽는다.
  */
 SW_TEST_CASE( TestFrameworkTest, TwoCasesAskingForTheSameFileNameGetDifferentPaths )
 {
@@ -343,7 +343,7 @@ SW_TEST_CASE( TestFrameworkTest, KnownErrorLogIsToleratedOnlyForItsSuiteAndText 
 
 /**
  * @brief [TestFrameworkTest] 단언 가로채기 안에서는 SW_ASSERT · SW_LOG_ASSERT 가 멈추지 않고 세어지며, 그 뒤 줄이 돈다
- * @details Debug 의 단언은 디버거에서 멈춘다 — 단언이 걸리는 입력을 시험할 길이 없었다. 겹쳐 건 가로채기도 바깥이 끝날 때까지 유지된다.
+ * @details Debug 의 단언은 디버거에서 멈춘다 — 가로채기가 없으면 단언이 걸리는 입력을 시험할 수 없다. 겹쳐 건 가로채기도 바깥이 끝날 때까지 유지된다.
  */
 SW_TEST_CASE( TestFrameworkTest, AssertCaptureCountsInsteadOfBreaking )
 {
@@ -392,8 +392,8 @@ SW_TEST_CASE( TestFrameworkTest, TempPathsOfACaseAreCreated )
 
 /**
  * @brief [TestFrameworkTest] 앞 케이스의 임시 경로는 그 케이스가 끝날 때 프레임워크가 지웠다
- * @details 예전에는 케이스마다 끝에서 `removeFile` 을 손으로 불렀고(193 곳), 단언으로 일찍 빠지면 그 줄에 닿지 않아 남았다 —
- *          이 PC 의 임시 폴더에 3,000 개 넘게 쌓여 있었다. 앞 케이스 없이 이것만 고르면 볼 것이 없어 건너뛴다.
+ * @details 케이스가 끝에서 `removeFile` 을 손으로 부르면 단언으로 일찍 빠질 때 그 줄에 닿지 않아 파일이 남는다.
+ *          앞 케이스 없이 이것만 고르면 볼 것이 없어 건너뛴다.
  */
 SW_TEST_CASE( TestFrameworkTest, TempPathsOfThePreviousCaseAreGone )
 {
@@ -444,8 +444,8 @@ SW_TEST_CASE( TestFrameworkTest, ChildProcessGetsItsEnvironmentAndOutputIsCaptur
 
 /**
  * @brief [TestFrameworkTest] 멈춘 자식은 시한에 죽고 그 사실이 남는다 — 테스트 실행 파일 전체가 CTest 시한까지 서 있지 않는다
- * @details 2026-10-01 CI 에서 크래시 자식 하나가 멈춰 CoreTest 가 30 초 시한까지 서 있다 졌다. 어느 크래시 종류였는지도,
- *          자식이 어디까지 갔는지도 남지 않았다. 시한이 없으면 이 케이스는 600 초를 기다린다.
+ * @details 자식 하나가 멈추면 시한 없이는 실행 파일 전체가 CTest 시한까지 서 있다 지고, 어느 자식이 어디까지 갔는지도
+ *          남지 않는다. 시한이 없으면 이 케이스는 600 초를 기다린다.
  */
 SW_TEST_CASE( TestFrameworkTest, HangingChildIsKilledAtTheDeadline )
 {
@@ -465,8 +465,8 @@ SW_TEST_CASE( TestFrameworkTest, HangingChildIsKilledAtTheDeadline )
 
 /**
  * @brief [TestFrameworkTest] 작업 스레드 여럿이 동시에 실패해도 실패는 하나도 빠지지 않고 깨지지 않는다
- * @details 단언은 `runParallel` 본문 · `std::thread` 람다에서도 불린다. 기록이 락 없는 `push_back` 이던 때는 둘이 동시에 실패하면
- *          벡터가 깨졌다 — 병렬 코드가 틀렸다는 것을 알려야 할 그 순간에 테스트 실행 파일이 죽거나 실패 수가 틀렸다.
+ * @details 단언은 `runParallel` 본문 · `std::thread` 람다에서도 불린다. 기록이 락 없는 `push_back` 이면 둘이 동시에 실패할 때
+ *          벡터가 깨진다 — 병렬 코드가 틀렸다는 것을 알려야 할 그 순간에 테스트 실행 파일이 죽거나 실패 수가 틀린다.
  *          (작업 스레드 안의 `SW_ASSERT_*` 는 그 람다만 끝낸다 — gtest 와 같다.)
  */
 SW_TEST_CASE( TestFrameworkTest, FailuresFromManyThreadsAreAllRecorded )

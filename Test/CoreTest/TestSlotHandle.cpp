@@ -234,7 +234,7 @@ SW_TEST_CASE( SlotHandleTableTest, ForgedGenerationDoesNotAliasTheOccupiedBit )
 
 /**
  * @brief [SlotHandleTableTest] `clear` 뒤에 새로 넣은 값을 비우기 전의 핸들로 꺼낼 수 없다.
- * @details 예전 `clear` 는 슬롯을 버리고 세대를 1 부터 다시 시작해, 비우기 전의 `(0, 1)` 핸들이 새 값으로 풀렸다.
+ * @details `clear` 가 슬롯을 버리고 세대를 1 부터 다시 시작하면 비우기 전의 `(0, 1)` 핸들이 새 값으로 풀린다.
  */
 SW_TEST_CASE( SlotHandleTableTest, ClearKeepsOldHandlesInvalid )
 {

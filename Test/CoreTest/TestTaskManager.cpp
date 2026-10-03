@@ -1,12 +1,7 @@
 /**
  * @file TestTaskManager.cpp
  * @brief TaskManager — 실행·의존성·병렬 분할·스테이지·메인 스레드 친화도·취소·동시 제출.
- * @details **이 파일이 없었다.** 1,355 줄짜리 동시성 핵심인데 `Test/CoreTest` 에 전용 케이스가
- *          하나도 없었고, `EngineTest` 의 다른 주제(AssetStreaming · Audio · GpuScene)를 통해
- *          간접적으로만 돌고 있었다. 그래서 스케줄러 자체의 결함은 테스트로 잡히지 않았다 —
- *          실제로 `scheduleReadyTask` 의 `notify_one` 결함(2026-09-20)이 그렇게 지나갔다.
- *
- *          여기서는 **스케줄러가 지켜야 하는 약속**만 본다: 낸 일은 반드시 돌고, 의존성 순서가
+ * @details 여기서는 **스케줄러가 지켜야 하는 약속**만 본다: 낸 일은 반드시 돌고, 의존성 순서가
  *          지켜지고, 병렬 분할이 빠짐없이 한 번씩 덮고, 스테이지 대기가 끝을 보장하고, 메인
  *          스레드 일감은 메인 스레드에서만 돌고, 취소된 일은 돌지 않는다.
  *
@@ -35,7 +30,7 @@ namespace
     /** @brief 누수 탐침이 한 번에 붙드는 스테이지 수. 풀이 재사용하지 못하게 전부 동시에 쥔다. */
     constexpr uint32 kLeakProbeStageCount = 32;
 
-    /** @brief 모두 깨우기 탐침의 워커 수. 워커가 많을수록 다시 잠든 워커를 쫓던 예전 결함이 잘 드러난다. */
+    /** @brief 모두 깨우기 탐침의 워커 수. 워커가 많을수록 다시 잠든 워커를 쫓는 결함이 잘 드러난다. */
     constexpr uint32 kWakeProbeWorkerCount = 12;
 
     /** @brief 모두 깨우기 탐침이 부르는 횟수. */
@@ -129,11 +124,10 @@ SW_TEST_CASE( TaskManagerTest, PrecedeKeepsTheDependencyOrder )
 /**
  * @brief [TaskManagerTest] 이미 제출한 태스크에 선행을 더 걸어도 그 태스크는 한 번만 돈다
  * @details 의존성 수는 제출로 0 이 되어 큐에 가고, 뒤늦은 `runBefore` 가 수를 1 로 올린 뒤 선행이 끝나며 **다시** 0 을
- *          지난다. 노드의 "큐에 넣었다" 문(`_bScheduled`)이 그 두 번째를 막는다. 예전의 5단 상태(`TaskState`)가
- *          남아 있던 이유가 이 문 하나였다 — 상태를 걷어낸 뒤에도 문은 지켜야 한다.
+ *          지난다. 노드의 "큐에 넣었다" 문(`_bScheduled`)이 그 두 번째를 막는다.
  *
  *          선행은 **본문이 도는 동안** 건다. 본문이 끝난 뒤라면 완료 처리가 호출 대상을 이미 비워서, 문이 없어도 두 번째
- *          실행은 빈 본문을 돌 뿐이라 보이지 않는다(문을 빼는 돌연변이로 확인했다). 본문이 도는 동안이면 두 번째 실행이
+ *          실행은 빈 본문을 돌 뿐이라 보이지 않는다. 본문이 도는 동안이면 두 번째 실행이
  *          다른 워커에서 같은 본문을 동시에 돈다.
  */
 SW_TEST_CASE( TaskManagerTest, PrecedeAfterSubmitDoesNotRunTheTaskTwice )
@@ -518,9 +512,9 @@ SW_TEST_CASE( TaskManagerTest, ConcurrentSubmitLosesNothing )
 
 /**
  * @brief [TaskManagerTest] 부서진 매니저는 자기 스테이지 노드를 돌려놓는다
- * @details 스테이지를 풀로 옮기면서 **풀 소멸자가 스테이지를 지우는 자리를 빠뜨렸다.** 스테이지는 재사용되므로
- *          돌고 있는 동안에는 새지 않고, 새는 것은 프로세스가 끝날 때다 — 그래서 윈도우에서는 아무 테스트도 지지
- *          않았고 리눅스 CI 의 LeakSanitizer 만 보고했다(`StageNode` + 태스크 목록 + 조건변수의 뮤텍스).
+ * @details 풀 소멸자가 스테이지를 지워야 한다. 스테이지는 재사용되므로 돌고 있는 동안에는 새지 않고, 새는 것은
+ *          프로세스가 끝날 때다 — 그래서 빠뜨려도 윈도우에서는 아무 테스트도 지지 않고 리눅스 CI 의 LeakSanitizer 만
+ *          보고한다(`StageNode` + 태스크 목록 + 조건변수의 뮤텍스).
  *
  *          여기서는 살아 있는 할당 수로 같은 것을 본다: 매니저를 세워 스테이지를 여럿 **동시에** 쥐었다 부수는
  *          한 바퀴를 돌고, 그 전후의 살아 있는 할당 수가 제자리로 돌아오는지 본다. 첫 바퀴는 워밍업이다 —
@@ -553,7 +547,7 @@ SW_TEST_CASE( TaskManagerTest, DestroyedManagerReturnsItsStageNodes )
  * @brief [TaskManagerTest] 스테이지를 기다리다 잠든 메인 스레드는 메인 전용 일감이 생기면 깨어난다
  * @details 메인은 자기 워드 하나에 잠든다. 그 스테이지의 워커 태스크가 뒤늦게 `MainThread` 친화도 태스크를 같은
  *          스테이지에 넣으면, 그 일감은 메인만 돌릴 수 있으므로 **메인을 깨우지 않으면 둘 다 영원히 기다린다.**
- *          예전에 조건 변수의 `notify_one` 이 엉뚱한 스레드를 깨워 실제로 멈췄던 자리다 — 지금은 메인이 잠들기 전에
+ *          조건 변수 하나에 `notify_one` 을 쓰면 엉뚱한 스레드가 깨어 멈춘다 — 그래서 메인이 잠들기 전에
  *          자기 슬롯을 적어 두고 메인 일감을 넣는 쪽이 그 슬롯을 깨운다. 그 길이 끊기면 이 케이스는 CTest 타임아웃으로 진다.
  */
 SW_TEST_CASE( TaskManagerTest, MainThreadTaskWakesParkedMainThread )
@@ -691,10 +685,10 @@ SW_TEST_CASE( TaskManagerTest, ParallelParentWithMainAffinityCompletesOnMainOnly
 
 /**
  * @brief [TaskManagerTest] 모두 깨우기는 부른 순간 잠들어 있던 워커만 깨우고 돌아온다
- * @details 할 일 없이 깨어난 워커는 스핀(2 us) 뒤 곧바로 다시 잠든다. 예전 루프는 워커 하나를 깨울 때마다 유휴 마스크를
- *          새로 읽어, 그렇게 다시 잠든 워커를 또 깨웠다. 깨우기 시스템 호출이 그 스핀보다 느린 곳(WSL)에서는 마스크가 비는
- *          순간이 좀처럼 오지 않아 호출 한 번이 1~90 초를 돌았다(`TaskManagerBenchTest.SmallTaskThroughput` 이 CTest
- *          타임아웃에 걸린 이유다). 일감 없이 여러 번 불러 전체 시간이 상한 안인지 본다. 상한을 넘으면 그 자리에서 멈춘다.
+ * @details 할 일 없이 깨어난 워커는 스핀(2 us) 뒤 곧바로 다시 잠든다. 루프가 워커 하나를 깨울 때마다 유휴 마스크를
+ *          새로 읽으면 그렇게 다시 잠든 워커를 또 깨운다. 깨우기 시스템 호출이 그 스핀보다 느린 곳(WSL)에서는 마스크가 비는
+ *          순간이 좀처럼 오지 않아 호출 한 번이 수십 초를 돈다. 일감 없이 여러 번 불러 전체 시간이 상한 안인지 본다.
+ *          상한을 넘으면 그 자리에서 멈춘다.
  */
 SW_TEST_CASE( TaskManagerTest, WakeAllDoesNotChaseWorkersThatSleepAgain )
 {
@@ -719,7 +713,7 @@ SW_TEST_CASE( TaskManagerTest, WakeAllDoesNotChaseWorkersThatSleepAgain )
 
 /**
  * @brief [TaskManagerTest] 이미 끝난 태스크에 `runBefore` · `whenAll` · `whenAny` 로 후속을 붙여도 후속은 돈다(유실 없음).
- * @details 예전에는 완료 쪽이 후속 목록을 훑고 난 뒤 붙은 후속이 영영 풀리지 않아 `waitAll` 과 종료가 멈췄다. 끝난 태스크의 목록은 닫혀
+ * @details 완료 쪽이 후속 목록을 훑고 난 뒤 붙은 후속은 영영 풀리지 않아 `waitAll` 과 종료가 멈춘다. 그래서 끝난 태스크의 목록은 닫혀
  *          있고, 붙이려는 쪽은 "이미 끝남" 을 듣고 의존을 되돌린다(언리얼 FGraphEvent 와 같다).
  */
 SW_TEST_CASE( TaskManagerTest, SuccessorAddedAfterCompletionStillRuns )
@@ -795,7 +789,7 @@ SW_TEST_CASE( TaskManagerTest, AbandonedTasksDoNotBlockWaitAll )
 
 /**
  * @brief [TaskManagerTest] 병렬 그룹의 본문(청크)은 부모에 건 `runAfter` 를 기다리고, 취소하면 돌지 않는다.
- * @details 예전에는 `emplaceParallel` 이 만드는 순간 티켓을 올려, 본문이 선행보다 먼저 돌고 취소도 듣지 않았다.
+ * @details `emplaceParallel` 이 만드는 순간 티켓을 올리면 본문이 선행보다 먼저 돌고 취소도 듣지 않는다.
  */
 SW_TEST_CASE( TaskManagerTest, ParallelBodyWaitsForPrerequisiteAndHonoursCancel )
 {
@@ -839,7 +833,7 @@ SW_TEST_CASE( TaskManagerTest, ParallelBodyWaitsForPrerequisiteAndHonoursCancel 
 
 /**
  * @brief [TaskManagerTest] 끝나는 비워커 스레드가 돌려준 도우미 슬롯을 다음 스레드가 다시 쓴다.
- * @details 예전에는 돌려받지 않아, 렌더 스레드를 다시 만들 때마다 새 칸을 받았고 상한(8)을 넘으면 칸을 나눠 써 스크래치가 겹쳤다.
+ * @details 돌려받지 않으면 렌더 스레드를 다시 만들 때마다 새 칸을 받고, 상한(8)을 넘으면 칸을 나눠 써 스크래치가 겹친다.
  */
 SW_TEST_CASE( TaskManagerTest, HelperSlotIsRecycledWhenThreadEnds )
 {

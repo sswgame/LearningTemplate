@@ -11,7 +11,7 @@
 
 /**
  * @brief [StringTest] 넓은 문자가 하위 한 바이트로 잘리지 않는다
- * @details 부호 확장을 막는다며 `uint8` 로 **고정**해 둔 것이 문제였다. 이 해시 템플릿은 `utf16`
+ * @details 부호 확장을 막으려고 `uint8` 로 **고정**하면 안 된다. 이 해시 템플릿은 `utf16`
  *          으로도 불리는데(`std::hash<fixed_wstring>`), 그러면 넓은 문자가 하위 한 바이트만 남는다 —
  *          한글처럼 상위 바이트가 의미를 갖는 문자열이 통째로 한 버킷에 뭉친다. 부호 없는 타입은
  *          맞되 **폭은 CharT 를 따라야** 한다.
@@ -27,7 +27,7 @@ SW_TEST_CASE( StringTest, WideCharHashIsNotTruncatedToOneByte )
     SW_EXPECT_TRUE( sw::StringUtil::computeHash64( arrWideA, 1 ) != sw::StringUtil::computeHash64( arrWideB, 1 ) );
     SW_EXPECT_TRUE( sw::StringUtil::computeHash32( arrWideA, 1 ) != sw::StringUtil::computeHash32( arrWideB, 1 ) );
 
-    // ASCII utf8 값은 예전 그대로여야 한다 — 셰이더 베이크 스탬프 같은 것이 이 값으로 디스크에 남는다.
+    // ASCII utf8 값은 바뀌면 안 된다 — 셰이더 베이크 스탬프 같은 것이 이 값으로 디스크에 남는다.
     SW_EXPECT_EQUAL( sw::StringUtil::kOffset64, sw::StringUtil::computeHash64( "", 0, false ) );
     SW_EXPECT_EQUAL( ( sw::StringUtil::kOffset64 ^ uint64{ 'a' } ) * sw::StringUtil::kPrime64,
                      sw::StringUtil::computeHash64( "a", 1, false ) );
@@ -153,8 +153,8 @@ SW_TEST_CASE( StringTest, HashedString )
 
 /**
  * @brief [StringTest] hashed_string 은 FName 규칙이다 — 같음은 대소문자 무시, 표시는 적은 철자 그대로, 순서는 사전순 · 빠른 순을 고른다
- * @details 처음 intern 된 철자가 모두에게 보였다 — "Hero" 를 먼저 만들면 `hashed_string( "hero" ).c_str()` 도 "Hero" 였다(에디터의 `hero` → `Hero`
- *          이름 바꾸기가 아무 일도 하지 않은 까닭). `operator<` 는 intern 순서인데 "사전순" 이라 적혀 있었다(실행마다 다른 순서).
+ * @details 표시 철자를 처음 intern 된 것 하나로 나눠 쓰면 "Hero" 를 먼저 만든 뒤 `hashed_string( "hero" ).c_str()` 도 "Hero" 가 되어
+ *          에디터의 `hero` → `Hero` 이름 바꾸기가 아무 일도 하지 않는다. `operator<` 가 intern 순서를 따르면 실행마다 순서가 달라진다.
  */
 SW_TEST_CASE( StringTest, HashedStringFollowsFNameRules )
 {
@@ -308,7 +308,7 @@ SW_TEST_CASE( StringTest, StringSplitter )
 }
 
 /**
- * @brief [StringTest] FixedString 동작
+ * @brief [StringTest] fixed_string 동작
  */
 SW_TEST_CASE( StringTest, FixedStringOperations )
 {
@@ -334,7 +334,7 @@ SW_TEST_CASE( StringTest, FixedStringOperations )
 }
 
 /**
- * @brief [StringTest] FixedString 전체 커버리지
+ * @brief [StringTest] fixed_string 전체 커버리지
  */
 SW_TEST_CASE( StringTest, FixedStringFullCoverage )
 {
@@ -366,9 +366,9 @@ SW_TEST_CASE( StringTest, FixedStringFullCoverage )
 
 /**
  * @brief [StringTest] 용량을 넘는 입력은 잘리고 버퍼 밖은 건드리지 않는다
- * @details 예전에는 단정으로 알리기만 하고 **원래 길이 그대로 복사**해서 `_arrData` 뒤(여기서는
- *          `_canary`)를 덮어썼다. 단정은 실행을 멈추지 않고 Shipping 에서는 사라지므로 그대로
- *          스택 오버플로였다. 이 테스트는 잘리는지(size)와 이웃을 안 건드리는지(canary)를 함께 본다.
+ * @details 단정으로 알리기만 하고 **원래 길이 그대로 복사**하면 `_arrData` 뒤(여기서는 `_canary`)를
+ *          덮어쓴다. 단정은 실행을 멈추지 않고 Shipping 에서는 사라지므로 그대로 스택 오버플로가 된다.
+ *          이 테스트는 잘리는지(size)와 이웃을 안 건드리는지(canary)를 함께 본다.
  */
 SW_TEST_CASE( StringTest, FixedStringTruncatesInsteadOfOverflowing )
 {
@@ -417,7 +417,7 @@ SW_TEST_CASE( StringTest, FixedStringTruncatesInsteadOfOverflowing )
         SW_EXPECT_EQUAL( kCanary, guarded._canary );
     }
 
-    // 4) 꽉 찬 뒤의 push_back 은 버려진다 (예전에는 _arrData[N + 1] 을 썼다)
+    // 4) 꽉 찬 뒤의 push_back 은 버려진다 (_arrData[N + 1] 을 쓰면 안 된다)
     {
         Guarded guarded{};
         guarded._canary = kCanary;
@@ -702,7 +702,7 @@ SW_TEST_CASE( StringTest, StringUtilHashingAndTransform )
 }
 
 /**
- * @brief [StringTest] FixedString 추가 고급 연산 (반복자, 비우기, 검색)
+ * @brief [StringTest] fixed_string 추가 고급 연산 (반복자, 비우기, 검색)
  */
 SW_TEST_CASE( StringTest, FixedStringExtendedOperations )
 {
@@ -804,7 +804,7 @@ SW_TEST_CASE( StringTest, Utf8BomHandling )
 }
 
 /**
- * @brief [StringTest] FixedString 다양한 생성자, 대입 및 assign 동작 검증
+ * @brief [StringTest] fixed_string 다양한 생성자, 대입 및 assign 동작 검증
  */
 SW_TEST_CASE( StringTest, FixedStringConstructorsAndAssignments )
 {
@@ -868,7 +868,7 @@ SW_TEST_CASE( StringTest, FixedStringConstructorsAndAssignments )
 }
 
 /**
- * @brief [StringTest] FixedString 비교 및 연산자 (==, !=, <, <=, >, >=, +, +=, <<, >>)
+ * @brief [StringTest] fixed_string 비교 및 연산자 (==, !=, <, <=, >, >=, +, +=, <<, >>)
  */
 SW_TEST_CASE( StringTest, FixedStringComparisonAndOperators )
 {
@@ -921,7 +921,7 @@ SW_TEST_CASE( StringTest, FixedStringComparisonAndOperators )
 }
 
 /**
- * @brief [StringTest] FixedString 최대 용량(N) 경계 조건 및 널 종단 무결성
+ * @brief [StringTest] fixed_string 최대 용량(N) 경계 조건 및 널 종단 무결성
  */
 SW_TEST_CASE( StringTest, FixedStringBoundaryAndMaxCapacity )
 {
@@ -942,7 +942,7 @@ SW_TEST_CASE( StringTest, FixedStringBoundaryAndMaxCapacity )
 }
 
 /**
- * @brief [StringTest] FixedString data() 버퍼 직접 변경 후 컨테이너 연산(insert, erase, append 등) 통합 검증
+ * @brief [StringTest] fixed_string data() 버퍼 직접 변경 후 컨테이너 연산(insert, erase, append 등) 통합 검증
  */
 SW_TEST_CASE( StringTest, FixedStringDirectMutationAndContainerOps )
 {
@@ -1023,7 +1023,7 @@ SW_TEST_CASE( StringTest, FixedWStringOperations )
 }
 
 /**
- * @brief [StringTest] FixedString의 std::unordered_map 및 std::unordered_set 연동 검증
+ * @brief [StringTest] fixed_string 의 std::unordered_map 및 std::unordered_set 연동 검증
  */
 SW_TEST_CASE( StringTest, FixedStringUnorderedContainers )
 {
@@ -1087,15 +1087,14 @@ SW_TEST_CASE( StringTest, FixedStringOperatorPlusWithCStringLhsAndSizeO1 )
 
 /**
  * @brief [StringTest] 표준 서식 지정자(정밀도·너비·플래그)를 formatstring 이 이해하는지
- * @details 예전에는 `%#` 과 맨 변환 문자(`%d`, `%f`)만 알아봤다. 그래서 `%.3f` 를 쓰면 `%.` 까지만
- *          플레이스홀더로 먹고 `3f` 가 글자로 남아 **조용히 틀린 출력**이 나왔다. 로그에서 소수점
- *          자릿수를 맞추려면 Fmt(v, Format().precision(3)) 를 써야 했는데, 그게 불편해서 서식을 넓혔다.
+ * @details `%#` 과 맨 변환 문자(`%d`, `%f`)만 알아보면 `%.3f` 가 `%.` 까지만 플레이스홀더로 먹히고
+ *          `3f` 가 글자로 남아 **조용히 틀린 출력**이 나온다.
  */
 SW_TEST_CASE( StringTest, FormatStringSupportsPrintfSpecifiers )
 {
     utf8 buffer[128]{};
 
-    // 정밀도 — 이게 예전에 깨지던 자리다.
+    // 정밀도 — `3f` 가 글자로 남으면 진다.
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%.3f", 3.14159f );
     SW_EXPECT_STREQ( "3.142", buffer );
 
@@ -1141,14 +1140,13 @@ SW_TEST_CASE( StringTest, FormatStringSupportsPrintfSpecifiers )
 
 /**
  * @brief [StringTest] 서식이 붙은 긴 문자열이 임시 버퍼 크기에서 잘리지 않는지
- * @details 값은 256바이트 스택 버퍼(kTempBufferSize)를 거쳐 문자열이 된다. 문자열 인자는 그 버퍼를
- *          건너뛰는 지름길이 있었는데 **서식 없는 경로에만** 있었다. 그래서 `%s` 는 멀쩡한데
- *          `%-20s` 처럼 폭을 주는 순간 256자에서 잘렸다 — 로그에서 긴 메시지의 꼬리가 사라지는,
- *          예전에 Vulkan 검증 메시지로 한 번 겪은 것과 같은 종류의 조용한 손실이다.
+ * @details 값은 스택 임시 버퍼(kTempBufferSize)를 거쳐 문자열이 된다. 문자열 인자가 그 버퍼를 건너뛰는
+ *          지름길이 **서식 없는 경로에만** 있으면 `%s` 는 멀쩡한데 `%-20s` 처럼 폭을 주는 순간 버퍼 크기에서
+ *          잘린다 — 로그에서 긴 메시지의 꼬리가 조용히 사라진다.
  */
 SW_TEST_CASE( StringTest, FormatStringLongTextSurvivesWidthSpec )
 {
-    // 임시 버퍼(256)보다 확실히 긴 문자열.
+    // 임시 버퍼(kTempBufferSize)보다 긴 문자열이어야 한다.
     sw::string longText;
     longText.reserve( 600 );
     for ( uint32 index = 0; index < 60; ++index )
@@ -1174,9 +1172,8 @@ SW_TEST_CASE( StringTest, FormatStringLongTextSurvivesWidthSpec )
 
 /**
  * @brief [StringTest] `%#` 은 옵션이 붙지 않는 순수 자리표다 — 뒤 글자는 무조건 리터럴, 서식은 printf 형으로.
- * @details `#` 뒤를 서식으로 읽던 시절엔 `%#x%#`(가로x세로)가 가로를 16진수로 찍고(1280 → 500, 16곳),
- *          `%#s`(초) 가 단위 `s` 를 삼키고(5곳), `%#.txt` 가 `.tx` 를 잃어 로그 파일이 `.txt` 없이 남았다.
- *          세 번 다 사고였고 그 문법을 쓰려던 사람은 없었다. 여기서 새 규약을 고정한다.
+ * @details `#` 뒤를 서식으로 읽으면 `%#x%#`(가로x세로)가 가로를 16진수로 찍고(1280 → 500), `%#s`(초) 가
+ *          단위 `s` 를 삼키고, `%#.txt` 가 `.tx` 를 잃어 로그 파일이 `.txt` 없이 남는다.
  */
 SW_TEST_CASE( StringTest, PlaceholderNeverTakesSpecifiers )
 {
@@ -1209,17 +1206,17 @@ SW_TEST_CASE( StringTest, PlaceholderNeverTakesSpecifiers )
     static_assert( sw::FormatString::countPlaceholders( "%#x%# %#s %#.txt" ) == 4 );
     SW_EXPECT_EQUAL( 2u, sw::FormatString::countPlaceholders( sw::string( "%#-%#" ) ) );
 
-    // 널 포인터는 종류와 무관하게 (null) — `nullptr` 리터럴과 널 `const utf8*` 는 예전엔 string_view 지름길에서
-    // strlen(nullptr) 로 죽었다(이 테스트가 처음 SEGFAULT 로 잡았다).
+    // 널 포인터는 종류와 무관하게 (null) — `nullptr` 리터럴과 널 `const utf8*` 가 string_view 지름길을 타면
+    // strlen(nullptr) 로 죽는다.
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%# %# %# %-8s|", nullptr, static_cast<const void*>( nullptr ),
                       static_cast<const utf8*>( nullptr ), static_cast<const utf8*>( nullptr ) );
     SW_EXPECT_STREQ( "(null) (null) (null) (null)  |", buffer );
 
-    // printf 서식 + Fmt 값 — 변환은 Fmt 의 서식(16진수), 너비는 서식 문자열. 예전엔 "[unsupported type]" 이었다.
+    // printf 서식 + Fmt 값 — 변환은 Fmt 의 서식(16진수), 너비는 서식 문자열. "[unsupported type]" 이 나오면 진다.
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "[%6d]", sw::Fmt( 255, sw::Format().hex() ) );
     SW_EXPECT_STREQ( "[    ff]", buffer );
 
-    // 실제로 깨져 있던 문장들 — 첫 글자가 변환 문자인 단어가 뒤에 온다.
+    // 로그에 쓰이는 문장들 — 첫 글자가 변환 문자인 단어가 뒤에 온다.
     sw::formatstring( buffer, static_cast<uint32>( sizeof( buffer ) ), "%# Passed, %# Failed", 3, 0 );
     SW_EXPECT_STREQ( "3 Passed, 0 Failed", buffer );
 
@@ -1286,14 +1283,14 @@ SW_TEST_CASE( StringTest, StristrStopsAtTerminator )
 /**
  * @brief [StringTest] 비-ASCII 바이트를 부호 없이 다룬다
  * @details `char` 의 부호성은 구현 정의이고, UTF-8 의 0x80 이상 바이트는 signed char 에서 음수다.
- *          그대로 int 로 넓히면 두 가지가 깨졌다:
+ *          그대로 int 로 넓히면 두 가지가 깨진다:
  *
- *          1. `compare` 가 한글처럼 비-ASCII 가 섞인 문자열을 ASCII 보다 **작다고** 답했다.
- *             `strcmp` 규약(부호 없는 바이트 비교)의 반대이고, 같은 함수의 대소문자 구분 경로는
- *             이미 `uint8` 로 비교하고 있어서 두 모드가 서로 다른 순서를 냈다.
- *          2. `computeHash64` 는 `bIgnoreCase` 경로만 부호 확장됐다(기본값이 true 다). 같은 바이트가
- *             경로에 따라 다른 값으로 해싱되고, `char` 가 unsigned 인 플랫폼에서는 해시 자체가
- *             달라진다.
+ *          1. `compare` 가 한글처럼 비-ASCII 가 섞인 문자열을 ASCII 보다 **작다고** 답한다.
+ *             `strcmp` 규약(부호 없는 바이트 비교)의 반대이고, 대소문자 구분 경로는 `uint8` 로
+ *             비교하므로 두 모드가 서로 다른 순서를 낸다.
+ *          2. `computeHash64` · `computeHash32` 의 `bIgnoreCase` 경로(기본값이 true 다)만 부호 확장되면
+ *             같은 바이트가 경로에 따라 다른 값으로 해싱되고, `char` 가 unsigned 인 플랫폼에서는
+ *             해시 자체가 달라진다.
  */
 SW_TEST_CASE( StringTest, NonAsciiBytesAreUnsigned )
 {
@@ -1306,7 +1303,7 @@ SW_TEST_CASE( StringTest, NonAsciiBytesAreUnsigned )
     SW_EXPECT_TRUE( sw::StringUtil::compare( korean, ascii, true ) > 0 );
     SW_EXPECT_TRUE( sw::StringUtil::compare( ascii, korean, true ) < 0 );
 
-    // 두 모드의 순서가 일치해야 한다 — 예전에는 ignoreCase 쪽만 뒤집혀 있었다.
+    // 두 모드의 순서가 일치해야 한다.
     const int32 sensitive   = sw::StringUtil::compare( korean, ascii, false );
     const int32 insensitive = sw::StringUtil::compare( korean, ascii, true );
     SW_EXPECT_TRUE( ( sensitive > 0 ) == ( insensitive > 0 ) );
@@ -1319,22 +1316,21 @@ SW_TEST_CASE( StringTest, NonAsciiBytesAreUnsigned )
     const uint64 hashExact  = sw::StringUtil::computeHash64( korean.c_str(), korean.size(), false );
     SW_EXPECT_EQUAL( hashExact, hashIgnore );
 
-    // **32비트 쌍둥이도 같아야 한다.** 예전 고침도, 그것을 지키는 이 테스트도 64비트에서 멈춰 있었다 —
-    // 그래서 `computeHash32` 의 bIgnoreCase 경로만 부호 확장된 채 남았다. 그 경로가 기본값이고,
+    // **32비트 쌍둥이도 같아야 한다.** `computeHash32` 의 bIgnoreCase 경로가 기본값이고,
     // `hashed_string` 의 intern 이 바로 그것을 쓴다.
     const uint32 hash32Ignore = sw::StringUtil::computeHash32( korean.c_str(), korean.size(), true );
     const uint32 hash32Exact  = sw::StringUtil::computeHash32( korean.c_str(), korean.size(), false );
     SW_EXPECT_EQUAL( hash32Exact, hash32Ignore );
 
-    // ASCII 는 예전 동작 그대로여야 한다(대문자만 접힌다).
+    // ASCII 는 대문자만 접힌다.
     SW_EXPECT_EQUAL( sw::StringUtil::computeHash64( "ABC", 3, true ), sw::StringUtil::computeHash64( "abc", 3, true ) );
     SW_EXPECT_TRUE( sw::StringUtil::computeHash64( "ABC", 3, false ) != sw::StringUtil::computeHash64( "abc", 3, false ) );
 }
 
 /**
- * @brief [StringTest] `%#` 바로 뒤의 `.확장자` 는 리터럴이다 — 로그 파일 이름이 `.txt` 를 잃던 자리.
- * @details `%#.txt` 를 "정밀도 0 + 길이 수식어 t + 16진수 x" 로 읽어 `.tx` 가 사라지고 `t` 만 남았다.
- *          이제 `%#` 은 두 글자만 소비한다. printf 형 정밀도(`%.2f`)와 `%#.%#`(버전 표기)은 그대로여야 한다.
+ * @brief [StringTest] `%#` 바로 뒤의 `.확장자` 는 리터럴이다 — 로그 파일 이름이 `.txt` 를 잃으면 안 된다.
+ * @details `%#.txt` 를 "정밀도 0 + 길이 수식어 t + 16진수 x" 로 읽으면 `.tx` 가 사라지고 `t` 만 남는다.
+ *          `%#` 은 두 글자만 소비한다. printf 형 정밀도(`%.2f`)와 `%#.%#`(버전 표기)은 그대로여야 한다.
  */
 SW_TEST_CASE( StringTest, FormatPlaceholderFollowedByExtensionIsLiteral )
 {
@@ -1354,7 +1350,7 @@ SW_TEST_CASE( StringTest, FormatPlaceholderFollowedByExtensionIsLiteral )
 }
 
 /**
- * @brief [StringTest] 큰 실수는 고정소수점 자릿수를 전부 담는다 — 예전엔 |x| ≥ 1e121 에서 uint64 캐스트 UB 폴백으로 떨어졌다.
+ * @brief [StringTest] 큰 실수는 고정소수점 자릿수를 전부 담는다 — |x| ≥ 1e121 에서 uint64 캐스트(UB)로 떨어지면 안 된다.
  * @details 1e300 의 double 값은 정수부 301자리(1000000000000000052504760255…)다. 그리고 값 변환은 목적지에 자리가 있으면
  *          바로 쓰고, 작은 버퍼에서는 임시를 거쳐 앞부분만 남긴다 — 두 경로의 결과가 같아야 한다.
  */
@@ -1377,11 +1373,10 @@ SW_TEST_CASE( StringTest, FormatStringHugeFloatAndDirectWrite )
 
 /**
  * @brief [StringTest] strncpy 가 플랫폼과 무관하게 **언제나 끝을 맺고** 넘치면 자르는지 검증
- * @details 예전에는 플랫폼마다 답이 달랐다. Windows 는 `strncpy_s( dst, length, src, length )`
- *          라 원본이 종결자까지 들어가지 않으면 목적지를 **빈 문자열로 만들고** 잘못된 파라미터
- *          핸들러를 부른다. Linux 는 `::strncpy` 라 `length` 글자를 복사하고 **종결자를
- *          붙이지 않는다** — 뒤이어 읽는 쪽이 버퍼 밖까지 훑는다. 이름은 "안전하게 복사" 인데
- *          어느 쪽도 그렇지 않았고, 같은 코드가 WSL 빌드에서 다르게 움직였다.
+ * @details 플랫폼 함수에 그대로 넘기면 답이 갈린다. Windows 의 `strncpy_s( dst, length, src, length )`
+ *          는 원본이 종결자까지 들어가지 않으면 목적지를 **빈 문자열로 만들고** 잘못된 파라미터
+ *          핸들러를 부른다. Linux 의 `::strncpy` 는 `length` 글자를 복사하고 **종결자를
+ *          붙이지 않는다** — 뒤이어 읽는 쪽이 버퍼 밖까지 훑는다.
  */
 SW_TEST_CASE( StringTest, StrncpyAlwaysTerminatesAndTruncates )
 {
@@ -1424,11 +1419,10 @@ SW_TEST_CASE( StringTest, StrncpyAlwaysTerminatesAndTruncates )
 
 /**
  * @brief [StringTest] fixed_string::erase 가 큰 길이에서 첨자를 접지 않는지 검증
- * @details 판정이 `pos + length >= currentSize` 였다. `npos` 가 아닌 큰 길이가 들어오면
+ * @details 판정을 `pos + length >= currentSize` 로 하면 `npos` 가 아닌 큰 길이가 들어올 때
  *          (끝-시작 이 뒤집힌 계산 같은 것) 그 합이 `uint32` 안에서 접혀 작은 수가 되고,
  *          "끝까지 지운다" 가 아니라 **범위 이동** 쪽으로 빠진다 — 거기서
- *          `_arrData + pos + length` 라는 엉뚱한 주소를 읽는다. 같은 파일의 `substr` 은
- *          처음부터 뺄셈 형태(`currentSize - pos`)였다.
+ *          `_arrData + pos + length` 라는 엉뚱한 주소를 읽는다. 뺄셈 형태(`currentSize - pos`)로 판정해야 한다.
  */
 SW_TEST_CASE( StringTest, FixedStringEraseWithHugeLengthDoesNotWrap )
 {
@@ -1458,9 +1452,9 @@ SW_TEST_CASE( StringTest, FixedStringEraseWithHugeLengthDoesNotWrap )
 
 /**
  * @brief [StringTest] 용량 0 으로 부른 formatstring 이 버퍼 밖에 쓰지 않는지 검증
- * @details 입구에 `SW_ASSERT( capacity > 0 )` 뿐이었다 — **Debug 밖에서는 통째로 사라진다.**
- *          그 뒤로 `capacity` 는 어디서나 `capacity - 1` 로 쓰이므로(남은 자리 계산, 종결자
- *          위치) 0 이면 그 뺄셈이 뒤집혀 4,294,967,295 가 되고, 길이 제한 없이 복사한다.
+ * @details 입구의 `SW_ASSERT( capacity > 0 )` 는 **Debug 밖에서는 통째로 사라진다.**
+ *          `capacity` 는 어디서나 `capacity - 1` 로 쓰이므로(남은 자리 계산, 종결자 위치)
+ *          가드가 없으면 0 에서 그 뺄셈이 뒤집혀 4,294,967,295 가 되고, 길이 제한 없이 복사한다.
  */
 SW_TEST_CASE( StringTest, FormatStringWithZeroCapacityWritesNothing )
 {
@@ -1481,9 +1475,8 @@ SW_TEST_CASE( StringTest, FormatStringWithZeroCapacityWritesNothing )
 
 /**
  * @brief [StringTest] `contains` 는 `startsWith` · `endsWith` 와 같은 규칙을 따른다
- * @details 셋은 같은 질문의 세 자리인데 **가운데만 없었다.** 그래서 부르는 쪽이
- *          `str.find( sub ) != npos` 로 손수 적었고 그때마다 `bIgnoreCase` 를 잃었다 —
- *          `zoneRoleFromMapPath` 가 그랬다. 빈 부분 문자열은 표준 `find` 와 같이 참이다.
+ * @details 셋은 같은 질문의 세 자리다. 가운데가 빠지면 부르는 쪽이 `str.find( sub ) != npos` 로
+ *          손수 적고 그때마다 `bIgnoreCase` 를 잃는다. 빈 부분 문자열은 표준 `find` 와 같이 참이다.
  */
 SW_TEST_CASE( StringTest, ContainsFollowsTheSameRulesAsItsTwoSiblings )
 {
@@ -1512,7 +1505,7 @@ SW_TEST_CASE( StringTest, ContainsFollowsTheSameRulesAsItsTwoSiblings )
 
 /**
  * @brief [StringTest] 정수 파서 셋(int32 · int64 · uint64)의 경계 — 부호 · 기수 접두사 · 최솟값 · 넘침 · 꼬리 글자
- * @details 셋이 같은 앞머리 처리(`splitIntegerToken`)를 쓰게 합치면서 그 규칙을 여기 못박는다. 최솟값은 절댓값이 최댓값 + 1 이라
+ * @details 셋이 같은 앞머리 처리(`splitIntegerToken`)를 쓰므로 그 규칙을 여기 못박는다. 최솟값은 절댓값이 최댓값 + 1 이라
  *          부호 없는 쪽으로 읽은 뒤 따로 다룬다 — 그 한 칸이 가장 틀리기 쉽다.
  */
 SW_TEST_CASE( StringTest, IntegerParsersShareSignPrefixAndRangeRules )
@@ -1562,8 +1555,8 @@ SW_TEST_CASE( StringTest, WideCaseMappingAndEqualsMatchNarrow )
 
 /**
  * @brief [StringTest] 잘못된 UTF-8 은 U+FFFD 로 바뀌고, 그 뒤의 글자를 삼키지 않는다.
- * @details 예전 `utf8ToUtf16` 은 검증 없이 비트만 이어 붙였다. 선두가 될 수 없는 바이트는 U+0000 이 되어 Win32 경로 API 에서 문자열이
- *          거기서 끊겼고, 연속 바이트를 확인하지 않아 잘린 시퀀스 뒤의 ASCII(`/` · `.`)를 삼켰다.
+ * @details `utf8ToUtf16` 이 검증 없이 비트만 이어 붙이면 선두가 될 수 없는 바이트가 U+0000 이 되어 Win32 경로 API 에서 문자열이
+ *          거기서 끊기고, 연속 바이트를 확인하지 않으면 잘린 시퀀스 뒤의 ASCII(`/` · `.`)를 삼킨다.
  */
 SW_TEST_CASE( StringTest, Utf8ToUtf16ReplacesInvalidBytesWithoutSwallowing )
 {
@@ -1612,7 +1605,7 @@ namespace
 
 /**
  * @brief [StringTest] 0 채움은 부호 뒤에 붙고, 부호 있는 열거형은 음수로 찍히고, 버퍼 끝에서는 UTF-8 글자 경계에서 자른다.
- * @details 예전에는 "%05d" 로 -42 가 "00-42", 열거형 -1 이 18446744073709551615 였고, 버퍼 끝에 걸친 한글 한 글자가 깨진 바이트로 남았다.
+ * @details 틀리면 "%05d" 로 -42 가 "00-42", 열거형 -1 이 18446744073709551615 가 되고, 버퍼 끝에 걸친 한글 한 글자가 깨진 바이트로 남는다.
  */
 SW_TEST_CASE( StringTest, FormatSignPaddingSignedEnumAndUtf8Truncation )
 {
@@ -1657,8 +1650,8 @@ SW_TEST_CASE( StringTest, FixedStringAndBuilderSelfReference )
 
 /**
  * @brief [StringTest] 부동소수 파서는 유한한 수만, 부호는 하나만 받는다
- * @details 예전에는 앞의 `+` 를 떼고 `from_chars` 에 넘겨 `"+-5"` 가 -5 가 됐고(`parseInt` 는 거절했다), "nan" · "inf" 도 성공이었다 — 설정 ·
- *          에셋의 그 글자가 트랜스폼 · 물리 값으로 조용히 흘러들었다(NaN 은 비교마다 거짓이라 범위 검사도 지나간다).
+ * @details 앞의 `+` 를 떼고 `from_chars` 에 넘기면 `"+-5"` 가 -5 가 되고(`parseInt` 는 거절한다), "nan" · "inf" 를 받으면 설정 ·
+ *          에셋의 그 글자가 트랜스폼 · 물리 값으로 조용히 흘러든다(NaN 은 비교마다 거짓이라 범위 검사도 지나간다).
  */
 SW_TEST_CASE( StringTest, FloatParsersAcceptOnlyFiniteNumbersWithOneSign )
 {
@@ -1678,7 +1671,7 @@ SW_TEST_CASE( StringTest, FloatParsersAcceptOnlyFiniteNumbersWithOneSign )
 
 /**
  * @brief [StringTest] 잘못된 UTF-8 바이트만 백슬래시 + `xNN` 으로 바뀌고 올바른 글자(한글 포함)는 그대로다 — 로그 한 줄이 통째로 깨지지 않는다
- * @details 로그는 한 바이트만 틀려도 줄 전체를 로캘 변환했다 — C 로캘이라 Windows 에서는 한글까지 깨졌고 glibc 에서는 줄이 비었다.
+ * @details 한 바이트만 틀려도 줄 전체를 로캘 변환하면 C 로캘이라 Windows 에서는 한글까지 깨지고 glibc 에서는 줄이 빈다.
  */
 SW_TEST_CASE( StringTest, EscapeInvalidUtf8KeepsValidText )
 {
@@ -1710,7 +1703,7 @@ SW_TEST_CASE( StringTest, LineAndColumnCountCharactersNotBytes )
 
 /**
  * @brief [StringTest] fixed_string 이 넘치는 글을 자를 때 글자 한가운데가 아니라 그 글자의 앞에서 자른다(UTF-8 · UTF-16)
- * @details 바이트 수로만 잘라 긴 한글 이름의 끝 글자가 반 토막(잘못된 UTF-8)으로 남았다 — 에디터는 `?` 로 그렸다.
+ * @details 바이트 수로만 자르면 긴 한글 이름의 끝 글자가 반 토막(잘못된 UTF-8)으로 남아 에디터가 `?` 로 그린다.
  */
 SW_TEST_CASE( StringTest, FixedStringTruncatesOnCharacterBoundary )
 {
@@ -1743,7 +1736,7 @@ SW_TEST_CASE( StringTest, FixedStringTruncatesOnCharacterBoundary )
 
 /**
  * @brief [StringTest] fixed_string 에 자기 버퍼 안쪽(포인터 · 뷰)을 대입해도 맞게 옮긴다
- * @details 시작 주소가 같은 자기 대입만 걸렀고, `s = s.c_str() + 2` 는 겹친 memcpy(정의되지 않은 동작)였다. Windows 의 memcpy 는 우연히 맞게 옮겨
+ * @details 시작 주소가 같은 자기 대입만 거르면 `s = s.c_str() + 2` 는 겹친 memcpy(정의되지 않은 동작)가 된다. Windows 의 memcpy 는 우연히 맞게 옮겨
  *          이 시험은 여기서 늘 통과한다 — 겹침은 리눅스 ASan CI(`memcpy-param-overlap`)가 잡는다.
  */
 SW_TEST_CASE( StringTest, FixedStringAssignFromItsOwnInterior )

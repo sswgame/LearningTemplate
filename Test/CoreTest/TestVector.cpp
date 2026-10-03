@@ -338,8 +338,8 @@ SW_TEST_CASE( VectorTest, InsertAcceptsAnElementOfItself )
 /**
  * @brief [VectorTest] 이동 삽입의 원본이 이 벡터 안의 원소여도 올바른 값이 들어가는지 검증
  * @details `insert( pos, count, value )` 는 값을 먼저 떠 두는데(그 주석에 `v.insert( v.begin(),
- *          3, v[0] )` 이 적법하다고 적혀 있다) **이동 오버로드만 그러지 않았다.**
- *          `push_back` 둘과 `emplace_back` 도 전부 떠 두므로, 이 한 판만 빠져 있었다.
+ *          3, v[0] )` 이 적법하다고 적혀 있다) **이동 오버로드도 그래야 한다.**
+ *          `push_back` 둘과 `emplace_back` 도 전부 떠 둔다.
  *
  *          재할당이 없어도 틀린다 — 밀기 루프가 `value` 가 가리키는 칸을 **먼저 덮기** 때문이다.
  *          재할당까지 겹치면 옛 버퍼가 해제된 뒤라 죽은 자리를 읽는다(ASAN).
@@ -359,7 +359,7 @@ SW_TEST_CASE( VectorTest, InsertMoveAcceptsAnElementOfItself )
         list.insert( list.begin(), std::move( list[2] ) );
 
         SW_ASSERT_EQUAL( size_t( 5 ), list.size() );
-        // 고치기 전에는 여기가 "bravo" 였다 — 밀기 루프가 index 2 를 이미 덮은 뒤였다.
+        // 값을 떠 두지 않으면 여기가 "bravo" 다 — 밀기 루프가 index 2 를 이미 덮은 뒤다.
         SW_EXPECT_STREQ( "charlie", list[0].c_str() );
         SW_EXPECT_STREQ( "alpha", list[1].c_str() );
         SW_EXPECT_STREQ( "bravo", list[2].c_str() );
@@ -386,9 +386,8 @@ SW_TEST_CASE( VectorTest, InsertMoveAcceptsAnElementOfItself )
 
 /**
  * @brief [VectorTest] 빈 벡터에서 `pop_back` 이 범위 밖을 건드리지 않는지 검증
- * @details `SW_ASSERT( _size > 0 )` 뿐이었다 — **Release 에서는 통째로 사라진다.** 그러면
+ * @details `SW_ASSERT( _size > 0 )` 는 **Release 에서는 통째로 사라진다.** 진짜 가드가 없으면
  *          `_pData[_size - 1].~T()` 의 첨자가 뒤집혀 `_pData[SIZE_MAX]` 의 소멸자를 부른다.
- *          바로 위 `erase` 가 같은 이유로 진짜 가드를 들고 있는데 이쪽은 없었다.
  */
 SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
 {
@@ -412,13 +411,11 @@ SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
 
 /**
  * @brief [VectorTest] 뒤집힌 이터레이터 쌍과 거대한 개수가 첨자를 접지 않는지 검증
- * @details 두 가드가 덧셈 형태였다 — `erase` 는 `offset + count > _size`, `insert` 는
- *          `_size + count > _capacity`. `size_t` 안에서 그 합이 넘치면 **작은 수로 접혀**
+ * @details 가드를 덧셈 형태로 쓰면 — `erase` 는 `offset + count > _size`, `insert` 는
+ *          `_size + count > _capacity` — `size_t` 안에서 그 합이 넘칠 때 **작은 수로 접혀**
  *          가드를 그냥 지나간다. `last < first` 인 이터레이터 쌍이면 `last - first` 가 음수라
  *          `count` 가 거대해지고(뒤집힌 뺄셈으로 만든 개수도 같다), 그 뒤 `_size - count` 와
- *          `fromIndex + count` 가 전부 범위 밖을 가리킨다.
- *
- *          같은 모양을 `fixed_string::erase` 에서도 고쳤다 — 이 저장소가 되풀이해 만난 형태다.
+ *          `fromIndex + count` 가 전부 범위 밖을 가리킨다(`fixed_string::erase` 도 같은 모양을 지킨다).
  */
 SW_TEST_CASE( VectorTest, ReversedRangeAndHugeCountDoNotWrap )
 {
@@ -520,7 +517,7 @@ SW_TEST_CASE( VectorTest, CopyAssignReusesElementStorage )
     // 대입이면 첫 원소의 버퍼가 그대로다 — 새로 만들었다면 주소가 바뀐다.
     SW_EXPECT_TRUE_MSG( target[0].data() == pFirstBufferBefore, "복사 대입이 원소를 새로 만들었다 — 안의 힙 용량이 버려진다" );
 
-    // 용량이 모자라면 예전처럼 늘린다.
+    // 용량이 모자라면 늘린다.
     sw::vector<sw::string> bigger;
     for ( uint32 index = 0; index < 8; ++index )
         bigger.emplace_back( "value-long-enough-to-leave-sso-behind" );
@@ -562,8 +559,8 @@ SW_TEST_CASE( VectorTest, RemoveSwapMovesTheLastElementIntoTheGap )
 
 /**
  * @brief [VectorTest] `resize( n, v[0] )` 처럼 자기 원소로 늘려도 값이 맞다. 범위 `insert` 는 넣은 첫 원소를 돌려준다.
- * @details 예전 `resize` 는 버퍼를 늘려 옛 버퍼를 해제한 뒤 `value`(옛 버퍼의 원소)를 복사했다. 범위 `insert` 는 늘어난 뒤 옛 `pos` 에서 새
- *          버퍼 주소를 빼 엉뚱한 반복자를 돌려줬다.
+ * @details `resize` 가 버퍼를 늘려 옛 버퍼를 해제한 뒤 `value`(옛 버퍼의 원소)를 복사하면 해제된 메모리를 읽는다. 범위 `insert` 가 늘어난 뒤
+ *          옛 `pos` 에서 새 버퍼 주소를 빼면 엉뚱한 반복자를 돌려준다.
  */
 SW_TEST_CASE( VectorTest, ResizeFromOwnElementAndRangeInsertIterator )
 {

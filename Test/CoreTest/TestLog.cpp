@@ -286,8 +286,8 @@ SW_TEST_CASE( LogTest, RuntimeVerbosityDropsLessSevere )
 
 /**
  * @brief [LogTest] Error/Warning 은 **모든 빌드**에 컴파일되는지
- * @details 예전에는 SW_DEBUG 가 아니면 매크로가 통째로 사라져 배포본에 로그가 하나도 없었다.
- *          이 단언이 그 회귀를 막는다 — 상한이 Warning 밑으로 내려가면 여기서 걸린다.
+ * @details SW_DEBUG 가 아닐 때 매크로가 통째로 사라지면 배포본에 로그가 하나도 없다.
+ *          상한이 Warning 밑으로 내려가면 여기서 걸린다.
  */
 SW_TEST_CASE( LogTest, ErrorAndWarningSurviveEveryBuild )
 {
@@ -497,9 +497,9 @@ SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
 /**
  * @brief [LogTest] 출력 장치 상한을 넘기면 **거절하고 경고한다** (조용히 삼키지 않는다)
  * @details 디스패치는 잠금 안에서 포인터만 고정 배열로 떠 와 락 밖에서 쓴다 — 느린 파일 I/O 가
- *          콘솔을 막지 않게 하는 분리다. 그 배열이 8개에서 잘리는데 `addOutput` 은 그 사실을 몰라서,
- *          9번째부터는 **받아서 `open` 까지 해 놓고 한 줄도 주지 않았다.** 붙인 자리에서는 보이지 않는
- *          실패다. 이제 상한에서 거절한다 — 그래서 "달린 장치는 반드시 받는다" 가 참이 된다.
+ *          콘솔을 막지 않게 하는 분리다. 그 배열은 상한에서 잘리므로 `addOutput` 이 상한을 넘는 장치를
+ *          **받아서 `open` 까지 해 놓으면 한 줄도 주지 못한다.** 붙인 자리에서는 보이지 않는 실패라
+ *          상한에서 거절한다 — 그래서 "달린 장치는 반드시 받는다" 가 참이 된다.
  */
 SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
 {
@@ -521,7 +521,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
     logger.writeLog( sw::LogLevel::Error, "Test", "Cap", "한 줄", __FILE__, __LINE__ );
     logger.shutdown();
 
-    // 거절되지 않고 달린 장치는 **전부** 그 줄을 받아야 한다. 예전에는 8번째 뒤로 0 이었다.
+    // 거절되지 않고 달린 장치는 **전부** 그 줄을 받아야 한다.
     uint32 attachedCount = 0;
     uint32 silentCount   = 0;
     for ( CountingLogOutput* pOutput : listAttached )
@@ -570,8 +570,8 @@ SW_TEST_CASE( LogTest, ReleaseListenerCodeWithinDropsOnlyThatRange )
 
 /**
  * @brief [LogTest] 잘못된 UTF-8 바이트가 섞인 줄은 그 바이트만 백슬래시 + `xNN` 이 되고, 나머지(한글 포함)는 그대로 파일 · 콘솔에 간다
- * @details 예전에는 한 바이트만 틀려도 줄 전체를 로캘 변환했다. 아무도 `setlocale` 을 부르지 않아 C 로캘이라, Windows 에서는 멀쩡한 한글까지
- *          바이트마다 다른 글자로 깨졌고 glibc 에서는 변환이 실패해 줄이 통째로 비었다.
+ * @details 한 바이트만 틀려도 줄 전체를 로캘 변환하면, 아무도 `setlocale` 을 부르지 않아 C 로캘이라 Windows 에서는 멀쩡한 한글까지
+ *          바이트마다 다른 글자로 깨지고 glibc 에서는 변환이 실패해 줄이 통째로 빈다.
  */
 SW_TEST_CASE( LogTest, InvalidUtf8ByteIsEscapedNotTheWholeLine )
 {
@@ -592,8 +592,8 @@ SW_TEST_CASE( LogTest, InvalidUtf8ByteIsEscapedNotTheWholeLine )
 
 /**
  * @brief [LogTest] 이름이 같은 두 파일(다른 폴더)의 로그 호출자 이름이 섞이지 않는다 — 구분자가 섞여도 같은 파일은 같다
- * @details 호출자 표는 파일 이름만 키로 썼다. `GameFramework/Base/SaveGame.cpp` 와 `Kits/TurnBattle/SaveGame.cpp` 가 같은 키라, 나중에 등록된
- *          "TurnBattleSaveGame" 이 두 파일의 로그에 모두 붙었다.
+ * @details 호출자 표가 파일 이름만 키로 쓰면 `GameFramework/Base/SaveGame.cpp` 와 `Kits/TurnBattle/SaveGame.cpp` 가 같은 키라, 나중에 등록된
+ *          "TurnBattleSaveGame" 이 두 파일의 로그에 모두 붙는다.
  */
 SW_TEST_CASE( LogTest, CallerNamesOfSameNamedFilesStayApart )
 {

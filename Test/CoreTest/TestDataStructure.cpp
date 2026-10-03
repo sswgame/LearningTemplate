@@ -414,8 +414,8 @@ SW_TEST_CASE( DataStructureTest, ConcurrentQueueMultiThread )
 
 /**
  * @brief [DataStructureTest] 다른 블록이 나가 있는 동안의 이중 반납도 잡는다 — 같은 블록이 두 번 나가지 않는다
- * @details 예전에는 자유 큐가 가득 찼을 때만(다른 블록이 모두 돌아와 있을 때만) 알아챘다. 다른 블록이 나가 있으면 두 번째 반납도 큐에
- *          들어가 같은 블록이 자유 목록에 두 번 들었고 소멸자도 두 번 돌았다 — 그 뒤 두 `acquire` 가 같은 메모리를 받았다.
+ * @details 자유 큐가 가득 찼을 때만(다른 블록이 모두 돌아와 있을 때만) 알아채면, 다른 블록이 나가 있는 동안의 두 번째 반납이 큐에
+ *          들어가 같은 블록이 자유 목록에 두 번 들고 소멸자도 두 번 돈다 — 그 뒤 두 `acquire` 가 같은 메모리를 받는다.
  *          Debug 의 `SW_LOG_ASSERT` 는 단언 가로채기 안에서 세어지고 그 뒤의 방어 경로가 돈다.
  */
 SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolCatchesDoubleReleaseWhileOthersAreOut )
@@ -1145,14 +1145,12 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetInvalidStringParsingSafety )
 
 /**
  * @brief [DataStructureTest] 네 연관 컨테이너 모두 **키를 만들지 않고** 찾는다
- * @details 0-Alloc 이종 검색은 `unordered_map.h` 가 계약으로 적어 둔 것인데, 넷 중 하나가 빠져 있었다:
- *          `unordered_set` 에는 이종 `find` 가 없어서 `string_view` 로 찾으면 **키를 하나 만들어서**
- *          찾았다(비교자 기본값은 이미 `std::equal_to<>` 였다 — 의도는 있었고 구현만 없었다).
+ * @details 0-Alloc 이종 검색은 `unordered_map.h` 가 계약으로 적어 둔 것이다. 이종 `find` 가 빠진 컨테이너는
+ *          `string_view` 로 찾을 때 **키를 하나 만들어서** 찾는다.
  *
- *          그리고 이 계약은 **빌드 옵션과 무관해야 한다.** `SW_ENABLE_STL_CONTAINER` 를 켜면
- *          `map`/`set` 은 `std::less<Key>`(비-transparent)로 별칭돼서, 같은 코드가 기본 빌드에서는
- *          컴파일되고 그 옵션에서는 안 됐다 — `unordered_map.h` 가 피하려고 적어 둔 바로 그 상황이다.
- *          지금은 두 경로 모두 `std::less<>` 다.
+ *          그리고 이 계약은 **빌드 옵션과 무관해야 한다.** `SW_ENABLE_STL_CONTAINER` 를 켠 경로도
+ *          `map`/`set` 이 `std::less<>` 여야 한다 — `std::less<Key>`(비-transparent)면 같은 코드가 기본 빌드에서는
+ *          컴파일되고 그 옵션에서는 안 된다.
  *
  * @note 이 케이스는 **컴파일되는 것 자체가 검사**다. 이종 오버로드가 사라지면 빌드가 선다.
  */
@@ -1387,7 +1385,7 @@ SW_TEST_CASE( DataStructureTest, StringHashAgreesAcrossKeyFormsAndSeparatesKeys 
 
 /**
  * @brief [DataStructureTest] `vector::resize( size() + 1 )` 를 되풀이해도 재할당은 로그 번이다
- * @details 예전엔 용량을 넘으면 딱 `count` 만 잡아서 한 칸 늘릴 때마다 통째로 옮겼다(N 번에 O(N^2), 20000 번에 1 us/회).
+ * @details 용량을 넘을 때 딱 `count` 만 잡으면 한 칸 늘릴 때마다 통째로 옮긴다(N 번에 O(N^2)).
  *          std::vector 처럼 두 배 이상으로 키우면 용량이 바뀌는 횟수는 log2(N) 남짓이다.
  */
 SW_TEST_CASE( DataStructureTest, VectorResizeByOneGrowsGeometrically )
@@ -1483,10 +1481,9 @@ SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolLosesNoBlockUnderContention )
 
 /**
  * @brief [DataStructureTest] 풀은 자기 블록만 자기 것이라고 말한다
- * @details `release` 가 남의 포인터를 **기다리지 않고** 가려내는 근거다. 예전에는 남의 포인터도
- *          "자리가 안 난다" 는 증상으로 알아냈는데, 그 증상은 경합 중인 **정상 반납**과 구별되지
- *          않는다 — 그래서 코어가 적은 CI 에서 진짜 반납이 그 단언에 걸려 프로세스가 죽었다.
- *          범위와 간격은 기다릴 필요 없이 확정된다.
+ * @details `release` 가 남의 포인터를 **기다리지 않고** 가려내는 근거다. 남의 포인터를 "자리가 안 난다" 는
+ *          증상으로 알아내면 그 증상이 경합 중인 **정상 반납**과 구별되지 않아, 코어가 적은 CI 에서 진짜 반납이
+ *          그 단언에 걸려 프로세스가 죽는다. 범위와 간격은 기다릴 필요 없이 확정된다.
  */
 SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolOwnsOnlyItsOwnBlocks )
 {
@@ -1519,8 +1516,8 @@ SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolOwnsOnlyItsOwnBlocks )
 
 /**
  * @brief [DataStructureTest] `try_emplace` 는 키가 있으면 인자를 건드리지 않고, 값을 괄호로 만든다. `map::upper_bound` 가 스칼라 키로 동작한다.
- * @details 예전 `try_emplace` 는 값을 먼저 만들어 넣어 보고 되돌려 키가 있어도 옮겨 받은 인자를 없앴고, 중괄호로 만들어 `try_emplace( k, 5 )` 가
- *          원소 하나(5)짜리 벡터가 됐다. `map` 비교자의 (키, 원소) 쪽은 키에서 `.first` 를 읽어 스칼라 키로 `upper_bound` 가 컴파일되지 않았다.
+ * @details `try_emplace` 가 값을 먼저 만들어 넣어 보고 되돌리면 키가 있어도 옮겨 받은 인자가 없어지고, 중괄호로 만들면 `try_emplace( k, 5 )` 가
+ *          원소 하나(5)짜리 벡터가 된다. `map` 비교자의 (키, 원소) 쪽이 키에서 `.first` 를 읽으면 스칼라 키로 `upper_bound` 가 컴파일되지 않는다.
  */
 SW_TEST_CASE( DataStructureTest, TryEmplaceKeepsArgumentsAndMapUpperBound )
 {

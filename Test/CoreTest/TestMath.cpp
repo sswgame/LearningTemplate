@@ -435,8 +435,8 @@ SW_TEST_CASE( MathTest, ProjectionWithZeroSpanStaysFinite )
 
 /**
  * @brief [MathTest] float3::transformVector 는 방향 변환이다 — 평행 이동은 무시하고 스케일 · 회전은 건다(법선 변환이 아니다)
- * @details 예전 이름 `transformNormal` 과 이 시험("비균등 스케일 변환 시 법선 직교성")은 축에 정렬된 Y 법선만 봐서 통과했다 — 기운 면의
- *          법선은 이 함수로 옮기면 면에서 기운다(셰이더가 같은 실수를 했다, R6). 법선은 역전치 행렬을 넘겨야 수직이 남는다.
+ * @details 축에 정렬된 법선만 보면 방향 변환과 법선 변환이 구별되지 않는다 — 기운 면의 법선은 이 함수로 옮기면 면에서 기운다
+ *          (셰이더에서도 같은 함정이다). 법선은 역전치 행렬을 넘겨야 수직이 남는다.
  */
 SW_TEST_CASE( MathTest, VectorTransformIsADirectionTransform )
 {
@@ -623,8 +623,8 @@ SW_TEST_CASE( MathTest, CreateTrsWithoutRotationMatchesIdentityQuaternion )
 
 /**
  * @brief [MathTest] 행렬식이 작아도 뒤집히는 행렬은 뒤집힌다. 거울 행렬의 분해 · 굴절 · nullptr 생성도 맞다.
- * @details 예전 `invert` 는 |det| < 1e-7 을 특이로 봐서, 균일 스케일 0.001(det 1e-9)이나 높이 200 인 직교 투영(det 5.6e-8)이 항등 행렬이 됐다.
- *          `decompose` 는 거울 행렬의 반사를 회전으로 봤고, `float3::refract` 는 선언만 있었다.
+ * @details `invert` 가 |det| 고정 문턱(1e-7 등)으로 특이를 판정하면 균일 스케일 0.001(det 1e-9)이나 높이 200 인 직교 투영(det 5.6e-8)이 항등 행렬이 된다.
+ *          `decompose` 는 거울 행렬의 반사를 회전으로 보면 안 된다.
  */
 SW_TEST_CASE( MathTest, SmallDeterminantMirrorRefractAndNullConstruct )
 {

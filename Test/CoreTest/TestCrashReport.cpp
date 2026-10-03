@@ -110,9 +110,8 @@ SW_TEST_CASE( CrashReportTest, ContextStoreOverwritesKeyAndDropsOverflowSafely )
 
 /**
  * @brief [CrashReportTest] 리포트가 "무엇을 보내면 되는지" 를 적고, 없는 덤프는 적지 않는다
- * @details 이 본문은 예전에 Windows 와 POSIX 가 각자 적고 있었고 이미 갈려 있었다 — 파일 목록이
- *          Windows 에만 있었고(리눅스 사용자는 리포트가 어디 났는지 알 수 없었다), 그 목록마저
- *          미니덤프를 **쓰지 못했을 때도** 적고 스택 파일은 아예 빠뜨렸다. 이제 한 곳에서 만든다.
+ * @details 본문은 Windows · POSIX 가 한 곳에서 만든다 — 플랫폼마다 따로 적으면 파일 목록이 한쪽에만 생기고,
+ *          미니덤프를 **쓰지 못했을 때도** 적거나 스택 파일을 빠뜨리는 식으로 갈린다.
  */
 SW_TEST_CASE( CrashReportTest, ReportListsFilesToSendAndSkipsTheDumpWhenThereIsNone )
 {
@@ -172,7 +171,7 @@ SW_TEST_CASE( CrashReportTest, SessionIdIsStableAndAppearsInReportPaths )
 // ------------------------------------------------------------------------------
 // 2) 진짜 크래시 — 이 실행 파일을 자식으로 띄워 죽게 하고, 리포트가 남았는지 본다
 //    크래시 핸들러는 크래시가 나야만 돈다. 조각을 직접 부르는 위 테스트로는 "그 방식으로 죽으면 핸들러에 들어오기는 하는가 · 들어와서
-//    쓸 스택이 남아 있는가" 를 볼 수 없다. 실측으로 스택 오버플로(덤프 0 바이트)와 abort · 순수 가상 호출(필터 미진입)이 그렇게 새고 있었다.
+//    쓸 스택이 남아 있는가" 를 볼 수 없다. 스택 오버플로(덤프 0 바이트)와 abort · 순수 가상 호출(필터 미진입)이 그렇게 샌다.
 // ------------------------------------------------------------------------------
 
 /**
@@ -199,9 +198,9 @@ SW_TEST_CASE( CrashReportTest, ChildProcessCrashesAsRequested )
 
 /**
  * @brief [CrashReportTest] 죽는 방식마다(접근 위반 · 스택 오버플로 · 작업 스레드 스택 오버플로 · abort · 순수 가상 호출) 리포트가 남는다.
- * @details 자식이 죽은 뒤 리포트 폴더에 콜 스택 파일이 있어야 하고, Windows 는 미니덤프도 비어 있지 않아야 한다. 예전에는
- *          - 스택 오버플로: 필터에 들어오지만 넘친 스택에서 다시 넘쳐 덤프가 0 바이트였다(Windows). 작업 스레드에는 대체 스택이 없었다(POSIX).
- *          - abort · 순수 가상 호출: CRT 가 `__fastfail` 로 끝내 필터에 아예 들어오지 않았다(Windows).
+ * @details 자식이 죽은 뒤 리포트 폴더에 콜 스택 파일이 있어야 하고, Windows 는 미니덤프도 비어 있지 않아야 한다. 주의:
+ *          - 스택 오버플로: 넘친 스택에서 덤프를 쓰면 다시 넘쳐 덤프가 0 바이트다(Windows). 작업 스레드에도 대체 스택이 있어야 한다(POSIX).
+ *          - abort · 순수 가상 호출: CRT 가 `__fastfail` 로 끝내면 필터에 아예 들어오지 않는다(Windows).
  */
 SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
 {
@@ -235,8 +234,8 @@ SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
         sw::StringBuilder<sw::constant::kMaxBuffer16> kindText;
         kindText.append( static_cast<int32>( crashCase._kind ) );
 
-        // 자식은 평소 1 초 안에 죽는다. 시한을 넘기면 크래시 경로 어딘가가 멈춘 것이다 — 2026-10-01 CI 에서 한 번 그렇게 CoreTest
-        // 전체가 30 초 시한까지 서 있다 졌고, 어느 종류였는지 남지 않았다. 이제 그 종류와 자식의 마지막 출력을 남기고 다음으로 간다.
+        // 자식은 평소 1 초 안에 죽는다. 시한을 넘기면 크래시 경로 어딘가가 멈춘 것이다 — 그 종류와 자식의 마지막 출력을 남기고
+        // 다음으로 간다(시한이 없으면 CoreTest 전체가 CTest 시한까지 서 있다 진다).
         const test::ChildEnvironmentVariable arrEnvironment[] = {
             {  "SW_CRASH_CHILD_KIND", kindText.c_str()},
             {"SW_CRASH_CHILD_FOLDER",           folder}
@@ -268,10 +267,10 @@ SW_TEST_CASE( CrashReportTest, EveryCrashKindLeavesAReport )
 
 /**
  * @brief [CrashReportTest] 보고가 끝날 수 없어도(다른 스레드가 stderr 를 쥔 채 놓지 않는다) 프로세스는 시한에 끝나고 스택 파일은 남는다
- * @details 보고는 죽어 가는 프로세스 안에서 돈다 — 크래시가 남긴 락을 기다리면 영영 끝나지 않는다. 예전에는
- *          - 보고 본문을 stderr 에 먼저 쓰고 파일에 썼다: stderr 에서 막히면 사용자가 보내 줄 스택 파일이 없었다.
- *          - 시한이 지났다는 줄도 stderr(`fputs`)로 썼다: 시한이 지나도 그 줄에서 다시 막혔다.
- *          - POSIX 는 시한이 아예 없었다(glibc 가 힙 손상을 malloc 의 락을 쥔 채 abort 하면, 보고의 할당이 그 락을 영영 기다린다).
+ * @details 보고는 죽어 가는 프로세스 안에서 돈다 — 크래시가 남긴 락을 기다리면 영영 끝나지 않는다. 주의:
+ *          - 스택 파일을 stderr 보다 먼저 쓴다: stderr 에서 막히면 사용자가 보내 줄 스택 파일이 없다.
+ *          - 시한이 지났다는 줄을 stderr(`fputs`)로 쓰면 그 줄에서 다시 막힌다.
+ *          - POSIX 에도 시한이 있어야 한다(glibc 가 힙 손상을 malloc 의 락을 쥔 채 abort 하면, 보고의 할당이 그 락을 영영 기다린다).
  */
 SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile )
 {
@@ -312,7 +311,7 @@ SW_TEST_CASE( CrashReportTest, StuckReportStillEndsAndKeepsTheStackFile )
 
 /**
  * @brief [CrashReportTest] 실패한 `SW_ASSERT` 는 멈추기 전에 식 · 자리를 남기고, 크래시 리포트도 남는다(Debug)
- * @details 예전에는 아무것도 찍지 않고 멈췄다 — 디버거 없이 돌면 "EXCEPTION_BREAKPOINT"(리눅스 SIGILL)와 스택만 남아 어느 식이 어긋났는지 몰랐다.
+ * @details 아무것도 찍지 않고 멈추면 디버거 없이 돌 때 "EXCEPTION_BREAKPOINT"(리눅스 SIGILL)와 스택만 남아 어느 식이 어긋났는지 모른다.
  */
 SW_TEST_CASE( CrashReportTest, FailedAssertNamesItsExpressionBeforeStopping )
 {

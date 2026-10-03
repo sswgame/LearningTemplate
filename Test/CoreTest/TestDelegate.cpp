@@ -260,8 +260,8 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateDeferredRemoveDuringBroadcast )
 /**
  * @brief [DelegateTest] MulticastDelegate 는 **진짜로 이동한다** (복사로 떨어지지 않는다)
  * @details 복사 생성자를 `= default` 로 *선언* 하면 암시적 이동 생성자·이동 대입이 생기지 않는다.
- *          그 상태였기 때문에 `std::move` 를 써도 구독자 벡터가 통째로 깊은 복사됐고,
- *          `is_nothrow_move_constructible` 이 false 였다. 옮긴 뒤 원본이 비는지로 확인한다 —
+ *          그러면 `std::move` 를 써도 구독자 벡터가 통째로 깊은 복사되고,
+ *          `is_nothrow_move_constructible` 이 false 다. 옮긴 뒤 원본이 비는지로 확인한다 —
  *          복사로 떨어지면 원본이 그대로 남는다.
  */
 SW_TEST_CASE( DelegateTest, MulticastDelegateMovesInsteadOfCopying )
@@ -296,13 +296,12 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateMovesInsteadOfCopying )
 /**
  * @brief [DelegateTest] 방송 중에 복사해도 **사본은 지연 제거에 갇히지 않는다**
  * @details `_broadcastDepth` 와 지연 제거 큐는 값이 아니라 *그 인스턴스의 호출 스택 상태*다.
- *          예전에는 복사 생성자가 `= default` 라 그 둘까지 같이 복사됐다 — broadcast 중에 복사하면
+ *          복사 생성자가 `= default` 면 그 둘까지 같이 복사된다 — broadcast 중에 복사하면
  *          사본이 깊이 0 이 아닌 채로 태어나, 그 사본에서 `remove` 한 것이 **영영 반영되지 않는다**
  *          (자기 broadcast 는 1→2→1 로만 오가므로 0 이 안 된다).
  *
  * @note **복사 생성자를 타야 한다.** 복사 대입은 받는 쪽의 깊이를 건드리지 않으므로(그 깊이는 지금
- *       그 객체를 방송 중인 호출 스택의 것이다) 이 결함을 드러내지 못한다 — 처음에 대입으로 썼다가
- *       변이 테스트에서 통과해 버려 다시 썼다.
+ *       그 객체를 방송 중인 호출 스택의 것이다) 이 결함을 드러내지 못한다 — 대입으로 쓰면 변이 검사에서도 통과한다.
  */
 SW_TEST_CASE( DelegateTest, CopyMadeDuringBroadcastStartsWithCleanBroadcastState )
 {
@@ -367,8 +366,8 @@ SW_TEST_CASE( DelegateTest, RemoveCodeWithinDropsOnlyTheDelegatesBuiltInThatRang
 
 /**
  * @brief [DelegateTest] 인라인 버퍼(SBO)에 든 람다를 옮겨도 캡처가 새지 않는다 — 옮긴 원본도 파괴된다
- * @details 이동은 새 자리에 이동 생성만 하고 원본을 파괴하지 않았다. 원본의 관리자를 지우므로 그 뒤로 아무도 파괴하지 않았다 — 이동이 사실상
- *          복사인 캡처는 하나씩 새었다(참조 카운트가 내려가지 않는다).
+ * @details 이동이 새 자리에 이동 생성만 하고 원본을 파괴하지 않으면, 원본의 관리자를 지우므로 그 뒤로 아무도 파괴하지 않는다 — 이동이 사실상
+ *          복사인 캡처는 하나씩 샌다(참조 카운트가 내려가지 않는다).
  */
 SW_TEST_CASE( DelegateTest, MovingAnInlineLambdaDestroysTheSource )
 {

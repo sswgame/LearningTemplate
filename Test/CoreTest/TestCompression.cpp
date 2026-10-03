@@ -128,9 +128,8 @@ SW_TEST_CASE( CompressionTest, CodecRegistryAndDynamicLookup )
 // ------------------------------------------------------------------------------
 /**
  * @brief [CompressionTest] 기본 레지스트리에 등록한 코덱을 CompressionStream 이 **실제로** 쓴다.
- * @details 예전에는 `CompressionStream` 이 레지스트리를 못 보고(엔진이 들고 있어 Core 가 닿지 못했다)
- *          항상 내장 코덱으로 갔다 — `registerCodec` 이 아무 일도 하지 않았다는 뜻이다. 문서(README
- *          §4.3)가 LZ4/Zstd 확장을 약속하고 있으므로, 그 약속이 살아 있는지 여기서 바이트로 확인한다.
+ * @details `CompressionStream` 이 레지스트리를 못 보고 내장 코덱으로만 가면 `registerCodec` 이 아무 일도 하지 않는다.
+ *          LZ4 · Zstd 같은 확장 코덱이 실제로 쓰이는지 여기서 바이트로 확인한다.
  */
 SW_TEST_CASE( CompressionTest, RegisteredCodecIsUsedByStream )
 {
@@ -200,12 +199,11 @@ SW_TEST_CASE( CompressionTest, CompressionStreamRoundtrip )
 
 /**
  * @brief [CompressionTest] 등록 안 된 코덱을 요구하면 **조용히 Null 로 바꿔치지 않는다**
- * @details 예전 `resolveCodec` 은 못 찾으면 마지막에 무조건 Null 코덱을 돌려줬다. 그 한 줄이 호출부의
- *          오류 처리를 전부 죽은 코드로 만들었고, 결과가 둘이었다:
+ * @details 코덱 조회가 못 찾을 때 Null 코덱으로 바꿔치면 호출부의 오류 처리가 전부 죽은 코드가 되고, 결과가 둘이다:
  *
  *          (1) **쓰기**: `compressBuffer( …, Zstd )` 를 Zstd 없이 부르면 헤더에는 `Zstd` 라고 적고
- *              페이로드는 무압축으로 썼다. Zstd 가 등록된 다른 기계가 그 스트림을 읽으면 쓰레기다.
- *          (2) **읽기**: 모르는 `_codecType` 이 든 스트림을 "해제" 해 버렸다.
+ *              페이로드는 무압축으로 쓴다. Zstd 가 등록된 다른 기계가 그 스트림을 읽으면 쓰레기다.
+ *          (2) **읽기**: 모르는 `_codecType` 이 든 스트림을 "해제" 해 버린다.
  *
  *          여기서는 (1)을 못박는다 — 헤더의 코덱 종류가 **페이로드를 실제로 만든 코덱**과 같아야 한다.
  */
@@ -241,13 +239,11 @@ SW_TEST_CASE( CompressionTest, UnavailableCodecIsNotSilentlySwappedForNull )
 
 /**
  * @brief [CompressionTest] 모르는 코덱이 든 스트림은 **성공으로 돌아오지 않는다**
- * @details 위 (2)번 경로다. 예전 `resolveCodec` 은 못 찾으면 Null 코덱을 돌려줬고, 그러면 페이로드를
- *          그냥 복사해 놓고 성공이라고 답했다.
+ * @details 위 (2)번 경로다. 못 찾은 코덱을 Null 코덱으로 바꿔치면 페이로드를 그냥 복사해 놓고 성공이라고 답한다.
  *
  *          **고정 용량 오버로드로 부른다.** `vector` 오버로드는 "푼 크기 != 헤더의 원본 크기" 를 한 번
  *          더 보기 때문에 이 결함이 있어도 우연히 걸러진다 — 그 그물을 통과하는 쪽으로 물어야 실제로
- *          무엇이 고쳐졌는지 검사할 수 있다. 체크섬 플래그도 끈다: 그 플래그가 켜져 있으면 체크섬이
- *          막아 주므로, 역시 이 수정이 한 일이 아니다.
+ *          코덱 처리를 검사할 수 있다. 체크섬 플래그도 끈다: 그 플래그가 켜져 있으면 체크섬이 대신 막는다.
  */
 SW_TEST_CASE( CompressionTest, StreamWithUnknownCodecFailsToDecompress )
 {
@@ -275,11 +271,10 @@ SW_TEST_CASE( CompressionTest, StreamWithUnknownCodecFailsToDecompress )
 
 /**
  * @brief [CompressionTest] 헤더가 적어 낸 크기가 넘쳐도 버퍼 밖을 읽지 않는다
- * @details 검사가 `_compressedSize + sizeof(헤더) > dataSize` 라는 **덧셈**이었다. `_compressedSize`
- *          가 UINT64_MAX 면 `+28` 이 27 로 돌아 검사를 **통과했고**, 그 값이 그대로 코덱의 srcSize 가
- *          되어 `decompress` 가 SIZE_MAX 바이트를 읽으려 들었다 — 28바이트짜리 파일 하나로 버퍼 밖을
- *          읽게 만들 수 있었다는 뜻이다. 이제 뺄셈으로 비교한다(같은 함정을 `BinarySerializer` 는
- *          이미 뺄셈으로 피하고 있었다).
+ * @details 검사를 `_compressedSize + sizeof(헤더) > dataSize` 라는 **덧셈**으로 하면 `_compressedSize`
+ *          가 UINT64_MAX 일 때 `+28` 이 27 로 돌아 검사를 **통과하고**, 그 값이 그대로 코덱의 srcSize 가
+ *          되어 `decompress` 가 SIZE_MAX 바이트를 읽으려 든다 — 28바이트짜리 파일 하나로 버퍼 밖을
+ *          읽게 만들 수 있다. 그래서 뺄셈으로 비교한다.
  */
 SW_TEST_CASE( CompressionTest, HeaderSizeOverflowIsRejected )
 {
@@ -291,7 +286,7 @@ SW_TEST_CASE( CompressionTest, HeaderSizeOverflowIsRejected )
                                                            sw::CompressionCodecType::RLE ) );
     SW_ASSERT_TRUE( stream.size() > sizeof( sw::CompressionHeader ) );
 
-    // 1) 넘치는 _compressedSize — 예전에는 검사를 통과해 버퍼 밖을 읽었다.
+    // 1) 넘치는 _compressedSize — 덧셈 검사면 통과해 버퍼 밖을 읽는다.
     {
         sw::vector<uint8>      attack = stream;
         sw::CompressionHeader* pHead  = reinterpret_cast<sw::CompressionHeader*>( attack.data() );
@@ -330,8 +325,8 @@ SW_TEST_CASE( CompressionTest, HeaderSizeOverflowIsRejected )
 /**
  * @brief [CompressionTest] 터무니없는 해제 크기는 할당 전에 거절한다
  * @details `_uncompressedSize` 는 **그대로 resize 인자**가 된다. 2^60 이 적힌 28바이트 헤더 하나면
- *          코덱이 한 바이트도 읽기 전에 그 자리에서 메모리가 터졌다 — 압축 파일로 프로세스를 죽일 수
- *          있었다. 코덱마다 팽창률이 달라 압축 크기로부터 정확한 상한은 못 내므로 컨테이너가 다루는
+ *          코덱이 한 바이트도 읽기 전에 그 자리에서 메모리가 터진다 — 압축 파일로 프로세스를 죽일 수
+ *          있다. 코덱마다 팽창률이 달라 압축 크기로부터 정확한 상한은 못 내므로 컨테이너가 다루는
  *          가장 큰 것보다 넉넉한 상한(`kMaxUncompressedSize`)을 두고 그 위를 자른다.
  */
 SW_TEST_CASE( CompressionTest, AbsurdUncompressedSizeIsRejectedBeforeAllocating )

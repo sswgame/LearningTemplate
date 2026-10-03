@@ -50,8 +50,6 @@ SW_TEST_CASE( MemoryProfilerTest, BasicTracking )
  *          그냥 `fetch_sub` 하면 0 아래가 **1.8e19** 로 접힌다. 할당은 세지 않았는데 해제만
  *          세는 경우가 실제로 있다 — 에디터의 프로파일러 패널에 **추적 켜기 체크박스**가
  *          있어서, 켜기 전에 잡힌 블록들이 켠 뒤에 풀리면 정확히 그 일이 난다.
- *
- *          같은 함수 안의 콜스택 표는 처음부터 `>= size` 로 막고 있었다 — 위쪽만 빠져 있었다.
  */
 SW_TEST_CASE( MemoryProfilerTest, FreeWithoutMatchingAllocationDoesNotWrap )
 {
@@ -66,14 +64,14 @@ SW_TEST_CASE( MemoryProfilerTest, FreeWithoutMatchingAllocationDoesNotWrap )
     const uint64 beforeBytes = profiler.getStats( MemoryTag::Game )._currentAllocatedBytes.load();
     const uint64 beforeCount = profiler.getStats( MemoryTag::Game )._currentAllocationCount.load();
 
-    // 이제 켜고 해제한다 — 세지 않은 것을 빼게 된다.
+    // 켜고 해제한다 — 세지 않은 것을 빼게 된다.
     profiler.setTrackingEnabled( true );
     profiler.recordFree( pDummy, 4096, MemoryTag::Game, 0 );
 
     const uint64 afterBytes = profiler.getStats( MemoryTag::Game )._currentAllocatedBytes.load();
     const uint64 afterCount = profiler.getStats( MemoryTag::Game )._currentAllocationCount.load();
 
-    // 고치기 전에는 여기가 1.8e19 였다.
+    // 0 아래로 접히면 여기가 1.8e19 가 된다.
     SW_EXPECT_TRUE( afterBytes <= beforeBytes );
     SW_EXPECT_TRUE( afterCount <= beforeCount );
 
@@ -114,8 +112,8 @@ SW_TEST_CASE( MemoryProfilerTest, TotalAllocationCountSurvivesFrees )
 
 /**
  * @brief [MemoryProfilerTest] `getTopCallStacks` 를 되풀이해 불러도 현재 사용량이 줄지 않는다.
- * @details 예전에는 결과 버퍼를 추적 가드 안에서 잡아 할당은 세지 않고, 호출한 쪽이 풀 때만 세어 현재 사용량이 줄기만 했다. 프로파일러
- *          패널이 매 프레임 불러 태그 카운터가 0 에 붙었다.
+ * @details 결과 버퍼를 추적 가드 안에서 잡으면 할당은 세지 않고 호출한 쪽이 풀 때만 세어 현재 사용량이 줄기만 한다. 프로파일러
+ *          패널이 매 프레임 부르므로 태그 카운터가 0 에 붙는다.
  */
 SW_TEST_CASE( MemoryProfilerTest, TopCallStackQueryDoesNotDriftLiveCounters )
 {
@@ -146,7 +144,7 @@ SW_TEST_CASE( MemoryProfilerTest, TopCallStackQueryDoesNotDriftLiveCounters )
     pProfiler->setDetailedTrackingEnabled( bWasDetailed );
     pProfiler->setTrackingEnabled( bWasTracking );
 
-    // 다른 스레드의 할당이 섞여 들 수 있어 정확히 같을 필요는 없다. 예전 결함은 호출마다 버퍼 한 벌씩 줄어 64 벌 줄었다.
+    // 다른 스레드의 할당이 섞여 들 수 있어 정확히 같을 필요는 없다. 해제만 세면 호출마다 버퍼 한 벌씩 줄어 64 벌 준다.
     const uint64 drift = ( after < before ) ? ( before - after ) : 0;
     SW_EXPECT_TRUE_MSG( drift < static_cast<uint64>( lastBytes ) * 8, "현재 사용량이 조회할 때마다 줄었습니다" );
 }

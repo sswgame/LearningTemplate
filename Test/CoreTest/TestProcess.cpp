@@ -91,9 +91,8 @@ SW_TEST_CASE( ProcessTest, ExitCodeStillActiveIsNotMistakenForRunning )
 
 /**
  * @brief [ProcessTest] 실행 중인 프로세스 강제 종료 — **양쪽 플랫폼에서**
- * @details 한때 이 케이스는 POSIX 에서도 돌았고 **통과했다**. 종료해서가 아니라 `pclose` 가
- *          `sleep 10` 이 스스로 끝날 때까지 10초를 기다려 줬기 때문이다 — 이름과 달리 종료를 본 적이
- *          없었다. 그 뒤로는 건너뛰었고, POSIX 가 fork/exec 으로 pid 를 들게 된 지금 걷어냈다.
+ * @details 주의: 종료 대신 자식이 스스로 끝날 때까지 기다리는 구현(`pclose` 가 `sleep 10` 을 10초 기다려 주는 식)도
+ *          통과할 수 있다 — 그래서 종료 코드가 0 이 아닌지를 본다.
  * @note 종료 코드가 갈리는 유일한 자리다. Windows 는 우리가 준 값(99)을 자식에게 물리고, POSIX 는
  *       신호로 죽이므로 코드를 정해 줄 수 없어 셸 규약대로 `128 + SIGKILL` 이 된다. **어느 쪽이든
  *       0 이 아닌 것이 핵심이다** — 0 이면 자식이 스스로 끝난 것이고, 그러면 이 케이스는 종료를
@@ -125,9 +124,9 @@ SW_TEST_CASE( ProcessTest, TerminateProcess )
 
 /**
  * @brief [ProcessTest] 자식이 스스로 끝나면 묻는 쪽이 **바로** 안다
- * @details `isRunning` 이 자기 깃발만 보던 시절에는 자식이 끝나도 `waitForExit` 을 부르기 전까지
- *          true 였다 — 취소 UI 가 끝난 빌드를 "돌고 있다" 고 보여 주던 자리다. OS 에 묻게 된 지금은
- *          곧 false 가 되어야 하고, 그러면서도 **종료 코드는 그대로 남아 있어야 한다**(POSIX 에서
+ * @details `isRunning` 이 자기 깃발만 보면 자식이 끝나도 `waitForExit` 을 부르기 전까지 true 라, 취소 UI 가
+ *          끝난 빌드를 "돌고 있다" 고 보여 준다. OS 에 물어 곧 false 가 되어야 하고, 그러면서도
+ *          **종료 코드는 그대로 남아 있어야 한다**(POSIX 에서
  *          묻는 김에 자식을 거둬 버리면 뒤이은 `waitForExit` 이 -1 을 준다 — 실제로 쉬운 함정이다).
  */
 SW_TEST_CASE( ProcessTest, IsRunningTurnsFalseWithoutEatingTheExitCode )
@@ -162,8 +161,8 @@ SW_TEST_CASE( ProcessTest, IsRunningTurnsFalseWithoutEatingTheExitCode )
 /**
  * @brief [ProcessTest] 자식은 자기 출력 파이프 말고는 이 프로세스의 핸들 · 서술자를 물려받지 않는다
  * @details 다른 스레드가 거의 동시에 띄운 자식의 파이프(여기서는 테스트가 만든 상속 가능한 파이프로 흉내 낸다)를 새 자식이 물려받으면,
- *          그 파이프의 읽기는 **새 자식이 끝날 때까지** EOF 를 못 받는다. 예전에는 Windows 가 `bInheritHandles = TRUE` 만 줘서 상속
- *          가능한 핸들이 전부 넘어갔고, POSIX 는 CLOEXEC 없는 서술자가 exec 를 넘어갔다. 그래서 여기서는 오래 사는 자식을 띄운 뒤
+ *          그 파이프의 읽기는 **새 자식이 끝날 때까지** EOF 를 못 받는다. Windows 에서 `bInheritHandles = TRUE` 만 주면 상속
+ *          가능한 핸들이 전부 넘어가고, POSIX 에서는 CLOEXEC 없는 서술자가 exec 를 넘어간다. 그래서 여기서는 오래 사는 자식을 띄운 뒤
  *          흉내 낸 파이프의 쓰기 끝을 닫고 읽는다 — 바로 EOF 여야 한다(물려받았다면 자식이 끝나는 3 초 뒤에야 온다).
  */
 SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
@@ -211,8 +210,8 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
 
 /**
  * @brief [ProcessTest] 분리 실행은 기다리지 않고 돌아오고, 명령은 실제로 돈다
- * @details "탐색기에서 보기" 같은 자리 — 사용자가 닫을 때까지 사는 프로그램을 띄운다. 예전에는 `execute` 라 부른 스레드(에디터 UI)가
- *          그 프로그램이 출력 파이프를 놓을 때까지 멈췄다. 여기서는 1 초쯤 걸리는 명령을 띄워 **곧바로** 돌아오는지, 그리고 명령이
+ * @details "탐색기에서 보기" 같은 자리 — 사용자가 닫을 때까지 사는 프로그램을 띄운다. `execute` 로 띄우면 부른 스레드(에디터 UI)가
+ *          그 프로그램이 출력 파이프를 놓을 때까지 멈춘다. 여기서는 1 초쯤 걸리는 명령을 띄워 **곧바로** 돌아오는지, 그리고 명령이
  *          끝에 남기는 표식으로 실제로 돌았는지를 본다.
  */
 SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
