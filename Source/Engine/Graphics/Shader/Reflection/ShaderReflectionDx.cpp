@@ -225,151 +225,102 @@ namespace sw
                 }
             }
 
-            static ShaderReflectionData fillFromId3d11Reflection( ID3D11ShaderReflection* pReflection )
+            /** @brief D3D11 리플렉션 타입 묶음입니다. SM5.0 에는 레지스터 공간이 없어 늘 0 입니다. */
+            struct D3D11ReflectionApi
             {
-                ShaderReflectionData data{};
-                D3D11_SHADER_DESC    shaderDesc{};
+                using Reflection     = ID3D11ShaderReflection;
+                using ShaderDesc     = D3D11_SHADER_DESC;
+                using ConstantBuffer = ID3D11ShaderReflectionConstantBuffer;
+                using BufferDesc     = D3D11_SHADER_BUFFER_DESC;
+                using Variable       = ID3D11ShaderReflectionVariable;
+                using VariableDesc   = D3D11_SHADER_VARIABLE_DESC;
+                using Type           = ID3D11ShaderReflectionType;
+                using TypeDesc       = D3D11_SHADER_TYPE_DESC;
+                using BindDesc       = D3D11_SHADER_INPUT_BIND_DESC;
+                using ParameterDesc  = D3D11_SIGNATURE_PARAMETER_DESC;
+
+                static bool   isVertexShader( UINT version ) { return D3D11_SHVER_GET_TYPE( version ) == D3D11_SHVER_VERTEX_SHADER; }
+                static uint32 getRegisterSpace( const BindDesc& bindDesc )
+                {
+                    (void)bindDesc;
+                    return 0;
+                }
+            };
+
+            /** @brief D3D12(DXIL) 리플렉션 타입 묶음입니다. */
+            struct D3D12ReflectionApi
+            {
+                using Reflection     = ID3D12ShaderReflection;
+                using ShaderDesc     = D3D12_SHADER_DESC;
+                using ConstantBuffer = ID3D12ShaderReflectionConstantBuffer;
+                using BufferDesc     = D3D12_SHADER_BUFFER_DESC;
+                using Variable       = ID3D12ShaderReflectionVariable;
+                using VariableDesc   = D3D12_SHADER_VARIABLE_DESC;
+                using Type           = ID3D12ShaderReflectionType;
+                using TypeDesc       = D3D12_SHADER_TYPE_DESC;
+                using BindDesc       = D3D12_SHADER_INPUT_BIND_DESC;
+                using ParameterDesc  = D3D12_SIGNATURE_PARAMETER_DESC;
+
+                static bool   isVertexShader( UINT version ) { return D3D12_SHVER_GET_TYPE( version ) == D3D12_SHVER_VERTEX_SHADER; }
+                static uint32 getRegisterSpace( const BindDesc& bindDesc ) { return bindDesc.Space; }
+            };
+
+            /**
+             * @brief D3D11 · D3D12 리플렉션 인터페이스에서 ShaderReflectionData 를 채웁니다(두 API 는 타입 이름과 레지스터 공간만 다르다).
+             * @details 상수버퍼의 자리(공간 · 바인드 포인트)는 **이름으로** 바인딩 서술을 찾아 정한다 — `GetConstantBufferByIndex` 의 열거
+             *          순서는 register(bN) 과 다를 수 있다. 찾지 못하면 열거 순서를 쓴다.
+             */
+            template <typename TApi>
+            static ShaderReflectionData fillFromReflection( typename TApi::Reflection* pReflection )
+            {
+                ShaderReflectionData      data{};
+                typename TApi::ShaderDesc shaderDesc{};
                 pReflection->GetDesc( &shaderDesc );
-                if ( D3D11_SHVER_GET_TYPE( shaderDesc.Version ) == D3D11_SHVER_VERTEX_SHADER )
-                    fillVertexInputs<ID3D11ShaderReflection, D3D11_SIGNATURE_PARAMETER_DESC>( pReflection, shaderDesc.InputParameters, data );
+                if ( TApi::isVertexShader( shaderDesc.Version ) )
+                    fillVertexInputs<typename TApi::Reflection, typename TApi::ParameterDesc>( pReflection, shaderDesc.InputParameters, data );
 
                 for ( UINT cbIndex = 0; cbIndex < shaderDesc.ConstantBuffers; ++cbIndex )
                 {
-                    ID3D11ShaderReflectionConstantBuffer* pCb = pReflection->GetConstantBufferByIndex( cbIndex );
+                    typename TApi::ConstantBuffer* pCb = pReflection->GetConstantBufferByIndex( cbIndex );
                     if ( pCb == nullptr )
                         continue;
-
-                    D3D11_SHADER_BUFFER_DESC cbDesc{};
+                    typename TApi::BufferDesc cbDesc{};
                     pCb->GetDesc( &cbDesc );
+                    // StructuredBuffer<T> 의 원소 타입 레이아웃은 "가상 CB"(Type == D3D_CT_RESOURCE_BIND_INFO, 변수 $Element 하나)로 열거된다.
+                    // CB 가 아니라 **원소 레이아웃**으로 따로 낸다 — GPUScene 머티리얼 데이터(g_SwMaterials)의 패킹 기준이다.
+                    const bool bStructuredElement = cbDesc.Type == D3D_CT_RESOURCE_BIND_INFO;
+                    if ( bStructuredElement == false && cbDesc.Type != D3D_CT_CBUFFER )
+                        continue;
 
-                    // cbIndex(열거 순서)는 register(bN) 과 다를 수 있다. 이름으로 실제 바인드 포인트를 찾는다.
-                    UINT                         realBindPoint = cbIndex;
-                    D3D11_SHADER_INPUT_BIND_DESC nameBindDesc{};
+                    ShaderBufferInfo bufferInfo{};
+                    bufferInfo._name      = cbDesc.Name != nullptr ? cbDesc.Name : "";
+                    bufferInfo._bindPoint = cbIndex;
+                    bufferInfo._totalSize = cbDesc.Size; ///< 원소 레이아웃이면 원소 stride
+                    typename TApi::BindDesc nameBindDesc{};
                     if ( cbDesc.Name != nullptr && SUCCEEDED( pReflection->GetResourceBindingDescByName( cbDesc.Name, &nameBindDesc ) ) )
-                        realBindPoint = nameBindDesc.BindPoint;
-
-                    // GetConstantBufferByIndex 는 실제 cbuffer 블록뿐 아니라 StructuredBuffer<T> 의 원소 타입 레이아웃도
-                    // "가상 CB"(Type == D3D_CT_RESOURCE_BIND_INFO, 변수 $Element 하나)로 열거한다. 그건 CB 가 아니라
-                    // **원소 레이아웃**으로 따로 낸다. GPUScene 머티리얼 데이터(g_SwMaterials)의 패킹 기준이다.
-                    if ( cbDesc.Type == D3D_CT_RESOURCE_BIND_INFO )
                     {
-                        ShaderBufferInfo element{};
-                        element._name          = cbDesc.Name != nullptr ? cbDesc.Name : "";
-                        element._registerSpace = 0;
-                        element._bindPoint     = realBindPoint;
-                        element._totalSize     = cbDesc.Size; ///< 원소 stride
-                        fillConstantBufferMembers<ID3D11ShaderReflectionConstantBuffer, ID3D11ShaderReflectionVariable, D3D11_SHADER_VARIABLE_DESC,
-                                                  ID3D11ShaderReflectionType, D3D11_SHADER_TYPE_DESC>( pCb, cbDesc.Variables, element );
-                        if ( element._listVariable.empty() == false )
-                            data._listStructuredElement.push_back( std::move( element ) );
-                        continue;
+                        bufferInfo._registerSpace = TApi::getRegisterSpace( nameBindDesc );
+                        bufferInfo._bindPoint     = nameBindDesc.BindPoint;
                     }
-                    if ( cbDesc.Type != D3D_CT_CBUFFER )
-                        continue;
-
-                    ShaderBufferInfo bufInfo{};
-                    bufInfo._name          = cbDesc.Name != nullptr ? cbDesc.Name : "";
-                    bufInfo._registerSpace = 0;
-                    bufInfo._bindPoint     = realBindPoint;
-                    bufInfo._totalSize     = cbDesc.Size;
-
-                    fillConstantBufferMembers<ID3D11ShaderReflectionConstantBuffer, ID3D11ShaderReflectionVariable, D3D11_SHADER_VARIABLE_DESC,
-                                              ID3D11ShaderReflectionType, D3D11_SHADER_TYPE_DESC>( pCb, cbDesc.Variables, bufInfo );
-
-                    data._listConstantBuffer.push_back( std::move( bufInfo ) );
+                    fillConstantBufferMembers<typename TApi::ConstantBuffer, typename TApi::Variable, typename TApi::VariableDesc, typename TApi::Type,
+                                              typename TApi::TypeDesc>( pCb, cbDesc.Variables, bufferInfo );
+                    if ( bStructuredElement == false )
+                        data._listConstantBuffer.push_back( std::move( bufferInfo ) );
+                    else if ( bufferInfo._listVariable.empty() == false )
+                        data._listStructuredElement.push_back( std::move( bufferInfo ) );
                 }
 
                 for ( UINT resourceIndex = 0; resourceIndex < shaderDesc.BoundResources; ++resourceIndex )
                 {
-                    D3D11_SHADER_INPUT_BIND_DESC bindDesc{};
+                    typename TApi::BindDesc bindDesc{};
                     pReflection->GetResourceBindingDesc( resourceIndex, &bindDesc );
 
                     ShaderResourceBinding resourceBinding{};
                     resourceBinding._name          = bindDesc.Name != nullptr ? bindDesc.Name : "";
-                    resourceBinding._registerSpace = 0;
-                    resourceBinding._bindPoint     = bindDesc.BindPoint;
-                    resourceBinding._bindCount     = bindDesc.BindCount;
-                    resourceBinding._type          = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
-                    data._listResource.push_back( std::move( resourceBinding ) );
-                }
-
-                return data;
-            }
-
-            static ShaderReflectionData fillFromId3d12Reflection( ID3D12ShaderReflection* pReflection )
-            {
-                ShaderReflectionData data{};
-                D3D12_SHADER_DESC    shaderDesc{};
-                pReflection->GetDesc( &shaderDesc );
-                if ( D3D12_SHVER_GET_TYPE( shaderDesc.Version ) == D3D12_SHVER_VERTEX_SHADER )
-                    fillVertexInputs<ID3D12ShaderReflection, D3D12_SIGNATURE_PARAMETER_DESC>( pReflection, shaderDesc.InputParameters, data );
-
-                for ( UINT cbIndex = 0; cbIndex < shaderDesc.ConstantBuffers; ++cbIndex )
-                {
-                    ID3D12ShaderReflectionConstantBuffer* pCb = pReflection->GetConstantBufferByIndex( cbIndex );
-                    D3D12_SHADER_BUFFER_DESC              cbDesc{};
-                    pCb->GetDesc( &cbDesc );
-
-                    // StructuredBuffer<T> 의 원소 타입 레이아웃("가상 CB", Type == D3D_CT_RESOURCE_BIND_INFO)은 원소 레이아웃 목록으로 보낸다.
-                    if ( cbDesc.Type == D3D_CT_RESOURCE_BIND_INFO )
-                    {
-                        ShaderBufferInfo element{};
-                        element._name      = cbDesc.Name != nullptr ? cbDesc.Name : "";
-                        element._totalSize = cbDesc.Size; ///< 원소 stride
-                        D3D12_SHADER_INPUT_BIND_DESC nameBindDesc{};
-                        if ( cbDesc.Name != nullptr && SUCCEEDED( pReflection->GetResourceBindingDescByName( cbDesc.Name, &nameBindDesc ) ) )
-                        {
-                            element._registerSpace = nameBindDesc.Space;
-                            element._bindPoint     = nameBindDesc.BindPoint;
-                        }
-                        fillConstantBufferMembers<ID3D12ShaderReflectionConstantBuffer, ID3D12ShaderReflectionVariable, D3D12_SHADER_VARIABLE_DESC,
-                                                  ID3D12ShaderReflectionType, D3D12_SHADER_TYPE_DESC>( pCb, cbDesc.Variables, element );
-                        if ( element._listVariable.empty() == false )
-                            data._listStructuredElement.push_back( std::move( element ) );
-                        continue;
-                    }
-                    if ( cbDesc.Type != D3D_CT_CBUFFER )
-                        continue;
-
-                    ShaderBufferInfo bufInfo{};
-                    bufInfo._name          = cbDesc.Name != nullptr ? cbDesc.Name : "";
-                    bufInfo._registerSpace = 0;
-                    bufInfo._bindPoint     = 0;
-                    bufInfo._totalSize     = cbDesc.Size;
-
-                    fillConstantBufferMembers<ID3D12ShaderReflectionConstantBuffer, ID3D12ShaderReflectionVariable, D3D12_SHADER_VARIABLE_DESC,
-                                              ID3D12ShaderReflectionType, D3D12_SHADER_TYPE_DESC>( pCb, cbDesc.Variables, bufInfo );
-
-                    data._listConstantBuffer.push_back( std::move( bufInfo ) );
-                }
-
-                for ( UINT resourceIndex = 0; resourceIndex < shaderDesc.BoundResources; ++resourceIndex )
-                {
-                    D3D12_SHADER_INPUT_BIND_DESC bindDesc{};
-                    pReflection->GetResourceBindingDesc( resourceIndex, &bindDesc );
-
-                    ShaderResourceBinding resourceBinding{};
-                    resourceBinding._name          = bindDesc.Name != nullptr ? bindDesc.Name : "";
-                    resourceBinding._registerSpace = bindDesc.Space;
+                    resourceBinding._registerSpace = TApi::getRegisterSpace( bindDesc );
                     resourceBinding._bindPoint     = bindDesc.BindPoint;
                     resourceBinding._bindCount     = bindDesc.BindCount; ///< 무제한 배열([])은 0
                     resourceBinding._type          = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );
-
-                    // 이 짝맞추기는 **move 하기 전에** 해야 한다. 예전에는 push_back( std::move ) 뒤에 비어 버린 이름과
-                    // 비교해 한 번도 맞지 않았고, DXIL 의 모든 cbuffer 가 bindPoint 0 으로 보고됐다(MaterialCB 도 b0).
-                    // 엔진 바인더는 기준 슬롯으로 걸어 가려졌지만 계약 검증이 "PassCB 와 MaterialCB 가 같은 자리" 로 잡아냈다.
-                    if ( bindDesc.Type == D3D_SIT_CBUFFER )
-                    {
-                        for ( ShaderBufferInfo& cb : data._listConstantBuffer )
-                        {
-                            if ( cb._name == resourceBinding._name )
-                            {
-                                cb._registerSpace = bindDesc.Space;
-                                cb._bindPoint     = bindDesc.BindPoint;
-                                break;
-                            }
-                        }
-                    }
                     data._listResource.push_back( std::move( resourceBinding ) );
                 }
 
@@ -386,7 +337,7 @@ namespace sw
                     return ShaderReflectionData{};
                 }
 
-                ShaderReflectionData data = fillFromId3d11Reflection( reflection.Get() );
+                ShaderReflectionData data = fillFromReflection<D3D11ReflectionApi>( reflection.Get() );
                 SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %#",
                               data._listConstantBuffer.size(), data._listResource.size() );
                 return data;
@@ -441,7 +392,7 @@ namespace sw
                 HRESULT                                        hr = utils->CreateReflection( &buffer, IID_PPV_ARGS( reflection12.GetAddressOf() ) );
                 if ( SUCCEEDED( hr ) && reflection12 != nullptr )
                 {
-                    data = fillFromId3d12Reflection( reflection12.Get() );
+                    data = fillFromReflection<D3D12ReflectionApi>( reflection12.Get() );
                     SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %#",
                                   data._listConstantBuffer.size(), data._listResource.size() );
                 }
@@ -452,7 +403,7 @@ namespace sw
                     hr = utils->CreateReflection( &buffer, IID_PPV_ARGS( reflection11.GetAddressOf() ) );
                     if ( SUCCEEDED( hr ) && reflection11 != nullptr )
                     {
-                        data = fillFromId3d11Reflection( reflection11.Get() );
+                        data = fillFromReflection<D3D11ReflectionApi>( reflection11.Get() );
                         SW_LOG_TRACE( "ConstantBuffers: %# BoundResources: %#",
                                       data._listConstantBuffer.size(), data._listResource.size() );
                     }
