@@ -8,35 +8,20 @@
 
 namespace sw
 {
-    /** @brief 로컬라이제이션 텍스트 파일의 형식입니다. 경로 확장자로 정합니다. */
-    enum class StringTableTextFormat : uint8
-    {
-        Json = 0, ///< 확장자를 모르면 여기로 옵니다
-        Xml,
-        KeyValue ///< `.ini` · `.kv`
-    };
-
     class SW_API StringTable
     {
     public:
-        /**
-         * @brief 경로 확장자로 텍스트 형식을 정합니다. **형식↔확장자 대응은 여기 하나입니다.**
-         * @details 예전에는 `StringTable` 과 `LocalizationManager` 가 각자 `{ ".ini", ".kv" }` 를 들고
-         *          같은 분기를 두 번 적었습니다. 목록이 둘이면 한쪽만 늘어납니다.
-         */
-        static StringTableTextFormat detectTextFormat( string_view path );
-        /** @brief 텍스트 형식으로 읽을 수 있는 확장자 목록입니다. 디렉터리를 훑을 때 이 순서로 시도합니다. */
-        static const vector<string_view>& getTextExtensions();
+        /** @brief 언어 파일의 확장자입니다. 언어 파일은 JSON 객체(`{ "키": "문자열" }`) 하나뿐입니다. */
+        static constexpr const utf8* kFileExtension = ".json";
 
+        /** @brief @p path 가 언어 파일(`kFileExtension`)이면 true 입니다. 다른 확장자는 읽지 않습니다. */
+        static bool isLanguageFile( string_view path );
+
+        /** @brief 절대 · 리소스 경로의 언어 파일을 읽습니다. 언어 파일이 아니면 경고를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromFile( const string& filePath );
         [[nodiscard]] bool loadFromJsonText( string_view jsonText );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText );
-        [[nodiscard]] bool loadFromKeyValueText( string_view kvText );
+        /** @brief 리소스 상대 경로의 언어 파일을 읽습니다. 언어 파일이 아니면 경고를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromResource( string_view assetRelativePath );
-        [[nodiscard]] bool saveToBinaryFile( string_view filePath ) const;
-        [[nodiscard]] bool loadFromBinaryFile( string_view filePath );
-        [[nodiscard]] bool saveToBinaryBuffer( vector<uint8>& outBytes ) const;
-        [[nodiscard]] bool loadFromBinaryBuffer( const uint8* pData, size_t size );
         const utf8*        getString( const hashed_string& key ) const;
         const utf8*        getString( const hashed_string& key, const utf8* pDefaultText ) const;
         /**

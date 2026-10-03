@@ -18,7 +18,7 @@ namespace sw
 
     /**
      * @class LocalizationManager
-     * @brief 언어별 문자열 테이블(JSON/XML/KeyValue/디렉터리)을 파일 단위로 로드하고 관리하는 다국어 매니저입니다(싱글톤이 아닙니다).
+     * @brief 언어별 문자열 테이블을 JSON 언어 파일(`StringTable::kFileExtension`) · 그 파일들의 디렉터리에서 로드하고 관리하는 다국어 매니저입니다(싱글톤이 아닙니다).
      */
     class SW_API LocalizationManager
     {
@@ -49,42 +49,31 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 로딩 및 등록
         // ------------------------------------------------------------------------------
-        /** @brief 파일 확장자(.json, .xml, .ini, .kv, .bin 등)로 형식을 골라 언어 파일을 로드합니다. */
+        /** @brief 언어 파일(.json)을 로드합니다. 다른 확장자는 경고를 남기고 false 이며, 그 언어를 등록하지 않습니다. */
         [[nodiscard]] bool loadLanguageFile( string_view languageCode, string_view filePath );
 
-        /** @brief 리소스 상대 경로에서 언어 파일을 로드합니다. */
+        /** @brief 리소스 상대 경로에서 언어 파일(.json)을 로드합니다. 다른 확장자는 경고를 남기고 false 입니다. */
         [[nodiscard]] bool loadLanguageResource( string_view languageCode, string_view assetRelativePath );
 
         /** @brief JSON 텍스트에서 언어 테이블을 로드합니다. */
         [[nodiscard]] bool loadLanguageJson( string_view languageCode, string_view jsonText );
 
-        /** @brief XML 텍스트에서 언어 테이블을 로드합니다(<GameStrings><string key="...">...</string></GameStrings>). */
-        [[nodiscard]] bool loadLanguageXml( string_view languageCode, string_view xmlText );
-
-        /** @brief KeyValue/INI 텍스트에서 언어 테이블을 로드합니다(key=value). */
-        [[nodiscard]] bool loadLanguageKeyValue( string_view languageCode, string_view kvText );
-
         /**
          * @brief 디렉터리 안의 언어 파일(예: ko_kr.json, en_us.json)을 파일 이름을 언어 코드로 삼아 한꺼번에 로드합니다.
          * @param directoryPath 탐색할 디렉터리 경로
-         * @param filterExtension 탐색할 확장자(기본 ".json", "" 면 모든 파일)
+         * @param filterExtension 탐색할 확장자(기본 ".json", "" 면 모든 파일 — 언어 파일이 아닌 것은 경고를 남기고 건너뜁니다)
          * @param bRecursive 하위 폴더 포함 여부
          */
         [[nodiscard]] bool loadLanguageDirectory( string_view directoryPath, string_view filterExtension = ".json", bool bRecursive = false );
 
         /**
-         * @brief 언어 팩 디렉터리나 리소스 파일을 찾아 언어 팩들을 로드하고 활성 · 폴백 언어를 정합니다.
-         * @param directoryOrResourcePath 디렉터리 경로(예: "<팩루트>/data/localization") 또는 기본 파일 경로("<팩루트>/data/strings.xml")
+         * @brief 언어 디렉터리의 언어 파일들, 또는 리소스 언어 파일 하나를 로드하고 활성 · 폴백 언어를 정합니다.
+         * @param directoryOrResourcePath 디렉터리 경로(예: "<팩루트>/data/localization", 하위 폴더 포함) 또는 기본 파일 경로("<팩루트>/data/strings.json")
          * @param defaultLanguage 기본 활성 언어 코드(예: "ko_KR")
          * @param fallbackLanguage 폴백 언어 코드(예: "en_US")
          * @return 언어 파일을 하나 이상 로드하고 설정했으면 true 입니다.
          */
         bool initialize( string_view directoryOrResourcePath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
-
-        /** @brief 등록된 모든 언어 테이블을 바이너리 로컬라이제이션 팩(LOC1) 파일 하나로 저장합니다. */
-        [[nodiscard]] bool saveToBinaryPack( string_view filePath ) const;
-        /** @brief 바이너리 로컬라이제이션 팩(LOC1) 파일 하나에서 모든 언어 테이블을 로드합니다. */
-        [[nodiscard]] bool loadFromBinaryPack( string_view filePath );
 
         /** @brief 언어 테이블을 직접 등록하거나 기존 테이블을 대체합니다. */
         void registerLanguageTable( string_view languageCode, unique_ptr<StringTable> pStringTable );

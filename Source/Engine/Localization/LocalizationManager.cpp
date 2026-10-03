@@ -17,12 +17,6 @@ namespace sw
 {
     SW_LOG_CALLER( "LocalizationManager" );
 
-    namespace
-    {
-        constexpr uint32 kLocalizationPackBinaryMagic   = 0x31434F4C; // 'LOC1'
-        constexpr uint32 kLocalizationPackBinaryVersion = 1;
-    } // namespace
-
     string LocalizationManager::normalizeLanguageCode( string_view languageCode )
     {
         string code( StringUtil::trim( languageCode ) );
@@ -86,16 +80,17 @@ namespace sw
         _currentLanguage.clear();
     }
 
-    // **확장자로 무엇을 할지 고르는 일은 StringTable 이 한다.** 여기서 그것을 다시 적으면 둘이
-    // 갈라진다. 실제로 갈라져 있었다. `StringTable::loadFromFile` 은 `.bin` 이면 바이너리로
-    // 읽는데, 이쪽 사본은 `.bin` 을 몰라서 파일을 **텍스트로** 읽은 뒤 확장자 판별이 기본값인
-    // JSON 으로 떨어뜨렸다. 그래서 `initialize` 가 일부러 찾아 주는 `.bin` 언어 파일과
-    // `StringTable::saveToBinaryFile` 이 구워 낸 파일은 **하나도 읽히지 않았다.**
+    // 언어 파일인지는 표를 만들기 **전에** 묻는다 — 읽지 못할 파일 때문에 빈 언어가 등록되지 않게.
     bool LocalizationManager::loadLanguageFile( string_view languageCode, string_view filePath )
     {
         if ( languageCode.empty() || filePath.empty() )
         {
             SW_LOG_WARNING( "Invalid languageCode or filePath." );
+            return false;
+        }
+        if ( StringTable::isLanguageFile( filePath ) == false )
+        {
+            SW_LOG_WARNING( "Not a language file (expected %#): %#", StringTable::kFileExtension, filePath );
             return false;
         }
 
@@ -116,6 +111,11 @@ namespace sw
         if ( languageCode.empty() || assetRelativePath.empty() )
         {
             SW_LOG_WARNING( "Invalid languageCode or assetRelativePath." );
+            return false;
+        }
+        if ( StringTable::isLanguageFile( assetRelativePath ) == false )
+        {
+            SW_LOG_WARNING( "Not a language file (expected %#): %#", StringTable::kFileExtension, assetRelativePath );
             return false;
         }
 
@@ -149,36 +149,6 @@ namespace sw
             return false;
 
         const bool bSuccess = pTable->loadFromJsonText( jsonText );
-        if ( bSuccess )
-            markLanguageLoaded( languageCode );
-        return bSuccess;
-    }
-
-    bool LocalizationManager::loadLanguageXml( string_view languageCode, string_view xmlText )
-    {
-        if ( languageCode.empty() )
-            return false;
-
-        StringTable* pTable = getOrCreateLanguageTable( languageCode );
-        if ( pTable == nullptr )
-            return false;
-
-        const bool bSuccess = pTable->loadFromXmlText( xmlText );
-        if ( bSuccess )
-            markLanguageLoaded( languageCode );
-        return bSuccess;
-    }
-
-    bool LocalizationManager::loadLanguageKeyValue( string_view languageCode, string_view kvText )
-    {
-        if ( languageCode.empty() )
-            return false;
-
-        StringTable* pTable = getOrCreateLanguageTable( languageCode );
-        if ( pTable == nullptr )
-            return false;
-
-        const bool bSuccess = pTable->loadFromKeyValueText( kvText );
         if ( bSuccess )
             markLanguageLoaded( languageCode );
         return bSuccess;
@@ -225,29 +195,10 @@ namespace sw
         if ( absDirPath.empty() )
             absDirPath = string( directoryOrResourcePath );
 
-        if ( FileUtil::hasExtension( absDirPath, ".bin" ) )
-        {
-            bLoadedAny = loadFromBinaryPack( absDirPath );
-        }
-        else if ( FileUtil::directoryExists( absDirPath ) )
-        {
-            // 디렉터리에 미리 구운 바이너리 팩(localization.loc.bin)이 있는지 본다
-            const string binPackPath = FileUtil::joinPath( absDirPath, "localization.loc.bin" );
-            if ( FileUtil::fileExists( binPackPath ) )
-                bLoadedAny = loadFromBinaryPack( binPackPath );
-
-            if ( bLoadedAny == false )
-            {
-                // 텍스트 확장자 목록은 StringTable 이 기준이다. 여기 따로 적으면 셋째 목록이 된다.
-                for ( const string_view extension : StringTable::getTextExtensions() )
-                    bLoadedAny = loadLanguageDirectory( absDirPath, extension, true ) || bLoadedAny;
-                bLoadedAny = loadLanguageDirectory( absDirPath, ".bin", true ) || bLoadedAny;
-            }
-        }
+        if ( FileUtil::directoryExists( absDirPath ) )
+            bLoadedAny = loadLanguageDirectory( absDirPath, StringTable::kFileExtension, true );
         else
-        {
             bLoadedAny = loadLanguageResource( defaultLanguage.empty() ? "default" : defaultLanguage, directoryOrResourcePath );
-        }
 
         if ( bLoadedAny == false )
         {
@@ -284,136 +235,6 @@ namespace sw
             SW_LOG_INFO( "Localization setup complete. Active language: '%#', Fallback: '%#'.", string( preferredLang ).c_str(), string( _fallbackLanguage ).c_str() );
         }
 
-        return true;
-    }
-
-    bool LocalizationManager::saveToBinaryPack( string_view filePath ) const
-    {
-        std::shared_lock<std::shared_mutex> lock( _mutex );
-
-        vector<uint8> buffer;
-        buffer.reserve( 16 + _mapLanguageTable.size() * 1024 );
-
-        auto appendBytes = [&]( const void* pSrc, size_t numBytes )
-        {
-            const uint8* pByteSrc = static_cast<const uint8*>( pSrc );
-            buffer.insert( buffer.end(), pByteSrc, pByteSrc + numBytes );
-        };
-
-        const uint32 magic         = kLocalizationPackBinaryMagic;
-        const uint32 version       = kLocalizationPackBinaryVersion;
-        const uint32 languageCount = static_cast<uint32>( _mapLanguageTable.size() );
-
-        appendBytes( &magic, sizeof( magic ) );
-        appendBytes( &version, sizeof( version ) );
-        appendBytes( &languageCount, sizeof( languageCount ) );
-
-        // **언어 코드 순으로 적는다.** `_mapLanguageTable` 은 `unordered_map` 이라 순회 순서가
-        // 정해져 있지 않다. 같은 내용을 두 번 구워도 파일 바이트가 달라진다(`StringTable` 쪽도 같다).
-        vector<string> listLanguageCode;
-        listLanguageCode.reserve( _mapLanguageTable.size() );
-        for ( const auto& [langCode, pTable] : _mapLanguageTable )
-            listLanguageCode.push_back( langCode );
-        std::sort( listLanguageCode.begin(), listLanguageCode.end() );
-
-        for ( const string& langCode : listLanguageCode )
-        {
-            const unique_ptr<StringTable>& pTable  = _mapLanguageTable.find( langCode )->second;
-            const uint32                   codeLen = static_cast<uint32>( langCode.size() );
-            appendBytes( &codeLen, sizeof( codeLen ) );
-            if ( codeLen > 0 )
-                appendBytes( langCode.data(), codeLen );
-
-            // 언어 테이블을 인코딩한다
-            vector<uint8> tableBuffer;
-            if ( pTable != nullptr && pTable->saveToBinaryBuffer( tableBuffer ) == false )
-            {
-                SW_LOG_ERROR( "Language table '%#' could not be encoded - the pack is not written", langCode );
-                return false;
-            }
-
-            const uint32 tableSize = static_cast<uint32>( tableBuffer.size() );
-            appendBytes( &tableSize, sizeof( tableSize ) );
-            if ( tableSize > 0 )
-                appendBytes( tableBuffer.data(), tableSize );
-        }
-
-        return FileUtil::writeFile( filePath, buffer.data(), buffer.size() );
-    }
-
-    bool LocalizationManager::loadFromBinaryPack( string_view filePath )
-    {
-        vector<uint8> buffer;
-        bool          bRead = ResourceUtil::readBinaryResource( filePath, buffer );
-        if ( bRead == false )
-            bRead = FileUtil::readFile( filePath, buffer );
-        if ( bRead == false || buffer.size() < 12 )
-            return false;
-
-        const uint8* pPtr = buffer.data();
-        const uint8* pEnd = buffer.data() + buffer.size();
-
-        uint32 magic{ 0 };
-        uint32 version{ 0 };
-        uint32 languageCount{ 0 };
-
-        Memory::copy( &magic, pPtr, sizeof( magic ) );
-        pPtr += sizeof( magic );
-        Memory::copy( &version, pPtr, sizeof( version ) );
-        pPtr += sizeof( version );
-        Memory::copy( &languageCount, pPtr, sizeof( languageCount ) );
-        pPtr += sizeof( languageCount );
-
-        if ( magic != kLocalizationPackBinaryMagic || version != kLocalizationPackBinaryVersion )
-        {
-            SW_LOG_WARNING( "Invalid Localization binary pack format or version in %#", string( filePath ).c_str() );
-            return false;
-        }
-
-        // 경계는 **남은 바이트와 뺄셈으로** 견준다. `pPtr + n > pEnd` 는 버퍼 끝을 넘는 포인터를 만드는 것부터가 규약 밖이다.
-        uint32 loadedLanguageCount{ 0 };
-        for ( uint32 index = 0; index < languageCount; ++index )
-        {
-            if ( static_cast<size_t>( pEnd - pPtr ) < sizeof( uint32 ) )
-                return false;
-
-            uint32 codeLen{ 0 };
-            Memory::copy( &codeLen, pPtr, sizeof( codeLen ) );
-            pPtr += sizeof( codeLen );
-
-            if ( static_cast<size_t>( pEnd - pPtr ) < static_cast<size_t>( codeLen ) + sizeof( uint32 ) )
-                return false;
-
-            string langCode( reinterpret_cast<const utf8*>( pPtr ), codeLen );
-            pPtr += codeLen;
-
-            uint32 tableSize{ 0 };
-            Memory::copy( &tableSize, pPtr, sizeof( tableSize ) );
-            pPtr += sizeof( tableSize );
-
-            if ( static_cast<size_t>( pEnd - pPtr ) < static_cast<size_t>( tableSize ) )
-                return false;
-
-            if ( tableSize > 0 )
-            {
-                auto pTable = make_unique<StringTable>();
-                if ( pTable->loadFromBinaryBuffer( pPtr, tableSize ) )
-                {
-                    registerLanguageTable( langCode, std::move( pTable ) );
-                    ++loadedLanguageCount;
-                }
-            }
-
-            pPtr += tableSize;
-        }
-
-        // 하나도 못 올렸으면 실패다. 예전에는 표가 다 깨져도 true 여서, 부르는 쪽이 텍스트 파일 폴백을 건너뛰고 활성 언어 없이 끝났다.
-        if ( loadedLanguageCount == 0 )
-        {
-            SW_LOG_WARNING( "Localization binary pack '%#' has no readable language table — falling back to text files", string( filePath ).c_str() );
-            return false;
-        }
-        SW_LOG_INFO( "Loaded binary localization pack '%#' (%# of %# languages).", string( filePath ).c_str(), loadedLanguageCount, languageCount );
         return true;
     }
 

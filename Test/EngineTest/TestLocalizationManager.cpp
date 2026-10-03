@@ -48,74 +48,57 @@ SW_TEST_CASE( LocalizationManagerTest, NonSingletonIndependence )
 }
 
 /**
- * @brief [LocalizationManagerTest] JSON, XML, KeyValue(INI) 파일 로드 및 언어별 문자열 조회 검증
+ * @brief [LocalizationManagerTest] 언어 파일은 JSON 하나다 — `.xml` · `.ini` 는 읽지 않고, 그 언어를 등록하지도 않는다
+ * @details 형식은 확장자로 정한다. 다른 확장자를 받으면 경고를 남기고 실패하며, 표를 만들기 전에 거절하므로 빈 언어가 목록에 남지 않는다
+ *          (빈 언어가 남으면 `initialize` 가 그 언어를 활성 언어로 고를 수 있다).
  */
-SW_TEST_CASE( LocalizationManagerTest, MultiFormatFileLoading )
+SW_TEST_CASE( LocalizationManagerTest, OnlyJsonLanguageFilesAreLoaded )
 {
     const utf8* kKoJson = R"({
 		"UI_TITLE": "모험의 시작",
-		"UI_PLAY": "게임 시작",
-		"UI_EXIT": "나가기"
+		"UI_PLAY": "게임 시작"
 	})";
 
     const utf8* kEnJson = R"({
 		"UI_TITLE": "Adventure Begins",
-		"UI_PLAY": "Start Game",
-		"UI_EXIT": "Exit"
+		"UI_PLAY": "Start Game"
 	})";
 
     const utf8* kJaXml =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
         "<GameStrings>\n"
         "	<string key=\"UI_TITLE\">冒険の始まり</string>\n"
-        "	<string key=\"UI_PLAY\">ゲーム開始</string>\n"
-        "	<string key=\"UI_EXIT\">終了</string>\n"
         "</GameStrings>\n";
 
-    const utf8* kDeIni =
-        "# German language file\n"
-        "UI_TITLE=Beginn des Abenteuers\n"
-        "UI_PLAY=Spiel starten\n"
-        "UI_EXIT=Beenden\n";
+    const utf8* kDeIni = "UI_TITLE=Beginn des Abenteuers\n";
 
     const sw::string pathKo = test::makeTempPath( "test_loc_ko.json" );
     const sw::string pathEn = test::makeTempPath( "test_loc_en.json" );
     const sw::string pathJa = test::makeTempPath( "test_loc_ja.xml" );
     const sw::string pathDe = test::makeTempPath( "test_loc_de.ini" );
 
-    SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathKo, reinterpret_cast<const uint8*>( kKoJson ), strlen( kKoJson ) ) );
-    SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathEn, reinterpret_cast<const uint8*>( kEnJson ), strlen( kEnJson ) ) );
-    SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathJa, reinterpret_cast<const uint8*>( kJaXml ), strlen( kJaXml ) ) );
-    SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathDe, reinterpret_cast<const uint8*>( kDeIni ), strlen( kDeIni ) ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathKo, kKoJson ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathEn, kEnJson ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathJa, kJaXml ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathDe, kDeIni ) );
 
     sw::LocalizationManager loc;
-
     SW_EXPECT_TRUE( loc.loadLanguageFile( "ko_KR", pathKo ) );
     SW_EXPECT_TRUE( loc.loadLanguageFile( "en_US", pathEn ) );
-    SW_EXPECT_TRUE( loc.loadLanguageFile( "ja_JP", pathJa ) );
-    SW_EXPECT_TRUE( loc.loadLanguageFile( "de_DE", pathDe ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "language files that are not JSON" );
+        SW_EXPECT_FALSE( loc.loadLanguageFile( "ja_JP", pathJa ) );
+        SW_EXPECT_FALSE( loc.loadLanguageFile( "de_DE", pathDe ) );
+    }
 
-    SW_EXPECT_EQUAL( size_t( 4 ), loc.getLanguageCount() );
-    SW_EXPECT_TRUE( loc.hasLanguage( "ko_KR" ) );
-    SW_EXPECT_TRUE( loc.hasLanguage( "en_US" ) );
-    SW_EXPECT_TRUE( loc.hasLanguage( "ja_JP" ) );
-    SW_EXPECT_TRUE( loc.hasLanguage( "de_DE" ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), loc.getLanguageCount() );
+    SW_EXPECT_FALSE( loc.hasLanguage( "ja_JP" ) );
+    SW_EXPECT_FALSE( loc.hasLanguage( "de_DE" ) );
 
     const sw::hashed_string kKeyTitle{ "UI_TITLE" };
-    const sw::hashed_string kKeyPlay{ "UI_PLAY" };
-    const sw::hashed_string kKeyExit{ "UI_EXIT" };
-
     SW_EXPECT_STREQ( "모험의 시작", loc.getStringFromLanguage( "ko_KR", kKeyTitle ) );
     SW_EXPECT_STREQ( "Adventure Begins", loc.getStringFromLanguage( "en_US", kKeyTitle ) );
-    SW_EXPECT_STREQ( "冒険の始まり", loc.getStringFromLanguage( "ja_JP", kKeyTitle ) );
-    SW_EXPECT_STREQ( "Beginn des Abenteuers", loc.getStringFromLanguage( "de_DE", kKeyTitle ) );
-
-    SW_EXPECT_STREQ( "게임 시작", loc.getStringFromLanguage( "ko_KR", kKeyPlay ) );
-    SW_EXPECT_STREQ( "Start Game", loc.getStringFromLanguage( "en_US", kKeyPlay ) );
-    SW_EXPECT_STREQ( "ゲーム開始", loc.getStringFromLanguage( "ja_JP", kKeyPlay ) );
-    SW_EXPECT_STREQ( "Spiel starten", loc.getStringFromLanguage( "de_DE", kKeyPlay ) );
-
-    // 정리
+    SW_EXPECT_STREQ( "Start Game", loc.getStringFromLanguage( "en_US", sw::hashed_string( "UI_PLAY" ) ) );
 }
 
 /**
@@ -269,55 +252,25 @@ SW_TEST_CASE( LocalizationManagerTest, MoveSemantics )
 }
 
 /**
- * @brief [LocalizationManagerTest] StringTable 단독으로 다양한 포맷(.json, .xml, .ini, .kv) 파일 로드 검증
+ * @brief [LocalizationManagerTest] StringTable 은 JSON 언어 파일을 읽고, 다른 확장자의 파일은 내용이 무엇이든 읽지 않는다
  */
-SW_TEST_CASE( LocalizationManagerTest, StringTableDirectMultiFormatFileLoading )
+SW_TEST_CASE( LocalizationManagerTest, StringTableReadsOnlyJsonFiles )
 {
-    const utf8* kJson = R"({
-		"KEY_JSON": "JSON 텍스트"
-	})";
-
-    const utf8* kXml =
-        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-        "<GameStrings>\n"
-        "	<string key=\"KEY_XML\">XML 텍스트</string>\n"
-        "</GameStrings>\n";
-
-    const utf8* kIni =
-        "KEY_INI=INI 텍스트\n";
-
-    const utf8* kKv =
-        "KEY_KV=KV 텍스트\n";
-
     const sw::string pathJson = test::makeTempPath( "st_test.json" );
-    const sw::string pathXml  = test::makeTempPath( "st_test.xml" );
-    const sw::string pathIni  = test::makeTempPath( "st_test.ini" );
     const sw::string pathKv   = test::makeTempPath( "st_test.kv" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathJson, R"({ "KEY_JSON": "JSON 텍스트" })" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathKv, "KEY_KV=KV 텍스트\n" ) );
 
-    SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathJson, reinterpret_cast<const uint8*>( kJson ), strlen( kJson ) ) );
-    SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathXml, reinterpret_cast<const uint8*>( kXml ), strlen( kXml ) ) );
-    SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathIni, reinterpret_cast<const uint8*>( kIni ), strlen( kIni ) ) );
-    SW_EXPECT_TRUE( sw::FileUtil::writeFile( pathKv, reinterpret_cast<const uint8*>( kKv ), strlen( kKv ) ) );
-
-    // 1) JSON 로드
     sw::StringTable stJson;
     SW_EXPECT_TRUE( stJson.loadFromFile( pathJson ) );
     SW_EXPECT_STREQ( "JSON 텍스트", stJson.getString( sw::hashed_string( "KEY_JSON" ) ) );
 
-    // 2) XML 로드
-    sw::StringTable stXml;
-    SW_EXPECT_TRUE( stXml.loadFromFile( pathXml ) );
-    SW_EXPECT_STREQ( "XML 텍스트", stXml.getString( sw::hashed_string( "KEY_XML" ) ) );
-
-    // 3) INI 로드
-    sw::StringTable stIni;
-    SW_EXPECT_TRUE( stIni.loadFromFile( pathIni ) );
-    SW_EXPECT_STREQ( "INI 텍스트", stIni.getString( sw::hashed_string( "KEY_INI" ) ) );
-
-    // 4) KV 로드
     sw::StringTable stKv;
-    SW_EXPECT_TRUE( stKv.loadFromFile( pathKv ) );
-    SW_EXPECT_STREQ( "KV 텍스트", stKv.getString( sw::hashed_string( "KEY_KV" ) ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "language file that is not JSON" );
+        SW_EXPECT_FALSE( stKv.loadFromFile( pathKv ) );
+    }
+    SW_EXPECT_TRUE( stKv.empty() );
 }
 
 /**
@@ -435,18 +388,18 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
 
     const sw::string pathKo = sw::FileUtil::joinPath( packDir, "ko_KR.json" );
     const sw::string pathEn = sw::FileUtil::joinPath( packDir, "en_US.json" );
-    const sw::string pathJa = sw::FileUtil::joinPath( packDir, "ja_JP.xml" );
-    const sw::string pathZh = sw::FileUtil::joinPath( packDir, "zh_CN.kv" );
+    const sw::string pathJa = sw::FileUtil::joinPath( packDir, "ja_JP.json" );
+    const sw::string pathZh = sw::FileUtil::joinPath( packDir, "zh_CN.json" );
 
     const utf8* jsonKo = R"({ "UI_PLAY": "플레이", "UI_QUIT": "종료", "UI_SAVE": "저장" })";
     const utf8* jsonEn = R"({ "UI_PLAY": "Play", "UI_QUIT": "Quit", "UI_SAVE": "Save", "UI_ONLY_EN": "English Exclusive" })";
-    const utf8* xmlJa  = R"(<?xml version="1.0" encoding="UTF-8"?><StringTable><String key="UI_PLAY" value="プレイ"/><String key="UI_QUIT" value="終了"/><String key="UI_SAVE" value="セーブ"/></StringTable>)";
-    const utf8* kvZh   = "UI_PLAY = 开始游戏\nUI_QUIT = 退出\nUI_SAVE = 保存\n";
+    const utf8* jsonJa = R"({ "UI_PLAY": "プレイ", "UI_QUIT": "終了", "UI_SAVE": "セーブ" })";
+    const utf8* jsonZh = R"({ "UI_PLAY": "开始游戏", "UI_QUIT": "退出", "UI_SAVE": "保存" })";
 
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathKo, jsonKo ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathEn, jsonEn ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathJa, xmlJa ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathZh, kvZh ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathJa, jsonJa ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( pathZh, jsonZh ) );
 
     // initialize 실행 (기본: ko_KR, 폴백: en_US)
     const bool bSetup = sw::GameStrings::initialize( packDir, "ko_KR", "en_US" );
@@ -486,151 +439,6 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
     SW_EXPECT_STREQ( "Quit", sw::GameStrings::get( "UI_QUIT" ) );
 
     sw::GameStrings::clear();
-}
-
-/**
- * @brief [LocalizationManager] StringTable 및 LocalizationManager 바이너리 직렬화(STB1 / LOC1) 라운드트립 검증
- */
-SW_TEST_CASE( LocalizationManagerTest, StringTableAndLocalizationBinaryCooking )
-{
-    const sw::string stBinPath  = test::makeTempPath( "test_st.bin" );
-    const sw::string locBinPath = test::makeTempPath( "test_loc.bin" );
-
-    // 1) StringTable binary save / load
-    sw::StringTable sourceTable;
-    sourceTable.setString( sw::hashed_string( "KEY_A" ), "Apple" );
-    sourceTable.setString( sw::hashed_string( "KEY_B" ), "Banana" );
-    sourceTable.setString( sw::hashed_string( "KEY_C" ), "사과와 바나나" );
-
-    SW_EXPECT_TRUE( sourceTable.saveToBinaryFile( stBinPath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( stBinPath ) );
-
-    sw::StringTable loadedTable;
-    SW_EXPECT_TRUE( loadedTable.loadFromFile( stBinPath ) );
-    SW_EXPECT_EQUAL( size_t( 3 ), loadedTable.size() );
-    SW_EXPECT_STREQ( "Apple", loadedTable.getString( sw::hashed_string( "KEY_A" ) ) );
-    SW_EXPECT_STREQ( "Banana", loadedTable.getString( sw::hashed_string( "KEY_B" ) ) );
-    SW_EXPECT_STREQ( "사과와 바나나", loadedTable.getString( sw::hashed_string( "KEY_C" ) ) );
-
-    // 2) LocalizationManager binary pack save / load
-    sw::LocalizationManager sourceLoc;
-    sourceLoc.setString( "ko_KR", sw::hashed_string( "TXT_HELLO" ), "안녕하세요" );
-    sourceLoc.setString( "ko_KR", sw::hashed_string( "TXT_BYE" ), "안녕히 가세요" );
-    sourceLoc.setString( "en_US", sw::hashed_string( "TXT_HELLO" ), "Hello" );
-    sourceLoc.setString( "en_US", sw::hashed_string( "TXT_BYE" ), "Goodbye" );
-    sourceLoc.setString( "ja_JP", sw::hashed_string( "TXT_HELLO" ), "こんにちは" );
-
-    SW_EXPECT_TRUE( sourceLoc.saveToBinaryPack( locBinPath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::fileExists( locBinPath ) );
-
-    sw::LocalizationManager loadedLoc;
-    SW_EXPECT_TRUE( loadedLoc.loadFromBinaryPack( locBinPath ) );
-    SW_EXPECT_TRUE( loadedLoc.hasLanguage( "ko_KR" ) );
-    SW_EXPECT_TRUE( loadedLoc.hasLanguage( "en_US" ) );
-    SW_EXPECT_TRUE( loadedLoc.hasLanguage( "ja_JP" ) );
-    SW_EXPECT_EQUAL( size_t( 3 ), loadedLoc.getAvailableLanguages().size() );
-
-    loadedLoc.setCurrentLanguage( "ko_KR" );
-    loadedLoc.setFallbackLanguage( "en_US" );
-    SW_EXPECT_STREQ( "안녕하세요", loadedLoc.getString( sw::hashed_string( "TXT_HELLO" ) ) );
-    SW_EXPECT_STREQ( "안녕히 가세요", loadedLoc.getString( sw::hashed_string( "TXT_BYE" ) ) );
-
-    loadedLoc.setCurrentLanguage( "ja_JP" );
-    SW_EXPECT_STREQ( "こんにちは", loadedLoc.getString( sw::hashed_string( "TXT_HELLO" ) ) );
-    // ja_JP에는 TXT_BYE가 없으므로 en_US로 폴백
-    SW_EXPECT_STREQ( "Goodbye", loadedLoc.getString( sw::hashed_string( "TXT_BYE" ) ) );
-}
-
-/**
- * @brief [LocalizationManagerTest] `.bin` 언어 파일이 매니저 경로로도 읽히는지 검증
- * @details `initialize` 는 언어 디렉터리에서 `.bin` 을 **일부러 찾아 주고**,
- *          `StringTable::saveToBinaryFile` 이 바로 그 파일을 구워 낸다. 그런데 매니저가 확장자
- *          분기를 `StringTable` 과 따로 들고 있었고 그 사본만 `.bin` 을 몰랐다 — 파일을 텍스트로
- *          읽어 JSON 파서에 넣었으므로 **구워 낸 파일이 하나도 읽히지 않았다.** 지금까지의
- *          바이너리 테스트는 전부 `StringTable` 을 직접 부르거나 `loadFromBinaryPack` 을 썼기
- *          때문에 이 사이의 구멍을 지나가지 않았다.
- */
-SW_TEST_CASE( LocalizationManagerTest, BinaryLanguageFileLoadsThroughTheManager )
-{
-    const sw::string tempDir = test::makeTempDirectory( "sw_test_loc_bin_dir" );
-
-    const sw::hashed_string kKeyWelcome{ "MSG_WELCOME" };
-    const sw::string        pathKo = sw::FileUtil::joinPath( tempDir, "ko_KR.bin" );
-    const sw::string        pathEn = sw::FileUtil::joinPath( tempDir, "en_US.bin" );
-    SW_ASSERT_TRUE( sw::FileUtil::removeFile( pathKo ) );
-    SW_ASSERT_TRUE( sw::FileUtil::removeFile( pathEn ) );
-
-    BLOCK( "엔진이 실제로 내놓는 형식 그대로 굽는다" )
-    {
-        sw::StringTable tableKo;
-        tableKo.setString( kKeyWelcome, "환영합니다!" );
-        SW_ASSERT_TRUE( tableKo.saveToBinaryFile( pathKo ) );
-
-        sw::StringTable tableEn;
-        tableEn.setString( kKeyWelcome, "Welcome!" );
-        SW_ASSERT_TRUE( tableEn.saveToBinaryFile( pathEn ) );
-    }
-
-    BLOCK( "파일 하나를 언어로 직접 읽는다" )
-    {
-        sw::LocalizationManager loc;
-        SW_EXPECT_TRUE( loc.loadLanguageFile( "ko_KR", pathKo ) );
-        SW_EXPECT_STREQ( "환영합니다!", loc.getStringFromLanguage( "ko_KR", kKeyWelcome ) );
-    }
-
-    BLOCK( "디렉터리째 읽는다 — initialize 가 .bin 에 쓰는 바로 그 경로다" )
-    {
-        sw::LocalizationManager loc;
-        SW_EXPECT_TRUE( loc.loadLanguageDirectory( tempDir, ".bin" ) );
-        SW_EXPECT_STREQ( "환영합니다!", loc.getStringFromLanguage( "ko_KR", kKeyWelcome ) );
-        SW_EXPECT_STREQ( "Welcome!", loc.getStringFromLanguage( "en_US", kKeyWelcome ) );
-    }
-}
-
-/**
- * @brief [LocalizationManagerTest] 바이너리 헤더의 항목 개수가 버퍼 크기로 제한되는지 검증
- * @details `count` 는 파일에서 오는 값인데 그대로 `reserve` 에 들어갔다. 망가진 헤더 하나면
- *          항목을 **한 개도 읽어 보기 전에** 4G 개의 버킷을 요구한다. 루프 안의 범위 검사는
- *          그 뒤에야 도는 터라 아무것도 막지 못했다.
- */
-SW_TEST_CASE( LocalizationManagerTest, BinaryHeaderEntryCountIsBoundedByTheBuffer )
-{
-    SW_TEST_SUPPRESS_LOGS();
-
-    sw::StringTable sourceTable;
-    sourceTable.setString( sw::hashed_string( "KEY_A" ), "Apple" );
-
-    sw::vector<uint8> buffer;
-    SW_ASSERT_TRUE( sourceTable.saveToBinaryBuffer( buffer ) );
-    SW_ASSERT_TRUE( buffer.size() > 12 );
-
-    // 헤더의 세 번째 uint32(=개수)만 거짓말로 바꾼다 — 나머지 바이트는 그대로 멀쩡하다.
-    auto withEntryCount = [&]( uint32 count )
-    {
-        sw::vector<uint8> corruptedByte = buffer;
-        corruptedByte[8]                = static_cast<uint8>( count & 0xFFu );
-        corruptedByte[9]                = static_cast<uint8>( ( count >> 8 ) & 0xFFu );
-        corruptedByte[10]               = static_cast<uint8>( ( count >> 16 ) & 0xFFu );
-        corruptedByte[11]               = static_cast<uint8>( ( count >> 24 ) & 0xFFu );
-        return corruptedByte;
-    };
-
-    BLOCK( "버퍼가 담을 수 없는 개수면 한 항목도 읽지 않고 거절한다" )
-    {
-        const sw::vector<uint8> corruptedByte = withEntryCount( 1000 );
-        sw::StringTable         table;
-        SW_EXPECT_FALSE( table.loadFromBinaryBuffer( corruptedByte.data(), corruptedByte.size() ) );
-        // 고치기 전에는 멀쩡한 첫 항목을 **넣고 나서** 다음 항목에서야 실패를 알아차렸다.
-        SW_EXPECT_EQUAL( size_t( 0 ), table.size() );
-    }
-
-    BLOCK( "uint32 최대치도 즉시 거절한다 — reserve 가 자리를 요구하기 전에" )
-    {
-        const sw::vector<uint8> corruptedByte = withEntryCount( ~uint32{ 0 } );
-        sw::StringTable         table;
-        SW_EXPECT_FALSE( table.loadFromBinaryBuffer( corruptedByte.data(), corruptedByte.size() ) );
-        SW_EXPECT_EQUAL( size_t( 0 ), table.size() );
-    }
 }
 
 /**
@@ -686,64 +494,6 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeSpellingsNameOneLanguage )
 }
 
 /**
- * @brief [LocalizationManagerTest] 같은 내용은 언제나 같은 바이트로 구워지는지 검증
- * @details `StringTable` 과 `LocalizationManager` 는 둘 다 `unordered_map` 을 훑어 팩을 썼다.
- *          순회 순서는 삽입 순서와 할당 상황에 따라 달라지므로, **같은 내용을 두 번 구워도 파일
- *          바이트가 달라졌다** — 미리 구워 두는 산출물에 그것은 diff·캐시·검증을 전부 무의미하게
- *          만든다. 여기서는 넣는 순서만 뒤집어 구워 보고 바이트가 같은지 본다.
- */
-SW_TEST_CASE( LocalizationManagerTest, BinaryPackIsDeterministic )
-{
-    const sw::string kArrKey[]   = { "menu.start", "menu.quit", "hud.hp", "zzz.last", "aaa.first" };
-    const sw::string kArrValue[] = { "시작", "종료", "체력", "마지막", "처음" };
-    constexpr size_t kKeyCount   = sizeof( kArrKey ) / sizeof( kArrKey[0] );
-
-    // 1) StringTable — 넣는 순서만 뒤집는다.
-    sw::StringTable forwardTable;
-    sw::StringTable reverseTable;
-    for ( size_t index = 0; index < kKeyCount; ++index )
-    {
-        forwardTable.setString( sw::hashed_string( kArrKey[index].c_str() ), kArrValue[index] );
-        const size_t reverseIndex = kKeyCount - 1 - index;
-        reverseTable.setString( sw::hashed_string( kArrKey[reverseIndex].c_str() ), kArrValue[reverseIndex] );
-    }
-
-    sw::vector<uint8> forwardBytes;
-    sw::vector<uint8> reverseBytes;
-    SW_EXPECT_TRUE( forwardTable.saveToBinaryBuffer( forwardBytes ) );
-    SW_EXPECT_TRUE( reverseTable.saveToBinaryBuffer( reverseBytes ) );
-    SW_EXPECT_EQUAL( forwardBytes.size(), reverseBytes.size() );
-    SW_EXPECT_TRUE( forwardBytes.size() > 0 );
-    SW_EXPECT_TRUE( sw::Memory::compare( forwardBytes.data(), reverseBytes.data(), forwardBytes.size() ) == 0 );
-
-    // 2) LocalizationManager — 언어를 넣는 순서만 뒤집는다.
-    const sw::string kArrLanguage[] = { "ko_KR", "en_US", "ja_JP", "zh_CN" };
-    constexpr size_t kLanguageCount = sizeof( kArrLanguage ) / sizeof( kArrLanguage[0] );
-
-    sw::LocalizationManager forwardManager;
-    sw::LocalizationManager reverseManager;
-    for ( size_t index = 0; index < kLanguageCount; ++index )
-    {
-        const size_t reverseIndex = kLanguageCount - 1 - index;
-        forwardManager.setString( kArrLanguage[index], sw::hashed_string( "menu.start" ), "시작" );
-        reverseManager.setString( kArrLanguage[reverseIndex], sw::hashed_string( "menu.start" ), "시작" );
-    }
-
-    const sw::string forwardPath = test::makeTempPath( "test_loc_forward.loc.bin" );
-    const sw::string reversePath = test::makeTempPath( "test_loc_reverse.loc.bin" );
-    SW_EXPECT_TRUE( forwardManager.saveToBinaryPack( forwardPath ) );
-    SW_EXPECT_TRUE( reverseManager.saveToBinaryPack( reversePath ) );
-
-    sw::vector<uint8> forwardPackBytes;
-    sw::vector<uint8> reversePackBytes;
-    SW_EXPECT_TRUE( sw::FileUtil::readFile( forwardPath, forwardPackBytes ) );
-    SW_EXPECT_TRUE( sw::FileUtil::readFile( reversePath, reversePackBytes ) );
-    SW_EXPECT_EQUAL( forwardPackBytes.size(), reversePackBytes.size() );
-    SW_EXPECT_TRUE( forwardPackBytes.size() > 0 );
-    SW_EXPECT_TRUE( sw::Memory::compare( forwardPackBytes.data(), reversePackBytes.data(), forwardPackBytes.size() ) == 0 );
-}
-
-/**
  * @brief [LocalizationManagerTest] 조회가 준 포인터는 표가 바뀐 뒤에도 그때의 문자열을 가리킨다
  * @details 조회는 락을 놓은 뒤 `const utf8*` 를 돌려주고 UI · 워커가 그것을 들고 있다. 예전에는 표가 문자열을 값으로 가져, 같은 키를
  *          다시 쓰면 들고 있던 포인터가 새 값을 읽었고(제자리 대입), 다른 키를 넣거나 비우면 해제된 메모리를 읽었다.
@@ -767,30 +517,4 @@ SW_TEST_CASE( LocalizationManagerTest, LookupPointerOutlivesTableChanges )
     }
     table.clear();
     SW_EXPECT_STREQ( "Alpha", pHeld );
-}
-
-/**
- * @brief [LocalizationManagerTest] 언어 표를 하나도 읽지 못한 바이너리 팩은 실패다(텍스트 폴백이 돈다)
- * @details 예전에는 표가 모두 깨져도 true 여서, 부르는 쪽이 텍스트 파일 폴백을 건너뛰고 활성 언어 없이 끝났다.
- */
-SW_TEST_CASE( LocalizationManagerTest, BinaryPackWithNoReadableTableFails )
-{
-    SW_TEST_SUPPRESS_LOGS();
-    const sw::string packPath = test::makeTempPath( "test_loc_corrupt.bin" );
-
-    sw::LocalizationManager source;
-    source.setString( "en_US", sw::hashed_string( "TXT_HELLO" ), "Hello" );
-    SW_ASSERT_TRUE( source.saveToBinaryPack( packPath ) );
-
-    // [magic][version][count] 뒤 [codeLen][code "en_US"][tableSize] 다음이 표의 첫 바이트(표 매직)다 — 그것을 깬다.
-    sw::vector<uint8> bytes;
-    SW_ASSERT_TRUE( sw::FileUtil::readFile( packPath, bytes ) );
-    const size_t tableStart = 12 + 4 + 5 + 4;
-    SW_ASSERT_TRUE( bytes.size() > tableStart );
-    bytes[tableStart] ^= 0xFFu;
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( packPath, bytes.data(), bytes.size() ) );
-
-    sw::LocalizationManager loaded;
-    SW_EXPECT_FALSE( loaded.loadFromBinaryPack( packPath ) );
-    SW_EXPECT_FALSE( loaded.hasLanguage( "en_US" ) );
 }
