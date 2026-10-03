@@ -930,3 +930,82 @@ SW_TEST_CASE( MaterialTest, InstanceTextureOverrideRoundTripsAsAnAssetPath )
     SW_EXPECT_TRUE( reloaded->getTextureParameter( sw::hashed_string( "albedoMap" ) ) == "engine/textures/test/checker.dds" );
     SW_EXPECT_FALSE( reloaded->isParameterOverridden( sw::hashed_string( "albedoMap" ) ) );
 }
+
+/**
+ * @brief [MaterialTest] 머티리얼의 모르는 enum · 플래그 글은 경고하고 값을 그대로 둔다 — 0 이 되거나 토큰이 빠지지 않는다
+ * @details 프로퍼티 값(파일의 `_enumEntries` · 리플렉션 `enumType`)과 `_permutations` 의 `usage` 가 같은 규칙이다: 모르는 이름 · 오타 · 표식 값
+ *          (`Count`)이 하나라도 있으면 읽지 않는다. 에셋 글은 전역 이름 표에 넣지 않는다(`hashed_string::findInterned`).
+ */
+SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
+{
+    const sw::string xml =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+        "<MaterialDesc formatVersion=\"0\" name=\"EnumProbe\" shaderPath=\"engine/shaders/forwardlit.hlsl\">"
+        "  <_permutations quality=\"High\" usage=\"Instanced | ZqUsageTypoProbe\"/>"
+        "  <_properties>"
+        "    <item name=\"shadeMode\" type=\"Enum\" shaderType=\"Uint\" value=\"Lit\">"
+        "      <_enumEntries><item name=\"Unlit\" value=\"0\"/><item name=\"Lit\" value=\"1\"/></_enumEntries>"
+        "    </item>"
+        "    <item name=\"flags\" type=\"BitFlag\" shaderType=\"Uint\" value=\"CastShadows|ReceiveDecals\">"
+        "      <_enumEntries><item name=\"CastShadows\" value=\"1\"/><item name=\"ReceiveDecals\" value=\"2\"/></_enumEntries>"
+        "    </item>"
+        "    <item name=\"usage\" type=\"BitFlag\" shaderType=\"Uint\" enumType=\"sw::MaterialUsageFlags\" value=\"StaticMesh|Instanced\"/>"
+        "    <item name=\"quality\" type=\"Enum\" shaderType=\"Uint\" enumType=\"sw::MaterialQualityLevel\" value=\"Epic\"/>"
+        "  </_properties>"
+        "</MaterialDesc>";
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "unknown material enum text" );
+        SW_ASSERT_TRUE( material->loadFromXml( xml ) );
+    }
+    // usage 의 모르는 토큰은 아는 토큰만 남기지 않는다 — 기본값(StaticMesh)이 그대로다.
+    SW_EXPECT_TRUE_MSG( material->getPermutations()._usage == sw::MaterialUsageFlags::StaticMesh, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "ZqUsageTypoProbe" ) >= 1, logs.joined().c_str() );
+
+    const auto readUint = [&]( const utf8* pName ) -> uint32
+    {
+        const uint32* pValue = reinterpret_cast<const uint32*>( material->getParameterData( pName ) );
+        return pValue != nullptr ? *pValue : 0xFFFFFFFFu;
+    };
+    SW_ASSERT_EQUAL( 1u, readUint( "shadeMode" ) );
+    SW_ASSERT_EQUAL( 3u, readUint( "flags" ) );
+    SW_ASSERT_EQUAL( 5u, readUint( "usage" ) ); // StaticMesh(1) | Instanced(4)
+    SW_ASSERT_EQUAL( 3u, readUint( "quality" ) );
+
+    // 오타 · 모르는 토큰 · 표식 값은 쓰지 않는다 — 앞의 값이 남고, 이름과 함께 경고한다.
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "unknown material enum text" );
+        SW_EXPECT_FALSE( material->setParameter( nullptr, sw::hashed_string( "shadeMode" ), "Lt" ) );
+        SW_EXPECT_FALSE( material->setParameter( nullptr, sw::hashed_string( "flags" ), "CastShadows|ReceiveDecalz" ) );
+        SW_EXPECT_FALSE( material->setParameter( nullptr, sw::hashed_string( "usage" ), "Decal | ZqFlagTypoProbe" ) );
+        SW_EXPECT_FALSE( material->setParameter( nullptr, sw::hashed_string( "quality" ), "ZqQualityTypoProbe" ) );
+        SW_EXPECT_FALSE( material->setParameter( nullptr, sw::hashed_string( "quality" ), "Count" ) );
+    }
+    SW_EXPECT_EQUAL( 1u, readUint( "shadeMode" ) );
+    SW_EXPECT_EQUAL( 3u, readUint( "flags" ) );
+    SW_EXPECT_EQUAL( 5u, readUint( "usage" ) );
+    SW_EXPECT_EQUAL( 3u, readUint( "quality" ) );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Material parameter 'shadeMode' has an unknown enum value 'Lt'" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "'quality' has an unknown enum value 'Count'" ) == 1, logs.joined().c_str() );
+    // 실패한 글은 프로퍼티 값으로도 남지 않는다(저장하면 옛 값이 나간다).
+    const sw::MaterialProperty* pShade = material->findProperty( sw::hashed_string( "shadeMode" ) );
+    SW_ASSERT_NOT_NULL( pShade );
+    SW_EXPECT_TRUE( pShade->_value == "Lit" );
+
+    // 아는 이름 · 숫자 · 쉼표 구분은 그대로 읽는다.
+    SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "shadeMode" ), "unlit" ) );
+    SW_EXPECT_EQUAL( 0u, readUint( "shadeMode" ) );
+    SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "flags" ), "ReceiveDecals, 1" ) );
+    SW_EXPECT_EQUAL( 3u, readUint( "flags" ) );
+    SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "usage" ), "Decal" ) );
+    SW_EXPECT_EQUAL( 16u, readUint( "usage" ) );
+    SW_EXPECT_TRUE( material->setParameter( nullptr, sw::hashed_string( "quality" ), "Med" ) ); // ValueAlias
+    SW_EXPECT_EQUAL( 1u, readUint( "quality" ) );
+
+    // 에셋 글은 전역 이름 표에 들어가지 않는다.
+    SW_EXPECT_TRUE( sw::hashed_string::findInterned( "ZqUsageTypoProbe" ).empty() );
+    SW_EXPECT_TRUE( sw::hashed_string::findInterned( "ZqFlagTypoProbe" ).empty() );
+    SW_EXPECT_TRUE( sw::hashed_string::findInterned( "ZqQualityTypoProbe" ).empty() );
+}

@@ -65,61 +65,74 @@ namespace sw
                 return StringUtil::equals( value, pExpected, true );
             }
 
-            static int64 resolveNamedValue( const MaterialProperty& prop, string_view token, bool bitFlagMode )
+            /** @brief `_enumType` 이 가리키는 리플렉션 enum 입니다. 타입 이름은 찾기만 한다(에셋 글을 전역 이름 표에 넣지 않는다). */
+            static const EnumInfo* findReflectedEnum( const MaterialProperty& prop )
             {
-                const string tokenNt( token );
-                const string name{ StringUtil::trim( tokenNt ) };
-                if ( name.empty() )
-                    return 0;
-
-                // 숫자 리터럴
-                {
-                    int64 parsedValue{ 0 };
-                    if ( StringUtil::parseInt64( name, parsedValue, 0 ) )
-                        return parsedValue;
-                }
-
-                for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
-                {
-                    if ( iequals( enumEntry._name, name.c_str() ) )
-                        return enumEntry._value;
-                }
-
-                if ( prop._enumType.empty() == false )
-                {
-                    const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( prop._enumType.c_str() ) );
-                    if ( pInfo != nullptr )
-                    {
-                        if ( bitFlagMode || pInfo->_bIsBitFlag )
-                            return pInfo->stringFlagsToValue( name );
-                        hashed_string key( name.c_str() );
-                        const auto    it = pInfo->_mapNameToValue.find( key );
-                        if ( it != pInfo->_mapNameToValue.end() )
-                            return it->second;
-                    }
-                }
-                return 0;
+                if ( prop._enumType.empty() )
+                    return nullptr;
+                const hashed_string typeName = hashed_string::findInterned( prop._enumType );
+                return typeName.empty() ? nullptr : engine::getTypeRegistry().findEnum( typeName );
             }
 
-            static int64 parseEnumOrFlags( const MaterialProperty& prop, string_view value, bool bitFlagMode )
+            /**
+             * @brief 이름 · 숫자 토큰 하나를 값으로 읽습니다. 모르는 토큰이면 false 입니다.
+             * @details 파일의 `_enumEntries` 이름(대소문자 무시)이 먼저다. 리플렉션 enum 이 있으면 `EnumInfo::tryParseText`(이름 · ValueAlias ·
+             *          알려진 값의 숫자)이고, 없으면 숫자 리터럴을 받는다.
+             */
+            static bool tryParseEnumToken( const MaterialProperty& prop, const EnumInfo* pInfo, string_view token, int64& outValue )
             {
+                for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
+                {
+                    if ( iequals( token, enumEntry._name.c_str() ) )
+                    {
+                        outValue = enumEntry._value;
+                        return true;
+                    }
+                }
+                if ( pInfo != nullptr )
+                    return pInfo->tryParseText( token, outValue );
+                return StringUtil::parseInt64( token, outValue, 0 );
+            }
+
+            /**
+             * @brief Enum · BitFlag 값 글을 읽습니다. 모르는 이름 · 토큰이나 표식 값(`Invalid` · `Count`)이 하나라도 있으면 false 입니다.
+             * @details 비트플래그는 `|` · `,` 로 나눈 토큰마다 읽어 합친다. 빈 글은 0 이다(값을 적지 않은 프로퍼티). 실패하면 부르는 쪽이
+             *          경고하고 쓰지 않는다 — 버퍼의 앞 값이 남는다.
+             */
+            static bool tryParseEnumOrFlags( const MaterialProperty& prop, string_view value, bool bitFlagMode, int64& outValue )
+            {
+                const string_view trimmed = StringUtil::trim( value );
+                if ( trimmed.empty() )
+                {
+                    outValue = 0;
+                    return true;
+                }
+
+                const EnumInfo* pInfo = findReflectedEnum( prop );
+                int64           result{ 0 };
                 if ( bitFlagMode || prop._type == MaterialPropertyType::BitFlag )
                 {
-                    if ( prop._enumType.empty() == false )
-                    {
-                        const EnumInfo* pInfo = engine::getTypeRegistry().findEnum( hashed_string( prop._enumType.c_str() ) );
-                        if ( pInfo != nullptr && pInfo->_bIsBitFlag )
-                            return pInfo->stringFlagsToValue( value );
-                    }
-                    int64           result{ 0 };
-                    string_splitter splitter( value, { "|", "," } );
+                    string_splitter splitter( trimmed, { "|", "," } );
                     for ( string_view part : splitter.getSplitList() )
                     {
-                        result |= resolveNamedValue( prop, string( part ), true );
+                        const string_view token = StringUtil::trim( part );
+                        if ( token.empty() )
+                            continue;
+                        int64 tokenValue{ 0 };
+                        if ( tryParseEnumToken( prop, pInfo, token, tokenValue ) == false )
+                            return false;
+                        result |= tokenValue;
                     }
-                    return result;
                 }
-                return resolveNamedValue( prop, value, false );
+                else if ( tryParseEnumToken( prop, pInfo, trimmed, result ) == false )
+                {
+                    return false;
+                }
+
+                if ( pInfo != nullptr && pInfo->isValidValue( result ) == false )
+                    return false;
+                outValue = result;
+                return true;
             }
 
             static uint32 parseChannelMask( string_view value )
@@ -417,7 +430,12 @@ namespace sw
             }
             case MaterialPropertyType::Enum:
             {
-                const int64  enumVal  = MaterialPackingInternal::parseEnumOrFlags( prop, prop._value, false );
+                int64 enumVal{ 0 };
+                if ( MaterialPackingInternal::tryParseEnumOrFlags( prop, prop._value, false, enumVal ) == false )
+                {
+                    SW_LOG_WARNING( "Material parameter '%#' has an unknown enum value '%#' - value kept", prop._name, prop._value );
+                    return false;
+                }
                 const uint32 uEnumVal = static_cast<uint32>( enumVal );
                 if ( shaderType == MaterialPropertyType::Int )
                 {
@@ -433,7 +451,13 @@ namespace sw
             }
             case MaterialPropertyType::BitFlag:
             {
-                const uint32 uEnumVal = static_cast<uint32>( MaterialPackingInternal::parseEnumOrFlags( prop, prop._value, true ) );
+                int64 flagsVal{ 0 };
+                if ( MaterialPackingInternal::tryParseEnumOrFlags( prop, prop._value, true, flagsVal ) == false )
+                {
+                    SW_LOG_WARNING( "Material parameter '%#' has an unknown enum value '%#' - value kept", prop._name, prop._value );
+                    return false;
+                }
+                const uint32 uEnumVal = static_cast<uint32>( flagsVal );
                 return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &uEnumVal, sizeof( uEnumVal ) );
             }
             case MaterialPropertyType::ChannelMask:

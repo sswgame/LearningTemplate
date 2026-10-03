@@ -47,7 +47,8 @@ SW_TEST_CASE( ReflectionEnumBitFlagTest, StringFlagsToValue )
     if ( info == nullptr )
         return;
 
-    int64 val      = info->stringFlagsToValue( "OptionB | OptionC" );
+    int64 val{ 0 };
+    SW_EXPECT_TRUE( info->tryParseText( "OptionB | OptionC", val ) );
     int64 expected = static_cast<int64>( sw::DummyBitFlag::OptionB ) | static_cast<int64>( sw::DummyBitFlag::OptionC );
 
     SW_EXPECT_EQUAL( expected, val );
@@ -120,7 +121,8 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoFlagsStringConversion )
         {4, sw::hashed_string( "FlagC" )}
     };
 
-    int64 val = info.stringFlagsToValue( "FlagA | FlagC" );
+    int64 val{ 0 };
+    SW_EXPECT_TRUE( info.tryParseText( "FlagA | FlagC", val ) );
     SW_EXPECT_EQUAL( 5, val );
 
     sw::hashed_string flagsStr = info.toStringFlags( 5 );

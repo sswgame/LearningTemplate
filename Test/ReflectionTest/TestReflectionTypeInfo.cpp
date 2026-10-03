@@ -313,9 +313,12 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeAndEnumAliasLookup )
     SW_EXPECT_TRUE( enumAlias->_fullyQualifiedName == sw::hashed_string( "sw::SampleStatus" ) );
 
     // enumerator ValueAlias: OldIdle → Idle 값
-    SW_EXPECT_EQUAL( enumCanonical->stringFlagsToValue( "Idle" ), enumCanonical->stringFlagsToValue( "OldIdle" ) );
-    SW_EXPECT_EQUAL( enumCanonical->stringFlagsToValue( "Moving" ),
-                     enumCanonical->stringFlagsToValue( "OldMoving" ) );
+    int64 canonicalValue{ -1 };
+    int64 aliasValue{ -2 };
+    SW_EXPECT_TRUE( enumCanonical->tryParseText( "Idle", canonicalValue ) && enumCanonical->tryParseText( "OldIdle", aliasValue ) );
+    SW_EXPECT_EQUAL( canonicalValue, aliasValue );
+    SW_EXPECT_TRUE( enumCanonical->tryParseText( "Moving", canonicalValue ) && enumCanonical->tryParseText( "OldMoving", aliasValue ) );
+    SW_EXPECT_EQUAL( canonicalValue, aliasValue );
 }
 
 /**

@@ -752,7 +752,6 @@ namespace sw
             if ( flagsText.size() >= 2 && flagsText.front() == '"' && flagsText.back() == '"' )
                 flagsText = flagsText.substr( 1, flagsText.size() - 2 );
             // 모르는 이름이면 쓰지 않고 실패를 돌려준다(값은 그대로 — 대개 멤버 초기값). 읽는 쪽이 orphan 으로 남기거나 실패로 알린다.
-            // 예전에는 `stringFlagsToValue` 가 모르는 이름을 0 으로 만들어 그 0 을 썼다(`EnumInfo::tryParseText` 설명).
             int64 parsedValue{ 0 };
             if ( pEnumInfo->tryParseText( flagsText, parsedValue ) == false )
             {

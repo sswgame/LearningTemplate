@@ -586,42 +586,6 @@ namespace sw
             return false;
         }
 
-        /**
-         * @brief `"A | B"` 플래그 문자열을 값으로 파싱합니다.
-         * @note 이 함수와 `tryParse` 는 이름을 **찾기만** 한다(`hashed_string::findInterned`). 열거자 이름은 등록 때 이미 intern 됐으므로
-         *       답은 같고, 에셋의 모르는 글은 전역 이름 표에 들어가지 않는다 — 예전에는 틀린 이름 · 오타가 그때마다 표에 쌓였다.
-         */
-        int64 stringFlagsToValue( string_view flagsStr ) const
-        {
-            if ( _bIsBitFlag == SW_FALSE )
-            {
-                const hashed_string nameKey = hashed_string::findInterned( flagsStr );
-                auto                iter    = _mapNameToValue.find( nameKey );
-                return iter != _mapNameToValue.end() ? iter->second : 0;
-            }
-
-            int64  intResult{ 0 };
-            size_t startPos{ 0 };
-            while ( startPos < flagsStr.size() )
-            {
-                const size_t      delimiterPos = flagsStr.find( '|', startPos );
-                const size_t      endPos       = ( delimiterPos != string_view::npos ) ? delimiterPos : flagsStr.size();
-                const string_view token        = StringUtil::trim( flagsStr.substr( startPos, endPos - startPos ) );
-                if ( token.empty() == false )
-                {
-                    const hashed_string tokenKey = hashed_string::findInterned( token );
-                    auto                iter     = _mapNameToValue.find( tokenKey );
-                    if ( iter != _mapNameToValue.end() )
-                        intResult |= iter->second;
-                }
-                if ( delimiterPos == string_view::npos )
-                    break;
-                startPos = delimiterPos + 1;
-            }
-
-            return intResult;
-        }
-
         /** @brief 값에 해당하는 intern 된 enumerator 이름입니다. Invalid/Count 센티널이면 nullptr 입니다. */
         const utf8* valueToCString( int64 value ) const
         {
@@ -638,7 +602,8 @@ namespace sw
                 return false;
 
             {
-                const hashed_string key = hashed_string::findInterned( name ); // 찾기만 한다(`stringFlagsToValue` 설명)
+                // 찾기만 한다 — 열거자 이름은 등록 때 intern 됐으므로 답은 같고, 에셋의 모르는 글은 전역 이름 표에 들어가지 않는다.
+                const hashed_string key = hashed_string::findInterned( name );
                 const auto          it  = _mapNameToValue.find( key );
                 if ( it != _mapNameToValue.end() )
                 {
@@ -669,9 +634,8 @@ namespace sw
 
         /**
          * @brief 에셋 · 설정 텍스트를 값으로 읽습니다 — 이름(대소문자 무시), 비트플래그면 `A | B`, 그리고 **알려진 값의 숫자**까지.
-         * @details 모르는 이름 · 모르는 플래그 토큰이 하나라도 있으면 false 다. 예전 직렬화는 `stringFlagsToValue` 로 읽어, 이름이 바뀐
-         *          열거자 · 대소문자만 다른 `"editor"` · 숫자 `"2"` · 잘못 적은 `PROPERTY( Default = … )` 가 **조용히 0** 이 됐다(실패도
-         *          orphan 도 로그도 없었다).
+         * @details 모르는 이름 · 모르는 플래그 토큰이 하나라도 있으면 false 다 — 아는 토큰만 남기거나 0 으로 읽지 않는다. 에셋 · 설정 글을
+         *          값으로 읽는 길은 이것 하나다(직렬화기 · 머티리얼).
          *
          *          `tryParse` 와 달리 표식 값(`Invalid` · `Count`)도 받는다. 직렬화는 필드에 든 값을 이름으로 적으므로(`Key::Unknown` 은
          *          "바인딩 없음" 이다) 읽기도 그 이름을 받아야 왕복이 맞는다. 이름을 해시로 바꾸지 않는다 — 에셋 글을 전역 이름표에 넣지

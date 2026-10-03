@@ -616,9 +616,14 @@ namespace sw
         MaterialProperty* prop = findProperty( name );
         if ( prop == nullptr )
             return false;
-        prop->_value = value;
+        // 쓰지 못한 글(모르는 enum 이름 등)은 프로퍼티 값으로도 남기지 않는다 — 버퍼와 저장되는 값이 어긋나지 않게.
+        string previousValue = std::move( prop->_value );
+        prop->_value         = value;
         if ( MaterialUtil::packPropertyIntoBuffer( *prop, _data._bytes ) == false )
+        {
+            prop->_value = std::move( previousValue );
             return false;
+        }
         ++_bufferGeneration;
         if ( pRhi != nullptr && _constantBuffer != 0 )
             pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );

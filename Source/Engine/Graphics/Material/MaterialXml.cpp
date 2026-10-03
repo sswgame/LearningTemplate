@@ -176,6 +176,7 @@ namespace sw
         int64           value{ 0 };
         if ( pInfo != nullptr && pInfo->tryParse( qualityName, value ) )
             return static_cast<MaterialQualityLevel>( value );
+        SW_LOG_WARNING( "Material quality '%#' is not a quality level - using High", qualityName );
         return MaterialQualityLevel::High;
     }
 
@@ -212,8 +213,12 @@ namespace sw
         if ( usage.empty() == false )
         {
             const EnumInfo* pUsageEnum = engine::getTypeRegistry().findEnum( hashed_string( "sw::MaterialUsageFlags" ) );
-            if ( pUsageEnum != nullptr )
-                out._usage = static_cast<MaterialUsageFlags>( pUsageEnum->stringFlagsToValue( usage ) );
+            int64           usageValue{ 0 };
+            // 모르는 토큰이 하나라도 있으면 아는 토큰만 남기지 않고 기본값을 둔다(`EnumInfo::tryParseText`).
+            if ( pUsageEnum != nullptr && pUsageEnum->tryParseText( usage, usageValue ) )
+                out._usage = static_cast<MaterialUsageFlags>( usageValue );
+            else
+                SW_LOG_WARNING( "Material usage '%#' has an unknown flag - keeping the default", usage );
         }
 
         XmlNode always = permutationsNode.findChild( "_alwaysDefines" );
