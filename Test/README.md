@@ -41,9 +41,8 @@ ctest --test-dir build/Ninja-Debug --output-on-failure
 > ../TestBin/EngineTest.exe --test_filter=MaterialTest.*
 > ```
 >
-> `TestBin` 에서 그냥 돌리면 리소스 루트를 못 찾는다. 예전엔 그 상태로 계속 달리다 세그폴트했다 —
-> `SW_LOG_ASSERT` 는 배포본에서 사라지지 않지만 **브레이크 없이 로그만 남기고 진행** 하기 때문이다.
-> 지금은 `ResourceUtil::initialize()` 를 쓰는 케이스가 전부 `SW_ASSERT_TRUE` 로 감싸 그 자리에서 실패한다.
+> `TestBin` 에서 그냥 돌리면 리소스 루트를 못 찾는다. 주의: `SW_LOG_ASSERT` 는 배포본에서 **브레이크 없이 로그만 남기고
+> 진행** 하므로, `ResourceUtil::initialize()` 를 쓰는 케이스는 그 결과를 `SW_ASSERT_TRUE` 로 감싸 그 자리에서 실패하게 한다.
 
 ### 특정 테스트만 골라서 실행 (Label 활용)
 라벨은 `core`, `editor`, `engine`, `app`, `reflection`, `module`, `unit`, `nogpu`, `hostgpu`, `lint` 입니다.
@@ -65,8 +64,7 @@ ctest --preset Ninja-Debug-lint
 > 그 선언으로 ctest 항목을 가른다 — `<타깃>_NoGPU` 는 `--host_suites=exclude`, `<타깃>_HostOnly` 는 `--host_suites=only`.
 > 지금 선언된 것은 `EngineTest --test_list` 끝에 이유와 함께 찍힌다. 디바이스가 필요한 테스트를 새로 쓰면
 > **`RenderPassGpuTest` 에 넣고** 창 + 디바이스는 `test::RHITestDevice`(`Test/EngineTest/RHITestDevice.h`)로 세운다 — 스코프를
-> 벗어나면 내려가므로 단언으로 일찍 빠져도 다음 케이스에 남지 않는다. (이름을 하나씩 필터에 적던 시절에는 새 테스트가
-> 규칙을 비켜가 CI 가 나흘간 빨갛게 있었다.)
+> 벗어나면 내려가므로 단언으로 일찍 빠져도 다음 케이스에 남지 않는다.
 
 > **호스트 스위트의 케이스는 예상 밖 `[Error]` 로그 하나로 진다.** 검증 레이어 · 드라이버 오류는 Error 로그로만 남고 단언은 통과할 수
 > 있기 때문이다. 일부러 거절 경로를 부르는 자리는 `SW_TEST_DEFENSIVE_SCOPE( "이유" )` 로 감싼다(그 안의 Error 는 표식이 붙어 세지 않는다).
@@ -115,30 +113,30 @@ cd build/Ninja-Debug/Bin
 ### 구성마다 도는 케이스 수가 다르다
 
 `ctest` 는 어느 구성에서든 똑같이 "Passed" 라고만 말한다. 실제로 도는 양은 이렇게 다르다
-(2026-10-01 실측 — 등록된 케이스 / 그중 스킵, 호스트 스위트 포함):
+(main `8445bdea` 빌드의 `--test_list` 실측 — 등록된 케이스, 괄호 안은 그중 호스트 스위트(`--host_suites=only`) 케이스):
 
 | 실행 파일 | Debug | Shipping |
 | --- | ---: | ---: |
-| CoreTest | 328 / 4 | 328 / 10 |
-| EngineTest | 726 / 0 | 720 / 3 |
-| ReflectionTest | 132 / 0 | 132 / 8 |
-| **SmokeTest** | **36 / 1** | **2 / 0** |
-| EditorTest | 78 / 0 | 78 / 0 |
-| EditorUiTest | 2 / 0 | 2 / 0 |
-| **AppTest** | **6 / 0** | **5 / 0** |
+| CoreTest | 360 | 360 |
+| EngineTest | 1041 (86) | 1029 (81) |
+| ReflectionTest | 175 | 175 |
+| **SmokeTest** | **47** | **3** |
+| EditorTest | 149 | 142 |
+| EditorUiTest | 2 | 2 |
+| **AppTest** | **17 (11)** | **9 (3)** |
 
-SmokeTest 가 36 → 2 가 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
-Shipping 스모크는 정적 `fillGameAPI` 경로만 본다(`Test/SmokeTest/CMakeLists.txt` 참고). AppTest 가 6 → 5 인 것도
-같은 이유다 — 에디터 실기동 케이스는 배포본에 에디터가 없어 아예 컴파일되지 않는다.
+SmokeTest 가 47 → 3 이 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
+Shipping 스모크는 정적 `fillGameAPI` 경로만 본다(`Test/SmokeTest/CMakeLists.txt` 참고). AppTest 가 17 → 9 인 것도
+같은 이유다 — 에디터 실기동 · 백엔드 교체 · 메모리 태그 보고 케이스는 배포본에 에디터와 그 창구가 없어 아예 컴파일되지 않는다.
+EngineTest · EditorTest 의 차이도 Dev 전용 경로(모듈 코드 해제 · 셰이더 라이브 컴파일 · 인스펙터 메타데이터) 케이스다.
 스킵도 구성을 탄다. **어느 구성에서나 스킵되는 것은 "자식 역할" 케이스다** — 환경 변수가 없으면 스스로 빠지고, 다른 케이스가
 자기 자신을 자식 프로세스로 띄울 때만 돈다(`CrashReportTest.ChildProcessCrashesAsRequested` · `TestFrameworkTest.ChildRoleEchoesOrHangs` ·
-`ModuleApiTest.SharedModuleChildKeepsItsRegistrations`). Debug 의 CoreTest 는 둘이 더 빠진다 — `SW_ASSERT` 가 프로세스를 세우는
-구성이라, 단언이 사라진 구성에서만 뜻이 있는 방어 경로 검사다. Shipping 은 `SW_LOG_*` 가 컴파일에서 빠져 로그 검사가,
+`ModuleApiTest.SharedModuleChildKeepsItsRegistrations`). Shipping 은 `SW_LOG_*` 가 컴파일에서 빠져 로그 검사가,
 ReflectionTest 는 Dev 전용 진단 경로와 배포본에 없는 메타데이터 검사가 빠진다.
 
 **의도한 축소와 사고를 가르는 선은 하나다: 스위트가 통째로 비면 실패한다.**
 필터로 고른 스위트의 케이스가 **전부 스킵되면** 그 실행은 아무것도 검증하지 않은 것이므로 프레임워크가
-실패로 돌린다. DXC 가 사라지거나 구운 셰이더가 없어지면 예전에는 조용히 초록이었다. 정말 그래도 되는
+실패로 돌린다(DXC 가 사라지거나 구운 셰이더가 없어져도 초록으로 끝나지 않게). 정말 그래도 되는
 실행이면 `--allow_empty_suite` 를 준다.
 
 ### 스위트 이름 규칙 — `CheckTestSuites.py` 가 강제합니다
@@ -175,6 +173,9 @@ ReflectionTest 는 Dev 전용 진단 경로와 배포본에 없는 메타데이�
 단언 자체를 시험할 때는 `test::ScopedFailureCapture` 로 실패를 가로챕니다(gtest 의 `EXPECT_FATAL_FAILURE` 와 같은 일).
 `Test/CoreTest/TestTestFramework.cpp` 가 매크로마다 "실패를 하나 남기는가 · 무엇이라 찍는가 · ASSERT 가 멈추는가" 를 봅니다.
 
+엔진 단언(`SW_ASSERT` · `SW_LOG_ASSERT`)이 걸리는 입력을 시험할 때는 `test::ScopedAssertCapture` 를 겁니다. Debug 의 단언은
+멈추지만(`SW_DEBUG_BREAK`) 가로채기를 건 동안은 멈추지 않고 세므로, 방어 경로 시험이 Debug 에서도 돕니다(유니티 `LogAssert.Expect` 와 같은 일).
+
 ### 테스트 상태 정리
 
 각 테스트가 종료되면 프레임워크가 비동기 씬 로드와 TaskManager를 정리합니다. 그 밖에 테스트가
@@ -205,5 +206,3 @@ Cleanup은 등록한 역순으로 실행됩니다. ResourceManager 전체 shutdo
 다른 테스트와 엔진 서비스에 영향을 주는 작업은 자동으로 수행하지 않습니다.
 
 **오브젝트는 지역 `GameObjectManager` 로 만듭니다.** 전역 활성 씬을 빌리면 테스트끼리 상태가 샙니다.
-예전엔 그 용도의 `TestFixture` 가 프레임워크에 있었지만 **쓰는 테스트가 하나도 없어서** 지웠습니다
-(이 예제만 그것을 가리키고 있었습니다).

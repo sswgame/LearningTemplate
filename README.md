@@ -3,7 +3,7 @@
 [![CI (main)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml?query=branch%3Amain)
 [![CI (develop)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml?query=branch%3Adevelop)
 [![Windows](https://img.shields.io/badge/Windows-clang--cl%20(Debug%20%7C%20Shipping)-0078D6?logo=windows&logoColor=white)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)
-[![Linux](https://img.shields.io/badge/Linux-Clang%20(Debug%20%7C%20ASan%20%7C%20Shipping)-FCC624?logo=linux&logoColor=black)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)
+[![Linux](https://img.shields.io/badge/Linux-Clang%20(Debug%20%7C%20ASan%20%7C%20TSan%20%7C%20Shipping)-FCC624?logo=linux&logoColor=black)](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)
 [![C++17](https://img.shields.io/badge/Language-C%2B%2B17-00599C?logo=cplusplus&logoColor=white)](https://isocpp.org/)
 [![License](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE)
 
@@ -13,13 +13,17 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 ### 🛠️ 지원 플랫폼 및 CI 빌드 매트릭스
 
 > 💡 모든 빌드/테스트 매트릭스의 실시간 실행 상태와 로그는 [GitHub Actions CI](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml)에서 확인하실 수 있습니다.
+> CI 는 `nogpu` 레이블 시험만 돌립니다. GPU · 창 · DXC 가 필요한 `hostgpu` 시험은 GPU 가 있는 기계에서 직접 돌려야 합니다([7절](#7-자동화-테스트-스위트)).
 
 | OS / 플랫폼 | 컴파일러 / 툴체인 | 빌드 프리셋 & 검증 항목 | CI 상태 링크 |
 | :--- | :--- | :--- | :---: |
-| 🪟 **Windows** | `clang-cl` (LLVM) | `CI-Debug` (LiveReload DLL 모듈 + 단위 테스트) | [Windows Debug](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
+| 🐧 **Linux** | Python | 린트 잡(코드 규칙 · include 순서 게이트) — 아래 빌드 잡은 이것이 통과해야 돈다 | [Lint](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
+| 🪟 **Windows** | `clang-cl` (LLVM) | `CI-Debug` (LiveReload DLL 모듈 + `nogpu` 시험 + `SW_ENABLE_DEADLOCK_DETECTION` 컴파일 검사) | [Windows Debug](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
+| 🪟 **Windows** | `clang-cl` (LLVM) | `CI-Debug-STL` (`SW_ENABLE_STL_CONTAINER` — 표준 컨테이너 구성이 컴파일되는지) | [Windows STL](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
 | 🪟 **Windows** | `clang-cl` (LLVM) | `CI-Shipping` (최적화 정적 단일 실행파일 + 에셋 쿠킹) | [Windows Shipping](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
 | 🐧 **Linux** | `clang++` (LLVM + LLD) | `CI-Debug` (LiveReload Shared 모듈 + 단위 테스트) | [Linux Debug](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
 | 🐧 **Linux** | `clang++` (LLVM + LLD) | `CI-Debug-ASAN` (AddressSanitizer 메모리 살균자) | [Linux ASan](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
+| 🐧 **Linux** | `clang++` (LLVM + LLD) | `CI-Debug-TSAN` (ThreadSanitizer 데이터 레이스 검출) | [Linux TSan](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
 | 🐧 **Linux** | `clang++` (LLVM + LLD) | `CI-Shipping` (최적화 정적 단일 실행파일 + 에셋 쿠킹) | [Linux Shipping](https://github.com/sswgame/LearningTemplate/actions/workflows/ci.yml) |
 
 
@@ -33,8 +37,9 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 - 🧩 **[Engine Subsystems (서브시스템 개요)](docs/02_EngineSubsystems.md)**: 렌더링, 오브젝트/컴포넌트, 스레드 풀, 리플렉션 등 핵심 엔진 기능 찾아보기
 - 🔄 **[LiveReload & ABI (핫리로드 및 아키텍처)](docs/03_LiveReload_and_ABI.md)**: 게임을 끄지 않고 코드를 수정하는 원리와 주의사항
 - 📝 **[Coding Guidelines (코딩 규칙)](docs/04_CodingGuidelines.md)**: 프로젝트에 기여할 때 지켜야 하는 C++ / CMake 네이밍 규칙
-- 🎞️ **[RHI Frame Contract (프레임/렌더타깃 계약)](docs/05_RHI_FrameContract.md)**: 백엔드별 beginFrame/오프스크린 전제 분석과 재설계 계획 — 프레임 순서를 건드리기 전에 반드시 읽을 것
+- 🎞️ **[RHI Frame Contract (프레임/렌더타깃 계약)](docs/05_RHI_FrameContract.md)**: 백엔드별 beginFrame/오프스크린 전제 분석과 재설계 — 프레임 순서를 건드리기 전에 반드시 읽을 것
 - ✅ **[Backlog (작업 백로그)](docs/06_Backlog.md)**: 남은 일과 이어받기 — 여러 PC·여러 세션에서 이어서 작업할 때 먼저 읽을 것
+- 🏛️ **[Engine Structure vs Commercial (상용 엔진과의 구조 대조)](docs/07_EngineStructureVsCommercial.md)**: `Source/Engine` 의 의존 방향을 언리얼 · Unity · Godot 와 견준 결과
 
 > **심화 문서**: 전체 아키텍처 다이어그램 및 제약 사항은 **[ARCHITECTURE.md](ARCHITECTURE.md)**를 참고하세요.
 
@@ -45,10 +50,11 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 1. [📖 핵심 아키텍처 및 빌드 모드](#1-핵심-아키텍처-및-빌드-모드)
 2. [📂 디렉터리 레이아웃](#2-디렉터리-레이아웃)
 3. [📦 압축 직렬화 스트림 (Compression Stream & Pluggable Codecs)](#3-압축-직렬화-스트림-compression-stream--pluggable-codecs)
-   - [설계 원리 및 인터페이스 분리](#41-설계-원리-및-인터페이스-분리)
-   - [바이너리 컨테이너 헤더 규격](#42-바이너리-컨테이너-헤더-규격)
-   - [신규 코덱 확장 및 등록 방법 (LZ4 / Zstd 등)](#43-신규-코덱-확장-및-등록-방법-lz4--zstd-등)
-   - [C++ 실무 사용 예제 코드](#44-c-실무-사용-예제-코드)
+   - [설계 원리 및 인터페이스 분리](#31-설계-원리-및-인터페이스-분리)
+   - [바이너리 컨테이너 헤더 규격](#32-바이너리-컨테이너-헤더-규격)
+   - [사용자 코덱 확장 및 등록 방법](#33-사용자-코덱-확장-및-등록-방법)
+   - [C++ 실무 사용 예제 코드](#34-c-실무-사용-예제-코드)
+4. [🛠️ 빌드와 실행](#4-빌드와-실행)
 5. [🧩 엔진 핵심 서브시스템 실무 사용법](#5-엔진-핵심-서브시스템-실무-사용법)
    - [1. GameObject & Component 라이프사이클](#51-gameobject--component-라이프사이클)
    - [2. RHI 멀티 백엔드 렌더링 파이프라인](#52-rhi-멀티-백엔드-렌더링-파이프라인)
@@ -58,13 +64,13 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
    - [6. 공간 분할 인덱싱 (SpatialQuadTree & SpatialOctree)](#56-공간-분할-인덱싱-spatialquadtree--spatialoctree)
    - [7. 런타임 파일 감시 & 에셋 핫리로드 (ReloadFileManager)](#57-런타임-파일-감시--에셋-핫리로드-reloadfilemanager)
    - [8. 멀티스레드 태스크 시스템 (Task DAG)](#58-멀티스레드-태스크-시스템-task-dag)
-   - [9. 오디오 및 2D 물리 시스템](#59-오디오-및-2d-물리-시스템)
+   - [9. 오디오 및 물리 시스템](#59-오디오-및-물리-시스템)
    - [10. 비동기 에셋 스트리밍 큐 (AssetStreamingQueue)](#510-비동기-에셋-스트리밍-큐-assetstreamingqueue)
    - [11. GPU-Driven 간접 드로우 & 컴퓨트 디스패치](#511-gpu-driven-간접-드로우--컴퓨트-디스패치)
-   - [12. 티어-3 바인드리스 리소스 테이블 (BindlessTable)](#512-티어-3-바인드리스-리소스-테이블-bindlesstable)
+   - [12. 바인드리스 리소스 인덱스 (IRHIResource)](#512-바인드리스-리소스-인덱스-irhiresource)
    - [13. RenderGraph 순차 쓰기/RMW 의존성 및 리소스 수명 주기 분석](#513-rendergraph-순차-쓰기rmw-의존성-및-리소스-수명-주기-분석)
    - [14. C++17 Fluent Task Continuation (TaskFuture / TaskPromise)](#514-c17-fluent-task-continuation-taskfuture--taskpromise)
-   - [15. 트랜스폼 세대 카운터 (Transform Dirty Generation Counter)](#515-트랜스폼-세대-카운터-transform-dirty-generation-counter)
+   - [15. 트랜스폼 더티 루트 플러시 (SceneTransformHierarchy)](#515-트랜스폼-더티-루트-플러시-scenetransformhierarchy)
 6. [✍️ 코딩 컨벤션 및 네이밍 규칙](#6-코딩-컨벤션-및-네이밍-규칙)
 7. [🧪 자동화 테스트 스위트](#7-자동화-테스트-스위트)
 
@@ -93,10 +99,14 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 ```
 
 - **Dev (개발 모드)**:
-  - `Engine`은 DLL로 분리되고, `SWGame`(게임 모듈), `GF_Overworld`(키트), `EditorModule`(에디터)은 런타임에 동적 로드됩니다.
-  - 게임 코드를 수정한 뒤 빌드하면 `LiveReloadManager`가 변경된 DLL을 그림자 복사(Shadow Copy)하여 런타임 중에 갈아끼웁니다.
+  - `Engine`은 DLL로 분리되고, `SWGame`(게임 모듈), `GF_*`(장르 키트), `EditorModule`(에디터), `RHI_*`(백엔드)는 런타임에 동적 로드됩니다.
+  - 게임 코드를 수정한 뒤 빌드하면 `LiveReloadManager`(App)가 변경된 DLL을 그림자 복사(Shadow Copy)하여 런타임 중에 갈아끼웁니다.
 - **Shipping (배포 모드)**:
-  - 에디터 및 핫리로드 레이어가 제거되고, 모든 서브시스템이 단일 `.exe` 바이너리로 정적 링크(STATIC)되어 오버헤드가 제로화됩니다.
+  - 에디터 및 핫리로드 레이어가 제거되고, 모든 서브시스템이 단일 `.exe` 바이너리로 정적 링크(STATIC)됩니다.
+- **엔진 기동 · 종료**:
+  - 순서는 단계 표 하나(`Source/Engine/EngineStartupStepList.xxx`)가 정합니다. 단계마다 구조체 하나(`initialize` · `shutdown` · `destroy`)이고,
+    `EngineStartupSequence` 가 표의 의존을 위상 정렬해 세우고 역순으로 내립니다. `EngineLoop` 와 시험 하네스가 같은 부트스트랩(`EngineBootstrap`)을 씁니다.
+  - 씬은 모든 타입 공급자가 등록을 끝낸 단계(`ModuleTypes`) 뒤에만 읽고, `ModuleHost` 는 게임 인스턴스를 에디터보다 먼저 세웁니다.
 - **RuntimeAPI 계약**:
   - `App.exe`와 DLL 모듈 간의 통신은 순수 C-ABI 헤더(`RuntimeAPI`)의 함수 테이블을 통해 완전히 격리됩니다.
 - **DLL Export / Import (API) 매크로 규칙**:
@@ -111,19 +121,20 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 
 | 폴더 경로 | 역할 및 설명 |
 | :--- | :--- |
-| `Source/Core` | 기초 유틸리티 정적 라이브러리 (로깅, 메모리 풀링, 문자열, 압축, 델리게이트, 파일 I/O 등) |
-| `Source/Engine` | 핵심 엔진 라이브러리 (RHI, GameObject, Component, 씬/프리팹, 리플렉션, 물리, 오디오, 렌더 그래프 등) |
+| `Source/Core` | 기초 유틸리티 (로깅, 메모리 · 메모리 태그, 문자열, 컨테이너, 압축 코덱 인터페이스, 델리게이트, 태스크, 파일 I/O, 명령줄 · 전역 변수 등). Engine 이 OBJECT 라이브러리로 흡수합니다 |
+| `Source/Engine` | 핵심 엔진 라이브러리 (기동 단계 표, RHI · 렌더러, GameObject · Component, 씬 · 프리팹, 리플렉션 · 직렬화, 물리, 오디오, 입력 등) |
 | `Source/RuntimeAPI` | App ↔ Editor/Game 모듈 간의 순수 C-ABI 통신 인터페이스 (Header-Only) |
-| `Source/Editor` | 개발 모드 전용 ImGui 에디터 툴셋 |
+| `Source/Editor` | 개발 모드 전용 ImGui 에디터 툴셋 (`EditorModule`) |
 | `Source/GameFramework` | 장르별 공통 프레임워크 및 플러그형 키트 (`GF_Overworld`, `GF_TurnBattle`, `GF_ActionCombat`) |
 | `Source/Games` | 실제 게임 프로젝트 소스코드 (`Empty` 등 / `SW_ACTIVE_GAME` 변수로 빌드 대상 지정) |
-| `Source/App` | 얇은 진입점 실행 파일 (Main Loop, 모듈 호스트, 태스크 펜싱 관리) |
-| `Resource/` | 텍스처, 셰이더, 사운드, 씬 XML, 프리팹 JSON, 데이터 XML 등의 게임 에셋 |
-| `Scripts/` | 환경 설정, vcpkg 패키지 복원, 코드 린터 및 자동화 파이썬 도구 |
-| `Tools/` | ReflectionParser (Clang libtooling 기반 리플렉션 코드 생성기), LLVM, Ninja, Sccache |
-| `Test/` | 자동화 단위 테스트 스위트 (`CoreTest`, `ReflectionTest`, `EngineTest`, `SmokeTest`) |
-
----
+| `Source/App` | 얇은 진입점 실행 파일 (프레임 순서, 모듈 호스트 · 핫리로드, 백엔드 교체) |
+| `Resource/` | 런타임 에셋 — `engine/` · `common/` · `game/<게임>/` 로 나뉘고 이름은 전부 소문자입니다. 텍스처는 DDS 로만 읽고 원본 이미지는 `textures_raw/` 에 둡니다 |
+| `Config/` | 엔진 · 에디터 · 게임 · 앱 설정 JSON 과 쿠킹 표(`Config/Engine/CookContract.json`) |
+| `Scripts/` | 환경 설정, vcpkg 패키지 복원, 코드 생성, 린트(`Scripts/lint/{gate,fixer,report,selftest}`) 및 자동화 파이썬 도구 |
+| `cmake/` | 빌드 옵션(`cmake/Config/BuildOptions.cmake`) · 타깃 규칙 · 리플렉션 코드젠 단계 등 CMake 모듈 |
+| `Tools/` | ReflectionParser (libclang 기반 리플렉션 코드 생성기). LLVM · Ninja · Sccache · vcpkg 는 셋업 스크립트가 받아 두는 자리입니다 |
+| `Test/` | 자동화 테스트 (`CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUiTest`, `AppTest` + `TestFramework`) |
+| `docs/` | 위키 문서(위 목차) |
 
 ---
 
@@ -131,9 +142,9 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 
 SW Engine은 세이브 파일, 네트워크 패킷, 바이너리 씬 데이터의 디스크 I/O 최적화를 위해 **플러그형 압축 직렬화 스트림**을 제공합니다.
 
-### 4.1 설계 원리 및 인터페이스 분리
+### 3.1 설계 원리 및 인터페이스 분리
 
-압축 알고리즘(RLE, LZ4, Zstd, Snappy 등)의 변경이나 추가가 발생하더라도 **기존 직렬화 코드나 클라이언트 로직을 전혀 수정할 필요가 없도록** 인터페이스와 구현체가 엄격히 분리되어 있습니다:
+압축 알고리즘을 바꾸거나 더해도 **기존 직렬화 코드나 클라이언트 로직을 수정할 필요가 없도록** 인터페이스와 구현체가 분리되어 있습니다:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -150,107 +161,95 @@ SW Engine은 세이브 파일, 네트워크 패킷, 바이너리 씬 데이터�
 ┌─────────────────────────────────────────────────────────────┐
 │          CompressionCodecRegistry (엔진 서비스 레지스트리)        │
 │   ┌─────────────────────┬───────────────────┬────────────┐  │
-│   │ NullCompressionCodec│RleCompressionCodec│LZ4 / Zstd  │  │
-│   │   (Pass-through)    │  (내장 고속 RLE)   │ (확장 슬롯)│  │
+│   │ NullCompressionCodec│RleCompressionCodec│LZ4·Zstd·Zlib│ │
+│   │   (Pass-through)    │  (내장 고속 RLE)   │  (Engine)  │  │
 │   └─────────────────────┴───────────────────┴────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 - **`ICompressionCodec`**: 모든 압축 알고리즘이 구현해야 하는 순수 가상 인터페이스 (`compress`, `decompress`, `compressBound`, `getCodecType`, `getCodecName`).
-- **`NullCompressionCodec`**: 무압축(Pass-through) 코덱. 디버깅 및 압축 미적용 폴백용.
-- **`RleCompressionCodec`**: 엔진 자체 내장 고속 바이트 런 압축기 (외부 라이브러리 없이 독립 동작).
-- **`CompressionCodecRegistry`**: 런타임/빌드타임에 코덱을 등록, 조회, 교체할 수 있는 중앙 레지스트리.
+- **`NullCompressionCodec`** · **`RleCompressionCodec`** (`Source/Core/Compression`): 무압축(Pass-through) 코덱과 외부 라이브러리 없는 바이트 런 압축기.
+  레지스트리가 연결되지 않은 도구 경로(Core 만 링크하는 `ReflectionParser` 등)에서도 이 둘은 늘 쓸 수 있습니다.
+- **`Lz4CompressionCodec`** · **`ZstdCompressionCodec`** · **`ZlibCompressionCodec`** (`Source/Engine/Compression`): 외부 라이브러리로 구현한 코덱.
+  Core 는 압축 라이브러리에 의존하지 않으므로 Engine 이 가져와 `EngineCompressionCodecUtil::registerAll` 이 한 번에 등록합니다(목록은 그 헤더 한 곳).
+- **`CompressionCodecRegistry`**: 코덱을 등록 · 조회 · 교체하는 레지스트리. 엔진 서비스(`engine::getCompressionCodecRegistry()`)로 노출됩니다.
 - **`CompressionStream`**: 바이너리 헤더(`CompressionHeader`)와 FNV-1a 무결성 체크섬 검증을 캡슐화한 헬퍼.
 - **`BinarySerializer`**: 리플렉션 객체의 콤팩트 바이너리 직렬화 및 압축 스트림 직렬화(`serializeCompressed`)를 통합 지원.
 
 ---
 
-### 4.2 바이너리 컨테이너 헤더 규격
+### 3.2 바이너리 컨테이너 헤더 규격
 
-`CompressionStream`이 생성하는 바이너리 스트림은 항상 28바이트의 안전한 헤더로 시작합니다:
+`CompressionStream`이 생성하는 바이너리 스트림은 항상 28바이트 헤더로 시작합니다(디스크 포맷이라 `static_assert` 가 크기를 고정합니다):
 
 ```cpp
-#pragma pack(push, 1)
-struct CompressionHeader
+#pragma pack( push, 1 )
+struct SW_API CompressionHeader
 {
-    uint32 _magic{ 0x53574353 }; // 'SWCS' (SW Compression Stream 매직 넘버)
-    uint8  _version{ 1 };        // 스트림 포맷 버전
-    uint8  _codecType{ 0 };      // CompressionCodecType (0: None, 1: RLE, 2: LZ4, 3: Zstd)
-    uint16 _flags{ 0 };          // 0x01: 체크섬 포함 여부
-    uint64 _uncompressedSize{0}; // 압축 전 원본 바이트 크기
-    uint64 _compressedSize{ 0 }; // 압축 후 페이로드 바이트 크기
-    uint32 _checksum{ 0 };       // FNV-1a 32비트 무결성 체크섬
+    static constexpr uint32 kMagic        = 0x53574353; // 'SWCS' (SW Compression Stream)
+    static constexpr uint8  kVersion      = 1;          // 읽을 때 이 값만 받는다
+    static constexpr uint16 kFlagChecksum = 0x01;       // 해제한 뒤 _checksum 을 검증하라는 표시
+
+    uint32               _magic{ kMagic };
+    uint8                _version{ kVersion };
+    CompressionCodecType _codecType{ CompressionCodecType::None }; // 1바이트 (None 0 · RLE 1 · LZ4 2 · Zstd 3 · Zlib 4 · Custom 255)
+    uint16               _flags{ 0 };
+    uint64               _uncompressedSize{ 0 };
+    uint64               _compressedSize{ 0 };
+    uint32               _checksum{ 0 };                           // 원본의 FNV-1a 32비트 체크섬
 };
-#pragma pack(pop)
+#pragma pack( pop )
 ```
+
+`CompressionCodecType` 의 값은 디스크에 그대로 실리므로 새 코덱은 **뒤에 덧붙이기만** 합니다.
 
 ---
 
-### 4.3 신규 코덱 확장 및 등록 방법 (LZ4 / Zstd 등)
+### 3.3 사용자 코덱 확장 및 등록 방법
 
-추후 `LZ4`나 `Zstandard` 등 새로운 외부 라이브러리를 연동할 때에는 `ICompressionCodec` 인터페이스만 구현하여 레지스트리에 등록하면 끝납니다:
+LZ4 · Zstd · Zlib 은 이미 엔진에 있습니다. 그 밖의 알고리즘은 `ICompressionCodec` 을 구현해 `CompressionCodecType::Custom` 으로 등록합니다:
 
 ```cpp
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
-// #include <lz4.h>
 
 namespace sw
 {
-    class Lz4CompressionCodec final : public ICompressionCodec
+    class MyCompressionCodec final : public ICompressionCodec
     {
     public:
-        virtual CompressionCodecType getCodecType() const override { return CompressionCodecType::LZ4; }
-        virtual const char*          getCodecName() const override { return "LZ4"; }
-        virtual size_t compressBound( size_t uncompressedSize ) const override
-        {
-            // return LZ4_compressBound( static_cast<int32>( uncompressedSize ) );
-            return uncompressedSize + ( uncompressedSize / 255 ) + 16;
-        }
+        CompressionCodecType getCodecType() const override { return CompressionCodecType::Custom; }
+        const utf8*          getCodecName() const override { return "MyCodec"; }
+        size_t               compressBound( size_t uncompressedSize ) const override { return uncompressedSize + 16; }
 
-        virtual bool compress( const void* pSrc, size_t srcSize, void* pDst, size_t dstCapacity,
-                               size_t& outCompressedSize, int32 compressionLevel = 0 ) override
-        {
-            // const int32 compSize = LZ4_compress_default( (const char*)pSrc, (char*)pDst, (int)srcSize, (int)dstCapacity );
-            // if ( compSize <= 0 ) return false;
-            // outCompressedSize = compSize;
-            return true;
-        }
-
-        virtual bool decompress( const void* pSrc, size_t srcSize, void* pDst, size_t dstCapacity,
-                                 size_t& outUncompressedSize ) override
-        {
-            // const int32 decompSize = LZ4_decompress_safe( (const char*)pSrc, (char*)pDst, (int)srcSize, (int)dstCapacity );
-            // if ( decompSize < 0 ) return false;
-            // outUncompressedSize = decompSize;
-            return true;
-        }
+        bool compress( const void* pSrc, size_t srcSize, void* pDst, size_t dstCapacity, size_t& outCompressedSize,
+                       int32 compressionLevel = 0 ) override;
+        bool decompress( const void* pSrc, size_t srcSize, void* pDst, size_t dstCapacity, size_t& outUncompressedSize ) override;
     };
-}
+} // namespace sw
 
-// 런타임 초기화 시 레지스트리에 등록
-void registerCustomCodecs()
-{
-    sw::engine::getCompressionCodecRegistry().registerCodec( sw::make_unique<sw::Lz4CompressionCodec>() );
-    sw::engine::getCompressionCodecRegistry().setDefaultCodecType( sw::CompressionCodecType::LZ4 );
-}
+// 모듈 initialize 에서 등록하고, 그 모듈의 shutdown 에서 해제한다
+sw::engine::getCompressionCodecRegistry().registerCodec( sw::make_unique<sw::MyCompressionCodec>() );
+// ...
+sw::engine::getCompressionCodecRegistry().unregisterCodec( sw::CompressionCodecType::Custom );
 ```
 
-> **레지스트리는 `Core` 가 소유합니다** (`CompressionCodecRegistry::getDefault()` — 프로세스에 하나).
-> `engine::getCompressionCodecRegistry()` 는 그것을 가리키는 서비스라 어느 쪽으로 등록해도 같습니다.
-> 등록한 코덱은 `CompressionStream`(즉 `Archive`·`BinarySerializer` 의 압축 섹션)이 **바로 집어 씁니다.**
+> **레지스트리의 소유자는 엔진 하나입니다.** `EngineLoop` 의 기동 단계(시험에서는 `Test/TestFramework/main.cpp` 의 하네스)가
+> 만들고 `CompressionCodecRegistry::setActive` 로 Core 의 슬롯에 연결합니다. `engine::getCompressionCodecRegistry()` 와
+> `CompressionCodecRegistry::getActive()` 는 같은 인스턴스라 어느 쪽으로 등록해도 같고, 등록한 코덱은 `CompressionStream`
+> (즉 `Archive` · `BinarySerializer` 의 압축 섹션)이 **바로 집어 씁니다.** 슬롯이 비어 있으면(Core 만 링크하는 도구) 스트림은 내장 코덱만 씁니다.
 >
 > 주의할 것 둘:
 >
 > - **로드 가능한 모듈에서 등록했다면 그 모듈의 shutdown 에서 `unregisterCodec` 하십시오.** 레지스트리는
 >   `Engine.dll` 에 살아 모듈보다 오래 갑니다 — 모듈이 내려가면 남은 코덱의 vtable 이 언맵된 주소가 됩니다.
-> - **리소스 팩(`.pack`)은 이 레지스트리를 쓰지 않습니다.** 팩은 자기 포맷 enum(`PackCompressionType`)을
->   엔트리 헤더에 박고 직접 해제합니다. 두 enum 은 서로 다른 파일의 독립된 포맷이라(값도 2·3 에서
->   어긋납니다) 엮지 않습니다.
+> - **리소스 팩(`.pack`)의 압축 enum 은 따로입니다.** 팩은 자기 포맷 enum(`PackCompressionType`)을 엔트리 헤더에 박고,
+>   두 enum 은 서로 다른 파일의 독립된 포맷이라 값이 다릅니다. 팩은 표 한 곳(`PackCompressionUtil::kArrCodecMapping`)에서
+>   `CompressionCodecType` 으로 옮긴 뒤 같은 레지스트리에서 코덱을 찾습니다 — 두 enum 을 `static_cast` 로 오가지 마십시오.
 
 ---
 
-### 4.4 C++ 실무 사용 예제 코드
+### 3.4 C++ 실무 사용 예제 코드
 
 #### 1) 메모리 버퍼 직접 압축 및 복원
 ```cpp
@@ -288,28 +287,54 @@ playerData._level = 50;
 playerData._gold = 99999;
 playerData._listInventory = { 101, 102, 105 };
 
-// 1. 플레이어 데이터를 바이너리로 변환 후 즉시 압축
-const sw::TypeInfo* pTypeInfo = sw::TypeRegistry::get().findTypeByName( "PlayerSaveData" );
-sw::vector<sw::uint8> listSaveFileBuffer;
+// 1. 플레이어 데이터를 바이너리로 변환 후 즉시 압축 (REFLECT 된 타입은 StaticType() 이 TypeInfo 를 준다)
+const sw::TypeInfo*   pTypeInfo = PlayerSaveData::StaticType();
+sw::vector<sw::uint8> saveFileBytes;
 
-sw::BinarySerializer::serializeCompressed(
-    &playerData,
-    *pTypeInfo,
-    listSaveFileBuffer,
-    sw::CompressionCodecType::RLE
-);
+if ( sw::BinarySerializer::serializeCompressed( &playerData, *pTypeInfo, saveFileBytes, sw::CompressionCodecType::Zstd ) == false )
+    return false;
 
-// 디스크에 저장: FileUtil::saveFile( "Save01.sav", listSaveFileBuffer );
-
-// 2. 세이브 파일 로드 및 역압축 역직렬화
+// 2. 세이브 파일 로드 및 역압축 역직렬화 (헤더가 코덱을 알려 준다)
 PlayerSaveData loadedData{};
-sw::BinarySerializer::deserializeCompressed(
-    &loadedData,
-    *pTypeInfo,
-    listSaveFileBuffer.data(),
-    listSaveFileBuffer.size()
-);
+if ( sw::BinarySerializer::deserializeCompressed( &loadedData, *pTypeInfo, saveFileBytes.data(), saveFileBytes.size() ) == false )
+    return false;
 ```
+
+---
+
+## 4. 빌드와 실행
+
+자세한 환경 구성은 [Getting Started](docs/01_GettingStarted.md) 에 있습니다. 요약:
+
+```powershell
+py -3 Scripts/setup/SetupEnvironment.py       # 툴체인(LLVM · Ninja · sccache) 받기
+py -3 Scripts/setup/SetupVcpkg.py --install   # vcpkg 매니페스트 복원
+cmake --preset Ninja-Debug
+cmake --build --preset Ninja-Debug
+```
+
+- 프리셋: `Ninja-Debug` · `Ninja-Debug-ASAN` · `Ninja-Release` · `Ninja-Shipping`(Windows clang-cl), `WSL-*`(Linux clang), `CI-*`(CI 전용).
+- 산출물은 `build/<프리셋>/Bin` 입니다(`App.exe` · `Engine.dll` · 모듈 DLL). 주요 CMake 옵션은 `cmake/Config/BuildOptions.cmake` 의 `SW_*` 입니다.
+
+### 실행 인자
+
+명령줄 인자의 정본은 `Source/Core/Predefined/ArgumentList.xxx` 입니다. 키 앞의 `-` · `--` 는 떼고 읽으며, 값은 `-key=value` 로 줍니다
+(bool 인자만 `-key` 로 켤 수 있습니다). 이름은 대소문자를 구별합니다.
+
+| 인자 | 하는 일 |
+| :--- | :--- |
+| `-W=<폭>` · `-H=<높이>` (`-WIDTH` · `-HEIGHT`) | 창 크기. 주지 않으면 `EngineConfig` 의 창 설정을 씁니다 |
+| `-vsync` | 수직 동기화를 켭니다 |
+| `-dx11` · `-dx12` · `-vk` · `-gl` (별칭 `d3d11` · `directx11` · `d3d12` · `directx12` · `vulkan` · `spirv` · `opengl`) | RHI 백엔드. 목록 · 별칭 · 기본값(`DirectX12`)은 쿠킹 표 `Config/Engine/CookContract.json` 에서 옵니다 |
+| `-EnableEditor` | 에디터 모듈을 올립니다(Dev 전용). 주지 않으면 에디터 없이 뜹니다 |
+| `-lang=<코드>` · `-language=<코드>` | 시작 언어 |
+| `--bake-shaders` | 창 없이 셰이더를 전부 굽고 끝냅니다(패스 종류 표 × 뷰 모드에서 요청을 모읍니다) |
+| `--cook-scenes --cooked-dir=<폴더>` | 창 없이 씬 · 프리팹 · 에셋 레지스트리를 굽습니다. 소스 트리를 읽고, 모르는 컴포넌트(`MissingComponent`)가 든 씬은 실패로 셉니다 |
+| `--bake-textures` · `--check-textures` | 창 없이 `textures_raw/` 의 원본을 DDS 로 굽거나, 원본 · 굽기 규칙 · DDS 가 `bake.stamp` 와 맞는지 보기만 합니다. 에디터 모듈의 일이라 Dev 빌드에서만 됩니다 |
+| `-gv_<이름>=<값>` | 전역 변수(`gv_*`)를 정합니다. 예: `-gv_rhiBackend=Vulkan` · `-gv_editorStartupScene=<씬 경로>` · `-gv_benchMeshes=8000 -gv_profileFrames=600` |
+
+헤드리스 작업(`--bake-*` · `--cook-scenes` · `--check-textures`)이 실패하면 `App.exe` 는 0 이 아닌 종료 코드로 끝납니다 — 쿠커 스크립트가 그것을 봅니다.
+`SW_TEST_GLOBAL_VARIABLE_*` 로 선언한 진단 · 벤치 변수는 에디터 패널에 보이지 않고, `SW_KEEP_IN_SHIPPING` 을 준 것만 배포본에 남습니다.
 
 ---
 
@@ -328,44 +353,37 @@ sw::BinarySerializer::deserializeCompressed(
 // 1. 게임 오브젝트 생성
 sw::GameObject* pPlayer = pObjectManager->createGameObject( "Hero" );
 
-// 2. 컴포넌트 부착
-auto* pScene = pPlayer->addComponent<sw::SceneComponent>();
+// 2. 컴포넌트 부착 (컴포넌트 틱 중에는 구조 변경이 틱 뒤로 미뤄져 nullptr 을 돌려준다 — executeOrDeferPostTick 으로 감쌀 것)
+sw::SceneComponent* pScene = pPlayer->addComponent<sw::SceneComponent>();
 pScene->setLocalPosition( sw::float3{ 100.0f, 0.0f, 200.0f } );
 
-// 3. 계층 구조 구성 (Parent - Child)
+// 3. 계층 구조 구성 (Parent - Child). 틱 중에는 부모를 바꾸지 않는다.
 sw::GameObject* pWeapon = pObjectManager->createGameObject( "Sword" );
-pWeapon->attachToParent( pPlayer ); // 플레이어의 회전/이동이 자식에 자동 전파됨
+if ( pWeapon->attachToParent( pPlayer ) == false ) // 플레이어의 회전/이동이 자식에 전파된다
+    return;
 
-// 4. 태그 등록 및 고속 검색
-pPlayer->addTag( "Player.Hero"_tag );
-sw::vector<sw::GameObject*> listPlayers;
-pObjectManager->findGameObjectsByTag( "Player.Hero"_tag, listPlayers );
+// 4. 태그 등록 및 검색
+const sw::TagID heroTag = sw::TagID::request( "Player.Hero" );
+pPlayer->addTag( heroTag );
+sw::vector<sw::GameObject*> listPlayer;
+pObjectManager->findGameObjectsByTag( heroTag, listPlayer );
 ```
+
+프레임을 넘어 들고 있을 참조는 생포인터가 아니라 `GameObjectHandle` · `ComponentHandle` 로 두고 쓸 때마다 매니저로 풉니다([AGENTS.md](AGENTS.md)).
 
 ---
 
 ### 5.2 RHI 멀티 백엔드 렌더링 파이프라인
 
-`IRHIDevice`는 DirectX 11, DirectX 12, Vulkan, OpenGL을 균일하게 추상화합니다.
+`IRHIDevice`는 DirectX 11, DirectX 12, Vulkan(1.3 이상), OpenGL을 균일하게 추상화합니다. Dev 에서는 백엔드마다 `RHI_*` 모듈 DLL 이고,
+실행 중 `gv_rhiBackend` 를 바꾸면 App 이 프레임 경계에서 디바이스를 교체합니다(`BackendSwapController`).
 
-```cpp
-#include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
-#include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
-
-// 1. 프레임 렌더러 초기화 (원하는 RHI 백엔드 선택)
-// gv_rhiBackend = "DirectX12" 또는 "Vulkan", "DirectX11", "OpenGL"
-
-// 2. 렌더 그래프를 통한 패스 빌드
-sw::RenderGraph graph;
-graph.addPass( "GBufferPass", []( sw::IRHICommandContext* pContext )
-{
-    // 드로우 콜 제출
-    pContext->drawIndexed( 6, 1, 0, 0, 0 );
-} );
-
-graph.execute();
-```
+- **백엔드 선택**: 명령줄(`-dx11` · `-dx12` · `-vk` · `-gl`, [4절](#실행-인자)) > `EngineConfig` 의 기본값. 백엔드 목록은 `Config/Engine/CookContract.json` 한 곳입니다.
+- **프레임 그래프는 데이터입니다.** 패스 순서는 `Resource/engine/pipeline/*.xml`(`RenderPipelineResource`)이, 패스의 바인딩 틀(포맷 · 클리어)은
+  `Resource/engine/renderpass/`(`RenderPassResource`)가 정하고, `FrameRenderer` 가 그것으로 `RenderGraph` 를 지어 위상 정렬합니다(코드 예는 5.13).
+- **디바이스 종료**는 `IRHIDevice::shutdown` 템플릿 메서드가 공통 단계 순서를 갖고 백엔드는 단계 훅만 구현합니다.
+- **엔진 밖 모듈의 네이티브 자원**: 에디터 같은 모듈이 백엔드 네이티브 객체가 필요하면 백엔드 클래스로 캐스팅하지 않고
+  판 번호 든 `RHINativeHandles` 를 디바이스에서 조회하고, 다 쓴 네이티브 자원은 `IRHIDevice::enqueueGpuRelease` 로 백엔드 해제 큐(GPU 펜스 뒤)에 넘깁니다.
 
 ---
 
@@ -374,25 +392,27 @@ graph.execute();
 C++ 헤더에 어노테이션 매크로를 작성하면 `ReflectionParser`가 빌드 타임에 타입 정보를 자동 생성합니다.
 
 ```cpp
-// Header.h
+// CharacterStats.h
 #pragma once
 #include "Engine/Reflection/ReflectionMacros.h"
 
-REFLECT_CLASS()
+REFLECT( Category = "Combat" )
 class SW_API CharacterStats
 {
-    REFLECT_BODY()
 public:
-    REFLECT_PROPERTY( Category="Combat", Range(0.0, 1000.0) )
+    REFLECT_BODY();
+
+    FUNCTION( Category = "Combat", CallInEditor )
+    void heal() { _health += 10.0f; }
+
+    PROPERTY( Category = "Combat", Tooltip = "Current hit points", Min = 0.0, Max = 1000.0 )
     float32 _health{ 100.0f };
-
-    REFLECT_PROPERTY( Category="Visual", AssetType="Texture" )
-    sw::string _avatarPath{ "textures/hero.png" };
-
-    REFLECT_FUNCTION()
-    void heal( float32 amount ) { _health += amount; }
 };
 ```
+
+- 헤더에 처음 `REFLECT` · `ENUM` 을 넣었으면 **다시 configure** 해야 파서가 그 헤더를 봅니다(증상은 `X::StaticType()` 링크 오류).
+- 메타 키는 파서의 필드 표가 정한 것만 받습니다 — 모르는 키는 코드젠 오류입니다(`Tools/ReflectionParser/README.md`).
+  이름을 바꿀 때 옛 이름 호환(`Alias`)을 두지 않고 데이터를 새 이름으로 다시 씁니다.
 
 - **JSON 직렬화**: `JsonSerializer::serialize(&stats, *pTypeInfo)`
 - **XML 직렬화**: `XmlSerializer::serialize(&stats, *pTypeInfo)`
@@ -406,126 +426,143 @@ public:
 ```cpp
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Resource/ResourceManager.h"
 
-// 1. 비동기 씬 로드 (로딩 화면 유지 중 백그라운드 워커에서 파싱)
-sw::SceneManager::get().requestLoadAsync( "Resource/maps/town01.scene.xml" );
+// 1. 비동기 씬 로드 (TaskManager 워커에서 파싱하고, 끝나면 tickTransitions 가 활성 씬으로 바꿔 넣는다)
+//    경로는 도메인을 포함한 리소스 id 다(engine/ · common/ · game/<게임>/).
+sw::TaskFuture<sw::Scene*> sceneFuture = sw::engine::getSceneManager().requestLoadFuture( "game/empty/maps/editortest.scene.xml" );
 
-// 2. 프리팹 인스턴스화 (Prefab Delta Overrides 지원)
-sw::GameObject* pMonster = sw::PrefabManager::get().instantiatePrefab(
-    "Resource/prefabs/Goblin.prefab.json",
-    sw::SceneManager::get().getActiveScene()
-);
+// 2. 프리팹 스폰 (Dev 는 XML/JSON 저작본, Shipping 은 쿠킹된 .prefab.bin 을 읽는다)
+sw::GameObject* pProp = sw::engine::getResourceManager().getPrefabManager().spawn(
+    pObjectManager, "game/empty/prefabs/testprop.prefab.xml" );
 ```
+
+- 씬에 놓인 프리팹 인스턴스는 **덮어쓴 값만** 저장하고, 로드가 프리팹 원형 위에 얹습니다(`PrefabOverrides`).
+- 씬 · 프리팹은 지금 형식만 읽습니다(옛 판 · 별칭 읽기 없음). 모르는 컴포넌트 타입은 `MissingComponent` 로 남고, 그런 씬은 쿠킹에서 실패로 셉니다.
 
 ---
 
 ### 5.5 모듈 핫리로드 (LiveReload) 시스템
 
-개발 모드에서 게임 코드를 수정하고 Visual Studio / CLion / CMake에서 빌드 버튼을 누르면:
-1. `LiveReloadManager`가 DLL 변경을 파일 워처로 감지합니다.
-2. 실행 중인 비동기 태스크를 펜싱(동기화 완료)합니다.
-3. 게임 모듈의 상태(`State`)를 메모리 직렬화 버퍼로 덤프합니다.
-4. 이전 DLL을 언로드하고, 새 DLL을 그림자 복사본으로 로드합니다.
-5. 리플렉션 타입 체인(컴포넌트 생성 함수 포함)을 다시 등록하고 상태를 역직렬화하여 복원합니다.
+개발 모드에서 게임 코드를 수정하고 Visual Studio / CLion / CMake에서 빌드 버튼을 누르면(또는 Ctrl+F7 · 에디터의 빌드):
+1. `LiveReloadManager`(App)가 DLL 변경을 파일 워처로 감지하고, 파일이 잠잠해질 때까지 기다립니다(빌드 중에는 모으기만 합니다).
+2. 그 모듈에 의존하는 모듈까지 묶어(연쇄 리로드) 실행 중인 워커 태스크를 비웁니다.
+3. 게임 모듈의 상태를 메모리 직렬화 버퍼로 덤프합니다.
+4. 새 DLL 을 그림자 복사본으로 올려 엔진 ABI 도장을 대조한 뒤(prepare), 옛 DLL 을 내립니다(commit).
+5. 리플렉션 타입(컴포넌트 생성 함수는 `TypeInfo` 의 칸)을 다시 등록하고 상태를 역직렬화하여 복원합니다.
+
+적용 전에 실패하면 옛 모듈을 그대로 두고 계속 돌고, 적용 뒤의 결함만 리로드 그래프를 막습니다. 모듈 안의 static · 싱글턴은 교체 때 사라지므로
+남아야 하는 상태는 `Engine` 이나 `App` 에 둡니다. 원리와 주의점은 [LiveReload & ABI](docs/03_LiveReload_and_ABI.md) 에 있습니다.
 
 ---
 
 ### 5.6 공간 분할 인덱싱 (SpatialQuadTree & SpatialOctree)
 
-대규모 2D/3D 씬에서 $O(N)$ 전수 조사를 방지하고 $O(\log N)$ 고속 프러스텀 컬링, 구체(Sphere) 충돌 및 영역 쿼리를 지원합니다.
+대규모 2D/3D 씬에서 $O(N)$ 전수 조사를 피하고 영역 · 점 · 구체 쿼리를 지원합니다. 같은 폴더에 `BVHTree3D` 와 `SpatialHashGrid2D` 도 있습니다.
 
 ```cpp
 #include "Engine/Spatial/SpatialQuadTree.h"
 #include "Engine/Spatial/SpatialOctree.h"
 
 // 1. 2D 쿼드트리 (Top-down / 2D 월드 영역)
-sw::SpatialQuadTree quadTree( sw::AABB2D{ -5000.0f, -5000.0f, 5000.0f, 5000.0f } );
-quadTree.insert( pObject->getId(), sw::AABB2D{ 100.0f, 100.0f, 150.0f, 150.0f }, pObject );
+sw::SpatialQuadTree quadTree( sw::AABB2D{ sw::float2{ -5000.0f, -5000.0f }, sw::float2{ 5000.0f, 5000.0f } } );
+quadTree.insert( pObject->getObjectId(), sw::AABB2D{ sw::float2{ 100.0f, 100.0f }, sw::float2{ 150.0f, 150.0f } }, pObject );
 
 sw::vector<sw::SpatialElement> listVisible2D;
-quadTree.queryRange( sw::AABB2D{ 0.0f, 0.0f, 800.0f, 600.0f }, listVisible2D );
+quadTree.queryRange( sw::AABB2D{ sw::float2{ 0.0f, 0.0f }, sw::float2{ 800.0f, 600.0f } }, listVisible2D );
 
 // 2. 3D 옥트리 (3D 월드 AABB / 구체(Sphere) 반경 쿼리)
-sw::SpatialOctree octree( sw::AABB{ sw::float3( -1000.0f, -1000.0f, -1000.0f ), sw::float3( 1000.0f, 1000.0f, 1000.0f ) } );
-octree.insert( 101, sw::AABB{ sw::float3( 10.0f, 0.0f, 10.0f ), sw::float3( 20.0f, 10.0f, 20.0f ) }, pObject );
+sw::SpatialOctree octree( sw::AABB{ sw::float3{ -1000.0f, -1000.0f, -1000.0f }, sw::float3{ 1000.0f, 1000.0f, 1000.0f } } );
+octree.insert( 101, sw::AABB{ sw::float3{ 10.0f, 0.0f, 10.0f }, sw::float3{ 20.0f, 10.0f, 20.0f } }, pObject );
 
-// 3D 범위 및 구체 반경 쿼리
-sw::vector<sw::SpatialOctreeElement> listVisible3D;
-octree.queryRange( sw::AABB{ sw::float3( 0.0f, -50.0f, 0.0f ), sw::float3( 100.0f, 50.0f, 100.0f ) }, listVisible3D );
+sw::vector<sw::SpatialElement3D> listVisible3D;
+octree.queryRange( sw::AABB{ sw::float3{ 0.0f, -50.0f, 0.0f }, sw::float3{ 100.0f, 50.0f, 100.0f } }, listVisible3D );
 
-sw::vector<sw::SpatialOctreeElement> listExplosionTargets;
-octree.querySphere( sw::float3( 15.0f, 5.0f, 15.0f ), 25.0f, listExplosionTargets );
+// 구체 쿼리는 상자 위의 가장 가까운 점까지의 거리로 판정한다
+sw::vector<sw::SpatialElement3D> listExplosionTarget;
+octree.querySphere( sw::float3{ 15.0f, 5.0f, 15.0f }, 25.0f, listExplosionTarget );
 ```
 
 ---
 
 ### 5.7 런타임 파일 감시 & 에셋 핫리로드 (ReloadFileManager)
 
-텍스처, 셰이더, XML 파일이 외부 툴에서 수정되면 실시간으로 감지하여 콜백을 실행합니다.
+텍스처, 셰이더, XML 파일이 외부 툴에서 수정되면 실시간으로 감지하여 콜백을 실행합니다. **에디터(Dev) 기능입니다** —
+`ReloadFileManager` 는 `Source/Editor/Common/Workspace` 에 있고 `AssetHotReload` 가 소유합니다(Windows `ReadDirectoryChangesW` · Linux `inotify`).
 
 ```cpp
-#include "Engine/Module/ReloadFileManager.h"
+#include "Editor/Common/Workspace/ReloadFileManager.h"
 
-// 셰이더 파일 수정 시 자동 리로드 콜백 등록
-auto handle = sw::ReloadFileManager::get().registerWatch(
-    "Resource/shaders",
-    { ".hlsl", ".glsl" },
+// 경로 접두사 · 확장자가 맞는 변경만 콜백으로 온다
+const sw::FileWatchHandle handle = pReloadFileManager->registerWatch(
+    sw::ResourceUtil::getRootFolderPath(),
+    { ".hlsl", ".hlsli" },
     SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, []( const sw::FileChangeEvent& event )
     {
-        SW_LOG_INFO( "Shader modified: %# -> Recompiling...", event._filename.c_str() );
-        // ShaderCompiler::get().reloadShader( event._filename );
-    } )
-);
+        SW_LOG_INFO( "Shader modified: %#", event._filename.c_str() );
+    } ) );
+
+// 더 이상 필요 없으면 해제
+pReloadFileManager->unregisterWatch( handle );
 ```
+
+텍스처 원본(`textures_raw/`)을 고치면 에디터가 DDS 를 다시 굽습니다.
 
 ---
 
 ### 5.8 멀티스레드 태스크 시스템 (Task DAG)
 
-CPU 코어를 100% 활용할 수 있는 작업 훔치기(Work-stealing) 기반 비동기 태스크 시스템입니다.
+워커 풀 위에서 도는 태스크 그래프(DAG)입니다. 태스크는 `TaskHandle` 로 선후 관계(`then` · `runAfter` · `runBefore`)를 조립한 뒤 `submit` 하고,
+우선순위(`TaskPriority::High` · `Normal` · `Low`)는 레인으로 갈려 렌더 기록 같은 High 일이 게임 잡에 밀리지 않습니다.
 
 ```cpp
 #include "Core/Task/TaskManager.h"
+#include "Engine/Common/EngineParallel.h"
 
-// 1. 백그라운드 비동기 태스크 디스패치
-auto task = sw::TaskManager::get().run( sw::TaskPriority::Normal, []()
-{
-    // 백그라운드 계산 (예: 길찾기, 메쉬 생성 등)
-    return 42;
-} );
+sw::TaskManager& taskManager = sw::engine::getTaskManager();
 
-// 2. 태스크 체이닝 (.then)
-task.then( []( int32 result )
+// 1. 백그라운드 태스크 + 후속 태스크
+sw::TaskHandle loadTask = taskManager.emplaceTask( "LoadNavMesh", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []()
 {
-    SW_LOG_INFO( "Task completed with result: %#", result );
-} );
+    // 백그라운드 계산 (예: 길찾기 준비)
+} ) );
+sw::TaskHandle doneTask = loadTask.then( SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() { SW_LOG_INFO( "NavMesh ready" ); } ) );
+loadTask.submit(); // 만든 태스크는 submit 해야 스케줄러에 들어간다
+doneTask.submit();
 
-// 3. 대규모 데이터 병렬 처리 (Parallel For)
-sw::TaskManager::get().parallelFor( 0, 10000, []( size_t index )
+// 2. 대규모 데이터 병렬 처리 — [0, count) 를 구간으로 나눠 돌리고 끝날 때까지 기다린다
+//    문턱(serialThreshold)보다 작은 일은 나누지 않는다(디스패치 비용이 더 크다).
+sw::engine::runParallel( count, 2048, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [pData]( sw::uint32 start, sw::uint32 end )
 {
-    // 각 원소 병렬 계산
-} );
+    for ( sw::uint32 index = start; index < end; ++index )
+        pData[index].update(); // 워커는 컨테이너를 만지지 말고 포인터만 받는다
+} ) );
 ```
+
+병렬 시스템 하나의 모양은 "상태를 가진 시스템 타입 + `engine::runParallel` 한 줄 + 매니저 tick 의 단계 한 줄" 입니다(`SceneTransformHierarchy` 가 첫 예).
 
 ---
 
-### 5.9 오디오 및 2D 물리 시스템
+### 5.9 오디오 및 물리 시스템
 
 ```cpp
 #include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Physics/CCD.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
-// 오디오 사운드 재생
-sw::AudioSystem::get().playSound( "Resource/audio/sfx_jump.wav", 1.0f );
-sw::AudioSystem::get().playBGM( "Resource/audio/bgm_field.ogg", true );
+// 오디오: 효과음은 비동기 재생, 배경음악은 루프 재생. 로딩 중에 preload 해 두면 첫 재생이 끊기지 않는다.
+sw::IAudioSystem& audio = sw::engine::getAudioSystem();
+audio.preload( "game/<게임>/audio/sfx_jump.wav" );
+audio.play( "game/<게임>/audio/sfx_jump.wav" );
+audio.playMusic( "game/<게임>/audio/bgm_field.ogg" );
 
-// 2D 레이캐스트 물리 쿼리
-sw::RaycastHit2D hitInfo{};
-if ( sw::PhysicsSystem::get().raycast( sw::Vector2(0,0), sw::Vector2(1,0), 500.0f, hitInfo ) )
-{
-    SW_LOG_INFO( "Hit collider at distance: %#", hitInfo._distance );
-}
+// 물리: AABB 바디 월드 — 겹침 이벤트(step), 영역 쿼리, 스윕(연속 충돌) 쿼리
+sw::SweepHit hit{};
+if ( physicsWorld.sweepTest( movingBox, sw::float3{ 500.0f, 0.0f, 0.0f }, layer, hit ) )
+    SW_LOG_INFO( "Hit object %# at t=%#", hit._hitObjectId, hit._time );
 ```
+
+연속 충돌(CCD)의 원리와 쓰는 법은 `Source/Engine/Physics/README.md` 에 있습니다.
 
 ---
 
@@ -536,34 +573,32 @@ if ( sw::PhysicsSystem::get().raycast( sw::Vector2(0,0), sw::Vector2(1,0), 500.0
 ```cpp
 #include "Engine/Resource/AssetStreamingQueue.h"
 
-// 1. 큐 초기화 및 우선순위 기반 비동기 프리로드 요청
-sw::AssetStreamingQueue::get().initialize();
-
-sw::AssetStreamingQueue::get().requestAsset(
-    "Resource/textures/boss_dragon.png",
+// 우선순위(Low · Normal · High · Immediate) 기반 비동기 프리로드 요청
+sw::engine::getAssetStreamingQueue().requestAsset(
+    "game/<게임>/textures/boss_dragon.dds",
     sw::StreamingPriority::High,
-    SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, []( std::string_view assetPath, bool bSuccess )
+    SW_DELEGATE_LAMBDA( sw::OnStreamingCompleteDelegate, []( sw::string_view assetPath, bool bSuccess )
     {
         if ( bSuccess )
-            SW_LOG_INFO( "Asset streaming ready: %s", assetPath.data() );
-    } )
-);
+            SW_LOG_INFO( "Asset streaming ready" );
+    } ) );
 
-// 2. 매 프레임 메인 스레드에서 완료 콜백 플러시
-sw::AssetStreamingQueue::get().tick();
+// 완료 콜백은 엔진 루프가 메인 스레드에서 프레임마다 플러시한다(EngineLoop 가 update() 를 부른다).
+// TaskFuture 로 받고 싶으면 requestAssetFuture 를 쓴다.
 ```
+
+큐는 호스트 전용 엔진 서비스(`HostOnly`)라 `EngineLoop` 의 기동 단계가 만들고 내립니다 — 호출부에서 `initialize` 하지 않고, 게임 모듈에는 보이지 않습니다.
 
 ---
 
 ### 5.11 GPU-Driven 간접 드로우 & 컴퓨트 디스패치
 
 CPU 개입 없이 GPU에서 직접 컬링 결과를 기반으로 드로우 콜을 발행하는 **GPU-Driven Rendering** 파이프라인입니다.
-프로덕션 컴퓨트 셰이더는 셋 — `instanceanim.hlsl`(인스턴스 애니메이션) · `gpucull.hlsl`(컬링 + 커맨드 생성) ·
-`instancesort.hlsl`(투명 바이토닉 정렬) — 이고 `FrameRenderer::dispatchInstanceAnimation` /
-`dispatchCullAndSort` 가 돌립니다.
+프로덕션 컴퓨트 셰이더는 넷 — `instanceanim.hlsl`(인스턴스 애니메이션) · `meshmorph.hlsl`(메시 모프) · `gpucull.hlsl`(컬링 + 커맨드 생성) ·
+`instancesort.hlsl`(투명 바이토닉 정렬) — 이고 `FrameRenderer::dispatchInstanceAnimation` · `dispatchMeshMorph` ·
+`dispatchCullAndSort`(`FrameRendererCompute.cpp`)가 돌립니다.
 
-**컴퓨트 디스패치에는 별도 래퍼 클래스가 없습니다.** 커맨드 리스트가 직접 파이프라인·리소스 바인딩·디스패치를
-받습니다 — 예전에 `ComputePass` 라는 래퍼가 있었지만 어디에서도 만들어지지 않은 채 남아 있어 2026-09-12 에 지웠습니다.
+**컴퓨트 디스패치에는 별도 래퍼 클래스가 없습니다.** 커맨드 리스트가 직접 파이프라인·리소스 바인딩·디스패치를 받습니다.
 간접 인자도 전용 버퍼 클래스가 아니라 **일반 RHI 버퍼**에 담고, 인자 구조체는
 `RHIDrawIndexedIndirectCommand`(`Engine/Graphics/RHI/RHITypes.h`)입니다.
 
@@ -577,7 +612,7 @@ pCmd->transitionBuffer( instanceBuffer, sw::RHIBufferState::UnorderedAccess );
 // 2. 파이프라인 · 상수버퍼(b0) · UAV(u0) 를 셰이더 레지스터와 1:1 로 건다.
 pCmd->setComputePipelineState( cullPso );
 pCmd->bindComputeConstantBuffer( cullCbIndex, 0 );
-pCmd->bindComputeUAV( instanceUavIndex, 0 );
+pCmd->bindComputeUav( instanceUavIndex, 0 );
 pCmd->dispatchCompute( threadGroupCount, 1, 1 );
 
 // 3. 다음 소비자(정점 셰이더·간접 드로우)가 읽기 전에 전이를 되돌린다.
@@ -587,13 +622,15 @@ pCmd->transitionBuffer( instanceBuffer, sw::RHIBufferState::ShaderResource );
 pCmd->drawIndexedIndirect( argBuffer );
 ```
 
-실제 순서와 배리어 사유는 `FrameRenderer.cpp` 의 두 함수에 주석으로 적혀 있습니다 — 문서 예제보다 그쪽이 정본입니다.
+실제 순서와 배리어 사유는 `FrameRendererCompute.cpp` 의 세 함수에 주석으로 적혀 있습니다 — 문서 예제보다 그쪽이 정본입니다.
+슬롯 번호는 숫자 리터럴로 쓰지 않고 `bindingslots.hlsli`(HLSL · C++ 가 같은 파일을 include)의 `shaderslot` 상수로 씁니다.
 
 ---
 
-### 5.12 티어-3 바인드리스 리소스 테이블 (BindlessTable)
+### 5.12 바인드리스 리소스 인덱스 (IRHIResource)
 
-DirectX 12 / Vulkan의 티어-3 바인드리스(Bindless Resource Indexing)를 통해 수만 개의 텍스처와 버퍼를 전역 인덱스로 셰이더에서 즉시 접근할 수 있도록 관리합니다.
+텍스처와 버퍼를 전역 인덱스로 셰이더에서 접근할 수 있도록 디스크립터 인덱스를 발급합니다. 백엔드마다 한계가 다릅니다 —
+DX12 · Vulkan 은 디스크립터 힙 · 세트 인덱싱이고, DX11(SM5.0) · OpenGL(SPIR-V)은 버퍼로 텍스처를 넘길 수 없어 머티리얼 텍스처를 고정 슬롯으로 겁니다.
 
 별도의 테이블 클래스는 없습니다 — **인덱스 발급은 `IRHIResource` 가 직접** 합니다
 (`Engine/Graphics/RHI/IRHIResource.h`). 백엔드마다 디스크립터 힙/디스크립터 세트 구현이 달라도
@@ -609,8 +646,7 @@ sw::IRHIResource* pResource = pRhiDevice->getResource();
 sw::RHIDescriptorIndex albedoIndex = pResource->registerBindlessTexture( textureHandle );
 sw::RHIDescriptorIndex materialIndex = pResource->registerBindlessResource( materialBuffer );
 
-// 셰이더에는 인덱스(uint32)만 넘어간다:
-// StructuredBuffer<SwMaterialData> g_SwMaterials; ... g_SwMaterials[materialIndex]
+// 셰이더에는 인덱스(uint32)만 넘어간다 (binding.hlsli 의 g_SwMaterials 같은 구조 버퍼를 그 인덱스로 읽는다)
 
 pResource->unregisterBindlessTexture( albedoIndex );
 pResource->unregisterBindlessResource( materialIndex );
@@ -621,36 +657,37 @@ pResource->unregisterBindlessResource( materialIndex );
 
 ---
 
----
-
 ### 5.13 RenderGraph 순차 쓰기/RMW 의존성 및 리소스 수명 주기 분석
 
-RenderGraph는 패스 간 자원 의존성을 DAG 위상 정렬할 때 **Read-Modify-Write (동일 리소스 읽기 및 덮어쓰기)** 및 **순차 쓰기(Sequential Multi-Write)** 체인을 자동으로 추적하며, VRAM 앨리어싱(Transient Aliasing)을 위한 리소스 수명 주기(First ~ Last Pass)를 산출합니다.
+RenderGraph는 패스 간 자원 의존성을 DAG 위상 정렬할 때 **Read-Modify-Write (동일 리소스 읽기 및 덮어쓰기)** 및 **순차 쓰기(Sequential Multi-Write)** 체인을 추적하고,
+패스마다 필요한 상태 전이(배리어)를 추론하며, 트랜지언트 앨리어싱의 바탕이 되는 리소스 수명 주기(처음 ~ 마지막 사용 패스)를 산출합니다.
+엔진에서는 `FrameRenderer` 가 파이프라인 XML 로 그래프를 짓습니다 — 아래는 API 모양입니다.
 
 ```cpp
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 
 sw::RenderGraph graph;
 // Pass A(쓰기) -> Pass B(읽기 & 덮어쓰기) -> Pass C(읽기)
-graph.addPass( sw::hashed_string("PassA_Geometry"), {}, { sw::hashed_string("ColorBuffer") } );
-graph.addPass( sw::hashed_string("PassB_PostProcess"), { sw::hashed_string("ColorBuffer") }, { sw::hashed_string("ColorBuffer") } );
-graph.addPass( sw::hashed_string("PassC_UIOverlay"), { sw::hashed_string("ColorBuffer") }, { sw::hashed_string("FinalOutput") } );
+graph.addPass( "PassA_Geometry", {}, { "ColorBuffer" } );
+graph.addPass( "PassB_PostProcess", { "ColorBuffer" }, { "ColorBuffer" } );
+graph.addPass( "PassC_UIOverlay", { "ColorBuffer" }, { "FinalOutput" } );
 
-graph.compile(); // PassA -> PassB -> PassC 순서 완벽 보장
+if ( graph.compile() == false ) // PassA -> PassB -> PassC 순서 (사이클이면 false)
+    return;
 
-// Transient Resource Aliasing을 위한 수명 주기 계산
-auto listLifetimes = graph.computeResourceLifetimes();
-for ( const auto& life : listLifetimes )
-{
-    SW_LOG_INFO( "Resource '%s': First Pass %d ~ Last Pass %d", life._name.c_str(), life._firstPassIndex, life._lastPassIndex );
-}
+// 트랜지언트 앨리어싱을 위한 수명 주기 (compile 이 계산해 둔다)
+for ( const sw::RenderGraphResourceLifetime& lifetime : graph.getResourceLifetimes() )
+    SW_LOG_INFO( "Resource '%#': first pass %# ~ last pass %#", lifetime._name.c_str(), lifetime._firstPassIndex, lifetime._lastPassIndex );
 ```
+
+실행은 `execute`(직렬) 또는 `executeParallel`(패스마다 커맨드 리스트를 워커에서 기록)이고, 배리어는 `setLevelPrologue` 로 받은 콜백이 기록합니다.
 
 ---
 
 ### 5.14 C++17 Fluent Task Continuation (TaskFuture / TaskPromise)
 
-C++20 코루틴을 사용할 수 없는 C++17 환경에서도 콜백 지옥 없이 직관적인 비동기 파이프라인을 구축할 수 있도록 Monadic `.then()` 체이닝과 `whenAll` · `whenAny` 콤비네이터를 제공합니다.
+C++20 코루틴을 사용할 수 없는 C++17 환경에서도 콜백 지옥 없이 직관적인 비동기 파이프라인을 구축할 수 있도록 Monadic `.then()` 체이닝과 `whenAllFutures` · `whenAnyFuture` 콤비네이터를 제공합니다
+(태스크 핸들끼리의 결합은 `TaskManager::whenAll` · `whenAny`).
 
 #### 💡 `TaskManager (Job System)`와의 역할 차이 및 상호 보완성
 
@@ -684,13 +721,13 @@ chained.wait();
 sw::TaskPromise<std::vector<float>> computePromise;
 auto computeFuture = computePromise.getFuture();
 
-sw::engine::getTaskManager().emplaceTask( "AsyncCompute",
+sw::TaskHandle computeTask = sw::engine::getTaskManager().emplaceTask( "AsyncCompute",
     SW_DELEGATE_LAMBDA( sw::TaskDelegate, [computePromise]() mutable
     {
         std::vector<float> heavyResults = runHeavyPathFinding();
         computePromise.setValue( std::move( heavyResults ) ); // 비동기 워커에서 결과 전달
-    } )
-).submit();
+    } ) );
+computeTask.submit();
 
 // 메인 스레드나 렌더러에서 비동기 결과를 가공
 computeFuture.then( []( const std::vector<float>& path )
@@ -701,27 +738,28 @@ computeFuture.then( []( const std::vector<float>& path )
 
 ---
 
-### 5.15 트랜스폼 세대 카운터 (Transform Dirty Generation Counter)
+### 5.15 트랜스폼 더티 루트 플러시 (SceneTransformHierarchy)
 
-수천 개의 정적 환경 오브젝트가 존재하는 대규모 씬에서 불필요한 서브트리 순회를 방지하기 위해 원자적 세대 카운터(`_dirtyTransformGeneration`)를 기반으로 **$O(1)$ 조기 탈출(Early-Exit)** 최적화를 수행합니다.
+수천 개의 정적 환경 오브젝트가 존재하는 대규모 씬에서 불필요한 순회를 피하기 위해, 트랜스폼이 바뀐 노드는 자기 **루트를 더티 루트 목록에 한 번만** 올리고
+플러시는 그 목록만 돕니다(루트 서브트리끼리 겹치지 않으므로 루트 단위로 `engine::runParallel`). 상태와 알고리즘은 `SceneTransformHierarchy` 가,
+단계 순서(틱 중 쓰기 적용 → 플러시)는 `GameObjectManager::tick` 이 갖습니다.
 
 ```cpp
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-// 트랜스폼이 변경되지 않은 프레임:
-// hasDirtySceneTransforms() 및 flushSceneTransforms()는 서브트리 순회 없이
-// _dirtyTransformGeneration == _lastFlushedTransformGeneration 비교를 통해 1 클럭(O(1))에 즉시 반환됩니다.
+// 트랜스폼이 변경되지 않은 프레임: 더티 루트 목록이 비어 있으므로 아무것도 순회하지 않는다.
 if ( manager.hasDirtySceneTransforms() )
-{
     manager.flushSceneTransforms();
-}
 ```
+
+틱 중의 세터는 값을 바로 쓰지 않고 칸의 대기 자리 · 쓰기 큐에 올려 틱 뒤에 적용합니다 — 틱 중에 다른 오브젝트가 읽는 값은 틱 전 값입니다.
 
 ---
 
 ## 6. 코딩 컨벤션 및 네이밍 규칙
 
-SW Engine 소스코드를 작성할 때는 [AGENTS.md](AGENTS.md) 및 [GEMINI.md](GEMINI.md)의 다음 규칙을 **엄격히 준수**해야 합니다:
+SW Engine 소스코드를 작성할 때는 [AGENTS.md](AGENTS.md)(한국어판: [Coding Guidelines](docs/04_CodingGuidelines.md))의 규칙을 따릅니다. 규칙은
+`Scripts/lint/` 의 게이트가 CI · 커밋 훅에서 강제합니다. 자주 만나는 것:
 
 | 분류 | 규칙 | 예시 |
 | :--- | :--- | :--- |
@@ -731,30 +769,35 @@ SW Engine 소스코드를 작성할 때는 [AGENTS.md](AGENTS.md) 및 [GEMINI.md
 | **스마트 포인터** | `std::unique_ptr` 등은 `p` 접두어를 붙이지 않음 | `unique_ptr<Node> _rootNode;`, `shared_ptr<Material> _material;` |
 | **불리언 비교** | `!` 부정 연산자 금지, 반드시 명시적 비교 작성 | `if (_bValid == false)`, `if (pPtr == nullptr)` |
 | **범위(Range) 비교** | 변수를 안쪽(중간)에 배치하여 수학적 범위($min \le val \le max$)로 표기 | `if (kMin <= value && value <= kMax)` |
-| **헤더 선언 순서** | 1. `public` 변수 $\rightarrow$ 2. `ctor`/`dtor` $\rightarrow$ 3. `init`/`shutdown` $\rightarrow$ 4. `process` $\rightarrow$ 5. `getter`/`setter` $\rightarrow$ 6. `private` 함수 $\rightarrow$ 7. `private` 변수 (맨 아래) |
-| **생성자 초기화** | 헤더 인라인 초기화 지양, 생성자 본문에서 선언 순서대로 `{}` 중괄호 초기화 | `: _memberA{ 0 }<br>, _memberB{ nullptr }` |
+| **헤더 선언 순서** | 1. `public` 변수 $\rightarrow$ 2. `ctor`/`dtor` $\rightarrow$ 3. `init`/`shutdown` $\rightarrow$ 4. `process` $\rightarrow$ 5. `getter`/`setter` $\rightarrow$ 6. `private` 함수 $\rightarrow$ 7. `private` 변수 (맨 아래) | |
+| **생성자 초기화** | 생성자가 있으면 헤더 기본값 대신 생성자 초기화 목록에서 선언 순서대로 `{}` 중괄호 초기화(반복자 쌍만 소괄호). 기본값 없는 스칼라 필드는 빠짐없이 | `: _memberA{ 0 }<br>, _memberB{ nullptr }` |
+| **함수 이름** | 약어도 camelCase 한 낱말(`initRhi`, `bindComputeUav`), 개념 하나에 동사 하나(`initialize`/`shutdown`, `get`/`find`, `compute`), 술어는 질문형(`is`/`has`/…) | `bool isRhiValid() const;` |
+| **enum switch** | 열거자를 다 다룬 `switch` 에는 `default:` 를 두지 않는다(`-Werror=switch` 가 빠진 `case` 를 잡는다) | |
+| **플랫폼 · 컴파일러 판정** | 컴파일러 내장 매크로 대신 CMake 가 정의한 `SW_PLATFORM_*` · `SW_X64`/`SW_ARM64` · `SW_COMPILER_*` | `#if defined( SW_PLATFORM_WINDOWS )` |
+| **힙 할당** | 맨 `new` 금지 — `sw_new` · `make_unique` · `sw_new_array` 로 sw 할당자(메모리 태그)를 지난다 | `sw_new Foo( ... )` |
 
 ---
 
 ## 7. 자동화 테스트 스위트
 
-엔진은 모든 커밋과 빌드에서 회귀 결함을 방지하기 위해 4대 자동화 테스트 스위트를 포함하고 있습니다:
+시험은 자체 프레임워크(`Test/TestFramework`, gtest 식 플래그를 받습니다)로 짠 실행 파일 일곱 개입니다. 자세한 규칙은 [Test/README.md](Test/README.md) 에 있습니다.
 
 ```powershell
-# 모든 테스트 일괄 실행
-build/Ninja-Debug/Bin/CoreTest.exe
-build/Ninja-Debug/Bin/ReflectionTest.exe
-build/Ninja-Debug/Bin/EngineTest.exe
-build/Ninja-Debug/Bin/SmokeTest.exe
+ctest --test-dir build/Ninja-Debug -L nogpu --output-on-failure        # CI 와 같은 집합 (GPU 불필요)
+ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure   # CI 가 못 돌리는 GPU · 창 · DXC 시험 — 끝내기 전에 직접
+py -3 -m Scripts test SceneTest.*                                      # 이름으로 골라 돌리기(실행 파일 · 작업 폴더를 알아서 찾는다)
 ```
 
-| 테스트 실행 파일 | 테스트 항목 수 | 검증 대상 서브시스템 |
+직접 실행할 때는 작업 폴더가 `build/<프리셋>/Bin` 이어야 합니다(테스트가 거기서 위로 올라가며 `Resource/` 를 찾습니다).
+
+| 테스트 실행 파일 | 케이스 수 (Debug) | 검증 대상 |
 | :--- | :---: | :--- |
-| **`CoreTest.exe`** | **104개** | 메모리 풀링, 문자열 빌더, CPU 타이머, **플러그형 압축 코덱/스트림**, XML/JSON 파서 |
-| **`ReflectionTest.exe`** | **66개** | C++ 리플렉션 타입/프로퍼티/메서드 동적 호출, 스키마 마이그레이션, 직렬화, 소프트 역직렬화 고아 처리 |
-| **`EngineTest.exe`** | **199개** | RHI 4대 백엔드, 셰이더 컴파일러, GameObject/Component, **SpatialQuadTree/SpatialOctree (Node Collapse)**, **AssetStreamingQueue (In-Flight Multicast)**, **GPU-Driven IndirectDraw/Bindless (Double-Free 방어)**, **RenderGraph (RMW/Lifetime)**, **C++17 TaskFuture/Promise**, **Transform Dirty Generation**, 오디오, 물리(TLS 수축 가드), 태스크 DAG |
-| **`SmokeTest.exe`** | **17개** | App-Editor-Game 동적 모듈 로드, **LiveReload 반복 핫스왑 사이클**, 풀 씬 전환 |
-| **총계** | **386개 (100% PASS)** | **엔진 전체 서브시스템 무결성 보증** |
+| **`CoreTest`** | 360 | `Source/Core` 만 — 메모리 · 문자열 · 컨테이너 · 델리게이트 · 압축 스트림 · 명령줄 · 태스크 등 (엔진을 직접 쓰지 않는다) |
+| **`EngineTest`** | 1041 (호스트 86) | 엔진 · GameFramework · 장르 킷 — GameObject/Component, 씬 · 프리팹, 직렬화, RHI · 렌더러(`RenderPassGpuTest` 등은 GPU 필요), 물리, 오디오, 태스크, 기동 단계 표 |
+| **`ReflectionTest`** | 175 | `ReflectionParser` 코드젠과 리플렉션 런타임(타입 · 프로퍼티 · 스키마 마이그레이션 · orphan 처리) |
+| **`SmokeTest`** | 47 | 모듈 동적 로드, LiveReload 반복 핫스왑, 모듈 백그라운드 컴파일 (Shipping 은 정적 경로 3 케이스) |
+| **`EditorTest`** | 149 | 에디터의 UI 없는 로직(커맨드 스택 · 선택 · 뷰포트 수학 · 문서 dirty 계약) |
+| **`EditorUiTest`** | 2 | ImGui 컨텍스트가 필요한 에디터 시험 |
+| **`AppTest`** | 17 (호스트 11) | 런처 로직 + **진짜 `App.exe` 를 네 백엔드 × 에디터 유무로 띄우는 스모크**, 골든 이미지 비교, 에디터 자체 시험(`-gv_editorSelfTest`) |
 
-
-
+케이스 수는 main `8445bdea` Debug 빌드의 `--test_list` 실측입니다(괄호는 `hostgpu` 로 갈리는 케이스). 구성마다 수가 다릅니다 — Test/README.md 의 표를 보십시오.
