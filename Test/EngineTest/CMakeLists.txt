@@ -38,6 +38,7 @@ sw_addTestExecutable(EngineTest
 		GF_SurvivalHorror
 		GF_SideScrollConquest
 		GF_Fighting
+		GF_ActionAdventure
 	LABELS
 		"unit;engine"
 	TIMEOUT

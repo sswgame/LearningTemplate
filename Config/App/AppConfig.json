@@ -132,6 +132,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_ActionAdventure",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
