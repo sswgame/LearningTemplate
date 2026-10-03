@@ -33,15 +33,15 @@ namespace sw
         /** @brief 로드하지 않은 빈 프리팹으로 만듭니다. */
         PrefabAsset();
 
-        /** @brief XML 에서 프리팹을 로드합니다(<Prefab formatVersion="0" name="...">). */
+        /** @brief XML 에서 프리팹을 로드합니다(`<Prefab formatVersion="0" name="..."><GameObject …/></Prefab>` — 저장하는 모양 하나). */
         [[nodiscard]] bool loadFromXmlFile( string_view assetRelativePath );
-        /** @brief JSON 에서 프리팹을 로드합니다(표준 JSON 또는 래퍼 JSON). */
+        /** @brief JSON 에서 프리팹을 로드합니다(GameObject 상태 JSON 그대로 — `saveToJsonFile` 이 쓰는 모양 하나). */
         [[nodiscard]] bool loadFromJsonFile( string_view assetRelativePath );
         /** @brief 바이너리에서 프리팹을 로드합니다(쿠킹된 PFB2). */
         [[nodiscard]] bool loadFromBinaryFile( string_view assetRelativePath );
         /** @brief XML 로 저장합니다(<Prefab formatVersion="0" name="...">). */
         [[nodiscard]] bool saveToXmlFile( string_view assetRelativePath ) const;
-        /** @brief JSON 으로 저장합니다({ "formatVersion": 0, "name": "...", "GameObject": { ... } }). */
+        /** @brief JSON 으로 저장합니다(GameObject 상태 JSON 그대로). 상태를 JSON 으로 옮기지 못하면 XML 본문을 `xmlBody` 로 싸 둡니다. */
         [[nodiscard]] bool saveToJsonFile( string_view assetRelativePath ) const;
         /**
          * @brief 경로의 확장자로 형식을 골라 저장합니다(`.prefab.xml` · `.prefab.json`). 프리팹 경로가 아니면 쓰지 않고 false 입니다.

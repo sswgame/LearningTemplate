@@ -171,47 +171,28 @@ namespace sw
         }
 
         XmlNode root = doc.getRoot( PrefabAssetInternal::kRoot );
-        if ( root.isValid() )
+        if ( root.isValid() == false )
         {
-            if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::Prefab, doc, root, AssetFormatVersions::kPrefab ) == false )
-            {
-                SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
-                return false;
-            }
-
-            const utf8* pNameAttr = root.findAttribute( PrefabAssetInternal::kName );
-            if ( pNameAttr != nullptr )
-                _name = pNameAttr;
-            else
-            {
-                const utf8* pNameNode = root.findChildText( PrefabAssetInternal::kName );
-                if ( pNameNode != nullptr )
-                    _name = pNameNode;
-            }
-
-            XmlNode bodyNode = root.findChild( PrefabAssetInternal::kGameObject );
-            if ( bodyNode.isValid() )
-                _stateData = bodyNode.toString();
-            else
-                _stateData = doc.saveToString();
+            SW_LOG_ERROR( "Missing <Prefab> root: %#", absPath );
+            return false;
         }
-        else
+        if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::Prefab, doc, root, AssetFormatVersions::kPrefab ) == false )
         {
-            // 루트가 <GameObject> 처럼 바로 오브젝트인 XML 도 받는다
-            XmlNode goNode = doc.getRoot( PrefabAssetInternal::kGameObject );
-            if ( goNode.isValid() )
-            {
-                const utf8* pNameAttr = goNode.findAttribute( "_name" );
-                if ( pNameAttr != nullptr )
-                    _name = pNameAttr;
-                _stateData = doc.saveToString();
-            }
-            else
-            {
-                SW_LOG_ERROR( "Missing <Prefab> or <GameObject>: %#", absPath );
-                return false;
-            }
+            SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
+            return false;
         }
+
+        const utf8* pNameAttr = root.findAttribute( PrefabAssetInternal::kName );
+        if ( pNameAttr != nullptr )
+            _name = pNameAttr;
+
+        XmlNode bodyNode = root.findChild( PrefabAssetInternal::kGameObject );
+        if ( bodyNode.isValid() == false )
+        {
+            SW_LOG_ERROR( "Missing <GameObject> in <Prefab>: %#", absPath );
+            return false;
+        }
+        _stateData = bodyNode.toString();
 
         if ( _name.empty() )
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
@@ -233,22 +214,15 @@ namespace sw
             return false;
         }
 
-        JsonValue root = doc.getRoot();
-        if ( root.has( "GameObject" ) )
+        // 저장기가 쓰는 모양 하나 — GameObject 상태 JSON 그대로다(이름은 그 `_name`).
+        const JsonValue root = doc.getRoot();
+        if ( root.isObject() == false )
         {
-            _name = root.get( "name" ).asString();
-            if ( _name.empty() )
-                _name = root.get( "Name" ).asString();
-            _stateData = root.get( "GameObject" ).dump( 0 );
+            SW_LOG_ERROR( "Prefab JSON is not a GameObject state object: %#", absPath );
+            return false;
         }
-        else
-        {
-            // 바로 GameObject 인 JSON 인 경우
-            _name = root.get( "_name" ).asString();
-            if ( _name.empty() )
-                _name = root.get( "Name" ).asString();
-            _stateData = doc.dump( 0 );
-        }
+        _name      = root.get( "_name" ).asString();
+        _stateData = doc.dump( 0 );
 
         if ( _name.empty() )
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );

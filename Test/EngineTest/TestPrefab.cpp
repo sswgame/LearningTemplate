@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -518,4 +520,30 @@ SW_TEST_CASE( PrefabTest, ComponentNameSurvivesEveryPrefabFormat )
         SW_EXPECT_STREQ( "SceneComponent", pSpawned->getComponents()[0]->getComponentName().c_str() );
         SW_EXPECT_STREQ( "Grip", pSpawned->getComponents()[1]->getComponentName().c_str() );
     }
+}
+
+/**
+ * @brief [PrefabTest] XML 프리팹은 저장하는 모양(`<Prefab name=…><GameObject/></Prefab>`) 하나만 읽는다 — 루트가 바로 `<GameObject>` 인 문서 ·
+ *        `<GameObject>` 가 없는 `<Prefab>` 은 거절하고, 이름은 `name` 속성에서만 읽는다
+ */
+SW_TEST_CASE( PrefabTest, XmlPrefabReadsOnlyTheSavedShape )
+{
+    const sw::string barePath = test::makeTempPath( "bare.prefab.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( barePath, "<GameObject _name=\"Bare\"/>\n" ) );
+    const sw::string emptyPath = test::makeTempPath( "empty.prefab.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( emptyPath, "<Prefab name=\"Empty\"/>\n" ) );
+    const sw::string childNamePath = test::makeTempPath( "childname.prefab.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( childNamePath, "<Prefab><name>FromChild</name><GameObject _name=\"Crate\"/></Prefab>\n" ) );
+
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a prefab file that is not in the saved shape" );
+        sw::PrefabAsset bare;
+        SW_EXPECT_FALSE( bare.loadFromXmlFile( barePath ) );
+        sw::PrefabAsset empty;
+        SW_EXPECT_FALSE( empty.loadFromXmlFile( emptyPath ) );
+    }
+
+    sw::PrefabAsset childName;
+    SW_ASSERT_TRUE( childName.loadFromXmlFile( childNamePath ) );
+    SW_EXPECT_STREQ( "childname.prefab", childName.getName().c_str() ); // 이름 속성이 없으면 파일 이름이다
 }
