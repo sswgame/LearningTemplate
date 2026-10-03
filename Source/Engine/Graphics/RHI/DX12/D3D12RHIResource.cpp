@@ -41,7 +41,7 @@ namespace sw
             return;
 
         // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferShadow` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
-        // 세 프레임 중 두 프레임을 옛 값으로 그리던 것). 조회와 복사는 읽기 락 안에서 한다 — 다른 스레드의 `destroyBuffer` 가 Unmap 하는
+        // 세 프레임 중 두 프레임을 옛 값으로 그리지 않게). 조회와 복사는 읽기 락 안에서 한다 — 다른 스레드의 `destroyBuffer` 가 Unmap 하는
         // 도중에 쓰면 안 된다.
         std::shared_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_mapCbMapped.contains( buffer ) == false )
@@ -50,16 +50,15 @@ namespace sw
                                                [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
         { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );
 
-        // 힙의 CBV 는 여기서 갱신하지 않는다. 예전에는 드로우마다 **레지스트리 전체를 훑어** 이 버퍼를 가리키는
-        // 레코드마다 CreateConstantBufferView 를 다시 불렀다. 등록 수 N, 프레임당 드로우 D 면 O(N·D) 다.
-        // 드로우별 상수버퍼 슬롯이 생기면서 N 이 수백으로 늘자 이 순회가 드로우 경로의 지배적 비용이 됐다.
+        // 힙의 CBV 는 여기서 갱신하지 않는다. 주의: 드로우마다 **레지스트리 전체를 훑어** CreateConstantBufferView 를
+        // 다시 부르면 등록 수 N(수백) · 드로우 D 에 O(N·D) 라 드로우 경로의 지배적 비용이 된다.
         // CBV 주소는 **프레임 링 슬롯**에만 의존하므로 프레임당 한 번이면 충분하다.
         // D3D12RHIDevice::refreshConstantBufferViews 가 beginFrame 에서 한 번에 한다.
     }
 
     RHIBufferHandle D3D12RHIResource::createStructuredBuffer( uint32 elementSize, uint32 elementCount )
     {
-        // 64비트로 곱한다. 예전에는 `UINT` 로 곱해 `Width`(UINT64)에 넣었고, 넘치면 조용히 작은 버퍼가 됐다.
+        // 64비트로 곱한다. `UINT` 로 곱해 `Width`(UINT64)에 넣으면 넘칠 때 조용히 작은 버퍼가 된다.
         const uint64                totalBytes   = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
         const D3D12_HEAP_PROPERTIES heapProps    = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_DEFAULT );
         const D3D12_RESOURCE_DESC   resourceDesc = D3D12RHIResourcePreset::bufferDesc( totalBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS );
@@ -114,7 +113,7 @@ namespace sw
         {
             // 펜스 값이 바뀌었다는 것은 앞 구간 뒤에 Signal 이 **큐에 들어갔다**는 뜻이지 GPU 가 그 구간의 복사를
             // 끝냈다는 뜻이 아니다. signalCurrentFrame 은 올리기만 하고 기다리지 않는다. 프레임 끝 Signal 직후,
-            // 링이 아직 앞 슬롯을 가리키는 동안 업로드가 오면 여기서 아직 실행 중인 얼로케이터를 Reset 했다
+            // 링이 아직 앞 슬롯을 가리키는 동안 업로드가 오면 여기서 아직 실행 중인 얼로케이터를 Reset 하게 된다
             // ("is being reset before previous executions ... have completed" → DEVICE_HUNG, GPU 가 붐빌 때만).
             // 링 슬롯 대기가 가려 줄 것이라 기대하지 않고 이 얼로케이터의 펜스(_resetFence: 그 구간의 제출 뒤에
             // Signal 된 값)를 직접 기다린다. 보통은 이미 지나 있어 비용이 없다.
@@ -245,7 +244,7 @@ namespace sw
         std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
         // **조각을 모두 한 스테이징에 모아 한 번만 제출한다.** 조각마다 부르면 스테이징 확보와 큐
-        // 제출이 그만큼 되풀이돼 비용이 구간 수에 선형으로 붙는다(재 보니 호출당 ~3.3 us 였다).
+        // 제출이 그만큼 되풀이돼 비용이 구간 수에 선형으로 붙는다(호출당 ~3.3 us).
         constexpr uint32 kCopyAlignment = 4;
         uint32           totalSize      = 0;
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
@@ -302,8 +301,8 @@ namespace sw
             cursor += MathUtil::align( region._size, kCopyAlignment );
         }
 
-        // 올린 뒤에는 **셰이더 읽기** 상태로 둔다. 예전에는 늘 UAV 로 끝내서, 그래픽스가 SRV 로만 읽는 버퍼(배치 정보 · 머티리얼 데이터 · 라이트, 회전
-        // 인스턴스가 없을 때의 인스턴스 버퍼)가 UAV 상태로 읽혔다(GPU 검증이 짚고, 드라이버 관용에 기대 동작했다). 컴퓨트로 쓰는 버퍼는 쓰기 전에
+        // 올린 뒤에는 **셰이더 읽기** 상태로 둔다. 주의: UAV 로 끝내면 그래픽스가 SRV 로만 읽는 버퍼(배치 정보 · 머티리얼 데이터 · 라이트, 회전
+        // 인스턴스가 없을 때의 인스턴스 버퍼)가 UAV 상태로 읽힌다(GPU 검증이 짚고, 드라이버 관용에 기대 동작한다). 컴퓨트로 쓰는 버퍼는 쓰기 전에
         // `transitionBuffer( UnorderedAccess )` 가 기록된 상태에서 옮긴다.
         constexpr D3D12_RESOURCE_STATES kShaderReadState = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         D3D12_RESOURCE_BARRIER          toShaderRead{};
@@ -515,7 +514,7 @@ namespace sw
 
     RHIBufferHandle D3D12RHIResource::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
     {
-        // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 예전 기본 구현은 구조버퍼(기본 힙)를 만들었다. 인덱스 버퍼는 정점 버퍼처럼
+        // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 인덱스 버퍼는 구조버퍼가 아니라 정점 버퍼처럼
         // 업로드 힙의 GENERIC_READ 로 둔다. 그 상태가 INDEX_BUFFER 읽기를 포함하므로 전이 없이 걸 수 있다.
         (void)indexStride;
         return createUploadBuffer( pData, sizeBytes );
@@ -541,7 +540,7 @@ namespace sw
         if ( buffer == 0 )
             return;
         // 렌더 스레드의 기록 상태(`_frameStreamState` 의 묶인 정점 · 인덱스 버퍼)는 여기서 지우지 않는다. 이 함수는 게임 스레드에서도 불리는데 그 값은
-        // 렌더 스레드만 쓴다(예전엔 여기서 써서 경쟁이었다). 핸들은 세대가 있어 다시 쓰이지 않으므로, 지운 핸들은 드로우의 `resolveBuffer` 가 null 로
+        // 렌더 스레드만 쓴다(여기서 쓰면 경쟁이다). 핸들은 세대가 있어 다시 쓰이지 않으므로, 지운 핸들은 드로우의 `resolveBuffer` 가 null 로
         // 풀어 건너뛴다.
         {
             std::scoped_lock<mutex> lock{ _pDevice->_resourceStateMutex };
@@ -663,8 +662,8 @@ namespace sw
         _pDevice->assertRegistryMutableNow( "createTexture2D" );
 
         // 오프스크린 레코드와 디스크립터 프리리스트는 `transitionTexture` 가 기록 중에 읽는 것과
-        // 같은 자료다. 슬롯 배정부터 맵 삽입까지를 그 락 안에서 끝낸다. 예전에는 읽는 쪽만 잠가서
-        // 생성/파괴가 맵을 리해시하면 읽는 쪽이 무효한 참조를 잡을 수 있었다.
+        // 같은 자료다. 슬롯 배정부터 맵 삽입까지를 그 락 안에서 끝낸다. 읽는 쪽만 잠그면
+        // 생성/파괴가 맵을 리해시할 때 읽는 쪽이 무효한 참조를 잡는다.
         std::scoped_lock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
 
         for ( uint32 slice = 0; pNative != nullptr && desc._bIsRenderTarget && _pDevice->_rtvHeap != nullptr && slice < desc._arraySize; ++slice )
@@ -679,8 +678,8 @@ namespace sw
                 rtvSlot = _pDevice->_nextOffscreenRtvIndex++;
             else
             {
-                // 고갈되면 예전에는 조용히 넘어갔다. 유효한 핸들이 돌아오는데 RTV 가 없어서,
-                // 나중에 beginRenderPass 가 이유 없이 아무것도 안 그리는 것처럼 보였다.
+                // 고갈은 로그로 남긴다. 유효한 핸들이 돌아오는데 RTV 가 없으므로, 조용히 넘어가면
+                // 나중에 beginRenderPass 가 이유 없이 아무것도 안 그리는 것처럼 보인다.
                 rtvSlot = D3D12RHIDevice::kMaxOffscreenRtvs;
                 SW_LOG_ERROR( "오프스크린 RTV 디스크립터 고갈(최대 %#) — 이 텍스처는 렌더타깃으로 쓸 수 없습니다.",
                               static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenRtvs ) );

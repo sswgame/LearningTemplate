@@ -56,14 +56,9 @@ namespace sw
          * @brief 드로우 직전에 그래픽스 파이프라인을 **실제로 겁니다**. 걸 수 없으면 false 입니다(드로우하지 말 것).
          *
          * @details DX11 은 `setPipelineState` 가 **핸들만 기록**하고, VS/PS/InputLayout · 정점 버퍼 · 토폴로지는
-         *          드로우 시점에 겁니다. 그래서 드로우 진입점마다 이 블록이 필요합니다. 그런데 예전에
-         *          `drawIndirect` 에만 빠져 있어서 **GPU 드리븐 경로의 모든 드로우가 셰이더도 정점 버퍼도
-         *          없이 나갔습니다**(화면과 트랜지언트가 클리어 색만 남았습니다).
-         *
-         *          진입점이 넷(`draw` · `drawInstanced` · `drawIndirect` · `drawIndexedIndirect`)인데 블록은
-         *          세 벌로 복사돼 있었고, **넷째(`drawIndexedIndirect`)는 여전히 빠진 채였습니다.** 엔진에서
-         *          아무도 부르지 않아 드러나지 않았을 뿐입니다. 한 곳으로 모으면 새 진입점이 같은 실수를 할
-         *          자리가 없어집니다.
+         *          드로우 시점에 겁니다. 그래서 드로우 진입점(`draw` · `drawInstanced` · `drawIndirect` ·
+         *          `drawIndexedIndirect`)마다 이것을 불러야 합니다. 주의: 한 진입점이라도 빠뜨리면 그 경로의
+         *          드로우가 **셰이더도 정점 버퍼도 없이 나가** 화면에 클리어 색만 남습니다. 새 진입점도 이것을 부를 것.
          */
         bool bindGraphicsPipelineForDraw();
         void drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1,
@@ -89,7 +84,7 @@ namespace sw
         ID3D11ShaderResourceView* findBindlessBufferSrv( RHIDescriptorIndex index ) const;
         /**
          * @brief 루트 상수를 흉내 냅니다. 그림자 배열에 쓰고 계약 슬롯의 작은 상수버퍼를 다시 채워 겁니다.
-         * @details DX11 에는 루트 상수가 없습니다. 그래픽스 · 컴퓨트 진입점이 이 스무 줄을 각자 갖고 있었고 다른 것은 어느
+         * @details DX11 에는 루트 상수가 없습니다. 그래픽스 · 컴퓨트 진입점이 이것을 함께 쓰고 다른 것은 어느
          *          스테이지에 거는가뿐입니다(VS+PS / CS). 상한 검사 · WRITE_DISCARD 재명명 규칙이 두 벌이면 한쪽만 고쳐집니다.
          */
         void                 writeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues, bool bCompute );

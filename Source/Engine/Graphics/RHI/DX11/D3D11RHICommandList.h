@@ -20,9 +20,7 @@ namespace sw
     /**
      * @class D3D11RHICommandList
      * @brief 자신만의 네이티브 `ID3D11DeviceContext`(Deferred Context)를 소유하는 `IRHICommandList` 입니다.
-     * @details 예전에는 `IRHICommandList`(RHIDeferredCommandList) 가 모든 호출을 소프트웨어 `Cmd` 벡터에
-     *          쌓았다가 프레임 끝에 디바이스 단일 Immediate Context 에 재생(replay)했습니다. 이 클래스는
-     *          `Cmd` 벡터 없이 `IRHICommandList` 호출을 그 자리에서 바로 자신의 네이티브 Deferred
+     * @details `IRHICommandList` 호출을 그 자리에서 바로 자신의 네이티브 Deferred
      *          Context 에 기록합니다(`D3D11RHICommandContext` 로직을 재사용하고, `_pNativeContext` 만 자신의
      *          것을 가리킵니다). D3D11 런타임은 드라이버가 커맨드 리스트를 네이티브로 지원하지 않아도
      *          소프트웨어로 에뮬레이션하므로 `CreateDeferredContext`/`FinishCommandList` 는 언제나 동작합니다.
@@ -59,7 +57,7 @@ namespace sw
          * @brief 기록해 둔 커맨드 리스트를 버리고 Deferred Context 바인딩을 비웁니다.
          * @details `ID3D11CommandList` 는 **자기가 바인딩한 리소스의 참조를 붙들고 있습니다.** 백버퍼
          *          RTV 도 마찬가지라, 지난 프레임에 기록된 리스트가 살아 있으면 `ResizeBuffers` 가
-         *          DXGI_ERROR_INVALID_CALL 로 거부됩니다. 창 크기 변경이 조용히 실패하는 원인이었습니다.
+         *          DXGI_ERROR_INVALID_CALL 로 거부되고 창 크기 변경이 조용히 실패합니다.
          */
         void releaseRecordedState();
 
@@ -80,12 +78,9 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D11CommandList>   _pFinishedList;
         /**
          * @brief **이 리스트만의** 기록 상태입니다. `_context` 보다 먼저 선언해야 합니다(생성자가 주소를 넘깁니다).
-         * @details 예전에는 컨텍스트가 디바이스의 `_recordingState` 를 가리켰습니다. 리스트는 각자 Deferred
-         *          Context 를 갖는데 캐시가 하나뿐이라, 레벨을 병렬로 기록하면 한 패스의 드로우가
-         *          **다른 패스의 PSO · 정점 버퍼**로 나갔습니다. Shadow 와 GBuffer 가 같은 레벨에 있는
-         *          디퍼드 파이프라인에서 그림자 맵이 세 번에 한 번꼴로 엉뚱하게 그려졌고, 디퍼드
-         *          조명 결과(LitColor)가 두 값 사이를 오갔습니다
-         *          (`RenderPassGpuTest.AmbientOcclusionReachesBloom` 이 그것을 잡습니다).
+         * @details 주의: 리스트들이 디바이스의 `_recordingState` 하나를 나눠 쓰면, 레벨을 병렬로 기록할 때 한 패스의
+         *          드로우가 **다른 패스의 PSO · 정점 버퍼**로 나갑니다(디퍼드 파이프라인의 Shadow 와 GBuffer 가
+         *          같은 레벨에 있을 때 드러나며, `RenderPassGpuTest.AmbientOcclusionReachesBloom` 이 잡습니다).
          */
         D3D11RecordingState    _recordingState;
         D3D11RHICommandContext _context;

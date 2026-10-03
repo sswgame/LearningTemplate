@@ -149,11 +149,10 @@ namespace sw
             bindStaticSamplers( _deviceContext.Get() );
         }
 
-        // 풀스크린 삼각형 정점 버퍼. **DX11 만 이것이 없었다.** 멤버는 선언돼 있고 draw() 가 읽는데
-        // 아무도 만들지 않아 항상 nullptr 이었다. 그래서 메시 VB 없이 그리는 패스(Present/Bloom/
-        // Outline/Tonemap 등 모두)가 정점 없이 그려 아무것도 나오지 않았다. 오래 살아남은 이유는
-        // 오프스크린 스모크가 "크래시 안 났다" 만 봤기 때문이다(RHITest.OffscreenDrawIsReadable 이 그 공백).
-        // 좌표는 다른 백엔드와 같은 NDC 큰 삼각형이다. fullscreentriangle.hlsl 이 변환 없이 그대로 쓴다.
+        // 풀스크린 삼각형 정점 버퍼. 메시 VB 없이 그리는 패스(Present/Bloom/Outline/Tonemap 등)는 draw() 가 이것을 건다.
+        // 주의: 이것이 nullptr 이면 그 패스들이 정점 없이 그려 아무것도 안 나오지만 크래시는 없다
+        // (RHIDeviceTest.OffscreenDrawIsReadable 이 픽셀로 잡는다). 좌표는 다른 백엔드와 같은 NDC 큰 삼각형이다.
+        // fullscreentriangle.hlsl 이 변환 없이 그대로 쓴다.
         {
             const RHIVertex arrFullscreenVert[3] = {
                 // 화면 공간 삼각형이라 노멀은 쓰이지 않는다. 레이아웃을 채우려고 +Z 를 둔다.
@@ -210,8 +209,8 @@ namespace sw
 
         // 백버퍼를 가리키는 참조가 하나라도 남아 있으면 ResizeBuffers 가 거부된다
         // (DXGI_ERROR_INVALID_CALL). 참조는 세 군데에 있다: 백버퍼 RTV, Immediate Context 의
-        // 바인딩, 그리고 **기록이 끝난 커맨드 리스트**다. 마지막 것을 빠뜨려서 이 백엔드는
-        // 창 크기 변경이 매번 조용히 실패하고 있었다.
+        // 바인딩, 그리고 **기록이 끝난 커맨드 리스트**다. 마지막 것을 빠뜨리면 창 크기 변경이
+        // 매번 조용히 실패한다.
         _swapChain.releaseBackBufferRtv();
         {
             std::scoped_lock<mutex> lock{ _liveCmdListMutex };

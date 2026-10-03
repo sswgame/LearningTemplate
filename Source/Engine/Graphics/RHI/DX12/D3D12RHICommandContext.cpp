@@ -316,10 +316,9 @@ namespace sw
             dstStateBefore = dstIt->second._state;
         }
 
-        // CopyResource 는 포맷과 크기가 완전히 같아야 한다. 예전에는 검증 없이 발행해서, 포맷이나
-        // 해상도가 다른 조합(예: R16G16B16A16_FLOAT 트랜지언트 → R8G8B8A8 백버퍼, 1280 → 320)에서
-        // 그대로 정의되지 않은 동작이 됐다. 검증 레이어는 오류를 내고 드라이버는
-        // DXGI_ERROR_DRIVER_INTERNAL_ERROR 로 디바이스를 날린다.
+        // CopyResource 는 포맷과 크기가 완전히 같아야 한다. 검증 없이 발행하면 포맷이나 해상도가 다른 조합
+        // (예: R16G16B16A16_FLOAT 트랜지언트 → R8G8B8A8 백버퍼, 1280 → 320)이 정의되지 않은 동작이 된다.
+        // 검증 레이어는 오류를 내고 드라이버는 DXGI_ERROR_DRIVER_INTERNAL_ERROR 로 디바이스를 날린다.
         {
             const D3D12_RESOURCE_DESC srcDesc = pSrcResource->GetDesc();
             const D3D12_RESOURCE_DESC dstDesc = pDstResource->GetDesc();
@@ -374,7 +373,7 @@ namespace sw
     void D3D12RHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
         // 그래픽스 t# → 슬롯 테이블 상태에 오프라인 뷰를 적는다. 테이블은 드로우 직전 flushSlotTables 가 굳힌다.
-        // 뷰라서 버퍼든 텍스처든 같은 경로다(예전 루트 SRV 는 raw/구조 버퍼만 받았다).
+        // 뷰라서 버퍼든 텍스처든 같은 경로다(루트 SRV 는 raw/구조 버퍼만 받는다).
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kSrvSlotCount )
             return;
         const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, false );
@@ -659,9 +658,8 @@ namespace sw
 
         if ( flushSlotTables( false ) == false )
             return;
-        // 슬롯 0(메시 정점)과 1(인스턴스 슬롯 스트림)을 다른 드로우와 같은 도우미로 함께 건다. 예전에는 여기만 슬롯 0 을
-        // 걸어, 이 리스트에서 슬롯 1 이 한 번도 안 걸렸으면 인스턴스 자리를 0 으로 읽었다(엔진에서 부르는 곳이 없어 드러나지
-        // 않았다. RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream 이 잡는다).
+        // 슬롯 0(메시 정점)과 1(인스턴스 슬롯 스트림)을 다른 드로우와 같은 도우미로 함께 건다. 주의: 슬롯 0 만 걸면 이 리스트에서
+        // 슬롯 1 이 한 번도 안 걸렸을 때 인스턴스 자리를 0 으로 읽는다(RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream 이 잡는다).
         bindMeshVertexBufferOrFallback();
         bindBoundIndexBuffer();
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );

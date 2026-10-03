@@ -52,10 +52,9 @@ namespace sw
 
     /**
      * @brief 정점 속성 하나가 쓸 DXGI 포맷을 정합니다(DX11 · DX12 공유).
-     * @details 입력 레이아웃은 **공용 표**(`constant::arrVertexAttribute`)에서 만들지만, 그 표의 한 줄을
-     *          DXGI 포맷으로 옮기는 이 판단은 두 백엔드가 **각자** 적고 있었습니다. 성분 수를 하나 더하면
-     *          (예: 스칼라 float 속성) 한쪽만 고치기 쉬운 자리이고, 그러면 **그 백엔드만 정점이 어긋난
-     *          채로 그려집니다.** 이 저장소가 여러 번 겪은 "백엔드 하나만 다른 그림" 의 전형입니다.
+     * @details 입력 레이아웃은 **공용 표**(`constant::arrVertexAttribute`)에서 만들고, 그 표의 한 줄을
+     *          DXGI 포맷으로 옮기는 판단은 두 백엔드가 이 함수 하나를 씁니다. 주의: 성분 수를 하나 더할 때
+     *          (예: 스칼라 float 속성) 여기를 빠뜨리면 **D3D 백엔드만 정점이 어긋난 채로 그려집니다.**
      */
     inline DXGI_FORMAT toDxgiVertexFormat( const RHIVertexAttribute& attribute )
     {

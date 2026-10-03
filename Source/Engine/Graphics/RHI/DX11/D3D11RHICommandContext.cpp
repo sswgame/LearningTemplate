@@ -203,7 +203,7 @@ namespace sw
     {
         // D3D11 에 배리어는 없다. 하지만 "이제 읽는다" 는 요청이 할 일 없는 것은 아니다. 같은 리소스를
         // 출력(UAV)과 입력(SRV)에 동시에 걸 수 없어서, UAV 를 안 떼면 런타임이 SRV 를 NULL 로 강제하고
-        // 경고만 낸다. 정점 셰이더는 0 을 읽고 화면에서 통째로 사라진다(인스턴스 버퍼 t4 가 그랬다).
+        // 경고만 낸다. 정점 셰이더는 0 을 읽고 화면에서 통째로 사라진다(예: 인스턴스 버퍼 t4).
         // 그래서 읽기 상태로 돌릴 때 이 버퍼가 걸린 CS UAV 슬롯을 여기서 뗀다.
         if ( _pContext == nullptr || _pState == nullptr || buffer == 0 || newState == RHIBufferState::UnorderedAccess )
             return;
@@ -300,9 +300,9 @@ namespace sw
         }
 
         // 정점 셰이더가 없으면(컴퓨트 PSO · 지운 핸들) 그릴 수 없다. 부르는 쪽은 드로우를 건너뛴다. PS 는 없어도 된다 — 깊이 전용 PSO(그림자 ·
-        // 깊이 프리패스)는 픽셀 스테이지를 붙이지 않고, 아래 PSSetShader( nullptr )가 앞 드로우의 PS 를 뗀다. 예전에는 PS 까지 요구해서 DX11 의
-        // 깊이 전용 드로우가 **하나도** 나가지 않았다: 그림자 맵은 클리어 값뿐이라 그림자가 없었고, 깊이 프리패스는 아무것도 쓰지 못해 깊이 쓰기를
-        // 끈 기본 패스가 그리는 순서대로 덮었다(배치 순서가 프로세스마다 달라 시험이 가끔만 졌다).
+        // 깊이 프리패스)는 픽셀 스테이지를 붙이지 않고, 아래 PSSetShader( nullptr )가 앞 드로우의 PS 를 뗀다. 주의: PS 까지 요구하면 깊이 전용
+        // 드로우가 **하나도** 나가지 않는다 — 그림자 맵은 클리어 값뿐이고, 깊이 프리패스가 비어 깊이 쓰기를 끈 기본 패스가 그리는 순서대로
+        // 덮는다(배치 순서가 프로세스마다 달라 시험이 가끔만 진다).
         if ( pVs == nullptr )
             return false;
 
@@ -399,7 +399,7 @@ namespace sw
             return;
         _pContext->VSSetShaderResources( slot, 1, &pSrv );
         _pContext->PSSetShaderResources( slot, 1, &pSrv );
-        // 버퍼가 그 슬롯의 텍스처를 덮었다.
+        // 버퍼가 그 슬롯의 텍스처를 덮는다.
         if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
             _pState->_arrPixelSrvTexture[slot] = 0;
     }
@@ -511,9 +511,8 @@ namespace sw
             return;
 
         // **파이프라인 상태를 여기서도 걸어야 한다.** DX11 은 setPipelineState 가 핸들만 기록하고
-        // 실제 VS/PS/InputLayout 바인딩은 드로우 시점에 한다(draw/drawInstanced 참고). 그런데 이
-        // 경로에만 그 블록이 없어서, GPU 드리븐 경로(엔진의 기본 경로)의 모든 드로우가
-        // 셰이더도 정점 버퍼도 없이 나갔다. 화면과 트랜지언트가 클리어 색만 남던 원인이다.
+        // 실제 VS/PS/InputLayout 바인딩은 드로우 시점에 한다(draw/drawInstanced 참고). 빠뜨리면 GPU 드리븐
+        // 경로(엔진의 기본 경로)의 모든 드로우가 셰이더도 정점 버퍼도 없이 나가 화면에 클리어 색만 남는다.
         if ( bindGraphicsPipelineForDraw() == false )
             return;
 
@@ -532,8 +531,7 @@ namespace sw
         if ( pBuf == nullptr )
             return;
 
-        // 이 진입점에만 파이프라인을 거는 블록이 없었다. `drawIndirect` 가 같은 이유로 아무것도 그리지
-        // 못했던 적이 있다. 엔진에서 아무도 부르지 않아 드러나지 않았을 뿐이라 같이 고쳐 둔다.
+        // 다른 드로우 진입점과 같이 파이프라인을 여기서 건다. 엔진에서 부르는 곳이 없어 빠뜨려도 드러나지 않는 자리다.
         if ( bindGraphicsPipelineForDraw() == false )
             return;
 
@@ -554,7 +552,7 @@ namespace sw
     {
         // DX11 은 리소스 상태를 명시적으로 전환하지 않는다. 다만 같은 텍스처가 렌더타깃으로 걸린 채
         // SRV 로도 걸려 있으면 런타임이 조용히 한쪽을 풀어버리므로, 읽기로 넘기기 전에 픽셀 셰이더
-        // SRV 슬롯을 비운다(예전 endOffscreenPass 가 하던 일). 이 호출은 항상 바인딩 **이전**에
+        // SRV 슬롯을 비운다. 이 호출은 항상 바인딩 **이전**에
         // 오므로(FrameRenderer::registerPassTexture) 유효한 바인딩을 지우지 않는다.
         (void)texture;
         if ( _pContext == nullptr )
@@ -600,11 +598,10 @@ namespace sw
         ID3DUserDefinedAnnotation* pAnnotation = getAnnotation();
         if ( pAnnotation != nullptr )
         {
-            // 예전에는 `utf16 wide[256]` 에 `MultiByteToWideChar` 로 직접 옮겼다. 그 API 는 이름이
-            // 버퍼보다 길면 **0 을 반환하고 널 종단을 보장하지 않으므로**, 그대로 `BeginEvent` 에
-            // 넘기면 널을 찾아 배열 밖까지 읽는다. 길이에 상한이 없는 `StringUtil::utf8ToUtf16` 을
-            // 쓰면 그 종류가 통째로 사라진다. 잘라 담을 일도, 다중바이트 시퀀스가 중간에서
-            // 끊길 일도 없다. 마커는 그래픽스 디버거가 붙었을 때만 동작하므로(그때만 annotation 이
+            // 주의: 고정 배열에 `MultiByteToWideChar` 로 옮기지 말 것. 그 API 는 이름이 버퍼보다 길면
+            // **0 을 반환하고 널 종단을 보장하지 않으므로**, 그대로 `BeginEvent` 에 넘기면 배열 밖까지
+            // 읽는다. 길이에 상한이 없는 `StringUtil::utf8ToUtf16` 은 잘라 담을 일도, 다중바이트 시퀀스가
+            // 중간에서 끊길 일도 없다. 마커는 그래픽스 디버거가 붙었을 때만 동작하므로(그때만 annotation 이
             // 널이 아니다) 여기서 한 번 할당하는 비용은 캡처 비용에 묻힌다.
             const wstring wideName = StringUtil::utf8ToUtf16( pName );
             pAnnotation->BeginEvent( wideName.c_str() );

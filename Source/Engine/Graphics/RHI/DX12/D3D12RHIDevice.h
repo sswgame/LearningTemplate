@@ -46,10 +46,9 @@ namespace sw
     /**
      * @struct D3D12RecordingState
      * @brief "지금 이 커맨드 리스트가 기록 중" 상태입니다. 디바이스 전역이 아니라 리스트(컨텍스트)마다 있어야 합니다.
-     * @details 예전에는 이 필드들이 D3D12RHIDevice 에 있어서 모든 기록이 사실상 같은 커맨드 리스트의 상태를
-     *          나눠 썼습니다. `D3D12RHICommandList` 가 자기 것을 소유하게 해서 독립된 리스트 · 병렬 기록의
-     *          전제를 만듭니다(스왑체인 리소스 상태처럼 "실제 GPU 리소스의 상태" 를 나타내는 것은 여기 넣지
-     *          않습니다. 그것은 디바이스 · 리소스 전역입니다).
+     * @details `D3D12RHICommandList` 가 자기 것을 소유하므로 리스트끼리 독립이고 병렬로 기록할 수 있습니다. 디바이스 전역에
+     *          두면 모든 기록이 한 상태를 나눠 써 병렬 기록이 서로의 바인딩을 덮습니다(스왑체인 리소스 상태처럼 "실제 GPU
+     *          리소스의 상태" 를 나타내는 것은 여기 넣지 않습니다. 그것은 디바이스 · 리소스 전역입니다).
      */
     struct D3D12RecordingState
     {
@@ -79,8 +78,8 @@ namespace sw
         uint8                  _bRecording         : 1;
         /**
          * @brief 이 리스트에 명령이 하나라도 기록됐는지입니다(컨텍스트의 `commandListForRecord` 가 세웁니다).
-         * @details 프레임 스트림 조각이 비어 있으면 `executeCommandList` 가 자르지 않습니다. 레벨 배리어를 패스 리스트로
-         *          옮긴 뒤 레벨 사이의 조각은 늘 비어 있는데, 잘라 내보내면 큐에 빈 리스트가 나가고 그 제출이 리스트당 ~7 us 입니다.
+         * @details 프레임 스트림 조각이 비어 있으면 `executeCommandList` 가 자르지 않습니다. 레벨 배리어는 패스 리스트에
+         *          들어가므로 레벨 사이의 조각은 늘 비어 있는데, 잘라 내보내면 큐에 빈 리스트가 나가고 그 제출이 리스트당 ~7 us 입니다.
          */
         uint8                  _bRecordedAny : 1;
         [[maybe_unused]] uint8 _reserved     : 5;
@@ -174,8 +173,8 @@ namespace sw
         uint32 acquireOnlineBlock();
         /**
          * @brief 기록 상태가 빌린 온라인 블록들을 현재 펜스 뒤에 프리리스트로 돌려보냅니다(리스트가 닫힐 때).
-         * @details 블록 벡터를 **통째로 옮겨** 묶음에 넣습니다. 예전에는 벡터를 복사해 람다에 잡았고, 그 람다가 SBO 를 넘어
-         *          힙으로 갔습니다(리스트마다 프레임마다 둘). 상태는 빈 벡터(용량 남음)를 돌려받습니다.
+         * @details 블록 벡터를 **통째로 옮겨** 묶음에 넣습니다. 주의: 벡터를 복사해 람다에 잡으면 그 람다가 SBO 를 넘어
+         *          힙으로 갑니다(리스트마다 프레임마다 둘). 상태는 빈 벡터(용량 남음)를 돌려받습니다.
          */
         void releaseOnlineBlocksDeferred( D3D12RecordingState& state );
         /** @brief 펜스가 지난 묶음의 블록을 프리리스트로 돌려보냅니다. 펜스 완료 값을 읽는 자리에서 부릅니다. */
@@ -211,9 +210,9 @@ namespace sw
 
         /**
          * @brief 지금 기록 중인 ID3D12GraphicsCommandList 포인터(프레임 스트림의 활성 세그먼트)를 반환합니다.
-         * @details 에디터 ImGui 백엔드가 이 리스트에 직접 드로우를 기록합니다. 세그먼트 제출 도입 뒤
-         *          _commandList 는 '첫 세그먼트' 일 뿐이고 커맨드 리스트가 제출될 때마다 닫힙니다.
-         *          그것을 그대로 반환하면 닫힌 리스트에 기록하게 되어 UI 가 통째로 사라집니다.
+         * @details 에디터 ImGui 백엔드가 이 리스트에 직접 드로우를 기록합니다. _commandList 는 '첫 세그먼트' 일
+         *          뿐이고 커맨드 리스트가 제출될 때마다 닫힙니다. 주의: 그것을 그대로 반환하면 닫힌 리스트에
+         *          기록하게 되어 UI 가 통째로 사라집니다.
          */
         void* getNativeContext() const override { return _pActiveFrameList != nullptr ? _pActiveFrameList : _commandList.Get(); }
 
@@ -322,7 +321,7 @@ namespace sw
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D12Resource> buffer );
         /**
          * @brief 업로드 힙(GENERIC_READ)에 버퍼를 만들고 CPU 주소로 매핑합니다. 실패하면 false 이고 `outBuffer` 는 비웁니다. 로그는 부르는 쪽이 남깁니다.
-         * @details 상수버퍼 링 · 정점/인덱스 업로드 버퍼 · 전체 화면 삼각형 · 업로드 스테이징 넷이 "만들기 → 매핑" 여덟 줄을 각자 들고 있었습니다.
+         * @details 상수버퍼 링 · 정점/인덱스 업로드 버퍼 · 전체 화면 삼각형 · 업로드 스테이징 넷이 "만들기 → 매핑" 을 이것으로 합니다.
          */
         [[nodiscard]] bool createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
         /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. */
@@ -339,13 +338,13 @@ namespace sw
         void bindBindlessRootState( ID3D12GraphicsCommandList* pList );
         /**
          * @brief 링 상수버퍼들의 힙 CBV 를 이번 프레임 슬롯으로 맞춥니다. 프레임당 한 번, 기록 시작 전에 부릅니다.
-         * @details 예전에는 updateConstantBuffer 가 드로우마다 레지스트리를 훑어 이 일을 했습니다(O(등록 수 x 드로우 수)).
-         *          주소는 프레임 링 슬롯에만 의존하므로 프레임당 한 번이면 충분합니다.
+         * @details 주소는 프레임 링 슬롯에만 의존하므로 프레임당 한 번이면 충분합니다. 주의: updateConstantBuffer 에서
+         *          드로우마다 레지스트리를 훑으면 O(등록 수 x 드로우 수)가 되어 드로우 경로를 지배합니다.
          */
         void refreshConstantBufferViews();
         /**
          * @brief 링 상수버퍼의 `slot` 칸에 씁니다. `_bindlessMutex` 를 (읽기로라도) 쥐고 부릅니다.
-         * @details 만들 때 크기를 넘는 쓰기는 자릅니다. 예전에는 그대로 복사해 다음 칸(다음 프레임의 값)까지 덮었습니다.
+         * @details 만들 때 크기를 넘는 쓰기는 자릅니다. 그대로 복사하면 다음 칸(다음 프레임의 값)까지 덮습니다.
          */
         void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
         /** @brief 링이 넘어온 칸에 옛 값이 남은 상수버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferShadow`). `waitForRingSlot` 이 부릅니다. */
@@ -439,9 +438,9 @@ namespace sw
          * @brief 업로드(updateStructuredBufferRegions · uploadTexture2D)가 쓰는 프레임 링 슬롯 하나입니다. 스테이징 힙과 복사 얼로케이터 · 리스트입니다.
          * @details 한 프레임 안에서 여러 번 불립니다(GpuScene 만 해도 인스턴스 · 배치 표 · 간접 인자 · 머티리얼 그룹). 그래서
          *          얼로케이터는 **펜스 구간마다 한 번만** Reset 하고(_resetFence), 스테이징은 bump
-         *          오프셋으로 이어 씁니다(_uploadOffset). 예전에는 호출마다 둘 다 처음부터 다시 써서, 두 번째
-         *          호출이 첫 번째 복사가 아직 실행 중인 얼로케이터를 Reset 했습니다("allocator is being reset
-         *          [in use]" → 디바이스 제거 → 세그폴트, 에디터 없이 400 큐브에서 8/8 재현).
+         *          오프셋으로 이어 씁니다(_uploadOffset). 주의: 호출마다 둘 다 처음부터 다시 쓰면 두 번째 호출이
+         *          첫 번째 복사가 아직 실행 중인 얼로케이터를 Reset 합니다("allocator is being reset [in use]"
+         *          → 디바이스 제거 → 세그폴트).
          */
         struct StructuredUploadSlot
         {
@@ -456,10 +455,10 @@ namespace sw
         };
         /**
          * @brief 열어 둔 복사 리스트를 닫아 제출합니다. **프레임에 한 번**입니다.
-         * @details 예전에는 업로드 호출마다 리스트를 닫고 `ExecuteCommandLists` 를 불렀습니다. 인스턴스 · 배치 표 · 뷰마다의
-         *          간접 인자 · 머티리얼 그룹까지 프레임에 대여섯 번이고, 제출 하나가 수십 us 라 렌더 스레드의
-         *          `RT.GpuScene.batchTables` 106 us 의 정체가 그것이었습니다. 지금은 열어 두고 기록만 하다가 여기서 한 번 닫습니다.
-         *          큐 순서가 곧 실행 순서라 프레임 리스트 **앞에** 넣으면 예전과 같은 순서입니다.
+         * @details 업로드 호출은 리스트를 열어 두고 기록만 하고, 여기서 한 번 닫습니다. 업로드는 인스턴스 · 배치 표 · 뷰마다의
+         *          간접 인자 · 머티리얼 그룹까지 프레임에 대여섯 번이고 제출 하나가 수십 us 라, 호출마다 `ExecuteCommandLists` 를
+         *          부르면 렌더 스레드 비용이 됩니다. 큐 순서가 곧 실행 순서라 프레임 리스트 **앞에** 넣으면 업로드가 그 프레임의
+         *          드로우보다 먼저 실행됩니다.
          * @param bExecuteNow true 면 지금 큐에 넣습니다(펜스 대기 직전 · readback). false 면 `_listPendingSubmit` 맨 앞에 끼워
          *                    endFrame 의 한 번의 제출에 같이 나갑니다.
          */
@@ -467,7 +466,7 @@ namespace sw
         /**
          * @brief 즉시 제출 모드(`setImmediateSubmit`)면 모아 둔 리스트를 지금 큐에 넣습니다. 그 앞에 여기까지 기록된 업로드 복사를 끼웁니다.
          * @details 즉시 모드가 아니면 아무것도 하지 않습니다(endFrame 의 한 번의 제출에 같이 나갑니다). 잘라 담은 순서 그대로 내보내므로 실행
-         *          순서는 같고 제출 시점만 앞당깁니다. `executeCommandList` 의 두 갈래(빈 조각 · 자른 조각)가 이 열 줄을 각자 들고 있었습니다.
+         *          순서는 같고 제출 시점만 앞당깁니다. `executeCommandList` 의 두 갈래(빈 조각 · 자른 조각)가 함께 씁니다.
          */
         void submitPendingIfImmediate();
         /// @brief 복사 리스트는 게임 스레드(텍스처 · 메시 업로드)와 렌더 스레드(인스턴스 · 표)가 같이 씁니다. 열어 두는 동안 잠급니다.
@@ -564,15 +563,15 @@ namespace sw
         uint8 _bTimestampEnabled;
 
         /// @brief 디바이스 프레임 스트림(스왑체인 begin/endFrame 과 백버퍼 패스)의 기록 상태입니다.
-        /// @details 예전에는 '레거시' 라고 불렀지만, S2/S3 이후 RenderThread 가 백버퍼 렌더 패스를 여는
-        ///          정식 경로입니다. 패스별 D3D12RHICommandList 와는 다른 스트림이라는 뜻일 뿐입니다.
+        /// @details RenderThread 가 백버퍼 렌더 패스(beginRenderPass 핸들 0)를 여는 정식 경로입니다. 패스별
+        ///          D3D12RHICommandList 와는 다른 스트림이라는 뜻일 뿐입니다.
         D3D12RecordingState _frameStreamState;
 
         /// @brief bindless 레지스트리 · 프리리스트 · 디스크립터 카운터를 보호합니다. 구조를 바꾸는 register/unregister 와
         /// 파괴만 배타 잠금을 잡습니다. 기록 중의 읽기(컨텍스트의 resolveBufferAddress · resolveOfflineView)는 잠그지 않습니다.
         /// 기록 중에는 레지스트리가 바뀌지 않는다는 규칙(IRHIDevice::setParallelRecording · assertRegistryMutableNow)이
-        /// 그것을 보장합니다. 예전에는 드로우마다 updateConstantBuffer 가 레지스트리를 훑었고, 락 없이 순회하다 재할당이 일어나
-        /// GPU 가 쓰레기 디스크립터를 읽어 PageFault(VA=0) → DEVICE_HUNG 으로 이어졌습니다.
+        /// 그것을 보장합니다. 주의: 기록 중에 레지스트리를 락 없이 순회하는 동안 재할당이 일어나면 GPU 가 쓰레기 디스크립터를
+        /// 읽어 PageFault(VA=0) → DEVICE_HUNG 으로 이어집니다.
         std::shared_mutex              _bindlessMutex;
         vector<BindlessResourceRecord> _listRegisteredBindless;
         vector<uint32>                 _listFreeBindless;

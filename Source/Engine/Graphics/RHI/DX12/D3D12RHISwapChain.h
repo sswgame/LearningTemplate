@@ -18,9 +18,8 @@ namespace sw
     /**
      * @class D3D12RHISwapChain
      * @brief 창 하나의 백버퍼 묶음입니다. **만들고 · 크기를 바꾸고 · 다음 백버퍼를 고르고 · 표시합니다.**
-     * @details 예전에는 이 상태가 모두 `D3D12RHIDevice` 의 멤버로 흩어져 있어서, 백버퍼 리소스 상태를
-     *          바꾸는 코드가 세 곳(`beginRenderPass` / `blitTexture` / `endFrame`)에 각자 복사돼
-     *          있었습니다. 상태와 그 상태를 바꾸는 배리어를 한 객체가 함께 가지면 어긋날 수 없습니다.
+     * @details 백버퍼 리소스 상태와 그 상태를 바꾸는 배리어를 이 객체가 함께 가집니다. 상태를 바꾸는 곳
+     *          (`beginRenderPass` / `blitTexture` / `endFrame`)이 각자 배리어를 적으면 서로 어긋납니다.
      * @note RTV 힙은 **디바이스가 소유합니다.** 오프스크린 렌더 타깃과 같은 힙을 쓰기 때문입니다.
      *       백버퍼는 그 힙의 앞쪽 `bufferCount()` 칸을 차지하고, 오프스크린은 그 뒤부터 씁니다.
      */

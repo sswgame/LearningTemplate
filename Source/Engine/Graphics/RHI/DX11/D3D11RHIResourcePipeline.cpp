@@ -36,9 +36,9 @@ namespace sw
         D3D11RHIDevice::D3D11PipelineStateRecord pso{};
         if ( desc._vertexShaderPath.empty() == false )
         {
-            // 셰이더를 못 만들면 PSO 도 만들지 않는다(핸들 0). 다른 세 백엔드와 같은 규칙이다. 예전에는 셰이더가 빠진 레코드를 돌려주고
-            // 그리기 때 "PS 가 없으면 건너뛴다" 로 그 실패를 삼켰는데, 그 검사가 **원래 PS 가 없는** 깊이 전용 PSO(그림자 · 깊이 프리패스)의
-            // 드로우까지 모두 버렸다(bindGraphicsPipelineForDraw 참고). 뎁스 전용(RT 0 개)이면 경로가 있어도 PS 를 붙이지 않는다.
+            // 셰이더를 못 만들면 PSO 도 만들지 않는다(핸들 0). 다른 세 백엔드와 같은 규칙이다. 주의: 실패를 그리기 때 "PS 가 없으면
+            // 건너뛴다" 로 삼키면 **원래 PS 가 없는** 깊이 전용 PSO(그림자 · 깊이 프리패스)의 드로우까지 버려진다(bindGraphicsPipelineForDraw
+            // 참고). 뎁스 전용(RT 0 개)이면 경로가 있어도 PS 를 붙이지 않는다.
             ShaderCompileResult vsResult{};
             ShaderCompileResult psResult{};
             if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) == false ||

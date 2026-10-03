@@ -101,13 +101,12 @@ namespace sw
         if ( pList == nullptr )
             return;
 
-        // 예전에는 여기서 곧바로 ExecuteCommandLists 를 불렀다. 그러면 프레임 스트림(디바이스가
-        // 소유한 리스트)은 endFrame 에서 한 번에 제출되므로, 그래프보다 **먼저** 기록한 것까지
-        // 그래프 뒤에 실행됐다. 오프스크린 경로의 게임 RT 클리어가 대표적이다.
-        // Vulkan(S4)과 같이 스트림을 이 지점에서 자르고 순서대로 모아 endFrame 에서 한 번에
-        // 제출한다. 같은 큐의 제출 순서가 곧 실행 순서다.
+        // 프레임 스트림을 이 지점에서 자르고 [지금까지의 조각][이 리스트] 순서로 모아 endFrame 에서 한 번에
+        // 제출한다(Vulkan 과 같다). 같은 큐의 제출 순서가 곧 실행 순서다. 주의: 여기서 곧바로 ExecuteCommandLists 를
+        // 부르면 프레임 스트림은 endFrame 에 제출되므로, 그래프보다 **먼저** 기록한 것(오프스크린 게임 RT 클리어 등)이
+        // 그래프 뒤에 실행된다.
         //
-        // **빈 조각은 자르지 않는다.** 이 조각에 아무것도 기록되지 않았으면(레벨 배리어가 패스 리스트로 옮겨간 뒤
+        // **빈 조각은 자르지 않는다.** 이 조각에 아무것도 기록되지 않았으면(레벨 배리어는 패스 리스트에 들어가므로
         // 레벨 사이가 그렇다) 패스 리스트만 넣고 조각은 열어 둔 채 다음 기록을 받는다. 그 조각은 뒤에 기록될
         // 것만 담으므로 뒤에 제출돼도 순서가 맞다. 잘라 내보내면 큐에 빈 리스트가 나가고 제출이 리스트당 ~7 us 다.
         const bool bSegmentEmpty = ( _frameStreamState._bRecordedAny == SW_FALSE );
@@ -171,9 +170,9 @@ namespace sw
                 continue;
             slot._copyCommandList->Close();
             slot._bListOpen = SW_FALSE;
-            // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 예전에는 리스트를 **열 때** 적어서, 프레임 제출 뒤 ·
-            // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달았고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 했다 —
-            // `_resetFence` 가 막으려던 "실행 중 Reset" 그대로다. 부르는 쪽은 업로드 락을 쥐고 있고, 실행은 다음 Signal 보다 먼저다.
+            // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 주의: 리스트를 **열 때** 적으면, 프레임 제출 뒤 ·
+            // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 한다 —
+            // `_resetFence` 가 막으려는 "실행 중 Reset" 그대로다. 부르는 쪽은 업로드 락을 쥐고 있고, 실행은 다음 Signal 보다 먼저다.
             slot._resetFence = _fenceValue;
             if ( bExecuteNow )
             {
@@ -234,8 +233,8 @@ namespace sw
         {
             const uint32 nextIndex = ( _frameRing.currentIndex() + 1 ) % constant::kMaxFrameCountInFlight;
             const uint64 waitValue = _frameRing.getFenceValue( nextIndex );
-            // 2 초가 지나도 **끝날 때까지** 기다린다(`waitForFenceValue`). 예전에는 시간 초과를 무시하고 링을 넘기지 못한 채 이어가, 방금 제출한
-            // 프레임의 얼로케이터를 Reset 하고 GPU 가 읽는 상수버퍼 링 칸을 덮어썼다. 장치가 제거됐으면(Windows 는 멈춘 GPU 를 TDR 로 제거한다)
+            // 2 초가 지나도 **끝날 때까지** 기다린다(`waitForFenceValue`). 주의: 시간 초과를 무시하고 링을 넘기지 못한 채 이어가면, 방금 제출한
+            // 프레임의 얼로케이터를 Reset 하고 GPU 가 읽는 상수버퍼 링 칸을 덮어쓴다. 장치가 제거됐으면(Windows 는 멈춘 GPU 를 TDR 로 제거한다)
             // 기다리지 않는다.
             waitForFenceValue( waitValue );
             bAdvanced = _frameRing.beginFrame( _fence->GetCompletedValue() );
@@ -256,8 +255,8 @@ namespace sw
             return false;
         if ( FAILED( _fence->SetEventOnCompletion( fenceValue, _fenceEvent ) ) )
             return false;
-        // 끝날 때까지 기다린다. 예전에는 2 초 뒤 실패를 돌려줘, 부르는 쪽(링 슬롯 · 리드백 · 크기 변경 · 해제 큐 비우기)이 GPU 가 아직 쓰는 자원을 풀거나
-        // 재사용했다. 2 초마다 한 번 알리고, 장치가 제거되면(TDR) 멈춘다 — 그때는 기다려도 끝나지 않는다.
+        // 끝날 때까지 기다린다. 시간 초과로 실패를 돌려주면 부르는 쪽(링 슬롯 · 리드백 · 크기 변경 · 해제 큐 비우기)이 GPU 가 아직 쓰는 자원을
+        // 풀거나 재사용한다. 2 초마다 한 번 알리고, 장치가 제거되면(TDR) 멈춘다 — 그때는 기다려도 끝나지 않는다.
         uint32 waitedSeconds{ 0 };
         while ( WaitForSingleObject( _fenceEvent, 2000 ) != WAIT_OBJECT_0 )
         {
@@ -322,8 +321,7 @@ namespace sw
         if ( _device == nullptr )
             return entry;
 
-        // 예전에는 HRESULT 를 버리고 빈 엔트리만 반환했다. 부르는 쪽은 "생성 실패" 한 줄만 남기므로
-        // 원인(메모리 부족인지 디바이스 제거인지)을 알 방법이 없었다.
+        // HRESULT 를 여기서 남긴다. 부르는 쪽은 "생성 실패" 한 줄만 남기므로 원인(메모리 부족인지 디바이스 제거인지)은 여기서만 보인다.
         const HRESULT allocHr = _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( entry._allocator.GetAddressOf() ) );
         if ( FAILED( allocHr ) )
         {
@@ -488,8 +486,8 @@ namespace sw
             return;
 
         // 백버퍼 바인딩(RENDER_TARGET 배리어 + OMSetRenderTargets + Clear)은 여기서 하지 않는다.
-        // beginFrame 은 프레임 수명주기 전용이고, 백버퍼 타깃팅은 beginRenderPass(핸들 0) 가 배리어까지
-        // 포함해 명시적으로 한다(docs/05_RHI_FrameContract.md S2). 뷰포트/시저는 기본값으로 남긴다.
+        // beginFrame 은 프레임 수명주기 전용이고, 백버퍼 타깃팅은 RenderThread 가 여는 beginRenderPass(핸들 0) 가
+        // 배리어까지 포함해 명시적으로 한다. 뷰포트/시저는 기본값으로 남긴다.
         (void)clearColor;
 
         constexpr float32 kDefaultViewportX        = 0.0f;

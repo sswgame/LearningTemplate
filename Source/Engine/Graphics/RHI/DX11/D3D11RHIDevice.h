@@ -35,10 +35,9 @@ namespace sw
      * @struct D3D11RecordingState
      * @brief "지금 이 Deferred Context 에 무엇이 걸려 있나" 입니다. 기록 스트림마다 있어야 하는 상태입니다.
      * @details D3D12 의 `D3D12RecordingState` 와 같은 역할입니다. 리스트마다 자기 Deferred Context 를
-     *          소유하는데 이 캐시가 디바이스 전역이면 서로의 바인딩 캐시를 덮어씁니다. **한동안 정확히
-     *          그 상태였습니다.** 이 주석은 있었지만 `D3D11RHICommandList` 가 인자 둘짜리 컨텍스트
-     *          생성자를 써서 모든 리스트가 디바이스의 것 하나를 가리켰고, 병렬 기록에서 한 패스의
-     *          드로우가 다른 패스의 PSO · 정점 버퍼로 나갔습니다.
+     *          소유하는데 이 캐시가 디바이스 전역이면 서로의 바인딩 캐시를 덮어써, 병렬 기록에서 한 패스의
+     *          드로우가 다른 패스의 PSO · 정점 버퍼로 나갑니다. 주의: 인자 둘짜리 컨텍스트 생성자는 디바이스의
+     *          것을 가리키므로 즉시 컨텍스트 전용입니다. `D3D11RHICommandList` 는 자기 상태를 넘기는 생성자를 씁니다.
      * @note `OpenGLRecordingState` 는 **반대로 디바이스가 소유하는 것이 맞습니다.** GL 은 커맨드 버퍼가
      *       없는 상태 머신이라 실제 상태가 하나뿐입니다. 기준은 "리스트마다 하나" 가 아니라
      *       **"기록 스트림마다 하나"** 입니다.
@@ -275,7 +274,7 @@ namespace sw
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer );
         /**
          * @brief 버퍼에 `srvDesc` 로 SRV 를 만들고, 버퍼를 핸들 표에 넣은 뒤 SRV 를 그 핸들에 붙입니다. SRV 를 못 만들면 버퍼만 넣습니다.
-         * @details 구조버퍼와 인다이렉트 인자 버퍼 생성이 같은 여섯 줄을 각자 들고 있었습니다(뷰 설명만 다릅니다).
+         * @details 구조버퍼와 인다이렉트 인자 버퍼 생성이 함께 씁니다(뷰 설명만 다릅니다).
          */
         RHIBufferHandle storeBufferWithSrv( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc );
         /** @brief 불투명 텍스처 핸들을 TextureRecord 로 풉니다. */

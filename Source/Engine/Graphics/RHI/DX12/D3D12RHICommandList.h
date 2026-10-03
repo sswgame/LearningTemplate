@@ -20,17 +20,14 @@ namespace sw
     /**
      * @class D3D12RHICommandList
      * @brief 자신만의 `ID3D12GraphicsCommandList` · 기록 상태를 소유하는 `IRHICommandList` 입니다.
-     * @details 예전에는 `IRHICommandList`(RHIDeferredCommandList) 가 모든 호출을 소프트웨어 `Cmd` 벡터에
-     *          쌓았다가 프레임 끝에 디바이스 공유 커맨드 리스트 하나에 재생(replay)했습니다. Immediate/
-     *          Deferred Context 가 실제로는 같은 리스트를 가리키는 별칭이었습니다. 이 클래스는 `Cmd` 벡터
-     *          없이 `IRHICommandList` 호출을 그 자리에서 바로 자신의 네이티브 리스트에 기록합니다
-     *          (`D3D12RHICommandContext` 로직을 재사용하고, `_cmdList`/`_state` 만 자신의 것을 가리킵니다).
-     *          얼로케이터는 **리스트마다 전용**입니다. 예전에는 "프레임당 리스트 1개" 라는 전제로 디바이스의
-     *          프레임 링 얼로케이터를 빌려 썼는데, `RenderGraph::executeParallel` 이 패스마다 리스트를
-     *          만들어 동시에 기록하게 되면서 그 전제가 깨졌습니다. 여러 리스트가 한 얼로케이터를 공유하면
-     *          D3D12 계약 위반(기록 중 Reset, 동시 기록)이라 커맨드 메모리가 서로 덮어써지고 GPU 가
-     *          쓰레기를 실행해 PageFault/DEVICE_HUNG 으로 이어졌습니다. 이제 디바이스 풀에서 리스트+얼로케이터
-     *          쌍을 빌리고, 다 쓰면 GPU 펜스 통과 후 풀로 돌려줍니다. 리스트 객체가 프레임을 넘어
+     * @details `IRHICommandList` 호출을 그 자리에서 바로 자신의 네이티브 리스트에 기록합니다
+     *          (`D3D12RHICommandContext` 로직을 재사용하고, 컨텍스트의 `_pCmdList` · `_pState` 가 이 리스트의
+     *          `_entry._list` · `_state` 를 가리킵니다).
+     *          얼로케이터는 **리스트마다 전용**입니다. `RenderGraph::executeParallel` 이 패스마다 리스트를
+     *          만들어 동시에 기록하므로, 여러 리스트가 한 얼로케이터를 공유하면 D3D12 계약 위반(기록 중 Reset,
+     *          동시 기록)이 되어 커맨드 메모리가 서로 덮어써지고 GPU 가 쓰레기를 실행해 PageFault/DEVICE_HUNG
+     *          으로 이어집니다. 그래서 디바이스 풀에서 리스트+얼로케이터 쌍을 빌리고, 다 쓰면 GPU 펜스 통과 후
+     *          풀로 돌려줍니다. 리스트 객체가 프레임을 넘어
      *          재사용되는 경우(`FrameRenderer::_frameCmd`)에도 같은 쌍을 다시 Reset 하지 않고 매
      *          `beginCommandList` 마다 쌍을 교체합니다. 같은 계약 위반이기 때문입니다.
      */
@@ -59,10 +56,9 @@ namespace sw
          * @brief 디바이스와의 연결을 끊습니다. **디바이스가 내려갈 때 디바이스가 부릅니다.**
          * @details 커맨드 리스트는 디바이스보다 오래 살 수 있습니다. 그러면 소멸자가 이미 파괴된
          *          디바이스에 반납을 시도합니다(`releaseOnlineBlocksDeferred` ·
-         *          `recycleCommandListEntryDeferred`). DX11 은 이 보호를 처음부터 갖고 있었는데
-         *          DX12 에는 없어서, 커맨드 리스트를 든 채 디바이스를 내리면 종료 시 죽었습니다
-         *          (`RHITest.CommandListCreationAndExecution` 이 드물게 SEGFAULT 한 원인).
-         *          여기서는 디바이스를 다시 부르지 않고 자기 것만 놓습니다.
+         *          `recycleCommandListEntryDeferred`). 주의: 이 연결을 끊지 않으면 커맨드 리스트를 든 채
+         *          디바이스를 내릴 때 종료 시 죽습니다(`RHIDeviceTest.CommandListCreationAndExecution` 이 드물게
+         *          SEGFAULT 합니다). 여기서는 디바이스를 다시 부르지 않고 자기 것만 놓습니다.
          */
         void detachFromDevice();
 

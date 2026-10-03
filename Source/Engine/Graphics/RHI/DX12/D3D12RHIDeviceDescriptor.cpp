@@ -39,8 +39,8 @@ namespace sw
             return;
 
         // 링 상수버퍼의 CBV 는 이번 프레임 슬롯을 가리켜야 한다. 슬롯은 프레임당 한 번 바뀌므로 여기서 한 번에 맞춘다.
-        // (드로우마다 하던 일이다. updateConstantBuffer 주석 참고.) 렌더 스레드의 기록 시작 전이지만 게임 스레드는 그와 겹쳐 버퍼를 만들고
-        // 부수므로(레지스트리 · 상수버퍼 맵에 쓴다) 읽기 락을 잡는다. 예전에는 "단일 스레드 구간" 이라 적고 락 없이 훑었다.
+        // 렌더 스레드의 기록 시작 전이지만 게임 스레드는 그와 겹쳐 버퍼를 만들고 부수므로(레지스트리 · 상수버퍼 맵에 쓴다)
+        // 읽기 락을 잡는다. 주의: "단일 스레드 구간" 이 아니다.
         std::shared_lock<std::shared_mutex> registryLock{ _bindlessMutex };
         const uint32                        slot = _frameRing.currentIndex();
         for ( BindlessResourceRecord& record : _listRegisteredBindless )
@@ -86,7 +86,7 @@ namespace sw
         //  [5]     테이블: t0 space1 무제한 텍스처 배열 + u0 space1 무제한 RW 텍스처 배열 (둘 다 힙 시작). SM6.6 ResourceDescriptorHeap 은 쓰지 않는다.
         //  [6]     32비트 루트 상수 b0 space2 (set*RootConstants)
         //  정적 샘플러 s0..s7 (bindingslots.hlsli 4 의 세트), space0.
-        // 비용: shaderslot::dx12::kRootSignatureDwords = 3*2 + 3*1 + 16 = 25 dword (한계 64). 예전에는 t/u 도 루트 디스크립터라 51 이었다.
+        // 비용: shaderslot::dx12::kRootSignatureDwords = 3*2 + 3*1 + 16 = 25 dword (한계 64). t/u 를 루트 디스크립터로 두면 51 이 된다.
         {
             D3D12_FEATURE_DATA_D3D12_OPTIONS options{};
             if ( SUCCEEDED( _device->CheckFeatureSupport( D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof( options ) ) ) &&

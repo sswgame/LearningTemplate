@@ -98,9 +98,9 @@ namespace sw
     RHIBufferHandle D3D11RHIResource::createBuffer( const RHIBufferDesc& desc )
     {
         // 인다이렉트 인자 버퍼만 따로 만든다. D3D11 은 `DRAWINDIRECT_ARGS` 를 `BUFFER_STRUCTURED` 와
-        // **함께 쓸 수 없다.** 기본 경로(createStructuredBuffer)가 항상 STRUCTURED 로 만들기 때문에
-        // GPUScene 의 간접 인자 버퍼가 DrawInstancedIndirect 에 쓸 수 없는 버퍼였고, 드로우가 조용히
-        // 아무것도 하지 않았다(디버그 레이어를 켜지 않으면 흔적도 없다).
+        // **함께 쓸 수 없다.** 기본 경로(createStructuredBuffer)는 항상 STRUCTURED 로 만들므로, 간접 인자
+        // 버퍼가 그리로 가면 DrawInstancedIndirect 가 조용히 아무것도 하지 않는다(디버그 레이어를 켜지
+        // 않으면 흔적도 없다).
         if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::IndirectArgs ) == false )
             return IRHIResource::createBuffer( desc );
 
@@ -188,8 +188,8 @@ namespace sw
 
     RHIBufferHandle D3D11RHIResource::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
     {
-        // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. 예전 기본 구현은 구조버퍼를 만들었다. D3D11 규칙상 인덱스 버퍼는
-        // BIND_INDEX_BUFFER 로 만들어야 하고 구조버퍼(BUFFER_STRUCTURED)에는 그 플래그를 붙일 수 없다(드라이버가 받아 줘 그려지기는 했다).
+        // 인덱스 크기는 걸 때(setIndexBuffer) 정한다. D3D11 규칙상 인덱스 버퍼는 BIND_INDEX_BUFFER 로 만들어야 하고
+        // 구조버퍼(BUFFER_STRUCTURED)에는 그 플래그를 붙일 수 없다. 주의: 구조버퍼로 만들어도 드라이버가 받아 줘 그려지므로 틀려도 티가 안 난다.
         (void)indexStride;
         return createFilledBuffer( pData, sizeBytes, D3D11_BIND_INDEX_BUFFER );
     }

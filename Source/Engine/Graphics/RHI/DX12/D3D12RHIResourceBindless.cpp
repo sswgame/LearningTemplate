@@ -131,9 +131,7 @@ namespace sw
             srvDesc.Buffer.NumElements         = static_cast<UINT>( pResource->GetDesc().Width ) / stride;
             srvDesc.Buffer.StructureByteStride = stride;
             srvDesc.Buffer.Flags               = D3D12_BUFFER_SRV_FLAG_NONE;
-            // 온라인 힙과 오프라인 힙에 각각 한 번씩. 예전에는 오프라인 쪽을 **두 번** 불렀다
-            // (복사-붙여넣기). 같은 뷰를 덮어쓰는 것이라 결과는 같았지만, 읽는 사람에게는 "둘이
-            // 달라야 하는데 잘못 적은 것" 으로 보인다.
+            // 온라인 힙과 오프라인 힙에 각각 한 번씩.
             _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._cpu );
             _pDevice->_device->CreateShaderResourceView( pResource, &srvDesc, handle._offline );
 
@@ -161,7 +159,7 @@ namespace sw
             cbvDesc.SizeInBytes = ( aligned <= width ) ? aligned : ( width & ~255u );
             if ( cbvDesc.SizeInBytes == 0 )
             {
-                // 집은 인덱스를 돌려준다. 예전에는 그냥 반환해서 256 바이트보다 좁은 버퍼를 등록할 때마다 힙 슬롯이 하나씩 영영 샜다.
+                // 집은 인덱스를 돌려준다. 그냥 반환하면 256 바이트보다 좁은 버퍼를 등록할 때마다 힙 슬롯이 하나씩 샌다.
                 // 아직 뷰를 만들지 않았으므로 펜스를 기다릴 것 없이 바로 프리리스트로 간다(잠금은 쥐고 있다).
                 _pDevice->_listFreeBindless.push_back( index );
                 return kInvalidDescriptorIndex;
@@ -255,8 +253,8 @@ namespace sw
             return kInvalidDescriptorIndex;
 
         // UAV 도 SRV/CBV 와 **같은 힙 인덱스 공간**을 쓴다. 셰이더가 RWStructuredBuffer<T> name[] 을 이 인덱스로
-        // 고르고, 루트 시그니처의 UAV 무제한 범위가 힙 시작(offset 0)을 가리키므로 인덱스 = 힙 슬롯이어야 한다.
-        // 예전에는 UAV 목록의 순번을 반환해서 힙 슬롯과 달랐다(테이블을 슬롯마다 따로 걸던 시절에는 상관없었다).
+        // 고르고, 루트 시그니처의 UAV 무제한 범위가 힙 시작(offset 0)을 가리키므로 인덱스 = 힙 슬롯이어야 한다
+        // (UAV 목록 안의 순번을 돌려주면 안 된다).
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex            index = acquireBindlessIndex( lock );
         if ( index == kInvalidDescriptorIndex )

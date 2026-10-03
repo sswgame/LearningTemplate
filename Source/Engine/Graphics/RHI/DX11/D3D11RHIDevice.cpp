@@ -41,14 +41,14 @@ namespace sw
         /**
          * @brief 리소스가 출력과 입력에 동시에 걸린 "해저드" 메시지인지 판별합니다.
          * @details D3D11 은 이것을 **WARNING** 으로 냅니다. 그런데 결과는 조용한 실패입니다. 런타임이 한쪽을
-         *          NULL 로 강제하고 셰이더는 0 을 읽습니다. 인스턴스 버퍼(t4)가 컴퓨트 UAV 에 걸린 채
-         *          남아서 DX11 만 화면에 아무것도 못 그리던 것이 이 경고 뒤에 숨어 있었고, 심각도로
-         *          거른 탓에 로그에 한 줄도 안 나왔습니다. 그래서 해저드만은 ERROR 로 올립니다.
+         *          NULL 로 강제하고 셰이더는 0 을 읽습니다(예: 인스턴스 버퍼 t4 가 컴퓨트 UAV 에 걸린 채
+         *          남으면 화면에 아무것도 안 그려집니다). 심각도로만 거르면 로그에 한 줄도 안 나오므로
+         *          해저드만은 ERROR 로 올립니다.
          */
         bool isHazardMessage( D3D11_MESSAGE_ID id )
         {
             // switch 로 적으면 -Wswitch-enum 이 나머지 1318개를 다루라고 요구한다. 경고를 끄는
-            // 대신 목록 순회로 바꾼다. ID 를 더 넣을 때도 한 줄이다.
+            // 대신 목록을 순회한다. ID 를 더 넣을 때도 한 줄이다.
             for ( const D3D11_MESSAGE_ID hazardId : arrHazardMessageId )
             {
                 if ( id == hazardId )

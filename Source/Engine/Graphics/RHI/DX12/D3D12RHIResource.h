@@ -52,9 +52,8 @@ namespace sw
          *          한 임계 구역이어야 합니다. 여기서 잠갔다 풀면 그 틈에 다른 스레드가 같은 인덱스를 받습니다.
          *          인자로 받으면 그 전제가 컴파일러에게도 부르는 쪽에게도 보입니다.
          * @note 네 등록 함수(`registerBindlessTexture` · `registerBindlessResource` · `registerBindlessUav` ·
-         *       `registerBindlessTextureUav`)가 **같은 열두 줄을 각자** 갖고 있었습니다. 용량 검사와 프리리스트
-         *       정책이 네 벌이면, 힙을 키우거나 회수 규칙을 바꿀 때 한 곳만 고치고 넘어가기 쉽습니다.
-         *       그리고 그 결과는 **디스크립터가 어긋나 화면이 조용히 깨지는 것**입니다.
+         *       `registerBindlessTextureUav`)가 이것을 같이 씁니다. 용량 검사와 프리리스트 정책이 여러 벌이면 한 곳만
+         *       고치고 넘어가기 쉽고, 그 결과는 **디스크립터가 어긋나 화면이 조용히 깨지는 것**입니다.
          */
         RHIDescriptorIndex acquireBindlessIndex( const std::unique_lock<std::shared_mutex>& lock );
 
@@ -67,8 +66,7 @@ namespace sw
         /**
          * @brief 힙 인덱스의 디스크립터 핸들 셋을 계산합니다.
          * @details 뷰는 온라인 힙과 오프라인 힙에 **같이** 만듭니다(슬롯 테이블 t#/u# 은 오프라인에서 온라인 블록으로 복사합니다).
-         *          네 등록 함수가 이 여섯 줄을 각자 갖고 있었습니다. 오프라인 힙을 더하던 날 넷 중 하나만 빠뜨리면 그 종류의
-         *          리소스만 슬롯 테이블에서 사라집니다.
+         *          네 등록 함수가 같이 씁니다. 한 곳이 오프라인 힙을 빠뜨리면 그 종류의 리소스만 슬롯 테이블에서 사라집니다.
          */
         BindlessHandleSet bindlessHandlesAt( RHIDescriptorIndex index ) const;
 
@@ -85,13 +83,13 @@ namespace sw
 
         /**
          * @brief 등록부의 한 슬롯을 비우고 인덱스를 펜스 뒤 회수에 맡깁니다.
-         * @details **이미 빈 슬롯을 다시 돌려주면 같은 인덱스가 두 리소스에 발급됩니다.** 그 검사가
-         *          SRV/CBV 쪽과 UAV 쪽에 한 벌씩 복사돼 있었습니다. 둘은 등록부와 로그 문구만 달랐습니다.
+         * @details **이미 빈 슬롯을 다시 돌려주면 같은 인덱스가 두 리소스에 발급됩니다.** 그 검사를 SRV/CBV 쪽과
+         *          UAV 쪽이 같이 씁니다(다른 것은 등록부와 로그 문구뿐입니다).
          */
         void releaseBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index );
         /**
          * @brief 등록부의 칸 `index` 에 리소스 · 핸들 셋 · 원래 핸들(버퍼나 텍스처 하나, 다른 쪽은 0)을 적습니다. 칸이 모자라면 늘립니다.
-         * @details 다섯 등록 경로(텍스처 SRV · 구조버퍼 SRV · CBV · 버퍼 UAV · 텍스처 UAV)가 같은 네 줄을 각자 들고 있었습니다.
+         * @details 다섯 등록 경로(텍스처 SRV · 구조버퍼 SRV · CBV · 버퍼 UAV · 텍스처 UAV)가 같이 씁니다.
          *          인덱스를 집은 잠금 안에서 부릅니다.
          */
         void writeBindlessRecord( BindlessRegistry registry, RHIDescriptorIndex index, ID3D12Resource* pResource, const BindlessHandleSet& handle,
