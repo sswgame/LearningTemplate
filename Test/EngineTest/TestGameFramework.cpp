@@ -68,6 +68,43 @@ namespace
     };
 
     /**
+     * @brief `TestCustomState` 를 게임 상태로 내는 인스턴스입니다 — 스냅샷 · 세이브 · 되감기 · 변조 시험이 같이 씁니다.
+     * @details 상태 타입은 손으로 지은 TypeInfo 한 벌(프로세스에 하나)로 설명합니다. 직렬화 훅이 불렸는지 기록합니다.
+     */
+    class CustomStateGameInstance : public GameInstanceBase
+    {
+    public:
+        TestCustomState _customState{};
+        bool            _bBeforeCalled{ false };
+        bool            _bAfterCalled{ false };
+
+    protected:
+        const TypeInfo* getStateTypeInfo() const override
+        {
+            static TypeInfo s_typeInfo{};
+            if ( s_typeInfo._name.empty() )
+            {
+                s_typeInfo._name               = hashed_string( "TestCustomState" );
+                s_typeInfo._fullyQualifiedName = hashed_string( "TestCustomState" );
+                s_typeInfo._size               = sizeof( TestCustomState );
+                s_typeInfo._listProperty       = {
+                    {    hashed_string( "_score" ),  hashed_string( "int32" ),
+                     SW_OFFSET_OF( TestCustomState,     _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
+                    {hashed_string( "_stageName" ), hashed_string( "string" ),
+                     SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
+                };
+            }
+            return &s_typeInfo;
+        }
+
+        void*       getStateInstance() override { return &_customState; }
+        const void* getStateInstance() const override { return &_customState; }
+
+        void onBeforeStateSerialize() override { _bBeforeCalled = true; }
+        void onAfterStateDeserialize() override { _bAfterCalled = true; }
+    };
+
+    /**
      * @brief 게임 서비스에 씬 매니저만 겁니다 — `GameInstanceBase` · `DontDestroyOnLoadComponent` 가 활성 씬을 여기서 찾습니다.
      * @details 어서션이 중간에 빠져나가도 풀리게 RAII 로 둡니다. 시험 셋이 같은 가드를 각자 들고 있었습니다.
      *          (`EngineTest/GameTestUtil.h` 의 같은 가드는 `sw::test` 를 들여와 이 파일의 `test::makeTempPath` 와 이름이 부딪힌다.)
@@ -567,40 +604,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueConditionUnderstandsEveryComparison )
  */
 SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
 {
-    class DummyGameInstance : public GameInstanceBase
-    {
-    public:
-        TestCustomState _customState{};
-        bool            _bBeforeCalled{ false };
-        bool            _bAfterCalled{ false };
-
-    protected:
-        const TypeInfo* getStateTypeInfo() const override
-        {
-            static TypeInfo s_typeInfo{};
-            if ( s_typeInfo._name.empty() )
-            {
-                s_typeInfo._name               = hashed_string( "TestCustomState" );
-                s_typeInfo._fullyQualifiedName = hashed_string( "TestCustomState" );
-                s_typeInfo._size               = sizeof( TestCustomState );
-                s_typeInfo._listProperty       = {
-                    {    hashed_string( "_score" ),  hashed_string( "int32" ),
-                     SW_OFFSET_OF( TestCustomState,     _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
-                    {hashed_string( "_stageName" ), hashed_string( "string" ),
-                     SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
-                };
-            }
-            return &s_typeInfo;
-        }
-
-        void*       getStateInstance() override { return &_customState; }
-        const void* getStateInstance() const override { return &_customState; }
-
-        void onBeforeStateSerialize() override { _bBeforeCalled = true; }
-        void onAfterStateDeserialize() override { _bAfterCalled = true; }
-    };
-
-    DummyGameInstance gameInstance;
+    CustomStateGameInstance gameInstance;
     gameInstance._customState._score     = 77777;
     gameInstance._customState._stageName = "BossRoom_03";
 
@@ -611,7 +615,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
     SW_EXPECT_TRUE( gameInstance._bBeforeCalled );
 
     // 2) 인메모리 스냅샷 복원
-    DummyGameInstance restoredInstance;
+    CustomStateGameInstance restoredInstance;
     SW_EXPECT_TRUE( restoredInstance.restoreSnapshot( snapshotBytes ) );
     SW_EXPECT_TRUE( restoredInstance._bAfterCalled );
     SW_EXPECT_EQUAL( 77777, restoredInstance._customState._score );
@@ -622,7 +626,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
     SW_EXPECT_TRUE( gameInstance.saveStateToFile( tempStateFile ) );
     SW_EXPECT_TRUE( FileUtil::fileExists( tempStateFile ) );
 
-    DummyGameInstance fileRestoredInstance;
+    CustomStateGameInstance fileRestoredInstance;
     SW_EXPECT_TRUE( fileRestoredInstance.loadStateFromFile( tempStateFile ) );
     SW_EXPECT_EQUAL( 77777, fileRestoredInstance._customState._score );
     SW_EXPECT_EQUAL( string( "BossRoom_03" ), fileRestoredInstance._customState._stageName );
@@ -863,36 +867,8 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseMassiveStateStressTest )
  */
 SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCyclicRewindStressTest )
 {
-    class RewindGameInstance : public GameInstanceBase
-    {
-    public:
-        TestCustomState _customState{};
-
-    protected:
-        const TypeInfo* getStateTypeInfo() const override
-        {
-            static TypeInfo s_typeInfo{};
-            if ( s_typeInfo._name.empty() )
-            {
-                s_typeInfo._name               = hashed_string( "TestCustomState" );
-                s_typeInfo._fullyQualifiedName = hashed_string( "TestCustomState" );
-                s_typeInfo._size               = sizeof( TestCustomState );
-                s_typeInfo._listProperty       = {
-                    {    hashed_string( "_score" ),  hashed_string( "int32" ),
-                     SW_OFFSET_OF( TestCustomState,     _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
-                    {hashed_string( "_stageName" ), hashed_string( "string" ),
-                     SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
-                };
-            }
-            return &s_typeInfo;
-        }
-
-        void*       getStateInstance() override { return &_customState; }
-        const void* getStateInstance() const override { return &_customState; }
-    };
-
-    RewindGameInstance    instance;
-    vector<vector<uint8>> listHistory;
+    CustomStateGameInstance instance;
+    vector<vector<uint8>>   listHistory;
     listHistory.reserve( 100 );
 
     // 100번 상태 변경 및 스냅샷 보관
@@ -920,35 +896,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCyclicRewindStressTest )
  */
 SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience )
 {
-    class DummyGameInstance : public GameInstanceBase
-    {
-    public:
-        TestCustomState _customState{};
-
-    protected:
-        const TypeInfo* getStateTypeInfo() const override
-        {
-            static TypeInfo s_typeInfo{};
-            if ( s_typeInfo._name.empty() )
-            {
-                s_typeInfo._name               = hashed_string( "TestCustomState" );
-                s_typeInfo._fullyQualifiedName = hashed_string( "TestCustomState" );
-                s_typeInfo._size               = sizeof( TestCustomState );
-                s_typeInfo._listProperty       = {
-                    {    hashed_string( "_score" ),  hashed_string( "int32" ),
-                     SW_OFFSET_OF( TestCustomState,     _score ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr},
-                    {hashed_string( "_stageName" ), hashed_string( "string" ),
-                     SW_OFFSET_OF( TestCustomState, _stageName ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr}
-                };
-            }
-            return &s_typeInfo;
-        }
-
-        void*       getStateInstance() override { return &_customState; }
-        const void* getStateInstance() const override { return &_customState; }
-    };
-
-    DummyGameInstance instance;
+    CustomStateGameInstance instance;
     instance._customState._score     = 12345;
     instance._customState._stageName = "SafeRoom";
 
@@ -969,7 +917,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience 
     // 4) 매직 변조
     vector<uint8> badMagic = validSnapshot;
     badMagic[0] ^= 0xFF;
-    // 매직 불일치 시 레거시 씬 로더로 폴백되거나 안전하게 실패
+    // 매직이 맞지 않으면 복원하지 않고 실패한다
     SW_EXPECT_FALSE( instance.restoreSnapshot( badMagic ) );
 
     // 5) 빈 게임 인스턴스 (커스텀 상태 없음) 동작 검증
