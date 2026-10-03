@@ -100,6 +100,7 @@ SW_TEST_CASE( CombatStateTest, ShieldTakesDamageFirstAndPoiseBreaksThenRecovers 
     SW_EXPECT_TRUE( hasVitalityEvent( listEvent, VitalityEventType::ShieldBroken ) );
     SW_EXPECT_TRUE( hasVitalityEvent( listEvent, VitalityEventType::PoiseBroken ) );
     SW_EXPECT_TRUE( hasVitalityEvent( listEvent, VitalityEventType::PoiseRecovered ) );
+    listEvent.clear();
     vitality.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 0u, listEvent.size() );
 
@@ -158,6 +159,7 @@ SW_TEST_CASE( CombatStateTest, DownedBleedsOutReviveInterruptsAndDownLimitKills 
     SW_ASSERT_TRUE( vitality.isAlive() );
     SW_EXPECT_NEAR_EQUAL( 25.0f, vitality.getHealth(), 1.0e-4f );
     SW_EXPECT_TRUE( vitality.isInvulnerable() );
+    listEvent.clear();
     vitality.drainEvents( listEvent );
     SW_EXPECT_TRUE( hasVitalityEvent( listEvent, VitalityEventType::ReviveInterrupted ) );
     SW_EXPECT_TRUE( hasVitalityEvent( listEvent, VitalityEventType::Revived ) );
@@ -379,4 +381,92 @@ SW_TEST_CASE( CombatStateTest, ElementChartMultipliesDualTypesHandlesImmunityAnd
     // 선언된 속성이 없으면 실패.
     ElementChart emptyChart;
     SW_EXPECT_TRUE( emptyChart.loadFromXmlText( "<ElementChart><Rule attack=\"A\" defend=\"B\" multiplier=\"2\"/></ElementChart>", "CombatStateTest" ) == false );
+}
+
+SW_TEST_CASE( CombatStateTest, GaugeRegenScaleReduceAndDrainAtEmptyKeepDelay )
+{
+    ResourceGaugeSettings settings;
+    settings._max            = 100.0f;
+    settings._regenRate      = 10.0f;
+    settings._regenDelay     = 1.0f;
+    settings._drainPerSecond = 50.0f;
+    ResourceGauge gauge( settings );
+
+    // 0 에 붙은 채 계속 깎는 중이면 회복 지연이 끝나지 않는다.
+    SW_EXPECT_NEAR_EQUAL( gauge.reduce( 100.0f ), 100.0f, 0.001f );
+    for ( int32 frame = 0; frame < 30; ++frame )
+    {
+        SW_EXPECT_FALSE( gauge.drain( 0.1f ) );
+        gauge.update( 0.1f );
+    }
+    SW_EXPECT_NEAR_EQUAL( gauge.getValue(), 0.0f, 0.001f );
+    // 멈추면 마지막으로 쓴 뒤 1 초부터 초당 10 — 마지막 걸음에서 이미 0.1 초가 지났으니 2 초 뒤에는 1.1 초 몫.
+    gauge.update( 1.0f );
+    gauge.update( 1.0f );
+    SW_EXPECT_NEAR_EQUAL( gauge.getValue(), 11.0f, 0.01f );
+
+    // 회복 배율은 회복량에만 — 지연은 그대로.
+    ResourceGauge scaled( settings );
+    (void)scaled.reduce( 50.0f );
+    scaled.setRegenScale( 0.5f );
+    scaled.update( 0.9f );
+    SW_EXPECT_NEAR_EQUAL( scaled.getValue(), 50.0f, 0.001f );
+    scaled.update( 1.1f );
+    SW_EXPECT_NEAR_EQUAL( scaled.getValue(), 55.0f, 0.01f );
+    scaled.initialize( settings );
+    SW_EXPECT_NEAR_EQUAL( scaled.getRegenScale(), 1.0f, 0.001f );
+
+    // 과열형의 reduce 는 열을 올리고 최대면 과열.
+    ResourceGaugeSettings heat = settings;
+    heat._bOverheatMode        = SW_TRUE;
+    ResourceGauge boost( heat );
+    SW_EXPECT_NEAR_EQUAL( boost.reduce( 60.0f ), 60.0f, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( boost.reduce( 60.0f ), 40.0f, 0.001f );
+    SW_EXPECT_TRUE( boost.isOverheated() );
+}
+
+SW_TEST_CASE( CombatStateTest, MaxHealthChangesAndTimelineRestores )
+{
+    VitalitySettings settings;
+    settings._maxHealth = 12.0f;
+    Vitality vitality( settings );
+    (void)vitality.applyDamage( 5.0f );
+    vector<VitalityEvent> listEvent;
+    vitality.drainEvents( listEvent );
+    vitality.setMaxHealth( 16.0f, true ); // 하트 그릇 — 가득
+    SW_EXPECT_NEAR_EQUAL( vitality.getHealth(), 16.0f, 0.001f );
+    vitality.drainEvents( listEvent );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( listEvent.size() ) ); // 붙이기 — 앞의 Damaged 가 남는다
+    SW_EXPECT_TRUE( listEvent[1]._type == VitalityEventType::Healed );
+    vitality.setMaxHealth( 10.0f, false );
+    SW_EXPECT_NEAR_EQUAL( vitality.getHealth(), 10.0f, 0.001f );
+    vitality.setMaxHealth( 20.0f, false );
+    SW_EXPECT_NEAR_EQUAL( vitality.getHealth(), 10.0f, 0.001f );
+
+    MoveFrameData move;
+    move._id       = hashed_string( "jab" );
+    move._startup  = 5;
+    move._active   = 2;
+    move._recovery = 6;
+    MoveTimeline timeline;
+    SW_EXPECT_FALSE( timeline.restoreState( move, 0, 0, false, false ) );
+    SW_EXPECT_FALSE( timeline.restoreState( move, move.getTotalFrames() + 1, 0, false, false ) );
+    SW_EXPECT_FALSE( timeline.isPlaying() );
+    SW_ASSERT_TRUE( timeline.restoreState( move, 6, 3, true, true ) );
+    SW_EXPECT_TRUE( timeline.isPlaying() && timeline.hasContact() && timeline.wasBlocked() );
+    SW_EXPECT_EQUAL( 6, timeline.getFrame() );
+    SW_EXPECT_EQUAL( 3, timeline.getHitstopRemaining() );
+    SW_EXPECT_TRUE( timeline.getPhase() == MovePhase::Active );
+
+    // 같은 상태까지 걸어간 타임라인과 같다.
+    MoveTimeline walked;
+    walked.start( move );
+    walked.registerContact( true );
+    while ( walked.isInHitstop() )
+        (void)walked.advanceFrame();
+    for ( int32 step = 1; step < 6; ++step )
+        (void)walked.advanceFrame();
+    walked.applyHitstop( 3 );
+    SW_EXPECT_EQUAL( walked.getFrame(), timeline.getFrame() );
+    SW_EXPECT_EQUAL( walked.getHitstopRemaining(), timeline.getHitstopRemaining() );
 }

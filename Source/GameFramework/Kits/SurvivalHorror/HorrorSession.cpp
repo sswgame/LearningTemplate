@@ -89,7 +89,7 @@ namespace sw
         _pCatalog               = pCatalog;
         _pAreaGraph             = pAreaGraph;
         const HorrorRules rules = pCatalog != nullptr ? pCatalog->getRules() : HorrorRules{};
-        _inventory.initialize( pCatalog, rules._gridWidth, rules._gridHeight );
+        _inventory.initialize( pCatalog != nullptr ? pCatalog->makeShapeLookup() : GridInventory::ShapeDelegate{}, rules._gridWidth, rules._gridHeight );
         _itemBox.clear();
         _flags.clear();
         _sanity.initialize( HorrorSessionInternal::makeSanitySettings( rules ) );
@@ -122,8 +122,8 @@ namespace sw
             pushEvent( HorrorEvent::Kind::FlashlightDied, hashed_string() );
         }
         // 어둠은 매 프레임 조금씩이라 알림을 내지 않는다(환각 시작 · 끝만 알린다).
-        if ( bInDarkness && _bFlashlightOn == SW_FALSE && _sanity.getValue() > 0.0f )
-            (void)_sanity.drain( deltaTime );
+        if ( bInDarkness && _bFlashlightOn == SW_FALSE )
+            (void)_sanity.drain( deltaTime ); // 0 에 붙어 있어도 계속 깎는 중 — 회복 지연이 다시 센다
         _sanity.update( deltaTime );
         _battery.update( deltaTime );
         refreshHallucination();
@@ -131,7 +131,7 @@ namespace sw
 
     bool HorrorSession::storeInBox( int32 instanceId, int32 count )
     {
-        const HorrorGridItem* pItem = _inventory.findInstance( instanceId );
+        const GridItem* pItem = _inventory.findInstance( instanceId );
         if ( pItem == nullptr || count <= 0 || pItem->_count < count )
             return false;
         const hashed_string itemId = pItem->_itemId;
@@ -155,8 +155,8 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        const HorrorGridItem* pFirst  = _inventory.findInstance( firstInstanceId );
-        const HorrorGridItem* pSecond = _inventory.findInstance( secondInstanceId );
+        const GridItem* pFirst  = _inventory.findInstance( firstInstanceId );
+        const GridItem* pSecond = _inventory.findInstance( secondInstanceId );
         if ( pFirst == nullptr || pSecond == nullptr )
             return false;
         if ( firstInstanceId == secondInstanceId && pFirst->_count < 2 )
@@ -205,7 +205,7 @@ namespace sw
 
     bool HorrorSession::tryUseItem( int32 instanceId )
     {
-        const HorrorGridItem* pItem = _inventory.findInstance( instanceId );
+        const GridItem* pItem = _inventory.findInstance( instanceId );
         if ( pItem == nullptr || _pCatalog == nullptr )
             return false;
         const HorrorItemDef* pDef = _pCatalog->findItem( pItem->_itemId );
@@ -236,7 +236,7 @@ namespace sw
         {
             // 가방에서 처음 찾은 SaveItem 하나를 쓴다(놓은 순서 — 결정적).
             int32 ribbonInstance = -1;
-            for ( const HorrorGridItem& item : _inventory.getItems() )
+            for ( const GridItem& item : _inventory.getItems() )
             {
                 const HorrorItemDef* pDef = _pCatalog->findItem( item._itemId );
                 if ( pDef != nullptr && pDef->_kind == HorrorItemKind::SaveItem )
@@ -276,11 +276,10 @@ namespace sw
 
     void HorrorSession::loseSanity( float32 amount, const hashed_string& cause )
     {
-        if ( amount <= 0.0f || _sanity.getValue() <= 0.0f )
+        const float32 lost = _sanity.reduce( amount );
+        if ( lost <= 0.0f )
             return;
-        const float32 before = _sanity.getValue();
-        (void)_sanity.drain( amount, 1.0f );
-        pushEvent( HorrorEvent::Kind::SanityLost, cause, before - _sanity.getValue() );
+        pushEvent( HorrorEvent::Kind::SanityLost, cause, lost );
         refreshHallucination();
     }
 

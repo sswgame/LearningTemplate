@@ -213,7 +213,7 @@ namespace sw
 
     void JrpgParty::drainEvents( vector<JrpgPartyEvent>& outListEvent )
     {
-        outListEvent = std::move( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 

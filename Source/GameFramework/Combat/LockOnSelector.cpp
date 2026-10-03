@@ -12,7 +12,8 @@ namespace sw
         {
             static constexpr float32 kRadianToDegree = 180.0f / 3.14159265358979f;
 
-            static float32 computeFlatDistance( const float3& lhs, const float3& rhs ) { return ( lhs - rhs ).getLength(); }
+            /** @brief 눈에서 대상까지의 3D 거리입니다(공중 대상 · 높낮이가 있는 록온도 같은 기준). */
+            static float32 computeDistance( const float3& lhs, const float3& rhs ) { return ( lhs - rhs ).getLength(); }
 
             /** @brief 앞 방향과 이루는 각(도, 0..180)입니다. */
             static float32 computeAngle( const float3& eye, const float3& forward, const float3& position )
@@ -50,7 +51,7 @@ namespace sw
         {
             if ( candidate._bVisible == SW_FALSE || candidate._id == 0 )
                 continue;
-            const float32 distance = LockOnSelectorInternal::computeFlatDistance( eye, candidate._position );
+            const float32 distance = LockOnSelectorInternal::computeDistance( eye, candidate._position );
             const float32 angle    = LockOnSelectorInternal::computeAngle( eye, forward, candidate._position );
             if ( distance > _settings._maxDistance || angle > _settings._maxAngle )
                 continue;
@@ -79,7 +80,7 @@ namespace sw
         for ( const LockOnCandidate& candidate : listCandidate )
         {
             if ( candidate._id == _target || candidate._id == 0 || candidate._bVisible == SW_FALSE ||
-                 LockOnSelectorInternal::computeFlatDistance( eye, candidate._position ) > _settings._maxDistance ||
+                 LockOnSelectorInternal::computeDistance( eye, candidate._position ) > _settings._maxDistance ||
                  LockOnSelectorInternal::computeAngle( eye, forward, candidate._position ) > _settings._maxAngle )
                 continue;
             const float32 gap = ( computeYawOffset( eye, forward, candidate._position ) - currentYaw ) * static_cast<float32>( direction >= 0 ? 1 : -1 );
@@ -107,12 +108,12 @@ namespace sw
             if ( candidate._id == _target )
                 pTarget = &candidate;
         }
-        if ( pTarget == nullptr || LockOnSelectorInternal::computeFlatDistance( eye, pTarget->_position ) > _settings._breakDistance )
+        if ( pTarget == nullptr || LockOnSelectorInternal::computeDistance( eye, pTarget->_position ) > _settings._breakDistance )
         {
             release();
             return false;
         }
-        _hiddenTime = pTarget->_bVisible ? 0.0f : _hiddenTime + deltaTime;
+        _hiddenTime = pTarget->_bVisible == SW_TRUE ? 0.0f : _hiddenTime + deltaTime;
         if ( _hiddenTime > _settings._lostSightGrace )
         {
             release();

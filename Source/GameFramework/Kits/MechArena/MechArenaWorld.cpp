@@ -343,7 +343,8 @@ namespace sw
         stepMovement( pilotIndex, bControl, MechArenaWorldInternal::isPressed( input._bDash, previous._bDash ),
                       MechArenaWorldInternal::isPressed( input._bJump, previous._bJump ), deltaTime );
 
-        pilot._boost.update( deltaTime * computeModifier( pilotIndex, hashed_string( "boostRegen" ) ) );
+        pilot._boost.setRegenScale( computeModifier( pilotIndex, hashed_string( "boostRegen" ) ) );
+        pilot._boost.update( deltaTime );
         const bool bOverheated = pilot._boost.isOverheated();
         if ( bOverheated && pilot._bWasOverheated == SW_FALSE )
             pushEvent( MechArenaEvent::Kind::Overheated, pilotIndex, -1, 0.0f, hashed_string{} );

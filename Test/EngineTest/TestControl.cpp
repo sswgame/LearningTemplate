@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Network/BitStream.h"
+
 #include "GameFramework/Control/InputCommandBuffer.h"
 
 #include "TestFramework/TestFramework.h"
@@ -99,4 +101,55 @@ SW_TEST_CASE( ControlTest, BufferCompletesCommandsWithinGapsFacingAndPriority )
     SW_EXPECT_EQUAL( 4, InputCommandBuffer::mirrorDirection( 6, -1 ) );
     SW_EXPECT_EQUAL( 9, InputCommandBuffer::mirrorDirection( 7, -1 ) );
     SW_EXPECT_EQUAL( 2, InputCommandBuffer::mirrorDirection( 2, -1 ) );
+}
+
+SW_TEST_CASE( ControlTest, BufferCountsFramesSavesStateAndPrefersSpecificCommands )
+{
+    InputCommandBuffer buffer( 8 );
+    SW_EXPECT_EQUAL( 0, buffer.getFrameCount() );
+    SW_EXPECT_EQUAL( 8, buffer.getCapacity() );
+    pushFrames( buffer, 5, 0, 3 );
+    SW_EXPECT_EQUAL( 3, buffer.getFrameCount() ); // 쌓인 수 — 용량이 아니다
+    pushFrames( buffer, 5, 0, 20 );
+    SW_EXPECT_EQUAL( 8, buffer.getFrameCount() );
+
+    // 상태 왕복 — 오래된 것부터 다시 쌓여 같은 판정이 난다.
+    buffer.clear();
+    pushFrames( buffer, 6, 0, 1 );
+    pushFrames( buffer, 5, 0, 1 );
+    pushFrames( buffer, 6, kButton2, 1 );
+    BitWriter writer;
+    buffer.writeState( writer );
+    InputCommandBuffer restored( 8 );
+    BitReader          reader( writer.getBytes().data(), writer.getByteCount() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    SW_EXPECT_EQUAL( buffer.getFrameCount(), restored.getFrameCount() );
+    for ( int32 framesAgo = 0; framesAgo < buffer.getFrameCount(); ++framesAgo )
+    {
+        SW_EXPECT_EQUAL( buffer.getFrame( framesAgo )._buttons, restored.getFrame( framesAgo )._buttons );
+        SW_EXPECT_EQUAL( buffer.getFrame( framesAgo )._direction, restored.getFrame( framesAgo )._direction );
+    }
+    InputCommandParser parser;
+    InputCommand       dashPunch;
+    SW_ASSERT_TRUE( parser.parse( "f,f+2", dashPunch ) );
+    SW_EXPECT_TRUE( restored.isCompleted( dashPunch, 1 ) );
+    BitReader shortReader( writer.getBytes().data(), 1 );
+    SW_EXPECT_FALSE( restored.readState( shortReader ) ); // 모자란 바이트 — 그대로 둔다
+    SW_EXPECT_EQUAL( 3, restored.getFrameCount() );
+
+    // 우선도 · 단계 수가 같으면 방향 · 버튼을 더 적은 쪽("d/f+1")이 목록 순서와 상관없이 이긴다.
+    vector<InputCommand> listCommand( 2 );
+    SW_ASSERT_TRUE( parser.parse( "1", listCommand[0] ) );
+    SW_ASSERT_TRUE( parser.parse( "d/f+1", listCommand[1] ) );
+    listCommand[0]._id = hashed_string( "jab" );
+    listCommand[1]._id = hashed_string( "uppercut" );
+    InputCommandBuffer fight;
+    pushFrames( fight, 3, 0, 2 );
+    pushFrames( fight, 3, kButton1, 1 );
+    SW_ASSERT_NOT_NULL( fight.findCompleted( listCommand, 1 ) );
+    SW_EXPECT_TRUE( fight.findCompleted( listCommand, 1 )->_id == hashed_string( "uppercut" ) );
+    const InputCommand swapped = listCommand[0];
+    listCommand[0]             = listCommand[1];
+    listCommand[1]             = swapped;
+    SW_EXPECT_TRUE( fight.findCompleted( listCommand, 1 )->_id == hashed_string( "uppercut" ) );
 }

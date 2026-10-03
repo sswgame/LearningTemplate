@@ -1,17 +1,16 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/SurvivalHorror/HorrorGridInventory.h"
+#include "GameFramework/Inventory/GridInventory.h"
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Kits/SurvivalHorror/HorrorCatalog.h"
 
 namespace sw
 {
-    HorrorGridInventory::HorrorGridInventory()
+    GridInventory::GridInventory()
         : _listCell{}
         , _listItem{}
-        , _pCatalog{ nullptr }
+        , _shapeLookup{}
         , _width{ 0 }
         , _height{ 0 }
         , _nextInstanceId{ 1 }
@@ -19,9 +18,9 @@ namespace sw
     {
     }
 
-    void HorrorGridInventory::initialize( const HorrorCatalog* pCatalog, int32 width, int32 height )
+    void GridInventory::initialize( const ShapeDelegate& shapeLookup, int32 width, int32 height )
     {
-        _pCatalog = pCatalog;
+        _shapeLookup = shapeLookup;
         _width    = MathUtil::max( 1, width );
         _height   = MathUtil::max( 1, height );
         _listItem.clear();
@@ -29,34 +28,34 @@ namespace sw
         ++_revision;
     }
 
-    bool HorrorGridInventory::growGrid( int32 width, int32 height )
+    bool GridInventory::growGrid( int32 width, int32 height )
     {
         if ( width < _width || height < _height )
             return false;
         _width  = width;
         _height = height;
         _listCell.assign( static_cast<size_t>( _width * _height ), -1 );
-        for ( const HorrorGridItem& item : _listItem )
+        for ( const GridItem& item : _listItem )
             stampItem( item, item._instanceId );
         ++_revision;
         return true;
     }
 
-    void HorrorGridInventory::clear()
+    void GridInventory::clear()
     {
         _listItem.clear();
         _listCell.assign( _listCell.size(), -1 );
         ++_revision;
     }
 
-    bool HorrorGridInventory::canPlace( const hashed_string& itemId, int32 x, int32 y, bool bRotated, int32 ignoreInstanceId ) const
+    bool GridInventory::canPlace( const hashed_string& itemId, int32 x, int32 y, bool bRotated, int32 ignoreInstanceId ) const
     {
-        const HorrorItemDef* pDef = findDef( itemId );
-        if ( pDef == nullptr )
+        GridItemShape shape;
+        if ( findShape( itemId, shape ) == false )
             return false;
         int32 footWidth  = 0;
         int32 footHeight = 0;
-        computeFootprint( *pDef, bRotated, footWidth, footHeight );
+        computeFootprint( shape, bRotated, footWidth, footHeight );
         if ( x < 0 || y < 0 || x + footWidth > _width || y + footHeight > _height )
             return false;
         for ( int32 cellY = y; cellY < y + footHeight; ++cellY )
@@ -71,7 +70,7 @@ namespace sw
         return true;
     }
 
-    bool HorrorGridInventory::findFreeSpot( const hashed_string& itemId, int32& outX, int32& outY, bool& outRotated ) const
+    bool GridInventory::findFreeSpot( const hashed_string& itemId, int32& outX, int32& outY, bool& outRotated ) const
     {
         for ( int32 rotation = 0; rotation < 2; ++rotation )
         {
@@ -93,12 +92,12 @@ namespace sw
         return false;
     }
 
-    int32 HorrorGridInventory::placeItem( const hashed_string& itemId, int32 count, int32 x, int32 y, bool bRotated )
+    int32 GridInventory::placeItem( const hashed_string& itemId, int32 count, int32 x, int32 y, bool bRotated )
     {
-        const HorrorItemDef* pDef = findDef( itemId );
-        if ( pDef == nullptr || count <= 0 || count > pDef->_maxStack || canPlace( itemId, x, y, bRotated ) == false )
+        GridItemShape shape;
+        if ( findShape( itemId, shape ) == false || count <= 0 || count > shape._maxStack || canPlace( itemId, x, y, bRotated ) == false )
             return -1;
-        HorrorGridItem item;
+        GridItem item;
         item._itemId     = itemId;
         item._instanceId = _nextInstanceId++;
         item._count      = count;
@@ -111,19 +110,19 @@ namespace sw
         return item._instanceId;
     }
 
-    int32 HorrorGridInventory::addItem( const hashed_string& itemId, int32 count )
+    int32 GridInventory::addItem( const hashed_string& itemId, int32 count )
     {
-        const HorrorItemDef* pDef = findDef( itemId );
-        if ( pDef == nullptr || count <= 0 )
+        GridItemShape shape;
+        if ( findShape( itemId, shape ) == false || count <= 0 )
             return 0;
         int32 remaining = count;
-        for ( HorrorGridItem& item : _listItem )
+        for ( GridItem& item : _listItem )
         {
             if ( remaining <= 0 )
                 break;
-            if ( item._itemId != itemId || item._count >= pDef->_maxStack )
+            if ( item._itemId != itemId || item._count >= shape._maxStack )
                 continue;
-            const int32 moved = MathUtil::min( remaining, pDef->_maxStack - item._count );
+            const int32 moved = MathUtil::min( remaining, shape._maxStack - item._count );
             item._count += moved;
             remaining -= moved;
         }
@@ -134,7 +133,7 @@ namespace sw
             bool  bRotated = false;
             if ( findFreeSpot( itemId, x, y, bRotated ) == false )
                 break;
-            const int32 stackCount = MathUtil::min( remaining, pDef->_maxStack );
+            const int32 stackCount = MathUtil::min( remaining, shape._maxStack );
             if ( placeItem( itemId, stackCount, x, y, bRotated ) < 0 )
                 break;
             remaining -= stackCount;
@@ -144,14 +143,14 @@ namespace sw
         return count - remaining;
     }
 
-    bool HorrorGridInventory::removeItem( const hashed_string& itemId, int32 count )
+    bool GridInventory::removeItem( const hashed_string& itemId, int32 count )
     {
         if ( count <= 0 || getItemCount( itemId ) < count )
             return false;
         int32 remaining = count;
         for ( size_t itemIndex = _listItem.size(); itemIndex > 0 && remaining > 0; --itemIndex )
         {
-            HorrorGridItem& item = _listItem[itemIndex - 1];
+            GridItem& item = _listItem[itemIndex - 1];
             if ( item._itemId != itemId )
                 continue;
             const int32 taken = MathUtil::min( remaining, item._count );
@@ -164,12 +163,12 @@ namespace sw
         return true;
     }
 
-    int32 HorrorGridInventory::takeFromInstance( int32 instanceId, int32 count )
+    int32 GridInventory::takeFromInstance( int32 instanceId, int32 count )
     {
         const int32 itemIndex = findItemIndex( instanceId );
         if ( itemIndex < 0 || count <= 0 )
             return 0;
-        HorrorGridItem& item  = _listItem[static_cast<size_t>( itemIndex )];
+        GridItem& item  = _listItem[static_cast<size_t>( itemIndex )];
         const int32     taken = MathUtil::min( count, item._count );
         item._count -= taken;
         if ( item._count <= 0 )
@@ -178,12 +177,12 @@ namespace sw
         return taken;
     }
 
-    bool HorrorGridInventory::moveItem( int32 instanceId, int32 x, int32 y, bool bRotated )
+    bool GridInventory::moveItem( int32 instanceId, int32 x, int32 y, bool bRotated )
     {
         const int32 itemIndex = findItemIndex( instanceId );
         if ( itemIndex < 0 )
             return false;
-        HorrorGridItem& item = _listItem[static_cast<size_t>( itemIndex )];
+        GridItem& item = _listItem[static_cast<size_t>( itemIndex )];
         if ( canPlace( item._itemId, x, y, bRotated, instanceId ) == false )
             return false;
         stampItem( item, -1 );
@@ -195,31 +194,31 @@ namespace sw
         return true;
     }
 
-    bool HorrorGridInventory::rotateItem( int32 instanceId )
+    bool GridInventory::rotateItem( int32 instanceId )
     {
-        const HorrorGridItem* pItem = findInstance( instanceId );
+        const GridItem* pItem = findInstance( instanceId );
         if ( pItem == nullptr )
             return false;
         return moveItem( instanceId, pItem->_x, pItem->_y, pItem->_bRotated == SW_FALSE );
     }
 
-    int32 HorrorGridInventory::findInstanceAt( int32 x, int32 y ) const
+    int32 GridInventory::findInstanceAt( int32 x, int32 y ) const
     {
         if ( x < 0 || y < 0 || x >= _width || y >= _height )
             return -1;
         return _listCell[static_cast<size_t>( y * _width + x )];
     }
 
-    const HorrorGridItem* HorrorGridInventory::findInstance( int32 instanceId ) const
+    const GridItem* GridInventory::findInstance( int32 instanceId ) const
     {
         const int32 itemIndex = findItemIndex( instanceId );
         return itemIndex >= 0 ? &_listItem[static_cast<size_t>( itemIndex )] : nullptr;
     }
 
-    int32 HorrorGridInventory::getItemCount( const hashed_string& itemId ) const
+    int32 GridInventory::getItemCount( const hashed_string& itemId ) const
     {
         int32 total = 0;
-        for ( const HorrorGridItem& item : _listItem )
+        for ( const GridItem& item : _listItem )
         {
             if ( item._itemId == itemId )
                 total += item._count;
@@ -227,7 +226,7 @@ namespace sw
         return total;
     }
 
-    int32 HorrorGridInventory::countFreeCells() const
+    int32 GridInventory::countFreeCells() const
     {
         int32 freeCount = 0;
         for ( const int32 occupant : _listCell )
@@ -238,12 +237,17 @@ namespace sw
         return freeCount;
     }
 
-    const HorrorItemDef* HorrorGridInventory::findDef( const hashed_string& itemId ) const
+    bool GridInventory::findShape( const hashed_string& itemId, GridItemShape& outShape ) const
     {
-        return _pCatalog != nullptr ? _pCatalog->findItem( itemId ) : nullptr;
+        if ( _shapeLookup.isBound() == false || _shapeLookup( itemId, outShape ) == false )
+            return false;
+        outShape._width    = MathUtil::max( 1, outShape._width );
+        outShape._height   = MathUtil::max( 1, outShape._height );
+        outShape._maxStack = MathUtil::max( 1, outShape._maxStack );
+        return true;
     }
 
-    int32 HorrorGridInventory::findItemIndex( int32 instanceId ) const
+    int32 GridInventory::findItemIndex( int32 instanceId ) const
     {
         for ( size_t itemIndex = 0; itemIndex < _listItem.size(); ++itemIndex )
         {
@@ -253,20 +257,20 @@ namespace sw
         return -1;
     }
 
-    void HorrorGridInventory::computeFootprint( const HorrorItemDef& def, bool bRotated, int32& outWidth, int32& outHeight ) const
+    void GridInventory::computeFootprint( const GridItemShape& shape, bool bRotated, int32& outWidth, int32& outHeight ) const
     {
-        outWidth  = bRotated ? def._height : def._width;
-        outHeight = bRotated ? def._width : def._height;
+        outWidth  = bRotated ? shape._height : shape._width;
+        outHeight = bRotated ? shape._width : shape._height;
     }
 
-    void HorrorGridInventory::stampItem( const HorrorGridItem& item, int32 value )
+    void GridInventory::stampItem( const GridItem& item, int32 value )
     {
-        const HorrorItemDef* pDef = findDef( item._itemId );
-        if ( pDef == nullptr )
+        GridItemShape shape;
+        if ( findShape( item._itemId, shape ) == false )
             return;
         int32 footWidth  = 0;
         int32 footHeight = 0;
-        computeFootprint( *pDef, item._bRotated == SW_TRUE, footWidth, footHeight );
+        computeFootprint( shape, item._bRotated == SW_TRUE, footWidth, footHeight );
         for ( int32 cellY = item._y; cellY < item._y + footHeight && cellY < _height; ++cellY )
         {
             for ( int32 cellX = item._x; cellX < item._x + footWidth && cellX < _width; ++cellX )
@@ -274,7 +278,7 @@ namespace sw
         }
     }
 
-    void HorrorGridInventory::eraseItemAt( size_t itemIndex )
+    void GridInventory::eraseItemAt( size_t itemIndex )
     {
         stampItem( _listItem[itemIndex], -1 );
         _listItem.erase( _listItem.begin() + static_cast<ptrdiff_t>( itemIndex ) );

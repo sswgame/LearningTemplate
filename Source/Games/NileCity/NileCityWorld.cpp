@@ -514,6 +514,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void NileCityWorld::drainEvents()
     {
+        _listEvent.clear(); // drainEvents 는 뒤에 붙인다
         _city.drainEvents( _listEvent );
         for ( const CityEvent& event : _listEvent )
         {

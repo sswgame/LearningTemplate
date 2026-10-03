@@ -6,6 +6,7 @@
 #include "GameFramework/Data/ItemBag.h"
 #include "GameFramework/Inventory/Crafting.h"
 #include "GameFramework/Inventory/Equipment.h"
+#include "GameFramework/Inventory/GridInventory.h"
 #include "GameFramework/Inventory/Inventory.h"
 #include "GameFramework/Inventory/ItemCatalog.h"
 #include "GameFramework/Inventory/LootTable.h"
@@ -241,4 +242,64 @@ SW_TEST_CASE( InventoryTest, CraftingChecksStationLevelToolsAndQueuesTimedJobs )
     SW_EXPECT_TRUE( crafter.enqueue( hashed_string( "forge" ), inventory, hashed_string{}, 5, 2 ) == CraftResult::Ok );
     crafter.update( 0.1f, inventory, listFinished );
     SW_EXPECT_EQUAL( 2, inventory.getItemCount( hashed_string( "sword" ) ) );
+}
+
+SW_TEST_CASE( InventoryTest, CrafterConsumeHandlerAndGridInventoryShapes )
+{
+    ItemCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kItemTestXml, "InventoryTest" ) );
+    RecipeCatalog recipes;
+    SW_ASSERT_TRUE( recipes.loadFromXmlText( kRecipeTestXml, "InventoryTest" ) );
+    Inventory inventory;
+    inventory.initialize( &catalog, 6 );
+    (void)inventory.addItem( hashed_string( "herb" ), 3 );
+    (void)inventory.addItem( hashed_string( "mortar" ), 1 );
+    Crafter crafter;
+    crafter.initialize( &recipes );
+    SW_EXPECT_TRUE( crafter.getCatalog() == &recipes );
+
+    // 재료를 다른 장부에서 거둔다 — 인벤토리의 약초는 그대로, 결과만 들어온다.
+    int32 ledgerHerb = 3;
+    crafter.setConsumeInputsHandler( Crafter::ConsumeInputsDelegate::create(
+        [&ledgerHerb]( const ItemBag& inputs, int32 count )
+    {
+        const int32 needed = inputs.getItemCount( hashed_string( "herb" ) ) * count;
+        if ( ledgerHerb < needed )
+            return false;
+        ledgerHerb -= needed;
+        return true;
+    } ) );
+    const hashed_string alchemy( "Alchemy" );
+    SW_EXPECT_TRUE( crafter.craft( hashed_string( "brew" ), inventory, alchemy, 1 ) == CraftResult::Ok );
+    SW_EXPECT_EQUAL( 0, ledgerHerb );
+    SW_EXPECT_EQUAL( 3, inventory.getItemCount( hashed_string( "herb" ) ) );
+    SW_EXPECT_EQUAL( 1, inventory.getItemCount( hashed_string( "potion" ) ) );
+    SW_EXPECT_TRUE( crafter.craft( hashed_string( "brew" ), inventory, alchemy, 1 ) == CraftResult::MissingInputs ); // 장부가 비었다
+    SW_EXPECT_TRUE( crafter.enqueue( hashed_string( "brew" ), inventory, alchemy, 1 ) == CraftResult::MissingInputs );
+
+    // 기반 격자 가방 — 모양은 연결 함수로.
+    GridInventory grid;
+    grid.initialize( GridInventory::ShapeDelegate::create(
+                         []( const hashed_string& itemId, GridItemShape& outShape )
+    {
+        if ( itemId == hashed_string( "rifle" ) )
+        {
+            outShape._width  = 3;
+            outShape._height = 1;
+            return true;
+        }
+        if ( itemId == hashed_string( "ammo" ) )
+        {
+            outShape._maxStack = 30;
+            return true;
+        }
+        return false;
+    } ),
+                     3, 2 );
+    SW_EXPECT_TRUE( grid.placeItem( hashed_string( "rifle" ), 1, 0, 0, false ) > 0 );
+    SW_EXPECT_FALSE( grid.canPlace( hashed_string( "rifle" ), 0, 1, true ) );            // 세우면 3 칸 — 2 줄을 넘는다
+    SW_EXPECT_EQUAL( -1, grid.placeItem( hashed_string( "unknown" ), 1, 0, 1, false ) ); // 모르는 아이템
+    SW_EXPECT_EQUAL( 45, grid.addItem( hashed_string( "ammo" ), 45 ) );                  // 30 + 15 — 두 칸
+    SW_EXPECT_EQUAL( 1, grid.countFreeCells() );
+    SW_EXPECT_EQUAL( 45, grid.getItemCount( hashed_string( "ammo" ) ) );
 }

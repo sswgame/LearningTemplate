@@ -2,9 +2,9 @@
 // 정신력(어둠 · 괴물 목격 · 환각 · 조준 흔들림)과 손전등 배터리, 열쇠 문 · 다이얼 · 순서 퍼즐, 단서 보드 추리, 턴제 초자연 전투의 결정성.
 #include "pch.h"
 
+#include "GameFramework/Inventory/GridInventory.h"
 #include "GameFramework/Kits/SurvivalHorror/HorrorCatalog.h"
 #include "GameFramework/Kits/SurvivalHorror/HorrorEncounter.h"
-#include "GameFramework/Kits/SurvivalHorror/HorrorGridInventory.h"
 #include "GameFramework/Kits/SurvivalHorror/HorrorSession.h"
 #include "GameFramework/World/AreaGraph.h"
 
@@ -106,8 +106,8 @@ SW_TEST_CASE( SurvivalHorrorTest, GridPlacesRotatesFindsFreeSpotsAndStacks )
 {
     HorrorCatalog catalog;
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
-    HorrorGridInventory grid;
-    grid.initialize( &catalog, 3, 3 );
+    GridInventory grid;
+    grid.initialize( catalog.makeShapeLookup(), 3, 3 );
 
     const int32 rifle = grid.placeItem( "rifle", 1, 0, 0, false );
     SW_EXPECT_TRUE( rifle > 0 );
@@ -159,7 +159,7 @@ SW_TEST_CASE( SurvivalHorrorTest, ItemBoxAndCombineRollBackWhenTheResultHasNoRoo
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
     HorrorSession session;
     session.initialize( &catalog, nullptr, hashed_string() );
-    HorrorGridInventory& grid = session.getInventory();
+    GridInventory& grid = session.getInventory();
     SW_EXPECT_EQUAL( 2, grid.addItem( "herbGreen", 2 ) ); // (0,0) (1,0)
     SW_EXPECT_EQUAL( 1, grid.addItem( "herbRed", 1 ) );   // (2,0)
     SW_EXPECT_EQUAL( 5, grid.addItem( "junk", 9 ) );      // 남은 다섯 칸만

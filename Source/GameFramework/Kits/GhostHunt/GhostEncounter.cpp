@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/RayMath.h"
 #include "GameFramework/Kits/GhostHunt/GhostCatalog.h"
 
 namespace sw
@@ -14,16 +15,6 @@ namespace sw
         {
             static constexpr float32 kDegreeToRadian     = 3.14159265358979f / 180.0f;
             static constexpr int32   kFleeDirectionCount = 8;
-
-            static AiPerceptionSettings makeCone( float32 range, float32 halfAngleDegree )
-            {
-                AiPerceptionSettings settings;
-                settings._sightRange      = range;
-                settings._loseSightRange  = range;
-                settings._sightHalfAngle  = halfAngleDegree * kDegreeToRadian;
-                settings._peripheralRange = 0.0f; // 손전등은 등 뒤를 비추지 않는다
-                return settings;
-            }
 
             /** @brief XZ 로 눕혀 길이 1 로 — 너무 짧으면 0 벡터입니다. */
             static float3 flatten( const float3& direction )
@@ -61,8 +52,6 @@ namespace sw
     GhostEncounter::GhostEncounter()
         : _pCatalog{ nullptr }
         , _random{}
-        , _beamCone{}
-        , _strobeCone{}
         , _listGhost{}
         , _listEvent{}
         , _strobeCharge{ 0.0f }
@@ -79,11 +68,6 @@ namespace sw
         _random.setSeed( seed );
         _vacuumStage = 0;
         clear();
-        if ( pCatalog == nullptr )
-            return;
-        const GhostFlashlightSettings& flashlight = pCatalog->getFlashlight();
-        _beamCone.setSettings( GhostEncounterInternal::makeCone( flashlight._range, flashlight._halfAngle ) );
-        _strobeCone.setSettings( GhostEncounterInternal::makeCone( flashlight._strobeRange, flashlight._strobeHalfAngle ) );
     }
 
     void GhostEncounter::clear()
@@ -120,8 +104,11 @@ namespace sw
 
     bool GhostEncounter::isInCone( const float3& eye, const float3& forward, const float3& position, bool bStrobe ) const
     {
-        const AiPerception& cone = bStrobe ? _strobeCone : _beamCone;
-        return cone.canSee( eye, forward, position, nullptr, false );
+        if ( _pCatalog == nullptr )
+            return false;
+        const GhostFlashlightSettings& flashlight = _pCatalog->getFlashlight();
+        return bStrobe ? RayMath::isInFlatCone( eye, forward, flashlight._strobeHalfAngle, flashlight._strobeRange, position )
+                       : RayMath::isInFlatCone( eye, forward, flashlight._halfAngle, flashlight._range, position );
     }
 
     int32 GhostEncounter::shineBeam( const float3& eye, const float3& forward )

@@ -79,20 +79,10 @@ namespace sw
 
     const PartyItemDef* PartyItemSpawner::pickWeighted()
     {
-        float32 total = 0.0f;
-        for ( const PartyItemDef& def : _catalog.getAll() )
-            total += MathUtil::max( 0.0f, def._weight );
-        if ( total <= 0.0f )
-            return nullptr;
-        float32 roll = _random.nextFloat() * total;
-        for ( const PartyItemDef& def : _catalog.getAll() )
-        {
-            const float32 weight = MathUtil::max( 0.0f, def._weight );
-            if ( roll < weight )
-                return &def;
-            roll -= weight;
-        }
-        return &_catalog.getAll().back();
+        const vector<PartyItemDef>& listDef = _catalog.getAll();
+        const int32                 index   = _random.pickWeightedIndex( listDef, []( const PartyItemDef& def )
+                          { return def._weight; } );
+        return index >= 0 ? &listDef[static_cast<size_t>( index )] : nullptr;
     }
 
     void PartyItemSpawner::spawnOne()
@@ -146,7 +136,7 @@ namespace sw
 
     void PartyItemSpawner::drainEvents( vector<PartyItemEvent>& outListEvent )
     {
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 

@@ -16,8 +16,8 @@
 #include "GameFramework/Data/GameFlags.h"
 #include "GameFramework/Data/ItemBag.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Inventory/GridInventory.h"
 #include "GameFramework/Kits/SurvivalHorror/HorrorCatalog.h"
-#include "GameFramework/Kits/SurvivalHorror/HorrorGridInventory.h"
 
 namespace sw
 {
@@ -89,8 +89,8 @@ namespace sw
         void update( float32 deltaTime, bool bInDarkness );
 
         // ── 가방 · 상자 · 조합 ─────────────────────────────────────────────
-        HorrorGridInventory&       getInventory() { return _inventory; }
-        const HorrorGridInventory& getInventory() const { return _inventory; }
+        GridInventory&       getInventory() { return _inventory; }
+        const GridInventory& getInventory() const { return _inventory; }
         /** @brief 공유 아이템 상자(어느 상자에서 열어도 같은 내용)입니다. */
         const ItemBag& getItemBox() const { return _itemBox; }
         /** @brief 가방 자리 하나에서 @p count 개를 상자로 넣습니다. 모자라면 false 입니다. */
@@ -164,7 +164,7 @@ namespace sw
         void refreshHallucination();
         bool markSolved( const hashed_string& puzzleId, const hashed_string& flag );
 
-        HorrorGridInventory                 _inventory;
+        GridInventory                       _inventory;
         ItemBag                             _itemBox;
         GameFlags                           _flags;
         ResourceGauge                       _sanity;

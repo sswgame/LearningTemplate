@@ -8,6 +8,7 @@
 #include "Core/Container/deque.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
@@ -27,7 +28,7 @@ namespace sw
         ItemBag       _inputs{};  ///< 써서 없어지는 재료
         ItemBag       _tools{};   ///< 있어야 하지만 남는 것(망치 · 절구)
         ItemBag       _outputs{};
-        float32       _time{ 0.0f }; ///< 대기열에서 걸리는 초(즉시 제작은 무시)
+        float32       _time{ 0.0f }; ///< 대기열에서 걸리는 시간 — `Crafter` 는 `update` 에 넘긴 단위(보통 초) 그대로 쓴다. 게임 분으로 흘리는 키트는 분이다
         int32         _requiredLevel{ 0 };
         uint8         _bStartsKnown{ SW_TRUE }; ///< 처음부터 안다(아니면 배워야 한다 — 설계도 · 레시피 책)
     };
@@ -87,11 +88,20 @@ namespace sw
     class SW_GF_API Crafter
     {
     public:
+        /** @brief 재료를 인벤토리 대신 다른 곳(신선도 묶음 재고 · 원가 장부)에서 거둡니다 — (재료 봉투, 횟수) → 다 거뒀으면 true. */
+        using ConsumeInputsDelegate = Delegate<bool( const ItemBag& inputs, int32 count )>;
+
         Crafter();
 
         void initialize( const RecipeCatalog* pCatalog );
-        void learnRecipe( const hashed_string& recipeId ) { _uniqueLearnedRecipe.insert( recipeId ); }
-        bool isLearned( const hashed_string& recipeId ) const;
+        /**
+         * @brief 재료를 거두는 쪽을 바꿉니다. 묶여 있으면 `craft` · `enqueue` 가 인벤토리에서 빼지 않고 이것을 부릅니다(false 면 `MissingInputs`).
+         * @details 묶인 동안 `craft` 는 재료를 빼기 **전에** 결과 자리를 봅니다(되돌릴 길이 없으니). `cancel` 이 돌려주는 재료는 인벤토리로 갑니다.
+         */
+        void                 setConsumeInputsHandler( const ConsumeInputsDelegate& handler ) { _consumeInputs = handler; }
+        const RecipeCatalog* getCatalog() const { return _pCatalog; }
+        void                 learnRecipe( const hashed_string& recipeId ) { _uniqueLearnedRecipe.insert( recipeId ); }
+        bool                 isLearned( const hashed_string& recipeId ) const;
 
         /** @brief 지금 @p count 번 만들 수 있는가입니다. */
         CraftResult evaluate( const hashed_string& recipeId, const Inventory& inventory, const hashed_string& station, int32 level, int32 count = 1 ) const;
@@ -111,6 +121,7 @@ namespace sw
 
     private:
         const RecipeCatalog*         _pCatalog;
+        ConsumeInputsDelegate        _consumeInputs;
         unordered_set<hashed_string> _uniqueLearnedRecipe;
         deque<CraftJob>              _listJob;
     };

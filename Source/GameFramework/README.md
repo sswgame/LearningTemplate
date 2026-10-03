@@ -17,7 +17,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   절차로 무대를 세우는 도우미(`PrimitiveStage` — 활성 씬 잡기 · 세운 오브젝트 추적 · 색 · 텍스처 머티리얼 인스턴스 캐시 · 해 · 카메라),
   장르 무관 컴포넌트(`EffectBaseComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`).
   장르 무관 계산 도구 — 씨앗 고정 난수 · 좌표 해시(`GameRandom` · `GameHash`), 값 노이즈(`ValueNoise`), 고정 스텝 누적기(`FixedStepTimer`),
-  광선 판정(`RayMath` — 구 · 상자 · 바닥 평면), 1인칭 시점(`FirstPersonLook`). 셋 이상의 키트에 같은 것이 따로 있던 것을 모았다(아래 "새 장르 키트").
+  광선 판정(`RayMath` — 구 · 상자 · 바닥 평면 · 원뿔), 1인칭 시점(`FirstPersonLook`). `GameRandom` 은 가중치 고르기(`pickWeightedIndex`) · 섞기(`shuffle`)도 한다. 셋 이상의 키트에 같은 것이 따로 있던 것을 모았다(아래 "새 장르 키트").
   공유 타입은 `GameFrameworkMinimal.h`. "game" 채널의 수명주기 이벤트(`GameEvents.h`)는 프레임워크가 그 자리에서 낸다 —
   `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료, `GameModeStateMachine` 이 일시정지 진입 · 해제
 - **Data**: `GameData`, `GameStrings`, 데이터 XML 읽기(`GameDataXml` — 문서 · 루트 · id 확인 · 숫자 목록 · 토큰 목록), id 카탈로그(`GameCatalog<T>` —
@@ -26,12 +26,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   거리 · 가림 · 소리 · 기억), 타이머 대기열(`Base/TimerQueue`)
 - **Combat**: 무기 정의 · 상태(`WeaponCatalog` · `WeaponState` — 연사 · 탄창 · 재장전 · 퍼짐 · 산탄 · 거리 감쇠 · 머리 배율 · 탄속 · 탄 아이템), 탄 퍼짐(`WeaponMath`),
   피해 공식(`DamageMath`), 탄도(`Ballistics` — 낙차 · 발사각 · 앞 겨누기), 턴 순서(`TurnOrder` — 라운드제 · 타임라인제), 록온(`LockOnSelector`),
-  체력 상태(`Vitality` — 실드 · 기절 → 출혈 → 부활 · 최대 기절 횟수 · 무적 · 경직 게이지), 자원 게이지(`ResourceGauge` — 스태미나 탈진 · 과열),
-  프레임 데이터(`MoveCatalog` · `MoveTimeline` — 발생 · 지속 · 경직 · 캔슬 · 히트스톱 · 가드 높이), 속성 상성(`ElementChart` — 복합 속성 곱 · 면역 · 상태이상 확률)
+  체력 상태(`Vitality` — 실드 · 기절 → 출혈 → 부활 · 최대 기절 횟수 · 무적 · 경직 게이지 · 최대 체력 바꾸기), 자원 게이지(`ResourceGauge` — 스태미나 탈진 · 과열 · 회복 배율 · 즉시 깎기),
+  프레임 데이터(`MoveCatalog` · `MoveTimeline` — 발생 · 지속 · 경직 · 캔슬 · 히트스톱 · 가드 높이 · 상태 복원), 속성 상성(`ElementChart` — 복합 속성 곱 · 면역 · 상태이상 확률)
   슈터 · 배틀로얄 · 서부극 · 기체 대전 · JRPG · 포켓몬 · 젤다가 함께 쓴다(예전 `GF_Shooter` 키트의 무기는 여기로 옮겼다)
-- **Control**: 커맨드 입력(`InputCommandParser` — 철권 표기 · `InputCommandBuffer` — 새로 넣기 · 누른 채 · 동시 버튼 · 틱 한도 · 좌우 뒤집기, 결정적)
-- **Inventory**: 아이템 카탈로그(`ItemCatalog` — 분류 · 겹침 · 무게 · 희귀도 · 장비 칸 · 내구도 · 태그 · 능력치), 칸 인벤토리(`Inventory`), 장비(`Equipment` — 칸 배치는
-  데이터), 전리품 표(`LootCatalog` — 가중치 · 없음 · 늘 주기 · 표 안의 표 · 행운), 제작(`RecipeCatalog` · `Crafter` — 작업대 · 레벨 · 도구 · 배우기 · 대기열),
+- **Control**: 커맨드 입력(`InputCommandParser` — 철권 표기 · `InputCommandBuffer` — 새로 넣기 · 누른 채 · 동시 버튼 · 틱 한도 · 좌우 뒤집기 · 상태 바이트, 결정적)
+- **Inventory**: 아이템 카탈로그(`ItemCatalog` — 분류 · 겹침 · 무게 · 희귀도 · 장비 칸 · 내구도 · 태그 · 능력치), 칸 인벤토리(`Inventory`), 격자 가방(`GridInventory` — w × h · 돌리기 · 빈자리 찾기 · 겹침, 모양은 연결 함수), 장비(`Equipment` — 칸 배치는
+  데이터), 전리품 표(`LootCatalog` — 가중치 · 없음 · 늘 주기 · 표 안의 표 · 행운), 제작(`RecipeCatalog` · `Crafter` — 작업대 · 레벨 · 도구 · 배우기 · 대기열 · 재료를 거두는 쪽 바꾸기),
   지갑 · 가게(`Wallet` · `ShopCatalog` · `ShopState` — 여러 통화 · 재고 · 재입고 · 매입 시세 하락과 회복 · 조건은 `IShopConditionEvaluator`)
 - **Match**: 판 규칙(`MatchState` — 팀 · 역할 · 점수 · 도움 · 부활 대기 · 코스트 게이지 · 탈락 순위 · 시간 제한 · 목표로 끝내기)
 - **Movement**: 2D 플랫포머 몸(`PlatformerMotor2D` · `PlatformTileMap` — 점프 높이 · 짧은 점프 · 코요테 · 미리 누르기 · 벽 점프 · 대시 · 다단 점프 · 한쪽 발판 · 사다리),
@@ -41,8 +41,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `ReputationState`), 로그라이트 지도(`RunMap`)
 - **Quest**: 퀘스트(`QuestCatalog` · `QuestLog` — 선행 · 레벨 · 단계 · 목표 · 선택 목표 · 분기 · 보상 알림 · 시간 제한 · 반복)
 - **World**: 시계(`WorldClock` — 시 · 때 · 날 · 계절 · 해 · 햇빛 · 잠), 날씨(`WeatherCatalog` · `WeatherSystem` — 계절 가중치 · 섞기 · 예보),
-  방 · 지역 그래프(`AreaGraph` — 잠금 조건 · 일방통행 · 발견 · 탐색률 · 막힌 경계), 진행형 상호작용(`InteractionProgress` — 여럿 · 끊김 · 퇴행 · 스킬 체크)
-- 그 밖의 Base: 타이밍 판정(`TimingJudge` — 리듬 · 타이밍 공격 · 스킬 체크 · 저스트 프레임), Data 의 이름 → 수치(`StatBlock`), 월드 플래그와 조건식(`GameFlags` —
+  방 · 지역 그래프(`AreaGraph` — 잠금 조건 · 일방통행 · 발견 · 탐색률 · 막힌 경계 · 코드로 짓기 · 다른 XML 안에 적기), 진행형 상호작용(`InteractionProgress` — 여럿 · 끊김 · 퇴행 · 스킬 체크)
+- 그 밖의 Base: 타이밍 판정(`TimingJudge` — 리듬 · 타이밍 공격 · 스킬 체크 · 저스트 프레임), Data 의 이름 → 수치(`StatBlock` — 여러 자원 비용 `canAfford` · `trySpend`), 월드 플래그와 조건식(`GameFlags` —
   `a && !b || count>=3`), AI 의 스폰 감독(`SpawnDirector` — 시간에 따라 쌓이는 예산 · 곡선 · 종류 상한 · 태그)
 - **Transition**: `GameModeStateMachine`(일시정지 모드 전이에 `GamePausedEvent` · `GameResumedEvent`), `ScreenTransitionManager`
 - **UI**: 장르 무관 UI 컴포넌트 — `RuntimeHud`, `DialogueRunnerComponent`,
@@ -111,12 +111,14 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 | "1 0.5 0.2" · "Spring,Fall" 같은 칸 | `GameDataXml::parseFloat4` · `parseFloats` · `forEachToken` | 블록 색 · 계절 · 공원 배치 |
 | 되풀이되는 난수(시험 · 리플레이) | `GameRandom`(상태) · `GameHash`(좌표 → 수, 상태 없음) | 탄 퍼짐 · 손님 · 날씨 · 지형 · 조우 |
 | 프레임 수와 상관없는 시뮬레이션 | `FixedStepTimer` | 코스터 열차 · 공원 경영 |
-| 히트스캔 · 클릭 고르기 · 1인칭 | `RayMath` · `FirstPersonLook` | 슈터 · 복셀 |
+| 히트스캔 · 클릭 고르기 · 1인칭 · 원뿔 시야 | `RayMath` · `FirstPersonLook` | 슈터 · 복셀 · 유령 사냥 |
+| 가중치 고르기 · 섞기 | `GameRandom::pickWeightedIndex` · `shuffle` | 파티 아이템 · 식당 손님 · 카드 |
+| 여러 자원 비용 | `StatBlock::canAfford` · `trySpend` | 횡스크롤 정복 |
 | 아이템 개수 | `ItemBag` | 농장 인벤토리 · 출하함 |
 | 절차로 세우는 시험 무대 | `PrimitiveStage` | 시험 게임 넷 |
 | 피해 숫자 | `DamageUIComponent::spawnNumber` | 액션 · 어빌리티 |
 | 총 · 탄창 · 재장전 · 탄도 · 피해 공식 | `Combat/` | 슈터 · (배틀로얄 · 서부극 · 기체 대전) |
-| 아이템 · 인벤토리 · 장비 · 전리품 · 제작 | `Inventory/` | (배틀로얄 · RPG · 생활 · 협동 수집) |
+| 아이템 · 인벤토리 · 장비 · 전리품 · 제작 · 격자 가방 | `Inventory/` | 배틀로얄 · 위쳐 · 식당 · 생존 공포 · 협동 수집 |
 | 레벨 · 스킬 트리 · 평판 · 로그라이트 지도 | `Progression/` | (RPG · 생활 · 택틱스) |
 | 퀘스트 · 시간 · 날씨 | `Quest/` · `World/` | (오픈월드 · 생활) |
 | 팀 · 점수 · 부활 · 순위 | `Match/` | (대전 · 배틀로얄 · 비대칭) |
@@ -125,6 +127,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 | 타이밍 판정 · 턴 순서 · 커맨드 입력 · 록온 · 2D 플랫포머 몸 | `TimingJudge` · `TurnOrder` · `Control/` · `LockOnSelector` · `Movement/` | (리듬 · JRPG · 격투 · 액션 · 플랫포머) |
 
 괄호 안의 장르는 이 공통 부분을 쓰도록 설계했지만 아직 키트가 없는 것입니다(`docs/06_Backlog.md` 의 장르 키트 대기열).
+
+알림을 꺼내는 `drainEvents( outListEvent )` 는 기반 · 키트 모두 **받는 쪽 목록 뒤에 붙이고 자기 목록을 비웁니다**(바꿔치기하지 않는다). 매 프레임 같은 목록을 다시 쓰는 쪽은 먼저 `clear()` 합니다.
 
 키트 하나는 `Kits/<이름>/CMakeLists.txt` 에 `sw_addGameFrameworkKit(GF_<이름>)` 한 줄, `Kits/CMakeLists.txt` 의 `add_subdirectory`,
 `Config/App/AppConfig.json` 의 `_listGameKitModule`, 시험은 `Test/EngineTest/CMakeLists.txt` 의 `LIBS` 입니다. 엔진 없이 돌릴 수 있는 규칙(계산 · 데이터)은

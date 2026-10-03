@@ -202,8 +202,6 @@ namespace sw
         float32 computeFormationX( const ConquestUnit& unit ) const;
         float32 computeMoraleScale( ConquestTeam team, float32 x ) const;
         void    applyAttack( ConquestTeam attacker, float32 baseDamage, float32 structureScale, const Target& target, float32& inoutDealt );
-        bool    canAfford( const StatBlock& cost ) const;
-        void    payCost( const StatBlock& cost );
         int32   findHomeSiteIndex() const;
         void    pushEvent( ConquestEvent::Kind kind, const hashed_string& id, int32 value = 0, ConquestTeam team = ConquestTeam::Neutral );
 

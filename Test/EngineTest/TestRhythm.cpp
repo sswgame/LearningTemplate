@@ -114,6 +114,7 @@ SW_TEST_CASE( RhythmTest, JudgesByWindowIgnoresTooEarlyPressAndMissesPassedNotes
     SW_EXPECT_EQUAL( 550, static_cast<int32>( session.getScore() ) );
     SW_EXPECT_TRUE( session.getState() == RhythmPlayState::Cleared );
 
+    listEvent.clear();
     session.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.size() >= 2 );
     SW_EXPECT_TRUE( listEvent[0]._grade == hashed_string( "Cool" ) );

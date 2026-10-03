@@ -2,8 +2,8 @@
  * @file GhostEncounter.h
  * @brief 방 하나의 유령 싸움 — 유령 상태(숨음 → 나타남 → 공격 → 기절 → 흡입 중 → 잡힘), 손전등 원뿔(각 · 거리)과 모아 쏘는 스트로브,
  *        청소기 흡입 줄다리기(유령 체력 · 도망 방향 · 반대로 당기면 보너스 피해와 서지 게이지 · 끌려감 · 강화 단계)입니다.
- * @details 유령의 자리는 게임이 움직여 `setGhostPosition` 으로 알립니다 — 이 클래스는 규칙만 듭니다. 원뿔 판정은 기반 `AiPerception::canSee`
- *          (주변 감지 0 · 가림 없음)입니다. 흡입 중 도망 방향은 씨앗 고정 `GameRandom` 이 정해 같은 씨앗 · 같은 입력이면 같은 싸움입니다.
+ * @details 유령의 자리는 게임이 움직여 `setGhostPosition` 으로 알립니다 — 이 클래스는 규칙만 듭니다. 원뿔 판정은 기반 `RayMath::isInFlatCone`
+ *          (높이를 무시하는 XZ 원뿔)입니다. 흡입 중 도망 방향은 씨앗 고정 `GameRandom` 이 정해 같은 씨앗 · 같은 입력이면 같은 싸움입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,7 +12,6 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/AI/AiPerception.h"
 #include "GameFramework/Base/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -138,8 +137,6 @@ namespace sw
 
         const GhostCatalog*   _pCatalog;
         GameRandom            _random;
-        AiPerception          _beamCone;
-        AiPerception          _strobeCone;
         vector<GhostInstance> _listGhost;
         vector<GhostEvent>    _listEvent;
         float32               _strobeCharge;

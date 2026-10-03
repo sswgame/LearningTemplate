@@ -95,7 +95,7 @@ namespace sw
         if ( _heartCount >= _settings._maxHeartCount )
             return false;
         ++_heartCount;
-        resetHealth();
+        _health.setMaxHealth( static_cast<float32>( _heartCount * kQuartersPerHeart ), true ); // 새 그릇은 가득 찬다(알림 · 상태는 그대로)
         return true;
     }
 

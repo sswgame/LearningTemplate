@@ -307,4 +307,19 @@ namespace sw
         }
         return loadedCount;
     }
+    GridInventory::ShapeDelegate HorrorCatalog::makeShapeLookup() const
+    {
+        const HorrorCatalog* pCatalog = this;
+        return GridInventory::ShapeDelegate::create(
+            [pCatalog]( const hashed_string& itemId, GridItemShape& outShape )
+        {
+            const HorrorItemDef* pItem = pCatalog->findItem( itemId );
+            if ( pItem == nullptr )
+                return false;
+            outShape._width    = pItem->_width;
+            outShape._height   = pItem->_height;
+            outShape._maxStack = pItem->_maxStack;
+            return true;
+        } );
+    }
 } // namespace sw

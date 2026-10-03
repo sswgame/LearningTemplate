@@ -3,6 +3,7 @@
 #include "GameFramework/Control/InputCommandBuffer.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/BitStream.h"
 
 #include "GameFramework/Data/GameDataXml.h"
 
@@ -12,6 +13,19 @@ namespace sw
     {
         struct InputCommandInternal
         {
+            /** @brief 커맨드가 적은 방향 · 버튼의 수입니다(같은 길이의 커맨드끼리 더 구체적인 쪽을 고른다). */
+            static int32 computeSpecificity( const InputCommand& command )
+            {
+                int32 count = 0;
+                for ( const InputCommandStep& step : command._listStep )
+                {
+                    count += step._direction != 0 ? 1 : 0;
+                    for ( uint16 bits = step._buttons; bits != 0; bits = static_cast<uint16>( bits & ( bits - 1 ) ) )
+                        ++count;
+                }
+                return count;
+            }
+
             /** @brief 방향 낱말 → 넘패드(앞 = 6). 모르면 0 입니다. */
             static uint8 parseDirection( string_view word, bool& outHold )
             {
@@ -158,6 +172,38 @@ namespace sw
         _count                                   = MathUtil::min( _count + 1, _capacity );
     }
 
+    void InputCommandBuffer::writeState( BitWriter& outWriter ) const
+    {
+        outWriter.writeInt( _count, 0, _capacity );
+        for ( int32 framesAgo = _count - 1; framesAgo >= 0; --framesAgo )
+        {
+            const InputFrame& frame = getFrame( framesAgo );
+            outWriter.writeBits( frame._buttons, 16 );
+            outWriter.writeBits( frame._direction, 4 );
+        }
+    }
+
+    bool InputCommandBuffer::readState( BitReader& reader )
+    {
+        const int32 count = reader.readInt( 0, _capacity );
+        if ( reader.hasOverflowed() )
+            return false;
+        vector<InputFrame> listFrame( static_cast<size_t>( count ) );
+        for ( InputFrame& frame : listFrame )
+        {
+            frame._buttons   = static_cast<uint16>( reader.readBits( 16 ) );
+            frame._direction = static_cast<uint8>( reader.readBits( 4 ) );
+            if ( frame._direction > 9 )
+                return false;
+        }
+        if ( reader.hasOverflowed() )
+            return false;
+        clear();
+        for ( const InputFrame& frame : listFrame )
+            push( frame );
+        return true;
+    }
+
     void InputCommandBuffer::clear()
     {
         _head  = 0;
@@ -257,8 +303,17 @@ namespace sw
         {
             if ( isCompleted( command, facing ) == false )
                 continue;
-            if ( pBest == nullptr || command._priority > pBest->_priority ||
-                 ( command._priority == pBest->_priority && command._listStep.size() > pBest->_listStep.size() ) )
+            if ( pBest == nullptr || command._priority > pBest->_priority )
+            {
+                pBest = &command;
+                continue;
+            }
+            if ( command._priority != pBest->_priority )
+                continue;
+            // 같은 우선도 — 단계가 많은 것, 단계 수도 같으면 방향 · 버튼을 더 많이 적은 것("d/f+1" 이 "1" 을 이긴다).
+            const size_t stepCount = command._listStep.size();
+            const size_t bestCount = pBest->_listStep.size();
+            if ( stepCount > bestCount || ( stepCount == bestCount && InputCommandInternal::computeSpecificity( command ) > InputCommandInternal::computeSpecificity( *pBest ) ) )
                 pBest = &command;
         }
         return pBest;

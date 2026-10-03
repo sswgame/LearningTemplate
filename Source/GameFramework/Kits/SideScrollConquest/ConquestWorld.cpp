@@ -174,9 +174,9 @@ namespace sw
         }
         if ( usedSlots >= site._pDef->_buildSlots )
             return ConquestResult::NoBuildSlot;
-        if ( canAfford( pDef->_cost ) == false )
+        if ( _resource.canAfford( pDef->_cost ) == false )
             return ConquestResult::NotEnoughResources;
-        payCost( pDef->_cost );
+        (void)_resource.trySpend( pDef->_cost );
         ConquestBuilding building;
         building._pDef      = pDef;
         building._siteIndex = siteIndex;
@@ -215,9 +215,9 @@ namespace sw
             return ConquestResult::CannotTrainHere;
         if ( computePopulation() + pUnit->_population > computePopulationCap() )
             return ConquestResult::PopulationCap;
-        if ( canAfford( pUnit->_cost ) == false )
+        if ( _resource.canAfford( pUnit->_cost ) == false )
             return ConquestResult::NotEnoughResources;
-        payCost( pUnit->_cost );
+        (void)_resource.trySpend( pUnit->_cost );
         building._listQueue.push_back( unitId );
         return ConquestResult::Ok;
     }
@@ -830,21 +830,6 @@ namespace sw
                 pushEvent( ConquestEvent::Kind::WallBroken, site._pDef->_id, 0, attacker );
             }
         }
-    }
-
-    bool ConquestWorld::canAfford( const StatBlock& cost ) const
-    {
-        for ( const StatValue& value : cost.getValues() )
-        {
-            if ( _resource.getValue( value._name ) + 1.0e-4f < value._value )
-                return false;
-        }
-        return true;
-    }
-
-    void ConquestWorld::payCost( const StatBlock& cost )
-    {
-        _resource.merge( cost, -1.0f );
     }
 
     int32 ConquestWorld::findHomeSiteIndex() const

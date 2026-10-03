@@ -199,6 +199,7 @@ SW_TEST_CASE( CityBuilderTest, FoodChainFeedsHousesAndHousesEvolveAndDevolve )
     for ( int32 stepIndex = 0; stepIndex < 320; ++stepIndex ) // 80 초
     {
         city.update( 0.25f );
+        listEvent.clear();
         city.drainEvents( listEvent );
         for ( const CityEvent& event : listEvent )
             bDelivered = bDelivered || event._kind == CityEvent::Kind::GoodsDelivered;
@@ -241,6 +242,7 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
     for ( int32 stepIndex = 0; stepIndex < 12 * 80 + 4; ++stepIndex ) // 한 해 하고 조금
     {
         city.update( 0.25f );
+        listEvent.clear();
         city.drainEvents( listEvent );
         for ( const CityEvent& event : listEvent )
         {

@@ -74,7 +74,7 @@ namespace sw
         /** @brief 달랩니다 — 겁을 지우고 유대 경험치를 조금. */
         void calm();
         void addBondExperience( float32 amount );
-        void takeDamage( float32 amount ) { (void)_health.drain( amount, 1.0f ); }
+        void takeDamage( float32 amount ) { (void)_health.reduce( amount ); }
 
         int32   getBondLevel() const { return _bondLevel; }
         float32 getBondExperience() const { return _bondExperience; }

@@ -80,6 +80,22 @@ namespace sw
         _lastInstigatorId      = -1;
     }
 
+    void Vitality::setMaxHealth( float32 maxHealth, bool bFill )
+    {
+        if ( maxHealth <= 0.0f )
+            return;
+        _settings._maxHealth = maxHealth;
+        if ( isAlive() && bFill )
+        {
+            const float32 healed = maxHealth - _health;
+            _health              = maxHealth;
+            if ( healed > 0.0f )
+                pushEvent( VitalityEventType::Healed, healed, -1 );
+            return;
+        }
+        _health = MathUtil::min( _health, maxHealth );
+    }
+
     VitalityDamageResult Vitality::applyDamage( float32 amount, float32 poiseDamage, int32 instigatorId )
     {
         VitalityDamageResult result;
@@ -264,7 +280,7 @@ namespace sw
 
     void Vitality::drainEvents( vector<VitalityEvent>& outListEvent )
     {
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 

@@ -403,7 +403,7 @@ namespace sw
 
     void MatgoGame::drainEvents( vector<MatgoEvent>& outListEvent )
     {
-        outListEvent.clear();
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
+        _listEvent.clear();
     }
 } // namespace sw

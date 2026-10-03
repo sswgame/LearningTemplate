@@ -245,7 +245,7 @@ namespace sw
 
     void SkirmishMatch::drainEvents( vector<RtsEvent>& outListEvent )
     {
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 

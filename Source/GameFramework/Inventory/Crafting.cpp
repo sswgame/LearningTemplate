@@ -134,6 +134,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     Crafter::Crafter()
         : _pCatalog{ nullptr }
+        , _consumeInputs{}
         , _uniqueLearnedRecipe{}
         , _listJob{}
     {
@@ -190,6 +191,16 @@ namespace sw
         if ( result != CraftResult::Ok )
             return result;
         const RecipeDef* pRecipe = _pCatalog->findRecipe( recipeId );
+        if ( _consumeInputs.isBound() )
+        {
+            // 재료는 다른 곳에서 거둔다 — 되돌릴 길이 없으니 결과 자리를 먼저 본다.
+            if ( CraftingInternal::hasRoomForOutputs( inventory, pRecipe->_outputs, count ) == false )
+                return CraftResult::NoRoom;
+            if ( _consumeInputs( pRecipe->_inputs, count ) == false )
+                return CraftResult::MissingInputs;
+            CraftingInternal::giveItems( inventory, pRecipe->_outputs, count );
+            return CraftResult::Ok;
+        }
         CraftingInternal::takeItems( inventory, pRecipe->_inputs, count );
         if ( CraftingInternal::hasRoomForOutputs( inventory, pRecipe->_outputs, count ) == false )
         {
@@ -206,7 +217,15 @@ namespace sw
         if ( result != CraftResult::Ok )
             return result;
         const RecipeDef* pRecipe = _pCatalog->findRecipe( recipeId );
-        CraftingInternal::takeItems( inventory, pRecipe->_inputs, count );
+        if ( _consumeInputs.isBound() )
+        {
+            if ( _consumeInputs( pRecipe->_inputs, count ) == false )
+                return CraftResult::MissingInputs;
+        }
+        else
+        {
+            CraftingInternal::takeItems( inventory, pRecipe->_inputs, count );
+        }
         CraftJob job;
         job._recipeId  = recipeId;
         job._remaining = pRecipe->_time;

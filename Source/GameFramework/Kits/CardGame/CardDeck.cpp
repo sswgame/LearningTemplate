@@ -63,14 +63,7 @@ namespace sw
 
     void CardPile::shuffle( GameRandom& random )
     {
-        // Fisher-Yates — 뒤에서부터 [0, index] 의 한 자리와 바꾼다. 나머지 연산 치우침은 GameRandom::nextInt 가 없앤다.
-        for ( int32 index = getCount() - 1; index > 0; --index )
-        {
-            const int32 swapIndex                       = random.nextInt( 0, index );
-            const Card  temp                            = _listCard[static_cast<size_t>( index )];
-            _listCard[static_cast<size_t>( index )]     = _listCard[static_cast<size_t>( swapIndex )];
-            _listCard[static_cast<size_t>( swapIndex )] = temp;
-        }
+        random.shuffle( _listCard ); // 기반 Fisher-Yates
     }
 
     bool CardPile::deal( vector<CardPile>& inoutListHand, int32 cardsEach )

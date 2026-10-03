@@ -180,7 +180,7 @@ namespace sw
 
     void ArcadeVehicleMotor::drainEvents( vector<ArcadeVehicleEvent>& outListEvent )
     {
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 

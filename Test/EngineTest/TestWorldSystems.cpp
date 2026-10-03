@@ -2,6 +2,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Utility/Xml/XmlDocument.h"
+
 #include "GameFramework/AI/SpawnDirector.h"
 #include "GameFramework/Base/TimingJudge.h"
 #include "GameFramework/Data/GameFlags.h"
@@ -504,4 +506,42 @@ SW_TEST_CASE( WorldSystemsTest, SpawnDirectorSpendsBudgetWithinLimitsAndRepeatsW
         if ( event._kind == SpawnEvent::Kind::Spawned && event._entryId == hashed_string( "c" ) )
             SW_EXPECT_TRUE( event._time >= 20.0f );
     }
+}
+
+SW_TEST_CASE( WorldSystemsTest, AreaGraphBuildsFromCodeAndEmbeddedNodes )
+{
+    AreaGraph graph;
+    AreaDef   hall;
+    hall._id = hashed_string( "hall" );
+    AreaDef vault;
+    vault._id     = hashed_string( "vault" );
+    vault._region = hashed_string( "Basement" );
+    SW_ASSERT_TRUE( graph.addArea( hall ) );
+    SW_ASSERT_TRUE( graph.addArea( vault ) );
+    SW_EXPECT_FALSE( graph.addArea( hall ) );                                                      // 같은 id
+    SW_EXPECT_TRUE( graph.findArea( hashed_string( "hall" ) )->_name == hashed_string( "hall" ) ); // 이름이 없으면 id
+
+    bool bInvalid = false;
+    SW_EXPECT_FALSE( graph.addLink( hashed_string( "hall" ), hashed_string( "nowhere" ), hashed_string( "Door" ), "", false, bInvalid ) );
+    SW_ASSERT_TRUE( graph.addLink( hashed_string( "hall" ), hashed_string( "vault" ), hashed_string( "Door" ), "hasKey", false, bInvalid ) );
+    SW_EXPECT_FALSE( bInvalid );
+    GameFlags flags;
+    SW_EXPECT_FALSE( graph.canTraverse( hashed_string( "hall" ), hashed_string( "vault" ), flags ) );
+    flags.setFlag( hashed_string( "hasKey" ) );
+    SW_EXPECT_TRUE( graph.canTraverse( hashed_string( "hall" ), hashed_string( "vault" ), flags ) );
+    SW_EXPECT_TRUE( graph.enterArea( hashed_string( "vault" ) ) );
+
+    // 다른 키트의 XML 안에 적은 그래프를 더한다(지우지 않는다 — 탐색 상태도 남는다).
+    XmlDocument doc;
+    SW_ASSERT_TRUE( doc.parse( "<Dungeon><Map><Area id=\"crypt\" region=\"Basement\"/><Link from=\"vault\" to=\"crypt\" oneWay=\"true\"/></Map></Dungeon>" ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( graph.loadFromNode( doc.getRoot().findChild( "Map" ), "AreaGraphTest" ) ) );
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( graph.getAreas().size() ) );
+    SW_EXPECT_TRUE( graph.isVisited( hashed_string( "vault" ) ) );
+    SW_EXPECT_FALSE( graph.isVisited( hashed_string( "crypt" ) ) );
+    SW_EXPECT_TRUE( graph.canTraverse( hashed_string( "vault" ), hashed_string( "crypt" ), flags ) );
+    SW_EXPECT_FALSE( graph.canTraverse( hashed_string( "crypt" ), hashed_string( "vault" ), flags ) ); // 일방통행
+
+    graph.clear();
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( graph.getAreas().size() ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( graph.getLinks().size() ) );
 }

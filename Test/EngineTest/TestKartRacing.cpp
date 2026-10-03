@@ -200,6 +200,7 @@ SW_TEST_CASE( KartRacingTest, LapNeedsEveryCheckpointInOrder )
     // 2) 지름길 — 결승선 뒤로 옮겨 다시 지나도 체크포인트가 없으니 바퀴가 오르지 않는다(이 규칙을 끄면 2 바퀴가 된다).
     placeOnTrack( race, 0, -5.0f, 0.0f );
     runSteps( race, 60 );
+    listEvent.clear();
     race.drainEvents( listEvent );
     SW_EXPECT_EQUAL( race.findRacer( 0 )->_lap, 1 );
     SW_EXPECT_TRUE( findEvent( listEvent, KartRaceEvent::Kind::CheckpointMissed, 0 ) != nullptr );
@@ -210,6 +211,7 @@ SW_TEST_CASE( KartRacingTest, LapNeedsEveryCheckpointInOrder )
     const float3 position = makeTrackPoint( track, 20.0f, 0.0f, yaw );
     race.placeRacer( 0, position, yaw + MathUtil::Pi );
     runSteps( race, 150 );
+    listEvent.clear();
     race.drainEvents( listEvent );
     const KartRaceEvent* pWrongWay = findEvent( listEvent, KartRaceEvent::Kind::WrongWay, 0 );
     SW_ASSERT_NOT_NULL( pWrongWay );
@@ -229,6 +231,7 @@ SW_TEST_CASE( KartRacingTest, LapNeedsEveryCheckpointInOrder )
         input._vehicle = driver.computeInput( track, race.findRacer( 0 )->_motor, race.findRacer( 0 )->_distance );
         race.setInput( 0, input );
         race.step();
+        listEvent.clear();
         race.drainEvents( listEvent );
         listDrive.insert( listDrive.end(), listEvent.begin(), listEvent.end() );
     }
@@ -273,6 +276,7 @@ SW_TEST_CASE( KartRacingTest, PlacesUseLapAndClampedDistance )
     vector<KartRaceEvent> listEvent;
     race.drainEvents( listEvent );
     runSteps( race, 60 );
+    listEvent.clear();
     race.drainEvents( listEvent );
     SW_EXPECT_EQUAL( race.findRacer( 1 )->_nextCheckpoint, 1 );
     SW_EXPECT_EQUAL( race.findRacer( 1 )->_place, 1 );
@@ -340,6 +344,7 @@ SW_TEST_CASE( KartRacingTest, ItemEffectsHitBlockAndHome )
     SW_EXPECT_FALSE( race.useItem( 2 ) ); // 이제 빈손
     race.setInput( 0, makeThrottle( 1.0f ) );
     runSteps( race, 30 );
+    listEvent.clear();
     race.drainEvents( listEvent );
     const KartRaceEvent* pHit = findEvent( listEvent, KartRaceEvent::Kind::Hit, 0 );
     SW_ASSERT_NOT_NULL( pHit );
@@ -358,6 +363,7 @@ SW_TEST_CASE( KartRacingTest, ItemEffectsHitBlockAndHome )
     race.giveItem( 2, "green" );
     SW_EXPECT_TRUE( race.useItem( 2 ) );
     runSteps( race, 30 );
+    listEvent.clear();
     race.drainEvents( listEvent );
     SW_EXPECT_TRUE( findEvent( listEvent, KartRaceEvent::Kind::ShieldBlocked, 0 ) != nullptr );
     SW_EXPECT_TRUE( findEvent( listEvent, KartRaceEvent::Kind::Hit, 0 ) == nullptr );
@@ -369,6 +375,7 @@ SW_TEST_CASE( KartRacingTest, ItemEffectsHitBlockAndHome )
     placeOnTrack( race, 2, -6.0f, -3.0f );
     placeOnTrack( race, 3, -12.0f, 3.0f );
     race.step();
+    listEvent.clear();
     race.drainEvents( listEvent );
     SW_EXPECT_EQUAL( race.findRacer( 3 )->_place, 4 );
     SW_EXPECT_EQUAL( race.findRacerAtPlace( 3 ), 2 );
@@ -377,6 +384,7 @@ SW_TEST_CASE( KartRacingTest, ItemEffectsHitBlockAndHome )
     SW_ASSERT_TRUE( race.getProjectiles().size() == 1 );
     SW_EXPECT_EQUAL( race.getProjectiles()[0]._target, 2 );
     runSteps( race, 60 );
+    listEvent.clear();
     race.drainEvents( listEvent );
     pHit = findEvent( listEvent, KartRaceEvent::Kind::Hit );
     SW_ASSERT_NOT_NULL( pHit );
@@ -392,10 +400,12 @@ SW_TEST_CASE( KartRacingTest, ItemEffectsHitBlockAndHome )
     race.step();
     race.giveItem( 0, "shield" );
     SW_EXPECT_TRUE( race.useItem( 0 ) );
+    listEvent.clear();
     race.drainEvents( listEvent );
     race.giveItem( 2, "blue" );
     SW_EXPECT_TRUE( race.useItem( 2 ) );
     runSteps( race, 60 );
+    listEvent.clear();
     race.drainEvents( listEvent );
     SW_EXPECT_TRUE( findEvent( listEvent, KartRaceEvent::Kind::Hit, 0 ) != nullptr );
     SW_EXPECT_TRUE( findEvent( listEvent, KartRaceEvent::Kind::Hit, 1 ) != nullptr );
@@ -411,6 +421,7 @@ SW_TEST_CASE( KartRacingTest, ItemEffectsHitBlockAndHome )
     SW_EXPECT_TRUE( race.useItem( 0 ) );
     race.setInput( 3, makeThrottle( 1.0f ) );
     runSteps( race, 120 );
+    listEvent.clear();
     race.drainEvents( listEvent );
     pHit = findEvent( listEvent, KartRaceEvent::Kind::Hit, 3 );
     SW_ASSERT_NOT_NULL( pHit );

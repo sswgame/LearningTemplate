@@ -217,16 +217,12 @@ cd build/Ninja-Debug/Bin
   `GameFrameworkUtilTest`, 네트워크 — `Core/Network`(`NetworkTest` 6, 실제 UDP 로컬 송수신 포함) · 키트 `GF_NetClientServer` · `GF_NetLockstep` · `GF_NetTurnRelay` · `GF_NetMmo`
   (`NetClientServerTest` · `NetLockstepTest` · `NetTurnRelayTest` · `NetMmoTest`). Windows 소켓 경로(`PlatformSocketUtil` 의 winsock 분기)는 **구문 검사도 못 했다**(리눅스뿐). 할 일: 재구성(새 폴더는 GLOB 이라 CMake 수정 없음 — `GF_Shooter` 가 빠졌으니 낡은 빌드의 `GF_Shooter.dll` 을 지운다) → Debug · Shipping →
   `EngineTest --test_filter=` 위 스위트들. `GameFramework.dll` 이 커졌으니 `SW_GF_API` 내보내기 누락(링크 오류)부터 본다.
-- **장르 키트 대기열(사용자 지시 2026-10-03, 공통 먼저 → 네트워크(끝냄) → 순서대로).** 공통에 둘 것을 먼저 기반으로 빼고(위 항목), 키트는 아래 순서로 만든다. 키트마다 시험 · 등록
-  (`Kits/CMakeLists.txt` · `Test/EngineTest/CMakeLists.txt` LIBS · `AppConfig.json`) · 린트 · 커밋.
-  (1) 시험 게임 NileCity(도시 건설) · StarSkirmish(RTS) (2) 배틀로얄(배틀그라운드) (3) 서부 오픈월드(레드 데드 리뎀션) (4) 위쳐류 RPG (5) 생물 생활(포코피아)
-  (6) SRPG(G 제네레이션 · 메탈슬러그 택틱스 — `GridReachability` · `RunMap`) (7) 카드(포커 · 고스톱 · 맞고 · 솔리테어 · 우노 · 문스톤 아일랜드식 덱 빌딩)
-  (9) 기체 대전(SD 건담 캡슐파이터 — `Match` 코스트 게이지)
-  (10) 비대칭 공포(데드 바이 데이라이트) (11) 몬스터 수집(포켓몬 — 기존 `TurnBattle` 키트와 겹침을 먼저 본다) (12) 협동 수집 공포(리썰 컴퍼니) (13) 리듬(오투잼 — `TimingJudge`)
-  (14) 인디 추천 목록 — 메트로배니아 · 소울라이크 2D(어스블레이드 · 게슈탈트 · 블라스퍼머스 2 · 더 라스트 페이스 · 클로아 · 엠버베인), 액션 플랫포머(검브렐라 · 부시덴 ·
-  리플레이스드 · 페퍼 그라인더 — `PlatformerMotor2D`), 고전 JRPG(드래곤 퀘스트 3 HD-2D · 씨 오브 스타즈 · 완다링 소드 — `TurnOrder` · `TimingJudge`), 생존 공포 · 조사(홀스틴 ·
-  애니그마 오브 피어), 횡스크롤 정복(썬즈 오브 발할라), 식당 경영(셰프 RPG), 파티 아레나(바이킹 온 트램펄린) (15) 격투(철권 — `InputCommandBuffer`, 결정적 · 롤백)
-  (16) 카트 레이싱(카트라이더 · 마리오카트) (17) 유령 사냥(루이지 맨션) (18) 액션 어드벤처(젤다 — 시간의 오카리나 · 황혼의 공주 · 야생의 숨결, `LockOnSelector`).
+- **새 장르 키트 22 개 · 시험 게임 둘의 첫 엔진 빌드(2026-10-03, 대기열은 모두 만들었다).** 하네스로만 돌렸다 — `GF_TacticsSrpg` · `GF_CardGame` · `GF_OpenWorldWestern` ·
+  `GF_WitcherRpg` · `GF_CreatureLife` · `GF_RestaurantSim` · `GF_SurvivalHorror` · `GF_SideScrollConquest` · `GF_Fighting` · `GF_ActionAdventure` · `GF_GhostHunt` ·
+  `GF_BattleRoyale` · `GF_CoopScavenger` · `GF_MonsterCollector` · `GF_ClassicJrpg` · `GF_Metroidvania` · `GF_ActionPlatformer` · `GF_KartRacing` · `GF_MechArena` ·
+  `GF_AsymmetricHorror` · `GF_PartyArena` · `GF_Rhythm`, 시험 게임 `NileCity` · `StarSkirmish`(화면 · 마우스 집기 · 카메라는 본 적이 없다 — 에디터 게임 뷰에서는
+  창 크기를 써서 커서가 어긋날 수 있다). 할 일: 재구성 → Debug · Shipping → 각 `<Kit>Test`, `SW_ACTIVE_GAME=NileCity` · `StarSkirmish` 로 한 번씩 띄워 보기.
+  키트가 많아져 `AppConfig.json` 의 `_listGameKitModule` 이 길다 — 게임이 쓰는 키트만 올리는 쪽으로 바꿀지 그때 본다.
 
 ### 1-7. Core · 태스크
 
@@ -360,7 +356,12 @@ cd build/Ninja-Debug/Bin
 ## 3. 참고 — 다음 작업에 필요한 것
 
 끝낸 일에서 남긴 교훈만 모았다. 사연은 `git log` 에 있다 — 여기에는 다시 물릴 함정, 지켜야 할 계약, 되돌리면 안 되는 결정, 재는 법만 적는다.
+
 같은 내용이 `AGENTS.md` · 폴더 `README.md` · 코드 주석에 정본으로 있으면 그쪽을 가리킨다.
+
+- **`drainEvents` 는 붙이고 비운다(2026-10-03 통일).** 바꿔치기(`swap` · `std::move`) 하던 18 곳을 맞췄다 — 바꿔치기는 받는 쪽 목록의 앞 내용을 지우고, 붙이기에
+  익숙한 호출부는 같은 알림을 매 프레임 다시 받는다(StarSkirmish 에서 패배 로그가 두 번). 매 프레임 같은 목록을 쓰는 쪽이 먼저 `clear()` 한다.
+- **키트 커밋은 저장소가 고정한 clang-format(`Tools/LLVM/bin/clang-format`, 20)으로.** 시스템의 18 은 멤버 포인터(`float32 Foo::*_pMember`) 줄을 다르게 맞춰 린트가 막는다.
 
 ### 3-1. 측정 · 프로파일
 

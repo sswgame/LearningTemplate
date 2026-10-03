@@ -198,9 +198,11 @@ namespace sw
         void refuseCategory( const hashed_string& shopId, const hashed_string& category );
 
         ShopResult evaluateBuy( const hashed_string& shopId, const hashed_string& itemId, int32 count, const Wallet& wallet, const Inventory& inventory ) const;
-        ShopResult buy( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory );
+        /** @brief 삽니다. @p pOutPaid 가 있으면 실제로 낸 금액(성공일 때만)을 적습니다. */
+        ShopResult buy( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutPaid = nullptr );
         ShopResult evaluateSell( const hashed_string& shopId, const hashed_string& itemId, int32 count, const Inventory& inventory ) const;
-        ShopResult sell( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory );
+        /** @brief 팝니다. @p pOutReceived 가 있으면 실제로 받은 금액(성공일 때만)을 적습니다. */
+        ShopResult sell( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived = nullptr );
         /** @brief 하루를 넘깁니다 — 시세 회복과(때가 되면) 재입고입니다. */
         void advanceDay();
         void drainEvents( vector<ShopEvent>& outListEvent );

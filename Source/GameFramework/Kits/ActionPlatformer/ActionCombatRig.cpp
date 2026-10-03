@@ -220,8 +220,8 @@ namespace sw
 
     void ActionCombatRig::drainEvents( vector<ActionCombatEvent>& outListEvent )
     {
-        outListEvent.clear();
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
+        _listEvent.clear();
     }
 
     void ActionCombatRig::startMove( int32 comboIndex )

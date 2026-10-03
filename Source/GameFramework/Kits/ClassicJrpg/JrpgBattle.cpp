@@ -630,7 +630,7 @@ namespace sw
 
     void JrpgBattle::drainEvents( vector<JrpgBattleEvent>& outListEvent )
     {
-        outListEvent = std::move( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 } // namespace sw

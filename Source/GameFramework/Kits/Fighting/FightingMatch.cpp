@@ -40,10 +40,7 @@ namespace sw
                 writeCounter( writer, timeline.getHitstopRemaining() );
             }
 
-            /**
-             * @brief 타임라인을 되살립니다. 기반 `MoveTimeline` 은 상태를 직접 넣는 길이 없어 공개 함수로 같은 상태까지 다시 걸어갑니다:
-             *        시작 → (닿았으면) 닿음 표시와 그 히트스톱을 소진 → 프레임을 넘김 → 남은 히트스톱을 건다.
-             */
+            /** @brief 타임라인을 되살립니다(기반 `MoveTimeline::restoreState` — 기술은 쓰는 쪽이 찾아 넘긴다). */
             [[nodiscard]] static bool readTimeline( BitReader& reader, const FighterMove* pMove, MoveTimeline& outTimeline )
             {
                 const bool  bPlaying = reader.readBool();
@@ -54,19 +51,7 @@ namespace sw
                 outTimeline.cancel();
                 if ( bPlaying == false )
                     return true;
-                if ( pMove == nullptr || frame < 1 || frame > pMove->_frame.getTotalFrames() || hitstop < 0 )
-                    return false;
-                outTimeline.start( pMove->_frame );
-                if ( bContact )
-                {
-                    outTimeline.registerContact( bBlocked );
-                    while ( outTimeline.isInHitstop() )
-                        (void)outTimeline.advanceFrame();
-                }
-                for ( int32 step = 1; step < frame; ++step )
-                    (void)outTimeline.advanceFrame();
-                outTimeline.applyHitstop( hitstop );
-                return true;
+                return pMove != nullptr && outTimeline.restoreState( pMove->_frame, frame, hitstop, bContact, bBlocked );
             }
         };
     } // namespace
@@ -113,10 +98,9 @@ namespace sw
         const FighterDef* arrDef[kPlayerCount] = { &fighter0, &fighter1 };
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
-            _arrFighter[player]             = FighterRuntime{};
-            _arrFighter[player]._pDef       = arrDef[player];
-            _arrFighter[player]._side       = player == 0 ? 1 : -1;
-            _arrFighter[player]._inputCount = 0;
+            _arrFighter[player]       = FighterRuntime{};
+            _arrFighter[player]._pDef = arrDef[player];
+            _arrFighter[player]._side = player == 0 ? 1 : -1;
             _arrFighter[player]._inputBuffer.clear();
         }
         startRound();
@@ -186,10 +170,9 @@ namespace sw
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
             FighterRuntime& fighter  = _arrFighter[player];
-            const uint16    previous = fighter._inputCount > 0 ? fighter._inputBuffer.getFrame( 0 )._buttons : 0;
+            const uint16    previous = fighter._inputBuffer.getFrameCount() > 0 ? fighter._inputBuffer.getFrame( 0 )._buttons : 0;
             arrPressed[player]       = static_cast<uint16>( arrInput[player]._buttons & ~previous );
             fighter._inputBuffer.push( arrInput[player] );
-            fighter._inputCount = MathUtil::min( fighter._inputCount + 1, fighter._inputBuffer.getFrameCount() );
         }
 
         if ( _phase == FightingPhase::RoundOver )
@@ -1062,8 +1045,8 @@ namespace sw
 
     void FightingMatch::drainEvents( vector<FightingEvent>& outListEvent )
     {
-        outListEvent.clear();
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
+        _listEvent.clear();
     }
 
     // ------------------------------------------------------------------------------
@@ -1123,8 +1106,8 @@ namespace sw
                 writer.writeBool( flag == SW_TRUE );
             FightingMatchInternal::writeTimeline( writer, fighter._timeline );
             // 입력 버퍼 — 오래된 것부터(되살릴 때 그 순서로 다시 쌓는다).
-            FightingMatchInternal::writeCounter( writer, fighter._inputCount );
-            for ( int32 framesAgo = fighter._inputCount - 1; framesAgo >= 0; --framesAgo )
+            FightingMatchInternal::writeCounter( writer, fighter._inputBuffer.getFrameCount() );
+            for ( int32 framesAgo = fighter._inputBuffer.getFrameCount() - 1; framesAgo >= 0; --framesAgo )
                 writer.writeBits( encodeInput( fighter._inputBuffer.getFrame( framesAgo ) ), 8 );
         }
         outBuffer = writer.getBytes();
@@ -1187,10 +1170,9 @@ namespace sw
             if ( FightingMatchInternal::readTimeline( reader, fighter.findCurrentMove(), fighter._timeline ) == false )
                 return false;
             const int32 inputCount = FightingMatchInternal::readCounter( reader );
-            if ( inputCount < 0 || inputCount > fighter._inputBuffer.getFrameCount() )
+            if ( inputCount < 0 || inputCount > fighter._inputBuffer.getCapacity() )
                 return false;
             fighter._inputBuffer.clear();
-            fighter._inputCount = inputCount;
             for ( int32 index = 0; index < inputCount; ++index )
                 fighter._inputBuffer.push( decodeInput( static_cast<uint8>( reader.readBits( 8 ) ) ) );
         }

@@ -15,6 +15,9 @@
 
 namespace sw
 {
+    class BitReader;
+    class BitWriter;
+
     /** @brief 한 틱의 입력입니다. 방향은 넘패드(5 = 가운데, 6 = 오른쪽, 8 = 위). */
     struct InputFrame
     {
@@ -36,7 +39,7 @@ namespace sw
         hashed_string            _id{};
         vector<InputCommandStep> _listStep{};
         int32                    _maxGap{ 10 };  ///< 단계 사이 최대 틱
-        int32                    _priority{ 0 }; ///< 여럿이 완성되면 높은 것(같으면 단계가 많은 것) — "qcf+1" 이 "1" 을 이긴다
+        int32                    _priority{ 0 }; ///< 여럿이 완성되면 높은 것(같으면 단계가 많은 것, 그것도 같으면 방향 · 버튼을 더 많이 적은 것) — "qcf+1" · "d/f+1" 이 "1" 을 이긴다
     };
 
     /**
@@ -77,7 +80,17 @@ namespace sw
         /** @brief 이번 틱에 완성된 커맨드 가운데 우선도가 가장 높은 것입니다. 없으면 nullptr 입니다. */
         const InputCommand* findCompleted( const vector<InputCommand>& listCommand, int32 facing ) const;
 
-        int32             getFrameCount() const { return static_cast<int32>( _listFrame.size() ); }
+        /**
+         * @brief 상태를 바이트로 씁니다(롤백 · 리플레이). 쌓인 프레임만 오래된 것부터 씁니다.
+         * @details 버튼 16 비트 + 방향 4 비트씩입니다. 더 작게 싣고 싶은 키트는 `getFrame` 으로 직접 씁니다.
+         */
+        void writeState( BitWriter& outWriter ) const;
+        /** @brief `writeState` 로 쓴 상태를 읽습니다. 바이트가 모자라거나 용량을 넘으면 false 이고 버퍼는 그대로입니다. */
+        [[nodiscard]] bool readState( BitReader& reader );
+
+        /** @brief 지금 쌓인 프레임 수입니다(`push` 한 수, 용량에서 멈춘다). */
+        int32             getFrameCount() const { return _count; }
+        int32             getCapacity() const { return _capacity; }
         const InputFrame& getFrame( int32 framesAgo ) const;
         /** @brief 바라보는 쪽에 맞춰 뒤집은 방향입니다. */
         static uint8 mirrorDirection( uint8 direction, int32 facing );

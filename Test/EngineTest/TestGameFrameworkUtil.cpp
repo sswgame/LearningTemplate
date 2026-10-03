@@ -222,3 +222,70 @@ SW_TEST_CASE( GameFrameworkUtilTest, StatBlockReadsAttributesAndMerges )
     SW_EXPECT_EQUAL( 3, static_cast<int32>( stats.getCount() ) );
     SW_EXPECT_FALSE( stats.hasValue( hashed_string( "label" ) ) );
 }
+
+SW_TEST_CASE( GameFrameworkUtilTest, WeightedPickShuffleConeAndCosts )
+{
+    // 가중치 — 0 · 음수는 뽑히지 않고, 비율은 가중치를 따른다. 같은 씨앗이면 같은 순서.
+    struct Entry
+    {
+        float32 _weight;
+    };
+    const vector<Entry> listEntry{ { 1.0f }, { 0.0f }, { 3.0f }, { -2.0f } };
+    GameRandom          random( 7u );
+    int32               arrCount[4] = { 0, 0, 0, 0 };
+    for ( int32 roll = 0; roll < 4000; ++roll )
+    {
+        const int32 index = random.pickWeightedIndex( listEntry, []( const Entry& entry )
+        { return entry._weight; } );
+        SW_ASSERT_TRUE( index >= 0 && index < 4 );
+        ++arrCount[index];
+    }
+    SW_EXPECT_EQUAL( 0, arrCount[1] );
+    SW_EXPECT_EQUAL( 0, arrCount[3] );
+    SW_EXPECT_NEAR_EQUAL( static_cast<float32>( arrCount[2] ) / static_cast<float32>( arrCount[0] ), 3.0f, 0.4f );
+    const vector<Entry> listEmpty{ { 0.0f } };
+    SW_EXPECT_EQUAL( -1, random.pickWeightedIndex( listEmpty, []( const Entry& entry )
+    { return entry._weight; } ) );
+
+    vector<int32> listFirst{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    vector<int32> listSecond = listFirst;
+    GameRandom    firstRandom( 99u );
+    GameRandom    secondRandom( 99u );
+    firstRandom.shuffle( listFirst );
+    secondRandom.shuffle( listSecond );
+    SW_EXPECT_TRUE( listFirst == listSecond );
+    int32 sum   = 0;
+    int32 moved = 0;
+    for ( int32 index = 0; index < 10; ++index )
+    {
+        sum += listFirst[static_cast<size_t>( index )];
+        moved += listFirst[static_cast<size_t>( index )] != index ? 1 : 0;
+    }
+    SW_EXPECT_EQUAL( 45, sum ); // 같은 원소들
+    SW_EXPECT_TRUE( moved > 0 );
+
+    // 원뿔 — 반각 30 도 · 10 m.
+    const float3 origin{};
+    const float3 forward{ 0.0f, 0.0f, 2.0f }; // 단위가 아니어도 된다
+    SW_EXPECT_TRUE( RayMath::isInCone( origin, forward, 30.0f, 10.0f, float3{ 0.0f, 0.0f, 5.0f } ) );
+    SW_EXPECT_TRUE( RayMath::isInCone( origin, forward, 30.0f, 10.0f, float3{ 2.0f, 0.0f, 5.0f } ) );     // 약 22 도
+    SW_EXPECT_FALSE( RayMath::isInCone( origin, forward, 30.0f, 10.0f, float3{ 4.0f, 0.0f, 5.0f } ) );    // 약 39 도
+    SW_EXPECT_FALSE( RayMath::isInCone( origin, forward, 30.0f, 10.0f, float3{ 0.0f, 0.0f, 11.0f } ) );   // 멀다
+    SW_EXPECT_FALSE( RayMath::isInCone( origin, forward, 30.0f, 10.0f, float3{ 0.0f, 4.0f, 5.0f } ) );    // 위로 39 도
+    SW_EXPECT_TRUE( RayMath::isInFlatCone( origin, forward, 30.0f, 10.0f, float3{ 0.0f, 4.0f, 5.0f } ) ); // 높이는 무시
+
+    // 여러 자원 비용 — 다 되거나 아무것도.
+    StatBlock wallet;
+    wallet.setValue( hashed_string( "Wood" ), 50.0f );
+    wallet.setValue( hashed_string( "Gold" ), 10.0f );
+    StatBlock cost;
+    cost.setValue( hashed_string( "Wood" ), 30.0f );
+    cost.setValue( hashed_string( "Gold" ), 20.0f );
+    SW_EXPECT_FALSE( wallet.canAfford( cost ) );
+    SW_EXPECT_FALSE( wallet.trySpend( cost ) );
+    SW_EXPECT_NEAR_EQUAL( wallet.getValue( hashed_string( "Wood" ) ), 50.0f, 0.001f );
+    cost.setValue( hashed_string( "Gold" ), 10.0f );
+    SW_EXPECT_TRUE( wallet.trySpend( cost ) );
+    SW_EXPECT_NEAR_EQUAL( wallet.getValue( hashed_string( "Wood" ) ), 20.0f, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( wallet.getValue( hashed_string( "Gold" ) ), 0.0f, 0.001f );
+}

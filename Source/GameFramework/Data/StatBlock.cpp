@@ -58,6 +58,24 @@ namespace sw
         return false;
     }
 
+    bool StatBlock::canAfford( const StatBlock& cost ) const
+    {
+        for ( const StatValue& value : cost.getValues() )
+        {
+            if ( getValue( value._name ) + 1.0e-4f < value._value )
+                return false;
+        }
+        return true;
+    }
+
+    bool StatBlock::trySpend( const StatBlock& cost )
+    {
+        if ( canAfford( cost ) == false )
+            return false;
+        merge( cost, -1.0f );
+        return true;
+    }
+
     void StatBlock::merge( const StatBlock& other, float32 scale )
     {
         for ( const StatValue& value : other._listValue )

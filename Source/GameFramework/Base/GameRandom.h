@@ -35,6 +35,56 @@ namespace sw
         /** @brief 확률 @p probability 로 true 입니다. */
         bool nextChance( float32 probability ) { return nextFloat() < probability; }
 
+        /**
+         * @brief 가중치로 하나를 고릅니다(`nextFloat` 한 번). @p getWeight( 원소 ) 가 가중치이고 음수는 0 으로 칩니다. 합이 0 이하이면 −1 입니다.
+         * @code
+         *     const int32 index = random.pickWeightedIndex( listItem, []( const ItemDef& def ) { return def._weight; } );
+         * @endcode
+         */
+        template <typename TList, typename TGetWeight>
+        int32 pickWeightedIndex( const TList& list, TGetWeight&& getWeight )
+        {
+            float32 total = 0.0f;
+            for ( const auto& element : list )
+            {
+                const float32 weight = static_cast<float32>( getWeight( element ) );
+                total += weight > 0.0f ? weight : 0.0f;
+            }
+            if ( total <= 0.0f )
+                return -1;
+            float32 roll  = nextFloat() * total;
+            int32   index = 0;
+            int32   last  = -1;
+            for ( const auto& element : list )
+            {
+                const float32 weight = static_cast<float32>( getWeight( element ) );
+                if ( weight > 0.0f )
+                {
+                    if ( roll < weight )
+                        return index;
+                    roll -= weight;
+                    last = index;
+                }
+                ++index;
+            }
+            return last; // 부동소수 끝자락 — 마지막 양수 원소
+        }
+
+        /** @brief Fisher-Yates 로 섞습니다(뒤에서부터 [0, i] 의 한 자리와 바꾼다 — 원소 수 − 1 번 `nextInt`). */
+        template <typename TList>
+        void shuffle( TList& inoutList )
+        {
+            for ( int32 index = static_cast<int32>( inoutList.size() ) - 1; index > 0; --index )
+            {
+                const int32 swapIndex = nextInt( 0, index );
+                if ( swapIndex == index )
+                    continue;
+                auto temp                                   = inoutList[static_cast<size_t>( index )];
+                inoutList[static_cast<size_t>( index )]     = inoutList[static_cast<size_t>( swapIndex )];
+                inoutList[static_cast<size_t>( swapIndex )] = temp;
+            }
+        }
+
     private:
         uint32 _state;
     };

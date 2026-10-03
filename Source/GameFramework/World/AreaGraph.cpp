@@ -57,57 +57,97 @@ namespace sw
 
     uint32 AreaGraph::loadRoot( const XmlNode& root, string_view sourceName )
     {
-        _catalog.clear();
-        _listLink.clear();
-        for ( XmlNode node = root.findChild( "Area" ); node; node = node.findNextSibling( "Area" ) )
+        clear();
+        const uint32 loadedCount = loadFromNode( root, sourceName );
+        resetState();
+        return loadedCount;
+    }
+
+    uint32 AreaGraph::loadFromNode( const XmlNode& node, string_view sourceName )
+    {
+        uint32 loadedCount = 0;
+        for ( XmlNode areaNode = node.findChild( "Area" ); areaNode; areaNode = areaNode.findNextSibling( "Area" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXml::findRequiredId( areaNode, sourceName );
             if ( pId == nullptr )
                 continue;
             AreaDef area;
             area._id     = hashed_string( pId );
-            area._name   = AreaGraphInternal::readName( node, "name" );
-            area._region = AreaGraphInternal::readName( node, "region" );
-            area._x      = node.getAttributeFloat( "x", area._x );
-            area._y      = node.getAttributeFloat( "y", area._y );
-            area._width  = MathUtil::max( 0.0f, node.getAttributeFloat( "w", area._width ) );
-            area._height = MathUtil::max( 0.0f, node.getAttributeFloat( "h", area._height ) );
-            if ( area._name.empty() )
-                area._name = area._id;
-            (void)_catalog.add( area );
+            area._name   = AreaGraphInternal::readName( areaNode, "name" );
+            area._region = AreaGraphInternal::readName( areaNode, "region" );
+            area._x      = areaNode.getAttributeFloat( "x", area._x );
+            area._y      = areaNode.getAttributeFloat( "y", area._y );
+            area._width  = MathUtil::max( 0.0f, areaNode.getAttributeFloat( "w", area._width ) );
+            area._height = MathUtil::max( 0.0f, areaNode.getAttributeFloat( "h", area._height ) );
+            if ( addArea( area ) )
+                ++loadedCount;
+            else
+                SW_LOG_WARNING( "%#: duplicate area '%#' - skipped", sourceName, pId );
         }
-
-        _listAdjacency.clear();
-        _listAdjacency.resize( _catalog.getCount() );
-        for ( XmlNode node = root.findChild( "Link" ); node; node = node.findNextSibling( "Link" ) )
+        for ( XmlNode linkNode = node.findChild( "Link" ); linkNode; linkNode = linkNode.findNextSibling( "Link" ) )
         {
-            AreaLink link;
-            link._from      = AreaGraphInternal::readName( node, "from" );
-            link._to        = AreaGraphInternal::readName( node, "to" );
-            link._kind      = AreaGraphInternal::readName( node, "kind" );
-            link._fromIndex = _catalog.findIndex( link._from );
-            link._toIndex   = _catalog.findIndex( link._to );
-            link._bOneWay   = node.getAttributeBool( "oneWay", false ) ? SW_TRUE : SW_FALSE;
-            if ( link._fromIndex < 0 || link._toIndex < 0 || link._fromIndex == link._toIndex )
+            const hashed_string from     = AreaGraphInternal::readName( linkNode, "from" );
+            const hashed_string to       = AreaGraphInternal::readName( linkNode, "to" );
+            bool                bInvalid = false;
+            if ( addLink( from, to, AreaGraphInternal::readName( linkNode, "kind" ), linkNode.getAttributeText( "requires" ),
+                          linkNode.getAttributeBool( "oneWay", false ), bInvalid ) == false )
             {
-                SW_LOG_WARNING( "%#: link '%#' -> '%#' needs two different known areas - skipped", sourceName, link._from.c_str(), link._to.c_str() );
+                SW_LOG_WARNING( "%#: link '%#' -> '%#' needs two different known areas - skipped", sourceName, from.c_str(), to.c_str() );
                 continue;
             }
-            const string_view requireText = node.getAttributeText( "requires" );
-            link._requires                = string( requireText.data(), requireText.size() );
-            bool bIgnored                 = false;
-            if ( GameFlags::parseCondition( link._requires, GameFlags{}, bIgnored ) == false )
-            {
-                link._bInvalidCondition = SW_TRUE;
-                SW_LOG_WARNING( "%#: link '%#' -> '%#' has an invalid condition and stays locked", sourceName, link._from.c_str(), link._to.c_str() );
-            }
-            const int32 linkIndex = static_cast<int32>( _listLink.size() );
-            _listAdjacency[static_cast<size_t>( link._fromIndex )].push_back( linkIndex );
-            _listAdjacency[static_cast<size_t>( link._toIndex )].push_back( linkIndex );
-            _listLink.push_back( link );
+            if ( bInvalid )
+                SW_LOG_WARNING( "%#: link '%#' -> '%#' has an invalid condition and stays locked", sourceName, from.c_str(), to.c_str() );
         }
+        return loadedCount;
+    }
+
+    void AreaGraph::clear()
+    {
+        _catalog.clear();
+        _listLink.clear();
+        _listAdjacency.clear();
         resetState();
-        return static_cast<uint32>( _catalog.getCount() );
+    }
+
+    bool AreaGraph::addArea( const AreaDef& area )
+    {
+        if ( area._id.empty() || _catalog.findIndex( area._id ) >= 0 )
+            return false;
+        AreaDef added = area;
+        if ( added._name.empty() )
+            added._name = added._id;
+        (void)_catalog.add( added );
+        _listAdjacency.resize( _catalog.getCount() );
+        _listVisited.resize( _catalog.getCount(), SW_FALSE );
+        _listDiscovered.resize( _catalog.getCount(), SW_FALSE );
+        return true;
+    }
+
+    bool AreaGraph::addLink( const hashed_string& from, const hashed_string& to, const hashed_string& kind, string_view condition, bool bOneWay,
+                             bool& outbInvalidCondition )
+    {
+        outbInvalidCondition = false;
+        AreaLink link;
+        link._from      = from;
+        link._to        = to;
+        link._kind      = kind;
+        link._fromIndex = _catalog.findIndex( from );
+        link._toIndex   = _catalog.findIndex( to );
+        link._bOneWay   = bOneWay ? SW_TRUE : SW_FALSE;
+        if ( link._fromIndex < 0 || link._toIndex < 0 || link._fromIndex == link._toIndex )
+            return false;
+        link._requires = string( condition.data(), condition.size() );
+        bool bIgnored  = false;
+        if ( GameFlags::parseCondition( link._requires, GameFlags{}, bIgnored ) == false )
+        {
+            link._bInvalidCondition = SW_TRUE;
+            outbInvalidCondition    = true;
+        }
+        const int32 linkIndex = static_cast<int32>( _listLink.size() );
+        _listAdjacency[static_cast<size_t>( link._fromIndex )].push_back( linkIndex );
+        _listAdjacency[static_cast<size_t>( link._toIndex )].push_back( linkIndex );
+        _listLink.push_back( link );
+        return true;
     }
 
     void AreaGraph::resetState()

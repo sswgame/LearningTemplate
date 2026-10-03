@@ -98,6 +98,11 @@ namespace sw
         void initialize( const VitalitySettings& settings );
         /** @brief 같은 설정으로 가득 찬 상태로 되살립니다(리스폰). 기절 횟수는 남깁니다 — 지우려면 `resetDownCount`. */
         void respawn();
+        /**
+         * @brief 최대 체력을 바꿉니다(하트 그릇 · 레벨 업 · 장비). 상태 · 알림 · 기절 횟수는 그대로입니다.
+         * @param bFill 살아 있으면 새 최대까지 채운다(젤다의 하트 그릇). 아니면 지금 체력을 새 최대로 자르기만 한다.
+         */
+        void setMaxHealth( float32 maxHealth, bool bFill );
 
         /**
          * @brief 피해를 줍니다. @p amount 는 실드 → 체력 순서, @p poiseDamage 는 경직 게이지에 갑니다.
@@ -123,7 +128,7 @@ namespace sw
         /** @brief 상태를 가리지 않고 죽입니다(낙사 · 존 밖 · 갈고리 희생). 이미 죽었으면 아무 일도 없습니다. */
         void kill( int32 instigatorId = -1 );
         void resetDownCount() { _downCount = 0; }
-        /** @brief 쌓인 알림을 꺼내 갑니다(이 객체의 목록은 빈다). */
+        /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<VitalityEvent>& outListEvent );
 
         const VitalitySettings& getSettings() const { return _settings; }

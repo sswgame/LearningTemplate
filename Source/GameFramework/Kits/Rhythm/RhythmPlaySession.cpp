@@ -212,8 +212,8 @@ namespace sw
 
     void RhythmPlaySession::drainEvents( vector<RhythmEvent>& outListEvent )
     {
-        outListEvent.clear();
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
+        _listEvent.clear();
     }
 
     float32 RhythmPlaySession::computeAccuracy() const

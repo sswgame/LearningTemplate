@@ -554,6 +554,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void SkirmishWorld::handleEvents()
     {
+        _listEvent.clear(); // drainEvents 는 뒤에 붙인다
         _match.drainEvents( _listEvent );
         if ( _bHuman == SW_FALSE )
             return;

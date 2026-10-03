@@ -157,6 +157,12 @@ namespace sw
         /** @brief 기술을 버리고 중립으로 돌아갑니다(맞아서 끊김). */
         void cancel();
         /**
+         * @brief 상태를 바로 넣습니다(롤백 · 리플레이 복원). @p frame 은 1 부터 기술 전체 길이까지, @p hitstopRemaining 은 0 이상이어야 합니다.
+         * @details 기술 자체(`MoveFrameData`)는 바이트에 싣지 않고 쓰는 쪽이 id 로 다시 찾아 넘깁니다 — 상태는 프레임 · 히트스톱 · 닿음뿐입니다.
+         * @return 범위를 벗어나면 false 이고 타임라인은 그대로입니다.
+         */
+        [[nodiscard]] bool restoreState( const MoveFrameData& move, int32 frame, int32 hitstopRemaining, bool bContact, bool bBlocked );
+        /**
          * @brief 한 프레임 진행합니다. 히트스톱 중이면 히트스톱만 하나 줄이고 false 입니다.
          * @return 프레임이 실제로 넘어갔으면 true.
          */

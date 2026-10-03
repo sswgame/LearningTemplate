@@ -753,7 +753,7 @@ namespace sw
 
     void KartRace::drainEvents( vector<KartRaceEvent>& outListEvent )
     {
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 

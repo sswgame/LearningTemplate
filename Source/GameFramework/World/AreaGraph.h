@@ -71,6 +71,22 @@ namespace sw
 
         /** @brief 방문 · 발견을 모두 지웁니다(새 게임). */
         void resetState();
+        /** @brief 방과 연결을 모두 지웁니다(코드로 그래프를 지을 때 처음에). */
+        void clear();
+        /**
+         * @brief 방을 더합니다(절차 생성 · 다른 카탈로그 안에 적은 방). 같은 id 가 있으면 false 입니다. 탐색 상태는 새 방만 비어 있게 늘립니다.
+         */
+        [[nodiscard]] bool addArea( const AreaDef& area );
+        /**
+         * @brief 두 방을 잇습니다. 모르는 방 · 같은 방이면 false, 조건식이 문법에 맞지 않으면 늘 잠긴 채로 더하고 true 입니다(@p outbInvalidCondition 로 알린다).
+         * @param condition `GameFlags` 조건식 — 비면 늘 열려 있다
+         */
+        [[nodiscard]] bool addLink( const hashed_string& from, const hashed_string& to, const hashed_string& kind, string_view condition, bool bOneWay,
+                                    bool& outbInvalidCondition );
+        /**
+         * @brief `<Area>` · `<Link>` 를 가진 노드를 읽어 **더합니다**(지우지 않는다). 다른 키트의 XML 안에 그래프를 함께 적을 때 씁니다. 더한 방 수입니다.
+         */
+        uint32 loadFromNode( const XmlNode& node, string_view sourceName );
         /** @brief 방에 들어갑니다 — 방문 · 발견, 이웃 발견. 처음 방문이면 true 입니다(없는 방은 false). */
         bool enterArea( const hashed_string& areaId );
         /** @brief 방을 지도에 드러냅니다(지도 아이템 · 힌트). 새로 드러났으면 true 입니다. */

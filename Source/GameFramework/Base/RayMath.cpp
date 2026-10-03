@@ -74,6 +74,23 @@ namespace sw
         return true;
     }
 
+    bool RayMath::isInCone( const float3& origin, const float3& forward, float32 halfAngleDegree, float32 range, const float3& point )
+    {
+        const float3  toPoint  = point - origin;
+        const float32 distance = toPoint.getLength();
+        if ( distance > range )
+            return false;
+        const float32 forwardLength = forward.getLength();
+        if ( distance <= 1.0e-6f || forwardLength <= 1.0e-6f )
+            return true;
+        return toPoint.dot( forward ) / ( distance * forwardLength ) >= MathUtil::cos( MathUtil::toRadian( halfAngleDegree ) );
+    }
+
+    bool RayMath::isInFlatCone( const float3& origin, const float3& forward, float32 halfAngleDegree, float32 range, const float3& point )
+    {
+        return isInCone( float3{ origin._x, 0.0f, origin._z }, float3{ forward._x, 0.0f, forward._z }, halfAngleDegree, range, float3{ point._x, 0.0f, point._z } );
+    }
+
     float3 RayMath::computeLookDirection( float32 yaw, float32 pitch )
     {
         const float32 cosPitch = MathUtil::cos( pitch );

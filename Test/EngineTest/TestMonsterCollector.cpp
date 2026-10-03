@@ -303,6 +303,7 @@ SW_TEST_CASE( MonsterCollectorTest, PriorityThenSpeedOrdersTheRoundAndParalysisH
     SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kPlayerSide, MonsterAction::makeMove( 0 ) ) );
     SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kFoeSide, MonsterAction::makeMove( 1 ) ) );
     battle.resolveRound();
+    listEvent.clear();
     battle.drainEvents( listEvent );
     SW_EXPECT_EQUAL( MonsterBattle::kFoeSide, findFirstMoveSide( listEvent ) ); // 빠른 쪽 먼저
 
@@ -312,6 +313,7 @@ SW_TEST_CASE( MonsterCollectorTest, PriorityThenSpeedOrdersTheRoundAndParalysisH
     SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kPlayerSide, MonsterAction::makeMove( 0 ) ) );
     SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kFoeSide, MonsterAction::makeMove( 1 ) ) );
     battle.resolveRound();
+    listEvent.clear();
     battle.drainEvents( listEvent );
     SW_EXPECT_EQUAL( MonsterBattle::kPlayerSide, findFirstMoveSide( listEvent ) );
 
@@ -323,6 +325,7 @@ SW_TEST_CASE( MonsterCollectorTest, PriorityThenSpeedOrdersTheRoundAndParalysisH
     SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kPlayerSide, MonsterAction::makeMove( 0 ) ) );
     SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kFoeSide, MonsterAction::makeMove( 1 ) ) );
     battle.resolveRound();
+    listEvent.clear();
     battle.drainEvents( listEvent );
     SW_EXPECT_EQUAL( MonsterBattle::kPlayerSide, findFirstMoveSide( listEvent ) );
 
@@ -333,6 +336,7 @@ SW_TEST_CASE( MonsterCollectorTest, PriorityThenSpeedOrdersTheRoundAndParalysisH
     SW_EXPECT_FALSE( battle.setAction( MonsterBattle::kFoeSide, MonsterAction::makeSwitch( 0 ) ) ); // 이미 나와 있다
     SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kFoeSide, MonsterAction::makeMove( 0 ) ) );
     battle.resolveRound();
+    listEvent.clear();
     battle.drainEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() == false && listEvent.front()._kind == MonsterBattleEvent::Kind::Switched );
     SW_EXPECT_EQUAL( 1, battle.getActiveIndex( MonsterBattle::kPlayerSide ) );
@@ -371,6 +375,7 @@ SW_TEST_CASE( MonsterCollectorTest, StatusConditionsStatStagesAndWeather )
         SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kPlayerSide, MonsterAction::makeMove( 0 ) ) );
         battle.resolveRound();
     }
+    listEvent.clear();
     battle.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 2, countKind( listEvent, MonsterBattleEvent::Kind::Asleep ) );
     SW_EXPECT_EQUAL( 1, countKind( listEvent, MonsterBattleEvent::Kind::Woke ) );
@@ -387,6 +392,7 @@ SW_TEST_CASE( MonsterCollectorTest, StatusConditionsStatStagesAndWeather )
     SW_EXPECT_TRUE( battle.getActive( MonsterBattle::kFoeSide )._status == MonsterStatus::Burn );
 
     // 능력 변화: 칼춤 넷 — +2 +2 +2 다음은 더 오르지 않는다(+6 에서 멈춤).
+    listEvent.clear();
     battle.drainEvents( listEvent );
     battle.start( { world.makeMonster( "pikachu", 50, { "swordsdance" } ) }, { world.makeMonster( "geodude", 50, { "growl" } ) }, false );
     for ( int32 round = 0; round < 4; ++round )
@@ -394,6 +400,7 @@ SW_TEST_CASE( MonsterCollectorTest, StatusConditionsStatStagesAndWeather )
         SW_ASSERT_TRUE( battle.setAction( MonsterBattle::kPlayerSide, MonsterAction::makeMove( 0 ) ) );
         battle.resolveRound();
     }
+    listEvent.clear();
     battle.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 6, battle.getStage( MonsterBattle::kPlayerSide, MonsterStat::Attack ) );
     SW_EXPECT_TRUE( listEvent.empty() == false );
@@ -697,6 +704,7 @@ SW_TEST_CASE( MonsterCollectorTest, TrainerAiPicksBestExpectedDamageSwitchesWhen
             for ( int32 side = 0; side < MonsterBattle::kSideCount; ++side )
                 (void)fullBattle.setAction( side, MonsterTrainerAi::chooseAction( fullBattle, side ) );
             fullBattle.resolveRound();
+            listRound.clear();
             fullBattle.drainEvents( listRound );
             outListEvent.insert( outListEvent.end(), listRound.begin(), listRound.end() );
         }

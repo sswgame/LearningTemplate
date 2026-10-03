@@ -129,7 +129,6 @@ namespace sw
         int32              _health{ 0 };
         int32              _stateFrames{ 0 }; ///< 상태마다의 남은 프레임(경직 · 다운 · 기상 · 풀기 창 · 횡이동 …)
         int32              _hitstop{ 0 };     ///< 맞은 쪽 히트스톱(때린 쪽은 타임라인이 든다)
-        int32              _inputCount{ 0 };  ///< 입력 버퍼에 든 프레임 수
         int32              _moveIndex{ -1 };  ///< 지금 기술(`_pDef->_listMove` 자리)
         int32              _bufferedMove{ -1 };
         int32              _bufferedAge{ 0 };

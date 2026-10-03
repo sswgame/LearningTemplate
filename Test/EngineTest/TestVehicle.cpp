@@ -142,6 +142,7 @@ SW_TEST_CASE( VehicleTest, DriftChargesMiniTurboTiersAndReleasesBoost )
     runSteps( motor, makeInput( 1.0f, -1.0f, true ), 30 );
     SW_EXPECT_TRUE( motor.isDrifting() && motor.getDriftDirection() == -1 );
     runSteps( motor, makeInput( 1.0f, 0.0f ), 1 );
+    listEvent.clear();
     motor.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, ArcadeVehicleEvent::Kind::DriftStarted ) );
     SW_EXPECT_EQUAL( 0, countEvents( listEvent, ArcadeVehicleEvent::Kind::MiniTurbo ) );
@@ -156,6 +157,7 @@ SW_TEST_CASE( VehicleTest, DriftChargesMiniTurboTiersAndReleasesBoost )
     SW_EXPECT_EQUAL( 2, motor.getDriftTier() );
     SW_EXPECT_TRUE( motor.getLateralSpeed() < -3.0f ); // 드리프트 접지가 낮아 크게 미끄러진다
     runSteps( motor, makeInput( 1.0f, 0.0f, false ), 1 );
+    listEvent.clear();
     motor.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 2, countEvents( listEvent, ArcadeVehicleEvent::Kind::DriftTierReached ) );
     const ArcadeVehicleEvent* pMiniTurbo = findEvent( listEvent, ArcadeVehicleEvent::Kind::MiniTurbo );
@@ -170,6 +172,7 @@ SW_TEST_CASE( VehicleTest, DriftChargesMiniTurboTiersAndReleasesBoost )
     runSteps( motor, makeInput( 1.0f, 0.0f ), 50 );
     SW_EXPECT_TRUE( motor.getForwardSpeed() > settings._maxSpeed + 3.0f );
     runSteps( motor, makeInput( 1.0f, 0.0f ), 120 );
+    listEvent.clear();
     motor.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, ArcadeVehicleEvent::Kind::BoostEnded ) );
     SW_EXPECT_NEAR_EQUAL( settings._maxSpeed, motor.getForwardSpeed(), 1.0e-3f );
@@ -237,6 +240,7 @@ SW_TEST_CASE( VehicleTest, JumpsLandsAndFliesOffLedges )
     }
     SW_EXPECT_TRUE( airSteps >= 33 && airSteps <= 35 );
     SW_EXPECT_NEAR_EQUAL( 0.0f, motor.getPosition()._y, 1.0e-6f );
+    listEvent.clear();
     motor.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, ArcadeVehicleEvent::Kind::Jumped ) );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, ArcadeVehicleEvent::Kind::Landed ) );
@@ -249,6 +253,7 @@ SW_TEST_CASE( VehicleTest, JumpsLandsAndFliesOffLedges )
     runSteps( motor, makeInput( 1.0f, 0.0f ), 60 );
     SW_EXPECT_NEAR_EQUAL( 2.0f, motor.getPosition()._y, 1.0e-6f ); // 언덕 위를 따라간다
     runSteps( motor, makeInput( 1.0f, 0.0f ), 120 );
+    listEvent.clear();
     motor.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, ArcadeVehicleEvent::Kind::LeftGround ) );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, ArcadeVehicleEvent::Kind::Landed ) );
@@ -273,12 +278,14 @@ SW_TEST_CASE( VehicleTest, DriftFillsNitroThatBoostsOnPress )
     SW_EXPECT_EQUAL( 1, motor.getNitroCount() );
     SW_EXPECT_NEAR_EQUAL( 0.05f, motor.getNitroGauge(), 0.02f );
     runSteps( motor, makeInput( 1.0f, 0.0f ), 120 ); // 미니터보가 끝나게
+    listEvent.clear();
     motor.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, ArcadeVehicleEvent::Kind::NitroCharged ) );
 
     motor.update( press, kStep );
     SW_EXPECT_EQUAL( 0, motor.getNitroCount() );
     SW_EXPECT_NEAR_EQUAL( settings._nitroBoostTime - kStep, motor.getBoostTime(), 1.0e-3f );
+    listEvent.clear();
     motor.drainEvents( listEvent );
     const ArcadeVehicleEvent* pBoost = findEvent( listEvent, ArcadeVehicleEvent::Kind::BoostStarted );
     SW_ASSERT_NOT_NULL( pBoost );
@@ -311,6 +318,7 @@ SW_TEST_CASE( VehicleTest, SameInputsGiveTheSameRide )
                 (void)motor.advance( input, motor.getTimer().getStep() );
             else
                 motor.update( input, kStep );
+            listEvent.clear();
             motor.drainEvents( listEvent );
             outEventCount += static_cast<int32>( listEvent.size() );
         }

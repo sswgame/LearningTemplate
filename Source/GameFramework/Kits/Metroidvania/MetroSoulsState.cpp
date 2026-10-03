@@ -163,8 +163,8 @@ namespace sw
 
     void MetroSoulsState::drainEvents( vector<MetroSoulsEvent>& outListEvent )
     {
-        outListEvent.clear();
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
+        _listEvent.clear();
     }
 
     void MetroSoulsState::refreshWorld( Vitality& vitality )

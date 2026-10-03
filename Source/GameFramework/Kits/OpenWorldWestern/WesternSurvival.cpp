@@ -79,7 +79,8 @@ namespace sw
         {
             if ( index == static_cast<size_t>( WesternCore::DeadEye ) && _bDeadEyeActive != SW_FALSE )
                 continue; // 켜 둔 동안은 차지 않는다
-            _arrGauge[index].update( deltaTime * computeRegenScale( static_cast<WesternCore>( index ) ) );
+            _arrGauge[index].setRegenScale( computeRegenScale( static_cast<WesternCore>( index ) ) );
+            _arrGauge[index].update( deltaTime );
         }
     }
 

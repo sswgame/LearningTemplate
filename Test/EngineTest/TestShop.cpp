@@ -96,6 +96,7 @@ SW_TEST_CASE( ShopTest, WalletKeepsSeveralCurrenciesAndNeverGoesNegative )
     SW_EXPECT_EQUAL( -100, listEvent[2]._delta );
     SW_EXPECT_EQUAL( 0, listEvent[2]._balance );
     SW_EXPECT_TRUE( wallet.getBalances()[0]._currency == idGold() ); // 처음 만난 순서
+    listEvent.clear();
     wallet.drainEvents( listEvent );
     SW_EXPECT_TRUE( listEvent.empty() );
 }
@@ -261,6 +262,7 @@ SW_TEST_CASE( ShopTest, RestockEveryFewDaysUpToTheMaximum )
     scene._shop.advanceDay();
     SW_EXPECT_EQUAL( 3, scene._shop.getStockCount( idGeneral(), idPotion() ) );
     SW_EXPECT_EQUAL( 0, scene._shop.getStockCount( idGeneral(), idEther() ) ); // restock 이 없으면 다시 들어오지 않는다
+    listEvent.clear();
     scene._shop.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.size() == 1 );
     SW_EXPECT_TRUE( listEvent[0]._kind == ShopEvent::Kind::Restocked && listEvent[0]._itemId == idPotion() );
@@ -273,4 +275,22 @@ SW_TEST_CASE( ShopTest, RestockEveryFewDaysUpToTheMaximum )
     scene._shop.advanceDay();
     scene._shop.advanceDay();
     SW_EXPECT_EQUAL( 5, scene._shop.getStockCount( idGeneral(), idPotion() ) );
+}
+
+SW_TEST_CASE( ShopTest, BuyAndSellReportTheAmountThatMoved )
+{
+    ShopScene scene;
+    SW_ASSERT_TRUE( scene._bLoaded );
+    scene._wallet.add( idGold(), 100 );
+    int64 paid = -1;
+    SW_EXPECT_TRUE( scene._shop.buy( idGeneral(), idPotion(), 2, scene._wallet, scene._inventory, &paid ) == ShopResult::Ok );
+    SW_EXPECT_EQUAL( 40, static_cast<int32>( paid ) );
+    SW_EXPECT_EQUAL( 60, static_cast<int32>( scene._wallet.getBalance( idGold() ) ) );
+    int64 refused = -1;
+    SW_EXPECT_TRUE( scene._shop.buy( idGeneral(), idScrap(), 1, scene._wallet, scene._inventory, &refused ) == ShopResult::UnknownItem );
+    SW_EXPECT_EQUAL( -1, static_cast<int32>( refused ) ); // 실패면 건드리지 않는다
+    int64 received = 0;
+    SW_EXPECT_TRUE( scene._shop.sell( idGeneral(), idPotion(), 1, scene._wallet, scene._inventory, &received ) == ShopResult::Ok );
+    SW_EXPECT_TRUE( received > 0 );
+    SW_EXPECT_EQUAL( 60 + static_cast<int32>( received ), static_cast<int32>( scene._wallet.getBalance( idGold() ) ) );
 }

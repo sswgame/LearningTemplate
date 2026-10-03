@@ -95,7 +95,7 @@ namespace sw
 
     void Wallet::drainEvents( vector<WalletEvent>& outListEvent )
     {
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 
@@ -301,7 +301,7 @@ namespace sw
         return ShopResult::Ok;
     }
 
-    ShopResult ShopState::buy( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory )
+    ShopResult ShopState::buy( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutPaid )
     {
         const ShopResult result = evaluateBuy( shopId, itemId, count, wallet, inventory );
         if ( result != ShopResult::Ok )
@@ -319,6 +319,8 @@ namespace sw
         if ( stockCount >= 0 )
             stockCount -= count;
         _listEvent.push_back( ShopEvent{ shopId, itemId, total, count, ShopEvent::Kind::Bought } );
+        if ( pOutPaid != nullptr )
+            *pOutPaid = total;
         return ShopResult::Ok;
     }
 
@@ -339,7 +341,7 @@ namespace sw
         return ShopResult::Ok;
     }
 
-    ShopResult ShopState::sell( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory )
+    ShopResult ShopState::sell( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived )
     {
         const ShopResult result = evaluateSell( shopId, itemId, count, inventory );
         if ( result != ShopResult::Ok )
@@ -350,6 +352,8 @@ namespace sw
         const ShopDef* pShop    = _pShopCatalog->findShop( shopId );
         ShopRuntime*   pRuntime = findRuntime( shopId );
         wallet.add( pShop->_currency, total );
+        if ( pOutReceived != nullptr )
+            *pOutReceived = total;
         if ( pShop->_saturation > 0.0f )
         {
             int32 saturationIndex = ShopInternal::findSaturationIndex( *pRuntime, itemId );
@@ -398,7 +402,7 @@ namespace sw
 
     void ShopState::drainEvents( vector<ShopEvent>& outListEvent )
     {
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 

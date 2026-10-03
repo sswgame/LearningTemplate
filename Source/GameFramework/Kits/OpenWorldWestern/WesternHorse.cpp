@@ -80,8 +80,10 @@ namespace sw
             return;
         if ( deltaTime > 0.0f )
         {
-            _health.update( deltaTime * computeRegenScale( _healthCore ) );
-            _stamina.update( deltaTime * computeRegenScale( _staminaCore ) );
+            _health.setRegenScale( computeRegenScale( _healthCore ) );
+            _stamina.setRegenScale( computeRegenScale( _staminaCore ) );
+            _health.update( deltaTime );
+            _stamina.update( deltaTime );
             _fear = MathUtil::max( 0.0f, _fear - WesternHorseInternal::kFearDecayPerSecond * deltaTime );
             if ( _bRidden != SW_FALSE )
                 addBondExperience( _pCatalog->getBondExperience()._ridePerSecond * deltaTime );

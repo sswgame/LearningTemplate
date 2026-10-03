@@ -255,6 +255,7 @@ SW_TEST_CASE( ClassicJrpgTest, AgilityOrderDefendPriorityAndTimedAttackAndBlock 
         if ( battle.setCommand( 0, kind == JrpgCommandKind::Defend ? JrpgCommand::makeDefend() : JrpgCommand::makeAttack( 0 ) ) == false )
             return 0;
         battle.resolveRound();
+        outListEvent.clear();
         battle.drainEvents( outListEvent );
         outHeroHp = party.getMember( 0 )._hp;
         return battle.getComboPoints();
@@ -344,6 +345,7 @@ SW_TEST_CASE( ClassicJrpgTest, CastingEnemyLocksBreakCancelAndWeaken )
                     return -1;
             }
             battle.resolveRound();
+            listRound.clear();
             battle.drainEvents( listRound );
             outListEvent.insert( outListEvent.end(), listRound.begin(), listRound.end() );
         }
@@ -403,6 +405,7 @@ SW_TEST_CASE( ClassicJrpgTest, ComboPointsJointTechniqueAndFleeChance )
     SW_ASSERT_TRUE( battle.setCommand( 0, JrpgCommand::makeCombo( hashed_string( "solstice" ), 0 ) ) );
     const int32 golemHp = battle.getEnemies()[0]._hp;
     battle.resolveRound();
+    listEvent.clear();
     battle.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, JrpgBattleEvent::Kind::ComboUsed ) );
     SW_EXPECT_EQUAL( 0, countEvents( listEvent, JrpgBattleEvent::Kind::Attack, 0, 1 ) );
@@ -425,6 +428,7 @@ SW_TEST_CASE( ClassicJrpgTest, ComboPointsJointTechniqueAndFleeChance )
     SW_ASSERT_TRUE( bossBattle.start( &runners, { hashed_string( "dweller" ) } ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, bossBattle.computeFleeChance(), 1.0e-6f );
     SW_EXPECT_FALSE( bossBattle.tryFlee() );
+    listEvent.clear();
     bossBattle.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, JrpgBattleEvent::Kind::Attack, 1 ) );
     SW_EXPECT_EQUAL( 0, countEvents( listEvent, JrpgBattleEvent::Kind::Attack, 0 ) );
@@ -493,6 +497,7 @@ SW_TEST_CASE( ClassicJrpgTest, WuxiaInnerEnergyAndManualProficiencyUnlockTechniq
     SW_ASSERT_TRUE( battle.setCommand( 0, JrpgCommand::makeSpell( hashed_string( "pine_cut" ), 0 ) ) );
     battle.resolveRound();
     SW_EXPECT_EQUAL( 30, party.getMember( 0 ).findProficiency( hashed_string( "pine_sword" ) ) );
+    listPartyEvent.clear();
     party.drainEvents( listPartyEvent );
     bool bStormUnlocked = false;
     for ( const JrpgPartyEvent& event : listPartyEvent )
@@ -570,6 +575,7 @@ SW_TEST_CASE( ClassicJrpgTest, StepEncounterRewardSplitAndDeterminism )
             (void)battle.setCommand( 2, JrpgCommand::makeSpell( hashed_string( "frizz" ), 1 ) ); // 약점 Fire
             SW_EXPECT_FALSE( battle.setCommand( 3, JrpgCommand::makeAttack( 0 ) ) );             // 쓰러진 멤버
             battle.resolveRound();
+            listRound.clear();
             battle.drainEvents( listRound );
             outListEvent.insert( outListEvent.end(), listRound.begin(), listRound.end() );
         }

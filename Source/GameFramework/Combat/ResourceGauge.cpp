@@ -10,6 +10,7 @@ namespace sw
         : _settings{}
         , _value{ 0.0f }
         , _maxBonus{ 0.0f }
+        , _regenScale{ 1.0f }
         , _sinceUse{ 0.0f }
         , _overheatPenaltyRemaining{ 0.0f }
         , _bLocked{ SW_FALSE }
@@ -33,6 +34,7 @@ namespace sw
         _settings._overheatCooldown     = MathUtil::max( 0.0f, _settings._overheatCooldown );
         _settings._overheatRecoverLevel = MathUtil::clamp( _settings._overheatRecoverLevel, 0.0f, _settings._max );
         _maxBonus                       = 0.0f;
+        _regenScale                     = 1.0f;
         refill();
     }
 
@@ -83,7 +85,12 @@ namespace sw
             return true;
         }
         if ( _value <= 0.0f )
+        {
+            // 바닥에 닿은 채 계속 쓰려 한다 — 쓰는 중이니 회복 지연을 다시 센다(0 에 붙잡혀 있어도 다시 차지 않게).
+            if ( amount > 0.0f )
+                markUsed();
             return false;
+        }
         _value -= amount;
         markUsed();
         if ( _value > 0.0f )
@@ -92,6 +99,32 @@ namespace sw
         if ( _settings._exhaustThreshold > 0.0f )
             _bLocked = SW_TRUE;
         return false;
+    }
+
+    float32 ResourceGauge::reduce( float32 amount )
+    {
+        if ( amount <= 0.0f )
+            return 0.0f;
+        markUsed();
+        if ( _settings._bOverheatMode == SW_TRUE )
+        {
+            const float32 before = _value;
+            _value               = MathUtil::min( getMax(), _value + amount );
+            if ( _value >= getMax() && _bLocked == SW_FALSE )
+            {
+                _bLocked                  = SW_TRUE;
+                _overheatPenaltyRemaining = _settings._overheatCooldown;
+            }
+            return _value - before;
+        }
+        const float32 reduced = MathUtil::min( _value, amount );
+        _value -= reduced;
+        if ( _value <= 0.0f && _settings._exhaustThreshold > 0.0f )
+        {
+            _value   = 0.0f;
+            _bLocked = SW_TRUE;
+        }
+        return reduced;
     }
 
     void ResourceGauge::update( float32 deltaTime )
@@ -109,7 +142,7 @@ namespace sw
         const float32 regenTime = MathUtil::clamp( _sinceUse - _settings._regenDelay, 0.0f, deltaTime );
         if ( regenTime <= 0.0f || _settings._regenRate <= 0.0f )
             return;
-        const float32 amount = _settings._regenRate * regenTime;
+        const float32 amount = _settings._regenRate * _regenScale * regenTime;
         if ( _settings._bOverheatMode == SW_TRUE )
             _value = MathUtil::max( 0.0f, _value - amount );
         else

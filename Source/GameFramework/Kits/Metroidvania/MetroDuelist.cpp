@@ -100,7 +100,7 @@ namespace sw
             {
                 // 가드 붕괴 — 남은 스태미나를 모두 잃고 그대로 맞는다.
                 outcome._result = MetroDefenseResult::GuardBroken;
-                (void)_stamina.drain( _stamina.getValue() + 1.0f, 1.0f );
+                (void)_stamina.reduce( _stamina.getValue() );
             }
         }
         const VitalityDamageResult damageResult = _vitality.applyDamage( healthDamage, poise, attackerId );

@@ -13,6 +13,7 @@
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Inventory/Crafting.h"
+#include "GameFramework/Inventory/GridInventory.h"
 
 namespace sw
 {
@@ -165,16 +166,18 @@ namespace sw
         /** @brief 두 아이템(순서 무관)을 섞는 레시피입니다. 없으면 nullptr 입니다. */
         const RecipeDef* findCombine( const hashed_string& firstItem, const hashed_string& secondItem ) const;
 
-        const HorrorItemDef*      findItem( const hashed_string& id ) const { return _itemCatalog.find( id ); }
-        const HorrorMonsterDef*   findMonster( const hashed_string& id ) const { return _monsterCatalog.find( id ); }
-        const HorrorKeyLockDef*   findKeyLock( const hashed_string& id ) const { return _keyLockCatalog.find( id ); }
-        const HorrorDialLockDef*  findDialLock( const hashed_string& id ) const { return _dialLockCatalog.find( id ); }
-        const HorrorSequenceDef*  findSequence( const hashed_string& id ) const { return _sequenceCatalog.find( id ); }
-        const HorrorDocumentDef*  findDocument( const hashed_string& id ) const { return _documentCatalog.find( id ); }
-        const HorrorDeductionDef* findDeduction( const hashed_string& id ) const { return _deductionCatalog.find( id ); }
-        const RecipeCatalog&      getRecipeCatalog() const { return _recipeCatalog; }
-        const HorrorRules&        getRules() const { return _rules; }
-        void                      setRules( const HorrorRules& rules ) { _rules = rules; }
+        const HorrorItemDef* findItem( const hashed_string& id ) const { return _itemCatalog.find( id ); }
+        /** @brief 기반 `GridInventory` 에 넘길 모양 조회입니다(이 카탈로그를 빌린다 — 가방보다 오래 살아야 한다). */
+        GridInventory::ShapeDelegate makeShapeLookup() const;
+        const HorrorMonsterDef*      findMonster( const hashed_string& id ) const { return _monsterCatalog.find( id ); }
+        const HorrorKeyLockDef*      findKeyLock( const hashed_string& id ) const { return _keyLockCatalog.find( id ); }
+        const HorrorDialLockDef*     findDialLock( const hashed_string& id ) const { return _dialLockCatalog.find( id ); }
+        const HorrorSequenceDef*     findSequence( const hashed_string& id ) const { return _sequenceCatalog.find( id ); }
+        const HorrorDocumentDef*     findDocument( const hashed_string& id ) const { return _documentCatalog.find( id ); }
+        const HorrorDeductionDef*    findDeduction( const hashed_string& id ) const { return _deductionCatalog.find( id ); }
+        const RecipeCatalog&         getRecipeCatalog() const { return _recipeCatalog; }
+        const HorrorRules&           getRules() const { return _rules; }
+        void                         setRules( const HorrorRules& rules ) { _rules = rules; }
 
     private:
         uint32 loadRoot( const XmlNode& root, string_view sourceName );

@@ -25,7 +25,7 @@ namespace sw
     /** @brief 록온 설정입니다. 각도는 도입니다. */
     struct LockOnSettings
     {
-        float32 _maxDistance{ 25.0f };
+        float32 _maxDistance{ 25.0f };   ///< 눈에서 대상까지의 3D 거리(높이 차도 든다 — 공중 대상)
         float32 _breakDistance{ 32.0f }; ///< 잡은 뒤에는 이만큼까지 유지
         float32 _maxAngle{ 60.0f };      ///< 앞에서 이 각 안만 새로 잡는다
         float32 _angleWeight{ 1.0f };    ///< 점수 = 거리 비 + 각 비 × 이 값 − 우선도

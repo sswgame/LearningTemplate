@@ -35,5 +35,12 @@ namespace sw
         [[nodiscard]] static bool intersectHorizontalPlane( const GameRay& ray, float32 height, float32 maxDistance, float32& outDistance );
         /** @brief 요 · 피치(라디안, 피치 + 가 위)의 바라보는 단위 방향입니다. */
         static float3 computeLookDirection( float32 yaw, float32 pitch );
+        /**
+         * @brief @p point 가 @p origin 에서 @p forward 쪽으로 반각 @p halfAngleDegree(도) · 거리 @p range 의 원뿔 안인가입니다(손전등 · 감시 카메라 · 화염 방사).
+         * @details 3D 각입니다. @p forward 는 길이가 0 이 아니면 됩니다(단위가 아니어도). 꼭짓점과 같은 자리는 안으로 칩니다.
+         */
+        static bool isInCone( const float3& origin, const float3& forward, float32 halfAngleDegree, float32 range, const float3& point );
+        /** @brief `isInCone` 을 XZ 평면에서 봅니다(높이를 무시 — 탑다운 시야 · 바닥 손전등). */
+        static bool isInFlatCone( const float3& origin, const float3& forward, float32 halfAngleDegree, float32 range, const float3& point );
     };
 } // namespace sw

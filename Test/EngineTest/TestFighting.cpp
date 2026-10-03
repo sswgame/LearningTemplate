@@ -108,6 +108,7 @@ namespace
         for ( int32 index = 0; index < count; ++index )
         {
             match.advanceFrame( input0, input1 );
+            listEvent.clear();
             match.drainEvents( listEvent );
             inoutListEvent.insert( inoutListEvent.end(), listEvent.begin(), listEvent.end() );
         }
@@ -565,6 +566,7 @@ SW_TEST_CASE( FightingTest, RollbackSaveLoadResimulatesIdentically )
         listInput[0] = listScript[static_cast<size_t>( frame * 2 )];
         listInput[1] = listScript[static_cast<size_t>( frame * 2 + 1 )];
         match.advanceFrame( listInput );
+        listEvent.clear();
         match.drainEvents( listEvent );
         eventCount += static_cast<int32>( listEvent.size() );
     }

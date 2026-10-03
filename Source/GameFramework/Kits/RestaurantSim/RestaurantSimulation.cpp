@@ -202,12 +202,10 @@ namespace sw
 
     ShopResult RestaurantSimulation::buyIngredient( const hashed_string& shopId, const hashed_string& itemId, int32 count )
     {
-        const hashed_string currency = _market.getCurrency( shopId );
-        const int64         before   = _wallet.getBalance( currency );
-        const ShopResult    result   = _market.buy( shopId, itemId, count, _wallet, _inventory );
+        int64            spent  = 0;
+        const ShopResult result = _market.buy( shopId, itemId, count, _wallet, _inventory, &spent );
         if ( result != ShopResult::Ok )
             return result;
-        const int64 spent     = before - _wallet.getBalance( currency );
         const int32 shelfLife = _pCatalog != nullptr ? _pCatalog->findShelfLife( itemId ) : 0;
         _stock.recordBatch( itemId, count, shelfLife, spent / count );
         return ShopResult::Ok;
@@ -499,26 +497,17 @@ namespace sw
 
     void RestaurantSimulation::spawnArrivals()
     {
-        const vector<CustomerTypeDef>& listType    = _pCatalog->getCustomerTypes();
-        float32                        totalWeight = 0.0f;
-        for ( const CustomerTypeDef& customerType : listType )
-            totalWeight += customerType._weight;
-        if ( totalWeight <= 0.0f )
-            return;
+        const vector<CustomerTypeDef>& listType  = _pCatalog->getCustomerTypes();
+        auto                           getWeight = []( const CustomerTypeDef& customerType )
+        { return customerType._weight; };
         _arrivalAccumulator += computeArrivalRate() * kStepMinutes / RestaurantSimulationInternal::kMinutesPerHour;
         while ( _arrivalAccumulator >= 1.0f )
         {
             _arrivalAccumulator -= 1.0f;
-            float32 pick = _random.nextFloat() * totalWeight;
-            for ( const CustomerTypeDef& customerType : listType )
-            {
-                pick -= customerType._weight;
-                if ( pick < 0.0f || &customerType == &listType.back() )
-                {
-                    (void)admitCustomer( customerType._id );
-                    break;
-                }
-            }
+            const int32 typeIndex = _random.pickWeightedIndex( listType, getWeight );
+            if ( typeIndex < 0 )
+                return;
+            (void)admitCustomer( listType[static_cast<size_t>( typeIndex )]._id );
         }
     }
 
@@ -623,7 +612,6 @@ namespace sw
             return false;
         vector<const DishDef*> listCandidate;
         vector<float32>        listWeight;
-        float32                totalWeight = 0.0f;
         for ( const MenuEntry& entry : _listMenu )
         {
             const DishDef* pDish = _pCatalog->findDish( entry._dishId );
@@ -637,23 +625,14 @@ namespace sw
                 weight *= _settings._preferredWeight;
             listCandidate.push_back( pDish );
             listWeight.push_back( weight );
-            totalWeight += weight;
         }
         if ( listCandidate.empty() )
             return false;
-        float32        pick  = _random.nextFloat() * totalWeight;
-        const DishDef* pDish = listCandidate.back();
-        for ( size_t candidateIndex = 0; candidateIndex < listCandidate.size(); ++candidateIndex )
-        {
-            pick -= listWeight[candidateIndex];
-            if ( pick < 0.0f )
-            {
-                pDish = listCandidate[candidateIndex];
-                break;
-            }
-        }
-        const RecipeDef* pRecipe = findRecipe( *pDish );
-        int64            cost    = 0;
+        const int32      pickIndex = _random.pickWeightedIndex( listWeight, []( float32 weight )
+             { return weight; } );
+        const DishDef*   pDish     = pickIndex >= 0 ? listCandidate[static_cast<size_t>( pickIndex )] : listCandidate.back();
+        const RecipeDef* pRecipe   = findRecipe( *pDish );
+        int64            cost      = 0;
         if ( pRecipe == nullptr || _stock.consumeBag( pRecipe->_inputs, 1, cost ) == false )
             return false;
         _today._ingredientCost += cost;

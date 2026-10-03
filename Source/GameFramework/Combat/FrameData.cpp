@@ -183,6 +183,22 @@ namespace sw
         _bBlocked         = SW_FALSE;
     }
 
+    bool MoveTimeline::restoreState( const MoveFrameData& move, int32 frame, int32 hitstopRemaining, bool bContact, bool bBlocked )
+    {
+        if ( hitstopRemaining < 0 || frame < 1 )
+            return false;
+        MoveTimeline restored;
+        restored.start( move );
+        if ( frame > restored._move.getTotalFrames() )
+            return false;
+        restored._frame            = frame;
+        restored._hitstopRemaining = hitstopRemaining;
+        restored._bContact         = bContact ? SW_TRUE : SW_FALSE;
+        restored._bBlocked         = bContact && bBlocked ? SW_TRUE : SW_FALSE;
+        *this                      = restored;
+        return true;
+    }
+
     bool MoveTimeline::advanceFrame()
     {
         if ( _bPlaying == SW_FALSE )

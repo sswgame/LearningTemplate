@@ -395,7 +395,7 @@ namespace sw
 
     void CitySimulation::drainEvents( vector<CityEvent>& outListEvent )
     {
-        outListEvent.swap( _listEvent );
+        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 
