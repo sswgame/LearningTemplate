@@ -328,6 +328,8 @@ _kIncludePathRe = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]')
 #       익명 네임스페이스라도 같은 TU 안에서는 같은 이름이 재정의로 충돌한다 — 같은 클래스를 여러 .cpp 로
 #       나눠 구현할 때 헬퍼를 클래스 이름으로 지으면 실제로 부딪힌다(VulkanRHIResourceInternal 사례).
 _kAnonHelperStructRe = re.compile(r'^\s*struct\s+(\w+Internal)\s*$', re.MULTILINE)
+# 익명 네임스페이스 바로 안(구조체 · 함수 안이 아닌 곳)의 상수 선언 — `constexpr int32 kLimit = 4;` · `const string s_empty{};` · 배열.
+_kBareConstantDeclRe = re.compile(r'^\s*(?:static\s+)?(?:inline\s+)?(?:constexpr|const)\b[^;(]*?\b([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)?(?:=|\{)')
 
 _s_exactPathMap: dict[str, str] = {}
 
@@ -1581,6 +1583,88 @@ def checkDuplicateHelperNamesInternal(filesToScan: list[Path], projectRoot: Path
 
 
 
+def findBareAnonymousConstantsInternal(content: str) -> list[tuple[str, int]]:
+    """
+    익명 네임스페이스 **바로 안**에 선언한 상수의 (이름, 줄 번호) 를 모읍니다.
+
+    `XxxInternal` 구조체 안의 상수나 함수 지역 상수는 중괄호가 한 단 더 깊어 잡히지 않는다 — 그쪽은 구조체 이름이나 함수가 가린다.
+    """
+    listFound: list[tuple[str, int]] = []
+    depth = 0
+    anonymousDepth: int | None = None
+    bPendingAnonymous = False
+    bInBlockComment = False
+    for lineNum, line in enumerate(content.splitlines(), 1):
+        trimmed = line.strip()
+        if bInBlockComment:
+            if "*/" in trimmed:
+                bInBlockComment = False
+            continue
+        if trimmed.startswith("/*") and "*/" not in trimmed:
+            bInBlockComment = True
+            continue
+        code = _kCommentStripRe.sub("", _kStringLiteralStripRe.sub("", line))
+        if anonymousDepth is not None and depth == anonymousDepth and trimmed.startswith("#") is False:
+            if constantMatch := _kBareConstantDeclRe.match(code):
+                listFound.append((constantMatch.group(1), lineNum))
+        if trimmed in ("namespace", "namespace {", "namespace{"):
+            bPendingAnonymous = True
+        for ch in code:
+            if ch == "{":
+                depth += 1
+                if bPendingAnonymous:
+                    anonymousDepth = depth
+                    bPendingAnonymous = False
+            elif ch == "}":
+                if anonymousDepth is not None and depth == anonymousDepth:
+                    anonymousDepth = None
+                depth -= 1
+    return listFound
+
+
+def checkDuplicateAnonymousConstantsInternal(filesToScan: list[Path], projectRoot: Path) -> list[ConventionViolation]:
+    """
+    여러 .cpp 가 익명 네임스페이스 바로 안에 같은 이름의 상수를 두는지 검사합니다 (유니티 빌드 재정의 충돌 예방).
+
+    `Naming/DuplicateInternalHelper` 와 같은 이유다 — 유니티 빌드(`CI-*`)가 .cpp 를 한 TU 로 묶으면 익명 네임스페이스끼리 이름이 겹친다.
+    `XxxInternal` 구조체 안 상수와 함수 지역 상수는 그 구조체 · 함수가 가리므로 보지 않는다. 파일 짝이 필요해 전체 스캔에서만 돈다.
+    """
+    mapNameToSite: dict[str, list[tuple[str, int]]] = {}
+    for filePath in filesToScan:
+        if filePath.suffix.lower() != ".cpp":
+            continue
+        try:
+            content = readSourceTextInternal(filePath, "utf-8", "ignore")
+        except OSError:
+            continue
+        if "namespace" not in content:
+            continue
+        try:
+            relPath = normalizePath(filePath.relative_to(projectRoot))
+        except ValueError:
+            relPath = normalizePath(filePath)
+        for constantName, lineNum in findBareAnonymousConstantsInternal(content):
+            mapNameToSite.setdefault(constantName, []).append((relPath, lineNum))
+
+    violations: list[ConventionViolation] = []
+    for constantName, listSite in mapNameToSite.items():
+        uniqueFiles = sorted({relPath for relPath, _ in listSite})
+        if len(uniqueFiles) < 2:
+            continue
+        for relPath, lineNum in listSite:
+            others = [other for other in uniqueFiles if other != relPath]
+            violations.append(ConventionViolation(
+                file_path=relPath,
+                line_number=lineNum,
+                rule_category="Naming/DuplicateAnonymousConstant",
+                message=(f"익명 네임스페이스의 상수 '{constantName}' 가 다른 .cpp 와 이름이 겹칩니다 ({', '.join(others)}). "
+                         "유니티 빌드는 .cpp 를 한 TU 로 묶으므로 재정의로 충돌합니다."),
+                snippet=constantName,
+                suggested_fix="이 TU 의 `XxxInternal` 구조체 안 `static constexpr` 로 옮기거나, 이름을 이 파일에 맞게 바꾸세요.",
+            ))
+    return violations
+
+
 _kHeaderTypeHeadRe = re.compile(r"^(\s*)(class|struct)\s+(?:SW_\w+\s+|[A-Z]\w*_API\s+)?([A-Z]\w*)\b")
 _kHeaderMemberRe = re.compile(
     r"^(?P<indent>\s+)"
@@ -2336,6 +2420,7 @@ def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] |
     # **셋을 동시에 돌려 봤지만 재고 되돌렸다**(6.66s → 6.72s, 3회). 셋 다 정규식이라 GIL 을 놓지 않아
     # 스레드로 겹치지 않는다 — 파일마다 나누는 위쪽 루프와 성질이 다르다. 다시 제안하기 전에 그 숫자를 볼 것.
     allViolations.extend(checkDuplicateHelperNamesInternal(filesToScan, projectRoot))
+    allViolations.extend(checkDuplicateAnonymousConstantsInternal(filesToScan, projectRoot))
     allViolations.extend(checkHeaderMemberInitializersInternal(filesToScan, projectRoot))
     allViolations.extend(checkBitfieldBooleanLiteralsInternal(filesToScan, projectRoot))
 

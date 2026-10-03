@@ -123,6 +123,13 @@ _kWholeScanCases: list[tuple[str, dict[str, str]]] = [
         },
     ),
     (
+        "Naming/DuplicateAnonymousConstant",
+        {
+            "Source/Probe/AlphaLimit.cpp": '#include "pch.h"\n\nnamespace sw\n{\n    namespace\n    {\n        constexpr int32 kProbeLimit = 4;\n    } // namespace\n} // namespace sw\n',
+            "Source/Probe/BetaLimit.cpp": '#include "pch.h"\n\nnamespace\n{\n    constexpr int32 kProbeLimit = 8;\n} // namespace\n',
+        },
+    ),
+    (
         "Naming/DuplicateInternalHelper",
         {
             "Source/Probe/AlphaThing.cpp": '#include "pch.h"\n\nnamespace\n{\n    struct SharedInternal\n    {\n        int32 _value{ 0 };\n    };\n} // namespace\n',
@@ -230,6 +237,19 @@ _kCleanCase: tuple[str, str] = (
 # 게다가 이름 집합이 트리 전역이라, 한 파일의 `uint8 _buttonMask` 가 **다른 파일의 `uint64
 # _buttonMask` 까지** 불리언으로 만들었다(실제로 `MouseDevice` 가 `InputSnapshot` 을 그렇게 걸었다).
 _kWholeScanCleanCase: dict[str, str] = {
+    # 같은 상수 이름이라도 `XxxInternal` 구조체 안 · 함수 지역이면 그 구조체 · 함수가 가린다 — `Naming/DuplicateAnonymousConstant` 가 아니다.
+    "Source/Probe/GammaLimit.cpp": (
+        '#include "pch.h"\n\nnamespace\n{\n    struct GammaLimitInternal\n    {\n'
+        "        static constexpr int32 kProbeLimit = 4;\n    };\n} // namespace\n"
+    ),
+    "Source/Probe/DeltaLimit.cpp": (
+        '#include "pch.h"\n\nnamespace\n{\n    int32 computeDeltaLimit()\n    {\n'
+        "        constexpr int32 kProbeLimit = 8;\n        return kProbeLimit;\n    }\n} // namespace\n"
+    ),
+    "Source/Probe/EpsilonLimit.cpp": (
+        '#include "pch.h"\n\nnamespace\n{\n    struct EpsilonLimitInternal\n    {\n'
+        "        static constexpr int32 kProbeLimit = 16;\n    };\n} // namespace\n"
+    ),
     "Source/Probe/MaskDevice.h": (
         "#pragma once\n\nclass MaskDevice\n{\nprivate:\n"
         "    uint8 _buttonMask{ 0 };   ///< 8비트 비트마스크 — 불리언이 아니다\n};\n"

@@ -257,6 +257,10 @@ namespace sw
   `VulkanRHIResourcePipeline.cpp` uses `VulkanRHIResourcePipelineInternal`, not
   `VulkanRHIResourceInternal`. Enforced by `CheckCodeConventions.py`
   (`Naming/DuplicateInternalHelper`, full-scan only).
+- The same holds for a constant declared directly in the anonymous namespace (`constexpr int32 kLimit = 4;`):
+  two `.cpp` files with the same bare name collide in a unity build. Put it inside the TU's `XxxInternal`
+  struct as `static constexpr`, or give it a name no other `.cpp` uses. Enforced by `CheckCodeConventions.py`
+  (`Naming/DuplicateAnonymousConstant`, full-scan only); constants inside a struct or a function are not affected.
 
 ### One anonymous namespace per file, at the top of its scope
 

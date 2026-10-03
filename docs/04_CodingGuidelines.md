@@ -151,6 +151,9 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
      (`sw::MockMeshComponent`)으로 참조한다.
    - `SW_GLOBAL_VARIABLE_*` 은 `extern` 을 붙여 **외부 링키지를 의도**하므로 밖에 둔다.
    - `main` 과 헤더에 선언된 함수는 네임스페이스 스코프에 그대로 둔다.
+5. **익명 네임스페이스 바로 안의 상수 이름은 다른 `.cpp` 와 겹치지 않게 한다.** 유니티 빌드(`CI-*`)는 `.cpp` 를 한 번역 단위로
+   묶으므로 두 파일의 `constexpr int32 kLimit` 이 재정의로 충돌한다. 그 TU 의 `XxxInternal` 구조체 안 `static constexpr` 로 옮기거나
+   이 파일에만 있는 이름을 쓴다. 구조체 · 함수 안의 상수는 상관없다(`Naming/DuplicateAnonymousConstant`, 전체 스캔에서만).
 
 
 ## 3. CMake 및 빌드 규칙
