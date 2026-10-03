@@ -186,8 +186,8 @@ namespace sw
          *          경로를 한 번만 풀고, 3단계는 **1단계가 경로를 풀지 못한 경우에만** 의미가 있습니다.
          */
         template <typename DiskReadFn, typename PackReadFn>
-        bool readResourceCommon( string_view relativePath, string* pOutAbsPath,
-                                 const DiskReadFn& readFromDisk, const PackReadFn& readFromPack )
+        [[nodiscard]] bool readResourceCommon( string_view relativePath, string* pOutAbsPath,
+                                               const DiskReadFn& readFromDisk, const PackReadFn& readFromPack )
         {
             if ( relativePath.empty() )
                 return false;

@@ -72,7 +72,7 @@ namespace sw
             }
 
             template <typename T>
-            static bool parseScalarValue( string_view token, T& outValue )
+            [[nodiscard]] static bool parseScalarValue( string_view token, T& outValue )
             {
                 const string_view trimmed = StringUtil::trim( token );
                 if ( trimmed.empty() )

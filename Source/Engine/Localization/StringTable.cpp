@@ -83,7 +83,7 @@ namespace sw
 
         struct StringTableInternal
         {
-            static bool loadTextByExtension( StringTable& table, string_view path, string_view text )
+            [[nodiscard]] static bool loadTextByExtension( StringTable& table, string_view path, string_view text )
             {
                 switch ( StringTable::detectTextFormat( path ) )
                 {

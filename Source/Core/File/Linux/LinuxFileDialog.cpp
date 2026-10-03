@@ -269,7 +269,7 @@ namespace sw
             }
 
             /** @brief zenity(또는 호환 도구)로 다이얼로그를 엽니다. */
-            static bool openWithZenity( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
+            [[nodiscard]] static bool openWithZenity( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
             {
                 const bool   bMulti = isMultiselectEnabled( params );
                 const string cmd    = buildGtkStyleCommand( toolPath, "--file-selection", params, bMulti, true );
@@ -287,7 +287,7 @@ namespace sw
              * @note "All files" 필터를 붙이지 않는 것이 zenity 와의 유일한 차이입니다. 그대로 둔 이유는 `buildGtkStyleCommand` 의
              *       설명을 보십시오.
              */
-            static bool openWithYad( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
+            [[nodiscard]] static bool openWithYad( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
             {
                 const bool   bMulti = isMultiselectEnabled( params );
                 const string cmd    = buildGtkStyleCommand( toolPath, "--file", params, bMulti, false );
@@ -301,7 +301,7 @@ namespace sw
             }
 
             /** @brief kdialog 로 다이얼로그를 엽니다. */
-            static bool openWithKDialog( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
+            [[nodiscard]] static bool openWithKDialog( string_view toolPath, const FileDialogParams& params, vector<string>& outListPath )
             {
                 string cmd = shellQuote( toolPath );
                 if ( params._type == FileDialogParams::Type::Save )

@@ -55,7 +55,7 @@ namespace sw
             }
 
             /** @brief 원본을 읽습니다. 링커가 아직 쓰는 중이면 잠겨 있으므로 잠깐씩 기다려 다시 읽습니다. */
-            static bool readFileWithRetry( string_view path, vector<uint8>& outBytes )
+            [[nodiscard]] static bool readFileWithRetry( string_view path, vector<uint8>& outBytes )
             {
                 for ( int32 retryIndex = 0; retryIndex < 10; ++retryIndex )
                 {
@@ -223,7 +223,7 @@ namespace sw
             };
 
             template <typename T>
-            static bool readAt( const vector<uint8>& bytes, uint64 offset, T& outValue )
+            [[nodiscard]] static bool readAt( const vector<uint8>& bytes, uint64 offset, T& outValue )
             {
                 if ( offset > bytes.size() || bytes.size() - offset < sizeof( T ) )
                     return false;
@@ -1493,9 +1493,10 @@ namespace sw
         {
             int64  tag{ 0 };
             uint64 value{ 0 };
-            ModuleImagePatchInternal::readAt( bytes, view._dynamicOffset + entryOffset, tag );
-            ModuleImagePatchInternal::readAt( bytes, view._dynamicOffset + entryOffset + ModuleImagePatchInternal::kDynamicValue, value );
-            if ( tag == ModuleImagePatchInternal::kTagNull )
+            // 잘린 이미지는 거기서 끝난 것으로 본다(DT_NULL 과 같다).
+            const bool bRead = ModuleImagePatchInternal::readAt( bytes, view._dynamicOffset + entryOffset, tag ) &&
+                               ModuleImagePatchInternal::readAt( bytes, view._dynamicOffset + entryOffset + ModuleImagePatchInternal::kDynamicValue, value );
+            if ( bRead == false || tag == ModuleImagePatchInternal::kTagNull )
                 break;
             if ( tag != kTagSoname )
                 continue;
@@ -1523,9 +1524,10 @@ namespace sw
         {
             int64  entryTag{ 0 };
             uint64 value{ 0 };
-            ModuleImagePatchInternal::readAt( inoutBytes, view._dynamicOffset + entryOffset, entryTag );
-            ModuleImagePatchInternal::readAt( inoutBytes, view._dynamicOffset + entryOffset + ModuleImagePatchInternal::kDynamicValue, value );
-            if ( entryTag == ModuleImagePatchInternal::kTagNull )
+            // 잘린 이미지는 거기서 끝난 것으로 본다(DT_NULL 과 같다).
+            const bool bRead = ModuleImagePatchInternal::readAt( inoutBytes, view._dynamicOffset + entryOffset, entryTag ) &&
+                               ModuleImagePatchInternal::readAt( inoutBytes, view._dynamicOffset + entryOffset + ModuleImagePatchInternal::kDynamicValue, value );
+            if ( bRead == false || entryTag == ModuleImagePatchInternal::kTagNull )
                 break;
             if ( entryTag != tag || ModuleImagePatchInternal::stringAt( inoutBytes, view, value ) != from )
                 continue;

@@ -24,7 +24,7 @@ namespace sw
              * @details 자식 요소 들어가기(컨테이너 · 중첩 구조체)와 속성 읽기가 같은 "이름 → 별칭" 루프를 세 벌 들고 있었습니다.
              */
             template <typename TryNameFunc>
-            static bool tryNameOrAlias( const PropertyInfo& prop, TryNameFunc&& tryName )
+            [[nodiscard]] static bool tryNameOrAlias( const PropertyInfo& prop, TryNameFunc&& tryName )
             {
                 if ( tryName( prop._name.c_str() ) )
                     return true;
@@ -158,9 +158,9 @@ namespace sw
              * @details 자식 태그 이름에 의존하지 않고 순서대로 훑습니다(다형 포인터만 이름=타입).
              *          원소가 또 컨테이너면 그 자식 노드에서 재귀하므로 얼마든지 중첩할 수 있습니다.
              */
-            static bool readContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, IXmlBackend& backend,
-                                          const SerializeContext& ctx, bool& bOutFieldError,
-                                          vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& propForOrphan )
+            [[nodiscard]] static bool readContainerXml( void* pContainerPtr, const NestedContainerInfo& nested, IXmlBackend& backend,
+                                                        const SerializeContext& ctx, bool& bOutFieldError,
+                                                        vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& propForOrphan )
             {
                 if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
                     return false;
@@ -199,7 +199,9 @@ namespace sw
                                 }
                                 return;
                             }
-                            readXmlIntoInstance( pObj, *pType, backend, ctx, pOutListOrphan );
+                            // 원소 안의 못 읽은 칸 — orphan 목록이 있으면 거기 남고 true, 엄격 읽기면 false 다.
+                            if ( readXmlIntoInstance( pObj, *pType, backend, ctx, pOutListOrphan ) == false )
+                                bOutFieldError = true;
                             return;
                         }
 
@@ -209,14 +211,16 @@ namespace sw
                                {
                             if ( nested._elementNested != nullptr )
                             {
-                                readContainerXml( pElemPtr, *nested._elementNested, backend, ctx, bOutFieldError, pOutListOrphan, propForOrphan );
+                                // 반환값은 "원소가 하나라도 있었나" 다 — 빈 안쪽 컨테이너는 실패가 아니다. 칸 실패는 bOutFieldError 로 온다.
+                                (void)readContainerXml( pElemPtr, *nested._elementNested, backend, ctx, bOutFieldError, pOutListOrphan, propForOrphan );
                                 return true;
                             }
 
                             const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
                             if ( pElemType != nullptr )
                             {
-                                readXmlIntoInstance( pElemPtr, *pElemType, backend, ctx, pOutListOrphan );
+                                if ( readXmlIntoInstance( pElemPtr, *pElemType, backend, ctx, pOutListOrphan ) == false )
+                                    bOutFieldError = true;
                                 return true;
                             }
 
@@ -258,7 +262,8 @@ namespace sw
                         bool       vOk{ true };
                         if ( nested._elementNested != nullptr )
                         {
-                            readContainerXml( listVBuf.data(), *nested._elementNested, backend, ctx, bOutFieldError, pOutListOrphan, propForOrphan );
+                            // 반환값은 "원소가 하나라도 있었나" 다 — 빈 안쪽 컨테이너는 실패가 아니다. 칸 실패는 bOutFieldError 로 온다.
+                            (void)readContainerXml( listVBuf.data(), *nested._elementNested, backend, ctx, bOutFieldError, pOutListOrphan, propForOrphan );
                         }
                         else
                         {
@@ -268,7 +273,9 @@ namespace sw
                                 // 구조체 값은 <entry> 안의 <TypeName> 자식에 들어 있다.
                                 if ( backend.pushFirstChild() )
                                 {
-                                    readXmlIntoInstance( listVBuf.data(), *pElemType, backend, ctx, pOutListOrphan );
+                                    vOk = readXmlIntoInstance( listVBuf.data(), *pElemType, backend, ctx, pOutListOrphan );
+                                    if ( vOk == false )
+                                        bOutFieldError = true;
                                     backend.popChild();
                                 }
                             }
@@ -359,8 +366,8 @@ namespace sw
                 return false;
             }
 
-            static bool readXmlIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend, const SerializeContext& ctx,
-                                             vector<SchemaOrphanValue>* pOutListOrphan )
+            [[nodiscard]] static bool readXmlIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend, const SerializeContext& ctx,
+                                                           vector<SchemaOrphanValue>* pOutListOrphan )
             {
                 bool bFieldError{ false };
 
@@ -498,8 +505,8 @@ namespace sw
                 }
             }
 
-            static bool tryAppendUnknownXmlChildOrphans( string_view xmlStr, const TypeInfo& typeInfo,
-                                                         const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
+            [[nodiscard]] static bool tryAppendUnknownXmlChildOrphans( string_view xmlStr, const TypeInfo& typeInfo,
+                                                                       const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
             {
                 if ( xmlStr.empty() || pOutListOrphan == nullptr )
                     return false;

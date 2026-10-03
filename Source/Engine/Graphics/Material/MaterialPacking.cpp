@@ -79,7 +79,7 @@ namespace sw
              * @details 파일의 `_enumEntries` 이름(대소문자 무시)이 먼저다. 리플렉션 enum 이 있으면 `EnumInfo::tryParseText`(이름 · ValueAlias ·
              *          알려진 값의 숫자)이고, 없으면 숫자 리터럴을 받는다.
              */
-            static bool tryParseEnumToken( const MaterialProperty& prop, const EnumInfo* pInfo, string_view token, int64& outValue )
+            [[nodiscard]] static bool tryParseEnumToken( const MaterialProperty& prop, const EnumInfo* pInfo, string_view token, int64& outValue )
             {
                 for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
                 {
@@ -99,7 +99,7 @@ namespace sw
              * @details 비트플래그는 `|` · `,` 로 나눈 토큰마다 읽어 합친다. 빈 글은 0 이다(값을 적지 않은 프로퍼티). 실패하면 부르는 쪽이
              *          경고하고 쓰지 않는다 — 버퍼의 앞 값이 남는다.
              */
-            static bool tryParseEnumOrFlags( const MaterialProperty& prop, string_view value, bool bitFlagMode, int64& outValue )
+            [[nodiscard]] static bool tryParseEnumOrFlags( const MaterialProperty& prop, string_view value, bool bitFlagMode, int64& outValue )
             {
                 const string_view trimmed = StringUtil::trim( value );
                 if ( trimmed.empty() )
@@ -190,7 +190,7 @@ namespace sw
              *          손으로 지은 머티리얼 XML 이 이 저장소를 여러 번 물었으므로, 조용히 넘치는
              *          대신 쓰지 않고 false 를 반환합니다(부르는 쪽이 경고합니다).
              */
-            static bool writeBoundedValue( void* pDst, size_t packSize, const void* pSrc, size_t byteCount )
+            [[nodiscard]] static bool writeBoundedValue( void* pDst, size_t packSize, const void* pSrc, size_t byteCount )
             {
                 if ( pDst == nullptr || pSrc == nullptr || byteCount > packSize )
                     return false;
@@ -198,7 +198,7 @@ namespace sw
                 return true;
             }
 
-            static bool writeNumericValue( void* pDst, size_t packSize, MaterialPropertyType shaderType, string_view value )
+            [[nodiscard]] static bool writeNumericValue( void* pDst, size_t packSize, MaterialPropertyType shaderType, string_view value )
             {
                 const uint32 need = MaterialUtil::packedSizeOf( shaderType );
                 if ( need == 0 || packSize < need || pDst == nullptr )

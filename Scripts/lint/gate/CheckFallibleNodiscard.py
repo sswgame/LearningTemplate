@@ -7,7 +7,7 @@
 도장 찍혀 배포본에 옛 바이너리가 실렸고, 깨진 언어 파일을 빈 칸으로 다시 써 번역이 지워졌다. 2026-10-02 에 세어 보니 실패할 수 있는
 동사의 bool 함수 362 개 가운데 `[[nodiscard]]` 가 붙은 것이 0 이었고, 결과를 버리는 호출이 182 곳이었다.
 
-규칙: 이름이 아래 동사로 시작하고 bool 을 돌려주는 선언은 `[[nodiscard]]` 를 단다. 컴파일러는 `-Werror=unused-result`
+규칙: 이름이 아래 동사로(또는 `re` + 동사로 — `recreate` · `reopen`) 시작하고 bool 을 돌려주는 선언은 `[[nodiscard]]` 를 단다. 컴파일러는 `-Werror=unused-result`
 (cmake/Modules/Compiler/Clang.cmake · GCC.cmake)로 버리는 호출에서 빌드를 세운다. 일부러 버릴 때는 `(void)호출();` 과 이유 한 줄.
 
   load · save · read · write · parse · deserialize · serialize · apply · restore · import · export · cook · compile · bake
@@ -17,10 +17,13 @@
 동사의 뜻은 "false = 그 일이 일어나지 않았다" 다. 할 일이 없어 true 인 것(`FileUtil::removeFile` 은 이미 없으면 true)도, 없어서 false 인
 컨테이너 도우미(`VectorUtil::removeSingleSwap`)도 그 뜻 안에 있다 — 버려도 되는 자리는 `(void)` 와 이유로 그렇다고 적는다.
 
-`friend` 선언(정의가 아니면 속성을 달 수 없다)과 C-ABI 계약(`Source/RuntimeAPI`)은 보지 않는다. 한 줄에 반환 타입과 이름이 같이 있는
-선언만 본다 — 여러 줄로 쪼갠 선언은 놓치는 대신 오탐이 없다.
+헤더뿐 아니라 `.cpp` · `.inl` 도 본다 — 번역 단위 지역 함수(익명 네임스페이스 · `XxxInternal` 의 static)도 결과를 버리면 같은 결함이다.
+`Foo::loadX(` 같은 멤버 정의는 이름에 `::` 가 있어 잡히지 않는다(속성은 헤더 선언이 든다). 반환 타입만 한 줄에 두고 이름을 다음 줄에 쓴
+선언도 본다. `[[nodiscard]]` 는 같은 줄이나, 주석 · `template <…>` 줄을 건너뛴 바로 위 줄에 있으면 된다.
 
-  python Scripts/lint/gate/CheckFallibleNodiscard.py [--root <repo>] [--files a.h b.h]
+`friend` 선언(정의가 아니면 속성을 달 수 없다)과 C-ABI 계약(`Source/RuntimeAPI`)은 보지 않는다.
+
+  python Scripts/lint/gate/CheckFallibleNodiscard.py [--root <repo>] [--files a.h b.cpp]
 """
 
 from __future__ import annotations
@@ -42,20 +45,63 @@ _kListFallibleVerb = (
     "remove", "copy", "create", "delete", "move", "rename",
 )
 
+# 실패할 수 있는 동사로(또는 `re` + 그 동사로) 시작하는 이름.
+_kFallibleNamePattern = r"(?P<name>(?:re)?(?:" + "|".join(_kListFallibleVerb) + r")(?:[A-Z0-9]\w*)?)"
+_kSpecifierPattern = r"(?:(?:static|virtual|inline|constexpr|SW_API|SW_GF_API|SW_MODULE_API)\s+)*"
+
 # 줄 머리의 지정자(static · virtual · 내보내기 매크로) 다음 `bool 이름(` — 이름이 실패할 수 있는 동사로 시작하는 선언.
-_kDeclarationRe = re.compile(
-    r"^\s*(?:(?:static|virtual|inline|constexpr|SW_API|SW_GF_API|SW_MODULE_API)\s+)*"
-    r"bool\s+(?P<name>(?:" + "|".join(_kListFallibleVerb) + r")(?:[A-Z0-9]\w*)?)\s*\("
-)
+_kDeclarationRe = re.compile(r"^\s*" + _kSpecifierPattern + r"bool\s+" + _kFallibleNamePattern + r"\s*\(")
+# 반환 타입만 있는 줄(`static bool`)과, 이름으로 시작하는 다음 줄 — 둘로 쪼갠 선언.
+_kReturnTypeOnlyRe = re.compile(r"^\s*" + _kSpecifierPattern + r"bool\s*$")
+_kNameOnlyRe = re.compile(r"^\s*" + _kFallibleNamePattern + r"\s*\(")
+# `[[nodiscard]]` 를 찾을 때 건너뛰는 윗줄 — 주석과 템플릿 머리.
+_kSkippedAboveRe = re.compile(r"^\s*(?://|/\*|\*|template\s*<)")
 
 _kListScanRoot = ("Source",)
+_kListScanSuffix = (".h", ".cpp", ".inl")
 _kListSkippedFolder = ("Source/RuntimeAPI/",)
+
+#: 다른 작업이 고치는 중이라 아직 `[[nodiscard]]` 를 달지 못한 선언 — (파일, 이름). 그 파일의 그 이름만 건너뛴다.
+#: 항목이 낡으면(이름이 없거나 이미 달렸으면) 위반으로 알린다 — 지우라는 뜻이다.
+_kSetDeferredDeclaration: set[tuple[str, str]] = {
+    ("Source/Engine/Common/IRenderSurface.h", "recreateSurface"),   # 부르는 쪽 RHI.cpp 가 결과를 버린다
+    ("Source/Engine/Graphics/RHI/RHI.h", "recreateDevice"),
+    ("Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h", "recreateSwapChain"),
+    ("Source/Engine/Graphics/RHI/RHIBackendRegistry.cpp", "tryLoadBackendModule"),
+    ("Source/Engine/Graphics/Renderer/Frame/FrameRendererPso.cpp", "applyViewModeToDesc"),
+    ("Source/Engine/Graphics/Renderer/Pipeline/RenderPassInputContract.cpp", "tryParseRenderPassInputRole"),
+}
+
+
+def hasNodiscardAboveInternal(listLine: list[str], lineIndex: int) -> bool:
+    """`lineIndex` 줄 바로 위(주석 · 템플릿 머리는 건너뛴다)가 `[[nodiscard]]` 로 끝나는지 봅니다."""
+    aboveIndex = lineIndex - 1
+    while aboveIndex >= 0 and (_kSkippedAboveRe.match(listLine[aboveIndex]) is not None or listLine[aboveIndex].strip() == ""):
+        if listLine[aboveIndex].strip().endswith("[[nodiscard]]"):
+            return True
+        aboveIndex -= 1
+    return aboveIndex >= 0 and listLine[aboveIndex].strip().endswith("[[nodiscard]]")
+
+
+def findFallibleNameInternal(listLine: list[str], lineIndex: int) -> str | None:
+    """이 줄에서 시작하는 실패 가능 bool 선언의 이름 — 한 줄짜리든, 반환 타입과 이름을 두 줄로 쪼갠 것이든. 아니면 None."""
+    line = listLine[lineIndex]
+    match = _kDeclarationRe.match(line)
+    if match is not None:
+        return match.group("name")
+    if _kReturnTypeOnlyRe.match(line) is not None and lineIndex + 1 < len(listLine):
+        nameMatch = _kNameOnlyRe.match(listLine[lineIndex + 1])
+        if nameMatch is not None:
+            return nameMatch.group("name")
+    return None
 
 
 def findFallibleDeclarationsWithoutNodiscard(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
     """`[[nodiscard]]` 가 없는 실패 가능 bool 선언을 모아 위반 문자열로 돌려줍니다."""
     violations: list[str] = []
-    for path in LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=(".h",)):
+    setDeferredSeen: set[tuple[str, str]] = set()
+    setScannedFile: set[str] = set()
+    for path in LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kListScanSuffix):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         if relative.startswith(_kListSkippedFolder):
             continue
@@ -63,15 +109,22 @@ def findFallibleDeclarationsWithoutNodiscard(repositoryRoot: Path, listTargetFil
             listLine = path.read_text(encoding="utf-8", errors="replace").splitlines()
         except OSError:
             continue
+        setScannedFile.add(relative)
 
         for lineIndex, line in enumerate(listLine):
-            match = _kDeclarationRe.match(line)
-            if match is None or "[[nodiscard]]" in line:
+            name = findFallibleNameInternal(listLine, lineIndex)
+            if name is None or "[[nodiscard]]" in line or hasNodiscardAboveInternal(listLine, lineIndex):
                 continue
-            previous = listLine[lineIndex - 1].strip() if lineIndex > 0 else ""
-            if previous.endswith("[[nodiscard]]"):
+            if (relative, name) in _kSetDeferredDeclaration:
+                setDeferredSeen.add((relative, name))
                 continue
-            violations.append(f"[Fallible Nodiscard] {relative}:{lineIndex + 1}: {match.group('name')} — {line.strip()}")
+            violations.append(f"[Fallible Nodiscard] {relative}:{lineIndex + 1}: {name} — {line.strip()}")
+
+    # 미뤄 둔 항목이 그 파일을 훑었는데 보이지 않았다 — 고쳐졌거나 이름이 바뀌었다. 목록에서 지운다.
+    for relative, name in sorted(_kSetDeferredDeclaration):
+        if relative in setScannedFile and (relative, name) not in setDeferredSeen:
+            violations.append(f"[Fallible Nodiscard] {relative}: '{name}' 는 _kSetDeferredDeclaration 에 있지만 [[nodiscard]] 없는 선언으로 "
+                              f"보이지 않습니다 — 목록에서 지우세요")
     return violations
 
 
@@ -81,7 +134,7 @@ class CheckFallibleNodiscardGate(LintGate):
     description = "실패 가능 bool 함수의 [[nodiscard]] 검사"
     buildComment = "Checking fallible bool declarations for [[nodiscard]]..."
     timeoutSeconds = 30
-    preCommitPattern = ("Source/*.h",)
+    preCommitPattern = ("Source/*.h", "Source/*.cpp", "Source/*.inl")
     preCommitFileArgument = "--files"
     violationHeader = "실패를 bool 로 알리는데 [[nodiscard]] 가 없는 선언"
     hint = (
@@ -129,14 +182,40 @@ class CheckFallibleNodiscardGate(LintGate):
                 "    static bool rename( GameObject* pObj, const utf8* pNewName );\n",
             )
         ),
+        {
+            "name": "re + 동사 — recreate",
+            "files": {"Source/Probe/ProbeSurface.h": "struct ProbeSurface\n{\n    virtual bool recreateSurface() = 0;\n};\n"},
+        },
+        {
+            "name": ".cpp 의 번역 단위 지역 함수",
+            "files": {
+                "Source/Probe/ProbeLocal.cpp": (
+                    "namespace\n{\n    struct ProbeLocalInternal\n    {\n"
+                    "        static bool readHeader( const uint8* pData, size_t size );\n    };\n} // namespace\n"
+                ),
+            },
+        },
+        {
+            "name": "반환 타입과 이름을 두 줄로 쪼갠 선언",
+            "files": {"Source/Probe/ProbeSplit.h": "struct ProbeSplit\n{\n    static bool\n    parseLine( string_view line );\n};\n"},
+        },
+        {
+            "name": "주석을 사이에 둔 [[nodiscard]] 는 인정하지만, 주석 너머 다른 선언의 것은 아니다",
+            "files": {
+                "Source/Probe/ProbeAbove.h": (
+                    "struct ProbeAbove\n{\n    [[nodiscard]] bool isReady() const;\n"
+                    "    /** @brief 읽습니다. */\n    bool loadData();\n};\n"
+                ),
+            },
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        self.addFilesArgument(parser, "검사할 특정 헤더 (생략 시 Source 전체)")
+        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source 의 .h · .cpp · .inl 전체)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations = findFallibleDeclarationsWithoutNodiscard(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Source 의 실패 가능 bool 선언")
+        return GateResult(listViolation=violations, summary="Source 의 .h · .cpp · .inl 실패 가능 bool 선언")
 
 
 main = CheckFallibleNodiscardGate.run

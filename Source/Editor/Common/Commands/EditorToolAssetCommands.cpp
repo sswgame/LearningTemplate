@@ -85,20 +85,20 @@ namespace sw::editor
             }
 
             template <typename TAsset>
-            static bool readDocument( TAsset& outData, const string& resolved )
+            [[nodiscard]] static bool readDocument( TAsset& outData, const string& resolved )
             {
                 return outData.loadFromFile( resolved );
             }
 
-            static bool readDocument( TileMapXmlData& outData, const string& resolved ) { return outData.load( resolved ); }
+            [[nodiscard]] static bool readDocument( TileMapXmlData& outData, const string& resolved ) { return outData.load( resolved ); }
 
             template <typename TAsset>
-            static bool writeDocument( const TAsset& data, const string& resolved )
+            [[nodiscard]] static bool writeDocument( const TAsset& data, const string& resolved )
             {
                 return data.saveToFile( resolved );
             }
 
-            static bool writeDocument( const TileMapXmlData& data, const string& resolved ) { return data.save( resolved ); }
+            [[nodiscard]] static bool writeDocument( const TileMapXmlData& data, const string& resolved ) { return data.save( resolved ); }
 
             /** @brief 상태 문구에 보일 경로 — 받은 경로가 있으면 그것(리소스 id), 없으면 푼 경로입니다. */
             static string makeShownPath( string_view path, const string& resolved ) { return path.empty() ? resolved : string{ path }; }
@@ -132,7 +132,7 @@ namespace sw::editor
 
             /** @brief 도구 문서를 씁니다. 실패는 두 경우(경로 없음 · 쓰기 실패) 모두 오류 한 줄로 알립니다 — 호출부가 반환값을 버려도 조용하지 않습니다. */
             template <typename TAsset>
-            static bool saveToolDocument( const ToolDocumentDesc& desc, const TAsset& data, string_view path )
+            [[nodiscard]] static bool saveToolDocument( const ToolDocumentDesc& desc, const TAsset& data, string_view path )
             {
                 const string resolved = resolveDocumentPath( desc, path );
                 if ( resolved.empty() )

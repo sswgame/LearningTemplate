@@ -179,8 +179,8 @@ namespace sw
              * @brief items(JSON 배열)의 각 원소를 시퀀스 컨테이너에 채운다. 부르는 쪽이 미리 wrapper->clear() 를 한다.
              * @param pOutListOrphan 소유 포인터 원소(컴포넌트)의 못 읽은 칸을 받을 바깥 orphan 목록(XML 과 같다). 없으면 그 원소를 엄격하게 읽는다.
              */
-            static bool readSequenceItemsJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& items,
-                                               bool bOwnedPtr, const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
+            [[nodiscard]] static bool readSequenceItemsJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& items,
+                                                             bool bOwnedPtr, const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
             {
                 ISequenceContainerWrapper* pSeq = nested._wrapper != nullptr ? nested._wrapper->asSequence() : nullptr;
                 if ( pSeq == nullptr || items.isArray() == false )
@@ -255,8 +255,8 @@ namespace sw
             }
 
             // entries(JSON 오브젝트)의 각 멤버를 맵 컨테이너에 채운다. 부르는 쪽이 미리 wrapper->clear() 를 한다.
-            static bool readMapEntriesJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& entries,
-                                            const SerializeContext& ctx )
+            [[nodiscard]] static bool readMapEntriesJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& entries,
+                                                          const SerializeContext& ctx )
             {
                 IMapContainerWrapper* pMapWrap = nested._wrapper != nullptr ? nested._wrapper->asMap() : nullptr;
                 if ( pMapWrap == nullptr || entries.isObject() == false )
@@ -302,8 +302,8 @@ namespace sw
              * @brief 컨테이너를 자연스러운 JSON 표현으로 읽습니다. 시퀀스는 배열, 맵은 오브젝트입니다.
              * @details 원소가 또 컨테이너면 그 값에서 재귀하므로 얼마든지 중첩할 수 있습니다.
              */
-            static bool readTypedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
-                                                const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan = nullptr )
+            [[nodiscard]] static bool readTypedContainerJson( void* pContainerPtr, const NestedContainerInfo& nested, const JsonValue& src,
+                                                              const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan = nullptr )
             {
                 if ( pContainerPtr == nullptr || nested._wrapper == nullptr )
                     return false;
@@ -324,7 +324,7 @@ namespace sw
                 return false;
             }
 
-            static bool readJsonValue( void* pValPtr, const hashed_string& typeName, const JsonValue& src, const SerializeContext& ctx )
+            [[nodiscard]] static bool readJsonValue( void* pValPtr, const hashed_string& typeName, const JsonValue& src, const SerializeContext& ctx )
             {
                 if ( pValPtr == nullptr || src.isValid() == false )
                     return false;
@@ -389,8 +389,8 @@ namespace sw
                 writeJsonValue( parent.set( prop._name.c_str(), false ), pPropPtr, prop._typeName, ctx );
             }
 
-            static bool readProperty( const JsonValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx,
-                                      vector<SchemaOrphanValue>* pOutListOrphan = nullptr )
+            [[nodiscard]] static bool readProperty( const JsonValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx,
+                                                    vector<SchemaOrphanValue>* pOutListOrphan = nullptr )
             {
                 if ( prop._bIsBitField == SW_TRUE )
                 {

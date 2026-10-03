@@ -87,7 +87,7 @@ namespace sw
              *          작은 쓰기는 stdio 버퍼에 머물다 `fclose` 에서야 디스크로 가므로, 가득 찬 디스크는 `fclose` 만 알려 줍니다.
              *          언리얼 `FFileHelper::SaveArrayToFile` 과 같은 방식(임시 파일 → 이름 바꾸기)입니다.
              */
-            static bool writeAtomically( string_view fileName, const void* pData, size_t size )
+            [[nodiscard]] static bool writeAtomically( string_view fileName, const void* pData, size_t size )
             {
                 const string filePath = FileUtil::normalizeSeparators( fileName );
 #if defined( SW_PLATFORM_WINDOWS )
@@ -171,7 +171,7 @@ namespace sw
              *          허용하므로, 에디터가 쓰고 있는 파일도 전처럼 열립니다.
              */
             template <typename BufferType>
-            static bool readRange( string_view fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer )
+            [[nodiscard]] static bool readRange( string_view fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer )
             {
 #if defined( SW_PLATFORM_WINDOWS )
                 const string  filePath = FileUtil::normalizeSeparators( fileName );

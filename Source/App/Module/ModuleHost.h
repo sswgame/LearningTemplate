@@ -246,9 +246,9 @@ namespace sw
         /** @brief 보존해 둔 상태를 새 인스턴스에 되돌립니다. 실패하면 **버리지 않고** 다음 리로드까지 들고 있습니다. */
         void restoreGameState();
         /** @brief RHI 교체 뒤 에디터를 다시 세웁니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
-        bool recreateEditorInstance( void* pEditorModule );
+        [[nodiscard]] bool recreateEditorInstance( void* pEditorModule );
         /** @brief RHI 교체 뒤 게임을 다시 세웁니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
-        bool recreateGameInstance( void* pGameModule );
+        [[nodiscard]] bool recreateGameInstance( void* pGameModule );
 
     private:
         unique_ptr<ModuleCompiler> _moduleCompiler;

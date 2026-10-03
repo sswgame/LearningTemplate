@@ -74,7 +74,7 @@ namespace sw
             }
         }
 
-        bool readReflectionInternal( Archive& archive, ShaderReflectionData& outReflection )
+        [[nodiscard]] bool readReflectionInternal( Archive& archive, ShaderReflectionData& outReflection )
         {
             uint32 bufferCount{ 0 };
             archive >> bufferCount;
@@ -196,7 +196,7 @@ namespace sw
          * @brief 리소스 상대 경로의 매니페스트 파일 하나를 읽어 `outMapEntry` 에 채운다.
          * @return 파일이 없거나 형식 · 내용이 맞지 않으면 false 다(그때 `outMapEntry` 는 비어 있다).
          */
-        bool readManifestInternal( const string& manifestRelative, ShaderReflectionLibrary::EntryMap& outMapEntry )
+        [[nodiscard]] bool readManifestInternal( const string& manifestRelative, ShaderReflectionLibrary::EntryMap& outMapEntry )
         {
             outMapEntry.clear();
             Archive archive( manifestRelative, true );

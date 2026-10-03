@@ -134,7 +134,7 @@ namespace sw
          *          비슷한 수준(스택 + 간접 참조 메모리 + 스레드 정보)으로 고릅니다. Full 덤프는 수백 MB 가 되어 사용자가 보내 주지
          *          못합니다.
          */
-        bool writeMiniDump( EXCEPTION_POINTERS* pInfo, DWORD faultThreadId )
+        [[nodiscard]] bool writeMiniDump( EXCEPTION_POINTERS* pInfo, DWORD faultThreadId )
         {
             utf8 arrPath[constant::kMaxBuffer1024]{};
             buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "dmp" );

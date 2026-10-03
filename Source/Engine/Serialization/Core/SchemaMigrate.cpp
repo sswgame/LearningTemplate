@@ -114,7 +114,7 @@ namespace sw
             }
 
             template <typename T>
-            static bool readPod( const uint8* pPayload, size_t payloadSize, T& out )
+            [[nodiscard]] static bool readPod( const uint8* pPayload, size_t payloadSize, T& out )
             {
                 if ( payloadSize != sizeof( T ) )
                     return false;
@@ -218,8 +218,8 @@ namespace sw
              *          자리에 먼저 읽었습니다. 모양이 다른 타입(int32 → int16 · string 등)이면 그 자리와 이웃 필드를 덮어썼습니다.
              * @param wireTypeName 기록 타입. 모르면 비웁니다(그때는 이관이 제 타입 읽기부터 합니다).
              */
-            static bool applyOrphanBinary( void* pPropPtr, hashed_string propTypeName, const SchemaOrphanValue& orphan,
-                                           hashed_string wireTypeName, const SerializeContext& ctx )
+            [[nodiscard]] static bool applyOrphanBinary( void* pPropPtr, hashed_string propTypeName, const SchemaOrphanValue& orphan,
+                                                         hashed_string wireTypeName, const SerializeContext& ctx )
             {
                 const uint8* pPayload    = orphan._listBinary.data();
                 const size_t payloadSize = orphan._listBinary.size();
@@ -239,8 +239,8 @@ namespace sw
              *          남은 기록 타입 해시로 정합니다. 예전에는 경로 판이 힌트가 없을 때 프로퍼티 타입을 기록 타입으로 가정해,
              *          타입이 바뀐 orphan(int32 → float32 등)을 그 비트 그대로 제자리에 읽었습니다.
              */
-            static bool applyOrphanAt( void* pInstance, const TypeInfo& typeInfo, const utf8* pPath, const SchemaOrphanValue& orphan,
-                                       hashed_string wireTypeHint, const SerializeContext& ctx )
+            [[nodiscard]] static bool applyOrphanAt( void* pInstance, const TypeInfo& typeInfo, const utf8* pPath, const SchemaOrphanValue& orphan,
+                                                     hashed_string wireTypeHint, const SerializeContext& ctx )
             {
                 void*               pPtr{ nullptr };
                 const PropertyInfo* pProp = nullptr;
@@ -525,8 +525,8 @@ namespace sw
         return ( pEnumInfo != nullptr ) ? pEnumInfo->_fullyQualifiedName : hashed_string{};
     }
 
-    bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
-                                 const SerializeContext& ctx, hashed_string wireTypeName, BinaryWireVersion wireVersion )
+    [[nodiscard]] bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
+                                               const SerializeContext& ctx, hashed_string wireTypeName, BinaryWireVersion wireVersion )
     {
         if ( pPropPtr == nullptr || pPayload == nullptr )
             return false;
@@ -597,8 +597,8 @@ namespace sw
         return false;
     }
 
-    bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
-                                const SerializeContext& ctx )
+    [[nodiscard]] bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
+                                              const SerializeContext& ctx )
     {
         if ( pValPtr == nullptr )
             return false;

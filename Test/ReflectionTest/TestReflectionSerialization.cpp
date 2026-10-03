@@ -1237,6 +1237,45 @@ SW_TEST_CASE( ReflectionSerializationTest, JsonSequenceAcceptsPlainArray )
 }
 
 /**
+ * @brief [ReflectionSerializationTest] 엄격 역직렬화는 컨테이너 **원소 구조체** 안의 잘못된 칸에서도 실패한다 — JSON 과 XML 이 같다
+ * @details XML 백엔드 입구(`deserialize( …, IXmlBackend&, … )`)는 orphan 목록 없이 칸 실패로 판정한다. 원소 구조체를 읽은 결과를
+ *          버리면 `vector<NestedInner>` · `map<string, NestedInner>` 의 원소 칸이 깨져도 성공으로 끝난다(JSON 은 같은 입력에서 실패한다).
+ */
+SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadFieldInsideContainerElement )
+{
+    SW_TEST_DEFENSIVE_SCOPE( "Testing strict deserialization failure on a bad field inside a container element" );
+    const sw::TypeInfo* typeInfo = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
+    SW_ASSERT_TRUE( typeInfo != nullptr );
+
+    sw::NestedContainerActor jsonList;
+    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonList, *typeInfo, R"({"_listInner":[{"_x":"nope"}]})" ) );
+
+    // XML 은 두 입구를 다 본다 — 문자열 입구(orphan 목록으로 판정)와 백엔드 입구(orphan 목록 없이 칸 실패로 판정).
+    const utf8* const kArrBadXml[] = {
+        R"(<NestedContainerActor><_listInner><NestedInner _x="nope" /></_listInner></NestedContainerActor>)",
+        R"(<NestedContainerActor><_mapInner><entry key="m"><NestedInner _x="nope" /></entry></_mapInner></NestedContainerActor>)",
+    };
+    for ( const utf8* pBadXml : kArrBadXml )
+    {
+        sw::NestedContainerActor fromString;
+        SW_EXPECT_FALSE_MSG( sw::XmlSerializer::deserialize( &fromString, *typeInfo, pBadXml ), pBadXml );
+
+        sw::XmlDocumentBackend   backend;
+        sw::NestedContainerActor fromBackend;
+        SW_EXPECT_FALSE_MSG( sw::XmlSerializer::deserialize( &fromBackend, *typeInfo, backend, pBadXml ), pBadXml );
+    }
+
+    // 멀쩡한 원소는 그대로 읽힌다 — "다 막는다" 로 굳지 않는다.
+    const utf8* const kGoodXml =
+        R"(<NestedContainerActor><_listInner><NestedInner _x="5" /></_listInner><_mapInner><entry key="m"><NestedInner _x="6" /></entry></_mapInner></NestedContainerActor>)";
+    sw::XmlDocumentBackend   goodBackend;
+    sw::NestedContainerActor xmlOk;
+    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &xmlOk, *typeInfo, goodBackend, kGoodXml ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), xmlOk._listInner.size() );
+    SW_EXPECT_EQUAL( 6, xmlOk._mapInner.at( "m" )._x );
+}
+
+/**
  * @brief [ReflectionSerializationTest] JSON/XML 엄격 역직렬화가 잘못된 컨테이너·필드 coerce 에서 실패
  */
 SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadContainerAndField )

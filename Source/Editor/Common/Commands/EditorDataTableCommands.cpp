@@ -101,7 +101,7 @@ namespace sw::editor
              * @details 예전에는 깨진 파일(끝의 쉼표 · 병합 표식)을 읽을 때 조용히 건너뛰어 그 언어의 칸이 모두 비었고, 저장이 빈 칸으로 그 파일을 다시
              *          써서 **그 언어의 번역이 모두 지워졌다.** 로그는 "모두 저장했다" 였다.
              */
-            static bool writeLanguageJson( LocalizationLanguage lang, const string& localizationFolder, const vector<LocalizationRecord>& listRecord )
+            [[nodiscard]] static bool writeLanguageJson( LocalizationLanguage lang, const string& localizationFolder, const vector<LocalizationRecord>& listRecord )
             {
                 const string path = languageFilePath( lang, localizationFolder );
                 if ( path.empty() )

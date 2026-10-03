@@ -22,7 +22,7 @@ namespace sw
         /** @brief Cocoa 창을 파괴합니다. */
         void destroy() override;
         /** @brief 창 다시 만들기를 지원하지 않습니다. 항상 false 를 반환합니다. */
-        bool recreate() override;
+        [[nodiscard]] bool recreate() override;
         /** @brief Cocoa 이벤트를 처리합니다. 종료 요청이 있으면 false 를 반환합니다. */
         bool processMessages() override;
         /** @brief 창을 띄우거나 숨깁니다. */

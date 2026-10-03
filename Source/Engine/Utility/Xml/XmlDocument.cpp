@@ -223,7 +223,7 @@ namespace sw
              *          기본값이 됐다. 정수 · 실수 형제(`getAttributeInt` · `getAttributeFloat`)는 이미 알렸다 — 같은 규칙이다.
              * @param pKind 경고에 찍을 자리 종류("Attribute" · "Element").
              */
-            static bool parseNodeBool( const utf8* pKind, const utf8* pName, const utf8* pText, bool fallback )
+            [[nodiscard]] static bool parseNodeBool( const utf8* pKind, const utf8* pName, const utf8* pText, bool fallback )
             {
                 if ( pText == nullptr || StringUtil::trim( pText ).empty() )
                     return fallback;

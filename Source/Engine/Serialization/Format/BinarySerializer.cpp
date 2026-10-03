@@ -51,9 +51,9 @@ namespace sw
              *          **각자** 갖고 있었습니다. 분기를 하나 더하면(예: 새 컨테이너 모양) 한쪽만 고치기 쉽고,
              *          그러면 **그 경로로 읽은 객체만 필드가 비는** 재현하기 어려운 차이가 됩니다.
              */
-            static bool applyPropertyPayload( void* pInstance, const PropertyInfo& prop, const uint8* pData,
-                                              size_t payloadStart, size_t payloadSize, const SerializeContext& ctx,
-                                              bool bRequireExactConsume, BinaryWireVersion wireVersion )
+            [[nodiscard]] static bool applyPropertyPayload( void* pInstance, const PropertyInfo& prop, const uint8* pData,
+                                                            size_t payloadStart, size_t payloadSize, const SerializeContext& ctx,
+                                                            bool bRequireExactConsume, BinaryWireVersion wireVersion )
             {
                 void* pPropPtr = prop.getRawPtr( pInstance );
 
@@ -144,8 +144,8 @@ namespace sw
              *          예외입니다. 제 타입으로 다시 읽으면 비트가 재해석되므로(float32 1.5 → int32 1069547520, 열거자 이름 해시 → 수) orphan 으로 남깁니다.
              *          신뢰할 수 없는 스트림의 경계 검사가 이 안에 있습니다. 사본이 하나여야 그 검사가 한쪽에서만 빠지는 일이 없습니다.
              */
-            static bool deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
-                                           const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
+            [[nodiscard]] static bool deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
+                                                         const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
             {
                 BinaryStreamReader reader( pData, dataSize );
                 uint32             header{ 0 };
@@ -278,9 +278,9 @@ namespace sw
              *          한쪽이 그것을 잃으면 손상된 파일 하나로 버퍼 밖을 읽습니다. 저장소에서 가장
              *          위험한 파싱 코드를 두 벌로 두지 않습니다.
              */
-            static bool readAndApplyProperty( void* pInstance, uint64 propIndex, const vector<PropertyInfo>& listProp,
-                                              BinaryStreamReader& reader, const uint8* pData, size_t dataSize,
-                                              const SerializeContext& ctx, BinaryWireVersion wireVersion )
+            [[nodiscard]] static bool readAndApplyProperty( void* pInstance, uint64 propIndex, const vector<PropertyInfo>& listProp,
+                                                            BinaryStreamReader& reader, const uint8* pData, size_t dataSize,
+                                                            const SerializeContext& ctx, BinaryWireVersion wireVersion )
             {
                 uint64 payloadSize = 0;
                 if ( reader.readVarUint( payloadSize ) == false )
@@ -309,8 +309,8 @@ namespace sw
              * @return 인스턴스가 없거나, 쓴 바이트가 없거나, 압축에 실패하면 false 입니다.
              */
             template <typename SerializeRawFunc>
-            static bool serializeThenCompress( const void* pInstance, vector<uint8>& outListBuffer, CompressionCodecType codecType,
-                                               SerializeRawFunc&& serializeRaw )
+            [[nodiscard]] static bool serializeThenCompress( const void* pInstance, vector<uint8>& outListBuffer, CompressionCodecType codecType,
+                                                             SerializeRawFunc&& serializeRaw )
             {
                 outListBuffer.clear();
                 if ( pInstance == nullptr )
@@ -448,7 +448,8 @@ namespace sw
              *          오류 상태이거나 남은 바이트가 없거나 스트림이 잘렸으면 false 이고 자리는 그대로입니다.
              */
             template <typename DeserializeBytesFunc>
-            static bool deserializeArchiveStream( Archive& inArchive, MeasureStreamFn measure, DeserializeBytesFunc&& deserializeBytes )
+            [[nodiscard]] static bool deserializeArchiveStream( Archive& inArchive, MeasureStreamFn measure, DeserializeBytesFunc&& deserializeBytes )
+
             {
                 if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
                     return false;

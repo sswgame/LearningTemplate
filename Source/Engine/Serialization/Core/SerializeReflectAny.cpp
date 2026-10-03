@@ -32,7 +32,7 @@ namespace sw
                 listBuf.insert( listBuf.end(), any._bytes.begin(), any._bytes.end() );
             }
 
-            static bool readReflectAnyBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
+            [[nodiscard]] static bool readReflectAnyBinary( void* pPtr, const uint8* pData, size_t size, size_t& offset )
             {
                 ReflectAny& any = *static_cast<ReflectAny*>( pPtr );
                 any             = ReflectAny{};
@@ -75,7 +75,7 @@ namespace sw
                 return string{ sb.c_str(), sb.size() };
             }
 
-            static bool readReflectAnyText( void* pPtr, string_view str )
+            [[nodiscard]] static bool readReflectAnyText( void* pPtr, string_view str )
             {
                 ReflectAny& any  = *static_cast<ReflectAny*>( pPtr );
                 any              = ReflectAny{};

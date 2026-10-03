@@ -29,7 +29,7 @@ namespace sw::editor
                 return true;
             }
 
-            virtual bool open( string_view relativePath ) const override { return EditorAssetCommands::tryOpenScene( relativePath ); }
+            [[nodiscard]] virtual bool open( string_view relativePath ) const override { return EditorAssetCommands::tryOpenScene( relativePath ); }
 
             virtual bool dropInViewport( GameObjectManager* /*pManager*/, const utf8* pPath, const float3& /*spawnPos*/ ) const override
             {

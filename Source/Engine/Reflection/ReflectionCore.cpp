@@ -26,8 +26,8 @@ namespace sw
              *          같은 값을 가리키는 별칭은 괜찮다. 두 표를 다 본다 — 대소문자만 다른 두 이름은 intern 에서 한 이름이 되어 이름 → 값 표에는
              *          하나만 남고(뒤의 값이 이긴다), 값 → 이름 표에서만 두 값이 같은 이름을 가리킨다.
              */
-            static bool tryFindNameHashClash( const EnumInfo& info, hashed_string& outFirstName, int64& outFirstValue, hashed_string& outSecondName,
-                                              int64& outSecondValue )
+            [[nodiscard]] static bool tryFindNameHashClash( const EnumInfo& info, hashed_string& outFirstName, int64& outFirstValue, hashed_string& outSecondName,
+                                                            int64& outSecondValue )
             {
                 unordered_map<uint32, std::pair<hashed_string, int64>> mapHashToName;
                 const auto                                             isClash = [&]( const hashed_string& name, int64 value ) -> bool

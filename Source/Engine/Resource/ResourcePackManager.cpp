@@ -86,7 +86,7 @@ namespace sw
             /**
              * @brief "engine/textures/splash.dds" 나 "game/empty/maps/title.xml" 을 도메인과 나머지 경로로 나눕니다.
              */
-            static bool trySplitDomainPrefix( string_view relativePath, string_view& outDomain, string_view& outSubPath )
+            [[nodiscard]] static bool trySplitDomainPrefix( string_view relativePath, string_view& outDomain, string_view& outSubPath )
             {
                 outDomain  = {};
                 outSubPath = {};

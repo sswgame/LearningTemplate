@@ -91,7 +91,7 @@ namespace sw
             /**
              * @brief 메모리 버퍼의 표준 RIFF WAV 데이터를 파싱해 PCM 데이터를 뽑습니다.
              */
-            static bool parseWavPcmMemory( const uint8* pBytes, size_t byteCount, PcmClip& outClip )
+            [[nodiscard]] static bool parseWavPcmMemory( const uint8* pBytes, size_t byteCount, PcmClip& outClip )
             {
                 if ( pBytes == nullptr || byteCount < 44 )
                     return false;
@@ -166,7 +166,7 @@ namespace sw
              * @brief 표준 RIFF WAV 파일의 fmt · data 청크를 파싱해 PCM 데이터를 뽑습니다.
              * @param path 리소스 상대 경로와 절대 경로를 모두 받습니다. 리소스로 먼저 찾고, 없으면 파일로 읽습니다.
              */
-            static bool loadWavPcm( string_view path, PcmClip& outClip )
+            [[nodiscard]] static bool loadWavPcm( string_view path, PcmClip& outClip )
             {
                 vector<uint8> listFile;
                 if ( ResourceUtil::readBinaryResource( path, listFile ) == false && FileUtil::readFile( path, listFile ) == false )
@@ -178,7 +178,7 @@ namespace sw
             /**
              * @brief Windows Media Foundation 으로 MP3 등 압축 오디오를 PCM 바이트 스트림으로 디코딩합니다.
              */
-            static bool loadViaMediaFoundation( string_view absPath, PcmClip& outClip )
+            [[nodiscard]] static bool loadViaMediaFoundation( string_view absPath, PcmClip& outClip )
             {
                 ScopedThreadComAndMf threadComScope;
 
@@ -257,7 +257,7 @@ namespace sw
             }
 
             /** @brief 확장자에 맞는 디코더로 PCM 을 뽑습니다. */
-            static bool loadClip( string_view path, PcmClip& outClip )
+            [[nodiscard]] static bool loadClip( string_view path, PcmClip& outClip )
             {
                 // WAV 는 직접 읽는다(팩 안에서도 된다). 직접 못 읽는 WAV(ADPCM 등)는 Media Foundation 에 넘긴다 — 예전에는 거기서 멈췄다.
                 if ( FileUtil::hasExtension( path, ".wav" ) && loadWavPcm( path, outClip ) )

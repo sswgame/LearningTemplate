@@ -372,7 +372,7 @@ namespace sw
              *          float32 는 float32 로 바로 읽는다(배 정밀도를 거치면 드물게 반올림이 두 번 일어난다).
              */
             template <typename TFloat>
-            static bool parseFiniteFloatToken( string_view token, TFloat& outValue )
+            [[nodiscard]] static bool parseFiniteFloatToken( string_view token, TFloat& outValue )
             {
                 string_view trimmed = StringUtil::trim( token );
                 if ( trimmed.empty() )
@@ -432,7 +432,7 @@ namespace sw
 
             /** @brief 남은 글자가 모두 숫자여야 true 입니다. 뒤에 다른 것이 붙어 있으면 실패입니다. */
             template <typename UnsignedType>
-            static bool parseDigitsExact( string_view digits, int32 base, UnsignedType& outValue )
+            [[nodiscard]] static bool parseDigitsExact( string_view digits, int32 base, UnsignedType& outValue )
             {
                 const auto [ptr, ec] = std::from_chars( digits.data(), digits.data() + digits.size(), outValue, base );
                 return ec == std::errc{} && ptr == digits.data() + digits.size();
@@ -440,7 +440,7 @@ namespace sw
 
             /** @brief 부호 있는 정수를 읽습니다. 절댓값을 부호 없는 타입으로 읽고 범위를 확인합니다(최솟값의 절댓값은 최댓값 + 1 입니다). */
             template <typename SignedType, typename UnsignedType>
-            static bool parseSignedInteger( string_view token, int32 base, SignedType kMinValue, SignedType kMaxValue, SignedType& outValue )
+            [[nodiscard]] static bool parseSignedInteger( string_view token, int32 base, SignedType kMinValue, SignedType kMaxValue, SignedType& outValue )
             {
                 string_view digits;
                 bool        bNegative{ false };

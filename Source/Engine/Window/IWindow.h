@@ -63,7 +63,7 @@ namespace sw
          * @note 플랫폼이 이 기능을 지원하지 않으면(macOS) 이 함수를 재정의해 `false` 를 반환합니다.
          *       재정의해서 **절차를 다시 적지는 마십시오.** 그것이 세 벌이 생긴 경위입니다.
          */
-        virtual bool recreate();
+        [[nodiscard]] virtual bool recreate();
 
         /**
          * @brief 플랫폼 메시지 루프를 한 번 돕니다. 매 프레임 불러야 합니다.
@@ -83,11 +83,11 @@ namespace sw
         // ------------------------------------------------------------------------------
         // IRenderSurface: RHI 가 창 시스템을 모르는 채로 묻는 다섯 가지
         // ------------------------------------------------------------------------------
-        void*  getSurfaceHandle() const override { return getNativeHandle(); }
-        void*  getSurfaceDisplay() const override { return getNativeDisplay(); }
-        uint32 getSurfaceWidth() const override { return getWidth(); }
-        uint32 getSurfaceHeight() const override { return getHeight(); }
-        bool   recreateSurface() override { return recreate(); }
+        void*              getSurfaceHandle() const override { return getNativeHandle(); }
+        void*              getSurfaceDisplay() const override { return getNativeDisplay(); }
+        uint32             getSurfaceWidth() const override { return getWidth(); }
+        uint32             getSurfaceHeight() const override { return getHeight(); }
+        [[nodiscard]] bool recreateSurface() override { return recreate(); }
         /**
          * @brief 창을 화면에 띄우거나 숨깁니다. **"보이기로 했다" 는 사실을 기억합니다.**
          * @details 이것은 가상이 아닙니다. 의도를 기록하는 일을 플랫폼이 빠뜨릴 수 없게 합니다.

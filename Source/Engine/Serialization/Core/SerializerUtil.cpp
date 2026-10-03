@@ -72,7 +72,7 @@ namespace sw
             }
 
             /** @brief uint32 하나를 읽고 오프셋을 그만큼 옮깁니다. */
-            static bool readUint32( const uint8* pData, size_t dataSize, size_t& inoutOffset, uint32& outValue )
+            [[nodiscard]] static bool readUint32( const uint8* pData, size_t dataSize, size_t& inoutOffset, uint32& outValue )
             {
                 if ( inoutOffset + sizeof( uint32 ) > dataSize )
                     return false;
@@ -89,7 +89,7 @@ namespace sw
             }
 
             /** @brief int64 하나를 읽고 오프셋을 그만큼 옮깁니다. */
-            static bool readInt64( const uint8* pData, size_t dataSize, size_t& inoutOffset, int64& outValue )
+            [[nodiscard]] static bool readInt64( const uint8* pData, size_t dataSize, size_t& inoutOffset, int64& outValue )
             {
                 if ( inoutOffset + sizeof( int64 ) > dataSize )
                     return false;
@@ -163,7 +163,7 @@ namespace sw
             }
 
             /** @brief 열거자 항목 하나를 읽습니다. 이름을 모르면 `outKnown` 이 false 이고 바이트는 읽었습니다. 바이트가 모자라면 false 입니다. */
-            static bool readEnumEntry( const EnumInfo& enumInfo, const uint8* pData, size_t dataSize, size_t& inoutOffset, int64& outValue, bool& outKnown )
+            [[nodiscard]] static bool readEnumEntry( const EnumInfo& enumInfo, const uint8* pData, size_t dataSize, size_t& inoutOffset, int64& outValue, bool& outKnown )
             {
                 uint32 nameHash{ 0 };
                 if ( readUint32( pData, dataSize, inoutOffset, nameHash ) == false )
@@ -182,8 +182,8 @@ namespace sw
              * @return 바이트가 모자라면 false. 모르는 열거자 이름이면 **값은 그대로 두고** false 입니다(바이트는 끝까지 읽었다 — XML 의 모르는 이름과 같은 칸
              *         실패). 옛 판의 값 읽기는 이름 표를 보지 않는다(그때 적힌 뜻이 값이었다).
              */
-            static bool readEnumBinary( const EnumInfo& enumInfo, void* pValuePtr, const uint8* pData, size_t dataSize, size_t& inoutOffset,
-                                        BinaryWireVersion wireVersion )
+            [[nodiscard]] static bool readEnumBinary( const EnumInfo& enumInfo, void* pValuePtr, const uint8* pData, size_t dataSize, size_t& inoutOffset,
+                                                      BinaryWireVersion wireVersion )
             {
                 int64 value{ 0 };
                 if ( wireVersion == BinaryWireVersion::EnumByValue )
@@ -228,7 +228,7 @@ namespace sw
              * @brief uint32 길이 머리와 그 길이만큼의 본문을 건너뜁니다. 본문 시작은 `outBlockStart`, 길이는 `outBlockSize` 이고 오프셋은 본문 뒤로 옮깁니다.
              * @return 머리나 본문이 버퍼를 넘으면 false 입니다. 구조체 · 텍스트 리더 값의 바이너리 읽기가 같은 여섯 줄을 두 벌 들고 있었습니다.
              */
-            static bool readSizedBlock( const uint8* pData, size_t dataSize, size_t& inoutOffset, size_t& outBlockStart, uint32& outBlockSize )
+            [[nodiscard]] static bool readSizedBlock( const uint8* pData, size_t dataSize, size_t& inoutOffset, size_t& outBlockStart, uint32& outBlockSize )
             {
                 if ( readUint32( pData, dataSize, inoutOffset, outBlockSize ) == false )
                     return false;
@@ -298,7 +298,7 @@ namespace sw
              * 컨테이너에 넣는 것은 **팩토리가** 합니다(`createOwnedPointer` 가 소유자에 붙입니다).
              * XML · JSON 도 같은 약속이라 여기서 `appendElement` 를 부르지 않습니다.
              */
-            static bool readOwnedPointerBinary( const uint8* pData, size_t dataSize, size_t& inoutOffset, const SerializeContext& ctx )
+            [[nodiscard]] static bool readOwnedPointerBinary( const uint8* pData, size_t dataSize, size_t& inoutOffset, const SerializeContext& ctx )
             {
                 uint32 nameLen{ 0 };
                 if ( readUint32( pData, dataSize, inoutOffset, nameLen ) == false )
