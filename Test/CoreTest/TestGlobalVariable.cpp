@@ -3,76 +3,75 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Common/EngineServices.h"
-
 #include "TestFramework/TestFramework.h"
 
-SW_GLOBAL_VARIABLE_BOOL( gv_testBool, true, "Unit Test Bool Global Variable" );
-SW_GLOBAL_VARIABLE_INT( gv_testInt, 60, "Unit Test Int32 Global Variable" );
-SW_GLOBAL_VARIABLE_FLOAT( gv_testFloat, 45.0f, "Unit Test Float Global Variable" );
-SW_GLOBAL_VARIABLE_STRING( gv_testString, "InitialValue", "Unit Test String Global Variable" );
-
-SW_EXTERN_GLOBAL_VARIABLE_BOOL( gv_testBool );
-SW_EXTERN_GLOBAL_VARIABLE_INT( gv_testInt );
-SW_EXTERN_GLOBAL_VARIABLE_FLOAT( gv_testFloat );
-SW_EXTERN_GLOBAL_VARIABLE_STRING( gv_testString );
-
-// 테스트용 매크로 — 다섯 종류에 "Shipping 에서 빠짐 · 남음" 을 섞어 정의 · 참조의 두 선택 경로를 모두 컴파일한다.
-enum class TestGlobalVariableMode : uint8
+namespace
 {
-    First,
-    Second
-};
+    /**
+     * @brief 지역 `GlobalVariableManager` 하나에 네 종류(불리언 · 정수 · 실수 · 문자열) 변수를 등록한 시험 바탕입니다.
+     * @details 프로세스의 매니저(Engine 이 든다)를 쓰지 않으므로 시험끼리 값을 나누지 않습니다. 정의 매크로가 정적 등록자를 거쳐 기동 때
+     *          등록되는 경로는 EngineTest 의 `GlobalVariableMacroTest` 가 봅니다.
+     */
+    struct GlobalVariableFixture
+    {
+        sw::GlobalVariableManager _manager;
+        sw::string                _stringValue;
+        float32                   _floatValue;
+        int32                     _intValue;
+        bool                      _bValue;
+        bool                      _bAllRegistered;
 
-SW_TEST_GLOBAL_VARIABLE_BOOL( gv_testOnlyBool, true, "Test-only Bool (dropped in Shipping)" );
-SW_TEST_GLOBAL_VARIABLE_INT( gv_testOnlyInt, 7, "Test-only Int32 (kept in Shipping)", SW_KEEP_IN_SHIPPING );
-SW_TEST_GLOBAL_VARIABLE_FLOAT( gv_testOnlyFloat, 1.5f, "Test-only Float (dropped in Shipping)" );
-SW_TEST_GLOBAL_VARIABLE_STRING( gv_testOnlyString, "Probe", "Test-only String (kept in Shipping)", SW_KEEP_IN_SHIPPING );
-SW_TEST_GLOBAL_VARIABLE_ENUM( gv_testOnlyEnum, TestGlobalVariableMode, TestGlobalVariableMode::Second, "Test-only Enum (dropped in Shipping)" );
-
-SW_EXTERN_TEST_GLOBAL_VARIABLE_BOOL( gv_testOnlyBool );
-SW_EXTERN_TEST_GLOBAL_VARIABLE_INT( gv_testOnlyInt, SW_KEEP_IN_SHIPPING );
-SW_EXTERN_TEST_GLOBAL_VARIABLE_FLOAT( gv_testOnlyFloat );
-SW_EXTERN_TEST_GLOBAL_VARIABLE_STRING( gv_testOnlyString, SW_KEEP_IN_SHIPPING );
-SW_EXTERN_TEST_GLOBAL_VARIABLE_ENUM( gv_testOnlyEnum, TestGlobalVariableMode );
+        /** @brief 기본값으로 네 변수를 등록합니다. */
+        GlobalVariableFixture()
+            : _manager{}
+            , _stringValue{ "InitialValue" }
+            , _floatValue{ 45.0f }
+            , _intValue{ 60 }
+            , _bValue{ true }
+            , _bAllRegistered{ false }
+        {
+            const bool bBoolRegistered   = _manager.registerVariable( "gv_testBool", sw::GlobalVariableType::Boolean, &_bValue, true, "Unit Test Bool Global Variable" );
+            const bool bIntRegistered    = _manager.registerVariable( "gv_testInt", sw::GlobalVariableType::Int32, &_intValue, int32{ 60 }, "Unit Test Int32 Global Variable" );
+            const bool bFloatRegistered  = _manager.registerVariable( "gv_testFloat", sw::GlobalVariableType::Float, &_floatValue, 45.0f, "Unit Test Float Global Variable" );
+            const bool bStringRegistered = _manager.registerVariable( "gv_testString", sw::GlobalVariableType::String, &_stringValue, sw::string{ "InitialValue" }, "Unit Test String Global Variable" );
+            _bAllRegistered              = bBoolRegistered && bIntRegistered && bFloatRegistered && bStringRegistered;
+        }
+    };
+} // namespace
 
 // ------------------------------------------------------------------------------
-// 1) Engine_GlobalVariable — 등록·수정·커맨드라인
+// 1) GlobalVariableTest — 등록 정보 · 수정 · 커맨드라인 (지역 매니저)
 // ------------------------------------------------------------------------------
 /**
- * @brief [GlobalVariableTest] 등록
+ * @brief [GlobalVariableTest] 등록하면 타입 · 설명 · 현재 값을 그대로 돌려준다
  */
 SW_TEST_CASE( GlobalVariableTest, Registration )
 {
-    sw::GlobalVariableInfo* pBoolInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testBool" );
-    SW_EXPECT_TRUE( pBoolInfo != nullptr );
-    if ( pBoolInfo != nullptr )
-    {
-        SW_EXPECT_TRUE( pBoolInfo->_type == sw::GlobalVariableType::Boolean );
-        SW_EXPECT_TRUE( pBoolInfo->getValueAsBool() );
-        SW_EXPECT_EQUAL( sw::string( "Unit Test Bool Global Variable" ), pBoolInfo->_description );
-    }
+    GlobalVariableFixture fixture;
+    SW_ASSERT_TRUE( fixture._bAllRegistered );
 
-    sw::GlobalVariableInfo* pIntInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testInt" );
-    SW_EXPECT_TRUE( pIntInfo != nullptr );
-    if ( pIntInfo != nullptr )
-    {
-        SW_EXPECT_TRUE( pIntInfo->_type == sw::GlobalVariableType::Int32 );
-        SW_EXPECT_EQUAL( 60, pIntInfo->getValueAsInt() );
-    }
+    sw::GlobalVariableInfo* pBoolInfo = fixture._manager.findVariable( "gv_testBool" );
+    SW_ASSERT_NOT_NULL( pBoolInfo );
+    SW_EXPECT_TRUE( pBoolInfo->_type == sw::GlobalVariableType::Boolean );
+    SW_EXPECT_TRUE( pBoolInfo->getValueAsBool() );
+    SW_EXPECT_EQUAL( sw::string( "Unit Test Bool Global Variable" ), pBoolInfo->_description );
+    SW_EXPECT_FALSE( pBoolInfo->_bTestOnly );
 
-    sw::GlobalVariableInfo* pFloatInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testFloat" );
-    SW_EXPECT_TRUE( pFloatInfo != nullptr );
-    if ( pFloatInfo != nullptr )
-        SW_EXPECT_NEAR_EQUAL( 45.0f, pFloatInfo->getValueAsFloat(), 1e-4f );
+    sw::GlobalVariableInfo* pIntInfo = fixture._manager.findVariable( "gv_testInt" );
+    SW_ASSERT_NOT_NULL( pIntInfo );
+    SW_EXPECT_TRUE( pIntInfo->_type == sw::GlobalVariableType::Int32 );
+    SW_EXPECT_EQUAL( 60, pIntInfo->getValueAsInt() );
 
-    sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
-    SW_EXPECT_TRUE( pStrInfo != nullptr );
-    if ( pStrInfo != nullptr )
-        SW_EXPECT_EQUAL( sw::string( "InitialValue" ), pStrInfo->getValueAsString() );
+    sw::GlobalVariableInfo* pFloatInfo = fixture._manager.findVariable( "gv_testFloat" );
+    SW_ASSERT_NOT_NULL( pFloatInfo );
+    SW_EXPECT_NEAR_EQUAL( 45.0f, pFloatInfo->getValueAsFloat(), 1e-4f );
 
-    const uint32 varCount = sw::engine::getGlobalVariableManager().getVariableCount();
-    SW_EXPECT_TRUE( varCount >= 4u );
+    sw::GlobalVariableInfo* pStrInfo = fixture._manager.findVariable( "gv_testString" );
+    SW_ASSERT_NOT_NULL( pStrInfo );
+    SW_EXPECT_EQUAL( sw::string( "InitialValue" ), pStrInfo->getValueAsString() );
+
+    SW_EXPECT_EQUAL( 4u, fixture._manager.getVariableCount() );
+    SW_EXPECT_FALSE( fixture._manager.registerVariable( "gv_testInt", sw::GlobalVariableType::Int32, &fixture._intValue, int32{ 0 }, "duplicate" ) );
 }
 
 /**
@@ -80,18 +79,18 @@ SW_TEST_CASE( GlobalVariableTest, Registration )
  */
 SW_TEST_CASE( GlobalVariableTest, ModificationAndReset )
 {
+    GlobalVariableFixture fixture;
+    SW_EXPECT_TRUE( fixture._manager.setValueFromString( "gv_testInt", "144" ) );
+    SW_EXPECT_EQUAL( 144, fixture._intValue );
 
-    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testInt", "144" ) );
-    SW_EXPECT_EQUAL( 144, gv_testInt );
+    SW_EXPECT_TRUE( fixture._manager.setValueFromString( "gv_testBool", "false" ) );
+    SW_EXPECT_FALSE( fixture._bValue );
 
-    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testBool", "false" ) );
-    SW_EXPECT_FALSE( gv_testBool );
+    SW_EXPECT_TRUE( fixture._manager.resetToDefault( "gv_testInt" ) );
+    SW_EXPECT_EQUAL( 60, fixture._intValue );
 
-    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().resetToDefault( "gv_testInt" ) );
-    SW_EXPECT_EQUAL( 60, gv_testInt );
-
-    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().resetToDefault( "gv_testBool" ) );
-    SW_EXPECT_TRUE( gv_testBool );
+    SW_EXPECT_TRUE( fixture._manager.resetToDefault( "gv_testBool" ) );
+    SW_EXPECT_TRUE( fixture._bValue );
 }
 
 /**
@@ -101,12 +100,13 @@ SW_TEST_CASE( GlobalVariableTest, ModificationAndReset )
  */
 SW_TEST_CASE( GlobalVariableTest, BooleanTextThatIsNotABooleanIsRefused )
 {
-    sw::GlobalVariableManager& manager = sw::engine::getGlobalVariableManager();
+    GlobalVariableFixture      fixture;
+    sw::GlobalVariableManager& manager = fixture._manager;
     SW_ASSERT_TRUE( manager.resetToDefault( "gv_testBool" ) );
     SW_EXPECT_FALSE( manager.setValueFromString( "gv_testBool", "ture" ) );
-    SW_EXPECT_TRUE( gv_testBool );
+    SW_EXPECT_TRUE( fixture._bValue );
     SW_EXPECT_TRUE( manager.setValueFromString( "gv_testBool", "Off" ) );
-    SW_EXPECT_FALSE( gv_testBool );
+    SW_EXPECT_FALSE( fixture._bValue );
     SW_EXPECT_TRUE( manager.resetToDefault( "gv_testBool" ) );
 }
 
@@ -115,33 +115,34 @@ SW_TEST_CASE( GlobalVariableTest, BooleanTextThatIsNotABooleanIsRefused )
  */
 SW_TEST_CASE( GlobalVariableTest, DirectValueModificationAndReset )
 {
-    sw::GlobalVariableInfo* pBoolInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testBool" );
+    GlobalVariableFixture   fixture;
+    sw::GlobalVariableInfo* pBoolInfo = fixture._manager.findVariable( "gv_testBool" );
     SW_ASSERT_NOT_NULL( pBoolInfo );
     SW_EXPECT_TRUE( pBoolInfo->setValueAsBool( false ) );
-    SW_EXPECT_FALSE( gv_testBool );
+    SW_EXPECT_FALSE( fixture._bValue );
     pBoolInfo->resetToDefault();
-    SW_EXPECT_TRUE( gv_testBool );
+    SW_EXPECT_TRUE( fixture._bValue );
 
-    sw::GlobalVariableInfo* pIntInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testInt" );
+    sw::GlobalVariableInfo* pIntInfo = fixture._manager.findVariable( "gv_testInt" );
     SW_ASSERT_NOT_NULL( pIntInfo );
     SW_EXPECT_TRUE( pIntInfo->setValueAsInt( 999 ) );
-    SW_EXPECT_EQUAL( 999, gv_testInt );
+    SW_EXPECT_EQUAL( 999, fixture._intValue );
     pIntInfo->resetToDefault();
-    SW_EXPECT_EQUAL( 60, gv_testInt );
+    SW_EXPECT_EQUAL( 60, fixture._intValue );
 
-    sw::GlobalVariableInfo* pFloatInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testFloat" );
+    sw::GlobalVariableInfo* pFloatInfo = fixture._manager.findVariable( "gv_testFloat" );
     SW_ASSERT_NOT_NULL( pFloatInfo );
     SW_EXPECT_TRUE( pFloatInfo->setValueAsFloat( 123.5f ) );
-    SW_EXPECT_NEAR_EQUAL( 123.5f, gv_testFloat, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 123.5f, fixture._floatValue, 1e-4f );
     pFloatInfo->resetToDefault();
-    SW_EXPECT_NEAR_EQUAL( 45.0f, gv_testFloat, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 45.0f, fixture._floatValue, 1e-4f );
 
-    sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
+    sw::GlobalVariableInfo* pStrInfo = fixture._manager.findVariable( "gv_testString" );
     SW_ASSERT_NOT_NULL( pStrInfo );
     SW_EXPECT_TRUE( pStrInfo->setValueAsString( "ModifiedStr" ) );
-    SW_EXPECT_EQUAL( sw::string( "ModifiedStr" ), gv_testString );
+    SW_EXPECT_EQUAL( sw::string( "ModifiedStr" ), fixture._stringValue );
     pStrInfo->resetToDefault();
-    SW_EXPECT_EQUAL( sw::string( "InitialValue" ), gv_testString );
+    SW_EXPECT_EQUAL( sw::string( "InitialValue" ), fixture._stringValue );
 }
 
 /**
@@ -149,12 +150,10 @@ SW_TEST_CASE( GlobalVariableTest, DirectValueModificationAndReset )
  */
 SW_TEST_CASE( GlobalVariableTest, CommandLineIntegration )
 {
+    GlobalVariableFixture fixture;
     // 부분 CommandLineManager 에서 GlobalVariableManager::updateFromCommandLine 을 쓰지 않는다.
     // CLI 맵에 GV 이름이 없으면 getArgument 가 assert 한다(과거 flake/abort).
     // 테스트 대상 변수만 파싱한 뒤 setValueFromString 으로 적용한다.
-    sw::engine::getGlobalVariableManager().resetToDefault( "gv_testInt" );
-    sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
-
     sw::CommandLineManager cmd;
     cmd.initialize();
     cmd.addArgument<int32>( { "gv_testInt" }, int32{ 60 }, false );
@@ -174,13 +173,10 @@ SW_TEST_CASE( GlobalVariableTest, CommandLineIntegration )
     SW_EXPECT_TRUE( cmd.getArgument( "gv_testString", parsedStr ) );
     SW_EXPECT_EQUAL( sw::string( "FromCLI" ), parsedStr );
 
-    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testInt", sw::to_string( parsedInt ) ) );
-    SW_EXPECT_TRUE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_testString", parsedStr ) );
-    SW_EXPECT_EQUAL( 777, gv_testInt );
-    SW_EXPECT_EQUAL( sw::string( "FromCLI" ), gv_testString );
-
-    sw::engine::getGlobalVariableManager().resetToDefault( "gv_testInt" );
-    sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
+    SW_EXPECT_TRUE( fixture._manager.setValueFromString( "gv_testInt", sw::to_string( parsedInt ) ) );
+    SW_EXPECT_TRUE( fixture._manager.setValueFromString( "gv_testString", parsedStr ) );
+    SW_EXPECT_EQUAL( 777, fixture._intValue );
+    SW_EXPECT_EQUAL( sw::string( "FromCLI" ), fixture._stringValue );
 }
 
 /**
@@ -188,54 +184,12 @@ SW_TEST_CASE( GlobalVariableTest, CommandLineIntegration )
  */
 SW_TEST_CASE( GlobalVariableTest, NonExistentVariableHandling )
 {
-    sw::GlobalVariableInfo* pMissing = sw::engine::getGlobalVariableManager().findVariable( "gv_nonExistentVariable" );
+    GlobalVariableFixture   fixture;
+    sw::GlobalVariableInfo* pMissing = fixture._manager.findVariable( "gv_nonExistentVariable" );
     SW_EXPECT_NULL( pMissing );
 
-    SW_EXPECT_FALSE( sw::engine::getGlobalVariableManager().setValueFromString( "gv_nonExistentVariable", "123" ) );
-    SW_EXPECT_FALSE( sw::engine::getGlobalVariableManager().resetToDefault( "gv_nonExistentVariable" ) );
-}
-
-/**
- * @brief [GlobalVariableTest] 테스트용 매크로는 등록 정보에 표시를 남기고, Shipping 에서는 등록되지 않는다
- * @details 에디터 목록 · 프리셋이 이 표시(`_bTestOnly`)로 거른다. `SW_KEEP_IN_SHIPPING` 을 준 것만 배포 빌드에도 등록되고,
- *          나머지는 등록되지 않은 채 기본값으로 읽힌다.
- */
-SW_TEST_CASE( GlobalVariableTest, TestOnlyVariablesAreMarkedAndDroppedInShipping )
-{
-    sw::GlobalVariableManager& manager = sw::engine::getGlobalVariableManager();
-
-    // 값은 어느 빌드에서나 읽힌다(Shipping 에서는 등록되지 않은 기본값이다).
-    SW_EXPECT_TRUE( gv_testOnlyBool );
-    SW_EXPECT_NEAR_EQUAL( 1.5f, gv_testOnlyFloat, 1e-6f );
-    SW_EXPECT_TRUE( gv_testOnlyEnum == TestGlobalVariableMode::Second );
-
-    // 남기는 것: 어느 빌드에서나 등록되고 테스트용으로 표시된다.
-    const sw::GlobalVariableInfo* pKeptInt = manager.findVariable( "gv_testOnlyInt" );
-    SW_ASSERT_TRUE( pKeptInt != nullptr );
-    SW_EXPECT_TRUE( pKeptInt->_bTestOnly );
-    SW_EXPECT_EQUAL( 7, pKeptInt->getValueAsInt() );
-
-    const sw::GlobalVariableInfo* pKeptString = manager.findVariable( "gv_testOnlyString" );
-    SW_ASSERT_TRUE( pKeptString != nullptr );
-    SW_EXPECT_TRUE( pKeptString->_bTestOnly );
-    SW_EXPECT_EQUAL( sw::string( "Probe" ), pKeptString->getValueAsString() );
-
-    // 빠지는 것: 개발 빌드에서는 표시와 함께 등록되고, Shipping 에서는 등록 자체가 없다.
-    for ( const utf8* pDroppedName : { "gv_testOnlyBool", "gv_testOnlyFloat", "gv_testOnlyEnum" } )
-    {
-        const sw::GlobalVariableInfo* pDropped = manager.findVariable( pDroppedName );
-#if defined( SW_SHIPPING )
-        SW_EXPECT_TRUE_MSG( pDropped == nullptr, pDroppedName );
-#else
-        SW_ASSERT_TRUE( pDropped != nullptr );
-        SW_EXPECT_TRUE_MSG( pDropped->_bTestOnly, pDroppedName );
-#endif
-    }
-
-    // 일반 매크로에는 표시가 없다.
-    const sw::GlobalVariableInfo* pRuntime = manager.findVariable( "gv_testInt" );
-    SW_ASSERT_TRUE( pRuntime != nullptr );
-    SW_EXPECT_FALSE( pRuntime->_bTestOnly );
+    SW_EXPECT_FALSE( fixture._manager.setValueFromString( "gv_nonExistentVariable", "123" ) );
+    SW_EXPECT_FALSE( fixture._manager.resetToDefault( "gv_nonExistentVariable" ) );
 }
 
 /**
@@ -245,7 +199,8 @@ SW_TEST_CASE( GlobalVariableTest, TestOnlyVariablesAreMarkedAndDroppedInShipping
  */
 SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
 {
-    sw::GlobalVariableInfo* pStrInfo = sw::engine::getGlobalVariableManager().findVariable( "gv_testString" );
+    GlobalVariableFixture   fixture;
+    sw::GlobalVariableInfo* pStrInfo = fixture._manager.findVariable( "gv_testString" );
     SW_ASSERT_NOT_NULL( pStrInfo );
 
     std::atomic<bool>   bWriterDone{ false };
@@ -274,7 +229,7 @@ SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
     {
         if ( iter >= 1000 && readCount.load() - readBeforeWrite >= kMinOverlappedRead )
             break;
-        sw::engine::getGlobalVariableManager().setValueFromString( "gv_testString", sw::string( "Value_" ) + sw::to_string( iter ) );
+        fixture._manager.setValueFromString( "gv_testString", sw::string( "Value_" ) + sw::to_string( iter ) );
     }
     const uint32 overlappedRead = readCount.load() - readBeforeWrite;
     bWriterDone.store( true, std::memory_order_release );
@@ -282,8 +237,6 @@ SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
 
     SW_EXPECT_EQUAL( 0u, badReadCount.load() );
     SW_EXPECT_TRUE_MSG( overlappedRead >= kMinOverlappedRead, "읽기가 쓰기와 거의 겹치지 않았다 — 아무것도 시험하지 않은 것이다" );
-
-    sw::engine::getGlobalVariableManager().resetToDefault( "gv_testString" );
 }
 
 /**

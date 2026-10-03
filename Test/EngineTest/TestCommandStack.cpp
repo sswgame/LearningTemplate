@@ -12,7 +12,7 @@
 
 using namespace sw;
 
-SW_TEST_CASE( EditorCommandStackTest, PushUndoRedoAndBranch )
+SW_TEST_CASE( CommandStackTest, PushUndoRedoAndBranch )
 {
     CommandStack stack;
     int32        value{ 0 };
@@ -65,9 +65,9 @@ SW_TEST_CASE( EditorCommandStackTest, PushUndoRedoAndBranch )
 }
 
 /**
- * @brief [EditorCommandStackTest] 전역 싱글톤 CommandStack 및 다단계 Undo/Redo 체인 검증
+ * @brief [CommandStackTest] 전역 싱글톤 CommandStack 및 다단계 Undo/Redo 체인 검증
  */
-SW_TEST_CASE( EditorCommandStackTest, GlobalSingletonAndMultiStepChain )
+SW_TEST_CASE( CommandStackTest, GlobalSingletonAndMultiStepChain )
 {
     sw::CommandStack& globalStack = sw::engine::getCommandStack();
     globalStack.clear();
@@ -111,14 +111,14 @@ SW_TEST_CASE( EditorCommandStackTest, GlobalSingletonAndMultiStepChain )
 }
 
 /**
- * @brief [EditorCommandStackTest] 복합 트랜잭션 (Compound Transaction) begin/end/cancel 검증
+ * @brief [CommandStackTest] 복합 트랜잭션 (Compound Transaction) begin/end/cancel 검증
  */
 /**
- * @brief [EditorCommandStackTest] 중첩 트랜잭션은 최외곽에서 하나로 커밋된다.
+ * @brief [CommandStackTest] 중첩 트랜잭션은 최외곽에서 하나로 커밋된다.
  * @details 예전에는 1비트 플래그라 안쪽 begin 이 바깥이 쌓아둔 목록을 clear 하고,
  *          안쪽 end 가 플래그를 풀어 바깥 Undo 기록이 통째로 유실됐다.
  */
-SW_TEST_CASE( EditorCommandStackTest, NestedTransactionCommitsOnceAtOutermost )
+SW_TEST_CASE( CommandStackTest, NestedTransactionCommitsOnceAtOutermost )
 {
     CommandStack stack;
     int32        value{ 0 };
@@ -165,7 +165,7 @@ SW_TEST_CASE( EditorCommandStackTest, NestedTransactionCommitsOnceAtOutermost )
     SW_EXPECT_EQUAL( 7, value );
 };
 
-SW_TEST_CASE( EditorCommandStackTest, CompoundTransaction )
+SW_TEST_CASE( CommandStackTest, CompoundTransaction )
 {
     CommandStack stack;
     int32        valA{ 0 };
@@ -243,9 +243,9 @@ SW_TEST_CASE( EditorCommandStackTest, CompoundTransaction )
 }
 
 /**
- * @brief [EditorCommandStackTest] 슬라이더/드래그 연속 액션 병합 (pushCoalesce) 검증
+ * @brief [CommandStackTest] 슬라이더/드래그 연속 액션 병합 (pushCoalesce) 검증
  */
-SW_TEST_CASE( EditorCommandStackTest, PushCoalesce )
+SW_TEST_CASE( CommandStackTest, PushCoalesce )
 {
     CommandStack stack;
     float32      sliderValue{ 0.0f };
@@ -286,9 +286,9 @@ SW_TEST_CASE( EditorCommandStackTest, PushCoalesce )
 }
 
 /**
- * @brief [EditorCommandStackTest] 히스토리 검사 및 특정 시점 다단계 점프 (jumpTo) 검증
+ * @brief [CommandStackTest] 히스토리 검사 및 특정 시점 다단계 점프 (jumpTo) 검증
  */
-SW_TEST_CASE( EditorCommandStackTest, JumpToAndHistoryInspection )
+SW_TEST_CASE( CommandStackTest, JumpToAndHistoryInspection )
 {
     CommandStack stack;
     int32        value{ 0 };
@@ -334,9 +334,9 @@ SW_TEST_CASE( EditorCommandStackTest, JumpToAndHistoryInspection )
 }
 
 /**
- * @brief [EditorCommandStackTest] GameObject 바이너리 스냅샷 기반 다단계 Undo/Redo 트랜잭션 스트레스 검증
+ * @brief [CommandStackTest] GameObject 바이너리 스냅샷 기반 다단계 Undo/Redo 트랜잭션 스트레스 검증
  */
-SW_TEST_CASE( EditorCommandStackTest, GameObjectBinarySnapshotUndoRedoTransactions )
+SW_TEST_CASE( CommandStackTest, GameObjectBinarySnapshotUndoRedoTransactions )
 {
     GameObjectManager manager;
     GameObject*       pObject = manager.createGameObject( hashed_string( "TransactionHero" ) );
@@ -416,9 +416,9 @@ SW_TEST_CASE( EditorCommandStackTest, GameObjectBinarySnapshotUndoRedoTransactio
 }
 
 /**
- * @brief [EditorCommandStackTest] PIE 스냅샷 및 계층 구조 대규모 변이 복원 스트레스 검증
+ * @brief [CommandStackTest] PIE 스냅샷 및 계층 구조 대규모 변이 복원 스트레스 검증
  */
-SW_TEST_CASE( EditorCommandStackTest, EditorPlaySessionBinaryHierarchySnapshotStress )
+SW_TEST_CASE( CommandStackTest, EditorPlaySessionBinaryHierarchySnapshotStress )
 {
     GameObjectManager manager;
 
@@ -505,9 +505,9 @@ SW_TEST_CASE( EditorCommandStackTest, EditorPlaySessionBinaryHierarchySnapshotSt
 }
 
 /**
- * @brief [EditorCommandStackTest] 컴포넌트 클립보드 바이너리 복사/붙여넣기 정밀도 검증
+ * @brief [CommandStackTest] 컴포넌트 클립보드 바이너리 복사/붙여넣기 정밀도 검증
  */
-SW_TEST_CASE( EditorCommandStackTest, ComponentBinaryClipboardValuePasting )
+SW_TEST_CASE( CommandStackTest, ComponentBinaryClipboardValuePasting )
 {
     GameObjectManager manager;
     GameObject*       pSourceObj = manager.createGameObject( hashed_string( "ClipboardSource" ) );
@@ -546,9 +546,9 @@ SW_TEST_CASE( EditorCommandStackTest, ComponentBinaryClipboardValuePasting )
 }
 
 /**
- * @brief [EditorCommandStackTest] Undo/Redo 도중 push 재진입 가드 엣지 케이스 검증
+ * @brief [CommandStackTest] Undo/Redo 도중 push 재진입 가드 엣지 케이스 검증
  */
-SW_TEST_CASE( EditorCommandStackTest, ReentrancyPushGuardDuringUndoRedo )
+SW_TEST_CASE( CommandStackTest, ReentrancyPushGuardDuringUndoRedo )
 {
     CommandStack stack;
     int32        val = 0;
@@ -583,7 +583,7 @@ SW_TEST_CASE( EditorCommandStackTest, ReentrancyPushGuardDuringUndoRedo )
 }
 
 /**
- * @brief [EditorCommandStackTest] undo 실행 중의 pushCoalesce 가 지난 명령을 덮어쓰지 않는다
+ * @brief [CommandStackTest] undo 실행 중의 pushCoalesce 가 지난 명령을 덮어쓰지 않는다
  * @details `_bIsExecuting` 은 undo/redo 콜백이 자기 자신을 새 명령으로 기록하지 못하게 막는
  *          재진입 방지다. `push` 는 그것을 보는데 `pushCoalesce` 는 보지 않았다. 그래서
  *          undo 콜백 안에서 병합 push 를 하면 `push` 는 거절당하는데 **coalesce 키는 그대로
@@ -591,7 +591,7 @@ SW_TEST_CASE( EditorCommandStackTest, ReentrancyPushGuardDuringUndoRedo )
  *          즉 **아무 상관 없는 지난 명령** — 의 redo 를 갈아치웠다. 되돌린 뒤 다시 실행하면
  *          다른 일이 일어난다.
  */
-SW_TEST_CASE( EditorCommandStackTest, CoalesceDuringUndoDoesNotRewriteHistory )
+SW_TEST_CASE( CommandStackTest, CoalesceDuringUndoDoesNotRewriteHistory )
 {
     CommandStack stack;
     int32        firstValue{ 0 };
@@ -671,13 +671,13 @@ SW_TEST_CASE( EditorCommandStackTest, CoalesceDuringUndoDoesNotRewriteHistory )
 }
 
 /**
- * @brief [EditorCommandStackTest] undo 콜백 안에서 jumpTo 를 불러도 멈추지 않는다
+ * @brief [CommandStackTest] undo 콜백 안에서 jumpTo 를 불러도 멈추지 않는다
  * @details `push` · `pushCoalesce` · `undo` · `redo` 는 모두 재진입 깃발(`_bIsExecuting`)을 보는데
  *          `jumpTo` 만 보지 않았다. 콜백 안에서 부르면 안쪽 `undo()` 가 그 깃발 때문에 아무것도
  *          하지 않고 돌아오고, `_index` 가 줄지 않으므로 `while` 이 영원히 돈다 — 틀린 값이 아니라
  *          **멈춘 에디터**다. 이 케이스가 회귀하면 CTest 타임아웃까지 붙잡힌다.
  */
-SW_TEST_CASE( EditorCommandStackTest, JumpToInsideUndoCallbackDoesNotSpin )
+SW_TEST_CASE( CommandStackTest, JumpToInsideUndoCallbackDoesNotSpin )
 {
     sw::CommandStack stack;
 
@@ -714,11 +714,11 @@ SW_TEST_CASE( EditorCommandStackTest, JumpToInsideUndoCallbackDoesNotSpin )
 }
 
 /**
- * @brief [EditorCommandStackTest] 명령이 하나뿐인 트랜잭션도 트랜잭션 레이블을 쓴다
+ * @brief [CommandStackTest] 명령이 하나뿐인 트랜잭션도 트랜잭션 레이블을 쓴다
  * @details 여러 개일 때는 트랜잭션 레이블을 쓰면서 하나일 때만 안쪽 명령의 레이블을 그대로 썼다 —
  *          "Move 3 objects" 로 묶었는데 실제 명령이 하나면 실행 취소 메뉴에 "Set position" 이 떴다.
  */
-SW_TEST_CASE( EditorCommandStackTest, SingleCommandTransactionKeepsTheTransactionLabel )
+SW_TEST_CASE( CommandStackTest, SingleCommandTransactionKeepsTheTransactionLabel )
 {
     sw::CommandStack stack;
 
@@ -770,12 +770,12 @@ namespace
 } // namespace
 
 /**
- * @brief [EditorCommandStackTest] releaseCodeWithin 은 그 코드를 쥔 명령만 떼고, 나머지 명령과 현재 위치는 그대로 둔다
+ * @brief [CommandStackTest] releaseCodeWithin 은 그 코드를 쥔 명령만 떼고, 나머지 명령과 현재 위치는 그대로 둔다
  * @details 에디터 모듈이 핫 리로드로 내려가도 오브젝트 편집(엔진 데이터 명령)은 되돌릴 수 있어야 한다 — 내려가는 모듈의 코드를 쥔 명령만 뗀다.
  *          트랜잭션 묶음은 안쪽 하나가 걸리면 통째로 뗀다(반쪽 트랜잭션을 되돌리지 않는다). 되돌린 것 · 아직인 것의 경계(현재 위치)도 남은 명령
  *          기준으로 그대로여야 한다. 그 범위의 알림 처리기도 뗀다.
  */
-SW_TEST_CASE( EditorCommandStackTest, ReleaseCodeWithinDropsOnlyTheCommandsHoldingThatCode )
+SW_TEST_CASE( CommandStackTest, ReleaseCodeWithinDropsOnlyTheCommandsHoldingThatCode )
 {
     sw::CommandStack stack;
     s_releaseProbeValue = 0;

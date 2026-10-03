@@ -3,37 +3,61 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Window/WindowEvents.h"
-
 #include "TestFramework/TestFramework.h"
 
 #include <thread>
 
 namespace
 {
+    /**
+     * @brief 고정 ID 이벤트(`SW_REGISTER_ENGINE_EVENT`) 시험용입니다 — 엔진 예약 ID 를 쓰는 값 타입의 모양(크기 페이로드)만 흉내 냅니다.
+     * @details 시험은 디스패처(Core)를 보므로 Engine 의 창 이벤트 타입을 쓰지 않습니다. 그 타입 자체는 EngineTest 의 `WindowEventTest` 가 봅니다.
+     */
+    struct ResizeProbeEvent final : sw::IEvent
+    {
+        int32 _width{ 0 };
+        int32 _height{ 0 };
+
+        SW_REGISTER_ENGINE_EVENT( WindowResize );
+    };
+
+    /** @brief 페이로드 없는 고정 ID 이벤트입니다. */
+    struct CloseProbeEvent final : sw::IEvent
+    {
+        SW_REGISTER_ENGINE_EVENT( WindowClose );
+    };
+
+    /** @brief 불리언 하나를 싣는 고정 ID 이벤트입니다. */
+    struct ActivateProbeEvent final : sw::IEvent
+    {
+        bool _bActive{ false };
+
+        SW_REGISTER_ENGINE_EVENT( WindowActivate );
+    };
+
     int32 s_LastResizeWidth{ 0 };
     int32 s_LastResizeHeight{ 0 };
 
     /** @brief 리사이즈 이벤트에서 너비·높이를 기록합니다. */
-    void onWindowResize( const sw::WindowResizeEvent& e )
+    void onResizeProbe( const ResizeProbeEvent& e )
     {
         s_LastResizeWidth  = e._width;
         s_LastResizeHeight = e._height;
     }
 
-    bool s_bWindowClosed{ false };
-    bool s_bWindowActivated{ false };
+    bool s_bCloseReceived{ false };
+    bool s_bActivateReceived{ false };
 
-    /** @brief 창 닫기 이벤트를 기록합니다. */
-    void onWindowClose( const sw::WindowCloseEvent& )
+    /** @brief 닫기 이벤트를 받았음을 기록합니다. */
+    void onCloseProbe( const CloseProbeEvent& )
     {
-        s_bWindowClosed = true;
+        s_bCloseReceived = true;
     }
 
-    /** @brief 창 활성화 여부를 기록합니다. */
-    void onWindowActivate( const sw::WindowActivateEvent& e )
+    /** @brief 활성 이벤트의 값을 기록합니다. */
+    void onActivateProbe( const ActivateProbeEvent& e )
     {
-        s_bWindowActivated = e._bIsActivate;
+        s_bActivateReceived = e._bActive;
     }
 
     /** @brief 소멸 횟수를 세는 시험용 이벤트 — 큐에 남은 것이 실제로 파괴되는지 본다. */
@@ -60,7 +84,7 @@ namespace
     int32 s_releaseProbeCount{ 0 };
 
     /** @brief 이미지 범위 풀기 테스트가 받은 리사이즈 이벤트 수를 셉니다. */
-    void onReleaseProbeResize( const sw::WindowResizeEvent& )
+    void onReleaseProbeResize( const ResizeProbeEvent& )
     {
         ++s_releaseProbeCount;
     }
@@ -93,11 +117,11 @@ SW_TEST_CASE( EventTest, DispatcherPushAndDispatch )
     s_LastResizeWidth  = 0;
     s_LastResizeHeight = 0;
 
-    sw::EventDispatcher                                dispatcher;
-    sw::Delegate<void( const sw::WindowResizeEvent& )> del = SW_DELEGATE_FUNCTION( sw::Delegate<void( const sw::WindowResizeEvent& )>, onWindowResize );
-    dispatcher.subscribe<sw::WindowResizeEvent>( del );
+    sw::EventDispatcher                           dispatcher;
+    sw::Delegate<void( const ResizeProbeEvent& )> del = SW_DELEGATE_FUNCTION( sw::Delegate<void( const ResizeProbeEvent& )>, onResizeProbe );
+    dispatcher.subscribe<ResizeProbeEvent>( del );
 
-    sw::WindowResizeEvent event;
+    ResizeProbeEvent event;
     event._width  = 1920;
     event._height = 1080;
     dispatcher.push( event );
@@ -109,7 +133,7 @@ SW_TEST_CASE( EventTest, DispatcherPushAndDispatch )
     SW_EXPECT_EQUAL( 1920, s_LastResizeWidth );
     SW_EXPECT_EQUAL( 1080, s_LastResizeHeight );
 
-    dispatcher.unsubscribe<sw::WindowResizeEvent>( del );
+    dispatcher.unsubscribe<ResizeProbeEvent>( del );
     dispatcher.clear();
 }
 
@@ -118,25 +142,25 @@ SW_TEST_CASE( EventTest, DispatcherPushAndDispatch )
  */
 SW_TEST_CASE( EventTest, DispatcherCloseAndActivateEvents )
 {
-    s_bWindowClosed    = false;
-    s_bWindowActivated = false;
+    s_bCloseReceived    = false;
+    s_bActivateReceived = false;
 
-    sw::EventDispatcher                                  dispatcher;
-    sw::Delegate<void( const sw::WindowCloseEvent& )>    closeDel    = SW_DELEGATE_FUNCTION( sw::Delegate<void( const sw::WindowCloseEvent& )>, onWindowClose );
-    sw::Delegate<void( const sw::WindowActivateEvent& )> activateDel = SW_DELEGATE_FUNCTION( sw::Delegate<void( const sw::WindowActivateEvent& )>, onWindowActivate );
+    sw::EventDispatcher                             dispatcher;
+    sw::Delegate<void( const CloseProbeEvent& )>    closeDel    = SW_DELEGATE_FUNCTION( sw::Delegate<void( const CloseProbeEvent& )>, onCloseProbe );
+    sw::Delegate<void( const ActivateProbeEvent& )> activateDel = SW_DELEGATE_FUNCTION( sw::Delegate<void( const ActivateProbeEvent& )>, onActivateProbe );
 
-    dispatcher.subscribe<sw::WindowCloseEvent>( closeDel );
-    dispatcher.subscribe<sw::WindowActivateEvent>( activateDel );
+    dispatcher.subscribe<CloseProbeEvent>( closeDel );
+    dispatcher.subscribe<ActivateProbeEvent>( activateDel );
 
-    sw::WindowCloseEvent    closeEvt;
-    sw::WindowActivateEvent activateEvt;
-    activateEvt._bIsActivate = SW_TRUE;
+    CloseProbeEvent    closeEvt;
+    ActivateProbeEvent activateEvt;
+    activateEvt._bActive = true;
 
     dispatcher.publish( closeEvt );
     dispatcher.publish( activateEvt );
 
-    SW_EXPECT_TRUE( s_bWindowClosed );
-    SW_EXPECT_TRUE( s_bWindowActivated );
+    SW_EXPECT_TRUE( s_bCloseReceived );
+    SW_EXPECT_TRUE( s_bActivateReceived );
 
     SW_EXPECT_EQUAL( sw::kEventWindowClose, closeEvt.getEventType() );
     SW_EXPECT_EQUAL( sw::kEventWindowActivate, activateEvt.getEventType() );
@@ -152,11 +176,11 @@ SW_TEST_CASE( EventTest, DeferredEventQueueTest )
     s_LastResizeWidth  = 0;
     s_LastResizeHeight = 0;
 
-    sw::EventDispatcher                                dispatcher;
-    sw::Delegate<void( const sw::WindowResizeEvent& )> resizeDel = SW_DELEGATE_FUNCTION( sw::Delegate<void( const sw::WindowResizeEvent& )>, onWindowResize );
-    dispatcher.subscribe<sw::WindowResizeEvent>( resizeDel );
+    sw::EventDispatcher                           dispatcher;
+    sw::Delegate<void( const ResizeProbeEvent& )> resizeDel = SW_DELEGATE_FUNCTION( sw::Delegate<void( const ResizeProbeEvent& )>, onResizeProbe );
+    dispatcher.subscribe<ResizeProbeEvent>( resizeDel );
 
-    sw::WindowResizeEvent event;
+    ResizeProbeEvent event;
     event._width  = 2560;
     event._height = 1440;
 
@@ -164,7 +188,7 @@ SW_TEST_CASE( EventTest, DeferredEventQueueTest )
     SW_EXPECT_EQUAL( 2560, s_LastResizeWidth );
     SW_EXPECT_EQUAL( 1440, s_LastResizeHeight );
 
-    dispatcher.unsubscribe<sw::WindowResizeEvent>( resizeDel );
+    dispatcher.unsubscribe<ResizeProbeEvent>( resizeDel );
     dispatcher.clear();
 }
 
@@ -181,24 +205,24 @@ SW_TEST_CASE( EventTest, EventDispatcherChannelFiltering )
     sw::hashed_string uiChannel( "UI_Channel" );
     sw::hashed_string audioChannel( "Audio_Channel" );
 
-    sw::Delegate<void( const sw::WindowResizeEvent& )> uiDel = SW_DELEGATE_LAMBDA( sw::Delegate<void( const sw::WindowResizeEvent& )>, []( const sw::WindowResizeEvent& e )
+    sw::Delegate<void( const ResizeProbeEvent& )> uiDel = SW_DELEGATE_LAMBDA( sw::Delegate<void( const ResizeProbeEvent& )>, []( const ResizeProbeEvent& e )
     { s_uiChannelReceived = e._width; } );
 
-    sw::Delegate<void( const sw::WindowResizeEvent& )> audioDel = SW_DELEGATE_LAMBDA( sw::Delegate<void( const sw::WindowResizeEvent& )>, []( const sw::WindowResizeEvent& e )
+    sw::Delegate<void( const ResizeProbeEvent& )> audioDel = SW_DELEGATE_LAMBDA( sw::Delegate<void( const ResizeProbeEvent& )>, []( const ResizeProbeEvent& e )
     { s_audioChannelReceived = e._height; } );
 
-    dispatcher.subscribe<sw::WindowResizeEvent>( uiChannel, uiDel );
-    dispatcher.subscribe<sw::WindowResizeEvent>( audioChannel, audioDel );
+    dispatcher.subscribe<ResizeProbeEvent>( uiChannel, uiDel );
+    dispatcher.subscribe<ResizeProbeEvent>( audioChannel, audioDel );
 
-    sw::WindowResizeEvent event;
+    ResizeProbeEvent event;
     event._width  = 1280;
     event._height = 720;
 
-    dispatcher.publish<sw::WindowResizeEvent>( uiChannel, event );
+    dispatcher.publish<ResizeProbeEvent>( uiChannel, event );
     SW_EXPECT_EQUAL( 1280, s_uiChannelReceived );
     SW_EXPECT_EQUAL( 0, s_audioChannelReceived );
 
-    dispatcher.publish<sw::WindowResizeEvent>( audioChannel, event );
+    dispatcher.publish<ResizeProbeEvent>( audioChannel, event );
     SW_EXPECT_EQUAL( 720, s_audioChannelReceived );
 
     dispatcher.clear();
@@ -214,20 +238,20 @@ SW_TEST_CASE( EventTest, FrameAllocatorOverflowFallback )
     int32 receivedCount{ 0 };
     int32 lastReceivedIndex{ -1 };
 
-    sw::Delegate<void( const sw::WindowResizeEvent& )> del = SW_DELEGATE_LAMBDA( sw::Delegate<void( const sw::WindowResizeEvent& )>, [&]( const sw::WindowResizeEvent& e )
+    sw::Delegate<void( const ResizeProbeEvent& )> del = SW_DELEGATE_LAMBDA( sw::Delegate<void( const ResizeProbeEvent& )>, [&]( const ResizeProbeEvent& e )
     {
         ++receivedCount;
         SW_EXPECT_EQUAL( lastReceivedIndex + 1, e._width );
         lastReceivedIndex = e._width;
     } );
 
-    dispatcher.subscribe<sw::WindowResizeEvent>( del );
+    dispatcher.subscribe<ResizeProbeEvent>( del );
 
     // Push 3000 events (> 90 KB, exceeding default 64KB linear arena)
     constexpr int32 kTotalEvents = 3000;
     for ( int32 index = 0; index < kTotalEvents; ++index )
     {
-        sw::WindowResizeEvent evt;
+        ResizeProbeEvent evt;
         evt._width  = index;
         evt._height = index * 2;
         dispatcher.push( evt );
@@ -306,8 +330,8 @@ SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPumpingThread )
 
     int32 receivedCount = 0;
     int32 widthSum      = 0;
-    dispatcher.subscribe<sw::WindowResizeEvent>( SW_DELEGATE_LAMBDA(
-        sw::Delegate<void( const sw::WindowResizeEvent& )>, [&]( const sw::WindowResizeEvent& e )
+    dispatcher.subscribe<ResizeProbeEvent>( SW_DELEGATE_LAMBDA(
+        sw::Delegate<void( const ResizeProbeEvent& )>, [&]( const ResizeProbeEvent& e )
     {
         ++receivedCount;
         widthSum += e._width;
@@ -323,7 +347,7 @@ SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPumpingThread )
         {
             for ( int32 eventIndex = 0; eventIndex < kEventsPerThread; ++eventIndex )
             {
-                sw::WindowResizeEvent resizeEvent;
+                ResizeProbeEvent resizeEvent;
                 resizeEvent._width  = 1;
                 resizeEvent._height = 1;
                 dispatcher.push( resizeEvent );
@@ -354,13 +378,13 @@ SW_TEST_CASE( EventTest, PushFromWorkerThreadsReachesPumpingThread )
  */
 SW_TEST_CASE( EventTest, ReleaseCodeWithinDropsTheSubscriptionsAndEntriesTheImageCreated )
 {
-    using ResizeDelegate = sw::Delegate<void( const sw::WindowResizeEvent& )>;
+    using ResizeDelegate = sw::Delegate<void( const ResizeProbeEvent& )>;
 
     sw::EventDispatcher dispatcher;
     s_releaseProbeCount = 0;
-    dispatcher.subscribe<sw::WindowResizeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onReleaseProbeResize ) );
+    dispatcher.subscribe<ResizeProbeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onReleaseProbeResize ) );
 
-    sw::WindowResizeEvent event;
+    ResizeProbeEvent event;
     event._width  = 10;
     event._height = 20;
     dispatcher.publish( event );
@@ -378,7 +402,7 @@ SW_TEST_CASE( EventTest, ReleaseCodeWithinDropsTheSubscriptionsAndEntriesTheImag
     SW_EXPECT_EQUAL( 1, s_releaseProbeCount );
 
     // 항목이 지워졌어도 다시 구독하면 이쪽에서 새 항목을 만든다.
-    dispatcher.subscribe<sw::WindowResizeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onReleaseProbeResize ) );
+    dispatcher.subscribe<ResizeProbeEvent>( SW_DELEGATE_FUNCTION( ResizeDelegate, onReleaseProbeResize ) );
     dispatcher.publish( event );
     SW_EXPECT_EQUAL( 2, s_releaseProbeCount );
 

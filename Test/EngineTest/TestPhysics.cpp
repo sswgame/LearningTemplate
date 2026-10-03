@@ -29,6 +29,20 @@ SW_TEST_CASE( PhysicsTest, AabbIntersectsAndContains )
     SW_EXPECT_FALSE( box.intersects( farBox ) );
 }
 
+/**
+ * @brief [PhysicsTest] 빈 AABB(`AABB::empty`)의 `getExtents()` 는 무한대 차가 아니라 0 이다
+ */
+SW_TEST_CASE( PhysicsTest, EmptyAabbHasZeroExtents )
+{
+    const AABB emptyBox = AABB::empty();
+    SW_EXPECT_FALSE( emptyBox.isValid() );
+
+    const float3 extents = emptyBox.getExtents();
+    SW_EXPECT_NEAR_EQUAL( 0.0f, extents._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, extents._y, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, extents._z, 1e-4f );
+}
+
 SW_TEST_CASE( PhysicsTest, CollisionLayersFilter )
 {
     CollisionLayers layers;

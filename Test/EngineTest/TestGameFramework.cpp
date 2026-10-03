@@ -69,7 +69,7 @@ namespace
     /**
      * @brief 게임 서비스에 씬 매니저만 겁니다 — `GameInstanceBase` · `DontDestroyOnLoadComponent` 가 활성 씬을 여기서 찾습니다.
      * @details 어서션이 중간에 빠져나가도 풀리게 RAII 로 둡니다. 시험 셋이 같은 가드를 각자 들고 있었습니다.
-     *          (`TestFramework/GameTestUtil.h` 의 같은 가드는 `sw::test` 를 들여와 이 파일의 `test::makeTempPath` 와 이름이 부딪힌다.)
+     *          (`EngineTest/GameTestUtil.h` 의 같은 가드는 `sw::test` 를 들여와 이 파일의 `test::makeTempPath` 와 이름이 부딪힌다.)
      */
     struct ScopedSceneGameService
     {

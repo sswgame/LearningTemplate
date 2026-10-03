@@ -38,6 +38,11 @@
      파일이 옮겨져 경로가 죽는 것(실제로 있었다)과, ImGui 를 타는 파일이 섞여 들어오는 것
      (EditorTest 는 ImGui 를 링크하지 않으므로 그 순간 빌드가 깨진다).
 
+  6) `CoreTest` 는 **엔진 없이** Core 를 시험한다 — `Test/CoreTest` 의 파일은 Engine · GameFramework · Editor · Games · App 헤더를
+     include 하지 않고, 코드에서 `engine::` 를 부르지 않는다(주석은 보지 않는다). 엔진 타입이 필요한 시험은 EngineTest 에 둔다.
+     include 경로로는 막을 수 없다: 공용 `TestFramework` 가 Engine 을 PUBLIC 링크하고 `TestFramework.h` 가 `EngineMinimal.h` 를
+     끌어온다. 그래서 이 규칙이 보는 것은 CoreTest 파일이 **직접** 쓰는 것이다.
+
   python Scripts/lint/gate/CheckTestSuites.py [--root <repo>]
 """
 from __future__ import annotations
@@ -69,6 +74,11 @@ _kLegacyMarkerRe = re.compile(r"//\s*SW_TEST_REQUIRES_HOST\(\s*(\w+)\s*\)\s*:")
 _kHostSplitRe = re.compile(r"\bHOST_SPLIT\b")
 _kEditorSourceRe = re.compile(r"\$\{CMAKE_SOURCE_DIR\}/(Source/Editor/[\w/]+\.cpp)")
 _kImGuiIncludeRe = re.compile(r"^\s*#\s*include\s*[<\"][^>\"]*imgui[^>\"]*[>\"]", re.I | re.M)
+_kCoreTestFolder = "Test/CoreTest"
+_kCoreTestForbiddenIncludeRe = re.compile(r"^[ \t]*#[ \t]*include[ \t]*[<\"]((?:Engine|GameFramework|Editor|Games|App)/[^>\"]*)[>\"]", re.M)
+_kEngineNamespaceRe = re.compile(r"\bengine::\w+")
+_kBlockCommentRe = re.compile(r"/\*.*?\*/", re.S)
+_kLineCommentRe = re.compile(r"//[^\n]*")
 
 
 def collectCases(rootDir: Path) -> tuple[list[tuple[str, str, str]], list[str]]:
@@ -150,6 +160,34 @@ def checkEditorTestSources(rootDir: Path) -> list[str]:
     return errors
 
 
+def stripCommentsInternal(text: str) -> str:
+    """블록 · 줄 주석을 지운다. 블록 주석 안의 줄바꿈은 남겨 위반 줄 번호가 원문과 맞는다."""
+    text = _kBlockCommentRe.sub(lambda match: "\n" * match.group(0).count("\n"), text)
+    return _kLineCommentRe.sub("", text)
+
+
+def checkCoreTestIsEngineFree(rootDir: Path) -> list[str]:
+    """`Test/CoreTest` 의 파일이 엔진 계층 헤더를 include 하거나 `engine::` 를 부르지 않는지 봅니다."""
+    folder = rootDir / _kCoreTestFolder
+    if folder.is_dir() is False:
+        return []
+    errors: list[str] = []
+    for path in sorted(folder.rglob("*")):
+        if path.suffix not in (".cpp", ".h"):
+            continue
+        relPath = path.relative_to(rootDir).as_posix()
+        code = stripCommentsInternal(path.read_text(encoding="utf-8", errors="ignore"))
+        for match in _kCoreTestForbiddenIncludeRe.finditer(code):
+            line = code.count("\n", 0, match.start()) + 1
+            errors.append(f"{relPath}:{line}: CoreTest 가 `{match.group(1)}` 를 include 합니다 — CoreTest 는 엔진 없이 Core 를 "
+                          f"시험합니다. 엔진 타입이 필요한 시험은 EngineTest 로 옮기거나 지역 대역을 쓰세요")
+        for match in _kEngineNamespaceRe.finditer(code):
+            line = code.count("\n", 0, match.start()) + 1
+            errors.append(f"{relPath}:{line}: CoreTest 가 `{match.group(0)}` 를 부릅니다 — 프로세스의 엔진 서비스 대신 "
+                          f"지역 객체(예: 지역 GlobalVariableManager)를 쓰거나 EngineTest 로 옮기세요")
+    return errors
+
+
 def check(rootDir: Path) -> tuple[list[str], int, int]:
     cases, missed = collectCases(rootDir)
     errors: list[str] = list(missed)
@@ -219,6 +257,9 @@ def check(rootDir: Path) -> tuple[list[str], int, int]:
     # 5) EditorTest 가 손으로 나열한 Editor 소스
     errors += checkEditorTestSources(rootDir)
 
+    # 6) CoreTest 는 엔진을 직접 쓰지 않는다
+    errors += checkCoreTestIsEngineFree(rootDir)
+
     return errors, len(homes), len(cases)
 
 
@@ -287,6 +328,24 @@ class CheckTestSuitesGate(LintGate):
                 "Test/EngineTest/TestProbe.cpp": (
                     'SW_TEST_REQUIRES_HOST( ProbeTest, "needs a GPU" );\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n'
                     "SW_TEST_CASE( NeighbourTest, Two )\n{\n}\n"
+                ),
+            },
+        },
+        {
+            "name": "CoreTest 가 Engine 헤더를 include",
+            "files": {
+                **_kCleanFixture,
+                "Test/CoreTest/TestProbe.cpp": '#include "Engine/Physics/AABB.h"\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n',
+            },
+        },
+        {
+            # 주석의 `engine::` 는 세지 않는다 — 걸리는 것은 본문의 호출이다.
+            "name": "CoreTest 가 engine:: 서비스를 부름",
+            "files": {
+                **_kCleanFixture,
+                "Test/CoreTest/TestProbe.cpp": (
+                    "// engine::releaseModuleCode 가 부르는 길\n"
+                    "SW_TEST_CASE( ProbeTest, One )\n{\n    sw::engine::getGlobalVariableManager();\n}\n"
                 ),
             },
         },

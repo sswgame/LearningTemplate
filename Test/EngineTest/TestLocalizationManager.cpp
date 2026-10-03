@@ -6,10 +6,11 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
 
+#include "EngineTest/GameTestUtil.h"
+
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/Data/GameStrings.h"
 
-#include "TestFramework/GameTestUtil.h"
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------

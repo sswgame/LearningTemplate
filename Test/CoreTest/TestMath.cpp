@@ -4,8 +4,6 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Physics/AABB.h"
-
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
@@ -457,20 +455,6 @@ SW_TEST_CASE( MathTest, VectorTransformIsADirectionTransform )
     const sw::float3   rightNormal     = sw::float3::transformVector( normal, nonUniformScale.invert().transpose() ).normalize();
     SW_EXPECT_TRUE( sw::MathUtil::abs( wrongNormal.dot( tangent.normalize() ) ) > 0.1f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, rightNormal.dot( tangent.normalize() ), 1e-4f );
-}
-
-/**
- * @brief [MathTest] AABB::empty 미초기화 시 getExtents() 부동소수점 오버플로우 방어 검증
- */
-SW_TEST_CASE( MathTest, AABBEmptyExtentsSafety )
-{
-    sw::AABB emptyBox = sw::AABB::empty();
-    SW_EXPECT_FALSE( emptyBox.isValid() );
-
-    sw::float3 extents = emptyBox.getExtents();
-    SW_EXPECT_NEAR_EQUAL( 0.0f, extents._x, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, extents._y, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, extents._z, 1e-4f );
 }
 
 // ------------------------------------------------------------------------------

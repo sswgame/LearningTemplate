@@ -3,11 +3,12 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/EventDispatcher.h"
 
+#include "EngineTest/GameTestUtil.h"
+
 #include "GameFramework/Base/GameEvents.h"
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/Transition/GameModeStateMachine.h"
 
-#include "TestFramework/GameTestUtil.h"
 #include "TestFramework/TestFramework.h"
 
 using sw::test::ScopedLocalServiceBinding;
