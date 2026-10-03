@@ -138,6 +138,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_GhostHunt",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
