@@ -217,9 +217,6 @@ cd build/Ninja-Debug/Bin
 ### 1-9. 빌드 · 린트 · CI · 테스트
 
 
-- **`gv_benchMaterialInstances` 설명 문자열 `"(DX12 크래시 재현용)"` 이 낡아 보인다**(`Games/Empty/BenchScene.cpp`) — 원인(`updateStructuredBuffer` 업로드
-  얼로케이터 이중 Reset)은 `29da82bb` 에서 고쳐졌다. DX12 + `-gv_benchMaterialInstances=1` 로 한 번 돌려 확인한 뒤 문자열을 고친다(주석은 G4 에서 고쳤다).
-
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
 - **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된

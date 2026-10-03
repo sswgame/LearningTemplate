@@ -67,7 +67,7 @@ namespace sw
      * @note 기본은 꺼 둔다 — 배치가 하나인 기본 측정과 부하 모양이 다르다. 프레임마다 구조버퍼 업로드가
      *       여러 번 도는 경로라 DX12 업로드 얼로케이터의 펜스 구간 처리(`updateStructuredBuffer`)를 시험하기에 좋다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMaterialInstances, 0, "벤치 큐브마다 MaterialInstance 부여 (DX12 크래시 재현용)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMaterialInstances, 0, "벤치 큐브마다 MaterialInstance 부여 (배치를 큐브 수만큼 가른다)" );
 
     /**
      * @brief `-gv_benchMeshVariants=N` — 벤치가 쓸 **메시 종류 수**. 배치 키에 메시가 들어가므로 곧 배치 수다.
@@ -346,7 +346,7 @@ namespace sw
         _listBenchMesh.reserve( meshCount );
         _listBenchExtra.clear();
 
-        // 큐브별 머티리얼 인스턴스는 DX12 크래시를 재현하는 용도라 기본은 꺼 둔다.
+        // 큐브별 머티리얼 인스턴스는 배치를 가르는 부하라 기본 측정에서는 꺼 둔다(`gv_benchMaterialInstances`).
         const bool bPerCubeMaterial = ( gv_benchMaterialInstances != 0 );
 
         const uint32 transparentPercent =
