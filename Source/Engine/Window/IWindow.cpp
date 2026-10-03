@@ -3,7 +3,6 @@
 #include "Engine/Window/IWindow.h"
 
 #include "Engine/Window/Linux/X11Window.h"
-#include "Engine/Window/Mac/CocoaWindow.h"
 #include "Engine/Window/Windows/Win32Window.h"
 
 namespace sw
@@ -124,8 +123,6 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return make_unique<Win32Window>();
-#elif defined( SW_PLATFORM_MACOS )
-        return make_unique<CocoaWindow>();
 #elif defined( SW_PLATFORM_LINUX )
         return make_unique<X11Window>();
 #else

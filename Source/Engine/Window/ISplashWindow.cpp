@@ -8,7 +8,6 @@
 #include "Engine/Resource/DdsLoader.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Window/Linux/X11SplashWindow.h"
-#include "Engine/Window/Mac/CocoaSplashWindow.h"
 #include "Engine/Window/Windows/Win32SplashWindow.h"
 
 namespace sw
@@ -30,8 +29,6 @@ namespace sw
     {
 #if defined( SW_PLATFORM_WINDOWS )
         return make_unique<Win32SplashWindow>();
-#elif defined( SW_PLATFORM_MACOS )
-        return make_unique<CocoaSplashWindow>();
 #elif defined( SW_PLATFORM_LINUX )
         return make_unique<X11SplashWindow>();
 #else

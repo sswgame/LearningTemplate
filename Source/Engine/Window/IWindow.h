@@ -19,7 +19,7 @@ namespace sw
     /**
      * @class IWindow
      * @brief 애플리케이션의 주 화면이나 보조 화면을 추상화하는 기본 인터페이스입니다.
-     * @details 플랫폼별(Windows, Linux, macOS 등) 구체 클래스가 이 인터페이스를 상속해 구현합니다.
+     * @details 플랫폼별(Windows, Linux) 구체 클래스가 이 인터페이스를 상속해 구현합니다.
      *          `IRenderSurface` 를 구현하므로 RHI 는 창을 **표면으로만** 봅니다. `Graphics` 가 `Window` 를
      *          include 하지 않는 이유입니다(Engine/Common/IRenderSurface.h).
      */
@@ -60,7 +60,7 @@ namespace sw
          *          보이게 하지 않았습니다.** 백엔드 교체(`RHI::recreateDevice` → `recreateSurface`)가 부르는
          *          자리라, 그 길로 들어온 창은 교체 뒤 사라졌습니다. 플랫폼이 정말로 다른 두 가지는 아래 훅으로 뺐습니다.
          *
-         * @note 플랫폼이 이 기능을 지원하지 않으면(macOS) 이 함수를 재정의해 `false` 를 반환합니다.
+         * @note 플랫폼이 이 기능을 지원하지 않으면 이 함수를 재정의해 `false` 를 반환합니다.
          *       재정의해서 **절차를 다시 적지는 마십시오.** 그것이 세 벌이 생긴 경위입니다.
          */
         [[nodiscard]] virtual bool recreate();

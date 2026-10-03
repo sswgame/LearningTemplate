@@ -22,7 +22,7 @@
     #include <xaudio2.h>
     #define SW_HAS_DXC_API 1
 
-#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
+#elif defined( SW_PLATFORM_LINUX )
     #if __has_include( <dxcapi.h> )
         #define SW_HAS_DXC_API 1
     #endif

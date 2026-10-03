@@ -14,7 +14,7 @@ namespace sw
         /** @brief X11: processMessages 가 XEvent* 를 lParam 에 실을 때 쓰는 메시지 코드입니다. */
         static constexpr uint32 kMessageX11 = 0x8001;
 
-        /** @brief 네이티브 창 핸들입니다(Win32: HWND, macOS: NSWindow, X11: Window). */
+        /** @brief 네이티브 창 핸들입니다(Win32: HWND, X11: Window). */
         void* _pNativeWindow{ nullptr };
         /** @brief 첫 번째 파라미터입니다(Win32: WPARAM). */
         uintptr_t _wParam{ 0 };

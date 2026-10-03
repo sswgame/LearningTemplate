@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @class ISplashWindow
-     * @brief 플랫폼별(Windows, Linux, macOS) 스플래시 창 구현을 위한 추상 기반 클래스입니다.
+     * @brief 플랫폼별(Windows, Linux) 스플래시 창 구현을 위한 추상 기반 클래스입니다.
      */
     class SW_API ISplashWindow
     {

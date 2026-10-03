@@ -12,8 +12,6 @@ SW_TEST_REQUIRES_HOST( WindowTest, "creates a real OS window; headless CI runner
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Window/Windows/Win32Window.h"
-#elif defined( SW_PLATFORM_MACOS )
-    #include "Engine/Window/Mac/CocoaWindow.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include "Engine/Window/Linux/X11Window.h"
 #endif
