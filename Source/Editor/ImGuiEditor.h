@@ -67,6 +67,12 @@ namespace sw::editor
         void onHostFrameEnd() override;
 
     private:
+        /**
+         * @brief `initialize` 가 세운 단계를 **세운 역순으로** 내립니다. 단계마다 null 안전이라 어느 단계에서 멈춘 초기화의 실패 경로와
+         *        정상 종료(`shutdown`)가 같은 본문을 씁니다.
+         * @details 세우는 순서: 에디터 데이터 → ImGui · ImPlot 컨텍스트(+ 글꼴) → 플랫폼 백엔드 → 렌더 백엔드 → (스플래시) → 에디터 컨텍스트 · 패널 ·
+         *          Undo 편집 리스너 → 창 닫기 질의 처리기. 단계를 더하면 이 함수의 같은 자리(역순)에 내리기를 더합니다.
+         */
         void shutdownPartialInitialization();
         bool onWindowCloseQuery();
         // ------------------------------------------------------------------------------

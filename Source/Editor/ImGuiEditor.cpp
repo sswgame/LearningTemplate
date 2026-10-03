@@ -305,6 +305,15 @@ namespace sw::editor
 
     void ImGuiEditor::shutdownPartialInitialization()
     {
+        // 세운 역순이다(헤더의 단계 목록). 각 단계는 세워지지 않았으면 아무것도 하지 않는다.
+
+        // 7) 창 닫기 질의 처리기 — 이 DLL 의 메서드를 가리킨다.
+        IWindow* pActiveWindow = IWindow::getActiveWindow();
+        if ( pActiveWindow != nullptr )
+            pActiveWindow->setCloseQueryHandler( {} );
+
+        // 6) 에디터 컨텍스트 · 패널. Undo 스택에서는 이 모듈의 코드를 쥔 명령과 편집 리스너만 뗀다(오브젝트 편집은 엔진 데이터 명령이라 남는다).
+        ImGuiEditorInternal::releaseModuleUndoCommands();
         if ( _editorContext != nullptr )
         {
             _editorContext->destroyGameView();
@@ -314,25 +323,29 @@ namespace sw::editor
             _editorContext.reset();
         }
 
+        // 4) 렌더 백엔드
         if ( _rendererBackend != nullptr )
         {
             _rendererBackend->shutdown();
             _rendererBackend.reset();
         }
 
+        // 3) 플랫폼 백엔드
         if ( _platformBackend != nullptr )
         {
             _platformBackend->shutdown();
             _platformBackend.reset();
         }
 
-        editor::setEditorData( nullptr );
-        _editorData.reset();
-
+        // 2) ImPlot · ImGui 컨텍스트(글꼴 아틀라스는 컨텍스트가 든다)
         if ( ImPlot::GetCurrentContext() != nullptr )
             ImPlot::DestroyContext();
         if ( ImGui::GetCurrentContext() != nullptr )
             ImGui::DestroyContext();
+
+        // 1) 에디터 데이터
+        editor::setEditorData( nullptr );
+        _editorData.reset();
     }
 
     void ImGuiEditor::shutdown()
@@ -342,15 +355,8 @@ namespace sw::editor
 
         // 열려 있는 파일 대화 상자의 결과 델리게이트를 끊는다. 모듈이 내려가기 전에 걷어 내야 하는 이 DLL 안의 주소다(전역 변수는
         // 모듈을 내리는 쪽이 모듈 이름으로 걷는다). 그 델리게이트는 이 DLL 안의 함수와 `this` 를 잡고
-        // 있고, 네이티브 대화 상자는 사용자가 닫을 때까지 떠 있다. 아래 Undo 스택과 같은 종류의 함정이다.
+        // 있고, 네이티브 대화 상자는 사용자가 닫을 때까지 떠 있다. Undo 스택과 같은 종류의 함정이다.
         FileUtil::cancelFileDialogResults();
-
-        IWindow* pActiveWindow = IWindow::getActiveWindow();
-        if ( pActiveWindow != nullptr )
-            pActiveWindow->setCloseQueryHandler( {} );
-
-        // Undo 스택에서 이 모듈의 코드를 쥔 명령만 뗀다. 오브젝트 편집은 엔진 데이터 명령이라 리로드 뒤에도 되돌릴 수 있다.
-        ImGuiEditorInternal::releaseModuleUndoCommands();
 
         // 기다리지 않는다. 여기로 오는 경로(ModuleHost::suspendModules)는 이미 drainRenderWorkers 로 렌더 워커를 비운 뒤라
         // 기다릴 상대가 없다.
@@ -360,13 +366,7 @@ namespace sw::editor
 
         _dockLayout.save();
 
-        if ( _editorContext != nullptr )
-        {
-            _editorContext->destroyGameView();
-            _editorContext->getPanelManager().shutdownAllPanels( nullptr );
-            _editorContext->getPanelManager().clear();
-        }
-
+        // 초기화 단계의 내리기는 실패 경로와 같은 본문 하나다.
         shutdownPartialInitialization();
 
         _bInitialized = SW_FALSE;
