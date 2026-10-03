@@ -3,6 +3,7 @@
 #include "Core/Container/map.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -995,6 +996,40 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIdsOnlyWithinTheSameProcess )
         SW_EXPECT_TRUE( pManager->resolveComponent( componentHandle ) == nullptr );
         SW_EXPECT_TRUE( pManager->findGameObjectByName( hashed_string( "Survivor" ) ) != nullptr );
     }
+}
+
+/**
+ * @brief [GameFrameworkTest] 오브젝트 수를 터무니없이 크게 적은 스냅샷은 그 수만큼 잡지 않고 실패한다
+ * @details 파일이 말한 개수(40 억)를 그대로 `reserve` 하면 읽기가 잘린 데이터에서 멈추기도 전에 그 한 줄이 수십 GB 를 요구한다.
+ *          오브젝트 하나는 적어도 4 바이트라 남은 바이트 / 4 가 상한이다(`GameInstanceBase::deserializeSceneObjects`).
+ */
+SW_TEST_CASE( GameFrameworkTest, SceneObjectCountBeyondTheDataIsNotReserved )
+{
+    SceneManager sceneManager;
+    SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "HugeCountProbe" ) );
+    const ScopedSceneGameService scopedService{ sceneManager };
+
+    // 봉투 없는(레거시) 상태 — 첫 4 바이트가 오브젝트 수다. 뒤에는 4 바이트뿐이다.
+    const uint8 arrState[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x00, 0x00 };
+
+    // 할당한 바이트 누계로 본다 — 운영체제가 큰 예약을 받아 주면 그 reserve 는 실패하지 않고 조용히 수십 GB 를 잡는다.
+    const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+    if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
+        SW_TEST_SKIP( "memory tracking is off in this executable" );
+    const auto sumAllocatedBytes = [pProfiler]()
+    {
+        uint64 totalBytes = 0;
+        for ( uint32 tagIndex = 0; tagIndex < static_cast<uint32>( MemoryTag::MaxTags ); ++tagIndex )
+            totalBytes += pProfiler->getStats( static_cast<MemoryTag>( tagIndex ) )._totalAllocatedBytes.load();
+        return totalBytes;
+    };
+
+    GameInstanceBase instance;
+    SW_TEST_DEFENSIVE_SCOPE( "a truncated scene snapshot that claims four billion objects" );
+    const uint64 bytesBefore = sumAllocatedBytes();
+    SW_EXPECT_FALSE( instance.deserializeState( arrState, static_cast<uint32>( sizeof( arrState ) ) ) );
+    const uint64 allocatedBytes = sumAllocatedBytes() - bytesBefore;
+    SW_EXPECT_TRUE_MSG( allocatedBytes < uint64{ 1 } * 1024 * 1024, "파일이 말한 오브젝트 수만큼 미리 잡았습니다" );
 }
 
 /**
