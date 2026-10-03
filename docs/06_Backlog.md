@@ -138,11 +138,6 @@ cd build/Ninja-Debug/Bin
 
 - **`.hdr` 원본 굽기가 없다** — 지금 굽기는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
-- **GPU 메모리 측정(사용자 요청 2026-10-03, gfxfix 워크트리 병합 뒤)** — (1) 드라이버 총량 · 예산: DXGI `QueryVideoMemoryInfo`(DX12 · DX11), `VK_EXT_memory_budget`(Vulkan),
-  GL 은 벤더 확장(`GL_NVX_gpu_memory_info` · `GL_ATI_meminfo`)이 있을 때만(없으면 "모름"). (2) 엔진 집계: RHI 자원 생성 · 해제 때 종류별(텍스처 · 렌더 타깃 · 버퍼 ·
-  트랜지언트 풀 · 디스크립터)로 실제 할당 크기를 더한다(DX12 `GetResourceAllocationInfo`). 총량 − 집계 = "엔진 밖(드라이버 · 스왑체인)". 보여 주기는 CPU 태그와 같게
-  `-gv_profileFrames` 보고 · ProfilerPanel. 시험: 텍스처 하나를 만들고 지우면 집계가 그 크기만큼 오르내린다(hostgpu, 4 백엔드).
-
 - **2D 정렬 레이어가 없다.** 깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다.
 - **점광 · 스폿 그림자** — RHI 텍스처 차원(배열 · 큐브, 면 단위 타깃 · 올리기 · 읽기)은 있다. 남은 것: 그림자 패스 다중 뷰(면 여섯) → 셰이더 쪽(DX12 · Vulkan
   큐브 · 배열 bindless 테이블, DX11 · GL TextureCube 슬롯) + `swSampleShadowAtWorld`. 3 단계 전에 큐브 대신 2D 아틀라스(Unity URP · Godot — RHI 변경 없음)로 갈지 먼저 정한다.
@@ -602,6 +597,9 @@ cd build/Ninja-Debug/Bin
   `AssetDatabase::writeRegistryFiles`), 파이썬 `CookAssets.py` 는 스테이징만. 쿠킹은 왕복 검증한 엔티티만 바이너리로 바꾸고 나머지는 XML 로 남기며 WARNING 을 낸다.
 - **압축** — 팩 enum `PackCompressionType` 과 스트림 enum `CompressionCodecType` 은 독립된 디스크 포맷이다(`static_cast` 로 잇지 말 것). `CompressionCodecRegistry` 는 `EngineLoop` 가 소유하고
   Core 에는 슬롯만 있다. 모듈이 등록한 코덱은 그 모듈 shutdown 에서 `unregisterCodec`. zlib 은 Windows 에서 4 GB, LZ4 는 2 GB 가 한계다.
+- **GPU 메모리는 `RHIMemoryLedger` 가 센다** — 생성은 핸들 표에 넣는 자리, 해제는 지연 해제 콜백에서만 적는다(destroy 요청 시점이 아니다). 새 자원 경로를
+  더하면 거기서 `recordAllocation` / `recordFree` 를 부른다. Vulkan `heapUsage`(이 AMD 드라이버)는 `vkAllocateMemory` 합뿐이라 "엔진 밖" ≈ 0 — 스왑체인 몫은
+  DX12 · DX11 수치로 본다. GL 은 벤더 확장이 없으면 사용량이 "모름" 이다. DX11 · GL 은 할당 크기 API 가 없어 논리 크기다.
 - **씬 엔티티는 0 이 아닌 `id` 가 필수다** — `SceneDocument::loadXml` · `saveXml` · 쿠커가 거절한다. 손으로 씬 XML 이나 `EntityNode` 를 지을 때 `_fileId` 를 빠뜨리지 말 것.
   이름만 남은 부착(id 0 + 이름)은 찾지 못한 부모 참조를 다른 id 공간으로 옮겨 적은 **지금 형식**이라(`SceneComponent::syncAttachSerializeFields`) 지우면 안 된다.
 - **씬 · 프리팹 손 XML 을 쓰지 말 것** — 임베디드 오브젝트 XML 은 리플렉션 산출물이다. 머티리얼 XML 에서 `_permutations` 를 빼먹으면 네 백엔드가 제각각 무너져 렌더러 버그로 오인한다
