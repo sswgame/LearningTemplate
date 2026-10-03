@@ -95,7 +95,8 @@ cd build/Ninja-Debug/Bin
 
 ### 1-0. 대기 중 — 진행 중인 워크트리(종료 블록 · 패딩 감사)가 병합된 뒤 한꺼번에 (사용자 지시 2026-10-03)
 
-- **클래스 이름 일관화 — 감사 목록 전부**(사용자: "일관되게 바꿔봐"). 파일에 저장되는 이름은 `REFLECT( Alias = 옛이름 )`, CLI 는 옛 플래그를 별칭으로 남긴다.
+- **클래스 이름 일관화 — 감사 목록 전부**(사용자: "일관되게 바꿔봐"). **별칭은 두지 않는다**(사용자: 아직 실제 게임이 없다) — 씬 · 데이터 XML 의 타입 · 루트 이름,
+  스크립트 · CI 의 CLI 플래그까지 새 이름으로 다시 쓰고 옛 이름은 어디에도 남기지 않는다.
   묶음: (1) `IRHIResource`→`IRHIResourceFactory`(`getResourceFactory`), `ActionMap`→`InputMap`, `InputDeviceType`→`InputGlyphStyle`,
   `ShaderResourceBind`→`ShaderResourceBindOp` · `ShaderResourceBinding`→`ShaderReflectedBinding`, `PrefabManager`→`PrefabCache`, `HPBarBaseComponent`→`HealthBarComponent`,
   `AttackBaseComponent`→`MeleeHitboxComponent`, `EffectBaseComponent`→`FadeOutComponent`, `DamageUIComponent`→`DamageNumberComponent`, `ObjectSnapshotCommand`→`ObjectUndoUtil`,
@@ -111,6 +112,10 @@ cd build/Ninja-Debug/Bin
   `InputMapEditorPanel`/`PrefabEditorPanel`→`InputMapPanel`/`PrefabPanel`, ReflectionParser 소문자 구조체 → 소문자 네임스페이스(`tpl`→`template`), `framres`/`commandmod`→
   `frameresource`/`commandmodifier`; (4) Bake→Cook(`ShaderBaker`→`ShaderCooker`, `--bake-shaders`→`--cook-shaders` + 옛 플래그), `ResourceManager`→`AssetManager`
   ("Resource" 는 디스크 트리 · 팩, "Asset" 은 읽은 객체), `EngineData`/`GameData`/`EditorData`→`EngineDefaultAssets`/`GameSettings`/`EditorToolDefaults`.
+- **기존 별칭 사용처 전부 제거** — `PROPERTY( Alias = … )` 109 줄(36 파일) · `ENUM( ValueAlias = "Med:Medium" )`: `Resource/` 데이터의 키를 정본 이름으로 다시 쓰고 별칭을 지운다.
+  **별칭 기능 자체(REFLECT/PROPERTY Alias · ValueAlias)와 그 시험은 남긴다** — 실제 게임 데이터가 생긴 뒤 이름을 바꿀 때의 창구(언리얼 CoreRedirects 격)이고, 엔진 데이터는 쓰지 않는다.
+  같은 이유로 남은 옛 형식 읽기 경로(`legacy` · 레거시 래핑 등)도 하나씩 보고 걷어낸다. 함정: 모르는 키가 조용히 무시되면 데이터 다시 쓰기를 빠뜨려도 시험이 초록이다 —
+  다시 쓴 뒤 로드 경고/오류가 0 인지 볼 것.
 - **case 중괄호 일관성 규칙**(한 switch 안에서 한 case 라도 중괄호면 모두) — 픽서 패치 준비됨(스크래치), 39 파일 다시 쓰기 + AGENTS.md · 04 규칙 문장.
 - **한 파일에 클래스가 여럿이면 클래스마다 `namespace sw { }` 블록을 나눈다** — 규칙 + 가능하면 게이트, 트리 전체 적용.
 - **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
