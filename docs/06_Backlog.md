@@ -171,7 +171,17 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
-
+- **어빌리티 시스템(`GameFramework/Ability`) · `AbilityArena` 의 첫 빌드 · 실행 확인(2026-10-03, 먼저 할 것).** 들어온 세션은 vcpkg 포트를 받을 수
+  없어(GitHub 아카이브 차단) Engine 을 짓지 못했다 — clang 18 `-fsyntax-only -Wall -Wextra -fno-rtti`(Debug · Shipping 정의, 유니티 묶음 흉내)와
+  린트(`PreCommitLint` · 전체 `CheckCodeConventions`)만 통과했다. **리플렉션 코드 생성 · 링크 · 시험 실행은 한 번도 돌지 않았다.** 할 일:
+  (1) `cmake --preset Ninja-Debug` 다시 구성(새 `REFLECT` 헤더) → 빌드 경고 0 → `EngineTest --test_filter=AbilitySystemTest.*` 열다섯 통과 → 변이 검사
+  (예: `AbilitySystemComponentInternal::accumulate` 의 곱을 보너스 합 대신 곱으로 바꾸면 `DurationEffectsAggregateWithUnrealFormulaAndRevertOnRemoval` 이 지는지,
+  `updateActiveEffects` 의 만료 검사를 주기 실행 앞으로 옮기면 `PeriodicEffectExecutesEachPeriodUntilItExpires` 가 지는지) (2) Shipping · `-L nogpu`
+  (3) `-DSW_ACTIVE_GAME=AbilityArena` 로 Debug · Shipping 을 짓고 `App -gv_arenaAutoPlay=1 -gv_profileFrames=1200` 를 네 백엔드로 — 종료 코드 0, `[Error]` 0건,
+  로그의 `[Arena] wave` 가 오르는지. 에디터(`-EnableEditor`)에서 Play 로 직접 조작해 HP 바 · 피해 숫자 · 화상 스택 · 대시 무적을 눈으로 본다.
+- **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
+  (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
+  어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.
 - **강체 · 고정 스텝 누적기가 없다.** `PhysicsWorld::step` 은 겹침 이벤트만 낸다. 강체가 생기면 적분과 누적기를 넣는다.
 - **리눅스에서 yad 만 깔린 기계에는 "All files" 필터가 없다**(`LinuxFileDialog.cpp`). `yad --file --file-filter='A | *.txt' --file-filter='All files | *'`
   가 뜨는지 확인한 뒤에만 `buildGtkStyleCommand( ..., true )` 로 바꾼다 — yad 가 인자를 거부하면 다이얼로그가 아예 안 뜬다.
@@ -979,6 +989,10 @@ cd build/Ninja-Debug/Bin
   한 배치). 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`, 글리프 · 클립은 `Scripts/generate/GenerateSpriteTextures.py`.
 - **GameData** 는 `GameInstanceBase::initialize` 가 서비스로 묶는다. 언어 코드는 `LocalizationManager::normalizeLanguageCode` 의 철자 하나. 로컬라이제이션 조회의 `const utf8*` 는 추가 전용
   `LocalizedTextArena` 에 있어 영구 유효하다. 대화 핀 번호(`nodeId * 100 + offset`)는 디스크 포맷이고 주인은 `DialogueGraphAsset` 하나다.
+- **어빌리티 시스템** — 다른 오브젝트로 가는 적용 · 이벤트는 `applyGameplayEffectSpecToTarget` · `sendGameplayEventToTarget` 로만(틱 중이면 틱 직후로 미룬다 —
+  남의 `applyGameplayEffectSpecToSelf` 를 틱 안에서 직접 부르면 미루지 않는다). 활성 이펙트 · 스펙은 `unique_ptr` 목록이고 콜백 도중 지우기는 표시만 한다
+  (`ScopedListLock` 이 풀릴 때 지운다) — 콜백이 목록을 늘리거나 줄여도 도는 포인터가 산다. 게임 모듈의 어빌리티는 컴포넌트의 `IModuleCodeHolder` 가 모듈을
+  내리기 전에 거둔다. 카탈로그는 컴포넌트에 박지 말고 게임 서비스로 건다(리로드 뒤 옛 카탈로그를 가리킨다).
 - **키트 소속은 의존 관계로 판별되지 않는다**(전부 Engine 만 include). 다른 장르도 쓰는 것(HP 바 · 데미지 숫자 · 중력)은 `UI/` · `Base/`. 리플렉션 대상 헤더는 소스와 같은 재귀 규칙으로
   모은다(다르면 새 폴더의 `REFLECT` 타입이 컴파일되고 등록만 안 된다).
 - **설정 표의 열쇠는 타입이다**(`ensureConfig<T>( path, baked )`). Shipping 은 디스크의 `Config/` 를 보지 않는다. 고정 스텝 상한은 `EngineConfig::_fixedDeltaTime` · `_maxFixedStepPerFrame`

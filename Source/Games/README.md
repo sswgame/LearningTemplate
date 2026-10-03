@@ -5,6 +5,15 @@
 
 이때 컴파일되는 실행 파일과 타겟의 이름은 어떤 게임을 선택하든 항상 **SWGame**으로 고정됩니다. 이는 런타임에 게임 로직을 갈아끼우는 핫리로드(LiveReload) 기능이 고정된 모듈 이름을 안정적으로 찾을 수 있도록 하기 위함입니다.
 
+## 들어 있는 게임
+
+| 폴더 | 무엇 | 빌드 |
+|------|------|------|
+| `Empty` | 최소 템플릿 + 렌더 벤치 하네스(`-gv_benchMeshes=N`). 기본값 | `-DSW_ACTIVE_GAME=Empty` |
+| `AbilityArena` | 어빌리티 시스템(`GameFramework/Ability`)을 실제로 쓰는 탑다운 웨이브 아레나 — 근접 · 화염구(화상 스택) · 회복(데이터만) · 대시(무적) · 가시 | `-DSW_ACTIVE_GAME=AbilityArena` |
+
+고르지 않은 게임은 빌드되지 않습니다(CI 는 `Empty` 만 짓습니다). 다른 게임을 바꿨으면 그 게임을 골라 한 번 지어 확인합니다.
+
 ## 핫리로드 대상 모듈은 어디서 정하는가
 
 `Config/App/AppConfig.json` 의 `_listGameKitModule` 이 정본입니다. App 이 부팅할 때 이 목록을

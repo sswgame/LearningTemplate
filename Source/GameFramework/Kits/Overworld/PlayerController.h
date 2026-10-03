@@ -50,7 +50,7 @@ namespace sw
         /** @brief 타일 좌표를 설정합니다. */
         void setPosition( int32 x, int32 y );
         /** @brief 입력 허용 여부를 설정합니다. */
-        void setInputEnabled( bool enabled ) { _bInputEnabled = enabled ? 1 : 0; }
+        void setInputEnabled( bool bEnabled ) { _bInputEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         /** @brief 입력을 읽고 이동 FSM 을 갱신합니다. */
         void update( float32 deltaTime, InputManager& input );
 

@@ -8,6 +8,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 
 `GameFramework` 타겟(= 모든 키트가 깔고 앉는 기반):
 
+- **Ability**: 언리얼 Gameplay Ability System 과 같은 어빌리티 시스템 — `AbilitySystemComponent`(어트리뷰트 · 이펙트 · 어빌리티 · 태그 개수),
+  `AttributeSet` · `CombatAttributeSet`, `GameplayEffectDef` · `GameplayEffectSpec`(즉시 · 지속 · 무한 · 주기 · 스택 · 실행 계산), `GameplayAbility`
+  (태그 조건 · 비용 · 쿨다운 · 트리거 · 입력) · `AbilityTask`, XML 카탈로그(`AbilityCatalog`). 장르를 가리지 않아 키트가 아니라 기반에 있습니다(턴제는
+  틱을 끄고 턴마다 `advanceTime( 1 )`). 같은 오브젝트의 `HPBarBaseComponent` · `DamageUIComponent` 와 이어집니다. 자세한 것은 `Ability/README.md`,
+  쓰는 예는 `Source/Games/AbilityArena`
 - **Base**: 키트 공통 수명(`IGame`, `GameInstanceBase`, `GameService`), 세이브 베이스(`SaveGame`),
   장르 무관 컴포넌트(`EffectBaseComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`).
   공유 타입은 `GameFrameworkMinimal.h`. "game" 채널의 수명주기 이벤트(`GameEvents.h`)는 프레임워크가 그 자리에서 낸다 —

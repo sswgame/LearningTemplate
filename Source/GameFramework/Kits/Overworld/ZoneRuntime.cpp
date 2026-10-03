@@ -116,18 +116,18 @@ namespace sw
                                   string_view roleText )
     {
         clear();
-        ZoneDef z{};
-        z._id               = mapName.empty() ? mapPath : mapName;
-        z._role             = ZoneRuntimeInternal::zoneRoleFromText( roleText, mapPath );
-        z._bounds._min._x   = 0;
-        z._bounds._min._y   = 0;
-        z._bounds._max._x   = width > 0 ? width - 1 : 0;
-        z._bounds._max._y   = height > 0 ? height - 1 : 0;
-        z._bClearGateLocked = ZoneRuntimeInternal::roleUsesClearGate( z._role ) ? 1 : 0;
+        ZoneDef zone{};
+        zone._id               = mapName.empty() ? mapPath : mapName;
+        zone._role             = ZoneRuntimeInternal::zoneRoleFromText( roleText, mapPath );
+        zone._bounds._min._x   = 0;
+        zone._bounds._min._y   = 0;
+        zone._bounds._max._x   = width > 0 ? width - 1 : 0;
+        zone._bounds._max._y   = height > 0 ? height - 1 : 0;
+        zone._bClearGateLocked = ZoneRuntimeInternal::roleUsesClearGate( zone._role ) ? SW_TRUE : SW_FALSE;
         // 역할을 태그로 미러해 장르 비의존 코드가 ZoneRole 없이 조회할 수 있게 한다.
         // 이름은 위의 표 하나에서 온다. 여기에 `switch` 로 다시 적으면 세 번째 사본이 된다.
-        z.addTag( zoneRoleToTag( z._role ) );
-        _listZone.push_back( std::move( z ) );
+        zone.addTag( zoneRoleToTag( zone._role ) );
+        _listZone.push_back( std::move( zone ) );
         _activeIndex = 0;
     }
 
@@ -147,7 +147,7 @@ namespace sw
     {
         if ( _activeIndex < 0 || _activeIndex >= static_cast<int32>( _listZone.size() ) )
             return;
-        _listZone[static_cast<size_t>( _activeIndex )]._bClearGateLocked = locked ? 1 : 0;
+        _listZone[static_cast<size_t>( _activeIndex )]._bClearGateLocked = locked ? SW_TRUE : SW_FALSE;
     }
 
     bool ZoneRuntime::isClearGateLocked() const
