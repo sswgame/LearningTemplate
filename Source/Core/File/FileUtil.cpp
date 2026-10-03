@@ -12,14 +12,12 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
-#if defined( SW_PLATFORM_LINUX )
-    #include <link.h>
-#endif
-
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/File/Windows/WindowsFileDialog.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/File/Linux/LinuxFileDialog.h"
+
+    #include <link.h>
 #elif defined( SW_PLATFORM_MACOS )
     #include "Core/File/Mac/MacFileDialog.h"
 #endif

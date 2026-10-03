@@ -21,13 +21,11 @@
     #include "Core/File/Windows/WindowsFileWatcher.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/File/Linux/LinuxFileWatcher.h"
-#elif defined( SW_PLATFORM_MACOS )
-    #include "Core/File/Mac/MacFileWatcher.h"
-#endif
 
-#if defined( SW_PLATFORM_LINUX )
     #include <csetjmp>
     #include <csignal>
+#elif defined( SW_PLATFORM_MACOS )
+    #include "Core/File/Mac/MacFileWatcher.h"
 #endif
 
 namespace sw

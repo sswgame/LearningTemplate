@@ -50,6 +50,63 @@ def buildHeaderLookupMap(repositoryRoot: Path) -> tuple[dict[str, str], dict[str
     return tuple(buildHeaderLookupInternal(repositoryRoot, baseName) for baseName in ("Source", "Test", "Tools"))
 
 
+_kConditionalOpenRe = re.compile(r'^\s*#\s*(?:if|ifdef|ifndef)\b(.*)$')
+_kConditionalBranchRe = re.compile(r'^\s*#\s*(?:elif|else)\b(.*)$')
+_kConditionalEndRe = re.compile(r'^\s*#\s*endif\b')
+_kConditionMacroRe = re.compile(r'\b[A-Za-z_]\w*\b')
+_kNotConditionMacro = frozenset({"defined", "__has_include"})
+
+
+def conditionFamilyInternal(macroName: str) -> str:
+    """플랫폼 매크로는 하나의 사슬(`#if WINDOWS / #elif LINUX / #elif MACOS`)로 다루므로 같은 계열로 묶는다."""
+    if macroName.startswith("SW_PLATFORM_"):
+        return "SW_PLATFORM_*"
+    return macroName
+
+
+def findSplitConditionalIncludes(lines: list[str], relativeFilePath: str) -> list[str]:
+    """
+    include 를 담은 최상위 `#if` 블록 둘이 같은 조건 계열을 물으면 위반이다.
+    순서 검사(위)는 첫 `#if` 에서 멈추므로 조건부 include 는 그 밖에 있다 — 같은 조건으로 프로젝트 헤더 블록과
+    시스템 헤더 블록을 따로 여는 일이 그래서 생겼다. 한 사슬의 갈래 안에 프로젝트 헤더, 빈 줄, 시스템 헤더 순으로 둔다.
+    """
+    listBlock: list[tuple[int, set[str]]] = []
+    listOpen: list[list] = []   # [시작 줄, 계열 집합, include 포함 여부]
+    for lineIndex, line in enumerate(lines):
+        openMatch = _kConditionalOpenRe.match(line)
+        if openMatch:
+            listOpen.append([lineIndex + 1, set(), False])
+            condition = openMatch.group(1).split("//")[0]
+        else:
+            branchMatch = _kConditionalBranchRe.match(line)
+            if branchMatch and listOpen:
+                condition = branchMatch.group(1).split("//")[0]
+            elif _kConditionalEndRe.match(line) and listOpen:
+                block = listOpen.pop()
+                if not listOpen and block[2] and block[1]:
+                    listBlock.append((block[0], block[1]))
+                continue
+            else:
+                if _kIncludeRe.match(line):
+                    for block in listOpen:
+                        block[2] = True
+                continue
+        for macroName in _kConditionMacroRe.findall(condition):
+            if macroName not in _kNotConditionMacro and not macroName.isdigit():
+                listOpen[-1][1].add(conditionFamilyInternal(macroName))
+
+    violationsList = []
+    mapFirstLine: dict[str, int] = {}
+    for startLine, families in listBlock:
+        for family in sorted(families):
+            if family in mapFirstLine:
+                violationsList.append(f"{relativeFilePath}:{startLine}: {family} 로 include 를 고르는 #if 블록이 {mapFirstLine[family]} 줄에도 있습니다 — "
+                                      f"한 사슬로 합치고 갈래 안에 프로젝트 헤더 → 시스템 헤더 순으로 두십시오")
+            else:
+                mapFirstLine[family] = startLine
+    return violationsList
+
+
 def processFile(filePath: Path, repositoryRoot: Path,
                 sourceHeaderMap: dict[str, str] | None = None,
                 testHeaderMap: dict[str, str] | None = None,
@@ -65,6 +122,7 @@ def processFile(filePath: Path, repositoryRoot: Path,
     isCpp = filePath.suffix.lower() in kCppSourceExtensions
     
     lines = text.split('\n')
+    violationsList.extend(findSplitConditionalIncludes(lines, relativeFilePath))
     inIfDirectiveLevel = 0
     boundaryIndex = -1
     
@@ -262,6 +320,22 @@ class CheckIncludeOrderGate(LintGate):
                     '#include "pch.h"\n\n'
                     '#include "Engine/Common/EngineServices.h"\n'
                     '#include "Core/File/FileUtil.h"\n'
+                ),
+            },
+        },
+        {
+            "name": "같은 플랫폼 조건의 include 블록 둘",
+            "files": {
+                "Source/Engine/Probe/Probe.cpp": (
+                    '#include "pch.h"\n\n'
+                    '#if defined( SW_PLATFORM_WINDOWS )\n'
+                    '    #include "Core/File/Windows/WindowsFileDialog.h"\n'
+                    '#elif defined( SW_PLATFORM_LINUX )\n'
+                    '    #include "Core/File/Linux/LinuxFileDialog.h"\n'
+                    '#endif\n\n'
+                    '#if defined( SW_PLATFORM_LINUX )\n'
+                    '    #include <link.h>\n'
+                    '#endif\n'
                 ),
             },
         },

@@ -106,6 +106,9 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
    - 다른 Relative Scope 내의 파일들 (빈 줄)
    - 시스템/OS 전용 헤더 (`Core/Common/StdHeaders.h` 권장) (빈 줄)
    - 외부 ThirdParty 헤더
+4. 플랫폼마다 다른 include 는 무조건 include 들 **뒤의 `#if SW_PLATFORM_WINDOWS / #elif … / #endif` 사슬 하나**에 둡니다. 갈래 안에서는 프로젝트 헤더, 빈 줄,
+   시스템 헤더 순입니다. 시스템 헤더만 따로 같은 조건의 블록을 하나 더 열지 않습니다 — 순서 검사가 첫 `#if` 에서 멈추기 때문에 그렇게 쪼개진 블록이
+   생겼고, 지금은 `CheckIncludeOrder.py` 가 같은 조건 계열의 include 블록 둘을 위반으로 냅니다.
 
 ### 분기문 및 초기화 규칙
 - 본문이 한 줄인 `if` 는 중괄호를 생략합니다. `else` / `else if` 가 붙은 사슬은 **모든 갈래가 한 줄일 때만** 생략하고, 한 갈래라도 여러 줄이면 전부 중괄호를 유지합니다.

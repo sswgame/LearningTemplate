@@ -196,6 +196,9 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
 - Sort includes within a group where doing so does not undermine a required
   ordering. Prefer `Core/Common/StdHeaders.h` and
   `Core/Common/PlatformOsHeaders.h` over scattered system/OS includes.
+- Platform-specific includes go in **one** `#if SW_PLATFORM_WINDOWS / #elif ... / #endif` chain after the
+  unconditional includes; inside a branch, project headers, a blank line, then system headers. Never open a
+  second block on the same condition family for the system headers (`CheckIncludeOrder.py` rejects it).
 - Use the project type aliases from `Types.h`.
 - Prefer Core and Engine facilities over STL or direct system facilities when
   they meet the need.
