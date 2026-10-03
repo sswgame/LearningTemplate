@@ -140,7 +140,7 @@ namespace sw
         , _stamina{ kMaxStamina }
         , _selectedSeedIndex{ 0 }
         , _lastLoggedHour{ -1 }
-        , _randomState{ 0x2545f491u }
+        , _random{ 0x2545f491u }
         , _tool{ FarmTool::Hoe }
         , _bRaining{ SW_FALSE }
         , _bSpawned{ SW_FALSE }
@@ -552,7 +552,7 @@ namespace sw
     {
         [[maybe_unused]] const int32 earned        = _pCatalog != nullptr ? _inventory.settleShipping( *_pCatalog ) : 0;
         [[maybe_unused]] const bool  bSeasonChange = _calendar.startNextDay();
-        _bRaining                                  = ( _calendar.getSeason() != FarmSeason::Winter && nextRandom() < FarmWorldInternal::kRainChance ) ? SW_TRUE : SW_FALSE;
+        _bRaining                                  = ( _calendar.getSeason() != FarmSeason::Winter && _random.nextChance( FarmWorldInternal::kRainChance ) ) ? SW_TRUE : SW_FALSE;
         _field.advanceDay( _calendar.getSeason(), _bRaining != SW_FALSE );
         _stamina        = bPassedOut ? kMaxStamina / 2 : kMaxStamina;
         _playerPosition = FarmWorldInternal::kPlayerStart;
@@ -701,13 +701,5 @@ namespace sw
                      _calendar.getDay(), _calendar.getYear(), hour % 24, _calendar.getMinute(), _inventory.getGold(), _stamina, kMaxStamina,
                      FarmWorldInternal::toToolName( _tool ), pCrop != nullptr ? pCrop->_name.c_str() : "-", _inventory.getItemCount( getSelectedSeed() ),
                      _field.getCropCount(), _field.getReadyCount() );
-    }
-
-    float32 FarmWorld::nextRandom()
-    {
-        _randomState ^= _randomState << 13;
-        _randomState ^= _randomState >> 17;
-        _randomState ^= _randomState << 5;
-        return static_cast<float32>( _randomState & 0xffffffu ) / static_cast<float32>( 0x1000000u );
     }
 } // namespace sw

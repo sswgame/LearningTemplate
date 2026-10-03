@@ -3,9 +3,10 @@
 #include "GameFramework/Kits/Shooter/Weapon.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
+
+#include "GameFramework/Data/GameDataXml.h"
 
 namespace sw
 {
@@ -26,66 +27,28 @@ namespace sw
     // WeaponCatalog
     // ------------------------------------------------------------------------------
     WeaponCatalog::WeaponCatalog()
-        : _listWeapon{}
+        : _catalog{}
     {
     }
 
     bool WeaponCatalog::loadFromResource( string_view path )
     {
         XmlDocument doc;
-        string      absPath;
-        if ( doc.loadPath( path, &absPath ) == false )
-        {
-            SW_LOG_WARNING( "Failed to read weapon catalog %#", path );
-            return false;
-        }
-        const XmlNode root = doc.getRoot( "WeaponCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <WeaponCatalog> root in %#", absPath );
-            return false;
-        }
-        return loadRoot( root, absPath ) > 0;
+        XmlNode     root;
+        string      sourceName;
+        return GameDataXml::loadRoot( doc, path, "WeaponCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
     }
 
     bool WeaponCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
         XmlDocument doc;
-        if ( doc.parse( xmlText, sourceName ) == false )
-        {
-            SW_LOG_WARNING( "Failed to parse weapon catalog text %#", sourceName );
-            return false;
-        }
-        const XmlNode root = doc.getRoot( "WeaponCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <WeaponCatalog> root in %#", sourceName );
-            return false;
-        }
-        return loadRoot( root, sourceName ) > 0;
+        XmlNode     root;
+        return GameDataXml::parseRoot( doc, xmlText, sourceName, "WeaponCatalog", root ) && loadRoot( root, sourceName ) > 0;
     }
 
     void WeaponCatalog::addWeapon( const WeaponDef& weapon )
     {
-        for ( WeaponDef& existing : _listWeapon )
-        {
-            if ( existing._id == weapon._id )
-            {
-                existing = weapon;
-                return;
-            }
-        }
-        _listWeapon.push_back( weapon );
-    }
-
-    const WeaponDef* WeaponCatalog::findWeapon( const hashed_string& id ) const
-    {
-        for ( const WeaponDef& weapon : _listWeapon )
-        {
-            if ( weapon._id == id )
-                return &weapon;
-        }
-        return nullptr;
+        (void)_catalog.add( weapon ); // 빈 id 는 카탈로그가 거른다
     }
 
     uint32 WeaponCatalog::loadRoot( const XmlNode& root, string_view sourceName )
@@ -93,12 +56,9 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Weapon" ); node; node = node.findNextSibling( "Weapon" ) )
         {
-            const utf8* pId = node.findAttribute( "id" );
-            if ( StringUtil::isNullOrEmpty( pId ) )
-            {
-                SW_LOG_WARNING( "%#: <Weapon> without an id - skipped", sourceName );
+            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            if ( pId == nullptr )
                 continue;
-            }
             WeaponDef weapon;
             weapon._id             = hashed_string( pId );
             const utf8* pName      = node.findAttribute( "name" );
@@ -171,7 +131,7 @@ namespace sw
         }
     }
 
-    WeaponFireResult WeaponState::pullTrigger( const ShooterRay& aim, bool bTriggerJustPressed, WeaponShot& outShot )
+    WeaponFireResult WeaponState::pullTrigger( const GameRay& aim, bool bTriggerJustPressed, WeaponShot& outShot )
     {
         outShot._listRay.clear();
         outShot._spreadAtFire = _currentSpread;
@@ -194,7 +154,7 @@ namespace sw
         const float32 coneHalfAngle = _currentSpread * WeaponInternal::kDegreeToRadian;
         for ( int32 pelletIndex = 0; pelletIndex < _def._pelletCount; ++pelletIndex )
         {
-            ShooterRay ray;
+            GameRay ray;
             ray._origin    = aim._origin;
             ray._direction = ShooterMath::applySpread( aim._direction, coneHalfAngle, _random );
             outShot._listRay.push_back( ray );

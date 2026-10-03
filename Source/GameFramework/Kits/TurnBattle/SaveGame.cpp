@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -88,20 +89,25 @@ namespace sw
         const string_view starterSpecies = pData->getCustomProperty( "starterSpecies", "critter_a" );
         const int32       starterLevel   = pData->getCustomPropertyInt( "starterLevel", 5 );
 
-        PartyMember m{};
-        m._speciesId = starterSpecies;
-        m._nickname  = starterSpecies;
-        m._level     = starterLevel;
-        m._hp        = 20 + starterLevel * 2;
-        m._hpMax     = m._hp;
-        m._listPp    = { 35, 30 };
-        m._exp       = 0;
-        m._expNext   = 40 + starterLevel * 10;
-
-        const SpeciesCatalog* pCatalog = game::getService<SpeciesCatalog>();
-        const SpeciesDef*     pDef     = pCatalog != nullptr ? pCatalog->findSpecies( m._speciesId.c_str() ) : nullptr;
-        if ( pDef != nullptr && pDef->_name.empty() == false )
-            m._nickname = pDef->_name;
+        // 카탈로그에 그 종족이 있으면 카탈로그가 만든다(기본 HP · 기술 슬롯의 PP). 없을 때만 손으로 채운 최소 멤버다 — 예전에는 늘 손으로 채워
+        // 종족의 `baseHp` · 기술 수와 상관없이 HP 20 + 레벨 × 2, PP {35, 30} 이었다.
+        const SpeciesCatalog* pCatalog  = game::getService<SpeciesCatalog>();
+        const SpeciesDef*     pDef      = pCatalog != nullptr ? pCatalog->findSpecies( string( starterSpecies ).c_str() ) : nullptr;
+        const int32           safeLevel = MathUtil::clamp( starterLevel, 1, SpeciesCatalog::kMaxLevel );
+        PartyMember           m{};
+        if ( pDef != nullptr && string_view( pDef->_id ) == starterSpecies )
+            m = pCatalog->makeStarter( pDef->_id.c_str(), safeLevel );
+        else
+        {
+            m._speciesId = starterSpecies;
+            m._nickname  = starterSpecies;
+            m._level     = safeLevel;
+            m._hp        = 20 + safeLevel * 2;
+            m._hpMax     = m._hp;
+            m._listPp    = { 35, 30 };
+            m._exp       = 0;
+            m._expNext   = SpeciesCatalog::computeExpToNextLevel( safeLevel );
+        }
 
         _listParty.push_back( std::move( m ) );
         SW_LOG_INFO( "Added starter party %# (lv%#)", _listParty[0]._speciesId, _listParty[0]._level );
@@ -246,7 +252,7 @@ namespace sw
                 const SpeciesDef*     pDef     = pCatalog != nullptr ? pCatalog->findSpecies( m._speciesId.c_str() ) : nullptr;
                 m._nickname                    = pDef != nullptr ? pDef->_name : m._speciesId;
             }
-            m._expNext = 40 + m._level * 10;
+            m._expNext = SpeciesCatalog::computeExpToNextLevel( m._level );
             _listParty.push_back( std::move( m ) );
         }
 

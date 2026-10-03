@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Overworld/PlayerLocomotion.h"
@@ -30,6 +31,15 @@ namespace sw
      */
     SW_GF_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount );
 
+    /** @brief 입력 바인딩 이름 · 스틱 데드존 · 조우율입니다. 게임마다 액션 맵 이름이 다르면 여기서 바꿉니다(코드가 이름을 정하지 않게). */
+    struct PlayerControllerSettings
+    {
+        hashed_string _moveAction{ "Move" };         ///< 2D 벡터 액션
+        hashed_string _interactAction{ "Interact" }; ///< 눌림 액션
+        float32       _moveDeadZone{ 0.5f };         ///< 이보다 작게 기운 스틱은 걸음으로 치지 않는다
+        float32       _encounterRate{ 0.33f };       ///< 수풀 한 걸음의 조우 확률(주기로 바꿔 쓴다)
+    };
+
     /** @brief 타일 스텝 이동과 워프 · 조우 · 상호작용 요청을 만듭니다. */
     class SW_GF_API PlayerController
     {
@@ -46,7 +56,9 @@ namespace sw
          * @details 0 ~ 1 로 읽습니다. 0.33 이면 세 걸음마다 한 번꼴이고, 1 이상이면 매 걸음입니다.
          *          예전에는 0 이 "세 걸음마다" 였습니다. 끄려고 부른 값이 켜는 값이었습니다.
          */
-        void setEncounterRate( float32 rate ) { _encounterRate = rate; }
+        void                            setEncounterRate( float32 rate ) { _settings._encounterRate = rate; }
+        void                            setSettings( const PlayerControllerSettings& settings ) { _settings = settings; }
+        const PlayerControllerSettings& getSettings() const { return _settings; }
         /** @brief 타일 좌표를 설정합니다. */
         void setPosition( int32 x, int32 y );
         /** @brief 입력 허용 여부를 설정합니다. */
@@ -77,19 +89,19 @@ namespace sw
         [[nodiscard]] bool tryStep( int32 deltaX, int32 deltaY );
 
     private:
-        TileMap*               _pTileMap;
-        ActionMap*             _pActionMap;
-        string                 _pendingWarpMap;
-        PlayerLocomotion       _loco;
-        int2                   _tile;             ///< 현재 타일 좌표
-        int2                   _pendingWarpSpawn; ///< 워프 후 놓일 타일 좌표
-        uint32                 _encounterStepCounter;
-        float32                _encounterRate;
-        uint8                  _bMoved            : 1;
-        uint8                  _bWarpPending      : 1;
-        uint8                  _bEncounterPending : 1;
-        uint8                  _bInteractPending  : 1;
-        uint8                  _bInputEnabled     : 1;
-        [[maybe_unused]] uint8 _reserved          : 3;
+        TileMap*                 _pTileMap;
+        ActionMap*               _pActionMap;
+        string                   _pendingWarpMap;
+        PlayerLocomotion         _loco;
+        int2                     _tile;             ///< 현재 타일 좌표
+        int2                     _pendingWarpSpawn; ///< 워프 후 놓일 타일 좌표
+        PlayerControllerSettings _settings;         ///< 이름은 미리 해시해 둔다 — 매 프레임 리터럴을 해시하지 않는다
+        uint32                   _encounterStepCounter;
+        uint8                    _bMoved            : 1;
+        uint8                    _bWarpPending      : 1;
+        uint8                    _bEncounterPending : 1;
+        uint8                    _bInteractPending  : 1;
+        uint8                    _bInputEnabled     : 1;
+        [[maybe_unused]] uint8   _reserved          : 3;
     };
 } // namespace sw

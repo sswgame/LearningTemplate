@@ -49,7 +49,10 @@ namespace sw
         const GameData* pGameData = game::getService<GameData>();
         if ( pGameData != nullptr )
         {
-            const string_view bgm = pGameData->getCustomProperty( "dungeonBgm" );
+            // 전투 음악은 `battleBgm` — 없으면 예전 키(`dungeonBgm`, 던전 음악을 전투에도 틀던 자리)로 물러난다.
+            string_view bgm = pGameData->getCustomProperty( "battleBgm" );
+            if ( bgm.empty() )
+                bgm = pGameData->getCustomProperty( "dungeonBgm" );
             if ( bgm.empty() == false )
             {
                 IAudioSystem* pAudio = game::getService<IAudioSystem>();

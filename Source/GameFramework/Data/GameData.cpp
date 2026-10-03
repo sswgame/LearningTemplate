@@ -14,7 +14,7 @@ namespace sw
 
     string_view GameData::getCustomProperty( string_view key, string_view fallback ) const
     {
-        const auto it = _mapCustomProperty.find( string( key ) );
+        const auto it = _mapCustomProperty.find( key ); // 투명 비교자(`std::less<>`) — 조회마다 `string` 을 만들지 않는다
         if ( it != _mapCustomProperty.end() )
             return it->second;
         return fallback;

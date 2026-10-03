@@ -11,6 +11,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Utility/Xml/TileMapXml.h"
 
+#include "GameFramework/Base/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -96,6 +97,8 @@ namespace sw
         const vector<TileEncounterEntry>& getEncounters() const { return _data._listEncounterEntry; }
         /** @brief 맵 조우 테이블에서 가중치로 추첨합니다. 없으면 빈 문자열입니다. */
         string pickEncounterSpeciesId() const;
+        /** @brief 조우 추첨의 씨앗입니다 — 같은 씨앗이면 같은 조우 순서(시험 · 리플레이). 기본은 맵마다 고정된 씨앗입니다. */
+        void setEncounterSeed( uint32 seed ) { _encounterRandom.setSeed( seed ); }
 
         /** @brief 그 칸에서 레이어가 켜져 있는지 반환합니다. 맵 밖이면 false 입니다. */
         bool isFlagSet( TileFlagLayer layer, int32 x, int32 y ) const;
@@ -149,6 +152,7 @@ namespace sw
 
         TileMapXmlData                        _data; ///< 맵 데이터(파일 스키마 그대로)
         mutable unordered_map<uint64, size_t> _mapWarpIndex;
+        mutable GameRandom                    _encounterRandom; ///< 조우 추첨 — 전역 난수가 아니라 맵이 들고 있다(되풀이할 수 있게)
     };
 
 } // namespace sw

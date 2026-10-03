@@ -214,7 +214,7 @@ namespace sw
             m._listPp.push_back( pMove != nullptr ? pMove->_ppMax : 0 );
         }
         m._exp     = 0;
-        m._expNext = 40 + safeLevel * 10;
+        m._expNext = computeExpToNextLevel( safeLevel );
         return m;
     }
 

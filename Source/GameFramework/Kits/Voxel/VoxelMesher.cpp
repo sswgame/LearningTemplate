@@ -155,7 +155,7 @@ namespace sw
         return kArrShade[MathUtil::clamp( occlusionLevel, 0, 3 )];
     }
 
-    void VoxelMesher::buildChunkMesh( const VoxelWorld& world, int32 chunkX, int32 chunkZ, VoxelChunkMesh& outMesh )
+    void VoxelMesher::fillChunkMesh( const VoxelWorld& world, int32 chunkX, int32 chunkZ, VoxelChunkMesh& outMesh )
     {
         outMesh.clear();
         const VoxelBlockCatalog* pCatalog = world.getCatalog();

@@ -116,7 +116,7 @@ namespace sw
         _world.initialize( kChunkCountX, kChunkCountZ, pCatalog );
         VoxelTerrainSettings settings;
         settings._seed                                   = VoxelCraftWorldInternal::kTerrainSeed;
-        [[maybe_unused]] const VoxelTerrainReport report = VoxelTerrainGenerator::generate( _world, settings );
+        [[maybe_unused]] const VoxelTerrainReport report = VoxelTerrainGenerator::fillWorld( _world, settings );
         decorateTerrain();
         SW_LOG_INFO( "[Voxel] terrain %# x %# x %# - heights %#..%#, %# trees", _world.getSizeX(), _world.getSizeY(), _world.getSizeZ(), report._minHeight,
                      report._maxHeight, report._treeCount );
@@ -278,7 +278,7 @@ namespace sw
 
     void VoxelCraftWorld::rebuildChunk( int32 chunkX, int32 chunkZ )
     {
-        VoxelMesher::buildChunkMesh( _world, chunkX, chunkZ, _scratchMesh );
+        VoxelMesher::fillChunkMesh( _world, chunkX, chunkZ, _scratchMesh );
         _world.clearChunkDirty( chunkX, chunkZ );
         ChunkView&   view = _listChunkView[static_cast<size_t>( chunkZ * kChunkCountX + chunkX )];
         const float3 origin{ static_cast<float32>( chunkX * kVoxelChunkSize ), 0.0f, static_cast<float32>( chunkZ * kVoxelChunkSize ) };
@@ -466,7 +466,7 @@ namespace sw
 
     void VoxelCraftWorld::updateCameraAndHighlight()
     {
-        const float3 euler{ -_look.getPitch(), _look.getYaw(), 0.0f };
+        const float3 euler = _look.computeCameraEuler();
         _stage.placeCamerasWithRotation( _body.getEyePosition(), euler, 75.0f * VoxelCraftWorldInternal::kDegToRad, 220.0f );
 
         MeshComponent* pHighlight = _stage.findMesh( _highlight );

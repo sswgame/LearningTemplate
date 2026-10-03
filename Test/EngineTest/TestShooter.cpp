@@ -2,6 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Base/FirstPersonLook.h"
 #include "GameFramework/Kits/Shooter/ShooterMath.h"
 #include "GameFramework/Kits/Shooter/Weapon.h"
 
@@ -28,9 +29,9 @@ namespace
         return weapon;
     }
 
-    ShooterRay makeForwardRay()
+    GameRay makeForwardRay()
     {
-        ShooterRay ray;
+        GameRay ray;
         ray._origin    = float3{ 0.0f, 0.0f, 0.0f };
         ray._direction = float3{ 0.0f, 0.0f, 1.0f };
         return ray;
@@ -42,20 +43,20 @@ namespace
  */
 SW_TEST_CASE( ShooterTest, RaysHitSpheresAndBoxesInFrontOnly )
 {
-    const ShooterRay ray      = makeForwardRay();
-    float32          distance = -1.0f;
-    SW_EXPECT_TRUE( ShooterMath::intersectSphere( ray, float3{ 0.0f, 0.0f, 10.0f }, 1.0f, 100.0f, distance ) );
+    const GameRay ray      = makeForwardRay();
+    float32       distance = -1.0f;
+    SW_EXPECT_TRUE( RayMath::intersectSphere( ray, float3{ 0.0f, 0.0f, 10.0f }, 1.0f, 100.0f, distance ) );
     SW_EXPECT_NEAR_EQUAL( 9.0f, distance, 1.0e-4f );
-    SW_EXPECT_FALSE( ShooterMath::intersectSphere( ray, float3{ 0.0f, 0.0f, -10.0f }, 1.0f, 100.0f, distance ) );
-    SW_EXPECT_FALSE( ShooterMath::intersectSphere( ray, float3{ 2.0f, 0.0f, 10.0f }, 1.0f, 100.0f, distance ) );
-    SW_EXPECT_FALSE( ShooterMath::intersectSphere( ray, float3{ 0.0f, 0.0f, 10.0f }, 1.0f, 5.0f, distance ) );
-    SW_EXPECT_TRUE( ShooterMath::intersectSphere( ray, float3{ 0.0f, 0.0f, 0.5f }, 1.0f, 100.0f, distance ) );
+    SW_EXPECT_FALSE( RayMath::intersectSphere( ray, float3{ 0.0f, 0.0f, -10.0f }, 1.0f, 100.0f, distance ) );
+    SW_EXPECT_FALSE( RayMath::intersectSphere( ray, float3{ 2.0f, 0.0f, 10.0f }, 1.0f, 100.0f, distance ) );
+    SW_EXPECT_FALSE( RayMath::intersectSphere( ray, float3{ 0.0f, 0.0f, 10.0f }, 1.0f, 5.0f, distance ) );
+    SW_EXPECT_TRUE( RayMath::intersectSphere( ray, float3{ 0.0f, 0.0f, 0.5f }, 1.0f, 100.0f, distance ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, distance, 1.0e-6f );
 
-    SW_EXPECT_TRUE( ShooterMath::intersectAabb( ray, float3{ -1.0f, -1.0f, 4.0f }, float3{ 1.0f, 1.0f, 6.0f }, 100.0f, distance ) );
+    SW_EXPECT_TRUE( RayMath::intersectAabb( ray, float3{ -1.0f, -1.0f, 4.0f }, float3{ 1.0f, 1.0f, 6.0f }, 100.0f, distance ) );
     SW_EXPECT_NEAR_EQUAL( 4.0f, distance, 1.0e-4f );
-    SW_EXPECT_FALSE( ShooterMath::intersectAabb( ray, float3{ 2.0f, -1.0f, 4.0f }, float3{ 3.0f, 1.0f, 6.0f }, 100.0f, distance ) );
-    SW_EXPECT_FALSE( ShooterMath::intersectAabb( ray, float3{ -1.0f, -1.0f, -6.0f }, float3{ 1.0f, 1.0f, -4.0f }, 100.0f, distance ) );
+    SW_EXPECT_FALSE( RayMath::intersectAabb( ray, float3{ 2.0f, -1.0f, 4.0f }, float3{ 3.0f, 1.0f, 6.0f }, 100.0f, distance ) );
+    SW_EXPECT_FALSE( RayMath::intersectAabb( ray, float3{ -1.0f, -1.0f, -6.0f }, float3{ 1.0f, 1.0f, -4.0f }, 100.0f, distance ) );
 }
 
 /**
@@ -82,8 +83,8 @@ SW_TEST_CASE( ShooterTest, WeaponCyclesMagazineAndReload )
 {
     WeaponState weapon;
     weapon.equip( makeShooterTestRifle(), 7 );
-    WeaponShot       shot;
-    const ShooterRay aim = makeForwardRay();
+    WeaponShot    shot;
+    const GameRay aim = makeForwardRay();
 
     SW_EXPECT_TRUE( weapon.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), shot._listRay.size() );
@@ -135,9 +136,9 @@ SW_TEST_CASE( ShooterTest, SemiAutoShotgunSpreadIsBoundedAndDeterministic )
     WeaponState second;
     first.equip( shotgun, 0, 42u );
     second.equip( shotgun, 0, 42u );
-    WeaponShot       firstShot;
-    WeaponShot       secondShot;
-    const ShooterRay aim = makeForwardRay();
+    WeaponShot    firstShot;
+    WeaponShot    secondShot;
+    const GameRay aim = makeForwardRay();
 
     SW_ASSERT_TRUE( first.pullTrigger( aim, true, firstShot ) == WeaponFireResult::Fired );
     SW_ASSERT_TRUE( second.pullTrigger( aim, true, secondShot ) == WeaponFireResult::Fired );

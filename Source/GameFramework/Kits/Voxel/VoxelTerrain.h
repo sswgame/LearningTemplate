@@ -1,6 +1,6 @@
 /**
  * @file VoxelTerrain.h
- * @brief 씨앗으로 고정된 지형 생성 — 값 노이즈 높이 · 흙 · 돌 · 모래 해변 · 물 · 나무입니다.
+ * @brief 씨앗으로 고정된 지형 생성 — 값 노이즈(`Base/ValueNoise.h`) 높이 · 흙 · 돌 · 모래 해변 · 물 · 나무입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,20 +12,6 @@
 namespace sw
 {
     class VoxelWorld;
-
-    /**
-     * @struct VoxelNoise
-     * @brief 씨앗 고정 2D 값 노이즈입니다. 격자 꼭짓점에 정수 해시로 값을 두고 smoothstep 으로 잇습니다. 같은 씨앗이면 어느 기계에서나 같은 값입니다.
-     */
-    struct SW_GF_API VoxelNoise
-    {
-        /** @brief 정수 격자점의 값(0..1)입니다. */
-        static float32 hashLattice( int32 x, int32 z, uint32 seed );
-        /** @brief 한 옥타브(0..1)입니다. */
-        static float32 sampleValue( float32 x, float32 z, uint32 seed );
-        /** @brief 옥타브를 겹친 값(0..1)입니다. 옥타브마다 주파수 ×2 · 진폭 ×0.5. */
-        static float32 sampleFractal( float32 x, float32 z, uint32 seed, int32 octaveCount );
-    };
 
     /** @brief 지형 생성 설정입니다. 블록은 id 로 고르고 카탈로그에 없으면 그 층을 건너뜁니다. */
     struct VoxelTerrainSettings
@@ -65,6 +51,6 @@ namespace sw
     {
         /** @brief 기둥의 지면 높이(맨 위 블록의 y)입니다. 월드를 쓰지 않으므로 미리보기 · 스폰 위치에도 씁니다. */
         static int32              computeSurfaceHeight( int32 x, int32 z, const VoxelTerrainSettings& settings );
-        static VoxelTerrainReport generate( VoxelWorld& world, const VoxelTerrainSettings& settings );
+        static VoxelTerrainReport fillWorld( VoxelWorld& world, const VoxelTerrainSettings& settings );
     };
 } // namespace sw

@@ -6,9 +6,11 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Farming/FarmCalendar.h"
 
@@ -53,17 +55,22 @@ namespace sw
         /** @brief 작물을 더합니다(같은 id 는 바꾼다). */
         void addCrop( const CropDef& crop );
 
-        const CropDef* findCrop( const hashed_string& cropId ) const;
+        const CropDef* findCrop( const hashed_string& cropId ) const { return _catalog.find( cropId ); }
+        /** @brief 씨앗 아이템으로 작물을 찾습니다(해시 한 번). */
         const CropDef* findCropBySeed( const hashed_string& seedItem ) const;
         /**
          * @brief 아이템 하나의 판매가입니다 — 수확물은 `_sellPrice`, 씨앗은 `_seedPrice` 의 절반. 모르는 아이템은 0 입니다.
          */
         int32                  findSellPrice( const hashed_string& itemId ) const;
-        const vector<CropDef>& getCrops() const { return _listCrop; }
+        const vector<CropDef>& getCrops() const { return _catalog.getAll(); }
 
     private:
         uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        /** @brief 씨앗 · 수확물 → 작물 자리 맵을 다시 짓습니다(작물이 더해질 때). */
+        void rebuildItemIndex();
 
-        vector<CropDef> _listCrop; ///< 읽은 순서(가게 진열 순서)
+        GameCatalog<CropDef>                 _catalog;         ///< 읽은 순서(가게 진열 순서)
+        unordered_map<hashed_string, uint32> _mapSeedIndex;    ///< 씨앗 아이템 → 자리
+        unordered_map<hashed_string, uint32> _mapProduceIndex; ///< 수확물 아이템 → 자리
     };
 } // namespace sw

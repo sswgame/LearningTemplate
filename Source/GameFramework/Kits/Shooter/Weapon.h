@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Shooter/ShooterMath.h"
 
@@ -50,13 +51,13 @@ namespace sw
         [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
         void               addWeapon( const WeaponDef& weapon );
 
-        const WeaponDef*         findWeapon( const hashed_string& id ) const;
-        const vector<WeaponDef>& getWeapons() const { return _listWeapon; }
+        const WeaponDef*         findWeapon( const hashed_string& id ) const { return _catalog.find( id ); }
+        const vector<WeaponDef>& getWeapons() const { return _catalog.getAll(); }
 
     private:
         uint32 loadRoot( const XmlNode& root, string_view sourceName );
 
-        vector<WeaponDef> _listWeapon;
+        GameCatalog<WeaponDef> _catalog; ///< 읽은 순서(무기 바꾸기 순환)
     };
 
     /** @brief 방아쇠를 당긴 결과입니다. */
@@ -73,8 +74,8 @@ namespace sw
     /** @brief 한 번 쏜 결과 — 알마다의 광선입니다. */
     struct WeaponShot
     {
-        vector<ShooterRay> _listRay{};
-        float32            _spreadAtFire{ 0.0f }; ///< 이번 발사의 퍼짐(도)
+        vector<GameRay> _listRay{};
+        float32         _spreadAtFire{ 0.0f }; ///< 이번 발사의 퍼짐(도)
     };
 
     /**
@@ -95,7 +96,7 @@ namespace sw
          * @brief 방아쇠를 당깁니다(누른 동안 매 프레임). 쏘면 @p outShot 에 알마다 광선을 채웁니다.
          * @param bTriggerJustPressed 이번 프레임에 눌렀는지 — 반자동 총은 이때만 쏜다
          */
-        WeaponFireResult pullTrigger( const ShooterRay& aim, bool bTriggerJustPressed, WeaponShot& outShot );
+        WeaponFireResult pullTrigger( const GameRay& aim, bool bTriggerJustPressed, WeaponShot& outShot );
         /** @brief 재장전을 시작합니다. 이미 가득이거나 예비탄이 없거나 재장전 중이면 false 입니다. */
         [[nodiscard]] bool startReload();
         /** @brief 예비탄을 더합니다(상한까지). */
@@ -109,12 +110,12 @@ namespace sw
         float32          getReloadRemaining() const { return _reloadRemaining; }
 
     private:
-        WeaponDef     _def;
-        ShooterRandom _random;
-        float32       _cooldown;
-        float32       _reloadRemaining;
-        float32       _currentSpread;
-        int32         _magazineAmmo;
-        int32         _reserveAmmo;
+        WeaponDef  _def;
+        GameRandom _random;
+        float32    _cooldown;
+        float32    _reloadRemaining;
+        float32    _currentSpread;
+        int32      _magazineAmmo;
+        int32      _reserveAmmo;
     };
 } // namespace sw

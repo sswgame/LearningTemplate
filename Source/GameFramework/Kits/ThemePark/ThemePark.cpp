@@ -12,8 +12,6 @@ namespace sw
     {
         struct ThemeParkInternal
         {
-            static constexpr float32 kFixedStep        = 0.25f; ///< 시뮬레이션 간격(s)
-            static constexpr float32 kMaxFrameTime     = 5.0f;  ///< 한 프레임에 받는 시간 상한(빨리 감기 포함)
             static constexpr float32 kLeaveEnergy      = 0.1f;
             static constexpr float32 kLeaveHappiness   = 0.15f;
             static constexpr float32 kNauseaPerRating  = 0.06f;  ///< 멀미 평가 1 이 손님 멀미에 더하는 양
@@ -66,12 +64,12 @@ namespace sw
         , _arrivalAccumulator{ 0.0f }
         , _costAccumulator{ 0.0f }
         , _elapsedTime{ 0.0f }
-        , _timeAccumulator{ 0.0f }
+        , _stepTimer{}
+        , _random{ 12345u }
         , _cash{ 0 }
         , _parkRating{ 0 }
         , _nextGuestId{ 1 }
         , _totalVisitorCount{ 0 }
-        , _randomState{ 12345u }
     {
     }
 
@@ -83,24 +81,19 @@ namespace sw
         _arrivalAccumulator = 0.0f;
         _costAccumulator    = 0.0f;
         _elapsedTime        = 0.0f;
-        _timeAccumulator    = 0.0f;
+        _stepTimer          = FixedStepTimer( settings._fixedStep, settings._maxFrameTime );
         _cash               = startingCash;
         _nextGuestId        = 1;
         _totalVisitorCount  = 0;
-        _randomState        = settings._randomSeed != 0 ? settings._randomSeed : 12345u;
+        _random.setSeed( settings._randomSeed != 0 ? settings._randomSeed : 12345u );
         updateParkRating();
     }
 
     void ThemeParkSimulation::update( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f )
-            return;
-        _timeAccumulator += MathUtil::min( deltaTime, ThemeParkInternal::kMaxFrameTime );
-        while ( _timeAccumulator >= ThemeParkInternal::kFixedStep )
-        {
-            stepFixed( ThemeParkInternal::kFixedStep );
-            _timeAccumulator -= ThemeParkInternal::kFixedStep;
-        }
+        const int32 stepCount = _stepTimer.consume( deltaTime );
+        for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+            stepFixed( _stepTimer.getStep() );
     }
 
     int32 ThemeParkSimulation::buildRide( const ParkRide& ride, int32 buildCost )
@@ -249,12 +242,11 @@ namespace sw
         _cash -= wholeCost;
         _costAccumulator -= static_cast<float32>( wholeCost );
 
-        // 떠난 손님을 지운다(놀이기구의 줄 · 탑승자에는 남아 있지 않다 — 떠나기 전에 뺐다).
-        for ( size_t guestIndex = _listGuest.size(); guestIndex > 0; --guestIndex )
-        {
-            if ( _listGuest[guestIndex - 1]._state == ParkGuestState::Left )
-                _listGuest.erase( _listGuest.begin() + static_cast<ptrdiff_t>( guestIndex - 1 ) );
-        }
+        // 떠난 손님을 지운다(놀이기구의 줄 · 탑승자에는 남아 있지 않다 — 떠나기 전에 뺐다). 한 번에 당겨 담아 순서(id 오름차순)를 지킨다 —
+        // 예전에는 떠난 손님마다 `erase` 해 뒤를 매번 옮겼다.
+        _listGuest.erase( std::remove_if( _listGuest.begin(), _listGuest.end(), []( const ParkGuest& guest )
+        { return guest._state == ParkGuestState::Left; } ),
+                          _listGuest.end() );
         updateParkRating();
     }
 
@@ -267,10 +259,10 @@ namespace sw
         while ( _arrivalAccumulator >= 1.0f )
         {
             _arrivalAccumulator -= 1.0f;
-            const int32   cash            = 20 + static_cast<int32>( nextRandom() * 60.0f );
-            const float32 minIntensity    = nextRandom() * 3.0f;
-            const float32 maxIntensity    = 3.0f + nextRandom() * 6.0f;
-            const float32 nauseaTolerance = 0.3f + nextRandom() * 0.6f;
+            const int32   cash            = _settings._guestCashMin + static_cast<int32>( nextRandom() * static_cast<float32>( _settings._guestCashMax - _settings._guestCashMin ) );
+            const float32 minIntensity    = nextRandom() * _settings._guestMinIntensityMax;
+            const float32 maxIntensity    = _random.nextRange( _settings._guestMaxIntensityMin, _settings._guestMaxIntensityMax );
+            const float32 nauseaTolerance = _random.nextRange( _settings._guestNauseaToleranceMin, _settings._guestNauseaToleranceMax );
             if ( admitGuest( cash, minIntensity, maxIntensity, nauseaTolerance ) == false )
                 break; // 꽉 찼거나 입장료를 못 낸다 — 이번에는 그만 들인다
         }
@@ -575,21 +567,8 @@ namespace sw
 
     ParkGuest* ThemeParkSimulation::findGuest( uint32 guestId )
     {
-        for ( ParkGuest& guest : _listGuest )
-        {
-            if ( guest._id == guestId )
-                return &guest;
-        }
-        return nullptr;
-    }
-
-    float32 ThemeParkSimulation::nextRandom()
-    {
-        uint32 value = _randomState;
-        value ^= value << 13;
-        value ^= value >> 17;
-        value ^= value << 5;
-        _randomState = value;
-        return static_cast<float32>( value >> 8 ) * ( 1.0f / 16777216.0f );
+        const auto guestIter = std::lower_bound( _listGuest.begin(), _listGuest.end(), guestId, []( const ParkGuest& guest, uint32 id )
+        { return guest._id < id; } );
+        return ( guestIter != _listGuest.end() && guestIter->_id == guestId ) ? &*guestIter : nullptr;
     }
 } // namespace sw

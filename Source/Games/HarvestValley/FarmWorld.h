@@ -13,6 +13,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/GameRandom.h"
 #include "GameFramework/Base/PrimitiveStage.h"
 #include "GameFramework/Kits/Farming/FarmCalendar.h"
 #include "GameFramework/Kits/Farming/FarmField.h"
@@ -92,10 +93,9 @@ namespace sw
         bool                 findTargetTile( int32& outX, int32& outY ) const;
         const hashed_string& getSelectedSeed() const;
 
-        void    refreshViews();
-        void    updateCameraAndSun();
-        void    logStatus( bool bForce );
-        float32 nextRandom();
+        void refreshViews();
+        void updateCameraAndSun();
+        void logStatus( bool bForce );
 
         PrimitiveStage        _stage;
         FarmCalendar          _calendar;
@@ -113,7 +113,7 @@ namespace sw
         int32                 _stamina;
         int32                 _selectedSeedIndex;
         int32                 _lastLoggedHour;
-        uint32                _randomState;
+        GameRandom            _random; ///< 날씨
         FarmTool              _tool;
         uint8                 _bRaining;
         uint8                 _bSpawned;

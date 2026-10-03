@@ -120,6 +120,26 @@ namespace sw
             scheduleLayout();
     }
 
+    void DamageUIComponent::spawnNumber( GameObjectManager& manager, const float3& position, int32 value )
+    {
+        GameObjectManager* pManager = &manager;
+        manager.executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, position, value]()
+        {
+            GameObject* pNumber = pManager->createGameObject( hashed_string( "DamageNumber" ) );
+            if ( pNumber == nullptr )
+                return;
+            SceneComponent* pNumberRoot = pNumber->addComponent<SceneComponent>();
+            if ( pNumberRoot != nullptr )
+                pNumberRoot->setWorldPosition( position );
+            DamageUIComponent* pNumberUi = pNumber->addComponent<DamageUIComponent>();
+            if ( pNumberUi == nullptr )
+                return;
+            pNumberUi->setLifeTime( kSpawnedLifeTime );
+            pNumberUi->setFloatSpeed( kSpawnedFloatSpeed );
+            pNumberUi->setDamageValue( value );
+        } ) );
+    }
+
     void DamageUIComponent::setColor( const float4& color )
     {
         _color = color;

@@ -15,6 +15,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/FixedStepTimer.h"
+#include "GameFramework/Base/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -117,6 +119,16 @@ namespace sw
         int32   _maxGuests{ 150 };
         int32   _entryFee{ 0 };
         uint32  _randomSeed{ 12345u };
+        // ---- 새로 오는 손님의 성향(고르게 뽑는 범위) — 가족 공원 · 스릴 공원을 데이터로 나눈다 ----
+        int32   _guestCashMin{ 20 };
+        int32   _guestCashMax{ 80 };
+        float32 _guestMinIntensityMax{ 3.0f }; ///< "이보다 약하면 시시하다" 의 상한(0 ~ 이 값)
+        float32 _guestMaxIntensityMin{ 3.0f }; ///< "이보다 세면 안 탄다" 의 범위
+        float32 _guestMaxIntensityMax{ 9.0f };
+        float32 _guestNauseaToleranceMin{ 0.3f };
+        float32 _guestNauseaToleranceMax{ 0.9f };
+        float32 _fixedStep{ 0.25f };   ///< 시뮬레이션 간격(s) — 프레임 수와 상관없이 같은 결과
+        float32 _maxFrameTime{ 5.0f }; ///< 한 프레임에 받는 시간 상한(빨리 감기 포함)
     };
 
     /**
@@ -172,17 +184,18 @@ namespace sw
         const ThemeParkSettings& getSettings() const { return _settings; }
 
     private:
-        void       stepFixed( float32 deltaTime );
-        void       spawnGuests( float32 deltaTime );
-        void       updateGuests( float32 deltaTime );
-        void       runRides( float32 deltaTime );
-        void       chooseNextRide( ParkGuest& guest );
-        void       startWalking( ParkGuest& guest, const float3& destination );
-        void       sendHome( ParkGuest& guest, ParkGuestThought thought );
-        void       leaveQueue( ParkGuest& guest );
-        void       updateParkRating();
+        void stepFixed( float32 deltaTime );
+        void spawnGuests( float32 deltaTime );
+        void updateGuests( float32 deltaTime );
+        void runRides( float32 deltaTime );
+        void chooseNextRide( ParkGuest& guest );
+        void startWalking( ParkGuest& guest, const float3& destination );
+        void sendHome( ParkGuest& guest, ParkGuestThought thought );
+        void leaveQueue( ParkGuest& guest );
+        void updateParkRating();
+        /** @brief id 로 손님을 찾습니다. 목록은 id 오름차순이라(새 손님은 뒤에 붙고 지울 때 순서를 지킨다) 이분 탐색입니다. */
         ParkGuest* findGuest( uint32 guestId );
-        float32    nextRandom();
+        float32    nextRandom() { return _random.nextFloat(); }
 
         ThemeParkSettings _settings;
         vector<ParkRide>  _listRide;
@@ -190,11 +203,11 @@ namespace sw
         float32           _arrivalAccumulator;
         float32           _costAccumulator;
         float32           _elapsedTime;
-        float32           _timeAccumulator;
+        FixedStepTimer    _stepTimer;
+        GameRandom        _random;
         int32             _cash;
         int32             _parkRating;
         uint32            _nextGuestId;
         uint32            _totalVisitorCount;
-        uint32            _randomState;
     };
 } // namespace sw

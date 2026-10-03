@@ -7,44 +7,30 @@
 namespace sw
 {
     FarmInventory::FarmInventory()
-        : _mapItem{}
-        , _mapShipped{}
+        : _bag{}
+        , _shippingBin{}
         , _gold{ 0 }
     {
     }
 
     void FarmInventory::addItem( const hashed_string& itemId, int32 count )
     {
-        if ( itemId.empty() || count <= 0 )
-            return;
-        _mapItem[itemId] += count;
+        _bag.addItem( itemId, count );
     }
 
     bool FarmInventory::removeItem( const hashed_string& itemId, int32 count )
     {
-        const auto mapIter = _mapItem.find( itemId );
-        if ( count <= 0 || mapIter == _mapItem.end() || mapIter->second < count )
-            return false;
-        mapIter->second -= count;
-        if ( mapIter->second == 0 )
-            _mapItem.erase( mapIter );
-        return true;
+        return _bag.removeItem( itemId, count );
     }
 
     int32 FarmInventory::getItemCount( const hashed_string& itemId ) const
     {
-        const auto mapIter = _mapItem.find( itemId );
-        return mapIter != _mapItem.end() ? mapIter->second : 0;
+        return _bag.getItemCount( itemId );
     }
 
     void FarmInventory::getItemIds( vector<hashed_string>& outListItem ) const
     {
-        outListItem.clear();
-        for ( const auto& [itemId, count] : _mapItem )
-        {
-            if ( count > 0 )
-                outListItem.push_back( itemId );
-        }
+        _bag.getItemIds( outListItem );
     }
 
     void FarmInventory::addGold( int32 amount )
@@ -73,31 +59,20 @@ namespace sw
 
     bool FarmInventory::shipItem( const hashed_string& itemId, int32 count )
     {
-        if ( removeItem( itemId, count ) == false )
-            return false;
-        _mapShipped[itemId] += count;
-        return true;
+        return _bag.moveItemTo( _shippingBin, itemId, count );
     }
 
     int32 FarmInventory::getShippedItemCount() const
     {
-        int32 shippedCount = 0;
-        for ( const auto& [itemId, count] : _mapShipped )
-        {
-            (void)itemId;
-            shippedCount += count;
-        }
-        return shippedCount;
+        return _shippingBin.getTotalCount();
     }
 
     int32 FarmInventory::settleShipping( const CropCatalog& catalog )
     {
         int32 earned = 0;
-        for ( const auto& [itemId, count] : _mapShipped )
-        {
+        for ( const auto& [itemId, count] : _shippingBin.getItems() )
             earned += catalog.findSellPrice( itemId ) * count;
-        }
-        _mapShipped.clear();
+        _shippingBin.clear();
         addGold( earned );
         return earned;
     }

@@ -7,6 +7,8 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
+#include "GameFramework/Data/GameDataXml.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "CoasterTrack" );
@@ -309,7 +311,7 @@ namespace sw
         }
     }
 
-    CoasterTrack CoasterTrackBuilder::build( bool bCloseCircuit ) const
+    CoasterTrack CoasterTrackBuilder::makeTrack( bool bCloseCircuit ) const
     {
         CoasterTrack track;
         for ( const CoasterTrack::Point& point : _listPoint )
@@ -485,66 +487,28 @@ namespace sw
     // CoasterLayoutCatalog
     // ------------------------------------------------------------------------------
     CoasterLayoutCatalog::CoasterLayoutCatalog()
-        : _listLayout{}
+        : _catalog{}
     {
     }
 
     bool CoasterLayoutCatalog::loadFromResource( string_view path )
     {
         XmlDocument doc;
-        string      absPath;
-        if ( doc.loadPath( path, &absPath ) == false )
-        {
-            SW_LOG_WARNING( "Failed to read coaster catalog %#", path );
-            return false;
-        }
-        const XmlNode root = doc.getRoot( "CoasterCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <CoasterCatalog> root in %#", absPath );
-            return false;
-        }
-        return loadRoot( root, absPath ) > 0;
+        XmlNode     root;
+        string      sourceName;
+        return GameDataXml::loadRoot( doc, path, "CoasterCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
     }
 
     bool CoasterLayoutCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
         XmlDocument doc;
-        if ( doc.parse( xmlText, sourceName ) == false )
-        {
-            SW_LOG_WARNING( "Failed to parse coaster catalog text %#", sourceName );
-            return false;
-        }
-        const XmlNode root = doc.getRoot( "CoasterCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <CoasterCatalog> root in %#", sourceName );
-            return false;
-        }
-        return loadRoot( root, sourceName ) > 0;
+        XmlNode     root;
+        return GameDataXml::parseRoot( doc, xmlText, sourceName, "CoasterCatalog", root ) && loadRoot( root, sourceName ) > 0;
     }
 
     void CoasterLayoutCatalog::addLayout( const CoasterLayoutDef& layout )
     {
-        for ( CoasterLayoutDef& existing : _listLayout )
-        {
-            if ( existing._id == layout._id )
-            {
-                existing = layout;
-                return;
-            }
-        }
-        _listLayout.push_back( layout );
-    }
-
-    const CoasterLayoutDef* CoasterLayoutCatalog::findLayout( const hashed_string& id ) const
-    {
-        for ( const CoasterLayoutDef& layout : _listLayout )
-        {
-            if ( layout._id == id )
-                return &layout;
-        }
-        return nullptr;
+        (void)_catalog.add( layout );
     }
 
     uint32 CoasterLayoutCatalog::loadRoot( const XmlNode& root, string_view sourceName )
@@ -552,12 +516,9 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode layoutNode = root.findChild( "Layout" ); layoutNode; layoutNode = layoutNode.findNextSibling( "Layout" ) )
         {
-            const utf8* pId = layoutNode.findAttribute( "id" );
-            if ( StringUtil::isNullOrEmpty( pId ) )
-            {
-                SW_LOG_WARNING( "%#: <Layout> without an id - skipped", sourceName );
+            const utf8* pId = GameDataXml::findRequiredId( layoutNode, sourceName );
+            if ( pId == nullptr )
                 continue;
-            }
             CoasterLayoutDef layout;
             layout._id          = hashed_string( pId );
             const utf8* pName   = layoutNode.findAttribute( "name" );

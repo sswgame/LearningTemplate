@@ -57,7 +57,7 @@ namespace
         builder.appendPiece( makeCoasterPiece( CoasterPieceType::Straight, bWithLoop ? 130.0f : 116.0f, 0.0f ) );
         builder.appendPiece( makeCoasterTurn( CoasterPieceType::TurnRight, 18.0f, 180.0f, 30.0f ) );
         builder.appendPiece( makeCoasterPiece( CoasterPieceType::Brakes, 15.0f, 0.0f ) );
-        return builder.build( true );
+        return builder.makeTrack( true );
     }
 
     bool isOrthonormal( const CoasterTrackFrame& frame )
@@ -106,7 +106,7 @@ SW_TEST_CASE( CoasterTest, FrictionlessDropConservesEnergy )
     builder.appendPiece( makeCoasterPiece( CoasterPieceType::Straight, 5.0f, 0.0f ) );
     builder.appendPiece( makeCoasterPiece( CoasterPieceType::Drop, 40.0f, 20.0f ) );
     builder.appendPiece( makeCoasterPiece( CoasterPieceType::Straight, 200.0f, 0.0f ) );
-    const CoasterTrack track = builder.build( false );
+    const CoasterTrack track = builder.makeTrack( false );
     SW_ASSERT_TRUE( track.isClosed() == false );
 
     CoasterPhysicsParams params;
@@ -199,7 +199,7 @@ SW_TEST_CASE( CoasterTest, CamelbackGivesAirtimeAndTooTallHillStalls )
     builder.appendPiece( makeCoasterPiece( CoasterPieceType::Drop, 30.0f, 30.0f ) );
     builder.appendPiece( makeCoasterPiece( CoasterPieceType::Hill, 14.0f, 8.0f ) );
     builder.appendPiece( makeCoasterPiece( CoasterPieceType::Straight, 150.0f, 0.0f ) );
-    const CoasterRideStats airtime = CoasterRideAnalyzer::analyze( builder.build( false ), CoasterPhysicsParams{}, 120.0f );
+    const CoasterRideStats airtime = CoasterRideAnalyzer::analyze( builder.makeTrack( false ), CoasterPhysicsParams{}, 120.0f );
     SW_EXPECT_TRUE( airtime._airtime > 0.1f );
     SW_EXPECT_TRUE( airtime._minVerticalG < 0.0f );
 
@@ -209,7 +209,7 @@ SW_TEST_CASE( CoasterTest, CamelbackGivesAirtimeAndTooTallHillStalls )
     builder.appendPiece( makeCoasterPiece( CoasterPieceType::Drop, 20.0f, 10.0f ) );
     builder.appendPiece( makeCoasterPiece( CoasterPieceType::Hill, 30.0f, 25.0f ) ); // 리프트(10 m)보다 높다
     builder.appendPiece( makeCoasterPiece( CoasterPieceType::Straight, 20.0f, 0.0f ) );
-    const CoasterRideStats stalled = CoasterRideAnalyzer::analyze( builder.build( false ), CoasterPhysicsParams{}, 120.0f );
+    const CoasterRideStats stalled = CoasterRideAnalyzer::analyze( builder.makeTrack( false ), CoasterPhysicsParams{}, 120.0f );
     SW_EXPECT_TRUE( stalled._bCompleted == SW_FALSE );
     SW_EXPECT_EQUAL( 0.0f, stalled._excitement );
 }

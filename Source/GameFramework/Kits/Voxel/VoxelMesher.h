@@ -47,7 +47,7 @@ namespace sw
      */
     struct SW_GF_API VoxelMesher
     {
-        static void buildChunkMesh( const VoxelWorld& world, int32 chunkX, int32 chunkZ, VoxelChunkMesh& outMesh );
+        static void fillChunkMesh( const VoxelWorld& world, int32 chunkX, int32 chunkZ, VoxelChunkMesh& outMesh );
         /** @brief 면 하나의 밝기입니다(위 1 · 옆 0.85 / 0.75 · 아래 0.6). 해 없이도 블록 모서리가 읽히게 합니다. */
         static float32 getFaceShade( VoxelFace face );
         /** @brief 그늘 단계(0 = 가장 어둡다 … 3 = 트였다)의 밝기입니다. */

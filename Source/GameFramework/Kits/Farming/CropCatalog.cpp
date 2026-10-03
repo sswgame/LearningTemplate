@@ -3,9 +3,10 @@
 #include "GameFramework/Kits/Farming/CropCatalog.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
+
+#include "GameFramework/Data/GameDataXml.h"
 
 namespace sw
 {
@@ -20,24 +21,15 @@ namespace sw
             {
                 (void)sourceName;
                 (void)pCropId;
-                uint8  mask       = 0;
-                size_t tokenStart = 0;
-                while ( tokenStart <= text.size() )
+                uint8 mask = 0;
+                GameDataXml::forEachToken( text, ",;| ", [&]( string_view token )
                 {
-                    size_t tokenEnd = text.find_first_of( ",;| ", tokenStart );
-                    if ( tokenEnd == string_view::npos )
-                        tokenEnd = text.size();
-                    const string_view token = text.substr( tokenStart, tokenEnd - tokenStart );
-                    if ( token.empty() == false )
-                    {
-                        FarmSeason season{ FarmSeason::Spring };
-                        if ( parseFarmSeason( token, season ) )
-                            mask = static_cast<uint8>( mask | makeFarmSeasonBit( season ) );
-                        else
-                            SW_LOG_WARNING( "%#: crop '%#' has an unknown season in '%#'", sourceName, pCropId, text );
-                    }
-                    tokenStart = tokenEnd + 1;
-                }
+                    FarmSeason season{ FarmSeason::Spring };
+                    if ( parseFarmSeason( token, season ) )
+                        mask = static_cast<uint8>( mask | makeFarmSeasonBit( season ) );
+                    else
+                        SW_LOG_WARNING( "%#: crop '%#' has an unknown season in '%#'", sourceName, pCropId, text );
+                } );
                 return mask;
             }
         };
@@ -47,88 +39,63 @@ namespace sw
 namespace sw
 {
     CropCatalog::CropCatalog()
-        : _listCrop{}
+        : _catalog{}
+        , _mapSeedIndex{}
+        , _mapProduceIndex{}
     {
     }
 
     bool CropCatalog::loadFromResource( string_view path )
     {
         XmlDocument doc;
-        string      absPath;
-        if ( doc.loadPath( path, &absPath ) == false )
-        {
-            SW_LOG_WARNING( "Failed to read crop catalog %#", path );
-            return false;
-        }
-        const XmlNode root = doc.getRoot( "CropCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <CropCatalog> root in %#", absPath );
-            return false;
-        }
-        return loadRoot( root, absPath ) > 0;
+        XmlNode     root;
+        string      sourceName;
+        return GameDataXml::loadRoot( doc, path, "CropCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
     }
 
     bool CropCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
         XmlDocument doc;
-        if ( doc.parse( xmlText, sourceName ) == false )
-        {
-            SW_LOG_WARNING( "Failed to parse crop catalog text %#", sourceName );
-            return false;
-        }
-        const XmlNode root = doc.getRoot( "CropCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <CropCatalog> root in %#", sourceName );
-            return false;
-        }
-        return loadRoot( root, sourceName ) > 0;
+        XmlNode     root;
+        return GameDataXml::parseRoot( doc, xmlText, sourceName, "CropCatalog", root ) && loadRoot( root, sourceName ) > 0;
     }
 
     void CropCatalog::addCrop( const CropDef& crop )
     {
-        for ( CropDef& existing : _listCrop )
-        {
-            if ( existing._id == crop._id )
-            {
-                existing = crop;
-                return;
-            }
-        }
-        _listCrop.push_back( crop );
-    }
-
-    const CropDef* CropCatalog::findCrop( const hashed_string& cropId ) const
-    {
-        for ( const CropDef& crop : _listCrop )
-        {
-            if ( crop._id == cropId )
-                return &crop;
-        }
-        return nullptr;
+        if ( _catalog.add( crop ) >= 0 )
+            rebuildItemIndex();
     }
 
     const CropDef* CropCatalog::findCropBySeed( const hashed_string& seedItem ) const
     {
-        for ( const CropDef& crop : _listCrop )
-        {
-            if ( crop._seedItem == seedItem )
-                return &crop;
-        }
-        return nullptr;
+        const auto mapIter = _mapSeedIndex.find( seedItem );
+        return mapIter != _mapSeedIndex.end() ? &_catalog.getAt( mapIter->second ) : nullptr;
     }
 
     int32 CropCatalog::findSellPrice( const hashed_string& itemId ) const
     {
-        for ( const CropDef& crop : _listCrop )
-        {
-            if ( crop._produceItem == itemId )
-                return crop._sellPrice;
-            if ( crop._seedItem == itemId )
-                return crop._seedPrice / 2;
-        }
+        const auto produceIter = _mapProduceIndex.find( itemId );
+        if ( produceIter != _mapProduceIndex.end() )
+            return _catalog.getAt( produceIter->second )._sellPrice;
+        const auto seedIter = _mapSeedIndex.find( itemId );
+        if ( seedIter != _mapSeedIndex.end() )
+            return _catalog.getAt( seedIter->second )._seedPrice / 2;
         return 0;
+    }
+
+    void CropCatalog::rebuildItemIndex()
+    {
+        // 같은 아이템을 두 작물이 쓰면 앞 작물이 이긴다(읽은 순서) — 예전 선형 조회와 같은 답.
+        _mapSeedIndex.clear();
+        _mapProduceIndex.clear();
+        for ( uint32 cropIndex = 0; cropIndex < static_cast<uint32>( _catalog.getCount() ); ++cropIndex )
+        {
+            const CropDef& crop = _catalog.getAt( cropIndex );
+            if ( _mapSeedIndex.find( crop._seedItem ) == _mapSeedIndex.end() )
+                _mapSeedIndex[crop._seedItem] = cropIndex;
+            if ( _mapProduceIndex.find( crop._produceItem ) == _mapProduceIndex.end() )
+                _mapProduceIndex[crop._produceItem] = cropIndex;
+        }
     }
 
     uint32 CropCatalog::loadRoot( const XmlNode& root, string_view sourceName )
@@ -136,12 +103,9 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Crop" ); node; node = node.findNextSibling( "Crop" ) )
         {
-            const utf8* pId = node.findAttribute( "id" );
-            if ( StringUtil::isNullOrEmpty( pId ) )
-            {
-                SW_LOG_WARNING( "%#: <Crop> without an id - skipped", sourceName );
+            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            if ( pId == nullptr )
                 continue;
-            }
             CropDef crop;
             crop._id             = hashed_string( pId );
             const utf8* pName    = node.findAttribute( "name" );
@@ -165,9 +129,10 @@ namespace sw
             }
             if ( crop._regrowDays > crop._growthDays )
                 SW_LOG_WARNING( "%#: crop '%#' regrows slower (%#) than it first grows (%#)", sourceName, pId, crop._regrowDays, crop._growthDays );
-            addCrop( crop );
+            (void)_catalog.add( crop ); // 색인은 한 번에 — 작물마다 다시 짓지 않는다
             ++loadedCount;
         }
+        rebuildItemIndex();
         if ( loadedCount == 0 )
             SW_LOG_WARNING( "%#: no <Crop> entries", sourceName );
         return loadedCount;

@@ -1625,24 +1625,13 @@ namespace sw
         if ( pManager == nullptr )
             return;
 
-        // 자리는 지금 읽는다(자기 오브젝트라 이 워커가 읽어도 된다). 만들기는 틱 중이면 틱 직후다 — 틱 안에서는 컴포넌트를 붙일 수 없다.
+        // 자리는 지금 읽는다(자기 오브젝트라 이 워커가 읽어도 된다). 만들기는 틱 중이면 틱 직후다(`DamageUIComponent::spawnNumber`).
         const SceneComponent* pRoot    = pOwner->getPrimarySceneComponent();
         const float3          position = ( pRoot != nullptr ? pRoot->getWorldPosition() : float3{} ) + _damageNumberOffset;
         const int32           value    = static_cast<int32>( MathUtil::round( amount ) );
         if ( value <= 0 )
             return;
-        pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, position, value]()
-        {
-            GameObject* pNumber = pManager->createGameObject( hashed_string( "DamageNumber" ) );
-            if ( pNumber == nullptr )
-                return;
-            SceneComponent* pNumberRoot = pNumber->addComponent<SceneComponent>();
-            if ( pNumberRoot != nullptr )
-                pNumberRoot->setWorldPosition( position );
-            DamageUIComponent* pNumberUi = pNumber->addComponent<DamageUIComponent>();
-            if ( pNumberUi != nullptr )
-                pNumberUi->setDamageValue( value );
-        } ) );
+        DamageUIComponent::spawnNumber( *pManager, position, value );
     }
 
     uint32 AbilitySystemComponent::releaseModuleCodeWithin( const void* pBegin, const void* pEnd )

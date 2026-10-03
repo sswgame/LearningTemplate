@@ -181,16 +181,28 @@ cd build/Ninja-Debug/Bin
   로그의 `[Arena] wave` 가 오르는지. 에디터(`-EnableEditor`)에서 Play 로 직접 조작해 HP 바 · 피해 숫자 · 화상 스택 · 대시 무적을 눈으로 본다.
 - **장르 키트 넷(`GF_Farming` · `GF_Shooter` · `GF_ThemePark` · `GF_Voxel`) · `OrientationUtil` · `PrimitiveStage` 와 시험 게임 넷의 첫 엔진 빌드 · 실행(2026-10-03).**
   위 항목과 같은 이유로 엔진을 짓지 못했다. 키트 로직은 엔진 밖 하네스(Core 의 수학 · XML · 해시 문자열만 링크, 테스트 매크로 흉내)로 **실제로 돌려**
-  `CoasterTest` 6 · `ThemeParkTest` 5 · `FarmingTest` 5 · `ShooterTest` 5 · `VoxelTest` 7 · `OrientationUtilTest` 1 이 통과했고, `coasters.xml` 의 세 레이아웃은
+  `CoasterTest` 6 · `ThemeParkTest` 5 · `FarmingTest` 5 · `ShooterTest` 5 · `VoxelTest` 7 · `OrientationUtilTest` 1 · `GameFrameworkUtilTest` 5 가 통과했고, `coasters.xml` 의 세 레이아웃은
   같은 하네스로 회로가 닫히고 한 바퀴를 돌며 평가가 나오는 것을, 공원 경제(`rides.xml` 의 처음 두 놀이기구)는 손님이 오고 돈이 느는 것을 봤다.
   게임 넷(`HarvestValley` · `Shooter3D` · `ThemeParkTycoon` · `VoxelCraft`)과 `PrimitiveStage` 는 **구문 검사만** 통과했다. 할 일:
-  (1) 재구성 → Debug · Shipping 빌드(새 DLL 넷, `SW_GF_API` 내보내기 · delay-load) → `EngineTest --test_filter=CoasterTest.*:ThemeParkTest.*:FarmingTest.*:ShooterTest.*:VoxelTest.*:OrientationUtilTest.*`
+  (1) 재구성 → Debug · Shipping 빌드(새 DLL 넷, `SW_GF_API` 내보내기 · delay-load) → `EngineTest --test_filter=CoasterTest.*:ThemeParkTest.*:FarmingTest.*:ShooterTest.*:VoxelTest.*:OrientationUtilTest.*:GameFrameworkUtilTest.*`
   (2) 게임마다 `-DSW_ACTIVE_GAME=<이름>` 으로 짓고 자동 플레이(`-gv_farmAutoPlay=1` · `-gv_shooterAutoPlay=1` · `-gv_parkAutoBuild=1` · `-gv_voxelAutoPlay=1`)를
   `-gv_profileFrames=3600` 으로 네 백엔드에서 — 종료 코드 0, `[Error]` 0 건, 로그가 오르는지(`[Farm] good morning` · `[Shooter] wave` · `[Park] built` · `[Voxel] ... broken`).
   (3) 눈으로 볼 것: 스프라이트 조준선이 카메라 앞에서 보이는지(`SpriteComponent` 를 시점에 붙여 쓴 첫 자리), 복셀 청크의 감김 · 아틀라스 UV(옆면 풀이 위),
   물 반투명, 코스터 레일 · 차량 방향(루프에서 뒤집힘), 직교 카메라(`setOrthographic`)의 그림자 범위. (4) 런타임 `Mesh::setVertices` 대신 매번 새 메시를
   거는 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는다 — 프로파일에서 튀면 메시 재사용(같은 크기면 덮어쓰기)으로 바꾼다.
   코스터 평가식(`CoasterRideAnalyzer::computeRatings`)의 계수는 시험 트랙 몇 개로 맞춘 것이라 레이아웃이 늘면 다시 본다.
+- **GameFramework 정리(2026-10-03)의 엔진 쪽 확인.** 엔진 밖에서 못 돌린 고침: `DamageUIComponent::spawnNumber`(띄운 숫자가 수명 0.9 초 · 떠오름 1.2 m/s 로
+  지워진다 — 예전에는 맞을 때마다 숫자 오브젝트가 영영 남았다, `ActionCombatTest.UnitSpawnsDamageNumbersWhenAsked` 가 수명을 본다), TurnBattle 스타터가
+  종족 카탈로그로 만들어짐(`baseHp` · 기술 PP), 전투 음악 키 `battleBgm`(없으면 `dungeonBgm`), `DialogueRunnerComponent` 의 기반 호출 · 틱 끔,
+  `MonsterDataCatalog` 가 생성 때부터 폴백 표, `TileMap` 조우 추첨이 맵의 씨앗 난수, `PlayerControllerSettings`(액션 이름 · 데드존 — 매 프레임 리터럴 해시 없음),
+  `GameData::getCustomProperty` 의 투명 조회. 빌드 뒤 `-L nogpu` 전부, 특히 `GameFrameworkTest.*` · `ActionCombatTest.*` · `WorldUiTest.*` 를 본다.
+- **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** (1) `CameraControllerComponent`(Overworld) · `UnitStatsComponent`(ActionCombat)는 장르 무관이라
+  기반으로 옮길 감 — 리플렉션 컴포넌트가 DLL 을 옮기면 등록 모듈이 바뀌므로 씬 로드 · 핫 리로드를 돌려 보며 옮긴다. (2) `ZoneRuntime` 의 `ZoneRole` 열거(센터 · 마트 ·
+  체육관…)와 클리어 게이트 역할을 데이터(태그 + 맵 칸)로 — 태그 미러는 이미 있다, 열거를 쓰는 곳 · 시험을 함께 바꾼다. (3) `ActionRoom` 의 방 배치 · 적 스탯 ·
+  투사체 값을 `MonsterDataCatalog` 로, 피해를 `UnitStatsComponent` 한 길로. (4) `BattleState` 의 단계 시간 · 피해식 · 경험치를 설정 구조체로, `_expNext` 로
+  레벨 업, 두 기술 가정(`FightMove0/1`) 걷기. (5) 세이브 키 조립(`"party" + i + ".pp0"`) 도우미, 수명 → 지우기 타이머 셋(`EffectBase` · `DamageUI` ·
+  `Projectile`) 하나로. **하지 않기로 한 것:** HP 바 · 피해 숫자의 매 틱 배치 예약을 "바뀔 때만" 으로 줄이는 것 — 월드 변환이 틱 **뒤에** 적용되므로 틱 안에서
+  자리 변화를 보면 움직이는 막대가 한 프레임씩 건너 늦는다. 줄이려면 변환 적용 뒤의 훅이 필요하다.
 - **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.

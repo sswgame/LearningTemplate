@@ -32,7 +32,7 @@ namespace sw
         , _distance{ 0.0f }
         , _speed{ 0.0f }
         , _elapsedTime{ 0.0f }
-        , _accumulator{ 0.0f }
+        , _stepTimer{}
         , _lapCount{ 0 }
         , _bHasPreviousVelocity{ SW_FALSE }
     {
@@ -47,7 +47,7 @@ namespace sw
         _previousVelocity     = float3{};
         _speed                = 0.0f;
         _elapsedTime          = 0.0f;
-        _accumulator          = 0.0f;
+        _stepTimer            = FixedStepTimer( _params._fixedStep, 0.25f ); // 큰 프레임(디버거 정지)이 수천 번의 적분이 되지 않게
         _lapCount             = 0;
         _bHasPreviousVelocity = SW_FALSE;
         setDistance( startDistance );
@@ -57,13 +57,9 @@ namespace sw
     {
         if ( _pTrack == nullptr || deltaTime <= 0.0f )
             return;
-        // 큰 프레임(디버거 정지)이 수천 번의 적분이 되지 않게 한 번에 0.25 초까지만 받는다.
-        _accumulator += MathUtil::min( deltaTime, 0.25f );
-        while ( _accumulator >= _params._fixedStep )
-        {
-            integrate( _params._fixedStep );
-            _accumulator -= _params._fixedStep;
-        }
+        const int32 stepCount = _stepTimer.consume( deltaTime );
+        for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+            integrate( _stepTimer.getStep() );
     }
 
     void CoasterTrain::setDistance( float32 distance )

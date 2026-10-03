@@ -5,10 +5,10 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Data/ItemBag.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -18,6 +18,7 @@ namespace sw
     /**
      * @class FarmInventory
      * @brief 이름 → 개수의 아이템 가방, 돈, 출하함입니다. 아이템 종류를 코드가 정하지 않습니다(이름이 곧 아이템).
+     * @details 가방 · 출하함은 기반의 `ItemBag` 이고, 여기는 돈과 "출하함은 밤에 팔린다" 는 농장 규칙만 얹습니다.
      */
     class SW_GF_API FarmInventory
     {
@@ -47,9 +48,12 @@ namespace sw
          */
         int32 settleShipping( const CropCatalog& catalog );
 
+        /** @brief 가방입니다(아이템 개수 — 장르 공통 `ItemBag`). */
+        const ItemBag& getBag() const { return _bag; }
+
     private:
-        unordered_map<hashed_string, int32> _mapItem;
-        unordered_map<hashed_string, int32> _mapShipped;
-        int32                               _gold;
+        ItemBag _bag;
+        ItemBag _shippingBin; ///< 하루 끝에 팔린다
+        int32   _gold;
     };
 } // namespace sw

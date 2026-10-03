@@ -13,6 +13,7 @@
 
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/Base/OrientationUtil.h"
+#include "GameFramework/Data/GameDataXml.h"
 
 namespace sw
 {
@@ -32,30 +33,6 @@ namespace sw
             static constexpr float32 kCameraDistance    = 250.0f;
             static constexpr float32 kPanSpeed          = 40.0f;
             static constexpr float32 kAutoBuildInterval = 20.0f;
-
-            /** @brief "r g b [a]" 를 읽습니다. */
-            static float4 parseColor( string_view text, const float4& fallback )
-            {
-                float32 arrValue[4] = { fallback._x, fallback._y, fallback._z, fallback._w };
-                size_t  tokenStart  = 0;
-                int32   valueIndex  = 0;
-                while ( tokenStart < text.size() && valueIndex < 4 )
-                {
-                    size_t tokenEnd = text.find_first_of( ", ", tokenStart );
-                    if ( tokenEnd == string_view::npos )
-                        tokenEnd = text.size();
-                    const string_view token = text.substr( tokenStart, tokenEnd - tokenStart );
-                    if ( token.empty() == false )
-                    {
-                        float32 value = 0.0f;
-                        if ( StringUtil::parseFloat( token, value ) )
-                            arrValue[valueIndex] = value;
-                        ++valueIndex;
-                    }
-                    tokenStart = tokenEnd + 1;
-                }
-                return float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] };
-            }
 
             /** @brief 행복도 → 색 칸(0 초록 · 1 노랑 · 2 빨강)입니다. */
             static int32 findHappinessBucket( float32 happiness )
@@ -124,18 +101,10 @@ namespace sw
     bool ParkWorld::loadParkLayout( string_view parkPath )
     {
         XmlDocument doc;
+        XmlNode     root;
         string      absPath;
-        if ( doc.loadPath( parkPath, &absPath ) == false )
-        {
-            SW_LOG_WARNING( "Failed to read park layout %#", parkPath );
+        if ( GameDataXml::loadRoot( doc, parkPath, "ParkLayout", root, absPath ) == false )
             return false;
-        }
-        const XmlNode root = doc.getRoot( "ParkLayout" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <ParkLayout> root in %#", absPath );
-            return false;
-        }
         _settings._gatePosition = float3{ root.getAttributeFloat( "gateX", 0.0f ), 0.0f, root.getAttributeFloat( "gateZ", -30.0f ) };
         _settings._entryFee     = MathUtil::max( 0, root.getAttributeInt( "entryFee", 0 ) );
         _startingCash           = root.getAttributeInt( "startingCash", _startingCash );
@@ -143,8 +112,8 @@ namespace sw
         _listBlueprint.clear();
         for ( XmlNode node = root.findChild( "FlatRide" ); node; node = node.findNextSibling( "FlatRide" ) )
         {
-            const utf8* pId = node.findAttribute( "id" );
-            if ( StringUtil::isNullOrEmpty( pId ) )
+            const utf8* pId = GameDataXml::findRequiredId( node, absPath );
+            if ( pId == nullptr )
                 continue;
             RideBlueprint blueprint;
             ParkRide&     ride         = blueprint._ride;
@@ -165,7 +134,7 @@ namespace sw
             const utf8* pShape         = node.findAttribute( "shape" );
             blueprint._shape           = pShape != nullptr ? pShape : "Cylinder";
             blueprint._size            = float3{ node.getAttributeFloat( "sizeX", 4.0f ), node.getAttributeFloat( "sizeY", 1.0f ), node.getAttributeFloat( "sizeZ", 4.0f ) };
-            blueprint._color           = ParkWorldInternal::parseColor( node.getAttributeText( "color" ), blueprint._color );
+            blueprint._color           = GameDataXml::parseFloat4( node.getAttributeText( "color" ), blueprint._color );
             blueprint._spin            = node.getAttributeFloat( "spin", 0.0f );
             _listBlueprint.push_back( blueprint );
         }
@@ -187,7 +156,7 @@ namespace sw
             blueprint._heading        = node.getAttributeFloat( "heading", 0.0f );
             blueprint._loadTime       = MathUtil::max( 0.0f, node.getAttributeFloat( "loadTime", 15.0f ) );
             blueprint._buildCost      = MathUtil::max( 0, node.getAttributeInt( "cost", 5000 ) );
-            blueprint._color          = ParkWorldInternal::parseColor( node.getAttributeText( "color" ), blueprint._color );
+            blueprint._color          = GameDataXml::parseFloat4( node.getAttributeText( "color" ), blueprint._color );
             _listBlueprint.push_back( blueprint );
         }
         return _listBlueprint.empty() == false;
@@ -303,7 +272,7 @@ namespace sw
             CoasterTrackBuilder builder;
             builder.reset( blueprint._position + float3{ 0.0f, pLayout->_startHeight, 0.0f }, blueprint._heading );
             builder.appendPieces( pLayout->_listPiece );
-            const CoasterTrack     track = builder.build( true );
+            const CoasterTrack     track = builder.makeTrack( true );
             const CoasterRideStats stats = CoasterRideAnalyzer::analyze( track, CoasterPhysicsParams{} );
             if ( stats._bCompleted == SW_FALSE )
             {
@@ -378,7 +347,7 @@ namespace sw
         CoasterTrackBuilder builder;
         builder.reset( blueprint._position + float3{ 0.0f, pLayout->_startHeight, 0.0f }, blueprint._heading );
         builder.appendPieces( pLayout->_listPiece );
-        view._pTrack = make_unique<CoasterTrack>( builder.build( true ) );
+        view._pTrack = make_unique<CoasterTrack>( builder.makeTrack( true ) );
         view._train.initialize( view._pTrack.get(), CoasterPhysicsParams{}, 0.0f );
 
         // 레일 — 2 m 마다 트랙 좌표계로 돌린 납작한 상자. 기둥 — 8 m 마다 땅까지(뒤집힌 구간은 없다).

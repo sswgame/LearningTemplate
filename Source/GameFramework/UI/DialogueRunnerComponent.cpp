@@ -107,10 +107,12 @@ namespace sw
         , _currentNodeId{ 0 }
         , _transitionSerial{ 0 }
     {
+        setCanEverTick( false ); // 대화는 입력 · 이벤트로만 넘어간다 — 빈 틱에 워커를 쓰지 않는다
     }
 
     void DialogueRunnerComponent::onBeginPlay()
     {
+        Component::onBeginPlay();
         if ( _graph._listNode.empty() )
             loadGraphFromPath();
     }
@@ -141,6 +143,7 @@ namespace sw
     void DialogueRunnerComponent::onEndPlay()
     {
         stopDialogue();
+        Component::onEndPlay();
     }
 
     void DialogueRunnerComponent::onTick( [[maybe_unused]] float32 deltaTime )

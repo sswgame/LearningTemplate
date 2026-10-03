@@ -3,9 +3,10 @@
 #include "GameFramework/Kits/Voxel/VoxelBlock.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
+
+#include "GameFramework/Data/GameDataXml.h"
 
 namespace sw
 {
@@ -17,30 +18,6 @@ namespace sw
         {
             /** @brief 블록 번호의 상한입니다(`VoxelBlockIndex` 가 uint8). */
             static constexpr size_t kMaxBlockCount = 255;
-
-            /** @brief "r g b a" (쉼표도 된다)를 읽습니다. 빠진 성분은 @p fallback 의 것입니다. */
-            static float4 parseColor( string_view text, const float4& fallback )
-            {
-                float32 arrValue[4] = { fallback._x, fallback._y, fallback._z, fallback._w };
-                size_t  tokenStart  = 0;
-                int32   valueIndex  = 0;
-                while ( tokenStart < text.size() && valueIndex < 4 )
-                {
-                    size_t tokenEnd = text.find_first_of( ", ", tokenStart );
-                    if ( tokenEnd == string_view::npos )
-                        tokenEnd = text.size();
-                    const string_view token = text.substr( tokenStart, tokenEnd - tokenStart );
-                    if ( token.empty() == false )
-                    {
-                        float32 value = 0.0f;
-                        if ( StringUtil::parseFloat( token, value ) )
-                            arrValue[valueIndex] = value;
-                        ++valueIndex;
-                    }
-                    tokenStart = tokenEnd + 1;
-                }
-                return float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] };
-            }
         };
     } // namespace
 } // namespace sw
@@ -68,7 +45,7 @@ namespace sw
     }
 
     VoxelBlockCatalog::VoxelBlockCatalog()
-        : _listBlock{}
+        : _catalog{}
         , _atlasColumns{ 8 }
         , _atlasRows{ 8 }
         , _tileTexels{ 16 }
@@ -78,75 +55,43 @@ namespace sw
     bool VoxelBlockCatalog::loadFromResource( string_view path )
     {
         XmlDocument doc;
-        string      absPath;
-        if ( doc.loadPath( path, &absPath ) == false )
-        {
-            SW_LOG_WARNING( "Failed to read block catalog %#", path );
-            return false;
-        }
-        const XmlNode root = doc.getRoot( "BlockCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <BlockCatalog> root in %#", absPath );
-            return false;
-        }
-        return loadRoot( root, absPath ) > 0;
+        XmlNode     root;
+        string      sourceName;
+        return GameDataXml::loadRoot( doc, path, "BlockCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
     }
 
     bool VoxelBlockCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
         XmlDocument doc;
-        if ( doc.parse( xmlText, sourceName ) == false )
-        {
-            SW_LOG_WARNING( "Failed to parse block catalog text %#", sourceName );
-            return false;
-        }
-        const XmlNode root = doc.getRoot( "BlockCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <BlockCatalog> root in %#", sourceName );
-            return false;
-        }
-        return loadRoot( root, sourceName ) > 0;
+        XmlNode     root;
+        return GameDataXml::parseRoot( doc, xmlText, sourceName, "BlockCatalog", root ) && loadRoot( root, sourceName ) > 0;
     }
 
     VoxelBlockIndex VoxelBlockCatalog::addBlock( const VoxelBlockDef& block )
     {
-        for ( VoxelBlockDef& existing : _listBlock )
-        {
-            if ( existing._id == block._id )
-            {
-                const VoxelBlockIndex index = existing._index;
-                existing                    = block;
-                existing._index             = index;
-                return index;
-            }
-        }
-        if ( _listBlock.size() >= VoxelBlockInternal::kMaxBlockCount )
+        // 번호 = 자리 + 1. 같은 id 는 그 자리를 그대로 쓴다(저장된 월드의 번호가 바뀌지 않게).
+        const int32 existingIndex = _catalog.findIndex( block._id );
+        if ( existingIndex < 0 && _catalog.getCount() >= VoxelBlockInternal::kMaxBlockCount )
         {
             SW_LOG_WARNING( "Block catalog is full - '%#' skipped", block._id.c_str() );
             return kVoxelAirBlock;
         }
-        _listBlock.push_back( block );
-        _listBlock.back()._index = static_cast<VoxelBlockIndex>( _listBlock.size() );
-        return _listBlock.back()._index;
+        VoxelBlockDef stored = block;
+        stored._index        = static_cast<VoxelBlockIndex>( ( existingIndex >= 0 ? existingIndex : static_cast<int32>( _catalog.getCount() ) ) + 1 );
+        return _catalog.add( stored ) >= 0 ? stored._index : kVoxelAirBlock;
     }
 
     const VoxelBlockDef* VoxelBlockCatalog::findBlock( VoxelBlockIndex index ) const
     {
-        if ( index == kVoxelAirBlock || index > _listBlock.size() )
+        if ( index == kVoxelAirBlock || index > _catalog.getCount() )
             return nullptr;
-        return &_listBlock[index - 1];
+        return &_catalog.getAt( static_cast<size_t>( index - 1 ) );
     }
 
     VoxelBlockIndex VoxelBlockCatalog::findBlockIndex( const hashed_string& blockId ) const
     {
-        for ( const VoxelBlockDef& block : _listBlock )
-        {
-            if ( block._id == blockId )
-                return block._index;
-        }
-        return kVoxelAirBlock;
+        const int32 index = _catalog.findIndex( blockId );
+        return index >= 0 ? static_cast<VoxelBlockIndex>( index + 1 ) : kVoxelAirBlock;
     }
 
     bool VoxelBlockCatalog::isSolid( VoxelBlockIndex index ) const
@@ -183,12 +128,9 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Block" ); node; node = node.findNextSibling( "Block" ) )
         {
-            const utf8* pId = node.findAttribute( "id" );
-            if ( StringUtil::isNullOrEmpty( pId ) )
-            {
-                SW_LOG_WARNING( "%#: <Block> without an id - skipped", sourceName );
+            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            if ( pId == nullptr )
                 continue;
-            }
             VoxelBlockDef block;
             block._id                                                      = hashed_string( pId );
             const utf8* pName                                              = node.findAttribute( "name" );
@@ -201,7 +143,7 @@ namespace sw
             block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeZ )] = sideTile;
             block._arrFaceTile[static_cast<int32>( VoxelFace::PositiveY )] = node.getAttributeInt( "top", baseTile );
             block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeY )] = node.getAttributeInt( "bottom", baseTile );
-            block._color                                                   = VoxelBlockInternal::parseColor( node.getAttributeText( "color" ), block._color );
+            block._color                                                   = GameDataXml::parseFloat4( node.getAttributeText( "color" ), block._color );
             block._hardness                                                = MathUtil::max( 0.0f, node.getAttributeFloat( "hardness", block._hardness ) );
             block._bSolid                                                  = node.getAttributeBool( "solid", true ) ? SW_TRUE : SW_FALSE;
             block._bOpaque                                                 = node.getAttributeBool( "opaque", true ) ? SW_TRUE : SW_FALSE;

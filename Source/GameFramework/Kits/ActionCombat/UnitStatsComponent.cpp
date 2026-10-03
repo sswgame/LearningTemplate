@@ -202,7 +202,6 @@ namespace sw
 
     void UnitStatsComponent::spawnDamageNumber( int32 amount )
     {
-        // 피해는 구조가 얼지 않은 자리에서만 적용된다(틱 중이면 `takeDamage` 가 틱 뒤로 미룬다) — 여기서 바로 만들어도 된다.
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
@@ -210,14 +209,6 @@ namespace sw
         const SceneComponent* pRoot    = pOwner->getPrimarySceneComponent();
         const float3          position = ( pRoot != nullptr ? pRoot->getWorldPosition() : float3{} ) + _damageNumberOffset;
 
-        GameObject* pNumber = pManager->createGameObject( hashed_string( "DamageNumber" ) );
-        if ( pNumber == nullptr )
-            return;
-        SceneComponent* pNumberRoot = pNumber->addComponent<SceneComponent>();
-        if ( pNumberRoot != nullptr )
-            pNumberRoot->setWorldPosition( position );
-        DamageUIComponent* pNumberUi = pNumber->addComponent<DamageUIComponent>();
-        if ( pNumberUi != nullptr )
-            pNumberUi->setDamageValue( amount );
+        DamageUIComponent::spawnNumber( *pManager, position, amount );
     }
 } // namespace sw

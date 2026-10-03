@@ -154,10 +154,10 @@ SW_TEST_CASE( VoxelTest, TerrainIsDeterministicAndLayered )
     SW_ASSERT_TRUE( second.initialize( 4, 4 ) );
     SW_ASSERT_TRUE( other.initialize( 4, 4 ) );
     VoxelTerrainSettings     settings;
-    const VoxelTerrainReport firstReport  = VoxelTerrainGenerator::generate( first._world, settings );
-    const VoxelTerrainReport secondReport = VoxelTerrainGenerator::generate( second._world, settings );
+    const VoxelTerrainReport firstReport  = VoxelTerrainGenerator::fillWorld( first._world, settings );
+    const VoxelTerrainReport secondReport = VoxelTerrainGenerator::fillWorld( second._world, settings );
     settings._seed                        = 4242u;
-    (void)VoxelTerrainGenerator::generate( other._world, settings );
+    (void)VoxelTerrainGenerator::fillWorld( other._world, settings );
 
     const VoxelBlockIndex arrBlock[] = { first.findBlock( "grass" ), first.findBlock( "stone" ), first.findBlock( "water" ), first.findBlock( "log" ) };
     bool                  bSame      = true;
@@ -243,7 +243,7 @@ SW_TEST_CASE( VoxelTest, MesherEmitsExposedFacesWithOutwardWindingAndOcclusion )
     VoxelChunkMesh        mesh;
 
     SW_ASSERT_TRUE( scene._world.setBlock( 5, 10, 5, stone ) );
-    VoxelMesher::buildChunkMesh( scene._world, 0, 0, mesh );
+    VoxelMesher::fillChunkMesh( scene._world, 0, 0, mesh );
     SW_EXPECT_EQUAL( 6u, mesh.getFaceCount() );
     SW_EXPECT_TRUE( areAllTrianglesOutward( mesh._listOpaqueVertex ) );
     bool bInsideBlock = true;
@@ -255,14 +255,14 @@ SW_TEST_CASE( VoxelTest, MesherEmitsExposedFacesWithOutwardWindingAndOcclusion )
     SW_EXPECT_TRUE( bInsideBlock );
 
     SW_ASSERT_TRUE( scene._world.setBlock( 6, 10, 5, stone ) );
-    VoxelMesher::buildChunkMesh( scene._world, 0, 0, mesh );
+    VoxelMesher::fillChunkMesh( scene._world, 0, 0, mesh );
     SW_EXPECT_EQUAL( 10u, mesh.getFaceCount() );
 
     // 청크 경계 — 이웃 청크의 블록이 이 청크의 면을 가린다. 정점은 그 청크 원점 기준이다.
     SW_ASSERT_TRUE( scene._world.setBlock( 15, 20, 5, stone ) );
     SW_ASSERT_TRUE( scene._world.setBlock( 16, 20, 5, stone ) );
     VoxelChunkMesh neighborMesh;
-    VoxelMesher::buildChunkMesh( scene._world, 1, 0, neighborMesh );
+    VoxelMesher::fillChunkMesh( scene._world, 1, 0, neighborMesh );
     SW_EXPECT_EQUAL( 5u, neighborMesh.getFaceCount() );
     bool bLocal = true;
     for ( const VoxelMeshVertex& vertex : neighborMesh._listOpaqueVertex )
@@ -272,7 +272,7 @@ SW_TEST_CASE( VoxelTest, MesherEmitsExposedFacesWithOutwardWindingAndOcclusion )
     // 물 둘은 서로 사이 면이 없고 반투명 목록으로 간다.
     SW_ASSERT_TRUE( scene._world.setBlock( 2, 30, 2, water ) );
     SW_ASSERT_TRUE( scene._world.setBlock( 3, 30, 2, water ) );
-    VoxelMesher::buildChunkMesh( scene._world, 0, 0, mesh );
+    VoxelMesher::fillChunkMesh( scene._world, 0, 0, mesh );
     SW_EXPECT_EQUAL( static_cast<size_t>( 10 * 6 ), mesh._listTranslucentVertex.size() );
     SW_EXPECT_TRUE( areAllTrianglesOutward( mesh._listTranslucentVertex ) );
 
@@ -281,7 +281,7 @@ SW_TEST_CASE( VoxelTest, MesherEmitsExposedFacesWithOutwardWindingAndOcclusion )
     SW_ASSERT_TRUE( floorScene.initialize( 1, 1 ) );
     floorScene.fillFloor( 3 );
     SW_ASSERT_TRUE( floorScene._world.setBlock( 8, 4, 8, stone ) );
-    VoxelMesher::buildChunkMesh( floorScene._world, 0, 0, mesh );
+    VoxelMesher::fillChunkMesh( floorScene._world, 0, 0, mesh );
     float32 lowShade  = 1.0f;
     float32 highShade = 0.0f;
     for ( const VoxelMeshVertex& vertex : mesh._listOpaqueVertex )

@@ -2,7 +2,7 @@
  * @file VoxelCraftWorld.h
  * @brief VoxelCraft 의 게임 규칙 — 지형 꾸미기(광석 · 눈), 청크 메시를 엔진 메시로 옮기기, 1인칭 몸 · 시점, 부수기 · 놓기, 핫바입니다.
  *
- * @details 블록 · 월드 · 지형 · 광선 · 메싱 · 몸 충돌 · 핫바의 규칙은 키트(`GF_Voxel`)가, 시점은 `GF_Shooter` 의 `FirstPersonLook` 이 맡습니다.
+ * @details 블록 · 월드 · 지형 · 광선 · 메싱 · 몸 충돌 · 핫바의 규칙은 키트(`GF_Voxel`)가, 시점은 기반의 `FirstPersonLook` 이 맡습니다.
  *          청크마다 불투명 · 반투명(물) 메시 오브젝트가 하나씩이고, 블록이 바뀐 청크만 한 프레임에 몇 개씩 다시 짓습니다.
  */
 #pragma once
@@ -13,8 +13,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "GameFramework/Base/FirstPersonLook.h"
 #include "GameFramework/Base/PrimitiveStage.h"
-#include "GameFramework/Kits/Shooter/ShooterMath.h"
 #include "GameFramework/Kits/Voxel/VoxelBody.h"
 #include "GameFramework/Kits/Voxel/VoxelHotbar.h"
 #include "GameFramework/Kits/Voxel/VoxelMesher.h"

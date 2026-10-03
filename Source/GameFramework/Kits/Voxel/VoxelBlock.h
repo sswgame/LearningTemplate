@@ -10,6 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -96,7 +97,7 @@ namespace sw
         /** @brief 면의 아틀라스 칸 UV 사각형(왼위 · 오른아래)입니다. 칸 가장자리에서 반 텍셀 안으로 들여 이웃 칸이 번지지 않게 합니다. */
         void computeTileUv( int32 tile, float2& outMin, float2& outMax ) const;
 
-        const vector<VoxelBlockDef>& getBlocks() const { return _listBlock; }
+        const vector<VoxelBlockDef>& getBlocks() const { return _catalog.getAll(); }
         int32                        getAtlasColumns() const { return _atlasColumns; }
         int32                        getAtlasRows() const { return _atlasRows; }
         /** @brief 아틀라스 칸 한 변의 텍셀 수입니다(UV 들여쓰기에 씁니다). */
@@ -105,9 +106,9 @@ namespace sw
     private:
         uint32 loadRoot( const XmlNode& root, string_view sourceName );
 
-        vector<VoxelBlockDef> _listBlock; ///< 번호 - 1 자리
-        int32                 _atlasColumns;
-        int32                 _atlasRows;
-        int32                 _tileTexels;
+        GameCatalog<VoxelBlockDef> _catalog; ///< 번호 - 1 자리(id 조회는 해시 한 번)
+        int32                      _atlasColumns;
+        int32                      _atlasRows;
+        int32                      _tileTexels;
     };
 } // namespace sw

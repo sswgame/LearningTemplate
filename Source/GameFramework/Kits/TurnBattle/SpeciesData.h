@@ -84,6 +84,9 @@ namespace sw
          */
         static constexpr int32 kMaxLevel = 999;
 
+        /** @brief 다음 레벨까지의 경험치입니다. 레벨은 곱하기 전에 [1, `kMaxLevel`] 로 자릅니다 — 세이브 · 야생 · 스타터가 같은 식을 씁니다. */
+        static constexpr int32 computeExpToNextLevel( int32 level ) { return 40 + ( level < 1 ? 1 : ( level > kMaxLevel ? kMaxLevel : level ) ) * 10; }
+
         /** @brief 최소 폴백 표를 심고 시작합니다. 빈 카탈로그로는 만들어지지 않습니다. */
         SpeciesCatalog();
         ~SpeciesCatalog();

@@ -11,6 +11,7 @@
 
 namespace sw
 {
+    class GameObjectManager;
     class SpriteClipAsset;
 
     /**
@@ -32,6 +33,9 @@ namespace sw
         static constexpr uint32 kMaxGlyphCount = 11;
         /** @brief '-' 글리프의 클립 프레임 번호입니다(0..9 는 숫자 그대로). */
         static constexpr int32 kMinusGlyphFrame = 10;
+        /** @brief `spawnNumber` 로 띄운 숫자의 수명(초) · 떠오르는 빠르기(m/s)입니다. */
+        static constexpr float32 kSpawnedLifeTime   = 0.9f;
+        static constexpr float32 kSpawnedFloatSpeed = 1.2f;
 
         DamageUIComponent();
         virtual ~DamageUIComponent() override = default;
@@ -64,6 +68,20 @@ namespace sw
         const float4& getColor() const { return _color; }
         /** @brief 지금 흐림 정도(1 → 0)입니다. */
         float32 getAlpha() const { return _alpha; }
+        /** @brief 사라지기까지의 초입니다. 0 이면 지우지 않고 그대로 둡니다(씬에 놓은 견본 숫자). */
+        void    setLifeTime( float32 lifeTime ) { _lifeTime = lifeTime < 0.0f ? 0.0f : lifeTime; }
+        float32 getLifeTime() const { return _lifeTime; }
+        /** @brief 위로 떠오르는 빠르기(m/s)입니다. 수명이 0 이면 움직이지 않습니다. */
+        void    setFloatSpeed( float32 floatSpeed ) { _floatSpeed = floatSpeed; }
+        float32 getFloatSpeed() const { return _floatSpeed; }
+
+        /**
+         * @brief 피해 숫자 하나를 @p position 에 띄웁니다 — 떠오르며 흐려지다 `kSpawnedLifeTime` 초 뒤 지워집니다.
+         * @details 피해를 내는 모든 곳(`UnitStatsComponent` · `AbilitySystemComponent`)이 이것 하나를 씁니다. 틱 중이면 만들기를 틱 직후로 미룹니다
+         *          (틱 안에서는 컴포넌트를 붙일 수 없다). 예전에는 두 곳이 저마다 만들었고, 둘 다 수명 · 떠오름을 정하지 않아(기본 0 = 지우지 않음)
+         *          맞을 때마다 숫자 오브젝트가 영영 남았습니다.
+         */
+        static void spawnNumber( GameObjectManager& manager, const float3& position, int32 value );
 
         /**
          * @brief 값을 글리프 프레임 번호들로 바꿉니다(왼쪽부터). '-' 는 `kMinusGlyphFrame` 입니다. 글자 수를 돌려줍니다.

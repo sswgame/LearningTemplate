@@ -15,6 +15,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -132,7 +133,7 @@ namespace sw
     /**
      * @class CoasterTrackBuilder
      * @brief 거북이처럼 자리(위치 · 진행 방향)를 들고 조각을 하나씩 이어 붙입니다.
-     * @details `appendPiece` 마다 점이 쌓이고, `build( bCloseCircuit )` 이 트랙을 내줍니다. 닫으면 끝에서 시작점으로 에르미트 연결 곡선을 더합니다
+     * @details `appendPiece` 마다 점이 쌓이고, `makeTrack( bCloseCircuit )` 이 트랙을 내줍니다. 닫으면 끝에서 시작점으로 에르미트 연결 곡선을 더합니다
      *          (끝이 이미 시작점과 같으면 더하지 않는다). 짓는 도중에도 `getPosition` · `getHeading` 으로 지금 자리를 물을 수 있습니다(에디터 미리보기).
      */
     class SW_GF_API CoasterTrackBuilder
@@ -150,7 +151,7 @@ namespace sw
         /** @brief 조각들을 차례로 이어 붙입니다. */
         void appendPieces( const vector<CoasterTrackPiece>& listPiece );
         /** @brief 지금까지의 점으로 트랙을 짓습니다. @p bCloseCircuit 면 시작점으로 이어 닫습니다. */
-        CoasterTrack build( bool bCloseCircuit ) const;
+        CoasterTrack makeTrack( bool bCloseCircuit ) const;
 
         /** @brief 지금 자리입니다(다음 조각이 시작할 곳). */
         const float3& getPosition() const { return _position; }
@@ -200,12 +201,12 @@ namespace sw
         [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
         void               addLayout( const CoasterLayoutDef& layout );
 
-        const CoasterLayoutDef*         findLayout( const hashed_string& id ) const;
-        const vector<CoasterLayoutDef>& getLayouts() const { return _listLayout; }
+        const CoasterLayoutDef*         findLayout( const hashed_string& id ) const { return _catalog.find( id ); }
+        const vector<CoasterLayoutDef>& getLayouts() const { return _catalog.getAll(); }
 
     private:
         uint32 loadRoot( const XmlNode& root, string_view sourceName );
 
-        vector<CoasterLayoutDef> _listLayout; ///< 읽은 순서(게임이 차례로 바꿔 탄다)
+        GameCatalog<CoasterLayoutDef> _catalog; ///< 읽은 순서(게임이 차례로 바꿔 탄다)
     };
 } // namespace sw

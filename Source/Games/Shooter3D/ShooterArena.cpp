@@ -407,7 +407,7 @@ namespace sw
     {
         (void)bTriggerHeld;
         WeaponState& weapon = _arrWeapon[_weaponIndex];
-        ShooterRay   aim;
+        GameRay      aim;
         aim._origin    = getEyePosition();
         aim._direction = _look.getForward();
         WeaponShot             shot;
@@ -421,7 +421,7 @@ namespace sw
 
         ++_shotCount;
         bool bAnyHit = false;
-        for ( const ShooterRay& ray : shot._listRay )
+        for ( const GameRay& ray : shot._listRay )
         {
             bool          bHitDrone = false;
             const float32 distance  = traceShot( ray, weapon.getDef()._damage, bHitDrone );
@@ -444,7 +444,7 @@ namespace sw
         _look.addRecoil( kick, kick * 0.25f * ( ( _shotCount % 2u ) == 0u ? 1.0f : -1.0f ) );
     }
 
-    float32 ShooterArena::traceShot( const ShooterRay& ray, float32 damage, bool& outHitDrone )
+    float32 ShooterArena::traceShot( const GameRay& ray, float32 damage, bool& outHitDrone )
     {
         const float32 range        = _arrWeapon[_weaponIndex].getDef()._range;
         float32       nearest      = range;
@@ -452,7 +452,7 @@ namespace sw
         for ( const ArenaBox& box : _listBox )
         {
             float32 distance = 0.0f;
-            if ( ShooterMath::intersectAabb( ray, box._min, box._max, nearest, distance ) && distance < nearest )
+            if ( RayMath::intersectAabb( ray, box._min, box._max, nearest, distance ) && distance < nearest )
                 nearest = distance;
         }
         // 바닥
@@ -464,7 +464,7 @@ namespace sw
         for ( size_t droneIndex = 0; droneIndex < _listDrone.size(); ++droneIndex )
         {
             float32 distance = 0.0f;
-            if ( ShooterMath::intersectSphere( ray, _listDrone[droneIndex]._position, ShooterArenaInternal::kDroneRadius, nearest, distance ) && distance < nearest )
+            if ( RayMath::intersectSphere( ray, _listDrone[droneIndex]._position, ShooterArenaInternal::kDroneRadius, nearest, distance ) && distance < nearest )
             {
                 nearest      = distance;
                 nearestDrone = static_cast<int32>( droneIndex );
@@ -697,8 +697,8 @@ namespace sw
     void ShooterArena::updateOverlay()
     {
         // 1인칭 카메라 — 오일러 피치는 아래가 + 라서 시점의 피치(위가 +)를 뒤집는다.
-        const float3 eye = getEyePosition();
-        const float3 euler{ -_look.getPitch(), _look.getYaw(), 0.0f };
+        const float3 eye   = getEyePosition();
+        const float3 euler = _look.computeCameraEuler();
         _stage.placeCamerasWithRotation( eye, euler, 75.0f * ShooterArenaInternal::kDegToRad, 120.0f );
 
         const float3 forward      = _look.getForward();

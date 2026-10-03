@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/FirstPersonLook.h"
 #include "GameFramework/Base/PrimitiveStage.h"
 #include "GameFramework/Kits/Shooter/ShooterMath.h"
 #include "GameFramework/Kits/Shooter/Weapon.h"
@@ -83,7 +84,7 @@ namespace sw
         void movePlayer( const float3& wishDirection, bool bJump, bool bSprint, float32 deltaTime );
         void fireWeapon( bool bTriggerHeld, bool bJustPressed );
         /** @brief 광선 하나 — 가장 가까운 드론 · 상자를 찾아 드론이면 피해를 줍니다. 맞은 거리입니다. */
-        float32 traceShot( const ShooterRay& ray, float32 damage, bool& outHitDrone );
+        float32 traceShot( const GameRay& ray, float32 damage, bool& outHitDrone );
         void    updateDrones( float32 deltaTime );
         void    updateEffects( float32 deltaTime );
         void    updateOverlay();

@@ -33,8 +33,8 @@ namespace sw
         , _loco{}
         , _tile{ 1, 1 }
         , _pendingWarpSpawn{ 1, 1 }
+        , _settings{}
         , _encounterStepCounter{ 0 }
-        , _encounterRate{ 0.33f }
         , _bMoved{ SW_FALSE }
         , _bWarpPending{ SW_FALSE }
         , _bEncounterPending{ SW_FALSE }
@@ -66,23 +66,24 @@ namespace sw
         if ( pActionMap->getInputManager() != &input )
             pActionMap->setInputManager( &input );
 
-        if ( pActionMap->wasActionTriggered( "Interact" ) )
+        if ( pActionMap->wasActionTriggered( _settings._interactAction ) )
         {
             _loco.beginInteract();
             _bInteractPending = SW_TRUE;
             return;
         }
 
-        int32        deltaX{ 0 };
-        int32        deltaY{ 0 };
-        const float2 moveVec = pActionMap->getVector2D( "Move" );
-        if ( moveVec._y > 0.5f )
+        int32         deltaX{ 0 };
+        int32         deltaY{ 0 };
+        const float2  moveVec  = pActionMap->getVector2D( _settings._moveAction );
+        const float32 deadZone = _settings._moveDeadZone;
+        if ( moveVec._y > deadZone )
             deltaY = -1;
-        else if ( moveVec._y < -0.5f )
+        else if ( moveVec._y < -deadZone )
             deltaY = 1;
-        else if ( moveVec._x < -0.5f )
+        else if ( moveVec._x < -deadZone )
             deltaX = -1;
-        else if ( moveVec._x > 0.5f )
+        else if ( moveVec._x > deadZone )
             deltaX = 1;
 
         if ( deltaX == 0 && deltaY == 0 )
@@ -180,7 +181,7 @@ namespace sw
         else if ( _pTileMap->isEncounterTile( _tile._x, _tile._y ) )
         {
             ++_encounterStepCounter;
-            if ( shouldEncounterOnStep( _encounterRate, _encounterStepCounter ) )
+            if ( shouldEncounterOnStep( _settings._encounterRate, _encounterStepCounter ) )
             {
                 _bEncounterPending = SW_TRUE;
                 SW_LOG_TRACE( "Wild encounter at (%#,%#)", _tile._x, _tile._y );

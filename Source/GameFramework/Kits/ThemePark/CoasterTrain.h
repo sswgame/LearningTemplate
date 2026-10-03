@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/Math.h"
 
+#include "GameFramework/Base/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/ThemePark/CoasterTrack.h"
 
@@ -84,7 +85,7 @@ namespace sw
         float32              _distance;
         float32              _speed;
         float32              _elapsedTime;
-        float32              _accumulator;
+        FixedStepTimer       _stepTimer;
         int32                _lapCount;
         uint8                _bHasPreviousVelocity;
     };
