@@ -362,8 +362,8 @@ if ( pTarget != nullptr ) { ... }
   메서드에 붙인 `PROPERTY( Name = … )`)가 들고 칸을 찾으므로, 씬 파일 · 인스펙터 · 직렬화는 필드와 같은 키로 읽고 씁니다.
 - 칸은 컴포넌트를 만들 때 받고 소멸할 때 놓습니다. 씬에 붙지 않은 컴포넌트도 칸이 있어 등록 여부로 값의 자리가 바뀌지 않습니다.
 - 틱(병렬) 중 `setLocalPosition` 등은 **틱이 끝난 뒤 적용**됩니다(위 F).
-- **절대 하지 말 것 (병렬 tick 중):** `attachToParent` / `detach` 로 부모·자식 바꾸기.  
-  → 크래시·깨진 계층의 원인이 됩니다. ([ARCHITECTURE.md](../../../ARCHITECTURE.md) CAUTION)
+- 틱(병렬) 중 `attachToParent` / `detach` 는 **미뤄집니다** — 틱 직후 구조 변경 큐가 부른 순서대로 적용하므로, 같은 틱 안에서 바뀐 계층을
+  기대하면 안 됩니다(아래 실수 표). 만들고 바로 붙여 초기화까지 해야 하면 `GameObjectManager::executeOrDeferPostTick` 블록 안에서.
 
 ---
 

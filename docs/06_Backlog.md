@@ -95,7 +95,7 @@ cd build/Ninja-Debug/Bin
 
 ### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
 
-- **불필요 코드 삭제 — 코드 묶음 여섯(A~F)은 10-04 에 끝났다**(조사 보고서는 세션 스크래치 `deadcode/report.md`). 남은 것: **주석 · 문서 2 차(G1~G5, G3 Graphics · 셰이더는 10-04 끝 — 경위 ~410 · 없는 대상 ~45)** —
+- **불필요 코드 삭제 — 코드 묶음 여섯(A~F)은 10-04 에 끝났다**(조사 보고서는 세션 스크래치 `deadcode/report.md`). 남은 것: **주석 · 문서 2 차(G1~G5, G3 Graphics · 셰이더 · G2 Engine · App · RuntimeAPI · ReflectionParser 는 10-04 끝 — 경위 ~1,000 · 없는 대상 ~80)** —
   경위 서술("예전에는 …") ~2,300 블록 · 없는 대상을 가리키는 줄 ~330(보고서 4 장; 문서 최신화 뒤라 다시 grep 해서 셀 것), 영역은 G1 시험 · G2 Engine(Graphics 제외) ·
   App · RuntimeAPI · ReflectionParser · G3 Graphics · 셰이더 · G4 Core · Editor · GameFramework · G5 문서 · 스크립트 · CI. 보고서가 "판단 필요" 로 남긴 것
   (`transcodeBinaryToXml` 시험 전용, `GameModes::cutscene`, `seedFallback`, 1-C 접근자 등)은 그대로다. `RuntimeHud` 는 남긴다(사용자 결정).
@@ -127,6 +127,10 @@ cd build/Ninja-Debug/Bin
 - **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
 
 ### 1-1. 직렬화 · 리플렉션
+
+- **"지금 형식만 읽기" 원칙에 걸리는 리더가 몇 남았다**(G2 보고) — id 없는 부착 · 자기 이름 부착(`ObjectStateSerializer.cpp`), 전체 상태가 실린 프리팹 엔티티(`Scene.cpp`),
+  `SceneDocument::assignMissingFileIds`, animations 키 없는 클립(`SpriteClipAsset`), 시각 없는 스탬프(`GeneratedFiles`). 일부는 지금도 만들어지는 모양(프리팹을 못 읽은 채
+  저장한 엔티티 등)이라 하나씩 "지금 쓰는 쪽이 이 모양을 만드는가" 를 보고 지운다.
 
 - **`AssetDatabase::ensureMeta` 가 리소스 루트 안의 없는 경로에도 `.meta` 를 지어 쓴다** — 머티리얼을 acquire 만 해도 Resource 가 더러워진다(시험 쪽은 임시 경로로 피했다).
 
@@ -479,6 +483,9 @@ cd build/Ninja-Debug/Bin
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
+
+- **주석 정리에서 마커(예전 · 날짜 · 백로그)로만 뽑으면 과거형 경위("~를 각자 들고 있었습니다")가 영역마다 ~10 % 남는다** — `(었|았|였)(는데|다|습니다)` 로 한 번 더 훑는다.
+  빌드가 도는 동안 헤더를 고치면 PCH 크기 불일치("modified since the precompiled header")로 빌드가 진다 — 편집과 빌드를 겹치지 말 것.
 
 - **`git mv` 로 옮긴 시험 파일은 pre-commit 의 `CheckIncludeOrder` · `CheckTestSuites` 가 "변경 없음" 으로 건너뛴다** — 옮긴 뒤에는 `ctest -L lint` 로 확인할 것.
 
