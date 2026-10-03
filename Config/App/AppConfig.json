@@ -90,6 +90,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_OpenWorldWestern",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
