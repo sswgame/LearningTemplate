@@ -47,24 +47,37 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Uuid/Uuid.cpp"
 )
 
+set(listWindowsSource
+	"${CMAKE_CURRENT_SOURCE_DIR}/File/Windows/WindowsFileDialog.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/File/Windows/WindowsFileWatcher.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsCallStackCapture.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsCrashHandler.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsProcess.cpp"
+)
+set(listPosixSource
+	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixCallStackCapture.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixCrashHandler.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixProcess.cpp"
+)
+set(listMacSource
+	"${CMAKE_CURRENT_SOURCE_DIR}/File/Mac/MacFileDialog.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/File/Mac/MacFileWatcher.cpp"
+)
+set(listLinuxSource
+	"${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileDialog.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileWatcher.cpp"
+)
+
+# 고르지 않은 OS 의 것은 소스 검사 게이트에 "이 구성이 짓지 않는다" 로 적는다(`sw_declareUnbuiltSources`).
 if(WIN32)
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Windows/WindowsFileDialog.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Windows/WindowsFileWatcher.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsCallStackCapture.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsCrashHandler.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsProcess.cpp")
+	list(APPEND cfSources ${listWindowsSource})
+	sw_declareUnbuiltSources(${listPosixSource} ${listMacSource} ${listLinuxSource})
 elseif(APPLE)
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Mac/MacFileDialog.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Mac/MacFileWatcher.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixCallStackCapture.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixCrashHandler.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixProcess.cpp")
+	list(APPEND cfSources ${listMacSource} ${listPosixSource})
+	sw_declareUnbuiltSources(${listWindowsSource} ${listLinuxSource})
 elseif(UNIX)
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileDialog.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileWatcher.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixCallStackCapture.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixCrashHandler.cpp")
-	list(APPEND cfSources "${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixProcess.cpp")
+	list(APPEND cfSources ${listLinuxSource} ${listPosixSource})
+	sw_declareUnbuiltSources(${listWindowsSource} ${listMacSource})
 endif()
 
 # ------------------------------------------------------------------------------

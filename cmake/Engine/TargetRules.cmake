@@ -657,6 +657,15 @@ function(sw_declareUnbuiltSources)
 	set_property(GLOBAL APPEND PROPERTY SW_UNBUILT_SOURCES ${ARGN})
 endfunction()
 
+# 폴더(ARGN, 절대 경로) 아래의 .c · .cpp 를 전부 "이 구성이 짓지 않는 소스" 로 적는다 — 통째로 빼는 폴더(고르지 않은 게임 팩 ·
+# 끈 GameFramework)에 쓴다.
+function(sw_declareUnbuiltDirectory)
+	foreach(directory IN LISTS ARGN)
+		file(GLOB_RECURSE listSource CONFIGURE_DEPENDS "${directory}/*.c" "${directory}/*.cpp")
+		sw_declareUnbuiltSources(${listSource})
+	endforeach()
+endfunction()
+
 # 목록 변수 LIST_VAR 에서 정규식(ARGN)에 맞는 소스를 빼고, 뺀 것을 "이 구성이 짓지 않는 소스" 로 적는다.
 # 빼기와 적기가 한 호출이라 한쪽만 하는 일이 없다. 다른 타겟으로 옮겨 짓는 것에는 쓰지 않는다(그때는 `list(FILTER)`).
 function(sw_excludeUnbuiltSources LIST_VAR)

@@ -266,6 +266,9 @@ sw_addReflectionStep(Engine
 sw_addReflectBuiltinsGen(Engine)
 
 # 선택적 RHI 백엔드 MODULE 플러그인 (DX는 Windows 전용, GL/Vulkan은 전 플랫폼)
+# 모듈을 짓지 않는 구성은 모듈 엔트리(Modules/<백엔드>/ModuleEntry.cpp)를 짓지 않는다 — 소스 검사 게이트에 적는다.
 if(SW_RHI_AS_MODULES)
     add_subdirectory(Graphics/RHI/Modules)
+else()
+    sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}/Graphics/RHI/Modules")
 endif()

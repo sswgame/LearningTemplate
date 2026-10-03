@@ -29,6 +29,14 @@ endif()
 message(STATUS "[Games] SW_ACTIVE_GAME=${SW_ACTIVE_GAME} -> target SWGame")
 add_subdirectory(${SW_ACTIVE_GAME})
 
+# 고르지 않은 게임 팩은 짓지 않는다 — 소스 검사 게이트에 적는다.
+file(GLOB _swListGameFolder RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/*")
+foreach(_swGameName IN LISTS _swListGameFolder)
+	if(NOT _swGameName STREQUAL SW_ACTIVE_GAME AND IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${_swGameName}")
+		sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}/${_swGameName}")
+	endif()
+endforeach()
+
 # 등록은 여기서 하지 않는다 — 타겟을 **만드는** `sw_addGameModule` 이 한다
 # (`cmake/Engine/TargetRules.cmake` 의 "동적 모듈 레지스트리"). 호출부가 등록하면
 # 새 모듈이 조용히 빠진다.

@@ -68,12 +68,17 @@ add_subdirectory(Source/RuntimeAPI)
 add_subdirectory(Source/Editor)
 add_subdirectory(Source/App)
 
+# 끈 것은 소스 검사 게이트에 "이 구성이 짓지 않는다" 로 적는다.
 if(SW_BUILD_GAMEFRAMEWORK OR SW_BUILD_GAME)
 	add_subdirectory(Source/GameFramework)
+else()
+	sw_declareUnbuiltDirectory("${CMAKE_SOURCE_DIR}/Source/GameFramework")
 endif()
 
 if(SW_BUILD_GAME)
 	add_subdirectory(Source/Games)
+else()
+	sw_declareUnbuiltDirectory("${CMAKE_SOURCE_DIR}/Source/Games")
 endif()
 
 # 여기까지 오면 동적 모듈이 전부 만들어졌다 — 레지스트리에 빠진 것이 없는지 먼저 확인한다.
