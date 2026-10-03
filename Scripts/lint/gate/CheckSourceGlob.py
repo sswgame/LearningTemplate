@@ -19,9 +19,8 @@ CMake 소스 GLOB 누락 및 컴파일 데이터베이스 일치 검사.
 `sw_excludeUnbuiltSources` · `sw_declareUnbuiltDirectory`, `cmake/Engine/TargetRules.cmake`), 여기서는 그 목록만 읽는다 — 이 게이트에는
 플랫폼 · 게임 이름을 적은 무시 목록이 없다. 목록에 없는데 지어지지 않은 소스는 위반이다.
 
-(Ninja 빌드는 SW_GLOB_CONFIGURE_DEPENDS로 자동 감지하지만,
- CI 파이프라인이나 CONFIGURE_DEPENDS=OFF 환경, pre-commit 단계에서
- 전체 빌드 없이 빠른 소스 누락 방지 검증을 위해 사용됩니다.)
+(Ninja 빌드는 소스 GLOB 의 `CONFIGURE_DEPENDS` 로 추가 · 삭제를 감지하지만,
+ 이 게이트는 전체 빌드 없이 빠르게 소스 누락을 막는 데 씁니다.)
 
   python Scripts/lint/gate/CheckSourceGlob.py [--root <repo>] [--build <dir>]
 """
