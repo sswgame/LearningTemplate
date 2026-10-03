@@ -421,7 +421,7 @@ namespace sw
             emit.linef( "auto* self = static_cast<%#*>( objPtr );", typeInfo._fullyQualifiedName );
             if ( method._bConstructor != SW_FALSE )
             {
-                emit.linef( "new ( self ) %#(%#);", typeInfo._fullyQualifiedName, callArgs );
+                emit.linef( "sw_placement_new( self ) %#(%#);", typeInfo._fullyQualifiedName, callArgs ); // `Style/PlacementNew` 와 같은 모양
                 emit.line( "return ::sw::TaskValue{};" );
             }
             else if ( returnType == annotationConstants::kVoidTypeName )

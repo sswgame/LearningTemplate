@@ -580,6 +580,40 @@ SW_TEST_CASE( ReflectionParserTest, EveryAnnotationErrorOfATypeIsReported )
 }
 
 /**
+ * @brief [ReflectionParserTest] 생성자 호출기는 받은 저장소에 `sw_placement_new` 로 만든다 — 맨 `new ( p )` 를 내지 않는다
+ * @details 손으로 쓴 코드는 `Style/PlacementNew` 가 막지만 생성 코드는 그 린트 밖이다. 생성기가 같은 모양을 낸다.
+ */
+SW_TEST_CASE( ReflectionParserTest, ConstructorInvokerUsesPlacementNewMacro )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "CtorInvokerSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Core/Common/Types.h\"\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tREFLECT()\n"
+                                                       "\tstruct CtorInvokerSampleActor\n"
+                                                       "\t{\n"
+                                                       "\t\tREFLECT_BODY();\n"
+                                                       "\t\tCtorInvokerSampleActor() = default;\n"
+                                                       "\t\texplicit CtorInvokerSampleActor( int32 value ) : _value{ value } {}\n"
+                                                       "\t\tPROPERTY()\n"
+                                                       "\t\tint32 _value{ 0 };\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_ASSERT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), run._listGeneratedCpp.size() );
+    const sw::string& generated = run._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "sw_placement_new( self ) sw::CtorInvokerSampleActor(" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "new ( self )" ) == sw::string::npos, generated.c_str() );
+}
+
+/**
  * @brief [ReflectionParserTest] 값 참조를 돌려주는 메서드의 PROPERTY 는 오프셋 대신 값 접근자를 낸다
  * @details 씬 컴포넌트의 로컬 TRS 가 트랜스폼 저장소로 옮겨 가며 생긴 모양이다. 값은 객체 밖에 있고 이름(`Name`)은 옛 필드 이름을
  *          이어 쓴다. 모양이 틀리면(값으로 돌려준다 — 쓸 자리가 없다) 조용히 넘기지 않고 멈춘다.
