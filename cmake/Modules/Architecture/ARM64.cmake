@@ -1,12 +1,9 @@
 # ==============================================================================
 # @file cmake/Modules/Architecture/ARM64.cmake
-# @brief ARM64 아키텍처 INTERFACE 매크로
+# @brief ARM64 아키텍처 INTERFACE 매크로 (판정은 DetectArchitecture.cmake)
 # ==============================================================================
 
-if(
-    NOT CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64"
-    AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64"
-)
+if(NOT sw_target_architecture STREQUAL "arm64")
     return()
 endif()
 

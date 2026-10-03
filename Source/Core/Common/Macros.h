@@ -1,8 +1,9 @@
 /**
  * @file Macros.h
- * @brief Core 공통 매크로입니다 — 어서션, 컴파일러 · 플랫폼 판별, SW_API, 인라인 힌트 등.
+ * @brief Core 공통 매크로입니다 — 어서션, 디버그 브레이크, SW_API, 인라인 힌트 등. 타깃 매크로 검사는 TargetMacroCheck.h 입니다.
  */
 #pragma once
+#include "Core/Common/TargetMacroCheck.h"
 #include "Core/Common/Types.h"
 
 #include <cstdio>      // SW_ASSERT 가 멈추기 전에 남기는 한 줄(Debug)
@@ -109,22 +110,9 @@ namespace sw::internal
 #endif
 
 // ------------------------------------------------------------------------------
-// 6) 플랫폼 — Windows / Linux / macOS 중 하나
+// 6) 플랫폼 · 아키텍처 · 컴파일러 — `SW_PLATFORM_*` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 는 CMake 가 정의하고
+//    `TargetMacroCheck.h`(이 파일 맨 위에서 포함)가 실제 컴파일러와 대조한다. 여기서 다시 판정하지 않는다.
 // ------------------------------------------------------------------------------
-#if !defined( SW_PLATFORM_WINDOWS ) && !defined( SW_PLATFORM_LINUX ) && !defined( SW_PLATFORM_MACOS )
-    #if defined( _WIN32 ) || defined( _WIN64 )
-        /** @brief Windows 타깃입니다. */
-        #define SW_PLATFORM_WINDOWS
-    #elif defined( __linux__ )
-        /** @brief Linux 타깃입니다. */
-        #define SW_PLATFORM_LINUX
-    #elif defined( __APPLE__ )
-        /** @brief macOS 타깃입니다. */
-        #define SW_PLATFORM_MACOS
-    #else
-        #error "Unknown target platform."
-    #endif
-#endif
 
 // ------------------------------------------------------------------------------
 // 7) DLL export / import — Engine.dll 은 SW_API, 게임/에디터 모듈은 SW_MODULE_API

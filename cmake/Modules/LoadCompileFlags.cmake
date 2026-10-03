@@ -10,6 +10,7 @@
 # ------------------------------------------------------------------------------
 set(swModulesRoot "${CMAKE_CURRENT_LIST_DIR}")
 
+include("${swModulesRoot}/Architecture/DetectArchitecture.cmake")
 include("${swModulesRoot}/Architecture/ARM64.cmake")
 include("${swModulesRoot}/Architecture/X64.cmake")
 

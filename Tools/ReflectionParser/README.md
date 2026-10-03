@@ -219,6 +219,10 @@ clang 인자·SDK 상대경로·emit 확장자·튜닝의 **단일 소스**입�
 | `emit` | `.gen.cpp` 확장자·배너·generated 네임스페이스 |
 | `tuning` | `source_lookback_bytes` 등 |
 
+타깃 매크로(`SW_PLATFORM_*` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_CLANG`)는 이 파일에 적지 않습니다. 파서가 자기 빌드의 매크로로
+붙입니다(`ParserConfig::load`) — libclang 은 기본 타깃(파서를 지은 기계)으로 읽으므로 둘이 같고, 헤더 쪽 `Core/Common/TargetMacroCheck.h` 가
+그 매크로를 libclang 의 내장 매크로와 대조합니다.
+
 **C++에 남는 계약** (`ParserDefines.h`): 매크로 이름, CLI 플래그, tpl stem, `RegisterType` 마커.  
 
 ### CLI (CMake가 보통 넘김)

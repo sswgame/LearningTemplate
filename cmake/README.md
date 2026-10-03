@@ -23,7 +23,7 @@ cmake/
 │
 ├── Modules/                     [3계층: 컴파일러/플랫폼/아키텍처 INTERFACE 플래그]
 │   ├── LoadCompileFlags.cmake   — 플래그 모듈 일괄 인클루더
-│   ├── Architecture/            — X64.cmake, ARM64.cmake
+│   ├── Architecture/            — DetectArchitecture.cmake(컴파일러가 겨냥하는 아키텍처 판정), X64.cmake, ARM64.cmake
 │   ├── BuildType/               — Debug.cmake, Release.cmake
 │   ├── Compiler/                — Clang.cmake, MSVC.cmake, GCC.cmake
 │   ├── Options/                 — CppStandard.cmake, Sanitizer.cmake, UnityBuild.cmake

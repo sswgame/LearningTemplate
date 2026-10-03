@@ -1,9 +1,9 @@
 # ==============================================================================
 # @file cmake/Modules/Architecture/X64.cmake
-# @brief x64 아키텍처 INTERFACE 매크로
+# @brief x64 아키텍처 INTERFACE 매크로 (판정은 DetectArchitecture.cmake)
 # ==============================================================================
 
-if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64")
+if(NOT sw_target_architecture STREQUAL "x64")
     return()
 endif()
 

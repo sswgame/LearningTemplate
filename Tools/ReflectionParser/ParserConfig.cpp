@@ -444,6 +444,26 @@ namespace sw
             return false;
         }
 
+        BLOCK( "Target Macros" )
+        {
+            // 헤더는 CMake 가 정의하는 타깃 매크로만 읽고 `Core/Common/TargetMacroCheck.h` 가 그것을 실제 컴파일러와 대조한다.
+            // libclang 은 CMake 를 거치지 않으므로 같은 매크로를 여기서 넘긴다. libclang 은 기본 타깃(이 파서를 지은 기계)으로 읽고,
+            // 언제나 clang 이다.
+#if defined( SW_PLATFORM_WINDOWS )
+            _listBaseArg.emplace_back( "-DSW_PLATFORM_WINDOWS" );
+#elif defined( SW_PLATFORM_LINUX )
+            _listBaseArg.emplace_back( "-DSW_PLATFORM_LINUX" );
+#elif defined( SW_PLATFORM_MACOS )
+            _listBaseArg.emplace_back( "-DSW_PLATFORM_MACOS" );
+#endif
+#if defined( SW_X64 )
+            _listBaseArg.emplace_back( "-DSW_X64" );
+#elif defined( SW_ARM64 )
+            _listBaseArg.emplace_back( "-DSW_ARM64" );
+#endif
+            _listBaseArg.emplace_back( "-DSW_COMPILER_CLANG" );
+        }
+
         BLOCK( "Locate LLVM and Clang Resource Directory" )
         {
             if ( llvmPath.empty() )

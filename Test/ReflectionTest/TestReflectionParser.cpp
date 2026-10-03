@@ -614,6 +614,56 @@ SW_TEST_CASE( ReflectionParserTest, ConstructorInvokerUsesPlacementNewMacro )
 }
 
 /**
+ * @brief [ReflectionParserTest] 파서는 헤더를 이 빌드와 같은 타깃 매크로(플랫폼 · 아키텍처 · `SW_COMPILER_CLANG`)로 읽는다
+ * @details libclang 은 CMake 를 거치지 않으므로 `SW_PLATFORM_*` · `SW_X64` / `SW_ARM64` · `SW_COMPILER_*` 를 파서가 직접 넘긴다
+ *          (`ParserConfig::load`). 빠지면 헤더가 그 매크로로 고른 갈래가 파서와 컴파일러에서 달라진다. 이 시험 바이너리가 받은
+ *          매크로를 헤더 안에서 `#error` 로 대조한다.
+ */
+SW_TEST_CASE( ReflectionParserTest, ParserDefinesTargetMacros )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+#if defined( SW_PLATFORM_WINDOWS )
+    const sw::string platformMacro = "SW_PLATFORM_WINDOWS";
+#elif defined( SW_PLATFORM_LINUX )
+    const sw::string platformMacro = "SW_PLATFORM_LINUX";
+#else
+    const sw::string platformMacro = "SW_PLATFORM_MACOS";
+#endif
+#if defined( SW_X64 )
+    const sw::string architectureMacro = "SW_X64";
+#else
+    const sw::string architectureMacro = "SW_ARM64";
+#endif
+
+    const sw::string header = "#pragma once\n"
+                              "#include \"Core/Common/Types.h\"\n"
+                              "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                              "#if !defined( " +
+                              platformMacro + " ) || !defined( " + architectureMacro +
+                              " ) || !defined( SW_COMPILER_CLANG )\n"
+                              "#error \"ReflectionParser did not define the target macros\"\n"
+                              "#endif\n"
+                              "namespace sw\n"
+                              "{\n"
+                              "\tREFLECT()\n"
+                              "\tstruct TargetMacroSampleActor\n"
+                              "\t{\n"
+                              "\t\tREFLECT_BODY();\n"
+                              "\t\tPROPERTY()\n"
+                              "\t\tint32 _value{ 0 };\n"
+                              "\t};\n"
+                              "}\n";
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "TargetMacroSample", header );
+    SW_ASSERT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), run._listGeneratedCpp.size() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[0].find( "TargetMacroSampleActor" ) != sw::string::npos, run._listGeneratedCpp[0].c_str() );
+}
+
+/**
  * @brief [ReflectionParserTest] 값 참조를 돌려주는 메서드의 PROPERTY 는 오프셋 대신 값 접근자를 낸다
  * @details 씬 컴포넌트의 로컬 TRS 가 트랜스폼 저장소로 옮겨 가며 생긴 모양이다. 값은 객체 밖에 있고 이름(`Name`)은 옛 필드 이름을
  *          이어 쓴다. 모양이 틀리면(값으로 돌려준다 — 쓸 자리가 없다) 조용히 넘기지 않고 멈춘다.

@@ -29,9 +29,8 @@ target_compile_options(sw_compiler_gcc INTERFACE
 	>
 )
 
-target_compile_definitions(sw_compiler_gcc INTERFACE
-	$<$<COMPILE_LANGUAGE:CXX>:SW_COMPILER_GCC>
-)
+# 정의는 언어를 가리지 않는다 — Clang.cmake · MSVC.cmake 와 같이 C 소스도 SW_COMPILER_* 하나를 받는다(TargetMacroCheck.h).
+target_compile_definitions(sw_compiler_gcc INTERFACE SW_COMPILER_GCC)
 
 message(STATUS "[Compiler] GCC Compiler Options Configured.")
 
