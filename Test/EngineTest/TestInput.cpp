@@ -45,13 +45,6 @@ namespace
         s_inputProbeValue += 1000;
     }
 
-    sw::string s_lastTextInput; ///< 글자 입력 콜백이 마지막으로 받은 글자
-
-    void onRecordTextInput( sw::string_view text )
-    {
-        s_lastTextInput = sw::string( text );
-    }
-
     /** @brief 마우스 장치 하나를 더 꽂는 자리 — 모듈이 등록한 장치처럼 vtable 이 이 실행 파일에 있다. */
     class SecondMouseDevice final : public sw::MouseDevice
     {
@@ -1262,6 +1255,16 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
 }
 
 #if defined( SW_PLATFORM_WINDOWS )
+namespace
+{
+    sw::string s_lastTextInput; ///< 글자 입력 콜백이 마지막으로 받은 글자
+
+    void onRecordTextInput( sw::string_view text )
+    {
+        s_lastTextInput = sw::string( text );
+    }
+} // namespace
+
 /**
  * @brief [InputManagerTest] WM_CHAR 의 글자가 다음 프레임에 `InputManager::setTextInputCallback` 콜백으로 UTF-8 로 온다
  * @details 글자 입력의 창구는 이것 하나다(언리얼 `FSlateApplication::OnKeyChar` 자리). 메시지 펌프가 원시 이벤트로 넣고 `beginFrame` 이 콜백을 부른다.

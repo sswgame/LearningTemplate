@@ -102,13 +102,20 @@ namespace sw
                 if ( pEntry != nullptr && pEntry->_factory.isBound() )
                     return true;
 
+                // 열거자는 플랫폼과 상관없이 모두 적는다 — `#if` 로 case 를 빼면 그 플랫폼에서만 -Wswitch 가 진다.
                 switch ( backend )
                 {
-    #if defined( SW_PLATFORM_WINDOWS )
                     case RHIBackend::DirectX11:
+    #if defined( SW_PLATFORM_WINDOWS )
                         return tryLoadBackendModule( RHIBackend::DirectX11, "RHI_DX11" );
+    #else
+                        return false; // D3D 는 Windows 에만 있다
+    #endif
                     case RHIBackend::DirectX12:
+    #if defined( SW_PLATFORM_WINDOWS )
                         return tryLoadBackendModule( RHIBackend::DirectX12, "RHI_DX12" );
+    #else
+                        return false;
     #endif
                     case RHIBackend::OpenGL:
                         return tryLoadBackendModule( RHIBackend::OpenGL, "RHI_GL" );
