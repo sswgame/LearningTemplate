@@ -2844,6 +2844,60 @@ SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAMethodThatIsNotAnRpc )
 }
 
 /**
+ * @brief [ReflectionSerializationTest] ReflectAny 프로퍼티가 Binary · JSON · XML 셋 모두에서 타입과 값을 그대로 왕복한다
+ * @details 텍스트 포맷은 `타입FQN|16진수 바이트` 한 줄로 쓰고 읽는다(`SerializeReflectAny.cpp` 의 텍스트 핸들러). 바이너리 왕복만 시험이
+ *          있었다 — 텍스트 핸들러가 깨져도(이름 · 16진수 · 구분자) 아무도 몰랐다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyRoundTripsInEveryFormat )
+{
+    const sw::TypeInfo* pActorType   = sw::engine::getTypeRegistry().findType<sw::AssetPathActor>();
+    const sw::TypeInfo* pPayloadType = sw::engine::getTypeRegistry().findType<sw::PolyPayloadA>();
+    SW_ASSERT_NOT_NULL( pActorType );
+    SW_ASSERT_NOT_NULL( pPayloadType );
+
+    sw::PolyPayloadA payload;
+    payload._a = 0x5A3C;
+    sw::AssetPathActor source;
+    source._albedo  = "engine/textures/probe.png";
+    source._payload = sw::ReflectAny::makeFrom( *pPayloadType, &payload );
+
+    const auto expectPayload = [&]( const sw::AssetPathActor& restored, const utf8* pFormat )
+    {
+        SW_EXPECT_TRUE_MSG( restored._payload.empty() == false, pFormat );
+        sw::PolyPayloadA out{};
+        SW_EXPECT_TRUE_MSG( restored._payload.tryGetFrom( *pPayloadType, &out ), pFormat );
+        SW_EXPECT_EQUAL( 0x5A3C, out._a );
+        SW_EXPECT_STREQ( "engine/textures/probe.png", restored._albedo.c_str() );
+    };
+
+    {
+        sw::vector<uint8> bytes;
+        sw::BinarySerializer::serialize( &source, *pActorType, bytes );
+        sw::AssetPathActor restored;
+        SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &restored, *pActorType, bytes.data(), bytes.size() ) );
+        expectPayload( restored, "binary" );
+    }
+    {
+        const sw::string   json = sw::JsonSerializer::serialize( &source, *pActorType );
+        sw::AssetPathActor restored;
+        SW_EXPECT_TRUE_MSG( sw::JsonSerializer::deserialize( &restored, *pActorType, json ), json.c_str() );
+        expectPayload( restored, "json" );
+    }
+    {
+        const sw::string   xml = sw::XmlSerializer::serialize( &source, *pActorType );
+        sw::AssetPathActor restored;
+        SW_EXPECT_TRUE_MSG( sw::XmlSerializer::deserialize( &restored, *pActorType, xml ), xml.c_str() );
+        expectPayload( restored, "xml" );
+    }
+
+    // 텍스트 표현이 깨지면(홀수 자리 16진수 · 구분자 없음) 값을 만들지 않는다.
+    SW_TEST_DEFENSIVE_SCOPE( "malformed ReflectAny text is rejected" );
+    sw::AssetPathActor broken;
+    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &broken, *pActorType, R"({"_payload":"sw::PolyPayloadA|abc"})" ) );
+    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &broken, *pActorType, R"({"_payload":"no separator"})" ) );
+}
+
+/**
  * @brief [ReflectionSerializationTest] 파일에 적힌 모르는 타입 이름은 전역 이름 표에 들어가지 않는다
  * @details 전역 `hashed_string` 표는 줄지 않는다. 예전에는 다형 값의 타입 이름을 찾으려고 intern 해서, 서로 다른 이름 수만 개를 담은 파일
  *          하나가 표를 채울 수 있었고 차면 그 뒤 **엔진의 모든** 새 이름이 None 이 됐다. 이제는 찾기만 한다(`findInterned`).
