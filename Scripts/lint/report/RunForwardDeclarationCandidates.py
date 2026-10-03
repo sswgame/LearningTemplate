@@ -14,7 +14,9 @@
   - 헤더 H 가 P 의 class/struct 이름을 **포인터 · 참조 · unique_ptr/shared_ptr/weak_ptr/vector<T*> · friend · 전방 선언**으로만 쓰고,
     P 의 다른 이름(enum · alias · 함수 · 상수 · 매크로 · 템플릿)을 하나도 쓰지 않으면 후보다.
   - P 가 아무것도 정의하지 않는 우산 헤더는 건드리지 않는다(그 아래 헤더의 이름을 쓰는지 알 수 없다).
-  - `unique_ptr<T>` 멤버는 소멸자가 헤더 밖에 있어야 전방 선언으로 충분하다 — 여기서는 그것을 보지 않으므로 빌드가 거른다.
+  - `unique_ptr<T>` 멤버는 소멸자가 헤더 밖에 있어야 전방 선언으로 충분하다(삭제자가 T 의 정의를 본다). 헤더에 본문 없는 소멸자 선언
+    (`~X();`)이 하나도 없으면 — 암시적이거나 헤더 안에서 정의하면 — `unique_ptr<T>` 를 값 사용으로 친다. 클래스마다가 아니라 헤더 단위라
+    여전히 빌드가 마지막으로 거른다.
 
 `--apply` 는 H 의 include 줄을 지우고, 같은 네임스페이스 블록 머리에 `class X;` 를 (struct → class, 알파벳 순으로) 넣고,
 H 와 짝인 `.cpp` 에 그 include 를 옮겨 넣는다. 다른 TU 가 그 include 에 전이적으로 기대고 있었다면 빌드가 알려 준다 —
@@ -149,10 +151,15 @@ _kFriendBefore = re.compile(r"friend\s+(?:class|struct)\s+$")
 _kForwardBefore = re.compile(r"(?:^|\n)[ \t]*(?:class|struct)\s+$")
 
 
+_kOutOfLineDestructor = re.compile(r"~\s*\w+\s*\(\s*\)\s*(?:override\s*)?;")
+
+
 def classifyUses(text: str, name: str) -> tuple[int, int]:
     """(pointerLike, byValue) 사용 횟수."""
     pointerLike = 0
     byValue = 0
+    # unique_ptr<T> 는 소멸자가 헤더 밖에 있을 때만 전방 선언으로 충분하다(모듈 머리말 참고).
+    bUniquePtrNeedsDefinition = _kOutOfLineDestructor.search(text) is None
     for m in re.finditer(r"\b" + re.escape(name) + r"\b", text):
         before = text[max(0, m.start() - 80):m.start()]
         after = text[m.end():m.end() + 40]
@@ -166,7 +173,10 @@ def classifyUses(text: str, name: str) -> tuple[int, int]:
             pointerLike += 1
             continue
         if _kSmartBefore.search(before) and after.lstrip().startswith(">"):
-            pointerLike += 1
+            if bUniquePtrNeedsDefinition and re.search(r"unique_ptr\s*<\s*(?:const\s+)?$", before):
+                byValue += 1
+            else:
+                pointerLike += 1
             continue
         if _kVectorPtrBefore.search(before) and re.match(r"^\s*\*\s*>", after):
             pointerLike += 1
