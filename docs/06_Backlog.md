@@ -172,7 +172,7 @@ cd build/Ninja-Debug/Bin
   `git show 7ce95fc8:docs/06_Backlog.md` 로. 목록은 grep `06_Backlog\|백로그` 로 다시 뽑는다.
 
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
-  `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스), `BoxCollider2D`(1-11 결정 대기).
+  `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
 - **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
   결과(열거값)로 바꾸는 그래픽스 쪽 수정.
 - **`RunForwardDeclarationCandidates.py --show-unused` 의 거짓 "쓰임 없음" 208 건** — 보고 전용이라 손으로 걸러야 한다.
@@ -213,11 +213,8 @@ cd build/Ninja-Debug/Bin
 - **모듈 리로드 실패: 적용 전 실패는 옛 이미지 유지, 적용 뒤 결함은 broken + 재시작**(UE Live Coding · Unity 도 적용 뒤 결함은 되돌리지 않는다).
 - **에디터 패널 시험은 에디터 안에서 돈다**(UE Automation · Unity EditMode) — 에디터 모듈 안 자체 시험 실행기, AppTest(hostgpu)가 띄워 결과를 읽는다.
 - **텍스트 포맷의 orphan 관대함은 의도다**(UE 태그 직렬화 · Unity YAML 은 모르는 필드를 건너뛴다; 쿠킹 바이너리는 판이 다르면 거부) — `SchemaMigrate.h` 에 포맷별 계약.
-- **마우스 스무딩은 시간 기반 EMA**(UE 마우스 스무딩은 샘플 시간 기반) — 프레임 · 폴링 레이트와 무관하게.
-- **`BoxCollider2DComponent` 판정을 둘로 나눈다**(Unity `Bounds.Intersects` 대 `Collider2D.IsTouching`) — 순수 기하와 레이어 반영 겹침, 등록 여부와 무관하게 같은 답.
-- **onBeginPlay 의 자동 소유 태그를 걷는다**(UE · Unity 는 엔진이 태그를 붙이지 않고 타입으로 찾는다) — 게임은 컴포넌트 타입 조회로.
 - **컴포넌트 이름표를 씬에 저장한다**(UE 는 컴포넌트 이름이 참조 · 오버라이드의 키) — 옛 씬은 기본값으로 읽는다.
-- **호출부 0 API** — 항목마다 (a) 지운다 (b) 잇는다 (c) 남긴다(상용 엔진에 대응이 있으면 남기고 시험).
+- **호출부 0 API — 에디터 · 모듈 쪽 남음**(입력 · 턴제 킷 쪽은 끝) — 항목마다 (a) 지운다 (b) 잇는다 (c) 남긴다(상용 엔진에 대응이 있으면 남기고 시험).
 - **컴포넌트 팩토리를 TypeRegistry 하나로**(UE `UClass`) · **엔진 등록부 공통 템플릿**.
 - **EngineLoop 초기화 · 종료 순서를 의존 선언 + 위상 정렬로**(UE `USubsystem::InitializeDependency`).
 - **프리팹은 덮어쓴 값만 저장한다**(UE · Unity) — 놓인 인스턴스에 프리팹 수정이 퍼진다.
@@ -829,6 +826,12 @@ cd build/Ninja-Debug/Bin
   Core 에 인스턴스가 필요하면 Logger 모양 — 인스턴스는 `EngineLoop`, Core 에는 포인터 슬롯.
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
+
+- **마우스 `getSmoothDelta` 는 프레임당 한 번 `IInputDevice::onEventsDispatched( dt )` 에서 정해진다** — `setSmoothing(f)` 는 1/60 초 동안 남기는 비율
+  (τ = -(1/60)/ln f, 60 Hz 에서 옛 계수와 같다). 이벤트 처리기 안에서 스무딩을 다시 돌리면 폴링 레이트마다 감각이 달라진다. 프레임 이동은 `getMovementDelta()` 하나.
+- **2D 콜라이더 판정은 `overlapsBounds`(순수 기하)와 `isTouching`(레이어 반영) 둘** — 둘 다 바디 등록 여부와 무관하게 같은 답(Unity `Bounds.Intersects` · `IsTouching`).
+- **엔진 · 킷 컴포넌트는 태그를 붙이지 않는다** — 종류는 `GameObjectManager::forEachComponentOfType<T>` 로 찾는다(UE `GetAllActorsOfClass`). 프레임마다 쓰는
+  소비자가 생기면 타입별 등록부(O(해당 타입))를 Release 로 재고 정한다. 글자 입력은 `InputManager::setTextInputCallback` 하나(UE `OnKeyChar`).
 
 - **도구 에셋 종류는 표 하나** — 대화 노드는 `kArrDialogueNodeTraits` 한 줄 + 러너 switch 의 case 하나(`-Wswitch-enum` 이 짚음), 다음 노드는 러너 · 에디터 미리보기가
   같이 쓰는 `DialogueCursor::step`. 핀 번호 `nodeId*100+offset` 은 디스크 포맷. 타일맵 레이어 표(`kArrTileFlagLayerInfo`)의 XML 속성 이름과 줄 순서는 파일 형식이다
