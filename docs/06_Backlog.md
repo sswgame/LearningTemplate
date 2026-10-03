@@ -93,18 +93,6 @@ cd build/Ninja-Debug/Bin
 영역별로 묶었다. 영역 안에서는 위에 있을수록 먼저 볼 것이다. 줄 번호는 2026-10-03 기준이라 어긋날 수 있다 — 함수 이름으로 찾는다.
 "확인 필요" 가 붙은 항목은 열려 있는지부터 확인하고 시작한다.
 
-### 1-0. 종류를 하나 더할 때 중앙 파일 여러 곳을 고치는 자리 (사용자 요청 — 표 · 등록 · 상속으로 하나로)
-
-2026-10-03 감사로 찾은 14 곳. 끝난 줄은 지운다. "진행 중" 은 워크트리에서 하고 있는 것이다.
-
-- **대화 노드 종류** — `DialogueGraphPanel.cpp` 의 추가 메뉴 · 그리기 switch · 프로퍼티 체인 · 미리보기 진행과 `DialogueRunnerComponent.cpp:386-430`
-  (빠짐없지 않은 if — 새 종류면 대화가 조용히 멈춘다)가 진행 규칙을 따로 구현한다. → 엔진 쪽 종류별 특성 줄 + 러너 · 미리보기가 같이 쓰는
-  `DialogueCursor::step` + 빠짐없는 switch.
-- **타일맵 플래그 레이어** — Walkable · Encounter · PassThrough(+ Visual · Warp)가 `TileMapXmlData` · `TileMapPanel` · 런타임 `TileMap` 에 필드마다
-  복사된다(이름 배열이 `PaintLayer` 순서와 맞아야 함). → `TileFlagLayer` enum + `{이름, XML 속성, 색}` 표 + 플래그 벡터 배열(XML 속성 `enc` · `pt` 유지).
-- **시퀀서 항목 종류가 매직 정수** — `SequenceTrackItem::_type` 0=Clip · 1=Event 를 `SequenceTimelineUtil.cpp` · `SequencerPanel.cpp` 가 리터럴로 본다.
-  → `ENUM() SequenceItemKind`(JSON 은 정수 그대로) + 종류별 적용 표.
-
 ### 1-1. 직렬화 · 리플렉션
 
 - **머티리얼 파일의 enum · 플래그 글을 옛 길로 읽는다.** 모르는 이름 · 오타가 조용히 0 이 되거나 빠진다(일반 직렬화는 이미 막았다).
@@ -127,8 +115,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
 
-- **시퀀서 이벤트 트랙이 어디로도 나가지 않는다.** `SequencePlayerComponent` 가 `applyPlayback` 을 출력 목록 없이 부른다 — Shipping 에서는 이벤트 트랙이
-  없는 것과 같다. 델리게이트로 낼지 이벤트 디스패처로 낼지 정하고 잇는다.
 - **연속 바디의 후보 범위가 그 step 의 최대 이동만큼 넓어진다.** 순간이동이 아닌 먼 이동(에디터 드래그)이 있는 step 은 모든 바디를 훑는다(답은 맞고
   그 step 만 느리다). 상대 운동은 한 step 안 직선 이동을 가정한다. `PhysicsWorld.cpp` 의 `maxDisplacement` · `addSweptPairs`.
 - **서브틱 id 64 번부터는 활성이 목록에만 있어** 틱 중 끄기 · 해제가 틱 뒤에야 반영된다(1~63 은 원자 마스크, `Component.h` 에 적혀 있다).
@@ -889,6 +875,11 @@ cd build/Ninja-Debug/Bin
   Core 에 인스턴스가 필요하면 Logger 모양 — 인스턴스는 `EngineLoop`, Core 에는 포인터 슬롯.
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
+
+- **도구 에셋 종류는 표 하나** — 대화 노드는 `kArrDialogueNodeTraits` 한 줄 + 러너 switch 의 case 하나(`-Wswitch-enum` 이 짚음), 다음 노드는 러너 · 에디터 미리보기가
+  같이 쓰는 `DialogueCursor::step`. 핀 번호 `nodeId*100+offset` 은 디스크 포맷. 타일맵 레이어 표(`kArrTileFlagLayerInfo`)의 XML 속성 이름과 줄 순서는 파일 형식이다
+  (바꾸면 옛 맵의 그 레이어가 기본값으로 읽힌다 — `TileMapXmlTest.SavedBytesMatchTheExistingFormat`). `SequenceItemKind` 값은 JSON 정수라 번호를 바꾸지 말 것;
+  시퀀서 이벤트는 `SequencePlayerComponent::registerSequenceEvent` 로 받는다.
 
 - **`GameEvents.h` 의 이벤트는 프레임워크가 그 자리에서 낸다**(세이브 · 로드 완료 = `GameInstanceBase::save/loadStateToFile`, 레벨 로드 요청 · 완료 =
   `requestFirstScene` · `requestEntranceScene`, 일시정지 = `GameModeStateMachine`). `SceneManager` 를 직접 부른 로드는 LevelLoad 이벤트를 내지 않는다.
