@@ -15,6 +15,7 @@
 sw_addTestExecutable(AppTest
 	HOST_SPLIT
 	SOURCES
+		AppTestUtil.cpp
 		TestAppCook.cpp
 		TestAppSmoke.cpp
 		TestFrameTimeline.cpp

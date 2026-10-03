@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "AppTest/AppTestUtil.h"
+
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -28,49 +30,16 @@ namespace
         bool           _bLaunched{ false };
     };
 
-    /** @brief 플랫폼별 실행 파일 이름입니다. */
-    const utf8* getAppExecutableName()
-    {
-#if defined( SW_PLATFORM_WINDOWS )
-        return "App.exe";
-#else
-        return "App";
-#endif
-    }
-
-    /**
-     * @brief 띄울 App 실행 파일의 절대 경로입니다. 못 찾으면 빈 문자열입니다.
-     * @details 작업 폴더(`Bin`)를 먼저 본다 — 배포 구성에서는 시험 바이너리만 `TestBin` 에 있다.
-     */
-    string findAppExecutablePath()
-    {
-        string candidate = FileUtil::joinPath( FileUtil::getCurrentPath(), getAppExecutableName() );
-        if ( FileUtil::fileExists( candidate ) )
-            return candidate;
-
-        const string executableFolder = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-        candidate                     = FileUtil::joinPath( executableFolder, getAppExecutableName() );
-        if ( FileUtil::fileExists( candidate ) == false )
-            candidate.clear();
-        return candidate;
-    }
-
     /** @brief `App --cook-scenes --cooked-dir=<cookedDir>` 를 한 판 돌립니다. */
     CookRunResult runSceneCook( const string& cookedDir )
     {
         CookRunResult result{};
-        const string  executablePath = findAppExecutablePath();
-        if ( executablePath.empty() )
-            return result;
-
-        string command{ "\"" };
-        command += executablePath;
-        command += "\" --cook-scenes \"--cooked-dir=";
-        command += cookedDir;
-        command += "\"";
+        string        arguments{ "--cook-scenes \"--cooked-dir=" };
+        arguments += cookedDir;
+        arguments += "\"";
 
         Process process;
-        if ( process.launch( command ) == false )
+        if ( test::AppTestUtil::launchApp( process, arguments ) == false )
             return result;
         result._bLaunched = true;
 

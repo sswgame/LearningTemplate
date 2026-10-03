@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "AppTest/AppTestUtil.h"
+
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Container/string.h"
@@ -79,37 +81,6 @@ namespace
                line.find( "GL_ARB_gl_spirv" ) != string_view::npos;
     }
 
-    /** @brief 플랫폼별 실행 파일 이름. */
-    const utf8* getAppExecutableName()
-    {
-#if defined( SW_PLATFORM_WINDOWS )
-        return "App.exe";
-#else
-        return "App";
-#endif
-    }
-
-    /**
-     * @brief 띄울 App 실행 파일의 **절대 경로**. 못 찾으면 빈 문자열.
-     * @details 이름만 넘기면 안 된다 — 배포 구성에서는 테스트 바이너리가 `TestBin` 에 있고
-     *          `CreateProcess` 는 **부르는 실행 파일의 폴더**부터 찾으므로 `Bin/App.exe` 를 못 본다
-     *          (실제로 Shipping 에서 "띄우지 못했습니다" 로 걸렸다). 작업 폴더(`Bin`)와 테스트
-     *          바이너리 폴더를 순서대로 본다.
-     */
-    string findAppExecutablePath()
-    {
-        // 반환은 이 변수 하나로만 한다 — 갈래마다 다른 객체를 돌려주면 NRVO 가 막힌다(-Wnrvo).
-        string candidate = FileUtil::joinPath( FileUtil::getCurrentPath(), getAppExecutableName() );
-        if ( FileUtil::fileExists( candidate ) )
-            return candidate;
-
-        const string executableFolder = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-        candidate                     = FileUtil::joinPath( executableFolder, getAppExecutableName() );
-        if ( FileUtil::fileExists( candidate ) == false )
-            candidate.clear();
-        return candidate;
-    }
-
     /**
      * @brief App 을 한 판 돌리고 종료 코드와 `[Error]` 줄 수를 돌려줍니다.
      * @details 작업 디렉터리는 **바꾸지 않는다** — 테스트의 작업 폴더가 이미 `Bin` 이고(ctest 가 그렇게
@@ -121,18 +92,8 @@ namespace
     {
         AppRunResult result{};
 
-        const string executablePath = findAppExecutablePath();
-        if ( executablePath.empty() )
-            return result;
-
-        // 경로에 공백이 있을 수 있다 — 첫 토큰은 따옴표로 감싼다.
-        string command{ "\"" };
-        command += executablePath;
-        command += "\" ";
-        command += arguments;
-
         Process process;
-        if ( process.launch( command ) == false )
+        if ( test::AppTestUtil::launchApp( process, arguments ) == false )
             return result;
         result._bLaunched = true;
 
