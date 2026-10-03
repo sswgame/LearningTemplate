@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file Source/GameFramework/Kits/CMakeLists.txt
-# @brief GameFramework 장르 키트 (Overworld / TurnBattle / ActionCombat / Farming / Shooter / ThemePark / Voxel)
+# @brief GameFramework 장르 키트 (장르별 — 목록은 README)
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -13,3 +13,4 @@ add_subdirectory(Farming)
 add_subdirectory(Shooter)
 add_subdirectory(ThemePark)
 add_subdirectory(Voxel)
+add_subdirectory(CityBuilder)

@@ -23,6 +23,7 @@ sw_addTestExecutable(EngineTest
 		GF_Shooter
 		GF_ThemePark
 		GF_Voxel
+		GF_CityBuilder
 	LABELS
 		"unit;engine"
 	TIMEOUT

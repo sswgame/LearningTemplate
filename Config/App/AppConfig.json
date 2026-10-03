@@ -42,6 +42,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_CityBuilder",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
