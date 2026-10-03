@@ -728,6 +728,29 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityOutsideTheResourceRoot )
 }
 
 /**
+ * @brief [ResourceTest] 에셋 파일이 없는 루트 안 경로에는 GUID 도 `.meta` 도 만들지 않는다
+ * @details 없는 머티리얼을 acquire 만 해도(`MaterialCache::acquire` → `ensureMeta`) 그 경로 옆에 `.meta` 가 생기면 Resource/ 가 더러워지고,
+ *          나중에 같은 이름의 에셋이 생기면 아무도 고르지 않은 GUID 를 물려받는다.
+ */
+SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityToAMissingAsset )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const utf8*      pMissing      = "engine/materials/ensuremeta_missing_probe.material";
+    const sw::string metaWritePath = sw::ResourceUtil::getWritePath( "engine/materials/ensuremeta_missing_probe.material.meta" );
+    SW_ASSERT_FALSE( metaWritePath.empty() );
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [metaWritePath]()
+    {
+        (void)sw::FileUtil::removeFile( metaWritePath ); // 없으면 할 일이 없다
+    } ) );
+    SW_ASSERT_TRUE_MSG( sw::ResourceUtil::getResourcePath( pMissing ).empty(), "탐침 경로에 실제 파일이 있다 — 시험 전제가 깨졌다" );
+
+    sw::AssetDatabase db;
+    SW_EXPECT_TRUE_MSG( db.ensureMeta( pMissing ).isNull(), "없는 에셋에 GUID 를 지었다" );
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( metaWritePath ), "없는 에셋 옆에 .meta 를 썼다" );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), db.getAssetCount() );
+}
+
+/**
  * @brief [ResourceTest] 리소스 루트 **안의** 절대 경로는 그 전역 id 로 등록된다 — 같은 에셋이 키 둘을 갖지 않는다
  * @details 키가 받은 절대 경로를 소문자로 내린 것이면 같은 에셋이 id 키와 절대 경로 키를 따로 갖고, GUID → 경로가 **절대 경로**를
  *          돌려줘 그 GUID 로 에셋을 다시 찾는 쪽(씬의 프리팹 · 머티리얼 참조)이 기계마다 다른 경로를 받는다.

@@ -129,8 +129,6 @@ cd build/Ninja-Debug/Bin
   저장한 엔티티 등)이라 하나씩 "지금 쓰는 쪽이 이 모양을 만드는가" 를 보고 지운다. 시험이 그 동작을 고정하는 곳: `TestObjectStateRoundTrip`(자기 이름 부착 ·
   루트로 저장된 둘째 씬 컴포넌트), `TestPrefab`(실린 부모 무시), `TestSpriteClipAsset`(레거시 파일).
 
-- **`AssetDatabase::ensureMeta` 가 리소스 루트 안의 없는 경로에도 `.meta` 를 지어 쓴다** — 머티리얼을 acquire 만 해도 Resource 가 더러워진다(시험 쪽은 임시 경로로 피했다).
-
 - **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리

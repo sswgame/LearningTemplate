@@ -128,6 +128,9 @@ namespace sw
                 // (부르는 쪽은 모두 null GUID 를 허용한다. 씬 · 프리팹 로더는 경로로 물러난다).
                 return result;
 #else
+                // 에셋 파일이 없는 경로에는 식별자를 지어내지 않는다. 지어 쓰면 없는 머티리얼을 acquire 만 해도 Resource/ 에 고아 `.meta` 가 생긴다.
+                if ( ResourceUtil::getResourcePath( path ).empty() )
+                    return result;
                 result = Uuid::generate();
                 if ( writeMetaFile( path, result, bImported ) == false )
                 {

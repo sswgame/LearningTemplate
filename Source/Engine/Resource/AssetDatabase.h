@@ -47,7 +47,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 기존 .meta 를 로드하거나 새로 만듭니다(guid + sourcePath + 선택 imported).
-         * @return GUID 입니다. 실패하면 null UUID 입니다.
+         * @details 새로 만드는 것은 에셋 파일이 리소스 루트 안에 **있을 때만**입니다(개발 빌드). 저장하는 쪽은 파일을 쓴 뒤에 부릅니다.
+         * @return GUID 입니다. 실패하거나, 에셋 파일이 없거나, 루트 밖이면 null UUID 입니다.
          */
         Uuid ensureMeta( string_view relativePath, bool bImported = false );
 
