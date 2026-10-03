@@ -95,13 +95,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
 
-- **불필요 코드 삭제(진행 중, 사용자 지시 10-04)** — 조사 보고서는 세션 스크래치 `deadcode/report.md`(1,615 줄: 호출자 없음 354 · 구조 개선 잔여물 39 · 중복 11 묶음 ·
-  경위 주석 ~2,300 블록). 코드 묶음 A(에디터 −352 줄) · B(RHI · 렌더러, Dev 모놀리식 RHI 갈래 · `SW_RHI_AS_MODULES` 제거, ABI v23) · D(Core · App · 도구 · 스크립트 · cmake −842/+341, 누수 추적 켬) · C(셰이더 데이터 · EngineData) · E(Engine 나머지 −2186/+289)는 끝났고, F 가 진행 중이고, C(셰이더 데이터 · EngineData — 굽기 필요) ·
-  E(Engine 나머지: `PropertyMetaHint` · XML 백엔드 배열/맵 API · LocalizationManager 형식 셋 · SerializeContext 객체 id 표 · ActionMap 기본 바인딩 폴백) ·
-  F(GameFramework · 시험: `BattleEvents.h` · TurnBattle 옛 세이브 · GPU 시험 준비 코드 43 곳 합치기)가 그다음, 주석 · 문서 2 차(G1~G5)는 코드 묶음을 합친 뒤.
-  사용자 결정: macOS · LocalizationManager 형식 셋 · SerializeContext id 표 · Dev 모놀리식 RHI 갈래 · ActionMap 폴백은 지움, 누수 추적(`enableMemoryLeakChecks`)은 켬,
-  `RuntimeHud` 는 남김, 로그 상세도 인자는 더하지 않음(주석만 고침). 이 묶음은 이름 일관화보다 먼저 한다.
-
+- **불필요 코드 삭제 — 코드 묶음 여섯(A~F)은 10-04 에 끝났다**(조사 보고서는 세션 스크래치 `deadcode/report.md`). 남은 것: **주석 · 문서 2 차(G1~G5)** —
+  경위 서술("예전에는 …") ~2,300 블록 · 없는 대상을 가리키는 줄 ~330(보고서 4 장; 문서 최신화 뒤라 다시 grep 해서 셀 것), 영역은 G1 시험 · G2 Engine(Graphics 제외) ·
+  App · RuntimeAPI · ReflectionParser · G3 Graphics · 셰이더 · G4 Core · Editor · GameFramework · G5 문서 · 스크립트 · CI. 보고서가 "판단 필요" 로 남긴 것
+  (`transcodeBinaryToXml` 시험 전용, `GameModes::cutscene`, `seedFallback`, 1-C 접근자 등)은 그대로다. `RuntimeHud` 는 남긴다(사용자 결정).
 - **클래스 이름 일관화 — 감사 목록 전부**(사용자: "일관되게 바꿔봐"). **별칭은 두지 않는다**(사용자: 아직 실제 게임이 없다) — 씬 · 데이터 XML 의 타입 · 루트 이름,
   스크립트 · CI 의 CLI 플래그까지 새 이름으로 다시 쓰고 옛 이름은 어디에도 남기지 않는다.
   묶음: (1) `IRHIResource`→`IRHIResourceFactory`(`getResourceFactory`), `ActionMap`→`InputMap`, `InputDeviceType`→`InputGlyphStyle`,
@@ -130,6 +127,8 @@ cd build/Ninja-Debug/Bin
 - **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
 
 ### 1-1. 직렬화 · 리플렉션
+
+- **`AssetDatabase::ensureMeta` 가 리소스 루트 안의 없는 경로에도 `.meta` 를 지어 쓴다** — 머티리얼을 acquire 만 해도 Resource 가 더러워진다(시험 쪽은 임시 경로로 피했다).
 
 - **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
 
@@ -168,8 +167,6 @@ cd build/Ninja-Debug/Bin
 
 - **에디터 단축키 판정이 `io.KeySuper` 를 Ctrl 로 친다**(`EditorCommandGui.cpp`, macOS Cmd 용으로 넣은 것). macOS 를 지웠으니 Windows 에서 Win 키가 Ctrl 처럼 동작하는
   셈이다 — 지울지 결정(지우면 동작이 바뀐다).
-- **`EditorTexturePipelineTest.SwizzleLayoutAndFormatAgree` 가 `_expectedDxgiFormat` 칸을 채우기만 하고 단언하지 않는다** — DDS 를 구워 형식을 대조하거나 칸을 지운다.
-
 - **imgui Vulkan 백엔드가 UI 스레드에서 `vkQueueSubmit` 을 부른다** — 글꼴 아틀라스 업로드(`ImGui_ImplVulkan_UpdateTexture`) · 보조 뷰포트(`RenderPlatformWindowsDefault`)가
   렌더 스레드와 같은 큐에 엔진 `_queueMutex` 밖에서 제출한다(큐 외부 동기화 위반). ImGui 의 아틀라스 파괴(`ImGui_ImplVulkan_DestroyTexture`)도 즉시 해제다.
 
@@ -194,11 +191,6 @@ cd build/Ninja-Debug/Bin
   내보내는 일이다. 쓰는 모듈이 생기면 그때.
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
-
-- **`GameStrings.h:26` 주석이 ".xml · .json · .ini · .kv 자동 감지" 라고 적는다** — 언어 파일은 이제 JSON 하나뿐이다(묶음 F 에서 고친다).
-
-- **TurnBattle 세이브가 옛 형식(pp0/pp1 두 칸)을 아직 읽는다** — `SaveGame.cpp` 의 `ppCount` 없을 때 갈래. 별칭 · 옛 형식 제거 결정대로 지우고 시험 픽스처를 지금 형식으로.
-
 
 - **강체 · 고정 스텝 누적기가 없다.** `PhysicsWorld::step` 은 겹침 이벤트만 낸다. 강체가 생기면 적분과 누적기를 넣는다.
 - **리눅스에서 yad 만 깔린 기계에는 "All files" 필터가 없다**(`LinuxFileDialog.cpp`). `yad --file --file-filter='A | *.txt' --file-filter='All files | *'`
@@ -244,7 +236,6 @@ cd build/Ninja-Debug/Bin
 
 - **`Test/README.md` 의 "구성마다 도는 케이스 수" 표(2026-10-01 실측)가 낡았다** — 다시 잰다(Debug CoreTest 만 해도 348 개).
 
-
 - **코드 · 문서 29 곳이 옛 백로그의 날짜 항목 · 옛 절 번호를 가리킨다**(`ci.yml:156` · `TargetRules.cmake:51` · `GameEvents.h:12` "1-0c" · `docs/07` "1-0e" ·
   `FrameRendererCompute.cpp` "백로그 1-4" 등). 주석 정리(현재형 핵심만)와 함께 고친다 — 날짜 사연은 지우고, 남길 지식은 이 문서 3절 위치나
   `git show 7ce95fc8:docs/06_Backlog.md` 로. 목록은 grep `06_Backlog\|백로그` 로 다시 뽑는다. 코드 주석의 "예전에는 …" 경위 서술도 같은 정리에서 현재형 주의로
@@ -256,7 +247,6 @@ cd build/Ninja-Debug/Bin
   결과(열거값)로 바꾸는 그래픽스 쪽 수정.
 - **`RunForwardDeclarationCandidates.py --show-unused` 의 거짓 "쓰임 없음" 208 건** — 보고 전용이라 손으로 걸러야 한다.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
-- **`TestRenderPassGpu.cpp` 의 남은 같은 줄**("큐브 하나 든 씬" · "한 프레임 돌리기")은 같은 모양의 케이스가 늘면 도우미로.
 - **옛 시험 산출물 정리**(사용자 폴더라 두었다): `%TEMP%` 의 `sw_*`, `build/*/Bin` · `TestBin` 의 `prefab_test/` · `TestTemp/` · `temp_gen_*` · `temp_collide/`.
   옛 규칙으로 지은 바이너리가 남은 프리셋은 다시 지어야 새 규칙을 따른다.
 
@@ -282,15 +272,10 @@ cd build/Ninja-Debug/Bin
   이름 표에 각각 영구 적재된다. 런타임에 번호 붙은 이름을 대량으로 만드는 경로(복제 · 스폰 이름 자동 부여)가 생기면 다시 본다 — 넣으면 `_숫자`(앞자리 0 제외)를
   떼어 정수 칸에 두고 비교는 (인덱스, 숫자) 쌍.
 
-
 ### 1-12. 낮은 우선순위 · 조건이 오면
 
 - **100 줄 넘는 함수 정리.** 분해는 총량을 줄이지 않는다. 중복을 먼저 없애고, 그래도 문제면 본다. 목록이 필요하면 여러 줄 시그니처를 중괄호 깊이로 재는 스크립트로
   뽑는다(단순 정규식은 틀린다).
-- **macOS 코드는 10-04 에 지운다(사용자 결정 — 리팩터링 묶음 A · B · D · E · F 가 영역별로; A · B · D 끝, Apple 호스트는 `LoadCompileFlags.cmake` 가 구성을 멈춘다).**
-  다 지운 뒤 `SW_PLATFORM_MACOS` 자체를 막는 게이트를 둔다. `Vcpkg.cmake` 의 APPLE 갈래 · 레거시 스탬프 이관과 `arm64-osx` · `x64-osx` 트리플릿은 손대지 않는 파일이라 사용자가 정리한다. 되살리려면 그 커밋 전 git 기록에서 꺼낸다. 그때의 순서: `ci.yml` macOS 잡 복원 → configure 실패 → `CocoaWindow` 가 `_onResize` 를
-  부르지 않음(스왑체인이 안 따라감) → `CocoaSplashWindow` 가 창을 만들지 않음 → `applyWindowVisibility` 이름 변경 컴파일 → `PosixCallStackCapture` 의 폴트 PC
-  (Linux 만) · `Posix*` 의 macOS 가드 · `Mac` 파일워처.
 - **`SetupVcpkg.py --install` 이 `vcpkg.cmake` 만 보고 "찾았다" 고 끝낸다.** 윈도우에서 클론한 트리를 리눅스에서 쓰면 `vcpkg` 바이너리 없이 성공을 보고한다
   (툴체인이 부트스트랩하므로 치명적이진 않다).
 
@@ -380,6 +365,11 @@ cd build/Ninja-Debug/Bin
   Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest`, `Test/TestFramework/TestBench.h`.
 
 ### 3-2. 검증 · 시험 쓰기
+
+- **백엔드마다 디바이스를 세우는 시험은 `test::RHIBackendSweep`** — `for ( test::RHITestDevice& device : sweep )`, 건너뛰기는 케이스가 `sweep.getReadyCount() == 0` 으로.
+  오프스크린 · 한 프레임 도우미(`makeSingleTargetPsoDesc` · `beginOffscreenRenderPass` · `countPrimaryColorPixels` · `renderSceneFrame`)를 먼저 볼 것.
+- **macOS 는 지원 대상이 아니다** — 코드는 10-04 에 지웠고 `CheckTargetMacros` 가 `SW_PLATFORM_MACOS` 를 막는다. 되살리려면 그 전 git 기록에서. `Vcpkg.cmake` 의 APPLE 갈래 ·
+  레거시 스탬프 이관과 `arm64-osx` · `x64-osx` 트리플릿은 손대지 않는 파일이라 사용자가 정리한다.
 
 - **CoreTest 는 엔진을 쓰지 않는다** — include 경로로는 막을 수 없다(`TestFramework` 가 Engine 을 PUBLIC 링크, `TestFramework.h` → `EngineMinimal.h`).
   `CheckTestSuites` 규칙 6 이 CoreTest 파일의 직접 Engine · GameFramework · Editor include 와 `engine::` 호출을 막는다. 엔진 타입이 필요하면 지역 대역을 쓰거나 EngineTest 에.
