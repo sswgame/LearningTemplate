@@ -690,6 +690,32 @@ SW_TEST_CASE( ShaderBakerTest, ReflectionManifestBytesIgnoreInsertionOrder )
 }
 
 /**
+ * @brief [ShaderReflectionCacheTest] 셰이더 캐시를 내리면 리플렉션 매니페스트 캐시도 비는지.
+ * @details 매니페스트 캐시는 프로세스 정적 저장소라 엔진 종료 뒤에도 남는다. 백엔드를 바꾼 실행은 기동 기준선 뒤에 두 번째 RHI 의
+ *          매니페스트(~1.1 MB)를 읽으므로, 종료가 비우지 않으면 메모리 누수 검사(`MemoryProfiler::reportMemoryLeaks`)가 그것을 잡는다.
+ *          없는 소스를 물어도 그 RHI 폴더의 매니페스트 칸은 (빈 채로) 캐시된다 — 그것으로 캐시를 채운다.
+ */
+SW_TEST_CASE( ShaderReflectionCacheTest, ShaderCacheShutdownClearsManifestCache )
+{
+    sw::ShaderCompileDesc desc;
+    desc._filePath     = "engine/shaders/reflection_cache_probe_missing.hlsl";
+    desc._entryPoint   = "VSMain";
+    desc._stage        = sw::ShaderStage::Vertex;
+    desc._targetFormat = sw::ShaderTargetFormat::DXIL_D3D12;
+    sw::ShaderReflectionData reflection;
+    SW_EXPECT_FALSE( sw::ShaderReflectionLibrary::tryGet( desc, reflection ) );
+    SW_ASSERT_TRUE( sw::ShaderReflectionLibrary::getCachedManifestCount() > 0u );
+
+    const uint32    generationBefore = sw::ShaderReflectionLibrary::getCacheGeneration();
+    sw::ShaderCache cache;
+    SW_ASSERT_TRUE( cache.initialize() );
+    cache.shutdown();
+
+    SW_EXPECT_EQUAL( 0u, sw::ShaderReflectionLibrary::getCachedManifestCount() );
+    SW_EXPECT_TRUE( sw::ShaderReflectionLibrary::getCacheGeneration() != generationBefore );
+}
+
+/**
  * @brief [ShaderStageTest] 스테이지 표는 빠진 줄이 없고, 태그 · 진입점 · 프로파일이 서로 맞는다
  */
 SW_TEST_CASE( ShaderStageTest, StageInfoTableIsComplete )

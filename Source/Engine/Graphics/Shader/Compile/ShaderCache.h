@@ -35,7 +35,7 @@ namespace sw
 
         /** @brief 셰이더 캐시를 초기화합니다. */
         bool initialize();
-        /** @brief 셰이더 캐시를 정리하고 종료합니다. */
+        /** @brief 셰이더 캐시를 정리하고 종료합니다. 리플렉션 매니페스트 캐시(`ShaderReflectionLibrary`)도 비웁니다. */
         void shutdown();
 
         /** @brief 캐시에 있으면 반환하고, 없거나 소스가 바뀌었으면 컴파일한 뒤 캐시합니다. */

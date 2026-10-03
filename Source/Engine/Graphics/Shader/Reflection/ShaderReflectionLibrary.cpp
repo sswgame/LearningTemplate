@@ -394,6 +394,12 @@ namespace sw
         cacheGenerationInternal().fetch_add( 1u, std::memory_order_acq_rel );
     }
 
+    uint32 ShaderReflectionLibrary::getCachedManifestCount()
+    {
+        std::scoped_lock<mutex> lock{ manifestMutexInternal() };
+        return static_cast<uint32>( manifestCacheInternal().size() );
+    }
+
     uint32 ShaderReflectionLibrary::getCacheGeneration()
     {
         return cacheGenerationInternal().load( std::memory_order_acquire );

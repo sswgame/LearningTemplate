@@ -74,8 +74,11 @@ namespace sw
          */
         static bool getOrReflect( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection );
 
-        /** @brief 캐시를 비웁니다(셰이더를 다시 구운 뒤 · 라이브 셰이더 편집 뒤). 캐시 세대가 오릅니다. */
+        /** @brief 캐시를 비웁니다(셰이더를 다시 구운 뒤 · 라이브 셰이더 편집 뒤 · 엔진 종료 때 `ShaderCache::shutdown`). 캐시 세대가 오릅니다. */
         static void clearCache();
+
+        /** @brief 지금 캐시에 든 매니페스트 수입니다(RHI 폴더마다 하나, 없는 파일도 빈 채로 하나). 진단 · 시험용입니다. */
+        static uint32 getCachedManifestCount();
 
         /**
          * @brief 캐시를 비운 횟수입니다. 이 값이 바뀌면 전에 얻은 리플렉션은 낡았을 수 있습니다.
