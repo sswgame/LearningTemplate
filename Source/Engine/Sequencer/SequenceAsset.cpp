@@ -76,8 +76,7 @@ namespace sw
         JsonDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
-        // 읽은 문서를 **그대로** 읽는다. 예전에는 `parseJson( doc.dump( -1 ) )` 이었다.
-        // 파일 전체를 문자열로 되돌렸다가 다시 파싱하는, 같은 일을 두 번 하는 경로였다.
+        // 읽은 문서를 **그대로** 읽는다(문자열로 되돌렸다가 다시 파싱하지 않는다).
         return parseRoot( doc.getRoot() );
     }
 

@@ -265,12 +265,8 @@ namespace sw
 
         /**
          * @brief 원소를 새 경계로 옮깁니다. 실패하면 **있던 자리에 그대로** 남습니다.
-         * @details 옮기기는 지우고 다시 넣는 것으로 합니다. 그런데 새 경계가 월드 밖이면
-         *          `insert` 가 실패하는데, 예전에는 그때 원소가 **이미 지워진 뒤**였습니다.
-         *          부르는 쪽은 false 를 받고 "그대로겠지" 로 읽지만 실제로는 사라졌습니다.
-         *          월드를 벗어나는 오브젝트에서 바로 일어나는 일입니다. 형제 둘
-         *          (`SpatialHashGrid2D` · `BVHTree3D`)의 update 는 그냥 insert 에 맡겨서
-         *          이 구멍이 없었습니다. 셋 중 이것만 원소를 잃었습니다.
+         * @details 옮기기는 지우고 다시 넣는 것으로 합니다. 새 경계가 월드 밖이면 `insert` 가 실패하는데, 그때 원소는
+         *          **이미 지워진 뒤**이므로 원래 경계로 되돌려 넣습니다 — 부르는 쪽은 false 를 받고 "그대로겠지" 로 읽습니다.
          * @return 새 경계로 옮겼으면 true 입니다. false 면 아무것도 바뀌지 않았습니다.
          */
         bool update( uint64 id, const BoundsType& newBounds )
@@ -293,9 +289,8 @@ namespace sw
 
         /**
          * @brief 범위에 겹치는 원소를 찾습니다.
-         * @param outListElement 결과입니다. **부르기 전 내용은 지워집니다**(`Spatial/README.md` 의 공통 규약).
-         *                       예전에는 덧붙이기만 했고, 트리가 비면 아무것도 건드리지 않았습니다.
-         *                       벡터 하나를 돌려 쓰는 쪽에 지난 답이 그대로 남았습니다.
+         * @param outListElement 결과입니다. **부르기 전 내용은 지워집니다**(`Spatial/README.md` 의 공통 규약) — 트리가 비어도
+         *                       지우므로 벡터 하나를 돌려 쓰는 쪽에 지난 답이 남지 않습니다.
          */
         void queryRange( const BoundsType& range, vector<ElementType>& outListElement ) const
         {

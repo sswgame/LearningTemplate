@@ -12,9 +12,8 @@ namespace sw
     {
         /**
          * @brief 축 하나의 슬랩으로 [tNear, tFar] 구간을 좁힙니다. 이 축에서 이미 빗나갔으면 false 입니다.
-         * @details 슬랩 검사는 축마다 똑같습니다. 예전에는 이 22줄이 **여섯 벌**(두 함수 × 세 축)
-         *          있었고, 한 축의 부호나 첨자를 잘못 적어도 나머지 다섯과 비교해 보지 않는 한
-         *          보이지 않았습니다. 증상은 "특정 방향에서만 안 맞는다" 라서 가장 찾기 어렵습니다.
+         * @details 슬랩 검사는 축마다 똑같아 두 함수 × 세 축이 이것 하나를 씁니다. 벌마다 적으면 한 축의 부호나 첨자 실수가 보이지 않고,
+         *          증상은 "특정 방향에서만 안 맞는다" 라서 가장 찾기 어렵습니다.
          * @param origin 이동 시작점의 이 축 좌표
          * @param delta 이 축의 변위
          * @param slabMin 슬랩(확장된 대상 상자)의 이 축 최소값
@@ -90,9 +89,8 @@ namespace sw
 {
     bool CCD::sweepAabb( const AABB& movingBox, const float3& displacement, const AABB& targetBox, SweepHit& outHit )
     {
-        // **빗나가면 outHit 은 비어 있다.** 예전에는 이 함수만 비우지 않아서, 결과 구조체를
-        // 재사용하는 쪽이 false 를 받고도 이전 호출의 `_bHit` 을 그대로 읽을 수 있었다
-        // (형제 함수 `sweepSphere` 는 처음부터 비우고 있었다. 둘이 다른 약속을 하고 있었다).
+        // **빗나가면 outHit 은 비어 있다**(형제 `sweepSphere` 와 같은 약속) — 결과 구조체를 재사용하는 쪽이 false 를 받고
+        // 이전 호출의 `_bHit` 을 읽지 않게.
         outHit = SweepHit{};
 
         const float3 movingHalfExtents = movingBox.getExtents();

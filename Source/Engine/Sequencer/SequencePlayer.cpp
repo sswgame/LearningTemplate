@@ -22,12 +22,9 @@ namespace sw
     bool SequencePlayer::loadFromFile( string_view path )
     {
         const bool bLoaded = _asset.loadFromFile( path );
-        // **에셋을 바꾼 뒤에 멈춘다.** 예전에는 `stop()` 이 먼저였고, 그 안의
-        // `_previousFrame = _asset._frameMin` 이 **바뀌기 전 에셋**의 시작 프레임을 집었다.
-        // 새 에셋이 100 프레임에서 시작하고 직전 값이 0 이면, 첫 갱신이 `applyFrame(100, 0)` 이
-        // 되어 100 이하의 이벤트가 모두 한꺼번에 발화한다. `getCurrentFrame()` 은 재생 시각으로
-        // 그때그때 구하므로 새 에셋을 따르는데 `getPreviousFrame()` 만 옛 에셋을 따르는,
-        // 둘이 어긋나는 상태이기도 했다.
+        // **에셋을 바꾼 뒤에 멈춘다.** `stop()` 이 먼저면 그 안의 `_previousFrame = _asset._frameMin` 이
+        // **바뀌기 전 에셋**의 시작 프레임을 집는다 — 새 에셋이 100 프레임에서 시작하고 직전 값이 0 이면 첫 갱신이
+        // `applyFrame(100, 0)` 이 되어 100 이하의 이벤트가 모두 한꺼번에 발화한다.
         stop();
         return bLoaded;
     }
@@ -144,8 +141,8 @@ namespace sw
     {
         const float32 fps = ( _framesPerSecond > 0.0f ) ? _framesPerSecond : 30.0f;
         // 프레임 경계에 **정확히** 놓인 시간(끝에서 멈춤 · `seekToFrame`)이 float32 로는 경계 바로 아래가 된다 — (63/30)*30 은 62.999996
-        // 이라 그냥 자르면 한 프레임 모자랐다. 반복 안 하는 시퀀스가 `_frameMax` 에 영영 닿지 않아, 그 프레임에서 끝나는 클립 · 이벤트가
-        // 빠졌다. 프레임의 천분의 일만큼 얹어 자른다(배 정밀도로 곱해 긴 시퀀스에서도 오차가 그보다 작다).
+        // 이라 그냥 자르면 한 프레임 모자란다. 반복 안 하는 시퀀스가 `_frameMax` 에 영영 닿지 않아, 그 프레임에서 끝나는 클립 · 이벤트가
+        // 빠진다. 프레임의 천분의 일만큼 얹어 자른다(배 정밀도로 곱해 긴 시퀀스에서도 오차가 그보다 작다).
         constexpr float64 kFrameBoundaryTolerance = 1e-3;
         int32             frame                   = _asset._frameMin + static_cast<int32>( static_cast<float64>( timeSeconds ) * static_cast<float64>( fps ) + kFrameBoundaryTolerance );
         if ( frame < _asset._frameMin )

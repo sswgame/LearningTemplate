@@ -4,8 +4,7 @@
  *
  * @note 이 클래스는 Windows 에서만 만들어집니다. IAudioSystem::create() 가 다른 플랫폼에서는
  *       NullAudioSystem 을 반환합니다. 그래서 구현 .cpp 는 파일 전체가 SW_PLATFORM_WINDOWS 가드
- *       안에 있습니다(Window/Windows · Input/Windows 와 같은 형태). 예전에는 이 파일이 모든
- *       플랫폼에서 컴파일되느라 몸통 안에 #if 가 22개 들어 있었습니다.
+ *       안에 있습니다(Window/Windows · Input/Windows 와 같은 형태).
  */
 #pragma once
 #include "Core/Common/Macros.h"

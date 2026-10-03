@@ -57,9 +57,8 @@ namespace sw
      * @brief `.sprite.json` 하나입니다. 에디터(SpriteClipPanel)가 쓰고 런타임(SpriteComponent · SpriteAnimatorComponent)이 읽는 **한 벌의 파서**입니다.
      * @details 형식(키 이름)은 에디터가 처음부터 쓰던 그대로입니다:
      *          `{ "atlas": 경로, "frames": [ { "u", "v", "w", "h", "durationMs" } ], "transformKeys": [ { "time", "x", "y", "angleDeg" } ] }`.
-     *          여기에 선택 배열 `"animations": [ { "name", "start", "count", "loop" } ]` 이 붙습니다. 없는 옛 파일은 **프레임 전체가 이름 없는
-     *          애니메이션 하나**입니다(`findFrameRange`). 예전에는 에디터만 이 형식을 알았고(`EditorSpriteClipData`) 런타임 타입이 없어서, 클립을
-     *          만들어도 게임에서 읽는 곳이 없었습니다.
+     *          여기에 선택 배열 `"animations": [ { "name", "start", "count", "loop" } ]` 이 붙습니다. 이 배열이 없는 파일은 **프레임 전체가 이름
+     *          없는 애니메이션 하나**입니다(`findFrameRange`).
      */
     class SW_API SpriteClipAsset
     {
@@ -73,7 +72,7 @@ namespace sw
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief JSON 본문을 읽습니다. 구문이 틀렸거나 루트가 객체가 아니면 false 이고 내용은 비어 있습니다. */
         [[nodiscard]] bool parseJson( string_view json );
-        /** @brief JSON 본문을 만듭니다(들여쓰기 2). 애니메이션이 없으면 "animations" 키를 쓰지 않습니다(옛 파일과 바이트까지 같습니다). */
+        /** @brief JSON 본문을 만듭니다(들여쓰기 2). 애니메이션이 없으면 "animations" 키를 쓰지 않습니다(그 키가 없는 파일과 바이트까지 같습니다). */
         string toJson() const;
         /** @brief 내용을 비웁니다. */
         void clear();
@@ -88,8 +87,8 @@ namespace sw
         const SpriteClipAnimation* findAnimation( string_view name ) const;
         /**
          * @brief 이름의 프레임 구간(시작 · 개수 · 반복)을 찾습니다. 찾으면 true 이고 @p outRange 를 채웁니다(이름 칸은 건드리지 않습니다).
-         * @details 이름 붙은 애니메이션이 하나도 없는 클립(옛 파일)은 **어떤 이름이든 프레임 전체**를 반복 구간으로 답합니다 — 클립 하나가 곧
-         *          애니메이션 하나이던 시절의 뜻입니다. 이름 붙은 것이 있는데 그 이름이 없으면 false 입니다.
+         * @details 이름 붙은 애니메이션이 하나도 없는 클립은 **어떤 이름이든 프레임 전체**를 반복 구간으로 답합니다 — 클립 하나가 곧
+         *          애니메이션 하나입니다. 이름 붙은 것이 있는데 그 이름이 없으면 false 입니다.
          */
         bool findFrameRange( string_view name, SpriteClipAnimation& outRange ) const;
         /** @brief 클립 타임라인에서 프레임 @p frameIndex 가 시작하는 시각(초)입니다 — 앞 프레임들의 시간 합이고, 시간이 없는 프레임은 @p fallbackSeconds 로 셉니다. */
@@ -106,7 +105,7 @@ namespace sw
         string                      _atlasPath;     ///< 아틀라스 텍스처 경로("atlas")입니다
         vector<SpriteClipFrame>     _listFrame;     ///< 프레임("frames")입니다
         vector<SpriteClipKey>       _listKey;       ///< 트랜스폼 키("transformKeys")입니다
-        vector<SpriteClipAnimation> _listAnimation; ///< 이름 붙은 구간("animations")입니다. 옛 파일은 비어 있습니다
+        vector<SpriteClipAnimation> _listAnimation; ///< 이름 붙은 구간("animations")입니다. 그 키가 없는 파일은 비어 있습니다
 
     private:
         /** @brief 파싱된 루트에서 내용을 읽습니다. 루트가 객체가 아니면 false 입니다. */

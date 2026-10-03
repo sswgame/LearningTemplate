@@ -106,8 +106,8 @@ namespace sw
         vector<const SequenceTrackItem*> listActive;
         asset.collectActiveItems( frame, listActive );
 
-        // 대상마다 원하는 상태는 하나다 — 그 대상을 덮는 활성 클립이 있으면 켜짐. **바뀔 때만** 세팅한다. 예전에는 클립마다 끄고 켜서,
-        // 클립이 둘인 대상은 매 프레임 꺼졌다 켜졌고(렌더 집합이 두 번 흔들렸다) 모든 대상을 매 프레임 다시 썼다.
+        // 대상마다 원하는 상태는 하나다 — 그 대상을 덮는 활성 클립이 있으면 켜짐. **바뀔 때만** 세팅한다(클립마다 끄고 켜면
+        // 클립이 둘인 대상이 매 프레임 꺼졌다 켜져 렌더 집합이 두 번 흔들린다).
         for ( const SequenceTrackItem& item : asset._listItem )
         {
             if ( SequenceTimelineUtilInternal::drivesTarget( item ) == false || item._targetObject.empty() )

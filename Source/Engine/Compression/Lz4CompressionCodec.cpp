@@ -85,8 +85,7 @@ namespace sw
         if ( pSrc == nullptr || pDst == nullptr || srcSize == 0 )
             return false;
 
-        // 입력 크기를 **여기서도** 본다. 압축 쪽에만 한계 검사가 있었는데, 외부에서 온 바이트를
-        // 먹는 쪽은 이쪽이다. 2GB 를 넘는 값을 int32 로 캐스팅하면 음수가 되어 LZ4 에 그대로
+        // 입력 크기를 **여기서도** 본다. 외부에서 온 바이트를 먹는 쪽은 이쪽이다. 2GB 를 넘는 값을 int32 로 캐스팅하면 음수가 되어 LZ4 에 그대로
         // 들어가고, 그때 동작은 정의되어 있지 않다. (대상 용량은 아래에서 좁은 쪽으로 자른다.)
         if ( srcSize > static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) )
         {

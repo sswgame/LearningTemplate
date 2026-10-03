@@ -381,7 +381,7 @@ namespace sw
                 PhysicsOverlapEvent{ pair._firstObjectId, pair._secondObjectId, 1.0f, SW_FALSE, pair._bFirstTrigger, pair._bSecondTrigger } );
         }
         // **먼저 닿은 것이 먼저 간다.** 빠른 총알이 한 step 에 적 둘을 지나가면 받는 쪽은 앞의 이벤트에 반응해 사라진다 — 핸들 순서로 두면
-        // 뒤의 적이 맞을 수 있었다. 같은 때끼리는 쌍 순서 그대로다(안정 정렬).
+        // 뒤의 적이 맞을 수 있다. 같은 때끼리는 쌍 순서 그대로다(안정 정렬).
         std::stable_sort( _listOverlapEvent.begin(), _listOverlapEvent.end(), []( const PhysicsOverlapEvent& lhs, const PhysicsOverlapEvent& rhs )
         { return lhs._time < rhs._time; } );
 
@@ -424,7 +424,7 @@ namespace sw
         const bool         bCanTouch = pOther != nullptr && pOther->_aabb.isValid() && _layers.shouldCollide( body._layer, pOther->_layer );
         if ( bCanTouch == false )
             return;
-        // 상대 운동: 둘 다 출발점에서, 이 바디의 이동에서 상대의 이동을 뺀 만큼 쓴다(Box2D 총알 TOI). 상대가 가만히 있었으면 예전과 같다.
+        // 상대 운동: 둘 다 출발점에서, 이 바디의 이동에서 상대의 이동을 뺀 만큼 쓴다(Box2D 총알 TOI). 상대가 가만히 있었으면 그냥 쓸림과 같다.
         const AABB&  otherFrom            = pOther->_stepAabb.isValid() ? pOther->_stepAabb : pOther->_aabb;
         const float3 otherDisplacement    = pOther->_aabb.getCenter() - otherFrom.getCenter();
         const float3 relativeDisplacement = displacement - otherDisplacement;

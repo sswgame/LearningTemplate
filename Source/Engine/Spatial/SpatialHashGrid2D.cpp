@@ -290,9 +290,8 @@ namespace sw
             {
                 for ( const SlotHandle handle : bucketIt->second )
                 {
-                    // **좁힌다.** 예전에는 지나간 셀의 핸들을 모두 담아서, 광선이 스치지도 않은
-                    // 것이 결과에 들어갔다. 형제 둘(`queryAabb` · `queryCircle`)은 처음부터
-                    // 각자의 판정을 거친다. 이쪽만 후보 목록을 그대로 내놓고 있었다.
+                    // **좁힌다** — 지나간 셀의 핸들을 모두 담으면 광선이 스치지도 않은 것이 결과에 들어간다.
+                    // 형제 둘(`queryAabb` · `queryCircle`)도 각자의 판정을 거친다.
                     const auto boundIt = _mapHandleBound.find( handle );
                     if ( boundIt != _mapHandleBound.end() &&
                          doesRayHitBounds( startX, startY, directionX, directionY, maxDist, boundIt->second ) )

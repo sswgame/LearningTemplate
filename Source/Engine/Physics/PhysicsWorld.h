@@ -80,7 +80,7 @@ namespace sw
         void setAabb( BodyHandle handle, const AABB& aabb );
         /**
          * @brief 바디의 상자 · 레이어 · 판정 방식을 한 번에 맞춥니다. 콜라이더가 `step` 직전에 부릅니다(`BoxCollider2DComponent::syncPhysicsBody`).
-         * @details 예전에는 상자만 맞췄습니다 — 레이어는 더할 때 한 번 적혀, 시작한 뒤 바꾼 콜라이더 종류(`setColliderType`)가 겹침에 닿지 않았습니다.
+         * @details 레이어 · 판정 방식도 매번 맞춥니다 — 더할 때 한 번만 적으면 시작한 뒤 바꾼 콜라이더 종류(`setColliderType`)가 겹침에 반영되지 않습니다.
          * @param moveType `Teleport` 면 새 자리가 다음 쓸림의 출발점이 됩니다 — 지난 자리에서 여기까지의 길을 쓸지 않습니다.
          */
         void updateBody( BodyHandle handle, const PhysicsBodyState& state, BodyMoveType moveType = BodyMoveType::Sweep );
@@ -90,8 +90,7 @@ namespace sw
          * @brief 바디 쌍의 겹침을 다시 재고, 지난 step 과 달라진 쌍을 시작 · 끝 이벤트로 냅니다(`getOverlapEvents`).
          * @details 유니티 `OnTriggerEnter2D/Exit2D` · 언리얼 `BeginOverlap/EndOverlap` 의 자리입니다. 계속 겹친 쌍은 다시 내지 않고, 바디가 사라진
          *          쌍은 끝납니다(언리얼은 컴포넌트를 내릴 때 EndOverlap 을 낸다). 강체가 없으므로 적분하지 않습니다 — @p deltaTime 은 그때를 위한
-         *          자리입니다. 매니저가 틱 · 트랜스폼 적용 뒤에 게임 스레드에서 부릅니다(`GameObjectManager::stepPhysics`). 예전에는 빈 함수였고
-         *          부르는 곳도 없었습니다.
+         *          자리입니다. 매니저가 틱 · 트랜스폼 적용 뒤에 게임 스레드에서 부릅니다(`GameObjectManager::stepPhysics`).
          *
          *          **연속 바디(`_bContinuous`)는 지난 step 의 자리에서 지금 자리까지 쓸립니다**(`CCD::sweepAabb`, 유니티 `CollisionDetectionMode2D.Continuous`).
          *          한 프레임에 얇은 바디를 통째로 건너뛴 총알도 그 바디와 겹친 것으로 칩니다 — 이번 step 에 시작하고, 다음 step 에(이미 지나갔으면)
@@ -99,8 +98,8 @@ namespace sw
          *          겹침이 이어 갑니다.
          *
          *          **상대도 움직였으면 상대 운동으로 잽니다**(Box2D 총알 TOI · 유니티 Continuous Dynamic): 두 바디 모두 지난 step 의 자리에서 출발해
-         *          연속 바디의 이동에서 상대의 이동을 뺀 만큼 쓸립니다. 프레임 사이에 총알 길을 가로질러 건너편으로 간 상대도 맞습니다. 예전에는 상대를
-         *          이번 step 의 자리에 세워 두고 쟀습니다.
+         *          연속 바디의 이동에서 상대의 이동을 뺀 만큼 쓸립니다. 프레임 사이에 총알 길을 가로질러 건너편으로 간 상대도 맞습니다(상대를
+         *          이번 step 의 자리에 세워 두고 재면 놓친다).
          */
         void step( float32 deltaTime );
         /** @brief 마지막 `step` 이 낸 겹침 이벤트입니다. 다음 `step` 까지 그대로입니다. */
@@ -153,17 +152,15 @@ namespace sw
 
         /**
          * @brief 이 셀 수를 넘으면 그리드를 훑지 않고 모든 바디를 돕니다.
-         * @details 넓은 질의는 셀을 다 방문하는 값이 바디를 모두 보는 값보다 비싸집니다. 예전에는 이
-         *          숫자가 질의 두 곳에 리터럴로 적혀 있었습니다. 값이 같아 증상은 없었지만 한쪽만 바꾸면
-         *          질의 종류에 따라 다른 문턱이 됩니다.
+         * @details 넓은 질의는 셀을 다 방문하는 값이 바디를 모두 보는 값보다 비싸집니다. 질의 두 곳이 이 상수를 같이 씁니다 —
+         *          리터럴로 따로 적으면 한쪽만 바뀌어 질의 종류에 따라 다른 문턱이 됩니다.
          */
         static constexpr int64 kMaxQueryCellCount = 1024;
 
         /**
          * @brief 바디 하나가 이 셀 수를 넘게 덮으면 그리드에 넣지 않고 **언제나 후보**로 둡니다.
-         * @details 질의 쪽에는 상한이 있었는데 **삽입 쪽에는 없었습니다.** 큰 지형 · 바닥 콜라이더 하나가
-         *          자기 AABB 가 덮는 모든 셀에 핸들을 적으므로, 20,000 유닛짜리 바닥이면 셀 표에
-         *          **한 바디 때문에 십만 개 가까운 항목**이 생깁니다(64 유닛 셀 기준). `setAabb` 로
+         * @details 삽입 쪽에도 상한이 필요합니다. 큰 지형 · 바닥 콜라이더 하나가 자기 AABB 가 덮는 모든 셀에 핸들을 적으면,
+         *          20,000 유닛짜리 바닥이면 셀 표에 **한 바디 때문에 십만 개 가까운 항목**이 생깁니다(64 유닛 셀 기준). `setAabb` 로
          *          움직이기라도 하면 그만큼을 매번 지웠다 다시 적습니다.
          *
          *          넘치는 바디는 그리드에 흩뿌리는 대신 목록 하나에 모아 두고, 그리드로 가는 질의가

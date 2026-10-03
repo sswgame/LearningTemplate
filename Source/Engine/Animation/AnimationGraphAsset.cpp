@@ -20,8 +20,7 @@ namespace sw
         JsonDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
-        // 예전에는 파싱한 문서를 다시 문자열로 덤프해 parseJson 에 넘겼다. 같은 JSON 을 두 번
-        // 파싱하고, 그 사이에 문서 전체 길이의 문자열을 한 번 더 만들던 자리다.
+        // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseJson 에 다시 넘기지 않는다).
         parseRoot( doc.getRoot() );
         return true;
     }

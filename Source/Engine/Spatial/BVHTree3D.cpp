@@ -21,8 +21,7 @@ namespace sw
 
             /**
              * @brief 경계가 `overlaps` 를 만족하는 잎의 핸들을 모읍니다. 네 질의(상자 · 광선 · 구 · 절두체)의 공통 순회입니다.
-             * @details 예전에는 네 질의가 이 스무 줄을 각자 들고 판정식만 달랐습니다. 스택이 차면 자식을 **조용히 버렸습니다.** 균형
-             *          트리에서는 닿지 않는 자리지만, 닿으면 질의 결과가 빠지므로 이제는 단언이 알립니다.
+             * @details 스택이 차면 자식을 버리게 되므로 단언이 알립니다(균형 트리에서는 닿지 않는 자리지만, 닿으면 질의 결과가 빠집니다).
              */
             template <typename OverlapFn>
             static void collectOverlapping( const vector<BVHNode3D>& listNode, int32 rootIndex, OverlapFn&& overlaps,
@@ -54,8 +53,8 @@ namespace sw
 
             /**
              * @brief 광선을 축 하나의 슬랩으로 잘라 [inoutNear, inoutFar] 를 좁힙니다. 이 축에서 빗나가면 false 입니다.
-             * @details 슬랩 검사는 축마다 똑같습니다. 예전에는 이 열다섯 줄이 축마다 한 벌씩 세 벌이었습니다(`Physics/CCD.cpp` 가
-             *          같은 이유로 `clipSlab` 하나로 모은 모양입니다). 이 축으로 나아가지 않으면 시작 좌표가 슬랩 안에 있는지만 봅니다.
+             * @details 슬랩 검사는 축마다 똑같아 세 축이 이것 하나를 씁니다(`Physics/CCD.cpp` 의 `clipSlab` 과 같은 모양).
+             *          이 축으로 나아가지 않으면 시작 좌표가 슬랩 안에 있는지만 봅니다.
              */
             static bool clipRaySlab( float32 origin, float32 direction, float32 slabMin, float32 slabMax, float32& inoutNear,
                                      float32& inoutFar )
@@ -497,7 +496,7 @@ namespace sw
     void BVHTree3D::queryFrustum( const float4x4& viewProj, vector<SlotHandle>& outListHandle ) const
     {
         outListHandle.clear();
-        // 평면 추출은 렌더러의 GPU 컬링과 같은 `Frustum` 하나다. 예전에는 여기에 같은 식의 사본이 있었다.
+        // 평면 추출은 렌더러의 GPU 컬링과 같은 `Frustum` 하나다.
         const Frustum frustum = Frustum::fromViewProjection( viewProj );
         BVHTree3DInternal::collectOverlapping( _listNode, _rootIndex, [&frustum]( const AABB& box )
         { return frustum.overlapsBox( box._min, box._max ); },

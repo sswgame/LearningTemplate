@@ -152,8 +152,7 @@ namespace sw
 
                 if ( bHaveFmt == false || pData == nullptr || dataSize == 0 )
                     return false;
-                // PCM 과 IEEE float(확장형 포함)를 받는다. 예전에는 PCM 태그만 받아, 24 비트 · 다채널 · 부동소수 WAV 가 "디코드 실패" 경고 하나만
-                // 남기고 소리가 나지 않았다. XAudio2 는 둘 다 그대로 재생한다.
+                // PCM 과 IEEE float(확장형 포함)를 받는다(24 비트 · 다채널 · 부동소수 WAV). XAudio2 는 둘 다 그대로 재생한다.
                 if ( ( baseFormatTag != WAVE_FORMAT_PCM && baseFormatTag != WAVE_FORMAT_IEEE_FLOAT ) || fmt.Format.nChannels == 0 ||
                      fmt.Format.nSamplesPerSec == 0 || fmt.Format.nBlockAlign == 0 )
                     return false;
@@ -260,7 +259,7 @@ namespace sw
             /** @brief 확장자에 맞는 디코더로 PCM 을 뽑습니다. */
             [[nodiscard]] static bool loadClip( string_view path, PcmClip& outClip )
             {
-                // WAV 는 직접 읽는다(팩 안에서도 된다). 직접 못 읽는 WAV(ADPCM 등)는 Media Foundation 에 넘긴다 — 예전에는 거기서 멈췄다.
+                // WAV 는 직접 읽는다(팩 안에서도 된다). 직접 못 읽는 WAV(ADPCM 등)는 Media Foundation 에 넘긴다.
                 if ( FileUtil::hasExtension( path, ".wav" ) && loadWavPcm( path, outClip ) )
                     return true;
 
@@ -427,11 +426,9 @@ namespace sw
         {
             // **잠그고 부순다.** 오디오는 `EngineLoop::shutdown` 에서 **TaskManager 보다 먼저**
             // 내려가므로, 바로 이 순간에도 워커가 `playDecodedClipTask` 안에서 `_listActiveVoice`
-            // 에 `push_back` 하고 있을 수 있다. 예전에는 여기만 잠금 없이 훑었다. 그 push_back 이
-            // 벡터를 재할당하면 아래 루프의 참조가 **해제된 메모리**를 가리키고, 뒤늦게 잠금을 얻은
-            // 워커는 이미 `Release()` 한 `_pXAudio` 로 보이스를 만든다.
+            // 에 `push_back` 하고 있을 수 있다. 잠금 없이 훑으면 그 push_back 이 벡터를 재할당할 때 아래 루프의 참조가
+            // **해제된 메모리**를 가리키고, 뒤늦게 잠금을 얻은 워커는 이미 `Release()` 한 `_pXAudio` 로 보이스를 만든다.
             // `_bInitialized` 를 잠금 안에서 **먼저** 내려, 기다리던 워커가 그것을 보고 돌아가게 한다.
-            // (`_voiceMutex` 의 주석은 처음부터 "보이스를 지킨다" 고 적고 있었는데, 여기만 지키지 않았다.)
             std::scoped_lock<mutex> lock{ _impl->_voiceMutex };
             _impl->_bInitialized = SW_FALSE;
 
@@ -562,9 +559,7 @@ namespace sw
                 return true;
         }
 
-        // 있는 곡인지 **멈추기 전에** 본다. 예전에는 stopMusic() 을 먼저 불렀기 때문에, 없는
-        // 곡을 요청하면 틀어져 있던 BGM 만 꺼지고 새 곡은 시작되지 않았다. 요청은 실패했는데
-        // 결과는 "정적" 이었다.
+        // 있는 곡인지 **멈추기 전에** 본다 — stopMusic() 을 먼저 부르면 없는 곡을 요청했을 때 틀어져 있던 BGM 만 꺼진다.
         if ( ResourceUtil::hasResource( path ) == false )
         {
             SW_LOG_WARNING( "Audio resource not found: %#", path );
@@ -618,9 +613,8 @@ namespace sw
         if ( _impl == nullptr )
             return;
 
-        // 음소거는 **마스터 보이스 한 자리에만** 건다. 예전에는 음악·효과음 보이스에도 같이
-        // 걸었는데, 음소거를 푸는 쪽은 마스터만 되돌려서 "음소거 → 볼륨 조절 → 음소거 해제" 뒤
-        // 그 보이스들이 0 인 채로 남았다.
+        // 음소거는 **마스터 보이스 한 자리에만** 건다 — 음악 · 효과음 보이스에도 걸면 "음소거 → 볼륨 조절 → 음소거 해제" 뒤
+        // 그 보이스들이 0 인 채로 남는다.
         if ( _impl->_pMasterVoice != nullptr )
             _impl->_pMasterVoice->SetVolume( getEffectiveMasterVolume() );
 
@@ -660,9 +654,8 @@ namespace sw
         if ( _impl->_bInitialized == SW_FALSE || _impl->_pXAudio == nullptr )
             return;
 
-        // 요청 번호로 거른다. 경로로 걸렀을 때는 (1) 요청자가 경로를 **제출 뒤에** 적어서 빠른
-        // 워커가 자기 요청을 남의 것으로 착각해 통째로 버렸고, (2) A → B → A 처럼 같은 곡으로
-        // 돌아오면 늦게 온 첫 A 도 통과해 음악 보이스가 둘이 되었다(앞의 것은 멈추지도 않는다).
+        // 요청 번호로 거른다. 경로로 거르면 A → B → A 처럼 같은 곡으로 돌아올 때 늦게 온 첫 A 도 통과해
+        // 음악 보이스가 둘이 된다(앞의 것은 멈추지도 않는다).
         if ( bLoop && _impl->_musicGeneration != musicGeneration )
             return;
 
@@ -752,9 +745,8 @@ namespace sw
 
         const string requestedPath = string( path );
 
-        // **제출보다 먼저** 기록한다. 예전에는 `.submit()` 뒤에 `_musicPath` 를 적었고, 잠금도
-        // 잡지 않았다. 클립이 캐시에 있으면 워커가 먼저 도착해 "요청한 곡이 아니다" 로 판단하고
-        // 조용히 돌아갔다. 그러면 BGM 이 아무 말 없이 시작되지 않는다.
+        // **제출보다 먼저**(잠금 안에서) 기록한다. 클립이 캐시에 있으면 워커가 먼저 도착하므로, 제출 뒤에 적으면 워커가
+        // "요청한 곡이 아니다" 로 판단하고 조용히 돌아가 BGM 이 아무 말 없이 시작되지 않는다.
         uint64 musicGeneration = 0;
         if ( bLoop )
         {
