@@ -35,6 +35,8 @@
     `then` 은 잠금 밖에서). 여러 스레드가 쓰는 동안 연결 통계는 `getConnectionStats`(사본)
   - `NetHostThread` — 전용 네트워크 스레드: 소켓을 기다렸다가(`poll` · `WSAPoll`, 최대 2 ms) `update` 를 돌린다. 게임 프레임이 멈춰도 확인 · 유지 · 재전송이
     돌아 끊기지 않고 RTT 에 프레임 길이가 섞이지 않는다. 기다리는 일이라 TaskManager 워커가 아니라 전용 스레드(로그 · 파일 감시와 같은 규칙)
+  - `NetParallel` — 서버 키트가 연결(관찰자)마다의 일을 `TaskManager::runParallel` 로 나누는 `NetParallelFor` 와 스레드마다의 작업 자리
+    `NetParallelScratch<T>`. 매니저가 없으면 지금 스레드가 돈다(결과는 같다)
   - `NetMessage` — `NetMessageWriter`(종류 바이트 + 몸, 버퍼 재사용), `INetMessageHandler`(영역 하나를 맡는 쪽 — `GF_Net*` 키트의 서버 · 클라이언트),
     `NetMessageRouter`(첫 바이트 위 4 비트로 처리기를 바로 찾아 `pump( host )` 로 나눠 주고, 아무도 안 받은 것은 돌려준다)
   - 전송: `INetTransport`(`send` 는 아무 스레드, `receive` · `waitForReceive` 는 `update` 스레드 하나), 실제 UDP(`UdpNetTransport` — 플랫폼 차이는 `PlatformSocketUtil` 한 곳, 송수신 버퍼 1 MB, Windows 는 ICMP 포트 닿지 않음으로

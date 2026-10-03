@@ -144,11 +144,9 @@ namespace sw
         , _pHost{ nullptr }
         , _pPolicy{ nullptr }
         , _sentUpdateCount{ 0 }
-        , _messageWriter{}
-        , _listLeaveScratch{}
-        , _listNearScratch{}
-        , _listRankScratch{}
-        , _listSentScratch{}
+        , _parallel{}
+        , _observerScratch{}
+        , _tickDeltaTime{ 0.0f }
     {
     }
 
@@ -202,16 +200,42 @@ namespace sw
                  : 0;
     }
 
+    void MmoReplicator::setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold ) { _parallel.setTaskManager( pTaskManager, serialThreshold ); }
+
     void MmoReplicator::update( float32 deltaTime )
     {
-        for ( size_t index = 0; index < _listObserver.size(); ++index )
+        if ( _pHost == nullptr )
+            return;
+        _tickDeltaTime = deltaTime;
+        _observerScratch.prepare( _parallel );
+        _parallel.run( static_cast<uint32>( _listObserver.size() ), SW_DELEGATE_METHOD( ParallelBlockDelegate, &MmoReplicator::updateObserverRange, this ) );
+        for ( ObserverScratch& scratch : _observerScratch.getSlots() )
         {
-            if ( _listObserver[index]._bActive )
-                updateObserver( static_cast<int32>( index ), _listObserver[index], deltaTime );
+            _sentUpdateCount += scratch._sentUpdateCount;
+            scratch._sentUpdateCount = 0;
         }
     }
 
-    void MmoReplicator::updateObserver( int32 connectionId, Observer& observer, float32 deltaTime )
+    void MmoReplicator::updateObserverRange( uint32 start, uint32 end )
+    {
+        ObserverScratch& scratch = _observerScratch.acquire( _parallel );
+        for ( uint32 index = start; index < end; ++index )
+        {
+            Observer& observer = _listObserver[index];
+            if ( observer._bActive )
+                updateObserver( static_cast<int32>( index ), observer, _tickDeltaTime, scratch );
+        }
+    }
+
+    const MmoEntity& MmoReplicator::getEntity( uint32 entityId ) const
+    {
+        // 나눈 본문에서 부른다 — `operator[]` 는 없으면 넣으므로(쓰기) 쓰지 않는다. 보이는 엔티티는 나감 단계가 사라진 것을 이미 뺐다.
+        const auto entityIter = _mapEntity.find( entityId );
+        SW_ASSERT( entityIter != _mapEntity.end() );
+        return entityIter->second;
+    }
+
+    void MmoReplicator::updateObserver( int32 connectionId, Observer& observer, float32 deltaTime, ObserverScratch& scratch )
     {
         float3 center{};
         if ( _grid.findPosition( observer._entityId, center ) == false )
@@ -220,7 +244,7 @@ namespace sw
         const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
 
         // 1) 나감 — 사라졌거나 나가는 반경 밖(늘 보이기는 빼고).
-        vector<uint32>& listLeave = _listLeaveScratch;
+        vector<uint32>& listLeave = scratch._listLeave;
         listLeave.clear();
         for ( const auto& visible : observer._mapVisible )
         {
@@ -237,7 +261,7 @@ namespace sw
         std::sort( listLeave.begin(), listLeave.end() );
         if ( listLeave.empty() == false )
         {
-            BitWriter& writer = _messageWriter.begin( NetMmoMessage::kLeave );
+            BitWriter& writer = scratch._messageWriter.begin( NetMmoMessage::kLeave );
             writer.writeVarUint( listLeave.size() );
             for ( const uint32 entityId : listLeave )
             {
@@ -248,7 +272,7 @@ namespace sw
         }
 
         // 2) 들어옴 — 들어오는 반경 안(가까운 것부터, 틱마다 상한).
-        vector<uint32>& listNear = _listNearScratch;
+        vector<uint32>& listNear = scratch._listNear;
         listNear.clear();
         _grid.queryRadius( center, _settings._enterRadius, listNear );
         if ( bAlwaysPolicy )
@@ -260,7 +284,7 @@ namespace sw
             }
         }
         // 거리는 한 번씩만 재고 (거리, id) 로 정렬한다(비교마다 해시를 찾지 않게). 이미 보이는 것은 뺀다.
-        vector<std::pair<float32, uint32>>& listRank = _listRankScratch;
+        vector<std::pair<float32, uint32>>& listRank = scratch._listRank;
         listRank.clear();
         for ( const uint32 entityId : listNear )
         {
@@ -281,7 +305,7 @@ namespace sw
             const auto entityIter = _mapEntity.find( entityId );
             if ( entityIter == _mapEntity.end() )
                 continue;
-            BitWriter& writer = _messageWriter.begin( NetMmoMessage::kEnter );
+            BitWriter& writer = scratch._messageWriter.begin( NetMmoMessage::kEnter );
             MmoReplicatorInternal::writeEntity( writer, entityIter->second, true );
             if ( _pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
                 break; // 신뢰 창이 찼다 — 다음 틱에
@@ -292,11 +316,11 @@ namespace sw
         }
 
         // 3) 갱신 — 우선도를 쌓고 예산 안에서 큰 것부터.
-        vector<std::pair<float32, uint32>>& listCandidate = _listRankScratch;
+        vector<std::pair<float32, uint32>>& listCandidate = scratch._listRank;
         listCandidate.clear();
         for ( auto& visible : observer._mapVisible )
         {
-            const MmoEntity& entity   = _mapEntity[visible.first];
+            const MmoEntity& entity   = getEntity( visible.first );
             const float32    distance = MmoReplicatorInternal::computeFlatDistance( center, entity._position );
             const bool       bChanged = entity._listState != visible.second._listSentState;
             visible.second._accumulated += _pPolicy->computePriority( connectionId, entity, distance ) * deltaTime * ( bChanged ? _settings._changedBoost : 1.0f );
@@ -305,13 +329,13 @@ namespace sw
         std::sort( listCandidate.begin(), listCandidate.end(),
                    []( const std::pair<float32, uint32>& lhs, const std::pair<float32, uint32>& rhs )
         { return lhs.first != rhs.first ? lhs.first > rhs.first : lhs.second < rhs.second; } );
-        BitWriter&      writer   = _messageWriter.begin( NetMmoMessage::kUpdate );
-        vector<uint32>& listSent = _listSentScratch;
+        BitWriter&      writer   = scratch._messageWriter.begin( NetMmoMessage::kUpdate );
+        vector<uint32>& listSent = scratch._listSent;
         listSent.clear();
         int32 usedBytes = 1;
         for ( const auto& candidate : listCandidate )
         {
-            const MmoEntity& entity = _mapEntity[candidate.second];
+            const MmoEntity& entity = getEntity( candidate.second );
             const int32      bytes  = MmoReplicatorInternal::computeEntityBytes( entity );
             if ( usedBytes + bytes > _settings._updateBudgetBytes )
                 continue;
@@ -328,9 +352,9 @@ namespace sw
         {
             VisibleEntry& entry  = observer._mapVisible[entityId];
             entry._accumulated   = 0.0f;
-            entry._listSentState = _mapEntity[entityId]._listState;
+            entry._listSentState = getEntity( entityId )._listState;
         }
-        _sentUpdateCount += listSent.size();
+        scratch._sentUpdateCount += listSent.size();
     }
 
     // ------------------------------------------------------------------------------

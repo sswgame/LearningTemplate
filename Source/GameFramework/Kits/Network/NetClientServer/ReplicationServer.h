@@ -8,6 +8,7 @@
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
 #include "Core/Network/NetMessage.h"
+#include "Core/Network/NetParallel.h"
 #include "Core/Network/NetTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -20,6 +21,8 @@ namespace sw
     /**
      * @class IReplicationPolicy
      * @brief 무엇을 누구에게 얼마나 먼저 보낼지 — 게임마다 바꿉니다(배틀로얄은 거리, 비대칭 대전은 시야 · 역할, 기체 대전은 전부).
+     * @warning 서버에 `setTaskManager` 를 주면 두 함수가 **여러 스레드에서 동시에** 불린다 — 상태를 바꾸지 말고(읽기만), 읽는 게임 상태는 스냅샷을
+     *          보내는 동안 바뀌지 않아야 한다(보통 틱 끝에 보내니 그렇다).
      */
     class SW_GF_API IReplicationPolicy
     {
@@ -70,8 +73,13 @@ namespace sw
         void beginTick( uint32 tick );
         void setEntity( uint32 entityId, uint32 typeId, const vector<uint8>& buffer );
         void endTick();
-        /** @brief 연결된 클라이언트마다 스냅샷을 보냅니다. */
+        /**
+         * @brief 연결된 클라이언트마다 스냅샷을 보냅니다. `setTaskManager` 를 줬으면 클라이언트들을 작업 스레드에 나눠 만든다(클라이언트마다 독립 —
+         *        결과는 한 스레드로 돌 때와 같다).
+         */
         void sendSnapshots();
+        /** @brief 스냅샷 만들기를 나눌 작업 스레드 풀입니다(게임은 `&engine::getTaskManager()`). nullptr 이면 지금 스레드가 돈다. */
+        void setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold = NetParallelFor::kDefaultSerialThreshold );
         /** @brief 이 키트의 메시지면 처리하고 true 입니다. */
         uint8 getMessageRangeBase() const override { return NetMessageRange::kClientServer; }
         bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
@@ -109,19 +117,29 @@ namespace sw
             uint8               _bActive{ SW_FALSE };
         };
 
+        /** @brief 작업 스레드 하나가 스냅샷 하나를 만드는 데 쓰는 자리입니다(틱마다 다시 쓴다). */
+        struct SnapshotScratch
+        {
+            NetSnapshot      _filtered{}; ///< 클라이언트 하나의 관련 엔티티
+            vector<float32>  _listPriority{};
+            vector<int32>    _listOrder{};
+            NetMessageWriter _messageWriter{};
+        };
+
         ClientState& acquireClient( int32 connectionId );
+        void         sendSnapshotRange( uint32 start, uint32 end );
+        void         sendSnapshot( int32 connectionId, ClientState& client, SnapshotScratch& scratch );
         void         handleInput( ClientState& client, const uint8* pData, int32 size );
 
-        vector<ClientState>       _listClient;
-        NetSnapshot               _world;
-        ReplicationServerSettings _settings;
-        NetHost*                  _pHost;
-        const IReplicationPolicy* _pPolicy;
-        IReplicationPolicy        _defaultPolicy;
-        NetMessageWriter          _messageWriter;   ///< 보낼 메시지 — 버퍼를 다시 쓴다
-        NetSnapshot               _filteredScratch; ///< 클라이언트 하나의 관련 엔티티(틱마다 다시 쓴다)
-        vector<float32>           _listPriorityScratch;
-        vector<int32>             _listOrderScratch;
-        vector<int32>             _listConnectionScratch;
+        vector<ClientState>                 _listClient;
+        NetSnapshot                         _world;
+        ReplicationServerSettings           _settings;
+        NetHost*                            _pHost;
+        const IReplicationPolicy*           _pPolicy;
+        IReplicationPolicy                  _defaultPolicy;
+        NetParallelFor                      _parallel;
+        NetParallelScratch<SnapshotScratch> _snapshotScratch;       ///< 스레드마다 하나
+        vector<int32>                       _listConnectionScratch; ///< 이번 틱에 보낼 연결
+        vector<ClientState*>                _listClientScratch;     ///< 위 연결의 상태 — 나누기 전에 모두 잡아 둔다(나누는 중에 목록이 자라지 않게)
     };
 } // namespace sw

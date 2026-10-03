@@ -14,6 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 #include "Core/Network/NetMessage.h"
+#include "Core/Network/NetParallel.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -64,6 +65,7 @@ namespace sw
     /**
      * @class IInterestPolicy
      * @brief 누가 무엇을 얼마나 원하는가 — 게임마다 바꿉니다(파티원은 늘 보이기 · 길드전 지역은 반경 넓히기).
+     * @warning 복제기에 `setTaskManager` 를 주면 이 함수들이 **여러 스레드에서 동시에** 불린다 — 상태를 바꾸지 말고 읽기만.
      */
     class SW_GF_API IInterestPolicy
     {
@@ -112,8 +114,13 @@ namespace sw
         void removeEntity( uint32 entityId );
         void setObserver( int32 connectionId, uint32 entityId );
         void removeObserver( int32 connectionId );
-        /** @brief 관찰자마다 들어옴 · 나감 · 갱신을 보냅니다. */
+        /**
+         * @brief 관찰자마다 들어옴 · 나감 · 갱신을 보냅니다. `setTaskManager` 를 줬으면 관찰자들을 작업 스레드에 나눠 계산한다(관찰자마다 독립 —
+         *        결과는 한 스레드로 돌 때와 같다). 도는 동안 엔티티 · 관찰자를 바꾸지 않는다(같은 스레드에서 차례로 부르면 그렇다).
+         */
         void update( float32 deltaTime );
+        /** @brief 관심 영역 계산을 나눌 작업 스레드 풀입니다(게임은 `&engine::getTaskManager()`). nullptr 이면 지금 스레드가 돈다. */
+        void setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold = NetParallelFor::kDefaultSerialThreshold );
 
         /** @brief 그 관찰자에게 지금 보이는 엔티티 수입니다. */
         int32               getVisibleCount( int32 connectionId ) const;
@@ -134,22 +141,32 @@ namespace sw
             uint8                               _bActive{ SW_FALSE };
         };
 
-        void updateObserver( int32 connectionId, Observer& observer, float32 deltaTime );
+        /** @brief 작업 스레드 하나가 관찰자를 계산하는 데 쓰는 자리입니다(틱마다 다시 쓴다). */
+        struct ObserverScratch
+        {
+            vector<uint32>                     _listLeave{};
+            vector<uint32>                     _listNear{};
+            vector<std::pair<float32, uint32>> _listRank{}; ///< (거리 또는 우선도, id)
+            vector<uint32>                     _listSent{};
+            NetMessageWriter                   _messageWriter{};
+            uint64                             _sentUpdateCount{ 0 }; ///< 이번 update 에서 이 자리가 보낸 갱신 — 끝나고 합친다
+        };
 
-        unordered_map<uint32, MmoEntity> _mapEntity;
-        vector<Observer>                 _listObserver;
-        InterestGrid                     _grid;
-        MmoReplicatorSettings            _settings;
-        IInterestPolicy                  _defaultPolicy;
-        NetHost*                         _pHost;
-        const IInterestPolicy*           _pPolicy;
-        uint64                           _sentUpdateCount;
-        NetMessageWriter                 _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
-        // 관찰자마다 매 틱 쓰는 목록 — 용량을 다시 쓴다.
-        vector<uint32>                     _listLeaveScratch;
-        vector<uint32>                     _listNearScratch;
-        vector<std::pair<float32, uint32>> _listRankScratch; ///< (거리 또는 우선도, id)
-        vector<uint32>                     _listSentScratch;
+        void             updateObserverRange( uint32 start, uint32 end );
+        void             updateObserver( int32 connectionId, Observer& observer, float32 deltaTime, ObserverScratch& scratch );
+        const MmoEntity& getEntity( uint32 entityId ) const;
+
+        unordered_map<uint32, MmoEntity>    _mapEntity;
+        vector<Observer>                    _listObserver;
+        InterestGrid                        _grid;
+        MmoReplicatorSettings               _settings;
+        IInterestPolicy                     _defaultPolicy;
+        NetHost*                            _pHost;
+        const IInterestPolicy*              _pPolicy;
+        uint64                              _sentUpdateCount;
+        NetParallelFor                      _parallel;
+        NetParallelScratch<ObserverScratch> _observerScratch; ///< 스레드마다 하나
+        float32                             _tickDeltaTime;   ///< 이번 update 의 시간 — 나눈 본문이 읽는다
     };
 
     /** @brief 클라이언트에서 생긴 일입니다. */

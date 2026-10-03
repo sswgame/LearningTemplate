@@ -17,11 +17,10 @@ namespace sw
         , _pHost{ nullptr }
         , _pPolicy{ nullptr }
         , _defaultPolicy{}
-        , _messageWriter{}
-        , _filteredScratch{}
-        , _listPriorityScratch{}
-        , _listOrderScratch{}
+        , _parallel{}
+        , _snapshotScratch{}
         , _listConnectionScratch{}
+        , _listClientScratch{}
     {
     }
 
@@ -71,66 +70,82 @@ namespace sw
 
     void ReplicationServer::endTick() { _world.sortEntities(); }
 
+    void ReplicationServer::setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold ) { _parallel.setTaskManager( pTaskManager, serialThreshold ); }
+
     void ReplicationServer::sendSnapshots()
     {
         if ( _pHost == nullptr )
             return;
-        // 매 틱 · 클라이언트마다 쓰는 목록은 멤버에 두고 다시 쓴다 — 엔티티 버퍼는 자리에 덮어써 용량을 남긴다.
-        vector<int32>& listConnection = _listConnectionScratch;
-        _pHost->collectConnected( listConnection );
-        for ( const int32 connectionId : listConnection )
-        {
-            ClientState& client = acquireClient( connectionId );
-            // 이 클라이언트에게 관련 있는 것만.
-            NetSnapshot& filtered            = _filteredScratch;
-            filtered._tick                   = _world._tick;
-            filtered._lastProcessedInputTick = client._lastProcessedInputTick;
-            vector<float32>& listPriority    = _listPriorityScratch;
-            listPriority.clear();
-            size_t relevantCount = 0;
-            for ( const NetEntityState& entity : _world._listEntity )
-            {
-                if ( _pPolicy->isRelevant( connectionId, entity ) == false )
-                    continue;
-                if ( relevantCount < filtered._listEntity.size() )
-                    filtered._listEntity[relevantCount] = entity;
-                else
-                    filtered._listEntity.push_back( entity );
-                ++relevantCount;
-                listPriority.push_back( _pPolicy->computePriority( connectionId, entity ) );
-            }
-            filtered._listEntity.resize( relevantCount );
-            vector<int32>& listOrder = _listOrderScratch;
-            listOrder.resize( relevantCount );
-            for ( size_t index = 0; index < listOrder.size(); ++index )
-                listOrder[index] = static_cast<int32>( index );
-            std::stable_sort( listOrder.begin(), listOrder.end(),
-                              [&listPriority]( int32 lhs, int32 rhs )
-            { return listPriority[static_cast<size_t>( lhs )] > listPriority[static_cast<size_t>( rhs )]; } );
+        // 클라이언트 상태는 나누기 전에 모두 잡는다 — `acquireClient` 는 목록을 키울 수 있다(나누는 중에는 아무도 목록을 건드리지 않는다).
+        _pHost->collectConnected( _listConnectionScratch );
+        _listClientScratch.resize( _listConnectionScratch.size() );
+        for ( size_t index = 0; index < _listConnectionScratch.size(); ++index )
+            acquireClient( _listConnectionScratch[index] );
+        for ( size_t index = 0; index < _listConnectionScratch.size(); ++index )
+            _listClientScratch[index] = &_listClient[static_cast<size_t>( _listConnectionScratch[index] )];
+        _snapshotScratch.prepare( _parallel );
+        _parallel.run( static_cast<uint32>( _listConnectionScratch.size() ),
+                       SW_DELEGATE_METHOD( ParallelBlockDelegate, &ReplicationServer::sendSnapshotRange, this ) );
+    }
 
-            // 기준 — 클라이언트가 확인한 틱의 우리가 보낸 재구성. 너무 오래돼 덮였으면 기준 없이.
-            const NetSnapshot* pBaseline = nullptr;
-            if ( client._bHasAck )
-            {
-                const NetSnapshot& candidate = client._listSent[static_cast<size_t>( client._ackedTick % client._listSent.size() )];
-                if ( candidate._tick == client._ackedTick && _world._tick - client._ackedTick < client._listSent.size() )
-                    pBaseline = &candidate;
-            }
-            BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kSnapshot );
-            // 보낸 재구성은 그 틱의 자리에 바로 쓴다(기준 자리와 겹치면 — 확인이 한 바퀴 늦었다 — 사본을 거친다).
-            NetSnapshot& slot = client._listSent[static_cast<size_t>( _world._tick % client._listSent.size() )];
-            if ( &slot == pBaseline )
-            {
-                NetSnapshot written;
-                filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, written, &listOrder );
-                slot = std::move( written );
-            }
+    void ReplicationServer::sendSnapshotRange( uint32 start, uint32 end )
+    {
+        SnapshotScratch& scratch = _snapshotScratch.acquire( _parallel );
+        for ( uint32 index = start; index < end; ++index )
+            sendSnapshot( _listConnectionScratch[index], *_listClientScratch[index], scratch );
+    }
+
+    void ReplicationServer::sendSnapshot( int32 connectionId, ClientState& client, SnapshotScratch& scratch )
+    {
+        // 이 클라이언트에게 관련 있는 것만 — 엔티티 버퍼는 자리에 덮어써 용량을 남긴다.
+        NetSnapshot& filtered            = scratch._filtered;
+        filtered._tick                   = _world._tick;
+        filtered._lastProcessedInputTick = client._lastProcessedInputTick;
+        vector<float32>& listPriority    = scratch._listPriority;
+        listPriority.clear();
+        size_t relevantCount = 0;
+        for ( const NetEntityState& entity : _world._listEntity )
+        {
+            if ( _pPolicy->isRelevant( connectionId, entity ) == false )
+                continue;
+            if ( relevantCount < filtered._listEntity.size() )
+                filtered._listEntity[relevantCount] = entity;
             else
-            {
-                filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, slot, &listOrder );
-            }
-            (void)_pHost->sendMessage( connectionId, NetChannelType::UnreliableSequenced, writer.getBytes() );
+                filtered._listEntity.push_back( entity );
+            ++relevantCount;
+            listPriority.push_back( _pPolicy->computePriority( connectionId, entity ) );
         }
+        filtered._listEntity.resize( relevantCount );
+        vector<int32>& listOrder = scratch._listOrder;
+        listOrder.resize( relevantCount );
+        for ( size_t index = 0; index < listOrder.size(); ++index )
+            listOrder[index] = static_cast<int32>( index );
+        std::stable_sort( listOrder.begin(), listOrder.end(),
+                          [&listPriority]( int32 lhs, int32 rhs )
+        { return listPriority[static_cast<size_t>( lhs )] > listPriority[static_cast<size_t>( rhs )]; } );
+
+        // 기준 — 클라이언트가 확인한 틱의 우리가 보낸 재구성. 너무 오래돼 덮였으면 기준 없이.
+        const NetSnapshot* pBaseline = nullptr;
+        if ( client._bHasAck )
+        {
+            const NetSnapshot& candidate = client._listSent[static_cast<size_t>( client._ackedTick % client._listSent.size() )];
+            if ( candidate._tick == client._ackedTick && _world._tick - client._ackedTick < client._listSent.size() )
+                pBaseline = &candidate;
+        }
+        BitWriter& writer = scratch._messageWriter.begin( NetClientServerMessage::kSnapshot );
+        // 보낸 재구성은 그 틱의 자리에 바로 쓴다(기준 자리와 겹치면 — 확인이 한 바퀴 늦었다 — 사본을 거친다).
+        NetSnapshot& slot = client._listSent[static_cast<size_t>( _world._tick % client._listSent.size() )];
+        if ( &slot == pBaseline )
+        {
+            NetSnapshot written;
+            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, written, &listOrder );
+            slot = std::move( written );
+        }
+        else
+        {
+            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, slot, &listOrder );
+        }
+        (void)scratch._messageWriter.send( *_pHost, connectionId, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 — NetHost 가 지킨다
     }
 
     bool ReplicationServer::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
