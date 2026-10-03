@@ -5,8 +5,12 @@
 #endif
 #include "App/Module/ModuleHost.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "TestFramework/TestFramework.h"
@@ -169,5 +173,98 @@ SW_TEST_CASE( ModuleHostTest, ShutdownDetachesEveryCallbackItRegistered )
     SW_EXPECT_TRUE_MSG( bBeforeCalled == false, "뗀 콜백이 아직 불립니다 — 죽은 객체를 가리키는 자리다" );
 
     manager.shutdown();
+}
+
+namespace
+{
+    /** @brief 가짜 게임 API 가 불린 순서와, 상태 직렬화가 성공할지. */
+    vector<const utf8*> s_listGameCall;
+    bool                s_bGameSerializeSucceeds{ true };
+
+    bool recordGameSerialize( GameHandle, void* pOutBuffer, uint32* pInOutSize )
+    {
+        s_listGameCall.push_back( "serializeState" );
+        if ( pOutBuffer == nullptr && pInOutSize != nullptr )
+            *pInOutSize = 4;
+        return s_bGameSerializeSucceeds;
+    }
+    void recordGameShutdown( GameHandle ) { s_listGameCall.push_back( "shutdown" ); }
+    void recordGameDestroy( GameHandle ) { s_listGameCall.push_back( "destroy" ); }
+
+    /** @brief 상태 직렬화 · 종료 · 파괴만 채운 가짜 게임 API 표. */
+    GameAPI makeRecordingGameApi()
+    {
+        GameAPI api{};
+        api.serializeState = &recordGameSerialize;
+        api.shutdown       = &recordGameShutdown;
+        api.destroy        = &recordGameDestroy;
+        return api;
+    }
+
+    /** @brief @p pName 이 @p listCall 에 있는지 봅니다. */
+    bool hasCall( const vector<const utf8*>& listCall, const utf8* pName )
+    {
+        for ( const utf8* pCall : listCall )
+        {
+            if ( StringUtil::equals( pCall, pName ) )
+                return true;
+        }
+        return false;
+    }
+} // namespace
+
+/**
+ * @brief [ModuleHostTest] 리로드 직전에 게임 상태를 찍지 못하면 게임을 내리지 않고 배치를 거절한다 — 옛 게임 모듈이 계속 돈다
+ * @details 게임 상태는 새 이미지가 넘겨받을 유일한 것이다. 찍지 못한 채 내리면 게임 컴포넌트가 모든 씬에서 걷히고 되돌릴 스냅숏이 없다.
+ *          거절(false)은 "아무것도 내리지 않았다" 는 계약이라 `LiveReloadManager` 는 새 이미지만 버린다. 찍으면 평소대로 내린다.
+ */
+SW_TEST_CASE( ModuleHostTest, ReloadBatchKeepsTheGameWhenItsStateCannotBeCaptured )
+{
+    RHI        rhi;
+    ModuleHost host;
+    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false, {} ) );
+    int32 gameToken = 0;
+    host.attachGameInstance( makeRecordingGameApi(), &gameToken );
+    const vector<string> listBatch{ string{ "SWGame" } };
+
+    s_listGameCall.clear();
+    s_bGameSerializeSucceeds = false;
+    SW_EXPECT_FALSE( host.onBeforeCommitBatch( listBatch ) );
+    SW_EXPECT_TRUE( hasCall( s_listGameCall, "serializeState" ) );
+    SW_EXPECT_FALSE_MSG( hasCall( s_listGameCall, "shutdown" ) || hasCall( s_listGameCall, "destroy" ),
+                         "the game was torn down although its state was not captured" );
+
+    s_listGameCall.clear();
+    s_bGameSerializeSucceeds = true;
+    SW_EXPECT_TRUE( host.onBeforeCommitBatch( listBatch ) );
+    SW_EXPECT_TRUE( hasCall( s_listGameCall, "shutdown" ) );
+    SW_EXPECT_TRUE( hasCall( s_listGameCall, "destroy" ) );
+
+    host.shutdown();
+}
+
+/**
+ * @brief [ModuleHostTest] 새 이미지가 호스트의 API 표와 맞는지 옛 이미지를 내리기 전에 가린다
+ * @details 같은 검사(`bindEditorApi` · `bindGameApi`)가 onAfterReload 에만 있으면 거절이 곧 에디터 · 게임을 잃는 일이다. 진짜 모듈은 받아들이고,
+ *          표가 다른 모듈(에디터 자리에 게임 모듈)은 거절한다.
+ */
+SW_TEST_CASE( ModuleHostTest, ImageCheckAcceptsOnlyAModuleWithTheHostsApiTable )
+{
+    void* const pEditorModule = FileUtil::loadDynamicLibrary( FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ),
+                                                                                  FileUtil::formatSharedLibraryName( "EditorModule" ) ) );
+    if ( pEditorModule == nullptr )
+        SW_TEST_SKIP( "EditorModule is not built next to this executable" );
+    SW_TEST_DEFENSIVE_SCOPE( "a module with another API table is rejected and says why" );
+    engine::registerModuleTypes( "EditorModule" ); // 정적 등록자를 전역 헤드에서 떼어 둔다(내릴 때 걷는다)
+
+    RHI        rhi;
+    ModuleHost host;
+    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false, {} ) );
+    SW_EXPECT_TRUE( host.isEditorImageUsable( pEditorModule ) );
+    SW_EXPECT_FALSE( host.isGameImageUsable( pEditorModule ) );
+    SW_EXPECT_FALSE( host.isEditorImageUsable( nullptr ) );
+    host.shutdown();
+    engine::unregisterModuleTypes( "EditorModule" );
+    FileUtil::unloadDynamicLibrary( pEditorModule );
 }
 #endif

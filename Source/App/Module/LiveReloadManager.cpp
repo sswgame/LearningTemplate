@@ -791,6 +791,11 @@ namespace sw
         _mapModule[string( moduleName )]._onReloadFault = std::move( delegate );
     }
 
+    void LiveReloadManager::setOnValidateImage( string_view moduleName, OnValidateImageDelegate delegate )
+    {
+        _mapModule[string( moduleName )]._onValidateImage = std::move( delegate );
+    }
+
     void LiveReloadManager::setOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )
     {
         _onBeforeCommitBatch = std::move( delegate );
@@ -805,9 +810,10 @@ namespace sw
     {
         for ( auto& [name, ctx] : _mapModule )
         {
-            ctx._onBeforeReload = {};
-            ctx._onAfterReload  = {};
-            ctx._onReloadFault  = {};
+            ctx._onBeforeReload  = {};
+            ctx._onAfterReload   = {};
+            ctx._onReloadFault   = {};
+            ctx._onValidateImage = {};
         }
     }
 
@@ -979,6 +985,36 @@ namespace sw
             EnumRegistrar::getHead()                 = nullptr;
             sw::ComponentFactoryRegistrar::getHead() = nullptr;
             GlobalVariableRegistrar::getHead()       = nullptr;
+        }
+
+        BLOCK( "Validate New Image" )
+        {
+            // 옛 이미지가 아직 도는 동안 호스트가 새 이미지를 거절할 자리다. 거절은 적용 전 실패라 옛 것을 두고 그래프를 막지 않는다.
+            // 새 이미지의 코드가 불리므로 onAfterReload 와 같이 지킨다.
+            if ( ctx._onValidateImage.isBound() )
+            {
+                bool        bAccepted{ false };
+                uint32      faultCode{ 0 };
+                void* const pNewHandle = out._pHandle;
+                const bool  bCompleted = ModuleCallGuard::run(
+                    SW_DELEGATE_LAMBDA( Delegate<void()>, [&ctx, &bAccepted, pNewHandle]()
+                 {
+                    bAccepted = ctx._onValidateImage( pNewHandle );
+                } ),
+                    faultCode );
+                if ( bCompleted == false || bAccepted == false )
+                {
+                    const utf8* pOutcome = ( ctx._pLibraryModule != nullptr ) ? "keeping the old module" : "it is not loaded";
+                    if ( bCompleted == false )
+                        SW_LOG_ERROR( "Module %# faulted (code 0x%#) while the host checked it — %#", ctx._moduleName,
+                                      Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), pOutcome );
+                    else
+                        SW_LOG_ERROR( "Module %# was rejected by the host before it took over — %#", ctx._moduleName, pOutcome );
+                    abortShadowCopy( ctx, out );
+                    out = {};
+                    return false;
+                }
+            }
         }
 
         return true;
@@ -1357,8 +1393,16 @@ namespace sw
             return;
         }
 
-        if ( _onBeforeCommitBatch.isBound() )
-            _onBeforeCommitBatch( listOrder );
+        // 배치 직전 콜백의 거절은 적용 전 실패다 — 아무것도 내리지 않았으니 새 이미지만 버리고 옛 것으로 계속 돈다.
+        if ( _onBeforeCommitBatch.isBound() && _onBeforeCommitBatch( listOrder ) == false )
+        {
+            SW_LOG_ERROR( "Cascade reload refused before the first commit — keeping the previous modules" );
+            for ( PreparedEntry& entry : listPrepared )
+            {
+                abortShadowCopy( *entry._pCtx, entry._shadow );
+            }
+            return;
+        }
 
         _bReloadingBatch = SW_TRUE;
         ++_reloadBatchId;
@@ -1413,6 +1457,7 @@ namespace sw
         : _onBeforeReload{}
         , _onAfterReload{}
         , _onReloadFault{}
+        , _onValidateImage{}
         , _moduleName{}
         , _originalModulePath{}
         , _tempModulePath{}
@@ -1432,6 +1477,7 @@ namespace sw
         : _onBeforeReload{ std::move( other._onBeforeReload ) }
         , _onAfterReload{ std::move( other._onAfterReload ) }
         , _onReloadFault{ std::move( other._onReloadFault ) }
+        , _onValidateImage{ std::move( other._onValidateImage ) }
         , _moduleName{ std::move( other._moduleName ) }
         , _originalModulePath{ std::move( other._originalModulePath ) }
         , _tempModulePath{ std::move( other._tempModulePath ) }
@@ -1458,6 +1504,7 @@ namespace sw
             _onBeforeReload     = std::move( other._onBeforeReload );
             _onAfterReload      = std::move( other._onAfterReload );
             _onReloadFault      = std::move( other._onReloadFault );
+            _onValidateImage    = std::move( other._onValidateImage );
             _moduleName         = std::move( other._moduleName );
             _originalModulePath = std::move( other._originalModulePath );
             _tempModulePath     = std::move( other._tempModulePath );

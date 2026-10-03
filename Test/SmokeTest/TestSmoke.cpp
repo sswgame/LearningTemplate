@@ -1049,6 +1049,97 @@ SW_TEST_CASE( ArchitectureTest, ModuleBuiltAgainstOtherEngineHeadersIsRejected )
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( probePath ) );
 }
 
+namespace sw
+{
+    namespace
+    {
+        /** @brief 적용 전 실패를 주입하는 자리입니다. */
+        enum class PreApplyFailure : uint8
+        {
+            ImageRejected, ///< 이미지 검사(`setOnValidateImage`)가 새 이미지를 거절한다 — 모듈 API 표가 다른 빌드
+            BatchRefused,  ///< 배치 직전 콜백(`setOnBeforeCommitBatch`)이 거절한다 — 게임 상태를 찍지 못했다
+        };
+
+        /**
+         * @brief SWGame 리로드에 @p failure 를 주입하고, 옛 모듈이 그대로 남아 돌며 그래프가 막히지 않았는지 봅니다. 주입을 거두면 리로드가 됩니다.
+         * @return 주입 자리가 불렸으면 true 입니다(불리지 않으면 케이스가 아무것도 검증하지 못한다).
+         */
+        bool expectPreApplyFailureKeepsTheOldModule( PreApplyFailure failure )
+        {
+            sw::LiveReloadManager manager;
+            if ( manager.registerModule( "SWGame" ) == false )
+                return false;
+            void* const pOldHandle = manager.getModuleHandle( "SWGame" );
+
+            bool bInjected{ false };
+            bool bBeforeReloadCalled{ false };
+            manager.setOnBeforeReload( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeReloadDelegate, [&bBeforeReloadCalled]()
+            {
+                bBeforeReloadCalled = true;
+            } ) );
+            if ( failure == PreApplyFailure::ImageRejected )
+            {
+                manager.setOnValidateImage( "SWGame", SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnValidateImageDelegate, [&bInjected, pOldHandle]( void* pNewHandle )
+                {
+                    // 첫 로드(등록)는 받아들이고, 다시 올리는 이미지만 거절한다.
+                    if ( pNewHandle == pOldHandle )
+                        return true;
+                    bInjected = true;
+                    return false;
+                } ) );
+            }
+            else
+            {
+                manager.setOnBeforeCommitBatch( SW_DELEGATE_LAMBDA( sw::LiveReloadManager::OnBeforeCommitBatchDelegate, [&bInjected]( const sw::vector<sw::string>& )
+                {
+                    bInjected = true;
+                    return false;
+                } ) );
+            }
+
+            manager.triggerReload( "SWGame" );
+            for ( int32 stepIndex = 0; stepIndex < 100 && bInjected == false; ++stepIndex )
+            {
+                std::this_thread::sleep_for( std::chrono::milliseconds( 15 ) );
+                manager.update();
+            }
+
+            SW_EXPECT_TRUE( bInjected );
+            SW_EXPECT_FALSE_MSG( manager.isGraphBroken(), "a failure before the new image took over must not block later reloads" );
+            SW_EXPECT_TRUE_MSG( manager.getModuleHandle( "SWGame" ) == pOldHandle, "the old module must stay loaded" );
+            SW_EXPECT_FALSE_MSG( bBeforeReloadCalled, "the old module was told to tear down for a reload that did not happen" );
+            // 옛 모듈의 함수가 그대로 불린다.
+            SW_EXPECT_TRUE( sw::createAndDestroyGame( manager.getModuleHandle( "SWGame" ) ) );
+            // 새 이미지의 섀도 복사본은 치웠다 — 남은 것은 지금 올라온 옛 것(DLL · 심볼)뿐이다.
+            SW_EXPECT_TRUE( sw::countShadowCopies( "SWGame" ) <= 2u );
+
+            // 주입을 거두면 같은 매니저로 리로드가 된다(그래프가 살아 있다).
+            manager.setOnValidateImage( "SWGame", {} );
+            manager.setOnBeforeCommitBatch( {} );
+            manager.setOnBeforeReload( "SWGame", {} );
+            SW_EXPECT_TRUE( sw::reloadAndWait( manager, "SWGame" ) );
+            SW_EXPECT_TRUE( manager.getModuleHandle( "SWGame" ) != pOldHandle );
+            manager.shutdown();
+            return bInjected;
+        }
+    } // namespace
+} // namespace sw
+
+/**
+ * @brief [ArchitectureTest] 적용 전 실패(새 이미지 거절 · 배치 거절)는 옛 모듈을 그대로 두고 계속 돈다 — 그래프를 막지 않는다
+ * @details 새 이미지가 상태를 넘겨받기 전의 실패는 잃은 것이 없다. 옛 이미지에 onBeforeReload 를 부르지 않고(옛 인스턴스를 내리지 않는다) 새 이미지만
+ *          버린 뒤 옛 모듈 함수가 계속 불려야 한다. 고친 뒤 다시 빌드하면 리로드가 되어야 하므로 그래프는 막지 않는다.
+ */
+SW_TEST_CASE( ArchitectureTest, FailureBeforeTheNewImageTakesOverKeepsTheOldModule )
+{
+    if ( sw::FileUtil::fileExists( sw::modulePath( "SWGame" ) ) == false )
+        SW_TEST_SKIP( "SWGame MODULE not built in this config" );
+    SW_TEST_DEFENSIVE_SCOPE( "a rejected reload logs why it kept the old module" );
+
+    SW_EXPECT_TRUE( sw::expectPreApplyFailureKeepsTheOldModule( sw::PreApplyFailure::ImageRejected ) );
+    SW_EXPECT_TRUE( sw::expectPreApplyFailureKeepsTheOldModule( sw::PreApplyFailure::BatchRefused ) );
+}
+
 /**
  * @brief [ArchitectureTest] ModuleCompiler (CMake 백그라운드 컴파일) -> LiveReloadManager (DLL 핫스왑) End-to-End 전체 파이프라인 검증
  */

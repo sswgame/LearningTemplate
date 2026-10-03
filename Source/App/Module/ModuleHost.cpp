@@ -145,6 +145,8 @@ namespace sw
                                                        SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterEditorReload, this ) );
                 _pLiveReloadManager->setOnReloadFault( config::kTargetEditorModule,
                                                        SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &ModuleHost::onEditorReloadFault, this ) );
+                _pLiveReloadManager->setOnValidateImage( config::kTargetEditorModule,
+                                                         SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &ModuleHost::isEditorImageUsable, this ) );
                 if ( _pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
                 {
                     SW_LOG_ERROR( "Editor Module 로드에 실패했습니다." );
@@ -193,6 +195,7 @@ namespace sw
                 _pLiveReloadManager->setOnBeforeReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameReload, this ) );
                 _pLiveReloadManager->setOnAfterReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameReload, this ) );
                 _pLiveReloadManager->setOnReloadFault( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &ModuleHost::onGameReloadFault, this ) );
+                _pLiveReloadManager->setOnValidateImage( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &ModuleHost::isGameImageUsable, this ) );
 
                 if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
                 {
@@ -426,20 +429,50 @@ namespace sw
         }
     }
 
-    void ModuleHost::onBeforeCommitBatch( const vector<string>& listModuleName )
+    bool ModuleHost::onBeforeCommitBatch( const vector<string>& listModuleName )
     {
 #if !defined( SW_SHIPPING )
         for ( const string& name : listModuleName )
         {
             if ( name != sw::config::kTargetEditorModule )
             {
-                onBeforeGameplayDllReload();
-                return;
+                // 게임 상태는 새 이미지가 넘겨받을 유일한 것이다. 찍지 못했으면 내리지 않는다 — 옛 게임이 그대로 돈다.
+                if ( suspendModulesInternal( ModuleScope::Game, true, true ) == false )
+                {
+                    SW_LOG_ERROR( "The game could not serialize its state for the reload — keeping the old game modules running" );
+                    return false;
+                }
+                return true;
             }
         }
 #else
         (void)listModuleName;
 #endif
+        return true;
+    }
+
+    bool ModuleHost::isEditorImageUsable( void* pLibraryModule ) const
+    {
+        if ( pLibraryModule == nullptr || ModuleHostInternal::matchesModuleAbi( pLibraryModule, "getEditorModuleAbiVersion", "getEditorModuleAbiStamp", "Editor" ) == false )
+            return false;
+        const PFN_ExportEditorAPI pfnExport = reinterpret_cast<PFN_ExportEditorAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportEditorApi" ) );
+        EditorAPI                 api{};
+        const bool                bExported = pfnExport != nullptr && pfnExport( &api ) && api.create != nullptr && api.destroy != nullptr;
+        if ( bExported == false )
+            SW_LOG_ERROR( "The new editor module does not export a usable EditorAPI" );
+        return bExported;
+    }
+
+    bool ModuleHost::isGameImageUsable( void* pLibraryModule ) const
+    {
+        if ( pLibraryModule == nullptr || ModuleHostInternal::matchesModuleAbi( pLibraryModule, "getGameModuleAbiVersion", "getGameModuleAbiStamp", "Game" ) == false )
+            return false;
+        const PFN_ExportGameAPI pfnExport = reinterpret_cast<PFN_ExportGameAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportGameApi" ) );
+        GameAPI                 api{};
+        const bool              bExported = pfnExport != nullptr && pfnExport( &api ) && api.create != nullptr && api.destroy != nullptr;
+        if ( bExported == false )
+            SW_LOG_ERROR( "The new game module does not export a usable GameAPI" );
+        return bExported;
     }
 
     // ======================================================================
@@ -561,6 +594,12 @@ namespace sw
 
     void ModuleHost::suspendModules( ModuleScope scope, bool bReleaseApiTable )
     {
+        // 종료 · RHI 교체 · 에디터 리로드에는 게임 상태를 넘겨받을 새 게임 이미지가 없다 — 찍기 실패가 내리기를 막지 않는다.
+        (void)suspendModulesInternal( scope, bReleaseApiTable, false );
+    }
+
+    bool ModuleHost::suspendModulesInternal( ModuleScope scope, bool bReleaseApiTable, bool bKeepGameOnCaptureFailure )
+    {
         drainRenderWorkers();
 
         const bool bSuspendEditor = scope != ModuleScope::Game;
@@ -577,8 +616,9 @@ namespace sw
             _editorApi.stopSimulation( _editor );
         }
 
-        if ( bSuspendGame )
-            captureGameState();
+        // 무엇이든 내리기 전에 찍는다. 찍지 못했으면(리로드 직전일 때만) 여기서 멈춘다 — 아직 아무것도 내리지 않았다.
+        if ( bSuspendGame && captureGameState() == false && bKeepGameOnCaptureFailure )
+            return false;
         if ( bSuspendEditor )
         {
             destroyEditorInstance( bReleaseApiTable );
@@ -588,12 +628,19 @@ namespace sw
         }
         if ( bSuspendGame )
             destroyGameInstance( bReleaseApiTable );
+        return true;
     }
 
     void ModuleHost::attachEditorInstance( const EditorAPI& editorApi, EditorHandle editor )
     {
         _editorApi = editorApi;
         _editor    = editor;
+    }
+
+    void ModuleHost::attachGameInstance( const GameAPI& gameApi, GameHandle game )
+    {
+        _gameApi = gameApi;
+        _game    = game;
     }
 
     bool ModuleHost::reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule )
@@ -621,18 +668,22 @@ namespace sw
 #endif
     }
 
-    void ModuleHost::captureGameState()
+    bool ModuleHost::captureGameState()
     {
         if ( _game == nullptr || _gameApi.serializeState == nullptr )
-            return;
+            return true;
 
         uint32 size{ 0 };
-        if ( _gameApi.serializeState( _game, nullptr, &size ) == false || size == 0 )
-            return;
+        if ( _gameApi.serializeState( _game, nullptr, &size ) == false )
+            return false;
+        if ( size == 0 )
+            return true;
 
         vector<uint8> tempState( size );
-        if ( _gameApi.serializeState( _game, tempState.data(), &size ) )
-            _listGameSavedState = std::move( tempState );
+        if ( _gameApi.serializeState( _game, tempState.data(), &size ) == false )
+            return false;
+        _listGameSavedState = std::move( tempState );
+        return true;
     }
 
     void ModuleHost::restoreGameState()

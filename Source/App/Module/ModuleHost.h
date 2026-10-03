@@ -168,8 +168,16 @@ namespace sw
         /**
          * @brief 연쇄 교체 대상이 모두 준비된 뒤 첫 commit 직전에 불립니다. 에디터가 아닌 모듈이 섞여 있으면 게임을 먼저 내립니다.
          * @param listModuleName 이번 배치에서 교체될 모듈 이름들
+         * @return 게임 상태를 찍지 못해 **아무것도 내리지 않았으면** false 입니다. 그러면 리로드를 거두고 옛 게임 모듈이 계속 돕니다.
          */
-        void onBeforeCommitBatch( const vector<string>& listModuleName );
+        [[nodiscard]] bool onBeforeCommitBatch( const vector<string>& listModuleName );
+        /**
+         * @brief 새 에디터 이미지가 이 호스트와 같은 API 표로 빌드됐는지 봅니다(ABI 버전 · 지문 · `exportEditorApi`). 옛 이미지를 내리기 전에 불립니다.
+         * @details 여기서 거절하면 옛 에디터가 그대로 돈다. 같은 검사를 옛 것을 내린 뒤(`onAfterEditorReload`)에야 하면 거절이 곧 에디터를 잃는 일이 된다.
+         */
+        bool isEditorImageUsable( void* pLibraryModule ) const;
+        /** @brief 새 게임 이미지에 대한 `isEditorImageUsable` 의 짝입니다(`exportGameApi`). */
+        bool isGameImageUsable( void* pLibraryModule ) const;
         /**
          * @brief 새 에디터 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 표를 **모듈을 부르지 않고** 버립니다.
          * @param faultCode 예외 코드(Windows) · 시그널 번호(리눅스)
@@ -206,6 +214,8 @@ namespace sw
          *          (시뮬레이션 멈춤 → shutdown → destroy)를 시험하려고 둔다. 에디터 모드(`initialize` 의 bEnableEditor)일 때만 에디터로 쓰인다.
          */
         void attachEditorInstance( const EditorAPI& editorApi, EditorHandle editor );
+        /** @brief `attachEditorInstance` 의 게임 짝입니다 — 가짜 API 표로 게임을 내리는 순서(상태 찍기 → shutdown → destroy)를 시험합니다. */
+        void attachGameInstance( const GameAPI& gameApi, GameHandle game );
 
         /** @brief RHI 핫스왑 뒤 에디터 · 게임을 다시 초기화합니다. 실패하면 false 입니다. */
         bool reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule );
@@ -247,8 +257,17 @@ namespace sw
         /** @brief 게임 인스턴스를 만들고 초기화합니다. 디바이스 전제는 위와 같습니다. */
         [[nodiscard]] bool createGameInstance();
 
-        /** @brief 게임이 자기 상태를 직렬화해 두게 합니다(리로드 사이에 보존할 것). */
-        void captureGameState();
+        /**
+         * @brief 게임이 자기 상태를 직렬화해 두게 합니다(리로드 사이에 보존할 것).
+         * @return 게임이 직렬화를 실패로 알렸으면 false 입니다. 게임이 없거나 찍을 상태가 없으면 true 입니다.
+         */
+        [[nodiscard]] bool captureGameState();
+        /**
+         * @brief `suspendModules` 의 본체입니다.
+         * @param bKeepGameOnCaptureFailure true 면 게임 상태를 찍지 못했을 때 아무것도 내리지 않고 false 를 돌려줍니다(리로드 직전).
+         *        종료 · RHI 교체처럼 상태를 넘겨받을 새 이미지가 없으면 false 로 둡니다.
+         */
+        [[nodiscard]] bool suspendModulesInternal( ModuleScope scope, bool bReleaseApiTable, bool bKeepGameOnCaptureFailure );
         /** @brief 보존해 둔 상태를 새 인스턴스에 되돌립니다. 실패하면 **버리지 않고** 다음 리로드까지 들고 있습니다. */
         void restoreGameState();
         /** @brief RHI 교체 뒤 에디터를 다시 세웁니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */

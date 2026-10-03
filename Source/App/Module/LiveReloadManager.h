@@ -118,8 +118,11 @@ namespace sw
     /**
      * @brief 모듈을 섀도 경로에 복사해 로드하는 핫 리로드 매니저입니다.
      * @note 연쇄 교체는 의존 순서(위상 정렬)대로 합니다. 모든 모듈의 prepare 가 성공한 뒤에만 commit 합니다. 언로드는 위상 역순
-     *       (의존하는 쪽 먼저)입니다. prepare 가 실패하면 새 이미지를 버리고 기존 핸들을 유지합니다(keep-old). commit 중에 실패하거나
-     *       onAfter 가 그래프를 깨진 상태로 표시하면 남은 commit 을 멈춥니다. 이미 교체된 DLL 은 되돌릴 수 없습니다.
+     *       (의존하는 쪽 먼저)입니다.
+     *       - **적용 전 실패는 옛 이미지를 그대로 두고 계속 돕니다**(그래프를 막지 않는다): 엔진 ABI 도장 불일치 · 로드 실패 · 이미지 검사
+     *         거절(`setOnValidateImage`) · 배치 직전 콜백의 거절(`setOnBeforeCommitBatch`). 새 이미지가 상태를 넘겨받기 전이라 잃는 것이 없습니다.
+     *       - **적용 뒤 결함은 되돌리지 않습니다**: commit 중 실패 · onAfter 의 결함이나 그래프 막음은 남은 commit 을 멈추고 그래프를 막습니다
+     *         (재시작 안내). 이미 교체된 DLL 은 되돌릴 수 없습니다 — UE Live Coding · Unity 의 도메인 리로드도 적용 뒤 결함을 되돌리지 않습니다.
      */
     class LiveReloadManager final : public IModuleHandleProvider
     {
@@ -127,8 +130,18 @@ namespace sw
         using OnBeforeReloadDelegate = Delegate<void()>;
         using OnAfterReloadDelegate  = Delegate<void( void* pLibraryModule )>;
         /** @brief onAfterReload 안에서 하드웨어 예외가 났을 때 불립니다. 인자는 예외 코드(Windows) · 시그널 번호(리눅스)입니다. */
-        using OnReloadFaultDelegate       = Delegate<void( uint32 faultCode )>;
-        using OnBeforeCommitBatchDelegate = Delegate<void( const vector<string>& listModuleName )>;
+        using OnReloadFaultDelegate = Delegate<void( uint32 faultCode )>;
+        /**
+         * @brief 새로 올린 이미지를 받아들일지 묻습니다. 인자는 새 이미지의 핸들입니다. 옛 이미지가 아직 돌고 있을 때(prepare) 불립니다.
+         * @details false 면 새 이미지를 내리고 옛 이미지를 그대로 둡니다 — 그래프는 막지 않습니다(적용 전 실패). 호스트가 모듈 API 표의 ABI 처럼
+         *          "옛 것을 내린 뒤에야 알던 거절 사유" 를 여기서 미리 봅니다.
+         */
+        using OnValidateImageDelegate = Delegate<bool( void* pLibraryModule )>;
+        /**
+         * @brief 연쇄 교체의 첫 commit 직전에 불립니다. false 면 아무것도 바꾸지 않고 옛 이미지를 모두 둡니다(그래프는 막지 않는다).
+         * @details false 는 "아무것도 내리지 않았다" 는 뜻이어야 합니다 — 호스트가 상태를 찍지 못했을 때(게임 상태 직렬화 실패) 씁니다.
+         */
+        using OnBeforeCommitBatchDelegate = Delegate<bool( const vector<string>& listModuleName )>;
         using DrainWorkersDelegate        = Delegate<void()>;
 
         /**
@@ -208,10 +221,12 @@ namespace sw
          *          부르지 않고** 버려야 합니다. 반쯤 만들어진 인스턴스를 부수는 코드도 같은 모듈이기 때문입니다.
          */
         void setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate );
+        /** @brief 새 이미지를 옛 이미지가 내려가기 전에 검사할 콜백을 등록합니다(`OnValidateImageDelegate`). */
+        void setOnValidateImage( string_view moduleName, OnValidateImageDelegate delegate );
 
         /**
          * @brief 연쇄 교체 대상이 모두 prepare 된 뒤, 첫 commit 직전에 한 번 불립니다.
-         * @details 키트 DLL 을 언로드하기 전에 SWGame 을 먼저 내릴 때 씁니다.
+         * @details 키트 DLL 을 언로드하기 전에 SWGame 을 먼저 내릴 때 씁니다. false 를 돌려주면 이번 연쇄를 거두고 옛 이미지를 모두 둡니다.
          */
         void setOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate );
 
@@ -345,21 +360,22 @@ namespace sw
         /// @brief 등록된 모듈입니다(경로 · 핸들 · 의존 · 리로드 예약).
         struct ModuleContext
         {
-            OnBeforeReloadDelegate _onBeforeReload;
-            OnAfterReloadDelegate  _onAfterReload;
-            OnReloadFaultDelegate  _onReloadFault;
-            string                 _moduleName;
-            string                 _originalModulePath;
-            string                 _tempModulePath;
-            vector<string>         _listDependsOn;
-            SonameState            _soname;
-            void*                  _pLibraryModule;
-            uint64                 _loadedSourceMtime;
-            uint64                 _debounceMtime;
-            CpuTimer               _debounceTimer;
-            atomic<bool>           _bPendingReload;
-            atomic<bool>           _bMtimeDebouncing;
-            atomic<bool>           _bForceReload;
+            OnBeforeReloadDelegate  _onBeforeReload;
+            OnAfterReloadDelegate   _onAfterReload;
+            OnReloadFaultDelegate   _onReloadFault;
+            OnValidateImageDelegate _onValidateImage;
+            string                  _moduleName;
+            string                  _originalModulePath;
+            string                  _tempModulePath;
+            vector<string>          _listDependsOn;
+            SonameState             _soname;
+            void*                   _pLibraryModule;
+            uint64                  _loadedSourceMtime;
+            uint64                  _debounceMtime;
+            CpuTimer                _debounceTimer;
+            atomic<bool>            _bPendingReload;
+            atomic<bool>            _bMtimeDebouncing;
+            atomic<bool>            _bForceReload;
 
             /** @brief 원자 플래그를 끈 기본값으로 만듭니다. */
             ModuleContext() noexcept;
