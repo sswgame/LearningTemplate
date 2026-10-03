@@ -158,12 +158,14 @@ namespace sw
         /** @brief 컴퓨트 루트 상수 UBO 를 확보합니다. */
         bool ensureComputeRootConstantUbo();
         /** @brief MRT 합성 FBO 를 확보합니다. */
-        uint32 ensureCompositeFboMrt( const RHITextureHandle* pColor, uint32 colorCount, RHITextureHandle depth );
+        uint32 ensureCompositeFboMrt( const RHITextureHandle* pColor, const uint16* pColorSlice, uint32 colorCount, RHITextureHandle depth, uint32 depthSlice );
         /** @brief 불투명 핸들을 GLuint 이름으로 풉니다. */
         uint32 resolveGlBuffer( RHIBufferHandle handle ) const;
         /** @brief GL 버퍼 이름을 테이블에 넣고 핸들을 반환합니다. */
         RHIBufferHandle storeGlBuffer( uint32 glName );
         struct OpenGLTextureRecord;
+        /** @brief 텍스처(의 면 `slice`)를 지금 바인딩된 FBO 의 `attachment` 에 붙입니다. 면이 여럿인 텍스처는 층(layer)으로 붙인다. */
+        static void attachTextureToFramebuffer( uint32 attachment, const OpenGLTextureRecord& record, uint32 slice );
         /** @brief 불투명 텍스처 핸들을 OpenGLTextureRecord 로 풉니다. */
         OpenGLTextureRecord*       resolveTexture( RHITextureHandle handle );
         const OpenGLTextureRecord* resolveTexture( RHITextureHandle handle ) const;
@@ -189,16 +191,29 @@ namespace sw
         /// @brief GLuint 텍스처와 타깃 · 포맷입니다.
         struct OpenGLTextureRecord
         {
-            uint32    _texture{ 0 };
-            uint32    _fbo{ 0 };
-            uint32    _width{ 0 };
-            uint32    _height{ 0 };
-            uint32    _mipLevels{ 1 };
-            RHIFormat _format = RHIFormat::R8G8B8A8_UNORM;
-            uint32    _internalFormat{ 0 }; ///< GL 내부 포맷. glBindImageTexture 가 쓴다
-            uint8     _bDepthStencil : 1;
-            uint8     _bUAV          : 1;
-            uint8     _reserved      : 6;
+            uint32              _texture{ 0 };
+            uint32              _fbo{ 0 };
+            uint32              _width{ 0 };
+            uint32              _height{ 0 };
+            uint32              _mipLevels{ 1 };
+            RHIFormat           _format = RHIFormat::R8G8B8A8_UNORM;
+            uint32              _internalFormat{ 0 }; ///< GL 내부 포맷. glBindImageTexture 가 쓴다
+            uint32              _target{ 0x0DE1 };    ///< GL_TEXTURE_2D · GL_TEXTURE_2D_ARRAY · GL_TEXTURE_CUBE_MAP
+            uint32              _arraySize{ 1 };      ///< 면 수(배열 원소 · 큐브 면)
+            RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
+            uint8               _bDepthStencil : 1;
+            uint8               _bUAV          : 1;
+            uint8               _reserved      : 6;
+            /// @brief 면이 여럿일 때 면 하나를 첨부한 FBO 들입니다(0 번 = `_fbo`). 면이 하나면 비어 있다.
+            vector<uint32> _listSliceFbo;
+
+            /** @brief 면 `slice` 를 첨부한 단일 타깃 FBO 입니다. 없으면 0. */
+            uint32 findSliceFbo( uint32 slice ) const
+            {
+                if ( _listSliceFbo.empty() )
+                    return slice == 0 ? _fbo : 0u;
+                return slice < _listSliceFbo.size() ? _listSliceFbo[slice] : 0u;
+            }
         };
 
         /// @brief MRT FBO 캐시 키입니다.
@@ -207,14 +222,16 @@ namespace sw
             RHITextureHandle _arrColor[kMaxColorAttachments]{};
             uint32           _colorCount{ 0 };
             RHITextureHandle _depth{ 0 };
+            uint16           _arrColorSlice[kMaxColorAttachments]{}; ///< 첨부마다 붙인 면
+            uint16           _depthSlice{ 0 };
             /** @brief 키가 같으면 true 를 반환합니다. */
             bool operator==( const CompositeFboKey& other ) const
             {
-                if ( _colorCount != other._colorCount || _depth != other._depth )
+                if ( _colorCount != other._colorCount || _depth != other._depth || _depthSlice != other._depthSlice )
                     return false;
                 for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
                 {
-                    if ( _arrColor[colorIndex] != other._arrColor[colorIndex] )
+                    if ( _arrColor[colorIndex] != other._arrColor[colorIndex] || _arrColorSlice[colorIndex] != other._arrColorSlice[colorIndex] )
                         return false;
                 }
                 return true;
@@ -229,9 +246,11 @@ namespace sw
             {
                 size_t hash = static_cast<size_t>( key._depth ) * 1315423911u;
                 hash ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
+                hash ^= static_cast<size_t>( key._depthSlice ) * 2654435761u;
                 for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
                 {
                     hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
+                    hash ^= static_cast<size_t>( key._arrColorSlice[colorIndex] ) * 2246822519u;
                 }
                 return hash;
             }

@@ -304,6 +304,10 @@ namespace sw
         ID3D12Resource* resolveBuffer( RHIBufferHandle handle ) const;
         /** @brief 불투명 텍스처 핸들을 GPU 리소스로 풉니다. */
         ID3D12Resource* resolveTexture( RHITextureHandle handle ) const;
+        /** @brief RTV 힙의 `rtvIndex` 번 디스크립터입니다(스왑체인 버퍼 수를 포함한 절대 번호). */
+        D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenRtvHandle( uint32 rtvIndex ) const;
+        /** @brief DSV 힙의 `dsvIndex` 번 디스크립터입니다. */
+        D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenDsvHandle( uint32 dsvIndex ) const;
         /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. */
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D12Resource> buffer );
         /**
@@ -341,8 +345,8 @@ namespace sw
          */
         void flushDebugMessages( const utf8* pStage );
 
-        static constexpr uint32 kMaxOffscreenRtvs = 32;
-        static constexpr uint32 kMaxOffscreenDsvs = 16;
+        static constexpr uint32 kMaxOffscreenRtvs = 128; ///< 면마다 하나 — 큐브 하나가 여섯을 쓴다
+        static constexpr uint32 kMaxOffscreenDsvs = 64;
         // 루트 시그니처. 언리얼 FD3D12RootSignature 와 같은 배치다: b# 는 루트 CBV(GPU 주소), t#/u# 슬롯은 **디스크립터 테이블**
         // (오프라인 힙의 뷰를 드로우 직전 온라인 블록에 복사해 건다. FD3D12DescriptorCache), 텍스처 배열(t0 space1)은 힙 시작을
         // 가리키는 테이블. 예산은 shaderslot::dx12 (25/64 dword)이고, 슬롯을 늘려도 테이블 안이라 예산이 안 는다.
@@ -371,9 +375,14 @@ namespace sw
             DXGI_FORMAT                 _format = DXGI_FORMAT_UNKNOWN;
             uint32                      _width{ 0 };
             uint32                      _height{ 0 };
-            uint8                       _bHasRtv  : 1;
-            uint8                       _bHasDsv  : 1;
-            uint8                       _reserved : 6;
+            /// @brief 면 1.. 의 RTV · DSV 힙 인덱스입니다(면 0 은 `_rtvIndex` · `_dsvIndex`). 면이 하나면 비어 있다.
+            vector<uint32>      _listExtraRtvIndex;
+            vector<uint32>      _listExtraDsvIndex;
+            uint32              _arraySize{ 1 };
+            RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
+            uint8               _bHasRtv  : 1;
+            uint8               _bHasDsv  : 1;
+            uint8               _reserved : 6;
         };
 
         /// @brief 네이티브 PSO 와 루트 시그니처입니다.

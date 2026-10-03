@@ -117,7 +117,7 @@ namespace sw
          *          빠뜨린 새 배리어는 검증 계층이 잡아 주지만, **잡히는 곳이 배리어를 건 자리가 아니라
          *          그 뒤의 전이**라 읽기 나쁩니다. 고정값은 한 곳에 둡니다.
          */
-        VkImageMemoryBarrier makeWholeImageBarrier( VkImage image, uint32 mipLevels )
+        VkImageMemoryBarrier makeWholeImageBarrier( VkImage image, uint32 mipLevels, uint32 arrayLayers )
         {
             VkImageMemoryBarrier barrier{};
             barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -128,7 +128,7 @@ namespace sw
             barrier.subresourceRange.baseMipLevel   = 0;
             barrier.subresourceRange.levelCount     = mipLevels;
             barrier.subresourceRange.baseArrayLayer = 0;
-            barrier.subresourceRange.layerCount     = 1;
+            barrier.subresourceRange.layerCount     = arrayLayers;
             return barrier;
         }
     } // namespace
@@ -462,6 +462,13 @@ namespace sw
     {
         if ( _pDevice->_device == nullptr || desc._width == 0 || desc._height == 0 )
             return 0;
+        if ( isRhiTextureShapeValid( desc ) == false )
+        {
+            SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
+                          desc._arraySize, desc._width, desc._height );
+            return 0;
+        }
+        const bool bSliced = desc._dimension != RHITextureDimension::Texture2D;
 
         VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         if ( desc._bIsRenderTarget )
@@ -490,7 +497,8 @@ namespace sw
         imageInfo.extent.height = desc._height;
         imageInfo.extent.depth  = 1;
         imageInfo.mipLevels     = desc._mipLevels > 0 ? desc._mipLevels : 1;
-        imageInfo.arrayLayers   = 1;
+        imageInfo.arrayLayers   = desc._arraySize;
+        imageInfo.flags         = ( desc._dimension == RHITextureDimension::TextureCube ) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0u;
         imageInfo.format        = format;
         imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -504,6 +512,8 @@ namespace sw
         record._format        = static_cast<uint32>( format );
         record._rhiFormat     = static_cast<uint32>( desc._format );
         record._mipLevels     = imageInfo.mipLevels;
+        record._arrayLayers   = desc._arraySize;
+        record._dimension     = desc._dimension;
         record._layout        = static_cast<uint32>( VK_IMAGE_LAYOUT_UNDEFINED );
         record._bRenderTarget = desc._bIsRenderTarget ? 1 : 0;
         record._bDepthStencil = desc._bIsDepthStencil ? 1 : 0;
@@ -547,13 +557,15 @@ namespace sw
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         viewInfo.image                           = record._image;
-        viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.viewType                        = ( desc._dimension == RHITextureDimension::TextureCube )    ? VK_IMAGE_VIEW_TYPE_CUBE
+                                                 : ( desc._dimension == RHITextureDimension::Texture2DArray ) ? VK_IMAGE_VIEW_TYPE_2D_ARRAY
+                                                                                                              : VK_IMAGE_VIEW_TYPE_2D;
         viewInfo.format                          = format;
         viewInfo.subresourceRange.aspectMask     = aspect;
         viewInfo.subresourceRange.baseMipLevel   = 0;
         viewInfo.subresourceRange.levelCount     = imageInfo.mipLevels;
         viewInfo.subresourceRange.baseArrayLayer = 0;
-        viewInfo.subresourceRange.layerCount     = 1;
+        viewInfo.subresourceRange.layerCount     = desc._arraySize;
 
         if ( vkCreateImageView( _pDevice->_device, &viewInfo, nullptr, &record._imageView ) != VK_SUCCESS )
         {
@@ -575,6 +587,27 @@ namespace sw
             }
         }
 
+        // 면이 여럿이면 렌더 패스 첨부는 면 하나짜리 2D 뷰여야 한다(배열 · 큐브 뷰는 첨부가 될 수 없다).
+        if ( bSliced && ( desc._bIsRenderTarget || desc._bIsDepthStencil ) )
+        {
+            for ( uint32 slice = 0; slice < desc._arraySize; ++slice )
+            {
+                VkImageViewCreateInfo sliceInfo           = viewInfo;
+                sliceInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+                sliceInfo.subresourceRange.aspectMask     = aspect;
+                sliceInfo.subresourceRange.levelCount     = 1;
+                sliceInfo.subresourceRange.baseArrayLayer = slice;
+                sliceInfo.subresourceRange.layerCount     = 1;
+                VkImageView sliceView{ VK_NULL_HANDLE };
+                if ( vkCreateImageView( _pDevice->_device, &sliceInfo, nullptr, &sliceView ) != VK_SUCCESS )
+                {
+                    SW_LOG_ERROR( "createTexture2D: slice view %# creation failed", slice );
+                    break;
+                }
+                record._listSliceView.push_back( sliceView );
+            }
+        }
+
         if ( record._bRenderTarget && _pDevice->createOffscreenFramebuffer( record ) == false )
             SW_LOG_WARNING( "createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 
@@ -589,6 +622,11 @@ namespace sw
             return false;
         if ( pRecord->_bDepthStencil != SW_FALSE )
             return false;
+        if ( desc._arraySlice >= pRecord->_arrayLayers )
+        {
+            SW_LOG_ERROR( "uploadTexture2D: slice %# is out of range (%# slices)", desc._arraySlice, pRecord->_arrayLayers );
+            return false;
+        }
 
         RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
         const uint32      mipCount = resolveTextureUploadMips( desc, static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height,
@@ -623,7 +661,7 @@ namespace sw
         const VkCommandBuffer cmd = oneShot.get();
 
         // transitionImageLayout 은 밉 하나만 다루므로 여기서는 전체 밉 체인 배리어를 직접 쓴다.
-        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels );
+        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
 
         barrier.oldLayout     = static_cast<VkImageLayout>( pRecord->_layout );
         barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -640,7 +678,7 @@ namespace sw
             region.bufferImageHeight               = 0;
             region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
             region.imageSubresource.mipLevel       = span._mip;
-            region.imageSubresource.baseArrayLayer = 0;
+            region.imageSubresource.baseArrayLayer = desc._arraySlice;
             region.imageSubresource.layerCount     = 1;
             region.imageExtent                     = { span._width, span._height, 1 };
             vkCmdCopyBufferToImage( cmd, pStaging->_buffer, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
@@ -672,7 +710,7 @@ namespace sw
         return pRecord != nullptr ? static_cast<RHIFormat>( pRecord->_rhiFormat ) : RHIFormat::Unknown;
     }
 
-    bool VulkanRHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
+    bool VulkanRHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
         // **여기의 실패는 모두 소리를 낸다.** 예전에는 네 자리가 말없이 false 를 반환했는데, 리드백은
         // 오프스크린 렌더 문제가 드러나는 통로라 "false 인데 이유가 없다" 가 곧 긴 추적이 된다
@@ -684,10 +722,10 @@ namespace sw
             SW_LOG_ERROR( "readbackTexture2D: texture %# or the device is not usable", texture );
             return false;
         }
-        if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels )
+        if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arrayLayers )
         {
-            SW_LOG_ERROR( "readbackTexture2D: depth-stencil readback is unsupported, or mip %# is out of range (%# mips)",
-                          mip, pRecord->_mipLevels );
+            SW_LOG_ERROR( "readbackTexture2D: depth-stencil readback is unsupported, or mip %# / slice %# is out of range (%# mips, %# slices)",
+                          mip, arraySlice, pRecord->_mipLevels, pRecord->_arrayLayers );
             return false;
         }
         if ( computeRhiTextureMipLayout( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, mip, outLayout ) == false )
@@ -716,7 +754,7 @@ namespace sw
         }
         const VkCommandBuffer cmd = oneShot.get();
 
-        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels );
+        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
         barrier.oldLayout            = static_cast<VkImageLayout>( pRecord->_layout );
         barrier.newLayout            = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         barrier.srcAccessMask        = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
@@ -729,7 +767,7 @@ namespace sw
         region.bufferImageHeight               = 0;
         region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
         region.imageSubresource.mipLevel       = mip;
-        region.imageSubresource.baseArrayLayer = 0;
+        region.imageSubresource.baseArrayLayer = arraySlice;
         region.imageSubresource.layerCount     = 1;
         region.imageExtent                     = { outLayout._width, outLayout._height, 1 };
         vkCmdCopyImageToBuffer( cmd, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, pStaging->_buffer, 1, &region );
@@ -785,13 +823,16 @@ namespace sw
         VulkanRHIDevice::VulkanTextureRecord owned;
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
             return;
-        VkDevice       dev        = _pDevice->_device;
-        VkImageView    view       = owned._imageView;
-        VkImageView    sampleView = owned._sampleView;
-        VkImage        image      = owned._image;
-        VkDeviceMemory mem        = owned._memory;
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem]()
+        VkDevice            dev        = _pDevice->_device;
+        VkImageView         view       = owned._imageView;
+        VkImageView         sampleView = owned._sampleView;
+        VkImage             image      = owned._image;
+        VkDeviceMemory      mem        = owned._memory;
+        vector<VkImageView> listSliceView{ owned._listSliceView };
+        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView]()
         {
+            for ( VkImageView sliceView : listSliceView )
+                vkDestroyImageView( dev, sliceView, nullptr );
             if ( view != VK_NULL_HANDLE )
                 vkDestroyImageView( dev, view, nullptr );
             if ( sampleView != VK_NULL_HANDLE )

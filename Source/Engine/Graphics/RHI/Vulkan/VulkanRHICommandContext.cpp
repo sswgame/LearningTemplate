@@ -341,9 +341,11 @@ namespace sw
             {
                 key._arrColor[colorIndex]       = colorHandles[colorIndex];
                 key._arrColorLoadOp[colorIndex] = static_cast<uint8>( beginInfo._arrLoadOp[colorIndex] );
+                key._arrColorSlice[colorIndex]  = beginInfo._arrColorTargetSlice[colorIndex];
             }
             key._depth       = beginInfo._depthTarget;
             key._depthLoadOp = static_cast<uint8>( beginInfo._depthLoadOp );
+            key._depthSlice  = beginInfo._depthTargetSlice;
 
             if ( _pState->_bRenderPassActive == SW_TRUE )
             {
@@ -395,13 +397,13 @@ namespace sw
             if ( colorTarget != 0 )
             {
                 VulkanRHIDevice::VulkanTextureRecord* pTex = _pDevice->resolveTexture( colorTarget );
-                if ( pTex == nullptr || pTex->_framebuffer == VK_NULL_HANDLE || pTex->_renderPass == VK_NULL_HANDLE )
+                if ( pTex == nullptr || pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] ) == VK_NULL_HANDLE || pTex->_renderPass == VK_NULL_HANDLE )
                     return;
 
                 constexpr uint32 aspect = VK_IMAGE_ASPECT_COLOR_BIT;
                 _pDevice->transitionTextureLayout( cmd, *pTex, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, aspect );
                 renderPass                   = pTex->_renderPass;
-                framebuffer                  = pTex->_framebuffer;
+                framebuffer                  = pTex->findSliceFramebuffer( beginInfo._arrColorTargetSlice[0] );
                 extent                       = { pTex->_width, pTex->_height };
                 _pState->_bActiveSwapchainRT = SW_FALSE;
             }

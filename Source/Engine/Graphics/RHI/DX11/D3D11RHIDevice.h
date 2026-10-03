@@ -203,16 +203,40 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D11RenderTargetView>   _rtv;
             Microsoft::WRL::ComPtr<ID3D11DepthStencilView>   _dsv;
             Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> _srv;
-            uint32                                           _width;
-            uint32                                           _height;
-            uint8                                            _bDepth   : 1;
-            uint8                                            _reserved : 7;
+            /// @brief 면(배열 원소 · 큐브 면)마다의 RTV · DSV 입니다. 면이 하나면 비어 있고 `_rtv` · `_dsv` 를 씁니다(`_rtv` · `_dsv` 는 늘 면 0).
+            vector<Microsoft::WRL::ComPtr<ID3D11RenderTargetView>> _listSliceRtv;
+            vector<Microsoft::WRL::ComPtr<ID3D11DepthStencilView>> _listSliceDsv;
+            uint32                                                 _width;
+            uint32                                                 _height;
+            uint32                                                 _arraySize; ///< 면 수
+            RHITextureDimension                                    _dimension;
+            uint8                                                  _bDepth   : 1;
+            uint8                                                  _reserved : 7;
             /** @brief 빈 텍스처 레코드로 만듭니다. */
             TextureRecord()
-                : _width{ 0 }
+                : _listSliceRtv{}
+                , _listSliceDsv{}
+                , _width{ 0 }
                 , _height{ 0 }
+                , _arraySize{ 1 }
+                , _dimension{ RHITextureDimension::Texture2D }
                 , _bDepth{ SW_FALSE }
                 , _reserved{ 0 } {}
+
+            /** @brief 면 `slice` 의 RTV 입니다. 없으면 nullptr. */
+            ID3D11RenderTargetView* findSliceRtv( uint32 slice ) const
+            {
+                if ( _listSliceRtv.empty() )
+                    return slice == 0 ? _rtv.Get() : nullptr;
+                return slice < _listSliceRtv.size() ? _listSliceRtv[slice].Get() : nullptr;
+            }
+            /** @brief 면 `slice` 의 DSV 입니다. 없으면 nullptr. */
+            ID3D11DepthStencilView* findSliceDsv( uint32 slice ) const
+            {
+                if ( _listSliceDsv.empty() )
+                    return slice == 0 ? _dsv.Get() : nullptr;
+                return slice < _listSliceDsv.size() ? _listSliceDsv[slice].Get() : nullptr;
+            }
         };
 
         // ------------------------------------------------------------------------------

@@ -330,9 +330,16 @@ namespace sw
         std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
-        RHITextureMipSpan         arrMip[constant::kMaxTextureMipCount]{};
-        const uint32              mipCount = resolveTextureUploadMips( desc, fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ),
-                                                                       resourceDesc.Height, resourceDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
+        if ( desc._arraySlice >= resourceDesc.DepthOrArraySize )
+        {
+            SW_LOG_ERROR( "uploadTexture2D: slice %# is out of range (%# slices)", desc._arraySlice, static_cast<uint32>( resourceDesc.DepthOrArraySize ) );
+            return false;
+        }
+        // 서브리소스 번호 = 밉 + 면 × 밉 수(D3D12CalcSubresource 와 같은 순서).
+        const UINT        firstSubresource = desc._arraySlice * resourceDesc.MipLevels;
+        RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
+        const uint32      mipCount = resolveTextureUploadMips( desc, fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ),
+                                                               resourceDesc.Height, resourceDesc.MipLevels, arrMip, constant::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
             SW_LOG_ERROR( "uploadTexture2D: unsupported format or not enough data (%# bytes for %#×%#, %# mips)",
@@ -345,7 +352,7 @@ namespace sw
         UINT                               arrRowCount[constant::kMaxTextureMipCount]{};
         UINT64                             arrRowSize[constant::kMaxTextureMipCount]{};
         UINT64                             totalBytes{ 0 };
-        _pDevice->_device->GetCopyableFootprints( &resourceDesc, 0, mipCount, 0, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, 0, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
         uint32 slotIndex{ 0 };
         uint64 stagingOffset{ 0 };
@@ -353,7 +360,7 @@ namespace sw
         if ( acquireUploadStaging( totalBytes, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, slotIndex, stagingOffset, pMapped ) == false )
             return false;
         // 스테이징 안의 실제 위치로 풋프린트를 다시 받는다(BaseOffset).
-        _pDevice->_device->GetCopyableFootprints( &resourceDesc, 0, mipCount, stagingOffset, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, firstSubresource, mipCount, stagingOffset, arrFootprint, arrRowCount, arrRowSize, &totalBytes );
 
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
@@ -394,7 +401,7 @@ namespace sw
             D3D12_TEXTURE_COPY_LOCATION dst{};
             dst.pResource        = pTexture;
             dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-            dst.SubresourceIndex = arrMip[mip]._mip;
+            dst.SubresourceIndex = firstSubresource + arrMip[mip]._mip;
 
             D3D12_TEXTURE_COPY_LOCATION src{};
             src.pResource       = slot._uploadHeap.Get();
@@ -429,7 +436,7 @@ namespace sw
         return fromDxgiFormat( pTexture->GetDesc().Format );
     }
 
-    bool D3D12RHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
+    bool D3D12RHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
         ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
         if ( pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
@@ -438,16 +445,17 @@ namespace sw
         std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
 
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
-        if ( mip >= resourceDesc.MipLevels )
+        if ( mip >= resourceDesc.MipLevels || arraySlice >= resourceDesc.DepthOrArraySize )
             return false;
         if ( computeRhiTextureMipLayout( fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip, outLayout ) == false )
             return false;
 
+        const UINT                         subresource = mip + arraySlice * resourceDesc.MipLevels;
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
         UINT                               rowCount{ 0 };
         UINT64                             rowSize{ 0 };
         UINT64                             totalBytes{ 0 };
-        _pDevice->_device->GetCopyableFootprints( &resourceDesc, mip, 1, 0, &footprint, &rowCount, &rowSize, &totalBytes );
+        _pDevice->_device->GetCopyableFootprints( &resourceDesc, subresource, 1, 0, &footprint, &rowCount, &rowSize, &totalBytes );
 
         const D3D12_HEAP_PROPERTIES            readbackHeap = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
         const D3D12_RESOURCE_DESC              bufferDesc   = D3D12RHIResourcePreset::bufferDesc( totalBytes );
@@ -483,7 +491,7 @@ namespace sw
         D3D12_TEXTURE_COPY_LOCATION src{};
         src.pResource        = pTexture;
         src.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        src.SubresourceIndex = mip;
+        src.SubresourceIndex = subresource;
         D3D12_TEXTURE_COPY_LOCATION dst{};
         dst.pResource       = readback.Get();
         dst.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
@@ -591,6 +599,12 @@ namespace sw
 
     RHITextureHandle D3D12RHIResource::createTexture2D( const RHITextureDesc& desc )
     {
+        if ( isRhiTextureShapeValid( desc ) == false )
+        {
+            SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
+                          desc._arraySize, desc._width, desc._height );
+            return 0;
+        }
         D3D12_HEAP_PROPERTIES heapProps{};
         heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 
@@ -604,7 +618,7 @@ namespace sw
         resourceDesc.Alignment          = 0;
         resourceDesc.Width              = desc._width;
         resourceDesc.Height             = desc._height;
-        resourceDesc.DepthOrArraySize   = 1;
+        resourceDesc.DepthOrArraySize   = static_cast<UINT16>( desc._arraySize );
         resourceDesc.MipLevels          = static_cast<UINT16>( desc._mipLevels );
         resourceDesc.Format             = typelessFmt;
         resourceDesc.SampleDesc.Count   = 1;
@@ -648,13 +662,16 @@ namespace sw
         const RHITextureHandle                 handle  = _pDevice->storeTexture( texture );
         ID3D12Resource*                        pNative = _pDevice->resolveTexture( handle );
         D3D12RHIDevice::OffscreenTextureRecord record{};
-        record._state    = D3D12_RESOURCE_STATE_COMMON;
-        record._format   = bDepth ? dsvFmt : colorFmt;
-        record._width    = desc._width;
-        record._height   = desc._height;
-        record._bHasRtv  = SW_FALSE;
-        record._bHasDsv  = SW_FALSE;
-        record._reserved = 0;
+        record._state      = D3D12_RESOURCE_STATE_COMMON;
+        record._format     = bDepth ? dsvFmt : colorFmt;
+        record._width      = desc._width;
+        record._height     = desc._height;
+        record._arraySize  = desc._arraySize;
+        record._dimension  = desc._dimension;
+        record._bHasRtv    = SW_FALSE;
+        record._bHasDsv    = SW_FALSE;
+        record._reserved   = 0;
+        const bool bSliced = desc._dimension != RHITextureDimension::Texture2D;
 
         _pDevice->assertRegistryMutableNow( "createTexture2D" );
 
@@ -663,7 +680,7 @@ namespace sw
         // 생성/파괴가 맵을 리해시하면 읽는 쪽이 무효한 참조를 잡을 수 있었다.
         std::scoped_lock<mutex> offscreenLock{ _pDevice->_resourceStateMutex };
 
-        if ( pNative != nullptr && desc._bIsRenderTarget && _pDevice->_rtvHeap != nullptr )
+        for ( uint32 slice = 0; pNative != nullptr && desc._bIsRenderTarget && _pDevice->_rtvHeap != nullptr && slice < desc._arraySize; ++slice )
         {
             uint32 rtvSlot{ 0 };
             if ( _pDevice->_listFreeOffscreenRtvIndex.empty() == false )
@@ -681,22 +698,38 @@ namespace sw
                 SW_LOG_ERROR( "오프스크린 RTV 디스크립터 고갈(최대 %#) — 이 텍스처는 렌더타깃으로 쓸 수 없습니다.",
                               static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenRtvs ) );
             }
-            if ( rtvSlot < D3D12RHIDevice::kMaxOffscreenRtvs )
+            if ( rtvSlot >= D3D12RHIDevice::kMaxOffscreenRtvs )
+                break;
+            const uint32                  rtvIndex  = _pDevice->_swapChain.getBufferCount() + rtvSlot;
+            D3D12_CPU_DESCRIPTOR_HANDLE   rtvHandle = _pDevice->getOffscreenRtvHandle( rtvIndex );
+            D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+            rtvDesc.Format = colorFmt;
+            if ( bSliced )
             {
-                record._rtvIndex  = _pDevice->_swapChain.getBufferCount() + rtvSlot;
-                record._rtvHandle = _pDevice->_rtvHeap->GetCPUDescriptorHandleForHeapStart();
-                record._rtvHandle.ptr += static_cast<SIZE_T>( record._rtvIndex ) * _pDevice->_rtvDescriptorSize;
-                D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
-                rtvDesc.Format               = colorFmt;
+                rtvDesc.ViewDimension                  = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+                rtvDesc.Texture2DArray.MipSlice        = 0;
+                rtvDesc.Texture2DArray.FirstArraySlice = slice;
+                rtvDesc.Texture2DArray.ArraySize       = 1;
+                rtvDesc.Texture2DArray.PlaneSlice      = 0;
+            }
+            else
+            {
                 rtvDesc.ViewDimension        = D3D12_RTV_DIMENSION_TEXTURE2D;
                 rtvDesc.Texture2D.MipSlice   = 0;
                 rtvDesc.Texture2D.PlaneSlice = 0;
-                _pDevice->_device->CreateRenderTargetView( pNative, &rtvDesc, record._rtvHandle );
-                record._bHasRtv = SW_TRUE;
             }
+            _pDevice->_device->CreateRenderTargetView( pNative, &rtvDesc, rtvHandle );
+            if ( slice == 0 )
+            {
+                record._rtvIndex  = rtvIndex;
+                record._rtvHandle = rtvHandle;
+                record._bHasRtv   = SW_TRUE;
+            }
+            else
+                record._listExtraRtvIndex.push_back( rtvIndex );
         }
 
-        if ( pNative != nullptr && bDepth && _pDevice->_dsvHeap != nullptr )
+        for ( uint32 slice = 0; pNative != nullptr && bDepth && _pDevice->_dsvHeap != nullptr && slice < desc._arraySize; ++slice )
         {
             uint32 dsvSlot{ 0 };
             if ( _pDevice->_listFreeOffscreenDsvIndex.empty() == false )
@@ -712,19 +745,33 @@ namespace sw
                 SW_LOG_ERROR( "오프스크린 DSV 디스크립터 고갈(최대 %#) — 이 텍스처는 뎁스로 쓸 수 없습니다.",
                               static_cast<uint32>( D3D12RHIDevice::kMaxOffscreenDsvs ) );
             }
-            if ( dsvSlot < D3D12RHIDevice::kMaxOffscreenDsvs )
+            if ( dsvSlot >= D3D12RHIDevice::kMaxOffscreenDsvs )
+                break;
+            const D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = _pDevice->getOffscreenDsvHandle( dsvSlot );
+            D3D12_DEPTH_STENCIL_VIEW_DESC     dsvDesc{};
+            dsvDesc.Format = dsvFmt;
+            dsvDesc.Flags  = D3D12_DSV_FLAG_NONE;
+            if ( bSliced )
+            {
+                dsvDesc.ViewDimension                  = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+                dsvDesc.Texture2DArray.MipSlice        = 0;
+                dsvDesc.Texture2DArray.FirstArraySlice = slice;
+                dsvDesc.Texture2DArray.ArraySize       = 1;
+            }
+            else
+            {
+                dsvDesc.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
+                dsvDesc.Texture2D.MipSlice = 0;
+            }
+            _pDevice->_device->CreateDepthStencilView( pNative, &dsvDesc, dsvHandle );
+            if ( slice == 0 )
             {
                 record._dsvIndex  = dsvSlot;
-                record._dsvHandle = _pDevice->_dsvHeap->GetCPUDescriptorHandleForHeapStart();
-                record._dsvHandle.ptr += static_cast<SIZE_T>( record._dsvIndex ) * _pDevice->_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
-                D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
-                dsvDesc.Format             = dsvFmt;
-                dsvDesc.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
-                dsvDesc.Flags              = D3D12_DSV_FLAG_NONE;
-                dsvDesc.Texture2D.MipSlice = 0;
-                _pDevice->_device->CreateDepthStencilView( pNative, &dsvDesc, record._dsvHandle );
-                record._bHasDsv = SW_TRUE;
+                record._dsvHandle = dsvHandle;
+                record._bHasDsv   = SW_TRUE;
             }
+            else
+                record._listExtraDsvIndex.push_back( dsvSlot );
         }
 
         _pDevice->_mapOffscreenTexture[handle] = record;
@@ -747,6 +794,10 @@ namespace sw
                     _pDevice->_listFreeOffscreenRtvIndex.push_back( it->second._rtvIndex - offscreenRtvBase );
                 if ( it->second._bHasDsv != SW_FALSE )
                     _pDevice->_listFreeOffscreenDsvIndex.push_back( it->second._dsvIndex );
+                for ( const uint32 rtvIndex : it->second._listExtraRtvIndex )
+                    _pDevice->_listFreeOffscreenRtvIndex.push_back( rtvIndex - offscreenRtvBase );
+                for ( const uint32 dsvIndex : it->second._listExtraDsvIndex )
+                    _pDevice->_listFreeOffscreenDsvIndex.push_back( dsvIndex );
                 _pDevice->_mapOffscreenTexture.erase( it );
             }
         }

@@ -14,7 +14,7 @@ namespace sw
     class IRHIDevice;
 
     /** @brief 숫자 버전입니다. 도장의 `v<N>` 과 같아야 합니다. 예전에는 도장만 v16 까지 올리고 이 값은 6 에 머물러 둘이 다른 것을 셌습니다. */
-    inline constexpr uint32 kRHIModuleAbiVersion = 19;
+    inline constexpr uint32 kRHIModuleAbiVersion = 20;
     /** @brief 불투명 표면 지문입니다. 커맨드 리스트 · 디바이스 ABI 가 바뀌면 문자열을 바꿉니다.
      *         v3: IRHICommandList/ICommandReplayTarget 에 bindConstantBuffer/bindStructuredBuffer 추가.
      *         v4: drawInstanced (인스턴스드 드로우, GPUScene 인스턴스 버퍼) 추가.
@@ -43,8 +43,10 @@ namespace sw
      *         v17: IRHIDevice::waitIdle 이 비가상이 됐다(렌더 스레드를 먼저 비운 뒤 백엔드의 waitIdleInternal 을 부른다) +
      *              setRenderThreadDrain 과 그 멤버. 비동기 씬 로드 · 핫 리로드가 렌더 스레드 기록 도중에 장치 대기를 끼워 넣던 것.
      *         v18: IRHIDevice::supportsMultiRenderTarget 삭제(가상 함수 하나가 빠져 vtable 이 바뀐다). 네 백엔드가 모두 MRT 를 보장한다.
-     *         v19: IRHICommandList::updateConstantBuffer 추가. 기록 중의 상수버퍼 갱신이 리스트로 간다(DX11 의 기록 슬롯 토큰 삭제). */
-    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v19-2026-10";
+     *         v19: IRHICommandList::updateConstantBuffer 추가. 기록 중의 상수버퍼 갱신이 리스트로 간다(DX11 의 기록 슬롯 토큰 삭제).
+     *         v20: 텍스처 모양(RHITextureDimension · RHITextureDesc::_arraySize) · 렌더 패스의 면 고르기(_arrColorTargetSlice · _depthTargetSlice) ·
+     *              RHITextureUploadDesc::_arraySlice · readbackTexture2D 의 arraySlice 인자. 배열 · 큐브 텍스처. */
+    inline constexpr auto kRHIModuleAbiStamp = "rhi-cl-v20-2026-10";
 
     namespace RHIModuleAbiInternal
     {

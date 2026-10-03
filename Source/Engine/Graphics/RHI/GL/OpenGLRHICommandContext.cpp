@@ -151,16 +151,16 @@ namespace sw
 
         GLuint fbo{ 0 };
         if ( bBindColor && bDepthOnly == false && colorCount > 0 && colorHandles[0] != 0 )
-            fbo = _pDevice->ensureCompositeFboMrt( colorHandles, colorCount, beginInfo._depthTarget );
+            fbo = _pDevice->ensureCompositeFboMrt( colorHandles, beginInfo._arrColorTargetSlice, colorCount, beginInfo._depthTarget, beginInfo._depthTargetSlice );
         else if ( bBindColor == false && bHasDepth )
-            fbo = _pDevice->ensureCompositeFboMrt( nullptr, 0, beginInfo._depthTarget );
+            fbo = _pDevice->ensureCompositeFboMrt( nullptr, nullptr, 0, beginInfo._depthTarget, beginInfo._depthTargetSlice );
 
         if ( fbo == 0 && colorCount == 1 && colorHandles[0] != 0 )
         {
             const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( colorHandles[0] );
             if ( pRecord != nullptr )
             {
-                fbo        = pRecord->_fbo;
+                fbo        = pRecord->findSliceFbo( beginInfo._arrColorTargetSlice[0] );
                 bDepthOnly = pRecord->_bDepthStencil != SW_FALSE;
                 if ( beginInfo._width == 0 )
                     targetWidth = pRecord->_width;

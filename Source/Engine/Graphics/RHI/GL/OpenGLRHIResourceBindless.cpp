@@ -30,6 +30,14 @@ namespace sw
         const uint32 glName = _pDevice->getGlTextureName( texture );
         if ( glName == 0 )
             return kInvalidDescriptorIndex;
+        // 셰이더의 텍스처 유닛은 sampler2D 로 선언돼 있다 — 배열 · 큐브는 걸 수 없다(RHITextureDimension 참고).
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord != nullptr && pRecord->_dimension != RHITextureDimension::Texture2D )
+        {
+            SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture units yet", texture,
+                          static_cast<uint32>( pRecord->_dimension ) );
+            return kInvalidDescriptorIndex;
+        }
 
         return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree,
                                       OpenGLRHIDevice::BindlessTextureRecord{ texture } );

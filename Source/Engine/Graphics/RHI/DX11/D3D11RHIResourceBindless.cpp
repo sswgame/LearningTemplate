@@ -29,6 +29,13 @@ namespace sw
         D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_srv == nullptr )
             return kInvalidDescriptorIndex;
+        // 셰이더의 텍스처 슬롯은 Texture2D 로 선언돼 있다 — 배열 · 큐브 뷰를 걸면 셰이더가 읽지 못한다(RHITextureDimension 참고).
+        if ( pRecord->_dimension != RHITextureDimension::Texture2D )
+        {
+            SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to shader texture slots yet", texture,
+                          static_cast<uint32>( pRecord->_dimension ) );
+            return kInvalidDescriptorIndex;
+        }
 
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         return allocateFreeListIndex( _pDevice->_listRegisteredTexture, _pDevice->_listTextureFree, texture );

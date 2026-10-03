@@ -148,12 +148,13 @@ namespace sw
         virtual bool uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) = 0;
 
         /**
-         * @brief 2D 텍스처의 밉 하나를 CPU 로 읽어 옵니다. 행은 빈틈없이(업로드와 같은 배치, BC 는 블록 행) 채웁니다.
+         * @brief 텍스처의 면(`arraySlice` — 배열 원소 · 큐브 면, 2D 는 0) 하나의 밉 하나를 CPU 로 읽어 옵니다. 행은 빈틈없이(업로드와 같은 배치,
+         *        BC 는 블록 행) 채웁니다.
          * @details GPU 를 기다리는 **동기** 경로입니다. 테스트 · 도구 · 스크린샷 용도이지 프레임 경로가 아닙니다.
          *          outLayout 에 밉 크기와 행 바이트가 채워집니다(_pData 는 outBytes.data() 를 가리키지 않습니다).
-         * @return 포맷이 대상이 아니거나(깊이) 밉이 범위 밖이면 false.
+         * @return 포맷이 대상이 아니거나(깊이) 밉 · 면이 범위 밖이면 false.
          */
-        virtual bool readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) = 0;
+        virtual bool readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) = 0;
 
         // ------------------------------------------------------------------------------
         // Bindless — 텍스처/버퍼/UAV 등록과 해제

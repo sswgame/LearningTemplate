@@ -103,6 +103,20 @@ namespace sw
         return slot != nullptr ? slot->Get() : nullptr;
     }
 
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenRtvHandle( uint32 rtvIndex ) const
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE handle = _rtvHeap->GetCPUDescriptorHandleForHeapStart();
+        handle.ptr += static_cast<SIZE_T>( rtvIndex ) * _rtvDescriptorSize;
+        return handle;
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::getOffscreenDsvHandle( uint32 dsvIndex ) const
+    {
+        D3D12_CPU_DESCRIPTOR_HANDLE handle = _dsvHeap->GetCPUDescriptorHandleForHeapStart();
+        handle.ptr += static_cast<SIZE_T>( dsvIndex ) * _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
+        return handle;
+    }
+
     D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::offlineDescriptorAt( uint32 index ) const
     {
         D3D12_CPU_DESCRIPTOR_HANDLE handle{};

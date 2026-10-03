@@ -259,6 +259,11 @@ namespace sw
 
         D3D11_TEXTURE2D_DESC texDesc{};
         pRecord->_texture->GetDesc( &texDesc );
+        if ( desc._arraySlice >= texDesc.ArraySize )
+        {
+            SW_LOG_ERROR( "uploadTexture2D: slice %# is out of range (%# slices)", desc._arraySlice, texDesc.ArraySize );
+            return false;
+        }
 
         RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
         const uint32      mipCount = resolveTextureUploadMips( desc, fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height,
@@ -274,8 +279,9 @@ namespace sw
         std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
-            const RHITextureMipSpan& span = arrMip[mip];
-            _pDevice->_deviceContext->UpdateSubresource( pRecord->_texture.Get(), span._mip, nullptr, span._pData, span._rowBytes, span._sizeBytes );
+            const RHITextureMipSpan& span        = arrMip[mip];
+            const UINT               subresource = D3D11CalcSubresource( span._mip, desc._arraySlice, texDesc.MipLevels );
+            _pDevice->_deviceContext->UpdateSubresource( pRecord->_texture.Get(), subresource, nullptr, span._pData, span._rowBytes, span._sizeBytes );
         }
         return true;
     }
@@ -293,7 +299,7 @@ namespace sw
         return fromDxgiFormat( texDesc.Format );
     }
 
-    bool D3D11RHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
+    bool D3D11RHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
         D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_deviceContext == nullptr )
@@ -303,7 +309,7 @@ namespace sw
 
         D3D11_TEXTURE2D_DESC texDesc{};
         pRecord->_texture->GetDesc( &texDesc );
-        if ( mip >= texDesc.MipLevels )
+        if ( mip >= texDesc.MipLevels || arraySlice >= texDesc.ArraySize )
             return false;
         if ( computeRhiTextureMipLayout( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, mip, outLayout ) == false )
             return false;
@@ -323,7 +329,8 @@ namespace sw
             return false;
 
         std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
-        _pDevice->_deviceContext->CopySubresourceRegion( staging.Get(), 0, 0, 0, 0, pRecord->_texture.Get(), mip, nullptr );
+        _pDevice->_deviceContext->CopySubresourceRegion( staging.Get(), 0, 0, 0, 0, pRecord->_texture.Get(), D3D11CalcSubresource( mip, arraySlice, texDesc.MipLevels ),
+                                                         nullptr );
 
         D3D11_MAPPED_SUBRESOURCE mapped{};
         if ( FAILED( _pDevice->_deviceContext->Map( staging.Get(), 0, D3D11_MAP_READ, 0, &mapped ) ) )
@@ -341,14 +348,22 @@ namespace sw
     {
         if ( _pDevice == nullptr || desc._width == 0 || desc._height == 0 )
             return 0;
+        if ( isRhiTextureShapeValid( desc ) == false )
+        {
+            SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
+                          desc._arraySize, desc._width, desc._height );
+            return 0;
+        }
 
-        const bool bDepth = desc._bIsDepthStencil != SW_FALSE;
+        const bool bDepth  = desc._bIsDepthStencil != SW_FALSE;
+        const bool bCube   = desc._dimension == RHITextureDimension::TextureCube;
+        const bool bSliced = desc._dimension != RHITextureDimension::Texture2D;
 
         D3D11_TEXTURE2D_DESC texDesc{};
         texDesc.Width     = desc._width;
         texDesc.Height    = desc._height;
         texDesc.MipLevels = desc._mipLevels;
-        texDesc.ArraySize = 1;
+        texDesc.ArraySize = desc._arraySize;
         // DSV 와 그림자 샘플링용 깊이 SRV 를 둘 다 만들 수 있게 typeless 로 만든다.
         texDesc.Format             = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormat( desc._format );
         texDesc.SampleDesc.Count   = 1;
@@ -369,12 +384,16 @@ namespace sw
 
         if ( texDesc.BindFlags == 0 )
             texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        if ( bCube )
+            texDesc.MiscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
 
         D3D11RHIDevice::TextureRecord record{};
-        record._width    = desc._width;
-        record._height   = desc._height;
-        record._bDepth   = bDepth ? 1 : 0;
-        record._reserved = 0;
+        record._width     = desc._width;
+        record._height    = desc._height;
+        record._arraySize = desc._arraySize;
+        record._dimension = desc._dimension;
+        record._bDepth    = bDepth ? 1 : 0;
+        record._reserved  = 0;
 
         if ( FAILED( _pDevice->_device->CreateTexture2D( &texDesc, nullptr, record._texture.GetAddressOf() ) ) )
         {
@@ -382,39 +401,84 @@ namespace sw
             return 0;
         }
 
+        // 면이 여럿이면 렌더 패스가 면 하나를 타깃으로 고른다 — 면마다 배열 뷰(원소 하나)를 만든다. `_rtv` · `_dsv` 는 면 0 이다.
         if ( desc._bIsRenderTarget && bDepth == false )
         {
-            if ( FAILED( _pDevice->_device->CreateRenderTargetView( record._texture.Get(), nullptr, record._rtv.GetAddressOf() ) ) )
+            for ( uint32 slice = 0; slice < desc._arraySize; ++slice )
             {
-                SW_LOG_ERROR( "Failed to create RTV for Texture2D." );
-                return 0;
+                D3D11_RENDER_TARGET_VIEW_DESC rtvDesc{};
+                rtvDesc.Format                         = toDxgiFormat( desc._format );
+                rtvDesc.ViewDimension                  = bSliced ? D3D11_RTV_DIMENSION_TEXTURE2DARRAY : D3D11_RTV_DIMENSION_TEXTURE2D;
+                rtvDesc.Texture2DArray.MipSlice        = 0;
+                rtvDesc.Texture2DArray.FirstArraySlice = slice;
+                rtvDesc.Texture2DArray.ArraySize       = 1;
+                Microsoft::WRL::ComPtr<ID3D11RenderTargetView> rtv;
+                if ( FAILED( _pDevice->_device->CreateRenderTargetView( record._texture.Get(), &rtvDesc, rtv.GetAddressOf() ) ) )
+                {
+                    SW_LOG_ERROR( "Failed to create RTV for Texture2D (slice %#).", slice );
+                    return 0;
+                }
+                if ( slice == 0 )
+                    record._rtv = rtv;
+                if ( bSliced )
+                    record._listSliceRtv.push_back( std::move( rtv ) );
             }
         }
 
         if ( bDepth )
         {
-            D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
-            dsvDesc.Format             = toDxgiFormat( constant::kDepthStencilFormat );
-            dsvDesc.ViewDimension      = D3D11_DSV_DIMENSION_TEXTURE2D;
-            dsvDesc.Texture2D.MipSlice = 0;
-            if ( FAILED( _pDevice->_device->CreateDepthStencilView( record._texture.Get(), &dsvDesc, record._dsv.GetAddressOf() ) ) )
+            for ( uint32 slice = 0; slice < desc._arraySize; ++slice )
             {
-                SW_LOG_ERROR( "Failed to create DSV for Texture2D." );
-                return 0;
+                D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+                dsvDesc.Format                         = toDxgiFormat( constant::kDepthStencilFormat );
+                dsvDesc.ViewDimension                  = bSliced ? D3D11_DSV_DIMENSION_TEXTURE2DARRAY : D3D11_DSV_DIMENSION_TEXTURE2D;
+                dsvDesc.Texture2DArray.MipSlice        = 0;
+                dsvDesc.Texture2DArray.FirstArraySlice = slice;
+                dsvDesc.Texture2DArray.ArraySize       = 1;
+                Microsoft::WRL::ComPtr<ID3D11DepthStencilView> dsv;
+                if ( FAILED( _pDevice->_device->CreateDepthStencilView( record._texture.Get(), &dsvDesc, dsv.GetAddressOf() ) ) )
+                {
+                    SW_LOG_ERROR( "Failed to create DSV for Texture2D (slice %#).", slice );
+                    return 0;
+                }
+                if ( slice == 0 )
+                    record._dsv = dsv;
+                if ( bSliced )
+                    record._listSliceDsv.push_back( std::move( dsv ) );
             }
         }
 
         if ( desc._bIsShaderResource )
         {
+            // 밉은 텍스처가 가진 전부다(-1). 서술체의 0 은 D3D11 에서 "전체 체인" 이라 숫자로 옮기면 안 된다.
+            constexpr UINT                  kAllMips = static_cast<UINT>( -1 );
             D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-            srvDesc.ViewDimension       = D3D11_SRV_DIMENSION_TEXTURE2D;
-            srvDesc.Texture2D.MipLevels = desc._mipLevels;
-            if ( bDepth )
-                srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-            else
-                srvDesc.Format = toDxgiFormat( desc._format );
-
-            if ( FAILED( _pDevice->_device->CreateShaderResourceView( record._texture.Get(), bDepth ? &srvDesc : nullptr, record._srv.GetAddressOf() ) ) )
+            srvDesc.Format = bDepth ? DXGI_FORMAT_R24_UNORM_X8_TYPELESS : toDxgiFormat( desc._format );
+            switch ( desc._dimension )
+            {
+                case RHITextureDimension::Texture2DArray:
+                {
+                    srvDesc.ViewDimension                  = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+                    srvDesc.Texture2DArray.MipLevels       = kAllMips;
+                    srvDesc.Texture2DArray.FirstArraySlice = 0;
+                    srvDesc.Texture2DArray.ArraySize       = desc._arraySize;
+                    break;
+                }
+                case RHITextureDimension::TextureCube:
+                {
+                    srvDesc.ViewDimension         = D3D11_SRV_DIMENSION_TEXTURECUBE;
+                    srvDesc.TextureCube.MipLevels = kAllMips;
+                    break;
+                }
+                case RHITextureDimension::Texture2D:
+                default:
+                {
+                    srvDesc.ViewDimension       = D3D11_SRV_DIMENSION_TEXTURE2D;
+                    srvDesc.Texture2D.MipLevels = kAllMips;
+                    break;
+                }
+            }
+            if ( FAILED( _pDevice->_device->CreateShaderResourceView( record._texture.Get(), &srvDesc, record._srv.GetAddressOf() ) ) )
             {
                 SW_LOG_ERROR( "Failed to create SRV for Texture2D." );
                 return 0;

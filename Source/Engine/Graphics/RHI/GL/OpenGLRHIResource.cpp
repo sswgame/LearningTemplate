@@ -288,6 +288,11 @@ namespace sw
             return false;
         if ( pRecord->_bDepthStencil != SW_FALSE )
             return false;
+        if ( desc._arraySlice >= pRecord->_arraySize )
+        {
+            SW_LOG_ERROR( "uploadTexture2D: slice %# is out of range (%# slices)", desc._arraySlice, pRecord->_arraySize );
+            return false;
+        }
 
         RHITextureMipSpan arrMip[constant::kMaxTextureMipCount]{};
         const uint32      mipCount = resolveTextureUploadMips( desc, pRecord->_format, pRecord->_width, pRecord->_height,
@@ -305,26 +310,47 @@ namespace sw
         const GLenum        glFormat    = toGlFormat( pRecord->_format );
         const GLenum        glType      = toGlType( pRecord->_format );
 
-        glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
         // 행이 빈틈없이 이어진 데이터라 기본 4바이트 행 정렬을 끈다(R32G32B32 12바이트 행 같은 경우).
         glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
-        for ( uint32 mip = 0; mip < mipCount; ++mip )
+        if ( pRecord->_target == GL_TEXTURE_2D )
         {
-            const RHITextureMipSpan& span = arrMip[mip];
-            if ( bCompressed )
+            glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
+            for ( uint32 mip = 0; mip < mipCount; ++mip )
             {
-                glCompressedTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0,
-                                           static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), glInternal,
-                                           static_cast<GLsizei>( span._sizeBytes ), span._pData );
+                const RHITextureMipSpan& span = arrMip[mip];
+                if ( bCompressed )
+                {
+                    glCompressedTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLsizei>( span._width ),
+                                               static_cast<GLsizei>( span._height ), glInternal, static_cast<GLsizei>( span._sizeBytes ), span._pData );
+                }
+                else
+                {
+                    glTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLsizei>( span._width ),
+                                     static_cast<GLsizei>( span._height ), glFormat, glType, span._pData );
+                }
             }
-            else
+            glBindTexture( GL_TEXTURE_2D, 0 );
+        }
+        else
+        {
+            // 배열 · 큐브는 DSA 의 3D 창(z = 면)으로 올린다. 큐브 맵도 DSA 에서는 면이 z 다.
+            for ( uint32 mip = 0; mip < mipCount; ++mip )
             {
-                glTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( span._mip ), 0, 0,
-                                 static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), glFormat, glType, span._pData );
+                const RHITextureMipSpan& span = arrMip[mip];
+                if ( bCompressed )
+                {
+                    glCompressedTextureSubImage3D( pRecord->_texture, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLint>( desc._arraySlice ),
+                                                   static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), 1, glInternal,
+                                                   static_cast<GLsizei>( span._sizeBytes ), span._pData );
+                }
+                else
+                {
+                    glTextureSubImage3D( pRecord->_texture, static_cast<GLint>( span._mip ), 0, 0, static_cast<GLint>( desc._arraySlice ),
+                                         static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), 1, glFormat, glType, span._pData );
+                }
             }
         }
         glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
-        glBindTexture( GL_TEXTURE_2D, 0 );
         return true;
     }
 
@@ -334,26 +360,45 @@ namespace sw
         return pRecord != nullptr ? pRecord->_format : RHIFormat::Unknown;
     }
 
-    bool OpenGLRHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
+    bool OpenGLRHIResource::readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE )
             return false;
-        if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels )
+        if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arraySize )
             return false;
         if ( computeRhiTextureMipLayout( pRecord->_format, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
             return false;
 
         ScopedOpenGLContext ctxScope( _pDevice );
         outBytes.assign( outLayout._sizeBytes, 0 );
-        glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
         glPixelStorei( GL_PACK_ALIGNMENT, 1 );
-        if ( isRhiFormatBlockCompressed( pRecord->_format ) )
-            glGetCompressedTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), outBytes.data() );
+        if ( pRecord->_target == GL_TEXTURE_2D )
+        {
+            glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
+            if ( isRhiFormatBlockCompressed( pRecord->_format ) )
+                glGetCompressedTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), outBytes.data() );
+            else
+                glGetTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), toGlFormat( pRecord->_format ), toGlType( pRecord->_format ), outBytes.data() );
+            glBindTexture( GL_TEXTURE_2D, 0 );
+        }
         else
-            glGetTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), toGlFormat( pRecord->_format ), toGlType( pRecord->_format ), outBytes.data() );
+        {
+            // 면 하나만 읽는다(z = 면 — 큐브 맵도 DSA 에서는 면이 z 다).
+            const GLsizei bufferBytes = static_cast<GLsizei>( outBytes.size() );
+            if ( isRhiFormatBlockCompressed( pRecord->_format ) )
+            {
+                glGetCompressedTextureSubImage( pRecord->_texture, static_cast<GLint>( mip ), 0, 0, static_cast<GLint>( arraySlice ),
+                                                static_cast<GLsizei>( outLayout._width ), static_cast<GLsizei>( outLayout._height ), 1, bufferBytes, outBytes.data() );
+            }
+            else
+            {
+                glGetTextureSubImage( pRecord->_texture, static_cast<GLint>( mip ), 0, 0, static_cast<GLint>( arraySlice ), static_cast<GLsizei>( outLayout._width ),
+                                      static_cast<GLsizei>( outLayout._height ), 1, toGlFormat( pRecord->_format ), toGlType( pRecord->_format ), bufferBytes,
+                                      outBytes.data() );
+            }
+        }
         glPixelStorei( GL_PACK_ALIGNMENT, 4 );
-        glBindTexture( GL_TEXTURE_2D, 0 );
         return true;
     }
 
@@ -361,20 +406,34 @@ namespace sw
     {
         if ( _pDevice->_bInitialized == SW_FALSE || desc._width == 0 || desc._height == 0 )
             return 0;
+        if ( isRhiTextureShapeValid( desc ) == false )
+        {
+            SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
+                          desc._arraySize, desc._width, desc._height );
+            return 0;
+        }
 
         ScopedOpenGLContext ctxScope( _pDevice );
         const uint32        mipLevels   = desc._mipLevels > 0 ? desc._mipLevels : 1;
         const GLenum        internalFmt = toGlInternalFormat( desc._format );
         const bool          bDepth      = desc._bIsDepthStencil || desc._format == RHIFormat::D24_UNORM_S8_UINT;
+        const GLenum        target      = ( desc._dimension == RHITextureDimension::TextureCube )    ? GL_TEXTURE_CUBE_MAP
+                                        : ( desc._dimension == RHITextureDimension::Texture2DArray ) ? GL_TEXTURE_2D_ARRAY
+                                                                                                     : GL_TEXTURE_2D;
 
         GLuint tex{ 0 };
         glGenTextures( 1, &tex );
-        glBindTexture( GL_TEXTURE_2D, tex );
+        glBindTexture( target, tex );
 
-        if ( glad_glTexStorage2D != nullptr )
+        if ( target == GL_TEXTURE_2D_ARRAY )
         {
-            glTexStorage2D( GL_TEXTURE_2D, static_cast<GLsizei>( mipLevels ), internalFmt,
-                            static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ) );
+            glTexStorage3D( GL_TEXTURE_2D_ARRAY, static_cast<GLsizei>( mipLevels ), internalFmt, static_cast<GLsizei>( desc._width ),
+                            static_cast<GLsizei>( desc._height ), static_cast<GLsizei>( desc._arraySize ) );
+        }
+        else if ( target == GL_TEXTURE_CUBE_MAP || glad_glTexStorage2D != nullptr )
+        {
+            // 큐브 맵의 저장소는 2D 와 같은 호출 하나로 면 여섯이 잡힌다.
+            glTexStorage2D( target, static_cast<GLsizei>( mipLevels ), internalFmt, static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ) );
         }
         else
         {
@@ -385,22 +444,22 @@ namespace sw
 
         if ( bDepth )
         {
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE );
-            glTexParameteri( GL_TEXTURE_2D, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_DEPTH_COMPONENT );
+            glTexParameteri( target, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+            glTexParameteri( target, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+            glTexParameteri( target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+            glTexParameteri( target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+            glTexParameteri( target, GL_TEXTURE_COMPARE_MODE, GL_NONE );
+            glTexParameteri( target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_DEPTH_COMPONENT );
         }
         else
         {
             const GLint minFilter = ( mipLevels > 1 ) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR;
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minFilter );
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-            glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+            glTexParameteri( target, GL_TEXTURE_MIN_FILTER, minFilter );
+            glTexParameteri( target, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+            glTexParameteri( target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+            glTexParameteri( target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
         }
-        glBindTexture( GL_TEXTURE_2D, 0 );
+        glBindTexture( target, 0 );
 
         OpenGLRHIDevice::OpenGLTextureRecord record{};
         record._texture        = tex;
@@ -409,11 +468,16 @@ namespace sw
         record._mipLevels      = mipLevels;
         record._format         = desc._format;
         record._internalFormat = static_cast<uint32>( internalFmt );
+        record._target         = static_cast<uint32>( target );
+        record._arraySize      = desc._arraySize;
+        record._dimension      = desc._dimension;
         record._bDepthStencil  = bDepth ? 1 : 0;
         record._bUAV           = desc._bIsUnorderedAccess ? 1 : 0;
         record._reserved       = 0;
 
-        if ( desc._bIsRenderTarget || bDepth )
+        // 단일 타깃 FBO — 면마다 하나(면이 하나면 `_fbo` 하나).
+        const uint32 fboCount = ( desc._bIsRenderTarget || bDepth ) ? desc._arraySize : 0u;
+        for ( uint32 slice = 0; slice < fboCount; ++slice )
         {
             GLuint fbo{ 0 };
             glGenFramebuffers( 1, &fbo );
@@ -423,22 +487,25 @@ namespace sw
                 const GLenum depthAttachment = ( desc._format == RHIFormat::D24_UNORM_S8_UINT )
                                                  ? GL_DEPTH_STENCIL_ATTACHMENT
                                                  : GL_DEPTH_ATTACHMENT;
-                glFramebufferTexture2D( GL_FRAMEBUFFER, depthAttachment, GL_TEXTURE_2D, tex, 0 );
+                OpenGLRHIDevice::attachTextureToFramebuffer( depthAttachment, record, slice );
                 glDrawBuffer( GL_NONE );
                 glReadBuffer( GL_NONE );
             }
             else
-                glFramebufferTexture2D( GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0 );
+                OpenGLRHIDevice::attachTextureToFramebuffer( GL_COLOR_ATTACHMENT0, record, slice );
             const GLenum status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
             glBindFramebuffer( GL_FRAMEBUFFER, 0 );
             if ( status != GL_FRAMEBUFFER_COMPLETE )
             {
-                SW_LOG_WARNING( "createTexture2D FBO incomplete (status=%#) — texture kept without FBO.",
-                                static_cast<uint32>( status ) );
+                SW_LOG_WARNING( "createTexture2D FBO incomplete (status=%#, slice %#) — texture kept without FBO.",
+                                static_cast<uint32>( status ), slice );
                 glDeleteFramebuffers( 1, &fbo );
+                fbo = 0;
             }
-            else
+            if ( slice == 0 )
                 record._fbo = fbo;
+            if ( desc._dimension != RHITextureDimension::Texture2D )
+                record._listSliceFbo.push_back( fbo );
         }
 
         return _pDevice->_gpuTextures.insert( record );
@@ -473,8 +540,9 @@ namespace sw
                 ++compIt;
         }
 
-        const GLuint fboName = owned._fbo;
-        const GLuint texName = owned._texture;
+        const GLuint   fboName = owned._fbo;
+        const GLuint   texName = owned._texture;
+        vector<uint32> listSliceFbo{ owned._listSliceFbo };
 
         for ( size_t textureIndex = 0; textureIndex < _pDevice->_listRegisteredTexture.size(); ++textureIndex )
         {
@@ -484,8 +552,15 @@ namespace sw
                                   static_cast<uint32>( textureIndex ), OpenGLRHIDevice::BindlessTextureRecord{} );
         }
 
-        auto releaseCb = [fboName, texName]()
+        auto releaseCb = [fboName, texName, listSliceFbo]()
         {
+            // 면 FBO 의 0 번은 `_fbo` 와 같다 — 1 번부터 지운다.
+            for ( size_t slice = 1; slice < listSliceFbo.size(); ++slice )
+            {
+                GLuint name = listSliceFbo[slice];
+                if ( name != 0 )
+                    glDeleteFramebuffers( 1, &name );
+            }
             if ( fboName != 0 )
             {
                 GLuint name = fboName;

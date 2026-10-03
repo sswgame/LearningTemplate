@@ -778,7 +778,14 @@ namespace sw
                 }
                 _pDevice->reportBarrierDuringRecording( "beginRenderPass(color)" );
                 transitionTexture( colorHandle, D3D12_RESOURCE_STATE_RENDER_TARGET );
-                rtv                                     = it->second._rtvHandle;
+                const uint32 slice = beginInfo._arrColorTargetSlice[attachmentIndex];
+                if ( slice >= it->second._arraySize )
+                {
+                    if ( attachmentIndex > 0 )
+                        break;
+                    return;
+                }
+                rtv                                     = ( slice == 0 ) ? it->second._rtvHandle : _pDevice->getOffscreenRtvHandle( it->second._listExtraRtvIndex[slice - 1] );
                 bValid                                  = true;
                 _pState->_arrActiveColorTarget[rtCount] = colorHandle;
             }
@@ -799,12 +806,14 @@ namespace sw
         _pState->_activeDepthTarget = 0;
         if ( bHasDepth )
         {
-            auto depthIt = _pDevice->_mapOffscreenTexture.find( beginInfo._depthTarget );
-            if ( depthIt != _pDevice->_mapOffscreenTexture.end() && depthIt->second._bHasDsv != SW_FALSE )
+            auto         depthIt    = _pDevice->_mapOffscreenTexture.find( beginInfo._depthTarget );
+            const uint32 depthSlice = beginInfo._depthTargetSlice;
+            if ( depthIt != _pDevice->_mapOffscreenTexture.end() && depthIt->second._bHasDsv != SW_FALSE && depthSlice < depthIt->second._arraySize )
             {
                 _pDevice->reportBarrierDuringRecording( "beginRenderPass(depth)" );
                 transitionTexture( beginInfo._depthTarget, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-                dsvHandle                   = depthIt->second._dsvHandle;
+                dsvHandle                   = ( depthSlice == 0 ) ? depthIt->second._dsvHandle
+                                                                  : _pDevice->getOffscreenDsvHandle( depthIt->second._listExtraDsvIndex[depthSlice - 1] );
                 pDsv                        = &dsvHandle;
                 _pState->_activeDepthTarget = beginInfo._depthTarget;
                 if ( beginInfo._depthLoadOp == RHIRenderPassLoadOp::Clear )

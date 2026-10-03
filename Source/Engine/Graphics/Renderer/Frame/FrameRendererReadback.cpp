@@ -35,7 +35,7 @@ namespace sw
                 break;
             }
         }
-        if ( _pDevice->getResource()->readbackTexture2D( texture, 0, outBytes, outLayout ) == false )
+        if ( _pDevice->getResource()->readbackTexture2D( texture, 0, 0, outBytes, outLayout ) == false )
         {
             SW_LOG_ERROR( "readbackTransient: readbackTexture2D 실패 ('%#').", string( attachmentName ).c_str() );
             return false;
@@ -47,7 +47,7 @@ namespace sw
     {
         if ( _pDevice == nullptr || isPresentCaptureEnabled() == false )
             return false;
-        if ( _pDevice->getResource()->readbackTexture2D( _presentCapture, 0, outByte, outLayout ) == false )
+        if ( _pDevice->getResource()->readbackTexture2D( _presentCapture, 0, 0, outByte, outLayout ) == false )
         {
             SW_LOG_ERROR( "readbackPresentCapture: readbackTexture2D 실패." );
             return false;

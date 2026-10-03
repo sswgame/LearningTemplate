@@ -62,6 +62,17 @@ namespace sw
         auto* pResource = _pDevice->resolveTexture( texture );
         if ( pResource == nullptr )
             return kInvalidDescriptorIndex;
+        // 셰이더의 bindless 텍스처 배열은 Texture2D[] 다 — 배열 · 큐브 뷰를 넣으면 셰이더가 읽지 못한다(RHITextureDimension 참고).
+        {
+            std::scoped_lock<mutex> stateLock{ _pDevice->_resourceStateMutex };
+            const auto              it = _pDevice->_mapOffscreenTexture.find( texture );
+            if ( it != _pDevice->_mapOffscreenTexture.end() && it->second._dimension != RHITextureDimension::Texture2D )
+            {
+                SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture table yet",
+                              texture, static_cast<uint32>( it->second._dimension ) );
+                return kInvalidDescriptorIndex;
+            }
+        }
 
         std::unique_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         const RHIDescriptorIndex            index = acquireBindlessIndex( lock );

@@ -33,6 +33,13 @@ namespace sw
         VulkanRHIDevice::VulkanTextureRecord* pResolved = _pDevice->resolveTexture( texture );
         if ( pResolved == nullptr || pResolved->_imageView == VK_NULL_HANDLE )
             return kInvalidDescriptorIndex;
+        // 텍스처 배열 세트(set 1 binding 0)는 sampler2D[] 다 — 배열 · 큐브 뷰는 넣을 수 없다(RHITextureDimension 참고).
+        if ( pResolved->_dimension != RHITextureDimension::Texture2D )
+        {
+            SW_LOG_ERROR( "registerBindlessTexture: texture %# is a %# texture — only Texture2D can be bound to the bindless texture set yet", texture,
+                          static_cast<uint32>( pResolved->_dimension ) );
+            return kInvalidDescriptorIndex;
+        }
 
         // 깊이 텍스처는 DEPTH|STENCIL 두 aspect 뷰로는 샘플 디스크립터를 못 만든다. DEPTH 단일 aspect 뷰
         // (_sampleView) 를 쓰고, 샘플 시점 레이아웃(prepareTextureForShaderRead 가 옮기는

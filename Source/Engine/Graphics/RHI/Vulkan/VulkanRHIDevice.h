@@ -381,22 +381,42 @@ namespace sw
         /// @brief VkImage 와 뷰 · 현재 레이아웃입니다.
         struct VulkanTextureRecord
         {
-            VkImage            _image{ nullptr };
-            VkImageView        _imageView{ nullptr };
-            VkImageView        _sampleView{ nullptr }; ///< 깊이 텍스처 샘플용 DEPTH 단일 aspect 뷰. 컬러는 nullptr(_imageView 를 그대로 쓴다)
-            VkDeviceMemory     _memory{ nullptr };
-            VkFramebuffer      _framebuffer{ nullptr };
-            VkRenderPass       _renderPass{ nullptr };
-            uint32             _format{ 0 };    ///< VkFormat
-            uint32             _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기 계산용 (VkFormat 은 깊이 선택으로 달라질 수 있다)
-            uint32             _layout{ 0 };    ///< VkImageLayout (UNDEFINED=0)
-            uint32             _width{ 0 };
-            uint32             _height{ 0 };
-            uint32             _mipLevels{ 1 };
-            uint8              _bRenderTarget : 1;
-            uint8              _bDepthStencil : 1;
-            uint8              _reserved      : 6;
-            RHIDescriptorIndex _bindlessIndex{ kInvalidDescriptorIndex };
+            VkImage             _image{ nullptr };
+            VkImageView         _imageView{ nullptr };
+            VkImageView         _sampleView{ nullptr }; ///< 깊이 텍스처 샘플용 DEPTH 단일 aspect 뷰. 컬러는 nullptr(_imageView 를 그대로 쓴다)
+            VkDeviceMemory      _memory{ nullptr };
+            VkFramebuffer       _framebuffer{ nullptr };
+            VkRenderPass        _renderPass{ nullptr };
+            uint32              _format{ 0 };    ///< VkFormat
+            uint32              _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기 계산용 (VkFormat 은 깊이 선택으로 달라질 수 있다)
+            uint32              _layout{ 0 };    ///< VkImageLayout (UNDEFINED=0)
+            uint32              _width{ 0 };
+            uint32              _height{ 0 };
+            uint32              _mipLevels{ 1 };
+            uint32              _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
+            RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
+            uint8               _bRenderTarget : 1;
+            uint8               _bDepthStencil : 1;
+            uint8               _reserved      : 6;
+            RHIDescriptorIndex  _bindlessIndex{ kInvalidDescriptorIndex };
+            /// @brief 면이 여럿일 때 면마다의 2D 뷰(렌더 패스 첨부용)와 단일 RT 프레임버퍼입니다. `_imageView` 는 그때 셰이더가 보는 배열 · 큐브 뷰다.
+            vector<VkImageView>   _listSliceView;
+            vector<VkFramebuffer> _listSliceFramebuffer;
+
+            /** @brief 면 `slice` 를 렌더 패스 첨부로 쓸 뷰입니다. 없으면 nullptr. */
+            VkImageView findAttachmentView( uint32 slice ) const
+            {
+                if ( _listSliceView.empty() )
+                    return slice == 0 ? _imageView : nullptr;
+                return slice < _listSliceView.size() ? _listSliceView[slice] : nullptr;
+            }
+            /** @brief 면 `slice` 하나를 타깃으로 하는 오프스크린 프레임버퍼입니다. 없으면 nullptr. */
+            VkFramebuffer findSliceFramebuffer( uint32 slice ) const
+            {
+                if ( _listSliceFramebuffer.empty() )
+                    return slice == 0 ? _framebuffer : nullptr;
+                return slice < _listSliceFramebuffer.size() ? _listSliceFramebuffer[slice] : nullptr;
+            }
         };
 
         /// @brief VkPipeline 과 레이아웃입니다.

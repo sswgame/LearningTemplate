@@ -95,7 +95,7 @@ namespace sw
         : _clearColor{ 0.0f, 0.0f, 0.0f, 0.0f }
         , _width{ 1 }
         , _height{ 1 }
-        , _depth{ 1 }
+        , _arraySize{ 1 }
         , _mipLevels{ 1 }
         , _format{ RHIFormat::R8G8B8A8_UNORM }
         , _clearDepth{ 1.0f }
@@ -105,7 +105,8 @@ namespace sw
         , _bIsShaderResource{ SW_TRUE }
         , _bIsUnorderedAccess{ SW_FALSE }
         , _reservedFlags{ 0 }
-        , _arrReserved{ 0, 0 }
+        , _dimension{ RHITextureDimension::Texture2D }
+        , _arrReserved{ 0 }
     {
     }
 
@@ -113,6 +114,7 @@ namespace sw
         : _pData{ nullptr }
         , _sizeBytes{ 0 }
         , _mipLevels{ 0 }
+        , _arraySlice{ 0 }
     {
     }
 
@@ -127,9 +129,11 @@ namespace sw
         , _clearDepth{ 1.0f }
         , _arrLoadOp{}
         , _depthLoadOp{ RHIRenderPassLoadOp::Clear }
+        , _arrColorTargetSlice{}
+        , _depthTargetSlice{ 0 }
         , _bBindColor{ SW_TRUE }
         , _reservedFlags{ 0 }
-        , _arrReserved{ 0, 0, 0 }
+        , _arrReserved{ 0 }
     {
         for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
         {

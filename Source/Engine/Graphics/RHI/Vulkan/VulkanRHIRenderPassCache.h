@@ -60,6 +60,8 @@ namespace sw
             RHITextureHandle _depth{ 0 };
             uint8            _arrColorLoadOp[kMaxColorAttachments]{};
             uint8            _depthLoadOp{ 0 };
+            uint16           _arrColorSlice[kMaxColorAttachments]{}; ///< 첨부마다 그릴 면
+            uint16           _depthSlice{ 0 };
             /** @brief 키가 같으면 true 를 반환합니다. */
             bool operator==( const CompositeKey& other ) const;
         };

@@ -62,8 +62,9 @@ namespace sw
         barrier.dstQueueFamilyIndex         = VK_QUEUE_FAMILY_IGNORED;
         barrier.image                       = image;
         barrier.subresourceRange.aspectMask = aspect;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.layerCount = 1;
+        // 레이아웃은 텍스처 단위로 추적하므로 모든 밉 · 면을 함께 옮긴다(면 하나만 옮기면 나머지 면이 옛 레이아웃으로 남는다).
+        barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+        barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
         VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
@@ -168,21 +169,29 @@ namespace sw
                 return false;
         }
 
-        VkFramebufferCreateInfo fbInfo{};
-        fbInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        fbInfo.renderPass      = record._renderPass;
-        fbInfo.attachmentCount = 1;
-        fbInfo.pAttachments    = &record._imageView;
-        fbInfo.width           = record._width;
-        fbInfo.height          = record._height;
-        fbInfo.layers          = 1;
-
-        if ( vkCreateFramebuffer( _device, &fbInfo, nullptr, &record._framebuffer ) != VK_SUCCESS )
+        // 면마다 프레임버퍼 하나(면 뷰가 첨부). 면이 하나면 `_framebuffer` 하나다.
+        const uint32 sliceCount = record._listSliceView.empty() ? 1u : static_cast<uint32>( record._listSliceView.size() );
+        for ( uint32 slice = 0; slice < sliceCount; ++slice )
         {
-            if ( record._renderPass != _offscreenRenderPass )
-                vkDestroyRenderPass( _device, record._renderPass, nullptr );
-            record._renderPass = VK_NULL_HANDLE;
-            return false;
+            const VkImageView       attachment = record.findAttachmentView( slice );
+            VkFramebufferCreateInfo fbInfo{};
+            fbInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            fbInfo.renderPass      = record._renderPass;
+            fbInfo.attachmentCount = 1;
+            fbInfo.pAttachments    = &attachment;
+            fbInfo.width           = record._width;
+            fbInfo.height          = record._height;
+            fbInfo.layers          = 1;
+            VkFramebuffer framebuffer{ VK_NULL_HANDLE };
+            if ( vkCreateFramebuffer( _device, &fbInfo, nullptr, &framebuffer ) != VK_SUCCESS )
+            {
+                destroyOffscreenFramebuffer( record );
+                return false;
+            }
+            if ( slice == 0 )
+                record._framebuffer = framebuffer;
+            if ( record._listSliceView.empty() == false )
+                record._listSliceFramebuffer.push_back( framebuffer );
         }
         return true;
     }
@@ -192,6 +201,10 @@ namespace sw
         // 즉시 파괴하면 안 된다. 아직 실행 중인 프레임의 커맨드버퍼가 이 프레임버퍼를 참조할 수
         // 있다(게임뷰 리사이즈가 대표적인 경로다). 예전에는 오프스크린 경로가 매 프레임 블로킹
         // 제출을 해서 우연히 안전했을 뿐이고, 그 스톨을 걷어내자 곧바로 in-use 위반이 드러났다.
+        // 면별 프레임버퍼의 0 번은 `_framebuffer` 와 같다 — 한 번만 놓는다.
+        for ( size_t slice = 1; slice < record._listSliceFramebuffer.size(); ++slice )
+            enqueueFramebufferRelease( record._listSliceFramebuffer[slice], VK_NULL_HANDLE );
+        record._listSliceFramebuffer.clear();
         enqueueFramebufferRelease( record._framebuffer,
                                    ( record._renderPass != _offscreenRenderPass ) ? record._renderPass : VK_NULL_HANDLE );
         record._framebuffer = VK_NULL_HANDLE;
@@ -260,9 +273,9 @@ namespace sw
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
             VulkanTextureRecord* pTex = resolveTexture( key._arrColor[colorIndex] );
-            if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil != SW_FALSE )
+            if ( pTex == nullptr || pTex->findAttachmentView( key._arrColorSlice[colorIndex] ) == VK_NULL_HANDLE || pTex->_bDepthStencil != SW_FALSE )
                 return false;
-            arrFbAttachment[colorIndex] = pTex->_imageView;
+            arrFbAttachment[colorIndex] = pTex->findAttachmentView( key._arrColorSlice[colorIndex] );
             width                       = pTex->_width;
             height                      = pTex->_height;
             spec.addColor( pTex->_format, toVkLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) ),
@@ -273,9 +286,9 @@ namespace sw
         if ( key._depth != 0 )
         {
             VulkanTextureRecord* pTex = resolveTexture( key._depth );
-            if ( pTex == nullptr || pTex->_imageView == VK_NULL_HANDLE || pTex->_bDepthStencil == SW_FALSE )
+            if ( pTex == nullptr || pTex->findAttachmentView( key._depthSlice ) == VK_NULL_HANDLE || pTex->_bDepthStencil == SW_FALSE )
                 return false;
-            arrFbAttachment[attachCount] = pTex->_imageView;
+            arrFbAttachment[attachCount] = pTex->findAttachmentView( key._depthSlice );
             ++attachCount;
             if ( width == 0 )
             {

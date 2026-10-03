@@ -111,7 +111,7 @@ namespace
         // 읽기는 파괴 **전**에. 여기서 실패하면 그린 것 자체를 검증할 수 없으므로 smoke 도 실패로 본다.
         if ( bOk && pOutPixels != nullptr && pOutLayout != nullptr )
         {
-            if ( pResource->readbackTexture2D( rt, 0, *pOutPixels, *pOutLayout ) == false )
+            if ( pResource->readbackTexture2D( rt, 0, 0, *pOutPixels, *pOutLayout ) == false )
             {
                 SW_LOG_WARNING( "executeOffscreenPipelineSmoke: readbackTexture2D failed" );
                 bOk = false;
@@ -542,7 +542,7 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
             {
                 sw::vector<uint8>     bytes;
                 sw::RHITextureMipSpan layout{};
-                const bool            bRead = pResource->readbackTexture2D( texture, mip, bytes, layout );
+                const bool            bRead = pResource->readbackTexture2D( texture, mip, 0, bytes, layout );
                 SW_EXPECT_TRUE_MSG( bRead, testCase._pName );
                 if ( bRead == false )
                     break;
@@ -557,7 +557,7 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
                 SW_TEST_DEFENSIVE_SCOPE( "readbackTexture2D rejects a mip past the last one" );
                 sw::vector<uint8>     outOfRangeBytes;
                 sw::RHITextureMipSpan outOfRangeLayout{};
-                SW_EXPECT_TRUE( pResource->readbackTexture2D( texture, testCase._mips, outOfRangeBytes, outOfRangeLayout ) == false );
+                SW_EXPECT_TRUE( pResource->readbackTexture2D( texture, testCase._mips, 0, outOfRangeBytes, outOfRangeLayout ) == false );
             }
             pResource->destroyTexture( texture );
         }
@@ -799,7 +799,7 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
 
             sw::vector<uint8>     pixels;
             sw::RHITextureMipSpan layout{};
-            SW_ASSERT_TRUE( pResource->readbackTexture2D( rt, 0, pixels, layout ) );
+            SW_ASSERT_TRUE( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) );
             const uint8* pCenter = pixels.data() + static_cast<size_t>( layout._height / 2 ) * layout._rowBytes +
                                    static_cast<size_t>( layout._width / 2 ) * 4;
             const bool bRed = pCenter[0] > 200 && pCenter[1] < 80 && pCenter[2] < 80;
@@ -988,7 +988,7 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
 
                 sw::vector<uint8>     pixels;
                 sw::RHITextureMipSpan layout{};
-                if ( pResource->readbackTexture2D( rt, 0, pixels, layout ) )
+                if ( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) )
                 {
                     uint32 redCount{ 0 };
                     for ( uint32 row = 0; row < layout._height; ++row )
@@ -1124,7 +1124,7 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
 
                 sw::vector<uint8>     pixels;
                 sw::RHITextureMipSpan layout{};
-                if ( pResource->readbackTexture2D( rt, 0, pixels, layout ) )
+                if ( pResource->readbackTexture2D( rt, 0, 0, pixels, layout ) )
                 {
                     uint32 greenCount{ 0 };
                     uint32 redCount{ 0 };
@@ -1396,7 +1396,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
 
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
-            const bool            bRead = pResource->readbackTexture2D( texture, 0, bytes, layout );
+            const bool            bRead = pResource->readbackTexture2D( texture, 0, 0, bytes, layout );
             SW_EXPECT_TRUE_MSG( bRead, pName );
             if ( bRead && layout._rowBytes >= kSize * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSize )
             {
@@ -1522,4 +1522,249 @@ SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
         SW_TEST_SKIP( "No RHI backend could be initialized" );
     if ( reportedCount == 0 )
         SW_TEST_SKIP( "No backend reported GPU timestamps (driver support missing)" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 배열 · 큐브 텍스처는 면마다 렌더 패스 타깃(컬러 · 깊이)이 되고, 면마다 올리고 읽힌다 — 4백엔드
+ * @details 점광 그림자(큐브) · 다중 그림자(배열)의 RHI 바탕이다. 면마다 (1) 컬러 면만 열어 면마다 다른 색으로 지우고, 깊이 면만 열어
+ *          짝수 면 1.0 · 홀수 면 0.25 로 지운 뒤 (2) 컬러 면 + 깊이 면을 Load 로 열어 z = 0.5 인 화면 가득 삼각형을 빨강으로 그린다.
+ *          짝수 면은 빨강, 홀수 면은 깊이 테스트에 져서 (1) 의 색이 남아야 한다 — 컬러 면 뷰가 틀리면 색이 다른 면으로 가고, 깊이 면 뷰가
+ *          틀리면 다른 면의 깊이와 견주어 짝 · 홀이 섞인다. 따로, SRV 만 있는 배열 · 큐브에 면마다 다른 바이트를 올려 그대로 읽히는지 본다. 셰이더 테이블은 아직
+ *          Texture2D 만 받으므로 배열 · 큐브의 bindless 등록은 거부되고, 모양이 틀린 서술(정사각형 아닌 큐브 · 면 둘인 2D)은 만들어지지 않는다.
+ */
+SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
+{
+    constexpr uint32 kSize = 16;
+    // 홀수 면의 지우기 색 — 면 번호를 초록에 싣는다(면이 섞이면 값이 달라진다).
+    auto clearColorOf = []( uint32 slice ) -> sw::float4
+    {
+        return sw::float4{ 0.0f, static_cast<float32>( 20 + slice * 30 ) / 255.0f, 200.0f / 255.0f, 1.0f };
+    };
+    // 화면 가득 삼각형(z = 0.5) — 기본 풀스크린 삼각형은 z = 0 이라 깊이 0.25 에 지지 않는다.
+    sw::RHIVertex arrVertex[3]{};
+    const float32 arrPosition[3][2] = {
+        {-1.0f, -1.0f},
+        { 3.0f, -1.0f},
+        {-1.0f,  3.0f}
+    };
+    for ( uint32 vertexIndex = 0; vertexIndex < 3; ++vertexIndex )
+    {
+        arrVertex[vertexIndex]._arrPosition[0] = arrPosition[vertexIndex][0];
+        arrVertex[vertexIndex]._arrPosition[1] = arrPosition[vertexIndex][1];
+        arrVertex[vertexIndex]._arrPosition[2] = 0.5f;
+        for ( uint32 channel = 0; channel < 4; ++channel )
+            arrVertex[vertexIndex]._arrColor[channel] = 1.0f;
+    }
+
+    uint32 okCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        sw::IRHIResource* pResource = device->getResource();
+        const sw::string  label     = sw::string( device->getBackendName() ) + ": ";
+
+        // 모양이 틀린 서술은 만들어지지 않는다.
+        {
+            SW_TEST_SUPPRESS_LOGS();
+            sw::RHITextureDesc badCube{};
+            badCube._width     = kSize;
+            badCube._height    = kSize * 2;
+            badCube._dimension = sw::RHITextureDimension::TextureCube;
+            badCube._arraySize = sw::kCubeFaceCount;
+            SW_EXPECT_TRUE_MSG( pResource->createTexture2D( badCube ) == 0, ( label + "정사각형이 아닌 큐브를 받았다" ).c_str() );
+            sw::RHITextureDesc badPlain{};
+            badPlain._arraySize = 2;
+            SW_EXPECT_TRUE_MSG( pResource->createTexture2D( badPlain ) == 0, ( label + "면이 둘인 Texture2D 를 받았다" ).c_str() );
+        }
+
+        const float32             arrRed[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+        const sw::RHIBufferHandle cb        = pResource->createConstantBuffer( sizeof( arrRed ) );
+        SW_ASSERT_TRUE( cb != 0 );
+        pResource->updateConstantBuffer( cb, arrRed, sizeof( arrRed ) );
+        const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
+        const sw::RHIBufferHandle    vb      = pResource->createVertexBuffer( arrVertex, static_cast<uint32>( sizeof( arrVertex ) ) );
+
+        sw::RHIPipelineStateDesc psoDesc{};
+        psoDesc._vertexShaderPath            = "engine/shaders/fullscreentriangle.hlsl";
+        psoDesc._pixelShaderPath             = "engine/shaders/fullscreentriangle.hlsl";
+        psoDesc._vertexEntryPoint            = "VSMain";
+        psoDesc._pixelEntryPoint             = "PSMain";
+        psoDesc._numRenderTargets            = 1;
+        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
+        psoDesc._depthStencilFormat          = sw::RHIFormat::D24_UNORM_S8_UINT;
+        psoDesc._bEnableDepthTest            = SW_TRUE;
+        psoDesc._bEnableDepthWrite           = SW_TRUE;
+        psoDesc._cullMode                    = sw::RHICullMode::None;
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        SW_EXPECT_TRUE_MSG( pso != 0 && cbIndex != sw::kInvalidDescriptorIndex && vb != 0, ( label + "PSO · 버퍼를 만들지 못했다" ).c_str() );
+
+        struct Shape
+        {
+            sw::RHITextureDimension _dimension;
+            uint32                  _arraySize;
+            const utf8*             _pName;
+        };
+        const Shape arrShape[] = {
+            {sw::RHITextureDimension::Texture2DArray,                  3, "Texture2DArray"},
+            {   sw::RHITextureDimension::TextureCube, sw::kCubeFaceCount,    "TextureCube"}
+        };
+        for ( const Shape& shape : arrShape )
+        {
+            const sw::string   shapeLabel = label + shape._pName + " ";
+            sw::RHITextureDesc colorDesc{};
+            colorDesc._width                 = kSize;
+            colorDesc._height                = kSize;
+            colorDesc._format                = sw::RHIFormat::R8G8B8A8_UNORM;
+            colorDesc._dimension             = shape._dimension;
+            colorDesc._arraySize             = shape._arraySize;
+            colorDesc._bIsRenderTarget       = SW_TRUE;
+            colorDesc._bIsShaderResource     = SW_TRUE;
+            sw::RHITextureDesc depthDesc     = colorDesc;
+            depthDesc._format                = sw::RHIFormat::D24_UNORM_S8_UINT;
+            depthDesc._bIsRenderTarget       = SW_FALSE;
+            depthDesc._bIsDepthStencil       = SW_TRUE;
+            const sw::RHITextureHandle color = pResource->createTexture2D( colorDesc );
+            const sw::RHITextureHandle depth = pResource->createTexture2D( depthDesc );
+            SW_EXPECT_TRUE_MSG( color != 0 && depth != 0, ( shapeLabel + "텍스처를 만들지 못했다" ).c_str() );
+
+            // 셰이더 테이블은 Texture2D 만 받는다 — 등록은 거부된다.
+            {
+                SW_TEST_SUPPRESS_LOGS();
+                SW_EXPECT_TRUE_MSG( color == 0 || pResource->registerBindlessTexture( color ) == sw::kInvalidDescriptorIndex,
+                                    ( shapeLabel + "bindless 등록을 받았다" ).c_str() );
+            }
+
+            sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
+            if ( color != 0 && depth != 0 && pso != 0 && vb != 0 && cmd != nullptr )
+            {
+                sw::RHIViewport viewport{};
+                viewport._width  = static_cast<float32>( kSize );
+                viewport._height = static_cast<float32>( kSize );
+                cmd->beginCommandList();
+                // 먼저 면마다 컬러만 · 깊이만 지운다. 그리기는 둘 다 Load 로 열어, 깊이 면을 잘못 고르면 다른 면의 깊이와 견준다.
+                for ( uint32 slice = 0; slice < shape._arraySize; ++slice )
+                {
+                    sw::RHIRenderPassBeginInfo clearInfo{};
+                    clearInfo.setColorTarget( color, clearColorOf( slice ), sw::RHIRenderPassLoadOp::Clear );
+                    clearInfo._arrColorTargetSlice[0] = static_cast<uint16>( slice );
+                    clearInfo._width                  = kSize;
+                    clearInfo._height                 = kSize;
+                    cmd->beginRenderPass( clearInfo );
+                    cmd->endRenderPass();
+
+                    sw::RHIRenderPassBeginInfo depthInfo{};
+                    depthInfo._bBindColor       = SW_FALSE;
+                    depthInfo._colorTargetCount = 0;
+                    depthInfo._depthTarget      = depth;
+                    depthInfo._depthTargetSlice = static_cast<uint16>( slice );
+                    depthInfo._depthLoadOp      = sw::RHIRenderPassLoadOp::Clear;
+                    depthInfo._clearDepth       = ( slice % 2 == 0 ) ? 1.0f : 0.25f;
+                    depthInfo._width            = kSize;
+                    depthInfo._height           = kSize;
+                    cmd->beginRenderPass( depthInfo );
+                    cmd->endRenderPass();
+                }
+                for ( uint32 slice = 0; slice < shape._arraySize; ++slice )
+                {
+                    sw::RHIRenderPassBeginInfo drawInfo{};
+                    drawInfo.setColorTarget( color, clearColorOf( slice ), sw::RHIRenderPassLoadOp::Load );
+                    drawInfo._arrColorTargetSlice[0] = static_cast<uint16>( slice );
+                    drawInfo._depthTarget            = depth;
+                    drawInfo._depthTargetSlice       = static_cast<uint16>( slice );
+                    drawInfo._depthLoadOp            = sw::RHIRenderPassLoadOp::Load;
+                    drawInfo._width                  = kSize;
+                    drawInfo._height                 = kSize;
+                    cmd->beginRenderPass( drawInfo );
+                    cmd->setViewport( viewport );
+                    cmd->setPipelineState( pso );
+                    cmd->bindConstantBuffer( cbIndex, sw::shaderslot::kMaterialConstantBuffer );
+                    cmd->setVertexBuffer( 0, vb, static_cast<uint32>( sizeof( sw::RHIVertex ) ), 0 );
+                    cmd->draw( 3, 0 );
+                    cmd->endRenderPass();
+                }
+                cmd->endCommandList();
+                device->executeCommandListImmediate( cmd.get() );
+                device->waitIdle();
+
+                for ( uint32 slice = 0; slice < shape._arraySize; ++slice )
+                {
+                    sw::vector<uint8>     pixels;
+                    sw::RHITextureMipSpan layout{};
+                    const bool            bRead = pResource->readbackTexture2D( color, 0, slice, pixels, layout );
+                    SW_EXPECT_TRUE_MSG( bRead, ( shapeLabel + "면 " + sw::to_string( slice ) + " 를 읽지 못했다" ).c_str() );
+                    if ( bRead == false )
+                        continue;
+                    const uint8* pCenter  = pixels.data() + static_cast<size_t>( kSize / 2 ) * layout._rowBytes + static_cast<size_t>( kSize / 2 ) * 4;
+                    const bool   bEven    = slice % 2 == 0;
+                    const uint32 expectG  = bEven ? 0u : 20u + slice * 30u;
+                    const bool   bMatches = bEven ? ( pCenter[0] > 200 && pCenter[1] < 40 && pCenter[2] < 40 )
+                                                  : ( pCenter[0] < 40 && sw::MathUtil::abs( static_cast<int32>( pCenter[1] ) - static_cast<int32>( expectG ) ) <= 2 &&
+                                                    pCenter[2] > 180 );
+                    SW_EXPECT_TRUE_MSG( bMatches, ( shapeLabel + "면 " + sw::to_string( slice ) + " 의 가운데가 " + sw::to_string( pCenter[0] ) + "," +
+                                                    sw::to_string( pCenter[1] ) + "," + sw::to_string( pCenter[2] ) +
+                                                    ( bEven ? " — 빨강이어야 한다(그린 면)" : " — 지운 색이어야 한다(깊이 0.25 에 진 면)" ) )
+                                                      .c_str() );
+                }
+            }
+            pResource->destroyTexture( color );
+            pResource->destroyTexture( depth );
+
+            // 면마다 다른 바이트를 올리고 그대로 읽는다(SRV 만 있는 텍스처).
+            sw::RHITextureDesc uploadDesc{};
+            uploadDesc._width                   = kSize;
+            uploadDesc._height                  = kSize;
+            uploadDesc._format                  = sw::RHIFormat::R8G8B8A8_UNORM;
+            uploadDesc._dimension               = shape._dimension;
+            uploadDesc._arraySize               = shape._arraySize;
+            uploadDesc._bIsShaderResource       = SW_TRUE;
+            const sw::RHITextureHandle uploaded = pResource->createTexture2D( uploadDesc );
+            SW_EXPECT_TRUE_MSG( uploaded != 0, ( shapeLabel + "올릴 텍스처를 만들지 못했다" ).c_str() );
+            if ( uploaded == 0 )
+                continue;
+            sw::vector<uint8> bytes( static_cast<size_t>( kSize ) * kSize * 4 );
+            for ( uint32 slice = 0; slice < shape._arraySize; ++slice )
+            {
+                for ( size_t byteIndex = 0; byteIndex < bytes.size(); ++byteIndex )
+                    bytes[byteIndex] = static_cast<uint8>( ( byteIndex * 7 + slice * 41 ) & 0xFF );
+                sw::RHITextureUploadDesc upload{};
+                upload._pData      = bytes.data();
+                upload._sizeBytes  = static_cast<uint32>( bytes.size() );
+                upload._mipLevels  = 1;
+                upload._arraySlice = slice;
+                SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( uploaded, upload ), ( shapeLabel + "면 " + sw::to_string( slice ) + " 를 올리지 못했다" ).c_str() );
+            }
+            device->waitIdle();
+            for ( uint32 slice = 0; slice < shape._arraySize; ++slice )
+            {
+                for ( size_t byteIndex = 0; byteIndex < bytes.size(); ++byteIndex )
+                    bytes[byteIndex] = static_cast<uint8>( ( byteIndex * 7 + slice * 41 ) & 0xFF );
+                sw::vector<uint8>     readBytes;
+                sw::RHITextureMipSpan layout{};
+                const bool            bRead = pResource->readbackTexture2D( uploaded, 0, slice, readBytes, layout );
+                const bool            bSame = bRead && readBytes.size() == bytes.size() && sw::Memory::compare( readBytes.data(), bytes.data(), bytes.size() ) == 0;
+                SW_EXPECT_TRUE_MSG( bSame, ( shapeLabel + "면 " + sw::to_string( slice ) + " 의 바이트가 올린 것과 다르다" ).c_str() );
+            }
+            {
+                SW_TEST_SUPPRESS_LOGS();
+                sw::vector<uint8>     outOfRange;
+                sw::RHITextureMipSpan layout{};
+                SW_EXPECT_TRUE( pResource->readbackTexture2D( uploaded, 0, shape._arraySize, outOfRange, layout ) == false );
+            }
+            pResource->destroyTexture( uploaded );
+        }
+
+        if ( pso != 0 )
+            pResource->destroyPipelineState( pso );
+        if ( vb != 0 )
+            pResource->destroyBuffer( vb );
+        pResource->unregisterBindlessResource( cbIndex );
+        pResource->destroyBuffer( cb );
+        device->waitIdle();
+        ++okCount;
+    }
+
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the sliced texture test" );
 }

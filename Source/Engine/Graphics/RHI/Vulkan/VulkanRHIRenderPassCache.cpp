@@ -28,11 +28,13 @@ namespace sw
 
     bool VulkanRHIRenderPassCache::CompositeKey::operator==( const CompositeKey& other ) const
     {
-        if ( _colorCount != other._colorCount || _depth != other._depth || _depthLoadOp != other._depthLoadOp )
+        if ( _colorCount != other._colorCount || _depth != other._depth || _depthLoadOp != other._depthLoadOp || _depthSlice != other._depthSlice )
             return false;
         for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
         {
-            if ( _arrColor[colorIndex] != other._arrColor[colorIndex] || _arrColorLoadOp[colorIndex] != other._arrColorLoadOp[colorIndex] )
+            const bool bSameAttachment = _arrColor[colorIndex] == other._arrColor[colorIndex] && _arrColorLoadOp[colorIndex] == other._arrColorLoadOp[colorIndex] &&
+                                         _arrColorSlice[colorIndex] == other._arrColorSlice[colorIndex];
+            if ( bSameAttachment == false )
                 return false;
         }
         return true;
@@ -43,10 +45,12 @@ namespace sw
         size_t hash = static_cast<size_t>( key._depth ) * 1315423911u;
         hash ^= static_cast<size_t>( key._colorCount ) + 0x9e3779b9u;
         hash ^= static_cast<size_t>( key._depthLoadOp ) + 0x9e3779b9u;
+        hash ^= static_cast<size_t>( key._depthSlice ) * 2654435761u;
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
             hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + 0x9e3779b9u + ( hash << 6 ) + ( hash >> 2 );
             hash ^= static_cast<size_t>( key._arrColorLoadOp[colorIndex] ) + 0x9e3779b9u;
+            hash ^= static_cast<size_t>( key._arrColorSlice[colorIndex] ) * 2246822519u;
         }
         return hash;
     }

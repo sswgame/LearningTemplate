@@ -549,6 +549,24 @@ namespace sw
     };
 
     /**
+     * @enum RHITextureDimension
+     * @brief 텍스처의 모양입니다. 셋 다 2D 면(slice)을 겹친 것이고 다른 것은 면 수와 셰이더가 보는 뷰입니다(D3D 의 Texture2D +
+     *        ArraySize · TEXTURECUBE 와 같다 — 그래서 만드는 함수는 `createTexture2D` 하나다).
+     * @details 면 하나는 렌더 패스의 타깃(`RHIRenderPassBeginInfo::_arrColorTargetSlice` · `_depthTargetSlice`)이 되고, 올리기 ·
+     *          읽기도 면 단위입니다(`RHITextureUploadDesc::_arraySlice`, `readbackTexture2D` 의 arraySlice). 셰이더에 거는
+     *          bindless 등록은 아직 Texture2D 만 받습니다 — 배열 · 큐브 뷰를 읽는 셰이더 테이블이 생기면 넓힌다(점광 그림자).
+     */
+    enum class RHITextureDimension : uint8
+    {
+        Texture2D = 0,  ///< 면 하나
+        Texture2DArray, ///< 면 `_arraySize` 개
+        TextureCube,    ///< 면 6 개(+X · −X · +Y · −Y · +Z · −Z 순, D3D · Vulkan · GL 과 같다)
+    };
+
+    /** @brief 큐브 텍스처의 면 수입니다. */
+    inline constexpr uint32 kCubeFaceCount = 6;
+
+    /**
      * @struct RHITextureDesc
      * @brief 텍스처 생성 서술체입니다.
      */
@@ -557,7 +575,7 @@ namespace sw
         float4 _clearColor; ///< 초기화 색상 (16 bytes)
         uint32 _width;      ///< 너비 (4 bytes)
         uint32 _height;     ///< 높이 (4 bytes)
-        uint32 _depth;      ///< 깊이 (4 bytes)
+        uint32 _arraySize;  ///< 면 수 (4 bytes). Texture2D 는 1, TextureCube 는 6(`kCubeFaceCount`), Texture2DArray 는 1 이상
         /**
          * @brief 밉 레벨 수 (4 bytes)입니다. **1 이상을 주십시오. 0 은 백엔드마다 뜻이 다릅니다.**
          * @details 바로 아래 `RHITextureUploadDesc::_mipLevels` 는 0 을 "텍스처가 가진 밉 전부" 로
@@ -576,11 +594,31 @@ namespace sw
         uint8                  _bIsShaderResource  : 1; ///< 셰이더 리소스 지원 여부
         uint8                  _bIsUnorderedAccess : 1; ///< UAV 지원 여부
         [[maybe_unused]] uint8 _reservedFlags      : 4;
-        uint8                  _arrReserved[2]; ///< 4바이트 정렬 패딩 (2 bytes)
+        RHITextureDimension    _dimension;      ///< 모양 (1 byte)
+        uint8                  _arrReserved[1]; ///< 4바이트 정렬 패딩 (1 byte)
 
-        /** @brief 기본 크기 · 포맷 · 클리어로 만듭니다. */
+        /** @brief 기본 크기 · 포맷 · 클리어로 만듭니다(Texture2D, 면 하나). */
         RHITextureDesc() noexcept;
     };
+
+    /**
+     * @brief 서술체의 모양과 면 수가 맞는지 확인합니다 — Texture2D 는 1, TextureCube 는 6 이고 정사각형, Texture2DArray 는 1 이상.
+     * @details 네 백엔드의 `createTexture2D` 가 이 판정 하나로 거부합니다(맞지 않으면 백엔드마다 다르게 무너진다).
+     */
+    inline constexpr bool isRhiTextureShapeValid( const RHITextureDesc& desc )
+    {
+        switch ( desc._dimension )
+        {
+            case RHITextureDimension::Texture2D:
+                return desc._arraySize == 1;
+            case RHITextureDimension::Texture2DArray:
+                return desc._arraySize >= 1;
+            case RHITextureDimension::TextureCube:
+                return desc._arraySize == kCubeFaceCount && desc._width == desc._height;
+            default:
+                return false;
+        }
+    }
 
     /**
      * @struct RHITextureUploadDesc
@@ -590,9 +628,10 @@ namespace sw
      */
     struct SW_API RHITextureUploadDesc
     {
-        const void* _pData;     ///< 밉 0 첫 행부터 (8 bytes)
-        uint32      _sizeBytes; ///< _pData 전체 길이 (4 bytes)
-        uint32      _mipLevels; ///< 올릴 밉 수. 0 이면 텍스처가 가진 밉 전부 (4 bytes)
+        const void* _pData;      ///< 밉 0 첫 행부터 (8 bytes)
+        uint32      _sizeBytes;  ///< _pData 전체 길이 (4 bytes)
+        uint32      _mipLevels;  ///< 올릴 밉 수. 0 이면 텍스처가 가진 밉 전부 (4 bytes)
+        uint32      _arraySlice; ///< 올릴 면(배열 원소 · 큐브 면). 한 번에 면 하나다 (4 bytes)
 
         /** @brief 빈 업로드(데이터 없음, 밉 전부)로 만듭니다. */
         RHITextureUploadDesc() noexcept;
@@ -755,19 +794,21 @@ namespace sw
      */
     struct SW_API RHIRenderPassBeginInfo
     {
-        RHIRenderPassHandle    _renderPass;                           ///< 렌더 패스 핸들 (8 bytes)
-        RHITextureHandle       _arrColorTarget[kMaxColorAttachments]; ///< RT별 핸들 (32 bytes)
-        RHITextureHandle       _depthTarget;                          ///< 깊이/스텐실 핸들 (8 bytes)
-        float4                 _arrClearColor[kMaxColorAttachments];  ///< RT별 클리어 색상 (64 bytes)
-        uint32                 _colorTargetCount;                     ///< 컬러 RT 개수 (4 bytes)
-        uint32                 _width;                                ///< 렌더 영역 너비 (4 bytes)
-        uint32                 _height;                               ///< 렌더 영역 높이 (4 bytes)
-        float32                _clearDepth;                           ///< 깊이 클리어 값 (4 bytes)
-        RHIRenderPassLoadOp    _arrLoadOp[kMaxColorAttachments];      ///< RT별 로드 동작 (16 bytes)
-        RHIRenderPassLoadOp    _depthLoadOp;                          ///< 깊이 로드 동작 (4 bytes)
-        uint8                  _bBindColor    : 1;                    ///< 컬러 바인딩 여부 (1 byte)
+        RHIRenderPassHandle    _renderPass;                                ///< 렌더 패스 핸들 (8 bytes)
+        RHITextureHandle       _arrColorTarget[kMaxColorAttachments];      ///< RT별 핸들 (32 bytes)
+        RHITextureHandle       _depthTarget;                               ///< 깊이/스텐실 핸들 (8 bytes)
+        float4                 _arrClearColor[kMaxColorAttachments];       ///< RT별 클리어 색상 (64 bytes)
+        uint32                 _colorTargetCount;                          ///< 컬러 RT 개수 (4 bytes)
+        uint32                 _width;                                     ///< 렌더 영역 너비 (4 bytes)
+        uint32                 _height;                                    ///< 렌더 영역 높이 (4 bytes)
+        float32                _clearDepth;                                ///< 깊이 클리어 값 (4 bytes)
+        RHIRenderPassLoadOp    _arrLoadOp[kMaxColorAttachments];           ///< RT별 로드 동작 (16 bytes)
+        RHIRenderPassLoadOp    _depthLoadOp;                               ///< 깊이 로드 동작 (4 bytes)
+        uint16                 _arrColorTargetSlice[kMaxColorAttachments]; ///< RT별로 그릴 면(배열 원소 · 큐브 면). 2D 는 0 (8 bytes)
+        uint16                 _depthTargetSlice;                          ///< 깊이 타깃의 그릴 면 (2 bytes)
+        uint8                  _bBindColor    : 1;                         ///< 컬러 바인딩 여부 (1 byte)
         [[maybe_unused]] uint8 _reservedFlags : 7;
-        uint8                  _arrReserved[3]; ///< 8바이트 정렬 패딩 (3 bytes)
+        uint8                  _arrReserved[1]; ///< 4바이트 정렬 패딩 (1 byte)
 
         /** @brief 기본값(렌더 패스 0, 컬러 타깃 0 개, 로드 동작 Clear, 깊이 클리어 1.0)으로 만듭니다. */
         RHIRenderPassBeginInfo() noexcept;
