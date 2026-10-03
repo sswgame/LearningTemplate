@@ -150,6 +150,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_CoopScavenger",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
