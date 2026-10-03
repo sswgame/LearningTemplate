@@ -106,6 +106,87 @@ SW_TEST_CASE( ReflectionContainersTest, MapWrapper )
 }
 
 /**
+ * @brief [ReflectionContainersTest] 맵 값은 래퍼로 제자리에서 고치고, 항목은 순번으로 지운다 — 인스펙터의 맵 편집이 쓰는 길
+ * @details `forEach` 는 키 · 값을 const 로만 줘 인스펙터가 맵을 편집할 수 없었다. 키는 정렬 · 해시 키라 const 로 두고 값만 고쳐 쓴다.
+ */
+SW_TEST_CASE( ReflectionContainersTest, MapValuesAreEditableAndEntriesErasable )
+{
+    sw::map<sw::string, int32> sortedMap = {
+        {"a", 1},
+        {"b", 2},
+        {"c", 3}
+    };
+    sw::MapWrapper<sw::map<sw::string, int32>> sortedWrapper;
+    sortedWrapper.forEachMutable( &sortedMap, [&]( const void*, void* pValue )
+    { *static_cast<int32*>( pValue ) += 10; } );
+    SW_EXPECT_TRUE( sortedMap["a"] == 11 && sortedMap["b"] == 12 && sortedMap["c"] == 13 );
+    SW_EXPECT_TRUE( sortedWrapper.eraseAt( &sortedMap, 1 ) ); // 순회 순서 두 번째 = "b"
+    SW_EXPECT_EQUAL( size_t( 2 ), sortedMap.size() );
+    SW_EXPECT_TRUE( sortedMap.find( sw::string( "b" ) ) == sortedMap.end() );
+    SW_EXPECT_FALSE( sortedWrapper.eraseAt( &sortedMap, 2 ) );
+
+    sw::unordered_map<int32, sw::string> hashMap = {
+        {7, "seven"},
+        {8, "eight"}
+    };
+    sw::UnorderedMapWrapper<sw::unordered_map<int32, sw::string>> hashWrapper;
+    hashWrapper.forEachMutable( &hashMap, [&]( const void* pKey, void* pValue )
+    {
+        if ( *static_cast<const int32*>( pKey ) == 8 )
+            *static_cast<sw::string*>( pValue ) = "EIGHT";
+    } );
+    SW_EXPECT_TRUE( hashMap[8] == "EIGHT" && hashMap[7] == "seven" );
+    SW_EXPECT_TRUE( hashWrapper.eraseAt( &hashMap, 0 ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), hashMap.size() );
+}
+
+/**
+ * @brief [ReflectionContainersTest] set 원소는 지우고 다시 넣어 고친다 — 정렬 순서가 유지되고 같은 값은 합쳐진다
+ * @details 원소가 곧 정렬 키라 제자리 쓰기는 트리를 망친다(`allowsInPlaceElementWrite`). `replaceElement` 가 꺼내 고친 뒤 지우고 다시 넣는다.
+ */
+SW_TEST_CASE( ReflectionContainersTest, SetElementIsReplacedByEraseAndReinsert )
+{
+    sw::set<int32>                 sortedSet = { 1, 5, 9 };
+    sw::SetWrapper<sw::set<int32>> wrapper;
+    SW_EXPECT_TRUE( wrapper.replaceElement( &sortedSet, 0, [&]( void* pElement ) -> bool
+    {
+        *static_cast<int32*>( pElement ) = 7;
+        return true;
+    } ) );
+    SW_ASSERT_EQUAL( size_t( 3 ), sortedSet.size() );
+    SW_EXPECT_TRUE( *static_cast<const int32*>( wrapper.getElementConst( &sortedSet, 0 ) ) == 5 &&
+                    *static_cast<const int32*>( wrapper.getElementConst( &sortedSet, 1 ) ) == 7 &&
+                    *static_cast<const int32*>( wrapper.getElementConst( &sortedSet, 2 ) ) == 9 );
+    // 이미 있는 값으로 고치면 하나로 합쳐진다(set 의 계약).
+    SW_EXPECT_TRUE( wrapper.replaceElement( &sortedSet, 0, [&]( void* pElement ) -> bool
+    {
+        *static_cast<int32*>( pElement ) = 9;
+        return true;
+    } ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), sortedSet.size() );
+    // 채우기가 실패하면 그대로다.
+    SW_EXPECT_FALSE( wrapper.replaceElement( &sortedSet, 0, [&]( void* ) -> bool
+    { return false; } ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), sortedSet.size() );
+    SW_EXPECT_TRUE( wrapper.eraseAt( &sortedSet, 0 ) );
+    SW_EXPECT_TRUE( sortedSet.size() == 1 && *sortedSet.begin() == 9 );
+
+    // 순서 컨테이너는 제자리 쓰기 · 순번 지우기, 고정 배열은 지우지 못한다.
+    sw::vector<int32>                    listValue = { 3, 4, 5 };
+    sw::VectorWrapper<sw::vector<int32>> vectorWrapper;
+    SW_EXPECT_TRUE( vectorWrapper.replaceElement( &listValue, 1, [&]( void* pElement ) -> bool
+    {
+        *static_cast<int32*>( pElement ) = 40;
+        return true;
+    } ) );
+    SW_EXPECT_TRUE( vectorWrapper.eraseAt( &listValue, 0 ) );
+    SW_EXPECT_TRUE( listValue.size() == 2 && listValue[0] == 40 && listValue[1] == 5 );
+    std::array<int32, 2>                   arrValue = { 1, 2 };
+    sw::ArrayWrapper<std::array<int32, 2>> arrayWrapper;
+    SW_EXPECT_FALSE( arrayWrapper.eraseAt( &arrValue, 0 ) );
+}
+
+/**
  * @brief [ReflectionContainersTest] 추가 컨테이너 래퍼
  */
 SW_TEST_CASE( ReflectionContainersTest, AdditionalContainerWrappers )

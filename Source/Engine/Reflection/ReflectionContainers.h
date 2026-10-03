@@ -77,6 +77,21 @@ namespace sw
          */
         virtual bool allowsInPlaceElementWrite() const { return true; }
 
+        /** @brief @p index 번째 원소를 지웁니다. 범위 밖이거나 지울 수 없는 컨테이너(고정 배열)면 false 입니다. */
+        virtual bool eraseAt( void* pContainer, size_t index ) const = 0;
+
+        /**
+         * @brief @p index 번째 원소를 @p fill 로 고칩니다. 범위 밖이거나 @p fill 이 false 면 false 이고 컨테이너는 그대로입니다.
+         * @details 기본은 제자리 쓰기입니다. 원소가 곧 정렬 · 해시 키인 컨테이너(`set`)는 원소를 꺼내 고친 뒤 **지우고 다시 넣습니다** — 고친 값의
+         *          자리는 컨테이너가 정하므로 원소의 순번이 바뀔 수 있고, 같은 값이 이미 있으면 하나로 합쳐집니다.
+         */
+        virtual bool replaceElement( void* pContainer, size_t index, const ElementFillDelegate& fill ) const
+        {
+            if ( getSize( pContainer ) <= index )
+                return false;
+            return fill( getElement( pContainer, index ) );
+        }
+
         /**
          * @brief 읽은 순서로 @p elementIndex 번째 원소 하나를 컨테이너에 넣습니다. 읽기는 @p fill 이, 넣는 방법은 컨테이너가 정합니다.
          *
@@ -100,6 +115,8 @@ namespace sw
     };
 
     using MapForEachDelegate = Delegate<void( const void* pKey, const void* pVal )>;
+    /** @brief 맵 항목마다 부르는 콜백입니다. 키는 정렬 · 해시 키라 const, 값은 고쳐 써도 됩니다. */
+    using MapForEachMutableDelegate = Delegate<void( const void* pKey, void* pVal )>;
 
     /// @brief 키-값 맵 컨테이너 래퍼
     struct IMapContainerWrapper : IContainerWrapper
@@ -111,6 +128,10 @@ namespace sw
          * @brief 항목마다 callback 을 부릅니다
          */
         virtual void forEach( const void* pContainer, const MapForEachDelegate& callback ) const = 0;
+        /** @brief 항목마다 callback 을 부르며 값을 고쳐 쓸 수 있게 줍니다(인스펙터의 맵 값 편집). 콜백 안에서 항목을 더하거나 지우지 않습니다. */
+        virtual void forEachMutable( void* pContainer, const MapForEachMutableDelegate& callback ) const = 0;
+        /** @brief 순회 순서로 @p ordinal 번째 항목을 지웁니다. 범위 밖이면 false 입니다. */
+        virtual bool eraseAt( void* pContainer, size_t ordinal ) const = 0;
         /**
          * @brief 키-값을 삽입합니다
          */
@@ -168,6 +189,21 @@ namespace sw
 
         /** @brief 용량을 예약합니다. */
         void reserve( void* pContainer, size_t capacity ) const override { static_cast<TContainer*>( pContainer )->reserve( capacity ); }
+
+        /** @brief @p index 번째 원소를 지웁니다. */
+        bool eraseAt( void* pContainer, size_t index ) const override
+        {
+            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
+            if ( pContainerTyped->size() <= index )
+                return false;
+            auto it = pContainerTyped->begin();
+            for ( size_t step = 0; step < index; ++step )
+            {
+                ++it;
+            }
+            pContainerTyped->erase( it );
+            return true;
+        }
     };
 
     template <typename TContainer>
@@ -205,6 +241,21 @@ namespace sw
             using ElementType = typename TContainer::value_type;
             static_cast<TContainer*>( pContainer )->emplace_back( ElementType{} );
         }
+
+        /** @brief @p index 번째 원소를 지웁니다. */
+        bool eraseAt( void* pContainer, size_t index ) const override
+        {
+            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
+            if ( pContainerTyped->size() <= index )
+                return false;
+            auto it = pContainerTyped->begin();
+            for ( size_t step = 0; step < index; ++step )
+            {
+                ++it;
+            }
+            pContainerTyped->erase( it );
+            return true;
+        }
     };
 
     template <typename TContainer>
@@ -237,6 +288,21 @@ namespace sw
         {
             using ElementType = typename TContainer::value_type;
             static_cast<TContainer*>( pContainer )->emplace_back( ElementType{} );
+        }
+
+        /** @brief @p index 번째 원소를 지웁니다. */
+        bool eraseAt( void* pContainer, size_t index ) const override
+        {
+            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
+            if ( pContainerTyped->size() <= index )
+                return false;
+            auto it = pContainerTyped->begin();
+            for ( size_t step = 0; step < index; ++step )
+            {
+                ++it;
+            }
+            pContainerTyped->erase( it );
+            return true;
         }
     };
 
@@ -278,6 +344,43 @@ namespace sw
 
         /** @brief 원소가 곧 정렬 키라 제자리에서 고칠 수 없습니다. */
         bool allowsInPlaceElementWrite() const override { return false; }
+
+        /** @brief @p index 번째 원소를 지웁니다(순회 순서의 번호). */
+        bool eraseAt( void* pContainer, size_t index ) const override
+        {
+            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
+            if ( pContainerTyped->size() <= index )
+                return false;
+            auto it = pContainerTyped->begin();
+            for ( size_t step = 0; step < index; ++step )
+            {
+                ++it;
+            }
+            const typename TContainer::value_type key = *it;
+            pContainerTyped->erase( key );
+            return true;
+        }
+
+        /** @brief 원소를 꺼내 @p fill 로 고친 뒤 지우고 다시 넣습니다(`ISequenceContainerWrapper::replaceElement`). */
+        bool replaceElement( void* pContainer, size_t index, const ElementFillDelegate& fill ) const override
+        {
+            using ElementType           = typename TContainer::value_type;
+            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
+            if ( pContainerTyped->size() <= index )
+                return false;
+            auto it = pContainerTyped->begin();
+            for ( size_t step = 0; step < index; ++step )
+            {
+                ++it;
+            }
+            const ElementType original = *it;
+            ElementType       staged   = original;
+            if ( fill( &staged ) == false )
+                return false;
+            pContainerTyped->erase( original );
+            pContainerTyped->insert( std::move( staged ) );
+            return true;
+        }
 
         /**
          * @brief **다 읽은 뒤에 넣습니다.** 트리에 들어간 원소를 제자리에서 고치지 않습니다.
@@ -350,6 +453,9 @@ namespace sw
                 return false;
             return fill( getElement( pContainer, elementIndex ) );
         }
+
+        /** @brief 고정 배열은 원소를 지울 수 없습니다. */
+        bool eraseAt( void*, size_t ) const override { return false; }
     };
 
     template <typename TContainer>
@@ -374,6 +480,32 @@ namespace sw
             {
                 callback( &pair.first, &pair.second );
             }
+        }
+
+        /** @brief 각 키-값에 콜백을 호출합니다. 값은 고쳐 써도 됩니다. */
+        void forEachMutable( void* pContainer, const MapForEachMutableDelegate& callback ) const override
+        {
+            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
+            for ( auto& pair : *pContainerTyped )
+            {
+                callback( &pair.first, &pair.second );
+            }
+        }
+
+        /** @brief 순회 순서로 @p ordinal 번째 항목을 지웁니다. */
+        bool eraseAt( void* pContainer, size_t ordinal ) const override
+        {
+            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
+            if ( pContainerTyped->size() <= ordinal )
+                return false;
+            auto it = pContainerTyped->begin();
+            for ( size_t step = 0; step < ordinal; ++step )
+            {
+                ++it;
+            }
+            const KeyType key = it->first;
+            pContainerTyped->erase( key );
+            return true;
         }
 
         /** @brief 키-값을 삽입하거나 덮어씁니다. */
@@ -430,6 +562,34 @@ namespace sw
                 const ValueType& val = std::get<1>( tuple );
                 callback( &key, &val );
             }
+        }
+
+        /** @brief 각 키-값에 콜백을 호출합니다. 값은 고쳐 써도 됩니다. */
+        void forEachMutable( void* pContainer, const MapForEachMutableDelegate& callback ) const override
+        {
+            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
+            for ( auto tuple : *pContainerTyped )
+            {
+                const KeyType key = std::get<0>( tuple );
+                ValueType&    val = std::get<1>( tuple );
+                callback( &key, &val );
+            }
+        }
+
+        /** @brief 순회 순서로 @p ordinal 번째 항목을 지웁니다. */
+        bool eraseAt( void* pContainer, size_t ordinal ) const override
+        {
+            TContainer* pContainerTyped = static_cast<TContainer*>( pContainer );
+            if ( pContainerTyped->size() <= ordinal )
+                return false;
+            auto it = pContainerTyped->begin();
+            for ( size_t step = 0; step < ordinal; ++step )
+            {
+                ++it;
+            }
+            const KeyType key = std::get<0>( *it );
+            pContainerTyped->erase( key );
+            return true;
         }
 
         /** @brief 키-값을 삽입하거나 덮어씁니다. */

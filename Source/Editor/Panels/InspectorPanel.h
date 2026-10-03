@@ -20,6 +20,8 @@ namespace sw
 {
     struct EnumInfo;
     struct FunctionInfo;
+    struct IMapContainerWrapper;
+    struct ISequenceContainerWrapper;
     struct PropertyInfo;
     struct TypeInfo;
 
@@ -81,6 +83,19 @@ namespace sw::editor
         void drawEnumProperty( void* pInstance, const PropertyInfo& prop, const EnumInfo& enumInfo, bool bReadOnly );
         /** @brief 컨테이너 프로퍼티 위젯을 그립니다. */
         void drawContainerProperty( void* pInstance, const PropertyInfo& prop, bool bReadOnly );
+        /**
+         * @brief 맵 프로퍼티를 그립니다 — 키는 글(정렬 · 해시 키라 제자리에서 고치지 않는다), 값은 타입 위젯으로 제자리 편집, 항목 지우기 · 더하기.
+         * @details 더하기는 키 글을 Enter 로 받습니다. 같은 키가 이미 있으면 값을 덮어쓰지 않고 더하지 않습니다.
+         */
+        void drawMapContainer( void* pContainer, const PropertyInfo& prop, IMapContainerWrapper& mapWrapper, bool bReadOnly );
+        /**
+         * @brief 원소가 곧 키인 시퀀스(`set`)를 그립니다 — 원소는 글 칸이고 Enter 로 고치면 지우고 다시 넣습니다(`replaceElement`), 지우기 · 더하기.
+         */
+        void drawKeyedSequenceContainer( void* pContainer, const PropertyInfo& prop, ISequenceContainerWrapper& sequence, bool bReadOnly );
+        /** @brief 컨테이너 끝의 "더하기" 글 칸입니다. Enter 로 빈 글이 아닌 것을 냈으면 true 이고 @p outText 에 담고 칸을 비웁니다. */
+        bool drawContainerAddRow( const utf8* pHint, string& outText );
+        /** @brief 지금 그리는 프로퍼티의 주인 오브젝트입니다(되돌리기 기록 대상). 없으면 nullptr 입니다. */
+        GameObject* getEditOwner() const;
         /** @brief 구조체·문자열 프로퍼티 위젯을 그립니다. */
         void drawStructOrStringProperty( void* pInstance, const PropertyInfo& prop, const TypeInfo* pFieldType );
         /**
@@ -107,6 +122,8 @@ namespace sw::editor
         Component* _pEditTargetComponent;
         /** @brief 지금 프로퍼티를 그리는 중인 GameObject 입니다. 컴포넌트가 없을 때만 씁니다. */
         GameObject* _pEditTargetObject;
+        /** @brief 컨테이너 "더하기" 칸의 글입니다. 키는 그 칸의 ImGui id 라 컨테이너마다 따로 듭니다. */
+        unordered_map<uint32, fixed_string<constant::kMaxBuffer256>> _mapContainerAddText;
         /** @brief 중첩 · 컨테이너 재귀 깊이입니다. 통지는 가장 바깥에서 한 번만 합니다. */
         uint32                 _propertyDrawDepth;
         uint8                  _bComponentPresetDirty : 1;

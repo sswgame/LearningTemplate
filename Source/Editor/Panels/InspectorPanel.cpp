@@ -67,6 +67,24 @@ namespace sw::editor
                 edit();
                 EditorSceneCommands::commitModify( pObj, beforeSnapshot, undoLabel );
             }
+
+            /** @brief 컨테이너 구조 편집(더하기 · 지우기 · 다시 넣기)입니다. 주인 오브젝트가 있으면 되돌리기에 남기고, 없으면 그냥 바꿉니다. */
+            template <typename EditFunc>
+            static void applyContainerEdit( GameObject* pOwner, string_view undoLabel, EditFunc&& edit )
+            {
+                if ( pOwner == nullptr )
+                    edit();
+                else
+                    applyObjectEdit( pOwner, undoLabel, std::forward<EditFunc>( edit ) );
+            }
+
+            /** @brief 키 · 원소 하나를 값 자리에 둔 프로퍼티입니다(오프셋 0). 글 변환(`SerializerUtil::formatPropertyText` · `applyPropertyText`)에 씁니다. */
+            static PropertyInfo makeValueProperty( const hashed_string& typeName )
+            {
+                PropertyInfo valueProp{};
+                valueProp._typeName = typeName;
+                return valueProp;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -83,6 +101,7 @@ namespace sw::editor
         , _listComponentPresetFile{}
         , _pEditTargetComponent{ nullptr }
         , _pEditTargetObject{ nullptr }
+        , _mapContainerAddText{}
         , _propertyDrawDepth{ 0 }
         , _bComponentPresetDirty{ SW_TRUE }
         , _reserved{ 0 }
@@ -724,13 +743,13 @@ namespace sw::editor
                 return;
             }
 
-            // 맵을 편집하려면 래퍼에 **쓸 수 있는 값 접근자**가 있어야 한다. `forEach` 는 키 · 값을
-            // 모두 const 로만 준다. (키는 어차피 정렬 키라 제자리 편집이 불가능하다. `set` 과 같다.)
-            // 그때까지는 적어도 **몇 개 들어 있는지는 보여 준다.**
-            size_t entryCount = 0;
-            pMap->forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void*, const void* )
-            { ++entryCount; } ) );
-            ImGui::TextDisabled( "맵 컨테이너는 아직 인스펙터가 그리지 않습니다 (%zu entries)", entryCount );
+            drawMapContainer( pContainer, prop, *pMap, bReadOnly );
+            return;
+        }
+        // 원소가 곧 정렬 · 해시 키인 컨테이너(`set`)는 제자리에서 고칠 수 없다 — 지우고 다시 넣는다.
+        if ( pSeq->allowsInPlaceElementWrite() == false )
+        {
+            drawKeyedSequenceContainer( pContainer, prop, *pSeq, bReadOnly );
             return;
         }
 
@@ -738,26 +757,25 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer128> headerBuf;
         formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
 
-        // 연관 컨테이너(`set` 등)는 원소가 곧 정렬 키라 **제자리에서 고칠 수 없다.** 고치는 순간
-        // 트리가 정렬을 잃고 이후의 삽입 · 조회가 무너진다. 이 패널은 원소를 제자리에서 편집하므로
-        // 그런 컨테이너는 읽기 전용으로 보여 준다. 편집을 지원하려면 "지우고 다시 넣기" 가 필요하다.
-        const bool bInPlaceEditable = pSeq->allowsInPlaceElementWrite();
-        const bool bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, bInPlaceEditable );
-        if ( bInPlaceEditable == false )
-            bReadOnly = true;
+        const bool bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
 
         if ( ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) )
         {
-            if ( bInPlaceEditable == false )
-                ImGui::TextDisabled( "정렬 컨테이너라 제자리 편집을 지원하지 않습니다 (읽기 전용)" );
-
             if ( bReadOnly == false )
             {
                 if ( ImGui::SmallButton( "+ Add" ) )
-                    pSeq->addElementDefault( pContainer );
+                {
+                    InspectorPanelInternal::applyContainerEdit( getEditOwner(), "Add Element", [pSeq, pContainer]()
+                    { pSeq->addElementDefault( pContainer ); } );
+                    notifyPropertyEdited( prop );
+                }
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( "Clear" ) )
-                    pSeq->clear( pContainer );
+                {
+                    InspectorPanelInternal::applyContainerEdit( getEditOwner(), "Clear Elements", [pSeq, pContainer]()
+                    { pSeq->clear( pContainer ); } );
+                    notifyPropertyEdited( prop );
+                }
                 ImGui::Separator();
             }
 
@@ -790,6 +808,163 @@ namespace sw::editor
             ImGui::EndDisabled();
             ImGui::TreePop();
         }
+    }
+
+    void InspectorPanel::drawMapContainer( void* pContainer, const PropertyInfo& prop, IMapContainerWrapper& mapWrapper, bool bReadOnly )
+    {
+        const SerializeContext&               ctx = SerializeContext::getDefault();
+        fixed_string<constant::kMaxBuffer128> headerBuf;
+        formatstring( headerBuf.data(), headerBuf.capacity(), "[%# -> %#] (%# entries)", prop._keyTypeName.c_str(), prop._elementTypeName.c_str(),
+                      mapWrapper.getSize( pContainer ) );
+        if ( ImGui::TreeNodeEx( "##value", ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) == false )
+            return;
+
+        const PropertyInfo keyProp   = InspectorPanelInternal::makeValueProperty( prop._keyTypeName );
+        PropertyInfo       valueProp = InspectorPanelInternal::makeValueProperty( prop._elementTypeName );
+        valueProp._name              = prop._name;
+        valueProp._metadata          = prop._metadata;
+        const bool bElementEditable  = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
+
+        // 값은 맵 노드 안에서 제자리로 고친다(되돌리기는 위젯 하나 단위 — `drawPropertyWidget`). 지우기는 순회가 끝난 뒤에 한다.
+        size_t eraseOrdinal = static_cast<size_t>( -1 );
+        size_t ordinal      = 0;
+        mapWrapper.forEachMutable( pContainer, SW_DELEGATE_LAMBDA( MapForEachMutableDelegate, [&]( const void* pKey, void* pValue )
+        {
+            ImGui::PushID( static_cast<int32>( ordinal ) );
+            if ( bReadOnly == false && ImGui::SmallButton( "x" ) )
+                eraseOrdinal = ordinal;
+            if ( bReadOnly == false )
+                ImGui::SameLine();
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted( SerializerUtil::formatPropertyText( keyProp, pKey, ctx ).c_str() );
+            ImGui::SameLine();
+            ImGui::BeginDisabled( bElementEditable == false );
+            ImGui::SetNextItemWidth( -FLT_MIN );
+            drawPropertyWidget( pValue, valueProp );
+            ImGui::EndDisabled();
+            ImGui::PopID();
+            ++ordinal;
+        } ) );
+
+        if ( eraseOrdinal != static_cast<size_t>( -1 ) )
+        {
+            InspectorPanelInternal::applyContainerEdit( getEditOwner(), "Remove Map Entry", [&mapWrapper, pContainer, eraseOrdinal]()
+            { (void)mapWrapper.eraseAt( pContainer, eraseOrdinal ); } );
+            notifyPropertyEdited( prop );
+        }
+
+        string keyText;
+        if ( bReadOnly == false && drawContainerAddRow( "new key (Enter)", keyText ) )
+        {
+            // 키를 키 타입으로 읽어 본다. 같은 키(글이 같다)가 이미 있으면 값을 덮어쓰지 않는다.
+            void* pKey   = Memory::allocateAligned( mapWrapper.getKeySize(), alignof( std::max_align_t ) );
+            void* pValue = Memory::allocateAligned( mapWrapper.getValueSize(), alignof( std::max_align_t ) );
+            mapWrapper.defaultConstructKey( pKey );
+            mapWrapper.defaultConstructValue( pValue );
+            if ( SerializerUtil::applyPropertyText( keyProp, pKey, keyText, ctx ) )
+            {
+                const string stagedText = SerializerUtil::formatPropertyText( keyProp, pKey, ctx );
+                bool         bExists    = false;
+                mapWrapper.forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void* pExistingKey, const void* )
+                {
+                    if ( SerializerUtil::formatPropertyText( keyProp, pExistingKey, ctx ) == stagedText )
+                        bExists = true;
+                } ) );
+                if ( bExists == false )
+                {
+                    InspectorPanelInternal::applyContainerEdit( getEditOwner(), "Add Map Entry", [&mapWrapper, pContainer, pKey, pValue]()
+                    { mapWrapper.insertKeyValue( pContainer, pKey, pValue ); } );
+                    notifyPropertyEdited( prop );
+                }
+            }
+            mapWrapper.destroyKey( pKey );
+            mapWrapper.destroyValue( pValue );
+            Memory::freeAligned( pKey );
+            Memory::freeAligned( pValue );
+        }
+        ImGui::TreePop();
+    }
+
+    void InspectorPanel::drawKeyedSequenceContainer( void* pContainer, const PropertyInfo& prop, ISequenceContainerWrapper& sequence, bool bReadOnly )
+    {
+        const SerializeContext&               ctx   = SerializeContext::getDefault();
+        const size_t                          count = sequence.getSize( pContainer );
+        fixed_string<constant::kMaxBuffer128> headerBuf;
+        formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
+        if ( ImGui::TreeNodeEx( "##value", ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) == false )
+            return;
+
+        const PropertyInfo elementProp      = InspectorPanelInternal::makeValueProperty( prop._elementTypeName );
+        const bool         bElementEditable = EditorSessionPolicy::areContainerElementEditsAllowed( bReadOnly, true );
+        size_t             eraseIndex       = static_cast<size_t>( -1 );
+        size_t             replaceIndex     = static_cast<size_t>( -1 );
+        string             replaceText;
+        for ( size_t elemIndex = 0; elemIndex < count; ++elemIndex )
+        {
+            ImGui::PushID( static_cast<int32>( elemIndex ) );
+            if ( bReadOnly == false && ImGui::SmallButton( "x" ) )
+                eraseIndex = elemIndex;
+            if ( bReadOnly == false )
+                ImGui::SameLine();
+            // 원소는 글 칸이다. Enter 로 낸 글을 원소 타입으로 읽어 지우고 다시 넣는다 — 원소가 곧 정렬 키라 제자리 쓰기는 트리를 망친다.
+            fixed_string<constant::kMaxBuffer256> elementText{ SerializerUtil::formatPropertyText( elementProp, sequence.getElementConst( pContainer, elemIndex ), ctx ).c_str() };
+            const ImGuiInputTextFlags             flags = bElementEditable ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_ReadOnly;
+            ImGui::SetNextItemWidth( -FLT_MIN );
+            if ( ImGui::InputText( "##element", elementText.data(), elementText.capacity(), flags ) && bElementEditable )
+            {
+                replaceIndex = elemIndex;
+                replaceText  = elementText.c_str();
+            }
+            ImGui::PopID();
+        }
+
+        if ( replaceIndex != static_cast<size_t>( -1 ) )
+        {
+            InspectorPanelInternal::applyContainerEdit( getEditOwner(), "Edit Set Element", [&]()
+            {
+                (void)sequence.replaceElement( pContainer, replaceIndex, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
+                { return SerializerUtil::applyPropertyText( elementProp, pElement, replaceText, ctx ); } ) );
+            } );
+            notifyPropertyEdited( prop );
+        }
+        else if ( eraseIndex != static_cast<size_t>( -1 ) )
+        {
+            InspectorPanelInternal::applyContainerEdit( getEditOwner(), "Remove Set Element", [&sequence, pContainer, eraseIndex]()
+            { (void)sequence.eraseAt( pContainer, eraseIndex ); } );
+            notifyPropertyEdited( prop );
+        }
+
+        string addText;
+        if ( bReadOnly == false && drawContainerAddRow( "new element (Enter)", addText ) )
+        {
+            InspectorPanelInternal::applyContainerEdit( getEditOwner(), "Add Set Element", [&]()
+            {
+                (void)sequence.appendElement( pContainer, sequence.getSize( pContainer ), SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
+                { return SerializerUtil::applyPropertyText( elementProp, pElement, addText, ctx ); } ) );
+            } );
+            notifyPropertyEdited( prop );
+        }
+        ImGui::TreePop();
+    }
+
+    bool InspectorPanel::drawContainerAddRow( const utf8* pHint, string& outText )
+    {
+        const ImGuiID                          rowId = ImGui::GetID( "##add" );
+        fixed_string<constant::kMaxBuffer256>& text  = _mapContainerAddText[static_cast<uint32>( rowId )];
+        ImGui::SetNextItemWidth( -FLT_MIN );
+        const bool bEntered = ImGui::InputTextWithHint( "##add", pHint, text.data(), text.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        if ( bEntered == false || text.empty() )
+            return false;
+        outText = text.c_str();
+        text.clear();
+        return true;
+    }
+
+    GameObject* InspectorPanel::getEditOwner() const
+    {
+        if ( _pEditTargetComponent != nullptr )
+            return _pEditTargetComponent->getOwner();
+        return _pEditTargetObject;
     }
 
     void InspectorPanel::drawStructOrStringProperty( void* pInstance, const PropertyInfo& prop, const TypeInfo* pFieldType )
