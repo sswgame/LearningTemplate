@@ -129,6 +129,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-4. 에디터
 
+- **에디터 자체 시험(`SW_EDITOR_SELF_TEST`)이 입력을 흉내 내지 못한다** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 툴팁 호버 · 드래그 드롭은
+  ImGui 입력 이벤트를 넣는 창구(`ImGuiIO::AddMousePosEvent` 류를 프레임 단계에서 주입)가 있어야 덮인다.
+- **`Resource/engine/materials/glassmaterial.material` 에 `.meta` 가 없다** — 열 때마다 `.meta` 가 새로 생긴다. GUID 를 만들어 커밋한다.
+
 - **DPI 150 % 모니터와 모니터 사이 이동을 실물로 보지 않았다.** 96 DPI 기계에서 `-gv_editorUiScale=1.5` 로만 봤다. 글자 선명도 · 창 · 스왑체인 크기 ·
   `io.ConfigDpiScaleFonts` · `ConfigDpiScaleViewports` 를 본다.
 
@@ -212,11 +216,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-11a. 결정됨 — 상용 엔진과 견줘 정했고 구현 중 (사용자 지시 2026-10-03)
 
-- **에디터 핫 리로드 뒤 Undo 를 살린다**(UE `FTransaction` · Unity Undo 는 직렬화한 객체 상태라 코드 리로드를 넘는다) — 스냅샷 트랜잭션을 엔진 쪽 데이터 커맨드로,
-  모듈 코드를 쥔 커맨드만 `IModuleCodeHolder` 훑기로 내린다(`ImGuiEditor::shutdown` 의 `clear()` 제거).
-- **모듈 리로드 실패: 적용 전 실패는 옛 이미지 유지, 적용 뒤 결함은 broken + 재시작**(UE Live Coding · Unity 도 적용 뒤 결함은 되돌리지 않는다).
-- **에디터 패널 시험은 에디터 안에서 돈다**(UE Automation · Unity EditMode) — 에디터 모듈 안 자체 시험 실행기, AppTest(hostgpu)가 띄워 결과를 읽는다.
-- **호출부 0 API — 에디터 · 모듈 쪽 남음**(입력 · 턴제 킷 쪽은 끝) — 항목마다 (a) 지운다 (b) 잇는다 (c) 남긴다(상용 엔진에 대응이 있으면 남기고 시험).
 - **컴포넌트 팩토리를 TypeRegistry 하나로**(UE `UClass`) · **엔진 등록부 공통 템플릿**.
 - **EngineLoop 초기화 · 종료 순서를 의존 선언 + 위상 정렬로**(UE `USubsystem::InitializeDependency`).
 - **`SW_ENABLE_DEADLOCK_DETECTION` 을 CI 가 지킨다** — `RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION` 한 줄.
@@ -717,6 +716,12 @@ cd build/Ninja-Debug/Bin
 
 ### 3-8. 에디터
 
+- **Undo 의 오브젝트 편집은 엔진 데이터 명령(`ObjectSnapshotCommand` — 오브젝트 id · 이름 · 스냅샷)으로 기록한다** — 리로드를 넘어야 할 기록은 Engine 코드로 만든다.
+  모듈 람다 명령은 에디터 리로드 때 `CommandStack::releaseCodeWithin` 이 뗀다(묶음은 안쪽 하나라도 걸리면 통째로). 대상 조회는 id, 같은 프레임에 지우고 되살린
+  오브젝트는 지연 파괴 때문에 새 id 를 받으므로 이름으로 다시 찾는다. 선택 · dirty 는 `ObjectEditListener` 로.
+- **에디터 동작 검증은 에디터 안 자체 시험** — `SW_EDITOR_SELF_TEST` 로 등록하고 `AppSmokeTest.EditorSelfTestsPassInsideTheEditor` 의 기대 목록에 한 줄 더한다
+  (`-gv_editorSelfTest=<패턴>`, 실행 중에는 사용자 `imgui.ini` 를 읽지도 쓰지도 않는다). 워크스페이스는 오브젝트 GUID · 프리팹 경로 사본을 들지 않는다(id · 씬이 정본).
+
 - **DebugDrawQueue 는 `endFrame` 에 비워진다** — 에디터 UI 보다 먼저 채운 것(게임 업데이트)만 보인다(`debug_draw` 시각화). 틱에서 채우는 생산자가 생기면
   이중 버퍼로. `ActionRoom::drawDebug` 를 부르는 곳은 아직 없다. 메뉴 경로는 `EditorCommandRegistry::validate` 가 "그려지지 않는 경로" 를 잡는다.
 
@@ -754,6 +759,9 @@ cd build/Ninja-Debug/Bin
 - **패널 시각 검증 사각** — 피킹 클릭 · 기즈모 우선순위는 사람이 눌러야 보인다. 그리기 회귀는 `Game View` 정점 수로 전후를 비교한다.
 
 ### 3-9. 핫 리로드 · 모듈 · 엔진 서비스
+
+- **리로드 거절 사유는 옛 이미지를 내리기 전에 본다** — `LiveReloadManager::setOnValidateImage`(ABI · API 표)와 배치 콜백(`OnBeforeCommitBatchDelegate` 가 false
+  면 아무것도 내리지 않음, 게임 상태 찍기 실패 포함)이 적용 전 실패를 막아 옛 모듈이 계속 돈다. 적용 뒤 결함만 `markGraphBroken`(UE Live Coding 과 같다).
 
 - **모듈 코드를 쥘 수 있는 등록부는 `IModuleCodeHolder` 를 상속해 스스로 등록한다**(`releaseModuleCode` 에 손 목록을 다시 만들지 말 것). 보유자 객체는
   엔진(또는 App) 코드가 만들고 생성자를 .cpp 에 둔다 — 모듈 안에서 만든 보유자가 모듈보다 오래 살면 훑기가 내려간 vtable 로 뛴다.
