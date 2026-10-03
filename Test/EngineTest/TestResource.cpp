@@ -475,6 +475,31 @@ SW_TEST_CASE( ResourceTest, DdsLoaderRejectsUnknownPixelFormat )
 }
 
 /**
+ * @brief [ResourceTest] Resource/ 아래의 `.dds` 는 모두 DDS 매직("DDS ")으로 시작한다
+ * @details 받다 만 웹 페이지(HTML)가 `.dds` 이름으로 들어와 있으면 이름으로 부르는 날 로더가 "magic" 오류를 낸다. 이름만 보고는 모르므로
+ *          파일 머리 4 바이트를 본다.
+ */
+SW_TEST_CASE( ResourceTest, EveryDdsUnderResourceStartsWithTheDdsMagic )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    const sw::string& rootPath = sw::ResourceUtil::getRootFolderPath();
+    SW_ASSERT_FALSE( rootPath.empty() );
+
+    sw::vector<sw::string> listDdsPath;
+    SW_ASSERT_TRUE( sw::FileUtil::collectFiles( rootPath, ".dds", listDdsPath, true ) );
+    SW_ASSERT_TRUE( listDdsPath.empty() == false );
+
+    constexpr uint8 kArrDdsMagic[4] = { 'D', 'D', 'S', ' ' };
+    for ( const sw::string& ddsPath : listDdsPath )
+    {
+        sw::vector<uint8> bytes;
+        const bool        bRead     = sw::FileUtil::readFile( ddsPath, bytes, 0, sizeof( kArrDdsMagic ) );
+        const bool        bHasMagic = bRead && bytes.size() == sizeof( kArrDdsMagic ) && std::equal( bytes.begin(), bytes.end(), kArrDdsMagic );
+        SW_EXPECT_TRUE_MSG( bHasMagic, ( sw::string( "not a DDS file: " ) + ddsPath ).c_str() );
+    }
+}
+
+/**
  * @brief [ResourceTest] AssetDatabase 캡슐화, tryGetGuid/Path, registerMapping 검증
  */
 SW_TEST_CASE( ResourceTest, AssetDatabaseThreadSafeLookupAndMapping )
