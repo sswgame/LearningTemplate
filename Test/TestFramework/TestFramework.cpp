@@ -69,6 +69,93 @@ namespace test
             return s_mutex;
         }
 
+        /** @brief 이 스레드가 지금 `addFailure` 안에 있는가 — 거기서 남기는 `[FAILED]` 줄은 예상 밖 Error 로 세지 않는다. */
+        thread_local bool s_bReportingFailure = false;
+
+        /** @brief 방어 시험 구간(`SW_TEST_DEFENSIVE_SCOPE`)이 Error · Warning 앞에 붙이는 표식입니다. */
+        constexpr sw::string_view kDefensiveLogPrefix = "[Expected Defensive Test]";
+
+        /**
+         * @brief 호스트 스위트 케이스 하나 동안 남은 Error 로그를 셉니다.
+         * @details GPU 시험은 검증 레이어 · 드라이버 오류를 Error 로그로만 남기고 단언은 통과할 수 있다. 그래서 호스트 스위트의
+         *          케이스는 예상 밖 Error 가 하나라도 있으면 진다. 의도된 Error 는 `SW_TEST_DEFENSIVE_SCOPE` 안에서 남기면 표식이
+         *          붙어 세지 않고, `SW_TEST_SUPPRESS_LOGS` 안의 로그는 아예 남지 않는다. 그 스위트에 선언된 알려진 Error
+         *          (`SW_TEST_KNOWN_ERROR_LOG`)는 세지 않고 그 선언의 `_hitCount` 에 센다.
+         */
+        class UnexpectedErrorLogWatch
+        {
+        public:
+            /** @param pListKnownErrorLog 이 케이스의 스위트에 선언된 알려진 Error. 널이면 세지 않는다(호스트 스위트가 아님). */
+            explicit UnexpectedErrorLogWatch( sw::vector<KnownErrorLog*>* pListKnownErrorLog )
+                : _pListKnownErrorLog{ pListKnownErrorLog }
+            {
+                if ( _pListKnownErrorLog == nullptr )
+                    return;
+                _handle = sw::Logger::addGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [this]( const sw::LogEntry& entry )
+                {
+                    if ( entry._level != sw::LogLevel::Error || s_bReportingFailure )
+                        return;
+                    const sw::string_view message{ entry._message.c_str(), entry._message.size() };
+                    if ( message.substr( 0, kDefensiveLogPrefix.size() ) == kDefensiveLogPrefix )
+                        return;
+                    const std::lock_guard<std::mutex> lock( _mutex );
+                    for ( KnownErrorLog* pKnown : *_pListKnownErrorLog )
+                    {
+                        if ( message.find( sw::string_view{ pKnown->_substring.c_str(), pKnown->_substring.size() } ) == sw::string_view::npos )
+                            continue;
+                        ++pKnown->_hitCount;
+                        return;
+                    }
+                    ++_count;
+                    if ( _listMessage.size() < kShownMessageCount )
+                        _listMessage.push_back( entry._message );
+                } ) );
+            }
+
+            ~UnexpectedErrorLogWatch() { stop(); }
+
+            UnexpectedErrorLogWatch( const UnexpectedErrorLogWatch& )            = delete;
+            UnexpectedErrorLogWatch& operator=( const UnexpectedErrorLogWatch& ) = delete;
+
+            /** @brief 세기를 멈춥니다. 케이스 정리가 끝난 뒤, 결과를 기록하기 전에 부릅니다. */
+            void stop()
+            {
+                if ( _handle.isValid() == false )
+                    return;
+                sw::Logger::removeGlobalListener( _handle );
+                _handle = {};
+            }
+
+            uint32 getCount() const
+            {
+                const std::lock_guard<std::mutex> lock( _mutex );
+                return _count;
+            }
+
+            /** @brief 센 수와 앞쪽 몇 줄 — 실패 메시지에 붙여 "무엇이 나왔나" 를 보입니다. */
+            sw::string describe() const
+            {
+                const std::lock_guard<std::mutex> lock( _mutex );
+                sw::string                        result = sw::to_string( _count );
+                result += " unexpected [Error] log line(s); wrap intended ones in SW_TEST_DEFENSIVE_SCOPE";
+                for ( const sw::string& message : _listMessage )
+                {
+                    result += "\n      ";
+                    result += message;
+                }
+                return result;
+            }
+
+        private:
+            static constexpr size_t kShownMessageCount = 5;
+
+            mutable std::mutex          _mutex;
+            sw::vector<sw::string>      _listMessage;
+            sw::vector<KnownErrorLog*>* _pListKnownErrorLog{ nullptr };
+            sw::DelegateHandle          _handle;
+            uint32                      _count{ 0 };
+        };
+
         /** @brief CLI 인자 값의 따옴표를 제거합니다. */
         sw::string trimArgValue( std::string_view value )
         {
@@ -134,6 +221,28 @@ namespace test
     void TestRegistry::registerHostSuite( const utf8* pSuiteName, const utf8* pReason )
     {
         _mapHostSuiteReason[pSuiteName] = pReason;
+    }
+
+    void TestRegistry::registerKnownErrorLog( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason )
+    {
+        _listKnownErrorLog.push_back( { pSuiteName, pSubstring, pReason, 0 } );
+    }
+
+    void TestRegistry::printKnownErrorLogSummary() const
+    {
+        if ( _listKnownErrorLog.empty() )
+            return;
+
+        std::fprintf( stdout, " Known error logs (SW_TEST_KNOWN_ERROR_LOG - fix the cause, then delete the declaration):\n" );
+        for ( const KnownErrorLog& known : _listKnownErrorLog )
+        {
+            if ( known._hitCount > 0 )
+                std::fprintf( stdout, "   %s: tolerated %u line(s) containing '%s' - %s\n", known._suiteName.c_str(), known._hitCount,
+                              known._substring.c_str(), known._reason.c_str() );
+            else
+                std::fprintf( stdout, "   %s: '%s' did not appear in this run - delete the declaration if it is fixed\n", known._suiteName.c_str(),
+                              known._substring.c_str() );
+        }
     }
 
     bool TestRegistry::isSelected( const TestCaseInfo& testInfo ) const
@@ -321,6 +430,8 @@ namespace test
             return;
         }
 
+        s_bReportingFailure = true;
+
         _currentContext.addFailure( condition, file, line, message );
         std::fprintf( stdout, "\n  [FAILED] %s:%d\n    Condition: %s\n", file.c_str(), line, condition.c_str() );
         if ( message.empty() == false )
@@ -330,6 +441,7 @@ namespace test
         SW_LOG_ERROR( "    Condition: %#", condition.c_str() );
         if ( message.empty() == false )
             SW_LOG_ERROR( "    Message  : %#", message.c_str() );
+        s_bReportingFailure = false;
     }
 
     void TestRegistry::skipCurrentTest( [[maybe_unused]] const sw::string& reason, [[maybe_unused]] const sw::string& file, [[maybe_unused]] int32 line )
@@ -442,6 +554,16 @@ namespace test
 
         const std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
 
+        // 호스트 스위트(GPU · 창 · DXC)는 예상 밖 Error 로그를 실패로 친다 — 검증 레이어 오류가 단언 없이 지나가지 않게.
+        const bool                 bHostSuite = _mapHostSuiteReason.find( testInfo._groupName ) != _mapHostSuiteReason.end();
+        sw::vector<KnownErrorLog*> listKnownErrorLog;
+        for ( KnownErrorLog& known : _listKnownErrorLog )
+        {
+            if ( known._suiteName == testInfo._groupName )
+                listKnownErrorLog.push_back( &known );
+        }
+        UnexpectedErrorLogWatch errorLogWatch( bHostSuite ? &listKnownErrorLog : nullptr );
+
         try
         {
             testInfo._func();
@@ -469,6 +591,10 @@ namespace test
         }
 
         _currentContext.runCleanup();
+
+        errorLogWatch.stop();
+        if ( errorLogWatch.getCount() > 0 )
+            addFailure( "no unexpected [Error] log in a host suite case", testInfo.fullName(), 0, errorLogWatch.describe() );
 
         // 정리(핸들 닫기 · 등록 해제)가 끝난 뒤에 케이스 폴더를 통째로 지운다. 못 지웠다면 그 케이스가 파일을 연 채로
         // 두었다는 뜻이다 — Windows 에서는 열린 파일을 지울 수 없다. 핸들 누수는 결함이므로 그 케이스의 실패로 남긴다.
@@ -687,6 +813,7 @@ namespace test
                 std::fprintf( stdout, "   %9.2f ms  %s\n", listElapsed[index].first, listElapsed[index].second->fullName().c_str() );
         }
 
+        printKnownErrorLogSummary();
         std::fprintf( stdout, " Tests passed: %d / %d (%d skipped, %.2f ms total)\n", passedCount, passedCount + failedCount + skippedCount, skippedCount, totalMs );
         if ( failedCount > 0 )
         {

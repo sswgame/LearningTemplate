@@ -447,13 +447,16 @@ SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
         firstMipOnly._sizeBytes               = 16 * 4;
         SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, firstMipOnly ), "mip 0 only upload failed" );
 
-        sw::RHITextureUploadDesc tooShort = upload;
-        tooShort._sizeBytes               = 16 * 4; // 밉 3개를 요구하면서 밉 0 분량만 줌
-        SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, tooShort ) == false, "short upload must be rejected" );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "uploadTexture2D rejects a short upload and a mip count beyond the texture" );
+            sw::RHITextureUploadDesc tooShort = upload;
+            tooShort._sizeBytes               = 16 * 4; // 밉 3개를 요구하면서 밉 0 분량만 줌
+            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, tooShort ) == false, "short upload must be rejected" );
 
-        sw::RHITextureUploadDesc tooManyMips = upload;
-        tooManyMips._mipLevels               = 4;
-        SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, tooManyMips ) == false, "mip count beyond the texture must be rejected" );
+            sw::RHITextureUploadDesc tooManyMips = upload;
+            tooManyMips._mipLevels               = 4;
+            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, tooManyMips ) == false, "mip count beyond the texture must be rejected" );
+        }
 
         const sw::RHIDescriptorIndex srv = pResource->registerBindlessTexture( texture );
         SW_EXPECT_TRUE( srv != sw::kInvalidDescriptorIndex );
@@ -542,9 +545,12 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
                 SW_EXPECT_TRUE_MSG( bSame, "readback bytes differ from upload" );
                 offset += layout._sizeBytes;
             }
-            sw::vector<uint8>     outOfRangeBytes;
-            sw::RHITextureMipSpan outOfRangeLayout{};
-            SW_EXPECT_TRUE( pResource->readbackTexture2D( texture, testCase._mips, outOfRangeBytes, outOfRangeLayout ) == false );
+            {
+                SW_TEST_DEFENSIVE_SCOPE( "readbackTexture2D rejects a mip past the last one" );
+                sw::vector<uint8>     outOfRangeBytes;
+                sw::RHITextureMipSpan outOfRangeLayout{};
+                SW_EXPECT_TRUE( pResource->readbackTexture2D( texture, testCase._mips, outOfRangeBytes, outOfRangeLayout ) == false );
+            }
             pResource->destroyTexture( texture );
         }
 

@@ -51,6 +51,16 @@ namespace
         outReachedEnd = true;
     }
 
+    /** @brief 지역 레지스트리의 케이스 본문 — 예상 밖 Error 를 하나 남깁니다. */
+    void logProbeError() { SW_LOG_ERROR( "Deliberate probe error (TestFrameworkTest.HostSuiteCaseFailsOnUnexpectedErrorLog)" ); }
+
+    /** @brief 지역 레지스트리의 케이스 본문 — 방어 시험 구간 안에서 Error 를 남깁니다. */
+    void logProbeErrorInDefensiveScope()
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "probe error inside a defensive scope" );
+        SW_LOG_ERROR( "Deliberate probe error inside a defensive scope" );
+    }
+
     /** @brief 테스트 실행 파일 인자 하나로 지역 레지스트리를 설정합니다. */
     void configureWithArgument( test::TestRegistry& registry, const utf8* pArgument )
     {
@@ -281,6 +291,54 @@ SW_TEST_CASE( TestFrameworkTest, IneffectiveHostSuitesRunFails )
     staleRegistry.registerHostSuite( "RenamedAwayTest", "needs a GPU" );
     configureWithArgument( staleRegistry, "--host_suites=exclude" );
     SW_EXPECT_EQUAL( 1, staleRegistry.runAllTests() );
+}
+
+/**
+ * @brief [TestFrameworkTest] 호스트 스위트 케이스는 예상 밖 Error 로그 하나로 진다 — 방어 구간의 Error 와 일반 스위트는 그대로 통과
+ * @details GPU 시험은 검증 레이어 · 드라이버 오류를 Error 로그로만 남기고 단언은 통과할 수 있다(Vulkan 구간이 `[Error]` 17 줄을 찍으며
+ *          통과한 적이 있다). 이 케이스는 일부러 Error 한 줄을 남기므로 그 줄이 이 실행의 출력에 보인다.
+ */
+SW_TEST_CASE( TestFrameworkTest, HostSuiteCaseFailsOnUnexpectedErrorLog )
+{
+    test::TestRegistry hostRegistry;
+    hostRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    hostRegistry.registerTest( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+    SW_EXPECT_TRUE_MSG( hostRegistry.runAllTests() == 1, "a host suite case that logs an unexpected Error must fail" );
+
+    test::TestRegistry defensiveRegistry;
+    defensiveRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    defensiveRegistry.registerTest( "GpuProbeTest", "LogsDefensiveError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeErrorInDefensiveScope ) );
+    SW_EXPECT_TRUE_MSG( defensiveRegistry.runAllTests() == 0, "an Error inside SW_TEST_DEFENSIVE_SCOPE is expected, not a failure" );
+
+    test::TestRegistry plainRegistry;
+    plainRegistry.registerTest( "PlainProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+    SW_EXPECT_TRUE_MSG( plainRegistry.runAllTests() == 0, "only host suites count Error logs" );
+}
+
+/**
+ * @brief [TestFrameworkTest] 알려진 Error 선언은 그 스위트 · 그 문구만 견딘다
+ * @details `SW_TEST_KNOWN_ERROR_LOG` 는 원인이 엔진에 있고 아직 못 고친 Error 를 그 스위트에서만 빼 준다. 다른 문구나 다른 스위트까지
+ *          빼 주면 호스트 스위트의 Error 판정이 다시 구멍이 된다.
+ */
+SW_TEST_CASE( TestFrameworkTest, KnownErrorLogIsToleratedOnlyForItsSuiteAndText )
+{
+    test::TestRegistry knownRegistry;
+    knownRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    knownRegistry.registerKnownErrorLog( "GpuProbeTest", "Deliberate probe error", "probe" );
+    knownRegistry.registerTest( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+    SW_EXPECT_TRUE_MSG( knownRegistry.runAllTests() == 0, "a declared known error must be tolerated" );
+
+    test::TestRegistry otherTextRegistry;
+    otherTextRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    otherTextRegistry.registerKnownErrorLog( "GpuProbeTest", "some other text", "probe" );
+    otherTextRegistry.registerTest( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+    SW_EXPECT_TRUE_MSG( otherTextRegistry.runAllTests() == 1, "a known error must not tolerate a different text" );
+
+    test::TestRegistry otherSuiteRegistry;
+    otherSuiteRegistry.registerHostSuite( "GpuProbeTest", "needs a GPU" );
+    otherSuiteRegistry.registerKnownErrorLog( "OtherProbeTest", "Deliberate probe error", "probe" );
+    otherSuiteRegistry.registerTest( "GpuProbeTest", "LogsError", SW_DELEGATE_FUNCTION( sw::Delegate<void()>, logProbeError ) );
+    SW_EXPECT_TRUE_MSG( otherSuiteRegistry.runAllTests() == 1, "a known error must not tolerate another suite" );
 }
 
 /**

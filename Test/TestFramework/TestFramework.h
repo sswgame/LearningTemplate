@@ -25,6 +25,19 @@ namespace test
         sw::string fullName() const { return _groupName + "." + _testName; }
     };
 
+    /**
+     * @brief 호스트 스위트에서 아직 고치지 못한 Error 로그 하나(`SW_TEST_KNOWN_ERROR_LOG`).
+     * @details 그 스위트의 케이스가 남긴 Error 중 `_substring` 을 담은 줄은 예상 밖 Error 로 세지 않고 `_hitCount` 에 센다.
+     *          실행 요약이 견딘 줄 수를 찍으므로 조용히 묻히지 않는다.
+     */
+    struct KnownErrorLog
+    {
+        sw::string _suiteName;
+        sw::string _substring;
+        sw::string _reason;
+        uint32     _hitCount{ 0 };
+    };
+
     /** @brief 케이스 하나를 돌린 결과. */
     enum class CaseResult : uint8
     {
@@ -58,6 +71,9 @@ namespace test
         void registerTest( const utf8* pSuiteName, const utf8* pTestName, sw::Delegate<void()> func );
         /** @brief 스위트가 GPU · 창 · DXC 같은 호스트 자원을 요구한다고 등록합니다(`SW_TEST_REQUIRES_HOST`). */
         void registerHostSuite( const utf8* pSuiteName, const utf8* pReason );
+
+        /** @brief 호스트 스위트의 케이스가 남겨도 실패로 치지 않을 Error 로그(부분 문자열)를 등록합니다(`SW_TEST_KNOWN_ERROR_LOG`). */
+        void registerKnownErrorLog( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason );
 
         /** @brief 테스트 전용 인자를 파싱하고 나머지 인자를 반환합니다. */
         sw::vector<utf8*> configureFromArgs( int32 argc, utf8* argv[] );
@@ -107,11 +123,14 @@ namespace test
     private:
         /** @brief 호스트 스위트 선언이 실제 케이스와 맞는지 보고, 어긋난 수를 반환합니다. */
         int32 countHostSuiteMismatch() const;
+        /** @brief 견딘 알려진 Error 로그를 실행 요약에 찍습니다. */
+        void printKnownErrorLogSummary() const;
         /** @brief 케이스 하나를 돌리고(정리 · 임시 폴더 지우기까지) 결과 줄을 찍습니다. */
         CaseResult runCase( const TestCaseInfo& testInfo, float64& outElapsedMs );
 
         sw::vector<TestCaseInfo>        _listTest;
         sw::map<sw::string, sw::string> _mapHostSuiteReason;
+        sw::vector<KnownErrorLog>       _listKnownErrorLog;
         TestFilter                      _filter;
         TestContext                     _currentContext;
         TestEnvironment                 _environment;
@@ -444,6 +463,17 @@ namespace test
         }
     };
 
+    /** @brief 정적 초기화로 알려진 Error 로그 선언을 레지스트리에 붙입니다. */
+    class KnownErrorLogRegistrar
+    {
+    public:
+        /** @brief 정적 초기화 시점에 알려진 Error 로그를 등록합니다. */
+        KnownErrorLogRegistrar( const utf8* pSuiteName, const utf8* pSubstring, const utf8* pReason )
+        {
+            TestRegistry::getInstance().registerKnownErrorLog( pSuiteName, pSubstring, pReason );
+        }
+    };
+
     /** @brief 정적 초기화로 호스트 스위트 선언을 레지스트리에 붙입니다. */
     class HostSuiteRegistrar
     {
@@ -481,6 +511,18 @@ namespace test
  *          HostOnly 필터 세 곳에 적고 린트가 셋을 대조했다.
  */
 #define SW_TEST_REQUIRES_HOST( SuiteName, reason ) static test::HostSuiteRegistrar hostSuite_##SuiteName( #SuiteName, reason )
+
+/**
+ * @brief 호스트 스위트가 남기는 Error 로그 가운데 **아직 고치지 못한 것** 하나를 견딥니다.
+ * @param SuiteName 그 스위트(`SW_TEST_REQUIRES_HOST` 로 선언한 것).
+ * @param substring 그 Error 줄에 든 고정 문구(영문 원문).
+ * @param reason    왜 견디는지 · 어디서 고칠지(영문 — 실행 요약에 찍힌다).
+ * @details 호스트 스위트의 케이스는 예상 밖 Error 로그 하나로 진다(검증 레이어 · 드라이버 오류가 단언 없이 지나가지 않게).
+ *          의도된 Error 는 `SW_TEST_DEFENSIVE_SCOPE` 로 감싸고, 이 선언은 **원인이 시험 밖(엔진)에 있고 아직 못 고친 것**에만 쓴다.
+ *          실행 요약이 견딘 줄 수를 찍고, 한 번도 나오지 않았으면 "지워도 된다" 고 알린다. 고쳤으면 이 줄을 지운다.
+ */
+#define SW_TEST_KNOWN_ERROR_LOG( SuiteName, substring, reason ) \
+    static test::KnownErrorLogRegistrar SW_CONCAT( knownErrorLog_##SuiteName##_, __LINE__ )( #SuiteName, substring, reason )
 
 /** @brief 현재 테스트를 사유와 함께 건너뜁니다(스위트 실패로 치지 않음). */
 #define SW_TEST_SKIP( reason )                                                               \

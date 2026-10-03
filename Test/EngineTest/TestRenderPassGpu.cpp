@@ -60,6 +60,13 @@
 
 SW_TEST_REQUIRES_HOST( RenderPassGpuTest, "runs FrameRenderer on a real GPU device and reads pixels back" );
 
+// DX11 deferred 경로가 깊이를 PS t3 에 SRV 로 묶은 채 다음 패스의 DSV 로 건다 — 디버그 레이어가 SRV 를 강제로 풀고 Error 로 남긴다.
+// 원인은 엔진(D3D11RHICommandContext::beginRenderPass 가 DSV 와 겹치는 SRV 를 풀지 않음)이라 고치면 두 줄을 지운다.
+SW_TEST_KNOWN_ERROR_LOG( RenderPassGpuTest, "Resource being set to OM DepthStencil is still bound on input",
+                         "DX11 deferred binds depth as DSV while it is still a PS SRV (t3) - D3D11RHICommandContext::beginRenderPass" );
+SW_TEST_KNOWN_ERROR_LOG( RenderPassGpuTest, "Forcing PS shader resource slot 3 to NULL",
+                         "same DX11 deferred depth SRV/DSV hazard as above" );
+
 namespace
 {
     /**
@@ -3168,7 +3175,11 @@ SW_TEST_CASE( RenderPassGpuTest, StructuredBufferRejectsSizeThatOverflows32Bit )
             SW_ASSERT_TRUE( pResource != nullptr );
 
             // 64 x 100'000'000 = 6.4e9 — uint32 로 곱하면 약 2.1e9 로 접혀 "성공" 한다.
-            const sw::RHIBufferHandle overflowed = pResource->createStructuredBuffer( 64u, 100000000u );
+            sw::RHIBufferHandle overflowed = 0;
+            {
+                SW_TEST_DEFENSIVE_SCOPE( "createStructuredBuffer rejects a size that does not fit 32 bits" );
+                overflowed = pResource->createStructuredBuffer( 64u, 100000000u );
+            }
 
             // **DX12 는 거절하지 않아도 된다.** 그쪽 `D3D12_RESOURCE_DESC::Width` 는 UINT64 라 이 크기를
             // 실제로 표현할 수 있고, 만들지 말지는 드라이버가 정한다. 나머지 셋은 하위 API 가 전부
