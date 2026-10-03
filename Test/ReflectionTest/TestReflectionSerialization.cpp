@@ -3115,3 +3115,46 @@ SW_TEST_CASE( ReflectionSerializationTest, EveryPropertyHasATypeTheSerializersCa
     SW_EXPECT_TRUE( report._checkedCount > 100 );
     SW_EXPECT_TRUE_MSG( report._offender.empty(), report._offender.c_str() );
 }
+
+/**
+ * @brief [ReflectionSerializationTest] 고정 배열 프로퍼티는 세 형식에서 왕복한다 — 칸마다 채우고, 칸보다 많은 원소는 실패로 알린다
+ * @details 고정 배열은 자라지 않으므로 읽기가 "뒤에 넣기" 가 아니라 순번의 칸을 채운다(`ISequenceContainerWrapper::appendElement` 의 순번 인자).
+ *          파일의 원소가 칸보다 적으면 남은 칸은 그대로다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, FixedArrayPropertyRoundTripsInEveryFormat )
+{
+    const sw::TypeInfo* pType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::FixedArrayActor" ) );
+    SW_ASSERT_NOT_NULL( pType );
+    sw::FixedArrayActor source;
+    source._arrSlot = { 7, 8, 9 };
+    source._after   = 42;
+
+    const sw::string    xml = sw::XmlSerializer::serialize( &source, *pType );
+    sw::FixedArrayActor fromXml;
+    SW_EXPECT_TRUE_MSG( sw::XmlSerializer::deserialize( &fromXml, *pType, xml ), xml.c_str() );
+    SW_EXPECT_TRUE_MSG( fromXml._arrSlot[0] == 7 && fromXml._arrSlot[1] == 8 && fromXml._arrSlot[2] == 9 && fromXml._after == 42, xml.c_str() );
+
+    const sw::string    json = sw::JsonSerializer::serialize( &source, *pType );
+    sw::FixedArrayActor fromJson;
+    SW_EXPECT_TRUE_MSG( sw::JsonSerializer::deserialize( &fromJson, *pType, json ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( fromJson._arrSlot[0] == 7 && fromJson._arrSlot[1] == 8 && fromJson._arrSlot[2] == 9 && fromJson._after == 42, json.c_str() );
+
+    sw::vector<uint8> bytes;
+    sw::BinarySerializer::serialize( &source, *pType, bytes );
+    sw::FixedArrayActor fromBinary;
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromBinary, *pType, bytes.data(), bytes.size() ) );
+    SW_EXPECT_TRUE( fromBinary._arrSlot[0] == 7 && fromBinary._arrSlot[1] == 8 && fromBinary._arrSlot[2] == 9 && fromBinary._after == 42 );
+
+    // 원소가 칸보다 적으면 앞 칸만 채우고 나머지는 그대로다. 많으면 실패로 알린다(조용히 버리지 않는다).
+    const sw::string    shortJson = "{\"_arrSlot\":[5],\"_after\":1}";
+    sw::FixedArrayActor fromShort;
+    fromShort._arrSlot = { 1, 2, 3 };
+    SW_EXPECT_TRUE_MSG( sw::JsonSerializer::deserialize( &fromShort, *pType, shortJson ), shortJson.c_str() );
+    SW_EXPECT_TRUE( fromShort._arrSlot[0] == 5 && fromShort._arrSlot[1] == 2 && fromShort._arrSlot[2] == 3 && fromShort._after == 1 );
+
+    test::ScopedLogSuppressor suppressor;
+    sw::FixedArrayActor       fromLong;
+    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &fromLong, *pType, "{\"_arrSlot\":[1,2,3,4],\"_after\":1}" ) );
+    SW_EXPECT_FALSE( sw::XmlSerializer::deserialize( &fromLong, *pType,
+                                                     "<FixedArrayActor><_arrSlot><item>1</item><item>2</item><item>3</item><item>4</item></_arrSlot></FixedArrayActor>" ) );
+}

@@ -506,27 +506,36 @@ SW_TEST_CASE( ReflectionBitfieldTest, WideBitfieldSerializationRoundtrip )
 }
 
 /**
- * @brief 고정 배열 래퍼는 **뒤에 넣기를 거절한다** — 물려받으면 조용히 덮어쓴다.
- * @details `ISequenceContainerWrapper::appendElement` 의 기본 구현은 `addElementDefault` 로 자리를
- *          만들고 마지막 칸에 쓴다. 고정 배열은 자라지 않으므로 그 "마지막 칸" 이 늘 같은 칸이고,
- *          들어오는 원소가 전부 **한 칸에 덮어써진다.** 오류 없이 끝나므로 아무도 모른다.
- *          거절하면 호출자(세 직렬화기)가 스트림을 거부한다.
+ * @brief 고정 배열 래퍼는 순번의 칸을 채우고, 칸이 없으면 거절한다 — 마지막 칸에 덮어쓰지 않는다.
+ * @details `ISequenceContainerWrapper::appendElement` 의 기본 구현은 `addElementDefault` 로 자리를 만들고 마지막 칸에 쓴다. 고정 배열은
+ *          자라지 않으므로 그것을 물려받으면 들어오는 원소가 전부 한 칸에 덮어써진다. 칸보다 많은 원소는 거절하고 읽기 콜백도 부르지 않는다.
  */
-SW_TEST_CASE( ReflectionContainersTest, FixedArrayRefusesAppend )
+SW_TEST_CASE( ReflectionContainersTest, FixedArrayFillsTheSlotOfEachElement )
 {
     std::array<int32, 4>                   arr = { 1, 2, 3, 4 };
     sw::ArrayWrapper<std::array<int32, 4>> arrWrapper;
 
+    int32 nextValue{ 10 };
+    for ( size_t elementIndex = 0; elementIndex < 4; ++elementIndex )
+    {
+        const bool bAppended = arrWrapper.appendElement( &arr, elementIndex, SW_DELEGATE_LAMBDA( sw::ElementFillDelegate, [&]( void* pElement ) -> bool
+        {
+            *static_cast<int32*>( pElement ) = nextValue++;
+            return true;
+        } ) );
+        SW_EXPECT_TRUE( bAppended );
+    }
+    SW_EXPECT_TRUE( arr[0] == 10 && arr[1] == 11 && arr[2] == 12 && arr[3] == 13 );
+
     bool       bFillCalled = false;
-    const bool bAppended   = arrWrapper.appendElement( &arr, SW_DELEGATE_LAMBDA( sw::ElementFillDelegate, [&]( void* pElement ) -> bool
+    const bool bOverflow   = arrWrapper.appendElement( &arr, 4, SW_DELEGATE_LAMBDA( sw::ElementFillDelegate, [&]( void* pElement ) -> bool
       {
         bFillCalled                      = true;
         *static_cast<int32*>( pElement ) = 999;
         return true;
     } ) );
-
-    SW_EXPECT_FALSE_MSG( bAppended, "고정 배열에 뒤에 넣기가 성공했다고 답하면 안 됩니다" );
+    SW_EXPECT_FALSE_MSG( bOverflow, "고정 배열의 칸보다 많은 원소를 받았다고 답하면 안 됩니다" );
     SW_EXPECT_FALSE_MSG( bFillCalled, "거절했는데 읽기 콜백이 불렸습니다" );
-    SW_EXPECT_EQUAL( 4, arr[3] ); // 마지막 칸이 덮어써지지 않았다.
+    SW_EXPECT_EQUAL( 13, arr[3] );
     SW_EXPECT_EQUAL( 4u, arrWrapper.getSize( &arr ) );
 }

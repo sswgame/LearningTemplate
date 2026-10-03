@@ -78,21 +78,17 @@ namespace sw
         virtual bool allowsInPlaceElementWrite() const { return true; }
 
         /**
-         * @brief 원소 하나를 읽어 **뒤에 넣습니다.** 읽기는 @p fill 이, 넣는 방법은 컨테이너가 정합니다.
+         * @brief 읽은 순서로 @p elementIndex 번째 원소 하나를 컨테이너에 넣습니다. 읽기는 @p fill 이, 넣는 방법은 컨테이너가 정합니다.
          *
-         * @details 역직렬화는 오랫동안 "자리를 먼저 만들고(`addElementDefault`) 그 자리에 제자리로
-         *          쓴다(`getElement`)" 는 한 가지 방법만 알았습니다. **연관 컨테이너에서는 그것이 틀렸습니다.**
-         *          `set` 의 원소는 곧 정렬 키라, 트리에 들어간 뒤에 값을 바꾸면 정렬 불변식이 깨집니다.
-         *          (`SetWrapper::getElement` 가 `const_cast` 로 const 를 벗기고 있었습니다.) 증상은 그 자리에서
-         *          나지 않고 **나중에 엉뚱한 곳에서 터집니다.** 실제로 `set<int32>` 프로퍼티를 왕복시키면
-         *          프로세스가 죽었습니다.
-         *
-         *          그래서 "어떻게 넣는가" 를 컨테이너에 맡깁니다. 기본 구현은 예전과 같고(연속 · 노드
-         *          컨테이너는 제자리 쓰기가 옳습니다), 연관 컨테이너만 **다 읽은 뒤 insert** 하도록 재정의합니다.
-         *          새 컨테이너 래퍼를 더할 때 "내 컨테이너는 제자리 쓰기가 되는가" 만 답하면 됩니다.
+         * @details 기본 구현은 자리를 먼저 만들고(`addElementDefault`) 그 자리에 제자리로 씁니다(연속 · 노드 컨테이너).
+         *          연관 컨테이너(`set`)는 원소가 곧 정렬 키라 트리에 들어간 원소를 고치면 정렬 불변식이 깨지므로 **다 읽은 뒤
+         *          insert** 하도록 재정의하고, 고정 배열은 자라지 않으므로 **@p elementIndex 칸을 채우도록** 재정의합니다.
+         *          새 컨테이너 래퍼를 더할 때 "내 컨테이너에 원소를 어떻게 넣는가" 만 답하면 됩니다.
+         * @param elementIndex 이번 읽기에서 이 원소의 순번(0 부터). 부르는 쪽은 비운(`clear`) 뒤 0 부터 하나씩 늘려 부릅니다.
          */
-        virtual bool appendElement( void* pContainer, const ElementFillDelegate& fill ) const
+        virtual bool appendElement( void* pContainer, size_t elementIndex, const ElementFillDelegate& fill ) const
         {
+            (void)elementIndex;
             addElementDefault( pContainer );
 
             const size_t elementCount = getSize( pContainer );
@@ -291,8 +287,9 @@ namespace sw
          * @note 중복 키는 `insert` 가 조용히 버립니다. 그것이 `set` 의 계약이고, 원본에 중복이 없었다면
          *       개수도 그대로입니다.
          */
-        bool appendElement( void* pContainer, const ElementFillDelegate& fill ) const override
+        bool appendElement( void* pContainer, size_t elementIndex, const ElementFillDelegate& fill ) const override
         {
+            (void)elementIndex;
             using ElementType = typename TContainer::value_type;
 
             ElementType stagedElement{};
@@ -343,16 +340,16 @@ namespace sw
         void addElementDefault( void* ) const override {}
 
         /**
-         * @brief 고정 배열은 **뒤에 넣을 수 없습니다.** 항상 실패합니다.
-         * @details 기본 구현을 그대로 물려받으면 조용히 망가집니다. `addElementDefault` 가 아무 일도
-         *          하지 않으므로 개수가 늘지 않고, 들어오는 **모든 원소가 마지막 칸 하나에** 차례로
-         *          덮어써집니다. 역직렬화는 오류 없이 끝나고 배열만 틀린 값이 됩니다. 지금 이 래퍼를 쓰는
-         *          리플렉션 타입은 없지만(코드젠이 고정 배열을 내보내지 않습니다), 누군가 연결하는 날
-         *          **첫 왕복부터 데이터가 깨집니다.** 그래서 물려받지 않고 거절합니다. 부르는 쪽(세 직렬화기)은
-         *          `false` 를 스트림 거부로 다룹니다.
-         *          고정 배열을 정말 지원하려면 "뒤에 넣기" 가 아니라 **인덱스로 채우는** 경로가 필요합니다.
+         * @brief @p elementIndex 칸을 채웁니다. 칸이 없으면(파일의 원소가 배열보다 많다) 채우지 않고 false 입니다.
+         * @details 고정 배열은 자라지 않으므로 기본 구현("뒤에 자리를 만들고 마지막 칸에 쓴다")을 물려받으면 모든 원소가 마지막 칸
+         *          하나에 덮어써집니다. 파일의 원소가 칸보다 적으면 남은 칸은 그대로입니다(`clear` 가 할 일이 없다).
          */
-        bool appendElement( void*, const ElementFillDelegate& ) const override { return false; }
+        bool appendElement( void* pContainer, size_t elementIndex, const ElementFillDelegate& fill ) const override
+        {
+            if ( getSize( pContainer ) <= elementIndex )
+                return false;
+            return fill( getElement( pContainer, elementIndex ) );
+        }
     };
 
     template <typename TContainer>

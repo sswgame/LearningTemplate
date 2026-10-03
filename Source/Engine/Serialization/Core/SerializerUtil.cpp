@@ -637,8 +637,7 @@ namespace sw
             for ( uint32 elemIndex = 0; elemIndex < count; ++elemIndex )
             {
                 const size_t elementStart = offset;
-                const bool   bAppended    = pSeq->appendElement( pContainerPtr, SW_DELEGATE_LAMBDA( ElementFillDelegate,
-                                                                                                    [&]( void* pElement ) -> bool
+                const bool   bAppended    = pSeq->appendElement( pContainerPtr, elemIndex, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
                      {
                     if ( nested._elementNested != nullptr )
                         return SerializerUtil::deserializeNestedContainerBinary( pElement, *nested._elementNested, pData, dataSize, offset, ctx, wireVersion );

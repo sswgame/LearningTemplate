@@ -227,8 +227,7 @@ namespace sw
                 {
                     const JsonValue elem = items.at( elementIndex );
 
-                    const bool bAppended = pSeq->appendElement( pContainerPtr, SW_DELEGATE_LAMBDA( ElementFillDelegate,
-                                                                                                   [&]( void* pElemPtr ) -> bool
+                    const bool bAppended = pSeq->appendElement( pContainerPtr, elementIndex, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElemPtr ) -> bool
                     {
                         if ( nested._elementNested != nullptr )
                             return readTypedContainerJson( pElemPtr, *nested._elementNested, elem, ctx );

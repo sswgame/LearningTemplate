@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Container/array.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -579,6 +580,19 @@ namespace sw
 
         PROPERTY()
         TestAliasCount _aliasCount{ 0 };
+    };
+
+    /** @brief 고정 배열 프로퍼티 샘플입니다(`ReflectionSerializationTest.FixedArrayPropertyRoundTripsInEveryFormat`). */
+    REFLECT()
+    struct FixedArrayActor
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        array<int32, 3> _arrSlot{};
+
+        PROPERTY()
+        int32 _after{ 0 }; ///< 배열 뒤의 칸 — 배열을 읽다 스트림이 어긋나면 여기가 틀린다
     };
 } // namespace sw
 

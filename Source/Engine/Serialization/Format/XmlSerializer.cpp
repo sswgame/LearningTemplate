@@ -204,10 +204,9 @@ namespace sw
                         }
 
                         // 읽기는 여기서, **넣는 방법은 컨테이너가** 정한다. `set` 은 다 읽은 뒤 insert 해야 한다.
-                        ++elemIndex;
-                        pSeq->appendElement( pContainerPtr, SW_DELEGATE_LAMBDA( ElementFillDelegate,
-                                                                                [&]( void* pElemPtr ) -> bool
-                        {
+                        const size_t elementOrdinal = elemIndex++;
+                        const bool   bAppended      = pSeq->appendElement( pContainerPtr, elementOrdinal, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElemPtr ) -> bool
+                               {
                             if ( nested._elementNested != nullptr )
                             {
                                 readContainerXml( pElemPtr, *nested._elementNested, backend, ctx, bOutFieldError, pOutListOrphan, propForOrphan );
@@ -227,6 +226,14 @@ namespace sw
                                 recordCoerceFailure( pOutListOrphan, bOutFieldError, propForOrphan, itemText );
                             return true;
                         } ) );
+                        // 넣을 자리가 없다(고정 배열보다 원소가 많다) — 버리되 그 글을 orphan 으로 남겨 실패로 알린다.
+                        if ( bAppended == false )
+                        {
+                            SW_LOG_WARNING( "'%#' has more elements than it can hold - element %# dropped", propForOrphan._name.c_str(), elementOrdinal );
+                            string droppedText;
+                            (void)backend.readText( droppedText ); // 구조체 원소면 비어 있다 — 실패로 알리는 것이 목적이다
+                            recordCoerceFailure( pOutListOrphan, bOutFieldError, propForOrphan, droppedText );
+                        }
                     } ) );
                     return bAny;
                 }
