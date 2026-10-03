@@ -127,7 +127,7 @@ namespace sw
         _mapMigrator.insert_or_assign( MigratorKey{ kind, fromVersion }, migrator );
     }
 
-    AssetFormatVersion AssetFormatRegistry::readXmlVersion( XmlNode root ) const
+    AssetFormatVersion AssetFormatRegistry::readXmlVersion( XmlNode root )
     {
         if ( root.isValid() == false )
             return AssetFormatVersions::kUnversioned;
@@ -144,7 +144,7 @@ namespace sw
         return AssetFormatVersions::kUnversioned;
     }
 
-    void AssetFormatRegistry::writeXmlVersion( XmlNode root, AssetFormatVersion version ) const
+    void AssetFormatRegistry::writeXmlVersion( XmlNode root, AssetFormatVersion version )
     {
         if ( root.isValid() == false )
             return;

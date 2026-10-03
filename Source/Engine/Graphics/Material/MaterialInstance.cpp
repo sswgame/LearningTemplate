@@ -151,7 +151,7 @@ namespace sw
 
         XmlDocument doc;
         XmlNode     root = doc.appendRoot( "MaterialInstanceDesc" );
-        engine::getResourceManager().getAssetFormatRegistry().writeXmlVersion( root, AssetFormatVersions::kMaterialInstance );
+        AssetFormatRegistry::writeXmlVersion( root, AssetFormatVersions::kMaterialInstance );
         MaterialUtil::appendAttribute( root, "name", _desc._name );
         if ( _desc._parentPath.empty() == false )
             MaterialUtil::appendAttribute( root, "parentPath", _desc._parentPath );
@@ -741,8 +741,7 @@ namespace sw
         if ( root.isValid() == false )
             return false;
 
-        if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::MaterialInstance, doc, root,
-                                                                               AssetFormatVersions::kMaterialInstance ) == false )
+        if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::MaterialInstance, doc, root, AssetFormatVersions::kMaterialInstance ) == false )
             return false;
 
         _desc             = MaterialInstanceDesc{};

@@ -348,7 +348,7 @@ namespace sw
         XmlDocument doc;
         XmlNode     root = doc.appendRoot( "MaterialDesc" );
 
-        engine::getResourceManager().getAssetFormatRegistry().writeXmlVersion( root, AssetFormatVersions::kMaterial );
+        AssetFormatRegistry::writeXmlVersion( root, AssetFormatVersions::kMaterial );
         MaterialUtil::appendAttribute( root, "name", _desc._name );
         MaterialUtil::appendAttribute( root, "shaderPath", _desc._shaderPath );
         MaterialUtil::appendAttribute( root, "blendMode", MaterialUtil::blendModeToString( _blendMode ) );
@@ -423,8 +423,7 @@ namespace sw
         if ( root.isValid() == false )
             return false;
 
-        if ( engine::getResourceManager().getAssetFormatRegistry().upgradeXml( AssetKind::Material, doc, root, AssetFormatVersions::kMaterial ) ==
-             false )
+        if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::Material, doc, root, AssetFormatVersions::kMaterial ) == false )
             return false;
 
         _desc       = MaterialDesc{};

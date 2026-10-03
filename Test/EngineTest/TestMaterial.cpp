@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 
+#include "TestFramework/TestEnvironment.h"
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
@@ -1008,4 +1009,44 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
     SW_EXPECT_TRUE( sw::hashed_string::findInterned( "ZqUsageTypoProbe" ).empty() );
     SW_EXPECT_TRUE( sw::hashed_string::findInterned( "ZqFlagTypoProbe" ).empty() );
     SW_EXPECT_TRUE( sw::hashed_string::findInterned( "ZqQualityTypoProbe" ).empty() );
+}
+
+/**
+ * @brief [MaterialTest] 머티리얼 · 인스턴스의 형식 판정은 `ResourceManager` 서비스 없이 돈다 — 이 빌드보다 새 판은 서비스가 없어도 assert 없이 거절한다
+ * @details 형식 판정은 씬 · 프리팹과 같은 `AssetFormatRegistry::upgradeXmlWithActiveRegistry`, 판 번호 쓰기 · 읽기는 상태 없는 정적 함수다.
+ *          머티리얼 본문의 enum 글 해석은 리플렉션(`TypeRegistry`)이 필요하므로 이 시험은 그 앞에서 끝나는 경로만 본다.
+ */
+SW_TEST_CASE( MaterialTest, FormatCheckDoesNotNeedTheResourceManager )
+{
+    /** @brief 이 범위 동안 엔진 서비스를 풀고, 나갈 때 원래 표로 되묶는다(단언이 일찍 나가도). */
+    struct ScopedUnboundEngineServices
+    {
+        sw::EngineServices _saved;
+
+        ScopedUnboundEngineServices()
+            : _saved{ sw::engine::getBoundEngineServices() }
+        {
+            sw::engine::unbindEngineServices();
+        }
+
+        ~ScopedUnboundEngineServices() { test::rebindEngineServices( _saved ); }
+    };
+
+    const sw::string futureMaterialPath = test::makeTempPath( "future.material" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( futureMaterialPath, "<MaterialDesc formatVersion=\"999\" name=\"Future\"/>" ) );
+    const sw::string futureInstancePath = test::makeTempPath( "future.materialinstance" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( futureInstancePath, "<MaterialInstanceDesc formatVersion=\"999\" name=\"Future\"/>" ) );
+
+    SW_ASSERT_TRUE( sw::engine::areEngineServicesBound() );
+    {
+        const ScopedUnboundEngineServices unbound;
+        SW_ASSERT_FALSE( sw::engine::areEngineServicesBound() );
+
+        test::ScopedDefensiveTestLog expected( "material files newer than this build" );
+        sw::shared_ptr<sw::Material> material = sw::Material::create();
+        SW_EXPECT_FALSE( material->loadFromFile( futureMaterialPath ) );
+        sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( material.get() );
+        SW_EXPECT_FALSE( instance->loadFromFile( futureInstancePath ) );
+    }
+    SW_EXPECT_TRUE( sw::engine::areEngineServicesBound() );
 }

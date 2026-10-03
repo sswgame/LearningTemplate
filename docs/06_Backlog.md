@@ -107,39 +107,21 @@ cd build/Ninja-Debug/Bin
 
 - **배포 팩에 G-버퍼 셰이더의 Unlit 보기 퍼뮤테이션(`SW_VIEWMODE_UNLIT=1`)이 없다** — `gv_viewMode` 는 배포본에도 있는 설정이다. 고치면
   `TestRenderPassGpu.cpp` 의 `SW_TEST_KNOWN_ERROR_LOG` 두 줄을 지운다.
-- **OpenGL 만 벤치 프레임이 다르다**(256×144 에서 471 픽셀, 최대 차이 57 — DX11 · DX12 · Vulkan 은 바이트까지 같다). 골든 이미지를 GL 만 따로 둔다.
 - **`RHI.cpp:268` 이 `recreateSurface()` 결과를 버린다** — 그래서 `IRenderSurface::recreateSurface` 등 그래픽스 선언 다섯이 `CheckFallibleNodiscard` 의 미룸
   목록에 있다. 실패를 처리하고 미룸 목록에서 뺀다.
 
-- **머티리얼 XML 로더(`MaterialXml.cpp` · `MaterialInstance.cpp`)가 서비스 가드 없이 `getResourceManager()` 를 부른다** — 씬 · 프리팹처럼
-  `AssetFormatRegistry::upgradeXmlWithActiveRegistry` 로(서비스 없는 도구 · 시험에서 assert).
 
-- **엔진 슬롯 t0..t3(풀스크린 입력 · 그림자 맵)의 샘플러가 백엔드마다 다르다** — GL 최근접 · 클램프, DX11 선형 · 클램프, 네이티브는 셰이더가 고른다. 기본 벤치에서
-  GL 이 DX12 와 ~11k 픽셀(큐브 모서리 · 비스듬한 윗면) 다른 원인 후보(미확인). 머티리얼 슬롯처럼 계약 샘플러 하나(`shaderslot`)로 맞춘다.
-- **`gbuffernormal.hlsl`(MRT 없는 폴백)은 시험 밖이다** — 네 백엔드가 모두 MRT 라 이 경로를 타지 않는다. 쓰는 하드웨어가 없으면 지운다(폴백은 썩는다).
 
-- **파이프라인 검증이 렌더 타깃이 될 수 없는 포맷을 첨부 포맷으로 받는다**(`RenderPipelineResource::validate` — 리플렉션 이름이면 `Unknown` · BC* 도 통과).
-  `parseAttachmentFormat` 은 모르는 이름을 R8G8B8A8_UNORM 으로 명시 폴백한다. 렌더 타깃 가능 포맷 판정(`RHIFormat` 특성)을 검증에 넣는다.
 
-- **런타임은 DDS 만 읽는다.** `Texture2D` → `DdsLoader` 뿐이라 에디터에서 떨군 PNG 는 경로만 걸리고 그려지지 않는다. 텍스처 임포터 · 쿠킹의 몫이다
-  (`Texture2D.cpp`; 에디터 `TextureBaker::importChangedSourceImage` 는 `textures_raw/` 아래 소스만 옆 `textures/` 의 DDS 로 굽는다).
 - **2D 정렬 레이어가 없다.** 깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다.
-- **GPU 타임스탬프는 패스 14 개까지이고, 넘으면 조용히 빠진다.** `kMaxGpuTimestampSlot`(32) 중 뒤 세 칸을 프레임 · 컴퓨트가 쓴다. `FrameRenderer.cpp` ·
-  `FrameRendererPassExecute.cpp` 가 넘친 패스를 경고 없이 건너뛴다(지금 최장 10 패스). 칸을 늘리면 `RHITypes.h` 계약이 바뀌어 ABI 스탬프 + 백엔드 재빌드.
-- **Vulkan 검증 레이어의 "Vertex attribute at location 2/3 not consumed".** 풀스크린 셰이더가 노멀 · UV 를 안 써 DXC 가 떼는데 PSO 는 `arrVertexAttribute`
-  전부를 건다. 잡음이다. PSO 정점 입력을 리플렉션 `_listVertexInput` 으로 거르면 된다.
 - **`shaderDemoteToHelperInvocation` 이 없는 Vulkan 디바이스에서 `discard` 가 미정의다**(`deferredlighting` · `sprite2d`). 지금은 경고만 낸다
   (`VulkanRHIDeviceInit.cpp`). 대안은 1.1 타깃(OpKill)으로 되굽는 변형이다.
 - **에디터가 `VulkanRHIDevice` 클래스 레이아웃에 기대는데 ABI 스탬프가 그것을 덮지 않는다.** `ImGuiVulkanRendererBackend` 가 `static_cast` 뒤 가상
   `queryNativeHandles` 를 부른다. 한 빌드가 전부 짓는 지금은 무해하다 — RHI 백엔드를 따로 배포하면 여기가 먼저 깨진다.
-- **`updateConstantBuffer` 를 `IRHICommandList` 로 올리기.** 지금은 `IRHIResource` 에 있어 스트림을 모르고, 그래서 DX11 이 기록 슬롯 토큰으로 Map 할
-  Deferred Context 를 고른다. 올리면 그 장치가 사라진다. RHI 모듈 ABI 가 바뀌므로 엔진과 `RHI_*` 를 함께 다시 빌드.
-- **`ShaderReflectionDx` 의 D3D11 · D3D12 채우기가 두 벌이다.** CB 바인드 포인트 규칙이 다르다(D3D11 은 이름으로 실제 슬롯, D3D12 는 cb 인덱스).
-  차이가 의도인지 확인하고, 같아도 되면 하나로.
-- **점광 · 스폿 그림자가 없다.** 그림자를 드리우는 빛은 첫 그림자 방향광(`Scene::findShadowCastingDirectionalLight`) 하나다. RHI 에 큐브 텍스처가 없다.
-  순서: RHI 텍스처 차원(큐브 · 배열) → 그림자 패스 다중 뷰 → `swSampleShadowAtWorld`.
-- **후처리를 반해상도로 돌릴 수 없다.** 합친 Present 가 GPU 프레임의 절반 가까이다. 먼저 `TransientAttachmentPool` 에 부착물별 배율이 있어야 한다(지금
-  `setSize` 하나). `deferredpipeline.xml` 은 아직 단계별 패스이고(`postchain` 미적용) `BloomColor` 는 FP16 이다.
+- **점광 · 스폿 그림자** — RHI 텍스처 차원(배열 · 큐브, 면 단위 타깃 · 올리기 · 읽기)은 있다. 남은 것: 그림자 패스 다중 뷰(면 여섯) → 셰이더 쪽(DX12 · Vulkan
+  큐브 · 배열 bindless 테이블, DX11 · GL TextureCube 슬롯) + `swSampleShadowAtWorld`. 3 단계 전에 큐브 대신 2D 아틀라스(Unity URP · Godot — RHI 변경 없음)로 갈지 먼저 정한다.
+- **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것: 반해상도 패스가 읽는 입력의 텍셀 크기(`g_OutlineParams.yz` 는 프레임 텍셀),
+  `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
 
 ### 1-4. 에디터
 
@@ -220,6 +202,9 @@ cd build/Ninja-Debug/Bin
 - **(보류 — 사용자 결정 2026-10-03) `hashed_string` 에 FName 숫자 꼬리를 둘지.** 지금은 비교 · 표시 인덱스 두 칸(8 바이트)이라 `"Enemy_12"` · `"Enemy_13"` 이
   이름 표에 각각 영구 적재된다. 런타임에 번호 붙은 이름을 대량으로 만드는 경로(복제 · 스폰 이름 자동 부여)가 생기면 다시 본다 — 넣으면 `_숫자`(앞자리 0 제외)를
   떼어 정수 칸에 두고 비교는 (인덱스, 숫자) 쌍.
+
+- **런타임 텍스처 형식** — 런타임은 DDS 만 읽는다(PNG 는 "Invalid DDS magic" 오류 — 조용하지는 않다). (a) 에디터가 드롭할 때 굽기(UE 임포트) (b) 쿠킹 때 굽기
+  (c) 런타임 디코더. `Resource/engine/textures` 에 참조 0 인 PNG 10 여 개가 있다.
 
 ### 1-11a. 결정됨 — 상용 엔진과 견줘 정했고 구현 중 (사용자 지시 2026-10-03)
 
@@ -438,6 +423,8 @@ cd build/Ninja-Debug/Bin
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
 
+- **빌드 출력을 `| head` 로 자르지 말 것** — 파이프가 닫히면 빌드가 중간에 죽고 낡은 바이너리가 남는다. 파일로 받은 뒤 본다.
+
 - **린트의 제외 폴더 비교는 저장소 아래 경로의 폴더 이름으로** — 절대 경로 부분 문자열로 비교하면 경로에 "build" 가 든 워크트리에서 파일을 하나도 안 본다
   (실제로 그랬다). 짓지 않는 소스는 CMake 가 `sw_declareUnbuiltDirectory` 로 적고 `CheckSourceGlob` 은 그 목록만 본다.
 - **생성자 초기화의 반복자 쌍은 소괄호** — 중괄호면 initializer_list 생성자로 빠진다(`Style/IteratorPairBraces` 가 막는다).
@@ -620,6 +607,13 @@ cd build/Ninja-Debug/Bin
   태그 ID 를 만들고, 계층 비교(`Faction` → `Faction.Player`)에는 문자열이 같이 필요하다.
 
 ### 3-7. 그래픽스 · RHI · 셰이더
+
+- **텍스처 슬롯 샘플러의 정본은 `bindingslots.hlsli` 의 `SW_ENGINE_TEXTURE_SAMPLER`(t0..t3, 선형 · 클램프)와 `SW_MATERIAL_TEXTURE_SAMPLER`(t5..t8, 선형 · 랩)** —
+  GL 은 유닛마다 샘플러 객체, DX11 은 정적 세트. 이로써 네 백엔드 벤치 프레임이 바이트까지 같다(골든 이미지 백엔드마다 같은 그림).
+- **기록 중의 CB 갱신은 `IRHICommandList::updateConstantBuffer`, 기록 밖(에셋)은 `IRHIResource::updateConstantBuffer`** — 한 버퍼는 프레임에 한 번만 쓴다.
+- **배열 · 큐브 텍스처는 bindless 등록이 거부된다**(셰이더 테이블이 Texture2D 뿐). 면은 `_arrColorTargetSlice` · `_depthTargetSlice` 로 고른다.
+- **첨부 `_resolutionDivisor` 를 쓰면 패스는 출력 첨부 크기로 열린다** — 한 패스의 출력은 같은 나눗수여야 한다(검증이 본다). Vulkan PSO 는 셰이더가 읽는 정점 속성만 건다.
+- **머티리얼 · 인스턴스 형식 판정은 `AssetFormatRegistry::upgradeXmlWithActiveRegistry`**(씬 · 프리팹과 같다) — `ResourceManager` 없이 돈다. 본문의 enum 글은 `TypeRegistry` 가 필요하다.
 
 - **거울 변환(월드 3x3 행렬식 < 0)은 컬을 뒤집은 PSO 변형으로 그린다** — 배치 키 · 정렬 키 · 투명 병합에 `_bReverseCulling` 이 들어 있고 PSO 변형 키의 한 축이다
   (언리얼 `bReverseCulling`). 트랜스폼만 바뀐 프레임도 부호를 다시 구한다.

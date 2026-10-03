@@ -99,9 +99,9 @@ namespace sw
         void registerXmlMigrator( AssetKind kind, AssetFormatVersion fromVersion, XmlAssetMigrator migrator );
 
         /** @brief 루트의 formatVersion 을 읽습니다. */
-        AssetFormatVersion readXmlVersion( XmlNode root ) const;
-        /** @brief 루트에 formatVersion 을 씁니다. */
-        void writeXmlVersion( XmlNode root, AssetFormatVersion version ) const;
+        static AssetFormatVersion readXmlVersion( XmlNode root );
+        /** @brief 루트에 formatVersion 을 씁니다(등록부 상태를 쓰지 않아 서비스 없이 부를 수 있습니다). */
+        static void writeXmlVersion( XmlNode root, AssetFormatVersion version );
 
         /**
          * @brief 버전을 추정합니다. `formatVersion` 이 없으면 세대 0 으로 봅니다.
