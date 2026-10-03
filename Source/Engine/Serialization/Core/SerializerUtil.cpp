@@ -51,8 +51,7 @@ namespace sw
         if ( versionSource == SchemaVersionSource::Payload && ( pLegacyPtr == nullptr || softVersion != 0 ) )
             outVersion = softVersion;
 
-        // **여기가 포맷마다 갈리던 한 줄이다.** 예전에는 세 벌의 복사본에 각자 다른 식이 적혀 있어서,
-        // 다르다는 사실조차 나란히 놓고 보기 전에는 보이지 않았다.
+        // 포맷마다 갈리는 한 줄이다 — 텍스트는 orphan 을 버리고 통과, 바이너리는 이관 함수 없이는 거절(`SchemaOrphanPolicy` 의 계약).
         const bool bOrphanBlocks = ( orphanPolicy == SchemaOrphanPolicy::Reject ) && ( listOrphan.empty() == false );
         const bool bNeedsMigrate = ( outVersion != currentVersion ) || bOrphanBlocks;
 

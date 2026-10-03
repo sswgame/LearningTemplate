@@ -2041,14 +2041,11 @@ SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigra
 
 /**
  * @brief [ReflectionSerializationTest] 버전은 같고 orphan 만 있을 때 — **Binary 는 거절하고 텍스트는 받는다**
- * @details 이것은 "이렇게 되어야 한다" 가 아니라 **지금 실제로 이렇다** 를 못박는 케이스다.
- *          세 포맷이 `deserializeVersioned` 의 같은 스무 줄을 각자 복사해 갖고 있었고, 그 중 이 판단
- *          한 줄만 서로 달랐다 — 나란히 놓고 보기 전에는 아무도 몰랐다. 절차를 하나로 합치면서
- *          그 차이에 `SchemaOrphanPolicy` 라는 이름을 붙여 호출부에 드러냈고, 값은 **그대로 두었다**:
- *          텍스트를 엄격하게 바꾸면 모르는 필드가 하나만 있어도 씬·프리팹·머티리얼이 통째로 로드에
- *          실패한다. 그 선택이 옳은지는 `docs/06_Backlog.md` 에 질문으로 남겼다.
- * @note 그러므로 이 케이스가 깨졌다면 **정책을 바꾼 것**이다. 바꾼 것이 의도라면 여기 기대값과
- *       백로그의 질문을 같이 고칠 것. 의도가 아니라면 방금 씬 로딩을 깨뜨린 것이다.
+ * @details 정해진 계약을 고정한다(`SchemaOrphanPolicy`, SchemaMigrate.h). 텍스트(XML · JSON)는 사람이 고치는 저작 파일이라
+ *          모르는 필드를 건너뛰고 아는 필드를 읽는다 — 언리얼 태그 직렬화 · 유니티 YAML 과 같다. 바이너리는 쿠커 · 같은 빌드의
+ *          산출물이라 모르는 필드는 스키마가 바뀐 것이고, 이관 함수 없이는 거절한다 — 언리얼 쿠킹 패키지의 판 검사와 같은 자리다.
+ * @note 이 케이스가 깨졌다면 계약을 바꾼 것이다. 텍스트가 지면 모르는 필드 하나로 씬 · 프리팹 · 머티리얼이 통째로 안 읽히고,
+ *       바이너리가 받으면 낡은 쿠킹 산출물이 조용히 읽힌다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, OrphanOnlyPolicyDiffersByFormat )
 {

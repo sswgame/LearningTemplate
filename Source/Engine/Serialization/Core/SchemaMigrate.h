@@ -67,6 +67,26 @@ namespace sw
     SW_API void destroyScratchInstance( void* pInstance, const TypeInfo& typeInfo );
 
     /**
+     * @enum SchemaOrphanPolicy
+     * @brief 버전은 같은데 **모르는 필드(orphan)만** 있을 때 migrate 없이 통과시킬지 정합니다. 포맷마다 답이 다르고, 그것이 계약입니다.
+     *
+     * @details - **텍스트(XML · JSON)는 `Ignore`** 입니다. 모르는 필드를 건너뛰고 아는 필드는 읽어 성공합니다. 손으로 고치고 버전 관리에서
+     *            병합하는 저작 파일이라, 지운 PROPERTY 하나 · 오타 하나로 씬 · 프리팹 · 머티리얼이 통째로 안 읽히면 안 됩니다. 언리얼의 태그
+     *            직렬화(`FPropertyTag` — 이름으로 찾고 모르는 태그는 크기만큼 건너뛴다)와 유니티 YAML(모르는 필드는 버린다)이 같은 규칙입니다.
+     *            건너뛴 필드는 조용하지 않습니다 — `runSchemaMigrateStep` 이 타입 · 칸 이름과 함께 로드마다 한 번 경고합니다.
+     *          - **바이너리는 `Reject`** 입니다. 쿠커 · 같은 빌드가 쓴 산출물이라, 모르는 필드가 있다는 것은 스키마가 바뀌었다는 뜻입니다. 이관
+     *            함수(`SchemaMigrateFn`)가 받아 주지 않으면 실패합니다 — 언리얼 쿠킹 패키지가 판(`FPackageFileSummary` 의 버전)이 다르면 로드를
+     *            거절하는 것과 같은 자리입니다. 오브젝트 상태처럼 지운 칸을 버려도 되는 자리는 이관 함수가 그렇게 말합니다
+     *            (`ObjectStateSerializer` 의 `skipFieldsTheTypeNoLongerHas`).
+     *          고정하는 시험: `ReflectionSerializationTest.OrphanOnlyPolicyDiffersByFormat`.
+     */
+    enum class SchemaOrphanPolicy : uint8
+    {
+        Ignore, ///< orphan 은 버리고(경고하고) 성공으로 봅니다(XML · JSON — 사람이 고치는 저작 파일).
+        Reject  ///< orphan 이 있으면 migrate 없이는 실패합니다(바이너리 — 스키마가 바뀐 것이 확실합니다).
+    };
+
+    /**
      * @brief deserializeVersioned 가 migrate 를 부를 때 넘기는 컨텍스트입니다.
      * @details 부르는 조건: migrate != nullptr 이고 (버전이 다름 | orphan 있음 | legacyTypeInfo 있음).
      *          migrate 가 nullptr 이면 버전이 다를 때 deserializeVersioned 는 false 를 반환합니다. 버전이 같고

@@ -95,24 +95,6 @@ namespace sw
     };
 
     /**
-     * @enum SchemaOrphanPolicy
-     * @brief 버전은 같은데 **모르는 필드(orphan)만** 있을 때 migrate 없이 통과시킬지 정합니다.
-     *
-     * @details **포맷마다 답이 다르고, 그것이 의도인지 사고인지 오래 분명하지 않았습니다.** 셋이 같은 스무 줄을
-     *          각자 복사해 갖고 있었고 이 판단만 슬쩍 달랐습니다. Binary 는 거절하고 JSON · XML 은 조용히
-     *          통과시킵니다. 실측으로 확인한 사실입니다(`ReflectionSerializationTest` 의
-     *          `OrphanOnlyPolicyDiffersByFormat`). 어느 쪽이 옳은지는 정하지 않고, **동작을 바꾸지 않은 채** 이름을
-     *          붙여 부르는 쪽에 드러냈습니다. 텍스트를 엄격하게 바꾸면 모르는 필드가 하나만 있어도 씬 · 프리팹이
-     *          통째로 로드에 실패합니다. 바꿀 값이 있는지는 백로그에 질문으로 남겼습니다.
-     *          "통과" 가 더는 조용하지 않습니다 — 버린 orphan 은 `runSchemaMigrateStep` 이 타입 · 칸 이름과 함께 로드마다 한 번 알립니다.
-     */
-    enum class SchemaOrphanPolicy : uint8
-    {
-        Ignore, ///< orphan 은 버리고(경고하고) 성공으로 봅니다(JSON/XML. 손으로 고치는 파일이라 관대합니다).
-        Reject  ///< orphan 이 있으면 migrate 없이는 실패합니다(Binary. 스키마가 바뀐 것이 확실합니다).
-    };
-
-    /**
      * @brief 공통 절차가 포맷에 맡기는 **유일한 일**입니다. 본문을 읽어 값과 orphan 을 채웁니다.
      * @details 인자는 (대상 · 그 타입 · orphan 수집함 · 버전 출력)입니다. 버전을 본문에서 얻지 않는
      *          포맷(Binary)은 마지막 인자를 건드리지 않습니다.
