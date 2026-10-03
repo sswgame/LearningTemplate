@@ -77,6 +77,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   - `CardGame`: 카드 게임(포커 · 맞고/고스톱 · 솔리테어 · 우노 · 덱 빌딩) — 공통 덱 · 셔플 · 턴 중계 행동 바이트(`CardDeck`), 족보 판정(`PokerHand`), 블라인드 · 사이드 팟 테이블(`PokerTable`), 화투 48장 · 뻑 · 쪽 · 싹쓸이 · 고/스톱 · 박(`MatgoGame`), 클론다이크 undo · 자동 완료(`KlondikeGame`), 우노 벌칙 · 쌓기(`UnoGame`), XML 카드 덱 빌딩 전투(`DeckBattle`).
   - `OpenWorldWestern`: 오픈월드 서부극(레드 데드 리뎀션 장르) — 목격자 시야 · 신고 시간 · 처치/위협으로 막기 · 지역별 현상금 · 수배 감쇠 · 보안관 추적(`WesternLaw`), 명예 단계 · 할인 · 대사 플래그(`WesternHonor`), 말 유대 · 능력 해금 · 코어 · 질주 · 겁(`WesternHorse`), 추위/더위 · 옷 · 음식 · 데드아이(`WesternSurvival`), 가죽 등급 · 사체 부패 · 매입 값(`WesternHunting`).
   - `WitcherRpg`: 위쳐 RPG(위쳐 3 장르) — 괴물 도감 지식 · 해금된 약점 · 속성 배율(`WitcherBestiary`), 연금술 · 독성 · 변이 혼합물 · 명상 보충 · 오일(`WitcherAlchemy`), 표식 · 대체 시전 · 스태미나 · 아드레날린(`WitcherCombat`), 변이 슬롯 색 맞춤(`WitcherMutagens`), 계약 단서 순서 · 보상 흥정(`WitcherContract`).
+  - `CreatureLife`: 생물 생활(포코피아 · 문스톤 아일랜드 장르) — 칸 패턴 서식지 레시피(회전 · 큰 것 먼저), 시간대 · 날씨 방문(결정적), 생물별 호감도(`ReputationState`) · 부탁(`QuestLog`), 능력 칸 변환 · 하루 횟수, 집 배정, 마을 매력도 단계(`CreatureTown`).
   - `ThemePark`: 롤러코스터 타이쿤 — 조각으로 쌓는 코스터 트랙(`CoasterTrackBuilder`: 오르막 체인 · 낙하 · 언덕 · 뱅크 회전 · 클로소이드 루프 ·
     브레이크 · 부스터, XML 레이아웃), 고정 스텝 열차 물리(`CoasterTrain`), 시험 운행으로 흥분 · 강도 · 멀미 평가(`CoasterRideAnalyzer`),
     손님 · 줄 · 표 · 입장료 · 운영비 · 공원 평점 경영 시뮬레이션(`ThemeParkSimulation`).

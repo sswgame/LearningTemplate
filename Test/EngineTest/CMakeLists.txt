@@ -33,6 +33,7 @@ sw_addTestExecutable(EngineTest
 		GF_CardGame
 		GF_OpenWorldWestern
 		GF_WitcherRpg
+		GF_CreatureLife
 	LABELS
 		"unit;engine"
 	TIMEOUT

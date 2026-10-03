@@ -102,6 +102,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_CreatureLife",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
