@@ -60,8 +60,6 @@ namespace sw
             bool    anyDown{ false };
             bool    anyPressed{ false };
             bool    anyReleased{ false };
-            bool    anyDoubleClicked{ false };
-            bool    anyHoldThreshold{ false };
             bool    anyTriggered{ false };
             float32 maxHold{ 0.0f };
             float2  totalAccumValue{ 0.0f, 0.0f };
@@ -135,10 +133,6 @@ namespace sw
                     anyPressed = true;
                 if ( state._bReleased == SW_TRUE )
                     anyReleased = true;
-                if ( state._bDoubleClicked == SW_TRUE )
-                    anyDoubleClicked = true;
-                if ( state._bHoldThreshold == SW_TRUE )
-                    anyHoldThreshold = true;
                 if ( state._bTriggered == SW_TRUE )
                     anyTriggered = true;
                 if ( state._holdDuration > maxHold )
@@ -157,14 +151,12 @@ namespace sw
                 }
             }
 
-            const bool bPrevDown        = actionEntry._bDown == SW_TRUE;
-            actionEntry._bDown          = anyDown ? SW_TRUE : SW_FALSE;
-            actionEntry._bPressed       = anyPressed ? SW_TRUE : SW_FALSE;
-            actionEntry._bReleased      = anyReleased ? SW_TRUE : SW_FALSE;
-            actionEntry._bDoubleClicked = anyDoubleClicked ? SW_TRUE : SW_FALSE;
-            actionEntry._bHoldThreshold = anyHoldThreshold ? SW_TRUE : SW_FALSE;
-            actionEntry._bTriggered     = anyTriggered ? SW_TRUE : SW_FALSE;
-            actionEntry._holdDuration   = maxHold;
+            const bool bPrevDown      = actionEntry._bDown == SW_TRUE;
+            actionEntry._bDown        = anyDown ? SW_TRUE : SW_FALSE;
+            actionEntry._bPressed     = anyPressed ? SW_TRUE : SW_FALSE;
+            actionEntry._bReleased    = anyReleased ? SW_TRUE : SW_FALSE;
+            actionEntry._bTriggered   = anyTriggered ? SW_TRUE : SW_FALSE;
+            actionEntry._holdDuration = maxHold;
 
             // 모디파이어를 적용한다(축 반전, 클램핑 또는 원형 정규화)
             if ( _bInvertX == SW_TRUE )

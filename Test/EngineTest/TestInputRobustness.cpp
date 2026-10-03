@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Input/ActionMap.h"
@@ -68,6 +69,50 @@ SW_TEST_CASE( InputReplayTest, RecordingAndPlaybackWorkflow )
 
     replay.stop();
     SW_EXPECT_FALSE( replay.isPlaying() );
+}
+
+/**
+ * @brief [InputReplayTest] 리플레이 파일은 프레임 · 원시 이벤트를 그대로 되읽고, 다른 판(2)의 파일은 읽지 않는다
+ * @details 파일은 `RawInputEvent` 를 구조체째로 적으므로 그 배치가 바뀐 판(3)은 옛 판의 바이트를 지금 배치로 읽으면 안 된다.
+ */
+SW_TEST_CASE( InputReplayTest, FileRoundTripKeepsEventsAndRejectsOtherVersion )
+{
+    sw::InputReplay recorded;
+    recorded.startRecording( "FileRoundTrip" );
+    for ( uint32 frameIndex = 0; frameIndex < 2; ++frameIndex )
+    {
+        sw::InputSnapshot snapshot{};
+        snapshot._tickNumber = frameIndex;
+        sw::vector<sw::RawInputEvent> listEvent;
+        listEvent.push_back( sw::RawInputEvent::makeKeyDown( sw::Key::D, 0, false, static_cast<uint8>( frameIndex + 1 ) ) );
+        recorded.recordFrame( frameIndex, 0.016f, snapshot, listEvent );
+    }
+    recorded.stopRecording();
+
+    const sw::string path = test::makeTempPath( "roundtrip.swreplay" );
+    SW_ASSERT_TRUE( recorded.saveToFile( path ) );
+
+    sw::InputReplay loaded;
+    SW_ASSERT_TRUE( loaded.loadFromFile( path ) );
+    SW_ASSERT_EQUAL( 2u, loaded.getFrameCount() );
+    const sw::InputReplayFrame& lastFrame = loaded.getFrames()[1];
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( lastFrame._listRawEvent.size() ) );
+    SW_EXPECT_TRUE( lastFrame._listRawEvent[0]._type == sw::RawInputEventType::KeyDown );
+    SW_EXPECT_TRUE( lastFrame._listRawEvent[0]._payload._keyData._key == sw::Key::D );
+    SW_EXPECT_EQUAL( uint32( 2 ), static_cast<uint32>( lastFrame._listRawEvent[0]._modifierMask ) );
+
+    // 머리말의 판(매직 4 바이트 뒤 uint32)을 2 로 바꾼 파일은 거절한다.
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( path, bytes ) );
+    const uint32 otherVersion = 2;
+    sw::Memory::copy( bytes.data() + 4, &otherVersion, sizeof( otherVersion ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, bytes.data(), bytes.size() ) );
+    sw::InputReplay rejected;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "replay file of another version" );
+        SW_EXPECT_FALSE( rejected.loadFromFile( path ) );
+    }
+    SW_EXPECT_EQUAL( 0u, rejected.getFrameCount() );
 }
 
 /**

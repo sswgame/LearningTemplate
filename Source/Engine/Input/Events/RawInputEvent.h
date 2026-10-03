@@ -62,7 +62,6 @@ namespace sw
         uint8                  _modifierMask{ 0 }; /**< ModifierKey::Ctrl | Shift | Alt | Super */
         uint8                  _bRepeat  : 1;
         [[maybe_unused]] uint8 _reserved : 7;
-        uint64                 _timestampUs{ 0 };
 
         union
         {
@@ -103,7 +102,6 @@ namespace sw
             , _modifierMask{ 0 }
             , _bRepeat{ SW_FALSE }
             , _reserved{ 0 }
-            , _timestampUs{ 0 }
             , _payload{} {}
 
         static RawInputEvent makeKeyDown( Key key, uint16 vk = 0, bool bRepeat = false, uint8 modifierMask = 0 )

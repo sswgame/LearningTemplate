@@ -835,30 +835,6 @@ namespace sw
         return pEntry != nullptr && pEntry->_bReleased == SW_TRUE;
     }
 
-    bool ActionMap::wasActionDoubleClicked( const hashed_string& action ) const
-    {
-        const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr && pEntry->_bDoubleClicked == SW_TRUE;
-    }
-
-    bool ActionMap::wasActionDoubleClicked( ActionHandle handle ) const
-    {
-        const ActionEntry* pEntry = getActionFromHandle( handle );
-        return pEntry != nullptr && pEntry->_bDoubleClicked == SW_TRUE;
-    }
-
-    bool ActionMap::wasActionHoldThreshold( const hashed_string& action ) const
-    {
-        const ActionEntry* pEntry = findAction( action );
-        return pEntry != nullptr && pEntry->_bHoldThreshold == SW_TRUE;
-    }
-
-    bool ActionMap::wasActionHoldThreshold( ActionHandle handle ) const
-    {
-        const ActionEntry* pEntry = getActionFromHandle( handle );
-        return pEntry != nullptr && pEntry->_bHoldThreshold == SW_TRUE;
-    }
-
     float32 ActionMap::getActionHoldDuration( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );

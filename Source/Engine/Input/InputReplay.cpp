@@ -30,10 +30,9 @@ namespace sw
 
         /**
          * @brief 지금 쓰는 리플레이 파일 판입니다.
-         * @details 1 → 2: `InputSnapshot` 을 구조체째로 적던 것을 필드 순서대로 적게 바꿨습니다
-         *          (정렬 패딩이 파일로 나가지 않습니다). 프레임 배치가 달라졌으므로 판을 올립니다.
+         * @details `RawInputEvent` 를 구조체째로 적으므로 그 배치가 바뀌면 판을 올립니다(다른 판은 읽지 않습니다).
          */
-        constexpr uint32 kReplayVersion = 2;
+        constexpr uint32 kReplayVersion = 3;
     } // namespace
 
     InputReplay::InputReplay()

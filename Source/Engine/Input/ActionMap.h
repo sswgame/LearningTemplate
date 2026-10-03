@@ -437,12 +437,6 @@ namespace sw
         bool wasActionReleased( const hashed_string& action ) const;
         bool wasActionReleased( ActionHandle handle ) const;
 
-        bool wasActionDoubleClicked( const hashed_string& action ) const;
-        bool wasActionDoubleClicked( ActionHandle handle ) const;
-
-        bool wasActionHoldThreshold( const hashed_string& action ) const;
-        bool wasActionHoldThreshold( ActionHandle handle ) const;
-
         float32 getActionHoldDuration( const hashed_string& action ) const;
         float32 getActionHoldDuration( ActionHandle handle ) const;
 
@@ -511,14 +505,12 @@ namespace sw
             ActionPhase                      _currentPhase{ ActionPhase::None };
             uint32                           _handleIndex{ ActionHandle::kInvalidIndex };
             uint32                           _generation{ 1 };
-            uint8                            _bDown          : 1;
-            uint8                            _bPressed       : 1;
-            uint8                            _bReleased      : 1;
-            uint8                            _bDoubleClicked : 1;
-            uint8                            _bHoldThreshold : 1;
-            uint8                            _bTriggered     : 1;
-            uint8                            _bToggleMode    : 1;
-            uint8                            _bToggleState   : 1;
+            uint8                            _bDown        : 1;
+            uint8                            _bPressed     : 1;
+            uint8                            _bReleased    : 1;
+            uint8                            _bTriggered   : 1;
+            uint8                            _bToggleMode  : 1;
+            uint8                            _bToggleState : 1;
 
             ActionEntry()
                 : _valueType{ InputActionValueType::Boolean }
@@ -536,8 +528,6 @@ namespace sw
                 , _bDown{ SW_FALSE }
                 , _bPressed{ SW_FALSE }
                 , _bReleased{ SW_FALSE }
-                , _bDoubleClicked{ SW_FALSE }
-                , _bHoldThreshold{ SW_FALSE }
                 , _bTriggered{ SW_FALSE }
                 , _bToggleMode{ SW_FALSE }
                 , _bToggleState{ SW_FALSE } {}
