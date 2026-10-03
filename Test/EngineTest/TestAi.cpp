@@ -5,8 +5,8 @@
 #include "GameFramework/AI/AiPerception.h"
 #include "GameFramework/AI/BehaviorTree.h"
 #include "GameFramework/AI/Blackboard.h"
-#include "GameFramework/Base/TimerQueue.h"
 #include "GameFramework/Navigation/NavGrid.h"
+#include "GameFramework/Utility/TimerQueue.h"
 
 #include "TestFramework/TestFramework.h"
 

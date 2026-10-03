@@ -2,13 +2,13 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Kits/Voxel/VoxelBlock.h"
-#include "GameFramework/Kits/Voxel/VoxelBody.h"
-#include "GameFramework/Kits/Voxel/VoxelHotbar.h"
-#include "GameFramework/Kits/Voxel/VoxelMesher.h"
-#include "GameFramework/Kits/Voxel/VoxelRaycast.h"
-#include "GameFramework/Kits/Voxel/VoxelTerrain.h"
-#include "GameFramework/Kits/Voxel/VoxelWorld.h"
+#include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
+#include "GameFramework/Kits/Simulation/Voxel/VoxelBody.h"
+#include "GameFramework/Kits/Simulation/Voxel/VoxelHotbar.h"
+#include "GameFramework/Kits/Simulation/Voxel/VoxelMesher.h"
+#include "GameFramework/Kits/Simulation/Voxel/VoxelRaycast.h"
+#include "GameFramework/Kits/Simulation/Voxel/VoxelTerrain.h"
+#include "GameFramework/Kits/Simulation/Voxel/VoxelWorld.h"
 
 #include "TestFramework/TestFramework.h"
 

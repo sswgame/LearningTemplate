@@ -11,8 +11,8 @@
 
 #include "GameFramework/Ability/AbilityCatalog.h"
 #include "GameFramework/Ability/GameplayAbility.h"
-#include "GameFramework/Base/GameEventUtil.h"
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameEventUtil.h"
+#include "GameFramework/Framework/GameService.h"
 #include "GameFramework/UI/DamageUIComponent.h"
 #include "GameFramework/UI/HPBarBaseComponent.h"
 

@@ -13,8 +13,8 @@
 #include "GameFramework/Ability/AbilityTask.h"
 #include "GameFramework/Ability/CombatAttributeSet.h"
 #include "GameFramework/Ability/GameplayAbility.h"
-#include "GameFramework/Base/GameEvents.h"
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameEvents.h"
+#include "GameFramework/Framework/GameService.h"
 #include "GameFramework/UI/HPBarBaseComponent.h"
 
 #include "TestFramework/TestFramework.h"

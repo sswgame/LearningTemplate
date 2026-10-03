@@ -2,12 +2,12 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/GameRandom.h"
-#include "GameFramework/Kits/KartRacing/KartAi.h"
-#include "GameFramework/Kits/KartRacing/KartGhost.h"
-#include "GameFramework/Kits/KartRacing/KartItems.h"
-#include "GameFramework/Kits/KartRacing/KartRace.h"
-#include "GameFramework/Kits/KartRacing/KartTrack.h"
+#include "GameFramework/Kits/Casual/KartRacing/KartAi.h"
+#include "GameFramework/Kits/Casual/KartRacing/KartGhost.h"
+#include "GameFramework/Kits/Casual/KartRacing/KartItems.h"
+#include "GameFramework/Kits/Casual/KartRacing/KartRace.h"
+#include "GameFramework/Kits/Casual/KartRacing/KartTrack.h"
+#include "GameFramework/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
 

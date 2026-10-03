@@ -4,7 +4,7 @@
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetTransport.h"
 
-#include "GameFramework/Kits/NetMmo/MmoReplicator.h"
+#include "GameFramework/Kits/Network/NetMmo/MmoReplicator.h"
 
 #include "TestFramework/TestFramework.h"
 

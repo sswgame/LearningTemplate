@@ -1,19 +1,19 @@
 // 액션 어드벤처 키트(젤다 장르) — 던전 열쇠 · 문 · 지도 · 나침반 · 장치, 하트 · 마법 · 스태미나, 주목 몸놀림, 원소 화학, 요리, 무기 내구도, 탑 · 사당.
 #include "pch.h"
 
-#include "GameFramework/Data/GameFlags.h"
-#include "GameFramework/Data/ItemBag.h"
 #include "GameFramework/Inventory/Crafting.h"
 #include "GameFramework/Inventory/Inventory.h"
+#include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Inventory/ItemCatalog.h"
-#include "GameFramework/Kits/ActionAdventure/AdventureCooking.h"
-#include "GameFramework/Kits/ActionAdventure/AdventureDungeon.h"
-#include "GameFramework/Kits/ActionAdventure/AdventureElementGrid.h"
-#include "GameFramework/Kits/ActionAdventure/AdventureTargeting.h"
-#include "GameFramework/Kits/ActionAdventure/AdventureVitals.h"
-#include "GameFramework/Kits/ActionAdventure/AdventureWeaponWear.h"
-#include "GameFramework/Kits/ActionAdventure/AdventureWorldMap.h"
+#include "GameFramework/Kits/Action/ActionAdventure/AdventureCooking.h"
+#include "GameFramework/Kits/Action/ActionAdventure/AdventureDungeon.h"
+#include "GameFramework/Kits/Action/ActionAdventure/AdventureElementGrid.h"
+#include "GameFramework/Kits/Action/ActionAdventure/AdventureTargeting.h"
+#include "GameFramework/Kits/Action/ActionAdventure/AdventureVitals.h"
+#include "GameFramework/Kits/Action/ActionAdventure/AdventureWeaponWear.h"
+#include "GameFramework/Kits/Action/ActionAdventure/AdventureWorldMap.h"
 #include "GameFramework/World/AreaGraph.h"
+#include "GameFramework/World/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -9,7 +9,7 @@
 
 #include "GameFramework/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Ability/AbilitySystemEvents.h"
-#include "GameFramework/Base/GameEventUtil.h"
+#include "GameFramework/Framework/GameEventUtil.h"
 
 namespace sw
 {

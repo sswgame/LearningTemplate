@@ -12,8 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Base/PrimitiveStage.h"
-#include "GameFramework/Kits/RealTimeStrategy/RtsSelection.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsSelection.h"
+#include "GameFramework/Stage/PrimitiveStage.h"
 
 #include "Games/StarSkirmish/SkirmishMatch.h"
 

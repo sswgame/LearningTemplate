@@ -23,7 +23,7 @@
 #include "GameFramework/Ability/AbilityCatalog.h"
 #include "GameFramework/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Ability/CombatAttributeSet.h"
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameService.h"
 #include "GameFramework/UI/HPBarBaseComponent.h"
 
 namespace sw

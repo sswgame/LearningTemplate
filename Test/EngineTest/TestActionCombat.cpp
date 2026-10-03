@@ -13,13 +13,13 @@
 
 #include "EngineTest/TestGameObjectMocks.h"
 
-#include "GameFramework/Base/GameEvents.h"
-#include "GameFramework/Base/GameService.h"
-#include "GameFramework/Kits/ActionCombat/ActionCombatEvents.h"
-#include "GameFramework/Kits/ActionCombat/ActionRoom.h"
-#include "GameFramework/Kits/ActionCombat/AttackBaseComponent.h"
-#include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
-#include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
+#include "GameFramework/Framework/GameEvents.h"
+#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
+#include "GameFramework/Kits/Action/ActionCombat/ActionRoom.h"
+#include "GameFramework/Kits/Action/ActionCombat/AttackBaseComponent.h"
+#include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
+#include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
 #include "GameFramework/UI/DamageUIComponent.h"
 #include "GameFramework/UI/HPBarBaseComponent.h"
 

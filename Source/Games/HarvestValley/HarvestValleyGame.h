@@ -6,8 +6,8 @@
  *          `-gv_farmAutoPlay=1` 이면 농부도 AI 가 움직인다(입력 없이 날을 넘겨 보는 확인).
  */
 #pragma once
-#include "GameFramework/Base/GameInstanceBase.h"
-#include "GameFramework/Kits/Farming/CropCatalog.h"
+#include "GameFramework/Framework/GameInstanceBase.h"
+#include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 
 #include "Games/HarvestValley/FarmWorld.h"
 

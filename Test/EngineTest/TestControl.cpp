@@ -2,7 +2,7 @@
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Control/InputCommandBuffer.h"
+#include "GameFramework/Input/InputCommandBuffer.h"
 
 #include "TestFramework/TestFramework.h"
 

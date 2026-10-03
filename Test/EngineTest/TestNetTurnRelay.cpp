@@ -3,7 +3,7 @@
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetTransport.h"
 
-#include "GameFramework/Kits/NetTurnRelay/TurnRelay.h"
+#include "GameFramework/Kits/Network/NetTurnRelay/TurnRelay.h"
 
 #include "TestFramework/TestFramework.h"
 

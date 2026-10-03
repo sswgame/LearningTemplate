@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Kits/CityBuilder/CitySimulation.h"
+#include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 
 namespace sw
 {

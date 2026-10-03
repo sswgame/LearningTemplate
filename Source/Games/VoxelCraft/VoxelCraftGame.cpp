@@ -2,7 +2,7 @@
 
 #include "Games/VoxelCraft/VoxelCraftGame.h"
 
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameService.h"
 
 #include "RuntimeAPI/Export/GameModuleExports.h"
 

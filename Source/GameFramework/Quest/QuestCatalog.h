@@ -10,9 +10,9 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
-#include "GameFramework/Data/ItemBag.h"
 #include "GameFramework/Data/StatBlock.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Inventory/ItemBag.h"
 
 namespace sw
 {

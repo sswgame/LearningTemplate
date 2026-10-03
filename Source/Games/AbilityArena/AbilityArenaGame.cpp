@@ -2,7 +2,7 @@
 
 #include "Games/AbilityArena/AbilityArenaGame.h"
 
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameService.h"
 
 #include "Games/AbilityArena/ArenaAbilities.h"
 

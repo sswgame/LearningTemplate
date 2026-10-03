@@ -2,8 +2,8 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Kits/CityBuilder/CityCatalog.h"
-#include "GameFramework/Kits/CityBuilder/CitySimulation.h"
+#include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
+#include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 
 #include "TestFramework/TestFramework.h"
 

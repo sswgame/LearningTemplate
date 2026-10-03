@@ -10,8 +10,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Window/IWindow.h"
 
-#include "GameFramework/Base/GameService.h"
-#include "GameFramework/Base/RayMath.h"
+#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Utility/RayMath.h"
 
 namespace sw
 {

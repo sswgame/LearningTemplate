@@ -5,11 +5,11 @@
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetTransport.h"
 
-#include "GameFramework/Kits/NetClientServer/ClientPrediction.h"
-#include "GameFramework/Kits/NetClientServer/LagCompensation.h"
-#include "GameFramework/Kits/NetClientServer/NetSnapshot.h"
-#include "GameFramework/Kits/NetClientServer/ReplicationClient.h"
-#include "GameFramework/Kits/NetClientServer/ReplicationServer.h"
+#include "GameFramework/Kits/Network/NetClientServer/ClientPrediction.h"
+#include "GameFramework/Kits/Network/NetClientServer/LagCompensation.h"
+#include "GameFramework/Kits/Network/NetClientServer/NetSnapshot.h"
+#include "GameFramework/Kits/Network/NetClientServer/ReplicationClient.h"
+#include "GameFramework/Kits/Network/NetClientServer/ReplicationServer.h"
 
 #include "TestFramework/TestFramework.h"
 

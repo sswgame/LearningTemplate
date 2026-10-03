@@ -2,14 +2,14 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/GameRandom.h"
-#include "GameFramework/Data/ItemBag.h"
 #include "GameFramework/Inventory/Crafting.h"
 #include "GameFramework/Inventory/Equipment.h"
 #include "GameFramework/Inventory/GridInventory.h"
 #include "GameFramework/Inventory/Inventory.h"
+#include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Inventory/ItemCatalog.h"
 #include "GameFramework/Inventory/LootTable.h"
+#include "GameFramework/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
 

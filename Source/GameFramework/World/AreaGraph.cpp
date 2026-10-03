@@ -7,7 +7,7 @@
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Data/GameDataXml.h"
-#include "GameFramework/Data/GameFlags.h"
+#include "GameFramework/World/GameFlags.h"
 
 #include <algorithm>
 

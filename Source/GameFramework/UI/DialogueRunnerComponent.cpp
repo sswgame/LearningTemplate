@@ -7,7 +7,7 @@
 
 #include "Engine/Dialogue/DialogueCursor.h"
 
-#include "GameFramework/Base/SaveGame.h"
+#include "GameFramework/Framework/SaveGame.h"
 
 namespace sw
 {

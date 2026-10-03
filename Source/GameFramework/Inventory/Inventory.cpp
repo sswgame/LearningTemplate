@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Data/ItemBag.h"
+#include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Inventory/ItemCatalog.h"
 
 #include <algorithm>

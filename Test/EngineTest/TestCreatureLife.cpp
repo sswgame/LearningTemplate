@@ -2,8 +2,8 @@
 
 #include "GameFramework/Inventory/Inventory.h"
 #include "GameFramework/Inventory/ItemCatalog.h"
-#include "GameFramework/Kits/CreatureLife/CreatureLifeCatalog.h"
-#include "GameFramework/Kits/CreatureLife/CreatureTown.h"
+#include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
+#include "GameFramework/Kits/Simulation/CreatureLife/CreatureTown.h"
 #include "GameFramework/Progression/Reputation.h"
 #include "GameFramework/Quest/QuestCatalog.h"
 #include "GameFramework/World/WeatherSystem.h"

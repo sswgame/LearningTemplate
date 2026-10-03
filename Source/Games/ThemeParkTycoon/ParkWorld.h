@@ -16,10 +16,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/PrimitiveStage.h"
-#include "GameFramework/Kits/ThemePark/CoasterTrack.h"
-#include "GameFramework/Kits/ThemePark/CoasterTrain.h"
-#include "GameFramework/Kits/ThemePark/ThemePark.h"
+#include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
+#include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
+#include "GameFramework/Kits/Simulation/ThemePark/ThemePark.h"
+#include "GameFramework/Stage/PrimitiveStage.h"
 
 namespace sw
 {

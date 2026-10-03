@@ -13,8 +13,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Base/PrimitiveStage.h"
-#include "GameFramework/Kits/CityBuilder/CitySimulation.h"
+#include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
+#include "GameFramework/Stage/PrimitiveStage.h"
 
 #include "Games/NileCity/NileCityPlanner.h"
 

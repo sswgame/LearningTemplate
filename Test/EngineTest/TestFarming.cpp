@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Farming/CropCatalog.h"
-#include "GameFramework/Kits/Farming/FarmCalendar.h"
-#include "GameFramework/Kits/Farming/FarmField.h"
-#include "GameFramework/Kits/Farming/FarmInventory.h"
+#include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
+#include "GameFramework/Kits/Simulation/Farming/FarmCalendar.h"
+#include "GameFramework/Kits/Simulation/Farming/FarmField.h"
+#include "GameFramework/Kits/Simulation/Farming/FarmInventory.h"
 
 #include "TestFramework/TestFramework.h"
 

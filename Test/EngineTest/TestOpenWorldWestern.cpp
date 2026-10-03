@@ -2,17 +2,17 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/GameRandom.h"
-#include "GameFramework/Data/GameFlags.h"
-#include "GameFramework/Data/ItemBag.h"
+#include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Inventory/LootTable.h"
 #include "GameFramework/Inventory/Shop.h"
-#include "GameFramework/Kits/OpenWorldWestern/WesternCatalog.h"
-#include "GameFramework/Kits/OpenWorldWestern/WesternHonor.h"
-#include "GameFramework/Kits/OpenWorldWestern/WesternHorse.h"
-#include "GameFramework/Kits/OpenWorldWestern/WesternHunting.h"
-#include "GameFramework/Kits/OpenWorldWestern/WesternLaw.h"
-#include "GameFramework/Kits/OpenWorldWestern/WesternSurvival.h"
+#include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternCatalog.h"
+#include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternHonor.h"
+#include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternHorse.h"
+#include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternHunting.h"
+#include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternLaw.h"
+#include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternSurvival.h"
+#include "GameFramework/Utility/GameRandom.h"
+#include "GameFramework/World/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 

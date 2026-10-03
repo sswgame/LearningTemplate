@@ -6,8 +6,8 @@
  *          `-gv_nileAutoPlay=1` 이면 자동 계획표대로 짓고 달마다 `[Nile] month N pop P money M` 을 남긴다(입력 없이 도시가 크는 확인).
  */
 #pragma once
-#include "GameFramework/Base/GameInstanceBase.h"
-#include "GameFramework/Kits/CityBuilder/CityCatalog.h"
+#include "GameFramework/Framework/GameInstanceBase.h"
+#include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 
 #include "Games/NileCity/NileCityWorld.h"
 

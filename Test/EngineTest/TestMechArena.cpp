@@ -6,9 +6,9 @@
 
 #include "GameFramework/Combat/FrameData.h"
 #include "GameFramework/Combat/Weapon.h"
-#include "GameFramework/Kits/MechArena/MechArenaSnapshot.h"
-#include "GameFramework/Kits/MechArena/MechArenaWorld.h"
-#include "GameFramework/Kits/MechArena/MechCatalog.h"
+#include "GameFramework/Kits/Action/MechArena/MechArenaSnapshot.h"
+#include "GameFramework/Kits/Action/MechArena/MechArenaWorld.h"
+#include "GameFramework/Kits/Action/MechArena/MechCatalog.h"
 
 #include "TestFramework/TestFramework.h"
 

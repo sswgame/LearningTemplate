@@ -4,7 +4,7 @@
 
 #include "GameFramework/Ability/AbilityCatalog.h"
 #include "GameFramework/Ability/AbilitySystemComponent.h"
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameService.h"
 
 #include "Games/AbilityArena/ArenaWorld.h"
 

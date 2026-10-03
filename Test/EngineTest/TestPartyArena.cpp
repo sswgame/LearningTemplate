@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Kits/PartyArena/PartyItemSpawner.h"
-#include "GameFramework/Kits/PartyArena/PartyRoundSeries.h"
-#include "GameFramework/Kits/PartyArena/TrampolineArena.h"
+#include "GameFramework/Kits/Casual/PartyArena/PartyItemSpawner.h"
+#include "GameFramework/Kits/Casual/PartyArena/PartyRoundSeries.h"
+#include "GameFramework/Kits/Casual/PartyArena/TrampolineArena.h"
 
 #include "TestFramework/TestFramework.h"
 

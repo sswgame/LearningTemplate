@@ -4,15 +4,15 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Base/FirstPersonLook.h"
-#include "GameFramework/Base/FixedStepTimer.h"
-#include "GameFramework/Base/GameRandom.h"
-#include "GameFramework/Base/RayMath.h"
-#include "GameFramework/Base/TimingJudge.h"
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/GameDataXml.h"
-#include "GameFramework/Data/ItemBag.h"
 #include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Input/FirstPersonLook.h"
+#include "GameFramework/Input/TimingJudge.h"
+#include "GameFramework/Inventory/ItemBag.h"
+#include "GameFramework/Utility/FixedStepTimer.h"
+#include "GameFramework/Utility/GameRandom.h"
+#include "GameFramework/Utility/RayMath.h"
 
 #include "TestFramework/TestFramework.h"
 

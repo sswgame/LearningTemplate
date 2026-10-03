@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/ThemePark/CoasterTrain.h"
-#include "GameFramework/Kits/ThemePark/ThemePark.h"
+#include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
+#include "GameFramework/Kits/Simulation/ThemePark/ThemePark.h"
 
 #include "TestFramework/TestFramework.h"
 

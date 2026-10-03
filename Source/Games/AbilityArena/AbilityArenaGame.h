@@ -8,7 +8,7 @@
  */
 #pragma once
 #include "GameFramework/Ability/AbilityCatalog.h"
-#include "GameFramework/Base/GameInstanceBase.h"
+#include "GameFramework/Framework/GameInstanceBase.h"
 
 #include "Games/AbilityArena/ArenaWorld.h"
 

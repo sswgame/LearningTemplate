@@ -25,7 +25,7 @@ namespace sw
 
         /**
          * @brief 호출자 표의 키 — 경로의 **마지막 두 조각**(상위 폴더/파일 이름)의 해시입니다. 구분자는 슬래시와 역슬래시를 같게 봅니다.
-         * @details 예전에는 파일 이름만 썼다. `GameFramework/Base/SaveGame.cpp`("SaveGame")와 `Kits/TurnBattle/SaveGame.cpp`("TurnBattleSaveGame")가
+         * @details 예전에는 파일 이름만 썼다. `GameFramework/Framework/SaveGame.cpp`("SaveGame")와 `Kits/TurnBattle/SaveGame.cpp`("TurnBattleSaveGame")가
          *          같은 키라, 나중에 등록된 이름이 두 파일의 로그에 모두 붙었다. 전체 경로는 쓰지 않는다 — 같은 헤더라도 TU 마다 `__FILE__` 의
          *          앞부분(절대 · 상대 · 구분자)이 다를 수 있다.
          */

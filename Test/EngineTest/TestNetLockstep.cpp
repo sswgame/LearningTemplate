@@ -4,8 +4,8 @@
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetTransport.h"
 
-#include "GameFramework/Kits/NetLockstep/LockstepSession.h"
-#include "GameFramework/Kits/NetLockstep/RollbackSession.h"
+#include "GameFramework/Kits/Network/NetLockstep/LockstepSession.h"
+#include "GameFramework/Kits/Network/NetLockstep/RollbackSession.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -1,0 +1,59 @@
+#include "pch.h"
+
+#include "GameFramework/Inventory/ItemBag.h"
+
+namespace sw
+{
+    ItemBag::ItemBag()
+        : _mapItem{}
+    {
+    }
+
+    void ItemBag::addItem( const hashed_string& itemId, int32 count )
+    {
+        if ( itemId.empty() || count <= 0 )
+            return;
+        _mapItem[itemId] += count;
+    }
+
+    bool ItemBag::removeItem( const hashed_string& itemId, int32 count )
+    {
+        const auto mapIter = _mapItem.find( itemId );
+        if ( count <= 0 || mapIter == _mapItem.end() || mapIter->second < count )
+            return false;
+        mapIter->second -= count;
+        if ( mapIter->second == 0 )
+            _mapItem.erase( mapIter );
+        return true;
+    }
+
+    bool ItemBag::moveItemTo( ItemBag& target, const hashed_string& itemId, int32 count )
+    {
+        if ( &target == this || removeItem( itemId, count ) == false )
+            return false;
+        target.addItem( itemId, count );
+        return true;
+    }
+
+    int32 ItemBag::getItemCount( const hashed_string& itemId ) const
+    {
+        const auto mapIter = _mapItem.find( itemId );
+        return mapIter != _mapItem.end() ? mapIter->second : 0;
+    }
+
+    int32 ItemBag::getTotalCount() const
+    {
+        int32 total = 0;
+        for ( const auto& [itemId, count] : _mapItem )
+            total += count;
+        return total;
+    }
+
+    void ItemBag::getItemIds( vector<hashed_string>& outListItem ) const
+    {
+        outListItem.clear();
+        outListItem.reserve( _mapItem.size() );
+        for ( const auto& [itemId, count] : _mapItem )
+            outListItem.push_back( itemId );
+    }
+} // namespace sw

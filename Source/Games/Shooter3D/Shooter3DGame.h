@@ -6,8 +6,8 @@
  *          `-gv_shooterAutoPlay=1` 이면 조준 · 사격도 AI 가 한다.
  */
 #pragma once
-#include "GameFramework/Base/GameInstanceBase.h"
 #include "GameFramework/Combat/Weapon.h"
+#include "GameFramework/Framework/GameInstanceBase.h"
 
 #include "Games/Shooter3D/ShooterArena.h"
 

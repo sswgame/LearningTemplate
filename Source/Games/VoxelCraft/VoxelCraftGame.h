@@ -6,8 +6,8 @@
  *          `-gv_voxelAutoPlay=1` 이면 걷기 · 점프 · 부수기 · 놓기를 AI 가 한다.
  */
 #pragma once
-#include "GameFramework/Base/GameInstanceBase.h"
-#include "GameFramework/Kits/Voxel/VoxelBlock.h"
+#include "GameFramework/Framework/GameInstanceBase.h"
+#include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 
 #include "Games/VoxelCraft/VoxelCraftWorld.h"
 

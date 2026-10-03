@@ -274,7 +274,7 @@ bool isPlayer = go->hasTag( "Player"_tag );
 Games / GameFramework 에서는 `EngineServices` 대신 **`GameService`** 를 씁니다.
 
 ```cpp
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameService.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 GameObject* go = game::getResourceManager().getPrefabManager().spawn(

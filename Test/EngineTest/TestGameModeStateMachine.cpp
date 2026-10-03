@@ -5,9 +5,9 @@
 
 #include "EngineTest/GameTestUtil.h"
 
-#include "GameFramework/Base/GameEvents.h"
-#include "GameFramework/Base/GameService.h"
-#include "GameFramework/Transition/GameModeStateMachine.h"
+#include "GameFramework/Framework/GameEvents.h"
+#include "GameFramework/Framework/GameModeStateMachine.h"
+#include "GameFramework/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 

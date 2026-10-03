@@ -12,8 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Kits/RealTimeStrategy/RtsAiController.h"
-#include "GameFramework/Kits/RealTimeStrategy/RtsWorld.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiController.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
 
 namespace sw
 {

@@ -2,10 +2,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Kits/RealTimeStrategy/RtsAiController.h"
-#include "GameFramework/Kits/RealTimeStrategy/RtsCatalog.h"
-#include "GameFramework/Kits/RealTimeStrategy/RtsSelection.h"
-#include "GameFramework/Kits/RealTimeStrategy/RtsWorld.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiController.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsSelection.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -11,10 +11,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Base/FirstPersonLook.h"
-#include "GameFramework/Base/PrimitiveStage.h"
 #include "GameFramework/Combat/Weapon.h"
 #include "GameFramework/Combat/WeaponMath.h"
+#include "GameFramework/Input/FirstPersonLook.h"
+#include "GameFramework/Stage/PrimitiveStage.h"
 
 namespace sw
 {

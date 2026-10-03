@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Memory/Memory.h"
 
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameService.h"
 
 #include "RuntimeAPI/ABI/GameAPI.h"
 #include "RuntimeAPI/ABI/ModuleAbi.h"

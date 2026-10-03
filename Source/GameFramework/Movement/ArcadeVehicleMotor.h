@@ -11,8 +11,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Base/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
 {

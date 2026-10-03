@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/CardGame/CardDeck.h"
-#include "GameFramework/Kits/CardGame/DeckBattle.h"
-#include "GameFramework/Kits/CardGame/HwatuDeck.h"
-#include "GameFramework/Kits/CardGame/KlondikeGame.h"
-#include "GameFramework/Kits/CardGame/MatgoGame.h"
-#include "GameFramework/Kits/CardGame/PokerHand.h"
-#include "GameFramework/Kits/CardGame/PokerTable.h"
-#include "GameFramework/Kits/CardGame/UnoGame.h"
+#include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
+#include "GameFramework/Kits/Casual/CardGame/DeckBattle.h"
+#include "GameFramework/Kits/Casual/CardGame/HwatuDeck.h"
+#include "GameFramework/Kits/Casual/CardGame/KlondikeGame.h"
+#include "GameFramework/Kits/Casual/CardGame/MatgoGame.h"
+#include "GameFramework/Kits/Casual/CardGame/PokerHand.h"
+#include "GameFramework/Kits/Casual/CardGame/PokerTable.h"
+#include "GameFramework/Kits/Casual/CardGame/UnoGame.h"
 
 #include "TestFramework/TestFramework.h"
 

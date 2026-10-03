@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Kits/SideScrollConquest/ConquestCatalog.h"
-#include "GameFramework/Kits/SideScrollConquest/ConquestWorld.h"
+#include "GameFramework/Kits/Strategy/SideScrollConquest/ConquestCatalog.h"
+#include "GameFramework/Kits/Strategy/SideScrollConquest/ConquestWorld.h"
 
 #include "TestFramework/TestFramework.h"
 

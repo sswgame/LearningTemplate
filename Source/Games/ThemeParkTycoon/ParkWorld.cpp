@@ -11,9 +11,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Base/GameService.h"
-#include "GameFramework/Base/OrientationUtil.h"
 #include "GameFramework/Data/GameDataXml.h"
+#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Utility/OrientationUtil.h"
 
 namespace sw
 {

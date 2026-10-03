@@ -6,9 +6,9 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Base/GameRandom.h"
 #include "GameFramework/Data/GameDataXml.h"
-#include "GameFramework/Data/ItemBag.h"
+#include "GameFramework/Inventory/ItemBag.h"
+#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {

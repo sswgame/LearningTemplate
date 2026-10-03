@@ -4,9 +4,9 @@
 #include "GameFramework/Inventory/Inventory.h"
 #include "GameFramework/Inventory/ItemCatalog.h"
 #include "GameFramework/Inventory/Shop.h"
-#include "GameFramework/Kits/RestaurantSim/IngredientStock.h"
-#include "GameFramework/Kits/RestaurantSim/RestaurantCatalog.h"
-#include "GameFramework/Kits/RestaurantSim/RestaurantSimulation.h"
+#include "GameFramework/Kits/Simulation/RestaurantSim/IngredientStock.h"
+#include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantCatalog.h"
+#include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantSimulation.h"
 #include "GameFramework/Progression/LevelProgress.h"
 #include "GameFramework/Progression/Reputation.h"
 

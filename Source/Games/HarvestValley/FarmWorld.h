@@ -13,11 +13,11 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/GameRandom.h"
-#include "GameFramework/Base/PrimitiveStage.h"
-#include "GameFramework/Kits/Farming/FarmCalendar.h"
-#include "GameFramework/Kits/Farming/FarmField.h"
-#include "GameFramework/Kits/Farming/FarmInventory.h"
+#include "GameFramework/Kits/Simulation/Farming/FarmCalendar.h"
+#include "GameFramework/Kits/Simulation/Farming/FarmField.h"
+#include "GameFramework/Kits/Simulation/Farming/FarmInventory.h"
+#include "GameFramework/Stage/PrimitiveStage.h"
+#include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
 {

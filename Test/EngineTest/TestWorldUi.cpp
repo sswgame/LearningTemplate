@@ -15,7 +15,7 @@
 
 #include "EngineTest/StateReloadTestUtil.h"
 
-#include "GameFramework/Base/EffectBaseComponent.h"
+#include "GameFramework/Components/EffectBaseComponent.h"
 #include "GameFramework/UI/DamageUIComponent.h"
 #include "GameFramework/UI/HPBarBaseComponent.h"
 

@@ -2,10 +2,10 @@
 // 잡기 풀기 창, 횡이동 대 직선 · 추적, 라운드(시간 초과 · K.O. · 레이지 · 무승부), 롤백 저장 → 복원 → 재진행 결정성.
 #include "pch.h"
 
-#include "GameFramework/Base/GameRandom.h"
 #include "GameFramework/Combat/FrameData.h"
-#include "GameFramework/Kits/Fighting/FighterCatalog.h"
-#include "GameFramework/Kits/Fighting/FightingMatch.h"
+#include "GameFramework/Kits/Action/Fighting/FighterCatalog.h"
+#include "GameFramework/Kits/Action/Fighting/FightingMatch.h"
+#include "GameFramework/Utility/GameRandom.h"
 
 #include "TestFramework/TestFramework.h"
 

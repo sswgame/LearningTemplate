@@ -12,8 +12,8 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "GameFramework/Base/GameService.h"
-#include "GameFramework/Kits/Voxel/VoxelTerrain.h"
+#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Kits/Simulation/Voxel/VoxelTerrain.h"
 
 namespace sw
 {

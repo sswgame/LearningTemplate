@@ -8,8 +8,8 @@
 
 #include "EngineTest/GameTestUtil.h"
 
-#include "GameFramework/Base/GameService.h"
 #include "GameFramework/Data/GameStrings.h"
+#include "GameFramework/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 

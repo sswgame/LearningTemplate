@@ -10,8 +10,8 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "GameFramework/Base/GameService.h"
-#include "GameFramework/Kits/Farming/CropCatalog.h"
+#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 
 namespace sw
 {

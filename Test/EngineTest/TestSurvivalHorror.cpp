@@ -3,9 +3,9 @@
 #include "pch.h"
 
 #include "GameFramework/Inventory/GridInventory.h"
-#include "GameFramework/Kits/SurvivalHorror/HorrorCatalog.h"
-#include "GameFramework/Kits/SurvivalHorror/HorrorEncounter.h"
-#include "GameFramework/Kits/SurvivalHorror/HorrorSession.h"
+#include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
+#include "GameFramework/Kits/Horror/SurvivalHorror/HorrorEncounter.h"
+#include "GameFramework/Kits/Horror/SurvivalHorror/HorrorSession.h"
 #include "GameFramework/World/AreaGraph.h"
 
 #include "TestFramework/TestFramework.h"

@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameService.h"
 #include "GameFramework/UI/HPBarBaseComponent.h"
 
 namespace sw

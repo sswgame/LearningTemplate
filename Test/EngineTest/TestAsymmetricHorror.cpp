@@ -6,9 +6,9 @@
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/AI/AiPerception.h"
-#include "GameFramework/Kits/AsymmetricHorror/HorrorMatch.h"
-#include "GameFramework/Kits/AsymmetricHorror/HorrorRules.h"
-#include "GameFramework/Kits/AsymmetricHorror/HorrorSnapshot.h"
+#include "GameFramework/Kits/Horror/AsymmetricHorror/HorrorMatch.h"
+#include "GameFramework/Kits/Horror/AsymmetricHorror/HorrorRules.h"
+#include "GameFramework/Kits/Horror/AsymmetricHorror/HorrorSnapshot.h"
 
 #include "TestFramework/TestFramework.h"
 

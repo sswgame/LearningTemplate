@@ -5,9 +5,9 @@
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/AI/SpawnDirector.h"
-#include "GameFramework/Base/TimingJudge.h"
-#include "GameFramework/Data/GameFlags.h"
+#include "GameFramework/Input/TimingJudge.h"
 #include "GameFramework/World/AreaGraph.h"
+#include "GameFramework/World/GameFlags.h"
 #include "GameFramework/World/InteractionProgress.h"
 
 #include "TestFramework/TestFramework.h"
