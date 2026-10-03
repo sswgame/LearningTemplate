@@ -187,10 +187,20 @@ namespace sw
             {
                 // 프리팹 엔티티는 **원형에 덮어쓴 것을 얹은 상태**로 한 번에 짓는다 — 프리팹을 고치면 놓인 인스턴스에 퍼진다(언리얼 · 유니티의
                 // 프리팹 인스턴스). 전체 상태가 실린 엔티티(옛 문서)는 그 상태가 기준이다. 프리팹을 찾지 못하면 아래의 "Missing Prefab" 길이다.
-                const bool    bHasSavedState = entity._embeddedStateBytes.empty() == false || entity._embeddedXml.empty() == false;
-                const string* pBaseState     = SceneInternal::findPrefabBaseState( mapPrefabBaseState, entity._prefab );
-                const bool    bStateMade     = pBaseState != nullptr &&
-                                        ( bHasSavedState || PrefabOverrides::makeInstanceState( *pBaseState, entity._prefabOverrideXml, entity._name, prefabInstanceState ) );
+                // 전체 상태가 실린 엔티티는 원형을 짓지 않는다 — 그 상태가 기준이라 원형은 버려지고, 짓는 동안 컴포넌트가 한 벌 더 생긴다.
+                // 프리팹이 있는지만 본다(없으면 "Missing Prefab").
+                const bool bHasSavedState = entity._embeddedStateBytes.empty() == false || entity._embeddedXml.empty() == false;
+                bool       bStateMade     = false;
+                if ( bHasSavedState )
+                {
+                    bStateMade = engine::getResourceManager().getPrefabManager().loadPrefab( entity._prefab ) != nullptr;
+                }
+                else
+                {
+                    const string* pBaseState = SceneInternal::findPrefabBaseState( mapPrefabBaseState, entity._prefab );
+                    bStateMade               = pBaseState != nullptr &&
+                                 PrefabOverrides::makeInstanceState( *pBaseState, entity._prefabOverrideXml, entity._name, prefabInstanceState );
+                }
                 if ( bStateMade )
                     pGo = _objectManager->createGameObject( hashed_string( entity._name.c_str() ) );
                 if ( pGo == nullptr )

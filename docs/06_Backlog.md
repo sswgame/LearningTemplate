@@ -213,12 +213,6 @@ cd build/Ninja-Debug/Bin
 - **런타임 텍스처 형식** — 런타임은 DDS 만 읽는다(PNG 는 "Invalid DDS magic" 오류 — 조용하지는 않다). (a) 에디터가 드롭할 때 굽기(UE 임포트) (b) 쿠킹 때 굽기
   (c) 런타임 디코더. `Resource/engine/textures` 에 참조 0 인 PNG 10 여 개가 있다.
 
-### 1-11a. 결정됨 — 상용 엔진과 견줘 정했고 구현 중 (사용자 지시 2026-10-03)
-
-- **컴포넌트 팩토리를 TypeRegistry 하나로**(UE `UClass`) · **엔진 등록부 공통 템플릿**.
-- **EngineLoop 초기화 · 종료 순서를 의존 선언 + 위상 정렬로**(UE `USubsystem::InitializeDependency`).
-- **`SW_ENABLE_DEADLOCK_DETECTION` 을 CI 가 지킨다** — `RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION` 한 줄.
-
 ### 1-12. 낮은 우선순위 · 조건이 오면
 
 - **100 줄 넘는 함수 정리.** 분해는 총량을 줄이지 않는다. 중복을 먼저 없애고, 그래도 문제면 본다. 목록이 필요하면 여러 줄 시그니처를 중괄호 깊이로 재는 스크립트로
@@ -419,6 +413,10 @@ cd build/Ninja-Debug/Bin
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
 
+- **소유하지 않는 포인터 등록부는 `Core/Container/RegistrationList<T>`**(중복 · 이름 거절, 순서, 이름 찾기, 이름 사본) — 슬롯 인덱스로 O(1) 빼기를 하는 등록부
+  (Primitive · Tick · TransformHierarchy · 콜라이더)와 모양이 다른 것(TypeRegistry · GlobalVariable · 코덱 · RHIBackend)은 예외다.
+- **`SW_ENABLE_DEADLOCK_DETECTION` 은 CI Windows Debug 잡이 `RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error` 로 지킨다.**
+
 - **빌드 출력을 `| head` 로 자르지 말 것** — 파이프가 닫히면 빌드가 중간에 죽고 낡은 바이너리가 남는다. 파일로 받은 뒤 본다.
 
 - **린트의 제외 폴더 비교는 저장소 아래 경로의 폴더 이름으로** — 절대 경로 부분 문자열로 비교하면 경로에 "build" 가 든 워크트리에서 파일을 하나도 안 본다
@@ -551,6 +549,10 @@ cd build/Ninja-Debug/Bin
   — 실제 에셋 + `setPropertyValue` 로 간다.
 
 ### 3-6. 오브젝트 · 씬 · 틱
+
+- **이름으로 컴포넌트를 만드는 길은 `TypeInfo::_addComponent` 하나다**(팩토리 표 없음 — UE `UClass`). 코드젠이 구체 컴포넌트마다 채우고 모듈 해제가 비운다.
+  손으로 만든 시험 TypeInfo 는 이 칸을 채워야 `addComponentByName` · 씬 로드가 만든다. 스레드별 이름 캐시는 `TypeRegistry::getGeneration` 으로 무효화된다.
+  전체 상태가 실린 옛 프리팹 엔티티는 원형을 짓지 않는다(프리팹이 있는지만 본다).
 
 - **씬의 프리팹 엔티티 = 프리팹 경로 + `<PrefabOverrides>`**(프리팹 쪽 `이름표#n` 키, 다른 필드만) — `<GameObject>` 전체 상태를 든 엔티티는 옛 형식이고 그 상태가
   이긴다(다음 저장에서 오버라이드로). 프리팹 원형 상태는 별도 `GameObjectManager` 에서 만든다 — 한 매니저에만 `registerComponentType` 한 시험용 목 타입은 원형에서
@@ -758,6 +760,10 @@ cd build/Ninja-Debug/Bin
 - **패널 시각 검증 사각** — 피킹 클릭 · 기즈모 우선순위는 사람이 눌러야 보인다. 그리기 회귀는 `Game View` 정점 수로 전후를 비교한다.
 
 ### 3-9. 핫 리로드 · 모듈 · 엔진 서비스
+
+- **엔진 기동 · 종료 순서는 `EngineStartupStepList.xxx` 의 의존 칸이 정한다**(위상 정렬, 종료는 초기화한 단계만 역순 — UE `USubsystem` 의존 선언). 표는 이름 순이다.
+  새 단계는 `EngineLoop::initializeStartupStep` · `shutdownStartupStep` 과 시험 하네스(`Test/TestFramework/main.cpp`)에 본문을 더한다(-Wswitch-enum 이 짚는다).
+  객체 해제(reset) 순서는 표 밖이다(`ResourceManager::shutdown` 은 다른 매니저 소멸 뒤).
 
 - **리로드 거절 사유는 옛 이미지를 내리기 전에 본다** — `LiveReloadManager::setOnValidateImage`(ABI · API 표)와 배치 콜백(`OnBeforeCommitBatchDelegate` 가 false
   면 아무것도 내리지 않음, 게임 상태 찍기 실패 포함)이 적용 전 실패를 막아 옛 모듈이 계속 돈다. 적용 뒤 결함만 `markGraphBroken`(UE Live Coding 과 같다).

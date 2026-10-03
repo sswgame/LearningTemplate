@@ -443,6 +443,8 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnCollidersDuringPlay )
     manager.endPlay();
 
     SW_LOG_INFO( "[Bench] components per spawned collider object after onBeginPlay: %#", componentCount );
+    // onBeginPlay 가 소유 태그 컴포넌트를 붙이지 않는다 — 콜라이더 하나뿐이다.
+    SW_EXPECT_EQUAL( size_t( 1 ), componentCount );
     test::logBenchSamples( "spawn 8000 collider objects during play", listSpawn );
     test::logBenchSamples( "next tick (onBeginPlay + body add + step) of 8000 colliders", listBeginTick );
     test::logBenchSamples( "destroy 8000 collider objects + process", listDestroy );

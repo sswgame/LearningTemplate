@@ -96,7 +96,7 @@ over staged files only). **The folder says what a script does to you** — that 
 |--------|------|-----------|
 | `lint/gate/` | fails the build and blocks the commit | non-zero on any violation |
 | `lint/fixer/` | rewrites your files | 0 (or non-zero under `--check`) |
-| `lint/report/` | prints, you decide | always 0 |
+| `lint/report/` | prints, you decide | 0 (unless asked: `RunBuildWarnings.py --fail-on`, used by CI) |
 | `lint/selftest/` | checks the **lints**, not the code | non-zero if a lint went blind |
 
 `PreCommitLint.py` stays at `lint/` because it orchestrates all four; `LintGate.py` and `LintFixer.py`
