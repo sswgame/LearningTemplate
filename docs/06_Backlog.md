@@ -99,15 +99,17 @@ cd build/Ninja-Debug/Bin
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
 
-- **상태를 다시 읽을 때(`onPostLoad`) 파생 상태를 다시 맞추지 않는 컴포넌트가 남았다** — `SpriteAnimatorComponent` · `DamageUIComponent` 는 플레이 중 에셋 경로를
-  고쳐도 다시 열지 않는다, `CameraControllerComponent` 는 흔들림 중 상태를 다시 읽으면 오프셋이 남는다(적용한 오프셋을 저장하지 않음), `EffectBaseComponent` 는
-  페이드 중 다시 읽으면 이미 어두워진 알파에서 다시 시작한다. 순서 함정 둘: 핸들 프로퍼티는 `onPostLoad` 뒤에 풀리고, 프리팹 인스턴스의 저장 diff 는 `onPostLoad`
-  뒤에 알림 없이 적용된다.
 - **`getAllGameObjects()` 값 반환이 6 곳에 있다(모두 일회성).** 프레임 경로에 들어오면 `getAllGameObjects( out )` 또는 `forEachGameObject` 로 바꾼다(조건부).
 - **`MeshInstanceBatch` 의 한계.** 항목 수가 만들 때 정해지고(resize 없음, `setEntryVisible` 로 숨기기만), 배치 하나 = 메시 · 머티리얼 하나라 항목별
   머티리얼 · 투명 정렬이 없다.
 
 ### 1-3. 그래픽스 · RHI · 셰이더
+
+- **배포 팩에 G-버퍼 셰이더의 Unlit 보기 퍼뮤테이션(`SW_VIEWMODE_UNLIT=1`)이 없다** — `gv_viewMode` 는 배포본에도 있는 설정이다. 고치면
+  `TestRenderPassGpu.cpp` 의 `SW_TEST_KNOWN_ERROR_LOG` 두 줄을 지운다.
+- **OpenGL 만 벤치 프레임이 다르다**(256×144 에서 471 픽셀, 최대 차이 57 — DX11 · DX12 · Vulkan 은 바이트까지 같다). 골든 이미지를 GL 만 따로 둔다.
+- **`RHI.cpp:268` 이 `recreateSurface()` 결과를 버린다** — 그래서 `IRenderSurface::recreateSurface` 등 그래픽스 선언 다섯이 `CheckFallibleNodiscard` 의 미룸
+  목록에 있다. 실패를 처리하고 미룸 목록에서 뺀다.
 
 - **머티리얼 XML 로더(`MaterialXml.cpp` · `MaterialInstance.cpp`)가 서비스 가드 없이 `getResourceManager()` 를 부른다** — 씬 · 프리팹처럼
   `AssetFormatRegistry::upgradeXmlWithActiveRegistry` 로(서비스 없는 도구 · 시험에서 assert).
@@ -141,30 +143,15 @@ cd build/Ninja-Debug/Bin
 
 ### 1-4. 에디터
 
-- **DebugDrawQueue 를 읽는 쪽이 없다.** `ActionRoom` 이 매 프레임 `drawSphere` 로 채우고 `EngineLoop` 가 비우지만 `getLines()` · `getSpheres()` 호출이 0 이다.
-  `GameViewPanel` 에서 카메라로 투영해 ImGui 원 · 선으로 그린다. `Source/Engine/Graphics/README.md` 는 이것을 "완료됨" 으로 잘못 적고 있다.
-- **콜라이더 시각화가 오브젝트 전체를 훑고 월드 스케일 · 회전을 무시한다.** `EditorViewportVisualizer::drawColliders` 가 오브젝트마다 `getComponent` 하고
-  `getWorldPosition + offset` 으로만 상자를 만든다 — 물리 상자와 다르게 그려진다. `GameObjectManager` 의 콜라이더 목록 + `BoxCollider2DComponent::getWorldBox` 로.
-- **메뉴 id 가 커맨드 표에 없으면 그 항목이 조용히 사라진다.** `EditorCommandGui::drawMenuItem` 은 경고만 내고, 헤드리스는 메뉴를 열지 않아 경고도 없다.
-  `lint/gate/` 에 파일 하나로 게이트를 만들 수 있다(`Source/Editor/README.md` 의 대조 한 줄이 지금 유일한 수단).
-- **에디터 핫 리로드 뒤 Undo 히스토리가 사라진다.** `ImGuiEditor::shutdown` 이 `CommandStack::clear()` 를 부른다(안 그러면 모듈 람다가 언맵된 코드로 뛴다).
-  유지하려면 커맨드를 직렬화할 수 있어야 한다 — 큰 일.
 - **DPI 150 % 모니터와 모니터 사이 이동을 실물로 보지 않았다.** 96 DPI 기계에서 `-gv_editorUiScale=1.5` 로만 봤다. 글자 선명도 · 창 · 스왑체인 크기 ·
   `io.ConfigDpiScaleFonts` · `ConfigDpiScaleViewports` 를 본다.
-- **`InputMapEditorPanel` 액션 표 머리 · 행 6 줄 중복**(낮음).
 
 ### 1-5. 핫 리로드 · 모듈
 
-- **`IModuleCodeHolder` 가 아닌 등록부가 남았다.** `releaseModuleCode` 는 보유자 목록(이벤트 구독 · 로그 리스너 · Undo · 창 · 에셋 캐시)을 훑는다. 빠진 것:
-  `InputManager` 콜백 넷(`setTextInputCallback` 등), `KeyboardDevice` · `GamepadDevice` 콜백, `EventDispatcher` 의 `_mapChannelQueue`(큐에 쌓인 이벤트).
-  각각 `IModuleCodeHolder` 를 상속해 스스로 등록하면 된다. 지금은 다는 모듈이 없어 잠재 결함이다.
-- **결함 · commit 실패 때 옛 이미지로 되돌리는 길이 없다.** `onAfterReload` 결함을 잡으면 인스턴스를 버리고 `markGraphBroken` 으로 이후 리로드를 막는다
-  (재시작 필요). cr.h 식 "옛 이미지 + 스냅샷 되돌리기" 는 없다. 함정: 결함을 잡은 뒤는 소멸자 미실행 · 락을 쥔 상태다.
-- **리로드 트리거가 mtime 디바운스다.** "빌드 성공 뒤" 로 좁히지 않아, 연쇄 중 일부 모듈만 새로 써진 상태가 올라갈 여지가 있다(헤더 불일치는 ABI 도장이 막는다).
+- **바깥 빌드(터미널 · IDE)의 리로드 트리거는 여전히 mtime 디바운스뿐이다** — 에디터가 시킨 빌드는 성공 뒤에만 올린다(`LiveReloadManager::notifyBuildStarted/Finished`).
+  바깥 빌드도 "빌드 성공" 신호(ninja 종료 · 스탬프 파일)를 받으려면 빌드 쪽 협조가 필요하다.
 - **모듈이 렌더 패스를 등록하는 창구가 없다.** `FramePassContext` · 커맨드 리스트 · 트랜지언트 풀을 모듈 경계 밖으로 내야 하고, 그것은 RT 안전 계약까지
   내보내는 일이다. 쓰는 모듈이 생기면 그때.
-- **"다른 이미지가 구독 중인 채널을 만든 이미지는 내리지 않는다" 경로에 단위 시험이 없다**(`releaseModuleCode` 의 `pOutKeepImageMapped`). 엔진 코드에 구독자가
-  없어 상태를 못 만든다 — SmokeTest 의 `SweepProbe` 모양으로 구독자를 세운다.
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
@@ -197,46 +184,18 @@ cd build/Ninja-Debug/Bin
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
 
-- **`Style/ConstructorBraces` 가 반복자 쌍 생성자에도 중괄호를 강제한다** — `vector{ first, last }` 는 initializer_list 생성자로 빠져 반복자 두 개를 값으로
-  담는다(`TaskArgs` 가 그렇게 깨져 있었다). 린트에 반복자 쌍 예외를 두거나 그 모양을 따로 짚는다.
-- **백엔드 목록이 `Config/Engine/CookContract.json` 밖에 둘 남았다** — `Scripts/dev/BackendSmoke.py` 의 `kListBackend`, `EngineConfig::_window._defaultRHI`
-  (`RHIBackend::DirectX12` 고정 — 표의 `default_rhi_backend` 와 따로, `gv_rhiBackend` 만 `SW_RHI_BACKEND_DEFAULT` 를 쓴다).
 
 - **코드 · 문서 29 곳이 옛 백로그의 날짜 항목 · 옛 절 번호를 가리킨다**(`ci.yml:156` · `TargetRules.cmake:51` · `GameEvents.h:12` "1-0c" · `docs/07` "1-0e" ·
   `FrameRendererCompute.cpp` "백로그 1-4" 등). 주석 정리(현재형 핵심만)와 함께 고친다 — 날짜 사연은 지우고, 남길 지식은 이 문서 3절 위치나
   `git show 7ce95fc8:docs/06_Backlog.md` 로. 목록은 grep `06_Backlog\|백로그` 로 다시 뽑는다.
 
-- **GPU 시험이 검증 레이어 `[Error]` 를 세지 않는다.** `RenderPassGpuTest` 의 Vulkan 구간이 `[Error]` 17 줄을 찍으며 통과한 적이 있다. hostgpu 케이스마다
-  Error 로그를 실패로 친다(`test::ScopedLogCollector`). 의도된 방어 시험은 `SW_TEST_DEFENSIVE_SCOPE` 로 뺀다.
-- **골든 이미지 회귀 시험이 없다.** `-gv_benchAnimate=0` 이면 네 백엔드 프레임이 바이트까지 같아져 이제 기준 이미지를 둘 수 있다. 백엔드끼리 최대 차이가
-  1 이라 백엔드별 기준이나 허용치가 필요하다. 시작점은 `Scripts/dev/BackendSmoke.py`(지금은 평균 RGB 만) 또는 `RenderPassGpuTest`.
-- **`CheckFallibleNodiscard` 의 사각.** 동사가 이름 머리에 있어야 잡고(`recreate*` 를 놓친다), `.h` 만 보며(.cpp 정적 함수를 놓친다), 한 줄 선언만 본다.
-- **`CheckSourceGlob` 에 남은 하드코딩** — `Graphics/RHI/Modules/` 늘 무시, OS 별 무시 목록, `--active-game` 필터. 이것도 `UnbuiltSources.txt` 로 옮긴다.
-  WSL 에서는 확인하지 못했다.
-- **익명 네임스페이스의 맨 상수를 잡는 린트가 없다.** 유니티 빌드(CI-* 만)에서 TU 끼리 재정의가 된다. `CheckCodeConventions.py` 에 `ConventionRule` 하나 —
-  `XxxInternal` 구조체 안 상수와 함수 지역 상수는 오탐하면 안 된다.
-- **`CheckCodeConventions` 의 매개변수 · 지역변수 규칙 · 생성자 상태 기계 · 파일 짝 검사가 아직 `ConventionRule` 이 아니다**(`badSample` 이 없어 자기 시험의
-  손 조각 표가 덮는다). 두 함수는 파싱 한 번의 `if/elif` 사슬이라, 독립 `if` 로 쪼개면 동작이 바뀐다 — 쪼개는 방식부터 설계(보류).
-- **에디터 ImGui 경로에 자동 검증이 없다.** 인스펙터 enum 크기 읽기 · 직접 편집 기록 · 다른 문서 되돌리기 거절, 확장 구역 되돌리기(`trackLastItem`),
-  도 단위 드래그, 기본 도킹 제목 대조, `ImGuiEditor::initialize` 실패 경로, 그래프 패널 저장 배선, `EditorViewportPreview::applyMaterial` 짝, 기즈모 드래그
-  (`endGizmoDrag`). `EditorTest` 는 ImGui 를 링크하지 않고 `EditorUiTest` 는 "ImGui 컨텍스트만" 의 경계다 — 패널 하니스용 새 타깃을 둘지부터 정한다.
-- **핫 리로드 · 백엔드 교체가 에디터를 내릴 때 시뮬레이션을 멈추는 것에 시험이 없다.** `EditorPlaySession::setState( PlaySessionData&, … )` 로 컨텍스트 없이 쓸 수 있다.
-- **시험 안에서 단언을 잠시 끄는 장치가 없다.** Debug 의 `SW_ASSERT` · `SW_LOG_ASSERT` 는 `SW_DEBUG_BREAK()` 라 단언 경로를 시험하면 죽는다(예:
-  `CommandLineManager::addArgument` 동의어 충돌).
-- **시험 공백 목록** — `RenderGraph::executeParallel` 의 제출 실패 경로, 크래시 시한의 `TerminateProcess`, `FileLogOutput` · `ConsoleLogOutput` 의 실제 파일 출력,
-  `SerializeReflectAny` 의 JSON · XML 왕복, `DynamicBitset` 연산자의 크기 불일치 가드(Debug skip · Release 측정 방식으로 가능), `StringBuilder::ensureCapacity`
-  할당 실패(주입 창구 없음), 병합 키의 `_materialCb` 조건(`layoutBindsMaterialCb` — 인스턴스 CB 가 실제로 생기는 경로부터), 낱개 파일과 팩이 같은 키로 경쟁할 때의
-  우선순위(루트 밖 검색 폴더를 시험에서 더할 창구부터), `GameInstanceBase::deserializeSceneObjects` 의 reserve 상한, 컴포넌트 풀 키 회귀(TypeInfo 두 벌 —
-  지금은 `unregisterTypesByModule` 로 만들 수 있을지 모른다), `syncAfterSceneGenerationChange` 의 비우기, `BoxCollider2DComponent::intersects` 두 경로(1-11 결정 뒤).
-- **`GlobalVariableTest` 의 동시 읽기 시험은 스레드가 늦게 뜨면 조용히 약해진다.** `FileTest.ReadersNeverObserveHalfWrittenFile` 처럼 겹친 횟수를 단언한다.
-- **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다**(`Requested RHI backend is unavailable` · `GL_ARB_gl_spirv`). 엔진이
-  표식 하나로 말하게 한다.
-- **`RunBuildWarnings.py` 가 낡은 컴파일 DB 의 없는 파일을 오류로 낸다**(파일 이름을 바꾸고 그 프리셋을 다시 안 지었을 때). `Scripts/common/TranslationUnits.py`
-  `selectUnits` 에서 없는 `entry["file"]` 을 건너뛴다. 우회는 그 프리셋을 한 번 빌드.
-- **`RunForwardDeclarationCandidates.py` 의 한계** — `unique_ptr<T>` 멤버의 소멸자 위치를 보지 않고, "쓰임을 못 찾은 include" 205 건(`--show-unused`)은 대부분 거짓이다.
-- **pre-commit 의 clang-format 검사가 64 개씩 묶어 `--dry-run` 한다**(`Scripts/common/Host.py` `runClangFormatBatch`). 묶으면 보고가 잘린다 — 종료 코드까지
-  0 이 되는지 실험한다(확인 필요).
-- **`SW_ENABLE_DEADLOCK_DETECTION=ON` 은 아무 데서도 빌드되지 않는다.** 그대로 둘지, CI 에 컴파일 검사만 넣을지 정한다.
+- **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
+  `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스), `BoxCollider2D`(1-11 결정 대기).
+- **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
+  결과(열거값)로 바꾸는 그래픽스 쪽 수정.
+- **`RunForwardDeclarationCandidates.py --show-unused` 의 거짓 "쓰임 없음" 208 건** — 보고 전용이라 손으로 걸러야 한다.
+- **(결정만 남음) `SW_ENABLE_DEADLOCK_DETECTION` 을 CI 에서 지킬지** — 지금은 컴파일된다(`RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION` 로 Debug
+  Source 전부 오류 · 경고 0). CI 에 그 한 줄을 넣을지 정한다.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
 - **`TestRenderPassGpu.cpp` 의 남은 같은 줄**("큐브 하나 든 씬" · "한 프레임 돌리기")은 같은 모양의 케이스가 늘면 도우미로.
 - **옛 시험 산출물 정리**(사용자 폴더라 두었다): `%TEMP%` 의 `sw_*`, `build/*/Bin` · `TestBin` 의 `prefab_test/` · `TestTemp/` · `temp_gen_*` · `temp_collide/`.
@@ -259,6 +218,12 @@ cd build/Ninja-Debug/Bin
 - **DbgHelp 외부 샘플러 소스가 저장소 밖에 있다**(세션 스크래치였다). 다른 PC 에 남아 있는지 확인하고, 필요하면 `Scripts/dev/` 로 들인다.
 
 ### 1-11. 결정이 필요한 것
+
+- **에디터 핫 리로드 뒤 Undo 히스토리를 살릴지** — (a) 커맨드를 (타입 id + 직렬화 데이터)로 바꾸고 모듈 재로드 뒤 다시 엮기(큰 일), (b) 지금처럼 비우기.
+  지금은 `ImGuiEditor::shutdown` 이 `CommandStack::clear()` 한다(모듈 람다가 언맵된 코드로 뛰지 않게).
+- **결함 · commit 실패 때 옛 이미지로 되돌릴지**(cr.h 식) — 옛 이미지는 `deferImageUnload` 로 아직 올라와 있어 이론상 가능하지만, 결함을 잡은 뒤는 소멸자 미실행 ·
+  락을 쥔 상태라 온전하지 않다. 지금은 `markGraphBroken` 으로 이후 리로드를 막는다(재시작 필요).
+- **에디터 ImGui 패널 하니스** — `EditorUiTest`(ImGui 컨텍스트만)를 넓힐지, EditorContext · 패널 매니저까지 띄우는 새 타깃(hostgpu)을 둘지.
 
 - **(보류 — 사용자 결정 2026-10-03) `hashed_string` 에 FName 숫자 꼬리를 둘지.** 지금은 비교 · 표시 인덱스 두 칸(8 바이트)이라 `"Enemy_12"` · `"Enemy_13"` 이
   이름 표에 각각 영구 적재된다. 런타임에 번호 붙은 이름을 대량으로 만드는 경로(복제 · 스폰 이름 자동 부여)가 생기면 다시 본다 — 넣으면 `_숫자`(앞자리 0 제외)를
@@ -386,6 +351,12 @@ cd build/Ninja-Debug/Bin
 
 ### 3-2. 검증 · 시험 쓰기
 
+- **호스트 스위트 케이스는 예상 밖 `[Error]` 로그 하나로 진다** — 아직 못 고친 엔진 Error 는 `SW_TEST_KNOWN_ERROR_LOG( 스위트, 문구, 이유 )` 로만 허용하고, 고치면 그 줄을
+  지운다(실행 끝에 남은 선언이 출력된다). 골든 이미지는 `AppSmokeTest.BenchFrameMatchesGoldenImage`(`Test/AppTest/Golden`, `SW_UPDATE_GOLDEN=1` 로 다시 뜬다).
+- **Debug 의 단언 경로는 `test::ScopedAssertCapture` 안에서 시험한다**(멈추지 않고 센다).
+- **모듈 코드 정리 시험에 이미지 전체를 범위로 주지 말 것** — Shipping 은 엔진까지 한 exe 다. 스텁 · vtable 하나씩으로 좁힌다.
+- **큰 `reserve` 는 실패하지 않을 수 있다** — 상한 시험은 할당 바이트로 단언한다.
+
 - **시간으로 움직이는 GPU 픽셀 단언은 `FrameRenderer::setAnimationTimeOverride` 로 시각을 고정한다**(음수 = 벽시계). 단위 큐브는 모프 위상이 π 근처에 몰려
   t ≈ π/2 + kπ 에서 변위가 다 함께 0 이 된다 — 벽시계로 찍으면 부하에 따라 간헐로 진다.
 - **에디터 확장의 순서는 등록 순서가 아니라 `SW_EDITOR_*` 의 order 키다.** 등록이 빠지거나 순서가 바뀐 것은 `AppSmokeTest.EditorRegistriesKeepTheirOrder`
@@ -482,6 +453,11 @@ cd build/Ninja-Debug/Bin
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
+
+- **린트의 제외 폴더 비교는 저장소 아래 경로의 폴더 이름으로** — 절대 경로 부분 문자열로 비교하면 경로에 "build" 가 든 워크트리에서 파일을 하나도 안 본다
+  (실제로 그랬다). 짓지 않는 소스는 CMake 가 `sw_declareUnbuiltDirectory` 로 적고 `CheckSourceGlob` 은 그 목록만 본다.
+- **생성자 초기화의 반복자 쌍은 소괄호** — 중괄호면 initializer_list 생성자로 빠진다(`Style/IteratorPairBraces` 가 막는다).
+- **실패한 커밋 뒤에는 스테이징이 남는다** — 다음 커밋 전에 `git status`. Git Bash heredoc 은 `\\` 를 뭉갤 수 있다 — 스크립트는 파일로 써서 돌린다.
 
 - **RHI 백엔드 표(이름 · 별칭 · 셰이더 폴더 · 포맷)와 쿡 접미사 표의 정본은 `Config/Engine/CookContract.json`** — `GenerateCookContract.py` 가 C++ X-macro
   (`sw/config/CookContract.gen.h`)를 만들고 Python 은 `Scripts/common/CookContract.py` 로 읽는다. `CheckCookContract` 게이트가 쿠커 함수를 표와 대조한다.
@@ -605,6 +581,9 @@ cd build/Ninja-Debug/Bin
   — 실제 에셋 + `setPropertyValue` 로 간다.
 
 ### 3-6. 오브젝트 · 씬 · 틱
+
+- **`onPostLoad` 는 `ObjectStateBatch::finish` 에서 이름 → 부착 → 핸들이 풀린 뒤에 온다**(언리얼 PostLoad 순서). 플레이 중 재로드는 `onBeginPlay` 를 다시
+  부르므로, 흐른 시간 · 적용한 오프셋 같은 진행 상태는 저장하고 `onBeginPlay` 가 되돌리지 않게 한다.
 
 - **경로 프로퍼티로 에셋을 여는 컴포넌트는 `onBeginPlay` 만으로 부족하다** — 상태 읽기는 `onPostLoad` 만 부르고 플레이 전이면 BeginPlay 가 없다.
   `onPostLoad` · `onPropertyChanged`(그 경로) 양쪽에서 연다(`SequencePlayerComponent` · `DialogueRunnerComponent`).
@@ -753,6 +732,9 @@ cd build/Ninja-Debug/Bin
 - **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 굽지 않는다(8 비트 경로).
 
 ### 3-8. 에디터
+
+- **DebugDrawQueue 는 `endFrame` 에 비워진다** — 에디터 UI 보다 먼저 채운 것(게임 업데이트)만 보인다(`debug_draw` 시각화). 틱에서 채우는 생산자가 생기면
+  이중 버퍼로. `ActionRoom::drawDebug` 를 부르는 곳은 아직 없다. 메뉴 경로는 `EditorCommandRegistry::validate` 가 "그려지지 않는 경로" 를 잡는다.
 
 - **패널 · 팝업 · 인스펙터 · 시각화는 자기 .cpp 의 `SW_EDITOR_PANEL` · `SW_EDITOR_POPUP` · `SW_EDITOR_INSPECTOR` · `SW_EDITOR_VISUALIZER` 한 줄로 등록한다**
   (`EditorRegistry<T>`, (order, id) 정렬, 같은 id 거절). 메뉴 배치는 커맨드 표 줄의 `_menuPath` · `_menuOrder`(백의 자리가 바뀌면 구분선). 매니저 · 메뉴바에

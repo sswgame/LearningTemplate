@@ -60,13 +60,6 @@
 
 SW_TEST_REQUIRES_HOST( RenderPassGpuTest, "runs FrameRenderer on a real GPU device and reads pixels back" );
 
-// DX11 deferred 경로가 깊이를 PS t3 에 SRV 로 묶은 채 다음 패스의 DSV 로 건다 — 디버그 레이어가 SRV 를 강제로 풀고 Error 로 남긴다.
-// 원인은 엔진(D3D11RHICommandContext::beginRenderPass 가 DSV 와 겹치는 SRV 를 풀지 않음)이라 고치면 두 줄을 지운다.
-SW_TEST_KNOWN_ERROR_LOG( RenderPassGpuTest, "Resource being set to OM DepthStencil is still bound on input",
-                         "DX11 deferred binds depth as DSV while it is still a PS SRV (t3) - D3D11RHICommandContext::beginRenderPass" );
-SW_TEST_KNOWN_ERROR_LOG( RenderPassGpuTest, "Forcing PS shader resource slot 3 to NULL",
-                         "same DX11 deferred depth SRV/DSV hazard as above" );
-
 // 배포 팩에 G-버퍼 셰이더의 Unlit 보기 퍼뮤테이션(SW_VIEWMODE_UNLIT=1)이 구워지지 않는다 — ViewModeSelectsDistinctPipelineStates 가 그것을 찾다
 // Error 를 남긴다. `gv_viewMode` 는 배포본에도 있는 설정이라 쿠킹 쪽에서 고칠 일이다(고치면 두 줄을 지운다).
 SW_TEST_KNOWN_ERROR_LOG( RenderPassGpuTest, "define: SW_VIEWMODE_UNLIT=1", "shipping pack lacks the Unlit view-mode permutation of the G-buffer shaders" );
