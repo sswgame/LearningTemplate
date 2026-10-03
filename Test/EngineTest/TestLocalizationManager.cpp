@@ -376,7 +376,7 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsFullLifecycleAndMultiLanguageS
 }
 
 /**
- * @brief [LocalizationManager] initialize을 통한 디렉터리 다국어 팩 일괄 스캔, 로드 및 자동 활성화 세팅 검증
+ * @brief [LocalizationManagerTest] initialize을 통한 디렉터리 다국어 팩 일괄 스캔, 로드 및 자동 활성화 세팅 검증
  */
 SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory )
 {
