@@ -162,6 +162,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_ClassicJrpg",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
