@@ -89,6 +89,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   - `MonsterCollector`: 몬스터 수집(포켓몬 장르) — 종 · 기술 · 성격 · 날씨 카탈로그(`MonsterCatalog`), 개체값 · 노력치 · 능력치 공식 · 경험치 · 진화(`MonsterInstance`), 우선도 · 스피드 순 1:1 전투 · 피해 공식 · 상성 · 포획(`MonsterBattle`), 트레이너 AI(`MonsterTrainerAi`).
   - `ClassicJrpg`: 클래식 JRPG(드래곤 퀘스트 3 HD-2D · 씨 오브 스타즈 · 완다링 소드 장르) — 직업 · 주문 · 장비 카탈로그(`JrpgCatalog`), 파티 · 전직 · 여관 · 교회(`JrpgParty`), 라운드제 전투 · 타이밍 공격/방어(`JrpgBattle`), 걸음 수 인카운터(`JrpgEncounter`).
   - `Metroidvania`: 메트로배니아 · 2D 소울라이크(블라스퍼머스 2 · 더 라스트 페이스 · 엠버베인 장르) — 능력 잠금(`MetroAbilitySet`), 탐색률 · 지도 구매(`MetroMapState`), 휴식 · 시체 · 물약(`MetroSoulsState`), 스태미나 · 패리 · 강인도(`MetroDuelist`), 부적 슬롯(`MetroCharmLoadout`).
+  - `ActionPlatformer`: 스테이지형 액션 플랫포머(검브렐라 · 페퍼 그라인더 · 어스블레이드 장르) — 체크포인트 · 목숨 · 비밀 수집 · 등급(`ActionStageRun`), 활공 · 갈고리 진자 · 드릴 이동(`ActionPlatformerBody`), 근접 콤보 · 총 · 패리 반사(`ActionCombatRig`), 데이터 적 패턴(`ActionEnemyBrain`).
   - `ThemePark`: 롤러코스터 타이쿤 — 조각으로 쌓는 코스터 트랙(`CoasterTrackBuilder`: 오르막 체인 · 낙하 · 언덕 · 뱅크 회전 · 클로소이드 루프 ·
     브레이크 · 부스터, XML 레이아웃), 고정 스텝 열차 물리(`CoasterTrain`), 시험 운행으로 흥분 · 강도 · 멀미 평가(`CoasterRideAnalyzer`),
     손님 · 줄 · 표 · 입장료 · 운영비 · 공원 평점 경영 시뮬레이션(`ThemeParkSimulation`).
