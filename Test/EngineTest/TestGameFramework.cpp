@@ -15,6 +15,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Base/DontDestroyOnLoadComponent.h"
@@ -654,6 +655,13 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesLevelLoadEvents )
                                                         "    <entity name=\"Hero\"/>\n"
                                                         "  </entities>\n"
                                                         "</Scene>\n" ) );
+    // Shipping 은 XML 대신 같은 이름의 바이너리(.scene.bin)를 읽는다 — 둘 다 둔다(SceneAsyncTest 와 같다).
+    SceneDocument document{};
+    document._name = "LevelEvents";
+    SceneDocument::EntityNode entity{};
+    entity._name = "Hero";
+    document._listEntityNode.push_back( std::move( entity ) );
+    SW_ASSERT_TRUE( document.saveBinary( test::makeTempPath( "level_events.scene.bin" ) ) );
 
     SceneManager sceneManager;
     SW_ASSERT_TRUE( sceneManager.initialize() );
