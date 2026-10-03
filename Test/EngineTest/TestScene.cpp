@@ -1304,20 +1304,23 @@ SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
 }
 
 /**
- * @brief [SceneTest] 엔진 서비스 없이도 XML 씬 · 프리팹을 읽고, 지원하는 것보다 새 형식은 그때도 거절한다
+ * @brief [SceneTest] 엔진 서비스 없이도 XML 씬 · 프리팹을 읽고, 지원하는 것보다 새 형식 · 올릴 단계가 없는 옛 판은 그때도 거절한다
  * @details 단독 도구 · 테스트는 서비스를 묶지 않고 에셋을 읽는다. 로더가 `getResourceManager()` 로 형식 등록부를 꺼내면 거기서 assert 다 —
  *          같은 함수의 GUID 블록과 바이너리 로더는 이미 서비스가 있는지 묻는다. 서비스가 없을 때는 내장 migrator 만 든 등록부로 판정한다.
  */
 SW_TEST_CASE( SceneTest, XmlAssetsLoadWithoutEngineServices )
 {
     const sw::string scenePath = test::makeTempPath( "standalone.scene.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( scenePath, "<Scene name=\"Standalone\">\n"
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( scenePath, "<Scene formatVersion=\"1\" name=\"Standalone\">\n"
                                                             "  <entities>\n"
                                                             "    <entity id=\"1\" name=\"Crate\" prefab=\"game/demo/prefabs/crate.prefab.xml\"/>\n"
                                                             "  </entities>\n"
                                                             "</Scene>\n" ) );
     const sw::string futureScenePath = test::makeTempPath( "future.scene.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( futureScenePath, "<Scene formatVersion=\"999\" name=\"Future\"/>\n" ) );
+    // 판 속성이 없는 문서는 0 판이고, 0 판을 1 판으로 올리는 단계는 없다 — 저장소의 씬은 모두 1 판으로 다시 썼다.
+    const sw::string oldScenePath = test::makeTempPath( "unversioned.scene.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( oldScenePath, "<Scene name=\"Unversioned\"/>\n" ) );
     const sw::string prefabPath = test::makeTempPath( "standalone.prefab.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( prefabPath, "<Prefab name=\"Crate\">\n  <GameObject _name=\"Crate\"/>\n</Prefab>\n" ) );
 
@@ -1350,6 +1353,11 @@ SW_TEST_CASE( SceneTest, XmlAssetsLoadWithoutEngineServices )
             test::ScopedDefensiveTestLog expected( "a scene file newer than this build" );
             sw::SceneDocument            futureDocument;
             SW_EXPECT_FALSE( futureDocument.loadXml( futureScenePath ) );
+        }
+        {
+            test::ScopedDefensiveTestLog expected( "a scene file of a version no migrator upgrades" );
+            sw::SceneDocument            oldDocument;
+            SW_EXPECT_FALSE( oldDocument.loadXml( oldScenePath ) );
         }
 
         sw::PrefabAsset prefab;

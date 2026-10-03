@@ -35,7 +35,7 @@ namespace sw
         static constexpr AssetFormatVersion kRenderPipeline   = 0;
         static constexpr AssetFormatVersion kRenderPass       = 0;
         static constexpr AssetFormatVersion kPrefab           = 0;
-        /// 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)만 싣는다. 0 은 전체 상태였다(그대로 읽힌다).
+        /// 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)을 싣는다. 판이 0 인(또는 판이 없는) 씬 파일은 읽지 않는다.
         static constexpr AssetFormatVersion kScene = 1;
     };
 
@@ -93,7 +93,7 @@ namespace sw
         /** @brief 빈 등록부로 만듭니다. */
         AssetFormatRegistry() = default;
 
-        /** @brief 엔진 내장 N→N+1 migrator 를 등록합니다. 멱등입니다(씬 0 → 1). */
+        /** @brief 엔진 내장 N→N+1 migrator 를 등록합니다. 멱등입니다. 지금은 등록할 것이 없습니다. */
         void ensureBuiltins();
 
         /** @brief XML migrator 를 등록합니다. */

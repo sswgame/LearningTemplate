@@ -1,4 +1,4 @@
-<Scene formatVersion="0" name="EditorTest">
+<Scene formatVersion="1" name="EditorTest">
 	<entities>
 		<entity name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">

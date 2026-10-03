@@ -683,7 +683,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesLevelLoadEvents )
 
     const string scenePath = test::makeTempPath( "level_events.scene.xml" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( scenePath, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-                                                        "<Scene formatVersion=\"0\" name=\"LevelEvents\">\n"
+                                                        "<Scene formatVersion=\"1\" name=\"LevelEvents\">\n"
                                                         "  <entities>\n"
                                                         "    <entity name=\"Hero\"/>\n"
                                                         "  </entities>\n"

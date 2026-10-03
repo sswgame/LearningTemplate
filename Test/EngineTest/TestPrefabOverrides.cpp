@@ -197,19 +197,19 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
 }
 
 /**
- * @brief [PrefabOverridesTest] 옛 문서(formatVersion 0, 프리팹 엔티티가 전체 상태)는 그 상태 그대로 읽히고, 다음 저장이 덮어쓴 것만 쓴다
- * @details 0 판의 프리팹 엔티티는 `<GameObject>` 전체 상태를 싣는다. 그 상태가 기준이므로 그때 덮어쓴 값 · 지운 컴포넌트가 그대로 나온다.
- *          저장하면 1 판(덮어쓴 것만)으로 쓰고, 그것을 다시 읽어도 같은 오브젝트다.
+ * @brief [PrefabOverridesTest] 프리팹 엔티티가 전체 상태(`<GameObject>`)를 실으면 그 상태 그대로 읽히고, 다음 저장이 덮어쓴 것만 쓴다
+ * @details 프리팹을 읽지 못한 채 저장하면 전체 상태를 적는다(`Scene::serializeToDocument`). 그 상태가 기준이므로 덮어쓴 값 · 지운 컴포넌트가
+ *          그대로 나온다. 프리팹이 있을 때 저장하면 덮어쓴 것만 쓰고, 그것을 다시 읽어도 같은 오브젝트다.
  */
-SW_TEST_CASE( PrefabOverridesTest, LegacyFullStateSceneIsReadAndResavedAsOverrides )
+SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverrides )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const sw::string prefabPath = test::makeTempPath( "legacy_crate.prefab.xml" );
     SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab(
         sw::PrefabOverridesTestInternal::makeCratePrefab( sw::float3( 1.0f, 2.0f, 3.0f ), sw::float3( 2.0f, 2.0f, 2.0f ) ), prefabPath ) );
 
-    // 0 판 문서 — 인스턴스는 위치를 덮어쓰고 메시를 지운 전체 상태다(그 시절 저장기가 쓰던 모양).
-    const sw::string legacyScene = sw::string( "<Scene formatVersion=\"0\" name=\"Legacy\">\n"
+    // 인스턴스는 위치를 덮어쓰고 메시를 지운 전체 상태다.
+    const sw::string legacyScene = sw::string( "<Scene formatVersion=\"1\" name=\"Legacy\">\n"
                                                "\t<entities>\n"
                                                "\t\t<entity id=\"1\" name=\"Old\" prefab=\"" ) +
                                    prefabPath +

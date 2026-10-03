@@ -94,7 +94,7 @@ def buildScene(count: int, shapeCount: int) -> str:
     spacing = 2.0
     origin = -0.5 * float(side - 1) * spacing
 
-    listPart = ['<Scene formatVersion="0" name="StressScene">\n\t<entities>\n', _kCameraEntity, _kLightEntity]
+    listPart = ['<Scene formatVersion="1" name="StressScene">\n\t<entities>\n', _kCameraEntity, _kLightEntity]
     for index in range(count):
         col = index % side
         row = index // side
