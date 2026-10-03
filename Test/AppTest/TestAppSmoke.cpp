@@ -1,15 +1,20 @@
 #include "pch.h"
 
+#include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/Compression/CompressionStream.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
+
+#include "Engine/Compression/EngineCompressionCodecUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
 #include "sw/config/CookContract.gen.h"
 
 #include <chrono>
+#include <cstdlib>
 
 using namespace sw;
 
@@ -187,6 +192,120 @@ namespace
 #endif
         return true;
     }
+
+    /** @brief PPM(P6) 한 장 — 폭 · 높이와 RGB 8비트 픽셀. */
+    struct PpmImage
+    {
+        vector<uint8> _rgbBytes{};
+        uint32        _width{ 0 };
+        uint32        _height{ 0 };
+    };
+
+    /** @brief 공백(스페이스 · 탭 · 줄바꿈)을 건너뛰고 10진수 하나를 읽습니다. 숫자가 없으면 false. */
+    bool readPpmNumber( const vector<uint8>& fileBytes, size_t& inoutOffset, uint32& outValue )
+    {
+        while ( inoutOffset < fileBytes.size() && ( fileBytes[inoutOffset] == ' ' || fileBytes[inoutOffset] == '\n' || fileBytes[inoutOffset] == '\r' || fileBytes[inoutOffset] == '\t' ) )
+        {
+            ++inoutOffset;
+        }
+        const size_t start = inoutOffset;
+        outValue           = 0;
+        while ( inoutOffset < fileBytes.size() && '0' <= fileBytes[inoutOffset] && fileBytes[inoutOffset] <= '9' )
+        {
+            outValue = outValue * 10 + static_cast<uint32>( fileBytes[inoutOffset] - '0' );
+            ++inoutOffset;
+        }
+        return inoutOffset > start;
+    }
+
+    /** @brief `-gv_screenshot` 이 쓰는 PPM(P6, 최댓값 255)을 읽습니다. 모양이 다르면 false. */
+    bool parsePpm( const vector<uint8>& fileBytes, PpmImage& outImage )
+    {
+        if ( fileBytes.size() < 2 || fileBytes[0] != 'P' || fileBytes[1] != '6' )
+            return false;
+        size_t offset   = 2;
+        uint32 maxValue = 0;
+        if ( readPpmNumber( fileBytes, offset, outImage._width ) == false || readPpmNumber( fileBytes, offset, outImage._height ) == false ||
+             readPpmNumber( fileBytes, offset, maxValue ) == false || maxValue != 255 )
+            return false;
+        ++offset; // 최댓값 뒤의 공백 한 글자
+        const size_t pixelByteCount = static_cast<size_t>( outImage._width ) * outImage._height * 3;
+        if ( fileBytes.size() < offset + pixelByteCount )
+            return false;
+        outImage._rgbBytes.assign( fileBytes.begin() + static_cast<ptrdiff_t>( offset ), fileBytes.begin() + static_cast<ptrdiff_t>( offset + pixelByteCount ) );
+        return true;
+    }
+
+    /**
+     * @brief 골든 이미지 폴더(`Test/AppTest/Golden`)의 절대 경로. 못 찾으면 빈 문자열.
+     * @details 테스트의 작업 폴더는 `build/<프리셋>/Bin` 이다 — 거기서 위로 올라가며 저장소의 폴더를 찾는다.
+     */
+    string findGoldenDirectory()
+    {
+        string directory = FileUtil::getCurrentPath();
+        for ( uint32 depth = 0; depth < 8 && directory.empty() == false; ++depth )
+        {
+            const string candidate = FileUtil::joinPath( directory, "Test/AppTest/Golden" );
+            if ( FileUtil::directoryExists( candidate ) )
+                return candidate;
+            const string parent = FileUtil::getDirectoryPart( directory );
+            if ( parent == directory )
+                break;
+            directory = parent;
+        }
+        return {};
+    }
+
+    /** @brief 골든 파일 압축 · 해제에 쓰는 코덱 표(Zlib 을 쓴다 — 배경이 대부분인 그림이 1 KB 남짓으로 준다). */
+    struct GoldenCodecRegistry
+    {
+        GoldenCodecRegistry()
+        {
+            _registry.initialize();
+            EngineCompressionCodecUtil::registerAll( _registry );
+        }
+
+        CompressionCodecRegistry _registry;
+    };
+
+    CompressionCodecRegistry& getGoldenCodecRegistry()
+    {
+        static GoldenCodecRegistry s_registry;
+        return s_registry._registry;
+    }
+
+    /** @brief 골든과 비교한 결과 — 허용치를 넘은 픽셀 수와 가장 큰 채널 차이. */
+    struct GoldenDifference
+    {
+        uint32 _pixelOverTolerance{ 0 };
+        uint32 _maxChannelDifference{ 0 };
+    };
+
+    /** @brief 두 그림을 픽셀마다 비교합니다. 크기가 다르면 모든 픽셀이 넘은 것으로 셉니다. */
+    GoldenDifference compareImage( const PpmImage& expected, const PpmImage& actual, uint32 channelTolerance )
+    {
+        GoldenDifference difference{};
+        if ( expected._width != actual._width || expected._height != actual._height || expected._rgbBytes.size() != actual._rgbBytes.size() )
+        {
+            difference._pixelOverTolerance   = expected._width * expected._height;
+            difference._maxChannelDifference = 255;
+            return difference;
+        }
+        for ( size_t pixelOffset = 0; pixelOffset < expected._rgbBytes.size(); pixelOffset += 3 )
+        {
+            uint32 pixelMax = 0;
+            for ( size_t channel = 0; channel < 3; ++channel )
+            {
+                const int32  delta    = static_cast<int32>( expected._rgbBytes[pixelOffset + channel] ) - static_cast<int32>( actual._rgbBytes[pixelOffset + channel] );
+                const uint32 absDelta = static_cast<uint32>( delta < 0 ? -delta : delta );
+                pixelMax              = absDelta > pixelMax ? absDelta : pixelMax;
+            }
+            difference._maxChannelDifference = pixelMax > difference._maxChannelDifference ? pixelMax : difference._maxChannelDifference;
+            if ( pixelMax > channelTolerance )
+                ++difference._pixelOverTolerance;
+        }
+        return difference;
+    }
 } // namespace
 
 /**
@@ -312,3 +431,150 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
     }
 }
 #endif
+
+/**
+ * @brief [AppSmokeTest] 벤치 큐브 한 장면이 백엔드마다 골든 이미지와 같다(`Test/AppTest/Golden`)
+ * @details `-gv_benchAnimate=0` 이면 프레임이 결정적이라 기준 이미지를 둘 수 있다. 기준은 **백엔드마다** 하나다 — 백엔드끼리 래스터 결과가
+ *          조금씩 다를 수 있다(언리얼 · 유니티의 스크린샷 비교도 RHI 별 기준을 둔다). 작은 창(256×144)으로 그려 파일을 작게 둔다.
+ *          채널 차이 2 까지는 같다고 본다. 기준을 새로 뜨려면 `SW_UPDATE_GOLDEN=1` 로 이 케이스를 돌린다 — 그 판은 비교 대신 기준을 쓴다.
+ */
+SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
+{
+    constexpr uint32 kChannelTolerance = 2;
+
+    struct GoldenScene
+    {
+        const utf8* _pName;
+        const utf8* _pArgument;
+    };
+    constexpr GoldenScene kArrScene[] = {
+        {     "opaque",  "-gv_benchTransparent=0"},
+        {"transparent", "-gv_benchTransparent=25"},
+    };
+
+    struct GoldenBackend
+    {
+        const utf8* _pName;
+        const utf8* _pSwitch;
+    };
+#if defined( SW_SHIPPING )
+    // 배포본은 백엔드를 하나만 링크한다 — 스위치 없이 그 백엔드의 기준과 비교한다.
+    #if defined( SW_RHI_TARGET_DX11 )
+    constexpr GoldenBackend kArrBackend[] = {
+        { "dx11", "" }
+    };
+    #elif defined( SW_RHI_TARGET_VULKAN )
+    constexpr GoldenBackend kArrBackend[] = {
+        { "vk", "" }
+    };
+    #elif defined( SW_RHI_TARGET_OPENGL )
+    constexpr GoldenBackend kArrBackend[] = {
+        { "gl", "" }
+    };
+    #else
+    constexpr GoldenBackend kArrBackend[] = {
+        { "dx12", "" }
+    };
+    #endif
+#else
+    #define SW_APP_GOLDEN_BACKEND( Backend, ShaderFolder, ShaderTarget, Argument, FirstAlias, ... ) { FirstAlias, "-" FirstAlias },
+    constexpr GoldenBackend kArrBackend[] = { SW_RHI_BACKEND_TABLE( SW_APP_GOLDEN_BACKEND ) };
+    #undef SW_APP_GOLDEN_BACKEND
+#endif
+
+    // 기준은 그 플랫폼의 드라이버가 그린 것이다. 윈도우 밖은 이름에 플랫폼을 붙이고, 아직 뜬 적이 없으면 비교하지 않는다(경고만).
+#if defined( SW_PLATFORM_WINDOWS )
+    constexpr const utf8* kGoldenPlatformSuffix = "";
+    constexpr bool        kMissingGoldenFails   = true;
+#else
+    constexpr const utf8* kGoldenPlatformSuffix = ".linux";
+    constexpr bool        kMissingGoldenFails   = false;
+#endif
+
+    const string goldenDirectory = findGoldenDirectory();
+    SW_ASSERT_TRUE_MSG( goldenDirectory.empty() == false, "Test/AppTest/Golden 을 찾지 못했습니다 — 작업 폴더가 build/<프리셋>/Bin 입니까?" );
+
+    const utf8* pUpdate = std::getenv( "SW_UPDATE_GOLDEN" );
+    const bool  bUpdate = pUpdate != nullptr && pUpdate[0] == '1';
+
+    uint32 checkedCount = 0;
+    for ( const GoldenBackend& backend : kArrBackend )
+    {
+        for ( const GoldenScene& scene : kArrScene )
+        {
+            string imageName{ scene._pName };
+            imageName += "_";
+            imageName += backend._pName;
+            const string screenshotPath = test::makeTempPath( imageName + ".ppm" );
+
+            string arguments{ "-W=256 -H=144 -gv_benchMeshes=8 -gv_benchAnimate=0 -gv_profileFrames=20 " };
+            arguments += scene._pArgument;
+            arguments += " \"-gv_screenshot=";
+            arguments += screenshotPath;
+            arguments += "\" ";
+            arguments += backend._pSwitch;
+
+            const AppRunResult result = runApp( arguments );
+            SW_EXPECT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
+            if ( result._bLaunched == false || result._bBackendUnusableHere )
+                continue;
+            SW_EXPECT_TRUE_MSG( result._exitCode == 0, imageName.c_str() );
+
+            vector<uint8> screenshotBytes;
+            PpmImage      actual{};
+            const bool    bRead = FileUtil::readFile( screenshotPath, screenshotBytes ) && parsePpm( screenshotBytes, actual );
+            SW_EXPECT_TRUE_MSG( bRead, ( "스크린샷을 읽지 못했습니다: " + imageName ).c_str() );
+            if ( bRead == false )
+                continue;
+
+            const string goldenPath = FileUtil::joinPath( goldenDirectory, imageName + kGoldenPlatformSuffix + ".ppm.z" );
+            if ( bUpdate )
+            {
+                vector<uint8> goldenBytes;
+                SW_EXPECT_TRUE( CompressionStream::compressBuffer( screenshotBytes.data(), screenshotBytes.size(), goldenBytes, CompressionCodecType::Zlib, 9,
+                                                                   &getGoldenCodecRegistry() ) );
+                SW_EXPECT_TRUE_MSG( FileUtil::writeFile( goldenPath, goldenBytes.data(), goldenBytes.size() ), goldenPath.c_str() );
+                SW_LOG_WARNING( "Golden image updated: %#", goldenPath.c_str() );
+                ++checkedCount;
+                continue;
+            }
+
+            if ( kMissingGoldenFails == false && FileUtil::fileExists( goldenPath ) == false )
+            {
+                SW_LOG_WARNING( "No golden image for this platform yet - record it with SW_UPDATE_GOLDEN=1: %#", goldenPath.c_str() );
+                continue;
+            }
+
+            vector<uint8> goldenBytes;
+            vector<uint8> goldenPpmBytes;
+            PpmImage      expected{};
+            const bool    bGolden = FileUtil::readFile( goldenPath, goldenBytes ) &&
+                                 CompressionStream::decompressBuffer( goldenBytes.data(), goldenBytes.size(), goldenPpmBytes, &getGoldenCodecRegistry() ) &&
+                                 parsePpm( goldenPpmBytes, expected );
+            SW_EXPECT_TRUE_MSG( bGolden, ( "골든 이미지를 읽지 못했습니다(SW_UPDATE_GOLDEN=1 로 뜬다): " + goldenPath ).c_str() );
+            if ( bGolden == false )
+                continue;
+
+            const GoldenDifference difference = compareImage( expected, actual, kChannelTolerance );
+            string                 message    = imageName;
+            message += ": ";
+            message += sw::to_string( difference._pixelOverTolerance );
+            message += " pixel(s) differ by more than the tolerance, max channel difference ";
+            message += sw::to_string( difference._maxChannelDifference );
+            SW_EXPECT_TRUE_MSG( difference._pixelOverTolerance == 0, message.c_str() );
+            if ( difference._pixelOverTolerance != 0 )
+            {
+                // 케이스 임시 폴더는 케이스가 끝나면 지워진다 — 진 그림은 build/<프리셋>/GoldenDiff 에 남겨 열어 볼 수 있게 한다.
+                const string diffDirectory = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getCurrentPath() ), "GoldenDiff" );
+                FileUtil::ensureDirectoryExists( diffDirectory );
+                const string keptPath = FileUtil::joinPath( diffDirectory, imageName + ".ppm" );
+                SW_EXPECT_TRUE( FileUtil::writeFile( keptPath, screenshotBytes.data(), screenshotBytes.size() ) );
+                SW_LOG_WARNING( "Golden mismatch kept at %#", keptPath.c_str() );
+            }
+            ++checkedCount;
+        }
+    }
+
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "no usable RHI backend on this machine — run where a GPU and driver exist" );
+}

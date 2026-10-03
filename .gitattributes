@@ -1,2 +1,5 @@
 # vcpkg 오버레이 포트의 패치는 업스트림과 바이트 단위로 같아야 한다 — 줄끝 변환 금지
 *.patch -text
+
+# 골든 이미지(Test/AppTest/Golden — CompressionStream 으로 감싼 PPM)는 바이너리다
+*.ppm.z binary

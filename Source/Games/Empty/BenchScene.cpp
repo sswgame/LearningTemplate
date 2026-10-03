@@ -58,7 +58,7 @@ namespace sw
      * @brief `-gv_benchMeshes=N` — 시작 시 만들 벤치 큐브 수. 0 이면 만들지 않습니다.
      * @details 이것이 0 이 아니면 `EmptyGame` 은 `GameConfig` 의 시작 씬 대신 벤치 씬을 세운다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMeshes, 0, "시작 시 생성할 벤치 큐브 수 (0=사용 안 함)", SW_KEEP_IN_SHIPPING );
 
     /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
@@ -84,7 +84,7 @@ namespace sw
      *          지나지 않는다. 투명 큐브는 **소수의 머티리얼 인스턴스를 나눠 쓰므로** 한 배치에 투명
      *          인스턴스가 여럿 들어간다 — 그래야 배치 안의 정렬이 실제로 검사된다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchTransparent, 25, "벤치 큐브 중 투명으로 만들 비율 (퍼센트)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchTransparent, 25, "벤치 큐브 중 투명으로 만들 비율 (퍼센트)", SW_KEEP_IN_SHIPPING );
 
     /**
      * @brief `-gv_benchMaterialChurn=N` — 매 프레임 머티리얼 인스턴스 N 개의 **값**을 무작위로 바꿉니다.
@@ -143,7 +143,7 @@ namespace sw
      *          변경의 0.5% 차이를 "다르다" 고 읽을 뻔했다 — 손대지 않은 대조군이 움직이면 하니스를
      *          먼저 의심할 것. 회전만 멈춰서는 부족하다(사인파가 남아 여전히 0.05% 흔들렸다).
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchAnimate, 1, "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)" );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchAnimate, 1, "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)", SW_KEEP_IN_SHIPPING );
 
     /**
      * @brief `-gv_benchMovePercent=<퍼센트>` — 프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (기본 100 = 전부).
