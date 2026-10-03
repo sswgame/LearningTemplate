@@ -14,6 +14,7 @@ add_library(sw_platform_windows INTERFACE)
 # ------------------------------------------------------------------------------
 target_compile_definitions(sw_platform_windows INTERFACE
     SW_PLATFORM_WINDOWS
+    SW_PLATFORM_NAME="Windows"  # sw::build::kPlatformName (Core/Common/BuildInfo.h)
     _CRT_SECURE_NO_WARNINGS
 )
 

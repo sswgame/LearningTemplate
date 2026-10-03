@@ -37,6 +37,10 @@ if(sw_flag_libraries)
 	target_link_libraries(sw_global_options INTERFACE ${sw_flag_libraries})
 endif()
 
+# 빌드 구성 이름(sw::build::kConfigName, Core/Common/BuildInfo.h) — Shipping 이면 "Shipping", 아니면 실제 구성 이름.
+# 생성기 식이라 다중 구성 생성기에서도 그 구성의 이름이 된다.
+target_compile_definitions(sw_global_options INTERFACE "SW_BUILD_CONFIG_NAME=\"$<IF:$<BOOL:${SW_SHIPPING_BUILD}>,Shipping,$<CONFIG>>\"")
+
 if(SW_SHIPPING_BUILD)
 	target_compile_definitions(sw_global_options INTERFACE SW_SHIPPING)
 	set(SW_RHI_AS_MODULES OFF CACHE BOOL "RHI 백엔드(DX11/DX12/GL/Vulkan)를 MODULE 플러그인으로 빌드" FORCE)

@@ -3,6 +3,7 @@
 #include "Engine/EngineLoop.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Common/BuildInfo.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Concurrency/DeadlockDetector.h"
 #include "Core/Event/EventDispatcher.h"
@@ -144,20 +145,8 @@ namespace sw
 
             // 크래시 리포트에 함께 나갈 값들이다. 덤프만으로는 알 수 없는 것들이다.
             // 백엔드는 RHI 초기화 뒤에 다시 덮어쓴다(여기서는 아직 정해지지 않았을 수 있다).
-#if defined( SW_SHIPPING )
-            CrashHandler::setContextValue( "Build", "Shipping" );
-#elif defined( SW_DEBUG )
-            CrashHandler::setContextValue( "Build", "Debug" );
-#else
-            CrashHandler::setContextValue( "Build", "Release" );
-#endif
-#if defined( SW_PLATFORM_WINDOWS )
-            CrashHandler::setContextValue( "Platform", "Windows" );
-#elif defined( SW_PLATFORM_LINUX )
-            CrashHandler::setContextValue( "Platform", "Linux" );
-#elif defined( SW_PLATFORM_MACOS )
-            CrashHandler::setContextValue( "Platform", "macOS" );
-#endif
+            CrashHandler::setContextValue( "Build", build::kConfigName );
+            CrashHandler::setContextValue( "Platform", build::kPlatformName );
 
 #if defined( SW_DEBUG )
             _deadlockDetector = make_unique<DeadlockDetector>();

@@ -8,7 +8,7 @@ if(NOT APPLE)
 endif()
 
 add_library(sw_platform_macos INTERFACE)
-target_compile_definitions(sw_platform_macos INTERFACE SW_PLATFORM_MACOS)
+target_compile_definitions(sw_platform_macos INTERFACE SW_PLATFORM_MACOS SW_PLATFORM_NAME="macOS")  # 이름은 sw::build::kPlatformName
 
 # ------------------------------------------------------------------------------
 # 1) Cocoa · GPU INTERFACE 껍데기

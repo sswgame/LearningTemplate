@@ -10,7 +10,7 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 add_library(sw_platform_linux INTERFACE)
-target_compile_definitions(sw_platform_linux INTERFACE SW_PLATFORM_LINUX)
+target_compile_definitions(sw_platform_linux INTERFACE SW_PLATFORM_LINUX SW_PLATFORM_NAME="Linux")  # 이름은 sw::build::kPlatformName
 
 # ------------------------------------------------------------------------------
 # 1) X11 / xcb — 윈도잉 + WSLg Vulkan WSI (XGetXCBConnection / VK_KHR_xcb_surface)
