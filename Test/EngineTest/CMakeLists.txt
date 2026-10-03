@@ -30,6 +30,7 @@ sw_addTestExecutable(EngineTest
 		GF_NetMmo
 		GF_Rhythm
 		GF_TacticsSrpg
+		GF_CardGame
 	LABELS
 		"unit;engine"
 	TIMEOUT
