@@ -35,10 +35,17 @@ namespace sw
 
     bool EngineBootstrap::initialize( EngineOwnedServices& owned, bool bDiagnostics )
     {
-        // 로거 · 명령줄 · 전역 변수 표다. 프로파일러가 아래에서 서므로 그 앞의 할당은 세이지 않는다.
+        // 이름 풀 · 로거 · 명령줄 · 전역 변수 표다.
         SW_MEMORY_SCOPE( EngineMisc );
         _pOwned   = &owned;
         _bStarted = true;
+
+        // 메모리 프로파일러가 맨 먼저 선다. 그 앞에서 잡은 sw 블록(로거의 큐 · 이름 풀)은 태그에 세이지 않고 "sw 할당자 밖" 몫으로 보인다.
+        if ( bDiagnostics )
+        {
+            _memoryProfiler = make_unique<MemoryProfiler>();
+            _memoryProfiler->initialize();
+        }
         HashedStringPool::initialize();
 
         _logger = make_unique<Logger>();
@@ -62,8 +69,6 @@ namespace sw
         {
             _deadlockDetector = make_unique<DeadlockDetector>();
             _deadlockDetector->initialize();
-            _memoryProfiler = make_unique<MemoryProfiler>();
-            _memoryProfiler->initialize();
         }
 
         // 명령줄 · 전역 변수는 표의 서비스이지만 파싱이 다른 서비스 생성보다 먼저라 여기서 만든다(`createAll` 은 있는 것을 덮지 않는다).

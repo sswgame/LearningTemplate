@@ -219,6 +219,29 @@ namespace
     /** @brief 태그를 걸지 않은 할당(Unknown)의 상한(KB)입니다. 진입점이 빠지면 기동만으로 수십 KB 가 이 줄에 쌓입니다. */
     constexpr uint64 kMaxUnknownTagKilobytes = 8;
 
+    /**
+     * @brief 보고의 "sw 할당자 밖" 줄(`[Profile]   (sw 할당자 밖 — …)  19.8 KB`)의 KB 정수부입니다. 줄이 없으면(CRT 힙을 잴 수 없는 구성) 0 입니다.
+     */
+    uint64 findOutsideAllocatorKilobytes( const AppRunResult& result )
+    {
+        for ( const string& line : result._listMarkedLine )
+        {
+            if ( line.find( "(sw " ) == string::npos )
+                continue;
+            const size_t closeIndex = line.rfind( ')' );
+            if ( closeIndex == string::npos )
+                continue;
+            const size_t numberStart = line.find_first_not_of( ' ', closeIndex + 1 );
+            return numberStart == string::npos ? 0 : std::strtoull( line.c_str() + numberStart, nullptr, 10 );
+        }
+        return 0;
+    }
+
+    /**
+     * @brief "sw 할당자 밖" 의 상한(KB)입니다. 프로파일러가 로거 · 이름 풀보다 늦게 서면 그 블록(~870 KB)이 이 줄로 갑니다.
+     */
+    constexpr uint64 kMaxOutsideAllocatorKilobytes = 128;
+
     /** @brief PPM(P6) 한 장 — 폭 · 높이와 RGB 8비트 픽셀. */
     struct PpmImage
     {
@@ -432,6 +455,8 @@ SW_TEST_CASE( AppSmokeTest, EditorMemoryIsAttributedByTag )
     const uint64 unknownKilobytes = findMemoryTagKilobytes( result, "Unknown" );
     SW_EXPECT_TRUE_MSG( editorKilobytes > 4096, ( string( "Editor KB = " ) + to_string( editorKilobytes ) ).c_str() );
     SW_EXPECT_TRUE_MSG( unknownKilobytes < kMaxUnknownTagKilobytes, ( string( "Unknown KB = " ) + to_string( unknownKilobytes ) ).c_str() );
+    const uint64 outsideKilobytes = findOutsideAllocatorKilobytes( result );
+    SW_EXPECT_TRUE_MSG( outsideKilobytes < kMaxOutsideAllocatorKilobytes, ( string( "outside sw allocator KB = " ) + to_string( outsideKilobytes ) ).c_str() );
 }
 
 /**
@@ -451,6 +476,8 @@ SW_TEST_CASE( AppSmokeTest, RuntimeMemoryIsAttributedByTag )
 
     const uint64 unknownKilobytes = findMemoryTagKilobytes( result, "Unknown" );
     SW_EXPECT_TRUE_MSG( unknownKilobytes < kMaxUnknownTagKilobytes, ( string( "Unknown KB = " ) + to_string( unknownKilobytes ) ).c_str() );
+    const uint64 outsideKilobytes = findOutsideAllocatorKilobytes( result );
+    SW_EXPECT_TRUE_MSG( outsideKilobytes < kMaxOutsideAllocatorKilobytes, ( string( "outside sw allocator KB = " ) + to_string( outsideKilobytes ) ).c_str() );
 }
 
 /**

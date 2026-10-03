@@ -31,8 +31,9 @@ namespace sw
 
             /**
              * @brief 태그별 지금 살아 있는 바이트를 큰 순서로 한 줄씩 남깁니다. 0 인 태그는 건너뜁니다.
-             * @details 플랫폼 힙을 잴 수 있으면(Windows Debug CRT) 태그가 볼 수 없는 몫(`std::allocator` · 외부 라이브러리 · 직접 `new`)도 한 줄로 낸다 —
-             *          CRT 힙에서 태그 합과 sw 블록 헤더를 뺀 값이다.
+             * @details 플랫폼 힙을 잴 수 있으면(Windows Debug CRT) 태그가 볼 수 없는 몫도 한 줄로 낸다 — CRT 힙에서 태그 합과 sw 블록 헤더를 뺀 값이다.
+             *          `std::allocator` · 외부 라이브러리 · CRT 직접 호출에 더해, 프로파일러가 서기 전(정적 초기화)에 잡은 sw 블록과 정렬 할당의 CRT 여분도
+             *          여기 들어간다. 프로파일러는 부트스트랩 맨 앞에서 서므로 기동 직후 이 줄은 수십 KB 다.
              */
             static void reportMemoryTags( const MemoryProfiler& memory )
             {
@@ -57,7 +58,7 @@ namespace sw
                 if ( platformBytes > swBlockBytes )
                 {
                     const uint64 outsideX10 = toKilobytesX10( platformBytes - swBlockBytes );
-                    SW_LOG_INFO( "[Profile]   (sw 할당자 밖 — std::allocator · 외부 라이브러리 · 직접 new)  %#.%# KB", outsideX10 / 10, outsideX10 % 10 );
+                    SW_LOG_INFO( "[Profile]   (sw 할당자 밖 — std::allocator · 외부 라이브러리 · 정적 초기화)  %#.%# KB", outsideX10 / 10, outsideX10 % 10 );
                 }
             }
         };
