@@ -430,6 +430,89 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
             searchIndex = foundIndex + 1;
     }
 }
+
+namespace
+{
+    /** @brief 작업 폴더에서 위로 올라가며 에디터 설정 폴더의 `imgui.ini` 경로를 찾습니다. 설정 폴더가 없으면 빈 문자열입니다. */
+    string findEditorImguiIniPath()
+    {
+        string directory = FileUtil::getCurrentPath();
+        for ( uint32 depth = 0; depth < 8 && directory.empty() == false; ++depth )
+        {
+            const string configDirectory = FileUtil::joinPath( directory, "Config/Editor" );
+            if ( FileUtil::directoryExists( configDirectory ) )
+                return FileUtil::joinPath( configDirectory, "imgui.ini" );
+            const string parent = FileUtil::getDirectoryPart( directory );
+            if ( parent == directory )
+                break;
+            directory = parent;
+        }
+        return {};
+    }
+
+    /** @brief 파일이 있으면 그 바이트를, 없으면 빈 값과 false 를 돌려줍니다. */
+    bool readOptionalFile( const string& path, vector<uint8>& outBytes )
+    {
+        outBytes.clear();
+        return path.empty() == false && FileUtil::fileExists( path ) && FileUtil::readFile( path, outBytes );
+    }
+} // namespace
+
+/**
+ * @brief [AppSmokeTest] 에디터 자체 시험이 실제 에디터 안에서 모두 통과하고, 그 실행이 사용자의 레이아웃을 건드리지 않는다
+ * @details 패널 · 위젯 · 도킹은 에디터 컨텍스트와 ImGui 프레임이 모두 서 있어야 재현된다(UE Automation · Unity EditMode 의 자리). App 을
+ *          `-gv_editorSelfTest=*` 로 띄우면 에디터가 등록된 시험(`SW_EDITOR_SELF_TEST`)을 프레임마다 한 단계씩 돌리고 보고서를 쓴 뒤 스스로 닫힌다.
+ *          알려진 시험이 모두 PASS 로 나와야 하고(빠지면 등록이 링크에서 빠진 것), 끝 줄의 실패 수가 0 이어야 한다. 시험 실행은 저장된 레이아웃을
+ *          읽지도 쓰지도 않는다 — 끝난 뒤 `Config/Editor/imgui.ini` 가 실행 전과 바이트까지 같아야 한다.
+ */
+SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
+{
+    constexpr const utf8* kArrExpectedPass[] = {
+        "EditorSelfTest|PASS|theme.palette",
+        "EditorSelfTest|PASS|widgets.helpMarker",
+        "EditorSelfTest|PASS|widgets.propertyRow",
+        "EditorSelfTest|PASS|dock.corePanelsAreDocked",
+        "EditorSelfTest|PASS|inspector.drawLeavesTheObjectAlone",
+        "EditorSelfTest|PASS|preview.materialHoldsOneReference",
+        "EditorSelfTest|PASS|hierarchy.tagFilter",
+    };
+
+    const string  imguiIniPath = findEditorImguiIniPath();
+    vector<uint8> listIniBefore;
+    const bool    bIniExistedBefore = readOptionalFile( imguiIniPath, listIniBefore );
+
+    const string reportPath = test::makeTempPath( "editor_self_test.txt" );
+    // 보고서 경로는 따옴표 없이 넘긴다 — 시험 임시 폴더에는 공백이 없다.
+    string arguments{ "-gv_profileFrames=1200 -EnableEditor -dx12 -gv_editorSelfTest=* -gv_editorSelfTestReport=" };
+    arguments += reportPath;
+    const AppRunResult result = runApp( arguments, "EditorSelfTest|" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
+    if ( result._bBackendUnusableHere )
+        SW_TEST_SKIP( "DX12 is not usable on this machine" );
+    SW_EXPECT_TRUE_MSG( result._exitCode == 0, "App 이 0 이 아닌 코드로 끝났습니다" );
+    SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? "로그에 [Error] 가 있습니다" : result._firstErrorLine.c_str() );
+
+    for ( const utf8* pExpected : kArrExpectedPass )
+    {
+        bool bFound{ false };
+        for ( const string& line : result._listMarkedLine )
+        {
+            bFound = bFound || line == pExpected;
+        }
+        SW_EXPECT_TRUE_MSG( bFound, pExpected );
+    }
+    const bool bDoneWithoutFailure = result._listMarkedLine.empty() == false && result._listMarkedLine.back().find( "EditorSelfTest|DONE|" ) == 0 &&
+                                     result._listMarkedLine.back().size() >= 2 && result._listMarkedLine.back().substr( result._listMarkedLine.back().size() - 2 ) == "|0";
+    SW_EXPECT_TRUE_MSG( bDoneWithoutFailure, result._listMarkedLine.empty() ? "no EditorSelfTest lines" : result._listMarkedLine.back().c_str() );
+
+    string reportText;
+    SW_EXPECT_TRUE_MSG( FileUtil::readTextFile( reportPath, reportText ) && reportText.find( "EditorSelfTest|DONE|" ) != string::npos,
+                        "the report file was not written" );
+
+    vector<uint8> listIniAfter;
+    const bool    bIniExistsAfter = readOptionalFile( imguiIniPath, listIniAfter );
+    SW_EXPECT_TRUE_MSG( bIniExistsAfter == bIniExistedBefore && listIniAfter == listIniBefore, "the self test run rewrote the user's imgui.ini" );
+}
 #endif
 
 /**

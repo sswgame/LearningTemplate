@@ -35,6 +35,11 @@ namespace sw::editor
         /** @brief 복제·이름 변경·삭제 단축키를 처리합니다. */
         void handleHierarchyShortcuts( GameObjectManager* pManager );
 
+        /** @brief 검색 칸의 글을 바꿉니다. 다음 프레임의 트리가 이 필터로 그려집니다(에디터 자체 시험이 사람 대신 칩니다). */
+        void setFilterText( string_view filterText ) { _filterBuffer = filterText; }
+        /** @brief 마지막으로 그린 프레임에 필터를 지난 루트 오브젝트 수입니다(서브트리 중 하나라도 맞으면 그 루트가 보인다). */
+        uint32 getVisibleRootCount() const { return _visibleRootCount; }
+
     private:
         /**
          * @brief 프레임마다 다시 채우는 오브젝트 스냅샷입니다(용량 재사용).
@@ -46,6 +51,7 @@ namespace sw::editor
         uint64                                _renamingObjectId;
         fixed_string<constant::kMaxBuffer128> _filterBuffer;
         fixed_string<constant::kMaxBuffer256> _renameBuffer;
+        uint32                                _visibleRootCount; ///< 마지막 프레임에 보인 루트 수(`getVisibleRootCount`)
         bool                                  _bFocusRenameInput;
     };
 } // namespace sw::editor

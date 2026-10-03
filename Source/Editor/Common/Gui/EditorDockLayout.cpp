@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "Engine/Utility/Format/KeyValueFile.h"
 
@@ -74,7 +75,7 @@ namespace sw::editor
 
     bool EditorDockLayout::isPanelOverrideActive()
     {
-        return gv_editorOpenPanel.empty() == false;
+        return gv_editorOpenPanel.empty() == false || EditorSelfTestRunner::isRequested();
     }
 
     bool EditorDockLayout::isOpeningAllPanels()
@@ -143,6 +144,13 @@ namespace sw::editor
             return;
         }
 
+        // 에디터 자체 시험은 사용자의 레이아웃과 무관한 상태에서 돈다 — 등록된 기본 가시성(코어 열림 · 도구 닫힘)과 기본 도킹 배치.
+        if ( gv_editorOpenPanel.empty() && isPanelOverrideActive() )
+        {
+            SW_LOG_INFO( "Editor self test: default panel visibility and dock layout (saved layout is neither read nor written)." );
+            return;
+        }
+
         // 하나만 연다. 모두 열면 서로를 가려서 원하는 패널이 화면 캡처에 나오지 않는다.
         if ( isPanelOverrideActive() )
         {
@@ -208,7 +216,8 @@ namespace sw::editor
                 SW_LOG_WARNING( "Failed to write windows.ini: %#", _windowsIniPath.c_str() );
         }
 
-        if ( _imguiIniPath.empty() == false && ImGui::GetCurrentContext() != nullptr )
+        // 도킹 레이아웃도 같다 — 스위치가 만든 배치(전부 떠 있는 창 · 기본 배치)를 사용자의 imgui.ini 에 쓰지 않는다.
+        if ( _imguiIniPath.empty() == false && isPanelOverrideActive() == false && ImGui::GetCurrentContext() != nullptr )
         {
             ImGui::SaveIniSettingsToDisk( _imguiIniPath.c_str() );
             SW_LOG_TRACE( "Saved ImGui layout to %#", _imguiIniPath.c_str() );

@@ -39,6 +39,7 @@
   - `Viewport/Visualizers/`: 시각화 하나에 파일 하나
 - **Popups/**: 커맨드 팔레트, 퀵 런처, 본 계층 팝업
 - **AssetActions/**: 애셋 종류별 에디터 동작(썸네일 · 열기 · 뷰포트 드롭) — 종류마다 파일 하나
+- **SelfTest/**: 에디터 안에서 도는 시험(`SW_EDITOR_SELF_TEST`)과 실행기(`-gv_editorSelfTest`)
 
 ### 어디에 두나
 
@@ -174,10 +175,29 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 남깁니다. **보이는데 정점이 0인 패널**이 곧 빈 패널입니다. 컨테이너(자식이 내용을 든 창)와 순수
 오버레이(`NoInputs` — ImGuizmo 의 `gizmo` 가 그렇습니다)는 정상적으로 비므로 빼고 셉니다.
 
-구현은 `Common/Gui/EditorPanelDump.*` 이고, 스위치 선언은 `Engine/EngineLoop.cpp` 에 있습니다 —
-커맨드라인은 모듈 로드 전에 파싱되므로 EditorModule 이 선언한 전역 변수는 `-gv_...` 로 설정할 수
-없습니다(파서가 조용히 무시합니다). 기준선과 비교 방법은
-[docs/06_Backlog.md](../../docs/06_Backlog.md) 0절에 있습니다.
+구현과 스위치 선언은 `Common/Gui/EditorPanelDump.*` 에 있습니다 — 모듈의 전역 변수도 모듈을 올릴 때 커맨드라인 값을 받습니다.
+기준선과 비교 방법은 [docs/06_Backlog.md](../../docs/06_Backlog.md) 0절에 있습니다.
+
+## 에디터 안에서 시험하는 법
+
+패널 · 위젯 · 도킹처럼 에디터 컨텍스트와 ImGui 프레임이 모두 서 있어야 재현되는 동작은 **에디터 자체 시험**으로 잽니다(UE Automation ·
+Unity EditMode 의 자리). 시험은 자기 .cpp 에서 한 줄로 등록합니다.
+
+```cpp
+SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &runHierarchyTagFilter );
+```
+
+본문은 에디터 프레임마다 한 번(패널을 그린 뒤) 불리고 `EditorSelfTestStep::Continue` 를 돌려주면 다음 프레임에 다시 불립니다 — 패널이 한 번
+그려지기를 기다릴 때 씁니다. 실패는 `context.expect( 조건, "이유" )` 로 적습니다. 시험이 만든 오브젝트 · 바꾼 테마는 시험이 되돌립니다.
+
+```powershell
+./App.exe -dx12 -EnableEditor "-gv_editorSelfTest=*" -gv_editorSelfTestReport=Saved/selftest.txt -gv_profileFrames=1200
+```
+
+패턴은 `*` 와 쉼표(`hierarchy.*,theme.*`)를 받습니다. 시험마다 `EditorSelfTest|PASS|<id>` · `EditorSelfTest|FAIL|<id>|<이유>` 한 줄, 끝에
+`EditorSelfTest|DONE|<통과>|<실패>` 를 로그와 보고서에 남기고 앱을 닫습니다. 실행 중에는 저장된 레이아웃(`imgui.ini` · `windows.ini`)을 읽지도
+쓰지도 않고 기본 가시성 · 기본 도킹 배치로 뜹니다. `AppSmokeTest.EditorSelfTestsPassInsideTheEditor`(hostgpu)가 이렇게 띄워 알려진 시험이 모두
+PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니다.
 
 ## ⚠️ 핵심 특징 및 규칙
 - **Dev 모드 전용**: 이 폴더의 코드는 개발(Dev) 모드에서만 `MODULE DLL`로 빌드되고 동작합니다. 배포(Shipping) 빌드를 할 때는 **코드가 통째로 날아갑니다.**

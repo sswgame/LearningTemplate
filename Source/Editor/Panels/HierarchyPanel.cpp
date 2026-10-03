@@ -529,6 +529,7 @@ namespace sw::editor
         : _renamingObjectId{ 0 }
         , _filterBuffer{}
         , _renameBuffer{}
+        , _visibleRootCount{ 0 }
         , _bFocusRenameInput{ false }
     {
     }
@@ -593,6 +594,7 @@ namespace sw::editor
                 }
             }
 
+            _visibleRootCount = visibleRootCount;
             if ( visibleRootCount == 0 && treeFilter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( treeFilter.getText() );
 
