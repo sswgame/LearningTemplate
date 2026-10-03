@@ -138,6 +138,8 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
+- **`.hdr` 원본 굽기가 없다** — 지금 굽기는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
+
 - **GPU 메모리 측정(사용자 요청 2026-10-03, gfxfix 워크트리 병합 뒤)** — (1) 드라이버 총량 · 예산: DXGI `QueryVideoMemoryInfo`(DX12 · DX11), `VK_EXT_memory_budget`(Vulkan),
   GL 은 벤더 확장(`GL_NVX_gpu_memory_info` · `GL_ATI_meminfo`)이 있을 때만(없으면 "모름"). (2) 엔진 집계: RHI 자원 생성 · 해제 때 종류별(텍스처 · 렌더 타깃 · 버퍼 ·
   트랜지언트 풀 · 디스크립터)로 실제 할당 크기를 더한다(DX12 `GetResourceAllocationInfo`). 총량 − 집계 = "엔진 밖(드라이버 · 스왑체인)". 보여 주기는 CPU 태그와 같게
@@ -246,8 +248,6 @@ cd build/Ninja-Debug/Bin
   이름 표에 각각 영구 적재된다. 런타임에 번호 붙은 이름을 대량으로 만드는 경로(복제 · 스폰 이름 자동 부여)가 생기면 다시 본다 — 넣으면 `_숫자`(앞자리 0 제외)를
   떼어 정수 칸에 두고 비교는 (인덱스, 숫자) 쌍.
 
-- **런타임 텍스처 형식** — 런타임은 DDS 만 읽는다(PNG 는 "Invalid DDS magic" 오류 — 조용하지는 않다). (a) 에디터가 드롭할 때 굽기(UE 임포트) (b) 쿠킹 때 굽기
-  (c) 런타임 디코더. `Resource/engine/textures` 에 참조 0 인 PNG 10 여 개가 있다.
 
 ### 1-12. 낮은 우선순위 · 조건이 오면
 
@@ -673,6 +673,11 @@ cd build/Ninja-Debug/Bin
   태그 ID 를 만들고, 계층 비교(`Faction` → `Faction.Player`)에는 문자열이 같이 필요하다.
 
 ### 3-7. 그래픽스 · RHI · 셰이더
+
+- **텍스처는 들일 때 굽는다(사용자 결정 2026-10-03 — UE 임포트 방식).** 런타임은 DDS 만 읽고, 원본은 `<domain>/textures_raw/` 에만 둔다(`CheckTextureFolders`).
+  원본 ↔ DDS 대조는 원본 폴더마다 `bake.stamp`(원본 바이트 + 해석한 규칙 + 베이커 버전의 해시, DDS 해시) — `App --bake-textures` · `--check-textures`(헤드리스로
+  에디터 모듈을 올린다, Shipping 은 이유를 남기고 실패), CI 대조는 `TextureBakeStampTest`. 함정: 굽기 동작을 바꾸면 `TextureBakerInternal::kBakerVersion` 을 올려야
+  모든 스탬프가 어긋남이 된다. Debug 의 DirectXTex BC7 은 블록당 수백 ms 라 큰 원본은 Release App 으로 굽는다. 밉 · 변환은 `TEX_FILTER_FORCE_NON_WIC`(결정적).
 
 - **디바이스 종료 순서는 `IRHIDevice::shutdown`(비가상 템플릿 메서드) 하나가 정한다** — releaseAllFor → `waitIdleInternal` → `detachCommandRecordingInternal` →
   `shutdownInternal`. 백엔드는 훅만 채우고 앞부분을 다시 적지 않는다(네 벌일 때 DX12 · DX11 이 이미 어긋나 있었다). 리스트 떼기는 `RHILiveCommandListUtil::detachAll`.
