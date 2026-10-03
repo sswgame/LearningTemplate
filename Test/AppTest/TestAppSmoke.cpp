@@ -408,26 +408,6 @@ SW_TEST_CASE( AppSmokeTest, EditorMemoryIsAttributedByTag )
 }
 
 /**
- * @brief [AppSmokeTest] `--check-textures` 는 창 · RHI 없이 에디터 모듈만 올려 원본 텍스처와 DDS 를 대조하고 끝난다
- * @details 텍스처 굽기는 에디터 모듈(`TextureBaker`)의 일이고 엔진은 에디터를 모른다. 그래서 엔진은 헤드리스로 세우기만 하고 App 이
- *          모듈을 올려 `bakeEditorTextures` 를 부른다. 배포본에는 에디터 모듈이 없으므로 이유를 남기고 실패해야 한다.
- */
-SW_TEST_CASE( AppSmokeTest, TextureCheckRunsHeadlessThroughTheEditorModule )
-{
-    const AppRunResult result = runApp( "--check-textures", "Texture check:" );
-    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
-    #if defined( SW_SHIPPING )
-    SW_EXPECT_TRUE( result._exitCode != 0 );
-    SW_EXPECT_TRUE( result._listMarkedLine.empty() );
-    #else
-    SW_EXPECT_TRUE_MSG( result._exitCode == 0, result._firstErrorLine.c_str() );
-    SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.c_str() );
-    SW_ASSERT_EQUAL( size_t( 1 ), result._listMarkedLine.size() );
-    SW_EXPECT_TRUE_MSG( result._listMarkedLine[0].find( "0 problems" ) != string::npos, result._listMarkedLine[0].c_str() );
-    #endif
-}
-
-/**
  * @brief [AppSmokeTest] 백엔드 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 검증
  * @details 교체는 디바이스에 의존하는 기동 단계를 다시 세운다. 씬 스냅샷 빌더의 "머티리얼을 넘어 배치 합치기" 는 디바이스가
  *          텍스처를 인덱스로 고를 수 있을 때(DX12 · Vulkan 의 네이티브 bindless)만 켜져야 한다 — DX11 · GL 은 머티리얼 텍스처를
@@ -617,6 +597,26 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
     SW_EXPECT_TRUE_MSG( bIniExistsAfter == bIniExistedBefore && listIniAfter == listIniBefore, "the self test run rewrote the user's imgui.ini" );
 }
 #endif
+
+/**
+ * @brief [AppSmokeTest] `--check-textures` 는 창 · RHI 없이 에디터 모듈만 올려 원본 텍스처와 DDS 를 대조하고 끝난다
+ * @details 텍스처 굽기는 에디터 모듈(`TextureBaker`)의 일이고 엔진은 에디터를 모른다. 그래서 엔진은 헤드리스로 세우기만 하고 App 이
+ *          모듈을 올려 `bakeEditorTextures` 를 부른다. 배포본에는 에디터 모듈이 없으므로 이유를 남기고 실패해야 한다.
+ */
+SW_TEST_CASE( AppSmokeTest, TextureCheckRunsHeadlessThroughTheEditorModule )
+{
+    const AppRunResult result = runApp( "--check-textures", "Texture check:" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
+#if defined( SW_SHIPPING )
+    SW_EXPECT_TRUE( result._exitCode != 0 );
+    SW_EXPECT_TRUE( result._listMarkedLine.empty() );
+#else
+    SW_EXPECT_TRUE_MSG( result._exitCode == 0, result._firstErrorLine.c_str() );
+    SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.c_str() );
+    SW_ASSERT_EQUAL( size_t( 1 ), result._listMarkedLine.size() );
+    SW_EXPECT_TRUE_MSG( result._listMarkedLine[0].find( "0 problems" ) != string::npos, result._listMarkedLine[0].c_str() );
+#endif
+}
 
 /**
  * @brief [AppSmokeTest] 벤치 큐브 한 장면이 백엔드마다 골든 이미지와 같다(`Test/AppTest/Golden`)
