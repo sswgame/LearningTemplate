@@ -35,7 +35,10 @@ namespace sw::editor
         bool _bIs2DMode{ false };
         bool _bSurfaceSnap{ false };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorViewportToolbar
      * @brief 뷰포트 상단 툴바와 기즈모 트랜스폼 바입니다.

@@ -35,7 +35,10 @@ namespace sw
         string         _initialDirectory;           ///< 시작 폴더(비어 있으면 OS 기본값)
         bool           _bEnableMultiselect{ true }; ///< 다중 선택 허용(열기에서만)
     };
+} // namespace sw
 
+namespace sw
+{
     SW_DECLARE_DELEGATE( void, FileDialogDelegate, const vector<string>& fileName );
 
     /**
@@ -53,7 +56,10 @@ namespace sw
         /** @brief 크기나 시각이 다른지 확인합니다. */
         bool operator!=( const FileStamp& other ) const { return ( *this == other ) == false; }
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) FileUtil — 경로 분해 · 정규화 · 존재 확인 · I/O · 다이얼로그 · DLL
     //    전부 static. 맵 키에는 normalizePath, 파일 열기에는 normalizeSeparators 를 쓴다

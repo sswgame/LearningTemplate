@@ -45,7 +45,10 @@ namespace sw::editor
         float32 _scrollbarRounding{ 6.0f };
         float32 _grabRounding{ 3.0f };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorThemeUtil
      * @brief 에디터 전체의 Look & Feel(색상 팔레트, 라운딩, 여백, 경계선)을 일관되게 제어하는 유틸리티

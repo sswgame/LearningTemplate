@@ -160,7 +160,10 @@ namespace sw
         size_t        _currentChunkIndex;
         vector<Chunk> _listChunk;
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) FrameDoubleBuffer — 게임 스레드가 N 번째를 쓰는 동안 렌더 스레드가 N-1 번째를 읽는다
     //    swapAndResetPrevious 가 인덱스를 바꾸고, 새로 활성이 된 쪽만 reset 한다

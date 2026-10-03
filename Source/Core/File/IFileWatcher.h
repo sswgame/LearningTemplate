@@ -32,7 +32,10 @@ namespace sw
         string            _directory;
         string            _filename;
     };
+} // namespace sw
 
+namespace sw
+{
     SW_DECLARE_DELEGATE( void, FileChangeDelegate, const FileChangeEvent& );
 
     // ------------------------------------------------------------------------------

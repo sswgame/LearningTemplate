@@ -62,7 +62,10 @@ namespace sw
         /** @brief 다른 모드로 전환되어 나갈 때 불립니다. */
         virtual void onExit( const hashed_string& nextMode ) = 0;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class GameModeStateMachine
      * @brief 장르에 매이지 않고 게임 상태 모드 사이의 수명주기를 관리하는 범용 FSM 입니다.

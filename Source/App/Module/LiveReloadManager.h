@@ -79,7 +79,10 @@ namespace sw
          */
         static bool findEngineAbiStamp( const vector<uint8>& bytes, string& outStamp );
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) ModuleCallGuard — 새 모듈 코드를 처음 부르는 자리를 하드웨어 예외로부터 지킨다
     // ------------------------------------------------------------------------------
@@ -105,7 +108,10 @@ namespace sw
          */
         static bool run( const Delegate<void()>& call, uint32& outFaultCode );
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 3) ShadowCopyName — 섀도 복사본 파일 이름과, 남은 복사본 가운데 지워도 되는 것
     // ------------------------------------------------------------------------------

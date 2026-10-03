@@ -40,7 +40,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ShaderBakeRequest
      * @brief 구울 것 하나입니다(셰이더 · 진입점 · 스테이지 · define).
@@ -57,7 +60,10 @@ namespace sw
         /// @brief `_listPermutation` 의 해시입니다. 구운 파일 이름에 들어갑니다(순서 무관).
         uint64 _permutationHash{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ShaderBaker
      * @brief HLSL 소스를 타깃 백엔드(DXIL, SPIR-V, DXBC) 바이너리로 미리 컴파일(베이킹)하는 엔진 유틸리티입니다.

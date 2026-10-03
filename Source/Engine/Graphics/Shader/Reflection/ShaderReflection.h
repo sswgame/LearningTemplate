@@ -18,7 +18,10 @@ namespace sw
         uint32 _offset{ 0 };
         uint32 _size{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 상수 · 스토리지 버퍼 블록입니다.
     struct ShaderBufferInfo
     {
@@ -28,7 +31,10 @@ namespace sw
         uint32                     _bindPoint{ 0 };     ///< 바인딩 슬롯(register bN / binding=N)
         uint32                     _totalSize{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 텍스처 · 샘플러 · UAV 바인딩 슬롯입니다.
     struct ShaderResourceBinding
     {
@@ -38,7 +44,10 @@ namespace sw
         uint32 _bindPoint{ 0 };
         uint32 _bindCount{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 정점 셰이더 입력 하나입니다(시맨틱과 location).
      * @details DX 는 시맨틱 이름으로 정점 버퍼에 묶고, Vulkan · OpenGL 은 **선언 순서로 매긴 location** 으로 묶습니다.
@@ -51,7 +60,10 @@ namespace sw
         uint32 _semanticIndex{ 0 }; ///< 시맨틱 인덱스(TEXCOORD0 → 0)
         uint32 _location{ 0 };      ///< SPIR-V Location / DX 입력 시그니처 레지스터(선언 순서)
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 한 셰이더의 리플렉션 결과입니다(버퍼 + 바인딩).
     struct ShaderReflectionData
     {
@@ -67,7 +79,10 @@ namespace sw
          */
         vector<ShaderBufferInfo> _listStructuredElement;
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief DXC · SPIR-V 리플렉션으로 ShaderReflectionData 를 채웁니다.
     class SW_API ShaderReflection
     {

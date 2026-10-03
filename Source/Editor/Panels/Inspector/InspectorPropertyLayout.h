@@ -32,14 +32,20 @@ namespace sw::editor
         float32 _dragSpeed{ 0.0f }; ///< 픽셀당 보이는 값의 변화. 0 이면 타입의 기본입니다
         string  _suffix{};          ///< 서식 뒤에 붙는 단위 글자. 없으면 빈 것입니다
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 인스펙터가 한 카테고리로 묶어 그리는 반사 프로퍼티입니다. */
     struct InspectorPropertyGroup
     {
         string                      _category;
         vector<const PropertyInfo*> _listProperty;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct InspectorPropertyLayout
      * @brief 컴포넌트 인스펙터의 배치 규칙입니다 — 상속 단계(기반 → 파생)로 조립합니다.

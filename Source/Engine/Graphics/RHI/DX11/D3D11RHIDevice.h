@@ -75,7 +75,10 @@ namespace sw
          */
         RHITextureHandle _arrPixelSrvTexture[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class D3D11RHIDevice
      * @brief Direct3D 11 그래픽스 디바이스 구현체입니다.

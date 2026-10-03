@@ -25,7 +25,10 @@ namespace sw
         float32 _w{ 0.28f };   ///< 너비
         float32 _h{ 0.04f };   ///< 높이
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief HUD 가 붙는 화면 사각형(NDC)입니다. */
     struct ScreenRect
     {
@@ -34,7 +37,10 @@ namespace sw
         float32 _w{ 1.0f }; ///< 너비
         float32 _h{ 1.0f }; ///< 높이
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) RuntimeHud — 범용 게이지 맵 · 대사 · 페이드, 에디터 Game View 로 스냅샷
     // ------------------------------------------------------------------------------

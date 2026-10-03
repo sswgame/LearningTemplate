@@ -17,14 +17,20 @@ namespace sw
         RHITextureHandle   _handle{ 0 };
         RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 등록된 버퍼입니다(핸들 + bindless 인덱스).
     struct RegisteredBuffer
     {
         RHIBufferHandle    _handle{ 0 };
         RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 엔진이 예약한 프레임 리소스 이름입니다(registerPassTexture 호출용 상수).
     namespace framres
     {

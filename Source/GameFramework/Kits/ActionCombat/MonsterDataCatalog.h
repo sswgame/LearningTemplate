@@ -72,7 +72,10 @@ namespace sw
             return mapIter != _mapDrop.end() ? mapIter->second : fallback;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief monsters.xml 몬스터 데이터 카탈로그 서비스입니다. */
     class SW_GF_API MonsterDataCatalog
     {

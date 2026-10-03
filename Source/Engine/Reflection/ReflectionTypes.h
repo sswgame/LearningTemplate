@@ -53,7 +53,10 @@ namespace sw
 #endif
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief PROPERTY() 저작 메타 (카테고리, 기본값, 범위, XML 속성)
     struct SW_API PropertyMetadata
     {
@@ -122,7 +125,10 @@ namespace sw
 #endif
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief FUNCTION() 저작 메타 (카테고리, NetRole, static/const)
     struct SW_API FunctionMetadata
     {
@@ -161,7 +167,10 @@ namespace sw
 #endif
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 재귀 컨테이너 스키마 (vector&lt;vector&lt;T&gt;&gt;, map&lt;K,vector&lt;V&gt;&gt;, …).
      */
@@ -174,7 +183,10 @@ namespace sw
         shared_ptr<IContainerWrapper>   _wrapper;
         shared_ptr<NestedContainerInfo> _elementNested; ///< 원소 · 값 자체가 컨테이너일 때
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 리플렉션 프로퍼티: 오프셋, 타입, 별칭, 컨테이너 래퍼
     struct SW_API PropertyInfo
     {
@@ -409,7 +421,10 @@ namespace sw
             return _metadata.findCustomMeta( key );
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 등록된 enum: 이름↔값, Flags, Invalid/Count 센티널
     struct SW_API EnumInfo
     {
@@ -720,7 +735,10 @@ namespace sw
 
     public:
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 리플렉션 메서드: 이름, 시그니처, invoker
     struct SW_API FunctionInfo
     {
@@ -737,7 +755,10 @@ namespace sw
             return _metadata.findCustomMeta( key );
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 등록된 타입: FQN, 프로퍼티/메서드, 생성 가능 여부
     struct SW_API TypeInfo
     {

@@ -73,7 +73,10 @@ namespace sw
         bool                  _bAddable;           /**< 에디터 추가 메뉴에 보이는지입니다(Start 는 그래프마다 하나라 없음). */
         uint8                 _defaultChoiceCount; /**< 새 노드에 넣을 선택지 수입니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 노드 종류 표입니다. **종류마다 한 줄이고, 순서는 `DialogueAssetNodeType` 값 순서입니다.**
      * @details 에셋 이름 해석 · 런타임 진행(`DialogueCursor`) · 에디터 그리기 · 추가 메뉴 · 인스펙터가 모두 이 표를 봅니다.
@@ -103,7 +106,10 @@ namespace sw
         /** @brief 그래프 에디터에서의 노드 위치입니다. JSON 키는 그대로 "x"/"y" 라 파일 형식은 바뀌지 않습니다. */
         float2 _position{ 40.0f, 40.0f };
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 대화 그래프 링크입니다. */
     struct DialogueAssetLink
     {
@@ -111,7 +117,10 @@ namespace sw
         int32 _fromPin{ 0 }; /**< 출발 핀 번호입니다(`DialogueGraphAsset::encodePin` 참고). */
         int32 _toPin{ 0 };   /**< 도착 핀 번호입니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class DialogueGraphAsset
      * @brief 대화 그래프 JSON 입니다. 노드 text 는 로컬라이즈 키로 해석합니다.

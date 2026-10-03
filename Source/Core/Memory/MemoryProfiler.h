@@ -29,7 +29,10 @@ namespace sw
          */
         atomic<uint64> _totalAllocationCount{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 콜 스택별 현재 할당량입니다. */
     struct CallStackAllocInfo
     {
@@ -39,7 +42,10 @@ namespace sw
         uint64    _totalBytes{ 0 }; ///< 이 위치에서 지금까지 할당한 바이트 누계(churn)
         uint64    _totalCount{ 0 }; ///< 이 위치에서 지금까지 할당한 횟수 누계(churn)
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief `getTopCallStacks` 의 정렬 기준입니다. */
     enum class TopCallStackOrder : uint8
     {
@@ -151,7 +157,10 @@ namespace sw
         unordered_map<uint64, CallStackAllocInfo> _mapCallStackAllocInfo;
         unordered_map<void*, uint64>              _mapPtrToCallStackHash;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 스코프 동안 현재 스레드의 할당 태그를 바꿨다가 되돌립니다.
      * @details `kMemoryTagScopesEnabled` 가 아니면 아무 일도 하지 않습니다(TLS 를 읽지도 쓰지도 않습니다).

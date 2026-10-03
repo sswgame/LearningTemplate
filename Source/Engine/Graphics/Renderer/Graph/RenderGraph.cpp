@@ -57,7 +57,10 @@ namespace sw
 
         void record() { RenderGraphInternal::recordRenderPass( _pNode, _pPassCmdList, _bAlreadyBegun ); }
     };
+} // namespace sw
 
+namespace sw
+{
     struct RenderGraph::ParallelScratch
     {
         vector<ParallelPassEntry> _listPassEntry;

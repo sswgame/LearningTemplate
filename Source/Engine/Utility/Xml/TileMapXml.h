@@ -36,7 +36,10 @@ namespace sw
         TileFlagLayer _layer;         /**< 레이어입니다. 표의 순번과 같아야 합니다. */
         uint8         _defaultValue;  /**< 파일에 없을 때 · 새 칸의 값(0 · 1)입니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 플래그 레이어 표입니다. **레이어마다 한 줄이고 순서는 `TileFlagLayer` 값 순서입니다.**
      * @details XML 속성 이름은 파일 형식입니다 — 바꾸면 기존 맵의 그 레이어가 기본값으로 읽힙니다. 쓰는 순서도 이 표 순서라

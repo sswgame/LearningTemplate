@@ -27,7 +27,10 @@ namespace sw
         RHIBufferHandle    _buffer{ 0 };
         RHIDescriptorIndex _index{ kInvalidDescriptorIndex };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ShaderBindingBinder
      * @brief 드로우 직전에 레이아웃을 따라 CB 바이트를 조립 · 업로드하고 슬롯별로 바인딩합니다.

@@ -39,7 +39,10 @@ namespace sw
         PROPERTY()
         bool _bVSync{ false }; ///< 수직 동기화 여부
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct EngineConfig
      * @brief `Config/Engine/EngineConfig.json` 이 담는 엔진 기동 설정입니다.

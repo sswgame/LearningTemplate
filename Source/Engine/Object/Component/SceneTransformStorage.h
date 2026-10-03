@@ -92,7 +92,10 @@ namespace sw
         uint8           _arrPendingMask[kSlotCount];      ///< 적용을 기다리는 틱 대기 값(`LocalValueBit` 조합). 칸의 주인 오브젝트를 틱하는 스레드만 씁니다
         uint8           _arrFlag[kSlotCount];             ///< `SlotFlag` 조합
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class SceneTransformStorage
      * @brief 모든 씬 컴포넌트의 트랜스폼 값을 담는 전역 저장소입니다(유니티 `TransformHierarchy` 의 자리).

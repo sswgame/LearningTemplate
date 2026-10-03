@@ -79,7 +79,10 @@ namespace sw
         uint8           _bSetRotation{ SW_FALSE };
         uint8           _bSetScale{ SW_FALSE };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class SceneTransformHierarchy
      * @brief 트랜스폼 계층의 상태와 알고리즘입니다(더티 루트 · 틱 중 쓰기와 그 적용 · 배치 쓰기 · 플러시). `GameObjectManager` 는 소유하고 단계만 정합니다.

@@ -29,7 +29,10 @@ namespace sw
         string _workingDirectory{};
         bool   _bCreateWindow{ false };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class Process
      * @brief 외부 OS 프로세스를 만들고, 표준 출력을 파이프로 받아 오고, 종료를 기다리는 클래스입니다.

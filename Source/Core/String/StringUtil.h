@@ -37,7 +37,10 @@ namespace sw
         uint32 _prefixLength{ 0 };
         uint32 _suffixLength{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     namespace StringUtilCrcInternal
     {
         /** @brief IEEE 802.3 CRC32 테이블을 컴파일 타임에 만듭니다. */

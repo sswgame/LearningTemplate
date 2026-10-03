@@ -34,7 +34,10 @@ namespace sw
         GamepadBatteryType  _type{ GamepadBatteryType::Unknown };
         GamepadBatteryLevel _level{ GamepadBatteryLevel::Empty };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class GamepadDevice
      * @brief 게임패드 버튼 · 아날로그 스틱 · 트리거 압력 · 럼블 진동 인터페이스를 정의하는 추상 기반 클래스입니다.

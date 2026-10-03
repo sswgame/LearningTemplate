@@ -31,7 +31,10 @@ namespace sw::editor
         uint32 _width{ 0 };
         uint32 _height{ 0 };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorContext
      * @brief 에디터의 중앙 컨텍스트입니다. 에디터 셸(ImGuiEditor)이 직접 만들고 없앱니다.

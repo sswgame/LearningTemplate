@@ -143,7 +143,10 @@ namespace sw
         /** @brief 부호를 뒤집습니다(단항 -). */
         float2 operator-() const noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 성분별로 더합니다. */
     inline float2 operator+( const float2& lhs, const float2& rhs ) noexcept { return float2{ lhs._x + rhs._x, lhs._y + rhs._y }; }
     /** @brief 성분별로 뺍니다. */
@@ -236,7 +239,10 @@ namespace sw
         /** @brief 부호를 뒤집습니다(단항 -). */
         constexpr int2 operator-() const noexcept { return int2{ -_x, -_y }; }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 성분별로 더합니다. */
     constexpr int2 operator+( const int2& lhs, const int2& rhs ) noexcept { return int2{ lhs._x + rhs._x, lhs._y + rhs._y }; }
     /** @brief 성분별로 뺍니다. */
@@ -418,7 +424,10 @@ namespace sw
         /** @brief 부호를 뒤집습니다(단항 -). */
         float3 operator-() const noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     static_assert( sizeof( float3 ) == 3 * sizeof( float32 ), "float3 must be 3 contiguous floats" );
 
     /** @brief 성분별로 더합니다. */
@@ -573,7 +582,10 @@ namespace sw
         /** @brief 부호를 뒤집습니다(단항 -). */
         float4 operator-() const noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 성분별로 더합니다. */
     inline float4 operator+( const float4& lhs, const float4& rhs ) noexcept { return float4{ lhs._x + rhs._x, lhs._y + rhs._y, lhs._z + rhs._z, lhs._w + rhs._w }; }
     /** @brief 성분별로 뺍니다. */

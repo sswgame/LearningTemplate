@@ -48,7 +48,10 @@ namespace sw
          */
         uint32 _elementStride{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ShaderEngineCbMember
      * @brief 엔진 CB 멤버 하나를 채우는 데 필요한 것입니다. **드로우 전에 미리 구워 둡니다.**
@@ -62,7 +65,10 @@ namespace sw
         uint32        _offset{ 0 };
         uint32        _size{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ShaderResourceBind
      * @brief 텍스처 · 구조버퍼 슬롯 하나의 바인딩에 필요한 것입니다. 마찬가지로 미리 구워 둡니다.
@@ -73,7 +79,10 @@ namespace sw
         uint32            _registerIndex{ 0 };
         ShaderBindingKind _kind{ ShaderBindingKind::Unknown };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class ShaderBindingLayout
      * @brief PSO 하나(VS+PS 혹은 CS)의 합쳐진 바인딩 레이아웃입니다. 이름 · 레지스터로 조회합니다.

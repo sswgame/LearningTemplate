@@ -69,7 +69,10 @@ namespace sw
         /** @brief 리소스 경로(XML)에서 부트스트랩 테이블을 로드합니다. */
         [[nodiscard]] bool loadFromResource( string_view assetRelativePath = {} );
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) BootstrapConfig — 팩 루트 + GameData
     // ------------------------------------------------------------------------------

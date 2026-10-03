@@ -29,13 +29,19 @@ namespace sw::editor
         string _extension;
         bool   _bRecursive{ false };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 폴더 하나의 직속 항목을 모으는 잡의 입력. */
     struct EditorFolderListingInput
     {
         string _folder;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorFileCollectJob
      * @brief 폴더 파일 목록을 워커에서 모으고 게임 스레드에서 꺼냅니다.
@@ -49,7 +55,10 @@ namespace sw::editor
     private:
         static void runJob( const TaskArgs& args );
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorLocalizationLoadJob
      * @brief 로컬라이즈 JSON을 워커에서 읽고 게임 스레드에서 적용합니다.
@@ -63,7 +72,10 @@ namespace sw::editor
     private:
         static void runJob( const TaskArgs& args );
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorGameDataScanJob
      * @brief 게임 데이터 XML 파일 목록을 워커에서 모읍니다.
@@ -77,7 +89,10 @@ namespace sw::editor
     private:
         static void runJob( const TaskArgs& args );
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorResourceIndexJob
      * @brief Resource 트리 분류 인덱스를 워커에서 만듭니다.
@@ -91,7 +106,10 @@ namespace sw::editor
     private:
         static void runJob( const TaskArgs& args );
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorFolderListingJob
      * @brief Content Browser 폴더 직속 항목을 워커에서 모읍니다.
@@ -105,7 +123,10 @@ namespace sw::editor
     private:
         static void runJob( const TaskArgs& args );
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorResourceCatalogJob
      * @brief 프로파일러 리소스 카탈로그 개수를 워커에서 셉니다.

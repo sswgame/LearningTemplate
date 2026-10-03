@@ -33,7 +33,10 @@ namespace sw
             , _bSkipBracketSections{ SW_TRUE }
             , _reserved{ 0 } {}
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class KeyValueFile
      * @brief `key=value` 줄을 파싱하고 절대/리소스 상대 경로에서 로드합니다

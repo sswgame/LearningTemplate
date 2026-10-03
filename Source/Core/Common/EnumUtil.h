@@ -61,7 +61,10 @@ namespace sw
             return static_cast<E>( static_cast<Underlying>( flags ) & static_cast<Underlying>( ~static_cast<Underlying>( flag ) ) );
         }
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) IsBitFlagEnum — ENUM(Flags) opt-in 트레이트 (기본 false)
     // ------------------------------------------------------------------------------

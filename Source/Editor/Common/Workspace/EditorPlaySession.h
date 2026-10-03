@@ -71,7 +71,10 @@ namespace sw::editor
         {
         }
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorPlaySession
      * @brief 에디터 Play-In-Editor(PIE) 시뮬레이션의 수명 주기와 씬 롤백을 관리합니다.

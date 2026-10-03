@@ -55,7 +55,10 @@ namespace sw::editor
         const utf8*             _pCacheKindName{ nullptr };  ///< 다시 읽을 엔진 캐시(`IAssetCache::getAssetKindName`). nullptr 이면 핫 리로드 대상이 아닙니다
         AssetSourceImporterFunc _pfnImportSource{ nullptr }; ///< 캐시가 읽기 전에 돌리는 임포터. nullptr 이면 바로 캐시가 다시 읽습니다
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct EditorAssetKindInfo
      * @brief 애셋 종류 하나를 **보여 주는** 데 필요한 전부입니다(이름 · 아이콘 · 색 · 패널 · 필터 · 임포트).
@@ -74,14 +77,20 @@ namespace sw::editor
         bool            _bOtherExcluded; ///< 브라우저 "Other" 필터에서 뺄지
         bool            _bImportable;    ///< 임포트 대화상자의 확장자 목록에 넣을지
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 확장자/접미사 → 도구 패널 종류 */
     struct EditorAssetPanelMapping
     {
         EditorAssetKind _kind;
         string_view     _suffix;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 콘텐츠 브라우저 타입 필터 한 줄 */
     struct EditorAssetBrowserFilter
     {
@@ -94,7 +103,10 @@ namespace sw::editor
         EditorAssetKind _kind;
         bool            _bOther;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorAssetTypeRegistry
      * @brief 종류 판별, 패널 제목, 브라우저 필터의 단일 정의입니다.

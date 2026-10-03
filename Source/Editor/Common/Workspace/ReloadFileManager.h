@@ -24,7 +24,10 @@ namespace sw
         bool   operator==( const FileWatchHandle& rhs ) const { return _id == rhs._id; }
         bool   operator!=( const FileWatchHandle& rhs ) const { return _id != rhs._id; }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class ReloadFileManager
      * @brief FileWatcher 로 리소스 변경을 폴링하고, 등록된 경로 접두사와 확장자가 맞을 때만 콜백을 부릅니다.

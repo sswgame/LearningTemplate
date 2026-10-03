@@ -16,13 +16,19 @@ namespace sw
     struct ReflectTypeTraits
     {
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename T, typename = void>
     /// @brief T::StaticType()이 없으면 false
     struct HasStaticType : std::false_type
     {
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename T>
     /// @brief T::StaticType()이 있으면 true
     struct HasStaticType<T, std::void_t<decltype( T::StaticType() )>> : std::true_type
@@ -37,7 +43,10 @@ namespace sw
     struct HasReflectStaticType : std::false_type
     {
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename T>
     /// @brief ReflectTypeTraits<T>::StaticType()이 있으면 true
     struct HasReflectStaticType<T, std::void_t<decltype( ReflectTypeTraits<T>::StaticType() )>> : std::true_type
@@ -52,7 +61,10 @@ namespace sw
     struct HasOwnReflectBody : std::false_type
     {
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename T>
     struct HasOwnReflectBody<T, std::void_t<decltype( std::declval<const T>().swReflectSelf() )>>
         : std::is_same<std::remove_cv_t<std::remove_pointer_t<decltype( std::declval<const T>().swReflectSelf() )>>, T>
@@ -67,7 +79,10 @@ namespace sw
     struct HasGetTypeInfo : std::false_type
     {
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename T>
     struct HasGetTypeInfo<T, std::void_t<decltype( std::declval<const T>().getTypeInfo() )>> : std::true_type
     {

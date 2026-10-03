@@ -58,7 +58,10 @@ namespace sw
         static constexpr uint32 kRequiresGpuCulling    = SW_BIT( 10 ); ///< 컴퓨트 PSO 를 `_bGpuCulling` 일 때만 만든다(아니면 `_bCompute`)
         static constexpr uint32 kHasInputContract      = SW_BIT( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RenderPassTypeTraits
      * @brief 패스 종류 하나의 사실입니다. `getRenderPassTypeTraits` 가 enum 값으로 찾습니다.
@@ -87,7 +90,10 @@ namespace sw
         /** @brief 이 플래그가 켜져 있는지 확인합니다. */
         constexpr bool hasFlag( uint32 flag ) const { return ( _flags & flag ) != 0; }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 패스 종류의 사실을 반환합니다. 표에 없는 값이면 Invalid 줄입니다. */
     SW_API const RenderPassTypeTraits& getRenderPassTypeTraits( RenderPassType type );
 

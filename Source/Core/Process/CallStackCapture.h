@@ -40,7 +40,10 @@ namespace sw
         /** @brief 해시나 프레임이 다르면 true 입니다. */
         bool operator!=( const CallStack& other ) const { return !( *this == other ); }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 크래시 리포트용 깊은 콜 스택입니다.
      * @details CallStack 은 DeadlockDetector 가 잠글 때마다 캡처하고 복사하므로 얕아야 합니다. 반면 크래시는 한 번만 기록하고

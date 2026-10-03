@@ -16,7 +16,10 @@ namespace sw
         int32 _choiceIndex{ -1 };      /**< `WaitChoice` 노드에서 고른 선택지입니다. 음수면 기본 출력 핀으로 갑니다. */
         bool  _bConditionMet{ false }; /**< `Condition` 노드의 조건식 결과입니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class DialogueCursor
      * @brief 대화 진행 규칙입니다. 다음 노드는 **이 함수 하나가** 정합니다.

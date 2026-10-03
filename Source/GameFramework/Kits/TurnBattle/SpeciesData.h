@@ -28,7 +28,10 @@ namespace sw
         int32  _power{ 40 };
         int32  _ppMax{ 35 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 종족 한 행입니다(기초 스탯 + 기술 슬롯).
      * @details 기술 슬롯 수는 **데이터가 정합니다** — 장르 공통 뼈대가 게임 하나의 스키마(슬롯 두 칸 등)를
@@ -42,7 +45,10 @@ namespace sw
         int32         _baseAtk{ 10 };
         vector<int32> _listMoveIndex{ 0, 1 }; ///< MoveDef 인덱스 (슬롯 순서)
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 런타임 파티 멤버입니다(세이브에 들어갑니다). */
     REFLECT()
     struct SW_GF_API PartyMember
@@ -67,7 +73,10 @@ namespace sw
         PROPERTY()
         int32 _expNext{ 50 };
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) SpeciesCatalog — 종족 / 기술 카탈로그 인스턴스
     //    로드 실패 시 최소 폴백을 심어 전투가 비지 않게

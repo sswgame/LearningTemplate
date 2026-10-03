@@ -30,7 +30,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class FrameTimeline
      * @brief 실시간 경과를 가변 델타와 고정 스텝 수로 나눕니다.

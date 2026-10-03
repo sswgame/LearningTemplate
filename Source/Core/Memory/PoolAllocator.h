@@ -84,7 +84,10 @@ namespace sw
         /** @brief 청크를 하나 더 잡아 자유 목록에 붙입니다. **잠금을 잡은 채로** 부릅니다. */
         void allocateChunk();
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 타입을 지정하는 풀 할당자 래퍼입니다.
      */

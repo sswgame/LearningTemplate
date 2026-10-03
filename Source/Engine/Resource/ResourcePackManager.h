@@ -28,7 +28,10 @@ namespace sw
         int32                          _priority{ 0 }; ///< 높을수록 우선 탐색
         unique_ptr<ResourcePackReader> _pReader;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class ResourcePackManager
      * @brief 여러 .pack 파일을 우선순위 스택으로 마운트하고 O(1) VFS 읽기를 제공하는 매니저입니다.

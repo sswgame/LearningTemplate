@@ -43,7 +43,10 @@ namespace sw
             , _bDashPressed{ SW_FALSE }
             , _reserved{ 0 } {}
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 한 프레임의 전투 결과입니다(피격 · 클리어 · 대시 시작). */
     struct ActionRoomFrameResult
     {
@@ -60,7 +63,10 @@ namespace sw
             , _bDashStarted{ SW_FALSE }
             , _reserved{ 0 } {}
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 이 룸이 어디에 있는지입니다 — 룸 이벤트에 실립니다(`ActionRoom::setSite`).
      * @details 룸은 전투만 압니다. 어느 맵 · 어느 존의 룸인지, 지면 어디로 돌아가는지는 룸을 연 게임이 정합니다.
@@ -71,7 +77,10 @@ namespace sw
         string _zoneId;        ///< 클리어 게이트가 걸린 존(`ClearGateStateChangedEvent::_zoneId`)
         string _returnMapPath; ///< 지면 돌아갈 오버월드 맵(`PlayerDefeatedInRoomEvent::_returnMapPath`)
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) ActionRoom — 적/투사체 스폰, 클리어 시 게이트 개방
     // ------------------------------------------------------------------------------

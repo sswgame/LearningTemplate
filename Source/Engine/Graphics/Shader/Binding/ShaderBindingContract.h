@@ -20,7 +20,10 @@ namespace sw
         string _resource; ///< 리소스 이름(없으면 빈 문자열)
         string _message;  ///< 사람이 읽는 설명(기대값 · 실제값 포함)
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 예약 리소스가 한 백엔드에서 있어야 할 자리입니다. `_bDeclared == false` 면 그 백엔드에는 선언 자체가 없어야 합니다.
     struct ShaderReservedLocation
     {
@@ -28,7 +31,10 @@ namespace sw
         uint32 _bind{ 0 };  ///< DX: register 번호 / Vulkan: binding / GL: binding(UBO·텍스처 유닛·SSBO)
         bool   _bDeclared{ false };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 예약 리소스 하나의 계약 위치입니다. 백엔드별로 "어디에 있어야 하는가" 를 담습니다.
      * @details 값은 모두 ShaderBindingSlots.h(= bindingslots.hlsli)에서 옵니다. 네이티브 bindless(DX12/Vulkan)는
@@ -43,7 +49,10 @@ namespace sw
         ShaderReservedLocation _vulkan;
         ShaderReservedLocation _opengl;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class ShaderBindingContract
      * @brief 바인딩 계약 검증기입니다.

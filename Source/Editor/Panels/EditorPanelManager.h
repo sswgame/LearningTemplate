@@ -35,7 +35,10 @@ namespace sw::editor
         EditorPanelCategory      _category{ EditorPanelCategory::Core };
         unique_ptr<IEditorPanel> _pInstance;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct EditorPanelRegistration
      * @brief 패널 한 종류의 등록 줄입니다. 패널의 .cpp 가 `SW_EDITOR_PANEL` 로 둡니다.
@@ -49,7 +52,10 @@ namespace sw::editor
         EditorPanelCategory _category;
         unique_ptr<IEditorPanel> ( *_pCreate )();
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 등록 줄이 가리키는 패널 생성 함수입니다. */
     template <typename TPanel>
     unique_ptr<IEditorPanel> createEditorPanel()

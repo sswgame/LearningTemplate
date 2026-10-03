@@ -28,7 +28,10 @@ namespace sw
         /** @brief HGLRC(Windows) · GLXContext(Linux). */
         void* _pRenderContext{ nullptr };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class IOpenGLPlatformContext
      * @brief 플랫폼별 GL 컨텍스트의 수명 · 바인딩 · 프레젠트를 맡습니다.

@@ -20,7 +20,10 @@ namespace sw::editor
         string          _detail;
         string          _path; ///< 리소스 id(콘텐츠 브라우저 · 끌어 놓기와 같은 형태)
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 리소스 카탈로그의 종류 하나 */
     struct EditorResourceCatalogCount
     {
@@ -28,13 +31,19 @@ namespace sw::editor
         const utf8*     _pLabel{ nullptr }; ///< 종류의 브라우저 라벨(`EditorAssetKindInfo::_pBrowserLabel`)
         size_t          _count{ 0 };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 프로파일러 리소스 카탈로그 — 종류 표의 순서대로 종류마다 한 줄 */
     struct EditorResourceCatalogCounts
     {
         vector<EditorResourceCatalogCount> _listKindCount;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorResourceIndex
      * @brief 파일 하나의 종류는 애셋 종류 표 하나로 정합니다(`EditorAssetTypeRegistry::findKind`). 퀵 런처 · 카탈로그가 분류를 따로 적지 않습니다.

@@ -88,7 +88,10 @@ namespace sw
         uint8                  _bValid   : 1;
         [[maybe_unused]] uint8 _reserved : 7;
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 프리팹을 로드하고 스폰하는 캐시입니다.
     class SW_API PrefabManager final : public IAssetCache
     {

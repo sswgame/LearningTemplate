@@ -20,7 +20,10 @@ namespace sw::editor
         string                   _id;
         unique_ptr<IEditorPopup> _pInstance;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct EditorPopupRegistration
      * @brief 팝업 한 종류의 등록 줄입니다. 팝업의 .cpp 가 `SW_EDITOR_POPUP` 으로 둡니다. id 는 팝업의 `kPopupId` 입니다.
@@ -31,7 +34,10 @@ namespace sw::editor
 
         unique_ptr<IEditorPopup> ( *_pCreate )();
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 등록 줄이 가리키는 팝업 생성 함수입니다. */
     template <typename TPopup>
     unique_ptr<IEditorPopup> createEditorPopup()

@@ -22,7 +22,10 @@ namespace sw::editor
         string           _detail;
         Delegate<void()> _action;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class CommandPalettePopup
      * @brief Ctrl+Shift+P / Ctrl+Space 로 여는 퍼지 검색기입니다(커맨드 · 오브젝트 · 창).

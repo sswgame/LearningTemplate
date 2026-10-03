@@ -64,7 +64,10 @@ namespace sw
         PROPERTY()
         vector<TagID> _listTag;
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) TagQuery · TagQueryExpr: 불리언 식 트리로 만드는 복합 질의
     // ------------------------------------------------------------------------------
@@ -133,7 +136,10 @@ namespace sw
             return expr;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     class SW_API TagQuery
     {
     public:

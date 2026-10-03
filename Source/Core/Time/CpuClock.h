@@ -36,7 +36,10 @@ namespace sw
         /** @brief 지금 시각(마이크로초)입니다. */
         static int64 nowMicroseconds() noexcept { return nowNanoseconds() / 1000; }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class CpuStopwatch
      * @brief 만들 때(또는 `restart` 때)부터 지난 시간을 정수로 잽니다. 프레임 델타 · 일시정지가 필요하면 `CpuTimer` 를 씁니다.
@@ -63,7 +66,10 @@ namespace sw
     private:
         int64 _startNanoseconds;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class CpuDeadline
      * @brief "이 시각까지" 기다리는 루프의 기한입니다. 기다림은 횟수가 아니라 시간으로 묶는다(느린 머신에서 횟수 상한은 정상을 실패로 만든다).

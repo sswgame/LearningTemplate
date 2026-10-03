@@ -17,7 +17,10 @@ namespace sw
         float3 _to{};
         float4 _color{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 한 프레임 디버그 구입니다(중심 · 반지름 · 색).
     struct DebugSphere
     {
@@ -25,7 +28,10 @@ namespace sw
         float32 _radius{ 1.0f };
         float4  _color{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class DebugDrawQueue
      * @brief 한 프레임 디버그 지오메트리 큐입니다. 에디터 Game View 등이 ImGui 로 소비합니다.

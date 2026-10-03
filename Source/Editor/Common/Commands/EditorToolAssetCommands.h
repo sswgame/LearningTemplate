@@ -33,7 +33,10 @@ namespace sw::editor
         string _overriddenValue;
         bool   _bModified{ false };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorToolAssetCommands
      * @brief 도구 패널의 파일 IO를 ImGui 없이 수행합니다.

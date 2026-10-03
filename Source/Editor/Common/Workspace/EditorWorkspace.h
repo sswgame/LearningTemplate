@@ -34,14 +34,20 @@ namespace sw::editor
         float32 _orbitDistance{ 5.0f };
         bool    _bValid{ false };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief Isolation에서 숨긴 오브젝트와 이전 활성 상태 */
     struct PrefabIsolationHiddenObject
     {
         uint64 _objectId{ 0 };
         uint8  _bWasActive{ SW_FALSE };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 제자리(in-place) 프리팹 Isolation 한 단계입니다. */
     struct PrefabIsolationFrame
     {
@@ -50,7 +56,10 @@ namespace sw::editor
         uint64                              _rootObjectId{ 0 };
         uint8                               _bSpawnedRoot{ SW_FALSE };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorWorkspace
      * @brief 에디터의 작업 공간 상태(선택, 포커스 애셋, 기즈모, 창 요청)를 관리합니다(EditorContext 소유).

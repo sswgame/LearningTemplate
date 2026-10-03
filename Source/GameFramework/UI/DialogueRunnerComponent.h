@@ -35,7 +35,10 @@ namespace sw
         PROPERTY()
         int32 _nodeId{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     SW_DECLARE_DELEGATE( void, OnDialogueLineDelegate, const string& speaker, const string& text );
     SW_DECLARE_DELEGATE( void, OnDialogueChoicesDelegate, const vector<string>& listChoice );
     SW_DECLARE_DELEGATE( void, OnDialogueEventDelegate, const string& command );

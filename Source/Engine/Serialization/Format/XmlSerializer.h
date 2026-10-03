@@ -122,7 +122,10 @@ namespace sw
         uint8                  _bIgnoreCaseKeys    : 1;
         [[maybe_unused]] uint8 _reservedIgnoreCase : 7;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class XmlDocumentBackend
      * @brief XmlDocument 를 쓰는 XML 백엔드입니다.
@@ -185,7 +188,10 @@ namespace sw
         struct Impl;
         unique_ptr<Impl> _impl;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class XmlSerializer
      * @brief TypeInfo 리플렉션으로 XML 을 쓰고 읽습니다.

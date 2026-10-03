@@ -16,7 +16,10 @@ namespace sw
         float32  _normalizedTime{ 0.0f }; /**< 클립 길이로 나눈 재생 위치 [0,1] 입니다. 혼합 가중치가 아닙니다. */
         float4x4 _transform{};            /**< 샘플한 변환입니다. 스텁 구현에서는 항상 항등입니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class AnimClip
      * @brief 이름과 길이를 가진 클립입니다. sample() 은 정규화 시간과 항등 변환(스텁)을 반환합니다.

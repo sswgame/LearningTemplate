@@ -77,7 +77,10 @@ namespace sw
             return !( *this == other );
         }
     };
+} // namespace sw
 
+namespace sw
+{
     struct SubTickHandleHash
     {
         size_t operator()( const SubTickHandle& handle ) const noexcept
@@ -85,7 +88,10 @@ namespace sw
             return static_cast<size_t>( handle._componentId ^ ( static_cast<uint64>( handle._subTickId ) << 32 ) );
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 부모에 붙이거나 뗄 때 무엇을 지킬지입니다(언리얼 `EAttachmentRule` · 유니티 `SetParent( parent, worldPositionStays )`).
      * @details `KeepRelative` 는 로컬 값을 그대로 두어 새 부모를 따라 월드 자리가 바뀝니다 — 상태 읽기 · 코드의 기본입니다(저장된 로컬은 부모 기준이다).
@@ -171,7 +177,10 @@ namespace sw
         /** @brief 실행 여부를 바로 바꿉니다. 틱 중에도 부를 수 있습니다. */
         void setRunnable( bool bRunnable ) { _bRunnable.store( bRunnable ? SW_TRUE : SW_FALSE, std::memory_order_release ); }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct OverlapInfo
      * @brief 겹침 시작 · 끝 하나입니다 — 상대 오브젝트와, 어느 콜라이더끼리였는지(트리거 여부) · 닿은 때입니다(언리얼 `OnComponentBeginOverlap` 의 인자들).
@@ -192,7 +201,10 @@ namespace sw
             , _bOtherTrigger{ SW_FALSE }
             , _reserved{ 0 } {}
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class Component
      * @brief GameObject 에 기능과 데이터를 덧붙이는 컴포넌트의 기반 클래스입니다.
@@ -468,7 +480,10 @@ namespace sw
         uint8               _reservedFlags     : 5;
         vector<SubTickInfo> _listSubTick; ///< 등록된 보조 서브틱 목록
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 타입 T(또는 그 조상 중 `Component` 가 아닌 것)가 `onTick` 을 오버라이드했는지입니다. 주 틱의 기본값이 이것입니다.
      * @details `&T::onTick` 의 타입이 `Component` 의 것이면 아무도 오버라이드하지 않았습니다. 볼 수 없으면(보호 · 비공개 오버라이드라

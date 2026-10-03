@@ -25,7 +25,10 @@ namespace sw
         PROPERTY()
         vector<string> _listDependencyModule;
     };
+} // namespace sw
 
+namespace sw
+{
     REFLECT()
     struct AppConfig : IConfig
     {

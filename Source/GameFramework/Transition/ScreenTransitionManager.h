@@ -54,7 +54,10 @@ namespace sw
         uint8                  _bFinished : 1;
         [[maybe_unused]] uint8 _reserved  : 7;
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) TransitionCallbacks — 전환 시 입력 잠금/복원 및 커스텀 훅 콜백
     // ------------------------------------------------------------------------------
@@ -65,7 +68,10 @@ namespace sw
         Delegate<void()>               onTransitionStarted;   ///< 전환 시작 훅
         Delegate<void()>               onTransitionFinished;  ///< 전환 완료 훅
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 3) ScreenTransitionManager — 페이드 효과와 결합된 범용 화면 전환 관리자
     // ------------------------------------------------------------------------------

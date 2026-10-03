@@ -45,7 +45,10 @@ namespace sw
         PROPERTY()
         vector<string> _listRenderPassRef;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class RenderPipelineResource
      * @brief RenderPipelineDesc XML 을 읽고 쓰며 FrameRenderer 에 그래프 패스를 제공합니다.

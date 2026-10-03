@@ -41,6 +41,10 @@ namespace sw::editor
 
         bool isClean() const { return _listProblem.empty(); }
     };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /**
      * @struct TextureBakeResult
      * @brief 텍스처 베이킹 결과입니다.
@@ -70,7 +74,10 @@ namespace sw::editor
         {
         }
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct TextureBaker
      * @brief DirectXTex 로 소스 이미지(PNG/JPG 등)를 DDS 텍스처(밉맵 · 압축)로 굽는 에디터 애셋 베이커입니다.

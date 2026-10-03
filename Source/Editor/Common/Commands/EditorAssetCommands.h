@@ -28,7 +28,10 @@ namespace sw::editor
         string _extension;
         bool   _bIsDirectory{ false };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorAssetCommands
      * @brief Content Browser, 뷰포트 드롭, 메뉴가 공유하는 애셋 도메인 동작입니다.

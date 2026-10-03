@@ -74,7 +74,10 @@ namespace sw
         uint8                  _bHandlingChange : 1;
         [[maybe_unused]] uint8 _reserved        : 6;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 창의 OS 메시지를 엔진에 전달하고 메인 루프를 돌리는 얇은 래퍼입니다. */
     class App
     {

@@ -24,7 +24,10 @@ namespace sw::editor
         string          _path;
         uint64          _targetObjectId{ 0 };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class QuickLauncherPopup
      * @brief Ctrl+P 로 여는 애셋 · 게임 오브젝트 퍼지 검색 런처입니다.

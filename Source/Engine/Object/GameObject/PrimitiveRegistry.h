@@ -36,7 +36,10 @@ namespace sw
         MeshInstanceBatch* _pBatch{ nullptr };
         uint32             _index{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class PrimitiveRegistry
      * @brief 등록된 프리미티브 목록과 "무엇이 바뀌었나" 신호를 관리합니다.

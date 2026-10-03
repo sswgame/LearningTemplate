@@ -127,7 +127,10 @@ namespace sw
 
         void* _pValue{ nullptr };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief `parent` 안의 이름 붙은 배열을 돌며 **객체 원소만** 넘겨줍니다.
      * @param pArrayName 배열 멤버 이름 ("nodes" · "links" …). 없거나 배열이 아니면 아무것도 하지 않습니다.

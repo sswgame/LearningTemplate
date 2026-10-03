@@ -33,7 +33,10 @@ namespace sw::editor
         const TypeInfo* ( *_pGetComponentType )();
         unique_ptr<IInspectorComponent> ( *_pCreate )();
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 등록 줄이 가리키는 확장 생성 함수입니다. */
     template <typename TInspector>
     unique_ptr<IInspectorComponent> createInspectorComponent()

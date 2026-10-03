@@ -42,7 +42,10 @@ namespace sw
 
         void* _pAttr{ nullptr };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class XmlNode
      * @brief XmlDocument 안의 가벼운 핸들입니다(clear/destroy 이후 무효).
@@ -190,7 +193,10 @@ namespace sw
 
         void* _pNode{ nullptr };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class XmlDocument
      * @brief pugixml 문서 트리입니다. TypeInfo 없이 손으로 읽을 때 씁니다.

@@ -351,7 +351,10 @@ namespace sw
             return nullptr;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct AttachmentNames
      * @brief 어태치먼트 · 패스 리소스 이름의 hashed_string 캐시입니다.
@@ -380,7 +383,10 @@ namespace sw
         hashed_string _sourceColor{ "SourceColor" };
         hashed_string _ambientOcclusion{ "AmbientOcclusion" };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 프로세스 전역 AttachmentNames 를 반환합니다.
      * @details 함수 지역 static 이라 문자열 레지스트리보다 먼저 초기화될 위험이 없습니다.

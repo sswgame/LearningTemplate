@@ -43,7 +43,10 @@ namespace sw
          */
         static bool findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend );
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class RHI
      * @brief 플랫폼 · 백엔드에 맞는 IRHIDevice 를 만드는 팩토리입니다.

@@ -44,7 +44,10 @@ namespace sw::editor
         /** @brief 이번 프레임의 디버그 선 · 구 큐입니다(`DebugDrawQueue` 엔진 서비스). 없으면 nullptr 입니다. */
         const DebugDrawQueue* _pDebugDrawQueue{ nullptr };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct EditorVisualizerRegistration
      * @brief 시각화 하나의 등록 줄입니다. 시각화의 .cpp 가 `SW_EDITOR_VISUALIZER` 로 둡니다.
@@ -63,7 +66,10 @@ namespace sw::editor
         bool        _bDefaultOn;
         DrawFunc    _pDraw;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorViewportVisualizer
      * @brief 등록된 뷰포트 디버그 시각화를 마스크로 켜고 그립니다. 시각화를 하나 더하려면 자기 .cpp 에 `SW_EDITOR_VISUALIZER` 한 줄입니다.

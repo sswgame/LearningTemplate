@@ -24,7 +24,10 @@ namespace sw
 
         bool isLeaf() const { return _leftChild == invalid_index::kInt32; }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 3D 씬의 공간 질의를 빠르게 하는 동적 BVH(Bounding Volume Hierarchy) 트리입니다.
      */

@@ -45,11 +45,17 @@ namespace sw
         /** @brief 할당 블록 하나가 사용자 크기 앞에 더 잡는 헤더 바이트입니다(크기 · 태그 · 콜스택 해시). 배포본은 헤더가 없어 0 입니다. */
         static size_t getAllocationHeaderSize();
     };
+} // namespace sw
 
+namespace sw
+{
     struct MemoryAllocTag
     {
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief `T` 를 담는 블록을 정렬 할당(`allocateAligned` · `freeAligned`)으로 잡아야 하는지입니다.
      * @details **`sw_new` · `sw_delete` · `make_unique` · `Allocator` 가 모두 이 한 기준을 씁니다.** 기준은 컴파일러가 정렬 `operator new` 를

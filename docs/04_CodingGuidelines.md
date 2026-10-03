@@ -172,6 +172,9 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - 저장된 상태도 다른 오브젝트를 이름으로 가리키지 않습니다. 부모 참조는 부모의 id 이고, 배치의 모든 오브젝트를 읽은 뒤 `ObjectStateBatch` 가 풉니다.
   오브젝트 상태를 읽는 새 경로는 배치(`ObjectLoadContext::_pBatch` + `finish()`)를 지납니다 — 매니저가 이름을 고유하게 바꾸므로 이름으로 찾으면 동명이인에 떨어집니다.
 
+### 클래스마다 namespace 블록
+한 파일에 클래스 · 구조체 정의가 여럿이면 정의마다 이름 있는 `namespace` 블록을 따로 둡니다(앞 정의의 `};` 뒤에서 닫고 다시 엽니다) — 에디터에서 클래스 단위로 접히게 하려는 것입니다. 같은 이름의 템플릿 특수화는 한 블록에 두고, 익명 namespace 는 하나로 둡니다. `py -3 Scripts/lint/gate/CheckNamespaceBlocks.py --fix` 가 고치고 같은 게이트가 검사합니다.
+
 ### 헬퍼 Util vs Internal
 1. 여러 번역 단위가 공유하는 헬퍼는 `XxxUtil` 정적 구조체 헤더로 선언합니다 (`Internal` 이름을 붙이지 않음).
 2. 단일 `.cpp` 내에서만 사용하는 헬퍼는 클래스 구현과 분리된 별도 `namespace sw { namespace { struct FooInternal; } }` 블록에 배치합니다.

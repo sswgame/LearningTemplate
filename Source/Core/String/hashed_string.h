@@ -278,7 +278,10 @@ namespace sw
         uint32 _comparisonIndex; ///< 대소문자를 무시한 이름의 엔트리(같음 · 해시 · 미리 정의된 이름)
         uint32 _displayIndex;    ///< 적은 철자의 엔트리(`c_str()` · `size()`)
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 같은 이름인지 비교합니다(비교 인덱스 정수 비교 — 대소문자 무시). 철자까지는 `isEqual( other, NameCase::CaseSensitive )`. */
     template <typename T>
     bool operator==( const basic_hashed_string<T>& lhs, const basic_hashed_string<T>& rhs ) noexcept { return lhs.getIndex() == rhs.getIndex(); }
@@ -684,7 +687,10 @@ namespace sw
     {
         bool operator()( const hashed_string& lhs, const hashed_string& rhs ) const noexcept { return lhs.lexicalLess( rhs ); }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 비교 인덱스 순 비교 함수 객체입니다(FName 의 `FNameFastLess`). 순서에 뜻이 없고 실행마다 다릅니다. */
     struct HashedStringFastLess
     {

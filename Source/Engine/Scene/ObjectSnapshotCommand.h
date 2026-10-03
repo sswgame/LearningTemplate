@@ -26,7 +26,10 @@ namespace sw
         string         _xml;
         ObjectIdentity _identity;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 오브젝트 수명 편집의 방향입니다. 어느 쪽이 "되살리기" 인지를 정합니다. */
     enum class ObjectLifetimeEdit : uint8
     {

@@ -32,7 +32,10 @@ namespace sw
         virtual int32 getFlag( string_view key, int32 defaultValue = 0 ) const = 0;
         virtual void  setFlag( string_view key, int32 value )                  = 0;
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) SaveGameSerializer — 임의의 REFLECT() 객체 바이너리 세이브/로드 유틸리티
     // ------------------------------------------------------------------------------
@@ -99,7 +102,10 @@ namespace sw
             return payloadArch.deserializeObject( outSaveObject );
         }
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 3) SaveGame — 모든 세이브 데이터의 순수 리플렉션 베이스 클래스
     // ------------------------------------------------------------------------------

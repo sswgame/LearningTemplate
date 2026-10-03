@@ -30,7 +30,10 @@ namespace sw
         RHIDeviceFactoryDelegate _factory;
         RHICapabilities          _caps{};
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class RHIBackendRegistry
      * @brief 백엔드 팩토리의 등록 · 조회와 MODULE 로드를 맡습니다.

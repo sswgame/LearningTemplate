@@ -105,7 +105,10 @@ namespace sw
         PROPERTY()
         uint32 _resolutionDivisor{ 1 };
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 첨부 나눗수(`RenderPassAttachment::_resolutionDivisor`)가 받는 값인지 반환합니다(1 · 2 · 4). */
     constexpr bool isSupportedResolutionDivisor( uint32 divisor )
     {
@@ -236,7 +239,10 @@ namespace sw
         PROPERTY()
         bool _bEnableBlend{ false };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief RHI 렌더 패스 템플릿의 어태치먼트 묶음 서술입니다.
      * 프레임 구성(패스 그래프)은 RenderPipelineDesc 의 몫입니다(RenderPipelineResource.h).
@@ -251,7 +257,10 @@ namespace sw
         PROPERTY()
         vector<RenderPassAttachment> _listAttachment;
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief RenderPass XML 에셋(어태치먼트 템플릿)입니다.
     class SW_API RenderPassResource
     {

@@ -238,7 +238,10 @@ namespace sw
     private:
         FormatData _data;
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) FormattedValue / Fmt — 값과 Format 을 인자 하나로 묶는다
     // ------------------------------------------------------------------------------
@@ -261,7 +264,10 @@ namespace sw
         T      _value;
         Format _format;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 값과 포맷 설정을 묶어 FormattedValue 를 만드는 도우미 함수입니다. */
     template <typename T>
     constexpr FormattedValue<T> Fmt( T&& value, const Format& format ) noexcept { return FormattedValue<T>( std::forward<T>( value ), format ); }

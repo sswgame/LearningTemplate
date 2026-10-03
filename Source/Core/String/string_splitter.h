@@ -91,7 +91,10 @@ namespace sw
         vector<std::basic_string_view<T>> _listDelim{};
         Mode                              _mode{ Mode::End };
     };
+} // namespace sw
 
+namespace sw
+{
     using string_split_iterator  = basic_string_split_iterator<utf8>;
     using wstring_split_iterator = basic_string_split_iterator<utf16>;
 

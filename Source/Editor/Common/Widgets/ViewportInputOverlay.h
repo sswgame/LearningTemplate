@@ -50,7 +50,10 @@ namespace sw::editor
         {
         }
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class ViewportInputOverlay
      * @brief 뷰포트 렌더 타깃 위에 ImDrawList 로 컨트롤러 HUD 를 그립니다.

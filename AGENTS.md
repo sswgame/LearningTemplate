@@ -250,6 +250,10 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
 - Shared helpers used by more than one translation unit belong on a `XxxUtil`
   static struct in a header (for example `SerializerUtil`, `MaterialUtil`). Do
   not name those headers or types `Internal`.
+- **One class or struct definition per named `namespace` block.** A file that defines
+  several classes closes the block after each `};` and reopens it for the next, so each
+  class folds on its own (`CheckNamespaceBlocks.py --fix` does it; template
+  specializations of one name stay together, the anonymous namespace stays one block).
 - Helpers used only inside one `.cpp` go in a **separate** `namespace sw` block
   from the class implementation, so the two regions fold independently:
 

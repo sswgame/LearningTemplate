@@ -91,7 +91,10 @@ namespace sw
         /** @brief *_pData 를 _defaultValue 로 되돌립니다. */
         void resetToDefault();
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) GlobalVariableManager — 등록 · 커맨드라인 동기화 · 모듈 단위 해제
     // ------------------------------------------------------------------------------
@@ -187,7 +190,10 @@ namespace sw
         /** @brief 명령줄에서 글로 받아 파서를 기다리는 enum 변수 값입니다(이름 → 글). `applyPendingEnumText` 가 비웁니다. */
         unordered_map<string, string> _mapPendingEnumText;
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 3) GlobalVariableRegistrar — 정적 초기화 때 하나뿐인 전역 리스트에 연결된다(타입 등록자와 같다)
     // ------------------------------------------------------------------------------

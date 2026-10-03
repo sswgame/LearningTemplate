@@ -67,7 +67,10 @@ namespace sw
             return ( mapIt != _pSavedIdMap->end() ) ? mapIt->second : 0;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ObjectLoadContext
      * @brief 오브젝트 상태 하나를 읽을 때의 문맥입니다. 기본값은 "같은 실행의 상태 하나를 새 id 로" 입니다.
@@ -89,7 +92,10 @@ namespace sw
          */
         bool _bRestorePreviousOnFailure{ true };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ObjectIdentity
      * @brief 오브젝트 하나와 그 컴포넌트들의 런타임 ID 입니다. 같은 오브젝트를 되살릴 때 핸들이 끊기지 않게 상태와 함께 적어 둡니다.
@@ -111,7 +117,10 @@ namespace sw
         uint64                 _objectId{ 0 };
         vector<ComponentEntry> _listComponent;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class ObjectStateBatch
      * @brief 여러 오브젝트의 상태를 **모두 읽은 뒤** 그 사이의 부착(부모 · 소켓)을 한 번에 잇는 묶음입니다.
@@ -194,7 +203,10 @@ namespace sw
         ObjectIdSpace                        _idSpace;
         bool                                 _bFinished;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class ObjectStateSerializer
      * @brief GameObject 상태를 XML · JSON · 바이너리로 저장하고 로드합니다.

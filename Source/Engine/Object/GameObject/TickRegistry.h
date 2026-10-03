@@ -48,7 +48,10 @@ namespace sw
         uint8      _group{ 0 };     ///< `TickGroup`
         uint8      _orderKey{ 64 }; ///< `TickPhase` + 우선순위(0..63)
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 오브젝트 하나의 틱 항목입니다. **인라인이 아닙니다. 재 보고 기각했습니다.**
      * @details 인라인 두 칸(`InlineAllocator`)으로 두면 첫 틱의 등록부 구축이 절반(8000 개 힙 할당이 사라집니다)이고 틱 디스패치도
@@ -74,7 +77,10 @@ namespace sw
         const TickItem* _pItem{ nullptr };   ///< 이 그룹 항목들의 시작(오브젝트의 항목 버퍼 안)
         uint32          _itemCount{ 0 };     ///< 이 그룹 항목 수(1 이상)
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class TickRegistry
      * @brief 그룹마다의 "틱할 것이 있는 오브젝트" 목록, 멤버십 더티 표시, 오브젝트 항목 재구축, 선행 조건 스테이지를 맡습니다.

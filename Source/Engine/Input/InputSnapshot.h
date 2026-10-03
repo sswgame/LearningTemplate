@@ -37,7 +37,10 @@ namespace sw
         /** @brief 바이너리 버퍼에서 역직렬화합니다. */
         [[nodiscard]] bool deserialize( const uint8* pBuffer, uint32 bufferSize );
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class InputHistoryBuffer
      * @brief 최근 N개 틱의 입력을 보관하는 롤백 · 리플레이 전용 순환 링 버퍼입니다.

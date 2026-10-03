@@ -22,7 +22,10 @@ namespace sw::editor
         const utf8* _pId;   ///< 종류 안에서 유일한 id. 같은 id 의 둘째 등록은 거절됩니다
         int32       _order; ///< 보이는 순서. 작을수록 앞이고, 같으면 id 사전순입니다
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorRegistrationList
      * @brief 한 종류의 등록 목록입니다. 늘 (순서, id) 로 정렬돼 있습니다.
@@ -47,7 +50,10 @@ namespace sw::editor
         const utf8*                                _pKindName;
         RegistrationList<const EditorRegistration> _registered; ///< (순서, id) 사전순 · id 필수
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorRegistry
      * @brief 등록 줄 타입 하나의 등록부입니다. `TRegistration` 은 `EditorRegistration` 을 상속하고 `kKindName` 을 둡니다.
@@ -76,7 +82,10 @@ namespace sw::editor
             return static_cast<const TRegistration*>( getList().findRegistration( id ) );
         }
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorRegistrar
      * @brief 확장의 코드 파일에 정적 객체로 두면 줄을 등록하고, 모듈이 내려갈 때 뺍니다.

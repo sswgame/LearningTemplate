@@ -22,7 +22,10 @@ namespace sw
         float4x4      _boneSpaceTransform{ float4x4::Identity };      /**< 부모 기준 로컬 변환입니다. */
         float4x4      _characterSpaceTransform{ float4x4::Identity }; /**< 캐릭터 원점 기준 변환입니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 계층형 본과 최종 스키닝 행렬을 관리하는 스켈레톤입니다.
      */

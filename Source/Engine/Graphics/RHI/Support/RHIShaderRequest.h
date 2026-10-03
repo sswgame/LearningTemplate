@@ -31,7 +31,10 @@ namespace sw
 
         RHIGraphicsShaderRequest() noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 서술체를 컴파일 요청으로 해석하고, 캐시에 없으면 컴파일합니다. 백엔드는 이 둘만 부릅니다. */
     struct SW_API RHIShaderRequest
     {

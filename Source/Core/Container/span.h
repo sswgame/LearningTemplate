@@ -52,7 +52,10 @@ namespace sw
         struct IsSpan : std::false_type
         {
         };
+    } // namespace SpanInternal
 
+    namespace SpanInternal
+    {
         template <typename T>
         struct IsSpan<span<T>> : std::true_type
         {

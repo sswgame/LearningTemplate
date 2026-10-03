@@ -100,7 +100,10 @@ namespace sw
         atomic<uint64> _ownerThreadId{ 0 };
 #endif
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) ScopedRaceRead / ScopedRaceWrite — RAII 로 enter/exit
     // ------------------------------------------------------------------------------
@@ -126,7 +129,10 @@ namespace sw
         SW_INLINE explicit ScopedRaceRead( const RaceDetectContext& ) {}
 #endif
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ScopedRaceWrite
      * @brief 스코프 동안 쓰기 접근을 기록합니다.

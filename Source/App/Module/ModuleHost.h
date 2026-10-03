@@ -68,7 +68,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class ModuleHost
      * @brief 에디터 · 게임 모듈의 수명 주기와 API 바인딩을 감쌉니다.

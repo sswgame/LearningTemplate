@@ -43,7 +43,10 @@ namespace sw
         const uint8* getPixels() const { return _bytes.data(); }
         uint8*       getPixels() { return _bytes.data(); }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct DdsLoader
      * @brief 외부 라이브러리 없이 표준 DDS 헤더와 바이너리 데이터를 직접 파싱하는 가벼운 로더입니다.

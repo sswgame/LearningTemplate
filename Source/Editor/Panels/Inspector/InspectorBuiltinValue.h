@@ -59,7 +59,10 @@ namespace sw::editor
     {
         static constexpr InspectorValueWidget kWidget = Widget;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     // clang-format off
     template <> struct InspectorWidgetFor<int8>             : InspectorWidgetKind<InspectorValueWidget::Number> {};
     template <> struct InspectorWidgetFor<int16>            : InspectorWidgetKind<InspectorValueWidget::Number> {};
@@ -96,7 +99,10 @@ namespace sw::editor
     {
         using Type = T;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     template <>
     struct InspectorBuiltinCppType<std::string>
     {
@@ -119,14 +125,20 @@ namespace sw::editor
         InspectorValueWidget _widget; ///< 프로퍼티 · 인자를 그리는 위젯 갈래
         uint8                _index;  ///< 표 안의 자리
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief CallInEditor 인자 칸 하나입니다. 값은 늘 `_builtinIndex` 줄의 C++ 타입입니다. */
     struct InspectorMethodArgSlot
     {
         TaskValue _value;
         uint8     _builtinIndex{ 0 };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 내장 값 타입 표를 읽고, CallInEditor 의 인자 판정 · 인자 묶기 · 반환 형식화를 한 표로 합니다. */
     struct InspectorBuiltinValueUtil
     {

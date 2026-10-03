@@ -43,7 +43,10 @@ namespace sw
         uint8                       _bSrvDirty{ SW_TRUE };                       ///< 새 리스트는 테이블이 없으므로 첫 드로우에 반드시 굳힌다
         uint8                       _bUavDirty{ SW_TRUE };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct D3D12RecordingState
      * @brief "지금 이 커맨드 리스트가 기록 중" 상태입니다. 디바이스 전역이 아니라 리스트(컨텍스트)마다 있어야 합니다.
@@ -110,7 +113,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct D3D12CommandListEntry
      * @brief 커맨드 리스트와 **그 리스트 전용** 얼로케이터 한 쌍입니다.
@@ -123,7 +129,10 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator>    _allocator;
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> _list;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class D3D12RHIDevice
      * @brief Direct3D 12 그래픽스 디바이스 구현체입니다(bindless 지원).

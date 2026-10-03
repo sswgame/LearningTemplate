@@ -60,7 +60,10 @@ namespace sw::editor
         {
         }
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class TextureImportConfig
      * @brief TextureImportConfig.json 을 읽고 프리셋 상속과 패턴 매칭을 맡습니다.

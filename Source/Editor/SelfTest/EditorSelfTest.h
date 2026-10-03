@@ -49,7 +49,10 @@ namespace sw::editor
         string _failure;
         uint32 _stepIndex;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 시험 본문입니다. 프레임마다 한 번 불리고, `Done` 을 돌려주면 끝납니다. */
     using EditorSelfTestFunc = EditorSelfTestStep ( * )( EditorSelfTestContext& context );
 
@@ -63,7 +66,10 @@ namespace sw::editor
 
         EditorSelfTestFunc _pfnRun;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct EditorSelfTestRunner
      * @brief `-gv_editorSelfTest` 로 켜는 실행기입니다. `ImGuiEditor::updateUi` 가 패널을 그린 뒤 프레임마다 `runFrame` 을 부릅니다.

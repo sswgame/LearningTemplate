@@ -76,7 +76,10 @@ namespace sw
             return RHIMemoryKey{ static_cast<uint64>( reinterpret_cast<uintptr_t>( pObject ) ), RHIMemoryKeySpace::DeviceObject };
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 장부 한 줄의 지금 값입니다. */
     struct RHIMemoryKindStats
     {
@@ -84,7 +87,10 @@ namespace sw
         uint32 _liveCount{ 0 };        ///< 크기를 아는 살아 있는 자원 수
         uint32 _unknownSizeCount{ 0 }; ///< 크기를 모르는 살아 있는 자원 수 — 바이트 합에 들어 있지 않다
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 드라이버 사용량이 누구의 것인지입니다. */
     enum class RHIGpuMemoryScope : uint8
     {
@@ -111,7 +117,10 @@ namespace sw
         /** @brief 모든 칸을 "모름" 으로 둡니다. */
         RHIGpuMemoryBudget() noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 장부와 드라이버 값을 맞춰 본 결과입니다. 로그 보고와 에디터 패널이 같은 계산을 씁니다.
      * @details "엔진 밖" = 드라이버 사용량 − 장부 합입니다. 스왑체인 · 드라이버 내부 · 장부에 오르지 않은 디바이스 자원이 여기에 듭니다.
@@ -127,7 +136,10 @@ namespace sw
         RHIMemorySizeBasis _sizeBasis{ RHIMemorySizeBasis::Allocation }; ///< 장부 바이트의 기준
         uint8              _bOutsideKnown{ SW_FALSE };                   ///< `_outsideBytes` 를 계산했는가
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class RHIMemoryLedger
      * @brief 디바이스 하나의 GPU 자원 크기를 키별로 기억하고 종류별로 합합니다. 여러 스레드(게임 · 렌더 · 로더)에서 불러도 됩니다.

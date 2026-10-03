@@ -344,7 +344,10 @@ namespace sw
         /** @brief 다른지 비교합니다. */
         bool operator!=( const DelegateHandle& rhs ) const { return _id != rhs._id; }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 타입을 지운 멀티캐스트 인터페이스입니다. 항목은 핸들로만 제거합니다. */
     class SW_API IMulticastDelegateBase
     {

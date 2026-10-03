@@ -33,7 +33,10 @@ namespace sw
             , _bReliable{ SW_FALSE }
             , _reserved{ 0 } {}
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class ReflectionRpc
      * @brief 리플렉션 메서드 호출을 봉투로 싸고 로컬에서 풉니다

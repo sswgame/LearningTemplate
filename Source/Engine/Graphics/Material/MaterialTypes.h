@@ -72,7 +72,10 @@ namespace sw
         string _name;
         uint32 _value{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 머티리얼 프로퍼티입니다(타입, 기본값, 패킹 오프셋).
     struct MaterialProperty
     {
@@ -109,7 +112,10 @@ namespace sw
         /** @brief 플래그 · 범위를 끈 기본값으로 만듭니다. */
         MaterialProperty() noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 정적 스위치입니다(켜면 셰이더 define).
     struct MaterialStaticSwitch
     {
@@ -124,7 +130,10 @@ namespace sw
         /** @brief 꺼진 스위치로 만듭니다. */
         MaterialStaticSwitch() noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 멀티 컴파일 키워드 목록입니다.
     struct MaterialMultiCompile
     {
@@ -132,7 +141,10 @@ namespace sw
         string         _selected;
         vector<string> _listOption;
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 스위치 + 멀티 컴파일 + 품질 퍼뮤테이션입니다.
     struct MaterialPermutationDesc
     {
@@ -143,7 +155,10 @@ namespace sw
         vector<MaterialStaticSwitch> _listStaticSwitch;
         vector<MaterialMultiCompile> _listMultiCompile;
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 머티리얼 에셋 서술입니다(셰이더 경로, 프로퍼티, 퍼뮤테이션).
     struct MaterialDesc
     {
@@ -154,7 +169,10 @@ namespace sw
         vector<MaterialProperty> _listProperty;
         MaterialPermutationDesc  _permutations;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 직렬화되는 인스턴스 오버라이드입니다(게임 MIC / MaterialPropertyBlock). */
     struct MaterialInstanceDesc
     {
@@ -191,7 +209,10 @@ namespace sw
 
         string _quality; ///< 비어 있으면 부모를 따름
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 런타임 머티리얼 데이터입니다(패킹 버퍼 + 디스크립터).
     struct MaterialData
     {

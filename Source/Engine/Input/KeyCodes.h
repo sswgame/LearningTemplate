@@ -156,7 +156,10 @@ namespace sw
         /** @brief Key 의 안정적인 이름을 반환합니다. 엔진 서비스가 묶여 있지 않으면 "Unknown" 입니다. */
         static const utf8* toName( Key key );
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief MouseButton 이름 변환입니다. */
     struct SW_API MouseButtons
     {

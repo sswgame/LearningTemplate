@@ -112,7 +112,10 @@ namespace sw
                 return TDelegate{};
             }
         };
+    } // namespace internal
 
+    namespace internal
+    {
         template <typename T>
         struct SharedFutureState : SharedFutureSignal
         {
@@ -310,7 +313,10 @@ namespace sw
     private:
         sw::shared_ptr<internal::SharedFutureState<T>> _pState;
     };
+} // namespace sw
 
+namespace sw
+{
     template <>
     class TaskFuture<void>
     {

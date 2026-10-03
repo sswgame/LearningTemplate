@@ -127,7 +127,10 @@ namespace sw
         atomic<uint64> _frameCount{ 0 };
         atomic<bool>   _bEnabled{ false };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class ScopedFrameProfile
      * @brief 스코프 경과를 FrameProfiler 에 더하는 RAII 도우미입니다.

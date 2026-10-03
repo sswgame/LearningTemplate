@@ -28,7 +28,10 @@ namespace sw::editor
         float32          _elapsedSec{ 0.0f };
         float32          _progress{ -1.0f }; ///< 0.0 ~ 1.0 이면 프로그레스 바 표시, 음수면 미표시
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorNotificationManager
      * @brief 화면 오른쪽 아래의 비동기 토스트 알림과 진행 막대를 그립니다.

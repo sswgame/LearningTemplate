@@ -28,13 +28,19 @@ namespace sw
 
         SW_REGISTER_ENGINE_EVENT( WindowResize );
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 창 닫기 요청입니다. 페이로드는 없습니다. */
     struct SW_API WindowCloseEvent final : IEvent
     {
         SW_REGISTER_ENGINE_EVENT( WindowClose );
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 활성 · 비활성 전환입니다. */
     struct SW_API WindowActivateEvent final : IEvent
     {

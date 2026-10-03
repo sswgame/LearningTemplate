@@ -83,7 +83,10 @@ namespace sw
     private:
         vector<uint8>& _buffer;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class BinaryStreamReader
      * @brief 메모리 버퍼(const uint8*)에서 값을 읽어 내는 바이너리 스트림 리더입니다.

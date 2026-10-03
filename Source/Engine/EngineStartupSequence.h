@@ -37,14 +37,20 @@ namespace sw
         const utf8* _pName;           ///< 단계 이름
         const utf8* _pDependencyText; ///< 먼저 서야 하는 단계 이름들(쉼표 · 중괄호 · 공백으로 구분 — 표는 `{ A, B }`)
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief `EngineStartupSequence::computeGraph` 의 결과입니다. 인덱스는 노드 목록의 자리입니다. */
     struct EngineStartupGraph
     {
         vector<uint32>         _listOrder;      ///< 초기화 순서(위상 순서). 준비된 노드가 여럿이면 이름이 앞인 것이 먼저입니다
         vector<vector<uint32>> _listDependency; ///< 노드마다 먼저 서야 하는 노드
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 단계 본문의 기본값입니다. 아무것도 하지 않고 성공합니다.
      * @details 호스트는 표의 줄마다 `<단계>StartupStep` 구조체를 두고, 이것을 상속해 필요한 함수만 다시 정의합니다(이름 가림).
@@ -66,7 +72,10 @@ namespace sw
          */
         static void destroy( THost& ) {}
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 단계 하나의 본문 셋입니다. 호스트 타입을 지운 포인터를 받습니다(`EngineStartupStepTable` 이 채웁니다). */
     struct EngineStartupStepEntry
     {
@@ -74,7 +83,10 @@ namespace sw
         void ( *_pShutdown )( void* pHost );                  ///< `<단계>StartupStep::shutdown`
         void ( *_pDestroy )( void* pHost );                   ///< `<단계>StartupStep::destroy`
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 단계 구조체의 정적 함수를 `EngineStartupStepEntry` 의 모양으로 잇습니다. */
     template <class THost, class TStep>
     struct EngineStartupStepThunk
@@ -85,7 +97,10 @@ namespace sw
 
         static constexpr EngineStartupStepEntry kEntry{ &initialize, &shutdown, &destroy }; ///< 표의 칸 하나
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 호스트의 단계 구조체(`THost::<단계>StartupStep`)로 만든 본문 표입니다. 자리는 `EngineStartupStep` 값입니다.
      * @details 표(`EngineStartupStepList.xxx`)의 줄마다 구조체가 하나 있어야 하고, 빠지면 컴파일 오류입니다. 단계마다 `switch` 를
@@ -103,7 +118,10 @@ namespace sw
         static_assert( sizeof( kArrEntry ) / sizeof( kArrEntry[0] ) == static_cast<size_t>( EngineStartupStep::Count ),
                        "Startup step body table must have one row per EngineStartupStep" );
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class EngineStartupSequence
      * @brief 기동 단계 표를 정렬해 들고, 호스트의 단계 구조체로 초기화 · 종료 · 해제를 돌립니다.

@@ -36,7 +36,10 @@ namespace sw
         /// 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)을 싣는다. 판이 0 인(또는 판이 없는) 씬 파일은 읽지 않는다.
         static constexpr AssetFormatVersion kScene = 1;
     };
+} // namespace sw
 
+namespace sw
+{
     using XmlAssetMigrator = bool ( * )( XmlDocument& doc, XmlNode& root );
 
     /**
@@ -70,7 +73,10 @@ namespace sw
          */
         static string toSourcePath( string_view path, AssetKind kind );
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 에셋 종류별 formatVersion 과 N→N+1 migrator 등록부입니다.
     class SW_API AssetFormatRegistry
     {

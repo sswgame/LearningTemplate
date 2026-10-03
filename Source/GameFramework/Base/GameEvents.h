@@ -40,7 +40,10 @@ namespace sw
         bool   _bSuccess{ true }; ///< 파일을 끝까지 썼으면 true
         SW_DECLARE_GAMEPLAY_EVENT( SaveCompletedEvent );
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 게임 상태 불러오기(`GameInstanceBase::loadStateFromFile`)가 끝났음을 알립니다. */
     struct LoadCompletedEvent final : IEvent
     {
@@ -48,7 +51,10 @@ namespace sw
         bool   _bSuccess{ true }; ///< 씬과 상태를 모두 되살렸으면 true
         SW_DECLARE_GAMEPLAY_EVENT( LoadCompletedEvent );
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 3) 레벨(씬) 로드 — GameInstanceBase
     // ------------------------------------------------------------------------------
@@ -58,7 +64,10 @@ namespace sw
         string _levelName; ///< 로드할 씬 경로
         SW_DECLARE_GAMEPLAY_EVENT( LevelLoadRequestedEvent );
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 맡긴 씬 로드가 끝났음을 알립니다. 성공이면 그 씬이 이미 활성 씬입니다. */
     struct LevelLoadCompletedEvent final : IEvent
     {
@@ -66,7 +75,10 @@ namespace sw
         bool   _bSuccess{ true }; ///< 활성 씬이 되었으면 true. 읽지 못했거나 뒤 요청에 밀렸으면 false
         SW_DECLARE_GAMEPLAY_EVENT( LevelLoadCompletedEvent );
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 4) 일시정지 — GameModeStateMachine
     // ------------------------------------------------------------------------------
@@ -75,7 +87,10 @@ namespace sw
     {
         SW_DECLARE_GAMEPLAY_EVENT( GamePausedEvent );
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 게임 모드가 `GameModes::paused()` 에서 나갔음을 알립니다(다른 모드로 · 리셋 · 핸들러 해제 모두). */
     struct GameResumedEvent final : IEvent
     {

@@ -22,7 +22,10 @@ namespace sw::editor
     struct EditorBackgroundNoInput
     {
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorBackgroundJob
      * @brief 워커가 만들고 게임 스레드가 가져가는 잡의 공통 뼈대입니다(잠금 · 세대 · 완료 플래그).

@@ -42,7 +42,10 @@ namespace sw
 
         SW_DECLARE_GAMEPLAY_EVENT( DamageAppliedEvent );
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 액션 룸을 클리어했음을 알립니다(`ActionRoom` — 마지막 적이 쓰러진 프레임). */
     struct RoomClearedEvent final : IEvent
     {
@@ -57,14 +60,20 @@ namespace sw
 
         SW_DECLARE_GAMEPLAY_EVENT( RoomClearedEvent );
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 액션 룸에서 플레이어가 패배했음을 알립니다(`ActionRoom::onPlayerDefeated`). */
     struct PlayerDefeatedInRoomEvent final : IEvent
     {
         string _returnMapPath; ///< 복귀할 오버월드 맵
         SW_DECLARE_GAMEPLAY_EVENT( PlayerDefeatedInRoomEvent );
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 클리어 게이트 잠금이 바뀌었음을 알립니다(`ActionRoom` — 전투 시작에 닫히고, 클리어 · 패배에 열린다). */
     struct ClearGateStateChangedEvent final : IEvent
     {

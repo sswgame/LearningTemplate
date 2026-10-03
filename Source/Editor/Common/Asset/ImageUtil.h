@@ -27,7 +27,10 @@ namespace sw::editor
         bool         isValid() const { return _bytes.empty() == false && _width > 0 && _height > 0; }
         const uint8* getPixels() const { return _bytes.data(); }
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct ImageUtil
      * @brief 에디터에서 소스 이미지(PNG/JPG/TGA/BMP)를 RGBA 버퍼로 디코딩하는 유틸리티입니다(stb_image 를 감쌉니다).

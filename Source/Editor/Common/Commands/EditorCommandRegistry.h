@@ -112,7 +112,10 @@ namespace sw::editor
         EditorCommandKey _key{ EditorCommandKey::None };
         uint8            _modifier{ commandmod::kNone };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @brief 에디터 커맨드 하나의 정의입니다.
      * @details 한 커맨드는 최대 세 곳(메뉴바 · 전역 단축키 · 커맨드 팔레트)에 나타납니다. 곳마다 따로 적으면 서로 어긋나므로
@@ -139,14 +142,20 @@ namespace sw::editor
         string _menuPath;
         bool   _bPaletteVisible{ true };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 메뉴 안의 항목 하나입니다. */
     struct EditorMenuItem
     {
         uint32 _commandIndex;     ///< `EditorCommandRegistry::getCommands()` 의 칸
         bool   _bSeparatorBefore; ///< 앞 항목과 묶음이 달라 사이에 구분선을 그립니다
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 커맨드 표의 메뉴 경로 칸에서 만든 메뉴 하나입니다. */
     struct EditorMenu
     {
@@ -155,7 +164,10 @@ namespace sw::editor
         string                 _name;       ///< "File" (메뉴에 보이는 이름)
         vector<EditorMenuItem> _listItem;   ///< `_menuOrder` 순
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorCommandRegistry
      * @brief 에디터 커맨드 정의를 모아 두고 id 로 찾아 실행합니다 (EditorContext 소유).

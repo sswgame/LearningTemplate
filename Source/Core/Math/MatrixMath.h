@@ -139,7 +139,10 @@ namespace sw
         /** @brief 모든 성분의 부호를 뒤집습니다(단항 -). 같은 회전을 나타냅니다. */
         quaternion operator-() const noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 성분별로 더합니다. */
     inline quaternion operator+( const quaternion& lhs, const quaternion& rhs ) noexcept { return quaternion{ lhs._x + rhs._x, lhs._y + rhs._y, lhs._z + rhs._z, lhs._w + rhs._w }; }
     /** @brief 성분별로 뺍니다. */

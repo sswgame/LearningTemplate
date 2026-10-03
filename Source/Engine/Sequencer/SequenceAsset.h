@@ -46,7 +46,10 @@ namespace sw
         bool             _bDrivesTarget; /**< 구간 동안 대상 오브젝트의 활성 · 트랜스폼을 정하는지입니다. */
         bool             _bFiresOnCross; /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 항목 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceItemKind` 값 순서입니다.** */
     inline constexpr SequenceItemKindTraits kArrSequenceItemKindTraits[] = {
         { SequenceItemKind::Clip, 0xFF80AA80u,  true, false},
@@ -69,7 +72,10 @@ namespace sw
         uint32           _color{ 0xFFAA8080 };
         SequenceItemKind _kind{ SequenceItemKind::Clip }; /**< 표에 없는 값(새 버전 파일)은 읽고 다시 쓰지만 적용하지 않습니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class SequenceAsset
      * @brief 카메라 · 오브젝트 트랙을 담는 타임라인 에셋입니다.

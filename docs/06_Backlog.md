@@ -118,7 +118,6 @@ cd build/Ninja-Debug/Bin
   ("Resource" 는 디스크 트리 · 팩, "Asset" 은 읽은 객체), `EngineData`/`GameData`/`EditorData`→`EngineDefaultAssets`/`GameSettings`/`EditorToolDefaults`.
   CLI 철자도 하나로 — 하이픈 없는 철자(`bakeshaders` 등 다섯)는 10-04 에 지웠다. 남은 것: 열거자 이름 자동 등록으로 생기는 중복 키(`-WIDTH` 와 `-W`,
   `-lang` 과 `-language`), 리플렉션 주석 키 `Alias` 의 동의어 `PreviousName` · `PreviousNames`(사용처 0).
-- **한 파일에 클래스가 여럿이면 클래스마다 `namespace sw { }` 블록을 나눈다** — 규칙 + 가능하면 게이트, 트리 전체 적용.
 
 ### 1-1. 직렬화 · 리플렉션
 

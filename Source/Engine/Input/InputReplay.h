@@ -26,7 +26,10 @@ namespace sw
         InputSnapshot         _snapshot{};
         vector<RawInputEvent> _listRawEvent{};
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class InputReplay
      * @brief 게임플레이 입력을 파일(.swreplay)로 녹화하고, 프레임 스크러빙 · 재생 · QA 버그 재현을 하는 엔진 시스템입니다.

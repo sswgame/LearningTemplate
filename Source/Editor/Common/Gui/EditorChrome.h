@@ -54,7 +54,10 @@ namespace sw::editor
         float2             _childSize{ 0.0f, 0.0f };
         EditorSectionFlags _flags{ EditorSectionFlags::None };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     // ------------------------------------------------------------------------------
     // 3) FloatingBar Flags & Descs
     // ------------------------------------------------------------------------------
@@ -79,7 +82,10 @@ namespace sw::editor
         /** @brief AutoResize | NoMove | PassThroughWhenDisabled 기본값. */
         EditorFloatingBarDesc();
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     // ------------------------------------------------------------------------------
     // 4) Overlay Flags & Descs
     // ------------------------------------------------------------------------------
@@ -111,7 +117,10 @@ namespace sw::editor
         float32            _borderSize{ 0.0f };
         float32            _bgAlpha{ -1.0f };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     // ------------------------------------------------------------------------------
     // 5) Search Overlay — 뷰포트 중앙 검색 팝업 (커맨드 팔레트 / 퀵 런처)
     // ------------------------------------------------------------------------------
@@ -128,7 +137,10 @@ namespace sw::editor
         float4      _borderColor{ 0.25f, 0.45f, 0.75f, 1.0f };
         bool*       _pFocusOnOpen{ nullptr };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     // ------------------------------------------------------------------------------
     // 6) EditorChrome 클래스
     // ------------------------------------------------------------------------------

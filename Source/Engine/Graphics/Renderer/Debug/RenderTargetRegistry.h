@@ -42,7 +42,10 @@ namespace sw
         uint8            _bDepth{ SW_FALSE };     ///< 깊이 첨부면 1. 미리보기가 색으로 안 나옴
         uint8            _bPresented{ SW_FALSE }; ///< 화면에 나가는 첨부면 1(Present 패스의 입력)
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class RenderTargetRegistry
      * @brief 이번 프레임 구성의 렌더 타깃 목록을 담아 두고 스냅샷으로 반환합니다.

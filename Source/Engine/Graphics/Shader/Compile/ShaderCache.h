@@ -22,7 +22,10 @@ namespace sw
         uint64              _lastTimestamp{ 0 };
         ShaderCompileResult _result;
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 컴파일 결과 디스크 캐시 매니저입니다.
     class SW_API ShaderCache
     {

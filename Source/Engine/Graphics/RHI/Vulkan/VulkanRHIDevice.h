@@ -37,7 +37,10 @@ namespace sw
         uint32                   _cursor{ 0 };                  ///< 지금 할당 중인 풀
         uint8                    _bExhaustedLogged{ SW_FALSE }; ///< 상한 도달 로그를 한 번만
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct VulkanCommandListEntry
      * @brief `VulkanRHICommandList` 가 빌려 쓰는 커맨드 풀 + 커맨드 버퍼 쌍입니다.
@@ -51,7 +54,10 @@ namespace sw
         /// @brief 이 버퍼 전용 슬롯 세트 풀 묶음입니다. 디바이스가 소유하고(_listCmdListDescriptorPoolSet) 쌍과 함께 빌려 줍니다.
         VulkanDescriptorPoolSet* _pDescriptorPoolSet{ nullptr };
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 슬롯 세트의 원소 하나입니다(어떤 버퍼의 어느 구간이 걸려 있나).
     struct VulkanSlotBinding
     {
@@ -59,7 +65,10 @@ namespace sw
         uint64   _offset{ 0 };
         uint64   _range{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct VulkanSlotState
      * @brief 바인드 포인트(그래픽스 · 컴퓨트) 하나의 슬롯 세트 상태입니다. 언리얼 Vulkan RHI 의 파이프라인별 디스크립터 상태와 같은 자리입니다.
@@ -75,7 +84,10 @@ namespace sw
         /// @brief 마지막으로 굳힌 세트 이후 바뀌었는지 여부입니다.
         uint8 _bDirty{ SW_TRUE };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct VulkanRecordingState
      * @brief "지금 이 커맨드 버퍼에 무엇이 걸려 있나" 입니다. 커맨드 버퍼(=기록 스트림)마다 있어야 하는 상태입니다.
@@ -126,7 +138,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     class VulkanRHICommandList;
 
     /**

@@ -48,7 +48,10 @@ namespace sw
         float4 _position{}; ///< w 는 쓰지 않습니다(정렬용).
         float4 _normal{};   ///< 변형된 노멀입니다. 컴퓨트가 위치와 **같이** 다시 만듭니다. w 는 쓰지 않습니다.
     };
+} // namespace sw
 
+namespace sw
+{
     static_assert( sizeof( GpuMorphVertex ) == 2 * sizeof( float4 ), "모프 풀 정점은 float4 둘(32바이트)이어야 한다 — 셰이더가 [2i], [2i+1] 로 읽는다" );
 
     /// @brief 정점 하나가 차지하는 버퍼 원소(float4) 수입니다. 셰이더의 `SW_MORPH_FLOAT4_PER_VERTEX` 와 같아야 합니다.

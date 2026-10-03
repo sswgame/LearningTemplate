@@ -23,7 +23,10 @@ namespace sw
         string   _clipName;                   /**< 표본이 가리키는 클립 이름입니다. */
         float4x4 _pose{ float4x4::Identity }; /**< 표본의 포즈 행렬입니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 2D 파라미터 표본 하나입니다.
      */
@@ -33,7 +36,10 @@ namespace sw
         string   _clipName;                   /**< 표본이 가리키는 클립 이름입니다. */
         float4x4 _pose{ float4x4::Identity }; /**< 표본의 포즈 행렬입니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 1차원 파라미터(예: Speed 0~10)에 따라 Idle → Walk → Run 포즈를 보간하는 1D Blend Space 입니다.
      */
@@ -66,7 +72,10 @@ namespace sw
     private:
         vector<BlendSample1D> _listSample; /**< 파라미터 오름차순으로 정렬된 표본입니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 2차원 파라미터(예: Direction, Speed)에 따라 여러 방향의 보행 모션을 보간하는 2D Blend Space 입니다.
      */

@@ -18,14 +18,20 @@ namespace sw::editor
         string _jaJP;
         bool   _bModified{ false };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 게임 데이터 XML 파일 항목 */
     struct GameDataFileEntry
     {
         string _fileName;
         string _absolutePath;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorDataTableCommands
      * @brief Data Table 패널의 파일 IO를 ImGui 없이 수행합니다.

@@ -210,7 +210,10 @@ namespace sw
         const VTable* _pVtable{ nullptr };
         alignas( std::max_align_t ) std::byte _arrStorage[kInlineStorageSize]{};
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class TaskArgs
      * @brief 위치 기반 태스크 인자 묶음입니다.
@@ -272,7 +275,10 @@ namespace sw
     private:
         vector<TaskValue> _listValue;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 타입 목록을 명시해 TaskArgs 를 만듭니다. */
     template <typename... Ts>
     TaskArgs MakeTaskArgs( Ts... values )
@@ -395,7 +401,10 @@ namespace sw
     private:
         TaskNode* _pNode{ nullptr };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct CancellationToken
      * @brief 비동기 태스크에 넘겨, 밖에서 취소 신호를 보내거나 확인할 수 있게 하는 토큰입니다.
@@ -418,7 +427,10 @@ namespace sw
             return _pCancelled != nullptr && _pCancelled->load( std::memory_order_acquire );
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct TaskStageHandle
      * @brief 여러 태스크를 하나의 논리적 단계(stage)로 묶어 관리하고 동기화하는 스테이지 핸들입니다.

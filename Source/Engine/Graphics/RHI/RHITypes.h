@@ -57,7 +57,10 @@ namespace sw
         float32 _arrUv[2];
         float32 _arrColor[4]; ///< 정점 색상 (R, G, B, A)
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RHIVertexAttribute
      * @brief 정점 속성 하나의 선언입니다. 네 백엔드가 **같은 표**를 읽어 각자의 입력 레이아웃을 만듭니다.
@@ -76,7 +79,10 @@ namespace sw
         uint8       _bPerInstance{ SW_FALSE }; ///< 인스턴스마다 한 원소를 읽는다 (step rate 1).
         uint8       _bUint{ SW_FALSE };        ///< 32비트 부호 없는 정수(R32_UINT). 아니면 float.
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) 백엔드 · 포맷 — API 종류, 픽셀 포맷
     // ------------------------------------------------------------------------------
@@ -252,7 +258,10 @@ namespace sw
         PROPERTY()
         bool _bFullscreen{ false }; ///< 전체 화면
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RHIViewport
      * @brief 렌더링 뷰포트 영역입니다(DirectX 규약, 모든 백엔드 동일).
@@ -282,7 +291,10 @@ namespace sw
         PROPERTY()
         float32 _maxDepth{ 1.0f }; ///< 최대 깊이 (0.0~1.0)
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RHIDrawIndirectCommand
      * @brief 간접 드로우 인자입니다.
@@ -303,7 +315,10 @@ namespace sw
         PROPERTY()
         uint32 _startInstanceLocation{ 0 }; ///< 시작 인스턴스 위치
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RHIDispatchIndirectCommand
      * @brief 간접 컴퓨트 디스패치 인자입니다.
@@ -321,7 +336,10 @@ namespace sw
         PROPERTY()
         uint32 _threadGroupCountZ{ 1 }; ///< Z축 스레드 그룹 개수
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 파이프라인 상태 객체(PSO)의 64비트 핸들입니다. */
     using RHIPipelineStateHandle = uint64;
 
@@ -376,7 +394,10 @@ namespace sw
         uint32 _dstOffset{ 0 }; ///< 목적 버퍼 안의 바이트 오프셋
         uint32 _size{ 0 };      ///< 옮길 바이트 수
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RHIBufferDesc
      * @brief 범용 버퍼 생성 서술체입니다.
@@ -389,7 +410,10 @@ namespace sw
         RHIBufferUsage _usage        = RHIBufferUsage::None;
         const void*    _pInitialData = nullptr;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RHIDrawIndexedIndirectCommand
      * @brief 인덱스 버퍼를 쓰는 간접 드로우 인자입니다(D3D12 · Vulkan 레이아웃과 같습니다).
@@ -402,7 +426,10 @@ namespace sw
         int32  _baseVertexLocation{ 0 };
         uint32 _startInstanceLocation{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 5) 파이프라인 상태 — 블렌드, 토폴로지, 컬링, 로드/스토어
     // ------------------------------------------------------------------------------
@@ -504,7 +531,10 @@ namespace sw
         /** @brief 기본 토폴로지 · 컬링 · 깊이 플래그로 만듭니다. */
         RHIPipelineStateDesc() noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 렌더 타깃 기본 클리어 색(RGBA)입니다. */
     inline constexpr float4 kDefaultClearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
 
@@ -519,7 +549,10 @@ namespace sw
         RHIRenderPassLoadOp  _loadOp     = RHIRenderPassLoadOp::Clear;  ///< 로드 동작
         RHIRenderPassStoreOp _storeOp    = RHIRenderPassStoreOp::Store; ///< 저장 동작
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RHIRenderPassDesc
      * @brief 렌더 패스 생성 정보입니다.
@@ -536,7 +569,10 @@ namespace sw
         /** @brief 깊이 클리어 기본값으로 만듭니다. */
         RHIRenderPassDesc() noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @enum RHITextureDimension
      * @brief 텍스처의 모양입니다. 셋 다 2D 면(slice)을 겹친 것이고 다른 것은 면 수와 셰이더가 보는 뷰입니다(D3D 의 Texture2D +
@@ -590,7 +626,10 @@ namespace sw
         /** @brief 기본 크기 · 포맷 · 클리어로 만듭니다(Texture2D, 면 하나). */
         RHITextureDesc() noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 서술체의 모양과 면 수가 맞는지 확인합니다 — Texture2D 는 1, TextureCube 는 6 이고 정사각형, Texture2DArray 는 1 이상.
      * @details 네 백엔드의 `createTexture2D` 가 이 판정 하나로 거부합니다(맞지 않으면 백엔드마다 다르게 무너진다).
@@ -625,7 +664,10 @@ namespace sw
         /** @brief 빈 업로드(데이터 없음, 밉 전부)로 만듭니다. */
         RHITextureUploadDesc() noexcept;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RHITextureMipSpan
      * @brief resolveTextureUploadMips 가 풀어낸 밉 하나의 위치와 크기입니다.
@@ -640,7 +682,10 @@ namespace sw
         uint32       _height{ 0 };
         uint32       _mip{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RHIFormatBlockInfo
      * @brief 포맷의 저장 단위입니다. 비압축은 1x1 블록에 픽셀 바이트, BC 는 4x4 블록에 8 · 16 바이트입니다.
@@ -651,7 +696,10 @@ namespace sw
         uint32 _blockHeight{ 1 };
         uint32 _blockBytes{ 0 }; ///< 0 = 업로드·읽기 대상이 아님(깊이/Unknown)
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 포맷의 블록 정보를 반환합니다. 네 백엔드가 밉 크기 · 행 바이트를 같은 규칙으로 계산하는 유일한 출처입니다. */
     inline constexpr RHIFormatBlockInfo getRhiFormatBlockInfo( RHIFormat format )
     {

@@ -71,7 +71,10 @@ namespace sw
             return _controlIndex < other._controlIndex;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class IInputDevice
      * @brief 모든 하드웨어 · 가상 입력 장치가 구현해야 하는 추상 기반 인터페이스입니다.

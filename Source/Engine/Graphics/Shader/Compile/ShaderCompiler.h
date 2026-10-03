@@ -68,7 +68,10 @@ namespace sw
         const utf8* _pProfileSm5; ///< DXBC(D3D11) 프로파일("vs_5_0"). 없으면 nullptr
         const utf8* _pProfileSm6; ///< DXIL · SPIR-V 프로파일("vs_6_6")
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 스테이지의 표 한 줄입니다. `Count` 이상이면 버텍스 줄입니다(폴백). */
     inline const ShaderStageInfo& getShaderStageInfo( ShaderStage stage ) noexcept
     {
@@ -130,7 +133,10 @@ namespace sw
             return macro;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ShaderCompileDesc
      * @brief 셰이더 컴파일 요청 서술체입니다.
@@ -151,7 +157,10 @@ namespace sw
          */
         uint8 _bDebugCodegen = SW_FALSE;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ShaderCompileResult
      * @brief 셰이더 컴파일 결과입니다.
@@ -162,7 +171,10 @@ namespace sw
         string        _errorMessage;      ///< 실패했을 때의 컴파일러 오류 메시지
         bool          _bSuccess{ false }; ///< 컴파일 성공 여부
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class ShaderCompiler
      * @brief HLSL 소스를 RHI 백엔드별 바이트코드(DXIL, SPIR-V, DXBC)로 컴파일하는 파사드입니다.

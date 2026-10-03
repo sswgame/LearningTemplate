@@ -52,6 +52,10 @@ namespace sw
         GpuSpriteInstanceData _sprite{};
         uint32                _reserved{ 0 }; ///< 16 바이트 정렬을 채웁니다(112 바이트). 셰이더의 `reserved` 입니다
     };
+} // namespace sw
+
+namespace sw
+{
     static_assert( sizeof( GpuInstance ) == 112, "GpuInstance must match SwInstanceData (instancedata.hlsli) byte for byte" );
 
     /// @brief 같은 메시 · 머티리얼 · 퍼뮤테이션으로 그리는 인스턴스 배치입니다.
@@ -115,7 +119,10 @@ namespace sw
         /** @brief 배치의 머티리얼 인스턴스입니다. RT 가 upload() 에서 updateRhi 합니다. 수명은 이 shared_ptr 이 쥐어, 패킷이 살아 있는 동안 삽니다. */
         shared_ptr<MaterialInstance> _materialInstance;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct GpuMaterialElementKey
      * @brief 머티리얼 데이터 원소 하나를 가리키는 키, 곧 (머티리얼, 인스턴스) 쌍입니다.
@@ -133,7 +140,10 @@ namespace sw
             return _pMaterial == other._pMaterial && _pInstance == other._pInstance;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct GpuMaterialElement
      * @brief 머티리얼 데이터 원소 하나입니다. (머티리얼, 인스턴스) 쌍의 **소유**입니다.
@@ -145,7 +155,10 @@ namespace sw
         shared_ptr<Material>         _material;
         shared_ptr<MaterialInstance> _instance;
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief GpuMaterialElementKey 의 해시입니다. 포인터 둘을 섞습니다.
     struct GpuMaterialElementKeyHash
     {
@@ -157,7 +170,10 @@ namespace sw
             return hash;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct GpuShaderPermutation
      * @brief 머티리얼이 요구하는 셰이더 변형 하나(경로 + 정적 define)입니다.
@@ -176,7 +192,10 @@ namespace sw
         /// @brief (경로, define) 해시입니다. PSO 캐시 키이자 **배치 병합 키**입니다.
         uint64 _hash{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct GpuMaterialGroup
      * @brief 셰이더 타입(머티리얼 셰이더 경로)별 머티리얼 데이터 원소 목록입니다. CPU 스냅샷의 일부입니다.
@@ -190,14 +209,20 @@ namespace sw
         // (`GpuSceneBuilder::MaterialGroupState`). 스냅샷에는 RT 가 읽는 것만 싣는다. 표를 여기 두면
         // 프레임마다 패킷으로 복사된다(맵 하나 + 벡터 둘, 그룹마다).
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 인스턴스 배열에서 바뀐 구간 `[_start, _start + _count)` 입니다. */
     struct GpuInstanceRun
     {
         uint32 _start{ 0 };
         uint32 _count{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct GpuSceneSnapshot
      * @brief 게임 스레드가 만들고 렌더 패킷에 실어 렌더 스레드로 **옮기는 전부**입니다.

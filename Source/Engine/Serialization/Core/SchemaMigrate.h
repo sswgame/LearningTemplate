@@ -52,7 +52,10 @@ namespace sw
          */
         string _writtenName;
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) 스테이징 인스턴스: legacyTypeInfo 버퍼 생성 · 파괴
     //    $ctor 가 있으면 placement new + _destroyInstance, 없으면 멤버별로

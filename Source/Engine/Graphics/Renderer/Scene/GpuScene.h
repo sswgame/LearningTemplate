@@ -33,7 +33,10 @@ namespace sw
         RHIStructuredBufferSlot _indirectArgs;
         RHIStructuredBufferSlot _visibleInstances;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 배치의 가시 목록 정렬 방식입니다.
      * @details 컬링이 압축을 하면 자리 번호가 원자 연산의 완료 순서로 정해집니다. 불투명은 상관없지만
@@ -77,6 +80,10 @@ namespace sw
         uint32 _pad1{ 0 };
         uint32 _pad2{ 0 };
     };
+} // namespace sw
+
+namespace sw
+{
     static_assert( sizeof( GpuBatchInfo ) == 8 * sizeof( uint32 ), "GpuBatchInfo 는 uint 여덟(32바이트) — binding.hlsli SwBatchData · gpucull.hlsl GpuBatchInfo 와 같아야 한다" );
 
     /// @brief 머티리얼 그룹의 GPU 버퍼입니다. RT 가 소유하고, 셰이더 경로를 키로 스냅샷을 넘어 재사용합니다.
@@ -86,7 +93,10 @@ namespace sw
         /** @brief 마지막으로 올린 바이트입니다. 같으면 업로드를 건너뜁니다(언리얼처럼 바뀐 것만 올립니다). */
         vector<uint8> _lastBytes;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class GpuScene
      * @brief 렌더 스레드가 영속 소유하는 씬 GPU 상태입니다. 매 프레임 패킷의 스냅샷을 받아(`adoptCpuSnapshot`) 올립니다(`upload`).

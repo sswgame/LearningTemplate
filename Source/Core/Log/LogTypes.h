@@ -40,7 +40,10 @@ namespace sw
         int32    _line{ 0 };
         LogLevel _level = LogLevel::Info;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 비동기 lock-free 큐로 보내는 로그 레코드입니다. **출력 장치에 필요한 것이 모두** 들어 있습니다.
      * @details 포맷은 이미 끝나 있고(`_formatted`), 날짜 필드는 파일 출력이 시간별로 파일을 바꿀지 판단할 때 씁니다.

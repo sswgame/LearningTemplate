@@ -22,7 +22,10 @@ namespace sw
         uint8  _bContinuous{ SW_FALSE }; ///< 연속 충돌(CCD) 바디면 SW_TRUE — `step` 이 지난 자리에서 지금 자리까지 쓸어 그 사이에 닿은 것도 겹침으로 낸다
         uint8  _bTrigger{ SW_FALSE };    ///< 트리거면 SW_TRUE — 겹침은 내지만 막지 않는다(유니티 `isTrigger` · 언리얼 Overlap 반응). 받는 쪽이 이벤트에서 본다
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 콜라이더가 바디에 맞추는 값 한 벌입니다 — 자리 · 레이어 · 판정 방식(`PhysicsWorld::addBody` · `updateBody`). */
     struct PhysicsBodyState
     {
@@ -31,7 +34,10 @@ namespace sw
         uint8 _bContinuous{ SW_FALSE };
         uint8 _bTrigger{ SW_FALSE };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 바디를 옮기는 방식입니다(언리얼 `ETeleportType` · 유니티 `Rigidbody.MovePosition` 대 `position` 대입).
      * @details 연속 바디만 다릅니다 — `Sweep` 은 지난 step 의 자리에서 새 자리까지 쓸려 그 사이에 닿은 것과 겹치고, `Teleport` 는 그 사이를 건너뛴다
@@ -57,7 +63,10 @@ namespace sw
         uint8   _bTriggerA{ SW_FALSE }; ///< A 쪽 바디가 트리거인지
         uint8   _bTriggerB{ SW_FALSE }; ///< B 쪽 바디가 트리거인지
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class PhysicsWorld
      * @brief 겹침 질의 · 레이어 필터 · 겹침 이벤트입니다. 강체가 없어 `step` 은 적분하지 않고 겹침만 다시 잽니다.

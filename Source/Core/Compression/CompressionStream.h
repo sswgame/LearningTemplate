@@ -34,6 +34,10 @@ namespace sw
         uint64               _compressedSize{ 0 };
         uint32               _checksum{ 0 }; ///< 원본 데이터의 FNV-1a 체크섬(무결성 검증용)
     };
+} // namespace sw
+
+namespace sw
+{
 #pragma pack( pop )
 
     // 디스크 포맷이라 크기가 바뀌면 예전 스트림이 조용히 어긋난다. 주석으로 당부하는 대신 컴파일러가 지키게 한다.

@@ -21,7 +21,10 @@ namespace sw
         /** @brief 그래프 에디터에서의 노드 위치입니다. JSON 키는 그대로 "x"/"y" 라 파일 형식은 바뀌지 않습니다. */
         float2 _position{ 40.0f, 40.0f };
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 애니메이션 그래프 링크입니다. */
     struct AnimationGraphLink
     {
@@ -29,7 +32,10 @@ namespace sw
         int32 _fromNode{ 0 }; /**< 출발 노드 id 입니다. */
         int32 _toNode{ 0 };   /**< 도착 노드 id 입니다. */
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class AnimationGraphAsset
      * @brief BlendSpace · SpriteAnimator 와 노드 이름을 함께 쓰는 JSON 그래프입니다.

@@ -47,7 +47,10 @@ namespace sw
         uint32     _imageCount{ 0 };                        ///< 스왑체인 이미지 수(Vulkan)
         RHIBackend _backend{ RHIBackend::DirectX12 };       ///< 채운 디바이스의 백엔드
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class IRHIDevice
      * @brief DX11 · DX12 · Vulkan · OpenGL 하드웨어 디바이스 추상화입니다.

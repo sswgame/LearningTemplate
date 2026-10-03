@@ -37,7 +37,10 @@ namespace sw
         int2 _min{ 0, 0 }; ///< 정수판 AABB. float 판은 AABB2D 가 같은 모양이다
         int2 _max{ 0, 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 한 존의 ID · 역할 · 경계 · 태그입니다. */
     struct ZoneDef
     {
@@ -56,7 +59,10 @@ namespace sw
         /** @brief 태그를 추가합니다. */
         void addTag( string_view tag );
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) ZoneRuntime — 존 목록 + 활성 존 조회
     //    1개 맵 = 1개 기본 존(setFromMap)뿐이다. 여러 존을 채우는 로더는 아직 없다

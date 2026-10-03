@@ -42,7 +42,10 @@ namespace sw
         /** @brief `_ownerId` 의 공간입니다. 찾지 못한 참조를 남길 때만 뜻이 있습니다(다른 공간으로 저장할 때는 id 를 비우고 이름만 남깁니다). */
         ObjectIdSpace _idSpace{};
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class SceneComponent
      * @brief 로컬 트랜스폼 · 부모-자식 계층, float64 로 누적한 월드 위치(LWC), 카메라 상대 행렬을 제공하는 씬 컴포넌트입니다.

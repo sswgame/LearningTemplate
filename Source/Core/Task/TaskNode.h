@@ -33,7 +33,10 @@ namespace sw
         TaskArgsDelegate _delegate;
         TaskArgs         _args;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 병렬 그룹의 부모가 시작 조건(제출 + 선행)을 채웠을 때 띄울 그룹입니다.
      * @details 부모의 의존 수가 0 이 되는 순간 티켓을 올립니다(`TaskManager::resolveDependency` → `launchParallelGroup`) — README 의
@@ -45,7 +48,10 @@ namespace sw
         ParallelGroup* _pGroup{ nullptr };
         uint32         _ticketCount{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 타입을 지운 태스크 호출 대상 variant 입니다. 병렬 본문은 여기 없고 그룹이 가집니다.
      */
@@ -127,7 +133,10 @@ namespace sw
             }
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 동시에 살아 있는 병렬 그룹 수의 상한입니다(청크 수가 아닙니다). 넘치면 힙을 씁니다. */
     constexpr uint32 kParallelGroupPoolCapacity = 512;
     using ParallelGroupPool                     = LockFreeObjectPool<ParallelGroup, kParallelGroupPoolCapacity>;
@@ -165,7 +174,10 @@ namespace sw
         /** @brief 풀에서 왔는지 확인합니다. 부모를 잡은 그룹만 풀 · 힙에 있습니다. 스택 그룹은 마지막 티켓 뒤에 역참조하면 안 됩니다. */
         bool isPooled() const { return _pParent != nullptr; }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 스테이지입니다. 태스크 묶음의 완료를 기다리는 단위로, 매니저의 풀에서 오고 침입형 참조 계수로 수명을 관리합니다.
      * @details 스테이지는 **남은 수만 셉니다.** 태스크를 붙들지 않습니다. 태스크의 수명은 핸들과 큐가 잡은 참조가 정하고,
@@ -186,7 +198,10 @@ namespace sw
         /** @brief 마지막 참조가 놓이면 풀로 돌아갑니다. */
         void release();
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct InlineSuccessorList
      * @brief 후속 태스크 목록을 인라인 버퍼(최대 4개)에 담아 힙 할당을 피하는 small-vector 구조체입니다.
@@ -265,7 +280,10 @@ namespace sw
         /** @brief 목록의 모든 참조를 놓고 비웁니다. */
         void clearAndRelease();
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct TaskNode
      * @brief 사용자에게 보이는 태스크 하나입니다. 핸들 · 스테이지 · 후속 태스크 · 활성 수가 모두 여기에 연결됩니다.

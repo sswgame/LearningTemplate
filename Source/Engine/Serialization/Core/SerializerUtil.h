@@ -45,7 +45,10 @@ namespace sw
             return ( pBitmask[bitIndex / 8] & ( 1 << ( bitIndex % 8 ) ) ) != 0;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ScopedScratchInstance
      * @brief 임시 스크래치 인스턴스를 만들고, 범위를 벗어나면 반드시 파괴하는 RAII 래퍼입니다.
@@ -83,7 +86,10 @@ namespace sw
         vector<uint8>   _listStorage;
         void*           _pInstance{ nullptr };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @enum SchemaVersionSource
      * @brief 버전 번호를 **어디서 얻는지** 나타냅니다. 포맷마다 다릅니다.

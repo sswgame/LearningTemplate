@@ -44,7 +44,10 @@ namespace sw
         virtual ISequenceContainerWrapper* asSequence() { return nullptr; }
         virtual IMapContainerWrapper*      asMap() { return nullptr; }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 원소 하나를 채우는 콜백입니다. 인자는 **채울 원소의 주소**입니다. 실패하면 false 입니다.
      * @details 읽는 방법(바이너리 스트림 · JSON 값 · XML 노드)은 부르는 쪽이 알고, **그 값을 컨테이너에
@@ -113,7 +116,10 @@ namespace sw
             return fill( getElement( pContainer, elementCount - 1 ) );
         }
     };
+} // namespace sw
 
+namespace sw
+{
     using MapForEachDelegate = Delegate<void( const void* pKey, const void* pVal )>;
     /** @brief 맵 항목마다 부르는 콜백입니다. 키는 정렬 · 해시 키라 const, 값은 고쳐 써도 됩니다. */
     using MapForEachMutableDelegate = Delegate<void( const void* pKey, void* pVal )>;
@@ -154,7 +160,10 @@ namespace sw
         /** @brief 값을 파괴합니다. */
         virtual void destroyValue( void* pPtr ) const = 0;
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename TContainer>
     /// @brief vector 시퀀스 래퍼
     struct VectorWrapper : ISequenceContainerWrapper
@@ -205,7 +214,10 @@ namespace sw
             return true;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename TContainer>
     /// @brief list 시퀀스 래퍼
     struct ListWrapper : ISequenceContainerWrapper
@@ -257,7 +269,10 @@ namespace sw
             return true;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename TContainer>
     /// @brief deque 시퀀스 래퍼
     struct DequeWrapper : ISequenceContainerWrapper
@@ -305,7 +320,10 @@ namespace sw
             return true;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename TContainer>
     /// @brief set 시퀀스 래퍼 (인덱스 순회)
     struct SetWrapper : ISequenceContainerWrapper
@@ -403,7 +421,10 @@ namespace sw
             return true;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief unordered_set 래퍼입니다. `SetWrapper` 와 **하는 일이 같아 별칭입니다.**
      * @details 정렬 여부는 컨테이너의 성질이고, 이 래퍼가 하는 일(개수 · 비우기 · 순회 · 삽입 · 키/값 크기)은
@@ -456,7 +477,10 @@ namespace sw
         /** @brief 고정 배열은 원소를 지울 수 없습니다. */
         bool eraseAt( void*, size_t ) const override { return false; }
     };
+} // namespace sw
 
+namespace sw
+{
     template <typename TContainer>
     /// @brief map 키-값 래퍼
     struct MapWrapper : IMapContainerWrapper
@@ -526,7 +550,10 @@ namespace sw
         /** @brief 값을 파괴합니다. */
         void destroyValue( void* pPtr ) const override { static_cast<ValueType*>( pPtr )->~ValueType(); }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief unordered_map 래퍼입니다. `MapWrapper` 와 **하는 일이 같아 별칭입니다.**
      * @details 정렬 여부는 컨테이너의 성질이고, 이 래퍼가 하는 일(개수 · 비우기 · 순회 · 삽입 · 키/값 크기)은

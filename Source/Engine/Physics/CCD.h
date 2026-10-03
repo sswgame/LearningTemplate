@@ -20,7 +20,10 @@ namespace sw
         uint64     _hitObjectId{ 0 };
         SlotHandle _hitBody{};
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class CCD
      * @brief 빠른 투사체가 벽을 뚫고 지나가지 않게 하는 연속 충돌 감지(CCD) 스윕 알고리즘입니다.

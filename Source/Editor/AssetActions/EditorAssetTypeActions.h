@@ -41,7 +41,10 @@ namespace sw::editor
         /** @brief 뷰포트에 끌어 놓은 것을 처리합니다(스폰 · 로드). 처리하지 않으면 false 이고, 부르는 쪽이 열기로 넘어갑니다. */
         [[nodiscard]] virtual bool dropInViewport( GameObjectManager* pManager, const utf8* pPath, const float3& spawnPos ) const;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorAssetTypeActionsRegistry
      * @brief 종류 → 동작 등록부입니다. 등록은 정적 초기화 때 `EditorAssetTypeActionsRegistrar` 가 합니다.
@@ -59,7 +62,10 @@ namespace sw::editor
         /** @brief 경로가 속한 종류(`EditorAssetTypeRegistry::findKind`)의 동작입니다. 없으면 nullptr 입니다. */
         static const IEditorAssetTypeActions* findActionsForPath( string_view path );
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorAssetTypeActionsRegistrar
      * @brief 종류의 코드 파일에 정적 객체로 두면 동작을 만들어 등록하고, 모듈이 내려갈 때 지웁니다.

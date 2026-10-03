@@ -43,7 +43,10 @@ namespace sw
         RenderGraphResourceState _before{ RenderGraphResourceState::Undefined };
         RenderGraphResourceState _after{ RenderGraphResourceState::Undefined };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RenderGraphPassContext
      * @brief execute() 중 패스 콜백에 넘기는 컨텍스트입니다.
@@ -55,7 +58,10 @@ namespace sw
         const vector<hashed_string>* _pListOutputs{ nullptr };
         IRHICommandList*             _pCmdList{ nullptr }; ///< (선택) 병렬 기록 때의 활성 패스 커맨드 리스트
     };
+} // namespace sw
 
+namespace sw
+{
     using RenderGraphPassExecuteFn = Delegate<void( const RenderGraphPassContext& )>;
 
     /**
@@ -72,7 +78,10 @@ namespace sw
         /// @brief 배리어를 기록할 커맨드 리스트입니다. 병렬 경로는 레벨 첫 패스의 리스트(앞머리), 직렬 경로는 그 패스의 리스트입니다.
         IRHICommandList* _pCmdList{ nullptr };
     };
+} // namespace sw
 
+namespace sw
+{
     using RenderGraphLevelPrologueFn = Delegate<void( const RenderGraphLevelContext& )>;
 
     /**
@@ -128,7 +137,10 @@ namespace sw
             return RenderGraphResourceState::Undefined;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RenderGraphNode
      * @brief Render Graph 안의 렌더 패스 노드 하나입니다.
@@ -141,7 +153,10 @@ namespace sw
         RenderGraphPassExecuteFn _execute;          ///< 컴파일된 순서대로 부르는 패스 콜백(선택)
         bool                     _bCulled{ false }; ///< 쓰이지 않아 컬링됐는지 여부
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct RenderGraphResourceLifetime
      * @brief 리소스 하나의 사용 구간입니다(처음 · 마지막 사용 패스, 읽힘 · 쓰임 여부). 트랜지언트 앨리어싱 계산의 바탕이 되는 정보입니다.
@@ -154,7 +169,10 @@ namespace sw
         bool          _bWritten{ false };
         bool          _bRead{ false };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class RenderGraph
      * @brief 렌더 패스 사이의 자원 의존 관계를 만들고 위상 정렬로 실행 순서를 정하는 프레임워크입니다.

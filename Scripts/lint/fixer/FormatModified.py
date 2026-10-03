@@ -18,13 +18,14 @@ sys.path.insert(0, str(scriptDir.parent))       # Scripts/lint — 사촌 린트
 sys.path.insert(0, str(scriptDir.parents[1]))   # Scripts — common
 
 from gate import CheckIncludeOrder
+from gate import CheckNamespaceBlocks
 from fixer import FormatBranchBraces
 from fixer import FormatForwardDeclarations
 from common import getModifiedCppFiles, getProjectRoot, runClangFormatBatch, useUtf8Stdout
 
 #: 이 파일은 `LintFixer` 가 아니다 — 자기 변환이 없고, 다른 픽서 셋과 clang-format 을 **순서대로**
 #: 부르는 조율자다. `CheckFixersAreAlive` 가 이 이유를 읽고 건너뛴다 (이유 없는 예외는 없다).
-kFixerSkipReason = "픽서가 아니라 CheckIncludeOrder·픽서 둘·clang-format 을 순서대로 부르는 조율자다"
+kFixerSkipReason = "픽서가 아니라 CheckIncludeOrder · CheckNamespaceBlocks · 픽서 둘 · clang-format 을 순서대로 부르는 조율자다"
 
 
 def main() -> int:
@@ -53,6 +54,10 @@ def main() -> int:
             print(f"  - {violation}")
     else:
         print("  - Include 검사 OK")
+
+    # 1b. 한 namespace 블록에 클래스 · 구조체 정의가 여럿이면 정의마다 블록을 나눈다
+    for filePath in modifiedFiles:
+        CheckNamespaceBlocks.processFile(filePath, projectRoot, checkOnly=False)
 
     # 2. Forward Declaration 정렬 (enum -> struct -> class 및 그룹 간 빈 줄 삽입)
     print("\n[2/4] Forward Declaration 순서 및 그룹 정렬 중...")

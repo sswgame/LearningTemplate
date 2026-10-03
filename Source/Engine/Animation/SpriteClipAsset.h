@@ -25,7 +25,10 @@ namespace sw
         /** @brief 이 프레임을 보여 줄 시간(ms)입니다. 0 이하면 애니메이터의 프레임 속도를 씁니다(`getFrameDurationSeconds`). */
         int32 _durationMs{ 100 };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct SpriteClipKey
      * @brief 클립의 트랜스폼 키입니다(위치 · 회전을 시간에 따라 움직이는 선택 트랙). JSON 키는 "time" · "x" · "y" · "angleDeg" 입니다.
@@ -39,7 +42,10 @@ namespace sw
         float2  _position{ 0.0f, 0.0f };
         float32 _angleDeg{ 0.0f };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct SpriteClipAnimation
      * @brief 이름 붙은 프레임 구간 하나입니다(예: "run" = 프레임 4..7). 애니메이터의 `play( name )` 이 이 이름으로 구간을 찾습니다.
@@ -51,7 +57,10 @@ namespace sw
         int32  _frameCount{ 0 };
         uint8  _bLoop{ SW_TRUE };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class SpriteClipAsset
      * @brief `.sprite.json` 하나입니다. 에디터(SpriteClipPanel)가 쓰고 런타임(SpriteComponent · SpriteAnimatorComponent)이 읽는 **한 벌의 파서**입니다.

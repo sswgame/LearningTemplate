@@ -23,7 +23,10 @@ namespace sw::editor
         float3 _origin{};
         float3 _direction{}; ///< 정규화되어 있어야 합니다
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 피킹 결과. 맞은 것이 없으면 포인터가 nullptr입니다. */
     struct EditorPickResult
     {
@@ -31,7 +34,10 @@ namespace sw::editor
         Component*  _pComponent{ nullptr };
         float32     _distance{ 0.0f }; ///< 레이 원점에서의 거리
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @class EditorViewportPick
      * @brief 뷰포트 피킹 로직입니다. 경계는 컴포넌트가 선언하고(`SceneComponent::getWorldBounds`), 같은 거리에서 어느 종류가 이기는지는 이 안의 표가 정합니다.

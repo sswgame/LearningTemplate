@@ -73,7 +73,10 @@ namespace sw
         float32 getCenterX() const noexcept { return ( _min._x + _max._x ) * 0.5f; }
         float32 getCenterY() const noexcept { return ( _min._y + _max._y ) * 0.5f; }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct SpatialElement
      * @brief 2D 공간 트리에 등록되는 단위 객체입니다.
@@ -84,7 +87,10 @@ namespace sw
         AABB2D _bounds{};
         void*  _pUserData{ nullptr };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct SpatialElement3D
      * @brief 3D 공간 트리에 등록되는 단위 객체입니다.
@@ -95,7 +101,10 @@ namespace sw
         AABB   _bounds{};
         void*  _pUserData{ nullptr };
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct QuadTreeTraits
      * @brief 2차원 4분할 트리 정책입니다.
@@ -136,7 +145,10 @@ namespace sw
             };
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct OctreeTraits
      * @brief 3차원 8분할 트리 정책입니다.
@@ -172,7 +184,10 @@ namespace sw
             }
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class SpatialTree
      * @brief 2D/3D 공통 공간 분할 색인 템플릿입니다.

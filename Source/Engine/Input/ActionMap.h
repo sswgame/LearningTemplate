@@ -90,7 +90,10 @@ namespace sw
          */
         static uint32 getRebindSlotIndex( BindingKind kind );
     };
+} // namespace sw
 
+namespace sw
+{
     enum class ConflictResolution : uint8
     {
         Swap = 0,    ///< 기존 액션과 새 액션의 키를 서로 맞바꿈
@@ -174,7 +177,10 @@ namespace sw
             , _bAlwaysOn{ SW_FALSE }
             , _reserved{ 0 } {}
     };
+} // namespace sw
 
+namespace sw
+{
     enum class DigitalNormalization : uint8
     {
         Circular = 0,   ///< 대각선 입력 시 반경 1.0으로 정규화 (표준 3D/FPS 액션)
@@ -194,7 +200,10 @@ namespace sw
 
         constexpr bool isValid() const { return _index != kInvalidIndex; }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ActionBinding
      * @brief 단일 · 합성 · 스틱 · 조합 키 · 마우스 룩을 모두 담는 통합 바인딩입니다.
@@ -221,7 +230,10 @@ namespace sw
 
         ActionBinding() = default;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct DebugActionState
      * @brief 디버깅과 온스크린 뷰어용 실시간 액션 평가 상태입니다.
@@ -238,7 +250,10 @@ namespace sw
         uint8                  _bDown      : 1;
         [[maybe_unused]] uint8 _reserved   : 6;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class ActionMap
      * @brief 액션 · 레이어 · 바인딩을 담고 매 프레임 평가하는 통합 액션 맵입니다.

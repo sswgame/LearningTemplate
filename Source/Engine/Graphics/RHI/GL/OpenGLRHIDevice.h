@@ -48,7 +48,10 @@ namespace sw
         RHIPipelineStateHandle _boundGraphicsPso{ 0 };
         RHIPipelineStateHandle _boundComputePso{ 0 }; ///< setComputePipelineState 가 마지막으로 건 컴퓨트 PSO. dispatchCompute 는 이 프로그램을 쓴다
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class OpenGLRHIDevice
      * @brief OpenGL 4.6 그래픽스 · 컴퓨트 디바이스 구현입니다(SSBO · UBO 바인딩).
@@ -367,7 +370,10 @@ namespace sw
         uint8                  _bAtiMemInfo    : 1; ///< GL_ATI_meminfo 가 있다(남은 양)
         [[maybe_unused]] uint8 _reservedFlags  : 5;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @struct ScopedOpenGLContext
      * @brief 배타적 GL 컨텍스트 바인딩이 필요한 작업 동안 컨텍스트를 가져오고 놓는 RAII 가드입니다.

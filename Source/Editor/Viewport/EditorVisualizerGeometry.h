@@ -22,7 +22,10 @@ namespace sw::editor
         float3 _to{};
         float4 _color{ 1.0f, 1.0f, 1.0f, 1.0f };
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /**
      * @struct EditorVisualizerGeometryUtil
      * @brief 시각화가 함께 쓰는 월드 도형 계산입니다. 판정이 ImGui 밖에 있어야 `Test/EditorTest` 가 시험할 수 있습니다.

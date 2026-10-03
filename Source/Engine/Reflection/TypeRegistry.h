@@ -125,7 +125,10 @@ namespace sw
             _generation.store( 0, std::memory_order_relaxed );
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class TypeRegistry
      * @brief 리플렉션 TypeInfo / EnumInfo 를 등록 · 조회하고 별칭을 관리합니다.
@@ -425,7 +428,10 @@ namespace sw
         /** @brief 모든 타입 공급자가 등록을 끝냈는가(`markAllModuleTypesRegistered`). 기동 스레드가 쓰고 씬을 읽는 쪽이 읽습니다. */
         atomic<bool> _bAllModuleTypesRegistered;
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 7) TypeRegistrar — 정적 초기화로 Type 등록 함수를 체인에 연결
     //    Core TU는 getHead(), 핫리로드 모듈은 모듈 로컬 헤드
@@ -443,7 +449,10 @@ namespace sw
         /** @brief 핫리로드 모듈 등 외부 registrar 등록에 사용합니다. */
         TypeRegistrar( void ( *registerFunc )( TypeRegistry& ), TypeRegistrar*& pModuleHead );
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 8) EnumRegistrar — 정적 초기화로 Enum 등록 함수를 체인에 연결
     //    Core TU는 getHead(), 핫리로드 모듈은 모듈 로컬 헤드
