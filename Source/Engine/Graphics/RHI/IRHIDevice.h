@@ -91,10 +91,11 @@ namespace sw
         /**
          * @brief GPU 에 제출된 작업이 모두 끝날 때까지 기다립니다.
          * @details **렌더 스레드가 떠 있고 다른 스레드에서 부르면, 먼저 렌더 스레드가 받은 일을 모두 끝낼 때까지 기다립니다**
-         *          (`setRenderThreadDrain`). 예전에는 비동기 씬 로드 완료(`SceneManager::tickTransitions`) · 텍스처 · 머티리얼 핫 리로드가 게임
-         *          스레드에서 곧바로 장치 대기를 불러, 렌더 스레드가 프레임을 기록 · 제출하는 도중에 펜스 Signal 과 해제 큐 비우기가 끼어들었습니다
-         *          (DX12: 아직 실행 전인 명령 할당자 재사용 → 장치 제거, Vulkan: 큐 외부 동기화 위반). 에디터 빌드는 UI 가 렌더 스레드를 먼저 비워
-         *          가려져 있었고, 에디터가 없는 빌드(Shipping)에서만 드러났습니다. 실제 대기는 백엔드의 `waitIdleInternal` 입니다.
+         *          (`setRenderThreadDrain`). 게임 스레드에서 부르는 쪽(비동기 씬 로드 완료 `SceneManager::tickTransitions` · 텍스처 · 머티리얼
+         *          핫 리로드)도 이 순서를 지납니다. 실제 대기는 백엔드의 `waitIdleInternal` 입니다.
+         * @warning 렌더 스레드가 프레임을 기록 · 제출하는 도중에 펜스 Signal 과 해제 큐 비우기가 끼어들면 DX12 는 아직 실행 전인 명령
+         *          할당자를 재사용해 장치가 제거되고, Vulkan 은 큐 외부 동기화를 어깁니다. 에디터 빌드는 UI 가 렌더 스레드를 먼저 비워
+         *          이것을 가리므로, 이 경로는 에디터가 없는 빌드(Shipping)로 확인합니다.
          */
         void waitIdle();
 
@@ -135,11 +136,10 @@ namespace sw
          */
         virtual RHICapabilities getCapabilities() const { return RHIAvailability::query( getBackendType() ); }
         /**
-         * @brief 프레임 기록을 열고 백버퍼를 준비합니다.
-         * @details 예전에는 이 셋(beginFrame · endFrame · resize)이 `IRHISwapChain` 에 있었습니다. 그런데 스왑체인 구현 넷 중 셋은
-         *          디바이스로 그대로 넘기기만 했고, DX12 만 내용이 있었는데 그 내용이 모두
-         *          디바이스의 private 멤버를 만지는 것이라 `friend` 가 필요했습니다. 분리가 아니라
-         *          분리의 반대였습니다. 프레임 수명주기는 디바이스의 일이므로 여기로 올렸습니다.
+         * @brief 프레임 기록을 엽니다. 프레임당 정확히 한 번, 그 프레임의 어떤 기록보다 먼저 부릅니다.
+         * @details **수명주기 전용**입니다 — 펜스 대기(GPU 백프레셔) · 스왑체인 이미지 획득 · 기록 시작만 하고 렌더 타깃을 바인딩하지 않습니다.
+         *          백버퍼 바인딩과 클리어는 `IRHICommandList::beginRenderPass`(타깃 핸들 0)가 명시적으로 합니다(`RenderThread::executeFrameBody`).
+         *          프레임 수명주기(beginFrame · endFrame · resize)는 디바이스의 일입니다 — 스왑체인 쪽에 두면 디바이스의 private 상태를 만져야 합니다.
          * @note 스왑체인 자체(백버퍼 · 이미지 인덱스 · 동기화 · present)는 백엔드 안의 구체 클래스
          *       `<백엔드>RHISwapChain` 이 소유합니다. 가상 인터페이스로 되돌리지 않습니다(Graphics/README.md). GL 에는 없습니다.
          */
@@ -180,8 +180,7 @@ namespace sw
          * @brief 백버퍼 크기를 바꿉니다. 채택된 크기는 `getBackBufferWidth/Height` 가 답합니다.
          * @details 크기를 여기 적어 두는 이유: 렌더러가 첨부 크기를 정할 때 **창에 묻지 않고 디바이스에 묻게**
          *          하려는 것입니다. 렌더러가 보는 것은 스왑체인이지 OS 창이 아닙니다(언리얼 `FRHIViewport` 의 자리).
-         *          예전에는 `FrameRenderer` 가 `IWindow::getActiveWindow()` 전역을 읽었고, 그래서 Graphics 가
-         *          Window 를 include 했습니다.
+         *          그래서 Graphics 는 Window 를 include 하지 않습니다.
          */
         void resize( uint32 width, uint32 height );
         /** @brief 백버퍼 너비입니다. initialize 때는 표면 크기이고, 그 뒤로는 마지막 `resize` 값입니다. */
@@ -194,8 +193,7 @@ namespace sw
          * @brief 디바이스가 소유한 **프레임 스트림**에 기록하는 컨텍스트입니다.
          * @details beginFrame/endFrame 이 여는 디바이스 커맨드 리스트(버퍼)에 그대로 기록합니다.
          *          RenderThread 가 백버퍼 렌더 패스를 여는 경로가 이것입니다. 패스별 기록은 자기
-         *          네이티브 버퍼를 소유하는 IRHICommandList 가 따로 합니다.
-         *          예전에는 Immediate/Deferred 두 슬롯이 있었지만 모드 구분이 사라져 스트림은 하나입니다.
+         *          네이티브 버퍼를 소유하는 IRHICommandList 가 따로 합니다. 프레임 스트림은 디바이스마다 하나입니다.
          */
         virtual IRHICommandContext* getFrameStreamContext() = 0;
 
@@ -281,10 +279,8 @@ namespace sw
         void setPreferredVSync( bool bVSync ) { _bPreferredVSync = bVSync; }
         /**
          * @brief 실제로 채택된 VSync 값입니다(설정값 → CLI `--VSYNC` 순으로 정해집니다).
-         * @details **프레젠트 경로가 읽어야 하는 값이 이것입니다.** 예전에는 `RenderThread` 가
-         *          `endFrame( true )` 를 못박고 있어서 설정도 CLI 도 아무 효과가 없었습니다.
-         *          `RHISwapChainDesc::_bVSync` 는 채워지기만 하고 아무도 읽지 않는 필드였고,
-         *          그래서 `_bVSync: false` 설정으로도 프레임이 모니터 주사율에 묶여 있었습니다.
+         * @details **프레젠트 경로가 읽어야 하는 값이 이것입니다.** 주의: `endFrame` 의 vsync 인자를 상수로 박으면 설정도
+         *          CLI 도 효과가 없어 프레임이 모니터 주사율에 묶입니다.
          */
         bool isVSyncEnabled() const { return _bPreferredVSync; }
         // ------------------------------------------------------------------------------

@@ -2,7 +2,7 @@
  * @file RHIGpuTimestamp.h
  * @brief GPU 타임스탬프 칸을 마이크로초 목록으로 푸는 규칙입니다. 네 백엔드의 공통부입니다.
  * @details 백엔드마다 다른 것은 틱을 **읽는 방법**(쿼리 객체 · 리드백 버퍼 · 가용 비트)과 틱의 단위뿐입니다. 기준점을 고르고
- *          (가장 이른 시각이지 번호가 낮은 칸이 아닙니다) 안 적힌 칸을 음수로 표시하는 규칙은 넷이 같은 스무 줄을 각자 들고 있었습니다.
+ *          (가장 이른 시각이지 번호가 낮은 칸이 아닙니다) 안 적힌 칸을 음수로 표시하는 규칙은 넷이 같으므로 여기 한 벌만 둡니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @class RHIGpuTimestamp
-     * @brief 읽힌 틱 배열과 준비 비트를 받아 마이크로초 목록을 냅니다. 디바이스가 없어도 돌아 `RHISupportTest` 가 검증합니다.
+     * @brief 읽힌 틱 배열과 준비 비트를 받아 마이크로초 목록을 냅니다. 디바이스가 없어도 돌아 `RHIGpuTimestampTest` 가 검증합니다.
      */
     class SW_API RHIGpuTimestamp
     {

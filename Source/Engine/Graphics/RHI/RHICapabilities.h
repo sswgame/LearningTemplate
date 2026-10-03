@@ -12,8 +12,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @note 비트필드 대신 uint8 입니다. DLL · 컴파일러 간 패킹 · true 대입 문제를 피합니다. 0/1 만 씁니다.
-     * @note **여기에 에디터 능력을 다시 넣지 말 것.** 예전에 `_bEditorSupported` · `_bImGuiHooks` 가 있었는데
-     *       네 백엔드가 모두 1 이라 검사하는 쪽이 모두 죽은 분기였고, 무엇보다 "이 백엔드로 에디터가 도는가" 는
+     * @note **여기에 에디터 능력을 넣지 말 것.** "이 백엔드로 에디터가 도는가" 는
      *       디바이스가 아니라 **에디터가 아는 사실**입니다(ImGui 렌더러 백엔드가 있느냐). 그 답의 기준은
      *       `IImGuiRendererBackend::createRendererBackend` 하나이고, 없으면 nullptr 을 반환합니다.
      */
@@ -109,7 +108,7 @@ namespace sw
                     // **디바이스가 있으면 이 값을 믿지 말 것.** `D3D11RHIDevice::getCapabilities` 가
                     // `D3D11_FEATURE_THREADING` 조회 결과로 이 항목을 덮어 **참이 될 수 있다**. 여기 FALSE 는
                     // "드라이버를 모를 때의 보수적 기본값" 이지 "DX11 은 병렬로 기록하지 않는다" 가 아니다.
-                    // 그 둘을 혼동해 병렬 테스트가 DX12 만 돌았고, DX11 병렬 경로의 레이스 둘이 오래 살았다.
+                    // 둘을 혼동하면 병렬 테스트가 DX11 병렬 경로를 건너뛴다.
                     caps._bParallelCommandRecording   = SW_FALSE;
                     caps._bThreadSafeResourceCreation = SW_TRUE;
                     break;
@@ -121,10 +120,9 @@ namespace sw
                     caps._bOffscreenRT    = SW_TRUE;
                     caps._bIndirectDraw   = SW_TRUE;
                     caps._bGpuCulling     = SW_TRUE;
-                    // 오래 꺼져 있었다. GL 만 정점 셰이더가 풀에서 **한 칸 앞 원소**를 읽었다. 엔진이 준 바이트는
-                    // 모두 되읽어 맞았고, 원인은 드라이버가 early-return 모양의 `swComputeMorphElement` (DXC 가
-                    // OpSwitch(0) 구조로 내는 코드) 를 잘못 컴파일한 것이었다. 분기 없는 한 식으로 바꾸자 네
-                    // 백엔드가 같다(binding.hlsli 주석). 회귀는 RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 잡는다.
+                    // 주의: GL 드라이버는 early-return 모양의 `swComputeMorphElement`(DXC 가 OpSwitch(0) 구조로 내는 코드)를
+                    // 잘못 컴파일해 풀에서 **한 칸 앞 원소**를 읽는다. 셰이더 쪽은 분기 없는 한 식이어야 한다(binding.hlsli 주석).
+                    // 회귀는 RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 잡는다.
                     caps._bGpuMeshMorph             = SW_TRUE;
                     caps._bMultiDrawIndirect        = SW_TRUE;
                     caps._bParallelCommandRecording = SW_FALSE;
@@ -141,13 +139,11 @@ namespace sw
                     caps._bOffscreenRT    = SW_TRUE;
                     caps._bIndirectDraw   = SW_TRUE;
                     caps._bGpuCulling     = SW_TRUE;
-                    // 한때 "Vulkan 도 GL 과 같이 깨졌다" 고 적었는데 **그것은 구운 셰이더가 낡았던 것**이다
-                    // (`forwardlit` 바이너리가 라이트 버퍼 이전 것이었다). 베이크 신선도 판정을 파일
-                    // 시간에서 내용 해시로 바꾼 뒤 다시 재니 DX12 · DX11 과 픽셀 수가 같다. 백엔드 하나가
-                    // 다른 그림을 낼 때 **셰이더 산출물부터 의심할 것**(백로그 1-4 참고).
+                    // 주의: 백엔드 하나가 다른 그림을 내면 **구운 셰이더 산출물이 낡았는지부터 의심할 것**
+                    // (`App.exe --bake-shaders` 로 다시 굽고 견준다). Vulkan 의 모프는 DX12 · DX11 과 픽셀 수가 같다.
                     caps._bGpuMeshMorph      = SW_TRUE;
                     caps._bMultiDrawIndirect = SW_TRUE;
-                    // 리스트가 자기 VkCommandPool + VkCommandBuffer + 기록 상태를 소유한다(S4).
+                    // 리스트가 자기 VkCommandPool + VkCommandBuffer + 기록 상태를 소유한다.
                     // 풀이 리스트마다 따로여야 하는 이유는 VkCommandPool 이 외부 동기화 대상이기
                     // 때문이다. DX12 의 커맨드 얼로케이터와 같은 제약이다.
                     caps._bParallelCommandRecording   = SW_TRUE;

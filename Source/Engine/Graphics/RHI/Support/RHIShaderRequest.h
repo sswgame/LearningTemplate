@@ -1,10 +1,9 @@
 /**
  * @file RHIShaderRequest.h
  * @brief 파이프라인 서술체(RHIPipelineStateDesc)를 셰이더 컴파일 요청으로 해석하는 규칙입니다. 네 백엔드의 공통부입니다.
- * @details 예전에는 DX11 · DX12 · GL · Vulkan 이 각자 desc 를 읽었습니다: 진입점 기본값, define 파싱, "RT 0 개 = 픽셀 스테이지
- *          없음" 판정, RT 수 정규화, 캐시-아니면-컴파일. 같은 규칙을 네 곳에 복사해 두니 한 곳만 빠지거나 늦게
- *          따라갔습니다. Vulkan 은 define 을 아예 안 읽었고, DX12 만 뎁스 전용 파이프라인에 PS 를 붙였습니다. 여기서 한 번
- *          해석한 요청을 백엔드가 받기만 하면, 축이 하나 더 들어올 때(마스크드 그림자의 PS 같은) 고칠 자리도 하나입니다.
+ * @details 진입점 기본값, define 파싱, "RT 0 개 = 픽셀 스테이지 없음" 판정, RT 수 정규화, 캐시-아니면-컴파일을 여기서 한 번
+ *          해석하고 백엔드는 그 요청을 받기만 합니다. 백엔드마다 desc 를 따로 읽으면 한 곳만 규칙을 빠뜨립니다(define 무시,
+ *          뎁스 전용 파이프라인에 PS 붙이기). 축이 하나 더 들어올 때(마스크드 그림자의 PS 같은) 고칠 자리도 하나입니다.
  *          백엔드 고유의 것(입력 레이아웃 · 상태 객체 · API 호출)은 그대로 백엔드에 남습니다. 정책은 Engine, 메커니즘은 디바이스입니다.
  */
 #pragma once
@@ -48,7 +47,7 @@ namespace sw
         static ShaderCompileResult compile( const ShaderCompileDesc& desc );
 
         /**
-         * @brief 그래픽스 요청의 정점 · (있으면) 픽셀 스테이지를 컴파일합니다. DX12 · GL · Vulkan 이 같은 일곱 줄을 각자 들고 있었습니다.
+         * @brief 그래픽스 요청의 정점 · (있으면) 픽셀 스테이지를 컴파일합니다. DX12 · GL · Vulkan 이 같이 씁니다.
          * @return 정점 스테이지가 성공했고, 픽셀은 없거나 성공했으면 true. 실패한 쪽의 메시지는 그 결과에 남습니다.
          */
         [[nodiscard]] static bool compileGraphics( const RHIGraphicsShaderRequest& request, ShaderCompileResult& outVertex, ShaderCompileResult& outPixel );

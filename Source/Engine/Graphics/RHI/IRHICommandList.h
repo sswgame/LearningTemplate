@@ -50,8 +50,8 @@ namespace sw
         /**
          * @brief 삼각형 리스트를 그립니다.
          * @details 상수버퍼(b0/b1)는 여기 인자가 아니라 **bindConstantBuffer( index, shaderslot::k*ConstantBuffer )** 로
-         *          미리 겁니다. 예전에는 draw( …, passCb, materialCb ) 위치 인자였는데, 자리를 하나 바꿔 넘긴 호출 한 줄이
-         *          네 백엔드에서 동시에 검은 화면을 냈습니다. 슬롯은 언제나 이름(계약 상수)으로 지정합니다.
+         *          미리 겁니다. 슬롯은 언제나 이름(계약 상수)으로 지정합니다 — 상수버퍼를 위치 인자로 받으면 자리를 하나
+         *          바꿔 넘긴 호출 한 줄이 네 백엔드에서 동시에 검은 화면을 냅니다.
          */
         virtual void draw( uint32 vertexCount, uint32 startVertex = 0 ) = 0;
         /**
@@ -162,10 +162,8 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 간접 인자로 그립니다. **한 번 그리는 것은 drawCount == 1 인 멀티 드로우입니다.**
-         * @details 예전에는 drawIndirect 와 multiDrawIndirect 가 따로 있었습니다. 둘은 같은 일을 하는데 개수만
-         *          다르고, 나뉘어 있는 동안 **멀티 쪽만 조용히 틀려 있었습니다.** GL 은 PSO 프로그램 · 토폴로지를
-         *          안 걸고 GL_TRIANGLES 로 굳혔고, Vulkan 은 정점 버퍼 바인딩을 빠뜨렸습니다. 아무도 안 부르는
-         *          경로라 드러나지 않았습니다. 하나로 합치면 그럴 자리가 없습니다.
+         * @details 단일 · 멀티 드로우를 한 함수로 둡니다. 개수만 다른 두 경로로 나누면 안 쓰이는 쪽이 조용히 틀립니다
+         *          (PSO 프로그램 · 토폴로지 · 정점 버퍼 바인딩 누락).
          * @param argumentBuffer       `RHIDrawIndirectCommand` 배열.
          * @param argumentBufferOffset 첫 커맨드의 바이트 오프셋.
          * @param drawCount            그릴 커맨드 수. 커맨드는 연속으로 놓여 있다고 봅니다.

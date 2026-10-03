@@ -24,8 +24,7 @@ namespace sw
      * @details Win32 PrintWindow 캡처는 DX11 · GL · Vulkan 에서 빈 화면이 자주 나옵니다. 스왑체인이 GDI 로
      *          합성되지 않기 때문입니다. 그래서 GPU 에서 직접 읽습니다(readbackTexture2D).
      *          PPM 은 인코더가 필요 없어 의존성이 늘지 않습니다. `-gv_profileFrames` 와 같이 쓰면 찍고 종료합니다.
-     * @note 셋 모두 이 파일이 유일한 소비자입니다. 예전에는 선언이 `EngineLoop.cpp` 에 있고 여기서 `extern` 으로
-     *       끌어 썼습니다. 타입이 어긋나도 링커까지 가야 걸리는 형태라 쓰는 자리로 내렸습니다.
+     * @note 셋 모두 이 파일이 유일한 소비자라 여기서 정의합니다. 다른 파일에서 `extern` 으로 끌어 쓰면 타입이 어긋나도 링커까지 가야 걸립니다.
      */
     SW_TEST_GLOBAL_VARIABLE_STRING( gv_screenshot, "", "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)", SW_KEEP_IN_SHIPPING );
 
@@ -35,8 +34,8 @@ namespace sw
     /**
      * @brief `-gv_screenshotFrame=<N>` 입니다. 몇 번째 프레임에서 찍을지 정합니다(기본 10, 10 보다 작으면 10).
      * @details 시간에 따라 움직이는 것(GPU 인스턴스 회전 등)을 검증하려면 **서로 다른 시각**의 장면이
-     *          필요합니다. 예전에는 워밍업 10 프레임이 고정이라 `-gv_profileFrames` 를 아무리 늘려도 늘 같은
-     *          시각이 찍혔고, 그것을 모르고 비교하면 "움직이지 않는다" 는 잘못된 결론이 나옵니다.
+     *          필요합니다. 주의: `-gv_profileFrames` 는 찍는 시각을 바꾸지 않습니다 — 같은 프레임 번호끼리 비교하면
+     *          "움직이지 않는다" 는 잘못된 결론이 나옵니다.
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)", SW_KEEP_IN_SHIPPING );
 
@@ -320,14 +319,10 @@ namespace sw
         //
         // **무엇을 기다리는지는 아래 스코프들이 답한다**: `RT.BeginFrame`(GPU 백프레셔) ·
         // `RT.ExecutePacket`(기록) · `RT.PresentHook`(에디터 UI) · `RT.Present`(제출).
-        // 예전에는 여기에 "RT.Frame 에서 RT.Present 를 빼면 기록 시간" 이라고 적혀 있었는데 **틀렸다.**
-        // GPU 대기의 대부분은 Present 가 아니라 `beginFrame` 에 있고(이번 프레임 얼로케이터가 풀릴 때까지
-        // 펜스를 기다린다), 그 시간이 스코프 없이 `RT.Frame` 에만 잡혀서 통째로 "기록" 으로 오인됐다.
-        //
-        // 2026-09-20 실측(Release · DX12 · 벤치 큐브 2000 · 600프레임):
-        //   RT.Frame 1021us = BeginFrame 516 + ExecutePacket 393 + Present 110 (합이 맞는다)
-        // 큐브를 200 개로 줄여도 BeginFrame 은 455us 로 거의 안 줄었다. 이 대기는 **씬 복잡도가
-        // 아니라 GPU · 프레임 페이싱**이 정한다. 기록 경로를 CPU 에서 깎아도 프레임은 안 줄어든다.
+        // 주의: "RT.Frame - RT.Present = 기록 시간" 이 아니다. GPU 대기의 대부분은 Present 가 아니라 `beginFrame` 에
+        // 있다(이번 프레임 얼로케이터가 풀릴 때까지 펜스를 기다린다). 그 대기는 **씬 복잡도가 아니라 GPU · 프레임
+        // 페이싱**이 정한다(Release · DX12 벤치에서 큐브 2000 → 200 으로 줄여도 거의 그대로다). 기록 경로를 CPU 에서
+        // 깎아도 프레임은 줄지 않는다.
         SW_PROFILE_SCOPE( "RT.Frame" );
 
         ensureContextOnCurrentThread();
@@ -340,10 +335,9 @@ namespace sw
             return false;
         }
 
-        // 프레임 수명주기는 경로와 무관하게 항상 여기서 한 번 연다. 예전에는 오프스크린 경로에서만
-        // beginFrame 을 그래프 뒤로 미뤄 뒀는데, 그것은 "백버퍼를 바인딩할 다른 수단이 없어서" 위치로
-        // 대신하던 것이었다(docs/05_RHI_FrameContract.md 의 R2). 그 역할은 아래 명시적 백버퍼
-        // 렌더 패스가 맡는다. 이 둘은 반드시 같이 있어야 한다.
+        // 프레임 수명주기는 경로와 무관하게 항상 여기서, 어떤 기록보다 먼저 한 번 연다. `beginFrame` 은 렌더 타깃을
+        // 바인딩하지 않는다 — 백버퍼를 잡는 것은 아래 명시적 백버퍼 렌더 패스(핸들 0) 하나뿐이다. 이 둘은 반드시
+        // 같이 있어야 한다(백버퍼 렌더 패스를 빼면 UI 가 직전 타깃 · 상태에 그려지고 DX12 는 DEVICE_HUNG 이 난다).
         // 제출 정책은 매 프레임 갱신한다. 런타임에 gv 를 토글해도 다음 프레임부터 바로 먹힌다.
         // 즉시 모드는 제출 횟수가 늘어 성능이 크게 떨어지므로, 모르고 그 상태로 재는 일이 없도록
         // 바뀐 순간에 한 번 남긴다.
@@ -355,16 +349,13 @@ namespace sw
         _pDevice->setImmediateSubmit( gv_rhiImmediateSubmit );
         {
             // **여기가 GPU 백프레셔다.** 백엔드의 `beginFrame` 은 이번 프레임이 쓸 커맨드
-            // 얼로케이터 · 프레임 리소스가 풀릴 때까지 펜스를 기다린다. 스코프가 없을 때는 이 시간이
-            // `RT.Frame` 에만 잡혀 어디로 갔는지 표에 안 보였다. "RT.Frame 에서 RT.Present 를 빼면
-            // 기록 시간" 으로 읽던 차이의 대부분이 실은 이 대기였다.
+            // 얼로케이터 · 프레임 리소스가 풀릴 때까지 펜스를 기다린다.
             SW_PROFILE_SCOPE( "RT.BeginFrame" );
             _pDevice->beginFrame( packet._clearColor );
         }
 
-        // 게임뷰 렌더 타깃을 잡는다. 예전에는 beginOffscreenPass 였는데, 그것은 "렌더 타깃 바인딩" 과 "백엔드마다
-        // 다른 스트림 분리" 가 섞인 API 였다(Vulkan 만 별도 커맨드 버퍼 + 블로킹 제출).
-        // 렌더 타깃 바인딩은 beginRenderPass 로 충분하다(docs/05_RHI_FrameContract.md S3).
+        // 게임뷰 렌더 타깃을 잡는다. 오프스크린도 프레임 스트림과 같은 스트림 · 같은 제출이고, 순서는 큐 순서와
+        // 아래 prepareTextureForShaderRead 의 배리어가 보장한다(별도 스트림 · 블로킹 제출을 두지 않는다).
         if ( bOffscreen )
         {
             RHIRenderPassBeginInfo gameViewPass{};
@@ -405,8 +396,7 @@ namespace sw
 
         if ( _presentHook.isBound() )
         {
-            // 에디터 UI 가 이 훅으로 백버퍼에 그린다. 에디터를 켜면 이게 프레임의 큰 몫인데
-            // 스코프가 없어서 `RT.Frame` 안에 통째로 묻혀 있었다.
+            // 에디터 UI 가 이 훅으로 백버퍼에 그린다. 에디터를 켜면 이게 프레임의 큰 몫이다.
             SW_PROFILE_SCOPE( "RT.PresentHook" );
             _presentHook( *_pDevice, packet );
         }
@@ -415,16 +405,14 @@ namespace sw
             // 제출과 Present. GPU 가 밀리면 여기서 기다린다.
             SW_PROFILE_SCOPE( "RT.Present" );
             // VSync 는 **디바이스가 채택한 값**이다. 여기 true 를 못박아 두면 EngineConfig 의
-            // `_window._bVSync` 와 CLI `--VSYNC` 가 둘 다 죽는다. 실제로 죽어 있었고,
-            // `_bVSync: false` 설정으로도 프레임이 모니터 주사율에 정확히 붙어 있었다.
+            // `_window._bVSync` 와 CLI `--VSYNC` 가 둘 다 무시되고 프레임이 모니터 주사율에 붙는다.
             _pDevice->endFrame( _pDevice->isVSyncEnabled() );
         }
 
         // -gv_screenshot=<path> : 한 장만 찍는다.
         //  - **endFrame 뒤여야 한다.** 그 전에는 커맨드 리스트가 기록만 됐고 아직 큐에 나가지 않아,
         //    읽어 보면 클리어 색만 나온다.
-        //  - **몇 프레임 기다려야 한다.** 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 게 없다
-        //    (그래서 처음엔 네 백엔드 중 하나만 지오메트리가 보였다).
+        //  - **몇 프레임 기다려야 한다.** 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 게 없다.
         if ( gv_screenshot.empty() == false && _bScreenshotTaken == SW_FALSE && _pFrameRenderer != nullptr )
         {
             // 최소 몇 프레임은 기다려야 한다. 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 것이 없다.
@@ -437,7 +425,7 @@ namespace sw
             {
                 _bScreenshotTaken = SW_TRUE;
                 // 기본은 **Present 결과 캡처**, 곧 화면에 나간 그림이다. 캡처가 없으면 Present 가 읽는 첨부로 물러난다.
-                // 예전에는 `"SceneColor"` 리터럴이라 그 이름이 없는 파이프라인(디퍼드)에서는 한 장도 안 찍혔다.
+                // 첨부 이름을 리터럴로 박지 말 것 — 그 이름이 없는 파이프라인(디퍼드)에서는 한 장도 안 찍힌다.
                 const string_view attachment{ gv_screenshotAttachment };
                 if ( attachment.empty() == false )
                 {
@@ -446,7 +434,7 @@ namespace sw
                 }
                 else if ( _pFrameRenderer->dumpPresentCaptureToPpm( gv_screenshot ) == false )
                 {
-                    // 캡처가 없으면(오프스크린 출력 등) 예전 방식대로 Present 가 **읽는** 첨부를 찍는다.
+                    // 캡처가 없으면(오프스크린 출력 등) Present 가 **읽는** 첨부를 찍는다.
                     // 그 그림에는 Present 패스가 한 일(톤맵 등)이 들어 있지 않다.
                     string_view fallback = _pFrameRenderer->getPresentedAttachmentName();
                     if ( fallback.empty() )

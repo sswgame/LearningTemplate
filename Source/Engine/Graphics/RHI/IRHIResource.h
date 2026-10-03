@@ -60,9 +60,8 @@ namespace sw
          * @brief Structured / Storage 버퍼의 **여러 조각**을 한 번에 갱신합니다.
          * @param pBaseSource 조각들의 `_srcOffset` 이 가리키는 원본 블롭.
          *
-         * @details 오프셋이 필요한 이유는 하나입니다. **바뀐 것만 올리기 위해서입니다.** 인스턴스 버퍼는
-         *          하나만 움직여도 전체를 다시 올리고 있었고, 8000 개 중 10 개만 움직여도 800 개를
-         *          움직일 때와 같은 100 us 를 썼습니다(`docs/06_Backlog.md` 2026-09-20).
+         * @details 오프셋이 필요한 이유는 하나입니다. **바뀐 것만 올리기 위해서입니다.** 인스턴스 8000 개 중 10 개만
+         *          움직였는데 버퍼 전체를 올리면 800 개가 움직일 때와 같은 비용을 냅니다.
          *
          * @warning 크기와 마찬가지로 **범위를 백엔드가 검사해 주지 않습니다.** `byteOffset + size` 가
          *          버퍼를 넘으면 버퍼 밖까지 씁니다. 부르는 쪽이 지켜야 합니다.
@@ -112,10 +111,9 @@ namespace sw
         /**
          * @brief 내용을 실어 인덱스 버퍼(uint16 · uint32)를 만듭니다. 인덱스 크기는 걸 때(`setIndexBuffer`) 다시 알려 줍니다.
          * @details 백엔드마다 **인덱스 버퍼 용도**로 만들어야 합니다(D3D11_BIND_INDEX_BUFFER · VK_BUFFER_USAGE_INDEX_BUFFER_BIT 등).
-         *          예전의 기본 구현은 구조버퍼를 만들었고 DX11 · DX12 · Vulkan 이 그것을 그대로 썼습니다. 구조버퍼는 인덱스 버퍼
-         *          용도가 아닙니다(D3D11 은 BUFFER_STRUCTURED 에 BIND_INDEX_BUFFER 를 붙일 수 없고, Vulkan 은 검증 레이어가 용도
-         *          위반으로 잡습니다). 드라이버가 받아 줘서 그려진 백엔드도 있었지만 규칙 밖이었습니다. 엔진이 아직 인덱스 메시를
-         *          쓰지 않아 드러나지 않았습니다(RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream).
+         *          주의: 구조버퍼로 대신하면 안 됩니다(D3D11 은 BUFFER_STRUCTURED 에 BIND_INDEX_BUFFER 를 붙일 수 없고, Vulkan 은
+         *          검증 레이어가 용도 위반으로 잡습니다). 드라이버가 받아 줘서 그려지는 백엔드도 있어 그림만으로는 드러나지 않습니다
+         *          (RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream).
          */
         virtual RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride = 4 ) = 0;
 

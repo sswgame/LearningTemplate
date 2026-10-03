@@ -45,16 +45,14 @@ namespace sw
         float32 _arrPosition[3]; ///< 정점 위치 (X, Y, Z)
         /**
          * @brief 정점 노멀 (X, Y, Z)입니다. 정규화되어 있어야 합니다.
-         * @details 예전에는 없었고, 셰이더가 위치로 **지어내고** 있었습니다(`DemoCubeNormal`). 원점 중심
-         *          박스형 도형에만 맞는 함수라 평면 · 구 · 원뿔은 조용히 틀린 빛을 받았습니다. 바닥 평면을
-         *          `y = 0` 에 두면 `|y|` 가 0 이라 ±X/±Z 노멀이 나와 바닥이 옆을 보는 것처럼 칠해졌습니다.
+         * @details 주의: 셰이더에서 위치로 노멀을 지어내지 말 것. 원점 중심 박스형 도형에만 맞아 평면 · 구 · 원뿔이
+         *          조용히 틀린 빛을 받습니다(`y = 0` 바닥 평면이 옆을 보는 것처럼 칠해집니다).
          */
         float32 _arrNormal[3];
         /**
          * @brief 텍스처 좌표 (U, V)입니다.
-         * @details 노멀과 **같은 함정**이었습니다. 셰이더가 `localPos.xy * 0.5 + 0.5` 로 지어내고 있어서,
-         *          원점 중심 단위 도형이 아니면 알베도 텍스처가 엉뚱하게 붙었고 도형의 옆면 · 뚜껑은
-         *          아예 같은 자리를 물고 있었습니다. 지금은 도형 생성기가 면마다 제대로 펼쳐 줍니다.
+         * @details 노멀과 **같은 함정**입니다. 위치로 지어내면(`xy * 0.5 + 0.5`) 원점 중심 단위 도형이 아닐 때 알베도가
+         *          엉뚱하게 붙고 옆면 · 뚜껑이 같은 자리를 뭅니다. 도형 생성기가 면마다 펼쳐 줍니다.
          */
         float32 _arrUv[2];
         float32 _arrColor[4]; ///< 정점 색상 (R, G, B, A)
@@ -63,9 +61,8 @@ namespace sw
     /**
      * @struct RHIVertexAttribute
      * @brief 정점 속성 하나의 선언입니다. 네 백엔드가 **같은 표**를 읽어 각자의 입력 레이아웃을 만듭니다.
-     * @details 예전에는 DX11 · DX12 · Vulkan · GL 이 이 표를 각자 손으로 적고 있었습니다. 속성을 하나 더하려면
-     *          네 곳을 같이 고쳐야 하고, 한 곳을 빠뜨리면 그 백엔드만 조용히 다른 그림을 냅니다.
-     *          이 저장소에서 가장 비싼 종류의 버그입니다. 표를 하나로 두면 그럴 자리가 없습니다.
+     * @details 백엔드마다 표를 손으로 적으면 속성을 더할 때 한 곳을 빠뜨린 백엔드만 조용히 다른 그림을 냅니다.
+     *          표를 하나로 두면 그럴 자리가 없습니다.
      * @note `_location` 은 HLSL 선언 **순서**와 같아야 합니다(Vulkan location · GL 정점 속성 번호).
      *       DX 는 시맨틱 이름으로 묶으므로 `_pSemanticName` 이 그 역할을 합니다.
      */
@@ -122,9 +119,8 @@ namespace sw
         /**
          * @brief 백버퍼 컬러 포맷입니다. 네 백엔드의 스왑체인과 파이프라인 RTV 기본값이 같아야 합니다.
          * @details 파이프라인은 `RHIPipelineStateDesc::_arrRtvFormat` 으로 렌더 패스 · PSO 를 만듭니다.
-         *          스왑체인이 다른 포맷을 고르면 백버퍼에 직접 그리는 패스가 모두 비호환이 됩니다.
-         *          실제로 Vulkan 만 `B8G8R8A8_UNORM` 을 고르고 있어서, 에디터 없이 실행하는 경로가
-         *          렌더 패스 비호환으로 깨져 있었습니다(docs/05_RHI_FrameContract.md 실패기록 5차).
+         *          스왑체인이 다른 포맷을 고르면 백버퍼에 직접 그리는 패스가 모두 비호환이 됩니다
+         *          (예: Vulkan 이 `B8G8R8A8_UNORM` 을 고르면 에디터 없이 실행하는 경로가 렌더 패스 비호환으로 깨집니다).
          *          백엔드가 이 포맷을 낼 수 없으면 조용히 다른 것을 고르지 말고
          *          `IRHIDevice::getBackBufferFormat()` 으로 실제 채택한 값을 보고해야 합니다.
          */
@@ -154,10 +150,10 @@ namespace sw
 
         /**
          * @brief 인스턴스 슬롯 스트림이 걸리는 정점 버퍼 슬롯입니다. 원소는 uint 하나이고, 그 드로우 인스턴스의 **전역 인스턴스 자리**입니다.
-         * @details 씬 드로우는 인스턴스마다 자기 자리(가시 목록 슬롯)를 알아야 인스턴스 버퍼를 읽습니다. 예전에는 배치마다 루트 상수로
-         *          시작 오프셋을 싣고 SV_InstanceID 를 더했는데, 그러면 배치마다 루트 상수를 바꿔야 해서 같은 PSO 의 배치들을
-         *          멀티 드로우 하나로 낼 수 없었습니다. 대신 슬롯 1 에 `0,1,2,…` 스트림을 인스턴스 스텝으로 걸고 간접 인자의
-         *          startInstance 를 배치 시작으로 두면, 입력 어셈블러가 네 API 모두에서 `startInstance + i` 번째 원소를 줍니다.
+         * @details 씬 드로우는 인스턴스마다 자기 자리(가시 목록 슬롯)를 알아야 인스턴스 버퍼를 읽습니다. 배치마다 루트 상수로
+         *          시작 오프셋을 실으면 같은 PSO 의 배치들을 멀티 드로우 하나로 낼 수 없습니다. 그래서 슬롯 1 에 `0,1,2,…` 스트림을
+         *          인스턴스 스텝으로 걸고 간접 인자의 startInstance 를 배치 시작으로 두면, 입력 어셈블러가 네 API 모두에서
+         *          `startInstance + i` 번째 원소를 줍니다.
          *          SV_InstanceID 가 startInstance 를 포함하는지(API 마다 다르다)에 기대지 않습니다. 언리얼 D3D11 경로의
          *          인스턴스 ID 스트림과 같은 자리입니다.
          */
@@ -169,7 +165,6 @@ namespace sw
          * @details 순서가 곧 HLSL 의 선언 순서이고 `_location` 입니다. 속성을 더하려면 여기 한 줄과
          *          `RHIVertex` 멤버 하나만 고치면 되고, 백엔드는 손대지 않습니다.
          * @note 오프셋을 손으로 적지 않습니다. `SW_OFFSET_OF` 라 구조체를 바꾸면 자동으로 따라옵니다.
-         *       예전에는 네 백엔드가 각자 `0` 과 `12` 를 적어 두고 있었습니다.
          */
         inline constexpr RHIVertexAttribute arrVertexAttribute[] = {
             { "POSITION", 0, 3, SW_OFFSET_OF( RHIVertex, _arrPosition ), 0, SW_FALSE, SW_FALSE },
@@ -189,10 +184,8 @@ namespace sw
          * @details **이 개념의 유일한 출처입니다.** 프레임마다 따로 있어야 하는 자원(DX12 커맨드
          *          얼로케이터 · 업로드 슬롯, Vulkan 커맨드 버퍼 · 펜스 · 상수버퍼 슬롯 · 디스크립터 셋,
          *          에디터 draw 스냅샷)이 모두 이 값으로 크기를 잡습니다.
-         *          예전에는 이 값과 `FrameResourceRing::kFrameCount` 두 상수가 각각 2/3 으로 따로
-         *          있었고 Vulkan 이 둘을 섞어 썼습니다(상수버퍼는 3슬롯, 커맨드 버퍼는 2개). 값이 작아서
-         *          우연히 맞았을 뿐이고, 한쪽만 올리면 디스크립터가 버퍼 밖을 가리켰습니다. 그래서 별칭도
-         *          두지 않습니다. 같은 개념에 이름이 둘이면 같은 사고가 다시 납니다.
+         *          별칭을 두지 않습니다 — 같은 개념에 상수가 둘이면 섞어 쓰다 한쪽만 올렸을 때 디스크립터가
+         *          버퍼 밖을 가리킵니다.
          */
         inline constexpr uint32 kMaxFrameCountInFlight = 3;
 
@@ -233,8 +226,8 @@ namespace sw
     struct RHISwapChainDesc
     {
         REFLECT_BODY();
-        // 창 핸들은 실행마다 다른 런타임 값이라 저장하지 않는다(`Transient`). 예전에는 그냥 PROPERTY 라 직렬화기가 다룰 줄 몰라 텍스트 "null" ·
-        // 바이너리 0 바이트로 조용히 썼다 — `ReflectionSerializationTest.EveryPropertyHasATypeTheSerializersCanCarry` 가 짚는다.
+        // 창 핸들은 실행마다 다른 런타임 값이라 저장하지 않는다(`Transient`). 직렬화기가 다룰 수 없는 타입을 그냥 PROPERTY 로 두면
+        // 텍스트 "null" · 바이너리 0 바이트로 조용히 쓴다 — `ReflectionSerializationTest.EveryPropertyHasATypeTheSerializersCanCarry` 가 짚는다.
         PROPERTY( Transient )
         void* _pWindowHandle{ nullptr }; ///< OS 윈도우 핸들 (HWND, Window XID 등)
 
@@ -375,7 +368,7 @@ namespace sw
      * @struct RHIBufferCopyRegion
      * @brief 버퍼 부분 갱신의 한 조각입니다. 원본 블롭 안의 위치, 목적 버퍼 안의 위치, 그리고 크기입니다.
      * @details 여러 조각을 **한 번의 호출**로 넘기기 위한 것입니다. 조각마다 따로 부르면 백엔드가
-     *          스테이징 확보와 큐 제출을 그만큼 되풀이합니다(DX12 에서 호출당 ~3.3 us 였습니다).
+     *          스테이징 확보와 큐 제출을 그만큼 되풀이합니다(DX12 에서 호출당 ~3.3 us).
      */
     struct RHIBufferCopyRegion
     {
@@ -416,8 +409,8 @@ namespace sw
     /**
      * @enum RHIBlendMode
      * @brief 머티리얼 · 패스의 블렌드 분류입니다.
-     * @details 반사 enum 입니다 — 메시 컴포넌트의 `_blendMode` PROPERTY 가 이 이름으로 저장됩니다. 예전에는 `ENUM()` 이 없어 직렬화기가 이름을
-     *          몰라 `"null"` 로 적었고 읽을 때 불투명으로 돌아갔습니다(언리얼 `EBlendMode` 도 UENUM 입니다).
+     * @details 반사 enum 입니다 — 메시 컴포넌트의 `_blendMode` PROPERTY 가 이 이름으로 저장됩니다. `ENUM()` 을 빼면 직렬화기가 이름을
+     *          몰라 `"null"` 로 적고 읽을 때 불투명으로 돌아갑니다(언리얼 `EBlendMode` 도 UENUM 입니다).
      */
     ENUM()
     enum class RHIBlendMode : uint8
