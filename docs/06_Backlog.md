@@ -93,7 +93,11 @@ cd build/Ninja-Debug/Bin
 영역별로 묶었다. 영역 안에서는 위에 있을수록 먼저 볼 것이다. 줄 번호는 2026-10-03 기준이라 어긋날 수 있다 — 함수 이름으로 찾는다.
 "확인 필요" 가 붙은 항목은 열려 있는지부터 확인하고 시작한다.
 
-### 1-0. 대기 중 — 진행 중인 워크트리(종료 블록)가 병합된 뒤 한꺼번에 (사용자 지시 2026-10-03)
+### 1-0. 대기 중 — 진행 중인 별칭 제거 워크트리가 병합된 뒤 한꺼번에 (사용자 지시 2026-10-03)
+
+- **수명 짝을 표 하나로 — 기동 표와 같은 모양으로 남은 자리**(종료 블록 감사에서 찾은 것): RHI 디바이스 넷의 `shutdown` 이 같은 순서를 손으로 되풀이(템플릿 메서드 후보),
+  FrameRenderer · GpuScene 의 GPU 자원 해제 목록, 모듈 인스턴스 수명 짝(에디터 · 게임 둘이 같은 코드), ImGuiEditor 의 초기화 · 종료 단계, ImGui 플랫폼 · 렌더 백엔드 짝,
+  `App::shutdown` 의 모듈 인스턴스 단계, GPU 시험의 손 정리(하네스 픽스처로). 하나씩 표 · 단계 구조체로 바꾸고 순서를 시험으로 고정한다.
 
 - **클래스 이름 일관화 — 감사 목록 전부**(사용자: "일관되게 바꿔봐"). **별칭은 두지 않는다**(사용자: 아직 실제 게임이 없다) — 씬 · 데이터 XML 의 타입 · 루트 이름,
   스크립트 · CI 의 CLI 플래그까지 새 이름으로 다시 쓰고 옛 이름은 어디에도 남기지 않는다.
@@ -135,6 +139,9 @@ cd build/Ninja-Debug/Bin
   머티리얼 · 투명 정렬이 없다.
 
 ### 1-3. 그래픽스 · RHI · 셰이더
+
+- **`-dx12 -gv_rhiSwapAtFrame=10 -gv_rhiSwapTo=0`(DX12→DX11 교체) 종료 시 `[MemoryLeak] heap larger than post-init baseline` +37 블록(~1.2 MB)** — `destroyAll` 뒤에도
+  남는다(정적 캐시이거나 실제 누수). 결정적 재현, 교체 전 코드에서도 같음. vk→gl · dx11→dx12 는 안 난다. 할당 지점은 `-gv_profileAllocSites` 로 본다.
 
 - **배포 팩에 G-버퍼 셰이더의 Unlit 보기 퍼뮤테이션(`SW_VIEWMODE_UNLIT=1`)이 없다** — `gv_viewMode` 는 배포본에도 있는 설정이다. 고치면
   `TestRenderPassGpu.cpp` 의 `SW_TEST_KNOWN_ERROR_LOG` 두 줄을 지운다.
@@ -808,8 +815,12 @@ cd build/Ninja-Debug/Bin
 - **엔진 기동 · 종료 순서는 `EngineStartupStepList.xxx` 의 의존 칸이 정하고, 표는 그 순서대로 적는다**(UE `USubsystem` 의존 선언). 의존은 식별자 목록
   `{ A, B }` 라 오타 · 아래 줄 의존은 컴파일 오류(static_assert), 정렬은 의존만 보고 동점은 이름 순, 그 결과가 줄 순서와 같은지
   `EngineStartupSequenceTest.TableIsWrittenInStartupOrder` 가 본다(의존을 빼먹으면 진다). 종료는 초기화한 단계만 역순.
-  새 단계는 `EngineLoop::initializeStartupStep` · `shutdownStartupStep` 과 시험 하네스(`Test/TestFramework/main.cpp`)에 본문을 더한다(-Wswitch-enum 이 짚는다).
-  객체 해제(reset) 순서는 표 밖이다(`ResourceManager::shutdown` 은 다른 매니저 소멸 뒤).
+  새 단계는 호스트(EngineLoop · 시험 하네스 `Test/TestFramework/main.cpp`)마다 `<단계>StartupStep` 구조체 하나(initialize · shutdown · destroy, 기본은 no-op)를 더한다 —
+  빠지면 `EngineStartupStepTable` 이 컴파일 오류. 해제(destroy)는 **표의 모든 단계**를 역순으로 돈다(실패 · 건너뜀 · 닿지 못한 단계 포함)라 본문은 null 안전이어야 하고,
+  백엔드 교체는 `shutdownDependentsOf( RHI )` · `restartStoppedSteps()` 로 같은 initialize 본문을 다시 돌리므로 본문은 다시 설 수 있어야 한다(객체가 있으면 다시 쓰고
+  디바이스 설정은 매번 건다 — 교체 뒤 `setMergeBatchesAcrossMaterials` 가 옛 디바이스 값으로 남던 결함이 이것). 로거 · 명령줄 · 크래시 핸들러는 두 호스트가 `EngineBootstrap`
+  하나를 쓴다(로거 스레드는 메모리 프로파일러보다 먼저, 로거 객체는 맨 마지막 — 해제 중의 진단이 남는다). 서비스 표 칸은 낱말(`Required/Optional` ·
+  `GameVisible/HostOnly` · `EngineCreated/HostCreated`, RuntimeAPI `ServiceListColumns.h`), `destroyAll` 순서는 `makeDestroyOrder()` 로 시험한다.
 
 - **리로드 거절 사유는 옛 이미지를 내리기 전에 본다** — `LiveReloadManager::setOnValidateImage`(ABI · API 표)와 배치 콜백(`OnBeforeCommitBatchDelegate` 가 false
   면 아무것도 내리지 않음, 게임 상태 찍기 실패 포함)이 적용 전 실패를 막아 옛 모듈이 계속 돈다. 적용 뒤 결함만 `markGraphBroken`(UE Live Coding 과 같다).
