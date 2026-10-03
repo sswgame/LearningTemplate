@@ -115,7 +115,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 | `Source/Engine` | 핵심 엔진 라이브러리 (RHI, GameObject, Component, 씬/프리팹, 리플렉션, 물리, 오디오, 렌더 그래프 등) |
 | `Source/RuntimeAPI` | App ↔ Editor/Game 모듈 간의 순수 C-ABI 통신 인터페이스 (Header-Only) |
 | `Source/Editor` | 개발 모드 전용 ImGui 에디터 툴셋 |
-| `Source/GameFramework` | 장르별 공통 프레임워크 및 플러그형 키트 (`GF_Overworld`, `GF_TurnBattle`, `GF_ActionCombat`, `GF_Farming`, `GF_Shooter`, `GF_ThemePark`) |
+| `Source/GameFramework` | 장르별 공통 프레임워크 및 플러그형 키트 (`GF_Overworld`, `GF_TurnBattle`, `GF_ActionCombat`, `GF_Farming`, `GF_Shooter`, `GF_ThemePark`, `GF_Voxel`) |
 | `Source/Games` | 실제 게임 프로젝트 소스코드 (`Empty` 등 / `SW_ACTIVE_GAME` 변수로 빌드 대상 지정) |
 | `Source/App` | 얇은 진입점 실행 파일 (Main Loop, 모듈 호스트, 태스크 펜싱 관리) |
 | `Resource/` | 텍스처, 셰이더, 사운드, 씬 XML, 프리팹 JSON, 데이터 XML 등의 게임 에셋 |

@@ -22,6 +22,7 @@ sw_addTestExecutable(EngineTest
 		GF_Farming
 		GF_Shooter
 		GF_ThemePark
+		GF_Voxel
 	LABELS
 		"unit;engine"
 	TIMEOUT

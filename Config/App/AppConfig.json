@@ -36,6 +36,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_Voxel",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }

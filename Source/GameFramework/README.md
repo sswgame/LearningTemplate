@@ -14,6 +14,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   틱을 끄고 턴마다 `advanceTime( 1 )`). 같은 오브젝트의 `HPBarBaseComponent` · `DamageUIComponent` 와 이어집니다. 자세한 것은 `Ability/README.md`,
   쓰는 예는 `Source/Games/AbilityArena`
 - **Base**: 키트 공통 수명(`IGame`, `GameInstanceBase`, `GameService`), 세이브 베이스(`SaveGame`), 앞 · 위 → 오일러(`OrientationUtil` — 롤이 있는 차량 · 카메라),
+  절차로 무대를 세우는 도우미(`PrimitiveStage` — 활성 씬 잡기 · 세운 오브젝트 추적 · 색 · 텍스처 머티리얼 인스턴스 캐시 · 해 · 카메라),
   장르 무관 컴포넌트(`EffectBaseComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`).
   공유 타입은 `GameFrameworkMinimal.h`. "game" 채널의 수명주기 이벤트(`GameEvents.h`)는 프레임워크가 그 자리에서 낸다 —
   `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료, `GameModeStateMachine` 이 일시정지 진입 · 해제
@@ -41,6 +42,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   - `ThemePark`: 롤러코스터 타이쿤 — 조각으로 쌓는 코스터 트랙(`CoasterTrackBuilder`: 오르막 체인 · 낙하 · 언덕 · 뱅크 회전 · 클로소이드 루프 ·
     브레이크 · 부스터, XML 레이아웃), 고정 스텝 열차 물리(`CoasterTrain`), 시험 운행으로 흥분 · 강도 · 멀미 평가(`CoasterRideAnalyzer`),
     손님 · 줄 · 표 · 입장료 · 운영비 · 공원 평점 경영 시뮬레이션(`ThemeParkSimulation`).
+  - `Voxel`: 복셀 샌드박스(마인크래프트 장르) — 블록 XML 카탈로그(`VoxelBlockCatalog`: 면마다 아틀라스 칸), 청크 월드(`VoxelWorld`: 경계 블록이 바뀌면
+    이웃 청크도 다시 짓기), 씨앗 고정 지형(`VoxelTerrainGenerator`: 값 노이즈 · 물 · 모래 · 나무), 격자 광선(`VoxelRaycast`: 맞은 면 · 놓을 칸),
+    드러난 면만 짓는 메싱(`VoxelMesher`: 꼭짓점 그늘 · 반투명 분리), 상자 몸(`VoxelBody`: 축별 충돌 · 점프 · 헤엄), 핫바(`VoxelHotbar`).
 
 ## 무엇이 키트에 들어가고 무엇이 기반에 남는가
 

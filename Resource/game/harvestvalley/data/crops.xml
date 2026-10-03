@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HarvestValley 의 작물. days = 물 받고 자라야 하는 날 수, regrow = 거둔 뒤 다시 열리기까지(0 이면 한 번), harvest = 한 번에 받는 수.
+     씨앗은 가게(B)에서 seedPrice 에 사고, 수확물은 출하함에 넣으면 그날 밤 sellPrice 에 팔린다(씨앗은 반값). -->
+<CropCatalog>
+  <Crop id="turnip" name="Turnip" seed="turnip_seed" produce="turnip" days="4" seasons="Spring" seedPrice="120" sellPrice="60" harvest="1"/>
+  <Crop id="potato" name="Potato" seed="potato_seed" produce="potato" days="7" seasons="Spring" seedPrice="150" sellPrice="80" harvest="2"/>
+  <Crop id="cucumber" name="Cucumber" seed="cucumber_seed" produce="cucumber" days="9" regrow="4" seasons="Spring" seedPrice="200" sellPrice="60"/>
+  <Crop id="strawberry" name="Strawberry" seed="strawberry_seed" produce="strawberry" days="8" regrow="2" seasons="Spring" seedPrice="150" sellPrice="30"/>
+  <Crop id="tomato" name="Tomato" seed="tomato_seed" produce="tomato" days="9" regrow="3" seasons="Summer" seedPrice="200" sellPrice="60"/>
+  <Crop id="corn" name="Corn" seed="corn_seed" produce="corn" days="14" regrow="3" seasons="Summer" seedPrice="300" sellPrice="100"/>
+  <Crop id="onion" name="Onion" seed="onion_seed" produce="onion" days="7" seasons="Summer" seedPrice="150" sellPrice="80" harvest="2"/>
+  <Crop id="pumpkin" name="Pumpkin" seed="pumpkin_seed" produce="pumpkin" days="14" seasons="Summer" seedPrice="500" sellPrice="250"/>
+  <Crop id="eggplant" name="Eggplant" seed="eggplant_seed" produce="eggplant" days="9" regrow="3" seasons="Fall" seedPrice="120" sellPrice="80"/>
+  <Crop id="carrot" name="Carrot" seed="carrot_seed" produce="carrot" days="7" seasons="Fall" seedPrice="300" sellPrice="120" harvest="2"/>
+  <Crop id="sweet_potato" name="Sweet Potato" seed="sweet_potato_seed" produce="sweet_potato" days="5" regrow="2" seasons="Fall" seedPrice="300" sellPrice="120"/>
+  <Crop id="spinach" name="Spinach" seed="spinach_seed" produce="spinach" days="5" seasons="Fall" seedPrice="200" sellPrice="80"/>
+</CropCatalog>

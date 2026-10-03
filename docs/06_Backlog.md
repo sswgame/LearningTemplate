@@ -179,11 +179,18 @@ cd build/Ninja-Debug/Bin
   `updateActiveEffects` 의 만료 검사를 주기 실행 앞으로 옮기면 `PeriodicEffectExecutesEachPeriodUntilItExpires` 가 지는지) (2) Shipping · `-L nogpu`
   (3) `-DSW_ACTIVE_GAME=AbilityArena` 로 Debug · Shipping 을 짓고 `App -gv_arenaAutoPlay=1 -gv_profileFrames=1200` 를 네 백엔드로 — 종료 코드 0, `[Error]` 0건,
   로그의 `[Arena] wave` 가 오르는지. 에디터(`-EnableEditor`)에서 Play 로 직접 조작해 HP 바 · 피해 숫자 · 화상 스택 · 대시 무적을 눈으로 본다.
-- **장르 키트 `GF_Farming` · `GF_Shooter` · `GF_ThemePark` 와 `OrientationUtil` 의 첫 엔진 빌드(2026-10-03).** 위 항목과 같은 이유로 엔진을 짓지 못했다.
-  키트 로직은 엔진 밖 하네스(Core 의 수학 · XML · 해시 문자열만 링크, 테스트 매크로 흉내)로 **실제로 돌려** `CoasterTest` 6 · `ThemeParkTest` 5 ·
-  `FarmingTest` 5 · `ShooterTest` 5 · `OrientationUtilTest` 1 이 통과했다. 남은 것: 재구성 → Debug · Shipping 빌드(새 DLL 셋, `SW_GF_API` 내보내기 ·
-  delay-load) → `EngineTest --test_filter=CoasterTest.*:ThemeParkTest.*:FarmingTest.*:ShooterTest.*:OrientationUtilTest.*`. 코스터 평가식
-  (`CoasterRideAnalyzer::computeRatings`)의 계수는 시험 트랙 몇 개로 맞춘 것이라, 게임에서 여러 레이아웃을 돌려 보고 다듬는다.
+- **장르 키트 넷(`GF_Farming` · `GF_Shooter` · `GF_ThemePark` · `GF_Voxel`) · `OrientationUtil` · `PrimitiveStage` 와 시험 게임 넷의 첫 엔진 빌드 · 실행(2026-10-03).**
+  위 항목과 같은 이유로 엔진을 짓지 못했다. 키트 로직은 엔진 밖 하네스(Core 의 수학 · XML · 해시 문자열만 링크, 테스트 매크로 흉내)로 **실제로 돌려**
+  `CoasterTest` 6 · `ThemeParkTest` 5 · `FarmingTest` 5 · `ShooterTest` 5 · `VoxelTest` 7 · `OrientationUtilTest` 1 이 통과했고, `coasters.xml` 의 세 레이아웃은
+  같은 하네스로 회로가 닫히고 한 바퀴를 돌며 평가가 나오는 것을, 공원 경제(`rides.xml` 의 처음 두 놀이기구)는 손님이 오고 돈이 느는 것을 봤다.
+  게임 넷(`HarvestValley` · `Shooter3D` · `ThemeParkTycoon` · `VoxelCraft`)과 `PrimitiveStage` 는 **구문 검사만** 통과했다. 할 일:
+  (1) 재구성 → Debug · Shipping 빌드(새 DLL 넷, `SW_GF_API` 내보내기 · delay-load) → `EngineTest --test_filter=CoasterTest.*:ThemeParkTest.*:FarmingTest.*:ShooterTest.*:VoxelTest.*:OrientationUtilTest.*`
+  (2) 게임마다 `-DSW_ACTIVE_GAME=<이름>` 으로 짓고 자동 플레이(`-gv_farmAutoPlay=1` · `-gv_shooterAutoPlay=1` · `-gv_parkAutoBuild=1` · `-gv_voxelAutoPlay=1`)를
+  `-gv_profileFrames=3600` 으로 네 백엔드에서 — 종료 코드 0, `[Error]` 0 건, 로그가 오르는지(`[Farm] good morning` · `[Shooter] wave` · `[Park] built` · `[Voxel] ... broken`).
+  (3) 눈으로 볼 것: 스프라이트 조준선이 카메라 앞에서 보이는지(`SpriteComponent` 를 시점에 붙여 쓴 첫 자리), 복셀 청크의 감김 · 아틀라스 UV(옆면 풀이 위),
+  물 반투명, 코스터 레일 · 차량 방향(루프에서 뒤집힘), 직교 카메라(`setOrthographic`)의 그림자 범위. (4) 런타임 `Mesh::setVertices` 대신 매번 새 메시를
+  거는 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는다 — 프로파일에서 튀면 메시 재사용(같은 크기면 덮어쓰기)으로 바꾼다.
+  코스터 평가식(`CoasterRideAnalyzer::computeRatings`)의 계수는 시험 트랙 몇 개로 맞춘 것이라 레이아웃이 늘면 다시 본다.
 - **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.

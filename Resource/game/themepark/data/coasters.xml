@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ThemePark 의 롤러코스터 레이아웃. 조각은 차례로 이어지고 끝에서 스테이션까지는 빌더가 곡선으로 잇는다 — 끝이 스테이션 몇 m 뒤에 오도록
+     마지막 직선 길이를 맞춘다(앞으로 지나치면 연결이 접혀 큰 횡 G 가 난다 · CoasterTrackBuilder::build 가 경고한다).
+     각 레이아웃은 시험 운행(CoasterRideAnalyzer)으로 흥분 · 강도 · 멀미를 받고 그 값이 손님을 끈다. -->
+<CoasterCatalog>
+  <Layout id="looper" name="Thunder Loop" startHeight="1">
+    <Piece type="Station" length="12"/>
+    <Piece type="LiftHill" length="30" height="25"/>
+    <Piece type="Drop" length="60" height="25"/>
+    <Piece type="Loop" radius="10" width="3"/>
+    <Piece type="Straight" length="10"/>
+    <Piece type="TurnRight" radius="18" angle="180" bank="45"/>
+    <Piece type="Straight" length="145"/>
+    <Piece type="TurnRight" radius="18" angle="180" bank="30"/>
+    <Piece type="Brakes" length="15"/>
+  </Layout>
+  <Layout id="camelback" name="Camel Hills" startHeight="1">
+    <Piece type="Station" length="12"/>
+    <Piece type="LiftHill" length="30" height="28"/>
+    <Piece type="Drop" length="60" height="28"/>
+    <Piece type="Hill" length="80" height="10"/>
+    <Piece type="Hill" length="64" height="7"/>
+    <Piece type="Straight" length="8"/>
+    <Piece type="TurnRight" radius="16" angle="180" bank="40"/>
+    <Piece type="Straight" length="273"/>
+    <Piece type="TurnRight" radius="16" angle="180" bank="30"/>
+    <Piece type="Brakes" length="15"/>
+  </Layout>
+  <Layout id="family" name="Little Dipper" startHeight="1">
+    <Piece type="Station" length="10"/>
+    <Piece type="LiftHill" length="16" height="8"/>
+    <Piece type="Drop" length="16" height="8"/>
+    <Piece type="TurnLeft" radius="10" angle="180" bank="20"/>
+    <Piece type="Straight" length="54"/>
+    <Piece type="TurnLeft" radius="10" angle="180" bank="15"/>
+    <Piece type="Brakes" length="8"/>
+  </Layout>
+</CoasterCatalog>
