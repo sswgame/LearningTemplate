@@ -44,9 +44,8 @@ flowchart LR
 | `ReflectionCast.h` | 리플렉션 기반 캐스트 헬퍼 |
 | `ReflectionContainers.h` | Sequence/Map 래퍼 |
 | `ReflectBuiltins.xxx` | int/string/vector 등 빌트인 타입의 단일 등록표(X-매크로 — 엔진이 include 하고 ReflectionParser 가 읽는다) |
-| `ReflectionConstants.h` | 리플렉션과 `PropertyMetaHint` 가 함께 쓰는 상수 · 데이터 표 |
+| `ReflectionConstants.h` | 리플렉션 상수 · 데이터 표 |
 | `ReflectionEnumNames.h` | `ContainerKind` · `FunctionNetRole` ↔ 식별자 문자열(정본은 `Core/Predefined/*.xxx`) |
-| `PropertyMetaHint.*` | 프로퍼티 메타데이터 → 인스펙터 위젯 유형 · 서식 힌트 |
 | `ReflectGenerated.h` | `*.gen.cpp` preamble |
 | `ReflectAny.*` | 타입 소거 값 상자 |
 | `Rpc/` | RPC용 리플렉션 보조(`ReflectionRpc.h`) |

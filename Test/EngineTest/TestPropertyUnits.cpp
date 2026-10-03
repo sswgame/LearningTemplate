@@ -3,7 +3,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Reflection/PropertyMetaHint.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -11,31 +10,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// Engine_Reflection — PROPERTY 메타에서 에디터 위젯을 고르는 규칙.
-// ------------------------------------------------------------------------------
-// 7) PropertyMetaHint UI 위젯 판별
-// ------------------------------------------------------------------------------
-
-SW_TEST_CASE( PropertyMetaHintTest, PropertyMetaHintWidgetDeduction )
-{
-    sw::PropertyMetadata rangeMeta{};
-    rangeMeta._bHasMinRange = SW_TRUE;
-    rangeMeta._bHasMaxRange = SW_TRUE;
-    rangeMeta._minRange     = 0.0f;
-    rangeMeta._maxRange     = 100.0f;
-    SW_EXPECT_EQUAL( static_cast<uint32>( sw::PropertyWidgetType::Slider ), static_cast<uint32>( sw::PropertyMetaHint::deduceWidgetType( rangeMeta, "float32" ) ) );
-
-    float32 minVal = 0.0f;
-    float32 maxVal = 0.0f;
-    SW_EXPECT_TRUE( sw::PropertyMetaHint::getSliderRange( rangeMeta, minVal, maxVal ) );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, minVal, 0.0001f );
-    SW_EXPECT_NEAR_EQUAL( 100.0f, maxVal, 0.0001f );
-
-    sw::PropertyMetadata assetMeta{};
-    assetMeta._bAssetPath = SW_TRUE;
-    assetMeta._assetType  = "Texture";
-    SW_EXPECT_EQUAL( static_cast<uint32>( sw::PropertyWidgetType::AssetPicker ), static_cast<uint32>( sw::PropertyMetaHint::deduceWidgetType( assetMeta, "string" ) ) );
-}
+// Engine_Reflection — PROPERTY 의 `Units` 메타가 값이 저장된 단위와 맞는지 본다.
 
 // PROPERTY 의 `Units` 메타는 에디터 메타데이터라 Shipping 빌드에는 없다(`findCustomMeta` 가 늘 nullptr) — 그 규칙 시험도 없다.
 #if !defined( SW_SHIPPING )
@@ -78,7 +53,7 @@ namespace
 } // namespace
 
 /**
- * @brief [PropertyMetaHintTest] PROPERTY 의 `Units` 는 값이 저장된 단위를 말한다 — 등록된 모든 타입(엔진 · GameFramework · 킷)
+ * @brief [PropertyUnitsTest] PROPERTY 의 `Units` 는 값이 저장된 단위를 말한다 — 등록된 모든 타입(엔진 · GameFramework · 킷)
  * @details 인스펙터는 `Units` 로 보이는 값 · 드래그 속도 · 단위 글자를 정한다(`InspectorPropertyLayout::getDisplayUnit`). 그래서 메타가 틀리면 값이
  *          틀리게 보이고 틀린 속도로 움직인다. 두 번 그랬다 — 트랜스폼 회전은 라디안을 `Units=deg` 라고 적었고(결함 64), HP 바의 0..1 비율 셋은
  *          `Units=%` 라고 적어 0.5 를 "0.5 %" 로 읽게 했다. 규칙은 다섯이다.
@@ -87,7 +62,7 @@ namespace
  *          (도 범위를 라디안이라 적은 것을 잡는다). (5) 툴팁이 `Units` 와 다른 단위를 말하지 않는다 — `Units=m/s` 인 이동 속도의 툴팁이
  *          "tiles/sec" 이면 값을 넣는 사람은 어느 단위로 넣을지 모른다(`kArrConflictingUnitWord`).
  */
-SW_TEST_CASE( PropertyMetaHintTest, UnitsMatchHowValuesAreStored )
+SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
 {
     // GameFramework 타입이 등록부에 있어야 이 시험이 HP 바를 본다(EngineTest 는 GameFramework 를 링크한다).
     SW_ASSERT_NOT_NULL( sw::HPBarBaseComponent::StaticType() );
