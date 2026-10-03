@@ -365,6 +365,46 @@ SW_TEST_CASE( AppSmokeTest, EditorModeStartsAndExitsCleanly )
 }
 
 /**
+ * @brief [AppSmokeTest] 백엔드 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 검증
+ * @details 교체는 디바이스에 의존하는 기동 단계를 다시 세운다. 씬 스냅샷 빌더의 "머티리얼을 넘어 배치 합치기" 는 디바이스가
+ *          텍스처를 인덱스로 고를 수 있을 때(DX12 · Vulkan 의 네이티브 bindless)만 켜져야 한다 — DX11 · GL 은 머티리얼 텍스처를
+ *          고정 슬롯에 걸므로 합친 배치가 한 머티리얼의 텍스처로 그려진다. 교체 뒤 `Active backend is now` 줄의 두 값이 같아야 한다.
+ */
+SW_TEST_CASE( AppSmokeTest, BackendSwapFollowsTheNewDevice )
+{
+    // -gv_rhiSwapTo 는 RHIBackend 값이다(0 = DirectX11, 1 = DirectX12).
+    constexpr const utf8* kArrSwapArgument[] = { "-dx12 -gv_rhiSwapTo=0", "-dx11 -gv_rhiSwapTo=1" };
+
+    uint32 checkedCount = 0;
+    for ( const utf8* pSwapArgument : kArrSwapArgument )
+    {
+        string arguments{ "-gv_profileFrames=30 -gv_rhiSwapAtFrame=10 " };
+        arguments += pSwapArgument;
+        const AppRunResult result = runApp( arguments, "Active backend is now" );
+        SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
+        if ( result._bBackendUnusableHere )
+            continue;
+        ++checkedCount;
+        SW_EXPECT_TRUE_MSG( result._exitCode == 0, arguments.c_str() );
+        SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? arguments.c_str() : result._firstErrorLine.c_str() );
+        SW_ASSERT_TRUE_MSG( result._listMarkedLine.size() == 1, arguments.c_str() );
+
+        const string&     line          = result._listMarkedLine[0];
+        const string_view kMergeKey     = "across materials ";
+        const string_view kBindlessKey  = "bindless sampling ";
+        const size_t      mergeIndex    = line.find( kMergeKey.data() );
+        const size_t      bindlessIndex = line.find( kBindlessKey.data() );
+        SW_ASSERT_TRUE_MSG( mergeIndex != string::npos && bindlessIndex != string::npos, line.c_str() );
+        const utf8 mergeValue    = line[mergeIndex + kMergeKey.size()];
+        const utf8 bindlessValue = line[bindlessIndex + kBindlessKey.size()];
+        SW_EXPECT_TRUE_MSG( mergeValue == bindlessValue, line.c_str() );
+    }
+
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "neither DX12 nor DX11 is usable on this machine" );
+}
+
+/**
  * @brief [AppSmokeTest] 에디터 확장의 정적 등록이 실제 EditorModule 에 다 실리고, 순서 · 메뉴 배치가 그대로인가
  * @details 패널 · 팝업 · 인스펙터 · 시각화는 각자 자기 .cpp 의 정적 등록자로 등록하고, 메뉴는 커맨드 표의 경로 · 순서 칸에서 나온다.
  *          그래서 등록이 빠지거나 순서 키 · 메뉴 칸이 바뀌어도 빌드는 그대로 통과한다. 실제 App 을 `-gv_editorRegistryDump=1` 로 띄워

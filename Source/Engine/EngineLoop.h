@@ -147,8 +147,8 @@ namespace sw
         bool didHeadlessTaskFail() const { return _bHeadlessTaskFailed; }
 
     private:
-        /** @brief 디바이스 재생성 후 FrameRenderer·RenderThread·Scene을 다시 붙입니다. */
-        void rebindSceneAfterDeviceRecreate();
+        /** @brief 디바이스 재생성 뒤 내렸던 단계(렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스)를 다시 세웁니다. 모두 섰으면 true 입니다. */
+        [[nodiscard]] bool rebindSceneAfterDeviceRecreate();
         /** @brief 셰이더 라이브 리로드 매니저입니다. Shipping 에서는 늘 nullptr 입니다. */
         LiveShaderManager* getLiveShaderManager() const;
         /** @brief 셰이더 강제 리로드 핫키를 처리합니다. Engine 자신의 개발 도구이므로 여기서 끝냅니다. */

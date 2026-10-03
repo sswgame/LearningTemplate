@@ -365,9 +365,13 @@ namespace sw
         static EngineStartupResult initialize( EngineLoop& loop )
         {
             // 씬 스냅샷 · 패킷 · 업로드 큐는 그리는 쪽의 것이다. 렌더러를 세우지 않는 헤드리스 작업에는 없다.
-            loop._gpuSceneBuilder = make_unique<GpuSceneBuilder>();
-            loop._packetScratch   = make_unique<RenderFramePacket>();
-            loop._gpuUploadQueue  = make_unique<GpuUploadQueue>();
+            // 백엔드 교체로 다시 설 때(`restartStoppedSteps`)는 있는 것을 그대로 쓰고, 디바이스에 매인 설정만 새로 건다.
+            if ( loop._gpuSceneBuilder == nullptr )
+                loop._gpuSceneBuilder = make_unique<GpuSceneBuilder>();
+            if ( loop._packetScratch == nullptr )
+                loop._packetScratch = make_unique<RenderFramePacket>();
+            if ( loop._gpuUploadQueue == nullptr )
+                loop._gpuUploadQueue = make_unique<GpuUploadQueue>();
             // GT 쪽 GpuScene 이 배치를 만든다. 텍스처를 인덱스로 고를 수 있는 백엔드면 머티리얼이 달라도
             // 셰이더 타입 단위로 합친다(언리얼 GPUScene).
             loop._gpuSceneBuilder->setMergeBatchesAcrossMaterials( loop._rhi->getDevice().supportsNativeBindlessSampling() );
@@ -400,7 +404,9 @@ namespace sw
     {
         static EngineStartupResult initialize( EngineLoop& loop )
         {
-            loop._renderThread = make_unique<RenderThread>();
+            // 다시 설 때는 같은 객체에 붙인다 — 호스트가 건 프레젠트 훅과 렌더 스레드 포인터(ModuleHost)가 그대로 남는다.
+            if ( loop._renderThread == nullptr )
+                loop._renderThread = make_unique<RenderThread>();
             if ( loop._renderThread->attach( &loop._rhi->getDevice(), loop._frameRenderer.get() ) == false )
             {
                 SW_LOG_ERROR( "Failed to attach RenderThread!" );
@@ -422,7 +428,8 @@ namespace sw
         {
 #if defined( SW_DEBUG )
             // 셰이더 라이브 리로드는 개발 도구다. Debug 에서만 만든다(Shipping 에는 코드 자체가 없다).
-            loop._liveShaderManager = make_unique<LiveShaderManager>();
+            if ( loop._liveShaderManager == nullptr )
+                loop._liveShaderManager = make_unique<LiveShaderManager>();
             if ( loop._liveShaderManager->initialize( "Shaders" ) == false )
             {
                 SW_LOG_ERROR( "Failed to initialize LiveShaderManager!" );
@@ -811,24 +818,16 @@ namespace sw
                      RHI::getBackendTypeName( previous ),
                      RHI::getBackendTypeName( requested ) );
 
-        BLOCK( "기존 RHI / Scene 리소스 정리" )
+        BLOCK( "디바이스에 매인 단계 내리기" )
         {
-            if ( _owned._pSceneManager != nullptr )
-                _owned._pSceneManager->setRhiDevice( nullptr );
-            if ( _renderThread != nullptr )
-                _renderThread->stop();
-            if ( _frameRenderer != nullptr )
-                _frameRenderer->shutdown();
+            // RHI 에 (간접으로라도) 의존하는 단계(씬의 디바이스 · 라이브 셰이더 · 렌더 스레드 · 렌더러)를 기동 표의 역순으로, 기동과 같은
+            // 본문으로 내린다. 씬 스냅샷 빌더가 든 머티리얼 · 인스턴스도 FrameRenderer 단계의 종료가 옛 디바이스가 살아 있을 때 놓는다.
+            _startup.shutdownDependentsOf( EngineStartupStep::RHI );
 
             // 옛 디바이스의 GPU 자원은 recreateDevice 안의 shutdown 이 등록부에 통보하며 거둔다.
             _rhi->getDevice().waitIdle();
             if ( _owned._pShaderCache != nullptr )
                 _owned._pShaderCache->clearCache();
-            // GT 쪽 GpuScene 의 캐시(후보 · 배치)가 옛 디바이스에 올라간 머티리얼 · 인스턴스의 소유를 들고 있다.
-            // 여기서 놓지 않으면 교체 뒤 첫 buildFromScene 의 clear() 가 그것들을 옛 디바이스와 함께 파괴한다.
-            // 실제로 그 자리에서 죽었다(~MaterialInstance → shutdown(옛 디바이스)).
-            if ( _gpuSceneBuilder != nullptr )
-                _gpuSceneBuilder->clear();
         }
 
         if ( _rhi->recreateDevice( requested ) == false )
@@ -841,40 +840,36 @@ namespace sw
                 SW_LOG_ERROR( "Failed to restore previous RHI backend — device is gone." );
                 return false;
             }
-            rebindSceneAfterDeviceRecreate();
+            (void)rebindSceneAfterDeviceRecreate();
             return false;
         }
 
-        rebindSceneAfterDeviceRecreate();
-        SW_LOG_INFO( "Active backend is now %#", RHI::getBackendTypeName( _rhi->getCommittedBackend() ) );
+        if ( rebindSceneAfterDeviceRecreate() == false )
+            return false;
+        // 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 한 줄로 남긴다(AppSmokeTest.BackendSwapFollowsTheNewDevice 가 읽는다).
+        SW_LOG_INFO( "Active backend is now %# (merge batches across materials %#, native bindless sampling %#)", RHI::getBackendTypeName( _rhi->getCommittedBackend() ),
+                     ( _gpuSceneBuilder != nullptr && _gpuSceneBuilder->isMergeBatchesAcrossMaterials() ) ? 1 : 0,
+                     _rhi->getDevice().supportsNativeBindlessSampling() ? 1 : 0 );
         return true;
     }
 
-    void EngineLoop::rebindSceneAfterDeviceRecreate()
+    bool EngineLoop::rebindSceneAfterDeviceRecreate()
     {
         if ( _rhi == nullptr || _rhi->hasDevice() == false )
-            return;
+            return false;
 
         // 새 디바이스가 섰다. 등록부 전체에 "다시 올려라" 를 알린다. 어떤 캐시를 빠뜨렸는지
         // 기억할 필요가 없는 것이 이 구조의 요점이다(언리얼 FRenderResource::InitRHI 와 같은 자리).
         RHIRenderResource::initAllFor( &_rhi->getDevice() );
 
-        // 새 디바이스다. 큐가 들고 있던 요청은 옛 디바이스의 것이므로 여기서 바꿔 준다.
-        if ( _gpuUploadQueue != nullptr )
-            _gpuUploadQueue->bindDevice( &_rhi->getDevice(), _owned._pTaskManager.get() );
-
-        if ( _frameRenderer != nullptr )
-            _frameRenderer->initialize( &_rhi->getDevice(), _owned._pTaskManager.get() );
-
-        if ( _renderThread != nullptr && _renderThread->attach( &_rhi->getDevice(), _frameRenderer.get() ) == false )
-            SW_LOG_ERROR( "Render thread could not attach to the new device" );
-
-        if ( _owned._pSceneManager != nullptr )
-            _owned._pSceneManager->setRhiDevice( &_rhi->getDevice() );
+        // 내렸던 단계를 기동과 같은 본문으로 다시 세운다: 렌더러(업로드 큐 · 배치 합치기 설정을 새 디바이스로) → 렌더 스레드 → 라이브 셰이더 →
+        // 씬의 디바이스. 본문은 이미 있는 객체를 다시 쓰므로 렌더 스레드에 걸린 훅과 그것을 가리키는 포인터가 그대로다.
+        const bool bRestarted = _startup.restartStoppedSteps();
 
         Scene* pScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
         if ( pScene != nullptr )
             pScene->ensureDefaultCameras();
+        return bRestarted;
     }
 
     LiveShaderManager* EngineLoop::getLiveShaderManager() const

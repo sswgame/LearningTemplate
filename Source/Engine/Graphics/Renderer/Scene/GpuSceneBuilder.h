@@ -89,6 +89,8 @@ namespace sw
          *          디바이스 caps(supportsNativeBindlessSampling)로 정합니다. 바꾸면 다음 buildFromScene 이 다시 묶습니다.
          */
         void setMergeBatchesAcrossMaterials( bool bMerge );
+        /** @brief 불투명 배치를 셰이더 퍼뮤테이션 단위로 묶고 있으면 true 입니다(`setMergeBatchesAcrossMaterials`). */
+        bool isMergeBatchesAcrossMaterials() const { return _bMergeAcrossMaterials == SW_TRUE; }
 
         /** @brief 인스턴스 목록을 반환합니다. */
         const vector<GpuInstance>& getInstances() const { return _snapshot.getInstances(); }

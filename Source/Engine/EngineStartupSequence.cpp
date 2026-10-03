@@ -107,6 +107,7 @@ namespace sw
         : _listOrder{}
         , _listDependency{}
         , _listInitialized{}
+        , _listStopped{}
         , _pArrEntry{ nullptr }
         , _pHost{ nullptr }
         , _error{}
@@ -126,6 +127,7 @@ namespace sw
         _pArrEntry = pArrEntry;
         _pHost     = pHost;
         _listInitialized.clear();
+        _listStopped.clear();
         if ( _error.empty() == false )
         {
             SW_LOG_ERROR( "Invalid startup step table: %#", _error.c_str() );
@@ -182,6 +184,67 @@ namespace sw
         // 쓰지 않는 것은 표 오류로 정렬이 비었어도 부트스트랩이 만든 객체를 해제해야 하기 때문이다.
         for ( uint32 stepIndex = static_cast<uint32>( EngineStartupStep::Count ); stepIndex > 0; --stepIndex )
             _pArrEntry[stepIndex - 1]._pDestroy( _pHost );
+    }
+
+    void EngineStartupSequence::shutdownDependentsOf( EngineStartupStep step )
+    {
+        // 위상 순서로 훑으며 의존을 따라 표시한다 — 의존이 늘 먼저 오므로 한 번에 닫힌다(간접 의존 포함).
+        vector<uint8> listDependent( static_cast<size_t>( EngineStartupStep::Count ), SW_FALSE );
+        for ( const EngineStartupStep orderStep : _listOrder )
+        {
+            const uint32 stepIndex = static_cast<uint32>( orderStep );
+            for ( const uint32 dependencyIndex : _listDependency[stepIndex] )
+            {
+                if ( dependencyIndex == static_cast<uint32>( step ) || listDependent[dependencyIndex] == SW_TRUE )
+                    listDependent[stepIndex] = SW_TRUE;
+            }
+        }
+
+        // 초기화한 순서의 역순으로 내리고, 내린 것은 초기화 순서로 기억한다.
+        vector<EngineStartupStep> listStopped;
+        for ( size_t order = _listInitialized.size(); order > 0; --order )
+        {
+            const EngineStartupStep initializedStep = _listInitialized[order - 1];
+            if ( listDependent[static_cast<uint32>( initializedStep )] == SW_FALSE )
+                continue;
+            _pArrEntry[static_cast<uint32>( initializedStep )]._pShutdown( _pHost );
+            listStopped.insert( listStopped.begin(), initializedStep );
+            _listInitialized.erase( _listInitialized.begin() + static_cast<ptrdiff_t>( order - 1 ) );
+        }
+        _listStopped = std::move( listStopped );
+    }
+
+    bool EngineStartupSequence::restartStoppedSteps()
+    {
+        vector<EngineStartupStep> listStopped = std::move( _listStopped );
+        _listStopped.clear();
+        bool bRestarted = true;
+        for ( const EngineStartupStep step : listStopped )
+        {
+            if ( _pArrEntry[static_cast<uint32>( step )]._pInitialize( _pHost ) == EngineStartupResult::Failed )
+            {
+                SW_LOG_ERROR( "Startup step '%#' failed to restart", getStepName( step ) );
+                bRestarted = false;
+                break;
+            }
+            _listInitialized.push_back( step );
+        }
+        // 종료가 역순으로 돌도록 초기화한 단계를 표의 순서로 되돌린다(다시 세운 단계는 끝에 붙었다).
+        vector<EngineStartupStep> listOrdered;
+        listOrdered.reserve( _listInitialized.size() );
+        for ( const EngineStartupStep orderStep : _listOrder )
+        {
+            for ( const EngineStartupStep initializedStep : _listInitialized )
+            {
+                if ( initializedStep == orderStep )
+                {
+                    listOrdered.push_back( orderStep );
+                    break;
+                }
+            }
+        }
+        _listInitialized = std::move( listOrdered );
+        return bRestarted;
     }
 
     const utf8* EngineStartupSequence::getStepName( EngineStartupStep step )

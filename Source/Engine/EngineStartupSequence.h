@@ -133,6 +133,20 @@ namespace sw
          */
         void destroyAll();
 
+        /**
+         * @brief @p step 에 (간접으로라도) 의존하는 **초기화된** 단계를 역순으로 종료합니다. @p step 자신은 그대로 둡니다.
+         * @details 기동 중에 한 단계를 갈아 끼울 때 쓴다(백엔드 교체: RHI 의 디바이스를 다시 만든다). 내린 단계는
+         *          `restartStoppedSteps` 가 같은 본문으로 다시 세운다 — 교체 경로가 기동 본문을 손으로 베끼지 않는다.
+         */
+        void shutdownDependentsOf( EngineStartupStep step );
+        /**
+         * @brief `shutdownDependentsOf` 가 내린 단계를 위상 순서로 다시 초기화합니다(`initialize`). 본문은 이미 있는 객체를 다시 쓴다.
+         * @return 모두 다시 섰으면 true 입니다. 실패한 단계에서 멈추고, 그 단계와 나머지는 내린 채로 남습니다(종료 대상에서도 빠진다).
+         */
+        [[nodiscard]] bool restartStoppedSteps();
+        /** @brief `shutdownDependentsOf` 가 내리고 아직 다시 세우지 않은 단계입니다(초기화 순서). */
+        const vector<EngineStartupStep>& getStoppedSteps() const { return _listStopped; }
+
         /** @brief 표의 초기화 순서입니다(본문을 돌리지 않아도 나옵니다). */
         const vector<EngineStartupStep>& getInitializeOrder() const { return _listOrder; }
         /** @brief 지금 초기화돼 있는 단계입니다(초기화한 순서). */
@@ -158,6 +172,7 @@ namespace sw
         vector<EngineStartupStep>     _listOrder;       ///< 초기화 순서
         vector<vector<uint32>>        _listDependency;  ///< 단계마다 먼저 서야 하는 단계(표의 자리)
         vector<EngineStartupStep>     _listInitialized; ///< 초기화한 단계(종료가 역순으로 돈다)
+        vector<EngineStartupStep>     _listStopped;     ///< `shutdownDependentsOf` 가 내린 단계(초기화 순서)
         const EngineStartupStepEntry* _pArrEntry;       ///< `initializeAll` 이 받은 호스트의 본문 표
         void*                         _pHost;           ///< 본문에 넘길 호스트
         string                        _error;           ///< 표 오류

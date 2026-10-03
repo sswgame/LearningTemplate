@@ -270,3 +270,51 @@ SW_TEST_CASE( EngineStartupSequenceTest, DependenciesOrderAndNameBreaksTies )
     SW_ASSERT_TRUE_MSG( EngineStartupSequence::computeGraph( listNode, graph, error ), error.c_str() );
     SW_EXPECT_STREQ( "B C A D", joinNodeOrder( listNode, graph._listOrder ).c_str() );
 }
+
+/**
+ * @brief [EngineStartupSequenceTest] 한 단계에 (간접으로라도) 의존하는 단계만 역순으로 내리고, 같은 본문으로 다시 세우는지 검증
+ * @details 백엔드 교체가 이 길을 탄다: RHI 의 디바이스를 갈아 끼우는 동안 렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스만 내렸다가
+ *          다시 세운다. 다시 세운 뒤의 종료 순서는 처음 기동한 것과 같아야 한다.
+ */
+SW_TEST_CASE( EngineStartupSequenceTest, DependentsOfAStepRestartWithTheSameBodies )
+{
+    EngineStartupSequence sequence;
+    StartupStepRecorder   recorder;
+    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
+    recorder._listInitialized.clear();
+
+    sequence.shutdownDependentsOf( EngineStartupStep::RHI );
+    SW_EXPECT_STREQ( "SceneRhi LiveShader RenderThread FrameRenderer", joinStepNames( recorder._listShutdown ).c_str() );
+    SW_EXPECT_STREQ( "FrameRenderer RenderThread LiveShader SceneRhi", joinStepNames( sequence.getStoppedSteps() ).c_str() );
+    SW_EXPECT_TRUE( recorder._listDestroyed.empty() );
+
+    SW_EXPECT_TRUE( sequence.restartStoppedSteps() );
+    SW_EXPECT_STREQ( "FrameRenderer RenderThread LiveShader SceneRhi", joinStepNames( recorder._listInitialized ).c_str() );
+    SW_EXPECT_TRUE( sequence.getStoppedSteps().empty() );
+
+    recorder._listShutdown.clear();
+    sequence.shutdownAll();
+    SW_EXPECT_STREQ( "SceneRhi LiveShader RenderThread FrameRenderer RHI Headless Scene Input Audio ModuleImages Task ShaderCache EngineData Resource "
+                     "Config Reflection Compression",
+                     joinStepNames( recorder._listShutdown ).c_str() );
+}
+
+/**
+ * @brief [EngineStartupSequenceTest] 다시 세우다 실패하면 거기서 멈추고, 서지 못한 단계는 종료 대상에서 빠지는지 검증
+ */
+SW_TEST_CASE( EngineStartupSequenceTest, FailedRestartLeavesTheRestStopped )
+{
+    EngineStartupSequence sequence;
+    StartupStepRecorder   recorder;
+    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
+
+    sequence.shutdownDependentsOf( EngineStartupStep::RHI );
+    recorder._resultStep = EngineStartupStep::RenderThread;
+    recorder._result     = EngineStartupResult::Failed;
+    SW_EXPECT_FALSE( sequence.restartStoppedSteps() );
+
+    recorder._listShutdown.clear();
+    sequence.shutdownAll();
+    SW_EXPECT_STREQ( "FrameRenderer RHI Headless Scene Input Audio ModuleImages Task ShaderCache EngineData Resource Config Reflection Compression",
+                     joinStepNames( recorder._listShutdown ).c_str() );
+}
