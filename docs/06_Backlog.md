@@ -145,19 +145,16 @@ cd build/Ninja-Debug/Bin
   트랜지언트 풀 · 디스크립터)로 실제 할당 크기를 더한다(DX12 `GetResourceAllocationInfo`). 총량 − 집계 = "엔진 밖(드라이버 · 스왑체인)". 보여 주기는 CPU 태그와 같게
   `-gv_profileFrames` 보고 · ProfilerPanel. 시험: 텍스처 하나를 만들고 지우면 집계가 그 크기만큼 오르내린다(hostgpu, 4 백엔드).
 
-- **배포 팩에 G-버퍼 셰이더의 Unlit 보기 퍼뮤테이션(`SW_VIEWMODE_UNLIT=1`)이 없다** — `gv_viewMode` 는 배포본에도 있는 설정이다. 고치면
-  `TestRenderPassGpu.cpp` 의 `SW_TEST_KNOWN_ERROR_LOG` 두 줄을 지운다.
 - **2D 정렬 레이어가 없다.** 깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다.
-- **`shaderDemoteToHelperInvocation` 이 없는 Vulkan 디바이스에서 `discard` 가 미정의다**(`deferredlighting` · `sprite2d`). 지금은 경고만 낸다
-  (`VulkanRHIDeviceInit.cpp`). 대안은 1.1 타깃(OpKill)으로 되굽는 변형이다.
-- **에디터가 `VulkanRHIDevice` 클래스 레이아웃에 기대는데 ABI 스탬프가 그것을 덮지 않는다.** `ImGuiVulkanRendererBackend` 가 `static_cast` 뒤 가상
-  `queryNativeHandles` 를 부른다. 한 빌드가 전부 짓는 지금은 무해하다 — RHI 백엔드를 따로 배포하면 여기가 먼저 깨진다.
 - **점광 · 스폿 그림자** — RHI 텍스처 차원(배열 · 큐브, 면 단위 타깃 · 올리기 · 읽기)은 있다. 남은 것: 그림자 패스 다중 뷰(면 여섯) → 셰이더 쪽(DX12 · Vulkan
   큐브 · 배열 bindless 테이블, DX11 · GL TextureCube 슬롯) + `swSampleShadowAtWorld`. 3 단계 전에 큐브 대신 2D 아틀라스(Unity URP · Godot — RHI 변경 없음)로 갈지 먼저 정한다.
 - **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것: 반해상도 패스가 읽는 입력의 텍셀 크기(`g_OutlineParams.yz` 는 프레임 텍셀),
   `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
 
 ### 1-4. 에디터
+
+- **Vulkan 에디터: 게임 뷰 리사이즈의 `unregisterTexture` 가 `ImGui_ImplVulkan_RemoveTexture` 를 즉시 불러 비행 중인 디스크립터 세트를 놓는다**(검증 레이어 Error,
+  `-vk -EnableEditor` 4 회 중 1 회). `EditorContext::destroyGameView` 경로. 해제를 프레임 펜스 뒤로 미룰 것(렌더 스레드 동기화 확인).
 
 - **에디터 자체 시험(`SW_EDITOR_SELF_TEST`)이 입력을 흉내 내지 못한다** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 툴팁 호버 · 드래그 드롭은
   ImGui 입력 이벤트를 넣는 창구(`ImGuiIO::AddMousePosEvent` 류를 프레임 단계에서 주입)가 있어야 덮인다.
@@ -674,6 +671,10 @@ cd build/Ninja-Debug/Bin
 
 ### 3-7. 그래픽스 · RHI · 셰이더
 
+- **셰이더 굽기는 패스 종류 표 전체 × (머티리얼 없음 + 머티리얼) × `RenderViewMode` 를 굽는다** — 파이프라인 XML 에 나오는 패스만 곱하면 런타임
+  (`ensurePassResources`)이 만드는 변형이 빠진다. 뷰 모드 define 의 정본은 `FrameRendererUtil::findViewModeDefine`, `ShaderBakeRequestTest.BakedManifestHoldsEveryRequest` 가
+  커밋된 매니페스트를 대조한다. Vulkan 최소 판과 굽기 타깃(`-fspv-target-env`)은 `VulkanRHIApiVersion.h` 하나 — 1.3 미만 디바이스는 고르지 않는다(SPIR-V 1.6).
+
 - **텍스처는 들일 때 굽는다(사용자 결정 2026-10-03 — UE 임포트 방식).** 런타임은 DDS 만 읽고, 원본은 `<domain>/textures_raw/` 에만 둔다(`CheckTextureFolders`).
   원본 ↔ DDS 대조는 원본 폴더마다 `bake.stamp`(원본 바이트 + 해석한 규칙 + 베이커 버전의 해시, DDS 해시) — `App --bake-textures` · `--check-textures`(헤드리스로
   에디터 모듈을 올린다, Shipping 은 이유를 남기고 실패), CI 대조는 `TextureBakeStampTest`. 함정: 굽기 동작을 바꾸면 `TextureBakerInternal::kBakerVersion` 을 올려야
@@ -766,7 +767,8 @@ cd build/Ninja-Debug/Bin
   않는다). `glClipControl` 은 `#ifdef GL_CLIP_CONTROL`(없는 토큰) 같은 가드 뒤에 두지 말 것(상하 반전이 오래 숨었다). MRT 클리어는 `glClearBufferfv`, `R16G16B16A16_FLOAT` 는
   `GL_HALF_FLOAT`, `drawInstanced` 는 startInstance 를 버린다. 로그 문구에 `[Error]` 같은 레벨 토큰을 쓰지 말 것(스모크가 센다).
 - **스왑체인은 진짜 객체다**(`5aea5ef1`) — 가상 인터페이스로 되돌리지 말 것, GL 은 의도적으로 없다. Present PSO 는 대상 포맷(`getBackBufferFormat`)으로, BGRA 는 `-gv_rhiBackBufferFormat=1`
-  로 검증. `IRHIDevice` 에 백엔드 전용 API 를 두지 않는다(Vulkan `queryNativeHandles` 는 override 가 없어도 `virtual` — 에디터가 vtable 로 부른다). 에디터 능력을 `RHICapabilities` 에
+  로 검증. `IRHIDevice` 에 백엔드 전용 API 를 두지 않는다 — 에디터 같은 외부 모듈은 네이티브 핸들을 판 번호 든 `RHINativeHandles` 로 받는다
+  (`IRHIDevice::queryNativeHandles` 가 판 · 크기를 대조). 구체 디바이스로 캐스팅하지 말 것. 에디터 능력을 `RHICapabilities` 에
   넣지 말 것(`createRendererBackend` 가 모르는 백엔드에 `nullptr`). 백엔드 능력은 이름이 아니라 `getCapabilities()` 런타임 값으로.
 - **백엔드 하나만 고쳐진 모양이 계속 나온다**(`createStructuredBuffer` 는 DX12 만 64 비트로 곱한다). 시험은 백엔드별 계약으로 쓴다. 안 쓰이는 경로는 조용히 썩는다 — 폴백은 지우고
   "아직 안 쓰는 기능" 은 시험과 함께 남긴다(인덱스 드로우의 유일한 검증은 `RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream`, `createIndexBuffer` 는 순수 가상).
