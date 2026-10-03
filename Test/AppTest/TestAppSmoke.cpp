@@ -631,6 +631,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|preview.materialHoldsOneReference",
         "EditorSelfTest|PASS|hierarchy.tagFilter",
         "EditorSelfTest|PASS|gameView.resizeEveryFrame",
+        "EditorSelfTest|PASS|profiler.gpuMemoryTab",
     };
 
     const string  imguiIniPath = findEditorImguiIniPath();

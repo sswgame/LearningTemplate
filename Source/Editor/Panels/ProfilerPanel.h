@@ -30,6 +30,8 @@ namespace sw::editor
     private:
         /** @brief 메모리 프로파일 탭을 그립니다. */
         void drawMemoryTab();
+        /** @brief GPU 메모리 탭을 그립니다 — `-gv_profileFrames` 보고의 GPU 표와 같은 숫자(장부 줄별 · 드라이버 · 엔진 밖)입니다. */
+        void drawGpuMemoryTab();
         /** @brief 실시간 FPS 및 씬 성능 진단 탭을 그립니다. */
         void drawPerformanceTab();
 

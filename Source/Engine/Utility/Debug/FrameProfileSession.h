@@ -37,6 +37,12 @@ namespace sw
         /** @brief 목표 프레임을 채워 종료하려 하면 true 입니다. */
         bool isQuitRequested() const { return _bQuitRequested == SW_TRUE; }
 
+        /**
+         * @brief 보고를 이미 냈으면 true 입니다. 이 타입이 볼 수 없는 표(GPU 메모리 — Graphics 는 Utility 위 층이다)는 이 값이 바뀐 프레임에
+         *        부르는 쪽(`EngineLoop`)이 이어서 남깁니다.
+         */
+        bool hasReported() const { return _bReported == SW_TRUE; }
+
     private:
         /** @brief 측정 창의 프레임당 할당 수와(켰다면) 콜스택별 상위 자리를 로그로 남깁니다. */
         void reportAllocations( uint64 frames );

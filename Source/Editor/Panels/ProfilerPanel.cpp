@@ -10,9 +10,12 @@
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -43,6 +46,18 @@ namespace sw::editor
                     formatstring( out.data(), out.capacity(), "%# MB", Fmt( static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 ), Format().precision( 2 ) ) );
                 else
                     formatstring( out.data(), out.capacity(), "%# GB", Fmt( static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 * 1024.0 ), Format().precision( 2 ) ) );
+            }
+
+            /** @brief 아는 값은 `formatBytes` 로, 드라이버가 답하지 않은 값은 "Unknown" 으로 적습니다. */
+            template <uint32 N>
+            static void formatKnownBytes( uint64 bytes, bool bKnown, fixed_string<N>& out )
+            {
+                if ( bKnown == false )
+                {
+                    formatstring( out.data(), out.capacity(), "Unknown" );
+                    return;
+                }
+                formatBytes( bytes, out );
             }
         };
     } // namespace
@@ -75,6 +90,11 @@ namespace sw::editor
             if ( ImGui::BeginTabItem( "Memory" ) )
             {
                 drawMemoryTab();
+                ImGui::EndTabItem();
+            }
+            if ( ImGui::BeginTabItem( "GPU Memory" ) )
+            {
+                drawGpuMemoryTab();
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
@@ -196,6 +216,83 @@ namespace sw::editor
         }
 
         ImGui::Separator();
+    }
+
+    void ProfilerPanel::drawGpuMemoryTab()
+    {
+        EditorContext* pContext = EditorContext::get();
+        IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getRhiDevice() : nullptr;
+        if ( pDevice == nullptr )
+        {
+            EditorWidgets::drawEmptyHint( "No RHI device." );
+            return;
+        }
+        const RHIMemoryLedger&    ledger  = pDevice->getMemoryLedger();
+        const RHIGpuMemorySummary summary = ledger.makeSummary();
+
+        fixed_string<constant::kMaxBuffer32> arrBytesBuf;
+        ProfilerPanelInternal::formatBytes( summary._trackedBytes, arrBytesBuf );
+        ImGui::Text( "%s - %s size", pDevice->getBackendName(), RHIMemoryLedger::getSizeBasisName( summary._sizeBasis ) );
+        ImGui::Text( "Tracked: %s  (+ %u of unknown size)", arrBytesBuf.c_str(), summary._unknownSizeCount );
+
+        if ( ImGui::CollapsingHeader( "Engine Ledger By Kind", ImGuiTreeNodeFlags_DefaultOpen ) )
+        {
+            if ( ImGui::BeginTable( "GpuMemoryTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
+            {
+                ImGui::TableSetupColumn( "Kind" );
+                ImGui::TableSetupColumn( "Live Bytes" );
+                ImGui::TableSetupColumn( "Share" );
+                ImGui::TableSetupColumn( "Count" );
+                ImGui::TableSetupColumn( "Unknown Size" );
+                ImGui::TableHeadersRow();
+
+                // 로그 보고와 같은 순서(바이트가 큰 줄부터)와 같은 이름이다. 크기 모름은 바이트 합에 넣지 않고 따로 센다.
+                for ( const RHIMemoryKind kind : ledger.makeKindOrderByLiveBytes() )
+                {
+                    const RHIMemoryKindStats stats = ledger.getStats( kind );
+                    ProfilerPanelInternal::formatBytes( stats._liveBytes, arrBytesBuf );
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted( RHIMemoryLedger::getKindName( kind ) );
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted( arrBytesBuf.c_str() );
+                    ImGui::TableNextColumn();
+                    ImGui::Text( "%.1f%%", summary._trackedBytes == 0 ? 0.0
+                                                                      : static_cast<float64>( stats._liveBytes ) * 100.0 / static_cast<float64>( summary._trackedBytes ) );
+                    ImGui::TableNextColumn();
+                    ImGui::Text( "%u", stats._liveCount );
+                    ImGui::TableNextColumn();
+                    ImGui::Text( "%u", stats._unknownSizeCount );
+                }
+                ImGui::EndTable();
+            }
+        }
+
+        if ( ImGui::CollapsingHeader( "Driver", ImGuiTreeNodeFlags_DefaultOpen ) )
+        {
+            // 드라이버가 답하지 않은 칸은 "Unknown" 이다 — 0 으로 지어내지 않는다.
+            const RHIGpuMemoryBudget&            budget = summary._budget;
+            fixed_string<constant::kMaxBuffer32> arrUsageBuf;
+            fixed_string<constant::kMaxBuffer32> arrBudgetBuf;
+            fixed_string<constant::kMaxBuffer32> arrAvailableBuf;
+            ProfilerPanelInternal::formatKnownBytes( budget._usageBytes, budget._bUsageKnown != SW_FALSE, arrUsageBuf );
+            ProfilerPanelInternal::formatKnownBytes( budget._budgetBytes, budget._bBudgetKnown != SW_FALSE, arrBudgetBuf );
+            ProfilerPanelInternal::formatKnownBytes( budget._availableBytes, budget._bAvailableKnown != SW_FALSE, arrAvailableBuf );
+            const utf8* pScope = budget._bUsageKnown == SW_FALSE             ? ""
+                               : budget._scope == RHIGpuMemoryScope::Process ? " (this process)"
+                                                                             : " (whole device, other processes included)";
+            ImGui::Text( "Usage: %s%s", arrUsageBuf.c_str(), pScope );
+            ImGui::Text( "Budget: %s", arrBudgetBuf.c_str() );
+            ImGui::Text( "Available: %s", arrAvailableBuf.c_str() );
+            if ( summary._bOutsideKnown != SW_FALSE )
+            {
+                const bool bNegative = summary._outsideBytes < 0;
+                ProfilerPanelInternal::formatBytes( static_cast<uint64>( bNegative ? -summary._outsideBytes : summary._outsideBytes ), arrBytesBuf );
+                ImGui::Text( "Outside ledger (swap chain, driver, untracked): %s%s", bNegative ? "-" : "", arrBytesBuf.c_str() );
+            }
+            else
+                ImGui::TextUnformatted( "Outside ledger: Unknown (no per-process driver usage)" );
+        }
     }
 
     void ProfilerPanel::drawMemoryTab()

@@ -13,6 +13,8 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -359,6 +361,76 @@ namespace sw::editor
                 ImGui::End();
                 return EditorSelfTestStep::Continue;
             }
+
+            // ------------------------------------------------------------------------------
+            // profiler.gpuMemoryTab — 프로파일러의 GPU Memory 탭이 장부 표(줄 · 바이트 · 비율 · 개수 · 크기 모름)를 그린다
+            // ------------------------------------------------------------------------------
+            /** @brief 이 프레임에 그려진, 첫 열이 `pFirstColumn` 이고 마지막 열이 `pLastColumn` 인 표입니다. 없으면 nullptr. */
+            static ImGuiTable* findActiveTable( const utf8* pFirstColumn, const utf8* pLastColumn, int32 columnCount )
+            {
+                ImGuiContext& imguiContext = *ImGui::GetCurrentContext();
+                for ( int32 tableIndex = 0; tableIndex < imguiContext.Tables.GetMapSize(); ++tableIndex )
+                {
+                    ImGuiTable* pTable = imguiContext.Tables.TryGetMapData( tableIndex );
+                    if ( pTable == nullptr || pTable->LastFrameActive != imguiContext.FrameCount || pTable->ColumnsCount != columnCount )
+                        continue;
+                    const string_view firstName{ ImGui::TableGetColumnName( pTable, 0 ) };
+                    const string_view lastName{ ImGui::TableGetColumnName( pTable, columnCount - 1 ) };
+                    if ( firstName == pFirstColumn && lastName == pLastColumn )
+                        return pTable;
+                }
+                return nullptr;
+            }
+
+            /** @brief 이름이 `pTabName` 인 탭을 가진 탭 바를 찾아 그 탭을 다음 프레임에 고르게 합니다. 찾으면 true. */
+            static bool queueTabFocus( const utf8* pTabName )
+            {
+                ImGuiContext& imguiContext = *ImGui::GetCurrentContext();
+                for ( int32 barIndex = 0; barIndex < imguiContext.TabBars.GetMapSize(); ++barIndex )
+                {
+                    ImGuiTabBar* pTabBar = imguiContext.TabBars.TryGetMapData( barIndex );
+                    if ( pTabBar == nullptr )
+                        continue;
+                    for ( ImGuiTabItem& tab : pTabBar->Tabs )
+                    {
+                        if ( string_view{ ImGui::TabBarGetTabName( pTabBar, &tab ) } != pTabName )
+                            continue;
+                        ImGui::TabBarQueueFocus( pTabBar, &tab );
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            static EditorSelfTestStep runProfilerGpuMemoryTabDrawsTheLedger( EditorSelfTestContext& context )
+            {
+                constexpr const utf8* kProfilerPanelId = "profiler";
+                constexpr uint32      kMaxStepCount    = 30;
+
+                EditorContext* pContext = EditorContext::get();
+                if ( context.expect( pContext != nullptr && pContext->getRhiDevice() != nullptr, "no editor context or RHI device" ) == false )
+                    return EditorSelfTestStep::Done;
+
+                const uint32 stepIndex = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    (void)pContext->getPanelManager().setPanelOpen( kProfilerPanelId, true );
+                    return EditorSelfTestStep::Continue;
+                }
+
+                // 탭은 고른 다음 프레임에 그려진다. 표가 이 프레임에 그려졌으면 확인하고, 아니면 GPU Memory 탭을 다시 고른다.
+                const ImGuiTable* pTable = findActiveTable( "Kind", "Unknown Size", 5 );
+                if ( pTable == nullptr && stepIndex < kMaxStepCount )
+                {
+                    (void)queueTabFocus( "GPU Memory" );
+                    return EditorSelfTestStep::Continue;
+                }
+                (void)context.expect( pTable != nullptr, "the profiler GPU Memory tab never drew its ledger table" );
+                const RHIMemoryLedger& ledger = pContext->getRhiDevice()->getMemoryLedger();
+                (void)context.expect( ledger.getTrackedBytes() > 0, "the GPU memory ledger is empty in a running editor" );
+                (void)pContext->getPanelManager().setPanelOpen( kProfilerPanelId, false );
+                return EditorSelfTestStep::Done;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -373,4 +445,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( MaterialPreview, "preview.materialHoldsOneReference", 500, &EditorSelfTestCasesInternal::runMaterialPreviewHoldsOneReference );
     SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &EditorSelfTestCasesInternal::runHierarchyTagFilter );
     SW_EDITOR_SELF_TEST( GameViewResize, "gameView.resizeEveryFrame", 700, &EditorSelfTestCasesInternal::runGameViewResizeEveryFrame );
+    SW_EDITOR_SELF_TEST( ProfilerGpuMemory, "profiler.gpuMemoryTab", 800, &EditorSelfTestCasesInternal::runProfilerGpuMemoryTabDrawsTheLedger );
 } // namespace sw::editor

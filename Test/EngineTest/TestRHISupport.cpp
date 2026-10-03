@@ -602,3 +602,47 @@ SW_TEST_CASE( RHIMemoryLedgerTest, RefreshWithoutDriverQueryLeavesEveryFieldUnkn
     SW_EXPECT_TRUE( budget._bUsageKnown == SW_FALSE && budget._bBudgetKnown == SW_FALSE && budget._bAvailableKnown == SW_FALSE );
     SW_EXPECT_EQUAL( 0ull, budget._usageBytes );
 }
+
+/**
+ * @brief [RHIMemoryLedgerTest] `-gv_profileFrames` 의 GPU 표는 머리 · 쓰인 줄 · 드라이버 줄 · 엔진 밖 줄을 내고, 모르는 값은 "모름" 으로 찍는다
+ * @details 장부에 값이 있는 줄(크기 모름만 있는 줄 포함)만 내고 빈 줄은 내지 않는다. 드라이버 사용량이 디바이스 전체 값이면 엔진 밖은 계산하지 않는다.
+ */
+SW_TEST_CASE( RHIMemoryLedgerTest, ReportPrintsUsedKindsAndUnknownDriverValues )
+{
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
+    sw::RHIMemoryLedger ledger;
+    ledger.recordAllocation( sw::RHIMemoryKey::makeTexture( 1 ), sw::RHIMemoryKind::TransientPool, 3ull * 1024ull * 1024ull );
+    int32 poolStandIn{ 0 };
+    ledger.recordAllocation( sw::RHIMemoryKey::makeDeviceObject( &poolStandIn ), sw::RHIMemoryKind::Descriptor, sw::kRHIMemoryUnknownBytes );
+    sw::RHIGpuMemoryBudget deviceBudget{};
+    deviceBudget._availableBytes  = 8ull * 1024ull * 1024ull;
+    deviceBudget._bAvailableKnown = SW_TRUE;
+    deviceBudget._scope           = sw::RHIGpuMemoryScope::Device;
+    ledger.setDriverBudget( deviceBudget );
+
+    sw::mutex                mutex;
+    sw::vector<sw::string>   listLine;
+    const sw::DelegateHandle handle = sw::Logger::addGlobalListener( SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&mutex, &listLine]( const sw::LogEntry& entry )
+    {
+        if ( entry._message.find( "[Profile]" ) == sw::string::npos )
+            return;
+        std::scoped_lock<sw::mutex> lock{ mutex };
+        listLine.push_back( entry._message );
+    } ) );
+    ledger.report( "FakeBackend" );
+    sw::Logger::removeGlobalListener( handle );
+
+    sw::string joined;
+    for ( const sw::string& line : listLine )
+        joined += line + "\n";
+    const sw::string_view text{ joined.c_str(), joined.size() };
+    SW_EXPECT_TRUE_MSG( text.find( "GPU memory by kind (live, FakeBackend · allocation size)  3.0 MB in 1 resources  + 1 of unknown size" ) != sw::string_view::npos, joined.c_str() );
+    SW_EXPECT_TRUE_MSG( text.find( "TransientPool  3.0 MB  100.0%  1 resources" ) != sw::string_view::npos, joined.c_str() );
+    SW_EXPECT_TRUE_MSG( text.find( "Descriptor  0.0 MB  0.0%  0 resources  + 1 of unknown size" ) != sw::string_view::npos, joined.c_str() );
+    SW_EXPECT_TRUE_MSG( text.find( "Buffer" ) == sw::string_view::npos, joined.c_str() );
+    SW_EXPECT_TRUE_MSG( text.find( "사용량 모름  예산 모름  남은 양 8.0 MB" ) != sw::string_view::npos, joined.c_str() );
+    SW_EXPECT_TRUE_MSG( text.find( "모름 — 이 프로세스의 드라이버 사용량이 없다" ) != sw::string_view::npos, joined.c_str() );
+#else
+    SW_TEST_SKIP( "Info logs are compiled out in this configuration" );
+#endif
+}

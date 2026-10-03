@@ -190,6 +190,14 @@ namespace sw
         /** @brief 드라이버 값과 장부를 맞춰 "엔진 밖" 까지 계산합니다. */
         RHIGpuMemorySummary makeSummary() const;
 
+        /**
+         * @brief `-gv_profileFrames` 보고의 GPU 표를 Info 로그로 남깁니다. CPU 의 "memory by tag" 표와 같은 모양입니다.
+         * @details 줄별(바이트가 큰 순서) 살아 있는 바이트 · 비율 · 개수 · 크기 모름 수, 드라이버 사용량 · 예산 · 남은 양, 엔진 밖을 적습니다.
+         *          모르는 값은 "모름" 으로 찍습니다. Info 로그가 빠지는 구성(Shipping)에서는 아무것도 하지 않습니다.
+         * @param pBackendName 표 머리에 적을 백엔드 이름.
+         */
+        void report( const utf8* pBackendName ) const;
+
     private:
         /** @brief 키 하나가 올라 있는 동안 기억하는 값입니다. 해제는 이 값을 그대로 뺍니다. */
         struct LiveEntry

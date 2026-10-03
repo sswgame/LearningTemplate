@@ -29,6 +29,7 @@
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
@@ -783,7 +784,12 @@ namespace sw
     void EngineLoop::endFrame()
     {
         engine::getFrameProfiler().endFrame();
+        const bool bReportedBefore = _profileSession.hasReported();
         _profileSession.onFrameEnd();
+        // CPU 메모리 태그 표 옆에 GPU 메모리 표를 둔다. 보고 세션은 Utility 층이라 Graphics 의 장부를 볼 수 없어 여기서 잇는다.
+        const bool bReportedNow = bReportedBefore == false && _profileSession.hasReported();
+        if ( bReportedNow && _rhi != nullptr && _rhi->hasDevice() )
+            _rhi->getDevice().getMemoryLedger().report( _rhi->getDevice().getBackendName() );
 
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->endFrame();

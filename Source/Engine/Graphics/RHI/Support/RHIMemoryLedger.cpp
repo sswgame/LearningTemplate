@@ -24,6 +24,21 @@ namespace sw
 
             /** @brief 깊이 첨부(D24S8)의 텍셀 바이트입니다. 네 백엔드 모두 24 비트 깊이 + 8 비트 스텐실 한 칸으로 만듭니다. */
             static constexpr uint64 kDepthStencilTexelBytes = 4;
+
+            /** @brief 바이트를 MB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
+            static constexpr uint64 toMegabytesX10( uint64 bytes ) { return ( bytes * 10 ) / ( 1024ull * 1024ull ); }
+
+            /** @brief 아는 값은 "12.3 MB", 모르는 값은 "모름" 으로 적습니다. */
+            static void formatMegabytes( uint64 bytes, bool bKnown, utf8* pOut, uint32 capacity )
+            {
+                if ( bKnown == false )
+                {
+                    formatstring( pOut, capacity, "모름" );
+                    return;
+                }
+                const uint64 megabytesX10 = toMegabytesX10( bytes );
+                formatstring( pOut, capacity, "%#.%# MB", megabytesX10 / 10, megabytesX10 % 10 );
+            }
         };
     } // namespace
 } // namespace sw
@@ -224,6 +239,51 @@ namespace sw
             summary._bOutsideKnown = SW_TRUE;
         }
         return summary;
+    }
+
+    void RHIMemoryLedger::report( [[maybe_unused]] const utf8* pBackendName ) const
+    {
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
+        const RHIGpuMemorySummary summary = makeSummary();
+        uint32                    liveCount{ 0 };
+        for ( uint32 kindIndex = 0; kindIndex < kRHIMemoryKindCount; ++kindIndex )
+            liveCount += getStats( static_cast<RHIMemoryKind>( kindIndex ) )._liveCount;
+
+        const uint64 trackedX10 = RHIMemoryLedgerInternal::toMegabytesX10( summary._trackedBytes );
+        SW_LOG_INFO( "[Profile] GPU memory by kind (live, %# · %# size)  %#.%# MB in %# resources  + %# of unknown size", pBackendName,
+                     getSizeBasisName( summary._sizeBasis ), trackedX10 / 10, trackedX10 % 10, liveCount, summary._unknownSizeCount );
+        for ( const RHIMemoryKind kind : makeKindOrderByLiveBytes() )
+        {
+            const RHIMemoryKindStats stats = getStats( kind );
+            if ( stats._liveBytes == 0 && stats._unknownSizeCount == 0 )
+                continue;
+            const uint64 megabytesX10 = RHIMemoryLedgerInternal::toMegabytesX10( stats._liveBytes );
+            const uint64 sharePermill = summary._trackedBytes == 0 ? 0 : ( stats._liveBytes * 1000 ) / summary._trackedBytes;
+            SW_LOG_INFO( "[Profile]   %#  %#.%# MB  %#.%#%%  %# resources  + %# of unknown size", getKindName( kind ), megabytesX10 / 10, megabytesX10 % 10,
+                         sharePermill / 10, sharePermill % 10, stats._liveCount, stats._unknownSizeCount );
+        }
+
+        const RHIGpuMemoryBudget& budget = summary._budget;
+        utf8                      arrUsage[constant::kMaxBuffer32]{};
+        utf8                      arrBudget[constant::kMaxBuffer32]{};
+        utf8                      arrAvailable[constant::kMaxBuffer32]{};
+        RHIMemoryLedgerInternal::formatMegabytes( budget._usageBytes, budget._bUsageKnown != SW_FALSE, arrUsage, constant::kMaxBuffer32 );
+        RHIMemoryLedgerInternal::formatMegabytes( budget._budgetBytes, budget._bBudgetKnown != SW_FALSE, arrBudget, constant::kMaxBuffer32 );
+        RHIMemoryLedgerInternal::formatMegabytes( budget._availableBytes, budget._bAvailableKnown != SW_FALSE, arrAvailable, constant::kMaxBuffer32 );
+        const utf8* pScope = budget._bUsageKnown == SW_FALSE             ? ""
+                           : budget._scope == RHIGpuMemoryScope::Process ? " (이 프로세스)"
+                                                                         : " (디바이스 전체 — 다른 프로세스 몫 포함)";
+        SW_LOG_INFO( "[Profile]   드라이버: 사용량 %#%#  예산 %#  남은 양 %#", arrUsage, pScope, arrBudget, arrAvailable );
+        if ( summary._bOutsideKnown == SW_FALSE )
+        {
+            SW_LOG_INFO( "[Profile]   (장부 밖 — 스왑체인 · 드라이버 내부 · 장부에 없는 디바이스 자원)  모름 — 이 프로세스의 드라이버 사용량이 없다" );
+            return;
+        }
+        const bool   bNegative  = summary._outsideBytes < 0;
+        const uint64 outsideX10 = RHIMemoryLedgerInternal::toMegabytesX10( static_cast<uint64>( bNegative ? -summary._outsideBytes : summary._outsideBytes ) );
+        SW_LOG_INFO( "[Profile]   (장부 밖 — 스왑체인 · 드라이버 내부 · 장부에 없는 디바이스 자원)  %#%#.%# MB", bNegative ? "-" : "", outsideX10 / 10,
+                     outsideX10 % 10 );
+#endif
     }
 
     void RHIMemoryLedger::subtractLocked( const LiveEntry& entry )
