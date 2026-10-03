@@ -23,8 +23,8 @@ namespace sw
 
     namespace
     {
-        constexpr uint32 kDefaultNumerator  = 60;
-        constexpr uint32 kDefaultDenomiator = 1;
+        constexpr uint32 kDefaultNumerator   = 60;
+        constexpr uint32 kDefaultDenominator = 1;
     } // namespace
 
     bool D3D11RHIDevice::initializeInternal( const RHISwapChainDesc& desc )
@@ -41,7 +41,7 @@ namespace sw
         swapChainDesc.BufferDesc.Height                  = desc._height;
         swapChainDesc.BufferDesc.Format                  = toDxgiFormat( desc._format );
         swapChainDesc.BufferDesc.RefreshRate.Numerator   = kDefaultNumerator;
-        swapChainDesc.BufferDesc.RefreshRate.Denominator = kDefaultDenomiator;
+        swapChainDesc.BufferDesc.RefreshRate.Denominator = kDefaultDenominator;
         swapChainDesc.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         swapChainDesc.OutputWindow                       = _pHWnd;
         swapChainDesc.SampleDesc.Count                   = 1;
