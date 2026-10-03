@@ -116,6 +116,12 @@ cd build/Ninja-Debug/Bin
   `Renderer/Bake/`→`Renderer/Cook/`, `--bake-shaders`→`--cook-shaders`(옛 철자 없음), `bake.stamp`→`cook.stamp`, `TextureBaker`→`TextureImporter`(이미 `TextureImportConfig` ·
   `TextureImportRule` 과 짝), `BakeShippingHostDefaults.py`→`GenerateShippingHostDefaults.py`, 주석 · 문서의 "굽다"도 같은 구분으로. `ResourceManager`→`AssetManager`
   ("Resource" 는 디스크 트리 · 팩, "Asset" 은 읽은 객체), `EngineData`/`GameData`/`EditorData`→`EngineDefaultAssets`/`GameSettings`/`EditorToolDefaults`.
+- **enum switch 규칙을 LLVM 방식으로**(사용자 질문 2026-10-03 "default 요구 안 하는 게 낫나?" → 낫다): 모든 열거자를 다루는 switch 에는 `default:` 를 **두지 않고**
+  `-Werror=switch`(clang · GCC 의 -Wall 에 이미 있다)가 빠진 열거자를 잡게 한다 — `-Werror=covered-switch-default`(다 다뤘는데 default 가 있으면 오류),
+  `-Wno-switch-default` · `-Wno-switch-enum`(일부만 다루는 switch 는 default 를 써도 된다 — 지금은 clang-cl 의 -Wall(-Weverything) 때문에 쓸데없는 열거자까지 다 적는다).
+  값이 범위를 벗어나는 것은 입력 경계(역직렬화가 모르는 열거자를 거절)에서 막고, 반환이 있는 함수는 switch 뒤 `SW_UNREACHABLE` 류. 그러면 파일별
+  `#pragma clang diagnostic error "-Wswitch-enum"`(ActionMapGlyph.cpp · DialogueRunnerComponent.cpp)과 AGENTS 의 default 요구가 사라진다. cmake/Modules/Compiler 를
+  archmacro 워크트리가 고치는 중이라 그 병합 뒤에. 고칠 자리는 `-Wno-covered-switch-default` 를 뺀 빌드가 전부 짚어 준다.
 - **case 중괄호 일관성 규칙**(한 switch 안에서 한 case 라도 중괄호면 모두) — 픽서 패치 준비됨(스크래치), 39 파일 다시 쓰기 + AGENTS.md · 04 규칙 문장.
 - **한 파일에 클래스가 여럿이면 클래스마다 `namespace sw { }` 블록을 나눈다** — 규칙 + 가능하면 게이트, 트리 전체 적용.
 - **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
