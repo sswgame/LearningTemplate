@@ -61,12 +61,6 @@
 
 SW_TEST_REQUIRES_HOST( RenderPassGpuTest, "runs FrameRenderer on a real GPU device and reads pixels back" );
 
-// 배포 팩에 G-버퍼 셰이더의 Unlit 보기 퍼뮤테이션(SW_VIEWMODE_UNLIT=1)이 구워지지 않는다 — ViewModeSelectsDistinctPipelineStates 가 그것을 찾다
-// Error 를 남긴다. `gv_viewMode` 는 배포본에도 있는 설정이라 쿠킹 쪽에서 고칠 일이다(고치면 두 줄을 지운다).
-SW_TEST_KNOWN_ERROR_LOG( RenderPassGpuTest, "define: SW_VIEWMODE_UNLIT=1", "shipping pack lacks the Unlit view-mode permutation of the G-buffer shaders" );
-SW_TEST_KNOWN_ERROR_LOG( RenderPassGpuTest, "Precompiled shader binary not found in shipping pack: 'engine/shaders/gbuffer",
-                         "same missing Unlit view-mode permutation as above" );
-
 namespace
 {
     /**

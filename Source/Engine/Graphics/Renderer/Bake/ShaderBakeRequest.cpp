@@ -66,8 +66,18 @@ namespace sw
                 string         _pixelEntryPoint;
                 vector<string> _listPermutation;
                 bool           _bUsesMaterialShader{ false };
+                bool           _bAppliesViewMode{ false };
                 bool           _bHasPixelStage{ false };
             };
+
+            /** @brief 메시 패스 하나가 이 셰이더 · define 으로 그릴 때의 VS(그리고 픽셀 스테이지가 있으면 PS) 요청을 더합니다. */
+            static void appendMeshPassRequest( vector<ShaderBakeRequest>& outListRequest, const MeshPassInfo& passInfo, string_view shaderPath,
+                                               const vector<string>& listDefine )
+            {
+                appendRequestUnique( outListRequest, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listDefine );
+                if ( passInfo._bHasPixelStage )
+                    appendRequestUnique( outListRequest, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listDefine );
+            }
 
             /** @brief 머티리얼 하나가 요구하는 셰이더 경로와 **런타임과 같은** define 목록입니다. */
             struct MaterialVariantInfo
@@ -142,6 +152,7 @@ namespace sw
                             passInfo._pixelEntryPoint     = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
                             passInfo._listPermutation     = listPassDefine;
                             passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._resolvedType );
+                            passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( pass._resolvedType );
                             passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment );
                             listMeshPass.push_back( std::move( passInfo ) );
                         }
@@ -191,15 +202,32 @@ namespace sw
 
                 // 2) 패스 종류 표(RenderPassTypeTraits)의 엔진 셰이더. 런타임이 패스 서술 없이도 만드는 PSO 의 셰이더다.
                 //    컴퓨트 패스는 CSMain, 나머지는 VSMain · PSMain 을 define 없이 굽는다(폴백 셰이더 포함).
+                //    런타임(FrameRenderer::ensurePassResources)은 로드한 파이프라인과 무관하게 표의 **모든** 패스 종류로 엔진 PSO 를 만들고,
+                //    씬 메시 패스면 그 위에 머티리얼 · 뷰 모드 변형을 얹는다. 파이프라인에 그 종류가 없으면 서술 없이 표만으로 만든다 —
+                //    그 메시 패스도 아래 4) 의 곱에 넣는다. XML 에 나오는 패스만 곱하면 어느 파이프라인에도 없는 종류의 변형이 빠진다.
                 for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
                 {
-                    const RenderPassTypeTraits& traits = getRenderPassTypeTraits( static_cast<RenderPassType>( typeIndex ) );
+                    const RenderPassType        passType = static_cast<RenderPassType>( typeIndex );
+                    const RenderPassTypeTraits& traits   = getRenderPassTypeTraits( passType );
                     if ( traits._pDefaultShader == nullptr )
                         continue;
                     if ( traits.hasFlag( RenderPassTraitFlag::kCompute ) )
                     {
                         appendRequestUnique( outListRequest, engineData.*traits._pDefaultShader, "CSMain", ShaderStage::Compute, {} );
                         continue;
+                    }
+                    if ( FrameRendererUtil::drawsSceneMeshes( passType ) )
+                    {
+                        const RenderPassShaderSelection passShader = selectRenderPassShader( passType, nullptr, engineData );
+                        MeshPassInfo                    passInfo;
+                        passInfo._shaderPath          = passShader._shaderPath;
+                        passInfo._vertexEntryPoint    = FrameRendererUtil::Entry::kVSMain;
+                        passInfo._pixelEntryPoint     = FrameRendererUtil::Entry::kPSMain;
+                        passInfo._listPermutation     = passShader._listDefine;
+                        passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( passType );
+                        passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( passType );
+                        passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( passType );
+                        listMeshPass.push_back( std::move( passInfo ) );
                     }
                     for ( string EngineData::* pShader : { traits._pDefaultShader, traits._pFallbackShader } )
                     {
@@ -256,54 +284,41 @@ namespace sw
                     appendRequestUnique( outListRequest, variant._shaderPath, "PSMain", ShaderStage::Pixel, variant._listDefine );
                 }
 
-                // 4) 패스 x 머티리얼: 런타임이 실제로 요구하는 조합
+                // 4) 패스 x (머티리얼 없음 + 머티리얼) x 뷰 모드: 런타임이 실제로 요구하는 조합
                 //
-                // FrameRenderer::createMaterialPsoVariant 는 패스 PSO 의 define 위에 머티리얼 define 을
-                // 얹어 변형 PSO 를 만든다. 즉 런타임이 찾는 것은 패스 단독도 머티리얼 단독도 아닌
-                // **둘의 합집합**이다. 위의 1)/3) 만 구워 두면 그림자 · 불투명 패스가 머티리얼 메시를
-                // 그릴 때마다 미스가 나고, Shipping 은 런타임 컴파일이 없어 드로우가 통째로 사라진다.
+                // FrameRenderer::createMaterialPsoVariant 는 패스 PSO 의 define 위에 머티리얼 define 을, 그 위에 뷰 모드 define 을
+                // 얹어 변형 PSO 를 만든다. 런타임이 찾는 것은 셋의 합집합이고, 머티리얼이 없는 배치(ensureMaterialPsos 의 퍼뮤테이션 없는
+                // 요청)도 패스 define 위에 뷰 모드를 얹는다. 굽지 않은 조합은 Shipping 에서 PSO 생성이 실패하고 패스 PSO 로 물러나
+                // **조용히 Lit 으로** 그려지거나(뷰 모드) 드로우가 사라진다(머티리얼).
+                // 뷰 모드 define 은 런타임과 같은 FrameRendererUtil::findViewModeDefine 에서 얻는다. Wireframe 처럼 래스터라이저 상태만
+                // 바꾸는 모드는 define 이 없어 새 바이트코드가 필요 없다.
                 for ( const MeshPassInfo& passInfo : listMeshPass )
                 {
+                    vector<MaterialVariantInfo> listDrawVariant;
+                    listDrawVariant.push_back( MaterialVariantInfo{ passInfo._shaderPath, passInfo._listPermutation } );
                     for ( const MaterialVariantInfo& variant : listMaterialVariant )
                     {
                         // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다. 그림자 · 뎁스는 자기 셰이더에
                         // define 만 얹는다(usesMaterialShader 와 같은 규칙).
                         const string& shaderPath = passInfo._bUsesMaterialShader ? variant._shaderPath : passInfo._shaderPath;
-                        if ( shaderPath.empty() )
-                            continue;
-
-                        const vector<string> listCombined = mergeDefines( passInfo._listPermutation, variant._listDefine );
-                        appendRequestUnique( outListRequest, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listCombined );
-                        if ( passInfo._bHasPixelStage )
-                            appendRequestUnique( outListRequest, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listCombined );
-
-                        // 5) 그 위의 **뷰 모드** 축: 런타임이 요구하는 조합은 (패스 x 머티리얼 x 뷰 모드)다.
-                        //
-                        // Wireframe 은 래스터라이저 상태만 바꾸므로 새 바이트코드가 필요 없지만 Unlit 은
-                        // 퍼뮤테이션이다. 굽지 않으면 Shipping 에서 그 PSO 생성이 실패하고 패스 PSO 로
-                        // 물러나 **조용히 Lit 으로 그려진다.** 값은 바뀌는데 화면은 그대로인, 이 기능을
-                        // 처음 막아 두게 만든 바로 그 증상이다.
-                        // 뷰 모드를 받는 패스만이다(FrameRendererUtil::appliesViewMode 와 같은 규칙.
-                        // 그림자 · 뎁스는 머티리얼 셰이더를 안 쓰므로 _bUsesMaterialShader 로 갈린다).
-                        if ( passInfo._bUsesMaterialShader )
-                        {
-                            const vector<string> listUnlit = mergeDefines( listCombined, { string( kViewModeUnlitDefine ) } );
-                            appendRequestUnique( outListRequest, shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listUnlit );
-                            if ( passInfo._bHasPixelStage )
-                                appendRequestUnique( outListRequest, shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listUnlit );
-                        }
+                        listDrawVariant.push_back( MaterialVariantInfo{ shaderPath, mergeDefines( passInfo._listPermutation, variant._listDefine ) } );
                     }
 
-                    // 머티리얼이 **없는** 배치의 뷰 모드 변형. 런타임은 퍼뮤테이션 없는 배치에도 (패스 define + Unlit)을
-                    // 만든다(ensureMaterialPsos 의 bHasPlain). 언리얼은 모든 메시에 머티리얼(기본 머티리얼)이 있어 이 축이
-                    // 없지만, 여기는 머티리얼 없는 메시가 패스 PSO 로 그려지므로 그 변형도 굽는다. 위의 머티리얼 루프
-                    // 안에만 두면 이 조합이 빠져 Shipping 에서 그 메시만 Lit 으로 물러난다.
-                    if ( passInfo._bUsesMaterialShader )
+                    for ( const MaterialVariantInfo& drawVariant : listDrawVariant )
                     {
-                        const vector<string> listPlainUnlit = mergeDefines( passInfo._listPermutation, { string( kViewModeUnlitDefine ) } );
-                        appendRequestUnique( outListRequest, passInfo._shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listPlainUnlit );
-                        if ( passInfo._bHasPixelStage )
-                            appendRequestUnique( outListRequest, passInfo._shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listPlainUnlit );
+                        if ( drawVariant._shaderPath.empty() )
+                            continue;
+                        appendMeshPassRequest( outListRequest, passInfo, drawVariant._shaderPath, drawVariant._listDefine );
+                        if ( passInfo._bAppliesViewMode == false )
+                            continue;
+                        for ( uint32 viewModeIndex = 0; viewModeIndex < static_cast<uint32>( RenderViewMode::Count ); ++viewModeIndex )
+                        {
+                            const utf8* pViewModeDefine = FrameRendererUtil::findViewModeDefine( static_cast<RenderViewMode>( viewModeIndex ) );
+                            if ( pViewModeDefine == nullptr )
+                                continue;
+                            appendMeshPassRequest( outListRequest, passInfo, drawVariant._shaderPath,
+                                                   mergeDefines( drawVariant._listDefine, { string( pViewModeDefine ) } ) );
+                        }
                     }
                 }
             }

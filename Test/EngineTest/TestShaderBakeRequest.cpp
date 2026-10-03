@@ -14,6 +14,7 @@
 #include "pch.h"
 
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 
@@ -23,6 +24,8 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -188,4 +191,116 @@ SW_TEST_CASE( ShaderBakeRequestTest, EveryPipelinePassShaderIsRequested )
         if ( sw::isPipelinePassType( static_cast<sw::RenderPassType>( typeIndex ) ) )
             SW_EXPECT_TRUE_MSG( arrCovered[typeIndex], ( "배포 파이프라인에 없는 패스 타입 " + sw::to_string( typeIndex ) ).c_str() );
     }
+}
+
+/**
+ * @brief [ShaderBakeRequestTest] 씬 메시 패스 종류마다 · 뷰 모드마다 런타임이 만드는 변형을, 파이프라인 XML 이 하나도 없어도 요청한다
+ * @details 런타임(`FrameRenderer::ensurePassResources`)은 로드한 파이프라인과 무관하게 패스 종류 표의 **모든** 종류로 엔진 PSO 를
+ *          만들고(`selectRenderPassShader( type, nullptr, … )`), 뷰 모드가 바뀌면 머티리얼 없는 배치에도 그 위에 뷰 모드 define 을
+ *          얹은 변형을 만든다(`findViewModeDefine`). 베이커가 파이프라인 XML 에 나오는 패스만 곱하면 어느 파이프라인에도 없는
+ *          종류의 변형이 빠지고, Shipping 에서 `gv_viewMode` 를 바꾸면 그 PSO 를 만들지 못한다(셰이더 없음 오류 · Lit 으로 물러남).
+ *          빈 임시 루트로 모아 XML 이 주는 몫을 빼고 표가 주는 몫만 본다.
+ */
+SW_TEST_CASE( ShaderBakeRequestTest, EveryViewModeVariantOfEveryMeshPassTypeIsRequested )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    sw::EngineData engineData;
+    SW_ASSERT_TRUE( engineData.loadFromResource() );
+
+    const sw::string emptyRoot = test::makeTempDirectory( "bake_no_pipeline" );
+    SW_ASSERT_TRUE( emptyRoot.empty() == false );
+
+    sw::vector<sw::ShaderBakeRequest> listRequest;
+    sw::ShaderBakeDriver::collectAllRequests( emptyRoot, listRequest );
+    SW_ASSERT_TRUE( listRequest.empty() == false );
+
+    uint32 checkedVariantCount{ 0 };
+    for ( uint32 typeIndex = 0; typeIndex < sw::kRenderPassTypeCount; ++typeIndex )
+    {
+        const sw::RenderPassType passType = static_cast<sw::RenderPassType>( typeIndex );
+        if ( sw::FrameRendererUtil::drawsSceneMeshes( passType ) == false )
+            continue;
+        const sw::RenderPassShaderSelection passShader = sw::selectRenderPassShader( passType, nullptr, engineData );
+        if ( passShader._shaderPath.empty() )
+            continue;
+
+        for ( uint32 viewModeIndex = 0; viewModeIndex < static_cast<uint32>( sw::RenderViewMode::Count ); ++viewModeIndex )
+        {
+            const sw::RenderViewMode viewMode        = static_cast<sw::RenderViewMode>( viewModeIndex );
+            sw::vector<sw::string>   listDefine      = passShader._listDefine;
+            const utf8*              pViewModeDefine = sw::FrameRendererUtil::findViewModeDefine( viewMode );
+            if ( pViewModeDefine != nullptr && sw::FrameRendererUtil::appliesViewMode( passType ) )
+                listDefine.push_back( pViewModeDefine );
+
+            const uint64     permutationHash = sw::ShaderBaker::computePermutationHash( listDefine );
+            const sw::string label           = passShader._shaderPath + " (pass type " + sw::to_string( typeIndex ) + ", view mode " +
+                                     sw::to_string( viewModeIndex ) + ")";
+            SW_EXPECT_TRUE_MSG( hasExactRequestInternal( listRequest, passShader._shaderPath, "VSMain", sw::ShaderStage::Vertex, permutationHash ),
+                                ( label + ": 런타임이 만드는 VS 변형을 굽지 않는다" ).c_str() );
+            if ( sw::FrameRendererUtil::hasPixelStage( passType ) )
+                SW_EXPECT_TRUE_MSG( hasExactRequestInternal( listRequest, passShader._shaderPath, "PSMain", sw::ShaderStage::Pixel, permutationHash ),
+                                    ( label + ": 런타임이 만드는 PS 변형을 굽지 않는다" ).c_str() );
+            ++checkedVariantCount;
+        }
+    }
+    SW_EXPECT_TRUE_MSG( checkedVariantCount > 0, "씬 메시 패스 종류가 하나도 없다 — 이 시험이 아무것도 보지 않는다" );
+}
+
+/**
+ * @brief [ShaderBakeRequestTest] 구운 리플렉션 매니페스트(배포 팩에 실리는 것)가 베이커의 요청을 모두 담는다
+ * @details 위 시험들은 "요청 ⊇ 런타임이 요구하는 것" 을 본다. 여기는 "구운 것 ⊇ 요청" — 요청 규칙을 바꾸고 `App.exe --bake-shaders` 를
+ *          빠뜨리면 커밋된 산출물에 그 조합이 없어 Shipping 이 PSO 를 못 만든다. 매니페스트 키는 베이커의 바이너리 파일 이름이다.
+ *          배포본은 고른 백엔드의 매니페스트만 실으므로 없는 백엔드 폴더는 건너뛰되, 하나는 있어야 한다.
+ */
+SW_TEST_CASE( ShaderBakeRequestTest, BakedManifestHoldsEveryRequest )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    sw::vector<sw::ShaderBakeRequest> listRequest;
+    sw::ShaderBakeDriver::collectAllRequests( sw::ResourceUtil::getRootFolderPath(), listRequest );
+    SW_ASSERT_TRUE( listRequest.empty() == false );
+
+    const sw::ShaderTargetFormat arrFormat[] = { sw::ShaderTargetFormat::DXBC_D3D11, sw::ShaderTargetFormat::DXIL_D3D12,
+                                                 sw::ShaderTargetFormat::SPIRV_Vulkan, sw::ShaderTargetFormat::SPIRV_OpenGL };
+
+    // (bin 폴더 → 매니페스트) 캐시. 매니페스트가 없는 폴더는 빈 맵이 아니라 "없음" 으로 남긴다.
+    sw::unordered_map<sw::string, sw::ShaderReflectionLibrary::EntryMap> mapManifest;
+    sw::unordered_map<sw::string, bool>                                  mapManifestLoaded;
+
+    uint32 checkedCount{ 0 };
+    uint32 missingCount{ 0 };
+    for ( const sw::ShaderBakeRequest& request : listRequest )
+    {
+        const size_t shaderPos = request._shaderPath.find( "shaders/" );
+        if ( shaderPos == sw::string::npos )
+            continue;
+        const sw::string shaderDir = request._shaderPath.substr( 0, shaderPos + sizeof( "shaders/" ) - 1 );
+        const sw::string stemLower = sw::ShaderBaker::getStemLower( request._shaderPath );
+
+        for ( const sw::ShaderTargetFormat format : arrFormat )
+        {
+            const sw::string binDir = shaderDir + "bin/" + sw::string( sw::ShaderBaker::getSubfolderForFormat( format ) );
+            if ( mapManifestLoaded.find( binDir ) == mapManifestLoaded.end() )
+                mapManifestLoaded[binDir] = sw::ShaderReflectionLibrary::loadManifest( binDir, mapManifest[binDir] );
+            if ( mapManifestLoaded[binDir] == false )
+                continue;
+
+            const sw::string key = sw::ShaderBaker::computeBinaryFileName( stemLower, request._stage, request._entryPoint, request._permutationHash,
+                                                                           sw::ShaderBaker::getExtensionForFormat( format ) );
+            ++checkedCount;
+            if ( mapManifest[binDir].find( key ) == mapManifest[binDir].end() )
+            {
+                // 요청 규칙 하나가 어긋나면 수백 줄이 빠진다 — 앞의 몇 개만 이름을 남기고 나머지는 수로 센다.
+                constexpr uint32 kReportedMissingLimit = 8;
+                if ( missingCount < kReportedMissingLimit )
+                    SW_EXPECT_TRUE_MSG( false, ( binDir + " 매니페스트에 '" + key + "' (" + request._shaderPath +
+                                                 ") 가 없다 — App.exe --bake-shaders 로 다시 굽고 산출물을 커밋할 것" )
+                                                   .c_str() );
+                ++missingCount;
+            }
+        }
+    }
+    SW_EXPECT_TRUE_MSG( checkedCount > 0, "구운 매니페스트를 하나도 찾지 못했다 — 이 시험이 아무것도 보지 않는다" );
+    SW_EXPECT_EQUAL( 0u, missingCount );
 }

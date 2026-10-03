@@ -23,27 +23,28 @@ namespace sw
          */
         [[nodiscard]] bool applyViewModeToDesc( RHIPipelineStateDesc& desc, RenderViewMode viewMode )
         {
+            bool bChanged{ false };
             if ( viewMode == RenderViewMode::Wireframe )
             {
                 desc._fillMode = RHIFillMode::Wireframe;
                 // 와이어프레임은 뒷면도 보여야 형태를 읽을 수 있다. 컬링을 남기면 뒤쪽 선이 사라져
                 // 상자가 열린 것처럼 보인다. 에디터의 와이어프레임은 관례적으로 양면이다.
                 desc._cullMode = RHICullMode::None;
-                return true;
+                bChanged       = true;
             }
-            if ( viewMode == RenderViewMode::Unlit )
+
+            // Unlit 은 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이라 그림자 샘플링 · 림 라이트까지
+            // 같이 빠진다. define 은 베이커와 같은 정본(findViewModeDefine)에서 얻는다 — 베이커가 굽지 않은 define 은 Shipping 에서 PSO 를 못 만든다.
+            const utf8* pViewModeDefine = FrameRendererUtil::findViewModeDefine( viewMode );
+            if ( pViewModeDefine == nullptr )
+                return bChanged;
+            for ( const string& existing : desc._listShaderDefine )
             {
-                // 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이라
-                // 그림자 샘플링 · 림 라이트까지 같이 빠진다.
-                for ( const string& existing : desc._listShaderDefine )
-                {
-                    if ( existing == kViewModeUnlitDefine )
-                        return false;
-                }
-                desc._listShaderDefine.push_back( kViewModeUnlitDefine );
-                return true;
+                if ( existing == pViewModeDefine )
+                    return bChanged;
             }
-            return false;
+            desc._listShaderDefine.push_back( pViewModeDefine );
+            return true;
         }
 
         /**

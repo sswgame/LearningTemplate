@@ -317,6 +317,26 @@ namespace sw
         }
 
         /**
+         * @brief 이 뷰 모드가 셰이더에 얹는 define 입니다. 셰이더를 바꾸지 않는 모드(Lit · Wireframe)는 nullptr 입니다.
+         * @details 런타임 PSO 변형(`FrameRenderer::createMaterialPsoVariant`)과 셰이더 베이커가 함께 보는 정본입니다. 베이커는
+         *          `RenderViewMode` 를 끝까지 훑어 define 이 있는 모드마다 변형을 굽습니다 — 모드를 더하면 굽는 목록이 따라옵니다.
+         */
+        static const utf8* findViewModeDefine( RenderViewMode viewMode )
+        {
+            return ( viewMode == RenderViewMode::Unlit ) ? kViewModeUnlitDefine : nullptr;
+        }
+
+        /**
+         * @brief 패스 서술 없이 패스 종류 표만으로 만든 엔진 PSO 에 픽셀 스테이지가 있는지 반환합니다.
+         * @details 파이프라인에 그 종류의 패스가 없으면 `createPsoForPassType` 은 표의 컬러 타깃 수로 PSO 를 만들고, 0 이면 PS 를
+         *          붙이지 않습니다. 베이커가 같은 판정으로 굽습니다. 서술이 있는 패스는 `hasPixelStage( pass, listAttachment )` 입니다.
+         */
+        static bool hasPixelStage( RenderPassType passType )
+        {
+            return getRenderPassTypeTraits( passType )._colorTargetCount > 0;
+        }
+
+        /**
          * @brief 이름 목록에서 맵에 실제로 있는 첫 이름을 반환합니다(없으면 nullptr).
          * @details 키 존재만 보고 값은 건드리지 않으므로 어떤 어태치먼트 맵이든 받습니다.
          */
