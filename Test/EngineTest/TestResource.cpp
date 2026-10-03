@@ -404,7 +404,7 @@ SW_TEST_CASE( ResourceTest, DdsLoaderValidHeaderAndPixelLoading )
     SW_EXPECT_TRUE( image.isValid() );
     SW_EXPECT_EQUAL( 1376u, image._width );
     SW_EXPECT_EQUAL( 768u, image._height );
-    SW_EXPECT_EQUAL( 87u, image._dxgiFormat ); // DXGI_FORMAT_B8G8R8A8_UNORM
+    SW_EXPECT_EQUAL( 91u, image._dxgiFormat ); // DXGI_FORMAT_B8G8R8A8_UNORM_SRGB — 임포트 규칙 Editor_Splash(Base_UI, sRGB)
     SW_EXPECT_EQUAL( SW_TRUE, image._bIsBgra );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1376 * 768 * 4 ), image._bytes.size() );
     SW_EXPECT_NOT_NULL( image.getPixels() );

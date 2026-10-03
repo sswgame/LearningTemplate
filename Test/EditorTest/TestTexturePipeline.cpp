@@ -12,8 +12,120 @@
 
 #include "TestFramework/TestFramework.h"
 
+#if defined( TileShape )
+    #undef TileShape
+#endif
+#if defined( CursorShape )
+    #undef CursorShape
+#endif
+#if defined( PixmapShape )
+    #undef PixmapShape
+#endif
+
+#include <DirectXTex.h>
+
 namespace sw::editor
 {
+    namespace
+    {
+        struct TestTexturePipelineInternal
+        {
+            /** @brief 압축 없는 32비트 TGA(왼쪽 위 원점)를 씁니다. 픽셀은 RGBA 순서로 받습니다. */
+            static bool writeTga( const string& path, uint16 width, uint16 height, const vector<uint8>& rgbaBytes )
+            {
+                constexpr size_t kHeaderSize = 18;
+                vector<uint8>    bytes( kHeaderSize, 0 );
+                bytes[2]  = 2; // 무압축 트루컬러
+                bytes[12] = static_cast<uint8>( width & 0xFFu );
+                bytes[13] = static_cast<uint8>( width >> 8 );
+                bytes[14] = static_cast<uint8>( height & 0xFFu );
+                bytes[15] = static_cast<uint8>( height >> 8 );
+                bytes[16] = 32;   // 픽셀당 비트
+                bytes[17] = 0x28; // 알파 8비트 · 왼쪽 위 원점
+                for ( size_t offset = 0; offset + 3 < rgbaBytes.size(); offset += 4 )
+                {
+                    bytes.push_back( rgbaBytes[offset + 2] );
+                    bytes.push_back( rgbaBytes[offset + 1] );
+                    bytes.push_back( rgbaBytes[offset + 0] );
+                    bytes.push_back( rgbaBytes[offset + 3] );
+                }
+                FileUtil::ensureParentDirectoryExists( path );
+                return FileUtil::writeFile( path, bytes.data(), bytes.size() );
+            }
+
+            /** @brief 한 색으로 채운 RGBA 픽셀 버퍼입니다. */
+            static vector<uint8> makeSolidRgba( uint32 width, uint32 height, uint8 red, uint8 green, uint8 blue, uint8 alpha )
+            {
+                vector<uint8> rgbaBytes;
+                rgbaBytes.reserve( static_cast<size_t>( width ) * height * 4 );
+                for ( uint32 pixelIndex = 0; pixelIndex < width * height; ++pixelIndex )
+                {
+                    rgbaBytes.push_back( red );
+                    rgbaBytes.push_back( green );
+                    rgbaBytes.push_back( blue );
+                    rgbaBytes.push_back( alpha );
+                }
+                return rgbaBytes;
+            }
+
+            /** @brief 위치마다 값이 다른 RGBA 픽셀 버퍼입니다(밉 · 압축이 실제로 일하게 합니다). */
+            static vector<uint8> makeGradientRgba( uint32 width, uint32 height )
+            {
+                vector<uint8> rgbaBytes;
+                rgbaBytes.reserve( static_cast<size_t>( width ) * height * 4 );
+                for ( uint32 row = 0; row < height; ++row )
+                {
+                    for ( uint32 column = 0; column < width; ++column )
+                    {
+                        rgbaBytes.push_back( static_cast<uint8>( column * 255u / ( width - 1u ) ) );
+                        rgbaBytes.push_back( static_cast<uint8>( row * 255u / ( height - 1u ) ) );
+                        rgbaBytes.push_back( static_cast<uint8>( ( column * 7u + row * 13u ) & 0xFFu ) );
+                        rgbaBytes.push_back( 255 );
+                    }
+                }
+                return rgbaBytes;
+            }
+
+            /** @brief 구운 DDS 를 DirectXTex 로 풀어 첫 픽셀을 RGBA 로 돌려줍니다(sRGB 형식은 sRGB 바이트 그대로). */
+            static bool decodeFirstPixel( const string& ddsPath, uint8 ( &outArrRgba )[4] )
+            {
+                vector<uint8> bytes;
+                if ( FileUtil::readFile( ddsPath, bytes ) == false )
+                    return false;
+
+                DirectX::ScratchImage loaded;
+                if ( FAILED( DirectX::LoadFromDDSMemory( bytes.data(), bytes.size(), DirectX::DDS_FLAGS_NONE, nullptr, loaded ) ) )
+                    return false;
+
+                const DXGI_FORMAT     targetFormat = DirectX::IsSRGB( loaded.GetMetadata().format ) ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : DXGI_FORMAT_R8G8B8A8_UNORM;
+                DirectX::ScratchImage decoded;
+                if ( DirectX::IsCompressed( loaded.GetMetadata().format ) )
+                {
+                    if ( FAILED( DirectX::Decompress( *loaded.GetImage( 0, 0, 0 ), targetFormat, decoded ) ) )
+                        return false;
+                }
+                else if ( FAILED( DirectX::Convert( *loaded.GetImage( 0, 0, 0 ), targetFormat, DirectX::TEX_FILTER_FORCE_NON_WIC, DirectX::TEX_THRESHOLD_DEFAULT, decoded ) ) )
+                {
+                    return false;
+                }
+
+                const uint8* pPixel = decoded.GetImage( 0, 0, 0 )->pixels;
+                for ( size_t channel = 0; channel < 4; ++channel )
+                {
+                    outArrRgba[channel] = pPixel[channel];
+                }
+                return true;
+            }
+
+            /** @brief 두 바이트가 허용 오차 안인지 봅니다(BC 압축 오차). */
+            static bool isNear( uint8 actual, uint8 expected, uint8 tolerance )
+            {
+                const int32 difference = static_cast<int32>( actual ) - static_cast<int32>( expected );
+                return -static_cast<int32>( tolerance ) <= difference && difference <= static_cast<int32>( tolerance );
+            }
+        };
+    } // namespace
+
     /**
      * @brief [EditorTexturePipelineTest] TextureImportConfig 파싱, 프리셋 상속 및 규칙 매칭 검증
      */
@@ -388,6 +500,189 @@ namespace sw::editor
         TextureImportRule otherRule;
         SW_ASSERT_TRUE( config.findMatchingRule( "characters/hero_albedo.png", otherRule ) );
         SW_EXPECT_EQUAL( sw::string( "Fallback_Default" ), otherRule._name );
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] sRGB 규칙은 원본 바이트에 sRGB 형식 이름만 붙인다 — 감마를 한 번 더 씌우지 않는다
+     * @details 원본 이미지(PNG · JPG)의 바이트는 이미 sRGB 로 인코딩돼 있다. 그것을 UNORM 으로 읽어 UNORM_SRGB 로 "변환" 하면
+     *          DirectXTex 가 선형 → sRGB 곡선을 한 번 더 적용해 화면이 밝게 뜬다. 무압축(B8G8R8A8)과 BC7 둘 다 본다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, SrgbRuleLabelsBytesWithoutReencodingThem )
+    {
+        const string sourcePath = test::makeTempPath( "srgb_source.tga" );
+        SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 4, 4, TestTexturePipelineInternal::makeSolidRgba( 4, 4, 128, 64, 200, 255 ) ) );
+
+        TextureImportRule rule;
+        rule._format        = "B8G8R8A8_UNORM";
+        rule._swizzle       = TextureSwizzle::BGRA;
+        rule._bGenerateMips = SW_FALSE;
+        rule._bSrgb         = SW_TRUE;
+
+        const string bgraPath = test::makeTempPath( "srgb_bgra.dds" );
+        SW_ASSERT_TRUE( TextureBaker::bakeTexture( sourcePath, bgraPath, rule ) );
+
+        DdsImageData bgraImage;
+        SW_ASSERT_TRUE( DdsLoader::loadFromFile( bgraPath, bgraImage ) );
+        SW_EXPECT_EQUAL( 91u, bgraImage._dxgiFormat ); // B8G8R8A8_UNORM_SRGB
+        SW_ASSERT_TRUE( bgraImage._bytes.size() >= 4 );
+        SW_EXPECT_EQUAL( 200, static_cast<int32>( bgraImage._bytes[0] ) );
+        SW_EXPECT_EQUAL( 64, static_cast<int32>( bgraImage._bytes[1] ) );
+        SW_EXPECT_EQUAL( 128, static_cast<int32>( bgraImage._bytes[2] ) );
+        SW_EXPECT_EQUAL( 255, static_cast<int32>( bgraImage._bytes[3] ) );
+
+        rule._format  = "BC7_UNORM";
+        rule._swizzle = TextureSwizzle::RGBA;
+
+        const string bc7Path = test::makeTempPath( "srgb_bc7.dds" );
+        SW_ASSERT_TRUE( TextureBaker::bakeTexture( sourcePath, bc7Path, rule ) );
+
+        uint8 arrRgba[4] = {};
+        SW_ASSERT_TRUE( TestTexturePipelineInternal::decodeFirstPixel( bc7Path, arrRgba ) );
+        SW_EXPECT_TRUE_MSG( TestTexturePipelineInternal::isNear( arrRgba[0], 128, 2 ), "BC7 R 이 원본(128)에서 벗어났습니다 — sRGB 곡선이 한 번 더 씌워졌습니다" );
+        SW_EXPECT_TRUE( TestTexturePipelineInternal::isNear( arrRgba[1], 64, 2 ) );
+        SW_EXPECT_TRUE( TestTexturePipelineInternal::isNear( arrRgba[2], 200, 2 ) );
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] 같은 원본 · 같은 규칙은 같은 바이트를 낸다(밉 · BC7 포함)
+     * @details 구운 DDS 를 커밋하고 그 해시를 스탬프에 적으므로 굽기가 흔들리면 스탬프가 매번 어긋난다. 밉은 WIC 를 쓰지 않는
+     *          필터로 만들어 Windows · Linux 에서도 같은 결과를 낸다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, BakingTheSameSourceTwiceGivesTheSameBytes )
+    {
+        const string sourcePath = test::makeTempPath( "determinism_source.tga" );
+        SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 8, 8, TestTexturePipelineInternal::makeGradientRgba( 8, 8 ) ) );
+
+        TextureImportRule rule; // 기본 규칙: BC7 sRGB + 밉
+        const string      firstPath  = test::makeTempPath( "determinism_first.dds" );
+        const string      secondPath = test::makeTempPath( "determinism_second.dds" );
+        TextureBakeResult result;
+        SW_ASSERT_TRUE( TextureBaker::bakeTexture( sourcePath, firstPath, rule, &result ) );
+        SW_ASSERT_TRUE( TextureBaker::bakeTexture( sourcePath, secondPath, rule ) );
+        SW_EXPECT_EQUAL( 4u, result._mipCount ); // 8 → 1 (Debug 의 BC7 은 블록당 수백 ms 라 작게 둔다)
+
+        vector<uint8> firstBytes;
+        vector<uint8> secondBytes;
+        SW_ASSERT_TRUE( FileUtil::readFile( firstPath, firstBytes ) );
+        SW_ASSERT_TRUE( FileUtil::readFile( secondPath, secondBytes ) );
+        SW_EXPECT_TRUE( firstBytes.empty() == false );
+        SW_EXPECT_TRUE( firstBytes == secondBytes );
+    }
+
+    // ------------------------------------------------------------------------------
+    // TextureBakeStampTest — 원본(textures_raw)과 구운 DDS(textures)가 맞는지 내용 해시로 본다
+    // ------------------------------------------------------------------------------
+
+    /**
+     * @brief [TextureBakeStampTest] 저장소의 모든 원본 텍스처가 커밋된 DDS 와 스탬프로 맞는다
+     * @details 깨끗한 클론 · CI 에서 "원본을 고치고 굽지 않았다" 를 잡는 자리다. 지면 `App --bake-textures` 로 굽고 DDS 와
+     *          `textures_raw/bake.stamp` 를 함께 커밋한다.
+     */
+    SW_TEST_CASE( TextureBakeStampTest, RepositoryRawTexturesMatchTheirDds )
+    {
+        SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+        TextureImportConfig config;
+        SW_ASSERT_TRUE( config.loadFromFile( TextureBaker::makeDefaultImportConfigPath() ) );
+
+        const TextureBakeSummary summary = TextureBaker::bakeAllTextures( sw::ResourceUtil::getRootFolderPath(), config, TextureBakeMode::CheckOnly );
+        string                   problemText;
+        for ( const string& problem : summary._listProblem )
+        {
+            problemText += problem;
+            problemText += "\n";
+        }
+        SW_EXPECT_TRUE( summary._sourceCount > 0 ); // editor/textures_raw/splash.jpg
+        SW_EXPECT_TRUE_MSG( summary.isClean(), problemText.c_str() );
+        SW_EXPECT_EQUAL( 0u, summary._bakedCount );
+    }
+
+    /**
+     * @brief [TextureBakeStampTest] 원본 경로는 같은 도메인의 `textures/` 아래 `.dds` 로 대응한다
+     */
+    SW_TEST_CASE( TextureBakeStampTest, RawPathMapsToTheTexturesFolder )
+    {
+        SW_EXPECT_STREQ( "editor/textures/splash.dds", TextureBaker::makeBakedTexturePath( "editor/textures_raw/splash.jpg" ).c_str() );
+        SW_EXPECT_STREQ( "D:/r/game/x/textures/ui/hud/icon.dds", TextureBaker::makeBakedTexturePath( "D:\\r\\game\\x\\textures_raw\\ui\\hud\\icon.png" ).c_str() );
+        SW_EXPECT_TRUE( TextureBaker::makeBakedTexturePath( "engine/textures/white.png" ).empty() );
+        SW_EXPECT_TRUE( TextureBaker::makeBakedTexturePath( "engine/my_textures_raw_backup/a.png" ).empty() );
+    }
+
+    /**
+     * @brief [TextureBakeStampTest] 굽지 않은 원본 · 고친 원본 · 바꾼 규칙 · 손댄 DDS · 사라진 원본을 모두 어긋남으로 잡고, 굽기가 그것을 닫는다
+     */
+    SW_TEST_CASE( TextureBakeStampTest, CheckReportsEveryKindOfDriftAndBakeClosesIt )
+    {
+        const string resourceRoot = test::makeTempDirectory( "bake_stamp_resource" );
+        const string sourcePath   = FileUtil::joinPath( resourceRoot, "game/probe/textures_raw/ui/icon.tga" );
+        const string ddsPath      = FileUtil::joinPath( resourceRoot, "game/probe/textures/ui/icon.dds" );
+        const string stampPath    = FileUtil::joinPath( resourceRoot, "game/probe/textures_raw/bake.stamp" );
+        SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 4, 4, TestTexturePipelineInternal::makeSolidRgba( 4, 4, 10, 20, 30, 255 ) ) );
+
+        TextureImportConfig uiConfig;
+        SW_ASSERT_TRUE( uiConfig.loadFromJsonString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false } ] })" ) );
+
+        // 1) 한 번도 굽지 않았다 — 보고만 하고 아무것도 쓰지 않는다.
+        TextureBakeSummary summary = TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly );
+        SW_EXPECT_EQUAL( 1u, summary._sourceCount );
+        SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
+        SW_EXPECT_FALSE( FileUtil::fileExists( ddsPath ) );
+        SW_EXPECT_FALSE( FileUtil::fileExists( stampPath ) );
+
+        // 2) 굽는다 → DDS 와 스탬프가 생기고, 다시 보면 맞는다. 맞는 것은 다시 굽지 않는다.
+        summary = TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::BakeStale );
+        SW_EXPECT_TRUE( summary.isClean() );
+        SW_EXPECT_EQUAL( 1u, summary._bakedCount );
+        SW_EXPECT_TRUE( FileUtil::fileExists( ddsPath ) );
+        SW_EXPECT_TRUE( FileUtil::fileExists( stampPath ) );
+        SW_EXPECT_TRUE( TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly ).isClean() );
+        SW_EXPECT_EQUAL( 0u, TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::BakeStale )._bakedCount );
+
+        // 3) 원본을 고쳤다.
+        SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 4, 4, TestTexturePipelineInternal::makeSolidRgba( 4, 4, 11, 20, 30, 255 ) ) );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly )._listProblem.size() );
+        SW_EXPECT_EQUAL( 1u, TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::BakeStale )._bakedCount );
+
+        // 4) 규칙만 바꿨다(원본은 그대로).
+        TextureImportConfig srgbConfig;
+        SW_ASSERT_TRUE( srgbConfig.loadFromJsonString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false, "srgb": false } ] })" ) );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureBaker::bakeAllTextures( resourceRoot, srgbConfig, TextureBakeMode::CheckOnly )._listProblem.size() );
+        SW_EXPECT_TRUE( TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly ).isClean() );
+
+        // 5) DDS 를 손으로 바꿨다.
+        vector<uint8> ddsBytes;
+        SW_ASSERT_TRUE( FileUtil::readFile( ddsPath, ddsBytes ) );
+        ddsBytes.back() = static_cast<uint8>( ddsBytes.back() ^ 0xFFu );
+        SW_ASSERT_TRUE( FileUtil::writeFile( ddsPath, ddsBytes.data(), ddsBytes.size() ) );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly )._listProblem.size() );
+        SW_EXPECT_EQUAL( 1u, TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::BakeStale )._bakedCount );
+
+        // 6) 원본이 사라졌다 — 스탬프 줄이 남은 것이 어긋남이고, 굽기는 그 줄을 지운다(DDS 는 사람이 정리한다).
+        SW_ASSERT_TRUE( FileUtil::removeFile( sourcePath ) );
+        SW_EXPECT_EQUAL( size_t( 1 ), TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly )._listProblem.size() );
+        summary = TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::BakeStale );
+        SW_EXPECT_TRUE( summary.isClean() );
+        SW_EXPECT_EQUAL( 0u, summary._sourceCount );
+        SW_EXPECT_TRUE( TextureBaker::bakeAllTextures( resourceRoot, uiConfig, TextureBakeMode::CheckOnly ).isClean() );
+        SW_EXPECT_TRUE( FileUtil::fileExists( ddsPath ) );
+    }
+
+    /**
+     * @brief [TextureBakeStampTest] HDR 원본은 8비트로 잘라 굽지 않고 실패로 보고한다
+     */
+    SW_TEST_CASE( TextureBakeStampTest, HdrSourceIsReportedNotTruncated )
+    {
+        const string resourceRoot = test::makeTempDirectory( "bake_stamp_hdr" );
+        const string sourcePath   = FileUtil::joinPath( resourceRoot, "engine/textures_raw/sky.hdr" );
+        FileUtil::ensureParentDirectoryExists( sourcePath );
+        SW_ASSERT_TRUE( FileUtil::writeTextFile( sourcePath, "#?RADIANCE\n" ) );
+
+        TextureImportConfig config;
+        SW_ASSERT_TRUE( config.loadFromJsonString( R"({ "rules": [ { "name": "Any" } ] })" ) );
+        const TextureBakeSummary summary = TextureBaker::bakeAllTextures( resourceRoot, config, TextureBakeMode::BakeStale );
+        SW_EXPECT_EQUAL( 1u, summary._sourceCount );
+        SW_EXPECT_EQUAL( 0u, summary._bakedCount );
+        SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
+        SW_EXPECT_FALSE( FileUtil::fileExists( FileUtil::joinPath( resourceRoot, "engine/textures/sky.dds" ) ) );
     }
 
 } // namespace sw::editor

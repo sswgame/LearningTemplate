@@ -299,6 +299,19 @@ namespace sw
                 loop._bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0;
                 return EngineStartupResult::SkipDependents;
             }
+
+            // 텍스처 굽기 · 대조는 에디터 모듈이 한다(엔진은 에디터를 모른다). 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려
+            // 부르는 것은 App 이다(`ModuleHost::bakeTexturesWithEditorModule`).
+            bool bBakeTextures  = false;
+            bool bCheckTextures = false;
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_TEXTURES, bBakeTextures );
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
+            if ( bBakeTextures || bCheckTextures )
+            {
+                loop._bHeadless = true;
+                SW_LOG_INFO( "Starting Headless (%#Textures)...", bCheckTextures ? "Check" : "Bake" );
+                return EngineStartupResult::SkipDependents;
+            }
             return EngineStartupResult::Succeeded;
         }
     };

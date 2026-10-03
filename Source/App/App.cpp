@@ -85,7 +85,23 @@ namespace sw
         // 작업이 실패했으면 **초기화 실패로 반환한다.** 그래야 종료 코드가 0 이 아니고, 이것을 부르는 `CookAssets.py` 가
         // "굽지 못했다" 를 알아챌 수 있다.
         if ( _engineLoop.isHeadless() )
-            return _engineLoop.didHeadlessTaskFail() == false;
+        {
+            if ( _engineLoop.didHeadlessTaskFail() )
+                return false;
+
+            // 텍스처 굽기는 에디터 모듈의 일이다. 엔진은 헤드리스로 세우기만 했고, 모듈을 올리는 것은 App 이다.
+            const CommandLineManager* pHeadlessCommandLine = _engineLoop.getCommandLineManager();
+            bool                      bBakeTextures        = false;
+            bool                      bCheckTextures       = false;
+            if ( pHeadlessCommandLine != nullptr )
+            {
+                pHeadlessCommandLine->getArgument( CommandLineArgument::BAKE_TEXTURES, bBakeTextures );
+                pHeadlessCommandLine->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
+            }
+            if ( bBakeTextures || bCheckTextures )
+                return ModuleHost::bakeTexturesWithEditorModule( bCheckTextures );
+            return true;
+        }
 
         SplashWindow splash;
         splash.initialize( "SW Engine", "Initializing Engine Subsystems..." );

@@ -340,6 +340,43 @@ namespace sw
 #endif
     }
 
+    bool ModuleHost::bakeTexturesWithEditorModule( bool bCheckOnly )
+    {
+#if defined( SW_SHIPPING )
+        (void)bCheckOnly;
+        SW_LOG_ERROR( "Texture baking needs the editor module, which a Shipping build does not have - run it from a Dev build." );
+        return false;
+#else
+        const string modulePath     = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ),
+                                                          FileUtil::formatSharedLibraryName( sw::config::kTargetEditorModule ) );
+        void* const  pLibraryModule = FileUtil::fileExists( modulePath ) ? FileUtil::loadDynamicLibrary( modulePath ) : nullptr;
+        if ( pLibraryModule == nullptr )
+        {
+            SW_LOG_ERROR( "Texture baking needs the editor module next to the executable: %#", modulePath.c_str() );
+            return false;
+        }
+
+        // 올리는 순간 모듈의 정적 등록기가 전역 머리에 매달린다. 모듈 이름으로 등록해 두어야 내리기 전에 걷을 수 있다.
+        engine::registerModuleTypes( sw::config::kTargetEditorModule );
+
+        bool bSucceeded = false;
+        if ( ModuleHostInternal::matchesModuleAbi( pLibraryModule, ModuleHostInternal::kEditorSymbols._pVersionSymbol,
+                                                   ModuleHostInternal::kEditorSymbols._pStampSymbol, ModuleHostInternal::kEditorSymbols._pModuleLabel ) )
+        {
+            const PFN_BakeEditorTextures pfnBake =
+                reinterpret_cast<PFN_BakeEditorTextures>( FileUtil::getDynamicSymbol( pLibraryModule, kBakeEditorTexturesSymbol ) );
+            if ( pfnBake == nullptr )
+                SW_LOG_ERROR( "The editor module does not export %#", kBakeEditorTexturesSymbol );
+            else
+                bSucceeded = pfnBake( bCheckOnly ? 1u : 0u ) == 0;
+        }
+
+        engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
+        FileUtil::unloadDynamicLibrary( pLibraryModule );
+        return bSucceeded;
+#endif
+    }
+
     // ======================================================================
     // 프레임 단위 처리
     // ======================================================================

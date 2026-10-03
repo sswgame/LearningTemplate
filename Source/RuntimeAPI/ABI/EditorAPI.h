@@ -45,6 +45,12 @@ namespace sw
 
     /** @brief EditorModule 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportEditorApi). */
     using PFN_ExportEditorAPI = bool ( * )( EditorAPI* pOutApi );
+
+    /** @brief 헤드리스 텍스처 굽기 진입점의 형입니다(심볼 이름: `kBakeEditorTexturesSymbol`). */
+    using PFN_BakeEditorTextures = int32 ( * )( uint32 checkOnly );
+
+    /** @brief `bakeEditorTextures` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --bake-textures`). */
+    inline constexpr const utf8* kBakeEditorTexturesSymbol = "bakeEditorTextures";
 } // namespace sw
 
 extern "C"
@@ -59,4 +65,11 @@ extern "C"
 
     /** @brief EditorModule API 테이블을 내보냅니다. */
     SW_MODULE_API bool exportEditorApi( sw::EditorAPI* pOutApi );
+
+    /**
+     * @brief 리소스 트리의 텍스처 원본(`textures_raw/`)을 `bake.stamp` 와 대조하고, @p checkOnly 가 0 이면 어긋난 것을 DDS 로 굽습니다.
+     * @details 에디터 인스턴스 · 창 · RHI 없이 부릅니다. 리소스 루트와 로거는 호스트(Engine)가 이미 세워 두었어야 합니다.
+     * @return 남은 문제 수입니다(0 이면 원본과 DDS 가 맞습니다). 설정을 읽지 못하면 음수입니다.
+     */
+    SW_MODULE_API int32 bakeEditorTextures( uint32 checkOnly );
 }
