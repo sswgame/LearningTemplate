@@ -217,6 +217,10 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   The engine builds 64-bit only, so there are no 32-bit branches. The one file that reads built-ins is
   `Core/Common/TargetMacroCheck.h`, which fails the build when CMake's choice disagrees with the compiler.
   Enforced by `CheckTargetMacros.py`.
+- **Read time through `Core/Time/CpuClock.h`**, never a `std::chrono` clock (`steady_clock`, `high_resolution_clock`,
+  `system_clock` — aliases and `using namespace` included): `CpuClock::nowNanoseconds()`, `CpuStopwatch` for elapsed time,
+  `CpuDeadline::afterMilliseconds( ms )` + `isExpired()` for a bounded wait. Tests too. Duration values (`sleep_for`) are fine.
+  Exceptions live in one table with their reason. Enforced by `CheckClockReads.py`.
 - Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`
   (`Core/Memory/Memory.h`), never a bare `new ( pMemory ) T( ... )`. Enforced by
   `CheckCodeConventions.py` (`Style/PlacementNew`).

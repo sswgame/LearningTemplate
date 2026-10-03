@@ -151,6 +151,9 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - 내장 매크로를 읽는 곳은 `Source/Core/Common/TargetMacroCheck.h` 하나뿐입니다. CMake 판정이 실제 컴파일러와 어긋나거나 매크로가
   빠지면 그 헤더의 `#error` 로 빌드가 섭니다. `CheckTargetMacros.py` 가 Source · Test · Tools/ReflectionParser 에서 검사합니다.
 
+### 시계는 CpuClock 하나
+- 시각은 `Core/Time/CpuClock.h` 로만 읽습니다(`CpuClock::nowNanoseconds()` · 걸린 시간 `CpuStopwatch` · 기다림 기한 `CpuDeadline::afterMilliseconds( ms )` + `isExpired()`). `std::chrono` 의 `steady_clock` · `high_resolution_clock` · `system_clock` 은 시험 코드에서도 쓰지 않습니다(별칭 · `using namespace` 포함, `sleep_for` 같은 기간 값은 괜찮다). 예외는 이유와 함께 게이트의 표 한 곳에 두고, `CheckClockReads.py` 가 Source · Test · Tools/ReflectionParser 에서 검사합니다.
+
 ### 이미 잡아 둔 메모리에 객체 만들기
 - placement new 는 `sw_placement_new( pMemory ) T( ... )` 로 씁니다(`Core/Memory/Memory.h`). 맨 `new ( pMemory ) T( ... )` 는 쓰지 않습니다.
 - 매크로는 주소를 `void*` 로 바꾸는 캐스트를 드러냅니다. T 가 포인터 타입이면(`vector<char*>` 등) `char**` → `void*` 같은 변환이 조용히 일어나기 때문입니다. 또 표기가 하나뿐이어야 매크로 한 곳만 고쳐도 전체에 반영됩니다.

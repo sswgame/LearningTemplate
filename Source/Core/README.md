@@ -83,7 +83,7 @@
 ## 시간
 - 엔진의 단조 시계는 `Time/CpuClock.h` 하나다 — 지금 시각 `CpuClock::nowNanoseconds` / `nowMicroseconds`, 경과 시간 `CpuStopwatch`,
   기한 `CpuDeadline::afterMilliseconds( ms )`(`isExpired` · `getRemainingMilliseconds`). 엔진 코드에서 `std::chrono::steady_clock::now()` 를
-  직접 읽지 않는다 — 프로파일러 · 로그 · 기한이 같은 시각을 봐야 한다.
+  직접 읽지 않는다(시험 코드 포함) — 프로파일러 · 로그 · 기한이 같은 시각을 봐야 한다. `Scripts/lint/gate/CheckClockReads.py` 가 막는다.
 - 기다리는 루프는 횟수가 아니라 시간(`CpuDeadline`)으로 묶는다. 횟수 상한은 느린 머신에서 정상을 실패로 만든다.
 - 프레임 델타 · 일시정지가 필요하면 `CpuTimer`(같은 OS 카운터)를 쓴다.
 
