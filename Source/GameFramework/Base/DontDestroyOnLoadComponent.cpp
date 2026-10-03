@@ -9,8 +9,7 @@
 namespace sw
 {
     DontDestroyOnLoadComponent::DontDestroyOnLoadComponent()
-        : _persistentTag{ "Persistent" }
-        , _bPersistent{ true }
+        : _bPersistent{ true }
     {
     }
 

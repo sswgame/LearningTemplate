@@ -1,6 +1,4 @@
 #pragma once
-#include "Core/Container/string.h"
-
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -19,8 +17,6 @@ namespace sw
         void onBeginPlay() override;
 
     private:
-        PROPERTY()
-        string _persistentTag;
         PROPERTY()
         bool _bPersistent;
     };

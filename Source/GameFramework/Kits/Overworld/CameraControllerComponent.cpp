@@ -8,7 +8,6 @@ namespace sw
 {
     CameraControllerComponent::CameraControllerComponent()
         : _targetPos{ 0.0f, 0.0f }
-        , _currentPos{ 0.0f, 0.0f }
         , _appliedShake{ 0.0f, 0.0f }
         , _followSpeed{ 0.0f }
         , _shakeIntensity{ 0.0f }
@@ -45,13 +44,12 @@ namespace sw
             return;
 
         // 기준은 주인이 지금 놓인 자리에서 지난 틱에 얹은 흔들림을 걷어 낸 자리다 — 놓은 자리 · 다른 코드가 옮긴 자리를 따른다. 따라가는 속도가 있을 때만
-        // 목표 쪽으로 옮긴다. 예전에는 `_currentPos`(기본 (0,0))를 매 틱 썼고 속도의 기본이 0 이라, 카메라가 놓인 자리와 상관없이 원점에 박혔다.
+        // 목표 쪽으로 옮긴다.
         // 목표는 월드 자리다 — 월드로 읽고 쓴다(카메라를 리그 · 플레이어 아래에 둬도 같다).
         const float3 pos     = pSceneComp->getWorldPosition();
         float2       basePos = float2{ pos._x, pos._y } - _appliedShake;
         if ( _followSpeed > 0.0f )
             basePos = float2::lerp( basePos, _targetPos, MathUtil::saturate( _followSpeed * deltaTime ) );
-        _currentPos   = basePos;
         _appliedShake = shakeOffset;
         pSceneComp->setWorldPosition( float3{ basePos + shakeOffset, pos._z } );
     }

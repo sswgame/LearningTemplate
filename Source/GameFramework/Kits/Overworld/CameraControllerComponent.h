@@ -44,11 +44,7 @@ namespace sw
         /** @brief 이번 프레임의 흔들림 오프셋입니다. 흔들림이 없으면 (0,0) 입니다. */
         float2 getShakeOffset() const;
 
-        /**
-         * @brief 따라갈 자리(XY)입니다. 따라가는 속도가 0 보다 클 때만 카메라가 그쪽으로 갑니다.
-         * @details 예전에는 코드에서 넣을 창구가 없었다(리플렉션 프로퍼티뿐). 속도의 기본이 0 이라 따라가지 않으면서도 매 틱 `_currentPos`(기본 (0,0))
-         *          를 주인의 위치로 썼으므로, 이 컴포넌트를 단 카메라는 놓은 자리와 상관없이 **원점에 박혔다.**
-         */
+        /** @brief 따라갈 자리(XY)입니다. 따라가는 속도가 0 보다 클 때만 카메라가 그쪽으로 갑니다. */
         void setTargetPosition( const float2& targetPosition ) { _targetPos = targetPosition; }
         /** @brief 따라갈 자리입니다. */
         const float2& getTargetPosition() const { return _targetPos; }
@@ -62,9 +58,6 @@ namespace sw
     private:
         PROPERTY()
         float2 _targetPos;
-        /** @brief 흔들림을 뺀 카메라 자리입니다. 매 틱 주인의 위치에서 다시 구하는 런타임 값이라 저장하지 않습니다. */
-        PROPERTY( Transient )
-        float2 _currentPos;
         /**
          * @brief 지난 틱에 주인 위치에 얹은 흔들림입니다. 다음 틱에 걷어 내고 기준을 구합니다.
          * @details 저장합니다 — 주인 위치(씬 컴포넌트 상태)에는 이 흔들림이 얹힌 채 저장되므로, 흔들리는 중에 상태를 다시 읽으면(플레이 중
