@@ -1237,6 +1237,30 @@ SW_TEST_CASE( ReflectionSerializationTest, JsonSequenceAcceptsPlainArray )
 }
 
 /**
+ * @brief [ReflectionSerializationTest] JSON 시퀀스의 값 구조체 원소는 본문 그대로만 읽는다 — 타입 이름으로 감싼 원소(`{"NestedInner":{…}}`)는 읽지 않는다
+ * @details 쓰는 쪽은 값 구조체를 감싸지 않는다. 멤버 하나의 이름이 등록된 타입이면 감싼 것으로 짐작해 그 안을 읽던 갈래는 옛 모양을 받아 주는 것뿐이었고,
+ *          칸 하나짜리 구조체의 칸 이름이 우연히 타입 이름이면 엉뚱하게 벗겨 읽었다.
+ */
+SW_TEST_CASE( ReflectionSerializationTest, JsonValueStructElementIsReadOnlyAsItsBody )
+{
+    const sw::TypeInfo* typeInfo = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
+    SW_ASSERT_TRUE( typeInfo != nullptr );
+
+    sw::NestedContainerActor plain;
+    SW_ASSERT_TRUE( sw::JsonSerializer::deserialize( &plain, *typeInfo, R"({"_listInner":[{"_x":5}]})" ) );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), plain._listInner.size() );
+    SW_EXPECT_EQUAL( 5, plain._listInner[0]._x );
+
+    sw::NestedContainerActor wrapped;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a JSON value struct element wrapped in its type name" );
+        (void)sw::JsonSerializer::deserialize( &wrapped, *typeInfo, R"({"_listInner":[{"NestedInner":{"_x":5}}]})" );
+    }
+    const bool bReadThroughWrapper = wrapped._listInner.size() == 1 && wrapped._listInner[0]._x == 5;
+    SW_EXPECT_FALSE( bReadThroughWrapper );
+}
+
+/**
  * @brief [ReflectionSerializationTest] 엄격 역직렬화는 컨테이너 **원소 구조체** 안의 잘못된 칸에서도 실패한다 — JSON 과 XML 이 같다
  * @details XML 백엔드 입구(`deserialize( …, IXmlBackend&, … )`)는 orphan 목록 없이 칸 실패로 판정한다. 원소 구조체를 읽은 결과를
  *          버리면 `vector<NestedInner>` · `map<string, NestedInner>` 의 원소 칸이 깨져도 성공으로 끝난다(JSON 은 같은 입력에서 실패한다).

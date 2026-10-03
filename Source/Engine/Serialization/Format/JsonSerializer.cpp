@@ -124,7 +124,7 @@ namespace sw
                 const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
                 if ( pElemType != nullptr )
                 {
-                    // 값 구조체는 타입 래핑 없이 본문을 그대로 쓴다(리더가 양쪽 다 받는다).
+                    // 값 구조체는 타입 래핑 없이 본문을 그대로 쓴다(리더도 본문만 받는다).
                     JsonSerializer::writeObject( dst, pElemPtr, *pElemType, ctx );
                     return;
                 }
@@ -239,13 +239,8 @@ namespace sw
                         if ( elem.isObject() == false )
                             return false;
 
-                        // 래핑 형식 { "TypeName": {body} } 이면 그 안을 읽고, 아니면 elem 자체를 body 로 본다.
-                        const vector<string> listMember = elem.getMemberNames();
-                        const bool           bWrapped =
-                            ( listMember.size() == 1 &&
-                              engine::getTypeRegistry().findType( hashed_string::findInterned( listMember[0] ) ) != nullptr );
-                        const JsonValue body = bWrapped ? elem.get( listMember[0], false ) : elem;
-                        return JsonSerializer::readObject( body, pElemPtr, *pElemType, nullptr, nullptr, ctx );
+                        // 값 구조체 원소는 본문 그대로다(쓰는 쪽이 타입 이름으로 감싸지 않는다). 감싼 원소는 모르는 키 하나로 읽힌다.
+                        return JsonSerializer::readObject( elem, pElemPtr, *pElemType, nullptr, nullptr, ctx );
                     } ) );
 
                     if ( bAppended == false )
