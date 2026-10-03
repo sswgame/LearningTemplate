@@ -8,6 +8,7 @@
 
 #include "Engine/Animation/AnimationGraphAsset.h"
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
@@ -15,6 +16,12 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDocument.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Utility/Xml/TileMapXml.h"
 
@@ -297,6 +304,72 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, OverridesPairComponentsByKeyAndRevert
     SW_EXPECT_NEAR_EQUAL( 5.0f, pInstanceSocket->getWorldPosition()._x, 1e-4f ); // 알렸다
     SW_EXPECT_TRUE( pInstanceAnimator->isRepeating() );
     SW_EXPECT_TRUE( pInstanceAnimator->isPlaying() ); // 같은 바이트의 다른 비트는 그대로다
+}
+
+/**
+ * @brief [EditorToolAssetCommandsTest] 덮어쓴 것만 저장한 씬을 다시 연 인스턴스에서도 오버라이드 목록 · 되돌리기가 그대로 동작하고, 되돌린 값은 다음 저장에서 빠진다
+ */
+SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSavedScene )
+{
+    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    const string prefabPath = test::makeTempPath( "revert_crate.prefab.xml" );
+    {
+        GameObjectManager authoring;
+        GameObject*       pSource = authoring.createGameObject( hashed_string( "Crate" ) );
+        pSource->addComponent<SceneComponent>()->setLocalPosition( float3( 1.0f, 2.0f, 3.0f ) );
+        PrefabAsset prefab;
+        prefab.setFromGameObject( pSource );
+        SW_ASSERT_TRUE( prefab.saveToXmlFile( prefabPath ) );
+        SW_ASSERT_TRUE( prefab.saveToBinaryFile( AssetCookPath::toCookedPath( prefabPath ) ) ); // 배포본은 쿠킹본만 읽는다
+        engine::getResourceManager().getPrefabManager().reload( prefabPath );
+    }
+
+    SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    SceneDocument             authored;
+    SceneDocument::EntityNode entity;
+    entity._name   = "Crate";
+    entity._prefab = prefabPath;
+    authored._listEntityNode.push_back( entity );
+    Scene* pPlaced = manager.createScene( "RevertWorld" );
+    SW_ASSERT_TRUE( pPlaced->instantiate( authored ) );
+    GameObject* pPlacedCrate = pPlaced->getObjectManager()->findGameObjectByName( hashed_string( "Crate" ) );
+    SW_ASSERT_NOT_NULL( pPlacedCrate );
+    pPlacedCrate->getPrimarySceneComponent()->setLocalPosition( float3( 4.0f, 4.0f, 4.0f ) );
+    SceneDocument saved;
+    SW_ASSERT_TRUE( pPlaced->serializeToDocument( saved ) );
+    SW_ASSERT_TRUE( saved._listEntityNode.size() == 1 && saved._listEntityNode[0]._prefabOverrideXml.empty() == false );
+
+    // 다시 연 인스턴스 — 덮어쓴 위치가 원형 위에 얹혀 있다.
+    Scene* pReopened = manager.createScene( "RevertWorldReopened" );
+    SW_ASSERT_TRUE( pReopened->instantiate( saved ) );
+    GameObject* pInstance = pReopened->getObjectManager()->findGameObjectByName( hashed_string( "Crate" ) );
+    SW_ASSERT_NOT_NULL( pInstance );
+    GameObjectManager scratch;
+    GameObject*       pCdo    = scratch.createGameObject( hashed_string( "Cdo" ) );
+    PrefabAsset*      pPrefab = engine::getResourceManager().getPrefabManager().loadPrefab( prefabPath );
+    SW_ASSERT_TRUE( pPrefab != nullptr && pPrefab->applyStateTo( pCdo ) );
+
+    vector<PrefabOverrideItem> listOverride;
+    EditorToolAssetCommands::collectComponentOverrides( pInstance, pCdo, listOverride );
+    uint32 revertedCount = 0;
+    for ( PrefabOverrideItem& item : listOverride )
+    {
+        if ( item._bModified == false )
+            continue;
+        SW_EXPECT_STREQ( "_localPosition", item._propertyName.c_str() );
+        SW_EXPECT_TRUE( EditorToolAssetCommands::revertComponentOverride( pInstance, pCdo, item ) );
+        ++revertedCount;
+    }
+    SW_EXPECT_EQUAL( 1u, revertedCount );
+    SW_EXPECT_TRUE( pInstance->getPrimarySceneComponent()->getLocalPosition() == float3( 1.0f, 2.0f, 3.0f ) );
+
+    SceneDocument resaved;
+    SW_ASSERT_TRUE( pReopened->serializeToDocument( resaved ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), resaved._listEntityNode.size() );
+    SW_EXPECT_TRUE_MSG( resaved._listEntityNode[0]._prefabOverrideXml.empty(), resaved._listEntityNode[0]._prefabOverrideXml.c_str() );
+    SW_EXPECT_TRUE( resaved._listEntityNode[0]._embeddedXml.empty() );
+    manager.shutdown();
 }
 
 /**

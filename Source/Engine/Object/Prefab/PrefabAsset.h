@@ -116,14 +116,14 @@ namespace sw
          * @brief 프리팹을 스폰합니다.
          * @details 컴포넌트 틱 중이면 오브젝트는 바로 돌려주고 프리팹 상태는 틱 직후(구조 변경 큐)에 채웁니다 — 그때까지 오브젝트는 비어 있습니다.
          *          상태를 쓰지 못하면 그 오브젝트를 지웁니다. 틱 안에서 스폰하고 바로 초기화하려면 `executeOrDeferPostTick` 으로 감쌀 것.
-         *          인스턴스가 덮어쓴 값은 차이(diff)로 얹지 않습니다 — 씬은 인스턴스의 전체 상태를 저장하고 그것을 읽습니다(`Scene::instantiate`).
+         *          씬에 놓인 인스턴스는 이것을 지나지 않습니다 — 씬은 프리팹 원형에 덮어쓴 것만 얹어 짓습니다(`Scene::instantiate` · `PrefabOverrides`).
          */
         GameObject* spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName = nullptr );
         /**
          * @brief 캐시에서 프리팹 하나를 버립니다. 다음 `loadPrefab` 이 디스크를 다시 읽습니다(에디터 핫 리로드).
-         * @details **이미 스폰된 오브젝트는 바뀌지 않습니다.** 프리팹은 스폰 시점에 복사되는 틀이라,
-         *          살아 있는 인스턴스를 거슬러 고치려면 그것은 다른 기능입니다(프리팹 오버라이드 전파).
-         *          여기서 보장하는 것은 "다음에 스폰하면 고친 내용이 나온다" 하나입니다.
+         * @details **지금 살아 있는 오브젝트는 바뀌지 않습니다.** 보장하는 것은 "다음에 짓는 인스턴스에 고친 내용이 나온다" 입니다 — 스폰과,
+         *          씬을 다시 읽을 때입니다. 씬은 프리팹 인스턴스의 덮어쓴 것만 저장하므로(`PrefabOverrides`) 다시 읽은 씬의 인스턴스에는
+         *          고친 프리팹의 값이 퍼지고, 인스턴스가 덮어쓴 값은 그대로 남습니다.
          * @param pDevice 쓰지 않습니다. 프리팹은 GPU 자원을 들지 않습니다(`IAssetCache` 계약).
          */
         void reload( string_view assetRelativePath, IRHIDevice* pDevice = nullptr ) override;

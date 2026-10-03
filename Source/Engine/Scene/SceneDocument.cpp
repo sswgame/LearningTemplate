@@ -8,6 +8,7 @@
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -32,7 +33,8 @@ namespace sw
             // v1 부터 엔티티마다 **바이너리 상태**가 한 필드 더 붙는다(비어 있을 수 있다). v0 은
             // XML 문자열만 실려 있었고, 그 파일도 계속 읽는다 — 아래 읽기가 버전으로 갈린다.
             // v2 부터 엔티티의 파일 id(부착이 부모를 가리키는 값)가 끝에 붙는다.
-            static constexpr uint32 kSceneBinVersion = 2;
+            // v3 부터 프리팹 인스턴스의 덮어쓴 것(`_prefabOverrideXml`)이 끝에 붙는다.
+            static constexpr uint32 kSceneBinVersion = 3;
 
             /** @brief 속성으로 먼저 찾고, 없으면 같은 이름의 자식 텍스트를 봅니다(저작본의 두 모양을 다 읽습니다). 없으면 nullptr 입니다. */
             static const utf8* findAttributeOrChildText( const XmlNode& node, const utf8* pKey )
@@ -130,6 +132,10 @@ namespace sw
 
                 SceneDocumentInternal::resolvePrefabPathByGuid( node );
 
+                const XmlNode overrideNode = entityNode.findChild( PrefabOverrides::kRootName );
+                if ( overrideNode.isValid() )
+                    node._prefabOverrideXml = overrideNode.toString();
+
                 XmlNode stateNode = entityNode.findChild( SceneDocumentInternal::kGameObject );
                 // 서브트리는 XML 문서가 쓴다(`XmlNode::toString`). 예전에는 여기서 손으로 다시 썼는데, 속성 값의 줄바꿈을 그대로 적어 다시
                 // 읽을 때 공백이 됐다(XML 속성 값 정규화 — 여러 줄 대사 · 설명이 한 줄로) — 쓰는 규칙이 두 벌이었다.
@@ -177,6 +183,14 @@ namespace sw
                 Uuid prefabGuid{};
                 if ( engine::getResourceManager().getAssetDatabase().tryGetGuid( entity._prefab, prefabGuid ) && prefabGuid.isNull() == false )
                     entityNode.appendAttribute( "prefabGuid", prefabGuid.toString() );
+            }
+            if ( entity._prefabOverrideXml.empty() == false )
+            {
+                XmlDocument overrideDoc;
+                if ( overrideDoc.parse( entity._prefabOverrideXml ) && overrideDoc.getRoot().isValid() )
+                    entityNode.appendClone( overrideDoc.getRoot() );
+                else
+                    SW_LOG_ERROR( "Entity '%#' has prefab overrides that are not XML - they are not written", entity._name );
             }
             if ( entity._embeddedXml.empty() == false )
             {
@@ -261,10 +275,10 @@ namespace sw
         arch >> entityCount;
 
         // **파일이 말한 개수를 그대로 잡아 두지 않는다.** 엔티티 하나는 길이 앞머리(4바이트)를 쓰는
-        // 필드 넷(v1 부터는 다섯)이므로, 남은 바이트를 그 최소치로 나눈 것보다 많은 엔티티는 있을 수
+        // 필드 넷(v1 부터는 다섯, v3 부터는 여섯)이므로, 남은 바이트를 그 최소치로 나눈 것보다 많은 엔티티는 있을 수
         // 없다. 손상된 씬 하나가 수백 기가짜리 `reserve` 가 되는 것을 여기서 막는다. 읽기는 어차피
         // 아래에서 실패하지만, 그 전에 할당이 먼저 터진다.
-        const uint64 kMinBytesPerEntity = ( version >= 1 ? 5u : 4u ) * sizeof( uint32 ) + ( version >= 2 ? sizeof( uint64 ) : 0u );
+        const uint64 kMinBytesPerEntity = ( version >= 3 ? 6u : ( version >= 1 ? 5u : 4u ) ) * sizeof( uint32 ) + ( version >= 2 ? sizeof( uint64 ) : 0u );
         const uint64 maxPossibleEntity  = arch.getRemainingBytes() / kMinBytesPerEntity;
         if ( static_cast<uint64>( entityCount ) > maxPossibleEntity )
         {
@@ -282,6 +296,8 @@ namespace sw
                 arch >> node._embeddedStateBytes;
             if ( version >= 2 )
                 arch >> node._fileId;
+            if ( version >= 3 )
+                arch >> node._prefabOverrideXml;
             // 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를 쌓는 일일 뿐이다.
             if ( arch.isError() )
                 break;
@@ -328,6 +344,7 @@ namespace sw
             arch << entity._embeddedXml;
             arch << entity._embeddedStateBytes;
             arch << entity._fileId;
+            arch << entity._prefabOverrideXml;
         }
 
         const string absPath = ResourceUtil::getWritePath( path );

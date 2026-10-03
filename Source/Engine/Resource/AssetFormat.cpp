@@ -32,6 +32,15 @@ namespace sw
                 SW_COOK_SUFFIX_TABLE( SW_ASSET_COOK_SUFFIX_ROW )
 #undef SW_ASSET_COOK_SUFFIX_ROW
             };
+
+            /**
+             * @brief 씬 0 → 1. 1 은 프리팹 엔티티가 덮어쓴 것(`<PrefabOverrides>`)만 싣는 판이다. 0 의 프리팹 엔티티는 전체 상태(`<GameObject>`)를
+             *        싣고, 1 의 로더도 전체 상태가 실린 엔티티는 그 상태로 짓는다 — 고칠 것이 없다. 다음 저장이 1 의 모양으로 쓴다.
+             */
+            static bool migrateSceneFullStateToOverrides( XmlDocument&, XmlNode& )
+            {
+                return true;
+            }
         };
     } // namespace
 
@@ -116,8 +125,8 @@ namespace sw
         if ( _bBuiltins )
             return;
         _bBuiltins = true;
-        // 내장 migrator 는 없다. 지금 디스크 스키마가 세대 0 이다.
         // 호환이 깨지는 변경이면 AssetFormatVersions::* 를 올리고 registerXmlMigrator(kind, from, …) 로 등록한다.
+        registerXmlMigrator( AssetKind::Scene, 0, &AssetFormatInternal::migrateSceneFullStateToOverrides );
     }
 
     void AssetFormatRegistry::registerXmlMigrator( AssetKind kind, AssetFormatVersion fromVersion, XmlAssetMigrator migrator )

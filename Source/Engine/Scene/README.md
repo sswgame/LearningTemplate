@@ -23,6 +23,7 @@ classDiagram
         +string _name
         +string _prefab
         +string _embeddedXml
+        +string _prefabOverrideXml
     }
 
     class Scene {
@@ -63,14 +64,21 @@ classDiagram
 개발 및 저작(Editor) 단계에서 사용되는 기본 텍스트 포맷입니다:
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
-<Scene formatVersion="0" name="Town01">
+<Scene formatVersion="1" name="Town01">
     <entities>
-        <entity name="PlayerSpawn" prefab="game/<pack>/prefabs/hero.prefab.json"/>
-        <entity name="ShopKeeper" prefab="game/<pack>/prefabs/npc.prefab.json"/>
-        <entity name="CustomLight">
+        <entity id="1" name="PlayerSpawn" prefab="game/<pack>/prefabs/hero.prefab.json"/>
+        <entity id="2" name="ShopKeeper" prefab="game/<pack>/prefabs/npc.prefab.json">
+            <PrefabOverrides>
+                <Override key="SceneComponent#0">
+                    <SceneComponent _localPosition="4,0,2"/>
+                </Override>
+                <Remove key="BoxCollider2DComponent#0"/>
+            </PrefabOverrides>
+        </entity>
+        <entity id="3" name="CustomLight">
             <GameObject _schemaVersion="0" _name="CustomLight" _bActive="true">
                 <_listComponent>
-                    <MeshComponent _schemaVersion="0" _meshId="Sphere" _localPosition="0,2,0"/>
+                    <MeshComponent _componentName="MeshComponent" _meshId="Sphere" _localPosition="0,2,0"/>
                 </_listComponent>
             </GameObject>
         </entity>
@@ -78,12 +86,17 @@ classDiagram
 </Scene>
 ```
 
+- **프리팹 엔티티는 프리팹 경로와 덮어쓴 것만 싣습니다**(`<PrefabOverrides>` — `PrefabOverrides`). 로드는 프리팹의 원형 상태에 그것을 얹어 짓습니다 —
+  프리팹을 고치면 놓인 인스턴스에 퍼지고, 덮어쓴 값은 남습니다(언리얼 · 유니티의 프리팹 인스턴스와 같다). 키는 프리팹 쪽 컴포넌트 키(`이름표#n`)입니다.
+- `formatVersion="0"` 문서의 프리팹 엔티티는 `<GameObject>` 전체 상태를 싣습니다. 그 상태가 그대로 기준이고, 다음 저장이 1 의 모양으로 씁니다.
+- 컴포넌트 이름표(`_componentName`)는 상태와 함께 저장됩니다. 없는 옛 상태는 타입 이름으로 읽힙니다.
+
 ### 2.2 바이너리 포맷 (`.scene.bin` — SCN1)
 배포(Shipping) 빌드 및 고속 스트리밍을 위한 바이너리 쿠킹 포맷입니다:
 - **Magic**: `0x53434E31` (`SCN1`)
-- **Version**: `0`
+- **Version**: `3` (읽기는 0 ~ 3)
 - **Name**: `u32 length` + `UTF-8 bytes`
-- **Entities**: `u32 count` + 각 엔티티(`name`, `prefabPath`, `embeddedXml`)
+- **Entities**: `u32 count` + 각 엔티티(`name`, `prefabPath`, `prefabGuid`, `embeddedXml`, v1+ `embeddedStateBytes`, v2+ `fileId`, v3+ `prefabOverrideXml`)
 
 ---
 

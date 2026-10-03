@@ -35,6 +35,12 @@ namespace sw
              * 쿠커가 왕복 검증에 성공한 엔티티만 이쪽에 담고, 실패하면 XML 을 그대로 남깁니다.
              */
             vector<uint8> _embeddedStateBytes;
+            /**
+             * @brief 프리팹 인스턴스가 프리팹과 다른 점입니다(`<PrefabOverrides>` — `PrefabOverrides`). 비어 있으면 프리팹 그대로입니다.
+             * @details 프리팹 엔티티는 이것만 싣고 상태(`_embeddedXml` · `_embeddedStateBytes`)는 비웁니다 — 로드가 프리팹을 지은 뒤 이것을 얹으므로
+             *          프리팹을 고치면 놓인 인스턴스에 퍼집니다. 상태가 실린 프리팹 엔티티는 옛 문서(전체 상태)이고, 그 상태가 그대로 기준입니다.
+             */
+            string _prefabOverrideXml;
         };
 
         string             _name;

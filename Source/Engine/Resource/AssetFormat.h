@@ -35,7 +35,8 @@ namespace sw
         static constexpr AssetFormatVersion kRenderPipeline   = 0;
         static constexpr AssetFormatVersion kRenderPass       = 0;
         static constexpr AssetFormatVersion kPrefab           = 0;
-        static constexpr AssetFormatVersion kScene            = 0;
+        /// 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)만 싣는다. 0 은 전체 상태였다(그대로 읽힌다).
+        static constexpr AssetFormatVersion kScene = 1;
     };
 
     using XmlAssetMigrator = bool ( * )( XmlDocument& doc, XmlNode& root );
@@ -92,7 +93,7 @@ namespace sw
         /** @brief 빈 등록부로 만듭니다. */
         AssetFormatRegistry() = default;
 
-        /** @brief 엔진 내장 N→N+1 migrator 를 등록합니다. 멱등입니다(지금은 내장 migrator 가 없습니다). */
+        /** @brief 엔진 내장 N→N+1 migrator 를 등록합니다. 멱등입니다(씬 0 → 1). */
         void ensureBuiltins();
 
         /** @brief XML migrator 를 등록합니다. */

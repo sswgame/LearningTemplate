@@ -38,9 +38,15 @@ namespace sw
          * @brief 씬 문서(SceneDocument)의 엔티티 · 프리팹을 스폰하고 계층 구조를 만듭니다.
          * @details 모든 엔티티를 하나의 묶음(`ObjectStateBatch`, 파일 id 공간)으로 읽고 끝에서 한 번에 잇습니다 — 자식이 부모보다 앞에 적혀도 된다.
          *          엔티티의 파일 id 는 오브젝트의 런타임 id 와 짝지어 들고 있다가(`collectSavedIdMap`) 저장할 때 같은 값을 다시 씁니다.
+         *          프리팹 엔티티는 프리팹의 원형 상태에 덮어쓴 것(`EntityNode::_prefabOverrideXml`)을 얹어 짓습니다 — 프리팹을 고치면 퍼집니다.
+         *          전체 상태가 실린 프리팹 엔티티(옛 문서)는 그 상태가 기준입니다.
          */
         [[nodiscard]] bool instantiate( const SceneDocument& doc );
-        /** @brief 현재 씬의 오브젝트 상태를 씬 문서(SceneDocument)로 직렬화합니다. 부착은 부모의 파일 id 로 적습니다. */
+        /**
+         * @brief 현재 씬의 오브젝트 상태를 씬 문서(SceneDocument)로 직렬화합니다. 부착은 부모의 파일 id 로 적습니다.
+         * @details 프리팹 인스턴스는 프리팹 경로와 프리팹 원형과 다른 것만 적습니다(`PrefabOverrides` — 언리얼 · 유니티의 프리팹 인스턴스와 같다).
+         *          프리팹을 읽지 못하면 전체 상태를 적습니다(옛 문서와 같은 모양 — 다음 로드가 그 상태로 짓는다).
+         */
         [[nodiscard]] bool serializeToDocument( SceneDocument& outDoc ) const;
         /**
          * @brief 살아 있는 오브젝트마다의 파일 id 표(런타임 id → 파일 id)를 채웁니다. id 가 없는 오브젝트(새로 만든 것)에는 여기서 줍니다.
