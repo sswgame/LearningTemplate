@@ -1,6 +1,7 @@
 /**
  * @file Weapon.h
- * @brief 총 한 자루의 정의(weapons.xml)와 상태 — 연사 간격 · 탄창 · 재장전 · 탄 퍼짐 · 산탄입니다.
+ * @brief 총 한 자루의 정의(weapons.xml)와 상태 — 연사 간격 · 탄창 · 재장전 · 탄 퍼짐 · 산탄 · 거리 감쇠 · 탄속입니다.
+ * @details 장르 공통입니다 — 1인칭 슈터 · 배틀로얄 · 서부극 · 기체 액션이 같은 정의와 상태를 씁니다(키트끼리는 링크하지 않으므로 기반에 둔다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -9,9 +10,9 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Combat/WeaponMath.h"
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Shooter/ShooterMath.h"
 
 namespace sw
 {
@@ -25,6 +26,7 @@ namespace sw
     struct WeaponDef
     {
         hashed_string _id{};
+        hashed_string _ammoId{}; ///< 예비탄으로 쓰는 아이템 id(인벤토리와 잇는 게임이 본다 — 비면 무기 자체 예비탄)
         string        _name{};
         float32       _fireInterval{ 0.1f }; ///< 발사 사이 최소 간격(s)
         float32       _reloadTime{ 1.8f };
@@ -35,6 +37,12 @@ namespace sw
         float32       _spreadPerShot{ 0.6f };
         float32       _spreadRecovery{ 6.0f }; ///< 초당 줄어드는 퍼짐(도)
         float32       _recoilPitch{ 0.6f };    ///< 한 발의 반동(도, 위로)
+        float32       _falloffStart{ 0.0f };   ///< 이 거리까지는 피해 그대로(0 = 감쇠 없음)
+        float32       _falloffEnd{ 0.0f };     ///< 이 거리부터 `_falloffMinScale`
+        float32       _falloffMinScale{ 1.0f };
+        float32       _projectileSpeed{ 0.0f };   ///< m/s — 0 이면 히트스캔(광선), 아니면 탄도(`Ballistics`)
+        float32       _projectileGravity{ 1.0f }; ///< 중력 배율(탄 낙차 — 0 이면 곧게)
+        float32       _headshotMultiplier{ 2.0f };
         int32         _magazineSize{ 30 };
         int32         _maxReserveAmmo{ 180 };
         int32         _pelletCount{ 1 };      ///< 한 번에 나가는 알 수(산탄)

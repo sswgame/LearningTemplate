@@ -4,6 +4,7 @@
 
 #include "GameFramework/Navigation/FlowField.h"
 #include "GameFramework/Navigation/GridPathfinder.h"
+#include "GameFramework/Navigation/GridReachability.h"
 #include "GameFramework/Navigation/NavAgent.h"
 #include "GameFramework/Navigation/NavGrid.h"
 
@@ -318,4 +319,47 @@ SW_TEST_CASE( NavigationTest, AgentsFollowPathsAndFlowFieldsWithoutOverlapping )
         pushed.update( grid, listNoNeighbor, 1.0f / 60.0f );
     SW_EXPECT_TRUE( pushed.getState() == NavAgentState::Stuck );
     SW_EXPECT_TRUE( grid.isWalkable( grid.computeCell( pushed.getPosition() ) ) );
+}
+
+SW_TEST_CASE( NavigationTest, ReachabilityHonoursTerrainCostsAlliesAndAttackRange )
+{
+    // 7 × 7, 가운데 (3,3) 에서 이동력 3. (4,3) 숲(비용 2), (3,4) 적(막힘), (2,3) 아군(지나가되 서지 못함).
+    const int2       forest{ 4, 3 };
+    const int2       enemy{ 3, 4 };
+    const int2       ally{ 2, 3 };
+    GridReachability reach;
+    reach.compute( 7, 7, int2{ 3, 3 }, 3,
+                   [&]( const int2&, const int2& to )
+    { return to == enemy ? -1 : ( to == forest ? 2 : 1 ); },
+                   [&]( const int2& cell )
+    { return cell != ally; } );
+    SW_EXPECT_TRUE( reach.isReachable( int2{ 3, 3 } ) );
+    SW_EXPECT_EQUAL( 2, reach.getCost( forest ) );
+    SW_EXPECT_EQUAL( 3, reach.getCost( int2{ 5, 3 } ) );
+    SW_EXPECT_FALSE( reach.isReachable( int2{ 6, 3 } ) );
+    SW_EXPECT_FALSE( reach.isReachable( enemy ) );
+    SW_EXPECT_FALSE( reach.isReachable( ally ) );
+    SW_EXPECT_EQUAL( 1, reach.getCost( ally ) );
+    SW_EXPECT_TRUE( reach.isReachable( int2{ 0, 3 } ) );                            // 아군을 지나 왼쪽 끝
+    SW_EXPECT_EQUAL( GridReachability::kUnreached, reach.getCost( int2{ 3, 6 } ) ); // 적 뒤는 돌아가야 해서 3 을 넘는다
+    SW_EXPECT_FALSE( reach.isReachable( int2{ 3, 6 } ) );
+
+    vector<int2> listPath;
+    SW_ASSERT_TRUE( reach.makePath( int2{ 0, 3 }, listPath ) );
+    SW_EXPECT_EQUAL( 4, static_cast<int32>( listPath.size() ) );
+    SW_EXPECT_TRUE( listPath.front() == int2( 3, 3 ) && listPath.back() == int2( 0, 3 ) );
+
+    vector<int2> listStand;
+    reach.collectReachable( listStand );
+    vector<int2> listAttack;
+    reach.collectAttackCells( 1, 1, listAttack );
+    SW_EXPECT_TRUE( listAttack.size() > listStand.size() );
+    bool bEnemyInRange = false;
+    for ( const int2& cell : listAttack )
+        bEnemyInRange = bEnemyInRange || cell == enemy;
+    SW_EXPECT_TRUE( bEnemyInRange );
+
+    vector<int2> listRing;
+    GridReachability::collectRangeCells( int2{ 0, 0 }, 2, 2, 7, 7, listRing );
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( listRing.size() ) ); // (2,0) (1,1) (0,2)
 }

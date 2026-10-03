@@ -40,7 +40,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   - `TurnBattle`: 턴제 전투 시스템
   - `Farming`: 농장 생활(하베스트 문 장르) — 달력(`FarmCalendar`: 6:00–26:00 하루 · 28 일 계절 · 해), 작물 XML 카탈로그(`CropCatalog`),
     밭(`FarmField`: 갈기 · 물 · 심기 · 거두기, 물 받은 날만 자람, 다시 열림, 철 지나면 시듦, 비), 인벤토리 · 출하 정산(`FarmInventory`).
-  - `Shooter`: 1인칭 슈터 — 탄 퍼짐 원뿔(`ShooterMath`, 광선 판정 · 시점은 기반의 `RayMath` · `FirstPersonLook`), 무기 XML 카탈로그와
+  - `Shooter`: 1인칭 슈터 — 탄 퍼짐 원뿔(`WeaponMath`, 광선 판정 · 시점은 기반의 `RayMath` · `FirstPersonLook`), 무기 XML 카탈로그와
     무기 상태(`WeaponState`: 연사 간격 · 탄창 · 재장전 · 반자동 · 산탄 · 반동 · 씨앗 고정 난수).
   - `ThemePark`: 롤러코스터 타이쿤 — 조각으로 쌓는 코스터 트랙(`CoasterTrackBuilder`: 오르막 체인 · 낙하 · 언덕 · 뱅크 회전 · 클로소이드 루프 ·
     브레이크 · 부스터, XML 레이아웃), 고정 스텝 열차 물리(`CoasterTrain`), 시험 운행으로 흥분 · 강도 · 멀미 평가(`CoasterRideAnalyzer`),

@@ -2,7 +2,7 @@
  * @file ShooterArena.h
  * @brief Shooter3D 의 게임 규칙 — 1인칭 이동 · 충돌, 무기 셋, 히트스캔, 드론 웨이브, 체력, 조준선 · 맞음 표시입니다.
  *
- * @details 무기 규칙(연사 · 탄창 · 재장전 · 퍼짐 · 반동)과 광선 판정은 키트(`GF_Shooter`)가 맡고, 여기는 "어디서 누구를 쏘는가" 와 그 모습만 압니다.
+ * @details 무기 규칙(연사 · 탄창 · 재장전 · 퍼짐 · 반동)과 광선 판정은 기반(`GameFramework/Combat`)이 맡고, 여기는 "어디서 누구를 쏘는가" 와 그 모습만 압니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -13,8 +13,8 @@
 
 #include "GameFramework/Base/FirstPersonLook.h"
 #include "GameFramework/Base/PrimitiveStage.h"
-#include "GameFramework/Kits/Shooter/ShooterMath.h"
-#include "GameFramework/Kits/Shooter/Weapon.h"
+#include "GameFramework/Combat/Weapon.h"
+#include "GameFramework/Combat/WeaponMath.h"
 
 namespace sw
 {

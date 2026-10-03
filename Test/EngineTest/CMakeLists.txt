@@ -20,7 +20,6 @@ sw_addTestExecutable(EngineTest
 		GF_TurnBattle
 		GF_ActionCombat
 		GF_Farming
-		GF_Shooter
 		GF_ThemePark
 		GF_Voxel
 		GF_CityBuilder

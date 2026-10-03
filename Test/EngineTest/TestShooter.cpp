@@ -3,8 +3,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/FirstPersonLook.h"
-#include "GameFramework/Kits/Shooter/ShooterMath.h"
-#include "GameFramework/Kits/Shooter/Weapon.h"
+#include "GameFramework/Combat/Weapon.h"
+#include "GameFramework/Combat/WeaponMath.h"
 
 #include "TestFramework/TestFramework.h"
 

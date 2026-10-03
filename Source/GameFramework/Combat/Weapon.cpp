@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Shooter/Weapon.h"
+#include "GameFramework/Combat/Weapon.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -60,22 +60,30 @@ namespace sw
             if ( pId == nullptr )
                 continue;
             WeaponDef weapon;
-            weapon._id             = hashed_string( pId );
-            const utf8* pName      = node.findAttribute( "name" );
-            weapon._name           = pName != nullptr ? pName : pId;
-            weapon._fireInterval   = MathUtil::max( 0.01f, node.getAttributeFloat( "fireInterval", weapon._fireInterval ) );
-            weapon._reloadTime     = MathUtil::max( 0.0f, node.getAttributeFloat( "reloadTime", weapon._reloadTime ) );
-            weapon._damage         = node.getAttributeFloat( "damage", weapon._damage );
-            weapon._range          = MathUtil::max( 0.1f, node.getAttributeFloat( "range", weapon._range ) );
-            weapon._minSpread      = MathUtil::max( 0.0f, node.getAttributeFloat( "minSpread", weapon._minSpread ) );
-            weapon._maxSpread      = MathUtil::max( weapon._minSpread, node.getAttributeFloat( "maxSpread", weapon._maxSpread ) );
-            weapon._spreadPerShot  = MathUtil::max( 0.0f, node.getAttributeFloat( "spreadPerShot", weapon._spreadPerShot ) );
-            weapon._spreadRecovery = MathUtil::max( 0.0f, node.getAttributeFloat( "spreadRecovery", weapon._spreadRecovery ) );
-            weapon._recoilPitch    = node.getAttributeFloat( "recoilPitch", weapon._recoilPitch );
-            weapon._magazineSize   = MathUtil::max( 1, node.getAttributeInt( "magazineSize", weapon._magazineSize ) );
-            weapon._maxReserveAmmo = MathUtil::max( 0, node.getAttributeInt( "maxReserveAmmo", weapon._maxReserveAmmo ) );
-            weapon._pelletCount    = MathUtil::max( 1, node.getAttributeInt( "pelletCount", weapon._pelletCount ) );
-            weapon._bAutomatic     = node.getAttributeBool( "automatic", true ) ? SW_TRUE : SW_FALSE;
+            weapon._id                 = hashed_string( pId );
+            const utf8* pName          = node.findAttribute( "name" );
+            weapon._name               = pName != nullptr ? pName : pId;
+            weapon._fireInterval       = MathUtil::max( 0.01f, node.getAttributeFloat( "fireInterval", weapon._fireInterval ) );
+            weapon._reloadTime         = MathUtil::max( 0.0f, node.getAttributeFloat( "reloadTime", weapon._reloadTime ) );
+            weapon._damage             = node.getAttributeFloat( "damage", weapon._damage );
+            weapon._range              = MathUtil::max( 0.1f, node.getAttributeFloat( "range", weapon._range ) );
+            weapon._minSpread          = MathUtil::max( 0.0f, node.getAttributeFloat( "minSpread", weapon._minSpread ) );
+            weapon._maxSpread          = MathUtil::max( weapon._minSpread, node.getAttributeFloat( "maxSpread", weapon._maxSpread ) );
+            weapon._spreadPerShot      = MathUtil::max( 0.0f, node.getAttributeFloat( "spreadPerShot", weapon._spreadPerShot ) );
+            weapon._spreadRecovery     = MathUtil::max( 0.0f, node.getAttributeFloat( "spreadRecovery", weapon._spreadRecovery ) );
+            weapon._recoilPitch        = node.getAttributeFloat( "recoilPitch", weapon._recoilPitch );
+            weapon._magazineSize       = MathUtil::max( 1, node.getAttributeInt( "magazineSize", weapon._magazineSize ) );
+            weapon._maxReserveAmmo     = MathUtil::max( 0, node.getAttributeInt( "maxReserveAmmo", weapon._maxReserveAmmo ) );
+            weapon._pelletCount        = MathUtil::max( 1, node.getAttributeInt( "pelletCount", weapon._pelletCount ) );
+            weapon._bAutomatic         = node.getAttributeBool( "automatic", true ) ? SW_TRUE : SW_FALSE;
+            weapon._falloffStart       = MathUtil::max( 0.0f, node.getAttributeFloat( "falloffStart", weapon._falloffStart ) );
+            weapon._falloffEnd         = MathUtil::max( weapon._falloffStart, node.getAttributeFloat( "falloffEnd", weapon._falloffEnd ) );
+            weapon._falloffMinScale    = MathUtil::clamp( node.getAttributeFloat( "falloffMinScale", weapon._falloffMinScale ), 0.0f, 1.0f );
+            weapon._projectileSpeed    = MathUtil::max( 0.0f, node.getAttributeFloat( "projectileSpeed", weapon._projectileSpeed ) );
+            weapon._projectileGravity  = node.getAttributeFloat( "projectileGravity", weapon._projectileGravity );
+            weapon._headshotMultiplier = MathUtil::max( 0.0f, node.getAttributeFloat( "headshotMultiplier", weapon._headshotMultiplier ) );
+            const utf8* pAmmoId        = node.findAttribute( "ammo" );
+            weapon._ammoId             = pAmmoId != nullptr ? hashed_string( pAmmoId ) : hashed_string{};
             addWeapon( weapon );
             ++loadedCount;
         }
@@ -156,7 +164,7 @@ namespace sw
         {
             GameRay ray;
             ray._origin    = aim._origin;
-            ray._direction = ShooterMath::applySpread( aim._direction, coneHalfAngle, _random );
+            ray._direction = WeaponMath::applySpread( aim._direction, coneHalfAngle, _random );
             outShot._listRay.push_back( ray );
         }
         _currentSpread = MathUtil::min( _def._maxSpread, _currentSpread + _def._spreadPerShot );

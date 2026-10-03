@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Shooter/ShooterMath.h"
+#include "GameFramework/Combat/WeaponMath.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -8,7 +8,7 @@ namespace sw
 {
     namespace
     {
-        struct ShooterMathInternal
+        struct WeaponMathInternal
         {
             static constexpr float32 kPi = 3.14159265358979f;
         };
@@ -17,7 +17,7 @@ namespace sw
 
 namespace sw
 {
-    float3 ShooterMath::applySpread( const float3& direction, float32 coneHalfAngle, GameRandom& random )
+    float3 WeaponMath::applySpread( const float3& direction, float32 coneHalfAngle, GameRandom& random )
     {
         if ( coneHalfAngle <= 0.0f )
             return direction;
@@ -31,7 +31,7 @@ namespace sw
         const float32 cosMax   = MathUtil::cos( coneHalfAngle );
         const float32 cosTheta = random.nextRange( cosMax, 1.0f );
         const float32 sinTheta = MathUtil::sqrt( MathUtil::max( 0.0f, 1.0f - cosTheta * cosTheta ) );
-        const float32 phi      = random.nextRange( 0.0f, 2.0f * ShooterMathInternal::kPi );
+        const float32 phi      = random.nextRange( 0.0f, 2.0f * WeaponMathInternal::kPi );
         return direction * cosTheta + axisA * ( sinTheta * MathUtil::cos( phi ) ) + axisB * ( sinTheta * MathUtil::sin( phi ) );
     }
 } // namespace sw
