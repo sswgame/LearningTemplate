@@ -298,19 +298,23 @@ namespace sw
                         pLegacyTypeInfo != nullptr && ( isOrphanNameKnownTo( typeInfo, orphan ) || isOrphanNameKnownTo( *pLegacyTypeInfo, orphan ) );
                     if ( bStagedElsewhere )
                         continue;
+                    // 적힌 글이 먼저다 — 파일의 모르는 이름은 intern 하지 않고, 안쪽 원소의 이름은 타입 이름이 붙어 있다(`SpriteComponent._x`).
                     const uint32 nameHash = getOrphanNameHash( orphan );
-                    if ( std::find( listListedHash.begin(), listListedHash.end(), nameHash ) != listListedHash.end() )
+                    string       shownName;
+                    if ( orphan._writtenName.empty() == false )
+                        shownName = orphan._writtenName;
+                    else if ( orphan._name.empty() == false )
+                        shownName = orphan._name.c_str();
+                    else
+                        shownName = "#" + to_string( nameHash ); // 바이너리는 이름 없이 해시만 싣는다
+                    const uint32 shownHash = static_cast<uint32>( hashed_string::computeHash( string_view{ shownName } ) );
+                    if ( std::find( listListedHash.begin(), listListedHash.end(), shownHash ) != listListedHash.end() )
                         continue;
-                    listListedHash.push_back( nameHash );
+                    listListedHash.push_back( shownHash );
 
                     if ( names.empty() == false )
                         names += ", ";
-                    if ( orphan._name.empty() == false )
-                        names += orphan._name.c_str();
-                    else if ( orphan._writtenName.empty() == false )
-                        names += orphan._writtenName; // 파일의 모르는 이름은 intern 하지 않는다 — 적힌 글 그대로
-                    else
-                        names += "#" + to_string( nameHash ); // 바이너리는 이름 없이 해시만 싣는다
+                    names += shownName;
                 }
                 if ( listListedHash.empty() )
                     return;

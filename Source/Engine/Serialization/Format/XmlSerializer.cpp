@@ -200,7 +200,7 @@ namespace sw
                                 return;
                             }
                             // 원소 안의 못 읽은 칸 — orphan 목록이 있으면 거기 남고 true, 엄격 읽기면 false 다.
-                            if ( readXmlIntoInstance( pObj, *pType, backend, ctx, pOutListOrphan ) == false )
+                            if ( readNestedXmlIntoInstance( pObj, *pType, backend, ctx, pOutListOrphan ) == false )
                                 bOutFieldError = true;
                             return;
                         }
@@ -219,7 +219,7 @@ namespace sw
                             const TypeInfo* pElemType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
                             if ( pElemType != nullptr )
                             {
-                                if ( readXmlIntoInstance( pElemPtr, *pElemType, backend, ctx, pOutListOrphan ) == false )
+                                if ( readNestedXmlIntoInstance( pElemPtr, *pElemType, backend, ctx, pOutListOrphan ) == false )
                                     bOutFieldError = true;
                                 return true;
                             }
@@ -273,7 +273,7 @@ namespace sw
                                 // 구조체 값은 <entry> 안의 <TypeName> 자식에 들어 있다.
                                 if ( backend.pushFirstChild() )
                                 {
-                                    vOk = readXmlIntoInstance( listVBuf.data(), *pElemType, backend, ctx, pOutListOrphan );
+                                    vOk = readNestedXmlIntoInstance( listVBuf.data(), *pElemType, backend, ctx, pOutListOrphan );
                                     if ( vOk == false )
                                         bOutFieldError = true;
                                     backend.popChild();
@@ -351,19 +351,35 @@ namespace sw
                 }, true /* 상속 PROPERTY 포함 */ );
             }
 
-            static bool isNameKnown( const unordered_set<string>& uniqueKnownNames, const utf8* pChildName )
+            /**
+             * @brief @p pName 이 타입(상속 포함)의 프로퍼티 이름 · 별칭이면 true 입니다. 대소문자를 가리지 않습니다(해시가 그렇다).
+             * @details 대소문자만 다른 태그 · 속성은 orphan 이 아니다(JsonSerializer 의 bCaseVariant 와 같다).
+             */
+            static bool isNameKnown( const TypeInfo& typeInfo, const utf8* pName )
             {
-                if ( pChildName == nullptr )
+                if ( pName == nullptr )
                     return false;
-                if ( uniqueKnownNames.find( pChildName ) != uniqueKnownNames.end() )
-                    return true;
-                // 대소문자만 다른 태그는 orphan 이 아니다(JsonSerializer 의 bCaseVariant 와 같다).
-                for ( const string& known : uniqueKnownNames )
+                const uint32 nameHash = static_cast<uint32>( hashed_string::computeHash( string_view{ pName } ) );
+                for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
                 {
-                    if ( StringUtil::equals( known.c_str(), pChildName, true ) )
+                    if ( prop.matchesNameHash( nameHash ) )
                         return true;
                 }
                 return false;
+            }
+
+            /**
+             * @brief 안쪽 원소(컴포넌트 · 구조체 칸 · 컨테이너의 구조체 원소)를 읽고, orphan 목록이 있으면 그 원소의 모르는 속성 · 자식도 orphan 으로 남깁니다.
+             * @details 루트 원소는 `deserializeSoft` 가 따로 훑는다. 안쪽 원소의 모르는 이름은 타입 이름을 붙여 적는다(`SpriteComponent._clipPth`) —
+             *          로드가 끝난 뒤 `runSchemaMigrateStep` 이 루트 타입 이름과 함께 경고한다.
+             */
+            [[nodiscard]] static bool readNestedXmlIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend, const SerializeContext& ctx,
+                                                                 vector<SchemaOrphanValue>* pOutListOrphan )
+            {
+                const bool bRead = readXmlIntoInstance( pInstance, typeInfo, backend, ctx, pOutListOrphan );
+                if ( pOutListOrphan != nullptr )
+                    appendUnknownXmlChildOrphans( backend.getCurrentNode(), typeInfo, backend.ignoresCaseKeys(), pOutListOrphan, typeInfo._name.c_str() );
+                return bRead;
             }
 
             [[nodiscard]] static bool readXmlIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend, const SerializeContext& ctx,
@@ -407,7 +423,7 @@ namespace sw
                             } );
                             if ( entered )
                             {
-                                if ( readXmlIntoInstance( pPropPtr, *pNestedType, backend, ctx, pOutListOrphan ) == false )
+                                if ( readNestedXmlIntoInstance( pPropPtr, *pNestedType, backend, ctx, pOutListOrphan ) == false )
                                     bFieldError = true;
                                 backend.popChild();
                             }
@@ -443,65 +459,62 @@ namespace sw
                 return bFieldError == false;
             }
 
-            static void appendUnknownXmlChildOrphans( XmlNode root, const TypeInfo& typeInfo, bool bIgnore,
-                                                      vector<SchemaOrphanValue>* pOutListOrphan )
+            /** @brief 파일에 적힌 모르는 이름 하나를 orphan 으로 남깁니다. @p pOwnerTypeName 이 있으면 경고에 찍을 이름 앞에 붙입니다. */
+            static void appendUnknownNameOrphan( const utf8* pWrittenName, const utf8* pText, const utf8* pOwnerTypeName,
+                                                 vector<SchemaOrphanValue>& outListOrphan )
             {
-                if ( pOutListOrphan == nullptr || root.isValid() == false )
-                    return;
-
-                unordered_set<string> uniqueKnownNames;
-                typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
+                // 파일의 모르는 이름을 전역 이름 표에 넣지 않는다 — 아는 이름이면 그것을, 아니면 해시만 든다(`SchemaMigrateContext::findOrphan`).
+                SchemaOrphanValue orphan;
+                orphan._name     = hashed_string::findInterned( string_view{ pWrittenName } );
+                orphan._nameHash = hashed_string::computeHash( string_view{ pWrittenName } );
+                orphan._text     = pText != nullptr ? pText : "";
+                // 버렸다고 알릴 때 찍을 이름 — 위의 `_name` 은 intern 된 이름일 때만 찬다
+                if ( StringUtil::isNullOrEmpty( pOwnerTypeName ) == false )
                 {
-                    uniqueKnownNames.insert( prop._name.c_str() );
-                    for ( const hashed_string& alias : prop._listAlias )
-                    {
-                        if ( alias.empty() == false )
-                            uniqueKnownNames.insert( alias.c_str() );
-                    }
-                }, true /* 상속 PROPERTY 포함 */ );
+                    orphan._writtenName = pOwnerTypeName;
+                    orphan._writtenName += '.';
+                }
+                orphan._writtenName += pWrittenName;
+                outListOrphan.push_back( std::move( orphan ) );
+            }
+
+            /**
+             * @brief 원소 @p node 의 속성 · 자식 가운데 타입이 모르는 이름을 orphan 으로 남깁니다.
+             * @param pOwnerTypeName 안쪽 원소면 그 타입 이름(경고에 붙는다), 루트면 nullptr 입니다.
+             */
+            static void appendUnknownXmlChildOrphans( XmlNode node, const TypeInfo& typeInfo, bool bIgnore,
+                                                      vector<SchemaOrphanValue>* pOutListOrphan, const utf8* pOwnerTypeName = nullptr )
+            {
+                if ( pOutListOrphan == nullptr || node.isValid() == false )
+                    return;
 
                 // 대소문자만 다른 태그는 setIgnoreCaseKeys(false) 로 의도적으로 바인딩을 거른 것이므로
                 // 모르는 필드(orphan)로 올리지 않는다. bIgnore 와 무관하게 무시 대소문자로 판정한다.
-                for ( XmlNode child = root.findChild( nullptr, bIgnore ); child.isValid(); child = child.findNextSibling( nullptr, bIgnore ) )
+                for ( XmlNode child = node.findChild( nullptr, bIgnore ); child.isValid(); child = child.findNextSibling( nullptr, bIgnore ) )
                 {
                     const utf8* pChildName = child.getName();
                     if ( pChildName == nullptr )
                         continue;
                     if ( StringUtil::equals( pChildName, kSchemaVersionKey ) )
                         continue;
-                    if ( isNameKnown( uniqueKnownNames, pChildName ) )
+                    if ( isNameKnown( typeInfo, pChildName ) )
                         continue;
                     const utf8* pNameAttr = child.findAttribute( kXmlPropertyNameAttr, bIgnore );
-                    if ( pNameAttr != nullptr && isNameKnown( uniqueKnownNames, pNameAttr ) )
+                    if ( pNameAttr != nullptr && isNameKnown( typeInfo, pNameAttr ) )
                         continue;
-
-                    // 파일의 모르는 이름을 전역 이름 표에 넣지 않는다 — 아는 이름이면 그것을, 아니면 해시만 든다(`SchemaMigrateContext::findOrphan`).
-                    SchemaOrphanValue orphan;
-                    orphan._name     = hashed_string::findInterned( string_view{ pChildName } );
-                    orphan._nameHash = hashed_string::computeHash( string_view{ pChildName } );
-                    orphan._text     = child.getText() != nullptr ? child.getText() : "";
-                    // 버렸다고 알릴 때 찍을 이름 — 위의 `_name` 은 intern 된 이름일 때만 찬다
-                    orphan._writtenName = pChildName;
-                    pOutListOrphan->push_back( std::move( orphan ) );
+                    appendUnknownNameOrphan( pChildName, child.getText(), pOwnerTypeName, *pOutListOrphan );
                 }
 
-                for ( XmlAttribute attr = root.getFirstAttribute(); attr.isValid(); attr = attr.getNext() )
+                for ( XmlAttribute attr = node.getFirstAttribute(); attr.isValid(); attr = attr.getNext() )
                 {
                     const utf8* pAttrName = attr.getName();
                     if ( pAttrName == nullptr )
                         continue;
                     if ( StringUtil::equals( pAttrName, kSchemaVersionKey ) )
                         continue;
-                    if ( isNameKnown( uniqueKnownNames, pAttrName ) )
+                    if ( isNameKnown( typeInfo, pAttrName ) )
                         continue;
-
-                    SchemaOrphanValue orphan; // 이름은 위와 같이 찾기만 한다
-                    orphan._name     = hashed_string::findInterned( string_view{ pAttrName } );
-                    orphan._nameHash = hashed_string::computeHash( string_view{ pAttrName } );
-                    orphan._text     = attr.getValue() != nullptr ? attr.getValue() : "";
-                    // 버렸다고 알릴 때 찍을 이름
-                    orphan._writtenName = pAttrName;
-                    pOutListOrphan->push_back( std::move( orphan ) );
+                    appendUnknownNameOrphan( pAttrName, attr.getValue(), pOwnerTypeName, *pOutListOrphan );
                 }
             }
 
@@ -642,6 +655,16 @@ namespace sw
     string XmlDocumentBackend::endSerialize()
     {
         return _impl->_doc.saveToString();
+    }
+
+    XmlNode IXmlBackend::getCurrentNode() const
+    {
+        return XmlNode{};
+    }
+
+    XmlNode XmlDocumentBackend::getCurrentNode() const
+    {
+        return _impl->_currentParent;
     }
 
     XmlNode XmlDocumentBackend::getDeserializationRoot() const

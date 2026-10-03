@@ -13,7 +13,7 @@ namespace sw
     struct TypeInfo;
 
     class Archive;
-    /** @brief `XmlDocumentBackend::getDeserializationRoot` 가 반환하는 노드입니다. */
+    /** @brief `XmlDocumentBackend::getDeserializationRoot` · `IXmlBackend::getCurrentNode` 가 반환하는 노드입니다. */
     class XmlNode;
 
     using XmlArrayItemDelegate = Delegate<void( string_view itemStr )>;
@@ -130,6 +130,11 @@ namespace sw
             (void)callback;
             return false;
         }
+        /**
+         * @brief 읽는 중인 현재 노드입니다. 노드를 내줄 수 없는 백엔드는 무효 노드를 돌려줍니다.
+         * @details 안쪽 원소의 모르는 속성 · 자식을 orphan 으로 남길 때 씁니다. 무효 노드면 그 검사를 건너뜁니다.
+         */
+        [[nodiscard]] virtual XmlNode getCurrentNode() const;
 
         // ------------------------------------------------------------------------------
         // 3) 키 정책: 태그/속성 이름에만 적용하고 값에는 영향이 없다
@@ -214,6 +219,8 @@ namespace sw
         [[nodiscard]] bool readText( string& outText ) override;
         /** @brief 현재 노드의 자식 요소를 순서대로 방문합니다. */
         bool iterateChildren( const XmlChildVisitDelegate& callback ) override;
+        /** @brief 읽는 중인 현재 노드입니다. 이 백엔드가 살아 있는 동안만 유효합니다. */
+        [[nodiscard]] XmlNode getCurrentNode() const override;
 
         /**
          * @brief 역직렬화 중인 문서의 **루트 노드**입니다. 초기화 전이면 무효 노드입니다.
