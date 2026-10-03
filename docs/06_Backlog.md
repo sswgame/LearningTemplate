@@ -138,6 +138,11 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
+- **GPU 메모리 측정(사용자 요청 2026-10-03, gfxfix 워크트리 병합 뒤)** — (1) 드라이버 총량 · 예산: DXGI `QueryVideoMemoryInfo`(DX12 · DX11), `VK_EXT_memory_budget`(Vulkan),
+  GL 은 벤더 확장(`GL_NVX_gpu_memory_info` · `GL_ATI_meminfo`)이 있을 때만(없으면 "모름"). (2) 엔진 집계: RHI 자원 생성 · 해제 때 종류별(텍스처 · 렌더 타깃 · 버퍼 ·
+  트랜지언트 풀 · 디스크립터)로 실제 할당 크기를 더한다(DX12 `GetResourceAllocationInfo`). 총량 − 집계 = "엔진 밖(드라이버 · 스왑체인)". 보여 주기는 CPU 태그와 같게
+  `-gv_profileFrames` 보고 · ProfilerPanel. 시험: 텍스처 하나를 만들고 지우면 집계가 그 크기만큼 오르내린다(hostgpu, 4 백엔드).
+
 - **배포 팩에 G-버퍼 셰이더의 Unlit 보기 퍼뮤테이션(`SW_VIEWMODE_UNLIT=1`)이 없다** — `gv_viewMode` 는 배포본에도 있는 설정이다. 고치면
   `TestRenderPassGpu.cpp` 의 `SW_TEST_KNOWN_ERROR_LOG` 두 줄을 지운다.
 - **2D 정렬 레이어가 없다.** 깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다.
