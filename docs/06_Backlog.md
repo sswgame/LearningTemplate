@@ -95,7 +95,7 @@ cd build/Ninja-Debug/Bin
 
 ### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
 
-- **불필요 코드 삭제 — 코드 묶음 여섯(A~F)은 10-04 에 끝났다**(조사 보고서는 세션 스크래치 `deadcode/report.md`). 남은 것: **주석 · 문서 2 차(G1~G5, G3 Graphics · 셰이더 · G2 Engine · App · RuntimeAPI · ReflectionParser 는 10-04 끝 — 경위 ~1,000 · 없는 대상 ~80)** —
+- **불필요 코드 삭제 — 코드 묶음 여섯(A~F)은 10-04 에 끝났다**(조사 보고서는 세션 스크래치 `deadcode/report.md`). 남은 것: **주석 · 문서 2 차(G1~G5, G1 시험 · G2 Engine · App · RuntimeAPI · ReflectionParser · G3 Graphics · 셰이더는 10-04 끝 — 경위 ~1,750 · 없는 대상 ~150; G4 · G5 진행 중)** —
   경위 서술("예전에는 …") ~2,300 블록 · 없는 대상을 가리키는 줄 ~330(보고서 4 장; 문서 최신화 뒤라 다시 grep 해서 셀 것), 영역은 G1 시험 · G2 Engine(Graphics 제외) ·
   App · RuntimeAPI · ReflectionParser · G3 Graphics · 셰이더 · G4 Core · Editor · GameFramework · G5 문서 · 스크립트 · CI. 보고서가 "판단 필요" 로 남긴 것
   (`transcodeBinaryToXml` 시험 전용, `GameModes::cutscene`, `seedFallback`, 1-C 접근자 등)은 그대로다. `RuntimeHud` 는 남긴다(사용자 결정).
@@ -130,7 +130,8 @@ cd build/Ninja-Debug/Bin
 
 - **"지금 형식만 읽기" 원칙에 걸리는 리더가 몇 남았다**(G2 보고) — id 없는 부착 · 자기 이름 부착(`ObjectStateSerializer.cpp`), 전체 상태가 실린 프리팹 엔티티(`Scene.cpp`),
   `SceneDocument::assignMissingFileIds`, animations 키 없는 클립(`SpriteClipAsset`), 시각 없는 스탬프(`GeneratedFiles`). 일부는 지금도 만들어지는 모양(프리팹을 못 읽은 채
-  저장한 엔티티 등)이라 하나씩 "지금 쓰는 쪽이 이 모양을 만드는가" 를 보고 지운다.
+  저장한 엔티티 등)이라 하나씩 "지금 쓰는 쪽이 이 모양을 만드는가" 를 보고 지운다. 시험이 그 동작을 고정하는 곳: `TestObjectStateRoundTrip`(자기 이름 부착 ·
+  루트로 저장된 둘째 씬 컴포넌트), `TestPrefab`(실린 부모 무시), `TestSpriteClipAsset`(레거시 파일).
 
 - **`AssetDatabase::ensureMeta` 가 리소스 루트 안의 없는 경로에도 `.meta` 를 지어 쓴다** — 머티리얼을 acquire 만 해도 Resource 가 더러워진다(시험 쪽은 임시 경로로 피했다).
 
@@ -231,6 +232,9 @@ cd build/Ninja-Debug/Bin
 - **ReflectionParser 강제 include PCH**(`CoreMinimal.h` 를 PCH 로 — 타깃당 ~0.4 s). 캐시 위치 · 무효화가 필요하다. 값이 작아 보류.
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
+
+- **"부모-자식-손자 다계층 합성 활성" 시험이 없다** — 그것을 설명하던 doc 블록(`[GameObjectHierarchy]`)만 남아 있어 G1 에서 지웠다. 시험 공백인지 확인하고 필요하면 더한다.
+- **시험 doc 블록 규칙을 린트로** — 블록은 제 `SW_TEST_CASE` 바로 위(겹친 앞 블록은 떨어진 블록), `@brief [태그]` 는 실제 스위트 이름. G1 이 손으로 11 곳 · 18 곳을 고쳤다.
 
 - **`-gv_rhiBackend` 는 숫자만 받는다**(0 DX11 · 1 DX12 · 2 Vulkan · 3 GL) — `Vulkan` 처럼 이름을 주면 경고만 내고 DX11 로 돈다. enum 전역 변수가 리플렉션 열거자
   이름을 받게 하거나, 모르는 값이면 실행을 멈출 것.
