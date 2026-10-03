@@ -32,8 +32,6 @@ namespace sw
         static constexpr AssetFormatVersion kUnversioned      = 0; ///< 태그 없음 = 세대 0
         static constexpr AssetFormatVersion kMaterial         = 0;
         static constexpr AssetFormatVersion kMaterialInstance = 0;
-        static constexpr AssetFormatVersion kRenderPipeline   = 0;
-        static constexpr AssetFormatVersion kRenderPass       = 0;
         static constexpr AssetFormatVersion kPrefab           = 0;
         /// 1: 프리팹 엔티티가 프리팹 경로 + 덮어쓴 것(`<PrefabOverrides>`)을 싣는다. 판이 0 인(또는 판이 없는) 씬 파일은 읽지 않는다.
         static constexpr AssetFormatVersion kScene = 1;
@@ -73,16 +71,6 @@ namespace sw
          */
         static string toSourcePath( string_view path, AssetKind kind );
     };
-
-    /** @brief 런타임이 쿠킹된 바이너리를 쓰는지 반환합니다. Shipping 은 쿠킹된 바이너리를, Dev 는 XML 저작본을 로드합니다. */
-    constexpr bool usesCookedBinaryAtRuntime() noexcept
-    {
-#if defined( SW_SHIPPING )
-        return true;
-#else
-        return false;
-#endif
-    }
 
     /// @brief 에셋 종류별 formatVersion 과 N→N+1 migrator 등록부입니다.
     class SW_API AssetFormatRegistry

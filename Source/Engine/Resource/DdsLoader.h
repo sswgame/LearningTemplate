@@ -18,7 +18,6 @@ namespace sw
         uint32                 _depth;
         uint32                 _mipCount;
         uint32                 _dxgiFormat;
-        uint32                 _bitsPerPixel;
         uint8                  _bCompressed : 1;
         uint8                  _bIsBgra     : 1;
         [[maybe_unused]] uint8 _reserved    : 6;
@@ -30,7 +29,6 @@ namespace sw
             , _depth{ 1 }
             , _mipCount{ 1 }
             , _dxgiFormat{ 0 }
-            , _bitsPerPixel{ 32 }
             , _bCompressed{ SW_FALSE }
             , _bIsBgra{ SW_FALSE }
             , _reserved{ 0 }

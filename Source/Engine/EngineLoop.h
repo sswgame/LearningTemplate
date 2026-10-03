@@ -26,7 +26,6 @@ namespace sw
     class CameraComponent;
     class CommandLineManager;
     class CommandStack;
-    class ComponentDefaults;
     class CompressionCodecRegistry;
     class ConfigManager;
     class DebugDrawQueue;
@@ -40,14 +39,12 @@ namespace sw
     class InputManager;
     class IRHIDevice;
     class LiveShaderManager;
-    class LocalizationManager;
     class RenderTargetRegistry;
     class RenderThread;
     class ResourceManager;
     class RHI;
     class RHIBackendRegistry;
     class SceneManager;
-    class ShaderCache;
     class TaskManager;
     class TypeRegistry;
 
@@ -146,14 +143,11 @@ namespace sw
         // ----------------------------------------------------------------------
         // Getter (App 이 ModuleHost 등과 연동하는 데 필요)
         // ----------------------------------------------------------------------
-        ConfigManager*       getConfigManager() const { return _configManager.get(); }
-        CommandLineManager*  getCommandLineManager() const { return _owned._pCommandLineManager.get(); }
-        LocalizationManager* getLocalizationManager() const { return _owned._pLocalizationManager.get(); }
-        RHI*                 getRhi() const { return _rhi.get(); }
-        RenderThread*        getRenderThread() const { return _renderThread.get(); }
-        ShaderCache*         getShaderCache() const { return _owned._pShaderCache.get(); }
-        ComponentDefaults*   getComponentDefaults() const { return _owned._pComponentDefaults.get(); }
-        bool                 isHeadless() const { return _bHeadless; }
+        ConfigManager*      getConfigManager() const { return _configManager.get(); }
+        CommandLineManager* getCommandLineManager() const { return _owned._pCommandLineManager.get(); }
+        RHI*                getRhi() const { return _rhi.get(); }
+        RenderThread*       getRenderThread() const { return _renderThread.get(); }
+        bool                isHeadless() const { return _bHeadless; }
         /** @brief 헤드리스 작업(셰이더 베이크 · 씬 쿠킹)이 실패했는지 반환합니다. 부르는 쪽은 이것을 종료 코드로 내보냅니다. */
         bool didHeadlessTaskFail() const { return _bHeadlessTaskFailed; }
 

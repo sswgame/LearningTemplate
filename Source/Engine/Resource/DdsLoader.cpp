@@ -254,7 +254,6 @@ namespace sw
         }
         else if ( ( pHeader->_pixelFormat._flags & kDdpfRgb ) != 0 )
         {
-            image._bitsPerPixel = pHeader->_pixelFormat._rgbBitCount;
             if ( pHeader->_pixelFormat._rgbBitCount == 32 )
             {
                 if ( pHeader->_pixelFormat._rBitMask == 0x00FF0000 && pHeader->_pixelFormat._gBitMask == 0x0000FF00 &&
