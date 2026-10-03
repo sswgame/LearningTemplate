@@ -484,6 +484,42 @@ SW_TEST_CASE( AppSmokeTest, BackendSwapFollowsTheNewDevice )
 }
 
 /**
+ * @brief [AppSmokeTest] 백엔드 교체 뒤 인스턴스를 기동과 같은 순서(게임 → 에디터)로 다시 세운다
+ * @details 에디터는 게임이 등록한 타입 · 서비스를 보며 선다. 기동은 게임 → 에디터인데 교체 경로만 에디터 → 게임이면 교체 뒤 에디터가 게임 없이
+ *          선다. 인스턴스를 세울 때마다 찍는 `Module instance initialized: <모듈>` 줄의 순서를 본다.
+ */
+SW_TEST_CASE( AppSmokeTest, BackendSwapRebuildsGameBeforeEditor )
+{
+    // -gv_rhiSwapTo 는 RHIBackend 값이다(0 = DirectX11, 1 = DirectX12).
+    constexpr const utf8* kArrSwapArgument[]  = { "-dx12 -gv_rhiSwapTo=0", "-dx11 -gv_rhiSwapTo=1" };
+    constexpr const utf8* kArrExpectedLabel[] = { "Module instance initialized: Game", "Module instance initialized: Editor", "Module instance initialized: Game",
+                                                  "Module instance initialized: Editor" };
+
+    uint32 checkedCount = 0;
+    for ( const utf8* pSwapArgument : kArrSwapArgument )
+    {
+        string arguments{ "-gv_profileFrames=30 -gv_rhiSwapAtFrame=10 -EnableEditor " };
+        arguments += pSwapArgument;
+        const AppRunResult result = runApp( arguments, "Module instance initialized: " );
+        SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
+        if ( result._bBackendUnusableHere )
+            continue;
+        ++checkedCount;
+        SW_EXPECT_TRUE_MSG( result._exitCode == 0, arguments.c_str() );
+        SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? arguments.c_str() : result._firstErrorLine.c_str() );
+        SW_ASSERT_TRUE_MSG( result._listMarkedLine.size() == std::size( kArrExpectedLabel ), arguments.c_str() );
+        for ( size_t lineIndex = 0; lineIndex < std::size( kArrExpectedLabel ); ++lineIndex )
+        {
+            const string& line = result._listMarkedLine[lineIndex];
+            SW_EXPECT_TRUE_MSG( line.find( kArrExpectedLabel[lineIndex] ) != string::npos, line.c_str() );
+        }
+    }
+
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "neither DX12 nor DX11 is usable on this machine" );
+}
+
+/**
  * @brief [AppSmokeTest] 에디터 확장의 정적 등록이 실제 EditorModule 에 다 실리고, 순서 · 메뉴 배치가 그대로인가
  * @details 패널 · 팝업 · 인스펙터 · 시각화는 각자 자기 .cpp 의 정적 등록자로 등록하고, 메뉴는 커맨드 표의 경로 · 순서 칸에서 나온다.
  *          그래서 등록이 빠지거나 순서 키 · 메뉴 칸이 바뀌어도 빌드는 그대로 통과한다. 실제 App 을 `-gv_editorRegistryDump=1` 로 띄워

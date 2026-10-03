@@ -133,6 +133,7 @@ namespace sw
                     pOutHandle = nullptr;
                     return false;
                 }
+                SW_LOG_INFO( "Module instance initialized: %#", pModuleLabel );
                 return true;
             }
 
@@ -524,8 +525,6 @@ namespace sw
             markReloadGraphBroken( "Editor create/initialize failed after reload" );
             return;
         }
-
-        SW_LOG_INFO( "Editor initialized successfully via EditorAPI." );
     }
 
     // ======================================================================
@@ -564,8 +563,6 @@ namespace sw
         }
 
         restoreGameState();
-
-        SW_LOG_INFO( "SWGame initialized successfully via GameAPI." );
     }
 
     // ======================================================================
@@ -782,10 +779,11 @@ namespace sw
         if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
             return false;
 
+        // 기동과 같은 순서다 — 게임이 먼저 서고 에디터가 그 타입 · 서비스를 본다.
         bool bOk = true;
-        if ( recreateEditorInstance( pEditorModule ) == false )
-            bOk = false;
         if ( recreateGameInstance( pGameModule ) == false )
+            bOk = false;
+        if ( recreateEditorInstance( pEditorModule ) == false )
             bOk = false;
         return bOk;
     }

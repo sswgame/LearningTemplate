@@ -235,7 +235,7 @@ namespace sw
         void attachGameInstance( const GameAPI& gameApi, GameHandle game );
 #endif
 
-        /** @brief RHI 핫스왑 뒤 에디터 · 게임을 다시 초기화합니다. 실패하면 false 입니다. */
+        /** @brief RHI 핫스왑 뒤 게임 → 에디터 순서(기동과 같다)로 다시 초기화합니다. 실패하면 false 입니다. */
         bool reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule );
 
     private:

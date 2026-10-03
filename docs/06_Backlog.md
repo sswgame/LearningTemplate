@@ -179,8 +179,6 @@ cd build/Ninja-Debug/Bin
 - **RuntimeAPI 가 Engine 헤더를 include 한다** — `RuntimeAPI/Service/ModuleService.h` 가 `Engine/Common/EngineServiceList.xxx` 를 세 번 include 해 서비스 id 를 만든다.
   "RuntimeAPI 는 순수 계약" 과 어긋난다. 서비스 목록을 RuntimeAPI 쪽으로 옮기거나(Engine 이 그것을 include) 계약 문장을 사실대로 고칠지 정한다.
 
-- **RHI 백엔드 교체 경로(`reinitializeAfterRhiSwap`)는 아직 에디터 → 게임 순으로 인스턴스를 다시 세운다** — 기동은 게임 → 에디터로 바뀌었다. 같은 순서로 맞출 것.
-
 - **바깥 빌드(터미널 · IDE)의 리로드 트리거는 여전히 mtime 디바운스뿐이다** — 에디터가 시킨 빌드는 성공 뒤에만 올린다(`LiveReloadManager::notifyBuildStarted/Finished`).
   바깥 빌드도 "빌드 성공" 신호(ninja 종료 · 스탬프 파일)를 받으려면 빌드 쪽 협조가 필요하다.
 - **모듈이 렌더 패스를 등록하는 창구가 없다.** `FramePassContext` · 커맨드 리스트 · 트랜지언트 풀을 모듈 경계 밖으로 내야 하고, 그것은 RT 안전 계약까지
