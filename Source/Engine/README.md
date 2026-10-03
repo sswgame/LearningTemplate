@@ -23,32 +23,24 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 | 8 | `Graphics/Renderer` · `Module` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Bake)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. |
 | 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
 
-**강결합 묶음은 이제 없습니다 (2026-09-21).** 이 표는 DAG 이고 `CheckEngineLayers` 가 그대로 강제합니다.
+강결합 묶음은 없습니다 — 이 표는 DAG 이고 `CheckEngineLayers` 가 그대로 강제합니다.
 다시 계산하려면 `py -3 Scripts/lint/report/RunEngineLayerGraph.py` — 게이트와 같은 규칙(prelude·배선 예외,
 `Graphics/Renderer` 분리)으로 묶음과 티어를 찍습니다. `Graphics` 만 폴더보다 잘게 봅니다: `Graphics/Renderer`
 는 위(8), 나머지 `Graphics` 는 아래(5) — 상용 엔진의 RHI/RenderCore ↔ Renderer 사이의 선과 같습니다.
 상용 엔진과 어디가 같고 어디가 다른지는 [docs/07_EngineStructureVsCommercial.md](../../docs/07_EngineStructureVsCommercial.md).
 
-> **일곱 폴더 묶음이 어떻게 풀렸나 (2026-09-21).** 엣지 다섯이었고 전부 "위층 것을 아래층이 들고 있던" 모양이었다.
->
-> - `Object → Scene`: 핸들의 지연 해석이 활성 씬을 `SceneManager` 에게 물었다 → 슬롯은 Object 가 갖고 Scene 이
->   채운다(`GameObjectManager::setActiveManager`, 언리얼 `GWorld` · Godot `SceneTree` 의 자리). 나머지 셋은 쓰지도
->   않는 include 였다. (2026-09-24: 이름으로 찾던 `GameObjectPtr` · `ComponentPtr` 를 핸들로 통일하면서 그 슬롯을 읽는
->   쪽이 없어져 슬롯도 지웠다. 핸들은 자기를 만든 매니저에게 직접 푼다.)
-> - `RHI → Renderer`: `IRHIDevice` 가 `RenderPassManager`(패스 **에셋** 캐시)를 소유했다 → `FrameRenderer` 가 소유한다.
-> - `Graphics → Window`: RHI 와 렌더러가 `IWindow::getActiveWindow()` 전역을 읽었다 → `Common/IRenderSurface` 를
->   `IWindow` 가 구현하고 `EngineLoop` 이 넘긴다(`RHI::initialize( surface )`). 렌더러의 첨부 크기는 창이 아니라
->   디바이스의 백버퍼 크기(`IRHIDevice::getBackBufferWidth`)다.
-> - `Scene → Renderer`: `SceneManager` 가 에디터 툴바 하나를 위해 `FrameRenderer*` 를 들었다 → 렌더러는 호스트가
->   내주는 선택 서비스다(`EngineServiceList.xxx` 의 `_pFrameRenderer`).
-> - `Object ↔ Sequencer` · `Shader → Renderer`: `SequencePlayerComponent` 는 `Sequencer/` 로, 베이크의 정책(무엇을 ·
->   전부)은 `Renderer/Bake/ShaderBakeDriver` 로. 기능 모듈이 오브젝트 위에, 정책이 메커니즘 위에 있게 됐다.
->
-> 그 전(2026-09-13)에는 **열 개**였고 `Reflection`·`Serialization`·`Config` 가 세 줄 때문에 끌려 들어가 있었다:
-> 직렬화기가 `TagID`·`ComponentHandle` 때문에 `Object` 를 include 했고(두 타입 모두 Core 기능만 쓰는 값 타입이라
-> `Core/String/TagID.h` · `Core/Container/ComponentHandle.h` 로 내렸다), `Reflection` 이 `ReflectAny`·`Rpc` 의
-> **인코딩** 때문에 `Serialization` 을 include 했고(규칙: 리플렉션 타입의 인코딩은 Serialization 이 갖는다),
-> `EngineConfig` 가 `RHIBackend` 이름 하나 때문에 `RHITypes.h` 전체를 끌어왔다(→ `Config/RHIBackendType.h`).
+**규칙: 위층 것을 아래층이 들지 않는다.** 티어를 거스르는 include 가 필요해 보이면 대개 소유가 거꾸로 된 것입니다.
+지금 자리는 이렇습니다.
+
+- 오브젝트 핸들(`GameObjectHandle` · `ComponentHandle`)은 자기를 만든 매니저에게 직접 풉니다 — Object 는 활성 씬(`SceneManager`)을 묻지 않습니다.
+- 렌더 패스 **에셋** 캐시(`RenderPassManager`)는 `FrameRenderer` 가 소유합니다(`IRHIDevice` 가 아니라).
+- RHI 와 렌더러는 창을 `Common/IRenderSurface` 로만 봅니다. `IWindow` 가 구현하고 `EngineLoop` 이 넘깁니다(`RHI::initialize( pSurface )`).
+  렌더러의 첨부 크기는 창이 아니라 디바이스의 백버퍼 크기(`IRHIDevice::getBackBufferWidth`)입니다.
+- 렌더러는 호스트가 내주는 선택 서비스입니다(`EngineServiceList.xxx` 의 `_pFrameRenderer`) — Scene 이 `FrameRenderer*` 를 들지 않습니다.
+- 기능 모듈은 오브젝트 위에(`SequencePlayerComponent` 는 `Sequencer/`), 정책은 메커니즘 위에(셰이더 굽기의 "무엇을 · 전부"는
+  `Renderer/Bake/ShaderBakeDriver`, 컴파일 메커니즘은 `Graphics/Shader`) 있습니다.
+- 리플렉션 타입의 **인코딩**(`ReflectAny` · `Rpc`)은 Serialization 이 갖습니다. Core 기능만 쓰는 값 타입은 Core 에 둡니다
+  (`Core/String/TagID.h` · `Core/Container/ComponentHandle.h`). 설정은 `RHITypes.h` 대신 `Config/RHIBackendType.h` 만 봅니다.
 
 티어가 아닌 것이 둘 있습니다. 검사도 이 둘을 예외로 둡니다.
 
@@ -57,11 +49,12 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **배선 파일**: `Common/EngineServices.cpp`, `Reflection/ReflectGenerated.h`,
   `Resource/ResourceManager.cpp`. 노출하는 모든 서브시스템을 알아야 하는 자리입니다.
 
-금지 include 자동화: `py -3 Scripts/lint/gate/CheckEngineLayers.py`
-(Engine → `Editor/` / `GameFramework/` / `Games/` 금지 + 위 티어 방향. **위반은 실패입니다** —
-예전에는 손으로 고른 네 쌍만 경고로 찍고 실패시키지 않아서, 쌓여도 아무도 몰랐습니다.)
+금지 include 자동화: `py -3 Scripts/lint/gate/CheckEngineLayers.py` — 위반은 실패입니다.
 
-후속(별 PR): `EngineRHI` / `EngineReflection` 물리 분할 — 이 저장소 로드맵에서는 설계만.
+- Engine → `Editor/` · `GameFramework/` · `Games/` 금지, 그리고 위 티어 방향(표에 없는 새 최상위 폴더도 실패).
+- `Games/` · `GameFramework/` → `Engine/Common/EngineServices.h` 금지 — 게임 쪽은 `GameFramework/Base/GameService.h` 의 `game::` 만 씁니다.
+
+물리 모듈 분할(`EngineRHI` / `EngineReflection`)은 설계만 있습니다 — [docs/07](../../docs/07_EngineStructureVsCommercial.md) 참고.
 
 ## 주요 시스템 디렉터리 구조
 - **Object/**: GameObject · Component · Prefab. 틱/구조 동결·사용법은 [Object/README.md](Object/README.md)
@@ -73,7 +66,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Resource/**: AssetDatabase · ResourceManager · ResourceUtil · ResourcePackManager (VFS .pack) · AssetStreamingQueue
   - **에셋 종류를 늘리는 자리는 `IAssetCache` 다.** 경로를 키로 무언가를 들고 있는 캐시는 그 인터페이스를
     구현하고 `ResourceManager::registerAssetCache` 로 올린다. 그러면 종료·비우기·진단이 **등록부를 훑어**
-    그 캐시까지 지나간다. 이름으로 캐시를 적던 시절 종료 경로가 프리팹 캐시만 빠뜨리고 있었다.
+    그 캐시까지 지나간다 — 종료 경로에 캐시 이름을 따로 적지 않는다.
     핫리로드가 디바이스를 **인자로** 받는 것도 그 계약이다 — 캐시가 마지막으로 본 디바이스를 들고 있으면
     백엔드를 바꾼 뒤 죽은 포인터가 된다.
   - **모듈(게임·에디터·키트)도 자기 에셋 종류를 올릴 수 있다.** 창구는 이미 열려 있다 —
@@ -99,8 +92,21 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   감시 · 섀도 복사 · 다시 로드(`LiveReloadManager`)는 App 의 `App/Module`, 에셋 파일 감시(`ReloadFileManager`)는 에디터의
   `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleCodeHolder`)은 `Core/Module` 이다.
 - **Utility/**: Format (KeyValueFile), Json, Xml, CommandStack, Debug — 진짜 최하위 헬퍼만 둡니다.
-- **루트 파일**: `EngineLoop`(메인 루프) · `EngineStartupStepList.xxx`(기동 · 종료 단계와 의존의 등록표) · `EngineStartupSequence`(그 표를 위상 정렬해
-  초기화하고 역순으로 종료 · 해제 — 단계 본문은 호스트의 `<단계>StartupStep` 구조체) · `EngineOwnedServices`(호스트가 소유하는 서비스 저장소, `EngineServiceList.xxx` 에서 생성) · `EngineMinimal.h`(prelude)
+- **루트 파일 — 기동 · 종료**:
+  - `EngineStartupStepList.xxx`: 기동 단계의 등록표(X-macro). 줄 순서가 초기화 순서이고, 줄마다 단계 이름 · 그 초기화에 거는 메모리 태그 ·
+    먼저 서야 하는 단계 `{ A, B }` 를 적습니다. 의존이 자기보다 아래 줄이거나 오타면 컴파일 오류이고(`EngineStartupSequence.cpp` 의 static_assert),
+    의존만으로 위상 정렬한 순서가 줄 순서와 같아야 합니다(`EngineStartupSequenceTest.TableIsWrittenInStartupOrder`).
+    `ModuleTypes` 단계(호스트가 타입 공급자 — GF · 킷 · 게임 모듈 — 를 올려 등록을 끝냄)가 서야 씬을 읽고 굽습니다(`Headless` 가 그 뒤).
+  - `EngineStartupSequence`: 표를 읽어 초기화(`initializeAll`) → 초기화한 단계만 역순 종료(`shutdownAll`) → **모든 단계**를 역순 해제(`destroyAll`).
+    단계 본문은 호스트가 줄마다 구조체 하나 `<단계>StartupStep`(`initialize` · `shutdown` · `destroy`, `EngineStartupStepDefaults` 상속)로 줍니다 —
+    `EngineLoop.cpp` 와 시험 하네스(`Test/TestFramework/main.cpp`)가 같은 표를 씁니다. 구조체가 빠지면 컴파일 오류입니다.
+  - `EngineBootstrap`: 표 **앞**의 고정 부트스트랩(이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 교착 감지기 · 메모리 프로파일러 · 명령줄 · 전역 변수)과
+    표 **뒤**의 끝 정리. 서비스 표를 언제 끊는지 · 로거를 언제 내리는지는 여기 한 곳이 정합니다. 두 호스트가 함께 씁니다.
+  - `EngineOwnedServices`: 호스트가 소유하는 서비스 저장소(`Common/EngineServiceList.xxx` 의 `EngineCreated` 줄에서 생성, `destroyAll` 은 목록의 역순).
+  - `EngineLoop`(메인 루프 · 단계 구조체) · `EngineMinimal.h`(prelude)
+- **메모리 태그**(`Core/Memory/MemoryTag.h`, UE LLM 식): 할당을 용도로 나눕니다. 거는 자리는 하위 시스템의 **진입점**뿐입니다 — 기동 단계(표의 태그 칸),
+  에셋 종류별 로드 · 씬 로드 · 렌더러 · 렌더 스레드 · 모듈 호출에서 `SW_MEMORY_SCOPE( Tag )`. 태스크와 엔진이 띄우는 스레드는 띄운 쪽의 태그를 잇습니다.
+  태그를 읽는 것은 Debug 의 `MemoryProfiler` 뿐이라 다른 구성에서 비용은 0 입니다. 보고는 `-gv_profileFrames` 프로파일 보고 · 에디터 프로파일러 패널.
 - **Task 시스템**: Core의 [Task/README.md](../Core/Task/README.md) (`TaskManager` / `TaskHandle`)
 
 ## 동작 방식
