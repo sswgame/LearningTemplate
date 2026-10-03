@@ -253,11 +253,9 @@ namespace sw
         // 빌린 텍스처도 **여기서 놓는다.** 널 디바이스로 부르면 `TextureCache` 는 참조 수만 줄이고
         // GPU 호출은 하지 않는다(디바이스가 이미 없으므로 그것이 맞다).
         //
-        // 예전에는 `releaseRhi` 만 이 목록을 비웠다. 둘 다 "디바이스가 사라졌다" 는 통보인데 남기는
-        // 상태가 달라서, forget 뒤에 `initRhi` 가 오면 `resolveTextureAssets` 가 목록에 **덧붙였다.**
-        // 그러면 `ordinal` 이 0 이 아닌 값에서 시작하고, 네이티브 bindless 가 없는 백엔드(DX11 · GL)는
-        // 그 서수를 t5..t8 고정 슬롯 번호로 쓰므로 **엉뚱한 텍스처를 읽거나**, 한도를 넘어 흰색으로
-        // 남는다. 통보 둘이 같은 상태를 남기게 한다.
+        // 주의: `releaseRhi` 와 이 함수는 같은 상태를 남겨야 한다. 목록이 남은 채 `initRhi` 가 오면 `resolveTextureAssets` 가
+        // 목록에 **덧붙여** `ordinal` 이 0 이 아닌 값에서 시작하고, 네이티브 bindless 가 없는 백엔드(DX11 · GL)는 그 서수를
+        // t5..t8 고정 슬롯 번호로 쓰므로 **엉뚱한 텍스처를 읽거나**, 한도를 넘어 흰색으로 남는다.
         releaseTextureAssets( nullptr );
 
         // 디바이스가 이미 없다. GPU 자원은 그와 함께 갔다. 핸들만 비운다(destroy 를 부르면 해제 후 사용이다).
@@ -288,11 +286,11 @@ namespace sw
     bool Material::ensureShaderLayout( IRHIDevice* pDevice )
     {
         // 머티리얼 바이트의 기준은 .material 의 프로퍼티 순서가 아니라 **셰이더의 SwMaterialData 원소 레이아웃**이다(언리얼도
-        // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 예전에는 셰이더 핫 리로드 경로에서만 맞췄고 로드 경로에서는 XML
-        // 순서로 패킹해 stride 가 0 이었다. 그러면 GpuScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
+        // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 로드 경로에서도 맞춰야 한다 — XML 순서로 패킹하면 stride 가 0 이고,
+        // 그러면 GpuScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
         //
-        // "맞췄다" 는 백엔드 비트로 들고 있었고 **아무도 지우지 않았다** — 다시 로드(XML 순서로 다시 쌓는다) 뒤에도 맞춘 줄 알고 넘어가
-        // XML 순서 바이트와 옛 stride 가 함께 올라갔다. 지금은 다시 로드가 풀고(applyDescToRuntime), 리플렉션 캐시를 비우면 낡는다.
+        // "맞췄다" 표시는 다시 로드(XML 순서로 다시 쌓는다)가 풀고(applyDescToRuntime), 리플렉션 캐시를 비우면 낡는다.
+        // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 올라간다.
         if ( pDevice == nullptr || _desc._shaderPath.empty() )
             return false;
         const RHIBackend backend = pDevice->getBackendType();
@@ -351,10 +349,9 @@ namespace sw
                 }
             }
         }
-        // 예전에는 여기에 "멤버가 있는 **첫** 상수버퍼를 머티리얼 스키마로 삼는" 폴백이 있었다. 지금은
-        // 모든 셰이더가 SW_MATERIAL_BEGIN/END(g_SwMaterials) 아니면 MaterialCB 를 선언하므로 도달하지
-        // 않는다. 그리고 도달했다면 **PassCB 를 머티리얼 레이아웃으로 착각**해 조용히 엉뚱한 오프셋에
-        // 값을 써 넣었을 것이다. 조용히 틀리느니 못 찾았다고 알린다.
+        // 주의: "멤버가 있는 첫 상수버퍼" 로 폴백하지 않는다 — **PassCB 를 머티리얼 레이아웃으로 착각**해 조용히 엉뚱한
+        // 오프셋에 값을 써 넣는다. 모든 셰이더가 SW_MATERIAL_BEGIN/END(g_SwMaterials) 아니면 MaterialCB 를 선언하므로,
+        // 못 찾으면 조용히 틀리지 않고 알린다.
         if ( pSchemaCb == nullptr )
         {
             SW_LOG_WARNING( "머티리얼 '%#' 의 셰이더에 머티리얼 스키마가 없습니다 — SW_MATERIAL_BEGIN/END 또는 MaterialCB 를 선언해야 합니다.",
@@ -476,10 +473,7 @@ namespace sw
             if ( prop._shaderType == MaterialPropertyType::Unknown )
                 prop._shaderType = MaterialUtil::defaultShaderTypeFor( prop._type );
 
-            // 이 자리에 packSize 계산과 빈 if 블록이 있었다 — 계산한 값을 아무도 읽지 않았고
-            // 블록 본문은 주석뿐이었다. 실제 오프셋 패킹은 아래 두 번째 순회가 packSize 를 다시
-            // 구해서 한다. 이 순회가 하는 일은 비버퍼 타입을 0 으로 되돌리고 셰이더 타입을
-            // 채우는 것까지다.
+            // 이 순회는 비버퍼 타입을 0 으로 되돌리고 셰이더 타입을 채우는 것까지다. 오프셋 패킹은 아래 두 번째 순회가 한다.
         }
 
         bool anyExplicitOffset{ false };

@@ -46,19 +46,16 @@ namespace sw
         /**
          * @brief 지금까지 컴파일한 셰이더들의 요청을 모읍니다.
          * @details **"이 실행에서 실제로 쓰이는 셰이더" 의 기준이 여기입니다.** 수동 리로드는 따로 등록표를
-         *          두지 않고 이것을 씁니다. 예전에는 `LiveShaderManager` 가 자기 표를 들고 있었는데
-         *          채우는 곳이 하나도 없어서 리로드 단축키가 빈 표를 돌았습니다.
+         *          두지 않고 이것을 씁니다(따로 채우는 표는 채우는 쪽을 빠뜨리면 리로드 단축키가 빈 표를 돕니다).
          */
         void collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const;
 
         /**
          * @brief 이 컴파일 요청이 읽을 사전 베이크 바이너리의 리소스 상대 경로입니다(`<domain>/shaders/bin/<rhi>/<이름>`).
          * @details 파일 이름은 `ShaderBaker::computeBinaryFileName` 그대로입니다(스템 · 스테이지 · 진입점 · **퍼뮤테이션 해시**).
-         *          예전에는 여기서 스템과 스테이지만으로 이름을 만들어 해시가 빠졌습니다. 베이커는 퍼뮤테이션마다 다른 파일을
-         *          구워 두는데 캐시는 늘 해시 0(define 없음) 파일을 읽었으므로, 베이크 바이너리가 있는 한 어떤
-         *          define 도 GPU 에 닿지 않았습니다(SW_FORWARD · MATERIAL_BLEND_TRANSLUCENT · SW_VIEWMODE_UNLIT 모두).
-         *          리플렉션 매니페스트(ShaderReflectionLibrary::tryGet)는 해시를 넣은 키로 찾고 있었으니 레이아웃은
-         *          맞고 바이트코드만 틀린, 가장 조용한 종류의 어긋남이었습니다.
+         *          주의: 해시를 빼면 베이커는 퍼뮤테이션마다 다른 파일을 구워 두는데 캐시는 늘 해시 0(define 없음) 파일을 읽어,
+         *          어떤 define 도 GPU 에 닿지 않습니다. 리플렉션 매니페스트(ShaderReflectionLibrary::tryGet)는 해시를 넣은 키로
+         *          찾으므로 레이아웃은 맞고 바이트코드만 틀린, 가장 조용한 종류의 어긋남이 됩니다.
          */
         static string makePrebakedRelativePath( const ShaderCompileDesc& desc );
         /**
@@ -70,8 +67,7 @@ namespace sw
         /**
          * @brief 실시간 컴파일이 실제로 쓰는 요청입니다. Debug 는 디버그 코드젠(RenderDoc 에서 한 줄씩 볼 수 있게), 그 밖은 요청 그대로입니다.
          * @details 캐시의 실시간 컴파일과 `LiveShaderManager` 의 재컴파일이 **이 하나**로 코드젠을 정하고, 로컬 캐시 경로도 이것으로 만듭니다.
-         *          예전에는 캐시만 디버그 코드젠으로 컴파일하면서 경로는 요청(`-opt`)으로 정했고, 재컴파일은 요청 그대로(최적화) 같은 자리에 썼습니다.
-         *          Debug 의 `-opt` 폴더에 두 코드젠이 섞였고, 핫 리로드한 셰이더만 디버그 정보를 잃었습니다.
+         *          둘이 따로 정하면 Debug 의 한 폴더에 두 코드젠이 섞이고, 핫 리로드한 셰이더만 디버그 정보를 잃습니다.
          *          사전 베이크 바이너리는 이 규칙을 타지 않습니다(베이커는 늘 최적화 코드젠).
          */
         static ShaderCompileDesc makeLiveCompileDesc( const ShaderCompileDesc& desc );

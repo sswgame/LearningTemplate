@@ -19,7 +19,7 @@ namespace sw
          * @details **정지한 씬을 위한 신호입니다.** `GpuScene` 은 "등록 · 해제도 없고 움직인 것도 없으면"
          *          수집 자체를 건너뜁니다. 그런데 머티리얼 · 인스턴스의 정적 스위치 · 키워드 · 멀티 컴파일을
          *          런타임에 바꾸면 프리미티브는 하나도 더러워지지 않으므로, 그 건너뛰기에 걸려
-         *          **바뀐 퍼뮤테이션이 영원히 반영되지 않습니다**(움직이는 벤치에서는 우연히 가려져 있었습니다).
+         *          **바뀐 퍼뮤테이션이 영원히 반영되지 않습니다**(움직이는 씬에서는 가려집니다).
          *          누가 어떤 프리미티브를 쓰는지 역참조를 만드는 대신 세대 하나만 올립니다. 바뀌는 일이
          *          드물고, 읽는 쪽은 프레임당 한 번입니다.
          */
@@ -39,7 +39,7 @@ namespace sw
         /**
          * @brief 머티리얼의 불리언 글(`true` · `false` · `1` · `0` · `yes` · `no` · `on` · `off`)을 읽습니다. 머티리얼의 불리언 글은 모두 여기를 지납니다.
          * @details 비었으면 조용히 `fallback`, 불리언이 아닌 글이면 `name`(파라미터 · 필드 이름)과 함께 알리고 `fallback` 입니다.
-         *          예전에는 읽지 못한 글을 말없이 false 로 읽어, `bSrgb="ture"` 가 기본값(true)도 아닌 false 가 됐습니다.
+         *          주의: 읽지 못한 글을 말없이 false 로 읽으면 `bSrgb="ture"` 가 기본값(true)도 아닌 false 가 됩니다.
          */
         [[nodiscard]] static bool parseBoolToken( string_view token, string_view name, bool fallback );
         static bool               packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer );

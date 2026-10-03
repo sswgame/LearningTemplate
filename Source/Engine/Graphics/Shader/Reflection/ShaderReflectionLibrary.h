@@ -61,15 +61,15 @@ namespace sw
         /**
          * @brief 리플렉션을 구합니다. 구운 매니페스트가 기준이고, 개발 빌드는 런타임 리플렉션으로 폴백합니다.
          * @details `tryGet` 은 "쓸 수 있는 매니페스트 항목이 있는가" 만 답합니다. 없거나 낡았을 때 무엇을 할지는
-         *          **정책**이고, 정책은 한 곳에만 있어야 합니다. 예전에는 ShaderBindingLayoutCache 만 폴백을
-         *          갖고 Material 은 그냥 XML 순서 패킹으로 남았습니다. 그러면 셰이더는 24바이트 원소를 읽는데
+         *          **정책**이고, 정책은 한 곳에만 있어야 합니다. 주의: 한쪽(ShaderBindingLayoutCache)만 폴백을 갖고
+         *          Material 이 XML 순서 패킹으로 남으면 셰이더는 24바이트 원소를 읽는데
          *          엔진은 256바이트(상수버퍼 크기) stride 로 올려, 한 배치의 두 번째 머티리얼부터 통째로
          *          어긋납니다. 화면에는 "두 큐브가 같은 색" 으로, DX11 디버그 레이어에는
          *          "structure stride 256 vs 24" 로 나옵니다.
          *
-         *          매니페스트의 신선도는 `bake.stamp` 의 내용 해시로 봅니다(ShaderCache 와 같은 기준). 예전의 초 단위
-         *          파일 시간 판정에서는 베이크 직후 소스를 같은 초에 건드리기만 해도 RHI 폴더 넷 중 일부만 신선 판정을
-         *          받는 일이 실제로 있었습니다. 폴백이 없으면 그런 때 백엔드마다 다른 결과가 나옵니다.
+         *          매니페스트의 신선도는 `bake.stamp` 의 내용 해시로 봅니다(ShaderCache 와 같은 기준). 초 단위 파일 시간으로
+         *          판정하면 베이크 직후 소스를 같은 초에 건드리기만 해도 RHI 폴더 넷 중 일부만 신선 판정을 받고, 폴백이
+         *          없으면 그런 때 백엔드마다 다른 결과가 나옵니다.
          * @return 리플렉션을 얻으면 true 입니다. Shipping 에서는 매니페스트에 없으면 false 입니다(런타임 컴파일 없음).
          */
         static bool getOrReflect( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection );

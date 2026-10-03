@@ -453,7 +453,7 @@ namespace sw
         _data._listProperty = _desc._listProperty;
         _blendMode          = MaterialUtil::parseBlendMode( _desc._blendMode );
         // 다시 로드하면 프로퍼티가 XML 순서로 다시 쌓인다 — 셰이더 레이아웃에 맞춘 상태도 함께 풀어야 다음 ensureShaderLayout 이 다시 맞춘다.
-        // 예전에는 맞춘 표시가 남아 XML 순서 바이트와 옛 stride 가 함께 GpuScene 에 올라갔다(셰이더가 읽는 자리에 다른 프로퍼티 값).
+        // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 GpuScene 에 올라간다(셰이더가 읽는 자리에 다른 프로퍼티 값).
         _bShaderLayoutSynced = SW_FALSE;
         _elementStride       = 0;
         rebuildPackedBuffer();

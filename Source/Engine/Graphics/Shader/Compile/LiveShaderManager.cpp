@@ -59,9 +59,8 @@ namespace sw
         // 편집과 무관한 셰이더까지 모두 다시 컴파일한다. 키를 정확하게 만들어 두고 캐시가 거르게 한다.
         ShaderBaker::invalidateSharedHeaderCache();
 
-        // 등록표를 따로 두지 않는다. **이 실행에서 실제로 컴파일된 셰이더**가 곧 리로드 대상이다.
-        // 예전에는 `watchShader` 로 채우는 자기 표를 봤는데 그 함수를 부르는 곳이 하나도 없어서,
-        // 단축키를 눌러도 빈 표를 돌고 아무 일도 일어나지 않았다.
+        // 등록표를 따로 두지 않는다. **이 실행에서 실제로 컴파일된 셰이더**가 곧 리로드 대상이다
+        // (따로 채우는 표는 채우는 쪽을 빠뜨리면 단축키가 빈 표를 돈다).
         vector<ShaderCompileDesc> listDesc;
         engine::getShaderCache().collectCompiledDescs( listDesc );
 
@@ -90,8 +89,8 @@ namespace sw
             // 컴파일 캐시는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 여기서 캐시에 맞아 컴파일러를
             // 타지 않는다. 키에 소스와 모든 공유 헤더의 내용 해시(유효 소스 해시)가 들어 있으므로, 방금
             // 무효화한 덕분에 바뀐 것만 실제로 다시 컴파일된다.
-            // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(Debug 는 디버그 코드젠). 예전에는 요청 그대로(최적화) 컴파일해, 리로드한
-            // 셰이더만 디버그 정보를 잃고 캐시가 디버그 코드젠을 쓴 자리에 최적화 코드젠을 덮어썼다.
+            // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(Debug 는 디버그 코드젠). 요청 그대로(최적화) 컴파일하면 리로드한
+            // 셰이더만 디버그 정보를 잃고 캐시가 디버그 코드젠을 쓴 자리에 최적화 코드젠을 덮어쓴다.
             const ShaderCompileDesc   liveDesc  = ShaderCache::makeLiveCompileDesc( desc );
             const ShaderCompileResult newResult = ShaderCompiler::compileHlsl( liveDesc );
             if ( newResult._bSuccess == false )
@@ -131,7 +130,7 @@ namespace sw
             // 방금 지운 항목을 다시 채워 넣는다.
             engine::getShaderCache().clearCache();
             // 리플렉션도 비운다 — 셰이더가 머티리얼 구조(SW_MATERIAL_BEGIN/END)를 바꿨을 수 있고, 머티리얼은 이 캐시 세대를 보고 레이아웃을
-            // 다시 맞춘다(Material::isShaderLayoutSynced). 예전에는 맞춘 레이아웃이 옛 셰이더 것 그대로 남았다.
+            // 다시 맞춘다(Material::isShaderLayoutSynced). 비우지 않으면 맞춘 레이아웃이 옛 셰이더 것 그대로 남는다.
             ShaderReflectionLibrary::clearCache();
         }
 

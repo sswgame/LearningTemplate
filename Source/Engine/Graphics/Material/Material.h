@@ -31,7 +31,7 @@ namespace sw
      * 그래서 렌더에 실리는 Material 은 반드시 shared_ptr 로 소유돼야 하고, **반드시 create() 로 만든다.**
      * shared_ptr 의 제어 블록(소멸 코드)은 make_shared 를 부른 쪽 DLL 에 산다. 게임 모듈이 만든 머티리얼을
      * 엔진(GpuScene 스냅샷)이 마지막까지 들고 있다가 모듈이 내려간 뒤 놓으면 이미 없는 코드로 뛰어든다.
-     * 실제로 벤치 종료에서 그렇게 죽었다. create() 는 Engine.dll 안에서 만들므로 누가 마지막에 놓든 안전하다.
+     * create() 는 Engine.dll 안에서 만들므로 누가 마지막에 놓든 안전하다.
      */
     class SW_API Material final : public RHIRenderResource, public std::enable_shared_from_this<Material>
     {
@@ -143,8 +143,8 @@ namespace sw
         void releaseTextureAssets( IRHIDevice* pRhi );
         /**
          * @brief 빌린 텍스처가 다시 올라왔으면(`TextureCache::reload`) 새 SRV 인덱스를 받아 다시 패킹합니다.
-         * @details 텍스처 핫 리로드는 같은 `Texture2D` 에 새 텍스처 · 새 SRV 인덱스를 올리고 옛 인덱스는 돌려줍니다. 예전에는 머티리얼이 resolve 때
-         *          받은 인덱스를 바이트(네이티브 bindless)와 슬롯 목록(DX11 · GL)에 그대로 들고 있어 **돌려준 자리**를 읽었습니다. 캐시의 reload
+         * @details 텍스처 핫 리로드는 같은 `Texture2D` 에 새 텍스처 · 새 SRV 인덱스를 올리고 옛 인덱스는 돌려줍니다. resolve 때 받은
+         *          인덱스를 바이트(네이티브 bindless)와 슬롯 목록(DX11 · GL)에 그대로 들고 있으면 **돌려준 자리**를 읽습니다. 캐시의 reload
          *          세대가 그대로면 아무것도 하지 않으므로 매 빌드 불러도 쌉니다(`GpuSceneBuilder` 가 세대가 바뀐 빌드에서만 부릅니다).
          * @return 인덱스가 하나라도 바뀌었으면 true 입니다.
          */
@@ -215,9 +215,8 @@ namespace sw
 
         /**
          * @brief 셰이더 경로의 해시입니다(경로가 바뀔 때만 다시 계산합니다).
-         * @details GpuScene 이 배치 키를 만들 때 인스턴스마다 부릅니다. 예전에는 그때마다 경로 문자열을
-         *          다시 해시했습니다. 경로는 머티리얼 수명 동안 거의 안 바뀌는데 프레임마다 인스턴스
-         *          수만큼 해시하고 있었습니다. 정의(define) 해시가 이미 쓰는 더티 플래그 방식과 같습니다.
+         * @details GpuScene 이 배치 키를 만들 때 인스턴스마다 부릅니다. 경로는 머티리얼 수명 동안 거의 안 바뀌므로
+         *          정의(define) 해시와 같은 더티 플래그 방식으로 캐시합니다.
          */
         uint64 getShaderPathHash() const;
         /** @brief 머티리얼 이름을 반환합니다. */

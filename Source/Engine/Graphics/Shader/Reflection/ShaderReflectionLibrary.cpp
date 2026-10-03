@@ -303,8 +303,8 @@ namespace sw
                                                                            desc._entryPoint, permutationHash, ext );
 
 #if !defined( SW_SHIPPING )
-        // **지금 소스에서 나오지 않은(낡은) 매니페스트는 쓰지 않는다.** ShaderCache 의 베이크 바이너리와 같은 규칙이다
-        // (71cd9755 가 바이너리에만 넣었고 여기엔 빠져 있었다). 둘이 어긋나면 증상이 아주 멀리서 난다:
+        // **지금 소스에서 나오지 않은(낡은) 매니페스트는 쓰지 않는다.** ShaderCache 의 베이크 바이너리와 같은 규칙이다.
+        // 둘이 어긋나면 증상이 아주 멀리서 난다:
         // 바이너리는 새로 컴파일돼 b1(MaterialCB)을 참조하는데 레이아웃은 낡은 매니페스트라 그 슬롯이
         // 없고, 바인더가 b1 을 아예 안 걸어서 DX12 가 비어 있는 루트 디스크립터를 읽고 GPU 페이지
         // 폴트(DEVICE_HUNG)로 죽는다. 셰이더 한 줄 고쳤을 뿐인데 죽는 곳은 드로우라 추적이 오래 걸린다.
@@ -314,7 +314,7 @@ namespace sw
             if ( sourceAbs.empty() == false && manifestAbs.empty() == false )
             {
                 // 판정 기준은 ShaderCache 와 **같은 것 하나**, bake.stamp 의 내용 해시다. 파일 시간으로
-                // 보던 시절의 함정은 ShaderBaker::computeEffectiveSourceHash 주석에 적어 두었다.
+                // 보면 안 되는 이유는 ShaderBaker::computeEffectiveSourceHash 주석에 있다.
                 const string binDirAbs = FileUtil::getDirectoryPart( FileUtil::normalizeSeparators( manifestAbs ) );
                 if ( ShaderBaker::isBakedOutputCurrent( binDirAbs, sourceAbs ) == false )
                 {

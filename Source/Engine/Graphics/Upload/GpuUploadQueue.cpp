@@ -15,7 +15,7 @@ namespace sw
     SW_LOG_CALLER( "GpuUploadQueue" );
 
     /**
-     * @brief `-gv_gpuUploadQueue=0` 이면 업로드를 워커로 앞당기지 않고 예전처럼 렌더 스레드가 그 자리에서 만듭니다.
+     * @brief `-gv_gpuUploadQueue=0` 이면 업로드를 워커로 앞당기지 않고 렌더 스레드가 그 자리에서 만듭니다.
      * @details 이 최적화가 무엇을 바꿨는지 재려면 같은 실행에서 끄고 켜 비교할 수 있어야 합니다(A/B). 스레딩을 건드리는
      *          기능이라 의심스러울 때 끌 수 있는 스위치이기도 합니다. gv_useRenderThread · gv_gpuCulling 과 같은 자리입니다.
      */

@@ -164,8 +164,8 @@ namespace sw
             /**
              * @brief `[shift, shift + width)` 안에 드는지 반환합니다.
              * @details 부호 없는 뺄셈이라 `binding < shift` 면 아주 큰 값으로 감겨 width 를 넘습니다.
-             *          그래서 하한 비교가 따로 필요 없습니다. b 범위의 shift 는 0 이라 `binding >= 0` 이
-             *          늘 참이었고, 컴파일러가 그것을 짚어 줬습니다.
+             *          그래서 하한 비교가 따로 필요 없습니다(b 범위의 shift 는 0 이라 `binding >= 0` 은 늘 참이고,
+             *          컴파일러가 그것을 경고합니다).
              */
             static bool isInRange( uint32 binding, uint32 shift, uint32 width ) { return ( binding - shift ) < width; }
 
@@ -228,7 +228,7 @@ namespace sw
                     outList.push_back( std::move( reflected ) );
                 };
                 // 리소스 목록이 바인딩 위치의 1차 출처다(cbuffer 도 여기 들어 있다). CB 목록은 그 다음이다. 리플렉터가
-                // CB 쪽 bindPoint 를 못 채우는 경우가 있었다(DXIL, move 뒤 이름 비교).
+                // CB 쪽 bindPoint 를 못 채우는 경우가 있다(DXIL, move 뒤 이름 비교).
                 for ( const ShaderResourceBinding& res : reflection._listResource )
                 {
                     const ShaderBindingKind kind = ShaderBindingLayout::kindFromTypeLabel( static_cast<string_view>( res._type ) );
@@ -593,7 +593,7 @@ namespace sw
 
         // 5) 정점 입력: 시맨틱이 정점 레이아웃 표(constant::arrVertexAttribute)에 있고, Vulkan · GL 은 location 까지 같은가.
         //    DX 는 시맨틱 이름으로 묶어 순서가 달라도 맞지만, 두 백엔드는 **선언 순서**가 location 이라 중간 속성을
-        //    빼먹으면 그 뒤가 한 칸씩 당겨진다(색을 읽으려다 노멀을 읽는다). 예전에는 픽셀로만 드러났다.
+        //    빼먹으면 그 뒤가 한 칸씩 당겨진다(색을 읽으려다 노멀을 읽는다). 픽셀로는 늦게 드러난다.
         for ( const ShaderVertexInputInfo& input : reflection._listVertexInput )
         {
             const RHIVertexAttribute* pAttribute{ nullptr };

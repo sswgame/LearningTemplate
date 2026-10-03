@@ -57,8 +57,8 @@ namespace sw
     /**
      * @struct ShaderStageInfo
      * @brief 스테이지 하나의 표 한 줄입니다. 축약 태그 · 기본 진입점 · 컴파일 프로파일(SM5 / SM6)을 담습니다.
-     * @details 예전에는 이 넷이 세 파일의 switch 다섯이었습니다(베이커의 태그 · 기본 진입점, 컴파일러의 프로파일 둘, 바인딩
-     *          레이아웃의 비트 변환). 스테이지를 하나 더하면 열거형과 이 표의 한 줄입니다. `_pProfileSm5` 가 nullptr 이면
+     * @details 베이커의 태그 · 기본 진입점, 컴파일러의 프로파일, 바인딩 레이아웃의 비트 변환이 모두 이 표를 봅니다(switch 를
+     *          파일마다 두지 않습니다). 스테이지를 하나 더하면 열거형과 이 표의 한 줄입니다. `_pProfileSm5` 가 nullptr 이면
      *          SM5(DXBC · D3D11)에 그 스테이지가 없다는 뜻입니다.
      */
     struct ShaderStageInfo
@@ -69,7 +69,7 @@ namespace sw
         const utf8* _pProfileSm6; ///< DXIL · SPIR-V 프로파일("vs_6_6")
     };
 
-    /** @brief 스테이지의 표 한 줄입니다. `Count` 이상이면 버텍스 줄입니다(예전 switch 들의 폴백과 같습니다). */
+    /** @brief 스테이지의 표 한 줄입니다. `Count` 이상이면 버텍스 줄입니다(폴백). */
     inline const ShaderStageInfo& getShaderStageInfo( ShaderStage stage ) noexcept
     {
         static constexpr ShaderStageInfo arrInfo[static_cast<size_t>( ShaderStage::Count )] = {
@@ -110,8 +110,7 @@ namespace sw
 
         /**
          * @brief `"NAME=VALUE"` 또는 `"NAME"`(값 1) 한 줄을 매크로로 해석합니다.
-         * @details PSO 생성 경로(DX11 · DX12 · GL)와 바인딩 레이아웃 캐시가 같은 문자열 형식을 씁니다.
-         *          예전에는 백엔드마다 같은 파싱 람다를 복사해 두고 있었습니다.
+         * @details PSO 생성 경로(DX11 · DX12 · GL)와 바인딩 레이아웃 캐시가 같은 문자열 형식을 쓰므로 파싱은 여기 하나입니다.
          */
         static ShaderMacroDefine parse( string_view define )
         {
@@ -145,9 +144,9 @@ namespace sw
         ShaderTargetFormat        _targetFormat = ShaderTargetFormat::SPIRV_Vulkan; ///< 출력 포맷
         /**
          * @brief 디버그 정보 + 최적화 끔(`-Zi -Od` / `D3DCOMPILE_DEBUG|SKIP_OPTIMIZATION`)으로 컴파일할지 여부입니다.
-         * @details 예전에는 **빌드 구성**(SW_DEBUG)이 이것을 정했습니다. 그러면 구운 바이너리(저장소에 커밋되고 배포에
-         *          실리는 것)의 내용이 "어느 App.exe 가 베이커로 돌았나" 에 따라 달라집니다. 쿠커가 Debug 를
-         *          먼저 집으므로 커밋된 셰이더가 모두 무최적화였습니다. 지금은 **요청하는 쪽**이 정합니다. 런타임
+         * @details **요청하는 쪽**이 정합니다. 주의: **빌드 구성**(SW_DEBUG)이 정하면 구운 바이너리(저장소에 커밋되고 배포에
+         *          실리는 것)의 내용이 "어느 App.exe 가 베이커로 돌았나" 에 따라 달라지고, 쿠커가 Debug 를 먼저 집으면
+         *          커밋된 셰이더가 모두 무최적화가 됩니다. 런타임
          *          라이브 컴파일(ShaderCache)은 Debug 에서 켜고, 베이커는 절대 켜지 않습니다.
          */
         uint8 _bDebugCodegen = SW_FALSE;

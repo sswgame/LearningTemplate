@@ -49,7 +49,7 @@ namespace sw
         /** @brief 대입을 금지합니다. */
         MaterialInstance& operator=( const MaterialInstance& ) = delete;
 
-        /** @brief (RHIRenderResource) 살아 있는 디바이스에 상수버퍼를 돌려줍니다. 예전 이름은 shutdown 이었습니다. */
+        /** @brief (RHIRenderResource) 살아 있는 디바이스에 상수버퍼를 돌려줍니다. */
         void releaseRhi( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 잊습니다. */
         void forgetRhi( IRHIDevice* pDevice ) override;
@@ -86,8 +86,8 @@ namespace sw
          *          인덱스가 아니라 텍스처 자체를 가리킵니다. 게임 스레드는 원하는 경로만 적고, 렌더 스레드의 `updateRhi` 가 TextureCache 로 빌리고
          *          돌려줍니다(그 텍스처를 읽는 프레임이 렌더 스레드에 있다). 셰이더에 넣는 값(네이티브 bindless 의 SRV 인덱스, DX11 · GL 의 슬롯
          *          서수)은 그때마다 지금 텍스처에서 읽으므로 텍스처를 다시 올려도(핫 리로드) 따라갑니다.
-         *          예전에는 날 디스크립터 인덱스를 받았다 — 다시 올리면 돌려준 자리를 읽었고, DX11 · GL 에서는 그 인덱스가 슬롯 서수로 읽혀 엉뚱한
-         *          슬롯이었으며, .materialinstance 의 `assetPath` 는 읽고 버렸다.
+         *          주의: 날 디스크립터 인덱스를 들면 다시 올린 뒤 돌려준 자리를 읽고, DX11 · GL 에서는 그 인덱스가 슬롯 서수로 읽혀 엉뚱한
+         *          슬롯을 가리킵니다.
          */
         void setTextureParameter( hashed_string name, string_view textureAssetPath );
         /** @brief 품질 레벨을 설정합니다. */

@@ -181,14 +181,12 @@ namespace sw
 
             /**
              * @brief 확보된 칸(`packSize`) 안에 들어갈 때만 씁니다.
-             * @details 아래 `writeNumericValue` 는 처음부터 `packSize < need` 를 보고 있었는데,
-             *          switch 안에서 **직접 `Memory::copy` 하는 형제 경로들**은 그 검사를 건너뛰었습니다.
+             * @details `writeNumericValue` 뿐 아니라 switch 안에서 **직접 `Memory::copy` 하는 형제 경로들**도 이것을 거쳐야 합니다.
              *          칸 크기는 셰이더 리플렉션이 정하고(`ShaderVariableInfo::_size`) 쓰는 크기는
              *          머티리얼 XML 의 `shaderType` 이 정하므로 **둘이 어긋날 수 있습니다.**
              *          예를 들어 셰이더가 `uint`(4바이트)로 선언한 자리에 XML 이
              *          `ChannelMask` + `shaderType="Float4"` 를 적으면 4바이트 칸에 16바이트를 씁니다.
-             *          손으로 지은 머티리얼 XML 이 이 저장소를 여러 번 물었으므로, 조용히 넘치는
-             *          대신 쓰지 않고 false 를 반환합니다(부르는 쪽이 경고합니다).
+             *          조용히 넘치는 대신 쓰지 않고 false 를 반환합니다(부르는 쪽이 경고합니다).
              */
             [[nodiscard]] static bool writeBoundedValue( void* pDst, size_t packSize, const void* pSrc, size_t byteCount )
             {
@@ -212,7 +210,7 @@ namespace sw
                     uint32   count = need / 4;
                     for ( uint32 propIndex = 0; propIndex < count; ++propIndex )
                     {
-                        // 글이 모자란 칸은 기본값(색의 알파는 1)이다. 있는데 못 읽은 칸은 알리고 0 이다(예전에는 조용히 0).
+                        // 글이 모자란 칸은 기본값(색의 알파는 1)이다. 있는데 못 읽은 칸은 알리고 0 이다.
                         float32 component = ( propIndex == 3 && shaderType == MaterialPropertyType::Color ) ? 1.0f : 0.0f;
                         if ( propIndex < tokens.size() )
                         {
@@ -487,8 +485,8 @@ namespace sw
                         textureIndex = static_cast<uint32>( numericVal );
                 }
                 // 붙은 텍스처가 없으면 0 이 아니라 kInvalidIndex 를 넣는다. 0 은 "첫 번째 슬롯"
-                // 이라는 **유효한** 디스크립터 인덱스라서, 셰이더가 그 자리에 있던 상수버퍼를
-                // Texture2D 로 읽어 DX12 에서 GPU 페이지 폴트(DEVICE_HUNG)가 났다. 셰이더의
+                // 이라는 **유효한** 디스크립터 인덱스라서, 셰이더가 그 자리에 있는 상수버퍼를
+                // Texture2D 로 읽어 DX12 에서 GPU 페이지 폴트(DEVICE_HUNG)가 난다. 셰이더의
                 // swSampleIndex 는 kInvalidIndex 를 "텍스처 없음" 으로 이미 처리한다.
                 return MaterialPackingInternal::writeBoundedValue( pDst, packSize, &textureIndex, sizeof( textureIndex ) );
             }

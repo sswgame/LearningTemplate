@@ -321,7 +321,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 |------|------|
 | Caps의 bindless = 실제 native | DX12는 `supportsNativeBindlessSampling()` → `_bBindlessRootSignature` 확인 |
 | DebugDrawQueue = GPU 즉시 드로우 | 큐 API; 화면 표시는 Editor GameView 등 소비 측 |
-| Immediate Context = Immediate CommandList | Mode vs Context 혼동 — 위 표 참고 |
+| 프레임 스트림 컨텍스트 = 커맨드 리스트 | 프레임 스트림은 디바이스가 소유하고 `endFrame` 에서 제출되며, 리스트는 패스마다 만들어 `executeCommandList` 로 잇는다 — 위 표 참고 |
 | gen/머티리얼 XML을 코드에 하드코딩 | `Resource/engine/` 파이프라인·머티리얼 에셋 사용 |
 | DX11/GL `prepareTextureForShaderRead` · `transitionBuffer` 를 빈 함수로 두기 | DX11 은 슬롯 해저드(SRV ↔ RTV · UAV)를 여기서 풀고 GL 은 메모리 배리어를 낸다 — 비우면 그 백엔드만 0 을 읽는다 |
 | 명령줄에 백엔드를 안 주고 원하는 백엔드로 돌았다고 믿기 | 명령줄이 고르지 않으면 `EngineConfig` 의 `_defaultRHI` 가 이긴다. `-dx11` / `-dx12` / `-vk` / `-gl`(또는 `-gv_rhiBackend=<0..3>`)로 명시하고, 로그의 백엔드 이름으로 확인한다 |
@@ -331,7 +331,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 ## 설계 메모 — 언리얼과 같은 것, 다른 것
 
-남은 일은 [docs/06_Backlog.md](../../../docs/06_Backlog.md) 1-3 이 정본입니다. 여기에는 구조와 주의만 둡니다.
+남은 일은 [docs/06_Backlog.md](../../../docs/06_Backlog.md) 의 그래픽스 절이 정본입니다. 여기에는 구조와 주의만 둡니다.
 
 **언리얼과 같은 자리:**
 
@@ -342,7 +342,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
   지나 돌아온 뒤 `beginCommandList` 가 통째로 리셋한다 — 할당 경로에 락이 없다.
 - **DX12 루트 시그니처 25/64 dword**: CB 는 루트 CBV, t/u 슬롯은 디스크립터 테이블(`flushSlotTables` 가 바뀐 테이블만 온라인 힙 블록에 복사).
   `ShaderBindingContractTest.Dx12RootSignatureFitsBudget` 가 계약에서 예산을 계산한다.
-- **패스 상수버퍼는 드로우마다 슬롯을 받는다**(`PassConstantRing`, 기록 전에 `ensurePassCbCapacity` 로 배치 수만큼). 한 버퍼를 드로우들이
+- **패스 상수버퍼는 드로우마다 슬롯을 받는다**(`PassConstantRing`, 기록 전에 `PassConstantRing::ensureCapacity` 로 배치 수만큼). 한 버퍼를 드로우들이
   나눠 쓰면 GPU 는 제출 뒤에 읽으므로 모두 마지막 값을 본다 — `RenderPassGpuTest.MultiBatchPassKeepsPerBatchConstants` 가 메시 둘로 고정한다.
 - **머티리얼 원소는 영속 ID**(GPUScene 식): 처음 본 쌍에만 자리를 주고, 안 쓰이면 지연 회수하되 **자리를 옮기지 않는다**(인스턴스에 적힌
   materialIndex 가 엉뚱한 원소를 가리키게 된다). `GpuSceneTest.MaterialElementIdsPersistAcrossBuildsAndAreFreed`.

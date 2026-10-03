@@ -81,8 +81,8 @@ namespace sw
         uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
         /**
          * @brief 메시 공간 원점에서 가장 먼 정점까지의 거리입니다(원점 중심 경계 구의 반지름). `setVertices` 가 구합니다.
-         * @details 컴포넌트의 경계(`MeshComponent::getBoundsRadius`)와 GPU 컬링이 이것을 덮는다. 예전에는 메시가 경계를 몰라 모든 도형이 단위 상자의
-         *          반지름(0.866)을 썼고, 그보다 큰 도형(캡슐 끝 · 평면)은 화면 가장자리에서 보이는데도 잘렸다.
+         * @details 컴포넌트의 경계(`MeshComponent::getBoundsRadius`)와 GPU 컬링이 이것을 덮는다. 고정 반지름(단위 상자의 0.866)을 쓰면
+         *          그보다 큰 도형(캡슐 끝 · 평면)이 화면 가장자리에서 보이는데도 잘린다.
          */
         float32 getBoundingRadius() const { return _boundingRadius; }
         /** @brief 메시 공간의 축 정렬 경계(최소)입니다. 정점이 없으면 원점입니다. `setVertices` 가 구합니다. */
@@ -91,8 +91,8 @@ namespace sw
         const float3& getLocalBoundsMax() const { return _localBoundsMax; }
         /**
          * @brief 이 메시 **내용**의 프로세스 고유 번호입니다. 만들 때와 `setVertices` 때마다 새 번호를 받습니다.
-         * @details 정점 · 모프 풀은 메시 집합이 그대로인지를 이것으로 봅니다. 예전에는 포인터만 봐서, 메시가 지워진 자리에 새 메시가
-         *          생기거나(할당기는 같은 크기의 자리를 곧바로 다시 준다) 같은 메시의 정점을 바꾸면 "같은 집합" 으로 보여 옛 정점을 그렸습니다.
+         * @details 정점 · 모프 풀은 메시 집합이 그대로인지를 이것으로 봅니다. 포인터만 보면 메시가 지워진 자리에 새 메시가
+         *          생기거나(할당기는 같은 크기의 자리를 곧바로 다시 준다) 같은 메시의 정점을 바꿀 때 "같은 집합" 으로 보여 옛 정점을 그립니다.
          */
         uint64 getContentId() const { return _contentId; }
 
@@ -104,8 +104,7 @@ namespace sw
         /**
          * @brief 살아 있는 디바이스에 올라가 있는지 반환합니다.
          * @details 옛 디바이스가 죽으면 통보(`RHIRenderResource`)가 먼저 와서 핸들을 비웁니다. 그래서 값이 남아
-         *          있다는 것만으로 "살아 있는 디바이스의 것" 임이 보장됩니다. 예전에는 그 통보가 없어서 교체 뒤에도
-         *          옛 핸들이 "올라갔다" 고 답했고, 업로드 큐가 아무것도 다시 올리지 않았습니다.
+         *          있다는 것만으로 "살아 있는 디바이스의 것" 임이 보장됩니다(업로드 큐가 백엔드 교체 뒤 다시 올릴 것을 이것으로 고릅니다).
          */
         bool isRhiValid() const { return _vertex.isResident(); }
 

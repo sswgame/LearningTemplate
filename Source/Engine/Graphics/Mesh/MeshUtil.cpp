@@ -52,8 +52,7 @@ namespace sw
         /**
          * @brief 삼각형 하나를 **바깥을 향하도록** 넣습니다. 감김이 반대면 두 정점을 맞바꿉니다.
          * @details 감김이 뒤집힌 면은 후면 컬링에 걸려 **화면에서 그냥 사라집니다.** 그림으로는
-         *          "안 그려진다" 로만 보여서 렌더러 버그로 오인하기 쉽고, 실제로 이 생성기들을 처음
-         *          쓴 판에서 구 · 실린더 · 원뿔이 그렇게 뒤집혀 있었습니다. 손으로 맞추는 대신 여기서 바로잡습니다.
+         *          "안 그려진다" 로만 보여서 렌더러 버그로 오인하기 쉽습니다. 손으로 맞추는 대신 여기서 바로잡습니다.
          *          맞바꿀 때 노멀 · UV 가 **위치와 같이** 따라갑니다. `BuildVertex` 로 묶어 둔 이유입니다.
          * @warning **원점 중심 볼록 도형에서만 맞는 판정입니다.** 삼각형 중심이 곧 바깥 방향이라는 가정을
          *          씁니다. 오목하거나 원점을 품지 않는 기하를 넣으려면 이 함수를 쓰면 안 됩니다.
@@ -167,7 +166,7 @@ namespace sw
         listVert.reserve( 36 );
 
         // 면마다 색을 달리한다. 어느 면을 보고 있는지가 그림에서 바로 읽혀야 검증이 된다.
-        // 노멀 · UV 는 `pushFlatTriangle` 이 면에서 만든다(예전에는 36 줄을 손으로 적고 있었다).
+        // 노멀 · UV 는 `pushFlatTriangle` 이 면에서 만든다.
         struct CubeFace
         {
             float3 _corner0;
@@ -543,9 +542,7 @@ namespace sw
         vector<RHIVertex> listVert;
         listVert.reserve( static_cast<size_t>( segmentCount ) * segmentCount * 6 );
 
-        // 면은 로컬 y = 0 이다. 예전에는 y = +0.5(큐브 윗면 자리)에 두어야 했다 — 정점에 노멀이 없어
-        // 셰이더가 위치로 노멀을 지어냈고, y = 0 인 평면은 |y| 가 0 이라 ±X/±Z 노멀을 받았기 때문이다.
-        // 이제 정점이 노멀을 들고 다니므로 그 회피가 필요 없다.
+        // 면은 로컬 y = 0 이다. 노멀은 정점이 들고 다닌다(+Y).
         constexpr float32 kSurfaceY = 0.0f;
         constexpr float3  kUp{ 0.0f, 1.0f, 0.0f };
         const float32     step = 1.0f / static_cast<float32>( segmentCount );

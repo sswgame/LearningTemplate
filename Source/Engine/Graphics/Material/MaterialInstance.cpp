@@ -207,11 +207,10 @@ namespace sw
             _bGpuDirty        = SW_TRUE;
         }
 
-        // 부모 레이아웃을 먼저 셰이더에 맞춘다. 예전에는 GpuScene 이 인스턴스 CB 를 올린 **뒤에** 부모를 맞춰, 첫 프레임의 인스턴스는
-        // XML 순서 바이트를 복사해 들고 있었다.
+        // 부모 레이아웃을 **먼저** 셰이더에 맞춘다. 복사한 뒤에 맞추면 첫 프레임의 인스턴스가 XML 순서 바이트를 들고 있다.
         (void)_pParentMaterial->ensureShaderLayout( pRhi );
-        // 부모 바이트가 바뀌었으면(값 · 레이아웃 · 다시 로드) 복사본도 낡았다. 예전에는 인스턴스가 더러워질 때만 다시 복사해, 오버라이드가
-        // 없는 파라미터에서 부모의 값 변경을 놓쳤고 다시 맞춘 레이아웃도 놓쳤다.
+        // 부모 바이트가 바뀌었으면(값 · 레이아웃 · 다시 로드) 복사본도 낡았다. 인스턴스가 더러워질 때만 다시 복사하면 오버라이드가
+        // 없는 파라미터에서 부모의 값 변경과 다시 맞춘 레이아웃을 놓친다.
         if ( _parentBufferGeneration != _pParentMaterial->getBufferGeneration() )
             _bGpuDirty = SW_TRUE;
         if ( syncTextureOverrides( pRhi ) )
@@ -243,7 +242,7 @@ namespace sw
 
         const uint32 size = static_cast<uint32>( _bytes.size() );
 
-        // 부모의 상수버퍼는 **셰이더를 다시 구우면 커질 수 있다**(레이아웃이 바뀐다). 그때 예전
+        // 부모의 상수버퍼는 **셰이더를 다시 구우면 커질 수 있다**(레이아웃이 바뀐다). 그때 이전
         // 버퍼를 그대로 쓰면 `updateConstantBuffer` 가 만들 때보다 큰 크기로 복사한다. 그 함수는
         // 크기를 검사하지 않으므로(GL 만 API 가 막아 준다) 프레임 슬롯 밖까지 쓴다.
         // 커졌으면 버리고 다시 만든다.
@@ -697,7 +696,7 @@ namespace sw
             overrideItem._value = value;
             self->_desc._listOverride.push_back( std::move( overrideItem ) );
         }
-        // 텍스처 덮어쓰기는 값이 아니라 에셋 경로다(`assetPath`) — 예전에는 날 인덱스를 값으로 저장했다.
+        // 텍스처 덮어쓰기는 값이 아니라 에셋 경로다(`assetPath`). 날 인덱스는 다시 올리면 낡으므로 저장하지 않는다.
         for ( const TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._assetPath.empty() )
@@ -793,7 +792,7 @@ namespace sw
         for ( TextureOverride& texture : _listTextureOverride )
             texture._assetPath.clear(); // 렌더 스레드가 돌려준 뒤 뺀다
 
-        // `assetPath` 가 있는 항목은 텍스처 덮어쓰기다. 예전에는 읽고 버려 .materialinstance 의 텍스처가 조용히 부모 것으로 남았다.
+        // `assetPath` 가 있는 항목은 텍스처 덮어쓰기다. 빠뜨리면 .materialinstance 의 텍스처가 조용히 부모 것으로 남는다.
         for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverride )
         {
             if ( overrideItem._assetPath.empty() == false )

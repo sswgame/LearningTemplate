@@ -95,8 +95,8 @@ namespace sw
             /**
              * @brief OpenGL 용 SPIR-V 의 Vulkan 전용 내장 변수를 GL 것으로 바꿉니다(InstanceIndex→InstanceId, VertexIndex→VertexId).
              * @details DXC 는 SV_InstanceID/SV_VertexID 를 Vulkan 의 InstanceIndex/VertexIndex 로 냅니다. ARB_gl_spirv 는 그 둘을
-             *          지원하지 않아 드라이버가 조용히 0 을 반환했습니다. 인스턴스드 드로우가 모두 원소 0 을 읽어 큐브 16개가 한
-             *          자리에 겹쳤습니다. 지금 셰이더는 인스턴스 자리를 정점 스트림(`SW_INSTANCESLOT`)으로 받아 SV_InstanceID 를 쓰지
+             *          지원하지 않아 바꾸지 않으면 드라이버가 조용히 0 을 반환합니다(인스턴스드 드로우가 모두 원소 0 을 읽어 한
+             *          자리에 겹칩니다). 지금 셰이더는 인스턴스 자리를 정점 스트림(`SW_INSTANCESLOT`)으로 받아 SV_InstanceID 를 쓰지
              *          않습니다 — 다시 쓰게 되면 gl_InstanceID 는 startInstance 를 빼고 센다는 점(Vulkan InstanceIndex 와 다르다)에
              *          주의하십시오. OpDecorate(71) / OpMemberDecorate(72) 의 BuiltIn(11) 만 손댑니다.
              */
@@ -141,7 +141,7 @@ namespace sw
             /**
              * @brief 셰이더 스테이지와 타깃 포맷에 맞는 프로파일 문자열을 반환합니다.
              * @details DX11 은 SM5.0, DX12 · Vulkan · OpenGL 은 네이티브 bindless 와 Descriptor Indexing 을 위해 SM6.6 입니다. 스테이지마다
-             *          다른 것은 `ShaderStageInfo` 표의 줄이고, SM5 에 없는 스테이지(메시 · 앰플리피케이션)는 예전처럼 vs_5_0 으로 폴백합니다.
+             *          다른 것은 `ShaderStageInfo` 표의 줄이고, SM5 에 없는 스테이지(메시 · 앰플리피케이션)는 vs_5_0 으로 폴백합니다.
              */
             static const utf8* getTargetProfile( ShaderStage stage, ShaderTargetFormat targetFormat )
             {

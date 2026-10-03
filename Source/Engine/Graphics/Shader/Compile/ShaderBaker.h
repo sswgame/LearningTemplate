@@ -45,8 +45,8 @@ namespace sw
      * @struct ShaderBakeRequest
      * @brief 구울 것 하나입니다(셰이더 · 진입점 · 스테이지 · define).
      * @details "무엇을 구울지" 는 파이프라인 XML 과 머티리얼에서 나오고(`ShaderBakeRequest.cpp`), "어떻게 굽는지" 는
-     *          그것을 받아 컴파일합니다(`ShaderBaker.cpp`). 그 둘 사이를 넘는 값이라 여기 있습니다. 예전에는 TU 로컬이라
-     *          "이 빌드가 무엇을 구웠나" 를 밖에서 볼 길이 없었습니다.
+     *          그것을 받아 컴파일합니다(`ShaderBaker.cpp`). 그 둘 사이를 넘는 값이라 여기 있습니다(그래서
+     *          "이 빌드가 무엇을 구웠나" 를 밖에서 볼 수 있습니다).
      */
     struct ShaderBakeRequest
     {
@@ -85,7 +85,7 @@ namespace sw
         /**
          * @brief `bin/<rhi>/bake.stamp` 를 지금 소스의 내용 해시로 다시 씁니다(베이크가 끝난 뒤).
          * @param pFailedSource 이번 베이크에서 컴파일에 실패한 소스(정규화한 절대 경로)입니다. 도장에서 빠져 다음 베이크가 다시 시도합니다 —
-         *                      예전에는 실패한 셰이더의 옛 바이너리 위에 지금 소스의 해시를 찍어, 그 셰이더가 영영 최신으로 판정됐다.
+         *                      실패한 셰이더의 옛 바이너리 위에 지금 소스의 해시를 찍으면 그 셰이더가 영영 최신으로 판정된다.
          */
         static void writeBakeStamp( string_view binDirectory, const unordered_set<string>* pFailedSource = nullptr );
 
@@ -111,8 +111,7 @@ namespace sw
          *
          *          **파일 시간이 아니라 내용입니다.** 이 저장소는 구운 바이너리까지 커밋하므로 `git pull`
          *          이 소스와 산출물의 mtime 을 임의의 순서로 덮어씁니다. 소스가 바뀌었는데도 "산출물이
-         *          더 새것" 으로 판정돼 그대로 넘어갑니다. 실제로 `forwardlit` 이 라이트 버퍼 이전
-         *          바이너리로 커밋됐고, Vulkan 만 다른 그림을 내는 것을 백엔드 버그로 오인했습니다.
+         *          더 새것" 으로 판정돼 그대로 넘어가고, 한 백엔드만 다른 그림을 내 백엔드 버그로 보입니다.
          */
         static uint64 computeEffectiveSourceHash( string_view absShaderPath );
         /** @brief Resource 아래 모든 .hlsli 의 경로 + 내용을 합친 해시입니다(값을 캐시합니다). */
