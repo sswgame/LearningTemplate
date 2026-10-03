@@ -119,7 +119,6 @@ cd build/Ninja-Debug/Bin
   CLI 철자도 하나로 — 하이픈 없는 철자(`bakeshaders` 등 다섯)는 10-04 에 지웠다. 남은 것: 열거자 이름 자동 등록으로 생기는 중복 키(`-WIDTH` 와 `-W`,
   `-lang` 과 `-language`), 리플렉션 주석 키 `Alias` 의 동의어 `PreviousName` · `PreviousNames`(사용처 0).
 - **한 파일에 클래스가 여럿이면 클래스마다 `namespace sw { }` 블록을 나눈다** — 규칙 + 가능하면 게이트, 트리 전체 적용.
-- **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
 
 ### 1-1. 직렬화 · 리플렉션
 
@@ -215,6 +214,8 @@ cd build/Ninja-Debug/Bin
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
 - **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
   결과(열거값)로 바꾸는 그래픽스 쪽 수정.
+- **주석 · 문자열을 지우는 함수가 게이트 넷에 따로 있다**(CheckTargetMacros `blankCommentsAndLiterals` · CheckRenderOwnership · CheckShaderConventions ·
+  CheckTestSuites). `Scripts/common` 으로 모은다 — CheckClockReads 는 CheckTargetMacros 것을 가져다 쓴다.
 - **헤더의 안 쓰는 include 119 건** — `py -3 Scripts/lint/report/RunForwardDeclarationCandidates.py --verify-unused` 가 빼고 단독 컴파일해 "빼도 선다" 로 가린 것
   (Types.h 20 · Macros.h 20 · Defines.h 16 · EnginePlatformHeaders.h 13 · string.h 13 …). 지우면 그 include 를 **거쳐** 이름을 받던 소비자 TU 가 깨질 수 있으니
   지운 뒤 Debug · Release · Shipping · WSL 전체 빌드 + `RunHeaderSelfContained.py` 로 확인한다.
