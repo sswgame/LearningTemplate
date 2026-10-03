@@ -94,7 +94,17 @@ class LineScanContext:
 # 규칙이 자기 **위반 조각**(`badSample`)도 같이 든다. 그래서 음성 테스트
 # (`CheckCodeConventionsSelfTest.py`)가 조각 표를 따로 들지 않는다 — 규칙과 그 증거가 붙어 있으면
 # 둘이 어긋날 수가 없다. 이 저장소가 반복해서 배운 것이다: **목록이 아니라 자리가 규칙이다.**
-_kRulesByScope: dict[str, list] = {"line": [], "classMember": []}
+#
+# 줄을 **어떤 자리로 읽을지**(함수 서명 · 함수 본문 · 클래스 본문 · 생성자 초기화 목록)는 `checkFileConventionsInternal` 의 파서가
+# 한 번에 정한다 — 그 판정은 `if/elif` 사슬이라 규칙마다 따로 하면 동작이 바뀐다. 규칙은 판정된 자리를 **훅으로 받기만** 한다.
+_kRulesByScope: dict[str, list] = {
+    "line": [],                    # 모든 줄 — onLine
+    "classMember": [],             # 클래스 본문 직속 줄 — onLine
+    "functionLocal": [],           # 함수 본문 줄(생성자 초기화 목록 줄 제외) — onLine
+    "parameter": [],               # 함수 · 람다 · 생성자 서명의 매개변수 하나 — onParameter
+    "constructorInitializer": [],  # 생성자 초기화 목록의 줄 — onInitializerLine
+    "file": [],                    # 파일 하나 — onFile
+}
 
 
 class ConventionRule:
@@ -105,7 +115,8 @@ class ConventionRule:
     등록·자가 테스트 편입은 자동이다.
 
     - `category`     : 위반에 붙는 카테고리. 여러 개를 내는 규칙은 `categories` 를 쓴다.
-    - `scope`        : "line" 은 모든 줄, "classMember" 는 클래스 본문 직속에서만.
+    - `scope`        : 규칙이 받는 자리(`_kRulesByScope` 의 키). "line" · "classMember" · "functionLocal" 은 `onLine`,
+                       "parameter" 는 `onParameter`, "constructorInitializer" 는 `onInitializerLine`, "file" 은 `onFile`.
     - `badSample`    : 이 규칙이 **반드시 잡아야 하는** 조각. 없으면 "덮이지 않은 카테고리" 로 잡힌다.
     - `badSampleFile`: 그 조각을 쓸 파일 이름. 헤더 전용 규칙은 `.h` 로 준다.
     - `extraSamples` : 카테고리를 여럿 내는 규칙이 나머지를 증명하는 조각들 `(파일 이름, 내용)`.
@@ -131,6 +142,18 @@ class ConventionRule:
         return cls.categories if cls.categories else ((cls.category,) if cls.category else ())
 
     def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        raise NotImplementedError
+
+    def onParameter(self, ctx: LineScanContext, parameterText: str) -> list[ConventionViolation]:
+        """서명 한 줄에서 쪼갠 매개변수 하나(`const vector<int32>& items`)."""
+        raise NotImplementedError
+
+    def onInitializerLine(self, ctx: LineScanContext, initMatch: re.Match | None) -> list[ConventionViolation]:
+        """생성자 초기화 목록의 줄. `initMatch` 는 `_kConstructorInitRe` 의 결과(멤버 · 값), 맞지 않으면 None."""
+        raise NotImplementedError
+
+    def onFile(self, ctx: LineScanContext, listLine: list[str]) -> list[ConventionViolation]:
+        """파일 하나. `ctx.lineNum` 은 0 이다."""
         raise NotImplementedError
 
 
@@ -1326,28 +1349,11 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
             except Exception:
                 pass
 
-    # 1. .cpp 소스 파일의 첫 include "pch.h" 검사
-    if isSource:
-        firstCodeLine = None
-        firstCodeLineNum = 1
-        for idx, line in enumerate(lines, start=1):
-            trimmed = line.strip()
-            if not trimmed or trimmed.startswith("//") or trimmed.startswith("/*") or trimmed.startswith("*"):
-                continue
-            firstCodeLine = trimmed
-            firstCodeLineNum = idx
-            break
-
-        if firstCodeLine and not _kPchIncludeRe.match(firstCodeLine):
-            violations.append(
-                ConventionViolation(
-                    file_path=relPath,
-                    line_number=firstCodeLineNum,
-                    rule_category="Include/PCH",
-                    message='.cpp 소스 파일의 첫 번째 인클루드는 반드시 #include "pch.h" 이어야 합니다.',
-                    snippet=firstCodeLine,
-                )
-            )
+    # 1. 파일 단위 규칙
+    fileContext = LineScanContext(relPath=relPath, rootDir=rootDir, lineNum=0, line="", trimmed="", codeWithoutStrings="",
+                                  isHeader=isHeader, isSource=isSource)
+    for rule in _kRulesByScope["file"]:
+        violations.extend(rule.onFile(fileContext, lines))
 
     # 2. 줄 단위 규칙 검사
     inBlockComment = False
@@ -1422,11 +1428,11 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
         if isFnSig and not trimmed.endswith(";"):
             pendingFunc = True
 
-        # 함수 매개변수 명명 검사
+        # 함수 매개변수 — 서명을 쪼갠 매개변수마다 규칙에 넘긴다
         if sigParamStr is not None and sigParamStr.strip():
-            paramList = splitParametersInternal(sigParamStr)
-            for p in paramList:
-                violations.extend(checkParameterItemInternal(p, relPath, lineNum, trimmed))
+            for parameterText in splitParametersInternal(sigParamStr):
+                for rule in _kRulesByScope["parameter"]:
+                    violations.extend(rule.onParameter(scanContext, parameterText))
 
 
         # --- 생성자 초기화 리스트 검사 (포맷, 중괄호, 선언 순서) ---
@@ -1446,37 +1452,11 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
 
         if trimmed.startswith(":") or (inCtorInitList and trimmed.startswith(",")):
             inCtorInitList = True
-            if initMatch := _kConstructorInitRe.search(trimmed):
-                initVar = initMatch.group(1)
-                initVal = initMatch.group(2)
-                if initVal.startswith("(") and not initVar.startswith("super") and not initVar.endswith("Base"):
-                    # 반복자 쌍은 소괄호여야 한다 — 중괄호면 initializer_list 생성자가 이겨 반복자 자체를 값으로 담는다.
-                    initArgument = extractParenthesizedInternal(trimmed[initMatch.start(2):])
-                    bIteratorPair = initArgument is not None and isIteratorPairInternal(initArgument)
-                    if "_" in initVar and bIteratorPair is False:
-                        violations.append(
-                            ConventionViolation(
-                                file_path=relPath,
-                                line_number=lineNum,
-                                rule_category="Style/ConstructorBraces",
-                                message=f"생성자 멤버 초기화 '{initVar}'는 소괄호 '()' 대신 중괄호 '{{}}'를 사용해야 합니다.",
-                                snippet=trimmed,
-                            )
-                        )
-                if initVar.startswith("_"):
-                    ctorInitMembers.append(initVar)
-
-            if (trimmed.startswith(":") or trimmed.startswith(",")) and ("," in trimmed[1:]):
-                if _kInitListTrailingMemberRe.search(trimmed):
-                    violations.append(
-                        ConventionViolation(
-                            file_path=relPath,
-                            line_number=lineNum,
-                            rule_category="Style/ConstructorOnePerLine",
-                            message="생성자 멤버 초기화는 한 줄에 하나의 변수만 와야 하며, 다음 줄에 ','로 시작해야 합니다.",
-                            snippet=trimmed,
-                        )
-                    )
+            initMatch = _kConstructorInitRe.search(trimmed)
+            for rule in _kRulesByScope["constructorInitializer"]:
+                violations.extend(rule.onInitializerLine(scanContext, initMatch))
+            if initMatch is not None and initMatch.group(1).startswith("_"):
+                ctorInitMembers.append(initMatch.group(1))
 
         if inCtorInitList and "{" in trimmed and not trimmed.startswith(":") and not trimmed.startswith(","):
             inCtorInitList = False
@@ -1515,9 +1495,10 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
         isInsideClass = bool(classStack and (not funcStack or classStack[-1][1] >= funcStack[-1]) and braceDepth == classStack[-1][1] + 1)
         isInsideFunction = bool(funcStack and not isInsideClass)
 
-        # 1) 함수 내부 -> 지역 변수 검사
+        # 1) 함수 내부 -> 지역 변수 규칙
         if isInsideFunction and not isInsideClass and not trimmed.startswith((": ", ", ")):
-            violations.extend(checkLocalVariableItemInternal(line, relPath, lineNum))
+            for rule in _kRulesByScope["functionLocal"]:
+                violations.extend(rule.onLine(scanContext))
 
         # 2) 클래스 본문 직속 -> 멤버 변수 검사
         if isInsideClass:
@@ -2213,6 +2194,117 @@ class PlacementNewRule( ConventionRule ):
             )
             break
         return violations
+
+
+class PchIncludeRule( ConventionRule ):
+    """Include/PCH"""
+    category = "Include/PCH"
+    scope = "file"
+    badSampleFile = "Source/Probe/NoPch.cpp"
+    badSample = '#include "Engine/EngineMinimal.h"\n\nvoid probe() {}\n'
+
+    def onFile(self, ctx: LineScanContext, listLine: list[str]) -> list[ConventionViolation]:
+        # .cpp 의 첫 코드 줄은 `#include "pch.h"` 다.
+        if ctx.isSource is False:
+            return []
+        for lineNum, line in enumerate(listLine, start=1):
+            trimmed = line.strip()
+            if not trimmed or trimmed.startswith(("//", "/*", "*")):
+                continue
+            if _kPchIncludeRe.match(trimmed):
+                return []
+            return [
+                ConventionViolation(
+                    file_path=ctx.relPath,
+                    line_number=lineNum,
+                    rule_category=self.category,
+                    message='.cpp 소스 파일의 첫 번째 인클루드는 반드시 #include "pch.h" 이어야 합니다.',
+                    snippet=trimmed,
+                )
+            ]
+        return []
+
+
+class ParameterNamingRule( ConventionRule ):
+    """Naming/ParameterNoUnderscore · Naming/ParameterPointer · Naming/ParameterContainer"""
+    categories = ("Naming/ParameterNoUnderscore", "Naming/ParameterPointer", "Naming/ParameterContainer")
+    scope = "parameter"
+    badSampleFile = "Source/Probe/ParamUnderscore.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe( int32 _count )\n{\n    (void)_count;\n}\n'
+    extraSamples = (
+        ("Source/Probe/ParamPointer.cpp", '#include "pch.h"\n\nvoid probe( int32* value )\n{\n    (void)value;\n}\n'),
+        ("Source/Probe/ParamContainer.cpp", '#include "pch.h"\n\nvoid probe( const vector<int32>& items )\n{\n    (void)items;\n}\n'),
+    )
+
+    def onParameter(self, ctx: LineScanContext, parameterText: str) -> list[ConventionViolation]:
+        # 판정은 주체 셋이 함께 쓰는 어휘 표(`kMapNamingSubject["parameter"]`)를 읽는다.
+        return checkParameterItemInternal(parameterText, ctx.relPath, ctx.lineNum, ctx.trimmed)
+
+
+class LocalVariableNamingRule( ConventionRule ):
+    """Naming/LocalNoUnderscore · Naming/LocalPointer · Naming/LocalContainer"""
+    categories = ("Naming/LocalNoUnderscore", "Naming/LocalPointer", "Naming/LocalContainer")
+    scope = "functionLocal"
+    badSampleFile = "Source/Probe/LocalUnderscore.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe()\n{\n    int32 _count = 0;\n    (void)_count;\n}\n'
+    extraSamples = (
+        ("Source/Probe/LocalPointer.cpp", '#include "pch.h"\n\nvoid probe()\n{\n    int32* value = nullptr;\n    (void)value;\n}\n'),
+        ("Source/Probe/LocalContainer.cpp", '#include "pch.h"\n\nvoid probe()\n{\n    vector<int32> items;\n    (void)items;\n}\n'),
+    )
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        return checkLocalVariableItemInternal(ctx.line, ctx.relPath, ctx.lineNum)
+
+
+class ConstructorBracesRule( ConventionRule ):
+    """Style/ConstructorBraces"""
+    category = "Style/ConstructorBraces"
+    scope = "constructorInitializer"
+    badSampleFile = "Source/Probe/CtorBraces.cpp"
+    badSample = '#include "pch.h"\n\nProbe::Probe()\n    : _count( 0 )\n{\n}\n'
+
+    def onInitializerLine(self, ctx: LineScanContext, initMatch: re.Match | None) -> list[ConventionViolation]:
+        if initMatch is None:
+            return []
+        initVar = initMatch.group(1)
+        initVal = initMatch.group(2)
+        if initVal.startswith("(") is False or initVar.startswith("super") or initVar.endswith("Base") or "_" not in initVar:
+            return []
+        # 반복자 쌍은 소괄호여야 한다 — 중괄호면 initializer_list 생성자가 이겨 반복자 자체를 값으로 담는다.
+        initArgument = extractParenthesizedInternal(ctx.trimmed[initMatch.start(2):])
+        if initArgument is not None and isIteratorPairInternal(initArgument):
+            return []
+        return [
+            ConventionViolation(
+                file_path=ctx.relPath,
+                line_number=ctx.lineNum,
+                rule_category=self.category,
+                message=f"생성자 멤버 초기화 '{initVar}'는 소괄호 '()' 대신 중괄호 '{{}}'를 사용해야 합니다.",
+                snippet=ctx.trimmed,
+            )
+        ]
+
+
+class ConstructorOnePerLineRule( ConventionRule ):
+    """Style/ConstructorOnePerLine"""
+    category = "Style/ConstructorOnePerLine"
+    scope = "constructorInitializer"
+    badSampleFile = "Source/Probe/CtorOnePerLine.cpp"
+    badSample = '#include "pch.h"\n\nProbe::Probe()\n    : _count{ 0 }, _other{ 1 }\n{\n}\n'
+
+    def onInitializerLine(self, ctx: LineScanContext, initMatch: re.Match | None) -> list[ConventionViolation]:
+        trimmed = ctx.trimmed
+        if trimmed.startswith((":", ",")) is False or "," not in trimmed[1:] or _kInitListTrailingMemberRe.search(trimmed) is None:
+            return []
+        return [
+            ConventionViolation(
+                file_path=ctx.relPath,
+                line_number=ctx.lineNum,
+                rule_category=self.category,
+                message="생성자 멤버 초기화는 한 줄에 하나의 변수만 와야 하며, 다음 줄에 ','로 시작해야 합니다.",
+                snippet=trimmed,
+            )
+        ]
 
 
 class IteratorPairBracesRule( ConventionRule ):

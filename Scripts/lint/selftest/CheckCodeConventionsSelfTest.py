@@ -13,8 +13,8 @@
 적어 두고, 이 검사가 그것을 읽어 온다 — 규칙과 증거가 붙어 있으면 둘이 어긋날 수가 없다.
 `badSample` 이 비어 있으면 그 자체로 실패한다.
 
-아래 `_kPerFileCases` · `_kWholeScanCases` 는 **아직 클래스가 아닌** 검사들(매개변수·지역변수 규칙,
-생성자 상태 기계, 파일 짝이 필요한 교차 검사)을 위한 나머지다. 그쪽도 클래스가 되면 표는 비어야 한다.
+아래 `_kWholeScanCases` 는 파일 짝이 있어야 성립하는 교차 검사(헤더+소스, 같은 이름의 다른 파일)의 조각이다 — 파일 하나짜리
+조각으로는 적을 수 없어 규칙이 들지 못한다.
 """
 from __future__ import annotations
 
@@ -36,62 +36,9 @@ from common import useUtf8Stdout  # noqa: E402
 kLintBuildComment = "Checking that every CheckCodeConventions rule still catches a deliberately broken snippet..."
 kLintTimeoutSeconds = 60
 
-# ------------------------------------------------------------------------------
-# 1) 파일 하나로 잡히는 규칙 — (카테고리, 파일 이름, 내용)
-#
-# 내용은 **그 규칙만** 건드리도록 최소로 쓴다. 다른 규칙이 같이 걸려도 검사는 통과하지만,
-# 조각이 커질수록 "이 조각이 왜 이 규칙을 트리거하는가" 가 흐려진다.
-# ------------------------------------------------------------------------------
-_kPerFileCases: list[tuple[str, str, str]] = [
-    (
-        "Include/PCH",
-        "Source/Probe/NoPch.cpp",
-        '#include "Engine/EngineMinimal.h"\n\nvoid probe() {}\n',
-    ),
-    (
-        "Naming/LocalNoUnderscore",
-        "Source/Probe/LocalUnderscore.cpp",
-        '#include "pch.h"\n\nvoid probe()\n{\n    int32 _count = 0;\n    (void)_count;\n}\n',
-    ),
-    (
-        "Naming/LocalPointer",
-        "Source/Probe/LocalPointer.cpp",
-        '#include "pch.h"\n\nvoid probe()\n{\n    int32* value = nullptr;\n    (void)value;\n}\n',
-    ),
-    (
-        "Naming/LocalContainer",
-        "Source/Probe/LocalContainer.cpp",
-        '#include "pch.h"\n\nvoid probe()\n{\n    vector<int32> items;\n    (void)items;\n}\n',
-    ),
-    (
-        "Naming/ParameterNoUnderscore",
-        "Source/Probe/ParamUnderscore.cpp",
-        '#include "pch.h"\n\nvoid probe( int32 _count )\n{\n    (void)_count;\n}\n',
-    ),
-    (
-        "Naming/ParameterPointer",
-        "Source/Probe/ParamPointer.cpp",
-        '#include "pch.h"\n\nvoid probe( int32* value )\n{\n    (void)value;\n}\n',
-    ),
-    (
-        "Naming/ParameterContainer",
-        "Source/Probe/ParamContainer.cpp",
-        '#include "pch.h"\n\nvoid probe( const vector<int32>& items )\n{\n    (void)items;\n}\n',
-    ),
-    (
-        "Style/ConstructorBraces",
-        "Source/Probe/CtorBraces.cpp",
-        '#include "pch.h"\n\nProbe::Probe()\n    : _count( 0 )\n{\n}\n',
-    ),
-    (
-        "Style/ConstructorOnePerLine",
-        "Source/Probe/CtorOnePerLine.cpp",
-        '#include "pch.h"\n\nProbe::Probe()\n    : _count{ 0 }, _other{ 1 }\n{\n}\n',
-    ),
-]
 
 # ------------------------------------------------------------------------------
-# 2) 파일 하나로는 알 수 없는 규칙 — 트리를 통째로 스캔할 때만 돈다
+# 1) 파일 하나로는 알 수 없는 규칙 — 트리를 통째로 스캔할 때만 돈다(파일 짝이 있어야 성립해 규칙이 조각을 들 수 없다)
 # ------------------------------------------------------------------------------
 _kWholeScanCases: list[tuple[str, dict[str, str]]] = [
     (
@@ -139,7 +86,7 @@ _kWholeScanCases: list[tuple[str, dict[str, str]]] = [
 ]
 
 # ------------------------------------------------------------------------------
-# 3) 주체 × 어휘 교차표 — **드리프트를 막는 자리다**
+# 2) 주체 × 어휘 교차표 — **드리프트를 막는 자리다**
 #
 # 위의 카테고리 검사는 "이 카테고리가 한 번은 잡히는가"만 본다. 그래서 같은 규칙이 주체마다
 # 다르게 적혀 있어도 **하나만 살아 있으면 통과했다**. 실제로 그 상태로 오래 있었다:
@@ -361,7 +308,7 @@ def main(argv: list[str] | None = None) -> int:
                     ruleOwnedCases.append((None, extraFile, extraBody))
 
         # --- 파일 단위 규칙 ---
-        for category, relPath, content in ruleOwnedCases + _kPerFileCases:
+        for category, relPath, content in ruleOwnedCases:
             expected = (category,) if isinstance(category, str) else category
             caseName = Path(relPath).stem if expected is None else expected[0].replace("/", "_")
             caseRoot = tempRoot / caseName
