@@ -227,6 +227,26 @@ namespace sw
         // (`cmd /c exit 259` 로 재현된다). 핸들 자체가 신호 상태인지 묻는 것이 올바른 방법이다.
         return WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), 0 ) == WAIT_TIMEOUT;
     }
+
+    int32 Process::getCurrentProcessId()
+    {
+        return static_cast<int32>( GetCurrentProcessId() );
+    }
+
+    bool Process::isProcessAlive( int32 processId )
+    {
+        if ( processId <= 0 )
+            return false;
+
+        HANDLE hProcess = OpenProcess( PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, static_cast<DWORD>( processId ) );
+        if ( hProcess == nullptr )
+            return GetLastError() == ERROR_ACCESS_DENIED; // 있지만 열 수 없다
+
+        // 끝난 프로세스도 누가 핸들을 쥐고 있으면 열린다. 객체가 신호 상태인지로 가른다.
+        const bool bAlive = WaitForSingleObject( hProcess, 0 ) == WAIT_TIMEOUT;
+        CloseHandle( hProcess );
+        return bAlive;
+    }
 } // namespace sw
 
 #endif

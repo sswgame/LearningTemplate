@@ -7,6 +7,7 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Process/Process.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -52,18 +53,25 @@ namespace sw
             return dir + "/" + sw::FileUtil::formatSharedLibraryName( pBaseName );
         }
 
-        /** @brief 모듈 폴더에 남은 @p pModuleName 의 섀도 복사본 파일(DLL · 디버그 심볼) 수를 셉니다. */
+        /**
+         * @brief 모듈 폴더에 남은 @p pModuleName 의 섀도 복사본 파일(DLL · 디버그 심볼) 가운데 **이 프로세스가 만든 것**의 수를 셉니다.
+         * @details 그 폴더는 나란히 도는 다른 시험 프로세스(App 을 띄우는 AppTest 등)도 쓰므로 그쪽 복사본은 세지 않습니다.
+         */
         uint32 countShadowCopies( const utf8* pModuleName )
         {
             const sw::string       directory = sw::FileUtil::getDirectoryPart( modulePath( pModuleName ) );
             sw::vector<sw::string> listFile;
             if ( sw::FileUtil::collectFiles( directory, "", listFile, false ) == false )
                 return 0;
-            const sw::string prefix = sw::string{ pModuleName } + "_temp_";
+            const sw::string prefix           = sw::string{ pModuleName } + sw::ShadowCopyName::kMarker;
+            const int32      currentProcessId = sw::Process::getCurrentProcessId();
             uint32           count{ 0 };
             for ( const sw::string& filePath : listFile )
             {
-                if ( filePath.find( prefix ) != sw::string::npos )
+                int32      ownerProcessId{ 0 };
+                const bool bOwnCopy = filePath.find( prefix ) != sw::string::npos && sw::ShadowCopyName::parse( filePath, ownerProcessId ) &&
+                                      ownerProcessId == currentProcessId;
+                if ( bOwnCopy )
                     ++count;
             }
             return count;

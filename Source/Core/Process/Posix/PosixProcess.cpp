@@ -311,6 +311,23 @@ namespace sw
 
         return info.si_pid == 0; // 0 이면 아직 끝나지 않았다
     }
+
+    int32 Process::getCurrentProcessId()
+    {
+        return static_cast<int32>( ::getpid() );
+    }
+
+    bool Process::isProcessAlive( int32 processId )
+    {
+        // 0 이하를 kill 에 넘기면 프로세스 그룹을 가리킨다. 여기서 막는다.
+        if ( processId <= 0 )
+            return false;
+
+        // 신호 0 은 보내지 않고 대상이 있는지만 본다. EPERM 은 있지만 신호를 보낼 권한이 없다는 뜻이다.
+        if ( kill( static_cast<pid_t>( processId ), 0 ) == 0 )
+            return true;
+        return errno == EPERM;
+    }
 } // namespace sw
 
 #endif

@@ -7,6 +7,8 @@
 #include "Core/File/IFileWatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/Process.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -40,7 +42,7 @@ namespace sw
 
             static void tryDeleteFile( string_view path )
             {
-                // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 다음 시작 · 종료의 cleanStaleShadowArtifacts 가 지운다.
+                // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 다음 시작 · 종료의 ShadowCopyName::removeStaleCopies 가 지운다.
                 (void)FileUtil::removeFile( path );
             }
 
@@ -174,19 +176,6 @@ namespace sw
                 bool bKeepMapped{ false };
                 engine::releaseModuleCode( moduleName, pBegin, pEnd, &bKeepMapped );
                 return bKeepMapped;
-            }
-
-            static void cleanStaleShadowArtifacts( string_view directoryPath )
-            {
-                vector<string> listFile;
-                if ( FileUtil::collectFiles( directoryPath, "", listFile, false ) == false )
-                    return;
-
-                for ( const string& filePath : listFile )
-                {
-                    if ( filePath.find( "_temp_" ) != string::npos )
-                        (void)FileUtil::removeFile( filePath ); // 다른 프로세스가 아직 쥔 사본은 다음 정리 때 지운다
-                }
             }
         };
 
@@ -471,7 +460,7 @@ namespace sw
         , _bReloadingBatch{ SW_FALSE }
         , _reserved{ 0 }
     {
-        LiveReloadManagerInternal::cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
+        (void)ShadowCopyName::removeStaleCopies( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
 
         // 지연 로드 훅은 모듈 DLL 안에 있어 App 의 심볼을 볼 수 없다. 그래서 이 매니저를 Engine.dll 의 창구에 등록해 둔다.
         if ( engine::getModuleHandleProvider() == nullptr )
@@ -489,7 +478,7 @@ namespace sw
         _onBeforeCommitBatch = {};
         clearReloadCallbacks();
 
-        LiveReloadManagerInternal::cleanStaleShadowArtifacts( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
+        (void)ShadowCopyName::removeStaleCopies( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
         if ( engine::getModuleHandleProvider() == this )
             engine::setModuleHandleProvider( nullptr );
 
@@ -910,7 +899,7 @@ namespace sw
         out._sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
 
         ++LiveReloadManagerInternal::s_reloadCount;
-        const string tempName = ctx._moduleName + "_temp_" + to_string( LiveReloadManagerInternal::s_reloadCount ) + "_" + to_string( out._sourceMtime );
+        const string tempName = ShadowCopyName::make( ctx._moduleName, Process::getCurrentProcessId(), LiveReloadManagerInternal::s_reloadCount, out._sourceMtime );
         const string execDir  = FileUtil::getDirectoryPart( ctx._originalModulePath );
 
         BLOCK( "Create Shadow Copy" )
@@ -1636,6 +1625,72 @@ namespace sw
             remaining /= 36;
         }
         return name;
+    }
+
+    // ------------------------------------------------------------------------------
+    // ShadowCopyName
+    // ------------------------------------------------------------------------------
+    string ShadowCopyName::make( string_view moduleName, int32 processId, uint32 serial, uint64 sourceMtime )
+    {
+        StringBuilder<constant::kMaxPathSize> nameBuilder;
+        nameBuilder.append( moduleName ).append( kMarker ).append( kProcessPrefix ).append( processId ).append( '_' ).append( serial ).append( '_' ).append( sourceMtime );
+        return string{ nameBuilder.c_str() };
+    }
+
+    bool ShadowCopyName::parse( string_view filePath, int32& outProcessId )
+    {
+        outProcessId = 0;
+        string_view fileName;
+        FileUtil::getFileNamePart( filePath, fileName );
+        const string_view marker{ kMarker };
+        const size_t      markerPos = fileName.rfind( marker );
+        if ( markerPos == string_view::npos )
+            return false;
+
+        const string_view rest = fileName.substr( markerPos + marker.size() );
+        if ( rest.empty() )
+            return false;
+        // 프로세스 ID 를 넣기 전 형식은 표식 바로 뒤가 번호다.
+        if ( rest[0] != kProcessPrefix )
+            return '0' <= rest[0] && rest[0] <= '9';
+
+        const size_t idEnd = rest.find( '_' );
+        if ( idEnd == string_view::npos || idEnd < 2 )
+            return false;
+        const string_view idToken = rest.substr( 1, idEnd - 1 );
+        for ( const utf8 character : idToken )
+        {
+            if ( character < '0' || '9' < character )
+                return false;
+        }
+        int32 processId{ 0 };
+        if ( StringUtil::parseInt( idToken, processId ) == false || processId <= 0 )
+            return false;
+        outProcessId = processId;
+        return true;
+    }
+
+    uint32 ShadowCopyName::removeStaleCopies( string_view directoryPath )
+    {
+        vector<string> listFile;
+        if ( FileUtil::collectFiles( directoryPath, "", listFile, false ) == false )
+            return 0;
+
+        const int32 currentProcessId = Process::getCurrentProcessId();
+        uint32      removedCount{ 0 };
+        for ( const string& filePath : listFile )
+        {
+            int32 ownerProcessId{ 0 };
+            if ( parse( filePath, ownerProcessId ) == false )
+                continue;
+            // 다른 프로세스가 막 써 두고 아직 올리지 않은 복사본일 수 있다. 그 프로세스가 끝난 뒤의 정리가 지운다.
+            const bool bOwnedByOtherLiveProcess = ownerProcessId != 0 && ownerProcessId != currentProcessId && Process::isProcessAlive( ownerProcessId );
+            if ( bOwnedByOtherLiveProcess )
+                continue;
+            if ( FileUtil::removeFile( filePath ) )
+                ++removedCount;
+        }
+        return removedCount;
     }
 
     // ------------------------------------------------------------------------------
