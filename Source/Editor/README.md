@@ -15,11 +15,13 @@
   (애셋 종류 판별은 여기가 아니라 `Workspace/EditorAssetType` 의 `EditorAssetTypeRegistry` 가 정본입니다)
 - **EditorColor.h**: ImGui 없는 색 값 타입(`Color4`)과 공통 색 상수(`style`) — 상태(`Workspace/EditorAssetType`)와 위젯이 함께 쓰므로
   어느 한쪽 폴더가 아니라 `Common/` 바로 아래에 둡니다
-- **Backend/**: ImGui 백엔드 인터페이스 (`IImGuiPlatformBackend`, `IImGuiRendererBackend`)
+- **Backend/**: ImGui 백엔드 인터페이스 (`IImGuiPlatformBackend`, `IImGuiRendererBackend`), 렌더 스레드가 그릴 draw 데이터 사본
+  (`EditorDrawDataSnapshot`), UI 스레드가 놓은 GPU 자원의 해제 순서(`EditorDrawReleaseQueue` — 아래 절)
   - `Backend/Platform/`: Win32 / OSX / X11
-  - `Backend/Render/`: DX11 / DX12 / Vulkan / OpenGL
+  - `Backend/Render/`: DX11 / DX12 / Vulkan / OpenGL. 네이티브 객체는 `IRHIDevice` 가 판 번호를 대조해 내주는 `RHINativeHandles`
+    로만 받습니다 — 백엔드 디바이스 클래스로 캐스팅하지 않습니다.
 - **Gui/**: ImGui 를 **직접 그리는** 공용 셸 — `EditorChrome`, `EditorMenuBar`, `EditorDockLayout`,
-  `EditorDocumentPanel`, `EditorThemeUtil`, `EditorNotificationManager`(토스트),
+  `EditorDocumentPanel`, `EditorThemeUtil`, `EditorFontSetup`, `EditorNotificationManager`(토스트), `EditorPanelDump`(아래 "그려진 결과"),
   `EditorActionMenuManager`(우클릭 메뉴), `EditorCommandGui`(커맨드 표 · 전역 단축키 · 메뉴 항목),
   인터페이스 `IEditorPanel` / `IEditorPopup`
 - **Widgets/**: 검색, 헤더, 툴바 구분선, 노드 그래프 캔버스(`EditorNodeGraph`), 뷰포트 입력 오버레이
@@ -29,7 +31,8 @@
 - **Commands/**: 패널이 쓰는 **ImGui 없는 로직** — 애셋/씬/트랜스폼/데이터테이블 변이와 파일 IO,
   그리고 커맨드 정의를 담는 `EditorCommandRegistry`.
   패널은 UI 만, 실제 동작은 여기입니다 (그래서 테스트가 붙습니다)
-- **Asset/**: 텍스처 임포트·베이크 (`TextureBaker`, `TextureImportConfig`, `ImageUtil`). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
+- **Asset/**: 텍스처 임포트·베이크 (`TextureBaker`, `TextureImportConfig`, `ImageUtil`) + 헤드리스 굽기 진입점(`TextureBakeEntry.cpp` — 아래
+  "텍스처는 들일 때 굽는다"). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
 - **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorData`)
 
 ### 기능
@@ -106,12 +109,9 @@
 (`commandmenu::kArrHostedMenuPath`)여야 하고, 아니면 `validate` 가 "그려지지 않는 메뉴 경로" 로 시작할 때 Error 를 남깁니다
 (그 목록의 경로에 표의 줄이 없어도 Error). 에디터 스모크의 `[Error]` 0 건이 그것을 잡습니다.
 
-예전에는 같은 커맨드가 메뉴·단축키 사다리·팔레트 목록 **세 곳**에 따로 적혀 있었고, 그래서
-실제로 어긋났습니다: `F7`(게임 컴파일)은 어느 라벨에도 없었고, `Ctrl+Shift+Z`(다시 실행)는
-Inspector 가 포커스일 때만 먹었고, `Ctrl+Z` 는 전역 처리기와 Inspector 가 같은 프레임에 모두
-받아 **두 번 되돌렸습니다**(ImGui 의 `IsKeyPressed` 는 소비되지 않습니다). 정의를 모은 뒤에는
-`EditorCommandRegistry::validate` 가 중복 id·중복 조합을 시작할 때 잡습니다
-(`Test/EditorTest/TestEditorCommandRegistry.cpp`).
+`EditorCommandRegistry::validate` 는 중복 id·중복 조합도 시작할 때 잡습니다(`Test/EditorTest/TestEditorCommandRegistry.cpp`).
+**패널에서 단축키를 따로 처리하지 마십시오** — ImGui 의 `IsKeyPressed` 는 소비되지 않으므로, 전역 처리기와 패널이 같은 조합을 보면
+같은 프레임에 두 번 실행됩니다(예: `Ctrl+Z` 가 두 번 되돌림).
 
 **단축키 라벨을 손으로 적지 마십시오.** 툴팁의 `(Ctrl+S)` 도 표의 조합에서 만들어 붙습니다 —
 그래야 조합을 바꿀 때 라벨이 거짓말을 하지 않습니다.
@@ -122,17 +122,13 @@ Inspector 가 포커스일 때만 먹었고, `Ctrl+Z` 는 전역 처리기와 In
 하나 더하면 끝입니다 — 저장 이름 · 콤보 라벨 · 팔레트가 그 한 줄에 있고, 대화상자의 콤보와
 `EditorConfig` 저장·복원이 모두 표에서 나옵니다. 표와 열거형의 개수는 `static_assert` 가 맞춥니다.
 
-예전에는 네 곳을 맞춰 고쳐야 했고(팔레트 switch · 문자열→열거형 사다리 · 열거형→문자열 switch ·
-이름 배열), 이름 배열은 **열거형 순서에 인덱스로 묶여** 있어서 순서를 바꾸면 콤보가 조용히 틀린
-이름을 보여 줬습니다.
-
 ## 뷰포트에서 컴포넌트를 집거나 그리려면
 
 **피킹**은 `Common/Commands/EditorViewportPick` 이 합니다(ImGui 없음 → 테스트 있음).
 고유한 경계가 있는 종류는 그 안의 제공자 표에 한 줄을 넣고, 그렇지 않은 컴포넌트는
 **아무것도 하지 않아도** 집힙니다 — 전용 제공자가 못 잡은 오브젝트는 그 오브젝트의 모든
 `SceneComponent` 를 기본 반지름(`kFallbackRadius`)으로 훑기 때문입니다. 그래서 게임이 만든
-컴포넌트도 클릭으로 선택됩니다(예전에는 주 컴포넌트 하나만 봐서 안 됐습니다).
+컴포넌트도 클릭으로 선택됩니다.
 
 **디버그 시각화**는 `Viewport/Visualizers/` 에 파일 하나와 `SW_EDITOR_VISUALIZER` 한 줄이면 됩니다(위 절) —
 라벨·툴팁·기본값·그리기 함수가 한 줄에 있고, **툴바 체크박스도 그 등록부에서 만들어집니다.**
@@ -155,11 +151,8 @@ Inspector 가 포커스일 때만 먹었고, `Ctrl+Z` 는 전역 처리기와 In
 (`EditorAssetCommands::saveFocusedOrScene` → 포커스된 더티 문서), 종료·씬 전환 확인 모달의
 개수 집계(`EditorPanelManager::countDirtyDocuments`), 전체 저장·버리기.
 
-**자기 dirty 플래그를 새로 만들지 마십시오.** 예전에는 이 계약이 네 개의 가상 함수였고, 세 패널
-(`EditorDocumentPanel`·`DataTablePanel`·`GlobalVariablesPanel`)이 똑같은 구현을 각자 복사했으며,
-`InputMapEditorPanel` 은 `_bDirty` 만 두고 계약을 아예 구현하지 않았습니다 — 그래서 화면에는
-"* Unsaved changes" 를 띄우면서 `Ctrl+S` 는 InputMap 이 아니라 **씬을** 저장했고, 종료 확인은
-그 편집을 세지 않아 조용히 사라졌습니다.
+**자기 dirty 플래그를 새로 만들지 마십시오.** 계약 밖의 플래그는 `Ctrl+S` 가 포커스된 문서 대신 씬을 저장하게 하고,
+종료 확인이 그 편집을 세지 않아 편집이 조용히 사라집니다.
 
 문서 하나가 애셋 경로와 연동되는 도구 패널은 `Common/Gui/EditorDocumentPanel` 을 상속하십시오
 (포커스 추적 · Undo 기준선 · 문서 전환 확인 팝업까지 얹어 줍니다). 한 패널이 문서를 둘 이상
@@ -183,6 +176,34 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 
 구현과 스위치 선언은 `Common/Gui/EditorPanelDump.*` 에 있습니다 — 모듈의 전역 변수도 모듈을 올릴 때 커맨드라인 값을 받습니다.
 기준선과 비교 방법은 [docs/06_Backlog.md](../../docs/06_Backlog.md) 0절에 있습니다.
+
+## 텍스처는 들일 때 굽는다
+
+런타임은 DDS 만 읽습니다. 원본 이미지(PNG · JPG …)는 `textures_raw/` 에 두고, 같은 상대 경로의 `textures/*.dds` 로 굽습니다
+(`TextureBaker::makeBakedTexturePath`, 폴더 규칙은 `Scripts/lint/gate/CheckTextureFolders.py`).
+
+- **에디터가 떠 있을 때**: 핫 리로드가 원본 변경을 받으면 `TextureBaker::importChangedSourceImage` 가 굽고, 구운 DDS 의 쓰기가
+  다음 감시 이벤트로 와서 텍스처 캐시가 다시 읽습니다. 임포트 설정(`TextureImportConfig.json`)은 매번 읽습니다.
+- **헤드리스**: `App --bake-textures`(어긋난 것을 굽고 스탬프 갱신) · `--check-textures`(쓰지 않고 대조만). App 이 에디터 모듈을 인스턴스
+  없이 올려 `bakeEditorTextures`(`TextureBakeEntry.cpp`)를 부릅니다. Dev 빌드에서만 됩니다.
+- **스탬프**: `textures_raw/` 폴더마다 `bake.stamp` 에 `<원본 해시> <DDS 해시> <상대 경로>` 한 줄씩. 원본 해시는 원본 바이트 + 적용한 규칙 +
+  베이커 버전(`computeSourceHash`)이라 규칙만 바꿔도 어긋남이고, DDS 해시로 손댄 DDS 도 잡힙니다. 판정은 파일 시간이 아니라 **내용**입니다
+  (git 이 시간 순서를 뒤집습니다). 원본이 사라진 줄도 어긋남입니다 — `BakeStale` 은 줄만 지우고 남은 DDS 는 사람이 정리합니다.
+- 주의: `.hdr` 는 굽지 않고 보고합니다 — 디코더(stb_image)가 8비트라 값이 잘립니다.
+- 시험: `TextureBakeStampTest.RepositoryRawTexturesMatchTheirDds`(저장소의 원본과 DDS 가 맞는지), `AppSmokeTest.TextureCheckRunsHeadlessThroughTheEditorModule`.
+
+## UI 스레드가 놓은 GPU 자원
+
+ImGui 텍스처 · 게임 뷰 렌더 타깃은 UI 스레드가 놓지만 그리는 것은 렌더 스레드이고, 렌더 스레드는 UI 가 다음 스냅샷을 내기 전까지 **같은 draw
+스냅샷을 여러 프레임에 다시 그립니다.** 그래서 놓은 자원은 바로 지우지 않고 `IImGuiRendererBackend::getDrawReleaseQueue()` 의
+`EditorDrawReleaseQueue::enqueue` 에 맡깁니다. 큐는 해제마다 "다음에 낼 스냅샷 번호" 를 찍어 두고, 렌더 스레드가 그 번호 이상의 스냅샷을
+기록하는 프레임에서 `IRHIDevice::enqueueGpuRelease` 로 넘깁니다 — 그 프레임의 GPU 완료 뒤에 실제로 풀립니다.
+주의: UI 스레드에서 읽은 펜스 값으로 해제하면 뒤에 줄 선 프레임이 놓인 자원을 씁니다.
+
+## ImGui 할당자
+
+`ImGuiEditor::initialize` 는 컨텍스트를 만들기 **전에** `ImGui::SetAllocatorFunctions` 로 ImGui 할당을 sw 할당자(`Memory::allocate` · `free`)에
+보냅니다 — ImGui 메모리가 메모리 태그(호스트가 에디터 진입점에 건 `Editor`) · 누수 검사에 잡히고, 이 모듈 안에서 잡고 풉니다. 컨텍스트도 `shutdown` 이 이 모듈 안에서 지웁니다.
 
 ## 에디터 안에서 시험하는 법
 
