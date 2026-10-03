@@ -17,8 +17,9 @@
 동사의 뜻은 "false = 그 일이 일어나지 않았다" 다. 할 일이 없어 true 인 것(`FileUtil::removeFile` 은 이미 없으면 true)도, 없어서 false 인
 컨테이너 도우미(`VectorUtil::removeSingleSwap`)도 그 뜻 안에 있다 — 버려도 되는 자리는 `(void)` 와 이유로 그렇다고 적는다.
 
-헤더뿐 아니라 `.cpp` · `.inl` 도 본다 — 번역 단위 지역 함수(익명 네임스페이스 · `XxxInternal` 의 static)도 결과를 버리면 같은 결함이다.
-`Foo::loadX(` 같은 멤버 정의는 이름에 `::` 가 있어 잡히지 않는다(속성은 헤더 선언이 든다). 반환 타입만 한 줄에 두고 이름을 다음 줄에 쓴
+헤더뿐 아니라 `.cpp` · `.inl` 도 본다 — 번역 단위 지역 함수(익명 네임스페이스 안 · `static`)도 결과를 버리면 같은 결함이다.
+`.cpp` 에서 이름 있는 네임스페이스에 둔 정의(`namespace sw::internal { bool tryX() … }`)와 `Foo::loadX(` 같은 멤버 정의는 헤더에 선언된
+것을 정의하는 자리라 보지 않는다 — 속성은 헤더 선언이 든다. 반환 타입만 한 줄에 두고 이름을 다음 줄에 쓴
 선언도 본다. `[[nodiscard]]` 는 같은 줄이나, 주석 · `template <…>` 줄을 건너뛴 바로 위 줄에 있으면 된다.
 
 `friend` 선언(정의가 아니면 속성을 달 수 없다)과 C-ABI 계약(`Source/RuntimeAPI`)은 보지 않는다.
@@ -69,7 +70,6 @@ _kSetDeferredDeclaration: set[tuple[str, str]] = {
     ("Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h", "recreateSwapChain"),
     ("Source/Engine/Graphics/RHI/RHIBackendRegistry.cpp", "tryLoadBackendModule"),
     ("Source/Engine/Graphics/Renderer/Frame/FrameRendererPso.cpp", "applyViewModeToDesc"),
-    ("Source/Engine/Graphics/Renderer/Pipeline/RenderPassInputContract.cpp", "tryParseRenderPassInputRole"),
 }
 
 
@@ -81,6 +81,35 @@ def hasNodiscardAboveInternal(listLine: list[str], lineIndex: int) -> bool:
             return True
         aboveIndex -= 1
     return aboveIndex >= 0 and listLine[aboveIndex].strip().endswith("[[nodiscard]]")
+
+
+_kAnonymousNamespaceLines = ("namespace", "namespace {", "namespace{")
+_kStringLiteralRe = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
+_kLineCommentRe = re.compile(r"//.*$|/\*.*?\*/")
+
+
+def findTranslationUnitLocalLinesInternal(listLine: list[str]) -> set[int]:
+    """`.cpp` 에서 익명 네임스페이스 안에 있는 줄 번호(0 부터)를 모읍니다 — 중괄호 깊이로 블록의 끝까지."""
+    setLocalLine: set[int] = set()
+    depth = 0
+    listAnonymousDepth: list[int] = []
+    bPendingAnonymous = False
+    for lineIndex, line in enumerate(listLine):
+        if listAnonymousDepth:
+            setLocalLine.add(lineIndex)
+        if line.strip() in _kAnonymousNamespaceLines:
+            bPendingAnonymous = True
+        for ch in _kLineCommentRe.sub("", _kStringLiteralRe.sub("", line)):
+            if ch == "{":
+                depth += 1
+                if bPendingAnonymous:
+                    listAnonymousDepth.append(depth)
+                    bPendingAnonymous = False
+            elif ch == "}":
+                if listAnonymousDepth and listAnonymousDepth[-1] == depth:
+                    listAnonymousDepth.pop()
+                depth -= 1
+    return setLocalLine
 
 
 def findFallibleNameInternal(listLine: list[str], lineIndex: int) -> str | None:
@@ -110,10 +139,15 @@ def findFallibleDeclarationsWithoutNodiscard(repositoryRoot: Path, listTargetFil
         except OSError:
             continue
         setScannedFile.add(relative)
+        # 헤더가 아니면 번역 단위 지역 함수(익명 네임스페이스 안 · static)만 본다 — 나머지는 헤더 선언의 정의다.
+        bHeader = path.suffix.lower() == ".h"
+        setLocalLine = set() if bHeader else findTranslationUnitLocalLinesInternal(listLine)
 
         for lineIndex, line in enumerate(listLine):
             name = findFallibleNameInternal(listLine, lineIndex)
             if name is None or "[[nodiscard]]" in line or hasNodiscardAboveInternal(listLine, lineIndex):
+                continue
+            if bHeader is False and lineIndex not in setLocalLine and re.match(r"^\s*static\b", line) is None:
                 continue
             if (relative, name) in _kSetDeferredDeclaration:
                 setDeferredSeen.add((relative, name))
@@ -192,6 +226,15 @@ class CheckFallibleNodiscardGate(LintGate):
                 "Source/Probe/ProbeLocal.cpp": (
                     "namespace\n{\n    struct ProbeLocalInternal\n    {\n"
                     "        static bool readHeader( const uint8* pData, size_t size );\n    };\n} // namespace\n"
+                ),
+            },
+        },
+        {
+            "name": ".cpp 의 익명 네임스페이스 안 자유 함수(static 없이)",
+            "files": {
+                "Source/Probe/ProbeAnonymous.cpp": (
+                    "namespace sw\n{\n    namespace\n    {\n        bool parseToken( string_view token )\n        {\n"
+                    "            return token.empty() == false;\n        }\n    } // namespace\n} // namespace sw\n"
                 ),
             },
         },

@@ -525,8 +525,8 @@ namespace sw
         return ( pEnumInfo != nullptr ) ? pEnumInfo->_fullyQualifiedName : hashed_string{};
     }
 
-    [[nodiscard]] bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
-                                               const SerializeContext& ctx, hashed_string wireTypeName, BinaryWireVersion wireVersion )
+    bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
+                                 const SerializeContext& ctx, hashed_string wireTypeName, BinaryWireVersion wireVersion )
     {
         if ( pPropPtr == nullptr || pPayload == nullptr )
             return false;
@@ -597,8 +597,8 @@ namespace sw
         return false;
     }
 
-    [[nodiscard]] bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
-                                              const SerializeContext& ctx )
+    bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
+                                const SerializeContext& ctx )
     {
         if ( pValPtr == nullptr )
             return false;
