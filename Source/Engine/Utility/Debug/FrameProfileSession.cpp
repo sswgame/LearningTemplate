@@ -17,6 +17,9 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
+// 보고는 Info 로그로만 나간다. 그것이 사라지는 구성(Shipping)에는 도우미도 두지 않는다.
+
+#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
 namespace sw
 {
     namespace
@@ -31,9 +34,8 @@ namespace sw
              * @details 플랫폼 힙을 잴 수 있으면(Windows Debug CRT) 태그가 볼 수 없는 몫(`std::allocator` · 외부 라이브러리 · 직접 `new`)도 한 줄로 낸다 —
              *          CRT 힙에서 태그 합과 sw 블록 헤더를 뺀 값이다.
              */
-            static void reportMemoryTags( [[maybe_unused]] const MemoryProfiler& memory )
+            static void reportMemoryTags( const MemoryProfiler& memory )
             {
-#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
                 const uint64 liveBytes = memory.getLiveAllocatedBytes();
                 const uint64 liveCount = memory.getLiveAllocationCount();
                 const uint64 totalX10  = toKilobytesX10( liveBytes );
@@ -57,11 +59,11 @@ namespace sw
                     const uint64 outsideX10 = toKilobytesX10( platformBytes - swBlockBytes );
                     SW_LOG_INFO( "[Profile]   (sw 할당자 밖 — std::allocator · 외부 라이브러리 · 직접 new)  %#.%# KB", outsideX10 / 10, outsideX10 % 10 );
                 }
-#endif
             }
         };
     } // namespace
 } // namespace sw
+#endif
 
 namespace sw
 {
