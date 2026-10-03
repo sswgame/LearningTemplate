@@ -125,6 +125,12 @@ namespace sw
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
         void updateShellActions( float32 deltaTime );
+        /**
+         * @brief 셸 디버그 액션 맵을 InputMap 리소스(`EngineData::_shellInputMap`)에서 만듭니다.
+         * @details 경로가 비었거나 읽지 못하면 오류를 남기고 **빈 맵**을 돌려줍니다. 손으로 적은 바인딩으로 바꿔 끼우지 않습니다 —
+         *          그 내용은 리소스와 따로 낡고, 실패를 가립니다.
+         */
+        static unique_ptr<ActionMap> createShellActionMap( string_view inputMapPath );
 
         /**
          * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채운 경우).

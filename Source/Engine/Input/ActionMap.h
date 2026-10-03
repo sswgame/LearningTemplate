@@ -142,12 +142,9 @@ namespace sw
     {
         inline constexpr utf8    kDefaultLayerName[]     = "Gameplay";
         inline constexpr utf8    kTitleLayerName[]       = "Title";
-        inline constexpr utf8    kDebugLayerName[]       = "Debug";
         inline constexpr utf8    kReloadShadersAction[]  = "ReloadShaders";
         inline constexpr utf8    kReloadEditorAction[]   = "ReloadEditor";
         inline constexpr utf8    kReloadGameAction[]     = "ReloadGame";
-        inline constexpr utf8    kQuickSaveAction[]      = "QuickSave";
-        inline constexpr utf8    kQuickLoadAction[]      = "QuickLoad";
         inline constexpr float32 kDoubleClickTime        = 0.35f;
         inline constexpr float32 kDoubleClickMaxDistance = 6.0f;
         inline constexpr float32 kDoubleTapTime          = 0.22f;
@@ -266,8 +263,6 @@ namespace sw
         void clear();
         /** @brief 리소스 상대 경로에서 InputMap XML 을 로드합니다. */
         [[nodiscard]] bool loadFromResource( string_view relativePath );
-        /** @brief 엔진 기본 폴백 바인딩을 등록합니다(Ctrl+F6/F7/F8, WASD, Space 등). */
-        void bindDefaultFallback();
         /** @brief 한 프레임의 입력 상태를 평가하고 델리게이트를 디스패치합니다. */
         void update( float32 deltaSeconds );
 

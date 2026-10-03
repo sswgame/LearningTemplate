@@ -176,36 +176,6 @@ namespace sw
         _totalElapsedTime       = 0.0f;
     }
 
-    void ActionMap::bindDefaultFallback()
-    {
-        clear();
-        registerLayer( ActionMapDefaults::kDebugLayerName, 1000, true, false, true );
-        registerLayer( "UI", 100, true, false, false );
-        registerLayer( ActionMapDefaults::kDefaultLayerName, 0, true, false, false );
-
-        // 디버그 핫키 격리: Ctrl + F6, Ctrl + F7, Ctrl + F8 (게임플레이의 F1~F12 스킬과 겹치지 않게 한다)
-#if !defined( SW_SHIPPING )
-        bindChord( ActionMapDefaults::kReloadEditorAction, Key::LeftControl, Key::F6, ActionTrigger::Pressed, ActionMapDefaults::kDebugLayerName );
-        bindChord( ActionMapDefaults::kReloadGameAction, Key::LeftControl, Key::F7, ActionTrigger::Pressed, ActionMapDefaults::kDebugLayerName );
-        bindChord( ActionMapDefaults::kReloadShadersAction, Key::LeftControl, Key::F8, ActionTrigger::Pressed, ActionMapDefaults::kDebugLayerName );
-#endif
-
-        bind( ActionMapDefaults::kQuickSaveAction, Key::F5, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
-        bind( ActionMapDefaults::kQuickLoadAction, Key::F9, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
-
-        bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D, 0.0f, ActionMapDefaults::kDefaultLayerName );
-        bindGamepadStick2D( "Move", GamepadStick::Left, 0.15f, ActionMapDefaults::kDefaultLayerName );
-
-        bind( "Jump", Key::Space, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
-        bind( "Jump", GamepadButton::A, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
-
-        bind( "Interact", Key::E, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
-        bind( "Interact", GamepadButton::X, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
-
-        bind( "Pause", Key::Escape, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
-        bind( "Pause", GamepadButton::Start, ActionTrigger::Pressed, ActionMapDefaults::kDefaultLayerName );
-    }
-
     void ActionMap::createAction( const hashed_string& action, InputActionValueType valueType )
     {
         if ( action.empty() )

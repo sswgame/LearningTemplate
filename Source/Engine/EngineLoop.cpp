@@ -889,11 +889,7 @@ namespace sw
 
         if ( _bShellActionsBound == false )
         {
-            SW_MEMORY_SCOPE( EngineMisc );
-            _mapDebugAction            = make_unique<ActionMap>();
-            const string& inputMapPath = engine::getEngineData()._shellInputMap;
-            if ( inputMapPath.empty() || _mapDebugAction->loadFromResource( inputMapPath ) == false )
-                _mapDebugAction->bindDefaultFallback();
+            _mapDebugAction     = createShellActionMap( engine::getEngineData()._shellInputMap );
             _bShellActionsBound = true;
         }
 
@@ -903,6 +899,18 @@ namespace sw
             _mapDebugAction->setLayerEnabled( ActionMapDefaults::kTitleLayerName, false );
         _mapDebugAction->setInputManager( _owned._pInputManager.get() );
         _mapDebugAction->update( deltaTime );
+    }
+
+    unique_ptr<ActionMap> EngineLoop::createShellActionMap( string_view inputMapPath )
+    {
+        SW_MEMORY_SCOPE( EngineMisc );
+        unique_ptr<ActionMap> map = make_unique<ActionMap>();
+        if ( inputMapPath.empty() || map->loadFromResource( inputMapPath ) == false )
+        {
+            map->clear();
+            SW_LOG_ERROR( "Shell input map '%#' could not be loaded - shell debug actions stay unbound", inputMapPath );
+        }
+        return map;
     }
 
     void EngineLoop::pollShaderReloadHotkey()

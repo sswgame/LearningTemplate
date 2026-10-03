@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/EngineLoop.h"
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/InputManager.h"
@@ -934,4 +935,39 @@ SW_TEST_CASE( ActionMapTest, IntegratedMapIsUpdatedByTheInputFrame )
     SW_EXPECT_TRUE( actionMap.isActionDown( "Jump" ) );
     input.endFrame();
     input.shutdown();
+}
+
+/**
+ * @brief [ActionMapTest] 셸 디버그 액션 맵은 엔진 InputMap(default.input.xml)의 것이다 — 리로드 조합 키 셋과 타이틀 액션이 있고, 다른 것은 없다
+ */
+SW_TEST_CASE( ActionMapTest, ShellActionMapComesFromTheEngineInputMap )
+{
+    const sw::unique_ptr<sw::ActionMap> pMap = sw::EngineLoop::createShellActionMap( "engine/input/default.input.xml" );
+    SW_ASSERT_NOT_NULL( pMap.get() );
+    SW_EXPECT_TRUE( pMap->hasAction( "ReloadEditor" ) );
+    SW_EXPECT_TRUE( pMap->hasAction( "ReloadGame" ) );
+    SW_EXPECT_TRUE( pMap->hasAction( "ReloadShaders" ) );
+    SW_EXPECT_TRUE( pMap->hasAction( "Confirm" ) );
+    SW_EXPECT_FALSE( pMap->hasAction( "Jump" ) );
+}
+
+/**
+ * @brief [ActionMapTest] 셸 InputMap 을 읽지 못하면 맵은 비어 있다 — 손으로 적은 바인딩(WASD · Space · F5/F9 …)으로 바꿔 끼우지 않는다
+ * @details 실패는 오류 로그로 알린다. 바꿔 끼운 바인딩은 리소스와 내용이 달라(Title 레이어 없음) 실패를 가리고 다른 입력을 만든다.
+ */
+SW_TEST_CASE( ActionMapTest, MissingShellInputMapLeavesNoBindings )
+{
+    sw::unique_ptr<sw::ActionMap> pMissing;
+    sw::unique_ptr<sw::ActionMap> pEmptyPath;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "shell input map that does not exist" );
+        pMissing   = sw::EngineLoop::createShellActionMap( "engine/input/does_not_exist.input.xml" );
+        pEmptyPath = sw::EngineLoop::createShellActionMap( "" );
+    }
+    SW_ASSERT_NOT_NULL( pMissing.get() );
+    SW_ASSERT_NOT_NULL( pEmptyPath.get() );
+    SW_EXPECT_TRUE( pMissing->getActionNames().empty() );
+    SW_EXPECT_TRUE( pEmptyPath->getActionNames().empty() );
+    SW_EXPECT_FALSE( pMissing->hasAction( "Jump" ) );
+    SW_EXPECT_FALSE( pMissing->hasAction( "ReloadShaders" ) );
 }
