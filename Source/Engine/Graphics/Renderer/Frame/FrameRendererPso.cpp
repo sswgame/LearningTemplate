@@ -68,30 +68,6 @@ namespace sw
         }
     } // namespace
 
-    RHIPipelineStateHandle FrameRenderer::createEnginePso( string_view shaderPath, bool bDepthTest, uint32 numRenderTargets,
-                                                           const RHIFormat* pRtvFormats, bool bBlend, bool bDepthWrite )
-    {
-        if ( _pDevice == nullptr )
-            return 0;
-        RHIPipelineStateDesc desc{};
-        desc._vertexShaderPath  = shaderPath;
-        desc._pixelShaderPath   = shaderPath;
-        desc._bEnableDepthTest  = bDepthTest ? 1 : 0;
-        desc._bEnableDepthWrite = bDepthWrite ? 1 : 0;
-        desc._bEnableBlend      = bBlend ? 1 : 0;
-        desc._cullMode          = bDepthTest ? RHICullMode::Back : RHICullMode::None;
-        desc._numRenderTargets  = numRenderTargets > 0 ? numRenderTargets : 1;
-        if ( desc._numRenderTargets > kMaxColorAttachments )
-            desc._numRenderTargets = kMaxColorAttachments;
-        for ( uint32 rtIndex = 0; rtIndex < desc._numRenderTargets; ++rtIndex )
-        {
-            desc._arrRtvFormat[rtIndex] = ( pRtvFormats != nullptr ) ? pRtvFormats[rtIndex] : RHIFormat::R8G8B8A8_UNORM;
-        }
-        const RHIPipelineStateHandle handle = _pDevice->getResource()->createPipelineState( desc );
-        registerPsoLayout( handle, desc );
-        return handle;
-    }
-
     RHIPipelineStateHandle FrameRenderer::createPsoForPassType( RenderPassType passType, const RHIFormat* pRtvFormatOverride )
     {
         if ( _pDevice == nullptr )

@@ -61,8 +61,6 @@ namespace sw
             else
             {
                 pso = createPsoForPassType( passType );
-                if ( pso == 0 && traits._pFallbackShader != nullptr )
-                    pso = createEnginePso( ( engineData.*traits._pFallbackShader ).c_str(), traits.hasFlag( RenderPassTraitFlag::kDepthTest ) );
             }
             if ( pso != 0 )
                 _psoCache.setEnginePso( passType, pso );

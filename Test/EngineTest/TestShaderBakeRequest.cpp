@@ -125,6 +125,38 @@ SW_TEST_CASE( ShaderBakeRequestTest, RequestsAreUnique )
 }
 
 /**
+ * @brief [ShaderBakeRequestTest] 요청이 가리키는 셰이더는 도메인을 뗀 경로(`shaders/…`)가 서로 다르다
+ * @details 같은 셰이더를 두 도메인(`common/` · `engine/`)에 사본으로 두면 한쪽만 고쳐도 다른 쪽을 부르는 패스는 옛 코드로 그리고,
+ *          팩 상대 키(`shaders/x.hlsl`)는 검색 순서(game → common → engine)에서 앞 도메인의 사본을 집는다. 공유할 코드는 `.hlsli` 하나로
+ *          두고 전역 경로 하나에서 부른다.
+ */
+SW_TEST_CASE( ShaderBakeRequestTest, RequestedShaderPathsAreUniqueAcrossDomains )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    sw::vector<sw::ShaderBakeRequest> listRequest;
+    sw::ShaderBakeDriver::collectAllRequests( sw::ResourceUtil::getRootFolderPath(), listRequest );
+    SW_ASSERT_TRUE( listRequest.empty() == false );
+
+    // 도메인을 뗀 경로 → 처음 본 전역 경로
+    sw::unordered_map<sw::string, sw::string> mapDomainlessToPath;
+    sw::unordered_set<sw::string>             uniqueCopyPath;
+    for ( const sw::ShaderBakeRequest& request : listRequest )
+    {
+        const sw::string normPath  = sw::FileUtil::normalizePath( request._shaderPath );
+        const size_t     shaderPos = normPath.find( "shaders/" );
+        if ( shaderPos == sw::string::npos )
+            continue;
+        const auto [it, bInserted] = mapDomainlessToPath.emplace( normPath.substr( shaderPos ), normPath );
+        if ( bInserted || it->second == normPath || uniqueCopyPath.insert( normPath ).second == false )
+            continue;
+        SW_EXPECT_TRUE_MSG( false, ( normPath + " 와 " + it->second + " 가 같은 셰이더의 사본이다 — 하나를 지우고 경로 하나로 부를 것" ).c_str() );
+    }
+    SW_EXPECT_TRUE_MSG( mapDomainlessToPath.size() > 1, "셰이더 요청을 하나도 보지 못했다 — 이 시험이 아무것도 보지 않는다" );
+    SW_EXPECT_EQUAL( size_t{ 0 }, uniqueCopyPath.size() );
+}
+
+/**
  * @brief [ShaderBakeRequestTest] 파이프라인 패스마다 런타임 PSO 가 컴파일할 (셰이더 · define) 을 베이커가 요청한다
  * @details 런타임은 `selectRenderPassShader` 로 패스의 셰이더(XML 의 `_shaderPath`, 없으면 패스 종류 표의 기본 셰이더)와 define
  *          (XML 퍼뮤테이션 + 패스 define)을 정한다. 베이커가 패스 종류를 다른 규칙으로 읽으면 그 패스만 매니페스트 미스로

@@ -490,10 +490,6 @@ namespace sw
         /** @brief 패스 타입으로 파이프라인 패스 서술을 찾습니다. */
         const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
 
-        /** @brief 엔진 기본 PSO 를 만듭니다. */
-        RHIPipelineStateHandle createEnginePso( string_view shaderPath, bool bDepthTest, uint32 numRenderTargets = 1,
-                                                const RHIFormat* pRtvFormats = nullptr, bool bBlend = false,
-                                                bool bDepthWrite = true );
         /**
          * @brief 패스 종류의 표(RenderPassTypeTraits)와 파이프라인 XML 의 패스 서술로 패스 PSO 를 만듭니다.
          * @param pRtvFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(Present 변종). nullptr 이면 표의 고정 포맷 → 출력 선언 순입니다

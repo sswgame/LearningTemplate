@@ -201,7 +201,7 @@ namespace sw
                 }
 
                 // 2) 패스 종류 표(RenderPassTypeTraits)의 엔진 셰이더. 런타임이 패스 서술 없이도 만드는 PSO 의 셰이더다.
-                //    컴퓨트 패스는 CSMain, 나머지는 VSMain · PSMain 을 define 없이 굽는다(폴백 셰이더 포함).
+                //    컴퓨트 패스는 CSMain, 나머지는 VSMain · PSMain 을 define 없이 굽는다.
                 //    런타임(FrameRenderer::ensurePassResources)은 로드한 파이프라인과 무관하게 표의 **모든** 패스 종류로 엔진 PSO 를 만들고,
                 //    씬 메시 패스면 그 위에 머티리얼 · 뷰 모드 변형을 얹는다. 파이프라인에 그 종류가 없으면 서술 없이 표만으로 만든다 —
                 //    그 메시 패스도 아래 4) 의 곱에 넣는다. XML 에 나오는 패스만 곱하면 어느 파이프라인에도 없는 종류의 변형이 빠진다.
@@ -229,13 +229,8 @@ namespace sw
                         passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( passType );
                         listMeshPass.push_back( std::move( passInfo ) );
                     }
-                    for ( string EngineData::* pShader : { traits._pDefaultShader, traits._pFallbackShader } )
-                    {
-                        if ( pShader == nullptr )
-                            continue;
-                        appendRequestUnique( outListRequest, engineData.*pShader, "VSMain", ShaderStage::Vertex, {} );
-                        appendRequestUnique( outListRequest, engineData.*pShader, "PSMain", ShaderStage::Pixel, {} );
-                    }
+                    appendRequestUnique( outListRequest, engineData.*traits._pDefaultShader, "VSMain", ShaderStage::Vertex, {} );
+                    appendRequestUnique( outListRequest, engineData.*traits._pDefaultShader, "PSMain", ShaderStage::Pixel, {} );
                 }
 
                 // 패스가 아닌 엔진 · 시험 셰이더.

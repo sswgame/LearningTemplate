@@ -67,8 +67,6 @@ namespace sw
     {
         /** @brief 파이프라인 XML 이 `_shaderPath` 를 적지 않았을 때 쓰는 셰이더입니다(EngineData 의 칸). nullptr 이면 엔진 PSO 가 없습니다. */
         string EngineData::* _pDefaultShader{ nullptr };
-        /** @brief 패스 PSO 를 만들지 못했을 때 패스 서술 없이 만드는 셰이더입니다. nullptr 이면 폴백이 없습니다. */
-        string EngineData::* _pFallbackShader{ nullptr };
         /** @brief 패스가 셰이더에 얹는 define 입니다. 파이프라인 XML 의 `_listPermutation` 뒤에 붙습니다. nullptr 이면 없습니다. */
         const utf8* _pPassDefine{ nullptr };
         /** @brief 고정 컬러 포맷(`_colorTargetCount` 개)입니다. nullptr 이면 패스가 선언한 출력의 포맷을 씁니다. */

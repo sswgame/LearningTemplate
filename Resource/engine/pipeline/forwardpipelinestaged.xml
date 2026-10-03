@@ -92,7 +92,7 @@
 		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Outline"
 		                     _type="Outline"
-		                     _shaderPath="common/shaders/postoutline.hlsl"
+		                     _shaderPath="engine/shaders/postoutline.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"

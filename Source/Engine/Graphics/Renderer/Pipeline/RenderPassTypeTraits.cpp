@@ -107,10 +107,9 @@ namespace sw
                     }
                     case RenderPassType::Outline:
                     {
-                        traits._pDefaultShader  = &EngineData::_shaderPostOutlineCommon;
-                        traits._pFallbackShader = &EngineData::_shaderPostOutlineEngine;
-                        traits._inputContract   = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
-                        traits._flags           = Flag::kGenericFullscreen | Flag::kHasInputContract;
+                        traits._pDefaultShader = &EngineData::_shaderPostOutline;
+                        traits._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
+                        traits._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
                         break;
                     }
                     case RenderPassType::TAA:
