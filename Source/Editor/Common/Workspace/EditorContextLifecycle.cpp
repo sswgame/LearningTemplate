@@ -2,10 +2,9 @@
  * @file EditorContextLifecycle.cpp
  * @brief EditorContext 의 생성 · 초기화 · 종료입니다. 에디터 UI 매니저들을 실제로 만드는 곳입니다.
  *
- * @details 예전에는 EditorContext::get() 과 한 파일에 있었는데, 그러면 **컨텍스트를 조회하기만 해도** 패널 · 팝업 ·
- *          인스펙터 매니저가 모두 링크에 끌려옵니다(그 끝은 ImGui 입니다). 조회는 포인터 하나를 반환하는 일이고
- *          매니저를 알 필요가 없습니다. 생성 · 소멸(매니저 타입이 완전해야 하는 쪽)만 이 TU 로 떼어, EditorContext 를
- *          조회만 하는 코드가 UI 없이 링크되게 합니다. EditorSceneCommands 단위 테스트가 그래서 가능해졌습니다.
+ * @details EditorContext::get() 과 한 파일에 두지 말 것 — 그러면 **컨텍스트를 조회하기만 해도** 패널 · 팝업 ·
+ *          인스펙터 매니저가 모두 링크에 끌려옵니다(그 끝은 ImGui 입니다). 생성 · 소멸(매니저 타입이 완전해야 하는 쪽)만
+ *          이 TU 에 두어, EditorContext 를 조회만 하는 코드(EditorSceneCommands 단위 테스트 등)가 UI 없이 링크되게 합니다.
  */
 #include "pch.h"
 
@@ -157,8 +156,7 @@ namespace sw::editor
 
         destroyGameView();
 
-        // editordata.json 의 _clearColor 를 쓴다. 예전에는 여기에 같은 값을 손으로 박아 두어
-        // 설정 파일을 고쳐도 아무 일도 일어나지 않았다(설정이 조용히 무시되는 자리였다).
+        // editordata.json 의 _clearColor 를 쓴다(값을 여기 박아 두면 설정 파일이 조용히 무시된다).
         const float4 gameViewClearColor = editor::getEditorData()._clearColor;
 
         RHITextureDesc rtDesc{};

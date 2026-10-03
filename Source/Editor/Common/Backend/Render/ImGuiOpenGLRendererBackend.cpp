@@ -173,10 +173,9 @@ namespace sw::editor
 
 #if defined( SW_PLATFORM_WINDOWS )
         ImGuiIO& io = ImGui::GetIO();
-        // **검증을 거친 `_pRHIDevice` 를 쓴다.** 예전에는 매개변수 `pRhiDevice` 를 그대로 역참조해서 `initialize( nullptr )` 이면
-        // 널 역참조였다. 바로 위에서 널 · OpenGL 이 아닌 디바이스를 걸러 멤버를 nullptr 로 만들어 두고도 여기서는 그 검사를
-        // 건너뛰었다. 아래 Linux 분기는 막고 있었으니 Windows 쪽만 빠진 것이다. 멤버를 쓰면 "OpenGL 디바이스일 때만 GL 뷰포트
-        // 훅을 건다" 도 함께 맞는다.
+        // **검증을 거친 `_pRHIDevice` 를 쓴다.** 매개변수 `pRhiDevice` 를 그대로 역참조하면 `initialize( nullptr )` 에서
+        // 널 역참조다 — 바로 위에서 널 · OpenGL 이 아닌 디바이스를 걸러 멤버를 nullptr 로 만들어 둔다. 멤버를 쓰면
+        // "OpenGL 디바이스일 때만 GL 뷰포트 훅을 건다" 도 함께 맞는다(아래 Linux 분기와 같다).
         if ( ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && _pRHIDevice != nullptr )
         {
             s_MainWindowRC                     = static_cast<HGLRC>( _pRHIDevice->getNativeContext() );

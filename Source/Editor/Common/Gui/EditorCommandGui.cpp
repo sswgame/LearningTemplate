@@ -47,8 +47,8 @@ namespace sw::editor
             // 1) 커맨드 동작. 표가 함수 포인터로 가리킨다
             //
             // **여기 있는 함수는 모두 "표가 요구하는 모양으로 바꾸는 일" 을 한다.** 대상이 이미 `void()` / `bool()` 이라면 표가
-            // 그 함수를 **직접** 가리키면 되고, 감싸는 것은 이름만 하나 늘리는 일이다(그렇게 감싸기만 하던 여덟 개는 걷어 냈다.
-            // `saveFocusedOrScene` · `requestExit` · `QuickLauncherPopup::toggle` 등은 지금 표가 직접 가리킨다).
+            // 그 함수를 **직접** 가리키면 되고, 감싸는 것은 이름만 하나 늘리는 일이다(`saveFocusedOrScene` · `requestExit` ·
+            // `QuickLauncherPopup::toggle` 등은 표가 직접 가리킨다).
             //
             // 그러니 여기에 새 함수를 만들기 전에 **왜 직접 가리킬 수 없는지** 이유가 있어야 한다. 남아 있는 것들의 이유는 셋 중
             // 하나다.
@@ -56,8 +56,7 @@ namespace sw::editor
             //   - 인자를 고정한다   : `commandAlign<TAxis>` (대상이 축 · 정렬 두 인자를 받는다)
             //   - 대상을 찾아온다   : `commandUndo` (`getService<CommandStack>()`)
             //
-            // 그리고 인자를 고정하는 경우에도 **값마다 함수를 하나씩 적지는 않는다.** 축 여섯 벌이 그렇게 적혀 있었는데, 템플릿
-            // 인자로 받아 둘로 줄였다.
+            // 그리고 인자를 고정하는 경우에도 **값마다 함수를 하나씩 적지는 않는다** — 축처럼 값만 다른 것은 템플릿 인자로 받는다.
             // ------------------------------------------------------------------------------
             static void onOpenSceneDialogResult( const vector<string>& listPath )
             {
@@ -83,7 +82,7 @@ namespace sw::editor
                 params._title              = "Open Scene";
                 params._description        = "Scene";
                 params._bEnableMultiselect = false;
-                // 씬 이름은 쿠커의 규칙 하나다(`EditorAssetTypeRegistry` → `AssetCookPath`). 예전의 `.xml` 은 쿠커가 굽지 않는 이름이었다.
+                // 씬 이름은 쿠커의 규칙 하나다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 굽지 않는 이름이다.
                 EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind::Scene, params._listFilterExtension );
 
                 const string activePack = GameConfig::getActive()._packRoot;
@@ -277,8 +276,7 @@ namespace sw::editor
                 FileUtil::openFileDialog( params, SW_DELEGATE_FUNCTION( FileDialogDelegate, onSavePresetDialogResult ) );
             }
 
-            // 축만 다른 여섯 벌을 손으로 적고 있었다. 표가 `void()` 를 요구하므로 인자를 고정하는 함수 자체는 있어야 하지만,
-            // **축마다 하나씩 적을 이유는 없다.** 축을 템플릿 인자로 받으면 표는 그대로 `&commandAlign<AlignAxis::X>` 로 가리킨다.
+            // 표가 `void()` 를 요구하므로 인자를 고정하는 함수 자체는 있어야 하지만, **축마다 하나씩 적을 이유는 없다.** 축을 템플릿 인자로 받으면 표는 그대로 `&commandAlign<AlignAxis::X>` 로 가리킨다.
             // 축이 하나 늘어도 여기서 고칠 것은 없다.
             template <AlignAxis TAxis>
             static void commandAlign()
@@ -304,8 +302,8 @@ namespace sw::editor
 
             static void commandApplyPrefabOverrides()
             {
-                // **선택한 인스턴스의 프리팹에만** 쓴다. 예전에는 포커스된 에셋 경로(콘텐츠 브라우저에서 마지막에 클릭한 것 — 씬 · 머티리얼 · 텍스처)를
-                // 먼저 써서, 그 파일을 프리팹으로 덮어썼다.
+                // **선택한 인스턴스의 프리팹에만** 쓴다. 주의: 포커스된 에셋 경로(콘텐츠 브라우저에서 마지막에 클릭한 것 — 씬 · 머티리얼 · 텍스처)를
+                // 쓰면 그 파일을 프리팹으로 덮어쓴다.
                 GameObject*  pObj = nullptr;
                 const string path = findSelectedPrefabPath( pObj );
                 if ( path.empty() )
@@ -379,7 +377,7 @@ namespace sw::editor
 
             /**
              * @brief 에디터 커맨드의 정본입니다.
-             * @details 툴팁에 단축키를 손으로 적지 않습니다. `drawMenuItem` 이 이 표의 조합으로 만들어 붙이므로 라벨과 실제 처리가
+             * @details 툴팁에 단축키를 손으로 적지 않습니다. `drawCommandItem` 이 이 표의 조합으로 만들어 붙이므로 라벨과 실제 처리가
              *          어긋날 수 없습니다.
              */
             inline static const CommandRow _s_arrCommandRow[] = {
@@ -444,8 +442,8 @@ namespace sw::editor
 
             /**
              * @brief 이 조합이 이번 프레임에 정확히 눌렸으면 true입니다.
-             * @details 수정자를 **정확히** 비교합니다. 예전의 키 처리 if 사다리는 필요한 수정자만 확인해서 Ctrl+Shift+Z 가
-             *          undo(Ctrl+Z)까지 함께 발동했습니다. Shift 가 눌려 있지 않다는 것을 아무도 확인하지 않았기 때문입니다.
+             * @details 수정자를 **정확히** 비교합니다. 필요한 수정자만 확인하면 Ctrl+Shift+Z 가 undo(Ctrl+Z)까지 함께 발동합니다
+             *          (Shift 가 눌려 있지 않다는 것도 확인해야 합니다).
              */
             static bool isShortcutPressed( const EditorCommandShortcut& shortcut )
             {
@@ -457,7 +455,7 @@ namespace sw::editor
                     return false;
 
                 const ImGuiIO& io = ImGui::GetIO();
-                // macOS 의 Cmd 는 예전 코드와 같이 Ctrl 로 취급한다.
+                // macOS 의 Cmd 는 Ctrl 로 취급한다.
                 const bool bCtrlDown     = ( io.KeyCtrl || io.KeySuper );
                 const bool bRequireCtrl  = ( ( shortcut._modifier & commandmod::kCtrl ) != 0 );
                 const bool bRequireShift = ( ( shortcut._modifier & commandmod::kShift ) != 0 );

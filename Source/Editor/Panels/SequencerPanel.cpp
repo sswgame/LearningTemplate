@@ -27,8 +27,8 @@ namespace sw::editor
 
     /**
      * @brief ImSequencer 가 보는 시퀀스입니다. 항목은 애셋의 `SequenceTrackItem` 그대로입니다.
-     * @details 예전에는 같은 아홉 필드를 가진 패널 전용 `Item` 이 따로 있어서 저장 · 복원 때마다 필드를 하나씩 옮겼습니다.
-     *          애셋에 필드가 하나 늘면 두 복사 루프도 같이 고쳐야 했고, 빠뜨리면 그 필드만 조용히 저장되지 않았습니다.
+     * @details 패널 전용 항목 타입을 따로 두지 않습니다 — 저장 · 복원 때마다 필드를 하나씩 옮기면, 애셋에 필드가 늘 때
+     *          빠뜨린 필드만 조용히 저장되지 않습니다.
      */
     struct ClipSequence : ImSequencer::SequenceInterface
     {
@@ -237,7 +237,7 @@ namespace sw::editor
         if ( path.empty() )
             return ToolAssetLoadResult::Missing;
 
-        // 읽지 못하면 그대로 둔다 — 예전에는 표시 없이 돌아가 프레임마다 다시 읽고(로그가 쌓였다), 저장도 막지 않았다.
+        // 읽지 못하면 그대로 둔다 — 결과를 돌려주므로 기반이 표시하고 저장을 막는다(표시 없이 돌아가면 프레임마다 다시 읽는다).
         SequenceAsset             asset;
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadSequence( asset, path );
         if ( getLoadedAssetPath().empty() )

@@ -207,7 +207,7 @@ namespace sw::editor
         // 화면 밖으로 밀린다. 표를 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
         const EditorListFilter filter{ _localizationFilter.c_str() };
 
-        // **멤버 버퍼를 다시 쓴다.** 지역 `vector` 였을 때는 프레임마다 할당하고 해제했다.
+        // **멤버 버퍼를 다시 쓴다** — 지역 `vector` 면 프레임마다 할당하고 해제한다.
         vector<size_t>& listVisibleIndex = _listVisibleLocalizationIndex;
         listVisibleIndex.clear();
         listVisibleIndex.reserve( _listLocalizationRecord.size() );
@@ -390,7 +390,7 @@ namespace sw::editor
             return;
 
         const GameDataFileEntry& entry = _listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
-        // 읽지 못하면 고르지 않는다. 예전에는 실패해도 앞 파일의 글을 그대로 들고 "깨끗함" 으로 보여, 저장하면 **앞 파일의 내용을 이 파일에** 썼다.
+        // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 그대로 들고 고르면, 저장할 때 **앞 파일의 내용을 이 파일에** 쓴다.
         string text;
         if ( FileUtil::readTextFile( entry._absolutePath, text ) == false )
         {

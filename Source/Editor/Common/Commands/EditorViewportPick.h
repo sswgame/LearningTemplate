@@ -35,11 +35,9 @@ namespace sw::editor
     /**
      * @class EditorViewportPick
      * @brief 뷰포트 피킹 로직입니다. 경계는 컴포넌트가 선언하고(`SceneComponent::getWorldBounds`), 같은 거리에서 어느 종류가 이기는지는 이 안의 표가 정합니다.
-     * @details 예전에는 `EditorViewportClient.cpp` 안에 `considerMeshPick` · `considerSpritePick` · `considerBoxPick` ·
-     *          `hitTestScenePick` 네 함수가 있었고, 마지막 하나는 `getPrimarySceneComponent()` **하나만** 봤습니다. 그래서
-     *          게임이 만든 컴포넌트는 그것이 주 컴포넌트가 아니면 뷰포트에서 클릭으로 집을 수 없었습니다. 지금은 (1) 종류를
-     *          아는 제공자는 표의 한 줄이고, (2) 표가 잡지 못한 오브젝트는 그 오브젝트의 **모든** SceneComponent 를 기본
-     *          반지름으로 훑습니다. ImGui 를 쓰지 않으므로 `Test/EditorTest` 가 실제 씬으로 검증합니다.
+     * @details (1) 종류를 아는 제공자는 표의 한 줄이고, (2) 표가 잡지 못한 오브젝트는 그 오브젝트의 **모든** SceneComponent 를 기본
+     *          반지름으로 훑습니다 — 주 컴포넌트(`getPrimarySceneComponent()`)만 보면 게임이 만든 컴포넌트를 클릭으로 집을 수 없습니다.
+     *          ImGui 를 쓰지 않으므로 `Test/EditorTest` 가 실제 씬으로 검증합니다.
      */
     class EditorViewportPick
     {
@@ -62,7 +60,7 @@ namespace sw::editor
         /**
          * @brief 캔버스 정규 좌표(u·v ∈ [0,1], 왼쪽 위가 0·0)에서 월드 레이를 만듭니다.
          * @details 근평면(NDC z 0)과 원평면(z 1)을 역투영해 잇습니다. 원점은 근평면 위의 점이고, 방향은 단위 벡터입니다.
-         *          피킹 · 자 · 애셋 드롭이 같은 레이를 씁니다. 예전에는 셋이 이 계산을 각자 갖고 있었습니다.
+         *          피킹 · 자 · 애셋 드롭이 같은 레이를 씁니다.
          * @return 역행렬이 퇴화했으면 false
          */
         static bool makeRay( const float4x4& invViewProj, float32 u, float32 v, EditorPickRay& outRay );

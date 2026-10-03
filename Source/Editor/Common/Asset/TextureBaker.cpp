@@ -60,10 +60,8 @@ namespace sw::editor
         /**
          * @struct SwizzleLayoutInternal
          * @brief 스위즐 하나가 정하는 두 가지, **바이트를 어떻게 놓는가와 그것을 무슨 이름으로 부르는가**입니다.
-         * @details 이 둘이 따로 있으면 반드시 어긋납니다. 예전에는 채널 섞기가 `applyChannelManipulations` 의 if 사슬에, 이름이
-         *          `bakeTexture` 의 `_swizzle == BGRA ? BGRA : RGBA` 삼항에 있었습니다. 그래서 `ARGB` 는 섞기 쪽만 알고 이름 쪽은
-         *          몰랐고, 바이트는 옮겨졌는데 결과물에는 "RGBA" 라고 적혀 나가 색이 깨졌습니다. 이제 스위즐을 하나 더하려면
-         *          **이 표에 한 줄**만 더하면 됩니다.
+         * @details 이 둘이 따로 있으면 반드시 어긋납니다 — 섞기 쪽만 아는 스위즐은 바이트는 옮겨지는데 결과물에 "RGBA" 라고
+         *          적혀 나가 색이 깨집니다. 스위즐을 하나 더하려면 **이 표에 한 줄**만 더하면 됩니다.
          */
         struct SwizzleLayoutInternal
         {
@@ -78,8 +76,8 @@ namespace sw::editor
         const SwizzleLayoutInternal& swizzleLayoutInternal( TextureSwizzle swizzle )
         {
             // **BGRA 와 ARGB 는 같은 것이다.** D3D9 의 `D3DFMT_A8R8G8B8` 은 메모리에서 B,G,R,A 순서이고 DXGI 는 그것을 `B8G8R8A8`
-            // 이라 부른다. 열거형 주석의 "레거시 ARGB" 가 그 뜻이다. 예전 코드는 ARGB 를 왼쪽으로 한 칸 돌려 RGBA 를 GBAR 로
-            // 만들었는데, 그것은 어떻게 읽어도 ARGB 가 아니다.
+            // 이라 부른다. 열거형 주석의 "레거시 ARGB" 가 그 뜻이다. 주의: RGBA 를 왼쪽으로 한 칸 돌린 GBAR 은 어떻게 읽어도
+            // ARGB 가 아니다.
             static constexpr SwizzleLayoutInternal kRgba{
                 { 0, 1, 2, 3 },
                 SW_FALSE,

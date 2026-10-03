@@ -30,10 +30,7 @@ namespace sw::editor
 
         /**
          * @brief InputMap XML 을 씁니다.
-         * @details 예전에는 이 패널이 자기 `_bDirty` 만 들고 문서 계약을 구현하지 않아서, 화면에는 "* Unsaved changes" 를
-         *          띄우면서 Ctrl+S 는 이 파일이 아니라 **씬을** 저장했고(`saveFocusedOrScene` 이 이 패널을 dirty 로 보지
-         *          못했습니다), 종료 확인도 이 편집을 세지 않아 편집이 조용히 사라졌습니다. 이제 기반 클래스가 dirty 비트를
-         *          듭니다.
+         * @details dirty 비트는 기반 클래스가 듭니다 — 그래서 Ctrl+S(`saveFocusedOrScene`)와 종료 확인이 이 패널의 편집을 봅니다.
          */
         [[nodiscard]] bool saveDocument() override;
         void               revertDocument() override;
@@ -51,10 +48,8 @@ namespace sw::editor
         void drawConflictMatrixTab();
         /**
          * @brief 선택한 액션의 바인딩을 새 키로 바꿉니다. **바꾸기 전에 충돌을 확인합니다.**
-         * @details 예전에는 두 곳(키 감지 · 버튼 격자)에서 곧장 rebindKey 를 불러, 이미 다른 액션이 쓰는 키로 바꿔도 아무
-         *          말이 없었습니다. 같은 패널의 "Key Conflict Matrix" 탭에서야 알 수 있었습니다. 엔진에는 그 질문에 답하는
-         *          `ActionMap::hasBindingConflict` 가 이미 있었는데 아무도 부르지 않았습니다. 되돌리지는 않습니다(덮어쓰기를
-         *          원할 수 있습니다). 대신 무엇과 부딪히는지 알립니다.
+         * @details 키 감지 · 버튼 격자 모두 이것을 거칩니다. 이미 다른 액션이 쓰는 키면(`ActionMap::hasBindingConflict`) 되돌리지는 않고
+         *          (덮어쓰기를 원할 수 있습니다) 무엇과 부딪히는지 알립니다.
          */
         void rebindSelectedAction( sw::Key newKey );
         void drawInputGraphTab();

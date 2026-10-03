@@ -25,8 +25,7 @@ namespace sw::editor
 
         /**
          * @brief ImGui 위젯의 활성화~해제 사이를 한 번의 Undo 로 묶습니다.
-         * @details trackPod 와 trackString 이 **같은 표를 씁니다.** 예전에는 두 함수가 각자 자기 static 맵을 들고 같은
-         *          38줄을 그대로 복사하고 있었습니다. 동작은 같았지만 한쪽만 고치면 갈라지는 구조였습니다.
+         * @details trackPod 와 trackString 이 **같은 표를 씁니다**(각자 맵을 들면 한쪽만 고칠 때 갈라집니다).
          * @param pLabel Undo 항목에 붙일 이름 (널이면 "Property")
          */
         void trackActiveItemEdit( const utf8* pLabel )

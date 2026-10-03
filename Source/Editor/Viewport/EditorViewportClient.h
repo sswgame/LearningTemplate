@@ -91,9 +91,8 @@ namespace sw::editor
         GameObjectHandle        _gizmoObject; ///< `_gizmoUndoBefore` 의 대상. 드래그가 여러 프레임을 넘기므로 핸들로 듭니다
         /**
          * @brief 이 프레임의 오브젝트 스냅샷 (용량 재사용). 시각화와 통계 오버레이가 함께 봅니다.
-         * @details 값 반환 `getAllGameObjects()` 는 호출마다 씬 전체를 새로 할당·복사합니다.
-         *          예전에는 통계 오버레이가 **개수만 알려고** 한 번, 디버그 시각화가 한 번 그렇게
-         *          불러서 프레임마다 씬을 두 번 복사했습니다.
+         * @details 값 반환 `getAllGameObjects()` 는 호출마다 씬 전체를 새로 할당·복사하므로, 통계 오버레이와
+         *          디버그 시각화가 각자 부르지 않고 이것을 함께 봅니다.
          */
         vector<GameObject*>      _listSceneObject;
         vector<GameObjectHandle> _listGizmoObject; ///< 그룹 기즈모 대상. 드래그하는 동안 여러 프레임을 넘기므로 핸들로 듭니다

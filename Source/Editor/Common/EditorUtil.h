@@ -43,10 +43,8 @@ namespace sw::editor
 
         /**
          * @brief 호스트 상대 경로를 프로젝트 루트 기준 절대 경로로 만듭니다. 이미 절대 경로면 그대로 둡니다.
-         * @details 이 다섯 줄이 설정 파일을 다루는 **세 곳에 복사**되어 있었고(`EditorConfig::loadFromHost` · `saveToHost` ·
-         *          `EditorData::loadFromHostPath`), 셋 다 "절대 경로인가" 를 손으로 다시 적고 있었습니다. 게다가 그 손 판정은
-         *          `FileUtil::isAbsolutePath` 와 **달랐습니다**(드라이브 문자가 글자인지 보지 않았습니다). 여기에 한 번 두고
-         *          제대로 된 판정을 씁니다.
+         * @details 설정 파일을 다루는 곳(`EditorConfig::loadFromHost` · `saveToHost` · `EditorData::loadFromHostPath`)이 함께 씁니다.
+         *          "절대 경로인가" 는 `FileUtil::isAbsolutePath` 로 판정합니다(손 판정은 드라이브 문자 검사 같은 것을 빠뜨리기 쉽습니다).
          * @return 프로젝트 루트를 찾지 못하면 구분자만 정규화한 입력을 그대로 반환합니다.
          */
         static string resolveProjectRelativePath( string_view hostRelativePath );
@@ -65,10 +63,8 @@ namespace sw::editor
          * @brief 계층 라벨에 붙일 `[Category]` 뱃지를 덧붙입니다.
          * @param category 컴포넌트 타입의 리플렉션 Category (`TypeInfo::getCategory`).
          * @param inoutBadge 누적 중인 뱃지 문자열. 비어 있지 않으면 앞에 공백이 붙습니다.
-         * @details 예전에는 Hierarchy 패널이 타입 **이름** 7개를 if/else 로 비교해 뱃지를 골랐습니다. 게임이 자기 컴포넌트를
-         *          넣으면 뱃지가 없었고, 엔진이 컴포넌트를 늘릴 때마다 그 패널을 같이 고쳐야 했습니다. 같은 파일의 "컴포넌트
-         *          추가" 메뉴는 이미 `getCategory()` 로 묶고 있었습니다. 데이터는 있었는데 한쪽만 쓰지 않고 있었던 것입니다.
-         *          같은 Category 는 한 번만 넣습니다.
+         * @details 타입 이름이 아니라 Category 로 고르므로 게임이 넣은 컴포넌트도 뱃지가 붙고, 엔진이 컴포넌트를 늘려도 패널을
+         *          고칠 필요가 없습니다("컴포넌트 추가" 메뉴와 같은 기준). 같은 Category 는 한 번만 넣습니다.
          */
         static void appendCategoryBadge( string_view category, string& inoutBadge );
     };

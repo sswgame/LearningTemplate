@@ -254,7 +254,7 @@ namespace sw::editor
         EditorChrome::beginSection( logDesc );
 
         // 0건의 이유를 나눠서 알려 준다. 로그가 아직 없는 것, 검색어가 걸러 낸 것, 레벨을 모두
-        // 끈 것은 서로 다른 상황이고 고치는 방법도 다르다. 예전에는 셋 다 빈 상자였다.
+        // 끈 것은 서로 다른 상황이고 고치는 방법도 다르다.
         if ( _listVisible.empty() )
         {
             const EditorListFilter filter{ _cachedFilter };

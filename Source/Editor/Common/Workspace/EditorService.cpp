@@ -67,7 +67,7 @@ namespace sw::editor
         // 에디터가 죽는 대신 기본 설정으로 뜬다. Debug 의 assert 는 그대로 두어 "연결을 잊었다" 는
         // 사실은 분명히 드러나게 한다.
         //
-        // `engine::getXxx()` 의 같은 모양은 일부러 그대로 두었다. 그쪽은 `TaskManager` 같은 하위
+        // `engine::getXxx()` 의 같은 모양은 기본값으로 떨어지지 않는다. 그쪽은 `TaskManager` 같은 하위
         // 시스템이라 지어낼 기본값이 없고, 필수 서비스가 연결됐는지는
         // `CheckEngineServiceBinding` 린트가 따로 지킨다.
         SW_LOG_ASSERT( s_pEditorData != nullptr, "EditorData is not bound — falling back to defaults" );

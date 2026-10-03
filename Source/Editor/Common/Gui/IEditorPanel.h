@@ -52,19 +52,15 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /**
          * @brief 저장되지 않은 편집이 있으면 true입니다.
-         * @details 가상 함수가 아닙니다. 예전에는 가상이어서 패널마다 자기 dirty 플래그를 들고 네 메서드를 다시 구현했고(세
-         *          패널이 똑같은 것을 복사했습니다), 하나는 플래그만 두고 계약을 아예 구현하지 않았습니다. InputMapEditorPanel
-         *          이 "* Unsaved changes" 를 화면에는 띄우면서 Ctrl+S 와 종료 확인에는 보이지 않아, 편집이 조용히 사라졌습니다.
-         *          비트를 기반 클래스가 들면 그런 반쪽 구현이 불가능합니다.
+         * @details 가상 함수가 아닙니다. 비트를 기반 클래스가 들므로 패널이 "* Unsaved changes" 를 화면에 띄우면서 Ctrl+S 와
+         *          종료 확인에는 보이지 않는 반쪽 구현이 불가능합니다.
          */
         bool isDocumentDirty() const { return _bDocumentDirty; }
         /**
          * @brief `saveDocument()` 를 부르고 **성공했을 때만** dirty 를 지웁니다.
-         * @details 저장 경로는 **모두 이것을 거칩니다.** 예전에는 "저장했으면 dirty 를 지운다" 는 순서를 파생 아홉이 각자
-         *          구현했고, 그래서 서로 달랐습니다. 둘은 실패해도 무조건 지우고 `true` 를 반환했고(편집이 조용히 사라집니다),
-         *          하나는 성공해도 지우지 않았습니다(저장했는데 계속 미저장으로 남습니다). 바로 아래 `discardDirtyDocument` 는
-         *          처음부터 기반 클래스가 순서를 들고 있었고, 저장 쪽만 빠져 있었습니다. 파생은 **"쓰고, 됐는지 답한다"** 만
-         *          하면 됩니다.
+         * @details 저장 경로는 **모두 이것을 거칩니다**(바로 아래 `discardDirtyDocument` 와 같이 순서를 기반 클래스가 듭니다).
+         *          파생이 각자 구현하면 실패해도 지워 편집이 조용히 사라지거나, 성공해도 계속 미저장으로 남습니다. 파생은
+         *          **"쓰고, 됐는지 답한다"** 만 하면 됩니다.
          * @return 저장에 성공했으면 true. false 면 dirty 는 그대로 남습니다.
          */
         [[nodiscard]] bool saveDocumentAndClearDirty()
@@ -118,8 +114,7 @@ namespace sw::editor
         /**
          * @brief EditorPanelFlags 조합입니다. 기본은 None 입니다.
          * @details `UnsavedDocument` 는 여기에 넣지 않습니다. draw() 가 dirty 상태를 보고 스스로 더합니다. 그래야 이 함수를
-         *          다른 플래그 때문에 재정의한 패널이 제목의 미저장 표시를 잃지 않습니다(세 패널이 각자 같은 분기를 적고
-         *          있었습니다).
+         *          다른 플래그 때문에 재정의한 패널이 제목의 미저장 표시를 잃지 않습니다.
          */
         virtual EditorPanelFlags getPanelFlags() const { return EditorPanelFlags::None; }
         /** @brief FirstUseEver 크기입니다. (0,0) 이면 적용하지 않습니다. */

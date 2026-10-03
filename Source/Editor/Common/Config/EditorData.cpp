@@ -19,9 +19,8 @@ namespace sw::editor
 
     bool EditorData::loadFromHostPath( string_view hostRelativePath )
     {
-        // 경로의 정본은 `Scripts/common/Constants.py` 하나다. 예전에는 `EditorConfig._editorData` 로 경로를 한 번 더 바꿀 수
-        // 있었는데, 그 필드를 기본값이 아닌 값으로 둔 곳이 없었고, **테마를 저장할 때마다 기계가 다시 쓰는 파일**에 손으로
-        // 적는 경로를 두는 셈이었다.
+        // 경로의 정본은 `Scripts/common/Constants.py` 하나다. 경로를 바꾸는 칸을 `EditorConfig` 에 두지 말 것 — 그 파일은
+        // **테마를 저장할 때마다 기계가 다시 쓴다.**
         string rel = string( hostRelativePath );
         if ( rel.empty() )
             rel = string( config::kFileRuntimeEditorData );

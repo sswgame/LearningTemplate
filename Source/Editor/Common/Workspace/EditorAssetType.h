@@ -14,8 +14,8 @@ namespace sw::editor
 {
     /**
      * @brief 도구 문서를 읽은 결과 — "새 문서" 와 "읽지 못한 파일" 을 가른다. 문서 패널은 이것으로 저장을 막는다(`EditorDocumentPanel::reloadDocument`).
-     * @details 타입에 `[[nodiscard]]` 가 붙어 있다 — 이것을 돌려주는 로드의 결과를 버리면 컴파일러가 짚는다. 예전에는 다섯 로더 중 셋이 bool 이라
-     *          "없음" 과 "깨짐" 이 섞였고, 두 패널은 그 bool 마저 버린 채 읽었다고 표시해 깨진 파일을 앞 문서로 덮었다.
+     * @details 타입에 `[[nodiscard]]` 가 붙어 있다 — 이것을 돌려주는 로드의 결과를 버리면 컴파일러가 짚는다. bool 로는 "없음" 과 "깨짐" 이
+     *          섞이고, 결과를 버린 채 읽었다고 표시하면 깨진 파일을 앞 문서로 덮는다.
      */
     enum class [[nodiscard]] ToolAssetLoadResult : uint8
     {
@@ -87,9 +87,8 @@ namespace sw::editor
     {
         /**
          * @brief 콤보에 그대로 넘기는 라벨입니다. **널 종단 문자열입니다.**
-         * @details 예전에는 `string_view` 였는데, 쓰는 쪽 셋이 모두 곧바로 `.data()` 를 ImGui 로 넘겼습니다. ImGui 는 널 종단을
-         *          요구하지만 `string_view` 는 그것을 보장하지 않습니다. 지금 표가 모두 리터럴이라 우연히 맞을 뿐, 누가 부분
-         *          문자열을 넣으면 조용히 범위를 넘어 읽습니다. 그래서 타입으로 계약을 적어 둡니다.
+         * @details 쓰는 쪽이 곧바로 ImGui 로 넘기는데 ImGui 는 널 종단을 요구합니다. `string_view` 는 그것을 보장하지 않아 누가 부분
+         *          문자열을 넣으면 조용히 범위를 넘어 읽으므로, 타입으로 계약을 적어 둡니다.
          */
         const utf8*     _pLabel;
         EditorAssetKind _kind;
@@ -135,8 +134,7 @@ namespace sw::editor
 
         /**
          * @brief 도구 패널 제목을 하나씩 넘겨 줍니다 (제목이 비어 있는 종류는 건너뜁니다).
-         * @details 호출부가 개수를 받아 인덱스로 돌고 빈 제목을 걸러 내는 대여섯 줄을 매번 다시 쓰고 있었습니다(도킹
-         *          레이아웃 · 메뉴바). 순회는 레지스트리의 일이고, 쓰는 쪽은 유효한 제목만 받으면 됩니다.
+         * @details 순회는 레지스트리의 일이고, 쓰는 쪽(도킹 레이아웃 · 메뉴바)은 유효한 제목만 받으면 됩니다.
          */
         template <typename Func>
         static void forEachToolPanelTitle( Func&& func )
@@ -172,8 +170,7 @@ namespace sw::editor
         static void appendReloadableSuffixes( vector<string>& outListSuffix );
         /**
          * @brief @p directory 아래(재귀)에서 지정 종류인 파일을 @p outListFilePath 에 더합니다. 폴더가 없으면 false 입니다.
-         * @details 판정은 `matches` 그대로다. 예전에는 리소스 카탈로그가 종류마다 확장자 하나(`.prefab.xml` · `.png` · `.hlsl`)로 따로 셌다 —
-         *          JSON 프리팹 · `.jpg` 텍스처 · `.hlsli` 는 세지 않았다.
+         * @details 판정은 `matches` 그대로다 — 종류마다 확장자 하나로 따로 세면 JSON 프리팹 · `.jpg` 텍스처 · `.hlsli` 를 놓친다.
          */
         [[nodiscard]] static bool collectFiles( EditorAssetKind kind, string_view directory, vector<string>& outListFilePath );
 

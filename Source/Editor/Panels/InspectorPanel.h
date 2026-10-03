@@ -102,7 +102,7 @@ namespace sw::editor
          * @brief 인스펙터가 값을 바꿨음을 편집 대상에 알립니다.
          * @details 이것이 없으면 인스펙터 편집은 아무에게도 보이지 않는 변경이 됩니다. 위젯 대부분이 `getValuePtr<T>()` 로
          *          멤버의 생 포인터를 뽑아 ImGui 에 넘기기 때문에, 리플렉션 `setValue<T>()` 안의 통지 분기를 타지 않습니다.
-         *          렌더 상태처럼 "바뀌면 누군가 반응해야 하는" 값들이 조용히 어긋나던 구멍입니다.
+         *          빠뜨리면 렌더 상태처럼 "바뀌면 누군가 반응해야 하는" 값들이 조용히 어긋납니다.
          */
         void notifyPropertyEdited( const PropertyInfo& prop );
         /** @brief 타입의 메서드(FUNCTION) 목록을 그립니다. */

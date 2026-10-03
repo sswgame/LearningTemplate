@@ -35,8 +35,7 @@ namespace sw::editor
 
     void ImGuiDX11RendererBackend::shutdown()
     {
-        // `install()` 을 부른 쪽이 `clear()` 도 부른다. 가드 헤더가 "백엔드를 종료할 때 부르십시오" 라고 적어 둔 짝이다.
-        // 예전에는 DX12 만 짝을 맞췄고 DX11 은 설치만 하고 해제하지 않았다.
+        // `install()` 을 부른 쪽이 `clear()` 도 부른다. 가드 헤더가 "백엔드를 종료할 때 부르십시오" 라고 적어 둔 짝이다(DX12 도 같다).
         // 이 백엔드는 미룰 네이티브 자원이 없지만, 에디터가 같은 큐에 맡긴 해제(게임 뷰 렌더 타깃)가 이 모듈의 코드를 가리킨다.
         flushDrawReleases( _pRHIDevice );
         ImGuiViewportSizeGuard::clear();

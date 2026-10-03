@@ -66,9 +66,8 @@ namespace sw::editor
 
     /**
      * @brief 에디터 서비스를 찾습니다. **없으면 nullptr 이므로** 받는 쪽이 확인해야 합니다.
-     * @details 짝인 `game::getService<T>()` 와 같은 계약입니다. 그쪽에는 한동안 실패 자리에 `SW_ASSERT( false )` 가 있어서
-     *          **Debug 에서만** 프로세스가 죽었습니다. 같은 모양의 함수가 두 벌 있으면 한쪽만 고쳐지고 끝나기 쉽다는
-     *          예입니다. `CheckNullableServiceUse` 린트가 두 창구를 모두 봅니다.
+     * @details 짝인 `game::getService<T>()` 와 같은 계약입니다 — 한쪽만 실패 자리에 assert 를 두면 **Debug 에서만** 프로세스가
+     *          죽습니다. `CheckNullableServiceUse` 린트가 두 창구를 모두 봅니다.
      * @return 찾은 서비스. 로컬에도 호스트에도 없으면 nullptr
      */
     template <typename T>
@@ -91,9 +90,8 @@ namespace sw::editor
     //
     // 에디터 코드는 거의 항상 "지금 편집 중인 씬" 과 그 GameObjectManager 를 원한다. 그런데
     // 거기까지 가려면 SceneManager 서비스 → getActiveScene() → getObjectManager() 를 거치며
-    // 단계마다 nullptr 을 확인해야 해서, 커맨드 · 패널마다 같은 대여섯 줄이 다시 쓰였다(24곳).
-    // 새 커맨드를 하나 더 쓸 때마다 그 검사를 또 쓰게 되고, 한 군데서 빠뜨리면 그때만
-    // 조용히 죽는다. 원하는 것을 호출 한 번으로 반환하고, 실패는 nullptr 하나로 합친다.
+    // 단계마다 nullptr 을 확인해야 한다. 커맨드 · 패널마다 그 검사를 다시 쓰면 한 군데서 빠뜨릴 때
+    // 그때만 조용히 죽는다. 원하는 것을 호출 한 번으로 반환하고, 실패는 nullptr 하나로 합친다.
     // ------------------------------------------------------------------------------
     /** @brief 지금 편집 중인 씬입니다. 씬이 없으면 nullptr 입니다. */
     Scene* getActiveScene();

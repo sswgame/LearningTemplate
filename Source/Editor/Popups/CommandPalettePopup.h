@@ -28,7 +28,7 @@ namespace sw::editor
      * @brief Ctrl+Shift+P / Ctrl+Space 로 여는 퍼지 검색기입니다(커맨드 · 오브젝트 · 창).
      * @details 커맨드를 **직접 들고 있지 않습니다.** 열릴 때마다 `EditorCommandRegistry` 와 패널 목록과 활성 씬을 읽어
      *          목록을 만듭니다. 팔레트에 커맨드를 더하려면 `EditorCommandGui::registerDefaults` 의 표에 한 줄을
-     *          넣으십시오. 그러면 메뉴와 단축키에도 같이 나타납니다(예전에는 여기에 따로 적어야 해서 서로 어긋났습니다).
+     *          넣으십시오. 그러면 메뉴와 단축키에도 같이 나타납니다.
      */
     class CommandPalettePopup : public IEditorPopup
     {

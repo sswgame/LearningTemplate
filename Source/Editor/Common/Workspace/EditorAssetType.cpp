@@ -22,18 +22,14 @@ namespace sw::editor
             CookableSource ///< 엔진의 쿠킹 규칙(`AssetCookPath`) — 쿠커가 굽는 저작 소스만. 접미사는 엔진 표에서 온다
         };
 
-        // 여기 적힌 확장자는 **이 저장소가 실제로 읽거나 쓰는 것만** 둔다. 2026-09-12 에
-        // 쓰이지 않는 것을 걷어 냈다. `._material`(오타로 보인다) · `.mat`(파일도 코드도 없다) ·
-        // `.pfb`(loadPrefab 이 모르는 이름) · `.glsl` `.vert` `.frag`(엔진은 HLSL 전용) ·
-        // `.csv`(참조 0) · `.mp3` `.ogg`(디코더가 없다. XAudio2 는 `.wav` 만 읽는다).
-        // `.spv` 도 뺐다. 그것은 **구운 산출물**이라(`Resource/common/shaders/bin/`) 셰이더
-        // 소스로 세면 콘텐츠 브라우저가 빌드 출력 178개를 애셋으로 보여 준다.
-        // 대신 `.hlsli` 를 넣었다. 공유 헤더는 진짜 셰이더 소스인데 빠져 있었다.
+        // 여기 적힌 확장자는 **이 저장소가 실제로 읽거나 쓰는 것만** 둔다 — 엔진은 HLSL 전용이고(`.glsl` 등 없음),
+        // 오디오는 XAudio2 가 읽는 `.wav` 뿐이다. 셰이더는 공유 헤더 `.hlsli` 도 소스다.
+        // `.spv` 는 넣지 않는다. 그것은 **구운 산출물**이라(`Resource/common/shaders/bin/`) 셰이더
+        // 소스로 세면 콘텐츠 브라우저가 빌드 출력 수백 개를 애셋으로 보여 준다.
         //
-        // 씬 · 프리팹은 여기 적지 않는다 — 쿠커가 굽는 이름이 곧 에디터가 여는 이름이다(`AssetCookPath`, 2026-10-03). 예전에는 여기 따로
-        // 적어, 쿠커가 굽지 않는 `_scene.xml` · `.scene` 이 어디든 든 `.xml`(`forest.scenery.xml`) · 확장자 없는 `.scene` · `.prefab` 도
-        // 씬 · 프리팹으로 열고 저장하고 퀵 런처에 띄웠다 — 에디터에서는 되고 배포본에는 없었다. 쿠킹본 `.prefab.bin` 은 프리팹 편집기로 열렸지만
-        // 저장이 거절됐다(`PrefabAsset::saveToFile` 은 소스만 쓴다). 구운 산출물은 `.spv` 처럼 에셋이 아니다.
+        // 씬 · 프리팹은 여기 적지 않는다 — 쿠커가 굽는 이름이 곧 에디터가 여는 이름이다(`AssetCookPath`). 여기 따로 적으면
+        // 쿠커가 굽지 않는 이름(`_scene.xml` · 아무 `.xml` · 확장자 없는 `.scene` 등)도 씬 · 프리팹으로 열고 저장하게 되어 에디터에서는 되고
+        // 배포본에는 없다. 구운 산출물(`.prefab.bin`)은 `.spv` 처럼 에셋이 아니다(`PrefabAsset::saveToFile` 은 소스만 쓴다).
         constexpr string_view kArrTextureExt[]      = { ".png", ".jpg", ".jpeg", ".tga", ".dds", ".hdr", ".bmp" };
         constexpr string_view kArrMaterialExt[]     = { ".material" };
         constexpr string_view kArrShaderExt[]       = { ".hlsl", ".hlsli" };

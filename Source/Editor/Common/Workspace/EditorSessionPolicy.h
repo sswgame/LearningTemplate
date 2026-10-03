@@ -61,10 +61,9 @@ namespace sw::editor
          * @param bReadOnly                 프로퍼티가 `ReadOnly` 로 표시돼 있는가.
          * @param bAllowsInPlaceElementWrite 컨테이너가 제자리 쓰기를 허용하는가
          *                                  (`ISequenceContainerWrapper::allowsInPlaceElementWrite`).
-         * @details 인스펙터는 두 질문을 **따로** 물어 각각 다른 것을 막고 있었습니다. `ReadOnly` 는 `+ Add` · `Clear` 버튼만
-         *          감췄고, **원소 위젯은 그대로 편집할 수 있었습니다.** 즉 컨테이너 프로퍼티에서는 `ReadOnly` 가 조용히
-         *          무시되고 있었습니다. 연관 컨테이너에서는 더 나쁩니다. 원소가 곧 정렬 키라 제자리 편집이 **트리를
-         *          깨뜨립니다.** 두 조건을 여기 한곳에 모아 테스트가 지키게 합니다.
+         * @details 두 질문을 **따로** 물으면 `ReadOnly` 가 `+ Add` · `Clear` 버튼만 감추고 **원소 위젯은 그대로 편집됩니다.**
+         *          연관 컨테이너에서는 더 나쁩니다. 원소가 곧 정렬 키라 제자리 편집이 **트리를 깨뜨립니다.** 두 조건을 여기
+         *          한곳에 모아 테스트가 지키게 합니다.
          */
         static bool areContainerElementEditsAllowed( bool bReadOnly, bool bAllowsInPlaceElementWrite )
         {
@@ -72,11 +71,9 @@ namespace sw::editor
         }
         /**
          * @brief 노드가 움직였는지 판단합니다. **어느 한 축이라도** 달라지면 움직인 것입니다.
-         * @details 그래프 패널 둘이 이 판단을 각자 적고 있었고 **연산자가 서로 달랐습니다.** 애니메이션은 `||`, 대화는 `&&`
-         *          였습니다. `&&` 쪽에서는 노드를 **정확히 수평으로만**(또는 수직으로만) 옮기면 두 축 중 하나가 그대로라
-         *          "안 움직였다" 가 되어, 그 레이아웃 변경이 dirty 로 잡히지 않고 조용히 사라졌습니다. 축 하나만 움직이는 것은
-         *          드문 일이 아닙니다. 캔버스 정렬이 그렇게 만듭니다. 판단을 여기로 올려 **한 곳에서만** 정하고, 테스트가 그
-         *          규칙을 지킵니다.
+         * @details 그래프 패널들이 이 판단을 **한 곳에서만** 정하고, 테스트가 그 규칙을 지킵니다. 주의: `&&` 로 판단하면 노드를
+         *          **정확히 수평으로만**(또는 수직으로만) 옮겼을 때 "안 움직였다" 가 되어, 그 레이아웃 변경이 dirty 로 잡히지 않고
+         *          조용히 사라집니다. 축 하나만 움직이는 것은 드문 일이 아닙니다 — 캔버스 정렬이 그렇게 만듭니다.
          */
         static bool hasNodeMoved( float32 previousX, float32 previousY, float32 currentX, float32 currentY )
         {

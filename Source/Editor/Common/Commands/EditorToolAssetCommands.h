@@ -36,7 +36,7 @@ namespace sw::editor
 
     /**
      * @class EditorToolAssetCommands
-     * @brief 도구 패널이 쓰던 파일 IO를 ImGui 없이 수행합니다.
+     * @brief 도구 패널의 파일 IO를 ImGui 없이 수행합니다.
      * @details 도구 문서 다섯(애니메이션 그래프 · 대화 그래프 · 타일맵 · 스프라이트 클립 · 시퀀스)의 load/save 는 한 벌의 템플릿
      *          (EditorToolAssetCommands.cpp 의 loadToolDocument · saveToolDocument)이다 — 실패는 모두 같은 모양으로 알린다: 읽지 못하면 경고
      *          `Could not read the <종류> '<경로>'`, 저장하지 못하면 오류 `Failed to save the <종류> ...`.
@@ -59,8 +59,8 @@ namespace sw::editor
         /**
          * @brief SpriteClip JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. 결과는 `loadTileMap` 과 같은 세 갈래입니다.
          *        클립 문서가 아닌 이미지 경로는 문서로 읽지 않고 그 이미지를 아틀라스로 삼아 `Loaded` 를 돌려줍니다.
-         * @details 형식은 런타임 타입(`SpriteClipAsset`) 하나가 읽고 씁니다. 예전에는 에디터가 자기 구조체(`EditorSpriteClipData`)와 파서를 따로
-         *          들어 런타임에는 그 파일을 읽는 곳이 없었습니다. 문자열 왕복(되돌리기 스냅샷)도 `SpriteClipAsset::toJson` · `parseJson` 입니다.
+         * @details 형식은 런타임 타입(`SpriteClipAsset`) 하나가 읽고 씁니다 — 에디터가 자기 구조체와 파서를 따로 두지 않습니다.
+         *          문자열 왕복(되돌리기 스냅샷)도 `SpriteClipAsset::toJson` · `parseJson` 입니다.
          */
         static ToolAssetLoadResult loadSpriteClip( SpriteClipAsset& outData, string& outStatus, string_view path = {} );
         /** @brief SpriteClip JSON을 씁니다. */
@@ -76,16 +76,16 @@ namespace sw::editor
 
         /**
          * @brief 인스턴스와 프리팹 기본값(CDO)의 컴포넌트 프로퍼티 차이를 모읍니다.
-         * @details 컴포넌트는 안정 키(`타입#n`)로 짝짓고, 값은 `SerializerUtil` 한 벌로 견주고 적습니다. 예전에는 타입 이름으로 짝지어 같은 타입의
-         *          둘째 컴포넌트가 첫째의 원형과 비교됐고, 비트필드를 바이트째 견줘 같은 바이트의 다른 플래그까지 오버라이드로 보였다.
+         * @details 컴포넌트는 안정 키(`타입#n`)로 짝짓고, 값은 `SerializerUtil` 한 벌로 견주고 적습니다. 주의: 타입 이름으로 짝지으면 같은 타입의
+         *          둘째 컴포넌트가 첫째의 원형과 비교되고, 비트필드를 바이트째 견주면 같은 바이트의 다른 플래그까지 오버라이드로 보인다.
          */
         static void collectComponentOverrides( GameObject* pInstance, GameObject* pCdo, vector<PrefabOverrideItem>& outListOverride );
         /** @brief 오버라이드 하나를 템플릿 기본값으로 되돌립니다. 원형(CDO)은 프리팹에서 만듭니다(`revertComponentOverride`). */
         static void revertPrefabOverride( sw::GameObject* pInstance, PrefabOverrideItem& item, string_view prefabPath );
         /**
          * @brief 오버라이드 하나를 원형(CDO)의 값으로 되돌리고 되돌리기 기록을 남깁니다. 옮기지 못하면 false 이고 항목은 그대로입니다.
-         * @details 그 프로퍼티만 옮기고(비트필드는 그 비트만, 컨테이너는 원소째) 컴포넌트에 알립니다(`onPropertyChanged`). 예전에는 타입 이름의
-         *          첫 컴포넌트에, 값 경로로만 옮겨 컨테이너는 되돌리지 못했고 비트필드는 바이트째 덮었으며, 알리지 않아 위치가 화면에 들지 않았다.
+         * @details 그 프로퍼티만 옮기고(비트필드는 그 비트만, 컨테이너는 원소째) 컴포넌트에 알립니다(`onPropertyChanged`) — 알리지 않으면
+         *          되돌린 위치가 화면에 들지 않습니다.
          */
         [[nodiscard]] static bool revertComponentOverride( GameObject* pInstance, GameObject* pCdo, PrefabOverrideItem& item );
         /** @brief 인스턴스 상태를 프리팹 템플릿에 저장합니다. */

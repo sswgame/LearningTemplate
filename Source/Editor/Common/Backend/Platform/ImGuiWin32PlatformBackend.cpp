@@ -40,8 +40,8 @@ namespace sw::editor
         {
             // **초기화가 실패한 뒤에도 여기로 온다.** `ImGuiEditor::shutdownPartialInitialization` 은 `initialize()` 가 false 를
             // 반환한 직후 이 함수를 부르는데, 그때 ImGui 쪽에는 짝이 되는 Init 이 없어서 `ImGui_ImplWin32_Shutdown` 첫 줄의
-            // assert 에 걸린다. **실패를 수습하려고 있는 경로가 실패하는 것이다.** 렌더러 백엔드 넷은 모두
-            // `BackendRendererUserData` 로 같은 상황을 막고 있었고, 플랫폼 쪽만 빠져 있었다.
+            // assert 에 걸린다. **실패를 수습하려고 있는 경로가 실패하는 것이다.** 렌더러 백엔드 넷도 모두
+            // `BackendRendererUserData` 로 같은 상황을 막는다.
             if ( ImGui::GetIO().BackendPlatformUserData != nullptr )
                 ImGui_ImplWin32_Shutdown();
         }

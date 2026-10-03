@@ -47,7 +47,7 @@ namespace sw::editor
         /**
          * @brief 이 패널의 문서를 (다시) 읽어 내용을 채웁니다. **읽음 · 못 읽음 표시는 기반이 결과로 합니다**(`reloadDocument`) — 패널은 표시하지 않습니다.
          * @details `Missing` 은 새 문서(기본값으로 시작하고 저장하면 만든다), `Malformed` 는 저장을 막는다(읽지 못한 파일을 앞 문서로 덮지 않게).
-         *          예전에는 패널마다 "읽었다" 표시를 직접 불렀고, 둘(TileMap · SpriteClip)은 읽기 결과를 버린 채 늘 읽었다고 표시했다.
+         *          패널이 "읽었다" 표시를 직접 부르지 않는다 — 읽기 결과를 버리고 늘 읽었다고 표시하는 일을 막는다.
          */
         virtual ToolAssetLoadResult loadDocument() = 0;
         /** @brief 문서를 읽고 결과를 표시합니다. 첫 그리기(`ensureDocumentLoaded`)와 패널의 Load · Reload 단추가 부릅니다. */

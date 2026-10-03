@@ -28,7 +28,7 @@ namespace sw::editor
 
     /**
      * @class EditorDataTableCommands
-     * @brief Data Table 패널이 쓰던 파일 IO를 ImGui 없이 수행합니다.
+     * @brief Data Table 패널의 파일 IO를 ImGui 없이 수행합니다.
      */
     class EditorDataTableCommands
     {
@@ -41,7 +41,7 @@ namespace sw::editor
         [[nodiscard]] static bool loadLocalizationFrom( string_view localizationFolder, vector<LocalizationRecord>& outList );
         /**
          * @brief 폴더 하나에 언어별 JSON을 씁니다. **읽지 못한 기존 파일은 덮지 않습니다** — 하나라도 못 썼으면 false 이고 고친 표시가 남습니다.
-         * @details 예전에는 깨진 언어 파일을 읽을 때 건너뛰어 그 언어 칸이 비었고, 저장이 빈 칸으로 그 파일을 다시 써 **번역을 모두 지웠다.**
+         * @details 깨진 언어 파일을 덮으면 저장이 빈 칸으로 그 파일을 다시 써 **번역을 모두 지운다.**
          */
         [[nodiscard]] static bool saveLocalizationTo( string_view localizationFolder, vector<LocalizationRecord>& listRecord );
         /** @brief data 폴더의 XML 파일 목록을 채웁니다. */

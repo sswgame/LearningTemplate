@@ -530,8 +530,8 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawAssetView()
     {
-        // **엔트리를 복사하지 않는다.** `AssetEntry` 는 `string` 이 넷이라, 예전에는 애셋이
-        // 수백 개면 프레임마다 문자열 수천 개를 복사했다. 보는 쪽 둘은 읽기만 하므로 포인터로
+        // **엔트리를 복사하지 않는다.** `AssetEntry` 는 `string` 이 넷이라, 복사하면 애셋이
+        // 수백 개일 때 프레임마다 문자열 수천 개를 복사한다. 보는 쪽 둘은 읽기만 하므로 포인터로
         // 충분하고, 버퍼도 멤버로 올려 두면 첫 프레임 뒤로는 할당이 없다.
         vector<const AssetEntry*>& listVisible = _listVisibleEntry;
         listVisible.clear();

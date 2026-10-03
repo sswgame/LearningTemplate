@@ -22,9 +22,8 @@ namespace sw::editor
     /**
      * @struct PlaySessionData
      * @brief 플레이 세션이 들고 있는 상태 전부입니다. **소유는 `EditorContext`** 입니다.
-     * @details 예전에는 이것들이 `EditorPlaySession.cpp` 의 파일 정적 변수였습니다. 그러면 수명이 아무에게도 속하지 않아,
-     *          컨텍스트가 다시 만들어져도 앞 세션의 스냅샷과 재생 상태가 그대로 남습니다. 컨텍스트가 들면 컨텍스트와
-     *          함께 생기고 사라집니다.
+     * @details 컨텍스트가 들므로 컨텍스트와 함께 생기고 사라집니다. 파일 정적 변수로 두면 수명이 아무에게도 속하지 않아,
+     *          컨텍스트가 다시 만들어져도 앞 세션의 스냅샷과 재생 상태가 그대로 남습니다.
      */
     struct PlaySessionData
     {
@@ -101,7 +100,7 @@ namespace sw::editor
          * @brief `setState` 의 본체입니다. 상태를 인자로 받아 에디터 컨텍스트 없이도 시험할 수 있습니다.
          * @details 정지에서 시작할 때 씬을 여는 중이면(`SceneManager::isTransitioning`) **시작을 미룹니다** — 언리얼 `RequestPlaySession` 이 요청을
          *          걸어 두고 다음 틱에 시작하듯, 로드가 끝난 프레임에 `update` 가 시작합니다. 지금 시작하면 스냅샷이 곧 내려갈 씬을 찍고, 플레이 중에
-         *          로드가 끝나 씬이 바뀝니다. 예전에는 그때 거절했다(경고만) — 사용자가 다시 눌러야 했다. Stop 은 미룬 시작도 거둡니다.
+         *          로드가 끝나 씬이 바뀝니다. Stop 은 미룬 시작도 거둡니다.
          */
         static void setState( PlaySessionData& data, PlaySessionState state );
         /** @brief 매 에디터 프레임에 부릅니다. 미룬 시작이 있고 씬 로드가 끝났으면 시작합니다. */
@@ -127,7 +126,7 @@ namespace sw::editor
         /**
          * @brief 스냅샷을 활성 씬에 되돌립니다(Stop).
          * @details 플레이 중에 활성 씬이 바뀌었으면 그 씬에 되돌리지 않고, 편집하던 씬을 빈 씬으로 다시 세운 뒤(이름 · 소스 경로) 되돌립니다.
-         *          예전에는 지금 씬에 그대로 되돌려 두 씬이 섞였고, 활성 씬이 플레이 중에 연 씬의 소스 경로를 든 채라 저장하면 그 씬 파일을 덮어썼습니다.
+         *          지금 씬에 그대로 되돌리면 두 씬이 섞이고, 저장하면 플레이 중에 연 씬 파일을 덮어씁니다.
          */
         static void restoreSnapshot( PlaySessionData& data );
     };

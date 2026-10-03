@@ -30,7 +30,7 @@ namespace sw::editor
         {
             /**
              * @brief 변수 표의 틀을 엽니다. 핀 · 이름 · 타입 · 값 · 리셋 다섯 열은 고정 섹션과 본문(모듈별 · 평면)이 같습니다.
-             * @return 표가 열렸으면 true. `EndTable` 은 부르는 쪽이 부릅니다(예전에는 세 곳이 열 설정 다섯 줄을 각자 갖고 있었습니다).
+             * @return 표가 열렸으면 true. `EndTable` 은 부르는 쪽이 부릅니다.
              */
             static bool beginVariableTable( const utf8* pId, ImGuiTableFlags flags, float32 outerHeight )
             {
@@ -209,7 +209,7 @@ namespace sw::editor
 
         const EditorListFilter filter{ _searchFilter.c_str() };
 
-        // 멤버 버퍼를 다시 쓴다. 지역 `vector` 였을 때는 프레임마다 할당했다.
+        // 멤버 버퍼를 다시 쓴다 — 지역 `vector` 면 프레임마다 할당한다.
         vector<GlobalVariableInfo*>& listFiltered = _listFilteredVariable;
         listFiltered.clear();
         listFiltered.reserve( listAllName.size() );
@@ -234,7 +234,7 @@ namespace sw::editor
 
         drawPinnedSection( *pGvm );
 
-        // 걸러져서 0건인 것과 애초에 없는 것은 다르게 말해 준다. 예전에는 둘 다 설명 없는 빈 표였다.
+        // 걸러져서 0건인 것과 애초에 없는 것은 다르게 말해 준다.
         if ( listFiltered.empty() )
         {
             if ( filter.isActive() )
@@ -288,7 +288,7 @@ namespace sw::editor
                     const string presetPath = FileUtil::joinPath(
                         EditorGlobalVariableCommands::getPresetFolderPath(),
                         string( _presetNameBuf.c_str() ) + ".gvpreset.xml" );
-                    // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다 — 세션의 dirty 는 건드리지 않는다(예전에는 실패해도 지웠다).
+                    // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다 — 세션의 dirty 는 건드리지 않는다.
                     if ( EditorGlobalVariableCommands::savePreset( presetPath, _presetNameBuf.c_str() ) )
                     {
                         _presetNameBuf.clear();

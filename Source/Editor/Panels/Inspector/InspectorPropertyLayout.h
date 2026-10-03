@@ -21,10 +21,10 @@ namespace sw::editor
     /**
      * @brief 반사 프로퍼티를 인스펙터에 보이는 단위입니다. 보이는 값 = 저장 값 × `_scale` 입니다.
      * @details 각도는 라디안으로 저장하고(`Units=rad` — 트랜스폼 회전 · FOV · 원뿔 각) 도로 보이고 고칩니다. 언리얼 Details 의 FRotator · FOV,
-     *          유니티 인스펙터의 `localEulerAngles` · `fieldOfView` 가 모두 도입니다. 예전에는 트랜스폼 회전이 라디안을 `Units=deg` 라고 적었고
-     *          인스펙터는 그 라디안을 1 픽셀에 0.5(약 29 도)씩 움직였다.
-     *          0..1 비율도 같은 모양이다 — `Units=ratio` 로 적고 백분율(× 100, "%")로 보인다. 예전에는 HP 바의 비율 셋이 `Units=%` 라고 적어
-     *          0.5 를 "0.5 %" 로 읽게 했고, 그 `%` 는 printf 서식 문자라 화면에는 붙지도 않았다.
+     *          유니티 인스펙터의 `localEulerAngles` · `fieldOfView` 가 모두 도입니다. 주의: 라디안 값에 `Units=deg` 를 적으면 인스펙터가
+     *          그 라디안을 1 픽셀에 0.5(약 29 도)씩 움직인다.
+     *          0..1 비율도 같은 모양이다 — `Units=ratio` 로 적고 백분율(× 100, "%")로 보인다. `Units=%` 로 적으면 0.5 를 "0.5 %" 로 읽게 되고,
+     *          그 `%` 는 printf 서식 문자라 화면에는 붙지도 않는다.
      */
     struct InspectorDisplayUnit
     {
@@ -43,11 +43,10 @@ namespace sw::editor
     /**
      * @struct InspectorPropertyLayout
      * @brief 컴포넌트 인스펙터의 배치 규칙입니다 — 상속 단계(기반 → 파생)로 조립합니다.
-     * @details 예전 인스펙터는 (1) 타입의 **자기** 프로퍼티만 모아(상속분이 보이지 않았다 — 스프라이트에는 트랜스폼 · 메시 칸이 없었다), (2) 인스펙터
-     *          확장을 정확한 타입 이름으로만 찾았고(게임이 만든 SceneComponent 파생에는 트랜스폼 칸이 없었다), (3) 확장이 본문을 그리면 반사
-     *          프로퍼티를 **통째로** 감췄다(메시의 Bounds Radius · Blend Mode, 카메라의 Priority · Role 을 고칠 수 없었다). 언리얼 Details 패널이
+     * @details (1) 상속분까지 모든 프로퍼티를 보이고, (2) 인스펙터 확장은 하위 클래스에도 걸리며(게임이 만든 SceneComponent 파생에도
+     *          트랜스폼 칸이 있다), (3) 확장은 자기가 그린 것만 감추고 반사 프로퍼티를 **통째로** 감추지 않습니다. 언리얼 Details 패널이
      *          상속 UPROPERTY 를 모두 보이고 `IDetailCustomization` 이 하위 클래스에도 걸리며 자기가 그린 것만 `HideProperty` 하는 것, 유니티
-     *          `CustomEditor( editorForChildClasses: true )` · `DrawDefaultInspector` 와 같은 모양으로 바꿨습니다.
+     *          `CustomEditor( editorForChildClasses: true )` · `DrawDefaultInspector` 와 같은 모양입니다.
      */
     struct InspectorPropertyLayout
     {

@@ -25,9 +25,8 @@ namespace sw::editor
     {
         /**
          * @brief 핀 번호 계약입니다. **만드는 것과 푸는 것이 한곳에 있습니다.**
-         * @details 핀 번호는 `노드 id * kPinScale + 오프셋` 입니다. 예전에는 만드는 쪽만 여기 있고 푸는 쪽은 링크를 만드는
-         *          코드에 `/ 10` · `% 10` 으로 적혀 있었습니다. 자릿수 기준을 바꾸면 한쪽만 따라가서 **링크가 엉뚱한 노드에
-         *          붙습니다.** `DialogueGraphAsset` 도 같은 이유로 이미 한곳에 모았습니다(그 파일의 "핀 번호 계약" 절).
+         * @details 핀 번호는 `노드 id * kPinScale + 오프셋` 입니다. 푸는 쪽을 따로 적으면 자릿수 기준을 바꿀 때 한쪽만 따라가서
+         *          **링크가 엉뚱한 노드에 붙습니다.** `DialogueGraphAsset` 도 같은 이유로 한곳에 둡니다(그 파일의 "핀 번호 계약" 절).
          */
         struct AnimationGraphPanelInternal
         {
@@ -273,9 +272,8 @@ namespace sw::editor
             _nodeGraph.unbind();
             _listNode = data._listNode;
         }
-        // **저장이 실패하면 아무것도 지우지 않는다.** 예전에는 반환값을 버리고 무조건 `clearDocumentDirty()` 를 불렀다.
-        // 그래서 실패해도 "저장됨" 으로 표시되고, 되돌리기 기준점까지 옮겨지고, `saveDocument()` 는 `true` 를 반환했다.
-        // 결국 문서를 바꾸거나 에디터를 닫을 때 종료 확인이 뜨지 않고 편집이 조용히 사라졌다.
+        // **저장이 실패하면 아무것도 지우지 않는다.** 실패를 "저장됨" 으로 표시하면 문서를 바꾸거나 에디터를 닫을 때
+        // 종료 확인이 뜨지 않고 편집이 조용히 사라진다.
         if ( EditorToolAssetCommands::saveAnimationGraph( data, getLoadedAssetPath() ) == false )
             return false;
 

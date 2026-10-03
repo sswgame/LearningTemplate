@@ -136,8 +136,8 @@ namespace sw::editor
             /**
              * @brief 이번 프레임에 눌린 키를 ImGui 에서 읽습니다. 없으면 `Key::Unknown` 입니다.
              * @details 바인딩 창은 ImGui 모달이라 떠 있는 동안 ImGui 가 키보드를 쥐고 있고(`WantCaptureKeyboard`), 에디터는 그 키를
-             *          게임 입력으로 넘기지 않습니다(`ImGuiEditor::processEvent`). 그래서 예전처럼 `InputManager::wasKeyPressed` 를
-             *          물으면 키가 영원히 오지 않았습니다 — 창을 닫는 길은 아래 버튼 목록뿐이었습니다. 키는 창이 받은 곳에서 읽습니다.
+             *          게임 입력으로 넘기지 않습니다(`ImGuiEditor::processEvent`). 그래서 `InputManager::wasKeyPressed` 를
+             *          물으면 키가 영원히 오지 않습니다. 키는 창이 받은 곳에서 읽습니다.
              */
             static Key findPressedKey()
             {
@@ -1148,7 +1148,7 @@ namespace sw::editor
 
     void InputMapEditorPanel::reloadFromFile()
     {
-        // 못 읽으면 편집 중인 바인딩과 dirty 를 그대로 둔다(예전에는 실패해도 dirty 를 지우고 "다시 읽었다" 고 했다).
+        // 못 읽으면 편집 중인 바인딩과 dirty 를 그대로 둔다(dirty 를 지우고 "다시 읽었다" 고 하지 않는다).
         if ( _actionMap.loadFromResource( _inputMapPath.c_str() ) == false )
         {
             SW_LOG_ERROR( "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );

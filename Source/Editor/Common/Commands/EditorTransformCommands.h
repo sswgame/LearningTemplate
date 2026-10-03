@@ -45,7 +45,7 @@ namespace sw::editor
         static Component* pasteComponentAsNew( GameObject* pTargetObj, string_view typeName, string_view xml );
         /**
          * @brief 이름으로 저장하는 프리셋의 파일 이름입니다: `<타입>_<이름>.preset.xml`(프리셋 폴더 안). 인스펙터의 프리셋 목록이 이 규칙으로 찾습니다.
-         * @details 예전에는 이 이름을 저장하는 쪽과 목록을 읽는 쪽(접미사 길이 11 을 손으로 셌다)이 따로 들었다.
+         * @details 저장하는 쪽과 목록을 읽는 쪽이 이 함수 하나를 씁니다.
          */
         static string makeComponentPresetFileName( const Component* pComp, string_view presetName );
         /** @brief `makeComponentPresetFileName` 규칙의 이 컴포넌트 타입 프리셋이면 그 이름을, 아니면 빈 글을 돌려줍니다(경로를 받아도 됩니다). */
@@ -54,8 +54,8 @@ namespace sw::editor
         [[nodiscard]] static bool saveComponentPreset( const Component* pComp, string_view presetName );
         /**
          * @brief 컴포넌트 프리셋을 고른 파일에 그대로 저장합니다(`.preset.xml` 이 없으면 붙입니다).
-         * @details "Save Component Preset" 대화상자가 씁니다. 예전에는 고른 파일 이름에서 `.xml` 만 떼어 이름 규칙에 넘겨, 고른 폴더는 버려지고
-         *          `MyPreset.preset.xml` 이 프리셋 폴더의 `<타입>_MyPreset.preset.preset.xml` 이 됐다.
+         * @details "Save Component Preset" 대화상자가 씁니다. 주의: 고른 파일 이름을 이름 규칙(`makeComponentPresetFileName`)에 넘기면
+         *          고른 폴더는 버려지고 `MyPreset.preset.xml` 이 프리셋 폴더의 `<타입>_MyPreset.preset.preset.xml` 이 된다.
          */
         [[nodiscard]] static bool saveComponentPresetTo( const Component* pComp, string_view filePath );
         /** @brief 프리셋 XML을 컴포넌트에 적용합니다. */
@@ -68,8 +68,8 @@ namespace sw::editor
         static void distributeSelectedObjects( AlignAxis axis );
 
         // 본체는 오브젝트 목록을 받는다 — 선택(EditorContext)에 기대지 않아 EditorTest 가 부를 수 있다. 위치는 모두 **월드**로 읽고 쓴다
-        // (`SceneComponent::setWorldPosition`). 예전에는 월드 값을 로컬 칸에 쓰거나 월드 축 차이를 로컬 축에 더해, 부모가 돌았거나 커진 오브젝트가
-        // 엉뚱한 자리로 갔다.
+        // (`SceneComponent::setWorldPosition`). 월드 값을 로컬 칸에 쓰거나 월드 축 차이를 로컬 축에 더하면 부모가 돌았거나 커진 오브젝트가
+        // 엉뚱한 자리로 간다.
         /** @brief 오브젝트들의 바닥을 월드 Y = 0 에 맞춥니다(메시는 월드 Y 스케일의 반, 2D 박스는 박스 높이의 반을 바닥까지의 거리로 봅니다). */
         static void snapObjectsToGround( const vector<GameObject*>& listObject );
         /** @brief 오브젝트들의 월드 위치를 축 하나에서 맞춥니다(최소 · 최대 · 가운데). 둘보다 적으면 아무것도 하지 않습니다. */

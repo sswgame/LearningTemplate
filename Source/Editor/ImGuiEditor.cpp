@@ -118,10 +118,8 @@ namespace sw::editor
     // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
     /**
      * @brief `-gv_editorStartupScene=<리소스 경로>`: 에디터가 시작할 때 이 씬을 엽니다.
-     * @details 실제 기동 검증이 오랫동안 **빈 씬만** 보고 있었습니다. 활성 게임이 `Empty` 라 맵이 없어서 `SceneManager` 가
-     *          씬 없이 떴다가 내려갑니다. 그래서 오브젝트를 순회하는 코드(뷰포트 피킹 · 컴포넌트 시각화 · Hierarchy 트리 ·
-     *          Profiler 분포표 · 씬 세대 변경 훅)가 검증에서 한 번도 실행되지 않았습니다. 이 스위치로 테스트 씬을 열면 그
-     *          경로가 모두 켜집니다.
+     * @details 빈 씬으로 기동 검증을 하면 오브젝트를 순회하는 코드(뷰포트 피킹 · 컴포넌트 시각화 · Hierarchy 트리 ·
+     *          Profiler 분포표 · 씬 세대 변경 훅)가 실행되지 않습니다. 이 스위치로 테스트 씬을 열면 그 경로가 모두 켜집니다.
      *          예: `-gv_editorStartupScene=game/empty/maps/editortest.scene.xml`
      */
     SW_GLOBAL_VARIABLE_STRING( gv_editorStartupScene, "", "에디터 시작 시 열 씬의 리소스 경로 (비우면 열지 않는다)" );
@@ -295,8 +293,7 @@ namespace sw::editor
             SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDpiScale(), bFixedUiScale ? "fixed" : "monitor DPI",
                          ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y );
 
-            // `-gv_editorStartupScene=<경로>`: 검증용이다. 정의는 이 파일 위에 있다.
-            // 빈 씬만 보던 실제 기동 검증이 오브젝트를 순회하는 코드까지 다루게 하는 스위치다.
+            // `-gv_editorStartupScene=<경로>`: 검증용이다 — 기동 검증이 오브젝트를 순회하는 코드까지 다루게 한다. 정의는 이 파일 위에 있다.
             if ( gv_editorStartupScene.empty() == false )
             {
                 SW_LOG_INFO( "시작 씬을 엽니다: %#", gv_editorStartupScene.c_str() );
@@ -528,7 +525,7 @@ namespace sw::editor
     {
         // in-flight 표시는 "렌더 스레드가 이 슬롯을 읽고 postPresent 에서 풀어 준다" 는 약속이다. 렌더 워커를 비워 세우면 그
         // 약속을 지킬 쪽이 사라지므로, 비운 쪽이 여기로 알려 준다. 이것이 없으면 다음 waitForDrawSnapshotIdle 이 영원히 돌아오지
-        // 않는다. 에디터 모듈 핫 리로드가 실제로 여기서 멈췄다(destroyEditorInstance → shutdown → 무한 대기).
+        // 않는다(에디터 모듈 핫 리로드: destroyEditorInstance → shutdown → 무한 대기).
         _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
     }
 

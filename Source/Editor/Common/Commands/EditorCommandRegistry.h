@@ -115,8 +115,8 @@ namespace sw::editor
 
     /**
      * @brief 에디터 커맨드 하나의 정의입니다.
-     * @details 한 커맨드는 최대 세 곳(메뉴바 · 전역 단축키 · 커맨드 팔레트)에 나타납니다. 예전에는 곳마다 따로 적혀 있어서
-     *          서로 어긋났습니다. 그래서 정의는 여기에 한 번만 둡니다.
+     * @details 한 커맨드는 최대 세 곳(메뉴바 · 전역 단축키 · 커맨드 팔레트)에 나타납니다. 곳마다 따로 적으면 서로 어긋나므로
+     *          정의는 여기에 한 번만 둡니다.
      */
     struct EditorCommandDesc
     {
@@ -188,9 +188,8 @@ namespace sw::editor
 
         /**
          * @brief 중복 id · 중복 키 조합 · 같은 메뉴의 같은 순서 · 어디서도 그리지 않는 메뉴 경로를 outReport 에 적습니다. 문제가 없으면 true입니다.
-         * @details 정의가 세 곳으로 나뉘어 있던 동안 같은 조합을 두 곳이 처리하는 일이 실제로 있었습니다(Ctrl+Z 가 전역과
-         *          Inspector 에서 각각 undo 를 불러 두 번 되돌렸습니다). 정의를 한곳으로 모은 뒤로는 그런 충돌을 기계적으로 잡을
-         *          수 있습니다.
+         * @details 같은 조합을 두 곳이 처리하는 충돌(예: Ctrl+Z 가 전역과 Inspector 에서 각각 undo 를 불러 두 번 되돌림)을
+         *          기계적으로 잡습니다.
          */
         bool validate( string& outReport ) const;
 

@@ -17,8 +17,7 @@ namespace sw::editor
         float32 _cameraSpeed{ 5.0f };
         /**
          * @brief 켜진 컴포넌트 시각화 비트마스크입니다(`EditorViewportVisualizer` 표의 인덱스).
-         * @details 예전에는 시각화마다 bool 하나(`_bShowColliders` · `_bShowCameras`)가 여기 있었고, 툴바에도 체크박스를
-         *          손으로 적었습니다. 지금은 표가 개수를 정하므로 시각화를 더해도 이 구조체와 툴바는 그대로입니다. 초기값은
+         * @details 표가 개수를 정하므로 시각화를 더해도 이 구조체와 툴바는 그대로입니다. 초기값은
          *          EditorViewportClient 생성자가 표에서 받아 채웁니다.
          */
         uint32 _visualizerMask{ 0 };

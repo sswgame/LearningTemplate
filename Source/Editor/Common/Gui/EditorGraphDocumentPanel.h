@@ -3,15 +3,10 @@
  * @brief 노드 그래프를 문서로 여닫는 패널의 공통 뼈대입니다.
  *
  * [왜 있는가]
- * `AnimationGraphPanel` 과 `DialogueGraphPanel` 은 **같은 패널**이었습니다. 노드 · 링크 목록을 들고, 캔버스를 하나
- * 소유하고, JSON 으로 읽고 쓰고, 노드를 옮기면 dirty 로 표시합니다. 그런데 그 뼈대가 두 벌로 복사돼 있었고,
- * 복사본이 **조용히 갈라졌습니다.**
- *
- *   - `cacheNodeLayout` 의 "움직였는가" 판단이 한쪽은 `||`, 다른 쪽은 `&&` 였습니다. `&&` 쪽에서는 노드를 수평으로만
- *     옮기면 dirty 가 표시되지 않아 **레이아웃이 저장되지 않았습니다.**
- *     (판단 자체는 `EditorSessionPolicy::hasNodeMoved` 로 올려 테스트가 지킵니다.)
- *
- * 그래프 패널이 하나 더 생기면 또 한 벌이 늘어날 구조였습니다. `EditorNodeGraphId.h` 가 id 변환을 모은 것과 같은
+ * `AnimationGraphPanel` 과 `DialogueGraphPanel` 은 **같은 패널**입니다. 노드 · 링크 목록을 들고, 캔버스를 하나
+ * 소유하고, JSON 으로 읽고 쓰고, 노드를 옮기면 dirty 로 표시합니다. 뼈대를 패널마다 복사하면 복사본이 **조용히
+ * 갈라집니다**("움직였는가" 판단의 `||` · `&&` 가 갈리면 수평 이동만 한 레이아웃이 저장되지 않는 식 — 판단 자체는
+ * `EditorSessionPolicy::hasNodeMoved` 로 올려 테스트가 지킵니다). `EditorNodeGraphId.h` 가 id 변환을 모은 것과 같은
  * 이유로 뼈대도 여기에 모읍니다.
  *
  * [애셋에 요구하는 것]
@@ -154,7 +149,7 @@ namespace sw::editor
 
         /**
          * @brief 캔버스의 삭제 요청(링크 · 노드)을 목록에 반영합니다(`ed::BeginDelete` 구간 전체).
-         * @details 두 그래프 패널이 이 서른 줄을 각자 갖고 있었습니다. 패널마다 다른 것은 "이 링크가 이 노드에 닿는가"
+         * @details 패널마다 다른 것은 "이 링크가 이 노드에 닿는가"
          *          (애니메이션은 노드 id, 대화는 핀 번호를 풀어 봅니다)와 Undo 이름뿐입니다. 노드를 지우면 그 노드에 닿은 링크도
          *          함께 지웁니다. 남기면 저장된 그래프가 없는 노드를 가리킵니다.
          * @param linkTouchesNode `( const LinkType&, int32 nodeId ) -> bool`

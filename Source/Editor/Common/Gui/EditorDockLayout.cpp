@@ -65,10 +65,9 @@ namespace sw::editor
      * @brief `-gv_editorOpenPanel=<id>`: 그 패널 **하나만** 열고 나머지는 닫습니다. `-gv_editorOpenPanel=all` 이면 **전부** 엽니다.
      * @details 하나만 열기는 화면 캡처용입니다. 전부 띄우면 서로를 가려 마지막에 등록된 것이 위로 오므로 원하는 패널이 캡처에
      *          나오지 않습니다. 전부 열기는 `-gv_editorPanelDump` 가 도구 패널까지 재게 하려는 것입니다. 도구 패널은 기본이 닫힘이라
-     *          덤프가 기본 레이아웃의 다섯 개만 봤습니다. 그래서 전부 열기는 기본 도킹을 적용하지 않고 모두 떠 있는 창으로 둡니다.
-     *          **어느 쪽이든 저장된 레이아웃을 읽지도 쓰지도 않습니다.** 예전에는 전부 열기가 따로 된 스위치
-     *          (`-gv_editorOpenAllPanels=1`)였고 저장을 막는 것도 그쪽에만 있었습니다. 그래서 하나 열기로 한 번 띄우면 그 가시성이
-     *          `windows.ini` 에 굳어, 다음 실행부터 그 패널만 열렸습니다.
+     *          덤프가 기본 레이아웃의 다섯 개만 봅니다. 그래서 전부 열기는 기본 도킹을 적용하지 않고 모두 떠 있는 창으로 둡니다.
+     *          **어느 쪽이든 저장된 레이아웃을 읽지도 쓰지도 않습니다** — 저장하면 그 가시성이 `windows.ini` 에 굳어, 다음 실행부터
+     *          그 패널만 열립니다.
      *          id 는 패널의 `SW_EDITOR_PANEL` 이 준 것입니다(예: `render_targets` · `profiler` · `material`).
      */
     SW_TEST_GLOBAL_VARIABLE_STRING( gv_editorOpenPanel, "", "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)" );
@@ -277,7 +276,7 @@ namespace sw::editor
 
         // 기본 배치는 패널 **제목 문자열**로 붙인다(ImGui 의 API 가 그렇다). 그래서 제목이 패널 쪽에서 바뀌면 여기 적힌
         // 이름과 어긋나고, 그 패널은 아무 말 없이 도킹되지 않는다. `DockBuilderDockWindow` 는 모르는 이름도 조용히 받기
-        // 때문이다. 등록된 패널 제목과 대조해 어긋나면 알리게 했다(도구 패널은 이미 레지스트리에서 이름을 받아 오고 있었다).
+        // 때문이다. 등록된 패널 제목과 대조해 어긋나면 알린다(도구 패널은 레지스트리에서 이름을 받아 온다).
         EditorDockLayoutInternal::dockCheckedWindow( "Hierarchy", dockLeft );
         EditorDockLayoutInternal::dockCheckedWindow( "Inspector", dockRight );
 

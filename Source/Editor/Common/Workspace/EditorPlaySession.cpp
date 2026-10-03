@@ -23,7 +23,7 @@ namespace sw::editor
         {
             /**
              * @brief 월드의 플레이 상태를 바꿉니다. 활성 씬의 시작 · 끝은 `SceneManager` 가 합니다 — 플레이 중에 씬을 바꾸면 새 씬도 시작합니다.
-             * @details 예전에는 여기서 활성 씬의 매니저에 직접 `beginPlay` · `endPlay` 를 불렀고, 플레이 중에 연 씬은 시작하지 않았습니다.
+             * @details 활성 씬의 매니저에 직접 `beginPlay` · `endPlay` 를 부르지 않습니다 — 그러면 플레이 중에 연 씬이 시작하지 않습니다.
              */
             static void setWorldPlaying( bool bPlaying )
             {
@@ -76,9 +76,9 @@ namespace sw::editor
                 if ( data._bHasSnapshot == SW_FALSE )
                     return;
 
-                // 플레이 중에 활성 씬이 바뀌었으면(게임 코드가 다음 레벨을 열었다 · 씬 로드가 끝났다) 스냅샷은 지금 씬의 것이 아니다. 예전에는
-                // 그 씬에 그대로 되돌려 두 씬의 오브젝트가 섞였고, 활성 씬은 플레이 중에 연 씬의 소스 경로를 든 채라 저장하면 **그 씬 파일**을
-                // 덮어썼다. 편집하던 씬을 빈 씬으로 다시 세우고(이름 · 소스 경로) 거기에 되돌린다. 로드가 아직 돌고 있으면 끝나며 씬을 다시
+                // 플레이 중에 활성 씬이 바뀌었으면(게임 코드가 다음 레벨을 열었다 · 씬 로드가 끝났다) 스냅샷은 지금 씬의 것이 아니다. 그 씬에
+                // 그대로 되돌리면 두 씬의 오브젝트가 섞이고, 활성 씬은 플레이 중에 연 씬의 소스 경로를 든 채라 저장하면 **그 씬 파일**을
+                // 덮어쓴다. 편집하던 씬을 빈 씬으로 다시 세우고(이름 · 소스 경로) 거기에 되돌린다. 로드가 아직 돌고 있으면 끝나며 씬을 다시
                 // 바꿔 놓으므로 먼저 거둔다. 오브젝트는 원래 id 로 되살아나므로 프리팹 연결도 id 로 다시 맨다(아래 2).
                 SceneManager* pSceneManager = editor::getService<SceneManager>();
                 if ( pSceneManager != nullptr && pSceneManager->getSceneGeneration() != data._sceneGeneration )
@@ -151,8 +151,8 @@ namespace sw::editor
                 }
 
                 // 3. 계층을 다시 잇는다 — **모두 읽은 뒤에**, 부모의 **원래 id** 로. 읽는 자리에서 이으면 플레이 중에 부모도 지워졌고 자식이
-                // 스냅샷에서 먼저 나올 때(먼저 만들었으면) 부모가 아직 없어 루트로 남았다. 이름으로 찾으면 플레이 중 이름을 바꾼 오브젝트(A 가 B 의
-                // 이름을 가져갔다)의 자식이 엉뚱한 쪽에 붙었다. 씬 로드(`Scene::instantiate`)와 같은 묶음이다.
+                // 스냅샷에서 먼저 나올 때 부모가 아직 없어 루트로 남는다. 이름으로 찾으면 플레이 중 이름을 바꾼 오브젝트(A 가 B 의
+                // 이름을 가져갔다)의 자식이 엉뚱한 쪽에 붙는다. 씬 로드(`Scene::instantiate`)와 같은 묶음이다.
                 batch.finish();
 
                 SW_LOG_TRACE( "Play snapshot restored (%# objects).",
@@ -300,8 +300,8 @@ namespace sw::editor
         if ( pCommandStack != nullptr )
             pCommandStack->clear();
 
-        // **멈춤을 떠날 때 · 멈춤으로 돌아올 때로 가른다(목표 상태가 무엇이든).** 예전에는 Stopped → Playing 만 월드를 켜서, 멈춤에서
-        // 일시정지를 누른 뒤 Play 하면 스냅샷도 onBeginPlay 도 없이 플레이가 돌았고 Stop 이 편집 씬을 되돌리지 못했다.
+        // **멈춤을 떠날 때 · 멈춤으로 돌아올 때로 가른다(목표 상태가 무엇이든).** Stopped → Playing 만 월드를 켜면, 멈춤에서
+        // 일시정지를 누른 뒤 Play 할 때 스냅샷도 onBeginPlay 도 없이 플레이가 돌고 Stop 이 편집 씬을 되돌리지 못한다.
         // 멈춤 → 일시정지는 일시정지 상태로 플레이를 시작한다(스냅샷 · 시작은 하고 씬은 틱하지 않는다).
         if ( previous == PlaySessionState::Stopped )
         {

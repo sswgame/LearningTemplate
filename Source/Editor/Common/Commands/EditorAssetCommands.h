@@ -74,9 +74,8 @@ namespace sw::editor
 
         /**
          * @brief 파일 탐색기에서 이 경로를 선택한 채로 엽니다.
-         * @details 예전에는 `system( "explorer.exe /select,\"...\"" )` 이었습니다. 셸을 거치면 경로 안의 `&` · `"` 가 명령으로
-         *          해석되고, 콘솔 창이 한 번 깜빡이며, Windows 가 아니면 아무것도 하지 않았습니다. 지금은 셸 없이 프로세스를
-         *          직접 띄웁니다.
+         * @details 셸 없이 프로세스를 직접 띄웁니다. 셸(`system`)을 거치면 경로 안의 `&` · `"` 가 명령으로 해석되고 콘솔 창이
+         *          한 번 깜빡입니다.
          */
         static bool showInFileExplorer( string_view absolutePath );
         /** @brief 폴더의 직속 하위 폴더/파일을 채웁니다. .meta는 제외합니다. */

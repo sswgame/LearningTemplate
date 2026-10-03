@@ -100,8 +100,8 @@ namespace sw::editor
 
         /**
          * @brief 뒤로/앞으로 이동이 기억하는 최대 폴더 수입니다.
-         * @details 상한이 없었습니다. 폴더를 옮길 때마다 문자열 둘이 붙고 **지워지지 않아서**, 에디터를 오래 켜 두고 폴더를
-         *          계속 오갈수록 목록이 계속 늘었습니다. 브라우저의 뒤로 가기와 같은 규칙으로 가장 오래된 것부터 버립니다.
+         * @details 상한이 없으면 폴더를 옮길 때마다 문자열 둘이 붙어 에디터를 오래 켜 둘수록 목록이 계속 늡니다.
+         *          브라우저의 뒤로 가기와 같은 규칙으로 가장 오래된 것부터 버립니다.
          */
         static constexpr size_t kMaxHistoryCount = 64;
 
@@ -135,8 +135,7 @@ namespace sw::editor
         vector<AssetEntry>  _listEntry;
         /**
          * @brief 이번 프레임에 보일 엔트리입니다. **`_listEntry` 를 가리키기만** 합니다.
-         * @details 그리는 함수 안의 지역 `vector` 였습니다. 프레임마다 할당하고 해제했고, 게다가 엔트리를 통째로 복사해서
-         *          `string` 넷씩을 애셋 수만큼 베꼈습니다. 멤버로 두면 용량이 남아 첫 프레임 뒤로는 할당이 없습니다.
+         * @details 멤버로 두면 용량이 남아 첫 프레임 뒤로는 할당이 없고, 포인터라 엔트리(`string` 넷)를 베끼지 않습니다.
          * @warning `_listEntry` 가 바뀌면 이 포인터들은 무효가 됩니다. 그래서 프레임마다 다시 채웁니다.
          */
         vector<const AssetEntry*>             _listVisibleEntry;

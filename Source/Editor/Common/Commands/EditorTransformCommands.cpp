@@ -65,7 +65,7 @@ namespace sw::editor
 
             /**
              * @brief 오브젝트를 월드 축 `axis` 의 값이 `targetValue` 가 되도록 옮기고 되돌리기 기록을 남깁니다. 정렬 · 분배가 함께 씁니다.
-             * @details 월드 위치를 바꿔 쓴다(`setWorldPosition`). 예전에는 월드 차이만큼 **로컬** 위치를 옮겨, 부모에 회전 · 크기가 있으면 틀렸다.
+             * @details 월드 위치를 바꿔 쓴다(`setWorldPosition`). 월드 차이만큼 **로컬** 위치를 옮기면 부모에 회전 · 크기가 있을 때 틀린다.
              *          주 씬 컴포넌트가 없으면 아무것도 하지 않습니다.
              */
             static void moveAlongWorldAxis( GameObject* pGo, AlignAxis axis, float32 targetValue, string_view actionName )
@@ -106,8 +106,8 @@ namespace sw::editor
         // 이름표는 값이 아니라 정체다(컴포넌트 키) — 붙여 넣어도 대상의 것을 지킨다(언리얼의 속성 붙여넣기도 컴포넌트 이름을 옮기지 않는다).
         pTargetComp->setComponentName( targetName );
 
-        // 직렬화기는 값만 쓴다 — 컴포넌트가 그 값으로 다시 맞추게 알린다. 예전에는 알리지 않아 붙여 넣은 위치가 월드 행렬에 들지 않았고
-        // (화면 · 기즈모가 옛 자리) 메시 id 를 붙여 넣어도 옛 메시를 그렸다.
+        // 직렬화기는 값만 쓴다 — 컴포넌트가 그 값으로 다시 맞추게 알린다. 알리지 않으면 붙여 넣은 위치가 월드 행렬에 들지 않고
+        // (화면 · 기즈모가 옛 자리) 메시 id 를 붙여 넣어도 옛 메시를 그린다.
         if ( bSuccess )
             pTargetComp->notifyStateWritten();
 
@@ -149,9 +149,8 @@ namespace sw::editor
             // 읽지 못했어도 기본값이 그 상태다 — 어느 쪽이든 컴포넌트가 값을 자원으로 바꾸게 한다(`EditorSceneCommands::addComponent` 와 같다).
             pNewComp->notifyStateWritten();
 
-            // 예전에는 이 결과를 **아무도 읽지 않았다.** 둘 다 실패해도 값이 하나도 안 들어간
-            // 컴포넌트를 붙여 놓고 "붙여넣기" 실행 취소 항목까지 남겨서, 쓰는 사람은 왜 비었는지
-            // 알 수 없었다. 컴포넌트는 이미 붙었으니 되돌리지 않고, 대신 조용히 넘어가지 않는다.
+            // 이 결과를 버리면 둘 다 실패해도 값이 하나도 안 들어간 컴포넌트와 "붙여넣기" 실행 취소 항목만
+            // 남아, 쓰는 사람은 왜 비었는지 알 수 없다. 컴포넌트는 이미 붙었으니 되돌리지 않고, 대신 조용히 넘어가지 않는다.
             if ( bSuccess == false )
             {
                 SW_LOG_WARNING( "Paste Component as New: %# 의 값을 읽지 못했습니다. 빈 컴포넌트가 추가됩니다.",
@@ -266,8 +265,8 @@ namespace sw::editor
 
             const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
 
-            // 월드로 읽고 월드로 쓴다. 크기는 오브젝트의 월드 상자 하나로 잰다(`GameObject::getWorldBox`) — 예전에는 "메시면 월드 스케일 × 단위 상자,
-            // 콜라이더면 오프셋 크기" 를 따로 셈해, 단위 상자가 아닌 메시(구 · 캡슐 · 평면)와 키운 콜라이더가 떠 있거나 파묻혔다.
+            // 월드로 읽고 월드로 쓴다. 크기는 오브젝트의 월드 상자 하나로 잰다(`GameObject::getWorldBox`) — 종류마다 따로 셈하면("메시면 월드
+            // 스케일 × 단위 상자") 단위 상자가 아닌 메시(구 · 캡슐 · 평면)와 키운 콜라이더가 떠 있거나 파묻힌다.
             float3  pos          = pSc->getWorldPosition();
             float32 bottomOffset = 0.0f;
             AABB    box{};

@@ -11,10 +11,8 @@ namespace sw::editor
     /**
      * @class EditorCommandGui
      * @brief 에디터 커맨드를 등록하고, 단축키를 처리하고, 메뉴 항목 하나를 그립니다.
-     * @details 예전에는 커맨드 하나가 **세 곳**에 따로 적혀 있었습니다. `EditorMenuBar` 의 메뉴 항목, 같은 파일
-     *          `processHotkeys` 의 if 사다리, `CommandPalettePopup` 의 정적 목록입니다. 그래서 라벨의 단축키 안내와 실제
-     *          처리가 어긋나고(F7 은 어디에도 적혀 있지 않았고 Ctrl+Shift+Z 는 Inspector 에서만 먹었습니다), Ctrl+Z 는 두
-     *          곳이 처리해 두 번 되돌렸습니다. 이제 정의는 `registerDefaults` 의 표 하나이고, 세 곳은 그것을 읽기만 합니다.
+     * @details 정의는 `registerDefaults` 의 표 하나이고, 메뉴바 · 단축키 처리 · 커맨드 팔레트는 그것을 읽기만 합니다 — 곳마다 따로
+     *          적으면 라벨의 단축키 안내와 실제 처리가 어긋나고, 같은 조합을 두 곳이 처리합니다.
      *          커맨드를 하나 더하려면 표에 한 줄을 넣으면 메뉴 · 단축키 · 팔레트에 함께 나타납니다. 어느 메뉴의 어디에 놓일지도
      *          그 줄의 메뉴 경로 · 순서 칸이 정합니다.
      */

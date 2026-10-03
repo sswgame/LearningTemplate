@@ -188,7 +188,7 @@ namespace sw
     {
         for ( const FileChangeEvent& changeEvent : listEvent )
         {
-            // **이벤트당 한 번** 만든다. 예전에는 `matchesWatch` 안에 있어서 감시 수만큼 다시 만들었다.
+            // **이벤트당 한 번** 만든다(`matchesWatch` 안에서 만들면 감시 수만큼 다시 만든다).
             const string normalizedFullPath =
                 FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) );
 
@@ -213,8 +213,8 @@ namespace sw
 
             if ( bAnyMatch )
             {
-// 가드는 이 문자열을 **쓰는 로그가 컴파일되는가** 와 같아야 한다. 예전에는 "Shipping 아님" 이었는데,
-// Release 는 Shipping 이 아니면서 Trace 는 컴파일하지 않는다. 그래서 문자열만 만들고 아무도 쓰지 않게 됐다.
+// 가드는 이 문자열을 **쓰는 로그가 컴파일되는가** 와 같아야 한다. "Shipping 아님" 으로 가르면
+// Release(Trace 를 컴파일하지 않는다)에서 문자열만 만들고 아무도 쓰지 않는다.
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_TRACE )
                 // 의도된 기본값이다. 지금 switch 가 모든 열거자를 덮어 "쓰이지 않는 초기화" 로
                 // 보이지만, 열거자가 늘면 이 값이 로그에 남아야 한다.
@@ -344,7 +344,7 @@ namespace sw
             return true;
 
         // **접미사**로 본다. `hasExtension` 은 마지막 점 뒤만 보므로 `.prefab.xml` 같은 복합
-        // 접미사가 영영 걸리지 않았다. 프리팹 핫 리로드가 등록은 되는데 이벤트를 받지 못했다.
+        // 접미사가 걸리지 않는다(프리팹 핫 리로드가 등록은 되는데 이벤트를 받지 못한다).
         for ( const string& allowed : entry._listExtension )
         {
             if ( StringUtil::endsWith( filename, allowed, true ) )

@@ -44,8 +44,7 @@ namespace sw::editor
     {
         struct EditorViewportClientInternal
         {
-            // 축 색의 정본. 그리드 · 오리엔테이션 큐브가 같은 값을 본다. 예전에는 각자 리터럴을 들고 있었고
-            // 3D 그리드는 X · Z 가 뒤바뀐 채였다. 기즈모(ImGuizmo)도 같은 관례(X 빨강 · Y 초록 · Z 파랑)를 쓴다.
+            // 축 색의 정본. 그리드 · 오리엔테이션 큐브가 같은 값을 본다. 기즈모(ImGuizmo)도 같은 관례(X 빨강 · Y 초록 · Z 파랑)를 쓴다.
             static constexpr ImU32 _s_kColorAxisX = IM_COL32( 235, 65, 65, 255 );
             static constexpr ImU32 _s_kColorAxisY = IM_COL32( 65, 220, 95, 255 );
             static constexpr ImU32 _s_kColorAxisZ = IM_COL32( 65, 130, 245, 255 );
@@ -75,8 +74,8 @@ namespace sw::editor
 
             /**
              * @brief 마우스 아래의 월드 레이를 만듭니다. 캔버스 밖이거나 퇴화했으면 false 입니다.
-             * @details 피킹 · 자 · 애셋 드롭이 같은 레이를 씁니다. 예전에는 셋이 NDC 계산과 근 · 원평면 역투영을 각자 갖고
-             *          있었습니다. ImGui 에 닿는 것은 마우스 위치뿐이고, 나머지는 `EditorViewportPick::makeRay` 라 테스트가 있습니다.
+             * @details 피킹 · 자 · 애셋 드롭이 같은 레이를 씁니다. ImGui 에 닿는 것은 마우스 위치뿐이고, 나머지는
+             *          `EditorViewportPick::makeRay` 라 테스트가 있습니다.
              */
             static bool makeMouseRay( const float4x4& invViewProj, const float2& canvasPos, const float2& canvasSize,
                                       EditorPickRay& outRay )
@@ -117,8 +116,7 @@ namespace sw::editor
         const float32 fps         = ImGui::GetIO().Framerate;
         const float32 frameTimeMs = ( fps > 0.0f ) ? ( 1000.0f / fps ) : 0.0f;
 
-        // 개수만 필요하므로 이 프레임에 이미 만들어 둔 스냅샷을 본다 (예전에는 여기서 씬 전체를
-        // 다시 힙에 복사해 .size() 만 읽었다).
+        // 개수만 필요하므로 이 프레임에 이미 만들어 둔 스냅샷을 본다(씬 전체를 다시 복사하지 않는다).
         const uint32 totalObjects = static_cast<uint32>( _listSceneObject.size() );
 
         constexpr float32 overlayW = 160.0f;
@@ -537,8 +535,8 @@ namespace sw::editor
             float4x4 newWorldMat{};
             EditorViewportClientInternal::loadColumnMajor( newWorldMat, arrMatrix );
 
-            // 표면 붙이기는 **월드** 위치 · 월드 Y 스케일로 한다. 예전에는 로컬로 분해한 값을 넘겨, 부모가 있으면 다른 오브젝트의 월드 윗면과
-            // 로컬 높이를 견줬다.
+            // 표면 붙이기는 **월드** 위치 · 월드 Y 스케일로 한다. 로컬로 분해한 값을 넘기면 부모가 있을 때 다른 오브젝트의 월드 윗면과
+            // 로컬 높이를 견준다.
             if ( op == ImGuizmo::TRANSLATE && _toolbarSettings._bSurfaceSnap )
             {
                 float3 worldTranslation = newWorldMat.getTranslation();
@@ -546,7 +544,7 @@ namespace sw::editor
                 newWorldMat.setTranslation( worldTranslation );
             }
 
-            // 분해는 엔진이 한다(엔진의 오일러 규칙 — ImGuizmo 의 XYZ 분해는 엔진의 요 · 피치 · 롤 순서와 달라 섞인 회전이 틀어졌다).
+            // 분해는 엔진이 한다(엔진의 오일러 규칙 — ImGuizmo 의 XYZ 분해는 엔진의 요 · 피치 · 롤 순서와 달라 섞인 회전이 틀어진다).
             EditorSceneCommands::applyWorldTransform( pRaw, newWorldMat );
         }
 
@@ -665,8 +663,8 @@ namespace sw::editor
         const float3 worldPos = pSceneComp->getWorldPosition();
         _orbitTarget          = worldPos;
 
-        // 크기는 오브젝트의 월드 상자로 잰다(`GameObject::getWorldBox`). 예전에는 메시의 **로컬** 스케일 · 콜라이더 오프셋 크기로 따로 셈해,
-        // 부모가 키운 오브젝트 · 단위 상자가 아닌 메시를 너무 가깝거나 멀게 잡았다.
+        // 크기는 오브젝트의 월드 상자로 잰다(`GameObject::getWorldBox`). 메시의 **로컬** 스케일 · 콜라이더 오프셋 크기로 따로 셈하면
+        // 부모가 키운 오브젝트 · 단위 상자가 아닌 메시를 너무 가깝거나 멀게 잡는다.
         float32 objectRadius = 2.0f;
         AABB    objectBox{};
         if ( pRaw->getWorldBox( objectBox ) )
@@ -844,7 +842,7 @@ namespace sw::editor
                 const bool    bMajor   = ( index % 5 == 0 );
 
                 // x == 0 인 선은 Z 방향으로 뻗는다. 그것이 **Z 축**이고, z == 0 인 선이 X 축이다.
-                // 예전에는 이 둘의 색이 바뀌어 있어 그리드의 축 색이 오리엔테이션 큐브 · 기즈모와 달랐다.
+                // 이 둘의 색을 바꿔 쓰면 그리드의 축 색이 오리엔테이션 큐브 · 기즈모와 달라진다.
                 const ImU32 colorAlongZ = bOriginX ? EditorViewportClientInternal::_s_kColorAxisZ
                                                    : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
                 const ImU32 colorAlongX = bOriginZ ? EditorViewportClientInternal::_s_kColorAxisX

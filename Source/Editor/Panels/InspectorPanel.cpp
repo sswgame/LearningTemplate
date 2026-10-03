@@ -49,9 +49,9 @@ namespace sw::editor
         {
             /**
              * @brief 오브젝트 하나를 바꾸는 인스펙터 편집 — 멈춰 있으면 되돌리기 기록과 씬 dirty 를 남기고, 플레이 중이면 바로 바꿉니다.
-             * @details 예전에는 이름 · 활성 · 부모 해제 · 컴포넌트 활성 · 컴포넌트 제거를 바로 바꿨다 — 기록도 dirty 도 없어, 그 편집만
-             *          하고 다른 씬을 열거나 끄면 묻지도 않고 사라졌고 Ctrl+Z 로도 돌릴 수 없었다. 플레이 중에는 씬 명령이 막히므로
-             *          (플레이 사본은 Stop 이 되돌린다) 예전처럼 바로 바꾼다.
+             * @details 이름 · 활성 · 부모 해제 · 컴포넌트 활성 · 컴포넌트 제거가 이것을 지난다 — 기록도 dirty 도 없이 바꾸면 그 편집만
+             *          하고 다른 씬을 열거나 끌 때 묻지도 않고 사라지고 Ctrl+Z 로도 돌릴 수 없다. 플레이 중에는 씬 명령이 막히므로
+             *          (플레이 사본은 Stop 이 되돌린다) 바로 바꾼다.
              */
             template <typename EditFunc>
             static void applyObjectEdit( GameObject* pObj, string_view undoLabel, EditFunc&& edit )
@@ -113,11 +113,9 @@ namespace sw::editor
         EditorWidgets::pushInspectorStyle();
         drawSelectionSection();
 
-        // Undo/Redo 단축키는 여기서 처리하지 않는다. 예전에는 이 패널이 Ctrl+Z 를 따로 받았는데
-        // 전역 처리기(EditorCommandGui)도 같은 프레임에 받아 **두 번 되돌렸다.** ImGui 의
-        // IsKeyPressed 는 소비되지 않으므로 두 호출자가 모두 true 를 본다. 게다가 이쪽 경로는
-        // 플레이 중 가드도, 텍스트 입력 중 가드도 없어서 값을 타이핑하다 Ctrl+Z 를 누르면 씬 편집이
-        // 되돌아갔다. 지금은 edit.undo / edit.redo 커맨드가 유일한 처리자다.
+        // Undo/Redo 단축키는 여기서 처리하지 않는다 — edit.undo / edit.redo 커맨드가 유일한 처리자다.
+        // ImGui 의 IsKeyPressed 는 소비되지 않으므로 여기서도 받으면 전역 처리기(EditorCommandGui)와 함께
+        // **두 번 되돌린다.**
 
         EditorWidgets::popInspectorStyle();
     }
@@ -236,8 +234,8 @@ namespace sw::editor
                 continue;
 
             const utf8* pName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str() : "Component";
-            // 체크박스는 컴포넌트 **자기** 비트다. 예전에는 실효값(isActive — 소유 오브젝트의 계층 활성까지)을 읽어 그대로 다시 써서,
-            // 꺼진 부모 아래의 컴포넌트는 인스펙터에 보이기만 해도 자기 비트가 꺼졌다. 쓰는 것도 바뀐 때 한 번이다(아래).
+            // 체크박스는 컴포넌트 **자기** 비트다. 주의: 실효값(isActive — 소유 오브젝트의 계층 활성까지)을 읽어 그대로 다시 쓰면
+            // 꺼진 부모 아래의 컴포넌트는 인스펙터에 보이기만 해도 자기 비트가 꺼진다. 쓰는 것도 바뀐 때 한 번이다(아래).
             const bool bWasActive = pComp->isSelfActive();
             bool       bActive    = bWasActive;
             bool       bRemove{ false };
@@ -436,9 +434,8 @@ namespace sw::editor
             pInspector->drawHeader( pComp );
         for ( IInspectorComponent* pInspector : listInspector )
         {
-            // 확장 구역도 프로퍼티 위젯과 같은 규칙으로 되돌리기 · dirty 에 남긴다 — 구역을 한 묶음으로 닫고 그 묶음을 위젯 하나처럼 추적한다.
-            // 예전에는 위젯마다 `trackPod` 를 불러야 했고, Transform · Camera 구역은 하나도 부르지 않아 위치 · FOV 편집을 되돌릴 수 없었고
-            // 씬도 dirty 가 되지 않았다(저장을 묻지 않고 사라졌다).
+            // 확장 구역도 프로퍼티 위젯과 같은 규칙으로 되돌리기 · dirty 에 남긴다 — 구역을 한 묶음으로 닫고 그 묶음을 위젯 하나처럼 추적한다
+            // (구역이 위젯마다 `trackPod` 를 부르지 않아도 된다).
             ImGui::BeginGroup();
             pInspector->drawSection( pComp, pRhiDevice );
             ImGui::EndGroup();
@@ -461,13 +458,12 @@ namespace sw::editor
         if ( pInstance == nullptr || pTypeInfo == nullptr )
             return;
 
-        // 무엇을 어떤 순서로 그릴지는 `InspectorPropertyLayout` 이 정한다 — 상속분까지, 카테고리는 기반부터 처음 나온 순서(예전에는 자기 프로퍼티만,
-        // 카테고리는 알파벳 순이었다).
+        // 무엇을 어떤 순서로 그릴지는 `InspectorPropertyLayout` 이 정한다 — 상속분까지, 카테고리는 기반부터 처음 나온 순서.
         const EditorListFilter         filter{ _propertyFilter.c_str() };
         vector<InspectorPropertyGroup> listGroup;
         InspectorPropertyLayout::collectPropertyGroups( *pTypeInfo, listDrawnName, filter, listGroup );
 
-        // 검색어가 아무 프로퍼티도 맞히지 못하면 그렇다고 알려 준다. 예전에는 빈 공간이었다.
+        // 검색어가 아무 프로퍼티도 맞히지 못하면 그렇다고 알려 준다.
         if ( listGroup.empty() )
         {
             if ( filter.isActive() )
@@ -506,9 +502,8 @@ namespace sw::editor
                             formatstring( resetLabel.data(), resetLabel.capacity(), "Reset to Default (%#)", prop->_metadata._defaultValue.c_str() );
                             if ( ImGui::MenuItem( resetLabel.c_str() ) )
                             {
-                                // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린 뒤 되돌리기에 남긴다. 예전에는 `{"이름":기본값}` 을 JSON 으로
-                                // 읽혀, 읽기가 빠진 프로퍼티마다 기본값을 채우므로 **기본값이 있는 다른 프로퍼티까지** 되돌렸고, 따옴표 없는 문자열
-                                // 기본값은 JSON 이 아니라 실패했으며, 알리지도 기록하지도 않았다.
+                                // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린 뒤 되돌리기에 남긴다. 주의: `{"이름":기본값}` 을 JSON 으로
+                                // 읽히면 읽기가 빠진 프로퍼티마다 기본값을 채우므로 **기본값이 있는 다른 프로퍼티까지** 되돌린다.
                                 const PropertyInfo& resetProp = *prop;
                                 GameObject*         pOwnerObj = _pEditTargetComponent != nullptr ? _pEditTargetComponent->getOwner() : _pEditTargetObject;
                                 auto                reset     = [this, &resetProp, pInstance]()
@@ -622,9 +617,9 @@ namespace sw::editor
         if ( pRegistry == nullptr )
             return;
 
-        // **enum 의 실제 크기로** 읽고 쓴다(`EnumInfo::_size` · 부호). 예전에는 늘 int32 로 읽고 썼다 — 엔진의 enum 은 대부분 uint8 ·
-        // uint16 이라, 하나를 고를 때마다 뒤의 필드를 덮었고(`CameraComponent::_role` 을 고르면 바로 뒤의 `_bOrthographic` 이 꺼졌다),
-        // 읽을 때는 이웃 바이트가 섞여 멀쩡한 값이 "<Unknown>" 으로 떴다.
+        // **enum 의 실제 크기로** 읽고 쓴다(`EnumInfo::_size` · 부호). 주의: 늘 int32 로 읽고 쓰면 — 엔진의 enum 은 대부분 uint8 ·
+        // uint16 이라 — 하나를 고를 때마다 뒤의 필드를 덮고(`CameraComponent::_role` 을 고르면 바로 뒤의 `_bOrthographic` 이 꺼진다),
+        // 읽을 때는 이웃 바이트가 섞여 멀쩡한 값이 "<Unknown>" 으로 뜬다.
         void* pEnumMemory = prop.getValuePtr<void>( pInstance );
         if ( pEnumMemory == nullptr )
             return;
@@ -722,10 +717,9 @@ namespace sw::editor
     {
         const utf8* pLabel = "##value";
 
-        // 이 함수의 **모든 분기는 무언가를 그리고 끝난다.** 예전에는 시퀀스가 아니면 아무것도 그리지
-        // 않고 돌아갔고, 인스펙터에는 **빈 칸 하나**만 남았다. 값이 비었는지, 그리지 못하는 것인지,
-        // 버그인지 화면만 보고는 구분할 수 없었다. 모르는 타입조차 "No inspector for ..." 라고 알려 주는데
-        // 컨테이너만 조용했다. 맵 프로퍼티는 실제로 있다(`GameData::_mapCustomProperty` 등).
+        // 이 함수의 **모든 분기는 무언가를 그리고 끝난다.** 아무것도 그리지 않고 돌아가면 인스펙터에는 **빈 칸 하나**만 남아,
+        // 값이 비었는지, 그리지 못하는 것인지, 버그인지 화면만 보고는 구분할 수 없다(모르는 타입도 "No inspector for ..." 라고
+        // 알린다). 맵 프로퍼티도 실제로 있다(`GameData::_mapCustomProperty` 등).
         void* pContainer = prop.getRawPtr( pInstance );
         if ( pContainer == nullptr )
         {
@@ -779,8 +773,8 @@ namespace sw::editor
                 ImGui::Separator();
             }
 
-            // 원소 위젯도 같은 규칙을 받아야 한다. 예전에는 `bReadOnly` 가 위의 버튼만 가려서
-            // **`ReadOnly` 컨테이너의 원소가 그대로 편집됐다.**
+            // 원소 위젯도 같은 규칙을 받아야 한다 — `bReadOnly` 가 위의 버튼만 가리면
+            // **`ReadOnly` 컨테이너의 원소가 그대로 편집된다.**
             ImGui::BeginDisabled( bElementEditable == false );
 
             const size_t newCount = pSeq->getSize( pContainer );

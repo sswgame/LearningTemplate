@@ -74,8 +74,8 @@ namespace sw
             string          _pathPrefix;
             /**
              * @brief `_pathPrefix` 를 `normalizePath` 한 것입니다. **등록할 때 한 번** 만듭니다.
-             * @details `matchesWatch` 가 이벤트마다 이것을 다시 만들고 있었습니다. 접두사는 감시가 등록된 뒤로 바뀌지 않으므로,
-             *          이벤트 E 개 · 감시 W 개면 E x W 번의 정규화가 모두 같은 값을 다시 구하는 일이었습니다.
+             * @details 접두사는 감시가 등록된 뒤로 바뀌지 않으므로, `matchesWatch` 가 이벤트마다 다시 만들면 이벤트 E 개 ·
+             *          감시 W 개에 E x W 번의 정규화가 모두 같은 값을 다시 구합니다.
              */
             string                 _normalizedPrefix;
             vector<string>         _listExtension;
@@ -84,8 +84,8 @@ namespace sw
 
         /**
          * @brief 이벤트가 이 감시의 접두사 · 확장자와 맞으면 true 입니다.
-         * @param normalizedFullPath 이벤트의 전체 경로를 정규화한 것. **부르는 쪽이 이벤트당 한 번** 만들어 넘깁니다(예전에는
-         *        이 함수가 감시마다 같은 값을 다시 만들었습니다).
+         * @param normalizedFullPath 이벤트의 전체 경로를 정규화한 것. **부르는 쪽이 이벤트당 한 번** 만들어 넘깁니다(감시마다
+         *        다시 만들지 않게).
          */
         bool matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent,
                            string_view normalizedFullPath ) const;

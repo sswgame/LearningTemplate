@@ -84,8 +84,8 @@ namespace sw::editor
         /**
          * @brief 갱신 대기 중인 ImGui 텍스처를 백엔드 UpdateTexture 로 모두 처리합니다.
          * @param pUpdateTexture ImGui_Impl*_UpdateTexture 함수 포인터
-         * @details 네 백엔드가 같은 루프를 되풀이하므로 여기에 모았습니다. ImGui_Impl*_RenderDrawData 가 draw_data->Textures 를
-         *          순회하며 하던 일인데, draw-data 스냅샷은 그 리스트를 공유하지 않으므로 그리기 전에 끝내야 합니다. 부르는
+         * @details 네 백엔드가 함께 씁니다. ImGui_Impl*_RenderDrawData 가 draw_data->Textures 를 순회하며 하는 일인데,
+         *          draw-data 스냅샷은 그 리스트를 공유하지 않으므로 그리기 전에 끝내야 합니다. 부르는
          *          스레드는 requiresRenderThreadContext() 에 따라 UI 스레드와 렌더 스레드로 나뉩니다.
          */
         static void updatePendingTextures( void ( *pUpdateTexture )( ImTextureData* ) );

@@ -249,8 +249,8 @@ namespace sw::editor
         if ( pInstance == nullptr )
             return;
 
-        // 비교용 원형(CDO)은 **씬 밖**에서 만든다 — 언리얼 CDO 처럼 월드에 들지 않는다. 예전에는 활성 씬 매니저 안에 임시 오브젝트로 만들어
-        // 지울 때까지 씬 쪽(틱 · 계층 · 저장)에 보였다.
+        // 비교용 원형(CDO)은 **씬 밖**에서 만든다 — 언리얼 CDO 처럼 월드에 들지 않는다. 활성 씬 매니저 안에 임시 오브젝트로 만들면
+        // 지울 때까지 씬 쪽(틱 · 계층 · 저장)에 보인다.
         GameObjectManager scratch;
         GameObject*       pCdo = scratch.createGameObject( hashed_string( "__PrefabDiffCdo" ) );
         if ( pLoaded->applyStateTo( pCdo ) == false )
@@ -308,8 +308,8 @@ namespace sw::editor
         if ( pLoaded == nullptr )
             return;
 
-        // 비교용 원형(CDO)은 씬 밖에서 만든다(위 `collectPrefabOverrides` 설명). 형식은 프리팹이 안다 — 예전에는 XML 로만 읽어 JSON 프리팹의
-        // 원형이 비었고, 되돌릴 값을 찾지 못했다.
+        // 비교용 원형(CDO)은 씬 밖에서 만든다(위 `collectPrefabOverrides` 설명). 형식은 프리팹이 안다 — XML 로만 읽으면 JSON 프리팹의
+        // 원형이 비어 되돌릴 값을 찾지 못한다.
         GameObjectManager scratch;
         GameObject*       pCdo = scratch.createGameObject( hashed_string( "__PrefabRevertCdo" ) );
         if ( pLoaded->applyStateTo( pCdo ) == false )
@@ -334,7 +334,7 @@ namespace sw::editor
             return false;
 
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pInstance );
-        // 값을 옮기지 못했으면 되돌렸다고 표시하지 않는다(예전에는 실패해도 "되돌림" 으로 표시하고 되돌리기 기록을 남겼다).
+        // 값을 옮기지 못했으면 되돌렸다고 표시하지 않고 되돌리기 기록도 남기지 않는다.
         if ( SerializerUtil::copyPropertyValue( *pProp, pCdoComp, pInstanceComponent, SerializeContext::getDefault() ) == false )
         {
             SW_LOG_WARNING( "Prefab override '%#.%#' could not be reverted", item._componentKey.c_str(), item._propertyName.c_str() );

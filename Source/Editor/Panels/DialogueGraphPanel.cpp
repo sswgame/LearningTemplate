@@ -31,8 +31,7 @@ namespace sw::editor
     {
         /**
          * @brief 핀 번호의 정본은 **`DialogueGraphAsset`** 입니다. 여기서는 이름만 짧게 빌립니다.
-         * @details 예전에는 이 구조체가 오프셋 상수와 `nodeId * 100 + offset` 인코딩을 자기 사본으로 들고 있었고, 읽는
-         *          쪽(`DialogueGraphAsset`)에도 같은 상수가 따로 있었습니다. 링크는 디스크에 저장되므로, 한쪽만 바뀌면
+         * @details 오프셋 상수와 인코딩의 사본을 여기 두지 않습니다. 링크는 디스크에 저장되므로, 한쪽만 바뀌면
          *          대화가 조용히 엉뚱한 분기를 탑니다.
          */
         struct DialogueGraphPanelInternal
@@ -247,8 +246,8 @@ namespace sw::editor
         ed::EndCreate();
 
         // 삭제 처리. 링크가 노드에 닿는지는 핀 번호를 풀어 본다. **핀을 푸는 정본은 `DialogueGraphAsset` 이다.**
-        // `decodePinNodeId` 는 자릿수 기준(`kPinScale`)이 다른 옛 핀도 함께 푼다. 예전에는 여기만 `/ 100` 을 손으로 적어서,
-        // 기준이 바뀌면 노드를 지워도 그 링크가 남을 수 있었다.
+        // `decodePinNodeId` 는 자릿수 기준(`kPinScale`)이 다른 옛 핀도 함께 푼다. 여기서 손으로 풀면
+        // 기준이 바뀔 때 노드를 지워도 그 링크가 남는다.
         processCanvasDeletions(
             []( const DialogueLink& link, int32 nodeId )
         { return DialogueGraphAsset::decodePinNodeId( link._fromPin ) == nodeId || DialogueGraphAsset::decodePinNodeId( link._toPin ) == nodeId; },

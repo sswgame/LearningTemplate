@@ -48,7 +48,7 @@ namespace sw::editor
                 if ( listPath.empty() )
                     return;
 
-                // 같은 함수 안에서 한 번은 검사하고 한 번은 그냥 역참조하고 있었다. 하나로 맞춘다.
+                // 컨텍스트는 한 번 받아 검사하고 그것만 쓴다.
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return;
@@ -243,8 +243,8 @@ namespace sw::editor
 
         if ( pSceneManager->requestLoadAsync( loadPath ) == false )
         {
-            // 예전에는 조용히 false 만 반환했다. 사용자가 씬을 골랐는데 아무 일도 일어나지 않고 로그에도 남지 않았다.
-            // 호출부도 이 반환값을 읽지 않는다.
+            // 여기서 알린다 — 호출부는 이 반환값을 읽지 않으므로, 조용히 false 만 반환하면 사용자가 씬을 골랐는데 아무 일도
+            // 일어나지 않고 로그에도 남지 않는다.
             SW_LOG_ERROR( "Open Scene: 로드 요청 실패 — %#", loadPath );
             EditorContext* pFailContext = EditorContext::get();
             if ( pFailContext != nullptr )
@@ -455,8 +455,8 @@ namespace sw::editor
         SpriteComponent* pSprite = pSpawned->addComponent<SpriteComponent>();
         if ( pSprite != nullptr )
         {
-            // 끌어 놓은 것은 리소스 id 다(콘텐츠 브라우저). 예전에는 그것을 프로젝트 루트 기준으로 다시 `makeRelativePath` 해 경로가 깨졌고,
-            // 스프라이트는 텍스처를 찾지 못해 흰 사각형으로 그려졌다.
+            // 끌어 놓은 것은 리소스 id 다(콘텐츠 브라우저). 주의: 그것을 프로젝트 루트 기준으로 다시 `makeRelativePath` 하면 경로가 깨져
+            // 스프라이트가 텍스처를 찾지 못하고 흰 사각형으로 그려진다.
             const string textureId = ResourceUtil::toResourceId( pPath );
             if ( textureId.empty() )
                 SW_LOG_WARNING( "Sprite drop: '%#' is not inside the resource tree - the sprite has no texture", pPath );
@@ -516,7 +516,7 @@ namespace sw::editor
         params._title              = "Save Scene";
         params._description        = "Scene";
         params._bEnableMultiselect = false;
-        // 씬 이름은 쿠커의 규칙 하나다(`EditorAssetTypeRegistry` → `AssetCookPath`). 예전의 `.xml` 은 쿠커가 굽지 않는 이름이었다.
+        // 씬 이름은 쿠커의 규칙 하나다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 굽지 않는 이름이다.
         EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind::Scene, params._listFilterExtension );
         const string mapsDir = ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kMapsFolder );
         if ( FileUtil::directoryExists( mapsDir ) )
@@ -549,8 +549,8 @@ namespace sw::editor
                 continue;
             }
 
-            // **이미 있는 애셋을 덮어쓰지 않는다.** 예전에는 `makeSavePath` 가 준 경로로 그냥 복사해서, 같은 이름의 파일을 끌어다
-            // 놓으면 폴더에 있던 것이 **아무 말 없이 사라졌다.** 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다.
+            // **이미 있는 애셋을 덮어쓰지 않는다.** 같은 이름의 파일을 끌어다 놓아 폴더에 있던 것을 덮으면 **아무 말 없이 사라지고**,
+            // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다.
             // "원래 있던 것과 같은 파일인가" 는 바로 위에서 경로로 이미 걸렀으므로, 여기까지 온 것은 **다른 파일인데 이름만 같은**
             // 경우다.
             const string destPath = ResourceUtil::makeUniqueSavePath( destFolderAbs, fileName );
@@ -601,9 +601,8 @@ namespace sw::editor
         command = "xdg-open \"" + FileUtil::getDirectoryPart( path ) + "\"";
 #endif
 
-        // **띄우고 기다리지 않는다.** 예전에는 `Process::execute` 라 UI 스레드가 탐색기(또는 그것이 띄운 창)가 출력 파이프를 놓을
-        // 때까지 멈췄고, `explorer.exe /select,` 는 성공해도 종료 코드 1 을 돌려줘서 실패 경고가 매번 찍혔다. 알 수 있는 실패는
-        // "띄우지 못했다" 뿐이다.
+        // **띄우고 기다리지 않는다.** `Process::execute` 로 기다리면 UI 스레드가 탐색기(또는 그것이 띄운 창)가 출력 파이프를 놓을
+        // 때까지 멈추고, `explorer.exe /select,` 는 성공해도 종료 코드 1 을 돌려준다. 알 수 있는 실패는 "띄우지 못했다" 뿐이다.
         if ( Process::launchDetached( command ) == false )
         {
             SW_LOG_WARNING( "Failed to open file explorer for %#", path.c_str() );

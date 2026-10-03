@@ -254,8 +254,7 @@ namespace sw::editor
             return nullptr;
 
         void* pImageViewPtr{ nullptr };
-        // Vulkan 의 "네이티브 텍스처 포인터" 가 곧 VkImageView 다. 전용 조회 함수가 따로 있었는데, 이 범용 함수와 **같은 값을
-        // 같은 방법으로** 반환하고 있었다. 중복을 지우고 범용 쪽으로 모았다.
+        // Vulkan 의 "네이티브 텍스처 포인터" 가 곧 VkImageView 다 — 전용 조회 함수 없이 범용 함수를 쓴다.
         pImageViewPtr = _pRHIDevice->getNativeTexturePointer( texture );
         if ( pImageViewPtr == nullptr )
         {

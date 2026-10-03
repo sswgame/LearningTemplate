@@ -37,8 +37,8 @@ namespace sw::editor
         if ( pObjectManager == nullptr )
             return nullptr;
 
-        // 등록부의 규칙(역할 · 우선순위) 하나로 고른다. 프레임마다 세 번(뷰포트 update · draw, 게임 스레드의 뷰 카메라) 불리는 자리다 —
-        // 예전에는 부를 때마다 씬 전체를 돌며 오브젝트마다 `getComponent<CameraComponent>()` 를 물었다.
+        // 등록부의 규칙(역할 · 우선순위) 하나로 고른다. 프레임마다 세 번(뷰포트 update · draw, 게임 스레드의 뷰 카메라) 불리는 자리라
+        // 씬 전체를 돌며 오브젝트마다 `getComponent<CameraComponent>()` 를 묻지 않는다.
         CameraComponent* pBest = pObjectManager->getCameraRegistry().selectCamera( CameraRole::Editor );
         if ( pBest != nullptr )
             return pBest;

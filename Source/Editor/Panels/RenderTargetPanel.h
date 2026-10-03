@@ -24,9 +24,8 @@ namespace sw::editor
     /**
      * @class RenderTargetPanel
      * @brief 파이프라인이 만든 렌더 타깃을 나열 · 검색하고, 하나를 골라 미리 봅니다.
-     * @details 이것이 없을 때 "지금 G버퍼에 뭐가 들어 있나" 를 보려면 `-gv_screenshotAttachment` 로 **프로세스를 다시
-     *          띄워** PPM 을 한 장 찍는 수밖에 없었습니다. 디퍼드가 아무것도 그리지 않던 버그 셋을 그 방식으로 쫓았고,
-     *          한 장 볼 때마다 앱을 새로 켜야 했습니다.
+     * @details "지금 G버퍼에 뭐가 들어 있나" 를 앱을 다시 띄우지 않고 봅니다(앱 밖에서는 `-gv_screenshotAttachment` 로
+     *          PPM 을 한 장 찍습니다).
      * @note 목록은 `RenderTargetRegistry` 의 **스냅샷**입니다. 렌더 스레드가 트랜지언트를 다시 만드는 동안 UI 가 이미
      *       사라진 핸들을 들고 있지 않도록, 세대 번호가 바뀌면 다시 가져옵니다.
      */

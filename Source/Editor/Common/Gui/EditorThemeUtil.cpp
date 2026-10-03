@@ -59,10 +59,8 @@ namespace sw::editor
 
             /**
              * @brief 프리셋 하나의 정의입니다. 이름과 팔레트가 **여기 한 줄에** 모여 있습니다.
-             * @details 예전에는 프리셋을 하나 더하려면 네 곳을 맞춰 고쳐야 했습니다. `applyPreset` 의 팔레트 switch,
-             *          `loadFromConfig` 의 문자열→열거형 if 사다리, `saveToConfig` 의 열거형→문자열 switch, 그리고 대화 상자의
-             *          이름 배열입니다. 뒤의 셋은 같은 사실을 세 번 적은 것이었고, 이름 배열은 **열거형 순서에 인덱스로 묶여**
-             *          있어 순서를 바꾸면 콤보가 조용히 틀린 이름을 보여 줬습니다.
+             * @details 팔레트 적용 · 설정 읽기/쓰기의 이름 변환 · 대화 상자의 콤보가 모두 이 표를 봅니다. 프리셋을 하나 더하려면
+             *          한 줄만 더합니다. 이름 배열을 따로 두고 열거형 순서로 인덱스를 삼으면 순서를 바꿀 때 콤보가 조용히 틀린 이름을 보여 줍니다.
              */
             struct ThemePresetRow
             {
@@ -173,7 +171,7 @@ namespace sw::editor
 
                 // 창 색은 ImGui 기본 다크를 그대로 쓰므로 아래 배경색은 적용되지 않는다. 다만 상태색
                 // (textSuccess/textWarning/...)과 액센트는 이 테마에서도 필요하므로 값을 채워 둔다.
-                // 예전에는 이 프리셋이 s_activeTheme 을 갱신하지 않아 **이전 테마의 색**이 나왔다.
+                // 이 프리셋도 활성 테마를 갱신해야 한다 — 안 그러면 **이전 테마의 색**이 나온다.
                 { EditorThemePreset::ClassicDark,  "ClassicDark",  "Classic Dark (Default ImGui)",  true,
                  EditorThemeConfig{ EditorThemePreset::ClassicDark,
                  Color4{ 0.26f, 0.59f, 0.98f, 1.0f }, // ImGui 기본 파랑
@@ -218,9 +216,8 @@ namespace sw::editor
             // 창 색은 ImGui 기본 다크를 그대로 쓴다 (지오메트리는 건드리지 않는다).
             ImGui::StyleColorsDark();
 
-            // 예전에는 여기서 그대로 return 해서 s_activeTheme 이 **이전 프리셋에 머물렀다**.
-            // 그래서 (1) 이 선택이 저장되지 않고(saveToConfig 가 옛 이름을 썼다) (2) 콤보가 옛
-            // 프리셋을 선택된 것으로 보여 주고 (3) textWarning 등 상태색 API 가 옛 테마 색을 냈다.
+            // 주의: 여기서 그대로 return 하면 활성 테마가 **이전 프리셋에 머물러** (1) 이 선택이 저장되지 않고
+            // (2) 콤보가 옛 프리셋을 선택된 것으로 보여 주고 (3) textWarning 등 상태색 API 가 옛 테마 색을 낸다.
             // 지오메트리는 현재 스타일에서 되읽어 기록이 화면과 어긋나지 않게 한다.
             EditorThemeInternal::readGeometryFromStyle( config );
             EditorThemeInternal::setActiveTheme( config );
@@ -553,9 +550,7 @@ namespace sw::editor
         {
             EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
 
-            // 1) 프리셋 선택. 이름과 순서는 프리셋 표에서 온다.
-            //    예전에는 이름 배열을 따로 적고 `static_cast<int32>( _preset )` 로 인덱스를 삼았다.
-            //    열거형 순서를 바꾸면 콤보가 조용히 틀린 이름을 보여 주는 구조였다.
+            // 1) 프리셋 선택. 이름과 순서는 프리셋 표에서 온다(열거형 값을 인덱스로 삼지 않는다).
             uint32                                           rowCount{ 0 };
             const EditorThemeInternal::ThemePresetRow* const pRow = EditorThemeInternal::getPresetRows( rowCount );
 

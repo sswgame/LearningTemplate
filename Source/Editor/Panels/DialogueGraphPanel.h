@@ -38,7 +38,7 @@ namespace sw::editor
         void drawGraphCanvas( float32 canvasWidth );
         /** @brief 노드들을 캔버스에 그립니다. */
         void drawGraphNodes();
-        /** @brief 노드 왼쪽의 입력 핀("-> In")을 그립니다. 여섯 종류 중 다섯이 같은 세 줄을 쓰고 있었습니다. */
+        /** @brief 노드 왼쪽의 입력 핀("-> In")을 그립니다(입력이 있는 노드 종류가 함께 씁니다). */
         void drawInputPin( int32 nodeId );
         /** @brief 출력 핀 하나를 그립니다. 핀 번호는 부르는 쪽이 인코딩합니다(다음 · 선택지 · 분기). */
         void drawOutputPin( int32 pinId, const utf8* pLabel );
