@@ -553,7 +553,7 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
-            // D) REFLECT 타입의 멤버 — 베이스 · PROPERTY · FUNCTION · 생성자 · BODY/FACTORY 마커
+            // D) REFLECT 타입의 멤버 — 베이스 · PROPERTY · FUNCTION · 생성자 · BODY 마커
             // ------------------------------------------------------------------------------
             /** @brief REFLECT 타입 하나의 멤버를 한 번의 자식 순회로 모으는 상태입니다. */
             struct MemberCollector
@@ -563,9 +563,8 @@ namespace sw
                 uint32                 _baseCount;
                 uint8                  _bSkipConstructors : 1; ///< Abstract / Static 타입은 생성할 수 없다(Unreal UCLASS(Abstract))
                 uint8                  _bBodyFound        : 1;
-                uint8                  _bFactoryFound     : 1;
                 uint8                  _bHasError         : 1;
-                [[maybe_unused]] uint8 _reserved          : 4;
+                [[maybe_unused]] uint8 _reserved          : 5;
 
                 MemberCollector( ParsedTypeInfo& type, const ParserSession& session )
                     : _pType{ &type }
@@ -573,7 +572,6 @@ namespace sw
                     , _baseCount{ 0 }
                     , _bSkipConstructors{ SW_FALSE }
                     , _bBodyFound{ SW_FALSE }
-                    , _bFactoryFound{ SW_FALSE }
                     , _bHasError{ SW_FALSE }
                     , _reserved{ 0 }
                 {
@@ -719,20 +717,18 @@ namespace sw
                 collector._pType->_listProperty.push_back( std::move( prop ) );
             }
 
-            /** @brief 메서드 · 생성자에 붙은 애노테이션 넷을 한 번의 자식 순회로 봅니다. */
+            /** @brief 메서드 · 생성자에 붙은 애노테이션 셋을 한 번의 자식 순회로 봅니다. */
             struct MethodAnnotation
             {
                 string                 _functionSpelling; ///< FUNCTION(...) 철자. 없으면 비어 있다
                 string                 _propertySpelling; ///< PROPERTY(...) 철자. 값 참조를 돌려주는 메서드면 접근자 프로퍼티다
                 uint8                  _bBody    : 1;     ///< REFLECT_BODY
-                uint8                  _bFactory : 1;     ///< COMPONENT_FACTORY
-                [[maybe_unused]] uint8 _reserved : 6;
+                [[maybe_unused]] uint8 _reserved : 7;
 
                 MethodAnnotation()
                     : _functionSpelling{}
                     , _propertySpelling{}
                     , _bBody{ SW_FALSE }
-                    , _bFactory{ SW_FALSE }
                     , _reserved{ 0 }
                 {
                 }
@@ -752,8 +748,6 @@ namespace sw
                     const string_view spelling( pText );
                     if ( spelling.find( annotationConstants::kReflectBodyPrefix ) != string_view::npos )
                         pAnnotation->_bBody = SW_TRUE;
-                    if ( spelling.find( annotationConstants::kComponentFactoryPrefix ) != string_view::npos )
-                        pAnnotation->_bFactory = SW_TRUE;
                     if ( pAnnotation->_functionSpelling.empty() && spelling.find( annotationConstants::kFunctionPrefix ) != string_view::npos )
                         pAnnotation->_functionSpelling = pText;
                     if ( pAnnotation->_propertySpelling.empty() && spelling.find( annotationConstants::kPropertyPrefix ) != string_view::npos )
@@ -837,16 +831,11 @@ namespace sw
             /** @brief 함수 꼴 멤버 하나 — 마커 · 생성자 · 메서드로 나눕니다. */
             static void collectFunctionMember( const CXCursor cursor, const CXCursorKind kind, MemberCollector& collector )
             {
-                // REFLECT_BODY / COMPONENT_FACTORY 마커 함수다. 리플렉트 FUNCTION 이 아니다.
+                // REFLECT_BODY 마커 함수다. 리플렉트 FUNCTION 이 아니다.
                 const string spelling = getCursorSpelling( cursor );
                 if ( spelling == annotationConstants::kReflectBodyMarkerFn )
                 {
                     collector._bBodyFound = SW_TRUE;
-                    return;
-                }
-                if ( spelling == annotationConstants::kComponentFactoryMarkerFn )
-                {
-                    collector._bFactoryFound = SW_TRUE;
                     return;
                 }
 
@@ -854,8 +843,6 @@ namespace sw
                 clang_visitChildren( cursor, methodAnnotationVisitor, &annotation );
                 if ( annotation._bBody == SW_TRUE )
                     collector._bBodyFound = SW_TRUE;
-                if ( annotation._bFactory == SW_TRUE )
-                    collector._bFactoryFound = SW_TRUE;
 
                 if ( kind == CXCursor_Constructor )
                 {
@@ -1150,7 +1137,7 @@ namespace sw
      * 1. 클래스 이름과 네임스페이스를 포함한 전체 경로(FQN)
      * 2. `REFLECT(...)` 매크로 인자(Abstract, Static, Category, Alias 등)
      * 3. 부모 클래스를 찾아 상속 관계 연결
-     * 4. `REFLECT_BODY()` · `COMPONENT_FACTORY()` 매크로가 있는지 확인
+     * 4. `REFLECT_BODY()` 매크로가 있는지 확인
      * 5. 멤버 변수(`PROPERTY`)와 멤버 함수(`FUNCTION`) 메타데이터 수집
      */
     void AstVisitor::onStructDeclaration( const CXCursor cursor, ParsedHeader& outHeader )
@@ -1184,7 +1171,7 @@ namespace sw
             }
             // 추상 타입(REFLECT(Abstract) · C++ 추상)은 팩토리를 내지 않는다 — 팩토리는 `addComponent<T>()` 로 T 를 만든다. 공통 기반
             // 컴포넌트(`LightComponent`)가 첫 예다. 예전에는 컴포넌트에서 파생했으면 무조건 내 그런 기반을 둘 수 없었다.
-            const bool bRequiresFactory = collector._bFactoryFound == SW_TRUE || AstVisitorInternal::isDerivedFromComponent( cursor, _pSession->_config );
+            const bool bRequiresFactory = AstVisitorInternal::isDerivedFromComponent( cursor, _pSession->_config );
             const bool bFactory         = bRequiresFactory && typeInfo._bAbstract == SW_FALSE;
             typeInfo._bReflectBody      = collector._bBodyFound == SW_TRUE ? SW_TRUE : SW_FALSE;
             typeInfo._bComponentFactory = bFactory ? SW_TRUE : SW_FALSE;

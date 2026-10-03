@@ -57,20 +57,12 @@ namespace sw
                 }
             }
 
-            static string rewriteLegacyClangArg( const string& arg )
-            {
-                if ( arg == "-fno-spellchecking" )
-                    return "-fno-spell-checking";
-                return arg;
-            }
-
             static void appendUnique( vector<string>& inoutListDst, const vector<string>& listSrc )
             {
                 for ( const string& item : listSrc )
                 {
-                    const string normalized = rewriteLegacyClangArg( item );
-                    if ( std::find( inoutListDst.begin(), inoutListDst.end(), normalized ) == inoutListDst.end() )
-                        inoutListDst.push_back( normalized );
+                    if ( std::find( inoutListDst.begin(), inoutListDst.end(), item ) == inoutListDst.end() )
+                        inoutListDst.push_back( item );
                 }
             }
 

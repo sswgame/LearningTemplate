@@ -91,14 +91,6 @@ namespace sw
             return *this;
         }
 
-        /** @brief cond가 참이고 값이 비어 있지 않으면 `field = "이스케이프된문자열";` 를 출력합니다. */
-        CodeEmit& assignQuotedIf( bool cond, const string_view field, const string& value )
-        {
-            if ( cond )
-                linef( "%# = \"%#\";", field, escapeCppString( value ) );
-            return *this;
-        }
-
         // ------------------------------------------------------------------------------
         // 3) emit — hashed_string / 따옴표 / 이스케이프
         // ------------------------------------------------------------------------------

@@ -24,13 +24,6 @@ namespace sw
         const utf8* _pScope;
     };
 
-    inline static constexpr ReflectAnnotationDesc kReflectAnnotations[] = {
-#define REGISTER_REFLECT_ANNOTATION( Id, MacroName, AnnotatePrefix, ScopeName ) \
-    { MacroName, AnnotatePrefix, MacroName "(", ScopeName },
-#include "PredefinedReflectAnnotation.xxx"
-#undef REGISTER_REFLECT_ANNOTATION
-    };
-
     // ------------------------------------------------------------------------------
     // 2) parse — REFLECT/PROPERTY/FUNCTION 접두사·마커 (매크로 계약)
     // ------------------------------------------------------------------------------
@@ -53,14 +46,12 @@ namespace sw
          */
         inline static constexpr const utf8* kNetRoleField = "NetRole";
 
-        inline static constexpr const utf8* kReflectBodyPrefix        = "REFLECT_BODY";
-        inline static constexpr const utf8* kComponentFactoryPrefix   = "COMPONENT_FACTORY";
-        inline static constexpr const utf8* kReflectBodyMarkerFn      = "__sw_reflect_body";
-        inline static constexpr const utf8* kComponentFactoryMarkerFn = "__sw_component_factory";
-        inline static constexpr const utf8* kCtorLookupName           = "$ctor";
-        inline static constexpr const utf8* kVoidTypeName             = "void";
-        inline static constexpr const utf8* kDefaultMethodCategory    = "General";
-        inline static constexpr const utf8* kConstructorCategory      = "Constructor";
+        inline static constexpr const utf8* kReflectBodyPrefix     = "REFLECT_BODY";
+        inline static constexpr const utf8* kReflectBodyMarkerFn   = "__sw_reflect_body";
+        inline static constexpr const utf8* kCtorLookupName        = "$ctor";
+        inline static constexpr const utf8* kVoidTypeName          = "void";
+        inline static constexpr const utf8* kDefaultMethodCategory = "General";
+        inline static constexpr const utf8* kConstructorCategory   = "Constructor";
     }; // struct annotationConstants
 
     // ------------------------------------------------------------------------------
