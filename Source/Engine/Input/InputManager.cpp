@@ -273,6 +273,13 @@ namespace sw
             dispatchRawEvent( rawEvent );
         }
 
+        // 이벤트를 다 적용한 뒤 장치마다 한 번 마무리한다 — 마우스 스무딩은 이벤트 수가 아니라 흐른 시간으로 한 번 건다.
+        for ( auto& pDev : _listDevice )
+        {
+            if ( pDev != nullptr )
+                pDev->onEventsDispatched( deltaSeconds );
+        }
+
         // 가운데 고정 잠금: 이번 프레임의 델타를 잰 뒤에 커서를 되돌린다.
         if ( _pMouse != nullptr && _pMouse->getLockMode() == MouseLockMode::LockedInCenter )
             recenterLockedCursorPlatform();

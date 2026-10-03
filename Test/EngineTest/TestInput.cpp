@@ -1,6 +1,8 @@
 #include "pch.h"
 
 #include "Core/Concurrency/ConcurrentQueue.h"
+#include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Input/ActionMap.h"
@@ -62,6 +64,33 @@ namespace
         bool                wasControlPressed( uint16 ) const override { return false; }
         bool                wasControlReleased( uint16 ) const override { return false; }
     };
+
+    /**
+     * @brief 프레임마다 같은 총 이동(@p frameMoveX)을 @p eventsPerFrame 개의 원시 이벤트로 나눠 넣고, 프레임마다 스무딩 델타 X 를 적습니다.
+     * @details 앱 루프와 같은 순서(beginFrame → 조회 → endFrame)로 돈다.
+     */
+    void runSmoothedMouse( float32 smoothing, float32 acceleration, float32 frameSeconds, int32 frameCount, float32 frameMoveX, int32 eventsPerFrame,
+                           sw::vector<float32>& outListSmoothX )
+    {
+        sw::InputManager input;
+        SW_ASSERT_TRUE( input.initialize() );
+        input.getMouse()->setSmoothing( smoothing );
+        input.getMouse()->setAcceleration( acceleration );
+
+        outListSmoothX.clear();
+        const float32 eventMoveX = frameMoveX / static_cast<float32>( eventsPerFrame );
+        for ( int32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
+            for ( int32 eventIndex = 0; eventIndex < eventsPerFrame; ++eventIndex )
+            {
+                SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseRawDelta( eventMoveX, 0.0f ) ) );
+            }
+            input.beginFrame( frameSeconds );
+            outListSmoothX.push_back( input.getMouse()->getSmoothDelta()._x );
+            input.endFrame();
+        }
+        input.shutdown();
+    }
 } // namespace
 // 액션 맵 자체의 규칙은 TestActionMap.cpp, 스트레스·리플레이·경계는 TestInputRobustness.cpp.
 
@@ -1053,6 +1082,65 @@ SW_TEST_CASE( InputManagerTest, SmoothMouseDeltaReturnsToZeroWhenMouseStops )
     SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouse()->getSmoothDelta()._x, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouse()->getSmoothDelta()._y, 0.001f );
 
+    input.shutdown();
+}
+
+/**
+ * @brief [MouseDeviceTest] 같은 이동을 125 Hz · 1000 Hz 이벤트로 나눠 넣어도 스무딩 델타가 같다
+ * @details 스무딩과 가속은 프레임에 모인 이동에 한 번 걸린다(`MouseDevice::onEventsDispatched`). 이벤트마다 걸면 1000 Hz 마우스(프레임당
+ *          이벤트 16 개)가 125 Hz(2 개)보다 훨씬 빨리 따라와 같은 설정이 마우스마다 다른 감각이 된다.
+ */
+SW_TEST_CASE( MouseDeviceTest, SmoothingIsIndependentOfPollingRate )
+{
+    constexpr float32 kFrameSeconds = 1.0f / 60.0f;
+    constexpr int32   kFrameCount   = 12;
+
+    sw::vector<float32> listSlowPoll;
+    sw::vector<float32> listFastPoll;
+    runSmoothedMouse( 0.8f, 1.5f, kFrameSeconds, kFrameCount, 32.0f, 2, listSlowPoll );  // 125 Hz
+    runSmoothedMouse( 0.8f, 1.5f, kFrameSeconds, kFrameCount, 32.0f, 16, listFastPoll ); // 1000 Hz
+    SW_ASSERT_EQUAL( listSlowPoll.size(), listFastPoll.size() );
+    for ( size_t frameIndex = 0; frameIndex < listSlowPoll.size(); ++frameIndex )
+    {
+        SW_EXPECT_NEAR_EQUAL( listSlowPoll[frameIndex], listFastPoll[frameIndex], 0.01f );
+    }
+
+    // 가속 없이 스무딩만 걸면 첫 프레임은 1 - 0.8 = 20 % 를 따라온다(60 Hz 한 프레임이 설정값의 기준).
+    sw::vector<float32> listNoAcceleration;
+    runSmoothedMouse( 0.8f, 1.0f, kFrameSeconds, 1, 32.0f, 16, listNoAcceleration );
+    SW_EXPECT_NEAR_EQUAL( 32.0f * 0.2f, listNoAcceleration[0], 0.01f );
+}
+
+/**
+ * @brief [MouseDeviceTest] 30 fps 와 144 fps 에서 같은 시간이 지나면 스무딩이 같은 만큼 따라온다
+ * @details 계수는 프레임마다 1 - exp( -dt / τ ) 다. 프레임 수로 세면 144 fps 가 30 fps 보다 거의 다섯 배 빨리 따라와, 프레임 레이트가
+ *          감각을 바꾼다. 일정한 속도로 1/6 초를 움직인 뒤 "스무딩 델타 / 그 프레임의 실제 이동" 이 둘 다 1 - factor^( 1/6 초 ÷ 1/60 초 ) 여야 한다.
+ */
+SW_TEST_CASE( MouseDeviceTest, SmoothingFollowsElapsedTimeNotFrameCount )
+{
+    constexpr float32 kSmoothing     = 0.9f;
+    constexpr float32 kSpeed         = 600.0f; // 픽셀/초
+    const float32     expectedFollow = 1.0f - sw::MathUtil::pow( kSmoothing, 10.0f );
+
+    sw::vector<float32> listLowRate;
+    sw::vector<float32> listHighRate;
+    runSmoothedMouse( kSmoothing, 1.0f, 1.0f / 30.0f, 5, kSpeed / 30.0f, 1, listLowRate );     // 1/6 초 = 30 fps 5 프레임
+    runSmoothedMouse( kSmoothing, 1.0f, 1.0f / 144.0f, 24, kSpeed / 144.0f, 1, listHighRate ); // 1/6 초 = 144 fps 24 프레임
+    SW_ASSERT_EQUAL( size_t( 5 ), listLowRate.size() );
+    SW_ASSERT_EQUAL( size_t( 24 ), listHighRate.size() );
+
+    const float32 lowRateFollow  = listLowRate.back() / ( kSpeed / 30.0f );
+    const float32 highRateFollow = listHighRate.back() / ( kSpeed / 144.0f );
+    SW_EXPECT_NEAR_EQUAL( expectedFollow, lowRateFollow, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( expectedFollow, highRateFollow, 0.001f );
+
+    // 설정값의 시간 상수: τ = -(1/60 초) / ln( factor ).
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.getMouse()->setSmoothing( 0.5f );
+    SW_EXPECT_NEAR_EQUAL( 0.024045f, input.getMouse()->getSmoothingTimeConstant(), 0.00001f );
+    input.getMouse()->setSmoothing( 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, input.getMouse()->getSmoothingTimeConstant(), 0.00001f );
     input.shutdown();
 }
 

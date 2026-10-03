@@ -26,6 +26,12 @@ namespace sw
     class SW_API MouseDevice : public IInputDevice
     {
     public:
+        /**
+         * @brief 스무딩 · 가속 설정값이 기준으로 삼는 시간(60 Hz 한 프레임)입니다.
+         * @details 설정값의 뜻은 "이 시간 동안 남기는 비율" 입니다. 프레임이 길든 짧든 같은 시간이 지나면 같은 만큼 따라옵니다.
+         */
+        static constexpr float32 kSmoothingReferenceSeconds = 1.0f / 60.0f;
+
         MouseDevice();
         virtual ~MouseDevice() override = default;
 
@@ -41,6 +47,8 @@ namespace sw
 
         void poll( float32 deltaTime ) override;
         void onFrameBegin( float32 deltaTime ) override;
+        /** @brief 이번 프레임의 이동(`getMovementDelta`)에 가속과 스무딩을 한 번 적용해 `getSmoothDelta` 를 갱신합니다. */
+        void onEventsDispatched( float32 deltaTime ) override;
         void onFrameEnd() override;
         void resetState() override;
 
@@ -57,14 +65,35 @@ namespace sw
         bool wasButtonReleased( MouseButton button ) const;
         bool wasAnyButtonPressed() const { return _pressedMask != 0; }
 
-        int2    getPosition() const { return _mouse; }
-        int32   getPositionX() const { return _mouse._x; }
-        int32   getPositionY() const { return _mouse._y; }
-        int2    getDelta() const { return _delta; }
-        float2  getRawDelta() const { return _rawDelta; }
-        float2  getSmoothDelta() const { return _smoothDelta; }
+        int2   getPosition() const { return _mouse; }
+        int32  getPositionX() const { return _mouse._x; }
+        int32  getPositionY() const { return _mouse._y; }
+        int2   getDelta() const { return _delta; }
+        float2 getRawDelta() const { return _rawDelta; }
+        /**
+         * @brief 이번 프레임의 이동량입니다. 원시 델타가 있으면 그것(화면 경계에 막히지 않는다), 없으면 위치 차이입니다.
+         * @details 스무딩과 ActionMap 의 마우스 델타 바인딩이 같은 규칙으로 읽습니다.
+         */
+        float2 getMovementDelta() const;
+        /** @brief 가속 · 스무딩을 적용한 이번 프레임의 이동량입니다. 프레임당 한 번 갱신됩니다(`onEventsDispatched`). */
+        float2 getSmoothDelta() const { return _smoothDelta; }
+
+        /**
+         * @brief 스무딩 설정값 [0, 0.99] 입니다. 0 이면 스무딩하지 않습니다.
+         * @details 값은 `kSmoothingReferenceSeconds`(1/60 초) 동안 이전 속도를 남기는 비율입니다. 시간 상수로는
+         *          τ = -kSmoothingReferenceSeconds / ln( factor ) 이고(0.5 → 24 ms, 0.9 → 158 ms), 한 프레임의 계수는
+         *          1 - exp( -dt / τ ) = 1 - factor^( dt / kSmoothingReferenceSeconds ) 입니다. 60 Hz 에서는 계수가 1 - factor 이고,
+         *          프레임 레이트 · 폴링 레이트와 무관합니다.
+         */
         float32 getSmoothing() const { return _smoothingFactor; }
         void    setSmoothing( float32 factor ) { _smoothingFactor = factor < 0.0f ? 0.0f : ( factor > 0.99f ? 0.99f : factor ); }
+        /** @brief 스무딩 설정값을 시간 상수(초)로 바꾼 값입니다. 스무딩이 꺼져 있으면 0 입니다. */
+        float32 getSmoothingTimeConstant() const;
+        /**
+         * @brief 가속 지수입니다. 1 이면 가속하지 않습니다.
+         * @details 속도를 `kSmoothingReferenceSeconds` 당 픽셀로 잰 값 s 가 1 보다 크면 이동에 s^( power - 1 ) 을 곱합니다(시간 기준이라 프레임 ·
+         *          폴링 레이트와 무관).
+         */
         float32 getAcceleration() const { return _accelerationPower; }
         void    setAcceleration( float32 power ) { _accelerationPower = power < 1.0f ? 1.0f : power; }
 
@@ -123,29 +152,15 @@ namespace sw
         void setPointerInsideState( bool bInside );
 
     private:
-        /**
-         * @brief 델타에 **가속 곡선과 EMA 스무딩**을 적용해 `_smoothDelta` 를 갱신합니다.
-         * @details 이 계산이 `poll()` 에도 **글자까지 같은 사본**으로 들어 있었습니다. 마우스 감각을
-         *          조정하는 사람이 한쪽만 고치면 **입력 경로에 따라 감각이 달라집니다.** 원시 입력이
-         *          오는 기계와 안 오는 기계가 서로 다르게 움직이고, 테스트는 부호만 보므로 잡히지 않습니다.
-         *
-         * @note **아직 정하지 못한 것: 한 프레임에 여러 번 적용됩니다.** `addRawDelta` · `setPosition` 이
-         *       입력 이벤트마다 이것을 부르고, `poll()` 이 프레임당 한 번 더 부릅니다(그때는 프레임 시작
-         *       시점의 위치 차이 `_delta` 로). 즉 EMA 가 프레임당 "이벤트 수 + 1" 번 돌아서 **스무딩 양이
-         *       마우스 폴링 레이트에 따라 달라집니다.** 1000Hz 와 125Hz 가 다른 감각이 된다는 뜻입니다.
-         *       여기서는 **동작을 바꾸지 않았습니다.** 감각을 재려면 실제로 마우스를 움직여 봐야 하고
-         *       그것은 자동 검증이 안 됩니다. 손에 마우스를 쥔 사람이 정할 일입니다.
-         */
-        void updateSmoothDelta( float32 dx, float32 dy );
-
         static constexpr size_t kButtonCount = static_cast<size_t>( MouseButton::Count );
 
         int2                   _mouse;                     /**< 현재 프레임의 마우스 화면 좌표(창 클라이언트 기준). */
         int2                   _prevMouse;                 /**< 직전 프레임의 마우스 좌표. 델타 계산에 씀. */
         int2                   _delta;                     /**< 이번 프레임의 좌표 이동량(_mouse - _prevMouse). 화면 경계에 막히면 실제 이동보다 작음. */
         float2                 _rawDelta;                  /**< OS 원시(Raw Input) 델타 누적값. 화면 경계에 막히지 않는 실제 이동량(FPS 카메라 룩에 알맞음). */
-        float2                 _smoothDelta;               /**< 가속 · 스무딩(EMA)을 적용한 최종 델타. getSmoothDelta() 가 반환하는 값. */
-        float32                _smoothingFactor;           /**< EMA 스무딩 계수 [0.0, 0.99]. 0 이면 스무딩 없이 델타를 그대로 씀. */
+        float2                 _smoothDelta;               /**< 가속 · 스무딩(EMA)을 적용한 이번 프레임 이동량. getSmoothDelta() 가 반환하는 값. */
+        float2                 _smoothVelocity;            /**< 스무딩한 속도(픽셀/초). EMA 는 속도에 걸어 프레임 길이가 달라도 단위가 섞이지 않는다. */
+        float32                _smoothingFactor;           /**< 스무딩 설정값 [0.0, 0.99] — 1/60 초 동안 남기는 비율. 0 이면 스무딩 없이 이동을 그대로 씀. */
         float32                _accelerationPower;         /**< 마우스 가속 지수. 1.0 이면 가속 없음. 클수록 빠르게 움직일 때 델타가 더 커짐. */
         float32                _mouseWheelDelta;           /**< 이번 프레임 세로 휠 회전량. getMouseWheel() 이 반환하는 값. */
         float32                _mouseWheelHorizontalDelta; /**< 이번 프레임 가로 휠(틸트) 회전량. */

@@ -157,6 +157,10 @@ namespace sw
         [[nodiscard]] static SW_INLINE float32 pow( const float32 base, const float32 exp ) noexcept { return ::powf( base, exp ); }
         [[nodiscard]] static SW_INLINE float64 pow( const float64 base, const float64 exp ) noexcept { return ::pow( base, exp ); }
 
+        /** @brief 자연로그 ln(x)를 계산합니다. */
+        [[nodiscard]] static SW_INLINE float32 log( const float32 x ) noexcept { return ::logf( x ); }
+        [[nodiscard]] static SW_INLINE float64 log( const float64 x ) noexcept { return ::log( x ); }
+
         /** @brief 삼각함수 sin을 계산합니다. */
         [[nodiscard]] static SW_INLINE float32 sin( const float32 radian ) noexcept { return ::sinf( radian ); }
         [[nodiscard]] static SW_INLINE float64 sin( const float64 radian ) noexcept { return ::sin( radian ); }

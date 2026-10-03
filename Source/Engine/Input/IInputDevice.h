@@ -97,6 +97,12 @@ namespace sw
          * @details 폴링으로 상태를 읽는 장치가 "리셋 직후 처음 읽은 값" 을 이전 값으로 삼아 가짜 엣지를 막는 자리입니다.
          */
         virtual void onPolled() {}
+        /**
+         * @brief 이번 프레임의 원시 이벤트를 모두 적용했습니다(`onPolled` 와 이벤트 적용 뒤, 프레임당 한 번).
+         * @details 이벤트마다가 아니라 프레임에 모인 결과로 한 번 계산해야 하는 것(마우스 스무딩)을 여기서 합니다 — 이벤트마다 하면
+         *          결과가 폴링 레이트에 따라 달라집니다.
+         */
+        virtual void onEventsDispatched( float32 deltaTime ) { (void)deltaTime; }
         /** @brief 새 프레임을 시작할 때 이번 프레임의 임시 상태(Pressed/Released)를 준비합니다. */
         virtual void onFrameBegin( float32 deltaTime ) = 0;
         /** @brief 프레임을 마칠 때 정리합니다. */

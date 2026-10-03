@@ -405,17 +405,11 @@ namespace sw
             }
             case BindingKind::MouseDelta2D:
             {
-                const float2 rawDelta = _pInput->getMouse() != nullptr ? _pInput->getMouse()->getRawDelta() : float2{};
-                float32      rdx      = rawDelta._x;
-                float32      rdy      = rawDelta._y;
-                if ( rdx == 0.0f && rdy == 0.0f )
-                {
-                    const int2 mouseDelta = _pInput->getMouseDelta();
-                    rdx                   = static_cast<float32>( mouseDelta._x );
-                    rdy                   = static_cast<float32>( mouseDelta._y );
-                }
-                outValue._x = rdx * binding._scale * _mouseSensitivity._x * ( _bInvertX == SW_TRUE ? -1.0f : 1.0f );
-                outValue._y = rdy * binding._scale * _mouseSensitivity._y * ( _bInvertY == SW_TRUE ? -1.0f : 1.0f );
+                const float2  movement = _pInput->getMouse() != nullptr ? _pInput->getMouse()->getMovementDelta() : float2{};
+                const float32 rdx      = movement._x;
+                const float32 rdy      = movement._y;
+                outValue._x            = rdx * binding._scale * _mouseSensitivity._x * ( _bInvertX == SW_TRUE ? -1.0f : 1.0f );
+                outValue._y            = rdy * binding._scale * _mouseSensitivity._y * ( _bInvertY == SW_TRUE ? -1.0f : 1.0f );
                 return ( rdx != 0.0f || rdy != 0.0f );
             }
             case BindingKind::VirtualJoystick2D:
