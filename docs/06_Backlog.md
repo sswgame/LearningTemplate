@@ -99,6 +99,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
 
+- **프리팹 오버라이드의 남은 모서리 셋** — (1) 인스턴스에 더한 컴포넌트는 로드 때 목록 끝에 붙어, 가운데 있던 것은 저장 · 로드 뒤 순서가 바뀐다 (2) 물려받은
+  컴포넌트의 이름표를 바꾸면 제거 + 추가로 기록돼 그 컴포넌트에 프리팹 수정이 더는 닿지 않는다(UE 도 물려받은 컴포넌트 이름 변경을 막는다 — 에디터에서 막을지)
+  (3) 프리팹에서 사라진 컴포넌트의 오버라이드는 경고와 함께 버려지고 다음 저장에서 사라진다.
+
 - **`getAllGameObjects()` 값 반환이 6 곳에 있다(모두 일회성).** 프레임 경로에 들어오면 `getAllGameObjects( out )` 또는 `forEachGameObject` 로 바꾼다(조건부).
 - **`MeshInstanceBatch` 의 한계.** 항목 수가 만들 때 정해지고(resize 없음, `setEntryVisible` 로 숨기기만), 배치 하나 = 메시 · 머티리얼 하나라 항목별
   머티리얼 · 투명 정렬이 없다.
@@ -212,12 +216,9 @@ cd build/Ninja-Debug/Bin
   모듈 코드를 쥔 커맨드만 `IModuleCodeHolder` 훑기로 내린다(`ImGuiEditor::shutdown` 의 `clear()` 제거).
 - **모듈 리로드 실패: 적용 전 실패는 옛 이미지 유지, 적용 뒤 결함은 broken + 재시작**(UE Live Coding · Unity 도 적용 뒤 결함은 되돌리지 않는다).
 - **에디터 패널 시험은 에디터 안에서 돈다**(UE Automation · Unity EditMode) — 에디터 모듈 안 자체 시험 실행기, AppTest(hostgpu)가 띄워 결과를 읽는다.
-- **텍스트 포맷의 orphan 관대함은 의도다**(UE 태그 직렬화 · Unity YAML 은 모르는 필드를 건너뛴다; 쿠킹 바이너리는 판이 다르면 거부) — `SchemaMigrate.h` 에 포맷별 계약.
-- **컴포넌트 이름표를 씬에 저장한다**(UE 는 컴포넌트 이름이 참조 · 오버라이드의 키) — 옛 씬은 기본값으로 읽는다.
 - **호출부 0 API — 에디터 · 모듈 쪽 남음**(입력 · 턴제 킷 쪽은 끝) — 항목마다 (a) 지운다 (b) 잇는다 (c) 남긴다(상용 엔진에 대응이 있으면 남기고 시험).
 - **컴포넌트 팩토리를 TypeRegistry 하나로**(UE `UClass`) · **엔진 등록부 공통 템플릿**.
 - **EngineLoop 초기화 · 종료 순서를 의존 선언 + 위상 정렬로**(UE `USubsystem::InitializeDependency`).
-- **프리팹은 덮어쓴 값만 저장한다**(UE · Unity) — 놓인 인스턴스에 프리팹 수정이 퍼진다.
 - **`SW_ENABLE_DEADLOCK_DETECTION` 을 CI 가 지킨다** — `RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION` 한 줄.
 
 ### 1-12. 낮은 우선순위 · 조건이 오면
@@ -474,6 +475,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-5. 직렬화 · 리플렉션 · 파서
 
+- **orphan 정책은 `SchemaMigrate.h` 의 계약** — XML · JSON(사람이 고치는 저작 파일)은 `Ignore`(로드마다 경고, UE `FPropertyTag` · Unity YAML), 바이너리(쿠커 ·
+  빌드 산출물)는 `Reject`(UE `FPackageFileSummary` 판 검사). 필드를 버려도 되는 오브젝트 상태는 그 migrate 함수가 말한다(`skipFieldsTheTypeNoLongerHas`).
+
 - **바이너리 Archive 읽기는 읽은 만큼 자리를 옮긴다**(이어 쓴 객체를 차례로 읽는다). 같은 자리를 다시 보려면 새 Archive 를 만든다.
 - **set 원소 편집은 `replaceElement`(지우고 다시 넣기)로만** — 같은 값이 되면 하나로 합쳐진다. 맵은 `forEachMutable` · `eraseAt`, 고정 배열은 `appendElement` 가
   원소 순번의 칸을 채운다(칸보다 많으면 실패).
@@ -549,6 +553,11 @@ cd build/Ninja-Debug/Bin
   — 실제 에셋 + `setPropertyValue` 로 간다.
 
 ### 3-6. 오브젝트 · 씬 · 틱
+
+- **씬의 프리팹 엔티티 = 프리팹 경로 + `<PrefabOverrides>`**(프리팹 쪽 `이름표#n` 키, 다른 필드만) — `<GameObject>` 전체 상태를 든 엔티티는 옛 형식이고 그 상태가
+  이긴다(다음 저장에서 오버라이드로). 프리팹 원형 상태는 별도 `GameObjectManager` 에서 만든다 — 한 매니저에만 `registerComponentType` 한 시험용 목 타입은 원형에서
+  MissingComponent 가 되니 시험은 실제 타입으로. 원형은 `forEachGameObject` 안에서 만들 수 없다(순회 전에). 씬 판 1, SCN1 판 3(v0~v2 읽음).
+- **컴포넌트 이름표(`_componentName`)는 저장되고 컴포넌트 키(`ComponentStableKey`)는 이름표로 센다**(없으면 타입 이름) — 옛 키(`SceneComponent#n`)도 맞는다.
 
 - **`onPostLoad` 는 `ObjectStateBatch::finish` 에서 이름 → 부착 → 핸들이 풀린 뒤에 온다**(언리얼 PostLoad 순서). 플레이 중 재로드는 `onBeginPlay` 를 다시
   부르므로, 흐른 시간 · 적용한 오프셋 같은 진행 상태는 저장하고 `onBeginPlay` 가 되돌리지 않게 한다.
