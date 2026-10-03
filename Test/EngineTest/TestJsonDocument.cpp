@@ -51,12 +51,15 @@ SW_TEST_CASE( JsonDocumentTest, UnicodeEscapeAndRejectMalformed )
     sw::JsonDocument doc;
     SW_EXPECT_TRUE( doc.parse( R"({"Title":"A\u0020B","Nested":{"k":1}})" ) );
     SW_EXPECT_EQUAL( sw::string( "A B" ), doc.getRoot().get( "Title" ).asString() );
-    SW_EXPECT_TRUE( sw::JsonDocument::extractStringField( R"({"Title":"Hero"})", "title", true ) == sw::string( "Hero" ) );
+    SW_EXPECT_TRUE( sw::JsonDocument::extractStringField( R"({"Title":"Hero","HP":"10"})", "title", true ) == sw::string( "Hero" ) );
     SW_EXPECT_TRUE( sw::JsonDocument::extractStringField( R"({"Title":"Hero"})", "title", false ).empty() );
 
     const sw::string raw     = "line\n\t\"quote\"\\slash";
     const sw::string escaped = sw::JsonDocument::escapeString( raw );
     SW_EXPECT_TRUE( escaped.find( '\n' ) == sw::string::npos );
+    SW_EXPECT_TRUE( escaped.find( '\t' ) == sw::string::npos );
+    SW_EXPECT_TRUE( escaped.find( "\\\"" ) != sw::string::npos );
+    SW_EXPECT_TRUE( escaped.find( "\\\\" ) != sw::string::npos );
     SW_EXPECT_EQUAL( raw, sw::JsonDocument::unescapeString( escaped ) );
 
     {

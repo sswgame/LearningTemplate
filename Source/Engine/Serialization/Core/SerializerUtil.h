@@ -189,9 +189,6 @@ namespace sw
         /** @brief 프로퍼티 값을 사람이 읽는 글로 씁니다(XML 속성 값과 같은 꼴). 비트필드는 `true` · `false`, 컨테이너는 `[n]`(원소 수)입니다. */
         SW_API static string formatPropertyText( const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx );
 
-        /** @brief 컨테이너 TypeInfo 이름을 태그로 바꿉니다(`vector`, `map`). */
-        static const utf8* containerTypeTagName( hashed_string typeName );
-
         /** @brief 키 문자열이 같은지 비교합니다(대소문자 무시 옵션 지원). */
         static bool keysEqual( string_view left, string_view right, bool bIgnoreCase );
 

@@ -12,12 +12,9 @@ namespace sw
 {
     struct TypeInfo;
 
-    class Archive;
     /** @brief `XmlDocumentBackend::getDeserializationRoot` · `IXmlBackend::getCurrentNode` 가 반환하는 노드입니다. */
     class XmlNode;
 
-    using XmlArrayItemDelegate = Delegate<void( string_view itemStr )>;
-    using XmlMapItemDelegate   = Delegate<void( string_view keyStr, string_view valStr )>;
     /** @brief 자식 요소를 방문하는 콜백입니다. 불리는 동안 그 자식이 백엔드의 현재 노드가 됩니다. */
     using XmlChildVisitDelegate = Delegate<void( string_view tagName )>;
 
@@ -36,7 +33,7 @@ namespace sw
         IXmlBackend& operator=( IXmlBackend&& ) noexcept = default;
 
         // ------------------------------------------------------------------------------
-        // 1) 쓰기: 루트, 값/속성, 배열, 맵
+        // 1) 쓰기: 루트, 값/속성, 자식 요소
         // ------------------------------------------------------------------------------
         /** @brief XML 직렬화를 시작합니다. */
         virtual void initializeXmlSerialization( const utf8* pRootTagName ) = 0;
@@ -44,29 +41,15 @@ namespace sw
         virtual void writeValue( const utf8* pTagName, const utf8* pValueString ) = 0;
         /** @brief 값을 현재 부모 요소의 XML 속성(attribute)으로 씁니다. */
         virtual void writeAttribute( const utf8* pAttrName, const utf8* pValueString ) = 0;
-        /** @brief 배열 구간을 시작합니다. */
-        virtual void beginArray( const utf8* pTagName ) = 0;
-        /** @brief 배열 항목을 씁니다. */
-        virtual void writeArrayItem( const utf8* pValueString ) = 0;
-        /** @brief 배열 구간을 끝냅니다. */
-        virtual void endArray() = 0;
-        /** @brief 맵 구간을 시작합니다. */
+        /** @brief 자식 요소를 열고 그 안으로 들어갑니다. 이후 쓰기는 그 요소에 붙습니다. */
         virtual void beginMap( const utf8* pTagName ) = 0;
-        /** @brief 맵 항목을 시작합니다. */
-        virtual void beginMapEntry() = 0;
-        /** @brief 맵 키를 씁니다. */
-        virtual void writeMapKey( const utf8* pKeyString ) = 0;
-        /** @brief 맵 값을 씁니다. */
-        virtual void writeMapValue( const utf8* pValueString ) = 0;
-        /** @brief 맵 항목을 끝냅니다. */
-        virtual void endMapEntry() = 0;
-        /** @brief 맵 구간을 끝냅니다. */
+        /** @brief beginMap 으로 연 요소를 닫고 부모로 돌아갑니다. */
         virtual void endMap() = 0;
         /** @brief 직렬화를 마무리하고 XML 문자열을 반환합니다. */
         virtual string endSerialize() = 0;
 
         // ------------------------------------------------------------------------------
-        // 2) 읽기: 루트, 값/속성, 배열/맵 순회
+        // 2) 읽기: 루트, 값/속성, 자식 요소
         // ------------------------------------------------------------------------------
         /**
          * @brief XML 역직렬화를 시작합니다.
@@ -81,18 +64,6 @@ namespace sw
         [[nodiscard]] virtual bool readValue( const utf8* pTagName, string& outValue ) = 0;
         /** @brief 현재 부모 요소의 XML 속성을 읽습니다. */
         [[nodiscard]] virtual bool readAttribute( const utf8* pAttrName, string& outValue ) = 0;
-        /** @brief 속성을 먼저 보고, 없으면 자식 요소에서 읽습니다(호환 로드). */
-        [[nodiscard]] virtual bool readValueOrAttribute( const utf8* pName, string& outValue )
-        {
-            if ( readAttribute( pName, outValue ) )
-                return true;
-            return readValue( pName, outValue );
-        }
-
-        /** @brief 배열 요소를 순회합니다. pTagName 이 비면 현재 노드에서 `<item>` 을 순회합니다. */
-        virtual bool iterateArray( const utf8* pTagName, const XmlArrayItemDelegate& callback ) = 0;
-        /** @brief 맵 항목을 순회합니다. pTagName 이 비면 현재 노드의 자식을 순회합니다. */
-        virtual bool iterateMap( const utf8* pTagName, const XmlMapItemDelegate& callback ) = 0;
         /** @brief 현재 부모의 자식 요소로 내려갑니다. 없으면 false 입니다. */
         virtual bool pushChild( const utf8* pTagName )
         {
@@ -172,23 +143,9 @@ namespace sw
         void writeValue( const utf8* pTagName, const utf8* pValueString ) override;
         /** @brief 값을 현재 부모 요소의 XML 속성으로 씁니다. */
         void writeAttribute( const utf8* pAttrName, const utf8* pValueString ) override;
-        /** @brief 배열 구간을 시작합니다. */
-        void beginArray( const utf8* pTagName ) override;
-        /** @brief 배열 항목을 씁니다. */
-        void writeArrayItem( const utf8* pValueString ) override;
-        /** @brief 배열 구간을 끝냅니다. */
-        void endArray() override;
-        /** @brief 맵 구간을 시작합니다. */
+        /** @brief 자식 요소를 열고 그 안으로 들어갑니다. */
         void beginMap( const utf8* pTagName ) override;
-        /** @brief 맵 항목을 시작합니다. */
-        void beginMapEntry() override;
-        /** @brief 맵 키를 씁니다. */
-        void writeMapKey( const utf8* pKeyString ) override;
-        /** @brief 맵 값을 씁니다. */
-        void writeMapValue( const utf8* pValueString ) override;
-        /** @brief 맵 항목을 끝냅니다. */
-        void endMapEntry() override;
-        /** @brief 맵 구간을 끝냅니다. */
+        /** @brief beginMap 으로 연 요소를 닫고 부모로 돌아갑니다. */
         void endMap() override;
         /** @brief 직렬화를 마무리하고 XML 문자열을 반환합니다. */
         string endSerialize() override;
@@ -199,10 +156,6 @@ namespace sw
         [[nodiscard]] bool readValue( const utf8* pTagName, string& outValue ) override;
         /** @brief 현재 부모 요소의 XML 속성을 읽습니다. */
         [[nodiscard]] bool readAttribute( const utf8* pAttrName, string& outValue ) override;
-        /** @brief 배열 요소를 순회합니다. */
-        bool iterateArray( const utf8* pTagName, const XmlArrayItemDelegate& callback ) override;
-        /** @brief 맵 항목을 순회합니다. */
-        bool iterateMap( const utf8* pTagName, const XmlMapItemDelegate& callback ) override;
         /** @brief 현재 부모의 자식 요소로 내려갑니다. 없으면 false 입니다. */
         bool pushChild( const utf8* pTagName ) override;
         /** @brief 첫 자식 요소로 내려갑니다. */
@@ -262,14 +215,6 @@ namespace sw
         /** @brief 기본 XmlDocumentBackend 로 XML 에서 객체를 역직렬화합니다. */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
                                                const SerializeContext& ctx = SerializeContext::getDefault() );
-
-        /** @brief 객체를 XML 로 직렬화해 Archive 에 기록합니다. */
-        [[nodiscard]] static bool serializeToArchive( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
-                                                      const SerializeContext& ctx = SerializeContext::getDefault() );
-
-        /** @brief Archive 에서 XML 문자열을 읽어 객체로 역직렬화합니다. */
-        [[nodiscard]] static bool deserializeFromArchive( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
-                                                          const SerializeContext& ctx = SerializeContext::getDefault() );
 
         /** @brief XML 을 절대 경로에 씁니다. */
         [[nodiscard]] static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,

@@ -760,14 +760,6 @@ namespace sw
         return true;
     }
 
-    string Archive::convertBinaryToXml( const TypeInfo& typeInfo )
-    {
-        if ( _pData == nullptr || _offset >= _dataSize || typeInfo._size == 0 )
-            return {};
-
-        return SerializerUtil::transcodeBinaryToXml( _pData + _offset, _dataSize - _offset, typeInfo );
-    }
-
     void Archive::writeVarUint( uint64 value )
     {
         VarIntUtil::encodeVarUint64( value, _bytes );

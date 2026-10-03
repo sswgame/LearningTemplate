@@ -10,7 +10,6 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
-#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -597,21 +596,6 @@ namespace sw
         _impl->_currentParent.appendAttribute( sName.c_str(), pValueString != nullptr ? pValueString : "" );
     }
 
-    void XmlDocumentBackend::beginArray( const utf8* pTagName )
-    {
-        beginMap( pTagName );
-    }
-
-    void XmlDocumentBackend::writeArrayItem( const utf8* pValueString )
-    {
-        writeValue( "item", pValueString );
-    }
-
-    void XmlDocumentBackend::endArray()
-    {
-        endMap();
-    }
-
     void XmlDocumentBackend::beginMap( const utf8* pTagName )
     {
         if ( _impl->_currentParent.isValid() == false )
@@ -621,26 +605,6 @@ namespace sw
         XmlNode node = _impl->_currentParent.appendChild( sTag.c_str() );
         _impl->_listNodeStack.push_back( node );
         _impl->_currentParent = node;
-    }
-
-    void XmlDocumentBackend::beginMapEntry()
-    {
-        beginMap( "entry" );
-    }
-
-    void XmlDocumentBackend::writeMapKey( const utf8* pKeyString )
-    {
-        writeValue( "key", pKeyString );
-    }
-
-    void XmlDocumentBackend::writeMapValue( const utf8* pValueString )
-    {
-        writeValue( "value", pValueString );
-    }
-
-    void XmlDocumentBackend::endMapEntry()
-    {
-        endMap();
     }
 
     void XmlDocumentBackend::endMap()
@@ -724,65 +688,6 @@ namespace sw
             return false;
 
         outValue = pVal;
-        return true;
-    }
-
-    bool XmlDocumentBackend::iterateArray( const utf8* pTagName, const XmlArrayItemDelegate& callback )
-    {
-        if ( _impl->_currentParent.isValid() == false )
-            return false;
-
-        const bool bIgnore = ignoresCaseKeys();
-        XmlNode    arrNode = _impl->_currentParent;
-        if ( StringUtil::isNullOrEmpty( pTagName ) == false )
-        {
-            string sTag = Impl::sanitizeTag( pTagName );
-            arrNode     = _impl->_currentParent.findChild( sTag.c_str(), bIgnore );
-            if ( arrNode.isValid() == false )
-                return false;
-        }
-
-        for ( XmlNode item = arrNode.findChild( "item", bIgnore ); item; item = item.findNextSibling( "item", bIgnore ) )
-        {
-            callback( item.getText() != nullptr ? item.getText() : "" );
-        }
-
-        return true;
-    }
-
-    bool XmlDocumentBackend::iterateMap( const utf8* pTagName, const XmlMapItemDelegate& callback )
-    {
-        if ( _impl->_currentParent.isValid() == false )
-            return false;
-
-        const bool bIgnore = ignoresCaseKeys();
-        XmlNode    mapNode = _impl->_currentParent;
-        if ( StringUtil::isNullOrEmpty( pTagName ) == false )
-        {
-            string sTag = Impl::sanitizeTag( pTagName );
-            mapNode     = _impl->_currentParent.findChild( sTag.c_str(), bIgnore );
-            if ( mapNode.isValid() == false )
-                return false;
-        }
-
-        for ( XmlNode child = mapNode.findChild( nullptr, bIgnore ); child; child = child.findNextSibling( nullptr, bIgnore ) )
-        {
-            const utf8* pChildName = child.getName();
-            if ( pChildName == nullptr )
-                continue;
-
-            if ( StringUtil::equals( pChildName, "entry", true ) )
-            {
-                XmlNode kNode = child.findChild( "key", bIgnore );
-                XmlNode vNode = child.findChild( "value", bIgnore );
-                if ( kNode.isValid() && vNode.isValid() )
-                    callback( kNode.getText() != nullptr ? kNode.getText() : "", vNode.getText() != nullptr ? vNode.getText() : "" );
-                continue;
-            }
-
-            const string nodeXml = child.toString();
-            callback( pChildName, nodeXml );
-        }
         return true;
     }
 
@@ -922,31 +827,6 @@ namespace sw
         if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, nullptr, ctx ) == false )
             return false;
         return listOrphan.empty();
-    }
-
-    bool XmlSerializer::serializeToArchive( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
-                                            const SerializeContext& ctx )
-    {
-        const string xmlStr = serialize( pInstance, typeInfo, ctx );
-        if ( xmlStr.empty() )
-            return false;
-
-        outArchive << xmlStr;
-        return true;
-    }
-
-    bool XmlSerializer::deserializeFromArchive( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
-                                                const SerializeContext& ctx )
-    {
-        if ( inArchive.isError() )
-            return false;
-
-        string xmlStr;
-        inArchive >> xmlStr;
-        if ( inArchive.isError() || xmlStr.empty() )
-            return false;
-
-        return deserialize( pInstance, typeInfo, xmlStr, ctx );
     }
 
     bool XmlSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,

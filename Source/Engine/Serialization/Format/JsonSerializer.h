@@ -13,8 +13,6 @@ namespace sw
 {
     struct TypeInfo;
 
-    class Archive;
-
     /**
      * @class JsonSerializer
      * @brief TypeInfo 리플렉션으로 JSON 을 쓰고 읽습니다.
@@ -23,21 +21,7 @@ namespace sw
     {
     public:
         // ------------------------------------------------------------------------------
-        // 1) 문자열 도우미: 이스케이프, 필드 추출
-        // ------------------------------------------------------------------------------
-        /** @brief JSON 따옴표 값 안에 넣을 문자열을 이스케이프합니다. */
-        static string escapeString( string_view value );
-        /** @brief JSON 문자열 값의 이스케이프를 풉니다(바깥 따옴표는 제외). */
-        static string unescapeString( string_view value );
-        /**
-         * @brief 최상위 `"field": "value"` 문자열을 뽑습니다(단순 객체 형태).
-         * @param bIgnoreCaseKeys 필드 이름을 비교할 때 대소문자를 무시할지 여부(기본 true). 값 문자열은 그대로 둡니다.
-         */
-        static string extractStringField( string_view json, string_view fieldName,
-                                          bool bIgnoreCaseKeys = true );
-
-        // ------------------------------------------------------------------------------
-        // 2) 직렬화 / 역직렬화
+        // 1) 직렬화 / 역직렬화
         // ------------------------------------------------------------------------------
         /**
          * @brief 한 줄로 압축한 JSON 으로 직렬화합니다.
@@ -53,14 +37,6 @@ namespace sw
         /** @brief JSON 문자열에서 객체를 역직렬화합니다. */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                                const SerializeContext& ctx = SerializeContext::getDefault() );
-
-        /** @brief 객체를 JSON 으로 직렬화해 Archive 에 기록합니다. */
-        [[nodiscard]] static bool serializeToArchive( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
-                                                      bool bPretty = false, const SerializeContext& ctx = SerializeContext::getDefault() );
-
-        /** @brief Archive 에서 JSON 문자열을 읽어 객체로 역직렬화합니다. */
-        [[nodiscard]] static bool deserializeFromArchive( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
-                                                          const SerializeContext& ctx = SerializeContext::getDefault() );
 
         /** @brief Pretty JSON 을 절대 경로에 씁니다. indentSpaces 가 0 이면 serializePretty 와 같이 4 칸을 씁니다. */
         [[nodiscard]] static bool saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces = 4,
@@ -78,7 +54,7 @@ namespace sw
                                               const SerializeContext& ctx = SerializeContext::getDefault() );
 
         // ------------------------------------------------------------------------------
-        // 3) Soft · 버전: orphan 수집, _schemaVersion
+        // 2) Soft · 버전: orphan 수집, _schemaVersion
         // ------------------------------------------------------------------------------
         /**
          * @brief Soft 역직렬화입니다. 변환하지 못한 필드를 orphan 으로 모읍니다.

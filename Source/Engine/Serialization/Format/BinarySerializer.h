@@ -117,25 +117,6 @@ namespace sw
                                                          Archive&                inArchive,
                                                          const SerializeContext& ctx = SerializeContext::getDefault() );
 
-        /** @brief 버전 헤더를 붙인 압축 바이너리로 직렬화합니다. */
-        [[nodiscard]] static bool serializeVersionedCompressed( uint32                  version,
-                                                                const void*             pInstance,
-                                                                const TypeInfo&         typeInfo,
-                                                                vector<uint8>&          outListBuffer,
-                                                                CompressionCodecType    codecType = CompressionCodecType::RLE,
-                                                                const SerializeContext& ctx       = SerializeContext::getDefault() );
-
-        /** @brief 압축된 버전 바이너리 스트림을 풀고 필요하면 이관하며 역직렬화합니다. */
-        [[nodiscard]] static bool deserializeVersionedCompressed( uint32&                 outVersion,
-                                                                  void*                   pInstance,
-                                                                  const TypeInfo&         typeInfo,
-                                                                  const uint8*            pData,
-                                                                  size_t                  dataSize,
-                                                                  uint32                  currentVersion  = 0,
-                                                                  SchemaMigrateFn         migrate         = nullptr,
-                                                                  const TypeInfo*         pLegacyTypeInfo = nullptr,
-                                                                  const SerializeContext& ctx             = SerializeContext::getDefault() );
-
         // ------------------------------------------------------------------------------
         // 5) 적응형 컴팩트 바이너리 직렬화 (Presence Bitmask & Sparse VarUInt Index)
         // ------------------------------------------------------------------------------

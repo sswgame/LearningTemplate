@@ -12,6 +12,7 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Utility/Json/JsonDocument.h"
 
 #include "ReflectionTest/TestReflectionFixtures.h"
 #include "ReflectionTest/TestSampleActor.h"
@@ -507,40 +508,9 @@ struct SimpleXmlBackend : public sw::IXmlBackend
         _result += " " + sw::string( pAttr ) + "=\"" + sw::string( pValue ) + "\"";
         _mapKv[sw::string( pAttr )] = pValue != nullptr ? pValue : "";
     }
-    void beginArray( const utf8* pTag ) override
-    {
-        beginNamedElement( pTag );
-    }
-    void writeArrayItem( const utf8* pValue ) override
-    {
-        closeOpenTag();
-        _result += "<item>" + sw::string( pValue ) + "</item>";
-    }
-    void endArray() override
-    {
-        endNamedElement();
-    }
     void beginMap( const utf8* pTag ) override
     {
         beginNamedElement( pTag );
-    }
-    void beginMapEntry() override
-    {
-        beginNamedElement( "entry" );
-    }
-    void writeMapKey( const utf8* pKey ) override
-    {
-        closeOpenTag();
-        _result += "<key>" + sw::string( pKey ) + "</key>";
-    }
-    void writeMapValue( const utf8* pValue ) override
-    {
-        closeOpenTag();
-        _result += "<value>" + sw::string( pValue ) + "</value>";
-    }
-    void endMapEntry() override
-    {
-        endNamedElement();
     }
     void endMap() override
     {
@@ -626,14 +596,6 @@ struct SimpleXmlBackend : public sw::IXmlBackend
     {
         return readValue( pAttr, outValue );
     }
-    bool iterateArray( const utf8*, const sw::XmlArrayItemDelegate& ) override
-    {
-        return false;
-    }
-    bool iterateMap( const utf8*, const sw::XmlMapItemDelegate& ) override
-    {
-        return false;
-    }
 };
 
 /**
@@ -660,7 +622,6 @@ SW_TEST_CASE( ReflectionSerializationTest, XmlAttributeRoundtrip )
     SW_EXPECT_EQUAL( sw::string( "42" ), id );
     SW_EXPECT_EQUAL( sw::string( "AttrTitle" ), title );
     SW_EXPECT_EQUAL( sw::string( "child-element" ), note );
-    SW_EXPECT_TRUE( reader.readValueOrAttribute( "_id", id ) );
 }
 
 /**
@@ -694,8 +655,8 @@ SW_TEST_CASE( ReflectionSerializationTest, XmlJsonKeysIgnoreCaseValuesPreserveCa
     SW_EXPECT_EQUAL( 4, fromXml._listScore[1] );
 
     SW_EXPECT_EQUAL( sw::string( "CaseSensitiveValue" ),
-                     sw::JsonSerializer::extractStringField( json, "_title" ) );
-    SW_EXPECT_TRUE( sw::JsonSerializer::extractStringField( json, "_title", false ).empty() );
+                     sw::JsonDocument::extractStringField( json, "_title" ) );
+    SW_EXPECT_TRUE( sw::JsonDocument::extractStringField( json, "_title", false ).empty() );
 
     // 옵트아웃: 대소문자 구분 키 조회는 다른 대소문자를 바인딩하면 안 된다.
     sw::SerializeContext strictCtx = sw::SerializeContext::getDefault();
@@ -2604,27 +2565,6 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAbstractAndStatic )
     args.add( int32{ 21 } );
     const sw::TaskValue result = doubleFn->_invoker( nullptr, args );
     SW_EXPECT_EQUAL( 42, result.getValue<int32>() );
-}
-
-/**
- * @brief [ReflectionSerializationTest] JSON 이스케이프 라운드트립
- */
-SW_TEST_CASE( ReflectionSerializationTest, JsonEscapeUnescapeRoundtrip )
-{
-    const sw::string raw     = "line\n\t\"quote\"\\slash";
-    const sw::string escaped = sw::JsonSerializer::escapeString( raw );
-    SW_EXPECT_TRUE( escaped.find( '\n' ) == sw::string::npos );
-    SW_EXPECT_TRUE( escaped.find( '\t' ) == sw::string::npos );
-    SW_EXPECT_TRUE( escaped.find( "\\\"" ) != sw::string::npos );
-    SW_EXPECT_TRUE( escaped.find( "\\\\" ) != sw::string::npos );
-    SW_EXPECT_EQUAL( raw, sw::JsonSerializer::unescapeString( escaped ) );
-
-    const sw::string extracted =
-        sw::JsonSerializer::extractStringField( R"({"Title":"Hero","HP":"10"})", "title", true );
-    SW_EXPECT_EQUAL( sw::string( "Hero" ), extracted );
-    const sw::string missing =
-        sw::JsonSerializer::extractStringField( R"({"Title":"Hero"})", "title", false );
-    SW_EXPECT_TRUE( missing.empty() );
 }
 
 /**

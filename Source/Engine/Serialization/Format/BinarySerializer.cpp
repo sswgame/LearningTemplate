@@ -615,35 +615,6 @@ namespace sw
         } );
     }
 
-    bool BinarySerializer::serializeVersionedCompressed( uint32                  version,
-                                                         const void*             pInstance,
-                                                         const TypeInfo&         typeInfo,
-                                                         vector<uint8>&          outListBuffer,
-                                                         CompressionCodecType    codecType,
-                                                         const SerializeContext& ctx )
-    {
-        return BinarySerializerInternal::serializeThenCompress( pInstance, outListBuffer, codecType, [&]( vector<uint8>& outListRaw )
-        {
-            serializeVersioned( version, pInstance, typeInfo, outListRaw, ctx );
-        } );
-    }
-
-    bool BinarySerializer::deserializeVersionedCompressed( uint32&                 outVersion,
-                                                           void*                   pInstance,
-                                                           const TypeInfo&         typeInfo,
-                                                           const uint8*            pData,
-                                                           size_t                  dataSize,
-                                                           uint32                  currentVersion,
-                                                           SchemaMigrateFn         migrate,
-                                                           const TypeInfo*         pLegacyTypeInfo,
-                                                           const SerializeContext& ctx )
-    {
-        return BinarySerializerInternal::decompressThenDeserialize( pInstance, pData, dataSize, [&]( const uint8* pRaw, size_t rawSize )
-        {
-            return deserializeVersioned( outVersion, pInstance, typeInfo, pRaw, rawSize, currentVersion, migrate, pLegacyTypeInfo, ctx );
-        } );
-    }
-
     void BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
                                       const SerializeContext& ctx )
     {

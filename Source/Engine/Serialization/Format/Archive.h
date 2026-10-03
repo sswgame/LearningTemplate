@@ -318,8 +318,6 @@ namespace sw
 
         /** @brief XML 문자열을 콤팩트 바이너리로 바꿔 기록합니다. */
         [[nodiscard]] bool convertXmlToBinary( string_view xmlStr, const TypeInfo& typeInfo );
-        /** @brief 아카이브의 바이너리 객체를 XML 문자열로 바꿔 반환합니다. */
-        string convertBinaryToXml( const TypeInfo& typeInfo );
 
         // ------------------------------------------------------------------------------
         // 6) 가변 길이 정수 (VarInt / ZigZag) 스트리밍

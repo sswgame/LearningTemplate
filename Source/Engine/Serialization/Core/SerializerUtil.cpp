@@ -419,21 +419,6 @@ namespace sw
         return false;
     }
 
-    const utf8* SerializerUtil::containerTypeTagName( hashed_string typeName )
-    {
-        const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeName );
-        if ( pTypeInfo != nullptr )
-        {
-            if ( pTypeInfo->_name.empty() == false )
-                return pTypeInfo->_name.c_str();
-            if ( pTypeInfo->_fullyQualifiedName.empty() == false )
-                return pTypeInfo->_fullyQualifiedName.c_str();
-        }
-        if ( typeName.empty() == false )
-            return typeName.c_str();
-        return nullptr;
-    }
-
     void SerializerUtil::serializeValueBinary( const void* pValuePtr, const hashed_string& typeName,
                                                vector<uint8>& listBuffer, const SerializeContext& ctx )
     {
