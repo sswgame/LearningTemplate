@@ -107,6 +107,28 @@ namespace sw::editor
         }
 
         /**
+         * @brief 파일에서 읽은 그래프를 목록으로 받습니다(`loadDocument` 의 공통 절차).
+         * @details 읽지 못한 파일 앞에서는 앞 문서의 그래프를 들고 있지 않습니다 — 기본 그래프를 보이고 저장을 막습니다(덮지 않게).
+         *          레이아웃 동기화 플래그와 미리보기 재생을 내리고 캔버스가 내용에 맞추게 합니다. 패널별 미리보기 상태는 패널이 정리합니다.
+         */
+        void adoptLoadedGraph( AssetType&& data, ToolAssetLoadResult result )
+        {
+            _listNode.clear();
+            _listLink.clear();
+            if ( result == ToolAssetLoadResult::Loaded )
+            {
+                _listNode = std::move( data._listNode );
+                _listLink = std::move( data._listLink );
+            }
+            if ( _listNode.empty() )
+                ensureDefaults();
+
+            _bGraphLayoutReady = SW_FALSE;
+            _bPreviewPlaying   = SW_FALSE;
+            _nodeGraph.requestContentFit();
+        }
+
+        /**
          * @brief 캔버스의 노드 위치를 목록에 담고, 옮겨졌으면 dirty 로 표시합니다.
          * @details 정본은 캔버스이고 목록은 사본입니다. 사용자가 노드를 끌면 캔버스만 압니다. 첫 프레임에 "위치가 처음
          *          정해지는 것" 은 편집이 아니므로 `_bGraphLayoutReady` 가 켜지기 전에는 dirty 로 치지 않습니다.
