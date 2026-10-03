@@ -69,6 +69,95 @@ namespace sw
                 return true;
             }
 
+            /** @brief 모듈 이미지에서 API 표를 받는 데 쓰는 심볼 이름입니다. 에디터 · 게임이 같은 절차를 이 이름만 바꿔 씁니다. */
+            struct ModuleApiSymbols
+            {
+                const utf8* _pVersionSymbol;
+                const utf8* _pStampSymbol;
+                const utf8* _pExportSymbol;
+                const utf8* _pModuleLabel;
+            };
+            static constexpr ModuleApiSymbols kEditorSymbols{ "getEditorModuleAbiVersion", "getEditorModuleAbiStamp", "exportEditorApi", "Editor" };
+            static constexpr ModuleApiSymbols kGameSymbols{ "getGameModuleAbiVersion", "getGameModuleAbiStamp", "exportGameApi", "Game" };
+
+            /**
+             * @brief 모듈 이미지의 ABI 를 대조하고 API 표를 받습니다(에디터 · 게임 공통). 받지 못하면 @p outApi 는 빈 표입니다.
+             * @details 리로드 전 검사(`is*ImageUsable`)와 바인딩(`bind*Api`)이 같은 절차를 씁니다.
+             */
+            template <typename TApi, typename TExportFn>
+            [[nodiscard]] static bool exportApiFromImage( void* pLibraryModule, const ModuleApiSymbols& symbols, TApi& outApi )
+            {
+                outApi = {};
+                if ( pLibraryModule == nullptr ||
+                     matchesModuleAbi( pLibraryModule, symbols._pVersionSymbol, symbols._pStampSymbol, symbols._pModuleLabel ) == false )
+                    return false;
+                const TExportFn pfnExport = reinterpret_cast<TExportFn>( FileUtil::getDynamicSymbol( pLibraryModule, symbols._pExportSymbol ) );
+                if ( pfnExport == nullptr || pfnExport( &outApi ) == false )
+                {
+                    outApi = {};
+                    SW_LOG_ERROR( "The %# module does not export its API table (%#)", symbols._pModuleLabel, symbols._pExportSymbol );
+                    return false;
+                }
+                return true;
+            }
+
+            /**
+             * @brief 바인딩한 API 표로 인스턴스를 만들고 초기화합니다(에디터 · 게임 공통). 실패하면 만든 것을 부수고 핸들을 비웁니다.
+             * @note **디바이스가 없으면 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로 묻는 것 자체가 죽는 길이고, 만들어 봐야
+             *       초기화가 실패할 것이 정해져 있습니다.
+             */
+            template <typename TApi>
+            [[nodiscard]] static bool createInstance( const TApi& api, void*& pOutHandle, IWindow* pWindow, RHI* pRHI, const utf8* pModuleLabel )
+            {
+                pOutHandle = nullptr;
+                if ( pRHI == nullptr || pRHI->hasDevice() == false )
+                {
+                    SW_LOG_ERROR( "RHI 디바이스가 없어 %# 인스턴스를 만들지 않습니다.", pModuleLabel );
+                    return false;
+                }
+
+                pOutHandle = api.create();
+                if ( pOutHandle == nullptr )
+                {
+                    SW_LOG_ERROR( "Failed to create %# instance", pModuleLabel );
+                    return false;
+                }
+
+                if ( api.initialize( pOutHandle, pWindow, &pRHI->getDevice() ) == false )
+                {
+                    SW_LOG_ERROR( "Failed to initialize %# instance", pModuleLabel );
+                    if ( api.destroy != nullptr )
+                        api.destroy( pOutHandle );
+                    pOutHandle = nullptr;
+                    return false;
+                }
+                return true;
+            }
+
+            /**
+             * @brief 인스턴스를 내립니다(에디터 · 게임 공통): shutdown → destroy → (표를 놓으면) 모듈 타입 등록 해제 → 서비스 떼기 → 핸들 비우기
+             *        → (표를 놓으면) API 표 비우기.
+             * @details 타입 등록 해제가 그 모듈의 살아 있는 컴포넌트를 지웁니다. 그 소멸자는 모듈 코드라 서비스가 아직 붙어 있는 동안이어야 합니다.
+             */
+            template <typename TApi>
+            static void destroyInstance( TApi& inoutApi, void*& pInOutHandle, bool bReleaseApiTable, [[maybe_unused]] const utf8* pModuleName )
+            {
+                if ( pInOutHandle != nullptr && inoutApi.shutdown != nullptr )
+                    inoutApi.shutdown( pInOutHandle );
+                if ( pInOutHandle != nullptr && inoutApi.destroy != nullptr )
+                    inoutApi.destroy( pInOutHandle );
+                // Shipping 은 모듈을 내리지 않으므로 등록 해제 자체가 없다(Engine 에도 그 코드가 없다).
+#if !defined( SW_SHIPPING )
+                if ( bReleaseApiTable )
+                    engine::unregisterModuleTypes( pModuleName );
+#endif
+                if ( inoutApi.bindService != nullptr )
+                    inoutApi.bindService( nullptr );
+                pInOutHandle = nullptr;
+                if ( bReleaseApiTable )
+                    inoutApi = {};
+            }
+
             /** @brief 호스트가 제공하는 서비스 테이블을 만듭니다. 게임 모듈에는 GameVisible 인 것만 노출합니다. */
             template <Target TargetModule>
             static void fillModuleService( const ModuleHost* pHost, ModuleService& outService )
@@ -454,26 +543,18 @@ namespace sw
 
     bool ModuleHost::isEditorImageUsable( void* pLibraryModule ) const
     {
-        if ( pLibraryModule == nullptr || ModuleHostInternal::matchesModuleAbi( pLibraryModule, "getEditorModuleAbiVersion", "getEditorModuleAbiStamp", "Editor" ) == false )
+        EditorAPI api{};
+        if ( ModuleHostInternal::exportApiFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, ModuleHostInternal::kEditorSymbols, api ) == false )
             return false;
-        const PFN_ExportEditorAPI pfnExport = reinterpret_cast<PFN_ExportEditorAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportEditorApi" ) );
-        EditorAPI                 api{};
-        const bool                bExported = pfnExport != nullptr && pfnExport( &api ) && api.create != nullptr && api.destroy != nullptr;
-        if ( bExported == false )
-            SW_LOG_ERROR( "The new editor module does not export a usable EditorAPI" );
-        return bExported;
+        return api.create != nullptr && api.destroy != nullptr;
     }
 
     bool ModuleHost::isGameImageUsable( void* pLibraryModule ) const
     {
-        if ( pLibraryModule == nullptr || ModuleHostInternal::matchesModuleAbi( pLibraryModule, "getGameModuleAbiVersion", "getGameModuleAbiStamp", "Game" ) == false )
+        GameAPI api{};
+        if ( ModuleHostInternal::exportApiFromImage<GameAPI, PFN_ExportGameAPI>( pLibraryModule, ModuleHostInternal::kGameSymbols, api ) == false )
             return false;
-        const PFN_ExportGameAPI pfnExport = reinterpret_cast<PFN_ExportGameAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportGameApi" ) );
-        GameAPI                 api{};
-        const bool              bExported = pfnExport != nullptr && pfnExport( &api ) && api.create != nullptr && api.destroy != nullptr;
-        if ( bExported == false )
-            SW_LOG_ERROR( "The new game module does not export a usable GameAPI" );
-        return bExported;
+        return api.create != nullptr && api.destroy != nullptr;
     }
 
     // ======================================================================
@@ -543,19 +624,8 @@ namespace sw
 
     bool ModuleHost::bindEditorApi( void* pLibraryModule )
     {
-        _editorApi = {};
-        if ( pLibraryModule == nullptr )
+        if ( ModuleHostInternal::exportApiFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, ModuleHostInternal::kEditorSymbols, _editorApi ) == false )
             return false;
-
-        if ( ModuleHostInternal::matchesModuleAbi( pLibraryModule, "getEditorModuleAbiVersion", "getEditorModuleAbiStamp", "Editor" ) == false )
-            return false;
-
-        PFN_ExportEditorAPI pfnExport = reinterpret_cast<PFN_ExportEditorAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportEditorApi" ) );
-        if ( pfnExport == nullptr || pfnExport( &_editorApi ) == false )
-        {
-            SW_LOG_ERROR( "Failed to bind EditorAPI from module" );
-            return false;
-        }
 
         rebindEditorService();
 
@@ -574,17 +644,9 @@ namespace sw
             return false;
         }
 #else
-        if ( pLibraryModule == nullptr )
-            return false;
         // Shipping 은 게임을 정적으로 링크하므로(위 분기) 테이블이 어긋날 수 없다. 대조는 동적 경로에서만 한다.
-        if ( ModuleHostInternal::matchesModuleAbi( pLibraryModule, "getGameModuleAbiVersion", "getGameModuleAbiStamp", "Game" ) == false )
+        if ( ModuleHostInternal::exportApiFromImage<GameAPI, PFN_ExportGameAPI>( pLibraryModule, ModuleHostInternal::kGameSymbols, _gameApi ) == false )
             return false;
-        PFN_ExportGameAPI pfnExport = reinterpret_cast<PFN_ExportGameAPI>( FileUtil::getDynamicSymbol( pLibraryModule, "exportGameApi" ) );
-        if ( pfnExport == nullptr || pfnExport( &_gameApi ) == false )
-        {
-            SW_LOG_ERROR( "Failed to bind GameAPI from module" );
-            return false;
-        }
 #endif
 
         rebindGameService();
@@ -777,104 +839,27 @@ namespace sw
 
     void ModuleHost::destroyEditorInstance( bool bReleaseApiTable )
     {
-        if ( _editor != nullptr && _editorApi.shutdown != nullptr )
-            _editorApi.shutdown( _editor );
-        if ( _editor != nullptr && _editorApi.destroy != nullptr )
-            _editorApi.destroy( _editor );
-        if ( _editorApi.bindService != nullptr )
-            _editorApi.bindService( nullptr );
-        _editor = nullptr;
-
-        if ( bReleaseApiTable )
-        {
-            _editorApi = {};
-            // Shipping 은 모듈을 내리지 않으므로 등록 해제 자체가 없다(Engine 에도 그 코드가 없다).
-#if !defined( SW_SHIPPING )
-            engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
-#endif
-        }
+        ModuleHostInternal::destroyInstance( _editorApi, _editor, bReleaseApiTable, sw::config::kTargetEditorModule );
     }
 
     void ModuleHost::destroyGameInstance( bool bReleaseApiTable )
     {
-        if ( _game != nullptr && _gameApi.shutdown != nullptr )
-            _gameApi.shutdown( _game );
-        if ( _game != nullptr && _gameApi.destroy != nullptr )
-            _gameApi.destroy( _game );
-
+        ModuleHostInternal::destroyInstance( _gameApi, _game, bReleaseApiTable, sw::config::kTargetGameModule );
 #if !defined( SW_SHIPPING )
-        if ( bReleaseApiTable )
-        {
-            engine::unregisterModuleTypes( sw::config::kTargetGameModule );
-            // 게임 컴포넌트를 모든 씬에서 걷어 냈다. 되돌릴 때까지(`restoreGameState`) 씬을 저장하면 그것들이 빠진 채 저장된다 — 리로드가 실패 ·
-            // 중단되면 되돌리는 쪽이 오지 않으므로 여기서 막는다.
-            if ( engine::areEngineServicesBound() )
-                engine::getSceneManager().setSaveBlockReason( "the game module's components were removed for a reload and have not been restored yet" );
-        }
+        // 게임 컴포넌트를 모든 씬에서 걷어 냈다. 되돌릴 때까지(`restoreGameState`) 씬을 저장하면 그것들이 빠진 채 저장된다 — 리로드가 실패 ·
+        // 중단되면 되돌리는 쪽이 오지 않으므로 여기서 막는다.
+        if ( bReleaseApiTable && engine::areEngineServicesBound() )
+            engine::getSceneManager().setSaveBlockReason( "the game module's components were removed for a reload and have not been restored yet" );
 #endif
-
-        if ( _gameApi.bindService != nullptr )
-            _gameApi.bindService( nullptr );
-        _game = nullptr;
-
-        if ( bReleaseApiTable )
-            _gameApi = {};
     }
 
     bool ModuleHost::createEditorInstance()
     {
-        // 디바이스를 인자로 넘기는 곳이다. 없으면 만들지 않는다. `getDevice()` 가 널 참조라 묻는 것 자체가 죽는 길이고, 만들어
-        // 봐야 초기화가 실패할 것이 정해져 있다.
-        if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
-        {
-            SW_LOG_ERROR( "RHI 디바이스가 없어 Editor 인스턴스를 만들지 않습니다." );
-            return false;
-        }
-
-        _editor = _editorApi.create();
-        if ( _editor == nullptr )
-        {
-            SW_LOG_ERROR( "Failed to create Editor instance" );
-            return false;
-        }
-
-        if ( _editorApi.initialize( _editor, _pWindow, &_pRHI->getDevice() ) == false )
-        {
-            SW_LOG_ERROR( "Failed to initialize Editor instance" );
-            if ( _editorApi.destroy != nullptr )
-                _editorApi.destroy( _editor );
-            _editor = nullptr;
-            return false;
-        }
-
-        return true;
+        return ModuleHostInternal::createInstance( _editorApi, _editor, _pWindow, _pRHI, "Editor" );
     }
 
     bool ModuleHost::createGameInstance()
     {
-        // 위 `createEditorInstance` 와 같은 이유다. 디바이스 없이 부르면 널 참조다.
-        if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
-        {
-            SW_LOG_ERROR( "RHI 디바이스가 없어 Game 인스턴스를 만들지 않습니다." );
-            return false;
-        }
-
-        _game = _gameApi.create();
-        if ( _game == nullptr )
-        {
-            SW_LOG_ERROR( "Failed to create Game instance" );
-            return false;
-        }
-
-        if ( _gameApi.initialize( _game, _pWindow, &_pRHI->getDevice() ) == false )
-        {
-            SW_LOG_ERROR( "Failed to initialize Game instance" );
-            if ( _gameApi.destroy != nullptr )
-                _gameApi.destroy( _game );
-            _game = nullptr;
-            return false;
-        }
-
-        return true;
+        return ModuleHostInternal::createInstance( _gameApi, _game, _pWindow, _pRHI, "Game" );
     }
 } // namespace sw

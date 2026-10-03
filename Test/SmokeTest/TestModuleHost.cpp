@@ -6,6 +6,7 @@
 #include "App/Module/ModuleHost.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -201,6 +202,31 @@ namespace
         return api;
     }
 
+    /** @brief 모듈 타입 등록 해제를 알아보는 탐침 전역 변수입니다. 모듈 이름으로 올려 두면 `unregisterModuleTypes` 가 걷습니다. */
+    int32                 s_teardownProbeValue{ 0 };
+    constexpr const utf8* kEditorTeardownProbe = "gv_moduleHostEditorTeardownProbe";
+    constexpr const utf8* kGameTeardownProbe   = "gv_moduleHostGameTeardownProbe";
+    /** @brief 서비스를 뗄 때(`bindService( nullptr )`) 그 모듈의 탐침이 이미 걷혔었는지. */
+    bool   s_bEditorTypesGoneAtUnbind{ false };
+    bool   s_bGameTypesGoneAtUnbind{ false };
+    uint32 s_editorUnbindCount{ 0 };
+    uint32 s_gameUnbindCount{ 0 };
+
+    void recordEditorBindService( const ModuleService* pService )
+    {
+        if ( pService != nullptr )
+            return;
+        ++s_editorUnbindCount;
+        s_bEditorTypesGoneAtUnbind = engine::getGlobalVariableManager().findVariable( kEditorTeardownProbe ) == nullptr;
+    }
+    void recordGameBindService( const ModuleService* pService )
+    {
+        if ( pService != nullptr )
+            return;
+        ++s_gameUnbindCount;
+        s_bGameTypesGoneAtUnbind = engine::getGlobalVariableManager().findVariable( kGameTeardownProbe ) == nullptr;
+    }
+
     /** @brief @p pName 이 @p listCall 에 있는지 봅니다. */
     bool hasCall( const vector<const utf8*>& listCall, const utf8* pName )
     {
@@ -240,6 +266,54 @@ SW_TEST_CASE( ModuleHostTest, ReloadBatchKeepsTheGameWhenItsStateCannotBeCapture
     SW_EXPECT_TRUE( hasCall( s_listGameCall, "shutdown" ) );
     SW_EXPECT_TRUE( hasCall( s_listGameCall, "destroy" ) );
 
+    host.shutdown();
+}
+
+/**
+ * @brief [ModuleHostTest] 에디터와 게임 인스턴스를 같은 순서로 내린다 — 모듈 타입(과 그 컴포넌트)을 걷은 **뒤에** 서비스를 뗀다
+ * @details 타입 등록 해제(`engine::unregisterModuleTypes`)는 그 모듈의 살아 있는 컴포넌트를 지운다. 소멸자는 모듈 코드라 서비스가 아직 붙어 있어야
+ *          한다. 내리는 본문이 에디터 · 게임에 따로 적혀 있으면 한쪽만 순서가 바뀐다 — 각 모듈 이름으로 올린 탐침 변수가 서비스를 뗄 때 이미
+ *          걷혔는지 본다.
+ */
+SW_TEST_CASE( ModuleHostTest, EditorAndGameTearDownInTheSameOrder )
+{
+    if ( engine::areEngineServicesBound() == false )
+        SW_TEST_SKIP( "engine services are not bound in this executable" );
+
+    GlobalVariableManager& variableManager = engine::getGlobalVariableManager();
+    SW_ASSERT_TRUE( variableManager.registerVariable( kEditorTeardownProbe, GlobalVariableType::Int32, &s_teardownProbeValue, int32{ 0 },
+                                                      "ModuleHostTest teardown probe", "", "EditorModule" ) );
+    SW_ASSERT_TRUE( variableManager.registerVariable( kGameTeardownProbe, GlobalVariableType::Int32, &s_teardownProbeValue, int32{ 0 },
+                                                      "ModuleHostTest teardown probe", "", "SWGame" ) );
+
+    RHI        rhi;
+    ModuleHost host;
+    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true, {} ) );
+    EditorAPI editorApi   = makeRecordingEditorApi();
+    editorApi.bindService = &recordEditorBindService;
+    GameAPI gameApi       = makeRecordingGameApi();
+    gameApi.bindService   = &recordGameBindService;
+    int32 editorToken     = 0;
+    int32 gameToken       = 0;
+    host.attachEditorInstance( editorApi, &editorToken );
+    host.attachGameInstance( gameApi, &gameToken );
+
+    s_bGameSerializeSucceeds   = true;
+    s_editorUnbindCount        = 0;
+    s_gameUnbindCount          = 0;
+    s_bEditorTypesGoneAtUnbind = false;
+    s_bGameTypesGoneAtUnbind   = false;
+    host.suspendModules( ModuleScope::Both, true );
+
+    SW_EXPECT_EQUAL( 1u, s_editorUnbindCount );
+    SW_EXPECT_EQUAL( 1u, s_gameUnbindCount );
+    SW_EXPECT_TRUE_MSG( s_bEditorTypesGoneAtUnbind, "the editor's services were unbound before its module types (and components) were released" );
+    SW_EXPECT_TRUE_MSG( s_bGameTypesGoneAtUnbind, "the game's services were unbound before its module types (and components) were released" );
+
+    // 뒤처리: 실패했을 때도 탐침이 다음 케이스로 새지 않게 한다. 저장 막음은 게임 내리기가 건 것이다.
+    variableManager.unregisterVariablesByModule( "EditorModule" );
+    variableManager.unregisterVariablesByModule( "SWGame" );
+    engine::getSceneManager().setSaveBlockReason( {} );
     host.shutdown();
 }
 
