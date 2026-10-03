@@ -9,6 +9,7 @@
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include <imgui.h>
 
@@ -50,6 +51,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    SW_EDITOR_PANEL( ConsolePanel, "console", EditorPanelCategory::Core, 400 );
+
     ConsolePanel::ConsolePanel()
         : _listEntry{}
         , _listDrawSnapshot{}

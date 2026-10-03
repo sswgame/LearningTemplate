@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 
@@ -36,6 +37,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "PrefabTool" );
+    SW_EDITOR_PANEL( PrefabEditorPanel, "prefab_editor", EditorPanelCategory::Tool, 1400 );
 
     PrefabEditorPanel::PrefabEditorPanel()
         : _selectedPrefabPath{}

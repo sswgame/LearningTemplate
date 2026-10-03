@@ -43,6 +43,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    SW_EDITOR_POPUP( QuickLauncherPopup, 100 );
+
     QuickLauncherPopup::QuickLauncherPopup()
         : _listAllItem{}
         , _fileIndexJob{}
@@ -56,28 +58,28 @@ namespace sw::editor
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getPopupManager().openPopup( "QuickLauncher" );
+            pContext->getPopupManager().openPopup( kPopupId );
     }
 
     void QuickLauncherPopup::close()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getPopupManager().closePopup( "QuickLauncher" );
+            pContext->getPopupManager().closePopup( kPopupId );
     }
 
     void QuickLauncherPopup::toggle()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getPopupManager().togglePopup( "QuickLauncher" );
+            pContext->getPopupManager().togglePopup( kPopupId );
     }
 
     bool QuickLauncherPopup::isOpen()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            return pContext->getPopupManager().isPopupOpen( "QuickLauncher" );
+            return pContext->getPopupManager().isPopupOpen( kPopupId );
         return false;
     }
 

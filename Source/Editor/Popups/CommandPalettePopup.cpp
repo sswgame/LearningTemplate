@@ -51,6 +51,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    SW_EDITOR_POPUP( CommandPalettePopup, 200 );
+
     // ------------------------------------------------------------------------------
     // 생성자
     // ------------------------------------------------------------------------------
@@ -71,7 +73,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().openPopup( "CommandPalette" );
+        pContext->getPopupManager().openPopup( kPopupId );
     }
 
     void CommandPalettePopup::close()
@@ -80,7 +82,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().closePopup( "CommandPalette" );
+        pContext->getPopupManager().closePopup( kPopupId );
     }
 
     void CommandPalettePopup::toggle()
@@ -89,7 +91,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().togglePopup( "CommandPalette" );
+        pContext->getPopupManager().togglePopup( kPopupId );
     }
 
     bool CommandPalettePopup::isOpen()
@@ -98,7 +100,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return false;
 
-        return pContext->getPopupManager().isPopupOpen( "CommandPalette" );
+        return pContext->getPopupManager().isPopupOpen( kPopupId );
     }
 
     // ------------------------------------------------------------------------------

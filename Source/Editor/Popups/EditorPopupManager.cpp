@@ -3,9 +3,6 @@
 #include "Editor/Popups/EditorPopupManager.h"
 
 #include "Editor/Common/Gui/IEditorPopup.h"
-#include "Editor/Popups/BoneHierarchyPopup.h"
-#include "Editor/Popups/CommandPalettePopup.h"
-#include "Editor/Popups/QuickLauncherPopup.h"
 
 namespace sw::editor
 {
@@ -94,9 +91,11 @@ namespace sw::editor
             return;
         _bDefaultsRegistered = true;
 
-        registerPopup( make_unique<QuickLauncherPopup>() );
-        registerPopup( make_unique<CommandPalettePopup>() );
-        registerPopup( make_unique<BoneHierarchyPopup>() );
+        using PopupRegistry = EditorRegistry<EditorPopupRegistration>;
+        for ( uint32 index = 0; index < PopupRegistry::getCount(); ++index )
+        {
+            registerPopup( PopupRegistry::getAt( index )._pCreate() );
+        }
     }
 
     void EditorPopupManager::clear()

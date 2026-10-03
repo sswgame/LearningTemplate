@@ -1,138 +1,40 @@
 /**
  * @file EditorViewportVisualizer.cpp
- * @brief 컴포넌트 종류별 시각화 표와 그리기 구현
+ * @brief 등록된 시각화를 마스크로 고르고 그립니다(시각화 자체는 `Viewport/Visualizers/` 의 각 파일)
  */
 #include "pch.h"
 
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
-#include "Core/Math/MathUtil.h"
-#include "Core/Math/MatrixMath.h"
-
-#include "Editor/Viewport/EditorViewportProjection.h"
-
-#include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
-#include "Engine/Object/Component/CameraComponent.h"
-#include "Engine/Object/GameObject/CameraRegistry.h"
-#include "Engine/Object/GameObject/GameObject.h"
-
-#include <imgui.h>
+#include "Core/Log/Logger.h"
 
 namespace sw::editor
 {
-    namespace
+    SW_LOG_CALLER( "EditorViewportVisualizer" );
+
+    uint32 EditorViewportVisualizer::getCount()
     {
-        struct EditorViewportVisualizerInternal
-        {
-            /** @brief BoxCollider2D 사각형을 와이어프레임으로 그립니다. */
-            static void drawColliders( const EditorViewportVisualizerArgs& args )
-            {
-                constexpr ImU32 colorWire = IM_COL32( 60, 230, 80, 220 );
+        const uint32 count = EditorRegistry<EditorVisualizerRegistration>::getCount();
+        return count < kMaxVisualizerCount ? count : kMaxVisualizerCount;
+    }
 
-                for ( GameObject* pObj : *args._pListObject )
-                {
-                    if ( pObj == nullptr || pObj->isActive() == false )
-                        continue;
-                    BoxCollider2DComponent* pBox = pObj->getComponent<BoxCollider2DComponent>();
-                    if ( pBox == nullptr || pBox->isActive() == false )
-                        continue;
-
-                    const float2  offsetPos = pBox->getOffsetPosition();
-                    const float2  offsetScl = pBox->getOffsetScale();
-                    const float3  center    = pBox->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
-                    const float32 hx        = MathUtil::max( offsetScl._x * 0.5f, 0.05f );
-                    const float32 hy        = MathUtil::max( offsetScl._y * 0.5f, 0.05f );
-
-                    const float3 p0{ center._x - hx, center._y - hy, center._z };
-                    const float3 p1{ center._x + hx, center._y - hy, center._z };
-                    const float3 p2{ center._x + hx, center._y + hy, center._z };
-                    const float3 p3{ center._x - hx, center._y + hy, center._z };
-
-                    ImVec2 s0, s1, s2, s3;
-                    if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p0, args._canvasPos, args._canvasSize, s0 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p1, args._canvasPos, args._canvasSize, s1 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p2, args._canvasPos, args._canvasSize, s2 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p3, args._canvasPos, args._canvasSize, s3 ) )
-                    {
-                        args._pDrawList->AddLine( s0, s1, colorWire, 1.5f );
-                        args._pDrawList->AddLine( s1, s2, colorWire, 1.5f );
-                        args._pDrawList->AddLine( s2, s3, colorWire, 1.5f );
-                        args._pDrawList->AddLine( s3, s0, colorWire, 1.5f );
-                    }
-                }
-            }
-
-            /** @brief 활성 카메라를 제외한 CameraComponent 의 프러스텀을 그립니다. */
-            static void drawCameraFrustums( const EditorViewportVisualizerArgs& args )
-            {
-                constexpr ImU32 colorCameraWire = IM_COL32( 60, 200, 255, 200 );
-
-                if ( args._pListCamera == nullptr )
-                    return;
-                // 카메라 등록부만 본다. 예전에는 오브젝트 스냅샷 전체를 돌며 오브젝트마다 `getComponent<CameraComponent>()` 를 물었다.
-                for ( CameraComponent* pCam : *args._pListCamera )
-                {
-                    if ( pCam == args._pActiveCamera || CameraRegistry::isUsableCamera( pCam ) == false )
-                        continue;
-
-                    const float4x4 camWorld = pCam->getWorldMatrix();
-                    const float3   eye      = float3{ camWorld._41, camWorld._42, camWorld._43 };
-                    const float3   rgt      = float3{ camWorld._11, camWorld._12, camWorld._13 };
-                    const float3   up       = float3{ camWorld._21, camWorld._22, camWorld._23 };
-                    const float3   fwd      = float3{ camWorld._31, camWorld._32, camWorld._33 };
-
-                    const float3 nearCenter = eye + fwd * 1.0f;
-                    const float3 p0         = nearCenter - rgt * 0.6f - up * 0.4f;
-                    const float3 p1         = nearCenter + rgt * 0.6f - up * 0.4f;
-                    const float3 p2         = nearCenter + rgt * 0.6f + up * 0.4f;
-                    const float3 p3         = nearCenter - rgt * 0.6f + up * 0.4f;
-
-                    ImVec2 sEye, s0, s1, s2, s3;
-                    if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, eye, args._canvasPos, args._canvasSize, sEye ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p0, args._canvasPos, args._canvasSize, s0 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p1, args._canvasPos, args._canvasSize, s1 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p2, args._canvasPos, args._canvasSize, s2 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p3, args._canvasPos, args._canvasSize, s3 ) )
-                    {
-                        args._pDrawList->AddLine( sEye, s0, colorCameraWire, 1.2f );
-                        args._pDrawList->AddLine( sEye, s1, colorCameraWire, 1.2f );
-                        args._pDrawList->AddLine( sEye, s2, colorCameraWire, 1.2f );
-                        args._pDrawList->AddLine( sEye, s3, colorCameraWire, 1.2f );
-                        args._pDrawList->AddLine( s0, s1, colorCameraWire, 1.2f );
-                        args._pDrawList->AddLine( s1, s2, colorCameraWire, 1.2f );
-                        args._pDrawList->AddLine( s2, s3, colorCameraWire, 1.2f );
-                        args._pDrawList->AddLine( s3, s0, colorCameraWire, 1.2f );
-                    }
-                }
-            }
-
-            /** @brief 시각화의 정본입니다. 새 시각화는 여기에 한 줄을 더하면 됩니다. 툴바 체크박스도 이 표에서 나옵니다. */
-            inline static const EditorViewportVisualizer::Row _s_arrRow[] = {
-                {"Col",  "BoxCollider2D 사각형을 와이어프레임으로 표시합니다", true,      &drawColliders},
-                {"Cam", "활성 카메라를 제외한 카메라의 프러스텀을 표시합니다", true, &drawCameraFrustums}
-            };
-
-            static constexpr uint32 kRowCount = static_cast<uint32>( sizeof( _s_arrRow ) / sizeof( _s_arrRow[0] ) );
-
-            static_assert( kRowCount <= 32, "시각화 마스크가 uint32 라 시각화는 최대 32개입니다" );
-        };
-    } // namespace
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    const EditorViewportVisualizer::Row* EditorViewportVisualizer::getRows( uint32& outCount )
+    const EditorVisualizerRegistration& EditorViewportVisualizer::getAt( uint32 index )
     {
-        outCount = EditorViewportVisualizerInternal::kRowCount;
-        return EditorViewportVisualizerInternal::_s_arrRow;
+        return EditorRegistry<EditorVisualizerRegistration>::getAt( index );
     }
 
     uint32 EditorViewportVisualizer::getDefaultMask()
     {
-        uint32 mask{ 0 };
-        for ( uint32 index = 0; index < EditorViewportVisualizerInternal::kRowCount; ++index )
+        if ( EditorRegistry<EditorVisualizerRegistration>::getCount() > kMaxVisualizerCount )
         {
-            if ( EditorViewportVisualizerInternal::_s_arrRow[index]._bDefaultOn )
+            SW_LOG_ERROR( "%# viewport visualizers are registered but the mask holds %# - the rest are never drawn",
+                          EditorRegistry<EditorVisualizerRegistration>::getCount(), kMaxVisualizerCount );
+        }
+
+        uint32 mask{ 0 };
+        for ( uint32 index = 0; index < getCount(); ++index )
+        {
+            if ( getAt( index )._bDefaultOn )
                 mask |= getMaskBit( index );
         }
         return mask;
@@ -143,13 +45,13 @@ namespace sw::editor
         if ( args._pDrawList == nullptr || args._pViewProj == nullptr || args._pListObject == nullptr )
             return;
 
-        for ( uint32 index = 0; index < EditorViewportVisualizerInternal::kRowCount; ++index )
+        for ( uint32 index = 0; index < getCount(); ++index )
         {
-            const Row& row = EditorViewportVisualizerInternal::_s_arrRow[index];
+            const EditorVisualizerRegistration& registration = getAt( index );
             if ( ( visualizerMask & getMaskBit( index ) ) == 0 )
                 continue;
-            if ( row._pDraw != nullptr )
-                row._pDraw( args );
+            if ( registration._pDraw != nullptr )
+                registration._pDraw( args );
         }
     }
 } // namespace sw::editor

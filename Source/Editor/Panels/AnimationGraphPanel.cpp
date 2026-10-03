@@ -9,6 +9,7 @@
 #include "Editor/Common/Widgets/EditorNodeGraphId.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimationGraphAsset.h"
@@ -62,6 +63,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "AnimationGraph" );
+    SW_EDITOR_PANEL( AnimationGraphPanel, "animation_graph", EditorPanelCategory::Tool, 1100 );
 
     AnimationGraphPanel::AnimationGraphPanel()
         : EditorGraphDocumentPanel{ EditorAssetKind::AnimationGraph, "Move Animation Graph Nodes", "anim-graph-layout" }

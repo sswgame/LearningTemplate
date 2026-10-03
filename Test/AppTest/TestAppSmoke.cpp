@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 
@@ -43,8 +44,10 @@ namespace
         uint32 _errorCount{ 0 };
         uint32 _lineCount{ 0 };
         string _firstErrorLine{};
-        bool   _bLaunched{ false };
-        bool   _bBackendUnusableHere{ false }; /**< 이 기계가 그 백엔드를 못 돌린다고 App 이 말했다. */
+        /** @brief `runApp` 에 준 표식으로 시작하는 줄들(표식부터 줄 끝까지). 표식을 주지 않으면 비어 있습니다. */
+        vector<string> _listMarkedLine{};
+        bool           _bLaunched{ false };
+        bool           _bBackendUnusableHere{ false }; /**< 이 기계가 그 백엔드를 못 돌린다고 App 이 말했다. */
     };
 
     /**
@@ -102,8 +105,9 @@ namespace
      * @details 작업 디렉터리는 **바꾸지 않는다** — 테스트의 작업 폴더가 이미 `Bin` 이고(ctest 가 그렇게
      *          돌린다) App 도 거기서 `Resource/` 를 찾아 올라간다. 배포본에서는 테스트 바이너리만
      *          `TestBin` 에 있고 작업 폴더는 여전히 `Bin` 이라 이 전제가 양쪽에서 같다.
+     * @param pMarker nullptr 가 아니면 이 글이 든 줄을 표식부터 잘라 `_listMarkedLine` 에 모읍니다.
      */
-    AppRunResult runApp( string_view arguments )
+    AppRunResult runApp( string_view arguments, const utf8* pMarker = nullptr )
     {
         AppRunResult result{};
 
@@ -128,6 +132,17 @@ namespace
             ++result._lineCount;
             if ( isBackendUnusableLine( line ) )
                 result._bBackendUnusableHere = true;
+
+            const size_t markerIndex = pMarker == nullptr ? string::npos : line.find( pMarker );
+            if ( markerIndex != string::npos )
+            {
+                string markedLine = line.substr( markerIndex );
+                while ( markedLine.empty() == false && ( markedLine.back() == '\r' || markedLine.back() == ' ' ) )
+                {
+                    markedLine.pop_back();
+                }
+                result._listMarkedLine.push_back( std::move( markedLine ) );
+            }
 
             if ( line.find( "[Error]" ) == string::npos )
                 continue;
@@ -223,5 +238,72 @@ SW_TEST_CASE( AppSmokeTest, EditorModeStartsAndExitsCleanly )
 
     if ( checkedCount == 0 )
         SW_TEST_SKIP( "no usable RHI backend on this machine — run where a GPU and driver exist" );
+}
+
+/**
+ * @brief [AppSmokeTest] 에디터 확장의 정적 등록이 실제 EditorModule 에 다 실리고, 순서 · 메뉴 배치가 그대로인가
+ * @details 패널 · 팝업 · 인스펙터 · 시각화는 각자 자기 .cpp 의 정적 등록자로 등록하고, 메뉴는 커맨드 표의 경로 · 순서 칸에서 나온다.
+ *          그래서 등록이 빠지거나 순서 키 · 메뉴 칸이 바뀌어도 빌드는 그대로 통과한다. 실제 App 을 `-gv_editorRegistryDump=1` 로 띄워
+ *          기대 줄이 **이 순서로** 모두 나오는지 본다(사이에 새 줄이 끼는 것은 괜찮다). 패널 제목은 기본 도킹 배치(`applyDefaultDockLayout`)가
+ *          대조하는 이름이기도 하다.
+ */
+SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
+{
+    constexpr const utf8* kArrExpectedLine[] = {
+        "EditorRegistry|panel|hierarchy|Core|Hierarchy",
+        "EditorRegistry|panel|inspector|Core|Inspector",
+        "EditorRegistry|panel|game_view|Core|Game View",
+        "EditorRegistry|panel|console|Core|Output Log",
+        "EditorRegistry|panel|profiler|Core|Profiler",
+        "EditorRegistry|panel|content_browser|Core|Content Browser",
+        "EditorRegistry|panel|history|Tool|History",
+        "EditorRegistry|panel|global_variables|Tool|Global Variables",
+        "EditorRegistry|panel|render_targets|Tool|Render Targets",
+        "EditorRegistry|panel|sequencer|Tool|Sequencer",
+        "EditorRegistry|panel|animation_graph|Tool|Animation Graph",
+        "EditorRegistry|panel|dialogue_graph|Tool|Dialogue Graph",
+        "EditorRegistry|panel|material|Tool|Material",
+        "EditorRegistry|panel|prefab_editor|Tool|Prefab Editor",
+        "EditorRegistry|panel|tile_map|Tool|Tile Map Tool",
+        "EditorRegistry|panel|sprite_clip|Tool|Sprite Clip",
+        "EditorRegistry|panel|data_table|Tool|Data Table Editor",
+        "EditorRegistry|panel|input_map|Tool|Input & ActionMap Editor",
+        "EditorRegistry|popup|QuickLauncher",
+        "EditorRegistry|popup|CommandPalette",
+        "EditorRegistry|popup|BoneHierarchy",
+        "EditorRegistry|inspector|CameraComponent",
+        "EditorRegistry|inspector|SceneComponent",
+        "EditorRegistry|inspector|SpriteComponent",
+        "EditorRegistry|inspector|TagComponent",
+        "EditorRegistry|visualizer|box_collider_2d",
+        "EditorRegistry|visualizer|camera_frustum",
+        "EditorRegistry|menu|Viewport/Align|transform.snapToGround,-,transform.alignX,transform.alignY,transform.alignZ,-,"
+        "transform.distributeX,transform.distributeY,transform.distributeZ",
+        "EditorRegistry|menu|MainMenu/File|scene.new,scene.open,asset.save,scene.saveScene,-,editor.quickOpen,editor.commandPalette,-,"
+        "editor.exit",
+        "EditorRegistry|menu|MainMenu/Edit|edit.undo,edit.redo,-,editor.themeSettings",
+        "EditorRegistry|menu|MainMenu/Build|build.compileGame,build.compileEditor,build.compileAll,-,build.cancel",
+    };
+
+    const AppRunResult result = runApp( "-gv_profileFrames=5 -EnableEditor -dx12 -gv_editorRegistryDump=1", "EditorRegistry|" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
+    if ( result._bBackendUnusableHere )
+        SW_TEST_SKIP( "DX12 is not usable on this machine" );
+    SW_EXPECT_TRUE_MSG( result._exitCode == 0, "App 이 0 이 아닌 코드로 끝났습니다" );
+    SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? "로그에 [Error] 가 있습니다" : result._firstErrorLine.c_str() );
+
+    // 기대 줄을 순서대로 찾는다. 하나라도 없거나 순서가 뒤바뀌면 그 줄을 이름으로 알린다.
+    size_t searchIndex = 0;
+    for ( const utf8* pExpected : kArrExpectedLine )
+    {
+        size_t foundIndex = searchIndex;
+        while ( foundIndex < result._listMarkedLine.size() && result._listMarkedLine[foundIndex] != pExpected )
+        {
+            ++foundIndex;
+        }
+        SW_EXPECT_TRUE_MSG( foundIndex < result._listMarkedLine.size(), pExpected );
+        if ( foundIndex < result._listMarkedLine.size() )
+            searchIndex = foundIndex + 1;
+    }
 }
 #endif

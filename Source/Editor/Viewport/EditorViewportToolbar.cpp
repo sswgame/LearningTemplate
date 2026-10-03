@@ -123,24 +123,23 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::Checkbox( "Cube", &settings._bShowOrientationCube );
 
-            // 컴포넌트 시각화 체크박스는 시각화 표에서 만든다. 시각화를 더해도 여기는 그대로다.
-            uint32                                     visualizerCount{ 0 };
-            const EditorViewportVisualizer::Row* const pVisualizerRow = EditorViewportVisualizer::getRows( visualizerCount );
-            for ( uint32 index = 0; index < visualizerCount; ++index )
+            // 컴포넌트 시각화 체크박스는 시각화 등록부에서 만든다. 시각화를 더해도 여기는 그대로다.
+            for ( uint32 index = 0; index < EditorViewportVisualizer::getCount(); ++index )
             {
-                const uint32 maskBit = EditorViewportVisualizer::getMaskBit( index );
-                bool         bOn     = ( settings._visualizerMask & maskBit ) != 0;
+                const EditorVisualizerRegistration& visualizer = EditorViewportVisualizer::getAt( index );
+                const uint32                        maskBit    = EditorViewportVisualizer::getMaskBit( index );
+                bool                                bOn        = ( settings._visualizerMask & maskBit ) != 0;
 
                 ImGui::SameLine();
                 ImGui::PushID( static_cast<int32>( index ) );
-                if ( ImGui::Checkbox( pVisualizerRow[index]._pToggleLabel, &bOn ) )
+                if ( ImGui::Checkbox( visualizer._pToggleLabel, &bOn ) )
                 {
                     if ( bOn )
                         settings._visualizerMask |= maskBit;
                     else
                         settings._visualizerMask &= ~maskBit;
                 }
-                EditorWidgets::drawTooltip( pVisualizerRow[index]._pTooltip );
+                EditorWidgets::drawTooltip( visualizer._pTooltip );
                 ImGui::PopID();
             }
 
@@ -202,15 +201,8 @@ namespace sw::editor
                 {
                     ImGui::Text( "Multi-Object Alignment" );
                     ImGui::Separator();
-                    EditorCommandGui::drawMenuItem( "transform.snapToGround" );
-                    ImGui::Separator();
-                    EditorCommandGui::drawMenuItem( "transform.alignX" );
-                    EditorCommandGui::drawMenuItem( "transform.alignY" );
-                    EditorCommandGui::drawMenuItem( "transform.alignZ" );
-                    ImGui::Separator();
-                    EditorCommandGui::drawMenuItem( "transform.distributeX" );
-                    EditorCommandGui::drawMenuItem( "transform.distributeY" );
-                    EditorCommandGui::drawMenuItem( "transform.distributeZ" );
+                    // 항목 · 구분선은 커맨드 표의 메뉴 경로 칸(`Viewport/Align`)에서 나온다.
+                    EditorCommandGui::drawMenuItems( "Viewport/Align" );
                     ImGui::EndPopup();
                 }
             }

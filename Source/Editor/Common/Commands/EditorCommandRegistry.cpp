@@ -72,6 +72,27 @@ namespace sw::editor
                 }
                 return false;
             }
+
+            /** @brief 메뉴에 놓인 커맨드의 정렬 기준 — (메뉴 순서, 등록 순서). */
+            struct MenuOrderLess
+            {
+                const vector<EditorCommandDesc>* _pListCommand;
+
+                bool operator()( uint32 lhsIndex, uint32 rhsIndex ) const
+                {
+                    const int32 lhsOrder = ( *_pListCommand )[lhsIndex]._menuOrder;
+                    const int32 rhsOrder = ( *_pListCommand )[rhsIndex]._menuOrder;
+                    if ( lhsOrder != rhsOrder )
+                        return lhsOrder < rhsOrder;
+                    return lhsIndex < rhsIndex;
+                }
+            };
+
+            /** @brief 같은 메뉴에서 이웃한 두 순서가 다른 묶음이면 true 입니다(사이에 구분선). */
+            static bool isGroupBoundary( int32 previousOrder, int32 order )
+            {
+                return ( previousOrder / commandmenu::kGroupSpan ) != ( order / commandmenu::kGroupSpan );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -83,6 +104,7 @@ namespace sw::editor
     void EditorCommandRegistry::clear()
     {
         _listCommand.clear();
+        _listMenu.clear();
     }
 
     void EditorCommandRegistry::registerCommand( EditorCommandDesc desc )
@@ -94,6 +116,66 @@ namespace sw::editor
         }
 
         _listCommand.push_back( std::move( desc ) );
+        rebuildMenus();
+    }
+
+    const EditorMenu* EditorCommandRegistry::findMenu( string_view menuPath ) const
+    {
+        for ( const EditorMenu& menu : _listMenu )
+        {
+            if ( menu._path == menuPath )
+                return &menu;
+        }
+        return nullptr;
+    }
+
+    void EditorCommandRegistry::rebuildMenus()
+    {
+        _listMenu.clear();
+
+        vector<uint32> listPlacedIndex;
+        for ( uint32 index = 0; index < static_cast<uint32>( _listCommand.size() ); ++index )
+        {
+            if ( _listCommand[index]._menuPath.empty() == false )
+                listPlacedIndex.push_back( index );
+        }
+        std::stable_sort( listPlacedIndex.begin(), listPlacedIndex.end(), EditorCommandRegistryInternal::MenuOrderLess{ &_listCommand } );
+
+        // 순서대로 훑으므로 메뉴는 자기 가장 작은 순서의 항목을 만날 때 생긴다 — 메뉴끼리의 순서가 저절로 맞는다.
+        for ( const uint32 commandIndex : listPlacedIndex )
+        {
+            const EditorCommandDesc& desc  = _listCommand[commandIndex];
+            EditorMenu*              pMenu = nullptr;
+            for ( EditorMenu& menu : _listMenu )
+            {
+                if ( menu._path == desc._menuPath )
+                {
+                    pMenu = &menu;
+                    break;
+                }
+            }
+            if ( pMenu == nullptr )
+            {
+                EditorMenu& menu        = _listMenu.emplace_back();
+                menu._path              = desc._menuPath;
+                const size_t slashIndex = desc._menuPath.rfind( '/' );
+                if ( slashIndex == string::npos )
+                {
+                    menu._name = desc._menuPath;
+                }
+                else
+                {
+                    menu._parentPath = desc._menuPath.substr( 0, slashIndex );
+                    menu._name       = desc._menuPath.substr( slashIndex + 1 );
+                }
+                pMenu = &menu;
+            }
+
+            const bool bSeparatorBefore =
+                pMenu->_listItem.empty() == false &&
+                EditorCommandRegistryInternal::isGroupBoundary( _listCommand[pMenu->_listItem.back()._commandIndex]._menuOrder, desc._menuOrder );
+            pMenu->_listItem.push_back( EditorMenuItem{ commandIndex, bSeparatorBefore } );
+        }
     }
 
     const EditorCommandDesc* EditorCommandRegistry::find( string_view commandId ) const
@@ -147,6 +229,18 @@ namespace sw::editor
                 {
                     outReport += "중복 id: ";
                     outReport += desc._id;
+                    outReport += "\n";
+                }
+
+                const bool bSameMenuSlot = desc._menuPath.empty() == false && desc._menuPath == other._menuPath && desc._menuOrder == other._menuOrder;
+                if ( bSameMenuSlot )
+                {
+                    outReport += "같은 메뉴 순서 ";
+                    outReport += desc._menuPath;
+                    outReport += ": ";
+                    outReport += desc._id;
+                    outReport += " / ";
+                    outReport += other._id;
                     outReport += "\n";
                 }
 

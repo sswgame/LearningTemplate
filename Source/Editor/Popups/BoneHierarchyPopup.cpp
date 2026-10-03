@@ -83,6 +83,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    SW_EDITOR_POPUP( BoneHierarchyPopup, 300 );
+
     // ------------------------------------------------------------------------------
     // 생성자
     // ------------------------------------------------------------------------------
@@ -100,7 +102,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().openPopup( "BoneHierarchy" );
+        pContext->getPopupManager().openPopup( kPopupId );
     }
 
     void BoneHierarchyPopup::close()
@@ -109,7 +111,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().closePopup( "BoneHierarchy" );
+        pContext->getPopupManager().closePopup( kPopupId );
     }
 
     void BoneHierarchyPopup::toggle()
@@ -118,7 +120,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().togglePopup( "BoneHierarchy" );
+        pContext->getPopupManager().togglePopup( kPopupId );
     }
 
     bool BoneHierarchyPopup::isOpen()
@@ -127,7 +129,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return false;
 
-        return pContext->getPopupManager().isPopupOpen( "BoneHierarchy" );
+        return pContext->getPopupManager().isPopupOpen( kPopupId );
     }
 
     // ------------------------------------------------------------------------------

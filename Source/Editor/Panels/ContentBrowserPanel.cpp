@@ -17,6 +17,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
@@ -53,6 +54,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "ContentBrowserPanel" );
+    SW_EDITOR_PANEL( ContentBrowserPanel, "content_browser", EditorPanelCategory::Core, 600 );
 
     void ContentBrowserPanel::drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                                   const AssetEntry& entry )

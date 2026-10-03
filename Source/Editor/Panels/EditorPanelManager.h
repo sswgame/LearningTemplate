@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/Workspace/EditorRegistry.h"
 
 namespace sw
 {
@@ -36,6 +37,27 @@ namespace sw::editor
     };
 
     /**
+     * @struct EditorPanelRegistration
+     * @brief 패널 한 종류의 등록 줄입니다. 패널의 .cpp 가 `SW_EDITOR_PANEL` 로 둡니다.
+     * @details `_pId` 는 `windows.ini` 의 가시성 키이자 `-gv_editorOpenPanel` 의 값입니다. `_order` 는 Panel 메뉴 · 그리기 순서이고,
+     *          카테고리는 Panel 메뉴의 Panels / Tools 묶음을 정합니다.
+     */
+    struct EditorPanelRegistration : EditorRegistration
+    {
+        static constexpr const utf8* kKindName = "panel";
+
+        EditorPanelCategory _category;
+        unique_ptr<IEditorPanel> ( *_pCreate )();
+    };
+
+    /** @brief 등록 줄이 가리키는 패널 생성 함수입니다. */
+    template <typename TPanel>
+    unique_ptr<IEditorPanel> createEditorPanel()
+    {
+        return make_unique<TPanel>();
+    }
+
+    /**
      * @class EditorPanelManager
      * @brief 에디터 패널 인스턴스를 한곳에서 등록하고 관리합니다(EditorContext 소유).
      */
@@ -45,13 +67,7 @@ namespace sw::editor
         EditorPanelManager()  = default;
         ~EditorPanelManager() = default;
 
-        /**
-         * @brief 패널을 등록합니다. 메뉴에 보이는 이름은 패널의 `getPanelTitle()` 입니다.
-         * @details 예전에는 `menuPath` 인자와 `_menuPath` 필드가 더 있었는데, **넘기는 곳도 읽는 곳도 없었습니다.** 열아홉
-         *          개 등록이 모두 기본값이었고, Window 메뉴는 `_title` 로 항목을 만듭니다. 설정할 수는 있는데 아무 일도 하지
-         *          않는 손잡이라, 다음 사람이 그것으로 메뉴를 옮기려다 시간을 버리게 됩니다. 함께 있던 템플릿 오버로드도
-         *          호출부가 하나도 없어 걷어 냈습니다.
-         */
+        /** @brief 패널을 등록합니다. 메뉴에 보이는 이름은 패널의 `getPanelTitle()` 입니다. */
         void registerPanel( unique_ptr<IEditorPanel> pPanel,
                             string_view              panelId,
                             EditorPanelCategory      category = EditorPanelCategory::Core );
@@ -60,10 +76,11 @@ namespace sw::editor
         IEditorPanel*                   findPanel( string_view panelId ) const;
         bool                            setPanelOpen( string_view panelId, bool bOpen );
         void                            clear();
-        void                            registerDefaultPanels();
-        void                            drawOpenPanels();
-        void                            preRenderOpenPanels( IRHIDevice* pRhiDevice );
-        void                            shutdownAllPanels( IRHIDevice* pRhiDevice );
+        /** @brief `SW_EDITOR_PANEL` 로 등록된 패널을 순서대로 만들어 둡니다(앞의 목록은 버립니다). */
+        void registerDefaultPanels();
+        void drawOpenPanels();
+        void preRenderOpenPanels( IRHIDevice* pRhiDevice );
+        void shutdownAllPanels( IRHIDevice* pRhiDevice );
         /** @brief 포커스된 도구 문서가 dirty이면 저장하고 true입니다. */
         [[nodiscard]] bool saveFocusedDirtyDocument();
         /** @brief 모든 더티 도구 문서를 저장합니다. 하나라도 실패하면 false입니다. */
@@ -77,3 +94,13 @@ namespace sw::editor
         vector<EditorPanelEntry> _listPanel;
     };
 } // namespace sw::editor
+
+/**
+ * @brief 패널 종류를 그 패널의 .cpp 에서 등록합니다. 예: `SW_EDITOR_PANEL( HierarchyPanel, "hierarchy", EditorPanelCategory::Core, 100 );`
+ * @param TPanel   기본 생성자가 있는 `IEditorPanel` 구현
+ * @param pId      가시성 저장 키(리터럴, 종류 안에서 유일)
+ * @param category Panel 메뉴의 묶음
+ * @param order    Panel 메뉴 · 그리기 순서(작을수록 앞)
+ */
+#define SW_EDITOR_PANEL( TPanel, pId, category, order ) \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorPanelRegistration, Panel_##TPanel, { pId, order }, category, &::sw::editor::createEditorPanel<TPanel> )

@@ -32,10 +32,13 @@ namespace sw::editor
     class QuickLauncherPopup : public IEditorPopup
     {
     public:
+        /** @brief 팝업 매니저에서 이 팝업을 찾는 id 입니다. */
+        static constexpr const utf8* kPopupId = "QuickLauncher";
+
         QuickLauncherPopup();
         virtual ~QuickLauncherPopup() override = default;
 
-        virtual const utf8* getPopupId() const override { return "QuickLauncher"; }
+        virtual const utf8* getPopupId() const override { return kPopupId; }
         virtual const utf8* getPopupTitle() const override { return "Quick Open"; }
 
         static void open();

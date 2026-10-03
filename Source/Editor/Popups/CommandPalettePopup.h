@@ -33,13 +33,16 @@ namespace sw::editor
     class CommandPalettePopup : public IEditorPopup
     {
     public:
+        /** @brief 팝업 매니저에서 이 팝업을 찾는 id 입니다. */
+        static constexpr const utf8* kPopupId = "CommandPalette";
+
         CommandPalettePopup();
         virtual ~CommandPalettePopup() override = default;
 
         // ------------------------------------------------------------------------------
         // IEditorPopup 구현
         // ------------------------------------------------------------------------------
-        virtual const utf8* getPopupId() const override { return "CommandPalette"; }
+        virtual const utf8* getPopupId() const override { return kPopupId; }
         virtual const utf8* getPopupTitle() const override { return "Command Palette"; }
 
         // ------------------------------------------------------------------------------

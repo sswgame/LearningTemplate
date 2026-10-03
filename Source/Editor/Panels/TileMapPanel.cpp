@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -19,6 +20,7 @@
 namespace sw::editor
 {
     SW_LOG_CALLER( "TileMapPanel" );
+    SW_EDITOR_PANEL( TileMapPanel, "tile_map", EditorPanelCategory::Tool, 1500 );
 
     TileMapPanel::TileMapPanel()
         : EditorDocumentPanel{ EditorAssetKind::TileMap, false }

@@ -15,6 +15,7 @@
 #include "Editor/Common/Widgets/EditorNodeGraphId.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 
@@ -72,6 +73,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "DialogueGraphPanel" );
+    SW_EDITOR_PANEL( DialogueGraphPanel, "dialogue_graph", EditorPanelCategory::Tool, 1200 );
 
     DialogueGraphPanel::DialogueGraphPanel()
         : EditorGraphDocumentPanel{ EditorAssetKind::DialogueGraph, "Move Dialogue Nodes", "dialogue-graph-layout" }

@@ -68,7 +68,7 @@ namespace sw::editor
      *          **어느 쪽이든 저장된 레이아웃을 읽지도 쓰지도 않습니다.** 예전에는 전부 열기가 따로 된 스위치
      *          (`-gv_editorOpenAllPanels=1`)였고 저장을 막는 것도 그쪽에만 있었습니다. 그래서 하나 열기로 한 번 띄우면 그 가시성이
      *          `windows.ini` 에 굳어, 다음 실행부터 그 패널만 열렸습니다.
-     *          id 는 `registerDefaultPanels` 가 준 것입니다(예: `render_targets` · `profiler` · `material`).
+     *          id 는 패널의 `SW_EDITOR_PANEL` 이 준 것입니다(예: `render_targets` · `profiler` · `material`).
      */
     SW_TEST_GLOBAL_VARIABLE_STRING( gv_editorOpenPanel, "", "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)" );
 

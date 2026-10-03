@@ -33,9 +33,10 @@
 
 - **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler,
   Sequencer, Animation Graph, Dialogue Graph, Prefab Editor, Tile Map, Sprite Clip
-  - `Panels/Inspector/`: 프로퍼티·컴포넌트 인스펙터 확장
+  - `Panels/Inspector/`: 프로퍼티·컴포넌트 인스펙터 확장 — 컴포넌트 확장은 `<Component>Inspector.cpp` 하나씩
 - **Viewport/**: 뷰포트 클라이언트, 툴바, 에디터 카메라(`EditorCamera`),
-  화면 투영(`EditorViewportProjection`), 컴포넌트 시각화 표(`EditorViewportVisualizer`)
+  화면 투영(`EditorViewportProjection`), 컴포넌트 시각화 등록부(`EditorViewportVisualizer`)
+  - `Viewport/Visualizers/`: 시각화 하나에 파일 하나
 - **Popups/**: 커맨드 팔레트, 퀵 런처, 본 계층 팝업
 - **AssetActions/**: 애셋 종류별 에디터 동작(썸네일 · 열기 · 뷰포트 드롭) — 종류마다 파일 하나
 
@@ -64,13 +65,36 @@
    구현하고 같은 파일에 `EditorAssetTypeActionsRegistrar<…>` 정적 객체를 둡니다. 없으면 일반 문서 썸네일과 도구 패널 열기로
    대신합니다.
 
+## 패널 · 팝업 · 인스펙터 · 시각화를 하나 더하려면
+
+중앙 파일을 고치지 않습니다. 자기 .cpp 에 등록 한 줄을 두면 정적 초기화 때 등록부
+(`Common/Workspace/EditorRegistry.h` 의 `EditorRegistry<T>` · `EditorRegistrar<T>`)에 실립니다.
+
+| 종류 | 자기 .cpp 에 둘 한 줄 | 순서가 정하는 것 |
+|---|---|---|
+| 패널 | `SW_EDITOR_PANEL( MyPanel, "my_panel", EditorPanelCategory::Tool, 1900 );` | Panel 메뉴 · 그리기 순서 |
+| 팝업 | `SW_EDITOR_POPUP( MyPopup, 400 );` (클래스에 `kPopupId`) | 그리기 순서 |
+| 컴포넌트 인스펙터 | `SW_EDITOR_INSPECTOR( MyComponent, MyComponentInspector );` | (타입 계층이 정함) |
+| 뷰포트 시각화 | `SW_EDITOR_VISUALIZER( Name, "id", 300, "Lbl", "툴팁", true, &draw );` | 툴바 체크박스 · 마스크 비트 |
+
+- **순서는 등록 순서가 아니라 순서 키**입니다(같으면 id 사전순). 번역 단위 사이의 정적 초기화 순서는 정해지지 않습니다.
+  지금 값은 100 간격이니 사이에 끼우려면 그 사이 값을 씁니다.
+- 같은 종류의 같은 id 는 둘째 등록이 오류와 함께 거절됩니다. 패널 id 는 `windows.ini` 가시성 키이자 `-gv_editorOpenPanel` 값입니다.
+- EditorModule 은 MODULE DLL 이라 아무도 참조하지 않는 등록자도 링크에서 버려지지 않습니다. 정적 라이브러리로 묶는 구성이
+  생기면 그 전제가 깨지므로 `AppSmokeTest.EditorRegistriesKeepTheirOrder` 부터 확인하십시오.
+- 확인은 `App.exe -EnableEditor -gv_editorRegistryDump=1` — 등록부를 `EditorRegistry|<종류>|<id>|…` 한 줄씩 남깁니다.
+  `AppSmokeTest.EditorRegistriesKeepTheirOrder` 가 그 줄을 기대 목록과 대조합니다(새 줄이 끼는 것은 괜찮고, 기존 줄의 순서 ·
+  제목이 바뀌면 집니다 — 패널 제목은 기본 도킹 배치가 대조하는 이름이기도 합니다).
+
 ## 커맨드를 하나 더하려면
 
 메뉴 항목 · 전역 단축키 · 커맨드 팔레트 항목은 **한 정의에서 나옵니다** —
 `Common/Gui/EditorCommandGui.cpp` 의 `_s_arrCommandRow` 표입니다. 한 줄을 넣으면
 팔레트에 바로 나타나고(`_bPaletteVisible`), 단축키를 적었으면 전역에서 바로 먹습니다.
-메뉴에 **보이게** 하려면 `EditorMenuBar` 의 원하는 메뉴에서 `EditorCommandGui::drawMenuItem( "<id>" )`
-를 한 줄 부르십시오 — 라벨·아이콘·단축키 표기·활성 조건·툴팁은 표에서 옵니다.
+메뉴에 **보이게** 하려면 그 줄의 마지막 두 칸 — 메뉴 경로(`"MainMenu/File"`, 툴바 정렬 팝업은
+`"Viewport/Align"`)와 순서 — 를 채우십시오. 순서의 백의 자리가 바뀌는 자리에 구분선이 들어가고, 메인
+메뉴바의 메뉴끼리도 가장 작은 순서로 줄 섭니다(File 1xxx · Edit 2xxx · Build 3xxx). 라벨·아이콘·단축키
+표기·활성 조건·툴팁도 표에서 옵니다. 같은 메뉴의 같은 순서는 `validate` 가 잡습니다.
 
 예전에는 같은 커맨드가 메뉴·단축키 사다리·팔레트 목록 **세 곳**에 따로 적혀 있었고, 그래서
 실제로 어긋났습니다: `F7`(게임 컴파일)은 어느 라벨에도 없었고, `Ctrl+Shift+Z`(다시 실행)는
@@ -81,14 +105,6 @@ Inspector 가 포커스일 때만 먹었고, `Ctrl+Z` 는 전역 처리기와 In
 
 **단축키 라벨을 손으로 적지 마십시오.** 툴팁의 `(Ctrl+S)` 도 표의 조합에서 만들어 붙습니다 —
 그래야 조합을 바꿀 때 라벨이 거짓말을 하지 않습니다.
-
-메뉴에서 부르는 id 가 표에 없으면 그 항목은 조용히 사라집니다(경고만 남습니다). 메뉴를 손댔으면
-다음 한 줄로 대조하십시오:
-
-```bash
-comm -23 <(grep -rho 'drawMenuItem( "[a-zA-Z.]*"' Source/Editor --include=*.cpp | sed 's/.*"\(.*\)"/\1/' | sort) \
-         <(grep -o '{ "[a-z][a-zA-Z.]*"' Source/Editor/Common/Gui/EditorCommandGui.cpp | sed 's/{ "\(.*\)"/\1/' | sort)
-```
 
 ## 테마 프리셋을 하나 더하려면
 
@@ -108,10 +124,8 @@ comm -23 <(grep -rho 'drawMenuItem( "[a-zA-Z.]*"' Source/Editor --include=*.cpp 
 `SceneComponent` 를 기본 반지름(`kFallbackRadius`)으로 훑기 때문입니다. 그래서 게임이 만든
 컴포넌트도 클릭으로 선택됩니다(예전에는 주 컴포넌트 하나만 봐서 안 됐습니다).
 
-**디버그 시각화**는 `Viewport/EditorViewportVisualizer` 의 표에 한 줄이면 됩니다 —
-라벨·툴팁·기본값·그리기 함수가 한 줄에 있고, **툴바 체크박스도 그 표에서 만들어집니다.**
-예전에는 시각화마다 `ViewportToolbarSettings` 의 bool 하나 + 툴바 체크박스 + 그리기 분기를
-세 파일에 나눠 적어야 했습니다.
+**디버그 시각화**는 `Viewport/Visualizers/` 에 파일 하나와 `SW_EDITOR_VISUALIZER` 한 줄이면 됩니다(위 절) —
+라벨·툴팁·기본값·그리기 함수가 한 줄에 있고, **툴바 체크박스도 그 등록부에서 만들어집니다.**
 
 월드 → 화면 변환은 `Viewport/EditorViewportProjection` 을 씁니다. 선분은 반드시
 `projectSegment` 로 — 점 단위로 투영하면 카메라를 가로지르는 선이 통째로 사라집니다.

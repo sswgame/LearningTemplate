@@ -15,6 +15,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -164,6 +165,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    SW_EDITOR_PANEL( GlobalVariablesPanel, "global_variables", EditorPanelCategory::Tool, 800 );
+
     GlobalVariablesPanel::GlobalVariablesPanel()
         : IEditorPanel( false )
         , _uniquePinnedVar{}

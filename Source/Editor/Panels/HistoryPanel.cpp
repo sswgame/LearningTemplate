@@ -10,6 +10,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Utility/CommandStack.h"
 
@@ -17,6 +18,8 @@
 
 namespace sw::editor
 {
+    SW_EDITOR_PANEL( HistoryPanel, "history", EditorPanelCategory::Tool, 700 );
+
     HistoryPanel::HistoryPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
     {

@@ -35,6 +35,30 @@ namespace
         desc._action = &bumpInvokeCount;
         return desc;
     }
+
+    /** @brief 메뉴 경로 · 순서 칸까지 채운 커맨드를 만듭니다. */
+    EditorCommandDesc makeMenuCommand( const utf8* pId, const utf8* pMenuPath, int32 menuOrder )
+    {
+        EditorCommandDesc desc = makeCommand( pId );
+        desc._menuPath         = pMenuPath;
+        desc._menuOrder        = menuOrder;
+        return desc;
+    }
+
+    /** @brief 메뉴 항목을 `id,id,-,id` 로 이은 글입니다(`-` 는 구분선). */
+    string joinMenuItems( const EditorCommandRegistry& registry, const EditorMenu& menu )
+    {
+        string text;
+        for ( const EditorMenuItem& item : menu._listItem )
+        {
+            if ( text.empty() == false )
+                text += ',';
+            if ( item._bSeparatorBefore )
+                text += "-,";
+            text += registry.getCommands()[item._commandIndex]._id;
+        }
+        return text;
+    }
 } // namespace
 
 /**
@@ -197,4 +221,68 @@ SW_TEST_CASE( EditorCommandRegistryTest, DisplayOnlyShortcutIsNeverHandled )
 
     string report;
     SW_EXPECT_TRUE( registry.validate( report ) );
+}
+
+/**
+ * @brief [EditorCommandRegistryTest] 메뉴 · 항목 순서 · 구분선이 커맨드 표의 메뉴 경로 · 순서 칸에서 나온다
+ * @details 메뉴바가 메뉴마다 `drawMenuItem( "<id>" )` 를 손으로 나열했고, 표 줄의 분류 칸은 메뉴를 몰지 않았다. 커맨드를 더하면 표와
+ *          메뉴바 두 곳을 고쳐야 했다. 이제 표의 경로 · 순서 칸이 메뉴를 만든다 — 등록 순서와 무관하게 순서 칸으로 줄 서고, 백의 자리가
+ *          바뀌는 자리에 구분선이 들어가며, 메뉴끼리는 가장 작은 순서로 줄 선다.
+ */
+SW_TEST_CASE( EditorCommandRegistryTest, MenusComeFromMenuPathAndOrderColumns )
+{
+    EditorCommandRegistry registry;
+    registry.registerCommand( makeMenuCommand( "edit.undo", "MainMenu/Edit", 2100 ) );
+    registry.registerCommand( makeMenuCommand( "file.exit", "MainMenu/File", 1300 ) );
+    registry.registerCommand( makeMenuCommand( "file.open", "MainMenu/File", 1110 ) );
+    registry.registerCommand( makeCommand( "palette.only" ) );
+    registry.registerCommand( makeMenuCommand( "file.new", "MainMenu/File", 1100 ) );
+    registry.registerCommand( makeMenuCommand( "align.x", "Viewport/Align", 200 ) );
+    registry.registerCommand( makeMenuCommand( "align.snap", "Viewport/Align", 100 ) );
+
+    const vector<EditorMenu>& listMenu = registry.getMenus();
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( listMenu.size() ) );
+
+    // 메뉴끼리는 메뉴 안 가장 작은 순서로 줄 선다(Align 100 < File 1100 < Edit 2100).
+    SW_EXPECT_STREQ( "Viewport/Align", listMenu[0]._path.c_str() );
+    SW_EXPECT_STREQ( "MainMenu/File", listMenu[1]._path.c_str() );
+    SW_EXPECT_STREQ( "MainMenu/Edit", listMenu[2]._path.c_str() );
+    SW_EXPECT_STREQ( "MainMenu", listMenu[1]._parentPath.c_str() );
+    SW_EXPECT_STREQ( "File", listMenu[1]._name.c_str() );
+
+    SW_EXPECT_STREQ( "file.new,file.open,-,file.exit", joinMenuItems( registry, listMenu[1] ).c_str() );
+    SW_EXPECT_STREQ( "align.snap,-,align.x", joinMenuItems( registry, listMenu[0] ).c_str() );
+    SW_EXPECT_STREQ( "edit.undo", joinMenuItems( registry, listMenu[2] ).c_str() );
+
+    const EditorMenu* pFile = registry.findMenu( "MainMenu/File" );
+    SW_ASSERT_TRUE( pFile != nullptr );
+    SW_EXPECT_TRUE( pFile == &listMenu[1] );
+    SW_EXPECT_TRUE( registry.findMenu( "MainMenu/Help" ) == nullptr );
+
+    // 경로가 빈 커맨드는 어느 메뉴에도 없다(팔레트 · 단축키 전용).
+    for ( const EditorMenu& menu : listMenu )
+    {
+        SW_EXPECT_TRUE( joinMenuItems( registry, menu ).find( "palette.only" ) == string::npos );
+    }
+
+    registry.clear();
+    SW_EXPECT_TRUE( registry.getMenus().empty() );
+}
+
+/**
+ * @brief [EditorCommandRegistryTest] 한 메뉴의 같은 순서 자리를 두 커맨드가 차지하면 validate 가 잡는다
+ * @details 같은 순서는 둘 중 무엇이 위인지를 등록 순서에 맡긴다. 표가 메뉴를 정하는 지금은 그것도 표의 오류다.
+ */
+SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesTwoCommandsInOneMenuSlot )
+{
+    EditorCommandRegistry registry;
+    registry.registerCommand( makeMenuCommand( "file.new", "MainMenu/File", 1100 ) );
+    registry.registerCommand( makeMenuCommand( "edit.undo", "MainMenu/Edit", 1100 ) );
+
+    string report;
+    SW_EXPECT_TRUE( registry.validate( report ) );
+
+    registry.registerCommand( makeMenuCommand( "file.open", "MainMenu/File", 1100 ) );
+    SW_EXPECT_FALSE( registry.validate( report ) );
+    SW_EXPECT_TRUE( report.find( "file.open" ) != string::npos );
 }

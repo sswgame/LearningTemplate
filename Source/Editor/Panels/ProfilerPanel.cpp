@@ -11,6 +11,7 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
@@ -49,6 +50,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    SW_EDITOR_PANEL( ProfilerPanel, "profiler", EditorPanelCategory::Core, 500 );
+
     ProfilerPanel::ProfilerPanel()
         : IEditorPanel( false )
         , _arrFrameTimeHistory{}

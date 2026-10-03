@@ -11,6 +11,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/ViewportInputOverlay.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
@@ -25,6 +26,8 @@
 
 namespace sw::editor
 {
+    SW_EDITOR_PANEL( InputMapEditorPanel, "input_map", EditorPanelCategory::Tool, 1800 );
+
     namespace
     {
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */

@@ -20,6 +20,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorGlobalVariableCommands.cpp
 		TestEditorListFilter.cpp
 		TestEditorPanelDocument.cpp
+		TestEditorRegistry.cpp
 		TestEditorPlaySession.cpp
 		TestEditorResourceIndex.cpp
 		TestEditorSceneCommands.cpp
@@ -56,6 +57,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/AssetHotReload.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetType.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetTypeActions.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorContext.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorService.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorTransaction.cpp"

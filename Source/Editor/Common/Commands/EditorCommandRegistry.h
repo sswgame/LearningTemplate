@@ -90,6 +90,14 @@ namespace sw::editor
         inline constexpr uint8 kDisplayOnly = static_cast<uint8>( SW_BIT( 3 ) );
     } // namespace commandmod
 
+    /** @brief 메뉴 경로의 약속입니다. 경로는 `"<부모>/<메뉴 이름>"` 이고, 메인 메뉴바의 메뉴는 부모가 `kMainMenuBar` 입니다. */
+    namespace commandmenu
+    {
+        inline constexpr const utf8* kMainMenuBar = "MainMenu";
+        /** @brief 메뉴 순서의 묶음 폭입니다. 같은 메뉴에서 이웃한 두 항목의 `_menuOrder / kGroupSpan` 이 다르면 사이에 구분선이 들어갑니다. */
+        inline constexpr int32 kGroupSpan = 100;
+    } // namespace commandmenu
+
     /** @brief 키 조합 하나 */
     struct EditorCommandShortcut
     {
@@ -115,6 +123,29 @@ namespace sw::editor
         Delegate<void()>      _action;
         Delegate<bool()>      _enabledPredicate; ///< 바인딩되지 않으면 항상 활성입니다
         bool                  _bPaletteVisible{ true };
+        /** @brief 이 커맨드가 놓일 메뉴 경로(`"MainMenu/File"`)입니다. 비면 어느 메뉴에도 나오지 않습니다. */
+        string _menuPath;
+        /**
+         * @brief 메뉴 안의 순서입니다. 작을수록 위이고, 백의 자리(`commandmenu::kGroupSpan`)가 바뀌는 자리에 구분선이 들어갑니다.
+         * @details 메뉴끼리의 순서(메뉴바의 왼쪽→오른쪽)도 이 값으로 정합니다 — 가장 작은 값이 더 작은 메뉴가 앞입니다.
+         */
+        int32 _menuOrder{ 0 };
+    };
+
+    /** @brief 메뉴 안의 항목 하나입니다. */
+    struct EditorMenuItem
+    {
+        uint32 _commandIndex;     ///< `EditorCommandRegistry::getCommands()` 의 칸
+        bool   _bSeparatorBefore; ///< 앞 항목과 묶음이 달라 사이에 구분선을 그립니다
+    };
+
+    /** @brief 커맨드 표의 메뉴 경로 칸에서 만든 메뉴 하나입니다. */
+    struct EditorMenu
+    {
+        string                 _path;       ///< "MainMenu/File"
+        string                 _parentPath; ///< "MainMenu"
+        string                 _name;       ///< "File" (메뉴에 보이는 이름)
+        vector<EditorMenuItem> _listItem;   ///< `_menuOrder` 순
     };
 
     /**
@@ -129,7 +160,7 @@ namespace sw::editor
 
         /** @brief 등록된 커맨드를 모두 버립니다. */
         void clear();
-        /** @brief 커맨드를 등록합니다. id 가 비어 있으면 무시합니다. */
+        /** @brief 커맨드를 등록하고 메뉴를 다시 만듭니다. id 가 비어 있으면 무시합니다. */
         void registerCommand( EditorCommandDesc desc );
 
         /** @brief id 로 커맨드를 찾습니다. 없으면 nullptr입니다. */
@@ -142,9 +173,13 @@ namespace sw::editor
         static bool executeDesc( const EditorCommandDesc& desc );
 
         const vector<EditorCommandDesc>& getCommands() const { return _listCommand; }
+        /** @brief 커맨드의 메뉴 경로 · 순서 칸에서 만든 메뉴들입니다. 메뉴 안 가장 작은 `_menuOrder` 가 작은 메뉴가 앞입니다. */
+        const vector<EditorMenu>& getMenus() const { return _listMenu; }
+        /** @brief 경로로 메뉴를 찾습니다. 그 경로에 커맨드가 하나도 없으면 nullptr 입니다. */
+        const EditorMenu* findMenu( string_view menuPath ) const;
 
         /**
-         * @brief 중복 id · 중복 키 조합을 outReport 에 적습니다. 문제가 없으면 true입니다.
+         * @brief 중복 id · 중복 키 조합 · 같은 메뉴의 같은 순서를 outReport 에 적습니다. 문제가 없으면 true입니다.
          * @details 정의가 세 곳으로 나뉘어 있던 동안 같은 조합을 두 곳이 처리하는 일이 실제로 있었습니다(Ctrl+Z 가 전역과
          *          Inspector 에서 각각 undo 를 불러 두 번 되돌렸습니다). 정의를 한곳으로 모은 뒤로는 그런 충돌을 기계적으로 잡을
          *          수 있습니다.
@@ -163,6 +198,11 @@ namespace sw::editor
         static bool isHandledShortcut( const EditorCommandShortcut& shortcut );
 
     private:
+        /** @brief `_listCommand` 의 메뉴 경로 · 순서 칸에서 `_listMenu` 를 다시 만듭니다. */
+        void rebuildMenus();
+
+    private:
         vector<EditorCommandDesc> _listCommand;
+        vector<EditorMenu>        _listMenu;
     };
 } // namespace sw::editor

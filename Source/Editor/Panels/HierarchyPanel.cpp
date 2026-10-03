@@ -15,6 +15,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -522,6 +523,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    SW_EDITOR_PANEL( HierarchyPanel, "hierarchy", EditorPanelCategory::Core, 100 );
+
     HierarchyPanel::HierarchyPanel()
         : _renamingObjectId{ 0 }
         , _filterBuffer{}

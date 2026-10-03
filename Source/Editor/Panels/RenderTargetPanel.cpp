@@ -9,6 +9,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 
@@ -16,6 +17,8 @@
 
 namespace sw::editor
 {
+    SW_EDITOR_PANEL( RenderTargetPanel, "render_targets", EditorPanelCategory::Tool, 900 );
+
     namespace
     {
         /// @brief 목록 칸의 너비입니다. 이름이 길어도(GBufferAlbedo) 잘리지 않을 만큼 잡습니다.

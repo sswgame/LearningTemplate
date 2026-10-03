@@ -19,6 +19,7 @@
 #include "Editor/Common/Gui/EditorMenuBar.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Gui/EditorPanelDump.h"
+#include "Editor/Common/Gui/EditorRegistryDump.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/AssetEditorManager.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
@@ -248,6 +249,7 @@ namespace sw::editor
 
             _editorContext->getPanelManager().registerDefaultPanels();
             EditorCommandGui::registerDefaults();
+            EditorRegistryDump::dumpIfRequested();
             _dockLayout.loadPanelVisibility();
 
             // 모니터 DPI 로 스타일 · 글자를 키운다(테마를 읽은 **뒤** — 테마가 96 DPI 기준 크기를 적는다). 모니터를 옮기면 글자와 플랫폼 창이

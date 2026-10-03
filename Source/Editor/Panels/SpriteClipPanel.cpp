@@ -10,12 +10,14 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
     SW_LOG_CALLER( "SpriteClip" );
+    SW_EDITOR_PANEL( SpriteClipPanel, "sprite_clip", EditorPanelCategory::Tool, 1600 );
 
     SpriteClipPanel::SpriteClipPanel()
         : EditorDocumentPanel{ EditorAssetKind::SpriteClip, false }

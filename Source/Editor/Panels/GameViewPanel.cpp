@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
@@ -21,6 +22,8 @@
 
 namespace sw::editor
 {
+    SW_EDITOR_PANEL( GameViewPanel, "game_view", EditorPanelCategory::Core, 300 );
+
     GameViewPanel::GameViewPanel()
         : _viewportClient{}
         , _bConfirmUnsavedPlay{ false }

@@ -9,6 +9,7 @@
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -20,6 +21,8 @@
 
 namespace sw::editor
 {
+    SW_EDITOR_PANEL( SequencerPanel, "sequencer", EditorPanelCategory::Tool, 1000 );
+
     /**
      * @brief ImSequencer 가 보는 시퀀스입니다. 항목은 애셋의 `SequenceTrackItem` 그대로입니다.
      * @details 예전에는 같은 아홉 필드를 가진 패널 전용 `Item` 이 따로 있어서 저장 · 복원 때마다 필드를 하나씩 옮겼습니다.

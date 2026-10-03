@@ -49,63 +49,13 @@ namespace sw::editor
         if ( ImGui::BeginMainMenuBar() == false )
             return;
 
-        drawFileMenu();
-        drawEditMenu();
-        drawBuildMenu();
+        // File · Edit · Build 는 커맨드 표의 메뉴 경로 · 순서 칸에서 나온다(`EditorCommandGui.cpp`).
+        EditorCommandGui::drawMainMenus();
         drawAssetsMenu();
         drawPanelMenu( dockLayout );
         drawStatusArea();
 
         ImGui::EndMainMenuBar();
-    }
-
-    void EditorMenuBar::drawFileMenu()
-    {
-        if ( ImGui::BeginMenu( "File" ) )
-        {
-            EditorCommandGui::drawMenuItem( "scene.new" );
-            EditorCommandGui::drawMenuItem( "scene.open" );
-            EditorCommandGui::drawMenuItem( "asset.save" );
-            EditorCommandGui::drawMenuItem( "scene.saveScene" );
-
-            ImGui::Separator();
-            EditorCommandGui::drawMenuItem( "editor.quickOpen" );
-            EditorCommandGui::drawMenuItem( "editor.commandPalette" );
-
-            ImGui::Separator();
-            EditorCommandGui::drawMenuItem( "editor.exit" );
-
-            ImGui::EndMenu();
-        }
-    }
-
-    void EditorMenuBar::drawEditMenu()
-    {
-        if ( ImGui::BeginMenu( "Edit" ) )
-        {
-            EditorCommandGui::drawMenuItem( "edit.undo" );
-            EditorCommandGui::drawMenuItem( "edit.redo" );
-
-            ImGui::Separator();
-            EditorCommandGui::drawMenuItem( "editor.themeSettings" );
-
-            ImGui::EndMenu();
-        }
-    }
-
-    void EditorMenuBar::drawBuildMenu()
-    {
-        if ( ImGui::BeginMenu( "Build" ) )
-        {
-            EditorCommandGui::drawMenuItem( "build.compileGame" );
-            EditorCommandGui::drawMenuItem( "build.compileEditor" );
-            EditorCommandGui::drawMenuItem( "build.compileAll" );
-
-            ImGui::Separator();
-            EditorCommandGui::drawMenuItem( "build.cancel" );
-
-            ImGui::EndMenu();
-        }
     }
 
     void EditorMenuBar::drawAssetsMenu()

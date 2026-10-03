@@ -18,6 +18,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/SelectionManager.h"
+#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
@@ -72,6 +73,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    SW_EDITOR_PANEL( InspectorPanel, "inspector", EditorPanelCategory::Core, 200 );
+
     InspectorPanel::InspectorPanel()
         : _propertyFilter{}
         , _mapMethodArgSlot{}

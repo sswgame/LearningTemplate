@@ -11,12 +11,14 @@
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include <imgui.h>
 
 SW_LOG_CALLER( "DataTablePanel" );
 namespace sw::editor
 {
+    SW_EDITOR_PANEL( DataTablePanel, "data_table", EditorPanelCategory::Tool, 1700 );
 
     DataTablePanel::DataTablePanel()
         : IEditorPanel{ false }

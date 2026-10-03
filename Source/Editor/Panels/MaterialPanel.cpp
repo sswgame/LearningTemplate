@@ -13,6 +13,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -199,6 +200,7 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_LOG_CALLER( "MaterialPanel" );
+    SW_EDITOR_PANEL( MaterialPanel, "material", EditorPanelCategory::Tool, 1300 );
 
     MaterialPanel::MaterialPanel()
         : EditorDocumentPanel{ EditorAssetKind::Material, false }
