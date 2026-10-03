@@ -21,6 +21,13 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
 | **매크로** | `SW_SCREAMING_CASE` | `SW_API`, `SW_LOG_INFO` |
 | **출력 매개변수 (Out Param)** | `out` + PascalCase / 포인터는 `pOut`, 이중 포인터는 `ppOut` | `outConfig`, `pOutBuffer`, `ppOutObject`, `outListItem` |
 
+### 전역 변수는 두 종류
+- 에디터에서 바꿀 런타임 설정은 `SW_GLOBAL_VARIABLE_*` 로 선언합니다.
+- 벤치 · 자동화 · 진단 스위치는 `SW_TEST_GLOBAL_VARIABLE_*` 로 선언합니다. `-gv_*` 로는 그대로 정할 수 있지만 에디터 패널 · 프리셋에 보이지 않고
+  **Shipping 에는 등록되지 않습니다.** 스크립트가 배포 실행 파일을 그 변수로 몰아야 할 때만 마지막 인자로 `SW_KEEP_IN_SHIPPING` 을 줍니다
+  (`gv_profileFrames`, `gv_screenshot*`, `gv_crashTest`, `gv_bench*`).
+- `extern` 은 같은 인자의 `SW_EXTERN_…` 판으로 씁니다. 어긋나면 `CheckGlobalVariableKinds.py` 가 막습니다(`Core/GlobalVariable/GlobalVariableManager.h`).
+
 ### 변수 및 자료구조 특수 접두/접미어
 - **포인터(Pointer)**: `p` 접두어 (`_pObject`, `pMember`) / 이중 포인터는 `pp` (`_ppMember`, `ppMember`) — 삼중 포인터 이상(`ppp`, `_ppp`, `***`)은 구조적 결함이므로 엄격히 금지
 - **배열(Array)**: 고정 크기 배열은 `arr` 접두어 (`arr`, `_arr`)
@@ -40,10 +47,10 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
 
 ### 함수 이름 어휘 — 한 개념에 이름 하나
 
-같은 일을 하는 함수가 두 이름을 갖는 것은 규칙이 없어서가 아니라 **아무도 세지 않아서**다. 이 저장소는
-실제로 `queryAABB` 와 `queryAabb`, `alloc*` 과 `allocate*`, `setup*` 과 `initialize*` 를 동시에 갖고 있었다.
-읽는 사람은 어느 쪽이 맞는지 알 수 없고, 다음 사람은 방금 본 쪽을 따라 쓴다. 그렇게 갈라진다.
-아래 네 규칙 중 앞의 셋은 `Scripts/lint/gate/CheckFunctionVocabulary.py` 가 강제한다.
+같은 일을 하는 함수가 두 이름(`queryAABB` 와 `queryAabb`, `alloc*` 과 `allocate*`)을 가지면 읽는 사람은 어느 쪽이 맞는지 알 수 없고,
+다음 사람은 방금 본 쪽을 따라 쓴다. 그렇게 갈라진다. `Scripts/lint/gate/CheckFunctionVocabulary.py` 가 헤더 선언에서 다섯 가지를 강제한다 —
+두문자어 달리기(`AcronymRun`), 금지 동사(`BannedVerb`), `check*` 술어(`CheckVerb`), `string_view`/`hashed_string` 이름 쌍(`NamePair`),
+맨이름 게터(`BareGetter`). 아래 4) `on*` 규칙과 축약어 규칙은 리뷰가 지킨다.
 
 **1) 두문자어는 camelCase 낱말 하나다.** `initRhi`, `queryAabb`, `bindComputeUav`, `exportGameApi`,
 `updateUi`, `isValidUtf8`, `parseUint64`. 대문자가 연달아 붙으면 낱말 경계가 사라진다 — `getRHIFormatBlockInfo`
@@ -59,6 +66,7 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
 | 새 값을 만들어 돌려준다 | `create`(소유) · `make`(값) | `build`, `construct`, `generate` |
 | 찾는다 | `get`(반드시 있다) · `find`(없을 수 있다) | `fetch`, `retrieve`, `lookup`, `obtain` |
 | 입력에서 값을 셈한다 | `compute` | `calculate`, `calc` |
+| GPU 리소스 수명 | `initRhi` / `updateRhi` / `releaseRhi` / `forgetRhi` / `isRhiValid` | 그 밖의 모든 것 |
 
 **이름은 `hashed_string` 하나로 받는다.** 문자열 리터럴은 암묵 변환된다(`isActionDown( "Jump" )`). 포인터·`string_view`·
 `string` 은 explicit 이라 동적 텍스트를 intern 하는 자리는 호출부에 `hashed_string( text )` 로 보인다. 같은 이름에 `string_view`
@@ -67,7 +75,6 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
 `x()` 가 아니다(린트 `BareGetter`). `hashed_string` 은 언리얼 `FName` 규칙이다 — `==` · `getHash()` 는 대소문자를 무시하고,
 `c_str()` 은 적은 철자 그대로다("이름이 바뀌었나" 는 `isEqual( other, NameCase::CaseSensitive )`). `operator<` 는 없다 — 사람 · 파일이
 보는 정렬은 `HashedStringLexicalLess`, 찾기용은 `HashedStringFastLess`(intern 순서 — 실행마다 다르다).
-| GPU 리소스 수명 | `initRhi` / `updateRhi` / `releaseRhi` / `forgetRhi` / `isRhiValid` | 그 밖의 모든 것 |
 
 **3) 술어는 질문처럼 읽힌다.** `is` / `has` / `was` / `can` / `should` 로 시작하거나 3인칭 동사를 쓴다
 (`supportsX`, `usesX`, `requiresX`, `matchesX`, `allowsX`, `overlapsX`). **`check*` 는 술어가 아니다** —
@@ -107,8 +114,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
    - 시스템/OS 전용 헤더 (`Core/Common/StdHeaders.h` 권장) (빈 줄)
    - 외부 ThirdParty 헤더
 4. 플랫폼마다 다른 include 는 무조건 include 들 **뒤의 `#if SW_PLATFORM_WINDOWS / #elif … / #endif` 사슬 하나**에 둡니다. 갈래 안에서는 프로젝트 헤더, 빈 줄,
-   시스템 헤더 순입니다. 시스템 헤더만 따로 같은 조건의 블록을 하나 더 열지 않습니다 — 순서 검사가 첫 `#if` 에서 멈추기 때문에 그렇게 쪼개진 블록이
-   생겼고, 지금은 `CheckIncludeOrder.py` 가 같은 조건 계열의 include 블록 둘을 위반으로 냅니다.
+   시스템 헤더 순입니다. 시스템 헤더만 따로 같은 조건의 블록을 하나 더 열지 않습니다 — `CheckIncludeOrder.py` 가 같은 조건 계열의 include 블록 둘을 위반으로 냅니다.
 
 ### 분기문 및 초기화 규칙
 - 본문이 한 줄인 `if` 는 중괄호를 생략합니다. `else` / `else if` 가 붙은 사슬은 **모든 갈래가 한 줄일 때만** 생략하고, 한 갈래라도 여러 줄이면 전부 중괄호를 유지합니다.
@@ -116,11 +122,16 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - enum 을 `switch` 할 때 **모든 열거자를 다루면 `default:` 를 두지 않습니다**(LLVM 코딩 표준). 그래야 열거자를 늘리고 `case` 를 빠뜨리면 `-Werror=switch` 가 빌드를 세웁니다. 다 다뤘는데 `default:` 가 있으면 그 검사가 꺼지므로 그것 자체가 오류입니다(`-Werror=covered-switch-default`). 일부 열거자만 다루는 switch 는 `default:` 를 쓰고 나머지를 나열하지 않습니다(`-Wswitch-enum` · `-Wswitch-default` 는 끕니다). 범위 밖 값은 들어오는 자리(역직렬화가 모르는 열거자를 거절)에서 막고, 모든 `case` 에서 반환하는 함수는 switch 뒤에 폴백을 반환합니다. 파일마다 `#pragma` 로 switch 경고를 바꾸지 않습니다.
 - `switch` 의 `case` / `default` 는 본문이 **두 문장 이상이면 중괄호를 씌우고**, 한 문장이면 씌우지 않습니다. `break;` 도 한 문장으로 세므로 `case A:` 아래에 문장 하나와 `break;` 가 오면 중괄호를 씌우며, `case A: return X;` 는 그대로 둡니다. `break;` 는 중괄호 **안**에 둡니다. 본문에 전처리기 지시문이 끼어 있으면 건드리지 않습니다 — 본문의 끝이 글자만으로 정해지지 않아 여는 중괄호와 닫는 중괄호가 `#if` 의 반대편에 놓일 수 있습니다. 같은 스크립트가 자동 정리하며, clang-format 의 `InsertBraces` 는 case 라벨을 보지 않아 이 규칙을 표현하지 못합니다.
 - 부울(bool) 타입이 아닌 포인터 등은 명시적으로 `== nullptr` 혹은 `== false` 로 비교하세요. `!_bValid` 보다는 `_bValid == false` 를 권장합니다.
-- 비트 필드(bit field) 플래그(예: `uint8 _bFlag : 1;`)는 `true`/`false` 대신 `SW_TRUE`(1) / `SW_FALSE`(0)를 사용하여 대입 및 비교합니다.
+- `uint8` 불리언 멤버(`_b*` — 비트필드 `uint8 _bFlag : 1;` 이든 아니든)는 `true`/`false` · 맨 `1`/`0` 대신 `SW_TRUE` / `SW_FALSE` 로 대입 · 비교합니다(`_bFlag = SW_TRUE;`, `if (_bFlag == SW_FALSE)`). 맨 `1` 은 개수로 읽히고, 매크로는 상태라고 말합니다. 진짜 `bool` 멤버는 `true`/`false` 그대로입니다. `CheckCodeConventions.py` 의 `Style/BitfieldBoolean`(전체 스캔 전용)이 검사합니다.
+- 생성자가 있으면 필드는 헤더가 아니라 생성자에서 초기화합니다. 초기값은 **한 곳에만** 둡니다 — 두 곳에 쓰면 어느 쪽이 이기는지(생성자) 가려지고 한쪽만 고치게 됩니다(`Style/HeaderMemberInitializer`, 전체 스캔 전용). 헤더 기본값이 유일한 자리인 셋은 예외입니다: 기본 생성자가 `= default` 이거나 헤더 인라인인 클래스, 위임 생성자(`: Self( ... )` 는 멤버 초기화를 가질 수 없다), 생성자가 아예 없는 타입.
 - 생성자에서 멤버를 초기화할 때는 선언 순서대로 정렬해야 하며, 중괄호 `{}` 초기화를 사용하세요(반복자 쌍만은 소괄호 — `_listValue( list.begin(), list.end() )`. 중괄호면 `initializer_list` 생성자가 골라져 반복자 둘이 원소로 담긴다, `Style/IteratorPairBraces`). 한 줄에 1개 멤버씩 초기화하며 다음 줄에 `,`로 시작합니다.
 - 기본 초기화가 값을 정하지 않는 필드(정수 · 실수 · `bool` · 열거형 · 포인터 · 그 배열 · `atomic<스칼라>` · 비트필드)는 값이 **어딘가에** 있어야 합니다. 초기화 목록을 가진 생성자(복사 · 이동 생성자 포함)는 그 필드를 전부 목록에 두거나, 그 필드에 헤더 기본값이 있어야 합니다. 기본 생성자가 `= default` 인 클래스는 헤더 기본값을 주고, 비트필드는 C++17 에서 헤더 기본값을 가질 수 없으니 생성자를 씁니다. `-Wreorder-ctor` 와 `Style/ConstructorOrder` 는 목록에 **있는** 필드의 순서만 봅니다 — 빠진 필드는 쓰레기 값으로 시작하고 아무도 알아채지 못합니다. 버퍼로 쓰는 바이트 배열(`utf8 _arrStaticBuffer[N]`)은 예외입니다. `CheckCodeConventions.py` 의 `Style/ConstructorInitializesEveryField`(전체 스캔 전용)가 검사하며, 글자로 판정할 수 없는 타입(구조체 · 뜻이 둘인 별칭)은 추측하지 않고 건너뜁니다.
 - 범위(Range) 비교 시 변수를 안쪽(중간)에 위치하도록 작성하여 수학적 범위 표기법($min \le value \ \&\&\ value \le max$)을 따릅니다 (`kMin <= value && value <= kMax`).
 - 비트 패딩(Byte Padding) 낭비가 발생하지 않도록 변수 선언 순서를 최적화하세요.
+- `if` 초기화문(`if ( auto x = ...; x )`)을 쓰지 않습니다. 뜻이 분명하지 않거나 세 부분 이상인 조건은 지역 변수로 이름을 붙인 뒤 비교합니다.
+- `auto` 는 반복자 · 구조적 바인딩 · 그만큼 복잡한 타입에만 씁니다. 람다는 성능상 이득이 있을 때만 씁니다. `const` 는 성능을 해치지 않는 한 붙일 수 있는 곳에 붙입니다.
+- 버퍼 · 경로 크기를 숫자로 적지 않습니다(`char buf[64]`, `fixed_string<256>`, `StringBuilder<32>`). `constant` 네임스페이스(`Core/Common/Defines.h`)의 `kMaxBuffer16` ~ `kMaxBuffer8192`, 파일 경로는 `kMaxPathSize` 를 씁니다.
+- 타입은 `Types.h` 의 별칭을 쓰고, 쓸 수 있는 Core · Engine 기능이 있으면 STL · 시스템 기능보다 그것을 씁니다.
 
 ### 플랫폼 · 아키텍처 · 컴파일러는 SW_ 매크로로 묻기
 - 플랫폼 · 아키텍처 · 컴파일러는 CMake 가 판정해 정의하는 매크로로만 묻습니다. 컴파일러 내장 매크로(`_WIN32` · `__linux__` · `_MSC_VER` ·
@@ -143,7 +154,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 ### 이미 잡아 둔 메모리에 객체 만들기
 - placement new 는 `sw_placement_new( pMemory ) T( ... )` 로 씁니다(`Core/Memory/Memory.h`). 맨 `new ( pMemory ) T( ... )` 는 쓰지 않습니다.
 - 매크로는 주소를 `void*` 로 바꾸는 캐스트를 드러냅니다. T 가 포인터 타입이면(`vector<char*>` 등) `char**` → `void*` 같은 변환이 조용히 일어나기 때문입니다. 또 표기가 하나뿐이어야 매크로 한 곳만 고쳐도 전체에 반영됩니다.
-- `CheckCodeConventions.py` 가 `Style/PlacementNew` 로 검사합니다. 예전에는 강제하지 않아서 `Delegate` · `TaskTypes` · `TaskFuture` 등 18곳이 맨 `new ( p )` 로 남아 있었습니다.
+- `CheckCodeConventions.py` 가 `Style/PlacementNew` 로 검사합니다.
 
 ### 힙 할당은 sw 할당자로
 - 맨 `new T` · `new T[n]` 은 쓰지 않습니다. 객체는 `sw_new T( ... )` · `make_unique<T>`, 배열은 `sw_new_array<T>( n )` + `sw_delete_array( p, n )` · `make_unique<T[]>( n )`(원소 소멸자가 없는 타입) · `vector<T>` 로 잡습니다. CRT `new` 는 메모리 태그와 누수 검사에 보이지 않습니다. `CheckCodeConventions.py` 가 `Style/RawNew` 로 검사합니다.
@@ -152,13 +163,18 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - 내가 소유하지 않은 `GameObject` / `Component` 를 가리키는 `T*` 는 **지금 부른 함수 안에서만**(길어야 이번 프레임) 씁니다.
 - 프레임을 넘겨 드는 참조(멤버 · 선택 목록 · 되돌리기 기록)는 `GameObjectHandle` / `ComponentHandle`(`Core/Container`)로 들고, 쓸 때마다 소유 매니저의 `resolveGameObject` / `resolveComponent` 로 풉니다. 대상이 사라졌으면 nullptr 입니다.
 - 핸들은 다시 쓰지 않는 id 라 이름을 바꿔도 끊기지 않습니다. 에디터 되돌리기 · 플레이 세션 복원 · 핫 리로드는 오브젝트를 원래 id 로 되살립니다.
-- objectId 는 `GameObjectManager`(씬)마다 따로 세므로, 핸들은 자기 씬 안에서만 뜻이 있습니다.
+- objectId 는 프로세스 전체에서 겹치지 않지만, 핸들은 그 오브젝트를 가진 `GameObjectManager`(씬)로만 풉니다.
 - 오브젝트 모델이 스스로 관리하는 구조 링크(소유자 · 씬 계층 · 등록부)는 생포인터 그대로 둡니다.
-- 예전의 이름 기반 `GameObjectPtr` · `ComponentPtr` 은 2026-09-24 에 지웠습니다. 이름을 바꾸면 끊기고, 옛 이름으로 새 오브젝트가 생기면 조용히 그쪽을 가리켰습니다.
+- 이름으로 가리키는 참조는 두지 않습니다 — 이름을 바꾸면 끊기고, 같은 이름의 새 오브젝트가 생기면 조용히 그쪽을 가리킵니다.
+- 저장된 상태도 다른 오브젝트를 이름으로 가리키지 않습니다. 부모 참조는 부모의 id 이고, 배치의 모든 오브젝트를 읽은 뒤 `ObjectStateBatch` 가 풉니다.
+  오브젝트 상태를 읽는 새 경로는 배치(`ObjectLoadContext::_pBatch` + `finish()`)를 지납니다 — 매니저가 이름을 고유하게 바꾸므로 이름으로 찾으면 동명이인에 떨어집니다.
 
 ### 헬퍼 Util vs Internal
 1. 여러 번역 단위가 공유하는 헬퍼는 `XxxUtil` 정적 구조체 헤더로 선언합니다 (`Internal` 이름을 붙이지 않음).
 2. 단일 `.cpp` 내에서만 사용하는 헬퍼는 클래스 구현과 분리된 별도 `namespace sw { namespace { struct FooInternal; } }` 블록에 배치합니다.
+3. `Internal` 헬퍼 이름은 **클래스가 아니라 번역 단위**를 따릅니다. 유니티 빌드(`SW_ENABLE_UNITY_BUILD`, `CI-*` 프리셋)는 `.cpp` 여럿을 한 번역 단위로
+   묶고 익명 네임스페이스는 번역 단위마다만 이름을 숨기므로, 한 클래스를 여러 `.cpp` 로 나눈 뒤 헬퍼마다 클래스 이름을 붙이면 재정의 오류가 납니다
+   (`VulkanRHIResourcePipeline.cpp` 는 `VulkanRHIResourcePipelineInternal`). `CheckCodeConventions.py` 의 `Naming/DuplicateInternalHelper`(전체 스캔 전용)가 검사합니다.
 
 ### 익명 네임스페이스는 파일당 하나, 스코프 최상단에
 
@@ -182,6 +198,13 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
    이 파일에만 있는 이름을 쓴다. 구조체 · 함수 안의 상수는 상관없다(`Naming/DuplicateAnonymousConstant`, 전체 스캔에서만).
 
 
+### 리소스 에셋
+- `Resource/` 아래 파일 · 폴더 이름은 전부 소문자(`[a-z0-9_.-]+`)입니다(문서 `README.md` 만 예외). `CheckResourceCasing.py` 와 커밋 훅이 검사합니다.
+- 런타임은 텍스처를 DDS 로만 읽습니다. 런타임 텍스처 폴더(`textures/`)에는 `.dds` 와 데이터(`.sprite.json` · `.meta`)만 두고, 원본 이미지(PNG · JPG · TGA …)는
+  같은 상대 경로의 `textures_raw/` 에 두어 `App --bake-textures` 로 굽습니다(에디터는 핫 리로드 때도 굽습니다). DDS 는 `textures_raw/bake.stamp` 와
+  같이 커밋합니다. 원본 · 굽기 규칙 · DDS 가 어긋나면 `TextureBakeStampTest`(와 `App --check-textures`)가 집니다. 아무도 참조하지 않는 원본은
+  옮기지 말고 지웁니다. `CheckTextureFolders.py` 가 검사합니다.
+
 ## 3. CMake 및 빌드 규칙
 
 | 대상 | 규칙 | 예시 |
@@ -199,8 +222,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 
 ## 5. HLSL 셰이더 규칙
 셰이더도 HLSL 이 표현할 수 있는 데까지 **C++ 규칙을 그대로** 따른다. `Scripts/lint/gate/CheckShaderConventions.py` 가
-`Resource/` 아래 모든 `.hlsl` · `.hlsli` 에 이 절을 적용한다(CI 게이트 · 커밋 훅). 예전에는 셰이더를 보는 린트가 없어서
-PascalCase 함수, `SW_` 로 시작하는 함수, 한 글자 지역 변수, `_t` 꼬리 타입, `pos`/`nrm`/`col` 필드가 쌓여 있었다(2026-10-03 정리).
+`Resource/` 아래 모든 `.hlsl` · `.hlsli` 에 이 절을 적용한다(CI 게이트 · 커밋 훅).
 
 | 대상 | 규칙 | 예시 |
 | :--- | :--- | :--- |

@@ -38,7 +38,7 @@ cmake --preset Ninja-Debug
 cmake --build --preset Ninja-Debug
 ```
 
-- Prefer `-DSW_USE_SCCACHE=ON` when sccache is available.
+- `SW_USE_SCCACHE` is `ON` by default and uses sccache when it is available.
 - Build outputs are in `build/Ninja-Debug/Bin`.
 - The compilation database is `build/Ninja-Debug/compile_commands.json`.
 
@@ -62,7 +62,7 @@ cmake --build --preset Ninja-Debug
   in the editor use `SW_GLOBAL_VARIABLE_*`. Bench, automation and diagnostic switches use `SW_TEST_GLOBAL_VARIABLE_*`: they
   stay settable with `-gv_*` but are hidden from the editor panel and presets and are **not registered in Shipping**. Add
   `SW_KEEP_IN_SHIPPING` as the last argument only when scripts must drive the shipped executable with it
-  (`gv_profileFrames`, `gv_screenshot*`, `gv_crashTest`). An `extern` uses the matching `SW_EXTERN_…` form with the same
+  (`gv_profileFrames`, `gv_screenshot*`, `gv_crashTest`, `gv_bench*`). An `extern` uses the matching `SW_EXTERN_…` form with the same
   argument; `CheckGlobalVariableKinds.py` blocks mismatches.
 - Static variables: `s_camelCase`; private statics: `_s_camelCase`.
 - Macros: `SW_SCREAMING_CASE`.
@@ -92,8 +92,10 @@ cmake --build --preset Ninja-Debug
 
 ### Function names
 
-Four rules, all enforced by `CheckFunctionVocabulary.py`. A reader who knows one of these names must be
-able to guess the rest; that is the whole point.
+A reader who knows one of these names must be able to guess the rest; that is the whole point.
+`CheckFunctionVocabulary.py` enforces five checks on header declarations — acronym runs (`AcronymRun`), the banned
+verbs below (`BannedVerb`), `check*` predicates (`CheckVerb`), `string_view`/`hashed_string` name pairs (`NamePair`)
+and bare getters (`BareGetter`). The `on*` and spell-it-out rules are kept by review.
 
 - **An acronym inside a function name is one camelCase word**, not a run of capitals: `initRhi`,
   `queryAabb`, `bindComputeUav`, `exportGameApi`, `updateUi`, `isValidUtf8`, `parseUint64`.
