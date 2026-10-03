@@ -20,6 +20,7 @@
 #include "Core/Container/array.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/CpuClock.h"
 
 namespace sw
 {
@@ -158,9 +159,8 @@ namespace sw
             //
             // 여기까지 온 포인터는 이 풀의 블록이므로, 이미 반납된 것만 아니라면 자리는 반드시 난다. 그 하나를 가르는 기준이
             // 시간(kReleaseWaitMilli)이다.
-            const std::chrono::steady_clock::time_point deadline =
-                std::chrono::steady_clock::now() + std::chrono::milliseconds( kReleaseWaitMilli );
-            uint32 attemptCount = 0;
+            const CpuDeadline deadline     = CpuDeadline::afterMilliseconds( kReleaseWaitMilli );
+            uint32            attemptCount = 0;
             while ( _freeQueue.enqueue( pPtr ) == false )
             {
                 ++attemptCount;
@@ -169,7 +169,7 @@ namespace sw
                 else
                     std::this_thread::sleep_for( std::chrono::microseconds( 100 ) );
 
-                if ( std::chrono::steady_clock::now() < deadline )
+                if ( deadline.isExpired() == false )
                     continue;
 
                 // 이중 반납은 위에서 걸렀으니 여기는 일어나면 안 되는 자리다. 카운트는 줄이지 않는다(`_activeCount` 를 줄이면 0 에서

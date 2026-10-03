@@ -9,6 +9,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Time/CpuClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
@@ -68,7 +69,7 @@ namespace sw
 
     bool App::initialize( int32 argc, utf8* pArgv[] )
     {
-        _initializeStartMicro = std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count();
+        _initializeStartMicro = CpuClock::nowMicroseconds();
         // 리소스 루트 탐색은 EngineLoop 가 로거를 세운 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단이
         // 사라지고, 반환값도 여기서는 쓸 곳이 없었다.
 
@@ -291,7 +292,7 @@ namespace sw
 
         // 시작 시간: `initialize` 첫 줄부터 여기까지의 경과 시간이다. 표준 출력 로그는 에러가 아니면 버퍼에 머물러 있어 밖에서는 시각을 잴 수 없다.
         [[maybe_unused]] const int64 startupMicro =
-            std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count() - _initializeStartMicro;
+            CpuClock::nowMicroseconds() - _initializeStartMicro;
         SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)... startup %# ms", startupMicro / 1000 );
 
         _frameTimeline.start();

@@ -10,6 +10,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Time/CpuClock.h"
 
 #include "Engine/Common/EngineServices.h"
 
@@ -22,8 +23,7 @@ namespace sw
         /** @brief 단조 시계의 현재 나노초입니다. */
         uint64 nowNanos() noexcept
         {
-            return static_cast<uint64>(
-                std::chrono::duration_cast<std::chrono::nanoseconds>( std::chrono::steady_clock::now().time_since_epoch() ).count() );
+            return static_cast<uint64>( CpuClock::nowNanoseconds() );
         }
 
         /** @brief 값이 들어갈 칸입니다. 옥타브 = floor(log2) 이고, 그 안을 상위 비트로 등분합니다. 한 옥타브 미만은 값 그대로입니다. */

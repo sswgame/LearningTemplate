@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Time/CpuClock.h"
+
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandList.h"
@@ -471,9 +473,8 @@ namespace sw
 
         // 렌더 워커가 프레임 끝마다 놓는다. 조용히 다시 집는다. 시도마다 로그를 남기면 정상
         // 경합이 오류로 보인다(실제로 -gl -EnableEditor 의 ERROR_BUSY 2건이 그것이었다).
-        const std::chrono::steady_clock::time_point deadline =
-            std::chrono::steady_clock::now() + std::chrono::milliseconds( timeoutMs );
-        while ( std::chrono::steady_clock::now() < deadline )
+        const CpuDeadline deadline = CpuDeadline::afterMilliseconds( timeoutMs );
+        while ( deadline.isExpired() == false )
         {
             std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
             if ( _platformContext->makeCurrent() )

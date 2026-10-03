@@ -13,6 +13,7 @@
 #include "Core/Module/ModuleCodeHolder.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Time/CpuClock.h"
 
 namespace sw
 {
@@ -228,10 +229,10 @@ namespace sw
         if ( t_broadcastDepth > 0 )
             return;
 
-        const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 2 );
+        const CpuDeadline deadline = CpuDeadline::afterMilliseconds( 2000 );
         while ( _arrBroadcastInFlight[retiredSlot].load( std::memory_order_acquire ) != 0 )
         {
-            if ( std::chrono::steady_clock::now() > deadline )
+            if ( deadline.isExpired() )
             {
                 std::fputs( "[Logger] Timed out waiting for in-flight log broadcasts after removing a listener\n", stderr );
                 return;

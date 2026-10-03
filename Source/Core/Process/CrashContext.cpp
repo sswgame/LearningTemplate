@@ -9,6 +9,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
+#include "Core/Time/CpuClock.h"
 
 #include <chrono>
 #include <cstdio>
@@ -102,8 +103,7 @@ namespace sw
             if ( s_arrSession[0] != '\0' )
                 return s_arrSession;
 
-            const uint64 nowTicks =
-                static_cast<uint64>( std::chrono::steady_clock::now().time_since_epoch().count() );
+            const uint64 nowTicks = static_cast<uint64>( CpuClock::nowNanoseconds() );
             const uint64 wallSeconds =
                 static_cast<uint64>( std::chrono::system_clock::now().time_since_epoch().count() );
             std::random_device randomDevice;

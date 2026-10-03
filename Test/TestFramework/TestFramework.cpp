@@ -2,6 +2,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include "Core/Time/CpuClock.h"
+
 #include <algorithm>
 #include <chrono>
 #include <mutex>
@@ -374,7 +376,7 @@ namespace test
             {
                 _bShuffle = true;
                 if ( _shuffleSeed == 0 )
-                    _shuffleSeed = static_cast<uint32>( std::chrono::steady_clock::now().time_since_epoch().count() % 100000 ) + 1;
+                    _shuffleSeed = static_cast<uint32>( sw::CpuClock::nowNanoseconds() % 100000 ) + 1;
                 continue;
             }
             if ( arg.substr( 0, kShufflePrefix.size() ) == kShufflePrefix || arg.substr( 0, kSeedPrefix.size() ) == kSeedPrefix )
