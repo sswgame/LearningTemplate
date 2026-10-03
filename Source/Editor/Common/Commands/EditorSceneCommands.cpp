@@ -155,12 +155,12 @@ namespace sw::editor
         if ( wouldCreateParentCycle( pChild, pNewParent ) )
             return false;
 
-        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pChild );
+        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pChild );
         // 끌어 놓은 자리에 그대로 있게 월드를 지킨다(유니티 계층 창 · 언리얼 아웃라이너와 같다). 예전에는 로컬을 지켜 새 부모만큼 튀었다.
         if ( pChild->attachToParent( pNewParent, AttachRule::KeepWorld ) == false )
             return false;
 
-        const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pChild );
+        const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pChild );
         EditorTransaction::recordModify( pChild, beforeSnapshot, afterSnapshot, undoLabel );
         select( pChild, SelectionMode::Replace );
         return true;
@@ -173,9 +173,9 @@ namespace sw::editor
         if ( pObj == nullptr || pObj->getParent() == nullptr )
             return false;
 
-        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
+        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         pObj->detachFromParent( AttachRule::KeepWorld );
-        const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
+        const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
         EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, undoLabel );
         select( pObj, SelectionMode::Replace );
         return true;
@@ -220,9 +220,9 @@ namespace sw::editor
         if ( pObj == nullptr || StringUtil::isNullOrEmpty( pNewName ) )
             return false;
 
-        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
+        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         pObj->setName( hashed_string( pNewName ) );
-        const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
+        const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
         EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, "Rename GameObject" );
         return true;
     }
@@ -234,8 +234,8 @@ namespace sw::editor
         if ( pObj == nullptr || pObj->getManager() == nullptr || typeName.empty() )
             return nullptr;
 
-        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
-        Component*                 pComp          = pObj->getManager()->addComponentByName( pObj, typeName );
+        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
+        Component*           pComp          = pObj->getManager()->addComponentByName( pObj, typeName );
         if ( pComp == nullptr )
             return nullptr;
         pComp->onPostLoad();
@@ -264,7 +264,7 @@ namespace sw::editor
 
         // 기록을 남긴다 — 예전에는 기록도 dirty 도 없어 되돌릴 수 없었고, 그대로 다른 씬을 열면 묻지도 않고 사라졌다. 삭제 대기 컴포넌트는
         // 스냅샷에 실리지 않으므로(지우기 전 · 후 스냅샷이 다르다) 되돌리면 그 컴포넌트가 원래 id 로 돌아온다.
-        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
+        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
         pManager->destroyComponent( pComp );
         commitModify( pObj, beforeSnapshot, "Remove Component" );
         return true;
@@ -289,7 +289,7 @@ namespace sw::editor
         return pNewParent->isDescendantOf( pChild );
     }
 
-    EditorObjectSnapshot EditorSceneCommands::captureSnapshot( GameObject* pObj )
+    ObjectSnapshot EditorSceneCommands::captureSnapshot( GameObject* pObj )
     {
         return EditorTransaction::captureSnapshot( pObj );
     }
@@ -396,14 +396,14 @@ namespace sw::editor
         translation._y = ( bHit ? hitY : 0.0f ) + bottomOffset;
     }
 
-    void EditorSceneCommands::commitModify( GameObject* pObj, const EditorObjectSnapshot& before, string_view undoLabel )
+    void EditorSceneCommands::commitModify( GameObject* pObj, const ObjectSnapshot& before, string_view undoLabel )
     {
         if ( EditorSceneCommandsInternal::canMutateScene() == false )
             return;
         if ( pObj == nullptr || before._xml.empty() )
             return;
 
-        const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
+        const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
         EditorTransaction::recordModify( pObj, before, afterSnapshot, undoLabel );
     }
 

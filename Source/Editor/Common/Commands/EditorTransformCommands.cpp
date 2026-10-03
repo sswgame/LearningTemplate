@@ -74,12 +74,12 @@ namespace sw::editor
                 if ( pSc == nullptr )
                     return;
 
-                const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
-                float3                     worldPosition  = pSc->getWorldPosition();
+                const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
+                float3               worldPosition  = pSc->getWorldPosition();
                 setAxisValue( worldPosition, axis, targetValue );
                 pSc->setWorldPosition( worldPosition );
 
-                const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
+                const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
                 EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, actionName );
             }
         };
@@ -93,9 +93,9 @@ namespace sw::editor
         if ( pTargetComp == nullptr || pTargetComp->getTypeInfo() == nullptr )
             return false;
 
-        GameObject* const          pOwner         = pTargetComp->getOwner();
-        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
-        const hashed_string        targetName     = pTargetComp->getComponentName();
+        GameObject* const    pOwner         = pTargetComp->getOwner();
+        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
+        const hashed_string  targetName     = pTargetComp->getComponentName();
 
         bool bSuccess = false;
         if ( bytes.empty() == false )
@@ -113,7 +113,7 @@ namespace sw::editor
 
         if ( bSuccess && pOwner != nullptr )
         {
-            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );
+            const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );
             EditorTransaction::recordModify( pOwner, beforeSnapshot, afterSnapshot, "Paste Component Values" );
         }
         return bSuccess;
@@ -133,7 +133,7 @@ namespace sw::editor
         if ( pManager == nullptr )
             return nullptr;
 
-        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pTargetObj );
+        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pTargetObj );
 
         Component* pNewComp = pManager->addComponentByName( pTargetObj, hashed_string{ typeName } );
         if ( pNewComp != nullptr && pNewComp->getTypeInfo() != nullptr )
@@ -158,7 +158,7 @@ namespace sw::editor
                                 string{ typeName }.c_str() );
             }
 
-            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pTargetObj );
+            const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pTargetObj );
             EditorTransaction::recordModify( pTargetObj, beforeSnapshot, afterSnapshot, "Paste Component as New" );
             return pNewComp;
         }
@@ -224,8 +224,8 @@ namespace sw::editor
         if ( FileUtil::readTextFile( presetFilePath, xmlData ) == false )
             return false;
 
-        GameObject* const          pOwner         = pComp->getOwner();
-        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
+        GameObject* const    pOwner         = pComp->getOwner();
+        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
 
         const hashed_string targetName = pComp->getComponentName();
         const bool          bSuccess   = XmlSerializer::deserialize( pComp, *pComp->getTypeInfo(), xmlData );
@@ -234,7 +234,7 @@ namespace sw::editor
             pComp->notifyStateWritten();
         if ( bSuccess && pOwner != nullptr )
         {
-            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );
+            const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pOwner );
             EditorTransaction::recordModify( pOwner, beforeSnapshot, afterSnapshot, "Apply Component Preset" );
         }
         return bSuccess;
@@ -264,7 +264,7 @@ namespace sw::editor
             if ( pSc == nullptr )
                 continue;
 
-            const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
+            const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pGo );
 
             // 월드로 읽고 월드로 쓴다. 크기는 오브젝트의 월드 상자 하나로 잰다(`GameObject::getWorldBox`) — 예전에는 "메시면 월드 스케일 × 단위 상자,
             // 콜라이더면 오프셋 크기" 를 따로 셈해, 단위 상자가 아닌 메시(구 · 캡슐 · 평면)와 키운 콜라이더가 떠 있거나 파묻혔다.
@@ -277,7 +277,7 @@ namespace sw::editor
             pos._y = bottomOffset;
             pSc->setWorldPosition( pos );
 
-            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
+            const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pGo );
             EditorTransaction::recordModify( pGo, beforeSnapshot, afterSnapshot, "Snap to Ground" );
         }
 

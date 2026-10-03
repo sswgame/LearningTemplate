@@ -18,6 +18,9 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourceManager.h"
+#include "Engine/Scene/ObjectSnapshotCommand.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/WindowEvents.h"
@@ -711,6 +714,49 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
     SW_EXPECT_TRUE( api.create != nullptr );
     SW_EXPECT_TRUE( api.render != nullptr );
 
+    manager.shutdown();
+}
+
+/**
+ * @brief [ArchitectureTest] 에디터 모듈을 실제로 다시 올려도 오브젝트 편집의 Undo/Redo 가 남아 같은 결과를 낸다
+ * @details 리로드는 옛 이미지를 내리기 전에 그 범위로 모든 코드 보유자를 훑는다(`engine::releaseModuleCode` — Undo 스택 포함). 오브젝트 편집은 코드가
+ *          Engine 에 있는 데이터 명령(`ObjectSnapshotCommand`)이라 그 훑기를 지나 남아야 하고, 리로드 뒤의 undo · redo 가 리로드 전과 같은 상태를 만들어야
+ *          한다. 모듈 코드를 쥔 명령이 떨어지는 쪽은 `EditorTransactionTest.ObjectEditsSurviveReleasingTheEditorCode` ·
+ *          `ReleaseModuleCodeSweepsEveryRegistryTheEditorUses` 가 본다.
+ */
+SW_TEST_CASE( ArchitectureTest, ObjectUndoSurvivesAnEditorModuleReload )
+{
+    if ( sw::FileUtil::fileExists( sw::modulePath( "EditorModule" ) ) == false )
+        SW_TEST_SKIP( "EditorModule not built in this config" );
+
+    sw::SceneManager sceneManager;
+    sw::Scene*       pScene = sceneManager.createEmptyActiveScene( "UndoAcrossReload" );
+    SW_ASSERT_NOT_NULL( pScene );
+    sw::GameObjectManager* pManager = pScene->getObjectManager();
+    sw::GameObject*        pTarget  = pManager->createGameObject( sw::hashed_string( "UndoTarget" ) );
+    SW_ASSERT_NOT_NULL( pTarget );
+    pManager->mergePendingAdds();
+    const uint64 targetId = pTarget->getObjectId();
+
+    sw::CommandStack         stack;
+    const sw::ObjectSnapshot before = sw::ObjectSnapshotCommand::captureSnapshot( pTarget );
+    pTarget->setActive( false );
+    const sw::ObjectSnapshot after = sw::ObjectSnapshotCommand::captureSnapshot( pTarget );
+    SW_ASSERT_TRUE( before._xml != after._xml );
+    stack.push( sw::ObjectSnapshotCommand::makeModify( stack, sceneManager, *pTarget, before, after, "Deactivate" ) );
+
+    sw::LiveReloadManager manager;
+    SW_ASSERT_TRUE( manager.registerModule( "EditorModule" ) );
+    void* const pOldHandle = manager.getModuleHandle( "EditorModule" );
+    SW_ASSERT_TRUE( sw::reloadAndWait( manager, "EditorModule" ) );
+    SW_EXPECT_TRUE( manager.getModuleHandle( "EditorModule" ) != pOldHandle );
+    SW_EXPECT_FALSE( manager.isGraphBroken() );
+
+    SW_ASSERT_EQUAL( size_t( 1 ), stack.getCommandCount() );
+    stack.undo();
+    SW_EXPECT_TRUE( sw::ObjectSnapshotCommand::captureSnapshot( pManager->findGameObjectById( targetId ) )._xml == before._xml );
+    stack.redo();
+    SW_EXPECT_TRUE( sw::ObjectSnapshotCommand::captureSnapshot( pManager->findGameObjectById( targetId ) )._xml == after._xml );
     manager.shutdown();
 }
 

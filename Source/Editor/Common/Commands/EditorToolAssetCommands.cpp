@@ -333,7 +333,7 @@ namespace sw::editor
         if ( pProp == nullptr )
             return false;
 
-        const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pInstance );
+        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pInstance );
         // 값을 옮기지 못했으면 되돌렸다고 표시하지 않는다(예전에는 실패해도 "되돌림" 으로 표시하고 되돌리기 기록을 남겼다).
         if ( SerializerUtil::copyPropertyValue( *pProp, pCdoComp, pInstanceComponent, SerializeContext::getDefault() ) == false )
         {
@@ -341,7 +341,7 @@ namespace sw::editor
             return false;
         }
         pInstanceComponent->onPropertyChanged( pProp->_name );
-        const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pInstance );
+        const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pInstance );
         EditorTransaction::recordModify( pInstance, beforeSnapshot, afterSnapshot, "Revert Prefab Override" );
         item._overriddenValue = item._defaultValue;
         item._bModified       = false;

@@ -63,7 +63,7 @@ namespace sw::editor
                     edit();
                     return;
                 }
-                const EditorObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
+                const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
                 edit();
                 EditorSceneCommands::commitModify( pObj, beforeSnapshot, undoLabel );
             }

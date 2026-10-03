@@ -7,7 +7,7 @@ namespace sw
     CommandStack::CommandStack()
         : _listCommand{}
         , _listPendingTransactionCommand{}
-        , _listCodeAddress{}
+        , _objectEditListener{}
         , _transactionLabel{}
         , _lastCoalesceKey{}
         , _empty{}
@@ -19,9 +19,8 @@ namespace sw
 
     void CommandStack::push( Command cmd )
     {
-        if ( cmd._undo.isBound() == false || cmd._redo.isBound() == false || _bIsExecuting )
+        if ( isExecutable( cmd ) == false || _bIsExecuting )
             return;
-        recordCodeAddress( cmd );
 
         if ( _transactionDepth != 0 )
         {
@@ -48,8 +47,7 @@ namespace sw
 
     void CommandStack::beginTransaction( string_view label )
     {
-        // 중첩 호출은 가장 바깥 트랜잭션에 합친다. 여기서 목록을 비우면 바깥이 쌓아 둔
-        // Undo 기록이 통째로 사라진다.
+        // 중첩 호출은 가장 바깥 트랜잭션에 합친다. 여기서 목록을 비우면 바깥이 쌓아 둔 기록이 사라진다.
         if ( _transactionDepth == 0 )
         {
             _transactionLabel = label;
@@ -71,11 +69,9 @@ namespace sw
         if ( _listPendingTransactionCommand.empty() )
             return;
 
+        // 트랜잭션 레이블은 명령이 몇 개든 그 트랜잭션의 이름이다("Move 3 objects" 로 묶었는데 명령이 하나여도 그 이름).
         if ( _listPendingTransactionCommand.size() == 1 )
         {
-            // 트랜잭션 레이블은 **명령이 몇 개든** 그 트랜잭션의 이름이다. 예전에는 명령 하나로 끝난
-            // 트랜잭션만 안쪽 명령의 레이블을 그대로 썼다. "Move 3 objects" 로 묶었는데 실제로
-            // 명령이 하나 나오면 실행 취소 메뉴에 "Set position" 이 떴다.
             Command singleCmd = std::move( _listPendingTransactionCommand[0] );
             _listPendingTransactionCommand.clear();
             if ( _transactionLabel.empty() == false )
@@ -85,31 +81,11 @@ namespace sw
         }
 
         Command compoundCmd;
-        compoundCmd._label = _transactionLabel.empty() == false
-                               ? _transactionLabel
-                               : _listPendingTransactionCommand[0]._label;
-
-        auto listMergedCommand = sw::make_shared<vector<Command>>( std::move( _listPendingTransactionCommand ) );
+        compoundCmd._label     = _transactionLabel.empty() == false
+                                   ? _transactionLabel
+                                   : _listPendingTransactionCommand[0]._label;
+        compoundCmd._listChild = sw::make_shared<const vector<Command>>( std::move( _listPendingTransactionCommand ) );
         _listPendingTransactionCommand.clear();
-
-        compoundCmd._redo = SW_DELEGATE_LAMBDA( Delegate<void()>, [listMergedCommand]()
-        {
-            for ( size_t cmdIndex = 0; cmdIndex < listMergedCommand->size(); ++cmdIndex )
-            {
-                if ( ( *listMergedCommand )[cmdIndex]._redo.isBound() )
-                    ( *listMergedCommand )[cmdIndex]._redo();
-            }
-        } );
-
-        compoundCmd._undo = SW_DELEGATE_LAMBDA( Delegate<void()>, [listMergedCommand]()
-        {
-            for ( size_t cmdIndex = listMergedCommand->size(); cmdIndex > 0; --cmdIndex )
-            {
-                if ( ( *listMergedCommand )[cmdIndex - 1]._undo.isBound() )
-                    ( *listMergedCommand )[cmdIndex - 1]._undo();
-            }
-        } );
-
         push( std::move( compoundCmd ) );
     }
 
@@ -123,15 +99,10 @@ namespace sw
 
     void CommandStack::pushCoalesce( string_view coalesceKey, Command cmd )
     {
-        // **`_bIsExecuting` 을 여기서도 본다.** 이 플래그는 undo/redo 콜백이 자기 자신을 새 명령으로
-        // 기록하지 못하게 막는 재진입 방지인데, 예전에는 `push` 만 보고 이쪽은 보지 않았다.
-        // 그러면 콜백 안에서 병합 push 를 했을 때 `push` 는 거절당하는데 **coalesce 키는 그대로
-        // 남아**, 그다음의 정상적인 병합 push 가 같은 키를 보고 `_index - 1` 의 명령(아무
-        // 상관 없는 지난 명령)의 redo 를 바꿔 버렸다. 되돌린 뒤 다시 실행하면 다른 일이 일어난다.
-        // 여기서 막고 나면 아래 `push` 가 거절될 이유가 남지 않으므로, 키를 적는 것도 안전해진다.
-        if ( cmd._undo.isBound() == false || cmd._redo.isBound() == false || _bIsExecuting )
+        // 재진입(undo/redo 콜백 안의 push)을 여기서도 막는다. 막지 않으면 `push` 는 거절되는데 coalesce 키만 남아, 다음 병합이
+        // 상관없는 지난 명령의 redo 를 바꾼다.
+        if ( isExecutable( cmd ) == false || _bIsExecuting )
             return;
-        recordCodeAddress( cmd );
 
         if ( _transactionDepth != 0 )
         {
@@ -173,12 +144,9 @@ namespace sw
         if ( canUndo() == false || _bIsExecuting )
             return;
         --_index;
-        if ( _listCommand[_index]._undo.isBound() )
-        {
-            _bIsExecuting = true;
-            _listCommand[_index]._undo();
-            _bIsExecuting = false;
-        }
+        _bIsExecuting = true;
+        execute( _listCommand[_index], true );
+        _bIsExecuting = false;
     }
 
     void CommandStack::redo()
@@ -188,33 +156,63 @@ namespace sw
             return;
         const size_t targetIndex = _index;
         ++_index;
-        if ( _listCommand[targetIndex]._redo.isBound() )
-        {
-            _bIsExecuting = true;
-            _listCommand[targetIndex]._redo();
-            _bIsExecuting = false;
-        }
+        _bIsExecuting = true;
+        execute( _listCommand[targetIndex], false );
+        _bIsExecuting = false;
+    }
+
+    void CommandStack::setObjectEditListener( ObjectEditListener listener )
+    {
+        _objectEditListener = std::move( listener );
+    }
+
+    void CommandStack::notifyObjectEdit( const ObjectEditNotice& notice ) const
+    {
+        if ( _objectEditListener.isBound() )
+            _objectEditListener( notice );
     }
 
     uint32 CommandStack::releaseCodeWithin( const void* pBegin, const void* pEnd )
     {
-        const uintptr_t begin = reinterpret_cast<uintptr_t>( pBegin );
-        const uintptr_t end   = reinterpret_cast<uintptr_t>( pEnd );
-        bool            bHoldsCode{ false };
-        for ( const void* pCode : _listCodeAddress )
-        {
-            const uintptr_t code = reinterpret_cast<uintptr_t>( pCode );
-            if ( begin <= code && code < end )
-            {
-                bHoldsCode = true;
-                break;
-            }
-        }
-        if ( bHoldsCode == false )
-            return 0;
+        if ( _objectEditListener.isCodeWithin( pBegin, pEnd ) )
+            _objectEditListener = {};
 
-        const uint32 droppedCount = static_cast<uint32>( _listCommand.size() + _listPendingTransactionCommand.size() );
-        clear();
+        uint32 droppedCount{ 0 };
+        size_t keptCount{ 0 };
+        size_t keptBeforeIndex{ 0 };
+        for ( size_t commandIndex = 0; commandIndex < _listCommand.size(); ++commandIndex )
+        {
+            if ( holdsCodeWithin( _listCommand[commandIndex], pBegin, pEnd ) )
+            {
+                ++droppedCount;
+                continue;
+            }
+            if ( commandIndex < _index )
+                ++keptBeforeIndex;
+            if ( keptCount != commandIndex )
+                _listCommand[keptCount] = std::move( _listCommand[commandIndex] );
+            ++keptCount;
+        }
+        _listCommand.resize( keptCount );
+        _index = keptBeforeIndex;
+
+        size_t keptPendingCount{ 0 };
+        for ( size_t pendingIndex = 0; pendingIndex < _listPendingTransactionCommand.size(); ++pendingIndex )
+        {
+            if ( holdsCodeWithin( _listPendingTransactionCommand[pendingIndex], pBegin, pEnd ) )
+            {
+                ++droppedCount;
+                continue;
+            }
+            if ( keptPendingCount != pendingIndex )
+                _listPendingTransactionCommand[keptPendingCount] = std::move( _listPendingTransactionCommand[pendingIndex] );
+            ++keptPendingCount;
+        }
+        _listPendingTransactionCommand.resize( keptPendingCount );
+
+        // 병합 대상이 바뀌었을 수 있다 — 다음 병합 push 가 엉뚱한 명령을 고치지 않게 끊는다.
+        if ( droppedCount > 0 )
+            _lastCoalesceKey.clear();
         return droppedCount;
     }
 
@@ -224,21 +222,58 @@ namespace sw
         return releaseCodeWithin( pBegin, pEnd );
     }
 
-    void CommandStack::recordCodeAddress( const Command& cmd )
+    void CommandStack::execute( const Command& cmd, bool bUndo )
     {
-        const void* arrCode[] = { cmd._undo.getCodeAddress(), cmd._redo.getCodeAddress() };
-        for ( const void* pCode : arrCode )
+        if ( cmd._listChild != nullptr )
         {
-            if ( std::find( _listCodeAddress.begin(), _listCodeAddress.end(), pCode ) == _listCodeAddress.end() )
-                _listCodeAddress.push_back( pCode );
+            const vector<Command>& listChild = *cmd._listChild;
+            if ( bUndo )
+            {
+                for ( size_t childIndex = listChild.size(); childIndex > 0; --childIndex )
+                {
+                    execute( listChild[childIndex - 1], true );
+                }
+            }
+            else
+            {
+                for ( const Command& child : listChild )
+                {
+                    execute( child, false );
+                }
+            }
+            return;
         }
+
+        const Delegate<void()>& step = bUndo ? cmd._undo : cmd._redo;
+        if ( step.isBound() )
+            step();
+    }
+
+    bool CommandStack::holdsCodeWithin( const Command& cmd, const void* pBegin, const void* pEnd )
+    {
+        if ( cmd._undo.isCodeWithin( pBegin, pEnd ) || cmd._redo.isCodeWithin( pBegin, pEnd ) )
+            return true;
+        if ( cmd._listChild == nullptr )
+            return false;
+        for ( const Command& child : *cmd._listChild )
+        {
+            if ( holdsCodeWithin( child, pBegin, pEnd ) )
+                return true;
+        }
+        return false;
+    }
+
+    bool CommandStack::isExecutable( const Command& cmd )
+    {
+        const bool bHasBothSteps = cmd._undo.isBound() && cmd._redo.isBound();
+        const bool bIsCompound   = cmd._listChild != nullptr && cmd._listChild->empty() == false;
+        return bHasBothSteps || bIsCompound;
     }
 
     void CommandStack::clear()
     {
         _listCommand.clear();
         _listPendingTransactionCommand.clear();
-        _listCodeAddress.clear();
         _transactionLabel.clear();
         _lastCoalesceKey.clear();
         _index            = 0;
@@ -261,11 +296,8 @@ namespace sw
 
     void CommandStack::jumpTo( size_t targetIndex )
     {
-        // **재진입 플래그를 여기서도 본다. 여기서는 값이 아니라 진행이 걸려 있다.** `push` ·
-        // `pushCoalesce` · `undo` · `redo` 는 모두 `_bIsExecuting` 을 보는데 이 함수만 보지 않았다.
-        // undo/redo 콜백 안에서 `jumpTo` 를 부르면 아래의 `undo()` 가 그 플래그 때문에 **아무것도
-        // 하지 않고 돌아오고**, `_index` 가 줄지 않으므로 `while` 조건이 영원히 참이다.
-        // 틀린 답이 아니라 **멈춘 에디터**가 된다.
+        // 재진입 플래그를 여기서도 본다. undo/redo 콜백 안에서 부르면 아래 `undo()` 가 그 플래그 때문에 아무것도 하지 않아 `_index` 가
+        // 줄지 않고 `while` 이 끝나지 않는다.
         if ( _bIsExecuting )
             return;
 

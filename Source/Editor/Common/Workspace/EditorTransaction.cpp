@@ -10,9 +10,6 @@
 #include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
 
@@ -22,32 +19,15 @@ namespace sw::editor
     {
         struct EditorTransactionInternal
         {
-            /**
-             * @brief Undo 스택입니다. 없으면 nullptr 이므로 **부르는 쪽이 반드시 확인해야 합니다.**
-             * @details `editor::getService<T>()` 는 문서대로 **nullptr 을 반환할 수 있습니다**(로컬 등록도 없고 모듈 서비스 표에도
-             *          없을 때). 그런데 이 파일의 일곱 곳이 그 값을 그대로 `->` 로 따라가고 있었습니다. 커맨드 스택은 `EngineLoop`
-             *          소유라 EditorModule 보다 오래 살고, 종료할 때는 서비스 연결이 먼저 풀립니다. 그 틈에 트랜잭션이 하나라도
-             *          돌면 널 역참조입니다. 바로 아래의 씬 접근이 `getActiveScene()` 로 같은 검사를 한곳에 모아 둔 것과 같은
-             *          모양입니다.
-             */
+            /** @brief Undo 스택입니다. 서비스가 풀린 뒤(종료 · 시험)에는 nullptr 이라 부르는 쪽이 확인합니다. */
             static CommandStack* getCommandStack()
             {
                 return editor::getService<CommandStack>();
             }
 
-            static GameObjectManager* getActiveGameObjectManager()
-            {
-                Scene* pActiveScene = editor::getActiveScene();
-                if ( pActiveScene == nullptr )
-                    return nullptr;
-
-                return pActiveScene->getObjectManager();
-            }
-
             /**
-             * @brief 활성 씬을 dirty 로 표시합니다. 기록할 때와 **되돌리기 · 다시 하기가 씬을 바꿀 때** 부릅니다.
-             * @details 예전에는 기록할 때만 표시해서, 편집 → 저장 → Ctrl+Z 하면 씬이 바뀌었는데도 깨끗하다고 했다 — 그대로 끄거나
-             *          다른 씬을 열면 묻지도 않고 되돌린 상태를 잃었다. 컨텍스트가 없으면(테스트 · 도구) 지역 서비스로 건 워크스페이스에.
+             * @brief 활성 씬을 dirty 로 표시합니다. 기록할 때와 되돌리기 · 다시 하기가 씬을 바꿀 때 부릅니다.
+             * @details 컨텍스트가 없으면(시험 · 도구) 지역 서비스로 건 워크스페이스에 표시합니다.
              */
             static void markActiveSceneDirty()
             {
@@ -57,81 +37,36 @@ namespace sw::editor
                     pWorkspace->markSceneDirty();
             }
 
-            /** @brief 되돌리기 · 다시 하기가 대상 오브젝트를 다시 찾는 열쇠입니다. 기록할 때 적고, 되돌릴 때 `findTargetGameObject` 로 찾습니다. */
-            struct TargetKey
-            {
-                Uuid   _guid;       /**< 워크스페이스 guid 입니다. 다시 만든 오브젝트도 이것으로 찾습니다 */
-                uint64 _objId{ 0 }; /**< 기록할 때의 오브젝트 id 입니다 */
-                string _objName;    /**< 기록할 때의 이름입니다. guid · id 로 못 찾을 때 씁니다 */
-            };
-
-            /** @brief 오브젝트의 열쇠를 적습니다. guid 가 아직 없으면 이때 줍니다. */
-            static TargetKey makeTargetKey( const GameObject* pObj )
+            /**
+             * @brief 데이터 명령이 오브젝트에 한 일을 에디터 상태에 맞춥니다. 없앨 오브젝트는 선택에서 빼고(파괴는 지연이라 남겨 두면 인스펙터 · 기즈모가
+             *        계속 잡는다), 되살린 오브젝트는 선택하고, 씬을 dirty 로 표시합니다.
+             */
+            static void onObjectEdit( const CommandStack::ObjectEditNotice& notice )
             {
                 EditorContext* pContext = EditorContext::get();
-                TargetKey      key;
-                key._objId   = pObj->getObjectId();
-                key._guid    = ( pContext != nullptr ) ? pContext->getWorkspace().getOrAssignGuid( key._objId ) : Uuid{};
-                key._objName = string{ pObj->getName().c_str() };
-                return key;
-            }
-
-            /** @brief 열쇠로 대상을 찾습니다. guid(삭제 대기가 아닌 것) → id → 이름 순입니다. 매니저가 없으면 nullptr 입니다. */
-            static GameObject* findTargetGameObject( GameObjectManager* pManager, const TargetKey& key )
-            {
-                if ( pManager == nullptr )
-                    return nullptr;
-
-                if ( key._guid.isNull() == false )
+                GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( notice._objectId ) );
+                if ( pContext != nullptr && pTarget != nullptr )
                 {
-                    EditorContext* pContext = EditorContext::get();
-                    if ( pContext != nullptr )
-                    {
-                        GameObject* pByGuid = pContext->getWorkspace().findGameObjectByGuid( key._guid );
-                        if ( pByGuid != nullptr && pByGuid->isPendingDestroy() == false )
-                            return pByGuid;
-                    }
+                    SelectionManager& selection = pContext->getSelectionManager();
+                    if ( notice._kind == ObjectEditKind::Destroyed && selection.hasObject( pTarget ) )
+                        selection.selectObject( pTarget, SelectionMode::Remove );
+                    else if ( notice._kind == ObjectEditKind::Recreated )
+                        selection.selectObject( pTarget, SelectionMode::Replace );
                 }
-
-                GameObject* pTarget = pManager->findGameObjectById( key._objId );
-                if ( pTarget == nullptr && key._objName.empty() == false )
-                    pTarget = pManager->findGameObjectByName( hashed_string( key._objName.c_str() ) );
-                return pTarget;
-            }
-
-            /**
-             * @brief XML 스냅샷을 오브젝트에 되읽고 씬 계층을 다시 잇습니다. 수정 되돌리기와 삭제 되돌리기(다시 만들기)가 함께 씁니다.
-             * @details 부모는 스냅샷에 적힌 **런타임 id** 로 찾습니다(같은 실행의 스냅샷이고, 지운 오브젝트는 원래 id 로 되살아난다). 예전에는
-             *          이름으로 찾아, 지운 사이 같은 이름의 오브젝트가 생기면(엔진이 프레임마다 만드는 "GameCamera") 자식이 그쪽에 붙었다.
-             */
-            static void loadXmlSnapshot( GameObject* pTarget, const EditorObjectSnapshot& snapshot )
-            {
-                ObjectLoadContext context{};
-                context._pIdentity = &snapshot._identity;
-                // 실패하면 로드가 오브젝트를 읽기 전 상태로 되돌린다 — 되돌리기 하나가 빠졌다고 알린다.
-                if ( ObjectStateSerializer::loadFromXmlString( pTarget, snapshot._xml, context ) == false )
-                    SW_LOG_WARNING( "Undo/redo could not restore '%#' - it is left as it was", pTarget->getName().c_str() );
-            }
-
-            /** @brief 활성 씬에서 대상을 다시 찾아 XML 스냅샷을 되읽습니다. 대상이 없으면 아무것도 하지 않습니다. */
-            static void restoreXmlSnapshot( const TargetKey& key, const EditorObjectSnapshot& snapshot )
-            {
-                GameObject* pTarget = findTargetGameObject( getActiveGameObjectManager(), key );
-                if ( pTarget == nullptr )
-                    return;
-                loadXmlSnapshot( pTarget, snapshot );
                 markActiveSceneDirty();
             }
 
             /**
-             * @brief 기록을 스택에 넣고 활성 씬을 dirty 로 표시합니다. 오브젝트 기록 둘(수정 · 생성/삭제)이 함께 씁니다.
-             * @details 스택이 없어도 **씬은 이미 바뀌었습니다.** 되돌리기 기록만 남기지 못할 뿐이므로 dirty 는 표시합니다.
+             * @brief 기록을 스택에 넣고 활성 씬을 dirty 로 표시합니다.
+             * @details 스택이 없어도 씬은 이미 바뀌었습니다. 되돌리기 기록만 남기지 못할 뿐이므로 dirty 는 표시합니다.
              */
-            static void pushCommand( CommandStack::Command&& cmd )
+            static void pushCommand( CommandStack* pStack, CommandStack::Command&& cmd )
             {
-                CommandStack* pStack = getCommandStack();
                 if ( pStack != nullptr )
+                {
+                    EditorTransaction::bindObjectEditListener( *pStack );
                     pStack->push( std::move( cmd ) );
+                }
                 markActiveSceneDirty();
             }
         };
@@ -164,34 +99,30 @@ namespace sw::editor
         pStack->cancelTransaction();
     }
 
-    EditorObjectSnapshot EditorTransaction::captureSnapshot( const GameObject* pObj )
+    void EditorTransaction::bindObjectEditListener( CommandStack& stack )
     {
-        EditorObjectSnapshot snapshot;
-        if ( pObj == nullptr )
-            return snapshot;
-        snapshot._xml      = ObjectStateSerializer::saveToXmlString( pObj );
-        snapshot._identity = ObjectStateSerializer::captureIdentity( pObj );
-        return snapshot;
+        stack.setObjectEditListener( SW_DELEGATE_FUNCTION( CommandStack::ObjectEditListener, EditorTransactionInternal::onObjectEdit ) );
     }
 
-    void EditorTransaction::recordModify( GameObject* pObj, const EditorObjectSnapshot& before, const EditorObjectSnapshot& after,
+    ObjectSnapshot EditorTransaction::captureSnapshot( const GameObject* pObj )
+    {
+        return ObjectSnapshotCommand::captureSnapshot( pObj );
+    }
+
+    void EditorTransaction::recordModify( GameObject* pObj, const ObjectSnapshot& before, const ObjectSnapshot& after,
                                           string_view label )
     {
         if ( pObj == nullptr || before._xml == after._xml )
             return;
 
-        const EditorTransactionInternal::TargetKey key = EditorTransactionInternal::makeTargetKey( pObj );
-        CommandStack::Command                      cmd{};
-        cmd._label = string{ label };
-        cmd._undo  = [key, beforeSnapshot = before]()
+        CommandStack* pStack        = EditorTransactionInternal::getCommandStack();
+        SceneManager* pSceneManager = editor::getService<SceneManager>();
+        if ( pStack == nullptr || pSceneManager == nullptr )
         {
-            EditorTransactionInternal::restoreXmlSnapshot( key, beforeSnapshot );
-        };
-        cmd._redo = [key, afterSnapshot = after]()
-        {
-            EditorTransactionInternal::restoreXmlSnapshot( key, afterSnapshot );
-        };
-        EditorTransactionInternal::pushCommand( std::move( cmd ) );
+            EditorTransactionInternal::markActiveSceneDirty();
+            return;
+        }
+        EditorTransactionInternal::pushCommand( pStack, ObjectSnapshotCommand::makeModify( *pStack, *pSceneManager, *pObj, before, after, label ) );
     }
 
     void EditorTransaction::recordObjectLifetime( GameObject* pObj, string_view label, ObjectLifetimeEdit edit )
@@ -199,62 +130,14 @@ namespace sw::editor
         if ( pObj == nullptr )
             return;
 
-        EditorContext*                             pContext   = EditorContext::get();
-        const EditorTransactionInternal::TargetKey key        = EditorTransactionInternal::makeTargetKey( pObj );
-        const EditorObjectSnapshot                 snapshot   = captureSnapshot( pObj );
-        const string                               prefabPath = ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( key._objId ) : string{};
-
-        // 오브젝트를 없애는 절차. 선택에서 먼저 빼는 것이 중요하다. 파괴는 지연 큐를 거치므로, 선택에
-        // 남겨 두면 실제로 사라질 때까지 인스펙터 · 기즈모가 그 오브젝트를 계속 대상으로 삼는다.
-        Delegate<void()> destroyStep = SW_DELEGATE_LAMBDA( Delegate<void()>, [key]()
+        CommandStack* pStack        = EditorTransactionInternal::getCommandStack();
+        SceneManager* pSceneManager = editor::getService<SceneManager>();
+        if ( pStack == nullptr || pSceneManager == nullptr )
         {
-            GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
-            if ( pManager == nullptr )
-                return;
-
-            GameObject* pTarget = EditorTransactionInternal::findTargetGameObject( pManager, key );
-            if ( pTarget != nullptr )
-            {
-                EditorContext* pCurrentContext = EditorContext::get();
-                if ( pCurrentContext != nullptr && pCurrentContext->getSelectionManager().hasObject( pTarget ) )
-                    pCurrentContext->getSelectionManager().selectObject( pTarget, SelectionMode::Remove );
-                pManager->destroyObject( pTarget );
-                EditorTransactionInternal::markActiveSceneDirty();
-            }
-        } );
-
-        // 저장해 둔 XML 로 오브젝트를 되살리는 절차. **원래 id 로** 되살린다. 그래야 이 오브젝트와 그 컴포넌트를
-        // 가리키던 핸들(선택 · 다른 기록 · 씬의 활성 카메라)이 그대로 이어진다. guid 도 되돌려 놓아 다음 되돌리기가
-        // 같은 오브젝트를 다시 찾게 한다.
-        Delegate<void()> recreateStep = SW_DELEGATE_LAMBDA( Delegate<void()>, [key, snapshot, prefabPath]()
-        {
-            GameObjectManager* pManager = EditorTransactionInternal::getActiveGameObjectManager();
-            if ( pManager == nullptr )
-                return;
-
-            GameObject* pCreated = pManager->createGameObjectWithId( hashed_string( key._objName.c_str() ), snapshot._identity._objectId );
-            if ( pCreated != nullptr )
-            {
-                EditorContext* pCurrentContext = EditorContext::get();
-                if ( pCurrentContext != nullptr && key._guid.isNull() == false )
-                    pCurrentContext->getWorkspace().setGuid( pCreated->getObjectId(), key._guid );
-                EditorTransactionInternal::loadXmlSnapshot( pCreated, snapshot );
-                if ( pCurrentContext != nullptr )
-                {
-                    pCurrentContext->getWorkspace().setGameObjectPrefabPath( pCreated->getObjectId(), prefabPath );
-                    pCurrentContext->getSelectionManager().selectObject( pCreated, SelectionMode::Replace );
-                }
-                EditorTransactionInternal::markActiveSceneDirty();
-            }
-        } );
-
-        // **여기가 이 함수의 전부다.** 생성과 삭제는 같은 두 절차를 반대 순서로 잇는 것이다.
-        CommandStack::Command cmd{};
-        cmd._label                         = string{ label };
-        const bool bUndoRecreatesTheObject = ( edit == ObjectLifetimeEdit::Destroyed );
-        cmd._undo                          = bUndoRecreatesTheObject ? recreateStep : destroyStep;
-        cmd._redo                          = bUndoRecreatesTheObject ? destroyStep : recreateStep;
-        EditorTransactionInternal::pushCommand( std::move( cmd ) );
+            EditorTransactionInternal::markActiveSceneDirty();
+            return;
+        }
+        EditorTransactionInternal::pushCommand( pStack, ObjectSnapshotCommand::makeLifetime( *pStack, *pSceneManager, pObj, edit, label ) );
     }
 
     void EditorTransaction::recordCreation( GameObject* pObj, string_view label )

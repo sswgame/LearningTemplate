@@ -96,7 +96,7 @@ namespace sw::editor
         float32                 _farZ;
         CameraControlMode       _cameraMode;
         ViewportToolbarSettings _toolbarSettings;
-        EditorObjectSnapshot    _gizmoUndoBefore;
+        ObjectSnapshot          _gizmoUndoBefore;
         GameObjectHandle        _gizmoObject; ///< `_gizmoUndoBefore` 의 대상. 드래그가 여러 프레임을 넘기므로 핸들로 듭니다
         /**
          * @brief 이 프레임의 오브젝트 스냅샷 (용량 재사용). 시각화와 통계 오버레이가 함께 봅니다.
@@ -104,13 +104,13 @@ namespace sw::editor
          *          예전에는 통계 오버레이가 **개수만 알려고** 한 번, 디버그 시각화가 한 번 그렇게
          *          불러서 프레임마다 씬을 두 번 복사했습니다.
          */
-        vector<GameObject*>          _listSceneObject;
-        vector<GameObjectHandle>     _listGizmoObject; ///< 그룹 기즈모 대상. 드래그하는 동안 여러 프레임을 넘기므로 핸들로 듭니다
-        vector<EditorObjectSnapshot> _listGizmoUndo;
-        vector<float4x4>             _listGizmoRelativeWorld;
-        float32                      _arrGizmoGroupMatrix[16];
-        uint8                        _bRulerActive   : 1;
-        uint8                        _bGizmoTracking : 1;
-        [[maybe_unused]] uint8       _reservedGizmo  : 6;
+        vector<GameObject*>      _listSceneObject;
+        vector<GameObjectHandle> _listGizmoObject; ///< 그룹 기즈모 대상. 드래그하는 동안 여러 프레임을 넘기므로 핸들로 듭니다
+        vector<ObjectSnapshot>   _listGizmoUndo;
+        vector<float4x4>         _listGizmoRelativeWorld;
+        float32                  _arrGizmoGroupMatrix[16];
+        uint8                    _bRulerActive   : 1;
+        uint8                    _bGizmoTracking : 1;
+        [[maybe_unused]] uint8   _reservedGizmo  : 6;
     };
 } // namespace sw::editor

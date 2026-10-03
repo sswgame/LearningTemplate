@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Delegate/Delegate.h"
+#include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -53,7 +54,7 @@ namespace
         EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, []() {} ),
                                  SW_DELEGATE_LAMBDA( Delegate<void()>, []() {} ),
                                  "Probe push" );
-        EditorTransaction::recordModify( pTarget, EditorObjectSnapshot{ "<before/>", {} }, EditorObjectSnapshot{ "<after/>", {} }, "Probe modify" );
+        EditorTransaction::recordModify( pTarget, ObjectSnapshot{ "<before/>", {} }, ObjectSnapshot{ "<after/>", {} }, "Probe modify" );
         EditorTransaction::recordCreation( pTarget, "Probe create" );
         EditorTransaction::recordDestruction( pTarget, "Probe destroy" );
         EditorTransaction::endTransaction();
@@ -132,7 +133,7 @@ SW_TEST_CASE( EditorTransactionTest, RecordModifyRunsToTheEndWithoutStack )
     manager.mergePendingAdds();
 
     // 앞뒤가 같으면 애초에 기록하지 않는 계약이므로 일부러 다르게 준다.
-    EditorTransaction::recordModify( pObject, EditorObjectSnapshot{ "<a/>", {} }, EditorObjectSnapshot{ "<b/>", {} }, "Probe" );
+    EditorTransaction::recordModify( pObject, ObjectSnapshot{ "<a/>", {} }, ObjectSnapshot{ "<b/>", {} }, "Probe" );
 }
 
 /**
@@ -274,9 +275,9 @@ SW_TEST_CASE( EditorTransactionTest, ComponentHandleSurvivesModifyUndo )
     pManager->mergePendingAdds();
     const ComponentHandle componentHandle = pSceneComp->getHandle();
 
-    const EditorObjectSnapshot before = EditorTransaction::captureSnapshot( pObj );
+    const ObjectSnapshot before = EditorTransaction::captureSnapshot( pObj );
     pObj->setName( hashed_string( "After" ) );
-    const EditorObjectSnapshot after = EditorTransaction::captureSnapshot( pObj );
+    const ObjectSnapshot after = EditorTransaction::captureSnapshot( pObj );
     EditorTransaction::recordModify( pObj, before, after, "Rename" );
 
     stack.undo();
@@ -483,4 +484,65 @@ SW_TEST_CASE( EditorTransactionTest, RemovingAComponentCanBeUndone )
     GameObject* pRestoredOwner = pManager->findGameObjectByName( hashed_string( "ComponentOwner" ) );
     SW_ASSERT_NOT_NULL( pRestoredOwner );
     SW_EXPECT_TRUE( pRestoredOwner->getComponent<BoxCollider2DComponent>() != nullptr );
+}
+
+/**
+ * @brief [EditorTransactionTest] 에디터 코드를 내려도(핫 리로드) 오브젝트 편집은 되돌릴 수 있고, 문서 편집(모듈 코드)만 떨어진다
+ * @details 에디터 코드가 든 이미지(이 시험 실행 파일 — 에디터 소스를 함께 컴파일한다)의 범위로 스택을 훑는다. `EditorTransaction` 이 기록한 오브젝트
+ *          편집은 엔진 데이터 명령이라 남아 같은 상태로 오가야 하고, `EditorTransaction::push` 의 람다(패널 코드)는 떨어져야 한다. 알림 처리기도
+ *          이 이미지의 코드라 떨어지고, 다시 걸면(새 모듈의 initialize) 리로드 전의 명령도 씬을 dirty 로 만든다.
+ */
+SW_TEST_CASE( EditorTransactionTest, ObjectEditsSurviveReleasingTheEditorCode )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "ReloadProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+    SW_ASSERT_NOT_NULL( pManager );
+
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+    SelectionManager          selection;
+    EditorWorkspace           workspace{ &selection };
+    ScopedWorkspaceService    scopedWorkspace{ workspace };
+
+    GameObject* pTarget = pManager->createGameObject( hashed_string( "ReloadTarget" ) );
+    SW_ASSERT_NOT_NULL( pTarget );
+    pManager->mergePendingAdds();
+    const uint64 targetId = pTarget->getObjectId();
+
+    const ObjectSnapshot beforeRename = EditorTransaction::captureSnapshot( pTarget );
+    SW_ASSERT_TRUE( EditorSceneCommands::rename( pTarget, "ReloadRenamed" ) );
+    const ObjectSnapshot afterRename = EditorTransaction::captureSnapshot( pManager->findGameObjectById( targetId ) );
+    int32                documentValue{ 0 };
+    EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [&documentValue]()
+    { documentValue = 0; } ),
+                             SW_DELEGATE_LAMBDA( Delegate<void()>, [&documentValue]()
+    { documentValue = 1; } ),
+                             "Document edit" );
+    SW_ASSERT_EQUAL( size_t( 2 ), stack.getCommandCount() );
+
+    const void* pBegin{ nullptr };
+    const void* pEnd{ nullptr };
+    SW_ASSERT_TRUE( FileUtil::findLoadedImageRange( reinterpret_cast<const void*>( &EditorTransaction::captureSnapshot ), pBegin, pEnd ) );
+    SW_EXPECT_EQUAL( 1u, stack.releaseCodeWithin( pBegin, pEnd ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), stack.getCommandCount() );
+    SW_EXPECT_STREQ( "Rename GameObject", stack.peekUndoLabel().c_str() );
+
+    // 처리기가 떨어졌으므로 되돌려도 dirty 는 찍히지 않는다 — 새 모듈이 다시 걸어야 한다.
+    workspace.clearSceneDirty();
+    stack.undo();
+    SW_EXPECT_FALSE( workspace.isSceneDirty() );
+    GameObject* pAfterUndo = pManager->findGameObjectById( targetId );
+    SW_ASSERT_NOT_NULL( pAfterUndo );
+    SW_EXPECT_TRUE( EditorTransaction::captureSnapshot( pAfterUndo )._xml == beforeRename._xml );
+
+    EditorTransaction::bindObjectEditListener( stack );
+    stack.redo();
+    SW_EXPECT_TRUE( workspace.isSceneDirty() );
+    GameObject* pAfterRedo = pManager->findGameObjectById( targetId );
+    SW_ASSERT_NOT_NULL( pAfterRedo );
+    SW_EXPECT_TRUE( EditorTransaction::captureSnapshot( pAfterRedo )._xml == afterRename._xml );
+    SW_EXPECT_EQUAL( 0, documentValue );
 }

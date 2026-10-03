@@ -25,6 +25,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Popups/EditorPopupManager.h"
 #include "Editor/Viewport/EditorCamera.h"
@@ -79,6 +80,25 @@ namespace sw::editor
                 SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
                 if ( pPipeline->loadFromXmlFile( pEngineData->_defaultForwardPipeline ) == false )
                     SW_LOG_WARNING( "Splash: could not read %#", pEngineData->_defaultForwardPipeline.c_str() );
+            }
+
+            /**
+             * @brief 이 모듈이 Undo 스택에 넣은 모듈 명령(패널 람다 · 문서 편집)과 알림 처리기를 뗍니다. 오브젝트 편집(엔진 데이터 명령)은 남습니다.
+             * @details 스택은 엔진 소유라 이 모듈보다 오래 산다. 모듈 명령을 남긴 채 내려가면 리로드 뒤 Ctrl+Z 가 언맵된 코드로 뛰고, 종료할 때는
+             *          델리게이트 소멸자(`Delegate::_managerFunc`)가 그리로 뛴다. 범위는 이 함수가 든 이미지다.
+             */
+            static void releaseModuleUndoCommands()
+            {
+                CommandStack* pCommandStack = editor::getService<CommandStack>();
+                const void*   pBegin{ nullptr };
+                const void*   pEnd{ nullptr };
+                if ( pCommandStack == nullptr ||
+                     FileUtil::findLoadedImageRange( reinterpret_cast<const void*>( &ImGuiEditorInternal::releaseModuleUndoCommands ), pBegin, pEnd ) == false )
+                    return;
+                pCommandStack->setObjectEditListener( {} );
+                const uint32 droppedCount = pCommandStack->releaseCodeWithin( pBegin, pEnd );
+                if ( droppedCount > 0 )
+                    SW_LOG_INFO( "Dropped %# undo commands that run editor module code; scene edits stay undoable", droppedCount );
             }
         };
     } // namespace
@@ -248,6 +268,10 @@ namespace sw::editor
 
             _editorContext->getPanelManager().registerDefaultPanels();
             EditorCommandGui::registerDefaults();
+            // 리로드 전에 기록한 오브젝트 편집도 되돌리면 이 모듈이 선택 · 씬 dirty 를 맞춘다.
+            CommandStack* pCommandStack = editor::getService<CommandStack>();
+            if ( pCommandStack != nullptr )
+                EditorTransaction::bindObjectEditListener( *pCommandStack );
             EditorRegistryDump::dumpIfRequested();
             _dockLayout.loadPanelVisibility();
 
@@ -324,18 +348,8 @@ namespace sw::editor
         if ( pActiveWindow != nullptr )
             pActiveWindow->setCloseQueryHandler( {} );
 
-        /**
-         * Undo 스택은 **엔진이 소유**하고(EngineLoop::_commandStack) 이 모듈보다 오래 산다. 그런데 거기에 쌓는 것은 모두
-         * 에디터다. `EditorTransaction` 이 넣는 커맨드는 패널의 `this` 를 잡은 **람다** 델리게이트이고, 그 람다의 코드와
-         * 소멸자(`Delegate::_managerFunc`)는 EditorModule.dll 안에 있다. 그래서 비우지 않고 내려가면:
-         *   - 핫 리로드 뒤 Ctrl+Z 가 이미 언맵된 옛 이미지의 코드를 부른다.
-         *   - 종료할 때는 App 이 모듈을 먼저 내리고(App::shutdown → ModuleHost) 그다음에 `_commandStack` 을 파괴하므로,
-         *     델리게이트 소멸자가 언맵된 DLL 로 점프한다.
-         * 넣은 쪽이 치운다. 에디터 밖에서 이 스택에 push 하는 코드는 없다(PlaySession 도 상태가 바뀔 때마다 같은 이유로 비운다).
-         */
-        CommandStack* pCommandStack = editor::getService<CommandStack>();
-        if ( pCommandStack != nullptr )
-            pCommandStack->clear();
+        // Undo 스택에서 이 모듈의 코드를 쥔 명령만 뗀다. 오브젝트 편집은 엔진 데이터 명령이라 리로드 뒤에도 되돌릴 수 있다.
+        ImGuiEditorInternal::releaseModuleUndoCommands();
 
         // 기다리지 않는다. 여기로 오는 경로(ModuleHost::suspendModules)는 이미 drainRenderWorkers 로 렌더 워커를 비운 뒤라
         // 기다릴 상대가 없다.

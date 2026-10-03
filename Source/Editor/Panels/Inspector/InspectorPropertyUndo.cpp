@@ -18,9 +18,9 @@ namespace sw::editor
         /** @brief 편집이 시작된 위젯 하나의 "편집 전" 스냅샷입니다. 대상은 위젯이 풀릴 때까지 여러 프레임을 넘기므로 핸들로 듭니다. */
         struct PendingEdit
         {
-            EditorObjectSnapshot _before;
-            GameObjectHandle     _target;
-            string               _label;
+            ObjectSnapshot   _before;
+            GameObjectHandle _target;
+            string           _label;
         };
 
         /**
@@ -55,9 +55,9 @@ namespace sw::editor
             if ( iter == s_mapPending.end() )
                 return;
 
-            GameObject*                pTarget       = editor::findGameObject( iter->second._target );
-            const EditorObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pTarget );
-            const string               label         = string( "Edit " ) + iter->second._label;
+            GameObject*          pTarget       = editor::findGameObject( iter->second._target );
+            const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pTarget );
+            const string         label         = string( "Edit " ) + iter->second._label;
             EditorTransaction::recordModify( pTarget, iter->second._before, afterSnapshot, label );
             s_mapPending.erase( iter );
         }

@@ -736,45 +736,107 @@ SW_TEST_CASE( EditorCommandStackTest, SingleCommandTransactionKeepsTheTransactio
     SW_EXPECT_STREQ( "Move 3 objects", stack.peekUndoLabel().c_str() );
 }
 
-/**
- * @brief [EditorCommandStackTest] releaseCodeWithin 은 트랜잭션에 싸인 명령의 코드도 보고, 들어 있으면 스택을 통째로 비운다
- * @details 트랜잭션은 안쪽 명령을 엔진 쪽 람다 하나로 싸서, 쌓인 명령의 undo · redo 만 보면 안쪽이 보이지 않는다. 에디터 Undo 는 거의
- *          전부 트랜잭션이라, 들어올 때 코드 주소를 적어 두지 않으면 핫 리로드 뒤 Ctrl+Z 가 내려간 이미지로 뛴다. 코드가 없는 범위는
- *          스택을 건드리지 않는다.
- */
-SW_TEST_CASE( EditorCommandStackTest, ReleaseCodeWithinSeesCommandsInsideATransaction )
+namespace
 {
-    CommandStack stack;
-    int32        value{ 0 };
+    // 아래 케이스가 명령마다 다는 함수들이다. 몸통을 서로 다르게 둔다 — 같으면 링커가 접어 스텁 주소가 겹칠 수 있다.
+    int32 s_releaseProbeValue{ 0 };
 
-    CommandStack::Command first;
-    first._label = "first";
-    first._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-     { value += 1; } );
-    first._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-     { value -= 1; } );
-    CommandStack::Command second;
-    second._label            = "second";
-    second._redo             = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-                { value += 10; } );
-    second._undo             = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
-                { value -= 10; } );
-    const uint8* pSecondUndo = static_cast<const uint8*>( second._undo.getCodeAddress() );
+    void redoKeptFirst() { s_releaseProbeValue += 1; }
+    void undoKeptFirst() { s_releaseProbeValue -= 1; }
+    void redoPairInner() { s_releaseProbeValue += 10; }
+    void undoPairInner() { s_releaseProbeValue -= 10; }
+    void redoPairModule() { s_releaseProbeValue += 100; }
+    void undoPairModule() { s_releaseProbeValue -= 100; }
+    void redoKeptLast() { s_releaseProbeValue += 1000; }
+    void undoKeptLast() { s_releaseProbeValue -= 1000; }
+    void onReleaseProbeEdit( const sw::CommandStack::ObjectEditNotice& ) { s_releaseProbeValue += 10000; }
 
-    stack.beginTransaction( "pair" );
+    sw::CommandStack::Command makeFunctionCommand( const utf8* pLabel, void ( *pfnRedo )(), void ( *pfnUndo )() )
+    {
+        sw::CommandStack::Command cmd;
+        cmd._label = pLabel;
+        cmd._redo  = sw::Delegate<void()>::create( pfnRedo );
+        cmd._undo  = sw::Delegate<void()>::create( pfnUndo );
+        return cmd;
+    }
+
+    /** @brief 델리게이트 스텁 하나만 담는 범위입니다 — 그 스텁을 만든 명령만 "내려가는 모듈의 코드" 가 됩니다. */
+    template <typename TDelegate>
+    void makeStubRange( const TDelegate& delegate, const uint8*& pOutBegin, const uint8*& pOutEnd )
+    {
+        pOutBegin = static_cast<const uint8*>( delegate.getCodeAddress() );
+        pOutEnd   = pOutBegin + 1;
+    }
+} // namespace
+
+/**
+ * @brief [EditorCommandStackTest] releaseCodeWithin 은 그 코드를 쥔 명령만 떼고, 나머지 명령과 현재 위치는 그대로 둔다
+ * @details 에디터 모듈이 핫 리로드로 내려가도 오브젝트 편집(엔진 데이터 명령)은 되돌릴 수 있어야 한다 — 내려가는 모듈의 코드를 쥔 명령만 뗀다.
+ *          트랜잭션 묶음은 안쪽 하나가 걸리면 통째로 뗀다(반쪽 트랜잭션을 되돌리지 않는다). 되돌린 것 · 아직인 것의 경계(현재 위치)도 남은 명령
+ *          기준으로 그대로여야 한다. 그 범위의 알림 처리기도 뗀다.
+ */
+SW_TEST_CASE( EditorCommandStackTest, ReleaseCodeWithinDropsOnlyTheCommandsHoldingThatCode )
+{
+    sw::CommandStack stack;
+    s_releaseProbeValue = 0;
+
+    sw::CommandStack::Command first = makeFunctionCommand( "first", &redoKeptFirst, &undoKeptFirst );
+    first._redo();
     stack.push( std::move( first ) );
-    stack.push( std::move( second ) );
+
+    // 모듈 코드를 쥔 명령 하나가 섞인 트랜잭션. 스텁은 함수마다 따로 인스턴스화된다(`create<Function>`).
+    sw::CommandStack::Command pairInner = makeFunctionCommand( "inner", &redoPairInner, &undoPairInner );
+    sw::CommandStack::Command pairModule;
+    pairModule._label = "module";
+    pairModule._redo  = SW_DELEGATE_FUNCTION( sw::Delegate<void()>, redoPairModule );
+    pairModule._undo  = SW_DELEGATE_FUNCTION( sw::Delegate<void()>, undoPairModule );
+    const uint8* pModuleBegin{ nullptr };
+    const uint8* pModuleEnd{ nullptr };
+    makeStubRange( pairModule._undo, pModuleBegin, pModuleEnd );
+    stack.beginTransaction( "pair" );
+    stack.push( std::move( pairInner ) );
+    stack.push( std::move( pairModule ) );
     stack.endTransaction();
-    SW_ASSERT_EQUAL( size_t{ 1 }, stack.getCommandCount() );
-    // 쌓인 것은 묶은 명령 하나이고, 그 undo 는 엔진 람다다 — 안쪽 스텁이 거기 보이지 않는다는 것이 이 테스트의 전제다.
-    SW_EXPECT_FALSE( stack.getCommand( 0 )._undo.isCodeWithin( pSecondUndo, pSecondUndo + 1 ) );
+    s_releaseProbeValue += 110;
 
-    SW_EXPECT_EQUAL( 0u, stack.releaseCodeWithin( &value, &value + 1 ) );
-    SW_EXPECT_TRUE( stack.canUndo() );
+    sw::CommandStack::Command last = makeFunctionCommand( "last", &redoKeptLast, &undoKeptLast );
+    last._redo();
+    stack.push( std::move( last ) );
+    SW_ASSERT_EQUAL( size_t{ 3 }, stack.getCommandCount() );
 
-    SW_EXPECT_EQUAL( 1u, stack.releaseCodeWithin( pSecondUndo, pSecondUndo + 1 ) );
+    stack.undo(); // "last" 를 되돌린다 — 위치는 2 (first · pair 가 적용된 상태)
+    SW_ASSERT_EQUAL( 111, s_releaseProbeValue );
+
+    // 알림 처리기 둘: 하나는 떼는 범위 밖, 하나는 안.
+    const sw::CommandStack::ObjectEditListener keptListener = SW_DELEGATE_FUNCTION( sw::CommandStack::ObjectEditListener, onReleaseProbeEdit );
+    stack.setObjectEditListener( keptListener );
+
+    SW_EXPECT_EQUAL( 0u, stack.releaseCodeWithin( &s_releaseProbeValue, &s_releaseProbeValue + 1 ) );
+    SW_EXPECT_EQUAL( size_t{ 3 }, stack.getCommandCount() );
+
+    SW_EXPECT_EQUAL( 1u, stack.releaseCodeWithin( pModuleBegin, pModuleEnd ) );
+    SW_ASSERT_EQUAL( size_t{ 2 }, stack.getCommandCount() );
+    SW_EXPECT_STREQ( "first", stack.getCommand( 0 )._label.c_str() );
+    SW_EXPECT_STREQ( "last", stack.getCommand( 1 )._label.c_str() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCurrentIndex() );
+    SW_EXPECT_STREQ( "first", stack.peekUndoLabel().c_str() );
+    SW_EXPECT_STREQ( "last", stack.peekRedoLabel().c_str() );
+
+    // 남은 명령은 그대로 돈다.
+    stack.redo();
+    SW_EXPECT_EQUAL( 1111, s_releaseProbeValue );
+    stack.undo();
+    stack.undo();
+    SW_EXPECT_EQUAL( 110, s_releaseProbeValue );
     SW_EXPECT_FALSE( stack.canUndo() );
-    SW_EXPECT_EQUAL( size_t{ 0 }, stack.getCommandCount() );
-    // 비운 뒤에는 적어 둔 주소도 없다.
-    SW_EXPECT_EQUAL( 0u, stack.releaseCodeWithin( pSecondUndo, pSecondUndo + 1 ) );
+
+    // 범위 밖 처리기는 남고, 범위 안 처리기는 떼어진다.
+    stack.notifyObjectEdit( sw::CommandStack::ObjectEditNotice{} );
+    SW_EXPECT_EQUAL( 10110, s_releaseProbeValue );
+    const uint8* pListenerBegin{ nullptr };
+    const uint8* pListenerEnd{ nullptr };
+    makeStubRange( keptListener, pListenerBegin, pListenerEnd );
+    SW_EXPECT_EQUAL( 0u, stack.releaseCodeWithin( pListenerBegin, pListenerEnd ) );
+    stack.notifyObjectEdit( sw::CommandStack::ObjectEditNotice{} );
+    SW_EXPECT_EQUAL( 10110, s_releaseProbeValue );
 }

@@ -561,7 +561,7 @@ namespace sw::editor
             // 클릭 없이 시작된 드래그(스냅숏이 없다)는 대상만 기억한다 — 커밋할 "이전" 이 없으니 끝에서 버린다.
             if ( _bGizmoTracking == SW_FALSE && _gizmoObject != pRaw->getHandle() )
             {
-                _gizmoUndoBefore = EditorObjectSnapshot{};
+                _gizmoUndoBefore = ObjectSnapshot{};
                 _gizmoObject     = pRaw->getHandle();
             }
             _bGizmoTracking = SW_TRUE;
@@ -589,7 +589,7 @@ namespace sw::editor
                     EditorSceneCommands::commitModify( pObj, _listGizmoUndo[objectIndex], "Gizmo Transform" );
             }
         }
-        _gizmoUndoBefore = EditorObjectSnapshot{};
+        _gizmoUndoBefore = ObjectSnapshot{};
         _gizmoObject     = GameObjectHandle{};
         _listGizmoObject.clear();
         _listGizmoUndo.clear();

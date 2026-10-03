@@ -9,25 +9,59 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/ModuleCodeHolder.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
-    /** @brief 변경에 대한 Push / Undo / Redo 스택 */
+    /** @brief 되돌리기 · 다시 하기가 오브젝트에 한 일입니다(`CommandStack::ObjectEditNotice`). */
+    enum class ObjectEditKind : uint8
+    {
+        Modified = 0, ///< 상태를 다시 읽었다
+        Recreated,    ///< 원래 id 로 되살렸다
+        Destroyed     ///< 없앤다(지연 파괴 — 알림은 없애기 직전)
+    };
+
+    /**
+     * @class CommandStack
+     * @brief 변경에 대한 Push / Undo / Redo 스택입니다. 엔진(`EngineLoop`)이 소유해 모듈 핫 리로드를 넘어 삽니다.
+     * @details 명령은 둘로 나뉩니다.
+     *          - **데이터 명령** — 코드가 엔진에 있고 나머지는 값(오브젝트 id · 직렬화한 상태)인 명령(`ObjectSnapshotCommand`). 모듈이 내려가도 남습니다.
+     *          - **모듈 명령** — undo · redo 가 모듈 이미지의 코드(람다 · 패널 메서드)인 명령. 그 모듈이 내려가기 전에 `releaseCodeWithin` 이 떼어 냅니다.
+     *          UE `FTransaction`(오브젝트 상태를 직렬화해 기록) · Unity `Undo`(직렬화한 객체 상태)가 코드 리로드를 넘는 것과 같은 모양입니다.
+     */
     class SW_API CommandStack final : public IModuleCodeHolder
     {
     public:
-        /** @brief 레이블과 undo/redo 델리게이트를 담는 한 명령 */
+        /**
+         * @struct Command
+         * @brief 레이블과 undo/redo 델리게이트를 담는 한 명령입니다.
+         * @details 트랜잭션으로 묶인 명령은 `_listChild` 에 안쪽 명령을 그대로 듭니다(undo · redo 는 비어 있고 스택이 차례로 부른다). 안쪽이 보여야
+         *          모듈 코드를 쥔 명령을 가릴 수 있습니다.
+         */
         struct Command
         {
-            string           _label;
-            Delegate<void()> _undo;
-            Delegate<void()> _redo;
+            string                            _label;
+            Delegate<void()>                  _undo;
+            Delegate<void()>                  _redo;
+            shared_ptr<const vector<Command>> _listChild; ///< 트랜잭션의 안쪽 명령(앞에서 뒤로 redo, 뒤에서 앞으로 undo). 묶음이 아니면 nullptr
         };
+
+        /**
+         * @struct ObjectEditNotice
+         * @brief 데이터 명령이 오브젝트에 무엇을 했는지 알리는 내용입니다.
+         */
+        struct ObjectEditNotice
+        {
+            uint64         _objectId{ 0 };
+            ObjectEditKind _kind{ ObjectEditKind::Modified };
+        };
+        /** @brief 에디터가 다는 알림 처리기입니다(선택 갱신 · 씬 dirty). 모듈 코드라 그 모듈이 내려갈 때 떼어집니다. */
+        using ObjectEditListener = Delegate<void( const ObjectEditNotice& )>;
 
         /** @brief 빈 스택으로 시작합니다. 생성자를 .cpp 에 두는 이유는 `IModuleCodeHolder` 의 주의(vtable 의 집)입니다. */
         CommandStack();
 
-        /** @brief 명령 스택에 새로운 명령을 추가합니다. */
+        /** @brief 명령 스택에 새로운 명령을 추가합니다. undo · redo 가 비었거나(트랜잭션 묶음 제외) 실행 중이면 버립니다. */
         void push( Command cmd );
         /** @brief 복합 트랜잭션을 시작합니다. */
         void beginTransaction( string_view label = "" );
@@ -48,7 +82,7 @@ namespace sw
         void undo();
         /** @brief 취소한 명령을 다시 실행합니다. */
         void redo();
-        /** @brief 스택을 비웁니다. */
+        /** @brief 스택을 비웁니다. 알림 처리기는 그대로 둡니다. */
         void clear();
         /** @brief 취소할 명령의 레이블을 반환합니다. */
         const string& peekUndoLabel() const;
@@ -64,31 +98,40 @@ namespace sw
         /** @brief 특정 인덱스 위치로 연속 undo/redo를 실행하여 점프합니다. */
         void jumpTo( size_t targetIndex );
 
+        /** @brief 데이터 명령의 알림 처리기를 답니다. 빈 델리게이트를 넘기면 뗍니다. */
+        void setObjectEditListener( ObjectEditListener listener );
+        /** @brief 데이터 명령이 오브젝트에 한 일을 처리기에 알립니다. 처리기가 없으면 아무것도 하지 않습니다. */
+        void notifyObjectEdit( const ObjectEditNotice& notice ) const;
+
         /**
-         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 명령이 들어왔으면 스택을 **통째로** 비우고, 버린 명령 수를 반환합니다.
-         * @details 핫 리로드가 모듈 이미지를 내리기 전에 부릅니다. 기록은 중간을 뺄 수 없어서(뒤 명령이 앞 명령의 결과를 전제한다) 일부만 떼지
-         *          않습니다. 트랜잭션으로 묶인 명령은 엔진 쪽 람다에 싸여 안쪽이 보이지 않으므로, 들어올 때 본 코드 주소를 따로 적어 둡니다
-         *          (`_listCodeAddress`). 그래서 이미 잘려 나간 명령 때문에 비우는 일은 있어도, 남은 명령을 못 보고 지나치는 일은 없습니다.
+         * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 명령만 떼어 내고, 뗀 명령 수를 반환합니다. 알림 처리기도 그 범위면 뗍니다(수에는 넣지 않는다).
+         * @details 모듈 이미지를 내리기 전에 부릅니다(그 모듈 스스로 · 핫 리로드의 안전망). 트랜잭션 묶음은 안쪽에 하나라도 걸리면 **통째로** 뗍니다
+         *          (트랜잭션의 반쪽만 되돌리지 않는다). 남은 명령의 순서와 현재 위치(되돌린 것 · 아직인 것의 경계)는 그대로입니다. 데이터 명령은 대상
+         *          오브젝트의 상태 전체를 들고 있어, 사이의 명령이 빠져도 그 오브젝트는 같은 상태로 돌아갑니다.
          */
         uint32 releaseCodeWithin( const void* pBegin, const void* pEnd );
 
         /** @brief 보유자 목록의 이름입니다. */
         const utf8* getModuleCodeHolderName() const override { return "undo commands"; }
-        /** @brief `releaseCodeWithin` 입니다. 스택을 비우면 그만이라 이미지를 붙들지 않습니다. */
+        /** @brief `releaseCodeWithin` 입니다. 명령은 떼면 그만이라 이미지를 붙들지 않습니다. */
         uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
     private:
-        /** @brief 들어온 명령의 undo · redo 코드 주소를 `_listCodeAddress` 에 (중복 없이) 적습니다. */
-        void recordCodeAddress( const Command& cmd );
+        /** @brief undo · redo 하나를 실행합니다. 트랜잭션 묶음이면 안쪽 명령을 차례로(undo 는 거꾸로) 실행합니다. */
+        static void execute( const Command& cmd, bool bUndo );
+        /** @brief @p cmd(와 그 안쪽)가 [@p pBegin, @p pEnd) 의 코드를 쥐었는지 봅니다. */
+        static bool holdsCodeWithin( const Command& cmd, const void* pBegin, const void* pEnd );
+        /** @brief 실행할 것이 있는 명령인지 봅니다(undo · redo 둘 다 있거나 트랜잭션 묶음). */
+        static bool isExecutable( const Command& cmd );
 
     private:
-        vector<Command>     _listCommand;
-        vector<Command>     _listPendingTransactionCommand;
-        vector<const void*> _listCodeAddress; ///< 들어온 명령의 코드 주소(중복 없이). 트랜잭션 안쪽 명령도 남는다. `clear` 가 비운다
-        string              _transactionLabel;
-        string              _lastCoalesceKey;
-        string              _empty;
-        size_t              _index;
+        vector<Command>    _listCommand;
+        vector<Command>    _listPendingTransactionCommand;
+        ObjectEditListener _objectEditListener;
+        string             _transactionLabel;
+        string             _lastCoalesceKey;
+        string             _empty;
+        size_t             _index;
         /** @brief 중첩 트랜잭션 깊이입니다. 가장 바깥(0 으로 돌아올 때)에서만 하나의 복합 커맨드로 커밋합니다. */
         uint32 _transactionDepth;
         bool   _bIsExecuting;
