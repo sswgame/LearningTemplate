@@ -265,7 +265,7 @@ namespace sw
         string stampText;
         if ( FileUtil::readTextFile( paths._stampPath, stampText ) == false )
             return false;
-        // 첫 줄은 원본 경로, 다음은 `input <파싱 전에 본 쓰기 시각>` 과 `dep <시각> <경로>` 줄들. 경로 한 줄뿐이면 시각이 없으니 한 번 다시 만든다.
+        // 첫 줄은 원본 경로, 다음은 `input <파싱 전에 본 쓰기 시각>` 과 `dep <시각> <경로>` 줄들. 시각을 읽지 못하는 스탬프는 최신이 아니다 — 다시 만든다.
         GeneratedFilesInternal::StampRecord record;
         if ( GeneratedFilesInternal::parseStamp( stampText, record ) == false || record._sourcePath != string_view( inputFile ) )
             return false;
