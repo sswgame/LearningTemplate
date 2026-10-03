@@ -8,6 +8,7 @@
 
 #include "Core/Process/CrashHandler.h"
 
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
@@ -15,6 +16,9 @@
 namespace sw
 {
     SW_LOG_CALLER( "Vulkan" );
+
+    static_assert( VulkanRHIApiVersion::makeApiVersion( 1, 3 ) == VK_MAKE_API_VERSION( 0, 1, 3, 0 ),
+                   "VulkanRHIApiVersion::makeApiVersion must encode like VK_MAKE_API_VERSION" );
 
     static const vector<const utf8*> s_listValidationLayers = {
         "VK_LAYER_KHRONOS_validation" };
@@ -94,7 +98,7 @@ namespace sw
         appInfo.applicationVersion = VK_MAKE_VERSION( 1, 0, 0 );
         appInfo.pEngineName        = "SW Engine";
         appInfo.engineVersion      = VK_MAKE_VERSION( 1, 0, 0 );
-        appInfo.apiVersion         = VK_API_VERSION_1_3;
+        appInfo.apiVersion         = VulkanRHIApiVersion::kRequiredApiVersion;
 
         VkInstanceCreateInfo createInfo{};
         createInfo.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -200,6 +204,18 @@ namespace sw
 
         for ( const VkPhysicalDevice& device : devices )
         {
+            // 셰이더는 요구 판(VulkanRHIApiVersion) 타깃의 SPIR-V 로 굽는다. 그보다 낮은 디바이스는 그 모듈을 하나도 받지 못한다.
+            VkPhysicalDeviceProperties candidateProperties{};
+            vkGetPhysicalDeviceProperties( device, &candidateProperties );
+            if ( VulkanRHIApiVersion::isApiVersionSupported( candidateProperties.apiVersion ) == false )
+            {
+                SW_LOG_WARNING( "Skipping Vulkan device '%#': API %#.%# is below the required %#.%# (shaders are SPIR-V for that target)",
+                                candidateProperties.deviceName, VK_API_VERSION_MAJOR( candidateProperties.apiVersion ),
+                                VK_API_VERSION_MINOR( candidateProperties.apiVersion ), VulkanRHIApiVersion::kRequiredMajor,
+                                VulkanRHIApiVersion::kRequiredMinor );
+                continue;
+            }
+
             uint32 queueFamilyCount{ 0 };
             vkGetPhysicalDeviceQueueFamilyProperties( device, &queueFamilyCount, nullptr );
             vector<VkQueueFamilyProperties> queueFamilies( queueFamilyCount );
@@ -239,6 +255,9 @@ namespace sw
                           VK_VERSION_MINOR( properties.apiVersion ), VK_VERSION_PATCH( properties.apiVersion ) );
             CrashHandler::setContextValue( "GPU", arrGpu );
         }
+        if ( _physicalDevice == nullptr )
+            SW_LOG_ERROR( "No Vulkan %#.%# device with a graphics queue that can present to this surface", VulkanRHIApiVersion::kRequiredMajor,
+                          VulkanRHIApiVersion::kRequiredMinor );
         return _physicalDevice != nullptr;
     }
 
@@ -310,16 +329,12 @@ namespace sw
         _bSamplerAnisotropy                                    = availableFeatures.samplerAnisotropy ? 1 : 0;
         _bFillModeNonSolid                                     = availableFeatures.fillModeNonSolid ? 1 : 0;
 
-        // 1.3 기능 구조체는 1.3 디바이스에서만 체인에 넣을 수 있다. 아래 조회 · 생성 양쪽이 같은 판단을 쓴다.
-        VkPhysicalDeviceProperties properties{};
-        vkGetPhysicalDeviceProperties( _physicalDevice, &properties );
-        const bool bHasVulkan13 = properties.apiVersion >= VK_API_VERSION_1_3;
-
+        // pickPhysicalDevice 가 요구 판(1.3) 미만 디바이스를 건너뛰므로 1.3 기능 구조체는 늘 체인에 넣을 수 있다.
         VkPhysicalDeviceVulkan13Features available13{};
         available13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
         VkPhysicalDeviceVulkan12Features available12{};
         available12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-        available12.pNext = bHasVulkan13 ? &available13 : nullptr;
+        available12.pNext = &available13;
         VkPhysicalDeviceFeatures2 features2{};
         features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
         features2.pNext = &available12;
@@ -345,15 +360,18 @@ namespace sw
         _bDrawIndirectCount                = available12.drawIndirectCount ? 1 : 0;
 
         // 셰이더는 -fspv-target-env=vulkan1.3 으로 굽고, 그 타깃에서 DXC 는 HLSL `discard` 를 OpKill 이 아니라
-        // OpDemoteToHelperInvocation 으로 낸다. 이 기능을 켜지 않으면 vkCreateShaderModule 이 검증 오류를 내고
-        // (VUID-VkShaderModuleCreateInfo-pCode-08740) 드라이버가 우연히 돌려 줄 뿐 스펙상 미정의다.
-        // deferredlighting.hlsl · sprite2d.hlsl 의 discard 가 이 경로다.
+        // OpDemoteToHelperInvocation 으로 낸다(deferredlighting.hlsl · sprite2d.hlsl 의 ALPHA_TEST). 이 기능을 켜지 않으면
+        // vkCreateShaderModule 이 검증 오류를 낸다(VUID-VkShaderModuleCreateInfo-pCode-08740). Vulkan 1.3 의 필수 기능이라
+        // 1.3 디바이스에는 늘 있다 — 없다고 답하는 드라이버는 스펙을 어긴 것이라 디바이스를 만들지 않는다.
+        if ( available13.shaderDemoteToHelperInvocation == VK_FALSE )
+        {
+            SW_LOG_ERROR( "Vulkan 1.3 device reports no shaderDemoteToHelperInvocation (a required 1.3 feature) - HLSL discard cannot run" );
+            return false;
+        }
         VkPhysicalDeviceVulkan13Features vulkan13Features{};
         vulkan13Features.sType                          = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-        vulkan13Features.shaderDemoteToHelperInvocation = available13.shaderDemoteToHelperInvocation;
-        vulkan12Features.pNext                          = bHasVulkan13 ? &vulkan13Features : nullptr;
-        if ( bHasVulkan13 && available13.shaderDemoteToHelperInvocation == VK_FALSE )
-            SW_LOG_WARNING( "shaderDemoteToHelperInvocation unavailable - HLSL discard (vulkan1.3 SPIR-V) is undefined on this device" );
+        vulkan13Features.shaderDemoteToHelperInvocation = VK_TRUE;
+        vulkan12Features.pNext                          = &vulkan13Features;
 
         VkDeviceCreateInfo createInfo{};
         createInfo.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferShadow.h"
@@ -8,6 +10,8 @@
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #include "EngineTest/RHIFakeDevice.h"
 
@@ -370,4 +374,64 @@ SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatching
     device._pNativeDevice = nullptr;
     sw::RHINativeHandles noDevice{};
     SW_EXPECT_FALSE( device.queryNativeHandles( noDevice ) );
+}
+
+/**
+ * @brief [VulkanApiVersionTest] 물리 디바이스 선택이 요구 판(셰이더 굽기 타깃) 미만의 디바이스를 거른다.
+ * @details 셰이더는 vulkan1.3 타깃(SPIR-V 1.6)으로 굽는다. 1.2 디바이스는 SPIR-V 1.5 까지만 받으므로 그 디바이스를 고르면 셰이더 모듈 전부가 무효다.
+ *          맨 위 변형 비트는 판 비교에 넣지 않는다.
+ */
+SW_TEST_CASE( VulkanApiVersionTest, DeviceBelowTheShaderTargetIsRejected )
+{
+    using sw::VulkanRHIApiVersion;
+    const uint32 kRequiredMajor = VulkanRHIApiVersion::kRequiredMajor;
+    const uint32 kRequiredMinor = VulkanRHIApiVersion::kRequiredMinor;
+    SW_ASSERT_TRUE( kRequiredMinor > 0u );
+
+    const uint32 belowWithPatch = VulkanRHIApiVersion::makeApiVersion( kRequiredMajor, kRequiredMinor - 1u ) | 0xFFFu;
+    SW_EXPECT_FALSE( VulkanRHIApiVersion::isApiVersionSupported( belowWithPatch ) );
+    SW_EXPECT_FALSE( VulkanRHIApiVersion::isApiVersionSupported( belowWithPatch | ( 1u << 29u ) ) );
+    SW_EXPECT_TRUE( VulkanRHIApiVersion::isApiVersionSupported( VulkanRHIApiVersion::makeApiVersion( kRequiredMajor, kRequiredMinor ) ) );
+    SW_EXPECT_TRUE( VulkanRHIApiVersion::isApiVersionSupported( VulkanRHIApiVersion::makeApiVersion( kRequiredMajor, kRequiredMinor + 1u ) ) );
+}
+
+/**
+ * @brief [VulkanApiVersionTest] 구운 Vulkan SPIR-V 의 판이 디바이스 요구 판의 타깃과 같다.
+ * @details 셰이더 굽기 타깃(`-fspv-target-env`)과 물리 디바이스의 최소 판은 `VulkanRHIApiVersion` 하나에서 나온다. 한쪽만 바꾸거나 다시 굽지 않으면
+ *          디바이스가 받지 못하는 판의 모듈이 남는다. 커밋된 vulkan 폴더 .spv 헤더의 판을 읽어 대조한다.
+ */
+SW_TEST_CASE( VulkanApiVersionTest, BakedVulkanSpirvMatchesTheRequiredApi )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    constexpr uint32 kSpirvMagic     = 0x07230203u;
+    const uint32     expectedVersion = sw::VulkanRHIApiVersion::computeSpirvVersion( sw::VulkanRHIApiVersion::kRequiredMinor );
+    const utf8*      arrDomain[]     = { "engine", "common" };
+
+    uint32 checkedCount{ 0 };
+    for ( const utf8* pDomain : arrDomain )
+    {
+        const sw::string       binDirectory = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), sw::string( pDomain ) + "/shaders/bin/vulkan" );
+        sw::vector<sw::string> listSpirvPath;
+        if ( sw::FileUtil::collectFiles( binDirectory, ".spv", listSpirvPath, false ) == false )
+            continue;
+        for ( const sw::string& spirvPath : listSpirvPath )
+        {
+            sw::vector<uint8> bytes;
+            if ( sw::FileUtil::readFile( spirvPath, bytes ) == false || bytes.size() < 8u )
+            {
+                SW_EXPECT_TRUE_MSG( false, ( spirvPath + ": SPIR-V 헤더를 읽지 못했다" ).c_str() );
+                continue;
+            }
+            uint32 magic{ 0 };
+            uint32 version{ 0 };
+            std::memcpy( &magic, bytes.data(), sizeof( magic ) );
+            std::memcpy( &version, bytes.data() + sizeof( magic ), sizeof( version ) );
+            SW_EXPECT_TRUE_MSG( magic == kSpirvMagic, ( spirvPath + ": SPIR-V 가 아니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( version == expectedVersion, ( spirvPath + ": 디바이스 요구 판과 다른 SPIR-V 판으로 구워졌다 — 다시 구울 것" ).c_str() );
+            ++checkedCount;
+        }
+    }
+    if ( checkedCount == 0 )
+        SW_TEST_SKIP( "No baked Vulkan SPIR-V found (App.exe --bake-shaders)" );
 }

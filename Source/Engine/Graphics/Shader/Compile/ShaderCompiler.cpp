@@ -7,6 +7,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -467,8 +468,14 @@ namespace sw
 
                     if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
                     {
+                        // 타깃 판은 디바이스가 요구하는 최소 판과 같은 값이다(VulkanRHIApiVersion). 이 타깃에서 DXC 는 HLSL `discard` 를
+                        // OpDemoteToHelperInvocation 으로 낸다 — 1.3 디바이스의 필수 기능이다.
+                        static const wstring s_targetEnv = StringUtil::utf8ToUtf16(
+                            ( string( "-fspv-target-env=vulkan" ) + to_string( VulkanRHIApiVersion::kRequiredMajor ) + "." +
+                              to_string( VulkanRHIApiVersion::kRequiredMinor ) )
+                                .c_str() );
                         listArgument.push_back( L"-spirv" );
-                        listArgument.push_back( L"-fspv-target-env=vulkan1.3" );
+                        listArgument.push_back( s_targetEnv.c_str() );
                         listArgument.push_back( L"-fvk-use-dx-position-w" );
                         // cbuffer · StructuredBuffer 를 DX 와 같은 규칙으로 패킹한다. 머티리얼 데이터 원소(g_SwMaterials)를
                         // 엔진이 한 레이아웃으로 채우므로 백엔드마다 stride · 오프셋이 달라지면 안 된다(std430 은 float3 을 16 정렬).
@@ -598,9 +605,9 @@ namespace sw
 
     #if defined( SW_DEBUG )
                             const utf8* pFormatName = ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
-                                                        ? "Vulkan (SPIR-V vulkan1.2)"
+                                                        ? "Vulkan (SPIR-V, Vulkan API target)"
                                                     : ( desc._targetFormat == ShaderTargetFormat::SPIRV_OpenGL )
-                                                        ? "OpenGL (SPIR-V universal1.5)"
+                                                        ? "OpenGL (SPIR-V vulkan1.1)"
                                                         : "D3D12 (DXIL Row-Major)";
                             SW_LOG_TRACE( "Target: %#", pFormatName );
     #endif
