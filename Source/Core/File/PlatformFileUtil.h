@@ -28,7 +28,8 @@ namespace sw
          * @brief 파일을 엽니다. 실패하면 nullptr 입니다.
          * @param pFilePath 널 종료 **UTF-8** 경로. 구분자 정규화는 호출하는 쪽이 먼저 합니다.
          * @param pMode fopen 모드 문자열("rb", "wb", "a" 등)
-         * @details Windows 에서는 UTF-16 으로 바꿔 엽니다(`_wfopen_s`). 좁은 문자 `fopen_s` 는 경로를 **ANSI 코드 페이지**(한국어
+         * @details 다른 프로세스의 읽기 · 쓰기를 막지 않습니다(POSIX `fopen` 과 같다) — 실행 중인 로그 파일을 다른 프로그램이 열 수 있다.
+         *          Windows 에서는 UTF-16 으로 바꿔 엽니다(`_wfsopen`, `_SH_DENYNO`). 좁은 문자 `fopen_s` 는 경로를 **ANSI 코드 페이지**(한국어
          *          Windows 는 CP949)로 해석해, 한글이 들어간 UTF-8 경로를 다른 이름으로 읽었습니다. 읽기(`readRange`)는 이미 UTF-16 으로
          *          열고 있어서, 같은 경로를 쓰기와 읽기가 서로 다른 파일로 봤습니다.
          */

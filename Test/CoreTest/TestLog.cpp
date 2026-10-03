@@ -1,9 +1,16 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/Log/ConsoleLogOutput.h"
+#include "Core/Log/FileLogOutput.h"
 #include "Core/Log/ILogOutput.h"
+#include "Core/Process/CrashContext.h"
 #include "Core/String/StringUtil.h"
 
+#include "TestFramework/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
+
+#include <cstdlib>
 
 SW_LOG_CALLER( "TestLog" );
 
@@ -142,6 +149,30 @@ namespace
 
         sw::vector<sw::string> _listFormatted;
     };
+
+    /** @brief 이 날짜 · 시각의 레코드 하나. 연도를 먼 미래로 두어 실제 로그 파일과 이름이 겹치지 않게 한다. */
+    sw::LogRecord makeProbeRecord( int32 hour, sw::LogLevel level, const utf8* pText )
+    {
+        sw::LogRecord record{};
+        record._formatted = pText;
+        record._year      = 2099;
+        record._month     = 1;
+        record._day       = 2;
+        record._hour      = hour;
+        record._level     = level;
+        return record;
+    }
+
+    /** @brief `FileLogOutput` 이 그 시각에 쓰는 파일의 경로(`LOG_<연>-<월>-<일>-<시>_<세션>.txt`). */
+    sw::string makeProbeLogPath( const sw::FileLogOutput& output, int32 hour )
+    {
+        sw::string fileName{ "LOG_2099-1-2-" };
+        fileName += sw::to_string( hour );
+        fileName += "_";
+        fileName += sw::getCrashSessionId();
+        fileName += ".txt";
+        return sw::FileUtil::joinPath( output.getLogFolderPath(), fileName );
+    }
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -572,4 +603,74 @@ SW_TEST_CASE( LogTest, CallerNamesOfSameNamedFilesStayApart )
     SW_EXPECT_STREQ( "KitCaller", sw::Logger::getCaller( "C:\\proj\\Source\\CallerKit\\SameNamedFile.cpp" ) );
     // 앞부분 · 구분자가 달라도(헤더는 TU 마다 `__FILE__` 의 꼴이 다를 수 있다) 같은 파일이다.
     SW_EXPECT_STREQ( "KitCaller", sw::Logger::getCaller( "../elsewhere/CallerKit/SameNamedFile.cpp" ) );
+}
+
+// ------------------------------------------------------------------------------
+// 2) 출력 장치 — 실제 파일 · 표준 출력
+// ------------------------------------------------------------------------------
+/**
+ * @brief [LogTest] FileLogOutput 은 레코드를 그 시각 · 세션의 파일에 쓰고, 시각이 바뀌면 새 파일을 열며, Error 는 닫기 전에 비워 읽힌다
+ * @details 열기 전의 쓰기는 버린다(파일을 만들지 않는다). 연도를 2099 로 두어 실제 로그 파일과 이름이 겹치지 않게 하고, 끝에 지운다.
+ */
+SW_TEST_CASE( LogTest, FileLogOutputWritesTheFileOfItsHourAndSession )
+{
+    sw::FileLogOutput output;
+    output.write( makeProbeRecord( 3, sw::LogLevel::Info, "dropped before open\n" ) );
+    SW_ASSERT_TRUE( output.open() );
+
+    const sw::string             firstPath  = makeProbeLogPath( output, 3 );
+    const sw::string             secondPath = makeProbeLogPath( output, 4 );
+    const sw::vector<sw::string> listProbePath{ firstPath, secondPath };
+    SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [listProbePath]()
+    {
+        for ( const sw::string& probePath : listProbePath )
+        {
+            (void)sw::FileUtil::removeFile( probePath ); // 없으면 할 일이 없다
+        }
+    } ) );
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( firstPath ), "열기 전에 쓴 줄이 파일을 만들었습니다" );
+
+    output.write( makeProbeRecord( 3, sw::LogLevel::Info, "probe line in hour 3\n" ) );
+    output.write( makeProbeRecord( 4, sw::LogLevel::Error, "probe error in hour 4\n" ) );
+
+    // Error 는 줄마다 비운다 — 쓰는 중인 파일을 닫기 전에 다른 쪽이 열어 읽을 수 있어야 한다(크래시 직전의 Error 가 버퍼에 남지 않게,
+    // 실행 중인 로그를 편집기 · tail 이 열 수 있게).
+    sw::string secondText;
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::readTextFile( secondPath, secondText ), "쓰는 중인 로그 파일을 열지 못했습니다(배타적으로 열었습니까?)" );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( secondText, "probe error in hour 4" ), secondText.c_str() );
+
+    output.close();
+    sw::string firstText;
+    SW_EXPECT_TRUE( sw::FileUtil::readTextFile( firstPath, firstText ) );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( firstText, "probe line in hour 3" ), firstText.c_str() );
+    SW_EXPECT_FALSE_MSG( sw::StringUtil::contains( firstText, "probe error in hour 4" ), "다른 시각의 줄이 섞였습니다" );
+}
+
+/**
+ * @brief [LogTest] 자식 역할: ConsoleLogOutput 으로 표식 한 줄을 쓴다. 그냥 실행하면 건너뛴다.
+ */
+SW_TEST_CASE( LogTest, ConsoleChildRoleWritesAMarker )
+{
+    if ( std::getenv( "SW_TEST_CONSOLE_LOG_CHILD" ) == nullptr )
+        SW_TEST_SKIP( "child only — ConsoleLogOutputReachesStandardOutput launches it" );
+
+    sw::ConsoleLogOutput output;
+    SW_ASSERT_TRUE( output.open() );
+    output.write( makeProbeRecord( 1, sw::LogLevel::Warning, "SW_CONSOLE_LOG_PROBE warning line\n" ) );
+    output.close();
+}
+
+/**
+ * @brief [LogTest] ConsoleLogOutput 이 쓴 줄은 표준 출력으로 나간다 — 자식 프로세스의 출력을 받아 본다
+ */
+SW_TEST_CASE( LogTest, ConsoleLogOutputReachesStandardOutput )
+{
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_TEST_CONSOLE_LOG_CHILD", "1" }
+    };
+    const test::ChildRunResult child = test::runThisExecutableAsChild( "LogTest.ConsoleChildRoleWritesAMarker", arrEnvironment, 60 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE( child._bTimedOut );
+    SW_EXPECT_EQUAL( 0, child._exitCode );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "SW_CONSOLE_LOG_PROBE warning line" ), child.getOutputTail().c_str() );
 }

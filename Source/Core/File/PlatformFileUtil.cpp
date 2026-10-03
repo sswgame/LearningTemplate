@@ -6,6 +6,8 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
+
+    #include <share.h>
 #endif
 
 namespace sw
@@ -26,7 +28,9 @@ namespace sw
             ++modeLength;
         }
         const wstring widePath = StringUtil::utf8ToUtf16( pFilePath );
-        _wfopen_s( &pFile, widePath.c_str(), arrWideMode );
+        // 공유를 막지 않는다(`_SH_DENYNO`) — POSIX `fopen` 과 같다. `_wfopen_s` 는 배타적으로 열어, 엔진이 쓰는 동안 그 로그 파일을
+        // 다른 프로그램(편집기 · tail · 시험)이 열지 못했다.
+        pFile = _wfsopen( widePath.c_str(), arrWideMode, _SH_DENYNO );
 #else
         pFile = fopen( pFilePath, pMode );
 #endif
