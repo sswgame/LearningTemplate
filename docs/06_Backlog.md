@@ -173,6 +173,8 @@ cd build/Ninja-Debug/Bin
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
 
+- **`Test/README.md` 의 "구성마다 도는 케이스 수" 표(2026-10-01 실측)가 낡았다** — 다시 잰다(Debug CoreTest 만 해도 348 개).
+
 
 - **코드 · 문서 29 곳이 옛 백로그의 날짜 항목 · 옛 절 번호를 가리킨다**(`ci.yml:156` · `TargetRules.cmake:51` · `GameEvents.h:12` "1-0c" · `docs/07` "1-0e" ·
   `FrameRendererCompute.cpp` "백로그 1-4" 등). 주석 정리(현재형 핵심만)와 함께 고친다 — 날짜 사연은 지우고, 남길 지식은 이 문서 3절 위치나
@@ -309,6 +311,11 @@ cd build/Ninja-Debug/Bin
   Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest`, `Test/TestFramework/TestBench.h`.
 
 ### 3-2. 검증 · 시험 쓰기
+
+- **CoreTest 는 엔진을 쓰지 않는다** — include 경로로는 막을 수 없다(`TestFramework` 가 Engine 을 PUBLIC 링크, `TestFramework.h` → `EngineMinimal.h`).
+  `CheckTestSuites` 규칙 6 이 CoreTest 파일의 직접 Engine · GameFramework · Editor include 와 `engine::` 호출을 막는다. 엔진 타입이 필요하면 지역 대역을 쓰거나 EngineTest 에.
+- **레이어 때문에 지금 자리가 가장 낮은 합법 자리인 파일 넷**(`SpriteClipCache` · `PackCompressionUtil` · `ObjectSnapshotCommand` · `GpuLight.h`)은 README 에
+  이유가 있다 — 다시 "잘못 놓였다" 로 옮기지 말 것.
 
 - **호스트 스위트 케이스는 예상 밖 `[Error]` 로그 하나로 진다** — 아직 못 고친 엔진 Error 는 `SW_TEST_KNOWN_ERROR_LOG( 스위트, 문구, 이유 )` 로만 허용하고, 고치면 그 줄을
   지운다(실행 끝에 남은 선언이 출력된다). 골든 이미지는 `AppSmokeTest.BenchFrameMatchesGoldenImage`(`Test/AppTest/Golden`, `SW_UPDATE_GOLDEN=1` 로 다시 뜬다).
