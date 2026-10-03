@@ -117,6 +117,57 @@ namespace sw
                 return StringUtil::computeHash64( reinterpret_cast<const utf8*>( normalizedByte.data() ), normalizedByte.size(), false );
             }
 
+            /** @brief 스탬프 한 줄의 원천입니다 — 키와 그 소스의 절대 경로입니다. */
+            struct StampedSource
+            {
+                string _key;
+                string _absPath;
+            };
+
+            /**
+             * @brief 스탬프가 볼 소스를 모읍니다. 자기 도메인의 `.hlsl`(@p bHeadersOnly 가 아니면) · `.hlsli` 와, 다른 include 루트 도메인
+             *        (`ShaderBaker::kArrIncludeRootDomain`)의 `.hlsli` 입니다.
+             * @details 셰이더는 자기 폴더 밖 include 루트(engine · common)의 헤더도 include 한다. 자기 도메인만 보면 engine 헤더를 고쳐도
+             *          common 셰이더가 "최신" 으로 남는다. 다른 도메인 헤더의 키는 `<도메인>:<상대 경로>` 다(자기 키에는 ':' 가 없다).
+             *          `CookAssets.py` 의 `collectStampedSourceHashesInternal` 이 같은 규칙이다.
+             */
+            static void collectStampedSources( const string& shadersDir, bool bHeadersOnly, vector<StampedSource>& outListSource )
+            {
+                outListSource.clear();
+                vector<string> listOwn;
+                if ( bHeadersOnly == false )
+                    FileUtil::collectFiles( shadersDir, ".hlsl", listOwn, true );
+                FileUtil::collectFiles( shadersDir, ".hlsli", listOwn, true );
+                for ( const string& sourcePath : listOwn )
+                {
+                    const string normSource = FileUtil::normalizeSeparators( sourcePath );
+                    if ( normSource.find( "/bin/" ) != string::npos )
+                        continue;
+                    string key = makeStampKey( normSource, shadersDir );
+                    if ( key.empty() == false )
+                        outListSource.push_back( StampedSource{ std::move( key ), normSource } );
+                }
+
+                const string ownDirLower = StringUtil::toLower( shadersDir.c_str() );
+                for ( const utf8* pDomain : ShaderBaker::kArrIncludeRootDomain )
+                {
+                    const string rootDir = FileUtil::normalizeSeparators( ResourceUtil::getDomainFolderPath( pDomain, "shaders" ) );
+                    if ( rootDir.empty() || StringUtil::toLower( rootDir.c_str() ) == ownDirLower )
+                        continue;
+                    vector<string> listHeader;
+                    FileUtil::collectFiles( rootDir, ".hlsli", listHeader, true );
+                    for ( const string& headerPath : listHeader )
+                    {
+                        const string normHeader = FileUtil::normalizeSeparators( headerPath );
+                        if ( normHeader.find( "/bin/" ) != string::npos )
+                            continue;
+                        const string relKey = makeStampKey( normHeader, rootDir );
+                        if ( relKey.empty() == false )
+                            outListSource.push_back( StampedSource{ string( pDomain ) + ":" + relKey, normHeader } );
+                    }
+                }
+            }
+
             /** @brief `bake.stamp` 한 장을 읽은 결과입니다. */
             struct StampInfo
             {
@@ -169,16 +220,14 @@ namespace sw
                     }
                 }
 
-                // 공유 헤더는 어느 셰이더가 무엇을 include 하는지 파싱하지 않고 **모두** 본다.
-                // 넉넉하게 굽는 쪽이 안전하다(과거 타임스탬프 판정과 같은 정책).
+                // 헤더는 어느 셰이더가 무엇을 include 하는지 파싱하지 않고 include 루트의 것을 **모두** 본다. 넉넉하게 굽는 쪽이 안전하다.
                 info._bHeadersCurrent = info._mapHash.empty() == false;
-                vector<string> listHeader;
-                FileUtil::collectFiles( shadersDir, ".hlsli", listHeader, true );
-                for ( const string& headerPath : listHeader )
+                vector<StampedSource> listHeader;
+                collectStampedSources( shadersDir, true, listHeader );
+                for ( const StampedSource& header : listHeader )
                 {
-                    const string rel  = makeStampKey( headerPath, shadersDir );
-                    const auto   iter = info._mapHash.find( rel );
-                    if ( iter == info._mapHash.end() || iter->second != computeContentHash( headerPath ) )
+                    const auto iter = info._mapHash.find( header._key );
+                    if ( iter == info._mapHash.end() || iter->second != computeContentHash( header._absPath ) )
                     {
                         info._bHeadersCurrent = false;
                         break;
@@ -215,32 +264,24 @@ namespace sw
                 if ( shadersDir.empty() )
                     return;
 
-                vector<string> listSource;
-                FileUtil::collectFiles( shadersDir, ".hlsl", listSource, true );
-                FileUtil::collectFiles( shadersDir, ".hlsli", listSource, true );
+                vector<StampedSource> listSource;
+                collectStampedSources( shadersDir, false, listSource );
 
                 vector<string> listLine;
                 listLine.reserve( listSource.size() );
-                for ( const string& sourcePath : listSource )
+                for ( const StampedSource& source : listSource )
                 {
-                    const string normSource = FileUtil::normalizeSeparators( sourcePath );
-                    if ( normSource.find( "/bin/" ) != string::npos )
-                        continue;
-                    if ( normSource.size() <= shadersDir.size() + 1 )
-                        continue;
-                    if ( pFailedSource != nullptr && pFailedSource->find( normSource ) != pFailedSource->end() )
+                    if ( pFailedSource != nullptr && pFailedSource->find( source._absPath ) != pFailedSource->end() )
                         continue; // 이번에 굽지 못했다 — 최신이 아니다
 
-                    // 해싱과 키 만들기는 **판정 쪽과 같은 함수**를 쓴다. 스탬프와 판정이 다른 규칙을
-                    // 쓰던 것이 이 파일이 고치는 버그였다. 줄 끝 정규화 사연은 computeContentHash 주석에 있다.
-                    const uint64 hash    = computeContentHash( normSource );
-                    const string relPath = makeStampKey( normSource, shadersDir );
-                    if ( hash == 0 || relPath.empty() )
+                    // 해싱과 키 만들기는 **판정 쪽과 같은 함수**를 쓴다(스탬프와 판정이 다른 규칙을 쓰면 낡은 산출물이 "최신" 이 된다).
+                    const uint64 hash = computeContentHash( source._absPath );
+                    if ( hash == 0 )
                         continue;
 
                     StringBuilder<constant::kMaxBuffer256> sb;
                     sb.appendFormat( "%#", Fmt( hash, Format( 16, Format::Padding::Zero ).hex() ) );
-                    sb.append( ' ' ).append( relPath );
+                    sb.append( ' ' ).append( source._key );
                     listLine.push_back( string( sb.c_str(), sb.size() ) );
                 }
 

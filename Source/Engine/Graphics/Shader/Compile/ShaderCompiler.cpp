@@ -30,13 +30,13 @@ namespace sw
                 if ( shaderDir.empty() == false )
                     outListDir.push_back( FileUtil::normalizeSeparators( shaderDir ) );
 
-                const string engineShaders = ResourceUtil::getDomainFolderPath( "engine", "shaders" );
-                if ( engineShaders.empty() == false )
-                    outListDir.push_back( engineShaders );
-
-                const string commonShaders = ResourceUtil::getDomainFolderPath( "common", "shaders" );
-                if ( commonShaders.empty() == false )
-                    outListDir.push_back( commonShaders );
+                // 베이크 스탬프도 같은 표의 헤더를 본다(`ShaderBaker::kArrIncludeRootDomain`).
+                for ( const utf8* pDomain : ShaderBaker::kArrIncludeRootDomain )
+                {
+                    const string domainShaders = ResourceUtil::getDomainFolderPath( pDomain, "shaders" );
+                    if ( domainShaders.empty() == false )
+                        outListDir.push_back( domainShaders );
+                }
             }
 
 #if defined( SW_PLATFORM_WINDOWS )

@@ -233,6 +233,26 @@ def collectShaderSourceHashesInternal(shadersDir: Path) -> dict[str, str]:
     return result
 
 
+_kIncludeRootDomains = ("engine", "common")
+
+
+def collectStampedSourceHashesInternal(resourceDir: Path, shadersDir: Path) -> dict[str, str]:
+    """스탬프가 담아야 할 { 키: hex } 입니다 — 자기 도메인의 .hlsl/.hlsli 와, 다른 include 루트 도메인의 .hlsli.
+
+    셰이더는 자기 폴더 밖 include 루트(engine · common)의 헤더도 include 한다. 다른 도메인 헤더의 키는
+    `<도메인>:<상대 경로>` 다. `ShaderBakeStamp.cpp` 의 `collectStampedSources` 와 같은 규칙이다.
+    """
+    result = collectShaderSourceHashesInternal(shadersDir)
+    for domain in _kIncludeRootDomains:
+        rootDir = resourceDir / domain / "shaders"
+        if not rootDir.is_dir() or rootDir.resolve() == shadersDir.resolve():
+            continue
+        for rel, digest in collectShaderSourceHashesInternal(rootDir).items():
+            if rel.endswith(".hlsli"):
+                result[f"{domain}:{rel}"] = digest
+    return result
+
+
 def verifyShaderBakeInternal(projectRoot: Path, targetRhi: str) -> list[str]:
     """구워둔 셰이더가 **지금 소스에서 나온 것인지** 확인하고 문제 목록을 돌려줍니다.
 
@@ -257,9 +277,9 @@ def verifyShaderBakeInternal(projectRoot: Path, targetRhi: str) -> list[str]:
         if not shadersDir.is_dir():
             continue
 
-        expected = collectShaderSourceHashesInternal(shadersDir)
-        if not expected:
+        if not collectShaderSourceHashesInternal(shadersDir):
             continue
+        expected = collectStampedSourceHashesInternal(resourceDir, shadersDir)
 
         label = f"{domainDir.name}/shaders"
         binDir = shadersDir / "bin" / targetRhi

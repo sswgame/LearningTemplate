@@ -143,10 +143,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
-- **common 셰이더는 engine 헤더를 고쳐도 다시 구워지지 않는다** — common 셰이더가 engine 의 `common.hlsli` · `binding.hlsli` 를 include 하는데 `isBakedOutputCurrent` ·
-  `writeBakeStamp` 는 자기 도메인 `shaders/` 아래 `.hlsli` 만 해시한다(`CookAssets --verify-shaders` 도 같다). 스탬프가 include 를 따라가게 할 것. 베이커는 요청에서 빠진
-  바이너리를 지우지 않는다 — 지금은 `ShaderBakeRequestTest.BakedFoldersHoldOnlyRequestedBinaries` 가 잡는다. 강제로 다시 굽는 CLI 플래그가 없어, common 이 engine
-  헤더를 따라가는지 볼 때는 `Resource/common/shaders/bin/*/` 의 해당 바이너리를 지우고 `--bake-shaders` 한다.
 - **디퍼드 파이프라인이 톤맵을 두 번 거는 것으로 보인다(코드 읽기, 픽셀 미측정)** — Tonemap 패스 뒤 `_shaderPath` 없는 Present 의 기본 셰이더 `fullscreenblit.hlsl` 이
   `tonemap.hlsl` 과 바이트까지 같은 Reinhard 다. Present 를 진짜 블릿으로 바꿀지 — 바꾸면 staged forward 의 Present 톤맵 · 골든 이미지도 함께.
 

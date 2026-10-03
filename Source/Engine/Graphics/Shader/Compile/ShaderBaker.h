@@ -118,6 +118,13 @@ namespace sw
         static uint64 getSharedHeaderContentHash();
 
         /**
+         * @brief 셰이더 `#include` 가 자기 폴더 다음으로 찾는 도메인입니다(`<도메인>/shaders`). 컴파일러의 검색 경로와 베이크 스탬프가 같은 표를 씁니다.
+         * @details 스탬프는 자기 도메인의 소스에 더해 이 도메인들의 `.hlsli` 를 `<도메인>:<상대 경로>` 키로 적습니다 — common 셰이더가 include 하는
+         *          engine 헤더를 고치면 common 산출물도 낡은 것이 되어야 합니다.
+         */
+        inline static constexpr const utf8* kArrIncludeRootDomain[] = { "engine", "common" };
+
+        /**
          * @brief 구운 산출물이 지금 소스에서 나온 것인지 `bin/<rhi>/bake.stamp` 의 내용 해시로 봅니다.
          * @param binDirectory `<domain>/shaders/bin/<rhi>`(스탬프가 있는 폴더)
          * @param absShaderPath 원본 `.hlsl` 절대 경로

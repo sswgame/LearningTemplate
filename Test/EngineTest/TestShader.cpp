@@ -656,6 +656,36 @@ SW_TEST_CASE( ShaderBakeStampTest, FreshnessIsJudgedByContentNotFileTime )
 }
 
 /**
+ * @brief [ShaderBakeStampTest] 다른 include 루트(engine)의 헤더가 바뀌면 common 셰이더 산출물도 낡은 것이 된다
+ * @details common 셰이더는 `common.hlsli` · `binding.hlsli` 를 engine/shaders 에서 include 한다. 스탬프가 자기 도메인 헤더만 보면 engine 헤더를
+ *          고쳐도 common 바이너리가 "최신" 으로 남아, 한쪽만 옛 바인딩으로 도는 바이너리가 커밋된다.
+ */
+SW_TEST_CASE( ShaderBakeStampTest, HeaderInAnotherIncludeRootMakesOutputStale )
+{
+    const sw::string shaderPath       = sw::ResourceUtil::getResourcePath( "common/shaders/samplecompute.hlsl" );
+    const sw::string binDir           = sw::ResourceUtil::getResourcePath( "common/shaders/bin/dx12" );
+    const sw::string engineShadersDir = sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" );
+    // 구운 트리가 없는 환경(클린 체크아웃 직후)에서는 볼 것이 없다.
+    if ( shaderPath.empty() || binDir.empty() || engineShadersDir.empty() )
+        return;
+
+    sw::ShaderBaker::invalidateSharedHeaderCache();
+    SW_ASSERT_TRUE_MSG( sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath ), "common 산출물이 지금 소스와 다르다 — App --bake-shaders 로 다시 굽고 시작한다" );
+
+    const sw::string tempHeader = sw::FileUtil::joinPath( engineShadersDir, "baketemp_otherroot.hlsli" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( tempHeader, "// bake staleness test (another include root)\n" ) );
+    sw::ShaderBaker::invalidateSharedHeaderCache();
+    const bool bCurrentAfterEngineHeaderAdded = sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath );
+
+    // 넣은 헤더는 반드시 되돌린다 — 실패해도 소스 트리를 더럽힌 채 끝나면 안 된다.
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( tempHeader ) );
+    sw::ShaderBaker::invalidateSharedHeaderCache();
+
+    SW_EXPECT_FALSE( bCurrentAfterEngineHeaderAdded );
+    SW_EXPECT_TRUE( sw::ShaderBaker::isBakedOutputCurrent( binDir, shaderPath ) );
+}
+
+/**
  * @brief [ShaderBakerTest] 리플렉션 매니페스트의 바이트는 항목을 넣은 순서와 상관없다
  * @details 베이커는 요청을 모은 순서대로 매니페스트 맵에 넣고, 맵은 넣은 순서로 돈다. 그 순서로 파일을 쓰면 같은 항목 집합이라도
  *          요청 순서만 바뀐 변경(베이커가 패스 표를 훑는 순서 등)이 커밋된 매니페스트 넷을 모두 바꿔 놓는다. 키 순서로 써야 같은 바이트다.

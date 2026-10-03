@@ -1,5 +1,12 @@
 SWBAKE 3
 082019df2dbbcbd5 instanceslotprobe.hlsl
+111f7515f60bf571 engine:postbloom.hlsli
 22c00eae8dfcf116 samplecompute.hlsl
 2376b38d79149448 provokingvertex.hlsl
+33f13d9d6e4daf83 engine:lighting.hlsli
+3e9284baed6b5322 engine:common.hlsli
 434550571f0a2425 computetexturewrite.hlsl
+8a1142c850b34fee engine:instancedata.hlsli
+980c18c4c174d3fb engine:postoutline.hlsli
+b8468871483f170e engine:binding.hlsli
+fe17a8a1687d3fa3 engine:bindingslots.hlsli
