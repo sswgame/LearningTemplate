@@ -56,6 +56,7 @@ command '@brief'` 가 빌드마다 나왔는데 87 줄에는 `@brief` 가 없었
 from __future__ import annotations
 
 import argparse
+import functools
 import os
 import re
 import subprocess
@@ -100,7 +101,7 @@ def splitCommandInternal(entry: dict) -> tuple[list[str], bool]:
     return listToken, not bIsWindows
 
 
-def buildSyntaxOnlyCommandInternal(entry: dict) -> tuple[list[str] | str, bool]:
+def buildSyntaxOnlyCommandInternal(entry: dict, listExtraDefine: tuple[str, ...] = ()) -> tuple[list[str] | str, bool]:
     """
     빌드 명령을 **문법 검사 전용**으로 바꾼다. 경고 관련 인자는 하나도 건드리지 않는다 —
     그래야 여기서 나오는 경고가 실제 빌드에서 나오는 경고와 같다.
@@ -147,6 +148,9 @@ def buildSyntaxOnlyCommandInternal(entry: dict) -> tuple[list[str] | str, bool]:
         listOut.insert(listOut.index("--"), syntaxOnly)
     else:
         listOut.insert(1, syntaxOnly)
+    # 더할 정의는 컴파일러 바로 뒤에 — 입력 파일(`--` 뒤)보다 앞이어야 한다.
+    for define in reversed(listExtraDefine):
+        listOut.insert(1, f"-D{define}")
 
     if bIsArgumentList:
         return listOut, False
@@ -154,9 +158,14 @@ def buildSyntaxOnlyCommandInternal(entry: dict) -> tuple[list[str] | str, bool]:
     return " ".join(listOut), False
 
 
-def runOne(entry: dict) -> str:
-    """TU 하나를 문법 검사한다. 진단은 stderr 로 나온다."""
-    command, bNeedShell = buildSyntaxOnlyCommandInternal(entry)
+def runOne(entry: dict, listExtraDefine: tuple[str, ...] = ()) -> str:
+    """
+    TU 하나를 문법 검사한다. 진단은 stderr 로 나온다.
+
+    `listExtraDefine` 은 컴파일러 바로 뒤에 `-D<값>` 으로 더한다 — 아무 프리셋도 켜지 않는 옵션(`SW_ENABLE_DEADLOCK_DETECTION` 등)이
+    아직 컴파일되는지를 그 구성을 따로 짓지 않고 묻는다.
+    """
+    command, bNeedShell = buildSyntaxOnlyCommandInternal(entry, listExtraDefine)
     if not command:
         return ""
     try:
@@ -227,6 +236,9 @@ def main() -> int:
     parser.add_argument("--filter", default="", help="경로 부분 문자열로 TU 를 고릅니다 (예: Graphics)")
     parser.add_argument("--jobs", type=int, default=max(4, (os.cpu_count() or 8)), help="병렬 실행 수")
     parser.add_argument("--out", default="", help="원본 출력을 저장할 파일")
+    parser.add_argument("--define", action="append", default=[],
+                        help="모든 TU 에 더할 전처리 정의(NAME 또는 NAME=VALUE). 어느 프리셋도 켜지 않는 옵션이 아직 컴파일되는지 볼 때 "
+                             "(예: --define SW_ENABLE_DEADLOCK_DETECTION)")
     args = parser.parse_args()
 
     listPreset = args.preset or list(_kDefaultPresets)
@@ -245,7 +257,8 @@ def main() -> int:
             continue
 
         print(f"[RunBuildWarnings] {presetName}: TU {len(listEntry)}개, 병렬 {args.jobs}")
-        rawText = sweep.run(listEntry, runOne, workerCount=args.jobs, progressEvery=100)
+        rawText = sweep.run(listEntry, functools.partial(runOne, listExtraDefine=tuple(args.define)), workerCount=args.jobs,
+                            progressEvery=100)
         mapPresetToText[presetName] = rawText
         listRawChunk.append(f"==== {presetName}\n{rawText}\n")
 
