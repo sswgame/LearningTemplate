@@ -29,6 +29,7 @@ sw_addTestExecutable(EngineTest
 		GF_NetTurnRelay
 		GF_NetMmo
 		GF_Rhythm
+		GF_TacticsSrpg
 	LABELS
 		"unit;engine"
 	TIMEOUT

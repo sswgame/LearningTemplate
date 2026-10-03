@@ -78,6 +78,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_TacticsSrpg",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
