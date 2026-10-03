@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    enum class MemoryTag : uint8;
+
     // ------------------------------------------------------------------------------
     // 1) LinuxFileWatcher — inotify 의 wd → 경로 맵, eventfd 로 워커를 깨운다
     // ------------------------------------------------------------------------------
@@ -40,7 +42,7 @@ namespace sw
 
     private:
         /** @brief inotify 이벤트를 읽어 큐에 넣습니다. */
-        void workerThreadMain();
+        void workerThreadMain( MemoryTag memoryTag );
         /** @brief 디렉터리를(재귀면 하위 디렉터리까지) inotify 에 등록합니다. */
         bool addWatchRecursive( string_view directoryPath );
         /** @brief 디렉터리 하나만 inotify 에 등록하고 wd 맵에 넣습니다. */

@@ -555,7 +555,10 @@ namespace sw
                 _audioSystem = IAudioSystem::create();
             }
 #if !defined( SW_SHIPPING )
-            _commandStack = make_unique<CommandStack>();
+            {
+                SW_MEMORY_SCOPE( EngineMisc );
+                _commandStack = make_unique<CommandStack>();
+            }
 #endif
             // 렌더러는 서비스 표에 실리므로(아래) 여기서 만든다. 초기화와 해제는 FrameRenderer 단계가 한다.
             {
@@ -886,6 +889,7 @@ namespace sw
 
         if ( _bShellActionsBound == false )
         {
+            SW_MEMORY_SCOPE( EngineMisc );
             _mapDebugAction            = make_unique<ActionMap>();
             const string& inputMapPath = engine::getEngineData()._shellInputMap;
             if ( inputMapPath.empty() || _mapDebugAction->loadFromResource( inputMapPath ) == false )

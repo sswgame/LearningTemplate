@@ -11,6 +11,7 @@
     #include "Core/Container/vector.h"
     #include "Core/File/FileUtil.h"
     #include "Core/Log/Logger.h"
+    #include "Core/Memory/MemoryProfiler.h"
     #include "Core/String/StringUtil.h"
 
 SW_LOG_CALLER( "WindowsFileWatcher" );
@@ -65,7 +66,7 @@ namespace sw
         _bRecursive    = bRecursive;
         _bIsWatching   = true;
 
-        _workerThread = std::thread( &WindowsFileWatcher::workerThreadMain, this );
+        _workerThread = std::thread( &WindowsFileWatcher::workerThreadMain, this, MemoryProfiler::getCurrentMemoryTag() );
 
         SW_LOG_INFO( "Started watching directory: %#", directoryPath );
         return true;
@@ -100,8 +101,10 @@ namespace sw
         }
     }
 
-    void WindowsFileWatcher::workerThreadMain()
+    void WindowsFileWatcher::workerThreadMain( MemoryTag memoryTag )
     {
+        // 이 스레드의 할당은 감시를 시작한 쪽의 용도로 센다.
+        const ScopedMemoryTag threadMemoryTag{ memoryTag };
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
         CrashHandler::initializeCurrentThread();
         constexpr DWORD bufferSize = 64 * 1024;

@@ -197,6 +197,28 @@ namespace
         return true;
     }
 
+    /**
+     * @brief `-gv_profileFrames` 보고의 태그 줄에서 @p tagName 줄의 KB 정수부를 읽습니다. 줄이 없으면(그 태그가 0 바이트) 0 입니다.
+     * @details 줄 모양: `[Profile]   Editor  15538.7 KB  77.6%  2383 blocks`. `runApp` 에 표식 `"[Profile]   "` 을 주고 돌린 결과를 넘깁니다.
+     */
+    uint64 findMemoryTagKilobytes( const AppRunResult& result, string_view tagName )
+    {
+        for ( const string& line : result._listMarkedLine )
+        {
+            const string_view text{ line };
+            const size_t      nameStart = text.find_first_not_of( ' ', string_view{ "[Profile]" }.size() );
+            const size_t      nameEnd   = nameStart == string_view::npos ? string_view::npos : text.find( ' ', nameStart );
+            if ( nameEnd == string_view::npos || text.substr( nameStart, nameEnd - nameStart ) != tagName )
+                continue;
+            const size_t numberStart = text.find_first_not_of( ' ', nameEnd );
+            return numberStart == string_view::npos ? 0 : std::strtoull( line.c_str() + numberStart, nullptr, 10 );
+        }
+        return 0;
+    }
+
+    /** @brief 태그를 걸지 않은 할당(Unknown)의 상한(KB)입니다. 진입점이 빠지면 기동만으로 수십 KB 가 이 줄에 쌓입니다. */
+    constexpr uint64 kMaxUnknownTagKilobytes = 8;
+
     /** @brief PPM(P6) 한 장 — 폭 · 높이와 RGB 8비트 픽셀. */
     struct PpmImage
     {
@@ -406,29 +428,29 @@ SW_TEST_CASE( AppSmokeTest, EditorMemoryIsAttributedByTag )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
     SW_EXPECT_EQUAL( 0, result._exitCode );
 
-    // 줄 모양: "[Profile]   Editor  15538.7 KB  77.6%  2383 blocks" — KB 의 정수부와 몫의 정수부만 읽는다.
-    uint64 editorKilobytes{ 0 };
-    uint64 unknownSharePercent{ 100 };
-    for ( const string& line : result._listMarkedLine )
-    {
-        const string_view text{ line };
-        const size_t      nameStart = text.find_first_not_of( ' ', string_view{ "[Profile]" }.size() );
-        const size_t      nameEnd   = text.find( ' ', nameStart );
-        if ( nameStart == string_view::npos || nameEnd == string_view::npos )
-            continue;
-        const string_view name         = text.substr( nameStart, nameEnd - nameStart );
-        const size_t      numberStart  = text.find_first_not_of( ' ', nameEnd );
-        const size_t      shareEnd     = text.find( '%' );
-        const size_t      shareStart   = shareEnd == string_view::npos ? string_view::npos : text.rfind( ' ', shareEnd );
-        const uint64      kilobytes    = numberStart == string_view::npos ? 0 : std::strtoull( line.c_str() + numberStart, nullptr, 10 );
-        const uint64      sharePercent = shareStart == string_view::npos ? 100 : std::strtoull( line.c_str() + shareStart + 1, nullptr, 10 );
-        if ( name == "Editor" )
-            editorKilobytes = kilobytes;
-        else if ( name == "Unknown" )
-            unknownSharePercent = sharePercent;
-    }
+    const uint64 editorKilobytes  = findMemoryTagKilobytes( result, "Editor" );
+    const uint64 unknownKilobytes = findMemoryTagKilobytes( result, "Unknown" );
     SW_EXPECT_TRUE_MSG( editorKilobytes > 4096, ( string( "Editor KB = " ) + to_string( editorKilobytes ) ).c_str() );
-    SW_EXPECT_TRUE_MSG( unknownSharePercent < 5, ( string( "Unknown share % = " ) + to_string( unknownSharePercent ) ).c_str() );
+    SW_EXPECT_TRUE_MSG( unknownKilobytes < kMaxUnknownTagKilobytes, ( string( "Unknown KB = " ) + to_string( unknownKilobytes ) ).c_str() );
+}
+
+/**
+ * @brief [AppSmokeTest] 에디터 없는 기동도 모든 할당이 용도 태그에 실리는가
+ * @details 엔진 · 앱의 진입점(기동 단계 · 서비스 생성 · 로거 · 입력 · 모듈 호스트 · 엔진이 띄우는 스레드)이 태그를 걸면 Unknown 은 거의 0 이다.
+ */
+SW_TEST_CASE( AppSmokeTest, RuntimeMemoryIsAttributedByTag )
+{
+    if constexpr ( kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+
+    const AppRunResult result = runApp( "-gv_profileFrames=5 -dx12", "[Profile]   " );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
+    if ( result._bBackendUnusableHere )
+        SW_TEST_SKIP( "DX12 is not usable on this machine" );
+    SW_EXPECT_EQUAL( 0, result._exitCode );
+
+    const uint64 unknownKilobytes = findMemoryTagKilobytes( result, "Unknown" );
+    SW_EXPECT_TRUE_MSG( unknownKilobytes < kMaxUnknownTagKilobytes, ( string( "Unknown KB = " ) + to_string( unknownKilobytes ) ).c_str() );
 }
 
 /**

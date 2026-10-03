@@ -203,6 +203,8 @@ namespace sw
 
     bool App::loadModuleImages()
     {
+        // 모듈 호스트 · 감시자 · 앱 설정은 엔진 기반 몫이다. 모듈 본체의 로드는 ModuleHost 가 에디터 · 게임 태그를 건다.
+        SW_MEMORY_SCOPE( EngineMisc );
         vector<GameKitConfig> listGameKitModule{};
 #if !defined( SW_SHIPPING )
         const AppConfig* pAppConfig = _engineLoop.getConfigManager()->ensureConfig<AppConfig>(

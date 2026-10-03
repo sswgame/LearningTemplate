@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -96,7 +97,7 @@ namespace sw
         }
 
         _bIsWatching  = true;
-        _workerThread = std::thread( &LinuxFileWatcher::workerThreadMain, this );
+        _workerThread = std::thread( &LinuxFileWatcher::workerThreadMain, this, MemoryProfiler::getCurrentMemoryTag() );
 
         SW_LOG_INFO( "Started watching directory: %#", _directoryPath.c_str() );
         return true;
@@ -137,8 +138,10 @@ namespace sw
         }
     }
 
-    void LinuxFileWatcher::workerThreadMain()
+    void LinuxFileWatcher::workerThreadMain( MemoryTag memoryTag )
     {
+        // 이 스레드의 할당은 감시를 시작한 쪽의 용도로 센다.
+        const ScopedMemoryTag threadMemoryTag{ memoryTag };
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
         CrashHandler::initializeCurrentThread();
         alignas( inotify_event ) uint8 buffer[LinuxFileWatcherInternal::kInotifyEventBufferSize];

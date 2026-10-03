@@ -7,6 +7,7 @@
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -915,8 +916,10 @@ namespace sw
         }
 
         std::thread(
-            [delegateCallback = std::move( onSuccess ), params, openGeneration]
+            [delegateCallback = std::move( onSuccess ), params, openGeneration, memoryTag = MemoryProfiler::getCurrentMemoryTag()]
         {
+            // 이 스레드의 할당은 대화상자를 연 쪽의 용도로 센다.
+            const ScopedMemoryTag threadMemoryTag{ memoryTag };
             CrashHandler::initializeCurrentThread();
             vector<string> listResult;
             bool           bSuccess{ false };

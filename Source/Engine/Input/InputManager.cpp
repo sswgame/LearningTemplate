@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
@@ -247,6 +248,7 @@ namespace sw
 
     void InputManager::beginFrame( float32 deltaSeconds )
     {
+        SW_MEMORY_SCOPE( EngineMisc );
         const uint32 droppedCount = _droppedRawEventCount.exchange( 0, std::memory_order_relaxed );
         if ( droppedCount > 0 )
             SW_LOG_WARNING( "Raw input event queue full (capacity=%d). %d event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );

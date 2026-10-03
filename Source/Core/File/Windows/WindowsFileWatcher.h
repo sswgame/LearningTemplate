@@ -17,6 +17,8 @@ using HANDLE = void*;
 
 namespace sw
 {
+    enum class MemoryTag : uint8;
+
     // ------------------------------------------------------------------------------
     // 1) WindowsFileWatcher — 워커가 IOCP 완료를 큐에 넣고, pollEvents 가 꺼낸다
     // ------------------------------------------------------------------------------
@@ -41,7 +43,7 @@ namespace sw
 
     private:
         /** @brief ReadDirectoryChangesW 의 완료 결과를 이벤트 큐에 넣습니다. */
-        void workerThreadMain();
+        void workerThreadMain( MemoryTag memoryTag );
 
         // 큐 · 뮤텍스 · 감시 경로 · 넘침 표시는 IFileWatcher 가 가진다. 세 플랫폼이 똑같이 가져야 하는 것들이다.
         HANDLE       _hDirectory;

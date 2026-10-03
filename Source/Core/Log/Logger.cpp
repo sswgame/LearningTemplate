@@ -10,6 +10,7 @@
 #include "Core/Log/ILogOutput.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Module/ModuleCodeHolder.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/String/StringUtil.h"
@@ -402,6 +403,7 @@ namespace sw
 
     void Logger::workerLoop()
     {
+        SW_MEMORY_SCOPE( EngineMisc );
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
         CrashHandler::initializeCurrentThread();
         while ( _bIsRunning.load( std::memory_order_acquire ) || _queue.empty() == false )
@@ -455,6 +457,8 @@ namespace sw
 
     void Logger::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )
     {
+        // 로그 레코드는 부른 쪽이 아니라 로거의 몫이다. 리스너(에디터 콘솔 등)는 자기 태그를 건다.
+        SW_MEMORY_SCOPE( EngineMisc );
         // 1단계: 타임스탬프를 계산하고 포맷한다(같은 초 안에서는 캐시한 문자열을 재사용한다)
         int32 year{ 0 }, month{ 0 }, day{ 0 }, hour{ 0 };
 

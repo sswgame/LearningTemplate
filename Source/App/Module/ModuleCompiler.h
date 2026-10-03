@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    enum class MemoryTag : uint8;
+
     class LiveReloadManager;
     class Process;
 
@@ -74,7 +76,7 @@ namespace sw
         virtual string getTargetName() const override;
 
     private:
-        void   runBuildThread( const string& targetName );
+        void   runBuildThread( const string& targetName, MemoryTag memoryTag );
         string findBuildDirectory() const;
         /** @brief 빌드가 끝났음을 리로드 관리자에 넘깁니다(빌드 스레드에서, 모든 끝 경로가 한 번씩). */
         void notifyBuildFinished( bool bSucceeded, const string& targetName );

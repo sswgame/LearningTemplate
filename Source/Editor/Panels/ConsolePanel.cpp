@@ -3,6 +3,7 @@
 #include "Editor/Panels/ConsolePanel.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
@@ -328,6 +329,8 @@ namespace sw::editor
 
     void ConsolePanel::onLogWritten( const LogEntry& entry )
     {
+        // 어느 스레드 · 어느 스코프에서 쓴 로그든 콘솔이 들고 있는 사본은 에디터 몫이다.
+        SW_MEMORY_SCOPE( Editor );
         std::scoped_lock<mutex> lock{ _entriesMutex };
         _listEntry.push_back( entry );
         while ( _listEntry.size() > constant::kMaxBuffer2048 )

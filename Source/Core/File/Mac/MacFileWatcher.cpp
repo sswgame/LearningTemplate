@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
 
 #if defined( SW_PLATFORM_MACOS )
@@ -106,12 +107,14 @@ namespace sw
 
         _pStream      = stream;
         _bIsWatching  = true;
-        _workerThread = std::thread( &MacFileWatcher::workerThreadMain, this );
+        _workerThread = std::thread( &MacFileWatcher::workerThreadMain, this, MemoryProfiler::getCurrentMemoryTag() );
         return true;
     }
 
-    void MacFileWatcher::workerThreadMain()
+    void MacFileWatcher::workerThreadMain( MemoryTag memoryTag )
     {
+        // 이 스레드의 할당은 감시를 시작한 쪽의 용도로 센다.
+        const ScopedMemoryTag threadMemoryTag{ memoryTag };
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
         CrashHandler::initializeCurrentThread();
         FSEventStreamRef stream = static_cast<FSEventStreamRef>( _pStream );

@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    enum class MemoryTag : uint8;
+
     /**
      * @class MacFileWatcher
      * @brief macOS FSEvents 기반 파일 감시입니다.
@@ -35,7 +37,7 @@ namespace sw
 
     private:
         /** @brief CFRunLoop 에서 FSEvents 를 돌립니다. */
-        void workerThreadMain();
+        void workerThreadMain( MemoryTag memoryTag );
         /** @brief FSEvents 콜백이 받은 경로를 큐에 넣습니다. */
         void        handlePaths( size_t numEvents, void* pEventPaths, const uint32* pFlags );
         static void streamCallback( const void* pStreamRef, void* pClientCallBackInfo, size_t numEvents, void* pEventPaths,
