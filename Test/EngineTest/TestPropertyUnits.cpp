@@ -11,8 +11,8 @@
 #include "TestFramework/TestFramework.h"
 
 // Engine_Reflection — PROPERTY 의 `Units` 메타가 값이 저장된 단위와 맞는지 본다.
-
 // PROPERTY 의 `Units` 메타는 에디터 메타데이터라 Shipping 빌드에는 없다(`findCustomMeta` 가 늘 nullptr) — 그 규칙 시험도 없다.
+
 #if !defined( SW_SHIPPING )
 namespace
 {
