@@ -116,7 +116,11 @@ enum class CollisionMask : uint32 { None = 0, World = 1, Pawn = 2 };
 
 `ENUM(Flags)` 비트 연산자는 `FlagOps.gen.h`로 생성되어 해당 타겟에 강제 include 됩니다.
 
-### 4) 별칭 (옛 이름 호환)
+### 4) 별칭 (실제 게임 데이터가 생긴 뒤의 이름 변경 창구)
+
+이름은 하나만 씁니다. 지금은 타입 · 프로퍼티 · 열거자 이름을 바꾸면 Resource 데이터를 새 이름으로 다시 쓰고, 엔진 · 게임프레임워크 ·
+게임 코드는 별칭을 쓰지 않습니다(`ResourceDataSchemaTest` 가 데이터에 모르는 이름이 없는지 봅니다). 아래 별칭은 다시 쓸 수 없는 데이터 —
+배포한 게임의 세이브 · 사용자가 만든 콘텐츠 — 가 생긴 뒤 이름을 바꿀 때 쓰는 창구입니다(언리얼 CoreRedirects 와 같은 자리).
 
 ```cpp
 REFLECT( Alias = "OldMonster" )
@@ -126,7 +130,7 @@ PROPERTY( Alias = "hp, HitPoints" )
 int32 health{ 0 };
 ```
 
-직렬화된 예전 이름도 TypeRegistry 별칭으로 찾을 수 있습니다.
+직렬화된 예전 이름도 TypeRegistry 별칭으로 찾을 수 있습니다. 열거자는 `ENUM( ValueAlias = "Old:New" )` 입니다.
 
 ### 5) 값이 객체 밖에 있는 프로퍼티 (접근자 프로퍼티)
 

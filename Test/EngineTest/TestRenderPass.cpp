@@ -583,7 +583,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
     }
 
     // 5) 이름은 정본 하나로 통일돼 있다 — 예전 표기(`Shading`, `PostBloom`)는 이제 오류로 잡힌다.
-    //    다시 이름을 바꿔야 하면 ENUM( ValueAlias = "Old:New" ) 로 호환을 열어 주면 된다.
+    //    이름을 바꾸면 XML 을 새 이름으로 다시 쓴다(ValueAlias 는 실제 게임 데이터가 생긴 뒤의 창구다).
     {
         auto removedTypeIsRejected = []( const utf8* pRemovedType ) -> bool
         {

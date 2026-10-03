@@ -26,8 +26,8 @@ namespace sw
      *       받아 줄 이유가 없고, 표기가 갈리는 순간 "어느 쪽으로 적었나" 를 매번 확인해야 합니다.
      *       XML 에 적히는 철자가 곧 열거자 이름이고, 여기에 없는 표기는 Invalid 로 파싱되어
      *       RenderPipelineResource::validate 가 잡습니다.
-     * @note 나중에 이름을 바꿔야 하면 기존 XML 을 깨지 않도록 `ENUM( ValueAlias = "Old:New" )` 를
-     *       씁니다. 지금은 통일된 상태라 비워 둡니다.
+     * @note 이름을 바꾸면 XML 을 새 이름으로 다시 씁니다. `ENUM( ValueAlias = "Old:New" )` 는 실제 게임 데이터가 생겨
+     *       다시 쓸 수 없게 된 뒤의 창구입니다.
      */
     ENUM()
     enum class RenderPassType : uint32

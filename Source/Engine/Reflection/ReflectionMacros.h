@@ -4,7 +4,8 @@
  * @details
  * 사용 패턴 요약:
  *   - 일반 타입: REFLECT() + PROPERTY() / FUNCTION()
- *   - 이름 변경 호환: REFLECT(Alias=…) / ENUM(ValueAlias="Old:New, …") / PROPERTY(Alias="hp, HitPoints")
+ *   - 이름 변경 창구: REFLECT(Alias=…) / ENUM(ValueAlias="Old:New, …") / PROPERTY(Alias="hp, HitPoints") — 실제 게임 데이터가 생긴 뒤
+ *     이름을 바꿀 때만 씁니다. 그 전에는 이름을 바꾸고 데이터를 새 이름으로 다시 씁니다(엔진 · 게임 코드에 별칭이 없습니다).
  *   - ENUM(Flags): 비트 연산자를 켭니다. ENUM(Invalid=…, Count=…): TypeRegistry::enumToString 센티널
  *   - 직접 만든 컨테이너: 타입에 REFLECT_CONTAINER(...) 한 번 → 필드는 PROPERTY() 만
  *   - StaticType 필요: REFLECT_BODY()

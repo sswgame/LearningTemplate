@@ -572,8 +572,8 @@ namespace sw
         /**
          * @brief 이름 해시로 열거자 값을 찾습니다 — 정본 이름과 ValueAlias 모두. 바이너리는 열거자를 이 해시로 싣습니다(값이 아니라 이름이 정체성이다).
          * @details 표식 값(`Invalid` · `Count`)도 받습니다 — `tryParseText` 와 같은 규칙(필드에 든 값을 적은 그대로 읽는다). 이름 해시는 대소문자를
-         *          가리지 않습니다(`hashed_string` — 글 읽기도 대소문자를 가리지 않는다). 이름을 바꾼 열거자는 옛 이름을 ValueAlias 로 남기면 옛 데이터가
-         *          새 이름으로 읽힙니다.
+         *          가리지 않습니다(`hashed_string` — 글 읽기도 대소문자를 가리지 않는다). ValueAlias 로 남긴 옛 이름도 새 열거자로 읽힙니다
+         *          (실제 게임 데이터가 생긴 뒤 이름을 바꿀 때의 창구 — 그 전에는 데이터를 새 이름으로 다시 쓴다).
          */
         [[nodiscard]] bool findValueByNameHash( uint32 nameHash, int64& outValue ) const
         {
