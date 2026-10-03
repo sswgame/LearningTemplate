@@ -26,6 +26,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/RegistrationList.h"
 #include "Core/Container/array.h"
 #include "Core/Container/vector.h"
 
@@ -67,8 +68,8 @@ namespace sw
         const vector<LightComponent*>& getAll( uint32 lightType ) const;
 
     private:
-        /** @brief 종류마다 등록된 빛입니다. 소유하지 않습니다(수명은 GameObject 가 쥡니다). */
-        array<vector<LightComponent*>, shaderslot::kLightTypeCount> _arrListLight;
+        /** @brief 종류마다 등록된 빛입니다(등록 순서). 소유하지 않습니다(수명은 GameObject 가 쥡니다). */
+        array<RegistrationList<LightComponent>, shaderslot::kLightTypeCount> _arrRegisteredLight;
         /** @brief 목록을 지킵니다. 등록/해제는 드물고, 조회는 게임 스레드 한 곳입니다. */
         mutable mutex _mutex;
     };

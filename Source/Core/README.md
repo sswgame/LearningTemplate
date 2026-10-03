@@ -7,7 +7,7 @@
 - **Memory/**: `allocateAligned`, `LinearAllocator`, `FrameArenaAllocator`(+ `FrameDoubleBuffer`), `MemoryProfiler`(누수 검사 포함), `CallStackCapture`
 - **Concurrency/**: `LockFreeObjectPool`, `LockFreeQueue`, `ConcurrentQueue`, `WorkStealingDeque`, `DeadlockDetector`, `DataRaceDetector`
 - **Task/**: `TaskManager` · `TaskHandle` · `TaskFuture` (워커 풀 + DAG 스케줄러)
-- **Container/**: `DynamicBitset` · **String/** · **File/** · **Event/** · **Delegate/**
+- **Container/**: `DynamicBitset` · `RegistrationList`(등록부의 공통 모양 — 중복 거절 · 정렬 · 이름 찾기 · 이름 사본) · **String/** · **File/** · **Event/** · **Delegate/**
 - **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.
   - `ILogSink` / `Logger` — 매크로가 말을 거는 파사드. 포맷 · 타임스탬프 · 리스너 · 비동기 큐 · 상세도 ·
     Caller 표를 맡는다. 테스트 프레임워크는 이 인터페이스를 구현해 기존 싱크를 **감싼다**(로그 가로채기).

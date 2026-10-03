@@ -16,25 +16,16 @@ namespace sw
 {
     void CameraRegistry::add( CameraComponent* pCamera )
     {
-        if ( pCamera == nullptr )
-            return;
-
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( std::find( _listCamera.begin(), _listCamera.end(), pCamera ) != _listCamera.end() )
-            return;
-        _listCamera.push_back( pCamera );
+        // nullptr · 이미 등록된 카메라는 목록이 거절한다(멱등).
+        (void)_registeredCamera.add( pCamera );
     }
 
     void CameraRegistry::remove( CameraComponent* pCamera )
     {
-        if ( pCamera == nullptr )
-            return;
-
         // 순서를 지키며 뺀다(목록을 보여 주는 쪽 — 프러스텀 시각화 · 벤치 — 이 순서를 본다). 카메라는 몇 개뿐이다.
         std::scoped_lock<mutex> lock{ _mutex };
-        const auto              it = std::find( _listCamera.begin(), _listCamera.end(), pCamera );
-        if ( it != _listCamera.end() )
-            _listCamera.erase( it );
+        (void)_registeredCamera.remove( pCamera ); // 두 번 빼도 된다 — 없으면 할 일이 없다
     }
 
     bool CameraRegistry::isUsableCamera( const CameraComponent* pCamera )
@@ -49,7 +40,7 @@ namespace sw
     {
         int32            bestPriority = MathUtil::MinInt32;
         CameraComponent* pBest{ nullptr };
-        for ( CameraComponent* pCamera : _listCamera )
+        for ( CameraComponent* pCamera : _registeredCamera.getItems() )
         {
             if ( isUsableCamera( pCamera ) == false || pCamera->getRole() != role )
                 continue;

@@ -14,6 +14,7 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
+#include "Core/Container/RegistrationList.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/ModuleCodeHolder.h"
 #include "Core/Memory/Memory.h"
@@ -159,8 +160,8 @@ namespace sw
         const PrefabManager& getPrefabManager() const;
 
     private:
-        /** @brief 이 매니저가 소유한 캐시를 등록하고 내장으로 표시합니다(종료 경고에서 뺍니다). */
-        void registerBuiltInAssetCache( IAssetCache* pCache );
+        /** @brief 이 매니저가 소유한 내장 캐시(머티리얼 · 텍스처 · 프리팹 · 스프라이트 클립)인지 봅니다. 종료 경고 · 모듈 코드 걷기에서 뺍니다. */
+        bool isBuiltInAssetCache( const IAssetCache* pCache ) const;
 
         AssetDatabase                   _assetDatabase;
         AssetFormatRegistry             _assetFormatRegistry;
@@ -170,20 +171,11 @@ namespace sw
         unique_ptr<SpriteClipCache>     _spriteClipCache; ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<ResourcePackManager> _pPackManager;
         /**
-         * @struct RegisteredAssetCache
-         * @brief 등록된 캐시 하나와 **그 이름의 사본**입니다.
-         * @details 이름을 복사해 두는 이유가 있습니다. 모듈이 자기 캐시를 내리지 않고 사라지면 그
-         *          포인터의 가상 함수 표도 같이 사라집니다. 진단에서 `getAssetKindName()` 을 부르면
-         *          그 진단 자체가 죽습니다. 사본이 있으면 **무엇을 두고 갔는지** 안전하게 말할 수 있습니다.
+         * @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 넷은 위 멤버가, 모듈이 올린 것은 그 모듈이 소유합니다).
+         * @details 종류 이름(`getAssetKindName`)은 **올릴 때** 복사합니다. 모듈이 자기 캐시를 내리지 않고 사라지면 그 포인터의 가상 함수 표도
+         *          같이 사라지므로, 진단에서 이름을 다시 물으면 그 진단이 죽습니다. 사본이 있으면 무엇을 두고 갔는지 안전하게 말할 수 있습니다.
+         *          같은 종류 이름의 둘째 캐시는 거절합니다(이름으로 찾는 쪽이 어느 것을 받을지 정해지지 않습니다).
          */
-        struct RegisteredAssetCache
-        {
-            IAssetCache* _pCache{ nullptr }; ///< 소유하지 않습니다.
-            string       _kindName{};        ///< 등록 시점의 이름 사본.
-            bool         _bBuiltIn{ false }; ///< 이 매니저가 소유한 내장 캐시(모듈이 내려야 하는 것이 아님).
-        };
-
-        /** @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 셋은 위 멤버가, 모듈이 올린 것은 그 모듈이 소유합니다). */
-        vector<RegisteredAssetCache> _listAssetCache;
+        RegistrationList<IAssetCache> _registeredAssetCache;
     };
 } // namespace sw

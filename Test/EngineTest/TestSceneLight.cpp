@@ -149,6 +149,30 @@ SW_TEST_CASE( SceneLightTest, RegistryIsIdempotentForAddAndRemove )
 }
 
 /**
+ * @brief [SceneLightTest] 빛 하나를 빼도 남은 빛은 등록 순서 그대로다 — "등록된 첫 방향광" 이 빼기마다 바뀌지 않는다
+ * @details 그림자를 드리우는 방향광은 등록 순서의 첫 활성 빛이다. 빼기가 맨 뒤 빛을 빈자리로 옮기면(swap-and-pop) 첫 빛을 뺀 뒤 둘째가 아니라
+ *          **마지막** 빛이 그 자리를 받아, 씬에서 아무 관계 없는 빛 하나를 지웠을 뿐인데 그림자가 다른 빛으로 넘어갔다.
+ */
+SW_TEST_CASE( SceneLightTest, RemovingALightKeepsTheOthersInRegistrationOrder )
+{
+    sw::Scene              scene( "SceneLightOrder" );
+    sw::GameObjectManager* pObjects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( pObjects );
+
+    sw::DirectionalLightComponent* pFirst  = addLightObject<sw::DirectionalLightComponent>( pObjects, "SunFirst" );
+    sw::DirectionalLightComponent* pSecond = addLightObject<sw::DirectionalLightComponent>( pObjects, "SunSecond" );
+    sw::DirectionalLightComponent* pThird  = addLightObject<sw::DirectionalLightComponent>( pObjects, "SunThird" );
+    SW_ASSERT_TRUE( pFirst != nullptr && pSecond != nullptr && pThird != nullptr );
+
+    sw::LightRegistry& registry = pObjects->getLightRegistry();
+    registry.remove( pFirst );
+    const sw::vector<sw::LightComponent*>& listSun = registry.getAll( sw::shaderslot::kLightTypeDirectional );
+    SW_ASSERT_EQUAL( size_t( 2 ), listSun.size() );
+    SW_EXPECT_TRUE_MSG( listSun[0] == pSecond, "첫 빛을 뺀 뒤 맨 앞이 둘째가 아니라 다른 빛입니다" );
+    SW_EXPECT_TRUE( listSun[1] == pThird );
+}
+
+/**
  * @brief [SceneLightTest] 수집은 꺼진 컴포넌트와 꺼진 계층의 빛을 건너뛴다
  * @details 등록부는 "무엇이 있나" 만 안다 — 활성 판정은 수집하는 쪽의 몫이라고 두 헤더가 적어
  *          두었다. 그 몫을 실제로 하는지 보는 자리다. 계층 쪽(부모만 끈다)을 따로 보는 이유는

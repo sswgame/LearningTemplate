@@ -4,6 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/RegistrationList.h"
 
 namespace sw
 {
@@ -17,8 +18,8 @@ namespace sw
          */
         struct ModuleCodeHolderList
         {
-            mutex                      _mutex;
-            vector<IModuleCodeHolder*> _listHolder;
+            mutex                               _mutex;
+            RegistrationList<IModuleCodeHolder> _registeredHolder;
         };
 
         ModuleCodeHolderList& getModuleCodeHolderList()
@@ -31,7 +32,7 @@ namespace sw
         {
             ModuleCodeHolderList&   list = getModuleCodeHolderList();
             std::scoped_lock<mutex> lock{ list._mutex };
-            list._listHolder.push_back( pHolder );
+            (void)list._registeredHolder.add( pHolder ); // 생성자에서 한 번 — 같은 객체가 두 번 오를 일은 없다
         }
     } // namespace
 } // namespace sw
@@ -53,9 +54,7 @@ namespace sw
     {
         ModuleCodeHolderList&   list = getModuleCodeHolderList();
         std::scoped_lock<mutex> lock{ list._mutex };
-        const auto              it = std::find( list._listHolder.begin(), list._listHolder.end(), this );
-        if ( it != list._listHolder.end() )
-            list._listHolder.erase( it );
+        (void)list._registeredHolder.remove( this ); // 올라 있지 않으면(정적 소멸 순서) 할 일이 없다
     }
 
     IModuleCodeHolder& IModuleCodeHolder::operator=( const IModuleCodeHolder& other )
@@ -72,8 +71,8 @@ namespace sw
 
         ModuleCodeHolderList&   list = getModuleCodeHolderList();
         std::scoped_lock<mutex> lock{ list._mutex };
-        outListResult.reserve( list._listHolder.size() );
-        for ( IModuleCodeHolder* pHolder : list._listHolder )
+        outListResult.reserve( list._registeredHolder.getCount() );
+        for ( IModuleCodeHolder* pHolder : list._registeredHolder.getItems() )
         {
             ReleaseResult result{};
             result._pHolderName   = pHolder->getModuleCodeHolderName();
@@ -86,7 +85,7 @@ namespace sw
     {
         ModuleCodeHolderList&   list = getModuleCodeHolderList();
         std::scoped_lock<mutex> lock{ list._mutex };
-        return static_cast<uint32>( list._listHolder.size() );
+        return list._registeredHolder.getCount();
     }
 
     bool IModuleCodeHolder::isAddressWithin( const void* pCode, const void* pBegin, const void* pEnd )

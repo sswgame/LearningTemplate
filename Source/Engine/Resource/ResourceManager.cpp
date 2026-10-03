@@ -28,13 +28,13 @@ namespace sw
         , _prefabManager{ make_unique<PrefabManager>() }
         , _spriteClipCache{ make_unique<SpriteClipCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
-        , _listAssetCache{}
+        , _registeredAssetCache{}
     {
         // 내장 캐시도 **등록부를 통해서만** 훑는다 — 이름으로 캐시를 적는 경로를 따로 두지 말 것.
-        registerBuiltInAssetCache( _materialCache.get() );
-        registerBuiltInAssetCache( _textureCache.get() );
-        registerBuiltInAssetCache( _prefabManager.get() );
-        registerBuiltInAssetCache( _spriteClipCache.get() );
+        registerAssetCache( _materialCache.get() );
+        registerAssetCache( _textureCache.get() );
+        registerAssetCache( _prefabManager.get() );
+        registerAssetCache( _spriteClipCache.get() );
     }
 
     ResourceManager::~ResourceManager() = default;
@@ -139,105 +139,75 @@ namespace sw
     {
         if ( pCache == nullptr )
             return;
-        for ( const RegisteredAssetCache& existing : _listAssetCache )
-        {
-            if ( existing._pCache == pCache )
-                return;
-        }
-
-        RegisteredAssetCache entry{};
-        entry._pCache = pCache;
-        // 이름은 **지금** 복사해 둔다. 모듈이 내리지 않고 사라지면 나중에는 물어볼 수 없다.
-        const utf8* pKindName = pCache->getAssetKindName();
-        if ( pKindName != nullptr )
-            entry._kindName = pKindName;
-        _listAssetCache.push_back( std::move( entry ) );
+        // 이름은 **지금** 복사해 둔다(`RegistrationList`). 모듈이 내리지 않고 사라지면 나중에는 물어볼 수 없다.
+        const utf8*              pKindName = pCache->getAssetKindName();
+        const string_view        kindName  = ( pKindName != nullptr ) ? string_view{ pKindName } : string_view{};
+        const RegistrationResult result    = _registeredAssetCache.add( pCache, kindName );
+        if ( result == RegistrationResult::DuplicateName )
+            SW_LOG_WARNING( "Asset cache kind '%#' is already registered by another cache - keeping the first", kindName );
     }
 
-    void ResourceManager::registerBuiltInAssetCache( IAssetCache* pCache )
+    bool ResourceManager::isBuiltInAssetCache( const IAssetCache* pCache ) const
     {
-        registerAssetCache( pCache );
-        if ( _listAssetCache.empty() == false && _listAssetCache.back()._pCache == pCache )
-            _listAssetCache.back()._bBuiltIn = true;
+        return pCache != nullptr && ( pCache == _materialCache.get() || pCache == _textureCache.get() || pCache == _prefabManager.get() ||
+                                      pCache == _spriteClipCache.get() );
     }
 
     void ResourceManager::unregisterAssetCache( const IAssetCache* pCache )
     {
-        if ( pCache == nullptr )
-            return;
-        for ( size_t slot = 0; slot < _listAssetCache.size(); ++slot )
-        {
-            if ( _listAssetCache[slot]._pCache != pCache )
-                continue;
-
-            _listAssetCache.erase( _listAssetCache.begin() + static_cast<ptrdiff_t>( slot ) );
-            return;
-        }
+        (void)_registeredAssetCache.remove( pCache ); // 올라 있지 않으면 할 일이 없다(멱등)
     }
 
     vector<IAssetCache*> ResourceManager::getAllAssetCache() const
     {
-        vector<IAssetCache*> listCache;
-        listCache.reserve( _listAssetCache.size() );
-        for ( const RegisteredAssetCache& entry : _listAssetCache )
-        {
-            listCache.push_back( entry._pCache );
-        }
-        return listCache;
+        return _registeredAssetCache.getItems();
     }
 
     IAssetCache* ResourceManager::findAssetCache( string_view assetKindName ) const
     {
-        if ( assetKindName.empty() )
-            return nullptr;
-        for ( const RegisteredAssetCache& entry : _listAssetCache )
-        {
-            // 이름은 등록 시점 사본으로 맞춘다. 죽은 모듈의 가상 함수를 부르지 않는다.
-            if ( entry._pCache != nullptr && assetKindName == entry._kindName )
-                return entry._pCache;
-        }
-        return nullptr;
+        // 이름은 등록 시점 사본으로 맞춘다. 죽은 모듈의 가상 함수를 부르지 않는다.
+        return _registeredAssetCache.findByName( assetKindName );
     }
 
     void ResourceManager::clearAssetCaches()
     {
-        for ( const RegisteredAssetCache& entry : _listAssetCache )
-        {
-            if ( entry._pCache != nullptr )
-                entry._pCache->clear();
-        }
+        for ( IAssetCache* pCache : _registeredAssetCache.getItems() )
+            pCache->clear();
     }
 
     void ResourceManager::warnAboutRemainingModuleCaches() const
     {
-        for ( const RegisteredAssetCache& entry : _listAssetCache )
+        for ( uint32 index = 0; index < _registeredAssetCache.getCount(); ++index )
         {
-            if ( entry._bBuiltIn )
+            if ( isBuiltInAssetCache( _registeredAssetCache.getAt( index ) ) )
                 continue;
 
             // 이름은 사본이라 안전하다. 포인터는 이미 죽었을 수도 있어 **역참조하지 않는다.**
             SW_LOG_WARNING( "에셋 캐시 '%#' 가 등록된 채로 남아 있습니다 — 올린 쪽(모듈)이 내려가기 전에 "
                             "unregisterAssetCache 를 불러야 합니다. 그대로 두면 다음 비우기가 죽은 코드로 뜁니다.",
-                            entry._kindName.c_str() );
+                            _registeredAssetCache.getNameAt( index ).c_str() );
         }
     }
 
     uint32 ResourceManager::releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
     {
         (void)outKeepImageMapped;
-        uint32 releasedCount{ 0 };
-        for ( size_t slot = _listAssetCache.size(); slot > 0; --slot )
+        vector<IAssetCache*> listModuleCache;
+        for ( IAssetCache* pCache : _registeredAssetCache.getItems() )
         {
-            const RegisteredAssetCache& entry = _listAssetCache[slot - 1];
-            if ( entry._bBuiltIn || entry._pCache == nullptr )
+            if ( isBuiltInAssetCache( pCache ) )
                 continue;
             // 캐시 객체가 모듈의 정적 데이터이거나, 모듈 쪽 클래스라 vtable 이 그 이미지에 있으면 이미지와 함께 사라진다.
-            const bool bObjectWithin = IModuleCodeHolder::isAddressWithin( entry._pCache, pBegin, pEnd );
-            const bool bVtableWithin = IModuleCodeHolder::isAddressWithin( IModuleCodeHolder::findVtableAddress( entry._pCache ), pBegin, pEnd );
-            if ( bObjectWithin == false && bVtableWithin == false )
-                continue;
-            _listAssetCache.erase( _listAssetCache.begin() + static_cast<ptrdiff_t>( slot - 1 ) );
-            ++releasedCount;
+            const bool bObjectWithin = IModuleCodeHolder::isAddressWithin( pCache, pBegin, pEnd );
+            const bool bVtableWithin = IModuleCodeHolder::isAddressWithin( IModuleCodeHolder::findVtableAddress( pCache ), pBegin, pEnd );
+            if ( bObjectWithin || bVtableWithin )
+                listModuleCache.push_back( pCache );
+        }
+        uint32 releasedCount{ 0 };
+        for ( const IAssetCache* pCache : listModuleCache )
+        {
+            if ( _registeredAssetCache.remove( pCache ) )
+                ++releasedCount;
         }
         return releasedCount;
     }

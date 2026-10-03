@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/RegistrationList.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
@@ -26,6 +27,7 @@ namespace sw::editor
      * @class EditorRegistrationList
      * @brief 한 종류의 등록 목록입니다. 늘 (순서, id) 로 정렬돼 있습니다.
      * @details 정적 초기화 순서는 번역 단위 사이에서 정해지지 않으므로 등록 순서가 아니라 `_order` 가 보이는 순서를 정합니다.
+     *          목록 자체는 엔진 등록부와 같은 공통 모양(`RegistrationList` — 중복 거절 · 정렬 · id 찾기)이고, 여기서는 거절을 종류 이름과 함께 알립니다.
      */
     class EditorRegistrationList
     {
@@ -38,13 +40,13 @@ namespace sw::editor
         void removeRegistration( const EditorRegistration& registration );
 
         /** @brief id 로 찾습니다. 없으면 nullptr 입니다. */
-        const EditorRegistration*                findRegistration( string_view id ) const;
-        const vector<const EditorRegistration*>& getRegistrations() const { return _listRegistration; }
+        const EditorRegistration*                findRegistration( string_view id ) const { return _registered.findByName( id ); }
+        const vector<const EditorRegistration*>& getRegistrations() const { return _registered.getItems(); }
         const utf8*                              getKindName() const { return _pKindName; }
 
     private:
-        const utf8*                       _pKindName;
-        vector<const EditorRegistration*> _listRegistration;
+        const utf8*                                _pKindName;
+        RegistrationList<const EditorRegistration> _registered; ///< (순서, id) 사전순 · id 필수
     };
 
     /**

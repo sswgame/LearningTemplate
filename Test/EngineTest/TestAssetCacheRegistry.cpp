@@ -35,6 +35,17 @@ namespace
         uint32          _reloadCount{ 0 };
         sw::IRHIDevice* _pLastDevice{ nullptr };
     };
+
+    /** @brief 내장 머티리얼 캐시와 같은 종류 이름을 대는 가짜 캐시(모듈이 같은 이름으로 하나 더 올리는 실수). */
+    class ImpostorMaterialCache final : public sw::IAssetCache
+    {
+    public:
+        const utf8* getAssetKindName() const override { return "Material"; }
+        bool        isCached( sw::string_view ) const override { return false; }
+        void        reload( sw::string_view, sw::IRHIDevice* ) override {}
+        size_t      getCachedCount() const override { return 0u; }
+        void        clear() override {}
+    };
 } // namespace
 
 /**
@@ -78,6 +89,26 @@ SW_TEST_CASE( AssetCacheRegistryTest, RegisterIgnoresNullAndDuplicates )
     resources.registerAssetCache( &probe );
     SW_EXPECT_EQUAL( builtInCount + 1, resources.getAllAssetCache().size() );
     SW_EXPECT_TRUE( resources.findAssetCache( "ProbeKind" ) == static_cast<sw::IAssetCache*>( &probe ) );
+}
+
+/**
+ * @brief [AssetCacheRegistryTest] 같은 종류 이름의 둘째 캐시는 거절하고 알린다 — 이름으로 찾는 쪽은 늘 먼저 것을 받는다
+ * @details 예전에는 둘 다 올라 `findAssetCache( "Material" )` 이 등록 순서의 첫 것을 조용히 돌려줬다. 에셋 핫 리로드는 그 이름으로 캐시를 찾으므로
+ *          나중 것은 다시 읽히지도 비워지지도 않는 캐시가 됐다. 공통 등록 목록(`RegistrationList`)이 이름 중복을 거절한다.
+ */
+SW_TEST_CASE( AssetCacheRegistryTest, SecondCacheWithTheSameKindNameIsRejected )
+{
+    sw::ResourceManager   resources;
+    ImpostorMaterialCache impostor;
+    const size_t          builtInCount = resources.getAllAssetCache().size();
+
+    {
+        test::ScopedDefensiveTestLog expected( "a second asset cache claims the kind name Material" );
+        resources.registerAssetCache( &impostor );
+    }
+    SW_EXPECT_EQUAL( builtInCount, resources.getAllAssetCache().size() );
+    SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getMaterialManager() ) );
+    resources.unregisterAssetCache( &impostor ); // 올라 있지 않아도 조용하다
 }
 
 /**
