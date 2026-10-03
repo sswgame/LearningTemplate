@@ -22,8 +22,9 @@
 namespace
 {
     constexpr const utf8* kSpriteMaterialPath = "engine/materials/sprite2d.material";
-    constexpr const utf8* kTextureA           = "engine/textures/flashlight.png";
-    constexpr const utf8* kTextureB           = "engine/textures/light_bulb.png";
+    // 런타임은 DDS 만 읽는다 — 시험도 실제로 있는 DDS 두 장을 쓴다.
+    constexpr const utf8* kTextureA = "engine/textures/test/checker.dds";
+    constexpr const utf8* kTextureB = "engine/textures/perlin.dds";
 
     /** @brief 텍스처를 건 스프라이트 하나를 만들고 렌더 에셋을 풉니다(시작 · 씬 초기화가 부르는 자리). */
     sw::SpriteComponent* spawnSprite( sw::GameObjectManager& manager, const utf8* pName, const utf8* pTexture )
