@@ -186,6 +186,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_MechArena",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }

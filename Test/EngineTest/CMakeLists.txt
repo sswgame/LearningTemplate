@@ -47,6 +47,7 @@ sw_addTestExecutable(EngineTest
 		GF_Metroidvania
 		GF_ActionPlatformer
 		GF_KartRacing
+		GF_MechArena
 	LABELS
 		"unit;engine"
 	TIMEOUT
