@@ -15,6 +15,7 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 
@@ -303,4 +304,75 @@ SW_TEST_CASE( ShaderBakeRequestTest, BakedManifestHoldsEveryRequest )
     }
     SW_EXPECT_TRUE_MSG( checkedCount > 0, "구운 매니페스트를 하나도 찾지 못했다 — 이 시험이 아무것도 보지 않는다" );
     SW_EXPECT_EQUAL( 0u, missingCount );
+}
+
+/**
+ * @brief [ShaderBakeRequestTest] 커밋된 `shaders/bin/<rhi>` 폴더에는 지금 요청이 만드는 바이너리만 있다
+ * @details 위 시험의 반대쪽 — "구운 것 ⊆ 요청". 베이커는 매니페스트를 요청으로 새로 쓰지만 요청에서 빠진 바이너리 파일은 지우지 않는다.
+ *          셰이더나 구울 목록 줄을 지우고 그 바이너리를 남기면 매니페스트에 없는 파일이 배포 팩에 실린다.
+ */
+SW_TEST_CASE( ShaderBakeRequestTest, BakedFoldersHoldOnlyRequestedBinaries )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const sw::string& rootDir = sw::ResourceUtil::getRootFolderPath();
+    SW_ASSERT_TRUE( rootDir.empty() == false );
+
+    sw::vector<sw::ShaderBakeRequest> listRequest;
+    sw::ShaderBakeDriver::collectAllRequests( rootDir, listRequest );
+    SW_ASSERT_TRUE( listRequest.empty() == false );
+
+    const sw::ShaderTargetFormat arrFormat[] = { sw::ShaderTargetFormat::DXBC_D3D11, sw::ShaderTargetFormat::DXIL_D3D12,
+                                                 sw::ShaderTargetFormat::SPIRV_Vulkan, sw::ShaderTargetFormat::SPIRV_OpenGL };
+
+    // 베이커(ShaderBakeDriver::bakeAllShaders)와 같은 규칙으로 요청마다 바이너리의 절대 경로를 만든다.
+    sw::unordered_set<sw::string> uniqueExpectedBinary;
+    for ( const sw::ShaderBakeRequest& request : listRequest )
+    {
+        const sw::string absPath = sw::FileUtil::fileExists( request._shaderPath ) ? request._shaderPath
+                                                                                   : sw::ResourceUtil::getResourcePath( request._shaderPath );
+        if ( sw::FileUtil::fileExists( absPath ) == false )
+            continue;
+        const sw::string normPath  = sw::FileUtil::normalizeSeparators( absPath );
+        const size_t     shaderPos = normPath.find( "/shaders/" );
+        if ( shaderPos == sw::string::npos )
+            continue;
+        const sw::string binRoot   = normPath.substr( 0, shaderPos + sizeof( "/shaders" ) - 1 ) + "/bin";
+        const sw::string stemLower = sw::ShaderBaker::getStemLower( normPath );
+        for ( const sw::ShaderTargetFormat format : arrFormat )
+        {
+            const sw::string fileName = sw::ShaderBaker::computeBinaryFileName( stemLower, request._stage, request._entryPoint, request._permutationHash,
+                                                                                sw::ShaderBaker::getExtensionForFormat( format ) );
+            const sw::string binDir   = sw::FileUtil::joinPath( binRoot, sw::ShaderBaker::getSubfolderForFormat( format ) );
+            uniqueExpectedBinary.insert( sw::FileUtil::normalizePath( sw::FileUtil::joinPath( binDir, fileName ) ) );
+        }
+    }
+    SW_ASSERT_TRUE( uniqueExpectedBinary.empty() == false );
+
+    sw::unordered_set<sw::string> uniqueExtension;
+    for ( const sw::ShaderTargetFormat format : arrFormat )
+        uniqueExtension.insert( sw::string( sw::ShaderBaker::getExtensionForFormat( format ) ) );
+
+    uint32 checkedCount{ 0 };
+    uint32 orphanCount{ 0 };
+    for ( const sw::string& extension : uniqueExtension )
+    {
+        sw::vector<sw::string> listBinary;
+        (void)sw::FileUtil::collectFiles( rootDir, extension, listBinary, true );
+        for ( const sw::string& binaryPath : listBinary )
+        {
+            const sw::string normBinary = sw::FileUtil::normalizePath( binaryPath );
+            if ( normBinary.find( "/shaders/bin/" ) == sw::string::npos )
+                continue;
+            ++checkedCount;
+            if ( uniqueExpectedBinary.find( normBinary ) != uniqueExpectedBinary.end() )
+                continue;
+            constexpr uint32 kReportedOrphanLimit = 8;
+            if ( orphanCount < kReportedOrphanLimit )
+                SW_EXPECT_TRUE_MSG( false, ( binaryPath + " 를 만드는 요청이 없다 — 지운 셰이더 · 목록 줄의 바이너리를 같이 지울 것" ).c_str() );
+            ++orphanCount;
+        }
+    }
+    SW_EXPECT_TRUE_MSG( checkedCount > 0, "구운 바이너리를 하나도 찾지 못했다 — 이 시험이 아무것도 보지 않는다" );
+    SW_EXPECT_EQUAL( 0u, orphanCount );
 }

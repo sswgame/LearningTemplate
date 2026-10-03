@@ -242,7 +242,6 @@ namespace sw
                 const vector<string> listEngineShader = {
                     engineData._shaderFullscreenTriangle,
                     "engine/shaders/sprite2d.hlsl",
-                    "common/shaders/computetestgeometry.hlsl",
                     "common/shaders/provokingvertex.hlsl",
                     "common/shaders/instanceslotprobe.hlsl" };
                 for ( const string& path : listEngineShader )
@@ -253,7 +252,6 @@ namespace sw
 
                 const vector<string> listEngineComputeShader = {
                     "common/shaders/samplecompute.hlsl",
-                    "common/shaders/sampleindirect.hlsl",
                     "common/shaders/computetexturewrite.hlsl" };
                 for ( const string& path : listEngineComputeShader )
                 {
