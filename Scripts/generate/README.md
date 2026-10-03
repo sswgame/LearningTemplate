@@ -8,7 +8,7 @@
 
 | 스크립트 | 역할 | 출력/대상 |
 |---|---|---|
-| `CookAssets.py` | Prefab, Scene XML 파싱(PFB2, SCN1) 및 Resource 디렉터리 .pack 바이너리 패킹 | `Resource/**/*.bin`, `build/*/Bin/Packs/*.pack` |
+| `CookAssets.py` | 씬 · 프리팹을 `App --cook-scenes` 로 굽게 하고(SCN1 · PFB2 — 리플렉션이 엔진 안에 있어서 엔진이 굽는다), Resource 도메인을 `.pack` 으로 패킹(SWPK, 4KB 섹터 정렬). 구운 씬 · 프리팹은 소스 옆이 아니라 스테이징 폴더에 쓰고 팩에 같은 상대 경로로 넣는다 | `--cooked-dir`(기본 `build/*/Bin/Cooked`), `build/*/Bin/Packs/*.pack` |
 | `BakeShippingHostDefaults.py` | 커밋된 런타임 JSON 설정을 읽어 Shipping 및 Fallback용 C++ 헤더로 베이킹 | `build/.../ShippingHostDefaults.h` |
 | `GenerateDocs.py` | Doxygen을 구동하여 C++ API 레퍼런스 문서 생성 | `Docs/Doxygen/html/index.html` |
 | `GeneratePackFormat.py` | 팩 바이너리 계약(`Config/Engine/PackFormat.json`)을 C++ 헤더로 | `build/.../PackFormat.gen.h` |
@@ -19,8 +19,11 @@
 | `GenerateEngineAbiStamp.py` | Core · Engine 헤더 내용의 지문 — 핫 리로드의 엔진 ABI 도장 (빌드 시점) | `build/.../EngineAbiStamp.gen.h` |
 | `GenerateSpriteTextures.py` | 엔진이 들고 다니는 작은 스프라이트 텍스처(DDS)와 클립 — 데미지 숫자 글리프 아틀라스 · 네 칸 시험 텍스처 (손으로 돌린다, 결과를 커밋한다) | `Resource/engine/textures/ui/digits.*` · `Resource/engine/textures/test/quadrants.*` |
 
-`Generate*` 넷은 2026-09-30 까지 `setup/` 에 있었다. `setup/` 은 **외부 도구를 찾아 설치하는** 폴더이고, 정본에서 파일을 만들어 내는 일은
-구성 시점이든 빌드 시점이든 여기다.
+`setup/` 은 **외부 도구를 찾아 설치하는** 폴더이고, 정본에서 파일을 만들어 내는 일은 구성 시점이든 빌드 시점이든 여기다.
+
+> **씬 쿠킹은 소스 트리를 읽습니다.** `App --cook-scenes` 는 팩을 마운트하지 않고 소스 트리(`ContentSource::SourceTree`)를 올려, 배포 구성에서도
+> 느슨한 파일 · 소스 프리팹을 읽습니다. 모르는 타입의 컴포넌트(`MissingComponent`)가 든 씬은 굽지 않고 실패로 세며, 실패가 하나라도 있으면
+> App 이 0 이 아닌 코드로 끝나 쿠커가 멈춥니다.
 
 ## 팩 압축 코덱 고르기
 
@@ -58,7 +61,7 @@
 ```bash
 py -3 -m Scripts cook --all
 # 또는 직접 실행:
-py -3 Scripts/generate/CookAssets.py [--all] [--prefabs-only] [--scenes-only] [--packs-only] [--app <App 실행 파일>]
+py -3 Scripts/generate/CookAssets.py [--all] [--prefabs-only] [--scenes-only] [--packs-only] [--app <App 실행 파일>] [--cooked-dir <폴더>] [--target-rhi <백엔드>] [--bake-shaders]
 # 씬 쿠킹은 App --cook-scenes 라 App 이 먼저 서 있어야 한다. CMake 의 CookAssets 타겟은 App 뒤에 돌며 경로를 --app 으로 넘긴다.
 py -3 Scripts/generate/BakeShippingHostDefaults.py <output_header_path>
 py -3 Scripts/generate/GenerateDocs.py [--open]

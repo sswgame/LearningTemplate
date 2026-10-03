@@ -53,7 +53,7 @@ ParserDefines.h        ← 매크로/CLI/tpl 이름 계약 (JSON이 아님)
 | 최신 판정 · 무엇을 다시 만드나 | `GeneratedFiles.cpp` (`IncrementalCheck`) |
 | 흐름 · 병렬 | `ReflectionPipeline.cpp` |
 | 수집 구조체 멤버 | `ParsedReflection.h` |
-| `Alias=` 토큰이 어디에 붙나 | `PredefinedAnnotationField.xxx`(필드 표) + `AnnotationMeta.txt`(철자) |
+| `Alias=` 토큰이 어디에 붙나 | `PredefinedAnnotationField.xxx`(필드 표) + `AnnotationMeta.txt`(철자). `Alias` · `ValueAlias` 는 실제 게임 데이터가 생긴 뒤의 이름 변경 창구다 — 지금은 이름을 바꾸면 별칭을 두지 않고 데이터를 다시 쓴다 |
 | AST에서 클래스·필드를 어떻게 찾나 | `AstVisitor.cpp` (A~G) |
 | 생성 코드 모양 | `CodeGenerator.cpp` + `Templates/` |
 | clang `-DREFLECT...` 인자 | `Config/Environment/parser_config.defaults.json` |
@@ -115,7 +115,7 @@ Engine 입력 27 개를 한 TU 로 묶어도 1.04 초다. 묶음 TU 는 입력�
 디스크에 없다)이고, 선언은 **적힌(매크로면 전개된) 파일**로 헤더마다 나눈다(`AstVisitor::findTargetIndex`).
 
 - 한 헤더의 **애노테이션 오류**는 그 헤더만 실패시킨다(오류는 헤더 단위, 순회는 계속) — 나머지 헤더는 만들어진다.
-- 한 헤더의 **C++ 오류**로 묶음이 파싱되지 않으면 헤더마다 병렬로 다시 파싱해 그 헤더의 오류로 알린다(예전 경로).
+- 한 헤더의 **C++ 오류**로 묶음이 파싱되지 않으면 헤더마다 병렬로 다시 파싱해 그 헤더의 오류로 알린다(헤더 단위 경로).
 - 헤더가 하나면 묶지 않는다(그 헤더가 주 파일).
 
 ---
@@ -156,7 +156,7 @@ ReflectionParser/
 | 경로 | 역할 |
 |------|------|
 | `Source/Core/Predefined/AnnotationMeta.txt` | 어노테이션 별칭 표 |
-| `Source/Core/Predefined/PredefinedAnnotationKind.xxx` | 애노테이션 종류 — `AnnotationMeta.h` 가 여기서 전개한다. 예전에 이 폴더에 같은 이름의 사본이 있었는데 아무도 include 하지 않는 죽은 파일이었다(`Scripts/lint/gate/CheckDataFileReferences.py` 가 이제 막는다) |
+| `Source/Core/Predefined/PredefinedAnnotationKind.xxx` | 애노테이션 종류 — `AnnotationMeta.h` 가 여기서 전개한다. 이 폴더에 사본을 두지 않는다(아무도 include 하지 않는 데이터 파일은 `Scripts/lint/gate/CheckDataFileReferences.py` 가 막는다) |
 | `Source/Engine/Reflection/ReflectBuiltins.xxx` | 빌트인 타입 표 → `ReflectBuiltins.gen.cpp` |
 | `Source/Engine/Reflection/ReflectionEnumNames.h` | `ContainerKind` · `FunctionNetRole` ↔ 식별자 문자열. 파서와 엔진이 같은 헤더(헤더 전용)로 변환한다 |
 | `Config/Environment/parser_config.defaults.json` | clang 인자·경로·emit·tuning |

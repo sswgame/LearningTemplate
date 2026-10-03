@@ -4,4 +4,7 @@
 
 ## 주요 구성요소
 - **ReflectionParser**: libclang으로 `REFLECT` / `PROPERTY` 등을 스캔해 `*.gen.cpp`를 생성합니다. 초심자용 흐름·CLI·템플릿 설명은 [ReflectionParser/README.md](ReflectionParser/README.md). 엔진 본체를 빌드하려면 이 도구가 먼저 준비되어야 합니다.
-- **_dependencyModuleList / vcpkg**: 서드파티 라이브러리나 툴 체인이 다운로드 되는 캐시/임시 폴더로 활용됩니다.
+- **LLVM · Ninja · Sccache · vcpkg**: `Scripts/setup/` 의 셋업 스크립트(`SetupEnvironment.py` · `SetupLlvm.py` · `SetupVcpkg.py`)가 받아 두는 툴체인 · 패키지 매니저 자리입니다.
+  clang-format 도 `LLVM/bin` 의 고정 판을 씁니다(PATH 의 다른 판이 아니라).
+- **_cache**: 위 도구를 받을 때의 다운로드 캐시입니다.
+- 받아 오는 폴더는 `.gitignore` 로 빠져 있고, 이 폴더에서 커밋되는 소스는 `ReflectionParser` 와 `CMakeLists.txt` 뿐입니다.

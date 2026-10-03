@@ -9,7 +9,7 @@ cmake/
 ├── Config/                      [1계층: 전역 설정 및 프로젝트 옵션]
 │   ├── BuildOptions.cmake       — SW_* 빌드 기능 옵션 및 프로젝트 메타데이터 정의
 │   ├── LoadConfigConstants.cmake — Constants.py 의 상수를 SW_* 변수로 (상수만 필요한 곳은 이것만 include)
-│   ├── GenerateConfigConstants.cmake — 위 상수로 ConfigConstants.h · PackFormat.gen.h · Shipping 호스트 기본값 생성 (한 번)
+│   ├── GenerateConfigConstants.cmake — 위 상수로 ConfigConstants.h · PackFormat.gen.h · CookContract.gen.h · Shipping 호스트 기본값 생성 (한 번)
 │   └── ConfigConstants.h.in     — C++ 헤더 템플릿
 │
 ├── Environment/                 [2계층: 개발 환경 및 툴체인 주입 (project() 이전)]
@@ -25,9 +25,9 @@ cmake/
 │   ├── LoadCompileFlags.cmake   — 플래그 모듈 일괄 인클루더
 │   ├── Architecture/            — DetectArchitecture.cmake(컴파일러가 겨냥하는 아키텍처 판정), X64.cmake, ARM64.cmake
 │   ├── BuildType/               — Debug.cmake, Release.cmake
-│   ├── Compiler/                — Clang.cmake, MSVC.cmake, GCC.cmake
+│   ├── Compiler/                — Clang.cmake, MSVC.cmake, GCC.cmake (SW_COMPILER_* 정의, `-Werror=switch` · `-Werror=unused-result` 등 경고 정책)
 │   ├── Options/                 — CppStandard.cmake, Sanitizer.cmake, UnityBuild.cmake
-│   ├── Platform/                — Windows.cmake, Linux.cmake, MacOS.cmake
+│   ├── Platform/                — Windows.cmake, Linux.cmake, MacOS.cmake (SW_PLATFORM_* 정의 — 코드는 컴파일러 내장 매크로 대신 이것을 묻는다)
 │   └── Toolchain/Vcpkg/         — vcpkg 에게 건네는 파일: triplet · 포트 툴체인 · 포트 컴파일 규칙
 │
 └── Engine/                      [4계층: 엔진 빌드 파이프라인 및 타겟 헬퍼 (project() 이후)]

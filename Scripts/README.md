@@ -15,7 +15,7 @@ CMake는 빌드만 담당하고, 도구 탐색·설정·보조 생성 및 코드
 
 **폴더가 곧 성격이다.** 새 스크립트는 "무엇을 하는가" 로 자리를 고른다 — 도구를 찾아 설치하면 `setup/`, 파일을 만들어 내면 `generate/`,
 검사 · 수정이면 `lint/` 의 네 폴더 중 하나, 사람이 가끔 돌리는 실험 도구면 `dev/`. 모두 `common/` 만 import 하고 서로는 부르지 않는다
-(`common` 이 위층을 부르면 안 된다 — 2026-09-30 에 하나 있던 것을 걷었다).
+(`common` 은 위층을 부르지 않는다).
 
 ```
 Scripts/
@@ -73,9 +73,11 @@ Scripts/
   │     │     ├── CheckRenderOwnership.py     # 렌더 스냅샷 소유 규칙
   │     │     ├── CheckTestSuites.py          # 스위트 명명 · 한 파일 한 스위트 · CI 경계 표식 · CoreTest 는 엔진을 직접 쓰지 않음
   │     │     ├── CheckFallibleNodiscard.py   # 실패를 bool 로 알리는 함수 선언의 `[[nodiscard]]`
-  │     │     ├── CheckSourceGlob.py          # CMake GLOB 소스 누락 + RHI 백엔드 목록
+  │     │     ├── CheckSourceGlob.py          # CMake GLOB 소스 누락 + RHI 백엔드 목록 (짓지 않는 소스는 CMake 가 적은 UnbuiltSources.txt 로만 안다)
   │     │     ├── CheckDataFileReferences.py  # 아무도 include 하지 않는 죽은 데이터 파일
   │     │     ├── CheckResourceCasing.py      # 리소스 소문자 명명
+  │     │     ├── CheckTextureFolders.py      # 런타임 textures/ 에는 DDS 만, 원본 이미지는 textures_raw/ 에만
+  │     │     ├── CheckTargetMacros.py        # 플랫폼 · 아키텍처 · 컴파일러를 SW_* 매크로로만 묻기 (컴파일러 내장 매크로 금지)
   │     │     ├── CheckCookContract.py        # 쿠커가 쿠킹 표대로 고르는지
   │     │     ├── CheckShaderConventions.py   # HLSL 명명 규칙(AGENTS.md 의 HLSL 절)
   │     │     ├── CheckCmakeConventions.py    # CMake 명명 규칙
@@ -88,8 +90,9 @@ Scripts/
   │     │     ├── FormatForwardDeclarations.py
   │     │     ├── RunClangFormat.py           # clang-format 적용 (`py -3 -m Scripts format`)
   │     │     └── FormatModified.py           # 작업 트리 변경분에 위 셋 + 인클루드 순서
-  │     ├── report/                   # 찍어 줄 뿐, 언제나 0 으로 끝난다
-  │     │     ├── RunBuildWarnings.py         # 트리에 남아 있는 컴파일러 경고 (`--fail-on error` 를 명시하면 CI 가 막는 데 쓴다)
+  │     ├── report/                   # 찍어 줄 뿐, 0 으로 끝난다 (`RunBuildWarnings.py --fail-on` 을 명시했을 때만 예외)
+  │     │     ├── RunBuildWarnings.py         # 트리에 남아 있는 컴파일러 경고 (`--fail-on error` 를 명시하면 CI 가 막는 데 쓴다,
+  │     │     │                               #   `--define SW_ENABLE_DEADLOCK_DETECTION` 처럼 어느 프리셋도 켜지 않는 옵션이 아직 컴파일되는지도 묻는다)
   │     │     ├── RunClangTidy.py
   │     │     ├── RunHeaderSelfContained.py   # 혼자 서지 못하는 헤더
   │     │     ├── RunPaddingReport.py         # 레코드별 패딩 · 필드 재배치로 줄일 수 있는 크기 (libclang, `--preset` · `--define SW_SHIPPING`)
