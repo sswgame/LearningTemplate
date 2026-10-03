@@ -94,6 +94,14 @@ namespace sw::editor
     namespace commandmenu
     {
         inline constexpr const utf8* kMainMenuBar = "MainMenu";
+        /** @brief 뷰포트 툴바의 "Align..." 팝업이 그리는 메뉴입니다. */
+        inline constexpr const utf8* kViewportAlign = "Viewport/Align";
+        /**
+         * @brief 메인 메뉴바 밖에서 코드가 그리는 메뉴 경로(`EditorCommandGui::drawMenuItems`)입니다. 부모가 `kMainMenuBar` 가 아닌 메뉴는 여기 있어야 그려집니다.
+         * @details 메인 메뉴바는 한 단계 메뉴만 그립니다(하위 메뉴 없음). 표의 경로가 이 목록에도 메인 메뉴바에도 없으면 그 항목은 화면 어디에도 나오지
+         *          않으므로 `EditorCommandRegistry::validate` 가 잡습니다. 코드가 그리는 경로는 이 상수로 적습니다(글자를 두 곳에 적지 않는다).
+         */
+        inline constexpr const utf8* kArrHostedMenuPath[] = { kViewportAlign };
         /** @brief 메뉴 순서의 묶음 폭입니다. 같은 메뉴에서 이웃한 두 항목의 `_menuOrder / kGroupSpan` 이 다르면 사이에 구분선이 들어갑니다. */
         inline constexpr int32 kGroupSpan = 100;
     } // namespace commandmenu
@@ -179,7 +187,7 @@ namespace sw::editor
         const EditorMenu* findMenu( string_view menuPath ) const;
 
         /**
-         * @brief 중복 id · 중복 키 조합 · 같은 메뉴의 같은 순서를 outReport 에 적습니다. 문제가 없으면 true입니다.
+         * @brief 중복 id · 중복 키 조합 · 같은 메뉴의 같은 순서 · 어디서도 그리지 않는 메뉴 경로를 outReport 에 적습니다. 문제가 없으면 true입니다.
          * @details 정의가 세 곳으로 나뉘어 있던 동안 같은 조합을 두 곳이 처리하는 일이 실제로 있었습니다(Ctrl+Z 가 전역과
          *          Inspector 에서 각각 undo 를 불러 두 번 되돌렸습니다). 정의를 한곳으로 모은 뒤로는 그런 충돌을 기계적으로 잡을
          *          수 있습니다.

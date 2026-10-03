@@ -47,6 +47,17 @@ namespace sw::editor
                 outLabel.append( EditorCommandRegistry::getKeyName( shortcut._key ) );
             }
 
+            /** @brief 코드가 경로로 그리는 메뉴(`commandmenu::kArrHostedMenuPath`)면 true 입니다. */
+            static bool isHostedMenuPath( const string& menuPath )
+            {
+                for ( const utf8* pHostedPath : commandmenu::kArrHostedMenuPath )
+                {
+                    if ( menuPath == pHostedPath )
+                        return true;
+                }
+                return false;
+            }
+
             /** @brief 두 커맨드가 같은 조합을 처리하면 그 조합을 outChord 에 담고 true입니다. */
             static bool findSharedChord( const EditorCommandDesc& lhs, const EditorCommandDesc& rhs,
                                          EditorCommandShortcut& outChord )
@@ -259,6 +270,20 @@ namespace sw::editor
                     outReport += "\n";
                 }
             }
+        }
+
+        // 메인 메뉴바는 한 단계 메뉴만 그리고, 그 밖의 메뉴는 코드가 경로로 부를 때만 그려진다 — 둘 다 아니면 그 항목은 어디에도 나오지 않는다.
+        for ( const EditorMenu& menu : _listMenu )
+        {
+            if ( menu._parentPath == commandmenu::kMainMenuBar || EditorCommandRegistryInternal::isHostedMenuPath( menu._path ) )
+                continue;
+            outReport += "그려지지 않는 메뉴 경로 ";
+            outReport += menu._path;
+            outReport += " (부모가 ";
+            outReport += commandmenu::kMainMenuBar;
+            outReport += " 도 아니고 commandmenu::kArrHostedMenuPath 에도 없다): ";
+            outReport += _listCommand[menu._listItem.front()._commandIndex]._id;
+            outReport += "\n";
         }
 
         return outReport.empty();

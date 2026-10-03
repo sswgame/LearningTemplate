@@ -92,9 +92,12 @@
 `Common/Gui/EditorCommandGui.cpp` 의 `_s_arrCommandRow` 표입니다. 한 줄을 넣으면
 팔레트에 바로 나타나고(`_bPaletteVisible`), 단축키를 적었으면 전역에서 바로 먹습니다.
 메뉴에 **보이게** 하려면 그 줄의 마지막 두 칸 — 메뉴 경로(`"MainMenu/File"`, 툴바 정렬 팝업은
-`"Viewport/Align"`)와 순서 — 를 채우십시오. 순서의 백의 자리가 바뀌는 자리에 구분선이 들어가고, 메인
+`commandmenu::kViewportAlign`)와 순서 — 를 채우십시오. 순서의 백의 자리가 바뀌는 자리에 구분선이 들어가고, 메인
 메뉴바의 메뉴끼리도 가장 작은 순서로 줄 섭니다(File 1xxx · Edit 2xxx · Build 3xxx). 라벨·아이콘·단축키
 표기·활성 조건·툴팁도 표에서 옵니다. 같은 메뉴의 같은 순서는 `validate` 가 잡습니다.
+메인 메뉴바는 한 단계 메뉴만 그립니다. 그 밖의 경로는 코드가 `EditorCommandGui::drawMenuItems` 로 그리는 경로
+(`commandmenu::kArrHostedMenuPath`)여야 하고, 아니면 `validate` 가 "그려지지 않는 메뉴 경로" 로 시작할 때 Error 를 남깁니다
+(그 목록의 경로에 표의 줄이 없어도 Error). 에디터 스모크의 `[Error]` 0 건이 그것을 잡습니다.
 
 예전에는 같은 커맨드가 메뉴·단축키 사다리·팔레트 목록 **세 곳**에 따로 적혀 있었고, 그래서
 실제로 어긋났습니다: `F7`(게임 컴파일)은 어느 라벨에도 없었고, `Ctrl+Shift+Z`(다시 실행)는
