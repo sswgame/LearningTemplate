@@ -228,7 +228,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
-- **10-03 병합 뒤 Shipping `-L hostgpu` 기록이 없다.** GPU 있는 PC 에서 한 번 돌려 확인한다(확인 필요).
 - **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩). 09-23 에 고친 DX11 기록 컨텍스트 결함과 모양은 같지만 단정하지 않았다.
   이제 시험 실행 파일에 크래시 핸들러가 있어 다음에는 스택이 남는다 — 직접 실행해 전체 출력을 파일로 받는다.
 - **Shipping `CoreTest` 의 `Failed to deserialize config from: shipping_host_baked`**(한 번, 3 회 재실행 통과). `ConfigManager::loadConfigFromJson`.
