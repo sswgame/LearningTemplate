@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Utility/Xml/TileMapXml.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -31,50 +32,22 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 2) 워프 · 조우 테이블 · HD-2D 비주얼
+    // 2) 워프 · 조우 테이블 · HD-2D 비주얼 — 파일 스키마(`TileMapXmlData`)의 타입을 그대로 쓴다
     // ------------------------------------------------------------------------------
     /** @brief 타일 좌표에서 다른 맵으로 보내는 워프입니다. */
-    struct TileWarp
-    {
-        int32  _tileX{ 0 };
-        int32  _tileY{ 0 };
-        string _targetMap{};      ///< 대상 맵 (Resource 상대)
-        int32  _targetTileX{ 1 }; ///< 도착 타일 X
-        int32  _targetTileY{ 1 }; ///< 도착 타일 Y
-        string _pairId{};         ///< 선택적 WarpDoor 페어 ID
-    };
-
+    using TileWarp = TileMapXmlData::Warp;
     /** @brief 맵 조우 테이블의 한 행입니다(가중치 추첨). */
-    struct TileEncounterEntry
-    {
-        string  _speciesId{};
-        float32 _weight{ 1.0f }; ///< 상대 가중치
-    };
-
+    using TileEncounterEntry = TileMapXmlData::Encounter;
     /** @brief HD-2D 1차: 타일별 가짜 높이 + 틴트입니다(메시 패스 전까지 소프트웨어 · 디버그). */
-    struct TileVisual
-    {
-        uint8 _height{ 0 }; ///< 가짜 높이
-        uint8 _tintR{ 180 };
-        uint8 _tintG{ 200 };
-        uint8 _tintB{ 160 };
-        uint8 _atlasId{ 0 }; ///< 아틀라스 슬롯
-    };
-
-    /** @brief 타일맵 에디터 페인트 레이어입니다. */
-    enum class TilePaintLayer : uint8
-    {
-        Visual = 0,
-        Walkable,
-        Encounter,
-        Warp,
-        PassThrough
-    };
+    using TileVisual = TileMapXmlData::Visual;
 
     // ------------------------------------------------------------------------------
     // 3) TileMap — XML 그리드 + 워프 목록 + 조우 테이블
     // ------------------------------------------------------------------------------
-    /** @brief HD-2D 오버월드 타일 그리드입니다. */
+    /**
+     * @brief HD-2D 오버월드 타일 그리드입니다.
+     * @details 맵 데이터는 파일 스키마 `TileMapXmlData` 를 그대로 듭니다 — 플래그 레이어 · 비주얼 · 워프가 필드마다 복사되지 않습니다.
+     */
     class SW_GF_API TileMap
     {
     public:
@@ -91,39 +64,41 @@ namespace sw
         void resize( int32 width, int32 height );
 
         /** @brief 맵 너비(타일 수)를 반환합니다. */
-        int32 getWidth() const { return _width; }
+        int32 getWidth() const { return _data._width; }
         /** @brief 맵 높이(타일 수)를 반환합니다. */
-        int32 getHeight() const { return _height; }
+        int32 getHeight() const { return _data._height; }
         /** @brief 맵 표시 이름을 반환합니다. */
-        const string& getName() const { return _name; }
+        const string& getName() const { return _data._name; }
         /** @brief 맵 표시 이름을 설정합니다. */
-        void setName( string_view name ) { _name = name; }
+        void setName( string_view name ) { _data._name = name; }
         /** @brief 원본 XML 경로를 반환합니다. */
-        const string& getSourcePath() const { return _sourcePath; }
+        const string& getSourcePath() const { return _data._sourcePath; }
         /** @brief 대응 씬 경로를 반환합니다. */
-        const string& getScenePath() const { return _scenePath; }
+        const string& getScenePath() const { return _data._scenePath; }
         /** @brief 대응 씬 경로를 설정합니다. */
-        void setScenePath( string_view path ) { _scenePath = path; }
+        void setScenePath( string_view path ) { _data._scenePath = path; }
         /** @brief 존 역할 문자열을 반환합니다. */
-        const string& getRole() const { return _role; }
+        const string& getRole() const { return _data._role; }
         /** @brief 존 역할 문자열을 설정합니다. */
-        void setRole( string_view role ) { _role = role; }
+        void setRole( string_view role ) { _data._role = role; }
         /** @brief 기본 스폰 X를 반환합니다. */
-        int32 getSpawnX() const { return _spawnX; }
+        int32 getSpawnX() const { return _data._spawnX; }
         /** @brief 기본 스폰 Y를 반환합니다. */
-        int32 getSpawnY() const { return _spawnY; }
+        int32 getSpawnY() const { return _data._spawnY; }
         /** @brief 기본 스폰 좌표를 설정합니다. */
         void setSpawn( int32 x, int32 y )
         {
-            _spawnX = x;
-            _spawnY = y;
+            _data._spawnX = x;
+            _data._spawnY = y;
         }
 
         /** @brief 맵 조우 테이블을 반환합니다. */
-        const vector<TileEncounterEntry>& getEncounters() const { return _listEncounterEntry; }
+        const vector<TileEncounterEntry>& getEncounters() const { return _data._listEncounterEntry; }
         /** @brief 맵 조우 테이블에서 가중치로 추첨합니다. 없으면 빈 문자열입니다. */
         string pickEncounterSpeciesId() const;
 
+        /** @brief 그 칸에서 레이어가 켜져 있는지 반환합니다. 맵 밖이면 false 입니다. */
+        bool isFlagSet( TileFlagLayer layer, int32 x, int32 y ) const;
         /** @brief 보행 가능 여부를 반환합니다. */
         bool isWalkable( int32 x, int32 y ) const;
         /** @brief 조우 타일 여부를 반환합니다. */
@@ -139,6 +114,8 @@ namespace sw
         /** @brief 타일 비주얼을 반환합니다. */
         TileVisual getTileVisual( int32 x, int32 y ) const;
 
+        /** @brief 그 칸의 레이어 값을 설정합니다. 맵 밖이면 무시합니다. */
+        void setFlag( TileFlagLayer layer, int32 x, int32 y, bool bSet );
         /** @brief 보행 가능 여부를 설정합니다. */
         void setWalkable( int32 x, int32 y, bool bWalkable );
         /** @brief 조우 타일 여부를 설정합니다. */
@@ -165,25 +142,12 @@ namespace sw
         {
             // 곱셈을 size_t 로 한다. int 로 곱하면 큰 맵에서 넘친 뒤에 확대되므로, 캐스트가 값을
             // 지켜 주는 것처럼 보이지만 이미 틀린 값이다. (좌표 유효성은 isInBounds 가 본다.)
-            return static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
+            return static_cast<size_t>( y ) * static_cast<size_t>( _data._width ) + static_cast<size_t>( x );
         }
         uint64 getWarpKey( int32 x, int32 y ) const { return ( static_cast<uint64>( static_cast<uint32>( x ) ) << 32 ) | static_cast<uint32>( y ); }
         void   rebuildWarpIndex();
 
-        string                                _name;
-        string                                _sourcePath; ///< loadFromXml 경로
-        string                                _scenePath;  ///< 대응 씬 XML
-        string                                _role;       ///< ZoneRole 힌트 문자열
-        int32                                 _width;
-        int32                                 _height;
-        int32                                 _spawnX;
-        int32                                 _spawnY;
-        vector<uint8>                         _listWalkable;
-        vector<uint8>                         _listEncounter;
-        vector<uint8>                         _listPassThrough;
-        vector<TileVisual>                    _listVisual;
-        vector<TileWarp>                      _listWarp;
-        vector<TileEncounterEntry>            _listEncounterEntry;
+        TileMapXmlData                        _data; ///< 맵 데이터(파일 스키마 그대로)
         mutable unordered_map<uint64, size_t> _mapWarpIndex;
     };
 

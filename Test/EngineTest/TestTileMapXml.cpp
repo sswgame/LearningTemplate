@@ -27,16 +27,16 @@ namespace
         data._spawnY    = 1;
 
         const size_t count = 6;
-        data._listWalkable.assign( count, 1 );
-        data._listEncounter.assign( count, 0 );
-        data._listPassThrough.assign( count, 0 );
+        data.getFlagLayer( sw::TileFlagLayer::Walkable ).assign( count, 1 );
+        data.getFlagLayer( sw::TileFlagLayer::Encounter ).assign( count, 0 );
+        data.getFlagLayer( sw::TileFlagLayer::PassThrough ).assign( count, 0 );
         data._listVisual.assign( count, sw::TileMapXmlData::Visual{} );
 
         for ( size_t tileIndex = 0; tileIndex < count; ++tileIndex )
         {
-            data._listWalkable[tileIndex]    = ( tileIndex % 2 == 0 ) ? 1 : 0;
-            data._listEncounter[tileIndex]   = ( tileIndex % 3 == 0 ) ? 1 : 0;
-            data._listPassThrough[tileIndex] = ( tileIndex == 4 ) ? 1 : 0;
+            data.getFlagLayer( sw::TileFlagLayer::Walkable )[tileIndex]    = ( tileIndex % 2 == 0 ) ? 1 : 0;
+            data.getFlagLayer( sw::TileFlagLayer::Encounter )[tileIndex]   = ( tileIndex % 3 == 0 ) ? 1 : 0;
+            data.getFlagLayer( sw::TileFlagLayer::PassThrough )[tileIndex] = ( tileIndex == 4 ) ? 1 : 0;
 
             sw::TileMapXmlData::Visual tileVisual;
             tileVisual._height          = static_cast<uint8>( tileIndex );
@@ -75,13 +75,18 @@ namespace
         SW_EXPECT_EQUAL( expected._spawnX, actual._spawnX );
         SW_EXPECT_EQUAL( expected._spawnY, actual._spawnY );
 
-        SW_ASSERT_EQUAL( expected._listWalkable.size(), actual._listWalkable.size() );
-        SW_ASSERT_EQUAL( expected._listVisual.size(), actual._listVisual.size() );
-        for ( size_t tileIndex = 0; tileIndex < expected._listWalkable.size(); ++tileIndex )
+        for ( const sw::TileFlagLayerInfo& info : sw::kArrTileFlagLayerInfo )
         {
-            SW_EXPECT_EQUAL( uint32( expected._listWalkable[tileIndex] ), uint32( actual._listWalkable[tileIndex] ) );
-            SW_EXPECT_EQUAL( uint32( expected._listEncounter[tileIndex] ), uint32( actual._listEncounter[tileIndex] ) );
-            SW_EXPECT_EQUAL( uint32( expected._listPassThrough[tileIndex] ), uint32( actual._listPassThrough[tileIndex] ) );
+            const sw::vector<uint8>& listExpected = expected.getFlagLayer( info._layer );
+            const sw::vector<uint8>& listActual   = actual.getFlagLayer( info._layer );
+            SW_ASSERT_EQUAL( listExpected.size(), listActual.size() );
+            for ( size_t tileIndex = 0; tileIndex < listExpected.size(); ++tileIndex )
+                SW_EXPECT_EQUAL( uint32( listExpected[tileIndex] ), uint32( listActual[tileIndex] ) );
+        }
+
+        SW_ASSERT_EQUAL( expected._listVisual.size(), actual._listVisual.size() );
+        for ( size_t tileIndex = 0; tileIndex < expected._listVisual.size(); ++tileIndex )
+        {
             SW_EXPECT_EQUAL( uint32( expected._listVisual[tileIndex]._height ), uint32( actual._listVisual[tileIndex]._height ) );
             SW_EXPECT_EQUAL( uint32( expected._listVisual[tileIndex]._tintR ), uint32( actual._listVisual[tileIndex]._tintR ) );
             SW_EXPECT_EQUAL( uint32( expected._listVisual[tileIndex]._tintG ), uint32( actual._listVisual[tileIndex]._tintG ) );
@@ -164,16 +169,16 @@ SW_TEST_CASE( TileMapXmlTest, SavingWithShortTileArraysStaysInsideTheArrays )
     SW_ASSERT_TRUE( loaded.loadFromXml( xml ) );
     SW_EXPECT_EQUAL( 4, loaded._width );
     SW_EXPECT_EQUAL( 4, loaded._height );
-    SW_ASSERT_EQUAL( size_t( 16 ), loaded._listWalkable.size() );
+    SW_ASSERT_EQUAL( size_t( 16 ), loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).size() );
     SW_ASSERT_EQUAL( size_t( 16 ), loaded._listVisual.size() );
 
     // 모자란 칸은 읽기 쪽 기본값(통행 가능 · 기본 틴트)과 같아야 왕복이 어긋나지 않는다.
     const sw::TileMapXmlData::Visual defaultVisual{};
-    for ( size_t tileIndex = 0; tileIndex < loaded._listWalkable.size(); ++tileIndex )
+    for ( size_t tileIndex = 0; tileIndex < loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).size(); ++tileIndex )
     {
-        SW_EXPECT_EQUAL( uint32( 1 ), uint32( loaded._listWalkable[tileIndex] ) );
-        SW_EXPECT_EQUAL( uint32( 0 ), uint32( loaded._listEncounter[tileIndex] ) );
-        SW_EXPECT_EQUAL( uint32( 0 ), uint32( loaded._listPassThrough[tileIndex] ) );
+        SW_EXPECT_EQUAL( uint32( 1 ), uint32( loaded.getFlagLayer( sw::TileFlagLayer::Walkable )[tileIndex] ) );
+        SW_EXPECT_EQUAL( uint32( 0 ), uint32( loaded.getFlagLayer( sw::TileFlagLayer::Encounter )[tileIndex] ) );
+        SW_EXPECT_EQUAL( uint32( 0 ), uint32( loaded.getFlagLayer( sw::TileFlagLayer::PassThrough )[tileIndex] ) );
         SW_EXPECT_EQUAL( uint32( defaultVisual._tintR ), uint32( loaded._listVisual[tileIndex]._tintR ) );
         SW_EXPECT_EQUAL( uint32( defaultVisual._tintG ), uint32( loaded._listVisual[tileIndex]._tintG ) );
         SW_EXPECT_EQUAL( uint32( defaultVisual._tintB ), uint32( loaded._listVisual[tileIndex]._tintB ) );
@@ -190,13 +195,13 @@ SW_TEST_CASE( TileMapXmlTest, MissingOrNegativeSizeFallsBackToEightByEight )
     SW_ASSERT_TRUE( loaded.loadFromXml( "<TileMap><name>NoSize</name></TileMap>" ) );
     SW_EXPECT_EQUAL( 8, loaded._width );
     SW_EXPECT_EQUAL( 8, loaded._height );
-    SW_EXPECT_EQUAL( size_t( 64 ), loaded._listWalkable.size() );
+    SW_EXPECT_EQUAL( size_t( 64 ), loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).size() );
     SW_EXPECT_EQUAL( size_t( 64 ), loaded._listVisual.size() );
 
     SW_ASSERT_TRUE( loaded.loadFromXml( "<TileMap><width>-3</width><height>0</height></TileMap>" ) );
     SW_EXPECT_EQUAL( 8, loaded._width );
     SW_EXPECT_EQUAL( 8, loaded._height );
-    SW_EXPECT_EQUAL( size_t( 64 ), loaded._listPassThrough.size() );
+    SW_EXPECT_EQUAL( size_t( 64 ), loaded.getFlagLayer( sw::TileFlagLayer::PassThrough ).size() );
 }
 
 /**
@@ -212,9 +217,9 @@ SW_TEST_CASE( TileMapXmlTest, ExtraTilesBeyondTheDeclaredCountAreIgnored )
 
     sw::TileMapXmlData loaded;
     SW_ASSERT_TRUE( loaded.loadFromXml( xml ) );
-    SW_EXPECT_EQUAL( size_t( 2 ), loaded._listWalkable.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).size() );
     SW_EXPECT_EQUAL( size_t( 2 ), loaded._listVisual.size() );
-    SW_EXPECT_EQUAL( uint32( 0 ), uint32( loaded._listWalkable[0] ) );
+    SW_EXPECT_EQUAL( uint32( 0 ), uint32( loaded.getFlagLayer( sw::TileFlagLayer::Walkable )[0] ) );
     SW_EXPECT_EQUAL( uint32( 3 ), uint32( loaded._listVisual[1]._height ) );
 }
 
@@ -226,16 +231,16 @@ SW_TEST_CASE( TileMapXmlTest, ExtraTilesBeyondTheDeclaredCountAreIgnored )
 SW_TEST_CASE( TileMapXmlTest, MalformedDocumentFailsAndLeavesAnEmptyMap )
 {
     sw::TileMapXmlData loaded = makeSampleMap();
-    SW_ASSERT_EQUAL( size_t( 6 ), loaded._listWalkable.size() );
+    SW_ASSERT_EQUAL( size_t( 6 ), loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).size() );
 
     SW_EXPECT_FALSE( loaded.loadFromXml( "<TileMap><width>2</width>" ) );
-    SW_EXPECT_TRUE( loaded._listWalkable.empty() );
+    SW_EXPECT_TRUE( loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).empty() );
     SW_EXPECT_TRUE( loaded._name.empty() );
     SW_EXPECT_EQUAL( 0, loaded._width );
 
     // 루트 이름이 다르면 파싱은 되지만 타일맵이 아니다.
     SW_EXPECT_FALSE( loaded.loadFromXml( "<Level><width>2</width><height>2</height></Level>" ) );
-    SW_EXPECT_TRUE( loaded._listWalkable.empty() );
+    SW_EXPECT_TRUE( loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).empty() );
 
     // 빈 경로는 파일을 뒤지지 않고 거절한다.
     SW_EXPECT_FALSE( loaded.load( "" ) );
@@ -261,12 +266,12 @@ SW_TEST_CASE( TileMapXmlTest, SizeBeyondTheTileLimitIsRejected )
         test::ScopedLogSuppressor suppressor;
         SW_EXPECT_FALSE( loaded.loadFromXml( "<TileMap><width>100000</width><height>100000</height></TileMap>" ) );
     }
-    SW_EXPECT_TRUE( loaded._listWalkable.empty() );
+    SW_EXPECT_TRUE( loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).empty() );
     SW_EXPECT_EQUAL( 0, loaded._width );
 
     // 상한 안쪽은 그대로 열린다.
     SW_ASSERT_TRUE( loaded.loadFromXml( "<TileMap><width>64</width><height>64</height></TileMap>" ) );
-    SW_EXPECT_EQUAL( size_t( 4096 ), loaded._listWalkable.size() );
+    SW_EXPECT_EQUAL( size_t( 4096 ), loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).size() );
 }
 
 /**
@@ -287,4 +292,114 @@ SW_TEST_CASE( TileMapXmlTest, OutOfRangeByteAttributesAreClamped )
     SW_EXPECT_EQUAL( 255, static_cast<int32>( visual._tintR ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( visual._tintG ) );
     SW_EXPECT_EQUAL( 128, static_cast<int32>( visual._tintB ) );
+}
+
+// ------------------------------------------------------------------------------
+// 플래그 레이어 표 — 레이어마다 쓰고 읽기, 기존 파일 바이트 유지
+// ------------------------------------------------------------------------------
+
+/**
+ * @brief [TileMapXmlTest] 레이어 표가 레이어마다 한 줄이고, XML 속성 이름이 기존 파일 형식 그대로인지
+ * @details 속성 이름은 파일 형식이다 — 바뀌면 기존 맵의 그 레이어가 조용히 기본값으로 읽힌다.
+ */
+SW_TEST_CASE( TileMapXmlTest, FlagLayerTableKeepsTheFileFormat )
+{
+    static_assert( SW_COUNT_OF( sw::kArrTileFlagLayerInfo ) == sw::kTileFlagLayerCount, "레이어마다 한 줄" );
+    for ( size_t layerIndex = 0; layerIndex < sw::kTileFlagLayerCount; ++layerIndex )
+        SW_EXPECT_TRUE( sw::kArrTileFlagLayerInfo[layerIndex]._layer == static_cast<sw::TileFlagLayer>( layerIndex ) );
+
+    const sw::TileFlagLayerInfo& walkable = sw::kArrTileFlagLayerInfo[static_cast<size_t>( sw::TileFlagLayer::Walkable )];
+    SW_EXPECT_NULL( walkable._pXmlAttribute );
+    SW_EXPECT_EQUAL( uint32( 1 ), uint32( walkable._defaultValue ) );
+    SW_EXPECT_EQUAL( sw::string_view( "enc" ), sw::string_view( sw::kArrTileFlagLayerInfo[static_cast<size_t>( sw::TileFlagLayer::Encounter )]._pXmlAttribute ) );
+    SW_EXPECT_EQUAL( sw::string_view( "pt" ), sw::string_view( sw::kArrTileFlagLayerInfo[static_cast<size_t>( sw::TileFlagLayer::PassThrough )]._pXmlAttribute ) );
+}
+
+/**
+ * @brief [TileMapXmlTest] 레이어마다 한 칸만 바꿔 쓰고 읽으면 그 레이어의 그 칸만 바뀐다
+ * @details 레이어 둘이 같은 속성 · 같은 배열을 보면(표 줄을 복사하다 이름만 고친 경우) 다른 레이어가 같이 바뀐다.
+ */
+SW_TEST_CASE( TileMapXmlTest, EveryFlagLayerRoundTripsAlone )
+{
+    for ( const sw::TileFlagLayerInfo& info : sw::kArrTileFlagLayerInfo )
+    {
+        sw::TileMapXmlData source;
+        SW_ASSERT_TRUE( source.resetTiles( 3, 2 ) );
+        const uint8 flipped                   = info._defaultValue != 0 ? 0 : 1;
+        source.getFlagLayer( info._layer )[4] = flipped;
+
+        sw::TileMapXmlData loaded;
+        SW_ASSERT_TRUE( loaded.loadFromXml( source.toXml() ) );
+        for ( const sw::TileFlagLayerInfo& other : sw::kArrTileFlagLayerInfo )
+        {
+            const sw::vector<uint8>& listFlag = loaded.getFlagLayer( other._layer );
+            SW_ASSERT_EQUAL( size_t( 6 ), listFlag.size() );
+            for ( size_t tileIndex = 0; tileIndex < listFlag.size(); ++tileIndex )
+            {
+                const bool  bFlippedTile = other._layer == info._layer && tileIndex == 4;
+                const uint8 expected     = bFlippedTile ? flipped : other._defaultValue;
+                SW_EXPECT_EQUAL( uint32( expected ), uint32( listFlag[tileIndex] ) );
+            }
+        }
+    }
+}
+
+/**
+ * @brief [TileMapXmlTest] 레이어 표로 바꾼 쓰기가 기존 형식과 같은 바이트를 낸다
+ * @details 아래 두 문서는 레이어가 필드마다 따로 있던 때의 `toXml` 출력이다(저장소에 타일맵 파일이 없어 시험 안에 둔다).
+ *          하나는 칸마다 다른 맵, 하나는 높이 · 틴트 없이 `enc` · `pt` 만 적힌 옛 손글 맵을 읽어 다시 쓴 것이다.
+ */
+SW_TEST_CASE( TileMapXmlTest, SavedBytesMatchTheExistingFormat )
+{
+    const sw::string_view kSampleXml = R"(<TileMap>
+	<name>SampleTown</name>
+	<width>3</width>
+	<height>2</height>
+	<scene>game/empty/maps/sample.scene.xml</scene>
+	<role>town</role>
+	<spawn x="2" y="1" />
+	<tiles>
+		<t h="0" enc="1" tr="10" tg="20" tb="30">1</t>
+		<t h="1" atlas="1" tr="11" tg="21" tb="31">0</t>
+		<t h="2" atlas="2" tr="12" tg="22" tb="32">1</t>
+		<t h="3" enc="1" atlas="3" tr="13" tg="23" tb="33">0</t>
+		<t h="4" pt="1" tr="14" tg="24" tb="34">1</t>
+		<t h="5" atlas="1" tr="15" tg="25" tb="35">0</t>
+	</tiles>
+	<warps>
+		<warp x="2" y="0" map="game/empty/maps/cave.tilemap.xml" tx="5" ty="7" pair="cave-entrance" />
+	</warps>
+	<encounters>
+		<e id="slime" weight="2.25" />
+	</encounters>
+</TileMap>
+)";
+    SW_EXPECT_TRUE_MSG( makeSampleMap().toXml() == kSampleXml, "레이어 표로 쓴 바이트가 기존 형식과 다르다" );
+
+    sw::TileMapXmlData sample;
+    SW_ASSERT_TRUE( sample.loadFromXml( kSampleXml ) );
+    SW_EXPECT_TRUE_MSG( sample.toXml() == kSampleXml, "기존 형식 파일을 읽고 다시 쓰면 바이트가 달라진다" );
+
+    const sw::string_view kLegacyInput = "<TileMap><name>Legacy</name><width>3</width><height>2</height><spawn x=\"1\" y=\"0\"/><tiles>"
+                                         "<t>1</t><t enc=\"1\">1</t><t>0</t><t pt=\"1\">1</t><t enc=\"1\" pt=\"1\">0</t><t atlas=\"3\">1</t>"
+                                         "</tiles></TileMap>";
+    const sw::string_view kLegacyXml   = R"(<TileMap>
+	<name>Legacy</name>
+	<width>3</width>
+	<height>2</height>
+	<spawn x="1" y="0" />
+	<tiles>
+		<t h="1" tr="180" tg="200" tb="160">1</t>
+		<t h="2" enc="1" tr="120" tg="190" tb="90">1</t>
+		<t h="0" tr="80" tg="80" tb="90">0</t>
+		<t h="1" pt="1" tr="160" tg="170" tb="200">1</t>
+		<t h="2" enc="1" pt="1" tr="120" tg="190" tb="90">0</t>
+		<t h="1" atlas="3" tr="180" tg="200" tb="160">1</t>
+	</tiles>
+	<warps />
+</TileMap>
+)";
+    sw::TileMapXmlData    legacy;
+    SW_ASSERT_TRUE( legacy.loadFromXml( kLegacyInput ) );
+    SW_EXPECT_TRUE_MSG( legacy.toXml() == kLegacyXml, "옛 손글 맵을 읽어 쓴 바이트가 기존 형식과 다르다" );
 }

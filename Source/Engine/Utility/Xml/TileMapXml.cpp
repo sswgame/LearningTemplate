@@ -27,7 +27,38 @@ namespace sw
                 }
                 return static_cast<uint8>( value );
             }
+
+            /** @brief 표가 레이어 값 순서이고, 본문으로 저장하는 레이어가 하나뿐인지 봅니다. */
+            static constexpr bool isFlagLayerTableValid()
+            {
+                size_t textLayerCount{ 0 };
+                for ( size_t layerIndex = 0; layerIndex < kTileFlagLayerCount; ++layerIndex )
+                {
+                    if ( kArrTileFlagLayerInfo[layerIndex]._layer != static_cast<TileFlagLayer>( layerIndex ) )
+                        return false;
+                    if ( kArrTileFlagLayerInfo[layerIndex]._pXmlAttribute == nullptr )
+                        ++textLayerCount;
+                }
+                return textLayerCount <= 1;
+            }
+
+            /** @brief `<t>` 하나에서 레이어 값을 읽습니다. 본문 레이어는 "0" 으로 시작하면 0 이고, 없으면 기본값입니다. */
+            static uint8 readFlag( const XmlNode& tileNode, const TileFlagLayerInfo& info )
+            {
+                if ( info._pXmlAttribute == nullptr )
+                {
+                    const utf8* pText = tileNode.getText();
+                    if ( pText == nullptr || pText[0] == '\0' )
+                        return info._defaultValue;
+                    return pText[0] != '0' ? 1 : 0;
+                }
+                if ( tileNode.findAttribute( info._pXmlAttribute ) == nullptr )
+                    return info._defaultValue;
+                return tileNode.getAttributeInt( info._pXmlAttribute, 0 ) != 0 ? 1 : 0;
+            }
         };
+
+        static_assert( TileMapXmlInternal::isFlagLayerTableValid(), "kArrTileFlagLayerInfo must be ordered by TileFlagLayer and have at most one text layer" );
     } // namespace
 
     SW_LOG_CALLER( "TileMapXml" );
@@ -93,11 +124,12 @@ namespace sw
             return false;
         }
 
+        (void)resetTiles( _width, _height ); // 크기는 바로 위에서 확인했다
         const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
-        _listWalkable.assign( count, 1 );
-        _listEncounter.assign( count, 0 );
-        _listPassThrough.assign( count, 0 );
-        _listVisual.assign( count, Visual{} );
+
+        const vector<uint8>& listWalkable    = getFlagLayer( TileFlagLayer::Walkable );
+        const vector<uint8>& listEncounter   = getFlagLayer( TileFlagLayer::Encounter );
+        const vector<uint8>& listPassThrough = getFlagLayer( TileFlagLayer::PassThrough );
 
         XmlNode tiles = root.findChild( "tiles" );
         if ( tiles.isValid() )
@@ -106,17 +138,16 @@ namespace sw
             for ( XmlNode tileNode = tiles.findChild( "t" ); tileNode && index < static_cast<int32>( count );
                   tileNode         = tileNode.findNextSibling( "t" ), ++index )
             {
-                const utf8*  pText             = tileNode.getText();
-                const size_t elementIndex      = static_cast<size_t>( index );
-                _listWalkable[elementIndex]    = ( pText == nullptr || pText[0] != '0' ) ? 1 : 0;
-                _listEncounter[elementIndex]   = tileNode.getAttributeInt( "enc", 0 ) != 0 ? 1 : 0;
-                _listPassThrough[elementIndex] = tileNode.getAttributeInt( "pt", 0 ) != 0 ? 1 : 0;
+                const size_t elementIndex = static_cast<size_t>( index );
+                for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
+                    getFlagLayer( info._layer )[elementIndex] = TileMapXmlInternal::readFlag( tileNode, info );
 
+                // 높이 · 틴트가 없는 옛 맵은 레이어 값으로 보기를 만든다.
                 Visual tileVisual{};
                 if ( tileNode.findAttribute( "h" ) != nullptr )
                     tileVisual._height = TileMapXmlInternal::readByteAttribute( tileNode, "h", 0 );
                 else
-                    tileVisual._height = _listEncounter[elementIndex] != 0 ? 2 : ( _listWalkable[elementIndex] != 0 ? 1 : 0 );
+                    tileVisual._height = listEncounter[elementIndex] != 0 ? 2 : ( listWalkable[elementIndex] != 0 ? 1 : 0 );
 
                 if ( tileNode.findAttribute( "atlas" ) != nullptr )
                     tileVisual._atlasId = TileMapXmlInternal::readByteAttribute( tileNode, "atlas", 0 );
@@ -128,19 +159,19 @@ namespace sw
                     tileVisual._tintG = TileMapXmlInternal::readByteAttribute( tileNode, "tg", 255 );
                     tileVisual._tintB = TileMapXmlInternal::readByteAttribute( tileNode, "tb", 255 );
                 }
-                else if ( _listEncounter[elementIndex] != 0 )
+                else if ( listEncounter[elementIndex] != 0 )
                 {
                     tileVisual._tintR = 120;
                     tileVisual._tintG = 190;
                     tileVisual._tintB = 90;
                 }
-                else if ( _listWalkable[elementIndex] == 0 )
+                else if ( listWalkable[elementIndex] == 0 )
                 {
                     tileVisual._tintR = 80;
                     tileVisual._tintG = 80;
                     tileVisual._tintB = 90;
                 }
-                else if ( _listPassThrough[elementIndex] != 0 )
+                else if ( listPassThrough[elementIndex] != 0 )
                 {
                     tileVisual._tintR = 160;
                     tileVisual._tintG = 170;
@@ -191,6 +222,21 @@ namespace sw
         return true;
     }
 
+    bool TileMapXmlData::resetTiles( int32 width, int32 height )
+    {
+        if ( isSizeSupported( width, height ) == false )
+            return false;
+
+        _width             = width;
+        _height            = height;
+        const size_t count = static_cast<size_t>( width ) * static_cast<size_t>( height );
+        for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
+            getFlagLayer( info._layer ).assign( count, info._defaultValue );
+        _listVisual.assign( count, Visual{} );
+        _listWarp.clear();
+        return true;
+    }
+
     bool TileMapXmlData::save( string_view path ) const
     {
         string absPath = ResourceUtil::getResourcePath( path );
@@ -230,10 +276,9 @@ namespace sw
         // 적는다(Debug 는 vector assert 에서 죽고, 배포본은 조용히 쓰레기 값을 쓴다). 모자란 칸은
         // **읽기 쪽 기본값**으로 적는다. `loadFromXml` 이 `<t>` 가 없을 때 넣는 값과 같아서
         // 왕복이 어긋나지 않는다(통행 가능 · 조우 없음 · 기본 틴트).
-        size_t tileCount = MathUtil::min( count, _listWalkable.size() );
-        tileCount        = MathUtil::min( tileCount, _listEncounter.size() );
-        tileCount        = MathUtil::min( tileCount, _listPassThrough.size() );
-        tileCount        = MathUtil::min( tileCount, _listVisual.size() );
+        size_t tileCount = MathUtil::min( count, _listVisual.size() );
+        for ( const vector<uint8>& listFlag : _arrFlagLayer )
+            tileCount = MathUtil::min( tileCount, listFlag.size() );
         if ( tileCount < count )
         {
             SW_LOG_WARNING( "타일 배열이 %#×%# 보다 짧습니다(%# 칸) — 모자란 칸은 기본값으로 적습니다.",
@@ -247,16 +292,23 @@ namespace sw
             XmlNode       tileNode   = tiles.appendChild( "t" );
             const Visual& tileVisual = bHasTile ? _listVisual[tileIndex] : defaultVisual;
             tileNode.appendAttribute( "h", static_cast<int32>( tileVisual._height ) );
-            if ( bHasTile && _listEncounter[tileIndex] != 0 )
-                tileNode.appendAttribute( "enc", 1 );
-            if ( bHasTile && _listPassThrough[tileIndex] != 0 )
-                tileNode.appendAttribute( "pt", 1 );
+            // 레이어는 표 순서로 적는다. 속성은 기본값과 다를 때만 적고, 본문 레이어는 맨 끝 본문이 된다.
+            const utf8* pTextFlag = nullptr;
+            for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
+            {
+                const uint8 value = bHasTile ? getFlagLayer( info._layer )[tileIndex] : info._defaultValue;
+                if ( info._pXmlAttribute == nullptr )
+                    pTextFlag = value != 0 ? "1" : "0";
+                else if ( ( value != 0 ) != ( info._defaultValue != 0 ) )
+                    tileNode.appendAttribute( info._pXmlAttribute, value != 0 ? 1 : 0 );
+            }
             if ( tileVisual._atlasId != 0 )
                 tileNode.appendAttribute( "atlas", static_cast<int32>( tileVisual._atlasId ) );
             tileNode.appendAttribute( "tr", static_cast<int32>( tileVisual._tintR ) );
             tileNode.appendAttribute( "tg", static_cast<int32>( tileVisual._tintG ) );
             tileNode.appendAttribute( "tb", static_cast<int32>( tileVisual._tintB ) );
-            tileNode.setValue( ( bHasTile == false || _listWalkable[tileIndex] != 0 ) ? "1" : "0" );
+            if ( pTextFlag != nullptr )
+                tileNode.setValue( pTextFlag );
         }
 
         XmlNode warps = root.appendChild( "warps" );

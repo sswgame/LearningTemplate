@@ -31,29 +31,19 @@ namespace sw::editor
         , _edgeTargetS{}
         , _edgeTargetW{}
         , _warpTarget{}
-        , _scenePath{}
-        , _role{}
         , _status{}
-        , _listWalkable{}
-        , _listEncounter{}
-        , _listPassThrough{}
-        , _listVisual{}
-        , _listWarp{}
-        , _listEncounterEntry{}
+        , _map{}
         , _arrEdgeTx{ 1, 1, 1, 1 }
         , _arrEdgeTy{ 1, 1, 1, 1 }
         , _arrTint{ 180.0f / 255.0f, 200.0f / 255.0f, 160.0f / 255.0f }
-        , _width{ 8 }
-        , _height{ 8 }
         , _inputWidth{ 8 }
         , _inputHeight{ 8 }
         , _paintHeight{ 1 }
         , _atlasId{ 0 }
         , _warpTx{ 1 }
         , _warpTy{ 1 }
-        , _spawnX{ 1 }
-        , _spawnY{ 1 }
-        , _layer{ PaintLayer::Walkable }
+        , _layer{ PaintLayer::Flag }
+        , _flagLayer{ TileFlagLayer::Walkable }
         , _bErase{ false }
     {
         const EditorData& editorData = editor::getEditorData();
@@ -76,7 +66,7 @@ namespace sw::editor
         ImGui::Separator();
 
         drawLayerControls();
-        ImGui::Text( "Grid %dx%d ??click to paint", _width, _height );
+        ImGui::Text( "Grid %dx%d - click to paint", _map._width, _map._height );
 
         constexpr float32 cell   = 18.0f;
         ImDrawList*       pDl    = ImGui::GetWindowDrawList();
@@ -85,17 +75,17 @@ namespace sw::editor
         unordered_set<uint64> uniqueWarpCells;
         if ( _layer == PaintLayer::Warp )
         {
-            uniqueWarpCells.reserve( _listWarp.size() );
-            for ( const TileMapXmlData::Warp& warp : _listWarp )
+            uniqueWarpCells.reserve( _map._listWarp.size() );
+            for ( const TileMapXmlData::Warp& warp : _map._listWarp )
             {
                 uniqueWarpCells.insert( ( static_cast<uint64>( static_cast<uint32>( warp._tileY ) ) << 32 ) |
                                         static_cast<uint32>( warp._tileX ) );
             }
         }
 
-        for ( int32 tileY = 0; tileY < _height; ++tileY )
+        for ( int32 tileY = 0; tileY < _map._height; ++tileY )
         {
-            for ( int32 tileX = 0; tileX < _width; ++tileX )
+            for ( int32 tileX = 0; tileX < _map._width; ++tileX )
             {
                 const size_t tileIndex = indexOf( tileX, tileY );
                 ImU32        color     = IM_COL32( 60, 60, 70, 255 );
@@ -103,28 +93,21 @@ namespace sw::editor
                 {
                     case PaintLayer::Visual:
                     {
-                        color = IM_COL32( _listVisual[tileIndex]._tintR, _listVisual[tileIndex]._tintG, _listVisual[tileIndex]._tintB, 255 );
-                        break;
-                    }
-                    case PaintLayer::Walkable:
-                    {
-                        color = _listWalkable[tileIndex] ? IM_COL32( 80, 160, 90, 255 ) : IM_COL32( 70, 70, 80, 255 );
-                        break;
-                    }
-                    case PaintLayer::Encounter:
-                    {
-                        color = _listEncounter[tileIndex] ? IM_COL32( 120, 190, 90, 255 ) : IM_COL32( 50, 50, 55, 255 );
-                        break;
-                    }
-                    case PaintLayer::PassThrough:
-                    {
-                        color = _listPassThrough[tileIndex] ? IM_COL32( 80, 120, 200, 255 ) : IM_COL32( 70, 70, 80, 255 );
+                        const TileMapXmlData::Visual& tileVisual = _map._listVisual[tileIndex];
+                        color                                    = IM_COL32( tileVisual._tintR, tileVisual._tintG, tileVisual._tintB, 255 );
                         break;
                     }
                     case PaintLayer::Warp:
                     {
                         const uint64 key = ( static_cast<uint64>( static_cast<uint32>( tileY ) ) << 32 ) | static_cast<uint32>( tileX );
                         color            = uniqueWarpCells.count( key ) ? IM_COL32( 200, 120, 80, 255 ) : IM_COL32( 50, 50, 55, 255 );
+                        break;
+                    }
+                    case PaintLayer::Flag:
+                    {
+                        const TileFlagLayerInfo& info = kArrTileFlagLayerInfo[static_cast<size_t>( _flagLayer )];
+                        const uint32             rgb  = _map.getFlagLayer( _flagLayer )[tileIndex] != 0 ? info._onColorRgb : info._offColorRgb;
+                        color                         = IM_COL32( ( rgb >> 16 ) & 0xFFu, ( rgb >> 8 ) & 0xFFu, rgb & 0xFFu, 255 );
                         break;
                     }
                     default:
@@ -141,7 +124,7 @@ namespace sw::editor
         }
 
         ImGui::InvisibleButton( "##tilegrid",
-                                ImVec2( static_cast<float32>( _width ) * cell, static_cast<float32>( _height ) * cell ) );
+                                ImVec2( static_cast<float32>( _map._width ) * cell, static_cast<float32>( _map._height ) * cell ) );
         if ( ImGui::IsItemHovered() && ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
         {
             const ImVec2 mouse = ImGui::GetMousePos();
@@ -200,10 +183,13 @@ namespace sw::editor
 
     void TileMapPanel::drawLayerControls()
     {
-        const utf8* layerNames[] = { "Visual", "Walkable", "Encounter", "Warp", "PassThrough" };
-        int32       layerIdx     = static_cast<int32>( _layer );
-        if ( ImGui::Combo( "Layer", &layerIdx, layerNames, 5 ) )
-            _layer = static_cast<PaintLayer>( layerIdx );
+        // 목록은 Visual · Warp 다음에 플래그 레이어 표 순서다. 순번 ↔ 레이어는 getPaintLayerIndex / selectPaintLayer 가 정한다.
+        const utf8* arrLayerName[kFixedPaintLayerCount + kTileFlagLayerCount] = { "Visual", "Warp" };
+        for ( size_t flagIndex = 0; flagIndex < kTileFlagLayerCount; ++flagIndex )
+            arrLayerName[kFixedPaintLayerCount + flagIndex] = kArrTileFlagLayerInfo[flagIndex]._pName;
+        int32 layerIndex = getPaintLayerIndex();
+        if ( ImGui::Combo( "Layer", &layerIndex, arrLayerName, static_cast<int32>( SW_COUNT_OF( arrLayerName ) ) ) )
+            selectPaintLayer( layerIndex );
 
         if ( _layer == PaintLayer::Visual )
         {
@@ -244,26 +230,16 @@ namespace sw::editor
 
     void TileMapPanel::resize( int32 width, int32 height )
     {
-        // 크기는 Width/Height 칸에서 그대로 온다. int32 아무 값이나 들어올 수 있고, 아래에서
-        // 그만큼의 칸을 잡는다. 상한과 그 이유는 `TileMapXmlData::kMaxTileCount` 에 있다.
-        if ( TileMapXmlData::isSizeSupported( width, height ) == false )
+        // 크기는 Width/Height 칸에서 그대로 온다. 상한과 그 이유는 `TileMapXmlData::kMaxTileCount` 에 있다.
+        if ( _map.resetTiles( width, height ) == false )
         {
             _status = "Size is out of range.";
             SW_LOG_WARNING( "TileMap resize %#x%# is beyond the supported tile count (%#)",
                             width, height, TileMapXmlData::kMaxTileCount );
             return;
         }
-
-        _width             = width;
-        _height            = height;
-        _inputWidth        = width;
-        _inputHeight       = height;
-        const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
-        _listWalkable.assign( count, 1 );
-        _listEncounter.assign( count, 0 );
-        _listPassThrough.assign( count, 0 );
-        _listVisual.assign( count, TileMapXmlData::Visual{} );
-        _listWarp.clear();
+        _inputWidth  = width;
+        _inputHeight = height;
     }
 
     ToolAssetLoadResult TileMapPanel::loadDocument()
@@ -281,22 +257,8 @@ namespace sw::editor
         if ( result != ToolAssetLoadResult::Loaded )
             return result;
 
-        _nameBuffer         = data._name.c_str();
-        _width              = data._width;
-        _height             = data._height;
-        _inputWidth         = data._width;
-        _inputHeight        = data._height;
-        _listWalkable       = std::move( data._listWalkable );
-        _listEncounter      = std::move( data._listEncounter );
-        _listPassThrough    = std::move( data._listPassThrough );
-        _listVisual         = std::move( data._listVisual );
-        _listWarp           = std::move( data._listWarp );
-        _listEncounterEntry = std::move( data._listEncounterEntry );
-        _scenePath          = data._scenePath;
-        _role               = data._role;
-        _spawnX             = data._spawnX;
-        _spawnY             = data._spawnY;
-        _pathBuffer         = string( assetRelativePath ).c_str();
+        applyMapData( data );
+        _pathBuffer = string( assetRelativePath ).c_str();
         return ToolAssetLoadResult::Loaded;
     }
 
@@ -318,38 +280,17 @@ namespace sw::editor
 
     TileMapXmlData TileMapPanel::captureMapData() const
     {
-        TileMapXmlData data;
-        data._name               = _nameBuffer.c_str();
-        data._width              = _width;
-        data._height             = _height;
-        data._listWalkable       = _listWalkable;
-        data._listEncounter      = _listEncounter;
-        data._listPassThrough    = _listPassThrough;
-        data._listVisual         = _listVisual;
-        data._listWarp           = _listWarp;
-        data._scenePath          = _scenePath;
-        data._role               = _role;
-        data._spawnX             = _spawnX;
-        data._spawnY             = _spawnY;
-        data._listEncounterEntry = _listEncounterEntry;
+        TileMapXmlData data = _map;
+        data._name          = _nameBuffer.c_str();
         return data;
     }
 
     void TileMapPanel::applyMapData( const TileMapXmlData& data )
     {
-        _nameBuffer         = data._name.c_str();
-        _width              = data._width;
-        _height             = data._height;
-        _listWalkable       = data._listWalkable;
-        _listEncounter      = data._listEncounter;
-        _listPassThrough    = data._listPassThrough;
-        _listVisual         = data._listVisual;
-        _listWarp           = data._listWarp;
-        _listEncounterEntry = data._listEncounterEntry;
-        _scenePath          = data._scenePath;
-        _role               = data._role;
-        _spawnX             = data._spawnX;
-        _spawnY             = data._spawnY;
+        _map         = data;
+        _nameBuffer  = data._name.c_str();
+        _inputWidth  = data._width;
+        _inputHeight = data._height;
     }
 
     string TileMapPanel::captureDocumentText() const
@@ -377,35 +318,26 @@ namespace sw::editor
             {
                 if ( _bErase == false )
                 {
-                    _listVisual[tileIndex]._height  = static_cast<uint8>( _paintHeight );
-                    _listVisual[tileIndex]._atlasId = static_cast<uint8>( _atlasId );
-                    _listVisual[tileIndex]._tintR   = static_cast<uint8>( MathUtil::clamp( _arrTint[0] * 255.0f, 0.0f, 255.0f ) );
-                    _listVisual[tileIndex]._tintG   = static_cast<uint8>( MathUtil::clamp( _arrTint[1] * 255.0f, 0.0f, 255.0f ) );
-                    _listVisual[tileIndex]._tintB   = static_cast<uint8>( MathUtil::clamp( _arrTint[2] * 255.0f, 0.0f, 255.0f ) );
+                    TileMapXmlData::Visual& tileVisual = _map._listVisual[tileIndex];
+                    tileVisual._height                 = static_cast<uint8>( _paintHeight );
+                    tileVisual._atlasId                = static_cast<uint8>( _atlasId );
+                    tileVisual._tintR                  = static_cast<uint8>( MathUtil::clamp( _arrTint[0] * 255.0f, 0.0f, 255.0f ) );
+                    tileVisual._tintG                  = static_cast<uint8>( MathUtil::clamp( _arrTint[1] * 255.0f, 0.0f, 255.0f ) );
+                    tileVisual._tintB                  = static_cast<uint8>( MathUtil::clamp( _arrTint[2] * 255.0f, 0.0f, 255.0f ) );
                 }
                 break;
             }
-            case PaintLayer::Walkable:
+            case PaintLayer::Flag:
             {
-                _listWalkable[tileIndex] = _bErase ? 0 : 1;
-                break;
-            }
-            case PaintLayer::Encounter:
-            {
-                _listEncounter[tileIndex] = _bErase ? 0 : 1;
-                break;
-            }
-            case PaintLayer::PassThrough:
-            {
-                _listPassThrough[tileIndex] = _bErase ? 0 : 1;
+                _map.getFlagLayer( _flagLayer )[tileIndex] = _bErase ? 0 : 1;
                 break;
             }
             case PaintLayer::Warp:
             {
-                _listWarp.erase( std::remove_if( _listWarp.begin(), _listWarp.end(),
-                                                 [x, y]( const TileMapXmlData::Warp& warp )
+                _map._listWarp.erase( std::remove_if( _map._listWarp.begin(), _map._listWarp.end(),
+                                                      [x, y]( const TileMapXmlData::Warp& warp )
                 { return warp._tileX == x && warp._tileY == y; } ),
-                                 _listWarp.end() );
+                                      _map._listWarp.end() );
                 if ( _bErase == false && _warpTarget.empty() == false )
                 {
                     TileMapXmlData::Warp warpItem{};
@@ -414,8 +346,8 @@ namespace sw::editor
                     warpItem._targetMap   = _warpTarget.c_str();
                     warpItem._targetTileX = _warpTx;
                     warpItem._targetTileY = _warpTy;
-                    _listWarp.push_back( std::move( warpItem ) );
-                    _listWalkable[tileIndex] = 1;
+                    _map._listWarp.push_back( std::move( warpItem ) );
+                    _map.getFlagLayer( TileFlagLayer::Walkable )[tileIndex] = 1;
                 }
                 break;
             }
@@ -433,25 +365,25 @@ namespace sw::editor
 
         auto stamp = [&]( int32 tileX, int32 tileY )
         {
-            _listWalkable[indexOf( tileX, tileY )] = 1;
-            _listWarp.erase( std::remove_if( _listWarp.begin(), _listWarp.end(),
-                                             [tileX, tileY]( const TileMapXmlData::Warp& warp )
+            _map.getFlagLayer( TileFlagLayer::Walkable )[indexOf( tileX, tileY )] = 1;
+            _map._listWarp.erase( std::remove_if( _map._listWarp.begin(), _map._listWarp.end(),
+                                                  [tileX, tileY]( const TileMapXmlData::Warp& warp )
             { return warp._tileX == tileX && warp._tileY == tileY; } ),
-                             _listWarp.end() );
+                                  _map._listWarp.end() );
             TileMapXmlData::Warp warpItem{};
             warpItem._tileX       = tileX;
             warpItem._tileY       = tileY;
             warpItem._targetMap   = targets[edge]->c_str();
             warpItem._targetTileX = _arrEdgeTx[edge];
             warpItem._targetTileY = _arrEdgeTy[edge];
-            _listWarp.push_back( std::move( warpItem ) );
+            _map._listWarp.push_back( std::move( warpItem ) );
         };
 
         switch ( edge )
         {
             case 0:
             {
-                for ( int32 tileX = 0; tileX < _width; ++tileX )
+                for ( int32 tileX = 0; tileX < _map._width; ++tileX )
                 {
                     stamp( tileX, 0 );
                 }
@@ -459,23 +391,23 @@ namespace sw::editor
             }
             case 1:
             {
-                for ( int32 tileY = 0; tileY < _height; ++tileY )
+                for ( int32 tileY = 0; tileY < _map._height; ++tileY )
                 {
-                    stamp( _width - 1, tileY );
+                    stamp( _map._width - 1, tileY );
                 }
                 break;
             }
             case 2:
             {
-                for ( int32 tileX = 0; tileX < _width; ++tileX )
+                for ( int32 tileX = 0; tileX < _map._width; ++tileX )
                 {
-                    stamp( tileX, _height - 1 );
+                    stamp( tileX, _map._height - 1 );
                 }
                 break;
             }
             case 3:
             {
-                for ( int32 tileY = 0; tileY < _height; ++tileY )
+                for ( int32 tileY = 0; tileY < _map._height; ++tileY )
                 {
                     stamp( 0, tileY );
                 }
@@ -487,14 +419,32 @@ namespace sw::editor
         notifyDocumentEdited( "Paint Tile Map Edge", "tilemap-edge" );
     }
 
+    int32 TileMapPanel::getPaintLayerIndex() const
+    {
+        if ( _layer == PaintLayer::Flag )
+            return kFixedPaintLayerCount + static_cast<int32>( _flagLayer );
+        return static_cast<int32>( _layer );
+    }
+
+    void TileMapPanel::selectPaintLayer( int32 layerIndex )
+    {
+        if ( layerIndex < kFixedPaintLayerCount )
+        {
+            _layer = static_cast<PaintLayer>( layerIndex );
+            return;
+        }
+        _layer     = PaintLayer::Flag;
+        _flagLayer = static_cast<TileFlagLayer>( layerIndex - kFixedPaintLayerCount );
+    }
+
     bool TileMapPanel::isInBounds( int32 x, int32 y ) const
     {
-        return 0 <= x && x < _width && 0 <= y && y < _height;
+        return 0 <= x && x < _map._width && 0 <= y && y < _map._height;
     }
 
     size_t TileMapPanel::indexOf( int32 x, int32 y ) const
     {
         // 곱셈을 size_t 로 한다(Engine 의 TileMap::indexOf 와 같은 이유).
-        return static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
+        return static_cast<size_t>( y ) * static_cast<size_t>( _map._width ) + static_cast<size_t>( x );
     }
 } // namespace sw::editor

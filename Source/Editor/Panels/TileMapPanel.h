@@ -44,15 +44,15 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 2) 페인트 레이어 · 타일 데이터
         // ------------------------------------------------------------------------------
-        /** @brief 현재 브러시가 쓰는 레이어 */
+        /** @brief 현재 브러시가 쓰는 레이어 종류입니다. 플래그 레이어는 `_flagLayer` 가 고릅니다. */
         enum class PaintLayer : uint8
         {
             Visual = 0,
-            Walkable,
-            Encounter,
             Warp,
-            PassThrough
+            Flag
         };
+        /** @brief 레이어 목록에서 플래그 레이어보다 앞에 오는 항목 수(Visual · Warp)입니다. */
+        static constexpr int32 kFixedPaintLayerCount = 2;
 
         // ------------------------------------------------------------------------------
         // 3) XML 로드/저장 · 페인트
@@ -69,6 +69,10 @@ namespace sw::editor
         void paintCell( int32 x, int32 y );
         /** @brief 가장자리 워프를 페인트합니다. */
         void paintEdgeWarp( int32 edge );
+        /** @brief 레이어 목록에서 지금 레이어의 순번입니다(Visual · Warp · 플래그 레이어들). */
+        int32 getPaintLayerIndex() const;
+        /** @brief 레이어 목록의 순번으로 레이어를 고릅니다. */
+        void selectPaintLayer( int32 layerIndex );
         /** @brief 좌표가 맵 범위 안인지 여부를 반환합니다. */
         bool isInBounds( int32 x, int32 y ) const;
         /** @brief (x, y)의 1차원 인덱스를 반환합니다. */
@@ -82,29 +86,19 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer128> _edgeTargetS;
         fixed_string<constant::kMaxBuffer128> _edgeTargetW;
         fixed_string<constant::kMaxBuffer128> _warpTarget;
-        string                                _scenePath;
-        string                                _role;
         string                                _status;
-        vector<uint8>                         _listWalkable;
-        vector<uint8>                         _listEncounter;
-        vector<uint8>                         _listPassThrough;
-        vector<TileMapXmlData::Visual>        _listVisual;
-        vector<TileMapXmlData::Warp>          _listWarp;
-        vector<TileMapXmlData::Encounter>     _listEncounterEntry;
+        TileMapXmlData                        _map; ///< 편집 중인 맵(파일 스키마 그대로). 이름은 `_nameBuffer` 가 들고 저장 때 옮긴다.
         int32                                 _arrEdgeTx[4];
         int32                                 _arrEdgeTy[4];
         float32                               _arrTint[3];
-        int32                                 _width;
-        int32                                 _height;
         int32                                 _inputWidth;
         int32                                 _inputHeight;
         int32                                 _paintHeight;
         int32                                 _atlasId;
         int32                                 _warpTx;
         int32                                 _warpTy;
-        int32                                 _spawnX;
-        int32                                 _spawnY;
         PaintLayer                            _layer;
+        TileFlagLayer                         _flagLayer;
         bool                                  _bErase;
     };
 } // namespace sw::editor
