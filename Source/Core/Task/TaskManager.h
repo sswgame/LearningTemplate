@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Concurrency/WorkStealingDeque.h"
+#include "Core/Container/span.h"
 #include "Core/Task/TaskTypes.h"
 
 namespace sw
@@ -182,21 +183,21 @@ namespace sw
 
         /**
          * @brief 넘긴 태스크가 모두 끝나면 실행될 후속 태스크(continuation)를 만듭니다.
-         * @param listTask 먼저 끝나야 하는 태스크 핸들 목록
+         * @param listTask 먼저 끝나야 하는 태스크 핸들들(vector · array · C 배열 무엇이든)
          * @param continuation 모두 끝나면 실행할 델리게이트
          * @param affinity 실행할 스레드
          * @return 만든 후속 태스크의 핸들
          */
-        TaskHandle whenAll( const vector<TaskHandle>& listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
+        TaskHandle whenAll( vector_reference<const TaskHandle> listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
         /**
          * @brief 넘긴 태스크 중 **하나라도** 먼저 끝나면 바로 실행되는 후속 태스크를 만듭니다.
-         * @param listTask 지켜볼 태스크 핸들 목록
+         * @param listTask 지켜볼 태스크 핸들들(vector · array · C 배열 무엇이든)
          * @param continuation 처음으로 끝난 태스크가 나오면 실행할 델리게이트
          * @param affinity 실행할 스레드
          * @return 만든 후속 태스크의 핸들
          */
-        TaskHandle whenAny( const vector<TaskHandle>& listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
+        TaskHandle whenAny( vector_reference<const TaskHandle> listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
         /**
          * @brief 메인 스레드 전용(`MainThread`)으로 등록된 태스크를 한꺼번에 실행합니다.

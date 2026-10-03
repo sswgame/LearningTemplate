@@ -2,6 +2,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/array.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskManager.h"
@@ -354,8 +355,9 @@ SW_TEST_CASE( TaskTest, TaskCombinatorWhenAll )
     sw::TaskHandle t3 = taskMgr.emplaceTask( SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&completedCount]()
     { completedCount.fetch_add( 1 ); } ) );
 
-    sw::TaskHandle whenAllTask = taskMgr.whenAll( { t1, t2, t3 }, SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&whenAllExecuted, &completedCount]()
-    {
+    const sw::TaskHandle arrPrerequisite[] = { t1, t2, t3 }; // 핸들 목록은 vector 가 아니어도 된다(vector_reference)
+    sw::TaskHandle       whenAllTask       = taskMgr.whenAll( arrPrerequisite, SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&whenAllExecuted, &completedCount]()
+                {
         if ( completedCount.load() == 3 )
             whenAllExecuted = true;
     } ) );
@@ -386,8 +388,9 @@ SW_TEST_CASE( TaskTest, TaskCombinatorWhenAny )
     sw::TaskHandle t1 = taskMgr.emplaceTask( SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
     sw::TaskHandle t2 = taskMgr.emplaceTask( SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
 
-    sw::TaskHandle whenAnyTask = taskMgr.whenAny( { t1, t2 }, SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&whenAnyExecuted]()
-    {
+    const sw::array<sw::TaskHandle, 2> arrWatched{ t1, t2 };
+    sw::TaskHandle                     whenAnyTask = taskMgr.whenAny( arrWatched, SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&whenAnyExecuted]()
+                        {
         whenAnyExecuted = true;
     } ) );
 

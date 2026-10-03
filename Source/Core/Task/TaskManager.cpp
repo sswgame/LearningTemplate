@@ -463,7 +463,7 @@ namespace sw
         return TaskHandle{ pNode };
     }
 
-    TaskHandle TaskManager::whenAll( const vector<TaskHandle>& listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity )
+    TaskHandle TaskManager::whenAll( vector_reference<const TaskHandle> listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity )
     {
         TaskHandle nextTask = emplaceTask( "WhenAllContinuation", continuation, affinity );
         for ( const TaskHandle& task : listTask )
@@ -477,7 +477,7 @@ namespace sw
         return nextTask;
     }
 
-    TaskHandle TaskManager::whenAny( const vector<TaskHandle>& listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity )
+    TaskHandle TaskManager::whenAny( vector_reference<const TaskHandle> listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity )
     {
         // 유효한 핸들이 하나도 없으면 빈 목록과 같다. 예전에는 "선행 트리거 몫" 1 을 더해 두고 트리거를 하나도 만들지 않아, 후속이 영영 돌지
         // 않았고 활성 수가 남아 `waitAll` · 종료가 멈췄다.
