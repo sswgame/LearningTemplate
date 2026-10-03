@@ -1500,3 +1500,23 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
     SW_EXPECT_TRUE_MSG( sceneCount >= 2 && prefabCount >= 1, "no repository scene or prefab was found - this check saw nothing" );
     manager.shutdown();
 }
+
+/**
+ * @brief [SceneTest] 씬 문서의 씬 · 엔티티 값은 속성에서만 읽는다 — 같은 이름의 자식 텍스트(`<name>`)는 저장하는 모양이 아니라 읽지 않는다
+ */
+SW_TEST_CASE( SceneTest, SceneDocumentReadsValuesOnlyFromAttributes )
+{
+    const sw::string scenePath = test::makeTempPath( "childtext.scene.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( scenePath, "<Scene formatVersion=\"1\">\n"
+                                                            "  <name>FromChild</name>\n"
+                                                            "  <entities>\n"
+                                                            "    <entity id=\"1\"><name>Crate</name><prefab>game/demo/prefabs/crate.prefab.xml</prefab></entity>\n"
+                                                            "  </entities>\n"
+                                                            "</Scene>\n" ) );
+    sw::SceneDocument document;
+    SW_ASSERT_TRUE( document.loadXml( scenePath ) );
+    SW_EXPECT_STREQ( "childtext.scene", document._name.c_str() ); // 이름 속성이 없으면 파일 이름이다
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), document._listEntityNode.size() );
+    SW_EXPECT_STREQ( "Entity", document._listEntityNode[0]._name.c_str() );
+    SW_EXPECT_TRUE( document._listEntityNode[0]._prefab.empty() );
+}

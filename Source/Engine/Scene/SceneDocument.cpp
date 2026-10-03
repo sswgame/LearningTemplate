@@ -34,13 +34,6 @@ namespace sw
             // 쿠킹본은 쿠커가 매번 다시 굽는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
             static constexpr uint32 kSceneBinVersion = 3;
 
-            /** @brief 속성으로 먼저 찾고, 없으면 같은 이름의 자식 텍스트를 봅니다(저작본의 두 모양을 다 읽습니다). 없으면 nullptr 입니다. */
-            static const utf8* findAttributeOrChildText( const XmlNode& node, const utf8* pKey )
-            {
-                const utf8* pValue = node.findAttribute( pKey );
-                return ( pValue != nullptr ) ? pValue : node.findChildText( pKey );
-            }
-
             /**
              * @brief 프리팹 GUID 로 경로를 다시 풉니다. 파일 이동 · 이름 변경을 자동으로 따라갑니다.
              * @details XML 로더와 바이너리 로더가 같은 아홉 줄을 각자 들고 있었습니다. 한쪽만 고치면 그 포맷으로 읽은 씬만
@@ -94,9 +87,8 @@ namespace sw
             return false;
         }
 
-        const utf8* pSceneName = root.findAttribute( "name" );
-        if ( pSceneName == nullptr )
-            pSceneName = root.findChildText( SceneDocumentInternal::kName );
+        // 씬 · 엔티티의 값은 속성에만 있다(`saveXml` 이 쓰는 모양).
+        const utf8* pSceneName = root.findAttribute( SceneDocumentInternal::kName );
 
         if ( pSceneName != nullptr )
             _name = pSceneName;
@@ -111,7 +103,7 @@ namespace sw
                   entityNode         = entityNode.findNextSibling( SceneDocumentInternal::kEntity ) )
             {
                 EntityNode  node{};
-                const utf8* pName = SceneDocumentInternal::findAttributeOrChildText( entityNode, SceneDocumentInternal::kName );
+                const utf8* pName = entityNode.findAttribute( SceneDocumentInternal::kName );
                 if ( pName != nullptr )
                     node._name = pName;
 
@@ -120,11 +112,11 @@ namespace sw
                 if ( pFileId != nullptr && StringUtil::parseUint64( pFileId, node._fileId ) == false )
                     SW_LOG_WARNING( "Entity '%#' has an unreadable id '%#' in %# - its children may stay unattached", node._name, pFileId, absPath );
 
-                const utf8* pPrefabGuid = SceneDocumentInternal::findAttributeOrChildText( entityNode, "prefabGuid" );
+                const utf8* pPrefabGuid = entityNode.findAttribute( "prefabGuid" );
                 if ( pPrefabGuid != nullptr )
                     node._prefabGuid = pPrefabGuid;
 
-                const utf8* pPrefab = SceneDocumentInternal::findAttributeOrChildText( entityNode, SceneDocumentInternal::kPrefab );
+                const utf8* pPrefab = entityNode.findAttribute( SceneDocumentInternal::kPrefab );
                 if ( pPrefab != nullptr )
                     node._prefab = pPrefab;
 
