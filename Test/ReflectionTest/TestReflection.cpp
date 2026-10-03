@@ -3,6 +3,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -233,6 +234,68 @@ SW_TEST_CASE( ReflectionComponentTest, ComponentPropertySerialization )
 
     pSpeedProp->setValue<float32>( &comp, 2.718f );
     SW_EXPECT_TRUE( sw::MathUtil::nearEqual( comp._scriptSpeed, 2.718f, 0.0001f ) );
+}
+
+/**
+ * @brief [ReflectionComponentTest] 파일 상태 묶음은 옮기지 못하는 핸들(맵 값 · ComponentHandle)을 비우고 알린다 — 같은 실행 상태는 그대로 둔다
+ * @details 묶음은 단일 `GameObjectHandle` 과 시퀀스 원소만 저장된 id 에서 이 실행의 오브젝트로 옮긴다. 맵 값 · `ComponentHandle` 에 남은 파일 id 는
+ *          이 실행에서 우연히 같은 값을 받은 다른 오브젝트를 가리키므로 비운다. 같은 실행의 상태(`ObjectIdSpace::Live`)는 런타임 id 그대로가 맞다.
+ */
+SW_TEST_CASE( ReflectionComponentTest, LoadBatchClearsHandlesItCannotRemap )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pTarget = manager.createGameObject( sw::hashed_string( "HandleTarget" ) );
+    sw::GameObject*       pHolder = manager.createGameObject( sw::hashed_string( "HandleHolder" ) );
+    SW_ASSERT_TRUE( pTarget != nullptr && pHolder != nullptr );
+    sw::Component*                 pTargetComp = pTarget->addComponent<sw::TestScriptComponent>();
+    sw::TestHandleHolderComponent* pHolderComp = pHolder->addComponent<sw::TestHandleHolderComponent>();
+    SW_ASSERT_TRUE( pTargetComp != nullptr && pHolderComp != nullptr );
+    pHolderComp->_target          = pTarget->getHandle();
+    pHolderComp->_listTarget      = { pTarget->getHandle() };
+    pHolderComp->_mapSlotToTarget = {
+        { 1, pTarget->getHandle() }
+    };
+    pHolderComp->_targetComponent = pTargetComp->getHandle();
+    const sw::string state        = sw::ObjectStateSerializer::saveToXmlString( pHolder );
+    SW_ASSERT_TRUE( state.empty() == false );
+
+    // 같은 실행 상태 — 묶음 밖의 오브젝트도 런타임 id 그대로다.
+    {
+        sw::GameObject* pLive = manager.createGameObject( sw::hashed_string( "LiveCopy" ) );
+        SW_ASSERT_NOT_NULL( pLive );
+        sw::ObjectStateBatch  batch( sw::ObjectIdSpace::Live );
+        sw::ObjectLoadContext context{};
+        context._pBatch = &batch;
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pLive, state, context ) );
+        batch.finish();
+        const sw::TestHandleHolderComponent* pLoaded = pLive->getComponent<sw::TestHandleHolderComponent>();
+        SW_ASSERT_NOT_NULL( pLoaded );
+        SW_EXPECT_TRUE( pLoaded->_target == pTarget->getHandle() );
+        SW_EXPECT_EQUAL( size_t( 1 ), pLoaded->_mapSlotToTarget.size() );
+        SW_EXPECT_TRUE( pLoaded->_targetComponent == pTargetComp->getHandle() );
+    }
+
+    // 파일 상태 — 대상이 묶음에 없다. 옮기는 자리는 없음이 되고, 옮기지 못하는 자리는 비우고 이름과 함께 알린다.
+    sw::GameObject* pFresh = manager.createGameObject( sw::hashed_string( "FromFile" ) );
+    SW_ASSERT_NOT_NULL( pFresh );
+    test::ScopedLogCollector logs;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "unremappable handle property" );
+        sw::ObjectStateBatch  batch( sw::ObjectIdSpace::Saved );
+        sw::ObjectLoadContext context{};
+        context._pBatch  = &batch;
+        context._savedId = 900000001; // 런타임 id 와 겹치지 않는 파일 id
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pFresh, state, context ) );
+        batch.finish();
+    }
+    const sw::TestHandleHolderComponent* pFromFile = pFresh->getComponent<sw::TestHandleHolderComponent>();
+    SW_ASSERT_NOT_NULL( pFromFile );
+    SW_EXPECT_FALSE( pFromFile->_target.isValid() );
+    SW_EXPECT_TRUE( pFromFile->_listTarget.size() == 1 && pFromFile->_listTarget[0].isValid() == false );
+    SW_EXPECT_TRUE_MSG( pFromFile->_mapSlotToTarget.empty(), "a file id left in a map value points at whatever object got that id in this run" );
+    SW_EXPECT_FALSE( pFromFile->_targetComponent.isValid() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "TestHandleHolderComponent::_mapSlotToTarget' holds object handles" ) == 1, logs.joined().c_str() );
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "TestHandleHolderComponent::_targetComponent' holds object handles" ) == 1, logs.joined().c_str() );
 }
 
 /**

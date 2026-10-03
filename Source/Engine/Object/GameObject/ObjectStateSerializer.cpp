@@ -208,6 +208,42 @@ namespace sw
                 return s_typeName;
             }
 
+            /** @brief `ComponentHandle` 의 타입 이름입니다. */
+            static const hashed_string& getComponentHandleTypeName()
+            {
+                static const hashed_string s_typeName{ "ComponentHandle" };
+                return s_typeName;
+            }
+
+            static bool isHandleTypeName( const hashed_string& typeName )
+            {
+                return typeName == getObjectHandleTypeName() || typeName == getComponentHandleTypeName();
+            }
+
+            /**
+             * @brief 묶음이 저장된 id 를 옮기지 못하는 자리에 핸들을 담는 프로퍼티인지 봅니다.
+             * @details 옮기는 자리는 단일 `GameObjectHandle` 과 제자리 쓰기가 되는 평평한 시퀀스의 원소뿐입니다. `ComponentHandle` 은 저장된
+             *          컴포넌트 id 를 이 실행의 컴포넌트로 옮길 표가 없고, 맵 · set 의 키 · 값과 중첩 컨테이너의 원소는 제자리에서 고칠 수 없습니다.
+             */
+            static bool holdsUnmappedHandle( const PropertyInfo& prop )
+            {
+                if ( prop._bIsContainer == SW_FALSE )
+                    return prop._typeName == getComponentHandleTypeName();
+
+                const NestedContainerInfo  shape       = prop.getContainerShape();
+                ISequenceContainerWrapper* pSequence   = ( shape._wrapper != nullptr ) ? shape._wrapper->asSequence() : nullptr;
+                const bool                 bRemappable = pSequence != nullptr && pSequence->allowsInPlaceElementWrite() && shape._elementNested == nullptr &&
+                                         shape._elementTypeName == getObjectHandleTypeName();
+                if ( bRemappable )
+                    return false;
+                for ( const NestedContainerInfo* pLevel = &shape; pLevel != nullptr; pLevel = pLevel->_elementNested.get() )
+                {
+                    if ( isHandleTypeName( pLevel->_elementTypeName ) || isHandleTypeName( pLevel->_keyTypeName ) )
+                        return true;
+                }
+                return false;
+            }
+
             /**
              * @brief 저장할 때 `GameObjectHandle` 값을 저장할 id 로 옮겨 적는 글 처리기입니다 — 부착과 같은 규칙(`ObjectSaveOptions::getSavedObjectId`).
              * @details 세 형식이 모두 이 글 처리기를 지납니다(바이너리도 핸들은 글로 싣는다 — `SerializerUtil::serializeValueBinary`). 예전에는 기본
@@ -564,6 +600,21 @@ namespace sw
                 // 읽지 않은 칸(Transient)은 지금 실행의 값이다 — 옮기면 살아 있는 참조를 망친다.
                 if ( prop._metadata._bTransient == SW_TRUE )
                     continue;
+                if ( ObjectStateSerializerInternal::holdsUnmappedHandle( prop ) )
+                {
+                    // 같은 실행의 상태면 런타임 id 그대로가 맞다. 파일 id 는 이 실행에서 다른 오브젝트일 수 있으므로 비우고 알린다.
+                    if ( _idSpace == ObjectIdSpace::Saved )
+                    {
+                        SW_LOG_WARNING( "Property '%#::%#' holds object handles a load batch cannot remap (ComponentHandle, map/set or nested "
+                                        "container) - cleared",
+                                        pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str() );
+                        if ( prop._bIsContainer == SW_TRUE )
+                            prop._containerWrapper->clear( prop.getRawPtr( pComp ) );
+                        else
+                            *static_cast<ComponentHandle*>( prop.getRawPtr( pComp ) ) = ComponentHandle{};
+                    }
+                    continue;
+                }
                 if ( prop._bIsContainer == SW_FALSE )
                 {
                     if ( prop._typeName == handleTypeName )

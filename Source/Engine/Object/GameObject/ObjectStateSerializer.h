@@ -127,7 +127,8 @@ namespace sw
      *
      *          컴포넌트의 `GameObjectHandle` PROPERTY(단일 · 순서 컨테이너의 원소)도 같은 규칙으로 옮깁니다(`resolveObjectReference`): 묶음의 저장된
      *          id 면 그 오브젝트, `Live` 면 런타임 id 그대로(핫 리로드 · 되돌리기 — id 는 다시 쓰이지 않는다), `Saved` 인데 묶음에 없으면 없음입니다.
-     *          예전에는 런타임 id 가 그대로 파일에 들어가, 다시 연 씬에서 같은 값의 다른 오브젝트를 가리킬 수 있었습니다.
+     *          옮기지 못하는 자리(`ComponentHandle`, 맵 · set 의 키 · 값, 중첩 컨테이너의 원소)는 `Saved` 면 비우고 경고합니다 — 파일 id 를 그대로 두면
+     *          이 실행에서 같은 값을 받은 다른 오브젝트를 가리킵니다. `Live` 면 런타임 id 그대로 둡니다.
      */
     class SW_API ObjectStateBatch
     {

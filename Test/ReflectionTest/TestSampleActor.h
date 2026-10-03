@@ -4,6 +4,8 @@
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/ComponentHandle.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -496,6 +498,25 @@ namespace sw
             TestDerivedScriptComponent::onTick( dt );
             _grandChildTickCount += 3;
         }
+    };
+
+    /** @brief 오브젝트 상태 묶음이 핸들을 옮기는 자리와 옮기지 못하는 자리를 한 컴포넌트에 둔 샘플입니다(`ObjectStateBatch::finish`). */
+    REFLECT()
+    struct TestHandleHolderComponent : public Component
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        GameObjectHandle _target; ///< 옮긴다
+
+        PROPERTY()
+        vector<GameObjectHandle> _listTarget; ///< 옮긴다
+
+        PROPERTY()
+        map<int32, GameObjectHandle> _mapSlotToTarget; ///< 옮기지 못한다 — 파일 상태면 비운다
+
+        PROPERTY()
+        ComponentHandle _targetComponent; ///< 옮기지 못한다 — 파일 상태면 비운다
     };
     REFLECT( Category = "Gameplay", DisplayName = "Meta Test Actor", Tooltip = "Actor for testing rich metadata", HideInMenu, Meta = "CustomTag=ActorVal, Priority=10" )
     struct MetaTestActor
