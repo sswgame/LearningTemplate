@@ -47,10 +47,8 @@ namespace sw
  * @brief 고정된 EventTypeId 로 IEvent 를 등록합니다.
  * @warning **이 매크로 뒤는 `private:` 입니다.** 멤버를 더하려면 매크로 **위**에 적으십시오. 아래에 적으면 조용히
  *          private 이 됩니다(`struct` 라서 기본이 public 인 것과 어긋납니다).
- * @details 이름을 모두 `sw::` 로 한정합니다. 예전에는 ID 식만 한정하고 반환 타입과 friend 는 한정하지 않아서
- *          **`namespace sw` 밖에서는 쓸 수 없었습니다.** `EventTypeId` 를 찾지 못했고, `friend class EventDispatcher` 는
- *          전역에 새 클래스를 선언해 버려 진짜 디스패처가 `kType` 에 닿지 못했습니다. ID 식이 이미 `sw::` 로 적혀 있던
- *          것을 보면 밖에서도 쓰려던 의도였습니다.
+ * @details 이름을 모두 `sw::` 로 한정합니다 — `namespace sw` 밖에서도 쓸 수 있게. 한정하지 않으면 `EventTypeId` 를 찾지 못하고,
+ *          `friend class EventDispatcher` 는 전역에 새 클래스를 선언해 버려 진짜 디스패처가 `kType` 에 닿지 못합니다.
  */
 #define SW_REGISTER_EVENT_ID( eventTypeId )                         \
     sw::EventTypeId getEventType() const override { return kType; } \
@@ -83,8 +81,7 @@ private:                                                            \
         /**
          * @brief 큐 링크는 가져오지 않습니다.
          * @note `noexcept` 가 **계약의 일부**입니다. 이동이 noexcept 가 아니면 `vector` 같은 컨테이너는 재할당 때 강한 예외
-         *       보장을 지키려고 **이동 대신 복사**를 씁니다. 이 두 함수는 본문이 비어 있어 예외를 던질 수 없는데도 그 표시가
-         *       없었습니다.
+         *       보장을 지키려고 **이동 대신 복사**를 씁니다. 본문이 비어 있어 예외를 던질 수 없어도 표시가 있어야 합니다.
          */
         IEvent( IEvent&& ) noexcept
             : _next{ nullptr }

@@ -39,9 +39,8 @@ namespace sw
         constexpr int64 kWorkerIdleSpinMicro = 2;
         /**
          * @brief 워커 수를 정할 때 하드웨어 스레드 수에서 빼 두는 수입니다(게임 스레드와 렌더 스레드 몫).
-         * @details 예전에는 하드웨어 스레드 수만큼 워커를 만들었습니다(16코어에 워커 16 + 게임 스레드 + 렌더 스레드 + 메인). 그러면
-         *          워커가 일하는 동안 게임 · 렌더 스레드가 코어를 나눠 써야 해서, 게임 스레드가 잡을 돌리면 렌더 스레드의 병렬 기록이
-         *          밀렸습니다(170 -> 261 us). 상용 엔진도 전용 스레드 몫을 뺍니다.
+         * @details 하드웨어 스레드 수만큼 워커를 만들면 워커가 일하는 동안 게임 · 렌더 스레드가 코어를 나눠 써야 해서, 게임 스레드가
+         *          잡을 돌릴 때 렌더 스레드의 병렬 기록이 밀립니다. 상용 엔진도 전용 스레드 몫을 뺍니다.
          */
         constexpr uint32 kReservedThreadCount = 2;
         /**
@@ -58,12 +57,11 @@ namespace sw
 
         /**
          * @brief 병렬 그룹의 본문을 도는 동안 "지금 실행 중인 태스크" 를 비워 두는 RAII 스코프입니다. 끝나면 바깥 값을 되돌립니다.
-         * @details 병렬 본문은 어느 태스크의 본문도 아니다. 예전에는 이 스레드가 **돕고 있던** 태스크를 그대로 물려받아, 본문에서 만든 태스크가
-         *          엉뚱한 태스크의 자식이 됐다(씬 로드 태스크가 게임 틱의 소리 재생 태스크를 기다리는 식). 어느 스레드가 티켓을 가져가느냐에 따라
-         *          부모가 달라졌다. 본문에서 만든 태스크는 최상위다. 티켓 하나(청크 여러 개)마다 한 번 세우므로 청크당 비용은 없습니다.
+         * @details 병렬 본문은 어느 태스크의 본문도 아니다. 이 스레드가 **돕고 있던** 태스크를 그대로 물려받으면 본문에서 만든 태스크가
+         *          엉뚱한 태스크의 자식이 된다(씬 로드 태스크가 게임 틱의 소리 재생 태스크를 기다리는 식 — 어느 스레드가 티켓을 가져가느냐에
+         *          따라 부모가 달라진다). 본문에서 만든 태스크는 최상위다. 티켓 하나(청크 여러 개)마다 한 번 세우므로 청크당 비용은 없습니다.
          *
-         *          예전에는 "병렬 본문 안인가" 표시(`isInsideParallelTask`)도 함께 세웠다 — 그것으로 스스로를 지키는 함수가 하나도 없어
-         *          지웠다(2026-10-03). 틱 중 구조 변경은 단언이 아니라 구조 변경 큐로 미룬다(`GameObjectManager::deferStructuralChange`).
+         *          "병렬 본문 안인가" 표시는 두지 않는다. 틱 중 구조 변경은 단언이 아니라 구조 변경 큐로 미룬다(`GameObjectManager::deferStructuralChange`).
          */
         struct ParallelTaskScope
         {
@@ -484,8 +482,8 @@ namespace sw
 
     TaskHandle TaskManager::whenAny( vector_reference<const TaskHandle> listTask, const TaskDelegate& continuation, TaskThreadAffinity affinity )
     {
-        // 유효한 핸들이 하나도 없으면 빈 목록과 같다. 예전에는 "선행 트리거 몫" 1 을 더해 두고 트리거를 하나도 만들지 않아, 후속이 영영 돌지
-        // 않았고 활성 수가 남아 `waitAll` · 종료가 멈췄다.
+        // 유효한 핸들이 하나도 없으면 빈 목록과 같다. 주의: "선행 트리거 몫" 1 을 더해 두고 트리거를 하나도 만들지 않으면 후속이 영영 돌지
+        // 않고 활성 수가 남아 `waitAll` · 종료가 멈춘다.
         bool bHasValidTask{ false };
         for ( const TaskHandle& task : listTask )
         {
@@ -688,8 +686,7 @@ namespace sw
         for ( ;; )
         {
             // **High 큐는 청크 사이에 확인한다.** 티켓을 가진 워커가 그룹을 다 실행할 때까지 렌더 스레드의 패스 기록을 세워 두면
-            // 그 줄이 그대로 프레임 지연이 된다. 예전에는 청크가 노드라서 노드 사이에 저절로 확인했다. 지금의 청크 하나(참여자당 4개)는
-            // 그때의 노드 하나보다 작으므로 기다리는 시간의 상한도 더 짧다.
+            // 그 줄이 그대로 프레임 지연이 된다. 청크 하나(참여자당 4개)가 작으므로 기다리는 시간의 상한도 짧다.
             drainHighQueueBetweenChunks();
             const uint64 reservedStart = pGroup->_nextChunkStart.fetch_add( chunkSize, std::memory_order_relaxed );
             if ( reservedStart >= end )
@@ -990,10 +987,10 @@ namespace sw
 
     void TaskManager::completeTask( TaskNode* pNode )
     {
-        // **활성 수는 스테이지 · 부모보다 먼저 내린다.** 예전에는 맨 끝(후속 트리거 뒤)에서 내렸는데, 그러면 `waitStage` 가 스테이지
-        // 완료 통지를 받고 돌아온 순간에도 이 태스크는 아직 활성으로 세어져 있다. 그 직후 `clear()` 가 수를 0 으로 놓으면 뒤늦은
-        // fetch_sub 가 0xFFFFFFFF 로 돌아가 이후의 `waitAll` 이 영원히 기다린다. CTest 아래에서만 재현되던 EngineTest_NoGPU 180초
-        // 타임아웃의 원인이 이것이다. 후속 태스크는 만들 때 이미 세어져 있으므로 여기서 내려도 `waitAll` 이 일찍 돌아오지 않는다.
+        // **활성 수는 스테이지 · 부모보다 먼저 내린다.** 맨 끝(후속 트리거 뒤)에서 내리면 `waitStage` 가 스테이지 완료 통지를 받고
+        // 돌아온 순간에도 이 태스크는 아직 활성으로 세어져 있다. 그 직후 `clear()` 가 수를 0 으로 놓으면 뒤늦은 fetch_sub 가
+        // 0xFFFFFFFF 로 돌아가 이후의 `waitAll` 이 영원히 기다린다(스케줄링에 따라 CTest 아래에서만 드러난다). 후속 태스크는 만들 때
+        // 이미 세어져 있으므로 여기서 내려도 `waitAll` 이 일찍 돌아오지 않는다.
         if ( _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
             notifyBroadcast();
 
@@ -1031,7 +1028,7 @@ namespace sw
         BLOCK( "Trigger Successors and Cleanup" )
         {
             // 목록을 **닫고** 푼다. 닫은 뒤에 `runBefore` 로 붙으려는 후속은 "이미 끝났다" 를 듣고 스스로 의존을 되돌린다(`tryPushBack`).
-            // 예전에는 잠금 없이 비었는지만 보고 훑어서, 그 사이에 붙은 후속이 영영 풀리지 않거나 너무 일찍 돌았다.
+            // 닫지 않고 훑으면 그 사이에 붙은 후속이 영영 풀리지 않거나 너무 일찍 돈다.
             pNode->_successors.closeAndForEach( [this]( TaskNode* pSuccessor )
             {
                 resolveDependency( pSuccessor, true );
@@ -1135,7 +1132,7 @@ namespace sw
                     std::this_thread::yield();
             }
             // 이 일감을 실행할 수 있는 것은 메인 스레드뿐이다(`dispatchMainThreadTasks`). 메인이 어느 대기에서든 잠들어 있으면 깨워야
-            // 한다. 예전에 `notify_one` 이 엉뚱한 스레드를 깨워서 메인과 태스크가 서로를 기다렸다.
+            // 한다(아무나 하나 깨우면 엉뚱한 스레드가 깨어 메인과 태스크가 서로를 기다린다).
             wakeParkedMainThread();
             return;
         }
@@ -1182,7 +1179,7 @@ namespace sw
             return;
 
         // **필요한 수만큼, 비트를 내린 쪽이** 깨운다. 두 제출자가 같은 워커를 두 번 깨우지 않고, 깨우기 하나는 주소 하나에 대한
-        // 것이다. 예전의 `notify_one` × n 은 뮤텍스 아래에서 차례로 나갔고, 깨어난 n 개가 그 뮤텍스를 다시 잡느라 줄을 섰다.
+        // 것이다(조건 변수의 `notify_one` × n 이면 깨어난 n 개가 뮤텍스를 다시 잡느라 줄을 선다).
         uint32 wokenCount = 0;
         while ( mask != 0 && wokenCount < requestedCount )
         {
@@ -1195,8 +1192,8 @@ namespace sw
                 ++wokenCount;
             }
             // 처음 읽은 마스크 안에서만 고른다(남이 먼저 내린 비트는 뺀다). 부른 뒤에 잠든 워커는 잠들기 전에 큐를 한 번 더 보므로
-            // 깨울 필요가 없다. 예전에는 `previous` 로 마스크를 새로 채워 그 워커까지 쫓았다. 할 일 없이 깨어난 워커는 스핀(2 us)
-            // 뒤 곧바로 다시 잠들어서, 깨우기 시스템 호출이 그보다 느린 곳(WSL)에서는 모두 깨우기 한 번이 1~90 초를 돌았다.
+            // 깨울 필요가 없다. 주의: `previous` 로 마스크를 새로 채워 그 워커까지 쫓으면, 할 일 없이 깨어난 워커가 스핀(2 us) 뒤 곧바로
+            // 다시 잠들어서 깨우기 시스템 호출이 그보다 느린 곳(WSL)에서는 모두 깨우기 한 번이 1~90 초를 돈다.
             mask &= previous & ~bit;
         }
         if ( wokenCount > 0 )

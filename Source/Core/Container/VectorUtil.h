@@ -35,7 +35,7 @@ namespace sw
 
         /**
          * @brief `value` 와 같은 첫 원소를 `removeAtSwap` 으로 지웁니다(언리얼 `TArray::RemoveSingleSwap`). 찾아서 지웠으면 true 입니다.
-         * @details 여러 곳이 "찾기 → 마지막 원소로 덮기 → pop_back" 여덟 줄을 각자 들고 있었습니다.
+         * @details "찾기 → 마지막 원소로 덮기 → pop_back" 을 손으로 적지 않고 이것을 씁니다.
          */
         template <typename TVector, typename TValue>
         [[nodiscard]] static bool removeSingleSwap( TVector& list, const TValue& value )

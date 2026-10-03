@@ -22,11 +22,10 @@ namespace sw
          * @struct SharedFutureSignal
          * @brief future 의 **완료 신호**입니다. 값 타입과 상관없는 부분을 모두 담습니다.
          *
-         * @details `SharedFutureState<T>` 와 `SharedFutureState<void>` 는 서로 다른 특수화라 **같은 코드를 두 벌 갖고 있었습니다.**
-         *          뮤텍스 · 조건 변수 · `_bReady` · `wait` · `waitFor`, 그리고 "락 안에서 표시하고, 알림과 후속 작업(continuation)
-         *          호출은 락 밖에서" 라는 **순서 규칙**까지입니다. 그 규칙은 틀리기 쉽습니다. 후속 작업이 다시 이 future 를 건드릴 수
-         *          있어 락 밖에서 불러야 하고, 이동시킨 델리게이트를 다시 읽어서도 안 됩니다. 실제로 그 자리에서 use-after-move 를
-         *          한 번 고쳤고, 그때 **두 벌을 따로 고쳐야 했습니다.**
+         * @details `SharedFutureState<T>` 와 `SharedFutureState<void>` 가 함께 씁니다: 뮤텍스 · 조건 변수 · `_bReady` · `wait` · `waitFor`,
+         *          그리고 "락 안에서 표시하고, 알림과 후속 작업(continuation) 호출은 락 밖에서" 라는 **순서 규칙**입니다. 그 규칙은
+         *          틀리기 쉽습니다. 후속 작업이 다시 이 future 를 건드릴 수 있어 락 밖에서 불러야 하고, 이동시킨 델리게이트를 다시
+         *          읽어서도 안 됩니다(use-after-move).
          *
          *          그래서 여기 한 벌만 둡니다. 값을 어디에 어떻게 저장할지는 특수화가 람다로 넘깁니다.
          */
@@ -100,8 +99,7 @@ namespace sw
             /**
              * @brief 후속 작업을 **보관하거나**, 이미 끝났으면 그대로 반환합니다.
              * @details 반환받았으면 호출하는 쪽이 **락 밖에서** 부릅니다. 갈 곳을 하나만 정하므로 이동시킨 값을 다시 읽는 곳이
-             *          없습니다. 예전에는 bool 플래그와 `std::move` 가 서로 배타적이라는 사실에 기대고 있어서, 읽는 사람도 분석기도
-             *          use-after-move 로 볼 수밖에 없었습니다.
+             *          없습니다(bool 플래그와 `std::move` 가 서로 배타적이라는 사실에 기대면 읽는 사람도 분석기도 use-after-move 로 봅니다).
              */
             template <typename TDelegate>
             TDelegate takeImmediateOrStore( TDelegate continuation, TDelegate& outStorage )
@@ -264,12 +262,10 @@ namespace sw
         {
             using ReturnType = std::invoke_result_t<F, const T&>;
 
-            // **원본이 무효하면 결과도 무효다.** 예전에는 여기서 유효한(그러나 아무도 값을 넣어 주지 않는) future 를 반환했고,
-            // 그것을 `wait()` 하면 **영원히 멈췄다.** 그리고 그 함정을 `whenAllFutures` · `whenAnyFuture` 가 각자 우회하고 있었다.
-            // 유효한 것만 세고, 후보가 하나도 없으면 무효한 future 를 반환하는 식이었다. 우회가 두 벌이면 세 번째 호출부가 같은
-            // 함정에 빠진다. 그래서 뿌리를 여기서 막는다. 무효한 future 는 `wait()` 가 바로 돌아오고, `waitFor` 는 false 이며,
-            // `isValid()` 로 확인할 수 있다. "무효가 들어오면 무효가 나간다" 가 체인 전체에 전해진다. (`fallback()` 은 처음부터
-            // 이 경우를 올바르게 다뤘다. 값을 채워 완료시킨다.)
+            // **원본이 무효하면 결과도 무효다.** 유효한(그러나 아무도 값을 넣어 주지 않는) future 를 반환하면 그것을 `wait()` 할 때
+            // **영원히 멈춘다.** 호출부마다 우회하게 두지 않고 뿌리를 여기서 막는다. 무효한 future 는 `wait()` 가 바로 돌아오고,
+            // `waitFor` 는 false 이며, `isValid()` 로 확인할 수 있다. "무효가 들어오면 무효가 나간다" 가 체인 전체에 전해진다.
+            // (`fallback()` 은 이 경우 값을 채워 완료시킨다.)
             if ( _pState == nullptr )
                 return TaskFuture<ReturnType>{};
 
@@ -354,12 +350,8 @@ namespace sw
         {
             using ReturnType = std::invoke_result_t<F>;
 
-            // **원본이 무효하면 결과도 무효다.** 예전에는 여기서 유효한(그러나 아무도 값을 넣어 주지 않는) future 를 반환했고,
-            // 그것을 `wait()` 하면 **영원히 멈췄다.** 그리고 그 함정을 `whenAllFutures` · `whenAnyFuture` 가 각자 우회하고 있었다.
-            // 유효한 것만 세고, 후보가 하나도 없으면 무효한 future 를 반환하는 식이었다. 우회가 두 벌이면 세 번째 호출부가 같은
-            // 함정에 빠진다. 그래서 뿌리를 여기서 막는다. 무효한 future 는 `wait()` 가 바로 돌아오고, `waitFor` 는 false 이며,
-            // `isValid()` 로 확인할 수 있다. "무효가 들어오면 무효가 나간다" 가 체인 전체에 전해진다. (`fallback()` 은 처음부터
-            // 이 경우를 올바르게 다뤘다. 값을 채워 완료시킨다.)
+            // **원본이 무효하면 결과도 무효다**(값 있는 `then` 과 같은 규칙 — 유효하지만 아무도 채우지 않는 future 는 `wait()` 가
+            // 영원히 멈춘다).
             if ( _pState == nullptr )
                 return TaskFuture<ReturnType>{};
 
@@ -514,9 +506,9 @@ namespace sw
     template <typename T>
     inline TaskFuture<T> whenAnyFuture( const vector<TaskFuture<T>>& listFuture )
     {
-        // 이길 후보가 하나도 없으면 값을 만들 방법이 없다. 예전에는 **유효한** future 를 반환했는데 아무도 값을 넣어 주지 않아
-        // `wait()` 가 영원히 멈췄다(형제 함수인 `whenAllFutures` 는 빈 목록을 올바르게 끝냈다). `isValid()` 가 false 인 future 를
-        // 반환하면 `wait()` 는 바로 돌아오고, 호출하는 쪽이 "결과가 없다" 를 확인할 수 있다.
+        // 이길 후보가 하나도 없으면 값을 만들 방법이 없다. **유효한** future 를 반환하면 아무도 값을 넣어 주지 않아 `wait()` 가
+        // 영원히 멈춘다. `isValid()` 가 false 인 future 를 반환하면 `wait()` 는 바로 돌아오고, 호출하는 쪽이 "결과가 없다" 를
+        // 확인할 수 있다.
         bool bHasValid = false;
         for ( const TaskFuture<T>& future : listFuture )
         {

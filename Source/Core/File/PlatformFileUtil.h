@@ -3,10 +3,10 @@
  * @brief 플랫폼마다 이름이 다른 stdio 원시 연산입니다.
  *
  * @details 안전한 파일 열기와 64비트 오프셋 탐색은 Windows 와 POSIX 에서 함수 이름이 다릅니다. 쓰는 곳마다 그 `#if` 를
- *          적다 보니 `FileUtil` 에 5벌, `Logger` 에 1벌, Engine 의 `ResourcePackReader` 에 5벌이 쌓였습니다. 그러면
- *          플랫폼을 하나 더 지원할 때 세 파일을 모두 찾아내 빠짐없이 고쳐야 합니다. 그래서 원시 연산은 여기 한 곳에만 둡니다.
+ *          적으면(`FileUtil` · `Logger` · Engine 의 `ResourcePackReader`) 플랫폼을 하나 더 지원할 때 모두 찾아내 빠짐없이
+ *          고쳐야 합니다. 그래서 원시 연산은 여기 한 곳에만 둡니다.
  *
- * @note 지금은 분기가 한 줄짜리라 이 `.cpp` 하나가 세 플랫폼을 모두 담습니다. 비동기 IO 나 메모리 매핑처럼 플랫폼별 코드가
+ * @note 분기가 한 줄짜리라 이 `.cpp` 하나가 세 플랫폼을 모두 담습니다. 비동기 IO 나 메모리 매핑처럼 플랫폼별 코드가
  *       커지면 `File/Windows` · `File/Linux` 로 옮기면 됩니다(FileDialog · FileWatcher 가 이미 그 형태입니다).
  */
 #pragma once
@@ -30,8 +30,8 @@ namespace sw
          * @param pMode fopen 모드 문자열("rb", "wb", "a" 등)
          * @details 다른 프로세스의 읽기 · 쓰기를 막지 않습니다(POSIX `fopen` 과 같다) — 실행 중인 로그 파일을 다른 프로그램이 열 수 있다.
          *          Windows 에서는 UTF-16 으로 바꿔 엽니다(`_wfsopen`, `_SH_DENYNO`). 좁은 문자 `fopen_s` 는 경로를 **ANSI 코드 페이지**(한국어
-         *          Windows 는 CP949)로 해석해, 한글이 들어간 UTF-8 경로를 다른 이름으로 읽었습니다. 읽기(`readRange`)는 이미 UTF-16 으로
-         *          열고 있어서, 같은 경로를 쓰기와 읽기가 서로 다른 파일로 봤습니다.
+         *          Windows 는 CP949)로 해석해, 한글이 들어간 UTF-8 경로를 다른 이름으로 읽습니다. 읽기(`readRange`)도 UTF-16 으로
+         *          열므로 쓰기와 읽기가 같은 파일을 봅니다.
          */
         static FILE* openFile( const utf8* pFilePath, const utf8* pMode );
 

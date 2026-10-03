@@ -74,8 +74,8 @@ namespace sw
         static bool isValidUtf8( const utf8* pInput );
         /**
          * @brief 올바른 UTF-8 은 그대로 두고, 잘못된 바이트만 백슬래시 + `xNN`(16진 두 자리) 넉 자로 바꿉니다. 결과는 늘 올바른 UTF-8 입니다.
-         * @details 로그가 이것을 쓴다. 예전에는 한 바이트만 틀려도 **줄 전체**를 로캘 변환했는데, `setlocale` 을 부르는 곳이 없어 C 로캘이라
-         *          Windows 에서는 멀쩡한 한글까지 깨졌고 glibc 에서는 줄이 통째로 비었다. 무슨 바이트였는지가 남아 원인도 찾을 수 있다.
+         * @details 로그가 이것을 쓴다. 한 바이트만 틀려도 **줄 전체**를 로캘 변환하면, `setlocale` 을 부르는 곳이 없어 C 로캘이라
+         *          Windows 에서는 멀쩡한 한글까지 깨지고 glibc 에서는 줄이 통째로 빈다. 무슨 바이트였는지가 남아 원인도 찾을 수 있다.
          */
         static string escapeInvalidUtf8( string_view text );
         /**
@@ -158,10 +158,8 @@ namespace sw
         static bool endsWith( string_view str, string_view suffix, bool bIgnoreCase = false ) noexcept;
         /**
          * @brief 문자열 **안 어딘가에** 부분 문자열이 있는지 확인합니다(할당 없음).
-         * @details `startsWith` · `endsWith` 에 빠져 있던 짝입니다. 셋이 같은 질문의 세 가지 경우인데 가운데만 없어서, 부르는
-         *          쪽이 `str.find( sub ) != npos` 로 직접 적었고 그때마다 **`bIgnoreCase` 를 잃었습니다.** 실제로
-         *          `zoneRoleFromMapPath` 가 그랬습니다. 같은 역할을 글자로 묻는 짝 함수는 대소문자를 무시하는데 경로로 묻는 쪽만
-         *          구별해서, `Dungeon_01` 은 던전이 아니고 `dungeon_01` 만 던전이었습니다.
+         * @details `startsWith` · `endsWith` 의 짝입니다. `str.find( sub ) != npos` 로 직접 적으면 **`bIgnoreCase` 를 잃습니다**
+         *          (대소문자를 무시하는 짝 함수와 판정이 갈라져 `Dungeon_01` 만 던전이 아니게 되는 식).
          * @return 있으면 true. `sub` 가 비어 있으면 true 입니다(표준 `find` 와 같습니다).
          */
         static bool contains( string_view str, string_view sub, bool bIgnoreCase = false ) noexcept;
@@ -189,11 +187,9 @@ namespace sw
         /**
          * @brief 원본을 목적지에 복사합니다. **항상 NUL 로 끝나고**, 들어가지 않으면 자릅니다.
          * @param length 목적지 **버퍼의 크기**(문자 수)입니다. 종료 문자 자리를 포함합니다.
-         * @details 예전에는 플랫폼마다 **다르게** 동작했습니다. Windows 는 `strncpy_s( dst, length, src, length )` 라서, 원본이
-         *          종료 문자까지 들어가지 않으면 목적지를 **빈 문자열로 만들고** 잘못된 매개변수 핸들러를 불렀습니다. Linux ·
-         *          macOS 는 `::strncpy` 라서 `length` 글자를 복사하고 **종료 문자를 붙이지 않았습니다.** 그래서 뒤이어 읽는 쪽이
-         *          버퍼 밖까지 읽었습니다. 이름은 "안전하게 복사" 라고 말하는데 어느 쪽도 그렇지 않았습니다. 잘라 낼 때도 반드시
-         *          끝을 맺는 하나의 규칙으로 맞춥니다.
+         * @details 플랫폼 함수에 맡기지 않습니다 — Windows 의 `strncpy_s( dst, length, src, length )` 는 원본이 종료 문자까지
+         *          들어가지 않으면 목적지를 **빈 문자열로 만들고** 잘못된 매개변수 핸들러를 부르고, `::strncpy` 는 `length` 글자를
+         *          복사하고 **종료 문자를 붙이지 않습니다.** 잘라 낼 때도 반드시 끝을 맺는 하나의 규칙으로 맞춥니다.
          */
         static void strncpy( utf8* pOutDest, const utf8* pSource, uint32 length );
         /** @brief 위와 같습니다. 항상 NUL 로 끝나고, 들어가지 않으면 자릅니다. */
@@ -221,7 +217,7 @@ namespace sw
         [[nodiscard]] static bool parseBool( string_view token, bool bFallback = false );
         /**
          * @brief 불리언 토큰(`true` · `false` · `1` · `0` · `yes` · `no` · `on` · `off`, 대소문자 무시)을 읽습니다. 아니면 false 이고 값은 그대로입니다.
-         * @details `parseBool` 은 읽지 못한 글을 폴백으로 돌려줘 "ture" 가 조용히 false 가 됐습니다 — 실패를 알아야 하는 자리는 이것을 씁니다.
+         * @details `parseBool` 은 읽지 못한 글을 폴백으로 돌려줘 "ture" 가 조용히 false 가 됩니다 — 실패를 알아야 하는 자리는 이것을 씁니다.
          */
         [[nodiscard]] static bool tryParseBool( string_view token, bool& outValue );
 
@@ -317,10 +313,10 @@ namespace sw
             {
                 // **두 경로 모두 CharT 의 부호 없는 짝 타입을 거친다.** 부호 확장을 막기 위해서다. `char` 가 음수면(UTF-8 의 0x80
                 // 이상 바이트) 0xFFFFFFFFFFFFFF80 같은 값이 섞여 들어가고, `char` 의 부호 여부는 구현 정의라서 **플랫폼이 바뀌면
-                // 해시가 달라졌다**(ARM 은 unsigned char 다).
+                // 해시가 달라진다**(ARM 은 unsigned char 다).
                 //
                 // 다만 `uint8` 로 고정하면 안 된다. 이 템플릿은 `utf16` 으로도 불리는데(`std::hash<fixed_wstring>`), 그러면 넓은
-                // 문자가 **하위 한 바이트로 잘려** 한글처럼 상위 바이트만 다른 문자들이 모두 같은 값으로 해시된다. 실제로 그랬다.
+                // 문자가 **하위 한 바이트로 잘려** 한글처럼 상위 바이트만 다른 문자들이 모두 같은 값으로 해시된다.
                 const uint64 c = static_cast<uint64>(
                     static_cast<std::make_unsigned_t<CharT>>( bIgnoreCase ? toLowerChar( pStr[charIndex] ) : pStr[charIndex] ) );
                 hash = ( hash ^ c ) * kPrime64;
@@ -342,8 +338,7 @@ namespace sw
             uint32 hash = seed;
             for ( size_t charIndex = 0; charIndex < length; ++charIndex )
             {
-                // 64비트 쪽과 **같은 규칙**이다. 그쪽은 부호 확장을 고쳤는데 여기는 bIgnoreCase 경로만 고쳐지지 않은 채 남아
-                // 있었다. 같은 문자열이 두 경로에서 다르게 해시됐다.
+                // 64비트 쪽과 **같은 규칙**이다(bIgnoreCase 경로 포함) — 다르면 같은 문자열이 두 경로에서 다르게 해시된다.
                 const uint32 c = static_cast<uint32>(
                     static_cast<std::make_unsigned_t<CharT>>( bIgnoreCase ? toLowerChar( pStr[charIndex] ) : pStr[charIndex] ) );
                 hash = ( hash ^ c ) * kPrime32;

@@ -71,9 +71,8 @@ namespace sw
 
         /**
          * @brief 지정한 채널에서 이벤트를 구독합니다.
-         * @details `add` 를 **잠금 안에서** 합니다. 예전에는 잠금이 맵 조회까지만 걸려 있고 `add` 는 밖에서 돌았습니다.
-         *          같은 이벤트를 두 스레드가 동시에 구독하면 멀티캐스트의 벡터가 경쟁했습니다. 해제(`unsubscribe`)는 이미
-         *          잠금 안에서 `remove` 를 하고 있었으므로, 둘 중 한쪽만 보호되는 비대칭이었습니다.
+         * @details `add` 를 **잠금 안에서** 합니다(해제의 `remove` 와 같이). 잠금이 맵 조회까지만 걸리면 같은 이벤트를 두 스레드가
+         *          동시에 구독할 때 멀티캐스트의 벡터가 경쟁합니다.
          */
         template <typename T>
         EventSubscription subscribe( hashed_string channel, const Delegate<void( const T& )>& delegate )
@@ -321,8 +320,8 @@ namespace sw
 
         /**
          * @brief 채널 + 타입의 멀티캐스트를 찾거나 만듭니다. `_busSpinLock` 을 **잡은 채로** 부르십시오.
-         * @details 예전에는 이 함수가 잠금을 스스로 잡았다가 곧바로 놓아서, 호출부의 `add` / `remove` / `broadcast` 가 모두
-         *          잠금 밖에서 돌았습니다. 이제 잠금 범위는 호출부가 정합니다.
+         * @details 잠금 범위는 호출부가 정합니다 — 여기서 잡았다 놓으면 호출부의 `add` / `remove` / `broadcast` 가 모두
+         *          잠금 밖에서 돕니다.
          */
         template <typename T>
         shared_ptr<MulticastDelegate<void( const T& )>> findOrCreateChannelDelegateUnlocked( hashed_string channel )
@@ -343,16 +342,15 @@ namespace sw
         mutable SpinLock _queueSpinLock;
         /**
          * @brief (채널, 이벤트 타입) → 브로드캐스트 함수 + 멀티캐스트 표입니다. **이 표 하나만 기준입니다.**
-         * @details 예전에는 `_mapChannelDelegate`(같은 키 → `shared_ptr<void>`)가 따로 있었는데, 그 값은 여기의 `_pMulticast` 와
-         *          **같은 포인터**였습니다. 항상 함께 쓰이고 함께 비워지는 같은 표를 두 벌 두면, 한쪽만 고친 날 디스패치가 이미
-         *          사라진 멀티캐스트를 부르게 됩니다.
+         * @details 같은 키로 멀티캐스트를 가리키는 표를 따로 두지 말 것 — 항상 함께 쓰이고 함께 비워지는 같은 표를 두 벌 두면,
+         *          한쪽만 고친 날 디스패치가 이미 사라진 멀티캐스트를 부르게 됩니다.
          */
         unordered_map<pair<hashed_string, EventTypeId>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
         unordered_map<hashed_string, unique_ptr<ChannelEventList>>                      _mapChannelQueue;
 
         /**
          * @brief 큐를 비우는 스레드입니다. 첫 `processEvents` 가 정합니다. 기본값이면 아직 주인이 없습니다.
-         * @details 예전에는 Debug 에만 있었습니다(단언용). 이제 `isBusThread` 가 배포본에서도 묻습니다 — 다른 스레드가 읽으므로 원자값입니다.
+         * @details `isBusThread` 가 배포본에서도 묻습니다 — 다른 스레드가 읽으므로 원자값입니다.
          */
         atomic<std::thread::id> _busThreadId;
 

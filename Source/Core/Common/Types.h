@@ -5,10 +5,8 @@
  * @note 숫자 · 문자 별칭은 전역에, 문자열 뷰는 `sw` 안에 둡니다. 기준은 "누구의 이름인가" 입니다.
  *       `int32` · `utf8` 은 이 저장소가 고정폭 기본형에 붙인 이름이라 `int` 와 같은 층인 전역에 둡니다.
  *       반면 문자열 뷰는 컨테이너의 이름이고, 이 저장소의 컨테이너는 모두 `sw` 안에 있습니다
- *       (`sw::string` · `sw::vector` · `sw::unordered_map`). 뷰만 전역에 두면 짝이 어긋납니다. 실제로 예전에는
- *       `namespace sw` 안에서 `string` 은 `sw::string` 으로, `string_view` 는 `::string_view` 로 풀려서
- *       `sw::string_view` 라고 쓰면 컴파일되지 않았습니다. 지금은 `sw::string_view` 가 기준이고,
- *       `namespace sw` 안의 코드는 예전처럼 `string_view` 라고만 쓰면 됩니다.
+ *       (`sw::string` · `sw::vector` · `sw::unordered_map`). 뷰만 전역에 두면 짝이 어긋나 `sw::string_view` 라고 쓸 수 없습니다.
+ *       `sw::string_view` 가 기준이고, `namespace sw` 안의 코드는 `string_view` 라고만 쓰면 됩니다.
  */
 #pragma once
 #include <cstddef>

@@ -30,7 +30,7 @@ namespace sw
          * @brief 스택 버퍼(_arrStaticBuffer)를 처음 버퍼로 두고 널 문자로 끝냅니다.
          * @note `_arrStaticBuffer` 는 **일부러 값 초기화하지 않습니다.** 아래에서 `[0] = '\0'` 으로 널 종료를 세우고, 이후 모든
          *       쓰기가 `_length` 와 종료 문자를 함께 유지하므로 `Capacity` 바이트를 0 으로 채우는 것은 낭비입니다. 직렬화는
-         *       스칼라 값 하나마다 StringBuilder<8192> 를 만들기 때문에, 값 하나를 쓸 때마다 8KB memset 을 하고 있었습니다.
+         *       스칼라 값 하나마다 StringBuilder<8192> 를 만들기 때문에, 0 으로 채우면 값 하나를 쓸 때마다 8KB memset 이 됩니다.
          */
         StringBuilder() noexcept
             : _pDynamicBuffer{ nullptr }
@@ -87,9 +87,8 @@ namespace sw
         /**
          * @brief 힙 버퍼를 할당하거나 용량을 늘립니다(두 배씩 늘립니다).
          * @return 요청한 만큼 담을 수 있으면 true. **false 면 버퍼는 손대지 않은 그대로입니다.**
-         * @details 예전에는 `Memory::allocate` 의 결과를 확인하지 않고 곧바로 `Memory::copy` 의 목적지로 넘겼습니다. 할당이
-         *          실패하면(nullptr) nullptr 에 복사하고, 이어서 `_pBuffer` 가 nullptr 인 채로 `_capacity` 만 커져서 **그 뒤의 모든
-         *          append 가 nullptr 에 씁니다.** 실패하면 아무것도 바꾸지 않는 쪽이 맞습니다. 지금까지 쌓은 내용이 그대로 남고,
+         * @details 할당이 실패하면(nullptr) 아무것도 바꾸지 않습니다 — 결과를 확인하지 않고 복사하면 `_pBuffer` 가 nullptr 인 채로
+         *          `_capacity` 만 커져서 **그 뒤의 모든 append 가 nullptr 에 씁니다.** 지금까지 쌓은 내용이 그대로 남고,
          *          호출하는 쪽은 잘린 문자열을 보게 됩니다.
          *
          *          여기서 로그를 남기지 않는 이유는 **로거 자신이 이 클래스를 쓰기 때문입니다**(`formatString.h` 가 stderr 로 직접
@@ -272,7 +271,7 @@ namespace sw
             for ( ;; )
             {
                 // 재시도 루프라서 **forward 하지 않는다.** std::forward 는 한 번만 쓰기로 한 약속인데, 여기서는 버퍼가 모자라면
-                // 같은 인자 팩을 다시 넘긴다. 지금은 formatstring 이 인자를 읽기만 해서 문제가 없지만, 인자를 옮길 여지가 생기는
+                // 같은 인자 팩을 다시 넘긴다. formatstring 이 인자를 읽기만 해서 문제가 없지만, 인자를 옮길 여지가 생기는
                 // 순간 두 번째 시도가 빈 값을 출력한다.
                 formatstring( _pBuffer + _length, available, format, args... );
                 const uint32 written = StringUtil::strlen( _pBuffer + _length );
@@ -287,8 +286,8 @@ namespace sw
 
                 _pBuffer[_length] = '\0';
 
-                // 늘리지 못하면 **여기서 끝낸다.** 예전에는 실패를 확인하지 않아 `available` 이 그대로였고, 같은 크기로 다시 포맷하고
-                // 다시 늘리려는 루프가 끝없이 돌았다.
+                // 늘리지 못하면 **여기서 끝낸다.** 실패를 확인하지 않으면 `available` 이 그대로라, 같은 크기로 다시 포맷하고
+                // 다시 늘리려는 루프가 끝없이 돈다.
                 if ( ensureCapacity( available ) == false )
                     return *this;
 

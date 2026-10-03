@@ -130,8 +130,7 @@ namespace sw
         static bool ensureParentDirectoryExists( string_view filePath );
         /**
          * @brief 디렉터리가 있게 합니다(필요하면 상위 디렉터리도).
-         * @details 예전에는 둘 다 void 라 만들지 못해도 말이 없었다 — 뒤따르는 쓰기가 "열 수 없다" 로만 실패해 어느 폴더가 왜 막혔는지 몰랐다. 이름도
-         *          `createParentDirectory` · `ensureDirectoryExists` 로 같은 일에 동사가 둘이었다.
+         * @details 만들지 못하면 여기서 알린다 — 말없이 넘어가면 뒤따르는 쓰기가 "열 수 없다" 로만 실패해 어느 폴더가 왜 막혔는지 모른다.
          * @return 디렉터리가 있으면 true. 만들지 못했으면 경로와 이유를 알리고 false 입니다.
          */
         static bool ensureDirectoryExists( string_view directoryPath );
@@ -175,8 +174,7 @@ namespace sw
         [[nodiscard]] static bool writeFile( string_view fileName, const uint8* pData, uint64 size );
         /**
          * @brief 파일의 [offset, offset + maxReadCount) 를 outBytes 에 담습니다.
-         * @details 잰 크기만큼 읽지 못하면(읽기 오류 · 읽는 도중 파일이 줄어듦) false 입니다. 예전 인자는 uint32 라 4 GB 이상의 파일이
-         *          조용히 잘렸습니다.
+         * @details 잰 크기만큼 읽지 못하면(읽기 오류 · 읽는 도중 파일이 줄어듦) false 입니다. 인자는 64비트라 4 GB 이상의 파일도 다룹니다.
          */
         [[nodiscard]] static bool readFile( string_view fileName, vector<uint8>& outBytes, uint64 offset = 0, uint64 maxReadCount = MathUtil::MaxUInt64 );
         /** @brief 파일 전체를 UTF-8 텍스트로 읽습니다(UTF-8 BOM 은 자동으로 뗍니다). 잘린 읽기는 false 입니다. */
@@ -194,9 +192,9 @@ namespace sw
          *          않으므로 그 자리에서 기다리면 프레임이 멈추기 때문입니다. 그래서 **결과만** 큐에 담고, `pumpFileDialogResults`
          *          가 메인 스레드에서 꺼내 델리게이트를 부릅니다.
          *
-         *          예전에는 그 스레드에서 곧바로 델리게이트를 불렀습니다. 그러면 콜백이 씬 · 컴포넌트 · 에디터 상태처럼 메인
-         *          스레드가 매 프레임 만지는 것들을 **동시에** 고치게 됩니다(실제로 씬 직렬화와 컴포넌트 역직렬화가 그 스레드에서
-         *          돌고 있었습니다). 호출하는 곳마다 큐를 하나씩 두는 대신 여기서 한 번에 막습니다.
+         *          그 스레드에서 곧바로 델리게이트를 부르면 콜백이 씬 · 컴포넌트 · 에디터 상태처럼 메인 스레드가 매 프레임
+         *          만지는 것들을 **동시에** 고치게 됩니다(씬 직렬화 · 컴포넌트 역직렬화 등). 호출하는 곳마다 큐를 하나씩 두는 대신
+         *          여기서 한 번에 막습니다.
          * @param params 다이얼로그 설정
          * @param onSuccess 사용자가 파일을 골랐을 때 **메인 스레드에서** 불릴 델리게이트(취소하면 불리지 않습니다)
          */

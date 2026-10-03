@@ -55,10 +55,9 @@ namespace sw
      * @details **`sw_new` · `sw_delete` · `make_unique` · `Allocator` 가 모두 이 한 기준을 씁니다.** 기준은 컴파일러가 정렬 `operator new` 를
      *          고르는 경계(`__STDCPP_DEFAULT_NEW_ALIGNMENT__`, x64 에서 16)입니다. `Memory::allocate` 는 16 바이트 정렬을 보장합니다(헤더 48 바이트).
      *
-     *          예전에는 해제 쪽만 `alignof( std::max_align_t )` 를 봤습니다. MSVC 에서 그 값은 **8** 이라, 16 바이트 정렬 타입이 `sw_new`(일반
-     *          할당)로 잡히고 `sw_delete`(정렬 해제)로 풀려 힙이 깨졌습니다. 64 바이트 정렬 타입(`ParallelGroup` 등)은 `sw_new` 에 정렬 오버로드가
-     *          없어 일반 할당(16 바이트 정렬)으로 잡혀 정렬 자체가 틀렸고, 풀 때는 정렬 해제였습니다. `Allocator` 는 정렬을 아예 보지 않아
-     *          `vector` · `make_shared` 에 담긴 과정렬 타입도 16 바이트 정렬이었습니다.
+     *          주의: 할당과 해제가 다른 기준을 보면 힙이 깨집니다. 예컨대 `alignof( std::max_align_t )` 는 MSVC 에서 **8** 이라, 한쪽만
+     *          그것을 보면 16 바이트 정렬 타입이 일반 할당으로 잡히고 정렬 해제로 풀립니다. 64 바이트 정렬 타입(`ParallelGroup` 등)과
+     *          `vector` · `make_shared` 에 담긴 과정렬 타입도 이 기준으로 정렬 할당을 받습니다.
      */
     template <typename T>
     inline constexpr bool kUsesAlignedAllocation = alignof( T ) > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
@@ -76,8 +75,7 @@ namespace sw
         /**
          * @brief 원소 `n` 개 분량의 메모리를 잡습니다.
          * @details `n * sizeof( T )` 가 **오버플로하면 요청보다 훨씬 작은 블록이 잡히고**, 호출하는 쪽은 원소 `n` 개를 쓸 수 있다고
-         *          믿고 그 밖에 씁니다. 표준 할당자가 같은 상황에서 예외를 던지는 이유입니다. `vector::max_size()` 가 이미 이 한계를
-         *          알려 주고 있었지만 아무도 강제하지 않고 있었습니다.
+         *          믿고 그 밖에 씁니다. 표준 할당자가 같은 상황에서 예외를 던지는 이유입니다(`vector::max_size()` 가 알려 주는 한계를 여기서 강제합니다).
          */
         [[nodiscard]] T* allocate( size_t n )
         {

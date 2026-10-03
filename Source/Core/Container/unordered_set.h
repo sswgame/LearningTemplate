@@ -1,6 +1,6 @@
 /**
  * @file unordered_set.h
- * @brief 해시 집합입니다. SW_USE_DOD_HASHMAP 이면 밀집 배열 구현, 아니면 std::unordered_set 래퍼입니다.
+ * @brief 해시 집합입니다. 기본은 밀집 배열 구현이고, `SW_ENABLE_STL_CONTAINER` 이면 std::unordered_set 래퍼입니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -99,7 +99,7 @@ namespace sw
 
         /**
          * @brief 해시를 버킷 번호로 바꿉니다. 곱셈 한 번 · 접기 한 번 · 마스크 한 번입니다. 버킷 수는 항상 2의 거듭제곱입니다(`rehash_internal`).
-         * @details 예전에는 `hash % 버킷 수` 였습니다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹습니다
+         * @details `hash % 버킷 수` 를 쓰지 않습니다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹습니다
          *          (`ContainerBenchTest`). 피보나치 상수를 곱하고 위쪽 절반을 아래쪽 절반에 접어 넣으므로, 아래 비트가 고르지 않은
          *          해시도 고르게 퍼집니다. libstdc++ · libc++ 의 std::hash 는 정수 · 포인터에 대해 항등 함수라서, 2의 거듭제곱 크기에
          *          `%` 만 쓰면 아래 비트만 남아 8바이트 정렬 포인터가 버킷 여덟 개 중 하나에 몰렸습니다(기본 증가 경로가 그 크기였습니다).
@@ -302,9 +302,8 @@ namespace sw
 
         /**
          * @brief 이종 키(heterogeneous key, 예: string_view)로 찾습니다.
-         * @details `unordered_map` 에는 있었는데 여기엔 없었습니다. 그래서 `unordered_set<string>` 을 `string_view` 로 찾으면
-         *          키를 하나 새로 만들어서 찾았고, 할당 없이 조회한다는 계약이 집합에서만 깨져 있었습니다. 비교자의 기본값이 이미
-         *          `std::equal_to<>` 라는 점이 원래 의도를 보여 줍니다.
+         * @details `unordered_map` 과 같은 계약입니다 — `unordered_set<string>` 을 `string_view` 로 찾아도 키를 새로 만들지 않습니다
+         *          (비교자의 기본값이 `std::equal_to<>` 인 이유입니다).
          */
         template <typename K, typename = std::enable_if_t<!std::is_same_v<std::decay_t<K>, Key>>>
         iterator find( const K& key ) const

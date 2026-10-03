@@ -2,9 +2,8 @@
  * @file EnumUtil.h
  * @brief 비트플래그 enum 을 검사하고 조합하는 도우미입니다. 전부 static · constexpr 이고 리플렉션(TypeRegistry)을 조회하지 않습니다.
  *
- * @note 예전에는 `StdHeaders.h`(표준 헤더 48개, `<regex>` · `<random>` · `<iostream>` 포함)를 끌어왔지만, 이 파일이 쓰는 것은
- *       `<type_traits>` 의 넷(`is_enum_v` · `underlying_type_t` · `enable_if_t` · `false_type`)뿐입니다. 비트플래그 연산자를
- *       쓰려고 이 헤더를 include 한 쪽이 컴파일이 무거운 `<regex>` 까지 함께 끌어오고 있었습니다.
+ * @note 이 파일이 쓰는 것은 `<type_traits>` 의 넷(`is_enum_v` · `underlying_type_t` · `enable_if_t` · `false_type`)뿐입니다.
+ *       `StdHeaders.h` 를 include 하지 말 것 — 비트플래그 연산자를 쓰려는 쪽이 `<regex>` 같은 무거운 헤더까지 끌어옵니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

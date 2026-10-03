@@ -13,8 +13,8 @@ namespace sw
     /**
      * @struct Frustum
      * @brief 절두체의 여섯 평면(왼쪽 · 오른쪽 · 아래 · 위 · 가까운 면 · 먼 면)입니다. 법선은 안쪽을 향하고 길이 1 로 정규화돼 있습니다.
-     * @details 예전에는 이 식(Gribb-Hartmann)이 `RenderView::setViewProjection` 과 `BVHTree3D::queryFrustum` 에 두 벌 있었고,
-     *          법선 길이가 0 인 퇴화 평면도 서로 다르게 다뤘습니다(한쪽은 0 으로 지우고, 다른 쪽은 정규화하지 않은 채 두었습니다).
+     * @details 이 식(Gribb-Hartmann)은 `RenderView::setViewProjection` 과 `BVHTree3D::queryFrustum` 이 함께 씁니다(사본을 두면
+     *          법선 길이가 0 인 퇴화 평면 처리가 갈라집니다).
      *          엔진은 행벡터 규약(`mul( v, M )`)이라 클립 좌표는 M 의 **열**과의 내적입니다. 그래서 열을 더하고 뺍니다.
      *          행 우선으로 저장하므로 col( i ) = ( _1i, _2i, _3i, _4i ) 입니다. 깊이는 D3D 규약 [0,1] 이라 near 평면은 열 2 하나입니다
      *          (GL 도 glClipControl 로 같은 규약에 맞춰 둡니다). `_arrPlane` 은 float4 여섯 개가 빈틈없이 이어져 GPU 상수버퍼에

@@ -76,8 +76,7 @@ namespace sw
     /**
      * @class Logger
      * @brief 기본 로깅 파사드입니다. 포맷 · 타임스탬프 · 리스너 · 비동기 큐를 맡고, **출력은 `ILogOutput` 에 넘깁니다.**
-     * @details 예전에는 이 클래스가 콘솔 쓰기와 파일 교체까지 직접 했고, 뮤텍스 **하나**가 둘을 함께 잠갔습니다. 그래서 파일
-     *          I/O 가 느리면 콘솔도 멈췄습니다. 지금은 장치마다 자기 락을 가집니다. 기본으로 콘솔 · 파일 출력을 하나씩 달고
+     * @details 장치마다 자기 락을 가지므로 파일 I/O 가 느려도 콘솔이 멈추지 않습니다. 기본으로 콘솔 · 파일 출력을 하나씩 달고
      *          시작하며, `addOutput` 으로 더 붙일 수 있습니다(에디터 패널 · 네트워크 등. 그때도 이 클래스를 고칠 필요는 없습니다).
      */
     class SW_API Logger final : public ILogSink
@@ -118,9 +117,8 @@ namespace sw
          * @brief 출력 장치를 하나 더 답니다. 이미 초기화된 뒤라면 바로 `open` 합니다.
          * @param output 소유권을 가져갑니다. nullptr 이면 무시합니다.
          * @return 실제로 달았으면 true. **상한(`_s_kMaxOutput`)을 넘으면 false** 이고, 그때 `output` 은 그대로 파괴됩니다.
-         * @warning 예전에는 반환값이 없었고, 상한을 넘겨도 받아서 `open` 까지 해 놓은 뒤 디스패치에서 **말없이 빠뜨렸습니다**
-         *          (고정 배열이 8개에서 잘렸습니다). 붙인 쪽에서는 보이지 않는 실패입니다. 그래서 거절하되 **거절했다고 알립니다.**
-         *          조용히 무시하든 조용히 파괴하든 호출하는 쪽에게는 똑같기 때문입니다.
+         * @warning 상한을 넘기면 받아서 `open` 해 놓고 디스패치에서 말없이 빠뜨리는 대신, 거절하고 **거절했다고 알립니다.**
+         *          조용히 무시하든 조용히 파괴하든 호출하는 쪽에게는 똑같이 보이지 않는 실패이기 때문입니다.
          */
         bool addOutput( unique_ptr<ILogOutput> output );
 
@@ -128,8 +126,8 @@ namespace sw
         const string& getLogFolderPath() override;
         /**
          * @brief 큐에 남은 줄을 이 스레드에서 모두 쓰고 장치 버퍼를 내보냅니다. 로거 락을 바로 잡지 못하면 포기합니다(기다리면 크래시가 멈춤이 된다).
-         * @details 예전에는 크래시 리포트의 `SW_LOG_ERROR` 도 큐에 넣기만 하고 프로세스가 끝나, 크래시 직전의 경고 · 정보 줄과 파일의 stdio
-         *          버퍼가 사라졌습니다. "로그 + std::abort" 치명 경로의 마지막 메시지도 그렇게 잃었습니다.
+         * @details 크래시 리포트 · "로그 + std::abort" 치명 경로가 부릅니다 — 큐에 넣기만 하고 프로세스가 끝나면 크래시 직전의 경고 · 정보
+         *          줄과 파일의 stdio 버퍼가 사라집니다.
          */
         void flushForCrash() override;
         /** @brief 전역 싱크의 `flushForCrash` 입니다. 크래시 핸들러가 리포트를 쓴 뒤 부릅니다. */
@@ -170,8 +168,8 @@ namespace sw
         void dispatchToOutputs( const LogRecord& record );
         /**
          * @brief 리스너를 뗀 뒤, 떼기 **전에** 시작한 방송이 모두 끝날 때까지 기다립니다.
-         * @details 방송은 리스너 목록을 복사해 락 밖에서 부릅니다. 그래서 떼기가 돌아온 뒤에도 다른 스레드의 방송이 뗀 리스너를 부를 수
-         *          있었습니다 — 에디터 콘솔 패널이 파괴되거나 모듈이 내려간 뒤에 그 코드로 들어갔습니다. 이 스레드가 방송 도중(리스너 안)이면
+         * @details 방송은 리스너 목록을 복사해 락 밖에서 부릅니다. 기다리지 않으면 떼기가 돌아온 뒤에도 다른 스레드의 방송이 뗀 리스너를
+         *          부를 수 있습니다(에디터 콘솔 패널이 파괴되거나 모듈이 내려간 뒤에 그 코드로 들어감). 이 스레드가 방송 도중(리스너 안)이면
          *          자기 자신을 기다리게 되므로 기다리지 않습니다. 끊임없는 로그로 세대가 비지 않으면 2 초 뒤 경고하고 돌아옵니다.
          * @param retiredSlot 떼기 직전 세대 칸(_mutex 안에서 읽은 값)
          */
@@ -182,8 +180,7 @@ namespace sw
         /**
          * @brief 달 수 있는 출력 장치의 최대 개수입니다.
          * @details `dispatchToOutputs` 는 잠금 안에서 포인터만 고정 배열로 복사해 오고 쓰기는 **락 밖에서** 합니다(느린 파일 I/O
-         *          가 콘솔을 막지 않도록). 그 배열의 크기가 곧 이 상한입니다. 예전에는 배열 리터럴 `8` 만 있고 `addOutput` 은
-         *          그 사실을 몰랐습니다.
+         *          가 콘솔을 막지 않도록). 그 배열의 크기가 곧 이 상한이고, `addOutput` 도 이 값으로 거절합니다.
          */
         static constexpr uint32 _s_kMaxOutput = 8;
 
@@ -204,7 +201,7 @@ namespace sw
         atomic<uint32>                   _arrBroadcastInFlight[2]; ///< 리스너를 부르는 중인 방송 수(세대 두 칸). 떼기가 이전 세대가 빌 때까지 기다린다
         uint32                           _broadcastEpoch;          ///< 방송 세대. _mutex 로 보호한다
         atomic<bool>                     _bIsRunning;
-        atomic<bool>                     _bInitialized;                             ///< 쓰는 스레드는 락 없이 읽는다(예전에는 bool 이라 초기화 · 종료와 데이터 경쟁이었다)
+        atomic<bool>                     _bInitialized;                             ///< 쓰는 스레드는 락 없이 읽는다(초기화 · 종료와 경쟁하지 않게 원자값)
         utf8                             _arrCachedDateStr[constant::kMaxBuffer32]; ///< 캐시한 날짜 문자열(YYYY-M-D H:M: 형식)
     };
 } // namespace sw
@@ -212,9 +209,8 @@ namespace sw
 // ------------------------------------------------------------------------------
 // 4) SW_LOG_* — 빌드 구성으로 통째로 끄지 않고 **상세도 상한**으로 자른다
 //
-//    예전에는 SW_DEBUG 가 아니면 매크로 전체가 빈 껍데기였다. 그러면 배포본에서 문제가 생겼을 때 남는 것이 하나도
-//    없어서 덤프만으로 원인을 찾아야 한다. 실제 서비스에서는 통하지 않는 방식이다. 그래서 언리얼처럼 **카테고리
-//    상세도**로 자른다. 상한을 넘는 호출만 컴파일에서 사라지고, 그 아래는 Shipping 에도 남는다. 관례대로 Warning
+//    SW_DEBUG 가 아니면 매크로 전체를 빈 껍데기로 만들면 배포본에서 문제가 생겼을 때 남는 것이 하나도
+//    없어서 덤프만으로 원인을 찾아야 한다. 그래서 언리얼처럼 **카테고리 상세도**로 자른다. 상한을 넘는 호출만 컴파일에서 사라지고, 그 아래는 Shipping 에도 남는다. 관례대로 Warning
 //    이상은 어떤 빌드에서도 남긴다.
 //
 //    SW_LOG_COMPILED_VERBOSITY 는 LogLevel 의 순서와 같은 숫자다. 아래 SW_LOG_VERBOSITY_* 가 그 이름이고,
@@ -331,7 +327,7 @@ static_assert( static_cast<int32>( sw::LogLevel::Trace ) == SW_LOG_VERBOSITY_TRA
 #else
     /**
      * @brief Debug 가 아니면 **멈추지 않고 Error 로그만** 남깁니다.
-     * @details 예전에는 통째로 no-op 이었습니다. 배포본에서 계약이 깨진 순간을 놓치는 가장 큰 구멍이었습니다.
+     * @details no-op 으로 두지 않습니다 — 배포본에서 계약이 깨진 순간을 놓치게 됩니다.
      */
     #define SW_LOG_ASSERT( expr, ... )                                                     \
         do                                                                                 \

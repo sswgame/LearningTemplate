@@ -11,10 +11,8 @@
 #   float    key=value → float (Min/Max 범위)
 #   netrole  단독 토큰 → FunctionNetRole (PredefinedFunctionNetRole.xxx)
 #
-# flag 한 줄이 두 형태를 함께 맡는다. 예전에는 `flag.X` 와 `bool.X` 를 따로 적었고, 둘이 어긋나 있었다.
-# 플래그 열셋 중 여섯(Abstract · Static · AssetPath · Polymorphic · Reliable · Validate)에 bool 줄이 없어서
-# `PROPERTY( Polymorphic = true )` 가 경고 한 줄 없이 버려졌고, 별칭도 한쪽만 늘어나 `xmlAttribute` 는 단독
-# 토큰으로만 인식됐다. 어느 쪽이 빠졌는지 눈에 보이지 않는 종류의 구멍이라 줄을 합쳤다.
+# flag 한 줄이 두 형태(단독 토큰 · `X = true`)를 함께 맡는다. 두 형태를 따로 적지 말 것 — 한쪽이 빠지면
+# `PROPERTY( Polymorphic = true )` 같은 것이 경고 한 줄 없이 버려지고, 별칭도 한쪽만 늘어나는데 눈에 보이지 않는다.
 #
 # 별칭만 추가할 때는 여기만 고치면 된다.
 # 새 *필드*를 만들면 PredefinedAnnotationField.xxx 에도 한 줄이 필요하다.

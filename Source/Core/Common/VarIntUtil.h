@@ -16,13 +16,13 @@ namespace sw
     struct VarIntUtil
     {
         // **인코딩에는 32비트 오버로드가 없다(일부러 비대칭이다).**
-        // 32비트 값을 `encodeVarUint64` 에 넘기면 승격되어 같은 바이트가 나온다. 오버로드는 `static_cast` 한 줄을 감쌀 뿐
-        // 하는 일이 없었고, 실제로 쓰는 곳도 없었다(`BinaryStream` 도 32비트 값을 64비트 인코더로 넣는다).
+        // 32비트 값을 `encodeVarUint64` 에 넘기면 승격되어 같은 바이트가 나온다. 오버로드는 `static_cast` 한 줄을 감쌀 뿐이라
+        // 두지 않는다(`BinaryStream` 도 32비트 값을 64비트 인코더로 넣는다).
         // 반대로 **디코딩에는 있다.** 그쪽은 캐스팅이 아니라 uint32/int32 범위를 벗어난 값을 걸러 내는 진짜 검사를 한다.
         //
-        // 오랫동안 이 설명만 맞고 코드는 틀렸다. 32비트 디코더 둘 다 `static_cast` 한 줄이라 범위 밖 값을 **조용히 잘라** 냈고,
-        // 그래서 망가진 아카이브가 거부되지 않고 엉뚱하게 읽혔다(`Archive::readPooledString` 의 `poolId >= getCount()` 검사는
-        // 0x1'0000'0000+n 이 n 으로 잘린 뒤에 보므로 통과한다). 지금은 `narrowToUint32` · `narrowToInt32` 가 실제로 거른다.
+        // 주의: 32비트 디코더가 `static_cast` 로 자르면 범위 밖 값을 **조용히 잘라** 망가진 아카이브가 거부되지 않고 엉뚱하게
+        // 읽힌다(`Archive::readPooledString` 의 `poolId >= getCount()` 검사는 0x1'0000'0000+n 이 n 으로 잘린 뒤에 보므로 통과한다).
+        // `narrowToUint32` · `narrowToInt32` 가 실제로 거른다.
 
         /**
          * @brief 64비트 값이 uint32 에 **손실 없이** 들어갈 때만 옮깁니다.

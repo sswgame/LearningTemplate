@@ -118,10 +118,10 @@ namespace sw
 
         /**
          * @brief 해시를 버킷 번호로 바꿉니다. 곱셈 한 번 · 접기 한 번 · 마스크 한 번입니다. 버킷 수는 항상 2의 거듭제곱입니다(`rehash_internal`).
-         * @details 예전에는 `hash % 버킷 수` 였습니다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹습니다
+         * @details `hash % 버킷 수` 를 쓰지 않습니다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹습니다
          *          (`ContainerBenchTest`). 피보나치 상수를 곱하고 위쪽 절반을 아래쪽 절반에 접어 넣으므로, 아래 비트가 고르지 않은
          *          해시도 고르게 퍼집니다. libstdc++ · libc++ 의 std::hash 는 정수 · 포인터에 대해 항등 함수라서, 2의 거듭제곱 크기에
-         *          `%` 만 쓰면 아래 비트만 남아 8바이트 정렬 포인터가 버킷 여덟 개 중 하나에 몰렸습니다(기본 증가 경로가 그 크기였습니다).
+         *          `%` 만 쓰면 아래 비트만 남아 8바이트 정렬 포인터가 버킷 여덟 개 중 하나에 몰립니다.
          *          순회는 밀집 배열을 따라가므로 버킷 배치가 바뀌어도 순서는 그대로입니다.
          */
         static size_t bucketIndexOf( size_t hash, size_t bucketCount ) noexcept
@@ -528,8 +528,8 @@ namespace sw
 
         /**
          * @brief 키가 없을 때만 값을 만들어 넣습니다. **키가 있으면 인자를 건드리지 않습니다**(표준 계약).
-         * @details 예전에는 값을 먼저 만들어 넣어 보고 되돌려서, 키가 있어도 인자를 소비했습니다(`try_emplace( k, std::move( pOwned ) )` 가
-         *          키가 있을 때 `pOwned` 를 없앴다). 값은 괄호로 만듭니다 — 중괄호면 `try_emplace( k, 5 )` 가 `vector<int>{ 5 }` 가 됩니다.
+         * @details 값을 먼저 만들어 넣어 보면 키가 있어도 인자를 소비합니다(`try_emplace( k, std::move( pOwned ) )` 가 키가 있을 때
+         *          `pOwned` 를 없앤다). 값은 괄호로 만듭니다 — 중괄호면 `try_emplace( k, 5 )` 가 `vector<int>{ 5 }` 가 됩니다.
          */
         template <typename... Args>
         pair<iterator, bool> try_emplace( const Key& k, Args&&... args )

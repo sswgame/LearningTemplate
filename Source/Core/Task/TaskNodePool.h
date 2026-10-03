@@ -58,10 +58,8 @@ namespace sw
         vector<StageNode*>               _listStageFree; ///< 돌아온 스테이지. 다음 createStage 가 먼저 꺼내 쓴다. 빌려 쓰는 것이라 소유하지 않는다
         /**
          * @brief 지금까지 만든 스테이지 전부입니다. **소유합니다.**
-         * @details 처음에는 raw 포인터 목록이었는데, 풀 소멸자에서 지우는 것을 빠뜨려 스테이지가 프로세스가 끝날 때까지
-         *          남았습니다(리눅스 CI 의 LeakSanitizer 가 잡았고, 윈도우 테스트는 모두 초록이었습니다). 소유를 타입으로 적으면
-         *          그런 누락이 생길 수 없습니다. 꺼내 쓰는 쪽(`_listStageFree`)은 여전히 raw 포인터라 할당 경로에 간접 참조가
-         *          늘지 않습니다.
+         * @details 소유를 타입으로 적어 풀 소멸자에서 지우기를 빠뜨릴 수 없게 합니다(raw 포인터 목록이면 그 누락은 LeakSanitizer 만
+         *          잡습니다). 꺼내 쓰는 쪽(`_listStageFree`)은 raw 포인터라 할당 경로에 간접 참조가 늘지 않습니다.
          */
         vector<unique_ptr<StageNode>> _listStageAll;
         mutex                         _stageMutex;

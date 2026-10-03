@@ -36,7 +36,7 @@ namespace sw
 
             HANDLE process = GetCurrentProcess();
             // 나중에 로드된 모듈(RHI_*.dll 같은 MODULE)도 심볼 변환되도록 모듈 목록을 새로 읽는다. 초기화 때 한 번만 읽으면
-            // 그 뒤에 로드된 DLL 의 프레임은 주소로만 남는다(크래시 지점인 [0] 이 그렇게 비어 있었다).
+            // 그 뒤에 로드된 DLL 의 프레임은 주소로만 남는다(크래시 지점인 [0] 이 비기 쉽다).
             SymRefreshModuleList( process );
             alignas( SYMBOL_INFO ) utf8 symbolBuffer[sizeof( SYMBOL_INFO ) + MAX_SYM_NAME * sizeof( TCHAR )];
             SYMBOL_INFO*                pSymbol = reinterpret_cast<SYMBOL_INFO*>( symbolBuffer );

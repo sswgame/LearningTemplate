@@ -54,8 +54,8 @@ namespace sw
         if ( size > SIZE_MAX - alignment )
             return nullptr;
 
-        // 새 청크를 잡지 못하면 **여기서 끝낸다.** 예전에는 실패를 확인하지 않고 `_pBuffer` 가 nullptr 인 청크를 표에 넣었고,
-        // 그다음 줄의 `allocate` 가 nullptr 에서 만든 주소를 정상 할당인 것처럼 돌려줬다(`nullptr + offset` 자체도 UB 다).
+        // 새 청크를 잡지 못하면 **여기서 끝낸다.** 계속 가면 그다음 줄의 `allocate` 가 nullptr 에서 만든 주소를 정상 할당인 것처럼
+        // 돌려준다(`nullptr + offset` 자체도 UB 다).
         if ( allocateNewChunk( size + alignment ) == false )
             return nullptr;
 

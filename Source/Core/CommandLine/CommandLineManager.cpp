@@ -134,9 +134,8 @@ namespace sw
         ArgumentInfo& argument = _listArgument[iter->second];
 
         // 필수 값이 빠졌는지 검사한다. 값 없이 적어도 되는 것은 bool 뿐이다. `-dx12` 는 "true" 라는 뜻이지만 `-WIDTH` 나
-        // `-gv_benchMeshes` 에는 그런 뜻이 없다. 예전에는 이 판단이 타입과 따로 노는 `_bMustHaveValue` 칸이었고, 그래서
-        // 값을 빠뜨린 `-gv_benchMeshes` 가 int32 자리에 bool 을 밀어 넣은 뒤 **경고 한 줄 없이 아무 일도 하지 않았다**
-        // (readValue 의 get_if 가 nullptr).
+        // `-gv_benchMeshes` 에는 그런 뜻이 없다. 판단은 타입이 한다(`isFlagArgument`) — 받아 주면 값을 빠뜨린 `-gv_benchMeshes` 가
+        // int32 자리에 bool 을 밀어 넣고 **경고 한 줄 없이 아무 일도 하지 않는다**(readValue 의 get_if 가 nullptr).
         if ( bHasValue == false && argument.isFlagArgument() == false )
         {
             SW_LOG_WARNING( "Value가 입력되지 않았습니다 : %#. 무시됩니다", string( rawKey ).c_str() );

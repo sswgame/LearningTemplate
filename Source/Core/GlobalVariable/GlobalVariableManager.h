@@ -143,8 +143,7 @@ namespace sw
          *          않습니다. 그래서 패널처럼 "이름을 훑으며 포인터를 모아 두었다가 한 번에 그리는" 방식이 안전합니다.
          * @note 이 보장이 맵에서 나오지 않는다는 점이 중요합니다. `sw::unordered_map` 은 밀집 배열이라 삽입하면 재할당으로
          *       **모든** 원소가, 삭제하면 swap-and-pop 으로 **마지막 원소가** 옮겨 갑니다. 그래서 값을 `unique_ptr` 로 들고
-         *       있습니다. 맵이 흔들려도 가리키는 객체는 제자리에 있습니다. 예전에는 `GlobalVariableInfo` 를 맵에 값으로 담고
-         *       그 주소를 그대로 내줬습니다.
+         *       있습니다. 맵이 흔들려도 가리키는 객체는 제자리에 있습니다(값으로 담고 그 주소를 내주면 안 됩니다).
          */
         GlobalVariableInfo* findVariable( string_view name );
 
@@ -178,9 +177,8 @@ namespace sw
      *          - 핫 리로드 모듈(EditorModule · SWGame …): 로드 직후 `LiveReloadManager` 가 타입 등록자와 함께 떼어 **모듈 이름으로** 등록하고
      *            (`engine::registerModuleTypes`), 내리기 전에 그 이름으로 걷는다(`engine::unregisterModuleTypes`). 모듈 코드는 등록 · 해제를
      *            부르지 않는다.
-     *          예전에는 모듈마다 전역 변수 헤더에서 `SW_GVM_MODULE_HEAD` 를 `#undef` · `#define` 으로 바꿔 모듈 로컬 헤드에 붙이고
-     *          등록 · 해제를 손으로 불렀다. 그 헤더를 include 하지 않은 .cpp 의 변수는 조용히 Engine 리스트에 붙어, 모듈이 내려간 뒤
-     *          매니저가 언맵된 주소를 가리켰다.
+     *          주의: 헤더 매크로로 모듈 로컬 헤드를 갈아 끼우는 방식은 그 헤더를 include 하지 않은 .cpp 의 변수를 조용히 Engine 리스트에
+     *          붙여, 모듈이 내려간 뒤 매니저가 언맵된 주소를 가리키게 한다.
      */
     struct SW_API GlobalVariableRegistrar
     {

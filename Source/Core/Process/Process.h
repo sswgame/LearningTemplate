@@ -14,10 +14,9 @@ namespace sw
     /**
      * @brief 프로세스 출력 한 줄을 받는 콜백입니다.
      * @details **표준 에러는 표준 출력에 합쳐져 들어옵니다.** 두 구현 모두 일부러 그렇게 합니다(Windows 는
-     *          `si.hStdError = hStdOutWrite`, POSIX 는 자식 프로세스에서 `dup2` 로 둘을 같은 파이프에 겁니다. 예전 `popen` 구현은
-     *          명령 끝에 `2>&1` 을 붙였습니다). 빌드 로그처럼 두 스트림이 **원래 순서대로** 섞여야 읽을 수 있는 출력을 다루는 것이
-     *          이 클래스의 용도이기 때문입니다. 그래서 어느 쪽에서 온 줄인지 가려낼 방법은 없습니다. 예전에는 `bIsStdErr` 인자가
-     *          있었지만 호출하는 곳 모두가 무시했고, 넘어오는 값도 항상 false 였습니다.
+     *          `si.hStdError = hStdOutWrite`, POSIX 는 자식 프로세스에서 `dup2` 로 둘을 같은 파이프에 겁니다). 빌드 로그처럼 두
+     *          스트림이 **원래 순서대로** 섞여야 읽을 수 있는 출력을 다루는 것이 이 클래스의 용도이기 때문입니다. 그래서 어느 쪽에서
+     *          온 줄인지 가려낼 방법은 없습니다.
      */
     using ProcessOutputDelegate = Delegate<void( string_view line )>;
 
@@ -37,8 +36,7 @@ namespace sw
      * @details **두 구현이 같은 일을 합니다.** Windows 는 `CreateProcess`, POSIX 는 `fork` + `exec` 으로 자식을 만들고, 양쪽 모두
      *          **자식을 직접 들고 있습니다.** 그래서 pid 조회 · 강제 종료 · 실행 중인지 확인이 모두 됩니다. 달라지는 곳은 두
      *          군데뿐이고 각 함수 주석에 적어 두었습니다. 종료 코드를 정해 줄 수 있는지(`terminate`), 그리고 시그널로 죽은
-     *          자식의 종료 코드를 무엇으로 볼지(`waitForExit`)입니다. 예전 POSIX 구현은 `popen` 위에 있어서 pid 가 없었고, 그래서
-     *          죽이지도 상태를 묻지도 못했습니다.
+     *          자식의 종료 코드를 무엇으로 볼지(`waitForExit`)입니다.
      */
     class SW_API Process
     {
@@ -48,8 +46,7 @@ namespace sw
         /**
          * @brief 프로세스 핸들을 닫고 자원을 정리합니다.
          * @details 양쪽 모두 실행 중인 자식을 **분리**하고 기다리지 않습니다. POSIX 는 이미 끝난 자식을 여기서 거두고(좀비를 남기지
-         *          않습니다), 아직 도는 자식은 이 프로세스가 끝난 뒤 init 이 거둡니다. 예전에는 `pclose` 여서 **소멸자가 자식이 끝날
-         *          때까지 막혔습니다.** 얼마나 걸릴지를 자식이 정한 셈입니다.
+         *          않습니다), 아직 도는 자식은 이 프로세스가 끝난 뒤 init 이 거둡니다. 기다리면 **소멸자가 자식이 끝날 때까지 막힙니다.**
          */
         ~Process();
 
@@ -99,8 +96,8 @@ namespace sw
         /**
          * @brief 프로세스가 아직 실행 중인지 반환합니다.
          * @details 양쪽 모두 **OS 에 직접 묻습니다.** POSIX 는 `waitid(WNOHANG | WNOWAIT)` 라서 묻기만 하고 거두지는 않습니다.
-         *          거두면 이어서 부를 `waitForExit` 이 종료 코드를 잃기 때문입니다. 예전에는 자기가 들고 있는 플래그만 봐서,
-         *          자식이 스스로 끝나도 true 로 남았습니다.
+         *          거두면 이어서 부를 `waitForExit` 이 종료 코드를 잃기 때문입니다. 자기가 들고 있는 플래그만 보면 자식이 스스로
+         *          끝나도 true 로 남습니다.
          */
         bool isRunning() const;
 
@@ -154,8 +151,8 @@ namespace sw
         string _bufferedOutput;
         /**
          * @brief 자식의 pid(없으면 0). **원자다** — `terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불리는 것이
-         *        계약이고(`ModuleCompiler::cancel` · 테스트의 자식 시한), `waitForExit` 은 거둔 뒤 이것을 0 으로 쓴다. 예전에는 보통 정수였고
-         *        같은 자리에 쓰기만 하고 읽지 않는 `_bRunning` 이 하나 더 있었다 — ThreadSanitizer 가 두 스레드의 쓰기를 짚었다(2026-10-01).
+         *        계약이고(`ModuleCompiler::cancel` · 테스트의 자식 시한), `waitForExit` 은 거둔 뒤 이것을 0 으로 쓴다(보통 정수면 ThreadSanitizer 가
+         *        두 스레드의 쓰기를 짚는다).
          */
         atomic<int32> _processId;
     };

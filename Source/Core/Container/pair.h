@@ -438,9 +438,8 @@ namespace sw
 // 구조적 바인딩 · tuple 인터페이스
 //
 // 커스텀 pair 일 때만 필요하다. `SW_ENABLE_STL_CONTAINER` 가 켜지면 `sw::pair` 는 `std::pair` 의 별칭이므로, 아래
-// 특수화는 표준 라이브러리가 이미 제공하는 `tuple_size<std::pair<…>>` 를 다시 정의하게 된다. 예전에는 이 블록이
-// `#if` 밖에 있어서 그 옵션을 켜면 컴파일 자체가 되지 않았다
-// (`pair.h:442: redefinition of 'tuple_size<sw::pair<T1, T2>>'`).
+// 특수화는 표준 라이브러리가 이미 제공하는 `tuple_size<std::pair<…>>` 를 다시 정의하게 된다. 이 블록을 `#if` 밖에 두면
+// 그 옵션을 켰을 때 컴파일 자체가 되지 않는다(`redefinition of 'tuple_size<sw::pair<T1, T2>>'`).
 #if !defined( SW_ENABLE_STL_CONTAINER )
 namespace std
 {

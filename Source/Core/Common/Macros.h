@@ -66,11 +66,11 @@
  *   SW_ASSERT(expr)        — 논리 불변식 검사(메시지 없음, 자주 도는 경로)
  *   SW_LOG_ASSERT(expr, …) — 실패 원인을 추적해야 하는 곳(로그 + 브레이크, 드물게 도는 경로)
  *
- * 둘은 배포본에서 다르게 동작합니다(예전 주석에는 "둘 다 no-op" 이라고 적혀 있었지만 사실이 아니었습니다).
+ * 둘은 배포본에서 다르게 동작합니다.
  *   - `SW_ASSERT`     : Debug 가 아니면 통째로 사라집니다. 식도 평가하지 않으므로, 부수 효과가 있는 식을 넣으면
  *                       배포본에서는 그 효과가 없어집니다.
- *   - `SW_LOG_ASSERT` : Debug 에서만 멈추고, 그 밖의 빌드에서는 Error 로그를 남깁니다. 예전에는 이쪽도 no-op 이라
- *                       배포본에서 계약이 깨진 순간을 놓쳤습니다(Logger.h 의 비-Debug 분기 참고).
+ *   - `SW_LOG_ASSERT` : Debug 에서만 멈추고, 그 밖의 빌드에서는 Error 로그를 남깁니다 — 배포본에서도 계약이 깨진 순간을
+ *                       놓치지 않습니다(Logger.h 의 비-Debug 분기 참고).
  *
  * 배포본에서도 반드시 막아야 하는 조건에는 둘 다 맞지 않습니다. 직접 if 로 검사하고 빠져나가십시오.
  */
@@ -79,9 +79,9 @@ namespace sw::internal
 {
     /**
      * @brief `SW_ASSERT` 가 멈추기 **전에** 무엇이 어디서 어긋났는지 stderr 에 남깁니다.
-     * @details 예전에는 아무것도 찍지 않고 멈췄다. 디버거 없이 돌면(CI · 테스트 자식 · 다른 사람의 PC) 남는 것은 크래시 리포트의
-     *          "EXCEPTION_BREAKPOINT"(리눅스는 SIGILL)와 스택뿐이라, 어느 식이 어긋났는지 몰랐다 — `vector::operator[]` 의 범위 검사가
-     *          CI 에서 그렇게 보였다. 식 · 파일 · 줄 · 함수를 남기고 버퍼를 비운 뒤 멈춘다(로거는 비동기라 멈추면 잃을 수 있다).
+     * @details 디버거 없이 돌면(CI · 테스트 자식 · 다른 사람의 PC) 남는 것은 크래시 리포트의 "EXCEPTION_BREAKPOINT"(리눅스는 SIGILL)와
+     *          스택뿐이라, 이것이 없으면 어느 식이 어긋났는지 모른다. 식 · 파일 · 줄 · 함수를 남기고 버퍼를 비운 뒤 멈춘다(로거는 비동기라
+     *          멈추면 잃을 수 있다).
      */
     inline void printAssertFailure( const utf8* pExpression, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept
     {

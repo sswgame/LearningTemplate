@@ -135,8 +135,7 @@ namespace sw
 
     private:
         // `_top` 은 훔치는 스레드들이, `_bottom` 은 소유 스레드가 계속 쓴다. 둘이 한 캐시 라인에 있으면 서로의 라인을
-        // 무효화해서(false sharing) 훔치기가 없어도 느려진다. `LockFreeQueue` · `ConcurrentQueue` 는 같은 이유로 이미 떼어
-        // 놓았는데 여기만 붙어 있었다.
+        // 무효화해서(false sharing) 훔치기가 없어도 느려진다. `LockFreeQueue` · `ConcurrentQueue` 도 같은 이유로 떼어 놓는다.
         alignas( 64 ) atomic<uint64> _top;
         alignas( 64 ) atomic<uint64> _bottom;
 

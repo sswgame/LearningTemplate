@@ -5,11 +5,9 @@
  * @details 태그는 "parent.child" 처럼 점으로 나뉜 계층을 가지며, 비교는 해시 하나로 끝납니다. 리터럴은 컴파일 타임에
  *          (`""_tag`), 런타임 문자열은 `TagID::request` 로 만듭니다.
  *
- * @note 이 타입이 **Core 에 있는 이유**: 예전에는 `Engine/Object/Component/TagSystem.h` 안에 있었습니다. 쓰는 것이 Core
- *       기능뿐인데도 Object 폴더에 있어서, 직렬화기가 TagID 의 기본 핸들러를 등록하려면 Object 를 include 해야 했습니다.
- *       그 한 줄이 Reflection · Serialization · Config 를 Engine 코어의 강결합 묶음에 묶어 두는 고리였습니다(그 연결 하나를
- *       끊자 묶음이 10개에서 8개로 줄었습니다). 리플렉션이 필요한 태그 집합과 질의는 `Engine` 쪽
- *       `Object/Component/TagSystem.h` 에 남아 있습니다.
+ * @note 이 타입이 **Core 에 있는 이유**: 쓰는 것이 Core 기능뿐이고, 직렬화기가 TagID 의 기본 핸들러를 등록하려고 Object 를
+ *       include 하면 Reflection · Serialization · Config 가 Engine 코어의 강결합 묶음에 묶입니다. 리플렉션이 필요한 태그
+ *       집합과 질의는 `Engine` 쪽 `Object/Component/TagSystem.h` 에 있습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -45,12 +43,9 @@ namespace sw
 
         /**
          * @brief 태그 문자열에서 ID 를 구합니다. **리터럴 · 런타임 · 조회가 모두 이 함수를 씁니다.**
-         * @details 예전에는 이 해시를 세 곳이 각자 계산했고 규칙이 서로 달랐습니다. `""_tag` 와 `request` 는 손으로 펼친 FNV-1a
-         *          였고(대소문자 구별 + `char` 부호 확장), 에디터 Hierarchy 의 `tag:` 필터는 `computeHash64` 를 기본 인자로 불러
-         *          **대소문자를 무시**했습니다. 저장소의 태그는 모두 대문자로 시작하므로(`Collider` · `Sprite` · `UI` ·
-         *          `Faction.Player` …) 그 필터는 **하나도 찾지 못했습니다.** 소문자 태그만 우연히 맞았을 것입니다.
+         * @details 해시를 따로 계산하지 말 것 — 규칙이 갈라지면(대소문자 · `char` 부호 확장) 같은 태그를 찾지 못합니다.
          *
-         *          대소문자를 무시하는 쪽으로 맞춥니다. `request` 는 문자열을 `hashed_string` 으로 intern 하는데, 그 intern 이 이미
+         *          대소문자를 무시합니다. `request` 는 문자열을 `hashed_string` 으로 intern 하는데, 그 intern 이 이미
          *          대소문자를 무시하므로(`Player` 와 `player` 는 한 항목입니다) ID 만 대소문자를 구별하면 **같은 문자열을 가리키는
          *          두 태그가 서로 다른 ID** 를 갖는 모순이 생깁니다. 태그는 ID 가 아니라 **문자열로 직렬화**되므로(SerializeContext 가
          *          `TagID::request( text )` 로 다시 읽습니다) 규칙을 바꿔도 저장된 씬은 그대로입니다.

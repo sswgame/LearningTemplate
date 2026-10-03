@@ -290,8 +290,8 @@ namespace sw
                     {
                         Lambda* pSource = static_cast<Lambda*>( const_cast<void*>( pSrc ) );
                         sw_placement_new( pDest ) Lambda( std::move( *pSource ) );
-                        // 옮긴 뒤 원래 자리를 파괴한다. `moveFrom` 이 원본의 관리자를 지우므로 그 뒤로는 아무도 원본을 파괴하지 않는다. 예전에는
-                        // 이 줄이 없어, 이동이 사실상 복사인 캡처(복사 생성자만 둔 참조 카운트 핸들 등)는 참조가 새고 소멸자의 부작용이 사라졌다.
+                        // 옮긴 뒤 원래 자리를 파괴한다. `moveFrom` 이 원본의 관리자를 지우므로 그 뒤로는 아무도 원본을 파괴하지 않는다. 이 줄이
+                        // 없으면 이동이 사실상 복사인 캡처(복사 생성자만 둔 참조 카운트 핸들 등)는 참조가 새고 소멸자의 부작용이 사라진다.
                         pSource->~Lambda();
                         return pDest;
                     }
@@ -398,10 +398,10 @@ namespace sw
         //
         // 이 넷을 직접 정의하는 이유는 두 가지다.
         //
-        // 1) **이동이 복사로 대체되고 있었다.** 복사 생성자를 `= default` 로 *선언*하는 순간 암시적 이동 생성자와 이동
-        //    대입이 만들어지지 않는다(C++ 규칙). 그래서 `MulticastDelegate` 를 옮길 때마다 구독자 벡터가 통째로 깊은
-        //    복사됐다. `is_nothrow_move_constructible` 이 false 였고, `std::move` 한 뒤에도 원본이 그대로 남아 있었다.
-        // 2) **`_broadcastDepth` 와 지연 제거 큐까지 함께 복사됐다.** 이 둘은 값이 아니라 *그 인스턴스의 호출 스택
+        // 1) **이동이 복사로 대체되지 않게.** 복사 생성자를 `= default` 로 *선언*하는 순간 암시적 이동 생성자와 이동
+        //    대입이 만들어지지 않는다(C++ 규칙). 그러면 `MulticastDelegate` 를 옮길 때마다 구독자 벡터가 통째로 깊은
+        //    복사되고(`is_nothrow_move_constructible` 이 false), `std::move` 한 뒤에도 원본이 그대로 남는다.
+        // 2) **`_broadcastDepth` 와 지연 제거 큐는 복사하지 않는다.** 이 둘은 값이 아니라 *그 인스턴스의 호출 스택
         //    상태*다. broadcast 중에 복사하면 사본의 깊이가 0 이 아닌 채로 만들어지고, 그 사본은 지연된 제거를 **영영
         //    반영하지 않는다**(자기 broadcast 는 깊이가 1→2→1 로만 오가므로 0 이 되지 않는다).
         //

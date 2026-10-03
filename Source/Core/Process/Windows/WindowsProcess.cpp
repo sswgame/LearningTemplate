@@ -17,7 +17,7 @@ namespace sw
         {
             /**
              * @brief 버퍼에 개행이 있으면 첫 줄을 `outLine` 으로 떼어 내고(개행 문자는 뺍니다) true 를 돌려줍니다. CRLF 는 한 개행으로 칩니다.
-             * @details `readOutputLine` 이 읽기 전과 파이프를 읽을 때마다 같은 여덟 줄을 두 벌 들고 있었습니다.
+             * @details `readOutputLine` 이 읽기 전과 파이프를 읽을 때마다 부릅니다.
              */
             static bool takeBufferedLine( string& inoutBuffer, string& outLine )
             {

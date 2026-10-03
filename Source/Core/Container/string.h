@@ -730,8 +730,8 @@ namespace sw
      * @brief 프로세스 안에서만 쓰는 바이트 해시입니다. 해시 컨테이너의 `std::hash<sw::string>` · `std::hash<sw::wstring>` 이 씁니다.
      * @details **파일이나 네트워크에 남기지 마십시오.** 이 구현이 바뀌면 값도 달라집니다. 밖에 남는 해시(쿠킹 산출물 · intern
      *          이름)의 기준은 `StringUtil::computeHash64`(FNV-1a)이고, 그쪽은 바꾸지 않습니다.
-     *          예전에는 `std::hash<std::string_view>` 로 넘겼습니다. MSVC STL 의 그 구현은 바이트마다 앞 결과를 기다리는 곱셈이
-     *          하나씩 있는 FNV-1a 라서, 35자짜리 경로 키 하나에 곱셈 35번이 줄지어 이어졌습니다(`ContainerBenchTest.StringKeyLookup`).
+     *          `std::hash<std::string_view>` 로 넘기지 않습니다. MSVC STL 의 그 구현은 바이트마다 앞 결과를 기다리는 곱셈이
+     *          하나씩 있는 FNV-1a 라서, 35자짜리 경로 키 하나에 곱셈 35번이 줄지어 이어집니다(`ContainerBenchTest.StringKeyLookup`).
      *          여기서는 8바이트씩 읽어 섞으므로 기다리는 곱셈이 8분의 1 입니다. 마지막에 splitmix64 의 마무리 단계로 비트를 고르게
      *          흩어서, 버킷 번호를 어느 비트에서 뽑아도 됩니다. 길이를 씨앗에 넣어, 끝의 0 바이트만 다른 두 키도 구별됩니다.
      */

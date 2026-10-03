@@ -65,10 +65,9 @@ namespace sw
             /**
              * @brief `-key` 처럼 **값 없이** 적을 수 있는 인자인지 확인합니다.
              * @details 그럴 수 있는 것은 bool 뿐입니다. 값 없는 `-dx12` 는 "true" 라는 뜻이 되지만, 값 없는 `-WIDTH` 나
-             *          `-gv_benchMeshes` 에는 그런 뜻이 없습니다. 예전에는 이것이 `_bMustHaveValue` 라는 별도 칸이었고,
-             *          `GlobalVariableManager` 가 모든 전역 변수를 타입과 상관없이 "값이 없어도 됨" 으로 등록했습니다. 그래서 값을
-             *          빠뜨린 `-gv_benchMeshes` 가 int32 자리에 bool 을 밀어 넣었고, 이후 `readValue` 의 `get_if<int32>` 가 nullptr 을
-             *          반환해 **경고 한 줄 없이 아무 일도 일어나지 않았습니다.**
+             *          `-gv_benchMeshes` 에는 그런 뜻이 없습니다. 판단은 타입이 합니다(별도 칸을 두지 않습니다) — 값을 빠뜨린
+             *          `-gv_benchMeshes` 를 받아 주면 int32 자리에 bool 이 들어가고, `readValue` 의 `get_if<int32>` 가 nullptr 을
+             *          반환해 **경고 한 줄 없이 아무 일도 일어나지 않습니다.**
              */
             bool isFlagArgument() const { return std::holds_alternative<bool>( _defaultValue ); }
         };
@@ -136,8 +135,8 @@ namespace sw
         /**
          * @brief 그 인자가 **커맨드라인에 실제로 적혔는지** 반환합니다.
          * @details `getArgument` 로는 알 수 없습니다. 기본값이 있는 인자는 적지 않아도 true 를 반환하기 때문입니다. "설정 파일
-         *          기본값보다 커맨드라인이 우선" 같은 판단에는 이 함수가 필요합니다. 실제로 `EngineConfig` 의 백엔드 기본값이
-         *          `-gv_rhiBackend` 를 조용히 덮어쓰고 있었습니다.
+         *          기본값보다 커맨드라인이 우선" 같은 판단에는 이 함수가 필요합니다(안 그러면 `EngineConfig` 의 백엔드 기본값이
+         *          `-gv_rhiBackend` 를 조용히 덮어씁니다).
          */
         bool isArgumentProvided( string_view key ) const;
 
@@ -251,8 +250,8 @@ namespace sw
     template <typename T>
     void CommandLineManager::addArgument( const std::initializer_list<string_view>& listAlias, T defaultValue, const bool bUseDefaultValue )
     {
-        // 먼저 모두 검사한다. 예전에는 겹치는 이름을 만난 자리에서 돌아갔고, 그 앞에서 이미 넣은 별칭들이 끝내 만들어지지
-        // 않는 인덱스를 가리킨 채 남았다. 그 별칭으로 조회하면 _listArgument 범위 밖을 읽는다.
+        // 먼저 모두 검사한다. 겹치는 이름을 만난 자리에서 돌아가면 그 앞에서 이미 넣은 별칭들이 끝내 만들어지지
+        // 않는 인덱스를 가리킨 채 남고, 그 별칭으로 조회하면 _listArgument 범위 밖을 읽는다.
         for ( string_view alias : listAlias )
         {
             if ( _mapArgument.find( alias ) != _mapArgument.end() )

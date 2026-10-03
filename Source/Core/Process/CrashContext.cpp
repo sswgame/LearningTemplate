@@ -304,8 +304,8 @@ namespace sw
         builder.append( "===============================================\n" );
 
         // 배포 환경에서는 아무도 stderr 를 보지 않는다. 파일로 남겨야 사용자가 보내 줄 수 있다 — 그래서 **파일이 먼저다.** stderr 는
-        // 막힐 수 있다(읽는 쪽이 멈춘 파이프에 쓰다 그 락을 쥔 채 선 스레드 — CrashTestKind::StderrHeld). 예전에는 순서가 반대라 거기서
-        // 막히면 스택 파일이 없었다.
+        // 막힐 수 있다(읽는 쪽이 멈춘 파이프에 쓰다 그 락을 쥔 채 선 스레드 — CrashTestKind::StderrHeld). 순서가 반대면 거기서
+        // 막혔을 때 스택 파일이 없다.
         writeCrashStackFile( builder.c_str() );
         // 로거가 비동기일 수 있으므로 stderr 로도 직접 내보내 크래시 직전의 기록을 확실히 남긴다.
         std::fputs( builder.c_str(), stderr );

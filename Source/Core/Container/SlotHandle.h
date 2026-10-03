@@ -2,7 +2,7 @@
  * @file SlotHandle.h
  * @brief index · generation 으로 이루어진 불투명 핸들입니다. generation 0 은 무효입니다.
  * @note `SlotHandleTable` 의 슬롯을 가리키는 범용 핸들입니다. RHI 리소스 · 물리 바디 · 공간 분할 키가 이것을 씁니다.
- *       게임 오브젝트와는 관계가 없습니다. 예전 이름 `ObjectHandle` 은 `GameObject` 쪽 참조로 오해되기 쉬워 바꿨습니다.
+ *       게임 오브젝트와는 관계가 없습니다(게임 오브젝트 참조는 `GameObjectHandle`).
  */
 #pragma once
 #include "Core/Common/StdHeaders.h"

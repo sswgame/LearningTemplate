@@ -246,7 +246,7 @@ namespace sw
 
     float3 float3::refract( const float3& source, const float3& normal, float32 refractionIndex ) noexcept
     {
-        // 선언만 있고 정의가 없어서, 부르는 순간 링크가 실패했다. 식은 DirectXMath XMVector3Refract 와 같다(법선은 단위 벡터로 만든다).
+        // 식은 DirectXMath XMVector3Refract 와 같다(법선은 단위 벡터로 만든다).
         // 전반사(근이 음수)면 영 벡터다.
         const float32 normalLenSq = normal.getLengthSquared();
         if ( normalLenSq < MathUtil::Epsilon )

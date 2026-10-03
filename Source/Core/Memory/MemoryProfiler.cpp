@@ -10,10 +10,8 @@
 #include "Core/String/formatString.h"
 
 // ASan 빌드에서는 CRT 누수 검사를 쓰지 않는다. ASan 이 힙을 자기 것으로 바꾸므로 `_CrtSetDbgFlag` 류가 모두 효과가 없고,
-// 검사가 **도는 척만 하고 아무것도 잡지 못한다.** 증상도 조용했다. `_CrtSetDbgFlag( flags )` 와
-// `_CrtMemDumpStatistics( &diff )` 가 인자를 쓰지 않게 되어 "set but not used" 경고 두 개로만 드러났다(Windows ASan
-// 빌드를 처음 돌려 보고서야 보였다). Linux 쪽은 아래에서 이미 ASan 이면 LSAN 을 쓰도록 나눠 두었는데 Windows 만
-// 빠져 있었다. Windows ASan 에는 LSAN 이 없으므로 여기서는 누수 검사가 **없는 것으로** 둔다.
+// 검사가 **도는 척만 하고 아무것도 잡지 못한다**(증상은 "set but not used" 경고 정도로 조용하다). Linux 쪽은 아래에서
+// ASan 이면 LSAN 을 쓴다. Windows ASan 에는 LSAN 이 없으므로 여기서는 누수 검사가 **없는 것으로** 둔다.
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING ) && !defined( SW_SANITIZER_ADDRESS )
     #define SW_HAS_CRT_LEAK_CHECK 1
@@ -328,7 +326,7 @@ namespace sw
 
         // **세지 않은 것을 빼면 안 된다.** 두 카운터는 `uint64` 라 0 아래로 내려가면 1.8e19 로 돌아간다. 에디터의 프로파일러
         // 패널에 **추적 켜기 체크박스**가 있어서, 켜기 전에 할당된 블록이 켠 뒤에 해제되면 바로 그 일이 생긴다(할당은 세지 않았는데
-        // 해제만 센다). 바로 아래 콜 스택 표는 처음부터 `>= size` 로 막고 있었다. 같은 함수 안에서 위쪽만 빠져 있었던 것이다.
+        // 해제만 센다). 바로 아래 콜 스택 표도 `>= size` 로 막는다.
         MemoryProfilerInternal::subtractSaturating( _arrStat[tagIdx]._currentAllocatedBytes, size );
         MemoryProfilerInternal::subtractSaturating( _arrStat[tagIdx]._currentAllocationCount, 1 );
 
@@ -420,8 +418,8 @@ namespace sw
 
     vector<CallStackAllocInfo> MemoryProfiler::getTopCallStacks( TopCallStackOrder order ) const
     {
-        // 결과 버퍼는 **가드 밖에서** 잡는다. 예전에는 가드(`t_bIsInsideProfiler`)를 켠 뒤 reserve 해서 이 할당은 세지 않고, 호출한 쪽이
-        // 가드 밖에서 풀 때는 세어 현재 사용량이 줄기만 했다(프로파일러 패널이 매 프레임 불러 태그 카운터가 0 에 붙었다). 표가 자란 만큼만
+        // 결과 버퍼는 **가드 밖에서** 잡는다. 가드(`t_bIsInsideProfiler`)를 켠 뒤 reserve 하면 이 할당은 세지 않고, 호출한 쪽이
+        // 가드 밖에서 풀 때는 세어 현재 사용량이 줄기만 한다(프로파일러 패널이 매 프레임 불러 태그 카운터가 0 에 붙는다). 표가 자란 만큼만
         // 여유를 두고, 가드 안에서는 그 용량 안에서만 넣어 다시 할당하지 않는다.
         size_t entryCount{ 0 };
         {

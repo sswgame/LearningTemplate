@@ -516,7 +516,7 @@ namespace sw
             PlaceholderMatch match;
             size_t           charIndex{ 0 };
             // 한 글자씩 훑지 않고 '%' 를 바로 찾는다. find 는 memchr 로 처리된다. 포맷 문자열은 대개 리터럴이 길고 자리표가
-            // 드물어서, 한 글자씩 훑는 부분이 이 함수 시간의 대부분이었다.
+            // 드물어서, 한 글자씩 훑으면 그것이 이 함수 시간의 대부분이 된다.
             while ( ( charIndex = format.find( '%', charIndex ) ) != string_view::npos )
             {
                 {
@@ -616,8 +616,8 @@ namespace sw
                 return pos;
 
             uint32 copyLength = MathUtil::min( static_cast<uint32>( str.length() ), capacity - 1 - pos );
-            // 잘리는 자리가 UTF-8 글자 한가운데면 그 글자의 선두 바이트 앞까지 물러난다. 예전에는 바이트 단위로 잘라, 버퍼 끝에 걸친
-            // 한글 한 글자가 깨진 바이트로 남았다(로그 · 경로 표시).
+            // 잘리는 자리가 UTF-8 글자 한가운데면 그 글자의 선두 바이트 앞까지 물러난다 — 바이트 단위로 자르면 버퍼 끝에 걸친
+            // 한글 한 글자가 깨진 바이트로 남는다(로그 · 경로 표시).
             if ( copyLength < str.length() )
             {
                 while ( copyLength > 0 && ( static_cast<uint8>( str[copyLength] ) & 0xC0 ) == 0x80 )
@@ -708,8 +708,8 @@ namespace sw
                 }
                 else if constexpr ( std::is_enum_v<DecayT> )
                 {
-                    // 열거형은 바탕 타입으로 바꿔 부호를 살린다. 예전에는 열거형 그대로 넘겨 `is_signed_v<Enum>` 이 늘 거짓이라, -1 인 값이
-                    // 18446744073709551615 로 찍혔다.
+                    // 열거형은 바탕 타입으로 바꿔 부호를 살린다. 열거형 그대로 넘기면 `is_signed_v<Enum>` 이 늘 거짓이라, -1 인 값이
+                    // 18446744073709551615 로 찍힌다.
                     return integerToString( pBuf, static_cast<std::underlying_type_t<DecayT>>( value ), format );
                 }
                 else
@@ -922,7 +922,7 @@ namespace sw
 
             if ( fmt.isLeftAlign() == false )
             {
-                // 0 으로 채울 때 부호는 채움 **앞**에 온다(printf 의 "%05d" 로 -42 는 "-0042"). 예전에는 "00-42" 였다.
+                // 0 으로 채울 때 부호는 채움 **앞**에 온다(printf 의 "%05d" 로 -42 는 "-0042", "00-42" 가 아니다).
                 const bool bSignFirst = fmt.isZeroPad() && str.empty() == false && ( str[0] == '-' || str[0] == '+' );
                 if ( bSignFirst )
                 {

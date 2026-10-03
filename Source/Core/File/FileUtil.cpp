@@ -85,9 +85,8 @@ namespace sw
 
             /**
              * @brief @p fileName 을 **원자적으로** 씁니다: 같은 폴더의 임시 파일에 다 쓰고, 쓰기 · 닫기 결과를 확인한 뒤 원본 자리로 바꿔 끼웁니다.
-             * @details 예전 `writeTextFile` 은 원본을 "wb" 로 열어(그 순간 길이 0 이 된다) 그 자리에 쓰고, `fwrite` · `fclose` 결과를 보지
-             *          않고 true 를 돌려줬습니다. 디스크가 차거나, 백신이 파일을 잡거나, 쓰는 도중 죽으면 씬 · 에셋 · `.meta` 가 빈 파일로 남는데
-             *          로그는 "Saved" 였고, 씬을 바꾸기 전 저장 흐름은 저장이 성공한 줄 알고 다음 씬으로 넘어가 편집을 잃었습니다. 4 KB 보다
+             * @details 주의: 원본을 "wb" 로 열면 그 순간 길이 0 이 됩니다. 그 자리에 쓰면서 `fwrite` · `fclose` 결과를 보지 않으면, 디스크가
+             *          차거나 백신이 파일을 잡거나 쓰는 도중 죽을 때 씬 · 에셋 · `.meta` 가 빈 파일로 남는데 저장은 성공으로 보입니다. 4 KB 보다
              *          작은 쓰기는 stdio 버퍼에 머물다 `fclose` 에서야 디스크로 가므로, 가득 찬 디스크는 `fclose` 만 알려 줍니다.
              *          언리얼 `FFileHelper::SaveArrayToFile` 과 같은 방식(임시 파일 → 이름 바꾸기)입니다.
              */
@@ -141,7 +140,7 @@ namespace sw
 #if !defined( SW_PLATFORM_WINDOWS )
             /**
              * @brief 읽기용으로 열고 크기를 잽니다(처음으로 되감긴 상태). 실패하면 로그를 남기고 nullptr 입니다. 연 파일은 호출하는 쪽이 닫습니다.
-             * @details `readFile` · `readTextFile` 이 이 열두 줄을 각자 들고 있었고, 크기를 재지 못했을 때 한쪽만 로그를 남겼습니다.
+             * @details `readFile` · `readTextFile` 이 함께 씁니다(크기를 재지 못했을 때 둘 다 같은 로그를 남깁니다).
              */
             static FILE* openForReading( string_view fileName, int64& outFileSize )
             {
@@ -168,11 +167,10 @@ namespace sw
              * @brief 파일의 [offset, offset + maxReadCount) 를 @p outBuffer 에 읽습니다(버퍼 크기는 실제로 읽은 만큼입니다). 실패하면 로그를 남기고 false 입니다.
              * @details `readFile` · `readTextFile` 의 본체입니다. **Windows 에서는 Win32 API 로 바로 읽습니다.** 열기 · 크기 · 읽기 · 닫기의
              *          시스템 호출 네 번입니다. stdio 경로(`fopen_s` → 끝으로 이동 → 위치 질의 → 처음으로 되감기 → `fread`)는 크기를
-             *          재려고 파일 위치를 세 번 옮겼고, UCRT 의 잠금과 버퍼 준비를 거쳤습니다. 게다가 `fopen_s` 는 좁은 문자 경로를
-             *          **ANSI 코드 페이지**로 해석해서 UTF-8 경로의 한글이 깨졌습니다(앱 매니페스트가 UTF-8 코드 페이지를 켜지 않습니다).
-             *          여기서는 UTF-16 으로 바꿔 엽니다. 2026-09-23 시작 시간 프로파일에서 `readFile` 이 게임 스레드 초기화의 12.6 %
-             *          였습니다(셰이더 굽기 도장이 소스를 읽어 해시합니다). 공유 모드는 stdio(`_SH_DENYNO`)와 같이 읽기 · 쓰기를
-             *          허용하므로, 에디터가 쓰고 있는 파일도 전처럼 열립니다.
+             *          재려고 파일 위치를 세 번 옮기고, UCRT 의 잠금과 버퍼 준비를 거칩니다. 게다가 `fopen_s` 는 좁은 문자 경로를
+             *          **ANSI 코드 페이지**로 해석해서 UTF-8 경로의 한글이 깨집니다(앱 매니페스트가 UTF-8 코드 페이지를 켜지 않습니다).
+             *          여기서는 UTF-16 으로 바꿔 엽니다. `readFile` 은 시작 시간에 큰 몫입니다(셰이더 굽기 도장이 소스를 읽어 해시합니다).
+             *          공유 모드는 stdio(`_SH_DENYNO`)와 같이 읽기 · 쓰기를 허용하므로, 에디터가 쓰고 있는 파일도 열립니다.
              */
             template <typename BufferType>
             [[nodiscard]] static bool readRange( string_view fileName, uint64 offset, uint64 maxReadCount, BufferType& outBuffer )
@@ -223,8 +221,8 @@ namespace sw
                     readTotal += readNow;
                 }
                 CloseHandle( hFile );
-                // 잰 크기만큼 읽지 못했으면 실패다: 읽기 오류이거나, 읽는 도중 누가 파일을 줄였다(에디터 저장 · 핫 리로드). 예전에는 버퍼를
-                // 줄이고 true 를 돌려줘, 잘린 JSON · XML · 설정이 "정상으로 읽은 것" 이 됐다. 체크섬이 없는 호출부는 알 길이 없었다.
+                // 잰 크기만큼 읽지 못했으면 실패다: 읽기 오류이거나, 읽는 도중 누가 파일을 줄였다(에디터 저장 · 핫 리로드). 버퍼를 줄이고
+                // true 를 돌려주면 잘린 JSON · XML · 설정이 "정상으로 읽은 것" 이 되고, 체크섬이 없는 호출부는 알 길이 없다.
                 if ( readTotal != dataSize )
                 {
                     outBuffer.clear();
@@ -295,11 +293,10 @@ namespace sw
          * @brief 디렉터리를 훑으며 항목마다 함수를 실행합니다. **예외를 던지지 않습니다.**
          * @details `std::filesystem` 의 순회자는 `error_code` 를 받지 않으면 **예외를 던집니다.** 권한이 없는 폴더, 순회 도중
          *          지워진 폴더, 윈도우의 보호된 정션이 그런 경우입니다. `collectFiles` · `collectFolders` 는 `bool` 로 실패를
-         *          알리기로 약속했는데, 그 예외가 호출부까지 뚫고 나갔습니다. 같은 파일의 `makeRelativePath` · `makeAbsolutePath` 는
-         *          처음부터 `error_code` 를 받고 있었는데, 그 방식이 여기에는 옮겨지지 않았던 것입니다.
+         *          알리기로 약속했으므로 예외가 호출부까지 뚫고 나가면 안 됩니다(`makeRelativePath` · `makeAbsolutePath` 도
+         *          `error_code` 를 받습니다).
          *
-         *          따로 적혀 있던 같은 코드 네 벌(파일/폴더 × 재귀/비재귀)도 여기서 하나로 모읍니다. 코드가 갈라질 곳을 줄이는
-         *          것이 이 저장소가 되풀이해 겪은 문제의 해법입니다.
+         *          파일/폴더 × 재귀/비재귀 네 경우가 모두 이것 하나를 씁니다.
          */
         template <typename Func>
         void forEachDirectoryEntry( const std::filesystem::path& directoryPath, const bool bRecursive, Func&& func )
@@ -671,7 +668,7 @@ namespace sw
 
     bool FileUtil::ensureParentDirectoryExists( string_view filePath )
     {
-        // 구분자 정규화까지 `ensureDirectoryExists` 와 같게 한다. 예전에는 이 함수만 정규화 없이 만들었다.
+        // 구분자 정규화까지 `ensureDirectoryExists` 와 같게 한다.
         return ensureDirectoryExists( getDirectoryPart( filePath ) );
     }
 
@@ -761,8 +758,7 @@ namespace sw
         if ( fileName.empty() )
             return 0;
 
-        // 크기만 알면 되는데 예전에는 파일을 열고 끝까지 이동하고 있었다. 바로 위 getFileTimestamp 와 같은 방식으로
-        // 묻는다. 핸들도 플랫폼 분기도 필요 없다.
+        // 크기만 알면 되므로 파일을 열지 않고 바로 위 getFileTimestamp 와 같은 방식으로 묻는다. 핸들도 플랫폼 분기도 필요 없다.
         const string    filePath = normalizeSeparators( fileName );
         std::error_code errorCode;
         const uintmax_t size = std::filesystem::file_size( filePath.c_str(), errorCode );
@@ -861,7 +857,7 @@ namespace sw
         if ( FileUtilInternal::readRange( fileName, 0, std::numeric_limits<uint64>::max(), outText ) == false )
             return false;
 
-        // BOM 판정의 기준은 아래 skipUtf8Bom 이다. 예전에는 여기서 바이트를 따로 세고 있었다. 한쪽만 고치면 읽기 경로와
+        // BOM 판정의 기준은 아래 skipUtf8Bom 이다. 여기서 바이트를 따로 세면 한쪽만 고쳤을 때 읽기 경로와
         // 질의 경로가 서로 다른 답을 준다.
         const string_view withoutBom = skipUtf8Bom( outText );
         if ( withoutBom.size() != outText.size() )

@@ -68,7 +68,7 @@ namespace sw
         static uint64 getPlatformHeapBytes();
         // ------------------------------------------------------------------------------
         // 2) 플랫폼 누수 검사 — CRT(Windows) / LSan(그 밖)
-        //    enable → (수명 할당) → captureBaseline → shutdown 뒤 report
+        //    enable → (수명 할당) → captureMemoryLeakBaseline → shutdown 뒤 report
         // ------------------------------------------------------------------------------
         /** @brief 프로세스 시작 직후에 플랫폼 누수 추적을 켭니다. */
         static void enableMemoryLeakChecks();

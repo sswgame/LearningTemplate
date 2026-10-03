@@ -3,8 +3,7 @@
  * @brief 컴포넌트 핸들입니다. 보관할 때는 핸들을 쓰고, T* 는 핸들을 푼 그 순간에만 씁니다.
  *
  * @note `SlotHandle` 과 같은 곳(`Core/Container`)에 둡니다. objectId 와 componentId 두 정수뿐인 값 타입이라 Core 밖을
- *       전혀 모릅니다. 예전에는 `Engine/Object/Component/` 에 있었고, 그 때문에 직렬화기가 이 핸들의 텍스트 핸들러를
- *       등록하려면 Object 를 include 해야 했습니다.
+ *       전혀 모릅니다. 그래서 직렬화기가 Object 를 include 하지 않고 이 핸들의 텍스트 핸들러를 등록합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

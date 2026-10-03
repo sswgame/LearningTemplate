@@ -1,8 +1,7 @@
 ﻿/**
  * @file ConcurrentQueue.h
  * @brief 고정 용량 MPMC lock-free 큐입니다(Vyukov 방식의 시퀀스 번호 링).
- * @note 이 파일의 주석에는 오랫동안 "뮤텍스 기반" 이라고 적혀 있었지만, 실제로는 뮤텍스를 한 줄도 쓰지 않습니다. 어느 큐를
- *       쓸지 고르는 사람이 정반대로 읽게 되는 차이입니다. 이 큐는 막히지 않는 대신, **가득 차면 `enqueue` 가 false 를
+ * @note 뮤텍스를 쓰지 않습니다. 이 큐는 막히지 않는 대신, **가득 차면 `enqueue` 가 false 를
  *       반환합니다**(그 처리는 호출하는 쪽의 몫입니다).
  */
 #pragma once
@@ -12,8 +11,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 
-// `drain( vector<T>& )` 가 쓴다. 본문에 나오는 `sw::array` 는 주석 속 언급뿐이라 array.h 는 뺐다.
-// 예전에 토큰만 세고 include 를 지웠다가 이 헤더가 혼자서는 컴파일되지 않게 된 적이 있다(단독 컴파일로 확인할 것).
+// `drain( vector<T>& )` 가 쓴다. 본문에 나오는 `sw::array` 는 주석 속 언급뿐이라 array.h 는 넣지 않는다.
+// 주의: 토큰만 세고 include 를 지우면 이 헤더가 혼자서는 컴파일되지 않을 수 있다(단독 컴파일로 확인할 것).
 
 namespace sw
 {

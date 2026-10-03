@@ -33,8 +33,8 @@ namespace sw
         atomic<bool> s_bInstalled{ false };
         /**
          * @brief 지금 리포트를 쓰는 스레드의 ID 입니다(0 이면 아무도 쓰지 않는다).
-         * @details 예전에는 bool 이라, 두 스레드가 거의 동시에 죽으면 두 번째 스레드가 "이미 보고 중" 을 보고 곧장 기본 동작으로 시그널을 다시
-         *          올려 프로세스를 끝냈습니다 — 첫 스레드가 리포트를 쓰는 도중에.
+         * @details bool 로 두면 두 스레드가 거의 동시에 죽을 때 두 번째 스레드가 "이미 보고 중" 을 보고 곧장 기본 동작으로 시그널을 다시
+         *          올려 프로세스를 끝냅니다 — 첫 스레드가 리포트를 쓰는 도중에.
          */
         atomic<uint64> s_reportingThreadId{ 0 };
         /** @brief 지금 보고 중인 시그널 — 시한이 지나 끝낼 때 종료 코드(128 + 시그널)로 쓴다. */
@@ -53,8 +53,8 @@ namespace sw
         constexpr int32  kArrFatalSignal[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT };
 
         /**
-         * @brief 이 스레드의 대체 시그널 스택입니다. **`sigaltstack` 은 스레드마다다** — 예전에는 `initialize` 를 부른 스레드 하나에만 정적
-         *        배열을 깔아, 작업 스레드 · 렌더 스레드의 스택 오버플로는 기록 없이 죽었다. 스레드가 끝날 때 스택을 끄고 돌려준다.
+         * @brief 이 스레드의 대체 시그널 스택입니다. **`sigaltstack` 은 스레드마다다** — 한 스레드에만 깔면 작업 스레드 · 렌더 스레드의
+         *        스택 오버플로는 기록 없이 죽는다. 스레드가 끝날 때 스택을 끄고 돌려준다.
          */
         struct ThreadSignalStackInternal
         {
@@ -108,7 +108,7 @@ namespace sw
             }
 
             // 시한을 건다(CrashHandler::setReportDeadline). 보고는 죽어 가는 프로세스 안에서 돈다 — glibc 는 힙 손상을 malloc 의 락을
-            // 쥔 채 abort 하고, 아래의 할당은 그 락을 **같은 스레드에서** 영영 기다린다. 예전에는 시한이 없어 그대로 서 있었다.
+            // 쥔 채 abort 하고, 아래의 할당은 그 락을 **같은 스레드에서** 영영 기다린다(시한이 없으면 그대로 서 있다).
             // (Windows 는 폴트 스레드가 보고 스레드를 시한까지만 기다린다.) 핸들러의 sa_mask 가 비어 있어 SIGALRM 은 여기서도 들어온다.
             s_reportSignalNumber.store( signalNumber );
             struct sigaction deadlineAction{};
@@ -156,9 +156,8 @@ namespace sw
         /**
          * @brief SA_SIGINFO 핸들러입니다. 폴트 주소와 레지스터 컨텍스트를 함께 받습니다.
          *
-         * 예전에는 `std::signal` 을 썼습니다. 그것은 siginfo 도 ucontext 도 주지 않아서 폴트 주소가 항상 nullptr 이었고,
-         * 스택도 폴트 지점이 아니라 핸들러 안에서 시작했습니다. Windows 쪽은 EXCEPTION_POINTERS 로 둘 다 받아 쓰고 있어서
-         * 한쪽의 리포트 품질만 크게 떨어졌습니다.
+         * `std::signal` 은 siginfo 도 ucontext 도 주지 않아서 폴트 주소가 항상 nullptr 이고, 스택도 폴트 지점이 아니라 핸들러
+         * 안에서 시작합니다. Windows 쪽이 EXCEPTION_POINTERS 로 둘 다 받는 것과 같은 품질을 내려고 이것을 씁니다.
          */
         void onFatalSignal( int32 signalNumber, siginfo_t* pSignalInfo, void* pPlatformContext )
         {

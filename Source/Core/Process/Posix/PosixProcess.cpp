@@ -22,7 +22,7 @@ namespace sw
         /**
          * @brief 자식 프로세스의 출력 파이프를 읽는 스트림입니다.
          * @details `_pStdOutRead` 에는 `fdopen` 한 `FILE*` 이 들어갑니다. 줄 단위로 읽으므로 버퍼가 있는 편이 낫고, `fgets`
-         *          하나로 끝납니다. 예전에는 같은 자리에 `popen` 의 스트림이 있었습니다.
+         *          하나로 끝납니다.
          */
         FILE* asOutputStream( void* pHandle )
         {
@@ -73,7 +73,7 @@ namespace sw
 
         // Windows 와 마찬가지로 **분리**한다. 아직 도는 자식을 기다리지 않는다. 이미 끝나 있으면 여기서 거둬 좀비를
         // 남기지 않고, 아직 돌고 있으면 이 프로세스가 끝난 뒤 init 이 거둔다.
-        // (예전에는 `pclose` 여서 소멸자가 자식이 끝날 때까지 막혔다. 얼마나 걸릴지를 자식이 정한 셈이다.)
+        // (`pclose` 처럼 기다리면 소멸자가 자식이 끝날 때까지 막힌다.)
         const pid_t childPid = static_cast<pid_t>( _processId.load() );
         if ( childPid > 0 )
         {
@@ -134,7 +134,7 @@ namespace sw
             // 여기서 로그를 찍거나 할당을 하면 그대로 멈춘다.
             close( arrPipeFd[0] );
             // 표준 에러를 표준 출력에 합친다. `ProcessOutputDelegate` 가 약속한 대로다(빌드 로그는 두 스트림이 원래 순서대로
-            // 섞여야 읽을 수 있다). 예전 `popen` 구현은 명령 끝에 `2>&1` 을 붙였다.
+            // 섞여야 읽을 수 있다).
             dup2( arrPipeFd[1], STDOUT_FILENO );
             dup2( arrPipeFd[1], STDERR_FILENO );
             close( arrPipeFd[1] );

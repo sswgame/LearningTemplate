@@ -66,7 +66,7 @@ namespace sw
             template <typename K>
             bool operator()( const value_type& a, const K& b ) const { return _comp( a.first, b ); }
 
-            /** @brief 이종 키와 엔트리의 키를 비교합니다. 예전에는 키에서 `.first` 를 읽어 `upper_bound` 가 컴파일되지 않거나 엉뚱한 멤버를 비교했습니다. */
+            /** @brief 이종 키와 엔트리의 키를 비교합니다(`upper_bound` 가 쓰는 인자 순서). 키 쪽에서 `.first` 를 읽지 않습니다. */
             template <typename K>
             bool operator()( const K& a, const value_type& b ) const { return _comp( a, b.first ); }
         };

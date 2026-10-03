@@ -205,7 +205,7 @@ namespace sw
         {
             case GlobalVariableType::Boolean:
             {
-                // 정수 · 실수처럼 읽지 못하면 false 다(값은 그대로). 예전에는 "ture" · "enabled" 가 조용히 false 로 들어갔다.
+                // 정수 · 실수처럼 읽지 못하면 false 다(값은 그대로) — "ture" · "enabled" 가 조용히 false 로 들어가지 않게.
                 bool bVal = false;
                 if ( StringUtil::tryParseBool( strValue, bVal ) == false )
                     return false;
@@ -426,7 +426,7 @@ namespace sw
                 // 남는다)가 int 변수에 닿아 조용히 실패하고, 사용자에게는 "스위치가 아무 일도 하지 않는다" 로만 보인다.
                 //
                 // 변경 알림은 여기서 따로 부르지 않는다. setValueFromString 이 거치는 setValueAs* 네 함수가 모두 이미
-                // _onValueChanged 를 부른다. 예전에는 여기서 한 번 더 불러서 모듈 변수만 콜백이 **두 번** 왔다.
+                // _onValueChanged 를 부른다(여기서 한 번 더 부르면 모듈 변수만 콜백이 **두 번** 온다).
                 if ( iter->second->setValueFromString( pendingValue ) == false )
                 {
                     SW_LOG_WARNING( "-%#=%# : 값이 변수 타입과 맞지 않습니다. 무시됩니다",

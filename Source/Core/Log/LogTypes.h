@@ -3,9 +3,7 @@
  * @brief 로그 한 줄을 나타내는 값 타입들입니다(`LogLevel` · `LogEntry` · `LogRecord`).
  *
  * `Logger`(파사드)와 `ILogOutput`(출력 장치)이 **둘 다** 이 타입들을 쓰므로 따로 둡니다. 한쪽 헤더에 두면 장치 헤더가
- * 파사드를 include 하게 되어 의존 방향이 뒤집힙니다.
- *
- * `Logger.h` 가 이 헤더를 include 하므로, 기존에 `Logger.h` 만 include 하던 코드는 그대로 동작합니다.
+ * 파사드를 include 하게 되어 의존 방향이 뒤집힙니다. `Logger.h` 가 이 헤더를 include 합니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"

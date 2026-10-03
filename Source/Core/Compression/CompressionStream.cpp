@@ -20,16 +20,12 @@ namespace sw
         {
             /**
              * @brief 코덱을 고릅니다. 넘겨받은 레지스트리를 먼저 보고, 없으면 연결된 활성 레지스트리를 봅니다.
-             * @details 예전에는 `pRegistry` 가 널이면 곧장 하드코딩된 코덱을 썼습니다. 그런데 넘기는 호출부가 하나도 없어서(레지스트리는
-             *          엔진이 들고 있고 Core 는 거기 닿지 못합니다) **항상** 하드코딩된 코덱이 쓰였고, 등록한 코덱은 쓰이지 않았습니다.
-             *          이제는 활성 레지스트리를 봅니다.
+             * @details 넘겨받는 호출부는 드물고(레지스트리는 엔진이 들고 있고 Core 는 거기 닿지 못합니다), 대개 활성 레지스트리가 답합니다.
              *
-             *          **찾지 못하면 nullptr 을 반환합니다.** 예전에는 마지막에 무조건 Null 코덱을 돌려줬는데, 그 한 줄 때문에 호출부의
-             *          오류 처리가 모두 죽은 코드가 됐습니다. 그 결과 두 가지 문제가 있었습니다.
-             *          (1) Zstd 가 없는 상태에서 `compressBuffer( …, Zstd )` 를 부르면 헤더에는 `Zstd` 라고 적고 페이로드는 **압축하지 않은 채**
-             *              썼습니다. Zstd 가 등록된 다른 기계에서 그 스트림을 읽으면 쓰레기가 나옵니다.
-             *          (2) 알 수 없는 `_codecType` 이 든 스트림도 "해제" 했습니다. 체크섬 플래그가 꺼진 스트림이면 그 쓰레기가 **성공으로**
-             *              반환됐습니다.
+             *          **찾지 못하면 nullptr 을 반환합니다.** Null 코덱으로 대신하면 호출부의 오류 처리가 모두 죽은 코드가 되어
+             *          (1) Zstd 가 없는 상태에서 `compressBuffer( …, Zstd )` 가 헤더에는 `Zstd` 라고 적고 페이로드는 **압축하지 않은 채**
+             *              쓰고(Zstd 가 등록된 다른 기계에서 읽으면 쓰레기가 나옵니다),
+             *          (2) 알 수 없는 `_codecType` 이 든 스트림도 "해제" 해, 체크섬 플래그가 꺼진 스트림이면 그 쓰레기가 **성공으로** 반환됩니다.
              *          내장 코덱으로 대신하는 것은 실제로 구현된 두 가지(None · RLE)뿐입니다.
              */
             static ICompressionCodec* findCodec( CompressionCodecType type, const CompressionCodecRegistry* pRegistry )
@@ -86,8 +82,8 @@ namespace sw
             return false;
 
         // 덧셈이 아니라 뺄셈으로 비교한다. 덧셈으로 쓰면 스트림에 적힌 크기가 클 때 오버플로가 난다.
-        // `_compressedSize` 가 UINT64_MAX 면 `+28` 이 27 로 돌아 검사를 통과했고, 그 뒤 `decompress` 에 srcSize 로 SIZE_MAX 가
-        // 그대로 들어가 코덱이 버퍼 밖을 읽었다. 위에서 `dataSize >= sizeof( CompressionHeader )` 를 이미 확인했으므로 이 뺄셈은 안전하다.
+        // `_compressedSize` 가 UINT64_MAX 면 `+28` 이 27 로 돌아 검사를 통과하고, 그 뒤 `decompress` 에 srcSize 로 SIZE_MAX 가
+        // 그대로 들어가 코덱이 버퍼 밖을 읽는다. 위에서 `dataSize >= sizeof( CompressionHeader )` 를 이미 확인했으므로 이 뺄셈은 안전하다.
         if ( outHeader._compressedSize > dataSize - sizeof( CompressionHeader ) )
             return false;
 

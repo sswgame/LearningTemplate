@@ -62,7 +62,7 @@ namespace sw
     {
         // 이벤트는 프레임 아레나에 placement new 로 올라간다. 아레나를 되감으면 **메모리만** 돌아올 뿐 소멸자는 불리지
         // 않으므로, `sw::string` 같은 멤버가 가진 힙 메모리는 그대로 남는다(게임플레이 이벤트는 대부분 문자열을 가진다).
-        // `processEvents` 는 브로드캐스트 뒤에 이 일을 하는데, `clear()` 와 소멸자에는 빠져 있었다.
+        // `processEvents` 는 브로드캐스트 뒤에, `clear()` 와 소멸자도 이 일을 한다.
         for ( auto& [channel, list] : _mapChannelQueue )
         {
             IEvent* pCurrent = list->_pHead.exchange( nullptr, std::memory_order_relaxed );

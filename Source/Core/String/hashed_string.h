@@ -4,11 +4,11 @@
  *
  * **규칙은 언리얼 FName 과 같습니다.**
  * - 같음은 **대소문자를 무시**합니다(`"Hero" == "hero"`) — 비교 인덱스(FName 의 ComparisonIndex) 정수 비교.
- * - 표시는 **적은 철자 그대로**입니다(`c_str()` 은 "hero" 로 만든 것이면 "hero") — 표시 인덱스(FName 의 DisplayIndex). 예전에는 처음
- *   intern 된 철자가 모두에게 보여, 에디터에서 `hero` → `Hero` 로 고치는 이름 바꾸기가 아무 일도 하지 않았다. 철자까지 묻는 곳은
+ * - 표시는 **적은 철자 그대로**입니다(`c_str()` 은 "hero" 로 만든 것이면 "hero") — 표시 인덱스(FName 의 DisplayIndex). 처음
+ *   intern 된 철자를 모두에게 보이면 에디터에서 `hero` → `Hero` 로 고치는 이름 바꾸기가 아무 일도 하지 않는다. 철자까지 묻는 곳은
  *   `isEqual( other, NameCase::CaseSensitive )`(FName 의 `IsEqual( …, ENameCase::CaseSensitive )`).
- * - 순서는 고른다 — `lexicalLess`(대소문자 무시 사전순, `FNameLexicalLess`) · `fastLess`(비교 인덱스 순, `FNameFastLess`). 예전의 `operator<`
- *   는 intern 순서였는데 "사전순" 이라 적혀 있었다(실행마다 달라지는 순서).
+ * - 순서는 고른다 — `lexicalLess`(대소문자 무시 사전순, `FNameLexicalLess`) · `fastLess`(비교 인덱스 순, `FNameFastLess` — intern 순서라
+ *   실행마다 달라질 수 있다).
  * - FName 과 다른 둘: 해시는 대소문자를 무시한 **FNV**(실행이 바뀌어도 같다 — 바이너리 칸 이름 · 열거자 · 지역화 표가 이 값을 저장한다),
  *   철자 보존은 **모든 구성**에서다(언리얼은 에디터만 — 여기서는 저장되는 철자가 빌드에 따라 달라지지 않게 한다). FName 의 숫자 꼬리
  *   (`Actor_12` = "Actor" + 13)는 두지 않았다 — `c_str()` 의 영구 포인터를 쥔 곳이 많고, 같은 이름의 번호는 `GameObjectManager` 가 다시 쓴다.
@@ -97,7 +97,7 @@ namespace sw
         static constexpr uint32 kChunkShift     = 10;                  /**< 청크 크기의 비트 시프트(1024 = 2^10) */
         static constexpr uint32 kChunkSize      = 1u << kChunkShift;   /**< 청크 하나의 엔트리 수(1024) */
         static constexpr uint32 kChunkMask      = kChunkSize - 1u;     /**< 청크 안 오프셋 마스크 */
-        static constexpr uint32 kMaxChunks      = 1024;                /**< 최대 청크 수(총 1,048,576개). 예전 64(65,536개)는 파일이 채울 수 있었다 */
+        static constexpr uint32 kMaxChunks      = 1024;                /**< 최대 청크 수(총 1,048,576개). 65,536개 정도면 파일 하나가 채울 수 있다 */
         static constexpr uint32 kNumShards      = 32;                  /**< 해시로 나눈 락 샤드 수 */
         static constexpr size_t kArenaBlockSize = size_t{ 64 } * 1024; /**< 문자열 아레나 블록 크기(64KB) */
 
@@ -186,8 +186,8 @@ namespace sw
         /**
          * @brief 이미 intern 된 문자열이면 그 이름을, 아니면 None 을 반환합니다. **표에 넣지 않습니다.**
          * @details 파일에서 읽은 이름으로 무엇을 **찾기만** 할 때 씁니다(타입 · 메서드). 등록된 것의 이름은 이미 표에 있으므로 표에 없으면
-         *          찾는 대상도 없습니다. 예전에는 찾으려고 intern 해서, 파일 하나가 서로 다른 이름 수만 개로 전역 표를 채울 수 있었고 차면
-         *          그 뒤 **엔진의 모든** 새 이름이 None 이 됐습니다.
+         *          찾는 대상도 없습니다. 찾으려고 intern 하면 파일 하나가 서로 다른 이름 수만 개로 전역 표를 채울 수 있고, 차면
+         *          그 뒤 **엔진의 모든** 새 이름이 None 이 됩니다.
          */
         static basic_hashed_string findInterned( std::basic_string_view<value_type> text ) noexcept;
 

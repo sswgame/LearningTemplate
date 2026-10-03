@@ -75,9 +75,8 @@ namespace sw
 
     /**
      * @brief 크래시 리포트 본문을 만들어 stderr · 파일 · 로그에 남깁니다.
-     * @details 세 플랫폼이 **같은 리포트**를 내도록 여기에 한 번만 둡니다. 예전에는 Windows 와 POSIX 가 이 본문을 각자 적고
-     *          있었고, 이미 내용이 갈라져 있었습니다. 어느 파일을 보내면 되는지 적는 줄이 Windows 에만 있어서, 리눅스 사용자는
-     *          리포트가 어디에 생겼는지 알 수 없었습니다.
+     * @details 세 플랫폼이 **같은 리포트**를 내도록 여기에 한 번만 둡니다(어느 파일을 보내면 되는지 적는 줄 같은 것이
+     *          한 플랫폼에서만 빠지지 않게).
      * @param pReason          폴트 이름(예외 코드 이름 · 시그널 이름)
      * @param pFaultAddress    폴트 주소. 없으면 nullptr
      * @param pPlatformContext 스택을 따라가기 시작할 지점(Windows 는 `CONTEXT*`). nullptr 이면 현재 스택

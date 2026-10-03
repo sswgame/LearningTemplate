@@ -12,8 +12,7 @@ namespace sw
         {
             /**
              * @brief 목적지 버퍼에 원본을 채우고 **반드시** NUL 로 끝냅니다. 들어가지 않으면 자릅니다.
-             * @details 두 오버로드(utf8 · utf16)가 같은 규칙을 따르도록 한 곳에 둡니다. 예전에는 각자 플랫폼 함수를 불러서
-             *          **플랫폼마다 결과가 달랐습니다.**
+             * @details 두 오버로드(utf8 · utf16)가 같은 규칙을 따르도록 한 곳에 둡니다(플랫폼 함수를 부르면 **플랫폼마다 결과가 다릅니다**).
              */
             template <typename CharType>
             static void copyTerminated( CharType* pOutDest, const CharType* pSource, uint32 length )
@@ -161,9 +160,9 @@ namespace sw
 
             /**
              * @brief UTF-8 한 글자를 읽습니다. 잘못된 입력은 U+FFFD 한 글자로 바꾸고, **읽을 수 있는 다음 바이트부터** 다시 시작합니다.
-             * @details 예전에는 검증 없이 비트만 이어 붙였습니다. 선두가 될 수 없는 바이트(0x80~0xBF · 0xF8~0xFF)는 U+0000 이 되어 Win32
-             *          경로 API 에서 문자열이 그 자리에서 끊겼고, 연속 바이트를 확인하지 않아 잘린 시퀀스 뒤의 ASCII(`/` · `.`)를 삼켰습니다.
-             *          CP949 로 된 한글 경로가 UTF-8 로 잘못 들어오면 경로가 조용히 다른 파일을 가리켰습니다. 대체 방식은 유니코드 권고(최대
+             * @details 주의: 검증 없이 비트만 이어 붙이면 선두가 될 수 없는 바이트(0x80~0xBF · 0xF8~0xFF)가 U+0000 이 되어 Win32
+             *          경로 API 에서 문자열이 그 자리에서 끊기고, 연속 바이트를 확인하지 않으면 잘린 시퀀스 뒤의 ASCII(`/` · `.`)를 삼킵니다
+             *          (CP949 로 된 한글 경로가 UTF-8 로 잘못 들어오면 경로가 조용히 다른 파일을 가리킵니다). 대체 방식은 유니코드 권고(최대
              *          부분 시퀀스마다 U+FFFD 하나)를 따릅니다.
              */
             static DecodedCodepoint decodeUtf8Sequence( const utf8* pData, const size_t remaining ) noexcept
@@ -239,8 +238,8 @@ namespace sw
              * @brief wide → 로케일 멀티바이트 변환 원시 연산입니다.
              * @param pOutBuffer nullptr 이면 변환하지 않고 필요한 크기만 반환합니다.
              * @return 널 종료를 포함한 바이트 수. 실패하면 kConversionFailed
-             * @details 플랫폼 분기를 이 한 줄짜리 함수에만 둡니다. 예전에는 "크기 질의 → 버퍼 준비 → 변환" 전체를 두 방향(utf16 →
-             *          locale, locale → utf16)이 각자 적어서 같은 #if 가 네 벌이었습니다.
+             * @details 플랫폼 분기를 이 한 줄짜리 함수에만 둡니다. "크기 질의 → 버퍼 준비 → 변환" 은 두 방향(utf16 → locale,
+             *          locale → utf16)이 함께 씁니다.
              */
             static size_t wideToMultiByteInternal( utf8* pOutBuffer, size_t bufferSize, const utf16* pInput )
             {
@@ -366,8 +365,8 @@ namespace sw
 
             /**
              * @brief 부동소수 토큰을 `from_chars` 로 **유한한 수로만** 읽습니다(`parseFloat` · `parseDouble`).
-             * @details 앞의 `+` 하나는 받는다(`from_chars` 가 받지 않는다). 그 뒤에 또 부호가 오면 숫자가 아니다 — 예전에는 `+` 를 떼고
-             *          넘겨 `"+-5"` 가 -5 가 됐다(`parseInt` 는 거절했다). 그리고 `from_chars` 는 "nan" · "inf" 를 받는데, 설정 · 에셋의
+             * @details 앞의 `+` 하나는 받는다(`from_chars` 가 받지 않는다). 그 뒤에 또 부호가 오면 숫자가 아니다 — `+` 를 떼고 그냥
+             *          넘기면 `"+-5"` 가 -5 가 된다(`parseInt` 는 거절한다). 그리고 `from_chars` 는 "nan" · "inf" 를 받는데, 설정 · 에셋의
              *          그 글자가 트랜스폼 · 물리 값으로 조용히 흘러들면 원인을 찾기 어렵다(NaN 은 비교마다 거짓이라 범위 검사도 지나간다).
              *          float32 는 float32 로 바로 읽는다(배 정밀도를 거치면 드물게 반올림이 두 번 일어난다).
              */
@@ -394,7 +393,7 @@ namespace sw
 
             /**
              * @brief 정수 토큰의 앞부분(공백 · 부호(`+`, 허용하면 `-`) · 기수 접두사(`0x`))을 떼어 냅니다.
-             * @details `parseInt` · `parseInt64` · `parseUint64` 가 이 스무 줄을 각자 들고 있었습니다. 기수가 0 이면 접두사로 정하고
+             * @details `parseInt` · `parseInt64` · `parseUint64` 가 함께 씁니다. 기수가 0 이면 접두사로 정하고
              *          (없으면 10), 기수 16 은 `0x` 가 있어도 되고 없어도 됩니다. 부호를 허용하지 않는 쪽(`uint64`)은 `-` 를 남겨 두어
              *          `from_chars` 가 거부하게 합니다.
              * @return 숫자 부분이 남고 기수가 [2, 36] 이면 true
@@ -539,8 +538,7 @@ namespace sw
         wstring      result{};
         result.reserve( length );
 
-        // 잘못된 입력은 어서트가 아니라 대체 문자다. 이 입력은 파일 이름 · 사용자 글자처럼 **밖에서** 온다. 예전에는 Debug 에서 멈추고
-        // 그 밖의 빌드에서는 로그만 남긴 뒤 망가진 문자열을 돌려줬다.
+        // 잘못된 입력은 어서트가 아니라 대체 문자다. 이 입력은 파일 이름 · 사용자 글자처럼 **밖에서** 온다.
         bool   bHadInvalidSequence{ false };
         size_t pos{ 0 };
         while ( pos < length )
@@ -766,7 +764,7 @@ namespace sw
     }
 
     // 바이트를 **부호 없이** 비교한다. `char` 를 그대로 int 로 넓히면 UTF-8 의 0x80 이상 바이트가 음수가 되어, 한글처럼
-    // ASCII 가 아닌 문자가 섞인 문자열이 ASCII 보다 **작다고** 나왔다(strcmp 규약과 반대다). 그러면 정렬 · 이진 검색에
+    // ASCII 가 아닌 문자가 섞인 문자열이 ASCII 보다 **작다고** 나온다(strcmp 규약과 반대다). 그러면 정렬 · 이진 검색에
     // 이 함수를 쓰는 쪽이 일관되지 않게 동작한다.
     int32 StringUtil::compare( string_view lhs, string_view rhs, bool bIgnoreCase ) noexcept
     {

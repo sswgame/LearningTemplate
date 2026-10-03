@@ -36,9 +36,9 @@ namespace sw
 
     /**
      * @brief 병렬 그룹의 부모가 시작 조건(제출 + 선행)을 채웠을 때 띄울 그룹입니다.
-     * @details 예전에는 `emplaceParallel*` 이 **만드는 순간** 티켓을 올려, 부모 태스크에 건 `runAfter` 와 취소를 본문(청크)이 무시했습니다
-     *          (README 의 "만들기 → 의존 연결 → 제출" 과 달랐다). 지금은 부모의 의존 수가 0 이 되는 순간 올립니다
-     *          (`TaskManager::resolveDependency` → `launchParallelGroup`). 부모의 완료는 예전처럼 그룹이 끝난 뒤 제 실행 스레드에서 합니다.
+     * @details 부모의 의존 수가 0 이 되는 순간 티켓을 올립니다(`TaskManager::resolveDependency` → `launchParallelGroup`) — README 의
+     *          "만들기 → 의존 연결 → 제출" 순서대로, 부모 태스크에 건 `runAfter` 와 취소를 본문(청크)도 따릅니다. 만드는 순간 올리면
+     *          그것들을 무시합니다. 부모의 완료는 그룹이 끝난 뒤 제 실행 스레드에서 합니다.
      */
     struct ParallelGroupLaunch
     {
@@ -169,9 +169,7 @@ namespace sw
     /**
      * @brief 스테이지입니다. 태스크 묶음의 완료를 기다리는 단위로, 매니저의 풀에서 오고 침입형 참조 계수로 수명을 관리합니다.
      * @details 스테이지는 **남은 수만 셉니다.** 태스크를 붙들지 않습니다. 태스크의 수명은 핸들과 큐가 잡은 참조가 정하고,
-     *          스테이지는 완료 통지가 올 곳일 뿐입니다. (예전에는 태스크 목록을 뮤텍스 아래에 들고 태스크마다 참조를 하나씩
-     *          잡았다가 `waitStage` 에서 놓았습니다. 그 목록을 읽는 곳이 없었고, `addTask` 마다 잠금 한 번과 참조 계수 왕복이
-     *          들었습니다.)
+     *          스테이지는 완료 통지가 올 곳일 뿐입니다(태스크 목록을 들지 않으므로 `addTask` 마다 잠금 · 참조 계수 왕복이 없습니다).
      *
      *          참조는 두 쪽이 잡습니다. 핸들 사본과, **남은 태스크가 있는 동안의 스테이지 자신**입니다(0→1 에서 잡고 1→0 에서
      *          놓습니다). 태스크 노드는 참조를 잡지 않습니다. 노드의 `_parentStage` 는 남은 태스크가 있는 동안만 유효하고,
@@ -208,8 +206,8 @@ namespace sw
 
         /**
          * @brief 후속을 붙입니다. 이 태스크가 이미 끝나 목록이 닫혔으면 붙이지 않고 false 를 돌려줍니다.
-         * @details 예전의 `push_back` 은 닫힘을 몰랐습니다. 끝나 가는 태스크에 `runBefore` · `whenAll` 로 후속을 붙이면, 완료 쪽이 이미 목록을
-         *          훑은 뒤라 후속이 영영 풀리지 않거나(유실), 붙이는 쪽이 의존 수를 올리기 전에 완료 쪽이 내려 **너무 일찍** 돌았습니다.
+         * @details 닫힘을 모르는 `push_back` 이면 끝나 가는 태스크에 `runBefore` · `whenAll` 로 후속을 붙일 때, 완료 쪽이 이미 목록을
+         *          훑은 뒤라 후속이 영영 풀리지 않거나(유실), 붙이는 쪽이 의존 수를 올리기 전에 완료 쪽이 내려 **너무 일찍** 돕니다.
          *          언리얼 `FGraphEvent::AddSubsequent` 도 같은 방식(닫힌 목록 = 이미 끝남)입니다.
          */
         [[nodiscard]] bool tryPushBack( TaskNode* pNode )
@@ -312,8 +310,8 @@ namespace sw
         /**
          * @brief 큐에 한 번 넣었는지입니다. 두 번 넣지 않게 막는 문 하나입니다.
          * @details 의존성 수는 0 을 한 번만 지나지만, 이미 제출한 태스크에 `runBefore` 로 선행을 더 걸면 수가 다시 올랐다가
-         *          내려와 한 번 더 0 을 봅니다. 예전의 5단 상태(`TaskState`)는 이 문 말고는 읽는 곳이 없었습니다(밖에서 물을 수
-         *          있는 "끝났나" 는 `TaskHandle::isCompleted` 가 `_pendingChildren` 으로 답합니다).
+         *          내려와 한 번 더 0 을 봅니다. 상태 기계는 두지 않습니다(밖에서 물을 수 있는 "끝났나" 는 `TaskHandle::isCompleted` 가
+         *          `_pendingChildren` 으로 답합니다).
          */
         atomic<bool> _bScheduled{ false };
         atomic<bool> _bCancelled{ false };
@@ -323,9 +321,8 @@ namespace sw
         uint32       _clearEpoch{ 0 };    ///< 만들 때의 `TaskManager::_clearEpoch`. `clear()` 가 활성 수를 0 으로 놓은 뒤의 노드를 가린다
         /**
          * @brief 본문 하나 + 아직 끝나지 않은 자식 수입니다. 0 으로 내리는 쪽(본문이든 마지막 자식이든)이 완료를 처리합니다.
-         * @details 예전에는 "자식 수" 와 "상태 = 자식 대기" 를 따로 두고 seq_cst 로 Dekker 식 순서를 맞췄는데, 본문이 상태를 적고
-         *          자식 수를 읽는 사이에 마지막 자식이 수를 내리고 상태를 읽으면 **둘 다** 완료를 처리했습니다. 본문 자신을 1 로 세어
-         *          두면 카운터 하나로 끝나고 seq_cst 도 필요 없습니다. `TaskHandle::isCompleted` 도 이 값이 0 인지를 봅니다.
+         * @details 주의: "자식 수" 와 "상태 = 자식 대기" 를 따로 두면, 본문이 상태를 적고 자식 수를 읽는 사이에 마지막 자식이 수를 내리고
+         *          상태를 읽어 **둘 다** 완료를 처리할 수 있습니다. 본문 자신을 1 로 세어 두면 카운터 하나로 끝나고 seq_cst 도 필요 없습니다. `TaskHandle::isCompleted` 도 이 값이 0 인지를 봅니다.
          */
         atomic<int32> _pendingChildren{ 1 };
         atomic<int32> _refCount{ 1 };

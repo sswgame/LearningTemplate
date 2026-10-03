@@ -284,10 +284,9 @@ namespace sw
     private:
         /**
          * @brief 용량 N 을 넘는 길이를 N 으로 잘라 반환합니다.
-         * @details 예전에는 `SW_LOG_ASSERT` 로 알리기만 하고 **원래 길이 그대로 복사**했습니다. 단언은 실행을 멈추지 않으므로
-         *          (Debug 는 브레이크, 그 밖은 로그만) 용량을 넘는 문자열이 들어오면 `_arrData` 뒤를 그대로 덮어썼습니다. 버퍼
-         *          오버플로입니다. 넘치는 길이는 **데이터에서 옵니다**(긴 대사 · 긴 경로). 프로그래밍 계약 위반이 아니므로 단언으로
-         *          멈추지 않고, 잘라 낸 뒤 경고를 남깁니다. 경고는 Shipping 에도 남습니다.
+         * @details 단언은 실행을 멈추지 않으므로(Debug 는 브레이크, 그 밖은 로그만) 알리기만 하고 원래 길이로 복사하면 `_arrData` 뒤를
+         *          덮어쓰는 버퍼 오버플로입니다. 넘치는 길이는 **데이터에서 옵니다**(긴 대사 · 긴 경로). 프로그래밍 계약 위반이 아니므로
+         *          단언으로 멈추지 않고, 잘라 낸 뒤 경고를 남깁니다. 경고는 Shipping 에도 남습니다.
          */
         static uint32 clampToCapacity( const T* pSource, size_t length )
         {
@@ -312,8 +311,8 @@ namespace sw
 
         /**
          * @brief 자를 자리 `cut` 이 글자 한가운데면(UTF-8 의 이어지는 바이트 · UTF-16 의 뒤 서로게이트) 그 글자의 시작으로 물립니다.
-         * @details 예전에는 바이트 수로만 잘라, 긴 한글 이름이 `fixed_string` 에 들어가면 끝 글자가 반 토막(잘못된 UTF-8)으로 남았다 — ImGui 는
-         *          그 자리를 `?` 로 그렸고 로그는 줄을 통째로 바꿨다. `pSource[cut]` 은 잘려 나가는 첫 단위다. 잘못된 UTF-8 을 끝없이 거슬러
+         * @details 바이트 수로만 자르면 긴 한글 이름의 끝 글자가 반 토막(잘못된 UTF-8)으로 남는다 — ImGui 는 그 자리를 `?` 로 그리고
+         *          로그는 줄을 통째로 바꾼다. `pSource[cut]` 은 잘려 나가는 첫 단위다. 잘못된 UTF-8 을 끝없이 거슬러
          *          가지 않도록 UTF-8 은 세 바이트까지만 물린다.
          */
         static uint32 backOffToCharacterStart( const T* pSource, uint32 cut )
@@ -392,8 +391,8 @@ namespace sw
         : _arrData{}
         , _size{ rhs.size() }
     {
-        // 길이는 다시 잰다(`size()`). `data()` 로 버퍼에 직접 쓴 뒤라면(ImGui 입력칸 · formatstring) 캐시된 `_size` 가 틀려 있고, 예전에는 그
-        // 값으로 복사해 글자가 잘리거나 종료 문자 없이 옛 글자와 섞였다(`"world"` 에 캐시 0 인 `"hello"` 를 대입하면 `"horld"`).
+        // 길이는 다시 잰다(`size()`). `data()` 로 버퍼에 직접 쓴 뒤라면(ImGui 입력칸 · formatstring) 캐시된 `_size` 가 틀려 있고, 그
+        // 값으로 복사하면 글자가 잘리거나 종료 문자 없이 옛 글자와 섞인다(`"world"` 에 캐시 0 인 `"hello"` 를 대입하면 `"horld"`).
         Memory::copy( _arrData, rhs._arrData, sizeof( T ) * ( _size + 1 ) );
     }
 
@@ -423,7 +422,7 @@ namespace sw
         if ( pStr != nullptr )
         {
             // `move`(memmove) 다 — `s = s.c_str() + 2` 처럼 자기 버퍼 **안쪽**을 대입하면 두 영역이 겹친다. 시작 주소가 같은 경우만 위에서
-            // 걸렀고, 그 밖은 겹친 memcpy(정의되지 않은 동작)였다. Windows 의 memcpy 는 우연히 맞게 옮겨 드러나지 않았다.
+            // 걸렀고, 그 밖을 memcpy 로 옮기면 겹친 복사(정의되지 않은 동작)다. Windows 의 memcpy 는 우연히 맞게 옮겨 드러나지 않는다.
             const uint32 length = clampToCapacity( pStr, StringUtil::strlen( pStr ) );
             Memory::move( _arrData, pStr, sizeof( T ) * length );
             _size = length;
@@ -564,8 +563,7 @@ namespace sw
 
         // **뺄셈으로 비교한다.** `pos + length` 는 `uint32` 범위에서 오버플로할 수 있다. `npos` 가 아닌 큰 길이가 들어오면
         // (끝과 시작을 거꾸로 뺀 계산 등) 합이 작은 수로 돌아와 아래 `else` 로 빠지고, 거기서 `_arrData + pos + length` 라는
-        // 엉뚱한 주소를 읽는다. `pos < currentSize` 는 위에서 걸렀으므로 이 뺄셈은 안전하다. 형제 함수인 `substr` 은
-        // 처음부터 이 형태였다.
+        // 엉뚱한 주소를 읽는다. `pos < currentSize` 는 위에서 걸렀으므로 이 뺄셈은 안전하다(형제 함수인 `substr` 도 같은 형태다).
         if ( length == npos || length >= currentSize - pos )
         {
             _size           = pos;

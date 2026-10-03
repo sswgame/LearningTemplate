@@ -6,7 +6,7 @@
  *
  * @details `sw::vector<T>` · `small_vector<T, N>` · `sw::array<T, N>` · `std::vector<T>` · `std::array<T, N>` · C 배열 · 포인터 + 개수를
  *          **모두 같은 인자 하나로** 받습니다. `const vector<T>&` 로 받으면 `small_vector` 는 할당자가 달라 다른 타입이라 넘길 수 없고,
- *          `array` 도 마찬가지입니다. 그래서 예전에는 포인터와 개수를 따로 받거나 vector 로 복사해 넘겼습니다.
+ *          `array` 도 마찬가지입니다(포인터와 개수를 따로 받거나 vector 로 복사해 넘기지 않아도 됩니다).
  *          언리얼의 `TArrayView` · `TConstArrayView` 와 같은 자리입니다.
  *
  *          - 읽기만 하면 `vector_reference<const T>`, 원소를 고쳐 쓰면 `vector_reference<T>` 로 받습니다. 쓰기 쪽은 읽기 쪽으로 바뀝니다.
