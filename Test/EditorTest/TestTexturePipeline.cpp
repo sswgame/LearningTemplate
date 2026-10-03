@@ -293,16 +293,17 @@ namespace sw::editor
             TextureSwizzle _swizzle;
             const utf8*    _pName;
             uint8          _arrExpected[4];
+            const utf8*    _pFormat;            ///< 이 배치를 부르는 가져오기 규칙의 포맷 이름
             uint32         _expectedDxgiFormat; ///< sRGB 없이 구운 DDS 가 들고 있어야 할 포맷
         };
 
         // BGRA 와 ARGB 는 **같은 것**이다. D3D9 의 D3DFMT_A8R8G8B8 은 메모리에서 B,G,R,A 이고,
         // DXGI 가 그것을 B8G8R8A8 이라 부른다 — 열거형 주석의 "레거시 ARGB" 가 그 뜻이다.
         const SwizzleCase arrCase[] = {
-            {TextureSwizzle::RGBA, "RGBA",  { 10, 20, 30, 40 }, 28u}, // R8G8B8A8_UNORM
-            {TextureSwizzle::BGRA, "BGRA",  { 30, 20, 10, 40 }, 87u}, // B8G8R8A8_UNORM
-            {TextureSwizzle::ARGB, "ARGB",  { 30, 20, 10, 40 }, 87u}, // 레거시 이름, 같은 배치
-            {TextureSwizzle::RGB1, "RGB1", { 10, 20, 30, 255 }, 28u}, // 알파만 불투명으로
+            {TextureSwizzle::RGBA, "RGBA",  { 10, 20, 30, 40 }, "R8G8B8A8_UNORM", 28u},
+            {TextureSwizzle::BGRA, "BGRA",  { 30, 20, 10, 40 }, "B8G8R8A8_UNORM", 87u},
+            {TextureSwizzle::ARGB, "ARGB",  { 30, 20, 10, 40 }, "B8G8R8A8_UNORM", 87u}, // 레거시 이름, 같은 배치
+            {TextureSwizzle::RGB1, "RGB1", { 10, 20, 30, 255 }, "R8G8B8A8_UNORM", 28u}, // 알파만 불투명으로
         };
 
         for ( const SwizzleCase& testCase : arrCase )
@@ -320,6 +321,25 @@ namespace sw::editor
             for ( size_t channel = 0; channel < 4; ++channel )
             {
                 SW_EXPECT_TRUE_MSG( testCase._arrExpected[channel] == image._bytes[channel], testCase._pName );
+            }
+
+            // 그 배치를 부르는 포맷으로 구우면 DDS 는 그 포맷을 달고 바이트는 섞인 그대로다. 배치와 포맷 이름이 어긋나면
+            // 굽기의 포맷 변환이 바이트를 한 번 더 섞는다.
+            const string sourcePath = test::makeTempPath( string( testCase._pName ) + ".tga" );
+            SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 1, 1, vector<uint8>( arrSourcePixel, arrSourcePixel + 4 ) ) );
+            rule._format         = testCase._pFormat;
+            rule._bSrgb          = SW_FALSE;
+            rule._bGenerateMips  = SW_FALSE;
+            const string ddsPath = test::makeTempPath( string( testCase._pName ) + ".dds" );
+            SW_ASSERT_TRUE_MSG( TextureBaker::bakeTexture( sourcePath, ddsPath, rule ), testCase._pName );
+
+            DdsImageData dds;
+            SW_ASSERT_TRUE_MSG( DdsLoader::loadFromFile( ddsPath, dds ), testCase._pName );
+            SW_EXPECT_TRUE_MSG( testCase._expectedDxgiFormat == dds._dxgiFormat, testCase._pName );
+            SW_ASSERT_TRUE_MSG( dds._bytes.size() == 4, testCase._pName );
+            for ( size_t channel = 0; channel < 4; ++channel )
+            {
+                SW_EXPECT_TRUE_MSG( testCase._arrExpected[channel] == dds._bytes[channel], testCase._pName );
             }
         }
     }
