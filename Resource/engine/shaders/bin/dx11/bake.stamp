@@ -6,7 +6,6 @@ SWBAKE 3
 18912cf2a9b4c732 gbuffer.hlsl
 26f8a5b98197b7ef instancedata.hlsli
 361b476c65945fac forwardlit.hlsl
-44d800bbc65ceb70 gbuffernormal.hlsl
 547cc3a3fdea0ea0 deferredlighting.hlsl
 7be542d929482371 postchain.hlsl
 89ca675f4380c825 lighting.hlsli
@@ -24,4 +23,3 @@ d9ebc7fcf8fd364b shadowdepth.hlsl
 e1458c1a780701b4 instancesort.hlsl
 ea62b823a0e6d198 sprite2d.hlsl
 f7f94bb464a612c8 gpucull.hlsl
-f89775d6dae9c6fa gbufferalbedo.hlsl

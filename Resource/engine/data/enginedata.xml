@@ -6,8 +6,6 @@
             _shaderShadowDepth="engine/shaders/shadowdepth.hlsl"
             _shaderForwardLit="engine/shaders/forwardlit.hlsl"
             _shaderGBuffer="engine/shaders/gbuffer.hlsl"
-            _shaderGBufferAlbedo="engine/shaders/gbufferalbedo.hlsl"
-            _shaderGBufferNormal="engine/shaders/gbuffernormal.hlsl"
             _shaderDeferredLighting="engine/shaders/deferredlighting.hlsl"
             _shaderPostBloom="engine/shaders/postbloom.hlsl"
             _shaderPostOutlineCommon="common/shaders/postoutline.hlsl"

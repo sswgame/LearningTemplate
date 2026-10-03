@@ -518,13 +518,16 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         SW_EXPECT_TRUE( removedTypeIsRejected( "Shading" ) );
         SW_EXPECT_TRUE( removedTypeIsRejected( "PostBloom" ) );
         SW_EXPECT_TRUE( removedTypeIsRejected( "HBAO" ) );
+        // MRT 없는 G버퍼의 단독 PSO 슬롯은 지워졌다 — 네 백엔드가 모두 MRT 를 보장한다.
+        SW_EXPECT_TRUE( removedTypeIsRejected( "GBufferAlbedo" ) );
+        SW_EXPECT_TRUE( removedTypeIsRejected( "GBufferNormal" ) );
         // 철자 대소문자는 리플렉션이 무시하므로 "ToneMap" 은 "Tonemap" 으로 읽힌다 — 의도된 관용이다.
         SW_EXPECT_TRUE( removedTypeIsRejected( "ToneMap" ) == false );
     }
 
-    // 6) 엔진 내부 PSO 슬롯은 XML 패스 타입으로 쓸 수 없다. GBufferAlbedo · GBufferNormal 은 MRT 없는 GBuffer 패스가 쓰는 PSO 일 뿐
-    //    executePass 에 실행 코드가 없다 — XML 이 받아 주면 그 패스는 매 프레임 경고만 남기고 아무것도 그리지 않는다.
-    for ( const utf8* pInternalType : { "GpuCull", "ForwardOpaqueNoDepthWrite", "GBufferAlbedo", "GBufferNormal" } )
+    // 6) 엔진 내부 PSO 슬롯은 XML 패스 타입으로 쓸 수 없다. executePass 에 실행 코드가 없다 — XML 이 받아 주면 그 패스는
+    //    매 프레임 경고만 남기고 아무것도 그리지 않는다.
+    for ( const utf8* pInternalType : { "GpuCull", "ForwardOpaqueNoDepthWrite" } )
     {
         sw::RenderPipelineResource res;
         sw::RenderPipelineDesc&    desc = res.getDesc();
@@ -807,6 +810,12 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
         SW_ASSERT_EQUAL( size_t( 2 ), listColor.size() );
         SW_EXPECT_TRUE( listColor[0]._attachment.view() == "MainAlbedo" );
         SW_EXPECT_TRUE( listColor[1]._attachment.view() == "MainNormal" );
+    }
+    // G버퍼는 알베도 · 노멀 두 컬러를 한 MRT 패스로 쓴다 — 하나뿐이면 Lighting · SSAO 가 읽을 노멀이 없다(MRT 없는 단독 패스 경로는 없다).
+    {
+        sw::RenderPipelineResource res;
+        makePipeline( res, "GBuffer", { "MainAlbedo", "MainDepth" } );
+        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
     }
     // 뎁스만 내는 ForwardOpaque 는 그릴 컬러가 없다 — 검증 오류(예전에는 SceneColor 를 짐작해 열었다).
     {

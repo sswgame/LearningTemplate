@@ -380,46 +380,24 @@ namespace sw
                 case RenderPassType::GBuffer:
                 {
                     // 알베도 · 노멀은 역할로 고른다(첨부의 `_role` 또는 정본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)다.
-                    // 노멀이 없으면 알베도만 그린다.
+                    // 한 MRT 패스로 둘 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 노멀 출력이 없는 G버퍼는 검증이 거부하므로 여기서는 그리지 않는다.
                     const AttachmentNames& names         = attachmentNames();
                     const hashed_string*   pAlbedoTarget = pickColorOutput( RenderPassInputRole::GBufferAlbedo, 0, nullptr );
                     const hashed_string&   albedoTarget  = pAlbedoTarget != nullptr ? *pAlbedoTarget : names._gbufferAlbedo;
                     const hashed_string*   pNormalTarget = pDeclaredColor != nullptr ? pickColorOutput( RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget )
                                                                                      : &names._gbufferNormal;
-                    const float4           clearColor    = getAttachmentClearColorOrDefault( albedoTarget.view(), float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
                     const bool             bHasNormal    = pNormalTarget != nullptr && findTransient( pNormalTarget->view() ) != 0;
-                    const bool             bUseMrt       = bHasNormal && _pDevice->supportsMultiRenderTarget() &&
-                                         getEnginePso( RenderPassType::GBuffer ) != 0;
-                    if ( bUseMrt )
+                    if ( bHasNormal == false || getEnginePso( RenderPassType::GBuffer ) == 0 )
+                        break;
+                    const float4              clearColor   = getAttachmentClearColorOrDefault( albedoTarget.view(), float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+                    const float4              normalClear  = getAttachmentClearColorOrDefault( pNormalTarget->view(), FrameRendererUtil::kNormalClear );
+                    const string_view         arrNames[]   = { albedoTarget.view(), pNormalTarget->view() };
+                    const float4              arrClears[2] = { clearColor, normalClear };
+                    const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget, false ), colorLoadFor( *pNormalTarget, false ) };
+                    if ( beginColorPassMrt( ctx, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth, false ) ) )
                     {
-                        const float4              normalClear  = getAttachmentClearColorOrDefault( pNormalTarget->view(), FrameRendererUtil::kNormalClear );
-                        const string_view         arrNames[]   = { albedoTarget.view(), pNormalTarget->view() };
-                        const float4              arrClears[2] = { clearColor, normalClear };
-                        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget, false ), colorLoadFor( *pNormalTarget, false ) };
-                        if ( beginColorPassMrt( ctx, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth, false ) ) )
-                        {
-                            drawSceneMeshes( ctx, getEnginePso( RenderPassType::GBuffer ), passCb, bTransparentBatch );
-                            ctx._pCmd->endRenderPass();
-                        }
-                    }
-                    else
-                    {
-                        const RHIPipelineStateHandle albedoPso = findPassPso( RenderPassType::GBufferAlbedo );
-                        if ( beginColorPass( ctx, albedoTarget.view(), passDepth.view(), clearColor, colorLoadFor( albedoTarget, false ), colorLoadFor( passDepth, false ) ) )
-                        {
-                            drawSceneMeshes( ctx, albedoPso, passCb, bTransparentBatch );
-                            ctx._pCmd->endRenderPass();
-                        }
-
-                        if ( bHasNormal )
-                        {
-                            const float4 normalClear = getAttachmentClearColorOrDefault( pNormalTarget->view(), FrameRendererUtil::kNormalClear );
-                            if ( beginColorPass( ctx, pNormalTarget->view(), passDepth.view(), normalClear, colorLoadFor( *pNormalTarget, false ), RHIRenderPassLoadOp::Load ) )
-                            {
-                                drawSceneMeshes( ctx, getEnginePso( RenderPassType::GBufferNormal ), passCb, bTransparentBatch );
-                                ctx._pCmd->endRenderPass();
-                            }
-                        }
+                        drawSceneMeshes( ctx, getEnginePso( RenderPassType::GBuffer ), passCb, bTransparentBatch );
+                        ctx._pCmd->endRenderPass();
                     }
                     break;
                 }
@@ -547,8 +525,6 @@ namespace sw
                 }
                 // 실행 코드가 없는 타입: 일반 풀스크린 패스인데 패스 서술이 없거나, PSO 슬롯만 있는 엔진 내부 타입이다.
                 case RenderPassType::Invalid:
-                case RenderPassType::GBufferAlbedo:
-                case RenderPassType::GBufferNormal:
                 case RenderPassType::Lighting:
                 case RenderPassType::SSAO:
                 case RenderPassType::Bloom:

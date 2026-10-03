@@ -76,20 +76,6 @@ namespace sw
                         traits._flags            = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
                         break;
                     }
-                    case RenderPassType::GBufferAlbedo:
-                    {
-                        // MRT 를 못 쓰는 디바이스의 G버퍼 알베도 단독 패스다.
-                        traits._pDefaultShader  = &EngineData::_shaderGBufferAlbedo;
-                        traits._psoFallbackType = RenderPassType::GBuffer;
-                        traits._flags           = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
-                        break;
-                    }
-                    case RenderPassType::GBufferNormal:
-                    {
-                        traits._pDefaultShader = &EngineData::_shaderGBufferNormal;
-                        traits._flags          = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
-                        break;
-                    }
                     case RenderPassType::Lighting:
                     {
                         traits._pDefaultShader = &EngineData::_shaderDeferredLighting;

@@ -44,10 +44,6 @@ namespace sw
         PROPERTY()
         string _shaderGBuffer{ "engine/shaders/gbuffer.hlsl" };
         PROPERTY()
-        string _shaderGBufferAlbedo{ "engine/shaders/gbufferalbedo.hlsl" };
-        PROPERTY()
-        string _shaderGBufferNormal{ "engine/shaders/gbuffernormal.hlsl" };
-        PROPERTY()
         string _shaderDeferredLighting{ "engine/shaders/deferredlighting.hlsl" };
         PROPERTY()
         string _shaderPostBloom{ "engine/shaders/postbloom.hlsl" };

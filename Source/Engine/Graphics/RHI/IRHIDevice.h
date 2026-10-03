@@ -165,9 +165,6 @@ namespace sw
          */
         virtual bool supportsNativeBindlessSampling() const { return false; }
 
-        /** @brief beginRenderPass 에서 컬러 RT 여러 개를 동시에 바인딩할 수 있는지 반환합니다(MRT G버퍼 등). */
-        virtual bool supportsMultiRenderTarget() const { return true; }
-
         /**
          * @brief 그래픽스 VS 가 GPUScene 인스턴스 구조버퍼(SwInstanceData)를 읽을 수 있으면 true 를 반환합니다.
          * @details true 면 FrameRenderer 가 인스턴스 버퍼를 걸고 배치를 drawIndirect(멀티 드로우)로 그리며, 인스턴스마다의
