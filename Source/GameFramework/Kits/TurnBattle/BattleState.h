@@ -13,7 +13,7 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) 페이즈 · 명령 — Intro → 선택 → 양쪽 Resolve → Ended
+    // 1) 페이즈 — Intro → 선택 → 양쪽 Resolve → Ended
     // ------------------------------------------------------------------------------
     /** @brief 턴제 전투 페이즈입니다. */
     enum class BattlePhase : uint8
@@ -24,15 +24,6 @@ namespace sw
         ResolvePlayer,
         ResolveFoe,
         Ended
-    };
-
-    /** @brief 플레이어가 고른 한 턴 명령입니다. */
-    enum class BattleCommand : uint8
-    {
-        None = 0,
-        FightMove0,
-        FightMove1,
-        Run
     };
 
     // ------------------------------------------------------------------------------
@@ -95,7 +86,6 @@ namespace sw
         float32                               _phaseTimer; ///< 현재 페이즈 남은 시간
         fixed_string<constant::kMaxBuffer256> _statusText; ///< HUD 한 줄
         BattlePhase                           _phase;
-        BattleCommand                         _pendingCmd;
         uint8                                 _bPlayerWon : 1;
         [[maybe_unused]] uint8                _reserved   : 7;
     };

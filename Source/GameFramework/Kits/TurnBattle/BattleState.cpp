@@ -21,7 +21,6 @@ namespace sw
         , _phaseTimer{ 0.0f }
         , _statusText{}
         , _phase{ BattlePhase::Inactive }
-        , _pendingCmd{ BattleCommand::None }
         , _bPlayerWon{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -41,7 +40,6 @@ namespace sw
         _foe                           = pCatalog != nullptr ? pCatalog->makeWild( pFoeSpeciesId, playerLead._level ) : PartyMember{};
         _phase                         = BattlePhase::Intro;
         _phaseTimer                    = 0.55f;
-        _pendingCmd                    = BattleCommand::None;
         _bPlayerWon                    = SW_FALSE;
         formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.wild_appeared", "A wild %# appeared!" ),
                       _foe._nickname.c_str() );
