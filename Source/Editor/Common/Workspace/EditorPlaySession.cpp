@@ -3,7 +3,6 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/Uuid/Uuid.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -48,10 +47,7 @@ namespace sw::editor
                 data._sceneName             = pScene->getName();
                 data._sceneSourcePath       = pScene->getSourcePath();
 
-                GameObjectManager* pObjects = pScene->getObjectManager();
-                EditorContext*     pContext = EditorContext::get();
-                // 예전에는 여기서 getAllGameObjects() 를 두 번 불렀다. 개수를 세려고 한 번, 순회하려고 한 번이다.
-                // 값으로 반환하는 함수라 씬 전체를 두 번 할당하고 복사했다.
+                GameObjectManager*  pObjects = pScene->getObjectManager();
                 vector<GameObject*> listAllObject;
                 pObjects->getAllGameObjects( listAllObject );
                 data._listSnapshot.reserve( listAllObject.size() );
@@ -65,8 +61,6 @@ namespace sw::editor
                     entry._identity   = ObjectStateSerializer::captureIdentity( pObj );
                     entry._name       = pObj->getName().c_str();
                     entry._prefabPath = pScene->getEntityPrefabPath( entry._identity._objectId );
-                    if ( pContext != nullptr )
-                        entry._guid = pContext->getWorkspace().getOrAssignGuid( entry._identity._objectId );
 
                     if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes ) )
                         data._listSnapshot.push_back( std::move( entry ) );
@@ -105,8 +99,6 @@ namespace sw::editor
                     return;
                 }
 
-                EditorContext* pContext = EditorContext::get();
-
                 // 1. 플레이 도중 생성된 오브젝트 파괴
                 {
                     unordered_set<uint64> uniqueSnapIds;
@@ -136,8 +128,6 @@ namespace sw::editor
                 for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
                 {
                     GameObject* pObj = pObjects->findGameObjectById( snap._identity._objectId );
-                    if ( pObj == nullptr && snap._guid.isNull() == false && pContext != nullptr )
-                        pObj = pContext->getWorkspace().findGameObjectByGuid( snap._guid );
 
                     // 플레이 중에 사라진 오브젝트는 원래 id 로 되살린다. 플레이 전에 들고 있던 핸들이 이어지게 하기 위해서다.
                     if ( pObj == nullptr )
@@ -150,8 +140,6 @@ namespace sw::editor
                         }
                     }
 
-                    if ( snap._guid.isNull() == false && pContext != nullptr )
-                        pContext->getWorkspace().setGuid( pObj->getObjectId(), snap._guid );
                     if ( snap._prefabPath.empty() == false && pScene != nullptr )
                         pScene->setEntityPrefabPath( pObj->getObjectId(), snap._prefabPath );
 

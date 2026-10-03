@@ -39,8 +39,6 @@ namespace sw::editor
         , _pendingSceneMutex{}
         , _arrCameraBookmark{}
         , _listPrefabIsolationFrame{}
-        , _mapObjectIdToGuid{}
-        , _mapGuidToObjectId{}
         , _pendingSceneAction{ EditorPendingSceneAction::None }
         , _gizmoOperation{ 0 }
         , _bGizmoLocalSpace{ SW_TRUE }
@@ -324,93 +322,5 @@ namespace sw::editor
     {
         _listPrefabIsolationFrame.clear();
         _bPrefabIsolation = SW_FALSE;
-    }
-
-    Uuid EditorWorkspace::getOrAssignGuid( uint64 objectId )
-    {
-        if ( objectId == 0 )
-            return Uuid{};
-
-        const auto it = _mapObjectIdToGuid.find( objectId );
-        if ( it != _mapObjectIdToGuid.end() )
-            return it->second;
-
-        const Uuid newGuid           = Uuid::generate();
-        _mapObjectIdToGuid[objectId] = newGuid;
-        _mapGuidToObjectId[newGuid]  = objectId;
-        return newGuid;
-    }
-
-    Uuid EditorWorkspace::getGuid( uint64 objectId ) const
-    {
-        if ( objectId == 0 )
-            return Uuid{};
-
-        const auto it = _mapObjectIdToGuid.find( objectId );
-        if ( it != _mapObjectIdToGuid.end() )
-            return it->second;
-        return Uuid{};
-    }
-
-    void EditorWorkspace::setGuid( uint64 objectId, const Uuid& guid )
-    {
-        if ( objectId == 0 || guid.isNull() )
-            return;
-
-        // **양쪽을 모두 끊어야 두 표가 서로의 역으로 남는다.** 예전에는 "이 오브젝트가 들고 있던
-        // 옛 guid" 만 끊고 "이 guid 를 들고 있던 옛 오브젝트" 는 그대로 뒀다. 그러면 옛 오브젝트가
-        // 계속 이 guid 를 가졌다고 답하는데(`getGuid`) 정작 guid 로 찾으면 새 오브젝트가 나온다.
-        // 되돌리기가 **엉뚱한 오브젝트에** 적용되는 경로다. 되돌리기로 오브젝트를 되살릴 때
-        // (`EditorTransaction` 의 recreate) 같은 guid 를 새 오브젝트에 다시 붙이므로 실제로 지나간다.
-        const auto itOldGuid = _mapObjectIdToGuid.find( objectId );
-        if ( itOldGuid != _mapObjectIdToGuid.end() )
-            _mapGuidToObjectId.erase( itOldGuid->second );
-
-        const auto itOldOwner = _mapGuidToObjectId.find( guid );
-        if ( itOldOwner != _mapGuidToObjectId.end() )
-            _mapObjectIdToGuid.erase( itOldOwner->second );
-
-        _mapObjectIdToGuid[objectId] = guid;
-        _mapGuidToObjectId[guid]     = objectId;
-    }
-
-    uint64 EditorWorkspace::findObjectIdByGuid( const Uuid& guid ) const
-    {
-        if ( guid.isNull() )
-            return 0;
-
-        const auto it = _mapGuidToObjectId.find( guid );
-        if ( it != _mapGuidToObjectId.end() )
-            return it->second;
-        return 0;
-    }
-
-    GameObject* EditorWorkspace::findGameObjectByGuid( const Uuid& guid ) const
-    {
-        const uint64 objectId = findObjectIdByGuid( guid );
-        if ( objectId == 0 )
-            return nullptr;
-
-        Scene* pScene = editor::getActiveScene();
-        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
-            return nullptr;
-
-        return pScene->getObjectManager()->findGameObjectById( objectId );
-    }
-
-    void EditorWorkspace::removeGuid( uint64 objectId )
-    {
-        const auto it = _mapObjectIdToGuid.find( objectId );
-        if ( it != _mapObjectIdToGuid.end() )
-        {
-            _mapGuidToObjectId.erase( it->second );
-            _mapObjectIdToGuid.erase( it );
-        }
-    }
-
-    void EditorWorkspace::clearGuidMap()
-    {
-        _mapObjectIdToGuid.clear();
-        _mapGuidToObjectId.clear();
     }
 } // namespace sw::editor

@@ -7,7 +7,6 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Uuid/Uuid.h"
 
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
@@ -36,7 +35,6 @@ namespace sw::editor
          */
         struct ObjectSnapshot
         {
-            Uuid           _guid{};
             ObjectIdentity _identity;
             string         _name;
             vector<uint8>  _bytes;
