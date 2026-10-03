@@ -176,7 +176,7 @@ function(sw_addModuleEngineStamp TARGET_NAME)
 // 리눅스에서는 이 상수의 주소로 의존 모듈이 어느 이미지에 묶였는지 가립니다.
 #include \"@SW_ENGINE_ABI_STAMP_HEADER@\"
 
-#if defined( _WIN32 )
+#if defined( SW_PLATFORM_WINDOWS ) // 플랫폼은 CMake 의 SW_PLATFORM_* 로 묻는다 (Core/Common/TargetMacroCheck.h)
     #define SW_MODULE_ENGINE_STAMP_EXPORT __declspec( dllexport )
 #else
     #define SW_MODULE_ENGINE_STAMP_EXPORT __attribute__( ( visibility( \"default\" ) ) )

@@ -9,7 +9,7 @@
 
 #include "GameFramework/Base/SaveGame.h"
 
-#if defined( __clang__ )
+#if defined( SW_COMPILER_CLANG )
     // `executeNode` 의 switch 는 `DialogueAssetNodeType` 을 빠짐없이 적는다. 이 저장소는 `default:` 를 요구하므로(-Wswitch-default)
     // -Wswitch 는 빠진 종류를 짚지 못한다 — 이 파일만 -Wswitch-enum 을 오류로 켜서, 종류를 늘리고 여기를 빠뜨리면 빌드가 선다.
     #pragma clang diagnostic push
@@ -494,6 +494,6 @@ namespace sw
     }
 } // namespace sw
 
-#if defined( __clang__ )
+#if defined( SW_COMPILER_CLANG )
     #pragma clang diagnostic pop
 #endif

@@ -8,7 +8,7 @@
 // 1) Windows — NOMINMAX · WIN32_LEAN_AND_MEAN 을 정의한 뒤 SDK 헤더
 // ------------------------------------------------------------------------------
 
-#if defined( SW_PLATFORM_WINDOWS ) || defined( _WIN32 ) || defined( _WIN64 )
+#if defined( SW_PLATFORM_WINDOWS )
     #if !defined( NOMINMAX )
         /** @brief Windows.h 의 min/max 매크로를 막습니다. */
         #define NOMINMAX
@@ -33,7 +33,7 @@
 // ------------------------------------------------------------------------------
 // 2) POSIX — Linux / macOS 공통 + 플랫폼별
 // ------------------------------------------------------------------------------
-#elif defined( SW_PLATFORM_LINUX ) || defined( __linux__ ) || defined( SW_PLATFORM_MACOS ) || defined( __APPLE__ )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_MACOS )
     #include <cxxabi.h>
     #include <dirent.h>
     #include <dlfcn.h>

@@ -38,17 +38,10 @@ namespace sw
 
     #if defined( SW_PLATFORM_LINUX )
             const ucontext_t* pContext = static_cast<const ucontext_t*>( pPlatformContext );
-        #if defined( __x86_64__ )
+        #if defined( SW_X64 )
             return reinterpret_cast<void*>( pContext->uc_mcontext.gregs[REG_RIP] );
-        #elif defined( __i386__ )
-            return reinterpret_cast<void*>( pContext->uc_mcontext.gregs[REG_EIP] );
-        #elif defined( __aarch64__ )
+        #elif defined( SW_ARM64 )
             return reinterpret_cast<void*>( pContext->uc_mcontext.pc );
-        #elif defined( __arm__ )
-            return reinterpret_cast<void*>( pContext->uc_mcontext.arm_pc );
-        #else
-            (void)pContext;
-            return nullptr;
         #endif
     #else
             // macOS 의 폴트 PC 추출은 아직 없다(Darwin 의 mcontext 는 구조가 다르다). 없으면 앞부분 잘라 내기만 건너뛰고

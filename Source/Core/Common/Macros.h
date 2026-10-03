@@ -21,22 +21,22 @@
 
 // ------------------------------------------------------------------------------
 // 2) 디버그 브레이크 — 어서션이 실패하면 디버거에서 멈춘다
+//    MSVC 확장(`__debugbreak` · `__FUNCSIG__` · `__forceinline` · `__declspec`)을 쓸 수 있는지는 SW_PLATFORM_WINDOWS 로 묻는다.
+//    Windows 는 MS ABI 툴체인(cl · clang-cl)만 짓고(TargetMacroCheck.h), clang-cl 은 SW_COMPILER_CLANG 이라 SW_COMPILER_MSVC 로는 물을 수 없다.
 // ------------------------------------------------------------------------------
-#if defined( _MSC_VER )
-    /** @brief MSVC 디버거 브레이크입니다. */
+#if defined( SW_PLATFORM_WINDOWS )
+    /** @brief MSVC 확장 디버거 브레이크입니다(cl · clang-cl). */
     #define SW_DEBUG_BREAK() __debugbreak()
-#elif defined( __clang__ ) || defined( __GNUC__ ) || defined( __GNUG__ )
+#else
     /** @brief Clang/GCC 트랩입니다. */
     #define SW_DEBUG_BREAK() __builtin_trap()
-#else
-    #error "SW_DEBUG_BREAK is not supported on this compiler or platform."
 #endif
 
 // ------------------------------------------------------------------------------
 // 3) 함수 시그니처 — 컴파일러별 pretty name
 // ------------------------------------------------------------------------------
-#ifdef _MSC_VER
-    /** @brief MSVC 함수 시그니처 문자열입니다. */
+#if defined( SW_PLATFORM_WINDOWS )
+    /** @brief MSVC 확장 함수 시그니처 문자열입니다(cl · clang-cl). */
     #define SW_FUNCTION_SIGNATURE __FUNCSIG__
 #else
     /** @brief Clang/GCC 의 함수 시그니처 문자열입니다(__PRETTY_FUNCTION__). */
@@ -191,7 +191,7 @@ namespace sw::internal
 // 하나가 된다. 매크로가 이름공간까지 붙여 부르므로 쓰는 쪽은 달라지지 않는다.
 namespace sw
 {
-#ifdef __clang__
+#if defined( SW_COMPILER_CLANG )
     /** @brief 배열 참조로부터 크기가 "원소 수 + 1" 인 배열 타입을 추론합니다(Clang). */
     template <typename T SW_REQUIRES( __is_array( T ) )>
     auto arrayCountHelper( T& t ) -> utf8 ( & )[sizeof( t ) / sizeof( t[0] ) + 1];
@@ -208,55 +208,42 @@ namespace sw
 // ------------------------------------------------------------------------------
 // 10) 인라인 · 노인라인 · restrict — 핫패스 최적화 힌트
 // ------------------------------------------------------------------------------
-#if defined( _MSC_VER )
-    /** @brief 강제 인라인 힌트입니다. */
+#if defined( SW_PLATFORM_WINDOWS )
+    /** @brief 강제 인라인 힌트입니다(MSVC 확장, cl · clang-cl). */
     #define SW_INLINE __forceinline
     /** @brief 인라인 금지 힌트입니다. */
     #define SW_NOINLINE __declspec( noinline )
     /** @brief 이 포인터가 다른 포인터와 겹치지 않는다(no alias)고 컴파일러에 알려 줍니다. */
     #define SW_RESTRICT __restrict
-#elif defined( __GNUC__ ) || defined( __clang__ )
-    /** @brief 강제 인라인 힌트입니다. */
+#else
+    /** @brief 강제 인라인 힌트입니다(Clang/GCC). */
     #define SW_INLINE   inline __attribute__( ( always_inline ) )
     /** @brief 인라인 금지 힌트입니다. */
     #define SW_NOINLINE __attribute__( ( noinline ) )
     /** @brief 이 포인터가 다른 포인터와 겹치지 않는다(no alias)고 컴파일러에 알려 줍니다. */
     #define SW_RESTRICT __restrict__
-#else
-    /** @brief 일반 inline 입니다. */
-    #define SW_INLINE inline
-    /** @brief 인라인 금지 힌트입니다. */
-    #define SW_NOINLINE
-    /** @brief restrict 를 지원하지 않으면 빈 매크로입니다. */
-    #define SW_RESTRICT
 #endif
 
 // ------------------------------------------------------------------------------
-// 11) CPU Pause / Yield — 스핀 대기 힌트 (x86/x64 · ARM/ARM64, 그 밖에는 아무것도 하지 않는다)
+// 11) CPU Pause / Yield — 스핀 대기 힌트 (x64 PAUSE · arm64 YIELD)
 // ------------------------------------------------------------------------------
-#if defined( _MSC_VER )
-    #if defined( _M_IX86 ) || defined( _M_X64 )
+#if defined( SW_X64 )
+    #if defined( SW_PLATFORM_WINDOWS )
         #include <emmintrin.h>
-        /** @brief x86/x64 PAUSE 명령입니다. */
+        /** @brief x64 PAUSE 명령입니다(MSVC intrinsic). */
         #define SW_CPU_PAUSE() _mm_pause()
-    #elif defined( _M_ARM ) || defined( _M_ARM64 ) || defined( _M_ARM64EC )
-        /** @brief ARM/ARM64 YIELD 명령입니다. */
+    #else
+        /** @brief x64 PAUSE — Clang/GCC 내장 함수입니다. */
+        #define SW_CPU_PAUSE() __builtin_ia32_pause()
+    #endif
+#elif defined( SW_ARM64 )
+    #if defined( SW_PLATFORM_WINDOWS )
+        /** @brief arm64 YIELD 명령입니다(MSVC intrinsic). */
         #define SW_CPU_PAUSE() __yield()
     #else
-        #define SW_CPU_PAUSE() ( (void)0 )
-    #endif
-#elif defined( __GNUC__ ) || defined( __clang__ )
-    #if defined( __i386__ ) || defined( __x86_64__ )
-        /** @brief x86/x64 PAUSE — Clang/GCC 내장 함수입니다. */
-        #define SW_CPU_PAUSE() __builtin_ia32_pause()
-    #elif defined( __arm__ ) || defined( __aarch64__ )
-        /** @brief ARM/ARM64 YIELD — 인라인 어셈블리입니다. */
+        /** @brief arm64 YIELD — 인라인 어셈블리입니다. */
         #define SW_CPU_PAUSE() asm volatile( "yield" ::: "memory" )
-    #else
-        #define SW_CPU_PAUSE() ( (void)0 )
     #endif
-#else
-    #define SW_CPU_PAUSE() ( (void)0 )
 #endif
 
 namespace sw
@@ -264,10 +251,9 @@ namespace sw
     /**
      * @brief 스핀 대기 중에 CPU 에 "기다리는 중" 이라고 알려 줍니다(Pause/Yield).
      * @details
-     * - **x86/x64**: `PAUSE`(`_mm_pause`). 스핀 루프가 파이프라인을 헛돌리는 것을 줄여 전력을 아끼고, 루프를 빠져나올 때
+     * - **x64**: `PAUSE`(`_mm_pause`). 스핀 루프가 파이프라인을 헛돌리는 것을 줄여 전력을 아끼고, 루프를 빠져나올 때
      *   생기는 메모리 순서 위반 페널티를 없앱니다. 같은 코어의 다른 하이퍼스레드에 자원을 양보하는 효과도 있습니다.
-     * - **ARM/ARM64**: `yield`. 같은 코어를 나눠 쓰는 다른 스레드에 양보하라는 힌트입니다.
-     * - **그 밖의 아키텍처**: 아무것도 하지 않습니다.
+     * - **arm64**: `yield`. 같은 코어를 나눠 쓰는 다른 스레드에 양보하라는 힌트입니다.
      */
     SW_INLINE void cpuPause() noexcept
     {

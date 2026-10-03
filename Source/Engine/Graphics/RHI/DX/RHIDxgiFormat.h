@@ -83,7 +83,7 @@ namespace sw
      *          없고 유지할 이유도 없습니다. 새 DXGI 포맷이 생기면 Unknown 이 맞는 답입니다. 반대 방향인
      *          toDxgiFormat 은 경고를 그대로 받습니다: RHIFormat 은 **우리 enum** 이라 늘어나면 알려 줘야 합니다.
      */
-    #if defined( __clang__ )
+    #if defined( SW_COMPILER_CLANG )
         #pragma clang diagnostic push
         #pragma clang diagnostic ignored "-Wswitch-enum"
     #endif
@@ -121,7 +121,7 @@ namespace sw
                 return RHIFormat::Unknown;
         }
     }
-    #if defined( __clang__ )
+    #if defined( SW_COMPILER_CLANG )
         #pragma clang diagnostic pop
     #endif
 } // namespace sw

@@ -129,18 +129,16 @@ namespace sw
 
         STACKFRAME64 frame{};
         DWORD        machineType;
-    #if defined( _M_X64 )
+    #if defined( SW_X64 )
         machineType            = IMAGE_FILE_MACHINE_AMD64;
         frame.AddrPC.Offset    = walkContext.Rip;
         frame.AddrFrame.Offset = walkContext.Rbp;
         frame.AddrStack.Offset = walkContext.Rsp;
-    #elif defined( _M_ARM64 )
+    #elif defined( SW_ARM64 )
         machineType            = IMAGE_FILE_MACHINE_ARM64;
         frame.AddrPC.Offset    = walkContext.Pc;
         frame.AddrFrame.Offset = walkContext.Fp;
         frame.AddrStack.Offset = walkContext.Sp;
-    #else
-        return;
     #endif
         frame.AddrPC.Mode    = AddrModeFlat;
         frame.AddrFrame.Mode = AddrModeFlat;

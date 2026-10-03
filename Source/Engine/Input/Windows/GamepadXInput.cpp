@@ -6,7 +6,7 @@
 
 #include "Engine/Input/GamepadButtons.h"
 
-#if defined( _WIN32 )
+#if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
 #endif
 
@@ -16,7 +16,7 @@ namespace sw
     {
         struct GamepadXInputInternal
         {
-#if defined( _WIN32 )
+#if defined( SW_PLATFORM_WINDOWS )
             using PFN_XInputGetState = DWORD( WINAPI* )( DWORD, XINPUT_STATE* );
             using PFN_XInputSetState = DWORD( WINAPI* )( DWORD, XINPUT_VIBRATION* );
 
@@ -113,7 +113,7 @@ namespace sw
             _onConnectionChanged( userIndex, false );
     }
 
-#if defined( _WIN32 )
+#if defined( SW_PLATFORM_WINDOWS )
     void GamepadXInput::pollUser( uint32 userIndex, float32 deltaTime )
     {
         // _prevButtonMask 는 GamepadDevice::onFrameBegin() 이 poll() 을 부르기 직전에 이미 갱신한다.

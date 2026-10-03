@@ -83,7 +83,7 @@ namespace sw
          */
         [[nodiscard]] static SW_INLINE uint32 countTrailingZeros( uint64 value ) noexcept
         {
-#if defined( __clang__ ) || defined( __GNUC__ )
+#if defined( SW_COMPILER_CLANG ) || defined( SW_COMPILER_GCC )
             return static_cast<uint32>( __builtin_ctzll( value ) );
 #else
             uint32 index = 0;

@@ -154,9 +154,9 @@ namespace sw
         uint32 result{ 0 };
         for ( const BlockType& block : _listBlock )
         {
-#if defined( _MSC_VER ) && ( defined( _M_X64 ) || defined( _M_AMD64 ) )
-            result += static_cast<uint32>( __popcnt64( block ) );
-#elif defined( __GNUC__ ) || defined( __clang__ )
+#if defined( SW_PLATFORM_WINDOWS ) && defined( SW_X64 )
+            result += static_cast<uint32>( __popcnt64( block ) ); // MSVC 확장 intrinsic(cl · clang-cl), x64 전용
+#elif defined( SW_COMPILER_CLANG ) || defined( SW_COMPILER_GCC )
             result += static_cast<uint32>( __builtin_popcountll( block ) );
 #else
             BlockType targetBlock = block;
