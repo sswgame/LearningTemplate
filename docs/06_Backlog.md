@@ -131,7 +131,6 @@ cd build/Ninja-Debug/Bin
 
 - **에디터 자체 시험(`SW_EDITOR_SELF_TEST`)이 입력을 흉내 내지 못한다** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 툴팁 호버 · 드래그 드롭은
   ImGui 입력 이벤트를 넣는 창구(`ImGuiIO::AddMousePosEvent` 류를 프레임 단계에서 주입)가 있어야 덮인다.
-- **`Resource/engine/materials/glassmaterial.material` 에 `.meta` 가 없다** — 열 때마다 `.meta` 가 새로 생긴다. GUID 를 만들어 커밋한다.
 
 - **DPI 150 % 모니터와 모니터 사이 이동을 실물로 보지 않았다.** 96 DPI 기계에서 `-gv_editorUiScale=1.5` 로만 봤다. 글자 선명도 · 창 · 스왑체인 크기 ·
   `io.ConfigDpiScaleFonts` · `ConfigDpiScaleViewports` 를 본다.
