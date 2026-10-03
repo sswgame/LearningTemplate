@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include <lz4.h>
 #include <lz4hc.h>
@@ -56,7 +57,14 @@ namespace sw
         // level 0 = 기본 속도 경로, 1 이상 = HC(고압축). 해제 속도는 둘이 같다.
         int32 written{ 0 };
         if ( compressionLevel > 0 )
-            written = LZ4_compress_HC( pSrcBytes, pDstBytes, srcBytes, dstBytes, compressionLevel );
+        {
+            // HC 는 상태(~256 KB)를 힙에 둔다. LZ4_compress_HC 는 그것을 CRT malloc 으로 잡으므로 상태를 sw 할당자로 잡아 넘긴다.
+            void* pState = Memory::allocate( static_cast<size_t>( LZ4_sizeofStateHC() ) );
+            if ( pState == nullptr )
+                return false;
+            written = LZ4_compress_HC_extStateHC( pState, pSrcBytes, pDstBytes, srcBytes, dstBytes, compressionLevel );
+            Memory::free( pState );
+        }
         else
             written = LZ4_compress_default( pSrcBytes, pDstBytes, srcBytes, dstBytes );
 

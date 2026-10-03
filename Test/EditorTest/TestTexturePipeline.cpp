@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/MemoryProfiler.h"
 
 #include "Editor/Common/Asset/ImageUtil.h"
 #include "Editor/Common/Asset/TextureBaker.h"
@@ -683,6 +684,41 @@ namespace sw::editor
         SW_EXPECT_EQUAL( 0u, summary._bakedCount );
         SW_EXPECT_EQUAL( size_t( 1 ), summary._listProblem.size() );
         SW_EXPECT_FALSE( FileUtil::fileExists( FileUtil::joinPath( resourceRoot, "engine/textures/sky.dds" ) ) );
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] stb_image 의 디코드 버퍼는 sw 할당자로 잡혀 그때의 메모리 태그로 세인다
+     * @details 64x64 RGBA TGA 를 읽으면 stb 가 16 KB 디코드 버퍼를 잡고(`STBI_MALLOC`) 결과를 `RawImageData` 로 16 KB 더 복사한다. stb 가 CRT malloc 을
+     *          쓰면 태그 줄에는 복사본 몫만 늘어난다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, ImageDecodeBufferIsTagged )
+    {
+        if constexpr ( kMemoryTagScopesEnabled == false )
+            SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+        const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+        if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
+            SW_TEST_SKIP( "no tracking memory profiler in this host" );
+
+        constexpr uint32 kSide       = 64;
+        constexpr size_t kPixelBytes = static_cast<size_t>( kSide ) * kSide * 4;
+        // 무압축 트루컬러 TGA: 18 바이트 머리 + BGRA 픽셀(위에서 아래로).
+        vector<uint8> tgaBytes( 18 + kPixelBytes, uint8{ 0x7F } );
+        Memory::set( tgaBytes.data(), 0, 18 );
+        tgaBytes[2]  = 2;
+        tgaBytes[12] = static_cast<uint8>( kSide );
+        tgaBytes[14] = static_cast<uint8>( kSide );
+        tgaBytes[16] = 32;
+        tgaBytes[17] = 0x28;
+
+        const uint64 totalBefore = pProfiler->getStats( MemoryTag::Animation )._totalAllocatedBytes.load();
+        RawImageData image;
+        {
+            SW_MEMORY_SCOPE( Animation );
+            SW_ASSERT_TRUE( ImageUtil::loadImageFromMemory( tgaBytes.data(), tgaBytes.size(), image ) );
+        }
+        const uint64 totalGrowth = pProfiler->getStats( MemoryTag::Animation )._totalAllocatedBytes.load() - totalBefore;
+        SW_EXPECT_EQUAL( static_cast<int32>( kSide ), image._width );
+        SW_EXPECT_TRUE_MSG( totalGrowth >= 2 * kPixelBytes, ( string( "Animation bytes allocated while decoding: " ) + to_string( totalGrowth ) ).c_str() );
     }
 
 } // namespace sw::editor

@@ -10,6 +10,9 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Compression/Lz4CompressionCodec.h"
+#include "Engine/Compression/ZlibCompressionCodec.h"
+#include "Engine/Compression/ZstdCompressionCodec.h"
 #include "Engine/EngineStartupSequence.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
@@ -274,4 +277,56 @@ SW_TEST_CASE( MemoryTagTest, JsonDocumentParseIsTagged )
     }
     SW_EXPECT_TRUE_MSG( animationHeld >= jsonText.size(), ( sw::string( "Animation bytes held by the document: " ) + sw::to_string( animationHeld ) ).c_str() );
     SW_EXPECT_TRUE( getLiveBytes( *pProfiler, sw::MemoryTag::Animation ) < animationBefore + jsonText.size() );
+}
+
+/**
+ * @brief [MemoryTagTest] 압축 코덱(zlib · zstd · LZ4 HC)의 작업 공간은 sw 할당자로 잡혀 그때의 태그로 세인다
+ * @details deflate · inflate 상태와 창, zstd 압축 · 해제 문맥, LZ4 HC 상태는 모두 수십~수백 KB 다. `compress2` · `ZSTD_compress` · `LZ4_compress_HC` 처럼
+ *          라이브러리가 CRT malloc 으로 잡게 두면 태그 줄은 움직이지 않는다.
+ */
+SW_TEST_CASE( MemoryTagTest, CompressionWorkspacesAreTagged )
+{
+    if constexpr ( sw::kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
+    if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
+        SW_TEST_SKIP( "no tracking memory profiler in this host" );
+
+    sw::vector<uint8> listSource( 64 * 1024 );
+    for ( size_t index = 0; index < listSource.size(); ++index )
+    {
+        listSource[index] = static_cast<uint8>( ( index * 7 ) % 251 );
+    }
+
+    sw::ZlibCompressionCodec zlibCodec;
+    sw::ZstdCompressionCodec zstdCodec;
+    sw::Lz4CompressionCodec  lz4Codec;
+    struct CodecCase
+    {
+        sw::ICompressionCodec* _pCodec;
+        int32                  _level;
+    };
+    const CodecCase arrCase[] = {
+        {&zlibCodec, 0},
+        {&zstdCodec, 0},
+        { &lz4Codec, 9}
+    };
+    for ( const CodecCase& codecCase : arrCase )
+    {
+        sw::vector<uint8> listCompressed( codecCase._pCodec->compressBound( listSource.size() ) );
+        sw::vector<uint8> listRestored( listSource.size() );
+        const uint64      totalBefore = getTotalBytes( *pProfiler, sw::MemoryTag::Animation );
+        size_t            compressedSize{ 0 };
+        size_t            restoredSize{ 0 };
+        {
+            SW_MEMORY_SCOPE( Animation );
+            SW_ASSERT_TRUE( codecCase._pCodec->compress( listSource.data(), listSource.size(), listCompressed.data(), listCompressed.size(), compressedSize,
+                                                         codecCase._level ) );
+            SW_ASSERT_TRUE( codecCase._pCodec->decompress( listCompressed.data(), compressedSize, listRestored.data(), listRestored.size(), restoredSize ) );
+        }
+        const uint64 totalGrowth = getTotalBytes( *pProfiler, sw::MemoryTag::Animation ) - totalBefore;
+        SW_EXPECT_EQUAL( listSource.size(), restoredSize );
+        SW_EXPECT_TRUE( sw::Memory::compare( listSource.data(), listRestored.data(), listSource.size() ) == 0 );
+        SW_EXPECT_TRUE_MSG( totalGrowth >= 32 * 1024, ( sw::string( codecCase._pCodec->getCodecName() ) + " workspace bytes: " + sw::to_string( totalGrowth ) ).c_str() );
+    }
 }

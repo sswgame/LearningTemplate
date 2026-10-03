@@ -206,6 +206,34 @@ SW_TEST_CASE( CompressionCodecTest, ExternalCodecRejectsCorruptInput )
 }
 
 /**
+ * @brief [CompressionCodecTest] zlib 은 잘린 입력 · 모자란 대상 버퍼 · 모자란 압축 버퍼를 실패로 알린다
+ * @details 코덱은 `compress2` · `uncompress` 대신 같은 일을 `z_stream` 으로 한다(할당 함수를 sw 할당자로 주기 위해). 두 함수가 실패로 알리던 경우가
+ *          그대로 실패여야 한다 — 잘린 팩 항목을 성공으로 읽으면 뒷부분이 0 인 자산이 올라온다.
+ */
+SW_TEST_CASE( CompressionCodecTest, ZlibReportsTruncatedInputAndShortBuffers )
+{
+    test::ScopedLogSuppressor suppressor;
+
+    const sw::vector<uint8>  listOriginal = makeSampleBuffer( 16 * 1024 );
+    sw::ZlibCompressionCodec zlib;
+
+    sw::vector<uint8> listCompressed( zlib.compressBound( listOriginal.size() ) );
+    size_t            compressedSize{ 0 };
+    SW_ASSERT_TRUE( zlib.compress( listOriginal.data(), listOriginal.size(), listCompressed.data(), listCompressed.size(), compressedSize, 0 ) );
+
+    sw::vector<uint8> listRestored( listOriginal.size() );
+    size_t            restoredSize{ 0 };
+    SW_EXPECT_FALSE( zlib.decompress( listCompressed.data(), compressedSize / 2, listRestored.data(), listRestored.size(), restoredSize ) );
+    SW_EXPECT_FALSE( zlib.decompress( listCompressed.data(), compressedSize, listRestored.data(), listRestored.size() / 2, restoredSize ) );
+    SW_ASSERT_TRUE( zlib.decompress( listCompressed.data(), compressedSize, listRestored.data(), listRestored.size(), restoredSize ) );
+    SW_EXPECT_EQUAL( listOriginal.size(), restoredSize );
+
+    sw::vector<uint8> listTooSmall( compressedSize / 2 );
+    size_t            tooSmallSize{ 0 };
+    SW_EXPECT_FALSE( zlib.compress( listOriginal.data(), listOriginal.size(), listTooSmall.data(), listTooSmall.size(), tooSmallSize, 0 ) );
+}
+
+/**
  * @brief [CompressionCodecTest] 코덱 넷을 같은 데이터로 재서 로그에 남긴다 (선택 근거 자료).
  * @details 단언은 느슨하다 — 기계마다 시간이 다르므로 **숫자를 고정하지 않는다.** 이 케이스의 목적은
  *          "어떤 자리에 무엇을 쓸지" 를 고를 때 볼 실측을 남기는 것이다. 압축률만 순서를 단언한다.

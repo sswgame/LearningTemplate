@@ -8,6 +8,37 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
+namespace sw::editor
+{
+    namespace
+    {
+        /** @brief stb_image 의 할당 훅(`STBI_MALLOC` · `STBI_REALLOC_SIZED` · `STBI_FREE`)입니다. 디코드 버퍼가 sw 할당자를 지나 메모리 태그에 세입니다. */
+        struct ImageUtilInternal
+        {
+            static void* allocate( size_t size ) { return Memory::allocate( size ); }
+
+            /** @brief 새 블록을 잡아 앞쪽 `min( oldSize, newSize )` 바이트를 옮기고 옛 블록을 풉니다. 실패하면 옛 블록을 그대로 두고 nullptr 입니다. */
+            static void* reallocate( void* pOld, size_t oldSize, size_t newSize )
+            {
+                void* pNew = Memory::allocate( newSize );
+                if ( pNew == nullptr )
+                    return nullptr;
+                if ( pOld != nullptr )
+                {
+                    Memory::copy( pNew, pOld, oldSize < newSize ? oldSize : newSize );
+                    Memory::free( pOld );
+                }
+                return pNew;
+            }
+
+            static void free( void* pAddress ) { Memory::free( pAddress ); }
+        };
+    } // namespace
+} // namespace sw::editor
+
+#define STBI_MALLOC( size )                          sw::editor::ImageUtilInternal::allocate( size )
+#define STBI_REALLOC_SIZED( pOld, oldSize, newSize ) sw::editor::ImageUtilInternal::reallocate( pOld, oldSize, newSize )
+#define STBI_FREE( pAddress )                        sw::editor::ImageUtilInternal::free( pAddress )
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
