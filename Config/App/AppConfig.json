@@ -198,6 +198,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_PartyArena",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }

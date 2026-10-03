@@ -49,6 +49,7 @@ sw_addTestExecutable(EngineTest
 		GF_KartRacing
 		GF_MechArena
 		GF_AsymmetricHorror
+		GF_PartyArena
 	LABELS
 		"unit;engine"
 	TIMEOUT
