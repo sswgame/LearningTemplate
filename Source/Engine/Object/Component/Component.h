@@ -101,15 +101,75 @@ namespace sw
     /**
      * @struct SubTickInfo
      * @brief 컴포넌트에 등록된 서브틱 하나의 메타데이터와 선행 조건 정보입니다.
+     * @details 활성은 둘이다. `_bActive` 는 틱 등록부가 읽는 값이라 틱 중이면 틱 뒤에 바뀌고, `_bRunnable` 은 실행 직전에 보는 값이라 틱 중에도
+     *          바로 바뀐다(다른 워커가 쓰므로 원자다). 틱 동안 목록의 모양은 얼어 있어(구조 변경은 미룬다) 원소를 가리켜 써도 된다.
+     *          서브틱 1~63 은 컴포넌트의 원자 마스크가 같은 일을 O(1) 로 한다 — `_bRunnable` 은 64 번부터의 정본이다.
      */
     struct SubTickInfo
     {
-        uint32                _subTickId{ 0 };
-        TickGroup             _group{ TickGroup::DuringPhysics };
-        TickPhase             _phase{ TickPhase::Normal };
-        uint8                 _priority{ 0 };
-        uint8                 _bActive{ SW_TRUE };
+        uint32                _subTickId;
+        TickGroup             _group;
+        TickPhase             _phase;
+        uint8                 _priority;
+        uint8                 _bActive;
+        atomic<uint8>         _bRunnable;
         vector<SubTickHandle> _listPrerequisite;
+
+        SubTickInfo()
+            : _subTickId{ 0 }
+            , _group{ TickGroup::DuringPhysics }
+            , _phase{ TickPhase::Normal }
+            , _priority{ 0 }
+            , _bActive{ SW_TRUE }
+            , _bRunnable{ SW_TRUE }
+            , _listPrerequisite{}
+        {
+        }
+
+        SubTickInfo( const SubTickInfo& other )
+            : _subTickId{ other._subTickId }
+            , _group{ other._group }
+            , _phase{ other._phase }
+            , _priority{ other._priority }
+            , _bActive{ other._bActive }
+            , _bRunnable{ other._bRunnable.load( std::memory_order_relaxed ) }
+            , _listPrerequisite{ other._listPrerequisite }
+        {
+        }
+
+        SubTickInfo( SubTickInfo&& other ) noexcept
+            : _subTickId{ other._subTickId }
+            , _group{ other._group }
+            , _phase{ other._phase }
+            , _priority{ other._priority }
+            , _bActive{ other._bActive }
+            , _bRunnable{ other._bRunnable.load( std::memory_order_relaxed ) }
+            , _listPrerequisite{ std::move( other._listPrerequisite ) }
+        {
+        }
+
+        SubTickInfo& operator=( const SubTickInfo& other )
+        {
+            SubTickInfo copy( other );
+            return *this = std::move( copy );
+        }
+
+        SubTickInfo& operator=( SubTickInfo&& other ) noexcept
+        {
+            _subTickId = other._subTickId;
+            _group     = other._group;
+            _phase     = other._phase;
+            _priority  = other._priority;
+            _bActive   = other._bActive;
+            _bRunnable.store( other._bRunnable.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+            _listPrerequisite = std::move( other._listPrerequisite );
+            return *this;
+        }
+
+        /** @brief 지금 실행해도 되는지 반환합니다(틱 중에 다른 스레드가 바꿀 수 있습니다). */
+        bool isRunnable() const { return _bRunnable.load( std::memory_order_acquire ) == SW_TRUE; }
+        /** @brief 실행 여부를 바로 바꿉니다. 틱 중에도 부를 수 있습니다. */
+        void setRunnable( bool bRunnable ) { _bRunnable.store( bRunnable ? SW_TRUE : SW_FALSE, std::memory_order_release ); }
     };
 
     /**
@@ -262,8 +322,8 @@ namespace sw
          *          부른 순서대로 — 이어서 부른 선행 조건 추가도 등록 뒤에 돈다). 목록은 이 컴포넌트를 틱하는 워커가 읽는데(64 번부터의 활성 · 자기 틱
          *          안의 등록 · 해제), 다른 오브젝트의 틱이 그것을 늘리면 벡터가 다시 잡혀 그 워커가 해제된 메모리를 읽었고 두 워커가 같은 컴포넌트에
          *          등록하면 `push_back` 이 겹쳤다(형제 `setTickGroup` · `setCanEverTick` 은 구조 ⑮ 에서 이미 미뤘다). 미뤄도 핸들은 바로 줍니다.
-         *          서브틱 1~63 의 원자 마스크는 틱 중에 바꾸라고 원자다 — 해제 · 끄기는 마스크를 바로 내려 이번 틱의 남은 항목이 곧바로 건너뛴다
-         *          (64 번부터는 활성이 목록에만 있어 틱 뒤에 바뀐다).
+         *          실행 여부(서브틱 1~63 은 원자 마스크, 64 번부터는 `SubTickInfo::_bRunnable`)는 틱 중에 바꾸라고 원자다 — 해제 · 끄기는 그것을 바로
+         *          내려 이번 틱의 남은 항목이 곧바로 건너뛴다.
          */
         SubTickHandle registerSubTick( TickGroup group, uint32 subTickId, TickPhase phase = TickPhase::Normal, uint8 priority = 0 );
         /** @brief 서브틱 하나의 등록을 해제합니다. 있었으면 true 입니다. 틱 중이면 마스크만 바로 내리고 목록은 틱 직후로 미루며 true(받아 둠)입니다. */
@@ -378,6 +438,8 @@ namespace sw
 
     private:
         bool isSubTickActiveSlow( uint32 subTickId ) const;
+        /** @brief 서브틱의 실행 여부를 바로 바꿉니다 — 1~63 은 원자 마스크, 64 번부터는 목록 원소의 원자 칸입니다. 틱 중에도 부를 수 있습니다. */
+        void setSubTickRunnable( uint32 subTickId, bool bRunnable );
         /**
          * @brief 소유 매니저가 구조 변경을 얼려 두었으면(컴포넌트 틱 중) @p func 를 틱 직후 구조 변경 큐로 미루고 true 를 돌려줍니다. 아니면 false 입니다.
          * @details 핸들로 다시 찾으므로 그 사이 파괴돼도 안전합니다. 틱 설정(그룹 · 틱 여부 · 서브틱)이 `GameObject` 의 setName · addTag 와 같은 규칙을 지킵니다.

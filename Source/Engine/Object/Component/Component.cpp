@@ -106,9 +106,6 @@ namespace sw
         { self.registerSubTick( group, subTickId, phase, priority ); } ) ) )
             return SubTickHandle{ _componentId, subTickId };
 
-        if ( subTickId < 64 )
-            _subTickActiveMask.fetch_or( 1ULL << subTickId, std::memory_order_relaxed );
-
         for ( SubTickInfo& info : _listSubTick )
         {
             if ( info._subTickId == subTickId )
@@ -117,6 +114,7 @@ namespace sw
                 info._phase    = phase;
                 info._priority = priority;
                 info._bActive  = SW_TRUE;
+                setSubTickRunnable( subTickId, true );
                 if ( _pOwner != nullptr )
                     _pOwner->markTickOrderDirty();
                 return SubTickHandle{ _componentId, subTickId };
@@ -130,6 +128,7 @@ namespace sw
         newInfo._priority  = priority;
         newInfo._bActive   = SW_TRUE;
         _listSubTick.push_back( std::move( newInfo ) );
+        setSubTickRunnable( subTickId, true );
 
         if ( _pOwner != nullptr )
             _pOwner->markTickOrderDirty();
@@ -139,9 +138,8 @@ namespace sw
 
     bool Component::unregisterSubTick( uint32 subTickId )
     {
-        // 마스크는 바로 내린다 — 이번 틱의 남은 항목이 곧바로 건너뛴다(원자라 틱 중에 바꿔도 된다). 목록에서 빼는 것은 틱 뒤로.
-        if ( subTickId < 64 )
-            _subTickActiveMask.fetch_and( ~( 1ULL << subTickId ), std::memory_order_relaxed );
+        // 실행 여부는 바로 내린다 — 이번 틱의 남은 항목이 곧바로 건너뛴다(원자라 틱 중에 바꿔도 된다). 목록에서 빼는 것은 틱 뒤로.
+        setSubTickRunnable( subTickId, false );
         if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickId]( Component& self )
         { (void)self.unregisterSubTick( subTickId ); } ) ) )
             return true;
@@ -194,15 +192,9 @@ namespace sw
         if ( subTickId == 0 )
             return;
 
-        // 마스크는 바로 바꾼다 — 틱 중에 끄면 이번 틱의 남은 항목이 곧바로 건너뛴다(원자라 틱 중에 바꿔도 된다). 목록의 값은 틱 뒤로 미루고,
-        // 미룬 호출이 마스크도 다시 적어 틱 안에서 여러 번 바꾼 순서가 그대로 남는다.
-        if ( subTickId < 64 )
-        {
-            if ( bActive )
-                _subTickActiveMask.fetch_or( 1ULL << subTickId, std::memory_order_release );
-            else
-                _subTickActiveMask.fetch_and( ~( 1ULL << subTickId ), std::memory_order_release );
-        }
+        // 실행 여부는 바로 바꾼다 — 틱 중에 끄면 이번 틱의 남은 항목이 곧바로 건너뛴다(원자라 틱 중에 바꿔도 된다). 목록의 값은 틱 뒤로 미루고,
+        // 미룬 호출이 실행 여부도 다시 적어 틱 안에서 여러 번 바꾼 순서가 그대로 남는다.
+        setSubTickRunnable( subTickId, bActive );
         if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickId, bActive]( Component& self )
         { self.setSubTickActive( subTickId, bActive ); } ) ) )
             return;
@@ -224,9 +216,30 @@ namespace sw
         for ( const SubTickInfo& info : _listSubTick )
         {
             if ( info._subTickId == subTickId )
-                return info._bActive == SW_TRUE;
+                return info.isRunnable();
         }
         return false;
+    }
+
+    void Component::setSubTickRunnable( uint32 subTickId, bool bRunnable )
+    {
+        if ( subTickId < 64 )
+        {
+            if ( bRunnable )
+                _subTickActiveMask.fetch_or( 1ULL << subTickId, std::memory_order_release );
+            else
+                _subTickActiveMask.fetch_and( ~( 1ULL << subTickId ), std::memory_order_release );
+            return;
+        }
+        // 틱 중에는 목록의 모양이 얼어 있다(구조 변경은 미룬다) — 다른 워커가 원소의 원자 칸만 쓴다.
+        for ( SubTickInfo& info : _listSubTick )
+        {
+            if ( info._subTickId == subTickId )
+            {
+                info.setRunnable( bRunnable );
+                return;
+            }
+        }
     }
 
     void Component::onDestroy()

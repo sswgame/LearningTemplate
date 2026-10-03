@@ -532,6 +532,67 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickSubTickDeactivationAndCancellat
 }
 
 /**
+ * @brief [ComponentSubTickHybridTest] 서브틱 id 64 번부터도 틱 중에 끄거나 해제하면 이번 틱의 남은 항목이 바로 건너뛴다
+ * @details 1~63 은 컴포넌트의 원자 마스크가 바로 꺼진다. 64 번부터는 활성이 목록 값뿐이라 틱 뒤에야 바뀌어, 같은 틱의 뒤 단계 항목이 그대로
+ *          돌았다 — id 크기에 따라 같은 호출의 결과가 달랐다.
+ */
+SW_TEST_CASE( ComponentSubTickHybridTest, MidTickDeactivationAppliesToHighSubTickIds )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+
+    sw::GameObject* pActorA = manager.createGameObject( sw::hashed_string( "ActorA" ) );
+    sw::GameObject* pActorB = manager.createGameObject( sw::hashed_string( "ActorB" ) );
+
+    auto* pCompA          = pActorA->addComponent<MockMidTickDeactivatorComponent>();
+    pCompA->_componentTag = "A";
+    auto* pCompB          = pActorB->addComponent<MockRootComponent>();
+    pCompB->_componentTag = "B";
+    pCompB->setCanEverTick( false );
+
+    vector<string> listTickOrder;
+    pCompA->_pTickOrderLog = &listTickOrder;
+    pCompB->_pTickOrderLog = &listTickOrder;
+
+    // A_100(Early) 이 돌면서 B_120 을 끄고 자기 A_101(Late) 을 해제한다. B_121(Finalize) 만 남아야 한다.
+    pCompA->registerSubTick( sw::TickGroup::PostPhysics, 100, sw::TickPhase::Early );
+    pCompA->registerSubTick( sw::TickGroup::PostPhysics, 101, sw::TickPhase::Late );
+    pCompB->registerSubTick( sw::TickGroup::PostPhysics, 120, sw::TickPhase::Normal );
+    pCompB->registerSubTick( sw::TickGroup::PostPhysics, 121, sw::TickPhase::Finalize );
+    pCompA->_pTargetComp             = pCompB;
+    pCompA->_targetSubTickId         = 120;
+    pCompA->_selfSubTickToUnregister = 101;
+
+    manager.tick( 0.016f );
+
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listTickOrder.size() );
+    if ( listTickOrder.size() == 2 )
+    {
+        SW_EXPECT_EQUAL( "A_SubTick_100", listTickOrder[0] );
+        SW_EXPECT_EQUAL( "B_SubTick_121", listTickOrder[1] );
+    }
+    SW_EXPECT_FALSE( pCompB->isSubTickActive( 120 ) );
+    SW_EXPECT_FALSE( pCompA->isSubTickActive( 101 ) );
+
+    // 다시 켜면 다음 틱에 돈다.
+    listTickOrder.clear();
+    pCompA->_pTargetComp     = nullptr;
+    pCompA->_targetSubTickId = 0;
+    pCompB->setSubTickActive( 120, true );
+    SW_EXPECT_TRUE( pCompB->isSubTickActive( 120 ) );
+
+    manager.tick( 0.016f );
+
+    SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), listTickOrder.size() );
+    if ( listTickOrder.size() == 3 )
+    {
+        SW_EXPECT_EQUAL( "A_SubTick_100", listTickOrder[0] );
+        SW_EXPECT_EQUAL( "B_SubTick_120", listTickOrder[1] );
+        SW_EXPECT_EQUAL( "B_SubTick_121", listTickOrder[2] );
+    }
+}
+
+/**
  * @brief [ComponentSubTickHybridTest] 부모-자식 계층에서 서브트리 비활성화, 재부모화(Reparenting), 연쇄 파괴 시 서브틱 라이프사이클 검증
  */
 SW_TEST_CASE( ComponentSubTickHybridTest, HierarchySubtreeDeactivationAndReparentingWithSubTicks )
