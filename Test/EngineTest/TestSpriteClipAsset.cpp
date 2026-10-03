@@ -12,8 +12,8 @@
 
 namespace
 {
-    /** @brief 에디터(SpriteClipPanel)가 처음부터 쓰던 꼴 그대로의 파일입니다 — "animations" 가 없습니다. */
-    constexpr const utf8* kLegacyEditorClip = R"({
+    /** @brief 이름 붙은 애니메이션이 없는 클립 파일입니다 — 쓰는 쪽(`SpriteClipAsset::toJson`)은 빈 목록이면 "animations" 키를 쓰지 않습니다. */
+    constexpr const utf8* kClipWithoutAnimations = R"({
   "atlas": "game/empty/textures/hero.dds",
   "frames": [
     { "u": 0.0, "v": 0.0, "w": 0.25, "h": 0.5, "durationMs": 80 },
@@ -28,13 +28,13 @@ namespace
 
 /**
  * @brief [SpriteClipAssetTest] 에디터가 쓰는 클립 파일을 그대로 읽고, 이름 없는 클립은 어떤 이름이든 프레임 전체가 반복 구간이다
- * @details 파서는 런타임 하나다(에디터와 게임이 같이 쓴다). "animations" 키가 없는 파일이 같은 값으로 읽혀야 하고, 다시 쓴 글에도
- *          "animations" 키가 생기지 않아야 한다(읽은 파일과 같은 모양).
+ * @details 파서는 런타임 하나다(에디터와 게임이 같이 쓴다). "animations" 키가 없는 것은 빈 목록을 쓴 지금 형식이라(옛 형식이 아니다) 같은 값으로
+ *          읽혀야 하고, 다시 쓴 글에도 "animations" 키가 생기지 않아야 한다(읽은 파일과 같은 모양).
  */
-SW_TEST_CASE( SpriteClipAssetTest, LegacyEditorFileReadsAsOneWholeClipAnimation )
+SW_TEST_CASE( SpriteClipAssetTest, ClipWithoutAnimationsReadsAsOneWholeClipAnimation )
 {
     sw::SpriteClipAsset clip;
-    SW_ASSERT_TRUE( clip.parseJson( kLegacyEditorClip ) );
+    SW_ASSERT_TRUE( clip.parseJson( kClipWithoutAnimations ) );
     SW_EXPECT_STREQ( "game/empty/textures/hero.dds", clip._atlasPath.c_str() );
     SW_ASSERT_EQUAL( 3, clip.getFrameCount() );
     SW_EXPECT_NEAR_EQUAL( 0.25f, clip._listFrame[1]._uvRect._x, 1e-6f );
@@ -131,7 +131,7 @@ SW_TEST_CASE( SpriteClipAssetTest, MalformedTextIsRejected )
 SW_TEST_CASE( SpriteClipAssetTest, CacheSharesOneClipPerPath )
 {
     const sw::string path = test::makeTempPath( "shared.sprite.json" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, kLegacyEditorClip ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, kClipWithoutAnimations ) );
 
     sw::shared_ptr<const sw::SpriteClipAsset> first  = sw::SpriteClipCache::acquire( path );
     sw::shared_ptr<const sw::SpriteClipAsset> second = sw::SpriteClipCache::acquire( path );
@@ -143,7 +143,7 @@ SW_TEST_CASE( SpriteClipAssetTest, CacheSharesOneClipPerPath )
     first.reset();
     second.reset();
     sw::SpriteClipAsset edited;
-    SW_ASSERT_TRUE( edited.parseJson( kLegacyEditorClip ) );
+    SW_ASSERT_TRUE( edited.parseJson( kClipWithoutAnimations ) );
     edited._listFrame.pop_back();
     SW_ASSERT_TRUE( edited.saveToFile( path ) );
     sw::shared_ptr<const sw::SpriteClipAsset> reloaded = sw::SpriteClipCache::acquire( path );
