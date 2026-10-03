@@ -440,11 +440,7 @@ namespace sw::editor
                 return ImGuiKey_None;
             }
 
-            /**
-             * @brief 이 조합이 이번 프레임에 정확히 눌렸으면 true입니다.
-             * @details 수정자를 **정확히** 비교합니다. 필요한 수정자만 확인하면 Ctrl+Shift+Z 가 undo(Ctrl+Z)까지 함께 발동합니다
-             *          (Shift 가 눌려 있지 않다는 것도 확인해야 합니다).
-             */
+            /** @brief 이 조합이 이번 프레임에 정확히 눌렸으면 true입니다. 수정자 비교는 `EditorCommandRegistry::matchesPressedModifiers` 입니다. */
             static bool isShortcutPressed( const EditorCommandShortcut& shortcut )
             {
                 if ( EditorCommandRegistry::isHandledShortcut( shortcut ) == false )
@@ -454,14 +450,15 @@ namespace sw::editor
                 if ( imKey == ImGuiKey_None )
                     return false;
 
-                const ImGuiIO& io = ImGui::GetIO();
-                // macOS 의 Cmd 는 Ctrl 로 취급한다.
-                const bool bCtrlDown     = ( io.KeyCtrl || io.KeySuper );
-                const bool bRequireCtrl  = ( ( shortcut._modifier & commandmod::kCtrl ) != 0 );
-                const bool bRequireShift = ( ( shortcut._modifier & commandmod::kShift ) != 0 );
-                const bool bRequireAlt   = ( ( shortcut._modifier & commandmod::kAlt ) != 0 );
-
-                if ( bCtrlDown != bRequireCtrl || io.KeyShift != bRequireShift || io.KeyAlt != bRequireAlt )
+                const ImGuiIO& io              = ImGui::GetIO();
+                uint8          pressedModifier = commandmod::kNone;
+                if ( io.KeyCtrl )
+                    pressedModifier |= commandmod::kCtrl;
+                if ( io.KeyShift )
+                    pressedModifier |= commandmod::kShift;
+                if ( io.KeyAlt )
+                    pressedModifier |= commandmod::kAlt;
+                if ( EditorCommandRegistry::matchesPressedModifiers( shortcut, pressedModifier, io.KeySuper ) == false )
                     return false;
 
                 return ImGui::IsKeyPressed( imKey, false );

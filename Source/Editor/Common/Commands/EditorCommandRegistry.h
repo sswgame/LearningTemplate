@@ -203,6 +203,12 @@ namespace sw::editor
         static bool isSameShortcut( const EditorCommandShortcut& lhs, const EditorCommandShortcut& rhs );
         /** @brief 우리가 실제로 처리하는 조합이면 true입니다 (키가 있고 DisplayOnly 가 아닙니다). */
         static bool isHandledShortcut( const EditorCommandShortcut& shortcut );
+        /**
+         * @brief 지금 눌린 수정자 @p pressedModifier(`commandmod` 비트)가 @p shortcut 이 요구하는 것과 **정확히** 같으면 true입니다.
+         * @details 요구하지 않은 수정자가 눌려 있어도 false 입니다 — 필요한 것만 보면 Ctrl+Shift+Z 가 Ctrl+Z(undo)까지 함께 발동합니다.
+         *          Super(Win 키)는 대응하는 수정자가 없어 눌려 있으면 늘 false 입니다(Win+Z 가 Ctrl+Z 로 발동하지 않게).
+         */
+        static bool matchesPressedModifiers( const EditorCommandShortcut& shortcut, uint8 pressedModifier, bool bSuperDown );
 
     private:
         /** @brief `_listCommand` 의 메뉴 경로 · 순서 칸에서 `_listMenu` 를 다시 만듭니다. */

@@ -335,4 +335,12 @@ namespace sw::editor
         const bool bDisplayOnly = ( ( shortcut._modifier & commandmod::kDisplayOnly ) != 0 );
         return bHasKey && bDisplayOnly == false;
     }
+
+    bool EditorCommandRegistry::matchesPressedModifiers( const EditorCommandShortcut& shortcut, uint8 pressedModifier, bool bSuperDown )
+    {
+        if ( bSuperDown )
+            return false;
+        constexpr uint8 kChordMask = commandmod::kCtrl | commandmod::kShift | commandmod::kAlt;
+        return ( shortcut._modifier & kChordMask ) == ( pressedModifier & kChordMask );
+    }
 } // namespace sw::editor

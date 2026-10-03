@@ -165,8 +165,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-4. 에디터
 
-- **에디터 단축키 판정이 `io.KeySuper` 를 Ctrl 로 친다**(`EditorCommandGui.cpp`, macOS Cmd 용으로 넣은 것). macOS 를 지웠으니 Windows 에서 Win 키가 Ctrl 처럼 동작하는
-  셈이다 — 지울지 결정(지우면 동작이 바뀐다).
 - **imgui Vulkan 백엔드가 UI 스레드에서 `vkQueueSubmit` 을 부른다** — 글꼴 아틀라스 업로드(`ImGui_ImplVulkan_UpdateTexture`) · 보조 뷰포트(`RenderPlatformWindowsDefault`)가
   렌더 스레드와 같은 큐에 엔진 `_queueMutex` 밖에서 제출한다(큐 외부 동기화 위반). ImGui 의 아틀라스 파괴(`ImGui_ImplVulkan_DestroyTexture`)도 즉시 해제다.
 

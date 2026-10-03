@@ -224,6 +224,30 @@ SW_TEST_CASE( EditorCommandRegistryTest, DisplayOnlyShortcutIsNeverHandled )
 }
 
 /**
+ * @brief [EditorCommandRegistryTest] 단축키 수정자는 정확히 같아야 하고, Super(Win 키)는 어떤 조합과도 맞지 않는다
+ * @details 필요한 수정자만 보면 Ctrl+Shift+Z 가 Ctrl+Z(undo)까지 함께 발동한다. Super 를 Ctrl 로 치면 Win+Z 가 undo 가 된다 —
+ *          지원하는 플랫폼(Windows · 리눅스)에 Cmd 키는 없다.
+ */
+SW_TEST_CASE( EditorCommandRegistryTest, ShortcutModifiersMustMatchExactly )
+{
+    const EditorCommandShortcut undo{ EditorCommandKey::Z, commandmod::kCtrl };
+    const EditorCommandShortcut redo{ EditorCommandKey::Z, commandmod::kCtrl | commandmod::kShift };
+
+    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmod::kCtrl, false ) );
+    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmod::kCtrl | commandmod::kShift, false ) );
+    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( redo, commandmod::kCtrl | commandmod::kShift, false ) );
+    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmod::kNone, false ) );
+
+    // Super 는 Ctrl 대신이 아니고, Ctrl 과 함께 눌려도 다른 조합이다.
+    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmod::kNone, true ) );
+    SW_EXPECT_FALSE( EditorCommandRegistry::matchesPressedModifiers( undo, commandmod::kCtrl, true ) );
+
+    // DisplayOnly 비트는 수정자 비교에 들지 않는다(처리 여부는 `isHandledShortcut` 이 가린다).
+    const EditorCommandShortcut displayOnly{ EditorCommandKey::F4, commandmod::kAlt | commandmod::kDisplayOnly };
+    SW_EXPECT_TRUE( EditorCommandRegistry::matchesPressedModifiers( displayOnly, commandmod::kAlt, false ) );
+}
+
+/**
  * @brief [EditorCommandRegistryTest] 메뉴 · 항목 순서 · 구분선이 커맨드 표의 메뉴 경로 · 순서 칸에서 나온다
  * @details 메뉴바가 항목을 id 로 손으로 나열하면 커맨드를 더할 때 표와 메뉴바 두 곳을 고쳐야 한다. 표의 경로 · 순서 칸이 메뉴를
  *          만든다 — 등록 순서와 무관하게 순서 칸으로 줄 서고, 백의 자리가 바뀌는 자리에 구분선이 들어가며, 메뉴끼리는 가장 작은 순서로
