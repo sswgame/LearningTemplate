@@ -24,6 +24,7 @@ namespace
     {
         int32          _exitCode{ -1 };
         vector<string> _listMissingComponentLine{}; ///< `MissingComponent` 가 든 줄 — 쿠킹이 모르는 타입을 만난 흔적
+        vector<string> _listProblemLine{};          ///< `[Error]` · `[Warning]` 줄 — 쿠킹이 입력(엔진 데이터 · 프리팹 · 클립)을 읽지 못한 흔적
         bool           _bLaunched{ false };
     };
 
@@ -78,6 +79,8 @@ namespace
         {
             if ( line.find( "MissingComponent" ) != string::npos )
                 result._listMissingComponentLine.push_back( line );
+            if ( line.find( "[Error]" ) != string::npos || line.find( "[Warning]" ) != string::npos )
+                result._listProblemLine.push_back( line );
         }
         result._exitCode = process.waitForExit();
         return result;
@@ -100,4 +103,21 @@ SW_TEST_CASE( AppCookTest, SceneCookBuildsGameFrameworkComponents )
     SW_EXPECT_TRUE_MSG( result._listMissingComponentLine.empty(),
                         result._listMissingComponentLine.empty() ? "" : result._listMissingComponentLine.front().c_str() );
     SW_EXPECT_TRUE( FileUtil::fileExists( FileUtil::joinPath( cookedDir, "game/empty/maps/spriteui.scene.bin" ) ) );
+}
+
+/**
+ * @brief [AppCookTest] 씬 쿠킹은 소스 트리를 읽어 오류 · 경고 없이 끝난다 — 배포 구성도 같다
+ * @details 배포 구성의 쿠킹이 실행처럼 팩만 읽고 느슨한 파일을 막아, 팩이 없는 첫 빌드에서 `engine/data/enginedata.xml` 을 찾지 못했고(오류),
+ *          옮긴 프리팹을 GUID 로 찾지 못해 쿠킹본 `.bin` 을 요구했고(오류), `quadrants.sprite.json` 을 읽지 못했다(경고). 팩이 있는 빌드에서는 지난
+ *          빌드의 팩을 입력으로 읽었다. 쿠킹은 소스 트리를 올린다(`ContentSource::SourceTree`).
+ */
+SW_TEST_CASE( AppCookTest, SceneCookReadsTheSourceTreeCleanly )
+{
+    const string        cookedDir = test::makeTempDirectory( "app_scene_cook_clean" );
+    const CookRunResult result    = runSceneCook( cookedDir );
+
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App could not be launched - is it next to the test binary or in the working folder (Bin)?" );
+    SW_EXPECT_EQUAL( 0, result._exitCode );
+    SW_EXPECT_TRUE_MSG( result._listProblemLine.empty(), result._listProblemLine.empty() ? "" : result._listProblemLine.front().c_str() );
+    SW_EXPECT_TRUE( FileUtil::fileExists( FileUtil::joinPath( cookedDir, "game/empty/prefabs/testprop.prefab.bin" ) ) );
 }

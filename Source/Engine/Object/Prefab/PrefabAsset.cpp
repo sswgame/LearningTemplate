@@ -499,26 +499,35 @@ namespace sw
         if ( binPath.empty() )
             binPath = resolvedPath;
 
+        // 배포 구성은 쿠킹본만 읽는다. 소스 트리를 올린 쿠킹(`ContentSource::SourceTree`)만 소스를 읽는다 — 쿠킹의 입력은 소스다.
 #if defined( SW_SHIPPING )
-        if ( asset->loadFromBinaryFile( binPath ) == false )
-        {
-            SW_LOG_ERROR( "Shipping requires cooked binary: %#", binPath );
-            return nullptr;
-        }
+        const bool bReadsSource = engine::areEngineServicesBound() && engine::getResourceManager().getContentSource() == ContentSource::SourceTree;
 #else
-        const bool bJson         = FileUtil::hasExtension( resolvedPath, ".json" );
-        const bool bSourceLoaded = bJson ? asset->loadFromJsonFile( resolvedPath ) : asset->loadFromXmlFile( resolvedPath );
-        if ( bSourceLoaded == false )
+        constexpr bool bReadsSource = true;
+#endif
+        if ( bReadsSource == false )
         {
             if ( asset->loadFromBinaryFile( binPath ) == false )
+            {
+                SW_LOG_ERROR( "Shipping requires cooked binary: %#", binPath );
                 return nullptr;
-            // Dev 는 소스(XML/JSON)가 기준이다. 여기로 왔다는 것은 소스가 옮겨졌거나 지워졌는데 낡은 쿠킹 산출물
-            // (.gitignore 된 .bin)이 소스 트리에 남아 있다는 뜻이다. 조용히 쓰면 실패가 가려진다(프리팹을 옮기는
-            // 실험에서 옛 .bin 이 "Not found" 를 그대로 삼켰다). 언리얼 · 유니티의 에디터는 쿠킹 데이터를 아예 보지 않는다.
-            // 여기는 폴백을 남기되 두 경로를 다 적어 왜 그 내용이 나왔는지 바로 보이게 한다.
-            SW_LOG_WARNING( "Source prefab missing - loaded stale cooked binary instead: %# (source %#)", binPath, resolvedPath );
+            }
         }
-#endif
+        else
+        {
+            const bool bJson         = FileUtil::hasExtension( resolvedPath, ".json" );
+            const bool bSourceLoaded = bJson ? asset->loadFromJsonFile( resolvedPath ) : asset->loadFromXmlFile( resolvedPath );
+            if ( bSourceLoaded == false )
+            {
+                if ( asset->loadFromBinaryFile( binPath ) == false )
+                    return nullptr;
+                // Dev 는 소스(XML/JSON)가 기준이다. 여기로 왔다는 것은 소스가 옮겨졌거나 지워졌는데 낡은 쿠킹 산출물
+                // (.gitignore 된 .bin)이 소스 트리에 남아 있다는 뜻이다. 조용히 쓰면 실패가 가려진다(프리팹을 옮기는
+                // 실험에서 옛 .bin 이 "Not found" 를 그대로 삼켰다). 언리얼 · 유니티의 에디터는 쿠킹 데이터를 아예 보지 않는다.
+                // 여기는 폴백을 남기되 두 경로를 다 적어 왜 그 내용이 나왔는지 바로 보이게 한다.
+                SW_LOG_WARNING( "Source prefab missing - loaded stale cooked binary instead: %# (source %#)", binPath, resolvedPath );
+            }
+        }
 
         std::unique_lock<std::shared_mutex> writeLock{ _mapCacheMutex };
         const auto                          cacheIt = _mapCache.find( cacheKey );

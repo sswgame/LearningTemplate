@@ -1002,3 +1002,22 @@ SW_TEST_CASE( ResourceTest, EveryPathTheEditorHoldsBecomesOneResourceId )
     }
     SW_EXPECT_TRUE( sw::ResourceUtil::getWritePath( "game/empty/new_file.txt" ).empty() == false );
 }
+
+/**
+ * @brief [ResourceTest] 쿠킹이 올리는 소스 트리 콘텐츠(`ContentSource::SourceTree`)는 팩을 마운트하지 않고 느슨한 소스 파일을 읽는다 — 배포 구성도 같다
+ * @details 배포 구성의 씬 쿠킹(`App --cook-scenes`)이 실행과 같이 팩을 마운트하고 느슨한 파일을 막았다. 팩은 쿠킹의 산출물이라 첫 빌드에서는
+ *          아무것도 없어 `enginedata.xml` · 옮긴 프리팹(GUID 표) · `quadrants.sprite.json` 을 읽지 못했고, 다음 빌드부터는 지난 빌드의 팩을 입력으로
+ *          읽었다. 배포 구성에서는 실행 파일 옆에 팩이 있으므로 이 시험이 그것을 마운트하지 않는지까지 본다.
+ */
+SW_TEST_CASE( ResourceTest, SourceTreeContentMountsNoPackAndReadsLooseFiles )
+{
+    sw::ResourceManager resources;
+    SW_ASSERT_TRUE( resources.initialize() );
+    SW_EXPECT_TRUE( resources.getContentSource() == sw::ContentSource::Cooked );
+
+    SW_EXPECT_FALSE( resources.mountContent( {}, sw::ContentSource::SourceTree ) );
+    SW_EXPECT_TRUE( resources.getContentSource() == sw::ContentSource::SourceTree );
+    SW_EXPECT_EQUAL( size_t( 0 ), resources.getPackManager().getMountedPackCount() );
+    SW_EXPECT_TRUE( resources.getPackManager().isAllowLooseFiles() );
+    resources.shutdown();
+}

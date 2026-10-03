@@ -29,6 +29,7 @@ namespace sw
         , _spriteClipCache{ make_unique<SpriteClipCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _registeredAssetCache{}
+        , _contentSource{ ContentSource::Cooked }
     {
         // 내장 캐시도 **등록부를 통해서만** 훑는다 — 이름으로 캐시를 적는 경로를 따로 두지 말 것.
         registerAssetCache( _materialCache.get() );
@@ -51,14 +52,20 @@ namespace sw
         return true;
     }
 
-    bool ResourceManager::mountContent( const vector<string>& listSearchPriority )
+    bool ResourceManager::mountContent( const vector<string>& listSearchPriority, ContentSource source )
     {
         // 우선순위 적용과 마운트를 **여기서 붙여 둔다.** 둘을 호출자에게 맡기면 순서를 뒤집거나
         // 사이에 다른 것을 끼워 넣을 수 있고, 실제로 그래서 팩이 게임 도메인 없이 실린 적이 있다.
         if ( listSearchPriority.empty() == false )
             ResourceUtil::setSearchPriority( listSearchPriority );
 
-        const bool bMounted = mountStartupPacks();
+        // 소스 트리를 읽는 쿠킹은 팩을 올리지 않는다 — 팩은 쿠킹의 산출물이다. 느슨한 파일을 배포 구성에서도 읽고, GUID 표는 `.meta` 를 훑는다.
+        _contentSource = source;
+        bool bMounted{ false };
+        if ( source == ContentSource::SourceTree )
+            _pPackManager->setAllowLooseFiles( true );
+        else
+            bMounted = mountStartupPacks();
         loadAssetRegistries();
         return bMounted;
     }

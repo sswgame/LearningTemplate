@@ -31,6 +31,13 @@ namespace sw
     class SpriteClipCache;
     class TextureCache;
 
+    /** @brief `ResourceManager::mountContent` 가 무엇을 콘텐츠로 올리는지입니다. */
+    enum class ContentSource : uint8
+    {
+        Cooked,     ///< 실행 — 쿠킹한 팩을 마운트한다. 느슨한 `Resource/` 파일은 개발 구성에서만 읽는다
+        SourceTree, ///< 쿠킹 — 소스 트리(`Resource/`)를 읽는다. 팩(지난 쿠킹의 산출물)은 마운트하지 않고, 프리팹도 소스(XML · JSON)를 읽는다
+    };
+
     /**
      * @class ResourceManager
      * @brief 에셋 식별 · 스키마 · 인스턴스 캐시와 VFS 팩 매니저를 한 객체로 소유합니다.
@@ -55,6 +62,9 @@ namespace sw
         /**
          * @brief 콘텐츠를 올립니다. 검색 우선순위 적용 → 시작 팩 마운트 → 에셋 레지스트리 적재 순서입니다.
          * @param listSearchPriority 검색 우선순위 토큰 목록. 비우면 지금 설정된 것을 그대로 씁니다.
+         * @param source 쿠킹(`ContentSource::SourceTree`)이면 팩을 마운트하지 않고 느슨한 소스 파일을 읽게 합니다 — 배포 구성도 같습니다. 쿠킹의
+         *               입력은 소스이고 팩은 그 산출물이라, 팩을 올리면 지난 빌드의 결과(엔진 데이터 · 프리팹 · GUID 표)를 다시 읽거나 첫 빌드에서는
+         *               아무것도 읽지 못합니다.
          * @return 팩을 하나라도 마운트했으면 true 입니다(느슨한 `Resource/` 트리만 있으면 false).
          *
          * @details **`GameConfig::setActive` 뒤에 불러야 합니다.** "game" 토큰은 `GameConfig._packRoot`
@@ -66,7 +76,9 @@ namespace sw
          *          **마운트와 레지스트리 적재를 뒤에서 한 번 더** 해서 메우고 있었습니다. 이제 전제가
          *          인자로 드러나고, 우선순위 적용과 마운트가 한 호출로 묶여 사이가 벌어지지 않습니다.
          */
-        bool mountContent( const vector<string>& listSearchPriority );
+        bool mountContent( const vector<string>& listSearchPriority, ContentSource source = ContentSource::Cooked );
+        /** @brief 마지막 `mountContent` 가 올린 콘텐츠의 출처입니다. 마운트 전에는 `ContentSource::Cooked` 입니다. */
+        ContentSource getContentSource() const { return _contentSource; }
 
         /** @brief 마운트된 팩을 내리고, 등록된 에셋 캐시와 GUID 표를 비웁니다. */
         void shutdown();
@@ -177,5 +189,7 @@ namespace sw
          *          같은 종류 이름의 둘째 캐시는 거절합니다(이름으로 찾는 쪽이 어느 것을 받을지 정해지지 않습니다).
          */
         RegistrationList<IAssetCache> _registeredAssetCache;
+        /** @brief 마지막 `mountContent` 가 올린 콘텐츠의 출처입니다. */
+        ContentSource _contentSource;
     };
 } // namespace sw

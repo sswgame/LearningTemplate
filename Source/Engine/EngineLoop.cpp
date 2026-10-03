@@ -164,8 +164,11 @@ namespace sw
             if ( loop._owned._pResourceManager->initialize() == false )
                 return EngineStartupResult::Failed;
             // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다. 그 전제는 `mountContent` 의 인자에 드러나 있다.
-            // 설정의 우선순위 목록이 비어 있으면 지금 것을 쓴다.
-            loop._owned._pResourceManager->mountContent( loop._pEngineConfig->_listResourcePriority );
+            // 설정의 우선순위 목록이 비어 있으면 지금 것을 쓴다. 씬 쿠킹(Headless 단계)의 입력은 소스 트리다 — 팩은 그 산출물이다.
+            bool bCookScenes = false;
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );
+            const ContentSource contentSource = bCookScenes ? ContentSource::SourceTree : ContentSource::Cooked;
+            loop._owned._pResourceManager->mountContent( loop._pEngineConfig->_listResourcePriority, contentSource );
             return EngineStartupResult::Succeeded;
         }
         // 에셋 캐시를 비운다(`ResourceManager::shutdown`). 에셋을 드는 단계(셰이더 캐시 · 오디오 · 입력 · 씬 · 렌더러)는 모두 이 단계 뒤에
