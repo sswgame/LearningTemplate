@@ -96,15 +96,22 @@ namespace sw
         void* getLoadedModuleHandle( string_view moduleName ) const;
 
         /**
-         * @brief LiveReloadManager 에 콜백을 등록하고 에디터 · 게임 모듈을 로드합니다.
+         * @brief 타입 공급자 모듈(GameFramework · 키트 · SWGame)의 이미지를 올려 그 타입을 등록합니다. 인스턴스는 만들지 않습니다.
+         * @details 기동 단계 `ModuleTypes` 의 호스트 로더(`App`)가 부릅니다 — 이것이 끝나야 엔진이 씬을 읽습니다. 게임 인스턴스는 RHI 가 선 뒤
+         *          `initialize` 가 만듭니다. Shipping 은 모듈이 정적 링크라 올릴 것이 없습니다.
+         * @param pLiveReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
+         * @param listGameKitModule 함께 올릴 GameFramework 키트 모듈 목록
+         */
+        [[nodiscard]] bool loadModuleImages( LiveReloadManager* pLiveReloadManager, const vector<GameKitConfig>& listGameKitModule );
+        /**
+         * @brief LiveReloadManager 에 콜백을 등록하고 에디터 · 게임 인스턴스를 만듭니다(게임 모듈 이미지는 `loadModuleImages` 가 이미 올렸다).
          * @param pLiveReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
          * @param pRHI 활성 RHI
          * @param pWindow 플랫폼 창
          * @param pRenderThread 렌더 스레드(워커 비우기용)
          * @param bEnableEditor 에디터 모드 여부
-         * @param listGameKitModule 함께 로드할 GameFramework 키트 모듈 목록
          */
-        bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& listGameKitModule );
+        bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor );
         /**
          * @brief 모듈 인스턴스를 내리고, 등록부에 걸어 둔 콜백을 **모두** 떼어 냅니다.
          * @details 콜백은 이 객체의 메서드를 가리킵니다. `App` 이 이 객체를 등록부보다 먼저 지우므로, 여기서 떼지 않으면 그 사이에

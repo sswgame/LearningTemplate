@@ -120,9 +120,8 @@ namespace sw
     {
         static EngineStartupResult initialize( EngineLoop& )
         {
-            // GameFramework 는 여기서 등록하지 않는다. 개발 구성에서는 이 시점에 아직 올라와 있지 않아(키트 · SWGame 이 링크한다) 아무것도
-            // 등록하지 못하고, 배포 구성은 정적 링크라 "Engine" 이 이미 다 모은다. 올리며 제 이름으로 등록하는 것은
-            // `LiveReloadManager::loadSharedModule` 이다(`ModuleHost` 가 키트보다 먼저 부른다).
+            // 여기서는 이미 이 프로세스에 올라온 등록기만 모은다. 배포 구성은 GameFramework · 킷 · 게임이 정적 링크라 "Engine" 이 다 모으고,
+            // 개발 구성의 모듈 DLL 은 `ModuleTypes` 단계에서 호스트 로더가 올리며 제 이름으로 등록한다.
             engine::registerModuleTypes( "Engine" );
             return EngineStartupResult::Succeeded;
         }
@@ -210,7 +209,7 @@ namespace sw
 
     struct EngineLoop::ModuleImagesStartupStep : EngineStartupStepDefaults<EngineLoop>
     {
-        // 모듈은 App 이 이 뒤에 올린다. 이 단계는 종료 쪽 자리(모듈을 내리는 구간)를 순서에 박아 둔다.
+        // 모듈은 이 뒤(`ModuleTypes` 단계의 호스트 로더 · App 의 ModuleHost)에 오른다. 이 단계는 종료 쪽 자리(모듈을 내리는 구간)를 순서에 박아 둔다.
         static void shutdown( EngineLoop& loop )
         {
             // 씬은 방금 사라졌고 서비스는 아직 살아 있다. 모듈 DLL 을 내리기에 알맞은 유일한 자리다.
@@ -243,6 +242,22 @@ namespace sw
             loop._mapDebugAction.reset();
             loop._bShellActionsBound = false;
             loop._owned._pInputManager.reset();
+        }
+    };
+
+    struct EngineLoop::ModuleTypesStartupStep : EngineStartupStepDefaults<EngineLoop>
+    {
+        static EngineStartupResult initialize( EngineLoop& loop )
+        {
+            // 호스트가 동적으로 올리는 타입 공급자(개발 구성의 GameFramework · 킷 · 게임 DLL)를 여기서 올린다. 로더가 없으면 올릴 것이 없다
+            // (배포 구성은 정적 링크라 리플렉션 단계가 이미 다 모았다). 이 뒤로 씬을 읽는다 — 헤드리스 쿠킹이 이 단계에 의존한다.
+            if ( loop._moduleTypeLoader.isBound() && loop._moduleTypeLoader() == false )
+            {
+                SW_LOG_ERROR( "The host could not load its type-providing modules - scenes are not read" );
+                return EngineStartupResult::Failed;
+            }
+            loop._owned._pTypeRegistry->markAllModuleTypesRegistered();
+            return EngineStartupResult::Succeeded;
         }
     };
 
@@ -842,6 +857,11 @@ namespace sw
     void EngineLoop::setOnScenesReleased( Delegate<void()> onScenesReleased )
     {
         _onScenesReleased = std::move( onScenesReleased );
+    }
+
+    void EngineLoop::setModuleTypeLoader( ModuleTypeLoaderDelegate moduleTypeLoader )
+    {
+        _moduleTypeLoader = std::move( moduleTypeLoader );
     }
 
     void EngineLoop::setPresentHook( PresentHookDelegate presentHook )

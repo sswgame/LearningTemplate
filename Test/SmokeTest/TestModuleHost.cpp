@@ -46,7 +46,7 @@ SW_TEST_CASE( ModuleHostTest, SurvivesAnRhiThatHasNoDevice )
     ModuleHost host;
     // 리로드 매니저·창·렌더 스레드 없이. 개발 구성은 등록할 모듈이 없어 그대로 성공하고,
     // 배포 구성은 정적 게임 API 를 묶다가 **디바이스가 없다는 것을 알고 멈춘다.**
-    SW_EXPECT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false, {} ) );
+    SW_EXPECT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
 
     // 디바이스가 없으면 재생성도 거절한다 — 여기서 true 를 돌려주면 호출자가 인스턴스가 있다고 믿는다.
     SW_EXPECT_FALSE( host.reinitializeAfterRhiSwap( nullptr, nullptr ) );
@@ -88,7 +88,7 @@ SW_TEST_CASE( ModuleHostTest, SuspendStopsTheEditorSimulationBeforeTearingDown )
     for ( const ModuleScope scope : arrScope )
     {
         ModuleHost host;
-        SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true, {} ) );
+        SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true ) );
         int32 editorToken = 0;
         host.attachEditorInstance( makeRecordingEditorApi(), &editorToken );
 
@@ -116,7 +116,7 @@ SW_TEST_CASE( ModuleHostTest, SuspendingAnEditorWithoutStopLeavesTheWorldStopped
 
     RHI        rhi;
     ModuleHost host;
-    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true, {} ) );
+    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true ) );
     EditorAPI api      = makeRecordingEditorApi();
     api.stopSimulation = nullptr;
     int32 editorToken  = 0;
@@ -248,7 +248,7 @@ SW_TEST_CASE( ModuleHostTest, ReloadBatchKeepsTheGameWhenItsStateCannotBeCapture
 {
     RHI        rhi;
     ModuleHost host;
-    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false, {} ) );
+    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
     int32 gameToken = 0;
     host.attachGameInstance( makeRecordingGameApi(), &gameToken );
     const vector<string> listBatch{ string{ "SWGame" } };
@@ -288,7 +288,7 @@ SW_TEST_CASE( ModuleHostTest, EditorAndGameTearDownInTheSameOrder )
 
     RHI        rhi;
     ModuleHost host;
-    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true, {} ) );
+    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true ) );
     EditorAPI editorApi   = makeRecordingEditorApi();
     editorApi.bindService = &recordEditorBindService;
     GameAPI gameApi       = makeRecordingGameApi();
@@ -333,7 +333,7 @@ SW_TEST_CASE( ModuleHostTest, ImageCheckAcceptsOnlyAModuleWithTheHostsApiTable )
 
     RHI        rhi;
     ModuleHost host;
-    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false, {} ) );
+    SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
     SW_EXPECT_TRUE( host.isEditorImageUsable( pEditorModule ) );
     SW_EXPECT_FALSE( host.isGameImageUsable( pEditorModule ) );
     SW_EXPECT_FALSE( host.isEditorImageUsable( nullptr ) );

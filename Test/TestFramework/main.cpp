@@ -172,6 +172,17 @@ namespace
             static void destroy( TestHost& host ) { host._pOwned->_pInputManager.reset(); }
         };
 
+        struct ModuleTypesStartupStep : Defaults
+        {
+            static sw::EngineStartupResult initialize( TestHost& host )
+            {
+                // 하네스의 타입 공급자(엔진 · GameFramework · 시험 타입)는 시험 실행 파일과 함께 올라와 리플렉션 단계가 이미 모았다.
+                // 앱과 같이 이 단계가 끝나야 씬을 읽는다(`SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes`).
+                host._pOwned->_pTypeRegistry->markAllModuleTypesRegistered();
+                return sw::EngineStartupResult::Succeeded;
+            }
+        };
+
         struct SceneStartupStep : Defaults
         {
             static sw::EngineStartupResult initialize( TestHost& host )

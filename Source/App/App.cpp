@@ -74,7 +74,8 @@ namespace sw
         // 리소스 루트 탐색은 EngineLoop 가 로거를 세운 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단이
         // 사라지고, 반환값도 여기서는 쓸 곳이 없었다.
 
-        // 1. 코어 매니저는 모두 EngineLoop 가 초기화한다(헤드리스 작업 처리 포함)
+        // 1. 코어 매니저는 모두 EngineLoop 가 초기화한다(헤드리스 작업 처리 포함). 타입 공급자 모듈은 그 기동 단계(`ModuleTypes`)에서 이 App 이 올린다.
+        _engineLoop.setModuleTypeLoader( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &App::loadModuleImages, this ) );
         if ( _engineLoop.initialize( argc, pArgv ) == false )
         {
             SW_LOG_ERROR( "EngineLoop initialization failed." );
@@ -200,7 +201,7 @@ namespace sw
 #endif
     }
 
-    bool App::startModules()
+    bool App::loadModuleImages()
     {
         vector<GameKitConfig> listGameKitModule{};
 #if !defined( SW_SHIPPING )
@@ -208,10 +209,8 @@ namespace sw
             config::kFileRuntimeAppConfig, nullptr );
         if ( pAppConfig != nullptr )
             listGameKitModule = pAppConfig->_listGameKitModule;
-#endif
 
-#if !defined( SW_SHIPPING )
-        // 모듈 감시자는 ModuleHost 보다 먼저 있어야 한다. ModuleHost 가 이 포인터로 리로드 콜백을 건다.
+        // 모듈 감시자는 모듈을 올리는 ModuleHost 보다 먼저 있어야 한다. ModuleHost 가 이 포인터로 모듈을 올리고 리로드 콜백을 건다.
         _liveReloadManager = make_unique<LiveReloadManager>();
         // 모듈 DLL 을 내릴 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 엔진이 내주는 훅에 건다.
         _engineLoop.setOnScenesReleased( SW_DELEGATE_LAMBDA( Delegate<void()>, [this]()
@@ -222,12 +221,18 @@ namespace sw
 #endif
 
         _moduleHost = make_unique<ModuleHost>();
+        return _moduleHost->loadModuleImages( getLiveReloadManager(), listGameKitModule );
+    }
+
+    bool App::startModules()
+    {
+        if ( _moduleHost == nullptr )
+            _moduleHost = make_unique<ModuleHost>();
         if ( _moduleHost->initialize( getLiveReloadManager(),
                                       _engineLoop.getRhi(),
                                       _window.get(),
                                       _engineLoop.getRenderThread(),
-                                      _bEnableEditor == SW_TRUE,
-                                      listGameKitModule ) == false )
+                                      _bEnableEditor == SW_TRUE ) == false )
         {
             SW_LOG_ERROR( "ModuleHost initialization failed." );
             return false;

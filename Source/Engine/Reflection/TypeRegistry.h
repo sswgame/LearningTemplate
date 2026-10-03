@@ -157,6 +157,15 @@ namespace sw
         /** @brief 해당 모듈이 등록한 타입을 모두 해제합니다. */
         void unregisterTypesByModule( string_view moduleName );
 #endif
+        /**
+         * @brief 호스트의 모든 타입 공급자(엔진 · GameFramework · 킷 · 게임 모듈)가 등록을 끝냈다고 적습니다. 기동 단계 `ModuleTypes` 가 부릅니다.
+         * @details 씬을 읽는 쪽(`SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes`)은 이 뒤에만 읽습니다 — 그 전에 읽으면 아직 오르지
+         *          않은 모듈의 컴포넌트가 `MissingComponent` 로 지어집니다. 핫 리로드가 모듈을 내렸다 다시 올려도 내리지 않습니다(그 사이에 지은
+         *          씬은 세대 비교가 다시 짓습니다 — `SceneManager::tickTransitions`).
+         */
+        void markAllModuleTypesRegistered();
+        /** @brief `markAllModuleTypesRegistered` 가 불렸는가 — 씬을 읽어도 되는가. */
+        bool areAllModuleTypesRegistered() const;
 
         // ------------------------------------------------------------------------------
         // 3) 단건 등록 · 별칭 — REFLECT(Alias=…) / ReflectBuiltins codegen
@@ -415,6 +424,8 @@ namespace sw
         unordered_map<hashed_string, EnumInfo*> _mapNameToEnum;
         unordered_map<uint32, hashed_string>    _mapHashToCanonicalName;
         hashed_string                           _activeModuleName;
+        /** @brief 모든 타입 공급자가 등록을 끝냈는가(`markAllModuleTypesRegistered`). 기동 스레드가 쓰고 씬을 읽는 쪽이 읽습니다. */
+        atomic<bool> _bAllModuleTypesRegistered;
     };
 
     // ------------------------------------------------------------------------------

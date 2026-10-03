@@ -1057,25 +1057,7 @@ namespace sw
             prepared._pEnumHead     = nullptr;
             prepared._pVariableHead = nullptr;
 
-            // 새 이미지의 코드가 처음 도는 자리다. 여기서 죽으면 에디터째 내려가 저장하지 않은 작업을 잃으므로 지킨다.
-            if ( ctx._onAfterReload.isBound() )
-            {
-                uint32     faultCode{ 0 };
-                const bool bCompleted = ModuleCallGuard::run(
-                    SW_DELEGATE_LAMBDA( Delegate<void()>, [&ctx]()
-                {
-                    ctx._onAfterReload( ctx._pLibraryModule );
-                } ),
-                    faultCode );
-                if ( bCompleted == false )
-                {
-                    SW_LOG_ERROR( "Module %# faulted (code 0x%#) while starting after the reload — dropping what it handed out; save your work and restart",
-                                  ctx._moduleName, Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
-                    markGraphBroken( "a module faulted in onAfterReload" );
-                    if ( ctx._onReloadFault.isBound() )
-                        ctx._onReloadFault( faultCode );
-                }
-            }
+            invokeAfterReload( ctx );
 
             // 옛 이미지는 바로 내리지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(예전에는 그때 핸들을 잃어버린 채 남겨 두었다).
             if ( pPreviousHandle != nullptr )
@@ -1091,6 +1073,40 @@ namespace sw
 
         SW_LOG_INFO( "Module loaded (shadow: %#)", ctx._tempModulePath.c_str() );
         return true;
+    }
+
+    void LiveReloadManager::invokeAfterReload( ModuleContext& ctx )
+    {
+        // 새 이미지의 코드가 처음 도는 자리다. 여기서 죽으면 에디터째 내려가 저장하지 않은 작업을 잃으므로 지킨다.
+        if ( ctx._onAfterReload.isBound() == false )
+            return;
+        uint32     faultCode{ 0 };
+        const bool bCompleted = ModuleCallGuard::run(
+            SW_DELEGATE_LAMBDA( Delegate<void()>, [&ctx]()
+        {
+            ctx._onAfterReload( ctx._pLibraryModule );
+        } ),
+            faultCode );
+        if ( bCompleted == false )
+        {
+            SW_LOG_ERROR( "Module %# faulted (code 0x%#) while starting after the reload — dropping what it handed out; save your work and restart",
+                          ctx._moduleName, Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
+            markGraphBroken( "a module faulted in onAfterReload" );
+            if ( ctx._onReloadFault.isBound() )
+                ctx._onReloadFault( faultCode );
+        }
+    }
+
+    bool LiveReloadManager::runAfterReload( string_view moduleName )
+    {
+        const auto it = _mapModule.find( string( moduleName ) );
+        if ( it == _mapModule.end() || it->second._pLibraryModule == nullptr )
+        {
+            SW_LOG_ERROR( "Module %# is not loaded - nothing to start", moduleName );
+            return false;
+        }
+        invokeAfterReload( it->second );
+        return _bReloadGraphBroken == SW_FALSE;
     }
 
     void LiveReloadManager::abortShadowCopy( ModuleContext& ctx, PreparedShadow& prepared )

@@ -182,6 +182,13 @@ namespace sw
             SW_LOG_WARNING( "requestLoadFuture: manager is shutting down" );
             return {};
         }
+        // 씬은 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleTypes`)에만 읽는다. 그 전에 지으면 아직 오르지 않은 모듈의 컴포넌트가
+        // `MissingComponent` 로 지어지고, 그 씬을 저장하면 그대로 남는다.
+        if ( engine::getTypeRegistry().areAllModuleTypesRegistered() == false )
+        {
+            SW_LOG_ERROR( "Scene '%#' was requested before every module registered its types - refused (load it after the ModuleTypes startup step)", path );
+            return {};
+        }
 
         bool expected{ false };
         if ( _bLoadInFlight.compare_exchange_strong( expected, true ) == false )
@@ -375,7 +382,7 @@ namespace sw
         _bLoadInFlight.store( false, std::memory_order_release );
         _loadHandle = {};
 
-        // 짓는 동안 타입 표가 바뀌었으면(시작할 때 키트 · SWGame 이 올라오는 중에 에디터가 시작 씬을 열었다) 그 씬은 **워커가 지을 때의**
+        // 짓는 동안 타입 표가 바뀌었으면(핫 리로드가 키트 · SWGame 을 내렸다 다시 올렸다) 그 씬은 **워커가 지을 때의**
         // 표로 지어져, 아직 오르지 않은 모듈의 컴포넌트가 빠졌다(못 만든 컴포넌트는 `MissingComponent` 로 남는다). 버리고 같은 경로를 다시
         // 띄운다. 대기열이 **다른** 경로면 어차피 이 결과를 버리므로 아래에 맡긴다. 대기열이 **같은** 경로면 아래는 이 결과를 그대로 쓰므로
         // 여기서 다시 짓는다. 대기열은 그대로 두어, 다시 지은 결과가 두 요청자를 함께 채운다.

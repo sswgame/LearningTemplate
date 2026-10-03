@@ -188,6 +188,14 @@ namespace sw
          */
         [[nodiscard]] bool loadSharedModule( string_view moduleName );
 
+        /**
+         * @brief 이미 올린 모듈의 리로드 직후 콜백(`setOnAfterReload`)을 부릅니다. 리로드 때와 같이 `ModuleCallGuard` 로 지킵니다.
+         * @details 기동은 이미지 올리기(기동 단계 `ModuleTypes` — 타입 등록)와 인스턴스 만들기(RHI 뒤)를 나눕니다. 올릴 때는 이 콜백이 아직
+         *          걸려 있지 않으므로, 인스턴스를 만드는 쪽이 콜백을 건 뒤 이것을 부릅니다.
+         * @return 모듈이 올라 있고, 콜백이 결함 없이 돌았고, 그래프가 깨지지 않았으면 true 입니다.
+         */
+        [[nodiscard]] bool runAfterReload( string_view moduleName );
+
         /** @brief 해당 모듈(과 그것에 의존하는 모듈)의 리로드를 예약합니다. 게임 스레드(`update` 를 부르는 스레드)에서 부릅니다. */
         void triggerReload( string_view moduleName );
 
@@ -300,6 +308,8 @@ namespace sw
         bool prepareShadowCopy( ModuleContext& ctx, PreparedShadow& out );
         /** @brief 섀도 핸들로 교체하고 콜백을 부릅니다. */
         bool commitShadowCopy( ModuleContext& ctx, PreparedShadow& prepared );
+        /** @brief @p ctx 의 리로드 직후 콜백을 `ModuleCallGuard` 안에서 부릅니다. 결함이 나면 그래프를 막고 결함 콜백을 부릅니다. */
+        void invokeAfterReload( ModuleContext& ctx );
         /** @brief prepare 가 실패하면 새 이미지를 버리고, 바꿔 둔 SONAME 을 commit 된 이름으로 되돌립니다. */
         void abortShadowCopy( ModuleContext& ctx, PreparedShadow& prepared );
         /**

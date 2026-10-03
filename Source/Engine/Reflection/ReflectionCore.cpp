@@ -593,6 +593,7 @@ namespace sw
     atomic<uint32> gv_typeTableGeneration{ 0 };
 
     TypeRegistry::TypeRegistry()
+        : _bAllModuleTypesRegistered{ false }
     {
         generated::forceLinkBuiltinTypes();
     }
@@ -600,6 +601,16 @@ namespace sw
     uint32 TypeRegistry::getGeneration() const
     {
         return gv_typeTableGeneration.load( std::memory_order_acquire );
+    }
+
+    void TypeRegistry::markAllModuleTypesRegistered()
+    {
+        _bAllModuleTypesRegistered.store( true, std::memory_order_release );
+    }
+
+    bool TypeRegistry::areAllModuleTypesRegistered() const
+    {
+        return _bAllModuleTypesRegistered.load( std::memory_order_acquire );
     }
     TypeRegistry::~TypeRegistry() = default;
 

@@ -54,7 +54,7 @@ namespace
 
     /** @brief 표의 줄을 거꾸로 적은 단계 이름입니다 — 해제는 기동이 어디서 멈췄든 이 순서로 모든 단계를 돈다. */
     constexpr const utf8* kFullDestroyOrder =
-        "SceneRhi LiveShader RenderThread FrameRenderer RHI Headless Scene Input Audio ModuleImages Task ShaderCache EngineData Resource "
+        "SceneRhi LiveShader RenderThread FrameRenderer RHI Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineData Resource "
         "Config Reflection Compression";
 
     string joinStepNames( const vector<EngineStartupStep>& listStep )
@@ -96,7 +96,57 @@ namespace
             listIndex.push_back( nodeIndex );
         return joinNodeOrder( listNode, listIndex );
     }
+
+    /** @brief @p step 에서 의존 칸을 (간접으로라도) 거슬러 @p dependency 에 닿는가 — @p dependency 가 @p step 보다 먼저 서야 하는가. */
+    bool dependsOnStep( const EngineStartupGraph& graph, EngineStartupStep step, EngineStartupStep dependency )
+    {
+        vector<uint32> listPending{ static_cast<uint32>( step ) };
+        vector<uint8>  listVisited( graph._listDependency.size(), SW_FALSE );
+        while ( listPending.empty() == false )
+        {
+            const uint32 nodeIndex = listPending.back();
+            listPending.pop_back();
+            for ( const uint32 dependencyIndex : graph._listDependency[nodeIndex] )
+            {
+                if ( dependencyIndex == static_cast<uint32>( dependency ) )
+                    return true;
+                if ( listVisited[dependencyIndex] == SW_FALSE )
+                {
+                    listVisited[dependencyIndex] = SW_TRUE;
+                    listPending.push_back( dependencyIndex );
+                }
+            }
+        }
+        return false;
+    }
 } // namespace
+
+/**
+ * @brief [EngineStartupSequenceTest] 씬을 읽는 단계(헤드리스 씬 쿠킹)는 모든 타입 공급자가 등록을 끝낸 뒤(`ModuleTypes`)에만 선다
+ * @details 쿠킹이 GameFramework · 킷 · 게임 모듈의 타입이 오르기 전에 씬을 읽어 그 컴포넌트를 `MissingComponent` 로 구웠다 — 표에 그 전제를 적을
+ *          자리가 없었다. 이제 `Headless` 의 의존 칸이 `ModuleTypes` 를 적고, 그 단계가 실패하면 쿠킹은 돌지 않는다. 의존을 빼면 이 시험이 진다.
+ */
+SW_TEST_CASE( EngineStartupSequenceTest, SceneReadingStepWaitsForModuleTypes )
+{
+    EngineStartupGraph graph{};
+    string             error;
+    SW_ASSERT_TRUE_MSG( EngineStartupSequence::computeGraph( EngineStartupSequence::makeStepNodes(), graph, error ), error.c_str() );
+    SW_EXPECT_TRUE( dependsOnStep( graph, EngineStartupStep::Headless, EngineStartupStep::ModuleTypes ) );
+    // 타입 등록은 리플렉션 · 설정(키트 목록) 뒤다 — 모듈 이미지를 내리는 자리(ModuleImages)보다도 뒤라 종료에서 먼저 내려간다.
+    SW_EXPECT_TRUE( dependsOnStep( graph, EngineStartupStep::ModuleTypes, EngineStartupStep::Reflection ) );
+    SW_EXPECT_TRUE( dependsOnStep( graph, EngineStartupStep::ModuleTypes, EngineStartupStep::ModuleImages ) );
+
+    EngineStartupSequence sequence;
+    StartupStepRecorder   recorder;
+    recorder._resultStep = EngineStartupStep::ModuleTypes;
+    recorder._result     = EngineStartupResult::Failed;
+    SW_EXPECT_FALSE( sequence.initializeAll( recorder ) );
+    for ( const EngineStartupStep step : recorder._listInitialized )
+    {
+        SW_EXPECT_TRUE_MSG( step != EngineStartupStep::Headless, "the scene cook ran although module types were not registered" );
+    }
+    sequence.destroyAll();
+}
 
 /**
  * @brief [EngineStartupSequenceTest] 표(`EngineStartupStepList.xxx`)가 실제 기동 순서대로 적혀 있는지 검증
@@ -126,7 +176,7 @@ SW_TEST_CASE( EngineStartupSequenceTest, ShutdownRunsInReverseOfInitialization )
 
     sequence.shutdownAll();
     SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
-    SW_EXPECT_STREQ( "SceneRhi LiveShader RenderThread FrameRenderer RHI Headless Scene Input Audio ModuleImages Task ShaderCache EngineData Resource "
+    SW_EXPECT_STREQ( "SceneRhi LiveShader RenderThread FrameRenderer RHI Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineData Resource "
                      "Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 
@@ -145,11 +195,11 @@ SW_TEST_CASE( EngineStartupSequenceTest, FailedStepStopsAndShutsDownOnlyInitiali
     recorder._resultStep = EngineStartupStep::Scene;
     recorder._result     = EngineStartupResult::Failed;
     SW_EXPECT_FALSE( sequence.initializeAll( recorder ) );
-    SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineData ShaderCache Task ModuleImages Audio Input Scene",
+    SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineData ShaderCache Task ModuleImages Audio Input ModuleTypes Scene",
                      joinStepNames( recorder._listInitialized ).c_str() );
 
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Input Audio ModuleImages Task ShaderCache EngineData Resource Config Reflection Compression", joinStepNames( recorder._listShutdown ).c_str() );
+    SW_EXPECT_STREQ( "ModuleTypes Input Audio ModuleImages Task ShaderCache EngineData Resource Config Reflection Compression", joinStepNames( recorder._listShutdown ).c_str() );
 
     // 해제는 실패한 단계(Scene — 종료는 받지 않았다)와 닿지 못한 단계까지 모두 돈다. 부트스트랩이 미리 만든 객체가 있기 때문이다.
     sequence.destroyAll();
@@ -167,11 +217,11 @@ SW_TEST_CASE( EngineStartupSequenceTest, SkipDependentsSkipsEveryDependentStep )
     recorder._resultStep = EngineStartupStep::Headless;
     recorder._result     = EngineStartupResult::SkipDependents;
     SW_EXPECT_TRUE( sequence.initializeAll( recorder ) );
-    SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineData ShaderCache Task ModuleImages Audio Input Scene Headless",
+    SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineData ShaderCache Task ModuleImages Audio Input ModuleTypes Scene Headless",
                      joinStepNames( recorder._listInitialized ).c_str() );
 
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Headless Scene Input Audio ModuleImages Task ShaderCache EngineData Resource Config Reflection Compression",
+    SW_EXPECT_STREQ( "Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineData Resource Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 
     // 건너뛴 단계(RHI 이후)도 해제는 받는다 — 그 단계의 서비스가 부트스트랩에서 만들어져 있을 수 있다.
@@ -194,7 +244,7 @@ SW_TEST_CASE( EngineStartupSequenceTest, DestroyRunsAfterEveryShutdownInReverseT
     SW_EXPECT_STREQ( kFullDestroyOrder, joinStepNames( recorder._listDestroyed ).c_str() );
     SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
 
-    // 종료 열일곱이 모두 해제 열일곱보다 앞이다.
+    // 종료 열여덟이 모두 해제 열여덟보다 앞이다.
     const size_t stepCount = static_cast<size_t>( EngineStartupStep::Count );
     SW_ASSERT_TRUE( recorder._listEvent.size() == stepCount * 3 );
     for ( size_t eventIndex = 0; eventIndex < recorder._listEvent.size(); ++eventIndex )
@@ -297,7 +347,7 @@ SW_TEST_CASE( EngineStartupSequenceTest, DependentsOfAStepRestartWithTheSameBodi
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "SceneRhi LiveShader RenderThread FrameRenderer RHI Headless Scene Input Audio ModuleImages Task ShaderCache EngineData Resource "
+    SW_EXPECT_STREQ( "SceneRhi LiveShader RenderThread FrameRenderer RHI Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineData Resource "
                      "Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 }
@@ -318,7 +368,7 @@ SW_TEST_CASE( EngineStartupSequenceTest, FailedRestartLeavesTheRestStopped )
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "FrameRenderer RHI Headless Scene Input Audio ModuleImages Task ShaderCache EngineData Resource Config Reflection Compression",
+    SW_EXPECT_STREQ( "FrameRenderer RHI Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineData Resource Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 }
 

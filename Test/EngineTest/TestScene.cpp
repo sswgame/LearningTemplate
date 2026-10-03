@@ -20,6 +20,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
@@ -771,6 +772,56 @@ SW_TEST_CASE( SceneTest, SceneCookCountsTheScenesItCouldNotCook )
     }
     SW_EXPECT_EQUAL( 1u, failedCount );
     SW_EXPECT_TRUE( sw::FileUtil::fileExists( sw::FileUtil::joinPath( cooked, "game/demo/maps/good.scene.bin" ) ) );
+}
+
+/**
+ * @brief [SceneTest] 모든 타입 공급자가 등록을 끝내기 전(기동 단계 `ModuleTypes` 전)에는 씬을 읽지 않는다 — 로드 요청도 쿠킹도 거절한다
+ * @details 씬 쿠킹과 에디터 시작 씬이 GameFramework 타입이 오르기 전에 씬을 읽어 그 컴포넌트를 `MissingComponent` 로 지었다. 읽는 쪽이 "타입 등록
+ *          완료" 를 확인하므로 기동 순서가 다시 어긋나면 씬이 조용히 망가지는 대신 오류로 멈춘다. 등록이 끝나기 전의 레지스트리를 서비스 표에 꽂아 본다.
+ */
+SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
+{
+    sw::SceneManager manager;
+    SW_ASSERT_TRUE( manager.initialize() );
+    const sw::string root   = test::makeTempDirectory( "scene_type_gate_root" );
+    const sw::string cooked = test::makeTempDirectory( "scene_type_gate_out" );
+
+    sw::SceneDocument doc;
+    doc._name                  = "Gate";
+    const sw::string scenePath = sw::FileUtil::joinPath( root, "game/demo/maps/gate.scene.xml" );
+    sw::FileUtil::ensureParentDirectoryExists( scenePath );
+    SW_ASSERT_TRUE( doc.saveXml( scenePath ) );
+    const sw::string cookedPath = sw::FileUtil::joinPath( cooked, "game/demo/maps/gate.scene.bin" );
+
+    // 하네스는 앱과 같은 기동 표를 지났다 — `ModuleTypes` 단계가 적어 두었다.
+    SW_ASSERT_TRUE( sw::engine::getTypeRegistry().areAllModuleTypesRegistered() );
+
+    const sw::EngineServices saved = sw::engine::getBoundEngineServices();
+    sw::TypeRegistry         registryBeforeModuleTypes;
+    sw::EngineServices       early = saved;
+    early._pTypeRegistry           = &registryBeforeModuleTypes;
+    test::rebindEngineServices( early );
+    bool   bRequestAccepted{ true };
+    uint32 earlyCookedCount{ 0 };
+    uint32 earlyFailedCount{ 0 };
+    {
+        test::ScopedDefensiveTestLog expected( "a scene read before the ModuleTypes startup step" );
+        bRequestAccepted = manager.requestLoadFuture( scenePath ).isValid();
+        earlyCookedCount = sw::SceneCooker::cookAllScenes( root, cooked, earlyFailedCount );
+    }
+    test::rebindEngineServices( saved );
+
+    SW_EXPECT_FALSE( bRequestAccepted );
+    SW_EXPECT_EQUAL( 0u, earlyCookedCount );
+    SW_EXPECT_EQUAL( 1u, earlyFailedCount );
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( cookedPath ) );
+
+    // 단계를 지난 레지스트리로는 같은 쿠킹이 된다.
+    uint32 failedCount{ 0 };
+    SW_EXPECT_EQUAL( 1u, sw::SceneCooker::cookAllScenes( root, cooked, failedCount ) );
+    SW_EXPECT_EQUAL( 0u, failedCount );
+    SW_EXPECT_TRUE( sw::FileUtil::fileExists( cookedPath ) );
+    manager.shutdown();
 }
 
 /**

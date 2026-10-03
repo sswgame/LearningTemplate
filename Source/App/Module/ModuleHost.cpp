@@ -205,7 +205,68 @@ namespace sw
         shutdown();
     }
 
-    bool ModuleHost::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor, const vector<GameKitConfig>& listGameKitModule )
+    bool ModuleHost::loadModuleImages( LiveReloadManager* pLiveReloadManager, const vector<GameKitConfig>& listGameKitModule )
+    {
+        _pLiveReloadManager = pLiveReloadManager;
+#if defined( SW_SHIPPING )
+        // 게임 · 키트 · GameFramework 는 정적 링크라 올릴 이미지가 없다 — 그 타입은 리플렉션 단계가 이미 모았다.
+        (void)listGameKitModule;
+        return true;
+#else
+        if ( _pLiveReloadManager == nullptr )
+            return true;
+
+        SW_MEMORY_SCOPE( Game );
+        const string   gameFrameworkModule = "GameFramework";
+        vector<string> listGameModule{ gameFrameworkModule };
+
+        // 공용 모듈을 **먼저** 올려 제 이름으로 등록한다. 키트 · SWGame 이 처음 부를 때 올라오면 그 등록기가 SWGame · 첫 키트의 이름으로
+        // 들어갔다(`LiveReloadManager::loadSharedModule`).
+        if ( _pLiveReloadManager->loadSharedModule( gameFrameworkModule ) == false )
+        {
+            SW_LOG_ERROR( "Shared module load failed (%#)", gameFrameworkModule );
+            return false;
+        }
+
+        for ( const GameKitConfig& kitConfig : listGameKitModule )
+        {
+            vector<string> listDep = kitConfig._listDependencyModule;
+            if ( listDep.empty() )
+                listDep.push_back( gameFrameworkModule );
+
+            if ( _pLiveReloadManager->registerModule( kitConfig._name, listDep ) == false )
+            {
+                SW_LOG_ERROR( "Kit module register failed (%#)", kitConfig._name );
+                return false;
+            }
+            _pLiveReloadManager->setOnBeforeReload( kitConfig._name, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameplayDllReload, this ) );
+            _pLiveReloadManager->setOnAfterReload( kitConfig._name, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameplayDllReload, this ) );
+            listGameModule.push_back( kitConfig._name );
+        }
+
+        // 게임 모듈은 이미지만 올린다(타입 등록까지). 리로드 직후 콜백 — 인스턴스 생성 — 은 RHI 가 선 뒤 `initialize` 가 걸고 부른다.
+        _pLiveReloadManager->setOnBeforeReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameReload, this ) );
+        _pLiveReloadManager->setOnReloadFault( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &ModuleHost::onGameReloadFault, this ) );
+        _pLiveReloadManager->setOnValidateImage( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &ModuleHost::isGameImageUsable, this ) );
+        if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
+        {
+            SW_LOG_ERROR( "SWGame module register failed" );
+            return false;
+        }
+
+        if ( _pLiveReloadManager->isGraphBroken() )
+        {
+            SW_LOG_ERROR( "LiveReload graph broken during module registration — aborting initialize" );
+            return false;
+        }
+
+        _pLiveReloadManager->setOnBeforeCommitBatch(
+            SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &ModuleHost::onBeforeCommitBatch, this ) );
+        return true;
+#endif
+    }
+
+    bool ModuleHost::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor )
     {
         _pLiveReloadManager = pLiveReloadManager;
         _pRHI               = pRHI;
@@ -223,7 +284,6 @@ namespace sw
 #endif
 
 #if defined( SW_SHIPPING )
-        (void)listGameKitModule;
         onAfterGameReload( nullptr );
 #else
         if ( _bEnableEditor == SW_TRUE && _pLiveReloadManager != nullptr )
@@ -255,55 +315,15 @@ namespace sw
 
         if ( _pLiveReloadManager != nullptr )
         {
-            BLOCK( "게임플레이 키트 및 SWGame 모듈 등록" )
+            BLOCK( "SWGame 인스턴스 생성" )
             {
                 SW_MEMORY_SCOPE( Game );
-                const string   gameFrameworkModule = "GameFramework";
-                vector<string> listGameModule{ gameFrameworkModule };
-
-                // 공용 모듈을 **먼저** 올려 제 이름으로 등록한다. 키트 · SWGame 이 처음 부를 때 올라오면 그 등록기가 SWGame · 첫 키트의 이름으로
-                // 들어갔다(`LiveReloadManager::loadSharedModule`).
-                if ( _pLiveReloadManager->loadSharedModule( gameFrameworkModule ) == false )
-                {
-                    SW_LOG_ERROR( "Shared module load failed (%#)", gameFrameworkModule );
-                    return false;
-                }
-
-                for ( const GameKitConfig& kitConfig : listGameKitModule )
-                {
-                    vector<string> listDep = kitConfig._listDependencyModule;
-                    if ( listDep.empty() )
-                        listDep.push_back( gameFrameworkModule );
-
-                    if ( _pLiveReloadManager->registerModule( kitConfig._name, listDep ) == false )
-                    {
-                        SW_LOG_ERROR( "Kit module register failed (%#)", kitConfig._name );
-                        return false;
-                    }
-                    _pLiveReloadManager->setOnBeforeReload( kitConfig._name, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameplayDllReload, this ) );
-                    _pLiveReloadManager->setOnAfterReload( kitConfig._name, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameplayDllReload, this ) );
-                    listGameModule.push_back( kitConfig._name );
-                }
-
-                _pLiveReloadManager->setOnBeforeReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeGameReload, this ) );
                 _pLiveReloadManager->setOnAfterReload( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnAfterReloadDelegate, &ModuleHost::onAfterGameReload, this ) );
-                _pLiveReloadManager->setOnReloadFault( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &ModuleHost::onGameReloadFault, this ) );
-                _pLiveReloadManager->setOnValidateImage( sw::config::kTargetGameModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateImageDelegate, &ModuleHost::isGameImageUsable, this ) );
-
-                if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
+                if ( _pLiveReloadManager->runAfterReload( sw::config::kTargetGameModule ) == false )
                 {
-                    SW_LOG_ERROR( "SWGame module register failed" );
+                    SW_LOG_ERROR( "SWGame instance could not be started" );
                     return false;
                 }
-
-                if ( _pLiveReloadManager->isGraphBroken() )
-                {
-                    SW_LOG_ERROR( "LiveReload graph broken during module registration — aborting initialize" );
-                    return false;
-                }
-
-                _pLiveReloadManager->setOnBeforeCommitBatch(
-                    SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeCommitBatchDelegate, &ModuleHost::onBeforeCommitBatch, this ) );
             }
         }
 #endif

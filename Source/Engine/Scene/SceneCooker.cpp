@@ -5,10 +5,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -145,6 +147,14 @@ namespace sw
         if ( resourceRoot.empty() )
         {
             SW_LOG_ERROR( "Scene cook could not resolve the resource root." );
+            ++outFailedCount;
+            return 0;
+        }
+
+        // 굽는 것은 씬을 짓는 일이다 — 모든 타입 공급자가 등록을 끝낸 뒤(기동 단계 `ModuleTypes`)라야 컴포넌트가 제 타입으로 지어진다.
+        if ( engine::getTypeRegistry().areAllModuleTypesRegistered() == false )
+        {
+            SW_LOG_ERROR( "Scene cook ran before every module registered its types - nothing is cooked (cook after the ModuleTypes startup step)" );
             ++outFailedCount;
             return 0;
         }

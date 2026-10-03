@@ -54,22 +54,6 @@ endif()
 
 sw_emitRuntimeCopies(App)
 
-# ------------------------------------------------------------------------------
-# 2) Shipping 정적 링크에서 리플렉션 등록기 살리기
-# ------------------------------------------------------------------------------
-# 생성된 *.gen.cpp 의 등록기는 파일 범위 static 객체이고(생성자가 전역 연결 리스트에
-# 자신을 매단다) 밖에서 참조하는 심볼이 없다. Dev 는 Engine 이 DLL 이라 전부 로드되지만,
-# Shipping 은 정적 라이브러리라 링커가 "아무도 참조하지 않는 오브젝트 파일"을 통째로 버린다.
-# 실제로 RHITypes.gen.cpp 가 빠져 RHIBackend 열거형이 등록되지 않았고, EngineConfig 의
-# _window._defaultRHI 역직렬화가 실패해 엔진 설정 전체가 기본값으로 떨어졌다
-# (리소스 우선순위 미설정 → 파이프라인 XML 조회 실패 → FrameRenderer 초기화 실패).
-# 그래서 리플렉션을 담은 정적 라이브러리는 통째로 링크해 등록기를 살린다. 플랫폼별 링커
-# 플래그는 `sw_linkWholeArchive`(cmake/Engine/TargetRules.cmake)가 고른다. 한때 이 블록이
-# `WIN32` 가드 안에 있어서 리눅스 Shipping 만 조용히 깨졌다(docs/06_Backlog.md 2026-09-21).
-if(SW_SHIPPING_BUILD)
-	set(swReflectionStaticLibs Engine)
-	sw_getDynamicModules(swDynamicModules)
-	list(APPEND swReflectionStaticLibs ${swDynamicModules})
-	list(REMOVE_DUPLICATES swReflectionStaticLibs)
-	sw_linkWholeArchive(App ${swReflectionStaticLibs})
-endif()
+# Shipping 정적 링크에서 리플렉션 등록기를 살리는 통째 링크(`sw_linkWholeArchive`)는 여기가 아니라
+# `sw_configureAppDependencies`(루트 CMakeLists 가 모든 모듈을 add_subdirectory 한 뒤 부른다)에 있다.
+# 통째로 링크할 목록이 모듈 레지스트리이고, 이 파일이 읽히는 시점에는 GameFramework · 킷 · 게임이 아직 등록되지 않았다.

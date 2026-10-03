@@ -59,6 +59,13 @@ namespace sw
     SW_DECLARE_DELEGATE( CameraComponent*, ViewCameraProviderDelegate, void );
 
     /**
+     * @brief 호스트가 동적으로 올리는 타입 공급자(GameFramework · 킷 · 게임 모듈)를 올려 그 타입을 등록합니다. 실패하면 false 입니다.
+     * @details 기동 단계 `ModuleTypes` 가 부릅니다. 이것이 돌아온 뒤 엔진은 "모든 타입이 등록됐다" 고 적고(`TypeRegistry::markAllModuleTypesRegistered`),
+     *          그때부터 씬을 읽을 수 있습니다.
+     */
+    SW_DECLARE_DELEGATE( bool, ModuleTypeLoaderDelegate, void );
+
+    /**
      * @class EngineLoop
      * @brief 코어 매니저들을 소유하고 메인 루프(tick)를 돌립니다(예전에는 App 이 들고 있었습니다).
      */
@@ -111,6 +118,12 @@ namespace sw
          *          Engine 은 그것이 무엇인지 모릅니다. 자리만 내주고, 무엇을 할지는 훅을 건 쪽이 정합니다.
          */
         void setOnScenesReleased( Delegate<void()> onScenesReleased );
+        /**
+         * @brief 기동 단계 `ModuleTypes` 가 부를 타입 공급자 로더를 겁니다. `initialize` **전에** 겁니다.
+         * @details 걸지 않으면 호스트에 따로 올릴 타입 공급자가 없다는 뜻입니다(정적 링크 — 리플렉션 단계가 이미 다 모았다). 어느 쪽이든 단계가 끝나면
+         *          모든 타입이 등록된 것으로 적고, 씬을 읽는 일(헤드리스 쿠킹 · 게임 · 에디터의 씬 로드)은 그 뒤에만 됩니다.
+         */
+        void setModuleTypeLoader( ModuleTypeLoaderDelegate moduleTypeLoader );
 
         void setPresentHook( sw::PresentHookDelegate presentHook );
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
@@ -188,6 +201,8 @@ namespace sw
          */
         unique_ptr<RenderFramePacket> _packetScratch;
         Delegate<void()>              _onScenesReleased;
+        /** @brief 기동 단계 `ModuleTypes` 가 부르는 호스트의 타입 공급자 로더입니다(`setModuleTypeLoader`). */
+        ModuleTypeLoaderDelegate _moduleTypeLoader;
         /**
          * @brief 셰이더 라이브 리로드입니다. **Shipping 에는 없고**(파일째 빌드에서 빠집니다) Debug 에서만 실제로 만들어집니다.
          * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**입니다. 예전에는 RHI 가 들고 있었는데, RHI 는

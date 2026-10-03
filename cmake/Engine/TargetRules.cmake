@@ -294,6 +294,17 @@ function(sw_configureAppDependencies TARGET_NAME)
 			target_link_libraries(${TARGET_NAME} PRIVATE SWGame)
 		endif()
 
+		# 3) 리플렉션을 담은 정적 라이브러리(Engine · GameFramework · 킷 · 게임)는 통째로 링크한다. 생성된 *.gen.cpp 의 등록기는 파일 범위
+		#    static 객체라(생성자가 전역 연결 리스트에 자신을 매단다) 밖에서 참조하는 심볼이 없고, 정적 링크에서 링커는 아무도 참조하지 않는
+		#    오브젝트 파일을 버린다 — 그 타입 · 열거형은 등록되지 않고 씬의 컴포넌트는 MissingComponent 가 된다. 목록은 모듈 레지스트리이므로
+		#    모든 모듈이 등록된 뒤인 여기서 읽는다. 플랫폼별 링커 플래그는 `sw_linkWholeArchive` 가 고른다.
+		if(TARGET GameFramework AND NOT GameFramework IN_LIST listDynamicModule)
+			message(FATAL_ERROR "[App] sw_configureAppDependencies ran before GameFramework registered itself — its reflection registrars would not be linked into ${TARGET_NAME}.")
+		endif()
+		set(listReflectionStaticLib Engine ${listDynamicModule})
+		list(REMOVE_DUPLICATES listReflectionStaticLib)
+		sw_linkWholeArchive(${TARGET_NAME} ${listReflectionStaticLib})
+
 		if(TARGET CookAssets)
 			add_dependencies(CookAssets ${TARGET_NAME})
 			set_target_properties(CookAssets PROPERTIES EXCLUDE_FROM_ALL FALSE)
