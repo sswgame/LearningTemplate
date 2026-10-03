@@ -41,8 +41,11 @@ namespace sw
         _bStarted = true;
 
         // 메모리 프로파일러가 맨 먼저 선다. 그 앞에서 잡은 sw 블록(로거의 큐 · 이름 풀)은 태그에 세이지 않고 "sw 할당자 밖" 몫으로 보인다.
+        // 플랫폼 누수 추적은 그보다도 먼저 켠다(Windows Debug CRT: 할당 추적 + 보고를 stderr 로). `EngineLoop` 가 기동 뒤 기준선을 찍고
+        // 종료 뒤 `reportMemoryLeaks` 로 비교한다 — 켜지 않으면 누수 덤프가 디버거 출력으로만 나가 콘솔 · CI 에서 보이지 않는다.
         if ( bDiagnostics )
         {
+            MemoryProfiler::enableMemoryLeakChecks();
             _memoryProfiler = make_unique<MemoryProfiler>();
             _memoryProfiler->initialize();
         }

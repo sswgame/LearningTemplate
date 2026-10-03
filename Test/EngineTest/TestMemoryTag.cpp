@@ -5,6 +5,7 @@
  */
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
@@ -74,6 +75,25 @@ SW_TEST_CASE( MemoryTagTest, HarnessStartupIsAttributed )
     SW_EXPECT_TRUE( getLiveBytes( *pProfiler, sw::MemoryTag::Asset ) > 0 );
     SW_EXPECT_TRUE( getLiveBytes( *pProfiler, sw::MemoryTag::Shader ) > 0 );
     SW_EXPECT_TRUE( getLiveBytes( *pProfiler, sw::MemoryTag::EngineMisc ) > 0 );
+}
+
+/**
+ * @brief [MemoryTagTest] 진단 구성의 부트스트랩이 플랫폼 누수 추적을 켜 둔다
+ * @details `EngineBootstrap::initialize( owned, true )` 는 `EngineLoop`(Debug) 와 이 하네스가 함께 부른다. 그래서 이 프로세스의 CRT 상태가
+ *          곧 Debug App 의 상태다. 할당 추적 플래그가 켜져 있고, 누수 덤프(`_CRT_WARN`) · CRT 오류(`_CRT_ERROR`)가 디버거 출력과 함께 stderr 로도
+ *          나가야 `MemoryProfiler::reportMemoryLeaks` 의 결과가 콘솔 · CI 로그에 남는다.
+ */
+SW_TEST_CASE( MemoryTagTest, DiagnosticBootstrapEnablesPlatformLeakChecks )
+{
+#if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING ) && !defined( SW_SANITIZER_ADDRESS )
+    const int32 debugFlags = _CrtSetDbgFlag( _CRTDBG_REPORT_FLAG );
+    SW_EXPECT_TRUE( ( debugFlags & _CRTDBG_ALLOC_MEM_DF ) != 0 );
+    SW_EXPECT_TRUE( ( debugFlags & _CRTDBG_LEAK_CHECK_DF ) == 0 );
+    SW_EXPECT_EQUAL( _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG, _CrtSetReportMode( _CRT_WARN, _CRTDBG_REPORT_MODE ) );
+    SW_EXPECT_EQUAL( _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG, _CrtSetReportMode( _CRT_ERROR, _CRTDBG_REPORT_MODE ) );
+#else
+    SW_TEST_SKIP( "platform leak tracking state is the Windows Debug CRT (no ASan); other configurations have nothing to query" );
+#endif
 }
 
 /**
