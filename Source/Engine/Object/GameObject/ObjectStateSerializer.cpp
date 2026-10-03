@@ -93,9 +93,10 @@ namespace sw
             }
 
             /**
-             * @brief 상태를 읽은 오브젝트를 주변에 다시 맞춥니다. 이름이 바뀌었으면 매니저의 이름 표를, 그리고 활성 계층을 맞추고 컴포넌트에 알립니다.
+             * @brief 상태를 읽은 오브젝트를 주변에 다시 맞춥니다. 이름이 바뀌었으면 매니저의 이름 표를, 그리고 활성 계층을 맞춥니다.
              * @details XML · JSON · 바이너리 세 로더가 이 다섯 줄을 각자 들고 있었습니다. 한 포맷만 빠뜨리면 그 포맷으로 되돌린 오브젝트만
-             *          이름으로 찾을 수 없게 됩니다. 부모 연결은 여기서 잇지 않습니다 — 묶음(`ObjectStateBatch::finish`)이 모두 읽은 뒤 잇습니다.
+             *          이름으로 찾을 수 없게 됩니다. 부모 연결 · 핸들 · 컴포넌트 알림(`onPostLoad`)은 여기서 하지 않습니다 — 묶음
+             *          (`ObjectStateBatch::finish`)이 모두 읽은 뒤 합니다.
              */
             static void finishLoad( GameObject* pGameObject, hashed_string oldName )
             {
@@ -103,12 +104,6 @@ namespace sw
                     pGameObject->getManager()->notifyNameChanged( pGameObject, oldName, pGameObject->getName() );
 
                 pGameObject->setActive( pGameObject->isActive() );
-                // 값을 다 읽었다 — 컴포넌트가 값을 자원으로 바꾼다(`Component::onPostLoad`). 편집 중에도 불린다.
-                for ( Component* pComp : pGameObject->getComponents() )
-                {
-                    if ( pComp != nullptr && pComp->isPendingDestroy() == false )
-                        pComp->onPostLoad();
-                }
             }
 
             /** @brief 상태가 이 오브젝트를 부를 때의 id 입니다. 문맥이 따로 주지 않았으면 되살리는 원래 id 입니다. */
@@ -334,13 +329,13 @@ namespace sw
             const uint64 savedId = ObjectStateSerializerInternal::resolveSavedId( context );
             if ( context._pBatch != nullptr )
             {
-                context._pBatch->add( pGameObject, savedId, savedName, context._bExternalParentAllowed );
+                context._pBatch->addLoadedState( pGameObject, savedId, savedName, context._bExternalParentAllowed );
             }
             else
             {
                 // 혼자 읽는 상태도 같은 규칙으로 잇는다 — 같은 실행의 상태라 다른 오브젝트는 매니저의 런타임 id 로 찾는다.
                 ObjectStateBatch single( ObjectIdSpace::Live );
-                single.add( pGameObject, savedId, savedName, context._bExternalParentAllowed );
+                single.addLoadedState( pGameObject, savedId, savedName, context._bExternalParentAllowed );
                 single.finish();
             }
         }
@@ -545,12 +540,22 @@ namespace sw
 
     void ObjectStateBatch::add( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed )
     {
+        addEntry( pObject, savedId, savedName, bExternalParentAllowed, false );
+    }
+
+    void ObjectStateBatch::addLoadedState( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed )
+    {
+        addEntry( pObject, savedId, savedName, bExternalParentAllowed, true );
+    }
+
+    void ObjectStateBatch::addEntry( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed, bool bLoadedState )
+    {
         if ( pObject == nullptr )
             return;
         SW_ASSERT( _bFinished == false );
 
         const uint32 entryIndex = static_cast<uint32>( _listEntry.size() );
-        _listEntry.push_back( Entry{ pObject, savedId, savedName, bExternalParentAllowed } );
+        _listEntry.push_back( Entry{ pObject, savedId, savedName, bExternalParentAllowed, bLoadedState } );
         // 같은 id · 이름이 둘이면 먼저 적힌 것이다(옛 문서에는 이름이 겹친 엔티티가 있을 수 있다).
         if ( savedId != 0 )
             _mapSavedIdToObject.emplace( savedId, pObject );
@@ -581,6 +586,19 @@ namespace sw
         // 3) 핸들 PROPERTY. 부착과 같은 규칙으로 저장된 id 를 이 실행의 오브젝트로 옮긴다 — 가리키던 오브젝트가 뒤에 읽혔어도 찾는다.
         for ( const Entry& entry : _listEntry )
             resolveObjectReferences( entry );
+
+        // 4) 값을 다 읽고 이었다 — 컴포넌트가 값을 자원으로 바꾼다(`Component::onPostLoad`, 편집 중에도). 부착 · 핸들이 풀린 뒤라 그것을 읽어도
+        //    이 실행의 오브젝트다(언리얼 `PostLoad` 도 패키지의 오브젝트를 모두 읽고 이은 뒤에 온다). 상태 없이 지은 항목(프리팹 스폰)은 스폰이 이미 불렀다.
+        for ( const Entry& entry : _listEntry )
+        {
+            if ( entry._bLoadedState == false || entry._pObject->isPendingDestroy() )
+                continue;
+            for ( Component* pComp : entry._pObject->getComponents() )
+            {
+                if ( pComp != nullptr && pComp->isPendingDestroy() == false )
+                    pComp->onPostLoad();
+            }
+        }
     }
 
     void ObjectStateBatch::resolveObjectReferences( const Entry& entry ) const

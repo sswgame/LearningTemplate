@@ -14,7 +14,6 @@
 #include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Object/ObjectDiffSerializer.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
@@ -599,10 +598,9 @@ namespace sw
         return true;
     }
 
-    GameObject* PrefabManager::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName,
-                                      const uint8* pInstanceDiff, size_t instanceDiffSize )
+    GameObject* PrefabManager::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName )
     {
-        // 이 함수는 나머지 포인터를 모두 검사한다(`pAsset` · `pGameObject` · `pTypeInfo` · `pInstanceName`).
+        // 이 함수는 나머지 포인터를 모두 검사한다(`pAsset` · `pGameObject` · `pInstanceName`).
         // 매니저만 빠져 있었다. 활성 씬이 없을 때 `getObjectManager()` 는 nullptr 를 반환한다.
         if ( pGameObjectManager == nullptr )
         {
@@ -649,24 +647,21 @@ namespace sw
         // 그 자리에서 돌며 컴포넌트 추가가 모두 미뤄져(nullptr) **프리팹의 값이 버려졌다** — 빈 오브젝트만 남았다.
         if ( pGameObjectManager->isStructuralMutationFrozen() )
         {
-            const uint64  objectId = pGameObject->getObjectId();
-            const string  instanceName( pInstanceNameUtf8 );
-            vector<uint8> diffCopy;
-            if ( pInstanceDiff != nullptr && instanceDiffSize > 0 )
-                diffCopy.assign( pInstanceDiff, pInstanceDiff + instanceDiffSize );
+            const uint64 objectId = pGameObject->getObjectId();
+            const string instanceName( pInstanceNameUtf8 );
             // 캐시의 프리팹은 그 사이 다시 읽힐 수 있다(에디터 핫 리로드) — 포인터가 아니라 경로를 들고 그때 다시 찾는다.
-            pGameObjectManager->deferStructuralChange( [this, pGameObjectManager, objectId, resolvedPath, instanceName, savedDiff = std::move( diffCopy )]()
+            pGameObjectManager->deferStructuralChange( [this, pGameObjectManager, objectId, resolvedPath, instanceName]()
             {
                 GameObject*  pSpawned      = pGameObjectManager->findGameObjectById( objectId );
                 PrefabAsset* pLaterAsset   = ( pSpawned != nullptr ) ? loadPrefab( resolvedPath ) : nullptr;
-                const bool   bStateWritten = pLaterAsset != nullptr && applySpawnState( pSpawned, *pLaterAsset, instanceName, savedDiff.data(), savedDiff.size() );
+                const bool   bStateWritten = pLaterAsset != nullptr && applySpawnState( pSpawned, *pLaterAsset, instanceName );
                 if ( pSpawned != nullptr && bStateWritten == false )
                     pGameObjectManager->destroyObject( pSpawned );
             } );
             return pGameObject;
         }
 
-        if ( applySpawnState( pGameObject, *pAsset, pInstanceNameUtf8, pInstanceDiff, instanceDiffSize ) == false )
+        if ( applySpawnState( pGameObject, *pAsset, pInstanceNameUtf8 ) == false )
         {
             pGameObjectManager->destroyObject( pGameObject );
             return nullptr;
@@ -674,8 +669,7 @@ namespace sw
         return pGameObject;
     }
 
-    bool PrefabManager::applySpawnState( GameObject* pGameObject, const PrefabAsset& asset, string_view instanceName, const uint8* pInstanceDiff,
-                                         size_t instanceDiffSize )
+    bool PrefabManager::applySpawnState( GameObject* pGameObject, const PrefabAsset& asset, string_view instanceName )
     {
         if ( StringUtil::trim( asset.getStateData() ).empty() == false )
         {
@@ -685,16 +679,6 @@ namespace sw
                 return false;
             }
             pGameObject->setName( hashed_string( string( instanceName ).c_str() ) );
-        }
-
-        if ( pInstanceDiff != nullptr && instanceDiffSize > 0 )
-        {
-            const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
-            if ( pTypeInfo != nullptr && ObjectDiffSerializer::deserializeDiff( pGameObject, *pTypeInfo, pInstanceDiff, instanceDiffSize ) == false )
-            {
-                SW_LOG_ERROR( "Instance diff apply failed for '%#' — spawn aborted", instanceName );
-                return false;
-            }
         }
         return true;
     }

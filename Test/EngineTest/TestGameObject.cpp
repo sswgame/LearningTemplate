@@ -2893,3 +2893,44 @@ SW_TEST_CASE( GameObjectTest, CaseOnlyRenameChangesTheName )
     SW_EXPECT_TRUE( manager.findGameObjectByName( hashed_string( "caserenamehero" ) ) == pObj );
     SW_EXPECT_TRUE( manager.findGameObjectByName( hashed_string( "CASERENAMEHERO" ) ) == pObj );
 }
+
+/**
+ * @brief [GameObjectTest] onPostLoad 는 묶음이 오브젝트 사이의 부착 · 핸들을 푼 뒤에 온다 — 자식이 부모보다 먼저 읽혀도 그때 이미 부모에 붙어 있다
+ * @details 상태 읽기는 컴포넌트마다 `onPostLoad` 를 부르고, 다른 오브젝트로의 부착 · `GameObjectHandle` PROPERTY 는 묶음이 모두 읽은 뒤(`finish`) 푼다.
+ *          `onPostLoad` 가 읽는 자리에서 불리면 그 값들은 아직 저장된 id 였다(파일 id 면 이 실행의 엉뚱한 오브젝트). 언리얼 `PostLoad` 처럼 다 이은 뒤에 부른다.
+ */
+SW_TEST_CASE( GameObjectTest, PostLoadRunsAfterTheBatchResolvesReferences )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents( manager );
+    sw::GameObject* pParent = manager.createGameObject( sw::hashed_string( "ProbeParent" ) );
+    sw::GameObject* pChild  = manager.createGameObject( sw::hashed_string( "ProbeChild" ) );
+    SW_ASSERT_TRUE( pParent != nullptr && pChild != nullptr );
+    SW_ASSERT_NOT_NULL( pParent->addComponent<sw::SceneComponent>() );
+    SW_ASSERT_NOT_NULL( pChild->addComponent<sw::SceneComponent>() );
+    SW_ASSERT_NOT_NULL( pChild->addComponent<sw::MockPostLoadProbeComponent>() );
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+
+    const sw::string parentXml     = sw::ObjectStateSerializer::saveToXmlString( pParent );
+    const sw::string childXml      = sw::ObjectStateSerializer::saveToXmlString( pChild );
+    const uint64     parentSavedId = pParent->getObjectId();
+    const uint64     childSavedId  = pChild->getObjectId();
+    manager.clear();
+    sw::GameObject* pNewParent = manager.createGameObject( sw::hashed_string( "TempParent" ) );
+    sw::GameObject* pNewChild  = manager.createGameObject( sw::hashed_string( "TempChild" ) );
+    SW_ASSERT_TRUE( pNewParent != nullptr && pNewChild != nullptr );
+
+    // 자식을 먼저 읽는다 — 읽는 자리에서는 부모가 아직 읽히지 않았다.
+    sw::MockPostLoadProbeComponent::s_postLoadCount           = 0;
+    sw::MockPostLoadProbeComponent::s_postLoadWithParentCount = 0;
+    sw::ObjectStateBatch batch( sw::ObjectIdSpace::Saved );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pNewChild, childXml, { nullptr, &batch, childSavedId } ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pNewParent, parentXml, { nullptr, &batch, parentSavedId } ) );
+    SW_EXPECT_EQUAL( 0, sw::MockPostLoadProbeComponent::s_postLoadCount ); // 묶음이 끝나기 전에는 부르지 않는다
+    batch.finish();
+
+    SW_EXPECT_EQUAL( 1, sw::MockPostLoadProbeComponent::s_postLoadCount );
+    SW_EXPECT_EQUAL( 1, sw::MockPostLoadProbeComponent::s_postLoadWithParentCount );
+    SW_EXPECT_EQUAL( pNewParent, pNewChild->getParent() );
+    manager.clear();
+}

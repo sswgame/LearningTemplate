@@ -13,6 +13,9 @@ namespace sw
     int32          MockPostLoadSpawnerComponent::s_spawnAttemptCount{ 0 };
     int32          MockPostLoadSpawnerComponent::s_spawnedCount{ 0 };
 
+    int32 MockPostLoadProbeComponent::s_postLoadCount{ 0 };
+    int32 MockPostLoadProbeComponent::s_postLoadWithParentCount{ 0 };
+
     /** @brief 테스트 전용 TypeInfo 를 만들거나 캐시에서 반환합니다. */
     const TypeInfo* makeMockComponentTypeInfo( hashed_string shortName, hashed_string fqn, size_t size, hashed_string parentFqn )
     {
@@ -51,6 +54,7 @@ namespace sw
         MockSubTickStressComponent::StaticType();
         MockPoolLifecycleComponent::StaticType();
         MockPostLoadSpawnerComponent::StaticType();
+        MockPostLoadProbeComponent::StaticType();
 
         manager.registerComponentType<MockMeshComponent>( hashed_string( "MockMeshComponent" ) );
         manager.registerComponentType<MockAudioComponent>( hashed_string( "MockAudioComponent" ) );
@@ -64,5 +68,6 @@ namespace sw
         manager.registerComponentType<MockSubTickStressComponent>( hashed_string( "MockSubTickStressComponent" ) );
         manager.registerComponentType<MockPoolLifecycleComponent>( hashed_string( "MockPoolLifecycleComponent" ) );
         manager.registerComponentType<MockPostLoadSpawnerComponent>( hashed_string( "MockPostLoadSpawnerComponent" ) );
+        manager.registerComponentType<MockPostLoadProbeComponent>( hashed_string( "MockPostLoadProbeComponent" ) );
     }
 } // namespace sw

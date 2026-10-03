@@ -146,9 +146,14 @@ namespace sw
          * @param savedName 상태에 적힌 이름입니다 — 매니저가 유일하게 바꾸기 **전**의 것입니다.
          */
         void add( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed = true );
+        /**
+         * @brief 상태를 읽은 오브젝트 하나를 적습니다(`add` 와 같고, `finish` 가 이 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다). 로더가 부릅니다.
+         * @details `onPostLoad` 는 부착 · 핸들 PROPERTY 가 풀린 **뒤에** 옵니다 — 읽는 자리에서 부르면 다른 오브젝트를 가리키는 칸이 아직 저장된 id 입니다.
+         */
+        void addLoadedState( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed = true );
 
         /**
-         * @brief 적은 오브젝트들의 부착을 잇습니다. 모두 읽은 뒤 한 번 부릅니다.
+         * @brief 적은 오브젝트들의 부착 · 핸들 PROPERTY 를 잇고, 상태를 읽은 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 모두 읽은 뒤 한 번 부릅니다.
          * @details 그 앞에, 읽는 동안 이름이 겹쳐 번호를 받은 오브젝트는 그 이름이 비었으면 저장된 이름으로 되돌립니다(플레이 중 이름을 바꾼
          *          오브젝트를 되돌릴 때 앞의 것이 뒤의 것 이름을 잠시 쥐고 있었다).
          */
@@ -168,7 +173,11 @@ namespace sw
             uint64        _savedId{ 0 };
             hashed_string _savedName{};
             bool          _bExternalParentAllowed{ true };
+            bool          _bLoadedState{ false }; ///< 상태를 읽었다 — `finish` 가 `onPostLoad` 를 부른다
         };
+
+        /** @brief `add` · `addLoadedState` 의 몸통입니다. */
+        void addEntry( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed, bool bLoadedState );
 
         /** @brief 항목 하나의 씬 컴포넌트마다 부모를 찾아 붙이고, 못 찾으면 참조를 남깁니다. */
         void resolveEntry( const Entry& entry ) const;

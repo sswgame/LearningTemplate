@@ -337,7 +337,7 @@ if ( pTarget != nullptr ) { ... }
 | 상태 전체(붙여넣기 · 프리셋) | `Component::notifyStateWritten()` — 프로퍼티마다 `onPropertyChanged`, 그다음 `onPostLoad` |
 | 프로퍼티 하나(오버라이드 되돌리기 · 기본값 · 인스펙터) | `onPropertyChanged( 이름 )` |
 | 새로 만든 컴포넌트(에디터의 "컴포넌트 추가") | `onPostLoad()` — 기본값이 그 상태다 |
-| 묶음 · 제자리 로드 | 아무것도 — `ObjectStateSerializer` 가 `onPostLoad` 를 부른다 |
+| 묶음 · 제자리 로드 | 아무것도 — `ObjectStateBatch::finish` 가 부착 · 핸들 PROPERTY 를 푼 **뒤에** `onPostLoad` 를 부른다 |
 
 - 값 하나를 옮기고 · 견주고 · 글로 쓰고 · 읽는 규칙은 `SerializerUtil::copyPropertyValue` · `arePropertyValuesEqual` · `formatPropertyText` ·
   `applyPropertyText` **한 벌**입니다. 비트필드는 그 비트만, 컨테이너는 원소째 다룹니다. 예전에는 오버라이드 도구 · 인스펙터가 각자 들어 비트필드를

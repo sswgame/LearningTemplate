@@ -746,4 +746,38 @@ namespace sw
                                           sizeof( MockPostLoadSpawnerComponent ) );
     }
 
+    /**
+     * @brief 상태를 다 읽었을 때(`onPostLoad`) 소유 오브젝트가 이미 부모에 붙어 있었는지 적는 컴포넌트입니다.
+     * @details 오브젝트 사이의 부착 · 핸들 PROPERTY 는 묶음이 모두 읽은 뒤(`ObjectStateBatch::finish`) 풉니다. `onPostLoad` 가 그보다 먼저 오면
+     *          다른 오브젝트를 가리키는 값이 아직 저장된 id 입니다 — 이 목이 그 순서를 봅니다. 설정 · 결과는 정적 칸입니다(정의는 TestGameObjectMocks.cpp).
+     */
+    class MockPostLoadProbeComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        static int32 s_postLoadCount;           ///< `onPostLoad` 가 불린 횟수
+        static int32 s_postLoadWithParentCount; ///< 그때 소유 오브젝트가 부모에 붙어 있던 횟수
+
+        const TypeInfo* getTypeInfo() const override
+        {
+            return StaticType();
+        }
+
+        void onPostLoad() override
+        {
+            Component::onPostLoad();
+            ++s_postLoadCount;
+            if ( getOwner() != nullptr && getOwner()->getParent() != nullptr )
+                ++s_postLoadWithParentCount;
+        }
+    };
+
+    inline const TypeInfo* MockPostLoadProbeComponent::StaticType()
+    {
+        return makeMockComponentTypeInfo( hashed_string( "MockPostLoadProbeComponent" ),
+                                          hashed_string( "sw::MockPostLoadProbeComponent" ),
+                                          sizeof( MockPostLoadProbeComponent ) );
+    }
+
 } // namespace sw
