@@ -48,18 +48,6 @@ namespace sw
         return pLoc->initialize( directoryOrResourcePath, defaultLanguage, fallbackLanguage );
     }
 
-    bool GameStrings::loadLanguage( string_view languageCode, string_view assetRelativePath )
-    {
-        LocalizationManager* pLoc = game::getService<LocalizationManager>();
-        if ( pLoc == nullptr )
-        {
-            SW_LOG_ERROR( "LocalizationManager service is not bound." );
-            return false;
-        }
-
-        return pLoc->loadLanguageResource( languageCode, assetRelativePath );
-    }
-
     bool GameStrings::loadLanguageFile( string_view languageCode, string_view filePath )
     {
         LocalizationManager* pLoc = game::getService<LocalizationManager>();

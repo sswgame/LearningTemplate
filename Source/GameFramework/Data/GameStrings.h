@@ -1,6 +1,6 @@
 /**
  * @file GameStrings.h
- * @brief game/<pack>/data/strings.xml 에서 읽는 키/값 문자열 테이블입니다.
+ * @brief JSON 언어 파일(`<팩루트>/data/strings.json` 또는 언어별 파일의 디렉터리)에서 읽는 키/값 문자열 테이블입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,7 +15,7 @@ namespace sw
 {
     // ------------------------------------------------------------------------------
     // 1) GameStrings — 프로세스 전역 키 테이블
-    //    UI/로그 리터럴이 아니라 팩 XML/JSON/INI 대사·표시 다국어 문자열
+    //    UI/로그 리터럴이 아니라 팩 JSON 언어 파일의 대사·표시 다국어 문자열
     // ------------------------------------------------------------------------------
     /** @brief 다국어 언어 파일 로딩과 키 조회를 맡는 게임 텍스트 시스템입니다. */
     class SW_GF_API GameStrings
@@ -23,21 +23,18 @@ namespace sw
     public:
         using LanguageChangedCallback = sw::Delegate<void( string_view oldLanguage, string_view newLanguage )>;
 
-        /** @brief Resource 상대 경로에서 단일 언어 또는 기본(default) 언어 파일을 로드합니다(.xml · .json · .ini · .kv 자동 감지). */
+        /** @brief Resource 상대 경로에서 단일 언어 또는 기본(default) 언어 파일(.json)을 로드합니다. 다른 확장자는 경고를 남기고 false 입니다. */
         [[nodiscard]] static bool loadFromResource( string_view assetRelativePath );
 
         /**
          * @brief 언어 팩 디렉터리 또는 기본 리소스 파일을 훑어 로드하고, 커맨드라인 · 기본 · 폴백 언어를 자동으로 활성화합니다.
-         * @param directoryOrResourcePath 디렉터리 경로 (예: "<팩루트>/data/localization") 또는 기본 파일 경로 ("<팩루트>/data/strings.xml")
+         * @param directoryOrResourcePath 디렉터리 경로 (예: "<팩루트>/data/localization") 또는 기본 파일 경로 ("<팩루트>/data/strings.json")
          * @param defaultLanguage 기본 활성 언어 코드 (예: "ko_KR")
          * @param fallbackLanguage 대체(Fallback) 언어 코드 (예: "en_US")
          */
         static bool initialize( string_view directoryOrResourcePath, string_view defaultLanguage = "ko_KR", string_view fallbackLanguage = "en_US" );
 
-        /** @brief Resource 상대 경로에서 특정 언어 코드(예: "ko_KR", "en_US")의 언어 파일을 로드합니다. */
-        [[nodiscard]] static bool loadLanguage( string_view languageCode, string_view assetRelativePath );
-
-        /** @brief 파일 시스템 경로에서 특정 언어 코드의 언어 파일을 로드합니다. */
+        /** @brief 파일 시스템 경로에서 특정 언어 코드의 언어 파일(.json)을 로드합니다. */
         [[nodiscard]] static bool loadLanguageFile( string_view languageCode, string_view filePath );
 
         /** @brief 특정 디렉터리 안의 모든 언어 파일(예: ko_kr.json, en_us.json 등)을 파일명을 언어 코드로 삼아 한꺼번에 로드합니다. */
