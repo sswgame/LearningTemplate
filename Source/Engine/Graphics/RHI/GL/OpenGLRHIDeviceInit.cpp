@@ -226,14 +226,33 @@ namespace sw
             glSamplerParameteri( materialSampler, GL_TEXTURE_WRAP_S, GL_REPEAT );
             glSamplerParameteri( materialSampler, GL_TEXTURE_WRAP_T, GL_REPEAT );
             glSamplerParameteri( materialSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE );
+            // 엔진 텍스처 유닛(t0..t3 — 풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵)은 엔진 텍스처 샘플러(선형 · 클램프, shaderslot::kEngineTextureSampler)다.
+            // 네이티브 bindless 의 swSampleIndex 가 고르는 샘플러와 같아야 블룸의 반 텍셀 탭이 같은 텍셀 넷을 섞는다. 렌더 타깃은 밉이 하나라
+            // 축소 필터에 밉 모드를 두지 않는다.
+            static_assert( shaderslot::kEngineTextureSampler == SW_SAMPLER_LINEAR_CLAMP, "GL 엔진 텍스처 샘플러의 필터 · 주소가 계약과 다르다" );
+            static_assert( shaderslot::kEngineTexture0 == 0, "엔진 텍스처 유닛 판정은 t0 부터라고 가정한다" );
+            GLuint engineSampler{ 0 };
+            glGenSamplers( 1, &engineSampler );
+            glSamplerParameteri( engineSampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+            glSamplerParameteri( engineSampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+            glSamplerParameteri( engineSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+            glSamplerParameteri( engineSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+            glSamplerParameteri( engineSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE );
             for ( uint32 unit = 0; unit < 64; ++unit )
             {
                 const bool bMaterialUnit = ( shaderslot::kMaterialTexture0 <= unit && unit < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
+                const bool bEngineUnit   = ( unit < shaderslot::kEngineTexture0 + shaderslot::kEngineTextureCount );
                 glBindTextureUnit( unit, defaultTex );
-                glBindSampler( unit, bMaterialUnit ? materialSampler : defaultSampler );
+                if ( bMaterialUnit )
+                    glBindSampler( unit, materialSampler );
+                else if ( bEngineUnit )
+                    glBindSampler( unit, engineSampler );
+                else
+                    glBindSampler( unit, defaultSampler );
             }
             _defaultSampler  = defaultSampler;
             _materialSampler = materialSampler;
+            _engineSampler   = engineSampler;
         }
 
         _frameStreamContext = sw::make_unique<OpenGLRHICommandContext>( this );
@@ -268,6 +287,11 @@ namespace sw
         {
             glDeleteSamplers( 1, &_materialSampler );
             _materialSampler = 0;
+        }
+        if ( _engineSampler != 0 )
+        {
+            glDeleteSamplers( 1, &_engineSampler );
+            _engineSampler = 0;
         }
         if ( _defaultTexture )
         {

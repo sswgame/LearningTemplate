@@ -4155,6 +4155,187 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialTexturesAreSampledLinearWrap )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 엔진 텍스처 슬롯(풀스크린 입력)은 네 백엔드 모두 같은 샘플러(선형 · 클램프)로 읽힌다 — 블룸 결과가 기준 백엔드와 같다
+ * @details 계약은 `shaderslot::kEngineTextureSampler`(SW_ENGINE_TEXTURE_SAMPLER) 하나다. 네이티브 bindless(DX12 · Vulkan)는 `swSampleIndex` 가 그
+ *          샘플러를 고르고, 슬롯 결합 샘플러를 쓰는 DX11 · GL 은 엔진이 t0..t3 에 같은 샘플러를 건다. 블룸은 `swSampleSource` 를 반 텍셀 비낀 두
+ *          탭으로 읽어 텍셀 넷을 평균하므로 필터(최근접이면 한 텍셀) · 주소 모드(화면 가장자리에서 랩이면 반대편 텍셀)가 그대로 픽셀에 드러난다.
+ *          밝은 큐브 셋 + 화면 왼쪽 가장자리를 넘는 긴 막대(왼쪽 끝만 밝다 — 랩과 클램프가 갈린다)를 나눈 후처리 파이프라인으로 그려,
+ *          `SceneColor` 가 기준과 같은 백엔드에서 `BloomColor` 도 같은지 픽셀로 본다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, EngineTextureSlotsAreSampledLinearClamp )
+{
+    // 채널당 허용 차이와, 기준과 달라도 되는 픽셀의 상한(그려진 픽셀 대비 ‰). 반올림 말고는 달라질 것이 없다.
+    constexpr int32  kChannelTolerance  = 2;
+    constexpr uint32 kMaxDifferPermille = 2;
+
+    struct Capture
+    {
+        test::RHITestImage _sceneColor;
+        test::RHITestImage _bloomColor;
+    };
+    // 두 이미지에서 채널 차이가 허용을 넘는 픽셀 수.
+    auto countDiffer = []( const test::RHITestImage& lhs, const test::RHITestImage& rhs ) -> uint32
+    {
+        uint32 differCount{ 0 };
+        for ( uint32 row = 0; row < lhs.getHeight(); ++row )
+        {
+            for ( uint32 col = 0; col < lhs.getWidth(); ++col )
+            {
+                const test::Rgba8 left       = lhs.getPixel( col, row );
+                const test::Rgba8 right      = rhs.getPixel( col, row );
+                const int32       redDelta   = static_cast<int32>( left._r ) - static_cast<int32>( right._r );
+                const int32       greenDelta = static_cast<int32>( left._g ) - static_cast<int32>( right._g );
+                const int32       blueDelta  = static_cast<int32>( left._b ) - static_cast<int32>( right._b );
+                const bool        bSame      = -kChannelTolerance <= redDelta && redDelta <= kChannelTolerance && -kChannelTolerance <= greenDelta &&
+                                   greenDelta <= kChannelTolerance && -kChannelTolerance <= blueDelta && blueDelta <= kChannelTolerance;
+                if ( bSame == false )
+                    ++differCount;
+            }
+        }
+        return differCount;
+    };
+
+    // 기준(네이티브 bindless)을 먼저 그린다.
+    sw::vector<sw::RHIBackend> listBackend;
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        if ( backend == sw::RHIBackend::DirectX12 || backend == sw::RHIBackend::Vulkan )
+            listBackend.insert( listBackend.begin(), backend );
+        else
+            listBackend.push_back( backend );
+    }
+
+    Capture    reference;
+    sw::string referenceName;
+    uint32     comparedCount{ 0 };
+    for ( sw::RHIBackend backend : listBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        const sw::string label = sw::string( device->getBackendName() ) + ": ";
+
+        sw::Scene scene( "EngineSamplerScene" );
+        bool      bOk = scene.ensureDefaultCameras();
+        if ( bOk )
+        {
+            // 밝은 면이 있어야 블룸이 퍼진다. 그림자는 끈다 — 에뮬 백엔드는 그림자 비교를 다르게 한다(이 시험의 대상이 아니다).
+            sw::GameObject*                pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
+            sw::DirectionalLightComponent* pLight       = ( pLightObject != nullptr ) ? pLightObject->addComponent<sw::DirectionalLightComponent>() : nullptr;
+            bOk                                         = pLight != nullptr;
+            if ( bOk )
+            {
+                pLight->setIntensity( 6.0f );
+                pLight->setCastShadow( false );
+            }
+        }
+        sw::shared_ptr<sw::Material> material = sw::Material::create();
+        if ( bOk )
+            bOk = material->loadFromFile( "engine/materials/defaultmaterial.material" ) &&
+                  material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 1.0 1.0 1.0" );
+
+        // 큐브 셋(화면 안) + 왼쪽 가장자리를 넘어가는 긴 막대 하나(오른쪽 가장자리는 배경이다).
+        constexpr uint32 kBoxCount = 4;
+        const sw::float3 arrPosition[kBoxCount]{
+            sw::float3{ -1.5f,  1.0f, 0.0f},
+            sw::float3{  0.0f,  1.0f, 0.0f},
+            sw::float3{  1.5f,  1.0f, 0.0f},
+            sw::float3{-20.0f, -1.0f, 0.0f}
+        };
+        const sw::float3 arrScale[kBoxCount]{
+            sw::float3{ 1.0f, 1.0f, 1.0f},
+            sw::float3{ 1.0f, 1.0f, 1.0f},
+            sw::float3{ 1.0f, 1.0f, 1.0f},
+            sw::float3{36.0f, 0.5f, 0.5f}
+        };
+        sw::shared_ptr<sw::Mesh> arrMesh[kBoxCount];
+        for ( uint32 index = 0; index < kBoxCount && bOk; ++index )
+        {
+            arrMesh[index]             = sw::MeshUtil::createUnitCube();
+            const sw::string   name    = sw::string( "Box" ) + sw::to_string( index );
+            sw::GameObject*    pObject = ( arrMesh[index] != nullptr )
+                                           ? scene.getObjectManager()->createGameObject( sw::hashed_string( name.c_str(), static_cast<uint32>( name.size() ) ) )
+                                           : nullptr;
+            sw::MeshComponent* pMesh   = ( pObject != nullptr ) ? pObject->addComponent<sw::MeshComponent>() : nullptr;
+            bOk                        = pMesh != nullptr;
+            if ( bOk == false )
+                break;
+            pMesh->setMesh( arrMesh[index] );
+            pMesh->setMaterial( material.get() );
+            pMesh->setLocalPosition( arrPosition[index] );
+            pMesh->setLocalScale( arrScale[index] );
+        }
+        scene.getObjectManager()->flushSceneTransforms();
+
+        Capture capture;
+        if ( bOk )
+        {
+            sw::FrameRenderer renderer;
+            bOk = renderer.initialize( device.get(), "engine/pipeline/forwardpipelinestaged.xml" ) && renderer.isReady();
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "나눈 후처리 파이프라인을 만들지 못했다" ).c_str() );
+            constexpr uint32 kWarmupFrameCount = 3;
+            for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
+            {
+                device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                bOk = renderer.execute( device.get(), &scene );
+                device->endFrame( false, false );
+                device->waitIdle();
+            }
+            bOk = bOk && capture._sceneColor.readTransient( renderer, "SceneColor" ) && capture._bloomColor.readTransient( renderer, "BloomColor" );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
+            renderer.shutdown();
+        }
+        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
+        {
+            if ( mesh != nullptr )
+                mesh->releaseRhi( device.get() );
+        }
+        material->releaseRhi( device.get() );
+        if ( bOk == false )
+            continue;
+
+        uint32 drawnCount{ 0 };
+        uint32 leftEdgeDrawnCount{ 0 };
+        for ( uint32 row = 0; row < capture._sceneColor.getHeight(); ++row )
+        {
+            for ( uint32 col = 0; col < capture._sceneColor.getWidth(); ++col )
+            {
+                if ( test::RHITestImage::isDefaultClearBackground( capture._sceneColor.getPixel( col, row ) ) )
+                    continue;
+                ++drawnCount;
+                if ( col == 0 )
+                    ++leftEdgeDrawnCount;
+            }
+        }
+        SW_EXPECT_TRUE_MSG( leftEdgeDrawnCount > 0, ( label + "막대가 화면 왼쪽 가장자리에 닿지 않는다 — 랩 · 클램프 차이를 재지 못한다" ).c_str() );
+        if ( referenceName.empty() )
+        {
+            referenceName = label;
+            reference     = capture;
+            continue;
+        }
+        if ( capture._sceneColor.getWidth() != reference._sceneColor.getWidth() || capture._sceneColor.getHeight() != reference._sceneColor.getHeight() )
+            continue;
+        ++comparedCount;
+
+        const uint32 sceneDiffer = countDiffer( capture._sceneColor, reference._sceneColor );
+        const uint32 bloomDiffer = countDiffer( capture._bloomColor, reference._bloomColor );
+        SW_LOG_INFO( "%#drawn %# px (left edge %#), SceneColor differs %# px, BloomColor differs %# px from %#", label, drawnCount, leftEdgeDrawnCount,
+                     sceneDiffer, bloomDiffer, referenceName );
+        // 입력이 같아야 블룸 비교가 샘플러를 잰다.
+        SW_EXPECT_TRUE_MSG( sceneDiffer * 1000u <= drawnCount * kMaxDifferPermille,
+                            ( label + "SceneColor 가 " + referenceName + "과 " + sw::to_string( sceneDiffer ) + " 픽셀 다르다 — 블룸 비교의 전제가 깨졌다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( bloomDiffer * 1000u <= drawnCount * kMaxDifferPermille,
+                            ( label + "BloomColor 가 " + referenceName + "과 " + sw::to_string( bloomDiffer ) +
+                              " 픽셀 다르다 — 엔진 텍스처 슬롯의 샘플러(필터 · 주소)가 계약(SW_ENGINE_TEXTURE_SAMPLER)과 다르다" )
+                                .c_str() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "Fewer than two RHI backends could run the staged post pipeline" );
+}
+
+/**
  * @brief [RenderPassGpuTest] 한 배치로 그린 스프라이트 여섯이 인스턴스마다 다른 아틀라스 프레임과 색을 보이고, 2D 카메라에서 텍스처가 뒤집히지 않는다 (4 백엔드)
  * @details 네 칸 텍스처(왼위 빨강 · 오위 초록 · 왼아래 파랑 · 오아래 흰색)를 나눠 쓰는 스프라이트들이 각자 다른 칸(UV 사각형)과 색을 고른다.
  *          둘은 머티리얼 인스턴스가 아니라 GPU 인스턴스(`instancedata.hlsli` 의 uvStart · uvEnd · tint)에 실리므로 모두 **반투명 배치 하나**다.

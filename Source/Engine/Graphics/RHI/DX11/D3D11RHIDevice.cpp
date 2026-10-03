@@ -95,7 +95,6 @@ namespace sw
         , _listRenderPass{}
         , _depthEnabledState{ nullptr }
         , _depthDisabledState{ nullptr }
-        , _linearSampler{ nullptr }
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
         , _backBufferFormat{ constant::kBackBufferFormat }

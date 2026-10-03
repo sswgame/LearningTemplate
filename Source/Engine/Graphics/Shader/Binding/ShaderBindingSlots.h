@@ -39,7 +39,13 @@ namespace sw
         // ------------------------------------------------------------------------------
         inline constexpr uint32 kEngineTexture0     = SW_SLOT_ENGINE_TEX0;
         inline constexpr uint32 kEngineTextureCount = SW_ENGINE_TEXTURE_SLOT_COUNT;
-        inline constexpr uint32 kInstanceBuffer     = SW_SLOT_INSTANCE_SRV;
+        /**
+         * @brief 엔진 텍스처 슬롯 t0..t3(풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵)을 읽는 샘플러(SW_SAMPLER_*)입니다 — 선형 필터 · 클램프 주소.
+         * @details 네이티브 bindless(DX12 · Vulkan)는 `swSampleIndex` 가 이 샘플러로 읽습니다. 슬롯 결합 샘플러를 쓰는 DX11 · GL 은 엔진이 t0..t3 에
+         *          같은 샘플러를 겁니다(언리얼 후처리 입력의 Bilinear · Clamp 정적 샘플러). 랩이면 화면 가장자리의 탭이 반대편을 읽습니다.
+         */
+        inline constexpr uint32 kEngineTextureSampler = SW_ENGINE_TEXTURE_SAMPLER;
+        inline constexpr uint32 kInstanceBuffer       = SW_SLOT_INSTANCE_SRV;
         /**
          * @brief 네이티브 bindless 가 없는 백엔드(DX11 · GL)의 머티리얼 텍스처 슬롯 t5..t8 입니다.
          * @details 그 두 백엔드는 머티리얼이 준 전역 인덱스를 셰이더에서 풀 수 없습니다. DX11 은 SM5.0 이라
@@ -51,10 +57,10 @@ namespace sw
         inline constexpr uint32 kMaterialTextureCount = SW_MATERIAL_TEXTURE_SLOT_COUNT;
         /**
          * @brief 머티리얼 텍스처를 읽는 샘플러(bindingslots.hlsli 4 의 SW_SAMPLER_*)입니다 — 선형 필터 · 랩 주소.
-         * @details 네이티브 bindless(DX12 · Vulkan)는 `swSampleMaterialTexture` → `swSampleIndex` 가 이 샘플러로 읽습니다. 슬롯 결합 샘플러를 쓰는
+         * @details 네이티브 bindless(DX12 · Vulkan)는 `swSampleMaterialTexture` 가 이 샘플러로 읽습니다. 슬롯 결합 샘플러를 쓰는
          *          DX11 · GL 은 셰이더가 고르지 못하므로 엔진이 머티리얼 슬롯 t5..t8 에 같은 샘플러를 겁니다(언리얼 머티리얼 텍스처의 기본 Wrap 샘플러).
          */
-        inline constexpr uint32 kMaterialTextureSampler = SW_SAMPLER_LINEAR_WRAP;
+        inline constexpr uint32 kMaterialTextureSampler = SW_MATERIAL_TEXTURE_SAMPLER;
         /// @brief GPUScene 머티리얼 데이터 구조버퍼(g_SwMaterials)입니다. 인스턴스의 materialIndex 로 읽습니다.
         inline constexpr uint32 kMaterialBuffer = SW_SLOT_MATERIAL_BUFFER;
         /**

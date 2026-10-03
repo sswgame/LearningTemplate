@@ -115,16 +115,6 @@ namespace sw
             dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
             _device->CreateDepthStencilState( &dsDesc, _depthDisabledState.GetAddressOf() );
 
-            D3D11_SAMPLER_DESC samplerDesc{};
-            samplerDesc.Filter         = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-            samplerDesc.AddressU       = D3D11_TEXTURE_ADDRESS_CLAMP;
-            samplerDesc.AddressV       = D3D11_TEXTURE_ADDRESS_CLAMP;
-            samplerDesc.AddressW       = D3D11_TEXTURE_ADDRESS_CLAMP;
-            samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-            samplerDesc.MinLOD         = 0.0f;
-            samplerDesc.MaxLOD         = D3D11_FLOAT32_MAX;
-            _device->CreateSamplerState( &samplerDesc, _linearSampler.GetAddressOf() );
-
             // 정적 샘플러 세트 s9..s15. DX12 루트 시그니처 정적 샘플러(D3D12RHIDeviceDescriptor.cpp)와 같은 표다. 비교 샘플러(7)는
             // 에뮬 경로가 깊이를 직접 비교하므로 없다.
             struct StaticSamplerSpec
@@ -207,7 +197,6 @@ namespace sw
         _gpuBuffers.clear();
         _depthEnabledState.Reset();
         _depthDisabledState.Reset();
-        _linearSampler.Reset();
         _recordingState._activeGraphicsPso = 0;
         _listRegisteredBindless.clear();
         _listBindlessFree.clear();

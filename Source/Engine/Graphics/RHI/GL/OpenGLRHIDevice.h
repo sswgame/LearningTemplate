@@ -282,8 +282,9 @@ namespace sw
         uint32 _vao;
         uint32 _vbo;             ///< 풀스크린 삼각형(정점 3개)
         uint32 _meshVao;         ///< 씬 메시 드로우용 VAO
-        uint32 _defaultSampler;  ///< 머티리얼 유닛 밖의 모든 텍스처 유닛(최근접 · 클램프)
+        uint32 _defaultSampler;  ///< 엔진 · 머티리얼 유닛 밖의 모든 텍스처 유닛(최근접 · 클램프)
         uint32 _materialSampler; ///< 머티리얼 텍스처 유닛 t5..t8 (선형 · 랩, shaderslot::kMaterialTextureSampler)
+        uint32 _engineSampler;   ///< 엔진 텍스처 유닛 t0..t3 (선형 · 클램프, shaderslot::kEngineTextureSampler)
         uint32 _defaultTexture;
 
         RHIHandleTable<uint32> _gpuBuffers;

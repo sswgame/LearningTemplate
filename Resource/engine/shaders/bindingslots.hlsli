@@ -140,6 +140,13 @@
 #define SW_SAMPLER_POINT_BORDER     6
 #define SW_SAMPLER_SHADOW_CMP       7
 
+// 슬롯 종류마다 읽는 샘플러(위 SW_SAMPLER_* 번호) — 네 백엔드가 같은 값을 쓴다. 네이티브 bindless(DX12/Vulkan)는 셰이더가 이 번호로
+// 고르고, 슬롯 결합 샘플러(DX11/GL)는 엔진이 그 슬롯에 같은 샘플러를 건다.
+//   엔진 텍스처 슬롯 t0..t3 (풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵): 선형 · 클램프(1) — 화면 가장자리의 탭이 반대편을 읽지 않는다.
+//   머티리얼 텍스처 t5..t8: 선형 · 랩(0).
+#define SW_ENGINE_TEXTURE_SAMPLER   1
+#define SW_MATERIAL_TEXTURE_SAMPLER 0
+
 // DX11(SM5.0) 정적 샘플러 세트 자리 s9..s15 — 슬롯 결합 샘플러(s0..s8, t# 와 같은 번호)와 겹치지 않는다. 엔진이 디바이스
 // 초기화 때 한 번 걸어 두고 셰이더는 swSampleIndexWith 의 samplerId 로 고른다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기).
 // 언리얼 D3D11 RHI 는 슬롯마다 엔진이 고른 샘플러를 걸 뿐 셰이더가 고르는 세트가 없다 — 여기서는 DX12/Vulkan 과 같은

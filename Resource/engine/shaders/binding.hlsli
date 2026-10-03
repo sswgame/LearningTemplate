@@ -371,9 +371,10 @@ float4 swSampleIndexWith( uint index, uint samplerId, float2 uv )
 	}
 #endif
 }
+/** @brief 엔진 텍스처(풀스크린 입력 · G버퍼 · 깊이 · 그림자 맵)를 엔진 텍스처 샘플러(선형 · 클램프)로 읽습니다 — 에뮬 백엔드가 t0..t3 에 거는 것과 같다. */
 float4 swSampleIndex( uint index, float2 uv )
 {
-	return swSampleIndexWith( index, SW_SAMPLER_LINEAR_WRAP, uv );
+	return swSampleIndexWith( index, SW_ENGINE_TEXTURE_SAMPLER, uv );
 }
 /**
  * @brief 씬 깊이의 2x2 이웃을 **텍스처 연산 한 번**으로 읽습니다 (`GatherRed`).
@@ -561,10 +562,10 @@ float4 swLoadRwTexture2D( uint index, uint2 texelPosition )
 #if defined( SW_NATIVE_BINDLESS )
 float4 swSampleMaterialTexture( uint index, float2 uv )
 {
-	// 네이티브 bindless: index 는 배열 전역 인덱스다.
+	// 네이티브 bindless: index 는 배열 전역 인덱스다. 샘플러는 머티리얼 텍스처 샘플러(선형 · 랩)다.
 	if ( index == kInvalidIndex )
 		return float4( 1, 1, 1, 1 );
-	return swSampleIndex( index, uv );
+	return swSampleIndexWith( index, SW_MATERIAL_TEXTURE_SAMPLER, uv );
 }
 #else
 float4 swSampleMaterialTexture( uint index, float2 uv )
