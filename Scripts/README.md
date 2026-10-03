@@ -132,7 +132,7 @@ py -3 Scripts/setup/SetupEnvironment.py
 py -3 Scripts/generate/CookAssets.py --all
 py -3 Scripts/lint/gate/CheckEngineLayers.py
 py -3 Scripts/lint/fixer/RunClangFormat.py
-py -3 Scripts/generate/BakeShippingHostDefaults.py build/generated/sw/config/ShippingHostDefaults.h
+py -3 Scripts/generate/BakeShippingHostDefaults.py build/Ninja-Shipping/generated/sw/config/ShippingHostDefaults.h  # 빌드가 읽는 자리(<빌드 폴더>/generated)
 ```
 
 `SetupLlvm` / `SetupEnvironment` 는 최소 LLVM 키트에 `clang-format` 을 포함·보완합니다 (기존 키트에 없으면 캐시된 LLVM tar에서 bin만 추출).
