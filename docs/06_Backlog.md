@@ -93,7 +93,7 @@ cd build/Ninja-Debug/Bin
 영역별로 묶었다. 영역 안에서는 위에 있을수록 먼저 볼 것이다. 줄 번호는 2026-10-03 기준이라 어긋날 수 있다 — 함수 이름으로 찾는다.
 "확인 필요" 가 붙은 항목은 열려 있는지부터 확인하고 시작한다.
 
-### 1-0. 대기 중 — 진행 중인 별칭 제거 워크트리가 병합된 뒤 한꺼번에 (사용자 지시 2026-10-03)
+### 1-0. 대기 중 — 진행 중인 수명 짝 워크트리가 병합된 뒤 한꺼번에 (사용자 지시 2026-10-03)
 
 - **수명 짝을 표 하나로 — 기동 표와 같은 모양으로 남은 자리**(종료 블록 감사에서 찾은 것): RHI 디바이스 넷의 `shutdown` 이 같은 순서를 손으로 되풀이(템플릿 메서드 후보),
   FrameRenderer · GpuScene 의 GPU 자원 해제 목록, 모듈 인스턴스 수명 짝(에디터 · 게임 둘이 같은 코드), ImGuiEditor 의 초기화 · 종료 단계, ImGui 플랫폼 · 렌더 백엔드 짝,
@@ -114,17 +114,21 @@ cd build/Ninja-Debug/Bin
   `ZoneRuntime`→`ZoneTracker`, `SelectionManager`→`EditorSelection`; (3) `AnimationGraph*`→`AnimGraph*`, `LevelLoad*Event`→`SceneLoad*Event`, `Load/SaveCompletedEvent`→
   `SaveGameLoaded/SavedEvent`, `SceneDocument::EntityNode`→`SceneObjectNode`, `EditorBackgroundJob`→`EditorBackgroundTask`, `SpatialElement`→`SpatialElement2D`,
   `InputMapEditorPanel`/`PrefabEditorPanel`→`InputMapPanel`/`PrefabPanel`, ReflectionParser 소문자 구조체 → 소문자 네임스페이스(`tpl`→`template`), `framres`/`commandmod`→
-  `frameresource`/`commandmodifier`; (4) Bake→Cook(`ShaderBaker`→`ShaderCooker`, `--bake-shaders`→`--cook-shaders` + 옛 플래그), `ResourceManager`→`AssetManager`
+  `frameresource`/`commandmodifier`; (4) Bake · Cook 용어(사용자 지시 — 상용 엔진 기준): **Cook = 배포 · 실행용 플랫폼 데이터로 바꾸기**(UE Cook), **Import = 원본 →
+  엔진 형식**(UE Factory · Unity Importer), **Bake = 미리 계산한 결과**(라이트맵 · 내비 · 애니메이션 굽기 — 지금은 없음, 그때만 쓴다), **Generate = 빌드가 만드는 코드 ·
+  헤더**. 그래서 `ShaderBaker` · `ShaderBakeDriver` · `ShaderBakeRequest` · `ShaderBakeStamp`→`ShaderCooker` · `ShaderCookDriver` · `ShaderCookRequest` · `ShaderCookStamp`,
+  `Renderer/Bake/`→`Renderer/Cook/`, `--bake-shaders`→`--cook-shaders`(옛 철자 없음), `bake.stamp`→`cook.stamp`, `TextureBaker`→`TextureImporter`(이미 `TextureImportConfig` ·
+  `TextureImportRule` 과 짝), `BakeShippingHostDefaults.py`→`GenerateShippingHostDefaults.py`, 주석 · 문서의 "굽다"도 같은 구분으로. `ResourceManager`→`AssetManager`
   ("Resource" 는 디스크 트리 · 팩, "Asset" 은 읽은 객체), `EngineData`/`GameData`/`EditorData`→`EngineDefaultAssets`/`GameSettings`/`EditorToolDefaults`.
-- **기존 별칭 사용처 전부 제거** — `PROPERTY( Alias = … )` 109 줄(36 파일) · `ENUM( ValueAlias = "Med:Medium" )`: `Resource/` 데이터의 키를 정본 이름으로 다시 쓰고 별칭을 지운다.
-  **별칭 기능 자체(REFLECT/PROPERTY Alias · ValueAlias)와 그 시험은 남긴다** — 실제 게임 데이터가 생긴 뒤 이름을 바꿀 때의 창구(언리얼 CoreRedirects 격)이고, 엔진 데이터는 쓰지 않는다.
-  같은 이유로 남은 옛 형식 읽기 경로(`legacy` · 레거시 래핑 등)도 하나씩 보고 걷어낸다. 함정: 모르는 키가 조용히 무시되면 데이터 다시 쓰기를 빠뜨려도 시험이 초록이다 —
-  다시 쓴 뒤 로드 경고/오류가 0 인지 볼 것.
 - **case 중괄호 일관성 규칙**(한 switch 안에서 한 case 라도 중괄호면 모두) — 픽서 패치 준비됨(스크래치), 39 파일 다시 쓰기 + AGENTS.md · 04 규칙 문장.
 - **한 파일에 클래스가 여럿이면 클래스마다 `namespace sw { }` 블록을 나눈다** — 규칙 + 가능하면 게이트, 트리 전체 적용.
 - **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
 
 ### 1-1. 직렬화 · 리플렉션
+
+- **Shipping `App --cook-scenes` 와 에디터 `-gv_editorStartupScene` 이 GF 타입 · 엔진 데이터 등록 전에 씬을 읽는다** — spriteui 의 GF 컴포넌트가 MissingComponent 로
+  구워지고(`enginedata.xml not found` · 프리팹 `.bin` 없음 경고도 같은 쿠킹), 에디터 시작 씬은 GameFramework.dll 로드 전에 읽혀 게임 시작 씬에 덮인다(GameConfig.h 주석과 반대).
+- **남은 옛 형식 후보**: UserBindings 의 `kind` 없는 `<bind>`(시험 픽스처 `TestActionMap` 이 그 모양), `PrefabAsset::saveToJsonFile` 의 `{formatVersion, name, xmlBody}` 래퍼(읽는 쪽 없음).
 
 - **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
 
@@ -522,6 +526,10 @@ cd build/Ninja-Debug/Bin
 
 ### 3-5. 직렬화 · 리플렉션 · 파서
 
+- **엔진 데이터는 별칭을 쓰지 않는다**(사용자 결정 2026-10-03 — 실제 게임 데이터가 없다). 이름을 바꾸면 `Resource/` 데이터를 다시 쓴다. 모르는 키 · 타입 · 열거자는
+  안쪽 원소까지 orphan 경고가 나고, `ResourceDataSchemaTest` 가 Resource/ 의 데이터 파일 전부(종류 표에 없는 파일도 실패)를 실제 로더로 읽어 경고 0 을 단언한다.
+  Alias · ValueAlias 기능과 그 시험은 실제 게임 데이터가 생긴 뒤의 창구로 남긴다. 판 체계(registerXmlMigrator · 바이너리 판 필드)도 기능으로 남고, 지금 판만 읽는다.
+
 - **orphan 정책은 `SchemaMigrate.h` 의 계약** — XML · JSON(사람이 고치는 저작 파일)은 `Ignore`(로드마다 경고, UE `FPropertyTag` · Unity YAML), 바이너리(쿠커 ·
   빌드 산출물)는 `Reject`(UE `FPackageFileSummary` 판 검사). 필드를 버려도 되는 오브젝트 상태는 그 migrate 함수가 말한다(`skipFieldsTheTypeNoLongerHas`).
 
@@ -535,8 +543,8 @@ cd build/Ninja-Debug/Bin
   런타임 핸들(`void*`)은 `Transient`. `PROPERTY()` 를 빼먹은 필드는 매 실행 "모르는 필드" 경고를 내고 값은 기본값으로 돈다.
 - **모르는 칸 · 모르는 열거자는 그 칸만 실패한다**(컨테이너면 그 원소, 맵이면 그 항목) — 세 형식이 같은 규칙이다. 기록 타입 해시를 모르는 칸(지운 enum · 타입)은 크기로
   짐작해 읽지 않는다. 모르는 타입의 컴포넌트는 `MissingComponent` 가 원문을 맡아 같은 형식으로 다시 쓴다. 프리팹을 못 찾은 엔티티는 `SceneDocument::EntityNode` 로 보존한다.
-- **바이너리는 enum 을 열거자 이름 해시로 싣는다**(플래그는 켜진 이름 수 + 해시, 이름 없는 값만 `0 + int64`). 열거자 이름을 바꾸면 옛 이름을 `ValueAlias` 로 남겨야 옛 데이터가
-  읽힌다. 한 enum 안의 `Red` · `RED` 는 해시가 같다 — `registerEnum` 이 알린다. 판 `BinaryWireVersion` 은 스트림 머리마다 있다. `kObjectReflectedSchemaVersion` 은 일부러
+- **바이너리는 enum 을 열거자 이름 해시로 싣는다**(플래그는 켜진 이름 수 + 해시, 이름 없는 값만 `0 + int64`). 열거자 이름을 바꾸면 데이터를 다시 쓴다(옛 바이너리는
+  읽히지 않는다 — 실제 게임 데이터가 생긴 뒤라면 `ValueAlias`). 한 enum 안의 `Red` · `RED` 는 해시가 같다 — `registerEnum` 이 알린다. 판 `BinaryWireVersion` 은 스트림 머리마다 있다. `kObjectReflectedSchemaVersion` 은 일부러
   올리지 않았다(올리면 옛 상태가 모두 거절된다).
 - **버전 절차는 `runVersionedDeserialize` 한 벌**이고 형식 사이 차이는 `SchemaVersionSource` · `SchemaOrphanPolicy` 두 enum 뿐이다. 버린 orphan 은 로드마다 한 줄 알린다 —
   새 이관도 `findOrphan` · `findOrphanHash` · `applyOrphanTo…` 로 찾아야 경고에서 빠진다(`_bClaimed`). 이관은 기록 타입이 같을 때만 제자리, 스칼라 → 스칼라는 텍스트를 거쳐
