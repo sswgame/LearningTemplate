@@ -179,12 +179,16 @@ namespace sw
                 // NOLINTNEXTLINE(bugprone-branch-clone)
                 case ShaderBindingKind::Texture:
                 case ShaderBindingKind::StructuredBuffer:
+                {
                     break; // 아래 getResourceBinds() 표에서 한 번에 처리한다
+                }
                 case ShaderBindingKind::Sampler:
                 case ShaderBindingKind::RwStructuredBuffer:
                 case ShaderBindingKind::RwTexture:
                 case ShaderBindingKind::Unknown:
+                {
                     break;
+                }
             }
         }
 

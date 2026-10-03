@@ -237,7 +237,9 @@ namespace sw
                 }
 
                 default:
+                {
                     break;
+                }
             }
         }
 

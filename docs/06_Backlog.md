@@ -118,7 +118,6 @@ cd build/Ninja-Debug/Bin
   ("Resource" 는 디스크 트리 · 팩, "Asset" 은 읽은 객체), `EngineData`/`GameData`/`EditorData`→`EngineDefaultAssets`/`GameSettings`/`EditorToolDefaults`.
   CLI 철자도 하나로 — 하이픈 없는 철자(`bakeshaders` 등 다섯)는 10-04 에 지웠다. 남은 것: 열거자 이름 자동 등록으로 생기는 중복 키(`-WIDTH` 와 `-W`,
   `-lang` 과 `-language`), 리플렉션 주석 키 `Alias` 의 동의어 `PreviousName` · `PreviousNames`(사용처 0).
-- **case 중괄호 일관성 규칙**(한 switch 안에서 한 case 라도 중괄호면 모두) — 픽서 패치 준비됨(스크래치), 39 파일 다시 쓰기 + AGENTS.md · 04 규칙 문장.
 - **한 파일에 클래스가 여럿이면 클래스마다 `namespace sw { }` 블록을 나눈다** — 규칙 + 가능하면 게이트, 트리 전체 적용.
 - **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
 

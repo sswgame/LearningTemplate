@@ -323,7 +323,9 @@ namespace sw
                         break;
                     }
                     default:
+                    {
                         break;
+                    }
                 }
             }
         }

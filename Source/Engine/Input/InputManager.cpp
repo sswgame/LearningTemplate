@@ -460,7 +460,9 @@ namespace sw
             }
 
             case RawInputEventType::None:
+            {
                 break;
+            }
         }
     }
 

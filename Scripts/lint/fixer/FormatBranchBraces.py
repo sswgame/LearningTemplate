@@ -21,6 +21,12 @@ Scripts/lint/fixer/FormatBranchBraces.py
     라벨의 종결자가 아니다.
   - 인자를 줄바꿈한 호출처럼 한 문장이 여러 줄에 걸친 것은 한 문장으로 센다.
 
+**3) 한 switch 안에서 한 case 라도 중괄호가 있으면 본문이 있는 모든 case 에 중괄호를 씌운다.**
+
+  - if 사슬의 "한 갈래라도 중괄호면 모두" 와 같은 일관성 규칙이다. `case A: return X;` 처럼 라벨과 같은 줄에
+    본문이 있으면 라벨과 본문을 나눠 씌운다. 모든 case 가 한 문장인 표 모양 switch 는 그대로 둔다.
+  - 본문이 없는 폴스루 라벨 · 전처리기 · 매크로 줄바꿈 · `[[fallthrough]]` 가 낀 본문은 2) 와 같이 건드리지 않는다.
+
 clang-format 은 둘 다 표현하지 못한다. RemoveBracesLLVM 은 for/while 까지 같이 벗겨내고,
 InsertBraces 는 if/for/while 만 보고 case 라벨은 건드리지 않는다. 그래서 clang-format
 앞단에서 이 스크립트가 돌고, 뒤이어 도는 clang-format 이 들여쓰기를 맞춘다.
@@ -292,7 +298,7 @@ def _collectCaseBodyInternal(listMasked: list[str], listDepth: list[int], labelI
             lineIndex += 1
             continue
         if listDepth[lineIndex] == labelDepth:
-            if stripped.startswith("}") or _kCaseLabelRe.match(stripped):
+            if stripped.startswith("}") or _kCaseLabelRe.match(stripped) or _splitSameLineLabelInternal(stripped) >= 0:
                 break
             if not listBodyIndex and stripped.startswith("{"):
                 return [], True
@@ -367,6 +373,124 @@ def insertCaseBraces(text: str) -> tuple[str, bool]:
     return "\n".join(listOut), True
 
 
+def _computeOpenBraceOwnersInternal(listMasked: list[str]) -> list[int]:
+    """
+    줄마다 그 줄이 시작할 때 가장 안쪽에서 열려 있던 '{' 의 줄 번호를 돌려준다(없으면 -1).
+    case 라벨의 이 값이 곧 그 라벨이 속한 switch 블록이다.
+    """
+    listOwner: list[int] = []
+    stack: list[int] = []
+    for lineIndex, line in enumerate(listMasked):
+        listOwner.append(stack[-1] if stack else -1)
+        for ch in line:
+            if ch == "{":
+                stack.append(lineIndex)
+            elif ch == "}" and stack:
+                stack.pop()
+    return listOwner
+
+
+def _splitSameLineLabelInternal(stripped: str) -> int:
+    """
+    `case A::B: return X;` 처럼 라벨과 본문이 한 줄인 마스킹된 줄에서 라벨을 끝내는 ':' 의 자리를 돌려준다.
+    `::` 는 건너뛴다. 라벨 줄이 아니거나 ':' 뒤에 본문이 없으면 -1 이다.
+    """
+    if not (stripped.startswith("case") and (len(stripped) == 4 or not (stripped[4].isalnum() or stripped[4] == "_"))) and not stripped.startswith("default"):
+        return -1
+    index = 0
+    while index < len(stripped):
+        if stripped[index] == ":":
+            if index + 1 < len(stripped) and stripped[index + 1] == ":":
+                index += 2
+                continue
+            rest = stripped[index + 1 :].strip()
+            return index if rest else -1
+        index += 1
+    return -1
+
+
+def makeCaseBracesConsistent(text: str) -> tuple[str, bool]:
+    """
+    한 switch 안에 중괄호를 쓴 case 가 하나라도 있으면 본문이 있는 나머지 case 에도 중괄호를 씌운 텍스트와 수정 여부를 돌려준다.
+    여러 문장인 case 는 앞 패스(`insertCaseBraces`)가 이미 씌웠으므로 여기서는 "이미 씌워진 것" 만 본다.
+    """
+    masked = _maskLiteralsAndCommentsInternal(text)
+    listMasked = masked.split("\n")
+    listRaw = text.split("\n")
+    if len(listMasked) != len(listRaw):
+        return text, False
+    lineSuffix = "\r" if text.count("\r\n") * 2 > text.count("\n") else ""
+
+    listDepth = _computeBraceDepthsInternal(listMasked)
+    listOwner = _computeOpenBraceOwnersInternal(listMasked)
+
+    # switch 블록(여는 '{' 의 줄)마다: 중괄호를 쓴 case 가 있는지, 씌울 후보(라벨만 있는 줄 · 라벨과 본문이 한 줄)
+    mapHasBraced: dict[int, bool] = {}
+    mapCandidate: dict[int, list[tuple[str, int, list[int]]]] = {}
+    for labelIndex, maskedLine in enumerate(listMasked):
+        stripped = maskedLine.strip()
+        owner = listOwner[labelIndex]
+        if _kCaseLabelRe.match(stripped):
+            listBodyIndex, bAlreadyBraced = _collectCaseBodyInternal(listMasked, listDepth, labelIndex)
+            if bAlreadyBraced:
+                mapHasBraced[owner] = True
+            elif listBodyIndex:
+                mapCandidate.setdefault(owner, []).append(("block", labelIndex, listBodyIndex))
+            continue
+        colon = _splitSameLineLabelInternal(stripped)
+        if colon >= 0:
+            body = stripped[colon + 1 :].strip()
+            if body.startswith("{"):
+                mapHasBraced[owner] = True
+            else:
+                mapCandidate.setdefault(owner, []).append(("inline", labelIndex, [labelIndex]))
+
+    mapOpenAfter: dict[int, list[str]] = {}
+    mapCloseAfter: dict[int, list[str]] = {}
+    mapReplace: dict[int, list[str]] = {}
+    for owner, listCandidate in mapCandidate.items():
+        if mapHasBraced.get(owner, False) is False:
+            continue
+        for kind, labelIndex, listBodyIndex in listCandidate:
+            if any(listMasked[index].strip().startswith("#") for index in listBodyIndex):
+                continue
+            if any(listRaw[index].rstrip().endswith("\\") for index in listBodyIndex):
+                continue
+            if any("[[fallthrough]]" in listRaw[index] for index in listBodyIndex):
+                continue
+            labelLine = listRaw[labelIndex].rstrip("\r")
+            indent = labelLine[: len(labelLine) - len(labelLine.lstrip())]
+            if kind == "block":
+                mapOpenAfter.setdefault(labelIndex, []).append(indent + "{" + lineSuffix)
+                mapCloseAfter.setdefault(listBodyIndex[-1], []).insert(0, indent + "}" + lineSuffix)
+                continue
+            # 라벨과 본문이 한 줄: 마스킹본과 원문은 길이가 같으므로 같은 자리에서 자른다.
+            maskedLine = listMasked[labelIndex]
+            leading = len(maskedLine) - len(maskedLine.lstrip())
+            colon = leading + _splitSameLineLabelInternal(maskedLine.strip())
+            label = labelLine[: colon + 1].rstrip()
+            body = labelLine[colon + 1 :].strip()
+            mapReplace[labelIndex] = [
+                label + lineSuffix,
+                indent + "{" + lineSuffix,
+                indent + "    " + body + lineSuffix,
+                indent + "}" + lineSuffix,
+            ]
+
+    if not mapOpenAfter and not mapReplace:
+        return text, False
+
+    listOut: list[str] = []
+    for index, line in enumerate(listRaw):
+        if index in mapReplace:
+            listOut.extend(mapReplace[index])
+        else:
+            listOut.append(line)
+        listOut.extend(mapOpenAfter.get(index, ()))
+        listOut.extend(mapCloseAfter.get(index, ()))
+    return "\n".join(listOut), True
+
+
 class FormatBranchBracesFixer(LintFixer):
     """
     if 를 먼저 벗기고 **그 다음에** case 를 센다 — 순서가 반대면 벗겨질 중괄호가 문장 수를 부풀린다.
@@ -374,7 +498,7 @@ class FormatBranchBracesFixer(LintFixer):
     """
 
     tag = "BranchBraces"
-    description = "한 줄짜리 if 본문의 중괄호 제거 · 여러 문장인 case 본문에 중괄호 추가"
+    description = "한 줄짜리 if 본문의 중괄호 제거 · 여러 문장인 case 본문에 중괄호 추가 · 한 switch 안의 case 중괄호 일관성"
     listPass = (
         FixPass(
             transform=formatBranchBraces,
@@ -404,6 +528,26 @@ class FormatBranchBracesFixer(LintFixer):
             goodSample=(
                 '#include "pch.h"\n\nvoid probe( int32 mode )\n{\n    switch ( mode )\n    {\n'
                 "    case 0:\n        return;\n    }\n}\n"
+            ),
+        ),
+        FixPass(
+            transform=makeCaseBracesConsistent,
+            problem="같은 switch 안에서 중괄호를 쓴 case 와 쓰지 않은 case 가 섞여 있습니다.",
+            done="switch 안의 case 중괄호를 한 모양으로 맞춤",
+            # 중괄호를 쓴 case 옆의 한 문장 case(다음 줄 본문 · 같은 줄 본문)에도 씌운다.
+            badSample=(
+                '#include "pch.h"\n\nint32 probe( int32 mode )\n{\n    switch ( mode )\n    {\n'
+                "    case 0:\n    {\n        doThing();\n        return 1;\n    }\n"
+                "    case 1:\n        return 2;\n"
+                "    case Mode::Two: return 3;\n"
+                "    }\n    return 0;\n}\n"
+            ),
+            # 모든 case 가 한 문장인 표 모양 switch · 본문 없는 폴스루 라벨은 그대로 둔다.
+            goodSample=(
+                '#include "pch.h"\n\nconst char* probe( int32 mode )\n{\n    switch ( mode )\n    {\n'
+                "    case 0:\n    case 1:\n        return \"low\";\n"
+                "    case 2: return \"mid\";\n"
+                "    default:\n        return \"high\";\n    }\n}\n"
             ),
         ),
     )

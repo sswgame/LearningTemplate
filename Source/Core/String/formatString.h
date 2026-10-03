@@ -503,9 +503,13 @@ namespace sw
                 case 'E':
                 case 's':
                 case 'c':
+                {
                     break;
+                }
                 default:
+                {
                     return 0; // 서식이 아니다
+                }
             }
             return cursor + 2; // `%` + 여기까지
         }

@@ -173,7 +173,9 @@ namespace sw
                             break;
                         }
                         default:
+                        {
                             break;
+                        }
                     }
                 }
                 return mask != 0 ? mask : 0xFu;
@@ -513,10 +515,14 @@ namespace sw
             case MaterialPropertyType::Int2:
             case MaterialPropertyType::Int3:
             case MaterialPropertyType::Int4:
+            {
                 return MaterialPackingInternal::writeNumericValue( pDst, packSize, shaderType, prop._value );
+            }
             case MaterialPropertyType::Keyword:
             case MaterialPropertyType::Unknown:
+            {
                 return false;
+            }
         }
         return MaterialPackingInternal::writeNumericValue( pDst, packSize, shaderType, prop._value );
     }

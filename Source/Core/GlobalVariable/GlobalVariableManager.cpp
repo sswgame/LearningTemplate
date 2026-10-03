@@ -108,7 +108,9 @@ namespace sw
         switch ( _type )
         {
             case GlobalVariableType::Boolean:
+            {
                 return *static_cast<bool*>( _pData ) ? "true" : "false";
+            }
             case GlobalVariableType::Int32:
             case GlobalVariableType::Enum:
             {

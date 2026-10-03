@@ -22,7 +22,9 @@ namespace sw::editor
         {
             case RegistrationResult::Added:
             case RegistrationResult::AlreadyPresent:
+            {
                 return true;
+            }
             case RegistrationResult::EmptyName:
             {
                 SW_LOG_ERROR( "Editor %# registered with an empty id - ignored", _pKindName );
@@ -34,7 +36,9 @@ namespace sw::editor
                 return false;
             }
             case RegistrationResult::NullItem:
+            {
                 return false;
+            }
         }
     }
 

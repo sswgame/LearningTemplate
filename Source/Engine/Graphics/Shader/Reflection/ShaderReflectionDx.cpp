@@ -60,9 +60,13 @@ namespace sw
                         break;
                     }
                     case static_cast<uint32>( D3D_SVT_BOOL ):
+                    {
                         return "Bool";
+                    }
                     default:
+                    {
                         break;
+                    }
                 }
 
                 if ( varClass == D3D_SVC_MATRIX_ROWS || varClass == D3D_SVC_MATRIX_COLUMNS )

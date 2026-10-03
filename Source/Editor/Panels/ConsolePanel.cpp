@@ -169,7 +169,9 @@ namespace sw::editor
                     break;
                 }
                 case LogLevel::Count:
+                {
                     break;
+                }
             }
         }
 

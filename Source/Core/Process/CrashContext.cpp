@@ -370,7 +370,9 @@ namespace sw
             }
             case CrashTestKind::None:
             case CrashTestKind::Count:
+            {
                 break;
+            }
         }
     }
 

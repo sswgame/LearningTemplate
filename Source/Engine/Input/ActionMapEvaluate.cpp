@@ -476,20 +476,34 @@ namespace sw
         switch ( trigger )
         {
             case ActionTrigger::Pressed:
+            {
                 return state._bPressed == SW_TRUE;
+            }
             case ActionTrigger::Released:
+            {
                 return state._bReleased == SW_TRUE;
+            }
             case ActionTrigger::Down:
+            {
                 return state._bDown == SW_TRUE;
+            }
             case ActionTrigger::DoubleClicked:
             case ActionTrigger::DoubleTap:
+            {
                 return state._bDoubleClicked == SW_TRUE;
+            }
             case ActionTrigger::HoldThreshold:
+            {
                 return state._bHoldThreshold == SW_TRUE;
+            }
             case ActionTrigger::HoldAndRelease:
+            {
                 return state._bReleased == SW_TRUE && state._holdDuration >= _holdThreshold;
+            }
             case ActionTrigger::Tap:
+            {
                 return state._bReleased == SW_TRUE && state._holdDuration < ActionMapDefaults::kTapMaxTime;
+            }
             case ActionTrigger::Pulse:
             {
                 // 누른 뒤 간격마다 한 번. `타이머 >= 간격` 만 보면 첫 간격이 지난 뒤 **매 프레임** 발화한다(연사 속도가 프레임률을
@@ -518,7 +532,9 @@ namespace sw
                 return false;
             }
             case ActionTrigger::Count:
+            {
                 return false;
+            }
         }
     }
 

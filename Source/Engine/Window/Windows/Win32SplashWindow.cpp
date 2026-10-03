@@ -25,7 +25,9 @@ namespace sw
                 switch ( msg )
                 {
                     case WM_ERASEBKGND:
+                    {
                         return 1; // 깜빡임 방지
+                    }
 
                     case WM_PAINT:
                     {
@@ -39,10 +41,14 @@ namespace sw
                     }
 
                     case WM_DESTROY:
+                    {
                         return 0;
+                    }
 
                     default:
+                    {
                         break;
+                    }
                 }
 
                 return DefWindowProcW( hWnd, msg, wParam, lParam );

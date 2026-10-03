@@ -353,8 +353,11 @@ namespace sw
   does not. The `break;` goes **inside** the braces. A body holding a preprocessor
   directive is left alone — its extent is not decidable from the text, and an
   opening and closing brace on opposite sides of an `#if` compiles on one platform
-  only. Enforced by `FormatBranchBraces.py`; clang-format's `InsertBraces` cannot
-  express this (it never looks at case labels).
+  only. **Within one `switch`, if any case takes braces, every case with a body takes
+  them** (the same consistency rule as an `if` chain; a fall-through label with no body
+  stays bare). A switch whose cases are all one statement stays a table. Enforced by
+  `FormatBranchBraces.py`; clang-format's `InsertBraces` cannot express this (it never
+  looks at case labels).
 - Do not use `if` initializers. For unclear conditions or conditions with three
   or more parts, name the condition in a local variable first.
 - Use `auto` only for iterators, structured bindings, or similarly complex

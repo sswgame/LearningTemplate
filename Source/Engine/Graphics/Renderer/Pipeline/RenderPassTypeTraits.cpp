@@ -41,7 +41,9 @@ namespace sw
                 switch ( type )
                 {
                     case RenderPassType::Invalid:
+                    {
                         break;
+                    }
                     case RenderPassType::Shadow:
                     {
                         traits._pDefaultShader   = &EngineData::_shaderShadowDepth;

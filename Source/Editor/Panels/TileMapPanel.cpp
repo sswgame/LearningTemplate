@@ -410,7 +410,9 @@ namespace sw::editor
                 break;
             }
             default:
+            {
                 break;
+            }
         }
         notifyDocumentEdited( "Paint Tile Map Edge", "tilemap-edge" );
     }

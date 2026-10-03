@@ -15,16 +15,22 @@ namespace sw
         switch ( pTraits->_output )
         {
             case DialogueNodeOutput::None:
+            {
                 return 0;
+            }
             case DialogueNodeOutput::Next:
+            {
                 return asset.findDefaultNextNodeId( node._id );
+            }
             case DialogueNodeOutput::Branch:
             {
                 const int32 branchNextId = asset.findBranchNextNodeId( node._id, input._bConditionMet );
                 return branchNextId > 0 ? branchNextId : asset.findDefaultNextNodeId( node._id );
             }
             case DialogueNodeOutput::Choice:
+            {
                 return asset.findChoiceNextNodeId( node._id, input._choiceIndex );
+            }
         }
         return 0;
     }
@@ -58,7 +64,9 @@ namespace sw
                 break;
             }
             case DialogueNodeBody::None:
+            {
                 break;
+            }
         }
 
         node._listChoice.reserve( pTraits->_defaultChoiceCount );

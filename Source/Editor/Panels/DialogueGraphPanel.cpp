@@ -467,7 +467,9 @@ namespace sw::editor
             }
             case DialogueNodeFlow::WaitChoice: // 사람이 툴바 버튼으로 고른다
             case DialogueNodeFlow::Condition:
+            {
                 return;
+            }
         }
     }
 
@@ -568,7 +570,9 @@ namespace sw::editor
                 return;
             }
             case DialogueNodeOutput::None:
+            {
                 break;
+            }
         }
 
         switch ( pTraits->_body )
@@ -597,7 +601,9 @@ namespace sw::editor
             }
             case DialogueNodeBody::Condition:
             case DialogueNodeBody::None:
+            {
                 break;
+            }
         }
     }
 
@@ -638,7 +644,9 @@ namespace sw::editor
                 break;
             }
             case DialogueNodeBody::None:
+            {
                 break;
+            }
         }
 
         if ( traits._output != DialogueNodeOutput::Choice )

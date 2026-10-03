@@ -493,7 +493,9 @@ namespace sw
                             break;
                         }
                         case Internal::RegisterClass::Other:
+                        {
                             break;
+                        }
                     }
                     if ( limit > 0 && reflectedA._bindPoint >= limit )
                     {

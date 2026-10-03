@@ -97,16 +97,26 @@ namespace sw
                         return glyph != "?" ? string( "[ " ) + glyph + " ]" : string{};
                     }
                     case BindingKind::Axis1DComposite:
+                    {
                         return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " / " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
+                    }
                     case BindingKind::Vector2DComposite:
+                    {
                         return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + slotToGlyph( binding._arrSlot[1], device ) +
                                slotToGlyph( binding._arrSlot[2], device ) + slotToGlyph( binding._arrSlot[3], device ) + " ]";
+                    }
                     case BindingKind::Chord:
+                    {
                         return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " + " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
+                    }
                     case BindingKind::MouseDelta2D:
+                    {
                         return "[ Mouse Look ]";
+                    }
                     case BindingKind::VirtualJoystick2D:
+                    {
                         return string( "[ Drag " ) + slotToGlyph( binding._arrSlot[0], device ) + " ]";
+                    }
                     case BindingKind::Shortcut:
                     {
                         string modifierText;
@@ -121,10 +131,14 @@ namespace sw
                         return string( "[ " ) + modifierText + slotToGlyph( binding._arrSlot[0], device ) + " ]";
                     }
                     case BindingKind::AnyKey:
+                    {
                         return "[ Any Key ]";
+                    }
                     case BindingKind::GamepadStick2D: // 게임패드 전용 — 키보드 표기가 없다
                     case BindingKind::Count:
+                    {
                         return {};
+                    }
                 }
             }
 
@@ -144,18 +158,26 @@ namespace sw
                         return glyph != "?" ? string( "[ " ) + glyph + " ]" : string{};
                     }
                     case BindingKind::GamepadStick2D:
+                    {
                         return ( binding._stick == GamepadStick::Left ) ? "[ L-Stick ]" : "[ R-Stick ]";
+                    }
                     case BindingKind::Chord:
+                    {
                         return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " + " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
+                    }
                     case BindingKind::AnyKey:
+                    {
                         return "[ Any Button ]";
+                    }
                     case BindingKind::Axis1DComposite: // 키보드 · 마우스 전용 종류 — 게임패드 표기가 없다
                     case BindingKind::Vector2DComposite:
                     case BindingKind::MouseDelta2D:
                     case BindingKind::VirtualJoystick2D:
                     case BindingKind::Shortcut:
                     case BindingKind::Count:
+                    {
                         return {};
+                    }
                 }
             }
         };

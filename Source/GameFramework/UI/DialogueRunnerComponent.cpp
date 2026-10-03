@@ -429,7 +429,9 @@ namespace sw
         switch ( node._type )
         {
             case DialogueAssetNodeType::Start:
+            {
                 break;
+            }
             case DialogueAssetNodeType::Dialogue:
             {
                 _state          = DialogueRunnerState::ShowingDialogue;

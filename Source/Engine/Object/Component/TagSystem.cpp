@@ -118,13 +118,21 @@ namespace sw
         switch ( expr._type )
         {
             case TagQueryExprType::Undefined:
+            {
                 return true;
+            }
             case TagQueryExprType::AnyTagsMatch:
+            {
                 return container.hasAnyTag( expr._tags );
+            }
             case TagQueryExprType::AllTagsMatch:
+            {
                 return container.hasAllTags( expr._tags );
+            }
             case TagQueryExprType::NoTagsMatch:
+            {
                 return container.hasAnyTag( expr._tags ) == false;
+            }
             case TagQueryExprType::AnyExprMatch:
             {
                 if ( expr._listSubExpr.empty() )

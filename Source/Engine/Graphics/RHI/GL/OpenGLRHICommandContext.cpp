@@ -303,7 +303,9 @@ namespace sw
                 break;
             }
             case RHIBufferState::Common:
+            {
                 break;
+            }
         }
     }
 

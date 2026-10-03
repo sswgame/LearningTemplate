@@ -288,7 +288,9 @@ namespace sw
                         break;
                     }
                     default:
+                    {
                         break;
+                    }
                 }
                 if ( button != MouseButton::Count )
                     postRawEvent( bDown ? RawInputEvent::makeMouseButtonDown( button, mouseX, mouseY ) : RawInputEvent::makeMouseButtonUp( button, mouseX, mouseY ) );
@@ -332,7 +334,9 @@ namespace sw
                 break;
             }
             default:
+            {
                 break;
+            }
         }
     }
 

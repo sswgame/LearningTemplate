@@ -198,7 +198,9 @@ namespace sw::editor
                 }
 
                 default:
+                {
                     break;
+                }
             }
             return false;
         }
