@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NileCity 의 도시 데이터(파라오 장르, GF_CityBuilder 의 CityCatalog 형식).
+     Good: 물자(food = 식량). Building: kind = House · Service · Producer · Storage · Market · Decoration.
+       service + delivery(Walker = 도로를 도는 일꾼 · Radius = 반경 안 집에 늘) · range(걸음 수 · 반경 칸) · walkerInterval(초).
+       Producer: goods 첫 칸을 productionTime 초마다 amount 만큼(일꾼이 다 찼을 때). terrain="Floodplain" 이면 해마다의 범람이 양을 정한다.
+       Storage · Market: goods 는 받는 · 파는 물자, capacity 는 상한. desirability(음수 = 싫은 이웃) · desirabilityRadius.
+     HouseLevel: 적은 순서가 단계(0 = 처음 짓는 오두막). services · goods 를 받고 매력도가 desirability 이상이 이어지면 오른다.
+     세금(tax)은 세리가 다녀간 집만 사람마다 달마다 낸다. -->
+<CityCatalog roadCost="2">
+  <Good id="grain" name="Grain" price="8" food="true"/>
+  <Good id="figs" name="Figs" price="10" food="true"/>
+  <Good id="pottery" name="Pottery" price="20"/>
+  <Good id="beer" name="Beer" price="24"/>
+
+  <!-- 집 -->
+  <Building id="house" name="Housing Plot" kind="House" size="1" cost="10"/>
+
+  <!-- 물 -->
+  <Building id="well" name="Well" kind="Service" service="Water" delivery="Radius" range="3" size="1" cost="15" desirability="1" desirabilityRadius="1"/>
+  <Building id="water_supply" name="Water Supply" kind="Service" service="Water" range="40" walkerInterval="3" workers="4" size="2" cost="60" desirability="2" desirabilityRadius="2"/>
+
+  <!-- 순회 서비스 -->
+  <Building id="shrine" name="Shrine to Osiris" kind="Service" service="Religion" range="40" walkerInterval="3" workers="2" size="1" cost="40" desirability="4" desirabilityRadius="2"/>
+  <Building id="juggler" name="Juggler School" kind="Service" service="Entertainment" range="40" walkerInterval="3" workers="3" size="2" cost="50"/>
+  <Building id="apothecary" name="Apothecary" kind="Service" service="Health" range="40" walkerInterval="3" workers="3" size="1" cost="40" desirability="1" desirabilityRadius="1"/>
+  <Building id="scribe_school" name="Scribal School" kind="Service" service="Education" range="40" walkerInterval="4" workers="4" size="2" cost="80" desirability="3" desirabilityRadius="2"/>
+  <Building id="tax_collector" name="Tax Collector" kind="Service" service="Tax" range="48" walkerInterval="3" workers="4" size="2" cost="80"/>
+
+  <!-- 생산 — 범람원 농장은 해마다의 범람이 양을 정한다 -->
+  <Building id="grain_farm" name="Grain Farm" kind="Producer" goods="grain" productionTime="10" amount="16" terrain="Floodplain" workers="6" size="3" cost="40" desirability="-2" desirabilityRadius="2"/>
+  <Building id="fig_farm" name="Fig Farm" kind="Producer" goods="figs" productionTime="10" amount="14" terrain="Floodplain" workers="6" size="3" cost="40" desirability="-2" desirabilityRadius="2"/>
+  <Building id="potter" name="Potter" kind="Producer" goods="pottery" productionTime="16" amount="6" workers="5" size="2" cost="60" desirability="-4" desirabilityRadius="2"/>
+  <Building id="brewery" name="Brewery" kind="Producer" goods="beer" productionTime="18" amount="6" workers="5" size="2" cost="60" desirability="-4" desirabilityRadius="2"/>
+
+  <!-- 저장 · 시장 -->
+  <Building id="granary" name="Granary" kind="Storage" goods="grain,figs" capacity="400" workers="4" size="3" cost="80" desirability="-2" desirabilityRadius="1"/>
+  <Building id="storage_yard" name="Storage Yard" kind="Storage" goods="pottery,beer" capacity="200" workers="3" size="3" cost="60" desirability="-3" desirabilityRadius="2"/>
+  <Building id="bazaar" name="Bazaar" kind="Market" goods="grain,figs,pottery,beer" capacity="160" range="40" walkerInterval="3" workers="3" size="2" cost="40" desirability="-1" desirabilityRadius="1"/>
+
+  <!-- 장식 — 매력도만 -->
+  <Building id="garden" name="Garden" kind="Decoration" size="1" cost="12" desirability="4" desirabilityRadius="3"/>
+  <Building id="statue" name="Small Statue" kind="Decoration" size="1" cost="30" desirability="6" desirabilityRadius="3"/>
+  <Building id="plaza" name="Plaza" kind="Decoration" size="2" cost="40" desirability="8" desirabilityRadius="4"/>
+
+  <!-- 집 단계 — 파라오의 이름(Crude Hut … Spacious Homestead) -->
+  <HouseLevel name="Crude Hut" population="5" tax="1"/>
+  <HouseLevel name="Sturdy Hut" population="7" services="Water" tax="1"/>
+  <HouseLevel name="Meager Shanty" population="9" services="Water,Religion" goods="grain" desirability="-10" tax="1"/>
+  <HouseLevel name="Common Shanty" population="11" services="Water,Religion,Entertainment" goods="grain" desirability="-6" tax="2"/>
+  <HouseLevel name="Rough Cottage" population="13" services="Water,Religion,Entertainment,Health" goods="grain" desirability="-2" tax="2"/>
+  <HouseLevel name="Ordinary Cottage" population="15" services="Water,Religion,Entertainment,Health" goods="grain,pottery" desirability="2" tax="3"/>
+  <HouseLevel name="Modest Homestead" population="18" services="Water,Religion,Entertainment,Health,Education" goods="grain,figs,pottery" desirability="6" tax="3"/>
+  <HouseLevel name="Spacious Homestead" population="21" services="Water,Religion,Entertainment,Health,Education" goods="grain,figs,pottery,beer" desirability="10" tax="4"/>
+</CityCatalog>
