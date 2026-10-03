@@ -102,7 +102,6 @@ namespace sw
         }
         _bLoadInFlight = false;
         // 활성을 **씬을 내리기 전에** 비운다 — 플레이 중이면 여기서 활성 씬의 플레이가 끝난다(onEndPlay 가 살아 있는 씬을 본다).
-        // 예전에는 씬을 다 지운 뒤에 비웠는데, 그때는 포인터만 지우는 일이라 순서가 드러나지 않았다.
         activateScene( nullptr );
         _bWorldPlaying = false;
         for ( auto& scene : _listLoadedScene )
@@ -194,8 +193,8 @@ namespace sw
         if ( _bLoadInFlight.compare_exchange_strong( expected, true ) == false )
         {
             // 대기열은 **한 자리**다. 앞에 있던 요청은 여기서 밀려나므로 그 요청자에게
-            // 실패를 알린다. 예전에는 `_queuedPath` 만 덮어써서, 밀려난 쪽이 쥔 future 는
-            // 아무도 채우지 않은 채로 남았다(영원히 끝나지 않는다).
+            // 실패를 알린다. `_queuedPath` 만 덮어쓰면 밀려난 쪽이 쥔 future 는
+            // 아무도 채우지 않은 채로 남는다(영원히 끝나지 않는다).
             if ( _queuedPath.empty() == false )
                 _queuedPromise.setValue( nullptr );
 
@@ -251,9 +250,7 @@ namespace sw
             return;
 
         // **로드는 프레임 밖에서 한 번 일어난다.** 그래서 `SW_PROFILE_SCOPE` 의 프레임 집계에는
-        // 잡히지 않는다. 여기 계측이 하나도 없어서 씬 로드가 얼마나 걸리는지 아무도 알 수 없었고,
-        // 실제로 로드 시간의 81% 를 먹는 결함이 그동안 보이지 않았다(`ComponentDefaults` 가 없는
-        // 파일을 컴포넌트마다 다시 열고 있었다).
+        // 잡히지 않으므로 여기서 따로 잰다.
         //
         // 재는 것은 `ScopeCpuTimer` 가 한다. 스코프 동안 재고 소멸할 때 남긴다. 로그가
         // 사라지는 빌드에서는 경과 계산도 함께 사라지므로 따로 가려 줄 것이 없다.
@@ -340,8 +337,8 @@ namespace sw
             return false;
         }
 
-        // 경로가 없으면 씬이 온 곳에 쓴다. 둘 다 없으면 쓰지 않는다 — 예전에는 `Resource/` 밖의 `Assets/Scenes/DefaultScene.scene`(대문자 ·
-        // 쿠커가 굽지 않는 이름)을 지어내 썼다. 쓰는 이름은 쿠커가 굽는 씬 이름이다(`AssetCookPath::toSourcePath`).
+        // 경로가 없으면 씬이 온 곳에 쓴다. 둘 다 없으면 쓰지 않는다(경로를 지어내지 않는다). 쓰는 이름은 쿠커가 굽는 씬 이름이다
+        // (`AssetCookPath::toSourcePath`).
         const string_view requestedPath = path.empty() ? string_view( pScene->getSourcePath() ) : path;
         if ( requestedPath.empty() )
         {
@@ -383,7 +380,7 @@ namespace sw
         _loadHandle = {};
 
         // 짓는 동안 타입 표가 바뀌었으면(핫 리로드가 키트 · SWGame 을 내렸다 다시 올렸다) 그 씬은 **워커가 지을 때의**
-        // 표로 지어져, 아직 오르지 않은 모듈의 컴포넌트가 빠졌다(못 만든 컴포넌트는 `MissingComponent` 로 남는다). 버리고 같은 경로를 다시
+        // 표로 지어져, 아직 오르지 않은 모듈의 컴포넌트가 빠진다(못 만든 컴포넌트는 `MissingComponent` 로 남는다). 버리고 같은 경로를 다시
         // 띄운다. 대기열이 **다른** 경로면 어차피 이 결과를 버리므로 아래에 맡긴다. 대기열이 **같은** 경로면 아래는 이 결과를 그대로 쓰므로
         // 여기서 다시 짓는다. 대기열은 그대로 두어, 다시 지은 결과가 두 요청자를 함께 채운다.
         const bool bQueuedSamePath = _queuedPath.empty() == false && pendingScene != nullptr &&
@@ -420,9 +417,8 @@ namespace sw
                     pendingScene->shutdown();
                     pendingScene.reset();
                 }
-                // 대기열 요청자의 약속을 **그대로 들고 간다.** 예전에는 `requestLoadFuture` 를
-                // 다시 불러 약속을 새로 만들었고, 그래서 대기열에 넣은 쪽이 쥔 future 는 바로
-                // 위에서 nullptr 로 닫힌 것이었다. 자기 씬이 활성이 되는데도 실패를 받았다.
+                // 대기열 요청자의 약속을 **그대로 들고 간다.** `requestLoadFuture` 를 다시 불러 약속을 새로 만들면
+                // 대기열에 넣은 쪽이 쥔 future 는 바로 위에서 nullptr 로 닫힌 것이 되어, 자기 씬이 활성이 되는데도 실패를 받는다.
                 dispatchLoad( nextPath, std::move( _queuedPromise ) );
                 return;
             }

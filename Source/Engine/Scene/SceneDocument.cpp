@@ -69,7 +69,7 @@ namespace sw
         string      absPath;
         if ( doc.loadPath( path, &absPath ) == false )
         {
-            // 없는 파일과 깨진 파일을 가른다 — 예전에는 구문 오류도 "File not found" 였다.
+            // 없는 파일과 깨진 파일을 가른다(구문 오류를 "File not found" 로 알리지 않는다).
             SW_LOG_ERROR( "Scene not loaded - %#", doc.getLastError() );
             return false;
         }
@@ -127,8 +127,8 @@ namespace sw
                     node._prefabOverrideXml = overrideNode.toString();
 
                 XmlNode stateNode = entityNode.findChild( SceneDocumentInternal::kGameObject );
-                // 서브트리는 XML 문서가 쓴다(`XmlNode::toString`). 예전에는 여기서 손으로 다시 썼는데, 속성 값의 줄바꿈을 그대로 적어 다시
-                // 읽을 때 공백이 됐다(XML 속성 값 정규화 — 여러 줄 대사 · 설명이 한 줄로) — 쓰는 규칙이 두 벌이었다.
+                // 서브트리는 XML 문서가 쓴다(`XmlNode::toString`) — 손으로 쓰면 속성 값의 줄바꿈이 그대로 적혀 다시 읽을 때 공백이 된다
+                // (XML 속성 값 정규화 — 여러 줄 대사 · 설명이 한 줄로).
                 if ( stateNode.isValid() )
                     node._embeddedXml = stateNode.toString();
 

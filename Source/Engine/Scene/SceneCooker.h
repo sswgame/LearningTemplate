@@ -20,8 +20,8 @@ namespace sw
      *          그것은 엔진 안에만 있습니다. 그래서 이 단계만 `App.exe --cook-scenes` 로 넘어옵니다.
      *          셰이더가 `--bake-shaders` 로 넘어오는 것과 같은 이유, 같은 모양입니다.
      *
-     *          굽기 전에는 쿠킹된 `.scene.bin` 이 XML 문자열을 그대로 담고 있어서, 런타임이
-     *          엔티티마다 XML 을 다시 파싱했습니다. 바이너리 상태는 엔티티당 4254 ns -> 1602 ns 입니다.
+     *          `.scene.bin` 이 XML 문자열을 담으면 런타임이 엔티티마다 XML 을 다시 파싱합니다. 바이너리 상태는 엔티티당
+     *          4254 ns -> 1602 ns 입니다.
      */
     class SceneCooker
     {
@@ -48,8 +48,8 @@ namespace sw
          * @return 기록한 씬 파일 수입니다.
          *
          * @details 산출물을 소스 옆에 두지 않습니다 — 소스가 옮겨진 뒤 낡은 `.bin` 이 남아 Dev 런타임이 그것으로 물러나 실패를 가립니다.
-         *          프리팹은 같은 실행에서 `PrefabManager::cookAllPrefabs` 가 굽습니다. 예전에는 읽거나 쓰지 못한 씬을 세지 않아, 씬이 하나라도
-         *          구워지면 쿠킹이 성공이었고 배포본은 그 씬을 열 때에야 "Shipping requires cooked binary scene" 으로 멈췄다(프리팹은 셌다).
+         *          프리팹은 같은 실행에서 `PrefabManager::cookAllPrefabs` 가 굽습니다. 실패를 세지 않으면 배포본이 그 씬을 열 때에야
+         *          "Shipping requires cooked binary scene" 으로 멈춘다.
          */
         SW_API static uint32 cookAllScenes( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount );
     };

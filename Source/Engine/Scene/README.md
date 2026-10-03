@@ -101,7 +101,7 @@ classDiagram
 - 씬 · 엔티티의 값은 **속성에만** 있습니다(`saveXml` 이 쓰는 모양). 자식 원소(`<name>` 등)로 적은 값은 읽지 않습니다.
 - `formatVersion` 이 지금 판(`AssetFormatVersions::kScene` = 1)이 아닌 문서는 읽지 않습니다(없으면 0). 이관 단계는 하나도 없습니다 — 판을 올리면
   `AssetFormatRegistry::registerXmlMigrator` 로 N → N+1 단계를 등록합니다.
-- 컴포넌트 이름표(`_componentName`)는 상태와 함께 저장됩니다. 없는 옛 상태는 타입 이름으로 읽힙니다.
+- 컴포넌트 이름표(`_componentName`)는 상태와 함께 저장됩니다. 이름표가 없는 상태는 타입 이름으로 읽힙니다.
 
 ### 2.2 바이너리 포맷 (`.scene.bin` — SCN1)
 배포(Shipping) 빌드 및 고속 스트리밍을 위한 바이너리 쿠킹 포맷입니다:

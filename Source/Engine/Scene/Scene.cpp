@@ -172,8 +172,8 @@ namespace sw
             return false;
 
         // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 풀 수 있다 — 엔티티를 모두 하나의 묶음으로 읽고 끝에서 잇는다. 부착은 부모를
-        // 그 엔티티의 **파일 id** 로 가리킨다(파일 안에서만 뜻이 있는 값이라 묶음 안에서만 푼다). 예전에는 이름으로 찾았는데, 이름이 겹친
-        // 엔티티(옛 문서 · 병합)는 자식이 앞의 것에 붙었다.
+        // 그 엔티티의 **파일 id** 로 가리킨다(파일 안에서만 뜻이 있는 값이라 묶음 안에서만 푼다). 이름으로 찾으면 이름이 겹친
+        // 엔티티(병합)에서 자식이 앞의 것에 붙는다.
         ObjectStateBatch batch( ObjectIdSpace::Saved );
         // 프리팹마다 원형 상태를 한 번만 짓는다(같은 프리팹을 여럿 놓은 씬).
         unordered_map<string, string> mapPrefabBaseState;
@@ -186,7 +186,7 @@ namespace sw
             if ( entity._prefab.empty() == false )
             {
                 // 프리팹 엔티티는 **원형에 덮어쓴 것을 얹은 상태**로 한 번에 짓는다 — 프리팹을 고치면 놓인 인스턴스에 퍼진다(언리얼 · 유니티의
-                // 프리팹 인스턴스). 전체 상태가 실린 엔티티(옛 문서)는 그 상태가 기준이다. 프리팹을 찾지 못하면 아래의 "Missing Prefab" 길이다.
+                // 프리팹 인스턴스). 전체 상태가 실린 엔티티는 그 상태가 기준이다. 프리팹을 찾지 못하면 아래의 "Missing Prefab" 길이다.
                 // 전체 상태가 실린 엔티티는 원형을 짓지 않는다 — 그 상태가 기준이라 원형은 버려지고, 짓는 동안 컴포넌트가 한 벌 더 생긴다.
                 // 프리팹이 있는지만 본다(없으면 "Missing Prefab").
                 const bool bHasSavedState = entity._embeddedStateBytes.empty() == false || entity._embeddedXml.empty() == false;
@@ -206,7 +206,7 @@ namespace sw
                 if ( pGo == nullptr )
                 {
                     // 버리지 않는다 — 버리면 다음 저장이 파일에서 지운다(덮어쓴 값 · 프리팹 GUID 까지). 문서 그대로 들고 있다가 저장 때
-                    // 다시 써 넣는다(유니티의 "Missing Prefab" 과 같은 자리). 예전에는 경고 한 줄 뒤에 사라졌다.
+                    // 다시 써 넣는다(유니티의 "Missing Prefab" 과 같은 자리).
                     SW_LOG_WARNING( "Prefab spawn failed for entity '%#' (%#, guid %#) - kept as-is and written back on save", entity._name, entity._prefab,
                                     entity._prefabGuid.empty() ? "none" : entity._prefabGuid.c_str() );
                     _listUnresolvedEntity.push_back( entity );
@@ -289,8 +289,8 @@ namespace sw
         }
 
         // **자식 오브젝트도 자기 엔티티로 적는다.** 오브젝트 상태에는 자식 목록이 없고, 자식은 제 씬 컴포넌트의 부착 필드(부모의 파일 id)로
-        // 읽은 뒤 되붙는다(`instantiate` 의 묶음 — 그래서 순서도 상관없다). 예전에는 부모가 있는 오브젝트를 건너뛰어, 계층 아래의 오브젝트가
-        // 저장할 때마다 파일에서 사라졌다.
+        // 읽은 뒤 되붙는다(`instantiate` 의 묶음 — 그래서 순서도 상관없다). 부모가 있는 오브젝트를 건너뛰면 계층 아래의 오브젝트가
+        // 저장할 때마다 파일에서 사라진다.
         _objectManager->forEachGameObject( [&]( GameObject* pGo )
         {
             if ( pGo == nullptr )
@@ -314,7 +314,7 @@ namespace sw
                     node._prefabGuid = guid.toString();
             }
             const string state = ObjectStateSerializer::saveToXmlString( pGo, saveOptions );
-            // 프리팹 인스턴스는 원형과 다른 것만 적는다. 프리팹을 읽지 못했으면 전체 상태를 적는다 — 다음 로드가 그 상태로 짓는다(옛 문서와 같다).
+            // 프리팹 인스턴스는 원형과 다른 것만 적는다. 프리팹을 읽지 못했으면 전체 상태를 적는다 — 다음 로드가 그 상태로 짓는다.
             const auto    baseIt     = node._prefab.empty() ? mapPrefabBaseState.end() : mapPrefabBaseState.find( node._prefab );
             const string* pBaseState = ( baseIt != mapPrefabBaseState.end() && baseIt->second.empty() == false ) ? &baseIt->second : nullptr;
             if ( pBaseState == nullptr || PrefabOverrides::computeOverrides( state, *pBaseState, node._prefabOverrideXml ) == false )
@@ -432,10 +432,8 @@ namespace sw
 
     /**
      * @brief 지금 켜져 있는 방향광 하나를 반환합니다. 없으면 nullptr 입니다.
-     * @details 등록부만 봅니다. 빛의 수에 비례하고 씬 크기와 무관합니다. 예전에는 **모든 GameObject**
-     *          를 돌며 `getComponent<DirectionalLightComponent>()` 를 물었고, 찾은 뒤에도
-     *          `forEachGameObject` 에 중단이 없어 끝까지 돌았습니다. EngineLoop 이 매 프레임 부르므로
-     *          큐브 20,000 개 벤치에서 이 한 줄이 게임 스레드 프레임의 38%(7.6ms 중 2.9ms)였습니다.
+     * @details 등록부만 봅니다. 빛의 수에 비례하고 씬 크기와 무관합니다(EngineLoop 이 매 프레임 부르므로 씬을 훑으면 안 된다 —
+     *          `LightRegistry` 설명).
      */
     DirectionalLightComponent* Scene::findActiveDirectionalLight() const
     {

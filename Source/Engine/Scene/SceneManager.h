@@ -42,11 +42,8 @@ namespace sw
          * @brief 씬 파일의 비동기 로드를 요청하고, 끝나면 활성 씬을 주는 TaskFuture 를 반환합니다.
          * @details **대기열에 들어가도 자기 답을 받습니다.** 이미 로드가 도는 중이면 이 요청은
          *          대기열로 가고, 반환하는 future 는 **이 요청의 것**입니다. 돌던 로드의 것이
-         *          아닙니다. 예전에는 후자였고, `tickTransitions` 가 대기열 때문에 그 로드를
-         *          버리면서 같은 약속에 nullptr 을 넣었습니다. 그래서 대기열에 넣은 쪽은 자기 씬이
-         *          멀쩡히 활성이 되는데도 실패를 받았습니다. 대기열은 **한 자리**이므로 새 요청은
-         *          앞의 것을 밀어내고, 밀려난 쪽의 future 는 nullptr 로 끝납니다(예전에는 아무
-         *          통지도 없이 사라져 그 future 가 영원히 끝나지 않았습니다).
+         *          아닙니다. 대기열은 **한 자리**이므로 새 요청은 앞의 것을 밀어내고, 밀려난 쪽의
+         *          future 는 nullptr 로 끝납니다(영원히 끝나지 않는 future 는 없습니다).
          */
         TaskFuture<Scene*> requestLoadFuture( string_view path );
         /** @brief 씬 파일의 비동기 로드를 요청합니다(TaskManager 워커). */
@@ -76,8 +73,8 @@ namespace sw
         /**
          * @brief 월드가 플레이 중인지 정합니다. 바뀌면 활성 씬의 오브젝트 매니저에 `beginPlay` · `endPlay` 를 부릅니다.
          * @details 플레이 중에 활성 씬이 바뀌면 나가는 씬은 끝나고 들어오는 씬이 시작합니다. 에디터가 없으면 App 이 켜고(`ModuleHost`),
-         *          에디터가 있으면 Play · Stop 이 켜고 끕니다. 예전에는 에디터 Play 버튼만 `beginPlay` 를 불러, App · Shipping 에서는
-         *          onBeginPlay 가 한 번도 불리지 않았습니다(시퀀스 자동 재생 · 대화 그래프 로드 · 물리 동기화가 에디터 밖에서 죽어 있었다).
+         *          에디터가 있으면 Play · Stop 이 켜고 끕니다. App · Shipping 에서도 켜야 onBeginPlay 가 불립니다(시퀀스 자동 재생 ·
+         *          대화 그래프 로드 · 물리 동기화가 거기에 기댄다).
          */
         void setWorldPlaying( bool bPlaying );
         /** @brief 월드가 플레이 중이면 true 입니다. */
@@ -110,9 +107,8 @@ namespace sw
         void carryPersistentObjects( Scene* pFrom, Scene* pTo );
         /**
          * @brief 워커에 로드를 실제로 띄웁니다. 이 로드의 결과를 받을 약속을 함께 넘깁니다.
-         * @details 요청 경로와 대기열 경로가 **같은 자리**로 모이게 하려고 뽑았습니다. 예전에는
-         *          대기열을 띄우는 쪽이 `requestLoadFuture` 를 다시 불러 약속을 새로 만들었고,
-         *          그래서 대기열에 넣은 요청자가 쥔 future 와 실제 로드의 약속이 갈렸습니다.
+         * @details 요청 경로와 대기열 경로가 **같은 자리**로 모입니다 — 대기열에 넣은 요청자가 쥔 future 와 실제 로드의 약속이
+         *          갈리지 않게.
          */
         bool dispatchLoad( string_view path, TaskPromise<Scene*> promise );
         /** @brief 워커에서 씬을 로드하는 잡 본문입니다. TaskArgs 는 AsyncLoadSlot shared_ptr 와 경로 문자열입니다. */
