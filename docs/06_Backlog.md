@@ -243,8 +243,6 @@ cd build/Ninja-Debug/Bin
   docs/05 의 1~3 · 7 절을 지운다(G5, 루트 `README.md:41` 의 링크도). (2) `ArgumentList.xxx` 의 `IP` · `PORT` 는 읽는 곳이 없다. (3) `CheckTestSuites.py` docstring 이 "규칙
   다섯" 이라며 여섯을 나열한다. 주석의 경위 서술 예: `CompressionCodecRegistry.h`, `RenderThread.cpp`, `ArgumentList.xxx`, `CheckFallibleNodiscard.py` · `CheckFunctionVocabulary.py`.
 
-- **`Test/README.md` 의 "구성마다 도는 케이스 수" 표(2026-10-01 실측)가 낡았다** — 다시 잰다(Debug CoreTest 만 해도 348 개).
-
 - **코드 · 문서 29 곳이 옛 백로그의 날짜 항목 · 옛 절 번호를 가리킨다**(`ci.yml:156` · `TargetRules.cmake:51` · `GameEvents.h:12` "1-0c" · `docs/07` "1-0e" ·
   `FrameRendererCompute.cpp` "백로그 1-4" 등). 주석 정리(현재형 핵심만)와 함께 고친다 — 날짜 사연은 지우고, 남길 지식은 이 문서 3절 위치나
   `git show 7ce95fc8:docs/06_Backlog.md` 로. 목록은 grep `06_Backlog\|백로그` 로 다시 뽑는다. 코드 주석의 "예전에는 …" 경위 서술도 같은 정리에서 현재형 주의로
