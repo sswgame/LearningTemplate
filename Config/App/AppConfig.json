@@ -120,6 +120,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_SideScrollConquest",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
