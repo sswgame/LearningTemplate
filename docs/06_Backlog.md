@@ -174,6 +174,9 @@ cd build/Ninja-Debug/Bin
 
 ### 1-7. Core · 태스크
 
+- **sw 할당자 밖 ~1 MB(Debug App 기동 직후)** — `std::allocator`, `PagedArray` · `SceneTransformStorage` 페이지의 `new T[]`, pugixml · nlohmann. 태그로 볼 수 없다.
+  sw 할당자로 옮길지 미정. 에디터 실행의 Unknown ~110 KB(App 의 LiveReloadManager · ModuleCompiler 생성으로 추정, 미확인).
+
 - **`runParallel` 합류 대기가 남의 태스크(IO 등)를 도와 실행할 수 있다.** 프로파일에 보이면 IO 레인을 따로 둔다(조건부).
 - **TaskManager 스테이지 디버그 이름** — 프로파일러에 연결할 때 넣는다(지금은 연결돼 있지 않다).
 - **`fixed_string` 의 해시가 FNV(`computeHash64`)다.** 느리지만 프로파일에 안 보여 두었다(낮음).
@@ -866,6 +869,11 @@ cd build/Ninja-Debug/Bin
   (리플렉션 등록 → 설정 → ResourceManager).
 
 ### 3-10. Core · 태스크 · 메모리
+
+- **메모리 태그(UE LLM 식)는 Debug 전용이다.** 거는 자리는 셋 — 기동 단계 표(`EngineStartupStepList.xxx`)의 태그 칸, 서비스 생성의 `kServiceMemoryTag<Type>`,
+  하위 시스템 진입점의 `SW_MEMORY_SCOPE`. 태스크 · 병렬 청크는 **만든 쪽의 태그를 상속**한다(`TaskNode` · `ParallelGroup` 의 패딩 자리, 크기 그대로). 분포와 sw 할당자 밖
+  몫은 `-gv_profileFrames` 보고의 "memory by tag" 와 ProfilerPanel 에서 본다 — Unknown 이 커지면 진입점이 빠진 것이다. ImGui 는 `SetAllocatorFunctions` 로 sw 할당자를
+  지나므로 에디터 실행의 alloc/frame 에 ImGui 할당이 들어간다. GPU 메모리는 대상이 아니다(CPU 힙만).
 
 - **프로세스 정적 캐시(`ShaderReflectionLibrary` 매니페스트 같은 것)는 엔진 종료 단계가 비운다** — 안 비우면 기동 뒤에 채운 몫이 종료 누수 검사(기준선 대비 바이트 ·
   블록 수)에 남는다(백엔드 교체 뒤 ~1.1 MB). 진단은 MemoryProfiler 세부 추적을 켜고 `destroyAll` 뒤 `getTopCallStacks( LiveBytes )`. 교체 전 백엔드의 매니페스트는
