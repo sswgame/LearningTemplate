@@ -1,3 +1,5 @@
+// 원본을 그대로 화면에 옮기는 블릿이다(톤맵 없음). `_shaderPath` 없는 Present 의 기본 셰이더라, 앞 패스가 톤맵을 끝낸 파이프라인(디퍼드)이
+// 여기서 한 번 더 톤맵을 걸면 화면이 c/(c+1) 로 눌린다. 톤맵이 필요한 Present 는 `tonemap.hlsl` · `postchain.hlsl` 을 지정한다.
 #include "binding.hlsli"
 
 struct PSInput
@@ -18,7 +20,5 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	float3 color = swSampleSource(input.uv).rgb;
-	color = color / (color + 1.0f);
-	return float4(color, 1.0f);
+	return float4(swSampleSource(input.uv).rgb, 1.0f);
 }

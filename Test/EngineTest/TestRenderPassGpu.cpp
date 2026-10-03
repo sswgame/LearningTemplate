@@ -2989,6 +2989,114 @@ SW_TEST_CASE( RenderPassGpuTest, StructuredBufferRejectsSizeThatOverflows32Bit )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 디퍼드의 Present 는 톤맵 결과를 그대로 화면에 낸다(톤맵을 두 번 걸지 않는다)
+ * @details 디퍼드는 Tonemap 패스가 `TonemapColor` 에 톤맵을 끝내고, `_shaderPath` 없는 Present 는 기본 셰이더(`fullscreenblit.hlsl`)로 그것을
+ *          화면에 옮긴다. 블릿이 Reinhard 를 한 번 더 걸면 [0,1] 값이 c/(c+1) 로 눌려 화면이 절반 밝기 아래로 내려간다. 화면(Present 캡처)과
+ *          `TonemapColor` 를 픽셀로 맞춘다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, DeferredPresentCopiesTheTonemapResult )
+{
+    uint32 comparedCount{ 0 };
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::Scene scene( "DeferredPresentScene" );
+        bool      bOk = scene.ensureDefaultCameras();
+        if ( bOk )
+        {
+            sw::GameObject* pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "KeyLight" ) );
+            if ( pLightObject != nullptr )
+            {
+                if ( sw::DirectionalLightComponent* pLight = pLightObject->addComponent<sw::DirectionalLightComponent>(); pLight != nullptr )
+                {
+                    pLight->setIntensity( 6.0f );
+                    pLight->setCastShadow( false );
+                }
+            }
+        }
+
+        sw::shared_ptr<sw::Mesh> mesh = bOk ? sw::MeshUtil::createUnitCube() : nullptr;
+        if ( bOk && mesh != nullptr )
+        {
+            sw::GameObject* pObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "Cube" ) );
+            if ( sw::MeshComponent* pMesh = ( pObject != nullptr ) ? pObject->addComponent<sw::MeshComponent>() : nullptr; pMesh != nullptr )
+            {
+                pMesh->setMesh( mesh );
+                pMesh->setLocalPosition( sw::float3{ 0.0f, 0.0f, 0.0f } );
+            }
+            else
+            {
+                bOk = false;
+            }
+        }
+
+        sw::vector<uint8>     listPresent;
+        sw::vector<uint8>     listTonemap;
+        sw::RHITextureMipSpan layoutPresent{};
+        sw::RHITextureMipSpan layoutTonemap{};
+        sw::RHIFormat         tonemapFormat{};
+        if ( bOk )
+        {
+            sw::FrameRenderer renderer;
+            bOk = renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) && renderer.isReady();
+            if ( bOk )
+            {
+                renderer.setPresentCaptureEnabled( true );
+                // 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 것이 없다 — 몇 장 돌린다.
+                for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+                {
+                    device->beginFrame( sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+                    bOk = renderer.execute( device.get(), &scene );
+                    device->endFrame( false, false );
+                    device->waitIdle();
+                }
+                bOk = bOk && renderer.readbackPresentCapture( listPresent, layoutPresent ) &&
+                      renderer.readbackTransient( "TonemapColor", listTonemap, layoutTonemap, tonemapFormat );
+            }
+            renderer.shutdown();
+        }
+
+        const utf8* pName = device->getBackendName();
+        if ( bOk == false || layoutPresent._width != layoutTonemap._width || layoutPresent._height != layoutTonemap._height ||
+             tonemapFormat != sw::RHIFormat::R8G8B8A8_UNORM )
+        {
+            SW_LOG_WARNING( "DeferredPresentCopiesTheTonemapResult: %# 에서 비교할 두 장을 얻지 못했습니다.", pName );
+            continue;
+        }
+        ++comparedCount;
+
+        // 두 장 모두 RGBA8 이지만 줄 바이트(_rowBytes)이 다를 수 있다 — 줄 단위로 RGB 를 맞춘다.
+        uint32 maxDelta{ 0 };
+        uint32 brightCount{ 0 };
+        for ( uint32 y = 0; y < layoutTonemap._height; ++y )
+        {
+            const uint8* pPresentRow = listPresent.data() + static_cast<size_t>( y ) * layoutPresent._rowBytes;
+            const uint8* pTonemapRow = listTonemap.data() + static_cast<size_t>( y ) * layoutTonemap._rowBytes;
+            for ( uint32 x = 0; x < layoutTonemap._width; ++x )
+            {
+                for ( uint32 channel = 0; channel < 3; ++channel )
+                {
+                    const int32  a     = pPresentRow[x * 4u + channel];
+                    const int32  b     = pTonemapRow[x * 4u + channel];
+                    const uint32 delta = static_cast<uint32>( a > b ? a - b : b - a );
+                    if ( delta > maxDelta )
+                        maxDelta = delta;
+                    if ( b > 40 )
+                        ++brightCount;
+                }
+            }
+        }
+        // 배경보다 밝은 픽셀(큐브)이 있어야 두 번째 Reinhard(c/(c+1))가 크게 드러난다 — 없으면 비교가 비었다.
+        SW_EXPECT_TRUE_MSG( brightCount > 0, ( sw::string( pName ) + ": TonemapColor 에 그린 것이 없어 비교가 비었다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( maxDelta <= 1, ( sw::string( pName ) + ": Present 가 톤맵 결과와 다르다 (최대 차이 " + sw::to_string( maxDelta ) + ")" ).c_str() );
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the deferred pipeline" );
+}
+
+/**
  * @brief [RenderPassGpuTest] 후처리를 한 패스로 합쳐도 같은 그림이 나온다
  * @details 합치기는 **성능 변경이지 룩 변경이 아니어야 한다.** `forwardpipeline.xml` 은 블룸·외곽선·
  *          톤맵을 Present 한 패스에서 끝내고, `forwardpipelinestaged.xml` 은 패스 셋으로

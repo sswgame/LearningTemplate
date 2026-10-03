@@ -142,9 +142,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
-- **디퍼드 파이프라인이 톤맵을 두 번 거는 것으로 보인다(코드 읽기, 픽셀 미측정)** — Tonemap 패스 뒤 `_shaderPath` 없는 Present 의 기본 셰이더 `fullscreenblit.hlsl` 이
-  `tonemap.hlsl` 과 바이트까지 같은 Reinhard 다. Present 를 진짜 블릿으로 바꿀지 — 바꾸면 staged forward 의 Present 톤맵 · 골든 이미지도 함께.
-
 - **`.hdr` 원본 굽기가 없다** — 지금 굽기는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
 - **GPU 메모리 측정(사용자 요청 2026-10-03, gfxfix 워크트리 병합 뒤)** — (1) 드라이버 총량 · 예산: DXGI `QueryVideoMemoryInfo`(DX12 · DX11), `VK_EXT_memory_budget`(Vulkan),

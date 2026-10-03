@@ -110,7 +110,7 @@
 		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Present"
 		                     _type="Present"
-		                     _shaderPath="engine/shaders/fullscreenblit.hlsl"
+		                     _shaderPath="engine/shaders/tonemap.hlsl"
 		                     _vertexEntryPoint="VSMain"
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"

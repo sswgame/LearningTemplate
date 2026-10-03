@@ -12,11 +12,11 @@ SWBAKE 3
 50e9b2fdfb46cc2e deferredlighting.hlsl
 68c2af27a6e78ad3 instancesort.hlsl
 7717b8533cdd5a0b forwardlit.hlsl
+7b589f7f72d93a5b fullscreenblit.hlsl
 8a1142c850b34fee instancedata.hlsli
 94c48c72e58dff6e postoutline.hlsl
 980c18c4c174d3fb postoutline.hlsli
 9d56604bd35346ce instanceanim.hlsl
-b54c618d8734fa38 fullscreenblit.hlsl
 b54c618d8734fa38 tonemap.hlsl
 b8468871483f170e binding.hlsli
 bfc1abf7672a9a07 ssao.hlsl
