@@ -2,10 +2,26 @@
 
 #include "Core/Container/PagedArray.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/MemoryProfiler.h"
 
 #include "TestFramework/TestFramework.h"
 
 using namespace sw;
+
+namespace
+{
+    /** @brief 만든 · 부순 횟수를 세는 원소입니다. */
+    struct PagedArrayCountedElement
+    {
+        static inline int32 s_constructCount = 0;
+        static inline int32 s_destructCount  = 0;
+
+        PagedArrayCountedElement() { ++s_constructCount; }
+        ~PagedArrayCountedElement() { ++s_destructCount; }
+
+        uint64 _value{ 0 };
+    };
+} // namespace
 
 /**
  * @brief [PagedArrayTest] 청크는 처음 닿을 때 생기고, 그 전에는 `find` 가 nullptr 을 돌려줍니다.
@@ -90,4 +106,52 @@ SW_TEST_CASE( PagedArrayTest, ForEachVisitsAllocatedChunksOnly )
     pages.forEachElement( [&visitCount]( uint32& )
     { ++visitCount; } );
     SW_EXPECT_EQUAL( 0u, visitCount );
+}
+
+/**
+ * @brief [PagedArrayTest] 청크의 원소는 만들 때 하나씩 생성되고 `releaseChunks` 에서 하나씩 소멸합니다.
+ */
+SW_TEST_CASE( PagedArrayTest, ReleaseDestroysEveryElementOfEveryChunk )
+{
+    PagedArrayCountedElement::s_constructCount = 0;
+    PagedArrayCountedElement::s_destructCount  = 0;
+    {
+        PagedArray<PagedArrayCountedElement, 8, 4> pages;
+        SW_ASSERT_TRUE( pages.ensure( 3 ) != nullptr );
+        SW_ASSERT_TRUE( pages.ensure( 17 ) != nullptr );
+        SW_EXPECT_EQUAL( 16, PagedArrayCountedElement::s_constructCount );
+        SW_EXPECT_EQUAL( 0, PagedArrayCountedElement::s_destructCount );
+        pages.releaseChunks();
+        SW_EXPECT_EQUAL( 16, PagedArrayCountedElement::s_destructCount );
+        SW_EXPECT_TRUE( pages.find( 3 ) == nullptr );
+    }
+    SW_EXPECT_EQUAL( 16, PagedArrayCountedElement::s_destructCount );
+}
+
+/**
+ * @brief [PagedArrayTest] 청크는 sw 할당자로 잡혀 그때의 메모리 태그로 세이고, 놓으면 빠집니다.
+ * @details 청크를 CRT `new[]` 로 잡으면 태그 줄이 움직이지 않습니다(sw 할당자 밖 몫이 됩니다).
+ */
+SW_TEST_CASE( PagedArrayTest, ChunkIsCountedUnderTheCurrentMemoryTag )
+{
+    if constexpr ( kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+    if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
+        SW_TEST_SKIP( "no tracking memory profiler in this host" );
+
+    constexpr uint64 kChunkBytes = 1024 * sizeof( uint64 );
+    const uint64     before      = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load();
+    uint64           held{ 0 };
+    {
+        PagedArray<uint64, 1024, 4> pages;
+        {
+            SW_MEMORY_SCOPE( Physics );
+            SW_ASSERT_TRUE( pages.ensure( 5 ) != nullptr );
+        }
+        held = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load();
+    }
+    const uint64 after = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load();
+    SW_EXPECT_TRUE_MSG( held >= before + kChunkBytes, ( string( "Physics bytes grew by " ) + to_string( held - before ) ).c_str() );
+    SW_EXPECT_TRUE( after < before + kChunkBytes );
 }

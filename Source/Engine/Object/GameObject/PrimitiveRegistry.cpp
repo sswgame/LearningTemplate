@@ -41,10 +41,10 @@ namespace sw
         uint32 capacity = ( _dirtyFlagCapacity == 0 ) ? 64u : _dirtyFlagCapacity;
         while ( capacity < count )
             capacity *= 2u;
-        const uint32                      oldWordCount = _dirtyFlagCapacity / 64u;
-        const uint32                      wordCount    = capacity / 64u;
-        std::unique_ptr<atomic<uint64>[]> arrNew{ new atomic<uint64>[wordCount] };
-        std::unique_ptr<atomic<uint64>[]> arrNewTransform{ new atomic<uint64>[wordCount] };
+        const uint32                 oldWordCount    = _dirtyFlagCapacity / 64u;
+        const uint32                 wordCount       = capacity / 64u;
+        unique_ptr<atomic<uint64>[]> arrNew          = make_unique<atomic<uint64>[]>( wordCount );
+        unique_ptr<atomic<uint64>[]> arrNewTransform = make_unique<atomic<uint64>[]>( wordCount );
         for ( uint32 wordIndex = 0; wordIndex < wordCount; ++wordIndex )
         {
             const bool   bOld              = wordIndex < oldWordCount;

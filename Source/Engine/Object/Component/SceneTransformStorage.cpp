@@ -6,6 +6,8 @@
 
 #include "Engine/Object/Component/SceneTransformStorage.h"
 
+#include "Core/Memory/Memory.h"
+
 #include <cstdlib>
 
 namespace sw
@@ -31,7 +33,7 @@ namespace sw
     {
         for ( atomic<SceneTransformPage*>& page : _arrPage )
         {
-            delete page.load( std::memory_order_relaxed );
+            sw_delete( page.load( std::memory_order_relaxed ) );
             page.store( nullptr, std::memory_order_relaxed );
         }
     }
@@ -63,7 +65,7 @@ namespace sw
             pPage                                  = pageEntry.load( std::memory_order_relaxed );
             if ( pPage == nullptr )
             {
-                pPage = new SceneTransformPage;
+                pPage = sw_new SceneTransformPage;
                 pageEntry.store( pPage, std::memory_order_release );
             }
             ++_liveSlotCount;

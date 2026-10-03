@@ -137,14 +137,14 @@ void sw_delete_func( T* pPtr )
  * @brief sw_new 로 만든 배열을 해제합니다. **원소의 소멸자는 부르지 않습니다.**
  * @warning 그래서 소멸자가 하는 일이 없는 타입(trivially destructible)에만 쓸 수 있습니다. 그렇지 않은 타입을
  *          `sw_new T[n]` 으로 만들고 이것으로 해제하면 원소가 새고, 컴파일러가 배열 앞에 넣는 원소 개수 쿠키 때문에 해제
- *          주소도 어긋납니다. 소멸이 필요한 배열은 `vector<T>` 를 쓰거나 `new[]` / `delete[]` 를 짝으로 쓰십시오(`PagedArray`
- *          가 후자입니다. 임의의 T 를 담기 때문입니다).
+ *          주소도 어긋납니다. 소멸이 필요한 배열은 `vector<T>` 를 쓰거나 `sw_new_array<T>( n )` / `sw_delete_array( p, n )` 을
+ *          짝으로 쓰십시오(`PagedArray` 가 후자입니다. 임의의 T 를 담기 때문입니다).
  */
 template <typename T>
 void sw_delete_array_func( T* pPtr )
 {
     static_assert( std::is_trivially_destructible_v<T>,
-                   "sw_delete_array 는 원소 소멸자를 부르지 않습니다. vector<T> 또는 new[]/delete[] 짝을 쓰세요." );
+                   "sw_delete_array 는 원소 소멸자를 부르지 않습니다. vector<T> 또는 sw_new_array / sw_delete_array( p, n ) 짝을 쓰세요." );
     if ( pPtr != nullptr )
     {
         if constexpr ( sw::kUsesAlignedAllocation<T> )
@@ -160,6 +160,50 @@ void sw_delete_array_func( T* pPtr )
 #define sw_placement_new( pPtr ) new ( static_cast<void*>( pPtr ) )
 #define sw_delete                sw_delete_func
 #define sw_delete_array          sw_delete_array_func
+#define sw_new_array             sw_new_array_func
+
+/**
+ * @brief 원소 @p count 개를 값 초기화(`T{}`)한 배열을 sw 할당자로 잡습니다. `sw_delete_array( pArray, count )` 로 풉니다.
+ * @details `sw_new T[n]` 과 달리 배열 앞에 개수 쿠키를 두지 않으므로 소멸자가 있는 타입도 담을 수 있습니다. 대신 풀 때 같은 개수를 다시
+ *          넘겨야 원소 소멸자가 불립니다. 원소 생성자는 예외를 던지지 않아야 합니다(던지면 이미 만든 원소와 블록이 샙니다).
+ * @return 첫 원소 주소. 크기가 넘치거나 할당에 실패하면 `std::bad_alloc` 을 던집니다(`Allocator::allocate` 와 같습니다).
+ */
+template <typename T>
+[[nodiscard]] T* sw_new_array_func( size_t count )
+{
+    if ( count > ( ~size_t( 0 ) ) / sizeof( T ) )
+        throw std::bad_alloc();
+
+    void* pMemory{ nullptr };
+    if constexpr ( sw::kUsesAlignedAllocation<T> )
+        pMemory = sw::Memory::allocateAligned( count * sizeof( T ), alignof( T ) );
+    else
+        pMemory = sw::Memory::allocate( count * sizeof( T ) );
+    if ( pMemory == nullptr )
+        throw std::bad_alloc();
+
+    T* pArray = static_cast<T*>( pMemory );
+    for ( size_t index = 0; index < count; ++index )
+    {
+        sw_placement_new( pArray + index ) T{};
+    }
+    return pArray;
+}
+
+/**
+ * @brief `sw_new_array` 로 만든 배열의 원소 @p count 개를 소멸시키고 블록을 풉니다. @p count 는 만들 때 넘긴 값과 같아야 합니다.
+ */
+template <typename T>
+void sw_delete_array_func( T* pArray, size_t count )
+{
+    if ( pArray == nullptr )
+        return;
+    std::destroy_n( pArray, count );
+    if constexpr ( sw::kUsesAlignedAllocation<T> )
+        sw::Memory::freeAligned( pArray );
+    else
+        sw::Memory::free( const_cast<void*>( static_cast<const void*>( pArray ) ) );
+}
 
 namespace sw
 {
@@ -181,11 +225,23 @@ namespace sw
         }
     };
 
+    /**
+     * @brief `unique_ptr<T[]>` 의 해제자입니다. 원소 소멸자를 부르지 않으므로(개수를 모른다) 소멸자가 하는 일이 없는 원소만 담습니다.
+     * @details 소멸이 필요한 원소의 배열은 `vector<T>` 로 담습니다. 그런 `T` 로 이 해제자를 만들면 `sw_delete_array` 의 static_assert 가 막습니다.
+     */
+    template <typename T>
+    struct default_delete<T[]>
+    {
+        constexpr default_delete() noexcept = default;
+
+        void operator()( T* pArray ) const { sw_delete_array_func( pArray ); }
+    };
+
     template <typename T, typename Deleter = default_delete<T>>
     using unique_ptr = std::unique_ptr<T, Deleter>;
 
     template <typename T, typename... Args>
-    unique_ptr<T> make_unique( Args&&... args )
+    std::enable_if_t<std::is_array_v<T> == false, unique_ptr<T>> make_unique( Args&&... args )
     {
         if constexpr ( kUsesAlignedAllocation<T> )
         {
@@ -198,6 +254,16 @@ namespace sw
         {
             return unique_ptr<T>( sw_new T( std::forward<Args>( args )... ) );
         }
+    }
+
+    /**
+     * @brief 원소 @p count 개를 값 초기화한 배열을 sw 할당자로 잡아 `unique_ptr<T[]>` 로 돌려줍니다(`std::make_unique<T[]>` 와 같은 모양).
+     * @details 원소는 소멸자가 하는 일이 없는 타입이어야 합니다(`default_delete<T[]>`).
+     */
+    template <typename T>
+    std::enable_if_t<std::is_array_v<T> && std::extent_v<T> == 0, unique_ptr<T>> make_unique( size_t count )
+    {
+        return unique_ptr<T>( sw_new_array_func<std::remove_extent_t<T>>( count ) );
     }
 
     template <typename T>

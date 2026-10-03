@@ -19,6 +19,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -153,13 +154,13 @@ namespace sw
          *          프로파일에서 게임 스레드 바쁜 시간의 3.5 %). 이제 워드마다 exchange 한 번(125 번)이고 선 비트만 골라 돕니다.
          *          찍는 쪽은 그대로 "읽어 보고 없으면 fetch_or" 라 이미 선 칸은 쓰지 않습니다.
          */
-        std::unique_ptr<atomic<uint64>[]> _arrDirtyWord;
+        unique_ptr<atomic<uint64>[]> _arrDirtyWord;
         /**
          * @brief 칸마다 "월드 행렬만 바뀌었다" 비트입니다(`markTransformDirty`). 모양은 `_arrDirtyWord` 와 같고 같이 자랍니다.
          * @details 렌더 상태 비트와 따로 두는 이유: 빌더가 이쪽만 선 칸은 컴포넌트를 다시 읽지 않고 행렬만 옮긴다. 큐브 8000 개가 모두
          *          움직이면 전부가 이쪽이다.
          */
-        std::unique_ptr<atomic<uint64>[]> _arrTransformDirtyWord;
+        unique_ptr<atomic<uint64>[]> _arrTransformDirtyWord;
         /// @brief 더티 비트가 덮는 칸 수입니다. 항상 64 의 배수이고 번호 공간(`getSlotCount`) 이상입니다.
         uint32 _dirtyFlagCapacity{ 0 };
         /**

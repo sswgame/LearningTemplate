@@ -7,6 +7,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -16,7 +17,7 @@ namespace sw
      *          돌려주는 표가 그 위에 있으면, 한 스레드가 원소를 더하는 순간 다른 스레드가 들고 있던 주소가 해제된
      *          메모리를 가리킵니다. 이 배열은 청크를 따로 할당하고 청크 표 자체는 고정 크기라서 그런 무효화가 없습니다.
      *
-     *          원소는 인덱스로 바로 씁니다(`ensure`). 청크는 처음 닿을 때 만들어지며, 모든 원소를 값 초기화한 뒤에
+     *          원소는 인덱스로 바로 씁니다(`ensure`). 청크는 처음 닿을 때 sw 할당자로(`sw_new_array`, 그때의 메모리 태그로 세입니다) 만들어지며, 모든 원소를 값 초기화한 뒤에
      *          청크 포인터를 release 로 발행합니다. 그래서 읽는 쪽(`find`)은 청크 포인터 하나만 acquire 로 읽으면 되고,
      *          아직 없는 청크면 nullptr 을 받습니다.
      *
@@ -87,7 +88,7 @@ namespace sw
             T*          pChunk    = chunkSlot.load( std::memory_order_relaxed );
             if ( pChunk == nullptr )
             {
-                pChunk = new T[kElementPerChunk]{};
+                pChunk = sw_new_array<T>( kElementPerChunk );
                 chunkSlot.store( pChunk, std::memory_order_release );
             }
             return std::addressof( pChunk[index % kElementPerChunk] );
@@ -116,7 +117,7 @@ namespace sw
             {
                 T* pChunk = chunkSlot.load( std::memory_order_relaxed );
                 chunkSlot.store( nullptr, std::memory_order_relaxed );
-                delete[] pChunk;
+                sw_delete_array( pChunk, kElementPerChunk );
             }
         }
 

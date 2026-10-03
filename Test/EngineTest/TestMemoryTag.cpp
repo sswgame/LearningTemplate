@@ -13,6 +13,9 @@
 #include "Engine/EngineStartupSequence.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Object/Component/SceneTransformStorage.h"
+#include "Engine/Object/GameObject/MeshInstanceBatch.h"
+#include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "TestFramework/TestFramework.h"
@@ -137,4 +140,71 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveMeshIsTaggedMesh )
     // 정점 · 인덱스는 돌려준다. 렌더 자원 등록부처럼 한 번 자란 표는 남을 수 있어 "거의 다" 로 본다.
     const uint64 meshAfter = getLiveBytes( *pProfiler, sw::MemoryTag::Mesh );
     SW_EXPECT_TRUE( meshAfter < meshBefore + ( meshHeld - meshBefore ) / 4 );
+}
+
+/**
+ * @brief [MemoryTagTest] 씬 트랜스폼 페이지는 sw 할당자로 잡혀 그때의 태그로 세인다
+ * @details 페이지는 칸 번호가 새 페이지에 처음 닿을 때 만들어진다. 앞선 시험이 놓은 칸(빈 칸 목록)이 먼저 나가므로, 새 페이지가 생길 때까지
+ *          칸을 받는다. 페이지를 CRT `new` 로 잡으면 태그 줄이 늘지 않아 상한까지 돌고 진다.
+ */
+SW_TEST_CASE( MemoryTagTest, SceneTransformPageIsTagged )
+{
+    if constexpr ( sw::kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
+    if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
+        SW_TEST_SKIP( "no tracking memory profiler in this host" );
+
+    constexpr uint32           kMaxSlotTaken = 1u << 18;
+    sw::SceneTransformStorage& storage       = sw::SceneTransformStorage::get();
+    sw::vector<uint32>         listSlot;
+    listSlot.reserve( kMaxSlotTaken );
+
+    const uint64 animationBefore = getLiveBytes( *pProfiler, sw::MemoryTag::Animation );
+    uint64       animationGrowth{ 0 };
+    {
+        SW_MEMORY_SCOPE( Animation );
+        while ( listSlot.size() < kMaxSlotTaken && animationGrowth < sizeof( sw::SceneTransformPage ) )
+        {
+            sw::SceneTransformPage* pPage{ nullptr };
+            listSlot.push_back( storage.allocateSlot( nullptr, pPage ) );
+            animationGrowth = getLiveBytes( *pProfiler, sw::MemoryTag::Animation ) - animationBefore;
+        }
+    }
+    for ( const uint32 slot : listSlot )
+    {
+        storage.freeSlot( slot );
+    }
+
+    SW_EXPECT_TRUE_MSG( animationGrowth >= sizeof( sw::SceneTransformPage ),
+                        ( sw::string( "Animation bytes grew by " ) + sw::to_string( animationGrowth ) ).c_str() );
+}
+
+/**
+ * @brief [MemoryTagTest] 프리미티브 등록부의 더티 비트 배열은 sw 할당자로 잡혀 그때의 태그로 세인다
+ * @details 항목 4096 개 배치를 등록하면 항목 표(16 B × 4096)와 더티 비트 배열 둘(워드 64 개 × 8 B)이 그 태그로 잡힌다. 비트 배열을 CRT `new` 로
+ *          잡으면 항목 표 몫만 늘어 하한에 못 미친다.
+ */
+SW_TEST_CASE( MemoryTagTest, PrimitiveDirtyFlagsAreTagged )
+{
+    if constexpr ( sw::kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
+    if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
+        SW_TEST_SKIP( "no tracking memory profiler in this host" );
+
+    constexpr uint32      kEntryCount = 4096;
+    sw::PrimitiveRegistry registry;
+    sw::MeshInstanceBatch batch( nullptr, nullptr, nullptr, kEntryCount );
+    const uint64          animationBefore = getLiveBytes( *pProfiler, sw::MemoryTag::Animation );
+    {
+        SW_MEMORY_SCOPE( Animation );
+        registry.addInstanceBatch( &batch );
+    }
+    const uint64 animationGrowth = getLiveBytes( *pProfiler, sw::MemoryTag::Animation ) - animationBefore;
+    const uint64 entryBytes      = kEntryCount * sizeof( sw::PrimitiveInstanceEntry );
+    const uint64 dirtyWordBytes  = 2 * ( kEntryCount / 64 ) * sizeof( sw::atomic<uint64> );
+    SW_EXPECT_TRUE_MSG( animationGrowth >= entryBytes + dirtyWordBytes,
+                        ( sw::string( "Animation bytes grew by " ) + sw::to_string( animationGrowth ) ).c_str() );
+    registry.removeInstanceBatch( &batch );
 }

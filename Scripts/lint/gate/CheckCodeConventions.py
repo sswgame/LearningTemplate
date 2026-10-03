@@ -1203,6 +1203,16 @@ _kBasicTypesRe = re.compile(
 # 올바른 예시: sw_placement_new( pMemory ) T();, sw_new T();
 # 컨벤션 규칙: 이미 잡아 둔 메모리에 객체를 만들 때는 Memory.h 의 sw_placement_new 를 씁니다.
 _kRawPlacementNewRe = re.compile(r'(?<!\w)new\s*\(')
+
+# [맨 new 검사]
+# 정규식 패턴: r'(?<!\w)new\s+(?=[A-Za-z_:])'
+#   - (?<!\w)               : 앞이 식별자 글자가 아니어야 한다 — `sw_new T` 는 여기서 빠진다(`::new T` 는 잡힌다)
+#   - new\s+(?=[A-Za-z_:])  : `new` 뒤에 타입 이름이 오는 형태(`new T` · `new T[n]` · `new T( ... )` · `new ::ns::T`)
+# placement 구문(`new (`)은 Style/PlacementNew 가 본다. `operator new` 선언과 `#define` 줄은 규칙 쪽에서 거른다.
+# 매칭 예시 (위반): pChunk = new T[count]{};, pPage = new Page;
+# 올바른 예시: sw_new Page, sw_new_array<T>( count ), make_unique<T>( ... )
+# 컨벤션 규칙: 힙 객체는 sw 할당자(Memory.h)로 만든다. CRT new 는 메모리 태그 · 누수 검사에 보이지 않는다.
+_kRawNewRe = re.compile(r'(?<!\w)new\s+(?=[A-Za-z_:])')
 _kOperatorKeywordTailRe = re.compile(r'\boperator\s*$')
 
 # [생성자 멤버 초기화 리스트 괄호 검사]
@@ -2678,6 +2688,37 @@ class PlacementNewRule( ConventionRule ):
                     message=(
                         "placement new 는 `sw_placement_new( p ) T( ... )` 로 쓰세요(Core/Memory/Memory.h). "
                         "매크로는 주소를 `void*` 로 바꾸는 캐스트를 드러내고, 표기가 하나여야 한 곳만 고쳐 전체에 반영됩니다."
+                    ),
+                    snippet=ctx.trimmed,
+                )
+            )
+            break
+        return violations
+
+
+class RawNewRule( ConventionRule ):
+    """Style/RawNew"""
+    category = "Style/RawNew"
+    badSampleFile = "Source/Probe/RawNew.cpp"
+    badSample = '#include "pch.h"\n\nvoid probe()\n{\n    int32* pArray = new int32[4]{};\n    (void)pArray;\n}\n'
+
+    def onLine(self, ctx: LineScanContext) -> list[ConventionViolation]:
+        violations: list[ConventionViolation] = []
+        # 매크로 정의(`sw_new` 자신)는 맨 new 를 쓸 수밖에 없다.
+        if ctx.trimmed.startswith("#"):
+            return violations
+        for newMatch in _kRawNewRe.finditer(ctx.codeWithoutStrings):
+            # `operator new[]( size_t, ... )` 는 할당 함수 선언이지 객체 생성이 아니다.
+            if _kOperatorKeywordTailRe.search(ctx.codeWithoutStrings[:newMatch.start()]):
+                continue
+            violations.append(
+                ConventionViolation(
+                    file_path=ctx.relPath,
+                    line_number=ctx.lineNum,
+                    rule_category="Style/RawNew",
+                    message=(
+                        "맨 `new` 대신 sw 할당자를 쓰세요 — 객체는 `sw_new T( ... )` · `make_unique<T>`, 배열은 `sw_new_array<T>( n )` · "
+                        "`make_unique<T[]>( n )` · `vector<T>`(Core/Memory/Memory.h). CRT new 는 메모리 태그 · 누수 검사에 보이지 않습니다."
                     ),
                     snippet=ctx.trimmed,
                 )

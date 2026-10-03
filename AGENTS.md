@@ -219,6 +219,9 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
 - Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`
   (`Core/Memory/Memory.h`), never a bare `new ( pMemory ) T( ... )`. Enforced by
   `CheckCodeConventions.py` (`Style/PlacementNew`).
+- Allocate on the heap through the sw allocator, never a bare `new T` / `new T[n]`: `sw_new T( ... )` / `make_unique<T>`
+  for one object, `sw_new_array<T>( n )` + `sw_delete_array( p, n )`, `make_unique<T[]>( n )` or `vector<T>` for arrays. CRT `new` is
+  invisible to memory tags and leak checks. Enforced by `CheckCodeConventions.py` (`Style/RawNew`).
 - **Borrow with a pointer, keep with a handle.** A `GameObject*` / `Component*` you do not own is valid
   only inside the current call (at most the current frame). Anything kept across frames — members,
   selection lists, undo records — holds a `GameObjectHandle` / `ComponentHandle` (`Core/Container`) and

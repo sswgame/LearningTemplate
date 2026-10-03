@@ -580,3 +580,25 @@ SW_TEST_CASE( MemoryTest, SwNewHonoursOverAlignmentAndMatchesSwDelete )
     listLine.resize( 5 );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( listLine.data() ) % 64 ) );
 }
+
+/**
+ * @brief [MemoryTest] `sw_new_array` 는 원소를 값 초기화하고 정렬을 지키며, `make_unique<T[]>` 도 같은 경로로 잡는다
+ */
+SW_TEST_CASE( MemoryTest, NewArrayValueInitializesAndKeepsAlignment )
+{
+    CacheLineAlignedInternal* pAligned = sw_new_array<CacheLineAlignedInternal>( 5 );
+    SW_ASSERT_NOT_NULL( pAligned );
+    for ( uint32 index = 0; index < 5; ++index )
+    {
+        SW_EXPECT_EQUAL( 0u, static_cast<uint32>( reinterpret_cast<uintptr_t>( pAligned + index ) % 64 ) );
+        SW_EXPECT_EQUAL( 7u, static_cast<uint32>( pAligned[index]._value ) );
+    }
+    sw_delete_array( pAligned, 5 );
+
+    sw::unique_ptr<uint64[]> arrWord = sw::make_unique<uint64[]>( 33 );
+    SW_ASSERT_NOT_NULL( arrWord.get() );
+    for ( uint32 index = 0; index < 33; ++index )
+    {
+        SW_EXPECT_EQUAL( 0ull, arrWord[index] );
+    }
+}
