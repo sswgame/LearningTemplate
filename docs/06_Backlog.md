@@ -97,10 +97,6 @@ cd build/Ninja-Debug/Bin
 
 2026-10-03 감사로 찾은 14 곳. 끝난 줄은 지운다. "진행 중" 은 워크트리에서 하고 있는 것이다.
 
-- **에디터 확장 지점을 손으로 채운다** — 패널(`EditorPanelManager.cpp` include 18 + 등록 18), 팝업(`EditorPopupManager.cpp`), 컴포넌트 인스펙터
-  (`InspectorComponentManager.cpp` 에 클래스 넷이 다 들어 있다), 뷰포트 시각화(`EditorViewportVisualizer.cpp`), 명령 표 27 줄 + 메뉴 배치 손 목록
-  (`EditorMenuBar.cpp` — 줄의 `_pCategory` 가 메뉴를 몰지 않는다). GameFramework · 킷 컴포넌트는 에디터 중앙 파일을 고치지 않고는 인스펙터 · 시각화를
-  가질 수 없다. → `ComponentFactoryRegistrar` 모양의 정적 등록(EditorModule 은 MODULE DLL 이라 등록 객체가 링크에서 안 버려진다) + 메뉴 경로 · 순서 칸.
 - **대화 노드 종류** — `DialogueGraphPanel.cpp` 의 추가 메뉴 · 그리기 switch · 프로퍼티 체인 · 미리보기 진행과 `DialogueRunnerComponent.cpp:386-430`
   (빠짐없지 않은 if — 새 종류면 대화가 조용히 멈춘다)가 진행 규칙을 따로 구현한다. → 엔진 쪽 종류별 특성 줄 + 러너 · 미리보기가 같이 쓰는
   `DialogueCursor::step` + 빠짐없는 switch.
@@ -133,8 +129,6 @@ cd build/Ninja-Debug/Bin
 
 - **시퀀서 이벤트 트랙이 어디로도 나가지 않는다.** `SequencePlayerComponent` 가 `applyPlayback` 을 출력 목록 없이 부른다 — Shipping 에서는 이벤트 트랙이
   없는 것과 같다. 델리게이트로 낼지 이벤트 디스패처로 낼지 정하고 잇는다.
-- **스프라이트 클립 `transformKeys` 를 런타임에 적용하지 않는다.** `SpriteClipAsset` 은 읽고 쓰기만 하고, 쓰는 곳은 에디터 `SpriteClipPanel` 뿐이다.
-  뿌리 컴포넌트를 움직이지 않는 규칙부터 정한다.
 - **연속 바디의 후보 범위가 그 step 의 최대 이동만큼 넓어진다.** 순간이동이 아닌 먼 이동(에디터 드래그)이 있는 step 은 모든 바디를 훑는다(답은 맞고
   그 step 만 느리다). 상대 운동은 한 step 안 직선 이동을 가정한다. `PhysicsWorld.cpp` 의 `maxDisplacement` · `addSweptPairs`.
 - **서브틱 id 64 번부터는 활성이 목록에만 있어** 틱 중 끄기 · 해제가 틱 뒤에야 반영된다(1~63 은 원자 마스크, `Component.h` 에 적혀 있다).
@@ -206,10 +200,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
-- **`GameEvents.h` 의 세이브 · 레벨 요청 이벤트 열둘은 발행자도 구독자도 없다.** 헤더 경고는 반쯤 낡았다 — 지금은 `GameEventUtil::send` 가 `gameEventChannel()` 로
-  `DamageAppliedEvent` · 룸 이벤트를 낸다. 열둘을 (a) 어휘로 둘지 (b) 프레임워크가 발행할지(세이브 · 씬 전환 자리부터) (c) 지울지 정하고 경고를 고친다.
-- **`GameModeStateMachine` 은 제품 코드에서 쓰는 곳이 없다.** 시험은 엉뚱하게 `LocalizationManagerTest.GameModeStateMachineLifecycle` 에 있다.
-- **`UnitStatsComponent::_moveSpeed` 는 `Units=m/s` 인데 툴팁은 "tiles/sec"** 이고 읽는 곳이 없다.
+- **`MonsterDef` 의 값이 픽셀 시절 단위로 보인다**(`_speed` 150 · 순찰 200 · 감지 400 · 공격 50) — `UnitStatsComponent::setStats` 인자와 1:1 로 맞지만 잇는 코드가
+  없다. 단위(m · m/s)를 정하고 카탈로그 → 유닛 스탯 연결을 만든다.
+- **`OverworldEvents.h` 의 Warp 이벤트 셋에 발행자 · 구독자가 없어 보인다**(확인만 함) — `GameEvents.h` 와 같은 기준(낼 자리가 있으면 발행, 없으면 삭제)으로 정리.
+
 - **강체 · 고정 스텝 누적기가 없다.** `PhysicsWorld::step` 은 겹침 이벤트만 낸다. 강체가 생기면 적분과 누적기를 넣는다.
 - **`StreamingPriority` 가 실행 순서에 반영되지 않는다.** `AssetStreamingQueue::requestAsset*` 이 받기만 한다 — `TaskPriority` 로 옮겨 싣는다.
 - **리눅스에서 yad 만 깔린 기계에는 "All files" 필터가 없다**(`LinuxFileDialog.cpp`). `yad --file --file-filter='A | *.txt' --file-filter='All files | *'`
@@ -290,7 +284,7 @@ cd build/Ninja-Debug/Bin
 - **`TestRenderPassGpu.cpp` 의 남은 같은 줄**("큐브 하나 든 씬" · "한 프레임 돌리기")은 같은 모양의 케이스가 늘면 도우미로.
 - **옛 시험 산출물 정리**(사용자 폴더라 두었다): `%TEMP%` 의 `sw_*`, `build/*/Bin` · `TestBin` 의 `prefab_test/` · `TestTemp/` · `temp_gen_*` · `temp_collide/`.
   옛 규칙으로 지은 바이너리가 남은 프리셋은 다시 지어야 새 규칙을 따른다.
-- **`Graphics/README.md` 의 "알려진 보강 후보" 와 `GameEvents.h` 경고처럼 사실과 다른 문서 줄**은 그 영역을 고칠 때 같이 고친다(1-4 · 1-6 참고).
+- **`Graphics/README.md` 의 "알려진 보강 후보" 처럼 사실과 다른 문서 줄**은 그 영역을 고칠 때 같이 고친다(1-4 참고).
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
@@ -298,7 +292,6 @@ cd build/Ninja-Debug/Bin
 - **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩). 09-23 에 고친 DX11 기록 컨텍스트 결함과 모양은 같지만 단정하지 않았다.
   이제 시험 실행 파일에 크래시 핸들러가 있어 다음에는 스택이 남는다 — 직접 실행해 전체 출력을 파일로 받는다.
 - **Shipping `CoreTest` 의 `Failed to deserialize config from: shipping_host_baked`**(한 번, 3 회 재실행 통과). `ConfigManager::loadConfigFromJson`.
-- **`RenderPassGpuTest.MorphPoolIdentityMatchesRest` 가 전체 ctest 부하에서 한 번 졌다**(807/26486 px < 5 %, sin(시간) 구동 — 단독 15/15).
 - **WSL lavapipe 의 첫 `vkAcquireNextImageKHR` 가 가끔 `VK_ERROR_SURFACE_LOST_KHR`** 로 진다(`AppTest_HostOnly`, 43 회 중 3 회, 환경 탓으로 판단 — 미확정).
   다시 보이면 기준선과 번갈아 돌려 가른다. App 로그는 `build/WSL-Debug/Bin/Saved/Logs`.
 - **CI Windows 러너(WARP)에서 픽셀 시험이 지던 원인은 판정하지 않았다**(`RenderPassGpuTest` 를 host 스위트로 빼서 우회). 실패 값이 `좌 0, 우 0` 이면 WARP 가
@@ -433,6 +426,11 @@ cd build/Ninja-Debug/Bin
   Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest`, `Test/TestFramework/TestBench.h`.
 
 ### 3-2. 검증 · 시험 쓰기
+
+- **시간으로 움직이는 GPU 픽셀 단언은 `FrameRenderer::setAnimationTimeOverride` 로 시각을 고정한다**(음수 = 벽시계). 단위 큐브는 모프 위상이 π 근처에 몰려
+  t ≈ π/2 + kπ 에서 변위가 다 함께 0 이 된다 — 벽시계로 찍으면 부하에 따라 간헐로 진다.
+- **에디터 확장의 순서는 등록 순서가 아니라 `SW_EDITOR_*` 의 order 키다.** 등록이 빠지거나 순서가 바뀐 것은 `AppSmokeTest.EditorRegistriesKeepTheirOrder`
+  (`-gv_editorRegistryDump=1`, hostgpu)만 잡는다 — 패널 · 메뉴를 고치면 hostgpu 를 돌릴 것.
 
 - **`ScopedDefensiveTestLog` 범위 안의 로그는 메시지 앞에 `"[Expected Defensive Test] "` 가 붙는다** — 문구 비교는 startsWith 가 아니라 포함 여부로.
 - **워크트리와 vcpkg 스탬프:** 스탬프 해시는 트립릿 파일(`cmake/Modules/Toolchain/Vcpkg/*-{windows,linux,osx}.cmake`)의 **바이트**로 계산한다. 작업 사본의
@@ -782,6 +780,10 @@ cd build/Ninja-Debug/Bin
 
 ### 3-8. 에디터
 
+- **패널 · 팝업 · 인스펙터 · 시각화는 자기 .cpp 의 `SW_EDITOR_PANEL` · `SW_EDITOR_POPUP` · `SW_EDITOR_INSPECTOR` · `SW_EDITOR_VISUALIZER` 한 줄로 등록한다**
+  (`EditorRegistry<T>`, (order, id) 정렬, 같은 id 거절). 메뉴 배치는 커맨드 표 줄의 `_menuPath` · `_menuOrder`(백의 자리가 바뀌면 구분선). 매니저 · 메뉴바에
+  손 목록을 다시 만들지 말 것. 시각화 마스크 비트는 등록 순서의 index 라 순서 키를 바꾸면 비트 자리도 바뀐다(지금은 저장하지 않아 무해).
+
 - **에셋 종류 하나 = `EditorAssetKind` 한 값 + `EditorAssetType.cpp` 의 `kArrAssetMatch`(판정 · 핫 리로드 칸) · `kArrKindInfo`(이름 · 라벨 · 패널 · 아이콘 · 색 ·
   임포트) 각 한 줄 + 필요하면 `Source/Editor/AssetActions/<Kind>AssetTypeActions.cpp`(썸네일 · 열기 · 드롭, 정적 등록).** 종류별 if-체인을 다시 만들지 말 것 —
   칸이 빠지면 static_assert 가 막는다. 도구 문서 IO 는 `loadToolDocument` / `saveToolDocument<TAsset>` + `ToolDocumentDesc` 하나.
@@ -887,6 +889,11 @@ cd build/Ninja-Debug/Bin
   Core 에 인스턴스가 필요하면 Logger 모양 — 인스턴스는 `EngineLoop`, Core 에는 포인터 슬롯.
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
+
+- **`GameEvents.h` 의 이벤트는 프레임워크가 그 자리에서 낸다**(세이브 · 로드 완료 = `GameInstanceBase::save/loadStateToFile`, 레벨 로드 요청 · 완료 =
+  `requestFirstScene` · `requestEntranceScene`, 일시정지 = `GameModeStateMachine`). `SceneManager` 를 직접 부른 로드는 LevelLoad 이벤트를 내지 않는다.
+  낼 자리가 없는 이벤트는 두지 않는다.
+- **스프라이트 클립 키(`transformKeys`)는 클립 타임라인의 초이고 루트(primary) 스프라이트에는 적용하지 않는다**(경고) — 움직일 스프라이트는 루트 아래에.
 
 - **입력** — 창 메시지는 큐에만 넣고 장치 상태를 바꾸는 길은 `beginFrame` 의 재생 하나다(포커스 · 포인터 진입도 큐 순서 안). `RawInputEventType` 은 뒤에만 덧붙인다(리플레이 파일이 번호를
   담는다). 입력 시험은 메시지 → `beginFrame` → 조회 → `endFrame`. XInput 트리거도 `setAxis( 4 · 5 )` 로 넣어야 데드존이 먹는다. 리바인딩은 바인딩 종류를 지킨다(`getRebindSlotIndex`),
