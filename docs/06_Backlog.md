@@ -194,8 +194,6 @@ cd build/Ninja-Debug/Bin
 - **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
   결과(열거값)로 바꾸는 그래픽스 쪽 수정.
 - **`RunForwardDeclarationCandidates.py --show-unused` 의 거짓 "쓰임 없음" 208 건** — 보고 전용이라 손으로 걸러야 한다.
-- **(결정만 남음) `SW_ENABLE_DEADLOCK_DETECTION` 을 CI 에서 지킬지** — 지금은 컴파일된다(`RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION` 로 Debug
-  Source 전부 오류 · 경고 0). CI 에 그 한 줄을 넣을지 정한다.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다.
 - **`TestRenderPassGpu.cpp` 의 남은 같은 줄**("큐브 하나 든 씬" · "한 프레임 돌리기")은 같은 모양의 케이스가 늘면 도우미로.
 - **옛 시험 산출물 정리**(사용자 폴더라 두었다): `%TEMP%` 의 `sw_*`, `build/*/Bin` · `TestBin` 의 `prefab_test/` · `TestTemp/` · `temp_gen_*` · `temp_collide/`.
@@ -219,45 +217,26 @@ cd build/Ninja-Debug/Bin
 
 ### 1-11. 결정이 필요한 것
 
-- **에디터 핫 리로드 뒤 Undo 히스토리를 살릴지** — (a) 커맨드를 (타입 id + 직렬화 데이터)로 바꾸고 모듈 재로드 뒤 다시 엮기(큰 일), (b) 지금처럼 비우기.
-  지금은 `ImGuiEditor::shutdown` 이 `CommandStack::clear()` 한다(모듈 람다가 언맵된 코드로 뛰지 않게).
-- **결함 · commit 실패 때 옛 이미지로 되돌릴지**(cr.h 식) — 옛 이미지는 `deferImageUnload` 로 아직 올라와 있어 이론상 가능하지만, 결함을 잡은 뒤는 소멸자 미실행 ·
-  락을 쥔 상태라 온전하지 않다. 지금은 `markGraphBroken` 으로 이후 리로드를 막는다(재시작 필요).
-- **에디터 ImGui 패널 하니스** — `EditorUiTest`(ImGui 컨텍스트만)를 넓힐지, EditorContext · 패널 매니저까지 띄우는 새 타깃(hostgpu)을 둘지.
-
 - **(보류 — 사용자 결정 2026-10-03) `hashed_string` 에 FName 숫자 꼬리를 둘지.** 지금은 비교 · 표시 인덱스 두 칸(8 바이트)이라 `"Enemy_12"` · `"Enemy_13"` 이
   이름 표에 각각 영구 적재된다. 런타임에 번호 붙은 이름을 대량으로 만드는 경로(복제 · 스폰 이름 자동 부여)가 생기면 다시 본다 — 넣으면 `_숫자`(앞자리 0 제외)를
   떼어 정수 칸에 두고 비교는 (인덱스, 숫자) 쌍.
 
-- **텍스트 포맷의 orphan 관대함은 의도인가.** 버전이 같고 모르는 필드만 있을 때 Binary 는 거절(`SchemaOrphanPolicy::Reject`), JSON · XML 은 버리고 통과
-  (`Ignore`, 버린 것은 로드마다 경고). 의도라면 `SchemaMigrate.h` 계약을 포맷별로 적는다. 사고라면 텍스트를 Reject 로 — 프로퍼티를 지운 적 있는 에셋이 통째로
-  로드에 실패하므로 마이그레이션 계획과 함께. 정책을 바꾸면 `ReflectionSerializationTest.OrphanOnlyPolicyDiffersByFormat` 가 깨지는 것이 정상이다
-  (`SerializerUtil.h` · `TestReflectionSerialization.cpp` 주석이 이 질문을 가리킨다).
-- **마우스 스무딩 EMA 가 프레임당 "이벤트 수 + 1" 번 돈다**(`MouseDevice::updateSmoothDelta`). 폴링 레이트(125 · 1000 Hz)마다 감각이 다르다. 실제 마우스로 사람이 정한다.
-- **`BoxCollider2DComponent::intersects` 의 답이 두 경로로 갈린다.** 바디 등록 전(에디터 · 시험)은 CPU AABB, 등록 뒤(플레이)는 `PhysicsWorld::overlaps` 가 레이어
-  행렬까지 본다. 어느 쪽이 맞는지 정해야 시험을 쓴다.
-- **onBeginPlay 가 붙이는 자동 소유 태그(Sprite · Collider · Bullet 등 열둘)를 걷을지.** 스폰마다 태그 컴포넌트가 생긴다. 게임이
-  `findGameObjectsByTag( "Bullet" )` 로 이 의미를 쓰므로 사용자가 정한다. 걷으면 `GameObjectTest.BeginPlayMayAddComponentsAndSpawn` 을 고친다.
-- **컴포넌트 이름표(`_componentName`)를 씬에 저장할지**(씬 포맷 결정, 지금은 런타임 전용).
-- **호출부가 0 인 API 를 지울지 · 이을지 · 남길지.** 판정은 (a) 같은 답을 주는 길이 있다 → 지운다 (b) 부를 자리가 있는데 안 부른다 → 잇는다 (c) 소비자가 아직
-  없다 → 남긴다(상용 엔진에 대응이 있으면 남기고 시험을 붙인다). 대상: `KeyboardDevice::notifyTextInput` · `setTextInputCallback`, `AssetEditorManager::registerAssetEditor`,
-  `InputManager::unregisterDevice`, `EditorThemeUtil` 팔레트 아홉 · `EditorWidgets::acceptAssetDrop` · `drawHelpMarker` · `drawPropertyRowBegin/End`,
-  `EditorWorkspace::removeGuid` · `isGameObjectPrefabInstance` · `clearGameObjectPrefabMap`, `EditorInspectorCommands::pushStringEdit`,
-  `EditorDataTableCommands::hasModifiedLocalization`, `ModuleHost::getModuleCompiler`, `BattleState::getFoeName` · `getStatusText`.
-- **구조 후보 넷** — 컴포넌트 팩토리 표를 TypeRegistry 하나로(코드젠 · TypeInfo 레이아웃 · 리로드 등록자를 건드린다), 트랜스폼 SoA 2 단계(원시 쓰기가 알림을
-  우회한다 — 접근자 PROPERTY 1 단계는 끝났다), 선행 조건 스케줄러(시스템이 서로의 결과에 기대기 시작하면 읽기/쓰기 집합 선언으로), 등록부 공통 템플릿.
-- **EngineLoop 초기화 · 종료 순서를 선언으로 자동화할지**(UE `USubsystem` 식). 생성 · 소유 · 바인딩은 이미 `EngineOwnedServices` 가 목록에서 만든다. 순서 지식은
-  지금 종료 절차의 주석에 있다(`docs/07_EngineStructureVsCommercial.md` 도 이 판단을 가리킨다).
-- **에셋 로더 등록제.** `IAssetCache` + `ResourceManager` 등록부는 있지만 "무엇을 어떻게 읽는가" 는 구체 캐시의 몫이다. 종류가 대여섯이 되면 로더도 등록제로.
-- **참조 카운트 RHI 핸들**(언리얼 `TRefCountPtr` 축). 한 리소스를 여럿이 나눠 들기 시작하면(LOD · 인스턴스가 버퍼 공유) 들인다. 핸들이 생 `uint64` 라 네 백엔드의
-  create/destroy API 를 다 바꾼다.
-- **Mesh · Material 을 `SlotHandle` 로 들지.** 지금은 권하지 않는다 — 해석 표가 RT 안전해야 하고, "프레임 끝까지 살아 있어야 한다" 를 핸들로 풀면 retire 큐가
-  다시 생긴다. `shared_ptr` 이 둘을 한 번에 준다. Mesh/Material 레지스트리를 따로 세우는 날 다시 본다(`docs/07` 이 이 판단을 가리킨다).
-- **`ResourceUtil` 을 소유 객체로 바꾸기**(정적 다섯 · 호출 247 곳). 이득 대비 변경량이 가장 나빠 미뤘다.
-- **물리 링크 단위 분할**(EngineRHI / EngineReflection — physics 가 아니라 링크 단위). 폴더 그래프가 DAG 라 어디를 잘라도 순환은 없다. 자르는 날은 별도 PR.
-- **API 통합 훑기에서 남긴 판단** — `FrameRenderer` 100 함수(이미 9 파일), `Archive` 의 형식별 `serializeXxxObject` 5 가족, `getCount` 넷. 다음 훑기가 다시 본다.
-- **프리팹 오버라이드 전파.** 씬은 인스턴스의 전체 상태를 저장해, 프리팹을 고쳐도 놓인 인스턴스에 퍼지지 않는다. 덮어쓴 값만 저장하는 방식(유니티 · 언리얼)은
-  큰 기능이다(`PrefabAsset.h` 주석, `Scene::instantiate`, `PrefabOverrideItem`).
+### 1-11a. 결정됨 — 상용 엔진과 견줘 정했고 구현 중 (사용자 지시 2026-10-03)
+
+- **에디터 핫 리로드 뒤 Undo 를 살린다**(UE `FTransaction` · Unity Undo 는 직렬화한 객체 상태라 코드 리로드를 넘는다) — 스냅샷 트랜잭션을 엔진 쪽 데이터 커맨드로,
+  모듈 코드를 쥔 커맨드만 `IModuleCodeHolder` 훑기로 내린다(`ImGuiEditor::shutdown` 의 `clear()` 제거).
+- **모듈 리로드 실패: 적용 전 실패는 옛 이미지 유지, 적용 뒤 결함은 broken + 재시작**(UE Live Coding · Unity 도 적용 뒤 결함은 되돌리지 않는다).
+- **에디터 패널 시험은 에디터 안에서 돈다**(UE Automation · Unity EditMode) — 에디터 모듈 안 자체 시험 실행기, AppTest(hostgpu)가 띄워 결과를 읽는다.
+- **텍스트 포맷의 orphan 관대함은 의도다**(UE 태그 직렬화 · Unity YAML 은 모르는 필드를 건너뛴다; 쿠킹 바이너리는 판이 다르면 거부) — `SchemaMigrate.h` 에 포맷별 계약.
+- **마우스 스무딩은 시간 기반 EMA**(UE 마우스 스무딩은 샘플 시간 기반) — 프레임 · 폴링 레이트와 무관하게.
+- **`BoxCollider2DComponent` 판정을 둘로 나눈다**(Unity `Bounds.Intersects` 대 `Collider2D.IsTouching`) — 순수 기하와 레이어 반영 겹침, 등록 여부와 무관하게 같은 답.
+- **onBeginPlay 의 자동 소유 태그를 걷는다**(UE · Unity 는 엔진이 태그를 붙이지 않고 타입으로 찾는다) — 게임은 컴포넌트 타입 조회로.
+- **컴포넌트 이름표를 씬에 저장한다**(UE 는 컴포넌트 이름이 참조 · 오버라이드의 키) — 옛 씬은 기본값으로 읽는다.
+- **호출부 0 API** — 항목마다 (a) 지운다 (b) 잇는다 (c) 남긴다(상용 엔진에 대응이 있으면 남기고 시험).
+- **컴포넌트 팩토리를 TypeRegistry 하나로**(UE `UClass`) · **엔진 등록부 공통 템플릿**.
+- **EngineLoop 초기화 · 종료 순서를 의존 선언 + 위상 정렬로**(UE `USubsystem::InitializeDependency`).
+- **프리팹은 덮어쓴 값만 저장한다**(UE · Unity) — 놓인 인스턴스에 프리팹 수정이 퍼진다.
+- **`SW_ENABLE_DEADLOCK_DETECTION` 을 CI 가 지킨다** — `RunBuildWarnings.py --define SW_ENABLE_DEADLOCK_DETECTION` 한 줄.
 
 ### 1-12. 낮은 우선순위 · 조건이 오면
 
@@ -294,6 +273,11 @@ cd build/Ninja-Debug/Bin
   작업 중에 pull · 충돌이 날 수 있다 — 커밋 전에 받아서 합친다.
 
 ### 안 하기로 한 것 (다시 제안하지 말 것)
+
+- **지금 하지 않는 구조 후보 — 다시 볼 조건과 함께**(2026-10-03 상용 엔진 비교로 결정): 트랜스폼 SoA 2 단계(UE 액터도 AoS, 측정 근거가 생기면) ·
+  선행 조건 스케줄러(시스템이 서로의 결과에 기대기 시작하면 — UE `AddTickPrerequisite` 모양) · 에셋 로더 등록제(종류가 대여섯이 되면 — UE `UFactory`) ·
+  참조 카운트 RHI 핸들(한 리소스를 여럿이 나눠 들기 시작하면 — UE `TRefCountPtr`) · Mesh/Material `SlotHandle`(하지 않는다 — `shared_ptr` 이 수명과 RT 안전을 한 번에
+  준다) · `ResourceUtil` 소유 객체화(하지 않는다 — UE `FPaths` 도 정적) · 링크 단위 분할(증분 링크 시간이 문제가 되면 별도 PR) · API 통합 남은 판단(다음 훑기).
 
 - **도구 버전을 "최신 자동" 으로 두는 것.** 네트워크 의존이 생기고 빌드 재현성이 떨어진다. 버전 키 하나로 고정하고 올릴 때만 의도적으로
   올린다. clang-format 은 버전이 곧 출력이라 고정이 아니면 안 된다.
