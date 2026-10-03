@@ -1301,35 +1301,39 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
  */
 SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGpu )
 {
-    sw::MaterialCache& cache = sw::engine::getResourceManager().getMaterialManager();
+    // 디스크에 없는 경로를 잡는다 — 디바이스 없이는 파일을 읽지 않는다. 리소스 루트 밖의 임시 경로라 에셋 데이터베이스가
+    // `.meta` 사이드카를 쓰지 않는다(루트 안의 없는 경로를 잡으면 시험을 돌릴 때마다 Resource 에 `.meta` 가 생긴다).
+    const sw::string   materialPath = test::makeTempPath( "does_not_need_gpu.material" );
+    sw::MaterialCache& cache        = sw::engine::getResourceManager().getMaterialManager();
     cache.clear();
 
-    sw::Material* mat = cache.acquire( "engine/test/does_not_need_gpu.material", nullptr );
+    sw::Material* mat = cache.acquire( materialPath, nullptr );
     SW_EXPECT_TRUE( mat != nullptr );
     if ( mat == nullptr )
         return;
 
-    sw::Material* again = cache.acquire( "engine/test/does_not_need_gpu.material", nullptr );
+    sw::Material* again = cache.acquire( materialPath, nullptr );
     SW_EXPECT_EQUAL( mat, again );
 
-    cache.release( "engine/test/does_not_need_gpu.material" );
-    cache.release( "engine/test/does_not_need_gpu.material" );
+    cache.release( materialPath );
+    cache.release( materialPath );
 
     // 두 번 잡고 두 번 놓았으니 항목이 사라져 있어야 한다 — **참조 계수 규율은 이것이 전부다.**
-    SW_EXPECT_FALSE( cache.isCached( "engine/test/does_not_need_gpu.material" ) );
+    SW_EXPECT_FALSE( cache.isCached( materialPath ) );
 
     // 한 번 더 놓아도 아무 일이 없어야 한다(항목이 이미 없으므로 조용히 돌아간다).
     {
         test::ScopedLogSuppressor suppressor;
-        cache.release( "engine/test/does_not_need_gpu.material" );
+        cache.release( materialPath );
     }
 
     // 다시 잡으면 참조가 1 이므로 한 번 놓는 것으로 사라진다 — 앞의 과다 release 가 셈을 흐리지 않았다.
-    SW_EXPECT_NOT_NULL( cache.acquire( "engine/test/does_not_need_gpu.material", nullptr ) );
-    SW_EXPECT_TRUE( cache.isCached( "engine/test/does_not_need_gpu.material" ) );
-    cache.release( "engine/test/does_not_need_gpu.material" );
-    SW_EXPECT_FALSE( cache.isCached( "engine/test/does_not_need_gpu.material" ) );
+    SW_EXPECT_NOT_NULL( cache.acquire( materialPath, nullptr ) );
+    SW_EXPECT_TRUE( cache.isCached( materialPath ) );
+    cache.release( materialPath );
+    SW_EXPECT_FALSE( cache.isCached( materialPath ) );
 
+    SW_EXPECT_FALSE_MSG( sw::FileUtil::fileExists( materialPath + ".meta" ), "acquire wrote a .meta sidecar next to a material that does not exist" );
     cache.clear();
 }
 
