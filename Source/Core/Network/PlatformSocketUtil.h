@@ -31,5 +31,10 @@ namespace sw
         static uint16              getBoundPort( uint64 socketHandle );
         [[nodiscard]] static bool  sendTo( uint64 socketHandle, const NetAddress& to, const uint8* pData, int32 size );
         static SocketReceiveResult receiveFrom( uint64 socketHandle, NetAddress& outFrom, uint8* pBuffer, int32 bufferSize, int32& outSize );
+        /**
+         * @brief 받을 데이터그램이 생기거나 @p timeoutMilli 가 지날 때까지 잠듭니다(POSIX `poll` · Windows `WSAPoll` — `select` 의 FD_SETSIZE 한도가 없다).
+         *        받을 것이 있으면 true 입니다. 기다리는 동안 소켓을 닫으면 안 된다(기다리는 스레드를 먼저 멈춘다).
+         */
+        static bool waitReadable( uint64 socketHandle, int32 timeoutMilli );
     };
 } // namespace sw

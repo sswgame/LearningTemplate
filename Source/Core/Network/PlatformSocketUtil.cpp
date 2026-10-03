@@ -10,6 +10,7 @@
     #include <cerrno>
     #include <fcntl.h>
     #include <netinet/in.h>
+    #include <poll.h>
     #include <sys/socket.h>
     #include <unistd.h>
 #endif
@@ -136,5 +137,22 @@ namespace sw
         outFrom._port = ntohs( from.sin_port );
         outSize       = static_cast<int32>( received );
         return SocketReceiveResult::Received;
+    }
+
+    bool PlatformSocketUtil::waitReadable( uint64 socketHandle, int32 timeoutMilli )
+    {
+        if ( socketHandle == kInvalidSocket )
+            return false;
+#if defined( SW_PLATFORM_WINDOWS )
+        WSAPOLLFD pollEntry{};
+        pollEntry.fd     = PlatformSocketUtilInternal::toNative( socketHandle );
+        pollEntry.events = POLLRDNORM;
+        return WSAPoll( &pollEntry, 1, timeoutMilli ) > 0 && ( pollEntry.revents & ( POLLRDNORM | POLLERR | POLLHUP ) ) != 0;
+#else
+        pollfd pollEntry{};
+        pollEntry.fd     = PlatformSocketUtilInternal::toNative( socketHandle );
+        pollEntry.events = POLLIN;
+        return poll( &pollEntry, 1, timeoutMilli ) > 0 && ( pollEntry.revents & ( POLLIN | POLLERR | POLLHUP ) ) != 0;
+#endif
     }
 } // namespace sw

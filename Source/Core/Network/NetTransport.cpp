@@ -5,14 +5,27 @@
 #include "Core/Math/MathUtil.h"
 
 #include <algorithm>
+#include <chrono>
+#include <thread>
 
 namespace sw
 {
     // ------------------------------------------------------------------------------
     // LoopbackNetwork
     // ------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------
+    // INetTransport
+    // ------------------------------------------------------------------------------
+    bool INetTransport::waitForReceive( float64 timeoutSeconds )
+    {
+        if ( timeoutSeconds > 0.0 )
+            std::this_thread::sleep_for( std::chrono::duration<float64>( timeoutSeconds ) );
+        return false;
+    }
+
     LoopbackNetwork::LoopbackNetwork( uint32 seed )
-        : _listEndpoint{}
+        : _mutex{}
+        , _listEndpoint{}
         , _listInFlight{}
         , _conditions{}
         , _time{ 0.0 }
@@ -32,9 +45,34 @@ namespace sw
         return static_cast<float32>( _randomState >> 8 ) / 16777216.0f;
     }
 
+    void LoopbackNetwork::setConditions( const LoopbackConditions& conditions )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        _conditions = conditions;
+    }
+
+    LoopbackConditions LoopbackNetwork::getConditions() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _conditions;
+    }
+
+    uint64 LoopbackNetwork::getDroppedCount() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _droppedCount;
+    }
+
+    uint64 LoopbackNetwork::getDeliveredCount() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _deliveredCount;
+    }
+
     LoopbackTransport* LoopbackNetwork::createEndpoint( uint16 port )
     {
-        const NetAddress address = NetAddress::makeLoopback( port );
+        std::scoped_lock<mutex> lock{ _mutex };
+        const NetAddress        address = NetAddress::makeLoopback( port );
         for ( const LoopbackTransport& endpoint : _listEndpoint )
         {
             if ( endpoint.getLocalAddress() == address )
@@ -46,6 +84,7 @@ namespace sw
 
     void LoopbackNetwork::enqueue( const NetAddress& from, const NetAddress& to, const uint8* pData, int32 size )
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         if ( nextRandom() < _conditions._lossRate )
         {
             ++_droppedCount;
@@ -72,6 +111,7 @@ namespace sw
 
     void LoopbackNetwork::advance( float64 time )
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         _time = MathUtil::max( _time, time );
         // 도착 시각 → 보낸 순서로 배달(같은 시각이면 보낸 순서 — 흔들림이 없으면 순서가 지켜진다).
         std::stable_sort( _listInFlight.begin(), _listInFlight.end(), []( const InFlight& lhs, const InFlight& rhs )
@@ -96,6 +136,18 @@ namespace sw
         _listInFlight.erase( _listInFlight.begin(), _listInFlight.begin() + static_cast<std::ptrdiff_t>( delivered ) );
     }
 
+    bool LoopbackNetwork::takeDatagram( LoopbackTransport* pEndpoint, NetAddress& outFrom, vector<uint8>& outBuffer )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return pEndpoint->popInbox( outFrom, outBuffer );
+    }
+
+    bool LoopbackNetwork::hasDatagram( const LoopbackTransport* pEndpoint ) const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return pEndpoint->hasInbox();
+    }
+
     // ------------------------------------------------------------------------------
     // LoopbackTransport
     // ------------------------------------------------------------------------------
@@ -114,7 +166,22 @@ namespace sw
         return true;
     }
 
-    bool LoopbackTransport::receive( NetAddress& outFrom, vector<uint8>& outBuffer )
+    bool LoopbackTransport::receive( NetAddress& outFrom, vector<uint8>& outBuffer ) { return _pNetwork->takeDatagram( this, outFrom, outBuffer ); }
+
+    bool LoopbackTransport::waitForReceive( float64 timeoutSeconds )
+    {
+        // 배달은 누군가의 `update`(망 시각 앞으로)가 한다 — 깨울 수단 없이 짧게 나눠 자며 받은 편지함을 본다.
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::duration<float64>( timeoutSeconds );
+        while ( _pNetwork->hasDatagram( this ) == false )
+        {
+            if ( std::chrono::steady_clock::now() >= deadline )
+                return false;
+            std::this_thread::sleep_for( std::chrono::microseconds( 200 ) );
+        }
+        return true;
+    }
+
+    bool LoopbackTransport::popInbox( NetAddress& outFrom, vector<uint8>& outBuffer )
     {
         if ( _listInbox.empty() )
             return false;

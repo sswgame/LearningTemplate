@@ -39,6 +39,14 @@ namespace sw
         return PlatformSocketUtil::sendTo( _socketHandle, to, pData, size );
     }
 
+    bool UdpNetTransport::waitForReceive( float64 timeoutSeconds )
+    {
+        if ( isOpen() == false )
+            return INetTransport::waitForReceive( timeoutSeconds );
+        const int32 timeoutMilli = static_cast<int32>( timeoutSeconds * 1000.0 + 0.5 );
+        return PlatformSocketUtil::waitReadable( _socketHandle, timeoutMilli > 0 ? timeoutMilli : 0 );
+    }
+
     bool UdpNetTransport::receive( NetAddress& outFrom, vector<uint8>& outBuffer )
     {
         if ( isOpen() == false )

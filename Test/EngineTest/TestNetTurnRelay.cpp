@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/deque.h"
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetTransport.h"
 
@@ -34,7 +35,7 @@ namespace
     {
         LoopbackNetwork         _network{ 3u };
         NetHost                 _serverHost;
-        vector<NetHost>         _listClientHost;
+        deque<NetHost>          _listClientHost; ///< deque — NetHost 는 옮길 수 없다
         TurnRelayServer         _server;
         vector<TurnRelayClient> _listClient;
         vector<uint8>           _listOnline;
@@ -50,7 +51,8 @@ namespace
             _serverHost.initialize( _network.createEndpoint( 4000 ), NetHostSettings{} );
             (void)_serverHost.listen();
             _server.initialize( &_serverHost, 3, &_policy );
-            _listClientHost.resize( 3 );
+            for ( int32 index = 0; index < 3; ++index )
+                _listClientHost.emplace_back();
             _listClient.resize( 3 );
             _listOnline.assign( 3, SW_TRUE );
             for ( size_t index = 0; index < 3; ++index )

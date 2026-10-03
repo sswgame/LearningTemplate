@@ -6,8 +6,11 @@
 #include "Core/Network/BitStream.h"
 #include "Core/Network/NetTransport.h"
 
+#include <chrono>
 #include <cstring>
+#include <mutex>
 #include <random>
+#include <thread>
 
 namespace sw
 {
@@ -57,35 +60,50 @@ namespace sw
 namespace sw
 {
     NetHost::NetHost()
-        : _listSlot{}
+        : _mutex{}
+        , _listSlot{}
         , _listEvent{}
-        , _receiveBuffer{}
-        , _packetBuffer{}
+        , _pendingBatch{}
         , _packetWriter{}
         , _mapSlotByAddress{}
+        , _connectPromise{}
+        , _listFinished{}
+        , _listReceived{}
+        , _flushBatch{}
+        , _listDeliver{}
         , _settings{}
         , _pTransport{ nullptr }
         , _saltState{ 0 }
         , _rejectedPacketCount{ 0 }
+        , _updateDepth{ 0 }
         , _clientIndex{ -1 }
         , _receiveCursor{ 0 }
         , _bServer{ SW_FALSE }
+        , _bConnectPending{ SW_FALSE }
     {
     }
 
     void NetHost::initialize( INetTransport* pTransport, const NetHostSettings& settings )
     {
-        _pTransport = pTransport;
-        _settings   = settings;
-        _saltState  = settings._saltSeed != 0 ? settings._saltSeed : NetHostInternal::makeRandomSeed();
-        _listSlot.clear();
-        _mapSlotByAddress.clear();
-        _packetWriter.reserve( kNetMaxPacketSize );
-        _packetBuffer.reserve( static_cast<size_t>( kNetMaxPacketSize ) );
-        _listEvent.clear();
-        _rejectedPacketCount = 0;
-        _clientIndex         = -1;
-        _bServer             = SW_FALSE;
+        vector<FinishedConnect> listFinished;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            finishConnect( NetDisconnectReason::Requested );
+            _pTransport = pTransport;
+            _settings   = settings;
+            _saltState  = settings._saltSeed != 0 ? settings._saltSeed : NetHostInternal::makeRandomSeed();
+            _listSlot.clear();
+            _mapSlotByAddress.clear();
+            _packetWriter.reserve( kNetMaxPacketSize );
+            _pendingBatch.clear();
+            _pendingBatch._bytes.reserve( static_cast<size_t>( kNetMaxPacketSize ) * 4 );
+            _listEvent.clear();
+            _rejectedPacketCount = 0;
+            _clientIndex         = -1;
+            _bServer             = SW_FALSE;
+            listFinished.swap( _listFinished );
+        }
+        deliverFinished( listFinished );
     }
 
     uint64 NetHost::nextSalt()
@@ -100,6 +118,7 @@ namespace sw
 
     bool NetHost::listen()
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         if ( _pTransport == nullptr )
             return false;
         _bServer = SW_TRUE;
@@ -110,6 +129,38 @@ namespace sw
     }
 
     bool NetHost::connect( const NetAddress& serverAddress )
+    {
+        vector<FinishedConnect> listFinished;
+        bool                    bStarted = false;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            finishConnect( NetDisconnectReason::Requested ); // 앞의 비동기 연결은 끝난다
+            bStarted = startConnect( serverAddress );
+            listFinished.swap( _listFinished );
+        }
+        deliverFinished( listFinished );
+        return bStarted;
+    }
+
+    TaskFuture<NetConnectResult> NetHost::connectAsync( const NetAddress& serverAddress )
+    {
+        vector<FinishedConnect>      listFinished;
+        TaskFuture<NetConnectResult> future;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            finishConnect( NetDisconnectReason::Requested );
+            _connectPromise  = TaskPromise<NetConnectResult>{};
+            future           = _connectPromise.getFuture();
+            _bConnectPending = SW_TRUE;
+            if ( startConnect( serverAddress ) == false )
+                finishConnect( NetDisconnectReason::Rejected );
+            listFinished.swap( _listFinished );
+        }
+        deliverFinished( listFinished );
+        return future;
+    }
+
+    bool NetHost::startConnect( const NetAddress& serverAddress )
     {
         if ( _pTransport == nullptr || serverAddress.isValid() == false )
             return false;
@@ -156,14 +207,58 @@ namespace sw
 
     void NetHost::sendFramed( const NetAddress& to )
     {
+        // 보낼 묶음의 바이트 뒤에 바로 짓는다(헤더 + 몸) — 보내기는 잠금을 푼 뒤 `sendBatch` 가.
         const vector<uint8>& body     = _packetWriter.getBytes();
         const int32          bodySize = _packetWriter.getByteCount();
-        _packetBuffer.resize( static_cast<size_t>( NetHostInternal::kHeaderSize + bodySize ) );
+        const size_t         offset   = _pendingBatch._bytes.size();
+        _pendingBatch._bytes.resize( offset + static_cast<size_t>( NetHostInternal::kHeaderSize + bodySize ) );
+        uint8* pPacket = _pendingBatch._bytes.data() + offset;
         if ( bodySize > 0 )
-            std::memcpy( _packetBuffer.data() + NetHostInternal::kHeaderSize, body.data(), static_cast<size_t>( bodySize ) );
-        NetHostInternal::writeUint32( _packetBuffer, 0, _settings._protocolId );
-        NetHostInternal::writeUint32( _packetBuffer, 4, NetHostInternal::computeChecksum( _settings._protocolId, _packetBuffer.data() + NetHostInternal::kHeaderSize, bodySize ) );
-        (void)_pTransport->send( to, _packetBuffer.data(), static_cast<int32>( _packetBuffer.size() ) );
+            std::memcpy( pPacket + NetHostInternal::kHeaderSize, body.data(), static_cast<size_t>( bodySize ) );
+        NetHostInternal::writeUint32( _pendingBatch._bytes, offset, _settings._protocolId );
+        NetHostInternal::writeUint32( _pendingBatch._bytes, offset + 4,
+                                      NetHostInternal::computeChecksum( _settings._protocolId, pPacket + NetHostInternal::kHeaderSize, bodySize ) );
+        _pendingBatch._listDatagram.push_back( OutgoingDatagram{ to, static_cast<int32>( offset ), NetHostInternal::kHeaderSize + bodySize } );
+    }
+
+    void NetHost::sendBatch( const OutgoingBatch& batch )
+    {
+        for ( const OutgoingDatagram& datagram : batch._listDatagram )
+            (void)_pTransport->send( datagram._to, batch._bytes.data() + datagram._offset, datagram._size );
+    }
+
+    void NetHost::takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished )
+    {
+        outBatch.clear();
+        outBatch._listDatagram.swap( _pendingBatch._listDatagram );
+        outBatch._bytes.swap( _pendingBatch._bytes );
+        outListFinished.clear();
+        outListFinished.swap( _listFinished );
+    }
+
+    void NetHost::deliverFinished( vector<FinishedConnect>& listFinished )
+    {
+        for ( FinishedConnect& finished : listFinished )
+            finished._promise.setValue( finished._result );
+        listFinished.clear();
+    }
+
+    void NetHost::pushEvent( const NetHostEvent& event )
+    {
+        _listEvent.push_back( event );
+        if ( _bServer == SW_FALSE )
+            finishConnect( event._kind == NetHostEvent::Kind::Connected ? NetDisconnectReason::None : event._reason );
+    }
+
+    void NetHost::finishConnect( NetDisconnectReason reason )
+    {
+        if ( _bConnectPending == SW_FALSE )
+            return;
+        _bConnectPending = SW_FALSE;
+        FinishedConnect finished{
+            std::move( _connectPromise ), NetConnectResult{ reason, reason == NetDisconnectReason::None ? _clientIndex : -1 }
+        };
+        _listFinished.push_back( std::move( finished ) );
     }
 
     void NetHost::sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB )
@@ -191,12 +286,63 @@ namespace sw
         slot._lastSendTime = time;
     }
 
+    bool NetHost::waitForReceive( float64 timeoutSeconds )
+    {
+        INetTransport* pTransport = nullptr;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            pTransport = _pTransport;
+        }
+        if ( pTransport != nullptr )
+            return pTransport->waitForReceive( timeoutSeconds );
+        std::this_thread::sleep_for( std::chrono::duration<float64>( timeoutSeconds ) );
+        return false;
+    }
+
     void NetHost::update( float64 time )
     {
-        if ( _pTransport == nullptr )
-            return;
-        _pTransport->update( time );
-        receivePackets( time );
+        const uint32 depth = _updateDepth.fetch_add( 1, std::memory_order_acq_rel );
+        SW_ASSERT( depth == 0 && "NetHost::update called from two threads at once" );
+        (void)depth;
+        INetTransport* pTransport = nullptr;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            pTransport = _pTransport;
+        }
+        if ( pTransport != nullptr )
+        {
+            // 1) 받기 — 잠금 밖. 받은 버퍼는 다시 쓴다.
+            pTransport->update( time );
+            int32 receivedCount = 0;
+            while ( receivedCount < kMaxDatagramPerUpdate )
+            {
+                if ( receivedCount == static_cast<int32>( _listReceived.size() ) )
+                    _listReceived.emplace_back();
+                ReceivedDatagram& datagram = _listReceived[static_cast<size_t>( receivedCount )];
+                if ( pTransport->receive( datagram._from, datagram._buffer ) == false )
+                    break;
+                ++receivedCount;
+            }
+            // 2) 처리 · 타임아웃 · 보낼 패킷 — 잠금 안.
+            {
+                std::scoped_lock<mutex> lock{ _mutex };
+                for ( int32 index = 0; index < receivedCount; ++index )
+                {
+                    const ReceivedDatagram& datagram = _listReceived[static_cast<size_t>( index )];
+                    handlePacket( time, datagram._from, datagram._buffer.data(), static_cast<int32>( datagram._buffer.size() ) );
+                }
+                updateSlots( time );
+                takePending( _flushBatch, _listDeliver );
+            }
+            // 3) 보내기 · 비동기 연결 결과 — 잠금 밖.
+            sendBatch( _flushBatch );
+            deliverFinished( _listDeliver );
+        }
+        _updateDepth.fetch_sub( 1, std::memory_order_acq_rel );
+    }
+
+    void NetHost::updateSlots( float64 time )
+    {
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
             Slot& slot = _listSlot[index];
@@ -246,24 +392,16 @@ namespace sw
         }
     }
 
-    void NetHost::receivePackets( float64 time )
+    void NetHost::handlePacket( float64 time, const NetAddress& from, const uint8* pData, int32 size )
     {
-        NetAddress from{};
-        while ( _pTransport->receive( from, _receiveBuffer ) )
-            handlePacket( time, from, _receiveBuffer );
-    }
-
-    void NetHost::handlePacket( float64 time, const NetAddress& from, const vector<uint8>& buffer )
-    {
-        const int32 size = static_cast<int32>( buffer.size() );
-        if ( size <= NetHostInternal::kHeaderSize || NetHostInternal::readUint32( buffer.data() ) != _settings._protocolId ||
-             NetHostInternal::readUint32( buffer.data() + 4 ) !=
-                 NetHostInternal::computeChecksum( _settings._protocolId, buffer.data() + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
+        if ( size <= NetHostInternal::kHeaderSize || NetHostInternal::readUint32( pData ) != _settings._protocolId ||
+             NetHostInternal::readUint32( pData + 4 ) !=
+                 NetHostInternal::computeChecksum( _settings._protocolId, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
         {
             ++_rejectedPacketCount; // 다른 게임 · 깨진 패킷
             return;
         }
-        BitReader        reader( buffer.data() + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize );
+        BitReader        reader( pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize );
         const PacketType type = static_cast<PacketType>( reader.readBits( NetHostInternal::kTypeBits ) );
         if ( type >= PacketType::Count )
         {
@@ -282,7 +420,7 @@ namespace sw
                 {
                     _listSlot[0]._state           = NetConnectionState::Connected;
                     _listSlot[0]._lastReceiveTime = time;
-                    _listEvent.push_back( NetHostEvent{ 0, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
+                    pushEvent( NetHostEvent{ 0, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
                 }
                 else
                 {
@@ -373,7 +511,7 @@ namespace sw
                     slot._lastReceiveTime   = time;
                     slot._lastSendTime      = -1.0;
                     slot._connection.reset();
-                    _listEvent.push_back( NetHostEvent{ slotIndex, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
+                    pushEvent( NetHostEvent{ slotIndex, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
                 }
                 sendControl( from, PacketType::Accepted, static_cast<uint64>( slotIndex ), slot._serverSalt );
                 return;
@@ -390,7 +528,7 @@ namespace sw
                 slot._lastSendTime    = -1.0;
                 slot._connection.reset();
                 _clientIndex = static_cast<int32>( valueA );
-                _listEvent.push_back( NetHostEvent{ 0, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
+                pushEvent( NetHostEvent{ 0, NetDisconnectReason::None, NetHostEvent::Kind::Connected } );
                 return;
             }
             case PacketType::Denied:
@@ -433,12 +571,18 @@ namespace sw
         slot._state = NetConnectionState::Disconnected;
         slot._connection.reset();
         if ( bWasVisible )
-            _listEvent.push_back( NetHostEvent{ slotIndex, reason, NetHostEvent::Kind::Disconnected } );
+            pushEvent( NetHostEvent{ slotIndex, reason, NetHostEvent::Kind::Disconnected } );
         if ( _bServer == SW_FALSE )
             _clientIndex = -1;
     }
 
     bool NetHost::sendMessage( int32 connectionId, NetChannelType channel, const uint8* pData, int32 size )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return sendMessageLocked( connectionId, channel, pData, size );
+    }
+
+    bool NetHost::sendMessageLocked( int32 connectionId, NetChannelType channel, const uint8* pData, int32 size )
     {
         if ( isValidSlot( connectionId ) == false || _listSlot[static_cast<size_t>( connectionId )]._state != NetConnectionState::Connected )
             return false;
@@ -447,10 +591,11 @@ namespace sw
 
     int32 NetHost::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptId )
     {
-        int32 sentCount = 0;
+        std::scoped_lock<mutex> lock{ _mutex };
+        int32                   sentCount = 0;
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
-            if ( static_cast<int32>( index ) != exceptId && sendMessage( static_cast<int32>( index ), channel, pData, size ) )
+            if ( static_cast<int32>( index ) != exceptId && sendMessageLocked( static_cast<int32>( index ), channel, pData, size ) )
                 ++sentCount;
         }
         return sentCount;
@@ -458,7 +603,8 @@ namespace sw
 
     bool NetHost::receiveMessage( int32& outConnectionId, NetChannelType& outChannel, vector<uint8>& outBuffer )
     {
-        const int32 slotCount = static_cast<int32>( _listSlot.size() );
+        std::scoped_lock<mutex> lock{ _mutex };
+        const int32             slotCount = static_cast<int32>( _listSlot.size() );
         for ( int32 step = 0; step < slotCount; ++step )
         {
             const int32 index = ( _receiveCursor + step ) % slotCount;
@@ -482,40 +628,101 @@ namespace sw
 
     void NetHost::disconnect( int32 connectionId )
     {
-        if ( isValidSlot( connectionId ) )
-            closeSlot( connectionId, NetDisconnectReason::Requested, true );
+        // 끊김 알림은 바로 보낸다(곧 호스트를 없앨 수 있다) — 이 스레드의 사본으로, 잠금 밖에서.
+        OutgoingBatch           batch;
+        vector<FinishedConnect> listFinished;
+        INetTransport*          pTransport = nullptr;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            if ( isValidSlot( connectionId ) )
+                closeSlot( connectionId, NetDisconnectReason::Requested, true );
+            takePending( batch, listFinished );
+            pTransport = _pTransport;
+        }
+        if ( pTransport != nullptr )
+        {
+            for ( const OutgoingDatagram& datagram : batch._listDatagram )
+                (void)pTransport->send( datagram._to, batch._bytes.data() + datagram._offset, datagram._size );
+        }
+        deliverFinished( listFinished );
     }
 
     void NetHost::disconnectAll()
     {
-        for ( size_t index = 0; index < _listSlot.size(); ++index )
-            closeSlot( static_cast<int32>( index ), NetDisconnectReason::Requested, true );
+        OutgoingBatch           batch;
+        vector<FinishedConnect> listFinished;
+        INetTransport*          pTransport = nullptr;
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            for ( size_t index = 0; index < _listSlot.size(); ++index )
+                closeSlot( static_cast<int32>( index ), NetDisconnectReason::Requested, true );
+            takePending( batch, listFinished );
+            pTransport = _pTransport;
+        }
+        if ( pTransport != nullptr )
+        {
+            for ( const OutgoingDatagram& datagram : batch._listDatagram )
+                (void)pTransport->send( datagram._to, batch._bytes.data() + datagram._offset, datagram._size );
+        }
+        deliverFinished( listFinished );
     }
 
     void NetHost::drainEvents( vector<NetHostEvent>& outListEvent )
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
     }
 
+    bool NetHost::isServer() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _bServer != SW_FALSE;
+    }
+
+    int32 NetHost::getClientIndex() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _clientIndex;
+    }
+
+    uint64 NetHost::getRejectedPacketCount() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _rejectedPacketCount;
+    }
+
+    bool NetHost::getConnectionStats( int32 connectionId, NetConnectionStats& outStats ) const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        if ( isValidSlot( connectionId ) == false || _listSlot[static_cast<size_t>( connectionId )]._state != NetConnectionState::Connected )
+            return false;
+        outStats = _listSlot[static_cast<size_t>( connectionId )]._connection.getStats();
+        return true;
+    }
+
     NetConnectionState NetHost::getConnectionState( int32 connectionId ) const
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         return isValidSlot( connectionId ) ? _listSlot[static_cast<size_t>( connectionId )]._state : NetConnectionState::Disconnected;
     }
 
     const NetConnection* NetHost::findConnection( int32 connectionId ) const
     {
-        return getConnectionState( connectionId ) == NetConnectionState::Connected ? &_listSlot[static_cast<size_t>( connectionId )]._connection : nullptr;
+        std::scoped_lock<mutex> lock{ _mutex };
+        return isValidSlot( connectionId ) && _listSlot[static_cast<size_t>( connectionId )]._state == NetConnectionState::Connected ? &_listSlot[static_cast<size_t>( connectionId )]._connection : nullptr;
     }
 
     NetAddress NetHost::getConnectionAddress( int32 connectionId ) const
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         return isValidSlot( connectionId ) ? _listSlot[static_cast<size_t>( connectionId )]._address : NetAddress{};
     }
 
     int32 NetHost::getConnectedCount() const
     {
-        int32 count = 0;
+        std::scoped_lock<mutex> lock{ _mutex };
+        int32                   count = 0;
         for ( const Slot& slot : _listSlot )
             count += slot._state == NetConnectionState::Connected ? 1 : 0;
         return count;
@@ -523,6 +730,7 @@ namespace sw
 
     void NetHost::collectConnected( vector<int32>& outListConnection ) const
     {
+        std::scoped_lock<mutex> lock{ _mutex };
         outListConnection.clear();
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {

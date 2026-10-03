@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/deque.h"
 #include "Core/Container/map.h"
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetTransport.h"
@@ -19,12 +20,13 @@ namespace
     struct NetTestCluster
     {
         LoopbackNetwork _network{ 31u };
-        vector<NetHost> _listHost;
+        deque<NetHost>  _listHost; ///< deque — NetHost 는 옮길 수 없다(잠금을 품는다)
         float64         _time{ 0.0 };
 
         NetTestCluster( int32 clientCount, const LoopbackConditions& conditions )
         {
-            _listHost.resize( static_cast<size_t>( clientCount + 1 ) );
+            for ( int32 index = 0; index <= clientCount; ++index )
+                _listHost.emplace_back();
             NetHostSettings settings;
             settings._sendInterval = 1.0f / 60.0f;
             for ( size_t index = 0; index < _listHost.size(); ++index )
