@@ -306,12 +306,19 @@ namespace sw
         _bodies.forEachHandle( [&listBody]( SlotHandle handle, const PhysicsBody& body )
         { listBody.push_back( BodyEntry{ handle, body } ); } );
 
-        // 이번 step 에 바디들이 축마다 움직인 가장 큰 거리 — 연속 바디의 후보를 모으는 범위를 이만큼 넓힌다(`addSweptPairs`).
-        float3 maxDisplacement{ 0.0f, 0.0f, 0.0f };
+        // 이번 step 에 셀 하나 이내로 움직인 바디들의 축별 가장 큰 거리 — 연속 바디의 후보를 모으는 범위를 이만큼 넓힌다(`addSweptPairs`).
+        // 셀 하나보다 멀리 간 바디는 넓히는 데 넣지 않고 따로 모아 연속 바디마다 하나씩 잰다.
+        float3             maxDisplacement{ 0.0f, 0.0f, 0.0f };
+        vector<BodyHandle> listFarMover;
         for ( const BodyEntry& entry : listBody )
         {
             if ( entry._body._aabb.isValid() == false || entry._body._stepAabb.isValid() == false )
                 continue;
+            if ( isFarMover( entry._body ) )
+            {
+                listFarMover.push_back( entry._handle );
+                continue;
+            }
             const float3 displacement = entry._body._aabb.getCenter() - entry._body._stepAabb.getCenter();
             maxDisplacement           = float3::max( maxDisplacement, float3{ MathUtil::abs( displacement._x ), MathUtil::abs( displacement._y ),
                                                                     MathUtil::abs( displacement._z ) } );
@@ -335,7 +342,7 @@ namespace sw
                 _listScratchPair.push_back( OverlapPair::makeOrdered( entry._handle, entry._body, candidate, *pOther, 1.0f ) );
             }
             if ( entry._body._bContinuous == SW_TRUE )
-                addSweptPairs( entry._handle, entry._body, maxDisplacement, listCandidate );
+                addSweptPairs( entry._handle, entry._body, maxDisplacement, listFarMover, listCandidate );
         }
         // 같은 쌍이 제자리 겹침 · 쓸림(연속 바디 둘이면 양쪽 쓸림)으로 여러 번 들 수 있다 — 쌍 순서로 줄 세우고 가장 먼저 닿은 하나만 남긴다.
         std::sort( _listScratchPair.begin(), _listScratchPair.end(), &OverlapPair::isEarlierInOrder );
@@ -381,7 +388,8 @@ namespace sw
         _listOverlapPair.swap( _listScratchPair );
     }
 
-    void PhysicsWorld::addSweptPairs( BodyHandle handle, const PhysicsBody& body, const float3& maxDisplacement, vector<BodyHandle>& inoutListCandidate )
+    void PhysicsWorld::addSweptPairs( BodyHandle handle, const PhysicsBody& body, const float3& maxNearDisplacement, const vector<BodyHandle>& listFarMover,
+                                      vector<BodyHandle>& inoutListCandidate )
     {
         const AABB& from = body._stepAabb;
         if ( from.isValid() == false || body._aabb.isValid() == false )
@@ -389,32 +397,51 @@ namespace sw
         const float3 displacement = body._aabb.getCenter() - from.getCenter();
 
         // 후보는 그리드에 지금 자리로 들어 있다. 상대가 그 사이 어느 때 이 바디와 겹쳤다면, 상대의 지금 자리는 쓸린 범위에서 상대가 움직인 거리
-        // 안에 있다 — 그래서 가장 많이 움직인 거리만큼 넓혀 모으면 빠지는 상대가 없다.
+        // 안에 있다 — 그래서 셀 하나 이내로 움직인 바디들의 가장 큰 거리만큼 넓혀 모으면 그 바디들 가운데 빠지는 상대가 없다.
         const AABB swept = from.unionWith( body._aabb );
-        const AABB range{ swept._min - maxDisplacement, swept._max + maxDisplacement };
+        const AABB range{ swept._min - maxNearDisplacement, swept._max + maxNearDisplacement };
         gatherStepCandidates( CellRange::fromAabb( range, kCellSize ), inoutListCandidate );
         for ( const BodyHandle candidate : inoutListCandidate )
         {
-            if ( candidate == handle )
+            // 멀리 간 바디는 아래에서 한 번만 잰다.
+            const PhysicsBody* pOther = _bodies.get( candidate );
+            if ( pOther == nullptr || isFarMover( *pOther ) )
                 continue;
-            const PhysicsBody* pOther    = _bodies.get( candidate );
-            const bool         bCanTouch = pOther != nullptr && pOther->_aabb.isValid() && _layers.shouldCollide( body._layer, pOther->_layer );
-            if ( bCanTouch == false )
-                continue;
-            // 상대 운동: 둘 다 출발점에서, 이 바디의 이동에서 상대의 이동을 뺀 만큼 쓴다(Box2D 총알 TOI). 상대가 가만히 있었으면 예전과 같다.
-            const AABB&  otherFrom            = pOther->_stepAabb.isValid() ? pOther->_stepAabb : pOther->_aabb;
-            const float3 otherDisplacement    = pOther->_aabb.getCenter() - otherFrom.getCenter();
-            const float3 relativeDisplacement = displacement - otherDisplacement;
-            if ( relativeDisplacement.getLengthSquared() <= 0.0f )
-                continue; // 함께 움직였다 — 제자리 겹침이 전부다
-            // 닿은 때 0 은 출발점에서 이미 겹쳐 있던 것이다 — 그 겹침은 지난 step 이 쟀고, 지금도 겹치면 제자리 겹침이 잇는다. 넣으면 떠난 쌍의
-            // 끝이 한 step 늦는다.
-            SweepHit   hit{};
-            const bool bEnteredWhileMoving = CCD::sweepAabb( from, relativeDisplacement, otherFrom, hit ) && hit._time > 0.0f;
-            if ( bEnteredWhileMoving == false )
-                continue;
-            _listScratchPair.push_back( OverlapPair::makeOrdered( handle, body, candidate, *pOther, hit._time ) );
+            addSweptPairIfTouched( handle, body, displacement, candidate );
         }
+        for ( const BodyHandle farMover : listFarMover )
+            addSweptPairIfTouched( handle, body, displacement, farMover );
+    }
+
+    void PhysicsWorld::addSweptPairIfTouched( BodyHandle handle, const PhysicsBody& body, const float3& displacement, BodyHandle candidate )
+    {
+        if ( candidate == handle )
+            return;
+        const PhysicsBody* pOther    = _bodies.get( candidate );
+        const bool         bCanTouch = pOther != nullptr && pOther->_aabb.isValid() && _layers.shouldCollide( body._layer, pOther->_layer );
+        if ( bCanTouch == false )
+            return;
+        // 상대 운동: 둘 다 출발점에서, 이 바디의 이동에서 상대의 이동을 뺀 만큼 쓴다(Box2D 총알 TOI). 상대가 가만히 있었으면 예전과 같다.
+        const AABB&  otherFrom            = pOther->_stepAabb.isValid() ? pOther->_stepAabb : pOther->_aabb;
+        const float3 otherDisplacement    = pOther->_aabb.getCenter() - otherFrom.getCenter();
+        const float3 relativeDisplacement = displacement - otherDisplacement;
+        if ( relativeDisplacement.getLengthSquared() <= 0.0f )
+            return; // 함께 움직였다 — 제자리 겹침이 전부다
+        // 닿은 때 0 은 출발점에서 이미 겹쳐 있던 것이다 — 그 겹침은 지난 step 이 쟀고, 지금도 겹치면 제자리 겹침이 잇는다. 넣으면 떠난 쌍의
+        // 끝이 한 step 늦는다.
+        SweepHit   hit{};
+        const bool bEnteredWhileMoving = CCD::sweepAabb( body._stepAabb, relativeDisplacement, otherFrom, hit ) && hit._time > 0.0f;
+        if ( bEnteredWhileMoving == false )
+            return;
+        _listScratchPair.push_back( OverlapPair::makeOrdered( handle, body, candidate, *pOther, hit._time ) );
+    }
+
+    bool PhysicsWorld::isFarMover( const PhysicsBody& body )
+    {
+        if ( body._aabb.isValid() == false || body._stepAabb.isValid() == false )
+            return false;
+        const float3 displacement = body._aabb.getCenter() - body._stepAabb.getCenter();
+        return MathUtil::abs( displacement._x ) > kCellSize || MathUtil::abs( displacement._y ) > kCellSize || MathUtil::abs( displacement._z ) > kCellSize;
     }
 
     /**

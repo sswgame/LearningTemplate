@@ -254,10 +254,18 @@ namespace sw
          * @brief 연속 바디 @p body 가 지난 step 의 자리에서 지금 자리까지 쓸리며 처음 닿은 바디를 쌍으로 더합니다. `step` 이 `_mutex` 를 잡은 채로 부릅니다.
          * @details 상대 운동으로 잽니다 — 두 바디의 출발점(`_stepAabb`)에서 이 바디의 이동에서 상대의 이동을 뺀 만큼. 후보는 그리드에 **지금 자리**로
          *          들어 있으므로, 쓸린 범위를 이번 step 에 가장 많이 움직인 바디의 이동만큼 넓혀 모읍니다(그 안에 없으면 그 사이 어느 때에도 닿을 수 없다).
-         * @param maxDisplacement 이번 step 에 바디들이 축마다 움직인 가장 큰 거리(절댓값)
+         *          셀 하나보다 멀리 간 바디(@p listFarMover — 에디터 드래그 · 아주 빠른 바디)는 범위를 넓히지 않고 따로 하나씩 잽니다. 넓히면 그 한 바디
+         *          때문에 모든 연속 바디가 월드 전체를 훑습니다.
+         * @param maxNearDisplacement 이번 step 에 셀 하나 이내로 움직인 바디들의 축별 가장 큰 거리(절댓값)
+         * @param listFarMover 이번 step 에 어느 축으로든 셀 하나보다 멀리 간 바디들
          * @param inoutListCandidate 후보를 모을 자리(할당 재사용 — 들어 있던 것은 버린다)
          */
-        void addSweptPairs( BodyHandle handle, const PhysicsBody& body, const float3& maxDisplacement, vector<BodyHandle>& inoutListCandidate );
+        void addSweptPairs( BodyHandle handle, const PhysicsBody& body, const float3& maxNearDisplacement, const vector<BodyHandle>& listFarMover,
+                            vector<BodyHandle>& inoutListCandidate );
+        /** @brief 연속 바디 @p body(이번 step 이동 @p displacement)가 @p candidate 와 쓸리며 처음 닿았으면 쌍으로 더합니다. `addSweptPairs` 의 후보 하나입니다. */
+        void addSweptPairIfTouched( BodyHandle handle, const PhysicsBody& body, const float3& displacement, BodyHandle candidate );
+        /** @brief 바디가 이번 step 에 어느 축으로든 셀 하나보다 멀리 갔으면 true 입니다(`addSweptPairs` 가 범위를 넓히지 않고 따로 재는 바디). */
+        static bool isFarMover( const PhysicsBody& body );
 
     private:
         mutable std::shared_mutex                                   _mutex;
