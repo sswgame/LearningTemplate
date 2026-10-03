@@ -13,7 +13,8 @@ Renderer/
   Frame/      실제로 그리는 것
   Light/      씬 라이트를 한 구조버퍼로 (GpuLightBuffer) — 포워드·디퍼드가 같이 읽는다
   Debug/      에디터가 읽는 통로 — RenderTargetRegistry(프레임 렌더타깃 목록) · DebugDrawQueue(라인/스피어 큐)
-  Bake/       오프라인 셰이더 베이크의 정책 — 무엇을 구울지(요청) · 전부 굽기(드라이버). Shader/ 는 한 장을 굽는 법만 안다
+  Bake/       오프라인 셰이더 베이크의 정책 — 무엇을 구울지(요청: 파이프라인 XML · 패스 종류 표 × 뷰 모드 · 머티리얼) · 전부 굽기(드라이버).
+              Shader/ 는 한 장을 굽는 법만 안다
   RenderThread.cpp/h   위를 구동하는 스레드
 ```
 
@@ -34,8 +35,12 @@ Renderer/
 - `RenderPassInputContract` — 패스 입력의 **역할**(필수/선택). 타입마다의 목록은 위 표의 칸이고, 검증과 실행이 같은
   칸을 보므로 "선언은 했는데 안 걸리는 입력" 이 생길 자리가 없습니다.
 
+- 첨부마다 해상도 나눗수(`RenderPassAttachment::_resolutionDivisor` — 1 · 2 · 4)가 있고, 패스는 출력 첨부의 크기로 렌더 패스를 엽니다.
+
 XML 이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 잘못 그리거나 GPU 가 죽습니다.
-그래서 로드 시점에 `validate()` 가 자기모순을 검사합니다.
+그래서 로드 시점에 `validate()` 가 자기모순을 검사합니다 — 모르는 패스 타입 · 역할, 렌더 타깃이 될 수 없는 첨부 포맷(Unknown · BC* ·
+R32G32B32_FLOAT), 한 패스 안에서 나눗수가 다른 출력, 컬러 출력이 없는 지오메트리 패스, 컬러 출력이 표의 수(2)와 다른 GBuffer 패스.
+GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스가 많은 파이프라인은 로드 때 경고하고 넘치는 패스는 재지 않습니다.
 
 ### Graph/ — 실행 순서를 푼다
 
@@ -44,7 +49,8 @@ XML 이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 �
 기록합니다.
 
 > 주의: 같은 레벨의 패스 콜백은 **동시에** 돕니다. 콜백이 만지는 FrameRenderer 공유 상태는
-> 반드시 보호해야 합니다. 실제로 여기서 데이터 레이스가 있었습니다.
+> 반드시 보호하거나(락보다 먼저 "나누지 않을 수 있나" 를 볼 것) 기록 전 셋업으로 옮겨야 합니다.
+> 기록 중에는 bindless 레지스트리 · PSO 를 만들지 않습니다(`IRHIDevice::setParallelRecording`).
 
 ### Scene/ — 씬을 GPU 데이터로
 
@@ -70,7 +76,8 @@ XML 이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 �
   - `FrameRendererConstants` — 뷰/라이트 행렬 등 **프레임 상수 시드** (프레임당 1회)
   - `FrameRendererPassExecute` — 패스 타입별 실행 분기
   - `FrameRendererDraw` — 드로우 루프
-  - `FrameRendererPso` — 머티리얼 PSO 생성
+  - `FrameRendererPso` — 머티리얼 PSO 생성. 뷰 모드(`RenderViewMode` — Lit · Unlit · Wireframe)가 얹는 define 은
+    `FrameRendererUtil::findViewModeDefine` 하나가 정하고 셰이더 베이크 요청도 같은 함수를 부릅니다 — 베이커가 굽지 않은 define 은 Shipping 에서 PSO 를 못 만듭니다
 - `FrameRenderer` 가 **소유하는 셋** — 각자 뮤텍스와 수명을 가진 상태라 클래스로 떼어 두었습니다:
   - `PassConstantRing` — 드로우마다 하나씩 나눠 주는 패스 상수버퍼 슬롯 링(원자 커서, 프레임마다 되감기)
   - `RenderPsoCache` — 엔진 패스 PSO · Present 포맷별 PSO · 머티리얼 퍼뮤테이션 변형과 바인딩 레이아웃.
@@ -82,7 +89,7 @@ XML 이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 �
 - `FrameResourceRegistry` — 패스 스코프 이름→리소스 매핑
 - `RenderFramePacket` — 게임 스레드 → 렌더 스레드로 넘기는 프레임 데이터
 - 컴퓨트 디스패치(애니메이션·컬링·정렬)는 `FrameRenderer::dispatchInstanceAnimation` / `dispatchCullAndSort` 가
-  커맨드 리스트에 직접 건다 — 별도 래퍼 클래스는 없다(`ComputePass` 는 쓰이지 않은 채 남아 있어 지웠다)
+  커맨드 리스트에 직접 건다 — 별도 래퍼 클래스는 없다
 
 ### RenderThread
 
