@@ -33,6 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
+from common import blankCommentsAndLiterals  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: 셰이더 확장자.
@@ -115,13 +116,6 @@ kCbufferBodyRe = re.compile(r"\bcbuffer\s+\w+[^{;]*\{|\bSW_DECLARE_CBUFFER\s*\([
 def blankInternal(match: re.Match) -> str:
     """일치한 글을 같은 길이의 공백으로 바꾼다(줄바꿈은 남겨 줄 번호 · 오프셋을 지킨다)."""
     return re.sub(r"[^\n]", " ", match.group(0))
-
-
-def stripCommentsAndStringsInternal(text: str) -> str:
-    """주석 · 문자열을 같은 길이의 공백으로 바꾼다."""
-    text = re.sub(r"/\*.*?\*/", blankInternal, text, flags=re.DOTALL)
-    text = re.sub(r"//[^\n]*", blankInternal, text)
-    return re.sub(r'"(?:\\.|[^"\\\n])*"', blankInternal, text)
 
 
 def lineOfInternal(text: str, offset: int) -> int:
@@ -237,7 +231,7 @@ def checkShaderTextInternal(text: str, relPath: str) -> list[str]:
     """셰이더 하나의 글에 규칙을 적용한다."""
     listViolation: list[str] = []
     bSharedHeader = relPath.endswith(".hlsli")
-    code = stripCommentsAndStringsInternal(text)
+    code = blankCommentsAndLiterals(text)
     codeBody = kDirectiveRe.sub(blankInternal, code)   # 지시문까지 지운 글 — 깊이 · 함수 · 선언은 이것으로 본다
     listDepth = computeDepthMapInternal(codeBody)
     listStructSpan = computeBodySpanInternal(codeBody, kStructBodyRe)

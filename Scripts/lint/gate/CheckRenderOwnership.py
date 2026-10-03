@@ -36,6 +36,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
+from common import blankComments  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 # 옮겨지는 것이 선언되는 헤더. 여기 있는 구조체는 **전부** 검사 대상이다.
@@ -50,41 +51,11 @@ _kStructDecl = re.compile(r"^[ \t]*struct\s+(?:SW_API\s+)?(\w+)\b[^;{]*$|^[ \t]*
 _kExemptMarker = re.compile(r"//\s*SW_OWNERSHIP_RAW_OK\s*:\s*(\S.*)")
 
 
-def stripComments(text: str) -> str:
-    """
-    주석을 **같은 길이의 공백**으로 바꿉니다(줄바꿈은 남긴다).
-
-    길이를 유지하는 이유: 오프셋이 어긋나면 아래 중괄호 세기가 다른 구조체를 집는다.
-    주의: 주석을 지우지 않으면 `@struct Foo` 라는 **문서 주석 언급**에 정규식이 걸리고,
-    거기서부터 다음 `{` 를 찾아 **엉뚱한 구조체의 본문**을 잰다.
-    """
-    out = list(text)
-    index = 0
-    length = len(text)
-    while index < length:
-        if text.startswith("//", index):
-            end = text.find("\n", index)
-            end = length if end < 0 else end
-            for pos in range(index, end):
-                out[pos] = " "
-            index = end
-        elif text.startswith("/*", index):
-            end = text.find("*/", index + 2)
-            end = length if end < 0 else end + 2
-            for pos in range(index, end):
-                if out[pos] != "\n":
-                    out[pos] = " "
-            index = end
-        else:
-            index += 1
-    return "".join(out)
-
-
 def findStructBodies(text: str) -> list[tuple[str, int, str]]:
     """
     파일에 선언된 구조체들을 (이름, 선언 줄번호, 본문) 으로 돌려줍니다 — 중첩 구조체 포함.
     """
-    stripped = stripComments(text)
+    stripped = blankComments(text)
     results: list[tuple[str, int, str]] = []
     for match in re.finditer(r"(?m)^[ \t]*struct\s+(?:SW_API\s+)?(\w+)\b", stripped):
         name = match.group(1)
@@ -140,7 +111,7 @@ def checkTransportedHeaders(rootDir: Path) -> tuple[list[str], int]:
         for structName, declLineNo, body in bodies:
             checkedCount += 1
             reason = findExemptReason(text, declLineNo)
-            for line in stripComments(body).splitlines():
+            for line in blankComments(body).splitlines():
                 if _kRawPointerMember.match(line) is None:
                     continue
                 if reason is not None:

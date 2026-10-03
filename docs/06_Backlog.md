@@ -209,8 +209,6 @@ cd build/Ninja-Debug/Bin
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
 - **`AppSmokeTest` 의 "이 기계에서 못 도는 백엔드" 판정이 로그 문자열 둘에 기댄다** — 표식을 내는 곳(`RHI.cpp` · `OpenGLRHIDeviceInit.cpp`)을 하나의 구조화된
   결과(열거값)로 바꾸는 그래픽스 쪽 수정.
-- **주석 · 문자열을 지우는 함수가 게이트 넷에 따로 있다**(CheckTargetMacros `blankCommentsAndLiterals` · CheckRenderOwnership · CheckShaderConventions ·
-  CheckTestSuites). `Scripts/common` 으로 모은다 — CheckClockReads 는 CheckTargetMacros 것을 가져다 쓴다.
 - **헤더의 안 쓰는 include 119 건** — `py -3 Scripts/lint/report/RunForwardDeclarationCandidates.py --verify-unused` 가 빼고 단독 컴파일해 "빼도 선다" 로 가린 것
   (Types.h 20 · Macros.h 20 · Defines.h 16 · EnginePlatformHeaders.h 13 · string.h 13 …). 지우면 그 include 를 **거쳐** 이름을 받던 소비자 TU 가 깨질 수 있으니
   지운 뒤 Debug · Release · Shipping · WSL 전체 빌드 + `RunHeaderSelfContained.py` 로 확인한다.

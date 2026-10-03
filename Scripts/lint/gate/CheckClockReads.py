@@ -28,8 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
 
-from common import normalizePath, readTextFiles  # noqa: E402
-from gate.CheckTargetMacros import blankCommentsAndLiterals  # noqa: E402
+from common import blankCommentsAndLiterals, normalizePath, readTextFiles  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kListScanRoot = ("Source", "Test", "Tools/ReflectionParser")

@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath, readTextFiles  # noqa: E402
+from common import blankCommentsAndLiterals, normalizePath, readTextFiles  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 내장 매크로를 읽어도 되는 유일한 파일(CMake 판정과 실제 컴파일러를 대조한다).
@@ -73,15 +73,6 @@ _kMapUnsupportedMacroToReason = {
 }
 
 _kUnsupportedRe = re.compile(r"(?<![\w$])(" + "|".join(re.escape(name) for name in _kMapUnsupportedMacroToReason) + r")(?![\w$])")
-
-#: 주석 · 문자열 · 문자 리터럴 — 같은 길이의 공백으로 지워 줄 번호를 지킨다.
-_kCommentOrLiteralRe = re.compile(r"//[^\n]*|/\*.*?\*/|\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'", re.DOTALL)
-
-
-def blankCommentsAndLiterals(text: str) -> str:
-    """주석 · 문자열 · 문자 리터럴을 같은 길이의 공백으로 바꿉니다(줄바꿈은 남긴다)."""
-    return _kCommentOrLiteralRe.sub(lambda match: re.sub(r"[^\n]", " ", match.group(0)), text)
-
 
 def findBuiltinMacroUses(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
     """검사 헤더 밖에서 내장 매크로를 읽는 줄과, 어디서든 지원하지 않는 플랫폼 매크로를 읽는 줄을 위반 문자열로 돌려줍니다."""

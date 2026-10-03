@@ -56,6 +56,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
+from common import blankComments  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kTestRoot = "Test"
@@ -77,8 +78,6 @@ _kImGuiIncludeRe = re.compile(r"^\s*#\s*include\s*[<\"][^>\"]*imgui[^>\"]*[>\"]"
 _kCoreTestFolder = "Test/CoreTest"
 _kCoreTestForbiddenIncludeRe = re.compile(r"^[ \t]*#[ \t]*include[ \t]*[<\"]((?:Engine|GameFramework|Editor|Games|App)/[^>\"]*)[>\"]", re.M)
 _kEngineNamespaceRe = re.compile(r"\bengine::\w+")
-_kBlockCommentRe = re.compile(r"/\*.*?\*/", re.S)
-_kLineCommentRe = re.compile(r"//[^\n]*")
 _kDocBlockTagRe = re.compile(r"@brief\s+\[(\w+)\]")
 
 
@@ -161,12 +160,6 @@ def checkEditorTestSources(rootDir: Path) -> list[str]:
     return errors
 
 
-def stripCommentsInternal(text: str) -> str:
-    """블록 · 줄 주석을 지운다. 블록 주석 안의 줄바꿈은 남겨 위반 줄 번호가 원문과 맞는다."""
-    text = _kBlockCommentRe.sub(lambda match: "\n" * match.group(0).count("\n"), text)
-    return _kLineCommentRe.sub("", text)
-
-
 def checkCoreTestIsEngineFree(rootDir: Path) -> list[str]:
     """`Test/CoreTest` 의 파일이 엔진 계층 헤더를 include 하거나 `engine::` 를 부르지 않는지 봅니다."""
     folder = rootDir / _kCoreTestFolder
@@ -177,7 +170,7 @@ def checkCoreTestIsEngineFree(rootDir: Path) -> list[str]:
         if path.suffix not in (".cpp", ".h"):
             continue
         relPath = path.relative_to(rootDir).as_posix()
-        code = stripCommentsInternal(path.read_text(encoding="utf-8", errors="ignore"))
+        code = blankComments(path.read_text(encoding="utf-8", errors="ignore"))
         for match in _kCoreTestForbiddenIncludeRe.finditer(code):
             line = code.count("\n", 0, match.start()) + 1
             errors.append(f"{relPath}:{line}: CoreTest 가 `{match.group(1)}` 를 include 합니다 — CoreTest 는 엔진 없이 Core 를 "

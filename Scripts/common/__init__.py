@@ -39,12 +39,13 @@ for _stream in (_sys.stdout, _sys.stderr):
         except (ValueError, OSError):
             pass  # 리다이렉트된 파이프 등 — 그대로 둔다
 
-from . import (AppBinary, Archive, AssetPipeline, ClangFormat, Config, Constants, CookContract, Host, PackFormat, Parallel,
+from . import (AppBinary, Archive, AssetPipeline, ClangFormat, CodeText, Config, Constants, CookContract, Host, PackFormat, Parallel,
                Paths, Search, ToolLocator, TranslationUnits)
 from .AppBinary import *
 from .Archive import *
 from .AssetPipeline import *
 from .ClangFormat import *
+from .CodeText import *
 from .Config import *
 from .Constants import *
 from .CookContract import *
