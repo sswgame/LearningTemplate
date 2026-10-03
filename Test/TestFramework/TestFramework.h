@@ -308,6 +308,40 @@ namespace test
     };
 
     /**
+     * @brief 스코프 동안 단언(`SW_ASSERT` · `SW_LOG_ASSERT`)이 멈추지 않고 세어지게 하는 RAII 헬퍼입니다.
+     * @details Debug 의 단언은 디버거에서 멈추므로(`SW_DEBUG_BREAK`) 단언이 걸리는 입력을 시험하면 프로세스가 죽는다. 이 스코프 안에서는
+     *          단언이 세어지기만 하고 코드는 그 뒤로 이어진다(배포본과 같은 길). `getCount()` 로 "단언이 걸렸나" 를 묻는다.
+     *          단언은 Debug 에서만 있으므로 그 밖의 구성에서 `getCount()` 는 늘 0 이다 — 시험은 `kAssertsAreActive` 로 갈라 묻는다.
+     *          `SW_LOG_ASSERT` 는 Error 로그도 남기므로 `SW_TEST_DEFENSIVE_SCOPE` 와 같이 쓴다.
+     */
+    class ScopedAssertCapture
+    {
+    public:
+#if defined( SW_DEBUG )
+        static constexpr bool kAssertsAreActive = true;
+#else
+        static constexpr bool kAssertsAreActive = false;
+#endif
+
+        ScopedAssertCapture()
+            : _startCount{ sw::internal::getCapturedAssertCount() }
+        {
+            sw::internal::beginAssertCapture();
+        }
+
+        ~ScopedAssertCapture() { sw::internal::endAssertCapture(); }
+
+        ScopedAssertCapture( const ScopedAssertCapture& )            = delete;
+        ScopedAssertCapture& operator=( const ScopedAssertCapture& ) = delete;
+
+        /** @brief 이 스코프가 시작한 뒤 가로챈 단언 수입니다(다른 스레드의 단언도 센다). */
+        uint32 getCount() const { return sw::internal::getCapturedAssertCount() - _startCount; }
+
+    private:
+        uint32 _startCount;
+    };
+
+    /**
      * @brief 스코프 동안 남은 Warning · Error 로그를 모아 "이 경고가 나왔나" 를 묻는 RAII 헬퍼입니다.
      * @details 시험마다 `Logger::addGlobalListener` 리스너를 손으로 만들어 왔다(AssetCacheRegistry · ToolAssetCommands …). 리스너는 남기는 스레드에서
      *          곧바로 불리므로 같은 스레드의 경고는 그 호출이 돌아오면 이미 모여 있다. `ScopedDefensiveTestLog` 와 같이 써도 된다 — 그때 메시지 앞에

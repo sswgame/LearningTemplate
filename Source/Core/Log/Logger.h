@@ -305,6 +305,7 @@ static_assert( static_cast<int32>( sw::LogLevel::Trace ) == SW_LOG_VERBOSITY_TRA
 
     /**
      * @brief 조건이 거짓이면 메시지 · 식 · 파일 · 함수 · 줄을 Error 로 남기고 디버거에서 멈춥니다.
+     * @note 시험이 단언 가로채기(`test::ScopedAssertCapture`)를 걸어 두었으면 멈추지 않고 세기만 합니다.
      * @note Debug 에서만 멈춥니다. 그 밖의 빌드는 아래에서 **로그만** 남깁니다. 배포본에서 단언이 통째로 사라지면 무엇이
      *       어긋났는지 알 길이 없기 때문입니다.
      */
@@ -323,7 +324,8 @@ static_assert( static_cast<int32>( sw::LogLevel::Trace ) == SW_LOG_VERBOSITY_TRA
                                  "Function   : %#\n"                                             \
                                  "Line       : %#",                                              \
                                  #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ ); \
-                SW_DEBUG_BREAK();                                                                \
+                if ( ::sw::internal::tryCaptureAssert() == false )                               \
+                    SW_DEBUG_BREAK();                                                            \
             }                                                                                    \
         } while ( false )
 #else

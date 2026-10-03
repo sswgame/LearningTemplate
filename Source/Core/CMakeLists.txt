@@ -8,6 +8,7 @@
 # ------------------------------------------------------------------------------
 set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/CommandLine/CommandLineManager.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Common/Macros.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/CompressionCodecRegistry.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/CompressionStream.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/NullCompressionCodec.cpp"

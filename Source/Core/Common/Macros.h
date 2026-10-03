@@ -89,14 +89,18 @@ namespace sw::internal
     }
 } // namespace sw::internal
 
-    /** @brief 식이 거짓이면 그 식 · 자리를 stderr 에 남기고 디버거에서 멈춥니다. Debug 가 아니면 식째 사라집니다. */
+    /**
+     * @brief 식이 거짓이면 그 식 · 자리를 stderr 에 남기고 디버거에서 멈춥니다. Debug 가 아니면 식째 사라집니다.
+     * @note 시험이 단언 가로채기(`test::ScopedAssertCapture`)를 걸어 두었으면 멈추지 않고 세기만 합니다(`tryCaptureAssert`).
+     */
     #define SW_ASSERT( expr )                                                                                                 \
         do                                                                                                                    \
         {                                                                                                                     \
             if ( !( expr ) )                                                                                                  \
             {                                                                                                                 \
                 ::sw::internal::printAssertFailure( #expr, __FILE__, static_cast<int32>( __LINE__ ), SW_FUNCTION_SIGNATURE ); \
-                SW_DEBUG_BREAK();                                                                                             \
+                if ( ::sw::internal::tryCaptureAssert() == false )                                                            \
+                    SW_DEBUG_BREAK();                                                                                         \
             }                                                                                                                 \
         } while ( false )
 #else
@@ -150,6 +154,23 @@ namespace sw::internal
     /** @brief 모듈 심볼도 기본 visibility 로 내보냅니다. */
     #define SW_MODULE_API __attribute__( ( visibility( "default" ) ) )
 #endif
+
+// ------------------------------------------------------------------------------
+// 8) 단언 가로채기 — 시험이 단언 경로를 지나가게 할 때만 쓴다
+//    Debug 의 단언은 멈추므로(`SW_DEBUG_BREAK`) 단언이 걸리는 입력을 시험하면 프로세스가 죽는다. 가로채기를 건 동안은 멈추지 않고
+//    센다 — 유니티 `LogAssert.Expect` · 언리얼 자동화의 기대 오류와 같은 일이다. 정의는 `Core/Common/Macros.cpp`.
+// ------------------------------------------------------------------------------
+namespace sw::internal
+{
+    /** @brief 가로채기가 걸려 있으면 단언 하나를 세고 true 입니다 — 부르는 쪽(`SW_ASSERT` · `SW_LOG_ASSERT`)은 멈추지 않습니다. */
+    [[nodiscard]] SW_API bool tryCaptureAssert() noexcept;
+    /** @brief 가로채기를 겁니다. 겹쳐 걸 수 있고, 건 횟수만큼 풀어야 멈춤이 돌아옵니다. */
+    SW_API void beginAssertCapture() noexcept;
+    /** @brief 가로채기 하나를 풉니다. */
+    SW_API void endAssertCapture() noexcept;
+    /** @brief 프로세스가 지금까지 가로챈 단언 수입니다(구간의 수는 시작과 끝의 차로 잰다). */
+    [[nodiscard]] SW_API uint32 getCapturedAssertCount() noexcept;
+} // namespace sw::internal
 
 /** @brief 코드 블록을 명시적으로 구분할 때 사용합니다 (세미콜론 없이: BLOCK( "..." )). */
 #define BLOCK( message )

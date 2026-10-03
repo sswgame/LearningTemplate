@@ -150,6 +150,29 @@ SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlagsAndAliases )
 }
 
 /**
+ * @brief [CommandLineTest] 이미 쓰는 별칭이 섞인 등록은 단언으로 거절되고, 같이 적은 새 별칭도 남기지 않는다
+ * @details 겹치는 이름을 만난 자리에서 돌아가면 그 앞에서 넣은 별칭이 만들어지지 않은 인덱스를 가리킨 채 남는다. Debug 에서는 단언이
+ *          멈추므로 단언 가로채기(`test::ScopedAssertCapture`) 안에서 부른다.
+ */
+SW_TEST_CASE( CommandLineTest, DuplicateAliasIsRejectedWithoutPartialRegistration )
+{
+    sw::CommandLineManager cmdManager;
+    cmdManager.initialize();
+    cmdManager.addArgument<int32>( { "taken_alias" }, 1, true );
+
+    SW_TEST_DEFENSIVE_SCOPE( "addArgument rejects an alias that is already registered" );
+    test::ScopedAssertCapture assertCapture;
+    cmdManager.addArgument<int32>( { "fresh_alias", "taken_alias" }, 2, true );
+    if ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+
+    // 거절된 등록의 새 별칭은 남지 않았다 — 다시 등록해도 겹치지 않고, 그 기본값이 읽힌다.
+    cmdManager.addArgument<int32>( { "fresh_alias" }, 3, true );
+    if ( test::ScopedAssertCapture::kAssertsAreActive )
+        SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+}
+
+/**
  * @brief [CommandLineTest] 커스텀 인자 등록 및 복합 파싱 검증
  */
 SW_TEST_CASE( CommandLineTest, ComplexPrefixAndCustomArguments )

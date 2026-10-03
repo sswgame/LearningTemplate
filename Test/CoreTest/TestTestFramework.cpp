@@ -342,6 +342,33 @@ SW_TEST_CASE( TestFrameworkTest, KnownErrorLogIsToleratedOnlyForItsSuiteAndText 
 }
 
 /**
+ * @brief [TestFrameworkTest] 단언 가로채기 안에서는 SW_ASSERT · SW_LOG_ASSERT 가 멈추지 않고 세어지며, 그 뒤 줄이 돈다
+ * @details Debug 의 단언은 디버거에서 멈춘다 — 단언이 걸리는 입력을 시험할 길이 없었다. 겹쳐 건 가로채기도 바깥이 끝날 때까지 유지된다.
+ */
+SW_TEST_CASE( TestFrameworkTest, AssertCaptureCountsInsteadOfBreaking )
+{
+    if ( test::ScopedAssertCapture::kAssertsAreActive == false )
+        SW_TEST_SKIP( "asserts are compiled out outside Debug" );
+
+    SW_TEST_DEFENSIVE_SCOPE( "deliberate assertions inside an assert capture" );
+    test::ScopedAssertCapture outer;
+    bool                      bReachedAfterAssert = false;
+    SW_ASSERT( 1 + 1 == 3 );
+    bReachedAfterAssert = true;
+    SW_EXPECT_TRUE( bReachedAfterAssert );
+    SW_EXPECT_EQUAL( 1u, outer.getCount() );
+
+    {
+        test::ScopedAssertCapture inner;
+        SW_LOG_ASSERT( false, "deliberate %#", "assert" );
+        SW_EXPECT_EQUAL( 1u, inner.getCount() );
+    }
+    // 안쪽이 풀려도 바깥 가로채기는 그대로다.
+    SW_ASSERT( false );
+    SW_EXPECT_EQUAL( 3u, outer.getCount() );
+}
+
+/**
  * @brief [TestFrameworkTest] 케이스가 만든 임시 경로를 남겨 둔다 — 바로 다음 케이스가 그것이 지워졌는지 본다
  * @details 파일 · 폴더(안에 파일) · 테스트가 알려 주지 않은 옆 파일(엔진이 구워 두는 `.bin` · `.meta` 를 흉내) 셋을 만든다.
  *          지우는 것은 케이스가 **끝난 뒤** 프레임워크라 같은 케이스 안에서는 볼 수 없다.
