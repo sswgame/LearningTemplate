@@ -33,8 +33,8 @@ namespace sw
             /**
              * @brief 배치 건이 갈 버킷입니다. 같은 대상(componentId)은 늘 같은 버킷이라 한 워커가 배열 순서대로 씁니다.
              * @details componentId 를 256 개씩 묶은 **연속 구간**을 돌려 가며 버킷에 줍니다. 이웃한 컴포넌트(이웃한 칸)가 같은 버킷이라 워커끼리
-             *          칸의 캐시 라인을 나눠 쓰지 않습니다. 처음에는 나머지(`id % 버킷 수`)로 나눠 이웃한 칸을 서로 다른 워커가 썼고(캐시 라인
-             *          핑퐁) 잎 루트 8000 건이 150 → 450 us 였습니다(Release p50). 최솟값 · 최댓값으로 구간을 나누면 한 번 더 훑어야 합니다.
+             *          칸의 캐시 라인을 나눠 쓰지 않습니다. 주의: 나머지(`id % 버킷 수`)로 나누면 이웃한 칸을 서로 다른 워커가 써(캐시 라인
+             *          핑퐁) 잎 루트 8000 건이 150 → 450 us 가 된다(Release p50). 최솟값 · 최댓값으로 구간을 나누면 한 번 더 훑어야 합니다.
              */
             static uint32 batchBucketOf( const SceneTransformWrite& write, uint32 bucketCount )
             {
@@ -568,7 +568,7 @@ namespace sw
         else
         {
             // **대상 버킷으로 나눈다**(`batchBucketOf`). 같은 핸들은 늘 같은 버킷이라 한 워커가 배열 순서대로 쓴다 — 뒤의 건이 이긴다.
-            // 예전에는 배열을 연속 구간으로 잘라 같은 핸들이 두 구간에 있으면 두 워커가 한 칸을 동시에 썼다. 나누기는 한 번 훑으며 건 번호를
+            // 배열을 연속 구간으로 자르면 같은 핸들이 두 구간에 있을 때 두 워커가 한 칸을 동시에 쓴다. 나누기는 한 번 훑으며 건 번호를
             // 버킷 목록에 넣는 것뿐이다(버킷 목록은 프레임마다 재사용한다).
             const uint32 bucketCount = MathUtil::min( SceneTransformHierarchyInternal::kMaxBatchBucketCount, count / ( kParallelWriteCount / 4 ) );
             if ( _listBatchBucket.size() < bucketCount )

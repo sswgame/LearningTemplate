@@ -6,17 +6,14 @@
  * `PrimitiveRegistry` 와 같은 이유입니다. **찾지 말고 등록받습니다.** 그릴 것이 그랬듯 비추는 것도
  * 붙을 때 자기를 등록하면, 프레임 루프의 비용이 "씬의 오브젝트 수"가 아니라 "빛의 수"가 됩니다.
  *
- * 이것이 없을 때 `Scene::findActiveDirectionalLight` 는 매 프레임 **모든 GameObject** 를 돌며
- * `getComponent<DirectionalLightComponent>()` 를 물었고, 찾은 뒤에도 순회를 멈추지 않았습니다
- * (`forEachGameObject` 에는 중단이 없습니다). 큐브 20,000 개 벤치에서 그 한 줄이 게임 스레드
- * 프레임 7.6ms 중 **2.9ms** 를 썼습니다. 빛은 하나였습니다.
+ * 매 프레임 **모든 GameObject** 를 돌며 `getComponent<DirectionalLightComponent>()` 를 물으면(`forEachGameObject` 에는
+ * 중단이 없습니다) 빛이 하나뿐인 큐브 20,000 개 벤치에서 게임 스레드 프레임 7.6ms 중 **2.9ms** 를 씁니다.
  *
  * 등록부를 `GameObjectManager` 안에 두지 않은 이유도 `PrimitiveRegistry` 와 같습니다. 매니저는 이미
  * 저장소 · 컴포넌트 풀 · 팩토리 · 틱 등록부를 들고 있어서, 능력을 따로 떼어 두면 컴포넌트가 자기가
  * 쓰는 것만 들고 있으면 됩니다.
  *
- * 종류(방향광 · 점광 · 스포트)마다 칸 하나입니다. 예전에는 종류마다 add · remove · getAll 이 한 벌씩(세 벌) 손으로 복사돼 있어 빛 종류
- * 하나를 더하면 여기만 세 자리였습니다. 지금은 `LightComponent` 가 자기 종류(`getLightType`)로 한 쌍의 함수를 부릅니다.
+ * 종류(방향광 · 점광 · 스포트)마다 칸 하나입니다. `LightComponent` 가 자기 종류(`getLightType`)로 한 쌍의 함수를 부릅니다.
  *
  * @note 더티 표시는 없습니다. 렌더러가 매 프레임 값을 새로 읽어 GPU 버퍼를 다시 채우므로 "무엇이
  *       바뀌었나" 를 알 필요가 없습니다. 프리미티브와 달리 라이트는 원소가 64 바이트뿐입니다.

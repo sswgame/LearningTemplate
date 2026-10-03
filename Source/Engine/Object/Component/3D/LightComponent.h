@@ -16,17 +16,15 @@ namespace sw
     /**
      * @class LightComponent
      * @brief 빛 하나의 공통 부분입니다. 종류(방향광 · 점광 · 스포트)는 파생이 정하고, 등록부와 수집이 그 종류로 나눕니다.
-     * @details 언리얼 `ULightComponent` 의 자리입니다. 예전에는 세 빛이 색 · 세기의 세터 · 등록과 해제 · 위치 · 방향 함수를 각자 들었고,
-     *          등록부도 종류마다 add · remove · getAll 세 벌이었습니다 — 빛 종류 하나를 더하면 여덟 자리를 고쳐야 했습니다. 방향 함수
-     *          두 벌은 같은 결함(아래)을 같이 갖고 있었습니다. 새 종류는 파생 하나(GPU 원소의 자기 칸은 `writeGpuLightKindFields`
-     *          재정의) + 셰이더 분기 하나입니다. 수집(`collectSceneLights`)은 종류를 모릅니다.
+     * @details 언리얼 `ULightComponent` 의 자리입니다. 색 · 세기의 세터 · 등록과 해제 · 위치 · 방향 함수는 여기 하나입니다. 새 종류는 파생
+     *          하나(GPU 원소의 자기 칸은 `writeGpuLightKindFields` 재정의) + 셰이더 분기 하나입니다. 수집(`collectSceneLights`)은 종류를 모릅니다.
      *
      *          **방향 규약.** 파생의 기본 방향은 **로컬** 방향이고, 월드 회전(부모 포함)이 그것을 돌립니다. 회전이 없는 루트 빛은 기본
-     *          방향을 그대로 씁니다. 예전에는 "로컬 회전이 0 이면 기본 방향, 아니면 전방(+Z)" 이었습니다 — 부모의 회전을 무시했고,
-     *          회전이 1e-3 라디안을 넘는 순간 방향이 기본 방향에서 +Z 로 튀었습니다.
+     *          방향을 그대로 씁니다. 주의: "로컬 회전이 0 이면 기본 방향, 아니면 전방(+Z)" 처럼 갈라 두면 부모의 회전을 무시하고, 회전이
+     *          문턱을 넘는 순간 방향이 기본 방향에서 +Z 로 튄다.
      *
-     *          `REFLECT( Abstract )` 라 만들 수 없고 컴포넌트 팩토리도 없습니다. 색 · 세기 PROPERTY 이름은 예전 그대로라(`_color` ·
-     *          `_intensity`) 저장된 씬 · 바이너리 · 기본값이 이름으로 그대로 묶입니다.
+     *          `REFLECT( Abstract )` 라 만들 수 없고 컴포넌트 팩토리도 없습니다. 색 · 세기 PROPERTY(`_color` · `_intensity`)는 저장된 씬 ·
+     *          바이너리 · 기본값이 이름으로 묶입니다.
      */
     REFLECT( Abstract, Category = "Rendering 3D", DisplayName = "Light", Tooltip = "Common part of every light kind" )
     class SW_API LightComponent : public SceneComponent

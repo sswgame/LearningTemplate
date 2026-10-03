@@ -33,9 +33,9 @@ namespace sw
      */
     struct SceneAttachReference
     {
-        /** @brief 부모 오브젝트의 이름입니다. **비면 같은 오브젝트**입니다. id 가 없는 옛 데이터는 다른 오브젝트도 이것만 있습니다. */
+        /** @brief 부모 오브젝트의 이름입니다. **비면 같은 오브젝트**입니다. id 가 없는 데이터는 다른 오브젝트도 이것만 있습니다. */
         hashed_string _ownerName{};
-        /** @brief 다른 오브젝트의 id 입니다(`_idSpace` 의 것). 0 이면 같은 오브젝트이거나 id 가 없는 옛 데이터입니다. */
+        /** @brief 다른 오브젝트의 id 입니다(`_idSpace` 의 것). 0 이면 같은 오브젝트이거나 id 가 없는 데이터입니다. */
         uint64 _ownerId{ 0 };
         /** @brief 부모 컴포넌트의 안정 키(`ComponentStableKey`)입니다. 비면 루트입니다. */
         hashed_string _componentKey{};
@@ -67,10 +67,8 @@ namespace sw
         /**
          * @brief **옮기지 않습니다.** 이 클래스는 자기 주소로 얽혀 있는 계층의 노드입니다.
          * @details 자식들의 `_pParent`, 부모의 `_listChild` 항목, 매니저의 루트 등록부가 모두
-         *          이 객체의 **주소**를 들고 있습니다. 옮기려면 그 셋을 모두 새 주소로 고쳐야
-         *          하는데, 예전 이동 연산은 하나도 하지 않았습니다(이동 대입은 방금 옮겨 온
-         *          `_listChild` 를 그 자리에서 비우기까지 했습니다). 컴포넌트는 풀 안의 제자리에서
-         *          만들고 없애므로 실제로 옮겨지는 일이 없습니다. 그래서 고치는 대신 막습니다.
+         *          이 객체의 **주소**를 들고 있어 옮기려면 그 셋을 모두 새 주소로 고쳐야 합니다.
+         *          컴포넌트는 풀 안의 제자리에서 만들고 없애므로 실제로 옮겨지는 일이 없습니다. 그래서 막습니다.
          */
         SceneComponent( SceneComponent&& )            = delete;
         SceneComponent& operator=( SceneComponent&& ) = delete;
@@ -119,8 +117,8 @@ namespace sw
         float3 getWorldPosition() const;
         /**
          * @brief 월드 위치를 정합니다. 부모 아래에 있으면 부모 월드의 역으로 로컬 위치를 구해 씁니다(회전 · 스케일은 그대로).
-         * @details 언리얼 `SetWorldLocation`, 유니티 `Transform.position` 의 자리입니다. 예전에는 월드 세터가 없어 에디터 다섯 곳이 각자 바꿨고 셋이
-         *          틀렸습니다 — 월드 값을 로컬 칸에 쓰거나 월드 축의 차이를 로컬 축에 더해, 부모가 돌았거나 커졌으면 엉뚱한 자리로 갔습니다.
+         * @details 언리얼 `SetWorldLocation`, 유니티 `Transform.position` 의 자리입니다. 월드 자리를 바꾸는 곳은 이것을 씁니다 — 월드 값을 로컬 칸에
+         *          쓰거나 월드 축의 차이를 로컬 축에 더하면 부모가 돌았거나 커졌을 때 엉뚱한 자리로 간다.
          */
         void setWorldPosition( const float3& worldPosition );
         /**
@@ -132,8 +130,8 @@ namespace sw
         void teleportTo( const float3& worldPosition );
         /**
          * @brief 월드 트랜스폼(행렬)을 정합니다. 부모 기준으로 분해해 로컬 위치 · 회전 · 스케일을 씁니다(언리얼 `SetWorldTransform`).
-         * @details 회전은 이 엔진의 오일러 규칙(`quaternion::getEulerAngles` — `createFromYawPitchRoll` 의 역)으로 적습니다. 에디터 기즈모가 예전에는
-         *          ImGuizmo 의 XYZ 오일러로 분해해 넣어, 두 축 이상이 섞인 회전이 다른 회전으로 들어갔습니다. 부모의 부등 스케일과 회전이 만든 기울임은
+         * @details 회전은 이 엔진의 오일러 규칙(`quaternion::getEulerAngles` — `createFromYawPitchRoll` 의 역)으로 적습니다. 주의: ImGuizmo 의 XYZ
+         *          오일러로 분해해 넣으면 두 축 이상이 섞인 회전이 다른 회전으로 들어간다. 부모의 부등 스케일과 회전이 만든 기울임은
          *          TRS 로 나타낼 수 없어 버립니다(언리얼 · 유니티도 같습니다).
          */
         void setWorldTransform( const float4x4& worldMatrix );
@@ -160,14 +158,14 @@ namespace sw
         /**
          * @brief 이 컴포넌트가 차지하는 월드 공간의 경계 구입니다. 경계가 없는 컴포넌트(빈 트랜스폼 · 빛 · 카메라)는 false 입니다.
          * @details 경계는 **컴포넌트가 선언**합니다 — 언리얼 `USceneComponent::CalcBounds( LocalToWorld )`, 유니티 `Renderer.bounds` ·
-         *          `Collider.bounds` 의 자리입니다. 에디터 피킹과 GPU 컬링이 같은 답을 씁니다. 예전에는 에디터가 종류마다 경계를 손으로 셌고
-         *          (메시 · 스프라이트 · 2D 박스) 모두 **로컬** 스케일을 봐서, 부모가 키운 물체는 클릭이 빗나갔습니다.
+         *          `Collider.bounds` 의 자리입니다. 에디터 피킹과 GPU 컬링이 같은 답을 씁니다 — 종류마다 경계를 따로 세면 **로컬** 스케일만 봐서
+         *          부모가 키운 물체에서 클릭이 빗나간다.
          */
         virtual bool getWorldBounds( float3& outCenter, float32& outRadius ) const;
         /**
          * @brief 그리거나 부딪히는 것의 **월드** 축 정렬 상자입니다. 크기가 없는 컴포넌트(빈 씬 컴포넌트 · 카메라 · 빛)는 false 입니다.
-         * @details 크기를 재는 쪽(에디터의 바닥 · 표면 붙이기 · 프레이밍)은 이것 하나를 본다. 예전에는 자리마다 "메시면 로컬 스케일 × 단위 상자,
-         *          콜라이더면 오프셋 크기" 를 따로 셈해, 부모가 키운 오브젝트 · 단위 상자가 아닌 메시 · 키운 콜라이더를 틀리게 쟀다.
+         * @details 크기를 재는 쪽(에디터의 바닥 · 표면 붙이기 · 프레이밍)은 이것 하나를 본다. 자리마다 "메시면 로컬 스케일 × 단위 상자,
+         *          콜라이더면 오프셋 크기" 를 따로 세면 부모가 키운 오브젝트 · 단위 상자가 아닌 메시 · 키운 콜라이더를 틀리게 잰다.
          */
         virtual bool getWorldBox( AABB& outBox ) const;
 
@@ -247,15 +245,14 @@ namespace sw
         bool isInParallelTick() const;
         /**
          * @brief 세터 셋의 몸통입니다. 비트 하나(`SceneTransformPage::LocalValueBit`)의 로컬 값을 씁니다.
-         * @details 병렬 틱 중이면 `writeTickTransform` 으로 가고, 아니면 칸에 쓰고(거의 같은 값이면 건너뜀) 더티를 표시합니다. 예전에는 세터
-         *          셋이 같은 열 줄을 각자 들고 있었습니다.
+         * @details 병렬 틱 중이면 `writeTickTransform` 으로 가고, 아니면 칸에 쓰고(거의 같은 값이면 건너뜀) 더티를 표시합니다.
          */
         void setLocalValue( uint8 bit, const float3& value );
         /**
          * @brief 병렬 틱 중의 세터 한 건입니다. 이 컴포넌트의 오브젝트를 틱하는 스레드면 칸의 대기 자리에 바로 쓰고, 아니면 쓰기 큐에 올립니다.
          * @details 대기 자리는 칸의 주인 오브젝트를 틱하는 스레드만 씁니다(한 오브젝트의 항목은 한 워커가 돈다). 그래서 잠금 없이 쓰고, 칸이
-         *          처음 대기에 들 때만 그 스레드의 대기 목록에 번호를 올립니다. 틱 중에 다른 스레드가 읽는 로컬 · 월드 값은 그대로라(틱 전 값)
-         *          예전 쓰기 큐와 보이는 것이 같습니다. 다른 오브젝트의 컴포넌트에 쓰는 것은 두 스레드가 한 칸에 쓸 수 있어 쓰기 큐로 갑니다.
+         *          처음 대기에 들 때만 그 스레드의 대기 목록에 번호를 올립니다. 틱 중에 다른 스레드가 읽는 로컬 · 월드 값은 그대로입니다(틱 전 값).
+         *          다른 오브젝트의 컴포넌트에 쓰는 것은 두 스레드가 한 칸에 쓸 수 있어 쓰기 큐로 갑니다.
          */
         void writeTickTransform( uint8 bit, const float3& value );
         /** @brief 페이지 안의 자리입니다. */
@@ -317,9 +314,9 @@ namespace sw
         PROPERTY( HideInInspector )
         mutable hashed_string _attachOwner;
         /**
-         * @brief 다른 오브젝트인 부모의 id 입니다. 씬 파일에서는 파일 id, 스냅샷에서는 런타임 id 입니다(`ObjectIdSpace`). 0 이면 같은 오브젝트이거나 옛 데이터입니다.
-         * @details 예전에는 이름만 적어 매니저에서 이름으로 찾았는데, 매니저는 이름을 유일하게 바꾸므로(`X` → `X_2`) 복제본 · 두 번 놓은 프리팹 ·
-         *          되돌린 오브젝트가 **같은 이름의 다른 오브젝트**(원본 · 자동으로 생긴 카메라)에 붙었습니다.
+         * @brief 다른 오브젝트인 부모의 id 입니다. 씬 파일에서는 파일 id, 스냅샷에서는 런타임 id 입니다(`ObjectIdSpace`). 0 이면 같은 오브젝트이거나 id 가 없는 데이터입니다.
+         * @details 주의: 이름만으로 찾지 말 것 — 매니저는 이름을 유일하게 바꾸므로(`X` → `X_2`) 복제본 · 두 번 놓은 프리팹 · 되돌린 오브젝트가
+         *          **같은 이름의 다른 오브젝트**(원본 · 자동으로 생긴 카메라)에 붙는다.
          */
         PROPERTY( HideInInspector )
         mutable uint64 _attachOwnerId;
@@ -335,15 +332,14 @@ namespace sw
         uint32 _transformSlot;
         /**
          * @brief 계층의 더티 루트 목록에서의 자기 자리입니다. 목록에 없으면 `kNotInList` 입니다. `SceneTransformHierarchy` 만 만집니다.
-         * @details 해제가 선형으로 찾던 것을 O(1) swap-remove 로 바꿨습니다(8000 개를 지우면 3200만 번 비교, 파괴 개당 2 µs 였다).
-         *          자리는 플러시가 비웁니다. 루트 전부의 목록과 그 자리(`_rootIndex`)는 읽는 곳이 없어 걷었습니다.
+         * @details 해제가 이 자리로 O(1) swap-remove 합니다(선형으로 찾으면 8000 개를 지울 때 3200만 번 비교다).
+         *          자리는 플러시가 비웁니다.
          */
         static constexpr uint32 kNotInList = 0xFFFFFFFFu;
         uint32                  _dirtyRootIndex;
         /**
          * @brief 이 컴포넌트가 속한 매니저입니다. 등록 시점에 받아 둡니다.
-         * @details 쓸 때마다 `getOwner()->getManager()` 로 두 단계 거슬러 찾던 것을 대체합니다.
-         *          언리얼 컴포넌트가 등록 시점에 `GetWorld()` 를 잡아 두는 것과 같은 자리입니다.
+         * @details 언리얼 컴포넌트가 등록 시점에 `GetWorld()` 를 잡아 두는 것과 같은 자리입니다.
          *          씬에 붙지 않았으면 nullptr 이고, 그때는 지연 없이 바로 반영하는 경로를 탑니다.
          */
         GameObjectManager*      _pManager;

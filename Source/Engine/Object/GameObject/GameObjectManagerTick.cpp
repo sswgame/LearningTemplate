@@ -65,8 +65,7 @@ namespace sw
              * @brief 등록부 칸 하나(오브젝트 하나의 그룹 항목)를 순서대로 틱합니다. 워커에서 불립니다.
              * @details **게임 오브젝트를 읽지 않습니다.** 계층에서 꺼진 오브젝트는 칸이 없고(목록 소속이 곧 활성), 틱 중의 `setActive` 는 틱
              *          뒤로 미뤄지며, 파괴는 컴포넌트마다 삭제 표시를 세웁니다 — 그래서 컴포넌트의 표시만 보면 됩니다. 언리얼 틱 함수가 대상
-             *          컴포넌트만 보고 액터는 보지 않는 것과 같습니다. 예전에는 여기서 오브젝트의 삭제 대기 · 계층 활성 · 항목 목록 · 그룹
-             *          자리를 읽고 항목 버퍼를 건넜다(큐브 8000 개 프로파일에서 틱 CPU 의 절반이 이 루프였다).
+             *          컴포넌트만 보고 액터는 보지 않는 것과 같습니다(오브젝트를 읽으면 큐브 8000 개 프로파일에서 틱 CPU 의 절반이 이 루프다).
              */
             static void tickEntry( float32 deltaTime, const TickObjectEntry& entry )
             {
@@ -144,8 +143,8 @@ namespace sw
             dispatchPendingBeginPlay();
         }
 
-        // 오브젝트가 없으면 컴포넌트 틱까지만 건너뛴다. 아래 단계(지연 큐 · 병합 · 파괴)는 늘 돈다 — 예전에는 여기서 통째로
-        // 돌아가, 빈 씬에 넣은 `deferPostTick` 이 오브젝트가 생길 때까지 돌지 않았다.
+        // 오브젝트가 없으면 컴포넌트 틱까지만 건너뛴다. 아래 단계(지연 큐 · 병합 · 파괴)는 늘 돈다 — 여기서 통째로 돌아가면
+        // 빈 씬에 넣은 `deferPostTick` 이 오브젝트가 생길 때까지 돌지 않는다.
         if ( _listGameObject.empty() == false )
             tickComponentsPhase( deltaTime );
 
@@ -201,10 +200,9 @@ namespace sw
         _bTicking.store( true, std::memory_order_release );
 
         {
-            // **씬 틱은 자기가 낸 일만 기다린다.** 틱의 병렬 일은 `runParallel` 이 합류까지 기다린다. 예전에는 여기서
-            // `TaskManager::waitAll()` 을 불러 엔진 **전체의** 태스크 — 렌더 스레드의 패스 기록, 에셋 스트리밍, 비동기 씬 로드,
-            // 오디오 재생 — 가 빌 때까지 게임 스레드를 세웠고, 그 시간이 이 스코프(components)로 잡혔다. onTick 이 낸 태스크가
-            // 틱 뒤 단계 전에 끝나야 하는 날이 오면, 매니저가 자기 스테이지를 만들어 `waitStage` 로 기다린다 — `waitAll` 은 쓰지 않는다.
+            // **씬 틱은 자기가 낸 일만 기다린다.** 틱의 병렬 일은 `runParallel` 이 합류까지 기다린다. 주의: `TaskManager::waitAll()` 은
+            // 엔진 **전체의** 태스크 — 렌더 스레드의 패스 기록, 에셋 스트리밍, 비동기 씬 로드, 오디오 재생 — 가 빌 때까지 게임 스레드를
+            // 세운다. onTick 이 낸 태스크가 틱 뒤 단계 전에 끝나야 하면 매니저가 자기 스테이지를 만들어 `waitStage` 로 기다린다.
             SW_PROFILE_SCOPE( "GT.Scene.tick.components" );
             tickComponents( deltaTime );
         }

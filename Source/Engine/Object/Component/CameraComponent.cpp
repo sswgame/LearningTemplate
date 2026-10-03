@@ -73,8 +73,8 @@ namespace sw
         const float32 yaw   = MathUtil::atan2( forward._x, forward._z );
         const float32 pitch = -MathUtil::asin( MathUtil::clamp( forward._y, -1.0f, 1.0f ) );
         (void)up;
-        // 요 · 피치는 **월드** 방향이다 — 월드 행렬로 만들어 부모 기준으로 분해해 적는다(`setWorldTransform`). 예전에는 그대로 로컬 회전에 넣어,
-        // 돌아간 부모(플레이어에 붙인 카메라 · 회전한 리그) 아래에서는 부모의 회전만큼 엉뚱한 곳을 봤다.
+        // 요 · 피치는 **월드** 방향이다 — 월드 행렬로 만들어 부모 기준으로 분해해 적는다(`setWorldTransform`). 그대로 로컬 회전에 넣으면
+        // 돌아간 부모(플레이어에 붙인 카메라 · 회전한 리그) 아래에서 부모의 회전만큼 엉뚱한 곳을 본다.
         float3     worldScale{};
         quaternion worldRotation{};
         float3     worldTranslation{};

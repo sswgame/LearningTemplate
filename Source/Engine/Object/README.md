@@ -21,11 +21,11 @@ Scene
  └─ GameObjectManager
      ├─ GameObject "Player"
      │    ├─ SceneComponent      (위치·계층)
-     │    ├─ PlayerComponent     (입력·이동)
-     │    └─ UnitStatsComponent  (HP 등 스탯 데이터)
+     │    ├─ (게임의 컴포넌트)   (입력·이동 — 게임 모듈이 정의)
+     │    └─ UnitStatsComponent  (HP 등 스탯 데이터 — GameFramework ActionCombat 킷)
      └─ GameObject "Slime"
           ├─ SceneComponent
-          └─ MonsterComponent
+          └─ (게임의 AI 컴포넌트)
 ```
 
 ---
@@ -71,9 +71,9 @@ Object/
 ```mermaid
 flowchart TD
   A[메인 스레드 작업 처리<br/>지연 삭제 병합] --> B[씬 트랜스폼 flush<br/>월드 좌표 스냅샷]
-  B --> C[beginTick<br/>구조 변경 동결]
+  B --> C[_bTicking = true<br/>구조 변경 동결]
   C --> D[컴포넌트 onTick<br/>병렬 실행]
-  D --> E[finishTick<br/>동결 해제]
+  D --> E[_bTicking = false<br/>동결 해제]
   E --> E2[구조 변경 큐 실행 — 부른 순서<br/>addComponent·attach·detach·태그·활성]
   E2 --> F[틱 중 쓰기 큐 적용<br/>슬롯별 트랜스폼 쓰기 배치]
   F --> G[deferPostTick 실행<br/>스폰·데미지 등]
@@ -136,7 +136,7 @@ flowchart LR
     A1["addComponent&lt;T&gt;()"] --> A2["지연 큐에 쌓임"]
     A2 --> A3["반환값 = nullptr"]
   end
-  subgraph after ["finishTick 이후"]
+  subgraph after ["동결 해제 이후"]
     C1["구조 변경 큐 실행(부른 순서)"]
     C1 --> C3["컴포넌트 실제로 생김"]
   end
@@ -158,8 +158,9 @@ GameObject* go = mgr->createGameObject( hashed_string( "Enemy" ) );
 SceneComponent* root = go->addComponent<SceneComponent>();
 root->setLocalPosition( float3{ 10.0f, 0.0f, 0.0f } );
 
-MonsterComponent* ai = go->addComponent<MonsterComponent>();
-ai->monsterId = "slime";
+// EnemyAiComponent 는 게임 모듈이 정의한 컴포넌트라고 하자(예시).
+EnemyAiComponent* ai = go->addComponent<EnemyAiComponent>();
+ai->setArchetype( "slime" );
 go->addTag( "Monster"_tag );
 ```
 
@@ -169,7 +170,7 @@ go->addTag( "Monster"_tag );
 그래서 “만들고 → 바로 필드 설정”은 **한 블록으로 묶어야** 합니다.
 
 ```cpp
-void MonsterComponent::fireProjectile()
+void EnemyAiComponent::fireProjectile()
 {
     GameObjectManager* mgr = /* 활성 씬의 매니저 */;
     const float3 spawnPos = /* ... */;
@@ -386,7 +387,7 @@ mgr->destroyComponent( comp );  // 처리 때 핸들로 다시 찾으므로 그 
 | tick 중 `attachToParent` 의 결과를 바로 기대 | 아직 안 붙어 있다 | 동결 중에는 **미뤄진다** — 틱 직후 구조 변경 큐가 부른 순서대로 붙인다(같은 틱에 붙인 씬 컴포넌트 뒤에) |
 | tick 중 상태 읽기(`ObjectStateSerializer::load*` 제자리) | 거절(false + 오류) | 컴포넌트를 모두 다시 만드는 일이라 틱 중에는 못 한다 — `executeOrDeferPostTick` 으로 감쌀 것 |
 | Games에서 `engine::getResourceManager` | 레이어 위반(`CheckEngineLayers` 가 `EngineServices.h` include 를 막는다) | `game::getService<ResourceManager>()` |
-| 태그 추가 직후 같은 프레임에 `findByTag` | 아직 안 보일 수 있음 | post-tick 이후, 또는 같은 deferred 블록 안에서 처리 |
+| 태그 추가 직후 같은 프레임에 `findGameObjectsByTag` | 아직 안 보일 수 있음 | post-tick 이후, 또는 같은 deferred 블록 안에서 처리 |
 
 ---
 
@@ -397,7 +398,7 @@ flowchart TB
   subgraph auto ["자동 지연"]
     AC["GameObject::addComponent / ByName"]
     TG["addTag / removeTag"]
-    DM["UnitStats takeDamage / heal<br/>게임프레임워크"]
+    DM["UnitStatsComponent takeDamage / heal<br/>게임프레임워크"]
   end
   subgraph when ["동결 중이면"]
     SC["GameObjectManager::deferStructuralChange<br/>(부른 순서, 틱 직후 먼저)"]

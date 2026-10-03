@@ -33,16 +33,15 @@ namespace sw
 
     /**
      * @brief 오브젝트의 컴포넌트 목록입니다(인라인 네 칸). 보통의 오브젝트(씬 + 메시 + 로직 한둘)는 힙을 만지지 않습니다.
-     * @details 예전에는 첫 push 가 스폰마다 할당 하나였습니다(총알처럼 스폰이 잦은 게임의 비용). 다섯 개째부터 힙으로 갑니다.
+     * @details 총알처럼 스폰이 잦은 게임에서 스폰마다 할당 하나가 붙지 않게 합니다. 다섯 개째부터 힙으로 갑니다.
      */
     using ComponentList = vector<Component*, InlineAllocator<Component*, 4>>;
 
     /**
      * @class GameObject
      * @brief 수명 주기(beginPlay), 태그, 컴포넌트 목록을 가진 월드 액터입니다.
-     * @details **이 헤더는 `GameObjectManager` 를 include 하지 않습니다.** 예전에는 `addComponent<T>` 가 매니저의 템플릿을 불러
-     *          헤더 끝에서 매니저 헤더를 끌어왔고, 그래서 GameObject 를 아는 모든 TU 가 매니저(물리 월드 · 등록부 셋 · 풀)
-     *          까지 알았습니다. 지금은 매니저가 필요한 걸음(동결 확인 · 저장소 · 붙이기 · 미루기)이 템플릿이 아닌 멤버 넷이고
+     * @details **이 헤더는 `GameObjectManager` 를 include 하지 않습니다** — 그러면 GameObject 를 아는 모든 TU 가 매니저(물리 월드 ·
+     *          등록부 셋 · 풀)까지 알게 됩니다. 매니저가 필요한 걸음(동결 확인 · 저장소 · 붙이기 · 미루기)은 템플릿이 아닌 멤버 넷이고
      *          템플릿은 `T` 만 다룹니다.
      */
     REFLECT()
@@ -115,7 +114,7 @@ namespace sw
         /**
          * @brief 켜거나 끕니다.
          * @details 자기 활성 플래그를 갱신하고 소유 컴포넌트에 그 값을 전파한 뒤, `isActiveInHierarchy` 를 부모 계층에
-         *          맞게 다시 계산합니다(자손까지 한 번). 예전에는 재계산이 두 번 돌았습니다. 여기서 한 번, `onPropertyChanged` 에서 또.
+         *          맞게 다시 계산합니다(자손까지 한 번).
          */
         void setActive( bool bActive );
 
@@ -148,8 +147,7 @@ namespace sw
 
         /**
          * @brief 자식 GameObject 를 `outListChild` 에 채웁니다(비우고 채웁니다). 이 오브젝트의 씬 컴포넌트(소켓 포함)에 primary 가 붙은 오브젝트들입니다.
-         * @details 예전에는 값으로 반환했습니다. 부르는 자리마다 벡터 하나였고, 에디터 계층 패널은 "자식이 있나" 를 물으려고
-         *          노드마다 프레임마다 그 벡터를 만들었습니다. 있는지만 볼 때는 `hasChildren` 을 씁니다.
+         * @details 부르는 쪽의 벡터를 재사용하려고 값으로 반환하지 않습니다. 있는지만 볼 때는 `hasChildren` 을 씁니다.
          */
         void getChildren( vector<GameObject*>& outListChild ) const;
         /** @brief 자식 GameObject 가 하나라도 있으면 true 입니다. 목록을 만들지 않습니다. */
@@ -163,8 +161,8 @@ namespace sw
 
         /**
          * @brief 트랜스폼 계층의 primary SceneComponent 입니다(목록에서 살아 있는 첫 SceneComponent 파생).
-         * @details 없으면 nullptr 입니다. 답은 캐시됩니다. 부모 · 자식 · 부착 · 에디터 계층 패널이 모두 여기를 지나는데, 예전에는 부를 때마다
-         *          목록을 캐스트로 훑었습니다(호출처 35 곳). 캐시는 첫 씬 컴포넌트가 붙을 때 적히고, 그것이 빠지거나 죽으면
+         * @details 없으면 nullptr 입니다. 부모 · 자식 · 부착 · 에디터 계층 패널이 모두 여기를 지나므로 답은 캐시됩니다(부를 때마다 목록을
+         *          캐스트로 훑지 않는다). 캐시는 첫 씬 컴포넌트가 붙을 때 적히고, 그것이 빠지거나 죽으면
          *          다음 호출이 목록에서 다시 찾습니다.
          */
         SceneComponent* getPrimarySceneComponent() const;
@@ -181,8 +179,8 @@ namespace sw
         bool matchesTagQuery( const TagQuery& query ) const;
         /**
          * @brief TagComponent 의 태그 컨테이너입니다. 없으면 빈 컨테이너입니다. **읽기 전용**입니다 — 쓰기는 `addTag` · `removeTag` · `clearTags` 뿐입니다.
-         * @details 컨테이너를 쓰기용으로 내주던 `getOrCreateTags()` 는 지웠다(부르는 곳이 없었다). 틱 중에는 그것이 쓰기를 버리는 통을 줬고, 그
-         *          밖에서는 미룸 규칙을 거치지 않고 살아 있는 컨테이너에 썼다. 쓰기는 미룸 규칙을 지키는 창구로만 한다.
+         * @details 컨테이너를 쓰기용으로 내주지 않는다 — 그러면 미룸 규칙을 거치지 않고 살아 있는 컨테이너에 쓰게 된다. 쓰기는 미룸 규칙을
+         *          지키는 창구로만 한다.
          */
         const TagContainer& getTags() const;
 
@@ -210,9 +208,7 @@ namespace sw
 
         /**
          * @brief 소유 Component 목록을 그대로 반환합니다. 빈 칸(nullptr)과 삭제 예정이 섞여 있을 수 있습니다.
-         * @details 걸러서 보려면 `forEachComponent` / `forEachComponentOfType`(할당 없음)을 씁니다. 예전에는 걸러서
-         *          복사해 주는 `getComponents()` 가 따로 있었는데, 이름이 반대로 읽혔고(전부 → 더 적게)
-         *          호출처 열둘이 모두 스스로 null 을 다시 걸렀습니다.
+         * @details 걸러서 보려면 `forEachComponent` / `forEachComponentOfType`(할당 없음)을 씁니다.
          */
         const ComponentList& getComponents() const { return _listComponent; }
 
@@ -300,7 +296,7 @@ namespace sw
 
         /**
          * @brief 직렬화 직전에 SceneComponent 의 부착 필드를 `_pParent` 에서 채웁니다.
-         * @details 읽은 부착 필드로 계층을 잇는 쪽은 `ObjectStateBatch::finish` 하나입니다 — 예전에는 오브젝트마다 읽는 자리에서 이름으로 이었습니다.
+         * @details 읽은 부착 필드로 계층을 잇는 쪽은 `ObjectStateBatch::finish` 하나입니다.
          */
         void prepareSerialize( const ObjectSaveOptions& options ) const;
 
@@ -326,9 +322,7 @@ namespace sw
         void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool, bool bOverridesTick );
         /**
          * @brief 목록에서 이미 뺀 컴포넌트를 해체합니다 — 매니저가 있으면 `GameObjectManager::destroyComponentInstance` 가 전부 합니다.
-         * @details 예전에는 `removeComponent` · `clearComponents` 가 해제 콜백 셋을 각자 부른 뒤 매니저에 넘겼고, 매니저가
-         *          `onUnregister` 를 **한 번 더** 불렀습니다. 등록하는 컴포넌트는 모두 두 번 불려도 되게 짜야 했고, 파괴마다 등록부
-         *          잠금을 두 번 잡았습니다.
+         * @details 해제 콜백은 여기서 부르지 않습니다 — 매니저가 `onUnregister` 를 정확히 한 번 부릅니다.
          */
         void destroyOwnedComponent( Component* pComp );
         /**
@@ -404,9 +398,9 @@ namespace sw
     T* GameObject::addComponent( Args&&... args )
     {
         static_assert( std::is_base_of_v<Component, T>, "T must derive from sw::Component" );
-        // 멤버가 없는 파생도 예외가 아니다. 예전에는 `sizeof( T ) == sizeof( Component )` 를 통과시켜, REFLECT_BODY 없는 파생이 부모의
-        // TypeInfo 를 물려받았다 — 모듈을 내릴 때 `destroyComponentsOfModule` 은 TypeInfo 의 모듈 이름으로 고르므로 그 인스턴스를 놓쳤고, 그
-        // vtable 은 내려간 이미지를 가리킨 채 씬에 남았다(언리얼도 모든 UObject 클래스는 리플렉션을 갖는다).
+        // 멤버가 없는 파생도 예외가 아니다. REFLECT_BODY 없는 파생은 부모의 TypeInfo 를 물려받는데, 모듈을 내릴 때
+        // `destroyComponentsOfModule` 은 TypeInfo 의 모듈 이름으로 고르므로 그 인스턴스를 놓치고, 그 vtable 은 내려간 이미지를 가리킨 채
+        // 씬에 남는다(언리얼도 모든 UObject 클래스는 리플렉션을 갖는다).
         static_assert( HasOwnReflectBody_v<T> || HasReflectStaticType_v<T>, "T must declare its own REFLECT_BODY()." );
 
         if ( _pOwnerManager == nullptr )

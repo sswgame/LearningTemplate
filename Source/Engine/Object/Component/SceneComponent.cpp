@@ -39,10 +39,8 @@ namespace sw
     // **SceneComponent 는 이동하지 않는다.** 이 클래스는 부모 포인터 · 자식 목록 · 계층의 더티
     // 루트 목록에 **자기 주소로** 얽혀 있는 계층의 노드다. 옮기려면 자식들의 `_pParent`, 부모의
     // `_listChild` 항목, 더티 루트 목록이 들고 있는 포인터를 모두 새 주소로
-    // 고쳐야 하는데, 예전 이동 연산은 그중 하나도 하지 않았다(이동 대입은 심지어 방금 옮겨
-    // 온 `_listChild` 를 그 자리에서 비웠다). 컴포넌트는 풀 안의 제자리에서 만들고 없애므로 실제로
-    // 옮겨지는 일이 없었고(삭제로 바꿔도 저장소 전체에서 두 정의 말고는 아무것도 깨지지
-    // 않았다), 그래서 고치는 대신 **막는다.** 파생 7종의 `= default` 선언도 같이 걷었다.
+    // 고쳐야 한다. 컴포넌트는 풀 안의 제자리에서 만들고 없애므로 실제로 옮겨지는 일이 없고,
+    // 그래서 **막는다.** 파생 타입도 이동 연산을 선언하지 않는다.
     // 트랜스폼 칸도 같은 이유로 옮길 수 없다(칸의 소유자 포인터가 이 주소다).
 
     SceneComponent::~SceneComponent()
@@ -116,8 +114,7 @@ namespace sw
     void SceneComponent::writeTickTransform( uint8 bit, const float3& value )
     {
         // **자기 오브젝트를 틱하는 스레드면 칸에 바로 쓴다.** 한 오브젝트의 항목은 한 워커가 돌므로 이 칸의 대기 자리를 쓰는 스레드는
-        // 이 스레드 하나다. 예전에는 세터마다 64 바이트짜리 쓰기 건을 스레드 큐에 올렸고(같은 컴포넌트면 앞 건과 합치는 비교 포함), 틱 뒤
-        // 적용이 그 건의 대상 컴포넌트를 하나씩 찾아가 값을 옮겼다. 이제 틱 뒤 적용은 칸 번호 목록을 따라 배열만 읽는다.
+        // 이 스레드 하나다. 틱 뒤 적용은 칸 번호 목록을 따라 배열만 읽는다.
         const GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && GameObjectManager::getTickingObject() == pOwner )
         {
@@ -132,7 +129,7 @@ namespace sw
             }
         }
 
-        // 다른 오브젝트의 컴포넌트에 쓰는 것은 두 스레드가 한 칸에 쓸 수 있으므로 예전처럼 쓰기 큐로 간다.
+        // 다른 오브젝트의 컴포넌트에 쓰는 것은 두 스레드가 한 칸에 쓸 수 있으므로 쓰기 큐로 간다.
         SceneTransformWrite write{};
         write.setValue( bit, value );
         queueTickWrite( write );
@@ -182,7 +179,7 @@ namespace sw
 
     float3 SceneComponent::getWorldPosition() const
     {
-        // float32 월드 위치는 LWC 를 내린 값이다. 따로 들지 않는다(예전에는 캐시가 하나 더 있었다).
+        // float32 월드 위치는 LWC 를 내린 값이다. 따로 들지 않는다.
         ensureWorldCache();
         const double3& worldLwc = _pTransformPage->_arrWorldPositionLwc[getPageIndex()];
         return float3( static_cast<float32>( worldLwc._x ), static_cast<float32>( worldLwc._y ), static_cast<float32>( worldLwc._z ) );
@@ -248,9 +245,9 @@ namespace sw
         if ( _bIsTransformDirty.load( std::memory_order_relaxed ) == SW_FALSE || isInParallelTick() )
             return;
 
-        // **합성은 `updateWorldTransformFromParent` 한 곳에서만 한다.** 예전에는 여기에 같은 합성 · 해제가 한 벌 더 있었고, 그쪽만
-        // 갱신 훅(`onWorldTransformUpdated`)을 부르지 않았다. 여기서 깨끗해진 노드는 플러시가 건너뛰므로(더티가 아니다) 훅이 영영
-        // 안 불렸다 — 인스펙터에서 메시 위치를 끌면 세터 직후 월드 위치를 읽어, 화면의 메시가 제자리에 멈춰 있었다.
+        // **합성은 `updateWorldTransformFromParent` 한 곳에서만 한다.** 주의: 여기서 따로 합성 · 해제하면 갱신 훅(`onWorldTransformUpdated`)이
+        // 빠진다. 여기서 깨끗해진 노드는 플러시가 건너뛰므로(더티가 아니다) 훅이 영영 안 불린다 — 인스펙터에서 메시 위치를 끌면 세터 직후
+        // 월드 위치를 읽어, 화면의 메시가 제자리에 멈춰 있게 된다.
         //
         // 더티인 조상 사슬을 위에서부터 합성한다. 깨끗한 노드의 조상은 모두 깨끗하다(더티는 자손 전부에 세우고, 해제는 위에서 아래로).
         // 재귀하지 않는다 — 깊은 계층에서도 스택이 자라지 않는다.
@@ -342,9 +339,8 @@ namespace sw
         if ( pParent == nullptr || pParent == this )
             return false;
 
-        // 다른 매니저의 부모. 예전에는 붙었고, 자기 매니저의 루트 목록에서 빠진 뒤 **부모 쪽 루트**를 자기 매니저의 더티 루트 목록에
-        // 올렸다. 부모 매니저가 그 루트를 파괴해도 이쪽 목록은 모르니 다음 플러시가 해제된 컴포넌트를 읽었다. 틱 중이면 미룬 붙이기가 자기
-        // 매니저로 부모를 다시 찾아 못 찾고 조용히 버렸는데, 호출은 true 를 돌려줬다.
+        // 다른 매니저의 부모는 거절한다. 붙이면 **부모 쪽 루트**가 자기 매니저의 더티 루트 목록에 오르는데, 부모 매니저가 그 루트를 파괴해도
+        // 이쪽 목록은 모르니 다음 플러시가 해제된 컴포넌트를 읽는다.
         if ( pParent->_pManager != _pManager )
         {
             SW_LOG_WARNING( "attachToComponent: the parent belongs to another object manager (scene) - a hierarchy cannot span two scenes" );
@@ -465,9 +461,8 @@ namespace sw
 
     void SceneComponent::refreshOwnerActiveInHierarchy()
     {
-        // 부모가 바뀌는 곳은 모두 여기(붙이기 · 떼기)를 지난다 — 그래서 계층 활성은 값이 그대로면 멈출 수 있다. 예전에는
-        // `GameObject::attachToParent` 만 맞췄고, 컴포넌트를 직접 붙이거나 상태를 되돌리는 로드(`applyLoadedHierarchy`)나 부모
-        // 컴포넌트의 소멸자가 자식을 뗀 경우는 옛 값이 남았다. primary 가 아닌 컴포넌트면 오브젝트의 부모가 그대로라 O(1) 로 끝난다.
+        // 부모가 바뀌는 곳은 모두 여기(붙이기 · 떼기)를 지난다 — 컴포넌트를 직접 붙이기 · 상태를 되돌리는 로드 · 부모 컴포넌트의 소멸자가
+        // 자식을 떼기까지. 그래서 계층 활성은 값이 그대로면 멈출 수 있다. primary 가 아닌 컴포넌트면 오브젝트의 부모가 그대로라 O(1) 로 끝난다.
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr && pOwner->isPendingDestroy() == false )
             pOwner->refreshActiveInHierarchy();
@@ -506,11 +501,10 @@ namespace sw
     {
         // 자손 전부를 더티로, 자식이 있는 노드는 "자손 더티" 도 세운다. 둘째가 필요한 이유: 플러시 전에 누가 자손 하나의 월드 위치를
         // 읽으면(`ensureWorldCache`) 그 사슬은 깨끗해진다. 플러시는 깨끗한 노드 아래로 "자손 더티" 가 있을 때만 내려가므로, 그게 없으면
-        // 사슬 옆의 형제가 갱신되지 않는다. 예전 워커 쪽 복사본(`markDirtySubtree`)은 더티만 세워 바로 그 형제를 놓쳤다.
+        // 사슬 옆의 형제가 갱신되지 않는다.
         //
         // 이미 더티인 자식은 그 아래도 이미 더티다 — 건너뛴다(부모와 자식을 같이 움직이면 제곱으로 느는 것을 막는다).
-        // 재귀하지 않는다. 예전 직렬 쪽은 자손마다 `markTransformDirty` 를 다시 불러 지연 검사 · 세대 올리기(공유 원자) · 부모 걷기를
-        // 자손 수만큼 했다.
+        // 재귀하지 않고, 자손마다 `markTransformDirty` 를 다시 부르지 않는다(지연 검사 · 세대 올리기(공유 원자) · 부모 걷기가 자손 수만큼 돈다).
         vector<SceneComponent*, InlineAllocator<SceneComponent*, 32>> listStack;
         listStack.push_back( this );
         while ( listStack.empty() == false )
@@ -554,8 +548,8 @@ namespace sw
         _attachComponent = {};
         if ( _pParent == nullptr )
         {
-            // 찾지 못한 참조는 지우지 않는다 — 예전에는 여기서 비워, 부모가 아직 없던(쿠커가 엔티티를 하나씩 읽었다) · 프리팹이 없는 부모의
-            // 자식이 저장할 때마다 연결을 잃었다. 다른 공간으로 옮겨 적을 때는 id 가 엉뚱한 오브젝트를 가리킬 수 있으니 이름만 남긴다.
+            // 찾지 못한 참조는 지우지 않는다 — 여기서 비우면 부모가 아직 없는(쿠커는 엔티티를 하나씩 읽는다) · 프리팹이 없는 부모의
+            // 자식이 저장할 때마다 연결을 잃는다. 다른 공간으로 옮겨 적을 때는 id 가 엉뚱한 오브젝트를 가리킬 수 있으니 이름만 남긴다.
             if ( _unresolvedAttach == nullptr )
                 return;
             const SceneAttachReference& kept           = *_unresolvedAttach;
@@ -577,8 +571,8 @@ namespace sw
         if ( parentKey.empty() )
             return;
 
-        // 같은 오브젝트 안의 부착은 소유자 칸을 비운다(= 자기). 예전에는 자기 이름을 적어, 읽을 때 이름이 유일하게 바뀐(`Rig` → `Rig_2`)
-        // 복제본 · 두 번째 프리팹 인스턴스가 이름으로 **원본**을 찾아 그 컴포넌트에 붙었다.
+        // 같은 오브젝트 안의 부착은 소유자 칸을 비운다(= 자기). 자기 이름을 적으면 읽을 때 이름이 유일하게 바뀐(`Rig` → `Rig_2`)
+        // 복제본 · 두 번째 프리팹 인스턴스가 이름으로 **원본**을 찾아 그 컴포넌트에 붙는다.
         if ( pParentOwner == getOwner() )
         {
             _attachComponent = hashed_string( parentKey.c_str() );

@@ -202,8 +202,8 @@ namespace sw
             return;
         }
 
-        // **컴포넌트의 자기 비트는 건드리지 않는다.** 예전에는 이 비트를 소유 컴포넌트마다 복사해, 꺼 둔 컴포넌트가 오브젝트를 껐다 켜면
-        // 다시 켜졌다(로드 · 되돌리기 · 시퀀서 트랙 · 에디터 계층 토글마다). `Component::isActive` 가 이미 소유 오브젝트의 계층 활성을
+        // **컴포넌트의 자기 비트는 건드리지 않는다.** 이 비트를 소유 컴포넌트마다 복사하면 꺼 둔 컴포넌트가 오브젝트를 껐다 켤 때
+        // 다시 켜진다(로드 · 되돌리기 · 시퀀서 트랙 · 에디터 계층 토글마다). `Component::isActive` 가 이미 소유 오브젝트의 계층 활성을
         // 함께 본다 — 유니티의 SetActive / enabled 와 같은 나눔이다. 같은 값이어도 계층은 다시 맞춘다(로드가 그것에 기댄다).
         static const hashed_string s_activeName( "_bActive" );
         _bActive.store( bActive, std::memory_order_relaxed );
@@ -311,9 +311,9 @@ namespace sw
         const bool bActiveInHierarchy = bParentActive && isActive();
         const bool bWasActive         = _bIsActiveInHierarchy.exchange( bActiveInHierarchy, std::memory_order_relaxed );
 
-        // **값이 그대로면 여기서 멈춘다.** 자식의 값은 부모의 값과 자기 비트로만 정해지므로 자손도 그대로다. 예전에는 늘 서브트리
-        // 전체를 걸어, 병합 · 파괴 · 해체처럼 오브젝트마다 부르는 자리에서 깊은 계층이 O(N · 깊이)였다(1000 단 사슬의 첫 틱 5 ms,
-        // 매니저 해체 10 ms). 부모가 바뀌는 자리는 모두 그 자리에서 이것을 부른다(`SceneComponent` 의 붙이기 · 떼기 · primary 교체).
+        // **값이 그대로면 여기서 멈춘다.** 자식의 값은 부모의 값과 자기 비트로만 정해지므로 자손도 그대로다. 늘 서브트리 전체를 걸면
+        // 병합 · 파괴 · 해체처럼 오브젝트마다 부르는 자리에서 깊은 계층이 O(N · 깊이)가 된다. 부모가 바뀌는 자리는 모두 그 자리에서
+        // 이것을 부른다(`SceneComponent` 의 붙이기 · 떼기 · primary 교체).
         if ( bWasActive == bActiveInHierarchy )
             return;
 
@@ -323,8 +323,8 @@ namespace sw
         if ( _listTickItem.empty() == false )
             markTickOrderDirty();
 
-        // 이 값이 곧 렌더 스냅샷의 포함 여부다. 자기 컴포넌트에만 알린다 — 메시가 제 칸을 더티로 찍는다. 예전에는 프리미티브 집합
-        // 세대를 올려, 메시 하나 없는 오브젝트(빛 · 트리거)를 켜고 꺼도 GpuScene 이 전체를 다시 모았다.
+        // 이 값이 곧 렌더 스냅샷의 포함 여부다. 자기 컴포넌트에만 알린다 — 메시가 제 칸을 더티로 찍는다. 프리미티브 집합 세대를
+        // 올리면 메시 하나 없는 오브젝트(빛 · 트리거)를 켜고 꺼도 GpuScene 이 전체를 다시 모은다.
         for ( Component* pComp : _listComponent )
         {
             if ( pComp != nullptr )
@@ -332,8 +332,8 @@ namespace sw
         }
 
         // 자식 오브젝트는 primary 가 아닌 씬 컴포넌트(소켓)에도 붙는다 — 자식의 부모는 "제 primary 가 붙은 컴포넌트의 소유자" 다. 그래서
-        // primary 만이 아니라 **자기 씬 컴포넌트 전부**의 자식을 본다. 예전에는 primary 의 자식만 봐서, 소켓에 붙은 무기는 캐릭터를 꺼도
-        // 켜진 채였다(틱하고 그려졌다). 자식 목록을 만들지 않는다. 재귀는 계층을 바꾸지 않으므로 그대로 돈다.
+        // primary 만이 아니라 **자기 씬 컴포넌트 전부**의 자식을 본다 — primary 의 자식만 보면 소켓에 붙은 무기가 캐릭터를 꺼도
+        // 켜진 채다(틱하고 그려진다). 자식 목록을 만들지 않는다. 재귀는 계층을 바꾸지 않으므로 그대로 돈다.
         for ( Component* pOwnComp : _listComponent )
         {
             if ( pOwnComp == nullptr || pOwnComp->isPendingDestroy() || pOwnComp->isSceneComponent() == false )
@@ -367,8 +367,8 @@ namespace sw
     {
         outListChild.clear();
         // primary 만이 아니라 **자기 씬 컴포넌트 전부**의 자식을 본다 — 소켓(primary 가 아닌 씬 컴포넌트)에 붙은 오브젝트도 자식이다
-        // (`getParent` · `refreshActiveInHierarchy` 가 이미 그렇게 본다). 예전에는 primary 의 자식만 돌려줘, `destroyObject( 캐릭터, true )`
-        // 가 소켓에 붙은 무기를 남겼고 그 무기는 루트가 되어 계속 틱하고 그려졌다. 계층 패널에도 보이지 않았다.
+        // (`getParent` · `refreshActiveInHierarchy` 도 그렇게 본다). primary 의 자식만 돌려주면 `destroyObject( 캐릭터, true )` 가
+        // 소켓에 붙은 무기를 남기고, 그 무기는 루트가 되어 계속 틱하고 그려진다.
         for ( Component* pOwnComp : _listComponent )
         {
             if ( pOwnComp == nullptr || pOwnComp->isSceneComponent() == false )
@@ -465,8 +465,8 @@ namespace sw
 
     void GameObject::clearTags()
     {
-        // `removeTag` 와 같이 틱 중이면 틱 뒤로 미룬다. 예전에는 여기만 바로 지워, 병렬 틱의 다른 워커가 `hasTag` 로 같은 컨테이너를 읽는 동안
-        // 비웠다(유니티 DOTS `EntityCommandBuffer` · 언리얼 Mass 명령 버퍼처럼 병렬 구간의 변경은 동기점에서 한다).
+        // `removeTag` 와 같이 틱 중이면 틱 뒤로 미룬다 — 바로 지우면 병렬 틱의 다른 워커가 `hasTag` 로 같은 컨테이너를 읽는 동안 비운다
+        // (유니티 DOTS `EntityCommandBuffer` · 언리얼 Mass 명령 버퍼처럼 병렬 구간의 변경은 동기점에서 한다).
         if ( isComponentMutationFrozen() )
         {
             deferOnSelfStructural( Delegate<void( GameObject& )>( []( GameObject& self )
@@ -588,9 +588,9 @@ namespace sw
             _pPrimaryScene.store( pComp, std::memory_order_relaxed );
         // 어느 등록부에 들어갈지는 컴포넌트가 안다. GameObject 는 타입을 몰라도 된다.
         pComp->onRegister( *_pOwnerManager );
-        // 둘째 씬 컴포넌트부터는 primary 에 붙인다 — 오브젝트의 루트는 하나다(언리얼 RootComponent). 예전에는 루트로 남아 **월드 원점**에 놓였다
-        // (오브젝트를 옮겨도 콜라이더 · 메시가 따라오지 않았다 — `editortest.scene.xml` 의 TestCollider · `testprop.prefab.xml` 이 그랬다).
-        // 상태 읽기는 이 뒤에 저장된 부착(소켓 · 다른 오브젝트)으로 다시 붙이고, 부착이 비어 있으면 이대로 둔다(옛 데이터도 읽는 순간 맞는다).
+        // 둘째 씬 컴포넌트부터는 primary 에 붙인다 — 오브젝트의 루트는 하나다(언리얼 RootComponent). 루트로 두면 **월드 원점**에 놓여
+        // 오브젝트를 옮겨도 콜라이더 · 메시가 따라오지 않는다.
+        // 상태 읽기는 이 뒤에 저장된 부착(소켓 · 다른 오브젝트)으로 다시 붙이고, 부착이 비어 있으면 이대로 둔다.
         Component* pPrimary = _pPrimaryScene.load( std::memory_order_relaxed );
         if ( pComp->isSceneComponent() && pPrimary != nullptr && pPrimary != pComp )
         {
@@ -639,8 +639,8 @@ namespace sw
 
     void GameObject::clearComponents()
     {
-        // 컴포넌트 틱 중에는 형제(`removeComponent`)와 같이 미룬다 — 다른 워커가 지금 이 컴포넌트들을 틱하고 있을 수 있다. 예전에는 여기만 바로
-        // 해제해, 틱 안에서 부르면(제자리 상태 읽기가 부른다) 해제한 컴포넌트를 다른 워커가 계속 틱했다.
+        // 컴포넌트 틱 중에는 형제(`removeComponent`)와 같이 미룬다 — 다른 워커가 지금 이 컴포넌트들을 틱하고 있을 수 있다(틱 안에서 부르는
+        // 곳: 제자리 상태 읽기).
         if ( isComponentMutationFrozen() )
         {
             for ( Component* pComp : _listComponent )
@@ -710,9 +710,9 @@ namespace sw
             return true;
         }
 
-        // **순서를 지키며 뺀다.** 예전에는 맨 뒤 원소를 그 자리에 옮겨 왔다(swap-remove). 목록 순서는 뜻이 있다 — primary 는
-        // "살아 있는 첫 SceneComponent", `getComponent<T>` 는 첫 일치, 안정 키(`ComponentStableKey`)는 같은 타입 안의 순번이다.
-        // 살아 있는 동안은 primary 캐시가 가려 주지만 저장했다 다시 읽으면 바뀐 순서가 그대로 굳었다. 목록은 대개 네 칸 이하다.
+        // **순서를 지키며 뺀다**(swap-remove 금지). 목록 순서는 뜻이 있다 — primary 는 "살아 있는 첫 SceneComponent", `getComponent<T>` 는
+        // 첫 일치, 안정 키(`ComponentStableKey`)는 같은 타입 안의 순번이다. 살아 있는 동안은 primary 캐시가 가려 주지만 저장했다 다시 읽으면
+        // 바뀐 순서가 그대로 굳는다. 목록은 대개 네 칸 이하다.
         const auto it = std::find( _listComponent.begin(), _listComponent.end(), pComp );
         if ( it == _listComponent.end() )
         {

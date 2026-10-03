@@ -3,10 +3,10 @@
  * @brief 카메라 컴포넌트의 등록부입니다. 역할 · 우선순위로 카메라를 고르는 규칙도 여기 하나입니다.
  *
  * [왜 필요한가]
- * `LightRegistry` 와 같은 이유입니다. **찾지 말고 등록받습니다.** 예전에는 게임 카메라(`Scene`)와 에디터 카메라(`EditorCamera`)를
- * 고르는 규칙이 두 벌이었고, 둘 다 **모든 GameObject** 를 돌며 `getComponent<CameraComponent>()` 를 물었습니다. 에디터가 켜져
- * 있으면 에디터 카메라 조회가 프레임마다 세 번(뷰포트 update · draw, 게임 스레드의 뷰 카메라) 씬 전체를 훑었습니다. 게임 쪽은
- * 반대로 한 번만 골라 캐시해, 나중에 생긴 더 높은 우선순위의 카메라나 꺼진 카메라를 따라가지 않았습니다.
+ * `LightRegistry` 와 같은 이유입니다. **찾지 말고 등록받습니다.** 게임 카메라(`Scene`)와 에디터 카메라(`EditorCamera`)가 같은
+ * 규칙 하나(`selectCamera`)로 고릅니다. 모든 GameObject 를 돌며 `getComponent<CameraComponent>()` 를 물으면 에디터 카메라
+ * 조회만으로 프레임마다 세 번(뷰포트 update · draw, 게임 스레드의 뷰 카메라) 씬 전체를 훑고, 한 번 골라 캐시하면 나중에 생긴
+ * 더 높은 우선순위의 카메라나 꺼진 카메라를 따라가지 못합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

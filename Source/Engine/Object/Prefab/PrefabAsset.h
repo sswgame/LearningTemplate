@@ -61,9 +61,8 @@ namespace sw
         PrefabStateFormat getStateFormat() const { return _stateFormat; }
         /**
          * @brief 프리팹 상태를 오브젝트에 읽어 넣습니다. 오브젝트의 컴포넌트는 모두 다시 만들어집니다(오브젝트는 매니저에 속해야 합니다).
-         * @details 스폰 · 되돌리기 · 오버라이드 비교(CDO) · 형식 변환이 모두 이것을 씁니다. 예전에는 다섯 자리가 본문 첫 글자('{')로 형식을 짐작했고,
-         *          되돌리기 둘은 XML 로만 읽어 JSON 프리팹의 인스턴스를 비웠습니다(컴포넌트를 지운 뒤 읽기에 실패).
-         *          다른 오브젝트로의 부착은 읽지 않습니다 — 프리팹 루트에는 부모가 없습니다(옛 프리팹에 남은 것도).
+         * @details 스폰 · 되돌리기 · 오버라이드 비교(CDO) · 형식 변환이 모두 이것을 씁니다 — 형식 판정은 여기 하나입니다.
+         *          다른 오브젝트로의 부착은 읽지 않습니다 — 프리팹 루트에는 부모가 없습니다(본문에 남아 있어도).
          * @param pIdentity 있으면 다시 만드는 컴포넌트가 그 id 를 되찾습니다(되돌리기 — 인스턴스의 컴포넌트를 가리키던 핸들이 이어진다).
          */
         [[nodiscard]] bool applyStateTo( GameObject* pTarget, const ObjectIdentity* pIdentity = nullptr ) const;
@@ -75,7 +74,7 @@ namespace sw
     private:
         /**
          * @brief 상태를 다른 형식의 텍스트로 옮깁니다(XML ↔ JSON). 매니저가 있는 임시 오브젝트를 거칩니다.
-         * @details 예전에는 매니저 없는 `GameObject` 를 거쳐, 컴포넌트를 만들 팩토리가 없어 **컴포넌트를 모두 버린** 본문을 썼습니다.
+         * @details 주의: 매니저 없는 `GameObject` 를 거치면 컴포넌트를 만들 팩토리가 없어 **컴포넌트를 모두 버린** 본문이 나온다.
          */
         string convertState( PrefabStateFormat targetFormat ) const;
 
@@ -108,8 +107,8 @@ namespace sw
         PrefabAsset* loadPrefab( string_view assetRelativePath );
         /**
          * @brief 인스턴스를 프리팹 상태로 되돌립니다. 인스턴스의 자리 — 부모 · 이름 · 루트의 위치와 회전 — 는 지킵니다.
-         * @details 유니티 `PrefabUtility.RevertPrefabInstance` 와 같은 규칙입니다(루트의 위치 · 회전은 늘 인스턴스의 것, 스케일은 되돌린다). 예전에는
-         *          상태를 통째로 읽어 넣어, 다른 오브젝트에 붙어 있던 인스턴스가 루트로 떨어지고 이름 · 자리가 프리팹의 것으로 바뀌었습니다.
+         * @details 유니티 `PrefabUtility.RevertPrefabInstance` 와 같은 규칙입니다(루트의 위치 · 회전은 늘 인스턴스의 것, 스케일은 되돌린다). 상태를
+         *          통째로 읽어 넣으면 다른 오브젝트에 붙어 있던 인스턴스가 루트로 떨어지고 이름 · 자리가 프리팹의 것으로 바뀐다.
          */
         [[nodiscard]] bool revertInstance( GameObject* pInstance, string_view assetRelativePath );
         /**
@@ -141,9 +140,8 @@ namespace sw
          * @brief @p sourceRoot 아래(하위 폴더 포함)의 저작 프리팹(`*.prefab.xml` · `*.prefab.json`)을 `<cookedDir>/<상대 경로>/<이름>.prefab.bin` 으로 굽습니다.
          * @return 기록한 쿠킹본 수입니다. 읽지 못한 것과, 앞의 소스와 같은 쿠킹본을 쓰게 되는 소스(`x.prefab.xml` 과 `x.prefab.json`)는
          *         @p outFailedCount 로 세고 경고합니다 — Shipping 은 쿠킹본 하나만 읽으므로 어느 것이 이길지 정해 두면 안 됩니다.
-         * @details 씬처럼 엔진이 굽습니다(`App --cook-scenes` 가 리소스 루트로 함께 부른다 — 언리얼 쿡 커맨드렛 자리). 예전에는 파이썬
-         *          (`CookAssets.py`)이 PFB2 형식을 따로 들고 `.prefab.xml` 만 구워, `.prefab.json` 은 Shipping 에 쿠킹본이 없어 스폰이 실패했고
-         *          엔진의 쿠킹 함수는 쓰이지 않았습니다. 형식을 쓰는 곳은 이제 `PrefabAsset::saveToBinaryFile` 하나입니다.
+         * @details 씬처럼 엔진이 굽습니다(`App --cook-scenes` 가 리소스 루트로 함께 부른다 — 언리얼 쿡 커맨드렛 자리). 형식을 쓰는 곳은
+         *          `PrefabAsset::saveToBinaryFile` 하나입니다.
          */
         static uint32 cookAllPrefabs( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount );
 

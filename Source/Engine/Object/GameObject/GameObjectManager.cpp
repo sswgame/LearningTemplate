@@ -223,7 +223,7 @@ namespace sw
 
         // 번호를 붙여 받은 이름(`Bullet_3`)을 그 밑 이름(`Bullet`)으로 되돌리는데 밑 이름을 다른 오브젝트가 쓰고 있으면, 다시 유일화해도
         // 번호만 바뀐다. 그대로 둔다. 프리팹 스폰이 그 길이다 — 만들 때 `Bullet_3`, 상태를 읽으며 저장된 이름 `Bullet` 으로 한 번,
-        // 인스턴스 이름을 다시 세팅하며 또 한 번. 예전에는 스폰 하나가 이름을 세 번 유일화해 번호 셋(인턴 셋)을 썼다.
+        // 인스턴스 이름을 다시 세팅하며 또 한 번. 그때마다 유일화하면 스폰 하나가 번호 셋(인턴 셋)을 쓴다.
         if ( bOwnsOldEntry && oldIt->second._suffix != 0 && oldIt->second._baseName == newName && isNameTakenUnlocked( newName ) )
         {
             pObj->_name = oldName;
@@ -292,7 +292,7 @@ namespace sw
         if ( pObject == nullptr )
             return nullptr;
         // 칸은 id 의 아래 비트라 같은 칸의 다른 id 가 들어 있을 수 있다 — 묻는 id 가 감긴 것이거나, 감긴 id 가 들어온 적이 있을 때
-        // (`_compareFromId` 가 0). 그때만 오브젝트의 id 로 견준다. 둘 다 아니면 이 칸에는 칸 번호와 같은 id 만 들어올 수 있었다.
+        // (`_compareFromId` 가 0). 그때만 오브젝트의 id 로 견준다. 둘 다 아니면 이 칸에는 칸 번호와 같은 id 만 들어 있을 수 있다.
         if ( objectId >= _compareFromId.load( std::memory_order_relaxed ) && pObject->getObjectId() != objectId )
             return nullptr;
         return pObject;
@@ -386,9 +386,9 @@ namespace sw
         // 표시를 먼저 세운다 — 도는 동안 onBeginPlay 가 붙이는 컴포넌트도 줄을 선다(이미 시작했으면 비트가 거른다).
         _bHasBegunPlay.store( true, std::memory_order_release );
         mergePendingAdds();
-        // **잠금을 쥔 채 컴포넌트 코드를 부르지 않는다.** 예전에는 `forEachGameObject` 의 공유 잠금 안에서 onBeginPlay 를 불렀다.
-        // onBeginPlay 가 태그를 붙이면(`addTag` → `addComponent<TagComponent>` → 풀 맵의 배타 잠금) 같은 스레드가 제 공유 잠금을 기다려
-        // 에디터 Play 가 멈췄다 — 트리의 열두 컴포넌트가 onBeginPlay 에서 태그를 붙인다. 목록을 받아 잠금 없이 돈다. 활성 여부와 무관하게
+        // **잠금을 쥔 채 컴포넌트 코드를 부르지 않는다.** `forEachGameObject` 의 공유 잠금 안에서 onBeginPlay 를 부르면, onBeginPlay 가
+        // 태그를 붙일 때(`addTag` → `addComponent<TagComponent>` → 풀 맵의 배타 잠금) 같은 스레드가 제 공유 잠금을 기다려
+        // 에디터 Play 가 멈춘다. 목록을 받아 잠금 없이 돈다. 활성 여부와 무관하게
         // 시작한다(언리얼과 같다. 짝은 컴포넌트의 "시작됨" 비트가 맞춘다). 도는 동안 생긴 오브젝트는 아래 줄 처리가 시작한다.
         getAllGameObjects( _listPlayWalk );
         for ( GameObject* pObj : _listPlayWalk )
@@ -456,9 +456,8 @@ namespace sw
             return;
         SW_ASSERT( WalkScope::isInsideWalk() == false );
 
-        // **표시를 먼저, 원자적으로 자리를 잡는다.** 예전에는 `isPendingDestroy()` 로 보고 나서
-        // `markPendingDestroy()` 을 했다. 둘 사이가 벌어져 있어, 같은 오브젝트를 같은 프레임에
-        // 없애는 두 스레드가 나란히 통과하면 파괴 목록에 같은 포인터가 두 번 들어가고
+        // **표시를 먼저, 원자적으로 자리를 잡는다.** 보고 나서 표시하면(check-then-set) 같은 오브젝트를 같은 프레임에
+        // 없애는 두 스레드가 나란히 통과해 파괴 목록에 같은 포인터가 두 번 들어가고
         // `_poolGameObject.destroy` 가 같은 블록을 두 번 반납한다. `onTick` 은 병렬로 돌고
         // (총알 둘이 같은 적을 맞히는) 그 경우는 흔하다. 자리를 잡은 스레드만 진행한다.
         if ( pObj->tryMarkPendingDestroy() == false )
@@ -468,7 +467,7 @@ namespace sw
         if ( bDestroyChildren )
             pObj->getChildren( listChildren );
 
-        // 계층 활성은 다시 맞추지 않는다 — 삭제 대기는 그 값의 입력이 아니다(예전에는 여기서 서브트리 전체를 걸었다).
+        // 계층 활성은 다시 맞추지 않는다 — 삭제 대기는 그 값의 입력이 아니다.
         pObj->forEachComponent( []( Component* pComp )
         { pComp->markPendingDestroy(); } );
 
@@ -498,7 +497,7 @@ namespace sw
 
         // **포인터가 아니라 핸들로 적는다.** 줄을 선 뒤에도 즉시 경로(틱 밖의 `removeComponent` · 상태를 되돌리는 로드의
         // `clearComponents`)가 먼저 해제할 수 있다. 날 포인터로 들면 처리할 때 풀려난 블록을 — 그새 같은 자리에 새
-        // 컴포넌트가 들었으면 **엉뚱한 컴포넌트를** — 지웠다. 핸들은 처리 때 다시 풀어, 이미 없으면 건너뛴다.
+        // 컴포넌트가 들었으면 **엉뚱한 컴포넌트를** — 지운다. 핸들은 처리 때 다시 풀어, 이미 없으면 건너뛴다.
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         _listPendingDestroyComponent.push_back( pComp->getHandle() );
         // 틱에 참여하던 컴포넌트면 소유 오브젝트의 항목을 다시 짓게 한다. 나머지는 등록부와 무관하다.
@@ -515,8 +514,7 @@ namespace sw
 
         // **컴포넌트 해체는 여기 하나다** — 등록 해제 → 파괴 콜백 → 소유자 끊기 → 소멸 → 반납.
         // 등록부는 raw 포인터를 들고 있다(렌더 경로가 프레임마다 전부 훑으므로 핸들은 비싸다). 그래서 메모리를 실제로 놓는
-        // 이 지점에서 등록을 해제해 "등록된 채로 해제" 가 구조적으로 없게 한다. 예전에는 목록에서 빼는 쪽이 한 번, 여기가
-        // 또 한 번 `onUnregister` 를 불러 구현마다 멱등이어야 했고 파괴마다 등록부 잠금을 두 번 잡았다. 이제 정확히 한 번이다.
+        // 이 지점에서 등록을 해제해 "등록된 채로 해제" 가 구조적으로 없게 한다. `onUnregister` 는 여기서 정확히 한 번 불린다.
         // 소멸자 호출 전이어야 가상 디스패치가 유효하다. 시작했던 컴포넌트는 여기서 끝낸다 — 떼기 · 비우기 · 지연 파괴 · 모듈 내리기가
         // 모두 이 한 곳을 지나므로 onEndPlay 가 빠지는 길이 없다(모듈 코드가 아직 올라와 있는 시점이다).
         pComp->dispatchEndPlay();
@@ -579,8 +577,8 @@ namespace sw
                     }
                     else
                     {
-                        // 본 목록에 없으면 이번 프레임에 만들어져 아직 병합되지 않은 것이다. 그때만 대기 목록을 훑는다.
-                        // (예전에는 무조건 훑어, 프레임에 100 개를 만들고 100 개를 지우면 만 번 비교였다.)
+                        // 본 목록에 없으면 이번 프레임에 만들어져 아직 병합되지 않은 것이다. 그때만 대기 목록을 훑는다
+                        // (늘 훑으면 프레임에 100 개를 만들고 100 개를 지울 때 만 번 비교다).
                         auto pendingIt = std::find( _listPendingAdd.begin(), _listPendingAdd.end(), pObj );
                         if ( pendingIt != _listPendingAdd.end() )
                         {
@@ -603,8 +601,7 @@ namespace sw
             }
         }
 
-        // 처리 목록은 이 함수만 만진다(대기 목록과 맞바꾼 것이다). 예전에는 그것을 다시 잠금 아래 지역 벡터로 베껴 돌았다 — 잠금 한 번과
-        // 파괴가 있는 프레임마다 할당 하나. 목록은 용량을 들고 있다.
+        // 처리 목록은 이 함수만 만진다(대기 목록과 맞바꾼 것이다). 지역 벡터로 베끼지 않는다 — 목록은 용량을 들고 있다.
         for ( GameObject* pObj : _listProcessingDestroyObject )
         {
             if ( pObj == nullptr )
@@ -676,8 +673,8 @@ namespace sw
 
     void GameObjectManager::mergePendingAdds()
     {
-        // 잠금 한 번에 옮긴다. 예전에는 대기 목록을 지역 벡터로 **옮겨 가며**(그래서 대기 목록이 매번 용량을 잃고 다음 스폰이 다시 할당했다)
-        // 잠금을 두 번 잡았다. 이름 맵 · id 표는 만들 때(`createGameObjectUnlocked`) 이미 넣었다. 여기서 다시 넣지 않는다.
+        // 잠금 한 번에 옮긴다. 대기 목록을 지역 벡터로 **옮기지** 않는다(그러면 대기 목록이 매번 용량을 잃고 다음 스폰이 다시 할당한다).
+        // 이름 맵 · id 표는 만들 때(`createGameObjectUnlocked`) 이미 넣었다. 여기서 다시 넣지 않는다.
         size_t firstNewIndex = 0;
         {
             std::unique_lock<std::shared_mutex> lock{ _mutex };
@@ -718,8 +715,8 @@ namespace sw
                 listToDestroy.push_back( pComp->getHandle() );
         } );
         // **핸들로 모으고 매번 다시 푼다.** 지우는 동안 모듈 콜백(onEndPlay · onUnregister · onDestroy)이 돌고, 그 콜백이 형제 컴포넌트를
-        // 곧바로 지울 수 있다. 예전에는 생포인터를 들고 돌아, 다음 차례가 풀에 반납된 자리(다른 컴포넌트가 다시 받았으면 엉뚱한 것)를
-        // 지웠다. 지연 파괴(`processDeferredDestruction`)가 핸들로 다시 푸는 것과 같은 이유다.
+        // 곧바로 지울 수 있다. 생포인터를 들고 돌면 다음 차례가 풀에 반납된 자리(다른 컴포넌트가 다시 받았으면 엉뚱한 것)를
+        // 지운다. 지연 파괴(`processDeferredDestruction`)가 핸들로 다시 푸는 것과 같은 이유다.
         uint32 count{ 0 };
         for ( const ComponentHandle handle : listToDestroy )
         {
@@ -814,8 +811,8 @@ namespace sw
         if ( baseView.size() > 96 )
             baseView = baseView.substr( 0, 96 );
 
-        // 이름마다 **번호 상태를 기억한다**(언리얼 MakeUniqueObjectName 의 자리). 예전에는 매번 _2 부터 다시 물어, 같은
-        // 이름 N 개면 생성 하나가 N 번 조회였다. 8000 개에 2.6 초(개당 326 µs). **지운 오브젝트의 번호부터 되쓴다** — 번호마다
+        // 이름마다 **번호 상태를 기억한다**(언리얼 MakeUniqueObjectName 의 자리). 매번 _2 부터 다시 물으면 같은
+        // 이름 N 개일 때 생성 하나가 N 번 조회다(8000 개에 2.6 초). **지운 오브젝트의 번호부터 되쓴다** — 번호마다
         // 이름을 인턴하므로, 오르기만 하면 스폰 · 파괴를 거듭하는 이름이 전역 인턴 풀을 채운다(`NameSuffixState` 설명).
         StringBuilder<constant::kMaxBuffer128> sb;
         const hashed_string                    baseKey( baseView.data(), static_cast<uint32>( baseView.size() ) );

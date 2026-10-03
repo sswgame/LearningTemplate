@@ -28,8 +28,7 @@ namespace sw
 
         /**
          * @brief 태그를 더합니다. 컴포넌트 틱 중이면 오브젝트의 미룸 길(`GameObject::addTag`)로 틱 뒤에 적용합니다.
-         * @details 예전에는 이 셋이 살아 있는 컨테이너에 바로 써, 틱 안에서 부르면 다른 워커의 `hasTag` · 태그 질의와 같은 컨테이너를 동시에 만졌다
-         *          (형제 `GameObject::addTag` 는 미뤘다).
+         * @details 주의: 틱 안에서 살아 있는 컨테이너에 바로 쓰면 다른 워커의 `hasTag` · 태그 질의와 같은 컨테이너를 동시에 만진다.
          */
         void addTag( TagID tag );
         /** @brief 태그를 뺍니다. 틱 중이면 `addTag` 처럼 미룹니다. */

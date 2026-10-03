@@ -17,7 +17,7 @@ namespace sw
      * @struct SpriteRenderUtil
      * @brief 스프라이트 머티리얼 경로와 (머티리얼, 텍스처) 인스턴스 공유 표입니다.
      * @details 두 길이 **같은 표**를 써야 같은 텍스처의 스프라이트 컴포넌트와 UI 스프라이트(데미지 숫자 · HP 바)가 한 배치로 묶입니다 — 배치 키가
-     *          머티리얼 인스턴스입니다. 예전에는 이 표가 `SpriteComponent.cpp` 안에만 있었습니다.
+     *          머티리얼 인스턴스입니다.
      */
     struct SW_API SpriteRenderUtil
     {

@@ -14,10 +14,8 @@ namespace sw
     /**
      * @class DirectionalLightComponent
      * @brief 방향광 하나입니다. 빛 방향은 이 컴포넌트의 월드 트랜스폼에서 나옵니다.
-     * @details 예전에는 주광의 방향 · 색 · 세기와 그림자 직교 볼륨이 모두 FrameRendererConstants.cpp
-     *          안의 `constexpr` 상수였습니다. 그래서 씬이 커져도 그림자 볼륨은 2 유닛짜리 그대로였고
-     *          (큐브 5000 개 격자는 142 유닛입니다), 빛을 돌려 보려면 엔진을 다시 빌드해야 했습니다.
-     *          카메라가 CameraComponent 로 선언되듯 빛도 컴포넌트로 선언합니다.
+     * @details 주광의 방향 · 색 · 세기와 그림자 직교 볼륨(`_shadowExtent`)을 씬이 정합니다. 카메라가 CameraComponent 로
+     *          선언되듯 빛도 컴포넌트로 선언합니다.
      * @note 방향은 기본 방향(위에서 비스듬히)을 이 컴포넌트의 월드 회전으로 돌린 것입니다(`LightComponent` 의 방향 규약).
      *       회전이 없는 루트면 기본 방향 그대로이고, 부모가 돌면 따라 돕니다.
      */

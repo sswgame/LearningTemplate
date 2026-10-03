@@ -22,8 +22,7 @@ namespace sw
      * @brief 같은 오브젝트의 `SpriteComponent` 가 든 클립(`.sprite.json`)의 프레임을 시간에 맞춰 넘깁니다.
      * @details 애니메이션 이름은 클립의 이름 붙은 구간(`SpriteClipAsset::findFrameRange`)을 고르고, 프레임 수 · 프레임마다의 시간도 클립에서 옵니다.
      *          프레임에 시간이 없으면(0) `_frameRate` 로 넘깁니다. 그래프(`_animationGraphPath`)는 애니메이션 이름과 "끝나면 다음" 을 줍니다.
-     *          예전에는 프레임 수(`_totalFrames`)를 손으로 넣어야 했고, 넘긴 프레임은 "<애니>-<프레임>" 문자열로 스프라이트의 읽는 곳 없는 칸에
-     *          적혔습니다 — 화면에는 아무것도 바뀌지 않았습니다. 지금은 스프라이트의 프레임 번호(`SpriteComponent::setClipFrame`)를 넘깁니다.
+     *          넘긴 프레임은 스프라이트의 프레임 번호(`SpriteComponent::setClipFrame`)로 갑니다.
      *
      *          **트랜스폼 키(`transformKeys`).** 클립에 키가 있으면 재생 중 스프라이트의 로컬 위치 x · y 와 Z 축 회전을 키 값으로 정합니다
      *          (z 위치 · 다른 축 회전 · 스케일은 그대로). 키 시각은 클립 타임라인의 초이고, 지금 구간의 프레임 시작 시각 + 그 프레임 안에서 흐른
@@ -49,7 +48,7 @@ namespace sw
          */
         void onPropertyChanged( hashed_string propertyName ) override;
 
-        /** @brief 이름의 구간을 처음부터 재생합니다. 반복 여부는 클립의 구간이 정합니다(이름 없는 옛 클립은 반복). */
+        /** @brief 이름의 구간을 처음부터 재생합니다. 반복 여부는 클립의 구간이 정합니다(구간 이름이 없는 클립은 반복). */
         void play( const string& animName );
         /** @brief 이름의 구간을 처음부터 재생합니다. 반복 여부를 직접 정합니다(그래프의 "끝나면 다음" 은 반복하지 않습니다). */
         void play( const string& animName, bool loop );

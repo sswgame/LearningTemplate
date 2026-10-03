@@ -48,11 +48,9 @@ namespace sw
             /**
              * @brief 기반 타입부터 파생 타입까지의 TypeInfo 를 **뿌리 → 파생** 순서로 모읍니다.
              * @details 기본값은 `<Component>` 처럼 기반 이름으로도 적을 수 있어야 합니다(모든 컴포넌트에
-             *          공통으로 거는 값). 예전에는 그 적용이 `Component` 생성자에서 일어났는데, 기반
-             *          생성자 시점에는 가상 `getTypeInfo()` 가 파생으로 디스패치되지 않아 **언제나
-             *          `Component` 노드 하나만** 적용됐습니다(중간 기반은 한 번도 적용된 적이 없습니다).
-             *          생성자에서 그 호출을 걷어냈으므로, 체인 적용은 여기서 제대로 합니다. 뿌리부터
-             *          적용해 파생이 마지막에 덮어씁니다.
+             *          공통으로 거는 값). 기반 생성자 시점에는 가상 `getTypeInfo()` 가 파생으로 디스패치되지
+             *          않으므로 체인 적용은 생성자가 아니라 여기서 합니다. 뿌리부터 적용해 파생이 마지막에
+             *          덮어씁니다.
              */
             static void collectTypeChain( const TypeInfo& typeInfo, vector<const TypeInfo*>& outListType )
             {
@@ -155,9 +153,9 @@ namespace sw
         // 이중 검사 잠금이다. 깃발이 원자적이어야 성립한다. acquire 로 읽어야 `true` 를 본
         // 스레드가 그 앞에서 만들어진 `_defaultsDoc` 도 함께 본다.
         //
-        // **보는 깃발은 "시도했는가" 다.** 예전에는 "성공했는가" 만 봐서, 파일이 없으면 실패한
-        // 채로 깃발이 false 로 남고 **다음 컴포넌트가 또 열었다.** 기본값 파일은 없어도 되는
-        // 것이라, 없는 게 정상인 게임에서는 씬 로드가 `컴포넌트 수 x 파일 열기 실패` 가 됐다.
+        // **보는 깃발은 "시도했는가" 다.** "성공했는가" 를 보면 파일이 없을 때 깃발이 false 로 남아
+        // **다음 컴포넌트가 또 연다.** 기본값 파일은 없어도 되는 것이라, 그러면 씬 로드가
+        // `컴포넌트 수 x 파일 열기 실패` 가 된다.
         if ( _bLoadAttempted.load( std::memory_order_acquire ) )
             return;
 
@@ -199,7 +197,7 @@ namespace sw
         // 쪽의 몫이다.
 
         // 어느 프로퍼티에 무엇을 넣을지는 **타입당 한 번만** 푼다(문서의 GameData · Defaults 찾기도 그때 한 번). 인스턴스마다는 memcpy
-        // 몇 번이다. 예전에는 인스턴스마다 문서 뿌리 · Defaults 노드를 문자열로 다시 찾았다.
+        // 몇 번이다.
         const ResolvedDefaults& resolved = resolveFor( typeInfo );
         for ( const DefaultPatch& patch : resolved._listPatch )
             applyPatch( pInstance, patch );
@@ -242,7 +240,7 @@ namespace sw
 
         std::unique_lock<std::shared_mutex> writeLock{ _resolvedMutex };
         // 그 사이에 다른 스레드가 같은 세대로 넣었으면 그것을 쓴다. 어차피 같은 값이다. 세대가 지난 것은 갈아 끼우되 **버리지 않는다** —
-        // 다른 스레드가 잠금 밖에서 아직 그 패치를 돌고 있을 수 있다. 예전에는 제자리에 이동 대입해 그 순회가 풀린 목록을 읽었다.
+        // 다른 스레드가 잠금 밖에서 아직 그 패치를 돌고 있을 수 있다. 제자리에 이동 대입하면 그 순회가 풀린 목록을 읽는다.
         auto it = _mapResolved.find( &typeInfo );
         if ( it == _mapResolved.end() )
             it = _mapResolved.emplace( &typeInfo, std::move( pResolved ) ).first;
@@ -289,7 +287,7 @@ namespace sw
             patch._pProperty = &prop;
             patch._text      = pAttrVal;
 
-            // POD 는 지금 한 번 파싱해 바이트로 든다. 파싱이 실패하면 예전처럼 인스턴스마다 텍스트 경로로 간다.
+            // POD 는 지금 한 번 파싱해 바이트로 든다. 파싱이 실패하면 인스턴스마다 텍스트 경로로 간다.
             size_t fieldSize = 0;
             if ( ComponentDefaultsInternal::isMemcpyProperty( registry, prop, fieldSize ) )
             {

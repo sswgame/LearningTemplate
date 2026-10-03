@@ -46,7 +46,7 @@ namespace sw
 
         tryLoadAnimationGraph();
 
-        // 그래프가 없으면 클립의 이름 붙은 구간이 애니메이션 목록이다. 이름 없는 옛 클립은 프레임 전체가 애니메이션 하나다.
+        // 그래프가 없으면 클립의 이름 붙은 구간이 애니메이션 목록이다. 구간 이름이 없는 클립은 프레임 전체가 애니메이션 하나다.
         const SpriteClipAsset* pClip = findClip();
         if ( _listAnimation.empty() && pClip != nullptr )
         {

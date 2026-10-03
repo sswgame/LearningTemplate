@@ -50,7 +50,7 @@ namespace sw
                 if ( priority < bestPriority )
                     continue;
                 // 우선순위가 같으면 **컴포넌트 id 가 큰 쪽**(나중에 만든 쪽)이 이긴다. 등록 순서로 가르면 되돌리기 · 플레이 종료 복원이
-                // 카메라를 다시 등록할 때마다 순서가 바뀌어 활성 카메라가 편집 이력에 따라 뒤집혔다. id 는 그 복원이 되살린다.
+                // 카메라를 다시 등록할 때마다 순서가 바뀌어 활성 카메라가 편집 이력에 따라 뒤집힌다. id 는 그 복원이 되살린다.
                 if ( priority == bestPriority && pCamera->getComponentId() < pBest->getComponentId() )
                     continue;
             }

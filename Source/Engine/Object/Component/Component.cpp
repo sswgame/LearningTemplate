@@ -28,14 +28,13 @@ namespace sw
         , _reservedFlags{ 0 }
         , _listSubTick{}
     {
-        // **여기서 기본값을 적용하지 않는다.** 예전에는 `initialize()` 를 불렀고 그 안에서 가상
-        // `getTypeInfo()` 를 썼는데, 생성 중에는 객체가 아직 Component 라 **파생 타입이 아니라
-        // 기반 타입의 TypeInfo** 가 나온다. 즉 MeshComponent 를 만들어도 "Component" 이름으로
-        // 기본값을 찾았다.
+        // **여기서 기본값을 적용하지 않는다.** 생성 중에는 객체가 아직 Component 라 가상
+        // `getTypeInfo()` 가 **파생 타입이 아니라 기반 타입의 TypeInfo** 를 내놓는다 — MeshComponent 를
+        // 만들어도 "Component" 이름으로 기본값을 찾게 된다.
         //
         // 실제 생성 경로는 타입을 아는 쪽이 이미 올바르게 넘겨 준다.
         // `GameObject::addComponent<T>` 와 `GameObjectManager` 의 이름 기반 생성이 둘 다
-        // `applyTypeDefaults( 파생 TypeInfo )` 를 부른다. 생성자 호출은 중복이면서 틀린 조회였다.
+        // `applyTypeDefaults( 파생 TypeInfo )` 를 부른다.
         //
         // 기반 타입 노드(`<SceneComponent>` 같은)도 기본값을 가질 수 있으므로, 상속 체인을
         // 뿌리 → 파생 순서로 적용하는 일은 `ComponentDefaults::apply` 가 맡는다.
@@ -268,7 +267,7 @@ namespace sw
 
     void Component::setActive( bool bActive )
     {
-        // 같은 값이면 아무것도 하지 않는다 — 메시는 알림마다 렌더 더티를 찍는다(예전 인스펙터가 프레임마다 불렀다).
+        // 같은 값이면 아무것도 하지 않는다 — 메시는 알림마다 렌더 더티를 찍는다(인스펙터는 프레임마다 부를 수 있다).
         if ( _bActive.load( std::memory_order_relaxed ) == bActive )
             return;
         static const hashed_string s_activeName( "_bActive" );
@@ -333,9 +332,8 @@ namespace sw
 
     const TypeInfo* Component::getTypeInfo() const
     {
-        // 만들 때 받은 타입이다. 모듈이 내려가 타입이 묘비가 됐으면 없는 것으로 답한다. 예전의 폴백(`findType<Component>()`)은
-        // 그때 Component 가 등록 타입이 아니라 늘 nullptr 이었고, 그 답을 얻으려고 캐스트가 빗나갈 때마다 레지스트리를 잠갔다
-        // (지금은 `REFLECT( Abstract )` 로 등록돼 있지만, 기반의 타입을 파생의 답으로 내면 안 되므로 폴백은 두지 않는다).
+        // 만들 때 받은 타입이다. 모듈이 내려가 타입이 묘비가 됐으면 없는 것으로 답한다. 기반의 타입을 파생의 답으로 내면 안 되므로
+        // `findType<Component>()` 같은 폴백은 두지 않는다.
         return ( _pTypeInfo != nullptr && _pTypeInfo->isAlive() ) ? _pTypeInfo : nullptr;
     }
 

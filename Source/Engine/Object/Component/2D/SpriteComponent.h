@@ -21,8 +21,7 @@ namespace sw
      * @brief 텍스처를 입힌 사각형을 그립니다(2D). 메시는 사각형, 머티리얼은 스프라이트 머티리얼(`sprite2d.material`)이 기본입니다.
      * @details 텍스처는 그 머티리얼의 **인스턴스**가 덮어쓰고(`albedoMap`), 같은 (머티리얼, 텍스처)의 스프라이트는 인스턴스 하나를 나눠 씁니다 —
      *          배치 키가 인스턴스라 그래야 한 드로우로 묶입니다. 유니티 `SpriteRenderer`(스프라이트 기본 머티리얼 · 텍스처는 프로퍼티 블록) ·
-     *          언리얼 Paper2D(`UPaperSpriteComponent`)의 자리입니다. 예전에는 메시 컴포넌트의 기본을 그대로 따라 씬 기본 머티리얼의 **단위 큐브**로
-     *          그려졌고, 텍스처 · 메시 · 머티리얼 이름 칸은 저장만 되고 읽는 곳이 없었습니다.
+     *          언리얼 Paper2D(`UPaperSpriteComponent`)의 자리입니다.
      *
      *          **무엇을 보이나.** 아틀라스의 한 프레임(UV 사각형)과 색입니다. 둘 다 머티리얼 인스턴스가 아니라 GPU 인스턴스에 실립니다
      *          (`MeshComponent::getSpriteInstanceData` → `GpuInstance::_sprite`) — 프레임이 넘어가거나 알파가 줄어도 배치는 그대로입니다.

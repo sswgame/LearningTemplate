@@ -52,7 +52,7 @@ namespace sw
         /**
          * @brief `_meshId` 프리미티브를 GPU 메시로 해석합니다.
          * @details 지금 메시가 지금 id 로 잡은 것이면 그대로 둡니다(`_resolvedMeshId` — 머티리얼의 `_acquiredMaterialPath` 와 같은 규칙).
-         *          예전에는 "메시가 있으면 그대로" 라 id 를 바꿔도(인스펙터 · 붙여넣기 · 되돌리기) 옛 메시를 그렸다. 비어 있으면 타입의
+         *          "메시가 있으면 그대로" 로 판정하면 id 를 바꿔도(인스펙터 · 붙여넣기 · 되돌리기) 옛 메시를 그린다. 비어 있으면 타입의
          *          기본(`getDefaultMeshId` — 메시는 단위 큐브, 스프라이트는 사각형)입니다.
          */
         void resolveRuntimeMesh();
@@ -73,8 +73,8 @@ namespace sw
 
         /**
          * @brief 머티리얼 에셋 경로를 바꾸고 그 머티리얼을 잡습니다. 저장되는 참조이고, 빈 경로는 씬 기본 머티리얼입니다.
-         * @details 언리얼 `UMeshComponent::OverrideMaterials` · 유니티 `Renderer.sharedMaterials` 의 자리입니다. 예전에는 메시의 머티리얼이
-         *          날 포인터뿐이라 저장되지 않아, 씬 · 프리팹을 다시 열면 모든 메시가 씬 기본 머티리얼이 됐습니다.
+         * @details 언리얼 `UMeshComponent::OverrideMaterials` · 유니티 `Renderer.sharedMaterials` 의 자리입니다. 런타임 지정(`setMaterial`)은
+         *          저장되지 않으므로 씬 · 프리팹에 남길 머티리얼은 이 경로로 정합니다.
          */
         void setMaterialPath( string_view path );
         /** @brief 저장되는 머티리얼 에셋 경로입니다. 비어 있으면 씬 기본 머티리얼입니다. */
@@ -191,9 +191,9 @@ namespace sw
         PrimitiveRegistry* _pPrimitiveRegistry;
         /** @brief 등록부 슬롯입니다. 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. */
         uint32 _primitiveIndex;
-        // "더티" 비트는 여기 없다. 등록부의 원자 플래그 하나가 기준이다. 비트필드였을 때는 워커의 더티 쓰기가
-        // `_bVisible` 과 같은 바이트를 읽고-고치고-쓰는 것이라, 이웃 비트를 만지는 스레드와 형식상 레이스였다.
-        /** @brief 그리는지 여부입니다. 저장됩니다 — 예전에는 PROPERTY 가 아니라 숨긴 메시가 Stop · 되돌리기 · 씬 다시 열기 뒤 다시 보였다. */
+        // "더티" 비트는 여기 없다. 등록부의 원자 플래그 하나가 기준이다. 주의: 더티를 이 비트필드에 두면 워커의 더티 쓰기가
+        // `_bVisible` 과 같은 바이트를 읽고-고치고-쓰는 것이라, 이웃 비트를 만지는 스레드와 레이스다.
+        /** @brief 그리는지 여부입니다. 저장됩니다(PROPERTY) — 숨긴 메시가 Stop · 되돌리기 · 씬 다시 열기 뒤에도 숨은 채로 남는다. */
         PROPERTY( Category = "Rendering", DisplayName = "Visible", Tooltip = "Draw this mesh" )
         uint8 _bVisible : 1;
         uint8 _reserved : 7;

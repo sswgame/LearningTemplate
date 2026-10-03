@@ -89,8 +89,8 @@ namespace sw
     /**
      * @brief 부모에 붙이거나 뗄 때 무엇을 지킬지입니다(언리얼 `EAttachmentRule` · 유니티 `SetParent( parent, worldPositionStays )`).
      * @details `KeepRelative` 는 로컬 값을 그대로 두어 새 부모를 따라 월드 자리가 바뀝니다 — 상태 읽기 · 코드의 기본입니다(저장된 로컬은 부모 기준이다).
-     *          `KeepWorld` 는 월드 자리를 지키도록 로컬 값을 다시 구합니다 — 에디터의 재부모 · 부모 떼기가 씁니다(예전에는 규칙이 하나뿐이라 계층 창에서
-     *          끌어 놓은 오브젝트가 새 부모만큼 **튀었다**).
+     *          `KeepWorld` 는 월드 자리를 지키도록 로컬 값을 다시 구합니다 — 에디터의 재부모 · 부모 떼기가 씁니다(`KeepRelative` 로 재부모하면
+     *          계층 창에서 끌어 놓은 오브젝트가 새 부모만큼 **튄다**).
      */
     enum class AttachRule : uint8
     {
@@ -176,8 +176,7 @@ namespace sw
      * @struct OverlapInfo
      * @brief 겹침 시작 · 끝 하나입니다 — 상대 오브젝트와, 어느 콜라이더끼리였는지(트리거 여부) · 닿은 때입니다(언리얼 `OnComponentBeginOverlap` 의 인자들).
      * @details 겹침은 바디(콜라이더) 쌍마다 납니다. 오브젝트 하나에 막는 콜라이더와 트리거(감지 범위)가 함께 있으면 같은 상대에게서 둘이 올 수 있고,
-     *          받는 쪽은 트리거 여부로 가립니다 — 투사체는 상대의 트리거에 막히지도 피해를 주지도 않는다. 예전에는 상대 오브젝트 하나만 넘겨, 어느
-     *          콜라이더였는지 알 수 없었다.
+     *          받는 쪽은 트리거 여부로 가립니다 — 투사체는 상대의 트리거에 막히지도 피해를 주지도 않는다.
      */
     struct OverlapInfo
     {
@@ -197,8 +196,8 @@ namespace sw
     /**
      * @class Component
      * @brief GameObject 에 기능과 데이터를 덧붙이는 컴포넌트의 기반 클래스입니다.
-     * @details 리플렉션에는 **만들 수 없는 기반**(`Abstract`)으로 등록한다 — 팩토리가 없어 이름으로 붙일 수 없다. 예전에는 등록하지 않아
-     *          모든 컴포넌트의 부모 사슬이 여기서 끊겼다(`SceneComponent : Component` 의 부모가 "없음").
+     * @details 리플렉션에는 **만들 수 없는 기반**(`Abstract`)으로 등록한다 — 팩토리가 없어 이름으로 붙일 수 없다. 주의: 등록하지 않으면
+     *          모든 컴포넌트의 부모 사슬이 여기서 끊긴다(`SceneComponent : Component` 의 부모가 "없음").
      */
     REFLECT( Abstract, Category = "Core", DisplayName = "Component", Tooltip = "Base of every component" )
     class SW_API Component
@@ -219,11 +218,8 @@ namespace sw
 
         /**
          * @brief **옮기지 않습니다.** 컴포넌트는 풀 안의 제자리에서 만들고 없앱니다.
-         * @details 예전에는 이동 연산이 있었고, `_componentId` 를 원본에서 **복사만** 했습니다.
-         *          비우지 않았으므로 옮기고 나면 둘이 같은 id 를 갖고 `findComponentById` 가
-         *          어느 쪽이든 내놓을 수 있었습니다. 저장소 전체에서 컴포넌트를 옮기는 곳은
-         *          **한 군데도 없었으므로**(삭제로 바꿔 보니 그 두 정의 말고는 아무것도 깨지지
-         *          않았습니다) 고치는 대신 막습니다. 파생 13종의 `= default` 선언도 같이 걷었습니다.
+         * @details 컴포넌트를 옮기는 곳은 없습니다. 옮기면 원본과 사본이 같은 `_componentId` 를 갖고 `findComponentById` 가
+         *          어느 쪽이든 내놓을 수 있으므로 막습니다. 파생 타입도 이동 연산을 선언하지 않습니다.
          * @see SceneComponent 도 계층 포인터까지 얽혀 있어 같은 이유로 막혀 있습니다.
          */
         Component( Component&& other )            = delete;
@@ -242,8 +238,7 @@ namespace sw
          * @details 월드가 플레이 중이면(에디터 Play · 에디터 없는 App · Shipping — `SceneManager::setWorldPlaying`) 활성 씬의 컴포넌트는
          *          플레이가 시작될 때, 플레이 중에 붙은 컴포넌트는 **다음 틱 단계**에서 불립니다 — 붙인 직후 세팅한 필드 · 상태 로드가 채운
          *          PROPERTY 를 봅니다. 활성 여부와 무관하게 불립니다(언리얼과 같다). 되돌리기 · 핫 리로드로 다시 만든 인스턴스는 새 인스턴스라
-         *          다시 불립니다 — 런타임에만 있는 상태를 짓는 곳입니다. 예전에는 에디터 Play 버튼만 불러 App · Shipping · 런타임 스폰에서는
-         *          한 번도 불리지 않았습니다. 직접 부르지 말고 `dispatchBeginPlay` 를 쓰십시오.
+         *          다시 불립니다 — 런타임에만 있는 상태를 짓는 곳입니다. 직접 부르지 말고 `dispatchBeginPlay` 를 쓰십시오.
          */
         virtual void onBeginPlay();
         /** @brief 게임플레이가 끝날 때(플레이 종료 · 컴포넌트 해체) 불리는 정리 콜백입니다. `onBeginPlay` 가 불린 인스턴스에만 한 번 불립니다. */
@@ -281,14 +276,12 @@ namespace sw
         virtual void onRegister( GameObjectManager& manager ) { (void)manager; }
         /**
          * @brief 소유 GameObject 에서 떨어지기 직전, 등록(`onRegister`) 한 번마다 **정확히 한 번** 불립니다.
-         * @details 해체는 `GameObjectManager::destroyComponentInstance` 하나를 지납니다. 예전에는 파괴 경로마다 두 번 불려 구현이
-         *          멱등이어야 했습니다.
+         * @details 해체는 `GameObjectManager::destroyComponentInstance` 하나를 지나므로 구현이 멱등일 필요는 없습니다.
          */
         virtual void onUnregister( GameObjectManager& manager ) { (void)manager; }
         /**
          * @brief 소유 GameObject 의 계층 활성(`isActiveInHierarchy`)이 바뀐 직후 불립니다. 값이 그대로면 불리지 않습니다.
-         * @details 계층 활성을 따라 무엇을 켜고 끄는 컴포넌트(렌더 프리미티브는 제 칸을 더티로)가 씁니다. 예전에는 오브젝트가 토글될
-         *          때마다 프리미티브 집합 세대를 올려, 무엇을 가졌든 GpuScene 이 전체를 다시 모았습니다.
+         * @details 계층 활성을 따라 무엇을 켜고 끄는 컴포넌트(렌더 프리미티브는 제 칸을 더티로)가 씁니다.
          */
         virtual void onOwnerActiveInHierarchyChanged() {}
         /** @brief 컴포넌트가 파괴될 때 불리는 콜백입니다. */
@@ -298,30 +291,30 @@ namespace sw
         /**
          * @brief 상태(저장된 PROPERTY)를 읽어 이 컴포넌트를 채운 뒤에 불립니다 — 씬 · 프리팹 로드, 되돌리기, 복제, 핫 리로드(언리얼 `PostLoad` ·
          *        유니티 `OnAfterDeserialize`).
-         * @details 값을 자원으로 바꾸는 자리입니다(메시 id → 메시, 머티리얼 참조 → 머티리얼). 플레이 중이 아니어도(편집 중) 불립니다 — 예전에는
-         *          그 일을 시작(`onBeginPlay`) · 씬 초기화에서만 해서, 편집 중에 되돌리기 · 프리팹 드래그로 다시 만든 메시가 그려지지 않았습니다.
+         * @details 값을 자원으로 바꾸는 자리입니다(메시 id → 메시, 머티리얼 참조 → 머티리얼). 플레이 중이 아니어도(편집 중) 불립니다 — 주의: 이
+         *          일을 `onBeginPlay` 에 두면 편집 중에 되돌리기 · 프리팹 드래그로 다시 만든 메시가 그려지지 않는다.
          *          비동기 씬 로드에서는 워커 스레드에서 불릴 수 있으니 공유 상태는 잠그는 API 로만 만집니다.
          */
         virtual void onPostLoad() {}
         /**
          * @brief 반사 값을 직렬화기로 **직접** 쓴 뒤 부릅니다 — 프로퍼티마다 `onPropertyChanged` 를, 그다음 `onPostLoad` 를 부릅니다(언리얼
          *        `PostEditChangeProperty` · 유니티 `OnValidate` 의 자리).
-         * @details 에디터의 컴포넌트 값 붙여넣기 · 새로 붙여넣기 · 프리셋 · 오버라이드 되돌리기 · 기본값 되돌리기가 값을 `BinarySerializer` ·
-         *          `XmlSerializer` · `JsonSerializer` 로 바로 썼는데, 그 길은 알림을 부르지 않아 트랜스폼이 더티가 되지 않았고(값은 바뀌었는데 화면에서
-         *          움직이지 않았다) 렌더 에셋(메시 · 머티리얼 · 텍스처)을 다시 풀지 않았다. 상태를 통째로 읽는 길(`ObjectStateSerializer`)은 컴포넌트를
-         *          새로 만들고 `onPostLoad` 를 부르므로 이것이 필요 없다.
+         * @details 에디터의 컴포넌트 값 붙여넣기 · 새로 붙여넣기 · 프리셋 · 오버라이드 되돌리기 · 기본값 되돌리기는 값을 `BinarySerializer` ·
+         *          `XmlSerializer` · `JsonSerializer` 로 바로 쓰는데, 그 길은 알림을 부르지 않는다 — 이것을 빼면 트랜스폼이 더티가 되지 않고(값은
+         *          바뀌었는데 화면에서 움직이지 않는다) 렌더 에셋(메시 · 머티리얼 · 텍스처)을 다시 풀지 않는다. 상태를 통째로 읽는 길
+         *          (`ObjectStateSerializer`)은 컴포넌트를 새로 만들고 `onPostLoad` 를 부르므로 이것이 필요 없다.
          */
         void notifyStateWritten();
 
         /**
          * @brief 서브틱을 등록합니다(TickGroup · Phase · Priority 지정).
-         * @details 우선순위는 단계 안의 자리(0..`kMaxTickPriority`)이고, 넘으면 묶습니다(경고). 예전에는 `& 63` 으로 감겨 70 이 6 이 되어
-         *          10 보다 앞섰습니다. 그룹이 유효하지 않으면 등록하지 않고 빈 핸들을 줍니다(예전에는 받아 두고 등록부가 조용히 버렸습니다).
+         * @details 우선순위는 단계 안의 자리(0..`kMaxTickPriority`)이고, 넘으면 묶습니다(경고). 그룹이 유효하지 않으면 등록하지 않고 빈 핸들을
+         *          줍니다.
          *
          *          **서브틱 목록(`_listSubTick`)을 바꾸는 넷(등록 · 해제 · 선행 조건 · 활성)은 틱 중이면 그 변경을 틱 직후로 미룹니다**(구조 변경 큐,
          *          부른 순서대로 — 이어서 부른 선행 조건 추가도 등록 뒤에 돈다). 목록은 이 컴포넌트를 틱하는 워커가 읽는데(64 번부터의 활성 · 자기 틱
-         *          안의 등록 · 해제), 다른 오브젝트의 틱이 그것을 늘리면 벡터가 다시 잡혀 그 워커가 해제된 메모리를 읽었고 두 워커가 같은 컴포넌트에
-         *          등록하면 `push_back` 이 겹쳤다(형제 `setTickGroup` · `setCanEverTick` 은 구조 ⑮ 에서 이미 미뤘다). 미뤄도 핸들은 바로 줍니다.
+         *          안의 등록 · 해제), 다른 오브젝트의 틱이 그것을 늘리면 벡터가 다시 잡혀 그 워커가 해제된 메모리를 읽고 두 워커가 같은 컴포넌트에
+         *          등록하면 `push_back` 이 겹친다(형제 `setTickGroup` · `setCanEverTick` 도 같은 이유로 미룬다). 미뤄도 핸들은 바로 줍니다.
          *          실행 여부(서브틱 1~63 은 원자 마스크, 64 번부터는 `SubTickInfo::_bRunnable`)는 틱 중에 바꾸라고 원자다 — 해제 · 끄기는 그것을 바로
          *          내려 이번 틱의 남은 항목이 곧바로 건너뛴다.
          */
@@ -359,15 +352,13 @@ namespace sw
         /**
          * @brief 주 틱에 들어갈지 설정합니다. 생성자에서 끄면(언리얼 `bCanEverTick = false`) 끈 것이 이깁니다.
          * @details **기본은 "`onTick` 을 오버라이드했는가"** 입니다(유니티: `Update` 가 있으면 부른다) — `GameObject::addComponent` 가
-         *          `OverridesOnTick_v` 로 판정해, 오버라이드하지 않은 타입은 끕니다. 예전에는 기본값이 갈렸습니다(`Component` 켜짐 ·
-         *          `SceneComponent` 꺼짐): 씬 컴포넌트에 `onTick` 을 쓰고 이것을 잊으면 조용히 한 번도 돌지 않았고, `onTick` 이 없는 데이터
-         *          컴포넌트는 매 프레임 빈 가상 호출로 디스패치됐습니다.
+         *          `OverridesOnTick_v` 로 판정해, 오버라이드하지 않은 타입은 끕니다. `Component` · `SceneComponent` 모두 같은 규칙입니다.
          */
         void setCanEverTick( bool bCanEverTick );
         /**
          * @brief 컴포넌트의 이름표를 설정합니다(기본은 타입 이름). **타입이 아닙니다.** 상태와 함께 저장됩니다.
          * @details 오브젝트 안에서 컴포넌트를 가리키는 키(`ComponentStableKey` — 부착 대상 · 프리팹 오버라이드 · 에디터 선택 복원)가 이 이름으로
-         *          셉니다. 언리얼의 컴포넌트 이름이 참조 · 오버라이드의 키인 것과 같은 자리입니다. 이름표가 없는 옛 상태는 기본값(타입 이름)으로
+         *          셉니다. 언리얼의 컴포넌트 이름이 참조 · 오버라이드의 키인 것과 같은 자리입니다. 이름표가 없는 상태는 기본값(타입 이름)으로
          *          읽힙니다. 타입은 만들 때 받은 `TypeInfo`(`_pTypeInfo`)이고 이름과 무관합니다 — 타입 이름이 필요하면 `getTypeName`.
          * @note 풀 키도 **아닙니다.** 파괴는 `_pPool` 로 돌아갑니다. 이름을 바꾸면 그 컴포넌트를 키로 가리키던 저장된 참조(다른 컴포넌트의 부착 ·
          *       프리팹 오버라이드)는 다음 로드에서 가리킬 곳을 잃습니다 — 언리얼이 컴포넌트 이름을 바꿀 때와 같습니다.
@@ -379,7 +370,7 @@ namespace sw
 
         /**
          * @brief 런타임 타입 리플렉션 정보(TypeInfo)입니다 — 만들 때 받은 타입이고, 그 타입이 해제됐으면 nullptr 입니다.
-         * @details 예전에는 `_componentName` 으로 찾았습니다(이름을 바꾸면 타입이 바뀌었습니다 — `setComponentName`). TypeInfo 의 주소는
+         * @details 이름표(`_componentName`)와 무관합니다 — `setComponentName` 으로 이름을 바꿔도 타입은 그대로입니다. TypeInfo 의 주소는
          *          고정이라(`TypeRegistry`) 포인터 하나를 들면 됩니다.
          */
         virtual const TypeInfo* getTypeInfo() const;
@@ -457,16 +448,15 @@ namespace sw
         const TypeInfo* _pTypeInfo; ///< 만들 때 받은 타입. `GameObject::attachCreatedComponent` 가 한 번 적는다(공개 전이라 원자가 아니다)
         /**
          * @brief 이 인스턴스를 내준 풀입니다. 힙에서 왔으면 nullptr 입니다. 생성이 한 번 적고 파괴가 읽습니다.
-         * @details 예전에는 파괴가 `getTypeInfo()->_fullyQualifiedName` 으로 풀을 **다시 찾았습니다.** 이름이 바뀌었거나(공개
-         *          `setComponentName`) 그 타입이 그새 해제되었으면 풀을 찾지 못해 풀 블록을 힙으로 반납했고, Shipping 에서
-         *          힙이 깨졌습니다(0xc0000374. Debug · ASan 은 조용했습니다). 어디서 왔는지는 온 순간에 적는 것이 맞습니다.
+         * @details 주의: 파괴할 때 타입 이름으로 풀을 다시 찾지 말 것 — 이름이 바뀌었거나(`setComponentName`) 그 타입이 그새 해제되었으면
+         *          풀을 찾지 못해 풀 블록을 힙으로 반납하고, Shipping 에서 힙이 깨진다(0xc0000374. Debug · ASan 은 조용하다).
          */
         PoolAllocator* _pPool;
 
         atomic<uint64> _subTickActiveMask; ///< 서브틱 1~63 의 활성 상태(원자 비트마스크, O(1))
         /**
-         * @brief 컴포넌트 자기 활성 비트입니다. 저장됩니다 — 예전에는 PROPERTY 가 아니라 끈 컴포넌트가 Stop · 되돌리기 · 씬 다시 열기 뒤 다시 켜졌고,
-         *        토글이 되돌리기에 남지 않았다(스냅샷이 이 값을 싣지 않았다). 인스펙터는 컴포넌트 머리의 체크박스로 그린다.
+         * @brief 컴포넌트 자기 활성 비트입니다. 저장됩니다(PROPERTY) — 스냅샷이 이 값을 실어야 끈 컴포넌트가 Stop · 되돌리기 · 씬 다시 열기 뒤에도
+         *        꺼진 채로 남고 토글이 되돌리기에 남는다. 인스펙터는 컴포넌트 머리의 체크박스로 그린다.
          */
         PROPERTY( HideInInspector )
         atomic<bool>        _bActive;

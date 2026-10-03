@@ -69,7 +69,7 @@ namespace sw
     void BoxCollider2DComponent::getBounds( float2& outMin, float2& outMax ) const
     {
         // 상자(오프셋 · 크기)는 콜라이더의 로컬 공간에 있다 — 월드 행렬의 회전 · 스케일을 받는다(유니티 `BoxCollider2D.size` · 언리얼 박스
-        // 범위). 예전에는 월드 위치에 그대로 더해, 키운 콜라이더가 그려진 모습보다 작았다. 물리는 축 정렬 상자로 판정하므로 돈 상자는 그것을
+        // 범위). 월드 위치에 그대로 더하면 키운 콜라이더가 그려진 모습보다 작아진다. 물리는 축 정렬 상자로 판정하므로 돈 상자는 그것을
         // 덮는 축 정렬 상자다 — 축마다 회전 · 스케일 성분의 절댓값으로 반 크기를 모은다(언리얼 `FBox::TransformBy`).
         const float4x4 world   = getWorldMatrix();
         const float3   center  = float3::transform( float3{ _offsetPos._x, _offsetPos._y, 0.0f }, world );
@@ -194,7 +194,7 @@ namespace sw
 
         // 순간이동 표시는 이번 맞춤에서 쓰고 지운다 — 바디가 새로 들어도(더한 자리가 출발점이다) 남겨 두면 다음 이동을 잘못 건너뛴다.
         const bool bTeleported = _bTeleportPending.exchange( false, std::memory_order_acq_rel );
-        // 레이어 · 판정 방식도 매번 맞춘다 — 예전에는 더할 때 한 번 적혀, 시작한 뒤 바꾼 콜라이더 종류가 겹침에 닿지 않았다.
+        // 레이어 · 판정 방식도 매번 맞춘다 — 더할 때 한 번만 적으면 시작한 뒤 바꾼 콜라이더 종류가 겹침에 반영되지 않는다.
         if ( _physicsBody.isValid() )
         {
             _pPhysics->updateBody( _physicsBody, state, bTeleported ? BodyMoveType::Teleport : BodyMoveType::Sweep );

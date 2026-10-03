@@ -112,8 +112,8 @@ namespace sw
             /**
              * @brief 선행 조건이 뒤 그룹에 있는 후보를 그 그룹으로 옮깁니다. 사슬을 따라 옮깁니다(언리얼 `QueueTickFunction` 의 `ActualStartTickGroup`).
              * @details 모든 그룹의 후보를 한 그래프로 보고 위상 순서(Kahn)로 걸으며 "내 그룹 = max(내 그룹, 선행의 그룹)" 을 적습니다. 앞 그룹의
-             *          선행 조건은 이미 끝났으므로 아무것도 바꾸지 않습니다. 예전에는 그룹마다 따로 DAG 를 지어 다른 그룹의 선행 조건을 "찾을 수
-             *          없음" 으로 버렸습니다 — PrePhysics 의 기수가 PostPhysics 의 말보다 먼저 돌았습니다. 순환에 걸린 후보(와 그 뒤)는 위상
+             *          선행 조건은 이미 끝났으므로 아무것도 바꾸지 않습니다. 주의: 그룹마다 따로 DAG 를 지으면 다른 그룹의 선행 조건을 "찾을 수
+             *          없음" 으로 버려, PrePhysics 의 기수가 PostPhysics 의 말보다 먼저 돈다. 순환에 걸린 후보(와 그 뒤)는 위상
              *          순서가 없으니 제 그룹에 둡니다(순환은 그룹 안에서 순서 키로 방어합니다).
              */
             static void raiseGroupsToPrerequisites( vector<StageCandidate>& listCandidate )
@@ -308,7 +308,7 @@ namespace sw
             return left._orderKey < right._orderKey;
         } );
 
-        // 그룹마다 항목이 시작하는 자리. 칸을 짓는 데만 쓰므로 오브젝트에 들지 않는다(예전에는 오브젝트의 20 바이트였다 — 디스패치가 그것을 읽었다).
+        // 그룹마다 항목이 시작하는 자리. 칸을 짓는 데만 쓰므로 오브젝트에 들지 않는다.
         uint32 arrGroupBegin[kGroupCount + 1] = {};
         uint32 cursor                         = 0;
         for ( uint32 group = 0; group < kGroupCount; ++group )

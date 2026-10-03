@@ -100,11 +100,8 @@ namespace sw
 
         /**
          * @brief 콜라이더 오프셋 · 크기입니다.
-         * @details 예전에는 `string` 으로 두고 쓸 때마다 string_splitter 로 쪼개 parseFloat 했습니다.
-         *          getBounds() 는 onTick 의 syncPhysicsBody 와 에디터의 기즈모 · 히트 테스트가 부르므로,
-         *          콜라이더 하나당 **매 프레임** 문자열 두 개를 쪼개고(vector<string> 할당) 실수 넷을
-         *          파싱하고 있었습니다. GameFramework 의 HPBarBaseComponent 는 같은 개념을 이미 float2
-         *          PROPERTY 로 들고 있었습니다. 리플렉션이 다루지 못하는 타입이라서가 아니었습니다.
+         * @details getBounds() 는 onTick 의 syncPhysicsBody 와 에디터의 기즈모 · 히트 테스트가 매 프레임 부르므로,
+         *          문자열이 아니라 float2 PROPERTY 로 듭니다.
          */
         PROPERTY( Category = "Collider", DisplayName = "Offset Position", Tooltip = "Collider center offset from the owner" )
         float2 _offsetPos;

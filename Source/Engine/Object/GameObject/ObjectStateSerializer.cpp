@@ -43,8 +43,8 @@ namespace sw
             /**
              * @brief 다시 읽기 전에 다른 오브젝트의 자식 연결을 적습니다.
              * @details 제자리에서 다시 읽으면(되돌리기 · 다시 하기 · 프리팹으로 되돌리기 · 플레이 종료 복원) 컴포넌트를 모두 지우고 새로
-             *          만드는데, 씬 컴포넌트의 소멸자가 자식을 떼어 **다른 오브젝트의 자식들이 루트가 됐습니다.** 로드가 되붙이는 것은
-             *          이 오브젝트 **안의** 부착(`applyLoadedHierarchy`)뿐이었습니다. 부모 속성 하나를 고치고 되돌리면 자식이 떨어졌습니다.
+             *          만드는데, 씬 컴포넌트의 소멸자가 자식을 떼어 **다른 오브젝트의 자식들이 루트가 됩니다.** 로드는 이 오브젝트 **안의**
+             *          부착만 되붙이므로, 이것이 없으면 부모 속성 하나를 고치고 되돌릴 때 자식이 떨어집니다.
              */
             static void captureChildLinks( const GameObject* pGameObject, vector<ChildLink>& outListLink )
             {
@@ -94,7 +94,7 @@ namespace sw
 
             /**
              * @brief 상태를 읽은 오브젝트를 주변에 다시 맞춥니다. 이름이 바뀌었으면 매니저의 이름 표를, 그리고 활성 계층을 맞춥니다.
-             * @details XML · JSON · 바이너리 세 로더가 이 다섯 줄을 각자 들고 있었습니다. 한 포맷만 빠뜨리면 그 포맷으로 되돌린 오브젝트만
+             * @details XML · JSON · 바이너리 세 로더가 함께 씁니다. 한 포맷만 빠뜨리면 그 포맷으로 되돌린 오브젝트만
              *          이름으로 찾을 수 없게 됩니다. 부모 연결 · 핸들 · 컴포넌트 알림(`onPostLoad`)은 여기서 하지 않습니다 — 묶음
              *          (`ObjectStateBatch::finish`)이 모두 읽은 뒤 합니다.
              */
@@ -116,8 +116,8 @@ namespace sw
 
             /**
              * @brief 이름으로 컴포넌트를 만들어 소유자에 붙입니다(역직렬화 팩토리).
-             * @details 모르는 타입(게임 모듈이 안 올라왔다 · 이름을 바꿨는데 별칭이 없다)은 만들지 못하고 그 데이터는 버려진다. 예전에는 **경고 없이**
-             *          버려, 그 상태로 저장하면 컴포넌트가 파일에서 영영 사라졌다. 이제 어느 오브젝트의 어느 타입인지 경고한다.
+             * @details 모르는 타입(게임 모듈이 안 올라왔다 · 이름을 바꿨는데 별칭이 없다)은 만들지 못한다 — 어느 오브젝트의 어느 타입인지 경고하고,
+             *          원문은 `keepMissingComponent` 가 맡는다.
              */
             static void* createOwnedComponent( void* pOuter, hashed_string typeName )
             {
@@ -129,7 +129,7 @@ namespace sw
             }
 
             /**
-             * @brief 모르는 타입의 컴포넌트 원문을 `MissingComponent` 로 맡습니다. 예전에는 건너뛰어, 그대로 저장하면 그 값이 영영 사라졌다.
+             * @brief 모르는 타입의 컴포넌트 원문을 `MissingComponent` 로 맡습니다. 건너뛰면 그대로 저장할 때 그 값이 영영 사라진다.
              */
             static bool keepMissingComponent( void* pOuter, const SerializeContext::OpaqueElementView& element )
             {
@@ -178,14 +178,14 @@ namespace sw
                 ctx.setOwnedPointerFactory( &createOwnedComponent );
                 ctx.setRuntimeTypeInfoFn( &getComponentRuntimeTypeInfo );
                 ctx.setOpaqueElementHandlers( &keepMissingComponent, &queryMissingComponent );
-                // 지금 타입에 없는 칸은 건너뛰고 읽는다 — 세 형식이 같은 규칙이다. 예전에는 XML · JSON 만 건너뛰고 바이너리는 **오브젝트 통째로**
-                // 실패해, 컴포넌트 PROPERTY 하나를 지우면 그 컴포넌트를 가진 모든 오브젝트의 세이브 · 플레이 스냅샷(핫 리로드 뒤 Stop)을 읽지 못했다.
+                // 지금 타입에 없는 칸은 건너뛰고 읽는다 — 세 형식이 같은 규칙이다. 바이너리가 실패하면 컴포넌트 PROPERTY 하나를 지웠을 때 그
+                // 컴포넌트를 가진 모든 오브젝트의 세이브 · 플레이 스냅샷(핫 리로드 뒤 Stop)을 읽지 못한다.
                 ctx.setAllowUnknownProperties( true );
                 return ctx;
             }
 
             /**
-             * @brief 오브젝트 자기 칸 가운데 지금 타입에 없는 것(옛 상태에만 있는 필드)을 넘깁니다. 스키마 버전이 같을 때만 받습니다.
+             * @brief 오브젝트 자기 칸 가운데 지금 타입에 없는 것(지운 필드)을 넘깁니다. 스키마 버전이 같을 때만 받습니다.
              * @details 바이너리의 판 붙은 읽기는 남는 칸이 있으면 이관 함수를 부르고, 없으면 실패합니다. 오브젝트 상태에는 이관할 것이 없다 —
              *          지운 칸은 버리고 나머지를 읽는 것이 XML · JSON 과 같은 규칙입니다. 버전이 다르면 받지 않습니다(진짜 이관이 필요하다).
              *          버린 칸은 여기서 알리지 않습니다 — 세 형식이 같이 지나는 `runSchemaMigrateStep` 이 이관이 찾아 보지 않은 칸을
@@ -241,8 +241,8 @@ namespace sw
 
             /**
              * @brief 저장할 때 `GameObjectHandle` 값을 저장할 id 로 옮겨 적는 글 처리기입니다 — 부착과 같은 규칙(`ObjectSaveOptions::getSavedObjectId`).
-             * @details 세 형식이 모두 이 글 처리기를 지납니다(바이너리도 핸들은 글로 싣는다 — `SerializerUtil::serializeValueBinary`). 예전에는 기본
-             *          처리기가 런타임 id 를 그대로 적어, 씬 파일을 다시 열면 같은 값을 받은 다른 오브젝트를 가리킬 수 있었다.
+             * @details 세 형식이 모두 이 글 처리기를 지납니다(바이너리도 핸들은 글로 싣는다 — `SerializerUtil::serializeValueBinary`). 런타임 id 를
+             *          그대로 적으면 씬 파일을 다시 열 때 같은 값을 받은 다른 오브젝트를 가리킬 수 있다.
              */
             struct ReferenceWriter
             {
@@ -323,7 +323,7 @@ namespace sw
         const bool                                bLoaded = deserializeState( version, ctx );
         if ( bLoaded )
         {
-            // 상태에 적힌 이름 — 매니저가 유일하게 바꾸기(`finishLoad`) 전에 잡는다. 옛 데이터는 자기 안의 부착에 이 이름을 적었다.
+            // 상태에 적힌 이름 — 매니저가 유일하게 바꾸기(`finishLoad`) 전에 잡는다. 자기 안의 부착에 이 이름이 적혀 있을 수 있다.
             const hashed_string savedName = pGameObject->getName();
             ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
             const uint64 savedId = ObjectStateSerializerInternal::resolveSavedId( context );
@@ -455,7 +455,7 @@ namespace sw
             if ( pComp == nullptr || pComp->isPendingDestroy() )
                 continue;
             // 타입 이름으로 적는다 — 되살릴 때(`takeRestoredComponentId`) 새 컴포넌트의 타입 이름과 견준다. 이름표를 적으면 이름표를 단
-            // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊겼다.
+            // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊긴다.
             identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pComp->getTypeName(), pComp->getComponentId() } );
         }
         return identity;
@@ -546,7 +546,7 @@ namespace sw
 
         const uint32 entryIndex = static_cast<uint32>( _listEntry.size() );
         _listEntry.push_back( Entry{ pObject, savedId, savedName, bExternalParentAllowed, bLoadedState } );
-        // 같은 id · 이름이 둘이면 먼저 적힌 것이다(옛 문서에는 이름이 겹친 엔티티가 있을 수 있다).
+        // 같은 id · 이름이 둘이면 먼저 적힌 것이다(문서에 이름이 겹친 엔티티가 있을 수 있다).
         if ( savedId != 0 )
             _mapSavedIdToObject.emplace( savedId, pObject );
         if ( savedName.empty() == false )
@@ -560,7 +560,7 @@ namespace sw
         _bFinished = true;
 
         // 1) 이름. 읽는 동안 다른 오브젝트가 잠시 쥐고 있던 저장된 이름이 이제 비었으면 되찾는다 — 플레이 중 이름을 서로 바꾼 오브젝트를
-        //    되돌리면 앞의 것이 뒤의 것 이름을 잠시 쥐고 있어, 앞의 것이 영영 `Left_2` 로 남았다. 아직 쥔 오브젝트가 있으면 그대로다.
+        //    되돌리면 앞의 것이 뒤의 것 이름을 잠시 쥐고 있어, 이것이 없으면 앞의 것이 영영 `Left_2` 로 남는다. 아직 쥔 오브젝트가 있으면 그대로다.
         for ( const Entry& entry : _listEntry )
         {
             GameObject* pObject = entry._pObject;
@@ -676,10 +676,10 @@ namespace sw
     {
         if ( ownerId == 0 )
         {
-            // 소유자 칸이 비었으면 자기다. 옛 데이터는 자기 안의 부착에도 자기 이름을 적었다 — 읽기 전 이름(저장된 이름)과 견준다.
+            // 소유자 칸이 비었으면 자기다. 자기 안의 부착에 자기 이름이 적혀 있으면 읽기 전 이름(저장된 이름)과 견준다.
             if ( ownerName.empty() || ownerName == entry._savedName )
                 return entry._pObject;
-            // id 가 없는 옛 데이터. **이 묶음의 저장된 이름**에서만 찾는다 — 매니저에서 찾으면 유일하게 바뀐 이름 때문에 다른 오브젝트에 붙는다.
+            // id 가 없는 데이터. **이 묶음의 저장된 이름**에서만 찾는다 — 매니저에서 찾으면 유일하게 바뀐 이름 때문에 다른 오브젝트에 붙는다.
             return findBySavedName( ownerName );
         }
         if ( ownerId == entry._savedId )

@@ -55,9 +55,7 @@ namespace sw
             {
                 string key = FileUtil::normalizePath( assetRelativePath );
 
-                // 확장자 길이를 손으로 쓰지 않는다. 예전에는 `.bin`/`.xml` 은 -4, `.json` 은 -5 로
-                // 따로 적어서, 확장자를 하나 더 넣을 때 길이를 같이 고쳐야 했다. 숫자와 문자열이
-                // 떨어져 있으면 어긋난다.
+                // 확장자 길이를 손으로 쓰지 않는다 — 숫자와 문자열이 떨어져 있으면 어긋난다.
                 for ( const string_view extension : { ".bin", ".xml", ".json" } )
                 {
                     if ( FileUtil::hasExtension( key, extension ) )
@@ -306,14 +304,12 @@ namespace sw
         }
         else if ( _stateData.empty() == false )
         {
-            // 상태가 있는데 XML 로 옮기지 못했다(타입이 빠진 JSON 본문 등). 예전에는 빈 `<Prefab>` 을 쓰고 성공이라 했다 — 파일의 내용이 사라졌다.
+            // 상태가 있는데 XML 로 옮기지 못했다(타입이 빠진 JSON 본문 등). 빈 `<Prefab>` 을 쓰면 파일의 내용이 사라지므로 실패로 돌려준다.
             SW_LOG_ERROR( "Prefab '%#' could not be converted to XML - '%#' is left as it was", _name, assetRelativePath );
             return false;
         }
 
-        // 상위 폴더가 없으면 쓰기가 실패한다. 로더는 실패를 모두 로그하는데 세이버는 조용히 false 만
-        // 반환하고 있었다. 새 폴더에 프리팹을 저장하면 아무 메시지도 없이 아무 일도 일어나지 않았다.
-        // SceneDocument::saveXml 과 같은 형태로 맞춘다.
+        // 상위 폴더가 없으면 쓰기가 실패한다. 실패는 로그로 남긴다(SceneDocument::saveXml 과 같은 형태).
         FileUtil::ensureParentDirectoryExists( absPath );
 
         const bool writeOk = xmlDoc.saveFile( absPath );
@@ -359,8 +355,8 @@ namespace sw
 
     bool PrefabAsset::saveToFile( string_view assetRelativePath ) const
     {
-        // 형식은 경로가 정한다 — 쿠커(`cookAllPrefabs`)와 로더(`loadPrefab`)가 읽는 규칙과 같다. 예전에는 "Apply to Prefab" 이 늘 XML 로 써서
-        // `.prefab.json` 에 XML 이 들어가 그 프리팹이 다시는 읽히지 않았고, 프리팹이 아닌 경로(씬 · 머티리얼)도 그대로 덮었다.
+        // 형식은 경로가 정한다 — 쿠커(`cookAllPrefabs`)와 로더(`loadPrefab`)가 읽는 규칙과 같다. 늘 XML 로 쓰면 `.prefab.json` 에 XML 이
+        // 들어가 그 프리팹이 다시는 읽히지 않는다. 프리팹이 아닌 경로(씬 · 머티리얼)는 덮지 않는다.
         if ( StringUtil::endsWith( assetRelativePath, ".prefab.json", true ) )
             return saveToJsonFile( assetRelativePath );
         if ( StringUtil::endsWith( assetRelativePath, ".prefab.xml", true ) )
@@ -395,8 +391,8 @@ namespace sw
             _bValid = SW_FALSE;
             return;
         }
-        // 프리팹 루트에는 부모가 없다 — 자식 인스턴스로 프리팹을 만들어도 옛 부모를 싣지 않는다. 예전에는 실어서, 그 프리팹을 스폰할 때마다
-        // 그 이름의 오브젝트에 붙었다(언리얼 · 유니티의 프리팹 루트도 부모를 들지 않는다).
+        // 프리팹 루트에는 부모가 없다 — 자식 인스턴스로 프리팹을 만들어도 원래 부모를 싣지 않는다. 실으면 그 프리팹을 스폰할 때마다
+        // 그 이름의 오브젝트에 붙는다(언리얼 · 유니티의 프리팹 루트도 부모를 들지 않는다).
         ObjectSaveOptions options{};
         options._bOmitExternalParent = true;
         _name                        = pGameObject->getName().c_str();
@@ -409,7 +405,7 @@ namespace sw
     {
         if ( pTarget == nullptr || _stateData.empty() )
             return false;
-        // 옛 프리팹에 남은 다른 오브젝트로의 부착은 읽지 않는다(위 `setFromGameObject`). 오브젝트 안의 부착은 그대로 잇는다.
+        // 프리팹 본문에 남은 다른 오브젝트로의 부착은 읽지 않는다(위 `setFromGameObject`). 오브젝트 안의 부착은 그대로 잇는다.
         ObjectLoadContext context{};
         context._pIdentity              = pIdentity;
         context._bExternalParentAllowed = false;
@@ -545,8 +541,8 @@ namespace sw
             return false;
 
         // 인스턴스의 자리를 적어 둔다. 상태를 읽으면 컴포넌트가 모두 새로 만들어지고 이름 · 부착 · 트랜스폼이 프리팹의 것이 된다.
-        // 부모는 오브젝트가 아니라 **붙어 있던 컴포넌트**(소켓일 수 있다)를 핸들로 적는다 — 예전에는 부모 오브젝트의 primary 에 다시 붙여,
-        // 소켓에 달린 무기가 튀었다. 컴포넌트 id 도 되살린다 — 이 인스턴스의 컴포넌트를 가리키던 핸들(활성 카메라 · 게임 코드)이 이어지게.
+        // 부모는 오브젝트가 아니라 **붙어 있던 컴포넌트**(소켓일 수 있다)를 핸들로 적는다 — 부모 오브젝트의 primary 에 다시 붙이면
+        // 소켓에 달린 무기가 튄다. 컴포넌트 id 도 되살린다 — 이 인스턴스의 컴포넌트를 가리키던 핸들(활성 카메라 · 게임 코드)이 이어지게.
         const hashed_string   name         = pInstance->getName();
         const SceneComponent* pOldRoot     = pInstance->getPrimarySceneComponent();
         const bool            bHadRoot     = pOldRoot != nullptr;
@@ -580,7 +576,7 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Scene );
         // 이 함수는 나머지 포인터를 모두 검사한다(`pAsset` · `pGameObject` · `pInstanceName`).
-        // 매니저만 빠져 있었다. 활성 씬이 없을 때 `getObjectManager()` 는 nullptr 를 반환한다.
+        // 활성 씬이 없을 때 `getObjectManager()` 는 nullptr 를 반환한다.
         if ( pGameObjectManager == nullptr )
         {
             SW_LOG_WARNING( "Cannot spawn prefab '%#' without a GameObjectManager.", assetRelativePath );
@@ -622,8 +618,8 @@ namespace sw
         if ( pGameObject == nullptr )
             return nullptr;
 
-        // 컴포넌트 틱 중이면 오브젝트는 지금 만들어 돌려주고(부르는 쪽이 핸들을 든다), 상태는 틱 직후 구조 변경 큐에서 채운다. 예전에는 상태 읽기가
-        // 그 자리에서 돌며 컴포넌트 추가가 모두 미뤄져(nullptr) **프리팹의 값이 버려졌다** — 빈 오브젝트만 남았다.
+        // 컴포넌트 틱 중이면 오브젝트는 지금 만들어 돌려주고(부르는 쪽이 핸들을 든다), 상태는 틱 직후 구조 변경 큐에서 채운다. 그 자리에서
+        // 상태를 읽으면 컴포넌트 추가가 모두 미뤄져(nullptr) **프리팹의 값이 버려지고** 빈 오브젝트만 남는다.
         if ( pGameObjectManager->isStructuralMutationFrozen() )
         {
             const uint64 objectId = pGameObject->getObjectId();

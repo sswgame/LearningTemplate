@@ -53,7 +53,7 @@ namespace sw
         GameObject* createGameObject( hashed_string name = hashed_string( "GameObject" ) );
 
         /**
-         * @brief 예전에 발급한 objectId 를 그대로 써서 오브젝트를 다시 만듭니다. 되돌리기 · 플레이 세션 복원 · 핫 리로드가 씁니다.
+         * @brief 앞서 발급한 objectId 를 그대로 써서 오브젝트를 다시 만듭니다. 되돌리기 · 플레이 세션 복원 · 핫 리로드가 씁니다.
          * @details 핸들(`GameObjectHandle` · `ComponentHandle`)은 objectId 로 대상을 찾으므로, 되살린 오브젝트가 같은 id 를 받아야
          *          그 너머로도 핸들이 이어집니다. 그 id 로 등록된 오브젝트가 아직 있으면(삭제 대기 포함) 새 id 를 쓰고 경고를 남깁니다.
          *          옛 오브젝트의 지연 파괴가 나중에 id 로 정리하는 항목(슬롯 표 · 에디터 GUID 맵 등)이 새 오브젝트 몫까지 지우지
@@ -211,8 +211,7 @@ namespace sw
         /**
          * @brief 컴포넌트 틱 중이면 true 입니다. 이때 구조 변경(GameObject 생성 · addComponent · attach · detach)은 미뤄지고,
          *        트랜스폼은 읽기 전용이라 세터가 쓰기 큐로 갑니다.
-         * @details 예전에는 늘 같은 자리에서 함께 켜고 끄는 플래그 둘(`_bParallelTransformReadOnly` · `_bTicking`)과 술어 둘이 있었고,
-         *          호출부가 어느 쪽을 물을지 골라야 했습니다. 뜻이 같아 하나로 합쳤습니다.
+         * @details 구조 동결과 트랜스폼 읽기 전용은 같은 구간이라 플래그 하나(`_bTicking`)가 둘 다 답합니다.
          */
         bool isStructuralMutationFrozen() const { return _bTicking.load( std::memory_order_acquire ); }
 
@@ -221,8 +220,8 @@ namespace sw
 
         /**
          * @brief 틱 중의 구조 변경(컴포넌트 추가 · 부착 · 떼기 · 태그 · 활성)을 **부른 순서대로** 지연 큐에 넣습니다. 틱 직후 가장 먼저 돕니다.
-         * @details 예전에는 부착 · 떼기만 이 큐에 들어가고 컴포넌트 추가 · 태그 · 활성은 뒤의 post-tick 큐로 갔다. 틱 안에서 씬 컴포넌트를 붙이고
-         *          (미뤄짐) 이어 부모에 붙이면, 부착이 먼저 돌아 붙일 씬 컴포넌트가 없었고 오브젝트는 루트로 남았다. 구조 변경은 이 큐 하나다.
+         * @details 구조 변경은 이 큐 하나다. 주의: 종류마다 큐를 나누면 틱 안에서 씬 컴포넌트를 붙이고(미뤄짐) 이어 부모에 붙일 때 부착이
+         *          먼저 돌아 붙일 씬 컴포넌트가 없고, 오브젝트는 루트로 남는다.
          */
         void deferStructuralChange( StructuralChangeDelegate func );
 
@@ -352,8 +351,7 @@ namespace sw
         /**
          * @brief 틱 등록부가 오브젝트 항목을 다시 지은 틱의 수입니다. 진단 · 회귀 테스트용입니다.
          * @details 틱에 참여하는 컴포넌트(`Component::hasTickWork`)가 생기거나 없어지거나 순서가 바뀔 때만 올라야 합니다.
-         *          예전에는 아무 구조 변경에나 씬 전체 스테이지를 다시 만들었습니다. 틱하지 않는 MeshComponent 를 붙였다 떼도 다음 틱이
-         *          8000 컴포넌트를 모두 훑었습니다(2 ms). 지금은 바뀐 오브젝트의 컴포넌트 몇 개를 훑는 값입니다.
+         *          틱하지 않는 MeshComponent 를 붙였다 떼는 것으로는 오르지 않습니다. 다시 지을 때도 바뀐 오브젝트의 컴포넌트 몇 개만 훑습니다.
          */
         uint32 getTickStageBuildCount() const { return _tickStageBuildCount.load( std::memory_order_relaxed ); }
 
@@ -362,7 +360,7 @@ namespace sw
 
         /**
          * @brief 물리 바디를 맞출 콜라이더를 등록합니다(`BoxCollider2DComponent::onRegister`). 매니저가 step 직전에 한 번에 맞춥니다.
-         * @details 예전에는 콜라이더가 병렬 틱에서 제 바디를 맞춰, 같은 그룹에서 겹침을 묻는 쪽이 스케줄에 따라 옛 · 새 자리를 봤다.
+         * @details 콜라이더가 병렬 틱에서 제 바디를 맞추면 같은 그룹에서 겹침을 묻는 쪽이 스케줄에 따라 옛 · 새 자리를 본다.
          */
         void registerCollider( BoxCollider2DComponent* pCollider );
         /** @brief 콜라이더 등록을 풉니다. 멱등입니다. */
@@ -390,9 +388,9 @@ namespace sw
         /**
          * @struct NameSuffixState
          * @brief 밑 이름 하나의 번호 상태 — 다음 새 번호와, 지운 오브젝트가 돌려준 번호들입니다.
-         * @details 예전에는 번호가 오르기만 했습니다. 번호마다 `hashed_string` 을 **새로 인턴**하는데 인턴 풀은 전역 65,536 칸이고
-         *          한번 들어간 문자열은 나가지 않아, 같은 이름으로 스폰 · 파괴를 거듭하는 게임(총알)은 결국 풀을 채웠고 그 뒤로 엔진의
-         *          **모든** 새 `hashed_string`(리소스 경로 · 태그 · 프로퍼티 이름)이 None 이 됐습니다. 되쓰면 번호 수는 같은 이름으로
+         * @details 주의: 번호를 오르기만 하게 두면 안 된다. 번호마다 `hashed_string` 을 **새로 인턴**하는데 인턴 풀은 전역 65,536 칸이고
+         *          한번 들어간 문자열은 나가지 않아, 같은 이름으로 스폰 · 파괴를 거듭하는 게임(총알)이 결국 풀을 채우고 그 뒤로 엔진의
+         *          **모든** 새 `hashed_string`(리소스 경로 · 태그 · 프로퍼티 이름)이 None 이 된다. 되쓰면 번호 수는 같은 이름으로
          *          동시에 살아 있던 오브젝트 수를 넘지 않습니다. 되쓰기도 O(1) 입니다(맨 뒤에서 꺼낸다).
          */
         struct NameSuffixState
@@ -433,19 +431,17 @@ namespace sw
         /**
          * @brief 잠금 없이 이름이 **살아 있는** 오브젝트에 쓰이고 있는지 봅니다.
          * @details 지연 파괴 대기(pending destroy) 오브젝트는 이름 맵에 남아 있지만 이름으로 찾을 수 없습니다. 그 이름은 비어 있는
-         *          것으로 봅니다. 모듈 리로드 · RHI 교체 때 새 인스턴스가 옛 오브젝트가 아직 사라지기 전에 같은 이름을 만들며
-         *          `Duplicate name` 경고를 내던 원인입니다. 대신 파괴 쪽은 맵 항목이 **자기 것**일 때만 지웁니다.
+         *          것으로 봅니다 — 모듈 리로드 · RHI 교체 때 새 인스턴스가 옛 오브젝트가 아직 사라지기 전에 같은 이름을 만들기
+         *          때문입니다. 대신 파괴 쪽은 맵 항목이 **자기 것**일 때만 지웁니다.
          */
         bool isNameTakenUnlocked( hashed_string name ) const;
 
         /**
          * @brief 타입별 컴포넌트 풀을 얻거나 만듭니다.
-         * @details 키는 **FQN 이고 TypeInfo 포인터가 아닙니다.** 예전에는 한 클래스에 `TypeInfo` 인스턴스가 둘 이상
-         *          생길 수 있었습니다(모듈이 로드되며 리플렉션을 다시 등록하면 새 인스턴스가 생겼습니다). 포인터로 키를 잡으면
-         *          **생성 때와 해제 때가 서로 다른 풀**을 가리켜서, `destroyComponentInstance` 가 엉뚱한 풀에 블록을 반납하고
-         *          `PoolAllocator::free` 의 "Pointer does not belong to any allocated chunk" 단정이 걸렸습니다(테스트 씬을 로드한 뒤
-         *          종료할 때 실제로 그랬습니다). 지금은 재등록이 같은 객체에 덮어써 주소가 고정이지만, 레지스트리 밖 사본도 있을 수
-         *          있어 재등록에도 변하지 않는 FQN 을 그대로 씁니다.
+         * @details 키는 **FQN 이고 TypeInfo 포인터가 아닙니다.** 재등록은 같은 객체에 덮어써 주소가 고정이지만 레지스트리 밖 사본도
+         *          있을 수 있어, 재등록에도 변하지 않는 FQN 을 씁니다. 주의: 포인터로 키를 잡아 한 클래스에 `TypeInfo` 가 둘이 되면
+         *          **생성 때와 해제 때가 서로 다른 풀**을 가리켜 `PoolAllocator::free` 의 "Pointer does not belong to any allocated chunk"
+         *          단정이 걸린다.
          *          해제는 이 표를 보지 않습니다. 컴포넌트가 `_pPool` 로 자기 풀을 들고, 그리로 돌아갑니다.
          */
         PoolAllocator* getOrCreateComponentPool( const TypeInfo* pTypeInfo, size_t typeSize )
@@ -470,24 +466,22 @@ namespace sw
          * @struct ObjectSlotTable
          * @brief `objectId → GameObject*` 를 **락 없이** 읽는 밀집 표입니다.
          *
-         * @details 핸들 해석(`resolveComponent`)이 프레임당 오브젝트 수만큼 일어납니다. 예전에는 그 한
-         *          번마다 매니저 `_mutex` 를 공유 잠금하고 해시 맵을 조회했습니다. 큐브 20,000 개 벤치에서
-         *          **호출당 110ns, 프레임당 2.2ms** 였습니다(핸들 대신 미리 푼 포인터를 쓰게 바꿔 실측).
+         * @details 핸들 해석(`resolveComponent`)이 프레임당 오브젝트 수만큼 일어납니다. 매번 매니저 `_mutex` 를 공유 잠금하고
+         *          해시 맵을 조회하면 큐브 20,000 개 벤치에서 **호출당 110ns, 프레임당 2.2ms** 다.
          *
          *          id 는 단조 증가 카운터라 **밀집**하므로 배열이면 됩니다. 다만 배열을 늘리면 주소가
          *          옮겨져 읽는 쪽과 부딪히므로, 절대 재배치되지 않는 청크 배열(`PagedArray`)에 둡니다.
          *          쓰기는 모두 매니저 락 안에서 일어나고, 읽기는 청크 포인터 하나와 슬롯 하나의 원자적 로드입니다.
-         *          예전에는 이 표가 청크 관리를 따로 구현했습니다. `SlotHandleTable` 이 쓰는 `PagedArray` 와 같은 일이었습니다.
          *
-         * @note **칸은 id 의 아래 비트입니다**(`kObjectSlotCount` 로 나눈 나머지). 예전에는 id 를 그대로 칸 번호로 써서 약 420 만을 넘는
-         *       id 는 모두 맵(잠금 + 해시, 호출당 110 ns)으로 갔고 되감지 않았습니다 — 스폰이 잦은 게임은 몇 시간 뒤 모든 핸들 해석이, 그런
-         *       세션에서 저장한 id 를 되살리면 처음부터 그 길이었습니다. 지금은 칸을 **다른 살아 있는 오브젝트**가 쓸 때만(이만큼 떨어진 id 둘이
+         * @note **칸은 id 의 아래 비트입니다**(`kObjectSlotCount` 로 나눈 나머지) — id 를 그대로 칸 번호로 쓰면 약 420 만을 넘는 id 가 모두
+         *       맵(잠금 + 해시, 호출당 110 ns)으로 가서, 스폰이 잦은 게임은 몇 시간 뒤 모든 핸들 해석이 그 길이 된다. 칸을 **다른 살아 있는
+         *       오브젝트**가 쓸 때만(이만큼 떨어진 id 둘이
          *       함께 살아 있을 때 — 오래 사는 오브젝트와 420 만 뒤의 스폰) 뒤에 온 것이 맵으로 갑니다. 칸의 오브젝트가 다른 id 면 "여기 없음" 이라
          *       읽는 쪽이 id 를 견줍니다 — 묻는 id 가 `_compareFromId` 이상일 때만. 그 값은 칸 수이고, 칸 수를 넘는 id 가 한 번이라도 들어오면
-         *       0 이 됩니다. 그 전에는 칸 번호가 곧 id 라 작은 id 는 견줄 것이 없습니다(늘 견주면 조회가 0.8 ns 느렸다 — 오브젝트의 `_objectId` 를
-         *       한 번 더 읽는다. Release · FindById 번갈아 5 회 5.6 → 6.4 ns).
-         *       청크는 늘 1024 개 이하(32 MB 상한)라 지금과 같습니다 — id 범위를
-         *       넓히면(2 단 디렉터리) 지난 id 범위마다 청크가 남아 메모리가 스폰 수에 비례해 자랐을 것입니다. 언리얼 `FUObjectArray` 는 칸을
+         *       0 이 됩니다. 그 전에는 칸 번호가 곧 id 라 작은 id 는 견줄 것이 없습니다(늘 견주면 오브젝트의 `_objectId` 를 한 번 더 읽어
+         *       조회가 0.8 ns 느리다. Release · FindById 번갈아 5 회 5.6 → 6.4 ns).
+         *       청크는 늘 1024 개 이하(32 MB 상한)입니다 — id 범위를
+         *       넓히면(2 단 디렉터리) 지난 id 범위마다 청크가 남아 메모리가 스폰 수에 비례해 자랍니다. 언리얼 `FUObjectArray` 는 칸을
          *       재사용하고 약한 포인터가 일련번호로 견줍니다. 여기서는 id 자체가 일련번호입니다.
          */
         struct ObjectSlotTable
@@ -524,8 +518,7 @@ namespace sw
         unordered_map<hashed_string, NameSuffixState> _mapNameSuffix; ///< 밑 이름마다 번호 상태. 중복 이름 만들기가 O(1) 입니다(언리얼 MakeUniqueObjectName 의 자리)
         /**
          * @brief id → 오브젝트 맵입니다. **슬롯 표의 칸을 다른 살아 있는 오브젝트가 쓰는 id 만** 듭니다(보통 비어 있습니다).
-         * @details 예전에는 모든 오브젝트를 여기에도 넣었습니다. 표와 같은 답을 두 번 들고, 스폰마다 노드 할당 하나와 파괴마다
-         *          해제 하나였습니다(총알처럼 스폰이 잦은 게임의 비용).
+         * @details 모든 오브젝트를 넣지 않습니다 — 표와 같은 답을 두 번 들고, 스폰마다 노드 할당 하나와 파괴마다 해제 하나가 붙는다.
          */
         unordered_map<uint64, GameObject*> _mapIdToObject;
         /** @brief id → 오브젝트의 **빠른 읽기 길**입니다. 칸이 막힌 id 만 위 맵으로 갑니다. */
@@ -541,8 +534,8 @@ namespace sw
         mutable std::shared_mutex _mutex;
         /**
          * @brief 오브젝트 id 발급 카운터입니다. **프로세스 전체에서 하나**입니다(컴포넌트 id `Component::_s_nextComponentId` 와 같은 규칙).
-         * @details 예전에는 매니저마다 1 부터 셌다. 씬을 넘어 옮긴 오브젝트(`SceneManager::markPersistent`)가 같은 id 를 지키려면 다른 매니저의
-         *          발급과 겹치지 않아야 한다 — 겹치면 새 id 를 받고 그 오브젝트를 가리키던 핸들이 끊겼다. 유니티의 인스턴스 id 도 프로세스 전체다.
+         * @details 씬을 넘어 옮긴 오브젝트(`SceneManager::markPersistent`)가 같은 id 를 지키려면 다른 매니저의 발급과 겹치지 않아야 한다 —
+         *          겹치면 새 id 를 받고 그 오브젝트를 가리키던 핸들이 끊긴다. 유니티의 인스턴스 id 도 프로세스 전체다.
          */
         static atomic<uint64> _s_nextObjectId;
 
