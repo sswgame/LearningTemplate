@@ -116,6 +116,8 @@ cd build/Ninja-Debug/Bin
   `Renderer/Bake/`→`Renderer/Cook/`, `--bake-shaders`→`--cook-shaders`(옛 철자 없음), `bake.stamp`→`cook.stamp`, `TextureBaker`→`TextureImporter`(이미 `TextureImportConfig` ·
   `TextureImportRule` 과 짝), `BakeShippingHostDefaults.py`→`GenerateShippingHostDefaults.py`, 주석 · 문서의 "굽다"도 같은 구분으로. `ResourceManager`→`AssetManager`
   ("Resource" 는 디스크 트리 · 팩, "Asset" 은 읽은 객체), `EngineData`/`GameData`/`EditorData`→`EngineDefaultAssets`/`GameSettings`/`EditorToolDefaults`.
+  CLI 철자도 하나로: `ArgumentList.xxx` 가 `"bake-shaders", "bakeshaders"` · `"cook-scenes", "cookscenes"` · `"cooked-dir", "cookeddir"` 처럼 하이픈 없는 철자를 같이
+  받는다 — 별칭 금지 결정대로 하이픈 철자 하나만 남긴다(스크립트 · CI · 문서의 사용처도).
 - **case 중괄호 일관성 규칙**(한 switch 안에서 한 case 라도 중괄호면 모두) — 픽서 패치 준비됨(스크래치), 39 파일 다시 쓰기 + AGENTS.md · 04 규칙 문장.
 - **한 파일에 클래스가 여럿이면 클래스마다 `namespace sw { }` 블록을 나눈다** — 규칙 + 가능하면 게이트, 트리 전체 적용.
 - **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
@@ -162,6 +164,9 @@ cd build/Ninja-Debug/Bin
 
 ### 1-5. 핫 리로드 · 모듈
 
+- **RuntimeAPI 가 Engine 헤더를 include 한다** — `RuntimeAPI/Service/ModuleService.h` 가 `Engine/Common/EngineServiceList.xxx` 를 세 번 include 해 서비스 id 를 만든다.
+  "RuntimeAPI 는 순수 계약" 과 어긋난다. 서비스 목록을 RuntimeAPI 쪽으로 옮기거나(Engine 이 그것을 include) 계약 문장을 사실대로 고칠지 정한다.
+
 - **RHI 백엔드 교체 경로(`reinitializeAfterRhiSwap`)는 아직 에디터 → 게임 순으로 인스턴스를 다시 세운다** — 기동은 게임 → 에디터로 바뀌었다. 같은 순서로 맞출 것.
 
 - **바깥 빌드(터미널 · IDE)의 리로드 트리거는 여전히 mtime 디바운스뿐이다** — 에디터가 시킨 빌드는 성공 뒤에만 올린다(`LiveReloadManager::notifyBuildStarted/Finished`).
@@ -170,6 +175,8 @@ cd build/Ninja-Debug/Bin
   내보내는 일이다. 쓰는 모듈이 생기면 그때.
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
+
+- **TurnBattle 세이브가 옛 형식(pp0/pp1 두 칸)을 아직 읽는다** — `SaveGame.cpp` 의 `ppCount` 없을 때 갈래. 별칭 · 옛 형식 제거 결정대로 지우고 시험 픽스처를 지금 형식으로.
 
 
 - **강체 · 고정 스텝 누적기가 없다.** `PhysicsWorld::step` 은 겹침 이벤트만 낸다. 강체가 생기면 적분과 누적기를 넣는다.
@@ -212,7 +219,8 @@ cd build/Ninja-Debug/Bin
 
 - **코드 · 문서 29 곳이 옛 백로그의 날짜 항목 · 옛 절 번호를 가리킨다**(`ci.yml:156` · `TargetRules.cmake:51` · `GameEvents.h:12` "1-0c" · `docs/07` "1-0e" ·
   `FrameRendererCompute.cpp` "백로그 1-4" 등). 주석 정리(현재형 핵심만)와 함께 고친다 — 날짜 사연은 지우고, 남길 지식은 이 문서 3절 위치나
-  `git show 7ce95fc8:docs/06_Backlog.md` 로. 목록은 grep `06_Backlog\|백로그` 로 다시 뽑는다.
+  `git show 7ce95fc8:docs/06_Backlog.md` 로. 목록은 grep `06_Backlog\|백로그` 로 다시 뽑는다. 코드 주석의 "예전에는 …" 경위 서술도 같은 정리에서 현재형 주의로
+  바꾼다(예: `Core/Memory/Memory.h:58` · `Core/Task/TaskManager.h` · `Core/Task/TaskFuture.h:268` · `App/App.cpp` · `TurnBattle/SpeciesData.h:34` — README 들은 10-04 에 정리됨).
 
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).
