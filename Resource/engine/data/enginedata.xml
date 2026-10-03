@@ -10,7 +10,6 @@
             _shaderPostBloom="engine/shaders/postbloom.hlsl"
             _shaderPostOutline="engine/shaders/postoutline.hlsl"
             _shaderFullscreenBlit="engine/shaders/fullscreenblit.hlsl"
-            _shaderPostChain="engine/shaders/postchain.hlsl"
             _shaderGpuCull="engine/shaders/gpucull.hlsl"
             _shaderInstanceAnim="engine/shaders/instanceanim.hlsl"
             _shaderMeshMorph="engine/shaders/meshmorph.hlsl"
