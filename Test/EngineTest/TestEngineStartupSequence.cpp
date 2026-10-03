@@ -10,28 +10,49 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 단계 본문 대신 불린 순서를 적고, 정해 둔 단계에서 정해 둔 결과를 돌려줍니다. */
+    /**
+     * @brief 단계 본문 대신 불린 순서를 적고, 정해 둔 단계에서 정해 둔 결과를 돌려주는 호스트입니다.
+     * @details 표의 줄마다 `<단계>StartupStep` 을 같은 기록 구조체로 둔다(X-macro). 호스트가 구조체를 빠뜨리면 컴파일 오류인 것도 이 모양이 보인다.
+     */
     struct StartupStepRecorder
     {
+        template <EngineStartupStep Step>
+        struct RecordingStep
+        {
+            static EngineStartupResult initialize( StartupStepRecorder& recorder )
+            {
+                recorder._listInitialized.push_back( Step );
+                recorder._listEvent.push_back( string( "I:" ) + EngineStartupSequence::getStepName( Step ) );
+                return ( Step == recorder._resultStep ) ? recorder._result : EngineStartupResult::Succeeded;
+            }
+            static void shutdown( StartupStepRecorder& recorder )
+            {
+                recorder._listShutdown.push_back( Step );
+                recorder._listEvent.push_back( string( "S:" ) + EngineStartupSequence::getStepName( Step ) );
+            }
+            static void destroy( StartupStepRecorder& recorder )
+            {
+                recorder._listDestroyed.push_back( Step );
+                recorder._listEvent.push_back( string( "D:" ) + EngineStartupSequence::getStepName( Step ) );
+            }
+        };
+
+#define SW_ENGINE_STARTUP_STEP( Name, ... ) using Name##StartupStep = RecordingStep<EngineStartupStep::Name>;
+#include "Engine/EngineStartupStepList.xxx"
+#undef SW_ENGINE_STARTUP_STEP
+
         vector<EngineStartupStep> _listInitialized{};
         vector<EngineStartupStep> _listShutdown{};
+        vector<EngineStartupStep> _listDestroyed{};
+        vector<string>            _listEvent{}; ///< 세 본문을 불린 순서대로 — "I:" 초기화, "S:" 종료, "D:" 해제
         EngineStartupStep         _resultStep{ EngineStartupStep::Count };
         EngineStartupResult       _result{ EngineStartupResult::Succeeded };
-
-        EngineStartupResult initializeStep( EngineStartupStep step )
-        {
-            _listInitialized.push_back( step );
-            return ( step == _resultStep ) ? _result : EngineStartupResult::Succeeded;
-        }
-
-        void shutdownStep( EngineStartupStep step ) { _listShutdown.push_back( step ); }
-
-        bool runInitialize( EngineStartupSequence& sequence )
-        {
-            return sequence.initializeAll( SW_DELEGATE_METHOD( EngineStartupSequence::InitializeStepDelegate, &StartupStepRecorder::initializeStep, this ),
-                                           SW_DELEGATE_METHOD( EngineStartupSequence::ShutdownStepDelegate, &StartupStepRecorder::shutdownStep, this ) );
-        }
     };
+
+    /** @brief 표의 줄을 거꾸로 적은 단계 이름입니다 — 해제는 기동이 어디서 멈췄든 이 순서로 모든 단계를 돈다. */
+    constexpr const utf8* kFullDestroyOrder =
+        "SceneRhi LiveShader RenderThread FrameRenderer RHI Headless Scene Input Audio ModuleImages Task ShaderCache EngineData Resource "
+        "Config Reflection Compression";
 
     string joinStepNames( const vector<EngineStartupStep>& listStep )
     {
@@ -97,7 +118,7 @@ SW_TEST_CASE( EngineStartupSequenceTest, ShutdownRunsInReverseOfInitialization )
 {
     EngineStartupSequence sequence;
     StartupStepRecorder   recorder;
-    SW_ASSERT_TRUE( recorder.runInitialize( sequence ) );
+    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
     SW_EXPECT_STREQ( joinTableOrder().c_str(), joinStepNames( recorder._listInitialized ).c_str() );
 
     sequence.shutdownAll();
@@ -120,12 +141,16 @@ SW_TEST_CASE( EngineStartupSequenceTest, FailedStepStopsAndShutsDownOnlyInitiali
     StartupStepRecorder   recorder;
     recorder._resultStep = EngineStartupStep::Scene;
     recorder._result     = EngineStartupResult::Failed;
-    SW_EXPECT_FALSE( recorder.runInitialize( sequence ) );
+    SW_EXPECT_FALSE( sequence.initializeAll( recorder ) );
     SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineData ShaderCache Task ModuleImages Audio Input Scene",
                      joinStepNames( recorder._listInitialized ).c_str() );
 
     sequence.shutdownAll();
     SW_EXPECT_STREQ( "Input Audio ModuleImages Task ShaderCache EngineData Resource Config Reflection Compression", joinStepNames( recorder._listShutdown ).c_str() );
+
+    // 해제는 실패한 단계(Scene — 종료는 받지 않았다)와 닿지 못한 단계까지 모두 돈다. 부트스트랩이 미리 만든 객체가 있기 때문이다.
+    sequence.destroyAll();
+    SW_EXPECT_STREQ( kFullDestroyOrder, joinStepNames( recorder._listDestroyed ).c_str() );
 }
 
 /**
@@ -138,13 +163,54 @@ SW_TEST_CASE( EngineStartupSequenceTest, SkipDependentsSkipsEveryDependentStep )
     StartupStepRecorder   recorder;
     recorder._resultStep = EngineStartupStep::Headless;
     recorder._result     = EngineStartupResult::SkipDependents;
-    SW_EXPECT_TRUE( recorder.runInitialize( sequence ) );
+    SW_EXPECT_TRUE( sequence.initializeAll( recorder ) );
     SW_EXPECT_STREQ( "Compression Reflection Config Resource EngineData ShaderCache Task ModuleImages Audio Input Scene Headless",
                      joinStepNames( recorder._listInitialized ).c_str() );
 
     sequence.shutdownAll();
     SW_EXPECT_STREQ( "Headless Scene Input Audio ModuleImages Task ShaderCache EngineData Resource Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
+
+    // 건너뛴 단계(RHI 이후)도 해제는 받는다 — 그 단계의 서비스가 부트스트랩에서 만들어져 있을 수 있다.
+    sequence.destroyAll();
+    SW_EXPECT_STREQ( kFullDestroyOrder, joinStepNames( recorder._listDestroyed ).c_str() );
+}
+
+/**
+ * @brief [EngineStartupSequenceTest] 해제가 표의 모든 단계를 줄의 역순으로, 모든 종료가 끝난 **뒤에** 도는지 검증
+ * @details `destroyAll` 은 아직 내리지 않은 단계가 있으면 먼저 `shutdownAll` 을 한다 — 해제된 객체를 다른 단계의 종료가 보는 일이 없다.
+ *          `EngineLoop::shutdown` 의 해제 순서가 이 줄이다(렌더러 쪽 → RHI → 씬 → 입력 · 오디오 → 태스크 → … → 압축).
+ */
+SW_TEST_CASE( EngineStartupSequenceTest, DestroyRunsAfterEveryShutdownInReverseTableOrder )
+{
+    EngineStartupSequence sequence;
+    StartupStepRecorder   recorder;
+    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
+
+    sequence.destroyAll();
+    SW_EXPECT_STREQ( kFullDestroyOrder, joinStepNames( recorder._listDestroyed ).c_str() );
+    SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
+
+    // 종료 열일곱이 모두 해제 열일곱보다 앞이다.
+    const size_t stepCount = static_cast<size_t>( EngineStartupStep::Count );
+    SW_ASSERT_TRUE( recorder._listEvent.size() == stepCount * 3 );
+    for ( size_t eventIndex = 0; eventIndex < recorder._listEvent.size(); ++eventIndex )
+    {
+        const utf8 expectedKind = ( eventIndex < stepCount ) ? 'I' : ( eventIndex < stepCount * 2 ) ? 'S'
+                                                                                                    : 'D';
+        SW_EXPECT_TRUE_MSG( recorder._listEvent[eventIndex][0] == expectedKind, recorder._listEvent[eventIndex].c_str() );
+    }
+}
+
+/**
+ * @brief [EngineStartupSequenceTest] 호스트를 받기 전(`initializeAll` 전)의 해제는 아무것도 부르지 않는지 검증
+ */
+SW_TEST_CASE( EngineStartupSequenceTest, DestroyBeforeInitializeDoesNothing )
+{
+    EngineStartupSequence sequence;
+    sequence.shutdownAll();
+    sequence.destroyAll();
+    SW_EXPECT_TRUE( sequence.getInitializedSteps().empty() );
 }
 
 /**

@@ -107,7 +107,8 @@ namespace sw
         : _listOrder{}
         , _listDependency{}
         , _listInitialized{}
-        , _shutdownStep{}
+        , _pArrEntry{ nullptr }
+        , _pHost{ nullptr }
         , _error{}
     {
         EngineStartupGraph graph{};
@@ -119,16 +120,18 @@ namespace sw
         _listDependency = std::move( graph._listDependency );
     }
 
-    bool EngineStartupSequence::initializeAll( const InitializeStepDelegate& initializeStep, const ShutdownStepDelegate& shutdownStep )
+    bool EngineStartupSequence::initializeAllInternal( const EngineStartupStepEntry* pArrEntry, void* pHost )
     {
+        // 표가 틀렸어도 호스트는 기억한다 — 부트스트랩이 이미 만든 단계 객체를 `destroyAll` 이 해제해야 한다.
+        _pArrEntry = pArrEntry;
+        _pHost     = pHost;
+        _listInitialized.clear();
         if ( _error.empty() == false )
         {
             SW_LOG_ERROR( "Invalid startup step table: %#", _error.c_str() );
             return false;
         }
 
-        _shutdownStep = shutdownStep;
-        _listInitialized.clear();
         // 건너뛴 단계(그리고 `SkipDependents` 를 돌려준 단계)를 표시한다. 위상 순서로 돌므로 의존을 먼저 본다.
         vector<uint8> listBlocked( static_cast<size_t>( EngineStartupStep::Count ), SW_FALSE );
         for ( const EngineStartupStep step : _listOrder )
@@ -146,7 +149,7 @@ namespace sw
                 continue;
             }
 
-            const EngineStartupResult result = initializeStep.isBound() ? initializeStep( step ) : EngineStartupResult::Succeeded;
+            const EngineStartupResult result = pArrEntry[stepIndex]._pInitialize( pHost );
             if ( result == EngineStartupResult::Failed )
             {
                 SW_LOG_ERROR( "Startup step '%#' failed", getStepName( step ) );
@@ -165,9 +168,20 @@ namespace sw
         {
             const EngineStartupStep step = _listInitialized.back();
             _listInitialized.pop_back();
-            if ( _shutdownStep.isBound() )
-                _shutdownStep( step );
+            _pArrEntry[static_cast<uint32>( step )]._pShutdown( _pHost );
         }
+    }
+
+    void EngineStartupSequence::destroyAll()
+    {
+        // 해제는 늘 종료 뒤다. 종료하지 않은 단계가 남았으면 여기서 먼저 내린다.
+        shutdownAll();
+        if ( _pArrEntry == nullptr )
+            return;
+        // 표의 줄 순서는 의존을 지키는 기동 순서이므로(`EngineStartupTableCheck`) 줄의 역순이 곧 해제 순서다. 정렬 결과(`_listOrder`)를
+        // 쓰지 않는 것은 표 오류로 정렬이 비었어도 부트스트랩이 만든 객체를 해제해야 하기 때문이다.
+        for ( uint32 stepIndex = static_cast<uint32>( EngineStartupStep::Count ); stepIndex > 0; --stepIndex )
+            _pArrEntry[stepIndex - 1]._pDestroy( _pHost );
     }
 
     const utf8* EngineStartupSequence::getStepName( EngineStartupStep step )

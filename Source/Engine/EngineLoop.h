@@ -154,18 +154,19 @@ namespace sw
         /** @brief 셰이더 강제 리로드 핫키를 처리합니다. Engine 자신의 개발 도구이므로 여기서 끝냅니다. */
         void pollShaderReloadHotkey();
 
-        /** @brief 기동 단계 하나의 초기화 본문입니다. 순서는 `_startup`(표의 의존)이 정합니다. */
-        EngineStartupResult initializeStartupStep( EngineStartupStep step );
-        /** @brief 기동 단계 하나의 종료 본문입니다. 초기화한 단계만 역순으로 불립니다. */
-        void shutdownStartupStep( EngineStartupStep step );
-        /** @brief 엔진 · 게임 설정을 읽어 `_pEngineConfig` 를 채우고 GameConfig 를 활성화합니다. */
-        EngineStartupResult initializeConfigStep();
-        /** @brief `--bake-shaders` · `--cook-scenes` 면 그 작업을 하고 RHI 이후 단계를 건너뛰게 합니다. */
-        EngineStartupResult initializeHeadlessStep();
-        /** @brief 백엔드를 고르고, 창이 없으면 만들고, RHI 디바이스를 세웁니다. */
-        EngineStartupResult initializeRhiStep();
-        /** @brief 셰이더 라이브 리로드(Debug)를 만들고 재컴파일 콜백을 겁니다. */
-        void initializeLiveShaderStep();
+        /**
+         * @brief 표 밖 부트스트랩(전역 변수 · 표 밖 서비스 · 서비스 표 · 로거 · 메모리 프로파일러 · 크래시 핸들러 · 이름 풀)을 역순으로 내립니다.
+         * @details 기동 단계의 종료 · 해제(`_startup`) 뒤에 부릅니다.
+         */
+        void shutdownBootstrap();
+
+        // 기동 단계의 본문이다(`EngineLoop.cpp`). 표(`EngineStartupStepList.xxx`)의 줄마다 `<단계>StartupStep` 하나이고, 빠지면 컴파일 오류다.
+        // 중첩 타입이라 이 클래스의 private 을 그대로 쓰고, 바깥에서는 본문 표(`EngineStartupStepTable`)만 이름을 본다.
+#define SW_ENGINE_STARTUP_STEP( Name, ... ) struct Name##StartupStep;
+#include "Engine/EngineStartupStepList.xxx"
+#undef SW_ENGINE_STARTUP_STEP
+        template <class>
+        friend struct EngineStartupStepTable;
 
     private:
         /**
@@ -184,12 +185,13 @@ namespace sw
         unique_ptr<IAudioSystem>     _audioSystem;
         unique_ptr<FrameRenderer>    _frameRenderer;
         unique_ptr<RenderThread>     _renderThread;
-        /** @brief GT 쪽 씬 스냅샷 빌더입니다. buildFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다.
+        /** @brief GT 쪽 씬 스냅샷 빌더입니다. buildFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다. FrameRenderer 단계가 만들고 해제합니다
+         *         (헤드리스 작업에는 없습니다).
          *         프레임마다 CPU 스냅샷만 exportCpuSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘깁니다.
          *         패킷과 함께 힙에 둡니다. 값으로 들면 이 헤더가 Graphics 의 씬 스냅샷 헤더들을 App 까지 끌고 갑니다(전방 선언으로 끊습니다). */
         unique_ptr<GpuSceneBuilder> _gpuSceneBuilder;
         /**
-         * @brief GT 가 프레임마다 채우는 패킷입니다. 링의 자리와 바꿔 가며 돕니다(`RenderThread::submit`).
+         * @brief GT 가 프레임마다 채우는 패킷입니다. 링의 자리와 바꿔 가며 돕니다(`RenderThread::submit`). FrameRenderer 단계가 만들고 해제합니다.
          * @details 지역 변수였을 때는 스냅샷의 배치 · 그룹 목록과 라이트 목록이 프레임마다 새로 할당됐습니다. 이제 링에서
          *          돌아온 저장소를 그대로 다시 채웁니다.
          */

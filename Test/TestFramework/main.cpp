@@ -55,131 +55,148 @@ namespace
 {
     /**
      * @brief 하네스의 기동 단계 본문입니다. 순서는 `EngineLoop` 과 같은 표(`EngineStartupStepList.xxx`)가 정합니다.
-     * @details 하네스는 창 · RHI · 렌더러를 세우지 않으므로 그 단계는 본문이 없고(자리만 차지), 오디오는 초기화하지 않고 종료만 부른다.
+     * @details 줄마다 `<단계>StartupStep` 하나다(`EngineStartupStepDefaults` 상속 — 필요한 것만 정의). 하네스는 창 · RHI · 렌더러 · 헤드리스
+     *          작업을 세우지 않으므로 그 단계는 기본값이고, 오디오는 초기화하지 않고 종료만 부른다. 해제는 `EngineLoop` 과 같은 역순이다.
      */
-    struct TestHostStartup
+    struct TestHost
     {
-        sw::EngineOwnedServices* _pOwned{ nullptr };
-        sw::ConfigManager*       _pConfigManager{ nullptr };
-        sw::IAudioSystem*        _pAudioSystem{ nullptr };
-        const sw::EngineConfig*  _pEngineConfig{ nullptr };
+        sw::EngineOwnedServices*          _pOwned{ nullptr };
+        sw::unique_ptr<sw::ConfigManager> _configManager{};
+        sw::unique_ptr<sw::IAudioSystem>  _audioSystem{};
+        sw::unique_ptr<sw::CommandStack>  _commandStack{};
+        const sw::EngineConfig*           _pEngineConfig{ nullptr };
 
-        sw::EngineStartupResult initializeStep( sw::EngineStartupStep step )
-        {
-            switch ( step )
-            {
-                case sw::EngineStartupStep::Compression:
-                {
-                    _pOwned->_pCompressionCodecRegistry->initialize();
-                    // 서비스와 **같은 인스턴스**를 Core 슬롯에도 꽂는다 — 안 꽂으면 CompressionStream 이
-                    // 다른 레지스트리를 보게 되어 등록한 코덱이 테스트에서만 조용히 무시된다.
-                    sw::CompressionCodecRegistry::setActive( _pOwned->_pCompressionCodecRegistry.get() );
-                    return sw::EngineStartupResult::Succeeded;
-                }
-                case sw::EngineStartupStep::Reflection:
-                {
-                    // 리플렉션은 설정보다 먼저다 — 설정(EngineConfig·GameConfig) 역직렬화가 TypeInfo 를 쓴다.
-                    sw::engine::registerModuleTypes( "Engine" );
-                    sw::engine::registerModuleTypes( "GameFramework" );
-                    _pOwned->_pTypeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
-                    return sw::EngineStartupResult::Succeeded;
-                }
-                case sw::EngineStartupStep::Config:
-                {
-                    // 설정은 리소스 초기화보다 먼저 읽는다. `loadAssetRegistries` 는 `GameConfig::getActive()._packRoot` 로 게임
-                    // 레지스트리 경로를 만든다 — 활성 설정이 없으면 시작 시점 GUID 표가 반쪽이 된다.
-                    _pConfigManager->setRootDirectory( sw::ResourceUtil::getProjectFolderPath() );
-                    _pEngineConfig                    = _pConfigManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJson );
-                    const sw::GameConfig* pGameConfig = _pConfigManager->ensureConfig<sw::GameConfig>( sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJson );
-                    if ( pGameConfig != nullptr )
-                        sw::GameConfig::setActive( *pGameConfig );
-                    return sw::EngineStartupResult::Succeeded;
-                }
-                case sw::EngineStartupStep::Resource:
-                {
-                    if ( _pOwned->_pResourceManager->initialize() == false )
-                        return sw::EngineStartupResult::Failed;
-                    // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다 — 그 전제는 `mountContent` 의 인자에 드러나 있다.
-                    if ( _pEngineConfig != nullptr )
-                        _pOwned->_pResourceManager->mountContent( _pEngineConfig->_listResourcePriority );
-                    else
-                        _pOwned->_pResourceManager->mountContent( {} );
-                    return sw::EngineStartupResult::Succeeded;
-                }
-                case sw::EngineStartupStep::ShaderCache:
-                    return _pOwned->_pShaderCache->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
-                case sw::EngineStartupStep::Task:
-                    return _pOwned->_pTaskManager->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
-                case sw::EngineStartupStep::Input:
-                    return _pOwned->_pInputManager->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
-                case sw::EngineStartupStep::Scene:
-                    return _pOwned->_pSceneManager->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
-                // 창 · RHI · 렌더러 · 헤드리스 작업 · 오디오 장치는 하네스가 세우지 않는다.
-                case sw::EngineStartupStep::Audio:
-                case sw::EngineStartupStep::EngineData:
-                case sw::EngineStartupStep::FrameRenderer:
-                case sw::EngineStartupStep::Headless:
-                case sw::EngineStartupStep::LiveShader:
-                case sw::EngineStartupStep::ModuleImages:
-                case sw::EngineStartupStep::RHI:
-                case sw::EngineStartupStep::RenderThread:
-                case sw::EngineStartupStep::SceneRhi:
-                case sw::EngineStartupStep::Count:
-                default:
-                    return sw::EngineStartupResult::Succeeded;
-            }
-        }
+        using Defaults = sw::EngineStartupStepDefaults<TestHost>;
 
-        void shutdownStep( sw::EngineStartupStep step )
+        struct CompressionStartupStep : Defaults
         {
-            switch ( step )
+            static sw::EngineStartupResult initialize( TestHost& host )
             {
-                case sw::EngineStartupStep::Audio:
-                {
-                    _pAudioSystem->shutdown();
-                    break;
-                }
-                case sw::EngineStartupStep::Compression:
-                {
-                    _pOwned->_pCompressionCodecRegistry->shutdown();
-                    break;
-                }
-                case sw::EngineStartupStep::Input:
-                {
-                    _pOwned->_pInputManager->shutdown();
-                    break;
-                }
-                case sw::EngineStartupStep::Scene:
-                {
-                    _pOwned->_pSceneManager->shutdown();
-                    break;
-                }
-                case sw::EngineStartupStep::ShaderCache:
-                {
-                    _pOwned->_pShaderCache->shutdown();
-                    break;
-                }
-                case sw::EngineStartupStep::Task:
-                {
-                    _pOwned->_pTaskManager->shutdown();
-                    break;
-                }
-                case sw::EngineStartupStep::Config:
-                case sw::EngineStartupStep::EngineData:
-                case sw::EngineStartupStep::FrameRenderer:
-                case sw::EngineStartupStep::Headless:
-                case sw::EngineStartupStep::LiveShader:
-                case sw::EngineStartupStep::ModuleImages:
-                case sw::EngineStartupStep::RHI:
-                case sw::EngineStartupStep::Reflection:
-                case sw::EngineStartupStep::RenderThread:
-                case sw::EngineStartupStep::Resource:
-                case sw::EngineStartupStep::SceneRhi:
-                case sw::EngineStartupStep::Count:
-                default:
-                    break;
+                host._pOwned->_pCompressionCodecRegistry->initialize();
+                // 서비스와 **같은 인스턴스**를 Core 슬롯에도 꽂는다 — 안 꽂으면 CompressionStream 이
+                // 다른 레지스트리를 보게 되어 등록한 코덱이 테스트에서만 조용히 무시된다.
+                sw::CompressionCodecRegistry::setActive( host._pOwned->_pCompressionCodecRegistry.get() );
+                return sw::EngineStartupResult::Succeeded;
             }
-        }
+            static void shutdown( TestHost& host ) { host._pOwned->_pCompressionCodecRegistry->shutdown(); }
+            static void destroy( TestHost& host ) { host._pOwned->destroyCompressionCodecRegistry(); }
+        };
+
+        struct ReflectionStartupStep : Defaults
+        {
+            static sw::EngineStartupResult initialize( TestHost& host )
+            {
+                // 리플렉션은 설정보다 먼저다 — 설정(EngineConfig·GameConfig) 역직렬화가 TypeInfo 를 쓴다.
+                sw::engine::registerModuleTypes( "Engine" );
+                sw::engine::registerModuleTypes( "GameFramework" );
+                host._pOwned->_pTypeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
+                return sw::EngineStartupResult::Succeeded;
+            }
+            static void destroy( TestHost& host ) { host._pOwned->_pTypeRegistry.reset(); }
+        };
+
+        struct ConfigStartupStep : Defaults
+        {
+            static sw::EngineStartupResult initialize( TestHost& host )
+            {
+                // 설정은 리소스 초기화보다 먼저 읽는다. `loadAssetRegistries` 는 `GameConfig::getActive()._packRoot` 로 게임
+                // 레지스트리 경로를 만든다 — 활성 설정이 없으면 시작 시점 GUID 표가 반쪽이 된다.
+                host._configManager = sw::make_unique<sw::ConfigManager>();
+                host._configManager->setRootDirectory( sw::ResourceUtil::getProjectFolderPath() );
+                host._pEngineConfig               = host._configManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJson );
+                const sw::GameConfig* pGameConfig = host._configManager->ensureConfig<sw::GameConfig>( sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJson );
+                if ( pGameConfig != nullptr )
+                    sw::GameConfig::setActive( *pGameConfig );
+                return sw::EngineStartupResult::Succeeded;
+            }
+            static void destroy( TestHost& host )
+            {
+                host._pEngineConfig = nullptr;
+                host._configManager.reset();
+            }
+        };
+
+        struct ResourceStartupStep : Defaults
+        {
+            static sw::EngineStartupResult initialize( TestHost& host )
+            {
+                if ( host._pOwned->_pResourceManager->initialize() == false )
+                    return sw::EngineStartupResult::Failed;
+                // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다 — 그 전제는 `mountContent` 의 인자에 드러나 있다.
+                if ( host._pEngineConfig != nullptr )
+                    host._pOwned->_pResourceManager->mountContent( host._pEngineConfig->_listResourcePriority );
+                else
+                    host._pOwned->_pResourceManager->mountContent( {} );
+                return sw::EngineStartupResult::Succeeded;
+            }
+            static void destroy( TestHost& host ) { host._pOwned->destroyResourceManager(); }
+        };
+
+        struct EngineDataStartupStep : Defaults
+        {
+            static void destroy( TestHost& host ) { host._pOwned->_pEngineData.reset(); }
+        };
+
+        struct ShaderCacheStartupStep : Defaults
+        {
+            static sw::EngineStartupResult initialize( TestHost& host )
+            {
+                return host._pOwned->_pShaderCache->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
+            }
+            static void shutdown( TestHost& host ) { host._pOwned->_pShaderCache->shutdown(); }
+            static void destroy( TestHost& host ) { host._pOwned->_pShaderCache.reset(); }
+        };
+
+        struct TaskStartupStep : Defaults
+        {
+            static sw::EngineStartupResult initialize( TestHost& host )
+            {
+                return host._pOwned->_pTaskManager->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
+            }
+            static void shutdown( TestHost& host ) { host._pOwned->_pTaskManager->shutdown(); }
+            static void destroy( TestHost& host ) { host._pOwned->_pTaskManager.reset(); }
+        };
+
+        struct AudioStartupStep : Defaults
+        {
+            static void shutdown( TestHost& host ) { host._audioSystem->shutdown(); }
+            static void destroy( TestHost& host ) { host._audioSystem.reset(); }
+        };
+
+        struct InputStartupStep : Defaults
+        {
+            static sw::EngineStartupResult initialize( TestHost& host )
+            {
+                return host._pOwned->_pInputManager->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
+            }
+            static void shutdown( TestHost& host ) { host._pOwned->_pInputManager->shutdown(); }
+            static void destroy( TestHost& host ) { host._pOwned->_pInputManager.reset(); }
+        };
+
+        struct SceneStartupStep : Defaults
+        {
+            static sw::EngineStartupResult initialize( TestHost& host )
+            {
+                return host._pOwned->_pSceneManager->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
+            }
+            static void shutdown( TestHost& host ) { host._pOwned->_pSceneManager->shutdown(); }
+            static void destroy( TestHost& host )
+            {
+                host._pOwned->_pSceneManager.reset();
+                // 소멸자가 태스크를 기다린다 — Task 해제보다 먼저다.
+                host._pOwned->_pAssetStreamingQueue.reset();
+                host._commandStack.reset();
+            }
+        };
+
+        // 하네스가 세우지 않는 단계다(모듈 이미지 · 헤드리스 작업 · 창 · RHI · 렌더러).
+        using ModuleImagesStartupStep  = Defaults;
+        using HeadlessStartupStep      = Defaults;
+        using RHIStartupStep           = Defaults;
+        using FrameRendererStartupStep = Defaults;
+        using RenderThreadStartupStep  = Defaults;
+        using LiveShaderStartupStep    = Defaults;
+        using SceneRhiStartupStep      = Defaults;
     };
 } // namespace
 
@@ -195,12 +212,15 @@ int main( int32 argc, utf8* argv[] )
     sw::EngineOwnedServices owned;
     owned.createAll();
 
+    // 단계가 소유하는 하네스 몫(설정 · 오디오 · 커맨드 스택)은 호스트가 든다 — 해제가 같은 표의 역순이다.
+    TestHost host{};
+    host._pOwned       = &owned;
+    host._audioSystem  = sw::IAudioSystem::create();
+    host._commandStack = sw::make_unique<sw::CommandStack>();
+
     sw::unique_ptr<sw::Logger>           logger           = sw::make_unique<sw::Logger>();
     sw::unique_ptr<sw::DeadlockDetector> deadlockDetector = sw::make_unique<sw::DeadlockDetector>();
     sw::unique_ptr<sw::MemoryProfiler>   memoryProfiler   = sw::make_unique<sw::MemoryProfiler>();
-    sw::unique_ptr<sw::ConfigManager>    configManager    = sw::make_unique<sw::ConfigManager>();
-    sw::unique_ptr<sw::CommandStack>     commandStack     = sw::make_unique<sw::CommandStack>();
-    sw::unique_ptr<sw::IAudioSystem>     audioSystem      = sw::IAudioSystem::create();
     logger->initialize();
     // 로거 직후에 설치해야 이후 어디서 죽든 콜 스택이 남는다(EngineLoop 과 같은 자리). 예전에는 테스트 실행 파일에
     // 핸들러가 없어서 간헐 세그폴트가 "SEGFAULT" 한 단어로만 남았다 — 세 번을 보고도 자리를 몰랐다.
@@ -228,82 +248,45 @@ int main( int32 argc, utf8* argv[] )
     sw::EngineServices services{};
     owned.bindInto( services );
     // owned=0 인 자리만 손으로 꽂는다(팩토리 · 구성별 조건부).
-    services._pAudioSystem    = audioSystem.get();
+    services._pAudioSystem    = host._audioSystem.get();
     services._pMemoryProfiler = memoryProfiler.get();
-    services._pCommandStack   = commandStack.get();
+    services._pCommandStack   = host._commandStack.get();
     sw::engine::bindEngineServices( services );
 
     // ------------------------------------------------------------------------------
     // 1) 기동 단계 — 리플렉션 · 설정 · 리소스 · 태스크 · 입력 · 씬
     // ------------------------------------------------------------------------------
-    // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 표(`EngineStartupStepList.xxx`)를 위상 정렬한 순서로 본문을 부른다 —
-    // 하네스가 앱과 다른 순서로 서는 일이 구조로 막힌다. 종료는 아래 `shutdownAll` 이 그 역순으로 한다.
-    TestHostStartup hostStartup{};
-    hostStartup._pOwned         = &owned;
-    hostStartup._pConfigManager = configManager.get();
-    hostStartup._pAudioSystem   = audioSystem.get();
-
+    // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 표(`EngineStartupStepList.xxx`)를 위상 정렬한 순서로 단계 구조체(`TestHost::<단계>StartupStep`)를
+    // 부른다 — 하네스가 앱과 다른 순서로 서는 일이 구조로 막힌다. 종료와 해제는 아래 `shutdownAll` · `destroyAll` 이 그 역순으로 한다.
     sw::EngineStartupSequence startup;
-    if ( startup.initializeAll( SW_DELEGATE_METHOD( sw::EngineStartupSequence::InitializeStepDelegate, &TestHostStartup::initializeStep, &hostStartup ),
-                                SW_DELEGATE_METHOD( sw::EngineStartupSequence::ShutdownStepDelegate, &TestHostStartup::shutdownStep, &hostStartup ) ) == false )
+    if ( startup.initializeAll( host ) == false )
         return -1;
 
     SW_LOG_INFO( "Core services initialized. Running tests..." );
     SW_LOG_INFO( " Tip: --test_filter=Suite.*  --test_filter=-RHITest.*  --test_list" );
     int32 result = test::TestRegistry::getInstance().runAllTests();
 
+    // ------------------------------------------------------------------------------
+    // 2) 종료 — 단계 종료 · 해제(표의 역순), 그 뒤 표 밖 부트스트랩(`EngineLoop::shutdownBootstrap` 과 같은 순서)
+    // ------------------------------------------------------------------------------
     startup.shutdownAll();
-    owned._pGlobalVariableManager->shutdown();
-    memoryProfiler->shutdown();
-    deadlockDetector->shutdown();
+    startup.destroyAll();
 
-    // ------------------------------------------------------------------------------
-    // 2) 종료 — 서비스 해제 (생성 역순)
-    // ------------------------------------------------------------------------------
+    owned._pGlobalVariableManager->shutdown();
+    // 단계에 속하지 않는 서비스를 목록의 역순으로 놓는다.
+    owned.destroyAll();
     sw::engine::unbindEngineServices();
 
-    owned._pFrameProfiler.reset();
-    owned._pRenderTargetRegistry.reset();
-    owned._pComponentDefaults.reset();
-    owned._pShaderCache.reset();
-    sw::CompressionCodecRegistry::setActive( nullptr );
-    owned._pCompressionCodecRegistry.reset();
-    owned._pDebugDrawQueue.reset();
-    owned._pDebugOverlayState.reset();
-    owned._pAssetStreamingQueue.reset();
-    owned._pEngineData.reset();
-    owned._pEventDispatcher.reset();
-    audioSystem.reset();
-    owned._pRHIBackendRegistry.reset();
-    owned._pInputManager.reset();
-    owned._pSceneManager.reset();
-    owned._pLocalizationManager.reset();
-    commandStack.reset();
-
-    // [Note] ResourceManager는 가장 밑바탕이 되는 시스템입니다.
-    // 다른 매니저들의 reset() 시 소멸자가 호출되며 들고 있던 리소스들을 해제하는데,
-    // 이때 ResourceManager가 살아있어야 안전하게 해제됩니다.
-    if ( owned._pResourceManager != nullptr )
-        owned._pResourceManager->shutdown();
-    owned._pResourceManager.reset();
-
-    owned._pTypeRegistry.reset();
-    owned._pGlobalVariableManager.reset();
-    owned._pTaskManager.reset();
-    owned._pCommandLineManager.reset();
-    // 위에서 순서대로 놓은 것 말고 남은 것을 쓸어 담는다(EngineLoop 과 같은 자리).
-    owned.destroyAll();
-
-    // 로거 스레드를 **먼저** 세운다. 그 스레드도 메모리를 풀며 프로파일러를 부르는데(`Memory::free` → `recordFree`), 예전에는 프로파일러를
-    // 먼저 지워 그 스레드가 읽던 객체가 사라졌다(ThreadSanitizer 가 모든 테스트 실행 파일에서 짚었다). `EngineLoop` 은 이미 이 순서다.
-    sw::CrashHandler::shutdown();
+    // 로거 스레드를 **먼저** 세운다. 그 스레드도 메모리를 풀며 프로파일러를 부르기 때문이다(`Memory::free` → `recordFree`).
     logger->shutdown();
-    logger.reset();
-
+    memoryProfiler->shutdown();
+    deadlockDetector->shutdown();
     memoryProfiler.reset();
     deadlockDetector.reset();
 
     sw::HashedStringPool::shutdown();
+    sw::CrashHandler::shutdown();
+    logger.reset();
 
     return result;
 }

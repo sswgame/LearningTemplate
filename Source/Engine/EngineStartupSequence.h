@@ -1,16 +1,15 @@
 /**
  * @file EngineStartupSequence.h
- * @brief 엔진 기동 단계를 의존 선언(`EngineStartupStepList.xxx`)으로 위상 정렬해 초기화하고, 그 역순으로 종료합니다. 표는 그 순서대로 적힙니다.
+ * @brief 엔진 기동 단계를 의존 선언(`EngineStartupStepList.xxx`)으로 위상 정렬해 초기화하고, 그 역순으로 종료 · 해제합니다. 표는 그 순서대로 적힙니다.
  * @details 언리얼 `FSubsystemCollectionBase::InitializeDependency` 와 같은 자리입니다 — 각 단계가 먼저 서야 하는 단계를
- *          적고, 초기화는 그 그래프의 위상 순서, 종료(`Deinitialize`)는 역순입니다. 순서 지식은 표의 의존 칸 하나에 있고
- *          호스트(`EngineLoop` · 시험 하네스)는 단계마다 본문만 줍니다.
+ *          적고, 초기화는 그 그래프의 위상 순서, 종료(`Deinitialize`)와 객체 해제는 역순입니다. 순서 지식은 표의 의존 칸 하나에 있고
+ *          호스트(`EngineLoop` · 시험 하네스)는 단계마다 구조체 하나(`<단계>StartupStep`)로 본문만 줍니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
 
 namespace sw
 {
@@ -46,27 +45,93 @@ namespace sw
     };
 
     /**
+     * @brief 단계 본문의 기본값입니다. 아무것도 하지 않고 성공합니다.
+     * @details 호스트는 표의 줄마다 `<단계>StartupStep` 구조체를 두고, 이것을 상속해 필요한 함수만 다시 정의합니다(이름 가림).
+     *          언리얼 subsystem 의 `Initialize` / `Deinitialize` 와 같은 자리이고, 해제(`destroy`)가 하나 더 있습니다.
+     * @tparam THost 본문을 돌리는 호스트(`EngineLoop` · 시험 하네스)입니다.
+     */
+    template <class THost>
+    struct EngineStartupStepDefaults
+    {
+        /** @brief 단계를 세웁니다. 위상 순서로 불립니다. */
+        static EngineStartupResult initialize( THost& ) { return EngineStartupResult::Succeeded; }
+        /** @brief 세운 단계를 내립니다. **초기화한 단계만** 역순으로 불리고, 이때 모든 단계의 객체는 아직 살아 있습니다. */
+        static void shutdown( THost& ) {}
+        /**
+         * @brief 단계가 소유한 객체를 해제합니다.
+         * @details 모든 단계의 `shutdown` 뒤에 **표의 모든 단계**에 역순으로 불립니다 — 기동이 어디서 멈췄든 같습니다. 단계의 객체는
+         *          부트스트랩이 미리 만들었거나(서비스) 실패한 초기화가 반쯤 만들었을 수 있기 때문입니다. 그래서 만들지 않은 객체에도
+         *          불리고, 본문은 null 안전해야 합니다.
+         */
+        static void destroy( THost& ) {}
+    };
+
+    /** @brief 단계 하나의 본문 셋입니다. 호스트 타입을 지운 포인터를 받습니다(`EngineStartupStepTable` 이 채웁니다). */
+    struct EngineStartupStepEntry
+    {
+        EngineStartupResult ( *_pInitialize )( void* pHost ); ///< `<단계>StartupStep::initialize`
+        void ( *_pShutdown )( void* pHost );                  ///< `<단계>StartupStep::shutdown`
+        void ( *_pDestroy )( void* pHost );                   ///< `<단계>StartupStep::destroy`
+    };
+
+    /** @brief 단계 구조체의 정적 함수를 `EngineStartupStepEntry` 의 모양으로 잇습니다. */
+    template <class THost, class TStep>
+    struct EngineStartupStepThunk
+    {
+        static EngineStartupResult initialize( void* pHost ) { return TStep::initialize( *static_cast<THost*>( pHost ) ); }
+        static void                shutdown( void* pHost ) { TStep::shutdown( *static_cast<THost*>( pHost ) ); }
+        static void                destroy( void* pHost ) { TStep::destroy( *static_cast<THost*>( pHost ) ); }
+
+        static constexpr EngineStartupStepEntry kEntry{ &initialize, &shutdown, &destroy }; ///< 표의 칸 하나
+    };
+
+    /**
+     * @brief 호스트의 단계 구조체(`THost::<단계>StartupStep`)로 만든 본문 표입니다. 자리는 `EngineStartupStep` 값입니다.
+     * @details 표(`EngineStartupStepList.xxx`)의 줄마다 구조체가 하나 있어야 하고, 빠지면 컴파일 오류입니다. 단계마다 `switch` 를
+     *          두지 않으므로 단계를 더하는 일은 표 한 줄과 호스트마다 구조체 하나입니다. 구조체를 private 으로 둔 호스트는
+     *          `template <class> friend struct EngineStartupStepTable;` 로 이 표에만 보입니다.
+     */
+    template <class THost>
+    struct EngineStartupStepTable
+    {
+        static constexpr EngineStartupStepEntry kArrEntry[] = {
+#define SW_ENGINE_STARTUP_STEP( Name, ... ) EngineStartupStepThunk<THost, typename THost::Name##StartupStep>::kEntry,
+#include "Engine/EngineStartupStepList.xxx"
+#undef SW_ENGINE_STARTUP_STEP
+        };
+        static_assert( sizeof( kArrEntry ) / sizeof( kArrEntry[0] ) == static_cast<size_t>( EngineStartupStep::Count ),
+                       "Startup step body table must have one row per EngineStartupStep" );
+    };
+
+    /**
      * @class EngineStartupSequence
-     * @brief 기동 단계 표를 정렬해 들고, 호스트가 준 본문으로 초기화 · 종료를 돌립니다.
+     * @brief 기동 단계 표를 정렬해 들고, 호스트의 단계 구조체로 초기화 · 종료 · 해제를 돌립니다.
      */
     class SW_API EngineStartupSequence
     {
     public:
-        using InitializeStepDelegate = Delegate<EngineStartupResult( EngineStartupStep )>;
-        using ShutdownStepDelegate   = Delegate<void( EngineStartupStep )>;
-
         /** @brief 표를 정렬합니다. 모르는 이름 · 순환이면 `initializeAll` 이 오류를 알리고 실패합니다. */
         EngineStartupSequence();
 
         /**
-         * @brief 위상 순서로 단계마다 @p initializeStep 을 부릅니다.
+         * @brief 위상 순서로 단계마다 `THost::<단계>StartupStep::initialize` 를 부릅니다.
          * @details `Failed` 면 거기서 멈추고 false 입니다. `SkipDependents` 면 그 단계에 의존하는 단계를 건너뜁니다.
-         *          종료는 **초기화한 단계만** 역순으로 @p shutdownStep 에 넘깁니다(`shutdownAll`).
+         *          @p host 를 기억해 두었다가 `shutdownAll` · `destroyAll` 이 같은 호스트로 부릅니다. 호스트는 그때까지 살아 있어야 합니다.
          * @return 표가 유효하고 실패한 단계가 없으면 true 입니다.
          */
-        [[nodiscard]] bool initializeAll( const InitializeStepDelegate& initializeStep, const ShutdownStepDelegate& shutdownStep );
-        /** @brief 초기화한 단계를 역순으로 종료합니다. 두 번 불러도 됩니다. */
+        template <class THost>
+        [[nodiscard]] bool initializeAll( THost& host )
+        {
+            return initializeAllInternal( EngineStartupStepTable<THost>::kArrEntry, &host );
+        }
+        /** @brief 초기화한 단계를 역순으로 종료합니다(`shutdown`). 두 번 불러도 됩니다. */
         void shutdownAll();
+        /**
+         * @brief 표의 모든 단계를 역순으로 해제합니다(`destroy`). 아직 종료하지 않은 단계가 있으면 먼저 `shutdownAll` 합니다.
+         * @details 초기화한 단계만이 아니라 **모든 단계**입니다 — 실패한 단계, 건너뛴 단계(`SkipDependents`), 닿지 못한 단계도 해제합니다
+         *          (`EngineStartupStepDefaults::destroy`). `initializeAll` 을 부른 적이 없으면 아무것도 하지 않습니다.
+         */
+        void destroyAll();
 
         /** @brief 표의 초기화 순서입니다(본문을 돌리지 않아도 나옵니다). */
         const vector<EngineStartupStep>& getInitializeOrder() const { return _listOrder; }
@@ -86,10 +151,15 @@ namespace sw
         [[nodiscard]] static bool computeGraph( const vector<EngineStartupNode>& listNode, EngineStartupGraph& outGraph, string& outError );
 
     private:
-        vector<EngineStartupStep> _listOrder;       ///< 초기화 순서
-        vector<vector<uint32>>    _listDependency;  ///< 단계마다 먼저 서야 하는 단계(표의 자리)
-        vector<EngineStartupStep> _listInitialized; ///< 초기화한 단계(종료가 역순으로 돈다)
-        ShutdownStepDelegate      _shutdownStep;    ///< `initializeAll` 이 받은 종료 본문
-        string                    _error;           ///< 표 오류
+        /** @brief `initializeAll` 의 본체입니다. @p pArrEntry 는 `EngineStartupStep::Count` 칸입니다. */
+        [[nodiscard]] bool initializeAllInternal( const EngineStartupStepEntry* pArrEntry, void* pHost );
+
+    private:
+        vector<EngineStartupStep>     _listOrder;       ///< 초기화 순서
+        vector<vector<uint32>>        _listDependency;  ///< 단계마다 먼저 서야 하는 단계(표의 자리)
+        vector<EngineStartupStep>     _listInitialized; ///< 초기화한 단계(종료가 역순으로 돈다)
+        const EngineStartupStepEntry* _pArrEntry;       ///< `initializeAll` 이 받은 호스트의 본문 표
+        void*                         _pHost;           ///< 본문에 넘길 호스트
+        string                        _error;           ///< 표 오류
     };
 } // namespace sw

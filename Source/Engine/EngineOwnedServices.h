@@ -18,9 +18,9 @@
  * 루트(`Source/Engine` 바로 아래)는 티어 6, **"모두를 엮는 자리"** 이고 `EngineLoop` 가 있는 곳입니다.
  * 예외 목록에 이름을 적는 대신 **맞는 자리로 옮겼습니다.**
  *
- * [초기화 · 종료 순서는 여기 없다]
+ * [초기화 · 종료 · 해제 순서는 여기 없다]
  * 이 저장소는 "누가 만들고 누가 들고 있는가" 만 압니다. 무엇을 언제 `initialize()` 하고 어떤 순서로
- * 내리는지는 기동 단계 표(`Engine/EngineStartupStepList.xxx`)의 의존 칸이 정하고, `EngineStartupSequence` 가
+ * 내리고 해제하는지는 기동 단계 표(`Engine/EngineStartupStepList.xxx`)의 의존 칸이 정하고, `EngineStartupSequence` 가
  * 위상 정렬해 두 호스트(`EngineLoop` · 시험 하네스)에 같은 순서를 줍니다. 디바이스 · 렌더 스레드 · 모듈 이미지처럼
  * 서비스가 아닌 단계도 같은 표에 있어서 서비스 목록의 칸으로 두지 않았습니다.
  */
@@ -49,8 +49,6 @@
     }
 #define SW_ENGINE_OWNED_BIND_0( member )
 #define SW_ENGINE_OWNED_BIND_1( member ) outServices.member = member.get();
-#define SW_ENGINE_OWNED_DESTROY_0( member )
-#define SW_ENGINE_OWNED_DESTROY_1( member ) member.reset();
 // NOLINTEND(bugprone-macro-parentheses)
 
 namespace sw
@@ -58,8 +56,8 @@ namespace sw
     /**
      * @struct EngineOwnedServices
      * @brief `owned=1` 인 서비스의 소유권을 들고 있습니다. 호스트가 멤버로 하나 둡니다.
-     * @note 소멸 순서는 **선언의 역순**, 즉 목록의 역순입니다. 그래도 호스트는 자기 종료 절차에서
-     *       필요한 것을 먼저 명시적으로 놓습니다. 순서가 중요한 것들은 거기서 정해집니다.
+     * @note 소멸 순서는 **선언의 역순**, 즉 목록의 역순입니다(`destroyAll` 도 같습니다). 단계가 소유한 서비스는 호스트가
+     *       기동 표의 해제로 먼저 놓습니다.
      */
     struct SW_API EngineOwnedServices
     {
@@ -112,10 +110,22 @@ namespace sw
         }
 
         /**
-         * @brief 남은 소유를 모두 놓습니다.
-         * @details 종료 절차에서 순서가 중요한 것은 호스트가 **먼저** 놓습니다. 이것은 그 뒤에 남은
-         *          것을 쓸어 담는 자리입니다. 그래야 목록에 줄을 더한 사람이 종료 코드를 잊어도
-         *          객체가 새지 않습니다.
+         * @brief `ResourceManager` 를 종료하고 해제합니다. 호스트의 Resource 단계 해제(`destroy`)가 부릅니다.
+         * @details 에셋 캐시를 비우므로 에셋을 든 다른 매니저가 모두 해제된 **뒤**여야 합니다. 표에서 Resource 는 Scene · Audio · Input ·
+         *          렌더러보다 먼저 서므로 역순 해제에서 자연히 그 뒤입니다.
+         */
+        void destroyResourceManager();
+        /**
+         * @brief 코덱 레지스트리를 Core 슬롯에서 떼고 해제합니다. 호스트의 Compression 단계 해제가 부릅니다.
+         * @details 슬롯이 이 레지스트리를 가리키면 먼저 비웁니다. 그 뒤의 압축 경로(`CompressionStream`)는 내장 코덱만 씁니다.
+         */
+        void destroyCompressionCodecRegistry();
+
+        /**
+         * @brief 남은 소유를 목록의 **역순**으로 모두 놓습니다(소멸자와 같은 순서).
+         * @details 단계가 소유한 서비스는 호스트가 기동 표의 해제(`EngineStartupSequence::destroyAll`)로 먼저 놓습니다. 이것은 그 뒤에 남은
+         *          표 밖 서비스(명령줄 · 전역 변수 · 이벤트 · 디버그 도구 등)를 쓸어 담는 자리입니다. 목록 앞줄의 명령줄 · 전역 변수가
+         *          맨 나중에 사라집니다.
          */
         void destroyAll();
     };

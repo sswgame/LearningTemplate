@@ -30,6 +30,26 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct EngineOwnedServicesInternal
+        {
+            /** @brief `owned=1` 멤버 하나를 놓습니다(`destroyAll` 이 역순으로 부릅니다). */
+            template <auto pMember>
+            static void resetMember( EngineOwnedServices& owned )
+            {
+                ( owned.*pMember ).reset();
+            }
+        };
+    } // namespace
+} // namespace sw
+
+// owned 열에 따라 표에 넣거나 뺀다(`SW_CONCAT` 으로 0/1 을 붙여 고른다 — 헤더의 다른 자리와 같은 방식).
+#define SW_ENGINE_OWNED_RESET_ENTRY_0( member )
+#define SW_ENGINE_OWNED_RESET_ENTRY_1( member ) &EngineOwnedServicesInternal::resetMember<&EngineOwnedServices::member>,
+
+namespace sw
+{
     EngineOwnedServices::EngineOwnedServices() = default;
 
     EngineOwnedServices::~EngineOwnedServices() = default;
@@ -45,14 +65,35 @@ namespace sw
 #undef SW_ENGINE_SERVICE_OPT
     }
 
+    void EngineOwnedServices::destroyResourceManager()
+    {
+        if ( _pResourceManager != nullptr )
+            _pResourceManager->shutdown();
+        _pResourceManager.reset();
+    }
+
+    void EngineOwnedServices::destroyCompressionCodecRegistry()
+    {
+        // 슬롯부터 끊는다. 소유자가 사라진 뒤에도 슬롯이 가리키면 엔진을 내린 다음의 압축 경로가 해제된 레지스트리를 읽는다.
+        if ( _pCompressionCodecRegistry != nullptr && CompressionCodecRegistry::getActive() == _pCompressionCodecRegistry.get() )
+            CompressionCodecRegistry::setActive( nullptr );
+        _pCompressionCodecRegistry.reset();
+    }
+
     void EngineOwnedServices::destroyAll()
     {
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )       SW_CONCAT( SW_ENGINE_OWNED_DESTROY_, owned )( member )
-#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) SW_CONCAT( SW_ENGINE_OWNED_DESTROY_, owned )( member )
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )             SW_CONCAT( SW_ENGINE_OWNED_DESTROY_, owned )( member )
+        // X-macro 는 목록 순서로만 펼쳐지므로 멤버마다 해제 함수를 표로 모아 거꾸로 돈다.
+        using ResetMemberFunction                              = void ( * )( EngineOwnedServices& );
+        static constexpr ResetMemberFunction kArrResetMember[] = {
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, required, gameAllowed, owned )       SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, owned )( member )
+#define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, required, gameAllowed, owned ) SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, owned )( member )
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, gameAllowed, owned )             SW_CONCAT( SW_ENGINE_OWNED_RESET_ENTRY_, owned )( member )
 #include "Engine/Common/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
+        };
+        for ( size_t memberIndex = SW_COUNT_OF( kArrResetMember ); memberIndex > 0; --memberIndex )
+            kArrResetMember[memberIndex - 1]( *this );
     }
 } // namespace sw

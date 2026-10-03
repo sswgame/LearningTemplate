@@ -100,7 +100,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleCodeHolder`)은 `Core/Module` 이다.
 - **Utility/**: Format (KeyValueFile), Json, Xml, CommandStack, Debug — 진짜 최하위 헬퍼만 둡니다.
 - **루트 파일**: `EngineLoop`(메인 루프) · `EngineStartupStepList.xxx`(기동 · 종료 단계와 의존의 등록표) · `EngineStartupSequence`(그 표를 위상 정렬해
-  초기화하고 역순으로 종료) · `EngineOwnedServices`(호스트가 소유하는 서비스 저장소, `EngineServiceList.xxx` 에서 생성) · `EngineMinimal.h`(prelude)
+  초기화하고 역순으로 종료 · 해제 — 단계 본문은 호스트의 `<단계>StartupStep` 구조체) · `EngineOwnedServices`(호스트가 소유하는 서비스 저장소, `EngineServiceList.xxx` 에서 생성) · `EngineMinimal.h`(prelude)
 - **Task 시스템**: Core의 [Task/README.md](../Core/Task/README.md) (`TaskManager` / `TaskHandle`)
 
 ## 동작 방식
