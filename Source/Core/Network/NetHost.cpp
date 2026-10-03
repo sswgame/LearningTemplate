@@ -6,6 +6,9 @@
 #include "Core/Network/BitStream.h"
 #include "Core/Network/NetTransport.h"
 
+#include <cstring>
+#include <random>
+
 namespace sw
 {
     namespace
@@ -32,6 +35,16 @@ namespace sw
                     outBytes[offset + static_cast<size_t>( index )] = static_cast<uint8>( value >> ( index * 8 ) );
             }
 
+            static uint64 makeAddressKey( const NetAddress& address ) { return ( static_cast<uint64>( address._ipv4 ) << 16 ) | address._port; }
+
+            /** @brief 운영체제 난수 64 비트 — 도전 값이 다른 실행 · 다른 호스트와 겹치지 않고 미리 알 수 없게. */
+            static uint64 makeRandomSeed()
+            {
+                std::random_device randomDevice;
+                const uint64       seed = ( static_cast<uint64>( randomDevice() ) << 32 ) | static_cast<uint64>( randomDevice() );
+                return seed != 0 ? seed : 0x9E3779B97F4A7C15ull;
+            }
+
             static uint32 readUint32( const uint8* pData )
             {
                 return static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
@@ -47,6 +60,9 @@ namespace sw
         : _listSlot{}
         , _listEvent{}
         , _receiveBuffer{}
+        , _packetBuffer{}
+        , _packetWriter{}
+        , _mapSlotByAddress{}
         , _settings{}
         , _pTransport{ nullptr }
         , _saltState{ 0 }
@@ -61,8 +77,11 @@ namespace sw
     {
         _pTransport = pTransport;
         _settings   = settings;
-        _saltState  = settings._saltSeed != 0 ? settings._saltSeed : 0x9E3779B97F4A7C15ull;
+        _saltState  = settings._saltSeed != 0 ? settings._saltSeed : NetHostInternal::makeRandomSeed();
         _listSlot.clear();
+        _mapSlotByAddress.clear();
+        _packetWriter.reserve( kNetMaxPacketSize );
+        _packetBuffer.reserve( static_cast<size_t>( kNetMaxPacketSize ) );
         _listEvent.clear();
         _rejectedPacketCount = 0;
         _clientIndex         = -1;
@@ -85,6 +104,8 @@ namespace sw
             return false;
         _bServer = SW_TRUE;
         _listSlot.assign( static_cast<size_t>( MathUtil::max( 1, _settings._maxConnections ) ), Slot{} );
+        _mapSlotByAddress.clear();
+        _mapSlotByAddress.reserve( _listSlot.size() * 2 );
         return true;
     }
 
@@ -94,6 +115,8 @@ namespace sw
             return false;
         _bServer = SW_FALSE;
         _listSlot.assign( 1, Slot{} );
+        _mapSlotByAddress.clear();
+        bindAddress( 0, serverAddress );
         Slot& slot             = _listSlot[0];
         slot._address          = serverAddress;
         slot._clientSalt       = nextSalt();
@@ -105,12 +128,20 @@ namespace sw
 
     int32 NetHost::findSlotByAddress( const NetAddress& address ) const
     {
-        for ( size_t index = 0; index < _listSlot.size(); ++index )
-        {
-            if ( _listSlot[index]._state != NetConnectionState::Disconnected && _listSlot[index]._address == address )
-                return static_cast<int32>( index );
-        }
-        return -1;
+        const auto iter = _mapSlotByAddress.find( NetHostInternal::makeAddressKey( address ) );
+        return iter != _mapSlotByAddress.end() ? iter->second : -1;
+    }
+
+    void NetHost::bindAddress( int32 slotIndex, const NetAddress& address )
+    {
+        _mapSlotByAddress[NetHostInternal::makeAddressKey( address )] = slotIndex;
+    }
+
+    void NetHost::unbindAddress( int32 slotIndex )
+    {
+        const auto iter = _mapSlotByAddress.find( NetHostInternal::makeAddressKey( _listSlot[static_cast<size_t>( slotIndex )]._address ) );
+        if ( iter != _mapSlotByAddress.end() && iter->second == slotIndex )
+            _mapSlotByAddress.erase( iter );
     }
 
     int32 NetHost::findFreeSlot() const
@@ -123,38 +154,40 @@ namespace sw
         return -1;
     }
 
+    void NetHost::sendFramed( const NetAddress& to )
+    {
+        const vector<uint8>& body     = _packetWriter.getBytes();
+        const int32          bodySize = _packetWriter.getByteCount();
+        _packetBuffer.resize( static_cast<size_t>( NetHostInternal::kHeaderSize + bodySize ) );
+        if ( bodySize > 0 )
+            std::memcpy( _packetBuffer.data() + NetHostInternal::kHeaderSize, body.data(), static_cast<size_t>( bodySize ) );
+        NetHostInternal::writeUint32( _packetBuffer, 0, _settings._protocolId );
+        NetHostInternal::writeUint32( _packetBuffer, 4, NetHostInternal::computeChecksum( _settings._protocolId, _packetBuffer.data() + NetHostInternal::kHeaderSize, bodySize ) );
+        (void)_pTransport->send( to, _packetBuffer.data(), static_cast<int32>( _packetBuffer.size() ) );
+    }
+
     void NetHost::sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB )
     {
-        BitWriter writer;
+        BitWriter& writer = _packetWriter;
+        writer.clear();
         writer.writeBits( static_cast<uint32>( type ), NetHostInternal::kTypeBits );
         writer.writeBits( static_cast<uint32>( valueA ), 32 );
         writer.writeBits( static_cast<uint32>( valueA >> 32 ), 32 );
         writer.writeBits( static_cast<uint32>( valueB ), 32 );
         writer.writeBits( static_cast<uint32>( valueB >> 32 ), 32 );
-        vector<uint8> buffer( static_cast<size_t>( NetHostInternal::kHeaderSize ), 0 );
-        buffer.insert( buffer.end(), writer.getBytes().begin(), writer.getBytes().end() );
-        NetHostInternal::writeUint32( buffer, 0, _settings._protocolId );
-        NetHostInternal::writeUint32( buffer, 4,
-                                      NetHostInternal::computeChecksum( _settings._protocolId, buffer.data() + NetHostInternal::kHeaderSize,
-                                                                        static_cast<int32>( buffer.size() ) - NetHostInternal::kHeaderSize ) );
-        (void)_pTransport->send( to, buffer.data(), static_cast<int32>( buffer.size() ) );
+        sendFramed( to );
     }
 
     void NetHost::sendPayload( float64 time, Slot& slot )
     {
-        BitWriter writer;
+        BitWriter& writer = _packetWriter;
+        writer.clear();
         writer.writeBits( static_cast<uint32>( PacketType::Payload ), NetHostInternal::kTypeBits );
         // 연결 값(두 소금의 섞음) — 같은 주소의 옛 연결 · 위조 패킷을 거른다.
         const uint64 token = slot._clientSalt ^ slot._serverSalt;
         writer.writeBits( static_cast<uint32>( token ), 32 );
-        slot._connection.writePacket( time, writer, kNetMaxPacketSize - NetHostInternal::kHeaderSize );
-        vector<uint8> buffer( static_cast<size_t>( NetHostInternal::kHeaderSize ), 0 );
-        buffer.insert( buffer.end(), writer.getBytes().begin(), writer.getBytes().end() );
-        NetHostInternal::writeUint32( buffer, 0, _settings._protocolId );
-        NetHostInternal::writeUint32( buffer, 4,
-                                      NetHostInternal::computeChecksum( _settings._protocolId, buffer.data() + NetHostInternal::kHeaderSize,
-                                                                        static_cast<int32>( buffer.size() ) - NetHostInternal::kHeaderSize ) );
-        (void)_pTransport->send( slot._address, buffer.data(), static_cast<int32>( buffer.size() ) );
+        slot._connection.writePacket( time, writer, kNetMaxPacketSize - NetHostInternal::kHeaderSize, _settings._keepAliveInterval );
+        sendFramed( slot._address );
         slot._lastSendTime = time;
     }
 
@@ -198,7 +231,10 @@ namespace sw
                         closeSlot( static_cast<int32>( index ), NetDisconnectReason::Timeout, false );
                         break;
                     }
-                    const bool bDue = slot._lastSendTime < 0.0 || time - slot._lastSendTime >= _settings._sendInterval;
+                    // 보낼 것이 있으면 `_sendInterval` 마다, 없으면 `_keepAliveInterval` 마다만(유지 · RTT · 상대의 확인용).
+                    const float64 sinceSend = slot._lastSendTime < 0.0 ? 1.0e9 : time - slot._lastSendTime;
+                    const bool    bDue      = sinceSend >= _settings._sendInterval &&
+                                      ( sinceSend >= _settings._keepAliveInterval || slot._connection.hasDataToSend( time ) );
                     if ( bDue )
                         sendPayload( time, slot );
                     break;
@@ -298,9 +334,10 @@ namespace sw
                     sendControl( from, PacketType::Denied, static_cast<uint64>( NetDisconnectReason::ServerFull ), 0 );
                     return;
                 }
-                Slot& slot              = _listSlot[static_cast<size_t>( freeIndex )];
-                slot                    = Slot{};
-                slot._address           = from;
+                Slot& slot    = _listSlot[static_cast<size_t>( freeIndex )];
+                slot          = Slot{};
+                slot._address = from;
+                bindAddress( freeIndex, from );
                 slot._clientSalt        = valueA;
                 slot._serverSalt        = nextSalt();
                 slot._state             = NetConnectionState::Connecting;
@@ -392,7 +429,8 @@ namespace sw
                 sendControl( slot._address, PacketType::Disconnect, slot._clientSalt ^ slot._serverSalt, 0 );
         }
         const bool bWasVisible = slot._state == NetConnectionState::Connected || _bServer == SW_FALSE;
-        slot._state            = NetConnectionState::Disconnected;
+        unbindAddress( slotIndex );
+        slot._state = NetConnectionState::Disconnected;
         slot._connection.reset();
         if ( bWasVisible )
             _listEvent.push_back( NetHostEvent{ slotIndex, reason, NetHostEvent::Kind::Disconnected } );

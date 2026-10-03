@@ -22,6 +22,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/BitStream.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetConnection.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetHost.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetMessage.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetTransport.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetTypes.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/PlatformSocketUtil.cpp"

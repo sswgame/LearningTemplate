@@ -18,6 +18,7 @@ namespace sw
         , _latestTick{ 0 }
         , _latestInputTick{ 0 }
         , _bHasSnapshot{ SW_FALSE }
+        , _messageWriter{}
     {
     }
 
@@ -43,20 +44,21 @@ namespace sw
 
     const NetSnapshot* ReplicationClient::getLatest() const { return _bHasSnapshot ? findSnapshot( _latestTick ) : nullptr; }
 
-    bool ReplicationClient::handleMessage( const vector<uint8>& buffer )
+    bool ReplicationClient::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
-        if ( buffer.empty() || NetMessageRange::isInRange( buffer[0], NetMessageRange::kClientServer ) == false )
+        (void)connectionId; // 클라이언트 — 받는 쪽은 서버 하나
+        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetMessageRange::kClientServer ) == false )
             return false;
-        if ( buffer[0] != NetClientServerMessage::kSnapshot )
+        if ( pData[0] != NetClientServerMessage::kSnapshot )
             return true;
         // 기준 틱을 먼저 엿보고 그 스냅샷을 찾는다.
-        BitReader    peek( buffer.data() + 1, static_cast<int32>( buffer.size() ) - 1 );
+        BitReader    peek( pData + 1, size - 1 );
         const uint32 tick         = static_cast<uint32>( peek.readVarUint() );
         const uint32 baselineCode = static_cast<uint32>( peek.readVarUint() );
         if ( _bHasSnapshot && tick <= _latestTick )
             return true; // 늦게 온 옛것
         const NetSnapshot* pBaseline = baselineCode != 0 ? findSnapshot( baselineCode - 1u ) : nullptr;
-        BitReader          reader( buffer.data() + 1, static_cast<int32>( buffer.size() ) - 1 );
+        BitReader          reader( pData + 1, size - 1 );
         NetSnapshot        snapshot;
         if ( NetSnapshot::readDelta( reader, pBaseline, snapshot ) == false )
         {
@@ -71,8 +73,7 @@ namespace sw
             _renderTime = static_cast<float32>( tick ) * _settings._tickInterval - _settings._interpolationDelay;
         if ( _pHost != nullptr )
         {
-            BitWriter writer;
-            writer.writeBits( NetClientServerMessage::kSnapshotAck, 8 );
+            BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kSnapshotAck );
             writer.writeVarUint( tick );
             (void)_pHost->sendMessage( 0, NetChannelType::UnreliableSequenced, writer.getBytes() );
         }
@@ -176,8 +177,7 @@ namespace sw
         _latestInputTick = tick;
         if ( _pHost == nullptr )
             return;
-        BitWriter writer;
-        writer.writeBits( NetClientServerMessage::kInput, 8 );
+        BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kInput );
         writer.writeVarUint( tick );
         writer.writeVarUint( static_cast<uint64>( MathUtil::max( 0.0f, getRenderTick() ) * 256.0f ) );
         writer.writeVarUint( _listRecentInput.size() );

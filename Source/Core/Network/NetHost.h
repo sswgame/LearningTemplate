@@ -7,7 +7,9 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/BitStream.h"
 #include "Core/Network/NetConnection.h"
 #include "Core/Network/NetTypes.h"
 
@@ -19,11 +21,12 @@ namespace sw
     struct NetHostSettings
     {
         uint32  _protocolId{ 0x53574E31u }; ///< 게임 · 버전마다 다르게(다르면 서로의 패킷을 버린다)
-        uint64  _saltSeed{ 0x1234ABCDull }; ///< 도전 값 씨앗(시험에서 고정)
+        uint64  _saltSeed{ 0 };             ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 시험은 고정해도 된다
         float32 _timeout{ 5.0f };
         float32 _connectTimeout{ 5.0f };
         float32 _connectRetryInterval{ 0.2f };
-        float32 _sendInterval{ 1.0f / 30.0f }; ///< 연결마다 패킷을 보내는 간격(보낼 것이 없어도 확인 · 유지용으로 보낸다)
+        float32 _sendInterval{ 1.0f / 30.0f }; ///< 연결마다 패킷을 보내는 가장 짧은 간격
+        float32 _keepAliveInterval{ 0.25f };   ///< 보낼 것(메시지 · 재전송 · 확인)이 없으면 이 간격으로만 보낸다(유지 · RTT)
         int32   _maxConnections{ 16 };
     };
 
@@ -110,25 +113,32 @@ namespace sw
             uint8              _bPendingChallenge{ SW_FALSE }; ///< 서버 — 도전을 보냈고 응답을 기다린다
         };
 
-        void   receivePackets( float64 time );
-        void   handlePacket( float64 time, const NetAddress& from, const vector<uint8>& buffer );
-        void   sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB );
+        void receivePackets( float64 time );
+        void handlePacket( float64 time, const NetAddress& from, const vector<uint8>& buffer );
+        void sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB );
+        /** @brief `_packetWriter` 의 몸에 헤더(프로토콜 · 체크섬)를 붙여 보냅니다. */
+        void   sendFramed( const NetAddress& to );
         void   sendPayload( float64 time, Slot& slot );
         void   closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote );
         int32  findSlotByAddress( const NetAddress& address ) const;
+        void   bindAddress( int32 slotIndex, const NetAddress& address );
+        void   unbindAddress( int32 slotIndex );
         int32  findFreeSlot() const;
         uint64 nextSalt();
         bool   isValidSlot( int32 slotIndex ) const { return slotIndex >= 0 && slotIndex < static_cast<int32>( _listSlot.size() ); }
 
-        vector<Slot>         _listSlot;
-        vector<NetHostEvent> _listEvent;
-        vector<uint8>        _receiveBuffer;
-        NetHostSettings      _settings;
-        INetTransport*       _pTransport;
-        uint64               _saltState;
-        uint64               _rejectedPacketCount;
-        int32                _clientIndex;
-        int32                _receiveCursor; ///< 받기를 연결마다 고르게 돌리는 자리
-        uint8                _bServer;
+        vector<Slot>                 _listSlot;
+        vector<NetHostEvent>         _listEvent;
+        vector<uint8>                _receiveBuffer;
+        vector<uint8>                _packetBuffer;     ///< 보낼 패킷(헤더 + 몸) — 패킷마다 다시 잡지 않는다
+        BitWriter                    _packetWriter;     ///< 보낼 패킷의 몸
+        unordered_map<uint64, int32> _mapSlotByAddress; ///< 주소 → 자리(연결이 많아도 패킷마다 선형 탐색하지 않게)
+        NetHostSettings              _settings;
+        INetTransport*               _pTransport;
+        uint64                       _saltState;
+        uint64                       _rejectedPacketCount;
+        int32                        _clientIndex;
+        int32                        _receiveCursor; ///< 받기를 연결마다 고르게 돌리는 자리
+        uint8                        _bServer;
     };
 } // namespace sw

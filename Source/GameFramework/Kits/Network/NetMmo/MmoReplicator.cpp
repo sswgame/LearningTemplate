@@ -144,6 +144,11 @@ namespace sw
         , _pHost{ nullptr }
         , _pPolicy{ nullptr }
         , _sentUpdateCount{ 0 }
+        , _messageWriter{}
+        , _listLeaveScratch{}
+        , _listNearScratch{}
+        , _listRankScratch{}
+        , _listSentScratch{}
     {
     }
 
@@ -212,8 +217,11 @@ namespace sw
         if ( _grid.findPosition( observer._entityId, center ) == false )
             return;
 
+        const bool bAlwaysPolicy = _pPolicy->hasAlwaysRelevant();
+
         // 1) 나감 — 사라졌거나 나가는 반경 밖(늘 보이기는 빼고).
-        vector<uint32> listLeave;
+        vector<uint32>& listLeave = _listLeaveScratch;
+        listLeave.clear();
         for ( const auto& visible : observer._mapVisible )
         {
             const auto entityIter = _mapEntity.find( visible.first );
@@ -222,15 +230,14 @@ namespace sw
                 listLeave.push_back( visible.first );
                 continue;
             }
-            const bool bAlways = _pPolicy->isAlwaysRelevant( connectionId, entityIter->second );
+            const bool bAlways = bAlwaysPolicy && _pPolicy->isAlwaysRelevant( connectionId, entityIter->second );
             if ( bAlways == false && MmoReplicatorInternal::computeFlatDistance( center, entityIter->second._position ) > _settings._leaveRadius )
                 listLeave.push_back( visible.first );
         }
         std::sort( listLeave.begin(), listLeave.end() );
         if ( listLeave.empty() == false )
         {
-            BitWriter writer;
-            writer.writeBits( NetMmoMessage::kLeave, 8 );
+            BitWriter& writer = _messageWriter.begin( NetMmoMessage::kLeave );
             writer.writeVarUint( listLeave.size() );
             for ( const uint32 entityId : listLeave )
             {
@@ -241,29 +248,40 @@ namespace sw
         }
 
         // 2) 들어옴 — 들어오는 반경 안(가까운 것부터, 틱마다 상한).
-        vector<uint32> listNear;
+        vector<uint32>& listNear = _listNearScratch;
+        listNear.clear();
         _grid.queryRadius( center, _settings._enterRadius, listNear );
-        for ( const auto& entity : _mapEntity )
+        if ( bAlwaysPolicy )
         {
-            if ( _pPolicy->isAlwaysRelevant( connectionId, entity.second ) )
-                listNear.push_back( entity.first );
+            for ( const auto& entity : _mapEntity )
+            {
+                if ( _pPolicy->isAlwaysRelevant( connectionId, entity.second ) )
+                    listNear.push_back( entity.first );
+            }
         }
-        std::sort( listNear.begin(), listNear.end(), [&]( uint32 lhs, uint32 rhs )
-        {
-            const float32 lhsDistance = MmoReplicatorInternal::computeFlatDistance( center, _mapEntity[lhs]._position );
-            const float32 rhsDistance = MmoReplicatorInternal::computeFlatDistance( center, _mapEntity[rhs]._position );
-            return lhsDistance != rhsDistance ? lhsDistance < rhsDistance : lhs < rhs;
-        } );
-        int32 enteredCount = 0;
+        // 거리는 한 번씩만 재고 (거리, id) 로 정렬한다(비교마다 해시를 찾지 않게). 이미 보이는 것은 뺀다.
+        vector<std::pair<float32, uint32>>& listRank = _listRankScratch;
+        listRank.clear();
         for ( const uint32 entityId : listNear )
         {
-            if ( enteredCount >= _settings._maxEnterPerTick || observer._mapVisible.find( entityId ) != observer._mapVisible.end() )
+            if ( observer._mapVisible.find( entityId ) != observer._mapVisible.end() )
                 continue;
+            const auto entityIter = _mapEntity.find( entityId );
+            if ( entityIter != _mapEntity.end() )
+                listRank.emplace_back( MmoReplicatorInternal::computeFlatDistance( center, entityIter->second._position ), entityId );
+        }
+        std::sort( listRank.begin(), listRank.end() );
+        listRank.erase( std::unique( listRank.begin(), listRank.end() ), listRank.end() ); // 반경 안 + 늘 보이기 겹침
+        int32 enteredCount = 0;
+        for ( const auto& ranked : listRank )
+        {
+            const uint32 entityId = ranked.second;
+            if ( enteredCount >= _settings._maxEnterPerTick )
+                break; // 가까운 것부터 — 나머지는 다음 틱에
             const auto entityIter = _mapEntity.find( entityId );
             if ( entityIter == _mapEntity.end() )
                 continue;
-            BitWriter writer;
-            writer.writeBits( NetMmoMessage::kEnter, 8 );
+            BitWriter& writer = _messageWriter.begin( NetMmoMessage::kEnter );
             MmoReplicatorInternal::writeEntity( writer, entityIter->second, true );
             if ( _pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
                 break; // 신뢰 창이 찼다 — 다음 틱에
@@ -274,7 +292,8 @@ namespace sw
         }
 
         // 3) 갱신 — 우선도를 쌓고 예산 안에서 큰 것부터.
-        vector<std::pair<float32, uint32>> listCandidate;
+        vector<std::pair<float32, uint32>>& listCandidate = _listRankScratch;
+        listCandidate.clear();
         for ( auto& visible : observer._mapVisible )
         {
             const MmoEntity& entity   = _mapEntity[visible.first];
@@ -286,10 +305,10 @@ namespace sw
         std::sort( listCandidate.begin(), listCandidate.end(),
                    []( const std::pair<float32, uint32>& lhs, const std::pair<float32, uint32>& rhs )
         { return lhs.first != rhs.first ? lhs.first > rhs.first : lhs.second < rhs.second; } );
-        BitWriter writer;
-        writer.writeBits( NetMmoMessage::kUpdate, 8 );
-        vector<uint32> listSent;
-        int32          usedBytes = 1;
+        BitWriter&      writer   = _messageWriter.begin( NetMmoMessage::kUpdate );
+        vector<uint32>& listSent = _listSentScratch;
+        listSent.clear();
+        int32 usedBytes = 1;
         for ( const auto& candidate : listCandidate )
         {
             const MmoEntity& entity = _mapEntity[candidate.second];
@@ -317,12 +336,13 @@ namespace sw
     // ------------------------------------------------------------------------------
     // MmoClientView
     // ------------------------------------------------------------------------------
-    bool MmoClientView::handleMessage( const vector<uint8>& buffer )
+    bool MmoClientView::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
-        if ( buffer.empty() || NetMessageRange::isInRange( buffer[0], NetMessageRange::kMmo ) == false )
+        (void)connectionId; // 클라이언트 — 받는 쪽은 서버 하나
+        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetMessageRange::kMmo ) == false )
             return false;
-        BitReader reader( buffer.data() + 1, static_cast<int32>( buffer.size() ) - 1 );
-        if ( buffer[0] == NetMmoMessage::kEnter )
+        BitReader reader( pData + 1, size - 1 );
+        if ( pData[0] == NetMmoMessage::kEnter )
         {
             MmoEntity entity;
             if ( MmoReplicatorInternal::readEntity( reader, entity, true ) )
@@ -332,7 +352,7 @@ namespace sw
                 _listEvent.push_back( MmoClientEvent{ entityId, MmoClientEvent::Kind::Entered } );
             }
         }
-        else if ( buffer[0] == NetMmoMessage::kLeave )
+        else if ( pData[0] == NetMmoMessage::kLeave )
         {
             const uint64 count = reader.readVarUint();
             for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
@@ -342,7 +362,7 @@ namespace sw
                     _listEvent.push_back( MmoClientEvent{ entityId, MmoClientEvent::Kind::Left } );
             }
         }
-        else if ( buffer[0] == NetMmoMessage::kUpdate )
+        else if ( pData[0] == NetMmoMessage::kUpdate )
         {
             while ( reader.readBool() )
             {

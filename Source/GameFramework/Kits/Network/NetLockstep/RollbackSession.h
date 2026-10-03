@@ -8,6 +8,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/NetMessage.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -42,7 +43,7 @@ namespace sw
      * @class RollbackSession
      * @brief 입력 하나는 1 바이트(버튼 비트)입니다 — 격투 입력에 넉넉합니다. 플레이어 번호는 서버 0, 클라이언트는 (연결 id + 1).
      */
-    class SW_GF_API RollbackSession
+    class SW_GF_API RollbackSession : public INetMessageHandler
     {
     public:
         static constexpr int32 kHistorySize = 128;
@@ -51,8 +52,11 @@ namespace sw
 
         void initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackSettings& settings );
         /** @brief 이번 프레임의 내 입력을 넣고 한 프레임 진행합니다(필요하면 먼저 되감는다). 너무 앞서 멈췄으면 false 입니다. */
-        bool advanceFrame( uint8 localInput );
-        bool handleMessage( int32 connectionId, const vector<uint8>& buffer );
+        bool  advanceFrame( uint8 localInput );
+        uint8 getMessageRangeBase() const override { return NetMessageRange::kLockstep; }
+        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
+        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
+        bool handleMessage( int32 connectionId, const vector<uint8>& buffer ) { return handleNetMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) ); }
 
         int32 getFrame() const { return _frame; }
         int32 getRollbackCount() const { return _rollbackCount; }
@@ -88,5 +92,6 @@ namespace sw
         int32                 _rollbackCount;
         int32                 _resimulatedFrameCount;
         int32                 _stallCount;
+        NetMessageWriter      _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
 } // namespace sw

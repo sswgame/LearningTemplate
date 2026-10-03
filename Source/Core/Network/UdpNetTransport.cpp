@@ -7,11 +7,9 @@
 namespace sw
 {
     UdpNetTransport::UdpNetTransport()
-        : _buffer{}
-        , _localAddress{}
+        : _localAddress{}
         , _socketHandle{ PlatformSocketUtil::kInvalidSocket }
     {
-        _buffer.resize( static_cast<size_t>( kNetMaxPacketSize * 2 ) );
     }
 
     UdpNetTransport::~UdpNetTransport() { close(); }
@@ -45,19 +43,22 @@ namespace sw
     {
         if ( isOpen() == false )
             return false;
+        // 받는 쪽 버퍼에 바로 받는다(사본 없음). 한도보다 한 바이트 크게 잡아 너무 큰 데이터그램을 알아본다.
         // 오류 · 너무 큰 데이터그램은 건너뛰고 다음 것을 본다.
+        outBuffer.resize( static_cast<size_t>( kNetMaxPacketSize + 1 ) );
         for ( int32 attempt = 0; attempt < 64; ++attempt )
         {
             int32                     size   = 0;
-            const SocketReceiveResult result = PlatformSocketUtil::receiveFrom( _socketHandle, outFrom, _buffer.data(), static_cast<int32>( _buffer.size() ), size );
+            const SocketReceiveResult result = PlatformSocketUtil::receiveFrom( _socketHandle, outFrom, outBuffer.data(), static_cast<int32>( outBuffer.size() ), size );
             if ( result == SocketReceiveResult::WouldBlock )
-                return false;
+                break;
             if ( result == SocketReceiveResult::Received && size > 0 && size <= kNetMaxPacketSize )
             {
-                outBuffer.assign( _buffer.begin(), _buffer.begin() + size );
+                outBuffer.resize( static_cast<size_t>( size ) );
                 return true;
             }
         }
+        outBuffer.clear();
         return false;
     }
 } // namespace sw

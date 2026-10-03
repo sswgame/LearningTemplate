@@ -8,6 +8,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/NetMessage.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -109,13 +110,16 @@ namespace sw
     };
 
     /** @brief 서버 쪽입니다. 방은 처음 들어오는 사람이 만듭니다. */
-    class SW_GF_API TurnRelayServer
+    class SW_GF_API TurnRelayServer : public INetMessageHandler
     {
     public:
         TurnRelayServer();
 
-        void initialize( NetHost* pHost, int32 seatCount, const ITurnPolicy* pPolicy = nullptr, uint32 tokenSeed = 0x5EEDu );
-        bool handleMessage( int32 connectionId, const vector<uint8>& buffer );
+        void  initialize( NetHost* pHost, int32 seatCount, const ITurnPolicy* pPolicy = nullptr, uint32 tokenSeed = 0x5EEDu );
+        uint8 getMessageRangeBase() const override { return NetMessageRange::kTurnRelay; }
+        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
+        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
+        bool handleMessage( int32 connectionId, const vector<uint8>& buffer ) { return handleNetMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) ); }
         void onDisconnected( int32 connectionId );
         void drainEvents( vector<TurnRelayEvent>& outListEvent );
 
@@ -123,8 +127,8 @@ namespace sw
 
     private:
         TurnRoom* findRoomMutable( uint32 roomId );
-        void      handleJoin( int32 connectionId, const vector<uint8>& buffer );
-        void      handleAction( int32 connectionId, const vector<uint8>& buffer );
+        void      handleJoin( int32 connectionId, const uint8* pData, int32 size );
+        void      handleAction( int32 connectionId, const uint8* pData, int32 size );
         void      sendApplied( const TurnRoom& room, int32 index, int32 connectionId );
         void      broadcastRoom( const TurnRoom& room, const vector<uint8>& buffer );
         uint32    nextToken();
@@ -136,10 +140,11 @@ namespace sw
         const ITurnPolicy*     _pPolicy;
         int32                  _seatCount;
         uint32                 _tokenState;
+        NetMessageWriter       _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
 
     /** @brief 클라이언트 쪽입니다. 받은 행동을 번호 순으로 들고, 다시 들어올 때 놓친 것을 받습니다. */
-    class SW_GF_API TurnRelayClient
+    class SW_GF_API TurnRelayClient : public INetMessageHandler
     {
     public:
         TurnRelayClient();
@@ -149,8 +154,11 @@ namespace sw
         void join( uint32 roomId, int32 seat = -1 );
         /** @brief 행동을 보냅니다. 행동 번호(거절 알림에 붙는다)입니다. */
         int32 submitAction( const vector<uint8>& buffer );
-        bool  handleMessage( const vector<uint8>& buffer );
-        void  drainEvents( vector<TurnRelayEvent>& outListEvent );
+        uint8 getMessageRangeBase() const override { return NetMessageRange::kTurnRelay; }
+        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
+        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
+        bool handleMessage( const vector<uint8>& buffer ) { return handleNetMessage( -1, buffer.data(), static_cast<int32>( buffer.size() ) ); }
+        void drainEvents( vector<TurnRelayEvent>& outListEvent );
 
         int32                     getSeat() const { return _seat; }
         uint32                    getToken() const { return _token; }
@@ -166,5 +174,6 @@ namespace sw
         int32                  _seat;
         int32                  _nextSubmitId;
         uint8                  _bStarted;
+        NetMessageWriter       _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
 } // namespace sw

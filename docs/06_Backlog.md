@@ -229,6 +229,9 @@ cd build/Ninja-Debug/Bin
 
 ### 1-7. Core · 태스크
 
+- **Windows UDP 소켓 설정은 Windows 에서 돌려 보지 않았다**(2026-10-03 네트워크 정리). `PlatformSocketUtil` 의 `SIO_UDP_CONNRESET` 끄기(`_WSAIOW( IOC_VENDOR, 12 )`)와
+  `SO_RCVBUF` · `SO_SNDBUF` 1 MB — Windows 빌드에서 `NetworkTest.UdpTransportSendsDatagramsOverLocalhost` 를 돌리고, 닫힌 포트로 보낸 뒤에도 `receive` 가 계속 되는지 본다.
+
 - **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는
   표준 API 라 줄이려면 Win32 · POSIX 순회로 바꾼다. 상주량은 1 KB 미만이라 전역 operator new 교체는 하지 않는다(사용자 결정).
 
@@ -950,6 +953,10 @@ cd build/Ninja-Debug/Bin
   (리플렉션 등록 → 설정 → ResourceManager).
 
 ### 3-10. Core · 태스크 · 메모리
+
+- **확인만 담은 패킷이 확인을 부르면 한가한 연결이 30 Hz 로 핑퐁한다**(`NetConnection` 확인 요청 비트의 이유). 요청을 끄면 거꾸로 두 쪽 유지 시각이 맞물려 한쪽은
+  늘 답만 보내 RTT 표본이 0 이 된다 — 그래서 답이라도 마지막 요청에서 유지 간격이 지나면 요청한다. RTT 는 "요청 패킷이 가장 새 확인으로" 돌아올 때만 잰다(묶음으로 늦게
+  확인된 것은 상대가 기다렸다 보낸 시간이 섞인다).
 
 - **보고의 "(sw 할당자 밖)" 은 CRT 합 − 태그 합**이라 프로파일러보다 먼저 잡힌 sw 블록도 들어간다 — MemoryProfiler 는 부트스트랩 맨 앞에서 선다. 새 스레드는 Unknown
   에서 시작하므로 띄운 쪽의 태그를 인자로 넘겨 첫 줄에서 건다. 배열은 `sw_new_array` · `make_unique<T[]>`(맨 `new` 는 `Style/RawNew` 가 막는다). 외부 라이브러리는

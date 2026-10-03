@@ -45,6 +45,7 @@ namespace sw
         , _pPolicy{ nullptr }
         , _seatCount{ 2 }
         , _tokenState{ 1 }
+        , _messageWriter{}
     {
     }
 
@@ -90,8 +91,7 @@ namespace sw
     void TurnRelayServer::sendApplied( const TurnRoom& room, int32 index, int32 connectionId )
     {
         const TurnAction& action = room._listAction[static_cast<size_t>( index )];
-        BitWriter         writer;
-        writer.writeBits( NetTurnRelayMessage::kApplied, 8 );
+        BitWriter&        writer = _messageWriter.begin( NetTurnRelayMessage::kApplied );
         writer.writeVarUint( room._roomId );
         writer.writeVarUint( static_cast<uint64>( index ) );
         writer.writeVarUint( static_cast<uint64>( action._seat ) );
@@ -102,9 +102,9 @@ namespace sw
             broadcastRoom( room, writer.getBytes() );
     }
 
-    void TurnRelayServer::handleJoin( int32 connectionId, const vector<uint8>& buffer )
+    void TurnRelayServer::handleJoin( int32 connectionId, const uint8* pData, int32 size )
     {
-        BitReader    reader( buffer.data() + 1, static_cast<int32>( buffer.size() ) - 1 );
+        BitReader    reader( pData + 1, size - 1 );
         const uint32 roomId     = static_cast<uint32>( reader.readVarUint() );
         const int64  wantedSeat = reader.readVarInt();
         const uint32 token      = reader.readUint32();
@@ -140,8 +140,7 @@ namespace sw
         }
         if ( seatIndex < 0 )
         {
-            BitWriter writer;
-            writer.writeBits( NetTurnRelayMessage::kDenied, 8 );
+            BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kDenied );
             writer.writeVarUint( roomId );
             writer.writeBits( static_cast<uint32>( TurnRejectReason::RoomFull ), 8 );
             (void)_pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() );
@@ -153,8 +152,7 @@ namespace sw
         if ( bReturning == false )
             seat._token = nextToken();
 
-        BitWriter writer;
-        writer.writeBits( NetTurnRelayMessage::kJoined, 8 );
+        BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kJoined );
         writer.writeVarUint( roomId );
         writer.writeVarUint( static_cast<uint64>( seatIndex ) );
         writer.writeUint32( seat._token );
@@ -192,9 +190,9 @@ namespace sw
         }
     }
 
-    void TurnRelayServer::handleAction( int32 connectionId, const vector<uint8>& buffer )
+    void TurnRelayServer::handleAction( int32 connectionId, const uint8* pData, int32 size )
     {
-        BitReader     reader( buffer.data() + 1, static_cast<int32>( buffer.size() ) - 1 );
+        BitReader     reader( pData + 1, size - 1 );
         const uint32  roomId   = static_cast<uint32>( reader.readVarUint() );
         const int32   submitId = static_cast<int32>( reader.readVarUint() );
         vector<uint8> actionBuffer;
@@ -232,24 +230,23 @@ namespace sw
                 return;
             }
         }
-        BitWriter writer;
-        writer.writeBits( NetTurnRelayMessage::kRejected, 8 );
+        BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kRejected );
         writer.writeVarUint( roomId );
         writer.writeVarUint( static_cast<uint64>( submitId ) );
         writer.writeBits( static_cast<uint32>( reason ), 8 );
         (void)_pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() );
     }
 
-    bool TurnRelayServer::handleMessage( int32 connectionId, const vector<uint8>& buffer )
+    bool TurnRelayServer::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
-        if ( buffer.empty() || NetMessageRange::isInRange( buffer[0], NetMessageRange::kTurnRelay ) == false )
+        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetMessageRange::kTurnRelay ) == false )
             return false;
         if ( _pHost == nullptr )
             return true;
-        if ( buffer[0] == NetTurnRelayMessage::kJoin )
-            handleJoin( connectionId, buffer );
-        else if ( buffer[0] == NetTurnRelayMessage::kAction )
-            handleAction( connectionId, buffer );
+        if ( pData[0] == NetTurnRelayMessage::kJoin )
+            handleJoin( connectionId, pData, size );
+        else if ( pData[0] == NetTurnRelayMessage::kAction )
+            handleAction( connectionId, pData, size );
         return true;
     }
 
@@ -290,6 +287,7 @@ namespace sw
         , _seat{ -1 }
         , _nextSubmitId{ 0 }
         , _bStarted{ SW_FALSE }
+        , _messageWriter{}
     {
     }
 
@@ -302,9 +300,8 @@ namespace sw
             _listAction.clear();
             _token = 0;
         }
-        _roomId = roomId;
-        BitWriter writer;
-        writer.writeBits( NetTurnRelayMessage::kJoin, 8 );
+        _roomId           = roomId;
+        BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kJoin );
         writer.writeVarUint( roomId );
         writer.writeVarInt( seat );
         writer.writeUint32( _token );
@@ -315,8 +312,7 @@ namespace sw
     int32 TurnRelayClient::submitAction( const vector<uint8>& buffer )
     {
         const int32 submitId = _nextSubmitId++;
-        BitWriter   writer;
-        writer.writeBits( NetTurnRelayMessage::kAction, 8 );
+        BitWriter&  writer   = _messageWriter.begin( NetTurnRelayMessage::kAction );
         writer.writeVarUint( _roomId );
         writer.writeVarUint( static_cast<uint64>( submitId ) );
         TurnRelayInternal::writeBlob( writer, buffer );
@@ -324,16 +320,17 @@ namespace sw
         return submitId;
     }
 
-    bool TurnRelayClient::handleMessage( const vector<uint8>& buffer )
+    bool TurnRelayClient::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
-        if ( buffer.empty() || NetMessageRange::isInRange( buffer[0], NetMessageRange::kTurnRelay ) == false )
+        (void)connectionId; // 클라이언트 — 받는 쪽은 서버 하나
+        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetMessageRange::kTurnRelay ) == false )
             return false;
-        BitReader      reader( buffer.data() + 1, static_cast<int32>( buffer.size() ) - 1 );
+        BitReader      reader( pData + 1, size - 1 );
         TurnRelayEvent event;
         event._roomId = static_cast<uint32>( reader.readVarUint() );
         if ( event._roomId != _roomId )
             return true;
-        switch ( buffer[0] )
+        switch ( pData[0] )
         {
             case NetTurnRelayMessage::kJoined:
             {

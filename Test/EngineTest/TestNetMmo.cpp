@@ -18,6 +18,7 @@ namespace
     class PartyPolicy final : public IInterestPolicy
     {
     public:
+        bool hasAlwaysRelevant() const override { return true; }
         bool isAlwaysRelevant( int32 connectionId, const MmoEntity& entity ) const override
         {
             (void)connectionId;

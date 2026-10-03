@@ -13,6 +13,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/Network/NetMessage.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -69,7 +70,12 @@ namespace sw
     public:
         virtual ~IInterestPolicy() = default;
 
-        /** @brief 반경과 상관없이 늘 보이는가입니다(파티원 · 추적 중인 퀘스트 대상). */
+        /**
+         * @brief 반경 밖에서도 늘 보이는 엔티티가 있을 수 있는가입니다. 기본은 false — 그러면 들어옴 단계가 엔티티 전체를 훑지 않는다
+         *        (관찰자 × 엔티티 비용). `isAlwaysRelevant` 를 바꾸는 정책은 true 를 돌려준다.
+         */
+        virtual bool hasAlwaysRelevant() const { return false; }
+        /** @brief 반경과 상관없이 늘 보이는가입니다(파티원 · 추적 중인 퀘스트 대상). `hasAlwaysRelevant` 가 true 일 때만 묻는다. */
         virtual bool isAlwaysRelevant( int32 connectionId, const MmoEntity& entity ) const
         {
             (void)connectionId;
@@ -138,6 +144,12 @@ namespace sw
         NetHost*                         _pHost;
         const IInterestPolicy*           _pPolicy;
         uint64                           _sentUpdateCount;
+        NetMessageWriter                 _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
+        // 관찰자마다 매 틱 쓰는 목록 — 용량을 다시 쓴다.
+        vector<uint32>                     _listLeaveScratch;
+        vector<uint32>                     _listNearScratch;
+        vector<std::pair<float32, uint32>> _listRankScratch; ///< (거리 또는 우선도, id)
+        vector<uint32>                     _listSentScratch;
     };
 
     /** @brief 클라이언트에서 생긴 일입니다. */
@@ -154,10 +166,13 @@ namespace sw
     };
 
     /** @brief 클라이언트 쪽 — 보이는 엔티티의 마지막 상태입니다. */
-    class SW_GF_API MmoClientView
+    class SW_GF_API MmoClientView : public INetMessageHandler
     {
     public:
-        bool handleMessage( const vector<uint8>& buffer );
+        uint8 getMessageRangeBase() const override { return NetMessageRange::kMmo; }
+        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
+        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
+        bool handleMessage( const vector<uint8>& buffer ) { return handleNetMessage( -1, buffer.data(), static_cast<int32>( buffer.size() ) ); }
         void drainEvents( vector<MmoClientEvent>& outListEvent );
 
         const MmoEntity* findEntity( uint32 entityId ) const;

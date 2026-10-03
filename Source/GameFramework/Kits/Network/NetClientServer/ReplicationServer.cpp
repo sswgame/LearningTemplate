@@ -17,6 +17,11 @@ namespace sw
         , _pHost{ nullptr }
         , _pPolicy{ nullptr }
         , _defaultPolicy{}
+        , _messageWriter{}
+        , _filteredScratch{}
+        , _listPriorityScratch{}
+        , _listOrderScratch{}
+        , _listConnectionScratch{}
     {
     }
 
@@ -70,24 +75,33 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return;
-        vector<int32> listConnection;
+        // 매 틱 · 클라이언트마다 쓰는 목록은 멤버에 두고 다시 쓴다 — 엔티티 버퍼는 자리에 덮어써 용량을 남긴다.
+        vector<int32>& listConnection = _listConnectionScratch;
         _pHost->collectConnected( listConnection );
         for ( const int32 connectionId : listConnection )
         {
             ClientState& client = acquireClient( connectionId );
             // 이 클라이언트에게 관련 있는 것만.
-            NetSnapshot filtered;
+            NetSnapshot& filtered            = _filteredScratch;
             filtered._tick                   = _world._tick;
             filtered._lastProcessedInputTick = client._lastProcessedInputTick;
-            vector<float32> listPriority;
+            vector<float32>& listPriority    = _listPriorityScratch;
+            listPriority.clear();
+            size_t relevantCount = 0;
             for ( const NetEntityState& entity : _world._listEntity )
             {
                 if ( _pPolicy->isRelevant( connectionId, entity ) == false )
                     continue;
-                filtered._listEntity.push_back( entity );
+                if ( relevantCount < filtered._listEntity.size() )
+                    filtered._listEntity[relevantCount] = entity;
+                else
+                    filtered._listEntity.push_back( entity );
+                ++relevantCount;
                 listPriority.push_back( _pPolicy->computePriority( connectionId, entity ) );
             }
-            vector<int32> listOrder( filtered._listEntity.size() );
+            filtered._listEntity.resize( relevantCount );
+            vector<int32>& listOrder = _listOrderScratch;
+            listOrder.resize( relevantCount );
             for ( size_t index = 0; index < listOrder.size(); ++index )
                 listOrder[index] = static_cast<int32>( index );
             std::stable_sort( listOrder.begin(), listOrder.end(),
@@ -102,22 +116,30 @@ namespace sw
                 if ( candidate._tick == client._ackedTick && _world._tick - client._ackedTick < client._listSent.size() )
                     pBaseline = &candidate;
             }
-            BitWriter writer;
-            writer.writeBits( NetClientServerMessage::kSnapshot, 8 );
-            NetSnapshot written;
-            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, written, &listOrder );
-            client._listSent[static_cast<size_t>( _world._tick % client._listSent.size() )] = std::move( written );
+            BitWriter& writer = _messageWriter.begin( NetClientServerMessage::kSnapshot );
+            // 보낸 재구성은 그 틱의 자리에 바로 쓴다(기준 자리와 겹치면 — 확인이 한 바퀴 늦었다 — 사본을 거친다).
+            NetSnapshot& slot = client._listSent[static_cast<size_t>( _world._tick % client._listSent.size() )];
+            if ( &slot == pBaseline )
+            {
+                NetSnapshot written;
+                filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, written, &listOrder );
+                slot = std::move( written );
+            }
+            else
+            {
+                filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, slot, &listOrder );
+            }
             (void)_pHost->sendMessage( connectionId, NetChannelType::UnreliableSequenced, writer.getBytes() );
         }
     }
 
-    bool ReplicationServer::handleMessage( int32 connectionId, const vector<uint8>& buffer )
+    bool ReplicationServer::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
-        if ( buffer.empty() || NetMessageRange::isInRange( buffer[0], NetMessageRange::kClientServer ) == false || connectionId < 0 )
+        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetMessageRange::kClientServer ) == false || connectionId < 0 )
             return false;
         ClientState& client = acquireClient( connectionId );
-        BitReader    reader( buffer.data() + 1, static_cast<int32>( buffer.size() ) - 1 );
-        if ( buffer[0] == NetClientServerMessage::kSnapshotAck )
+        BitReader    reader( pData + 1, size - 1 );
+        if ( pData[0] == NetClientServerMessage::kSnapshotAck )
         {
             const uint32 tick = static_cast<uint32>( reader.readVarUint() );
             if ( reader.hasOverflowed() == false && ( client._bHasAck == SW_FALSE || tick > client._ackedTick ) && tick <= _world._tick )
@@ -126,16 +148,16 @@ namespace sw
                 client._bHasAck   = SW_TRUE;
             }
         }
-        else if ( buffer[0] == NetClientServerMessage::kInput )
+        else if ( pData[0] == NetClientServerMessage::kInput )
         {
-            handleInput( client, buffer );
+            handleInput( client, pData, size );
         }
         return true;
     }
 
-    void ReplicationServer::handleInput( ClientState& client, const vector<uint8>& buffer )
+    void ReplicationServer::handleInput( ClientState& client, const uint8* pData, int32 size )
     {
-        BitReader    reader( buffer.data() + 1, static_cast<int32>( buffer.size() ) - 1 );
+        BitReader    reader( pData + 1, size - 1 );
         const uint32 latestTick = static_cast<uint32>( reader.readVarUint() );
         const uint32 viewTick   = static_cast<uint32>( reader.readVarUint() );
         const uint32 count      = static_cast<uint32>( reader.readVarUint() );

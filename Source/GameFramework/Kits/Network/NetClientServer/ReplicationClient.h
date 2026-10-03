@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/NetMessage.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetClientServer/NetSnapshot.h"
@@ -29,14 +30,17 @@ namespace sw
      * @class ReplicationClient
      * @brief 받은 스냅샷을 틱 순으로 들고, `sampleEntity` 가 렌더 시각을 사이에 둔 두 스냅샷의 그 엔티티와 비율을 줍니다(게임이 위치 · 회전을 섞는다).
      */
-    class SW_GF_API ReplicationClient
+    class SW_GF_API ReplicationClient : public INetMessageHandler
     {
     public:
         ReplicationClient();
 
         void initialize( NetHost* pHost, const ReplicationClientSettings& settings );
         /** @brief 이 키트의 메시지면 처리하고 true 입니다. */
-        bool handleMessage( const vector<uint8>& buffer );
+        uint8 getMessageRangeBase() const override { return NetMessageRange::kClientServer; }
+        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
+        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
+        bool handleMessage( const vector<uint8>& buffer ) { return handleNetMessage( -1, buffer.data(), static_cast<int32>( buffer.size() ) ); }
         /** @brief 렌더 시각을 흘립니다. */
         void update( float32 deltaTime );
         /** @brief 이 틱의 입력을 보냅니다(지난 입력 몇 개와 함께). */
@@ -70,5 +74,6 @@ namespace sw
         uint32                    _latestTick;
         uint32                    _latestInputTick;
         uint8                     _bHasSnapshot;
+        NetMessageWriter          _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
 } // namespace sw

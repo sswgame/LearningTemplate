@@ -28,8 +28,7 @@ namespace sw
         NetAddress         getLocalAddress() const override { return _localAddress; }
 
     private:
-        vector<uint8> _buffer;
-        NetAddress    _localAddress;
-        uint64        _socketHandle;
+        NetAddress _localAddress;
+        uint64     _socketHandle;
     };
 } // namespace sw

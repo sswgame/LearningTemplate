@@ -16,12 +16,13 @@ namespace sw
             static constexpr float64 kLossSmoothing   = 0.1;
             static constexpr float64 kStatsInterval   = 0.25;
             static constexpr int32   kMessageCountMax = 255;
+            static constexpr float64 kMinLostAge      = 0.5; ///< 확인이 이보다 늦으면 잃은 것으로 센다 — 유지 간격(0.25 초)보다 길게(답을 잃으면 다음 교환의 묶음이 확인한다)
 
             /** @brief 메시지 하나가 차지할 비트(채널 · id · 길이 · 몸)입니다. */
             static int32 computeMessageBits( NetChannelType channel, int32 size )
             {
                 const int32 idBits = channel == NetChannelType::Unreliable ? 0 : 16;
-                return kChannelBits + idBits + 16 + size * 8;
+                return kChannelBits + idBits + NetConnection::kMessageSizeBits + size * 8;
             }
         };
     } // namespace
@@ -57,8 +58,10 @@ namespace sw
         , _arrIncoming{}
         , _listOutgoingSequenced{}
         , _listOutgoingUnreliable{}
+        , _listParsedScratch{}
         , _stats{}
         , _lastStatsTime{ 0.0 }
+        , _lastAckRequestTime{ -1.0e9 }
         , _nextPacketSequence{ 0 }
         , _nextReliableSendId{ 0 }
         , _oldestUnackedReliableId{ 0 }
@@ -82,6 +85,7 @@ namespace sw
         _listOutgoingUnreliable.clear();
         _stats                   = NetConnectionStats{};
         _lastStatsTime           = 0.0;
+        _lastAckRequestTime      = -1.0e9;
         _nextPacketSequence      = 0;
         _nextReliableSendId      = 0;
         _oldestUnackedReliableId = 0;
@@ -164,17 +168,19 @@ namespace sw
         return ackBits;
     }
 
-    void NetConnection::writePacket( float64 time, BitWriter& writer, int32 maxBytes )
+    void NetConnection::writePacket( float64 time, BitWriter& writer, int32 maxBytes, float64 ackRequestInterval )
     {
         const uint16 sequence = _nextPacketSequence++;
         const uint16 ack      = _receivedPackets.hasNewest() ? _receivedPackets.getNewest() : static_cast<uint16>( 0xFFFF );
         writer.writeBits( sequence, 16 );
         writer.writeBits( ack, 16 );
         writer.writeBits( _receivedPackets.hasNewest() ? computeAckBits( ack ) : 0u, 32 );
-        _bAckPending = SW_FALSE;
+        const bool bReplyOnly = _bAckPending != SW_FALSE;
+        _bAckPending          = SW_FALSE;
 
-        SentPacket* pSent = _sentPackets.insert( sequence );
-        pSent->_time      = time;
+        SentPacket* pSent     = _sentPackets.insert( sequence );
+        pSent->_time          = time;
+        pSent->_reliableCount = 0;
 
         // 메시지 수를 먼저 쓰지 않고, 메시지마다 "더 있다" 1 비트를 앞에 둔다(몇 개가 들어갈지 쓰면서 정한다).
         const int32   budgetBits   = maxBytes * 8 - writer.getBitCount() - 8;
@@ -190,7 +196,7 @@ namespace sw
             writer.writeBits( static_cast<uint32>( channel ), NetConnectionInternal::kChannelBits );
             if ( channel != NetChannelType::Unreliable )
                 writer.writeBits( messageId, 16 );
-            writer.writeBits( static_cast<uint32>( buffer.size() ), 16 );
+            writer.writeBits( static_cast<uint32>( buffer.size() ), kMessageSizeBits );
             if ( buffer.empty() == false )
                 writer.writeBytes( buffer.data(), static_cast<int32>( buffer.size() ) );
             usedBits += bits;
@@ -204,12 +210,14 @@ namespace sw
             OutgoingReliable* pMessage = _outgoingReliable.find( messageId );
             if ( pMessage == nullptr || ( pMessage->_lastSentTime >= 0.0 && time - pMessage->_lastSentTime < resendDelay ) )
                 continue;
+            if ( pSent->_reliableCount >= kMaxReliablePerPacket )
+                break;
             if ( writeMessage( NetChannelType::ReliableOrdered, messageId, pMessage->_buffer ) == false )
                 break;
             if ( pMessage->_lastSentTime >= 0.0 )
                 ++_stats._resentMessageCount;
-            pMessage->_lastSentTime = time;
-            pSent->_listReliableId.push_back( messageId );
+            pMessage->_lastSentTime                        = time;
+            pSent->_arrReliableId[pSent->_reliableCount++] = messageId;
         }
         // 2) 순서만 — 가장 새 것만 의미가 있으니 마지막 것 하나를 싣고 옛것은 버린다(들어가지 않으면 다음 패킷에 그 새 것을).
         if ( _listOutgoingSequenced.empty() == false &&
@@ -230,7 +238,13 @@ namespace sw
             _listOutgoingUnreliable.pop_front();
         }
         writer.writeBool( false );
-        pSent->_byteCount = writer.getByteCount();
+        // 확인만 담은 답은 확인을 바라지 않는다(답에 답이 꼬리를 물지 않게) — 마지막 요청에서 유지 간격이 지났으면 답이라도 바란다.
+        const bool bAckRequested = written > 0 || bReplyOnly == false || time - _lastAckRequestTime >= ackRequestInterval;
+        if ( bAckRequested )
+            _lastAckRequestTime = time;
+        writer.writeBool( bAckRequested );
+        pSent->_bAckRequested = bAckRequested ? SW_TRUE : SW_FALSE;
+        pSent->_byteCount     = writer.getByteCount();
         ++_stats._sentPacketCount;
         updateStats( time );
     }
@@ -250,13 +264,8 @@ namespace sw
         pReceived->_time = time;
 
         // 메시지 — 먼저 모두 읽어 깨진 패킷이면 아무것도 넣지 않는다.
-        struct ParsedMessage
-        {
-            vector<uint8>  _buffer;
-            uint16         _id;
-            NetChannelType _channel;
-        };
-        vector<ParsedMessage> listParsed;
+        vector<ParsedMessage>& listParsed = _listParsedScratch;
+        listParsed.clear();
         while ( reader.readBool() )
         {
             ParsedMessage message;
@@ -264,7 +273,7 @@ namespace sw
             if ( message._channel == NetChannelType::Count )
                 return false;
             message._id      = message._channel != NetChannelType::Unreliable ? static_cast<uint16>( reader.readBits( 16 ) ) : static_cast<uint16>( 0 );
-            const int32 size = static_cast<int32>( reader.readBits( 16 ) );
+            const int32 size = static_cast<int32>( reader.readBits( kMessageSizeBits ) );
             if ( size > kMaxMessageSize )
                 return false;
             message._buffer.resize( static_cast<size_t>( size ) );
@@ -274,12 +283,14 @@ namespace sw
                 return false;
             listParsed.push_back( std::move( message ) );
         }
+        const bool bAckRequested = reader.readBool();
         if ( reader.hasOverflowed() )
             return false;
 
         pReceived->_byteCount = ( reader.getBitPosition() + 7 ) / 8;
         ++_stats._receivedPacketCount;
-        _bAckPending = SW_TRUE;
+        if ( bAckRequested )
+            _bAckPending = SW_TRUE;
         processAcks( time, ack, ackBits );
 
         for ( ParsedMessage& message : listParsed )
@@ -338,11 +349,15 @@ namespace sw
                 continue;
             pSent->_bAcked = SW_TRUE;
             ++_stats._ackedPacketCount;
-            const float64 sample = time - pSent->_time;
-            _stats._rtt          = _stats._rtt <= 0.0f ? static_cast<float32>( sample )
-                                                       : static_cast<float32>( _stats._rtt + ( sample - _stats._rtt ) * NetConnectionInternal::kRttSmoothing );
-            for ( const uint16 messageId : pSent->_listReliableId )
-                _outgoingReliable.remove( messageId );
+            // RTT 표본 — 확인을 바란 패킷이 가장 새 확인으로 돌아왔을 때만(묶음으로 늦게 확인된 것 · 답 패킷은 상대가 기다렸다 보냈을 수 있다).
+            if ( bitIndex < 0 && pSent->_bAckRequested )
+            {
+                const float64 sample = time - pSent->_time;
+                _stats._rtt          = _stats._rtt <= 0.0f ? static_cast<float32>( sample )
+                                                           : static_cast<float32>( _stats._rtt + ( sample - _stats._rtt ) * NetConnectionInternal::kRttSmoothing );
+            }
+            for ( int32 index = 0; index < pSent->_reliableCount; ++index )
+                _outgoingReliable.remove( pSent->_arrReliableId[index] );
         }
         // 가장 오래된 미확인 신뢰 id 를 앞으로.
         while ( _oldestUnackedReliableId != _nextReliableSendId && _outgoingReliable.exists( _oldestUnackedReliableId ) == false )
@@ -355,7 +370,7 @@ namespace sw
             return;
         _lastStatsTime = time;
         // 손실 — RTT 두 배 넘게 확인이 없는 패킷의 몫(최근 창 안).
-        const float64 lostAge   = MathUtil::max( 0.2, static_cast<float64>( _stats._rtt ) * 2.0 );
+        const float64 lostAge   = MathUtil::max( NetConnectionInternal::kMinLostAge, static_cast<float64>( _stats._rtt ) * 2.0 );
         int32         lostCount = 0;
         int32         sentCount = 0;
         int32         sentBytes = 0;
@@ -363,7 +378,7 @@ namespace sw
         for ( int32 offset = 1; offset <= 64; ++offset )
         {
             const SentPacket* pSent = _sentPackets.find( static_cast<uint16>( _nextPacketSequence - offset ) );
-            if ( pSent != nullptr && time - pSent->_time >= lostAge )
+            if ( pSent != nullptr && pSent->_bAckRequested && time - pSent->_time >= lostAge )
             {
                 ++sentCount;
                 lostCount += pSent->_bAcked ? 0 : 1;

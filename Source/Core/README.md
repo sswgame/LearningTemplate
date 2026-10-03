@@ -22,11 +22,18 @@
 - **Compression/**: `ICompressionCodec` · `CompressionCodecRegistry` · `CompressionStream` · `NullCompressionCodec` · `RleCompressionCodec`
 - **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
   얹어, 싱글 게임은 그 키트를 링크하지 않는다.
-  - `BitStream`(`BitWriter` · `BitReader` — 범위 정수 · 양자화 실수 · 가변 정수, 넘침 감지), `SequenceBuffer`(16 비트 감김 시퀀스 고리), `NetTypes`(`NetAddress` ·
+  - `BitStream`(`BitWriter` · `BitReader` — 범위 정수 · 양자화 실수 · 가변 정수, 넘침 감지. 비트를 바이트 덩어리로 쓰고 읽고, 경계에 맞은 바이트는 `memcpy` —
+    선 위 배치는 비트 단위 시절과 같다), `SequenceBuffer`(16 비트 감김 시퀀스 고리), `NetTypes`(`NetAddress` ·
     채널 · 연결 상태 · 메시지 첫 바이트 영역 `NetMessageRange`)
-  - `NetConnection` — 연결 하나의 신뢰성: 패킷 시퀀스 · ack + 32 비트 묶음, 채널(신뢰 순서 · 순서만 · 비신뢰), 재전송(RTT × 1.5), RTT · 손실률 · 대역폭
-  - `NetHost` — 서버 · 클라이언트 끝점: 요청 → 도전 → 응답 → 수락 핸드셰이크(위조 주소 방지), 프로토콜 id + 체크섬으로 남의 · 깨진 패킷 거르기, 유지 · 타임아웃 · 끊기
-  - 전송: `INetTransport`, 실제 UDP(`UdpNetTransport` — 플랫폼 차이는 `PlatformSocketUtil` 한 곳), 한 프로세스 루프백 망(`LoopbackNetwork` — 지연 · 흔들림 · 손실 ·
+  - `NetConnection` — 연결 하나의 신뢰성: 패킷 시퀀스 · ack + 32 비트 묶음, 채널(신뢰 순서 · 순서만 · 비신뢰), 재전송(RTT × 1.5), RTT · 손실률 · 대역폭.
+    메시지 길이 칸 11 비트(0..1024). 패킷 끝 1 비트 "확인 요청" — 확인만 담은 답은 끄므로 한가할 때 답에 답이 꼬리를 물지 않는다(RTT · 손실률은 요청 패킷으로 잰다)
+  - `NetHost` — 서버 · 클라이언트 끝점: 요청 → 도전 → 응답 → 수락 핸드셰이크(위조 주소 방지), 프로토콜 id + 체크섬으로 남의 · 깨진 패킷 거르기, 유지 · 타임아웃 · 끊기.
+    보낼 것이 없으면 `_sendInterval` 이 아니라 `_keepAliveInterval`(0.25 초)마다만 보낸다. 도전 소금 씨앗은 0 이면 OS 난수(`_saltSeed` 는 시험 재현용).
+    주소 → 자리 해시(연결 수에 상관없이 받은 패킷 하나에 O(1)), 패킷 · 쓰기 버퍼는 다시 쓴다
+  - `NetMessage` — `NetMessageWriter`(종류 바이트 + 몸, 버퍼 재사용), `INetMessageHandler`(영역 하나를 맡는 쪽 — `GF_Net*` 키트의 서버 · 클라이언트),
+    `NetMessageRouter`(첫 바이트 위 4 비트로 처리기를 바로 찾아 `pump( host )` 로 나눠 주고, 아무도 안 받은 것은 돌려준다)
+  - 전송: `INetTransport`, 실제 UDP(`UdpNetTransport` — 플랫폼 차이는 `PlatformSocketUtil` 한 곳, 송수신 버퍼 1 MB, Windows 는 ICMP 포트 닿지 않음으로
+    `recvfrom` 이 실패하지 않게 `SIO_UDP_CONNRESET` 을 끈다), 한 프로세스 루프백 망(`LoopbackNetwork` — 지연 · 흔들림 · 손실 ·
     중복 · 깨짐을 씨앗으로 흉내, 시험 · 리슨 서버)
 - **Math/**: `VectorMath` · `MatrixMath` · `MathUtil` · `Frustum`
 - **Time/**: `CpuTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE_*`)

@@ -24,15 +24,19 @@ namespace sw
         bitCount = MathUtil::min( bitCount, 32 );
         if ( bitCount < 32 )
             value &= ( 1u << bitCount ) - 1u;
-        // 낮은 비트부터 — 바이트 안에서도 낮은 비트부터 채운다.
-        for ( int32 bitIndex = 0; bitIndex < bitCount; ++bitIndex )
+        // 낮은 비트부터 — 바이트 안에서도 낮은 비트부터 채운다. 한 번에 바이트의 남은 칸만큼씩(32 비트도 5 번 안).
+        const int32 newBitCount = _bitCount + bitCount;
+        _buffer.resize( static_cast<size_t>( ( newBitCount + 7 ) >> 3 ), 0 );
+        uint8* pBytes = _buffer.data();
+        while ( bitCount > 0 )
         {
-            const int32 byteIndex = _bitCount >> 3;
-            if ( byteIndex >= static_cast<int32>( _buffer.size() ) )
-                _buffer.push_back( 0 );
-            if ( ( value >> bitIndex ) & 1u )
-                _buffer[static_cast<size_t>( byteIndex )] = static_cast<uint8>( _buffer[static_cast<size_t>( byteIndex )] | ( 1u << ( _bitCount & 7 ) ) );
-            ++_bitCount;
+            const int32  bitOffset = _bitCount & 7;
+            const int32  chunkBits = MathUtil::min( bitCount, 8 - bitOffset );
+            const uint32 chunk     = value & ( ( 1u << chunkBits ) - 1u );
+            pBytes[_bitCount >> 3] = static_cast<uint8>( pBytes[_bitCount >> 3] | ( chunk << bitOffset ) );
+            value >>= chunkBits;
+            bitCount -= chunkBits;
+            _bitCount += chunkBits;
         }
     }
 
@@ -72,8 +76,25 @@ namespace sw
 
     void BitWriter::writeBytes( const uint8* pData, int32 byteCount )
     {
+        if ( byteCount <= 0 )
+            return;
+        if ( ( _bitCount & 7 ) == 0 )
+        {
+            // 바이트 경계 — 통째로 복사한다.
+            const size_t offset = static_cast<size_t>( _bitCount >> 3 );
+            _buffer.resize( offset + static_cast<size_t>( byteCount ) );
+            std::memcpy( _buffer.data() + offset, pData, static_cast<size_t>( byteCount ) );
+            _bitCount += byteCount * 8;
+            return;
+        }
         for ( int32 index = 0; index < byteCount; ++index )
             writeBits( pData[index], 8 );
+    }
+
+    void BitWriter::reserve( int32 byteCount )
+    {
+        if ( byteCount > 0 )
+            _buffer.reserve( static_cast<size_t>( byteCount ) );
     }
 
     void BitWriter::alignToByte()
@@ -111,12 +132,16 @@ namespace sw
             _bitPosition = _bitCapacity;
             return 0;
         }
-        uint32 value = 0;
-        for ( int32 bitIndex = 0; bitIndex < bitCount; ++bitIndex )
+        uint32 value   = 0;
+        int32  written = 0;
+        while ( written < bitCount )
         {
-            const uint8 byte = _pData[_bitPosition >> 3];
-            value |= static_cast<uint32>( ( byte >> ( _bitPosition & 7 ) ) & 1u ) << bitIndex;
-            ++_bitPosition;
+            const int32  bitOffset = _bitPosition & 7;
+            const int32  chunkBits = MathUtil::min( bitCount - written, 8 - bitOffset );
+            const uint32 chunk     = ( static_cast<uint32>( _pData[_bitPosition >> 3] ) >> bitOffset ) & ( ( 1u << chunkBits ) - 1u );
+            value |= chunk << written;
+            written += chunkBits;
+            _bitPosition += chunkBits;
         }
         return value;
     }
@@ -169,6 +194,13 @@ namespace sw
         {
             _bOverflow = SW_TRUE;
             return false;
+        }
+        if ( ( _bitPosition & 7 ) == 0 )
+        {
+            if ( byteCount > 0 )
+                std::memcpy( pOutData, _pData + ( _bitPosition >> 3 ), static_cast<size_t>( byteCount ) );
+            _bitPosition += byteCount * 8;
+            return true;
         }
         for ( int32 index = 0; index < byteCount; ++index )
             pOutData[index] = static_cast<uint8>( readBits( 8 ) );

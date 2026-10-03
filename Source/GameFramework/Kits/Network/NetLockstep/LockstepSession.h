@@ -9,6 +9,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/NetMessage.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -33,7 +34,7 @@ namespace sw
      *     session.reportChecksum( tick, hashOfState );
      * @endcode
      */
-    class SW_GF_API LockstepSession
+    class SW_GF_API LockstepSession : public INetMessageHandler
     {
     public:
         LockstepSession();
@@ -44,8 +45,11 @@ namespace sw
         /** @brief 지금 틱의 입력이 모두 모였으면 꺼내고 틱을 넘깁니다. */
         [[nodiscard]] bool tryAdvance( vector<vector<uint8>>& outListInput );
         /** @brief 그 틱을 시뮬레이션한 뒤의 상태 체크섬을 알립니다. */
-        void reportChecksum( uint32 tick, uint32 checksum );
-        bool handleMessage( int32 connectionId, const vector<uint8>& buffer );
+        void  reportChecksum( uint32 tick, uint32 checksum );
+        uint8 getMessageRangeBase() const override { return NetMessageRange::kLockstep; }
+        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
+        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
+        bool handleMessage( int32 connectionId, const vector<uint8>& buffer ) { return handleNetMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) ); }
 
         uint32 getCurrentTick() const { return _currentTick; }
         /** @brief 입력을 기다리며 멈춘 틱 수(누가 느린가 — 화면의 "기다리는 중" 표시)입니다. */
@@ -57,7 +61,7 @@ namespace sw
     private:
         void storeInput( int32 player, uint32 tick, const vector<uint8>& listInput );
         void storeChecksum( int32 player, uint32 tick, uint32 checksum );
-        void relay( int32 fromConnectionId, const vector<uint8>& buffer );
+        void relay( int32 fromConnectionId, const uint8* pData, int32 size );
 
         map<uint32, vector<vector<uint8>>> _mapInput;    ///< 틱 → 플레이어마다 입력
         map<uint32, vector<uint8>>         _mapHasInput; ///< 틱 → 플레이어마다 받았나
@@ -71,5 +75,6 @@ namespace sw
         uint32                             _nextLocalTick;
         uint32                             _desyncTick;
         uint8                              _bDesynced;
+        NetMessageWriter                   _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
 } // namespace sw

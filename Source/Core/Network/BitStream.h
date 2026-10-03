@@ -1,7 +1,8 @@
 /**
  * @file BitStream.h
  * @brief 비트 단위 직렬화 — 범위가 정해진 정수는 필요한 비트만, 실수는 정밀도만큼 양자화, 가변 길이 정수, 바이트 덩어리입니다.
- * @details 스냅샷 · 입력은 수가 많고 패킷은 작으므로(1200 바이트) bool 하나에 1 비트, 0..100 체력에 7 비트를 씁니다(Gaffer "Reading and Writing Packets").
+ * @details 비트는 낮은 비트부터 채우고, 쓰기 · 읽기는 바이트의 남은 칸만큼씩 묶어(32 비트도 다섯 번 안) 처리합니다. 바이트 경계의 덩어리는 통째로 복사합니다.
+ *          스냅샷 · 입력은 수가 많고 패킷은 작으므로(1200 바이트) bool 하나에 1 비트, 0..100 체력에 7 비트를 씁니다(Gaffer "Reading and Writing Packets").
  *          읽기가 버퍼를 넘으면 0 을 돌려주고 `hasOverflowed` 가 참이 됩니다 — 깨진 패킷을 받아도 버퍼 밖을 읽지 않습니다.
  */
 #pragma once
@@ -49,8 +50,11 @@ namespace sw
         void writeVarUint( uint64 value );
         void writeVarInt( int64 value );
         void writeBytes( const uint8* pData, int32 byteCount );
+        /** @brief 버퍼를 미리 잡아 둡니다(패킷 하나 = `kNetMaxPacketSize` — 쓰는 동안 다시 잡지 않게). */
+        void reserve( int32 byteCount );
         /** @brief 다음 쓰기를 바이트 경계에서 시작합니다. */
         void alignToByte();
+        /** @brief 비웁니다. 잡아 둔 버퍼는 남겨 다시 씁니다. */
         void clear();
 
         int32 getBitCount() const { return _bitCount; }

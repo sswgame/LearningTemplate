@@ -101,7 +101,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `KartRacing`: 카트 레이싱(카트라이더 · 마리오카트 장르) — Catmull-Rom 트랙 · 체크포인트 · 오프로드(`KartTrack`), 순서 랩 · 실시간 순위 · 역주행(`KartRace`), 순위 가중 아이템(`KartItems`), AI 레이싱 라인 · 드리프트 · 러버밴딩(`KartAi`), 고스트(`KartGhost`).
   - **네트워크 방식** (`Kits/Network/`)
     - 네트워크 방식(장르별로 골라 링크 — 싱글 게임은 링크하지 않는다, 공통 계층은 `Core/Network`). 정책은 가상 인터페이스로 게임이 바꾼다.
-      메시지 첫 바이트는 키트마다 영역이 나뉘어(`NetMessageRange`) 한 게임이 둘을 같이 써도 섞이지 않는다 — 키트의 `handleMessage` 가 제 것만 먹고 false 를 돌려준다.
+      메시지 첫 바이트는 키트마다 영역이 나뉘어(`NetMessageRange`) 한 게임이 둘을 같이 써도 섞이지 않는다. 키트의 서버 · 클라이언트는 모두 `INetMessageHandler` 라
+      `NetMessageRouter` 에 걸어 두면 `pump( host )` 가 영역대로 나눠 주고 게임 메시지(0x80..)만 돌려준다(`handleMessage( buffer )` 를 직접 불러도 된다 — 제 것만 먹고 false).
+      보낼 메시지는 키트마다 `NetMessageWriter` 하나를 다시 쓰고, 서버의 스냅샷 · 관심 영역 계산도 매 틱 목록을 새로 잡지 않는다.
       - `NetClientServer`: 권위 서버(슈터 · 배틀로얄 · 액션 · 기체 대전 · 비대칭) — 스냅샷 델타(확인된 기준 대비 · 예산 · 우선도, `IReplicationPolicy` 관련성),
         보간(`ReplicationClient` — 지연만큼 과거 · 시계 맞추기), 입력 겹쳐 보내기, 클라이언트 예측 되맞추기(`ClientPrediction`), 랙 보정 되감기(`LagCompensationHistory`).
       - `NetLockstep`: 결정적 — 락스텝(`LockstepSession` — 입력 지연 · 체크섬 비동기 감지, RTS), 롤백(`RollbackSession` · `IRollbackGame` — 예측 · 되감기 · 재시뮬레이션, 격투).

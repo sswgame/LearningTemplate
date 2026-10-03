@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Network/NetMessage.h"
 #include "Core/Network/NetTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -56,11 +57,11 @@ namespace sw
      *     for ( each entity ) server.setEntity( id, typeId, bytes );
      *     server.endTick();
      *     server.sendSnapshots();
-     *     // 받은 메시지: if ( server.handleMessage( connectionId, bytes ) ) continue;
+     *     // 받은 메시지: router.addHandler( &server ) 뒤 매 틱 router.pump( host ) — 손으로는 server.handleMessage( connectionId, bytes )
      *     // 시뮬레이션: server.popInput( connectionId, tick, inputBytes ); ... server.setLastProcessedInputTick( connectionId, tick );
      * @endcode
      */
-    class SW_GF_API ReplicationServer
+    class SW_GF_API ReplicationServer : public INetMessageHandler
     {
     public:
         ReplicationServer();
@@ -72,7 +73,10 @@ namespace sw
         /** @brief 연결된 클라이언트마다 스냅샷을 보냅니다. */
         void sendSnapshots();
         /** @brief 이 키트의 메시지면 처리하고 true 입니다. */
-        bool handleMessage( int32 connectionId, const vector<uint8>& buffer );
+        uint8 getMessageRangeBase() const override { return NetMessageRange::kClientServer; }
+        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
+        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
+        bool handleMessage( int32 connectionId, const vector<uint8>& buffer ) { return handleNetMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) ); }
         void onDisconnected( int32 connectionId );
 
         /**
@@ -106,7 +110,7 @@ namespace sw
         };
 
         ClientState& acquireClient( int32 connectionId );
-        void         handleInput( ClientState& client, const vector<uint8>& buffer );
+        void         handleInput( ClientState& client, const uint8* pData, int32 size );
 
         vector<ClientState>       _listClient;
         NetSnapshot               _world;
@@ -114,5 +118,10 @@ namespace sw
         NetHost*                  _pHost;
         const IReplicationPolicy* _pPolicy;
         IReplicationPolicy        _defaultPolicy;
+        NetMessageWriter          _messageWriter;   ///< 보낼 메시지 — 버퍼를 다시 쓴다
+        NetSnapshot               _filteredScratch; ///< 클라이언트 하나의 관련 엔티티(틱마다 다시 쓴다)
+        vector<float32>           _listPriorityScratch;
+        vector<int32>             _listOrderScratch;
+        vector<int32>             _listConnectionScratch;
     };
 } // namespace sw

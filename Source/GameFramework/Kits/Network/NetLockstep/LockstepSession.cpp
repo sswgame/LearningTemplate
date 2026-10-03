@@ -22,6 +22,7 @@ namespace sw
         , _nextLocalTick{ 0 }
         , _desyncTick{ 0 }
         , _bDesynced{ SW_FALSE }
+        , _messageWriter{}
     {
     }
 
@@ -68,8 +69,7 @@ namespace sw
         storeInput( _localPlayer, tick, listInput );
         if ( _pHost == nullptr )
             return;
-        BitWriter writer;
-        writer.writeBits( NetLockstepMessage::kInput, 8 );
+        BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kInput );
         writer.writeVarUint( static_cast<uint64>( _localPlayer ) );
         writer.writeVarUint( tick );
         writer.writeVarUint( listInput.size() );
@@ -132,8 +132,7 @@ namespace sw
         storeChecksum( _localPlayer, tick, checksum );
         if ( _pHost == nullptr )
             return;
-        BitWriter writer;
-        writer.writeBits( NetLockstepMessage::kChecksum, 8 );
+        BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kChecksum );
         writer.writeVarUint( static_cast<uint64>( _localPlayer ) );
         writer.writeVarUint( tick );
         writer.writeUint32( checksum );
@@ -143,23 +142,23 @@ namespace sw
             (void)_pHost->sendMessage( 0, NetChannelType::ReliableOrdered, writer.getBytes() );
     }
 
-    void LockstepSession::relay( int32 fromConnectionId, const vector<uint8>& buffer )
+    void LockstepSession::relay( int32 fromConnectionId, const uint8* pData, int32 size )
     {
         if ( _pHost != nullptr && _pHost->isServer() )
-            (void)_pHost->broadcast( NetChannelType::ReliableOrdered, buffer.data(), static_cast<int32>( buffer.size() ), fromConnectionId );
+            (void)_pHost->broadcast( NetChannelType::ReliableOrdered, pData, size, fromConnectionId );
     }
 
-    bool LockstepSession::handleMessage( int32 connectionId, const vector<uint8>& buffer )
+    bool LockstepSession::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
-        if ( buffer.empty() || ( buffer[0] != NetLockstepMessage::kInput && buffer[0] != NetLockstepMessage::kChecksum ) )
+        if ( size <= 0 || ( pData[0] != NetLockstepMessage::kInput && pData[0] != NetLockstepMessage::kChecksum ) )
             return false;
-        BitReader   reader( buffer.data() + 1, static_cast<int32>( buffer.size() ) - 1 );
+        BitReader   reader( pData + 1, size - 1 );
         const int32 player = static_cast<int32>( reader.readVarUint() );
         // 서버는 클라이언트가 자기 번호로만 보내게 한다(남의 입력을 위조하지 못하게).
         if ( _pHost != nullptr && _pHost->isServer() && player != connectionId + 1 )
             return true;
         const uint32 tick = static_cast<uint32>( reader.readVarUint() );
-        if ( buffer[0] == NetLockstepMessage::kInput )
+        if ( pData[0] == NetLockstepMessage::kInput )
         {
             vector<uint8> listInput( static_cast<size_t>( MathUtil::min<uint64>( 1024, reader.readVarUint() ) ) );
             if ( listInput.empty() == false && reader.readBytes( listInput.data(), static_cast<int32>( listInput.size() ) ) == false )
@@ -175,7 +174,7 @@ namespace sw
                 return true;
             storeChecksum( player, tick, checksum );
         }
-        relay( connectionId, buffer );
+        relay( connectionId, pData, size );
         return true;
     }
 } // namespace sw

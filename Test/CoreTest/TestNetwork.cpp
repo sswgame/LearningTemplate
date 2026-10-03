@@ -3,6 +3,7 @@
 #include "Core/Network/BitStream.h"
 #include "Core/Network/NetConnection.h"
 #include "Core/Network/NetHost.h"
+#include "Core/Network/NetMessage.h"
 #include "Core/Network/NetTransport.h"
 #include "Core/Network/SequenceBuffer.h"
 #include "Core/Network/UdpNetTransport.h"
@@ -10,7 +11,7 @@
 #include "TestFramework/TestFramework.h"
 
 // 네트워크 공통 계층 — 비트 스트림, 시퀀스 감김, 신뢰성(재전송 · 순서 · 중복 · 옛것 버리기 · RTT), 핸드셰이크(도전 · 가득 참 · 다른 프로토콜),
-// 나쁜 망(지연 · 흔들림 · 손실 · 중복 · 깨짐)에서의 신뢰 순서, 끊기 · 타임아웃, 실제 UDP 소켓.
+// 나쁜 망(지연 · 흔들림 · 손실 · 중복 · 깨짐)에서의 신뢰 순서, 끊기 · 타임아웃, 실제 UDP 소켓, 한가할 때의 유지 패킷, 메시지 라우터, 많은 연결.
 
 using namespace sw;
 
@@ -46,6 +47,47 @@ namespace
         for ( int32 index = 0; index < 4 && index < size; ++index )
             buffer[static_cast<size_t>( index )] = static_cast<uint8>( value >> ( index * 8 ) );
         return buffer;
+    }
+
+    /** @brief 시험용 처리기 — 맡은 영역에서 @p acceptedKind 만 받아들이고 받은 수를 셉니다. */
+    class CountingHandler : public INetMessageHandler
+    {
+    public:
+        CountingHandler( uint8 rangeBase, uint8 acceptedKind )
+            : _rangeBase{ rangeBase }
+            , _acceptedKind{ acceptedKind }
+            , _handledCount{ 0 }
+            , _lastConnectionId{ -1 }
+        {
+        }
+
+        uint8 getMessageRangeBase() const override { return _rangeBase; }
+        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override
+        {
+            if ( size <= 0 || pData[0] != _acceptedKind )
+                return false;
+            ++_handledCount;
+            _lastConnectionId = connectionId;
+            return true;
+        }
+
+        int32 getHandledCount() const { return _handledCount; }
+        int32 getLastConnectionId() const { return _lastConnectionId; }
+
+    private:
+        uint8 _rangeBase;
+        uint8 _acceptedKind;
+        int32 _handledCount;
+        int32 _lastConnectionId;
+    };
+
+    /** @brief 시험용 의사 난수(xorshift) — 시드가 같으면 같은 수열입니다. */
+    uint32 nextRandom( uint32& inOutState )
+    {
+        inOutState ^= inOutState << 13;
+        inOutState ^= inOutState >> 17;
+        inOutState ^= inOutState << 5;
+        return inOutState;
     }
 
     int32 readMessageValue( const vector<uint8>& buffer )
@@ -229,10 +271,16 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     SW_ASSERT_TRUE( listReceived.size() == 200 );
     for ( int32 index = 0; index < 200; ++index )
         SW_EXPECT_EQUAL( index, listReceived[static_cast<size_t>( index )] );
-    SW_EXPECT_TRUE( pair._server.getRejectedPacketCount() > 0 ); // 깨진 패킷을 체크섬이 걸렀다
+    // RTT · 손실률 · 깨짐은 패킷이 쌓여야 보인다(메시지 200 개는 패킷 스무 개 남짓에 다 실렸다) — 6 초 동안 매 프레임 입력 같은 비신뢰 메시지를 보낸다.
     const NetConnectionStats& stats = pair._client.findConnection( 0 )->getStats();
-    SW_EXPECT_TRUE( stats._rtt > 0.12f && stats._rtt < 0.3f );
-    pair.run( 6.0 );                                                          // 손실률은 패킷이 쌓여야 보인다(메시지 200 개는 패킷 스무 개 남짓에 다 실렸다)
+    for ( int32 frame = 0; frame < 60 * 6; ++frame )
+    {
+        const vector<uint8> input = makeMessage( frame, 8 );
+        SW_ASSERT_TRUE( pair._client.sendMessage( 0, NetChannelType::Unreliable, input ) );
+        pair.run( 1.0 / 60.0 );
+    }
+    SW_EXPECT_TRUE( pair._server.getRejectedPacketCount() > 0 );              // 깨진 패킷을 체크섬이 걸렀다
+    SW_EXPECT_TRUE( stats._rtt > 0.12f && stats._rtt < 0.3f );                // 지연 80 ms 왕복 + 흔들림
     SW_EXPECT_TRUE( stats._packetLoss > 0.12f && stats._packetLoss < 0.45f ); // 보낸 쪽 손실 20 % + 깨짐 5 %
     SW_EXPECT_EQUAL( 1, pair._server.getConnectedCount() );                   // 나쁜 망에서도 끊기지 않았다
 
@@ -353,4 +401,207 @@ SW_TEST_CASE( NetworkTest, UdpTransportSendsDatagramsOverLocalhost )
     SW_EXPECT_TRUE( NetAddress::parse( "192.168.1.2", 3000, parsed ) && parsed._port == 3000 );
     SW_EXPECT_FALSE( NetAddress::parse( "300.1.1.1:5", 1, parsed ) );
     SW_EXPECT_FALSE( NetAddress::parse( "1.2.3", 1, parsed ) );
+}
+
+SW_TEST_CASE( NetworkTest, BitStreamKeepsWireLayoutAndRoundTripsRandomFields )
+{
+    // 선 위의 비트 배치는 바꾸지 않는다 — 바이트 단위로 빨라진 쓰기가 옛 비트 단위 쓰기와 같은 바이트를 낸다.
+    BitWriter   writer;
+    const uint8 arrRaw[5] = { 1, 2, 3, 0xFE, 0x80 };
+    writer.writeBits( 5, 3 );
+    writer.writeBool( true );
+    writer.writeBits( 0xABCDE, 20 );
+    writer.writeInt( -7, -100, 100 );
+    writer.writeFloat( 3.25f );
+    writer.writeQuantizedFloat( 1.5f, -10.0f, 10.0f, 0.01f );
+    writer.writeVarUint( 300 );
+    writer.writeVarInt( -12345 );
+    writer.writeBytes( arrRaw, 5 ); // 바이트 경계가 아닌 곳
+    writer.writeBits( 0xFFFFFFFFu, 32 );
+    writer.alignToByte();
+    writer.writeBytes( arrRaw, 3 ); // 바이트 경계
+    const uint8 arrExpected[] = { 0xED, 0xCD, 0xAB, 0x5D, 0x00, 0x00, 0x50, 0x40, 0x7E, 0x64, 0x15, 0x88, 0x07, 0x0E,
+                                  0x08, 0x10, 0x18, 0xF0, 0x07, 0xFC, 0xFF, 0xFF, 0xFF, 0x07, 0x01, 0x02, 0x03 };
+    SW_ASSERT_EQUAL( static_cast<int32>( sizeof( arrExpected ) ), writer.getByteCount() );
+    SW_EXPECT_EQUAL( 216, writer.getBitCount() );
+    for ( size_t index = 0; index < sizeof( arrExpected ); ++index )
+        SW_EXPECT_EQUAL( static_cast<int32>( arrExpected[index] ), static_cast<int32>( writer.getBytes()[index] ) );
+
+    // 무작위 — 폭 1..32 비트와 경계를 가리지 않는 바이트 덩어리를 섞어 쓰고 그대로 읽는다. 쓰기를 비워도 다시 쓸 수 있다.
+    uint32 state = 0x2545F491u;
+    for ( int32 round = 0; round < 500; ++round )
+    {
+        writer.clear();
+        uint32      arrValue[48]{};
+        int32       arrWidth[48]{};
+        uint8       arrBlob[48][6]{};
+        const int32 fieldCount = 1 + static_cast<int32>( nextRandom( state ) % 48 );
+        for ( int32 field = 0; field < fieldCount; ++field )
+        {
+            if ( nextRandom( state ) % 4 == 0 )
+            {
+                arrWidth[field] = -static_cast<int32>( nextRandom( state ) % 7 ); // 0..6 바이트
+                for ( int32 byteIndex = 0; byteIndex < -arrWidth[field]; ++byteIndex )
+                    arrBlob[field][byteIndex] = static_cast<uint8>( nextRandom( state ) );
+                writer.writeBytes( arrBlob[field], -arrWidth[field] );
+                continue;
+            }
+            arrWidth[field] = 1 + static_cast<int32>( nextRandom( state ) % 32 );
+            arrValue[field] = nextRandom( state ) & ( arrWidth[field] == 32 ? 0xFFFFFFFFu : ( 1u << arrWidth[field] ) - 1u );
+            writer.writeBits( arrValue[field], arrWidth[field] );
+        }
+        BitReader reader( writer.getBytes().data(), writer.getByteCount() );
+        for ( int32 field = 0; field < fieldCount; ++field )
+        {
+            if ( arrWidth[field] <= 0 )
+            {
+                uint8 arrRead[6]{};
+                SW_ASSERT_TRUE( reader.readBytes( arrRead, -arrWidth[field] ) );
+                for ( int32 byteIndex = 0; byteIndex < -arrWidth[field]; ++byteIndex )
+                    SW_ASSERT_EQUAL( static_cast<int32>( arrBlob[field][byteIndex] ), static_cast<int32>( arrRead[byteIndex] ) );
+                continue;
+            }
+            SW_ASSERT_TRUE( reader.readBits( arrWidth[field] ) == arrValue[field] );
+        }
+        SW_ASSERT_FALSE( reader.hasOverflowed() );
+        SW_EXPECT_TRUE( reader.getBitsRemaining() < 8 );
+    }
+}
+
+SW_TEST_CASE( NetworkTest, IdleConnectionsSendKeepAlivesInsteadOfEveryInterval )
+{
+    NetTestPair pair;
+    SW_ASSERT_TRUE( pair._server.listen() );
+    SW_ASSERT_TRUE( pair._client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    pair.run( 0.5 );
+    SW_ASSERT_TRUE( pair._client.getConnectionState( 0 ) == NetConnectionState::Connected );
+
+    // 4 초 동안 아무것도 보내지 않는다 — 보낼 간격(1/30 초)마다가 아니라 유지 간격(0.25 초)마다 유지 패킷과 그 확인만 오간다.
+    const NetConnectionStats& clientStats = pair._client.findConnection( 0 )->getStats();
+    const NetConnectionStats& serverStats = pair._server.findConnection( 0 )->getStats();
+    const uint64              clientSent  = clientStats._sentPacketCount;
+    const uint64              serverSent  = serverStats._sentPacketCount;
+    pair.run( 4.0 );
+    const uint64 clientIdleSent = clientStats._sentPacketCount - clientSent;
+    const uint64 serverIdleSent = serverStats._sentPacketCount - serverSent;
+    SW_EXPECT_TRUE( clientIdleSent >= 8 && clientIdleSent <= 40 ); // 30 Hz 였다면 120
+    SW_EXPECT_TRUE( serverIdleSent >= 8 && serverIdleSent <= 40 );
+    SW_EXPECT_TRUE( clientStats._rtt > 0.0f && clientStats._rtt < 0.1f ); // 유지 패킷도 RTT 를 잰다(지연 없는 망)
+    SW_EXPECT_TRUE( clientStats._packetLoss < 0.01f );                    // 확인만 담은 답은 확인을 바라지 않으니 잃은 것으로 세지 않는다
+    SW_EXPECT_EQUAL( 1, pair._server.getConnectedCount() );
+
+    // 보낼 것이 생기면 바로 — 다음 유지 시각을 기다리지 않는다. 메시지 길이 칸(11 비트)의 끝 1024 바이트까지 실린다.
+    const vector<uint8> largest = makeMessage( 777, NetConnection::kMaxMessageSize );
+    SW_ASSERT_TRUE( pair._client.sendMessage( 0, NetChannelType::ReliableOrdered, largest ) );
+    SW_EXPECT_FALSE( pair._client.sendMessage( 0, NetChannelType::ReliableOrdered, makeMessage( 0, NetConnection::kMaxMessageSize + 1 ) ) );
+    pair.run( 2.0 / 30.0 );
+    int32          connectionId = -1;
+    NetChannelType channel      = NetChannelType::Unreliable;
+    vector<uint8>  buffer;
+    SW_ASSERT_TRUE( pair._server.receiveMessage( connectionId, channel, buffer ) );
+    SW_EXPECT_EQUAL( NetConnection::kMaxMessageSize, static_cast<int32>( buffer.size() ) );
+    SW_EXPECT_EQUAL( 777, readMessageValue( buffer ) );
+}
+
+SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
+{
+    NetTestPair pair;
+    SW_ASSERT_TRUE( pair._server.listen() );
+    SW_ASSERT_TRUE( pair._client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    pair.run( 0.3 );
+    SW_ASSERT_TRUE( pair._client.getConnectionState( 0 ) == NetConnectionState::Connected );
+
+    // 한 영역에 처리기 둘 — 등록 순서대로 묻고 처음 받아들인 쪽에서 멈춘다.
+    CountingHandler  lockstep( NetMessageRange::kLockstep, 0x21 );
+    CountingHandler  gameFirst( NetMessageRange::kGame, 0x81 );
+    CountingHandler  gameSecond( NetMessageRange::kGame, 0x82 );
+    NetMessageRouter router;
+    router.addHandler( &lockstep );
+    router.addHandler( &gameFirst );
+    router.addHandler( &gameSecond );
+
+    NetMessageWriter messageWriter;
+    const uint8      arrKind[] = { 0x21, 0x81, 0x82, 0x82, 0x83, 0x51, 0x22 };
+    for ( const uint8 kind : arrKind )
+    {
+        messageWriter.begin( kind ).writeVarUint( kind );
+        SW_ASSERT_TRUE( messageWriter.send( pair._client, 0, NetChannelType::ReliableOrdered ) );
+    }
+    pair.run( 0.2 );
+    vector<NetReceivedMessage> listUnhandled;
+    SW_EXPECT_EQUAL( 7, router.pump( pair._server, &listUnhandled ) );
+    SW_EXPECT_EQUAL( 1, lockstep.getHandledCount() );
+    SW_EXPECT_EQUAL( 1, gameFirst.getHandledCount() );
+    SW_EXPECT_EQUAL( 2, gameSecond.getHandledCount() );
+    SW_EXPECT_EQUAL( 0, gameSecond.getLastConnectionId() );
+    // 거절(0x83 · 0x22)과 처리기 없는 영역(0x51)은 받은 순서대로 남는다.
+    SW_ASSERT_EQUAL( 3, static_cast<int32>( listUnhandled.size() ) );
+    SW_EXPECT_EQUAL( 0x83, static_cast<int32>( listUnhandled[0]._buffer[0] ) );
+    SW_EXPECT_EQUAL( 0x51, static_cast<int32>( listUnhandled[1]._buffer[0] ) );
+    SW_EXPECT_EQUAL( 0x22, static_cast<int32>( listUnhandled[2]._buffer[0] ) );
+    SW_EXPECT_EQUAL( 0, listUnhandled[0]._connectionId );
+
+    // 뺀 처리기는 더 묻지 않는다. 빈 메시지는 누구에게도 가지 않는다.
+    router.removeHandler( &gameFirst );
+    SW_EXPECT_FALSE( router.dispatch( 0, messageWriter.begin( 0x81 ).getBytes().data(), 1 ) );
+    SW_EXPECT_FALSE( router.dispatch( 0, nullptr, 0 ) );
+    SW_EXPECT_EQUAL( 1, gameFirst.getHandledCount() );
+}
+
+SW_TEST_CASE( NetworkTest, ServerTellsManyClientsApartByAddress )
+{
+    constexpr int32 kClientCount = 40;
+    NetHostSettings settings;
+    settings._maxConnections = 48;
+    LoopbackNetwork network( 11u );
+    NetHost         server;
+    server.initialize( network.createEndpoint( 4000 ), settings );
+    SW_ASSERT_TRUE( server.listen() );
+    NetHost arrClient[kClientCount];
+    for ( int32 index = 0; index < kClientCount; ++index )
+    {
+        arrClient[index].initialize( network.createEndpoint( static_cast<uint16>( 6000 + index ) ), settings );
+        SW_ASSERT_TRUE( arrClient[index].connect( NetAddress::makeLoopback( 4000 ) ) );
+    }
+    float64    time   = 0.0;
+    const auto runAll = [&]( float64 seconds )
+    {
+        for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
+        {
+            time += 1.0 / 60.0;
+            server.update( time );
+            for ( NetHost& client : arrClient )
+                client.update( time );
+        }
+    };
+    runAll( 0.5 );
+    SW_ASSERT_EQUAL( kClientCount, server.getConnectedCount() );
+
+    // 클라이언트마다 자기 번호를 보낸다 — 서버의 연결 id 가 그 클라이언트의 주소와 맞아야 한다.
+    for ( int32 index = 0; index < kClientCount; ++index )
+        SW_ASSERT_TRUE( arrClient[index].sendMessage( 0, NetChannelType::ReliableOrdered, makeMessage( index ) ) );
+    runAll( 0.2 );
+    int32          connectionId = -1;
+    NetChannelType channel      = NetChannelType::Unreliable;
+    vector<uint8>  buffer;
+    int32          receivedCount = 0;
+    while ( server.receiveMessage( connectionId, channel, buffer ) )
+    {
+        const int32 clientIndex = readMessageValue( buffer );
+        SW_EXPECT_EQUAL( static_cast<int32>( 6000 + clientIndex ), static_cast<int32>( server.getConnectionAddress( connectionId )._port ) );
+        ++receivedCount;
+    }
+    SW_EXPECT_EQUAL( kClientCount, receivedCount );
+
+    // 하나가 끊고 다시 붙어도 주소로 바른 자리를 찾는다.
+    arrClient[7].disconnect( 0 );
+    runAll( 0.2 );
+    SW_EXPECT_EQUAL( kClientCount - 1, server.getConnectedCount() );
+    SW_ASSERT_TRUE( arrClient[7].connect( NetAddress::makeLoopback( 4000 ) ) );
+    runAll( 0.5 );
+    SW_ASSERT_EQUAL( kClientCount, server.getConnectedCount() );
+    SW_ASSERT_TRUE( arrClient[7].sendMessage( 0, NetChannelType::ReliableOrdered, makeMessage( 7 ) ) );
+    runAll( 0.2 );
+    SW_ASSERT_TRUE( server.receiveMessage( connectionId, channel, buffer ) );
+    SW_EXPECT_EQUAL( 6007, static_cast<int32>( server.getConnectionAddress( connectionId )._port ) );
 }

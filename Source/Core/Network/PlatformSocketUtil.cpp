@@ -73,9 +73,17 @@ namespace sw
         local.sin_port        = htons( port );
         local.sin_addr.s_addr = htonl( INADDR_ANY );
         bool bOk              = bind( native, reinterpret_cast<const sockaddr*>( &local ), sizeof( local ) ) == 0;
+        // 서버는 한 틱에 여러 연결의 패킷이 몰린다 — 기본 버퍼(리눅스 208 KB · Windows 64 KB)가 넘치면 커널이 조용히 버린다. 실패해도 계속한다.
+        const int32 bufferSize = 1 << 20;
+        (void)setsockopt( native, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<const utf8*>( &bufferSize ), sizeof( bufferSize ) );
+        (void)setsockopt( native, SOL_SOCKET, SO_SNDBUF, reinterpret_cast<const utf8*>( &bufferSize ), sizeof( bufferSize ) );
 #if defined( SW_PLATFORM_WINDOWS )
         u_long nonBlocking = 1;
         bOk                = bOk && ioctlsocket( native, FIONBIO, &nonBlocking ) == 0;
+        // Windows 는 저쪽 포트가 닫혀 ICMP 가 오면 다음 recvfrom 을 WSAECONNRESET 으로 실패시킨다 — UDP 서버는 그것을 끈다.
+        BOOL  bReportReset  = FALSE;
+        DWORD bytesReturned = 0;
+        (void)WSAIoctl( native, _WSAIOW( IOC_VENDOR, 12 ), &bReportReset, sizeof( bReportReset ), nullptr, 0, &bytesReturned, nullptr, nullptr );
 #else
         const int32 flags = fcntl( native, F_GETFL, 0 );
         bOk               = bOk && flags >= 0 && fcntl( native, F_SETFL, flags | O_NONBLOCK ) == 0;

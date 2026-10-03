@@ -26,6 +26,7 @@ namespace sw
         , _rollbackCount{ 0 }
         , _resimulatedFrameCount{ 0 }
         , _stallCount{ 0 }
+        , _messageWriter{}
     {
     }
 
@@ -123,8 +124,7 @@ namespace sw
             return;
         const int32 latest = _listConfirmed[static_cast<size_t>( _localPlayer )];
         const int32 first  = MathUtil::max( 0, latest - _settings._redundancy + 1 );
-        BitWriter   writer;
-        writer.writeBits( NetLockstepMessage::kRollbackInput, 8 );
+        BitWriter&  writer = _messageWriter.begin( NetLockstepMessage::kRollbackInput );
         writer.writeVarUint( static_cast<uint64>( _localPlayer ) );
         writer.writeVarUint( static_cast<uint64>( first ) );
         writer.writeVarUint( static_cast<uint64>( latest - first + 1 ) );
@@ -167,11 +167,11 @@ namespace sw
         return true;
     }
 
-    bool RollbackSession::handleMessage( int32 connectionId, const vector<uint8>& buffer )
+    bool RollbackSession::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
-        if ( buffer.empty() || buffer[0] != NetLockstepMessage::kRollbackInput )
+        if ( size <= 0 || pData[0] != NetLockstepMessage::kRollbackInput )
             return false;
-        BitReader   reader( buffer.data() + 1, static_cast<int32>( buffer.size() ) - 1 );
+        BitReader   reader( pData + 1, size - 1 );
         const int32 player = static_cast<int32>( reader.readVarUint() );
         const int32 first  = static_cast<int32>( reader.readVarUint() );
         const int32 count  = static_cast<int32>( reader.readVarUint() );
@@ -187,7 +187,7 @@ namespace sw
             receiveInput( player, first + index, input );
         }
         if ( _pHost != nullptr && _pHost->isServer() )
-            (void)_pHost->broadcast( NetChannelType::Unreliable, buffer.data(), static_cast<int32>( buffer.size() ), connectionId );
+            (void)_pHost->broadcast( NetChannelType::Unreliable, pData, size, connectionId );
         return true;
     }
 } // namespace sw
