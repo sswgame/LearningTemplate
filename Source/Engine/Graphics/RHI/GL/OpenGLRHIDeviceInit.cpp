@@ -51,6 +51,8 @@ namespace sw
         _width  = desc._width;
         _height = desc._height;
         _pHWnd  = desc._pWindowHandle;
+        // GL 에는 자원의 할당 크기를 물을 API 가 없다. 장부는 서술(버퍼 크기 · 텍스처 서술)로 계산한 논리 크기다.
+        getMemoryLedger().setSizeBasis( RHIMemorySizeBasis::Logical );
 
         // 플랫폼 컨텍스트 생성(WGL · GLX)은 GL/Platform 이 맡는다. 디바이스는 플랫폼 분기를 갖지 않는다.
         _platformContext = IOpenGLPlatformContext::create();

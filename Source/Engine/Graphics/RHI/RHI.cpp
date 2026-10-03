@@ -104,6 +104,7 @@ namespace sw
         , _bIsDepthStencil{ SW_FALSE }
         , _bIsShaderResource{ SW_TRUE }
         , _bIsUnorderedAccess{ SW_FALSE }
+        , _bIsTransient{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _dimension{ RHITextureDimension::Texture2D }
         , _arrReserved{ 0 }

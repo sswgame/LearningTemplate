@@ -244,8 +244,13 @@ namespace sw
                                   static_cast<uint32>( bufferIndex ), RHIBufferHandle{ 0 } );
         }
 
-        auto releaseCb = [owned]()
-        { (void)owned.Get(); };
+        // 장부는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
+        RHIMemoryLedger* pLedger   = &_pDevice->getMemoryLedger();
+        auto             releaseCb = [owned, pLedger, buffer]()
+        {
+            (void)owned.Get();
+            pLedger->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
+        };
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
     }
 
@@ -484,7 +489,7 @@ namespace sw
             }
         }
 
-        return _pDevice->storeTexture( std::move( record ) );
+        return _pDevice->storeTexture( std::move( record ), desc );
     }
 
     void D3D11RHIResource::destroyTexture( RHITextureHandle texture )
@@ -511,8 +516,13 @@ namespace sw
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
             return;
 
-        auto releaseCb = [owned]()
-        { (void)owned._texture.Get(); };
+        // 장부는 자원을 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
+        RHIMemoryLedger* pLedger   = &_pDevice->getMemoryLedger();
+        auto             releaseCb = [owned, pLedger, texture]()
+        {
+            (void)owned._texture.Get();
+            pLedger->recordFree( RHIMemoryKey::makeTexture( texture ) );
+        };
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
     }
 } // namespace sw

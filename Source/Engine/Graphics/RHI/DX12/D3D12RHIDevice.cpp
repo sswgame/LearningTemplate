@@ -222,7 +222,45 @@ namespace sw
     {
         if ( buffer == nullptr )
             return 0;
-        return _gpuBuffers.insert( std::move( buffer ) );
+        const uint64          bytes  = computeAllocationBytes( buffer.Get() );
+        const RHIBufferHandle handle = _gpuBuffers.insert( std::move( buffer ) );
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bytes );
+        return handle;
+    }
+
+    uint64 D3D12RHIDevice::computeAllocationBytes( ID3D12Resource* pResource ) const
+    {
+        if ( pResource == nullptr || _device == nullptr )
+            return kRHIMemoryUnknownBytes;
+        const D3D12_RESOURCE_DESC            desc = pResource->GetDesc();
+        const D3D12_RESOURCE_ALLOCATION_INFO info = _device->GetResourceAllocationInfo( 0, 1, &desc );
+        // 서술이 잘못됐으면 SizeInBytes 가 UINT64_MAX 다. 지어내지 않고 "크기 모름" 으로 센다.
+        return info.SizeInBytes == UINT64_MAX ? kRHIMemoryUnknownBytes : static_cast<uint64>( info.SizeInBytes );
+    }
+
+    void D3D12RHIDevice::releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key )
+    {
+        // 람다가 델리게이트의 인라인 칸(24 바이트)에 들도록 키를 id 하나로 담고 공간은 갈래로 가른다 — 자원 · 장부 · id 로 꽉 찬다.
+        RHIMemoryLedger* pLedger = &getMemoryLedger();
+        const uint64     id      = key._id;
+        if ( key._space == RHIMemoryKeySpace::Texture )
+        {
+            auto releaseCb = [owned, pLedger, id]()
+            {
+                (void)owned.Get();
+                pLedger->recordFree( RHIMemoryKey::makeTexture( id ) );
+            };
+            _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _fenceValue );
+        }
+        else
+        {
+            auto releaseCb = [owned, pLedger, id]()
+            {
+                (void)owned.Get();
+                pLedger->recordFree( RHIMemoryKey::makeBuffer( id ) );
+            };
+            _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _fenceValue );
+        }
     }
 
     bool D3D12RHIDevice::createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped )
@@ -245,11 +283,14 @@ namespace sw
         return true;
     }
 
-    RHITextureHandle D3D12RHIDevice::storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture )
+    RHITextureHandle D3D12RHIDevice::storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, RHIMemoryKind kind )
     {
         if ( texture == nullptr )
             return 0;
-        return _gpuTextures.insert( std::move( texture ) );
+        const uint64           bytes  = computeAllocationBytes( texture.Get() );
+        const RHITextureHandle handle = _gpuTextures.insert( std::move( texture ) );
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeTexture( handle ), kind, bytes );
+        return handle;
     }
 
     void D3D12RHIDevice::flushDebugMessages( const utf8* pStage )

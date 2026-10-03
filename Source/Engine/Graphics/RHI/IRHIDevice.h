@@ -16,6 +16,7 @@ namespace sw
     class IRHICommandContext;
     class IRHICommandList;
     class IRHIResource;
+    class RHIMemoryLedger;
 
     /** @brief `RHINativeHandles` 의 판 번호입니다. 필드 · 순서 · 뜻이 바뀌면 올립니다. */
     inline constexpr uint32 kRHINativeHandlesVersion = 2;
@@ -362,6 +363,17 @@ namespace sw
          */
         void reportBarrierDuringRecording( const utf8* pWhat ) const;
 
+        // ------------------------------------------------------------------------------
+        // 5) GPU 메모리 — 자원 장부
+        // ------------------------------------------------------------------------------
+        /**
+         * @brief 이 디바이스가 만든 GPU 자원의 장부입니다. 백엔드가 자원을 만드는 자리와 실제로 놓는 자리에서 적고, 엔진(프로파일 보고 · 에디터 패널)이 읽습니다.
+         * @details 장부는 디바이스와 수명이 같습니다. 백엔드를 바꾸면 새 디바이스가 빈 장부로 시작합니다.
+         */
+        RHIMemoryLedger& getMemoryLedger() { return *_memoryLedger; }
+        /** @brief 읽기 전용 장부입니다. */
+        const RHIMemoryLedger& getMemoryLedger() const { return *_memoryLedger; }
+
     protected:
         /** @brief 백엔드의 실제 GPU 대기 + 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2 단계로 부릅니다. */
         virtual void waitIdleInternal() {}
@@ -388,5 +400,7 @@ namespace sw
         bool _bImmediateSubmit;
         /// @brief 지금이 병렬 패스 기록 구간인지입니다(setParallelRecording 참고).
         bool _bParallelRecording;
+        /// @brief GPU 자원 장부입니다(getMemoryLedger 참고). 해제 큐가 비워지는 백엔드 소멸자보다 오래 삽니다(기반 클래스 멤버).
+        unique_ptr<RHIMemoryLedger> _memoryLedger;
     };
 } // namespace sw

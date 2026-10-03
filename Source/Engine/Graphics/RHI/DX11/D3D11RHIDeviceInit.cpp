@@ -32,6 +32,8 @@ namespace sw
     {
         _pHWnd            = static_cast<HWND>( desc._pWindowHandle );
         _backBufferFormat = desc._format;
+        // D3D11 에는 자원의 할당 크기를 물을 API 가 없다. 장부는 서술로 계산한 논리 크기다.
+        getMemoryLedger().setSizeBasis( RHIMemorySizeBasis::Logical );
 
         // DX12 와 같게 FLIP_DISCARD 를 쓴다(DXGI 의 HWND 규칙). 한 HWND 에 플립 모델 스왑체인을 한 번 만든 뒤에는,
         // 같은 창에 DISCARD/blt 체인을 만들어 Present 해도 사용자가 보는 화면이 갱신되지 않을 수 있다

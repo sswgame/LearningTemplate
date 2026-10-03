@@ -122,6 +122,9 @@ namespace sw
             return false;
 
         _cbvDescriptorSize = _device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+        // GPU 메모리를 차지하는 것은 셰이더 가시 힙뿐이다(RTV · DSV · 오프라인 힙은 CPU 메모리). 크기는 칸 수 × 칸 크기다.
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( _cbvHeap.Get() ), RHIMemoryKind::Descriptor,
+                                            static_cast<uint64>( cbvHeapDesc.NumDescriptors ) * _cbvDescriptorSize );
 
         // 오프라인(CPU 전용) 뷰 힙. 슬롯 테이블은 CopyDescriptors 로 굳히는데 셰이더 가시 힙은 복사 원본이 될 수 없다.
         // 등록은 뷰를 두 힙에 같은 인덱스로 만들고, 마지막 두 칸은 안 걸린 슬롯을 채우는 null 뷰다.
@@ -215,6 +218,7 @@ namespace sw
         _drawCommandSignature.Reset();
         _drawIndexedCommandSignature.Reset();
         _dispatchCommandSignature.Reset();
+        getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( _cbvHeap.Get() ) );
         _cbvHeap.Reset();
         _offlineViewHeap.Reset();
         {

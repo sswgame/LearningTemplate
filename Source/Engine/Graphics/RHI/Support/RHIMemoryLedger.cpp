@@ -1,0 +1,194 @@
+#include "pch.h"
+
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+
+#include "Engine/Graphics/RHI/RHITypes.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct RHIMemoryLedgerInternal
+        {
+            /** @brief `RHIMemoryKind` 값 순서의 표시 이름입니다. */
+            static constexpr const utf8* kArrKindName[] = {
+                "Texture",
+                "RenderTarget",
+                "TransientPool",
+                "Buffer",
+                "Staging",
+                "Descriptor",
+            };
+            static_assert( sizeof( kArrKindName ) / sizeof( kArrKindName[0] ) == static_cast<size_t>( RHIMemoryKind::MaxKinds ),
+                           "kArrKindName must have one name per RHIMemoryKind" );
+
+            /** @brief 깊이 첨부(D24S8)의 텍셀 바이트입니다. 네 백엔드 모두 24 비트 깊이 + 8 비트 스텐실 한 칸으로 만듭니다. */
+            static constexpr uint64 kDepthStencilTexelBytes = 4;
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    SW_LOG_CALLER( "RHIMemoryLedger" );
+
+    const utf8* RHIMemoryLedger::getKindName( RHIMemoryKind kind )
+    {
+        const uint32 kindIndex = static_cast<uint32>( kind );
+        if ( kindIndex >= kRHIMemoryKindCount )
+            return "Invalid";
+        return RHIMemoryLedgerInternal::kArrKindName[kindIndex];
+    }
+
+    const utf8* RHIMemoryLedger::getSizeBasisName( RHIMemorySizeBasis basis )
+    {
+        switch ( basis )
+        {
+            case RHIMemorySizeBasis::Allocation:
+                return "allocation";
+            case RHIMemorySizeBasis::Logical:
+                return "logical";
+        }
+        return "Invalid";
+    }
+
+    RHIMemoryKind RHIMemoryLedger::classifyTexture( const RHITextureDesc& desc )
+    {
+        if ( desc._bIsTransient != SW_FALSE )
+            return RHIMemoryKind::TransientPool;
+        const bool bAttachment = desc._bIsRenderTarget != SW_FALSE || desc._bIsDepthStencil != SW_FALSE || desc._bIsUnorderedAccess != SW_FALSE;
+        return bAttachment ? RHIMemoryKind::RenderTarget : RHIMemoryKind::Texture;
+    }
+
+    uint64 RHIMemoryLedger::computeTextureLogicalBytes( const RHITextureDesc& desc )
+    {
+        if ( desc._width == 0 || desc._height == 0 )
+            return kRHIMemoryUnknownBytes;
+
+        // 깊이 첨부는 서술의 포맷과 상관없이 D24S8 로 만든다(블록 표는 깊이를 "업로드 대상 아님" 으로 0 바이트라 한다).
+        RHIFormatBlockInfo block = getRhiFormatBlockInfo( desc._format );
+        if ( desc._bIsDepthStencil != SW_FALSE )
+            block = RHIFormatBlockInfo{ 1, 1, static_cast<uint32>( RHIMemoryLedgerInternal::kDepthStencilTexelBytes ) };
+        if ( block._blockBytes == 0 )
+            return kRHIMemoryUnknownBytes;
+
+        const uint32 mipCount   = desc._mipLevels > 0 ? desc._mipLevels : 1u;
+        const uint32 sliceCount = desc._arraySize > 0 ? desc._arraySize : 1u;
+        uint64       sliceBytes{ 0 };
+        for ( uint32 mip = 0; mip < mipCount; ++mip )
+        {
+            const uint32 mipWidth  = ( desc._width >> mip ) > 0 ? ( desc._width >> mip ) : 1u;
+            const uint32 mipHeight = ( desc._height >> mip ) > 0 ? ( desc._height >> mip ) : 1u;
+            const uint64 blocksX   = ( mipWidth + block._blockWidth - 1 ) / block._blockWidth;
+            const uint64 blocksY   = ( mipHeight + block._blockHeight - 1 ) / block._blockHeight;
+            sliceBytes += blocksX * blocksY * block._blockBytes;
+        }
+        return sliceBytes * sliceCount;
+    }
+
+    RHIMemoryLedger::RHIMemoryLedger()
+        : _mutex{}
+        , _arrMapIdToEntry{}
+        , _arrStat{}
+        , _sizeBasis{ RHIMemorySizeBasis::Allocation }
+    {
+    }
+
+    void RHIMemoryLedger::recordAllocation( const RHIMemoryKey& key, RHIMemoryKind kind, uint64 bytes )
+    {
+        const uint32 spaceIndex = static_cast<uint32>( key._space );
+        const uint32 kindIndex  = static_cast<uint32>( kind );
+        if ( spaceIndex >= kRHIMemoryKeySpaceCount || kindIndex >= kRHIMemoryKindCount || key._id == 0 )
+            return;
+
+        std::scoped_lock<mutex>           lock{ _mutex };
+        unordered_map<uint64, LiveEntry>& mapIdToEntry = _arrMapIdToEntry[spaceIndex];
+        const auto                        entryIt      = mapIdToEntry.find( key._id );
+        if ( entryIt != mapIdToEntry.end() )
+        {
+            SW_LOG_WARNING( "GPU memory key %# (space %#) recorded twice without a free - replacing the old %# bytes", key._id, spaceIndex,
+                            entryIt->second._bytes );
+            subtractLocked( entryIt->second );
+            mapIdToEntry.erase( entryIt );
+        }
+
+        LiveEntry entry{};
+        entry._bytes = bytes;
+        entry._kind  = kind;
+        mapIdToEntry.emplace( key._id, entry );
+
+        RHIMemoryKindStats& stat = _arrStat[kindIndex];
+        if ( bytes == kRHIMemoryUnknownBytes )
+            ++stat._unknownSizeCount;
+        else
+        {
+            stat._liveBytes += bytes;
+            ++stat._liveCount;
+        }
+    }
+
+    void RHIMemoryLedger::recordFree( const RHIMemoryKey& key )
+    {
+        const uint32 spaceIndex = static_cast<uint32>( key._space );
+        if ( spaceIndex >= kRHIMemoryKeySpaceCount )
+            return;
+
+        std::scoped_lock<mutex>           lock{ _mutex };
+        unordered_map<uint64, LiveEntry>& mapIdToEntry = _arrMapIdToEntry[spaceIndex];
+        const auto                        entryIt      = mapIdToEntry.find( key._id );
+        if ( entryIt == mapIdToEntry.end() )
+            return;
+        subtractLocked( entryIt->second );
+        mapIdToEntry.erase( entryIt );
+    }
+
+    RHIMemoryKindStats RHIMemoryLedger::getStats( RHIMemoryKind kind ) const
+    {
+        const uint32 kindIndex = static_cast<uint32>( kind );
+        if ( kindIndex >= kRHIMemoryKindCount )
+            return RHIMemoryKindStats{};
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _arrStat[kindIndex];
+    }
+
+    uint64 RHIMemoryLedger::getTrackedBytes() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        uint64                  total{ 0 };
+        for ( const RHIMemoryKindStats& stat : _arrStat )
+            total += stat._liveBytes;
+        return total;
+    }
+
+    array<RHIMemoryKind, kRHIMemoryKindCount> RHIMemoryLedger::makeKindOrderByLiveBytes() const
+    {
+        // 정렬하는 동안 다른 스레드가 값을 바꿔도 비교가 흔들리지 않게 한 번 읽어 둔다.
+        array<uint64, kRHIMemoryKindCount>        arrLiveBytes{};
+        array<RHIMemoryKind, kRHIMemoryKindCount> arrKind{};
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            for ( uint32 kindIndex = 0; kindIndex < kRHIMemoryKindCount; ++kindIndex )
+            {
+                arrLiveBytes[kindIndex] = _arrStat[kindIndex]._liveBytes;
+                arrKind[kindIndex]      = static_cast<RHIMemoryKind>( kindIndex );
+            }
+        }
+        std::stable_sort( arrKind.begin(), arrKind.end(), [&arrLiveBytes]( RHIMemoryKind lhs, RHIMemoryKind rhs )
+        { return arrLiveBytes[static_cast<uint32>( lhs )] > arrLiveBytes[static_cast<uint32>( rhs )]; } );
+        return arrKind;
+    }
+
+    void RHIMemoryLedger::subtractLocked( const LiveEntry& entry )
+    {
+        RHIMemoryKindStats& stat = _arrStat[static_cast<uint32>( entry._kind )];
+        if ( entry._bytes == kRHIMemoryUnknownBytes )
+        {
+            if ( stat._unknownSizeCount > 0 )
+                --stat._unknownSizeCount;
+            return;
+        }
+        stat._liveBytes -= entry._bytes <= stat._liveBytes ? entry._bytes : stat._liveBytes;
+        if ( stat._liveCount > 0 )
+            --stat._liveCount;
+    }
+} // namespace sw

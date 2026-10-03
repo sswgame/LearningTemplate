@@ -110,7 +110,7 @@ namespace sw
         glBufferData( GL_UNIFORM_BUFFER, static_cast<GLsizeiptr>( alignedSize ), nullptr, GL_DYNAMIC_DRAW );
         glBindBuffer( GL_UNIFORM_BUFFER, 0 );
 
-        return _pDevice->storeGlBuffer( ubo );
+        return _pDevice->storeGlBuffer( ubo, alignedSize );
     }
 
     void OpenGLRHIResource::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
@@ -218,7 +218,7 @@ namespace sw
             glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
         }
 
-        return _pDevice->storeGlBuffer( ssbo );
+        return _pDevice->storeGlBuffer( ssbo, alignedSize );
     }
 
     RHIBufferHandle OpenGLRHIResource::createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride )
@@ -241,7 +241,7 @@ namespace sw
         glBufferData( GL_ARRAY_BUFFER, static_cast<GLsizeiptr>( sizeBytes ), pData, GL_STATIC_DRAW );
         glBindBuffer( GL_ARRAY_BUFFER, 0 );
 
-        return _pDevice->storeGlBuffer( vbo );
+        return _pDevice->storeGlBuffer( vbo, sizeBytes );
     }
 
     void OpenGLRHIResource::destroyBuffer( RHIBufferHandle buffer )
@@ -272,10 +272,13 @@ namespace sw
             record._buffer = 0;
         }
 
-        auto releaseCb = [glBuffer = glName]()
+        // 장부는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
+        RHIMemoryLedger* pLedger   = &_pDevice->getMemoryLedger();
+        auto             releaseCb = [glBuffer = glName, pLedger, buffer]()
         {
             GLuint name = glBuffer;
             glDeleteBuffers( 1, &name );
+            pLedger->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         };
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
     }
@@ -507,7 +510,11 @@ namespace sw
                 record._listSliceFbo.push_back( fbo );
         }
 
-        return _pDevice->_gpuTextures.insert( record );
+        // GPU 메모리 장부에 올리는 유일한 자리다. GL 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 적는다.
+        const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
+        _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryLedger::classifyTexture( desc ),
+                                                      RHIMemoryLedger::computeTextureLogicalBytes( desc ) );
+        return handle;
     }
 
     void OpenGLRHIResource::destroyTexture( RHITextureHandle texture )
@@ -551,7 +558,8 @@ namespace sw
                                   static_cast<uint32>( textureIndex ), OpenGLRHIDevice::BindlessTextureRecord{} );
         }
 
-        auto releaseCb = [fboName, texName, listSliceFbo]()
+        RHIMemoryLedger* pLedger   = &_pDevice->getMemoryLedger();
+        auto             releaseCb = [fboName, texName, listSliceFbo, pLedger, texture]()
         {
             // 면 FBO 의 0 번은 `_fbo` 와 같다 — 1 번부터 지운다.
             for ( size_t slice = 1; slice < listSliceFbo.size(); ++slice )
@@ -570,6 +578,8 @@ namespace sw
                 GLuint name = texName;
                 glDeleteTextures( 1, &name );
             }
+            // 장부는 이름을 실제로 지울 때 줄인다(해제 요청 시점이 아니라).
+            pLedger->recordFree( RHIMemoryKey::makeTexture( texture ) );
         };
         _pDevice->_releaseQueue.enqueueRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ) );
     }

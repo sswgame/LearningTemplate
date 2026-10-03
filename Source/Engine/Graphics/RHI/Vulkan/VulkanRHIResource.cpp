@@ -213,10 +213,12 @@ namespace sw
                 VkDeviceMemory mem = slot._memory;
                 if ( slot._pMapped != nullptr )
                     vkUnmapMemory( dev, mem );
-                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem]()
+                RHIMemoryLedger* pLedger = &_pDevice->getMemoryLedger();
+                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger]()
                 {
                     vkDestroyBuffer( dev, buf, nullptr );
                     vkFreeMemory( dev, mem, nullptr );
+                    pLedger->recordFree( RHIMemoryKey::makeDeviceObject( mem ) );
                 } ),
                                                            _pDevice->_frameFenceCounter + 1 );
                 slot._buffer   = VK_NULL_HANDLE;
@@ -266,6 +268,7 @@ namespace sw
                 return false;
             }
             slot._capacity = newCapacity;
+            _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( slot._memory ), RHIMemoryKind::Staging, memoryRequirements.size );
         }
 
         slot._uploadOffset = offset + sizeBytes;
@@ -442,15 +445,18 @@ namespace sw
             deferFreeBufferIndex( static_cast<uint32>( bufferIndex ), true );
         }
 
-        VkBuffer       buf = owned._buffer;
-        VkDeviceMemory mem = owned._memory;
-        VkDevice       dev = _pDevice->_device;
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem]()
+        VkBuffer         buf     = owned._buffer;
+        VkDeviceMemory   mem     = owned._memory;
+        VkDevice         dev     = _pDevice->_device;
+        RHIMemoryLedger* pLedger = &_pDevice->getMemoryLedger();
+        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger, buffer]()
         {
             if ( buf != VK_NULL_HANDLE )
                 vkDestroyBuffer( dev, buf, nullptr );
             if ( mem != VK_NULL_HANDLE )
                 vkFreeMemory( dev, mem, nullptr );
+            // 장부는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
+            pLedger->recordFree( RHIMemoryKey::makeBuffer( buffer ) );
         } ),
                                                    _pDevice->_frameFenceCounter + 1 );
     }
@@ -608,7 +614,10 @@ namespace sw
         if ( record._bRenderTarget && _pDevice->createOffscreenFramebuffer( record ) == false )
             SW_LOG_WARNING( "createTexture2D: framebuffer creation failed — texture kept without offscreen pass." );
 
-        return _pDevice->_gpuTextures.insert( record );
+        // GPU 메모리 장부에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
+        const RHITextureHandle handle = _pDevice->_gpuTextures.insert( record );
+        _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryLedger::classifyTexture( desc ), allocInfo.allocationSize );
+        return handle;
     }
 
     bool VulkanRHIResource::uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc )
@@ -825,7 +834,8 @@ namespace sw
         VkImage             image      = owned._image;
         VkDeviceMemory      mem        = owned._memory;
         vector<VkImageView> listSliceView{ owned._listSliceView };
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView]()
+        RHIMemoryLedger*    pLedger = &_pDevice->getMemoryLedger();
+        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pLedger, texture]()
         {
             for ( VkImageView sliceView : listSliceView )
                 vkDestroyImageView( dev, sliceView, nullptr );
@@ -837,6 +847,8 @@ namespace sw
                 vkDestroyImage( dev, image, nullptr );
             if ( mem != VK_NULL_HANDLE )
                 vkFreeMemory( dev, mem, nullptr );
+            // 장부는 메모리를 실제로 놓을 때 줄인다(해제 요청 시점이 아니라).
+            pLedger->recordFree( RHIMemoryKey::makeTexture( texture ) );
         } ),
                                                    _pDevice->_frameFenceCounter + 1 );
     }

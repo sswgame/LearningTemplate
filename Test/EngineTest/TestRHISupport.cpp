@@ -8,6 +8,7 @@
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
@@ -431,4 +432,119 @@ SW_TEST_CASE( VulkanApiVersionTest, BakedVulkanSpirvMatchesTheRequiredApi )
     }
     if ( checkedCount == 0 )
         SW_TEST_SKIP( "No baked Vulkan SPIR-V found (App.exe --bake-shaders)" );
+}
+
+/**
+ * @brief [RHIMemoryLedgerTest] 장부는 올린 키의 크기를 기억했다가 내릴 때 그대로 빼고, 크기 모름은 바이트가 아니라 따로 센다
+ * @details 버퍼 핸들과 텍스처 핸들은 다른 표라 같은 정수가 둘 다에 있다 — 키 공간이 가르지 않으면 텍스처를 내릴 때 버퍼가 빠진다.
+ *          올리지 않은 키를 내리는 것(장부보다 먼저 만든 자원)은 아무것도 바꾸지 않는다. 같은 키를 다시 올리면(해제를 빠뜨림) 옛 값을 빼고 바꾼다.
+ */
+SW_TEST_CASE( RHIMemoryLedgerTest, FreeSubtractsWhatTheSameKeyAdded )
+{
+    sw::RHIMemoryLedger ledger;
+    constexpr uint64    kSharedHandle = 0x100000001ull;
+    ledger.recordAllocation( sw::RHIMemoryKey::makeBuffer( kSharedHandle ), sw::RHIMemoryKind::Buffer, 1000 );
+    ledger.recordAllocation( sw::RHIMemoryKey::makeTexture( kSharedHandle ), sw::RHIMemoryKind::RenderTarget, 4096 );
+    int32 poolStandIn{ 0 };
+    ledger.recordAllocation( sw::RHIMemoryKey::makeDeviceObject( &poolStandIn ), sw::RHIMemoryKind::Descriptor, sw::kRHIMemoryUnknownBytes );
+
+    SW_EXPECT_EQUAL( 1000ull, ledger.getStats( sw::RHIMemoryKind::Buffer )._liveBytes );
+    SW_EXPECT_EQUAL( 4096ull, ledger.getStats( sw::RHIMemoryKind::RenderTarget )._liveBytes );
+    SW_EXPECT_EQUAL( 0ull, ledger.getStats( sw::RHIMemoryKind::Descriptor )._liveBytes );
+    SW_EXPECT_EQUAL( 0u, ledger.getStats( sw::RHIMemoryKind::Descriptor )._liveCount );
+    SW_EXPECT_EQUAL( 1u, ledger.getStats( sw::RHIMemoryKind::Descriptor )._unknownSizeCount );
+    SW_EXPECT_EQUAL( 5096ull, ledger.getTrackedBytes() );
+
+    ledger.recordFree( sw::RHIMemoryKey::makeTexture( kSharedHandle ) );
+    SW_EXPECT_EQUAL( 0ull, ledger.getStats( sw::RHIMemoryKind::RenderTarget )._liveBytes );
+    SW_EXPECT_EQUAL( 1000ull, ledger.getStats( sw::RHIMemoryKind::Buffer )._liveBytes );
+
+    ledger.recordFree( sw::RHIMemoryKey::makeTexture( kSharedHandle ) );
+    ledger.recordFree( sw::RHIMemoryKey::makeBuffer( 0x7777ull ) );
+    SW_EXPECT_EQUAL( 1000ull, ledger.getTrackedBytes() );
+
+    ledger.recordAllocation( sw::RHIMemoryKey::makeBuffer( kSharedHandle ), sw::RHIMemoryKind::Buffer, 300 );
+    SW_EXPECT_EQUAL( 300ull, ledger.getStats( sw::RHIMemoryKind::Buffer )._liveBytes );
+    SW_EXPECT_EQUAL( 1u, ledger.getStats( sw::RHIMemoryKind::Buffer )._liveCount );
+
+    ledger.recordFree( sw::RHIMemoryKey::makeDeviceObject( &poolStandIn ) );
+    ledger.recordFree( sw::RHIMemoryKey::makeBuffer( kSharedHandle ) );
+    for ( uint32 kindIndex = 0; kindIndex < sw::kRHIMemoryKindCount; ++kindIndex )
+    {
+        const sw::RHIMemoryKindStats stats = ledger.getStats( static_cast<sw::RHIMemoryKind>( kindIndex ) );
+        SW_EXPECT_EQUAL( 0ull, stats._liveBytes );
+        SW_EXPECT_EQUAL( 0u, stats._liveCount );
+        SW_EXPECT_EQUAL( 0u, stats._unknownSizeCount );
+    }
+}
+
+/**
+ * @brief [RHIMemoryLedgerTest] 텍스처 서술의 줄과 논리 크기 — 네 백엔드가 같은 판정을 쓴다
+ * @details 트랜지언트 풀 표시가 렌더 타깃보다 먼저다. 논리 크기는 밉 전부 × 면 수이고, BC 는 4x4 블록, 깊이는 D24S8 한 칸(4 바이트)이다.
+ */
+SW_TEST_CASE( RHIMemoryLedgerTest, TextureDescPicksTheKindAndLogicalSize )
+{
+    sw::RHITextureDesc sampled{};
+    sampled._width  = 256;
+    sampled._height = 256;
+    sampled._format = sw::RHIFormat::R8G8B8A8_UNORM;
+    SW_EXPECT_TRUE( sw::RHIMemoryLedger::classifyTexture( sampled ) == sw::RHIMemoryKind::Texture );
+    SW_EXPECT_EQUAL( 256ull * 256ull * 4ull, sw::RHIMemoryLedger::computeTextureLogicalBytes( sampled ) );
+
+    sw::RHITextureDesc mipped = sampled;
+    mipped._mipLevels         = 9;
+    uint64 expectedMipBytes{ 0 };
+    for ( uint32 size = 256; size >= 1; size /= 2 )
+        expectedMipBytes += static_cast<uint64>( size ) * size * 4ull;
+    SW_EXPECT_EQUAL( expectedMipBytes, sw::RHIMemoryLedger::computeTextureLogicalBytes( mipped ) );
+
+    sw::RHITextureDesc compressed{};
+    compressed._width  = 6;
+    compressed._height = 6;
+    compressed._format = sw::RHIFormat::BC1_UNORM;
+    SW_EXPECT_EQUAL( 2ull * 2ull * 8ull, sw::RHIMemoryLedger::computeTextureLogicalBytes( compressed ) );
+
+    sw::RHITextureDesc cube{};
+    cube._width     = 32;
+    cube._height    = 32;
+    cube._arraySize = sw::kCubeFaceCount;
+    cube._dimension = sw::RHITextureDimension::TextureCube;
+    cube._format    = sw::RHIFormat::R16G16B16A16_FLOAT;
+    SW_EXPECT_EQUAL( 32ull * 32ull * 8ull * sw::kCubeFaceCount, sw::RHIMemoryLedger::computeTextureLogicalBytes( cube ) );
+
+    sw::RHITextureDesc depth{};
+    depth._width           = 64;
+    depth._height          = 32;
+    depth._format          = sw::RHIFormat::D24_UNORM_S8_UINT;
+    depth._bIsDepthStencil = SW_TRUE;
+    SW_EXPECT_TRUE( sw::RHIMemoryLedger::classifyTexture( depth ) == sw::RHIMemoryKind::RenderTarget );
+    SW_EXPECT_EQUAL( 64ull * 32ull * 4ull, sw::RHIMemoryLedger::computeTextureLogicalBytes( depth ) );
+
+    sw::RHITextureDesc transient = depth;
+    transient._bIsTransient      = SW_TRUE;
+    SW_EXPECT_TRUE( sw::RHIMemoryLedger::classifyTexture( transient ) == sw::RHIMemoryKind::TransientPool );
+
+    sw::RHITextureDesc unknownFormat = sampled;
+    unknownFormat._format            = sw::RHIFormat::Unknown;
+    SW_EXPECT_EQUAL( sw::kRHIMemoryUnknownBytes, sw::RHIMemoryLedger::computeTextureLogicalBytes( unknownFormat ) );
+}
+
+/**
+ * @brief [RHIMemoryLedgerTest] 줄 이름은 enum 값마다 하나이고, 정렬은 바이트가 큰 줄부터다(같으면 enum 순서)
+ */
+SW_TEST_CASE( RHIMemoryLedgerTest, KindNamesAndOrderByLiveBytes )
+{
+    for ( uint32 kindIndex = 0; kindIndex < sw::kRHIMemoryKindCount; ++kindIndex )
+        SW_EXPECT_TRUE( sw::string_view( sw::RHIMemoryLedger::getKindName( static_cast<sw::RHIMemoryKind>( kindIndex ) ) ) != "Invalid" );
+    SW_EXPECT_STREQ( "Invalid", sw::RHIMemoryLedger::getKindName( sw::RHIMemoryKind::MaxKinds ) );
+
+    sw::RHIMemoryLedger ledger;
+    ledger.recordAllocation( sw::RHIMemoryKey::makeBuffer( 1 ), sw::RHIMemoryKind::Buffer, 10 );
+    ledger.recordAllocation( sw::RHIMemoryKey::makeTexture( 1 ), sw::RHIMemoryKind::TransientPool, 30 );
+    ledger.recordAllocation( sw::RHIMemoryKey::makeTexture( 2 ), sw::RHIMemoryKind::Texture, 20 );
+    const sw::array<sw::RHIMemoryKind, sw::kRHIMemoryKindCount> arrOrder = ledger.makeKindOrderByLiveBytes();
+    SW_EXPECT_TRUE( arrOrder[0] == sw::RHIMemoryKind::TransientPool );
+    SW_EXPECT_TRUE( arrOrder[1] == sw::RHIMemoryKind::Texture );
+    SW_EXPECT_TRUE( arrOrder[2] == sw::RHIMemoryKind::Buffer );
+    SW_EXPECT_TRUE( arrOrder[3] == sw::RHIMemoryKind::RenderTarget );
 }

@@ -218,7 +218,11 @@ namespace sw
     {
         if ( buffer == nullptr )
             return 0;
-        return _gpuBuffers.insert( std::move( buffer ) );
+        D3D11_BUFFER_DESC bufferDesc{};
+        buffer->GetDesc( &bufferDesc );
+        const RHIBufferHandle handle = _gpuBuffers.insert( std::move( buffer ) );
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, bufferDesc.ByteWidth );
+        return handle;
     }
 
     RHIBufferHandle D3D11RHIDevice::storeBufferWithSrv( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer, const D3D11_SHADER_RESOURCE_VIEW_DESC& srvDesc )
@@ -243,11 +247,14 @@ namespace sw
         return _gpuTextures.get( handle );
     }
 
-    RHITextureHandle D3D11RHIDevice::storeTexture( TextureRecord record )
+    RHITextureHandle D3D11RHIDevice::storeTexture( TextureRecord record, const RHITextureDesc& desc )
     {
         if ( record._texture == nullptr )
             return 0;
-        return _gpuTextures.insert( std::move( record ) );
+        const RHITextureHandle handle = _gpuTextures.insert( std::move( record ) );
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeTexture( handle ), RHIMemoryLedger::classifyTexture( desc ),
+                                            RHIMemoryLedger::computeTextureLogicalBytes( desc ) );
+        return handle;
     }
 } // namespace sw
 #endif

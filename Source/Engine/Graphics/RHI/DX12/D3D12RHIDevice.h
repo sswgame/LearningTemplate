@@ -16,6 +16,7 @@
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferShadow.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
@@ -317,15 +318,22 @@ namespace sw
         D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenRtvHandle( uint32 rtvIndex ) const;
         /** @brief DSV 힙의 `dsvIndex` 번 디스크립터입니다. */
         D3D12_CPU_DESCRIPTOR_HANDLE getOffscreenDsvHandle( uint32 dsvIndex ) const;
-        /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. */
+        /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. GPU 메모리 장부의 Buffer 줄에 할당 크기를 올리는 유일한 자리입니다. */
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D12Resource> buffer );
         /**
          * @brief 업로드 힙(GENERIC_READ)에 버퍼를 만들고 CPU 주소로 매핑합니다. 실패하면 false 이고 `outBuffer` 는 비웁니다. 로그는 부르는 쪽이 남깁니다.
          * @details 상수버퍼 링 · 정점/인덱스 업로드 버퍼 · 전체 화면 삼각형 · 업로드 스테이징 넷이 "만들기 → 매핑" 을 이것으로 합니다.
          */
         [[nodiscard]] bool createMappedUploadBuffer( uint64 sizeBytes, Microsoft::WRL::ComPtr<ID3D12Resource>& outBuffer, void*& pOutMapped );
-        /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. */
-        RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture );
+        /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. GPU 메모리 장부의 `kind` 줄에 할당 크기를 올리는 유일한 자리입니다. */
+        RHITextureHandle storeTexture( Microsoft::WRL::ComPtr<ID3D12Resource> texture, RHIMemoryKind kind );
+        /** @brief 자원 하나가 차지하는 실제 할당 크기입니다(`GetResourceAllocationInfo` — 정렬 · 패딩 포함). */
+        uint64 computeAllocationBytes( ID3D12Resource* pResource ) const;
+        /**
+         * @brief 핸들 표에서 꺼낸 자원을 지금 펜스 뒤에 놓고, 그때 장부에서 내립니다. destroyBuffer · destroyTexture 의 공통 해제 자리입니다.
+         * @details 장부는 GPU 가 실제로 놓은 뒤에 줄어야 합니다. 해제 요청 시점에 빼면 아직 GPU 메모리를 쥔 자원이 장부에서 먼저 사라집니다.
+         */
+        void releaseTrackedResourceDeferred( Microsoft::WRL::ComPtr<ID3D12Resource> owned, const RHIMemoryKey& key );
         /**
          * @brief 루트 시그니처(루트 CBV · t/u 슬롯 테이블 · 텍스처 배열 테이블 · 루트 상수 · 정적 샘플러), 커맨드 시그니처, 풀스크린 정점 버퍼를 만듭니다.
          */

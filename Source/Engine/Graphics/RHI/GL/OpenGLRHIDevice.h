@@ -12,6 +12,7 @@
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 
 namespace sw
@@ -167,8 +168,11 @@ namespace sw
         uint32 ensureCompositeFboMrt( const RHITextureHandle* pColor, const uint16* pColorSlice, uint32 colorCount, RHITextureHandle depth, uint32 depthSlice );
         /** @brief 불투명 핸들을 GLuint 이름으로 풉니다. */
         uint32 resolveGlBuffer( RHIBufferHandle handle ) const;
-        /** @brief GL 버퍼 이름을 테이블에 넣고 핸들을 반환합니다. */
-        RHIBufferHandle storeGlBuffer( uint32 glName );
+        /**
+         * @brief GL 버퍼 이름을 테이블에 넣고 핸들을 반환합니다. GPU 메모리 장부의 Buffer 줄에 `sizeBytes` 를 올리는 유일한 자리입니다.
+         * @param sizeBytes `glBufferData` 에 준 크기(논리 크기 — GL 에는 할당 크기를 물을 API 가 없다).
+         */
+        RHIBufferHandle storeGlBuffer( uint32 glName, uint32 sizeBytes );
         struct OpenGLTextureRecord;
         /** @brief 텍스처(의 면 `slice`)를 지금 바인딩된 FBO 의 `attachment` 에 붙입니다. 면이 여럿인 텍스처는 층(layer)으로 붙인다. */
         static void attachTextureToFramebuffer( uint32 attachment, const OpenGLTextureRecord& record, uint32 slice );

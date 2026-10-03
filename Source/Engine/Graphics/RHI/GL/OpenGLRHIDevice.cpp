@@ -77,7 +77,7 @@ namespace sw
         glBufferData( GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>( sizeBytes ), pData, GL_STATIC_DRAW );
         glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, 0 );
 
-        return storeGlBuffer( ibo );
+        return storeGlBuffer( ibo, sizeBytes );
     }
 
     bool OpenGLRHIDevice::ensureComputeRootConstantUbo()
@@ -202,11 +202,13 @@ namespace sw
         return pSlot != nullptr ? *pSlot : 0;
     }
 
-    RHIBufferHandle OpenGLRHIDevice::storeGlBuffer( uint32 glName )
+    RHIBufferHandle OpenGLRHIDevice::storeGlBuffer( uint32 glName, uint32 sizeBytes )
     {
         if ( glName == 0 )
             return 0;
-        return _gpuBuffers.insert( glName );
+        const RHIBufferHandle handle = _gpuBuffers.insert( glName );
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, sizeBytes );
+        return handle;
     }
 
     OpenGLRHIDevice::OpenGLTextureRecord* OpenGLRHIDevice::resolveTexture( RHITextureHandle handle )

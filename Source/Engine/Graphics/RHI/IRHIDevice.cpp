@@ -8,6 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/IRenderSurface.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 
 namespace sw
 {
@@ -105,6 +106,7 @@ namespace sw
         , _bPreferredVSync{ false }
         , _bImmediateSubmit{ false }
         , _bParallelRecording{ false }
+        , _memoryLedger{ make_unique<RHIMemoryLedger>() }
     {
     }
 

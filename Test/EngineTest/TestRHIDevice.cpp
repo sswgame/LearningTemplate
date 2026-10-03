@@ -7,6 +7,7 @@
 #include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Window/IWindow.h"
 
@@ -1686,4 +1687,93 @@ SW_TEST_CASE( RHIDeviceTest, EnqueuedGpuReleaseRunsOnceAfterItsFrame )
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the GPU release test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 텍스처 · 버퍼를 만들면 GPU 메모리 장부의 그 줄이 크기만큼 오르고, 지운 뒤 해제 지연을 지나면 원래대로 돌아온다(네 백엔드)
+ * @details 샘플링 텍스처는 Texture, 렌더 타깃은 RenderTarget, 트랜지언트 풀 표시가 붙은 것은 TransientPool, 구조버퍼는 Buffer 줄이다. 오른 양은
+ *          적어도 논리 크기(너비 × 높이 × 텍셀 바이트)다 — DX12 · Vulkan 은 드라이버의 할당 크기라 더 클 수 있다. 장부는 자원을 **실제로 놓을 때**
+ *          줄어야 한다. destroy 직후에는 아직 GPU 가 쥐고 있을 수 있으므로 그대로이고, 해제 지연(`kGpuReleaseFrameLatency` + 링 깊이)만큼 프레임을 돌린
+ *          뒤에 원래 값이다.
+ */
+SW_TEST_CASE( RHIDeviceTest, MemoryLedgerTracksCreateAndDeferredRelease )
+{
+    struct LedgerCase
+    {
+        sw::RHIMemoryKind _kind;
+        uint64            _minBytes;
+    };
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string           label     = sw::string( device->getBackendName() );
+        sw::IRHIResource*          pResource = device->getResource();
+        const sw::RHIMemoryLedger& ledger    = device->getMemoryLedger();
+
+        sw::RHITextureDesc sampledDesc{};
+        sampledDesc._width  = 256;
+        sampledDesc._height = 128;
+        sampledDesc._format = sw::RHIFormat::R8G8B8A8_UNORM;
+
+        sw::RHITextureDesc targetDesc = makeOffscreenTargetDesc( 128, 64 );
+
+        sw::RHITextureDesc transientDesc = makeOffscreenTargetDesc( 64, 64 );
+        transientDesc._format            = sw::RHIFormat::R16G16B16A16_FLOAT;
+        transientDesc._bIsTransient      = SW_TRUE;
+
+        constexpr uint32 kBufferElementSize  = 16;
+        constexpr uint32 kBufferElementCount = 4096;
+
+        const LedgerCase arrCase[] = {
+            {      sw::RHIMemoryKind::Texture,                                          256ull * 128ull * 4ull},
+            { sw::RHIMemoryKind::RenderTarget,                                           128ull * 64ull * 4ull},
+            {sw::RHIMemoryKind::TransientPool,                                            64ull * 64ull * 8ull},
+            {       sw::RHIMemoryKind::Buffer, static_cast<uint64>( kBufferElementSize ) * kBufferElementCount},
+        };
+        sw::RHIMemoryKindStats arrBefore[std::size( arrCase )]{};
+        for ( size_t caseIndex = 0; caseIndex < std::size( arrCase ); ++caseIndex )
+            arrBefore[caseIndex] = ledger.getStats( arrCase[caseIndex]._kind );
+
+        const sw::RHITextureHandle sampled   = pResource->createTexture2D( sampledDesc );
+        const sw::RHITextureHandle target    = pResource->createTexture2D( targetDesc );
+        const sw::RHITextureHandle transient = pResource->createTexture2D( transientDesc );
+        const sw::RHIBufferHandle  buffer    = pResource->createStructuredBuffer( kBufferElementSize, kBufferElementCount );
+        SW_ASSERT_TRUE( sampled != 0 && target != 0 && transient != 0 && buffer != 0 );
+
+        for ( size_t caseIndex = 0; caseIndex < std::size( arrCase ); ++caseIndex )
+        {
+            const sw::RHIMemoryKindStats after = ledger.getStats( arrCase[caseIndex]._kind );
+            const sw::string             what  = label + " " + sw::RHIMemoryLedger::getKindName( arrCase[caseIndex]._kind );
+            SW_EXPECT_TRUE_MSG( after._liveCount == arrBefore[caseIndex]._liveCount + 1, ( what + ": 만든 자원이 장부에 한 개 오르지 않았다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( after._liveBytes >= arrBefore[caseIndex]._liveBytes + arrCase[caseIndex]._minBytes,
+                                ( what + ": 장부가 자원 크기만큼 오르지 않았다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( after._unknownSizeCount == arrBefore[caseIndex]._unknownSizeCount, ( what + ": 크기를 아는 자원이 크기 모름으로 셌다" ).c_str() );
+        }
+
+        pResource->destroyTexture( sampled );
+        pResource->destroyTexture( target );
+        pResource->destroyTexture( transient );
+        pResource->destroyBuffer( buffer );
+        SW_EXPECT_TRUE_MSG( ledger.getStats( sw::RHIMemoryKind::Texture )._liveCount == arrBefore[0]._liveCount + 1,
+                            ( label + ": destroy 요청만으로 장부가 줄었다 — GPU 가 아직 쥔 자원이다" ).c_str() );
+
+        constexpr uint32 kFollowingFrameCount = sw::constant::kGpuReleaseFrameLatency + sw::constant::kMaxFrameCountInFlight;
+        for ( uint32 frame = 0; frame <= kFollowingFrameCount; ++frame )
+        {
+            device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            device->endFrame( false, false );
+        }
+
+        for ( size_t caseIndex = 0; caseIndex < std::size( arrCase ); ++caseIndex )
+        {
+            const sw::RHIMemoryKindStats released = ledger.getStats( arrCase[caseIndex]._kind );
+            const sw::string             what     = label + " " + sw::RHIMemoryLedger::getKindName( arrCase[caseIndex]._kind );
+            SW_EXPECT_TRUE_MSG( released._liveCount == arrBefore[caseIndex]._liveCount, ( what + ": 해제 지연이 지나도 장부에 남았다(개수)" ).c_str() );
+            SW_EXPECT_TRUE_MSG( released._liveBytes == arrBefore[caseIndex]._liveBytes, ( what + ": 해제 지연이 지나도 장부에 남았다(바이트)" ).c_str() );
+        }
+        device->waitIdle();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the GPU memory ledger test" );
 }

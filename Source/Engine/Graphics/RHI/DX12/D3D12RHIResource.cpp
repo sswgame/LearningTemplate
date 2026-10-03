@@ -201,8 +201,11 @@ namespace sw
             if ( slot._uploadHeap != nullptr )
             {
                 Microsoft::WRL::ComPtr<ID3D12Resource> oldHeap = slot._uploadHeap;
-                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [oldHeap]()
-                { (void)oldHeap.Get(); } ),
+                RHIMemoryLedger*                       pLedger = &_pDevice->getMemoryLedger();
+                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [oldHeap, pLedger]()
+                {
+                    pLedger->recordFree( RHIMemoryKey::makeDeviceObject( oldHeap.Get() ) );
+                } ),
                                                            _pDevice->_fenceValue );
                 slot._uploadHeap   = nullptr;
                 slot._pMapped      = nullptr;
@@ -218,6 +221,8 @@ namespace sw
                 return false;
             }
 
+            _pDevice->getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( newHeap.Get() ), RHIMemoryKind::Staging,
+                                                          _pDevice->computeAllocationBytes( newHeap.Get() ) );
             slot._uploadHeap = newHeap;
             slot._pMapped    = pMapped;
             slot._capacity   = newCapacity;
@@ -578,9 +583,7 @@ namespace sw
             }
         }
 
-        auto releaseCb = [owned]()
-        { (void)owned.Get(); };
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_fenceValue );
+        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeBuffer( buffer ) );
     }
 
     RHITextureHandle D3D12RHIResource::createTexture2D( const RHITextureDesc& desc )
@@ -645,7 +648,7 @@ namespace sw
                                                                  D3D12_RESOURCE_STATE_COMMON, pClearValue, IID_PPV_ARGS( texture.GetAddressOf() ) ) ) )
             return 0;
 
-        const RHITextureHandle                 handle  = _pDevice->storeTexture( texture );
+        const RHITextureHandle                 handle  = _pDevice->storeTexture( texture, RHIMemoryLedger::classifyTexture( desc ) );
         ID3D12Resource*                        pNative = _pDevice->resolveTexture( handle );
         D3D12RHIDevice::OffscreenTextureRecord record{};
         record._state      = D3D12_RESOURCE_STATE_COMMON;
@@ -802,9 +805,7 @@ namespace sw
             }
         }
 
-        auto releaseCb = [owned]()
-        { (void)owned.Get(); };
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_fenceValue );
+        _pDevice->releaseTrackedResourceDeferred( std::move( owned ), RHIMemoryKey::makeTexture( texture ) );
     }
 } // namespace sw
 #endif

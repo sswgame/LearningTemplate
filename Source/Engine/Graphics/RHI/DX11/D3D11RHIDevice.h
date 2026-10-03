@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
@@ -270,7 +271,7 @@ namespace sw
         void forgetPipelineStateInRecordingStates( RHIPipelineStateHandle pso );
         /** @brief 불투명 버퍼 핸들을 ID3D11Buffer 로 풉니다. */
         ID3D11Buffer* resolveBuffer( RHIBufferHandle handle ) const;
-        /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. */
+        /** @brief ComPtr 을 핸들 표에 넣고 핸들을 반환합니다. GPU 메모리 장부의 Buffer 줄에 크기(`ByteWidth`)를 올리는 유일한 자리입니다. */
         RHIBufferHandle storeBuffer( Microsoft::WRL::ComPtr<ID3D11Buffer> buffer );
         /**
          * @brief 버퍼에 `srvDesc` 로 SRV 를 만들고, 버퍼를 핸들 표에 넣은 뒤 SRV 를 그 핸들에 붙입니다. SRV 를 못 만들면 버퍼만 넣습니다.
@@ -280,8 +281,11 @@ namespace sw
         /** @brief 불투명 텍스처 핸들을 TextureRecord 로 풉니다. */
         TextureRecord*       resolveTexture( RHITextureHandle handle );
         const TextureRecord* resolveTexture( RHITextureHandle handle ) const;
-        /** @brief TextureRecord 를 핸들 표에 넣고 핸들을 반환합니다. */
-        RHITextureHandle storeTexture( TextureRecord record );
+        /**
+         * @brief TextureRecord 를 핸들 표에 넣고 핸들을 반환합니다. GPU 메모리 장부에 `desc` 의 줄 · 논리 크기를 올리는 유일한 자리입니다.
+         * @details D3D11 에는 할당 크기를 물을 API 가 없어 서술로 계산한 논리 크기를 적습니다(장부 기준 Logical).
+         */
+        RHITextureHandle storeTexture( TextureRecord record, const RHITextureDesc& desc );
 
         /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. 네 백엔드 공통 안전값은
          *         shaderslot::kRootConstantDwords(DX12 · Vulkan 의 루트 · 푸시 상수 크기)입니다. */

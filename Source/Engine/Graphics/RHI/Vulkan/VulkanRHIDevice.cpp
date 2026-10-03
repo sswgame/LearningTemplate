@@ -438,7 +438,10 @@ namespace sw
             if ( _pipelineLayout )
                 vkDestroyPipelineLayout( _device, _pipelineLayout, nullptr );
             if ( _descriptorPool )
+            {
+                getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( _descriptorPool ) );
                 vkDestroyDescriptorPool( _device, _descriptorPool, nullptr );
+            }
             for ( VkSampler& sampler : _arrStaticSampler )
             {
                 if ( sampler != VK_NULL_HANDLE )
@@ -581,7 +584,10 @@ namespace sw
         record._usage  = usageFlags;
         record._state  = RHIBufferState::Common;
 
-        return _gpuBuffers.insert( record );
+        // GPU 메모리 장부의 Buffer 줄에 올리는 유일한 자리다. 크기는 드라이버가 요구한 할당 크기(정렬 포함)다.
+        const RHIBufferHandle handle = _gpuBuffers.insert( record );
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeBuffer( handle ), RHIMemoryKind::Buffer, memRequirements.size );
+        return handle;
     }
 
 } // namespace sw

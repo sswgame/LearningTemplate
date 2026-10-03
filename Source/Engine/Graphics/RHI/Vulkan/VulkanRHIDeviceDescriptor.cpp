@@ -194,6 +194,8 @@ namespace sw
             poolInfo.pPoolSizes    = arrPoolSize;
             if ( vkCreateDescriptorPool( _device, &poolInfo, nullptr, &_descriptorPool ) != VK_SUCCESS )
                 return false;
+            // 디스크립터 풀의 크기는 Vulkan 이 알려 주지 않는다. 0 으로 숨기지 않고 "크기 모름" 칸에서 센다.
+            getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( _descriptorPool ), RHIMemoryKind::Descriptor, kRHIMemoryUnknownBytes );
         }
         for ( VulkanDescriptorPoolSet& poolSet : _arrFrameDescriptorPoolSet )
         {
@@ -375,6 +377,8 @@ namespace sw
         VkDescriptorPool pool{ VK_NULL_HANDLE };
         if ( vkCreateDescriptorPool( _device, &poolInfo, nullptr, &pool ) != VK_SUCCESS )
             return VK_NULL_HANDLE;
+        // 디스크립터 풀의 크기는 Vulkan 이 알려 주지 않는다. 0 으로 숨기지 않고 "크기 모름" 칸에서 센다. 내리는 자리는 destroyDescriptorPoolSet 하나다.
+        getMemoryLedger().recordAllocation( RHIMemoryKey::makeDeviceObject( pool ), RHIMemoryKind::Descriptor, kRHIMemoryUnknownBytes );
         return pool;
     }
 
@@ -439,8 +443,10 @@ namespace sw
         {
             for ( VkDescriptorPool pool : poolSet._listPool )
             {
-                if ( pool != VK_NULL_HANDLE )
-                    vkDestroyDescriptorPool( _device, pool, nullptr );
+                if ( pool == VK_NULL_HANDLE )
+                    continue;
+                getMemoryLedger().recordFree( RHIMemoryKey::makeDeviceObject( pool ) );
+                vkDestroyDescriptorPool( _device, pool, nullptr );
             }
         }
         poolSet._listPool.clear();

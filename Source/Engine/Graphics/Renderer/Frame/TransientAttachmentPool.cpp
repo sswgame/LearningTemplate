@@ -39,6 +39,7 @@ namespace sw
         desc._bIsRenderTarget         = bDepth ? SW_FALSE : SW_TRUE;
         desc._bIsDepthStencil         = bDepth ? SW_TRUE : SW_FALSE;
         desc._bIsShaderResource       = SW_TRUE;
+        desc._bIsTransient            = SW_TRUE;
         desc._clearDepth              = clearColor._x;
         desc._clearColor              = clearColor;
         const RHITextureHandle handle = pDevice->getResource()->createTexture2D( desc );
