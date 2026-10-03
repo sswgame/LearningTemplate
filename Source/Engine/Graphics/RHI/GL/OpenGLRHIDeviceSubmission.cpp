@@ -141,6 +141,11 @@ namespace sw
         _releaseQueue.flushAll();
     }
 
+    void OpenGLRHIDevice::enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate )
+    {
+        _releaseQueue.enqueueRelease( releaseDelegate );
+    }
+
     unique_ptr<IRHICommandList> OpenGLRHIDevice::createCommandList()
     {
         return make_unique<OpenGLRHICommandList>( this );

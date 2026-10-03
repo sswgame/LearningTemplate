@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Delegate/Delegate.h"
+
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResource.h"
@@ -1799,4 +1801,45 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
 
     if ( okCount == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for the sliced texture test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] `enqueueGpuRelease` 는 맡긴 콜백을 그 자리에서 부르지 않고, 프레임이 지나면 한 번만 부른다(네 백엔드)
+ * @details 에디터의 ImGui 렌더러가 디스크립터를 이 창구로 놓는다. 그 자리에서 부르면 기록 중인 프레임이 놓인 세트를 쓴다. 해제 큐의 기준은 백엔드마다
+ *          다르다(DX12 · Vulkan 은 GPU 펜스, DX11 · GL 은 프레임 지연) — 어느 쪽이든 `kGpuReleaseFrameLatency` 프레임을 넘기면 불려야 하고,
+ *          뒤의 `waitIdle` 이 다시 부르면 안 된다.
+ */
+SW_TEST_CASE( RHIDeviceTest, EnqueuedGpuReleaseRunsOnceAfterItsFrame )
+{
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        ++attemptedCount;
+
+        const sw::string label = sw::string( device->getBackendName() );
+        uint32           callCount{ 0 };
+        uint32*          pCallCount = &callCount;
+
+        device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        device->enqueueGpuRelease( SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, [pCallCount]()
+        { ++( *pCallCount ); } ) );
+        SW_EXPECT_TRUE_MSG( callCount == 0, ( label + ": 기록 중인 프레임에서 곧바로 불렀다" ).c_str() );
+        device->endFrame( false, false );
+
+        constexpr uint32 kFollowingFrameCount = sw::constant::kGpuReleaseFrameLatency + sw::constant::kMaxFrameCountInFlight;
+        for ( uint32 frame = 0; frame < kFollowingFrameCount; ++frame )
+        {
+            device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            device->endFrame( false, false );
+        }
+        SW_EXPECT_TRUE_MSG( callCount == 1, ( label + ": 프레임이 지나도 한 번 불리지 않았다" ).c_str() );
+
+        device->waitIdle();
+        SW_EXPECT_TRUE_MSG( callCount == 1, ( label + ": waitIdle 이 이미 부른 콜백을 다시 불렀다" ).c_str() );
+    }
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the GPU release test" );
 }

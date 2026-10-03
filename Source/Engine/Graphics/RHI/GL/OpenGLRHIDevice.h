@@ -99,6 +99,9 @@ namespace sw
         /** @brief GPU 가 끝날 때까지 기다리고(glFinish) 지연 해제 큐를 비웁니다. */
         void waitIdleInternal() override;
 
+        /** @brief 프레임 지연(`kGpuReleaseFrameLatency`) 뒤 해제 큐에 넣습니다. GL 은 펜스 대신 endFrame 횟수로 셉니다. */
+        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+
         /** @brief 백엔드 타입(OpenGL)을 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }
 

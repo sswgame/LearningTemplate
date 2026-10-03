@@ -98,6 +98,15 @@ namespace sw
          */
         void waitIdle();
 
+        /**
+         * @brief 지금 기록 중인 프레임의 GPU 작업이 끝난 뒤에 @p releaseDelegate 를 부릅니다(프레임 밖이면 다음에 제출할 프레임).
+         * @details 백엔드 해제 큐(`RHIReleaseQueue`)에 그 백엔드의 기준으로 넣습니다 — DX12 · Vulkan 은 GPU 펜스, DX11 · GL 은 프레임 지연.
+         *          엔진 바깥 모듈(에디터의 ImGui 렌더러)이 자기 네이티브 자원(디스크립터)을 엔진 자원과 같은 기준으로 놓는 창구입니다.
+         *          **프레임을 기록하는 스레드(렌더 스레드)에서 부릅니다** — 펜스 값을 읽는 스레드가 그 값을 올리는 스레드여야 "이 프레임" 이 맞습니다.
+         *          콜백은 백엔드가 완료를 확인하는 스레드에서 불리고, `waitIdle` · `shutdown` 이 남은 콜백을 모두 부릅니다.
+         */
+        virtual void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) = 0;
+
         /** @brief 렌더 스레드가 받은 일을 모두 끝낼 때까지 기다리는 함수입니다(부르는 쪽은 렌더 스레드가 아니다). */
         using RenderThreadDrainFunction = void ( * )( void* pContext );
 

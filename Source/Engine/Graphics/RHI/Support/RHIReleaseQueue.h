@@ -17,9 +17,6 @@
 
 namespace sw
 {
-
-    using RHIResourceReleaseDelegate = Delegate<void()>;
-
     /**
      * @class RHIReleaseQueue
      * @brief GPU 리소스 해제 콜백을 frameLatency 프레임 뒤, 또는 GPU 펜스가 지난 뒤에 실행합니다.

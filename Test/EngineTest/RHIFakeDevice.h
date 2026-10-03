@@ -5,6 +5,8 @@
  *          못할 때)는 GPU 시험(`RenderPassGpuTest`)에서만 지나갔다. 그리기는 하지 않고 기록 범위와 제출 순서만 적는다.
  */
 #pragma once
+#include "Core/Delegate/Delegate.h"
+
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
@@ -107,17 +109,21 @@ namespace test
 
         void executeCommandList( sw::IRHICommandList* pCmdList ) override { _listExecuted.push_back( static_cast<FakeRHICommandList*>( pCmdList ) ); }
 
+        /** @brief 부르지 않고 쌓기만 합니다. 시험이 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 `_listGpuRelease` 를 부릅니다. */
+        void enqueueGpuRelease( const sw::RHIResourceReleaseDelegate& releaseDelegate ) override { _listGpuRelease.push_back( releaseDelegate ); }
+
         [[nodiscard]] bool queryNativeHandlesInternal( sw::RHINativeHandles& outHandles ) const override
         {
             ++_nativeHandleQueryCount;
             return sw::IRHIDevice::queryNativeHandlesInternal( outHandles );
         }
 
-        uint32                          _maxCreatable{ 0xFFFFFFFFu }; /**< 이만큼 만든 뒤로는 만들지 못한다 */
-        uint32                          _createdCount{ 0 };           /**< 지금까지 만든 리스트 수 */
-        sw::vector<FakeRHICommandList*> _listExecuted;                /**< 제출된 순서 그대로의 리스트 */
-        sw::vector<const utf8*>         _listShutdownStep;            /**< 불린 종료 단계 훅 이름(부른 순서) — 시험 자원의 `releaseRhi` 도 여기 적는다 */
-        void*                           _pNativeDevice{ nullptr };    /**< `getNativeDevice` 가 돌려줄 값 */
-        mutable uint32                  _nativeHandleQueryCount{ 0 }; /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
+        uint32                                     _maxCreatable{ 0xFFFFFFFFu }; /**< 이만큼 만든 뒤로는 만들지 못한다 */
+        uint32                                     _createdCount{ 0 };           /**< 지금까지 만든 리스트 수 */
+        sw::vector<FakeRHICommandList*>            _listExecuted;                /**< 제출된 순서 그대로의 리스트 */
+        sw::vector<const utf8*>                    _listShutdownStep;            /**< 불린 종료 단계 훅 이름(부른 순서) — 시험 자원의 `releaseRhi` 도 여기 적는다 */
+        void*                                      _pNativeDevice{ nullptr };    /**< `getNativeDevice` 가 돌려줄 값 */
+        mutable uint32                             _nativeHandleQueryCount{ 0 }; /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
+        sw::vector<sw::RHIResourceReleaseDelegate> _listGpuRelease;              /**< `enqueueGpuRelease` 로 받은 콜백(받은 순서) */
     };
 } // namespace test

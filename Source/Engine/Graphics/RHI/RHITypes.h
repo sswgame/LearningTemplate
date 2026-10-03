@@ -30,6 +30,12 @@ namespace sw
     /** @brief 유효하지 않은 디스크립터 인덱스입니다. */
     constexpr RHIDescriptorIndex kInvalidDescriptorIndex = invalid_index::kUint32;
 
+    template <typename T>
+    class Delegate;
+
+    /** @brief GPU 가 다 쓴 뒤에 부를 자원 해제 콜백입니다(`RHIReleaseQueue` · `IRHIDevice::enqueueGpuRelease`). */
+    using RHIResourceReleaseDelegate = Delegate<void()>;
+
     /**
      * @struct RHIVertex
      * @brief 메시 정점 하나(위치 · 노멀 · UV · 색)입니다. 정점 버퍼 슬롯 0 의 원소입니다.

@@ -20,6 +20,11 @@ namespace sw
         _releaseQueue.flushAll();
     }
 
+    void VulkanRHIDevice::enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate )
+    {
+        _releaseQueue.enqueueGpuRelease( releaseDelegate, _frameFenceCounter + 1 );
+    }
+
     uint32 VulkanRHIDevice::getTimestampSlotCount() const
     {
         return ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE && _timestampPeriod > 0.0f )

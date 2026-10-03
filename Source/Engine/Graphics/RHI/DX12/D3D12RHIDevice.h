@@ -156,6 +156,9 @@ namespace sw
         /** @brief GPU 가 제출된 명령을 모두 끝낼 때까지 펜스로 기다립니다. */
         void waitIdleInternal() override;
 
+        /** @brief 이번 프레임이 Signal 할 펜스 값(`_fenceValue`)으로 해제 큐에 넣습니다. */
+        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+
         /** @brief 리소스 생성 · 파괴 인터페이스(D3D12RHIResource)를 반환합니다. */
         IRHIResource* getResource() override;
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스 · Present 가 여기에 기록합니다. */
@@ -621,6 +624,13 @@ namespace sw
 
         IRHIResource*       getResource() override { return nullptr; }
         IRHICommandContext* getFrameStreamContext() override { return nullptr; }
+
+        /** @brief 스텁은 프레임을 그리지 않으므로 기다릴 GPU 작업이 없습니다. 곧바로 부릅니다. */
+        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override
+        {
+            if ( releaseDelegate.isBound() )
+                releaseDelegate();
+        }
 
         sw::unique_ptr<IRHICommandList> createCommandList() override { return nullptr; }
         void                            executeCommandList( IRHICommandList* ) override {}

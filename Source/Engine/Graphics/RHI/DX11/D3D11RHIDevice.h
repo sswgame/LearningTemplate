@@ -132,6 +132,9 @@ namespace sw
         /** @brief GPU 가 쉴 때까지 기다린 뒤 해제 큐를 비웁니다. */
         void waitIdleInternal() override;
 
+        /** @brief 프레임 지연(`kGpuReleaseFrameLatency`) 뒤 해제 큐에 넣습니다. D3D11 은 펜스 대신 endFrame 횟수로 셉니다. */
+        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+
         /** @brief 백엔드 종류(DirectX11)를 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::DirectX11; }
         /**
@@ -428,6 +431,13 @@ namespace sw
 
         IRHIResource*       getResource() override { return nullptr; }
         IRHICommandContext* getFrameStreamContext() override { return nullptr; }
+
+        /** @brief 스텁은 프레임을 그리지 않으므로 기다릴 GPU 작업이 없습니다. 곧바로 부릅니다. */
+        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override
+        {
+            if ( releaseDelegate.isBound() )
+                releaseDelegate();
+        }
 
         sw::unique_ptr<IRHICommandList> createCommandList() override { return nullptr; }
         void                            executeCommandList( IRHICommandList* ) override {}

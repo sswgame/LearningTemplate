@@ -157,6 +157,9 @@ namespace sw
         /** @brief GPU 가 끝날 때까지 기다리고(vkDeviceWaitIdle) 지연 해제 큐를 비웁니다. */
         void waitIdleInternal() override;
 
+        /** @brief 이번 프레임이 제출할 세대(`_frameFenceCounter + 1`)로 해제 큐에 넣습니다. */
+        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+
         /** @brief 크기를 적고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
         void               resizeInternal( uint32 width, uint32 height ) override;
         [[nodiscard]] bool createRenderPass();

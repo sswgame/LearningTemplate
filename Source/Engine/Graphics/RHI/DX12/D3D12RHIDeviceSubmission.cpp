@@ -26,6 +26,11 @@ namespace sw
         _releaseQueue.flushAll();
     }
 
+    void D3D12RHIDevice::enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate )
+    {
+        _releaseQueue.enqueueGpuRelease( releaseDelegate, _fenceValue );
+    }
+
     unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList()
     {
         unique_ptr<D3D12RHICommandList> list = make_unique<D3D12RHICommandList>( this );
