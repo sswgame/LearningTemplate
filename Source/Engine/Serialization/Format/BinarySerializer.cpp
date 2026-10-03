@@ -29,20 +29,23 @@ namespace sw
 
             /**
              * @brief 태그 스트림 머리(uint32)의 짜임입니다 — 아래 24비트는 프로퍼티 수, 위 8비트는 값 인코딩의 판(`BinaryWireVersion`).
-             * @details 판이 없던 옛 스트림은 위 8비트가 0 이라 그대로 `EnumByValue` 로 읽힙니다(프로퍼티가 1600만 개인 타입은 없다). 머리는 스트림마다 있어
+             * @details 위 8비트가 지금 판이 아니면 읽지 않습니다(판이 없던 스트림은 0 이다 — 프로퍼티가 1600만 개인 타입은 없다). 머리는 스트림마다 있어
              *          중첩 구조체 · 소유 포인터 본문도 제 판을 말합니다. 판을 올리는 변경은 이 자리 하나만 고치면 모든 바이너리 길(세이브 · 스냅샷 · 쿠킹 씬 ·
              *          복사 · RPC)에 실립니다.
              */
             static constexpr uint32 kTaggedVersionShift = 24;
             static constexpr uint32 kTaggedCountMask    = ( 1u << kTaggedVersionShift ) - 1;
-            /** @brief 컴팩트 스트림 모드 바이트의 짜임입니다 — 아래 4비트는 모드(밀집 · 희소), 위 4비트는 판. 옛 스트림은 위가 0 이다. */
+            /** @brief 컴팩트 스트림 모드 바이트의 짜임입니다 — 아래 4비트는 모드(밀집 · 희소), 위 4비트는 판. 판이 없던 스트림은 위가 0 이다. */
             static constexpr uint8 kCompactVersionShift = 4;
             static constexpr uint8 kCompactModeMask     = ( 1u << kCompactVersionShift ) - 1;
 
-            /** @brief 이 빌드가 읽을 수 있는 판인지 봅니다. 더 높은 판은 앞선 빌드가 쓴 것이라 읽지 않습니다(값을 다른 뜻으로 읽게 된다). */
+            /**
+             * @brief 이 빌드가 읽을 수 있는 판인지 봅니다 — 지금 판 하나뿐입니다. 더 높은 판은 앞선 빌드가 쓴 것이고, 낮은 판을 올리는 단계는 없습니다
+             *        (값을 다른 뜻으로 읽게 된다).
+             */
             static bool isReadableWireVersion( uint32 wireVersion )
             {
-                return wireVersion <= static_cast<uint32>( kCurrentBinaryWireVersion );
+                return wireVersion == static_cast<uint32>( kCurrentBinaryWireVersion );
             }
 
             /**
@@ -151,7 +154,7 @@ namespace sw
                 uint32             header{ 0 };
                 if ( reader.read( header ) == false )
                     return false;
-                // 머리가 판을 말한다 — 이 스트림 안의 값(컨테이너 원소 · 맵 키 포함)은 그 판으로 읽는다. 옛 스트림은 0(`EnumByValue`)이다.
+                // 머리가 판을 말한다 — 이 스트림 안의 값(컨테이너 원소 · 맵 키 포함)은 그 판으로 읽는다. 지금 판이 아니면 읽지 않는다.
                 const uint32 wireVersionNumber = header >> kTaggedVersionShift;
                 if ( isReadableWireVersion( wireVersionNumber ) == false )
                 {

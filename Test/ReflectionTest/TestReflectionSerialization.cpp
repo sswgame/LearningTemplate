@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "Core/Compression/CompressionStream.h"
-
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -810,12 +808,12 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenThe
 }
 
 /**
- * @brief [ReflectionSerializationTest] enum 을 값으로 싣던 때의 바이트도 그대로 읽힌다 — 판이 없는 스트림은 값으로 읽는다
- * @details 아래 16진 두 줄은 이 변경 **전** 빌드가 `makeSavedWireShiftHost` 를 쓴 바이트 그대로다(태그 · 컴팩트). 머리에 판이 없고(태그 머리의 위 8비트 ·
- *          컴팩트 모드 바이트의 위 4비트가 0) enum 은 int64 값이다. 디스크의 세이브 · 쿠킹 씬이 이 모양이다. 지금 빌드가 쓰는 바이트(골든)도 같이 둔다 —
- *          머리의 판이 1 이고 enum 은 이름 해시다. 앞선 빌드의 판(2)은 다른 뜻일 수 있어 읽지 않는다.
+ * @brief [ReflectionSerializationTest] 바이너리는 지금 판(`kCurrentBinaryWireVersion`)만 읽는다 — 판이 없던(0) 스트림 · 앞선 빌드의 판은 읽지 않는다
+ * @details 아래 16진 두 줄은 enum 을 int64 값으로 싣던 판(0)의 바이트다(태그 · 컴팩트 — 머리의 판 자리가 0). 그 판을 쓰던 세이브 · 쿠킹 씬은
+ *          저장소에 없고 쿠킹본은 매번 다시 굽는다. 판을 짐작해 값으로 읽어 주면 열거자 순서가 바뀐 뒤 다른 열거자가 된다 — 읽지 않고 알린다.
+ *          지금 빌드가 쓰는 바이트(골든)도 같이 둔다 — 머리의 판이 1 이고 enum 은 이름 해시다.
  */
-SW_TEST_CASE( ReflectionSerializationTest, ValueEncodedEnumsFromBeforeTheChangeStillRead )
+SW_TEST_CASE( ReflectionSerializationTest, OnlyTheCurrentWireVersionIsRead )
 {
     registerWireShiftEnumsAsDeclared();
     const sw::TypeInfo info = makeWireShiftHostType();
@@ -826,43 +824,13 @@ SW_TEST_CASE( ReflectionSerializationTest, ValueEncodedEnumsFromBeforeTheChangeS
     const sw::vector<uint8> legacyCompact = fromHexString(
         "01051f0801000000000000000805000000000000001402000000020000000000000000000000000000001001000000010000000000000007000000"
         "0409000000" );
-
-    WireShiftHost fromTagged;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &fromTagged, info, legacyTagged.data(), legacyTagged.size() ) );
-    expectWireShiftEnumerators( "legacy tagged", fromTagged, 1, 5, 2, 0 );
-
-    sw::vector<uint8> legacyVersioned( sizeof( uint32 ), 0 );
-    legacyVersioned[0] = 3;
-    legacyVersioned.insert( legacyVersioned.end(), legacyTagged.begin(), legacyTagged.end() );
-    WireShiftHost fromVersioned;
-    uint32        version{ 0 };
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeVersioned( version, &fromVersioned, info, legacyVersioned.data(), legacyVersioned.size(), 3 ) );
-    expectWireShiftEnumerators( "legacy versioned", fromVersioned, 1, 5, 2, 0 );
-
-    sw::vector<uint8> legacyCompressed;
-    SW_ASSERT_TRUE( sw::CompressionStream::compressBuffer( legacyTagged.data(), legacyTagged.size(), legacyCompressed ) );
-    WireShiftHost fromCompressed;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompressed( &fromCompressed, info, legacyCompressed.data(), legacyCompressed.size() ) );
-    expectWireShiftEnumerators( "legacy compressed", fromCompressed, 1, 5, 2, 0 );
-
-    WireShiftHost fromCompact;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &fromCompact, info, legacyCompact.data(), legacyCompact.size() ) );
-    expectWireShiftEnumerators( "legacy compact", fromCompact, 1, 5, 2, 0 );
-
-    // 옛 스트림의 orphan 은 적힌 판을 든다 — 이관이 나중에 그 값을 읽을 때도 값으로 읽는다(이름 해시로 읽으면 모르는 열거자가 된다).
-    sw::TypeInfo withoutColor = info;
-    withoutColor._listProperty.erase( withoutColor._listProperty.begin() );
-    WireShiftHost                     partial;
-    sw::vector<sw::SchemaOrphanValue> listOrphan;
-    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeSoft( &partial, withoutColor, legacyTagged.data(), legacyTagged.size(), &listOrphan ) );
-    SW_ASSERT_EQUAL( size_t( 1 ), listOrphan.size() );
-    WireShiftHost            migrated;
-    sw::SchemaMigrateContext migrateContext;
-    migrateContext._pInstance = &migrated;
-    migrateContext._pTypeInfo = &info;
-    migrateContext._pOrphans  = &listOrphan;
-    SW_EXPECT_TRUE( migrateContext.applyOrphanTo( sw::hashed_string( "_color" ) ) );
-    SW_EXPECT_TRUE_MSG( migrated._color == WireShiftColor::Green, "옛 스트림의 orphan 을 지금 판으로 읽었습니다" );
+    {
+        test::ScopedDefensiveTestLog expected( "a binary stream of wire version 0" );
+        WireShiftHost                fromTagged;
+        SW_EXPECT_FALSE( sw::BinarySerializer::deserialize( &fromTagged, info, legacyTagged.data(), legacyTagged.size() ) );
+        WireShiftHost fromCompact;
+        SW_EXPECT_FALSE( sw::BinarySerializer::deserializeCompact( &fromCompact, info, legacyCompact.data(), legacyCompact.size() ) );
+    }
 
     // 지금 빌드가 쓰는 바이트 — 머리 05000001(판 1), _color 는 "Green" 의 해시, _flags 는 이름 둘(해시 오름차순), 원소 · 맵 키도 해시.
     const WireShiftHost saved = makeSavedWireShiftHost();
@@ -2997,9 +2965,10 @@ SW_TEST_CASE( ReflectionSerializationTest, CompactStreamDoesNotWriteTransientPro
     }
     SW_ASSERT_TRUE( healthIndex < 0x80 ); // varint 한 바이트
 
-    // [희소 모드][수정 1 개][인덱스][크기 4][int32 777]
+    // [판 · 희소 모드][수정 1 개][인덱스][크기 4][int32 777]
     const int32       injected = 777;
-    sw::vector<uint8> stream{ sw::PresenceMaskUtil::kModeSparse, 1, healthIndex, 4 };
+    const uint8       modeByte = static_cast<uint8>( ( static_cast<uint8>( sw::kCurrentBinaryWireVersion ) << 4 ) | sw::PresenceMaskUtil::kModeSparse );
+    sw::vector<uint8> stream{ modeByte, 1, healthIndex, 4 };
     const uint8*      pInjected = reinterpret_cast<const uint8*>( &injected );
     stream.insert( stream.end(), pInjected, pInjected + sizeof( injected ) );
 

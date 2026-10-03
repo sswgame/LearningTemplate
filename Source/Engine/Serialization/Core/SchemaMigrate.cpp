@@ -223,7 +223,7 @@ namespace sw
             {
                 const uint8* pPayload    = orphan._listBinary.data();
                 const size_t payloadSize = orphan._listBinary.size();
-                // 적힌 판으로 읽는다 — 옛 스트림의 orphan 은 enum 을 값으로 들고 있다.
+                // 적힌 판으로 읽는다 — orphan 은 그것을 읽은 스트림의 판을 든다.
                 if ( wireTypeName == propTypeName )
                 {
                     size_t offset{ 0 };

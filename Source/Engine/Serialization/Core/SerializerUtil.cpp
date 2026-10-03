@@ -177,21 +177,15 @@ namespace sw
             }
 
             /**
-             * @brief enum 값 하나를 적힌 판으로 읽습니다. 옛 판은 int64 값, 지금 판은 열거자 정체성입니다.
+             * @brief enum 값 하나를 열거자 정체성(이름 해시)으로 읽습니다.
              * @return 바이트가 모자라면 false. 모르는 열거자 이름이면 **값은 그대로 두고** false 입니다(바이트는 끝까지 읽었다 — XML 의 모르는 이름과 같은 칸
-             *         실패). 옛 판의 값 읽기는 이름 표를 보지 않는다(그때 적힌 뜻이 값이었다).
+             *         실패).
              */
             [[nodiscard]] static bool readEnumBinary( const EnumInfo& enumInfo, void* pValuePtr, const uint8* pData, size_t dataSize, size_t& inoutOffset,
                                                       BinaryWireVersion wireVersion )
             {
+                (void)wireVersion; // 읽는 판은 지금 판 하나다(`BinaryWireVersion`) — 판이 늘면 여기서 갈린다
                 int64 value{ 0 };
-                if ( wireVersion == BinaryWireVersion::EnumByValue )
-                {
-                    if ( readInt64( pData, dataSize, inoutOffset, value ) == false )
-                        return false;
-                    enumInfo.writeValueToMemory( pValuePtr, value );
-                    return true;
-                }
 
                 bool bKnown = true;
                 if ( enumInfo._bIsBitFlag == SW_FALSE )

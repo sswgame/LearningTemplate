@@ -132,8 +132,8 @@ namespace sw
                                                  vector<uint8>& listBuffer, const SerializeContext& ctx );
         /**
          * @brief 바이너리에서 값을 역직렬화합니다.
-         * @param wireVersion 바이트가 적힌 판입니다(스트림 머리가 말한다). 옛 판(`EnumByValue`)이면 enum 을 int64 값으로 읽습니다. 기본값은 이 빌드가
-         *                    방금 쓴 바이트(복사 · 비교 · diff)에만 맞습니다.
+         * @param wireVersion 바이트가 적힌 판입니다(스트림 머리가 말한다). 지금은 판이 하나라 갈림이 없고, 판을 올리면 여기서 갈린다.
+         *                    기본값은 이 빌드가 방금 쓴 바이트(복사 · 비교 · diff)에만 맞습니다.
          * @details 모르는 열거자 이름(지웠거나 ValueAlias 없이 이름을 바꿨다)이면 그 칸은 지금 값을 지키고 false 입니다 — XML 의 모르는 이름과 같다.
          *          바이트는 끝까지 읽었으므로 부른 쪽이 다음 칸으로 갈 수 있습니다(경고는 enum · 이름마다 한 번).
          */
