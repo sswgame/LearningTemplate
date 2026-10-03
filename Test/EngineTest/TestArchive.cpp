@@ -1061,50 +1061,6 @@ SW_TEST_CASE( ArchiveTest, PredefinedTypesStringPoolIntegration )
 }
 
 /**
- * @brief [ArchiveTest] SerializeContext 기반 객체 포인터 그래프 및 순환/공유 참조 중복 제거 검증
- */
-SW_TEST_CASE( ArchiveTest, ObjectGraphAndCyclicPointerDeduplication )
-{
-    sw::SerializeContext ctx = sw::SerializeContext::getDefault();
-    ctx.setEnableObjectDeduplication( true );
-    SW_EXPECT_TRUE( ctx.isObjectDeduplicationEnabled() );
-
-    int32 objA = 100;
-    int32 objB = 200;
-    int32 objC = 300;
-
-    // 1) 포인터 ID 등록 일관성 검증
-    const uint32 idA1 = ctx.registerOrFindObjectId( &objA );
-    const uint32 idA2 = ctx.registerOrFindObjectId( &objA );
-    const uint32 idB  = ctx.registerOrFindObjectId( &objB );
-    const uint32 idC  = ctx.registerOrFindObjectId( &objC );
-
-    SW_EXPECT_EQUAL( idA1, idA2 );
-    SW_EXPECT_TRUE( idA1 != idB );
-    SW_EXPECT_TRUE( idB != idC );
-
-    uint32 queryId = 0;
-    SW_EXPECT_TRUE( ctx.findObjectId( &objA, queryId ) );
-    SW_EXPECT_EQUAL( idA1, queryId );
-
-    // 2) 역직렬화 ID 매핑 테이블 검증
-    ctx.registerObjectWithId( idA1, &objA );
-    ctx.registerObjectWithId( idB, &objB );
-    ctx.registerObjectWithId( idC, &objC );
-
-    SW_EXPECT_EQUAL( reinterpret_cast<void*>( &objA ), ctx.findObjectById( idA1 ) );
-    SW_EXPECT_EQUAL( reinterpret_cast<void*>( &objB ), ctx.findObjectById( idB ) );
-    SW_EXPECT_EQUAL( reinterpret_cast<void*>( &objC ), ctx.findObjectById( idC ) );
-    SW_EXPECT_EQUAL( nullptr, ctx.findObjectById( 99999 ) );
-
-    // 3) 테이블 초기화 검증
-    ctx.clearObjectTable();
-    SW_EXPECT_EQUAL( nullptr, ctx.findObjectById( idA1 ) );
-    uint32 idAfterClear = 0;
-    SW_EXPECT_FALSE( ctx.findObjectId( &objA, idAfterClear ) );
-}
-
-/**
  * @brief [ArchiveTest] BinarySerializer 적응형 밀집 비트마스크(Dense Bitmask) 직렬화 검증
  */
 SW_TEST_CASE( ArchiveTest, BinarySerializerAdaptiveDenseBitmask )

@@ -12,7 +12,7 @@ namespace sw
     /**
      * @class SerializeContext
      * @brief 직렬화 한 번에 쓰는 설정 묶음입니다. 타입별 커스텀 바이너리/텍스트 핸들러, 키 정책,
-     *        소유 포인터 팩토리, 객체 중복 제거 표를 듭니다.
+     *        소유 포인터 팩토리, 모르는 원소를 맡는 함수를 듭니다.
      */
     class SW_API SerializeContext
     {
@@ -60,8 +60,6 @@ namespace sw
             , _mapBinaryReader{}
             , _mapTextWriter{}
             , _mapTextReader{}
-            , _mapObjectToId{}
-            , _mapIdToObject{}
             , _pOuterInstance{ nullptr }
             , _pOwnedPointerCreateFn{ nullptr }
             , _pRuntimeTypeInfoFn{ nullptr }
@@ -69,7 +67,6 @@ namespace sw
             , _pOpaqueQueryFn{ nullptr }
             , _bIgnoreCaseKeys{ SW_TRUE }
             , _bAllowUnknownProperties{ SW_FALSE }
-            , _bEnableObjectDeduplication{ SW_FALSE }
             , _reservedFlags{ 0 } {}
 
         // ------------------------------------------------------------------------------
@@ -171,63 +168,6 @@ namespace sw
             return _pOpaqueQueryFn != nullptr && pElement != nullptr && _pOpaqueQueryFn( pElement, outElement );
         }
 
-        /** @brief 객체 중복 제거(포인터 표)를 켤지 설정합니다. */
-        SerializeContext& setEnableObjectDeduplication( bool bEnable )
-        {
-            _bEnableObjectDeduplication = bEnable ? SW_TRUE : SW_FALSE;
-            return *this;
-        }
-
-        bool isObjectDeduplicationEnabled() const { return _bEnableObjectDeduplication == SW_TRUE; }
-
-        /** @brief 포인터 객체를 표에 등록하거나, 이미 등록돼 있으면 그 ID 를 반환합니다. */
-        uint32 registerOrFindObjectId( const void* pInstance ) const
-        {
-            if ( pInstance == nullptr )
-                return 0;
-            const auto it = _mapObjectToId.find( pInstance );
-            if ( it != _mapObjectToId.end() )
-                return it->second;
-            const uint32 newId = static_cast<uint32>( _mapObjectToId.size() + 1 );
-            _mapObjectToId.emplace( pInstance, newId );
-            return newId;
-        }
-
-        /** @brief 포인터 객체가 이미 등록된 ID 를 찾습니다. */
-        bool findObjectId( const void* pInstance, uint32& outId ) const
-        {
-            if ( pInstance == nullptr )
-                return false;
-            const auto it = _mapObjectToId.find( pInstance );
-            if ( it == _mapObjectToId.end() )
-                return false;
-            outId = it->second;
-            return true;
-        }
-
-        /** @brief ID 에 대응하는 역직렬화 인스턴스 주소를 등록합니다. */
-        void registerObjectWithId( uint32 objectId, void* pInstance ) const
-        {
-            if ( objectId != 0 && pInstance != nullptr )
-                _mapIdToObject[objectId] = pInstance;
-        }
-
-        /** @brief ID 로 역직렬화된 인스턴스 주소를 찾습니다. */
-        void* findObjectById( uint32 objectId ) const
-        {
-            const auto it = _mapIdToObject.find( objectId );
-            if ( it != _mapIdToObject.end() )
-                return it->second;
-            return nullptr;
-        }
-
-        /** @brief 객체 포인터 표를 비웁니다. */
-        void clearObjectTable() const
-        {
-            _mapObjectToId.clear();
-            _mapIdToObject.clear();
-        }
-
         /** @brief 기본 전역 직렬화 컨텍스트를 반환합니다. */
         static const SerializeContext& getDefault();
 
@@ -246,8 +186,6 @@ namespace sw
         unordered_map<hashed_string, BinaryReadFn>  _mapBinaryReader;
         unordered_map<hashed_string, TextWriteFn>   _mapTextWriter;
         unordered_map<hashed_string, TextReadFn>    _mapTextReader;
-        mutable unordered_map<const void*, uint32>  _mapObjectToId;
-        mutable unordered_map<uint32, void*>        _mapIdToObject;
         /** @brief 자기 표에 없을 때 물어볼 곳입니다. 전역 기본 컨텍스트라 수명은 프로그램 전체입니다. */
         const SerializeContext* _pHandlerFallback{ nullptr };
         void*                   _pOuterInstance;
@@ -255,10 +193,9 @@ namespace sw
         RuntimeTypeInfoFn       _pRuntimeTypeInfoFn;
         OpaqueElementKeepFn     _pOpaqueKeepFn;
         OpaqueElementQueryFn    _pOpaqueQueryFn;
-        uint8                   _bIgnoreCaseKeys            : 1;
-        uint8                   _bAllowUnknownProperties    : 1;
-        uint8                   _bEnableObjectDeduplication : 1;
-        [[maybe_unused]] uint8  _reservedFlags              : 5;
+        uint8                   _bIgnoreCaseKeys         : 1;
+        uint8                   _bAllowUnknownProperties : 1;
+        [[maybe_unused]] uint8  _reservedFlags           : 6;
     };
 
 } // namespace sw
