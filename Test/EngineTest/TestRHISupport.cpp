@@ -335,3 +335,39 @@ SW_TEST_CASE( RHIDeviceShutdownTest, StepsRunInContractOrder )
     for ( size_t index = 0; index < std::size( arrExpected ); ++index )
         SW_EXPECT_STREQ( arrExpected[index], device._listShutdownStep[index] );
 }
+
+/**
+ * @brief [RHINativeHandlesTest] `IRHIDevice::queryNativeHandles` 가 다른 판의 `RHINativeHandles` 를 거절하고, 맞는 판에는 백엔드 훅이 채운 값을 준다.
+ * @details 에디터(EditorModule)는 RHI 백엔드의 구체 클래스를 모르고 이 POD 하나로 네이티브 핸들을 받는다. 따로 지은 모듈이 다른 판의 구조체를
+ *          보내면 Engine 이 한 칸도 쓰지 않고 거절해야 한다 — 쓰면 다른 레이아웃 위에 핸들을 적어 조용히 깨진다. 판 번호와 크기를 각각 어긋나게 한다.
+ */
+SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatchingOne )
+{
+    test::FakeRHIDevice device;
+    int32               nativeDeviceStandIn{ 0 };
+    device._pNativeDevice = &nativeDeviceStandIn;
+
+    sw::RHINativeHandles handles{};
+    SW_EXPECT_TRUE( device.queryNativeHandles( handles ) );
+    SW_EXPECT_TRUE( handles._pDevice == &nativeDeviceStandIn );
+    SW_EXPECT_TRUE( handles._backend == device.getBackendType() );
+    SW_EXPECT_EQUAL( 1u, device._nativeHandleQueryCount );
+
+    sw::RHINativeHandles otherVersion{};
+    otherVersion._version = sw::kRHINativeHandlesVersion + 1u;
+    sw::RHINativeHandles otherSize{};
+    otherSize._byteSize = static_cast<uint32>( sizeof( sw::RHINativeHandles ) ) - static_cast<uint32>( sizeof( void* ) );
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "native handle query with another RHINativeHandles layout" );
+        SW_EXPECT_FALSE( device.queryNativeHandles( otherVersion ) );
+        SW_EXPECT_FALSE( device.queryNativeHandles( otherSize ) );
+    }
+    SW_EXPECT_TRUE( otherVersion._pDevice == nullptr );
+    SW_EXPECT_TRUE( otherSize._pDevice == nullptr );
+    SW_EXPECT_EQUAL( 1u, device._nativeHandleQueryCount );
+
+    // 디바이스가 없는 백엔드는 판이 맞아도 false 다.
+    device._pNativeDevice = nullptr;
+    sw::RHINativeHandles noDevice{};
+    SW_EXPECT_FALSE( device.queryNativeHandles( noDevice ) );
+}

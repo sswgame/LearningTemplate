@@ -17,25 +17,6 @@
 
 namespace sw
 {
-    /**
-     * @struct RHIVulkanNativeHandles
-     * @brief Vulkan 위에 얹히는 외부 라이브러리에 넘길 불투명 핸들 묶음입니다.
-     * @details 모두 `void*` 라 이 구조체 자체는 Vulkan 헤더를 요구하지 않습니다.
-     *          이미지 개수 기본값은 디바이스가 실제 스왑체인 값으로 덮어씁니다. 여기 기본값은 그때까지의
-     *          자리표시자라서, 매직 넘버 대신 계약 상수를 씁니다.
-     */
-    struct RHIVulkanNativeHandles
-    {
-        void*  _pInstance{ nullptr };
-        void*  _pPhysicalDevice{ nullptr };
-        void*  _pDevice{ nullptr };
-        void*  _pGraphicsQueue{ nullptr };
-        void*  _pRenderPass{ nullptr };
-        uint32 _queueFamily{ 0 };
-        uint32 _minImageCount{ constant::kMaxFrameCountInFlight };
-        uint32 _imageCount{ constant::kMaxFrameCountInFlight };
-    };
-
     class VulkanRHICommandContext;
     class VulkanRHIResource;
 
@@ -258,29 +239,23 @@ namespace sw
         RHIFormat getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
 
         /**
-         * @brief Vulkan 초기화에 필요한 네이티브 핸들 묶음을 채웁니다.
-         * @details **가상으로 둡니다.** 부르는 쪽(에디터 MODULE)은 `getBackendType()` 으로 Vulkan 임을 확인하고
-         *          이 타입으로 캐스팅해 부릅니다. 가상이면 호출이 vtable 을 타므로 이 심볼을 링크할 필요가 없습니다.
-         *          RHI 백엔드는 CMake MODULE 이라 애초에 링크 대상이 아닙니다.
-         *
-         *          예전에는 이것이 `IRHIDevice` 의 가상 함수였습니다. 그러면 Vulkan 이 아닌 세 백엔드가 "나는
-         *          Vulkan 이 아니다" 라고 답하는 빈 구현을 지고, 그 헤더를 여는 39개 파일이 Vulkan 어휘를
-         *          함께 졌습니다. 백엔드 전용인 것은 백엔드에 둡니다.
+         * @brief ImGui Vulkan 백엔드 초기화에 필요한 핸들(인스턴스 · 물리 디바이스 · 큐 패밀리 · 백버퍼 렌더 패스 · 이미지 수)까지 채웁니다.
+         * @details 에디터는 이 클래스를 모릅니다 — `IRHIDevice::queryNativeHandles` 가 판을 대조한 뒤 이 훅을 부릅니다.
          */
-        virtual bool queryNativeHandles( RHIVulkanNativeHandles& out ) const
+        [[nodiscard]] bool queryNativeHandlesInternal( RHINativeHandles& outHandles ) const override
         {
-            out._pInstance       = _instance;
-            out._pPhysicalDevice = _physicalDevice;
-            out._pDevice         = _device;
-            out._pGraphicsQueue  = _graphicsQueue;
-            out._pRenderPass     = _renderPass;
-            out._queueFamily     = _graphicsQueueFamilyIndex;
+            if ( IRHIDevice::queryNativeHandlesInternal( outHandles ) == false )
+                return false;
+            outHandles._pInstance       = _instance;
+            outHandles._pPhysicalDevice = _physicalDevice;
+            outHandles._pRenderPass     = _renderPass;
+            outHandles._queueFamily     = _graphicsQueueFamilyIndex;
             // 실제 스왑체인 이미지 수를 그대로 알린다. 매직 2 를 쓰면 백버퍼 개수 계약이 바뀔 때
             // ImGui 쪽만 옛 값으로 남는다.
-            out._imageCount    = ( _swapChain.getImageCount() == 0 ) ? constant::kMaxFrameCountInFlight
-                                                                     : _swapChain.getImageCount();
-            out._minImageCount = out._imageCount;
-            return _device != nullptr;
+            outHandles._imageCount    = ( _swapChain.getImageCount() == 0 ) ? constant::kMaxFrameCountInFlight
+                                                                            : _swapChain.getImageCount();
+            outHandles._minImageCount = outHandles._imageCount;
+            return true;
         }
 
         /** @brief 네이티브 텍스처 포인터(VkImageView)를 반환합니다. */

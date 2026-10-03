@@ -54,6 +54,33 @@ namespace sw
         waitIdleInternal();
     }
 
+    bool IRHIDevice::queryNativeHandles( RHINativeHandles& inoutHandles ) const
+    {
+        // 판 번호와 크기는 부르는 모듈이 컴파일될 때의 값이다. Engine 의 값과 다르면 두 쪽이 다른 구조체를 보고 있으므로 한 칸도 쓰지 않는다.
+        const bool bSameLayout = ( inoutHandles._version == kRHINativeHandlesVersion ) && ( inoutHandles._byteSize == sizeof( RHINativeHandles ) );
+        if ( bSameLayout == false )
+        {
+            SW_LOG_ERROR( "Native handle query rejected: the caller was built with RHINativeHandles v%# (%# bytes), the engine with v%# (%# bytes) - rebuild that module",
+                          inoutHandles._version, inoutHandles._byteSize, kRHINativeHandlesVersion, static_cast<uint32>( sizeof( RHINativeHandles ) ) );
+            return false;
+        }
+
+        RHINativeHandles handles{};
+        handles._backend = getBackendType();
+        if ( queryNativeHandlesInternal( handles ) == false )
+            return false;
+        inoutHandles = handles;
+        return true;
+    }
+
+    bool IRHIDevice::queryNativeHandlesInternal( RHINativeHandles& outHandles ) const
+    {
+        outHandles._pDevice        = getNativeDevice();
+        outHandles._pContext       = getNativeContext();
+        outHandles._pGraphicsQueue = getNativeCommandQueue();
+        return outHandles._pDevice != nullptr;
+    }
+
     void IRHIDevice::setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadId )
     {
         _pfnRenderThreadDrain      = pfnDrain;

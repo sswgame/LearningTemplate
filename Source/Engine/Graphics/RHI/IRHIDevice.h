@@ -17,6 +17,33 @@ namespace sw
     class IRHICommandList;
     class IRHIResource;
 
+    /** @brief `RHINativeHandles` 의 판 번호입니다. 필드 · 순서 · 뜻이 바뀌면 올립니다. */
+    inline constexpr uint32 kRHINativeHandlesVersion = 1;
+
+    /**
+     * @struct RHINativeHandles
+     * @brief 백엔드 위에 얹히는 외부 라이브러리(에디터의 ImGui 렌더러 백엔드)에 넘길 네이티브 핸들 묶음입니다.
+     * @details 모듈 경계(EditorModule ↔ Engine ↔ RHI_*)를 넘는 것은 이 POD 하나입니다 — 구체 디바이스 클래스의 레이아웃 · vtable 이 아닙니다.
+     *          부르는 쪽은 자기가 컴파일된 판 번호(`_version`)와 크기(`_byteSize`)를 기본값 그대로 실어 보내고,
+     *          `IRHIDevice::queryNativeHandles` 가 Engine 의 판과 다르면 채우지 않고 거절합니다. 모두 `void*` 라 백엔드 헤더를 요구하지
+     *          않습니다. 그 백엔드에 없는 칸은 nullptr · 0 입니다.
+     */
+    struct RHINativeHandles
+    {
+        uint32     _version{ kRHINativeHandlesVersion };    ///< 부르는 쪽이 컴파일된 판 번호
+        uint32     _byteSize{ sizeof( RHINativeHandles ) }; ///< 부르는 쪽이 아는 구조체 크기
+        void*      _pInstance{ nullptr };                   ///< VkInstance(Vulkan)
+        void*      _pPhysicalDevice{ nullptr };             ///< VkPhysicalDevice(Vulkan)
+        void*      _pDevice{ nullptr };                     ///< `getNativeDevice()` 와 같은 값(VkDevice · ID3D12Device · ID3D11Device · GL 표시 장치)
+        void*      _pContext{ nullptr };                    ///< `getNativeContext()` 와 같은 값
+        void*      _pGraphicsQueue{ nullptr };              ///< `getNativeCommandQueue()` 와 같은 값(VkQueue · ID3D12CommandQueue)
+        void*      _pRenderPass{ nullptr };                 ///< 백버퍼 렌더 패스(VkRenderPass, Vulkan)
+        uint32     _queueFamily{ 0 };                       ///< 그래픽스 큐 패밀리 인덱스(Vulkan)
+        uint32     _minImageCount{ 0 };                     ///< 스왑체인 최소 이미지 수(Vulkan)
+        uint32     _imageCount{ 0 };                        ///< 스왑체인 이미지 수(Vulkan)
+        RHIBackend _backend{ RHIBackend::DirectX12 };       ///< 채운 디바이스의 백엔드
+    };
+
     /**
      * @class IRHIDevice
      * @brief DX11 · DX12 · Vulkan · OpenGL 하드웨어 디바이스 추상화입니다.
@@ -212,6 +239,14 @@ namespace sw
         virtual void* getNativeCommandQueue() const = 0;
 
         /**
+         * @brief 외부 라이브러리 초기화에 쓸 네이티브 핸들 묶음을 채웁니다.
+         * @details 비가상입니다 — 판 대조는 Engine 이 이 한 자리에서 하고 백엔드는 `queryNativeHandlesInternal` 만 채웁니다.
+         *          `inoutHandles` 의 `_version` · `_byteSize` 가 이 엔진의 `kRHINativeHandlesVersion` · `sizeof( RHINativeHandles )` 와 다르면
+         *          (따로 지은 모듈이 다른 판의 구조체를 보냈다) 아무것도 쓰지 않고 false 입니다. 백엔드가 디바이스를 못 내놓아도 false 입니다.
+         */
+        [[nodiscard]] bool queryNativeHandles( RHINativeHandles& inoutHandles ) const;
+
+        /**
          * @brief RHI 텍스처의 백엔드 네이티브 텍스처 이름(OpenGL GLuint 등)을 반환합니다. 지원하지 않으면 0 입니다.
          * @note 에디터 MODULE 이 RHI_* 디바이스 MODULE 의 구체 타입에 링크하지 않도록 가상 함수로 둡니다.
          */
@@ -329,6 +364,12 @@ namespace sw
          * @details 리스트는 디바이스보다 오래 살 수 있습니다(렌더 그래프가 프레임 너머 듭니다). 떼지 않으면 그쪽 소멸자가 내려간 디바이스에 반납하려 듭니다.
          */
         virtual void detachCommandRecordingInternal() {}
+        /**
+         * @brief 백엔드가 자기 네이티브 핸들을 채웁니다. 판 대조는 이미 끝났고 `outHandles` 는 기본값(`_backend` 만 채운 상태)입니다.
+         * @details 기본은 `getNativeDevice` · `getNativeContext` · `getNativeCommandQueue` 세 칸이고, 디바이스가 없으면 false 입니다.
+         *          더 내놓을 것이 있는 백엔드(Vulkan 의 인스턴스 · 물리 디바이스 · 큐 패밀리 · 렌더 패스)가 재정의합니다.
+         */
+        [[nodiscard]] virtual bool queryNativeHandlesInternal( RHINativeHandles& outHandles ) const;
 
         IRenderSurface*           _pSurface;
         RenderThreadDrainFunction _pfnRenderThreadDrain;

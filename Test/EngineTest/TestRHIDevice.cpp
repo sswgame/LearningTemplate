@@ -193,6 +193,38 @@ SW_TEST_CASE( RHIDeviceTest, DeviceCreationAllBackends )
 }
 
 /**
+ * @brief [RHIDeviceTest] 네이티브 핸들 묶음(`RHINativeHandles`)이 네 백엔드에서 그 디바이스의 값을 담는다
+ * @details 에디터의 ImGui 렌더러 백엔드는 이 묶음 하나로 초기화한다(구체 디바이스 클래스로 캐스팅하지 않는다). Vulkan 은 인스턴스 · 물리
+ *          디바이스 · 백버퍼 렌더 패스 · 스왑체인 이미지 수까지 있어야 `ImGui_ImplVulkan_Init` 이 선다.
+ */
+SW_TEST_CASE( RHIDeviceTest, NativeHandlesDescribeTheDevice )
+{
+    uint32 attemptedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        ++attemptedCount;
+
+        const sw::string     label = sw::string( device->getBackendName() );
+        sw::RHINativeHandles handles{};
+        SW_EXPECT_TRUE_MSG( device->queryNativeHandles( handles ), ( label + ": 네이티브 핸들 조회 실패" ).c_str() );
+        SW_EXPECT_TRUE_MSG( handles._backend == backend, ( label + ": 다른 백엔드라고 답한다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( handles._pDevice != nullptr && handles._pDevice == device->getNativeDevice(), ( label + ": 디바이스 칸이 비었거나 다르다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( handles._pGraphicsQueue == device->getNativeCommandQueue(), ( label + ": 큐 칸이 getNativeCommandQueue 와 다르다" ).c_str() );
+        if ( backend == sw::RHIBackend::Vulkan )
+        {
+            SW_EXPECT_TRUE_MSG( handles._pInstance != nullptr && handles._pPhysicalDevice != nullptr, "Vulkan: 인스턴스 · 물리 디바이스가 비었다" );
+            SW_EXPECT_TRUE_MSG( handles._pGraphicsQueue != nullptr && handles._pRenderPass != nullptr, "Vulkan: 큐 · 렌더 패스가 비었다" );
+            SW_EXPECT_TRUE_MSG( handles._imageCount >= 2u && handles._minImageCount >= 2u, "Vulkan: 스왑체인 이미지 수가 2 보다 작다" );
+        }
+    }
+    if ( attemptedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend for the native handle test" );
+}
+
+/**
  * @brief [RHIDeviceTest] 가용 백엔드에서 RenderPass 생성 + 간단 드로우 커맨드 경로
  */
 SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )

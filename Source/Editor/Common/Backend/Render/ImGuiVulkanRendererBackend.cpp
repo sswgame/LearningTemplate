@@ -3,7 +3,6 @@
 #include "Editor/Common/Backend/Render/ImGuiVulkanRendererBackend.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
 
 #include <imgui.h>
@@ -81,13 +80,13 @@ namespace sw::editor
         if ( pRhiDevice == nullptr )
             return false;
 
-        // 이 백엔드는 Vulkan 전용이다. 타입을 확인하고 그 디바이스에 직접 묻는다. RHI 공통 인터페이스에 Vulkan 전용 함수를
-        // 만들지 않기 위해서다. 호출은 가상 함수라 vtable 을 거치므로 MODULE 인 RHI_Vulkan 을 링크하지 않아도 된다.
+        // 이 백엔드는 Vulkan 전용이다. 핸들은 `IRHIDevice::queryNativeHandles` 로 받는다 — 모듈 경계를 넘는 것은 판 번호가 든
+        // POD(RHINativeHandles) 하나이고 VulkanRHIDevice 의 레이아웃 · vtable 이 아니다. 판이 다르면 Engine 이 거절한다.
         if ( pRhiDevice->getBackendType() != RHIBackend::Vulkan )
             return false;
 
-        RHIVulkanNativeHandles vkNative{};
-        if ( static_cast<VulkanRHIDevice*>( pRhiDevice )->queryNativeHandles( vkNative ) == false || vkNative._pDevice == nullptr )
+        RHINativeHandles vkNative{};
+        if ( pRhiDevice->queryNativeHandles( vkNative ) == false || vkNative._backend != RHIBackend::Vulkan || vkNative._pDevice == nullptr )
             return false;
 
         _pRHIDevice = pRhiDevice;
