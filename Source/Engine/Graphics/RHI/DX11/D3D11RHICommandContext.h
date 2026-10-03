@@ -42,6 +42,8 @@ namespace sw
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
+        /** @brief 이 컨텍스트에 `Map(WRITE_DISCARD)` 합니다 — Deferred Context 면 런타임이 리스트 단위로 버저닝하고, 즉시 컨텍스트(프레임 스트림)면 `_immediateContextMutex` 를 잡습니다. */
+        void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
         void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
         void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
@@ -83,14 +85,6 @@ namespace sw
     private:
         /** @brief beginEventMarker · endEventMarker 용 어노테이션 인터페이스를 처음 한 번만 QueryInterface 해 캐시합니다. */
         ID3DUserDefinedAnnotation* getAnnotation();
-        /**
-         * @brief 이 컨텍스트가 기록 중인 Deferred Context 면 이 스레드에 그 토큰을 묶습니다. 패스가 시작되는 자리마다 부릅니다.
-         * @details 리스트를 연 스레드와 기록하는 스레드가 다를 수 있습니다(RenderGraph 병렬 레벨의 첫 리스트). `beginCommandList` 는
-         *          연 스레드만 묶으므로, 기록하는 스레드는 여기서 자기 것을 묶습니다. 그래야 그 스레드의 드로우별 상수버퍼 갱신이
-         *          즉시 컨텍스트가 아니라 **이 리스트**로 갑니다(D3D11 의 리스트 단위 버저닝). 즉시 컨텍스트는 슬롯이 없어 묶이지
-         *          않습니다. 그쪽은 `_immediateContextMutex` 로 지키는 공유 자원이라 묶으면 그 잠금을 건너뛰게 됩니다.
-         */
-        void ensureRecordingBinding();
         /** @brief bindless 인덱스가 가리키는 구조버퍼의 SRV 를 반환합니다. 범위 밖 · 미등록이면 nullptr 입니다. 그래픽스 · 컴퓨트 바인딩이 같은 조회를 씁니다. */
         ID3D11ShaderResourceView* findBindlessBufferSrv( RHIDescriptorIndex index ) const;
         /**

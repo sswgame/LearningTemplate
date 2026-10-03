@@ -84,7 +84,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // ShaderBindingBinder
     // ------------------------------------------------------------------------------
-    void ShaderBindingBinder::bindGraphics( IRHIDevice& device, IRHICommandList& cmd,
+    void ShaderBindingBinder::bindGraphics( IRHICommandList&                cmd,
                                             const ShaderBindingLayout&      layout,
                                             const FrameResourceRegistry&    registry,
                                             const PassConstantValues&       values,
@@ -97,7 +97,6 @@ namespace sw
         if ( layout.isEmpty() )
             return;
 
-        IRHIResource* pResource = device.getResource();
         // 이 함수는 드로우마다 불린다. 리터럴이라도 hashed_string 을 여기서 만들면 드로우마다
         // 전역 레지스트리 intern(FNV + 샤드 뮤텍스)이 붙는다. 함수 지역 static 으로 한 번만 만든다.
         static const hashed_string s_materialCbName{ shaderslot::cbname::kMaterial };
@@ -111,7 +110,7 @@ namespace sw
         // 배치마다 바뀌는 값은 루트 상수로 나가므로(binding.hlsli 1-0) 한 패스의 두 번째 드로우부터는 늘 여기로 온다.
         // 예전에는 드로우마다 멤버 표를 훑어 바이트를 채우고 512 바이트를 올렸다.
         const uint32 engineCbSize = layout.getEngineCbSize();
-        if ( engineCbSize > 0 && engineCb._buffer != 0 && pResource != nullptr && bEngineCbUpToDate == false )
+        if ( engineCbSize > 0 && engineCb._buffer != 0 && bEngineCbUpToDate == false )
         {
             // 드로우마다 힙에서 새로 잡지 않는다. 병렬 패스 기록이 여러 스레드에서 이 함수를
             // 동시에 부르므로 스레드마다 자기 버퍼를 갖는다.
@@ -152,7 +151,7 @@ namespace sw
                     Memory::copy( s_cbBytes.data() + member._offset, pValue, writeSize );
             }
 
-            pResource->updateConstantBuffer( engineCb._buffer, s_cbBytes.data(), static_cast<uint32>( s_cbBytes.size() ) );
+            cmd.updateConstantBuffer( engineCb._buffer, s_cbBytes.data(), static_cast<uint32>( s_cbBytes.size() ) );
         }
 
         // 2) 슬롯별 바인딩

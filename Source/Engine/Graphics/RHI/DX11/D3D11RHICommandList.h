@@ -78,8 +78,6 @@ namespace sw
         D3D11RHIDevice*                             _pDevice;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> _pNativeContext;
         Microsoft::WRL::ComPtr<ID3D11CommandList>   _pFinishedList;
-        /** @brief 디바이스의 기록 슬롯입니다. begin/end 가 세대를 올리고, 갱신은 그 세대의 토큰으로 이 리스트의 컨텍스트를 찾습니다. */
-        uint32 _recordingSlot;
         /**
          * @brief **이 리스트만의** 기록 상태입니다. `_context` 보다 먼저 선언해야 합니다(생성자가 주소를 넘깁니다).
          * @details 예전에는 컨텍스트가 디바이스의 `_recordingState` 를 가리켰습니다. 리스트는 각자 Deferred

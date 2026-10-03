@@ -20,6 +20,7 @@
 
 namespace sw
 {
+    class IRHICommandList;
     class IRHIDevice;
 
     /**
@@ -42,8 +43,8 @@ namespace sw
          */
         [[nodiscard]] bool create( IRHIDevice* pDevice, uint32 byteSize );
 
-        /** @brief 내용을 갱신합니다 (버퍼가 없으면 아무것도 하지 않습니다). */
-        void update( IRHIDevice* pDevice, const void* pData, uint32 byteSize ) const;
+        /** @brief 기록 중에 내용을 갱신합니다 — `cmd` 의 디스패치 · 드로우가 이 값을 봅니다(버퍼가 없으면 아무것도 하지 않습니다). */
+        void update( IRHICommandList& cmd, const void* pData, uint32 byteSize ) const;
 
         /** @brief 인덱스를 등록 해제하고 버퍼를 지웁니다. 여러 번 불러도 안전합니다. */
         void release( IRHIDevice* pDevice );

@@ -47,6 +47,7 @@ namespace test
         void bindComputeUav( sw::RHIDescriptorIndex, uint32 ) override {}
         void bindShaderResource( sw::RHIDescriptorIndex, uint32 ) override {}
         void bindConstantBuffer( sw::RHIDescriptorIndex, uint32 ) override {}
+        void updateConstantBuffer( sw::RHIBufferHandle, const void*, uint32 ) override {}
         void bindStructuredBuffer( sw::RHIDescriptorIndex, uint32 ) override {}
         void bindComputeConstantBuffer( sw::RHIDescriptorIndex, uint32 ) override {}
         void bindComputeShaderResource( sw::RHIDescriptorIndex, uint32 ) override {}

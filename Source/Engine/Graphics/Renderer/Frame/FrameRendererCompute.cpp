@@ -73,7 +73,7 @@ namespace sw
                 animParams._baseSpeed     = FrameRendererUtil::kGpuSpinBaseSpeed;
                 animParams._speedRange    = FrameRendererUtil::kGpuSpinSpeedRange;
                 animParams._instanceCount = instanceCount;
-                _instanceAnimCb.update( _pDevice, &animParams, sizeof( animParams ) );
+                _instanceAnimCb.update( *_pCmd, &animParams, sizeof( animParams ) );
 
                 // **쓰기 전에** UAV 상태로 옮긴다. 인스턴스 버퍼는 직전 프레임에 정점 셰이더가 읽던
                 // (그리고 방금 CPU 업로드가 쓴) 상태라, 이 전이 없이 UAV 로 쓰면 DX12 · Vulkan 에서 쓰기가
@@ -201,7 +201,7 @@ namespace sw
         morphParams._amplitude   = FrameRendererUtil::kMeshMorphAmplitude;
         morphParams._frequency   = FrameRendererUtil::kMeshMorphFrequency;
         morphParams._vertexCount = _meshMorphPool.getVertexCount();
-        _meshMorphCb.update( _pDevice, &morphParams, sizeof( morphParams ) );
+        _meshMorphCb.update( *_pCmd, &morphParams, sizeof( morphParams ) );
 
         // 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로. 정점 셰이더가 이 버퍼를 읽으므로 배리어가 빠지면
         // DX12 · Vulkan 에서 조용히 예전 값이 나온다(인스턴스 애니메이션과 같은 함정).
@@ -254,7 +254,7 @@ namespace sw
                     Memory::copy( cullParams._planes, renderView._frustum._arrPlane, sizeof( cullParams._planes ) );
                     cullParams._instanceCount = instanceCount;
                     cullParams._batchCount    = _gpuScene.getIndirectCommandCount();
-                    renderView._cullCb.update( _pDevice, &cullParams, sizeof( cullParams ) );
+                    renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
 
                     // 컬링이 쓰는 두 버퍼는 UAV 상태여야 한다. 간접 인자는 직전 프레임에 IndirectArgument 로,
                     // 가시 목록은 ShaderResource 로 두고 끝냈다.
@@ -302,7 +302,7 @@ namespace sw
                         sortParams._batchCount    = cullParams._batchCount;
                         // 값이 뷰마다 같으므로 버퍼 하나로 충분하다. 다르게 만들 일이 생기면 컬링 CB 처럼
                         // 뷰마다 하나로 나눠야 한다(하나를 나눠 쓰면 뒤 업로드가 앞 디스패치를 덮어쓴다).
-                        _instanceSortCb.update( _pDevice, &sortParams, sizeof( sortParams ) );
+                        _instanceSortCb.update( *_pCmd, &sortParams, sizeof( sortParams ) );
 
                         _pCmd->setComputePipelineState( sortPso );
                         // 바인딩 자리는 컬링과 같다. 인자 · 가시 목록을 그대로 읽고 쓴다.

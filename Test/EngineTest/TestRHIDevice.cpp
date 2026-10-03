@@ -31,13 +31,17 @@ namespace
      * @note 예전엔 이것이 `IRHIDevice::executeOffscreenPipelineSmoke` 라는 **엔진 API** 였다. 부르는
      *       곳은 이 파일뿐인데 배포 바이너리까지 따라 들어갔다. 쓰는 것은 전부 공개 RHI 인터페이스라
      *       검증 코드가 있어야 할 자리인 여기로 내렸다.
+     * @param recordCb · pRecordData · recordSize 주면 리스트를 연 뒤 드로우 전에 `IRHICommandList::updateConstantBuffer` 로 그 상수버퍼를 갱신한다.
      * @return 성공 시 true. pso==0 이면 false.
      */
     bool executeOffscreenPipelineSmoke( sw::IRHIDevice& device, sw::RHIPipelineStateHandle pso,
                                         sw::RHIDescriptorIndex materialCb = sw::kInvalidDescriptorIndex,
                                         uint32 width = 64, uint32 height = 64,
-                                        sw::vector<uint8>*     pOutPixels = nullptr,
-                                        sw::RHITextureMipSpan* pOutLayout = nullptr )
+                                        sw::vector<uint8>*     pOutPixels  = nullptr,
+                                        sw::RHITextureMipSpan* pOutLayout  = nullptr,
+                                        sw::RHIBufferHandle    recordCb    = 0,
+                                        const void*            pRecordData = nullptr,
+                                        uint32                 recordSize  = 0 )
     {
         if ( pso == 0 || width == 0 || height == 0 )
             return false;
@@ -90,6 +94,8 @@ namespace
             viewport._height = static_cast<float32>( height );
 
             cmd->beginCommandList();
+            if ( recordCb != 0 && pRecordData != nullptr )
+                cmd->updateConstantBuffer( recordCb, pRecordData, recordSize );
             cmd->setViewport( viewport );
             cmd->beginRenderPass( beginInfo );
             cmd->setPipelineState( pso );
@@ -645,6 +651,77 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
 }
 
 /**
+ * @brief [RHIDeviceTest] 기록 중에 커맨드 리스트로 갱신한 상수버퍼를 그 리스트의 드로우가 본다 — 4백엔드
+ * @details 기록 경로(패스 CB · 컴퓨트 CB)는 `IRHICommandList::updateConstantBuffer` 로 쓴다. DX11 은 리스트의 Deferred Context 에 Map 해
+ *          런타임이 리스트 단위로 버저닝하고, DX12 · Vulkan · GL 은 버퍼의 이번 프레임 칸에 쓴다. 기록 밖에서 파랑을 쓰고, 리스트를 연 뒤
+ *          빨강으로 갱신하고 그린다 — 화면이 빨강이어야 한다(파랑이면 리스트 갱신이 드로우에 닿지 않았다).
+ */
+SW_TEST_CASE( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws )
+{
+    uint32 okCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        sw::IRHIResource* pResource = device->getResource();
+        const sw::string  label     = sw::string( device->getBackendName() ) + ": ";
+
+        const float32             arrBlue[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
+        const float32             arrRed[4]  = { 1.0f, 0.0f, 0.0f, 1.0f };
+        const sw::RHIBufferHandle cb         = pResource->createConstantBuffer( sizeof( arrBlue ) );
+        SW_ASSERT_TRUE( cb != 0 );
+        pResource->updateConstantBuffer( cb, arrBlue, sizeof( arrBlue ) );
+        const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
+        SW_ASSERT_TRUE( cbIndex != sw::kInvalidDescriptorIndex );
+
+        sw::RHIPipelineStateDesc psoDesc{};
+        psoDesc._vertexShaderPath            = "engine/shaders/fullscreentriangle.hlsl";
+        psoDesc._pixelShaderPath             = "engine/shaders/fullscreentriangle.hlsl";
+        psoDesc._vertexEntryPoint            = "VSMain";
+        psoDesc._pixelEntryPoint             = "PSMain";
+        psoDesc._numRenderTargets            = 1;
+        psoDesc._arrRtvFormat[0]             = sw::RHIFormat::R8G8B8A8_UNORM;
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+        SW_EXPECT_TRUE_MSG( pso != 0, ( label + "PSO 를 만들지 못했다" ).c_str() );
+        if ( pso != 0 )
+        {
+            sw::vector<uint8>     pixels;
+            sw::RHITextureMipSpan layout{};
+            const bool            bSmoke = executeOffscreenPipelineSmoke( *device, pso, cbIndex, 64, 64, &pixels, &layout, cb, arrRed, sizeof( arrRed ) );
+            SW_EXPECT_TRUE_MSG( bSmoke, ( label + "그리거나 되읽지 못했다" ).c_str() );
+            if ( bSmoke )
+            {
+                uint32 redCount{ 0 };
+                uint32 blueCount{ 0 };
+                for ( uint32 row = 0; row < layout._height; ++row )
+                {
+                    const uint8* pRow = pixels.data() + static_cast<size_t>( row ) * layout._rowBytes;
+                    for ( uint32 col = 0; col < layout._width; ++col )
+                    {
+                        const uint8* pPixel = pRow + static_cast<size_t>( col ) * 4;
+                        if ( pPixel[0] > 200 && pPixel[2] < 80 )
+                            ++redCount;
+                        if ( pPixel[2] > 200 && pPixel[0] < 80 )
+                            ++blueCount;
+                    }
+                }
+                SW_EXPECT_TRUE_MSG( redCount > 0 && blueCount == 0,
+                                    ( label + "리스트로 갱신한 빨강이 드로우에 닿지 않았다 (빨강 " + sw::to_string( redCount ) + " · 파랑 " +
+                                      sw::to_string( blueCount ) + ")" )
+                                        .c_str() );
+            }
+            pResource->destroyPipelineState( pso );
+        }
+        pResource->unregisterBindlessResource( cbIndex );
+        pResource->destroyBuffer( cb );
+        ++okCount;
+    }
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for command list constant buffer test" );
+}
+
+/**
  * @brief [RHIDeviceTest] 한 번만 쓴 상수버퍼가 링의 **모든** 프레임 칸에서 보인다 — 4백엔드
  * @details 링 상수버퍼는 프레임 칸이 `kMaxFrameCountInFlight` 개이고 `updateConstantBuffer` 는 이번 칸에만 쓴다. 값이 바뀔 때만 쓰는
  *          머티리얼 상수버퍼는 DX12 · Vulkan 에서 나머지 칸이 0 으로 남아, 세 프레임 중 두 프레임을 검게 그렸다(DX11 · GL 은 버퍼
@@ -1171,10 +1248,9 @@ SW_TEST_CASE( RHIDeviceTest, CommandListCreationAndExecution )
 
 /**
  * @brief [RHIDeviceTest] 리스트를 연 스레드와 닫은 스레드가 달라도, 리스트가 사라진 뒤의 상수버퍼 갱신은 살아 있는 곳으로 간다 — 병렬 기록을 하는 세 백엔드
- * @details RenderGraph 의 병렬 레벨이 하는 일이다 — 렌더 스레드가 첫 패스 리스트를 열어 배리어를 적고 워커가 닫는다. DX11 은
- *          "이 스레드가 기록 중인 Deferred Context" 를 스레드 로컬로 알았는데, 닫는 스레드가 풀어도 연 스레드의 것은 남아 리스트가
- *          파괴된 뒤 죽은 컨텍스트에 Map 했다(간헐 세그폴트, 세 번 보고 잡았다 — 지금은 세대 토큰이라 닫는 순간 무효다).
- *          DX12 · Vulkan 은 갱신이 컨텍스트가 아니라 버퍼 메모리(프레임 링 슬롯)로 가고 리스트가 자기 얼로케이터 · 풀을 들므로
+ * @details RenderGraph 의 병렬 레벨이 하는 일이다 — 렌더 스레드가 첫 패스 리스트를 열어 배리어를 적고 워커가 닫는다. 기록 중의 갱신은
+ *          리스트 자신(`IRHICommandList::updateConstantBuffer`)으로 가므로 스레드에 남는 기록 상태가 없어야 한다 — 리스트가 사라진 뒤의
+ *          `IRHIResource` 갱신은 DX11 에서 즉시 컨텍스트로 간다. DX12 · Vulkan 은 갱신이 컨텍스트가 아니라 버퍼 메모리(프레임 링 슬롯)로 가고 리스트가 자기 얼로케이터 · 풀을 들므로
  *          begin 과 end 가 스레드를 넘어도 되는 구조인데, 그 전제를 여기서 같이 못박는다. GL 은 병렬 기록이 없어(리스트가 스레드를
  *          넘지 않는다) 대상이 아니다.
  */

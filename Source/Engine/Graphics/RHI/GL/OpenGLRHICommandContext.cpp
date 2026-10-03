@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #include <glad/glad.h>
@@ -537,6 +538,12 @@ namespace sw
         // 인스턴스 자리가 필요한 씬 드로우는 drawIndirect 와 인스턴스 슬롯 스트림을 쓴다.
         (void)startInstance;
         drawArrays( vertexCount, instanceCount, startVertex );
+    }
+
+    void OpenGLRHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    {
+        if ( _pDevice != nullptr )
+            _pDevice->getResource()->updateConstantBuffer( buffer, pData, size );
     }
 
     void OpenGLRHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )

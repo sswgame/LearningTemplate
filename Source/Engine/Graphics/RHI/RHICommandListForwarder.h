@@ -63,6 +63,7 @@ namespace sw
         void bindComputeUav( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindComputeUav( index, slot ); }
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindShaderResource( index, slot ); }
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override { _pContext->bindConstantBuffer( constantBufferIndex, slot ); }
+        void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override { _pContext->updateConstantBuffer( buffer, pData, size ); }
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindStructuredBuffer( index, slot ); }
         void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override { _pContext->bindComputeConstantBuffer( constantBufferIndex, slot ); }
         void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override

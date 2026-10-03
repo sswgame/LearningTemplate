@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
+#include "Engine/Graphics/RHI/IRHIResource.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -532,6 +533,12 @@ namespace sw
         commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
         bindMeshVertexBufferOrFallback();
         commandListForRecord()->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
+    }
+
+    void D3D12RHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    {
+        if ( _pDevice != nullptr )
+            _pDevice->getResource()->updateConstantBuffer( buffer, pData, size );
     }
 
     void D3D12RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )

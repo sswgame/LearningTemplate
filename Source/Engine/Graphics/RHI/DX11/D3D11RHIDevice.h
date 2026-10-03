@@ -190,43 +190,6 @@ namespace sw
         /** @brief 등록을 해제합니다. */
         void unregisterCommandList( D3D11RHICommandList* pCmdList );
 
-        /** @brief 기록 슬롯 표의 크기(동시에 살아 있는 커맨드 리스트 수의 상한)입니다. 넘치면 그 리스트의 기록 중 갱신은 즉시 컨텍스트(잠금)로 갑니다. */
-        static constexpr uint32 kMaxRecordingSlot = 64;
-        /** @brief 슬롯 없음을 뜻합니다. */
-        static constexpr uint32 kNoRecordingSlot = 0xFFFFFFFFu;
-
-        /**
-         * @brief 리스트가 태어날 때 기록 슬롯을 내줍니다. 표가 차면 `kNoRecordingSlot` 입니다.
-         * @details **리소스 갱신이 어느 스트림으로 나갈지 정하는 장치입니다.** `IRHIResource` 는 커맨드 스트림을 모르는 디바이스 레벨
-         *          인터페이스라 `updateConstantBuffer` 가 쓸 수 있는 컨텍스트는 원래 즉시 컨텍스트 하나뿐이었습니다. 그런데 그 함수는
-         *          드로우마다 불리므로 레벨을 병렬로 기록하면 워커 여럿이 같은 즉시 컨텍스트를 동시에 Map 합니다
-         *          (`ID3D11DeviceContext` 는 스레드 안전하지 않습니다). 인터페이스에 리스트를 끼우면 RHI 모듈 ABI 가 바뀌므로 백엔드
-         *          안에서 풉니다: `Map(WRITE_DISCARD)` 를 Deferred Context 에 하면 D3D11 런타임이 리스트 단위로 버퍼를 버저닝하므로
-         *          그 리스트의 드로우가 **기록 시점의 값**을 봅니다.
-         *
-         *          예전에는 스레드 로컬이 **컨텍스트 포인터**를 그대로 들었습니다. 리스트를 연 스레드와 닫은 스레드가 다르면(RenderGraph
-         *          병렬 레벨의 첫 리스트: 렌더 스레드가 열어 배리어를 적고 워커가 닫습니다) 연 쪽의 포인터가 리스트보다 오래 살아,
-         *          그 리스트가 파괴된 뒤 죽은 컨텍스트에 Map 했습니다(세 번 본 간헐 세그폴트, 2026-09-23). 풀어 주는 자리를 늘리는 것은
-         *          "빠뜨리지 않는다" 에 기대는 고침이라 구조를 바꿨습니다. **스레드 로컬은 (디바이스 일련번호 · 슬롯 · 기록 세대) 토큰만
-         *          들고, 컨텍스트는 디바이스가 소유한 이 슬롯 표에서 세대가 맞을 때만 나옵니다.** 닫거나 놓으면 세대가 바뀌므로 어느
-         *          스레드의 토큰이든 저절로 무효이고, 표는 디바이스와 수명이 같아 죽은 메모리를 가리킬 길이 없습니다.
-         */
-        uint32 acquireRecordingSlot( ID3D11DeviceContext* pContext );
-        /** @brief 슬롯을 반납합니다. 세대를 올려 남은 토큰을 모두 무효로 만듭니다. 잠그지 않습니다(디바이스 종료의 detach 안에서도 불립니다). */
-        void releaseRecordingSlot( uint32 slot );
-        /** @brief 기록을 시작합니다(`beginCommandList`). 새 세대(홀수)를 열고 이 스레드에 토큰을 묶습니다. */
-        void beginRecording( uint32 slot );
-        /** @brief 기록을 끝냅니다(`endCommandList`). 세대를 짝수로 올립니다. 어느 스레드가 들고 있든 그 토큰은 이제 아무것도 가리키지 않습니다. */
-        void endRecording( uint32 slot );
-        /**
-         * @brief 이 스레드가 이 Deferred Context 로 기록한다고 알립니다. 리스트를 **다른 스레드가 열었을 때** 기록하는 쪽이 패스 시작에서 부릅니다.
-         * @details 기록 중(세대 홀수)인 슬롯의 컨텍스트가 아니면 아무것도 하지 않습니다. 즉시 컨텍스트는 슬롯이 없으므로 묶이지 않습니다.
-         *          그쪽은 `_immediateContextMutex` 로 지키는 공유 자원입니다.
-         */
-        void bindRecordingThread( ID3D11DeviceContext* pContext );
-        /** @brief 이 스레드의 토큰이 **이 디바이스의, 지금 기록 중인** 리스트를 가리키면 그 Deferred Context 를, 아니면 nullptr 을 반환합니다. */
-        ID3D11DeviceContext* resolveRecordingContext() const;
-
     private:
         /** @brief 쿼리 묶음을 한 번만 만듭니다. 만들지 못하면 이 백엔드는 타임스탬프를 보고하지 않습니다. */
         void ensureTimestampResources();
@@ -344,12 +307,10 @@ namespace sw
 
         /// @brief **즉시 컨텍스트(`_deviceContext`)를 만지는 모든 코드가 잡아야 하는 자물쇠입니다.**
         /// @details `ID3D11DeviceContext` 는 스레드 안전하지 않습니다. 안전한 것은 `ID3D11Device` 뿐입니다.
-        ///          기록은 리스트마다 Deferred Context 라 안전하지만, **리소스 갱신은 즉시 컨텍스트로
-        ///          나갑니다**(`updateConstantBuffer` 의 `Map(WRITE_DISCARD)` 등). 그 경로는 드로우마다
-        ///          불리므로 레벨을 병렬로 기록하면 워커 여럿이 같은 즉시 컨텍스트를 동시에 Map 합니다.
-        ///          실제로 그 레이스가 `RenderPassGpuTest.AmbientOcclusionReachesBloom` 을 세 번에 두 번
-        ///          꼴로 깨뜨렸습니다. 크래시이거나, 패스 CB 가 옆 패스 값으로 덮여 Bloom 이 AO 대신 HDR
-        ///          컬러를 샘플링해 화면이 하얗게 탔습니다. 둘 다 같은 원인입니다.
+        ///          기록은 리스트마다 Deferred Context 라 안전하지만, `IRHIResource` 의 갱신(`updateConstantBuffer` 의
+        ///          `Map(WRITE_DISCARD)` 등)과 프레임 스트림 컨텍스트는 즉시 컨텍스트로 나가므로 여기서 잠급니다. 기록 중의
+        ///          상수버퍼 갱신은 `IRHICommandList::updateConstantBuffer` 로 리스트의 Deferred Context 에 갑니다 — 드로우마다
+        ///          불리는 그 경로가 즉시 컨텍스트로 오면 병렬 기록의 워커들이 한 버퍼를 덮어 패스 CB 가 옆 패스 값으로 바뀝니다.
         mutable mutex _immediateContextMutex;
 
         /**
@@ -409,18 +370,6 @@ namespace sw
 
         sw::unique_ptr<D3D11RHICommandContext> _frameStreamContext;
         sw::unique_ptr<D3D11RHIResource>       _resourceImpl;
-
-        /**
-         * @struct D3D11RecordingSlot
-         * @brief 리스트 하나의 기록 슬롯입니다. 세대(홀수 = 기록 중)와 그 리스트의 Deferred Context 를 듭니다. 디바이스가 소유하므로 리스트가 죽어도 남습니다.
-         */
-        struct D3D11RecordingSlot
-        {
-            atomic<uint64>               _generation; ///< 0 = 한 번도 안 쓴 슬롯. begin 이 홀수로, end · 반납이 짝수로 올린다
-            atomic<ID3D11DeviceContext*> _pContext;   ///< 내줄 때 적고 돌려받을 때 비운다(소유하지 않는다). nullptr 이면 빈 슬롯
-        };
-        D3D11RecordingSlot _arrRecordingSlot[kMaxRecordingSlot];
-        uint64             _serial; ///< 디바이스마다 유일. 죽은 디바이스의 토큰이 새 디바이스에 맞아떨어지지 않게
     };
 } // namespace sw
 

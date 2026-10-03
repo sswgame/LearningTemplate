@@ -57,16 +57,8 @@ namespace sw
         _pContext->CopyResource( dstTex.Get(), pSrcRecord->_texture.Get() );
     }
 
-    void D3D11RHICommandContext::ensureRecordingBinding()
-    {
-        if ( _pContext == nullptr || _pDevice == nullptr )
-            return;
-        _pDevice->bindRecordingThread( _pContext );
-    }
-
     void D3D11RHICommandContext::setPipelineState( RHIPipelineStateHandle pso )
     {
-        ensureRecordingBinding();
         const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || _pContext == nullptr )
             return;
@@ -93,13 +85,11 @@ namespace sw
 
     void D3D11RHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )
     {
-        ensureRecordingBinding();
         setPipelineState( pso );
     }
 
     void D3D11RHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
     {
-        ensureRecordingBinding();
         if ( _pContext == nullptr )
             return;
 
@@ -353,6 +343,25 @@ namespace sw
         _pContext->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
     }
 
+    void D3D11RHICommandContext::updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size )
+    {
+        if ( _pContext == nullptr || _pDevice == nullptr || buffer == 0 || pData == nullptr )
+            return;
+        ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
+        if ( pResource == nullptr )
+            return;
+        // 리스트의 Deferred Context 는 이 리스트만 쓰므로 잠그지 않는다. 즉시 컨텍스트는 다른 스레드의 갱신과 공유하므로 잠근다.
+        std::unique_lock<mutex> lock{ _pDevice->_immediateContextMutex, std::defer_lock };
+        if ( _pContext == _pDevice->_deviceContext.Get() )
+            lock.lock();
+        D3D11_MAPPED_SUBRESOURCE mapped{};
+        if ( SUCCEEDED( _pContext->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
+        {
+            Memory::copy( mapped.pData, pData, size );
+            _pContext->Unmap( pResource, 0 );
+        }
+    }
+
     void D3D11RHICommandContext::bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )
     {
         if ( _pContext == nullptr || constantBufferIndex == kInvalidDescriptorIndex ||
@@ -419,7 +428,6 @@ namespace sw
 
     void D3D11RHICommandContext::dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ )
     {
-        ensureRecordingBinding();
         if ( _pContext != nullptr )
             _pContext->Dispatch( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
     }
@@ -534,7 +542,6 @@ namespace sw
 
     void D3D11RHICommandContext::dispatchIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset )
     {
-        ensureRecordingBinding();
         if ( _pContext != nullptr && argumentBuffer != 0 )
         {
             ID3D11Buffer* pBuf = _pDevice->resolveBuffer( argumentBuffer );

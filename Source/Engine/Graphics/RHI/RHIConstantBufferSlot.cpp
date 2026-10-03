@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/RHIConstantBufferSlot.h"
 
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 namespace sw
@@ -20,11 +21,11 @@ namespace sw
         return isValid();
     }
 
-    void RHIConstantBufferSlot::update( IRHIDevice* pDevice, const void* pData, uint32 byteSize ) const
+    void RHIConstantBufferSlot::update( IRHICommandList& cmd, const void* pData, uint32 byteSize ) const
     {
-        if ( pDevice == nullptr || pDevice->getResource() == nullptr || _buffer == 0 || pData == nullptr || byteSize == 0 )
+        if ( _buffer == 0 || pData == nullptr || byteSize == 0 )
             return;
-        pDevice->getResource()->updateConstantBuffer( _buffer, pData, byteSize );
+        cmd.updateConstantBuffer( _buffer, pData, byteSize );
     }
 
     void RHIConstantBufferSlot::release( IRHIDevice* pDevice )

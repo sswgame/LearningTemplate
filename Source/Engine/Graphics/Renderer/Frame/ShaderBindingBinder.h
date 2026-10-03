@@ -42,7 +42,7 @@ namespace sw
          * @param pMaterialTexSrv 머티리얼 텍스처 SRV 배열(shaderslot::kMaterialTextureCount 개, 서수 순).
          *        bNativeBindless 가 false 일 때만 쓰이며 t5..t8 에 바인딩됩니다. 없으면 nullptr.
          */
-        static void bindGraphics( IRHIDevice& device, IRHICommandList& cmd,
+        static void bindGraphics( IRHICommandList&                cmd,
                                   const ShaderBindingLayout&      layout,
                                   const FrameResourceRegistry&    registry,
                                   const PassConstantValues&       values,

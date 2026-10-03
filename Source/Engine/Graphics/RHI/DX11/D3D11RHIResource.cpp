@@ -54,25 +54,10 @@ namespace sw
         ID3D11Buffer* pResource = _pDevice->resolveBuffer( buffer );
         if ( pResource == nullptr )
             return;
-        // **이 경로는 드로우마다 불린다.** 기록 중인 스레드는 **자기 Deferred Context** 에 쓴다.
-        // D3D11 런타임이 커맨드 리스트 단위로 이 버퍼를 버저닝하므로 그 리스트의 드로우가 기록
-        // 시점의 값을 보고, 컨텍스트가 스레드마다 따로라 락도 필요 없다. 그것이 D3D11 이 문서화한
-        // 동적 버퍼 갱신 방식이다(`D3D11RHIDevice::acquireRecordingSlot` 주석). 토큰이 살아 있는 세대를 가리킬 때만 나온다.
-        // 리스트가 닫혔거나 죽었으면 nullptr 이라 즉시 컨텍스트로 간다.
-        ID3D11DeviceContext*     pRecording = _pDevice->resolveRecordingContext();
+        // 기록 밖(에셋 · 머티리얼 파라미터)의 갱신이다 — 즉시 컨텍스트에 쓴다. 즉시 컨텍스트는 스레드 안전하지 않으므로 잠근다.
+        // 기록 중의 갱신은 리스트의 Deferred Context 로 가는 `IRHICommandList::updateConstantBuffer` 다.
         D3D11_MAPPED_SUBRESOURCE mapped{};
-        if ( pRecording != nullptr )
-        {
-            if ( SUCCEEDED( pRecording->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
-            {
-                Memory::copy( mapped.pData, pData, size );
-                pRecording->Unmap( pResource, 0 );
-            }
-            return;
-        }
-
-        // 기록 중이 아니다(프레임 시드·셋업). 즉시 컨텍스트는 스레드 안전하지 않으므로 잠근다.
-        std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
+        std::scoped_lock<mutex>  lock{ _pDevice->_immediateContextMutex };
         if ( SUCCEEDED( _pDevice->_deviceContext->Map( pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped ) ) )
         {
             Memory::copy( mapped.pData, pData, size );

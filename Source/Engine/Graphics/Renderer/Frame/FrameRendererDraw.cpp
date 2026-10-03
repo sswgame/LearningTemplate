@@ -175,7 +175,7 @@ namespace sw
         const bool   bUpToDate       = ( ctx._lastBindPso == pso ) && ( ctx._lastCbBuffer == engineCb._buffer ) &&
                                ( ctx._lastCbValuesVersion == valuesVersion ) && ( ctx._lastCbRegistryVersion == registryVersion );
 
-        ShaderBindingBinder::bindGraphics( *_pDevice, *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
+        ShaderBindingBinder::bindGraphics( *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
                                            engineCb, materialCb, _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv, bUpToDate );
 
         ctx._lastBindPso           = pso;
