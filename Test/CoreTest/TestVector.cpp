@@ -392,6 +392,9 @@ SW_TEST_CASE( VectorTest, InsertMoveAcceptsAnElementOfItself )
  */
 SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
 {
+#if defined( SW_ENABLE_STL_CONTAINER )
+    SW_TEST_SKIP( "the empty pop_back guard belongs to the custom vector; std::vector treats it as undefined behaviour" );
+#else
     // Debug 에서는 `SW_ASSERT( _size > 0 )` 가 먼저 울린다 — 단언 가로채기 안에서 불러 그 뒤의 가드까지 지나가게 한다.
     test::ScopedAssertCapture assertCapture;
     sw::vector<sw::string>    list;
@@ -404,6 +407,7 @@ SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
     SW_EXPECT_EQUAL( size_t( 0 ), list.size() );
     if ( test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 2u, assertCapture.getCount() );
+#endif
 }
 
 /**

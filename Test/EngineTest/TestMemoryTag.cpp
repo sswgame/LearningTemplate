@@ -128,6 +128,9 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
  */
 SW_TEST_CASE( MemoryTagTest, PrimitiveMeshIsTaggedMesh )
 {
+#if defined( SW_ENABLE_STL_CONTAINER )
+    SW_TEST_SKIP( "mesh vertex and index storage uses std::allocator in the STL container build, which the memory profiler does not see" );
+#else
     if constexpr ( sw::kMemoryTagScopesEnabled == false )
         SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
     const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
@@ -145,6 +148,7 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveMeshIsTaggedMesh )
     // 정점 · 인덱스는 돌려준다. 렌더 자원 등록부처럼 한 번 자란 표는 남을 수 있어 "거의 다" 로 본다.
     const uint64 meshAfter = getLiveBytes( *pProfiler, sw::MemoryTag::Mesh );
     SW_EXPECT_TRUE( meshAfter < meshBefore + ( meshHeld - meshBefore ) / 4 );
+#endif
 }
 
 /**

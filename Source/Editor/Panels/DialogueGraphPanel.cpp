@@ -668,7 +668,7 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::Button( "X" ) )
             {
-                node._listChoice.erase( node._listChoice.begin() + choiceIndex );
+                node._listChoice.erase( node._listChoice.begin() + static_cast<std::ptrdiff_t>( choiceIndex ) );
                 notifyDocumentEdited( "Edit Dialogue Node" );
                 ImGui::PopID();
                 break;
