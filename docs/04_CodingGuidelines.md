@@ -121,6 +121,24 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - 범위(Range) 비교 시 변수를 안쪽(중간)에 위치하도록 작성하여 수학적 범위 표기법($min \le value \ \&\&\ value \le max$)을 따릅니다 (`kMin <= value && value <= kMax`).
 - 비트 패딩(Byte Padding) 낭비가 발생하지 않도록 변수 선언 순서를 최적화하세요.
 
+### 플랫폼 · 아키텍처 · 컴파일러는 SW_ 매크로로 묻기
+- 플랫폼 · 아키텍처 · 컴파일러는 CMake 가 판정해 정의하는 매크로로만 묻습니다. 컴파일러 내장 매크로(`_WIN32` · `__linux__` · `_MSC_VER` ·
+  `__clang__` · `__GNUC__` · `_M_X64` · `__x86_64__` · `__aarch64__` …)를 직접 읽지 않습니다 — 언리얼의 `PLATFORM_COMPILER_CLANG` ·
+  `PLATFORM_CPU_X86_FAMILY` 와 같은 방식입니다.
+
+  | 묻는 것 | 매크로 | 정의하는 곳 |
+  | :--- | :--- | :--- |
+  | 플랫폼 | `SW_PLATFORM_WINDOWS` · `SW_PLATFORM_LINUX` · `SW_PLATFORM_MACOS` | `cmake/Modules/Platform/` |
+  | 아키텍처 | `SW_X64` · `SW_ARM64` | `cmake/Modules/Architecture/` (컴파일러가 겨냥하는 아키텍처로 판정) |
+  | 컴파일러 | `SW_COMPILER_CLANG`(clang-cl 포함) · `SW_COMPILER_MSVC`(cl.exe) · `SW_COMPILER_GCC` | `cmake/Modules/Compiler/` |
+
+- clang-cl 은 `__clang__` 과 `_MSC_VER` 를 둘 다 정의합니다. 그래서 "MSVC 확장(`__forceinline` · `__declspec` · MS intrinsic ·
+  `__FUNCSIG__`)을 쓸 수 있는가" 는 `SW_COMPILER_MSVC` 가 아니라 `SW_PLATFORM_WINDOWS` 로 묻습니다. Windows 는 MS ABI 툴체인
+  (cl · clang-cl)으로만 짓습니다. "Clang 또는 GCC 의 `__builtin_*`" 는 `SW_COMPILER_CLANG || SW_COMPILER_GCC` 입니다.
+- 엔진은 64 비트(x64 · arm64)만 짓습니다. 32 비트 갈래(`_M_IX86` · `__i386__` · `__arm__`)는 두지 않습니다.
+- 내장 매크로를 읽는 곳은 `Source/Core/Common/TargetMacroCheck.h` 하나뿐입니다. CMake 판정이 실제 컴파일러와 어긋나거나 매크로가
+  빠지면 그 헤더의 `#error` 로 빌드가 섭니다. `CheckTargetMacros.py` 가 Source · Test · Tools/ReflectionParser 에서 검사합니다.
+
 ### 이미 잡아 둔 메모리에 객체 만들기
 - placement new 는 `sw_placement_new( pMemory ) T( ... )` 로 씁니다(`Core/Memory/Memory.h`). 맨 `new ( pMemory ) T( ... )` 는 쓰지 않습니다.
 - 매크로는 주소를 `void*` 로 바꾸는 캐스트를 드러냅니다. T 가 포인터 타입이면(`vector<char*>` 등) `char**` → `void*` 같은 변환이 조용히 일어나기 때문입니다. 또 표기가 하나뿐이어야 매크로 한 곳만 고쳐도 전체에 반영됩니다.
