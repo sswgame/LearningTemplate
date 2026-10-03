@@ -48,7 +48,7 @@ SW_TEST_CASE( ReflectionBindingTest, BiDirectionalPropertyBinding )
  */
 SW_TEST_CASE( ReflectionFunctionMacroTest, AnnotatedMethodInvoke )
 {
-    // 수동 연결 invoker (레거시 경로도 여전히 지원).
+    // 수동 연결 invoker 경로.
     REFLECT()
     struct FunctionAnnotatedActor
     {
@@ -319,12 +319,12 @@ SW_TEST_CASE( ReflectionGenericQueryTest, FindTypeAndIsA )
  *        검증합니다. IPlainMixinTestActor(REFLECT() 없는 순수 인터페이스)는 두 번째 베이스로 조용히
  *        무시되고, EmptyReflectedBaseTestActor(REFLECT() 있음, 첫 번째 베이스)가 부모로 채택되어야
  *        합니다. GameFramework::TurnBattleSaveGame : public SaveGame, public IFlagStore 실사례의
- *        축소판이며, ReflectionParser/AstVisitor.cpp 의 baseClassVisitor 회귀 테스트입니다.
+ *        축소판이며, ReflectionParser/AstVisitor.cpp 의 `collectBase`(첫 번째 베이스를 부모로)를 지키는 테스트입니다.
  * @note 프로퍼티 오프셋은 파생 클래스 자신에게 직접 선언된 것만 안전합니다(offsetof가 그 파생
  *       클래스 자체의 실제 레이아웃으로 계산되므로). 그래서 리플렉션 부모(EmptyReflectedBaseTestActor)
  *       는 실제 SaveGame처럼 프로퍼티가 없고, _ownValue 는 파생 클래스 자신에 선언되어 있습니다 —
  *       서로 다른 다형성을 가진 베이스를 섞으면 상속받은(파생 클래스에 없는) 프로퍼티의 오프셋이
- *       ABI상 안전하지 않을 수 있으므로, 리플렉션 프로퍼티 병합은 여전히 단일 상속에서만 신뢰할 수
+ *       ABI상 안전하지 않을 수 있으므로, 리플렉션 프로퍼티 병합은 단일 상속에서만 신뢰할 수
  *       있습니다(getPropertiesWithBase() 문서 참고).
  */
 SW_TEST_CASE( ReflectionGenericQueryTest, MultiInheritanceSafeOrderParentAndProperties )
@@ -468,8 +468,8 @@ SW_TEST_CASE( ReflectAnyTest, ReflectAnyDirectMakeAndExtract )
 
 /**
  * @brief [ReflectionTest] 옛 이름(`REFLECT( Alias = … )`)으로도 컴포넌트를 붙일 수 있다 — 이름을 바꾼 컴포넌트가 옛 씬에서 빠지지 않는다
- * @details 팩토리는 지금 이름으로만 등록되고 `addComponentByName` 은 별칭을 보지 않았다. 씬 · 프리팹을 읽을 때 옛 이름의 컴포넌트는 로그도
- *          없이 빠졌고, 다시 저장하면 그 데이터가 지워졌다.
+ * @details 팩토리는 지금 이름으로만 등록된다. `addComponentByName` 이 별칭을 보지 않으면 씬 · 프리팹을 읽을 때 옛 이름의 컴포넌트가 로그도
+ *          없이 빠지고, 다시 저장하면 그 데이터가 지워진다.
  */
 SW_TEST_CASE( ReflectionTest, ComponentLoadsByItsOldName )
 {
@@ -485,7 +485,7 @@ SW_TEST_CASE( ReflectionTest, ComponentLoadsByItsOldName )
 
 /**
  * @brief [ReflectionTest] 별칭(`using`)으로 적은 컨테이너 프로퍼티도 컨테이너다 — 직렬화가 그 값을 쓰고 읽는다, 스칼라 별칭은 그대로
- * @details 파서가 적힌 이름만 봐서 `using ScoreList = sw::vector<int32>;` 로 적은 프로퍼티를 모르는 타입 이름으로 남겼다 — 직렬화가 그 값을 쓰지 못했다.
+ * @details 파서가 적힌 이름만 보면 `using ScoreList = sw::vector<int32>;` 로 적은 프로퍼티를 모르는 타입 이름으로 남겨, 직렬화가 그 값을 쓰지 못한다.
  */
 SW_TEST_CASE( ReflectionTest, AliasedContainerPropertyIsAContainer )
 {

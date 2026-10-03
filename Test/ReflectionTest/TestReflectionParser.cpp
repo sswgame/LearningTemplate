@@ -26,16 +26,13 @@ namespace
 {
     /**
      * @brief 이 빌드의 `ReflectionParser` 실행 파일 경로. 못 찾으면 빈 문자열.
-     * @details **`Bin` 옆이 아니라 `BuildTools` 에 있다.** 그것을 모르고 `Bin` 만 보던 검사는
-     *          늘 스스로 건너뛰었고(백로그에 "스킵 1건" 으로 적혀 있었다), 그래서 파서를 부르는
-     *          유일한 테스트가 한 번도 돈 적이 없었다. 두 자리를 다 본다.
+     * @details **`Bin` 옆이 아니라 `BuildTools` 에 있다.** `Bin` 만 보면 검사가 늘 스스로 건너뛰어
+     *          파서를 부르는 케이스가 돌지 않는다. 두 자리를 다 본다.
      *
      *          **찾는 순서는 `BuildTools` 가 먼저다.** 지금 빌드가 파서를 놓는 곳이 거기이기
-     *          때문이다. 예전 배치에서는 `Bin` 에도 놓았는데, 그때 만들어진 실행 파일이 빌드
-     *          디렉터리에 그대로 남아 있으면(정리되지 않는다) `Bin` 을 먼저 보는 순서에서는
-     *          **몇 주 전 파서로 검사를 돌게 된다** — 실제로 ASAN 빌드에서 3주 묵은 바이너리가
-     *          집혀 새 검사가 이유 없이 졌다. 초록이든 빨강이든 그 결과는 지금 코드에 대한
-     *          답이 아니다.
+     *          때문이다. 빌드 디렉터리의 `Bin` 에 낡은 파서 실행 파일이 남아 있으면(정리되지 않는다)
+     *          `Bin` 을 먼저 보는 순서에서는 **낡은 파서로 검사를 돌게 된다** — 초록이든 빨강이든
+     *          그 결과는 지금 코드에 대한 답이 아니다.
      */
     sw::string findReflectionParserExecutable()
     {
@@ -59,7 +56,7 @@ namespace
 
     /**
      * @brief 헤더 하나를 파서에 넣는 명령줄입니다. 파서를 프로세스로 부르는 케이스들이 같은 인자 한 벌을 씁니다.
-     * @details 예전에는 케이스마다 이 여덟 줄을 따로 적었습니다 — 파서에 인자가 하나 늘면 네 곳을 고쳐야 했습니다.
+     * @details 파서에 인자가 하나 늘면 여기 한 곳만 고칩니다.
      */
     sw::string makeParserCommand( const sw::string& parserExe, const sw::string& headerPath, const sw::string& outGenDir,
                                   const sw::string& projectRoot )
@@ -90,11 +87,10 @@ namespace
 
     /**
      * @brief 임시 헤더들을 **한 번의 파서 실행**에 넣고 종료 코드 · 로그 · 산출물을 돌려줍니다.
-     * @details 진단 메시지를 보는 케이스들이 헤더 쓰기 · 명령줄 · 출력 수집 · 정리 스무 줄을 각자 들고 있었습니다. 헤더가 둘
-     *          이상이면 파서는 그것들을 한 번역 단위로 묶습니다. `ResourceUtil::initialize()` 를 먼저 불러 두어야 합니다.
+     * @details 헤더가 둘 이상이면 파서는 그것들을 한 번역 단위로 묶습니다. `ResourceUtil::initialize()` 를 먼저 불러 두어야 합니다.
      *          실행마다 **새 폴더**(이 케이스의 임시 경로 아래)를 쓰므로 앞 실행의 산출물이 "이미 최신" 으로 읽히지 않고,
-     *          케이스가 끝나면 프레임워크가 통째로 지웁니다. 예전에는 실행 파일 폴더(`Bin`)에 헤더와 `temp_gen_diagnostics`
-     *          를 두고 손으로 지웠습니다 — 같은 `Bin` 을 쓰는 두 프로세스가 서로의 산출물을 밟을 수 있었습니다.
+     *          케이스가 끝나면 프레임워크가 통째로 지웁니다. 실행 파일 폴더(`Bin`)에 두면 같은 `Bin` 을 쓰는 두 프로세스가
+     *          서로의 산출물을 밟습니다.
      */
     [[maybe_unused]] ParserRunResult runParserOnTempHeaders( const sw::string& parserExe, const sw::vector<TempHeader>& listHeader,
                                                              const sw::string& extraArguments = {} )
@@ -277,11 +273,9 @@ SW_TEST_CASE( ReflectionParserTest, AnnotationKindParsing )
 
 /**
  * @brief [ReflectionParserTest] 플래그를 `X = true` 로 적어도 단독 토큰과 같게 붙는다
- * @details AnnotationMeta.txt 는 단독 토큰(flag)과 `key=value`(bool)를 **따로** 적었고 그 둘이
- *          어긋나 있었다 — 플래그 열셋 중 여섯(Abstract·Static·AssetPath·Polymorphic·Reliable·
- *          Validate)에 bool 줄이 없어 `PROPERTY( Polymorphic = true )` 가 경고 한 줄 없이 버려졌다.
- *          어느 쪽이 빠졌는지는 애노테이션을 적는 자리에서 보이지 않는다. 이제 flag 한 줄이 두
- *          형태를 함께 등록한다.
+ * @details AnnotationMeta.txt 의 flag 한 줄이 두 형태를 함께 등록한다. 단독 토큰(flag)과 `key=value`(bool)를
+ *          **따로** 적으면 둘이 어긋나 `PROPERTY( Polymorphic = true )` 같은 것이 경고 한 줄 없이 버려지고,
+ *          어느 쪽이 빠졌는지는 애노테이션을 적는 자리에서 보이지 않는다.
  */
 SW_TEST_CASE( ReflectionParserTest, AssignedFlagFormMatchesBareToken )
 {
@@ -490,10 +484,9 @@ SW_TEST_CASE( ReflectionParserTest, MultiBitBitfieldCompilationErrorDiagnosis )
 
 /**
  * @brief [ReflectionParserTest] AnnotationMeta.txt 에 없는 토큰은 조용히 버리지 않고 빌드를 세운다
- * @details 예전에는 모르는 토큰을 아무 말 없이 버렸다. 조명 컴포넌트 셋이 `PROPERTY( …, Color, … )` 로 색 선택기를
- *          요청하고 있었는데 그 토큰은 한 번도 생성 코드에 닿지 않았다(올바른 철자는 `Meta = "Color"` 다). 멤버 이름에
- *          color 가 들어 있어 인스펙터의 이름 휴리스틱이 증상을 가리고 있었다. 오타 하나가 기능 하나를 소리 없이 끄는
- *          구조라, 이제는 어느 타입 · 멤버의 어느 토큰인지 적고 멈춘다.
+ * @details 모르는 토큰을 아무 말 없이 버리면 오타 하나가 기능 하나를 소리 없이 끈다 — 예컨대 `PROPERTY( …, Color, … )` 는
+ *          색 선택기를 요청한 것처럼 보이지만 올바른 철자는 `Meta = "Color"` 이고, 멤버 이름에 color 가 들어 있으면 인스펙터의
+ *          이름 휴리스틱이 증상을 가린다. 그래서 어느 타입 · 멤버의 어느 토큰인지 적고 멈춘다.
  */
 SW_TEST_CASE( ReflectionParserTest, UnknownAnnotationTokenStopsTheBuild )
 {
@@ -663,8 +656,8 @@ SW_TEST_CASE( ReflectionParserTest, ParserDefinesTargetMacros )
 
 /**
  * @brief [ReflectionParserTest] 값 참조를 돌려주는 메서드의 PROPERTY 는 오프셋 대신 값 접근자를 낸다
- * @details 씬 컴포넌트의 로컬 TRS 가 트랜스폼 저장소로 옮겨 가며 생긴 모양이다. 값은 객체 밖에 있고 이름(`Name`)은 옛 필드 이름을
- *          이어 쓴다. 모양이 틀리면(값으로 돌려준다 — 쓸 자리가 없다) 조용히 넘기지 않고 멈춘다.
+ * @details 씬 컴포넌트의 로컬 TRS 처럼 값이 객체 밖(트랜스폼 저장소)에 있고 저장 이름은 `Name` 으로 정하는 모양이다.
+ *          모양이 틀리면(값으로 돌려준다 — 쓸 자리가 없다) 조용히 넘기지 않고 멈춘다.
  */
 SW_TEST_CASE( ReflectionParserTest, AccessorPropertyEmitsValueAccessor )
 {
@@ -721,8 +714,8 @@ SW_TEST_CASE( ReflectionParserTest, AccessorPropertyEmitsValueAccessor )
 
 /**
  * @brief [ReflectionParserTest] 추상 컴포넌트는 컴포넌트 팩토리를 내지 않고, 그 파생은 낸다
- * @details 팩토리는 `addComponent<T>()` 로 T 를 만든다. 예전에는 컴포넌트에서 파생했으면 무조건 냈기 때문에, 공통 기반 컴포넌트
- *          (`REFLECT( Abstract )` · 보호된 생성자)를 두면 생성된 코드가 컴파일되지 않았다. `LightComponent` 가 첫 예다.
+ * @details 팩토리는 `addComponent<T>()` 로 T 를 만든다. 컴포넌트에서 파생했다고 무조건 내면 공통 기반 컴포넌트
+ *          (`REFLECT( Abstract )` · 보호된 생성자, 예: `LightComponent`)를 둘 때 생성된 코드가 컴파일되지 않는다.
  */
 SW_TEST_CASE( ReflectionParserTest, AbstractComponentGetsNoFactory )
 {
@@ -765,9 +758,9 @@ SW_TEST_CASE( ReflectionParserTest, AbstractComponentGetsNoFactory )
 
 /**
  * @brief [ReflectionParserTest] REFLECT() 없는 타입의 REFLECT_BODY() 는 빌드를 세운다
- * @details 이 검사는 처음부터 있었지만 **한 번도 돈 적이 없었다.** `REFLECT_BODY()` 가 만드는 마커 함수는 매크로
- *          전개 위치에 있고, 파서는 "주 파일에 있나" 를 `clang_Location_isFromMainFile` 로 물었는데 그 함수는 매크로
- *          위치를 늘 "아니다" 로 답한다 — 마커가 검사에 닿지 않았다. 지금은 선언을 매크로를 **쓴** 자리의 파일로 센다.
+ * @details `REFLECT_BODY()` 가 만드는 마커 함수는 매크로 전개 위치에 있다. "주 파일에 있나" 를 `clang_Location_isFromMainFile`
+ *          로 물으면 그 함수는 매크로 위치를 늘 "아니다" 로 답해 마커가 검사에 닿지 않는다. 그래서 선언을 매크로를 **쓴** 자리의
+ *          파일로 센다.
  */
 SW_TEST_CASE( ReflectionParserTest, ReflectBodyWithoutReflectStopsTheBuild )
 {
@@ -799,8 +792,8 @@ SW_TEST_CASE( ReflectionParserTest, ReflectBodyWithoutReflectStopsTheBuild )
 /**
  * @brief [ReflectionParserTest] 헤더 여럿을 한 번역 단위로 묶어도, 깨진 헤더 하나가 나머지를 막지 않는다
  * @details 파서는 파싱할 헤더가 둘 이상이면 한 TU 로 묶는다 — 공통 include(CoreMinimal · Windows · D3D)가 비용의 거의 전부라,
- *          헤더마다 TU 를 따로 만들면 같은 것을 헤더 수만큼 다시 파싱한다(Engine 27 개: 3.37 → 1.04 초, CPU 39 → 1 초).
- *          묶으면 새 실패 경로가 둘 생긴다. (1) 한 헤더의 애노테이션 오류 — 예전 순회는 오류에서 멈췄으므로 그대로 두면 다른 헤더의
+ *          헤더마다 TU 를 따로 만들면 같은 것을 헤더 수만큼 다시 파싱한다.
+ *          묶으면 새 실패 경로가 둘 생긴다. (1) 한 헤더의 애노테이션 오류 — 순회가 오류에서 멈추면 다른 헤더의
  *          수집까지 끊긴다 → 오류는 헤더 단위로 남기고 계속 돈다. (2) 한 헤더의 C++ 오류 — 묶음 전체가 파싱되지 않는다 →
  *          헤더마다 다시 파싱해 그 헤더의 오류로 알린다. 두 경우 모두 성한 헤더의 산출물은 만들어져야 한다.
  */
@@ -838,11 +831,10 @@ SW_TEST_CASE( ReflectionParserTest, OneBrokenHeaderDoesNotBlockTheOthers )
 
 /**
  * @brief [ReflectionParserTest] 파서 자신이 새로워지면 산출물을 다시 만든다
- * @details **도구도 입력이다.** 예전에는 입력 헤더·템플릿(.tpl)·builtins 의 시간만 보고, 정작 그것을
- *          조립하는 실행 파일은 보지 않았다 — `CodeGenerator` 나 `AstVisitor` 를 고쳐 다시 빌드해도
- *          산출물이 예전 모양 그대로 남았다(CMake 는 exe 를 DEPENDS 에 걸어 파서를 다시 부르지만,
- *          파서가 스스로 "최신" 이라며 건너뛰었다). 그 상태에서 일부 파일만 다른 이유로 다시
- *          만들어지면 **두 모양이 섞인다.**
+ * @details **도구도 입력이다.** 입력 헤더·템플릿(.tpl)·builtins 의 시간만 보고 그것을 조립하는 실행 파일을
+ *          보지 않으면 `CodeGenerator` 나 `AstVisitor` 를 고쳐 다시 빌드해도 산출물이 낡은 모양 그대로 남는다
+ *          (CMake 는 exe 를 DEPENDS 에 걸어 파서를 다시 부르지만, 파서가 스스로 "최신" 이라며 건너뛴다). 그 상태에서
+ *          일부 파일만 다른 이유로 다시 만들어지면 **두 모양이 섞인다.**
  *
  *          검사는 그 상황을 그대로 만든다: 한 번 생성한 뒤 산출물에 표식을 심고 그 파일을 파서보다
  *          **과거로** 돌린다. 다시 돌렸을 때 표식이 사라져 있으면 다시 만든 것이다.
@@ -893,7 +885,7 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
 
     // 시간을 셋으로 벌린다: 입력(2시간 전) < 산출물(1시간 전) < 파서(지금).
     // **입력을 같이 과거로 보내는 것이 핵심이다** — 안 그러면 "입력이 더 새롭다" 는 이유로 다시
-    // 만들어져, 이 검사가 파서 시간을 보는지 아닌지를 구분하지 못한다(실제로 그렇게 통과했다).
+    // 만들어져, 이 검사가 파서 시간을 보는지 아닌지를 구분하지 못한다.
     const std::filesystem::file_time_type parserTime = std::filesystem::last_write_time( parserExe.c_str() );
     std::filesystem::last_write_time( headerPath.c_str(), parserTime - std::chrono::hours( 2 ) );
     std::filesystem::last_write_time( genPath.c_str(), parserTime - std::chrono::hours( 1 ) );
@@ -918,7 +910,7 @@ SW_TEST_CASE( ReflectionParserTest, RegeneratesWhenTheParserItselfIsNewer )
  * @details 생성 파일 이름은 소스의 **파일 이름만** 으로 짓는다(`makeGeneratedPath`). 그래서 한 모듈
  *          안에 같은 이름의 헤더가 둘 있으면 나중에 도는 쪽이 앞의 것을 덮고, **앞 헤더의 타입들은
  *          아무 말 없이 등록되지 않는다** — 증상은 한참 뒤 "씬이 그 컴포넌트를 못 찾는다" 로 나타나
- *          원인이 코드젠이라는 것을 짚기 어렵다. 지금은 그 자리에서 빌드를 세우고 두 경로를 다 적는다.
+ *          원인이 코드젠이라는 것을 짚기 어렵다. 그래서 그 자리에서 빌드를 세우고 두 경로를 다 적는다.
  *
  *          헤더를 **옮긴** 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어써야 한다 — 이 케이스는
  *          그것도 함께 본다. 그러지 않으면 파일을 옮길 때마다 빌드가 막힌다.
@@ -986,7 +978,7 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
     };
 
     // 산출물 폴더는 이 케이스의 임시 경로라 처음엔 비어 있다 — 파서는 "이미 최신" 이면 통째로 건너뛰므로,
-    // 예전처럼 `Bin` 에 두면 앞선 실행이 남긴 파일 때문에 첫 단계가 아무것도 만들지 않고 지나갈 수 있었다.
+    // `Bin` 에 두면 앞선 실행이 남긴 파일 때문에 첫 단계가 아무것도 만들지 않고 지나갈 수 있다.
     const sw::string genCppPath = sw::FileUtil::joinPath( outGenDir, "CollidingSample.gen.cpp" );
 
     // 첫 헤더는 정상적으로 산출물을 만든다.
@@ -1018,8 +1010,8 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
 
 /**
  * @brief [ReflectionParserTest] 컨테이너는 바깥 템플릿 이름으로만 알아본다 — 이름에 set · map · list 가 든 타입은 컨테이너가 아니다
- * @details 예전에는 표기 어디에든 규칙 이름이 있으면 컨테이너였다. `TextureAsset` · `Offset2D` 는 set, `Bitmap` 은 map, `Playlist` 는 list 로
- *          나가 생성 파일 안에서 빌드가 깨졌다.
+ * @details 표기 어디에든 규칙 이름이 있으면 컨테이너로 보면 `TextureAsset` · `Offset2D` 는 set, `Bitmap` 은 map, `Playlist` 는 list 로
+ *          나가 생성 파일 안에서 빌드가 깨진다.
  */
 SW_TEST_CASE( ReflectionParserTest, ContainerIsRecognizedByItsOuterTemplateNameOnly )
 {
@@ -1037,8 +1029,7 @@ SW_TEST_CASE( ReflectionParserTest, ContainerIsRecognizedByItsOuterTemplateNameO
 
 /**
  * @brief [ReflectionParserTest] `--dump` 는 헤더마다 뽑은 것(타입 · 부모 · 프로퍼티의 값 자리 · 범위 · 플래그 · enum 값)을 찍고, `--help` 는 성공이다
- * @details "왜 이 프로퍼티가 인스펙터에 없나" 를 물을 곳이 없었다 — 파서가 무엇을 봤는지는 Debug 파서의 trace 한 줄(개수만)뿐이었고,
- *          알 수 없는 플래그는 모두 거절해(`--help` 도) 볼 스위치를 붙일 수도 없었다.
+ * @details "왜 이 프로퍼티가 인스펙터에 없나" 를 묻는 창구다 — 파서가 무엇을 봤는지 헤더마다 찍는다.
  */
 SW_TEST_CASE( ReflectionParserTest, DumpShowsWhatWasExtracted )
 {
@@ -1079,7 +1070,7 @@ SW_TEST_CASE( ReflectionParserTest, DumpShowsWhatWasExtracted )
     {
         SW_EXPECT_TRUE_MSG( run._log.find( pExpected ) != sw::string::npos, ( sw::string( "missing: " ) + pExpected + "\n" + run._log ).c_str() );
     }
-    // 한쪽 범위는 한쪽만 찍는다(결함 ⑪).
+    // 한쪽 범위는 한쪽만 찍는다.
     SW_EXPECT_TRUE_MSG( run._log.find( "Max=" ) == sw::string::npos, run._log.c_str() );
 
     // `--help` 는 오류가 아니다.
@@ -1098,8 +1089,8 @@ SW_TEST_CASE( ReflectionParserTest, DumpShowsWhatWasExtracted )
 
 /**
  * @brief [ReflectionParserTest] 애노테이션 문자열 안의 이스케이프(`\"` · `\\`)와 쉼표를 그대로 읽는다
- * @details 첫 안쪽 따옴표에서 값이 끝나 `Tooltip = "Say \"hi\""` 가 `Say \` 로 조용히 잘렸고, 이스케이프한 따옴표 뒤의 쉼표에서 토큰이 갈라져 뒷조각이
- *          "모르는 토큰" 으로 빌드를 세웠다.
+ * @details 첫 안쪽 따옴표에서 값을 끝내면 `Tooltip = "Say \"hi\""` 가 `Say \` 로 조용히 잘리고, 이스케이프한 따옴표 뒤의 쉼표에서 토큰이 갈라지면
+ *          뒷조각이 "모르는 토큰" 으로 빌드를 세운다.
  */
 SW_TEST_CASE( ReflectionParserTest, AnnotationStringKeepsEscapesAndCommas )
 {
@@ -1133,8 +1124,8 @@ SW_TEST_CASE( ReflectionParserTest, AnnotationStringKeepsEscapesAndCommas )
 /**
  * @brief [ReflectionParserTest] 애노테이션 문자열 안의 `;` `{` `}` `)` 는 선언 경계가 아니다 — 그 타입의 REFLECT() 를 잃지 않는다
  * @details `class` 앞의 속성은 clang 이 버려 파서가 소스를 되읽는다. 매크로와 선언 사이의 `;` `{` `}` 를 "앞 선언의 매크로" 표시로 보는데
- *          따옴표 안도 셌다 — `Tooltip = "…; …"` 하나로 그 타입의 REFLECT() 가 사라져, 멤버마다 "REFLECT() 가 없다" 는 엉뚱한 오류로
- *          빌드가 섰다(`MissingComponent` 를 만들다 만났다). 인자를 읽는 괄호 세기도 따옴표 안의 `\"` 뒤에서 어긋났다.
+ *          따옴표 안까지 세면 `Tooltip = "…; …"` 하나로 그 타입의 REFLECT() 가 사라져, 멤버마다 "REFLECT() 가 없다" 는 엉뚱한 오류로
+ *          빌드가 선다. 인자를 읽는 괄호 세기도 따옴표 안의 `\"` 뒤에서 어긋나면 안 된다.
  */
 SW_TEST_CASE( ReflectionParserTest, PunctuationInsideAnnotationStringIsNotADeclarationBoundary )
 {
@@ -1166,8 +1157,8 @@ SW_TEST_CASE( ReflectionParserTest, PunctuationInsideAnnotationStringIsNotADecla
 
 /**
  * @brief [ReflectionParserTest] 별칭(`using`)으로 적은 기반도 실제 클래스로 읽는다 — 부모 FQN 과 컴포넌트 팩토리를 잃지 않는다
- * @details 베이스 지정자의 선언을 그대로 물으면 별칭 선언이 나온다. 부모 FQN 이 별칭 이름이 되어 실행 중에 부모를 못 찾았고, 컴포넌트 판별이 별칭에서
- *          멈춰 팩토리가 생기지 않았다(씬에서 그 컴포넌트를 만들 수 없다).
+ * @details 베이스 지정자의 선언을 그대로 물으면 별칭 선언이 나온다. 그러면 부모 FQN 이 별칭 이름이 되어 실행 중에 부모를 못 찾고, 컴포넌트 판별이 별칭에서
+ *          멈춰 팩토리가 생기지 않는다(씬에서 그 컴포넌트를 만들 수 없다).
  */
 SW_TEST_CASE( ReflectionParserTest, AliasedBaseClassKeepsParentAndFactory )
 {
@@ -1225,8 +1216,8 @@ SW_TEST_CASE( ReflectionParserTest, ParserExecutableIsBuilt )
 
 /**
  * @brief [ReflectionParserTest] 파싱하는 동안 저장한 편집도 다음 실행이 다시 파싱한다 — 스탬프보다 오래된 시각이어도
- * @details 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 봤다. 파서가 헤더를 읽은 뒤 · 스탬프를 쓰기 전에 저장한 편집은 스탬프보다 오래된 시각을
- *          가져 다음 실행에서도 "최신" 이었다 — 그 헤더를 다시 저장할 때까지 생성 코드에 들어가지 않았다. 이제 스탬프에 읽기 전에 본 시각을 적고 같음으로 본다.
+ * @details 스탬프에 읽기 전에 본 시각을 적고 같음으로 본다. 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 보면, 파서가 헤더를 읽은 뒤 · 스탬프를
+ *          쓰기 전에 저장한 편집이 스탬프보다 오래된 시각을 가져 다음 실행에서도 "최신" 이 된다 — 그 헤더를 다시 저장할 때까지 생성 코드에 들어가지 않는다.
  */
 SW_TEST_CASE( ReflectionParserTest, EditSavedWhileParsingIsNotHiddenByTheStamp )
 {
@@ -1288,8 +1279,8 @@ SW_TEST_CASE( ReflectionParserTest, EditSavedWhileParsingIsNotHiddenByTheStamp )
 /**
  * @brief [ReflectionParserTest] 반사된 헤더가 include 한 **다른** 헤더가 바뀌면 다시 파싱하고, depfile 에 그 헤더를 적는다
  * @details 생성 코드는 include 한 헤더에도 기댄다 — 반사되지 않은 기반 클래스에 순수 가상 함수가 생기면 파생 타입은 추상이 되고(`_bAbstract`),
- *          낡은 생성 코드는 그 타입을 만드는 생성자를 들고 있어 컴파일이 깨진다. 예전에는 그 헤더가 바뀌어도 ninja 는 다시 돌지 않았고(생성 단계의
- *          의존이 반사된 헤더뿐) 파서도 스탬프가 입력만 봐서 건너뛰었다. 이제 스탬프가 include 한 헤더를 적고, `--depfile` 이 ninja 에 같은 목록을 준다.
+ *          낡은 생성 코드는 그 타입을 만드는 생성자를 들고 있어 컴파일이 깨진다. 그래서 스탬프가 include 한 헤더를 적고, `--depfile` 이 ninja 에 같은
+ *          목록을 준다 — 생성 단계의 의존이 반사된 헤더뿐이면 그 헤더가 바뀌어도 ninja 도 파서도 다시 돌지 않는다.
  */
 SW_TEST_CASE( ReflectionParserTest, IncludedHeaderChangeRegeneratesAndIsInTheDepfile )
 {
@@ -1358,8 +1349,8 @@ SW_TEST_CASE( ReflectionParserTest, IncludedHeaderChangeRegeneratesAndIsInTheDep
 
 /**
  * @brief [ReflectionParserTest] 로컬 parser_config.json 은 커밋된 기본값을 덮지 못한다 — 이 기계에 딸린 키만 받고, 나머지는 경고하고 버린다
- * @details 셋업이 로컬에 기본값 **전체 사본**을 써 두고 파서는 로컬을 키마다 이기게 읽어, 커밋된 기본값을 고쳐도 그 기계는 옛 값을 계속 썼다 —
- *          `flag_ops_marker` 가 바뀐 뒤 옛 로컬 값 때문에 FlagOps 우산이 비어 Engine 빌드가 깨졌다. 여기서는 그 옛 값을 든 로컬 파일로 돌려, 우산이 여전히
+ * @details 로컬이 기본값의 **전체 사본**을 들고 키마다 이기면 커밋된 기본값을 고쳐도 그 기계는 옛 값을 계속 쓴다 — `flag_ops_marker` 가 바뀌면
+ *          옛 로컬 값 때문에 FlagOps 우산이 비어 Engine 빌드가 깨진다. 여기서는 옛 값을 든 로컬 파일로 돌려, 우산이 여전히
  *          ENUM(Flags) 헤더를 담고 로그가 무시한 키를 말하는지 본다.
  */
 SW_TEST_CASE( ReflectionParserTest, LocalConfigCannotOverrideCommittedDefaults )

@@ -107,7 +107,7 @@ SW_TEST_CASE( ReflectionContainersTest, MapWrapper )
 
 /**
  * @brief [ReflectionContainersTest] 맵 값은 래퍼로 제자리에서 고치고, 항목은 순번으로 지운다 — 인스펙터의 맵 편집이 쓰는 길
- * @details `forEach` 는 키 · 값을 const 로만 줘 인스펙터가 맵을 편집할 수 없었다. 키는 정렬 · 해시 키라 const 로 두고 값만 고쳐 쓴다.
+ * @details `forEach` 는 키 · 값을 const 로만 주므로 편집은 이 길로 한다. 키는 정렬 · 해시 키라 const 로 두고 값만 고쳐 쓴다.
  */
 SW_TEST_CASE( ReflectionContainersTest, MapValuesAreEditableAndEntriesErasable )
 {

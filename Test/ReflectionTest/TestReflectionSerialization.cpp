@@ -720,8 +720,8 @@ SW_TEST_CASE( ReflectionSerializationTest, NarrowEnumDeserializeKeepsAdjacentByt
 
 /**
  * @brief [ReflectionSerializationTest] 바이너리는 enum 을 **열거자**로 싣는다 — 열거자 순서를 바꾼 다음 빌드도 같은 열거자를 읽는다(값 · 비트플래그 · 원소 · 맵 키)
- * @details 바이너리만 enum 을 int64 **값**으로 실었다(XML · JSON 은 이름). 열거자를 사이에 넣거나 순서를 바꾸면 세이브 · 핫 리로드 뒤의 플레이 스냅샷 · 되돌리기
- *          스냅샷이 조용히 다른 열거자로 읽혔다. 시험은 저장한 뒤 같은 enum 을 순서만 바꿔 다시 등록한다(핫 리로드 · 다음 빌드가 하는 일). 바이너리 길 다섯
+ * @details enum 을 int64 **값**으로 실으면 열거자를 사이에 넣거나 순서를 바꿀 때 세이브 · 핫 리로드 뒤의 플레이 스냅샷 · 되돌리기 스냅샷이 조용히
+ *          다른 열거자로 읽힌다(XML · JSON 은 이름). 시험은 저장한 뒤 같은 enum 을 순서만 바꿔 다시 등록한다(핫 리로드 · 다음 빌드가 하는 일). 바이너리 길 다섯
  *          (태그 · 판 붙은 · 압축 · 컴팩트 · diff)이 모두 열거자로 읽어야 한다 — 하나라도 값으로 읽으면 Green 이 Blue · Red 가 된다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenTheEnumIsReordered )
@@ -743,7 +743,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryEnumsKeepTheirEnumeratorWhenThe
     sw::vector<uint8> diff;
     SW_ASSERT_TRUE( sw::ObjectDiffSerializer::serializeDiff( diff, &defaults, &saved, info ) );
 
-    // 다음 빌드: 같은 enum 의 열거자 순서가 바뀌었다. Green 은 이제 2, A | C 는 2 | 1.
+    // 다음 빌드: 같은 enum 의 열거자 순서가 바뀐다. Green 은 2, A | C 는 2 | 1.
     registerWireShiftEnumsReordered();
 
     WireShiftHost fromTagged;
@@ -813,7 +813,7 @@ SW_TEST_CASE( ReflectionSerializationTest, OnlyTheCurrentWireVersionIsRead )
 
 /**
  * @brief [ReflectionSerializationTest] 컨테이너 안의 모르는 열거자는 **그 원소만** 실패한다 — 뒤 원소 · 다른 항목은 읽힌다(XML 과 같다)
- * @details 바이너리 컨테이너 읽기는 원소 하나가 실패하면 멈췄다 — 지운 열거자 하나 뒤의 원소를 **모두 잃었다**(맵은 그 항목 뒤 항목 전부). XML 은 그 원소만
+ * @details 바이너리 컨테이너 읽기가 원소 하나의 실패에서 멈추면 지운 열거자 하나 뒤의 원소를 **모두 잃는다**(맵은 그 항목 뒤 항목 전부). XML 은 그 원소만
  *          기본값으로 두고 계속 읽는다. 모르는 열거자는 바이트를 끝까지 읽고 실패하므로 같은 규칙을 쓸 수 있다(망가진 스트림은 그대로 멈춘다). 칸은 여전히
  *          실패로 알린다 — 모르는 칸을 받는 문맥은 그 칸을 넘기되 읽은 원소는 남는다.
  */
@@ -824,7 +824,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorInAContainerFailsOnl
     const sw::TypeInfo                info       = makeWireShiftHostType();
     WireShiftHost                     saved      = makeSavedWireShiftHost();
     saved._listColor                             = { WireShiftColor::Blue, WireShiftColor::Green, WireShiftColor::Red };
-    saved._mapColorToCount[WireShiftColor::Blue] = 3; // Green(값 1) 뒤에 온다 — 예전에는 Green 에서 멈춰 이것을 잃었다
+    saved._mapColorToCount[WireShiftColor::Blue] = 3; // Green(값 1) 뒤에 온다 — Green 에서 멈추면 이것을 잃는다
     sw::vector<uint8> bytes;
     sw::BinarySerializer::serialize( &saved, info, bytes );
 
@@ -854,7 +854,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorInAContainerFailsOnl
 /**
  * @brief [ReflectionSerializationTest] 지금 enum 에 없는 열거자 이름은 **그 칸만** 실패한다 — 값은 그대로, 0 이 되지 않는다(XML 과 같다)
  * @details 열거자를 지웠거나 ValueAlias 없이 이름을 바꾼 다음 빌드의 자리다. 엄격한 읽기는 실패를 알리고 그 칸은 지금 값을 지킨다. 모르는 칸을 받는 문맥
- *          (오브젝트 상태)은 그 칸만 건너뛰고 나머지를 읽는다 — 예전에는 바이너리만 그 컴포넌트를 통째로 버렸다. 옛 이름을 ValueAlias 로 남기면 새 이름으로 읽힌다.
+ *          (오브젝트 상태)은 그 칸만 건너뛰고 나머지를 읽는다 — 그 컴포넌트를 통째로 버리면 안 된다. 옛 이름을 ValueAlias 로 남기면 새 이름으로 읽힌다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorFailsOnlyItsField )
 {
@@ -933,8 +933,8 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownEnumeratorFailsOnlyItsField )
 
 /**
  * @brief [ReflectionSerializationTest] enum 칸의 타입이 바뀌면 열거자 **이름**으로 옮긴다 — 글은 이름을 받고, 수는 받지 않는다(XML 과 같다)
- * @details enum 은 이제 이름 해시(4 바이트)로 실린다. 타입이 바뀐 칸은 기록 타입을 알아야 옮길 수 있는데 타입 표가 enum 을 몰라(`canonicalTypeNameByHash`)
- *          크기로 짐작했다 — 그 4 바이트가 int32 칸에 그대로 들어가는 길이었고, 예전 값 인코딩에서는 글 칸이 열거자 이름이 아니라 숫자("1")를 받았다.
+ * @details enum 은 이름 해시(4 바이트)로 실린다. 타입이 바뀐 칸은 기록 타입을 알아야 옮길 수 있다 — 타입 표(`canonicalTypeNameByHash`)가 enum 을 모르고
+ *          크기로 짐작하면 그 4 바이트가 int32 칸에 그대로 들어가고, 글 칸이 열거자 이름이 아니라 숫자("1")를 받는다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, EnumFieldWithANewTypeReadsTheEnumeratorName )
 {
@@ -964,8 +964,8 @@ SW_TEST_CASE( ReflectionSerializationTest, EnumFieldWithANewTypeReadsTheEnumerat
 
 /**
  * @brief [ReflectionSerializationTest] enum **타입 자체를 지운** 뒤 그 칸이 수로 바뀌어도 열거자 이름 해시를 수로 읽지 않는다
- * @details 기록 타입 해시를 모르면(지운 enum · 타입) 이관이 크기로 짐작했다 — 4 바이트 열거자 이름 해시가 int32 칸에 그대로 들어갔다. 이제 기록 타입을
- *          모르면 그 칸은 읽지 않는다(값은 그대로, 나머지는 읽힌다). 바이너리 칸 읽기와 orphan 이관이 같은 규칙이다.
+ * @details 기록 타입을 모르면(지운 enum · 타입) 그 칸은 읽지 않는다(값은 그대로, 나머지는 읽힌다). 이관이 크기로 짐작하면 4 바이트 열거자 이름 해시가
+ *          int32 칸에 그대로 들어간다. 바이너리 칸 읽기와 orphan 이관이 같은 규칙이다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANumber )
 {
@@ -1066,8 +1066,7 @@ SW_TEST_CASE( ReflectionSerializationTest, JsonMapUsesPlainObject )
     SW_EXPECT_TRUE( json.find( "\"map\"" ) == sw::string::npos );
     SW_EXPECT_TRUE( json.find( "\"entry\"" ) == sw::string::npos );
 
-    // 레거시 래핑 형식({"map":[{"_name":..,"entry":..}]})은 더 이상 지원하지 않는다.
-    // 알 수 없는 키 "map" 으로 취급되어 실패해야 한다.
+    // 래핑 형식({"map":[{"_name":..,"entry":..}]})은 읽지 않는다 — 알 수 없는 키 "map" 으로 취급되어 실패해야 한다.
     sw::ComplexData legacy;
     SW_EXPECT_FALSE( sw::JsonSerializer::deserialize(
         &legacy, *typeInfo, R"({"map":[{"_name":"_mapStat","entry":{"hp":9}}]})" ) );
@@ -1167,8 +1166,8 @@ SW_TEST_CASE( ReflectionSerializationTest, JsonSequenceAcceptsPlainArray )
 
 /**
  * @brief [ReflectionSerializationTest] JSON 시퀀스의 값 구조체 원소는 본문 그대로만 읽는다 — 타입 이름으로 감싼 원소(`{"NestedInner":{…}}`)는 읽지 않는다
- * @details 쓰는 쪽은 값 구조체를 감싸지 않는다. 멤버 하나의 이름이 등록된 타입이면 감싼 것으로 짐작해 그 안을 읽던 갈래는 옛 모양을 받아 주는 것뿐이었고,
- *          칸 하나짜리 구조체의 칸 이름이 우연히 타입 이름이면 엉뚱하게 벗겨 읽었다.
+ * @details 쓰는 쪽은 값 구조체를 감싸지 않는다. 멤버 하나의 이름이 등록된 타입이면 감싼 것으로 짐작해 그 안을 읽으면, 칸 하나짜리 구조체의 칸 이름이
+ *          우연히 타입 이름일 때 엉뚱하게 벗겨 읽는다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, JsonValueStructElementIsReadOnlyAsItsBody )
 {
@@ -1724,11 +1723,10 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldTypeChangeAndTextVersioned )
 
 /**
  * @brief [ReflectionSerializationTest] float 프로퍼티를 string 으로 바꿔도 **숫자가** 살아남는다
- * @details POD -> string 이관은 payload **크기**로 타입을 짐작했다. 그런데 `sizeof(float32)` 는
- *          `sizeof(int32)` 와 같아서 int32 가지가 먼저 걸리고 float32 가지는 **영영 돌지 않았다** —
- *          `1.5f` 가 그 비트값인 `"1069547520"` 으로 적혔다. 형제 케이스
- *          `FieldTypeChangeAndTextVersioned`(int32 -> string)는 크기 짐작이 우연히 맞아서 초록이었다.
- *          전선 타입은 바이너리 태그가 이미 들고 있었고, 여기까지 넘겨 주지 않았을 뿐이다.
+ * @details POD -> string 이관이 payload **크기**로 타입을 짐작하면 `sizeof(float32)` 가 `sizeof(int32)` 와 같아서
+ *          int32 가지가 먼저 걸리고 `1.5f` 가 그 비트값인 `"1069547520"` 으로 적힌다. 형제 케이스
+ *          `FieldTypeChangeAndTextVersioned`(int32 -> string)는 크기 짐작이 우연히 맞아 이것을 못 잡는다.
+ *          전선 타입은 바이너리 태그가 들고 있다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, FloatFieldToStringCoerceKeepsTheNumber )
 {
@@ -1805,10 +1803,9 @@ SW_TEST_CASE( ReflectionSerializationTest, FloatFieldToStringCoerceKeepsTheNumbe
 
 /**
  * @brief [ReflectionSerializationTest] 스칼라 필드의 타입이 바뀌면 **값으로** 옮긴다(비트를 재해석하지 않는다)
- * @details 이관은 제 타입으로 끝까지 읽히는지부터 봤다. 크기가 같은 스칼라는 그 읽기가 늘 성공해서 int32 100 이
- *          float32 1.4e-43 이 됐고, 문자열은 int32 0 을 길이 0 으로 읽어 "" 가 됐다. 이제 기록 타입을 아는 스칼라는
- *          JSON · XML 처럼 기록 타입의 텍스트를 대상 타입으로 다시 읽는다. 텍스트가 맞지 않는 쌍(float32 1.5 → int32)은
- *          옮기지 않고 orphan 으로 남긴다. 소프트 읽기가 예전처럼 제 타입으로 다시 읽으면 1069547520 이 들어간다.
+ * @details 기록 타입을 아는 스칼라는 JSON · XML 처럼 기록 타입의 텍스트를 대상 타입으로 다시 읽는다. 텍스트가 맞지 않는 쌍(float32 1.5 → int32)은
+ *          옮기지 않고 orphan 으로 남긴다. 이관이 제 타입으로 끝까지 읽히는지부터 보면 크기가 같은 스칼라는 그 읽기가 늘 성공해서 int32 100 이
+ *          float32 1.4e-43 이 되고, 문자열은 int32 0 을 길이 0 으로 읽어 "" 가 된다. 소프트 읽기가 제 타입으로 다시 읽으면 1069547520 이 들어간다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, ScalarFieldTypeChangeMovesTheValue )
 {
@@ -1883,9 +1880,8 @@ SW_TEST_CASE( ReflectionSerializationTest, ScalarFieldTypeChangeMovesTheValue )
 
 /**
  * @brief [ReflectionSerializationTest] 기록 타입이 다른 바이너리 orphan 을 적용해도 **이웃 필드를 덮지 않는다**
- * @details `applyOrphanTo` 는 기록 타입으로 프로퍼티 자리에 먼저 읽었다. int16 자리에 int32 를 읽으면 바로 뒤 필드의
- *          두 바이트까지 덮어썼고, string 자리였다면 객체를 부쉈다. `applyOrphanToPath` 는 힌트가 없으면 프로퍼티 타입을
- *          기록 타입으로 가정해 같은 일을 했다. 이제 둘 다 본 역직렬화 경로처럼 타입이 다르면 이관으로 옮긴다.
+ * @details `applyOrphanTo` · `applyOrphanToPath` 는 본 역직렬화 경로처럼 타입이 다르면 이관으로 옮긴다. 기록 타입으로 프로퍼티 자리에
+ *          바로 읽으면 int16 자리에 int32 를 읽어 바로 뒤 필드의 두 바이트까지 덮어쓰고, string 자리면 객체를 부순다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, ApplyOrphanWithOtherWireTypeKeepsNeighbors )
 {
@@ -2061,8 +2057,8 @@ SW_TEST_CASE( ReflectionSerializationTest, OrphanOnlyPolicyDiffersByFormat )
 /**
  * @brief [ReflectionSerializationTest] 판 붙은 로드가 값을 버리면 로드마다 한 번, 타입 · 칸 이름과 함께 알린다 — 이관이 찾아 본 값은 빼고
  * @details JSON · XML 의 판 붙은 로드(씬 · 프리팹 · 오브젝트 상태가 지나는 길)는 orphan 을 버리고 성공한다(`SchemaOrphanPolicy::Ignore`).
- *          숫자 칸의 "abc" 는 읽지 못해 orphan 이 되고 칸은 기본값으로 남는데, **그 사실을 아무도 알리지 않았다** — 손으로 고친 씬의
- *          오타가 말없이 기본값이 됐다. 이제 orphan 의 운명이 정해지는 `runSchemaMigrateStep` 이 버린 칸을 한 줄에 모아 경고한다.
+ *          숫자 칸의 "abc" 는 읽지 못해 orphan 이 되고 칸은 기본값으로 남는다 — 알리지 않으면 손으로 고친 씬의 오타가 말없이
+ *          기본값이 된다. 그래서 orphan 의 운명이 정해지는 `runSchemaMigrateStep` 이 버린 칸을 한 줄에 모아 경고한다.
  *          이관 함수가 찾아 본 orphan(`findOrphan`)은 이관이 처리한 것이라 그 줄에 들지 않는다. 읽은 값이 모두 자리를 찾으면 조용하다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
@@ -2494,8 +2490,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectionRpcPackInvoke )
     sw::TaskArgs args;
     args.add( int32{ 25 } );
 
-    // 봉투를 싸고(pack) 다시 풀어(invoke) 왕복시킨다 — 예전엔 이 두 줄을 묶은 packAndInvoke 가
-    // 엔진 API 에 있었지만 부르는 곳이 이 테스트뿐이라 테스트로 내렸다.
+    // 봉투를 싸고(pack) 다시 풀어(invoke) 왕복시킨다.
     sw::RpcEnvelope envelope;
     SW_ASSERT_TRUE( sw::ReflectionRpc::packCall( envelope, sw::hashed_string( "sw::RpcDemoActor" ),
                                                  sw::hashed_string( "applyDamage" ), args ) );
@@ -2505,8 +2500,8 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectionRpcPackInvoke )
 
 /**
  * @brief [ReflectionSerializationTest] 인자 타입이 어긋난 RPC 봉투는 호출되지 않는다
- * @details 봉투는 인자마다 **보낸 쪽의 타입 해시**를 싣는데 풀 때는 그것을 버리고(`(void)typeNameHash`)
- *          받는 쪽 시그니처만 보고 읽었다. 시그니처가 어긋난 채 주고받으면(빌드가 다르거나 모듈이
+ * @details 봉투는 인자마다 **보낸 쪽의 타입 해시**를 싣는다. 풀 때 그것을 버리고 받는 쪽 시그니처만 보고 읽으면,
+ *          시그니처가 어긋난 채 주고받을 때(빌드가 다르거나 모듈이
  *          핫리로드된 뒤, 또는 봉투가 망가진 채로) 같은 바이트를 다른 타입으로 읽어 **터지지 않고
  *          값만 조용히 달라진다** — `float32 1.5f` 를 `int32` 로 읽으면 `1069547520` 이 되는 식이다.
  */
@@ -2595,11 +2590,10 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyPolymorphic )
 
 /**
  * @brief [ReflectionSerializationTest] `set` 프로퍼티가 **세 포맷 모두** 왕복한다
- * @details 예전에는 **프로세스가 죽었다.** 역직렬화가 시퀀스 컨테이너를 "자리를 먼저 만들고
- *          (`addElementDefault`) 그 자리에 제자리로 쓴다(`getElement`)" 로만 채웠는데, `set` 의 원소는
- *          곧 정렬 키라 트리에 들어간 뒤 값을 바꾸면 정렬 불변식이 깨진다. 증상은 그 자리에서 나지
- *          않고 나중에 엉뚱한 곳에서 터져, 원인을 찾기 어려운 모양이었다.
- *          이제 컨테이너가 `appendElement` 로 **넣는 방법을 스스로 정한다** — `set` 은 다 읽은 뒤 insert 한다.
+ * @details 컨테이너가 `appendElement` 로 **넣는 방법을 스스로 정한다** — `set` 은 다 읽은 뒤 insert 한다.
+ *          "자리를 먼저 만들고(`addElementDefault`) 그 자리에 제자리로 쓴다(`getElement`)" 로 채우면 `set` 의 원소는
+ *          곧 정렬 키라 트리에 들어간 뒤 값을 바꿔 정렬 불변식이 깨진다 — 증상은 그 자리에서 나지 않고 나중에
+ *          엉뚱한 곳에서 프로세스가 죽는다.
  * @note 값을 **정렬되지 않은 순서로** 넣는 것이 중요하다. 순서대로 넣으면 제자리 쓰기 구현도 우연히
  *       통과할 수 있다(각 원소가 마침 트리의 끝에 붙는다).
  */
@@ -2696,7 +2690,7 @@ SW_TEST_CASE( ReflectionSerializationTest, AccessorPropertyReadsAndWritesOutside
     {
         const sw::float3& restored = sw::ExternalStorageTestActor::s_arrExternalPosition[storageIndex];
         SW_EXPECT_TRUE_MSG( sw::float3::getDistanceSquared( restored, sw::float3{ 1.0f, 2.0f, 3.0f } ) < 1e-10f, pFormat );
-        // 원본 칸은 그대로다(복사가 한 칸을 나눠 쓰게 만들지 않았다).
+        // 원본 칸은 그대로다(복사가 한 칸을 나눠 쓰게 만들지 않는다).
         SW_EXPECT_TRUE_MSG( sw::float3::getDistanceSquared( sw::ExternalStorageTestActor::s_arrExternalPosition[1], sw::float3{ 1.0f, 2.0f, 3.0f } ) < 1e-10f, pFormat );
     };
 
@@ -2733,8 +2727,8 @@ SW_TEST_CASE( ReflectionSerializationTest, AccessorPropertyReadsAndWritesOutside
 
 /**
  * @brief [ReflectionSerializationTest] 다른 타입을 적은 RPC 봉투는 인스턴스에 부르지 않는다
- * @details 봉투는 믿을 수 없는 입력이다. 예전에는 봉투가 적은 타입으로 메서드를 찾아 인스턴스가 그 타입인지 보지 않고 불러, 다른 타입의
- *          메서드가 엉뚱한 객체의 메모리를 썼다(타입 혼동).
+ * @details 봉투는 믿을 수 없는 입력이다. 봉투가 적은 타입으로 메서드를 찾아 인스턴스가 그 타입인지 보지 않고 부르면, 다른 타입의
+ *          메서드가 엉뚱한 객체의 메모리를 쓴다(타입 혼동).
  */
 SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAnEnvelopeForAnotherType )
 {
@@ -2754,7 +2748,7 @@ SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAnEnvelopeForAnotherType )
 
 /**
  * @brief [ReflectionSerializationTest] RPC 로 표시되지 않은 메서드는 봉투로 부를 수 없다
- * @details `FUNCTION()` 만 적은 메서드의 NetRole 은 Local 이다. 예전에는 그것도 불러, 모든 리플렉션 메서드가 원격 호출 표면이었다.
+ * @details `FUNCTION()` 만 적은 메서드의 NetRole 은 Local 이다. 그것도 부르면 모든 리플렉션 메서드가 원격 호출 표면이 된다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAMethodThatIsNotAnRpc )
 {
@@ -2774,8 +2768,8 @@ SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAMethodThatIsNotAnRpc )
 
 /**
  * @brief [ReflectionSerializationTest] ReflectAny 프로퍼티가 Binary · JSON · XML 셋 모두에서 타입과 값을 그대로 왕복한다
- * @details 텍스트 포맷은 `타입FQN|16진수 바이트` 한 줄로 쓰고 읽는다(`SerializeReflectAny.cpp` 의 텍스트 핸들러). 바이너리 왕복만 시험이
- *          있었다 — 텍스트 핸들러가 깨져도(이름 · 16진수 · 구분자) 아무도 몰랐다.
+ * @details 텍스트 포맷은 `타입FQN|16진수 바이트` 한 줄로 쓰고 읽는다(`SerializeReflectAny.cpp` 의 텍스트 핸들러). 텍스트 핸들러(이름 · 16진수 ·
+ *          구분자)가 깨지는 것도 여기서 잡는다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyRoundTripsInEveryFormat )
 {
@@ -2828,8 +2822,8 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyRoundTripsInEveryFormat )
 
 /**
  * @brief [ReflectionSerializationTest] 파일에 적힌 모르는 타입 이름은 전역 이름 표에 들어가지 않는다
- * @details 전역 `hashed_string` 표는 줄지 않는다. 예전에는 다형 값의 타입 이름을 찾으려고 intern 해서, 서로 다른 이름 수만 개를 담은 파일
- *          하나가 표를 채울 수 있었고 차면 그 뒤 **엔진의 모든** 새 이름이 None 이 됐다. 이제는 찾기만 한다(`findInterned`).
+ * @details 전역 `hashed_string` 표는 줄지 않는다. 다형 값의 타입 이름을 찾으려고 intern 하면 서로 다른 이름 수만 개를 담은 파일
+ *          하나가 표를 채울 수 있고, 차면 그 뒤 **엔진의 모든** 새 이름이 None 이 된다. 그래서 찾기만 한다(`findInterned`).
  */
 SW_TEST_CASE( ReflectionSerializationTest, UnknownTypeNamesInAFileAreNotInterned )
 {
@@ -2872,7 +2866,7 @@ SW_TEST_CASE( ReflectionSerializationTest, UnknownTypeNamesInAFileAreNotInterned
 
 /**
  * @brief [ReflectionSerializationTest] 바이너리 bool 은 0 · 1 이 아닌 바이트도 true 로 접어 읽는다
- * @details 예전에는 바이트를 그대로 memcpy 해, 망가진 파일의 0x02 가 값이 정의되지 않은 bool 이 됐다(컴파일러가 2 로 쓰거나 `b` 와
+ * @details 바이트를 그대로 memcpy 하면 망가진 파일의 0x02 가 값이 정의되지 않은 bool 이 된다(컴파일러가 2 로 쓰거나 `b` 와
  *          `b == true` 를 다르게 본다).
  */
 SW_TEST_CASE( ReflectionSerializationTest, BinaryBoolReadNormalizesTheByte )
@@ -2890,7 +2884,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryBoolReadNormalizesTheByte )
 
 /**
  * @brief [ReflectionSerializationTest] 압축 스트림이 기록하지 않는 프로퍼티(Transient)를 가리키면 쓰지 않는다
- * @details 쓰는 쪽은 Transient 를 적지 않는다. 예전에는 희소 모드가 아무 인덱스에나 페이로드를 써, 망가진 스트림이 런타임 전용 값을 덮었다.
+ * @details 쓰는 쪽은 Transient 를 적지 않는다. 희소 모드가 아무 인덱스에나 페이로드를 쓰면 망가진 스트림이 런타임 전용 값을 덮는다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, CompactStreamDoesNotWriteTransientProperties )
 {
@@ -2919,8 +2913,8 @@ SW_TEST_CASE( ReflectionSerializationTest, CompactStreamDoesNotWriteTransientPro
 
 /**
  * @brief [ReflectionSerializationTest] `Archive::setOffset` 은 데이터 끝을 넘기지 않는다
- * @details 읽기 함수들은 `_offset <= _dataSize` 를 믿고 남은 양을 뺄셈으로 센다. 예전에는 검사 없이 넣어 그 뺄셈이 돌았고 다음 읽기가 버퍼
- *          밖을 읽었다.
+ * @details 읽기 함수들은 `_offset <= _dataSize` 를 믿고 남은 양을 뺄셈으로 센다. 검사 없이 넣으면 그 뺄셈이 돌아 다음 읽기가 버퍼
+ *          밖을 읽는다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, ArchiveOffsetCannotPassTheEnd )
 {
@@ -2934,8 +2928,8 @@ SW_TEST_CASE( ReflectionSerializationTest, ArchiveOffsetCannotPassTheEnd )
 
 /**
  * @brief [ReflectionSerializationTest] 에셋의 모르는 글(틀린 enum 이름 · 모르는 태그 · 속성)은 전역 이름 표에 쌓이지 않는다 — 읽기 결과는 그대로
- * @details enum 이름 조회 · ReflectAny 글 · XML/JSON 의 고아 값이 글을 `hashed_string` 으로 만들어 intern 했다. 표는 프로세스 끝까지 줄지 않고 상한(약
- *          백만)에 닿으면 그 뒤의 **모든** 새 이름이 None 이 된다 — 모드 · 생성 · 깨진 파일의 고유 글이 그만큼 쌓였다.
+ * @details enum 이름 조회 · ReflectAny 글 · XML/JSON 의 고아 값이 글을 `hashed_string` 으로 만들어 intern 하면 안 된다. 표는 프로세스 끝까지 줄지 않고
+ *          상한(약 백만)에 닿으면 그 뒤의 **모든** 새 이름이 None 이 된다 — 모드 · 생성 · 깨진 파일의 고유 글이 그만큼 쌓인다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
 {
@@ -2977,8 +2971,8 @@ SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
 
 /**
  * @brief [ReflectionSerializationTest] 필드 범위를 넘는 정수 글자는 잘라 넣지 않고 거절한다 — 값은 그대로 남는다
- * @details 텍스트 스칼라 파서가 64 비트로 읽은 뒤 잘라 넣어, "300" 이 uint8 44 · "4000000000" 이 int32 음수가 됐다(XML · JSON · 바이너리 이관 ·
- *          기본값이 모두 이 길을 탄다). 모르는 enum 이름과 같이 실패로 돌려주고 값은 둔다. 쓰는 쪽은 늘 범위 안의 값을 적으므로 왕복은 그대로다.
+ * @details 텍스트 스칼라 파서가 64 비트로 읽은 뒤 잘라 넣으면 "300" 이 uint8 44 · "4000000000" 이 int32 음수가 된다(XML · JSON · 바이너리 이관 ·
+ *          기본값이 모두 이 경로를 쓴다). 모르는 enum 이름과 같이 실패로 돌려주고 값은 둔다. 쓰는 쪽은 늘 범위 안의 값을 적으므로 왕복은 그대로다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, OutOfRangeIntegerTextIsRejectedNotWrapped )
 {
@@ -3016,9 +3010,9 @@ SW_TEST_CASE( ReflectionSerializationTest, OutOfRangeIntegerTextIsRejectedNotWra
 
 /**
  * @brief [ReflectionSerializationTest] 프로퍼티 값 하나를 옮기고 견주고 글로 쓰는 한 벌 — 비트필드는 그 비트만, 컨테이너는 원소째
- * @details 예전에는 이 규칙을 직렬화기 셋 · 프리팹 오버라이드 도구 · 인스펙터가 각자 들었고, 오버라이드 도구는 비트필드의 **바이트**를
- *          견주고 옮겨 같은 바이트의 다른 플래그까지 "바뀜" 으로 보이거나 지워졌다. 컨테이너는 값 경로로만 옮겨 되돌리지 못했다.
- *          불리언 글은 엄격하다 — 예전 XML · JSON 은 "ture" 를 조용히 false 로 읽었다.
+ * @details 직렬화기 셋 · 프리팹 오버라이드 도구 · 인스펙터가 이 한 벌을 쓴다. 비트필드의 **바이트**를 견주고 옮기면 같은 바이트의 다른
+ *          플래그까지 "바뀜" 으로 보이거나 지워지고, 컨테이너를 값 경로로만 옮기면 되돌리지 못한다.
+ *          불리언 글은 엄격하다 — "ture" 를 조용히 false 로 읽지 않는다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwnBit )
 {
@@ -3079,8 +3073,8 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
 
 /**
  * @brief [ReflectionSerializationTest] 불리언이 아닌 비트필드 글은 읽기 실패다 — 조용히 false 가 되지 않는다
- * @details XML 은 `parseBool( text, false )` 로, JSON 은 문자열 · 오브젝트 · null 을 모두 false 로 읽고 성공을 돌려줬다. 손으로 고친 씬의
- *          오타("ture")가 그 플래그를 꺼도 아무도 몰랐다. 이제 읽기는 실패를 알리고 값은 그대로다.
+ * @details 읽기는 실패를 알리고 값은 그대로다. XML 의 `parseBool( text, false )` 처럼 무엇이든 false 로 읽고 성공을 돌려주면, 손으로 고친 씬의
+ *          오타("ture")가 그 플래그를 꺼도 아무도 모른다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsTheRead )
 {
@@ -3120,8 +3114,8 @@ SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsThe
 
 /**
  * @brief [ReflectionSerializationTest] 등록된 모든 PROPERTY 는 세 형식이 실어 나를 수 있는 타입이다
- * @details 직렬화기는 다룰 줄 모르는 타입을 조용히 텍스트 `null` · 바이너리 0 바이트로 썼고, 읽으면 그 칸은 기본값이 됐다 — 저장한 줄 알았던 값이 사라졌다.
- *          선언(PROPERTY)만 있고 저장이 없는 것이 결함 62 · ㊺ 의 모양이다. 새 PROPERTY 가 그런 타입이면 여기서 이름으로 진다. 저장할 수 없는
+ * @details 직렬화기는 다룰 줄 모르는 타입을 조용히 텍스트 `null` · 바이너리 0 바이트로 쓰고, 읽으면 그 칸은 기본값이 된다 — 저장한 줄 알았던 값이 사라진다.
+ *          새 PROPERTY 가 그런 타입이면 여기서 이름으로 진다. 저장할 수 없는
  *          런타임 값(창 핸들 같은 포인터)은 `Transient` 로 적는다. 이 실행 파일은 엔진과 자기 시험 타입만 등록한다 — 모듈(GameFramework · 킷 ·
  *          게임 · 에디터)의 타입은 `ModuleApiTest.EveryModulePropertyHasATypeTheSerializersCanCarry`(SmokeTest)가 같은 판정으로 본다.
  */

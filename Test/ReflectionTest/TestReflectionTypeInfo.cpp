@@ -604,12 +604,9 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, LookupCachesAreBuiltAfterRegistrationB
  * @brief [ReflectionTypeRegistryTest] 부모 체인이 순환해도 멈추는지 검증
  * @details `_parentFQN` 은 코드젠이 적는 값이지만 `registerClass` 는 **공개 API 이고 그 값을
  *          검사하지 않는다.** 모듈이 따로따로 등록되는 핫리로드에서는 A→B→A 가 만들어질 수
- *          있는데, 부모 체인을 거는 세 곳이 전부 그것을 대비하지 않고 있었다:
+ *          있으므로, 부모 체인을 거는 곳은 모두 그것을 대비해야 한다:
  *          `isDerivedFrom`(루프 — **행**), `findPropertyInHierarchy`(재귀 — 스택 오버플로),
  *          `getPropertiesWithBase`(재귀 — 스택 오버플로).
- *
- *          같은 저장소의 `ComponentDefaults::collectTypeChain` 은 "순환 방지" 를 명시적으로
- *          하고 있었다 — 그 가드가 형제들로 옮겨지지 않은 것이다.
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, ParentChainLoopDoesNotHang )
 {
@@ -662,8 +659,8 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentChainLoopDoesNotHang )
 
 /**
  * @brief [ReflectionTypeRegistryTest] 부모 포인터가 배치 끝에서 풀리고, 포인터 걷기가 이름 걷기와 같은 답을 내는지
- * @details `isDerivedFrom` 은 조상마다 `findType(_parentFQN)` 을 불렀다(잠금 + 해시맵). 이제 등록 배치 끝
- *          (`buildLookupCaches`)에서 부모를 포인터로 한 번 풀어 두고, 캐스트는 그 포인터만 걷는다.
+ * @details 등록 배치 끝(`buildLookupCaches`)에서 부모를 포인터로 한 번 풀어 두고, 캐스트는 그 포인터만 걷는다 —
+ *          조상마다 `findType(_parentFQN)`(잠금 + 해시맵)을 부르지 않는다.
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, ParentTypePointerIsResolvedAfterBatch )
 {
@@ -723,8 +720,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentTypePointerIsResolvedAfterBatch 
 
 /**
  * @brief [ReflectionTypeRegistryTest] 조상 표 — 배치 끝에 세워지고, 걷기와 같은 답을 내며, 사슬이 바뀌면 따라온다
- * @details 캐스트의 핫패스는 `isDerivedFrom( const TypeInfo* )` 다. 예전엔 조상마다 이름 비교 둘과 부모 포인터
- *          로드였다 — 실패 캐스트는 루트까지 약 28 ns. 이제 등록 배치 끝에 타입마다 루트부터의 `_typeId` 표를
+ * @details 캐스트의 핫패스는 `isDerivedFrom( const TypeInfo* )` 다. 등록 배치 끝에 타입마다 루트부터의 `_typeId` 표를
  *          적어 두고, 검사는 로드 둘과 비교 하나다(HotSpot 의 primary supers display). 지켜야 할 것 넷:
  *          (1) 표의 답은 걷기의 답과 같다 (2) 표가 없는 쪽 — 레지스트리 밖 사본·표보다 깊은 사슬 — 은 걷기로
  *          폴백해 같은 답을 낸다 (3) 재등록으로 부모가 바뀌면 옛 표로 답하지 않는다 (4) 모듈 해제 뒤 남은
@@ -890,8 +886,8 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
 
 /**
  * @brief [ReflectionTypeInfoTest] 계층 프로퍼티 조회는 병합 목록과 같은 답을 낸다 — 이름 · 별칭 · 실패
- * @details `findPropertyInHierarchy` 는 이제 `getPropertiesWithBase()` 가 지어 둔 맵 하나로 답한다(단계마다 걷던 때 적중
- *          17 · 실패 34 ns). 병합 목록의 모든 항목이 이름으로 그 항목 자신을 내고, 별칭도 같은 항목을 내며, 없는 이름은
+ * @details `findPropertyInHierarchy` 는 `getPropertiesWithBase()` 가 지어 둔 맵 하나로 답한다. 병합 목록의 모든 항목이
+ *          이름으로 그 항목 자신을 내고, 별칭도 같은 항목을 내며, 없는 이름은
  *          nullptr 여야 한다. 부모가 없는 타입은 자기 목록으로 답한다.
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyMatchesMergedList )
@@ -1027,9 +1023,8 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeLookupCacheFollowsRegistryGenerati
 
 /**
  * @brief [ReflectionTypeRegistryTest] `TypeInfo` 의 주소는 등록이 아무리 이어져도 고정이다
- * @details 예전엔 타입 표가 밀집 배열이라 커질 때 원소를 옮겼고, `findType` 이 내준 포인터는 다음 등록에서 무효였다 —
- *          그래서 `TypeLookupCache` 가 세대를 견줬고 `rebindAllCachedTypeInfo` 가 있었다. 이제 `unique_ptr` 로 든다.
- *          200 개를 더 등록해 표를 몇 번 키운 뒤에도 처음 포인터가 그 타입이어야 하고, 내용이 온전해야 한다.
+ * @details 타입 표는 `TypeInfo` 를 `unique_ptr` 로 든다. 밀집 배열에 값으로 들면 커질 때 원소가 옮겨 `findType` 이 내준 포인터가
+ *          다음 등록에서 무효가 된다. 200 개를 더 등록해 표를 몇 번 키운 뒤에도 처음 포인터가 그 타입이어야 하고, 내용이 온전해야 한다.
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, TypeInfoAddressIsStableAcrossRegistrations )
 {
@@ -1079,8 +1074,8 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeInfoAddressIsStableAcrossRegistrat
  * @brief [ReflectionTypeInfoTest] 등록된 모든 비트필드는 **이 빌드 구성의 실제 레이아웃에서** 앞뒤의 보통 프로퍼티 사이에 있다
  * @details 보통 프로퍼티의 오프셋은 생성 코드가 `offsetof` 로 적어 그 구성의 레이아웃을 따른다. 비트필드는 `offsetof` 를 쓸 수 없어
  *          파서가 libclang 으로 잰 숫자를 박는데, 파서는 Debug 정의(`SW_DEBUG` · `_DEBUG`)를 모른 채 잰다 — Debug 에서 커지는 멤버
- *          (`sw::string` 의 경쟁 검사 자리 · 반복자 디버그) 뒤의 비트필드는 엉뚱한 바이트를 가리켰다. `SequencePlayerComponent::_bLoop`
- *          의 124 는 Debug 에서 문자열 안이었고, 씬 로드 · 인스펙터가 그 비트를 쓰면 문자열의 용량 비트를 뒤집었다.
+ *          (`sw::string` 의 경쟁 검사 자리 · 반복자 디버그) 뒤의 비트필드가 엉뚱한 바이트를 가리킬 수 있다 — 씬 로드 · 인스펙터가
+ *          그 비트를 쓰면 옆 문자열의 용량 비트를 뒤집는다.
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, EveryBitFieldLiesBetweenItsNeighbours )
 {
@@ -1132,8 +1127,8 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryBitFieldLiesBetweenItsNeighbours )
 
 /**
  * @brief [ReflectionTypeInfoTest] 한쪽만 적은 범위(`Min = 0`)는 그쪽만 막는다 — 위 경계가 기본값 1 로 따라오지 않는다
- * @details 예전에는 범위 표시가 하나라 `Min` 만 적어도 `_maxRange` 의 기본값 1 이 함께 나갔고, 인스펙터가 빛의 세기 · 광원 반경 ·
- *          그림자 범위를 1 에서 막았다. 슬라이더는 두 경계가 다 있을 때만이다.
+ * @details 범위 표시가 하나면 `Min` 만 적어도 `_maxRange` 의 기본값 1 이 함께 나가 인스펙터가 빛의 세기 · 광원 반경 ·
+ *          그림자 범위를 1 에서 막는다. 슬라이더는 두 경계가 다 있을 때만이다.
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, OneSidedRangeOnlyBoundsThatSide )
 {
@@ -1158,7 +1153,7 @@ SW_TEST_CASE( ReflectionTypeInfoTest, OneSidedRangeOnlyBoundsThatSide )
 
 /**
  * @brief [ReflectionTypeInfoTest] `describeType` · `describeEnum` 은 등록된 그대로(부모 사슬 · 실제 자리 · 범위 · 열거자 값)를 글로 보여 준다
- * @details 등록 내용을 물을 곳이 없었다 — `forEachType` 을 부르는 곳이 하나도 없었다. `-gv_dumpReflection` 이 이것을 첫 프레임에 찍는다.
+ * @details 등록 내용을 묻는 창구다. `-gv_dumpReflection` 이 이것을 첫 프레임에 찍는다.
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, DescribeTypeShowsTheRegisteredLayout )
 {
@@ -1182,8 +1177,8 @@ SW_TEST_CASE( ReflectionTypeInfoTest, DescribeTypeShowsTheRegisteredLayout )
 
 /**
  * @brief [ReflectionTypeInfoTest] 등록된 모든 타입의 부모는 등록돼 있다 — 사슬이 중간에 끊기지 않는다
- * @details `SceneComponent` 의 부모 `Component` 가 리플렉션에 없었다(`-gv_dumpReflection` 이 처음 보여 줬다). 부모가 없으면 상속 병합 · `castTo` ·
- *          "이 타입은 컴포넌트인가" 같은 질문이 사슬 중간에서 멈춘다. 만들 수 없는 기반은 `REFLECT( Abstract )` 로 등록한다.
+ * @details 부모(예: `SceneComponent` 의 `Component`)가 리플렉션에 없으면 상속 병합 · `castTo` · "이 타입은 컴포넌트인가" 같은 질문이 사슬
+ *          중간에서 멈춘다. 만들 수 없는 기반은 `REFLECT( Abstract )` 로 등록한다.
  */
 SW_TEST_CASE( ReflectionTypeInfoTest, EveryReflectedParentIsRegistered )
 {
@@ -1199,9 +1194,8 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryReflectedParentIsRegistered )
 
 /**
  * @brief [ReflectionTypeRegistryTest] 기반을 다시 등록 · 해제하면 파생 타입의 상속 포함 목록이 따라 바뀐다
- * @details 파생 타입의 `getPropertiesWithBase` 는 부모 프로퍼티를 **복사해** 캐시한다. 재등록은 그 타입 자신의 캐시만 비웠고(대입), 해제는 부모
- *          포인터와 조상 표만 비웠다. 그래서 다른 모듈의 파생 타입은 핫 리로드 뒤에도 옛 기반의 프로퍼티(옛 오프셋 · 내려간 모듈의 접근자)로
- *          직렬화했다.
+ * @details 파생 타입의 `getPropertiesWithBase` 는 부모 프로퍼티를 **복사해** 캐시한다. 재등록 · 해제가 그 타입 자신의 캐시나 부모 포인터 · 조상 표만
+ *          비우면, 다른 모듈의 파생 타입은 핫 리로드 뒤에도 옛 기반의 프로퍼티(옛 오프셋 · 내려간 모듈의 접근자)로 직렬화한다.
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
 {
@@ -1249,8 +1243,8 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, DerivedPropertyListFollowsItsBase )
 
 /**
  * @brief [ReflectionTypeRegistryTest] 짧은 이름이 겹치는 두 타입 · 두 enum 을 등록하면 경고가 두 FQN 을 모두 말한다 — 같은 타입의 재등록은 조용하다
- * @details 씬 · 프리팹 · `addComponentByName` 은 짧은 이름으로 찾는다. `a::Foo` 뒤에 `b::Foo` 가 오르면 그 이름은 조용히 `b::Foo` 가 됐고, 옛 씬은
- *          다른 컴포넌트를 만들었다. 동작(나중 것이 이긴다)은 그대로 두고 알린다.
+ * @details 씬 · 프리팹 · `addComponentByName` 은 짧은 이름으로 찾는다. `a::Foo` 뒤에 `b::Foo` 가 오르면 그 이름은 조용히 `b::Foo` 가 되고, 옛 씬은
+ *          다른 컴포넌트를 만든다. 동작(나중 것이 이긴다)은 그대로 두고 알린다.
  */
 SW_TEST_CASE( ReflectionTypeRegistryTest, ShortNameCollisionIsReported )
 {

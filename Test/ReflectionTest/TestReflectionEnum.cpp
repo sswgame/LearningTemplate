@@ -203,13 +203,12 @@ SW_TEST_CASE( ReflectionEnumNamesTest, ContainerKindAndNetRoleNames )
 
 /**
  * @brief [ReflectionEnumBitFlagTest] 평범한 연속 열거형은 비트플래그로 등록되지 않는다
- * @details 자동 감지는 "0 이 아닌 값이 모두 2의 거듭제곱" 이었는데, 그 조건은 `{ 0, 1, 2 }` 같은
- *          **평범한 연속 열거형**에도 그대로 맞는다. 그래서 `CameraRole` · `PackEncryptionType` ·
- *          `SampleStatus` 셋이 비트플래그로 등록돼 있었다 — 문자열 변환이 `toStringFlags` 로 가고
- *          인스펙터가 콤보 대신 체크박스를 그린다. 값이 셋 이상이어야 켜지게 바꿨다(1·2·4 처럼
- *          연속 열거형이라면 있어야 할 3 이 빠진 모양이라야 한다).
+ * @details "0 이 아닌 값이 모두 2의 거듭제곱" 이면 비트플래그로 보는 값 모양 감지는 `{ 0, 1, 2 }` 같은
+ *          **평범한 연속 열거형**에도 그대로 맞는다. 그러면 `CameraRole` · `PackEncryptionType` ·
+ *          `SampleStatus` 가 비트플래그로 등록돼 문자열 변환이 `toStringFlags` 로 가고 인스펙터가
+ *          콤보 대신 체크박스를 그린다. 그래서 값 모양으로 감지하지 않는다.
  *
- *          `ENUM( Flags )` 를 명시한 열거형은 값 모양과 무관하게 계속 비트플래그다 — 아래에서
+ *          `ENUM( Flags )` 를 명시한 열거형은 값 모양과 무관하게 비트플래그다 — 아래에서
  *          그쪽도 함께 본다.
  */
 SW_TEST_CASE( ReflectionEnumBitFlagTest, PlainSequentialEnumIsNotABitFlag )
@@ -231,9 +230,9 @@ SW_TEST_CASE( ReflectionEnumBitFlagTest, PlainSequentialEnumIsNotABitFlag )
 
 /**
  * @brief [ReflectionEnumInfoTest] 좁은 enum 의 높은 비트 · 음수 값도 메모리에서 읽은 값과 이름표의 값이 같다
- * @details 코드젠은 열거자 값을 libclang 의 **부호 있는** 값으로 적었고, 런타임은 1 · 2 바이트 enum 을 **부호 없이** 읽었다. 둘이
- *          엇갈린 값은 이름을 잃었다 — `ShaderStageFlag::Amplification`(0x80)은 이름표에 -128 로, 메모리에서는 128 로 읽혀
- *          `toString` 이 비었고 `All` 을 저장하면 그 비트가 빠졌다. 부호 있는 좁은 enum 의 음수는 반대로 어긋났다.
+ * @details 코드젠이 열거자 값을 libclang 의 **부호 있는** 값으로 적고 런타임이 1 · 2 바이트 enum 을 **부호 없이** 읽으면, 둘이
+ *          엇갈린 값은 이름을 잃는다 — `ShaderStageFlag::Amplification`(0x80)이 이름표에 -128 로, 메모리에서는 128 로 읽혀
+ *          `toString` 이 비고 `All` 을 저장하면 그 비트가 빠진다. 부호 있는 좁은 enum 의 음수는 반대로 어긋난다.
  */
 SW_TEST_CASE( ReflectionEnumInfoTest, NarrowEnumValuesMatchTheirNamesInMemory )
 {
@@ -270,7 +269,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, NarrowEnumValuesMatchTheirNamesInMemory )
 
 /**
  * @brief [ReflectionEnumInfoTest] 텍스트를 enum 으로 읽을 때 모르는 이름은 실패다 — 조용히 0 이 되지 않는다
- * @details 예전 직렬화는 모르는 이름 · 대소문자만 다른 이름 · 숫자를 모두 0 으로 읽어 썼다(orphan 도 로그도 없이). 이제 이름은 대소문자를 가리지
+ * @details 모르는 이름 · 대소문자만 다른 이름 · 숫자를 모두 0 으로 읽으면 orphan 도 로그도 없이 값이 바뀐다. 이름은 대소문자를 가리지
  *          않고, 알려진 값의 숫자도 받고, 비트플래그는 토큰마다 알려진 이름이어야 한다.
  */
 SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero )
@@ -294,7 +293,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
     SW_EXPECT_FALSE( pFlag->tryParseText( "Read | Bogus", value ) );
     SW_EXPECT_FALSE( pFlag->tryParseText( "64", value ) ); // 모르는 비트
 
-    // 직렬화 경로(JSON · XML): 못 읽으면 그 필드는 쓰지 않는다(값은 그대로 — 예전에는 0 이 됐다). 대소문자만 다른 이름은 읽는다.
+    // 직렬화 경로(JSON · XML): 못 읽으면 그 필드는 쓰지 않는다(값은 그대로 — 0 이 되면 안 된다). 대소문자만 다른 이름은 읽는다.
     const sw::TypeInfo* pHostType = registry.findType( sw::hashed_string( "sw::NarrowEnumHost" ) );
     SW_ASSERT_NOT_NULL( pHostType );
     {
@@ -347,8 +346,8 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
 
 /**
  * @brief [ReflectionEnumInfoTest] `findEnum` 이 준 포인터는 enum 이 더 등록돼도 그대로이고, 이름 · FQN · 별칭이 같은 객체를 가리킨다
- * @details 레지스트리는 EnumInfo 를 밀집 배열 해시맵에 **값으로** 들었다. enum 이 하나 더 오르며 배열이 커지면 모든 EnumInfo 가 옮겨져, 워커가 씬을
- *          읽으며 들고 있던 포인터가 그 자리에서 죽었다. 짧은 이름 · 별칭은 각자 복사본이라, 다시 등록돼 열거자가 늘어도 별칭으로 찾으면 옛 목록이었다.
+ * @details 레지스트리가 EnumInfo 를 밀집 배열 해시맵에 **값으로** 들면, enum 이 하나 더 올라 배열이 커질 때 모든 EnumInfo 가 옮겨져 워커가 씬을
+ *          읽으며 들고 있던 포인터가 그 자리에서 죽는다. 짧은 이름 · 별칭이 각자 복사본이면, 다시 등록돼 열거자가 늘어도 별칭으로 찾을 때 옛 목록이 나온다.
  */
 SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
 {
@@ -402,8 +401,8 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
 
 /**
  * @brief [ReflectionEnumInfoTest] 이름 해시가 같은데 값이 다른 열거자 둘은 등록 때 알린다 — 같은 값의 별칭은 괜찮다
- * @details 바이너리는 enum 을 열거자 이름 해시(대소문자 무시)로 싣는다. `Red` · `RED` 가 다른 값이면 저장된 데이터가 어느 쪽으로 읽힐지 정해지지 않는데,
- *          등록이 그것을 보지 않았다.
+ * @details 바이너리는 enum 을 열거자 이름 해시(대소문자 무시)로 싣는다. `Red` · `RED` 가 다른 값이면 저장된 데이터가 어느 쪽으로 읽힐지 정해지지 않으므로
+ *          등록이 그것을 알려야 한다.
  */
 SW_TEST_CASE( ReflectionEnumInfoTest, EnumeratorsWhoseNameHashesClashAreReported )
 {

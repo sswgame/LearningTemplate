@@ -220,8 +220,8 @@ namespace sw
 
     /**
      * @brief `Abstract = true` — 단독 토큰이 아니라 대입 형태로 적은 표본입니다.
-     * @details AnnotationMeta.txt 가 단독 토큰(flag)과 `key=value`(bool)를 따로 적던 시절에는 이
-     *          형태가 경고 한 줄 없이 버려졌습니다.
+     * @details AnnotationMeta.txt 의 `flag` 줄이 단독 토큰과 `X = true` 를 함께 등록하지 않으면 이 형태가
+     *          경고 한 줄 없이 버려집니다.
      */
     REFLECT( Abstract = true )
     struct AssignedAbstractBase
@@ -261,7 +261,7 @@ namespace sw
         PROPERTY( Polymorphic = true )
         ReflectAny _payload;
 
-        /** @brief 별칭도 한쪽만 늘어나 있었다 — `xmlAttribute` 는 단독 토큰으로만 먹혔습니다. */
+        /** @brief 별칭도 두 형태를 다 받아야 합니다 — 별칭 `xmlAttribute` 가 단독 토큰으로만 등록되면 이 대입 형태가 버려집니다. */
         PROPERTY( xmlAttribute = true )
         int32 _tag{ 0 };
 
@@ -415,7 +415,7 @@ namespace sw
                 int64 _id = 999;
             };
 
-            // 비트플래그는 **말해야** 한다 — 예전에는 값이 1·2·4 라는 이유로 자동 감지됐다.
+            // 비트플래그는 **말해야** 한다 — 값이 1·2·4 라는 이유로 자동 감지하지 않는다.
             // 중첩 열거형이라 비트 연산자는 코드젠되지 않지만(전방 선언 불가), 등록부의 표시는
             // 이것으로 선다.
             ENUM( Flags )
@@ -539,7 +539,7 @@ namespace sw
 
     /**
      * @brief 값이 객체 밖에 있는 프로퍼티(접근자 프로퍼티) 샘플입니다. 씬 컴포넌트의 로컬 TRS 가 트랜스폼 저장소의 칸에 사는 모양의 축소판입니다.
-     * @details `_position` 은 이름만 옛 필드 이름을 이어 쓰고, 값은 바깥 배열 `s_arrExternalPosition` 의 이 객체 칸(`_storageIndex`)에 있습니다.
+     * @details `_position` 은 필드처럼 붙인 프로퍼티 이름일 뿐이고, 값은 바깥 배열 `s_arrExternalPosition` 의 이 객체 칸(`_storageIndex`)에 있습니다.
      *          `_level` 은 보통 필드입니다. 둘이 한 타입에 섞여도 선언 순서대로 등록되는지, 직렬화가 두 자리를 다 따라가는지 봅니다.
      */
     REFLECT()
