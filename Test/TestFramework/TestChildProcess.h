@@ -34,10 +34,8 @@ namespace test
      * @param listEnvironment 자식에게만 보일 환경 변수(띄우는 동안만 걸고 되돌린다).
      * @param timeoutSeconds  넘으면 자식을 죽이고 `_bTimedOut` 을 세운다. 새니타이저 빌드는 열 배(CTest 시한과 같은 규칙).
      * @details 프로세스마다 한 번뿐인 상태(지연 로드된 DLL 의 등록 귀속)나 프로세스를 죽이는 일(크래시 보고)을 재는 케이스가
-     *          쓴다. 예전에는 케이스마다 환경 변수 걸기(플랫폼 `#if`) · 명령줄 · `Process::execute` · 되돌리기를 손으로 들었고,
-     *          **시한이 없었다** — 크래시 자식 하나가 CI 에서 멈추자 CoreTest 전체가 CTest 시한(30 초)까지 서 있다 졌고, 로그에는
-     *          어느 크래시 종류였는지도, 자식이 어디까지 갔는지도 남지 않았다(2026-10-01). 이제 시한을 넘기면 자식을 죽이고 그
-     *          케이스가 진다 — 출력 꼬리를 실패 메시지에 붙일 수 있다.
+     *          쓴다. 시한을 넘기면 자식을 죽이고 그 케이스가 진다 — 출력 꼬리를 실패 메시지에 붙일 수 있다. 시한이 없으면 멈춘 자식
+     *          하나가 실행 파일 전체를 CTest 시한까지 세워 두고, 어느 자식이 어디까지 갔는지도 남지 않는다.
      */
     ChildRunResult runThisExecutableAsChild( sw::string_view caseFullName, sw::vector_reference<const ChildEnvironmentVariable> listEnvironment,
                                              uint32 timeoutSeconds );

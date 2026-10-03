@@ -60,8 +60,8 @@ namespace test
 
         /**
          * @brief 실패 · 건너뜀 기록을 한 줄로 세우는 락.
-         * @details 단언은 작업 스레드에서도 불린다(`runParallel` 본문 · `std::thread` 람다 — 테스트 열 곳 남짓). 예전에는 기록이
-         *          벡터 `push_back` 이라 **둘이 동시에 실패하면** 그 벡터가 깨졌다 — 병렬 코드가 틀렸다는 것을 알려야 할 바로 그 순간에.
+         * @details 단언은 작업 스레드에서도 불린다(`runParallel` 본문 · `std::thread` 람다). 락 없이 벡터에 `push_back` 하면
+         *          **둘이 동시에 실패할 때** 그 벡터가 깨진다 — 병렬 코드가 틀렸다는 것을 알려야 할 바로 그 순간에.
          *          gtest 도 단언을 스레드 안전하게 보장한다. 엔진의 `sw::mutex` 를 쓰지 않는 것은 그것이 Debug 에서 데드락 탐지기를
          *          타기 때문이다 — 그 탐지기를 시험하는 케이스가 있다.
          */
@@ -455,9 +455,8 @@ namespace test
 
     void TestRegistry::listTests() const
     {
-        // **필터를 적용해서 센다.** 예전에는 `_listTest` 를 통째로 찍어서, `--test_list` 와
-        // `--test_filter` 를 같이 주면 필터가 조용히 무시됐다. 하필 "내 필터가 무엇을 고르나" 를
-        // 확인할 때 쓰는 기능이라, 틀린 답을 주면 그걸 믿고 필터를 잘못 적는다.
+        // **필터를 적용해서 센다.** `--test_list` 는 "내 필터가 무엇을 고르나" 를 확인할 때 쓰는 기능이라,
+        // `_listTest` 를 통째로 찍으면 틀린 답을 믿고 필터를 잘못 적는다.
         sw::vector<sw::string> listSelected;
         listSelected.reserve( _listTest.size() );
         for ( const TestCaseInfo* pTestInfo : selectCasesForThisShard() )
@@ -675,7 +674,7 @@ namespace test
         sw::map<sw::string, sw::pair<int32, int32>> mapSuiteRanSkipped;
 
         // 오래 걸린 케이스 — 끝에 몇 개를 찍는다. 테스트가 느려지는 것은 조용히 일어난다. 되풀이하면 케이스마다 가장 오래 걸린 회차
-        // 하나로 센다(예전에는 회차마다 따로 들어가 같은 케이스 하나가 목록을 다 채웠다).
+        // 하나로 센다(회차마다 따로 넣으면 같은 케이스 하나가 목록을 다 채운다).
         sw::map<const TestCaseInfo*, float64> mapSlowestElapsed;
 
         for ( uint32 iteration = 0; iteration < _repeatCount; ++iteration )
@@ -723,11 +722,10 @@ namespace test
 
         // 스위트를 골라 놓고 **하나도 실행되지 않았다면** 그 스위트는 아무것도 검증하지 않았다.
         //
-        // 스킵은 실패가 아니라서 예전에는 이런 실행이 그냥 초록이었다. DXC 가 사라지거나 구운 셰이더가
+        // 스킵은 실패가 아니라서 그냥 두면 이런 실행이 초록이다. DXC 가 사라지거나 구운 셰이더가
         // 없어지면 케이스가 스스로 SW_TEST_SKIP 하고, CI 는 "통과" 를 보고한다 — 무엇이 사라졌는지
         // 아무도 모른 채로. 검증 공백은 통과가 아니므로 여기서 실패로 만든다.
-        // (2026-09-13 기준 Debug·Release·Shipping 어디에도 통째로 스킵되는 스위트는 없다. 그래서
-        //  예외 목록이 없다 — 정말 필요해지면 `--allow_empty_suite` 로 그 실행만 열어 준다.)
+        // (예외 목록은 없다 — 정말 필요해지면 `--allow_empty_suite` 로 그 실행만 열어 준다.)
         //
         // 샤드로 나눴으면 **여러 샤드에 갈린 스위트는 여기서 판단하지 않는다** — 이 샤드가 받은 케이스가 마침 모두 건너뛰는 것이어도 다른
         // 샤드에서는 검증했을 수 있다. 통째로 이 샤드에 온 스위트만 본다. 갈린 스위트가 "전부 건너뜀" 을 막아야 하면 그 전제를 단언하는

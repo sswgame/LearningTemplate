@@ -270,8 +270,8 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadBrokenGraphIgnoresTrigger )
 
 /**
  * @brief onAfter 가 그래프를 깨진 상태로 표시하면 registerModule 은 실패해야 하고, 올렸던 이미지와 섀도 복사본은 그 자리에서 치운다
- * @details commit 은 새 핸들을 컨텍스트에 넣은 뒤 onAfter 가 그래프를 막아도 실패를 돌려준다. 예전에는 등록이 그 컨텍스트를 내리지
- *          않고 지워서 이미지 · 섀도 파일이 프로세스 끝까지 남았다(이 테스트가 `SWGame_temp_*` 를 남기고 있었다).
+ * @details commit 은 새 핸들을 컨텍스트에 넣은 뒤 onAfter 가 그래프를 막아도 실패를 돌려준다. 등록이 그 컨텍스트를 내리지 않고 지우면
+ *          이미지 · 섀도 파일(`SWGame_temp_*`)이 프로세스 끝까지 남는다.
  */
 SW_TEST_CASE( ArchitectureTest, LiveReloadOnAfterBrokenGraphFailsRegister )
 {
@@ -536,7 +536,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeSuccessPath )
 /**
  * @brief [ArchitectureTest] 모듈 이미지를 내리기 전의 정리는 에디터가 다는 엔진 쪽 등록부 넷을 모두 본다
  * @details `engine::releaseModuleCode` 는 모듈이 스스로 떼지 않은 것을 떼는 안전망이다. 에디터는 이벤트 구독 · 로그 리스너(콘솔 패널) ·
- *          Undo 명령(트랜잭션) · 창 닫기 처리기를 달고, 지금은 `ImGuiEditor::shutdown` · `~ConsolePanel` 이 손으로 뗀다. 여기서는 등록부마다
+ *          Undo 명령(트랜잭션) · 창 닫기 처리기를 달고, `ImGuiEditor::shutdown` · `~ConsolePanel` 이 손으로 뗀다. 여기서는 등록부마다
  *          하나씩 달고 범위를 그 하나의 스텁으로 좁혀 부른다 — 이 실행 파일의 다른 등록은 건드리지 않고, 등록부 하나를 빠뜨리면 진다.
  */
 SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUses )
@@ -593,7 +593,7 @@ SW_TEST_CASE( ArchitectureTest, ReleaseModuleCodeSweepsEveryRegistryTheEditorUse
 /**
  * @brief [ArchitectureTest] 새 모듈이 onAfterReload 안에서 결함을 내면 프로세스가 아니라 그 모듈이 멈춘다
  * @details onAfterReload 는 새 이미지의 코드가 처음 도는 자리다(ModuleHost 는 여기서 API 를 바인딩하고 인스턴스를 만든다). 거기서
- *          접근 위반이 나면 예전에는 에디터째 내려갔다. 이제는 그래프를 막고 결함 콜백을 부른다 — ModuleHost 는 그 콜백에서 받은 것을
+ *          접근 위반이 나면 에디터째 내려가지 않고, 그래프를 막고 결함 콜백을 부른다 — ModuleHost 는 그 콜백에서 받은 것을
  *          모듈을 부르지 않고 버린다. 여기서는 콜백 자리에 일부러 널 쓰기를 둔다.
  */
 SW_TEST_CASE( ArchitectureTest, FaultInOnAfterReloadStopsTheModuleNotTheProcess )
@@ -893,8 +893,8 @@ SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
  * @brief [ArchitectureTest] App 과 같은 사슬(GameFramework → 킷 → SWGame)을 연쇄 리로드해도, 의존 모듈은 **지금의** 복사본에 묶인다
  * @details 섀도 복사본은 파일 이름이 원본과 달라서 의존 모듈이 어느 이미지에 묶일지를 로더가 정한다. Windows 는 지연 로드 훅이
  *          `LiveReloadManager` 에게 물어 지금의 복사본을 받고, 리눅스는 SONAME 이 같은 **먼저 올라온** 이미지가 이긴다. 어긋나면
- *          GameFramework 가 한 프로세스에 두 벌 돌고, 옛 복사본을 내리는 순간 그리로 뛰는 코드가 죽는다. 예전 테스트들은 리로드가
- *          "끝났다" 만 봤지 누가 누구에게 묶였는지는 보지 않았다.
+ *          GameFramework 가 한 프로세스에 두 벌 돌고, 옛 복사본을 내리는 순간 그리로 뛰는 코드가 죽는다. 리로드가 "끝났다" 만 보면
+ *          이것을 못 잡으므로 누가 누구에게 묶였는지를 본다.
  *
  *          Windows 에서는 SWGame 이 GameFramework 를 실제로 불러야 지연 로드가 풀리므로, 리로드 앞뒤로 게임 인스턴스를 한 번씩
  *          만들고 부순 뒤에 확인한다. (킷의 GameFramework 지연 로드는 킷 코드가 돌기 전까지 풀리지 않을 수 있다 — 그 경우 확인은
@@ -946,8 +946,8 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
 
 /**
  * @brief [ArchitectureTest] 이 프로세스가 시킨 빌드가 도는 동안은 모듈을 올리지 않고, 끝나면 성공일 때만 올린다
- * @details 연쇄 빌드는 모듈 DLL 을 하나씩 다시 쓴다. 파일 감시는 mtime 이 디바운스 시간(300 ms)만큼 멈추면 올렸으므로, 의존하는 모듈의 링크가 끝나기
- *          전의 반쯤 된 집합이 올라갈 수 있었다. 빌드 중에는 예약(강제 리로드 포함)을 모아 두기만 하고, 빌드가 성공하면 올리고 실패하면 버린다.
+ * @details 연쇄 빌드는 모듈 DLL 을 하나씩 다시 쓴다. 파일 감시만 믿고 mtime 이 디바운스 시간(300 ms)만큼 멈출 때 올리면, 의존하는 모듈의 링크가 끝나기
+ *          전의 반쯤 된 집합이 올라갈 수 있다. 빌드 중에는 예약(강제 리로드 포함)을 모아 두기만 하고, 빌드가 성공하면 올리고 실패하면 버린다.
  */
 SW_TEST_CASE( ArchitectureTest, ReloadWaitsForTheBuildToSucceed )
 {
@@ -1004,7 +1004,7 @@ SW_TEST_CASE( ArchitectureTest, ReloadWaitsForTheBuildToSucceed )
 /**
  * @brief [ArchitectureTest] 교체된 옛 이미지는 바로 내려가지 않고, 배치가 상한을 넘을 때 오래된 것부터 내려간다
  * @details 옛 코드를 가리키는 것이 남아 있어도 이미지가 올라와 있는 동안은 크래시가 아니라 옛 동작이 한 번 더 돈다. 그래서 첫 이미지에서
- *          얻은 함수 포인터를 리로드 **뒤에** 불러 본다 — 예전(바로 `FreeLibrary`)에는 이 호출이 내려간 코드로 뛰었다. 상한보다 많이
+ *          얻은 함수 포인터를 리로드 **뒤에** 불러 본다 — 바로 `FreeLibrary` 하면 이 호출이 내려간 코드로 뛴다. 상한보다 많이
  *          리로드하면 언로드를 미룬 이미지 수는 상한에서 멈추고, 종료하면 모두 내려간다.
  */
 SW_TEST_CASE( ArchitectureTest, DeferredUnloadImagesStayMappedUntilTheirBatchIsEvicted )
@@ -1380,7 +1380,7 @@ SW_TEST_CASE( ArchitectureTest, RHIBackendDynamicSwapAndReload )
 #if defined( SW_SHIPPING )
 
 // ------------------------------------------------------------------------------
-// 2) ModuleAPI — exportGameApi / exportEditorApi
+// 2) ModuleApiTest — exportGameApi / exportEditorApi
 // ------------------------------------------------------------------------------
 /**
  * @brief [ModuleApiTest] Shipping 정적 exportGameApi
@@ -1575,8 +1575,8 @@ SW_TEST_CASE( ModuleApiTest, GameFrameworkKitsModuleTypeRegistration )
 
 /**
  * @brief [ModuleApiTest] 자식 프로세스 역할: 공용 모듈을 먼저 올리면 GameFramework 의 타입이 제 이름으로 남는다. 그냥 실행하면 건너뛴다.
- * @details `ModuleHost` 의 순서를 그대로 밟는다 — 공용 모듈 → 키트 → SWGame 등록, SWGame 서비스 묶기(예전에는 여기서 GameFramework 가
- *          지연 로드로 **처음** 올라왔다), 그리고 `bindGameApi` 끝의 인자 없는 등록. 프로세스마다 한 번뿐인 일이라(이미지는 내려가지 않는다)
+ * @details `ModuleHost` 의 순서를 그대로 밟는다 — 공용 모듈 → 키트 → SWGame 등록, SWGame 서비스 묶기(공용 모듈을 먼저 올리지 않으면 여기서
+ *          GameFramework 가 지연 로드로 **처음** 올라온다), 그리고 `bindGameApi` 끝의 인자 없는 등록. 프로세스마다 한 번뿐인 일이라(이미지는 내려가지 않는다)
  *          앞선 케이스가 SWGame 을 올린 이 프로세스에서는 잴 수 없어 자식에서 잰다.
  */
 SW_TEST_CASE( ModuleApiTest, SharedModuleChildKeepsItsRegistrations )
@@ -1615,8 +1615,8 @@ SW_TEST_CASE( ModuleApiTest, SharedModuleChildKeepsItsRegistrations )
 
 /**
  * @brief [ModuleApiTest] 공용 모듈(GameFramework)의 타입은 그것을 링크한 키트 · SWGame 이 아니라 **제 이름**으로 등록된다
- * @details 예전에는 공용 모듈을 처음 부르는 쪽(Windows 지연 로드 · 리눅스 첫 키트의 DT_NEEDED)이 올려, 그 정적 등록기가 SWGame · 첫 키트의
- *          이름으로 들어갔다 — 첫 SWGame 리로드가 GameFramework 컴포넌트를 모든 씬에서 지웠고 돌아오지 않았다. 새 프로세스에서 잰다.
+ * @details 공용 모듈을 처음 부르는 쪽(Windows 지연 로드 · 리눅스 첫 키트의 DT_NEEDED)이 올리면 그 정적 등록기가 SWGame · 첫 키트의
+ *          이름으로 들어가, 첫 SWGame 리로드가 GameFramework 컴포넌트를 모든 씬에서 지우고 돌아오지 않는다. 새 프로세스에서 잰다.
  */
 SW_TEST_CASE( ModuleApiTest, GameFrameworkRegistersUnderItsOwnName )
 {
@@ -1671,8 +1671,8 @@ SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
 
 /**
  * @brief [ModuleApiTest] 모듈(GameFramework · 킷 · 게임 · 에디터)이 등록하는 모든 PROPERTY 도 세 형식이 실어 나를 수 있는 타입이다
- * @details 같은 판정(`ReflectionSerializationTest.EveryPropertyHasATypeTheSerializersCanCarry`)이 ReflectionTest 가 등록하는 타입만 봤다 —
- *          모듈 타입의 PROPERTY 가 직렬화기가 모르는 타입이면 씬 · 프리팹 · 세이브 · 에디터 설정에 조용히 `null` 로 쓰였다. 모듈을 올리는 실행 파일이
+ * @details 같은 판정(`ReflectionSerializationTest.EveryPropertyHasATypeTheSerializersCanCarry`)은 ReflectionTest 가 등록하는 타입만 본다 —
+ *          모듈 타입의 PROPERTY 가 직렬화기가 모르는 타입이면 씬 · 프리팹 · 세이브 · 에디터 설정에 조용히 `null` 로 쓰인다. 모듈을 올리는 실행 파일이
  *          여기뿐이라 여기서 본다(자식 프로세스 — 위 케이스 머리말).
  */
 SW_TEST_CASE( ModuleApiTest, EveryModulePropertyHasATypeTheSerializersCanCarry )

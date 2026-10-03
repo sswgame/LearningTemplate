@@ -27,10 +27,9 @@ SW_TEST_REQUIRES_HOST( AppSmokeTest, "launches the real App.exe, which needs a G
 // ------------------------------------------------------------------------------
 // 1) AppSmokeTest — "실기동 게이트" 를 자동화한 것
 //
-// 이 저장소의 실질적인 최종 검증은 **App 을 띄워 보는 것**이었다(백로그 0절: 네 백엔드 × 에디터
-// 유무, 종료 코드 0, 로그에 `[Error]` 0건). 그런데 그 절차가 문서에만 있어서 사람이 기억해야
-// 돌았고, `EngineLoop` 은 어떤 단위 테스트도 돌리지 않는다 — **엔진 기동 전체가 자동 그물 밖**에
-// 있었다. 그 절차를 그대로 테스트로 옮긴다.
+// 이 저장소의 실질적인 최종 검증은 **App 을 띄워 보는 것**이다(네 백엔드 × 에디터 유무, 종료 코드 0,
+// 로그에 `[Error]` 0건). `EngineLoop` 은 어떤 단위 테스트도 돌리지 않으므로, 이 절차를 테스트로 두지
+// 않으면 **엔진 기동 전체가 자동 그물 밖**에 있다.
 //
 // 무엇을 보는가:
 //   - 종료 코드 0 (`-gv_profileFrames=N` 이 N 프레임 뒤 스스로 끝낸다)
@@ -41,8 +40,7 @@ SW_TEST_REQUIRES_HOST( AppSmokeTest, "launches the real App.exe, which needs a G
 // 느려져 아무도 안 돌린다.
 //
 // **로거가 서기 전의 실패는 이 게이트가 못 본다.** `Logger` 는 `EngineLoop::initialize` 안에서
-// 만들어지므로 그 앞에서 부른 `SW_LOG_ERROR` 는 아무 데도 남지 않는다(변이로 확인했다 — 그 자리에
-// 심은 에러 줄은 출력에 나타나지 않았다). 그 구간의 실패는 **종료 코드로만** 드러난다.
+// 만들어지므로 그 앞에서 부른 `SW_LOG_ERROR` 는 아무 데도 남지 않는다. 그 구간의 실패는 **종료 코드로만** 드러난다.
 // ------------------------------------------------------------------------------
 
 namespace
@@ -381,10 +379,9 @@ SW_TEST_CASE( AppSmokeTest, EditorModeStartsAndExitsCleanly )
 
 /**
  * @brief [AppSmokeTest] 에디터의 시작 씬(`-gv_editorStartupScene`)이 실제로 열리는 씬이고, 그 씬의 GameFramework 컴포넌트가 제 타입으로 지어진다
- * @details 에디터가 게임보다 먼저 서서 시작 씬을 GameFramework.dll 이 오르기 전에 읽었고(그 컴포넌트가 MissingComponent), 뒤에 선 게임이
- *          처음 여는 씬(실행 설정의 시작 씬)을 요청해 마지막 요청을 남기는 씬 매니저에서 그것이 이겼다 — `GameConfig::_startupScene` 주석과 반대였다.
- *          이제 타입 공급자 모듈은 기동 단계 `ModuleTypes` 에서 오르고, 게임이 먼저 · 에디터가 나중에 선다. 마지막으로 바뀐 활성 씬이 에디터의
- *          시작 씬이어야 한다.
+ * @details 타입 공급자 모듈은 기동 단계 `ModuleTypes` 에서 오르고, 게임이 먼저 · 에디터가 나중에 선다. 순서가 뒤집히면 에디터가 시작 씬을
+ *          GameFramework.dll 이 오르기 전에 읽어 그 컴포넌트가 MissingComponent 가 되고, 뒤에 선 게임이 요청한 처음 씬(실행 설정의 시작 씬)이
+ *          마지막 요청을 남기는 씬 매니저에서 이긴다. 마지막으로 바뀐 활성 씬이 에디터의 시작 씬이어야 한다.
  */
 SW_TEST_CASE( AppSmokeTest, EditorStartupSceneIsTheSceneThatOpens )
 {

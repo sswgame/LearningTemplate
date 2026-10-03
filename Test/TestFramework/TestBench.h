@@ -21,8 +21,7 @@ namespace test
 
     /**
      * @brief `[Bench] 이름  min · p50 · p90 · max (표본 수)` 한 줄을 찍습니다(마이크로초 표본).
-     * @details Shipping 은 Info 로그가 컴파일에서 빠져 값만 계산하고 만다. 예전에는 벤치 파일마다 이것과 백분위 · 경과 시간을
-     *          따로 들었고, 한쪽은 p90 을 찍고 다른 쪽은 안 찍었다 — 두 벤치의 줄을 나란히 놓고 견줄 수 없었다.
+     * @details Shipping 은 Info 로그가 컴파일에서 빠져 값만 계산하고 만다. 벤치마다 같은 모양으로 찍어야 두 벤치의 줄을 나란히 놓고 견줄 수 있다.
      */
     void logBenchSamples( const utf8* pLabel, sw::vector<int64>& listSample );
 

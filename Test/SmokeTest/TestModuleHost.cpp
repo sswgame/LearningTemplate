@@ -27,16 +27,15 @@ using namespace sw;
 // `RHI` 객체는 있는데 **디바이스가 없는 상태**가 실제로 존재한다: 백엔드 교체가 실패하면 디바이스만
 // 사라지고 RHI 는 남는다(`BackendSwapController::applyPendingChange` 의 실패 경로). 그 뒤 종료가
 // 돌면 호스트는 반드시 `drainRenderWorkers` 를 지나가는데, `RHI::getDevice()` 는 **널 참조**를
-// 돌려주므로 묻는 순간 죽는다. `EngineLoop::shutdown` 은 같은 이유로 이미 `hasDevice()` 를 먼저
-// 묻고 있었다 — 그 주석에 "이게 없어서 정상적인 실패가 종료 경로에서 SEGFAULT 로 끝났다" 고 적혀 있다.
+// 돌려주므로 `hasDevice()` 를 먼저 묻지 않으면 정상적인 실패가 종료 경로에서 SEGFAULT 로 끝난다.
 //
 // 이 스위트는 그 자리를 **디바이스 없는 RHI 하나로** 재현한다. GPU 도 창도 필요 없다.
 // ------------------------------------------------------------------------------
 
 /**
  * @brief [ModuleHostTest] 디바이스 없는 RHI 로도 초기화·종료가 죽지 않는다
- * @details 고치기 전에는 `shutdown()` 안의 `drainRenderWorkers` 가 널 참조를 물어 프로세스가 죽었다.
- *          배포 구성에서는 초기화가 게임 인스턴스를 만들려다 같은 자리에서 죽었다.
+ * @details 디바이스를 확인하지 않으면 `shutdown()` 안의 `drainRenderWorkers` 가 널 참조를 물어 프로세스가 죽는다.
+ *          배포 구성에서는 초기화가 게임 인스턴스를 만들려다 같은 자리에서 죽는다.
  */
 SW_TEST_CASE( ModuleHostTest, SurvivesAnRhiThatHasNoDevice )
 {
@@ -51,7 +50,7 @@ SW_TEST_CASE( ModuleHostTest, SurvivesAnRhiThatHasNoDevice )
     // 디바이스가 없으면 재생성도 거절한다 — 여기서 true 를 돌려주면 호출자가 인스턴스가 있다고 믿는다.
     SW_EXPECT_FALSE( host.reinitializeAfterRhiSwap( nullptr, nullptr ) );
 
-    host.shutdown(); // 예전 코드는 여기서 죽었다.
+    host.shutdown(); // 디바이스를 확인하지 않으면 여기서 죽는다.
 }
 
 #if !defined( SW_SHIPPING )
@@ -137,8 +136,8 @@ SW_TEST_CASE( ModuleHostTest, SuspendingAnEditorWithoutStopLeavesTheWorldStopped
 /**
  * @brief [ModuleHostTest] 종료하면 등록부에 남은 콜백이 없다
  * @details 콜백은 `ModuleHost` 의 메서드를 가리킨다. `App` 은 호스트를 먼저 지우고 등록부를 나중에
- *          내리므로, 남아 있으면 그 사이의 리로드가 죽은 객체로 뛰어든다. 예전에는 배수·배치
- *          델리게이트 둘만 떼고 **모듈마다 건 것은 그대로 두었다.**
+ *          내리므로, 남아 있으면 그 사이의 리로드가 죽은 객체로 뛰어든다. 배수·배치 델리게이트뿐
+ *          아니라 **모듈마다 건 것도** 떼야 한다.
  */
 SW_TEST_CASE( ModuleHostTest, ShutdownDetachesEveryCallbackItRegistered )
 {

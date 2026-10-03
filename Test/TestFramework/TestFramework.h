@@ -345,7 +345,7 @@ namespace test
 
     /**
      * @brief 스코프 동안 남은 Warning · Error 로그를 모아 "이 경고가 나왔나" 를 묻는 RAII 헬퍼입니다.
-     * @details 시험마다 `Logger::addGlobalListener` 리스너를 손으로 만들어 왔다(AssetCacheRegistry · ToolAssetCommands …). 리스너는 남기는 스레드에서
+     * @details 시험마다 `Logger::addGlobalListener` 리스너를 손으로 만들지 않게 한 자리에 둔다. 리스너는 남기는 스레드에서
      *          곧바로 불리므로 같은 스레드의 경고는 그 호출이 돌아오면 이미 모여 있다. `ScopedDefensiveTestLog` 와 같이 써도 된다 — 그때 메시지 앞에
      *          `[Expected Defensive Test]` 가 붙지만 `countContaining` 은 부분 문자열로 찾는다.
      */
@@ -403,9 +403,9 @@ namespace test
     // ------------------------------------------------------------------------------
     // 실패 보고 — 단언 매크로가 부르는 **바깥** 함수들
     //
-    // 단언 자리에는 비교와 이 호출 하나만 남긴다. 예전에는 실패 경로(문자열 둘 · `ostringstream` · 서식)가 단언마다
-    // 인라인으로 펼쳐졌다. 단언이 9,500 곳이라 그것이 테스트 바이너리의 대부분이었고, 최적화 빌드는 그것을 더 펼쳐
-    // **Release 의 EngineTest.exe 가 Debug 보다 컸다**(12.5 MB 대 7.7 MB). 실패는 드물고 느려도 되는 경로다.
+    // 단언 자리에는 비교와 이 호출 하나만 남긴다. 실패 경로(문자열 둘 · `ostringstream` · 서식)를 단언마다 인라인으로
+    // 펼치면 단언이 수천 곳이라 그것이 테스트 바이너리의 대부분이 되고, 최적화 빌드는 그것을 더 펼쳐 **Release 바이너리가
+    // Debug 보다 커진다.** 실패는 드물고 느려도 되는 경로다.
     // ------------------------------------------------------------------------------
     /** @brief 단언 실패 하나를 기록합니다. @param pMessage 덧붙일 말(널이면 없음). */
     SW_NOINLINE void reportFailure( const utf8* pCondition, const utf8* pFile, int32 line, const utf8* pMessage );
@@ -464,17 +464,14 @@ namespace test
      * @brief 이 프로세스·이 케이스만 쓰는 임시 파일 경로를 만듭니다.
      * @param fileName 쓰려는 파일 이름. 확장자는 그대로 남는다(로더가 그것으로 형식을 고른다).
      * @return `<임시 폴더>/sw_<pid>/<스위트_케이스>/<fileName>` — 그 폴더는 만들어 둔다.
-     * @details 테스트들이 `%TEMP%/test_malformed.wav` 처럼 **고정된 이름**에 쓰고 있었다.
-     *          같은 `EngineTest` 가 네 프리셋에서 각각 돌고 CI 는 그것들을 나란히 돌리므로,
-     *          한쪽의 `removeFile` 이 다른 쪽이 방금 쓴 파일을 지운다 — 2026-09-20 에 실제로
-     *          `Ninja-Shipping` 의 `EngineTest_NoGPU` 가 한 번 그렇게 실패했다가 다시 돌리니
-     *          통과했다. 프로세스 id 를 섞으면 그 충돌이 사라지고, 케이스 이름까지 섞으면
-     *          **한 프로세스 안에서 같은 이름을 쓰던 두 케이스**도 서로를 안 밟는다(실제로
-     *          `sw_test_scene_desc.bin` 이 그랬다).
+     * @details `%TEMP%/test_malformed.wav` 처럼 **고정된 이름**에 쓰면 안 된다. 같은 `EngineTest` 가 네 프리셋에서
+     *          각각 돌고 CI 는 그것들을 나란히 돌리므로, 한쪽의 `removeFile` 이 다른 쪽이 방금 쓴 파일을 지워
+     *          간헐 실패가 된다. 프로세스 id 를 섞으면 그 충돌이 사라지고, 케이스 이름까지 섞으면
+     *          **한 프로세스 안에서 같은 이름을 쓰는 두 케이스**도 서로를 안 밟는다.
      *
      *          **케이스가 끝나면 프레임워크가 그 케이스 폴더를 통째로 지운다** — `SW_TEST_DEFER_CLEANUP` 이 돈 뒤에. 엔진이 옆에
-     *          구워 둔 `.bin` · `.meta` 도 같은 폴더라 함께 지워진다. 예전에는 케이스마다 끝에서 `removeFile` 을 손으로 불렀는데
-     *          (193 곳), 단언으로 일찍 빠지면 그 줄에 닿지 않아 남았다 — 이 PC 의 임시 폴더에 3,000 개 넘게 쌓여 있었다.
+     *          구워 둔 `.bin` · `.meta` 도 같은 폴더라 함께 지워진다. 케이스가 끝에서 `removeFile` 을 손으로 부르면 단언으로 일찍
+     *          빠질 때 그 줄에 닿지 않아 남는다.
      *          못 지우면(열린 핸들) 그 케이스가 진다. 폴더를 케이스마다 두는 것은 정리가 **훑기 없이** 끝나게 하려는 것이다
      *          (임시 폴더 전체를 이름으로 훑으면 케이스마다 수십 ms 가 든다).
      * @note 케이스 밖에서 부르면 프로세스 폴더(`sw_<pid>`)에 생기고, 실행이 끝날 때 지워진다.
@@ -543,8 +540,7 @@ namespace test
  * @param reason    왜 CI 가 못 돌리는지(영문 — `--test_list` 와 실행 요약에 찍힌다).
  * @details 선언이 곧 분류다. `sw_addTestExecutable( ... HOST_SPLIT )` 가 `<타깃>_NoGPU`(`--host_suites=exclude`,
  *          라벨 `nogpu`)와 `<타깃>_HostOnly`(`--host_suites=only`, 라벨 `hostgpu`)를 등록하므로 새 호스트 스위트는
- *          **이 한 줄**로 CI 에서 빠지고 호스트 실행에 들어간다. 예전에는 같은 집합을 주석 마커 · NoGPU 필터 ·
- *          HostOnly 필터 세 곳에 적고 린트가 셋을 대조했다.
+ *          **이 한 줄**로 CI 에서 빠지고 호스트 실행에 들어간다. CMake 에는 스위트 이름을 적지 않는다.
  */
 #define SW_TEST_REQUIRES_HOST( SuiteName, reason ) static test::HostSuiteRegistrar hostSuite_##SuiteName( #SuiteName, reason )
 
@@ -572,7 +568,7 @@ namespace test
 #define SW_TEST_DEFER_CLEANUP( cleanup ) test::TestRegistry::getInstance().getCurrentContext()->deferCleanup( cleanup )
 
 // 단언은 전부 아래 둘 중 하나의 뼈대다 — `onFail` 이 `(void)0` 이면 EXPECT(기록하고 계속), `return` 이면 ASSERT(기록하고
-// 그 케이스를 끝낸다). 예전에는 단언마다 `return;` 한 줄만 다른 복사본이 따로 있었다. 조건 글(`#cond`)은 **바깥 매크로에서**
+// 그 케이스를 끝낸다). 조건 글(`#cond`)은 **바깥 매크로에서**
 // 만든다 — 안쪽 뼈대로 넘어간 인자는 이미 매크로가 풀린 뒤라, 거기서 만들면 `SW_TRUE` 가 `1` 로 찍힌다.
 
 /** @brief 조건 단언의 뼈대 — `bPassed` 가 거짓이면 실패를 기록하고 `onFail` 을 실행합니다. */
@@ -610,9 +606,8 @@ namespace test
 
 /**
  * @brief 조건이 거짓이어야 하며, 실패 시 메시지를 함께 기록합니다.
- * @details 이것이 없어서 부정 단언에는 메시지를 붙일 수 없었다 — 저자는 메시지를 버리거나
- *          `SW_EXPECT_TRUE_MSG( x == false, ... )` 로 뒤집어 썼다. **실패했을 때 가장 설명이
- *          필요한 쪽이 부정 단언**이다(무엇이 열려 있으면 안 되는지). 그래서 짝을 맞춘다.
+ * @details **실패했을 때 가장 설명이 필요한 쪽이 부정 단언**이다(무엇이 열려 있으면 안 되는지). 그래서
+ *          `SW_EXPECT_TRUE_MSG( x == false, ... )` 로 뒤집어 쓰지 않게 짝을 맞춘다.
  */
 #define SW_EXPECT_FALSE_MSG( cond, msg ) SW_TEST_CHECK_IMPL( !( cond ), "!(" #cond ")", msg, (void)0 )
 
@@ -667,6 +662,6 @@ namespace test
 /** @brief 포인터가 null 이 아니어야 하며, 아니면 테스트를 중단합니다. */
 #define SW_ASSERT_NOT_NULL( ptr ) SW_TEST_CHECK_IMPL( ( ptr ) != nullptr, #ptr " != nullptr", nullptr, return )
 
-// `SW_ASSERT_NULL` 은 **일부러 없다.** 짝을 맞추려고 만들 수는 있지만 부를 자리가 하나도 없었다
-// (`SW_EXPECT_NULL` 은 50곳이 쓴다 — 그쪽은 실패해도 계속 가는 게 맞는 자리들이다).
+// `SW_ASSERT_NULL` 은 **일부러 없다.** 짝을 맞추려고 만들 수는 있지만 부를 자리가 없다
+// (`SW_EXPECT_NULL` 을 쓰는 자리는 실패해도 계속 가는 게 맞는 자리들이다).
 // 쓰는 곳이 생기면 그때 위 뼈대로 한 줄 넣는다.

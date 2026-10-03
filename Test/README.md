@@ -80,7 +80,7 @@ ctest --preset Ninja-Debug-lint
 
 ### 이름만으로 돌리기 — `RunTests.py`
 
-케이스 하나를 돌리려면 세 가지를 알아야 했다: 그 스위트가 **어느 실행 파일**에 사는지, 작업 폴더가 **`Bin`** 이어야 한다는 것,
+케이스 하나를 직접 돌리려면 세 가지를 알아야 한다: 그 스위트가 **어느 실행 파일**에 사는지, 작업 폴더가 **`Bin`** 이어야 한다는 것,
 Shipping 은 실행 파일이 **`TestBin`** 에 있다는 것. `Scripts/dev/RunTests.py` 가 셋을 대신 안다 — 실행 파일마다
 `--test_list` 로 물어 패턴이 고르는 케이스가 있는 것만, `Bin` 에서 돌린다.
 
@@ -114,20 +114,20 @@ cd build/Ninja-Debug/Bin
 ### 구성마다 도는 케이스 수가 다르다
 
 `ctest` 는 어느 구성에서든 똑같이 "Passed" 라고만 말한다. 실제로 도는 양은 이렇게 다르다
-(main `8445bdea` 빌드의 `--test_list` 실측 — 등록된 케이스, 괄호 안은 그중 호스트 스위트(`--host_suites=only`) 케이스):
+(`--test_list` 실측 — 등록된 케이스, 괄호 안은 그중 호스트 스위트(`--host_suites=only`) 케이스. 케이스가 늘면 숫자는 바뀐다):
 
 | 실행 파일 | Debug | Shipping |
 | --- | ---: | ---: |
-| CoreTest | 360 | 360 |
-| EngineTest | 1041 (86) | 1029 (81) |
-| ReflectionTest | 175 | 175 |
-| **SmokeTest** | **47** | **3** |
+| CoreTest | 363 | 363 |
+| EngineTest | 1043 (87) | 1031 (82) |
+| ReflectionTest | 174 | 174 |
+| **SmokeTest** | **52** | **3** |
 | EditorTest | 149 | 142 |
 | EditorUiTest | 2 | 2 |
 | **AppTest** | **17 (11)** | **9 (3)** |
 
-SmokeTest 가 47 → 3 이 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
-Shipping 스모크는 정적 `fillGameAPI` 경로만 본다(`Test/SmokeTest/CMakeLists.txt` 참고). AppTest 가 17 → 9 인 것도
+SmokeTest 가 52 → 3 이 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
+Shipping 스모크는 정적 `exportGameApi` 경로만 본다(`Test/SmokeTest/CMakeLists.txt` 참고). AppTest 가 17 → 9 인 것도
 같은 이유다 — 에디터 실기동 · 백엔드 교체 · 메모리 태그 보고 케이스는 배포본에 에디터와 그 창구가 없어 아예 컴파일되지 않는다.
 EngineTest · EditorTest 의 차이도 Dev 전용 경로(모듈 코드 해제 · 셰이더 라이브 컴파일 · 인스펙터 메타데이터) 케이스다.
 스킵도 구성을 탄다. **어느 구성에서나 스킵되는 것은 "자식 역할" 케이스다** — 환경 변수가 없으면 스스로 빠지고, 다른 케이스가

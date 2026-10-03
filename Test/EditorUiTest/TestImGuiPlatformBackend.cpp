@@ -50,12 +50,10 @@ namespace
  * @brief [EditorUiPlatformBackendTest] 초기화 없이 shutdown 해도 살아남는다
  * @details `ImGuiEditor::initialize()` 는 단계가 실패할 때마다
  *          `shutdownPartialInitialization()` 을 부르고, 그 함수는 `_platformBackend->shutdown()`
- *          을 부른다. 그런데 `ImGuiWin32PlatformBackend::shutdown()` 은
- *          `ImGui_ImplWin32_Shutdown()` 을 **무조건** 불렀다 — 짝이 되는 Init 이 없으면
- *          그 함수 첫 줄의 단정("No platform backend to shutdown, or already shutdown?")에 걸린다.
- *          **즉 실패를 수습하라고 있는 경로가 곧바로 죽었다.**
- *          렌더러 백엔드 넷은 모두 `BackendRendererUserData` 로 같은 것을 막고 있었고,
- *          플랫폼 쪽만 빠져 있었다(2026-09-18 수정, `BackendPlatformUserData` 로 맞춤).
+ *          을 부른다. `ImGuiWin32PlatformBackend::shutdown()` 이 `ImGui_ImplWin32_Shutdown()` 을
+ *          **무조건** 부르면 짝이 되는 Init 이 없을 때 그 함수 첫 줄의 단정("No platform backend to
+ *          shutdown, or already shutdown?")에 걸린다 — **실패를 수습하라고 있는 경로가 곧바로 죽는다.**
+ *          렌더러 백엔드가 `BackendRendererUserData` 로 막듯 플랫폼 쪽은 `BackendPlatformUserData` 로 막는다.
  */
 SW_TEST_CASE( EditorUiPlatformBackendTest, ShutdownWithoutInitializeIsSafe )
 {

@@ -58,9 +58,9 @@ namespace
 
 /**
  * @brief [AppCookTest] 씬 쿠킹이 GameFramework 컴포넌트를 제 타입으로 굽는다 — spriteui 의 HPBar · DamageUI · Effect 가 MissingComponent 가 아니다
- * @details 두 구성이 서로 다른 이유로 GameFramework 타입이 없는 채 씬을 구웠다. Dev 는 헤드리스 쿠킹이 모듈 DLL 을 하나도 올리지 않고 끝났고
- *          (모듈은 RHI 뒤에 ModuleHost 가 올렸다), Shipping 은 App 이 통째로 링크할 정적 라이브러리 목록을 GameFramework · 킷 · 게임이 등록되기
- *          전에 읽어 Engine 만 통째로 링크했다 — 아무도 참조하지 않는 GameFramework 의 등록기가 링크에서 빠졌다. 쿠킹은 경고만 남기고 성공했다.
+ * @details 두 구성이 서로 다른 이유로 GameFramework 타입이 없는 채 씬을 구울 수 있다. Dev 는 헤드리스 쿠킹이 모듈 DLL 을 올려야 하고(RHI 뒤에서
+ *          ModuleHost 가 올리면 쿠킹에는 없다), Shipping 은 App 이 통째로 링크할 정적 라이브러리 목록을 GameFramework · 킷 · 게임이 등록된 뒤에
+ *          읽어야 한다 — 아무도 참조하지 않는 GameFramework 의 등록기가 링크에서 빠진다. 그래도 쿠킹은 경고만 남기고 성공하므로 여기서 본다.
  */
 SW_TEST_CASE( AppCookTest, SceneCookBuildsGameFrameworkComponents )
 {
@@ -76,9 +76,9 @@ SW_TEST_CASE( AppCookTest, SceneCookBuildsGameFrameworkComponents )
 
 /**
  * @brief [AppCookTest] 씬 쿠킹은 소스 트리를 읽어 오류 · 경고 없이 끝난다 — 배포 구성도 같다
- * @details 배포 구성의 쿠킹이 실행처럼 팩만 읽고 느슨한 파일을 막아, 팩이 없는 첫 빌드에서 `engine/data/enginedata.xml` 을 찾지 못했고(오류),
- *          옮긴 프리팹을 GUID 로 찾지 못해 쿠킹본 `.bin` 을 요구했고(오류), `quadrants.sprite.json` 을 읽지 못했다(경고). 팩이 있는 빌드에서는 지난
- *          빌드의 팩을 입력으로 읽었다. 쿠킹은 소스 트리를 올린다(`ContentSource::SourceTree`).
+ * @details 쿠킹은 소스 트리를 올린다(`ContentSource::SourceTree`). 배포 구성의 쿠킹이 실행처럼 팩만 읽고 느슨한 파일을 막으면, 팩이 없는 첫 빌드에서
+ *          `engine/data/enginedata.xml` 을 찾지 못하고 옮긴 프리팹을 GUID 로 찾지 못해 쿠킹본 `.bin` 을 요구하며, 팩이 있는 빌드에서는 지난 빌드의
+ *          팩을 입력으로 읽는다.
  */
 SW_TEST_CASE( AppCookTest, SceneCookReadsTheSourceTreeCleanly )
 {
