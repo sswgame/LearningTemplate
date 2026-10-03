@@ -74,8 +74,8 @@ namespace sw
         float32 _maxRange;
         /**
          * @brief 아래 · 위 경계가 각각 적혀 있는가(`PROPERTY( Min = … )` · `Max = …`). 적힌 쪽만 막는다.
-         * @details 예전에는 표시가 하나라 `Min = 0` 만 적은 프로퍼티의 위 경계가 기본값 1 로 남았다 — 인스펙터가 빛의 세기 · 광원
-         *          반경 · 그림자 범위를 1 에서 막았다. 슬라이더는 둘 다 있을 때만 그린다(`hasFullRange`).
+         * @details 표시가 하나면 `Min = 0` 만 적은 프로퍼티의 위 경계가 기본값 1 로 남아 인스펙터가 그 값을 1 에서 막는다.
+         *          슬라이더는 둘 다 있을 때만 그린다(`hasFullRange`).
          */
         uint8 _bHasMinRange : 1;
         uint8 _bHasMaxRange : 1;
@@ -199,7 +199,7 @@ namespace sw
         hashed_string         _typeName;
         hashed_string         _elementTypeName;
         hashed_string         _keyTypeName;
-        vector<hashed_string> _listAlias; ///< PROPERTY(Alias=…) 로 적은 옛 키들
+        vector<hashed_string> _listAlias; ///< PROPERTY(Alias=…) 로 적은 다른 키들(이름을 바꾸기 전의 키)
         PropertyMetadata      _metadata;
 
         mutable uint32 _cachedNameHash;
@@ -277,10 +277,9 @@ namespace sw
         /**
          * @brief 비트필드의 바이트 · 마스크를 **이 빌드 구성의 실제 레이아웃에서** 찾아 이 프로퍼티를 비트필드로 만듭니다.
          * @details 0 으로 채운 자리에 그 비트만 세우는 함수를 불러, 바뀐 바이트와 비트를 읽는다(언리얼 `FBoolProperty` 가 UHT 의
-         *          SetBit 함수로 하는 것과 같다). 예전에는 파서가 libclang 으로 잰 바이트를 생성 코드에 박았는데, 파서는 Debug 정의
-         *          (`SW_DEBUG` · `_DEBUG`)를 모른 채 잰다 — Debug 에서 커지는 멤버(`sw::string` 의 경쟁 검사 자리 · 반복자 디버그) 뒤의
-         *          비트필드가 엉뚱한 바이트를 가리켰다(`DirectionalLightComponent::_bCastShadow` · `SequencePlayerComponent::_bLoop` 등
-         *          넷). 씬을 읽을 때마다 그 자리의 다른 필드를 덮어썼다. 다른 프로퍼티는 처음부터 `offsetof` 라 맞았다.
+         *          SetBit 함수로 하는 것과 같다). 주의: 파서가 libclang 으로 잰 바이트를 쓰면 안 된다 — 파서는 Debug 정의
+         *          (`SW_DEBUG` · `_DEBUG`)를 모른 채 재므로, Debug 에서 커지는 멤버(`sw::string` 의 경쟁 검사 자리 · 반복자 디버그) 뒤의
+         *          비트필드가 엉뚱한 바이트를 가리키고 씬을 읽을 때마다 그 자리의 다른 필드를 덮어쓴다. 다른 프로퍼티는 `offsetof` 다.
          * @param ownerSize 이 프로퍼티를 가진 타입의 크기(`sizeof`)
          * @param pSetBit   그 비트만 세우는 함수
          * @return 바이트 하나의 비트 하나를 찾았으면 true. 아니면 오류를 남기고, 읽으면 false · 쓰면 무시되는 비트필드로 둡니다 —
@@ -315,7 +314,7 @@ namespace sw
                 uint8* pByte = reinterpret_cast<uint8*>( pInstance ) + _offset;
                 bool   bVal  = false;
                 // 비트필드는 1비트 불리언 플래그뿐이다. 구조체 타입(float3 …)으로 부르면 이 분기는 닿지 않지만 컴파일은 되어야 한다 —
-                // 예전에는 `static_cast<T>( 0 )` 이 구조체에서 컴파일되지 않아 `setValue<float3>` 자체를 쓸 수 없었다.
+                // `static_cast<T>( 0 )` 은 구조체에서 컴파일되지 않으므로 bool 일 때만 쓴다.
                 if constexpr ( std::is_same_v<T, bool> )
                     bVal = newValue;
                 else if constexpr ( std::is_same_v<T, float32> )
@@ -449,8 +448,7 @@ namespace sw
         /**
          * @brief 메모리 포인터에서 실제 enum 크기만큼 안전하게 읽어 int64로 반환합니다.
          * @details 밑바탕 타입의 부호대로 넓힌다 — 이름표(`_mapValueToName`)의 값도 같은 규칙(생성 코드의 `static_cast<int64>( 열거자 )`)
-         *          이다. 예전에는 1 · 2 바이트를 늘 부호 없이 읽고 이름표는 libclang 의 부호 있는 값이라, `uint8` 의 0x80(`-128` 로
-         *          적힘)과 `int8` 의 -1(`255` 로 읽힘)이 이름을 잃었다.
+         *          이다. 둘이 어긋나면 `uint8` 의 0x80 · `int8` 의 -1 같은 값이 이름을 잃는다.
          */
         int64 readValueFromMemory( const void* pPtr ) const noexcept
         {
@@ -536,7 +534,7 @@ namespace sw
             }
 
             vector<hashed_string> listName;
-            (void)collectFlagNames( val, listName ); // 이름이 덮지 못한 비트는 글에 적지 않는다(예전과 같다)
+            (void)collectFlagNames( val, listName ); // 이름이 덮지 못한 비트는 글에 적지 않는다
             string result;
             result.reserve( 64 );
             for ( const hashed_string& name : listName )
@@ -572,7 +570,7 @@ namespace sw
         /**
          * @brief 이름 해시로 열거자 값을 찾습니다 — 정본 이름과 ValueAlias 모두. 바이너리는 열거자를 이 해시로 싣습니다(값이 아니라 이름이 정체성이다).
          * @details 표식 값(`Invalid` · `Count`)도 받습니다 — `tryParseText` 와 같은 규칙(필드에 든 값을 적은 그대로 읽는다). 이름 해시는 대소문자를
-         *          가리지 않습니다(`hashed_string` — 글 읽기도 대소문자를 가리지 않는다). ValueAlias 로 남긴 옛 이름도 새 열거자로 읽힙니다
+         *          가리지 않습니다(`hashed_string` — 글 읽기도 대소문자를 가리지 않는다). ValueAlias 로 남긴 이전 이름도 새 열거자로 읽힙니다
          *          (실제 게임 데이터가 생긴 뒤 이름을 바꿀 때의 창구 — 그 전에는 데이터를 새 이름으로 다시 쓴다).
          */
         [[nodiscard]] bool findValueByNameHash( uint32 nameHash, int64& outValue ) const
@@ -779,9 +777,8 @@ namespace sw
         mutable atomic<const TypeInfo*> _pParentType;
         /**
          * @brief `_parentFQN` 을 이름으로 풀어 봤지만 풀지 못했던 타입 표 세대입니다. 0 이면 아직 해 보지 않았습니다.
-         * @details `Component` 처럼 REFLECT 가 아닌 기반은 이름만 적혀 있고 등록되지 않습니다. 예전에는 부모를 묻는
-         *          자리마다(계층 프로퍼티 조회 · 이름 걷기 · 기본값의 사슬 수집) 레지스트리를 잠그고 다시 찾았습니다
-         *          (호출당 24 ns). 같은 세대면 답이 같으므로 세대를 적어 두고, 등록 · 해제로 세대가 바뀔 때만 다시 찾습니다.
+         * @details 등록되지 않은 기반은 이름만 적혀 있습니다. 부모를 묻는 자리(계층 프로퍼티 조회 · 이름 걷기 · 기본값의 사슬 수집)마다
+         *          레지스트리를 잠그고 다시 찾지 않도록, 같은 세대면 답이 같으므로 세대를 적어 두고 등록 · 해제로 세대가 바뀔 때만 다시 찾습니다.
          */
         mutable atomic<uint32> _parentMissGeneration;
         uint32                 _typeId;
@@ -947,15 +944,14 @@ namespace sw
         }
         /**
          * @brief 부모에게서 **복사해 온** 캐시(상속 포함 목록과 그 이름 맵 · POD 판정)를 비웁니다. 다음 조회가 지금 부모로 다시 만듭니다.
-         * @details 등록 · 해제 뒤에 `TypeRegistry` 가 모든 타입에 부릅니다. 예전에는 대입(`invalidateDerivedCaches`)만 비워서, 기반이 다시
-         *          등록되거나 내려가도 **다른 모듈의 파생 타입**은 옛 기반의 프로퍼티(옛 오프셋 · 내려간 모듈 코드를 가리키는 접근자)를
-         *          계속 내놓았다.
+         * @details 등록 · 해제 뒤에 `TypeRegistry` 가 모든 타입에 부릅니다. 이것이 없으면 기반이 다시 등록되거나 내려가도 **다른 모듈의
+         *          파생 타입**이 옛 기반의 프로퍼티(옛 오프셋 · 내려간 모듈 코드를 가리키는 접근자)를 계속 내놓는다.
          */
         void clearInheritedProperties() const;
         /**
          * @brief 선언에서 **파생된** 캐시(이름 맵 · 상속 포함 목록 · 부모 포인터 · 조상 표 · POD 판정)를 모두 비웁니다.
-         * @details 복사 · 이동 대입이 이 열한 줄을 각자 갖고 있었습니다. 캐시가 하나 늘면 두 곳을 같이 고쳐야 했고, 빠뜨리면 대입된
-         *          타입이 **옛 타입의 캐시**로 답했습니다(이름 조회가 다른 오프셋을 줍니다).
+         * @details 복사 · 이동 대입이 함께 씁니다. 캐시를 더하면 여기서 비울 것 — 빠뜨리면 대입된 타입이 **옛 타입의 캐시**로 답합니다
+         *          (이름 조회가 다른 오프셋을 줍니다).
          */
         void invalidateDerivedCaches();
         /** @brief 레지스트리에 살아 있으면 true 입니다. 모듈 해제가 내리고 재등록이 올립니다. 사본은 항상 true 입니다. */
@@ -1049,19 +1045,16 @@ namespace sw
 
         /**
          * @brief 현재 클래스와 부모 상속 체인에서 프로퍼티를 찾습니다. 계층 병합 목록과 함께 만든 맵 하나로 찾습니다.
-         * @details 예전에는 단계마다 `findProperty` 를 따로 불렀고, 사슬 끝의 풀리지 않는 부모 이름을 잠그고 찾았습니다
-         *          (적중 17 · 실패 34 ns). 이제 `getPropertiesWithBase()` 가 만들어 둔 맵을 한 번 봅니다. 파생이 기반과 같은
+         * @details `getPropertiesWithBase()` 가 만들어 둔 맵을 한 번 봅니다. 파생이 기반과 같은
          *          이름을 다시 적으면 파생이 이깁니다(병합 규칙과 같습니다).
          */
         const PropertyInfo* findPropertyInHierarchy( const hashed_string& propertyNameOrAlias ) const;
 
         /**
          * @brief 프로퍼티를 순회합니다. bIncludeBase 가 true 이면 상속 체인을 포함합니다.
-         * @details **직렬화는 true 를 써야 합니다.** 기본값이 false 라서 오랫동안 `XmlSerializer` ·
-         *          `JsonSerializer` · `ObjectDiffSerializer` 가 **상속된 PROPERTY 를 저장도 로드도
-         *          하지 않았습니다.** 컴포넌트에서는 그것이 곧 `SceneComponent` 의 트랜스폼이라,
-         *          씬 · 프리팹 · Undo 스냅샷에서 메시 · 스프라이트 · 카메라의 위치가 사라졌습니다
-         *          (`BinarySerializer` 만 처음부터 `getPropertiesWithBase()` 를 써서 옳았습니다).
+         * @details **직렬화는 true 를 써야 합니다.** 기본값 false 로 부르면 **상속된 PROPERTY 를 저장도 로드도 하지
+         *          않습니다** — 컴포넌트에서는 그것이 곧 `SceneComponent` 의 트랜스폼이라 씬 · 프리팹 · Undo 스냅샷에서
+         *          메시 · 스프라이트 · 카메라의 위치가 사라집니다.
          *          `getPropertiesWithBase()` 는 기반 먼저, 파생이 같은 이름을 **덮어쓰는** 순서로
          *          평탄화하고 캐시하므로 중복 방출은 없습니다.
          * @note 상속 체인을 **부르는 쪽이 직접 도는** 코드(`ComponentDefaults` 가 레벨마다 자기 XML

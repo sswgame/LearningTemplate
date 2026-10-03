@@ -87,14 +87,12 @@ namespace sw
 
     /**
      * @brief FQN 하나의 `findType` 결과를 적어 두는 칸입니다.
-     * @details 코드젠의 `StaticType()` 은 부를 때마다 `findType( hashed_string( "sw::Foo" ) )` 을
-     *          했습니다. 문자열 intern(샤드 뮤텍스) + shared_mutex 잠금 + 해시맵 조회입니다. 캐스트 한 번마다
-     *          그것이 들어갔습니다. 이 칸은 한 번 찾은 포인터를 그대로 반환합니다.
+     * @details 코드젠의 `StaticType()` 이 캐스트마다 `findType( hashed_string( "sw::Foo" ) )`(문자열 intern + shared_mutex 잠금 +
+     *          해시맵 조회)을 하지 않도록, 이 칸이 한 번 찾은 포인터를 그대로 반환합니다.
      *
      *          **세대를 보지 않는 이유.** `TypeInfo` 의 주소는 고정입니다. 레지스트리가 `unique_ptr` 로 들고,
      *          표가 커져도 옮기지 않으며, 모듈 해제는 지우는 대신 `_bAlive` 를 내립니다(묘비). 같은 FQN 이 다시
-     *          등록되면 같은 객체에 덮어써 되살립니다. 그래서 적중은 "포인터 하나 + 살아 있나" 로 끝납니다. 예전에는
-     *          레지스트리 세대와 자기 세대를 견주는 로드 둘이 더 있었습니다. 캐스트마다 두 번 오는 자리입니다.
+     *          등록되면 같은 객체에 덮어써 되살립니다. 그래서 적중은 "포인터 하나 + 살아 있나" 로 끝납니다(캐스트마다 두 번 오는 자리입니다).
      *          세대(`gv_typeTableGeneration`)는 **빈 답**(미등록)을 매번 다시 찾지 않으려고만 씁니다.
      *          핫 리로드로 모듈이 사라지면 그 모듈의 정적 칸도 같이 사라지고, 다시 올라온 모듈의 칸은
      *          비어서 첫 호출에 찾습니다.
@@ -176,11 +174,11 @@ namespace sw
         void registerEnum( const EnumInfo& info );
 
         /**
-         * @brief 옛 이름을 이미 등록된 canonical TypeInfo 에 연결합니다(직렬화 · 컴포넌트 키 호환).
+         * @brief 별칭(이름을 바꾸기 전의 이름)을 이미 등록된 canonical TypeInfo 에 연결합니다(직렬화 · 컴포넌트 키 호환).
          * @details REFLECT(Alias=…) / ReflectBuiltins 별칭 코드젠이 부릅니다.
          */
         void registerTypeAlias( const utf8* pAliasName, const utf8* pCanonicalName );
-        /** @brief 옛 이름을 이미 등록된 canonical EnumInfo 에 연결합니다. */
+        /** @brief 별칭(이름을 바꾸기 전의 이름)을 이미 등록된 canonical EnumInfo 에 연결합니다. */
         void registerEnumAlias( const utf8* pAliasName, const utf8* pCanonicalName );
 
         // ------------------------------------------------------------------------------
@@ -415,9 +413,9 @@ namespace sw
         unordered_map<hashed_string, hashed_string> _mapAliasToFqn;
         /**
          * @brief FQN 하나당 EnumInfo **하나**입니다(주소 고정 · 지우지 않는다 — TypeInfo 와 같은 규칙).
-         * @details 예전에는 값으로 들었다. 이 맵은 밀집 배열이라 enum 이 하나 더 등록돼 배열이 커지면 **모든 EnumInfo 가 옮겨졌고**,
-         *          `findEnum` 이 건넨 포인터가 그 자리에서 죽었다(워커가 씬을 짓는 동안 모듈이 올라오는 길). 짧은 이름 · 별칭은 각자
-         *          **복사본**이라 핫 리로드로 열거자가 늘어도 별칭 쪽은 옛 목록으로 답했다.
+         * @details 이 맵은 밀집 배열이라 값으로 들면 enum 이 하나 더 등록돼 배열이 커질 때 **모든 EnumInfo 가 옮겨져** `findEnum` 이 건넨
+         *          포인터가 죽는다(워커가 씬을 짓는 동안 모듈이 올라오는 길). 짧은 이름 · 별칭도 복사본이 아니라 같은 객체를 가리킨다 —
+         *          복사본이면 핫 리로드로 열거자가 늘어도 별칭 쪽이 옛 목록으로 답한다.
          */
         unordered_map<hashed_string, unique_ptr<EnumInfo>> _mapFqnToEnum;
         /** @brief FQN · 짧은 이름 · 별칭 → `_mapFqnToEnum` 의 객체입니다. 모듈 해제는 여기서만 지웁니다. */

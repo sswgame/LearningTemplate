@@ -25,11 +25,8 @@ namespace sw::generated
     /**
      * @brief 생성 코드가 타입마다 특수화하는 등록기입니다. 선언만 여기 있고 정의는 .gen.cpp 가 냅니다.
      * @details 등록기는 `offsetof( Foo, _privateField )` 로 private 멤버를 만지므로 friend 여야 합니다.
-     *          예전에는 등록기 이름이 타입마다 달라서(`sw_Foo_Registrar`) 헤더마다 두 줄을 손으로 적었습니다.
-     *          클래스 앞의 전방 선언 블록과 클래스 안의 friend 선언입니다. 인자 없는 REFLECT_BODY() 는
-     *          그 이름을 만들어 낼 수 없고, 한정된 friend 선언은 이름을 새로 도입하지 않아 전방 선언을
-     *          없앨 수도 없었습니다. 등록기를 타입으로 특수화되는 **템플릿**으로 두면 이름이 필요 없어져
-     *          `template <typename> friend struct` 한 줄로 REFLECT_BODY() 안에 접힙니다.
+     *          등록기를 타입으로 특수화되는 **템플릿**으로 두면 타입마다 이름을 만들 필요가 없어
+     *          `template <typename> friend struct` 한 줄로 REFLECT_BODY() 안에 접힙니다(전방 선언도 필요 없습니다).
      */
     template <typename T>
     struct Registrar;

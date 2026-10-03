@@ -56,6 +56,8 @@ flowchart LR
 
 ## 초심자용 작성법
 
+아래 예의 타입 이름(`UnitStatsData` · `MonsterComponent` · `MonsterAiState` · `CollisionMask`)은 설명용입니다 — 트리에 있는 타입이 아닙니다.
+
 ### 1) 일반 구조체 / 데이터
 
 ```cpp
@@ -131,7 +133,7 @@ PROPERTY( Alias = "hp, HitPoints" )
 int32 health{ 0 };
 ```
 
-등록하면 직렬화기가 옛 이름을 TypeRegistry 별칭(`registerTypeAlias` · `registerEnumAlias`)으로 찾습니다. 열거자는 `ENUM( ValueAlias = "Old:New" )` 입니다.
+등록하면 직렬화기가 이전 이름을 TypeRegistry 별칭(`registerTypeAlias` · `registerEnumAlias`)으로 찾습니다. 열거자는 `ENUM( ValueAlias = "Old:New" )` 입니다.
 
 ### 5) 값이 객체 밖에 있는 프로퍼티 (접근자 프로퍼티)
 

@@ -567,10 +567,9 @@ namespace sw
         else if ( stored._moduleName.empty() )
             stored._moduleName = hashed_string( constants::reflection::kDefaultModuleName );
 
-        // 타입 하나가 곧 TypeInfo 하나다. 예전엔 FQN 키와 짧은 이름 키에 **각각 복사본**을 넣어서,
-        // 같은 타입이라도 `findType("sw::Foo")` 와 `findType("Foo")` 가 서로 다른 포인터를 돌려줬다.
-        // `const TypeInfo*` 를 키로 쓰는 쪽(GameObjectManager 의 컴포넌트 풀)은 그 둘을 다른 타입으로
-        // 보고 조회에 실패했고, 풀에서 꺼낸 메모리를 힙 해제로 반납해 힙을 깨뜨렸다.
+        // 타입 하나가 곧 TypeInfo 하나다. 짧은 이름 키는 복사본이 아니라 FQN 을 가리킨다 — 복사본을 두면
+        // `findType("sw::Foo")` 와 `findType("Foo")` 가 서로 다른 포인터를 돌려주고, `const TypeInfo*` 를 키로 쓰는 쪽이
+        // 그 둘을 다른 타입으로 본다.
         const hashed_string canonicalKey =
             stored._fullyQualifiedName.empty() == false ? stored._fullyQualifiedName : stored._name;
 
@@ -608,7 +607,7 @@ namespace sw
         if ( shortName.empty() == false && shortName != canonicalKey )
         {
             // 짧은 이름이 이미 **다른 살아 있는** 타입을 가리키면 그 타입을 가린다. 씬 · 프리팹 · `addComponentByName` 은 짧은 이름으로
-            // 찾으므로 그 뒤로는 다른 타입이 만들어진다. 예전에는 조용히 덮어썼다. 동작(나중 것이 이긴다)은 두고 알린다.
+            // 찾으므로 그 뒤로는 다른 타입이 만들어진다. 나중 것이 이기되 알린다.
             const auto previousIt = _mapAliasToFqn.find( shortName );
             if ( previousIt != _mapAliasToFqn.end() && previousIt->second != canonicalKey )
             {
@@ -967,7 +966,7 @@ namespace sw
         if ( it == _mapNameToEnum.end() )
             return;
 
-        // 별칭은 같은 객체를 가리킨다(예전에는 복사본이라 다시 등록된 열거자를 못 봤다).
+        // 별칭은 같은 객체를 가리킨다(복사본이면 다시 등록된 열거자를 못 본다).
         EnumInfo* const pEnumInfo = it->second;
         _mapNameToEnum.insert_or_assign( hashed_string( pAliasName ), pEnumInfo );
 
@@ -1123,7 +1122,7 @@ namespace sw
             return pParent;
 
         // 풀지 못한 이름은 세대가 같은 동안 다시 찾지 않는다. 등록되지 않는 기반(`Component`)을 부모로 둔 타입은 모두
-        // 여기로 오는데, 예전에는 그때마다 레지스트리를 잠그고 찾았다. 등록 · 해제가 세대를 올리면 한 번 더 찾는다.
+        // 여기로 오므로 그때마다 레지스트리를 잠그고 찾지 않는다. 등록 · 해제가 세대를 올리면 한 번 더 찾는다.
         const uint32 generation = gv_typeTableGeneration.load( std::memory_order_acquire );
         if ( _parentMissGeneration.load( std::memory_order_acquire ) == generation )
             return nullptr;
@@ -1214,9 +1213,8 @@ namespace sw
         constexpr uint32 kNone  = static_cast<uint32>( PredefinedNameType::NameType_None );
 
         // 자기부터 위로 이름을 모은다. 순환은 표 깊이에서 걸린다. **풀리지 않는 부모는 사슬의 끝이다.** `Component`
-        // 처럼 REFLECT 가 아닌 기반은 이름만 적혀 있고 등록되지 않는데, 예전 걷기는 그 이름을 실패 캐스트마다
-        // 잠그고 레지스트리에서 찾았다(찾을 수 없으니 캐시도 되지 않았다). 부모가 나중에 등록되면 registerClass 가
-        // 표를 모두 비우므로 그때 다시 이어진다.
+        // 처럼 등록되지 않은 기반은 이름만 적혀 있으므로, 그 이름을 실패 캐스트마다 잠그고 레지스트리에서 찾지 않는다.
+        // 부모가 나중에 등록되면 registerClass 가 표를 모두 비우므로 그때 다시 이어진다.
         uint32          arrChain[kDepth];
         uint32          chainCount = 0;
         const TypeInfo* pCurrent   = this;

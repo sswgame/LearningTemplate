@@ -111,7 +111,7 @@ namespace sw
      * @details 업캐스트(To 가 From 의 기반)는 컴파일 타임에 끝나 런타임 비용이 0 입니다. 다운캐스트는 `getTypeInfo()` 가
      *          준 동적 타입의 조상 표를 한 번 봅니다(`TypeInfo::isDerivedFrom`). 잠금 · 할당 · 이름 비교 · 걷기가 없습니다.
      *          To 에 정적 타입이 없으면 pToType 은 무시되고, To 가 From 의 파생이면 검사 없이 내려갑니다(리플렉션 밖 타입의
-     *          옛 규칙). 정적 타입 폴백은 `getTypeInfo()` 가 nullptr 일 때만 합니다. 동적 타입이 To 의 자손이 아니면
+     *          규칙). 정적 타입 폴백은 `getTypeInfo()` 가 nullptr 일 때만 합니다. 동적 타입이 To 의 자손이 아니면
      *          그보다 위인 정적 타입도 자손일 리 없기 때문입니다.
      */
     template <typename To, typename From>
