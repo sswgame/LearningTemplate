@@ -60,7 +60,7 @@ Object/
 
 **`GameObject.h` 는 `GameObjectManager.h` 를 포함하지 않는다.** `addComponent<T>` 는 `T` 만 다루고, 매니저가 필요한 걸음
 (동결 확인 · 저장소 · 붙이기 · 미루기)은 템플릿이 아닌 `GameObject` 의 멤버다. 매니저 API 가 필요한 파일은 매니저 헤더를
-직접 포함한다 — 예전에는 `GameObject.h` 가 끝에서 매니저 헤더를 끌어와 GameObject 를 아는 모든 TU 가 물리 월드 · 등록부까지 알았다.
+직접 포함한다 — 그래야 GameObject 를 아는 모든 TU 가 물리 월드 · 등록부까지 알게 되지 않는다.
 
 ---
 
@@ -97,32 +97,32 @@ B·I 의 "씬 트랜스폼 flush" 는 매니저의 알고리즘이 아니라 **`
    — 잡마다 만들면 프레임당 청크 수만큼 힙 할당이다.
 3. 매니저 `tick` 의 단계에 한 줄.
 
-스테이지를 만들고 병렬 블록을 넣고 기다리는 열 줄을 다시 쓰지 말 것 — 예전엔 세 곳이 각자 들고 있었다. 시스템이
+스테이지를 만들고 병렬 블록을 넣고 기다리는 열 줄을 시스템마다 다시 쓰지 말 것. 시스템이
 둘을 넘어 서로의 결과에 기대기 시작하면 그때 읽기/쓰기 집합을 선언하는 등록부로 순서를 자동화한다.
 
 **스레드 슬롯은 워커만의 것이 아니다.** `waitStage` · `waitAll` · `runParallel` 이 기다리는 동안 **기다리는 스레드가 남의
 잡을 대신 실행한다** — 메인뿐 아니라 렌더 스레드(패스 기록 대기) · 로더 스레드도. 그래서 슬롯 수는 워커 수 + 도우미 몫
-(`TaskManager::kMaxHelperThreadCount`)이고, 워커가 아닌 스레드는 처음 물을 때 고유한 칸을 받는다. 예전엔 그 전부가
-마지막 칸 하나를 나눠 써서 메인과 렌더가 같은 슬롯 벡터에 동시에 push 했다.
+(`TaskManager::kMaxHelperThreadCount`)이고, 워커가 아닌 스레드는 처음 물을 때 고유한 칸을 받는다. 주의: 슬롯을 "워커 수" 로만
+잡으면 메인과 렌더 스레드가 같은 칸을 나눠 써 같은 벡터에 동시에 push 한다.
 
 ### 틱 등록부 (D) 와 틱 중 트랜스폼 쓰기 (F)
 
 - **D — `TickRegistry`** (`GameObject/TickRegistry.h`, 언리얼 `FTickTaskManager` 의 자리). 오브젝트가 자기 틱 항목(주 틱 ·
   서브틱, (그룹, 순서 키) 순)을 들고, 등록부는 그룹마다 **칸 목록**(`TickObjectEntry` — 오브젝트 · 첫 항목 · 나머지 항목의 자리)을
   든다. 컴포넌트가 틱을 켜고 끄면 소유 오브젝트만 표시되어 다음 틱 전에 자기 항목과 칸을 다시 짓는다 — 씬 전체를 훑어 스테이지를
-  다시 만들던 0.5~1 ms 가 사라진 자리다. 디스패치는 그룹마다 칸 목록을 **한 번의** 포크-조인으로 나누고, 한 칸(한 오브젝트)은 한
-  워커가 순서대로 돈다(같은 오브젝트의 컴포넌트 둘이 동시에 돌지 않는다). 서브틱에 선행 종속성이 하나라도 있으면 예전 DAG 스테이지 경로다.
+  다시 만들지 않는다. 디스패치는 그룹마다 칸 목록을 **한 번의** 포크-조인으로 나누고, 한 칸(한 오브젝트)은 한
+  워커가 순서대로 돈다(같은 오브젝트의 컴포넌트 둘이 동시에 돌지 않는다). 서브틱에 선행 종속성이 하나라도 있으면 DAG 스테이지 경로로 간다.
   **목록 소속이 곧 활성이다.** 언리얼 `FTickTaskManager` · 유니티 `BehaviourManager` 처럼 계층에서 꺼진 오브젝트는 칸이 없고, 디스패치는
   게임 오브젝트를 읽지 않고 컴포넌트의 삭제 대기 · 자기 활성만 본다(틱 중 `setActive` 는 틱 뒤로 미뤄지고, 파괴는 컴포넌트마다 표시를
   세운다). 켜고 끌 때 틱 항목이 있는 오브젝트만 등록부에 알린다(`GameObject::refreshActiveInHierarchy`).
 - **F — 틱 중의 세터는 틱이 끝나야 보인다.** 트랜스폼 값은 컴포넌트가 아니라 `SceneTransformStorage` 의 칸에 있다(아래
   "트랜스폼 · 계층"). `onTick` 안의 `setLocalPosition` 은 **자기 오브젝트를 틱하는 스레드면** 칸의 대기 자리에 바로 쓰고(한
   오브젝트의 항목은 한 워커가 도므로 잠금이 없다), 칸이 처음 대기에 들 때 번호 하나를 그 스레드의 목록에 올린다. **다른
-  오브젝트의** 컴포넌트에 쓰는 것은 두 스레드가 한 칸에 쓸 수 있어 예전처럼 `SceneTransformWrite` 를 스레드 슬롯 큐에 넣는다.
+  오브젝트의** 컴포넌트에 쓰는 것은 두 스레드가 한 칸에 쓸 수 있어 `SceneTransformWrite` 를 스레드 슬롯 큐에 넣는다.
   틱이 끝나면 계층이 대기 칸 목록 → 쓰기 큐 순으로 슬롯 단위로 나눠 적용한다(`SceneTransformHierarchy::applyTickWrites` — 매니저는 그 한 줄을 부를 뿐이다). 잎 루트(부모도 자식도 없다)는 컴포넌트를
   거치지 않고 칸에서 바로 합성하고, 메시는 칸에 적힌 프리미티브 번호로 렌더 더티를 찍는다. 틱 중에 다른 오브젝트가 읽는
   로컬 · 월드 값은 틱 전 값이다. 같은 스레드가 같은 컴포넌트에 잇따라 쓴 값은 마지막이 이기고, 다른 스레드가 같은
-  컴포넌트를 쓴 경우는 예전과 같이 순서가 없다.
+  컴포넌트를 쓴 경우는 순서가 없다.
 
 ### 초심자가 꼭 기억할 것
 
@@ -277,7 +277,7 @@ Games / GameFramework 에서는 `EngineServices` 대신 **`GameService`** 를 �
 #include "GameFramework/Base/GameService.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
-GameObject* go = game::getResourceManager().getPrefabManager().spawn(
+GameObject* go = game::getService<ResourceManager>()->getPrefabManager().spawn(
     mgr,
     "game/<pack>/prefabs/bullet.prefab.json",
     "Projectile" );
@@ -318,20 +318,20 @@ if ( pTarget != nullptr ) { ... }
 |------|-----------|---------|
 | 같은 오브젝트 안(소켓) | 비어 있음(`None`) | 자기 |
 | 다른 오브젝트 | 이름 + id | 같은 묶음의 저장된 id → (같은 실행의 상태일 때만) 매니저의 런타임 id |
-| 옛 데이터(id 0) | 이름만 | **같은 묶음의 저장된 이름**에서만 |
+| id 없음(0 — 다른 id 공간으로 옮겨 적은 상태 · id 없는 데이터) | 이름만 | **같은 묶음의 저장된 이름**에서만 |
 
 - **상태를 읽는 길은 모두 묶음을 지납니다** — 씬 로드 · 쿠커 · 플레이 종료 복원 · 핫 리로드 · 세이브 · 영속 이월 · 복제 · 되돌리기.
   모두 만들고 → 모두 읽고 → `finish()` 가 한 번에 잇습니다. 상태 하나만 읽는 로드도 한 개짜리 묶음입니다. 그래서 자식이 부모보다
   먼저 읽혀도 됩니다.
 - **매니저에서 이름으로 부모를 찾지 않습니다.** 매니저는 이름을 유일하게 바꾸므로(`Rig` → `Rig_2`) 이름으로 찾으면 복제본 · 두 번 놓은
-  프리팹 · 되돌린 오브젝트가 같은 이름의 **다른** 오브젝트(원본 · 엔진이 만든 "GameCamera")에 붙었습니다.
+  프리팹 · 되돌린 오브젝트가 같은 이름의 **다른** 오브젝트(원본 · 엔진이 만든 "GameCamera")에 붙습니다.
 - **찾지 못한 참조는 지우지 않습니다**(`SceneComponent::keepUnresolvedAttach`). 다음 저장이 그대로 다시 쓰고, 부모가 돌아오면 다음 로드가
   붙입니다. 붙이거나 떼면 잊습니다.
 - **프리팹은 다른 오브젝트로의 부착을 싣지도 읽지도 않습니다** — 프리팹 루트에는 부모가 없습니다.
 - 새로 상태를 읽는 길을 만들면 `ObjectLoadContext` 에 묶음과 저장된 id 를 주고, 다 읽은 뒤 `finish()` 를 부르십시오(빠뜨리면 Debug 단언).
 
-예전에는 이름으로 찾는 `GameObjectPtr` · `ComponentPtr` 도 있었습니다. 이름을 바꾸면 끊겼고, 옛 이름으로 새 오브젝트가
-생기면 조용히 그쪽을 가리켰으며, `ComponentPtr` 은 같은 타입 컴포넌트가 둘이면 첫 번째를 잡았습니다. 2026-09-24 에 지웠습니다.
+이름으로 대상을 찾아 드는 참조 타입은 두지 않습니다 — 이름은 바뀌고, 옛 이름으로 새 오브젝트가 생기면 조용히 그쪽을 가리키며,
+같은 타입 컴포넌트가 둘이면 어느 쪽인지 정할 수 없습니다.
 
 ### 반사 값을 직접 쓰면 알린다
 
@@ -346,8 +346,8 @@ if ( pTarget != nullptr ) { ... }
 | 묶음 · 제자리 로드 | 아무것도 — `ObjectStateBatch::finish` 가 부착 · 핸들 PROPERTY 를 푼 **뒤에** `onPostLoad` 를 부른다 |
 
 - 값 하나를 옮기고 · 견주고 · 글로 쓰고 · 읽는 규칙은 `SerializerUtil::copyPropertyValue` · `arePropertyValuesEqual` · `formatPropertyText` ·
-  `applyPropertyText` **한 벌**입니다. 비트필드는 그 비트만, 컨테이너는 원소째 다룹니다. 예전에는 오버라이드 도구 · 인스펙터가 각자 들어 비트필드를
-  바이트째 견주고 옮겼습니다(같은 바이트의 다른 플래그가 "바뀜" 으로 보이고 되돌리면 지워졌다).
+  `applyPropertyText` **한 벌**입니다. 비트필드는 그 비트만, 컨테이너는 원소째 다룹니다. 오버라이드 도구 · 인스펙터가 따로 비교 · 복사를 들면
+  비트필드를 바이트째 다뤄 같은 바이트의 다른 플래그가 "바뀜" 으로 보이고 되돌리면 지워집니다.
 - 컴포넌트는 값에서 자원을 다시 만들지 판단할 때 **무엇으로 만들었는지**를 들고 견줍니다(`MeshComponent::_resolvedMeshId` ·
   `_acquiredMaterialPath`). "이미 있으면 그대로" 로 판단하면 id 를 바꿔도 옛 것이 남습니다.
 
@@ -356,9 +356,9 @@ if ( pTarget != nullptr ) { ... }
 ## 트랜스폼 · 계층
 
 - 위치/회전/스케일은 보통 `SceneComponent` 에 둡니다. **값 자체는 컴포넌트 안에 없고** 전역 `SceneTransformStorage` 의
-  칸에 있습니다(유니티 `TransformHierarchy` 의 자리). 컴포넌트는 칸 번호와 페이지만 듭니다(280 B → 160 B). 틱 뒤 적용 ·
-  플러시가 값만 연달아 읽게 하려는 것입니다. 리플렉션 이름(`_localPosition` …)은 그대로이고 값 접근자(참조를 돌려주는
-  메서드에 붙인 `PROPERTY`)가 칸을 찾으므로, 씬 파일 · 인스펙터 · 직렬화는 바뀐 것이 없습니다.
+  칸에 있습니다(유니티 `TransformHierarchy` 의 자리). 컴포넌트는 칸 번호와 페이지만 듭니다. 틱 뒤 적용 ·
+  플러시가 값만 연달아 읽게 하려는 것입니다. 리플렉션 이름(`_localPosition` …)은 값 접근자(참조를 돌려주는
+  메서드에 붙인 `PROPERTY( Name = … )`)가 들고 칸을 찾으므로, 씬 파일 · 인스펙터 · 직렬화는 필드와 같은 키로 읽고 씁니다.
 - 칸은 컴포넌트를 만들 때 받고 소멸할 때 놓습니다. 씬에 붙지 않은 컴포넌트도 칸이 있어 등록 여부로 값의 자리가 바뀌지 않습니다.
 - 틱(병렬) 중 `setLocalPosition` 등은 **틱이 끝난 뒤 적용**됩니다(위 F).
 - **절대 하지 말 것 (병렬 tick 중):** `attachToParent` / `detach` 로 부모·자식 바꾸기.  
@@ -369,8 +369,8 @@ if ( pTarget != nullptr ) { ... }
 ## 삭제
 
 ```cpp
-mgr->destroyObjectDeferred( go );      // 즉시 free 하지 않음
-mgr->destroyComponentDeferred( comp );
+mgr->destroyObject( go );       // 지연 삭제 큐에 넣는다 — 즉시 free 하지 않음(자식도 함께, bDestroyChildren 기본 true)
+mgr->destroyComponent( comp );  // 처리 때 핸들로 다시 찾으므로 그 사이 다른 경로가 먼저 해제해도 안전
 // 실제 해제는 tick 끝 processDeferredDestruction
 ```
 
@@ -385,7 +385,7 @@ mgr->destroyComponentDeferred( comp );
 | `onTick`에서 `addComponent` 후 바로 `->` | `nullptr` 역참조 | `executeOrDeferPostTick` 안에 생성+초기화 |
 | tick 중 `attachToParent` 의 결과를 바로 기대 | 아직 안 붙어 있다 | 동결 중에는 **미뤄진다** — 틱 직후 구조 변경 큐가 부른 순서대로 붙인다(같은 틱에 붙인 씬 컴포넌트 뒤에) |
 | tick 중 상태 읽기(`ObjectStateSerializer::load*` 제자리) | 거절(false + 오류) | 컴포넌트를 모두 다시 만드는 일이라 틱 중에는 못 한다 — `executeOrDeferPostTick` 으로 감쌀 것 |
-| Games에서 `engine::getResourceManager` | 레이어 위반 | `game::getResourceManager()` |
+| Games에서 `engine::getResourceManager` | 레이어 위반(`CheckEngineLayers` 가 `EngineServices.h` include 를 막는다) | `game::getService<ResourceManager>()` |
 | 태그 추가 직후 같은 프레임에 `findByTag` | 아직 안 보일 수 있음 | post-tick 이후, 또는 같은 deferred 블록 안에서 처리 |
 
 ---

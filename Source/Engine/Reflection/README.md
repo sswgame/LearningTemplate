@@ -3,7 +3,7 @@
 > **[🏠 위키 홈으로 돌아가기](../../../README.md)** | **[📖 서브시스템 목록](../../../docs/02_EngineSubsystems.md)**
 
 C++ 타입의 **이름 · 필드 · 함수 · enum** 정보를 런타임에 조회하고,  
-직렬화·에디터·핫리로드·컴포넌트 팩토리가 그걸 쓰게 하는 레이어입니다.
+직렬화·에디터·핫리로드·컴포넌트 생성(`TypeInfo::_addComponent`)이 그걸 쓰게 하는 레이어입니다.
 
 경로: `Source/Engine/Reflection/`  
 코드 생성기: [Tools/ReflectionParser/README.md](../../../Tools/ReflectionParser/README.md)
@@ -25,7 +25,7 @@ flowchart LR
   H["헤더에 REFLECT / PROPERTY"] --> P[ReflectionParser]
   P --> G["Foo.gen.cpp"]
   G --> R[TypeRegistry 등록]
-  R --> S[직렬화 / 에디터 / 팩토리]
+  R --> S[직렬화 / 에디터 / 컴포넌트 생성]
 ```
 
 일반 C++ 빌드에서는 매크로가 **빈 정의**라 런타임 오버헤드가 거의 없고,  
@@ -118,9 +118,11 @@ enum class CollisionMask : uint32 { None = 0, World = 1, Pawn = 2 };
 
 ### 4) 별칭 (실제 게임 데이터가 생긴 뒤의 이름 변경 창구)
 
-이름은 하나만 씁니다. 지금은 타입 · 프로퍼티 · 열거자 이름을 바꾸면 Resource 데이터를 새 이름으로 다시 쓰고, 엔진 · 게임프레임워크 ·
-게임 코드는 별칭을 쓰지 않습니다(`ResourceDataSchemaTest` 가 데이터에 모르는 이름이 없는지 봅니다). 아래 별칭은 다시 쓸 수 없는 데이터 —
-배포한 게임의 세이브 · 사용자가 만든 콘텐츠 — 가 생긴 뒤 이름을 바꿀 때 쓰는 창구입니다(언리얼 CoreRedirects 와 같은 자리).
+**이름은 하나만 씁니다.** 실제 게임 데이터가 없는 지금은 타입 · 프로퍼티 · 열거자 이름을 바꾸면 Resource 데이터 · 시험 · 스크립트를 새 이름으로
+다시 쓰고 옛 이름은 어디에도 남기지 않습니다 — 엔진 · 게임프레임워크 · 게임 코드에 `Alias` · `ValueAlias` 는 0 개입니다.
+`ResourceDataSchemaTest.EveryResourceDataFileLoadsWithoutUnknownNames` 가 Resource/ 의 모든 데이터가 모르는 키 · 타입 · 열거자 경고 없이 읽히는지 봅니다.
+아래 별칭은 다시 쓸 수 없는 데이터 — 배포한 게임의 세이브 · 사용자가 만든 콘텐츠 — 가 생긴 뒤 이름을 바꿀 때만 쓰는 창구입니다
+(언리얼 CoreRedirects 와 같은 자리).
 
 ```cpp
 REFLECT( Alias = "OldMonster" )
@@ -130,7 +132,7 @@ PROPERTY( Alias = "hp, HitPoints" )
 int32 health{ 0 };
 ```
 
-직렬화된 예전 이름도 TypeRegistry 별칭으로 찾을 수 있습니다. 열거자는 `ENUM( ValueAlias = "Old:New" )` 입니다.
+등록하면 직렬화기가 옛 이름을 TypeRegistry 별칭(`registerTypeAlias` · `registerEnumAlias`)으로 찾습니다. 열거자는 `ENUM( ValueAlias = "Old:New" )` 입니다.
 
 ### 5) 값이 객체 밖에 있는 프로퍼티 (접근자 프로퍼티)
 
@@ -162,7 +164,7 @@ const TypeInfo* byName = engine::getTypeRegistry().findType( hashed_string( "Mon
 string s = engine::getTypeRegistry().enumToString( MonsterAiState::Chase );
 ```
 
-게임 모듈에서는 `game::getTypeRegistry()` 를 쓰세요 (`EngineServices` 직접 접근 지양).
+게임 모듈에서는 `game::getService<TypeRegistry>()` 를 쓰세요 — `Games/` · `GameFramework/` 는 `EngineServices.h` 를 include 할 수 없습니다(`CheckEngineLayers`).
 
 ---
 
@@ -194,15 +196,15 @@ CMake 헬퍼: `cmake/Engine/ReflectionCodeGen.cmake` (`sw_addReflectionStep`)
 
 | 매크로 | 용도 |
 |--------|------|
-| `REFLECT(...)` | 타입 노출. `Abstract`, `Alias=…` |
+| `REFLECT(...)` | 타입 노출. `Abstract`, `Alias=…`(4절 — 지금은 쓰지 않는다) |
 | `REFLECT_BODY()` | `StaticType()` + gen 정의 요청 |
-| `PROPERTY(...)` | 필드. `ReadOnly`, `Min`/`Max`, `Alias`, `Category` … |
+| `PROPERTY(...)` | 필드. `ReadOnly`, `Min`/`Max`, `Category`, `Name`(접근자 프로퍼티), `Alias`(4절) … |
 | `FUNCTION(...)` | 함수. RPC용 `Server`/`Client`/`Multicast` 등 |
 | `ENUM(...)` | 열거형. `Flags`, `Invalid=`, `Count=` |
 | `REFLECT_CONTAINER(...)` | 커스텀 컨테이너를 Sequence/Map으로 |
 
-어노테이션 별칭 표는 `Source/Core/Predefined/AnnotationMeta.txt`  
-(예: `Alias` = `PreviousName` 등).
+어노테이션 키 표(키 · 값 형식 · 같은 뜻의 키 이름)는 `Source/Core/Predefined/AnnotationMeta.txt` 입니다.
+파서는 모르는 어노테이션 토큰을 오류로 멈춥니다.
 
 ---
 
@@ -210,11 +212,13 @@ CMake 헬퍼: `cmake/Engine/ReflectionCodeGen.cmake` (`sw_addReflectionStep`)
 
 | 실수 | 결과 | 올바른 방법 |
 |------|------|-------------|
-| `REFLECT` 만 하고 `REFLECT_BODY` 없음 | StaticType/팩토리 없음 | 멤버 있는 타입은 BODY 필수에 가깝다 |
+| `REFLECT` 만 하고 `REFLECT_BODY` 없음 | `StaticType` · 생성 칸(`_addComponent`) 없음 | 멤버 있는 타입은 BODY 필수에 가깝다 |
+| 헤더에 처음 `REFLECT` · `ENUM` 을 넣고 configure 없이 빌드 | `X::StaticType()` 미정의 링크 오류 | 반사 헤더 목록은 configure 때 훑는다 — `cmake --preset <preset>` 을 다시 |
+| 반사된 부모를 등록하지 않음(추상이라서) | 자식의 부모 사슬이 끊김 | 인스턴스를 못 만드는 부모도 `REFLECT( Abstract )` 로 등록(`ReflectionTypeInfoTest.EveryReflectedParentIsRegistered`) |
 | `REFLECT_BODY()` 매크로 안에 주석 | 매크로 줄바꿈 깨짐 | BODY 안에는 주석 금지 (헤더 주석 참고) |
 | PROPERTY 없는 필드만 직렬화 기대 | 저장 안 됨 | 노출할 멤버에 `PROPERTY()` |
 | gen.cpp 를 손으로 수정 | 다음 파서 실행에 덮어씀 | 헤더/매크로만 수정 |
-| Games에서 EngineServices로 Registry | 레이어 위반 | `game::getTypeRegistry()` |
+| Games에서 EngineServices로 Registry | 레이어 위반 | `game::getService<TypeRegistry>()` |
 
 ---
 
