@@ -47,6 +47,8 @@ namespace sw::editor
     {
         // `install()` 을 부른 쪽이 `clear()` 도 부른다. 가드 헤더가 "백엔드를 종료할 때 부르십시오" 라고 적어 둔 짝이다.
         // 예전에는 DX12 만 짝을 맞췄고 DX11 은 설치만 하고 해제하지 않았다.
+        // 이 백엔드는 미룰 네이티브 자원이 없지만, 에디터가 같은 큐에 맡긴 해제(게임 뷰 렌더 타깃)가 이 모듈의 코드를 가리킨다.
+        flushDrawReleases( _pRHIDevice );
         ImGuiViewportSizeGuard::clear();
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
             ImGui_ImplDX11_Shutdown();
@@ -112,6 +114,8 @@ namespace sw::editor
         if ( pTextureID == nullptr )
             return;
 
+        // 곧바로 놓아도 된다. D3D11 런타임은 컨텍스트에 걸려 있거나 GPU 가 아직 쓰는 뷰를 그 작업이 끝날 때까지 살려 둔다 — 여기서 놓는 것은
+        // 이 백엔드의 참조 하나다. 그래서 Vulkan · DX12 와 달리 해제 큐에 맡기지 않는다.
         ID3D11ShaderResourceView* pSrv = static_cast<ID3D11ShaderResourceView*>( pTextureID );
         for ( auto it = _listRegisteredSrv.begin(); it != _listRegisteredSrv.end(); ++it )
         {

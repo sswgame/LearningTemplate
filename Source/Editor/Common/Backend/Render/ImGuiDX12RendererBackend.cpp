@@ -85,6 +85,8 @@ namespace sw::editor
 
     void ImGuiDX12RendererBackend::shutdown()
     {
+        // 렌더 스레드 · GPU 를 기다려 미뤄 둔 디스크립터 반환을 모두 끝낸 뒤에 힙을 놓는다(GPU 가 아직 읽는 힙을 놓지 않는다).
+        flushDrawReleases( _pRHIDevice );
         ImGuiViewportSizeGuard::clear();
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
         {
@@ -185,7 +187,11 @@ namespace sw::editor
         D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle{};
         cpuHandle.ptr = _d3d12SrvHeap->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize;
         gpuHandle.ptr = gpuPtr;
-        freeSrvDescriptor( cpuHandle, gpuHandle );
+
+        // 반환한 칸은 다음 registerTexture 가 곧바로 덮어쓴다. 이미 낸 draw 스냅샷이 이 칸을 아직 그릴 수 있으므로, 그것을 그린 마지막 프레임의
+        // GPU 완료 뒤에 반환한다.
+        getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [this, cpuHandle, gpuHandle]()
+        { freeSrvDescriptor( cpuHandle, gpuHandle ); } ) );
     }
 
     bool ImGuiDX12RendererBackend::allocateSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu )
@@ -193,7 +199,8 @@ namespace sw::editor
         if ( _d3d12SrvHeap == nullptr || pOutCpu == nullptr || pOutGpu == nullptr )
             return false;
 
-        uint32 index{ 0 };
+        std::scoped_lock<mutex> lock{ _descriptorMutex };
+        uint32                  index{ 0 };
         if ( _listFreeDescriptor.empty() == false )
         {
             index = _listFreeDescriptor.back();
@@ -224,8 +231,10 @@ namespace sw::editor
             return;
 
         const uint32 index = static_cast<uint32>( ( cpu.ptr - start ) / _descriptorSize );
-        if ( index < _maxDescriptors )
-            _listFreeDescriptor.push_back( index );
+        if ( index >= _maxDescriptors )
+            return;
+        std::scoped_lock<mutex> lock{ _descriptorMutex };
+        _listFreeDescriptor.push_back( index );
     }
 } // namespace sw::editor
 #else

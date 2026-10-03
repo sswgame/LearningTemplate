@@ -206,6 +206,8 @@ namespace sw::editor
 
     void ImGuiOpenGLRendererBackend::shutdown()
     {
+        // 이 백엔드는 미룰 네이티브 자원이 없지만, 에디터가 같은 큐에 맡긴 해제(게임 뷰 렌더 타깃)가 이 모듈의 코드를 가리킨다.
+        flushDrawReleases( _pRHIDevice );
         if ( _pRHIDevice != nullptr )
             _pRHIDevice->bindGraphicsContext();
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )

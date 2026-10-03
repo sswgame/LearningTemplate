@@ -3,6 +3,7 @@
  * @brief ImGui DirectX12 렌더러 백엔드
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
@@ -47,16 +48,16 @@ namespace sw::editor
         void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) override;
         /** @brief RHI 텍스처를 ImGui용 SRV로 등록합니다. */
         void* registerTexture( RHITextureHandle texture ) override;
-        /** @brief 등록된 ImGui SRV 디스크립터를 풀에 반환합니다. */
+        /** @brief 등록된 ImGui SRV 디스크립터를 풀에 반환합니다. 반환은 그 디스크립터를 그린 마지막 프레임의 GPU 완료 뒤입니다. */
         void unregisterTexture( void* pTextureID ) override;
 
 #if defined( SW_PLATFORM_WINDOWS )
         // ------------------------------------------------------------------------------
         // 3) SRV 힙 풀
         // ------------------------------------------------------------------------------
-        /** @brief SRV 힙에서 CPU/GPU 디스크립터를 할당합니다. */
+        /** @brief SRV 힙에서 CPU/GPU 디스크립터를 할당합니다. 어느 스레드에서나 부를 수 있습니다. */
         bool allocateSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu );
-        /** @brief 할당했던 SRV 디스크립터를 풀에 반환합니다. */
+        /** @brief 할당했던 SRV 디스크립터를 풀에 반환합니다. 곧바로 다시 쓰이므로 GPU 가 그 디스크립터를 다 읽은 뒤에 부릅니다. */
         void freeSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE gpu );
 #endif
 
@@ -68,6 +69,8 @@ namespace sw::editor
         UINT                                         _descriptorSize{ 0 };
         uint32                                       _maxDescriptors = 128;
         uint32                                       _nextDescriptor{ 0 };
+        /// @brief `_listFreeDescriptor` · `_nextDescriptor` 잠금입니다. UI 스레드가 할당하고, 미뤄 둔 반환은 렌더 스레드에서 불립니다.
+        mutex _descriptorMutex;
         /// @brief 디바이스 제거를 이미 로그로 남겼으면 true 입니다. 복구되지 않아 프레임마다 반복되므로 한 번만 남깁니다.
         bool _bDeviceRemovedLogged{ false };
 #endif

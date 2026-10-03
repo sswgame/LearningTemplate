@@ -6,6 +6,8 @@
 #include "Editor/Common/Backend/Render/ImGuiOpenGLRendererBackend.h"
 #include "Editor/Common/Backend/Render/ImGuiVulkanRendererBackend.h"
 
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+
 #include <imgui.h>
 
 namespace sw::editor
@@ -20,6 +22,13 @@ namespace sw::editor
             if ( pTexture != nullptr && pTexture->Status != ImTextureStatus_OK )
                 pUpdateTexture( pTexture );
         }
+    }
+
+    void IImGuiRendererBackend::flushDrawReleases( IRHIDevice* pRhiDevice )
+    {
+        if ( pRhiDevice != nullptr )
+            pRhiDevice->waitIdle();
+        _drawReleaseQueue.flushAll();
     }
 
     unique_ptr<IImGuiRendererBackend> IImGuiRendererBackend::createRendererBackend( RHIBackend backend )

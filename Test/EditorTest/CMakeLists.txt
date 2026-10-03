@@ -17,6 +17,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorBackgroundJob.cpp
 		TestEditorCommandRegistry.cpp
 		TestEditorDataTableCommands.cpp
+		TestEditorDrawReleaseQueue.cpp
 		TestEditorGlobalVariableCommands.cpp
 		TestEditorListFilter.cpp
 		TestEditorPanelDocument.cpp
@@ -38,6 +39,7 @@ sw_addTestExecutable(EditorTest
 		TestReloadFileManager.cpp
 		TestSelectionManager.cpp
 		TestTexturePipeline.cpp
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/EditorDrawReleaseQueue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorCommandRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorDataTableCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorResourceIndex.cpp"

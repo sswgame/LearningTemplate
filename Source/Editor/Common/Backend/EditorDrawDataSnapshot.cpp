@@ -85,6 +85,7 @@ namespace sw::editor
 
     EditorDrawDataSnapshot::EditorDrawDataSnapshot()
         : _pImpl{ make_unique<Impl>() }
+        , _sequence{ 0 }
     {
         _pImpl->_bValid   = SW_FALSE;
         _pImpl->_reserved = 0;
@@ -102,14 +103,16 @@ namespace sw::editor
 
         EditorDrawDataSnapshotInternal::destroyOwnedLists( _pImpl->_mainDrawData, _pImpl->_listMainOwned );
         _pImpl->_bValid = SW_FALSE;
+        _sequence       = 0;
     }
 
-    void EditorDrawDataSnapshot::capture()
+    void EditorDrawDataSnapshot::capture( uint64 sequence )
     {
         clear();
         if ( ImGui::GetCurrentContext() == nullptr )
             return;
 
+        _sequence = sequence;
         EditorDrawDataSnapshotInternal::cloneDrawData( ImGui::GetDrawData(), _pImpl->_mainDrawData, _pImpl->_listMainOwned );
         _pImpl->_bValid = ( _pImpl->_mainDrawData.Valid ) ? SW_TRUE : SW_FALSE;
     }

@@ -210,8 +210,8 @@ namespace sw::editor
 
     void ImGuiVulkanRendererBackend::shutdown()
     {
-        if ( _pDevice != nullptr )
-            vkDeviceWaitIdle( _pDevice );
+        // 렌더 스레드 · GPU 를 기다려 미뤄 둔 디스크립터 해제를 모두 끝낸 뒤에 풀을 부순다.
+        flushDrawReleases( _pRHIDevice );
 
         for ( pair<void* const, RHITextureHandle>& pair : _mapTextureId )
         {
@@ -247,6 +247,8 @@ namespace sw::editor
 
     void ImGuiVulkanRendererBackend::processTextureUpdates()
     {
+        // 글꼴 아틀라스 갱신도 같은 풀에서 세트를 잡고 놓는다.
+        std::scoped_lock<mutex> lock{ _descriptorPoolMutex };
         updatePendingTextures( &ImGui_ImplVulkan_UpdateTexture );
     }
 
@@ -272,10 +274,11 @@ namespace sw::editor
             return nullptr;
         }
 
-        VkDescriptorSet set = ImGui_ImplVulkan_AddTexture(
-            _pSampler,
-            static_cast<VkImageView>( pImageViewPtr ),
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        VkDescriptorSet set{ VK_NULL_HANDLE };
+        {
+            std::scoped_lock<mutex> lock{ _descriptorPoolMutex };
+            set = ImGui_ImplVulkan_AddTexture( _pSampler, static_cast<VkImageView>( pImageViewPtr ), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        }
         if ( set == VK_NULL_HANDLE )
             return nullptr;
 
@@ -293,7 +296,16 @@ namespace sw::editor
         if ( it == _mapTextureId.end() )
             return;
 
-        ImGui_ImplVulkan_RemoveTexture( static_cast<VkDescriptorSet>( pTextureID ) );
         _mapTextureId.erase( it );
+
+        // 이미 낸 draw 스냅샷이 이 세트를 아직 그릴 수 있다. 세트를 그린 마지막 프레임의 GPU 완료 뒤에 놓는다. 그 콜백은 렌더 스레드에서
+        // 불리므로 UI 스레드의 할당과 같은 잠금 안에서 놓는다. AddTexture 는 InitInfo.DescriptorPool(이 풀)에서 세트를 잡는다.
+        const VkDescriptorSet set = static_cast<VkDescriptorSet>( pTextureID );
+        getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [this, set]()
+        {
+            std::scoped_lock<mutex> lock{ _descriptorPoolMutex };
+            if ( _pDevice != nullptr && _pImguiDescriptorPool != nullptr )
+                vkFreeDescriptorSets( _pDevice, _pImguiDescriptorPool, 1, &set );
+        } ) );
     }
 } // namespace sw::editor

@@ -102,6 +102,8 @@ namespace sw::editor
         EditorDrawDataSnapshot            _arrDrawSnapshot[constant::kMaxFrameCountInFlight];
         atomic<uint32>                    _publishedDrawSlot;
         atomic<uint32>                    _inFlightDrawSlot;
+        /// @brief 마지막으로 낸 draw 스냅샷 번호입니다(UI 스레드 전용, 1 부터). 놓은 자원의 해제를 이 번호로 줄 세웁니다(`EditorDrawReleaseQueue`).
+        uint64 _lastDrawSnapshotSequence;
 
         uint8                  _bInitialized  : 1;
         [[maybe_unused]] uint8 _reservedFlags : 7;

@@ -316,6 +316,49 @@ namespace sw::editor
                 probe = HierarchyProbe{};
                 return EditorSelfTestStep::Done;
             }
+
+            // ------------------------------------------------------------------------------
+            // gameView.resizeEveryFrame — 게임 뷰를 프레임마다 다른 크기로 다시 만든다
+            // 놓은 ImGui 텍스처 · 렌더 타깃은 그것을 그렸을 수 있는 마지막 프레임의 GPU 작업이 끝난 뒤에 놓여야 한다. 어기면 Vulkan 검증 레이어가
+            // "사용 중인 디스크립터 세트 해제" 를 Error 로 남기고, AppSmokeTest 가 그 줄을 센다.
+            // ------------------------------------------------------------------------------
+            static EditorSelfTestStep runGameViewResizeEveryFrame( EditorSelfTestContext& context )
+            {
+                constexpr const utf8* kGameViewPanelId  = "game_view";
+                constexpr uint32      kResizeFrameCount = 90;
+
+                EditorContext* pContext = EditorContext::get();
+                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
+                    return EditorSelfTestStep::Done;
+
+                // 게임 뷰 패널은 닫아 둔다. 패널은 그리기 전에 자기 크기로 다시 맞추므로, 열어 두면 이 시험이 바꾼 크기를 되돌리며 이미 그린 텍스처를
+                // 같은 프레임에 놓는다. 패널이 닫히는 것은 다음 프레임이라 첫 단계는 닫기만 한다.
+                const uint32 stepIndex = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    (void)pContext->getPanelManager().setPanelOpen( kGameViewPanelId, false );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex > kResizeFrameCount )
+                {
+                    (void)pContext->getPanelManager().setPanelOpen( kGameViewPanelId, true );
+                    return EditorSelfTestStep::Done;
+                }
+
+                // 패널과 같은 순서다: 크기를 맞춘 뒤 그 프레임의 텍스처를 그린다. 이 프레임이 놓은 텍스처는 앞 프레임의 스냅샷만 그린다.
+                const uint32 width  = 256u + ( stepIndex % 2u ) * 64u;
+                const uint32 height = 144u + ( stepIndex % 2u ) * 36u;
+                pContext->ensureGameViewSize( width, height );
+                const EditorGameView& view = pContext->getGameView();
+                (void)context.expect( view._width == width && view._height == height && view._pTextureId != nullptr,
+                                      "the game view was not recreated at the requested size" );
+
+                beginProbeWindow();
+                if ( view._pTextureId != nullptr )
+                    ImGui::Image( reinterpret_cast<ImTextureID>( view._pTextureId ), ImVec2{ static_cast<float32>( width ) * 0.5f, static_cast<float32>( height ) * 0.5f } );
+                ImGui::End();
+                return EditorSelfTestStep::Continue;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -329,4 +372,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( InspectorEnum, "inspector.drawLeavesTheObjectAlone", 400, &EditorSelfTestCasesInternal::runInspectorDrawLeavesTheObjectAlone );
     SW_EDITOR_SELF_TEST( MaterialPreview, "preview.materialHoldsOneReference", 500, &EditorSelfTestCasesInternal::runMaterialPreviewHoldsOneReference );
     SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &EditorSelfTestCasesInternal::runHierarchyTagFilter );
+    SW_EDITOR_SELF_TEST( GameViewResize, "gameView.resizeEveryFrame", 700, &EditorSelfTestCasesInternal::runGameViewResizeEveryFrame );
 } // namespace sw::editor

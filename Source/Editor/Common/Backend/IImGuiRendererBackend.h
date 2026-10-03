@@ -6,6 +6,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/Backend/EditorDrawReleaseQueue.h"
+
 namespace sw
 {
     enum class RHIBackend : uint32;
@@ -58,8 +60,19 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief RHI 텍스처를 ImGui 텍스처 ID로 등록하고 핸들을 반환합니다. */
         virtual void* registerTexture( RHITextureHandle texture ) = 0;
-        /** @brief registerTexture로 발급한 ImGui 텍스처 ID를 해제합니다. */
+        /**
+         * @brief registerTexture로 발급한 ImGui 텍스처 ID를 해제합니다. UI 스레드에서 부릅니다.
+         * @details 이미 낸 draw 스냅샷이 그 ID 를 그릴 수 있으므로, 네이티브 자원(디스크립터)을 놓는 일은 `getDrawReleaseQueue()` 에 맡깁니다.
+         *          ID 는 부른 즉시 무효입니다 — 같은 UI 프레임에서 다시 그리지 않습니다.
+         */
         virtual void unregisterTexture( void* pTextureID ) = 0;
+
+        /**
+         * @brief UI 스레드에서 놓은 자원(ImGui 텍스처 · 그것이 가리키는 RHI 텍스처)의 해제 큐입니다.
+         * @details 해제는 그 자원을 그렸을 수 있는 마지막 프레임의 GPU 완료 뒤에 불립니다(`EditorDrawReleaseQueue`). `ImGuiEditor` 가 스냅샷을 낼 때
+         *          번호를 알리고, 렌더 스레드가 스냅샷을 그린 프레임에서 디바이스로 넘깁니다.
+         */
+        EditorDrawReleaseQueue& getDrawReleaseQueue() { return _drawReleaseQueue; }
 
         // ------------------------------------------------------------------------------
         // 3) 팩토리 (RHI 백엔드별 구현)
@@ -76,5 +89,14 @@ namespace sw::editor
          *          스레드는 requiresRenderThreadContext() 에 따라 UI 스레드와 렌더 스레드로 나뉩니다.
          */
         static void updatePendingTextures( void ( *pUpdateTexture )( ImTextureData* ) );
+
+        /**
+         * @brief 종료 첫 단계: 렌더 스레드와 GPU 를 기다려(`IRHIDevice::waitIdle`) 디바이스로 넘긴 해제를 부르게 하고, 넘기지 않은 해제도 지금 부릅니다.
+         * @details 해제 콜백은 이 모듈의 코드와 백엔드 객체를 가리킵니다. 모듈이 내려가거나 디스크립터 풀 · 힙을 부수기 전에 모두 불려야 합니다.
+         */
+        void flushDrawReleases( IRHIDevice* pRhiDevice );
+
+    private:
+        EditorDrawReleaseQueue _drawReleaseQueue;
     };
 } // namespace sw::editor

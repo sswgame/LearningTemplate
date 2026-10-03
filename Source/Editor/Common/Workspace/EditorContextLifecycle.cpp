@@ -31,6 +31,32 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct EditorContextLifecycleInternal
+        {
+            /** @brief R8G8B8A8_UNORM 텍스처 전체를 한 색으로 올립니다. 올린 텍스처는 셰이더 읽기 상태입니다. */
+            static bool fillTextureWithColor( IRHIResource& resource, RHITextureHandle texture, uint32 width, uint32 height, const float4& color )
+            {
+                // 메모리에서 R · G · B · A 순서가 되도록 낮은 바이트부터 채운다(엔진은 리틀 엔디언 64 비트만 짓는다).
+                const uint32 packedColor = static_cast<uint32>( toUnorm8( color._x ) ) | ( static_cast<uint32>( toUnorm8( color._y ) ) << 8 ) |
+                                           ( static_cast<uint32>( toUnorm8( color._z ) ) << 16 ) | ( static_cast<uint32>( toUnorm8( color._w ) ) << 24 );
+                const vector<uint32> listPixel( static_cast<size_t>( width ) * height, packedColor );
+
+                RHITextureUploadDesc upload{};
+                upload._pData     = listPixel.data();
+                upload._sizeBytes = static_cast<uint32>( listPixel.size() * sizeof( uint32 ) );
+                upload._mipLevels = 1;
+                return resource.uploadTexture2D( texture, upload );
+            }
+
+            static uint8 toUnorm8( float32 value ) { return static_cast<uint8>( MathUtil::round( MathUtil::saturate( value ) * 255.0f ) ); }
+        };
+    } // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
     EditorContext::EditorContext()
         : _pRhiDevice{ nullptr }
         , _pRendererBackend{ nullptr }
@@ -103,7 +129,19 @@ namespace sw::editor
 
         if ( _gameView._renderTarget != 0 && _pRhiDevice != nullptr && _pRhiDevice->getResource() != nullptr )
         {
-            _pRhiDevice->getResource()->destroyTexture( _gameView._renderTarget );
+            // 줄 서 있는 패킷이 이 렌더 타깃에 그리고, 이미 낸 draw 스냅샷이 그것을 샘플링한다. ImGui 텍스처와 같은 큐에 맡겨 그 프레임들의
+            // GPU 완료 뒤에 부순다. 렌더러 백엔드가 없으면(그릴 쪽이 없다) 곧바로 부순다.
+            IRHIResource*          pResource    = _pRhiDevice->getResource();
+            const RHITextureHandle renderTarget = _gameView._renderTarget;
+            if ( _pRendererBackend != nullptr )
+            {
+                _pRendererBackend->getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pResource, renderTarget]()
+                { pResource->destroyTexture( renderTarget ); } ) );
+            }
+            else
+            {
+                pResource->destroyTexture( renderTarget );
+            }
             _gameView._renderTarget = 0;
         }
 
@@ -138,6 +176,11 @@ namespace sw::editor
         _gameView._renderTarget = _pRhiDevice->getResource()->createTexture2D( rtDesc );
         if ( _gameView._renderTarget == 0 )
             return;
+
+        // 이번 프레임의 draw 스냅샷이 새 텍스처를 그리는데, 그 스냅샷은 이 렌더 타깃에 그릴 패킷보다 먼저 줄 선 패킷이 그릴 수 있다. 렌더러가 아직
+        // 쓰지 않은 텍스처를 샘플링하지 않도록 클리어 색으로 채워 셰이더 읽기 상태로 둔다(Vulkan 은 UNDEFINED 레이아웃 샘플링이 검증 Error 다).
+        if ( EditorContextLifecycleInternal::fillTextureWithColor( *_pRhiDevice->getResource(), _gameView._renderTarget, width, height, gameViewClearColor ) == false )
+            SW_LOG_WARNING( "Game view target %#x%# could not be cleared before its first frame", width, height );
 
         _gameView._width  = width;
         _gameView._height = height;

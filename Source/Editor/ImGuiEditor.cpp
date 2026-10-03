@@ -142,6 +142,7 @@ namespace sw::editor
         , _arrDrawSnapshot{}
         , _publishedDrawSlot{ 0 }
         , _inFlightDrawSlot{ _s_kInvalidDrawSlot }
+        , _lastDrawSnapshotSequence{ 0 }
         , _bInitialized{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
@@ -463,7 +464,11 @@ namespace sw::editor
             while ( _inFlightDrawSlot.load( std::memory_order_acquire ) == writeSlot )
                 std::this_thread::yield();
 
-            _arrDrawSnapshot[writeSlot].capture();
+            // 번호는 내기 전에 알린다. 이 뒤에 놓는 자원은 이 스냅샷이 그릴 수 있으므로 다음 번호를 받아야 한다.
+            ++_lastDrawSnapshotSequence;
+            _arrDrawSnapshot[writeSlot].capture( _lastDrawSnapshotSequence );
+            if ( _rendererBackend != nullptr )
+                _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
             _publishedDrawSlot.store( writeSlot, std::memory_order_release );
 
             // 이 프레임을 "렌더 대기" 상태로 표시한다. 다음 updateUi 는 상단 waitForDrawSnapshotIdle
@@ -495,6 +500,10 @@ namespace sw::editor
             ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
             if ( pDrawData != nullptr )
                 renderBackend( pRhiDevice, pDrawData );
+
+            // 이 프레임이 그린 스냅샷보다 먼저 놓인 자원은 앞 프레임들만 그렸다. 이 프레임의 GPU 완료 뒤에 놓이도록 디바이스로 넘긴다.
+            if ( _rendererBackend != nullptr )
+                _rendererBackend->getDrawReleaseQueue().handOverToDevice( *pRhiDevice, _arrDrawSnapshot[slot].getSequence() );
         }
 
         // 보조(플로팅) 뷰포트도 GL 이면 여기 렌더 스레드에서 렌더·present 한다.

@@ -56,7 +56,8 @@ namespace
         vector<string> _listMarkedLine{};
         uint32         _missingComponentLineCount{ 0 }; /**< `MissingComponent` 가 든 줄 수 — 씬이 모르는 타입을 만났다. */
         bool           _bLaunched{ false };
-        bool           _bBackendUnusableHere{ false }; /**< 이 기계가 그 백엔드를 못 돌린다고 App 이 말했다. */
+        bool           _bBackendUnusableHere{ false };     /**< 이 기계가 그 백엔드를 못 돌린다고 App 이 말했다. */
+        bool           _bVulkanValidationEnabled{ false }; /**< Vulkan 디바이스가 검증 레이어를 켜고 섰다(그래야 잘못된 사용이 [Error] 로 나온다). */
     };
 
     /**
@@ -143,6 +144,8 @@ namespace
                 result._bBackendUnusableHere = true;
             if ( line.find( "MissingComponent" ) != string::npos )
                 ++result._missingComponentLineCount;
+            if ( line.find( "(Validation Layers: ENABLED)" ) != string::npos )
+                result._bVulkanValidationEnabled = true;
 
             const size_t markerIndex = pMarker == nullptr ? string::npos : line.find( pMarker );
             if ( markerIndex != string::npos )
@@ -633,6 +636,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|inspector.drawLeavesTheObjectAlone",
         "EditorSelfTest|PASS|preview.materialHoldsOneReference",
         "EditorSelfTest|PASS|hierarchy.tagFilter",
+        "EditorSelfTest|PASS|gameView.resizeEveryFrame",
     };
 
     const string  imguiIniPath = findEditorImguiIniPath();
@@ -670,6 +674,31 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
     vector<uint8> listIniAfter;
     const bool    bIniExistsAfter = readOptionalFile( imguiIniPath, listIniAfter );
     SW_EXPECT_TRUE_MSG( bIniExistsAfter == bIniExistedBefore && listIniAfter == listIniBefore, "the self test run rewrote the user's imgui.ini" );
+}
+
+/**
+ * @brief [AppSmokeTest] Vulkan 에디터에서 게임 뷰를 프레임마다 다시 만들어도 검증 레이어가 아무것도 남기지 않는다
+ * @details 렌더 스레드는 UI 가 새 draw 스냅샷을 내기 전까지 옛 스냅샷을 여러 프레임에 다시 그린다. 게임 뷰를 다시 만들 때 놓은 ImGui 디스크립터
+ *          세트 · 렌더 타깃을 UI 스레드에서 곧바로 놓으면 그 프레임들이 놓인 세트를 쓰고(`vkFreeDescriptorSets ... in use`), 새 렌더 타깃을
+ *          렌더러가 쓰기 전에 샘플링하면 UNDEFINED 레이아웃을 읽는다. 둘 다 검증 레이어가 [Error] 로 남긴다. `gameView.resizeEveryFrame` 이
+ *          90 프레임 동안 매 프레임 크기를 바꾼다. 검증 레이어는 Debug `Bin` 에 함께 놓인다 — 꺼진 채로 돌면 이 시험은 아무것도 보지 못하므로 진다.
+ */
+SW_TEST_CASE( AppSmokeTest, VulkanEditorGameViewResizeLeavesNoValidationError )
+{
+    const AppRunResult result = runApp( "-gv_profileFrames=1200 -EnableEditor -vk -gv_editorSelfTest=gameView.*", "EditorSelfTest|" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
+    if ( result._bBackendUnusableHere )
+        SW_TEST_SKIP( "Vulkan is not usable on this machine" );
+    SW_EXPECT_TRUE_MSG( result._bVulkanValidationEnabled, "the Vulkan validation layer was not enabled - nothing would report a misuse" );
+    SW_EXPECT_TRUE_MSG( result._exitCode == 0, "App 이 0 이 아닌 코드로 끝났습니다" );
+    SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.empty() ? "로그에 [Error] 가 있습니다" : result._firstErrorLine.c_str() );
+
+    bool bPassed{ false };
+    for ( const string& line : result._listMarkedLine )
+    {
+        bPassed = bPassed || line == "EditorSelfTest|PASS|gameView.resizeEveryFrame";
+    }
+    SW_EXPECT_TRUE_MSG( bPassed, "gameView.resizeEveryFrame did not pass" );
 }
 #endif
 

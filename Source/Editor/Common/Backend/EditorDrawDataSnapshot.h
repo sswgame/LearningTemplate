@@ -26,17 +26,20 @@ namespace sw::editor
         EditorDrawDataSnapshot( const EditorDrawDataSnapshot& )            = delete;
         EditorDrawDataSnapshot& operator=( const EditorDrawDataSnapshot& ) = delete;
 
-        /** @brief 현재 ImGui 컨텍스트의 메인 뷰포트 DrawData를 복사합니다. */
-        void capture();
+        /** @brief 현재 ImGui 컨텍스트의 메인 뷰포트 DrawData를 복사하고, 이 스냅샷의 번호(1 부터 늘기만 한다)를 적습니다. */
+        void capture( uint64 sequence );
         /** @brief 소유한 클론을 모두 지웁니다. */
         void clear();
         /** @brief 캡처된 메인 DrawData가 있으면 true입니다. */
         bool isValid() const;
         /** @brief 렌더 스레드가 그릴 메인 DrawData입니다. 없으면 nullptr입니다. */
         ImDrawData* getMainDrawData();
+        /** @brief `capture` 에 준 번호입니다. 비어 있으면 0 입니다(`EditorDrawReleaseQueue` 가 이 번호로 해제를 넘깁니다). */
+        uint64 getSequence() const { return _sequence; }
 
     private:
         struct Impl;
         unique_ptr<Impl> _pImpl;
+        uint64           _sequence;
     };
 } // namespace sw::editor

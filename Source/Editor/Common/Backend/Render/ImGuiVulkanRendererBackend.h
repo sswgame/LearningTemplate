@@ -3,6 +3,7 @@
  * @brief ImGui Vulkan 렌더러 백엔드
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
@@ -47,7 +48,7 @@ namespace sw::editor
 
         /** @brief RHI 텍스처를 ImGui용으로 등록합니다. */
         void* registerTexture( RHITextureHandle texture ) override;
-        /** @brief 등록된 ImGui 텍스처를 해제합니다. */
+        /** @brief 등록된 ImGui 텍스처를 해제합니다. 디스크립터 세트는 그것을 그린 마지막 프레임의 GPU 완료 뒤에 풀로 돌아갑니다. */
         void unregisterTexture( void* pTextureID ) override;
 
     private:
@@ -56,5 +57,7 @@ namespace sw::editor
         VkSampler_T*                           _pSampler{ nullptr };
         IRHIDevice*                            _pRHIDevice{ nullptr };
         unordered_map<void*, RHITextureHandle> _mapTextureId;
+        /// @brief 디스크립터 풀 잠금입니다. 세트를 잡는 UI 스레드와, 미뤄 둔 해제를 부르는 렌더 스레드가 같은 풀을 씁니다.
+        mutex _descriptorPoolMutex;
     };
 } // namespace sw::editor
