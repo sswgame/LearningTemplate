@@ -263,13 +263,14 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
 }
 
 /**
- * @brief [PrefabOverridesTest] 덮어쓴 것이 없던 판(SCN1 v2)의 쿠킹 씬도 그대로 읽힌다 — 바이트를 v2 의 배치대로 손으로 쓴다
+ * @brief [PrefabOverridesTest] 지금 판이 아닌 쿠킹 씬(SCN1 v2)은 읽지 않고 다시 구우라고 알린다 — 바이트를 v2 의 배치대로 손으로 쓴다
+ * @details 쿠킹본은 쿠커가 매번 다시 굽는 산출물이다. 옛 배치를 읽어 주는 갈래를 두지 않는다 — 판이 다르면 배치를 짐작하지 않고 거절한다.
  */
-SW_TEST_CASE( PrefabOverridesTest, CookedSceneVersion2BytesStillLoad )
+SW_TEST_CASE( PrefabOverridesTest, CookedSceneOfAnotherVersionIsRefused )
 {
     sw::Archive arch;
     arch << static_cast<uint32>( 0x53434E31u ); // 'SCN1'
-    arch << static_cast<uint32>( 2 );           // v2: 이름 · 프리팹 · GUID · XML · 바이너리 상태 · 파일 id
+    arch << static_cast<uint32>( 2 );           // v2: 이름 · 프리팹 · GUID · XML · 바이너리 상태 · 파일 id(덮어쓴 것 칸이 없다)
     arch << sw::string( "OldCooked" );
     arch << static_cast<uint32>( 1 );
     arch << sw::string( "Plain" ) << sw::string() << sw::string()
@@ -279,16 +280,12 @@ SW_TEST_CASE( PrefabOverridesTest, CookedSceneVersion2BytesStillLoad )
     const sw::string path = test::makeTempPath( "v2.scene.bin" );
     SW_ASSERT_TRUE( arch.saveFile( path ) );
 
-    sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadBinary( path ) );
-    SW_EXPECT_STREQ( "OldCooked", doc._name.c_str() );
-    SW_ASSERT_EQUAL( size_t( 1 ), doc._listEntityNode.size() );
-    SW_EXPECT_EQUAL( uint64( 4 ), doc._listEntityNode[0]._fileId );
-    SW_EXPECT_TRUE( doc._listEntityNode[0]._prefabOverrideXml.empty() );
-
-    sw::Scene scene{ "OldCookedWorld" };
-    SW_ASSERT_TRUE( scene.instantiate( doc ) );
-    sw::GameObject* pPlain = scene.getObjectManager()->findGameObjectByName( sw::hashed_string( "Plain" ) );
-    SW_ASSERT_NOT_NULL( pPlain );
-    SW_EXPECT_FALSE( pPlain->isActive() );
+    test::ScopedLogCollector logs;
+    {
+        test::ScopedDefensiveTestLog expected( "a cooked scene of another binary version" );
+        sw::SceneDocument            doc;
+        SW_EXPECT_FALSE( doc.loadBinary( path ) );
+        SW_EXPECT_TRUE( doc._listEntityNode.empty() );
+    }
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Unsupported binary version 2" ) == 1, logs.joined().c_str() );
 }
