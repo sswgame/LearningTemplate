@@ -126,7 +126,7 @@ cd build/Ninja-Debug/Bin
 | EditorUiTest | 2 | 2 |
 | **AppTest** | **17 (11)** | **9 (3)** |
 
-SmokeTest 가 47 → 3 이 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
+SmokeTest 가 52 → 3 이 되는 것은 **의도된 것이다.** 핫 리로드와 모듈 백그라운드 컴파일은 Dev 에만 있고,
 Shipping 스모크는 정적 `exportGameApi` 경로만 본다(`Test/SmokeTest/CMakeLists.txt` 참고). AppTest 가 17 → 9 인 것도
 같은 이유다 — 에디터 실기동 · 백엔드 교체 · 메모리 태그 보고 케이스는 배포본에 에디터와 그 창구가 없어 아예 컴파일되지 않는다.
 EngineTest · EditorTest 의 차이도 Dev 전용 경로(모듈 코드 해제 · 셰이더 라이브 컴파일 · 인스펙터 메타데이터) 케이스다.

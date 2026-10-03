@@ -4,8 +4,8 @@
         "C++ 은 빌드 시 Scripts/generate/GeneratePackFormat.py 가 만든 sw/config/PackFormat.gen.h 의",
         "구조체를 그대로 fread 하고, Python 쿠커(Scripts/generate/CookAssets.py)는 이 JSON 을 직접 읽어",
         "struct.pack 포맷을 만든다. 그래서 한쪽만 바꾸면 컴파일 또는 쿠킹이 깨진다 —",
-        "예전에는 두 구현이 각자 레이아웃을 손으로 들고 있어서, 헤더가 offset 8 부터 통째로 어긋난 채",
-        "'마운트는 성공하지만 파일이 0개'인 팩이 만들어지고 있었다(Shipping 기동 불가).",
+        "주의: 두 구현이 레이아웃을 따로 들면 헤더가 어긋난 채 '마운트는 성공하지만 파일이 0개'인 팩이",
+        "만들어진다(Shipping 기동 불가). 레이아웃은 이 파일 하나에서만 정한다.",
         "",
         "이 파일은 빌드 타임 전용이라 배포물에 들어가지 않는다. 팩은 Resource/engine, Resource/common,",
         "Resource/game/<pack> 에서만 만들어지고 Config/ 는 그 바깥이라 구조적으로 패킹 대상이 아니다",
@@ -38,9 +38,8 @@
         "codecs": { "None": 0, "RLE": 1, "Zlib": 2, "LZ4": 3, "Zstd": 4, "Custom": 255 },
         "deflateStrategy": "default",
         "deflateNote": [
-            "리더가 표준 zlib(uncompress)을 쓰므로 전략 제약이 없다. 예전에는 자체 인플레이터가",
-            "동적 허프만을 거부해서 쿠커가 Z_FIXED 로 압축해야 했다 — 지금은 기본 전략(동적 허프만)을",
-            "써서 압축률을 온전히 쓴다. 리더를 다시 자체 구현으로 바꾸면 이 값도 같이 조정할 것."
+            "리더가 표준 zlib(uncompress)을 쓰므로 전략 제약이 없고 기본 전략(동적 허프만)으로 압축률을 온전히 쓴다.",
+            "주의: 동적 허프만을 못 읽는 자체 인플레이터로 리더를 바꾸면 이 값을 Z_FIXED 로 같이 바꿔야 한다."
         ]
     },
 

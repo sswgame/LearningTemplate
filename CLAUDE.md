@@ -73,10 +73,9 @@ build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (
   A host-suite case fails on any unexpected `[Error]` log line, since validation-layer and driver errors only log;
   wrap a deliberate rejection in `SW_TEST_DEFENSIVE_SCOPE( "reason" )`.
 - **`-L hostgpu` is the part CI can never run. Run it in Shipping before you call work done**, on the
-  machine with the GPU. Nothing else covers it: CI skips those suites and local habit is Debug-only, which is
-  how two `RenderPassGpuTest` failures and two `ShaderCompilerTest` failures sat in the tree unnoticed (see
-  the 2026-09-17 entry of the old backlog, `git show 7ce95fc8:docs/06_Backlog.md`). A `--host_suites=only` run that selects nothing fails, and so does a
-  declaration naming a suite that has no cases.
+  machine with the GPU. Nothing else covers it: CI skips those suites and local habit is Debug-only, so a
+  Shipping-only GPU failure otherwise sits in the tree unnoticed. A `--host_suites=only` run that selects nothing
+  fails, and so does a declaration naming a suite that has no cases.
 - **Suite names are a convention, and `CheckTestSuites.py` enforces it**: every suite is `XxxTest`
   (no underscore), lives in exactly one file, a host suite has its file to itself, and every
   `SW_TEST_REQUIRES_HOST` sits in a folder whose CMakeLists says `HOST_SPLIT` (otherwise nothing reads it and
@@ -239,9 +238,10 @@ its current shape only: no old-format readers, and a rename rewrites the data in
   `cmake --preset <preset>` runs again. The symptom is an undefined `X::StaticType()` link error. A base that
   cannot be instantiated is still registered, as `REFLECT( Abstract )` — every reflected parent must be
   registered (`ReflectionTypeInfoTest.EveryReflectedParentIsRegistered`).
-- **Never re-parent during tick.** `GameObjectManager::tick` runs `onTick()` across threads;
-  `attachToParent`/`detach` on any object inside it is forbidden. Structural changes (`addComponent`,
-  `addTag`) auto-defer via `deferPostTick`, so `addComponent` returns `nullptr` mid-tick — use
+- **Re-parenting during tick is deferred.** `GameObjectManager::tick` runs `onTick()` across threads;
+  `attachToParent` / `detachFromParent` and other structural changes (`addComponent`, `addTag`) made inside it
+  go to the structural-change queue (`deferStructuralChange`) and apply right after the tick in call order — do
+  not expect the changed hierarchy within the same tick. `addComponent` returns `nullptr` mid-tick — use
   `GameObjectManager::executeOrDeferPostTick` to spawn and initialize in one block.
 - **RHI ABI stamps.** Changing `RHIModuleAbi.h` requires rebuilding the engine and *all* `RHI_*.dll`
   backends together; a stale backend DLL crashes immediately on mismatched function pointers.
