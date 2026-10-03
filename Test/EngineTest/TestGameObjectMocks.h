@@ -1,8 +1,7 @@
 /**
  * @file TestGameObjectMocks.h
  * @brief GameObject·Component 테스트가 함께 쓰는 모의 컴포넌트 열한 개.
- * @details 예전엔 `TestGameObject.cpp` 3367 줄 안에 이 정의가 같이 있었다. 스위트 열여덟 개가 한 파일에 살던
- *          이유이기도 하다 — 목을 쓰려면 그 파일에 있어야 했다. 여기로 빼면서 파일을 주제별로 갈랐다.
+ * @details 목을 이 헤더에 두므로 GameObject·Component 시험 파일을 주제별로 나눌 수 있다.
  *
  *          **이 목들은 코드젠을 쓰지 않는다.** `REFLECT_BODY()` 가 선언만 하고 `StaticType()` 은 아래에서 손으로
  *          정의한다 — 테스트 로컬 `TypeInfo` 를 만들어 쓰기 때문이다(RTTI 없음). 그래서 그 `TypeInfo` 캐시는

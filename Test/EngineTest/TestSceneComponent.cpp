@@ -233,8 +233,8 @@ SW_TEST_CASE( SceneHierarchyTest, TransformDirtyPropagationAndEarlyOut )
 
 /**
  * @brief [SceneComponentTest] 느리게 움직이는 물체가 제자리에 얼어붙지 않는지 검증
- * @details 세 setter 가 `getDistanceSquared(...) <= MathUtil::Epsilon` 로 "안 바뀌었다" 를
- *          판정했다. **제곱 거리를 제곱 안 한 허용치와 비교**한 것이라, 실제 거리로는 1e-3
+ * @details setter 가 `getDistanceSquared(...) <= MathUtil::Epsilon` 로 "안 바뀌었다" 를 판정하면
+ *          **제곱 거리를 제곱 안 한 허용치와 비교**하는 것이라, 실제 거리로는 1e-3
  *          까지가 변화 없음으로 삼켜진다 — 의도한 부동소수 허용치보다 1000배 크다.
  *
  *          그리고 비교 기준이 **매번 현재 값**이라 오차가 쌓이지 않는다. 한 프레임에 1e-3
@@ -297,7 +297,7 @@ SW_TEST_CASE( SceneComponentTest, DetachInsideTickIsDeferredUntilAfterTheTick )
 
 /**
  * @brief [SceneComponentTest] 틱 안에서 태그를 모두 지우면 틱이 끝난 뒤에 지운다 — `removeTag` 와 같이
- * @details `clearTags` 만 미루지 않고 바로 지워, 병렬 틱의 다른 워커가 `hasTag` 로 같은 컨테이너를 읽는 동안 비웠다.
+ * @details `clearTags` 를 바로 지우면 병렬 틱의 다른 워커가 `hasTag` 로 같은 컨테이너를 읽는 동안 비운다.
  */
 SW_TEST_CASE( SceneComponentTest, ClearTagsInsideTickIsDeferredUntilAfterTheTick )
 {
@@ -322,7 +322,7 @@ SW_TEST_CASE( SceneComponentTest, ClearTagsInsideTickIsDeferredUntilAfterTheTick
 /**
  * @brief [SceneComponentTest] 틱 안에서 붙일 수 없는 부모에 붙이면 미루기 전에 false 다
  * @details 틱 중의 붙이기는 틱 뒤로 미뤄지는데, 미룬 일은 자기 매니저로 부모를 다시 찾는다. 다른 매니저의 부모는 그때 못 찾고 조용히
- *          버려졌고 호출은 이미 true 를 돌려준 뒤였다 — 부른 쪽은 붙었다고 믿는다. 거르는 것은 미루기 전이다.
+ *          버려지는데 호출이 이미 true 를 돌려줬다면 부른 쪽은 붙었다고 믿는다. 그래서 거르는 것은 미루기 전이다.
  */
 SW_TEST_CASE( SceneComponentTest, AttachInsideTickIsRejectedBeforeItIsDeferred )
 {
@@ -348,9 +348,9 @@ SW_TEST_CASE( SceneComponentTest, AttachInsideTickIsRejectedBeforeItIsDeferred )
 
 /**
  * @brief [SceneComponentTest] 플러시 전에 월드 값을 읽어도 렌더 프리미티브는 더티로 남는다.
- * @details 지연 합성(`getWorldPosition` 등)이 월드 캐시를 채우며 더티를 지웠지만 갱신 훅은 부르지 않았다. 그 노드는 이제 더티가
- *          아니라 플러시가 건너뛰고, 렌더 더티는 훅에서만 찍히므로 **아무도 찍지 않았다** — 인스펙터가 메시 위치를 세팅하고 곧장
- *          월드 위치를 읽는 경로에서, 화면의 메시가 옛 자리에 멈춰 있었다. 부모를 움직이고 자식을 읽는 경우도 같다.
+ * @details 지연 합성(`getWorldPosition` 등)이 월드 캐시를 채우며 더티를 지우고 갱신 훅은 부르지 않으면, 그 노드는 더티가
+ *          아니라 플러시가 건너뛰고, 렌더 더티는 훅에서만 찍히므로 **아무도 찍지 않는다** — 인스펙터가 메시 위치를 세팅하고 곧장
+ *          월드 위치를 읽는 경로에서 화면의 메시가 옛 자리에 멈춘다. 부모를 움직이고 자식을 읽는 경우도 같다.
  */
 SW_TEST_CASE( SceneComponentTest, LazyWorldReadKeepsRenderDirty )
 {
@@ -386,8 +386,8 @@ SW_TEST_CASE( SceneComponentTest, LazyWorldReadKeepsRenderDirty )
 /**
  * @brief [SceneComponentTest] 부모를 움직이고 자식 하나를 먼저 읽어도, 플러시는 그 형제까지 갱신하고 훅은 노드마다 한 번이다.
  * @details R → N → {C1, C2}. N 을 움직이고 C1 의 월드 위치를 읽으면 N · C1 사슬은 깨끗해진다. 플러시는 깨끗한 노드 아래로
- *          "자손 더티" 가 있을 때만 내려가므로 N 에 그것이 서 있어야 C2 에 닿는다. 직렬 표시는 세웠지만 배치(워커) 쪽 복사본은
- *          자손에게 더티만 세워, 배치로 N 을 옮기면 C2 가 옛 자리에 남았다. 두 경로를 다 본다.
+ *          "자손 더티" 가 있을 때만 내려가므로 N 에 그것이 서 있어야 C2 에 닿는다. 직렬 경로와 배치(워커) 경로가 모두 그것을 세워야 한다 —
+ *          한쪽이 자손에게 더티만 세우면 배치로 N 을 옮길 때 C2 가 옛 자리에 남는다. 두 경로를 다 본다.
  */
 SW_TEST_CASE( SceneComponentTest, LazyReadDoesNotStrandDirtySiblings )
 {
@@ -513,7 +513,7 @@ SW_TEST_CASE( SceneComponentTest, RotationCacheFollowsEveryRotationChange )
 /**
  * @brief [SceneComponentTest] 틱 안에서 자기 오브젝트의 칸에 쓴 값은 틱이 끝나야 보이고, 메시는 틱 뒤 렌더 더티가 된다
  * @details 틱 중의 세터는 자기 오브젝트를 틱하는 스레드면 칸의 대기 자리에 쓰고, 틱 뒤 적용이 칸 번호 목록을 따라 옮긴다. 그 사이에
- *          다른 오브젝트가 읽는 로컬 · 월드 값은 틱 전 값이어야 한다(예전 쓰기 큐와 같다). 메시는 훅 없이 칸의 프리미티브 번호로
+ *          다른 오브젝트가 읽는 로컬 · 월드 값은 틱 전 값이어야 한다. 메시는 훅 없이 칸의 프리미티브 번호로
  *          등록부에 더티가 찍혀야 렌더 수집이 움직임을 본다. 오브젝트가 16 개 미만이라 틱은 이 스레드가 만든 순서대로 돈다 — 쓰는 쪽이
  *          먼저 돌고 읽는 쪽이 나중에 돈다.
  */
@@ -602,8 +602,8 @@ namespace
 
 /**
  * @brief [SceneComponentTest] 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 이기는 값은 스레드 배정과 무관하다 — 쓴 오브젝트 id 가 큰 쪽
- * @details 틱 큐는 **쓴 스레드 슬롯** 단위로 적용돼 슬롯 번호가 큰 쪽이 이겼다. 같은 장면도 어느 워커가 그 오브젝트를 틱했느냐에 따라 실행마다
- *          다른 값이 남았고, 건수가 문턱(1024)을 넘으면 두 워커가 그 칸을 동시에 썼다. 이제 (대상, 쓴 오브젝트, 순번)으로 정렬해 대상 경계에서만
+ * @details 틱 큐를 **쓴 스레드 슬롯** 단위로 적용하면 슬롯 번호가 큰 쪽이 이겨, 같은 장면도 어느 워커가 그 오브젝트를 틱했느냐에 따라 실행마다
+ *          다른 값이 남고, 건수가 문턱(1024)을 넘으면 두 워커가 그 칸을 동시에 쓴다. 그래서 (대상, 쓴 오브젝트, 순번)으로 정렬해 대상 경계에서만
  *          잡을 나눈다(유니티 `EntityCommandBuffer.ParallelWriter` 의 sortKey). 두 스레드가 서로 다른 슬롯에 쓰게 하고 역할을 바꿔 두 번 돌린다.
  */
 SW_TEST_CASE( SceneComponentTest, CrossObjectTickWritesResolveByWriterNotThread )
@@ -651,8 +651,8 @@ SW_TEST_CASE( SceneComponentTest, TickWritesFromDifferentWritersAreNotMerged )
 
 /**
  * @brief [SceneComponentTest] 배치에 같은 핸들이 두 번 있으면 병렬로 나눠도 배열에서 뒤의 것이 이긴다
- * @details 배치는 배열을 연속 구간으로 잘라 워커에 줬다. 같은 핸들이 여러 구간에 있으면 워커 여럿이 한 칸을 동시에 썼고, 마지막에 끝난 워커의
- *          값이 남았다(배열의 마지막 값이 아니다). 이제 대상 버킷(componentId)으로 나눠 한 대상은 한 워커가 배열 순서대로 쓴다. 반복 핸들을 배열
+ * @details 배치를 배열의 연속 구간으로 잘라 워커에 주면 같은 핸들이 여러 구간에 있을 때 워커 여럿이 한 칸을 동시에 쓰고, 마지막에 끝난 워커의
+ *          값이 남는다(배열의 마지막 값이 아니다). 그래서 대상 버킷(componentId)으로 나눠 한 대상은 한 워커가 배열 순서대로 쓴다. 반복 핸들을 배열
  *          전체에 흩어 두어(61 칸마다) 나눔이 어긋나면 거의 확실히 진다. 월드도 이긴 로컬과 맞아야 한다(잎 루트는 적용 자리에서 합성한다).
  */
 SW_TEST_CASE( SceneComponentTest, BatchWithARepeatedHandleKeepsTheLastWrite )
@@ -693,8 +693,8 @@ SW_TEST_CASE( SceneComponentTest, BatchWithARepeatedHandleKeepsTheLastWrite )
 
 /**
  * @brief [SceneComponentTest] 월드 세터는 돌고 커진 부모 아래에서도 그 월드 자리 · 회전에 놓는다 — 세 축이 섞인 회전도 그대로
- * @details 월드 세터가 없어 에디터 다섯 곳이 각자 바꿨고 셋이 틀렸다(월드 값을 로컬 칸에 · 월드 축 차이를 로컬 축에). 기즈모는 ImGuizmo 의 XYZ
- *          오일러로 분해해 넣어 엔진의 요 · 피치 · 롤 순서와 달라, 두 축 이상이 섞인 회전이 다른 회전으로 들어갔다. 언리얼 `SetWorldLocation` ·
+ * @details 월드 값을 쓰는 쪽이 각자 바꾸면 틀리기 쉽다(월드 값을 로컬 칸에 · 월드 축 차이를 로컬 축에). ImGuizmo 의 XYZ 오일러로 분해해 넣으면
+ *          엔진의 요 · 피치 · 롤 순서와 달라 두 축 이상이 섞인 회전이 다른 회전으로 들어간다. 언리얼 `SetWorldLocation` ·
  *          `SetWorldTransform` 처럼 엔진이 부모 기준으로 분해한다.
  */
 SW_TEST_CASE( SceneComponentTest, WorldSettersRespectARotatedScaledParent )

@@ -81,7 +81,7 @@ SW_TEST_CASE( ComponentTickGroupTest, ParentChildHierarchyHeterogeneousTickGroup
     sw::RegisterMockComponents();
 
     // 1) 루트 부모 (PrePhysics 단계에서 기본 체력 연산)
-    // 계층은 씬 컴포넌트 사이에서 맺어진다 — 예전에는 씬 컴포넌트가 없어 붙이기가 늘 실패했고(결과를 버려 몰랐다) 이 시험에 계층이 없었다.
+    // 계층은 씬 컴포넌트 사이에서 맺어진다 — 씬 컴포넌트 없이 붙이면 늘 실패한다(결과를 버리면 모른다).
     sw::GameObject* pParentObj = manager.createGameObject( sw::hashed_string( "PipelineParent" ) );
     SW_ASSERT_NOT_NULL( pParentObj->addComponent<sw::SceneComponent>() );
     sw::MockBasePawnComponent* pPawn = pParentObj->addComponent<sw::MockBasePawnComponent>();
@@ -358,7 +358,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, DeepHierarchyMultiComponentMultiSubTic
     sw::GameObject* pGrandparent = manager.createGameObject( sw::hashed_string( "Grandparent" ) );
     sw::GameObject* pParent      = manager.createGameObject( sw::hashed_string( "Parent" ) );
     sw::GameObject* pChild       = manager.createGameObject( sw::hashed_string( "Child" ) );
-    // 계층은 씬 컴포넌트 사이에서 맺어진다(위 시험과 같은 사연 — 예전에는 붙이기가 늘 실패했다).
+    // 계층은 씬 컴포넌트 사이에서 맺어진다(위 시험과 같다).
     for ( sw::GameObject* pObj : { pGrandparent, pParent, pChild } )
         SW_ASSERT_NOT_NULL( pObj->addComponent<sw::SceneComponent>() );
 
@@ -533,8 +533,8 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickSubTickDeactivationAndCancellat
 
 /**
  * @brief [ComponentSubTickHybridTest] 서브틱 id 64 번부터도 틱 중에 끄거나 해제하면 이번 틱의 남은 항목이 바로 건너뛴다
- * @details 1~63 은 컴포넌트의 원자 마스크가 바로 꺼진다. 64 번부터는 활성이 목록 값뿐이라 틱 뒤에야 바뀌어, 같은 틱의 뒤 단계 항목이 그대로
- *          돌았다 — id 크기에 따라 같은 호출의 결과가 달랐다.
+ * @details 1~63 은 컴포넌트의 원자 마스크가 바로 꺼진다. 64 번부터도 같아야 한다 — 활성이 목록 값뿐이라 틱 뒤에야 바뀌면 같은 틱의 뒤 단계
+ *          항목이 그대로 돌아, id 크기에 따라 같은 호출의 결과가 달라진다.
  */
 SW_TEST_CASE( ComponentSubTickHybridTest, MidTickDeactivationAppliesToHighSubTickIds )
 {
@@ -775,8 +775,8 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
 
 /**
  * @brief `onTick` 을 오버라이드한 것이 곧 틱 선언이다 — 씬 컴포넌트도 돌고, `onTick` 이 없는 컴포넌트는 틱 목록에 들지 않는다.
- * @details 예전에는 기본값이 갈렸다: `Component` 는 켜짐, `SceneComponent` 는 꺼짐. 씬 컴포넌트에 `onTick` 을 쓰고 선언을 잊으면 **조용히 한 번도
- *          돌지 않았고**, `onTick` 이 없는 데이터 컴포넌트(영속 표시 같은 것)는 매 프레임 빈 가상 호출로 디스패치됐다. 유니티는 `Update` 가 있으면
+ * @details 타입마다 기본값이 갈리면(`Component` 는 켜짐, `SceneComponent` 는 꺼짐) 씬 컴포넌트에 `onTick` 을 쓰고 선언을 잊을 때 **조용히 한 번도
+ *          돌지 않고**, `onTick` 이 없는 데이터 컴포넌트(영속 표시 같은 것)는 매 프레임 빈 가상 호출로 디스패치된다. 유니티는 `Update` 가 있으면
  *          부르고 없으면 목록에 넣지 않는다. 언리얼의 `bCanEverTick = false` 처럼 생성자가 끄면 끈 것이 이긴다.
  */
 SW_TEST_CASE( ComponentTickGroupTest, OverridingOnTickIsWhatMakesAComponentTick )
@@ -806,7 +806,7 @@ SW_TEST_CASE( ComponentTickGroupTest, OverridingOnTickIsWhatMakesAComponentTick 
 }
 
 /**
- * @brief 범위 밖의 틱 그룹은 거절한다 — 예전에는 받아 두고 등록부가 조용히 버려 그 컴포넌트가 한 번도 돌지 않았다.
+ * @brief 범위 밖의 틱 그룹은 거절한다 — 받아 두면 등록부가 조용히 버려 그 컴포넌트가 한 번도 돌지 않는다.
  * @details 그룹은 넷(`TickRegistry::kGroupCount`)이다. 정수에서 캐스트한 값(데이터 주도 설정)이 넘으면 `setTickGroup` 은 그대로 두고,
  *          `registerSubTick` 은 빈 핸들을 준다(언리얼 `TG_MAX` 도 유효한 그룹이 아니다).
  */
@@ -834,7 +834,7 @@ SW_TEST_CASE( ComponentTickGroupTest, OutOfRangeTickGroupIsRejected )
 }
 
 /**
- * @brief 우선순위는 단계 안의 0..63 이다 — 넘으면 그 단계의 맨 뒤로 묶는다. 예전에는 `& 63` 으로 감겨 70 이 6 이 되어 10 보다 앞섰다.
+ * @brief 우선순위는 단계 안의 0..63 이다 — 넘으면 그 단계의 맨 뒤로 묶는다(`& 63` 으로 감기면 70 이 6 이 되어 10 보다 앞선다).
  */
 SW_TEST_CASE( ComponentSubTickHybridTest, PriorityAboveTheBandStaysLastInItsPhase )
 {
@@ -861,8 +861,8 @@ SW_TEST_CASE( ComponentSubTickHybridTest, PriorityAboveTheBandStaysLastInItsPhas
 
 /**
  * @brief 선행 조건이 뒤 그룹에 있으면 뒤따르는 틱이 그 그룹으로 옮겨 간다(언리얼 `ActualStartTickGroup`). 사슬을 따라 옮긴다.
- * @details 예전에는 그룹마다 따로 DAG 를 지어 다른 그룹의 선행 조건을 "찾을 수 없음" 으로 버렸다 — PrePhysics 의 기수가 PostPhysics 의 말보다
- *          먼저 돌았다. 앞 그룹의 선행 조건은 이미 끝났으므로 그대로다.
+ * @details 그룹마다 따로 DAG 를 지으면 다른 그룹의 선행 조건을 "찾을 수 없음" 으로 버려, PrePhysics 의 기수가 PostPhysics 의 말보다
+ *          먼저 돈다. 앞 그룹의 선행 조건은 이미 끝났으므로 그대로다.
  */
 SW_TEST_CASE( ComponentSubTickHybridTest, PrerequisiteInALaterGroupMovesTheDependentThere )
 {
@@ -905,15 +905,10 @@ SW_TEST_CASE( ComponentSubTickHybridTest, PrerequisiteInALaterGroupMovesTheDepen
 }
 
 /**
- * @brief [GameObjectHierarchy] refreshActiveInHierarchy 부모-자식-손자 다계층 합성 활성 상태 엣지 케이스 검증
- */
-/**
  * @brief [ComponentDefaultsTest] gamedata 의 기본값은 **기반 타입 노드부터** 적용된다
- * @details 예전에는 기반 기본값 적용이 `Component` 생성자에 있었는데, 기반 생성자 시점에는 가상
- *          `getTypeInfo()` 가 파생으로 디스패치되지 않아 언제나 `Component` 의 TypeInfo 만 나왔다
- *          — 중간 기반(`SceneComponent`)의 기본값은 한 번도 적용된 적이 없고, 파생 기본값은
- *          등록 시점의 `applyTypeDefaults` 가 따로 넣고 있었다. 생성자 호출을 걷어내면서 적용을
- *          한 곳(`applyTypeDefaults`)으로 모았고, 이제 뿌리 → 파생 순서로 체인 전체를 적용한다.
+ * @details 적용은 한 곳(`applyTypeDefaults`)에서 뿌리 → 파생 순서로 체인 전체를 한다. 기반 생성자에서 적용하면
+ *          그 시점에는 가상 `getTypeInfo()` 가 파생으로 디스패치되지 않아 언제나 `Component` 의 TypeInfo 만 나오고,
+ *          중간 기반(`SceneComponent`)의 기본값이 적용되지 않는다.
  *          이 테스트는 그 순서를 고정한다: 기반 노드의 값이 들어가고, 같은 프로퍼티를 파생이
  *          다시 적으면 파생이 이긴다.
  */
@@ -941,7 +936,7 @@ SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
         sw::MeshComponent*    pMesh   = ( pObject != nullptr ) ? pObject->addComponent<sw::MeshComponent>() : nullptr;
         SW_ASSERT_TRUE( pMesh != nullptr );
 
-        // 기반(SceneComponent) 노드가 적용됐는가 — 예전에는 여기가 (1,1,1) 이었다.
+        // 기반(SceneComponent) 노드가 적용됐는가 — 빠지면 여기가 (1,1,1) 이다.
         const sw::float3 scale = pMesh->getLocalScale();
         SW_EXPECT_TRUE( sw::MathUtil::nearEqual( scale._x, 2.0f ) );
         SW_EXPECT_TRUE( sw::MathUtil::nearEqual( scale._y, 3.0f ) );
@@ -957,8 +952,8 @@ SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
 
 /**
  * @brief [ComponentDefaultsTest] 한 타입의 해석 결과는 다른 타입들이 캐시에 들어와도 제자리에 있다
- * @details `apply` 는 해석 결과(`resolveFor` 가 돌려준 참조)를 **잠금 밖에서** 돈다. 예전에는 결과가 해시 맵의 밀집 벡터 안에 살아,
- *          다른 타입이 처음 들어오며 벡터가 다시 잡히면 그 참조가 풀린 메모리를 가리켰다 — 비동기 씬 로드의 워커와 게임 스레드가
+ * @details `apply` 는 해석 결과(`resolveFor` 가 돌려준 참조)를 **잠금 밖에서** 돈다. 결과가 해시 맵의 밀집 벡터 안에 살면,
+ *          다른 타입이 처음 들어오며 벡터가 다시 잡힐 때 그 참조가 풀린 메모리를 가리킨다 — 비동기 씬 로드의 워커와 게임 스레드가
  *          처음 보는 타입을 함께 만들 때의 해제 후 사용이다. 등록된 모든 타입을 한 번씩 풀게 해 벡터를 여러 번 자라게 한다.
  */
 SW_TEST_CASE( ComponentDefaultsTest, ResolvedDefaultsStayPutWhileOtherTypesResolve )
@@ -998,8 +993,8 @@ SW_TEST_CASE( ComponentDefaultsTest, ResolvedDefaultsStayPutWhileOtherTypesResol
 
 /**
  * @brief [ComponentDefaultsTest] 모듈이 타입을 등록해도 살아 있는 컴포넌트의 값은 기본값으로 돌아가지 않는다
- * @details 기본값은 만들 때 한 번이다. 예전에는 모듈 등록(`registerModuleTypes`)과 게임 DLL 리로드가 씬의 모든 컴포넌트에 기본값을
- *          다시 찍어(`rebindAllCachedTypeInfo`), 게임이 바꾼 값이 모듈 로드 · 핫 리로드마다 기본값으로 돌아갔다.
+ * @details 기본값은 만들 때 한 번이다. 모듈 등록(`registerModuleTypes`)이나 게임 DLL 리로드가 씬의 모든 컴포넌트에 기본값을
+ *          다시 찍으면 게임이 바꾼 값이 모듈 로드 · 핫 리로드마다 기본값으로 돌아간다.
  */
 SW_TEST_CASE( ComponentDefaultsTest, ModuleRegistrationKeepsLiveValues )
 {
@@ -1037,13 +1032,9 @@ SW_TEST_CASE( ComponentDefaultsTest, ModuleRegistrationKeepsLiveValues )
 
 /**
  * @brief [ComponentDefaultsTest] **없는** 기본값 파일은 딱 한 번만 열어 본다
- * @details 예전에는 성공 깃발 하나만 봐서, 로드가 실패하면 그 깃발이 false 로 남고
- *          **컴포넌트를 만들 때마다 파일을 다시 열었다.** 기본값 파일은 있어도 되고 없어도
- *          되는 것이라 없는 게 정상인데, 없을 때 씬 로드가
- *          `컴포넌트 수 x 파일 열기 실패` 가 됐다.
- *
- *          2026-09-20 실측: 엔티티 4000 개짜리 씬의 로드 **255 ms 중 207 ms** 가 이것이었다.
- *          고친 뒤 같은 씬이 **44 ms** 다.
+ * @details 성공 깃발 하나만 보면 로드가 실패할 때 그 깃발이 false 로 남아 **컴포넌트를 만들 때마다 파일을 다시 연다.**
+ *          기본값 파일은 있어도 되고 없어도 되는 것이라 없는 게 정상인데, 그러면 씬 로드가
+ *          `컴포넌트 수 x 파일 열기 실패` 가 되어 로드 시간의 대부분을 차지한다.
  * @note 시간으로 재면 흔들리므로 **열어 본 횟수**로 본다.
  */
 SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
@@ -1069,7 +1060,7 @@ SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
         sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "DefaultsRetryTarget" ) );
         SW_ASSERT_TRUE( pObject != nullptr );
 
-        // 컴포넌트를 여럿 만든다 — 예전에는 이 수만큼 파일을 다시 열었다.
+        // 컴포넌트를 여럿 만든다 — 실패를 기억하지 않으면 이 수만큼 파일을 다시 연다.
         constexpr int32 kComponentCount = 32;
         for ( int32 index = 0; index < kComponentCount; ++index )
         {
@@ -1088,11 +1079,9 @@ SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
 
 /**
  * @brief [ComponentDefaultsTest] 기본값 경로가 **값으로** 돌아오는지 검증
- * @details `getDefaultGamedataPath()` 가 `string_view` 를 돌려주고 있었다. 그 뷰는 뮤텍스로
- *          지키는 `_customDefaultsPath` 의 내부 버퍼를 가리키는데, **뮤텍스는 함수가 끝나면서
- *          풀린다.** 받아 든 쪽이 그것을 들고 있는 동안 다른 곳에서 `setDefaultGamedataPath` 를
- *          부르면(길이가 달라지면 버퍼를 새로 잡는다) 뷰는 사라진 메모리를 가리킨다.
- *          지키는 것이 아무 뜻이 없었던 셈이다.
+ * @details `getDefaultGamedataPath()` 가 `string_view` 를 돌려주면 그 뷰는 뮤텍스로 지키는 `_customDefaultsPath` 의
+ *          내부 버퍼를 가리키는데, **뮤텍스는 함수가 끝나면서 풀린다.** 받아 든 쪽이 그것을 들고 있는 동안 다른 곳에서
+ *          `setDefaultGamedataPath` 를 부르면(길이가 달라지면 버퍼를 새로 잡는다) 뷰는 사라진 메모리를 가리킨다.
  */
 SW_TEST_CASE( ComponentDefaultsTest, DefaultsPathIsReturnedByValue )
 {
@@ -1104,7 +1093,7 @@ SW_TEST_CASE( ComponentDefaultsTest, DefaultsPathIsReturnedByValue )
     // 길이를 크게 바꿔 내부 버퍼를 **다시 잡게** 만든다.
     sw::Component::setDefaultGamedataPath( sw::string( 4096, 'x' ) );
 
-    // 고치기 전이라면 여기서 사라진 버퍼를 읽는다 — ASAN 이 잡는다.
+    // 뷰를 돌려주면 여기서 사라진 버퍼를 읽는다 — ASAN 이 잡는다.
     SW_EXPECT_STREQ( "game/data/short.xml", sw::string( heldPath ).c_str() );
 
     sw::Component::setDefaultGamedataPath( previousPath );

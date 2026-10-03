@@ -158,7 +158,7 @@ SW_TEST_CASE( ObjectIdentityTest, WireFormatRoundTripAndRejectsGarbage )
 
 /**
  * @brief [ObjectIdentityTest] 프로세스 토큰은 0 이 아니고, 한 프로세스 안에서 바뀌지 않는다
- * @details 핫 리로드 스냅샷(같은 프로세스)과 세이브 파일(다른 실행)을 가르는 값이다. 0 이면 토큰이 없던 옛 봉투와 구분되지 않는다.
+ * @details 핫 리로드 스냅샷(같은 프로세스)과 세이브 파일(다른 실행)을 가르는 값이다. 0 이면 토큰이 없는 봉투와 구분되지 않는다.
  */
 SW_TEST_CASE( ObjectIdentityTest, ProcessTokenIsStableAndNonZero )
 {

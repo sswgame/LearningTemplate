@@ -275,9 +275,8 @@ namespace
 
 /**
  * @brief [GameObjectManagerTest] 씬 틱은 자기가 낸 일만 기다린다 — 다른 시스템의 태스크가 돌고 있어도 곧바로 돌아온다.
- * @details 예전 `tick()` 은 컴포넌트 틱 뒤 `TaskManager::waitAll()` 을 불러 **엔진 전체의** 태스크를 기다렸다 — 렌더 스레드의 패스 기록,
- *          에셋 스트리밍, 비동기 씬 로드, 오디오 재생까지. 그 시간은 `GT.Scene.tick.components` 로 잡혔다. 틱이 낸 병렬 일은
- *          `runParallel` 이 이미 합류를 기다린다.
+ * @details 틱이 낸 병렬 일은 `runParallel` 이 합류를 기다린다. `tick()` 이 `TaskManager::waitAll()` 을 부르면 **엔진 전체의** 태스크
+ *          — 렌더 스레드의 패스 기록, 에셋 스트리밍, 비동기 씬 로드, 오디오 재생까지 — 를 기다려 그 시간이 `GT.Scene.tick.components` 로 잡힌다.
  */
 SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
 {
@@ -310,8 +309,8 @@ SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
 
 /**
  * @brief [GameObjectManagerTest] 빈 씬에 넣은 틱 뒤 작업도 다음 틱에 돈다.
- * @details 예전 `tick()` 은 오브젝트가 없으면 병합 직후 돌아가 지연 큐 · 두 번째 병합 · 마지막 파괴를 건너뛰었다. 빈 씬에서 첫 오브젝트를
- *          `deferPostTick` 으로 만드는 코드(레벨 스크립트 · 스포너)는 영영 돌지 않았다.
+ * @details `tick()` 이 오브젝트가 없다고 병합 직후 돌아가면 지연 큐 · 두 번째 병합 · 마지막 파괴를 건너뛰어, 빈 씬에서 첫 오브젝트를
+ *          `deferPostTick` 으로 만드는 코드(레벨 스크립트 · 스포너)가 영영 돌지 않는다.
  */
 SW_TEST_CASE( GameObjectManagerTest, PostTickWorkRunsOnAnEmptyScene )
 {
@@ -589,9 +588,9 @@ SW_TEST_CASE( GameObjectManagerPoolTest, SceneClearAndPoolReuseLifecycle )
 // destroyComponentsOfModule 자체가 그 빌드에 없다. 없는 기능의 테스트도 없다.
 /**
  * @brief 모듈이 내려가기 전에 그 모듈 타입의 **살아 있는 컴포넌트**가 걷히는지.
- * @details 씬은 엔진이 소유해 모듈(SWGame·EditorModule)보다 오래 산다. 예전에는 언로드가 팩토리·타입·전역 변수만
- *          걷어서, 모듈이 정의한 컴포넌트의 인스턴스가 vtable 없는 객체로 씬에 남을 수 있었다(지금 씬은 엔진
- *          컴포넌트만 써서 드러나지 않았을 뿐이다). 여기서는 엔진 타입을 모듈 이름으로 삼아 같은 기계를 검증한다 —
+ * @details 씬은 엔진이 소유해 모듈(SWGame·EditorModule)보다 오래 산다. 언로드가 팩토리·타입·전역 변수만 걷으면
+ *          모듈이 정의한 컴포넌트의 인스턴스가 vtable 없는 객체로 씬에 남는다(엔진 컴포넌트만 쓰는 씬에서는 드러나지
+ *          않는다). 여기서는 엔진 타입을 모듈 이름으로 삼아 같은 기계를 검증한다 —
  *          이름이 맞는 컴포넌트만 사라지고, 소유 오브젝트와 다른 컴포넌트는 남아야 한다.
  */
 SW_TEST_CASE( GameObjectManagerPoolTest, ModuleComponentsPurgedBeforeUnload )
@@ -612,8 +611,8 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ModuleComponentsPurgedBeforeUnload )
     SW_EXPECT_EQUAL( 0u, manager.destroyComponentsOfModule( "NotThisModule" ) );
     SW_EXPECT_NOT_NULL( pObject->getComponent<sw::MeshComponent>() );
 
-    // 2) 자기 모듈 이름이면 인스턴스가 사라진다 — 오브젝트 자체는 남는다(컴포넌트만 모듈 소유다). 이름표를 바꿔도 걷힌다 — 예전에는
-    //    이름이 타입 조회 키라 이름표를 바꾼 컴포넌트는 타입(과 모듈)을 잃고 남아, DLL 이 내려간 뒤 vtable 없는 객체가 됐다.
+    // 2) 자기 모듈 이름이면 인스턴스가 사라진다 — 오브젝트 자체는 남는다(컴포넌트만 모듈 소유다). 이름표를 바꿔도 걷힌다 — 이름을
+    //    타입 조회 키로 쓰면 이름표를 바꾼 컴포넌트는 타입(과 모듈)을 잃고 남아, DLL 이 내려간 뒤 vtable 없는 객체가 된다.
     pMesh->setComponentName( sw::hashed_string( "RenamedMesh" ) );
     SW_EXPECT_EQUAL( 1u, manager.destroyComponentsOfModule( moduleName.c_str() ) );
     SW_EXPECT_NULL( pObject->getComponent<sw::MeshComponent>() );
@@ -628,7 +627,7 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ModuleComponentsPurgedBeforeUnload )
  * @brief 파괴 대기(pending destroy) 오브젝트의 이름은 비어 있는 것으로 본다.
  * @details 모듈 리로드 · RHI 교체는 새 인스턴스를 만든 뒤 상태를 복원하는데, 그 사이 옛 오브젝트가 아직 지연 파괴
  *          대기열에 있다. 이름 맵만 보고 판단하면 새 오브젝트가 `BenchMesh_0_2` 같은 이름을 받고 `Duplicate name`
- *          경고가 뜬다 — 실제로 교체 로그에 매번 둘씩 찍혔다. 이름은 **살아 있는** 오브젝트만 차지한다.
+ *          경고가 뜬다. 이름은 **살아 있는** 오브젝트만 차지한다.
  */
 SW_TEST_CASE( GameObjectManagerPoolTest, PendingDestroyNameIsFreeForReuse )
 {
@@ -654,9 +653,9 @@ SW_TEST_CASE( GameObjectManagerPoolTest, PendingDestroyNameIsFreeForReuse )
 /**
  * @brief [GameObjectManagerPoolTest] 같은 오브젝트를 여러 스레드가 동시에 없애도 한 번만 파괴되는지 검증
  * @details `onTick` 은 병렬로 돈다. 총알 둘이 같은 프레임에 같은 적을 맞히면 두 스레드가 같은
- *          `destroyObject` 를 부른다 — 흔한 경우다. 예전 코드는 `isPendingDestroy()` 로 보고 나서
- *          `markPendingDestroy()` 을 했고, 그 사이가 벌어져 있어 둘 다 통과하면 파괴 목록에 같은
- *          포인터가 두 번 들어갔다. 그러면 풀이 같은 블록을 두 번 받아 자유 목록이 망가지고,
+ *          `destroyObject` 를 부른다 — 흔한 경우다. `isPendingDestroy()` 로 보고 나서 `markPendingDestroy()` 를
+ *          하면(check-then-set) 그 사이가 벌어져 둘 다 통과할 때 파괴 목록에 같은 포인터가 두 번 들어간다.
+ *          그러면 풀이 같은 블록을 두 번 받아 자유 목록이 망가지고,
  *          **다음에 만드는 두 오브젝트가 같은 주소를 받는다.**
  *
  *          레이스라 한 번으로는 못 믿는다 — 라운드를 여러 번 돌려 확률을 올린다.
@@ -751,7 +750,7 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTransformFlushMatchesSerial )
         SW_EXPECT_FALSE( manager.hasDirtySceneTransforms() );
 
         // **플러시가 정말 다 돌았는지는 더티 비트로 본다.** `getWorldPosition` 은 더티면 그 자리에서 다시
-        // 계산해 주므로(게으른 갱신) 값만 봐서는 빠진 루트를 못 잡는다 — 청크의 마지막 루트를 빠뜨려도 통과했다.
+        // 계산해 주므로(게으른 갱신) 값만 봐서는 빠진 루트를 못 잡는다 — 청크의 마지막 루트를 빠뜨려도 통과한다.
         uint32 dirtyCount = 0;
         for ( uint32 index = 0; index < rootCount; ++index )
         {
@@ -899,8 +898,8 @@ const TypeInfo* sw::KitProbeComponent::StaticType()
 
 /**
  * @brief [GameObjectManagerTest] 생성 함수는 타입 표 하나에 있다 — 먼저 만든 매니저도 나중에 오른 모듈 타입을 만들고, 모듈을 내리면 어느 매니저도 못 만든다
- * @details 예전에는 매니저마다 만들 때 팩토리 표를 모았다. 씬에 속하지 않은 매니저(비동기 로드의 워커 · 시험)는 나중에 오른 모듈을 몰랐고, 내린
- *          모듈의 람다를 그대로 들었다. 그리고 생성 함수의 모듈은 구운 이름("GameFramework")이 아니라 **올린 모듈**("GF_TestKit")이다 — 그래야
+ * @details 매니저마다 만들 때 팩토리 표를 모으면 씬에 속하지 않은 매니저(비동기 로드의 워커 · 시험)는 나중에 오른 모듈을 모르고, 내린
+ *          모듈의 람다를 그대로 든다. 그리고 생성 함수의 모듈은 구운 이름("GameFramework")이 아니라 **올린 모듈**("GF_TestKit")이다 — 그래야
  *          키트를 내릴 때 같이 걷힌다. 걷힌 뒤에는 미리 들고 있던 `TypeInfo*` 의 칸도 비어 있어야 한다(내려간 이미지를 가리키면 안 된다).
  */
 SW_TEST_CASE( GameObjectManagerTest, CreationFunctionLivesInTheTypeTableAndLeavesWithItsModule )
@@ -967,8 +966,8 @@ SW_TEST_CASE( GameObjectManagerTest, AddComponentByNameFollowsTheTypeTableWhenAN
 #if !defined( SW_SHIPPING )
 /**
  * @brief [GameObjectManagerTest] 모듈 컴포넌트를 걷는 동안 콜백이 형제를 지워도, 지워진 형제를 다시 건드리지 않는다
- * @details `destroyComponentsOfModule` 은 지울 목록을 **생포인터**로 모은 뒤 차례로 지웠다. 앞 컴포넌트의 해제 콜백(모듈 코드)이 형제를
- *          곧바로 지우면, 다음 차례가 풀에 반납된 자리(다시 쓰였으면 엉뚱한 컴포넌트)를 지웠다. 지연 파괴처럼 핸들로 다시 푼다.
+ * @details `destroyComponentsOfModule` 은 지연 파괴처럼 핸들로 다시 푼다. 지울 목록을 **생포인터**로 모아 차례로 지우면, 앞 컴포넌트의 해제
+ *          콜백(모듈 코드)이 형제를 곧바로 지울 때 다음 차례가 풀에 반납된 자리(다시 쓰였으면 엉뚱한 컴포넌트)를 지운다.
  */
 SW_TEST_CASE( GameObjectManagerTest, ModuleSweepSurvivesCallbacksRemovingSiblings )
 {

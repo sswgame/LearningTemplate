@@ -55,8 +55,7 @@ namespace
 /**
  * @brief [PropertyUnitsTest] PROPERTY 의 `Units` 는 값이 저장된 단위를 말한다 — 등록된 모든 타입(엔진 · GameFramework · 킷)
  * @details 인스펙터는 `Units` 로 보이는 값 · 드래그 속도 · 단위 글자를 정한다(`InspectorPropertyLayout::getDisplayUnit`). 그래서 메타가 틀리면 값이
- *          틀리게 보이고 틀린 속도로 움직인다. 두 번 그랬다 — 트랜스폼 회전은 라디안을 `Units=deg` 라고 적었고(결함 64), HP 바의 0..1 비율 셋은
- *          `Units=%` 라고 적어 0.5 를 "0.5 %" 로 읽게 했다. 규칙은 다섯이다.
+ *          틀리게 보이고 틀린 속도로 움직인다(라디안을 `Units=deg` 로, 0..1 비율을 `Units=%` 로 적는 식). 규칙은 다섯이다.
  *          (1) `deg` 는 없다 — 엔진의 각도는 라디안이다(`setLocalRotation` · FOV · 원뿔 각). (2) 이름이 각도(angle · rotation · fov)인 실수 칸은
  *          `rad` 다. (3) `%` 는 0..100 값이다 — 위 경계가 1 이하면 비율이므로 `ratio` 다. (4) `ratio` 의 위 경계는 1 이하, `rad` 의 위 경계는 2π 이하다
  *          (도 범위를 라디안이라 적은 것을 잡는다). (5) 툴팁이 `Units` 와 다른 단위를 말하지 않는다 — `Units=m/s` 인 이동 속도의 툴팁이

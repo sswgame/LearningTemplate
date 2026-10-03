@@ -98,8 +98,8 @@ SW_TEST_CASE( GameObjectTest, DeferredComponentDestructionRemovesFromObject )
 
 /**
  * @brief 컴포넌트를 없애는 길 넷 모두 해제 콜백(`onUnregister` · `onDestroy`)을 정확히 한 번씩 부른다.
- * @details 예전에는 목록에서 빼는 쪽이 한 번, 메모리를 놓는 `destroyComponentInstance` 가 또 한 번 `onUnregister` 를 불렀다.
- *          그래서 등록하는 컴포넌트는 모두 두 번 불려도 되게 짜야 했고, 파괴마다 등록부 잠금을 두 번 잡았다.
+ * @details 목록에서 빼는 쪽과 메모리를 놓는 `destroyComponentInstance` 가 둘 다 `onUnregister` 를 부르면, 등록하는 컴포넌트가
+ *          모두 두 번 불려도 되게 짜야 하고 파괴마다 등록부 잠금을 두 번 잡는다.
  */
 SW_TEST_CASE( GameObjectTest, ComponentTeardownCallbacksRunExactlyOnce )
 {
@@ -145,8 +145,8 @@ SW_TEST_CASE( GameObjectTest, ComponentTeardownCallbacksRunExactlyOnce )
 
 /**
  * @brief 줄 선 파괴가 처리되기 전에 즉시 경로가 먼저 해제하고, 같은 블록에 새 컴포넌트가 들어도 새 것은 무사하다.
- * @details 대기열이 날 포인터를 들던 때는 처리할 때 풀려난 블록을 — 같은 풀에서 새로 받은 컴포넌트를 — 지웠다.
- *          대기열은 이제 핸들을 들고 처리 때 다시 푼다. 옛 id 는 더 없으니 건너뛴다.
+ * @details 대기열은 핸들을 들고 처리 때 다시 푼다. 옛 id 는 더 없으니 건너뛴다. 날 포인터를 들면 처리할 때 풀려난 블록을 —
+ *          같은 풀에서 새로 받은 컴포넌트를 — 지운다.
  */
 SW_TEST_CASE( GameObjectTest, QueuedComponentDestroySparesReusedBlock )
 {
@@ -170,8 +170,8 @@ SW_TEST_CASE( GameObjectTest, QueuedComponentDestroySparesReusedBlock )
 
 /**
  * @brief 컴포넌트를 빼도 남은 것들의 순서는 그대로다.
- * @details 예전에는 맨 뒤 원소를 빈자리로 옮겼다(swap-remove). 순서는 첫 일치(`getComponent<T>`) · primary · 같은 타입 안의
- *          순번(안정 키)을 정한다 — 저장했다 다시 읽으면 바뀐 순서가 그대로 굳었다.
+ * @details 맨 뒤 원소를 빈자리로 옮기면(swap-remove) 순서가 바뀐다. 순서는 첫 일치(`getComponent<T>`) · primary · 같은 타입 안의
+ *          순번(안정 키)을 정한다 — 저장했다 다시 읽으면 바뀐 순서가 그대로 굳는다.
  */
 SW_TEST_CASE( GameObjectTest, RemoveComponentKeepsOrder )
 {
@@ -425,9 +425,9 @@ SW_TEST_CASE( PostEditChangePropertyTest, CallbackOnPropertyChanged )
 
 /**
  * @brief [PostEditChangePropertyTest] 메시 id 를 바꾸면 그리는 메시가 바뀐다 — 런타임에 건 메시는 id 가 바뀔 때까지 남는다
- * @details 메시 해석은 "메시가 이미 있으면 그대로" 였다. 인스펙터에서 Mesh Asset 을 바꾸거나, 다른 id 를 붙여 넣거나, 되돌리기가 다른 id 를
- *          다시 읽어도 옛 메시를 그렸다(플레이 · 씬 재로드 전까지). `_meshId` 는 알림도 받지 않았다. 이제 메시는 자기가 어느 id 의 것인지
- *          들고(`_resolvedMeshId` — 머티리얼의 `_acquiredMaterialPath` 와 같은 규칙) 다르면 다시 잡는다.
+ * @details 메시는 자기가 어느 id 의 것인지 들고(`_resolvedMeshId` — 머티리얼의 `_acquiredMaterialPath` 와 같은 규칙) 다르면 다시 잡는다.
+ *          메시 해석이 "메시가 이미 있으면 그대로" 면 인스펙터에서 Mesh Asset 을 바꾸거나, 다른 id 를 붙여 넣거나, 되돌리기가 다른 id 를
+ *          다시 읽어도 옛 메시를 그린다(플레이 · 씬 재로드 전까지).
  */
 SW_TEST_CASE( PostEditChangePropertyTest, ChangingTheMeshIdChangesTheDrawnMesh )
 {
@@ -563,9 +563,9 @@ SW_TEST_CASE( GameObjectTest, TickRemoveOtherSameTypeComponent )
 
 /**
  * @brief [GameObjectTest] 틱 중의 구조 변경은 한 규칙이다 — 비우기는 제거처럼 틱 뒤로 미루고, 제자리 상태 읽기는 거절한다
- * @details 형제(`removeComponent`)는 틱 중이면 미뤘지만 `clearComponents` 는 바로 해제했고, 제자리 상태 읽기(되돌리기 · 스냅샷 · 프리팹 되돌리기가
- *          쓰는 길)는 그것을 불렀다. 틱 안에서 부르면 다른 워커가 **해제한 컴포넌트를 계속 틱했다**(해제 후 사용). 이제 비우기는 틱 뒤에 적용되고
- *          (틱 안에서는 아직 그대로), 결과를 바로 돌려줘야 하는 상태 읽기는 오류와 함께 거절한다(`executeOrDeferPostTick` 으로 감쌀 것).
+ * @details 비우기(`clearComponents`)는 형제 `removeComponent` 처럼 틱 뒤에 적용되고(틱 안에서는 아직 그대로), 결과를 바로 돌려줘야 하는
+ *          제자리 상태 읽기(되돌리기 · 스냅샷 · 프리팹 되돌리기가 쓰는 경로)는 오류와 함께 거절한다(`executeOrDeferPostTick` 으로 감쌀 것).
+ *          틱 안에서 바로 해제하면 다른 워커가 **해제한 컴포넌트를 계속 틱한다**(해제 후 사용).
  */
 SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickFollowOneRule )
 {
@@ -600,8 +600,8 @@ SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickFollowOneRule )
 
 /**
  * @brief [GameObjectTest] 틱 안에서 부른 구조 변경은 부른 순서대로 적용된다 — 씬 컴포넌트를 붙이고 이어 부모에 붙이면 붙는다
- * @details 부착 · 떼기는 틱 직후 먼저 도는 큐에, 컴포넌트 추가 · 태그 · 활성은 뒤의 post-tick 큐에 들어갔다. 그래서 부착이 먼저 돌아 붙일 씬
- *          컴포넌트가 없었고 오브젝트는 **루트로 남았다**(README 는 틱 중 부착을 "거부" 한다고 적었지만 실제로는 미뤘다). 이제 구조 변경은 큐 하나다.
+ * @details 구조 변경은 큐 하나다. 부착 · 떼기와 컴포넌트 추가 · 태그 · 활성이 다른 큐에 들어가 부착이 먼저 돌면 붙일 씬 컴포넌트가 아직 없어
+ *          오브젝트가 **루트로 남는다**.
  */
 SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickApplyInCallOrder )
 {
@@ -626,8 +626,8 @@ SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickApplyInCallOrder )
 
 /**
  * @brief [GameObjectTest] 틱 안에서 태그 컴포넌트에 직접 쓴 태그도 틱 뒤에 적용된다 — 다른 워커가 읽는 컨테이너를 바로 만지지 않는다
- * @details `GameObject::addTag` 는 틱 중이면 미뤘지만 `TagComponent::addTag` · `removeTag` · `clearTags` 는 살아 있는 컨테이너에 바로 썼다. 다른
- *          워커의 `hasTag` · 태그 질의가 같은 컨테이너를 읽는 동안이었다. 이제 같은 미룸 길이다.
+ * @details `TagComponent::addTag` · `removeTag` · `clearTags` 도 `GameObject::addTag` 와 같이 틱 중이면 미룬다. 살아 있는 컨테이너에 바로 쓰면
+ *          다른 워커의 `hasTag` · 태그 질의가 같은 컨테이너를 읽는 중에 바뀐다.
  */
 SW_TEST_CASE( GameObjectTest, TagComponentWritesDuringTickAreDeferred )
 {
@@ -650,7 +650,7 @@ SW_TEST_CASE( GameObjectTest, TagComponentWritesDuringTickAreDeferred )
 /**
  * @brief [GameObjectTest] 틱 안의 이름 · 틱 설정 변경도 틱 뒤에 적용된다
  * @details `setName` 은 다른 워커가 읽는 이름과 매니저의 이름 표를, `setCanEverTick` · `setTickGroup` 은 다른 워커가 읽는 비트와 한 바이트를
- *          틱 안에서 바로 고쳤다(형제 addTag · setActive 는 미뤘다). 이제 같은 구조 변경 큐다.
+ *          고친다 — 틱 안에서 바로 고치면 안 되므로 형제 addTag · setActive 와 같은 구조 변경 큐로 간다.
  */
 SW_TEST_CASE( GameObjectTest, NameAndTickSettingsChangedDuringTickApplyAfterIt )
 {
@@ -675,10 +675,10 @@ SW_TEST_CASE( GameObjectTest, NameAndTickSettingsChangedDuringTickApplyAfterIt )
 
 /**
  * @brief [GameObjectTest] 틱 안의 서브틱 목록 변경(등록 · 선행 조건 · 활성 · 해제)도 틱 뒤에 적용된다
- * @details `registerSubTick` 은 컴포넌트의 서브틱 목록(벡터)을 틱 안에서 바로 늘렸다. 그 목록은 그 컴포넌트를 틱하는 워커가 읽는다(64 번부터의
- *          활성 · 자기 틱 안의 등록 · 해제) — 다른 오브젝트의 틱이 늘리면 벡터가 다시 잡혀 그 워커가 해제된 메모리를 읽고, 두 워커가 같은 컴포넌트에
- *          등록하면 `push_back` 이 겹친다. 형제 `setTickGroup` · `setCanEverTick` 은 구조 ⑮ 에서 미뤘는데 서브틱 넷만 바로 썼다. 이제 같은 구조
- *          변경 큐로 가고, 부른 순서대로 돌아 틱 안에서 등록하고 이어 더한 선행 조건도 틱 뒤에 맞게 붙는다. 원자 마스크(1~63)는 그대로 바로 바뀐다 —
+ * @details 컴포넌트의 서브틱 목록(벡터)은 그 컴포넌트를 틱하는 워커가 읽는다(64 번부터의 활성 · 자기 틱 안의 등록 · 해제) — 다른 오브젝트의
+ *          틱이 `registerSubTick` 으로 바로 늘리면 벡터가 다시 잡혀 그 워커가 해제된 메모리를 읽고, 두 워커가 같은 컴포넌트에 등록하면 `push_back`
+ *          이 겹친다. 그래서 형제 `setTickGroup` · `setCanEverTick` 과 같은 구조 변경 큐로 가고, 부른 순서대로 돌아 틱 안에서 등록하고 이어 더한
+ *          선행 조건도 틱 뒤에 맞게 붙는다. 원자 마스크(1~63)는 그대로 바로 바뀐다 —
  *          틱 중에 끈 서브틱이 곧바로 건너뛰어지는 계약(`ComponentSubTickHybridTest.MidTickSubTickDeactivationAndCancellation`)은 지킨다.
  */
 SW_TEST_CASE( GameObjectTest, SubTickChangesDuringTickApplyAfterIt )
@@ -769,7 +769,7 @@ SW_TEST_CASE( GameObjectHandleTest, SafeDestruction )
 
 /**
  * @brief [GameObjectHandleTest] 이름을 바꿔도 핸들은 같은 오브젝트로 풀리고, 옛 이름의 새 오브젝트로 옮겨 가지 않는다
- * @details 이름으로 찾던 `GameObjectPtr` 가 틀리던 두 경우다. 핸들은 objectId 로 찾고, id 는 다시 쓰지 않는다.
+ * @details 이름으로 찾는 참조가 틀리는 두 경우다. 핸들은 objectId 로 찾고, id 는 다시 쓰지 않는다.
  */
 SW_TEST_CASE( GameObjectHandleTest, SurvivesRename )
 {
@@ -893,8 +893,8 @@ SW_TEST_CASE( GameObjectTest, NoOpTransformDoesNotMarkDirty )
 
 /**
  * @brief 같은 이름의 오브젝트 N 개는 다시 훑지 않고 유일해진다 — 첫 것은 원래 이름, 나머지는 번호, 전부 찾을 수 있다.
- * @details 예전엔 중복마다 `_2` 부터 다시 물어 N 개면 생성 하나가 N 번 조회였다(8000 개 2.6 초). 이제 이름마다 번호 상태를
- *          기억한다. 지운 오브젝트의 번호는 되쓴다(빈 번호 목록의 맨 뒤에서 꺼낸다 — 되써도 O(1) 이다).
+ * @details 이름마다 번호 상태를 기억한다 — 중복마다 `_2` 부터 다시 물으면 N 개일 때 생성 하나가 N 번 조회다.
+ *          지운 오브젝트의 번호는 되쓴다(빈 번호 목록의 맨 뒤에서 꺼낸다 — 되써도 O(1) 이다).
  */
 SW_TEST_CASE( GameObjectTest, DuplicateNamesUniquifyWithoutRescan )
 {
@@ -932,9 +932,9 @@ SW_TEST_CASE( GameObjectTest, DuplicateNamesUniquifyWithoutRescan )
 
 /**
  * @brief 같은 이름으로 스폰 · 파괴를 거듭해도 인턴되는 이름 수는 동시에 살아 있던 수를 넘지 않는다.
- * @details 번호마다 `hashed_string` 을 인턴하고 인턴 풀은 전역 65,536 칸이다(한번 들어가면 나가지 않는다). 예전에는 번호가
- *          오르기만 해서 총알 100 개를 유지하며 2 만 번 갈아 끼우면 이름 2 만 개가 풀에 쌓였고, 풀이 차면 그 뒤로 엔진의 **모든**
- *          새 `hashed_string` 이 None 이 됐다. 풀의 다음 칸 번호(새 문자열의 인덱스)로 증가량을 잰다.
+ * @details 번호마다 `hashed_string` 을 인턴하고 인턴 풀은 전역 65,536 칸이다(한번 들어가면 나가지 않는다). 번호가 오르기만 하면
+ *          총알 100 개를 유지하며 2 만 번 갈아 끼울 때 이름 2 만 개가 풀에 쌓이고, 풀이 차면 그 뒤로 엔진의 **모든**
+ *          새 `hashed_string` 이 None 이 된다. 풀의 다음 칸 번호(새 문자열의 인덱스)로 증가량을 잰다.
  */
 SW_TEST_CASE( GameObjectTest, SameNameChurnKeepsInternPoolBounded )
 {
@@ -956,7 +956,7 @@ SW_TEST_CASE( GameObjectTest, SameNameChurnKeepsInternPoolBounded )
     }
     const uint32 indexAfter = sw::hashed_string( "SameNameChurn.ProbeAfter" ).getIndex();
 
-    // 프로브 문자열 하나 + 여유 하나. 옛 코드는 약 2 만.
+    // 프로브 문자열 하나 + 여유 하나. 번호가 오르기만 하면 약 2 만이 된다.
     SW_EXPECT_TRUE( indexAfter - indexBefore <= 2 );
     for ( sw::GameObject* pObj : listLive )
         SW_EXPECT_TRUE( manager.findGameObjectByName( pObj->getName() ) == pObj );
@@ -965,7 +965,7 @@ SW_TEST_CASE( GameObjectTest, SameNameChurnKeepsInternPoolBounded )
 /**
  * @brief 번호를 받은 오브젝트에 밑 이름을 다시 세팅해도(프리팹 스폰 · 상태 읽기) 이름은 그대로고 번호를 새로 쓰지 않는다.
  * @details 프리팹 스폰은 만들 때(`Bullet_2`), 저장된 상태를 읽으며(저장된 이름 `Bullet`), 인스턴스 이름을 세팅하며(`Bullet`)
- *          세 번 유일화해 예전에는 `Bullet_4` 가 됐다 — 스폰 하나에 번호(인턴) 셋.
+ *          세 번 유일화한다 — 매번 번호를 새로 쓰면 `Bullet_4` 가 되어 스폰 하나에 번호(인턴) 셋이다.
  */
 SW_TEST_CASE( GameObjectTest, RenamingToOwnBaseNameKeepsTheNumber )
 {
@@ -997,8 +997,7 @@ SW_TEST_CASE( GameObjectTest, RenamingToOwnBaseNameKeepsTheNumber )
 
 /**
  * @brief 매니저 없이 만든 임시 오브젝트는 무효 id(0)를 든다 — id 는 매니저 하나가 발급한다.
- * @details 예전에는 GameObject 가 자기 카운터를 따로 들어, 매니저가 곧바로 덮어쓸 id 를 매번 하나씩 썼고 임시 오브젝트는
- *          어느 매니저에도 없는 "유효해 보이는" id 를 들었다.
+ * @details 오브젝트가 id 를 스스로 발급하면 임시 오브젝트가 어느 매니저에도 없는 "유효해 보이는" id 를 든다.
  */
 SW_TEST_CASE( GameObjectTest, StandaloneObjectHasInvalidId )
 {
@@ -1012,9 +1011,9 @@ SW_TEST_CASE( GameObjectTest, StandaloneObjectHasInvalidId )
 
 /**
  * @brief onBeginPlay 가 컴포넌트를 붙이거나 오브젝트를 만들어도 beginPlay 가 멈추지 않는다.
- * @details 예전 `GameObjectManager::beginPlay` 는 `forEachGameObject` 의 공유 잠금을 쥔 채 onBeginPlay 를 불렀다. onBeginPlay 가 태그를 붙이면
- *          `addComponent<TagComponent>` 가 같은 잠금을 배타로 잡으려다 **제 스레드를 기다려** 에디터 Play 가 멈췄다. 그리고 `GameObject::beginPlay` 는 범위 for 로 돌아, 컴포넌트가 이미 네 개인 오브젝트에 태그 컴포넌트가
- *          붙으면 인라인 칸이 힙으로 옮겨 가 반복자가 풀린 칸을 읽었다.
+ * @details `GameObjectManager::beginPlay` 가 `forEachGameObject` 의 공유 잠금을 쥔 채 onBeginPlay 를 부르면, onBeginPlay 가 태그를 붙일 때
+ *          `addComponent<TagComponent>` 가 같은 잠금을 배타로 잡으려다 **제 스레드를 기다려** 에디터 Play 가 멈춘다. `GameObject::beginPlay` 가
+ *          범위 for 로 돌면, 컴포넌트가 이미 네 개인 오브젝트에 태그 컴포넌트가 붙을 때 인라인 칸이 힙으로 옮겨 가 반복자가 풀린 칸을 읽는다.
  */
 SW_TEST_CASE( GameObjectTest, BeginPlayMayAddComponentsAndSpawn )
 {
@@ -1055,9 +1054,9 @@ SW_TEST_CASE( GameObjectTest, BeginPlayMayAddComponentsAndSpawn )
 
 /**
  * @brief 플레이 수명주기 — onBeginPlay 는 인스턴스마다 한 번, onEndPlay 는 시작한 인스턴스에만 한 번, 붙이는 시점과 해체 경로와 무관하게.
- * @details 예전에는 에디터 Play 버튼만 `beginPlay` 를 불렀다. 플레이 중에 붙은 컴포넌트(스폰)는 onBeginPlay 를 영영 받지 못했고, 떼거나
- *          지운 컴포넌트는 onEndPlay 를 받지 못했고, 꺼진 컴포넌트는 Play 에서 빠졌다가 Stop 에서도 빠졌다. 이제 컴포넌트의 "시작됨" 비트가
- *          짝을 맞추고, 플레이 중에 붙은 것은 다음 틱 단계에서 — 붙인 뒤 세팅한 필드를 본 채로 — 시작한다.
+ * @details 컴포넌트의 "시작됨" 비트가 짝을 맞추고, 플레이 중에 붙은 것은 다음 틱 단계에서 — 붙인 뒤 세팅한 필드를 본 채로 — 시작한다.
+ *          Play 시점에만 `beginPlay` 를 부르면 플레이 중에 붙은 컴포넌트(스폰)는 onBeginPlay 를 영영 받지 못하고, 떼거나 지운 컴포넌트는
+ *          onEndPlay 를 받지 못하며, 꺼진 컴포넌트는 Play 에서 빠졌다가 Stop 에서도 빠진다.
  */
 SW_TEST_CASE( GameObjectTest, PlayLifecycleIsPairedAndExactlyOnce )
 {
@@ -1114,8 +1113,8 @@ SW_TEST_CASE( GameObjectTest, PlayLifecycleIsPairedAndExactlyOnce )
 
 /**
  * @brief 이름표는 타입이 아니다 — 이름표를 바꿔도 캐스트 · 타입 조회 · 되살린 id 가 그대로이고, 다른 타입의 이름을 붙여도 그 타입이 되지 않는다.
- * @details 예전에는 컴포넌트 이름이 곧 동적 타입의 조회 키였다. `setComponentName( "Muzzle" )` 이면 타입을 잃어(저장에서 빠지고 캐스트가
- *          nullptr), `setComponentName( "CameraComponent" )` 면 SceneComponent 가 CameraComponent 로 **캐스트됐다**(정의되지 않은 동작).
+ * @details 컴포넌트 이름을 동적 타입의 조회 키로 쓰면 `setComponentName( "Muzzle" )` 일 때 타입을 잃고(저장에서 빠지고 캐스트가
+ *          nullptr), `setComponentName( "CameraComponent" )` 면 SceneComponent 가 CameraComponent 로 **캐스트된다**(정의되지 않은 동작).
  */
 SW_TEST_CASE( GameObjectTest, ComponentLabelIsNotItsType )
 {
@@ -1149,8 +1148,8 @@ SW_TEST_CASE( GameObjectTest, ComponentLabelIsNotItsType )
 
 /**
  * @brief 컴포넌트의 자기 활성 비트는 소유 오브젝트 · 조상의 토글과 무관하다. 같은 값을 세팅하면 알림도 없다.
- * @details 예전 `GameObject::setActive` 는 자기 비트를 소유 컴포넌트마다 **복사**했다. 꺼 둔 컴포넌트가 오브젝트를 껐다 켜면 다시 켜졌다
- *          (로드 · 되돌리기 · 시퀀서 트랙 · 에디터 계층 토글마다). `Component::isActive` 가 소유 오브젝트의 계층 활성을 이미 함께 본다.
+ * @details `Component::isActive` 가 소유 오브젝트의 계층 활성을 함께 본다. `GameObject::setActive` 가 자기 비트를 소유 컴포넌트마다 **복사**하면
+ *          꺼 둔 컴포넌트가 오브젝트를 껐다 켤 때 다시 켜진다(로드 · 되돌리기 · 시퀀서 트랙 · 에디터 계층 토글마다).
  */
 SW_TEST_CASE( GameObjectTest, ComponentActiveBitIsIndependentOfOwner )
 {
@@ -1195,7 +1194,7 @@ SW_TEST_CASE( GameObjectTest, ComponentActiveBitIsIndependentOfOwner )
 /**
  * @brief 지연 제거된 primary 가 캐시에서 먼저 밀려나도 계층 활성은 다시 맞는다.
  * @details 틱 중 `removeComponent( primary )` 는 삭제 대기로 줄만 세우고, 그 사이 `getParent` 같은 호출이 primary 캐시를 다음 씬 컴포넌트로
- *          옮긴다. 처리 때 "캐시가 이 컴포넌트였나" 로 primary 였는지 판단하면 거짓이 나와 재계산을 건너뛰었다 — 부모가 사라졌는데 꺼진 채였다.
+ *          옮긴다. 처리 때 "캐시가 이 컴포넌트였나" 로 primary 였는지 판단하면 거짓이 나와 재계산을 건너뛴다 — 부모가 사라졌는데 꺼진 채로 남는다.
  */
 SW_TEST_CASE( GameObjectTest, DeferredPrimaryRemovalRefreshesActive )
 {
@@ -1219,7 +1218,7 @@ SW_TEST_CASE( GameObjectTest, DeferredPrimaryRemovalRefreshesActive )
 
 /**
  * @brief 소켓(primary 가 아닌 씬 컴포넌트)에 붙은 자식 오브젝트도 부모 오브젝트의 활성을 따른다.
- * @details 계층 활성 전파가 primary 의 자식만 봐서, 캐릭터의 소켓에 붙은 무기는 캐릭터를 꺼도 켜진 채 틱하고 그려졌다.
+ * @details 계층 활성 전파가 primary 의 자식만 보면 캐릭터의 소켓에 붙은 무기는 캐릭터를 꺼도 켜진 채 틱하고 그려진다.
  */
 SW_TEST_CASE( GameObjectTest, SocketChildFollowsOwnerActive )
 {
@@ -1241,8 +1240,8 @@ SW_TEST_CASE( GameObjectTest, SocketChildFollowsOwnerActive )
 
 /**
  * @brief 소켓에 붙은 자식 오브젝트도 자식 목록에 들고, 부모를 자식째 지우면 함께 지워진다.
- * @details `getChildren` · `hasChildren` 이 primary 의 자식만 봐서, `destroyObject( 캐릭터, true )` 가 소켓에 붙은 무기를 남겼다 — 무기는
- *          루트가 되어 계속 틱하고 그려졌고, 계층 패널에도 캐릭터 아래에 보이지 않았다(`getParent` 는 캐릭터라고 답하는데).
+ * @details `getChildren` · `hasChildren` 이 primary 의 자식만 보면 `destroyObject( 캐릭터, true )` 가 소켓에 붙은 무기를 남긴다 — 무기는
+ *          루트가 되어 계속 틱하고 그려지고, 계층 패널에도 캐릭터 아래에 보이지 않는다(`getParent` 는 캐릭터라고 답하는데).
  */
 SW_TEST_CASE( GameObjectTest, SocketChildIsListedAndDestroyedWithOwner )
 {
@@ -1272,8 +1271,8 @@ SW_TEST_CASE( GameObjectTest, SocketChildIsListedAndDestroyedWithOwner )
 
 /**
  * @brief 다른 매니저(씬)의 부모에는 붙지 않는다 — 계층이 두 씬에 걸치지 않는다
- * @details 예전에는 붙었고, 자식 매니저의 더티 루트 목록에 **부모 매니저의 루트**가 올랐다. 부모 매니저가 그 루트를 파괴해도 자식 매니저는
- *          몰라 다음 플러시가 해제된 컴포넌트를 읽었다. 틱 중이면 미룬 붙이기가 자기 매니저로 부모를 찾다 못 찾고 버렸는데 호출은 true 였다.
+ * @details 붙으면 자식 매니저의 더티 루트 목록에 **부모 매니저의 루트**가 오른다. 부모 매니저가 그 루트를 파괴해도 자식 매니저는
+ *          몰라 다음 플러시가 해제된 컴포넌트를 읽는다.
  */
 SW_TEST_CASE( GameObjectTest, AttachAcrossManagersIsRejected )
 {
@@ -1297,7 +1296,7 @@ SW_TEST_CASE( GameObjectTest, AttachAcrossManagersIsRejected )
 /**
  * @brief 소켓을 거쳐도 오브젝트끼리 서로의 부모가 되지 않는다
  * @details 오브젝트의 부모는 "primary 가 붙은 컴포넌트의 소유자" 다. A 의 primary 를 B 의 소켓에, B 의 primary 를 A 의 소켓에 붙이면
- *          컴포넌트 사슬은 어디서도 돌지 않아 예전 검사를 통과했고, 오브젝트 A · B 가 서로의 부모가 됐다 — 그 뒤로 둘 밖의 오브젝트에 대한
+ *          컴포넌트 사슬은 어디서도 돌지 않아 컴포넌트 사슬만 보는 검사는 통과하고, 오브젝트 A · B 가 서로의 부모가 된다 — 그 뒤로 둘 밖의 오브젝트에 대한
  *          `isDescendantOf` 는 끝나지 않는다(에디터의 순환 검사가 그것을 부른다).
  */
 SW_TEST_CASE( GameObjectTest, SocketsCannotFormAnObjectCycle )
@@ -1351,8 +1350,8 @@ SW_TEST_CASE( GameObjectTest, AttachToADyingParentIsRejected )
 /**
  * @brief 상태를 되돌리는 로드 뒤에도 비활성 부모 아래의 자식은 비활성이다.
  * @details 로드는 컴포넌트를 모두 지우고 다시 만든 뒤 저장된 부모에 **씬 컴포넌트를 직접** 붙인다(`applyLoadedHierarchy`). 계층 활성은
- *          `GameObject::attachToParent` 만 맞춰, 되돌리기 · 플레이 종료 복원 · 프리팹 되돌리기를 거친 자식은 비활성 부모 아래에서 켜진
- *          채로 남았다(그 메시는 화면에 그려졌다). 이제 붙이는 자리가 맞춘다.
+ *          `GameObject::attachToParent` 만 맞추면 되돌리기 · 플레이 종료 복원 · 프리팹 되돌리기를 거친 자식이 비활성 부모 아래에서 켜진
+ *          채로 남는다(그 메시가 화면에 그려진다). 그래서 붙이는 자리가 맞춘다.
  */
 SW_TEST_CASE( GameObjectTest, ReloadedChildOfInactiveParentStaysInactive )
 {
@@ -1374,7 +1373,7 @@ SW_TEST_CASE( GameObjectTest, ReloadedChildOfInactiveParentStaysInactive )
 /**
  * @brief 비활성 부모를 지우면 자식은 루트가 되고 다시 활성이다.
  * @details 파괴는 부모의 컴포넌트를 먼저 삭제 대기로 표시해, 소멸자가 primary 를 찾지 못하고 자식 떼기를 건너뛴다. 자식은 부모 씬
- *          컴포넌트의 소멸자가 뗐는데 그 길은 계층 활성을 맞추지 않아, 부모 없는 자식이 영영 꺼진 채였다.
+ *          컴포넌트의 소멸자가 떼므로, 그 경로도 계층 활성을 맞춰야 부모 없는 자식이 영영 꺼진 채로 남지 않는다.
  */
 SW_TEST_CASE( GameObjectTest, OrphanOfDestroyedInactiveParentBecomesActive )
 {
@@ -1395,9 +1394,9 @@ SW_TEST_CASE( GameObjectTest, OrphanOfDestroyedInactiveParentBecomesActive )
 
 /**
  * @brief 더티 루트 목록은 자리(인덱스)로 지우고 되돌린다 — 플러시 전에 가운데를 지워도, 붙였다 떼도 남은 루트가 그대로 플러시된다.
- * @details 해제의 선형 탐색을 O(1) 로 바꿨다. 자리가 틀리면 엉뚱한 루트가 목록에서 빠지거나(움직여도 월드가 갱신되지 않는다) 지운
+ * @details 해제는 자리로 O(1) 이다. 자리가 틀리면 엉뚱한 루트가 목록에서 빠지거나(움직여도 월드가 갱신되지 않는다) 지운
  *          루트가 남는다(플러시가 풀린 메모리를 읽는다). 월드 값은 **더티가 풀렸는지 먼저** 본다 — 지연 합성이 읽는 순간 채워 주면
- *          플러시가 돌았는지 가려진다. 예전에는 루트 전부의 목록도 따로 들었다(읽는 곳이 이 테스트뿐이라 걷었다).
+ *          플러시가 돌았는지 가려진다.
  */
 SW_TEST_CASE( GameObjectTest, DirtyRootListSurvivesIndexedRemoval )
 {
@@ -1451,8 +1450,8 @@ SW_TEST_CASE( GameObjectTest, DirtyRootListSurvivesIndexedRemoval )
 
 /**
  * @brief 틱 스테이지는 틱 멤버십이 바뀔 때만 다시 만든다 — 틱하지 않는 컴포넌트를 붙였다 떼는 것은 세지 않는다.
- * @details 예전엔 아무 구조 변경에나(병합 · 지연 파괴 처리 · 메시 추가) 다시 만들었다. 8000 틱 컴포넌트에 재구성 하나가 2 ms 라,
- *          총알이 매 프레임 생기는 게임은 그것을 매 프레임 냈다. 횟수(`getTickStageBuildCount`)로 본다.
+ * @details 아무 구조 변경에나(병합 · 지연 파괴 처리 · 메시 추가) 다시 만들면, 재구성이 비싸서(틱 컴포넌트 수에 비례) 총알이 매 프레임
+ *          생기는 게임은 그것을 매 프레임 낸다. 횟수(`getTickStageBuildCount`)로 본다.
  */
 SW_TEST_CASE( GameObjectTest, TickStagesRebuildOnlyWhenTickWorkChanges )
 {
@@ -1503,8 +1502,8 @@ SW_TEST_CASE( GameObjectTest, TickStagesRebuildOnlyWhenTickWorkChanges )
 
 /**
  * @brief [GameObjectTest] 틱 등록부는 멤버십이 바뀐 오브젝트만 다시 짓고, 파괴된 오브젝트는 목록에서 빠진다.
- * @details 예전에는 틱 멤버십이 하나라도 바뀌면 씬 전체를 훑어 스테이지를 다시 만들었다. 지금은 오브젝트가 자기 항목을 들고
- *          등록부는 그룹마다 오브젝트 목록을 든다. 지켜야 할 것: (1) 틱하는 컴포넌트가 붙은 오브젝트만 그 그룹 목록에 오르고
+ * @details 오브젝트가 자기 항목을 들고 등록부는 그룹마다 오브젝트 목록을 든다 — 틱 멤버십이 바뀔 때 씬 전체를 훑지 않는다.
+ *          지켜야 할 것: (1) 틱하는 컴포넌트가 붙은 오브젝트만 그 그룹 목록에 오르고
  *          항목은 (그룹, 순서 키) 순이다 (2) 서브틱을 켜고 끄면 그 오브젝트의 항목만 바뀐다 (3) 선행 종속성이 있으면
  *          `hasPrerequisites` 가 서고, 떼면 내려간다 (4) 오브젝트를 파괴하면 목록에서 빠지고 옮겨진 오브젝트의 자리가 맞는다
  *          (5) 한 오브젝트에 틱 컴포넌트가 둘이면 둘 다 틱한다.
@@ -1648,9 +1647,8 @@ SW_TEST_CASE( GameObjectTest, TickListDropsInactiveObjectsAndRestoresThem )
 
 /**
  * @brief 컴포넌트는 이름이 바뀌어도 **자기가 나온 풀**로 돌아간다.
- * @details 파괴가 `getTypeInfo()->_fullyQualifiedName` 으로 풀을 다시 찾던 때는, 이름을 비운 채 파괴하면 풀을 못 찾아
- *          풀 블록을 힙으로 반납했다 — Shipping 에서 힙 손상(0xc0000374), Debug·ASan 은 조용했다. 이제 컴포넌트가
- *          `_pPool` 을 들고 그리로 돌아간다. 풀의 자유 목록은 LIFO 라, 반납이 풀로 갔으면 다음 할당이 **같은 주소**를
+ * @details 컴포넌트가 `_pPool` 을 들고 그리로 돌아간다. 파괴가 이름으로 풀을 다시 찾으면 이름을 비운 채 파괴할 때 풀을 못 찾아
+ *          풀 블록을 힙으로 반납한다 — Shipping 에서 힙 손상(0xc0000374), Debug·ASan 은 조용하다. 풀의 자유 목록은 LIFO 라, 반납이 풀로 갔으면 다음 할당이 **같은 주소**를
  *          받는다. 힙으로 갔으면 다른 블록이 나온다 — 그것이 검사다(Debug 에서도 잡힌다).
  */
 SW_TEST_CASE( GameObjectTest, ComponentReturnsToItsPoolAfterRename )
@@ -1688,7 +1686,7 @@ SW_TEST_CASE( GameObjectTest, CastFastPathsMatchVirtualPath )
     sw::Component* pSceneBase = pScene;
 
     // findStaticType 은 StaticType 그대로. 컴포넌트 기반(Component)도 등록 타입이다 — 만들 수 없는 기반(Abstract)이고, 모든 컴포넌트의
-    // 부모 사슬이 거기서 끝난다(예전에는 등록되지 않아 사슬이 SceneComponent 에서 끊겼다).
+    // 부모 사슬이 거기서 끝난다(등록되지 않으면 사슬이 SceneComponent 에서 끊긴다).
     const sw::TypeInfo* pSceneType     = sw::findStaticType<sw::SceneComponent>();
     const sw::TypeInfo* pMeshType      = sw::findStaticType<sw::MeshComponent>();
     const sw::TypeInfo* pComponentType = sw::findStaticType<sw::Component>();
@@ -1815,8 +1813,8 @@ SW_TEST_CASE( GameObjectTest, ApplyTransformBatchMatchesSetters )
 
 /**
  * @brief [GameObjectTest] 틱 안의 세터는 슬롯 큐에 쌓였다가 틱 뒤에 배치로 적용된다 — 결과는 틱 밖 세터와 같다.
- * @details 예전에는 틱 중 세터마다 람다를 힙에 만들어 뮤텍스 하나에 줄을 서고, 틱 뒤 게임 스레드가 직렬로 되돌렸다.
- *          지금은 워커가 자기 슬롯에 POD 로 쌓고 틱 뒤 슬롯 단위로 나눠 적용한다. 지켜야 할 것 넷: (1) 틱 안에서 쓴 값이
+ * @details 워커가 자기 슬롯에 POD 로 쌓고 틱 뒤 슬롯 단위로 나눠 적용한다(세터마다 힙 람다를 만들어 뮤텍스 하나에 줄 세우지 않는다).
+ *          지켜야 할 것 넷: (1) 틱 안에서 쓴 값이
  *          틱 뒤 월드 행렬에 반영된다(부모 아래 것도) (2) 같은 컴포넌트에 잇따라 쓴 값은 마지막이 이긴다 (3) 위치에 이어
  *          스케일을 쓰면 둘 다 적용된다(같은 건으로 합쳐진다) (4) 다른 오브젝트의 컴포넌트를 쓰는 것도 같다. 틱이 끝나면
  *          큐는 비어 있고 더티도 남지 않는다(post 플러시). 병렬 적용 문턱을 넘는 수로 돌린다.
@@ -1902,8 +1900,8 @@ SW_TEST_CASE( GameObjectTest, TickSettersQueueAndApplyAfterTick )
 
 /**
  * @brief [GameObjectTest] 잎 루트(부모도 자식도 없음)에 배치로 쓰면 월드 행렬이 그 자리에서 만들어지고 더티 목록에 오르지 않는다.
- * @details 쓴 라인이 뜨거운 채로 같은 워커가 합성한다 — 큐브 8000 개가 전부 움직이는 프레임의 사후 플러시(114 us)가 사라진 자리.
- *          자식이 있는 루트는 예전처럼 더티 목록에 올라 플러시가 내려간다(위 `FlushQueuesOnlyDirtyRoots`). 메시 컴포넌트면
+ * @details 쓴 라인이 뜨거운 채로 같은 워커가 합성한다 — 모두 움직이는 프레임에 사후 플러시가 없다.
+ *          자식이 있는 루트는 더티 목록에 올라 플러시가 내려간다(위 `FlushQueuesOnlyDirtyRoots`). 메시 컴포넌트면
  *          렌더 더티도 그 자리에서 찍혀야 한다.
  */
 SW_TEST_CASE( GameObjectTest, LeafRootWriteFlushesInPlace )
@@ -1942,8 +1940,8 @@ SW_TEST_CASE( GameObjectTest, LeafRootWriteFlushesInPlace )
 
 /**
  * @brief [GameObjectTest] 플러시 목록에는 더러워진 루트만, 한 번씩 오른다 — 세터 경로와 배치 경로 모두.
- * @details 예전에는 플러시가 루트 전부를 돌며 더티인지 물었다(루트마다 캐시 미스). 지금은 더러워진 노드가 자기 루트를
- *          올리고 플러시는 그 목록만 돈다. 그래서 (1) 루트 N 개 중 하나만 움직이면 목록은 1 (2) 같은 루트 아래 자식 둘이
+ * @details 더러워진 노드가 자기 루트를 올리고 플러시는 그 목록만 돈다(루트 전부를 돌며 묻지 않는다 — 루트마다 캐시 미스).
+ *          그래서 (1) 루트 N 개 중 하나만 움직이면 목록은 1 (2) 같은 루트 아래 자식 둘이
  *          움직여도 1 (3) 플러시 뒤 0 (4) 부모를 바꾼 자식은 옛 루트가 아니라 새 루트를 올린다 — 어느 하나가 어긋나면
  *          움직인 물체가 화면에 안 따라오거나(빠짐) 같은 서브트리를 두 잡이 동시에 만진다(중복).
  */
@@ -2143,9 +2141,9 @@ SW_TEST_CASE( GameObjectTest, ObjectStateBinaryBufferRoundtrip )
  *
  * @details `getChildren()` 은 자식 GameObject 를 primary SceneComponent 의 **자식 컴포넌트들의 owner**
  *          로 구한다. 한 오브젝트 안에서 SceneComponent 를 다른 SceneComponent 에 붙이면 그 owner 는
- *          자기 자신이라, 자신이 자기 자식으로 나왔다 — `refreshActiveInHierarchy` 가 무한 재귀해
- *          스택을 넘겼다. 부착 없이는 멀쩡하고 부착하는 순간 죽어서, 부착을 쓰는 경로(씬 로드·
- *          에디터 복제·상태 복원)에서만 터졌다.
+ *          자기 자신이라 걸러 내지 않으면 자신이 자기 자식으로 나온다 — `refreshActiveInHierarchy` 가 무한 재귀해
+ *          스택을 넘긴다. 부착 없이는 멀쩡하고 부착하는 순간 죽어서, 부착을 쓰는 경로(씬 로드·
+ *          에디터 복제·상태 복원)에서만 터진다.
  */
 SW_TEST_CASE( GameObjectTest, IntraObjectAttachDoesNotMakeObjectItsOwnChild )
 {
@@ -2163,7 +2161,7 @@ SW_TEST_CASE( GameObjectTest, IntraObjectAttachDoesNotMakeObjectItsOwnChild )
     for ( sw::GameObject* pChild : childrenOf( *pObj ) )
         SW_EXPECT_TRUE( pChild != pObj );
 
-    // 계층 갱신이 돌아와야 한다 — 예전에는 여기서 스택이 넘쳤다.
+    // 계층 갱신이 돌아와야 한다 — 자기 자신을 자식으로 보면 여기서 스택이 넘친다.
     pObj->setActive( false );
     SW_EXPECT_FALSE( pObj->isActiveInHierarchy() );
     pObj->setActive( true );
@@ -2176,10 +2174,8 @@ SW_TEST_CASE( GameObjectTest, IntraObjectAttachDoesNotMakeObjectItsOwnChild )
 /**
  * @brief [GameObjectTest] 바이너리 상태가 태그와 컴포넌트 간 부착 계층까지 실어 나르는지 검증
  *
- * @details 예전 바이너리 경로는 이름·태그·컴포넌트·부착표를 손으로 한 줄씩 적었고, 그래서 XML·JSON
- *          과 다른 세 번째 구현이었다. 지금은 셋 다 리플렉션 상태(`_name`/`_bActive`/`_listComponent`)
- *          하나를 쓴다 — 태그는 `TagComponent::_tags`, 부착은 `SceneComponent` 자신의 필드로 실린다.
- *          **손으로 적던 것을 지웠으니, 그것들이 여전히 건너오는지는 여기서 지킨다.**
+ * @details 바이너리 · XML · JSON 셋 다 리플렉션 상태(`_name`/`_bActive`/`_listComponent`) 하나를 쓴다 — 태그는
+ *          `TagComponent::_tags`, 부착은 `SceneComponent` 자신의 필드로 실린다. **그것들이 바이너리로도 건너오는지는 여기서 지킨다.**
  */
 SW_TEST_CASE( GameObjectTest, ObjectStateBinaryCarriesTagsAndAttachHierarchy )
 {
@@ -2722,13 +2718,9 @@ SW_TEST_CASE( GameObjectHierarchyTest, ActiveInHierarchyCompoundEvaluation )
 
 /**
  * @brief [GameObjectTest] 태그를 **읽기만** 하는 것이 오브젝트의 구성을 바꾸지 않는지 검증
- * @details `getTags()` 에 const/비-const 오버로드가 있었고, 비-const 쪽은 TagComponent 가 없으면
- *          **만들어 붙였다.** `GameObject*` 로 부르면 읽을 생각이었어도 그쪽이 골라진다 —
- *          인스펙터(`InspectorPanel`)가 태그 없는 오브젝트를 보여 주는 것만으로 그 오브젝트에
- *          컴포넌트가 하나 생겼고, 저장하면 씬 파일에까지 들어갔다. 오브젝트의 구성이 바뀌는
- *          일이 오버로드 해석으로 조용히 정해지고 있었던 것이다.
- *
- *          이제 컨테이너는 읽기로만 내주고, 쓰기는 `addTag` · `removeTag` · `clearTags` 창구뿐이다.
+ * @details 컨테이너는 읽기로만 내주고, 쓰기는 `addTag` · `removeTag` · `clearTags` 창구뿐이다. 비-const `getTags()` 가
+ *          TagComponent 가 없을 때 **만들어 붙이면** `GameObject*` 로 부른 읽기가 그쪽을 골라, 인스펙터가 태그 없는 오브젝트를
+ *          보여 주는 것만으로 컴포넌트가 하나 생기고 저장하면 씬 파일에까지 들어간다.
  */
 SW_TEST_CASE( GameObjectTest, ReadingTagsDoesNotAttachATagComponent )
 {
@@ -2748,14 +2740,9 @@ SW_TEST_CASE( GameObjectTest, ReadingTagsDoesNotAttachATagComponent )
 
 /**
  * @brief [GameObjectTest] 컴포넌트가 이동 불가로 남아 있는지 검증(회귀 가드)
- * @details 컴포넌트는 풀에서 제자리 생성·소멸하므로 옮겨질 일이 없다. 그런데 이동 연산이
- *          **있었고 틀려 있었다** — `Component` 는 `_componentId` 를 비우지 않고 복사만 해서
- *          옮기고 나면 둘이 같은 id 를 가졌고, `SceneComponent` 는 자식들의 `_pParent` · 부모의
- *          `_listChild` · 매니저의 루트 등록부를 하나도 고치지 않았다(이동 대입은 방금 옮겨 온
- *          자식 목록을 그 자리에서 비우기까지 했다). 쓰는 곳이 없어 아무도 몰랐다.
- *
- *          다시 생기면 여기서 걸린다. 진짜 방어선은 `= delete` 이고 이 케이스는 그것이
- *          유지되는지 본다.
+ * @details 컴포넌트는 풀에서 제자리 생성·소멸하므로 옮겨질 일이 없다. 이동 연산을 두면 `_componentId` 가 둘이 되거나
+ *          `SceneComponent` 의 자식 `_pParent` · 부모의 `_listChild` · 매니저의 루트 등록부가 옛 주소를 가리키기 쉽고,
+ *          쓰는 곳이 없으니 틀려도 아무도 모른다. 진짜 방어선은 `= delete` 이고 이 케이스는 그것이 유지되는지 본다.
  */
 SW_TEST_CASE( GameObjectTest, ComponentsStayNonMovable )
 {
@@ -2770,8 +2757,8 @@ SW_TEST_CASE( GameObjectTest, ComponentsStayNonMovable )
 
 /**
  * @brief 오브젝트 id 는 매니저를 넘어 겹치지 않는다(컴포넌트 id 와 같은 규칙) — 씬을 넘어 옮긴 오브젝트가 정체를 지킬 수 있어야 한다.
- * @details 예전에는 매니저마다 1 부터 셌다. 씬 A 의 오브젝트를 같은 id 로 씬 B 에 옮기면(영속 오브젝트 · `SceneManager::markPersistent`) B 의
- *          같은 id 와 부딪혀 새 id 를 받았고, 그 오브젝트를 가리키던 핸들이 끊겼다. 유니티의 인스턴스 id 도 프로세스 전체에서 하나다.
+ * @details 매니저마다 1 부터 세면 씬 A 의 오브젝트를 같은 id 로 씬 B 에 옮길 때(영속 오브젝트 · `SceneManager::markPersistent`) B 의
+ *          같은 id 와 부딪혀 새 id 를 받고, 그 오브젝트를 가리키던 핸들이 끊긴다. 유니티의 인스턴스 id 도 프로세스 전체에서 하나다.
  */
 SW_TEST_CASE( GameObjectTest, ObjectIdsAreUniqueAcrossManagers )
 {
@@ -2792,9 +2779,9 @@ SW_TEST_CASE( GameObjectTest, ObjectIdsAreUniqueAcrossManagers )
 
 /**
  * @brief 되살린 큰 id 도 락 없는 표에서 찾는다 — 표 범위(약 420 만)를 넘었다고 맵으로 떨어지지 않는다.
- * @details 예전 표는 id 를 그대로 칸 번호로 써서 `kChunkSize * kMaxChunk` 를 넘는 id 는 모두 잠금 + 해시 맵(호출당 110 ns)으로 갔고, 되감지
- *          않았다. 스폰이 잦은 게임은 몇 시간 뒤 모든 핸들 해석이 그 길로 갔고, 그런 세션에서 저장한 id 를 되살리면(세이브 · 플레이 복원) 처음부터
- *          그랬다. 지금 칸은 id 의 아래 비트다 — 칸을 다른 살아 있는 오브젝트가 쓸 때만 맵으로 간다.
+ * @details 칸은 id 의 아래 비트다 — 칸을 다른 살아 있는 오브젝트가 쓸 때만 맵으로 간다. id 를 그대로 칸 번호로 쓰면 표 범위를 넘는 id 는
+ *          모두 잠금 + 해시 맵으로 가서, 스폰이 잦은 게임은 몇 시간 뒤 모든 핸들 해석이 그 경로로 가고, 그런 세션에서 저장한 id 를
+ *          되살리면(세이브 · 플레이 복원) 처음부터 그렇다.
  */
 SW_TEST_CASE( GameObjectTest, RestoredLargeObjectIdsStayOnTheLockFreeTable )
 {
@@ -2817,7 +2804,7 @@ SW_TEST_CASE( GameObjectTest, RestoredLargeObjectIdsStayOnTheLockFreeTable )
 /**
  * @brief 표의 같은 칸을 쓰는 id 둘(`kObjectSlotCount` 만큼 떨어진)이 함께 살아 있어도 둘 다 찾고, 없는 id 는 찾지 않는다.
  * @details 뒤에 온 것은 맵으로 간다(드물다 — 오래 사는 오브젝트와 420 만 뒤의 id 가 겹칠 때). 칸 주인이 사라지면 칸이 비고, 맵의 것은 맵에서
- *          그대로 찾는다. 칸의 오브젝트가 다른 id 면 "없음" 이다 — 예전 표와 달리 칸만 보고 답하면 엉뚱한 오브젝트를 준다.
+ *          그대로 찾는다. 칸의 오브젝트가 다른 id 면 "없음" 이다 — 칸만 보고 답하면 엉뚱한 오브젝트를 준다.
  */
 SW_TEST_CASE( GameObjectTest, ObjectIdsThatShareATableSlotAreBothFound )
 {
@@ -2860,7 +2847,7 @@ SW_TEST_CASE( GameObjectTest, ObjectIdsThatShareATableSlotAreBothFound )
 
 /**
  * @brief [GameObjectTest] 돌아간 부모 아래의 카메라도 `lookAt` 하면 목표를 본다
- * @details `lookAt` 은 월드 방향으로 구한 요 · 피치를 **로컬** 회전에 넣었다. 부모(플레이어 · 리그)가 돌아가 있으면 그만큼 엉뚱한 곳을 봤다.
+ * @details 월드 방향으로 구한 요 · 피치를 **로컬** 회전에 넣으면 부모(플레이어 · 리그)가 돌아가 있을 때 그만큼 엉뚱한 곳을 본다.
  */
 SW_TEST_CASE( GameObjectTest, CameraLookAtUnderARotatedParentFacesTheTarget )
 {
@@ -2883,8 +2870,8 @@ SW_TEST_CASE( GameObjectTest, CameraLookAtUnderARotatedParentFacesTheTarget )
 
 /**
  * @brief [GameObjectTest] 대소문자만 바꾸는 이름 바꾸기도 바뀐다 — 찾기는 여전히 대소문자를 무시한다
- * @details `setName` 은 `==`(대소문자 무시)로 "같은 이름이면 할 일 없음" 을 봤고, 표시도 처음 intern 된 철자였다 — `hero` → `Hero` 가 아무 일도
- *          하지 않았다(인스펙터 · 계층 패널의 이름 바꾸기). 이제 철자까지 같을 때만 건너뛴다(FName 의 `IsEqual( …, CaseSensitive )`).
+ * @details `setName` 은 철자까지 같을 때만 건너뛴다(FName 의 `IsEqual( …, CaseSensitive )`). `==`(대소문자 무시)로 "같은 이름이면 할 일 없음"
+ *          을 보면 `hero` → `Hero` 가 아무 일도 하지 않는다(인스펙터 · 계층 패널의 이름 바꾸기).
  */
 SW_TEST_CASE( GameObjectTest, CaseOnlyRenameChangesTheName )
 {
@@ -2900,7 +2887,7 @@ SW_TEST_CASE( GameObjectTest, CaseOnlyRenameChangesTheName )
 /**
  * @brief [GameObjectTest] onPostLoad 는 묶음이 오브젝트 사이의 부착 · 핸들을 푼 뒤에 온다 — 자식이 부모보다 먼저 읽혀도 그때 이미 부모에 붙어 있다
  * @details 상태 읽기는 컴포넌트마다 `onPostLoad` 를 부르고, 다른 오브젝트로의 부착 · `GameObjectHandle` PROPERTY 는 묶음이 모두 읽은 뒤(`finish`) 푼다.
- *          `onPostLoad` 가 읽는 자리에서 불리면 그 값들은 아직 저장된 id 였다(파일 id 면 이 실행의 엉뚱한 오브젝트). 언리얼 `PostLoad` 처럼 다 이은 뒤에 부른다.
+ *          `onPostLoad` 가 읽는 자리에서 불리면 그 값들은 아직 저장된 id 다(파일 id 면 이 실행의 엉뚱한 오브젝트). 언리얼 `PostLoad` 처럼 다 이은 뒤에 부른다.
  */
 SW_TEST_CASE( GameObjectTest, PostLoadRunsAfterTheBatchResolvesReferences )
 {

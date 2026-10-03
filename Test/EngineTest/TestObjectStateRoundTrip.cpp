@@ -210,8 +210,8 @@ SW_TEST_CASE( ObjectStateRoundTripTest, DerivedComponentInheritedTransformSurviv
 // ------------------------------------------------------------------------------
 /**
  * @brief [ObjectStateRoundTripTest] 메시의 블렌드 모드가 저장 · 로드를 지난다
- * @details `RHIBlendMode` 에 `ENUM()` 이 없어 직렬화기가 이름을 몰랐다 — 씬 · 프리팹에 `_blendMode="null"` 로 적혔고(저장소의 에셋 셋이 그랬다),
- *          읽을 때는 기본값(불투명)으로 돌아갔다. 반투명으로 바꾼 메시가 저장할 때마다 불투명이 됐다.
+ * @details `RHIBlendMode` 에 `ENUM()` 이 없으면 직렬화기가 이름을 몰라 씬 · 프리팹에 `_blendMode="null"` 로 적고, 읽을 때는
+ *          기본값(불투명)으로 돌아간다 — 반투명으로 바꾼 메시가 저장할 때마다 불투명이 된다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, MeshBlendModeSurvivesXml )
 {
@@ -233,8 +233,8 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshBlendModeSurvivesXml )
 
 /**
  * @brief [ObjectStateRoundTripTest] 메시의 머티리얼 참조가 저장 · 로드를 지나고, 잡은 참조는 경로를 비우거나 컴포넌트가 사라질 때 놓인다
- * @details 메시의 머티리얼은 날 포인터(`_pMaterial`)뿐이라 저장되지 않았다 — 씬 · 프리팹을 다시 열면 모든 메시가 씬 기본 머티리얼이 됐다.
- *          언리얼 `UMeshComponent::OverrideMaterials` · 유니티 `Renderer.sharedMaterials` 는 에셋 참조로 저장된다.
+ * @details 머티리얼을 날 포인터로만 들면 저장되지 않아 씬 · 프리팹을 다시 열 때 모든 메시가 씬 기본 머티리얼이 된다.
+ *          언리얼 `UMeshComponent::OverrideMaterials` · 유니티 `Renderer.sharedMaterials` 처럼 에셋 참조로 저장한다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXml )
 {
@@ -275,8 +275,8 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXml )
 
 /**
  * @brief [ObjectStateRoundTripTest] 플레이 중이 아니어도 상태를 읽은 메시는 그릴 메시 · 머티리얼을 갖는다 — 편집 중 되돌리기 · 프리팹 드래그
- * @details 상태를 읽으면 컴포넌트를 새로 만든다. 메시는 렌더 에셋(메시 id → 메시, 머티리얼 참조 → 머티리얼)을 시작(`onBeginPlay`) · 씬 초기화에서만
- *          풀어, **편집 중**에 되돌리기 · 프리팹 드래그로 다시 만든 메시는 다음 플레이 · 씬 재로드까지 그려지지 않았다(GpuScene 은 메시 없는 것을
+ * @details 상태를 읽으면 컴포넌트를 새로 만든다. 메시가 렌더 에셋(메시 id → 메시, 머티리얼 참조 → 머티리얼)을 시작(`onBeginPlay`) · 씬 초기화에서만
+ *          풀면 **편집 중**에 되돌리기 · 프리팹 드래그로 다시 만든 메시가 다음 플레이 · 씬 재로드까지 그려지지 않는다(GpuScene 은 메시 없는 것을
  *          건너뛴다). 언리얼 `PostLoad` · 유니티 `OnAfterDeserialize` 처럼 상태를 읽은 뒤 컴포넌트마다 `onPostLoad` 를 부른다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, LoadedMeshResolvesItsRenderAssetsWithoutPlay )
@@ -307,9 +307,9 @@ SW_TEST_CASE( ObjectStateRoundTripTest, LoadedMeshResolvesItsRenderAssetsWithout
 
 /**
  * @brief [ObjectStateRoundTripTest] 부모를 제자리에서 다시 읽어도(되돌리기 · 프리팹으로 되돌리기 · 플레이 종료 복원) 다른 오브젝트의 자식이 붙어 있다
- * @details 제자리 로드는 컴포넌트를 모두 지우고 새로 만드는데, 씬 컴포넌트의 소멸자가 자식을 떼어 **다른 오브젝트의 자식들이 루트가
- *          됐다.** 로드는 이 오브젝트 안의 부착만 되붙였다. 에디터에서 부모의 속성 하나를 고치고 되돌리면 자식이 떨어져 월드 자리가 튀었다.
- *          XML · JSON · 바이너리 세 로더가 같은 길이다.
+ * @details 제자리 로드는 컴포넌트를 모두 지우고 새로 만드는데, 씬 컴포넌트의 소멸자가 자식을 떼므로 이 오브젝트 안의 부착만 되붙이면
+ *          **다른 오브젝트의 자식들이 루트가 된다** — 에디터에서 부모의 속성 하나를 고치고 되돌리면 자식이 떨어져 월드 자리가 튄다.
+ *          XML · JSON · 바이너리 세 로더가 같은 경로다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, InPlaceReloadKeepsOtherObjectsChildren )
 {
@@ -354,9 +354,9 @@ SW_TEST_CASE( ObjectStateRoundTripTest, InPlaceReloadKeepsOtherObjectsChildren )
 
 /**
  * @brief [ObjectStateRoundTripTest] 오브젝트 안의 부착(소켓)은 복사본 안에서 잇는다 — 이름이 바뀐 복사본이 원본에 붙지 않는다
- * @details 오브젝트 안의 부착도 소유자 이름을 적어, 원본이 살아 있는 매니저에 같은 상태를 읽으면(복제 · 같은 프리팹 두 번 · 영속 이월) 복사본의 이름이
- *          유일하게 바뀌어(`Rig` → `Rig_2`) 이름으로 **원본**을 찾았다 — 복사본의 팔이 원본의 루트에 붙었다. 이제 소유자 칸을 비운다(= 자기).
- *          옛 데이터(자기 이름을 적은 것)는 읽기 전 이름과 견준다. 세 형식이 같은 길이다.
+ * @details 오브젝트 안의 부착은 소유자 칸을 비운다(= 자기). 소유자 이름을 적으면 원본이 살아 있는 매니저에 같은 상태를 읽을 때(복제 · 같은
+ *          프리팹 두 번 · 영속 이월) 복사본의 이름이 유일하게 바뀌어(`Rig` → `Rig_2`) 이름으로 **원본**을 찾아, 복사본의 팔이 원본의 루트에 붙는다.
+ *          자기 이름을 적은 데이터는 읽기 전 이름과 견준다. 세 형식이 같은 경로다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, AttachmentInsideAnObjectStaysInsideItsCopy )
 {
@@ -401,7 +401,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, AttachmentInsideAnObjectStaysInsideItsCo
 
     BLOCK( "옛 데이터 — 자기 안의 부착에 자기 이름을 적었고 id 칸이 없다" )
     {
-        // 빈 이름은 "None" 으로 적힌다(읽으면 빈 값). 옛 저장은 같은 오브젝트의 부모에도 소유자 이름을 적었다.
+        // 빈 이름은 "None" 으로 적힌다(읽으면 빈 값). 같은 오브젝트의 부모에 소유자 이름을 적은 데이터도 읽혀야 한다.
         const sw::string kIdField    = "_attachOwnerId=\"0\"";
         const sw::string kEmptyOwner = "_attachOwner=\"None\"";
         sw::string       legacy      = xml;
@@ -422,8 +422,8 @@ SW_TEST_CASE( ObjectStateRoundTripTest, AttachmentInsideAnObjectStaysInsideItsCo
 
 /**
  * @brief [ObjectStateRoundTripTest] 제자리 로드가 실패하면 오브젝트는 읽기 전 그대로다 — 빈 오브젝트를 남기지 않는다
- * @details 제자리 로드는 컴포넌트를 먼저 비우고 읽는다. 예전에는 읽기가 실패하면 **빈 오브젝트**가 남았고, 되돌리기 · 복제 · 프리팹 되돌리기가
- *          결과를 버려 그 상태로 저장되었다. 이제 읽기 전 상태를 찍어 두고 실패하면 그것으로 되돌린다(컴포넌트 id 도 그대로).
+ * @details 제자리 로드는 컴포넌트를 먼저 비우고 읽는다. 읽기 전 상태를 찍어 두고 실패하면 그것으로 되돌린다(컴포넌트 id 도 그대로) —
+ *          아니면 **빈 오브젝트**가 남고, 결과를 버리는 되돌리기 · 복제 · 프리팹 되돌리기가 그 상태로 저장한다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, FailedInPlaceLoadLeavesTheObjectAsItWas )
 {
@@ -492,7 +492,7 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
     SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXmlString( &target, "" ) );
     SW_EXPECT_EMPTY( ObjectStateSerializer::saveToXmlString( nullptr ) );
 
-    // JSON 도 로드까지 돌려 본다 — 두 포맷은 몸통 하나(직렬화기만 다르다)를 쓰고, 예전엔 JSON 로드를 지나는 테스트가 없었다.
+    // JSON 도 로드까지 돌려 본다 — 두 포맷은 몸통 하나(직렬화기만 다르다)를 쓴다.
     manager.clear();
     sw::GameObject* jsonTargetPtr = manager.createGameObject( sw::hashed_string( "TempJson" ) );
     SW_ASSERT_NOT_NULL( jsonTargetPtr );
@@ -596,9 +596,9 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
 
 /**
  * @brief [ObjectStateRoundTripTest] PROPERTY 하나가 사라져도 그 전의 바이너리 상태는 읽힌다 — 사라진 칸만 버린다(XML 과 같은 규칙)
- * @details 바이너리 읽기만 엄격했다. 컴포넌트 안의 모르는 칸 하나에 그 컴포넌트가, 그래서 **오브젝트 통째로** 읽기가 실패했고(XML · JSON 은 건너뛰었다),
- *          오브젝트 자기 칸이 사라지면 판 붙은 읽기가 이관 함수 없이 거절했다. 바이너리 상태가 스키마보다 오래 사는 자리 — 디스크의 세이브, 핫 리로드
- *          뒤 Stop 이 되살리는 플레이 스냅샷 — 에서 그 오브젝트가 모두 사라졌다. 이제 세 형식이 같다: 지금 타입에 없는 칸은 건너뛰고 나머지를 읽는다.
+ * @details 세 형식이 같다: 지금 타입에 없는 칸은 건너뛰고 나머지를 읽는다. 바이너리만 엄격하면 컴포넌트 안의 모르는 칸 하나에 **오브젝트 통째로**
+ *          읽기가 실패하고, 오브젝트 자기 칸이 사라지면 판 붙은 읽기가 이관 함수 없이 거절한다 — 바이너리 상태가 스키마보다 오래 사는 자리(디스크의
+ *          세이브, 핫 리로드 뒤 Stop 이 되살리는 플레이 스냅샷)에서 그 오브젝트가 모두 사라진다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, StateSavedBeforeAPropertyWasRemovedStillLoads )
 {
@@ -685,8 +685,8 @@ SW_TEST_CASE( ObjectStateRoundTripTest, StateSavedBeforeAPropertyWasRemovedStill
 
 /**
  * @brief [ObjectStateRoundTripTest] 끈 컴포넌트와 숨긴 메시는 상태를 건너도 그대로다 — 저장 · 되돌리기 · Stop · 씬 다시 열기
- * @details `Component::_bActive` 와 `MeshComponent::_bVisible` 은 PROPERTY 가 아니었다. 상태(씬 파일 · 되돌리기 스냅샷 · 플레이 스냅샷)가 이 값을 싣지
- *          않아, 끈 컴포넌트 · 숨긴 메시가 Stop · 되돌리기 · 씬 다시 열기 뒤 다시 켜졌고 토글은 되돌리기에 남지 않았다(앞뒤 스냅샷이 같았다).
+ * @details `Component::_bActive` 와 `MeshComponent::_bVisible` 은 PROPERTY 다. 상태(씬 파일 · 되돌리기 스냅샷 · 플레이 스냅샷)가 이 값을 싣지
+ *          않으면 끈 컴포넌트 · 숨긴 메시가 Stop · 되돌리기 · 씬 다시 열기 뒤 다시 켜지고 토글은 되돌리기에 남지 않는다(앞뒤 스냅샷이 같다).
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, TurnedOffComponentsAndHiddenMeshesStayThatWay )
 {
@@ -716,8 +716,8 @@ SW_TEST_CASE( ObjectStateRoundTripTest, TurnedOffComponentsAndHiddenMeshesStayTh
 
 /**
  * @brief [ObjectStateRoundTripTest] 오브젝트의 둘째 씬 컴포넌트는 primary 아래에 붙는다 — 오브젝트를 옮기면 따라오고, 루트로 저장된 옛 데이터도 읽으면 붙는다
- * @details 둘째 씬 컴포넌트(콜라이더 · 소켓 · 메시)는 붙이지 않으면 루트로 남아 **월드 원점**에 놓였다 — 오브젝트를 옮겨도 따라오지 않았다.
- *          `editortest.scene.xml` 의 TestCollider(primary 는 x=2.5, 콜라이더는 원점) · `testprop.prefab.xml` 이 이미 그랬다. 오브젝트의 루트는 하나다.
+ * @details 둘째 씬 컴포넌트(콜라이더 · 소켓 · 메시)는 붙이지 않으면 루트로 남아 **월드 원점**에 놓인다 — 오브젝트를 옮겨도 따라오지 않는다.
+ *          오브젝트의 루트는 하나다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, SecondSceneComponentHangsUnderThePrimary )
 {
@@ -731,7 +731,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SecondSceneComponentHangsUnderThePrimary
     manager.flushSceneTransforms();
     SW_EXPECT_NEAR_EQUAL( 2.5f, pCollider->getWorldPosition()._x, 1e-4f );
 
-    // 옛 데이터: 둘째가 루트로 저장됐다. 읽으면 primary 아래로 간다.
+    // 둘째가 루트로 저장된 데이터: 읽으면 primary 아래로 간다.
     pCollider->detachFromComponent();
     const string oldXml  = ObjectStateSerializer::saveToXmlString( pCrate );
     GameObject*  pLoaded = manager.createGameObject( hashed_string( "LoadedCrate" ) );
@@ -752,7 +752,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SecondSceneComponentHangsUnderThePrimary
 
 /**
  * @brief [ObjectStateRoundTripTest] 부착 규칙 — `KeepWorld` 는 돌고 커진 부모에 붙이고 떼어도 월드 자리를 지키고, 기본(`KeepRelative`)은 로컬을 지킨다
- * @details 규칙이 하나(로컬 지킴)뿐이라 에디터의 재부모 · 부모 떼기가 오브젝트를 새 부모만큼 튀게 했다.
+ * @details 규칙이 하나(로컬 지킴)뿐이면 에디터의 재부모 · 부모 떼기가 오브젝트를 새 부모만큼 튀게 한다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, AttachRuleKeepsWorldOrRelativeAsAsked )
 {
@@ -789,8 +789,8 @@ SW_TEST_CASE( ObjectStateRoundTripTest, AttachRuleKeepsWorldOrRelativeAsAsked )
 
 /**
  * @brief [ObjectStateRoundTripTest] 모르는 타입의 컴포넌트는 버려지지 않는다 — 다시 저장하면 원문 그대로 남는다(XML · JSON · 바이너리)
- * @details 세 직렬화기가 모르는 타입의 원소를 건너뛰었다. 게임 모듈이 안 뜬 채 에디터가 씬을 저장하면 그 컴포넌트의 값이 **영영** 사라졌다.
- *          이제 원문을 `MissingComponent` 가 맡고, 같은 형식으로 저장할 때 그대로 다시 쓴다. 다른 형식(플레이 스냅샷 · 되돌리기 = 바이너리)을
+ * @details 원문을 `MissingComponent` 가 맡고, 같은 형식으로 저장할 때 그대로 다시 쓴다. 모르는 타입의 원소를 건너뛰면 게임 모듈이 안 뜬 채
+ *          에디터가 씬을 저장할 때 그 컴포넌트의 값이 **영영** 사라진다. 다른 형식(플레이 스냅샷 · 되돌리기 = 바이너리)을
  *          거쳐도 원래 형식으로 돌아오면 원문이 돌아간다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, UnknownComponentIsKeptAndWrittenBack )
@@ -872,9 +872,9 @@ SW_TEST_CASE( ObjectStateRoundTripTest, UnknownComponentIsKeptAndWrittenBack )
 
 /**
  * @brief [ObjectStateRoundTripTest] 저장된 상태의 enum 은 열거자로 돌아온다 — 다음 빌드가 열거자 순서를 바꿔도, 열거자를 지워도(그 칸만 기본값, 나머지는 그대로)
- * @details 바이너리 상태(세이브 · 핫 리로드 뒤 Stop 이 되살리는 플레이 스냅샷 · 되돌리기)는 enum 을 int64 **값**으로 실었다. 열거자를 사이에 넣으면 저장된
- *          Green 이 다른 열거자로 읽혔다. 지운 열거자는 그 값의 다른 열거자가 됐다 — XML 은 그 칸만 실패로 남긴다. 그리고 바이너리는 컴포넌트 안의 읽지 못한 칸 하나에
- *          그 컴포넌트를, 그래서 뒤의 컴포넌트까지 버렸다. 시험은 손으로 올린 enum 을 저장 뒤에 같은 이름으로 다시 올린다(핫 리로드 · 다음 빌드의 자리).
+ * @details 바이너리 상태(세이브 · 핫 리로드 뒤 Stop 이 되살리는 플레이 스냅샷 · 되돌리기)가 enum 을 int64 **값**으로 실으면 열거자를 사이에 넣을 때 저장된
+ *          Green 이 다른 열거자로 읽히고, 지운 열거자는 그 값의 다른 열거자가 된다 — XML 은 그 칸만 실패로 남긴다. 바이너리도 컴포넌트 안의 읽지 못한 칸
+ *          하나에 그 컴포넌트(와 뒤의 컴포넌트)를 버리면 안 된다. 시험은 손으로 올린 enum 을 저장 뒤에 같은 이름으로 다시 올린다(핫 리로드 · 다음 빌드의 자리).
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumChanges )
 {
@@ -897,7 +897,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumC
     SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pSaved, bytes ) );
     const string xml = ObjectStateSerializer::saveToXmlString( pSaved );
 
-    // 1) 다음 빌드에서 열거자 순서가 바뀌었다 — Green 은 이제 2 다.
+    // 1) 다음 빌드에서 열거자 순서가 바뀐다 — Green 은 2 다.
     registerStateShiftColor( {
         { "Blue", 0},
         {  "Red", 1},
@@ -945,8 +945,8 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumC
 
 /**
  * @brief [ObjectStateRoundTripTest] JSON 컴포넌트 안의 못 읽은 칸은 그 칸만 버려지고 이름으로 알린다 — 컴포넌트의 나머지는 읽힌다
- * @details JSON 은 컴포넌트 원소를 orphan 목록 없이 엄격하게 읽었다. 칸 하나가 `_listComponent` 칸 **전체**를 실패로 만들어 로드는
- *          "_listComponent 를 버렸다" 고 알렸다 — 컴포넌트는 읽혔는데 어느 칸이 문제인지는 말하지 않았다. XML 은 처음부터 바깥 목록을 내려 줬다.
+ * @details JSON 이 컴포넌트 원소를 orphan 목록 없이 엄격하게 읽으면 칸 하나가 `_listComponent` 칸 **전체**를 실패로 만들어 로드가
+ *          "_listComponent 를 버렸다" 고만 알린다 — 컴포넌트는 읽혔는데 어느 칸이 문제인지는 말하지 않는다. XML 처럼 바깥 목록을 내려 준다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, JsonComponentFieldThatDoesNotReadIsNamed )
 {
