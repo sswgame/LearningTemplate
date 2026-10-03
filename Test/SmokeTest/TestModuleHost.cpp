@@ -339,7 +339,7 @@ SW_TEST_CASE( ModuleHostTest, ImageCheckAcceptsOnlyAModuleWithTheHostsApiTable )
     SW_EXPECT_FALSE( host.isEditorImageUsable( nullptr ) );
     host.shutdown();
     engine::unregisterModuleTypes( "EditorModule" );
-    FileUtil::unloadDynamicLibrary( pEditorModule );
+    SW_EXPECT_TRUE( engine::unloadModuleImage( "EditorModule", pEditorModule ) );
 }
 #endif
 

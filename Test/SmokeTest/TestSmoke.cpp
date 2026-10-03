@@ -229,7 +229,7 @@ SW_TEST_CASE( ArchitectureTest, AllRHIModulesAbiStampExports )
         if ( pfnStamp != nullptr && pfnStamp() != nullptr )
             SW_EXPECT_STREQ( sw::kRHIModuleAbiStamp, pfnStamp() );
 
-        sw::FileUtil::unloadDynamicLibrary( handle );
+        SW_EXPECT_TRUE( sw::engine::unloadModuleImage( modName, handle ) );
     }
 }
 
@@ -1366,7 +1366,7 @@ SW_TEST_CASE( ArchitectureTest, RHIBackendDynamicSwapAndReload )
             SW_ASSERT_NOT_NULL( factory );
 
             // 동적 언로드 및 해제
-            sw::FileUtil::unloadDynamicLibrary( handle );
+            SW_EXPECT_TRUE( sw::engine::unloadModuleImage( backendName, handle ) );
         }
     }
 }
@@ -1414,7 +1414,7 @@ SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
     SW_EXPECT_TRUE( pfnExport != nullptr );
     if ( pfnExport == nullptr )
     {
-        sw::FileUtil::unloadDynamicLibrary( handle );
+        SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", handle ) );
         return;
     }
 
@@ -1430,7 +1430,7 @@ SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
     sw::engine::registerModuleTypes( "SWGame" );
     sw::engine::unregisterModuleTypes( "SWGame" );
 
-    sw::FileUtil::unloadDynamicLibrary( handle );
+    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", handle ) );
 }
 
 /**
@@ -1449,7 +1449,7 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
         if ( hOverworld != nullptr )
         {
             sw::engine::unregisterModuleTypes( "GF_Overworld" );
-            sw::FileUtil::unloadDynamicLibrary( hOverworld );
+            SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "GF_Overworld", hOverworld ) );
         }
         return;
     }
@@ -1464,9 +1464,9 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
         if ( hOverworld != nullptr )
         {
             sw::engine::unregisterModuleTypes( "GF_Overworld" );
-            sw::FileUtil::unloadDynamicLibrary( hOverworld );
+            SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "GF_Overworld", hOverworld ) );
         }
-        sw::FileUtil::unloadDynamicLibrary( handle );
+        SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", handle ) );
         return;
     }
 
@@ -1521,12 +1521,12 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
     sw::engine::getSceneManager().initialize();
 
     sw::engine::unregisterModuleTypes( "SWGame" );
-    sw::FileUtil::unloadDynamicLibrary( handle );
+    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", handle ) );
 
     if ( hOverworld != nullptr )
     {
         sw::engine::unregisterModuleTypes( "GF_Overworld" );
-        sw::FileUtil::unloadDynamicLibrary( hOverworld );
+        SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "GF_Overworld", hOverworld ) );
     }
 }
 
@@ -1549,7 +1549,7 @@ SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
     sw::engine::registerModuleTypes( "EditorModule" );
     sw::engine::unregisterModuleTypes( "EditorModule" );
 
-    sw::FileUtil::unloadDynamicLibrary( handle );
+    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "EditorModule", handle ) );
 }
 
 /**
@@ -1564,7 +1564,7 @@ SW_TEST_CASE( ModuleApiTest, GameFrameworkKitsModuleTypeRegistration )
         {
             sw::engine::registerModuleTypes( kitName );
             sw::engine::unregisterModuleTypes( kitName );
-            sw::FileUtil::unloadDynamicLibrary( handle );
+            SW_EXPECT_TRUE( sw::engine::unloadModuleImage( kitName, handle ) );
         }
     }
 }
@@ -1742,14 +1742,126 @@ SW_TEST_CASE( ModuleApiTest, GameModuleRepeatedReloadCycle )
         sw::engine::getSceneManager().initialize();
 
         sw::engine::unregisterModuleTypes( "SWGame" );
-        sw::FileUtil::unloadDynamicLibrary( handle );
+        SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", handle ) );
 
         if ( hOverworld != nullptr )
         {
             sw::engine::unregisterModuleTypes( "GF_Overworld" );
-            sw::FileUtil::unloadDynamicLibrary( hOverworld );
+            SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "GF_Overworld", hOverworld ) );
         }
     }
+}
+
+/**
+ * @brief [ModuleApiTest] 자식 프로세스 역할: GameFramework 를 직접 올리고 게임을 한 번 돌린 뒤 내리면, GameFramework 가 만든 이벤트 채널 항목이 디스패처에서 빠진다.
+ * @details 게임이 첫 씬을 요청하면 GameFramework 의 코드가 "game" 채널에 이벤트를 낸다(`GameEventUtil::send`). 그 채널 항목의 브로드캐스트 함수와
+ *          멀티캐스트의 해제자(`shared_ptr` 제어 블록)는 GameFramework 이미지의 코드라, 이미지를 내린 뒤 디스패처가 소멸하면 내려간 코드로 뛴다.
+ *          공용 모듈은 프로세스마다 한 번 올라오므로(이미지는 내려가지 않는다) 깨끗한 자식에서 잰다. 그냥 실행하면 건너뛴다.
+ */
+SW_TEST_CASE( ModuleApiTest, UnloadChildReleasesTheChannelsItsImageCreated )
+{
+    if ( std::getenv( "SW_UNLOAD_CHANNEL_CHILD" ) == nullptr )
+        SW_TEST_SKIP( "child only — UnloadReleasesTheChannelsTheImageCreated launches it" );
+
+    void* const hFramework = sw::loadModule( "GameFramework" );
+    SW_ASSERT_NOT_NULL( hFramework );
+    sw::engine::registerModuleTypes( "GameFramework" );
+    void* const hGame = sw::loadModule( "SWGame" );
+    SW_ASSERT_NOT_NULL( hGame );
+    sw::engine::registerModuleTypes( "SWGame" );
+
+    const void* pFrameworkBegin{ nullptr };
+    const void* pFrameworkEnd{ nullptr };
+    SW_ASSERT_TRUE( sw::FileUtil::findDynamicLibraryRange( hFramework, pFrameworkBegin, pFrameworkEnd ) );
+
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::FileUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
+    SW_ASSERT_NOT_NULL( pfnExport );
+    sw::GameAPI api{};
+    SW_ASSERT_TRUE( pfnExport( &api ) );
+    sw::ModuleService gameService{};
+    if ( api.bindService != nullptr )
+    {
+        sw::engine::fillModuleServices( gameService, true );
+        api.bindService( &gameService );
+    }
+    sw::GameHandle game = api.create();
+    SW_ASSERT_NOT_NULL( game );
+    SW_EXPECT_TRUE( api.initialize( game, nullptr, nullptr ) );
+    for ( int32 frameIndex = 0; frameIndex < 20; ++frameIndex )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        sw::engine::getSceneManager().tickTransitions();
+        api.update( game, 0.016f );
+    }
+    sw::engine::getTaskManager().waitAll();
+    sw::engine::getSceneManager().tickTransitions();
+    api.shutdown( game );
+    api.destroy( game );
+    if ( api.bindService != nullptr )
+        api.bindService( nullptr );
+    sw::engine::getSceneManager().shutdown();
+    sw::engine::getSceneManager().initialize();
+
+    sw::EventDispatcher& dispatcher = sw::engine::getEventDispatcher();
+    SW_ASSERT_TRUE_MSG( dispatcher.countChannelsCreatedWithin( pFrameworkBegin, pFrameworkEnd ) > 0,
+                        "GameFramework created no event channel - the case no longer exercises what it checks" );
+
+    sw::engine::unregisterModuleTypes( "SWGame" );
+    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", hGame ) );
+    sw::engine::unregisterModuleTypes( "GameFramework" );
+    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "GameFramework", hFramework ) );
+    SW_EXPECT_EQUAL( 0u, dispatcher.countChannelsCreatedWithin( pFrameworkBegin, pFrameworkEnd ) );
+}
+
+/**
+ * @brief [ModuleApiTest] 모듈 이미지를 내리면 그 이미지가 만든 이벤트 채널 항목도 디스패처에서 빠진다(자식 프로세스 — 위 케이스 머리말)
+ */
+SW_TEST_CASE( ModuleApiTest, UnloadReleasesTheChannelsTheImageCreated )
+{
+    if ( sw::FileUtil::fileExists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::fileExists( sw::modulePath( "SWGame" ) ) == false )
+        SW_TEST_SKIP( "GameFramework · SWGame 모듈이 옆에 없습니다" );
+
+    const test::ChildEnvironmentVariable arrEnvironment[] = {
+        { "SW_UNLOAD_CHANNEL_CHILD", "1" }
+    };
+    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleApiTest.UnloadChildReleasesTheChannelsItsImageCreated", arrEnvironment, 60 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
+    SW_EXPECT_TRUE_MSG( child._exitCode == 0, ( "모듈을 내린 뒤 채널 항목이 남았거나 자식이 죽었습니다 — 마지막 출력:" + child.getOutputTail( 40 ) ).c_str() );
+}
+
+/**
+ * @brief [ModuleApiTest] 모듈 이미지를 내려도 그 이미지가 끌어온 의존 이미지(GameFramework)는 올라와 있다
+ * @details 의존 이미지의 코드(그것이 만든 이벤트 채널 항목)를 쥔 등록은 모듈을 내릴 때 뗄 수 없다 — 의존이 함께 내려갈지는 로더만 안다. 그래서
+ *          `engine::unloadModuleImage` 는 의존을 고정한다. Windows 는 지연 로드가 GameFramework 를 원래 잡고 있고, 리눅스는 `DT_NEEDED` 참조가
+ *          함께 풀려 GameFramework 가 내려간다.
+ */
+SW_TEST_CASE( ModuleApiTest, UnloadKeepsTheImagesTheModulePulledIn )
+{
+    if ( sw::FileUtil::fileExists( sw::modulePath( "GameFramework" ) ) == false )
+        SW_TEST_SKIP( "GameFramework 모듈이 옆에 없습니다" );
+
+    void* const hGame = sw::loadModule( "SWGame" );
+    SW_ASSERT_NOT_NULL( hGame );
+    sw::engine::registerModuleTypes( "SWGame" );
+    // GameFramework 의 코드를 한 번 돌려 Windows 지연 로드를 풀어 둔다 — 그래야 아래에서 여는 핸들이 새로 올리지 않고 있는 이미지를 가리킨다.
+    SW_EXPECT_TRUE( sw::createAndDestroyGame( hGame ) );
+
+    void* const hFrameworkProbe = sw::FileUtil::loadDynamicLibrary( sw::modulePath( "GameFramework" ) );
+    SW_ASSERT_NOT_NULL( hFrameworkProbe );
+    const void* pFrameworkBegin{ nullptr };
+    const void* pFrameworkEnd{ nullptr };
+    const bool  bFoundRange = sw::FileUtil::findDynamicLibraryRange( hFrameworkProbe, pFrameworkBegin, pFrameworkEnd );
+    sw::FileUtil::unloadDynamicLibrary( hFrameworkProbe ); // 범위를 재느라 올린 참조만 돌려준다 — GameFramework 는 SWGame 이 끌어온 것이다
+    SW_ASSERT_TRUE( bFoundRange );
+
+    sw::engine::unregisterModuleTypes( "SWGame" );
+    SW_EXPECT_TRUE( sw::engine::unloadModuleImage( "SWGame", hGame ) );
+
+    const void* pBegin{ nullptr };
+    const void* pEnd{ nullptr };
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::findLoadedImageRange( pFrameworkBegin, pBegin, pEnd ),
+                        "GameFramework went down with SWGame - the event channels it created now point at unmapped code" );
 }
 
 #endif // SW_SHIPPING

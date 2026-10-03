@@ -242,6 +242,12 @@ namespace sw
         /** @brief 로드한 동적 라이브러리를 메모리에서 내립니다. */
         static void unloadDynamicLibrary( void* pHandle );
         /**
+         * @brief 라이브러리 @p pHandle 이 import 하는 라이브러리 가운데 지금 올라와 있는 것을 프로세스 끝까지 내려가지 않게 고정하고, 고정한 수를 반환합니다.
+         * @details 이 핸들을 내려도 그것이 끌어온 의존 이미지는 남깁니다. Windows 는 import · 지연 import 표의 DLL 을 `GET_MODULE_HANDLE_EX_FLAG_PIN`
+         *          으로, 리눅스는 `DT_NEEDED` 를 `RTLD_NODELETE | RTLD_NOLOAD` 로 고정합니다. 아직 올라오지 않은 의존은 올리지 않습니다.
+         */
+        static uint32 pinDynamicLibraryDependencies( void* pHandle );
+        /**
          * @brief 주소 @p pAddressInside 를 담은 실행 이미지(exe · DLL · SO)가 메모리에서 차지하는 범위를 찾습니다.
          * @details Windows 는 이미지 기준 주소 + `SizeOfImage`, 리눅스는 그 이미지의 적재 세그먼트(PT_LOAD) 전체입니다. 핫 리로드가
          *          "이 델리게이트 · 함수 포인터가 내리려는 모듈의 코드인가" 를 가리는 데 씁니다.

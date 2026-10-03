@@ -192,6 +192,18 @@ namespace sw
         return releasedCount;
     }
 
+    uint32 EventDispatcher::countChannelsCreatedWithin( const void* pBegin, const void* pEnd ) const
+    {
+        uint32                     count{ 0 };
+        std::scoped_lock<SpinLock> lock{ _busSpinLock };
+        for ( const auto& [key, entry] : _mapChannelDispatchTable )
+        {
+            if ( IModuleCodeHolder::isAddressWithin( reinterpret_cast<const void*>( reinterpret_cast<uintptr_t>( entry._pfnBroadcast ) ), pBegin, pEnd ) )
+                ++count;
+        }
+        return count;
+    }
+
     uint32 EventDispatcher::releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
     {
         uint32       remainingEntryCount{ 0 };

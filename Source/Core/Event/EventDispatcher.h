@@ -196,6 +196,12 @@ namespace sw
          */
         uint32 releaseQueuedEventsWithin( const void* pBegin, const void* pEnd );
 
+        /**
+         * @brief 브로드캐스트 함수가 [@p pBegin, @p pEnd) 안인 채널 항목 — 그 범위의 코드가 처음 구독 · 발행해 만든 항목 — 의 수입니다(진단 · 시험).
+         * @details 주소만 견주고 항목의 함수를 부르지 않으므로, 이미 내려간 이미지의 범위를 넘겨도 됩니다.
+         */
+        uint32 countChannelsCreatedWithin( const void* pBegin, const void* pEnd ) const;
+
         /** @brief 보유자 목록의 이름입니다. */
         const utf8* getModuleCodeHolderName() const override { return "event subscriptions"; }
         /**

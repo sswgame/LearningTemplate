@@ -46,6 +46,17 @@ namespace sw
          * @return 모든 보유자에서 뗀 것의 수입니다. 모듈이 제대로 정리했으면 0 입니다.
          */
         SW_API uint32 releaseModuleCode( string_view moduleName, const void* pBegin, const void* pEnd, bool* pOutKeepImageMapped = nullptr );
+
+        /**
+         * @brief `FileUtil::loadDynamicLibrary` 로 올린 모듈 이미지 @p pHandle 을 내립니다. `unregisterModuleTypes` 뒤에 부릅니다.
+         * @details 내리기 전에 그 이미지의 코드를 쥔 등록을 뗍니다(`releaseModuleCode`). 떼어 낼 수 없는 것이 남으면 내리지 않고 false 를
+         *          돌려줍니다. 그 이미지가 끌어온 의존 이미지(GameFramework 같은 공유 모듈)는 **내리지 않습니다** — 의존 이미지가 언제 함께
+         *          내려가는지는 로더만 알아 그 코드를 미리 뗄 수 없기 때문입니다. Windows 는 지연 로드가 의존 DLL 을 프로세스 끝까지 잡아 원래
+         *          그렇고, 리눅스는 `DT_NEEDED` 참조가 함께 풀려 내려가므로 여기서 고정합니다(`FileUtil::pinDynamicLibraryDependencies`).
+         *          핫 리로드(`LiveReloadManager`)는 떼기와 내리기 사이에 언로드를 미루므로 이 함수를 쓰지 않습니다.
+         * @return 이미지를 내렸으면 true 입니다.
+         */
+        [[nodiscard]] SW_API bool unloadModuleImage( string_view moduleName, void* pHandle );
 #endif
     } // namespace engine
 } // namespace sw

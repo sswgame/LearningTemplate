@@ -5,6 +5,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
@@ -142,6 +143,25 @@ namespace sw
                 }
             }
             return releasedCount;
+        }
+
+        bool unloadModuleImage( string_view moduleName, void* pHandle )
+        {
+            if ( pHandle == nullptr )
+                return false;
+
+            const void* pBegin{ nullptr };
+            const void* pEnd{ nullptr };
+            bool        bKeepImageMapped{ false };
+            if ( FileUtil::findDynamicLibraryRange( pHandle, pBegin, pEnd ) )
+                (void)releaseModuleCode( moduleName, pBegin, pEnd, &bKeepImageMapped ); // 뗀 것은 releaseModuleCode 가 경고로 남긴다
+            if ( bKeepImageMapped )
+                return false;
+
+            // 이 이미지가 끌어온 의존 이미지가 함께 내려가지 않게 한다. 그 이미지의 코드를 쥔 등록은 여기서 뗄 수 없다.
+            (void)FileUtil::pinDynamicLibraryDependencies( pHandle );
+            FileUtil::unloadDynamicLibrary( pHandle );
+            return true;
         }
 #endif
     } // namespace engine

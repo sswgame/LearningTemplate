@@ -66,6 +66,13 @@ namespace sw
                 }
                 return 0;
             }
+#elif defined( SW_PLATFORM_WINDOWS )
+            /** @brief 이름이 @p pDllName 인 DLL 이 올라와 있으면 프로세스 끝까지 내려가지 않게 고정합니다. 고정했으면 true 입니다. */
+            static bool pinLoadedModule( const utf8* pDllName )
+            {
+                HMODULE hModule = nullptr;
+                return GetModuleHandleExA( GET_MODULE_HANDLE_EX_FLAG_PIN, pDllName, &hModule ) != FALSE;
+            }
 #endif
 
             /** @brief 임시 파일 이름을 겹치지 않게 하는 번호입니다(같은 프로세스의 여러 스레드가 같은 파일을 동시에 저장해도 서로 밟지 않게). */
@@ -1204,5 +1211,76 @@ namespace sw
 #else
         dlclose( pHandle );
 #endif
+    }
+
+    uint32 FileUtil::pinDynamicLibraryDependencies( void* pHandle )
+    {
+        if ( pHandle == nullptr )
+            return 0;
+
+        uint32 pinnedCount{ 0 };
+#if defined( SW_PLATFORM_WINDOWS )
+        // Windows 의 모듈 핸들은 이미지의 기준 주소다.
+        const uint8*            pBase = static_cast<const uint8*>( pHandle );
+        const IMAGE_DOS_HEADER* pDos  = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBase );
+        if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )
+            return 0;
+        const IMAGE_NT_HEADERS* pNt = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBase + pDos->e_lfanew );
+        if ( pNt->Signature != IMAGE_NT_SIGNATURE )
+            return 0;
+
+        const IMAGE_DATA_DIRECTORY& importDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+        if ( importDir.VirtualAddress != 0 )
+        {
+            for ( const IMAGE_IMPORT_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>( pBase + importDir.VirtualAddress ); pDesc->Name != 0; ++pDesc )
+            {
+                if ( FileUtilInternal::pinLoadedModule( reinterpret_cast<const utf8*>( pBase + pDesc->Name ) ) )
+                    ++pinnedCount;
+            }
+        }
+
+        const IMAGE_DATA_DIRECTORY& delayDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
+        if ( delayDir.VirtualAddress != 0 )
+        {
+            for ( const IMAGE_DELAYLOAD_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_DELAYLOAD_DESCRIPTOR*>( pBase + delayDir.VirtualAddress ); pDesc->DllNameRVA != 0;
+                  ++pDesc )
+            {
+                if ( pDesc->Attributes.RvaBased == 0 )
+                    continue;
+                if ( FileUtilInternal::pinLoadedModule( reinterpret_cast<const utf8*>( pBase + pDesc->DllNameRVA ) ) )
+                    ++pinnedCount;
+            }
+        }
+#elif defined( SW_PLATFORM_LINUX )
+        struct link_map* pLinkMap = nullptr;
+        if ( dlinfo( pHandle, RTLD_DI_LINKMAP, &pLinkMap ) != 0 || pLinkMap == nullptr || pLinkMap->l_ld == nullptr )
+            return 0;
+
+        uintptr_t stringTable{ 0 };
+        for ( const ElfW( Dyn )* pEntry = pLinkMap->l_ld; pEntry->d_tag != DT_NULL; ++pEntry )
+        {
+            if ( pEntry->d_tag == DT_STRTAB )
+                stringTable = static_cast<uintptr_t>( pEntry->d_un.d_ptr );
+        }
+        if ( stringTable == 0 )
+            return 0;
+        // glibc 는 동적 섹션의 주소 칸을 적재 주소로 고쳐 두지만, 동적 섹션이 읽기 전용이면 파일 기준 값 그대로다.
+        if ( stringTable < static_cast<uintptr_t>( pLinkMap->l_addr ) )
+            stringTable += static_cast<uintptr_t>( pLinkMap->l_addr );
+
+        for ( const ElfW( Dyn )* pEntry = pLinkMap->l_ld; pEntry->d_tag != DT_NULL; ++pEntry )
+        {
+            if ( pEntry->d_tag != DT_NEEDED )
+                continue;
+            // NOLOAD 는 이미 올라온 것만 찾는다(SONAME 으로 맞춘다). NODELETE 는 그 이미지를 프로세스 끝까지 남긴다 — 찾느라 올린 참조는 바로 돌려준다.
+            const utf8* pName       = reinterpret_cast<const utf8*>( stringTable + static_cast<uintptr_t>( pEntry->d_un.d_val ) );
+            void*       pDependency = dlopen( pName, RTLD_LAZY | RTLD_NOLOAD | RTLD_NODELETE );
+            if ( pDependency == nullptr )
+                continue;
+            dlclose( pDependency );
+            ++pinnedCount;
+        }
+#endif
+        return pinnedCount;
     }
 } // namespace sw
