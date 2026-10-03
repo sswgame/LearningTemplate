@@ -102,7 +102,7 @@ flowchart TD
 - `ActionMap::update()`를 프레임마다 부르지 않으면 `isActionDown`/`wasActionTriggered`/커맨드 콤보/버퍼
   만료가 전부 멈춥니다. **통합 맵(`InputManager::getActionMap()`)은 `beginFrame()`이 끝에서 갱신합니다** — 따로 부르면
   한 프레임에 두 번 흐릅니다. 직접 `ActionMap`을 만들어 쓰는 도구(에디터 패널 · 셸 맵 등)는 만든 쪽이 매 프레임 호출하세요.
-  (2026-10-03 전에는 통합 맵을 아무도 갱신하지 않아 게임플레이 액션이 하나도 발동하지 않았습니다.)
+  주의: 통합 맵을 아무도 갱신하지 않으면 게임플레이 액션이 하나도 발동하지 않습니다(`beginFrame` 이 그 자리입니다).
 
 ---
 
@@ -117,8 +117,8 @@ actionMap.bind( "Jump", sw::Key::Space );
 actionMap.bind( "Jump", sw::GamepadButton::A );
 actionMap.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D );
 
-// 매 프레임 (게임 루프에서 InputManager::beginFrame() 다음, 게임 로직보다 먼저)
-actionMap.update( deltaSeconds );
+// 통합 맵은 InputManager::beginFrame() 이 매 프레임 갱신한다 — 여기서 update 를 다시 부르지 않는다.
+// 직접 만든 ActionMap 이라면 beginFrame() 다음, 게임 로직보다 먼저 update( deltaSeconds ) 를 부른다.
 
 if ( actionMap.wasActionTriggered( "Jump" ) )
     player->jump();
@@ -161,6 +161,7 @@ actionMap.bindVirtualJoystick2D( "Move", sw::MouseButton::Left, /*radius*/ 100.0
 | 상황 | 설명 |
 |------|------|
 | `ActionMap`을 직접 만들어 쓸 때 | `update(dt)`를 매 프레임 호출하지 않으면 조회 함수들이 전부 "안 눌림"으로 고정됩니다. |
+| 마우스 스무딩 | `MouseDevice::getSmoothDelta()` 는 가속 · 스무딩(EMA)을 프레임당 한 번, 흐른 시간 기준으로 적용한 값입니다(`setSmoothing`). 원시 이동량과 섞어 쓰지 마세요. |
 | `GamepadDevice::_triggerDeadzone` | 디지털 "눌림" 판정 임계값(0.5, 고정)과는 별개입니다 — 트리거 아날로그 값 자체의 노이즈만 걸러냅니다. |
 | `ActionBinding::_scale` | 바인딩 종류에 따라 뜻이 다릅니다: `MouseDelta2D`는 감도 배율, `VirtualJoystick2D`는 드래그 반경(px). |
 | 바인딩 종류를 하나 더할 때 | `bind*` 는 `beginBinding`(레이어 · 액션 등록 · 레이어 인덱스 캐시)으로 시작해 종류별 필드만 채우고 `commitBinding`(현재 · 기본값 · 상태 세 목록에 함께)으로 끝냅니다. 세 목록은 같은 인덱스로 짝지어지므로 직접 `push_back` 하지 마세요. |

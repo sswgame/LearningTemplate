@@ -2,6 +2,15 @@
 
 이 문서는 초보 개발자와 기여자를 위해 **스켈레탈 애니메이션(Skeletal Animation)**의 기본 원리, **듀얼 쿼터니언(Dual Quaternion)** 스키닝 수학, 그리고 **Blend Space**를 활용한 파라메트릭 모션 블렌딩의 동작 방식을 상세히 설명합니다.
 
+## 0. 폴더
+
+| 파일 | 무엇 |
+|------|------|
+| `Skeleton` · `DualQuaternion` · `BlendSpace` | 본 계층 · 스키닝 행렬, DQ 스키닝 수학, 1D/2D 파라메트릭 블렌딩(아래 1~3절) |
+| `AnimClip` · `AnimPlayer` | 이름 · 길이를 가진 클립(샘플은 아직 항등 변환 스텁)과 두 칸 크로스페이드 플레이어 |
+| `AnimationGraphAsset` · `AnimationGraphPlayer` | 에디터와 런타임이 함께 쓰는 애니메이션 그래프 JSON 에셋과, 그 노드를 클립에 묶어 재생하는 플레이어 |
+| `SpriteClipAsset` | 스프라이트 클립(`.sprite.json`) — 아틀라스 · 프레임(UV 사각형 + 시간) · 이름 붙은 애니메이션. 캐시(`SpriteClipCache`)는 `IAssetCache` 라 `Resource/` 에 있다 |
+
 ---
 
 ## 1. 3D 스켈레탈 본 계층과 스키닝 행렬 (`Skeleton`, `Bone`)
@@ -76,7 +85,7 @@ Speed:  0.0 m/s           5.0 m/s           10.0 m/s
 
 $$\text{Weight}_i = \frac{1}{\text{dist}(\mathbf{p}, \mathbf{p}_i)^2}, \quad \text{NormalizedWeight}_i = \frac{\text{Weight}_i}{\sum \text{Weight}}$$
 
-표본 개수에 상한은 없다. (예전에는 가중치를 `float[32]` 에 담아 33번째 표본부터 조용히 버렸다.)
+표본 개수에 상한은 없다 — 가중치를 고정 크기 배열에 담지 않는다.
 
 ---
 
