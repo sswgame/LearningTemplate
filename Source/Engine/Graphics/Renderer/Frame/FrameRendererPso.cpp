@@ -21,7 +21,7 @@ namespace sw
          * @brief 뷰 모드를 PSO 디스크립터에 얹습니다. 바꾼 것이 있으면 true 입니다.
          * @details Lit 는 아무것도 하지 않습니다. 그것이 패스가 이미 만들어 둔 상태입니다.
          */
-        bool applyViewModeToDesc( RHIPipelineStateDesc& desc, RenderViewMode viewMode )
+        [[nodiscard]] bool applyViewModeToDesc( RHIPipelineStateDesc& desc, RenderViewMode viewMode )
         {
             if ( viewMode == RenderViewMode::Wireframe )
             {

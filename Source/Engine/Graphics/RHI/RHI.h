@@ -82,7 +82,12 @@ namespace sw
         void shutdown();
 
         /** @brief 앱 재시작 없이 현재 디바이스를 파괴하고 백엔드를 다시 만듭니다. */
-        bool recreateDevice( RHIBackend backend );
+        [[nodiscard]] bool recreateDevice( RHIBackend backend );
+        /**
+         * @brief 두 백엔드 중 하나라도 창 재생성을 요구하면(WGL 픽셀 포맷은 창에 한 번만 붙는다) 표면을 다시 만듭니다.
+         * @return 필요 없었거나 다시 만들었으면 true. 필요했는데 실패했으면 false — 그 창에 새 디바이스를 만들면 안 됩니다.
+         */
+        [[nodiscard]] static bool recreateSurfaceForSwap( IRenderSurface* pSurface, RHIBackend previousBackend, RHIBackend nextBackend );
 
         /** @brief gv_rhiBackend 가 바뀌면 백엔드 교체를 예약합니다. */
         void schedulePendingBackendChange( RHIBackend requested );

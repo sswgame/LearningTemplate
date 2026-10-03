@@ -142,12 +142,6 @@ cd build/Ninja-Debug/Bin
 
 - **배포 팩에 G-버퍼 셰이더의 Unlit 보기 퍼뮤테이션(`SW_VIEWMODE_UNLIT=1`)이 없다** — `gv_viewMode` 는 배포본에도 있는 설정이다. 고치면
   `TestRenderPassGpu.cpp` 의 `SW_TEST_KNOWN_ERROR_LOG` 두 줄을 지운다.
-- **`RHI.cpp:268` 이 `recreateSurface()` 결과를 버린다** — 그래서 `IRenderSurface::recreateSurface` 등 그래픽스 선언 다섯이 `CheckFallibleNodiscard` 의 미룸
-  목록에 있다. 실패를 처리하고 미룸 목록에서 뺀다.
-
-
-
-
 - **2D 정렬 레이어가 없다.** 깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다.
 - **`shaderDemoteToHelperInvocation` 이 없는 Vulkan 디바이스에서 `discard` 가 미정의다**(`deferredlighting` · `sprite2d`). 지금은 경고만 낸다
   (`VulkanRHIDeviceInit.cpp`). 대안은 1.1 타깃(OpKill)으로 되굽는 변형이다.

@@ -64,13 +64,7 @@ _kListSkippedFolder = ("Source/RuntimeAPI/",)
 
 #: 다른 작업이 고치는 중이라 아직 `[[nodiscard]]` 를 달지 못한 선언 — (파일, 이름). 그 파일의 그 이름만 건너뛴다.
 #: 항목이 낡으면(이름이 없거나 이미 달렸으면) 위반으로 알린다 — 지우라는 뜻이다.
-_kSetDeferredDeclaration: set[tuple[str, str]] = {
-    ("Source/Engine/Common/IRenderSurface.h", "recreateSurface"),   # 부르는 쪽 RHI.cpp 가 결과를 버린다
-    ("Source/Engine/Graphics/RHI/RHI.h", "recreateDevice"),
-    ("Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h", "recreateSwapChain"),
-    ("Source/Engine/Graphics/RHI/RHIBackendRegistry.cpp", "tryLoadBackendModule"),
-    ("Source/Engine/Graphics/Renderer/Frame/FrameRendererPso.cpp", "applyViewModeToDesc"),
-}
+_kSetDeferredDeclaration: set[tuple[str, str]] = set()
 
 
 def hasNodiscardAboveInternal(listLine: list[str], lineIndex: int) -> bool:

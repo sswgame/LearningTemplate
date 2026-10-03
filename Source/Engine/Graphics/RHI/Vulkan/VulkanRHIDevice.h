@@ -332,7 +332,7 @@ namespace sw
          * @brief 스왑체인을 통째로 다시 만듭니다 (창 크기가 바뀌었거나 present 가 OUT_OF_DATE 를 냈을 때).
          * @details 이미지 개수가 달라질 수 있어 세마포어와 이미지별 펜스 표까지 함께 갱신합니다.
          */
-        bool recreateSwapChain();
+        [[nodiscard]] bool recreateSwapChain();
 
         /** @brief 파이프라인 캐시를 초기화합니다. */
         bool initializePipelineCache();

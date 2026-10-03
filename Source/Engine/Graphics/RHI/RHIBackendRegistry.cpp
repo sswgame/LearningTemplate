@@ -82,7 +82,7 @@ namespace sw
 #endif
 
 #if defined( SW_RHI_AS_MODULES )
-            static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
+            [[nodiscard]] static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
             {
                 RHIBackendRegistry& reg           = engine::getRHIBackendRegistry();
                 const string        dllName       = FileUtil::formatSharedLibraryName( pModuleBaseName );

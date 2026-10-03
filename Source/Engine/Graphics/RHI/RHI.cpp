@@ -246,6 +246,14 @@ namespace sw
         engine::getRHIBackendRegistry().unloadModules();
     }
 
+    bool RHI::recreateSurfaceForSwap( IRenderSurface* pSurface, const RHIBackend previousBackend, const RHIBackend nextBackend )
+    {
+        const bool bRequiresRecreate = RHIAvailability::query( previousBackend )._bRequiresWindowRecreate != SW_FALSE || RHIAvailability::query( nextBackend )._bRequiresWindowRecreate != SW_FALSE;
+        if ( bRequiresRecreate == false || pSurface == nullptr )
+            return true;
+        return pSurface->recreateSurface();
+    }
+
     bool RHI::recreateDevice( RHIBackend backend )
     {
         if ( RHIAvailability::isAvailable( backend ) == false )
@@ -264,10 +272,12 @@ namespace sw
             _device.reset();
         }
 
-        const RHICapabilities currentCaps  = RHIAvailability::query( backend );
-        const RHICapabilities previousCaps = RHIAvailability::query( previousBackend );
-        if ( ( currentCaps._bRequiresWindowRecreate != SW_FALSE || previousCaps._bRequiresWindowRecreate != SW_FALSE ) && _pSurface != nullptr )
-            _pSurface->recreateSurface();
+        if ( recreateSurfaceForSwap( _pSurface, previousBackend, backend ) == false )
+        {
+            SW_LOG_ERROR( "recreateDevice: render surface could not be recreated for %# -> %#", getBackendTypeName( previousBackend ),
+                          getBackendTypeName( backend ) );
+            return false;
+        }
 
         gv_rhiBackend = backend;
         _device       = createDevice( backend );

@@ -40,8 +40,8 @@ namespace sw
         virtual uint32 getSurfaceHeight() const = 0;
         /**
          * @brief 네이티브 표면을 같은 자리에 다시 만듭니다. 백엔드 교체가 그것을 요구할 때만 불립니다.
-         * @return 다시 만들었으면 true. 지원하지 않는 플랫폼은 false 를 반환하고, 부르는 쪽은 그대로 진행합니다.
+         * @return 다시 만들었으면 true. 실패하거나 지원하지 않으면 false — 그 표면을 요구한 백엔드 교체는 그 자리에서 실패합니다.
          */
-        virtual bool recreateSurface() = 0;
+        [[nodiscard]] virtual bool recreateSurface() = 0;
     };
 } // namespace sw
