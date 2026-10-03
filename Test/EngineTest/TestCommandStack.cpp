@@ -111,12 +111,9 @@ SW_TEST_CASE( CommandStackTest, GlobalSingletonAndMultiStepChain )
 }
 
 /**
- * @brief [CommandStackTest] 복합 트랜잭션 (Compound Transaction) begin/end/cancel 검증
- */
-/**
  * @brief [CommandStackTest] 중첩 트랜잭션은 최외곽에서 하나로 커밋된다.
- * @details 예전에는 1비트 플래그라 안쪽 begin 이 바깥이 쌓아둔 목록을 clear 하고,
- *          안쪽 end 가 플래그를 풀어 바깥 Undo 기록이 통째로 유실됐다.
+ * @details 깊이가 아니라 1비트 플래그로 들면 안쪽 begin 이 바깥이 쌓아둔 목록을 clear 하고,
+ *          안쪽 end 가 플래그를 풀어 바깥 Undo 기록이 통째로 유실된다.
  */
 SW_TEST_CASE( CommandStackTest, NestedTransactionCommitsOnceAtOutermost )
 {
@@ -165,6 +162,9 @@ SW_TEST_CASE( CommandStackTest, NestedTransactionCommitsOnceAtOutermost )
     SW_EXPECT_EQUAL( 7, value );
 };
 
+/**
+ * @brief [CommandStackTest] 복합 트랜잭션 (Compound Transaction) begin/end/cancel 검증
+ */
 SW_TEST_CASE( CommandStackTest, CompoundTransaction )
 {
     CommandStack stack;
@@ -585,10 +585,9 @@ SW_TEST_CASE( CommandStackTest, ReentrancyPushGuardDuringUndoRedo )
 /**
  * @brief [CommandStackTest] undo 실행 중의 pushCoalesce 가 지난 명령을 덮어쓰지 않는다
  * @details `_bIsExecuting` 은 undo/redo 콜백이 자기 자신을 새 명령으로 기록하지 못하게 막는
- *          재진입 방지다. `push` 는 그것을 보는데 `pushCoalesce` 는 보지 않았다. 그래서
- *          undo 콜백 안에서 병합 push 를 하면 `push` 는 거절당하는데 **coalesce 키는 그대로
- *          기록되어**, 그 다음의 정상적인 병합 push 가 같은 키를 보고 `_index - 1` 의 명령 —
- *          즉 **아무 상관 없는 지난 명령** — 의 redo 를 갈아치웠다. 되돌린 뒤 다시 실행하면
+ *          재진입 방지다. `pushCoalesce` 도 그것을 봐야 한다 — 안 보면 undo 콜백 안에서 병합 push 를 할 때
+ *          `push` 는 거절당하는데 **coalesce 키는 그대로 기록되어**, 그 다음의 정상적인 병합 push 가 같은 키를 보고
+ *          `_index - 1` 의 명령 — 즉 **아무 상관 없는 지난 명령** — 의 redo 를 갈아치운다. 되돌린 뒤 다시 실행하면
  *          다른 일이 일어난다.
  */
 SW_TEST_CASE( CommandStackTest, CoalesceDuringUndoDoesNotRewriteHistory )
@@ -642,7 +641,7 @@ SW_TEST_CASE( CommandStackTest, CoalesceDuringUndoDoesNotRewriteHistory )
     SW_EXPECT_EQUAL( 0, secondValue );
     SW_EXPECT_EQUAL( size_t( 2 ), stack.getCommandCount() );
 
-    // 4) 이제 같은 키로 정상적인 병합 push 를 한다. 이것은 **새 명령**이어야 한다 —
+    // 4) 같은 키로 정상적인 병합 push 를 한다. 이것은 **새 명령**이어야 한다 —
     //    지난 "SetFirst" 를 덮어쓰면 안 된다.
     int32 thirdValue{ 0 };
     {
@@ -672,9 +671,9 @@ SW_TEST_CASE( CommandStackTest, CoalesceDuringUndoDoesNotRewriteHistory )
 
 /**
  * @brief [CommandStackTest] undo 콜백 안에서 jumpTo 를 불러도 멈추지 않는다
- * @details `push` · `pushCoalesce` · `undo` · `redo` 는 모두 재진입 깃발(`_bIsExecuting`)을 보는데
- *          `jumpTo` 만 보지 않았다. 콜백 안에서 부르면 안쪽 `undo()` 가 그 깃발 때문에 아무것도
- *          하지 않고 돌아오고, `_index` 가 줄지 않으므로 `while` 이 영원히 돈다 — 틀린 값이 아니라
+ * @details `push` · `pushCoalesce` · `undo` · `redo` 처럼 `jumpTo` 도 재진입 깃발(`_bIsExecuting`)을 봐야 한다. 안 보면
+ *          콜백 안에서 부를 때 안쪽 `undo()` 가 그 깃발 때문에 아무것도 하지 않고 돌아오고, `_index` 가 줄지 않으므로
+ *          `while` 이 영원히 돈다 — 틀린 값이 아니라
  *          **멈춘 에디터**다. 이 케이스가 회귀하면 CTest 타임아웃까지 붙잡힌다.
  */
 SW_TEST_CASE( CommandStackTest, JumpToInsideUndoCallbackDoesNotSpin )

@@ -148,9 +148,8 @@ SW_TEST_CASE( JsonDocumentTest, FloatToIntTypeSafetyAndCoercion )
 /**
  * @brief [JsonDocumentTest] int64 를 넘는 부호 없는 수가 음수로 돌아오지 않는다
  * @details nlohmann 의 `is_number_integer()` 는 부호 있는 정수와 **부호 없는 정수 둘 다에 참**이다.
- *          `asInt` 와 `asFloat` 은 그 검사를 부호 없는 검사보다 **먼저** 해서, 부호 없는 가지가
- *          영영 돌지 않았다 — `asFloat` 에서는 그 탓에 `18446744073709551615` 가 `-1.0` 이 됐다.
- *          `asUint` 만 순서가 맞아 있었고, 셋이 같은 파일 안에서 어긋나 있었다.
+ *          그 검사를 부호 없는 검사보다 **먼저** 하면 부호 없는 가지가 영영 돌지 않는다 — `asFloat` 에서는
+ *          `18446744073709551615` 가 `-1.0` 이 된다. `asInt` · `asFloat` · `asUint` 셋이 같은 순서여야 한다.
  */
 SW_TEST_CASE( JsonDocumentTest, LargeUnsignedNumbersKeepTheirMagnitude )
 {
@@ -174,7 +173,7 @@ SW_TEST_CASE( JsonDocumentTest, LargeUnsignedNumbersKeepTheirMagnitude )
 
 /**
  * @brief [JsonDocumentTest] 구문 오류는 `이름:줄:열: 이유` 로 알린다 — nlohmann 의 예외 머리말 없이
- * @details 예전 로그는 "Parse error in json text" 한 줄뿐이었다. 어느 파일의 어디인지 알 수 없었다.
+ * @details "Parse error in json text" 한 줄로는 어느 파일의 어디인지 알 수 없다.
  */
 SW_TEST_CASE( JsonDocumentTest, ParseErrorNamesSourceLineAndColumn )
 {

@@ -75,12 +75,9 @@ namespace sw
 // 1) Engine_Task — DAG·병렬·체이닝·combinator
 // ------------------------------------------------------------------------------
 /**
- * @brief [TaskTest] 일반 태스크 DAG
- */
-/**
  * @brief [TaskTest] `TaskArgs{ a, b }` 는 값을 그 타입 그대로 담는다
- * @details 초기화 목록 생성자가 `_listValue{ begin, end }` 로 vector 를 채워, 반복자 두 개(`const TaskValue*`)가 TaskValue 로 담겼다 —
- *          `get<int32>( 0 )` 이 포인터를 읽었다(Debug 는 타입 크기 assert).
+ * @details 초기화 목록 생성자가 `_listValue{ begin, end }` 로 vector 를 채우면 반복자 두 개(`const TaskValue*`)가 TaskValue 로 담긴다 —
+ *          `get<int32>( 0 )` 이 포인터를 읽는다(Debug 는 타입 크기 assert).
  */
 SW_TEST_CASE( TaskTest, InitializerListArgsKeepValueTypes )
 {
@@ -91,6 +88,9 @@ SW_TEST_CASE( TaskTest, InitializerListArgsKeepValueTypes )
     SW_EXPECT_STREQ( "seven-long-enough-to-leave-sso-behind", args.get<sw::string>( 1 ).c_str() );
 }
 
+/**
+ * @brief [TaskTest] 일반 태스크 DAG
+ */
 SW_TEST_CASE( TaskTest, GeneralTaskDAG )
 {
     sw::TaskManager& taskMgr = sw::engine::getTaskManager();
@@ -533,10 +533,9 @@ SW_TEST_CASE( TaskTest, TaskFutureFallback )
 /**
  * @brief [TaskTest] 유효하지 않거나 빈 입력에도 콤비네이터가 멈추지 않는다
  * @details `then` 은 상태가 없는 future 에 콜백을 걸어 주지 않고 그냥 돌아간다. 그런 자리를
- *          카운트다운에 넣으면 `whenAllFutures` 의 결과가 **영원히 끝나지 않았다** — 기본 생성된
- *          future 하나가 섞이는 것으로 충분했다. `whenAnyFuture` 는 빈 목록에서 **유효한** future 를
- *          돌려줬는데 아무도 값을 넣어 주지 않아 `wait()` 가 영원히 멈췄다. 형제인 `whenAllFutures`
- *          는 빈 목록을 제대로 끝냈다 — 같은 질문에 둘이 다르게 답하고 있었다.
+ *          카운트다운에 넣으면 `whenAllFutures` 의 결과가 **영원히 끝나지 않는다** — 기본 생성된
+ *          future 하나가 섞이는 것으로 충분하다. `whenAnyFuture` 가 빈 목록에서 **유효한** future 를
+ *          돌려주면 아무도 값을 넣어 주지 않아 `wait()` 가 영원히 멈춘다. 둘은 빈 목록에 같은 답을 해야 한다.
  */
 SW_TEST_CASE( TaskTest, CombinatorsDoNotHangOnInvalidOrEmptyInput )
 {
@@ -797,13 +796,12 @@ SW_TEST_CASE( TaskTest, TaskFutureWhenAnyRaceStress )
 
 /**
  * @brief [TaskTest] 무효한 future 의 `then` 은 **무효한 future** 를 돌려준다.
- * @details 예전에는 유효한(그러나 아무도 값을 넣어 주지 않는) future 를 돌려줬다. 그것을 `wait()`
- *          하면 영원히 멈춘다 — 조건 변수는 절대 깨어나지 않는다. 증상은 "느리다" 가 아니라
- *          **완전한 정지**이고, 스택만 보면 기다리는 것이 정상인지 아닌지 알 수 없다.
+ * @details 유효한(그러나 아무도 값을 넣어 주지 않는) future 를 돌려주면 그것을 `wait()` 할 때 영원히 멈춘다 — 조건 변수는
+ *          절대 깨어나지 않는다. 증상은 "느리다" 가 아니라 **완전한 정지**이고, 스택만 보면 기다리는 것이 정상인지 아닌지
+ *          알 수 없다.
  *
- *          그 함정을 `whenAllFutures` · `whenAnyFuture` 가 각자 우회하고 있었다(유효한 것만 세고,
- *          후보가 없으면 무효를 돌려준다). 우회가 두 벌이면 세 번째 호출부가 같은 함정에 빠진다 —
- *          그래서 뿌리인 `then` 을 고쳤다. 네 조합(T→T · T→void · void→T · void→void)을 모두 본다:
+ *          호출부(`whenAllFutures` · `whenAnyFuture`)가 각자 우회하지 않도록 뿌리인 `then` 이 지킨다.
+ *          네 조합(T→T · T→void · void→T · void→void)을 모두 본다:
  *          `TaskFuture<T>` 와 `TaskFuture<void>` 는 **서로 다른 특수화**라 한쪽만 고쳐질 수 있다.
  *
  * @note 여기서 `wait()` 를 부르지 않는 것은 일부러다 — 회귀가 나면 그 호출이 테스트를 **멈춰
@@ -873,8 +871,8 @@ SW_TEST_CASE( TaskTest, InvalidFutureThenStaysInvalid )
 
 /**
  * @brief [TaskTest] 병렬 그룹은 잠든 워커를 한 번만 깨운다
- * @details 서브태스크마다 깨우면 깨우기(뮤텍스 + 조건 변수 시그널)가 청크 수만큼 반복된다 — 청크 32 개에
- *          디스패치가 125 us 였고 그 안의 일은 몇 us 였다. 그룹 하나는 시그널 하나여야 한다.
+ * @details 서브태스크마다 깨우면 깨우기(뮤텍스 + 조건 변수 시그널)가 청크 수만큼 반복되어 디스패치가 안의 일보다
+ *          훨씬 비싸진다. 그룹 하나는 시그널 하나여야 한다.
  *          부모 태스크가 준비될 때(마지막 자식이 끝날 때) 워커가 한 번 더 깨울 수 있으므로 상한은 2 다.
  */
 SW_TEST_CASE( TaskTest, ParallelGroupWakesWorkersOnce )
@@ -989,7 +987,7 @@ SW_TEST_CASE( TaskTest, HighPriorityTaskJumpsTheQueue )
  * @brief [TaskTest] waitStage 가 돌아온 순간 활성 태스크 수는 0 이다
  * @details 완료 처리가 스테이지에 먼저 알리고 활성 수를 나중에 내리면, `waitStage` 뒤에 부르는 `clear()` 가
  *          0 으로 놓은 수를 뒤늦은 감소가 0xFFFFFFFF 로 감아 버린다 — 이후의 `waitAll` 은 영원히 기다린다.
- *          창이 좁아 한 번엔 안 걸리므로 여러 번 돈다(CTest 아래에서는 매번 걸렸다).
+ *          창이 좁아 한 번엔 안 걸리므로 여러 번 돈다(CTest 아래처럼 붐비는 환경에서 잘 걸린다).
  */
 SW_TEST_CASE( TaskTest, WaitStageLeavesNoActiveTaskBehind )
 {
@@ -1071,7 +1069,7 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
         }
     }
 
-    // 여러 번 재어 가장 작은 값을 본다. 한 번만 재면 CI 에서 "50 회에 할당 2 회" 로 가끔 졌다(2026-09-29, 태스크 코드를 건드리지 않은 커밋).
+    // 여러 번 재어 가장 작은 값을 본다. 한 번만 재면 CI 에서 다른 스레드의 할당이 섞여 가끔 진다.
     // 스테이지 여유분은 스테이지 노드의 틈만 메운다. 같은 틈에 다른 풀 · 다른 스레드가 할당하는 것은 막지 못한다.
     const bool       bWasTracking = pMemory->isTrackingEnabled();
     constexpr uint32 kRound       = 50;

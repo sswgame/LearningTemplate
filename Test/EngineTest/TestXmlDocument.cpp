@@ -66,8 +66,8 @@ SW_TEST_CASE( XmlDocumentTest, CaseSensitiveKeyOptOut )
 
 /**
  * @brief [XmlDocumentTest] 긴 줄 접기는 시작 태그의 속성만 접는다 — 따옴표 든 요소 텍스트는 저장 · 읽기를 지나도 그대로다
- * @details 예전에는 줄 끝까지 따옴표를 세어, 120 자를 넘는 `<item>The "Fire" … "Ice" …</item>` 의 텍스트 속 공백에서 줄을 접었다. 읽을 때는
- *          양 끝만 다듬어 그 줄바꿈과 들여쓰기가 값에 남았다.
+ * @details 줄 끝까지 따옴표를 세면 120 자를 넘는 `<item>The "Fire" … "Ice" …</item>` 의 텍스트 속 공백에서 줄을 접고, 읽을 때는
+ *          양 끝만 다듬으므로 그 줄바꿈과 들여쓰기가 값에 남는다.
  */
 SW_TEST_CASE( XmlDocumentTest, LongTextWithQuotesSurvivesSave )
 {
@@ -104,7 +104,7 @@ SW_TEST_CASE( XmlDocumentTest, LongTextWithQuotesSurvivesSave )
 
 /**
  * @brief [XmlDocumentTest] 구문 오류는 `이름:줄:열: 이유` 로, 없는 파일은 `not found` 로 알린다 — 성공하면 비워진다
- * @details 예전에는 로그에 오프셋만 남고 어느 파일인지가 없었고, 부르는 쪽은 둘을 가를 수 없어 구문 오류도 "File not found" 로 알렸다.
+ * @details 오프셋만 남기면 어느 파일인지 알 수 없고, 부르는 쪽이 둘을 가를 수 없으면 구문 오류도 "File not found" 로 알린다.
  */
 SW_TEST_CASE( XmlDocumentTest, ParseErrorNamesSourceLineAndColumn )
 {
@@ -124,8 +124,8 @@ SW_TEST_CASE( XmlDocumentTest, ParseErrorNamesSourceLineAndColumn )
 
 /**
  * @brief [XmlDocumentTest] 불리언이 아닌 글은 폴백을 쓰되 알린다 — 속성 · 자식 텍스트 모두
- * @details `getAttributeBool` · `getChildBool` 은 `StringUtil::parseBool` 로 읽어, `enabled="ture"` 가 **아무 말 없이** 폴백이 됐다.
- *          정수 · 실수 형제(`getAttributeInt` · `getAttributeFloat`)는 이미 알렸다 — 이제 같은 규칙이다(`StringUtil::tryParseBool`).
+ * @details `getAttributeBool` · `getChildBool` 은 정수 · 실수 형제(`getAttributeInt` · `getAttributeFloat`)와 같은 규칙이다(`StringUtil::tryParseBool`).
+ *          `StringUtil::parseBool` 로 읽으면 `enabled="ture"` 가 **아무 말 없이** 폴백이 된다.
  *          없거나 빈 값은 여전히 조용한 폴백이다.
  */
 SW_TEST_CASE( XmlDocumentTest, UnreadableBooleanFallsBackAndSaysSo )

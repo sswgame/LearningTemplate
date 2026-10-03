@@ -35,9 +35,8 @@ namespace sw
          * @details 이 파일의 테스트들은 우선순위·오버라이드를 보려고 `unmountAll()` 로 판을 비운다.
          *          그런데 그 판은 **프로세스 전체가 쓰는 것**이라, 되돌리지 않으면 뒤에 도는 테스트가
          *          팩을 통째로 잃는다. Dev 에서는 느슨한 `Resource/` 트리가 가려 주지만 배포본은 팩이
-         *          전부다 — 실제로 `SceneTest.EditorTestSceneResolvesMovedPrefabByGuid` 가 쿠킹된 씬
-         *          바이너리를 못 찾아 **Shipping 에서만** 졌고, 단독으로 돌리면 통과해서 오래 원인이
-         *          안 잡혔다. 검색 우선순위도 같은 이유로 되돌린다.
+         *          전부다 — 쿠킹된 씬 바이너리를 찾는 뒤 시험(`SceneTest.EditorTestSceneResolvesMovedPrefabByGuid` 등)이
+         *          **Shipping 에서만** 지고, 단독으로 돌리면 통과해 원인을 짚기 어렵다. 검색 우선순위도 같은 이유로 되돌린다.
          */
         struct GlobalVfsScope
         {
@@ -558,9 +557,8 @@ SW_TEST_CASE( ResourcePackTest, LooseFileOverrideOption )
 /**
  * @brief [ResourcePackTest] 텍스트 읽기와 바이너리 읽기가 **같은 것을 고른다**
  * @details `readTextResource` 와 `readBinaryResource` 는 찾는 순서가 같아야 한다 —
- *          절대경로 → 낱개 파일 → 팩 → 낱개 폴백. 예전에는 그 순서가 **두 벌로 따로** 적혀
- *          있어서, 한쪽만 고치면 같은 키로 텍스트와 바이너리가 서로 다른 파일을 읽게 된다.
- *          지금은 한 자리(`readResourceCommon`)를 같이 쓴다.
+ *          절대경로 → 낱개 파일 → 팩 → 낱개 폴백. 둘은 한 자리(`readResourceCommon`)를 같이 쓴다 — 순서를
+ *          **두 벌로 따로** 적으면 한쪽만 고칠 때 같은 키로 텍스트와 바이너리가 서로 다른 파일을 읽는다.
  * @note **이 테스트가 덮는 것과 아닌 것.** 덮는 것은 "둘 중 하나가 어떤 소스를 아예 안 보게
  *       되는" 변이다(팩을 건너뛰게 만들면 깨진다). **낱개 파일과 팩이 경쟁할 때의 우선순위는
  *       못 덮는다** — 같은 상대 키로 디스크와 팩에 서로 다른 내용을 두려면 리소스 루트 안에
@@ -878,9 +876,9 @@ SW_TEST_CASE( ResourcePackTest, DomainQualifiedQueryInVfs )
 /**
  * @brief [ResourcePackTest] 헤더의 수를 그대로 믿지 않는다 — 인덱스가 파일 밖이면 거부한다
  * @details 헤더의 `_fileCount` · `_indexOffset` · `_stringPoolSize` 는 **파일에서 온 값**이다.
- *          예전에는 그대로 `resize` 했으므로, 잘리거나 손상된 팩 하나가 수 기가짜리 할당
- *          요청이 될 수 있었다. 그리고 헤더는 인덱스 크기를 `_indexSize` 로도 말하는데
- *          리더는 그 값을 **읽지도 않았다** — 쿠커와 리더가 레이아웃을 다르게 봐도 몰랐다.
+ *          그대로 `resize` 하면 잘리거나 손상된 팩 하나가 수 기가짜리 할당 요청이 된다.
+ *          그리고 헤더는 인덱스 크기를 `_indexSize` 로도 말하므로 리더가 그 값을 대조해야
+ *          쿠커와 리더가 레이아웃을 다르게 볼 때 알아챈다.
  */
 SW_TEST_CASE( ResourcePackTest, CorruptHeaderGeometryIsRejected )
 {
@@ -946,9 +944,9 @@ SW_TEST_CASE( ResourcePackTest, CorruptHeaderGeometryIsRejected )
 
 /**
  * @brief [ResourcePackTest] 스트링 풀의 마지막 문자열이 잘려 있어도 풀 밖을 읽지 않는다
- * @details 엔트리의 디버그 경로는 풀 안의 **NUL 종료 문자열**로 저장된다. 예전 코드는 시작
- *          오프셋이 풀 안인지만 보고 `const utf8*` 를 그대로 `string` 에 넘겼다 — 그러면
- *          string 이 NUL 을 찾아 **풀 밖까지** 훑는다. 종결자를 지워 그 경계를 확인한다.
+ * @details 엔트리의 디버그 경로는 풀 안의 **NUL 종료 문자열**로 저장된다. 시작 오프셋이 풀 안인지만
+ *          보고 `const utf8*` 를 그대로 `string` 에 넘기면 string 이 NUL 을 찾아 **풀 밖까지** 훑는다.
+ *          종결자를 지워 그 경계를 확인한다.
  */
 SW_TEST_CASE( ResourcePackTest, StringPoolReadStopsAtPoolEnd )
 {
@@ -978,10 +976,9 @@ SW_TEST_CASE( ResourcePackTest, StringPoolReadStopsAtPoolEnd )
 
 /**
  * @brief [ResourcePackTest] FAT 항목이 적어 둔 크기도 파일로 검증되는지 확인
- * @details `validateHeaderGeometry` 는 **헤더의 구역**(인덱스 · 스트링 풀)이 파일 안에 있는지
- *          재는데, **항목은 재지 않았다.** 그런데 `readFile` 은 항목이 적어 둔 크기를 그대로
- *          `resize` 에 넣는다 — `_uncompressedSize` 는 `uint32` 이므로 손상된 32바이트 항목
- *          하나가 **4GB 할당 요청**이 된다. 같은 파일 안에서 형제가 갈려 있었던 셈이다.
+ * @details `validateHeaderGeometry` 는 **헤더의 구역**(인덱스 · 스트링 풀)뿐 아니라 **항목**도 잰다.
+ *          `readFile` 은 항목이 적어 둔 크기를 그대로 `resize` 에 넣으므로 — `_uncompressedSize` 는
+ *          `uint32` 라 — 재지 않으면 손상된 32바이트 항목 하나가 **4GB 할당 요청**이 된다.
  *
  *          항목을 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다 — 그래서 검사는 여는
  *          시점에 있고, 이 케이스도 `open()` 이 거부하는지를 본다.
@@ -1040,8 +1037,7 @@ SW_TEST_CASE( ResourcePackTest, CorruptEntrySizeIsRejected )
 /**
  * @brief [ResourcePackTest] 리더를 옮기면(이동 생성 · 이동 대입) 연 팩이 통째로 따라가고, 원래 리더는 닫힌다
  * @details 엔진은 리더를 `unique_ptr` 로 들어서 이동 연산을 지나는 코드가 없다. 이동 생성과 이동 대입은 같은 몸통
- *          (`takeFromLocked`)을 쓰는데, 예전엔 여섯 줄을 각자 들고 있어 멤버 하나를 더하면 두 곳을 다 고쳐야 했다.
- *          이동 대입은 받는 쪽이 열어 둔 팩을 먼저 닫아야 한다.
+ *          (`takeFromLocked`)을 쓴다 — 멤버 하나를 더할 때 한 곳만 고친다. 이동 대입은 받는 쪽이 열어 둔 팩을 먼저 닫아야 한다.
  */
 SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
 {
@@ -1086,7 +1082,7 @@ SW_TEST_CASE( ResourcePackTest, MovedReaderKeepsTheOpenPack )
 
 /**
  * @brief [ResourcePackTest] 저장된 CRC 를 0 으로 지워도 검사가 꺼지지 않는다
- * @details 예전에는 저장된 CRC 가 0 이면 검사를 건너뛰어, 그 칸을 지우고 페이로드를 바꾸면 변조가 통과했다(굽는 쪽은 모든 항목의 CRC 를
+ * @details 저장된 CRC 가 0 이라고 검사를 건너뛰면 그 칸을 지우고 페이로드를 바꾸는 변조가 통과한다(굽는 쪽은 모든 항목의 CRC 를
  *          적는다 — 빈 데이터의 CRC 가 0).
  */
 SW_TEST_CASE( ResourcePackTest, ZeroedCrcDoesNotDisableTheCheck )
@@ -1115,7 +1111,7 @@ SW_TEST_CASE( ResourcePackTest, ZeroedCrcDoesNotDisableTheCheck )
 
 /**
  * @brief [ResourcePackTest] 압축 크기 0 인 항목은 0 바이트 N 개가 아니라 실패다
- * @details 예전에는 원본 크기가 N 이어도 압축 크기가 0 이면 "풀 것 없음" 으로 성공해, CRC 가 없는 팩에서 0 으로 찬 데이터를 돌려줬다.
+ * @details 원본 크기가 N 인데 압축 크기 0 을 "풀 것 없음" 으로 성공시키면 CRC 가 없는 팩에서 0 으로 찬 데이터를 돌려준다.
  */
 SW_TEST_CASE( ResourcePackTest, EmptyCompressedPayloadIsNotSuccess )
 {
@@ -1144,7 +1140,7 @@ SW_TEST_CASE( ResourcePackTest, EmptyCompressedPayloadIsNotSuccess )
 
 /**
  * @brief [ResourcePackTest] 암호화 표시가 있는 팩은 열지 않는다
- * @details 풀 방법이 없는데 예전에는 플래그 · 방식을 보지 않고 평문으로 풀었다.
+ * @details 풀 방법이 없으므로 플래그 · 방식을 보고 거절한다 — 보지 않으면 평문으로 푼다.
  */
 SW_TEST_CASE( ResourcePackTest, EncryptedPackIsRefused )
 {

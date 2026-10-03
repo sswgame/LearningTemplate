@@ -1961,14 +1961,6 @@ SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
 }
 
 /**
- * @brief 디바이스가 죽으면 **어디서 죽었든** 세대가 올라가야 한다 — 그래야 GPU 핸들이 스스로 무효가 된다.
- * @details 세대 카운터가 있는 이유는 "GPU 핸들을 든 CPU 객체(Mesh · MaterialInstance)가 디바이스보다 오래 산다" 는 것
- *          하나다. 세대를 올리는 일이 `RHI` 매니저의 경로(shutdown · recreateDevice)에만 있으면 `RHI::createDevice`
- *          로 직접 만든 디바이스(테스트가 그렇게 쓴다)는 죽어도 세대가 그대로라, 그 디바이스에 올라간 메시가 계속
- *          "상주" 라고 답한다. 그러면 새 디바이스에 옛 핸들을 그대로 돌려주고, 해제는 죽은 디바이스에 destroy 를
- *          부른다(UAF).
- */
-/**
  * @brief 새 디바이스가 서면 등록부가 **스스로** 리소스를 되살린다 — 아무도 각 리소스를 손으로 다시 올리지 않는다.
  * @details 이 테스트가 지키는 것은 "어느 캐시를 다시 올려야 하는지 기억하지 않아도 된다" 이다. 되살릴 목록을
  *          바깥이 들면 목록에서 빠진 것은 교체 뒤 조용히 비어 있다. 아래 initAllFor 한 줄을 지우면 이 테스트가 빨개진다.
@@ -2004,6 +1996,14 @@ SW_TEST_CASE( RenderPassGpuTest, RegistryRestoresResourcesOnNewDevice )
     SW_EXPECT_TRUE_MSG( cube->isRhiValid() == false, "내 디바이스의 해제 통보를 받고도 상주라고 답한다" );
 }
 
+/**
+ * @brief 디바이스가 죽으면 **어디서 죽었든** 세대가 올라가야 한다 — 그래야 GPU 핸들이 스스로 무효가 된다.
+ * @details 세대 카운터가 있는 이유는 "GPU 핸들을 든 CPU 객체(Mesh · MaterialInstance)가 디바이스보다 오래 산다" 는 것
+ *          하나다. 세대를 올리는 일이 `RHI` 매니저의 경로(shutdown · recreateDevice)에만 있으면 `RHI::createDevice`
+ *          로 직접 만든 디바이스(테스트가 그렇게 쓴다)는 죽어도 세대가 그대로라, 그 디바이스에 올라간 메시가 계속
+ *          "상주" 라고 답한다. 그러면 새 디바이스에 옛 핸들을 그대로 돌려주고, 해제는 죽은 디바이스에 destroy 를
+ *          부른다(UAF).
+ */
 SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
 {
     test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );

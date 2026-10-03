@@ -93,8 +93,8 @@ SW_TEST_CASE( AssetCacheRegistryTest, RegisterIgnoresNullAndDuplicates )
 
 /**
  * @brief [AssetCacheRegistryTest] 같은 종류 이름의 둘째 캐시는 거절하고 알린다 — 이름으로 찾는 쪽은 늘 먼저 것을 받는다
- * @details 예전에는 둘 다 올라 `findAssetCache( "Material" )` 이 등록 순서의 첫 것을 조용히 돌려줬다. 에셋 핫 리로드는 그 이름으로 캐시를 찾으므로
- *          나중 것은 다시 읽히지도 비워지지도 않는 캐시가 됐다. 공통 등록 목록(`RegistrationList`)이 이름 중복을 거절한다.
+ * @details 공통 등록 목록(`RegistrationList`)이 이름 중복을 거절한다. 둘 다 오르면 `findAssetCache( "Material" )` 이 등록 순서의 첫 것을 조용히
+ *          돌려주고, 에셋 핫 리로드는 그 이름으로 캐시를 찾으므로 나중 것은 다시 읽히지도 비워지지도 않는 캐시가 된다.
  */
 SW_TEST_CASE( AssetCacheRegistryTest, SecondCacheWithTheSameKindNameIsRejected )
 {

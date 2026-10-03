@@ -65,8 +65,8 @@ namespace
 
 /**
  * @brief [CookContractTest] 쿠킹 표의 백엔드 별칭은 명령줄 플래그 · 셰이더 폴더 역산에서 모두 그 백엔드를 고른다
- * @details 별칭이 세 벌이었다 — `ArgumentList.xxx`(명령줄), `ShaderBaker::getFormatForSubfolder`, `CookAssets.py`. 명령줄은 `-directx11` ·
- *          `-directx12` · `-spirv` 를 몰랐다. 지금은 셋이 `Config/Engine/CookContract.json` 의 같은 줄을 읽는다.
+ * @details 별칭을 읽는 셋 — `ArgumentList.xxx`(명령줄), `ShaderBaker::getFormatForSubfolder`, `CookAssets.py` — 이 `Config/Engine/CookContract.json` 의
+ *          같은 줄을 읽는다. 따로 들면 한쪽(예: 명령줄이 `-directx11` · `-directx12` · `-spirv` 를 모르는 식)이 어긋난다.
  */
 SW_TEST_CASE( CookContractTest, EveryBackendAliasSelectsItsBackend )
 {

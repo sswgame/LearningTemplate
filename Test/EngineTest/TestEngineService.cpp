@@ -16,8 +16,8 @@ using namespace sw;
 // 1) EngineServiceTest — 서비스 표가 게임 모듈에 무엇을 보여 주는지
 //
 //    `EngineServiceList.xxx` 의 `visibility` 열은 **게임 모듈이 손댈 수 있는 것과 없는 것의
-//    경계**인데, 그때까지 아무 테스트도 그 경계를 보고 있지 않았다. 열을 잘못 바꿔도 빌드는
-//    통과하고 아무도 모른다. 그래서 검사도 같은 목록에서 생성한다 — 목록이 정본이다.
+//    경계**다. 열을 잘못 바꿔도 빌드는 통과하고 아무도 모른다. 그래서 검사도 같은 목록에서 생성한다 —
+//    목록이 정본이다.
 // ------------------------------------------------------------------------------
 
 /**
@@ -79,9 +79,8 @@ SW_TEST_CASE( EngineServiceTest, TestHarnessBindsEveryRequiredService )
 
 /**
  * @brief [EngineServiceTest] `areEngineServicesBound()` 는 bind/unbind 를 따라오는 플래그 하나다
- * @details 예전엔 부를 때마다 필수 서비스 22 칸을 훑었다 — `Component::getTypeInfo()` 가 캐스트마다 그것을
- *          불러 캐스트 한 번의 절반이 이 훑기였다. 이제 bind/unbind 때 한 번 센 플래그를 읽는다. 훑기와 같은
- *          답이어야 한다: 빈 표 → false, 필수 하나가 빈 표 → false, 완전한 표 → true. 전역 표를 흔드는
+ * @details bind/unbind 때 한 번 센 플래그를 읽는다 — `Component::getTypeInfo()` 가 캐스트마다 부르므로 필수 서비스 칸을
+ *          매번 훑으면 안 된다. 훑기와 같은 답이어야 한다: 빈 표 → false, 필수 하나가 빈 표 → false, 완전한 표 → true. 전역 표를 흔드는
  *          테스트라 **원래 표를 그대로 되돌린다** — 뒤따르는 테스트가 전부 이 답으로 게이팅된다. 바인딩은
  *          하네스의 창구(`test::rebindEngineServices`)로 한다 — 이 파일이 직접 부르면 호스트로 잡힌다.
  */
@@ -179,8 +178,7 @@ SW_TEST_CASE( EngineServiceTest, OwnedStorageFillsExactlyTheOwnedRows )
 /**
  * @brief [EngineServiceTest] 호스트가 먼저 만든 것을 `createAll` 이 덮지 않는다
  * @details `EngineLoop` 은 명령줄을 파싱하려고 `CommandLineManager` 와 `GlobalVariableManager` 를
- *          저장소보다 **먼저** 만든다. 덮어썼다면 파싱 결과가 통째로 사라진다 — 이 저장소를 처음
- *          붙였을 때 실제로 그렇게 될 뻔했다.
+ *          저장소보다 **먼저** 만든다. 덮어쓰면 파싱 결과가 통째로 사라진다.
  */
 SW_TEST_CASE( EngineServiceTest, CreateAllKeepsWhatTheHostMadeFirst )
 {

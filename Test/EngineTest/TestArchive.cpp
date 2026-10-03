@@ -1100,7 +1100,7 @@ SW_TEST_CASE( ArchiveTest, BoundsChecksSurviveSizeOverflow )
 
     // **위치가 0 이 아니어야 넘친다.** `offset + count` 는 `count` 가 `2^64 - offset` 이상일 때
     // 되감기므로, 위치를 먼저 옮겨 두고 그 자리에서 되감기는 크기를 준다. 위치 0 에서는
-    // 어떤 `uint64` 로도 넘길 수 없어서 예전 검사도 우연히 버틴다 — 그래서 이 설정이 핵심이다.
+    // 어떤 `uint64` 로도 넘길 수 없어서 덧셈 검사도 우연히 버틴다 — 그래서 이 설정이 핵심이다.
     constexpr uint64 kWrapsAtOffsetFour = 0xFFFFFFFFFFFFFFFCull; // 4 를 더하면 0 으로 되감긴다
 
     {
@@ -1141,7 +1141,7 @@ SW_TEST_CASE( ArchiveTest, BoundsChecksSurviveSizeOverflow )
 
 /**
  * @brief [ArchiveTest] 밀집 비트마스크가 말하는 프로퍼티 수를 그대로 믿지 않는다
- * @details 모드 바이트 다음의 `totalProps` 는 **스트림에서 온 값**인데 검사 없이 세 군데에 쓰였다.
+ * @details 모드 바이트 다음의 `totalProps` 는 **스트림에서 온 값**이다. 검사 없이 쓰면 세 군데가 무너진다.
  *          ① `(totalProps + 7) / 8` 로 비트마스크를 잡는다 — 큰 값이면 거대한 할당이고,
  *             uint64 끝자락이면 덧셈이 넘쳐 **0 바이트** 마스크가 나온다.
  *          ② 그 0 바이트 마스크를 `testBit` 이 그대로 읽는다 — 버퍼 밖이다.
@@ -1508,7 +1508,7 @@ SW_TEST_CASE( ArchiveTest, MalformedStreamOversizedAllocationFaultInjection )
 
 SW_TEST_CASE( ArchiveTest, CorruptedStringPoolAndOutofBoundsSymbolFaultInjection )
 {
-    // 1. StringPool::loadFromArchive with oversized dynCount (exceeding 1,000,000 limit)
+    // 1. StringPool::loadFromArchive with an oversized dynamic string count (above kMaxDynamicStrings)
     {
         sw::Archive writeArch;
         writeArch.writeVarUint( 2000000ULL ); // 2 million dynamic strings
@@ -1517,7 +1517,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedStringPoolAndOutofBoundsSymbolFaultInjection
         SW_EXPECT_FALSE( pool.loadFromArchive( readArch ) );
     }
 
-    // 2. StringPool::loadFromBinaryBuffer with oversized dynCount
+    // 2. StringPool::loadFromBinaryBuffer with an oversized dynamic string count
     {
         sw::vector<uint8> rawBytes;
         sw::VarIntUtil::encodeVarUint64( 5000000ULL, rawBytes );
@@ -1673,9 +1673,8 @@ SW_TEST_CASE( ArchiveTest, SaveGameReflectionChecksumAndLoad )
  * @brief [ArchiveTest] 컴팩트 경로가 **컨테이너 프로퍼티**를 왕복시키는가
  * @details `serializeCompact`/`deserializeCompact` 는 프로퍼티 이름 대신 **순번**으로 값을 싣는
  *          조밀한 포맷이다. 그 경로의 "프로퍼티 하나를 인스턴스에 쓰는" 부분에는 비트필드·컨테이너·
- *          그 외 값의 세 갈래가 있는데, 지금까지 이 경로를 태우는 테스트의 타입에 **컨테이너 프로퍼티가
- *          하나도 없었다** — 즉 컨테이너 갈래는 한 번도 실행되지 않았다. 중복을 합치다 변이로 확인해
- *          드러난 구멍이라, 여기서 닫는다.
+ *          그 외 값의 세 갈래가 있다. 이 경로를 태우는 다른 테스트의 타입에는 **컨테이너 프로퍼티가
+ *          없어** 컨테이너 갈래는 이 케이스가 아니면 실행되지 않는다.
  * @note 이 케이스가 없으면 컴팩트 경로에서 컨테이너를 잘못 읽어도 **모든 테스트가 초록**이다.
  */
 SW_TEST_CASE( ArchiveTest, CompactRoundTripsContainerProperties )
@@ -1733,11 +1732,8 @@ SW_TEST_CASE( ArchiveTest, CompactRoundTripsContainerProperties )
  * @brief [ArchiveTest] 컴팩트 페이로드 크기도 **남은 바이트를 넘을 수 없다**
  * @details 두 모드(밀집 비트마스크 · 희소)가 프로퍼티마다 `payloadSize` 를 varint 로 읽어 그만큼을
  *          인스턴스에 쓰고 건너뛴다. 그 수는 **파일에서 온 값**이다 — 검사가 없으면 손상된 파일
- *          하나로 버퍼 밖을 읽는다(`applyPropertyPayload` 가 그 크기를 그대로 믿는다).
- *
- *          2026-09-19 에 그 검사가 두 모드에 **각자** 적혀 있던 것을 한 곳으로 모으면서 재 보니,
- *          **어느 쪽도 테스트가 없었다** — 검사를 통째로 지워도 전 스위트가 초록이었다. 저장소에서
- *          가장 위험한 파싱 코드가 그 상태였다는 뜻이다.
+ *          하나로 버퍼 밖을 읽는다(`applyPropertyPayload` 가 그 크기를 그대로 믿는다). 검사는 두 모드가 한 곳을
+ *          같이 쓰고, 이 케이스가 없으면 그 검사를 통째로 지워도 전 스위트가 초록이다.
  *
  * @note ASan 구성에서 이 케이스가 특히 값을 한다 — 검사가 없으면 거기서는 조용한 오독이 아니라
  *       **즉시 죽는다.**
@@ -1795,11 +1791,9 @@ SW_TEST_CASE( ArchiveTest, CompactPayloadSizeIsBounded )
 
 /**
  * @brief [ArchiveTest] 32비트로 못 담는 varint 는 잘리는 대신 거절된다
- * @details 32비트 디코더 둘은 오래도록 `static_cast` 한 줄이었다 — 범위 밖 값을 **조용히 잘라**
- *          냈고, 그래서 망가진 아카이브가 거부되는 대신 엉뚱하게 읽혔다. 가장 아픈 자리가
- *          `Archive::readPooledString` 이다: 거기 있는 `poolId >= getCount()` 검사는 이미 잘린
- *          값을 보므로 `0x1'0000'0000 + n` 이 **유효한 n 인 척 통과한다.**
- *          같은 파일의 주석은 처음부터 "범위를 거른다" 고 적혀 있었다 — 코드만 아니었다.
+ * @details 32비트 디코더가 `static_cast` 한 줄이면 범위 밖 값을 **조용히 잘라** 내, 망가진 아카이브가 거부되는 대신
+ *          엉뚱하게 읽힌다. 가장 아픈 자리가 `Archive::readPooledString` 이다: 거기 있는 `poolId >= getCount()` 검사는
+ *          잘린 값을 보므로 `0x1'0000'0000 + n` 이 **유효한 n 인 척 통과한다.**
  */
 SW_TEST_CASE( ArchiveTest, VarIntNarrowingRejectsOutOfRange )
 {
@@ -1877,8 +1871,8 @@ SW_TEST_CASE( ArchiveTest, VarIntNarrowingRejectsOutOfRange )
 
 /**
  * @brief [ArchiveTest] 10번째 바이트에 남는 비트가 켜져 있으면 거절한다
- * @details LEB128 의 10번째 바이트에는 1비트만 남는다. 예전에는 그 위 비트들을 **조용히 버려서**
- *          서로 다른 바이트열이 같은 값으로 읽혔다(장황한 인코딩 · 64비트 초과 값). 정상 인코더는
+ * @details LEB128 의 10번째 바이트에는 1비트만 남는다. 그 위 비트들을 **조용히 버리면**
+ *          서로 다른 바이트열이 같은 값으로 읽힌다(장황한 인코딩 · 64비트 초과 값). 정상 인코더는
  *          이 자리에 0 이나 1 만 내므로, 막아도 우리가 쓴 스트림은 하나도 다치지 않는다.
  */
 SW_TEST_CASE( ArchiveTest, VarIntRejectsNonCanonicalTenthByte )

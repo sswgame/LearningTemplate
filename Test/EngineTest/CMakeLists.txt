@@ -6,10 +6,10 @@
 # ------------------------------------------------------------------------------
 # 1) EngineTest 타겟 정의 및 런타임 의존성 복사
 #
-# `RUN_SERIAL` 은 **일부러 없다**(2026-10-01 에 걷었다). 다른 테스트와 함께 돌면 안 될 이유를 찾았지만 없었다 — `Bin` 에 쓰는 파일이
-# 없고(실행 전후로 `Bin` 을 통째로 견줬다. 임시 파일은 케이스 폴더 `%TEMP%/sw_<pid>/…`), 로그는 이름이 실행마다 다르고, Vulkan 파이프라인
-# 캐시는 원자적으로 쓴다. 직렬로 묶여 있는 동안 `ctest -L "nogpu|lint" -j 4` 의 끝이 이 둘(EngineTest_NoGPU · SmokeTest)이 혼자 도는
-# 22 초였다 — 풀자 44 초 → 24 초(다섯 번 다 통과). GPU 를 잡는 `_HostOnly` 는 그대로 직렬이다(`sw_addTestExecutable`).
+# `RUN_SERIAL` 은 **일부러 없다**. 다른 테스트와 함께 돌아도 되는 근거: `Bin` 에 쓰는 파일이 없고(임시 파일은 케이스 폴더
+# `%TEMP%/sw_<pid>/…`), 로그는 이름이 실행마다 다르고, Vulkan 파이프라인 캐시는 원자적으로 쓴다. 직렬로 묶으면
+# `ctest -L "nogpu|lint" -j 4` 의 끝을 이 둘(EngineTest_NoGPU · SmokeTest)이 혼자 돌아 전체가 거의 두 배로 늘어난다.
+# GPU 를 잡는 `_HostOnly` 는 직렬이다(`sw_addTestExecutable`).
 # ------------------------------------------------------------------------------
 sw_addTestExecutable(EngineTest
 	HOST_SPLIT
@@ -41,8 +41,8 @@ sw_emitRuntimeCopies(EngineTest)
 # RHI MODULE은 런타임 로드 — Engine과 순환 없이 테스트 빌드 시 플러그인 재빌드
 #
 # 백엔드 이름을 여기 적지 않는다. `sw_addRhiBackendModule` 이 타겟을 만들면서 등록한 것을 묻는다
-# (`cmake/Engine/TargetRules.cmake` 의 RHI 백엔드 레지스트리) — 예전에는 이 넷이 세 곳에 글자
-# 그대로 있었고, 백엔드가 늘면 조용히 빠졌다. Shipping 은 백엔드를 Engine 에 정적 링크해 모듈 타겟이 없으므로 목록이 빈다.
+# (`cmake/Engine/TargetRules.cmake` 의 RHI 백엔드 레지스트리) — 이름을 글자 그대로 적으면 백엔드가
+# 늘 때 조용히 빠진다. Shipping 은 백엔드를 Engine 에 정적 링크해 모듈 타겟이 없으므로 목록이 빈다.
 sw_getDynamicModules(listRhiBackend KINDS rhi)
 foreach(rhiMod IN LISTS listRhiBackend)
 	add_dependencies(EngineTest ${rhiMod})
@@ -57,9 +57,8 @@ endforeach()
 #
 #   ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
 #
-# 예전에는 스위트 이름을 이 파일에 **두 번** 적었다(빼는 필터 · 고르는 필터). 그보다 전에는 케이스 이름을 하나씩
-# 적었는데, 2026-09-08 에 들어온 픽셀 리드백 테스트 여섯이 그 규칙을 비켜가 그대로 CI 로 들어갔다 — 리눅스는 X11
+# 스위트 이름을 이 파일에 적지 않는다 — 이름 목록은 새 GPU 시험이 비켜 가 그대로 CI 로 들어간다. 리눅스는 X11
 # 디스플레이가 없어 조용히 스킵되지만, Windows 는 DX11/DX12 가 Basic Render Driver(WARP)로 **초기화에 성공해서**
-# 픽셀 검증이 실제로 돌고 진다. 그리고 `HostOnly` 가 없던 때에는 그 집합을 따로 고를 방법이 없어 아무도 돌지 않았고,
-# `RenderPassGpuTest` 두 건이 Shipping 에서만 지는 채로 숨어 있었다(docs/06_Backlog.md 2026-09-17).
+# 픽셀 검증이 실제로 돌고 진다. CI 는 `hostgpu` 를 돌리지 못하고 Shipping 에서만 지는 GPU 시험도 있으니,
+# 일을 마치기 전에 GPU 가 있는 기계에서 위 명령(Shipping)으로 `hostgpu` 를 돌릴 것.
 # ------------------------------------------------------------------------------

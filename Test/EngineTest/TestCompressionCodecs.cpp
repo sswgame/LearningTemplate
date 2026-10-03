@@ -96,8 +96,7 @@ namespace
 
 /**
  * @brief [CompressionCodecTest] LZ4 · Zstd · Zlib 왕복이 원본과 **바이트까지** 같은가.
- * @details Zlib 은 여기 없었다 — **리소스 팩이 실제로 쓰는 코덱인데** 직접 왕복을 보는 케이스가
- *          하나도 없었고, `TestResourcePack` 이 팩을 굽는 김에 간접적으로만 지나가고 있었다.
+ * @details Zlib 은 **리소스 팩이 실제로 쓰는 코덱**이라 팩을 굽는 김에 간접적으로만 지나가게 두지 않고 직접 왕복을 본다.
  */
 SW_TEST_CASE( CompressionCodecTest, ExternalCodecRoundTrip )
 {
@@ -129,8 +128,7 @@ SW_TEST_CASE( CompressionCodecTest, ExternalCodecRoundTrip )
  *          버리면서 성공이라고 말하는 셈이다. LZ4 도 int32 한계가 같은 자리에 있다.
  * @note zlib 의 한계는 **플랫폼마다 다르다** — `uLong`(= `unsigned long`)이 Windows 에서는 32비트,
  *       리눅스(LP64)에서는 64비트다. 그래서 8GiB 는 한쪽에서는 "담기지 않는 크기" 이고 다른 쪽에서는
- *       평범한 크기다. 한쪽 답을 적어 두면 다른 쪽에서 반드시 틀린다 — 실제로 이 케이스가 리눅스에서
- *       빨갰다(코드는 처음부터 `(uLong)-1` 로 옳게 재고 있었고, 틀린 것은 테스트였다). 그래서 여기서는
+ *       평범한 크기다. 한쪽 답을 적어 두면 다른 쪽에서 반드시 틀린다(코드는 `(uLong)-1` 로 잰다). 그래서 여기서는
  *       플랫폼을 가르지 않고 **어느 쪽에서도 참인 계약**을 단언한다.
  */
 SW_TEST_CASE( CompressionCodecTest, CodecsRejectSizesTheirLibraryCannotHold )
@@ -283,9 +281,8 @@ SW_TEST_CASE( CompressionCodecTest, CodecComparisonMeasurement )
 
 /**
  * @brief [CompressionCodecTest] `EngineCompressionCodecUtil::registerAll` 이 올린 코덱을 스트림이 전부 집어 쓴다.
- * @details 예전에는 등록 목록이 `EngineLoop::initialize` 안에 손으로 적혀 있었고 **Zlib 이 빠져
- *          있었다** — 클래스도 열거값도 있는데 아무도 등록하지 않아, 스트림에 Zlib 을 요청하면
- *          경고 한 줄과 함께 무압축으로 떨어졌다. 목록을 한 자리로 옮겼으므로 여기서 그 자리를 본다.
+ * @details 등록 목록은 이 한 자리다. 손으로 적은 목록에서 하나가 빠지면(클래스도 열거값도 있는데 아무도 등록하지 않으면)
+ *          스트림에 그 코덱을 요청할 때 경고 한 줄과 함께 무압축으로 떨어진다.
  */
 SW_TEST_CASE( CompressionCodecTest, RegisteredExternalCodecsAreReachableFromStream )
 {

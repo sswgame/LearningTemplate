@@ -121,8 +121,8 @@ SW_TEST_CASE( ResourceTest, MakeSavePathLowercasesRelativeFolders )
 /**
  * @brief [ResourceTest] 저장 경로가 이미 있는 파일을 가리키지 않는다
  * @details `makeSavePath` 는 폴더와 파일 이름을 잇기만 한다 — 그 자리에 이미 파일이 있어도 같은
- *          경로를 돌려준다. 에디터의 임포트가 그 경로로 그냥 복사해서, 같은 이름의 파일을 끌어다
- *          놓으면 폴더에 있던 것이 **아무 말 없이 사라졌다**(임포트에는 되돌리기가 없다).
+ *          경로를 돌려준다. 에디터의 임포트가 그 경로로 그냥 복사하면, 같은 이름의 파일을 끌어다
+ *          놓을 때 폴더에 있던 것이 **아무 말 없이 사라진다**(임포트에는 되돌리기가 없다).
  *          `makeUniqueSavePath` 는 확장자 앞에 `_2` · `_3` … 을 붙여 빈 자리를 찾는다.
  */
 SW_TEST_CASE( ResourceTest, MakeUniqueSavePathDoesNotPointAtAnExistingFile )
@@ -191,7 +191,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
 }
 
 /**
- * @brief [ResourceTest] formatVersion 없는 옛 Material 루트는 더 이상 자동 변환하지 않음
+ * @brief [ResourceTest] formatVersion 없는 옛 Material 루트는 자동 변환하지 않고 거부
  */
 SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXml )
 {
@@ -215,8 +215,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXml )
 /**
  * @brief [ResourceTest] AssetStreamingQueue 비동기 요청 등록, 취소, 프레임 쓰로틀링 콜백 검증
  * @details 콜백은 요청마다 **정확히 한 번**, `update()` 를 부른 스레드에서 온다 — 워커가 먼저 끝냈으면 그 결과로, 취소가 먼저였으면
- *          false 로. 예전 시험은 요청 직후 "아직 진행 중" 을 단언했는데, 없는 파일은 워커가 그 사이에 끝내 버린다(2026-10-01 CI Linux
- *          Shipping 에서 그렇게 졌다). 그러면서 정작 콜백이 왔는지 · 몇 번 왔는지 · 쓰로틀링이 듣는지는 하나도 보지 않았다.
+ *          false 로. 요청 직후 "아직 진행 중" 을 단언하면 안 된다 — 없는 파일은 워커가 그 사이에 끝내 버린다(느린 CI 에서 진다).
  */
 SW_TEST_CASE( ResourceTest, AssetStreamingQueueLifecycleAndThrottling )
 {
@@ -335,7 +334,7 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
     // 2. 임시 game 및 DLC 디렉터리/에셋 생성하여 우선순위 오버라이드 검증
     //    **소스 트리의 Resource/ 에 쓴다** — 우선순위 토큰은 리소스 루트 아래 폴더로만 풀리므로 임시 폴더로는 못 잰다.
     //    그래서 정리를 끝에 손으로 두지 않고 만들기 전에 걸어 둔다(일찍 빠지거나 죽어도 작업 트리에 남지 않게). 지우는 것은
-    //    이 케이스가 만든 폴더뿐이다 — 예전 정리는 `Resource/dlc` 를 통째로 지웠다(진짜 DLC 가 있었다면 같이 사라졌다).
+    //    이 케이스가 만든 폴더뿐이다 — `Resource/dlc` 는 이 케이스가 만들었을 때만 지운다(진짜 DLC 를 같이 지우지 않게).
     const sw::string rootDir    = sw::ResourceUtil::getRootFolderPath();
     const sw::string gameDir    = sw::FileUtil::joinPath( rootDir, "game/empty/test_asset" );
     const sw::string gameFile   = sw::FileUtil::joinPath( gameDir, "priority_test.xml" );
@@ -417,23 +416,21 @@ SW_TEST_CASE( ResourceTest, DdsLoaderLoadFromResource )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::DdsImageData image;
-    // **도메인까지 적은 engine 리소스**를 쓴다. 예전엔 도메인 없는 "textures/splash.dds" 였는데,
-    // 그건 editor 도메인 에셋이라 Shipping 팩에 아예 없다(쿠킹 대상은 engine/common/game 뿐).
-    // 느슨한 파일이 살아 있는 Dev 에서만 우연히 찾히던 경로다.
+    // **도메인까지 적은 engine 리소스**를 쓴다. 도메인 없는 "textures/splash.dds" 는 editor 도메인 에셋이라
+    // Shipping 팩에 아예 없다(쿠킹 대상은 engine/common/game 뿐) — 느슨한 파일이 있는 Dev 에서만 찾힌다.
     SW_ASSERT_TRUE( sw::DdsLoader::loadFromResource( "engine/textures/perlin.dds", image ) );
     SW_EXPECT_TRUE( image.isValid() );
     SW_EXPECT_EQUAL( 64u, image._width );
     SW_EXPECT_EQUAL( 64u, image._height );
     // 이 파일의 dwFourCC 는 0x71 — 네 글자 코드가 아니라 **D3DFMT_A16B16G16R16F(113) 정수**다.
-    // 예전에는 스위치가 못 알아보고 경고 한 줄 남긴 뒤 `_dxgiFormat == 0` 인 채로 성공을
-    // 돌려줬고, 이 테스트는 포맷을 보지 않아 통과하고 있었다. 이제 여기서 값을 못 박는다.
+    // 스위치가 이 값을 못 알아보면 `_dxgiFormat == 0` 인 채로 남으므로 여기서 값을 못 박는다.
     SW_EXPECT_EQUAL( 10u, image._dxgiFormat ); // DXGI_FORMAT_R16G16B16A16_FLOAT
 }
 
 /**
  * @brief [ResourceTest] 알아보지 못한 픽셀 포맷의 DDS 는 실패로 끝난다
  * @details 로더가 포맷을 정하지 못했는데 true 를 돌려주면, 호출부는 `_dxgiFormat == 0` 인
- *          이미지를 "로드 성공" 으로 받는다. `isValid()` 도 예전엔 포맷을 보지 않아 통과했다.
+ *          이미지를 "로드 성공" 으로 받는다. `isValid()` 도 포맷을 보지 않으면 통과한다.
  *          스플래시 창처럼 32bpp 를 전제하고 폭×높이×4 바이트를 훑는 소비자에게는 이것이
  *          버퍼 밖 접근으로 이어진다.
  */
@@ -529,9 +526,9 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseThreadSafeLookupAndMapping )
 /**
  * @brief [ResourceTest] 넣을 때 정규화했으면 찾을 때도 정규화한다
  * @details 등록하는 쪽(`ensureMeta` · `registerMapping` · `registerExisting`)은 전부
- *          `normalizePath` 를 거친 키를 넣는다 — 소문자에 `/` 구분자다. 그런데 `tryGetGuid`
- *          만 받은 문자열을 그대로 찾고 있었다. 씬 XML 의 `prefab` 속성처럼 사람이 적은 값에
- *          대문자나 역슬래시가 섞이면, 등록돼 있는데도 못 찾고 GUID 가 조용히 비었다.
+ *          `normalizePath` 를 거친 키를 넣는다 — 소문자에 `/` 구분자다. `tryGetGuid` 가 받은
+ *          문자열을 그대로 찾으면, 씬 XML 의 `prefab` 속성처럼 사람이 적은 값에 대문자나
+ *          역슬래시가 섞일 때 등록돼 있는데도 못 찾고 GUID 가 조용히 빈다.
  */
 SW_TEST_CASE( ResourceTest, AssetDatabaseLookupNormalizesPath )
 {
@@ -648,14 +645,11 @@ SW_TEST_CASE( ResourceTest, AbsolutePathPreservation )
 }
 
 /**
- * @brief [ResourceTest] ensureMeta 는 있는 .meta 를 다시 쓰지 않고, 배포 빌드는 GUID 를 지어내지도 않는다.
- * @details Shipping 은 .meta 를 팩에 넣지 않는다(PackConfig `*.meta` 제외). 예전엔 로드가 실패하면 GUID 를 새로 만들어
- *          **소스 트리 Resource/ 에 써서**, Shipping 실기동 한 번에 defaultmaterial.material->meta 의 GUID 가 바뀌었다.
- *          실제 에셋으로 "파일이 바뀌지 않았다" 를 mtime 으로 보고, 배포 빌드에서는 null GUID 가 나오는 것까지 본다.
+ * @brief [ResourceTest] 에셋 삭제가 실패하면(잠긴 파일) `.meta` 는 그대로 남는다
+ * @details 실패해도 `.meta` 를 지우면 남은 에셋이 새 GUID 를 받고 참조가 끊긴다.
  */
 SW_TEST_CASE( ResourceTest, DeletingAnAssetKeepsItsMetaUntilTheAssetIsGone )
 {
-    // 에셋 삭제가 실패하면(잠긴 파일) .meta 는 그대로다. 예전에는 실패해도 지워, 남은 에셋이 새 GUID 를 받고 참조가 끊겼다.
     const sw::string dir       = test::makeTempDirectory( "delete_asset" );
     const sw::string assetPath = sw::FileUtil::joinPath( dir, "crate.png" );
     const sw::string metaPath  = assetPath + ".meta";
@@ -683,6 +677,12 @@ SW_TEST_CASE( ResourceTest, DeletingAnAssetKeepsItsMetaUntilTheAssetIsGone )
     SW_EXPECT_FALSE( sw::FileUtil::fileExists( metaPath ) );
 }
 
+/**
+ * @brief [ResourceTest] ensureMeta 는 있는 .meta 를 다시 쓰지 않고, 배포 빌드는 GUID 를 지어내지도 않는다.
+ * @details Shipping 은 .meta 를 팩에 넣지 않는다(PackConfig `*.meta` 제외). 로드가 실패했다고 GUID 를 새로 지어 **소스 트리 Resource/ 에
+ *          쓰면** Shipping 실기동 한 번에 defaultmaterial.material.meta 의 GUID 가 바뀐다.
+ *          실제 에셋으로 "파일이 바뀌지 않았다" 를 mtime 으로 보고, 배포 빌드에서는 null GUID 가 나오는 것까지 본다.
+ */
 SW_TEST_CASE( ResourceTest, EnsureMetaNeverRewritesExistingMetaFile )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
@@ -705,9 +705,9 @@ SW_TEST_CASE( ResourceTest, EnsureMetaNeverRewritesExistingMetaFile )
 
 /**
  * @brief [ResourceTest] 리소스 루트 밖의 절대 경로에는 GUID 도 `.meta` 도 만들지 않는다
- * @details 예전에는 임시 폴더의 프리팹처럼 프로젝트 밖 파일에도 소문자로 정규화한 경로 옆에 `.meta` 를 썼다 — 테스트 실행마다
- *          `%TEMP%` 에 사이드카가 쌓였고(`sw_..._prefabtest_..._x.prefab.xml.meta`), 대소문자를 가리는 파일 시스템에서는 원래 파일 옆도
- *          아니었다. 루트 밖 에셋은 씬이 GUID 로 다시 찾을 수 없으므로 식별자가 없는 것이 맞다.
+ * @details 임시 폴더의 프리팹처럼 프로젝트 밖 파일에 `.meta` 를 쓰면 테스트 실행마다 `%TEMP%` 에 사이드카가 쌓이고, 소문자로 정규화한
+ *          경로 옆에 쓰면 대소문자를 가리는 파일 시스템에서는 원래 파일 옆도 아니다. 루트 밖 에셋은 씬이 GUID 로 다시 찾을 수 없으므로
+ *          식별자가 없는 것이 맞다.
  */
 SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityOutsideTheResourceRoot )
 {
@@ -729,8 +729,8 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityOutsideTheResourceRoot )
 
 /**
  * @brief [ResourceTest] 리소스 루트 **안의** 절대 경로는 그 전역 id 로 등록된다 — 같은 에셋이 키 둘을 갖지 않는다
- * @details 예전에는 루트 안인지만 확인하고, 키는 받은 절대 경로를 소문자로 내린 것이었다. 같은 에셋이 id 키와 절대 경로 키를 따로 가졌고,
- *          GUID → 경로가 **절대 경로**를 돌려줘 그 GUID 로 에셋을 다시 찾는 쪽(씬의 프리팹 · 머티리얼 참조)이 기계마다 다른 경로를 받았다.
+ * @details 키가 받은 절대 경로를 소문자로 내린 것이면 같은 에셋이 id 키와 절대 경로 키를 따로 갖고, GUID → 경로가 **절대 경로**를
+ *          돌려줘 그 GUID 로 에셋을 다시 찾는 쪽(씬의 프리팹 · 머티리얼 참조)이 기계마다 다른 경로를 받는다.
  *          유니티 `AssetDatabase` 도 키는 프로젝트 상대 경로(`Assets/...`)다.
  */
 SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsId )
@@ -786,9 +786,9 @@ SW_TEST_CASE( ResourceTest, AssetRegistryTextRegistersMappings )
 
 /**
  * @brief [ResourceTest] 배포본 레지스트리는 에셋을 `.meta` 가 놓인 자리로 적는다 — 옮긴 에셋도 새 자리로
- * @details 예전에는 파이썬 쿠커가 `.meta` 안의 `sourcePath=` 칸으로 경로를 정했다. Dev 는 `.meta` 의 자리를 보므로(`scanMetaFiles`), 탐색기 · git 으로
- *          옮긴 프리팹은 Dev 에서 멀쩡했고 **배포본에서만** GUID 가 옛 경로를 가리켰다 — 씬은 GUID 를 경로보다 먼저 보므로 그 프리팹이 사라졌다.
- *          이제 레지스트리는 엔진 쿠킹 단계가 Dev 와 같은 규칙으로 쓴다. 도메인마다 `<cookedDir>/<domain>/assetregistry.txt` 다.
+ * @details 레지스트리가 `.meta` 안의 `sourcePath=` 칸으로 경로를 정하면, Dev 는 `.meta` 의 자리를 보므로(`scanMetaFiles`) 탐색기 · git 으로
+ *          옮긴 프리팹이 Dev 에서는 멀쩡하고 **배포본에서만** GUID 가 옛 경로를 가리킨다 — 씬은 GUID 를 경로보다 먼저 보므로 그 프리팹이 사라진다.
+ *          레지스트리는 엔진 쿠킹 단계가 Dev 와 같은 규칙으로 쓴다. 도메인마다 `<cookedDir>/<domain>/assetregistry.txt` 다.
  */
 SW_TEST_CASE( ResourceTest, ShippedAssetRegistryNamesTheAssetWhereItsMetaLives )
 {
@@ -796,7 +796,7 @@ SW_TEST_CASE( ResourceTest, ShippedAssetRegistryNamesTheAssetWhereItsMetaLives )
     const sw::string cooked = test::makeTempDirectory( "registry_cooked" );
     const sw::Uuid   moved  = sw::Uuid::generate();
     const sw::Uuid   stayed = sw::Uuid::generate();
-    // 프리팹을 하위 폴더로 옮겼다 — .meta 는 따라왔지만 안의 sourcePath 는 옛 경로 그대로다.
+    // 프리팹을 하위 폴더로 옮긴다 — .meta 는 따라오지만 안의 sourcePath 는 옛 경로 그대로다.
     const sw::string movedMeta = sw::FileUtil::joinPath( root, "game/demo/prefabs/moved/Crate.prefab.xml.meta" );
     sw::FileUtil::ensureParentDirectoryExists( movedMeta );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( movedMeta, sw::string( "guid=" ) + moved.toString() + "\nsourcePath=game/demo/prefabs/crate.prefab.xml\n" ) );
@@ -831,8 +831,8 @@ SW_TEST_CASE( ResourceTest, ShippedAssetRegistryNamesTheAssetWhereItsMetaLives )
 
 /**
  * @brief [ResourceTest] 쿠킹본 이름은 규칙 하나다 — 씬 · 프리팹 로더와 쿠커가 같은 이름을 만든다
- * @details 예전에는 넷이 각자 확장자 길이를 세어(-4 · -5) 바꿨고, 씬 쿠커는 `.scene.xml` 을 **포함**하는 경로면 구웠으며 로더는 `.xml` 이면 무엇이든
- *          `.bin` 으로 바꿨다. 이제 `AssetCookPath` 하나다.
+ * @details 로더와 쿠커가 각자 확장자 길이를 세어 바꾸면 이름이 어긋난다 — `.scene.xml` 을 **포함**만 하는 경로(`.scene.xml.bak`)나
+ *          `.xml` 이면 무엇이든 `.bin` 으로 바꾸는 식으로. 규칙은 `AssetCookPath` 하나다.
  */
 SW_TEST_CASE( ResourceTest, CookedPathsComeFromOneRule )
 {
@@ -853,8 +853,8 @@ SW_TEST_CASE( ResourceTest, CookedPathsComeFromOneRule )
 
 /**
  * @brief [ResourceTest] 저작 소스 이름도 같은 표에서 나온다 — 굽지 않는 이름은 쿠커가 굽는 이름이 된다
- * @details 씬 저장은 대화상자에 적은 이름(`level`) · Shipping 이 읽은 쿠킹본(`.scene.bin`)을 그대로 썼다 — 에디터에서는 열리는데 쿠커가 굽지 않아
- *          배포본에 없었다. 저장 폴백 `Assets/Scenes/DefaultScene.scene` 도 굽지 않는 이름이었다.
+ * @details 씬 저장이 대화상자에 적은 이름(`level`) · Shipping 이 읽은 쿠킹본(`.scene.bin`)을 그대로 쓰면 에디터에서는 열리는데 쿠커가
+ *          굽지 않아 배포본에 없다.
  */
 SW_TEST_CASE( ResourceTest, SourcePathsComeFromTheSameRule )
 {
@@ -876,8 +876,8 @@ SW_TEST_CASE( ResourceTest, SourcePathsComeFromTheSameRule )
 
 /**
  * @brief [ResourceTest] 시작 시점의 AssetDatabase 는 **로드된 적 없는** 에셋의 GUID 도 안다.
- * @details `readme.md` 는 어떤 테스트도 로드하지 않는다. 예전엔 ensureMeta 를 거친 에셋만 표에 있어서 이름을 바꾼
- *          프리팹의 GUID 복구가 우연히만 동작했다. 기대값은 .meta 파일의 guid 줄에서 직접 읽는다.
+ * @details `readme.md` 는 어떤 테스트도 로드하지 않는다. ensureMeta 를 거친 에셋만 표에 있으면 이름을 바꾼
+ *          프리팹의 GUID 복구가 우연히만 동작한다. 기대값은 .meta 파일의 guid 줄에서 직접 읽는다.
  */
 SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
 {
@@ -908,7 +908,7 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
 
 /**
  * @brief [ResourceTest] 담기지 않거나 읽을 수 없는 formatVersion 은 "지원하는 것보다 새 형식" 으로 거절된다
- * @details 예전에는 파싱 결과를 버리고 32 비트로 잘라 담아, "4294967296" · "-1" 이 0(현재 버전)으로 읽혀 그 거절을 지나쳤다.
+ * @details 파싱 결과를 버리고 32 비트로 잘라 담으면 "4294967296" · "-1" 이 0(현재 버전)으로 읽혀 그 거절을 지나친다.
  */
 SW_TEST_CASE( ResourceTest, OutOfRangeFormatVersionIsRejected )
 {
@@ -930,7 +930,7 @@ SW_TEST_CASE( ResourceTest, OutOfRangeFormatVersionIsRejected )
 
 /**
  * @brief [ResourceTest] `..` 로 리소스 루트 밖을 가리키는 id 는 풀지도 읽지도 않는다
- * @details 예전에는 `..` 를 거르지 않아 도메인 루트에 붙은 id 가 루트 밖 파일을 읽었다.
+ * @details `..` 를 거르지 않으면 도메인 루트에 붙은 id 가 루트 밖 파일을 읽는다.
  */
 SW_TEST_CASE( ResourceTest, ParentDirectoryIdsAreRefused )
 {
@@ -947,7 +947,7 @@ SW_TEST_CASE( ResourceTest, ParentDirectoryIdsAreRefused )
 
 /**
  * @brief [ResourceTest] 팩 전용 모드에서는 리소스 루트 안을 가리키는 절대 경로로 낱개 파일을 읽을 수 없다
- * @details 루트 밖(임시 파일 · 세이브)은 그대로 읽는다. 예전에는 절대 경로로 적기만 하면 팩 전용 모드를 지나 낱개 에셋을 읽었다.
+ * @details 루트 밖(임시 파일 · 세이브)은 그대로 읽는다. 절대 경로를 따로 막지 않으면 팩 전용 모드를 지나 낱개 에셋을 읽는다.
  */
 SW_TEST_CASE( ResourceTest, PackOnlyModeRefusesAbsolutePathsIntoTheResourceRoot )
 {
@@ -977,9 +977,9 @@ SW_TEST_CASE( ResourceTest, PackOnlyModeRefusesAbsolutePathsIntoTheResourceRoot 
 
 /**
  * @brief [ResourceTest] 편집기가 쥔 경로는 한 함수로 리소스 id 가 된다 — 절대 · 프로젝트 기준(`Resource/…`) · 이미 id 모두
- * @details 예전에는 편집기가 자리마다 따로 바꿨다. 끌어 놓은 텍스처(리소스 id)를 프로젝트 루트 기준으로 다시 `makeRelativePath` 해 스프라이트가 흰
- *          사각형이 됐고, 퀵 런처는 `Resource/…` 를 들고 있어 씬 열기 · 에셋 포커스가 다른 형태를 받았다. 루트 밖 · `..` 는 빈 글이다 — 쓰기 경로도
- *          `..` 로 리소스 트리 밖에 쓰지 않는다(예전에는 데이터에 적힌 경로 하나로 아무 곳에나 쓸 수 있었다).
+ * @details 편집기가 자리마다 따로 바꾸면 형태가 어긋난다 — 끌어 놓은 텍스처(리소스 id)를 프로젝트 루트 기준으로 다시 `makeRelativePath` 하면
+ *          스프라이트가 흰 사각형이 되고, `Resource/…` 를 그대로 넘기면 씬 열기 · 에셋 포커스가 다른 형태를 받는다. 루트 밖 · `..` 는 빈 글이다 —
+ *          쓰기 경로도 `..` 로 리소스 트리 밖에 쓰지 않는다(데이터에 적힌 경로 하나로 아무 곳에나 쓰지 못하게).
  */
 SW_TEST_CASE( ResourceTest, EveryPathTheEditorHoldsBecomesOneResourceId )
 {
@@ -1005,9 +1005,9 @@ SW_TEST_CASE( ResourceTest, EveryPathTheEditorHoldsBecomesOneResourceId )
 
 /**
  * @brief [ResourceTest] 쿠킹이 올리는 소스 트리 콘텐츠(`ContentSource::SourceTree`)는 팩을 마운트하지 않고 느슨한 소스 파일을 읽는다 — 배포 구성도 같다
- * @details 배포 구성의 씬 쿠킹(`App --cook-scenes`)이 실행과 같이 팩을 마운트하고 느슨한 파일을 막았다. 팩은 쿠킹의 산출물이라 첫 빌드에서는
- *          아무것도 없어 `enginedata.xml` · 옮긴 프리팹(GUID 표) · `quadrants.sprite.json` 을 읽지 못했고, 다음 빌드부터는 지난 빌드의 팩을 입력으로
- *          읽었다. 배포 구성에서는 실행 파일 옆에 팩이 있으므로 이 시험이 그것을 마운트하지 않는지까지 본다.
+ * @details 배포 구성의 씬 쿠킹(`App --cook-scenes`)이 실행처럼 팩을 마운트하고 느슨한 파일을 막으면, 팩은 쿠킹의 산출물이라 첫 빌드에서는
+ *          아무것도 없어 `enginedata.xml` · 옮긴 프리팹(GUID 표) · `quadrants.sprite.json` 을 읽지 못하고, 다음 빌드부터는 지난 빌드의 팩을 입력으로
+ *          읽는다. 배포 구성에서는 실행 파일 옆에 팩이 있으므로 이 시험이 그것을 마운트하지 않는지까지 본다.
  */
 SW_TEST_CASE( ResourceTest, SourceTreeContentMountsNoPackAndReadsLooseFiles )
 {

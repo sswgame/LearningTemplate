@@ -10,8 +10,6 @@
 #include "TestFramework/TestFramework.h"
 
 // AssetStreamingQueue — 비동기 요청 큐의 완료 통지 · 인플라이트 멀티캐스트 · 퓨처와 동시성 스트레스.
-// 예전엔 이 주제가 세 스위트(Engine_Resource · Engine_Streaming · AssetStreamingTest)로 갈려
-// 두 파일에 흩어져 있었다.
 
 SW_TEST_CASE( AssetStreamingTest, AssetStreamingQueueAsyncOperations )
 {
@@ -27,8 +25,8 @@ SW_TEST_CASE( AssetStreamingTest, AssetStreamingQueueAsyncOperations )
 
     // 이 경로는 **일부러 없는 것**이다(도메인 접두사가 `Resource/` 라 해석되지 않는다). 여기서
     // 보는 것은 "요청이 등록됐는가" 뿐이므로 성패를 묻지 않는다 — 아직 돌고 있거나(`isStreaming`)
-    // 이미 결과가 적혔거나(`getCompletedCount`) 둘 중 하나다. 예전에는 뒷항이 `isLoaded` 였는데,
-    // 그때의 `isLoaded` 는 실패한 경로에도 true 를 돌려줘서 **틀린 이유로 통과**하고 있었다.
+    // 이미 결과가 적혔거나(`getCompletedCount`) 둘 중 하나다. 뒷항을 `isLoaded` 로 물으면 안 된다 — 실패한 경로는
+    // 로드된 것이 아니다.
     SW_EXPECT_TRUE( queue.isStreaming( "Resource/common/shaders/forward_lit.hlsl" ) || queue.getCompletedCount() > 0 );
     queue.shutdown();
 }
@@ -71,7 +69,7 @@ SW_TEST_CASE( AssetStreamingTest, FailedRequestIsNotLoadedAndRetries )
     SW_EXPECT_EQUAL( size_t( 1 ), queue.getCompletedCount() );
     SW_EXPECT_FALSE( queue.isLoaded( missingPath ) );
 
-    // 이제 파일이 생겼다. 다시 요청하면 기록된 실패를 넘어 **다시 읽어야** 한다.
+    // 파일을 만든 뒤 다시 요청하면 기록된 실패를 넘어 **다시 읽어야** 한다.
     const sw::string payload = "RETRY_PAYLOAD";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( missingPath,
                                              reinterpret_cast<const uint8*>( payload.data() ),
@@ -268,10 +266,9 @@ SW_TEST_CASE( AssetStreamingTest, MultiThreadedConcurrentStreamingStress )
 /**
  * @brief [AssetStreamingTest] 데이터 요청이 존재 확인 요청에 편승해 빈 버퍼를 받지 않는지 검증
  * @details `requestAsset`(있는지만 본다)과 `requestAssetData`(바이트를 읽는다)가 진행 중 목록
- *          하나를 공유했다. 그래서 존재 확인이 아직 돌고 있을 때 데이터 요청이 들어오면 그
- *          태스크에 **편승**했는데, 그 태스크는 파일을 읽지 않는다 — 데이터 콜백이
- *          `bSuccess = true` 와 **빈 버퍼**를 받았다. 성공이라고 말하면서 아무것도 주지 않는,
- *          가장 나쁜 모양의 틀린 답이다.
+ *          하나를 공유하면, 존재 확인이 아직 돌고 있을 때 들어온 데이터 요청이 그 태스크에 **편승**하는데
+ *          그 태스크는 파일을 읽지 않는다 — 데이터 콜백이 `bSuccess = true` 와 **빈 버퍼**를 받는다.
+ *          성공이라고 말하면서 아무것도 주지 않는, 가장 나쁜 모양의 틀린 답이다.
  *
  *          창이 좁은 레이스라 라운드를 여러 번 돌린다. 편승이 일어나지 않은 라운드는 어차피
  *          올바른 길을 타므로 통과한다 — 이 케이스는 **편승했을 때만** 진다.
@@ -282,8 +279,8 @@ SW_TEST_CASE( AssetStreamingTest, DataRequestDoesNotPiggybackOnAnExistenceCheck 
     queue.initialize();
 
     // **진짜로 읽히는 경로여야 한다.** 없는 경로를 쓰면 데이터 콜백이 `bSuccess = false` 로
-    // 오고, "성공인데 바이트가 없다" 는 이 케이스의 단언을 지나가 버린다(처음에 그렇게 썼다가
-    // 변이가 통과했다). 프리셋마다 리소스가 어디에 있는지 다르므로 — Shipping 은 팩만 읽는다 —
+    // 오고, "성공인데 바이트가 없다" 는 이 케이스의 단언을 지나가 버린다(변이가 통과한다).
+    // 프리셋마다 리소스가 어디에 있는지 다르므로 — Shipping 은 팩만 읽는다 —
     // **직접 만든 파일을 절대 경로로** 준다. `ResourceUtil` 은 절대 경로를 디스크에서 그대로
     // 읽으므로 어느 프리셋에서나 같은 답이 나온다.
     const sw::string assetPath = test::makeTempPath( "sw_stream_piggyback.bin" );

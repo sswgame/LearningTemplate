@@ -206,7 +206,7 @@ SW_TEST_CASE( InputEdgeCaseTest, GamepadTriggerEdgeDetection )
 /**
  * @brief [InputEdgeCaseTest] 트리거 값은 `setAxis` 에서 데드존을 거친다
  * @details 모든 입력 경로(XInput · 리눅스 조이스틱 · 원시 이벤트 · 에디터 시뮬레이터)가 트리거를 `setAxis( 4 · 5 )` 로 넣는다.
- *          예전에는 XInput 만 `_leftTrigger` 에 곧바로 대입해서 Windows 에서는 `setTriggerDeadzone` 이 아무 효과가 없었다.
+ *          한 경로라도 트리거 칸에 곧바로 대입하면 그 경로(예: Windows 의 XInput)에서는 `setTriggerDeadzone` 이 아무 효과가 없다.
  *          XInput 폴링은 장치 없이 돌릴 수 없으므로, 그 길이 기대는 `setAxis` 의 계약을 여기서 붙잡아 둔다.
  */
 SW_TEST_CASE( InputEdgeCaseTest, GamepadTriggerDeadzoneAppliesInSetAxis )

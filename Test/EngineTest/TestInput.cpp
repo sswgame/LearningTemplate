@@ -125,8 +125,8 @@ SW_TEST_CASE( InputManagerTest, NativeEventKeyPressReleaseEdges )
     SW_EXPECT_TRUE( input.initialize() );
 
     // 앱 루프와 같은 순서로 돈다: 메시지 펌프(processNativeEvent) → beginFrame → 게임플레이 조회 → endFrame.
-    // 예전 테스트는 processNativeEvent 직후 바로 물었다. 그 순서에서는 맞았지만 실제 루프에서는 beginFrame 이 엣지를 지우고
-    // 이벤트를 재생하면서 "새로 눌림" 이 사라졌고, 테스트는 그것을 볼 수 없었다.
+    // processNativeEvent 직후 바로 물으면 실제 루프에서 beginFrame 이 엣지를 지우고 이벤트를 재생하며 "새로 눌림" 이 사라지는
+    // 경우를 볼 수 없다.
 
     // 프레임 1: Space KeyDown 이벤트 수신
     sw::NativeWindowEvent downEvt{};
@@ -212,8 +212,8 @@ SW_TEST_CASE( InputManagerTest, NativeEventMouseMovementAndDelta )
     input.processNativeEvent( releaseEvt );
     input.beginFrame( 0.016f );
 
-    // 델타는 이번 프레임에 들어온 이동의 합이다. 예전에는 메시지를 받을 때 위치를 바로 바꿔 두고 beginFrame 이 같은 이동을
-    // 한 번 더 재생해, 실제 루프에서는 움직이는 동안 델타가 늘 0 이었다.
+    // 델타는 이번 프레임에 들어온 이동의 합이다. 메시지를 받을 때 위치를 바로 바꿔 두고 beginFrame 이 같은 이동을
+    // 한 번 더 재생하면 실제 루프에서는 움직이는 동안 델타가 늘 0 이다.
     int32          dx = 0, dy = 0;
     const sw::int2 vecMouseDelta3 = input.getMouseDelta();
     dx                            = vecMouseDelta3._x;
@@ -750,9 +750,8 @@ SW_TEST_CASE( InputManagerTest, TimedGamepadVibration )
 
 /**
  * @brief [InputManagerTest] 입력 뮤트(Mute) 및 스냅샷 기록 검증
- * @details 예전엔 `InputManager::injectSnapshot` 으로 히스토리에 스냅샷을 직접 밀어 넣었다. 그 함수는
- *          부르는 곳이 이 테스트뿐인 백도어였고, 정작 런타임이 쓰는 `recordSnapshot` 경로는 아무도
- *          검사하지 않았다. 이제 실제 경로로 — 버튼을 눌러 프레임을 돌리고 기록시켜 — 확인한다.
+ * @details 런타임이 쓰는 `recordSnapshot` 경로로 — 버튼을 눌러 프레임을 돌리고 기록시켜 — 확인한다. 히스토리에
+ *          스냅샷을 직접 밀어 넣는 백도어로는 실제 경로를 검사하지 못한다.
  */
 SW_TEST_CASE( InputManagerTest, InputMutingAndSnapshotRecording )
 {
@@ -1049,8 +1048,8 @@ SW_TEST_CASE( MouseDeviceTest, ExtremeDeltaAndNonLinearAcceleration )
 
 /**
  * @brief [InputManagerTest] 마우스를 멈추면 스무딩 델타가 **0 으로 돌아온다**
- * @details `MouseDevice::poll()` 이 하는 일이 이것 하나인데 **테스트가 없었다** — `poll` 의 스무딩
- *          갱신을 통째로 지워도 이 스위트가 전부 초록이었다(2026-09-19 변이로 확인).
+ * @details `MouseDevice::poll()` 이 하는 일이 이것 하나다 — 이 케이스가 없으면 `poll` 의 스무딩 갱신을 통째로
+ *          지워도 이 스위트가 전부 초록이다.
  *
  *          없으면 어떻게 되는가: 스무딩 델타는 마지막 입력 이벤트가 넣은 값에서 **멈추지 않는다.**
  *          마우스를 놓아도 `MouseDevice::getSmoothDelta()` 가 계속 같은 값을 보고하고, 그 값으로 시점을 도는
@@ -1148,8 +1147,8 @@ SW_TEST_CASE( MouseDeviceTest, SmoothingFollowsElapsedTimeNotFrameCount )
 /**
  * @brief [InputManagerTest] 포커스를 잃기 직전에 들어온 키 누름이 리셋 뒤에 되살아나지 않는다.
  * @details 한 번의 메시지 펌프 안에서 자동 반복 KeyDown(W) 이 먼저 오고 그 뒤에 WM_KILLFOCUS 가 온다(알트탭). 뗌 메시지는 다른
- *          창으로 간다. 예전에는 포커스 잃음이 메시지를 받는 즉시 장치를 리셋하고, 그보다 먼저 큐에 들어간 KeyDown 이 다음
- *          beginFrame 에 재생되어 W 가 눌린 채 남았다 — 캐릭터가 배경에서, 돌아온 뒤에도 계속 달렸다.
+ *          창으로 간다. 포커스 잃음이 메시지를 받는 즉시 장치를 리셋하면 그보다 먼저 큐에 들어간 KeyDown 이 다음
+ *          beginFrame 에 재생되어 W 가 눌린 채 남는다 — 캐릭터가 배경에서, 돌아온 뒤에도 계속 달린다.
  */
 SW_TEST_CASE( InputManagerTest, FocusLossAfterQueuedKeyDownLeavesNoKeyStuck )
 {
@@ -1184,8 +1183,8 @@ SW_TEST_CASE( InputManagerTest, FocusLossAfterQueuedKeyDownLeavesNoKeyStuck )
 
 /**
  * @brief [RawInputEventTest] 글자 페이로드는 UTF-8 글자 경계에서 자른다.
- * @details 칸은 31 바이트다. 한글은 글자당 3 바이트라 11 글자(33 바이트)면 10 글자(30 바이트)까지만 담아야 한다. 예전에는 31 바이트에서
- *          그냥 잘라 마지막 글자의 앞 바이트 하나가 남았고, 받는 쪽(IME 조합 표시)이 깨진 UTF-8 을 받았다.
+ * @details 칸은 31 바이트다. 한글은 글자당 3 바이트라 11 글자(33 바이트)면 10 글자(30 바이트)까지만 담아야 한다. 31 바이트에서
+ *          그냥 자르면 마지막 글자의 앞 바이트 하나가 남아 받는 쪽(IME 조합 표시)이 깨진 UTF-8 을 받는다.
  */
 SW_TEST_CASE( RawInputEventTest, TextPayloadTruncatesAtUtf8Boundary )
 {

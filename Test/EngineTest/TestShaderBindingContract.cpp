@@ -743,11 +743,6 @@ SW_TEST_CASE( ShaderBindingContractTest, EveryBoundNameIsInBakedReflection )
 }
 
 /**
- * @brief 계약 표 자체의 일관성 — 이름이 비지 않고 겹치지 않는다. 자리 충돌은 백엔드별로 뜻이 달라
- *        (DX11 은 g_SwSlot0Sampler=s0, DX12 는 g_SwSampler0=s0 처럼 서로 다른 셰이더에 산다) 여기서
- *        따지지 않고 AllBakedShadersMatchContract 가 실제 바이너리로 잡는다.
- */
-/**
  * @brief [ShaderBindingContractTest] 씬 구조버퍼 슬롯(t4 · t9..t13)은 모두 계약 표에 있다
  * @details validate 는 표에 없는 이름을 건너뛴다. 표에서 빠진 슬롯은 셰이더가 엉뚱한 레지스터에 선언해도 아무 검사도 지지 않는다.
  */
@@ -776,6 +771,11 @@ SW_TEST_CASE( ShaderBindingContractTest, EverySceneStructuredBufferSlotIsReserve
     }
 }
 
+/**
+ * @brief [ShaderBindingContractTest] 계약 표 자체의 일관성 — 이름이 비지 않고 겹치지 않는다. 자리 충돌은 백엔드별로 뜻이 달라
+ *        (DX11 은 g_SwSlot0Sampler=s0, DX12 는 g_SwSampler0=s0 처럼 서로 다른 셰이더에 산다) 여기서
+ *        따지지 않고 AllBakedShadersMatchContract 가 실제 바이너리로 잡는다.
+ */
 SW_TEST_CASE( ShaderBindingContractTest, ReservedTableIsConsistent )
 {
     const sw::vector<sw::ShaderReservedBinding>& list = sw::ShaderBindingContract::getReservedBindings();

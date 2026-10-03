@@ -171,8 +171,8 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
 
 /**
  * @brief [ResourceDataSchemaTest] 컴포넌트 원소의 모르는 속성은 버려지고 이름으로 알린다 — 위 시험이 기대는 경고 경로
- * @details XML 은 루트 원소의 모르는 속성만 orphan 으로 올렸고, 안쪽 원소(컴포넌트 · 구조체 칸)의 모르는 속성은 말없이 버렸다. 그래서 이름을 바꾸고
- *          씬 데이터를 빠뜨려도 로드는 조용했다.
+ * @details XML 이 루트 원소의 모르는 속성만 orphan 으로 올리고 안쪽 원소(컴포넌트 · 구조체 칸)의 모르는 속성을 말없이 버리면, 이름을 바꾸고
+ *          씬 데이터를 빠뜨려도 로드가 조용하다.
  */
 SW_TEST_CASE( ResourceDataSchemaTest, UnknownComponentAttributeIsNamed )
 {

@@ -14,13 +14,9 @@
 
 // ActionMap — 바인딩 · 레이어 · 조합 키 · 벡터 축 합성. 장치가 아니라 **매핑 규칙**을 본다.
 /**
- * @brief [ActionMapTest] default.input.xml 리소스 로드 및 레이어/액션/코드 바인딩 무결성 검증
- */
-/**
  * @brief [ActionMapTest] 같은 레이어에서 이미 쓰는 키를 찾아낸다.
- * @details 이 함수는 오래 아무도 부르지 않아 죽은 것처럼 보였다. 실제로는 에디터의 Rebind 가
- *          **불러야 했는데 안 부르던** 것이고(그래서 이미 쓰는 키로 바꿔도 아무 말이 없었다),
- *          지금은 InputMapEditorPanel::rebindSelectedAction 이 부른다. 계약을 여기서 고정한다.
+ * @details 에디터의 Rebind(`InputMapEditorPanel::rebindSelectedAction`)가 이것을 불러 이미 쓰는 키로 바꾸는 것을 알린다.
+ *          계약을 여기서 고정한다.
  */
 
 SW_TEST_CASE( ActionMapTest, DetectsBindingConflictInSameLayer )
@@ -47,6 +43,9 @@ SW_TEST_CASE( ActionMapTest, DetectsBindingConflictInSameLayer )
     SW_EXPECT_FALSE( actionMap.hasBindingConflict( sw::InputSlot::fromKey( sw::Key::Space ), "Menu", conflicting ) );
 }
 
+/**
+ * @brief [ActionMapTest] default.input.xml 리소스 로드 및 레이어/액션/코드 바인딩 무결성 검증
+ */
 SW_TEST_CASE( ActionMapTest, LoadFromDefaultInputXmlResource )
 {
     sw::InputManager inputManager;
@@ -527,8 +526,8 @@ SW_TEST_CASE( ActionMapTest, SaveAndLoadAllBindingKinds )
 
 /**
  * @brief [ActionMapTest] 유저 바인딩의 패드 번호 · 수정 키 마스크가 범위를 벗어나면 그 바인딩을 버리고 알린다 — 감아서 엉뚱한 패드에 묶지 않는다
- * @details 읽는 자리 넷이 `static_cast<uint8>( getAttributeInt( … ) )` 였다. `pad="256"` 은 0 번, `pad="-1"` 은 255 번 패드가 됐고
- *          (`pad="4"` 는 없는 패드), `modifierMask="257"` 은 Ctrl 이 됐다 — 모두 말없이. 이제 패드 번호는 슬롯 수(`kMaxGamepadSlot`),
+ * @details `static_cast<uint8>( getAttributeInt( … ) )` 로 읽으면 `pad="256"` 은 0 번, `pad="-1"` 은 255 번 패드가 되고
+ *          (`pad="4"` 는 없는 패드), `modifierMask="257"` 은 Ctrl 이 된다 — 모두 말없이. 패드 번호는 슬롯 수(`kMaxGamepadSlot`),
  *          마스크는 아는 비트(`ModifierKey::All`) 안에서만 받고(`XmlNode::tryGetAttributeIntInRange`), 벗어나면 경고하고 그 바인딩을 버린다.
  */
 SW_TEST_CASE( ActionMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
@@ -622,8 +621,8 @@ SW_TEST_CASE( ActionMapTest, UserBindingsReadOnlyTheSavedShape )
 
 /**
  * @brief [ActionMapTest] 유저 바인딩의 특성이 빠져도 죽지 않는다 — 모든 바인딩 종류에서 kind 만 있는 바인딩을 읽는다
- * @details 종류별 읽기가 `KeyCodes::fromName( node.findAttribute( … ) )` 였다. 특성이 없으면 nullptr 로 `string_view` 를 만들어
- *          strlen(nullptr) 에서 죽었다. 이제 `XmlNode::getAttributeText`(없으면 빈 글)를 넘긴다.
+ * @details 종류별 읽기는 `XmlNode::getAttributeText`(없으면 빈 글)를 넘긴다. `node.findAttribute( … )` 를 그대로 넘기면 특성이 없을 때
+ *          nullptr 로 `string_view` 를 만들어 strlen(nullptr) 에서 죽는다.
  */
 SW_TEST_CASE( ActionMapTest, UserBindingsWithMissingAttributesDoNotCrash )
 {
@@ -799,8 +798,8 @@ SW_TEST_CASE( ActionMapTest, ComboParserRingBufferOverflowStress )
 
 /**
  * @brief [ActionMapTest] Pulse 는 누르고 있는 동안 간격(0.1 초)마다 한 번 발화하고, 발화 수가 프레임률을 따르지 않는다.
- * @details 예전에는 `타이머 >= 간격` 만 봐서 첫 간격이 지나면 매 프레임 발화했다. 연사 무기가 144 fps 에서 초당 144 발, 30 fps 에서
- *          30 발을 쐈다.
+ * @details `타이머 >= 간격` 만 보고 타이머를 되감지 않으면 첫 간격이 지난 뒤 매 프레임 발화해, 연사 무기가 144 fps 에서 초당 144 발, 30 fps 에서
+ *          30 발을 쏜다.
  */
 SW_TEST_CASE( ActionMapTest, PulseTriggerFiresOncePerInterval )
 {
@@ -836,8 +835,8 @@ SW_TEST_CASE( ActionMapTest, PulseTriggerFiresOncePerInterval )
 
 /**
  * @brief [ActionMapTest] 키를 다시 잡아도 바인딩 종류는 그대로다 — Chord 는 방아쇠만 바뀌고, 합성 축은 키 하나로 바꾸지 않는다
- * @details `rebindKey` 는 어떤 바인딩이든 단일 키로 바꿨다. 편집기의 Rebind 로 `Ctrl+S` 를 다시 잡으면 수식 키가 사라졌고, A/D 축을 다시 잡으면 축이
- *          단일 키가 됐다.
+ * @details `rebindKey` 가 어떤 바인딩이든 단일 키로 바꾸면 편집기의 Rebind 로 `Ctrl+S` 를 다시 잡을 때 수식 키가 사라지고, A/D 축을 다시 잡으면 축이
+ *          단일 키가 된다.
  */
 SW_TEST_CASE( ActionMapTest, RebindKeepsTheBindingKind )
 {
@@ -872,8 +871,8 @@ SW_TEST_CASE( ActionMapTest, RebindKeepsTheBindingKind )
 
 /**
  * @brief [ActionMapTest] 충돌 해결 리바인딩도 바인딩 종류를 지킨다 — Chord 는 방아쇠를 바꾸고, 남의 방아쇠 · 축의 키와의 겹침을 알아본다
- * @details `rebindWithResolution` 은 늘 0 번 슬롯에 써서 Chord 의 수식 키를 덮었고, 겹침도 남의 0 번 슬롯만 봐서 Chord 의 방아쇠(1 번)나 축의 양의
- *          키와 겹쳐도 몰랐다(같은 키가 두 액션에 남는다).
+ * @details `rebindWithResolution` 이 늘 0 번 슬롯에 쓰면 Chord 의 수식 키를 덮고, 겹침도 남의 0 번 슬롯만 보면 Chord 의 방아쇠(1 번)나 축의 양의
+ *          키와 겹쳐도 모른다(같은 키가 두 액션에 남는다).
  */
 SW_TEST_CASE( ActionMapTest, RebindWithResolutionKeepsTheBindingKind )
 {
@@ -915,8 +914,8 @@ SW_TEST_CASE( ActionMapTest, RebindWithResolutionKeepsTheBindingKind )
 
 /**
  * @brief [ActionMapTest] 통합 ActionMap 은 입력 프레임이 갱신한다 — 따로 update() 를 부르지 않아도 액션이 한 번 발동한다
- * @details 아무도 통합 맵을 갱신하지 않아, 실제 루프에서 게임플레이 맵(`PlayerController` 가 읽는 맵)의 액션이 하나도 발동하지 않았다.
- *          시험만 `beginFrame` 뒤에 손으로 `update` 를 불러 통과하고 있었다.
+ * @details 입력 프레임이 통합 맵을 갱신하지 않으면 실제 루프에서 게임플레이 맵(`PlayerController` 가 읽는 맵)의 액션이 하나도 발동하지 않는다.
+ *          시험이 `beginFrame` 뒤에 손으로 `update` 를 부르면 그것을 못 잡는다.
  */
 SW_TEST_CASE( ActionMapTest, IntegratedMapIsUpdatedByTheInputFrame )
 {

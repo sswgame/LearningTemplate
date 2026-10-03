@@ -13,8 +13,8 @@ using namespace sw;
 // ------------------------------------------------------------------------------
 // 1) ConfigManagerTest — 설정 표의 열쇠, 경로 해석, 폴백 사슬
 //
-//    이 클래스에는 단위 테스트가 하나도 없었다. 그런데 여기서 잘못되면 증상이 "창 크기·VSync·
-//    리소스 우선순위가 조용히 기본값이 된다" 라서, 실행해 보고도 원인을 짚기 어렵다.
+//    여기서 잘못되면 증상이 "창 크기·VSync·리소스 우선순위가 조용히 기본값이 된다" 라서,
+//    실행해 보고도 원인을 짚기 어렵다.
 // ------------------------------------------------------------------------------
 
 namespace
@@ -30,9 +30,8 @@ namespace
 
 /**
  * @brief [ConfigManagerTest] 설정 표의 열쇠가 **타입**인지 검증
- * @details 예전에는 호출부가 `hashed_string( "EngineConfig" )` 를 손으로 적어 넘겼고, 표의 열쇠는
- *          그 이름의 해시였다. 이름을 넘기지 않으므로 철자가 어긋날 자리가 없고, 다른 타입을
- *          물으면 그 타입이 없다고 답한다.
+ * @details 호출부가 이름(`hashed_string( "EngineConfig" )`)을 손으로 적어 넘기지 않으므로 철자가 어긋날 자리가 없고,
+ *          다른 타입을 물으면 그 타입이 없다고 답한다.
  */
 SW_TEST_CASE( ConfigManagerTest, ConfigTableIsKeyedByType )
 {
@@ -57,10 +56,9 @@ SW_TEST_CASE( ConfigManagerTest, ConfigTableIsKeyedByType )
 
 /**
  * @brief [ConfigManagerTest] 상대 경로를 루트 디렉터리 기준으로 찾는지 검증
- * @details 실행 파일은 `build/<preset>/Bin` 에서 돌고 `Config/` 는 프로젝트 루트에 있다. 작업
- *          디렉터리 기준으로만 찾던 시절에는 설정 셋이 **매 실행마다 전부 "없음"** 이 되어
- *          베이크된 기본값으로 조용히 떨어졌다(창 크기·VSync·리소스 우선순위가 전부 무시됐다).
- *          `setRootDirectory` 가 그것을 막는데 그때까지 확인하는 테스트가 없었다.
+ * @details 실행 파일은 `build/<preset>/Bin` 에서 돌고 `Config/` 는 프로젝트 루트에 있다. 작업 디렉터리 기준으로만
+ *          찾으면 설정 셋이 **매 실행마다 전부 "없음"** 이 되어 베이크된 기본값으로 조용히 떨어진다(창 크기·VSync·
+ *          리소스 우선순위가 전부 무시된다). `setRootDirectory` 가 그것을 막는다.
  */
 SW_TEST_CASE( ConfigManagerTest, RelativePathResolvesAgainstRootDirectory )
 {

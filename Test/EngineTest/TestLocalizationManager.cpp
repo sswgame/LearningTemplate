@@ -443,11 +443,9 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsSetupLocalizationFromDirectory
 
 /**
  * @brief [LocalizationManagerTest] 언어 코드가 **값으로** 돌아오는지 검증
- * @details `getCurrentLanguage()` 가 `_mutex` 로 지키는 `_currentLanguage` 의 **참조**를
- *          돌려주고 있었다. 락은 함수가 끝나며 풀리므로, 받아 든 쪽이 그것을 들고 있는 동안
- *          `setCurrentLanguage` 가 길이가 다른 코드를 넣으면 `string` 이 버퍼를 새로 잡고
- *          참조는 사라진 메모리를 가리킨다 — 지키는 것이 아무 뜻이 없었다.
- *          `GameStrings::getLanguage()` 가 그것을 게임 코드까지 그대로 흘려보내고 있었다.
+ * @details `getCurrentLanguage()` 가 `_mutex` 로 지키는 `_currentLanguage` 의 **참조**를 돌려주면, 락은 함수가 끝나며
+ *          풀리므로 받아 든 쪽이 그것을 들고 있는 동안 `setCurrentLanguage` 가 길이가 다른 코드를 넣을 때 `string` 이
+ *          버퍼를 새로 잡고 참조는 사라진 메모리를 가리킨다. `GameStrings::getLanguage()` 가 그 값을 게임 코드까지 흘려보낸다.
  */
 SW_TEST_CASE( LocalizationManagerTest, LanguageCodeIsReturnedByValue )
 {
@@ -463,7 +461,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeIsReturnedByValue )
     loc.setCurrentLanguage( sw::string( 4096, 'a' ) );
     loc.setFallbackLanguage( sw::string( 4096, 'b' ) );
 
-    // 고치기 전이라면 여기서 사라진 버퍼를 읽는다 — ASAN 이 잡는다.
+    // 참조를 돌려주면 여기서 사라진 버퍼를 읽는다 — ASAN 이 잡는다.
     SW_EXPECT_STREQ( "ko_kr", sw::string( heldCurrent ).c_str() );
     SW_EXPECT_STREQ( "en_us", sw::string( heldFallback ).c_str() );
 }
@@ -471,8 +469,8 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeIsReturnedByValue )
 /**
  * @brief [LocalizationManagerTest] 언어 코드는 철자가 달라도 한 언어다 — `ko-KR` · `ko_KR` · `ko_kr` 는 같다
  * @details 파일 이름에서 읽은 코드(`Resource/` 는 소문자만 받는다 → `ko_kr`)와 기본값(`GameStrings` 의 "ko_KR" · `GameData` 의 "ko_kr") · 명령줄
- *          (`-language=ko-KR`)의 철자가 달랐는데 표는 대소문자를 그대로 키로 썼다. 기본 언어를 찾지 못해 아무 언어나 골랐고, 폴백 "en_US" 표가 없어
- *          현재 언어에 없는 키는 늘 빈 글이었다.
+ *          (`-language=ko-KR`)의 철자가 다를 수 있다. 표가 대소문자를 그대로 키로 쓰면 기본 언어를 찾지 못해 아무 언어나 고르고, 폴백 "en_US" 표가 없어
+ *          현재 언어에 없는 키는 늘 빈 글이 된다.
  */
 SW_TEST_CASE( LocalizationManagerTest, LanguageCodeSpellingsNameOneLanguage )
 {
@@ -495,8 +493,8 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeSpellingsNameOneLanguage )
 
 /**
  * @brief [LocalizationManagerTest] 조회가 준 포인터는 표가 바뀐 뒤에도 그때의 문자열을 가리킨다
- * @details 조회는 락을 놓은 뒤 `const utf8*` 를 돌려주고 UI · 워커가 그것을 들고 있다. 예전에는 표가 문자열을 값으로 가져, 같은 키를
- *          다시 쓰면 들고 있던 포인터가 새 값을 읽었고(제자리 대입), 다른 키를 넣거나 비우면 해제된 메모리를 읽었다.
+ * @details 조회는 락을 놓은 뒤 `const utf8*` 를 돌려주고 UI · 워커가 그것을 들고 있다. 표가 문자열을 값으로 가지면 같은 키를
+ *          다시 쓸 때 들고 있던 포인터가 새 값을 읽고(제자리 대입), 다른 키를 넣거나 비우면 해제된 메모리를 읽는다.
  */
 SW_TEST_CASE( LocalizationManagerTest, LookupPointerOutlivesTableChanges )
 {

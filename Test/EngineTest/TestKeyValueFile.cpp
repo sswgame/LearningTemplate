@@ -322,8 +322,8 @@ SW_TEST_CASE( KeyValueFileTest, GameConfigActiveManagement )
 
 /**
  * @brief [KeyValueFileTest] 같은 키가 두 번 나오면 뒤에 적힌 것이 이긴다
- * @details `emplace` 는 이미 있는 키를 **덮지 않는다.** 손으로 고친 설정 파일에서 같은 키를 아래에
- *          다시 적으면 위의 옛 값이 그대로 읽혔다 — 고쳤는데 아무 일도 일어나지 않는 모양이다.
+ * @details `emplace` 는 이미 있는 키를 **덮지 않는다.** 그것으로 읽으면 손으로 고친 설정 파일에서 같은 키를 아래에
+ *          다시 적을 때 위의 옛 값이 그대로 읽힌다 — 고쳤는데 아무 일도 일어나지 않는 모양이다.
  */
 SW_TEST_CASE( KeyValueFileTest, DuplicateKeyTakesTheLastValue )
 {
@@ -337,7 +337,7 @@ SW_TEST_CASE( KeyValueFileTest, DuplicateKeyTakesTheLastValue )
 
 /**
  * @brief [KeyValueFileTest] 못 읽은 불리언은 fallback 이 되고 알린다 — 형제 getInt · getFloat 와 같은 규칙
- * @details `getBool` 만 `parseBool` 로 읽어 "ture" 가 말없이 fallback 이 됐다(정수 · 실수는 이미 경고했다).
+ * @details `parseBool` 로 읽으면 "ture" 가 말없이 fallback 이 된다.
  */
 SW_TEST_CASE( KeyValueFileTest, UnreadableBooleanFallsBackAndSaysSo )
 {

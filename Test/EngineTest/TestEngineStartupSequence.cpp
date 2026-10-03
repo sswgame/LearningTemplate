@@ -123,8 +123,8 @@ namespace
 
 /**
  * @brief [EngineStartupSequenceTest] 씬을 읽는 단계(헤드리스 씬 쿠킹)는 모든 타입 공급자가 등록을 끝낸 뒤(`ModuleTypes`)에만 선다
- * @details 쿠킹이 GameFramework · 킷 · 게임 모듈의 타입이 오르기 전에 씬을 읽어 그 컴포넌트를 `MissingComponent` 로 구웠다 — 표에 그 전제를 적을
- *          자리가 없었다. 이제 `Headless` 의 의존 칸이 `ModuleTypes` 를 적고, 그 단계가 실패하면 쿠킹은 돌지 않는다. 의존을 빼면 이 시험이 진다.
+ * @details `Headless` 의 의존 칸이 `ModuleTypes` 를 적고, 그 단계가 실패하면 쿠킹은 돌지 않는다. 쿠킹이 GameFramework · 킷 · 게임 모듈의 타입이
+ *          오르기 전에 씬을 읽으면 그 컴포넌트를 `MissingComponent` 로 굽는다. 의존을 빼면 이 시험이 진다.
  */
 SW_TEST_CASE( EngineStartupSequenceTest, SceneReadingStepWaitsForModuleTypes )
 {
