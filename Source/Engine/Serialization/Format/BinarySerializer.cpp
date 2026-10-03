@@ -346,16 +346,119 @@ namespace sw
                     outArchive.writeBytes( buffer.data(), buffer.size() );
             }
 
+            /** @brief 스트림 하나의 바이트 수를 값을 읽지 않고 셉니다. 잘렸거나 모양이 틀리면 false 입니다. */
+            using MeasureStreamFn = bool ( * )( const uint8* pData, size_t dataSize, size_t& outStreamSize );
+
+            /** @brief 태그 스트림 — 머리 뒤에 칸마다 이름 해시 · 타입 해시 · 값 크기 · 값. */
+            static bool measureTaggedStream( const uint8* pData, size_t dataSize, size_t& outStreamSize )
+            {
+                BinaryStreamReader reader( pData, dataSize );
+                uint32             header{ 0 };
+                if ( reader.read( header ) == false )
+                    return false;
+                const uint32 propCount = header & kTaggedCountMask;
+                for ( uint32 propIndex = 0; propIndex < propCount; ++propIndex )
+                {
+                    uint32 tagHash{ 0 };
+                    uint32 wireTypeHash{ 0 };
+                    uint32 payloadSize{ 0 };
+                    if ( reader.read( tagHash ) == false || reader.read( wireTypeHash ) == false || reader.read( payloadSize ) == false )
+                        return false;
+                    if ( reader.skip( payloadSize ) == false )
+                        return false;
+                }
+                outStreamSize = reader.getOffset();
+                return true;
+            }
+
+            /** @brief 버전 스트림 — 버전(uint32) + 태그 스트림. */
+            static bool measureVersionedStream( const uint8* pData, size_t dataSize, size_t& outStreamSize )
+            {
+                constexpr size_t kVersionSize = sizeof( uint32 );
+                size_t           bodySize{ 0 };
+                if ( dataSize < kVersionSize || measureTaggedStream( pData + kVersionSize, dataSize - kVersionSize, bodySize ) == false )
+                    return false;
+                outStreamSize = kVersionSize + bodySize;
+                return true;
+            }
+
+            /** @brief 압축 스트림 — `CompressionHeader` 가 압축된 본문 크기를 든다. */
+            static bool measureCompressedStream( const uint8* pData, size_t dataSize, size_t& outStreamSize )
+            {
+                CompressionHeader header{};
+                if ( dataSize < sizeof( header ) )
+                    return false;
+                Memory::copy( &header, pData, sizeof( header ) );
+                if ( header._magic != CompressionHeader::kMagic || header._compressedSize > dataSize - sizeof( header ) )
+                    return false;
+                outStreamSize = sizeof( header ) + static_cast<size_t>( header._compressedSize );
+                return true;
+            }
+
+            /** @brief 컴팩트 스트림 — 모드 바이트 뒤에 밀집(수 · 비트마스크 · 켜진 칸마다 크기 · 값)이나 희소(수 · 칸마다 번호 · 크기 · 값). */
+            static bool measureCompactStream( const uint8* pData, size_t dataSize, size_t& outStreamSize )
+            {
+                BinaryStreamReader reader( pData, dataSize );
+                uint8              modeAndVersion{ 0 };
+                if ( reader.read( modeAndVersion ) == false )
+                    return false;
+                const uint8 modeByte = static_cast<uint8>( modeAndVersion & kCompactModeMask );
+                uint64      entryCount{ 0 };
+                if ( reader.readVarUint( entryCount ) == false )
+                    return false;
+                if ( modeByte == PresenceMaskUtil::kModeDense )
+                {
+                    if ( entryCount > static_cast<uint64>( dataSize - reader.getOffset() ) * 8 )
+                        return false;
+                    const size_t bitmaskBytes = PresenceMaskUtil::computeBitmaskBytes( static_cast<size_t>( entryCount ) );
+                    const uint8* pBitmask     = pData + reader.getOffset();
+                    if ( reader.skip( bitmaskBytes ) == false )
+                        return false;
+                    for ( uint64 propIndex = 0; propIndex < entryCount; ++propIndex )
+                    {
+                        if ( PresenceMaskUtil::testBit( pBitmask, static_cast<size_t>( propIndex ) ) == false )
+                            continue;
+                        uint64 payloadSize{ 0 };
+                        if ( reader.readVarUint( payloadSize ) == false || reader.skip( static_cast<size_t>( payloadSize ) ) == false )
+                            return false;
+                    }
+                }
+                else if ( modeByte == PresenceMaskUtil::kModeSparse )
+                {
+                    for ( uint64 entryIndex = 0; entryIndex < entryCount; ++entryIndex )
+                    {
+                        uint64 propIndex{ 0 };
+                        uint64 payloadSize{ 0 };
+                        if ( reader.readVarUint( propIndex ) == false || reader.readVarUint( payloadSize ) == false ||
+                             reader.skip( static_cast<size_t>( payloadSize ) ) == false )
+                            return false;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+                outStreamSize = reader.getOffset();
+                return true;
+            }
+
             /**
-             * @brief 아카이브의 남은 바이트(현재 자리 ~ 끝)를 `deserializeBytes` 로 읽습니다. Archive 판 역직렬화가 모두 씁니다.
-             * @details 오류 상태이거나 남은 바이트가 없으면 false 입니다. 읽기 자리는 옮기지 않습니다.
+             * @brief 아카이브의 현재 자리에서 스트림 하나를 `deserializeBytes` 로 읽고, 성공하면 읽기 자리를 그 끝으로 옮깁니다. Archive 판 역직렬화가 모두 씁니다.
+             * @details 스트림의 끝은 @p measure 가 값을 읽지 않고 셉니다 — 그래서 같은 Archive 에 이어 쓴 객체 · 값을 차례로 읽을 수 있습니다.
+             *          오류 상태이거나 남은 바이트가 없거나 스트림이 잘렸으면 false 이고 자리는 그대로입니다.
              */
             template <typename DeserializeBytesFunc>
-            static bool deserializeArchiveRemainder( Archive& inArchive, DeserializeBytesFunc&& deserializeBytes )
+            static bool deserializeArchiveStream( Archive& inArchive, MeasureStreamFn measure, DeserializeBytesFunc&& deserializeBytes )
             {
                 if ( inArchive.isError() || inArchive.getData() == nullptr || inArchive.getOffset() >= inArchive.getSize() )
                     return false;
-                return deserializeBytes( inArchive.getData() + inArchive.getOffset(), inArchive.getSize() - inArchive.getOffset() );
+                const uint8* pStream    = inArchive.getData() + inArchive.getOffset();
+                size_t       streamSize = 0;
+                if ( measure( pStream, static_cast<size_t>( inArchive.getSize() - inArchive.getOffset() ), streamSize ) == false )
+                    return false;
+                if ( deserializeBytes( pStream, streamSize ) == false )
+                    return false;
+                return inArchive.setOffset( inArchive.getOffset() + streamSize );
             }
         };
     } // namespace
@@ -548,7 +651,8 @@ namespace sw
     bool BinarySerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
                                         const SerializeContext& ctx )
     {
-        return BinarySerializerInternal::deserializeArchiveRemainder( inArchive, [&]( const uint8* pData, size_t dataSize )
+        return BinarySerializerInternal::deserializeArchiveStream( inArchive, &BinarySerializerInternal::measureTaggedStream,
+                                                                   [&]( const uint8* pData, size_t dataSize )
         {
             return deserialize( pInstance, typeInfo, pData, dataSize, ctx );
         } );
@@ -566,7 +670,8 @@ namespace sw
                                                  uint32 currentVersion, SchemaMigrateFn migrate,
                                                  const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
     {
-        return BinarySerializerInternal::deserializeArchiveRemainder( inArchive, [&]( const uint8* pData, size_t dataSize )
+        return BinarySerializerInternal::deserializeArchiveStream( inArchive, &BinarySerializerInternal::measureVersionedStream,
+                                                                   [&]( const uint8* pData, size_t dataSize )
         {
             return deserializeVersioned( outVersion, pInstance, typeInfo, pData, dataSize, currentVersion, migrate, pLegacyTypeInfo, ctx );
         } );
@@ -591,7 +696,8 @@ namespace sw
                                                   Archive&                inArchive,
                                                   const SerializeContext& ctx )
     {
-        return BinarySerializerInternal::deserializeArchiveRemainder( inArchive, [&]( const uint8* pData, size_t dataSize )
+        return BinarySerializerInternal::deserializeArchiveStream( inArchive, &BinarySerializerInternal::measureCompressedStream,
+                                                                   [&]( const uint8* pData, size_t dataSize )
         {
             return deserializeCompressed( pInstance, typeInfo, pData, dataSize, ctx );
         } );
@@ -785,7 +891,8 @@ namespace sw
                                                Archive&                inArchive,
                                                const SerializeContext& ctx )
     {
-        return BinarySerializerInternal::deserializeArchiveRemainder( inArchive, [&]( const uint8* pData, size_t dataSize )
+        return BinarySerializerInternal::deserializeArchiveStream( inArchive, &BinarySerializerInternal::measureCompactStream,
+                                                                   [&]( const uint8* pData, size_t dataSize )
         {
             return deserializeCompact( pInstance, typeInfo, pData, dataSize, ctx );
         } );

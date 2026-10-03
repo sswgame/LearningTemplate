@@ -37,7 +37,10 @@ namespace sw
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                                const SerializeContext& ctx = SerializeContext::getDefault() );
 
-        /** @brief Archive 에서 객체를 역직렬화합니다. */
+        /**
+         * @brief Archive 의 현재 자리에서 객체를 역직렬화하고, 성공하면 읽기 자리를 그 객체 끝으로 옮깁니다.
+         * @details Archive 판 역직렬화(버전 · 압축 · 컴팩트도)는 모두 같다 — 스트림이 스스로 끝을 알므로 같은 Archive 에 이어 쓴 것을 차례로 읽습니다.
+         */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
                                                const SerializeContext& ctx = SerializeContext::getDefault() );
 

@@ -550,7 +550,8 @@ namespace sw
             return false;
         }
 
-        return BinarySerializer::deserialize( pInstance, typeInfo, _pData + _offset, _dataSize - _offset );
+        // 객체 끝까지만 읽고 읽기 자리를 옮긴다 — 뒤에 이어 쓴 값을 다음 읽기가 읽는다.
+        return BinarySerializer::deserialize( pInstance, typeInfo, *this );
     }
 
     bool Archive::writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecType codecType )

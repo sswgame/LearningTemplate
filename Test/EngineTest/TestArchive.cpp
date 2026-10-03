@@ -658,6 +658,54 @@ SW_TEST_CASE( ArchiveTest, ArchiveCompressedObjectSerialization )
 }
 
 /**
+ * @brief [ArchiveTest] 한 Archive 에 이어 쓴 바이너리 객체들을 차례로 읽는다 — 읽기 자리가 객체 끝으로 옮겨 간다
+ * @details 태그 · 버전 · 압축 · 컴팩트 스트림은 모두 스스로 끝을 안다(칸마다 크기 · 압축 머리의 크기). 그 끝만큼 읽고 자리를 옮기므로 뒤에 쓴
+ *          객체 · 값을 이어서 읽는다.
+ */
+SW_TEST_CASE( ArchiveTest, BinaryObjectsWrittenBackToBackReadInOrder )
+{
+    const sw::TypeInfo* pType = TestReflectedPlayer::StaticType();
+    SW_ASSERT_NOT_NULL( pType );
+    TestReflectedPlayer arrSource[5];
+    for ( int32 index = 0; index < 5; ++index )
+    {
+        arrSource[index]._level = 10 + index;
+        arrSource[index]._name  = sw::string( "Player" ) + sw::to_string( index );
+        arrSource[index]._gold  = 1000 * ( index + 1 );
+    }
+
+    sw::Archive writeArch;
+    sw::BinarySerializer::serialize( &arrSource[0], *pType, writeArch );
+    sw::BinarySerializer::serializeVersioned( 3, &arrSource[1], *pType, writeArch );
+    SW_ASSERT_TRUE( sw::BinarySerializer::serializeCompressed( &arrSource[2], *pType, writeArch ) );
+    sw::BinarySerializer::serializeCompact( &arrSource[3], *pType, writeArch );
+    SW_ASSERT_TRUE( writeArch.serializeObject( arrSource[4] ) );
+    const int32 kTrailer = 0x5EED;
+    writeArch << kTrailer;
+
+    sw::Archive         readArch( writeArch.getData(), writeArch.getSize() );
+    TestReflectedPlayer arrRead[5];
+    uint32              version{ 0 };
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserialize( &arrRead[0], *pType, readArch ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeVersioned( version, &arrRead[1], *pType, readArch, 3 ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompressed( &arrRead[2], *pType, readArch ) );
+    SW_EXPECT_TRUE( sw::BinarySerializer::deserializeCompact( &arrRead[3], *pType, readArch ) );
+    SW_EXPECT_TRUE( readArch.deserializeObject( arrRead[4] ) );
+    int32 trailer{ 0 };
+    readArch >> trailer;
+
+    SW_EXPECT_EQUAL( 3u, version );
+    for ( int32 index = 0; index < 5; ++index )
+    {
+        SW_EXPECT_EQUAL( arrSource[index]._level, arrRead[index]._level );
+        SW_EXPECT_TRUE( arrSource[index]._name == arrRead[index]._name );
+        SW_EXPECT_EQUAL( arrSource[index]._gold, arrRead[index]._gold );
+    }
+    SW_EXPECT_EQUAL( kTrailer, trailer );
+    SW_EXPECT_TRUE( readArch.isOk() && readArch.getRemainingBytes() == 0 );
+}
+
+/**
  * @brief [ArchiveTest] Archive 버전 관리 객체 직렬화 및 마이그레이션 연계 검증
  */
 SW_TEST_CASE( ArchiveTest, ArchiveVersionedObjectSerialization )
@@ -713,8 +761,9 @@ SW_TEST_CASE( ArchiveTest, ArchiveJsonObjectEmbeddingAndTranscoding )
     SW_EXPECT_EQUAL( sw::string( "TranscodedHero" ), playerFromTranscode._name );
     SW_EXPECT_EQUAL( 99999, playerFromTranscode._gold );
 
-    // 3) Archive 바이너리 -> JSON 문자열 변환
-    const sw::string exportedJson = transcodeRead.convertBinaryToJson( *TestReflectedPlayer::StaticType() );
+    // 3) Archive 바이너리 -> JSON 문자열 변환. 위의 읽기가 자리를 객체 끝으로 옮겼으므로 처음부터 읽는 아카이브로 바꾼다.
+    sw::Archive      exportRead( transcodeArch.getData(), transcodeArch.getSize() );
+    const sw::string exportedJson = exportRead.convertBinaryToJson( *TestReflectedPlayer::StaticType() );
     SW_EXPECT_TRUE( exportedJson.find( "TranscodedHero" ) != sw::string::npos );
 }
 
