@@ -51,6 +51,7 @@ command '@brief'` 가 빌드마다 나왔는데 87 줄에는 `@brief` 가 없었
   py -3 Scripts/lint/report/RunBuildWarnings.py --preset Ninja-Debug  # 한 구성만
   py -3 Scripts/lint/report/RunBuildWarnings.py --filter Graphics     # 경로에 Graphics 가 든 TU 만
   py -3 Scripts/lint/report/RunBuildWarnings.py --jobs 8 --out warnings.txt
+  py -3 Scripts/lint/report/RunBuildWarnings.py --preset CI-Debug --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error   # CI 가 도는 줄
 """
 
 from __future__ import annotations
@@ -194,14 +195,16 @@ def collectDiagnosticsInternal(rawText: str) -> list[str]:
     return sorted(set(listLine))
 
 
-def summarize(mapPresetToText: dict[str, str]) -> int:
-    """구성별로 종류와 자리를 묶어 낸다. 돌려주는 값은 고유 경고 총합이다."""
+def summarize(mapPresetToText: dict[str, str]) -> tuple[int, int]:
+    """구성별로 종류와 자리를 묶어 낸다. 돌려주는 값은 (고유 경고 총합, 고유 오류 총합)이다."""
     totalUnique = 0
+    totalError = 0
     for presetName, rawText in mapPresetToText.items():
         listDiagnostic = collectDiagnosticsInternal(rawText)
         listWarning = [line for line in listDiagnostic if ": warning:" in line]
         listError = [line for line in listDiagnostic if ": error:" in line]
         totalUnique += len(listWarning)
+        totalError += len(listError)
 
         counter: Counter[str] = Counter()
         for line in listWarning:
@@ -223,7 +226,23 @@ def summarize(mapPresetToText: dict[str, str]) -> int:
         for line in listError + listWarning:
             print(f"  {line}")
 
-    return totalUnique
+    return totalUnique, totalError
+
+
+def computeExitCode(failOn: str, totalWarning: int, totalError: int, listSkippedPreset: list[str]) -> int:
+    """
+    `--fail-on` 이 없으면 늘 0 이다(보고 도구). 있으면 CI 가 이 스크립트로 막는다 — 오류(`error`) 또는 오류 · 경고(`warning`)가
+    하나라도 있거나, **검사한 TU 가 없는 프리셋**이 있으면 1 이다. 컴파일 DB 를 못 찾아 아무것도 안 본 실행이 초록으로 지나가면 안 된다.
+    """
+    if not failOn:
+        return 0
+    if listSkippedPreset:
+        return 1
+    if totalError > 0:
+        return 1
+    if failOn == "warning" and totalWarning > 0:
+        return 1
+    return 0
 
 
 def main() -> int:
@@ -239,11 +258,15 @@ def main() -> int:
     parser.add_argument("--define", action="append", default=[],
                         help="모든 TU 에 더할 전처리 정의(NAME 또는 NAME=VALUE). 어느 프리셋도 켜지 않는 옵션이 아직 컴파일되는지 볼 때 "
                              "(예: --define SW_ENABLE_DEADLOCK_DETECTION)")
+    parser.add_argument("--fail-on", choices=("error", "warning"), default="",
+                        help="CI 용: 오류(error) 또는 오류 · 경고(warning)가 있거나 검사한 TU 가 없는 프리셋이 있으면 1 로 끝냅니다. "
+                             "주지 않으면 늘 0 입니다(보고 도구)")
     args = parser.parse_args()
 
     listPreset = args.preset or list(_kDefaultPresets)
     mapPresetToText: dict[str, str] = {}
     listRawChunk: list[str] = []
+    listSkippedPreset: list[str] = []
 
     for presetName in listPreset:
         sweep = TranslationUnitSweep(projectRoot / "build" / presetName, tag="RunBuildWarnings")
@@ -254,6 +277,7 @@ def main() -> int:
         if not listEntry:
             print(f"[RunBuildWarnings] {presetName}: compile_commands.json 이 없거나 대상 TU 가 없습니다 "
                   f"— `cmake --preset {presetName}` 으로 configure 하세요. 건너뜁니다.")
+            listSkippedPreset.append(presetName)
             continue
 
         print(f"[RunBuildWarnings] {presetName}: TU {len(listEntry)}개, 병렬 {args.jobs}")
@@ -266,7 +290,7 @@ def main() -> int:
         Path(args.out).write_text("".join(listRawChunk), encoding="utf-8")
         print(f"[RunBuildWarnings] 원본 출력 → {args.out}")
 
-    totalUnique = summarize(mapPresetToText)
+    totalUnique, totalError = summarize(mapPresetToText)
 
     print("")
     if totalUnique == 0:
@@ -275,9 +299,13 @@ def main() -> int:
         print(f"[RunBuildWarnings] 경고 {totalUnique}건. 새 경고는 분류해서 고치거나, 의도한 것이면 "
               f"그 자리에 이유를 주석으로 남기세요.")
 
-    # **게이트가 아니다.** 경고가 있어도 0 을 돌려준다 — 구성·컴파일러 버전마다 집합이 달라서
+    # **기본은 게이트가 아니다.** 경고가 있어도 0 을 돌려준다 — 구성·컴파일러 버전마다 집합이 달라서
     # 막으면 남의 PC 에서 빨개진다. 막는 일은 `Check*` 스크립트가 맡는다(RunClangTidy 와 같은 규칙).
-    return 0
+    # `--fail-on` 은 CI 가 "어느 프리셋도 켜지 않는 옵션이 아직 컴파일되는가" 를 지키려고 명시적으로 켠다(ci.yml).
+    exitCode = computeExitCode(args.fail_on, totalUnique, totalError, listSkippedPreset)
+    if exitCode != 0:
+        print(f"[RunBuildWarnings] --fail-on {args.fail_on}: 오류 {totalError}건 · 경고 {totalUnique}건 · 검사 못 한 프리셋 {listSkippedPreset} — 실패로 끝냅니다.")
+    return exitCode
 
 
 if __name__ == "__main__":

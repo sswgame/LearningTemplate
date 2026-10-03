@@ -82,7 +82,7 @@ Scripts/
   │     │     ├── RunClangFormat.py           # clang-format 적용 (`py -3 -m Scripts format`)
   │     │     └── FormatModified.py           # 작업 트리 변경분에 위 셋 + 인클루드 순서
   │     ├── report/                   # 찍어 줄 뿐, 언제나 0 으로 끝난다
-  │     │     ├── RunBuildWarnings.py         # 트리에 남아 있는 컴파일러 경고
+  │     │     ├── RunBuildWarnings.py         # 트리에 남아 있는 컴파일러 경고 (`--fail-on error` 를 명시하면 CI 가 막는 데 쓴다)
   │     │     ├── RunClangTidy.py
   │     │     ├── RunHeaderSelfContained.py   # 혼자 서지 못하는 헤더
   │     │     ├── RunForwardDeclarationCandidates.py # 전방 선언으로 바꿀 수 있는 include (`--apply` 는 고쳐 쓴다)

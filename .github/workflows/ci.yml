@@ -155,6 +155,13 @@ jobs:
       run: |
         cmake --build --preset ${{ matrix.preset }}
 
+    # `SW_ENABLE_DEADLOCK_DETECTION` 은 어느 프리셋도 켜지 않는 옵션이라 짓지 않으면 썩는다. 구성을 따로 짓지 않고, 방금 지은 컴파일 DB 의
+    # 모든 TU 를 그 정의를 더해 -fsyntax-only 로 돌린다. 오류가 있거나 검사한 TU 가 없으면 진다(경고는 컴파일러 버전마다 달라 보고만 한다).
+    - name: Compile check with SW_ENABLE_DEADLOCK_DETECTION (Windows Debug)
+      if: runner.os == 'Windows' && matrix.preset == 'CI-Debug'
+      run: |
+        python Scripts/lint/report/RunBuildWarnings.py --preset ${{ matrix.preset }} --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error
+
     # Shipping 도 Debug 와 **같은 집합**을 돈다. 예전엔 Shipping 만 `-R CoreTest` 였고 빌드도
     # `--target App CoreTest` 로 좁혀, EngineTest · ReflectionTest · SmokeTest · EditorTest 가
     # 배포 구성에서 **한 번도 돌지 않았다.** 그런데 Debug 가 숨기는 결함이 드러나는 곳이 바로
