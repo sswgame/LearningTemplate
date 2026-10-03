@@ -526,6 +526,10 @@ SW_TEST_CASE( EditorTransactionTest, ObjectEditsSurviveReleasingTheEditorCode )
     const void* pBegin{ nullptr };
     const void* pEnd{ nullptr };
     SW_ASSERT_TRUE( FileUtil::findLoadedImageRange( reinterpret_cast<const void*>( &EditorTransaction::captureSnapshot ), pBegin, pEnd ) );
+    // 배포 구성은 Engine 을 이 실행 파일에 정적으로 링크한다 — 모듈 경계가 없어 엔진 명령도 같은 범위에 든다.
+    const void* const pEngineCode = reinterpret_cast<const void*>( &ObjectSnapshotCommand::captureSnapshot );
+    if ( pBegin <= pEngineCode && pEngineCode < pEnd )
+        SW_TEST_SKIP( "Engine is linked into this executable - there is no module boundary to release" );
     SW_EXPECT_EQUAL( 1u, stack.releaseCodeWithin( pBegin, pEnd ) );
     SW_ASSERT_EQUAL( size_t( 1 ), stack.getCommandCount() );
     SW_EXPECT_STREQ( "Rename GameObject", stack.peekUndoLabel().c_str() );
