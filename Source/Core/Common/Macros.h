@@ -160,6 +160,8 @@ namespace sw::internal
 //    Debug 의 단언은 멈추므로(`SW_DEBUG_BREAK`) 단언이 걸리는 입력을 시험하면 프로세스가 죽는다. 가로채기를 건 동안은 멈추지 않고
 //    센다 — 유니티 `LogAssert.Expect` · 언리얼 자동화의 기대 오류와 같은 일이다. 정의는 `Core/Common/Macros.cpp`.
 // ------------------------------------------------------------------------------
+#if defined( SW_DEBUG )
+// 멈추는 단언(`SW_ASSERT` · 멈추는 `SW_LOG_ASSERT`)은 Debug 에만 있으므로 가로채기도 Debug 에만 둔다 — 배포본에는 시험이 단언을 끄는 창구가 없다.
 namespace sw::internal
 {
     /** @brief 가로채기가 걸려 있으면 단언 하나를 세고 true 입니다 — 부르는 쪽(`SW_ASSERT` · `SW_LOG_ASSERT`)은 멈추지 않습니다. */
@@ -171,6 +173,7 @@ namespace sw::internal
     /** @brief 프로세스가 지금까지 가로챈 단언 수입니다(구간의 수는 시작과 끝의 차로 잰다). */
     [[nodiscard]] SW_API uint32 getCapturedAssertCount() noexcept;
 } // namespace sw::internal
+#endif
 
 /** @brief 코드 블록을 명시적으로 구분할 때 사용합니다 (세미콜론 없이: BLOCK( "..." )). */
 #define BLOCK( message )

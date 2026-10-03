@@ -631,6 +631,7 @@ namespace sw
         return true;
     }
 
+#if !defined( SW_SHIPPING )
     void ModuleHost::attachEditorInstance( const EditorAPI& editorApi, EditorHandle editor )
     {
         _editorApi = editorApi;
@@ -642,6 +643,7 @@ namespace sw
         _gameApi = gameApi;
         _game    = game;
     }
+#endif
 
     bool ModuleHost::reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule )
     {

@@ -2599,6 +2599,7 @@ SW_TEST_CASE( RenderPassGpuTest, RenderTargetsArePublishedForTheEditor )
     SW_EXPECT_TRUE_MSG( registry.getGeneration() != generation, "목록이 바뀌었는데 세대가 그대로다" );
 }
 
+#if !defined( SW_SHIPPING ) // 모프 시각 고정(`setAnimationTimeOverride`)은 배포본에 없다 — 벽시계로 찍으면 흔들린다
 /**
  * @brief GPU 메시 모프의 **정점 셰이더 풀 읽기**가 네 백엔드에서 같은지 픽셀로 봅니다.
  * @details 세 장을 찍는다 — (A) 모프 안 켬(레스트), (B) 모프 켜되 컴퓨트 없이 **레스트 버퍼를 그대로 풀에
@@ -2785,6 +2786,7 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
     if ( attemptedCount == 0 )
         SW_TEST_SKIP( "No RHI backend for the morph pool identity test" );
 }
+#endif
 
 /**
  * @brief [RenderPassGpuTest] 정점 · 모프 풀은 메시 **내용**이 바뀌면 다시 만든다 — 포인터가 같아도

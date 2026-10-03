@@ -112,11 +112,14 @@ namespace sw
         void setDrawMergeEnabled( bool bEnabled ) { _drawMergeOverride = bEnabled ? 1 : 0; }
         /** @brief 정점 풀을 쓸지 정합니다(기본 켬, 전역 `gv_vertexPool` 을 덮어씁니다). 끄면 메시마다 자기 정점 버퍼를 씁니다(진단 · A/B 용). */
         void setVertexPoolEnabled( bool bEnabled ) { _vertexPoolOverride = bEnabled ? 1 : 0; }
+#if !defined( SW_SHIPPING )
         /**
          * @brief 시간 구동 컴퓨트(인스턴스 애니메이션 · 메시 모프)가 읽는 절대 시간(초)을 고정합니다. 음수면 렌더러 시계(`_animTimer`)를 따릅니다(기본).
          * @details 테스트가 씁니다. 모프 변위는 sin(시간) 이라 벽시계로 찍으면 찍은 시각에 따라 그림이 달라지고, 부하가 걸린 실행에서 픽셀 단언이 흔들립니다.
+         *          배포본에는 없습니다 — 시험 전용 시계 고정이라 배포본에서 바꿀 수 없게 합니다.
          */
         void setAnimationTimeOverride( float32 seconds ) { _animationTimeOverride = seconds; }
+#endif
         /** @brief 마지막 프레임이 낸 씬 간접 드로우 호출 수입니다(모든 패스 합). 배치 수보다 작으면 묶인 것입니다. */
         uint32 getLastIndirectDrawCallCount() const { return _lastIndirectDrawCallCount; }
         /**
@@ -663,7 +666,7 @@ namespace sw
         void prepareMeshMorphPool();
         /** @brief 지금 적용되는 모프 진단 모드입니다. 오버라이드가 있으면 그것, 없으면 `gv_morphDiag` 입니다. */
         int32 getEffectiveMeshMorphDiag() const;
-        /** @brief 시간 구동 컴퓨트가 읽을 절대 시간(초)입니다. `setAnimationTimeOverride` 가 준 값(0 이상), 없으면 `_animTimer` 의 누적 시간입니다. */
+        /** @brief 시간 구동 컴퓨트가 읽을 절대 시간(초)입니다. `setAnimationTimeOverride` 가 준 값(0 이상, 배포본 아님), 없으면 `_animTimer` 의 누적 시간입니다. */
         float32 getAnimationTime() const;
         /** @brief 씬 배치를 멀티 드로우로 묶을지 반환합니다. `setDrawMergeEnabled` 가 준 값, 없으면 전역 `gv_drawMerge` 입니다. */
         bool isDrawMergeEnabled() const;
@@ -710,8 +713,10 @@ namespace sw
         // 아래는 8 바이트보다 작은 필드입니다. 사이에 끼면 패딩이 생기므로 큰 것부터 끝에 모아 둡니다.
         FrameLightState    _frameLight;    ///< 크기가 8 의 배수가 아니라(100) 4 바이트 필드와 짝을 짓습니다
         RHIDescriptorIndex _taaHistorySrv; ///< `_taaHistory` 의 bindless SRV(프레임마다 다시 등록하지 않음)
+#if !defined( SW_SHIPPING )
         /// @brief `setAnimationTimeOverride` 가 준 시각(초)입니다. 음수면 `_animTimer` 를 따릅니다.
         float32 _animationTimeOverride;
+#endif
         /// @brief 진단(`-gv_morphDiag=2|3`)에서 정점 셰이더에 결과 대신 **레스트** 버퍼를 물렸는지 여부입니다.
         uint8 _bMorphBindsRest;
         /**

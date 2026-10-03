@@ -99,7 +99,11 @@ namespace sw
 
     float32 FrameRenderer::getAnimationTime() const
     {
-        return ( _animationTimeOverride >= 0.0f ) ? _animationTimeOverride : _animTimer.getTotalTime();
+#if !defined( SW_SHIPPING )
+        if ( _animationTimeOverride >= 0.0f )
+            return _animationTimeOverride;
+#endif
+        return _animTimer.getTotalTime();
     }
 
     void FrameRenderer::prepareMeshMorphPool()

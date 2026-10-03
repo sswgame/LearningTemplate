@@ -268,3 +268,42 @@ SW_TEST_CASE( ModuleHostTest, ImageCheckAcceptsOnlyAModuleWithTheHostsApiTable )
     FileUtil::unloadDynamicLibrary( pEditorModule );
 }
 #endif
+
+namespace
+{
+    /** @brief `ModuleHost::attachGameInstance` 가 이 구성에 있는가 — 가짜 API 표를 붙이는 시험 창구라 배포본에는 없어야 한다. */
+    template <typename T, typename = void>
+    struct HasAttachGameInstance : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasAttachGameInstance<T, std::void_t<decltype( std::declval<T&>().attachGameInstance( std::declval<const GameAPI&>(), GameHandle{} ) )>>
+        : std::true_type
+    {
+    };
+    /** @brief `ModuleHost::attachEditorInstance` 가 이 구성에 있는가. */
+    template <typename T, typename = void>
+    struct HasAttachEditorInstance : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasAttachEditorInstance<T, std::void_t<decltype( std::declval<T&>().attachEditorInstance( std::declval<const EditorAPI&>(), EditorHandle{} ) )>>
+        : std::true_type
+    {
+    };
+} // namespace
+
+/**
+ * @brief [ModuleHostTest] 가짜 API 표를 붙이는 시험 창구(`attachEditorInstance` · `attachGameInstance`)는 배포본에서 컴파일되지 않는다
+ * @details 배포본에 남으면 호스트가 부르는 게임 API 표를 밖에서 바꿔 끼울 수 있다.
+ */
+SW_TEST_CASE( ModuleHostTest, AttachSeamsAreCompiledOutOfShipping )
+{
+#if defined( SW_SHIPPING )
+    SW_EXPECT_FALSE( HasAttachGameInstance<ModuleHost>::value );
+    SW_EXPECT_FALSE( HasAttachEditorInstance<ModuleHost>::value );
+#else
+    SW_EXPECT_TRUE( HasAttachGameInstance<ModuleHost>::value );
+    SW_EXPECT_TRUE( HasAttachEditorInstance<ModuleHost>::value );
+#endif
+}

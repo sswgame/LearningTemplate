@@ -4,6 +4,7 @@
 
 #include <atomic>
 
+#if defined( SW_DEBUG )
 namespace sw::internal
 {
     namespace
@@ -28,3 +29,4 @@ namespace sw::internal
 
     uint32 getCapturedAssertCount() noexcept { return s_capturedAssertCount.load( std::memory_order_acquire ); }
 } // namespace sw::internal
+#endif

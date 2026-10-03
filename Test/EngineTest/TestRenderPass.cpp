@@ -982,3 +982,29 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
         SW_EXPECT_EQUAL( 3u, res.validate( "unit-test" ) );
     }
 }
+
+namespace
+{
+    /** @brief `FrameRenderer::setAnimationTimeOverride` 가 이 구성에 있는가 — 시험 전용 시계 고정이라 배포본에는 없어야 한다. */
+    template <typename T, typename = void>
+    struct HasAnimationTimeOverride : std::false_type
+    {
+    };
+    template <typename T>
+    struct HasAnimationTimeOverride<T, std::void_t<decltype( std::declval<T&>().setAnimationTimeOverride( 0.0f ) )>> : std::true_type
+    {
+    };
+} // namespace
+
+/**
+ * @brief [RenderPassTest] 시험 전용 시계 고정(`setAnimationTimeOverride`)은 배포본에서 컴파일되지 않는다
+ * @details 시험이 모프 시각을 고정하려고 둔 창구다. 배포본에 남으면 배포본의 애니메이션 시계를 밖에서 바꿀 수 있고 필드 하나만큼 렌더러가 커진다.
+ */
+SW_TEST_CASE( RenderPassTest, AnimationTimeOverrideIsCompiledOutOfShipping )
+{
+#if defined( SW_SHIPPING )
+    SW_EXPECT_FALSE( HasAnimationTimeOverride<sw::FrameRenderer>::value );
+#else
+    SW_EXPECT_TRUE( HasAnimationTimeOverride<sw::FrameRenderer>::value );
+#endif
+}

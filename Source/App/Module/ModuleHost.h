@@ -208,14 +208,17 @@ namespace sw
         bool bindEditorApi( void* pLibraryModule );
         /** @brief 게임 API 테이블을 바인딩합니다. 배포 구성은 정적 `exportGameApi`, 개발 구성은 DLL 심볼을 씁니다. */
         bool bindGameApi( void* pLibraryModule );
+#if !defined( SW_SHIPPING )
         /**
          * @brief 이미 만든 에디터 인스턴스와 그 API 표를 호스트에 붙입니다.
          * @details 정상 경로는 `bindEditorApi` → `createEditorInstance` 다. 이 창구는 모듈 DLL · 디바이스 없이 가짜 API 표로 호스트의 순서
          *          (시뮬레이션 멈춤 → shutdown → destroy)를 시험하려고 둔다. 에디터 모드(`initialize` 의 bEnableEditor)일 때만 에디터로 쓰인다.
+         *          시험 전용 창구라 배포본에는 없다 — 배포본에서 호스트의 API 표를 바꿔 끼울 길을 남기지 않는다.
          */
         void attachEditorInstance( const EditorAPI& editorApi, EditorHandle editor );
         /** @brief `attachEditorInstance` 의 게임 짝입니다 — 가짜 API 표로 게임을 내리는 순서(상태 찍기 → shutdown → destroy)를 시험합니다. */
         void attachGameInstance( const GameAPI& gameApi, GameHandle game );
+#endif
 
         /** @brief RHI 핫스왑 뒤 에디터 · 게임을 다시 초기화합니다. 실패하면 false 입니다. */
         bool reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule );

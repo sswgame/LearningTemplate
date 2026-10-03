@@ -85,7 +85,9 @@ namespace sw
         , _statusMessage{}
         , _graphContext{}
         , _taaHistorySrv{ kInvalidDescriptorIndex }
+#if !defined( SW_SHIPPING )
         , _animationTimeOverride{ -1.0f }
+#endif
         , _bMorphBindsRest{ SW_FALSE }
         , _bGpuCullingActive{ SW_FALSE }
         , _bPresentCaptureEnabled{ SW_FALSE }

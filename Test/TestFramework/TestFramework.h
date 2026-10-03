@@ -319,18 +319,13 @@ namespace test
     public:
 #if defined( SW_DEBUG )
         static constexpr bool kAssertsAreActive = true;
-#else
-        static constexpr bool kAssertsAreActive = false;
-#endif
 
         ScopedAssertCapture()
             : _startCount{ sw::internal::getCapturedAssertCount() }
         {
             sw::internal::beginAssertCapture();
         }
-
         ~ScopedAssertCapture() { sw::internal::endAssertCapture(); }
-
         ScopedAssertCapture( const ScopedAssertCapture& )            = delete;
         ScopedAssertCapture& operator=( const ScopedAssertCapture& ) = delete;
 
@@ -339,6 +334,17 @@ namespace test
 
     private:
         uint32 _startCount;
+#else
+        // 단언이 멈추지 않는 구성에는 가로채기 창구(`sw::internal::beginAssertCapture`)가 없다 — 이 스코프는 아무것도 하지 않는다.
+        static constexpr bool kAssertsAreActive = false;
+
+        ScopedAssertCapture()                                        = default;
+        ScopedAssertCapture( const ScopedAssertCapture& )            = delete;
+        ScopedAssertCapture& operator=( const ScopedAssertCapture& ) = delete;
+
+        /** @brief 단언이 없는 구성이라 늘 0 입니다. */
+        uint32 getCount() const { return 0; }
+#endif
     };
 
     /**
