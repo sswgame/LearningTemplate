@@ -93,11 +93,7 @@ cd build/Ninja-Debug/Bin
 영역별로 묶었다. 영역 안에서는 위에 있을수록 먼저 볼 것이다. 줄 번호는 2026-10-03 기준이라 어긋날 수 있다 — 함수 이름으로 찾는다.
 "확인 필요" 가 붙은 항목은 열려 있는지부터 확인하고 시작한다.
 
-### 1-0. 대기 중 — 진행 중인 수명 짝 워크트리가 병합된 뒤 한꺼번에 (사용자 지시 2026-10-03)
-
-- **수명 짝을 표 하나로 — 기동 표와 같은 모양으로 남은 자리**(종료 블록 감사에서 찾은 것): RHI 디바이스 넷의 `shutdown` 이 같은 순서를 손으로 되풀이(템플릿 메서드 후보),
-  FrameRenderer · GpuScene 의 GPU 자원 해제 목록, 모듈 인스턴스 수명 짝(에디터 · 게임 둘이 같은 코드), ImGuiEditor 의 초기화 · 종료 단계, ImGui 플랫폼 · 렌더 백엔드 짝,
-  `App::shutdown` 의 모듈 인스턴스 단계, GPU 시험의 손 정리(하네스 픽스처로). 하나씩 표 · 단계 구조체로 바꾸고 순서를 시험으로 고정한다.
+### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
 
 - **클래스 이름 일관화 — 감사 목록 전부**(사용자: "일관되게 바꿔봐"). **별칭은 두지 않는다**(사용자: 아직 실제 게임이 없다) — 씬 · 데이터 XML 의 타입 · 루트 이름,
   스크립트 · CI 의 CLI 플래그까지 새 이름으로 다시 쓰고 옛 이름은 어디에도 남기지 않는다.
@@ -143,9 +139,6 @@ cd build/Ninja-Debug/Bin
   머티리얼 · 투명 정렬이 없다.
 
 ### 1-3. 그래픽스 · RHI · 셰이더
-
-- **`-dx12 -gv_rhiSwapAtFrame=10 -gv_rhiSwapTo=0`(DX12→DX11 교체) 종료 시 `[MemoryLeak] heap larger than post-init baseline` +37 블록(~1.2 MB)** — `destroyAll` 뒤에도
-  남는다(정적 캐시이거나 실제 누수). 결정적 재현, 교체 전 코드에서도 같음. vk→gl · dx11→dx12 는 안 난다. 할당 지점은 `-gv_profileAllocSites` 로 본다.
 
 - **배포 팩에 G-버퍼 셰이더의 Unlit 보기 퍼뮤테이션(`SW_VIEWMODE_UNLIT=1`)이 없다** — `gv_viewMode` 는 배포본에도 있는 설정이다. 고치면
   `TestRenderPassGpu.cpp` 의 `SW_TEST_KNOWN_ERROR_LOG` 두 줄을 지운다.
@@ -673,6 +666,11 @@ cd build/Ninja-Debug/Bin
 
 ### 3-7. 그래픽스 · RHI · 셰이더
 
+- **디바이스 종료 순서는 `IRHIDevice::shutdown`(비가상 템플릿 메서드) 하나가 정한다** — releaseAllFor → `waitIdleInternal` → `detachCommandRecordingInternal` →
+  `shutdownInternal`. 백엔드는 훅만 채우고 앞부분을 다시 적지 않는다(네 벌일 때 DX12 · DX11 이 이미 어긋나 있었다). 리스트 떼기는 `RHILiveCommandListUtil::detachAll`.
+- **트랜지언트 크기를 따르는 자원(TAA 히스토리 · Present 캡처)은 `releaseTransientResources` 만 놓는다** — 패스 자원만 다시 세우는 셰이더 리로드는 이것을 다시 만들지
+  않는다(놓으면 리사이즈 전까지 히스토리 0). 컴퓨트 상수버퍼는 `collectComputeConstantBuffers` 표 하나로 만들고 놓는다.
+
 - **텍스처 슬롯 샘플러의 정본은 `bindingslots.hlsli` 의 `SW_ENGINE_TEXTURE_SAMPLER`(t0..t3, 선형 · 클램프)와 `SW_MATERIAL_TEXTURE_SAMPLER`(t5..t8, 선형 · 랩)** —
   GL 은 유닛마다 샘플러 객체, DX11 은 정적 세트. 이로써 네 백엔드 벤치 프레임이 바이트까지 같다(골든 이미지 백엔드마다 같은 그림).
 - **기록 중의 CB 갱신은 `IRHICommandList::updateConstantBuffer`, 기록 밖(에셋)은 `IRHIResource::updateConstantBuffer`** — 한 버퍼는 프레임에 한 번만 쓴다.
@@ -868,6 +866,10 @@ cd build/Ninja-Debug/Bin
   (리플렉션 등록 → 설정 → ResourceManager).
 
 ### 3-10. Core · 태스크 · 메모리
+
+- **프로세스 정적 캐시(`ShaderReflectionLibrary` 매니페스트 같은 것)는 엔진 종료 단계가 비운다** — 안 비우면 기동 뒤에 채운 몫이 종료 누수 검사(기준선 대비 바이트 ·
+  블록 수)에 남는다(백엔드 교체 뒤 ~1.1 MB). 진단은 MemoryProfiler 세부 추적을 켜고 `destroyAll` 뒤 `getTopCallStacks( LiveBytes )`. 교체 전 백엔드의 매니페스트는
+  종료까지 상주한다(상한 4 개라 둔다). 모듈 인스턴스 내리기는 에디터 · 게임 모두 타입을 걷은 **뒤** 서비스를 뗀다(`ModuleHostInternal::destroyInstance`).
 
 - **STL 구성(`SW_ENABLE_STL_CONTAINER=ON`, CI `CI-Debug-STL`)은 C++17 이라 std 해시 컨테이너에 이종 조회 · `contains` 가 없다** — sw 쪽 얇은 클래스가 메운다.
   커스텀 컨테이너 전용 시험은 그 구성에서 건너뛴다.
