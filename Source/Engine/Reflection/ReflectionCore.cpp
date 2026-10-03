@@ -330,74 +330,15 @@ namespace sw
         , _reservedPadding{ 0, 0, 0 } {}
 
     TypeInfo::TypeInfo( const TypeInfo& other )
-        : _size{ other._size }
-        , _destroyInstance{ other._destroyInstance }
-        , _addComponent{ other._addComponent }
-        , _name{ other._name }
-        , _fullyQualifiedName{ other._fullyQualifiedName }
-        , _parentFQN{ other._parentFQN }
-        , _moduleName{ other._moduleName }
-        , _listProperty{ other._listProperty }
-        , _listMethod{ other._listMethod }
-        , _metadata{ other._metadata }
-        , _listPropertyWithBase{}
-        , _mapNameToPropertyWithBase{}
-        , _mapNameToProperty{}
-        , _mapNameToMethod{}
-        , _pParentType{ nullptr }
-        , _parentMissGeneration{ 0 }
-        , _typeId{ other._typeId }
-        , _arrAncestorNameIndex{}
-        , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
-        , _bAlive{ SW_TRUE }
-        , _bAbstract{ other._bAbstract }
-        , _bStatic{ other._bStatic }
-        , _bPrimitive{ other._bPrimitive }
-        , _bIsCacheBuilt{ SW_FALSE }
-        , _bIsPODFastPath{ SW_FALSE }
-        , _bIsPODCalculated{ SW_FALSE }
-        , _bListPropertyWithBaseBuilt{ SW_FALSE }
-        , _bBuildingPropertyWithBase{ SW_FALSE }
-        , _reservedPadding{ 0, 0, 0 }
+        : TypeInfo()
     {
+        *this = other;
     }
 
     TypeInfo::TypeInfo( TypeInfo&& other ) noexcept
-        : _size{ other._size }
-        , _destroyInstance{ other._destroyInstance }
-        , _addComponent{ other._addComponent }
-        , _name{ other._name }
-        , _fullyQualifiedName{ other._fullyQualifiedName }
-        , _parentFQN{ other._parentFQN }
-        , _moduleName{ other._moduleName }
-        , _listProperty{ std::move( other._listProperty ) }
-        , _listMethod{ std::move( other._listMethod ) }
-        , _metadata{ std::move( other._metadata ) }
-        , _listPropertyWithBase{}
-        , _mapNameToPropertyWithBase{}
-        , _mapNameToProperty{}
-        , _mapNameToMethod{}
-        , _pParentType{ nullptr }
-        , _parentMissGeneration{ 0 }
-        , _typeId{ other._typeId }
-        , _arrAncestorNameIndex{}
-        , _ancestorDepth{ constants::reflection::kAncestorDepthUnknown }
-        , _bAlive{ SW_TRUE }
-        , _bAbstract{ other._bAbstract }
-        , _bStatic{ other._bStatic }
-        , _bPrimitive{ other._bPrimitive }
-        , _bIsCacheBuilt{ SW_FALSE }
-        , _bIsPODFastPath{ SW_FALSE }
-        , _bIsPODCalculated{ SW_FALSE }
-        , _bListPropertyWithBaseBuilt{ SW_FALSE }
-        , _bBuildingPropertyWithBase{ SW_FALSE }
-        , _reservedPadding{ 0, 0, 0 }
+        : TypeInfo()
     {
-        other._typeId          = 0;
-        other._size            = 0;
-        other._destroyInstance = nullptr;
-        other._addComponent    = nullptr;
-        other._bIsCacheBuilt   = SW_FALSE;
+        *this = std::move( other );
     }
 
     void TypeInfo::clearInheritedProperties() const
