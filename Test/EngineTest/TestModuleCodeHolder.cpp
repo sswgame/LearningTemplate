@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Delegate/ModuleCodeHolder.h"
+#include "Core/Module/ModuleCodeHolder.h"
 
 #include "Engine/Module/ModuleTypeRegistry.h"
 

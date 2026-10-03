@@ -9,10 +9,10 @@
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Delegate/ModuleCodeHolder.h"
 #include "Core/Event/EventType.h"
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Module/ModuleCodeHolder.h"
 #include "Core/String/hashed_string.h"
 
 #include <thread>

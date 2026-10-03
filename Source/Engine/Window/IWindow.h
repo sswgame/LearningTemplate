@@ -3,7 +3,7 @@
  * @brief 플랫폼 독립적인 창(OS 디스플레이 창) 생성과 메시지 처리 인터페이스입니다.
  */
 #pragma once
-#include "Core/Delegate/ModuleCodeHolder.h"
+#include "Core/Module/ModuleCodeHolder.h"
 
 #include "Engine/Common/IRenderSurface.h"
 #include "Engine/EngineMinimal.h"

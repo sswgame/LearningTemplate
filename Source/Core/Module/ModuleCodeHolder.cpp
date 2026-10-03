@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Delegate/ModuleCodeHolder.h"
+#include "Core/Module/ModuleCodeHolder.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"

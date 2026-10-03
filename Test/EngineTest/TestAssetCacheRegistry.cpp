@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Core/Delegate/ModuleCodeHolder.h"
 #include "Core/Log/Logger.h"
+#include "Core/Module/ModuleCodeHolder.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"

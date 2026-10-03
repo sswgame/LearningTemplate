@@ -8,8 +8,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Delegate/ModuleCodeHolder.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Module/ModuleCodeHolder.h"
 
 namespace sw
 {

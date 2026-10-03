@@ -16,8 +16,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Container/RegistrationList.h"
 #include "Core/Container/vector.h"
-#include "Core/Delegate/ModuleCodeHolder.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Module/ModuleCodeHolder.h"
 
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
