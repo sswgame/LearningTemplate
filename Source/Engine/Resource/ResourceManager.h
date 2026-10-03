@@ -71,10 +71,8 @@ namespace sw
          *          로 풀리므로, 그 전에 부르면 게임 도메인이 통째로 빠진 채 팩이 실리고 GUID 표도
          *          engine/common 만 채워집니다.
          *
-         *          `initialize()` 에서 갈라낸 이유가 그것입니다. 예전에는 초기화가 이 일까지 같이 해서
-         *          "설정이 먼저" 라는 전제가 부르는 쪽에 드러나지 않았고, 그래서 순서가 뒤집힌 채로
-         *          **마운트와 레지스트리 적재를 뒤에서 한 번 더** 해서 메우고 있었습니다. 이제 전제가
-         *          인자로 드러나고, 우선순위 적용과 마운트가 한 호출로 묶여 사이가 벌어지지 않습니다.
+         *          `initialize()` 와 나뉜 이유가 그것입니다 — "설정이 먼저" 라는 전제가 부르는 쪽에 드러나고,
+         *          우선순위 적용과 마운트가 한 호출로 묶여 사이가 벌어지지 않습니다.
          */
         bool mountContent( const vector<string>& listSearchPriority, ContentSource source = ContentSource::Cooked );
         /** @brief 마지막 `mountContent` 가 올린 콘텐츠의 출처입니다. 마운트 전에는 `ContentSource::Cooked` 입니다. */
@@ -129,8 +127,7 @@ namespace sw
         IAssetCache* findAssetCache( string_view assetKindName ) const;
         /**
          * @brief 등록된 캐시를 모두 비웁니다.
-         * @details `shutdown` 이 이것을 씁니다. 예전에는 종료 경로가 캐시 이름을 손으로 적고 있었고,
-         *          그래서 **프리팹 캐시만 빠져 있었습니다.** 재초기화 뒤에도 옛 프리팹이 남았습니다.
+         * @details `shutdown` 이 이것을 씁니다. 종료 경로가 캐시 이름을 손으로 적으면 하나가 빠져 재초기화 뒤에도 옛 내용이 남습니다.
          */
         void clearAssetCaches();
         /**

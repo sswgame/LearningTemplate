@@ -118,7 +118,7 @@ namespace sw
             return false;
         }
 
-        // 암호화한 팩은 받지 않는다. 풀 방법이 없는데 예전에는 플래그 · 방식을 보지 않고 평문으로 풀었다.
+        // 암호화한 팩은 받지 않는다. 풀 방법이 없으므로 플래그 · 방식을 보고 거절한다(평문으로 풀지 않는다).
         if ( ( _header._flags & static_cast<uint16>( PackFlag::Encrypted ) ) != 0 ||
              static_cast<PackEncryptionType>( _header._encryptionType ) != PackEncryptionType::None )
         {
@@ -272,8 +272,8 @@ namespace sw
         // CRC32 로 무결성을 검증한다
         const bool bHasCrc32 = ( ( _header._flags & static_cast<uint16>( PackFlag::HasCrc32 ) ) != 0 );
 
-        // 플래그가 있으면 **늘** 대조한다. 굽는 쪽은 모든 항목의 CRC 를 적는다(빈 데이터의 CRC 가 0). 예전에는 저장된 값이 0 이면 건너뛰어,
-        // 그 칸을 0 으로 지우면 검사가 꺼졌다.
+        // 플래그가 있으면 **늘** 대조한다. 굽는 쪽은 모든 항목의 CRC 를 적는다(빈 데이터의 CRC 가 0). 저장된 값이 0 일 때 건너뛰면
+        // 그 칸을 0 으로 지우는 것만으로 검사가 꺼진다.
         if ( bHasCrc32 )
         {
             const uint32 computedCrc = StringUtil::computeCrc32( outBytes.data(), outBytes.size() );
@@ -374,9 +374,9 @@ namespace sw
 
         for ( const auto& diskEntry : listDiskEntry )
         {
-            // **항목도 파일 안을 가리켜야 한다.** `validateHeaderGeometry` 가 헤더의 구역(인덱스 ·
-            // 스트링 풀)을 재면서 **항목은 재지 않고 있었다.** 그런데 `readFile` 은 항목이 적어 둔
-            // 크기를 그대로 `resize` 에 넣는다. 손상된 32바이트 항목 하나가 4GB 할당 요청이 된다.
+            // **항목도 파일 안을 가리켜야 한다.** `validateHeaderGeometry` 는 헤더의 구역(인덱스 ·
+            // 스트링 풀)만 잰다. 그런데 `readFile` 은 항목이 적어 둔 크기를 그대로 `resize` 에 넣는다 —
+            // 손상된 32바이트 항목 하나가 4GB 할당 요청이 된다.
             // 여기서 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다.
             if ( validateFileEntry( diskEntry, fileSize ) == false )
                 return false;
@@ -419,7 +419,7 @@ namespace sw
         outFileSize            = sizeBytes;
 
         // 헤더가 인덱스 크기를 **두 번** 말한다. `_indexSize` 로 한 번, `_fileCount` 로 한 번.
-        // 리더는 예전에 뒤엣것만 쓰고 앞엣것은 읽지도 않았다. 둘이 어긋난 팩은 리더와 쿠커가
+        // 둘이 어긋난 팩은 리더와 쿠커가
         // 레이아웃을 다르게 보고 있다는 뜻이므로 여기서 멈춘다.
         const uint64 derivedIndexSize = static_cast<uint64>( _header._fileCount ) * sizeof( PackFileEntryOnDisk );
         if ( _header._indexSize != derivedIndexSize )
@@ -429,8 +429,8 @@ namespace sw
             return false;
         }
 
-        // 그리고 그 구역들이 실제 파일 안에 있어야 한다. 예전에는 헤더의 수를 그대로 믿고
-        // `resize` 했다. 잘린 팩 하나가 수십 기가짜리 할당 요청이 될 수 있었다.
+        // 그리고 그 구역들이 실제 파일 안에 있어야 한다. 헤더의 수를 그대로 믿고 `resize` 하면
+        // 잘린 팩 하나가 수십 기가짜리 할당 요청이 될 수 있다.
         if ( _header._indexOffset > sizeBytes || derivedIndexSize > sizeBytes - _header._indexOffset )
         {
             SW_LOG_ERROR( "Pack index table lies outside the file %# (offset %#, size %#, file %#)",
@@ -483,8 +483,7 @@ namespace sw
 
     bool ResourcePackReader::decompressData( PackCompressionType type, const uint8* pSrc, size_t srcSize, void* pDst, size_t dstSize ) const
     {
-        // 풀 것이 없으면 둘 다 0 이어야 한다. 예전에는 `srcSize == 0` 이면 성공이라, 압축 크기 0 · 원본 크기 N 인 항목이 0 바이트 N 개로
-        // 읽혔다.
+        // 풀 것이 없으면 둘 다 0 이어야 한다. `srcSize == 0` 만 보면 압축 크기 0 · 원본 크기 N 인 항목이 0 바이트 N 개로 읽힌다.
         if ( dstSize == 0 )
             return srcSize == 0;
         if ( srcSize == 0 )

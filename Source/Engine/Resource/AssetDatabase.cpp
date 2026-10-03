@@ -91,17 +91,17 @@ namespace sw
         if ( path.empty() || FileUtil::hasExtension( path, ".meta" ) )
             return result;
 
-        // **리소스 루트 밖의 절대 경로에는 식별자를 주지 않는다**(null GUID). 예전에는 그런 경로(테스트의 임시 프리팹, 사용자가 연
-        // 바깥 파일)에도 소문자로 정규화한 경로 옆에 `.meta` 를 써서 프로젝트 밖 폴더에 사이드카를 흘렸다 — 대소문자를 가리는 파일
-        // 시스템에서는 원래 파일 옆도 아닌(없는 폴더일 수도 있는) 자리였다. 루트 밖 에셋은 씬이 GUID 로 다시 찾을 수도 없다(유니티도
+        // **리소스 루트 밖의 절대 경로에는 식별자를 주지 않는다**(null GUID). 그런 경로(테스트의 임시 프리팹, 사용자가 연 바깥 파일)에
+        // `.meta` 를 쓰면 프로젝트 밖 폴더에 사이드카가 흘러나가고, 대소문자를 가리는 파일 시스템에서는 원래 파일 옆도 아닌 자리가 된다.
+        // 루트 밖 에셋은 씬이 GUID 로 다시 찾을 수도 없다(유니티도
         // `Assets/` 밖에는 .meta 를 만들지 않는다). 판정은 정규화 **전** 경로로 한다 — 루트와 대소문자를 견줘야 한다.
         if ( FileUtil::isAbsolutePath( relativePath ) )
         {
             string rootRelative = toRelativePath( relativePath );
             if ( rootRelative.empty() || rootRelative.rfind( "..", 0 ) == 0 )
                 return result;
-            // 루트 안이면 키는 그 전역 id 다. 예전에는 절대 경로를 소문자로 내린 것이 키가 되어, 같은 에셋이 id 키와 절대 경로 키를 따로
-            // 갖고 GUID → 경로가 기계마다 다른 절대 경로를 돌려줬다(유니티 `AssetDatabase` 의 키도 프로젝트 상대 경로다).
+            // 루트 안이면 키는 그 전역 id 다. 절대 경로를 키로 쓰면 같은 에셋이 id 키와 절대 경로 키를 따로 갖고 GUID → 경로가
+            // 기계마다 다른 절대 경로를 돌려준다(유니티 `AssetDatabase` 의 키도 프로젝트 상대 경로다).
             path = std::move( rootRelative );
         }
 
@@ -123,9 +123,8 @@ namespace sw
             {
 #if defined( SW_SHIPPING )
                 // 배포 빌드는 .meta 를 팩에 넣지 않는다(PackConfig 의 `*.meta` 제외). 여기서 GUID 를 지어내 쓰면
-                // 실행마다 다른 GUID 가 되고, 그 파일은 팩 옆(개발 PC 에서는 소스 트리 Resource/)에 떨어진다.
-                // 실제로 Shipping 실기동 한 번에 defaultmaterial.material.meta 의 GUID 가 바뀌어 작업 트리가
-                // 더러워졌다. 배포본에서 에셋 식별자는 쿠킹 때 정해진 것만 쓴다. 없으면 없는 것이다
+                // 실행마다 다른 GUID 가 되고, 그 파일은 팩 옆(개발 PC 에서는 소스 트리 Resource/)에 떨어져 작업 트리를 더럽힌다.
+                // 배포본에서 에셋 식별자는 쿠킹 때 정해진 것만 쓴다. 없으면 없는 것이다
                 // (부르는 쪽은 모두 null GUID 를 허용한다. 씬 · 프리팹 로더는 경로로 물러난다).
                 return result;
 #else
@@ -179,9 +178,8 @@ namespace sw
     bool AssetDatabase::tryGetGuid( string_view relativePath, Uuid& outGuid ) const
     {
         // **넣을 때 정규화했으면 찾을 때도 정규화해야 한다.** `ensureMeta` · `registerMapping` ·
-        // `registerExisting` 은 모두 `normalizePath` 를 거친 키를 넣는데(소문자 · `/` 구분자)
-        // 이쪽만 받은 문자열을 그대로 찾고 있었다. 씬 XML 의 `prefab` 경로처럼 대문자가 섞인
-        // 값으로 물어보면 등록돼 있어도 못 찾았다.
+        // `registerExisting` 은 모두 `normalizePath` 를 거친 키를 넣는다(소문자 · `/` 구분자). 받은 문자열을 그대로 찾으면
+        // 씬 XML 의 `prefab` 경로처럼 대문자가 섞인 값으로 물을 때 등록돼 있어도 못 찾는다.
         const string path = FileUtil::normalizePath( relativePath );
 
         std::shared_lock<std::shared_mutex> lock{ _mutex };

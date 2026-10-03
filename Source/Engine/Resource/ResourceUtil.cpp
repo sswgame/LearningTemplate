@@ -32,7 +32,7 @@ namespace sw
 
             /**
              * @brief 상대 id 에 `..` 성분이 있으면 true 입니다 — 리소스 루트 밖으로 나가는 id 입니다.
-             * @details 예전에는 `..` 를 거르지 않아 `engine/../../x` 같은 id 가 도메인 루트에 붙어 루트 밖 파일을 읽었다(언리얼은 경로를 가상
+             * @details 거르지 않으면 `engine/../../x` 같은 id 가 도메인 루트에 붙어 루트 밖 파일을 읽는다(언리얼은 경로를 가상
              *          경로 · 팩 마운트 지점 안으로 가둔다). 저장소의 데이터 · 코드에는 `..` 를 쓰는 id 가 없다.
              */
             static bool hasParentDirectoryComponent( string_view path )
@@ -178,12 +178,10 @@ namespace sw
          * @details 순서는 넷입니다. (0) OS 절대 경로면 디스크에서 바로, (1) 낱개 파일 우선이 켜져
          *          있으면 디스크, (2) 마운트된 팩, (3) 낱개 경로를 풀지 못한 경우의 마지막 폴백입니다.
          *
-         *          예전에는 이 순서가 `readTextResource` 와 `readBinaryResource` 에 **두 벌**
-         *          적혀 있었습니다. 한쪽만 고치면 텍스트와 바이너리가 다른 파일을 읽게 됩니다.
+         *          `readTextResource` 와 `readBinaryResource` 가 이 순서 하나를 씁니다 — 두 벌이면 한쪽만 고쳐 텍스트와
+         *          바이너리가 다른 파일을 읽게 됩니다.
          *
-         *          그리고 둘 다 못 찾을 때 `getResourcePath` 와 `fileExists` 를 **두 번씩** 했습니다.
-         *          1단계가 이미 "그 경로에 없다" 를 확인했는데 3단계가 같은 경로를 다시 물었습니다.
-         *          경로를 한 번만 풀고, 3단계는 **1단계가 경로를 풀지 못한 경우에만** 의미가 있습니다.
+         *          경로를 한 번만 풀고, 3단계는 **1단계가 경로를 풀지 못한 경우에만** 의미가 있습니다(같은 경로를 두 번 묻지 않는다).
          */
         template <typename DiskReadFn, typename PackReadFn>
         [[nodiscard]] bool readResourceCommon( string_view relativePath, string* pOutAbsPath,
@@ -193,7 +191,7 @@ namespace sw
                 return false;
 
             // 0. OS 절대 경로(임시 파일, 외부 세이브 등)면 디스크에서 바로 읽는다. 단, 팩 전용 모드(낱개 파일 금지 — 배포 구성)에서 리소스 루트
-            //    **안**을 가리키면 거절한다. 예전에는 절대 경로로 적기만 하면 팩 전용 모드를 지나 낱개 에셋을 읽었다.
+            //    **안**을 가리키면 거절한다 — 절대 경로로 적기만 하면 팩 전용 모드를 지나 낱개 에셋을 읽게 된다.
             if ( FileUtil::isAbsolutePath( relativePath ) )
             {
                 if ( ResourceUtil::getPackManager().isAllowLooseFiles() == false && ResourceUtilInternal::isInsideResourceRoot( relativePath ) )
@@ -262,7 +260,7 @@ namespace sw
     {
         // `_s_bInitialize` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다.
         //
-        // 예전에는 본문 맨 앞에서 이 플래그를 켰고, 그래서 두 가지가 깨져 있었다.
+        // 본문 맨 앞에서 이 플래그를 켜면 두 가지가 깨진다.
         //  1) 루트를 못 찾아 false 로 나가도 "초기화됨" 으로 남는다. `App::initialize` 는 반환값을
         //     보지 않으므로, 실패를 검사하는 유일한 호출부(`ResourceManager::initialize`)가 그 다음에
         //     true 를 받아 **빈 경로로** 팩 마운트와 레지스트리 로드를 진행한다.
@@ -390,7 +388,7 @@ namespace sw
         if ( FileUtil::isAbsolutePath( path ) )
             return FileUtil::normalizeSeparators( path );
 
-        // 상대 경로가 `..` 로 올라가면 리소스 루트 밖에 쓴다(데이터에 적힌 경로 하나로 아무 곳에나 쓸 수 있었다). 쓰지 않는다.
+        // 상대 경로가 `..` 로 올라가면 리소스 루트 밖에 쓴다(데이터에 적힌 경로 하나로 아무 곳에나 쓸 수 있다). 쓰지 않는다.
         if ( toResourceId( path ).empty() )
         {
             SW_LOG_ERROR( "'%#' leaves the resource tree - nothing is written there", path );
@@ -480,9 +478,7 @@ namespace sw
             return false;
 
         // 0. OS 절대 경로면 디스크에서 바로 확인한다
-        // 판정은 `FileUtil::isAbsolutePath` 가 기준이다. 여기 손으로 적은 복사본이 있었는데
-        // **드라이브 문자가 글자인지 보지 않아** 기준과 답이 갈렸다. 같은 복사본이 에디터 설정
-        // 경로에도 셋 있었다(지금은 `EditorUtil::resolveProjectRelativePath` 하나로 모았다).
+        // 판정은 `FileUtil::isAbsolutePath` 가 기준이다 — 손으로 적은 복사본을 두면 기준과 답이 갈린다.
         if ( FileUtil::isAbsolutePath( relativePath ) )
             return FileUtil::fileExists( relativePath );
 

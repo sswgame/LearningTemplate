@@ -69,8 +69,8 @@ namespace sw
          * @brief 편집기 · 도구가 쥔 경로를 리소스 id(전역 id — `game/empty/maps/x.scene.xml`, 소문자 · `/`)로 바꿉니다.
          * @param path 절대 경로 · 프로젝트 기준 경로(`Resource/…`) · 이미 리소스 id 중 무엇이든 받습니다.
          * @return 리소스 id 입니다. 리소스 루트 밖이거나 `..` 로 올라가면 빈 글입니다.
-         * @details 예전에는 편집기가 이 변환을 자리마다 따로 했다 — 프로젝트 루트 기준 `makeRelativePath` 를 리소스 id 에 다시 걸어 텍스처를 떨군
-         *          스프라이트가 흰 사각형이 됐고(경로가 깨졌다), 퀵 런처는 `Resource/…` 를 들고 있어 씬 열기 · 에셋 포커스가 다른 형태의 경로를 받았다.
+         * @details 편집기는 이 변환을 자리마다 따로 하지 않고 이것을 씁니다 — 프로젝트 루트 기준 `makeRelativePath` 를 리소스 id 에 다시 걸면
+         *          경로가 깨진다(텍스처를 떨군 스프라이트가 흰 사각형이 된다).
          */
         static string toResourceId( string_view path );
 

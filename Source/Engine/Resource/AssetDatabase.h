@@ -37,8 +37,8 @@ namespace sw
 
         /**
          * @brief 에셋 파일과 그 사이드카(`.meta`)를 지웁니다. `.meta` 는 **에셋이 실제로 지워진 뒤에만** 지웁니다 — 실패하면 둘 다 그대로이고 false 입니다.
-         * @details 예전 에디터 삭제는 에셋 삭제가 실패해도(잠긴 파일) `.meta` 를 지워, 남은 에셋이 다음에 새 GUID 를 받고 그 GUID 로 가리키던 참조
-         *          (씬의 프리팹 · 머티리얼)가 끊겼다. `.meta` 를 만드는 쪽(`ensureMeta`)과 지우는 쪽이 한 자리에 있다.
+         * @details 에셋 삭제가 실패했는데(잠긴 파일) `.meta` 를 지우면 남은 에셋이 다음에 새 GUID 를 받아 그 GUID 로 가리키던 참조
+         *          (씬의 프리팹 · 머티리얼)가 끊긴다. `.meta` 를 만드는 쪽(`ensureMeta`)과 지우는 쪽이 한 자리에 있다.
          */
         [[nodiscard]] static bool deleteAssetFile( string_view absolutePath );
 
@@ -59,13 +59,10 @@ namespace sw
 
         /**
          * @brief 상대 경로의 GUID 를 찾아 복사합니다(스레드 안전). 경로는 안에서 정규화합니다.
-         * @warning **이 표에서 값을 빌려 나가는 방법은 없습니다. 복사만 있습니다.** 예전에는 원소를
-         *          가리키는 `getGuid`/`getPath` 가 함께 있었는데, 둘 다 잠금을 놓은 뒤에
-         *          포인터를 반환했습니다. `_mapPathToGuid` 는 **정렬된 벡터**이고
-         *          `_mapGuidToPath` 는 **밀집 배열**이라, 다른 스레드의 등록 하나가 원소를
-         *          통째로 옮깁니다. 앞 키 자리에 하나만 끼어들어도 그 뒤가 모두 밀립니다.
-         *          호출부 다섯 곳은 모두 받자마자 값을 복사하고 있었으므로, 빌려 주는 쪽을
-         *          없앴습니다.
+         * @warning **이 표에서 값을 빌려 나가는 방법은 없습니다. 복사만 있습니다.** `_mapPathToGuid` 는
+         *          **정렬된 벡터**이고 `_mapGuidToPath` 는 **밀집 배열**이라, 잠금을 놓은 뒤에 원소 포인터를
+         *          돌려주면 다른 스레드의 등록 하나가 원소를 통째로 옮깁니다(앞 키 자리에 하나만 끼어들어도
+         *          그 뒤가 모두 밀립니다).
          */
         [[nodiscard]] bool tryGetGuid( string_view relativePath, Uuid& outGuid ) const;
 
@@ -80,8 +77,8 @@ namespace sw
 
         /**
          * @brief 리소스 루트 아래의 모든 `.meta` 를 재귀로 읽어 등록합니다(만들지는 않습니다). 반환값은 등록 수입니다.
-         * @details 시작 시점에 표를 채우는 개발 빌드 경로입니다. 예전에는 `ensureMeta` 를 거친 에셋만 알아서, 이름을
-         *          바꾼 프리팹의 GUID 복구가 "그 세션에서 먼저 로드됐을 때만" 동작했습니다. 유니티의 GUID 표,
+         * @details 시작 시점에 표를 채우는 개발 빌드 경로입니다 — `ensureMeta` 를 거친 에셋만 알면 이름을 바꾼 프리팹의 GUID 복구가
+         *          "그 세션에서 먼저 로드됐을 때만" 동작합니다. 유니티의 GUID 표,
          *          언리얼의 AssetRegistry 는 시작부터 전체를 압니다.
          */
         uint32 scanMetaFiles( string_view absoluteRoot );
@@ -100,9 +97,8 @@ namespace sw
 
         /**
          * @brief `<resourceRoot>/<domain>` 아래 `.meta` 마다 `<guid> <domain/상대 경로>` 한 줄을 만듭니다(경로 순). 쿠커가 배포본에 싣습니다.
-         * @details 경로는 **`.meta` 가 놓인 자리**입니다 — Dev 의 `scanMetaFiles` · `ensureMeta` 와 같은 규칙. 예전에는 파이썬 쿠커가 `.meta` 안의
-         *          `sourcePath=` 칸을 읽어, 탐색기 · git 으로 옮긴 에셋은 배포본에서만 **옛 경로**를 가리켰다(GUID 가 경로보다 먼저라 씬의 프리팹이 사라졌다).
-         *          그 칸은 사람이 읽으라고 남기고 아무도 읽지 않습니다. GUID 를 읽지 못한 `.meta` 는 @p outFailedCount 에 셉니다.
+         * @details 경로는 **`.meta` 가 놓인 자리**입니다 — Dev 의 `scanMetaFiles` · `ensureMeta` 와 같은 규칙. `.meta` 안의 `sourcePath=` 칸은
+         *          사람이 읽으라고 남기고 아무도 읽지 않습니다(그 칸을 믿으면 탐색기 · git 으로 옮긴 에셋이 배포본에서만 **옛 경로**를 가리킨다). GUID 를 읽지 못한 `.meta` 는 @p outFailedCount 에 셉니다.
          */
         static string makeRegistryText( string_view resourceRoot, string_view domain, uint32& outFailedCount );
         /**

@@ -20,7 +20,7 @@ namespace sw
         constexpr uint32 kDdpfFourCC = 0x00000004;
         constexpr uint32 kDdpfRgb    = 0x00000040;
 
-        // 옛 FourCC 코드
+        // DXT 계열 FourCC 코드
         constexpr uint32 kFourCC_DXT1 = 0x31545844;
         constexpr uint32 kFourCC_DXT2 = 0x32545844;
         constexpr uint32 kFourCC_DXT3 = 0x33545844;
@@ -34,8 +34,7 @@ namespace sw
         // D3DFMT 열거값이 그대로 들어앉은 FourCC — **네 글자 코드가 아니다.**
         // D3D9 시절 DDS 라이터는 부동소수점 포맷에 네 글자 이름을 주지 않고 `D3DFORMAT` 의 정수를
         // dwFourCC 에 밀어 넣었다. 그래서 값이 0x71 같은 작은 수로 보인다. 이 저장소의 DDS 다섯 개
-        // (`engine/textures/perlin.dds` · `skybox/env*.dds`)가 전부 이 모양이고, 예전에는 전부
-        // "Unrecognized DDS FourCC" 경고 한 줄만 남기고 **성공으로 처리**되고 있었다.
+        // (`engine/textures/perlin.dds` · `skybox/env*.dds`)가 전부 이 모양이다.
         constexpr uint32 kD3dFmt_R16F          = 111;
         constexpr uint32 kD3dFmt_G16R16F       = 112;
         constexpr uint32 kD3dFmt_A16B16G16R16F = 113;
@@ -279,9 +278,8 @@ namespace sw
              image._dxgiFormat == kDxgiFormatB8G8R8A8UnormSrgb )
             image._bIsBgra = SW_TRUE;
 
-        // **못 알아본 포맷은 실패다.** 예전에는 여기까지 흘러와 `_dxgiFormat == 0` 인 채로 true 를
-        // 반환했다. 그때는 `isValid()` 도 포맷을 보지 않아서(바이트 · 가로 · 세로만 봤다) 부르는 쪽에서도
-        // 걸러지지 않았고, 알아보지 못한 이미지가 "성공적으로 로드된 이미지" 로 흘러 나갔다.
+        // **못 알아본 포맷은 실패다.** `_dxgiFormat == 0` 인 채로 true 를 돌려주면 알아보지 못한 이미지가
+        // "성공적으로 로드된 이미지" 로 흘러 나간다(`isValid()` 도 포맷을 본다).
         if ( image._dxgiFormat == kDxgiFormatUnknown )
         {
             SW_LOG_ERROR(
