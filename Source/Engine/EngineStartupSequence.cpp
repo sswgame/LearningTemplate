@@ -10,9 +10,9 @@ namespace sw
     {
         struct EngineStartupSequenceInternal
         {
-            /** @brief 표 그대로의 이름 · 의존 칸입니다(줄 순서 = `EngineStartupStep` 값). */
+            /** @brief 표 그대로의 이름 · 의존 칸입니다(줄 순서 = `EngineStartupStep` 값). 의존 칸은 `{ A, B }` 를 글로 든다. */
             static constexpr EngineStartupNode kArrStepNode[] = {
-#define SW_ENGINE_STARTUP_STEP( Name, Dependencies ) { #Name, Dependencies },
+#define SW_ENGINE_STARTUP_STEP( Name, ... ) { #Name, #__VA_ARGS__ },
 #include "Engine/EngineStartupStepList.xxx"
 #undef SW_ENGINE_STARTUP_STEP
             };
@@ -20,6 +20,9 @@ namespace sw
                            "Startup node table must have one row per EngineStartupStep" );
 
             static constexpr uint32 kNotFound = 0xFFFFFFFFu;
+
+            /** @brief 의존 글의 구분자입니다 — 표는 `{ A, B }`, 시험은 공백으로 이은 이름을 넘긴다. */
+            static constexpr bool isDependencySeparator( utf8 ch ) { return ch == ' ' || ch == ',' || ch == '{' || ch == '}'; }
 
             static uint32 findNodeIndex( const vector<EngineStartupNode>& listNode, string_view name )
             {
@@ -31,7 +34,7 @@ namespace sw
                 return kNotFound;
             }
 
-            /** @brief 공백으로 구분한 의존 이름을 노드 자리로 풉니다. 모르는 이름이면 false 입니다. */
+            /** @brief 의존 이름(쉼표 · 중괄호 · 공백으로 구분)을 노드 자리로 풉니다. 모르는 이름이면 false 입니다. */
             static bool resolveDependencies( const vector<EngineStartupNode>& listNode, uint32 nodeIndex, vector<uint32>& outListDependency, string& outError )
             {
                 const utf8* pText = listNode[nodeIndex]._pDependencyText;
@@ -41,10 +44,10 @@ namespace sw
                 size_t            cursor{ 0 };
                 while ( cursor < text.size() )
                 {
-                    while ( cursor < text.size() && text[cursor] == ' ' )
+                    while ( cursor < text.size() && isDependencySeparator( text[cursor] ) )
                         ++cursor;
                     size_t tokenEnd = cursor;
-                    while ( tokenEnd < text.size() && text[tokenEnd] != ' ' )
+                    while ( tokenEnd < text.size() && isDependencySeparator( text[tokenEnd] ) == false )
                         ++tokenEnd;
                     if ( tokenEnd > cursor )
                     {
@@ -69,6 +72,35 @@ namespace sw
 
 namespace sw
 {
+    // 표의 의존이 모두 자기보다 위 줄에 있는지 컴파일 때 본다 — 표를 기동 순서로 읽을 수 있게(오타도 여기서 컴파일 오류).
+    namespace EngineStartupTableCheck
+    {
+        enum Index : uint32
+        {
+#define SW_ENGINE_STARTUP_STEP( Name, ... ) Name,
+#include "Engine/EngineStartupStepList.xxx"
+#undef SW_ENGINE_STARTUP_STEP
+        };
+
+        /** @brief @p listDependency 가 모두 @p self 보다 앞 줄이면 true 입니다. */
+        constexpr bool areAllAbove( uint32 self, std::initializer_list<uint32> listDependency )
+        {
+            for ( const uint32 dependency : listDependency )
+            {
+                if ( dependency >= self )
+                    return false;
+            }
+            return true;
+        }
+
+// `{ A, B }` 의 쉼표는 매크로 인자를 가르므로 가변 인자로 받아 다시 붙인다(`__VA_ARGS__` = `{ A, B }`).
+#define SW_ENGINE_STARTUP_STEP( Name, ... )                                        \
+    static_assert( areAllAbove( Name, std::initializer_list<uint32> __VA_ARGS__ ), \
+                   "EngineStartupStepList.xxx: step " #Name " must be listed below every step it depends on" );
+#include "Engine/EngineStartupStepList.xxx"
+#undef SW_ENGINE_STARTUP_STEP
+    } // namespace EngineStartupTableCheck
+
     SW_LOG_CALLER( "EngineStartup" );
 
     EngineStartupSequence::EngineStartupSequence()
@@ -175,7 +207,8 @@ namespace sw
                 return false;
         }
 
-        // Kahn: 남은 의존이 0 인 노드 중 목록 앞의 것을 고른다. 노드가 스무 개 남짓이라 매번 처음부터 훑는다.
+        // Kahn: 남은 의존이 0 인 노드 중 **이름이 가장 앞인** 것을 고른다 — 목록 순서를 보지 않으므로 순서는 의존 칸만이 정한다
+        // (표를 기동 순서로 적고, 그것이 이 결과와 같은지 시험이 본다). 노드가 스무 개 남짓이라 매번 처음부터 훑는다.
         vector<uint32> listRemaining( nodeCount, 0 );
         for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
             listRemaining[nodeIndex] = static_cast<uint32>( outGraph._listDependency[nodeIndex].size() );
@@ -186,11 +219,11 @@ namespace sw
             uint32 readyIndex = EngineStartupSequenceInternal::kNotFound;
             for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
             {
-                if ( listEmitted[nodeIndex] == SW_FALSE && listRemaining[nodeIndex] == 0 )
-                {
+                if ( listEmitted[nodeIndex] == SW_TRUE || listRemaining[nodeIndex] != 0 )
+                    continue;
+                if ( readyIndex == EngineStartupSequenceInternal::kNotFound ||
+                     string_view{ listNode[nodeIndex]._pName } < string_view{ listNode[readyIndex]._pName } )
                     readyIndex = nodeIndex;
-                    break;
-                }
             }
             if ( readyIndex == EngineStartupSequenceInternal::kNotFound )
             {

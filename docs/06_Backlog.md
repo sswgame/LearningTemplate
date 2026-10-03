@@ -761,7 +761,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-9. 핫 리로드 · 모듈 · 엔진 서비스
 
-- **엔진 기동 · 종료 순서는 `EngineStartupStepList.xxx` 의 의존 칸이 정한다**(위상 정렬, 종료는 초기화한 단계만 역순 — UE `USubsystem` 의존 선언). 표는 이름 순이다.
+- **엔진 기동 · 종료 순서는 `EngineStartupStepList.xxx` 의 의존 칸이 정하고, 표는 그 순서대로 적는다**(UE `USubsystem` 의존 선언). 의존은 식별자 목록
+  `{ A, B }` 라 오타 · 아래 줄 의존은 컴파일 오류(static_assert), 정렬은 의존만 보고 동점은 이름 순, 그 결과가 줄 순서와 같은지
+  `EngineStartupSequenceTest.TableIsWrittenInStartupOrder` 가 본다(의존을 빼먹으면 진다). 종료는 초기화한 단계만 역순.
   새 단계는 `EngineLoop::initializeStartupStep` · `shutdownStartupStep` 과 시험 하네스(`Test/TestFramework/main.cpp`)에 본문을 더한다(-Wswitch-enum 이 짚는다).
   객체 해제(reset) 순서는 표 밖이다(`ResourceManager::shutdown` 은 다른 매니저 소멸 뒤).
 

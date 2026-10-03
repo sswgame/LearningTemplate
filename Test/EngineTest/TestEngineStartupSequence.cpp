@@ -63,33 +63,29 @@ namespace
         return listReversed;
     }
 
-    /** @brief 표의 초기화 순서입니다. 의존 칸을 바꾸면 이 줄이 바뀌어야 합니다 — 바뀐 줄이 곧 순서 변경의 리뷰 대상입니다. */
-    constexpr const utf8* kExpectedInitializeOrder = "Compression Reflection Config Resource EngineData ShaderCache Task ModuleImages Audio Input Scene Headless "
-                                                     "RHI FrameRenderer RenderThread LiveShader SceneRhi";
+    /** @brief 표에 적힌 줄 순서 그대로의 단계 이름입니다. */
+    string joinTableOrder()
+    {
+        const vector<EngineStartupNode> listNode = EngineStartupSequence::makeStepNodes();
+        vector<uint32>                  listIndex;
+        for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( listNode.size() ); ++nodeIndex )
+            listIndex.push_back( nodeIndex );
+        return joinNodeOrder( listNode, listIndex );
+    }
 } // namespace
 
 /**
- * @brief [EngineStartupSequenceTest] 표(`EngineStartupStepList.xxx`)의 위상 순서가 기록해 둔 순서와 같은지 검증
- * @details 표는 이름 순이고 의존이 없는 단계끼리는 줄 순서로 가므로, 이 순서는 **의존 칸만으로** 나온다. 의존 하나를 빼면
- *          (예: Config 의 Reflection) 순서가 바뀌어 이 시험이 진다.
+ * @brief [EngineStartupSequenceTest] 표(`EngineStartupStepList.xxx`)가 실제 기동 순서대로 적혀 있는지 검증
+ * @details 정렬은 의존 칸만 본다(동점은 이름 순, 줄 위치는 보지 않는다). 그 결과가 표의 줄 순서와 같아야 표를 위에서 아래로 기동 순서로
+ *          읽을 수 있다. 의존을 빼먹어 계산 순서가 바뀌면(예: Config 의 Reflection) 이 시험이 진다 — 줄을 의존보다 위로 옮기는 것은
+ *          컴파일 오류다(static_assert).
  */
-SW_TEST_CASE( EngineStartupSequenceTest, InitializeOrderMatchesDump )
+SW_TEST_CASE( EngineStartupSequenceTest, TableIsWrittenInStartupOrder )
 {
     const EngineStartupSequence sequence;
     SW_ASSERT_TRUE_MSG( sequence.getError().empty(), sequence.getError().c_str() );
-    SW_EXPECT_STREQ( kExpectedInitializeOrder, joinStepNames( sequence.getInitializeOrder() ).c_str() );
-}
-
-/**
- * @brief [EngineStartupSequenceTest] 표의 줄이 이름 순인지 검증
- * @details 줄을 초기화 순서대로 적으면 의존 칸이 빠져도 순서가 그대로라 아무것도 잡지 못한다. 이름 순이라 줄 위치는 순서에 뜻이 없다.
- */
-SW_TEST_CASE( EngineStartupSequenceTest, StepListIsSortedByName )
-{
-    const vector<EngineStartupNode> listNode = EngineStartupSequence::makeStepNodes();
-    SW_ASSERT_TRUE( listNode.size() == static_cast<size_t>( EngineStartupStep::Count ) );
-    for ( size_t nodeIndex = 1; nodeIndex < listNode.size(); ++nodeIndex )
-        SW_EXPECT_TRUE_MSG( string_view{ listNode[nodeIndex - 1]._pName } < string_view{ listNode[nodeIndex]._pName }, listNode[nodeIndex]._pName );
+    SW_ASSERT_TRUE( sequence.getInitializeOrder().size() == static_cast<size_t>( EngineStartupStep::Count ) );
+    SW_EXPECT_STREQ( joinTableOrder().c_str(), joinStepNames( sequence.getInitializeOrder() ).c_str() );
 }
 
 /**
@@ -102,7 +98,7 @@ SW_TEST_CASE( EngineStartupSequenceTest, ShutdownRunsInReverseOfInitialization )
     EngineStartupSequence sequence;
     StartupStepRecorder   recorder;
     SW_ASSERT_TRUE( recorder.runInitialize( sequence ) );
-    SW_EXPECT_STREQ( kExpectedInitializeOrder, joinStepNames( recorder._listInitialized ).c_str() );
+    SW_EXPECT_STREQ( joinTableOrder().c_str(), joinStepNames( recorder._listInitialized ).c_str() );
 
     sequence.shutdownAll();
     SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
@@ -192,15 +188,16 @@ SW_TEST_CASE( EngineStartupSequenceTest, UnknownOrDuplicateNameIsRejected )
 }
 
 /**
- * @brief [EngineStartupSequenceTest] 의존이 순서를 정하고, 의존이 없는 노드끼리는 목록 순서로 가는지 검증
+ * @brief [EngineStartupSequenceTest] 의존이 순서를 정하고, 의존이 없는 노드끼리는 이름 순으로 가는지 검증(목록 순서는 보지 않는다)
+ * @details 목록은 이름과 거꾸로 두고, 의존 글은 표의 꼴(`{ A, B }`)과 공백 꼴을 섞는다.
  */
-SW_TEST_CASE( EngineStartupSequenceTest, DependenciesOrderAndListBreaksTies )
+SW_TEST_CASE( EngineStartupSequenceTest, DependenciesOrderAndNameBreaksTies )
 {
     const vector<EngineStartupNode> listNode = {
-        {"A",        "C"},
-        {"B",         ""},
+        {"D", "{ A, B }"},
         {"C",         ""},
-        {"D", "  A   B "}
+        {"B",       "{}"},
+        {"A",      " C "}
     };
     EngineStartupGraph graph{};
     string             error;
