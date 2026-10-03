@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Widgets/EditorColor.h"
+#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
 namespace sw

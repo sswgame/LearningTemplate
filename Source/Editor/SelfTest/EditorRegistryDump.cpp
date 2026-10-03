@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Gui/EditorRegistryDump.h"
+#include "Editor/SelfTest/EditorRegistryDump.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"

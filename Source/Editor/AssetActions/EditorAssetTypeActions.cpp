@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Workspace/EditorAssetTypeActions.h"
+#include "Editor/AssetActions/EditorAssetTypeActions.h"
 
 #include "Core/Container/array.h"
 #include "Core/Log/Logger.h"

@@ -19,7 +19,6 @@
 #include "Editor/Common/Gui/EditorMenuBar.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Gui/EditorPanelDump.h"
-#include "Editor/Common/Gui/EditorRegistryDump.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -28,6 +27,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Popups/EditorPopupManager.h"
+#include "Editor/SelfTest/EditorRegistryDump.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/Viewport/EditorCamera.h"
 

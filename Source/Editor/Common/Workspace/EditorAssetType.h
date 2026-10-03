@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Widgets/EditorColor.h"
+#include "Editor/Common/EditorColor.h"
 
 namespace sw::editor
 {
