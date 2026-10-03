@@ -144,6 +144,16 @@ def processFile(filePath: Path, repositoryRoot: Path,
     if boundaryIndex == -1:
         boundaryIndex = len(lines)
 
+    # 경계 줄에 빈 줄 없이 붙은 주석(doc 블록 · 구획 주석)은 그 코드의 것이다 — 아래 본문으로 넘긴다. 상단 영역에 두면 "include 영역과
+    # 본문 사이 한 줄" 이 주석과 그것이 설명하는 코드 사이에 끼어 doc 블록이 떨어진다(`CheckTestSuites` 7) 규칙과 부딪친다).
+    while boundaryIndex > 0 and boundaryIndex < len(lines):
+        previous = lines[boundaryIndex - 1].strip()
+        if previous == "" or previous.startswith(('#include', '#pragma', '#if', '#endif', '#else', '#elif')):
+            break
+        if previous.startswith(('//', '/*', '*')) is False:
+            break
+        boundaryIndex -= 1
+
     topLines = lines[:boundaryIndex]
     bottomLines = lines[boundaryIndex:]
 
