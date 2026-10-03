@@ -4,10 +4,9 @@
  */
 #include "pch.h"
 
-#include "Core/Math/MathUtil.h"
-
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
+#include "Editor/Viewport/EditorVisualizerGeometry.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -20,41 +19,35 @@ namespace sw::editor
     {
         struct BoxCollider2DVisualizerInternal
         {
-            /** @brief BoxCollider2D 사각형을 와이어프레임으로 그립니다. */
+            /**
+             * @brief BoxCollider2D 사각형을 와이어프레임으로 그립니다 — 물리가 판정하는 그 상자(월드 회전 · 스케일을 받은 것)입니다.
+             * @details 씬 전체를 훑지 않고 매니저의 콜라이더 등록부를 봅니다(`EditorViewportVisualizerArgs::_pListCollider`).
+             */
             static void draw( const EditorViewportVisualizerArgs& args )
             {
+                if ( args._pListCollider == nullptr )
+                    return;
                 constexpr ImU32 colorWire = IM_COL32( 60, 230, 80, 220 );
 
-                for ( GameObject* pObj : *args._pListObject )
+                for ( const BoxCollider2DComponent* pBox : *args._pListCollider )
                 {
-                    if ( pObj == nullptr || pObj->isActive() == false )
-                        continue;
-                    BoxCollider2DComponent* pBox = pObj->getComponent<BoxCollider2DComponent>();
-                    if ( pBox == nullptr || pBox->isActive() == false )
+                    const GameObject* pOwner = ( pBox != nullptr ) ? pBox->getOwner() : nullptr;
+                    if ( pOwner == nullptr || pOwner->isActive() == false || pBox->isActive() == false )
                         continue;
 
-                    const float2  offsetPos = pBox->getOffsetPosition();
-                    const float2  offsetScl = pBox->getOffsetScale();
-                    const float3  center    = pBox->getWorldPosition() + float3{ offsetPos._x, offsetPos._y, 0.0f };
-                    const float32 hx        = MathUtil::max( offsetScl._x * 0.5f, 0.05f );
-                    const float32 hy        = MathUtil::max( offsetScl._y * 0.5f, 0.05f );
-
-                    const float3 p0{ center._x - hx, center._y - hy, center._z };
-                    const float3 p1{ center._x + hx, center._y - hy, center._z };
-                    const float3 p2{ center._x + hx, center._y + hy, center._z };
-                    const float3 p3{ center._x - hx, center._y + hy, center._z };
-
-                    ImVec2 s0, s1, s2, s3;
-                    if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p0, args._canvasPos, args._canvasSize, s0 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p1, args._canvasPos, args._canvasSize, s1 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p2, args._canvasPos, args._canvasSize, s2 ) &&
-                         EditorViewportProjectionUtil::projectPoint( *args._pViewProj, p3, args._canvasPos, args._canvasSize, s3 ) )
+                    float3 arrCorner[4];
+                    EditorVisualizerGeometryUtil::computeColliderCorners( *pBox, arrCorner );
+                    ImVec2 arrScreen[4];
+                    bool   bVisible = true;
+                    for ( uint32 cornerIndex = 0; cornerIndex < 4 && bVisible; ++cornerIndex )
                     {
-                        args._pDrawList->AddLine( s0, s1, colorWire, 1.5f );
-                        args._pDrawList->AddLine( s1, s2, colorWire, 1.5f );
-                        args._pDrawList->AddLine( s2, s3, colorWire, 1.5f );
-                        args._pDrawList->AddLine( s3, s0, colorWire, 1.5f );
+                        bVisible = EditorViewportProjectionUtil::projectPoint( *args._pViewProj, arrCorner[cornerIndex], args._canvasPos, args._canvasSize,
+                                                                               arrScreen[cornerIndex] );
                     }
+                    if ( bVisible == false )
+                        continue;
+                    for ( uint32 cornerIndex = 0; cornerIndex < 4; ++cornerIndex )
+                        args._pDrawList->AddLine( arrScreen[cornerIndex], arrScreen[( cornerIndex + 1 ) % 4], colorWire, 1.5f );
                 }
             }
         };

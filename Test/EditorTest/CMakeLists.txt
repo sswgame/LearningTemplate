@@ -34,6 +34,7 @@ sw_addTestExecutable(EditorTest
 		TestInspectorPropertyLayout.cpp
 		TestEditorViewportPick.cpp
 		TestEditorViewportPreview.cpp
+		TestEditorVisualizerGeometry.cpp
 		TestReloadFileManager.cpp
 		TestSelectionManager.cpp
 		TestTexturePipeline.cpp
@@ -67,6 +68,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImportConfig.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureBaker.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorVisualizerGeometry.cpp"
 	LIBS
 		Engine
 		Microsoft::DirectXTex

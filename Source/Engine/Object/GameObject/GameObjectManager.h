@@ -432,6 +432,8 @@ namespace sw
         void registerCollider( BoxCollider2DComponent* pCollider );
         /** @brief 콜라이더 등록을 풉니다. 멱등입니다. */
         void unregisterCollider( BoxCollider2DComponent* pCollider );
+        /** @brief 등록된 콜라이더 목록입니다(순서 없음). 틱 밖에서 읽습니다 — 에디터 시각화가 씬 전체를 훑지 않고 이것을 봅니다. */
+        const vector<BoxCollider2DComponent*>& getColliders() const { return _listCollider; }
 
         /** @brief 트랜스폼이 바뀌었음을 알려 세대를 올립니다(`getTransformHierarchy().notifyDirtied()`). */
         void notifyTransformDirtied() { _transformHierarchy.notifyDirtied(); }

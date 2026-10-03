@@ -15,7 +15,9 @@ namespace sw
 {
     struct float4x4;
 
+    class BoxCollider2DComponent;
     class CameraComponent;
+    class DebugDrawQueue;
     class GameObject;
 } // namespace sw
 
@@ -37,6 +39,10 @@ namespace sw::editor
         const vector<GameObject*>* _pListObject{ nullptr };
         /** @brief 씬의 카메라 등록부 목록입니다(프러스텀 시각화가 씬 전체를 훑지 않게). 매니저가 없으면 nullptr 입니다. */
         const vector<CameraComponent*>* _pListCamera{ nullptr };
+        /** @brief 씬의 콜라이더 등록부 목록입니다(`GameObjectManager::getColliders`). 매니저가 없으면 nullptr 입니다. */
+        const vector<BoxCollider2DComponent*>* _pListCollider{ nullptr };
+        /** @brief 이번 프레임의 디버그 선 · 구 큐입니다(`DebugDrawQueue` 엔진 서비스). 없으면 nullptr 입니다. */
+        const DebugDrawQueue* _pDebugDrawQueue{ nullptr };
     };
 
     /**

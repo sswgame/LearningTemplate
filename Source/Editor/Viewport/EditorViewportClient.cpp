@@ -24,6 +24,7 @@
 #include "Editor/Viewport/EditorViewportToolbar.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
+#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
@@ -390,13 +391,15 @@ namespace sw::editor
                 pSnapshotManager->getAllGameObjects( _listSceneObject );
 
             EditorViewportVisualizerArgs visualizerArgs{};
-            visualizerArgs._pDrawList     = ImGui::GetWindowDrawList();
-            visualizerArgs._pViewProj     = &viewProj;
-            visualizerArgs._canvasPos     = canvasPos;
-            visualizerArgs._canvasSize    = canvasSize;
-            visualizerArgs._pActiveCamera = pCamera;
-            visualizerArgs._pListObject   = &_listSceneObject;
-            visualizerArgs._pListCamera   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getCameraRegistry().getAll() : nullptr;
+            visualizerArgs._pDrawList       = ImGui::GetWindowDrawList();
+            visualizerArgs._pViewProj       = &viewProj;
+            visualizerArgs._canvasPos       = canvasPos;
+            visualizerArgs._canvasSize      = canvasSize;
+            visualizerArgs._pActiveCamera   = pCamera;
+            visualizerArgs._pListObject     = &_listSceneObject;
+            visualizerArgs._pListCamera     = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getCameraRegistry().getAll() : nullptr;
+            visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getColliders() : nullptr;
+            visualizerArgs._pDebugDrawQueue = getService<DebugDrawQueue>();
             EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerMask );
 
             processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
