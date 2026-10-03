@@ -13,7 +13,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (태그 조건 · 비용 · 쿨다운 · 트리거 · 입력) · `AbilityTask`, XML 카탈로그(`AbilityCatalog`). 장르를 가리지 않아 키트가 아니라 기반에 있습니다(턴제는
   틱을 끄고 턴마다 `advanceTime( 1 )`). 같은 오브젝트의 `HPBarBaseComponent` · `DamageUIComponent` 와 이어집니다. 자세한 것은 `Ability/README.md`,
   쓰는 예는 `Source/Games/AbilityArena`
-- **Base**: 키트 공통 수명(`IGame`, `GameInstanceBase`, `GameService`), 세이브 베이스(`SaveGame`),
+- **Base**: 키트 공통 수명(`IGame`, `GameInstanceBase`, `GameService`), 세이브 베이스(`SaveGame`), 앞 · 위 → 오일러(`OrientationUtil` — 롤이 있는 차량 · 카메라),
   장르 무관 컴포넌트(`EffectBaseComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`).
   공유 타입은 `GameFrameworkMinimal.h`. "game" 채널의 수명주기 이벤트(`GameEvents.h`)는 프레임워크가 그 자리에서 낸다 —
   `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료, `GameModeStateMachine` 이 일시정지 진입 · 해제
@@ -34,6 +34,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     버스 스레드면 그 자리에서, 아니면 다음 `processEvents` 에.
   - `Overworld`: 오픈월드형 필드 탐색 시스템
   - `TurnBattle`: 턴제 전투 시스템
+  - `Farming`: 농장 생활(하베스트 문 장르) — 달력(`FarmCalendar`: 6:00–26:00 하루 · 28 일 계절 · 해), 작물 XML 카탈로그(`CropCatalog`),
+    밭(`FarmField`: 갈기 · 물 · 심기 · 거두기, 물 받은 날만 자람, 다시 열림, 철 지나면 시듦, 비), 인벤토리 · 출하 정산(`FarmInventory`).
+  - `Shooter`: 1인칭 슈터 — 히트스캔(`ShooterMath`: 광선 대 구 · 상자, 탄 퍼짐 원뿔), 1인칭 시점(`FirstPersonLook`), 무기 XML 카탈로그와
+    무기 상태(`WeaponState`: 연사 간격 · 탄창 · 재장전 · 반자동 · 산탄 · 반동 · 씨앗 고정 난수).
+  - `ThemePark`: 롤러코스터 타이쿤 — 조각으로 쌓는 코스터 트랙(`CoasterTrackBuilder`: 오르막 체인 · 낙하 · 언덕 · 뱅크 회전 · 클로소이드 루프 ·
+    브레이크 · 부스터, XML 레이아웃), 고정 스텝 열차 물리(`CoasterTrain`), 시험 운행으로 흥분 · 강도 · 멀미 평가(`CoasterRideAnalyzer`),
+    손님 · 줄 · 표 · 입장료 · 운영비 · 공원 평점 경영 시뮬레이션(`ThemeParkSimulation`).
 
 ## 무엇이 키트에 들어가고 무엇이 기반에 남는가
 

@@ -19,6 +19,9 @@ sw_addTestExecutable(EngineTest
 		GF_Overworld
 		GF_TurnBattle
 		GF_ActionCombat
+		GF_Farming
+		GF_Shooter
+		GF_ThemePark
 	LABELS
 		"unit;engine"
 	TIMEOUT

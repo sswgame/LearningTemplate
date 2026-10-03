@@ -179,6 +179,11 @@ cd build/Ninja-Debug/Bin
   `updateActiveEffects` 의 만료 검사를 주기 실행 앞으로 옮기면 `PeriodicEffectExecutesEachPeriodUntilItExpires` 가 지는지) (2) Shipping · `-L nogpu`
   (3) `-DSW_ACTIVE_GAME=AbilityArena` 로 Debug · Shipping 을 짓고 `App -gv_arenaAutoPlay=1 -gv_profileFrames=1200` 를 네 백엔드로 — 종료 코드 0, `[Error]` 0건,
   로그의 `[Arena] wave` 가 오르는지. 에디터(`-EnableEditor`)에서 Play 로 직접 조작해 HP 바 · 피해 숫자 · 화상 스택 · 대시 무적을 눈으로 본다.
+- **장르 키트 `GF_Farming` · `GF_Shooter` · `GF_ThemePark` 와 `OrientationUtil` 의 첫 엔진 빌드(2026-10-03).** 위 항목과 같은 이유로 엔진을 짓지 못했다.
+  키트 로직은 엔진 밖 하네스(Core 의 수학 · XML · 해시 문자열만 링크, 테스트 매크로 흉내)로 **실제로 돌려** `CoasterTest` 6 · `ThemeParkTest` 5 ·
+  `FarmingTest` 5 · `ShooterTest` 5 · `OrientationUtilTest` 1 이 통과했다. 남은 것: 재구성 → Debug · Shipping 빌드(새 DLL 셋, `SW_GF_API` 내보내기 ·
+  delay-load) → `EngineTest --test_filter=CoasterTest.*:ThemeParkTest.*:FarmingTest.*:ShooterTest.*:OrientationUtilTest.*`. 코스터 평가식
+  (`CoasterRideAnalyzer::computeRatings`)의 계수는 시험 트랙 몇 개로 맞춘 것이라, 게임에서 여러 레이아웃을 돌려 보고 다듬는다.
 - **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.

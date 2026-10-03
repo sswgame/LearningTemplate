@@ -18,6 +18,24 @@
                 "GameFramework",
                 "GF_Overworld"
             ]
+        },
+        {
+            "_name": "GF_Farming",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
+        },
+        {
+            "_name": "GF_Shooter",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
+        },
+        {
+            "_name": "GF_ThemePark",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
