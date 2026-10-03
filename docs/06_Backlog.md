@@ -96,7 +96,7 @@ cd build/Ninja-Debug/Bin
 ### 1-0. 다음 묶음 — 트리 전체를 건드리는 것들(차례로, 병렬 금지) (사용자 지시 2026-10-03)
 
 - **불필요 코드 삭제(진행 중, 사용자 지시 10-04)** — 조사 보고서는 세션 스크래치 `deadcode/report.md`(1,615 줄: 호출자 없음 354 · 구조 개선 잔여물 39 · 중복 11 묶음 ·
-  경위 주석 ~2,300 블록). 코드 묶음 A(에디터 −352 줄) · B(RHI · 렌더러, Dev 모놀리식 RHI 갈래 · `SW_RHI_AS_MODULES` 제거, ABI v23)는 끝났고, D(Core · App · 도구 · 스크립트 · cmake) · E 가 진행 중이고, C(셰이더 데이터 · EngineData — 굽기 필요) ·
+  경위 주석 ~2,300 블록). 코드 묶음 A(에디터 −352 줄) · B(RHI · 렌더러, Dev 모놀리식 RHI 갈래 · `SW_RHI_AS_MODULES` 제거, ABI v23) · D(Core · App · 도구 · 스크립트 · cmake −842/+341, 누수 추적 켬)는 끝났고, C · E 가 진행 중이고, C(셰이더 데이터 · EngineData — 굽기 필요) ·
   E(Engine 나머지: `PropertyMetaHint` · XML 백엔드 배열/맵 API · LocalizationManager 형식 셋 · SerializeContext 객체 id 표 · ActionMap 기본 바인딩 폴백) ·
   F(GameFramework · 시험: `BattleEvents.h` · TurnBattle 옛 세이브 · GPU 시험 준비 코드 43 곳 합치기)가 그다음, 주석 · 문서 2 차(G1~G5)는 코드 묶음을 합친 뒤.
   사용자 결정: macOS · LocalizationManager 형식 셋 · SerializeContext id 표 · Dev 모놀리식 RHI 갈래 · ActionMap 폴백은 지움, 누수 추적(`enableMemoryLeakChecks`)은 켬,
@@ -123,9 +123,8 @@ cd build/Ninja-Debug/Bin
   `Renderer/Bake/`→`Renderer/Cook/`, `--bake-shaders`→`--cook-shaders`(옛 철자 없음), `bake.stamp`→`cook.stamp`, `TextureBaker`→`TextureImporter`(이미 `TextureImportConfig` ·
   `TextureImportRule` 과 짝), `BakeShippingHostDefaults.py`→`GenerateShippingHostDefaults.py`, 주석 · 문서의 "굽다"도 같은 구분으로. `ResourceManager`→`AssetManager`
   ("Resource" 는 디스크 트리 · 팩, "Asset" 은 읽은 객체), `EngineData`/`GameData`/`EditorData`→`EngineDefaultAssets`/`GameSettings`/`EditorToolDefaults`.
-  CLI 철자도 하나로: `ArgumentList.xxx` 가 `"bake-shaders", "bakeshaders"` · `"cook-scenes", "cookscenes"` · `"cooked-dir", "cookeddir"` 처럼 하이픈 없는 철자를 같이
-  받는다 — 별칭 금지 결정대로 하이픈 철자 하나만 남긴다(스크립트 · CI · 문서의 사용처도). 리플렉션 주석 키도 같다: `AnnotationMeta.txt` 가
-  `Alias` 를 `PreviousName` · `PreviousNames` 로도 받는다(사용처 0) — `Alias` 하나로.
+  CLI 철자도 하나로 — 하이픈 없는 철자(`bakeshaders` 등 다섯)는 10-04 에 지웠다. 남은 것: 열거자 이름 자동 등록으로 생기는 중복 키(`-WIDTH` 와 `-W`,
+  `-lang` 과 `-language`), 리플렉션 주석 키 `Alias` 의 동의어 `PreviousName` · `PreviousNames`(사용처 0).
 - **case 중괄호 일관성 규칙**(한 switch 안에서 한 case 라도 중괄호면 모두) — 픽서 패치 준비됨(스크래치), 39 파일 다시 쓰기 + AGENTS.md · 04 규칙 문장.
 - **한 파일에 클래스가 여럿이면 클래스마다 `namespace sw { }` 블록을 나눈다** — 규칙 + 가능하면 게이트, 트리 전체 적용.
 - **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
@@ -280,7 +279,8 @@ cd build/Ninja-Debug/Bin
 
 - **100 줄 넘는 함수 정리.** 분해는 총량을 줄이지 않는다. 중복을 먼저 없애고, 그래도 문제면 본다. 목록이 필요하면 여러 줄 시그니처를 중괄호 깊이로 재는 스크립트로
   뽑는다(단순 정규식은 틀린다).
-- **macOS 코드는 10-04 에 지운다(사용자 결정 — 리팩터링 묶음 A · B · D · E · F 가 영역별로).** 되살리려면 그 커밋 전 git 기록에서 꺼낸다. 그때의 순서: `ci.yml` macOS 잡 복원 → configure 실패 → `CocoaWindow` 가 `_onResize` 를
+- **macOS 코드는 10-04 에 지운다(사용자 결정 — 리팩터링 묶음 A · B · D · E · F 가 영역별로; A · B · D 끝, Apple 호스트는 `LoadCompileFlags.cmake` 가 구성을 멈춘다).**
+  다 지운 뒤 `SW_PLATFORM_MACOS` 자체를 막는 게이트를 둔다. `Vcpkg.cmake` 의 APPLE 갈래 · 레거시 스탬프 이관과 `arm64-osx` · `x64-osx` 트리플릿은 손대지 않는 파일이라 사용자가 정리한다. 되살리려면 그 커밋 전 git 기록에서 꺼낸다. 그때의 순서: `ci.yml` macOS 잡 복원 → configure 실패 → `CocoaWindow` 가 `_onResize` 를
   부르지 않음(스왑체인이 안 따라감) → `CocoaSplashWindow` 가 창을 만들지 않음 → `applyWindowVisibility` 이름 변경 컴파일 → `PosixCallStackCapture` 의 폴트 PC
   (Linux 만) · `Posix*` 의 macOS 가드 · `Mac` 파일워처.
 - **`SetupVcpkg.py --install` 이 `vcpkg.cmake` 만 보고 "찾았다" 고 끝낸다.** 윈도우에서 클론한 트리를 리눅스에서 쓰면 `vcpkg` 바이너리 없이 성공을 보고한다
@@ -934,6 +934,9 @@ cd build/Ninja-Debug/Bin
   (리플렉션 등록 → 설정 → ResourceManager).
 
 ### 3-10. Core · 태스크 · 메모리
+
+- **Debug 기동은 CRT 누수 보고를 stderr 로도 낸다**(`EngineBootstrap` 의 진단 갈래가 `MemoryProfiler::enableMemoryLeakChecks` 를 부른다 — 누수 덤프가 콘솔 · CI 로그에
+  나온다, `MemoryTagTest.DiagnosticBootstrapEnablesPlatformLeakChecks`).
 
 - **보고의 "(sw 할당자 밖)" 은 CRT 합 − 태그 합**이라 프로파일러보다 먼저 잡힌 sw 블록도 들어간다 — MemoryProfiler 는 부트스트랩 맨 앞에서 선다. 새 스레드는 Unknown
   에서 시작하므로 띄운 쪽의 태그를 인자로 넘겨 첫 줄에서 건다. 배열은 `sw_new_array` · `make_unique<T[]>`(맨 `new` 는 `Style/RawNew` 가 막는다). 외부 라이브러리는
