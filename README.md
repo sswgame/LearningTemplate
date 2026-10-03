@@ -38,7 +38,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 - 🧩 **[Engine Subsystems (서브시스템 개요)](docs/02_EngineSubsystems.md)**: 렌더링, 오브젝트/컴포넌트, 스레드 풀, 리플렉션 등 핵심 엔진 기능 찾아보기
 - 🔄 **[LiveReload & ABI (핫리로드 및 아키텍처)](docs/03_LiveReload_and_ABI.md)**: 게임을 끄지 않고 코드를 수정하는 원리와 주의사항
 - 📝 **[Coding Guidelines (코딩 규칙)](docs/04_CodingGuidelines.md)**: 프로젝트에 기여할 때 지켜야 하는 C++ / CMake 네이밍 규칙
-- 🎞️ **[RHI Frame Contract (프레임/렌더타깃 계약)](docs/05_RHI_FrameContract.md)**: 백엔드별 beginFrame/오프스크린 전제 분석과 재설계 — 프레임 순서를 건드리기 전에 반드시 읽을 것
+- 🎞️ **[RHI Frame Contract (프레임/렌더타깃 계약)](docs/05_RHI_FrameContract.md)**: 프레임 순서 · 백버퍼 바인딩 계약, 함정과 검증 프로토콜 — 프레임 순서를 건드리기 전에 반드시 읽을 것
 - ✅ **[Backlog (작업 백로그)](docs/06_Backlog.md)**: 남은 일과 이어받기 — 여러 PC·여러 세션에서 이어서 작업할 때 먼저 읽을 것
 - 🏛️ **[Engine Structure vs Commercial (상용 엔진과의 구조 대조)](docs/07_EngineStructureVsCommercial.md)**: `Source/Engine` 의 의존 방향을 언리얼 · Unity · Godot 와 견준 결과
 
