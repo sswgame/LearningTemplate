@@ -56,20 +56,20 @@ namespace sw
         void deliverHit( GameObject* pTarget );
 
         /** @brief 이번 휘두르기에 이미 맞은 유닛입니다. `beginAttack` 이 비웁니다. */
-        PROPERTY( Alias = "hitTarget" )
+        PROPERTY()
         vector<GameObjectHandle> _listHitTarget;
         /**
          * @brief 지금 판정 콜라이더와 겹친 오브젝트입니다(겹침 이벤트가 채운다). 접촉마다 하나 — 같은 상대가 콜라이더 둘로 겹치면 두 번 든다.
          * @details 저장하지 않습니다 — 물리가 내는 값이라, 오브젝트가 다시 만들어지면(되돌리기 · 핫 리로드) 바디가 새로 들며 시작 이벤트가 다시 옵니다.
          */
         vector<GameObjectHandle> _listOverlapping;
-        PROPERTY( Alias = "damage" )
+        PROPERTY()
         int32 _damage;
-        PROPERTY( Alias = "duration" )
+        PROPERTY()
         float32 _duration;
-        PROPERTY( Alias = "currentDuration" )
+        PROPERTY()
         float32 _currentDuration;
-        PROPERTY( Alias = "bIsAttacking" )
+        PROPERTY()
         bool _bIsAttacking;
     };
 } // namespace sw

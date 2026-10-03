@@ -64,19 +64,19 @@ namespace sw
         /** @brief @p other 를 요격하는지 — 요격탄이고, 다른 쪽이 쏜 것일 때입니다(같은 instigator 끼리는 산탄이다). */
         bool canIntercept( const ProjectileComponent& other ) const;
 
-        PROPERTY( Alias = "velocity" )
+        PROPERTY()
         float2 _velocity;
-        PROPERTY( Alias = "instigator" )
+        PROPERTY()
         GameObjectHandle _instigator;
-        PROPERTY( Alias = "damage" )
+        PROPERTY()
         int32 _damage;
-        PROPERTY( Alias = "pierceCount" )
+        PROPERTY()
         int32 _pierceCount;
-        PROPERTY( Alias = "lifeTime" )
+        PROPERTY()
         float32 _lifeTime;
-        PROPERTY( Alias = "currentLife" )
+        PROPERTY()
         float32 _currentLife;
-        PROPERTY( Alias = "bInterceptor" )
+        PROPERTY()
         bool _bInterceptor;
     };
 } // namespace sw

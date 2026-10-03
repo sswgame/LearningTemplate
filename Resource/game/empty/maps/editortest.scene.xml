@@ -45,10 +45,9 @@
 					                 _boundsRadius="0.866"
 					                 _blendMode="Opaque"
 					                 _gpuSpinSeed="0"
-					                 _meshName=""
 					                 _materialPath=""
 					                 _textureName=""
-					                 _spriteName="" />
+					                 _clipPath="" />
 				</_listComponent>
 			</GameObject>
 		</entity>

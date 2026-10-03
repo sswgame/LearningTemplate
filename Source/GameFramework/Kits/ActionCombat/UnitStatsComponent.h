@@ -85,21 +85,21 @@ namespace sw
 
         /** @brief HP 가 깎일 때 부를 구독자들입니다(`registerDamageApplied`). 저장하지 않는다 — 코드가 거는 것이다. */
         MulticastDelegate<void( const DamageAppliedEvent& )> _damageAppliedMulticast;
-        PROPERTY( Category = "Stats", DisplayName = "HP", Tooltip = "Current Health Points", Min = 0.0, Meta = "Units=HP", Alias = "hp" )
+        PROPERTY( Category = "Stats", DisplayName = "HP", Tooltip = "Current Health Points", Min = 0.0, Meta = "Units=HP" )
         int32 _hp;
-        PROPERTY( Category = "Stats", DisplayName = "Max HP", Tooltip = "Maximum Health Points", Min = 1.0, Meta = "Units=HP", Alias = "maxHp" )
+        PROPERTY( Category = "Stats", DisplayName = "Max HP", Tooltip = "Maximum Health Points", Min = 1.0, Meta = "Units=HP" )
         int32 _maxHp;
-        PROPERTY( Category = "Stats", DisplayName = "Attack", Tooltip = "Attack power", Min = 0.0, Alias = "attack" )
+        PROPERTY( Category = "Stats", DisplayName = "Attack", Tooltip = "Attack power", Min = 0.0 )
         int32 _attack;
-        PROPERTY( Category = "Stats", DisplayName = "Defense", Tooltip = "Defense rating", Min = 0.0, Alias = "defense" )
+        PROPERTY( Category = "Stats", DisplayName = "Defense", Tooltip = "Defense rating", Min = 0.0 )
         int32 _defense;
-        PROPERTY( Category = "Movement", DisplayName = "Move Speed", Tooltip = "Base movement speed in world units per second", Min = 0.0, Max = 50.0, Meta = "Units=m/s", Alias = "moveSpeed" )
+        PROPERTY( Category = "Movement", DisplayName = "Move Speed", Tooltip = "Base movement speed in world units per second", Min = 0.0, Max = 50.0, Meta = "Units=m/s" )
         float32 _moveSpeed;
-        PROPERTY( Category = "Combat", DisplayName = "Invincibility Timer", Tooltip = "Remaining invincibility time", Transient, ReadOnly, Meta = "Units=s", Alias = "invincibilityTime" )
+        PROPERTY( Category = "Combat", DisplayName = "Invincibility Timer", Tooltip = "Remaining invincibility time", Transient, ReadOnly, Meta = "Units=s" )
         float32 _invincibilityTime;
-        PROPERTY( Category = "Combat", DisplayName = "Max Invincibility Time", Tooltip = "Duration of invincibility after taking damage", Min = 0.0, Max = 10.0, Meta = "Units=s", Alias = "maxInvincibilityTime" )
+        PROPERTY( Category = "Combat", DisplayName = "Max Invincibility Time", Tooltip = "Duration of invincibility after taking damage", Min = 0.0, Max = 10.0, Meta = "Units=s" )
         float32 _maxInvincibilityTime;
-        PROPERTY( Category = "State", DisplayName = "Is Dead", Tooltip = "Whether the unit is currently dead", ReadOnly, Alias = "bIsDead" )
+        PROPERTY( Category = "State", DisplayName = "Is Dead", Tooltip = "Whether the unit is currently dead", ReadOnly )
         bool _bIsDead;
         PROPERTY( Category = "Feedback", DisplayName = "Show Damage Numbers", Tooltip = "Spawn a floating damage number for each hit" )
         bool _bShowDamageNumbers;

@@ -27,19 +27,19 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        PROPERTY( Alias = "mapPath" )
+        PROPERTY()
         string _mapPath{}; ///< 현재 맵. 비었으면 `ensureStartMap` 이 시작 맵(`GameData::_startMap`)으로 채운다(세이브를 읽은 뒤에도)
 
-        PROPERTY( Alias = "playerX" )
+        PROPERTY()
         int32 _playerX{ 1 };
 
-        PROPERTY( Alias = "playerY" )
+        PROPERTY()
         int32 _playerY{ 1 };
 
-        PROPERTY( Alias = "listParty" )
+        PROPERTY()
         vector<PartyMember> _listParty{};
 
-        PROPERTY( Alias = "mapFlag" )
+        PROPERTY()
         map<string, int32> _mapFlag{}; ///< 스토리 플래그
 
         /** @brief 파티를 비웁니다. */

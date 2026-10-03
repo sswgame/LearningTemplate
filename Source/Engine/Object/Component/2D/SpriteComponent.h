@@ -98,17 +98,15 @@ namespace sw
         /** @brief 텍스처 칸이 비었으면 클립의 아틀라스, 아니면 텍스처 칸입니다. */
         string_view getEffectiveTexture() const;
 
-        PROPERTY( Category = "Rendering", DisplayName = "Texture", AssetPath, AssetType = "Texture", Tooltip = "Texture asset name; empty uses the clip atlas", Alias = "Texture" )
+        PROPERTY( Category = "Rendering", DisplayName = "Texture", AssetPath, AssetType = "Texture", Tooltip = "Texture asset name; empty uses the clip atlas" )
         string        _textureName;
         hashed_string _appliedTexture; ///< 이 컴포넌트가 건 텍스처 인스턴스의 텍스처. 비어 있으면 건 것이 없다
         /**
-         * @brief 스프라이트 클립(`.sprite.json`) 경로입니다. 옛 이름 `_spriteName` 을 그대로 읽습니다(별칭).
-         * @details 예전 `_spriteName` 은 표시 이름이 "Sprite Clip" 인 문자열이었고, 애니메이터가 "<애니>-<프레임>" 을 적었지만 읽는 곳이 없었다.
-         *          그 칸이 말하던 것(어느 클립인가)을 실제 조회 키로 만들고, 프레임은 번호(`_clipFrame`)로 따로 든다 — 프레임마다 문자열을
-         *          만들어 파싱하는 대신 번호 하나를 넘긴다. 저장된 옛 값은 모두 빈 글이라 그대로 읽힌다.
+         * @brief 스프라이트 클립(`.sprite.json`) 경로입니다. 보일 프레임은 번호(`_clipFrame`)로 따로 듭니다 — 프레임마다 문자열을 만들어
+         *        파싱하지 않고 번호 하나를 넘깁니다.
          */
         PROPERTY( Category = "Rendering", DisplayName = "Sprite Clip", AssetPath, AssetType = "SpriteClip",
-                  Tooltip = "Sprite clip (.sprite.json): atlas frames and named animations", Alias = "_spriteName, SpriteName" )
+                  Tooltip = "Sprite clip (.sprite.json): atlas frames and named animations" )
         string _clipPath;
         PROPERTY( Category = "Rendering", DisplayName = "Clip Frame", Tooltip = "Frame of the sprite clip to show", Min = 0.0 )
         int32 _clipFrame;

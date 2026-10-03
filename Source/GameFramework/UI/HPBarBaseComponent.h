@@ -79,18 +79,16 @@ namespace sw
         void layoutSprites();
 
         PROPERTY( Category = "Health", DisplayName = "HP Ratio", Tooltip = "Displayed fill ratio (0..1); drops at once, refills at the lerp speed", Min = 0.0, Max = 1.0,
-                  Meta = "Slider, Units=ratio", Alias = "hpRatio" )
+                  Meta = "Slider, Units=ratio" )
         float32 _hpRatio;
-        PROPERTY( Category = "Health", DisplayName = "Remain Ratio", Tooltip = "Delayed damage trail ratio (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=ratio",
-                  Alias = "remainRatio" )
+        PROPERTY( Category = "Health", DisplayName = "Remain Ratio", Tooltip = "Delayed damage trail ratio (0..1)", Min = 0.0, Max = 1.0, Meta = "Slider, Units=ratio" )
         float32 _remainRatio;
         PROPERTY( Category = "Health", DisplayName = "Target Ratio", Tooltip = "True HP ratio (0..1) set by the health system", Min = 0.0, Max = 1.0,
-                  Meta = "Slider, Units=ratio", Alias = "targetRatio" )
+                  Meta = "Slider, Units=ratio" )
         float32 _targetRatio;
-        PROPERTY( Category = "Animation", DisplayName = "Lerp Speed", Tooltip = "How fast the trail shrinks and the fill refills (per second)", Min = 0.1, Max = 20.0,
-                  Alias = "lerpSpeed" )
+        PROPERTY( Category = "Animation", DisplayName = "Lerp Speed", Tooltip = "How fast the trail shrinks and the fill refills (per second)", Min = 0.1, Max = 20.0 )
         float32 _lerpSpeed;
-        PROPERTY( Category = "Layout", DisplayName = "Offset Position", Tooltip = "Offset of the bar center from the owner position", Meta = "Units=m", Alias = "offsetPos" )
+        PROPERTY( Category = "Layout", DisplayName = "Offset Position", Tooltip = "Offset of the bar center from the owner position", Meta = "Units=m" )
         float2 _offsetPos;
         PROPERTY( Category = "Layout", DisplayName = "Bar Size", Tooltip = "Bar width and height in world units", Min = 0.0, Meta = "Units=m" )
         float2 _barSize;
@@ -100,7 +98,7 @@ namespace sw
         float4 _trailColor;
         PROPERTY( Category = "Style", DisplayName = "Background Color", Meta = "Color", Tooltip = "Color of the missing HP" )
         float4 _backgroundColor;
-        PROPERTY( Category = "Layout", DisplayName = "Visible", Tooltip = "Toggle HP bar visibility", Alias = "bVisible" )
+        PROPERTY( Category = "Layout", DisplayName = "Visible", Tooltip = "Toggle HP bar visibility" )
         bool                _bVisible;
         SpriteInstanceBatch _spriteBatch; ///< 조각 셋(채움 · 흔적 · 바탕). 저장하지 않습니다
     };

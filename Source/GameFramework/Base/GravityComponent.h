@@ -38,13 +38,13 @@ namespace sw
         float32 getVelocityY() const { return _velocityY; }
 
     private:
-        PROPERTY( Alias = "gravity" )
+        PROPERTY()
         float32 _gravity;
-        PROPERTY( Alias = "velocityY" )
+        PROPERTY()
         float32 _velocityY;
-        PROPERTY( Alias = "groundY" )
+        PROPERTY()
         float32 _groundY;
-        PROPERTY( Alias = "bIsGrounded" )
+        PROPERTY()
         bool _bIsGrounded;
     };
 } // namespace sw

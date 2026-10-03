@@ -99,21 +99,6 @@ SW_TEST_CASE( SpriteComponentTest, SpritesWithTheSameTextureShareOneInstance )
 }
 
 /**
- * @brief [SpriteComponentTest] 스프라이트가 따로 들던 메시 이름 칸(`_meshName`)은 메시 컴포넌트의 메시 id 로 읽힌다
- * @details 두 칸이 같은 것을 들었고 스프라이트 칸은 읽는 곳이 없었다. 하나로 합쳤고, 옛 파일은 옛 이름으로 읽힌다.
- */
-SW_TEST_CASE( SpriteComponentTest, OldMeshNameLoadsIntoTheMeshId )
-{
-    sw::GameObjectManager manager;
-    sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "OldSprite" ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString(
-        pObject, "<GameObject _name=\"OldSprite\"><_listComponent><SpriteComponent _meshName=\"Plane\" /></_listComponent></GameObject>" ) );
-    const sw::SpriteComponent* pSprite = pObject->getComponent<sw::SpriteComponent>();
-    SW_ASSERT_NOT_NULL( pSprite );
-    SW_EXPECT_STREQ( "Plane", pSprite->getMeshId().c_str() );
-}
-
-/**
  * @brief [SpriteComponentTest] 프레임(UV 사각형) · 색은 머티리얼 인스턴스가 아니라 GPU 인스턴스 칸에 실린다 — 같은 텍스처의 스프라이트는 값이 달라도 인스턴스 하나다
  * @details 배치 키가 머티리얼 인스턴스라 프레임 · 색을 인스턴스 파라미터로 바꾸면 스프라이트마다 배치가 갈린다. 그래서 둘은 `GpuSpriteInstanceData`
  *          (unorm16 꼭짓점 둘 + RGBA8)로 묶여 메시 컴포넌트의 인스턴스 칸에 간다. 꼭짓점으로 담으므로 음수 폭(좌우 반전)이 그대로 들어가고, 텍스처
@@ -204,16 +189,15 @@ SW_TEST_CASE( SpriteComponentTest, ClipSelectsTheFrameAndLendsItsAtlas )
 }
 
 /**
- * @brief [SpriteComponentTest] 옛 칸 `_spriteName` 은 클립 경로로 읽힌다 — 표시 이름("Sprite Clip")이 말하던 것이 실제 조회 키가 됐다
- * @details 예전 칸은 저장만 되고 읽는 곳이 없었다(애니메이터가 "<애니>-<프레임>" 을 적었다). 저장된 옛 파일이 그 이름으로 읽혀 클립을 잡아야 한다.
+ * @brief [SpriteComponentTest] 저장된 클립 경로(`_clipPath`)를 읽으면 클립을 잡는다 — 씬 · 프리팹 파일이 적는 키 그대로
  */
-SW_TEST_CASE( SpriteComponentTest, OldSpriteNameLoadsIntoTheClipPath )
+SW_TEST_CASE( SpriteComponentTest, SavedClipPathLoadsTheClip )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::GameObjectManager manager;
-    sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "OldClipSprite" ) );
+    sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "ClipSprite" ) );
     SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString(
-        pObject, "<GameObject _name=\"OldClipSprite\"><_listComponent><SpriteComponent _spriteName=\"engine/textures/test/quadrants.sprite.json\" "
+        pObject, "<GameObject _name=\"ClipSprite\"><_listComponent><SpriteComponent _clipPath=\"engine/textures/test/quadrants.sprite.json\" "
                  "/></_listComponent></GameObject>" ) );
     const sw::SpriteComponent* pSprite = pObject->getComponent<sw::SpriteComponent>();
     SW_ASSERT_NOT_NULL( pSprite );

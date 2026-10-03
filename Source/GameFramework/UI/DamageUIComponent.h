@@ -84,16 +84,16 @@ namespace sw
         /** @brief 소유 오브젝트 자리를 가운데로 글자를 늘어놓습니다. 클립이 없거나 꺼졌으면 모두 숨깁니다. */
         void layoutSprites();
 
-        PROPERTY( Category = "Damage", DisplayName = "Damage Value", Tooltip = "Number to show", Alias = "damageValue" )
+        PROPERTY( Category = "Damage", DisplayName = "Damage Value", Tooltip = "Number to show" )
         int32 _damageValue;
         PROPERTY( Category = "Animation", DisplayName = "Life Time", Tooltip = "Seconds until the number fades out and the object is destroyed; 0 keeps it", Min = 0.0,
-                  Meta = "Units=s", Alias = "lifeTime" )
+                  Meta = "Units=s" )
         float32 _lifeTime;
-        PROPERTY( Category = "Animation", DisplayName = "Current Life", Tooltip = "Seconds since the number appeared", ReadOnly, Meta = "Units=s", Alias = "currentLife" )
+        PROPERTY( Category = "Animation", DisplayName = "Current Life", Tooltip = "Seconds since the number appeared", ReadOnly, Meta = "Units=s" )
         float32 _currentLife;
-        PROPERTY( Category = "Animation", DisplayName = "Float Speed", Tooltip = "Upward speed in world units per second", Meta = "Units=m/s", Alias = "floatSpeed" )
+        PROPERTY( Category = "Animation", DisplayName = "Float Speed", Tooltip = "Upward speed in world units per second", Meta = "Units=m/s" )
         float32 _floatSpeed;
-        PROPERTY( Category = "Animation", DisplayName = "Alpha", Tooltip = "Current fade (1 to 0)", Min = 0.0, Max = 1.0, ReadOnly, Alias = "alpha" )
+        PROPERTY( Category = "Animation", DisplayName = "Alpha", Tooltip = "Current fade (1 to 0)", Min = 0.0, Max = 1.0, ReadOnly )
         float32 _alpha;
         PROPERTY( Category = "Style", DisplayName = "Glyph Size", Tooltip = "Width (advance) and height of one glyph in world units", Min = 0.0, Meta = "Units=m" )
         float2 _glyphSize;

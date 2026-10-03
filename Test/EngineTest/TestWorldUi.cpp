@@ -73,7 +73,7 @@ SW_TEST_CASE( WorldUiTest, HPBarDrawsFillTrailAndBackgroundWithoutOverlap )
     SW_ASSERT_NOT_NULL( pHero );
     sw::HPBarBaseComponent* pBar = pHero->addComponent<sw::HPBarBaseComponent>();
     SW_ASSERT_NOT_NULL( pBar );
-    SW_ASSERT_TRUE( setReflectedValue( pBar, "offsetPos", sw::float2{ 0.0f, 0.8f } ) );
+    SW_ASSERT_TRUE( setReflectedValue( pBar, "_offsetPos", sw::float2{ 0.0f, 0.8f } ) );
     pBar->resetRatio( 1.0f );
     pBar->setVisible( true );
     pBar->dispatchBeginPlay();
@@ -156,7 +156,7 @@ SW_TEST_CASE( WorldUiTest, DamageNumberShowsItsDigitsFromTheGlyphAtlas )
     SW_ASSERT_NOT_NULL( pHit );
     sw::DamageUIComponent* pDamage = pHit->addComponent<sw::DamageUIComponent>();
     SW_ASSERT_NOT_NULL( pDamage );
-    SW_ASSERT_TRUE( setReflectedValue( pDamage, "lifeTime", 1.0f ) );
+    SW_ASSERT_TRUE( setReflectedValue( pDamage, "_lifeTime", 1.0f ) );
     pDamage->setDamageValue( 123 );
     pDamage->dispatchBeginPlay();
 
@@ -225,7 +225,7 @@ SW_TEST_CASE( WorldUiTest, EffectFadesTheSpritesOfItsObject )
     pGlow->setTint( sw::float4{ 1.0f, 0.5f, 0.0f, 0.8f } );
     sw::EffectBaseComponent* pEffect = pSpark->addComponent<sw::EffectBaseComponent>();
     SW_ASSERT_NOT_NULL( pEffect );
-    SW_ASSERT_TRUE( setReflectedValue( pEffect, "duration", 1.0f ) );
+    SW_ASSERT_TRUE( setReflectedValue( pEffect, "_duration", 1.0f ) );
     pEffect->dispatchBeginPlay();
     SW_EXPECT_NEAR_EQUAL( 0.8f, pGlow->getTint()._w, 1e-6f ); // 시작 순간은 그대로다
 
@@ -257,7 +257,7 @@ SW_TEST_CASE( WorldUiTest, EffectResumesItsFadeAfterTheStateIsReadAgain )
     pGlow->setTint( sw::float4{ 1.0f, 0.5f, 0.0f, 0.8f } );
     sw::EffectBaseComponent* pEffect = pSpark->addComponent<sw::EffectBaseComponent>();
     SW_ASSERT_NOT_NULL( pEffect );
-    SW_ASSERT_TRUE( setReflectedValue( pEffect, "duration", 1.0f ) );
+    SW_ASSERT_TRUE( setReflectedValue( pEffect, "_duration", 1.0f ) );
     manager.beginPlay();
     SW_ASSERT_TRUE( pEffect->hasBegunPlay() );
 
@@ -292,7 +292,7 @@ SW_TEST_CASE( WorldUiTest, DamageNumberKeepsItsLifeAfterTheStateIsReadAgain )
     SW_ASSERT_NOT_NULL( pHit );
     sw::DamageUIComponent* pDamage = pHit->addComponent<sw::DamageUIComponent>();
     SW_ASSERT_NOT_NULL( pDamage );
-    SW_ASSERT_TRUE( setReflectedValue( pDamage, "lifeTime", 1.0f ) );
+    SW_ASSERT_TRUE( setReflectedValue( pDamage, "_lifeTime", 1.0f ) );
     pDamage->setDamageValue( 42 );
     manager.beginPlay();
     pDamage->onTick( 0.5f );

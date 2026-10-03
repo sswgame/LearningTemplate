@@ -234,8 +234,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshBlendModeSurvivesXml )
 /**
  * @brief [ObjectStateRoundTripTest] 메시의 머티리얼 참조가 저장 · 로드를 지나고, 잡은 참조는 경로를 비우거나 컴포넌트가 사라질 때 놓인다
  * @details 메시의 머티리얼은 날 포인터(`_pMaterial`)뿐이라 저장되지 않았다 — 씬 · 프리팹을 다시 열면 모든 메시가 씬 기본 머티리얼이 됐다.
- *          언리얼 `UMeshComponent::OverrideMaterials` · 유니티 `Renderer.sharedMaterials` 는 에셋 참조로 저장된다. 스프라이트가 따로 들던
- *          `_materialName`(읽는 곳이 없었다)은 이 참조의 옛 이름으로 읽힌다.
+ *          언리얼 `UMeshComponent::OverrideMaterials` · 유니티 `Renderer.sharedMaterials` 는 에셋 참조로 저장된다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXml )
 {
@@ -272,15 +271,6 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXml )
     manager.destroyObject( pCopy );
     manager.processDeferredDestruction();
     SW_EXPECT_FALSE( cache.isCached( kPath ) );
-
-    // 스프라이트의 옛 칸 이름(`_materialName`)도 이 참조로 읽힌다.
-    sw::GameObject* pSprite = manager.createGameObject( sw::hashed_string( "OldSprite" ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString(
-        pSprite, "<GameObject _name=\"OldSprite\"><_listComponent><SpriteComponent _materialName=\"engine/materials/benchtextured.material\" />"
-                 "</_listComponent></GameObject>" ) );
-    const sw::SpriteComponent* pSpriteComp = pSprite->getComponent<sw::SpriteComponent>();
-    SW_ASSERT_NOT_NULL( pSpriteComp );
-    SW_EXPECT_STREQ( kPath, pSpriteComp->getMaterialPath().c_str() );
 }
 
 /**

@@ -27,34 +27,34 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        PROPERTY( Alias = "startMap, StartMap" )
+        PROPERTY()
         string _startMap{}; ///< 시작 맵 / 레벨 경로
 
-        PROPERTY( Alias = "titleScene, TitleScene" )
+        PROPERTY()
         string _titleScene{}; ///< 타이틀 씬
 
-        PROPERTY( Alias = "entranceScene, EntranceScene" )
+        PROPERTY()
         string _entranceScene{}; ///< 타이틀 다음 씬
 
-        PROPERTY( Alias = "defaultSavePath, DefaultSavePath" )
+        PROPERTY()
         string _defaultSavePath{}; ///< 기본 세이브 슬롯 경로(파일 경로 — 경로 없는 `GameInstanceBase::saveStateToFile` · `loadStateFromFile`)
 
-        PROPERTY( Alias = "stringsData, StringsData" )
+        PROPERTY()
         string _stringsData{}; ///< 문자열 테이블 (단일 파일 폴백)
 
-        PROPERTY( Alias = "localizationDirectory, LocalizationDirectory" )
+        PROPERTY()
         string _localizationDirectory{}; ///< 다국어 팩 디렉터리
 
-        PROPERTY( Alias = "defaultLanguage, DefaultLanguage" )
+        PROPERTY()
         string _defaultLanguage{ "ko_kr" }; ///< 기본 활성 언어
 
-        PROPERTY( Alias = "fallbackLanguage, FallbackLanguage" )
+        PROPERTY()
         string _fallbackLanguage{ "en_us" }; ///< 대체(Fallback) 언어
 
-        PROPERTY( Alias = "inputMap, InputMap" )
+        PROPERTY()
         string _inputMap{}; ///< 게임플레이 InputMap 경로(통합 맵 `InputManager::getActionMap()` 에 읽힌다)
 
-        PROPERTY( Alias = "customProperties, CustomProperties" )
+        PROPERTY()
         map<string, string> _mapCustomProperty{}; ///< 범용 커스텀 키-값 프로퍼티 저장소
 
         /** @brief 커스텀 문자열 프로퍼티를 조회합니다(없으면 fallback 을 반환합니다). */
@@ -80,10 +80,10 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        PROPERTY( Alias = "packRoot, PackRoot" )
+        PROPERTY()
         string _packRoot{}; ///< Resource 상대 팩 폴더
 
-        PROPERTY( Alias = "data, Data" )
+        PROPERTY()
         GameData _data{}; ///< `{packRoot}/data/gamedata.xml` 테이블
 
         /** @brief packRoot 아래 상대 경로를 Resource 상대 경로로 만듭니다. */

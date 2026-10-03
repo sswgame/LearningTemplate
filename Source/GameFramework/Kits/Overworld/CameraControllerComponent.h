@@ -61,10 +61,10 @@ namespace sw
         bool isShaking() const { return _shakeDuration > 0.0f; }
 
     private:
-        PROPERTY( Alias = "targetPos" )
+        PROPERTY()
         float2 _targetPos;
         /** @brief 흔들림을 뺀 카메라 자리입니다. 매 틱 주인의 위치에서 다시 구하는 런타임 값이라 저장하지 않습니다. */
-        PROPERTY( Alias = "currentPos", Transient )
+        PROPERTY( Transient )
         float2 _currentPos;
         /**
          * @brief 지난 틱에 주인 위치에 얹은 흔들림입니다. 다음 틱에 걷어 내고 기준을 구합니다.
@@ -73,17 +73,17 @@ namespace sw
          */
         PROPERTY( HideInInspector )
         float2 _appliedShake;
-        PROPERTY( Alias = "followSpeed" )
+        PROPERTY()
         float32 _followSpeed;
-        PROPERTY( Alias = "shakeIntensity" )
+        PROPERTY()
         float32 _shakeIntensity;
-        PROPERTY( Alias = "shakeDuration" )
+        PROPERTY()
         float32 _shakeDuration;
-        PROPERTY( Alias = "shakeFrequency" )
+        PROPERTY()
         float32 _shakeFrequency;
-        PROPERTY( Alias = "shakeElapsed" )
+        PROPERTY()
         float32 _shakeElapsed; ///< 흔들림이 시작된 뒤 흐른 시간. **위상은 이것으로 간다**
-        PROPERTY( Alias = "shakeTotalDuration" )
+        PROPERTY()
         float32 _shakeTotalDuration; ///< 잦아드는 비율의 분모
     };
 } // namespace sw

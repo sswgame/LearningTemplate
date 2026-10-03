@@ -2074,7 +2074,7 @@ SW_TEST_CASE( GameFrameworkTest, ExpiredEffectObjectReturnsToThePool )
     // `_duration` 은 공개 setter 가 없는 리플렉션 프로퍼티다.
     const sw::TypeInfo* pTypeInfo = pEffect->getTypeInfo();
     SW_ASSERT_NOT_NULL( pTypeInfo );
-    const sw::PropertyInfo* pDuration = pTypeInfo->findPropertyInHierarchy( "duration" );
+    const sw::PropertyInfo* pDuration = pTypeInfo->findPropertyInHierarchy( "_duration" );
     SW_ASSERT_NOT_NULL( pDuration );
     pDuration->setValue<float32>( pEffect, 0.01f );
 

@@ -171,12 +171,11 @@ namespace sw
         shared_ptr<Mesh>             _mesh;
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _materialInstance;
-        /** @brief 저장되는 메시 id 입니다. `_meshName` 은 스프라이트가 따로 들던(읽는 곳 없던) 옛 칸 이름입니다. */
-        PROPERTY( Category = "Rendering", DisplayName = "Mesh Asset", AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset name or path", Alias = "_meshName, Mesh" )
+        /** @brief 저장되는 메시 id 입니다. */
+        PROPERTY( Category = "Rendering", DisplayName = "Mesh Asset", AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset name or path" )
         string _meshId;
-        /** @brief 저장되는 머티리얼 참조입니다. `_materialName` 은 스프라이트가 따로 들던(읽는 곳 없던) 옛 칸 이름입니다. */
-        PROPERTY( Category = "Rendering", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Material asset; empty uses the scene default",
-                  Alias = "_materialName, Material" )
+        /** @brief 저장되는 머티리얼 참조입니다. */
+        PROPERTY( Category = "Rendering", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Material asset; empty uses the scene default" )
         hashed_string _materialPath;
         hashed_string _acquiredMaterialPath; ///< 캐시에서 잡아 둔 경로(저장하지 않습니다). 인스펙터가 `_materialPath` 를 먼저 고쳐 써도 이것으로 놓습니다
         hashed_string _resolvedMeshId;       ///< `_mesh` 가 어느 메시 id 의 것인지(저장하지 않습니다). 지금 id 와 다르면 다시 잡습니다
