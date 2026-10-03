@@ -215,6 +215,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
 
+- **문서 최신화(10-04)에서 남은 정리 셋** — (1) 코드 주석이 `docs/05_RHI_FrameContract.md` 의 재설계 전 절 이름(R2 · S2 · S3 · "실패기록 5차")을 가리킨다:
+  주석을 현재형으로 바꾸면 docs/05 의 1~3 · 7 절을 지운다. (2) `ArgumentList.xxx` 의 `IP` · `PORT` 는 읽는 곳이 없다. (3) `CheckTestSuites.py` docstring 이 "규칙
+  다섯" 이라며 여섯을 나열한다. 주석의 경위 서술 예: `CompressionCodecRegistry.h`, `RenderThread.cpp`, `ArgumentList.xxx`, `CheckFallibleNodiscard.py` · `CheckFunctionVocabulary.py`.
+
 - **`Test/README.md` 의 "구성마다 도는 케이스 수" 표(2026-10-01 실측)가 낡았다** — 다시 잰다(Debug CoreTest 만 해도 348 개).
 
 
