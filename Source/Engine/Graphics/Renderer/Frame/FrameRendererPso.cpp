@@ -45,6 +45,26 @@ namespace sw
             }
             return false;
         }
+
+        /**
+         * @brief 컬 모드의 Back 과 Front 를 맞바꿉니다. 바꾼 것이 있으면 true 입니다(None 은 그대로라 false).
+         * @details 거울 변환(월드 행렬식 < 0)은 삼각형 감김을 뒤집습니다. 언리얼이 `bReverseCulling` 으로 프리미티브의 컬 모드를 뒤집는 자리입니다.
+         *          셰이더의 `SV_IsFrontFace` 를 뒤집는 것으로는 안 됩니다 — 컬링은 래스터라이저가 픽셀 셰이더보다 먼저 합니다.
+         */
+        bool reverseCullMode( RHIPipelineStateDesc& desc )
+        {
+            if ( desc._cullMode == RHICullMode::Back )
+            {
+                desc._cullMode = RHICullMode::Front;
+                return true;
+            }
+            if ( desc._cullMode == RHICullMode::Front )
+            {
+                desc._cullMode = RHICullMode::Back;
+                return true;
+            }
+            return false;
+        }
     } // namespace
 
     RHIPipelineStateHandle FrameRenderer::createEnginePso( string_view shaderPath, bool bDepthTest, uint32 numRenderTargets,
@@ -179,7 +199,7 @@ namespace sw
 
     RenderPsoCache::MaterialPsoEntry FrameRenderer::createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
                                                                               const GpuShaderPermutation* pPermutation,
-                                                                              RenderViewMode              viewMode )
+                                                                              RenderViewMode viewMode, bool bReverseCulling )
     {
         RenderPsoCache::MaterialPsoEntry entry{ passPso, 0 };
         if ( passPso == 0 || _pDevice == nullptr )
@@ -225,7 +245,12 @@ namespace sw
         if ( FrameRendererUtil::appliesViewMode( passType ) && applyViewModeToDesc( desc, viewMode ) )
             bChanged = true;
 
-        // 얹을 것이 없다 = 패스 PSO 가 이미 이 머티리얼의 셰이더이고 모드도 Lit 이다. 똑같은 PSO 를 하나 더 만들 이유가 없다.
+        // 거울 변환 배치는 감김이 뒤집혀 있다. 패스의 컬 모드를 맞바꿔야 같은 면(바깥 면)이 남는다. 와이어프레임처럼 컬링이 없는
+        // 패스(None)는 바꿀 것이 없다. 뷰 모드 뒤에 둔다 — 뷰 모드가 컬링을 끄면 뒤집을 것도 없다.
+        if ( bReverseCulling && reverseCullMode( desc ) )
+            bChanged = true;
+
+        // 얹을 것이 없다 = 패스 PSO 가 이미 이 머티리얼의 셰이더이고 모드도 Lit 이고 컬 모드도 그대로다. 똑같은 PSO 를 하나 더 만들 이유가 없다.
         if ( bChanged == false )
             return entry;
 
@@ -248,55 +273,47 @@ namespace sw
         // 읽는다. 기록 중에 바뀌어도 이 프레임이 고르는 PSO 는 여기서 준비한 집합 안에 있어야 한다.
         const RenderViewMode viewMode = getViewMode();
 
-        // 이번 프레임 배치가 실제로 쓰는 퍼뮤테이션만 본다. 불투명 패스와 반투명 패스는 배치 목록이 다르므로
+        // 이번 프레임 배치가 실제로 쓰는 (퍼뮤테이션, 컬 반전) 조합만 본다. 불투명 패스와 반투명 패스는 배치 목록이 다르므로
         // 유리 머티리얼의 변형을 그림자 패스까지 만들어 두는 낭비가 없다.
-        // 퍼뮤테이션이 없는 배치(머티리얼을 안 붙인 메시)도 세어 둔다. Lit 이 아니면 그 배치에도
-        // 변형이 필요하다. 그냥 건너뛰면 머티리얼 없는 메시만 뷰 모드가 안 걸려 화면이 섞인다.
-        auto collect = []( const vector<GpuMeshBatch>& listBatch, vector<uint32>& outList, bool& outHasPlain )
+        // 퍼뮤테이션이 없는 배치(머티리얼을 안 붙인 메시)도 모은다. Lit 이 아니거나 거울 배치면 그 배치에도
+        // 변형이 필요하다. 그냥 건너뛰면 머티리얼 없는 메시만 뷰 모드 · 컬 반전이 안 걸려 화면이 섞인다.
+        auto collect = []( const vector<GpuMeshBatch>& listBatch, vector<MaterialPsoRequest>& outList )
         {
             for ( const GpuMeshBatch& batch : listBatch )
             {
-                if ( batch._shaderPermutation == kInvalidShaderPermutation )
-                {
-                    outHasPlain = true;
-                    continue;
-                }
                 bool bFound{ false };
-                for ( const uint32 existing : outList )
+                for ( const MaterialPsoRequest& existing : outList )
                 {
-                    if ( existing == batch._shaderPermutation )
+                    if ( existing._shaderPermutation == batch._shaderPermutation && existing._bReverseCulling == batch._bReverseCulling )
                     {
                         bFound = true;
                         break;
                     }
                 }
                 if ( bFound == false )
-                    outList.push_back( batch._shaderPermutation );
+                    outList.push_back( MaterialPsoRequest{ batch._shaderPermutation, batch._bReverseCulling } );
             }
         };
 
-        bool            bCreatedVariant{ false };
-        vector<uint32>& listOpaquePermutation      = _listOpaquePermutationScratch;
-        vector<uint32>& listTransparentPermutation = _listTransparentPermutationScratch;
-        listOpaquePermutation.clear();
-        listTransparentPermutation.clear();
-        bool bOpaqueHasPlain{ false };
-        bool bTransparentHasPlain{ false };
-        collect( _gpuScene.getOpaqueBatches(), listOpaquePermutation, bOpaqueHasPlain );
-        collect( _gpuScene.getTransparentBatches(), listTransparentPermutation, bTransparentHasPlain );
-        if ( listOpaquePermutation.empty() && listTransparentPermutation.empty() && bOpaqueHasPlain == false &&
-             bTransparentHasPlain == false )
+        bool                        bCreatedVariant{ false };
+        vector<MaterialPsoRequest>& listOpaqueRequest      = _listOpaquePsoRequestScratch;
+        vector<MaterialPsoRequest>& listTransparentRequest = _listTransparentPsoRequestScratch;
+        listOpaqueRequest.clear();
+        listTransparentRequest.clear();
+        collect( _gpuScene.getOpaqueBatches(), listOpaqueRequest );
+        collect( _gpuScene.getTransparentBatches(), listTransparentRequest );
+        if ( listOpaqueRequest.empty() && listTransparentRequest.empty() )
             return;
 
         // 만드는 것은 락 밖에서, 넣는 것만 락 안에서 한다. 셰이더 컴파일이 낄 수 있어 드로우 경로의
         // 조회를 붙잡으면 안 된다. 세 자리가 같은 절차를 반복하던 것을 여기 하나로 모았다.
         auto ensureVariant = [this, viewMode, &bCreatedVariant]( RHIPipelineStateHandle passPso, RenderPassType passType,
-                                                                 const GpuShaderPermutation* pPermutation, uint64 permutationHash )
+                                                                 const GpuShaderPermutation* pPermutation, uint64 permutationHash, bool bReverseCulling )
         {
-            const uint64 key = RenderPsoCache::materialPsoKey( passPso, permutationHash, viewMode );
+            const uint64 key = RenderPsoCache::materialPsoKey( passPso, permutationHash, viewMode, bReverseCulling );
             if ( _psoCache.hasMaterialPso( key ) )
                 return;
-            const RenderPsoCache::MaterialPsoEntry entry = createMaterialPsoVariant( passPso, passType, pPermutation, viewMode );
+            const RenderPsoCache::MaterialPsoEntry entry = createMaterialPsoVariant( passPso, passType, pPermutation, viewMode, bReverseCulling );
             _psoCache.setMaterialPso( key, entry );
             bCreatedVariant = true;
         };
@@ -305,21 +322,25 @@ namespace sw
         {
             if ( passPso == 0 || FrameRendererUtil::drawsSceneMeshes( passType ) == false )
                 continue;
-            const bool            bTransparentPass = getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
-            const vector<uint32>& listPermutation  = bTransparentPass ? listTransparentPermutation : listOpaquePermutation;
-            const bool            bHasPlain        = bTransparentPass ? bTransparentHasPlain : bOpaqueHasPlain;
+            const bool                        bTransparentPass = getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
+            const vector<MaterialPsoRequest>& listRequest      = bTransparentPass ? listTransparentRequest : listOpaqueRequest;
 
-            // 퍼뮤테이션이 없는 배치를 위한 변형. 얹는 것이 뷰 모드뿐이다. Lit 에서는 만들 것이 없다
-            // (그때는 패스 PSO 가 그대로 정답이고 psoForBatch 도 캐시를 보지 않는다).
-            if ( bHasPlain && viewMode != RenderViewMode::Lit && FrameRendererUtil::appliesViewMode( passType ) )
-                ensureVariant( passPso, passType, nullptr, 0 );
-
-            for ( const uint32 permutationIndex : listPermutation )
+            for ( const MaterialPsoRequest& request : listRequest )
             {
-                const GpuShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( permutationIndex );
+                const bool bReverseCulling = ( request._bReverseCulling != SW_FALSE );
+                if ( request._shaderPermutation == kInvalidShaderPermutation )
+                {
+                    // 퍼뮤테이션이 없는 배치를 위한 변형. 얹는 것이 뷰 모드 · 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
+                    // (그때는 패스 PSO 가 그대로 정답이고 psoForBatch 도 캐시를 보지 않는다).
+                    const bool bAppliesViewMode = ( viewMode != RenderViewMode::Lit ) && FrameRendererUtil::appliesViewMode( passType );
+                    if ( bAppliesViewMode || bReverseCulling )
+                        ensureVariant( passPso, passType, nullptr, 0, bReverseCulling );
+                    continue;
+                }
+                const GpuShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( request._shaderPermutation );
                 if ( pPermutation == nullptr )
                     continue;
-                ensureVariant( passPso, passType, pPermutation, pPermutation->_hash );
+                ensureVariant( passPso, passType, pPermutation, pPermutation->_hash, bReverseCulling );
             }
         }
 
@@ -355,11 +376,13 @@ namespace sw
         // 얹을 것이 하나도 없는 조합이다. ensureMaterialPsos 도 이 키를 만들지 않는다.
         // (해시 0 은 퍼뮤테이션 없음을 뜻한다. 실제 퍼뮤테이션 해시가 0 이 되더라도 같은 자리로
         //  떨어지는데, 그 둘이 만드는 디스크립터는 어차피 같으므로 해롭지 않다.)
-        if ( permutationHash == 0 && viewMode == RenderViewMode::Lit )
+        const bool bReverseCulling = ( batch._bReverseCulling != SW_FALSE );
+        if ( permutationHash == 0 && viewMode == RenderViewMode::Lit && bReverseCulling == false )
             return passPso;
 
         // 못 찾으면 패스 PSO 로 그린다. ensureMaterialPsos 가 기록 전에 채우므로 정상 경로에서는 늘 있다.
-        const RHIPipelineStateHandle variant = _psoCache.findMaterialPso( RenderPsoCache::materialPsoKey( passPso, permutationHash, viewMode ) );
+        const RHIPipelineStateHandle variant =
+            _psoCache.findMaterialPso( RenderPsoCache::materialPsoKey( passPso, permutationHash, viewMode, bReverseCulling ) );
         return ( variant != 0 ) ? variant : passPso;
     }
 

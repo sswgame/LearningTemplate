@@ -74,8 +74,14 @@ namespace sw
          * @details RT 가 `GpuScene::assignMorphBases` 로 채웁니다. GT 는 GPU 풀을 모릅니다(스냅샷 소유 규칙). upload 가 이 값을
          *          배치 표(`GpuBatchInfo`, g_SwBatches t13)에 옮겨 적고, 정점 셰이더가 자기 배치 번호로 읽습니다(binding.hlsli swComputeMorphElement).
          */
-        uint32             _morphVertexBase{ 0xFFFFFFFFu };
-        RHIBlendMode       _blendMode  = RHIBlendMode::Opaque;
+        uint32       _morphVertexBase{ 0xFFFFFFFFu };
+        RHIBlendMode _blendMode = RHIBlendMode::Opaque;
+        /**
+         * @brief 인스턴스의 월드 행렬식이 음수(거울 변환)인 배치입니다. 이 배치는 컬 모드를 뒤집은 PSO 로 그립니다(언리얼 `bReverseCulling`).
+         * @details 거울 변환은 삼각형 감김을 뒤집습니다. 컬 모드를 그대로 두면 카메라 쪽 면이 잘리고 안쪽 면이 보입니다. 컬 모드는 PSO 의 상태라
+         *          배치 키에 들어갑니다 — 한 배치의 인스턴스는 모두 같은 부호입니다(`FrameRenderer::psoForBatch`).
+         */
+        uint8              _bReverseCulling{ SW_FALSE };
         RHIDescriptorIndex _materialCb = kInvalidDescriptorIndex;
         /**
          * @brief 배치가 쓰는 부모 머티리얼입니다. 셰이더 타입(머티리얼 데이터 그룹)과 텍스처 슬롯의 소유자입니다.

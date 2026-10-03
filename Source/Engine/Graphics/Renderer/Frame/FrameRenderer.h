@@ -197,8 +197,9 @@ namespace sw
         /** @brief 패스 타입에 대응하는 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle getEnginePso( RenderPassType passType ) const;
         /**
-         * @brief 이 배치를 그릴 PSO 입니다. 머티리얼 퍼뮤테이션 변형이 있으면 그것, 없으면 패스 PSO 그대로입니다.
+         * @brief 이 배치를 그릴 PSO 입니다. 머티리얼 퍼뮤테이션 · 뷰 모드 · 컬 반전을 얹은 변형이 있으면 그것, 없으면 패스 PSO 그대로입니다.
          * @details 드로우 경로가 배치마다 부르는 조회입니다(읽기 전용). 캐시는 `ensureMaterialPsos` 가 기록 전에 채웁니다.
+         *          거울 변환 배치(`GpuMeshBatch::_bReverseCulling`)는 패스의 컬 모드를 뒤집은 변형으로 그립니다.
          */
         RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPso, const GpuMeshBatch& batch ) const;
         /**
@@ -488,12 +489,14 @@ namespace sw
          */
         void ensureMaterialPsos();
         /**
-         * @brief 패스 PSO 에 머티리얼 퍼뮤테이션을 얹은 변형을 만듭니다. 얹을 것이 없으면 패스 PSO 를 그대로 반환합니다.
+         * @brief 패스 PSO 에 머티리얼 퍼뮤테이션 · 뷰 모드 · 컬 반전을 얹은 변형을 만듭니다. 얹을 것이 없으면 패스 PSO 를 그대로 반환합니다.
          * @details 렌더 상태(블렌드 · 뎁스 · RT 포맷)는 **패스의 것을 그대로 물려받고** 셰이더만 갈아 끼웁니다.
-         *          그 둘은 패스가 정하는 것이지 머티리얼이 정하는 것이 아닙니다.
+         *          그 둘은 패스가 정하는 것이지 머티리얼이 정하는 것이 아닙니다. 예외는 컬 모드 하나입니다 — `bReverseCulling` 이면
+         *          Back 과 Front 를 맞바꿉니다(거울 변환이 감김을 뒤집으므로). None 은 그대로입니다.
          */
         RenderPsoCache::MaterialPsoEntry createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
-                                                                   const GpuShaderPermutation* pPermutation, RenderViewMode viewMode );
+                                                                   const GpuShaderPermutation* pPermutation, RenderViewMode viewMode,
+                                                                   bool bReverseCulling );
         /**
          * @brief 이번 프레임 배치 수에 맞춰 상수버퍼 슬롯을 **기록 시작 전에** 늘려 둡니다(드로우마다 하나씩 나가므로).
          * @details 기록 중에는 버퍼 생성 · bindless 등록을 할 수 없습니다. 지난 프레임의 최대 사용량(하이워터)도 바닥값으로 봅니다.
@@ -555,9 +558,15 @@ namespace sw
         vector<FramePassContext> _listPassContext;
         /// @brief 씬 직접 경로가 내보내는 스냅샷입니다. 바꿔치기로 저장소가 돌아옵니다.
         GpuSceneSnapshot _sceneSnapshotScratch;
-        /// @brief `ensureMaterialPsos` 가 이번 프레임 배치에서 모으는 퍼뮤테이션입니다. 프레임마다 다시 채웁니다.
-        vector<uint32> _listOpaquePermutationScratch;
-        vector<uint32> _listTransparentPermutationScratch;
+        /** @brief 이번 프레임 배치가 쓰는 PSO 변형 하나의 조건(퍼뮤테이션, 컬 반전)입니다. 퍼뮤테이션이 없으면 kInvalidShaderPermutation 입니다. */
+        struct MaterialPsoRequest
+        {
+            uint32 _shaderPermutation{ kInvalidShaderPermutation };
+            uint8  _bReverseCulling{ SW_FALSE };
+        };
+        /// @brief `ensureMaterialPsos` 가 이번 프레임 배치에서 모으는 변형 조건입니다(중복 없음). 프레임마다 다시 채웁니다.
+        vector<MaterialPsoRequest> _listOpaquePsoRequestScratch;
+        vector<MaterialPsoRequest> _listTransparentPsoRequestScratch;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스에서 그려지는지의 어림값입니다(그림자 · 프리패스 · 불투명 · 반투명).
         static constexpr uint32 _s_kDrawCbPassEstimate = 4;
         /// @brief 패스 · 드로우별 상수버퍼 슬롯 링입니다. 병렬 기록에서 드로우마다 하나씩 집어 갑니다.

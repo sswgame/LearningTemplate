@@ -252,6 +252,11 @@ namespace sw
              *          바꾸는 길이 조용히 죽어 있었습니다). 수집에서 한 번 구해 두면 나누기 · 정렬도 다시 구하지 않습니다.
              */
             uint64 _permutationHash{ 0 };
+            /**
+             * @brief 월드 행렬식이 음수(거울 변환)인가입니다. 배치 키이고 `GpuMeshBatch::_bReverseCulling` 으로 갑니다.
+             * @details 월드 행렬에서 나오는 값이라 트랜스폼만 바뀐 프레임도 다시 구합니다(`copyCandidateTransforms`). 부호가 바뀌면 배치를 다시 나눕니다.
+             */
+            uint8 _bReverseCulling{ SW_FALSE };
 
             /**
              * @brief 재구축이 필요한지 판단하기 위한 필드 단위 비교입니다.
@@ -270,7 +275,7 @@ namespace sw
             {
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
                        _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite &&
-                       _permutationHash == other._permutationHash &&
+                       _permutationHash == other._permutationHash && _bReverseCulling == other._bReverseCulling &&
                        Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
                        Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
                        Memory::compare( &_boundsRadius, &other._boundsRadius, sizeof( _boundsRadius ) ) == 0;
@@ -279,15 +284,16 @@ namespace sw
             bool operator!=( const DrawCandidate& other ) const { return ( *this == other ) == false; }
 
             /**
-             * @brief 배치가 묶이는 기준(메시 · 머티리얼 · 인스턴스 · 블렌드 · 퍼뮤테이션 해시)이 같은지 확인합니다. 트랜스폼은 보지 않습니다.
-             * @details 불투명 배치는 이 다섯 가지로만 나뉘고 정렬됩니다. 물체가 **움직이기만** 했다면
+             * @brief 배치가 묶이는 기준(메시 · 머티리얼 · 인스턴스 · 블렌드 · 퍼뮤테이션 해시 · 컬 반전)이 같은지 확인합니다. 트랜스폼은 보지 않습니다.
+             * @details 불투명 배치는 이 여섯 가지로만 나뉘고 정렬됩니다. 컬 반전은 월드 행렬식의 부호뿐이라 이동 · 회전 · 양수 스케일로는 바뀌지 않습니다. 물체가 **움직이기만** 했다면
              *          배치 구성은 한 글자도 바뀌지 않으므로 다시 나누고 다시 정렬할 이유가 없습니다.
              *          움직이는 씬에서 남는 유일한 O(N log N) 이 그 정렬입니다.
              */
             bool hasSameBatchKey( const DrawCandidate& other ) const
             {
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
-                       _blendMode == other._blendMode && _permutationHash == other._permutationHash;
+                       _blendMode == other._blendMode && _permutationHash == other._permutationHash &&
+                       _bReverseCulling == other._bReverseCulling;
             }
         };
 
@@ -317,9 +323,10 @@ namespace sw
         /**
          * @brief 월드 행렬만 바뀐 프리미티브(`_listTransformDirtyPrimitive`)의 후보에 트랜스폼 저장소의 행렬 · 바운드 중심을 옮깁니다.
          * @details 컴포넌트 · 메시 · 머티리얼을 읽지 않습니다. 부분 수집 안에서만 부르고, 후보 자리는 지난 프레임 것 그대로입니다
-         *          (실리지 않았던 것은 부르기 전에 렌더 상태 목록으로 넘깁니다).
+         *          (실리지 않았던 것은 부르기 전에 렌더 상태 목록으로 넘깁니다). 행렬식의 부호(컬 반전)도 다시 구합니다.
+         * @return 컬 반전이 바뀐 후보가 있으면 true 입니다. 그것은 배치 키가 바뀐 것이라 부르는 쪽이 배치를 다시 나눕니다.
          */
-        void copyCandidateTransforms( const PrimitiveRegistry& primitives );
+        [[nodiscard]] bool copyCandidateTransforms( const PrimitiveRegistry& primitives );
         /**
          * @brief 월드 행렬만 바뀐 칸 가운데 지난 프레임 후보에 없는 것(메시가 아직 없었다 · 인스턴스 항목)을 렌더 상태 목록으로 넘깁니다.
          * @details 그런 칸은 다시 모아야 실릴지 압니다. 남은 것만 `copyCandidateTransforms` 가 행렬을 옮깁니다. 부분 수집 안에서만 부릅니다.
@@ -402,11 +409,13 @@ namespace sw
              *          넣어야 갈립니다(런타임에 인스턴스의 정적 스위치를 바꾸는 길이 여기서 죽어 있었습니다).
              */
             uint64 _permutationHash{ 0 };
-            /** @brief 메시·머티리얼·인스턴스·퍼뮤테이션이 같은지 비교합니다. */
+            /** @brief 컬 모드를 뒤집어 그리는가(거울 변환)입니다. 퍼뮤테이션과 함께 PSO 를 정하므로 키입니다. */
+            uint8 _bReverseCulling{ SW_FALSE };
+            /** @brief 메시·머티리얼·인스턴스·퍼뮤테이션·컬 반전이 같은지 비교합니다. */
             bool operator==( const SortKey& other ) const
             {
                 return _pMesh == other._pMesh && _pMaterial == other._pMaterial && _pInstance == other._pInstance &&
-                       _permutationHash == other._permutationHash;
+                       _permutationHash == other._permutationHash && _bReverseCulling == other._bReverseCulling;
             }
         };
 

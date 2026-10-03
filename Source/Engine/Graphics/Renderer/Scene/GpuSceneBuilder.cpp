@@ -53,6 +53,19 @@ namespace sw
                 outInstance._sprite       = raw._sprite;
             }
 
+            /**
+             * @brief 월드 행렬이 거울 변환(위 3x3 의 행렬식이 음수)인지 판정합니다. 그런 인스턴스는 컬 모드를 뒤집어 그립니다.
+             * @details 언리얼은 프리미티브의 LocalToWorld 행렬식 부호로 `bReverseCulling` 을 정하고, 유니티도 음수 스케일에서 와인딩을 뒤집습니다.
+             *          이동 행은 감김과 무관하므로 3x3 만 봅니다(원소 아홉 곱이라 수집 경로에서 매 후보 부를 수 있습니다).
+             */
+            static uint8 computeReverseCulling( const float4x4& world )
+            {
+                const float32 determinant = world._11 * ( world._22 * world._33 - world._23 * world._32 ) -
+                                            world._12 * ( world._21 * world._33 - world._23 * world._31 ) +
+                                            world._13 * ( world._21 * world._32 - world._22 * world._31 );
+                return ( determinant < 0.0f ) ? SW_TRUE : SW_FALSE;
+            }
+
             /** @brief 머티리얼의 텍스처 SRV 를 배치에 값으로 복사합니다(렌더 스레드는 Material* 를 따라갈 수 없습니다). */
             static void fillMaterialTextureSrvs( GpuMeshBatch& batch, const Material* pMaterial )
             {
@@ -190,7 +203,8 @@ namespace sw
             }
             // 합치기가 켜져 있으면 같은 퍼뮤테이션은 머티리얼 · 인스턴스가 달라도 한 키다. 파라미터는 원소 인덱스로 읽는다.
             SortKey key{ candidate._mesh.get(), batchKeyMaterial( candidate._material.get(), candidate._permutationHash ),
-                         _bMergeAcrossMaterials != SW_FALSE ? nullptr : candidate._instance.get(), candidate._permutationHash };
+                         _bMergeAcrossMaterials != SW_FALSE ? nullptr : candidate._instance.get(), candidate._permutationHash,
+                         candidate._bReverseCulling };
             _listScratchOpaqueEntry.push_back( SortEntry{ key, instanceIndex } );
         }
 
@@ -204,6 +218,8 @@ namespace sw
             {
                 if ( entryA._key._permutationHash != entryB._key._permutationHash )
                     return entryA._key._permutationHash < entryB._key._permutationHash;
+                if ( entryA._key._bReverseCulling != entryB._key._bReverseCulling )
+                    return entryA._key._bReverseCulling < entryB._key._bReverseCulling;
                 if ( entryA._key._pMaterial != entryB._key._pMaterial )
                     return entryA._key._pMaterial < entryB._key._pMaterial;
                 if ( entryA._key._pMesh != entryB._key._pMesh )
@@ -236,6 +252,7 @@ namespace sw
         candidate._boundsCenter      = world.getTranslation();
         candidate._localBoundsRadius = pMeshComp->getBoundsRadius();
         candidate._boundsRadius      = candidate._localBoundsRadius * world.getMaximumAxisScale();
+        candidate._bReverseCulling   = GpuSceneBuilderInternal::computeReverseCulling( world );
         candidate._spinSeed          = pMeshComp->getGpuSpinSeed();
         candidate._sprite            = pMeshComp->getSpriteInstanceData();
         // 소유를 싣는다. RT 가 upload() 에서 역참조한다. 스냅샷은 머티리얼 · 인스턴스의 소유도
@@ -268,6 +285,7 @@ namespace sw
         candidate._boundsCenter              = item._world.getTranslation();
         candidate._localBoundsRadius         = item._boundsRadius;
         candidate._boundsRadius              = item._boundsRadius * item._world.getMaximumAxisScale();
+        candidate._bReverseCulling           = GpuSceneBuilderInternal::computeReverseCulling( item._world );
         candidate._spinSeed                  = item._spinSeed;
         candidate._sprite                    = item._sprite;
         // 메시 컴포넌트 판과 같은 규칙: 날 포인터로 먼저 견주고, 다르면 소유를 싣는다.
@@ -313,7 +331,7 @@ namespace sw
         outInstance._sprite       = candidate._sprite;
     }
 
-    void GpuSceneBuilder::copyCandidateTransforms( const PrimitiveRegistry& primitives )
+    bool GpuSceneBuilder::copyCandidateTransforms( const PrimitiveRegistry& primitives )
     {
         // 행렬 하나(64 바이트)와 번호 셋을 읽는 것뿐이다. 예전에는 움직인 프리미티브마다 후보를 다시 채웠다 — 메시 컴포넌트 · 소유
         // 오브젝트(활성) · 메시 · 머티리얼을 건너다니고 소유 포인터 셋을 견줬다. 움직였다고 그것들이 바뀌지는 않는다.
@@ -326,6 +344,8 @@ namespace sw
             const uint32*                _pMap{ nullptr };
             DrawCandidate*               _pCandidate{ nullptr };
             const SceneTransformStorage* _pStorage{ nullptr };
+            /// @brief 컬 반전(행렬식 부호)이 바뀐 후보가 하나라도 있었는가. 바뀐 워커만 한 번 쓴다 — 거울 뒤집기는 드물다.
+            atomic<bool> _bReverseCullingChanged{ false };
 
             void copyRange( uint32 start, uint32 end )
             {
@@ -336,10 +356,16 @@ namespace sw
                     const SceneTransformPage* pPage          = _pStorage->findPage( transformSlot );
                     if ( pPage == nullptr )
                         continue;
-                    DrawCandidate& candidate = _pCandidate[_pMap[primitiveIndex]];
-                    candidate._world         = pPage->_arrWorldMatrix[transformSlot & SceneTransformPage::kSlotMask];
-                    candidate._boundsCenter  = candidate._world.getTranslation();
-                    candidate._boundsRadius  = candidate._localBoundsRadius * candidate._world.getMaximumAxisScale();
+                    DrawCandidate& candidate    = _pCandidate[_pMap[primitiveIndex]];
+                    candidate._world            = pPage->_arrWorldMatrix[transformSlot & SceneTransformPage::kSlotMask];
+                    candidate._boundsCenter     = candidate._world.getTranslation();
+                    candidate._boundsRadius     = candidate._localBoundsRadius * candidate._world.getMaximumAxisScale();
+                    const uint8 bReverseCulling = GpuSceneBuilderInternal::computeReverseCulling( candidate._world );
+                    if ( bReverseCulling != candidate._bReverseCulling )
+                    {
+                        candidate._bReverseCulling = bReverseCulling;
+                        _bReverseCullingChanged.store( true, std::memory_order_relaxed );
+                    }
                 }
             }
         };
@@ -351,6 +377,7 @@ namespace sw
         job._pStorage       = &SceneTransformStorage::get();
         engine::runParallel( static_cast<uint32>( _listTransformDirtyPrimitive.size() ), kParallelTransformCopyCount,
                              SW_DELEGATE_METHOD( ParallelBlockDelegate, &TransformCopyJob::copyRange, &job ) );
+        return job._bReverseCullingChanged.load( std::memory_order_relaxed );
     }
 
     void GpuSceneBuilder::moveTransformSlotsWithoutCandidate( uint32 meshCount )
@@ -491,7 +518,9 @@ namespace sw
 
             if ( bPartialDone && _listTransformDirtyPrimitive.empty() == false )
             {
-                copyCandidateTransforms( primitives );
+                // 행렬식의 부호가 바뀐 후보는 배치 키가 바뀐 것이다(컬 반전). 그때는 다시 나눈다.
+                if ( copyCandidateTransforms( primitives ) )
+                    bPartialKeysSame = false;
                 bPartialAnyChange = true;
             }
 
@@ -1198,7 +1227,7 @@ namespace sw
 
     void GpuSceneBuilder::emitTransparentBatches()
     {
-        // 먼 것부터 정렬된 투명 인덱스에서 키가 연속으로 같은 것만 합친다(메시 · 퍼뮤테이션 해시 · 머티리얼, 합치기가 꺼져 있으면 인스턴스까지).
+        // 먼 것부터 정렬된 투명 인덱스에서 키가 연속으로 같은 것만 합친다(메시 · 퍼뮤테이션 해시 · 컬 반전 · 머티리얼, 합치기가 꺼져 있으면 인스턴스까지).
         if ( _listScratchTransparentIdx.empty() == false )
         {
             uint32 batchStart{ 0 };
@@ -1221,7 +1250,8 @@ namespace sw
                                                                 ? ( pBatchHead->_material != current._material )
                                                                 : ( ( pBatchHead->_material == nullptr ) != ( current._material == nullptr ) );
                     bKeyChange                              = ( pBatchHead->_mesh != current._mesh ) || ( pBatchHead->_permutationHash != current._permutationHash ) ||
-                                 bKeyMaterialChange || ( _bMergeAcrossMaterials == SW_FALSE && pBatchHead->_instance != current._instance );
+                                 ( pBatchHead->_bReverseCulling != current._bReverseCulling ) || bKeyMaterialChange ||
+                                 ( _bMergeAcrossMaterials == SW_FALSE && pBatchHead->_instance != current._instance );
                 }
                 if ( bEnd || bKeyChange )
                 {
@@ -1265,6 +1295,7 @@ namespace sw
         batch._instanceBase       = static_cast<uint32>( work.size() );
         batch._instanceCount      = end - begin;
         batch._blendMode          = blendMode;
+        batch._bReverseCulling    = headCandidate._bReverseCulling;
         batch._material           = material;
         batch._materialInstance   = instance;
         if ( instance != nullptr )

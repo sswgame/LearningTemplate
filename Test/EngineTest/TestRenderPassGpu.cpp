@@ -134,7 +134,8 @@ namespace
         sw::Scene                    _scene{ "LitCubeScene" };
         sw::shared_ptr<sw::Material> _material;
         sw::shared_ptr<sw::Mesh>     _mesh;
-        sw::shared_ptr<sw::Mesh>     _floor; ///< 큐브의 그림자를 받는다 — 바닥이 없으면 그림자 맵을 잘못 걸어도 그림이 같다
+        sw::shared_ptr<sw::Mesh>     _floor;            ///< 큐브의 그림자를 받는다 — 바닥이 없으면 그림자 맵을 잘못 걸어도 그림이 같다
+        sw::MeshComponent*           _pCube{ nullptr }; ///< 큐브의 메시 컴포넌트(씬 소유) — 케이스가 트랜스폼을 바꿀 때 쓴다
 
         /** @brief 카메라 · 주광 · 큐브 · 바닥을 채웁니다. 하나라도 못 만들면 false 입니다. */
         bool populate()
@@ -161,6 +162,7 @@ namespace
             pMesh->setMesh( _mesh );
             pMesh->setMaterial( _material.get() );
             pMesh->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+            _pCube = pMesh;
 
             _floor                        = sw::MeshUtil::createPlane();
             sw::GameObject*    pFloorGo   = _scene.getObjectManager()->createGameObject( sw::hashed_string( "Floor" ) );
@@ -3749,8 +3751,8 @@ SW_TEST_CASE( RenderPassGpuTest, ShadowPassCastsOnEveryBackend )
  *          늘린 부모 아래에서 Y 로 돈 쿼드는 노멀이 늘어난 축 쪽으로 50° 넘게 기울었다 — 늘린 메시의 조명이 통째로 틀렸다. 고친 셰이더는 3x3 의
  *          여인수 행렬(외적 셋)로 옮기고 행렬식의 부호를 곱한다(binding.hlsli `swComputeWorldNormal`) — 부호가 없으면 거울 스케일(-3)에서 노멀이 뒤집힌다.
  *          기대값은 CPU 가 **다른 길**(월드 행렬의 역행렬 → 전치)로 구하고, 예전 식이 기대와 충분히 다른 배치인지도 먼저 확인한다 — 아니면 이 시험은
- *          눈이 멀어 있다. 노멀은 조명 이전의 값이라 G버퍼에서 직접 읽는다. G버퍼 패스의 컬링은 끈다 — 거울 변환은 감김을 뒤집는데 엔진은 아직
- *          컬 모드를 뒤집지 않으므로(남은 결함), 컬링을 두면 거울 배치의 그려지는 면이 그 수정에 따라 바뀐다. 이 시험은 노멀만 본다.
+ *          눈이 멀어 있다. 노멀은 조명 이전의 값이라 G버퍼에서 직접 읽는다. 거울 배치는 컬 모드를 뒤집어 그리므로(`GpuMeshBatch::_bReverseCulling`)
+ *          파이프라인의 후면 컬링을 그대로 두어도 카메라 쪽 면이 G버퍼에 남는다.
  */
 SW_TEST_CASE( RenderPassGpuTest, NormalsStayPerpendicularUnderNonUniformScale )
 {
@@ -3769,18 +3771,6 @@ SW_TEST_CASE( RenderPassGpuTest, NormalsStayPerpendicularUnderNonUniformScale )
     constexpr float32 kMatchDotFloor = 0.996f;
     constexpr uint32  kMinDrawnCount = 1000;
     const sw::float3  localNormal{ 0.0f, 0.0f, 1.0f }; // MeshUtil::createRectMesh 의 노멀
-
-    sw::string pipelineText;
-    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/pipeline/deferredpipeline.xml", pipelineText ) );
-    constexpr sw::string_view kCullBack     = "_cullMode=\"Back\"";
-    constexpr sw::string_view kCullNone     = "_cullMode=\"None\"";
-    const size_t              gbufferPassAt = pipelineText.find( "_type=\"GBuffer\"" );
-    SW_ASSERT_TRUE( gbufferPassAt != sw::string::npos );
-    const size_t cullAt = pipelineText.find( kCullBack.data(), gbufferPassAt );
-    SW_ASSERT_TRUE( cullAt != sw::string::npos );
-    pipelineText.replace( cullAt, kCullBack.size(), kCullNone.data() );
-    const sw::string twoSidedPath = test::makeTempPath( "twosidedgbufferpipeline.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( twoSidedPath, pipelineText ) );
 
     uint32 comparedCount{ 0 };
     for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
@@ -3828,7 +3818,7 @@ SW_TEST_CASE( RenderPassGpuTest, NormalsStayPerpendicularUnderNonUniformScale )
                                     ( label + "배치가 시험이 되지 않는다 — 월드 행렬로 옮긴 노멀이 기대와 거의 같다 " + describeVector( worldMatrixNormal ) ).c_str() );
 
                 sw::FrameRenderer renderer;
-                const bool        bReady = renderer.initialize( device.get(), twoSidedPath.c_str() ) && renderer.isReady();
+                const bool        bReady = renderer.initialize( device.get(), "engine/pipeline/deferredpipeline.xml" ) && renderer.isReady();
                 SW_EXPECT_TRUE_MSG( bReady, ( label + "디퍼드 파이프라인을 만들지 못했다" ).c_str() );
                 if ( bReady )
                 {
@@ -3865,6 +3855,65 @@ SW_TEST_CASE( RenderPassGpuTest, NormalsStayPerpendicularUnderNonUniformScale )
 
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could run the deferred pipeline for the normal test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] X 스케일 -1(거울 변환)인 큐브도 바깥 면이 보인다 — 거울이 아닌 큐브와 같은 그림이다 (4 백엔드 × 포워드 · 디퍼드)
+ * @details 거울 변환은 삼각형 감김을 뒤집는다. 컬 모드를 그대로 두면 카메라 쪽 면이 후면으로 잘리고 먼 쪽 면이 안에서 보인다. 엔진은 행렬식이 음수인
+ *          인스턴스를 따로 배치하고 컬 모드를 뒤집은 PSO 로 그린다(언리얼 `bReverseCulling`) — 그림자 패스도 같다.
+ *          큐브는 원점 대칭이고 카메라는 x = 0 에 있어 X 거울로 바뀌는 ±X 면은 보이지 않는다. 그래서 바르게 그리면 두 그림이 같고, 컬링이
+ *          뒤집히지 않으면 카메라 쪽 빨간 면(+Z) 대신 파란 면(-Z)의 안쪽이 보여 그림이 크게 다르다. 래스터 규칙 차이로 가장자리 몇 픽셀은
+ *          다를 수 있어 "다른 칸 1% 이하" 로 본다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MirroredMeshShowsItsOuterFaces )
+{
+    const utf8* const kArrPipeline[] = { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" };
+    // 다른 칸 비율의 상한(%). 바르게 그리면 0 이고, 컬링이 뒤집히지 않은 그림은 큐브 면적만큼(수 %) 다르다.
+    constexpr uint32 kMaxDifferPercent = 1;
+
+    uint32 comparedCount{ 0 };
+    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    {
+        test::RHITestDevice device( backend );
+        if ( device.isReady() == false )
+            continue;
+        const sw::string backendName( device->getBackendName() );
+
+        for ( const utf8* pPipeline : kArrPipeline )
+        {
+            const sw::string label = backendName + " " + pPipeline + ": ";
+            LitCubeScene     cube;
+            SW_ASSERT_TRUE_MSG( cube.populate(), ( label + "씬을 만들지 못했다" ).c_str() );
+            SW_ASSERT_NOT_NULL( cube._pCube );
+
+            sw::vector<uint8>     listPlain;
+            sw::vector<uint8>     listMirrored;
+            sw::RHITextureMipSpan layoutPlain{};
+            sw::RHITextureMipSpan layoutMirrored{};
+            bool                  bOk = renderPresentCaptureOf( device.get(), cube._scene, pPipeline, listPlain, layoutPlain );
+            cube._pCube->setLocalScale( sw::float3{ -1.0f, 1.0f, 1.0f } );
+            cube._scene.getObjectManager()->flushSceneTransforms();
+            SW_EXPECT_TRUE_MSG( cube._pCube->getWorldMatrix().determinant() < 0.0f, ( label + "큐브가 거울 변환이 아니다" ).c_str() );
+            if ( bOk )
+                bOk = renderPresentCaptureOf( device.get(), cube._scene, pPipeline, listMirrored, layoutMirrored );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "그리지 못했다" ).c_str() );
+
+            if ( bOk && layoutPlain._width == layoutMirrored._width && layoutPlain._height == layoutMirrored._height )
+            {
+                ++comparedCount;
+                const CaptureDifference difference = compareCaptures( listPlain, listMirrored );
+                SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( label + "기준 그림이 배경뿐입니다" ).c_str() );
+                SW_EXPECT_TRUE_MSG( difference._differCount * 100u <= difference._compareCount * kMaxDifferPercent,
+                                    ( label + "거울 큐브의 그림이 거울이 아닌 큐브와 다르다 — 컬 모드가 뒤집히지 않아 안쪽 면이 보인다 (" +
+                                      difference.describe() + ")" )
+                                        .c_str() );
+            }
+            cube.releaseRhi( device.get() );
+        }
+    }
+
+    if ( comparedCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the mirrored-cube pipelines" );
 }
 
 /**

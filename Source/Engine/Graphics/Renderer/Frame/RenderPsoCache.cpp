@@ -86,11 +86,13 @@ namespace sw
         return true;
     }
 
-    uint64 RenderPsoCache::materialPsoKey( RHIPipelineStateHandle passPso, uint64 permutationHash, RenderViewMode viewMode )
+    uint64 RenderPsoCache::materialPsoKey( RHIPipelineStateHandle passPso, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling )
     {
         uint64 key = static_cast<uint64>( passPso ) * 0x9e3779b97f4a7c15ull;
         key ^= permutationHash + 0x9e3779b97f4a7c15ull + ( key << 6 ) + ( key >> 2 );
         key ^= ( static_cast<uint64>( viewMode ) + 1 ) * 0xff51afd7ed558ccdull;
+        if ( bReverseCulling )
+            key ^= 0xc4ceb9fe1a85ec53ull;
         return key;
     }
 

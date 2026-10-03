@@ -721,6 +721,71 @@ SW_TEST_CASE( GpuSceneTest, TransformOnlyChangeKeepsBatches )
 }
 
 /**
+ * @brief 거울 변환(월드 행렬식 < 0)인 메시는 따로 배치되고 그 배치가 컬 반전을 싣는다 — 트랜스폼만 바꿔 부호가 뒤집혀도 다시 나눈다
+ * @details 컬 모드는 PSO 의 상태라 한 배치의 인스턴스는 모두 같은 부호여야 한다(`GpuMeshBatch::_bReverseCulling`). 스케일만 바꾸는 것은
+ *          트랜스폼만 바뀐 프레임(부분 수집 · 배치 구성 유지)으로 가므로, 거기서도 부호를 다시 보지 않으면 거울이 된 메시가 옛 배치에 남는다.
+ */
+SW_TEST_CASE( GpuSceneTest, MirroredTransformSplitsBatchAndReversesCulling )
+{
+    sw::Scene scene( "GpuSceneMirrored" );
+    SW_EXPECT_TRUE( scene.ensureDefaultCameras() );
+    sw::GameObjectManager* objects = scene.getObjectManager();
+    SW_ASSERT_NOT_NULL( objects );
+
+    sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+    auto addCube = [&]( const utf8* pName, float32 x, const sw::float3& scale ) -> sw::MeshComponent*
+    {
+        sw::GameObject* go = objects->createGameObject( sw::hashed_string( pName ) );
+        if ( go == nullptr )
+            return nullptr;
+        sw::MeshComponent* mesh = go->addComponent<sw::MeshComponent>();
+        if ( mesh == nullptr )
+            return nullptr;
+        mesh->setMesh( cube );
+        mesh->setLocalPosition( sw::float3( x, 0.0f, -4.0f ) );
+        mesh->setLocalScale( scale );
+        return mesh;
+    };
+    sw::MeshComponent* pPlain    = addCube( "PlainCube", -1.0f, sw::float3( 1.0f, 1.0f, 1.0f ) );
+    sw::MeshComponent* pMirrored = addCube( "MirroredCube", 1.0f, sw::float3( -1.0f, 1.0f, 1.0f ) );
+    SW_ASSERT_NOT_NULL( pPlain );
+    SW_ASSERT_NOT_NULL( pMirrored );
+
+    // 배치 몇 개 중 컬 반전이 몇 개인지 센다.
+    auto countBatches = []( const sw::GpuSceneBuilder& builder, uint32& outReversed ) -> uint32
+    {
+        outReversed = 0;
+        for ( const sw::GpuMeshBatch& batch : builder.getOpaqueBatches() )
+        {
+            if ( batch._bReverseCulling != SW_FALSE )
+                outReversed += batch._instanceCount;
+        }
+        return static_cast<uint32>( builder.getOpaqueBatches().size() );
+    };
+
+    sw::GpuSceneBuilder gpuScene;
+    const sw::float3    camPos{ 0.0f, 0.0f, 0.0f };
+    gpuScene.buildFromScene( &scene, camPos );
+    uint32 reversedCount{ 0 };
+    SW_EXPECT_EQUAL( 2u, countBatches( gpuScene, reversedCount ) );
+    SW_EXPECT_EQUAL( 1u, reversedCount );
+
+    // 거울이 아닌 쪽도 거울로 만든다(트랜스폼만 바뀐 프레임) — 두 인스턴스가 다시 한 배치이고 그 배치가 컬 반전이다.
+    pPlain->setLocalScale( sw::float3( 1.0f, -2.0f, 1.0f ) );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 1u, countBatches( gpuScene, reversedCount ) );
+    SW_EXPECT_EQUAL( 2u, reversedCount );
+
+    // 축 두 개를 뒤집으면 행렬식은 다시 양수다 — 회전과 같다.
+    pMirrored->setLocalScale( sw::float3( -1.0f, -1.0f, 1.0f ) );
+    pPlain->setLocalScale( sw::float3( 1.0f, 1.0f, 1.0f ) );
+    gpuScene.buildFromScene( &scene, camPos );
+    SW_EXPECT_EQUAL( 1u, countBatches( gpuScene, reversedCount ) );
+    SW_EXPECT_EQUAL( 0u, reversedCount );
+}
+
+/**
  * @brief 서로 다른 MaterialInstance 키는 transparent 머지되지 않는다
  */
 SW_TEST_CASE( GpuSceneTest, TransparentDifferentKeysStaySeparate )
