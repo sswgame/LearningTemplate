@@ -5,7 +5,6 @@
 #include "Core/Time/CpuClock.h"
 
 #include <algorithm>
-#include <chrono>
 #include <mutex>
 #include <random>
 
@@ -553,7 +552,7 @@ namespace test
         std::fflush( stdout );
         SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
 
-        const std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+        const sw::CpuStopwatch stopwatch;
 
         // 호스트 스위트(GPU · 창 · DXC)는 예상 밖 Error 로그를 실패로 친다 — 검증 레이어 오류가 단언 없이 지나가지 않게.
         const bool                 bHostSuite = _mapHostSuiteReason.find( testInfo._groupName ) != _mapHostSuiteReason.end();
@@ -606,7 +605,7 @@ namespace test
                 addFailure( "temp directory removed after the case", caseDirectory, 0, "still exists - is a file handle left open?" );
         }
 
-        outElapsedMs = std::chrono::duration<float64, std::milli>( std::chrono::high_resolution_clock::now() - start ).count();
+        outElapsedMs = static_cast<float64>( stopwatch.getElapsedNanoseconds() ) / 1.0e6;
 
         if ( _currentContext.isSkipped() && _currentContext.hasFailed() == false )
         {

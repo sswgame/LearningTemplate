@@ -3,19 +3,14 @@
  * @brief 벤치 케이스(`XxxBenchTest`)가 함께 쓰는 시간 재기 · 표본 요약 · 한 줄 보고.
  */
 #pragma once
+#include "Core/Time/CpuClock.h"
+
 #include "Engine/EngineMinimal.h"
 
-#include <chrono>
 #include <limits>
 
 namespace test
 {
-    /** @brief 시작 시각부터 지금까지 걸린 시간(마이크로초). */
-    inline int64 getElapsedMicroseconds( const std::chrono::steady_clock::time_point& start )
-    {
-        return std::chrono::duration_cast<std::chrono::microseconds>( std::chrono::steady_clock::now() - start ).count();
-    }
-
     /** @brief 표본의 백분위 값 — 표본을 그 자리에서 정렬한다. 비어 있으면 0. */
     int64 getPercentile( sw::vector<int64>& listSample, uint32 percent );
 
@@ -35,9 +30,9 @@ namespace test
         int64 bestNanos = std::numeric_limits<int64>::max();
         for ( uint32 round = 0; round < roundCount; ++round )
         {
-            const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+            const sw::CpuStopwatch stopwatch;
             body();
-            const int64 nanos = std::chrono::duration_cast<std::chrono::nanoseconds>( std::chrono::steady_clock::now() - start ).count();
+            const int64 nanos = stopwatch.getElapsedNanoseconds();
             bestNanos         = nanos < bestNanos ? nanos : bestNanos;
         }
         return ( bestNanos * 10 ) / static_cast<int64>( opCount == 0 ? 1 : opCount );

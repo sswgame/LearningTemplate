@@ -6,6 +6,7 @@
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/CpuClock.h"
 
 #include "Engine/Common/EngineServices.h"
 
@@ -935,8 +936,8 @@ SW_TEST_CASE( TaskTest, HighPriorityTaskJumpsTheQueue )
         {
             s_startOrder.fetch_add( 1, std::memory_order_relaxed );
             s_runningCount.fetch_add( 1, std::memory_order_acq_rel );
-            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 2 );
-            while ( s_bGateOpen.load( std::memory_order_acquire ) == false && std::chrono::steady_clock::now() < deadline )
+            const sw::CpuDeadline deadline = sw::CpuDeadline::afterMilliseconds( 2000 );
+            while ( s_bGateOpen.load( std::memory_order_acquire ) == false && deadline.isExpired() == false )
                 std::this_thread::yield();
         }
 
@@ -953,8 +954,8 @@ SW_TEST_CASE( TaskTest, HighPriorityTaskJumpsTheQueue )
 
     // 워커가 전부 문에 닿을 때까지 — 나머지 Normal 은 그 뒤에 줄 서 있다.
     {
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 2 );
-        while ( s_runningCount.load( std::memory_order_acquire ) < workerCount && std::chrono::steady_clock::now() < deadline )
+        const sw::CpuDeadline deadline = sw::CpuDeadline::afterMilliseconds( 2000 );
+        while ( s_runningCount.load( std::memory_order_acquire ) < workerCount && deadline.isExpired() == false )
             std::this_thread::yield();
     }
     SW_ASSERT_EQUAL( workerCount, s_runningCount.load() );

@@ -3,6 +3,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Time/CpuClock.h"
 
 #include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
@@ -15,7 +16,6 @@
 
 #include "TestFramework/TestFramework.h"
 
-#include <chrono>
 #include <thread>
 
 // 셰이더 주변 — 스테이지 비트 연산 · 굽기(퍼뮤테이션 해시·파일 이름) · 캐시 동시성 · 굽기 도장.
@@ -427,8 +427,8 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
         }
     } );
 
-    const auto waitStart = std::chrono::steady_clock::now();
-    while ( clearsDone.load() == 0 && std::chrono::steady_clock::now() - waitStart < std::chrono::seconds( 10 ) )
+    const sw::CpuDeadline waitDeadline = sw::CpuDeadline::afterMilliseconds( 10000 );
+    while ( clearsDone.load() == 0 && waitDeadline.isExpired() == false )
         std::this_thread::yield();
     SW_EXPECT_TRUE_MSG( clearsDone.load() > 0, "지우는 스레드가 10 초 안에 돌지 않았다" );
 

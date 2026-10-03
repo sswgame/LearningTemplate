@@ -146,10 +146,10 @@ SW_TEST_CASE( TaskManagerTest, PrecedeAfterSubmitDoesNotRunTheTaskTwice )
     } ) );
     late.submit();
 
-    const auto startTime = std::chrono::steady_clock::now();
+    const sw::CpuDeadline waitDeadline = sw::CpuDeadline::afterMilliseconds( kWaitTimeoutMs );
     while ( bLateStarted.load( std::memory_order_acquire ) == false )
     {
-        const bool bTimedOut = std::chrono::steady_clock::now() - startTime > std::chrono::milliseconds( kWaitTimeoutMs );
+        const bool bTimedOut = waitDeadline.isExpired();
         SW_ASSERT_FALSE( bTimedOut );
         std::this_thread::yield();
     }
@@ -194,10 +194,10 @@ SW_TEST_CASE( TaskManagerTest, IsCompletedWaitsForTheBodyAndItsChildren )
     SW_EXPECT_FALSE( parent.isCompleted() );
     parent.submit();
 
-    const auto startTime = std::chrono::steady_clock::now();
+    const sw::CpuDeadline waitDeadline = sw::CpuDeadline::afterMilliseconds( kWaitTimeoutMs );
     while ( bParentBodyDone.load( std::memory_order_acquire ) == false )
     {
-        const bool bTimedOut = std::chrono::steady_clock::now() - startTime > std::chrono::milliseconds( kWaitTimeoutMs );
+        const bool bTimedOut = waitDeadline.isExpired();
         if ( bTimedOut )
             break;
         std::this_thread::yield();
@@ -654,9 +654,9 @@ SW_TEST_CASE( TaskManagerTest, ParallelParentWithMainAffinityCompletesOnMainOnly
 
     // 청크는 워커가 끝내지만 부모는 메인 큐에서 기다린다 — 여기서 스테이지가 끝나 있으면 워커가 부모를 집어간 것이다.
     {
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( 200 );
-        bool       bAllHit  = false;
-        while ( bAllHit == false && std::chrono::steady_clock::now() < deadline )
+        const sw::CpuDeadline deadline = sw::CpuDeadline::afterMilliseconds( 200 );
+        bool                  bAllHit  = false;
+        while ( bAllHit == false && deadline.isExpired() == false )
         {
             bAllHit = true;
             for ( uint32 index = 0; index < kCount; ++index )
@@ -695,13 +695,13 @@ SW_TEST_CASE( TaskManagerTest, WakeAllDoesNotChaseWorkersThatSleepAgain )
     sw::TaskManager manager;
     SW_ASSERT_TRUE( manager.initialize( kWakeProbeWorkerCount ) );
 
-    const auto start        = std::chrono::steady_clock::now();
-    int64      elapsedMilli = 0;
-    uint32     callCount    = 0;
+    const sw::CpuStopwatch stopwatch;
+    int64                  elapsedMilli = 0;
+    uint32                 callCount    = 0;
     for ( ; callCount < kWakeProbeCallCount && elapsedMilli < kWakeProbeLimitMilli; ++callCount )
     {
         manager.wakeSleepingWorkers();
-        elapsedMilli = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - start ).count();
+        elapsedMilli = stopwatch.getElapsedMilliseconds();
     }
     SW_EXPECT_TRUE_MSG( elapsedMilli < kWakeProbeLimitMilli,
                         ( sw::string( "모두 깨우기 " ) + sw::to_string( callCount ) + " 번에 " + sw::to_string( elapsedMilli ) +

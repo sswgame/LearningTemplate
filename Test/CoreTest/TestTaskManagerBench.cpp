@@ -20,6 +20,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/CpuClock.h"
 
 #include "TestFramework/TestBench.h"
 #include "TestFramework/TestFramework.h"
@@ -134,9 +135,9 @@ SW_TEST_CASE( TaskManagerBenchTest, ForkJoinLatency )
     for ( uint32 round = 0; round < kColdRound; ++round )
     {
         std::this_thread::sleep_for( std::chrono::microseconds( kSleepGapMicro ) );
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         manager.runParallel( kCount, 1, body );
-        listCold.push_back( test::getElapsedMicroseconds( start ) );
+        listCold.push_back( stopwatch.getElapsedMicroseconds() );
     }
     test::logBenchSamples( "forkJoin cold (workers asleep), 4096 x touch", listCold );
 
@@ -144,9 +145,9 @@ SW_TEST_CASE( TaskManagerBenchTest, ForkJoinLatency )
     listHot.reserve( kHotRound );
     for ( uint32 round = 0; round < kHotRound; ++round )
     {
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         manager.runParallel( kCount, 1, body );
-        listHot.push_back( test::getElapsedMicroseconds( start ) );
+        listHot.push_back( stopwatch.getElapsedMicroseconds() );
     }
     test::logBenchSamples( "forkJoin hot (back to back), 4096 x touch", listHot );
 
@@ -169,9 +170,9 @@ SW_TEST_CASE( TaskManagerBenchTest, StageLikeRenderGraphLevel )
     sw::vector<int64> listSerialPass;
     for ( uint32 round = 0; round < 20; ++round )
     {
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         BenchBody::recordPass();
-        listSerialPass.push_back( test::getElapsedMicroseconds( start ) );
+        listSerialPass.push_back( stopwatch.getElapsedMicroseconds() );
     }
     test::logBenchSamples( "one pass body (ideal level time)", listSerialPass );
 
@@ -197,18 +198,18 @@ SW_TEST_CASE( TaskManagerBenchTest, StageLikeRenderGraphLevel )
     for ( uint32 round = 0; round < kRound; ++round )
     {
         std::this_thread::sleep_for( std::chrono::microseconds( kSleepGapMicro ) );
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         levelOnce();
-        listCold.push_back( test::getElapsedMicroseconds( start ) );
+        listCold.push_back( stopwatch.getElapsedMicroseconds() );
     }
     test::logBenchSamples( "stage level cold, 4 x High pass", listCold );
 
     sw::vector<int64> listHot;
     for ( uint32 round = 0; round < kRound; ++round )
     {
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         levelOnce();
-        listHot.push_back( test::getElapsedMicroseconds( start ) );
+        listHot.push_back( stopwatch.getElapsedMicroseconds() );
     }
     test::logBenchSamples( "stage level hot, 4 x High pass", listHot );
 
@@ -232,7 +233,7 @@ SW_TEST_CASE( TaskManagerBenchTest, SmallTaskThroughput )
     for ( uint32 round = 0; round < kRound; ++round )
     {
         s_ranCount.store( 0, std::memory_order_relaxed );
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         for ( uint32 index = 0; index < kTaskCount; ++index )
         {
             sw::TaskHandle handle = manager.emplaceTask( "Tiny", tiny );
@@ -240,7 +241,7 @@ SW_TEST_CASE( TaskManagerBenchTest, SmallTaskThroughput )
         }
         manager.wakeSleepingWorkers();
         SW_ASSERT_TRUE( manager.waitAll( 5000 ) );
-        listRound.push_back( test::getElapsedMicroseconds( start ) );
+        listRound.push_back( stopwatch.getElapsedMicroseconds() );
         SW_EXPECT_EQUAL( kTaskCount, s_ranCount.load() );
     }
     [[maybe_unused]] const int64 p50 = test::getPercentile( listRound, 50 );
@@ -264,9 +265,9 @@ SW_TEST_CASE( TaskManagerBenchTest, CpuBoundSpeedup )
     sw::vector<int64> listSerial;
     for ( uint32 round = 0; round < kRound; ++round )
     {
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         BenchBody::computeRange( 0, kCount );
-        listSerial.push_back( test::getElapsedMicroseconds( start ) );
+        listSerial.push_back( stopwatch.getElapsedMicroseconds() );
     }
 
     for ( uint32 round = 0; round < 4; ++round )
@@ -275,9 +276,9 @@ SW_TEST_CASE( TaskManagerBenchTest, CpuBoundSpeedup )
     sw::vector<int64> listParallel;
     for ( uint32 round = 0; round < kRound; ++round )
     {
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         manager.runParallel( kCount, 1, body );
-        listParallel.push_back( test::getElapsedMicroseconds( start ) );
+        listParallel.push_back( stopwatch.getElapsedMicroseconds() );
     }
 
     const int64                  serialP50   = test::getPercentile( listSerial, 50 );

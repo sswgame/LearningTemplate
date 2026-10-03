@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Time/CpuClock.h"
+
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
@@ -68,9 +70,9 @@ namespace
             if ( bWithFarMover )
                 world.setAabb( farMover, makeBoxAt( ( stepIndex % 2 == 0 ) ? kFarMoverDistance : -50.0f, -50.0f ) );
 
-            const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+            const sw::CpuStopwatch stopwatch;
             world.step( 0.016f );
-            outListSample.push_back( test::getElapsedMicroseconds( start ) );
+            outListSample.push_back( stopwatch.getElapsedMicroseconds() );
         }
     }
 } // namespace

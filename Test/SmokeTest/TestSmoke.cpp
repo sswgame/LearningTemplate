@@ -10,6 +10,7 @@
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/CpuClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -1245,13 +1246,13 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
     SW_EXPECT_TRUE( compiler.isCompiling() );
 
     // 3) 백그라운드 컴파일 완료 대기 (최대 60초)
-    const auto startTime = std::chrono::steady_clock::now();
+    const sw::CpuStopwatch compileStopwatch;
     while ( compiler.isCompiling() )
     {
         std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
         manager.update();
 
-        const auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::steady_clock::now() - startTime ).count();
+        const int64 elapsedSec = compileStopwatch.getElapsedMilliseconds() / 1000;
         if ( elapsedSec > 60 )
             break;
     }

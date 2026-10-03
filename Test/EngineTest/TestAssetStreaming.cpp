@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/CpuClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
@@ -384,8 +385,8 @@ SW_TEST_CASE( AssetStreamingTest, HighPriorityRequestOvertakesAnEarlierNormalOne
         {
             const uint32 ticket = s_ticketCount.fetch_add( 1, std::memory_order_acq_rel );
             s_runningCount.fetch_add( 1, std::memory_order_acq_rel );
-            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
-            while ( s_releasedCount.load( std::memory_order_acquire ) <= ticket && std::chrono::steady_clock::now() < deadline )
+            const sw::CpuDeadline deadline = sw::CpuDeadline::afterMilliseconds( 5000 );
+            while ( s_releasedCount.load( std::memory_order_acquire ) <= ticket && deadline.isExpired() == false )
                 std::this_thread::yield();
         }
     };
@@ -396,8 +397,8 @@ SW_TEST_CASE( AssetStreamingTest, HighPriorityRequestOvertakesAnEarlierNormalOne
         handle.submit();
     }
     {
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 2 );
-        while ( s_runningCount.load( std::memory_order_acquire ) < workerCount && std::chrono::steady_clock::now() < deadline )
+        const sw::CpuDeadline deadline = sw::CpuDeadline::afterMilliseconds( 2000 );
+        while ( s_runningCount.load( std::memory_order_acquire ) < workerCount && deadline.isExpired() == false )
             std::this_thread::yield();
     }
     SW_ASSERT_EQUAL( workerCount, s_runningCount.load() );
@@ -412,8 +413,8 @@ SW_TEST_CASE( AssetStreamingTest, HighPriorityRequestOvertakesAnEarlierNormalOne
 
     // 워커 하나만 푼다 — 그 워커가 두 요청을 차례로 처리한다.
     s_releasedCount.store( 1, std::memory_order_release );
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 5 );
-    while ( listCompleted.size() < 2 && std::chrono::steady_clock::now() < deadline )
+    const sw::CpuDeadline deadline = sw::CpuDeadline::afterMilliseconds( 5000 );
+    while ( listCompleted.size() < 2 && deadline.isExpired() == false )
     {
         queue.update();
         std::this_thread::yield();

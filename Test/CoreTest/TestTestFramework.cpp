@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Time/CpuClock.h"
 
 #include "TestFramework/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
@@ -451,10 +452,10 @@ SW_TEST_CASE( TestFrameworkTest, HangingChildIsKilledAtTheDeadline )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_TEST_CHILD_MODE", "hang" }
     };
-    const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
-    const test::ChildRunResult                  child = test::runThisExecutableAsChild( "TestFrameworkTest.ChildRoleEchoesOrHangs", arrEnvironment, 1 );
+    const sw::CpuStopwatch     stopwatch;
+    const test::ChildRunResult child = test::runThisExecutableAsChild( "TestFrameworkTest.ChildRoleEchoesOrHangs", arrEnvironment, 1 );
 
-    const int64 elapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::steady_clock::now() - start ).count();
+    const int64 elapsedSeconds = stopwatch.getElapsedMilliseconds() / 1000;
 
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_TRUE( child._bTimedOut );

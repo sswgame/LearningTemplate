@@ -5,6 +5,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Time/CpuClock.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -266,8 +267,8 @@ namespace
         void run()
         {
             _bStarted.store( true, std::memory_order_release );
-            const auto start = std::chrono::steady_clock::now();
-            while ( _bRelease.load( std::memory_order_acquire ) == false && std::chrono::steady_clock::now() - start < std::chrono::seconds( 2 ) )
+            const sw::CpuDeadline deadline = sw::CpuDeadline::afterMilliseconds( 2000 );
+            while ( _bRelease.load( std::memory_order_acquire ) == false && deadline.isExpired() == false )
                 std::this_thread::yield();
         }
     };
@@ -293,14 +294,14 @@ SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
     TaskHandle          handle      = taskManager.emplaceTask( "BlockingForeignTask", SW_DELEGATE_METHOD( TaskDelegate, &BlockingForeignTask::run, &task ) );
     handle.submit();
     // 워커가 집어 갔을 때부터 잰다. 아직 큐에 있으면 틱의 합류 대기가 그것을 도와 실행해 버릴 수 있다.
-    const auto waitStart = std::chrono::steady_clock::now();
-    while ( task._bStarted.load( std::memory_order_acquire ) == false && std::chrono::steady_clock::now() - waitStart < std::chrono::seconds( 2 ) )
+    const sw::CpuDeadline waitDeadline = sw::CpuDeadline::afterMilliseconds( 2000 );
+    while ( task._bStarted.load( std::memory_order_acquire ) == false && waitDeadline.isExpired() == false )
         std::this_thread::yield();
     SW_ASSERT_TRUE( task._bStarted.load( std::memory_order_acquire ) );
 
-    const auto tickStart = std::chrono::steady_clock::now();
+    const sw::CpuStopwatch tickStopwatch;
     manager.tick( 0.016f );
-    const int64 tickMilli = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - tickStart ).count();
+    const int64 tickMilli = tickStopwatch.getElapsedMilliseconds();
     task._bRelease.store( true, std::memory_order_release );
     taskManager.waitAll();
 

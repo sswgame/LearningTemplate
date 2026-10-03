@@ -16,6 +16,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Time/CpuClock.h"
 
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -83,33 +84,33 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnTickDestroy )
     sw::vector<sw::GameObject*> listObject;
     listObject.reserve( kObjectCount );
 
-    const auto spawnStart = std::chrono::steady_clock::now();
+    const sw::CpuStopwatch spawnStopwatch;
     for ( uint32 index = 0; index < kObjectCount; ++index )
     {
         listObject.push_back( spawnMoverObject( manager, false ) );
     }
-    [[maybe_unused]] const int64 spawnMicro = test::getElapsedMicroseconds( spawnStart );
+    [[maybe_unused]] const int64 spawnMicro = spawnStopwatch.getElapsedMicroseconds();
 
-    const auto firstTickStart = std::chrono::steady_clock::now();
+    const sw::CpuStopwatch firstTickStopwatch;
     manager.tick( 0.016f );
-    [[maybe_unused]] const int64 firstTickMicro = test::getElapsedMicroseconds( firstTickStart );
+    [[maybe_unused]] const int64 firstTickMicro = firstTickStopwatch.getElapsedMicroseconds();
 
     sw::vector<int64> listTick;
     for ( uint32 round = 0; round < 30; ++round )
     {
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         manager.tick( 0.016f );
-        listTick.push_back( test::getElapsedMicroseconds( start ) );
+        listTick.push_back( stopwatch.getElapsedMicroseconds() );
     }
 
-    const auto destroyStart = std::chrono::steady_clock::now();
+    const sw::CpuStopwatch destroyStopwatch;
     for ( sw::GameObject* pObj : listObject )
     {
         if ( pObj != nullptr )
             manager.destroyObject( pObj );
     }
     manager.processDeferredDestruction();
-    [[maybe_unused]] const int64 destroyMicro = test::getElapsedMicroseconds( destroyStart );
+    [[maybe_unused]] const int64 destroyMicro = destroyStopwatch.getElapsedMicroseconds();
 
     SW_LOG_INFO( "[Bench] sizeof GameObject %#  Component %#  SceneComponent %#  TickItemList %#", sizeof( sw::GameObject ), sizeof( sw::Component ), sizeof( sw::SceneComponent ), sizeof( sw::TickItemList ) );
     SW_LOG_INFO( "[Bench] spawn %# objects (scene + tick component): %# us (%# ns each)", kObjectCount, spawnMicro, ( spawnMicro * 1000 ) / kObjectCount );
@@ -147,9 +148,9 @@ SW_TEST_CASE( GameObjectBenchTest, TickMovers )
             if ( pMover != nullptr )
                 pMover->_tickLocalPos._y = height;
         }
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         manager.tick( 0.016f );
-        listTick.push_back( test::getElapsedMicroseconds( start ) );
+        listTick.push_back( stopwatch.getElapsedMicroseconds() );
     }
     test::logBenchSamples( "tick, 8000 movers writing position + scale", listTick );
 
@@ -191,9 +192,9 @@ SW_TEST_CASE( GameObjectBenchTest, ApplyTransformBatch )
             listWrite[index].setValue( sw::SceneTransformPage::kLocalPosition, sw::float3( static_cast<float32>( index ), offset, 0.0f ) );
             listWrite[index].setValue( sw::SceneTransformPage::kLocalRotation, sw::float3( 0.0f, offset, 0.0f ) );
         }
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         manager.applyTransformBatch( listWrite.data(), kObjectCount );
-        listApply.push_back( test::getElapsedMicroseconds( start ) );
+        listApply.push_back( stopwatch.getElapsedMicroseconds() );
     }
     test::logBenchSamples( "applyTransformBatch, 8000 leaf roots (position + rotation)", listApply );
 
@@ -233,10 +234,10 @@ SW_TEST_CASE( GameObjectBenchTest, SetActiveDeepChain )
     sw::vector<int64> listToggle;
     for ( uint32 round = 0; round < 20; ++round )
     {
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         pRoot->setActive( false );
         pRoot->setActive( true );
-        listToggle.push_back( test::getElapsedMicroseconds( start ) );
+        listToggle.push_back( stopwatch.getElapsedMicroseconds() );
     }
     test::logBenchSamples( "setActive false+true on a 1000-deep chain root", listToggle );
     SW_EXPECT_TRUE( pPrev->isActiveInHierarchy() );
@@ -258,14 +259,14 @@ SW_TEST_CASE( GameObjectBenchTest, GetComponentHot )
     pObj->addComponent<sw::SceneComponent>();
     manager.tick( 0.016f );
 
-    constexpr uint32 kIterationCount = 2000000;
-    uintptr_t        sink            = 0;
-    const auto       start           = std::chrono::steady_clock::now();
+    constexpr uint32       kIterationCount = 2000000;
+    uintptr_t              sink            = 0;
+    const sw::CpuStopwatch stopwatch;
     for ( uint32 iteration = 0; iteration < kIterationCount; ++iteration )
     {
         sink += reinterpret_cast<uintptr_t>( pObj->getComponent<sw::SceneComponent>() );
     }
-    [[maybe_unused]] const int64 micro = test::getElapsedMicroseconds( start );
+    [[maybe_unused]] const int64 micro = stopwatch.getElapsedMicroseconds();
     SW_LOG_INFO( "[Bench] getComponent<SceneComponent> (third of three, two misses first): %# ns per call", ( micro * 1000 ) / kIterationCount );
     SW_EXPECT_TRUE( sink != 0 );
 }
@@ -301,8 +302,8 @@ SW_TEST_CASE( GameObjectBenchTest, FindById )
     uint32 wrongCount = 0;
     for ( uint32 round = 0; round < 5; ++round )
     {
-        uintptr_t  sink  = 0;
-        const auto start = std::chrono::steady_clock::now();
+        uintptr_t              sink = 0;
+        const sw::CpuStopwatch stopwatch;
         for ( uint32 index = 0; index < kProbeCount; ++index )
         {
             const sw::GameObject* pFound = manager.findGameObjectById( listProbe[index] );
@@ -310,7 +311,7 @@ SW_TEST_CASE( GameObjectBenchTest, FindById )
                 ++wrongCount;
             sink += reinterpret_cast<uintptr_t>( pFound );
         }
-        const int64 nanos = std::chrono::duration_cast<std::chrono::nanoseconds>( std::chrono::steady_clock::now() - start ).count();
+        const int64 nanos = stopwatch.getElapsedNanoseconds();
         bestNanos         = std::min( bestNanos, nanos );
         SW_EXPECT_TRUE( sink != 0 );
     }
@@ -338,12 +339,12 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainMove )
     sw::vector<int64> listFlush;
     for ( uint32 round = 0; round < 40; ++round )
     {
-        const auto markStart = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch markStopwatch;
         pRootScene->setLocalPosition( sw::float3{ static_cast<float32>( round + 1 ), 0.0f, 0.0f } );
-        listMark.push_back( test::getElapsedMicroseconds( markStart ) );
-        const auto flushStart = std::chrono::steady_clock::now();
+        listMark.push_back( markStopwatch.getElapsedMicroseconds() );
+        const sw::CpuStopwatch flushStopwatch;
         manager.flushSceneTransforms();
-        listFlush.push_back( test::getElapsedMicroseconds( flushStart ) );
+        listFlush.push_back( flushStopwatch.getElapsedMicroseconds() );
     }
     test::logBenchSamples( "mark dirty: setLocalPosition on a 1000-deep chain root", listMark );
     test::logBenchSamples( "flush: flushSceneTransforms after that move", listFlush );
@@ -367,14 +368,14 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
             sw::GameObject* pLeaf = nullptr;
             sw::GameObject* pRoot = buildDeepChain( manager, kChainDepth, pLeaf );
 
-            const auto tickStart = std::chrono::steady_clock::now();
+            const sw::CpuStopwatch tickStopwatch;
             manager.tick( 0.016f );
-            listFirstTick.push_back( test::getElapsedMicroseconds( tickStart ) );
+            listFirstTick.push_back( tickStopwatch.getElapsedMicroseconds() );
 
-            const auto destroyStart = std::chrono::steady_clock::now();
+            const sw::CpuStopwatch destroyStopwatch;
             manager.destroyObject( pRoot, true );
             manager.processDeferredDestruction();
-            listDestroy.push_back( test::getElapsedMicroseconds( destroyStart ) );
+            listDestroy.push_back( destroyStopwatch.getElapsedMicroseconds() );
             SW_EXPECT_EQUAL( static_cast<size_t>( 0 ), manager.getAllGameObjects().size() );
         }
         {
@@ -383,9 +384,9 @@ SW_TEST_CASE( GameObjectBenchTest, DeepChainLifecycle )
             sw::GameObject* pLeaf = nullptr;
             buildDeepChain( *pManager, kChainDepth, pLeaf );
             pManager->tick( 0.016f );
-            const auto teardownStart = std::chrono::steady_clock::now();
+            const sw::CpuStopwatch teardownStopwatch;
             sw_delete( pManager );
-            listTeardown.push_back( test::getElapsedMicroseconds( teardownStart ) );
+            listTeardown.push_back( teardownStopwatch.getElapsedMicroseconds() );
         }
     }
     test::logBenchSamples( "first tick (merge) of a 1000-deep chain", listFirstTick );
@@ -412,7 +413,7 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnCollidersDuringPlay )
     for ( uint32 round = 0; round < 7; ++round )
     {
         listObject.clear();
-        const auto spawnStart = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch spawnStopwatch;
         for ( uint32 index = 0; index < kObjectCount; ++index )
         {
             sw::GameObject*             pObj = manager.createGameObject( sw::hashed_string( "Bullet" ) );
@@ -424,21 +425,21 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnCollidersDuringPlay )
             }
             listObject.push_back( pObj );
         }
-        listSpawn.push_back( test::getElapsedMicroseconds( spawnStart ) );
+        listSpawn.push_back( spawnStopwatch.getElapsedMicroseconds() );
 
-        const auto tickStart = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch tickStopwatch;
         manager.tick( 0.016f );
-        listBeginTick.push_back( test::getElapsedMicroseconds( tickStart ) );
+        listBeginTick.push_back( tickStopwatch.getElapsedMicroseconds() );
         componentCount = listObject.front() != nullptr ? listObject.front()->getComponentCount() : 0;
 
-        const auto destroyStart = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch destroyStopwatch;
         for ( sw::GameObject* pObj : listObject )
         {
             if ( pObj != nullptr )
                 manager.destroyObject( pObj );
         }
         manager.processDeferredDestruction();
-        listDestroy.push_back( test::getElapsedMicroseconds( destroyStart ) );
+        listDestroy.push_back( destroyStopwatch.getElapsedMicroseconds() );
     }
     manager.endPlay();
 
@@ -469,7 +470,7 @@ SW_TEST_CASE( GameObjectBenchTest, AddComponentByName )
         for ( uint32 index = 0; index < kObjectCount; ++index )
             listObject.push_back( manager.createGameObject( sw::hashed_string( "BenchObject" ) ) );
 
-        const auto start = std::chrono::steady_clock::now();
+        const sw::CpuStopwatch stopwatch;
         for ( sw::GameObject* pObj : listObject )
         {
             if ( manager.addComponentByName( pObj, sw::hashed_string( "SceneComponent" ) ) != nullptr )
@@ -477,7 +478,7 @@ SW_TEST_CASE( GameObjectBenchTest, AddComponentByName )
             if ( manager.addComponentByName( pObj, sw::hashed_string( "TagComponent" ) ) != nullptr )
                 ++addedCount;
         }
-        listRound.push_back( test::getElapsedMicroseconds( start ) );
+        listRound.push_back( stopwatch.getElapsedMicroseconds() );
 
         for ( sw::GameObject* pObj : listObject )
             manager.destroyObject( pObj );

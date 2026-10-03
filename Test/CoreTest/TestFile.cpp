@@ -2,11 +2,11 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Time/CpuClock.h"
 
 #include "TestFramework/TestFramework.h"
 
 #include <atomic>
-#include <chrono>
 #include <thread>
 
 namespace
@@ -467,8 +467,8 @@ SW_TEST_CASE( FileTest, ReadersNeverObserveHalfWrittenFile )
     } );
 
     // 읽는 쪽이 돌기 시작한 뒤에 쓴다(위 설명).
-    const auto waitStart = std::chrono::steady_clock::now();
-    while ( attemptCount.load() == 0 && std::chrono::steady_clock::now() - waitStart < std::chrono::seconds( 10 ) )
+    const sw::CpuDeadline waitDeadline = sw::CpuDeadline::afterMilliseconds( 10000 );
+    while ( attemptCount.load() == 0 && waitDeadline.isExpired() == false )
         std::this_thread::yield();
     const uint32 readBeforeWrite = goodReadCount.load() + tornReadCount.load();
 

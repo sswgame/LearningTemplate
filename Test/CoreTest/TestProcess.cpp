@@ -3,6 +3,7 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/Time/CpuClock.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -184,7 +185,7 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
     SW_ASSERT_TRUE( child.launch( longCommand ) );
 
     // 흉내 낸 "남의 파이프" 의 쓰기 끝을 닫고 읽는다. 아무도 물려받지 않았다면 바로 끝(EOF)이다.
-    const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    const sw::CpuStopwatch stopwatch;
 #if defined( SW_PLATFORM_WINDOWS )
     CloseHandle( hForeignWrite );
     utf8       byte      = 0;
@@ -199,7 +200,7 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
     close( arrForeignFd[0] );
     SW_EXPECT_EQUAL( static_cast<ssize_t>( 0 ), readCount );
 #endif
-    const int64 elapsedMilli = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - start ).count();
+    const int64 elapsedMilli = stopwatch.getElapsedMilliseconds();
 
     child.terminate( 1 );
     child.waitForExit();
@@ -228,9 +229,9 @@ SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
     const sw::string command = "sleep 1; echo done > '" + markerPath + "'";
 #endif
 
-    const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    const sw::CpuStopwatch stopwatch;
     SW_ASSERT_TRUE( sw::Process::launchDetached( command ) );
-    const int64 launchMilli = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - start ).count();
+    const int64 launchMilli = stopwatch.getElapsedMilliseconds();
     SW_EXPECT_TRUE_MSG( launchMilli < 700, "분리 실행이 명령이 끝나기를 기다렸다" );
 
     // 명령이 끝에 남기는 표식 — 다 쓸 때까지 기다린다(케이스 폴더는 케이스가 끝나면 지워지므로 쓰는 중이면 안 된다).

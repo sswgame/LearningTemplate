@@ -3,6 +3,7 @@
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/RleCompressionCodec.h"
+#include "Core/Time/CpuClock.h"
 
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Compression/Lz4CompressionCodec.h"
@@ -10,8 +11,6 @@
 #include "Engine/Compression/ZstdCompressionCodec.h"
 
 #include "TestFramework/TestFramework.h"
-
-#include <chrono>
 
 // ------------------------------------------------------------------------------
 // Engine_Compression — 외부 라이브러리 코덱(LZ4 · Zstd) 왕복과 실측
@@ -58,36 +57,34 @@ namespace
     /** @brief 한 코덱으로 압축·해제하고 크기와 시간을 잰다. */
     CodecMeasure measureCodec( sw::ICompressionCodec& codec, const sw::vector<uint8>& listOriginal, int32 level )
     {
-        using Clock = std::chrono::steady_clock;
-
         CodecMeasure measure{};
         measure._pName = codec.getCodecName();
 
         sw::vector<uint8> listCompressed;
         listCompressed.resize( codec.compressBound( listOriginal.size() ) );
 
-        size_t     compressedSize{ 0 };
-        const auto compressStart = Clock::now();
-        const bool bCompressed   = codec.compress( listOriginal.data(), listOriginal.size(), listCompressed.data(),
-                                                   listCompressed.size(), compressedSize, level );
-        const auto compressEnd   = Clock::now();
+        size_t           compressedSize{ 0 };
+        sw::CpuStopwatch stopwatch;
+        const bool       bCompressed   = codec.compress( listOriginal.data(), listOriginal.size(), listCompressed.data(),
+                                                         listCompressed.size(), compressedSize, level );
+        const int64      compressNanos = stopwatch.getElapsedNanoseconds();
         if ( bCompressed == false )
             return measure;
 
         measure._compressedSize = compressedSize;
-        measure._compressMs     = std::chrono::duration<float64, std::milli>( compressEnd - compressStart ).count();
+        measure._compressMs     = static_cast<float64>( compressNanos ) / 1.0e6;
 
         sw::vector<uint8> listRestored;
         listRestored.resize( listOriginal.size() );
-        size_t     restoredSize{ 0 };
-        const auto decompressStart = Clock::now();
-        const bool bDecompressed   = codec.decompress( listCompressed.data(), compressedSize, listRestored.data(),
-                                                       listRestored.size(), restoredSize );
-        const auto decompressEnd   = Clock::now();
+        size_t restoredSize{ 0 };
+        stopwatch.restart();
+        const bool  bDecompressed   = codec.decompress( listCompressed.data(), compressedSize, listRestored.data(),
+                                                        listRestored.size(), restoredSize );
+        const int64 decompressNanos = stopwatch.getElapsedNanoseconds();
         if ( bDecompressed == false )
             return measure;
 
-        measure._decompressMs = std::chrono::duration<float64, std::milli>( decompressEnd - decompressStart ).count();
+        measure._decompressMs = static_cast<float64>( decompressNanos ) / 1.0e6;
         measure._bRoundTripOk = ( restoredSize == listOriginal.size() ) &&
                                 ( sw::Memory::compare( listRestored.data(), listOriginal.data(), listOriginal.size() ) == 0 );
         return measure;
