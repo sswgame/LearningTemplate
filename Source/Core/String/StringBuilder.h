@@ -62,28 +62,12 @@ namespace sw
          * @brief 힙 버퍼를 가지고 있으면 포인터를 넘겨받고, 스택 버퍼면 내용을 복사합니다.
          */
         StringBuilder( StringBuilder&& other ) noexcept
-            : _pDynamicBuffer{ other._pDynamicBuffer }
+            : _pDynamicBuffer{ nullptr }
             , _pBuffer{ _arrStaticBuffer }
-            , _capacity{ other._capacity }
-            , _length{ other._length }
-
+            , _capacity{ Capacity }
+            , _length{ 0 }
         {
-            if ( other._pDynamicBuffer != nullptr )
-            {
-                _pBuffer                  = other._pDynamicBuffer;
-                other._pDynamicBuffer     = nullptr;
-                other._pBuffer            = other._arrStaticBuffer;
-                other._capacity           = Capacity;
-                other._length             = 0;
-                other._arrStaticBuffer[0] = '\0';
-            }
-            else
-            {
-                Memory::copy( _arrStaticBuffer, other._arrStaticBuffer, other._length + 1 );
-                _pBuffer                  = _arrStaticBuffer;
-                other._length             = 0;
-                other._arrStaticBuffer[0] = '\0';
-            }
+            takeBufferFrom( other );
         }
 
         /**
@@ -95,27 +79,7 @@ namespace sw
             {
                 if ( _pDynamicBuffer != nullptr )
                     Memory::free( _pDynamicBuffer );
-
-                _pDynamicBuffer = other._pDynamicBuffer;
-                _capacity       = other._capacity;
-                _length         = other._length;
-
-                if ( other._pDynamicBuffer != nullptr )
-                {
-                    _pBuffer                  = other._pDynamicBuffer;
-                    other._pDynamicBuffer     = nullptr;
-                    other._pBuffer            = other._arrStaticBuffer;
-                    other._capacity           = Capacity;
-                    other._length             = 0;
-                    other._arrStaticBuffer[0] = '\0';
-                }
-                else
-                {
-                    Memory::copy( _arrStaticBuffer, other._arrStaticBuffer, other._length + 1 );
-                    _pBuffer                  = _arrStaticBuffer;
-                    other._length             = 0;
-                    other._arrStaticBuffer[0] = '\0';
-                }
+                takeBufferFrom( other );
             }
             return *this;
         }
@@ -349,6 +313,32 @@ namespace sw
         {
             _length     = 0;
             _pBuffer[0] = '\0';
+        }
+
+    private:
+        /**
+         * @brief 상대의 내용을 넘겨받고 상대를 빈 스택 버퍼 상태로 되돌립니다. 힙 버퍼는 포인터째 가져오고, 스택 버퍼는 복사합니다.
+         * @note 지금 가진 힙 버퍼는 해제하지 않습니다 — 부르기 전에 비어 있거나 해제돼 있어야 합니다.
+         */
+        void takeBufferFrom( StringBuilder& other ) noexcept
+        {
+            _pDynamicBuffer = other._pDynamicBuffer;
+            _capacity       = other._capacity;
+            _length         = other._length;
+            if ( other._pDynamicBuffer != nullptr )
+            {
+                _pBuffer              = other._pDynamicBuffer;
+                other._pDynamicBuffer = nullptr;
+                other._pBuffer        = other._arrStaticBuffer;
+                other._capacity       = Capacity;
+            }
+            else
+            {
+                Memory::copy( _arrStaticBuffer, other._arrStaticBuffer, other._length + 1 );
+                _pBuffer = _arrStaticBuffer;
+            }
+            other._length             = 0;
+            other._arrStaticBuffer[0] = '\0';
         }
 
     private:

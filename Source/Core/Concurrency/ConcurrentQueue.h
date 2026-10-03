@@ -57,26 +57,10 @@ namespace sw
         /** @brief 복사해서 넣습니다. 가득 차 있으면 false 입니다. */
         SW_INLINE bool enqueue( const T& item )
         {
-            Cell*  pCell{ nullptr };
-            uint32 pos = _enqueuePos.load( std::memory_order_relaxed );
-
-            for ( ;; )
-            {
-                pCell            = &_arrBuffer[pos & kMask];
-                uint32      seq  = pCell->_sequence.load( std::memory_order_acquire );
-                const int32 diff = static_cast<int32>( seq - pos );
-
-                if ( diff == 0 )
-                {
-                    if ( _enqueuePos.compare_exchange_weak( pos, pos + 1, std::memory_order_relaxed ) )
-                        break;
-                }
-                else if ( diff < 0 )
-                    return false;
-                else
-                    pos = _enqueuePos.load( std::memory_order_relaxed );
-            }
-
+            uint32 pos{ 0 };
+            Cell*  pCell = reserveEnqueueCell( pos );
+            if ( pCell == nullptr )
+                return false;
             pCell->_data = item;
             pCell->_sequence.store( pos + 1, std::memory_order_release );
             return true;
@@ -85,26 +69,10 @@ namespace sw
         /** @brief 이동해서 넣습니다. 가득 차 있으면 false 입니다. */
         SW_INLINE bool enqueue( T&& item )
         {
-            Cell*  pCell{ nullptr };
-            uint32 pos = _enqueuePos.load( std::memory_order_relaxed );
-
-            for ( ;; )
-            {
-                pCell            = &_arrBuffer[pos & kMask];
-                uint32      seq  = pCell->_sequence.load( std::memory_order_acquire );
-                const int32 diff = static_cast<int32>( seq - pos );
-
-                if ( diff == 0 )
-                {
-                    if ( _enqueuePos.compare_exchange_weak( pos, pos + 1, std::memory_order_relaxed ) )
-                        break;
-                }
-                else if ( diff < 0 )
-                    return false;
-                else
-                    pos = _enqueuePos.load( std::memory_order_relaxed );
-            }
-
+            uint32 pos{ 0 };
+            Cell*  pCell = reserveEnqueueCell( pos );
+            if ( pCell == nullptr )
+                return false;
             pCell->_data = std::move( item );
             pCell->_sequence.store( pos + 1, std::memory_order_release );
             return true;
@@ -197,6 +165,35 @@ namespace sw
 
         /** @brief 용량을 반환합니다. */
         constexpr uint32 capacity() const { return Capacity; }
+
+    private:
+        /**
+         * @brief 넣을 슬롯 하나를 CAS 로 예약합니다. 가득 차 있으면 nullptr 입니다.
+         * @note 예약한 슬롯은 호출한 쪽이 값을 쓴 뒤 `_sequence` 를 `outPos + 1` 로 release 저장해야 소비자에게 보입니다.
+         */
+        SW_INLINE Cell* reserveEnqueueCell( uint32& outPos )
+        {
+            uint32 pos = _enqueuePos.load( std::memory_order_relaxed );
+            for ( ;; )
+            {
+                Cell*        pCell = &_arrBuffer[pos & kMask];
+                const uint32 seq   = pCell->_sequence.load( std::memory_order_acquire );
+                const int32  diff  = static_cast<int32>( seq - pos );
+
+                if ( diff == 0 )
+                {
+                    if ( _enqueuePos.compare_exchange_weak( pos, pos + 1, std::memory_order_relaxed ) )
+                    {
+                        outPos = pos;
+                        return pCell;
+                    }
+                }
+                else if ( diff < 0 )
+                    return nullptr;
+                else
+                    pos = _enqueuePos.load( std::memory_order_relaxed );
+            }
+        }
 
     private:
         static constexpr uint32 kMask = Capacity - 1;

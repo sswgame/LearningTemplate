@@ -535,6 +535,48 @@ SW_TEST_CASE( StringTest, StringBuilderGrowsBeyondStaticCapacity )
 }
 
 /**
+ * @brief [StringTest] StringBuilder 이동 생성 · 이동 대입이 스택 버퍼 · 힙 버퍼 모두에서 내용을 넘기고 원본을 빈 스택 상태로 되돌린다
+ */
+SW_TEST_CASE( StringTest, StringBuilderMoveTransfersStackAndHeapBuffers )
+{
+    // 스택 버퍼 → 이동 생성: 내용은 복사되고, 원본은 비고 다시 쓸 수 있다.
+    sw::StringBuilder<8> stackSource;
+    stackSource.append( "abc" );
+    sw::StringBuilder<8> fromStack{ std::move( stackSource ) };
+    SW_EXPECT_STREQ( "abc", fromStack.c_str() );
+    SW_EXPECT_EQUAL( 3u, fromStack.size() );
+    SW_EXPECT_EQUAL( 8u, fromStack.capacity() );
+    SW_EXPECT_EQUAL( 0u, stackSource.size() );
+    SW_EXPECT_STREQ( "", stackSource.c_str() );
+    stackSource.append( "re" );
+    SW_EXPECT_STREQ( "re", stackSource.c_str() );
+
+    // 힙 버퍼를 가진 대상에 힙 버퍼를 이동 대입: 대상의 옛 힙 버퍼는 해제되고(누수 검사), 원본은 스택 용량으로 돌아간다.
+    sw::StringBuilder<8> heapTarget;
+    heapTarget.append( "target-heap-buffer" );
+    sw::StringBuilder<8> heapSource;
+    heapSource.append( "source-heap-buffer!" );
+    const uint32 heapCapacity = heapSource.capacity();
+    heapTarget                = std::move( heapSource );
+    SW_EXPECT_STREQ( "source-heap-buffer!", heapTarget.c_str() );
+    SW_EXPECT_EQUAL( 19u, heapTarget.size() );
+    SW_EXPECT_EQUAL( heapCapacity, heapTarget.capacity() );
+    SW_EXPECT_EQUAL( 8u, heapSource.capacity() );
+    SW_EXPECT_EQUAL( 0u, heapSource.size() );
+    SW_EXPECT_STREQ( "", heapSource.c_str() );
+
+    // 힙 버퍼를 가진 대상에 스택 버퍼를 이동 대입: 대상은 자기 스택 버퍼로 돌아온다.
+    sw::StringBuilder<8> smallSource;
+    smallSource.append( "xy" );
+    heapTarget = std::move( smallSource );
+    SW_EXPECT_STREQ( "xy", heapTarget.c_str() );
+    SW_EXPECT_EQUAL( 8u, heapTarget.capacity() );
+    heapTarget.append( "z" );
+    SW_EXPECT_STREQ( "xyz", heapTarget.c_str() );
+    SW_EXPECT_EQUAL( 0u, smallSource.size() );
+}
+
+/**
  * @brief [StringTest] fixed_string string_view 및 hash 지원 검증
  */
 SW_TEST_CASE( StringTest, FixedStringModernFeatures )

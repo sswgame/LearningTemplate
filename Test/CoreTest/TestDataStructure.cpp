@@ -316,6 +316,38 @@ SW_TEST_CASE( DataStructureTest, LockFreeQueueBasicAndConcurrent )
 }
 
 /**
+ * @brief [DataStructureTest] ConcurrentQueue 의 두 enqueue(복사 · 이동)가 같은 슬롯 예약을 쓴다 — 가득 차면 둘 다 false, 순서는 FIFO
+ */
+SW_TEST_CASE( DataStructureTest, ConcurrentQueueBothEnqueueOverloadsStopWhenFull )
+{
+    sw::ConcurrentQueue<sw::string, 4> queue;
+    const sw::string                   first{ "first" };
+    SW_EXPECT_TRUE( queue.enqueue( first ) );
+    SW_EXPECT_TRUE( queue.enqueue( sw::string( "second" ) ) );
+    SW_EXPECT_TRUE( queue.enqueue( first ) );
+    SW_EXPECT_TRUE( queue.enqueue( sw::string( "fourth" ) ) );
+
+    const sw::string overflow{ "overflow" };
+    SW_EXPECT_FALSE( queue.enqueue( overflow ) );
+    SW_EXPECT_FALSE( queue.enqueue( sw::string( "overflow" ) ) );
+    SW_EXPECT_EQUAL( 4u, queue.size() );
+
+    sw::string item;
+    SW_EXPECT_TRUE( queue.dequeue( item ) );
+    SW_EXPECT_STREQ( "first", item.c_str() );
+    SW_EXPECT_TRUE( queue.enqueue( sw::string( "fifth" ) ) );
+
+    sw::vector<sw::string> listItem;
+    SW_EXPECT_EQUAL( 4u, queue.drain( listItem ) );
+    SW_ASSERT_EQUAL( 4u, static_cast<uint32>( listItem.size() ) );
+    SW_EXPECT_STREQ( "second", listItem[0].c_str() );
+    SW_EXPECT_STREQ( "first", listItem[1].c_str() );
+    SW_EXPECT_STREQ( "fourth", listItem[2].c_str() );
+    SW_EXPECT_STREQ( "fifth", listItem[3].c_str() );
+    SW_EXPECT_TRUE( queue.empty() );
+}
+
+/**
  * @brief [DataStructureTest] ConcurrentQueue 멀티스레드
  */
 SW_TEST_CASE( DataStructureTest, ConcurrentQueueMultiThread )
