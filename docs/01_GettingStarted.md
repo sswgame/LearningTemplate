@@ -9,7 +9,7 @@ SW Engine 프로젝트를 로컬 환경에 구성하고 첫 번째 빌드를 수
 엔진을 빌드하려면 다음 도구들이 시스템에 설치되어 있어야 합니다:
 
 **공통**
-- **Python 3.8+** (스크립트 실행 및 vcpkg 설정용)
+- **Python 3.10+** (스크립트 실행 및 vcpkg 설정용 — 최소 판은 `Scripts/lint/gate/CheckPythonMinimumVersion.py` 의 `kMinimumVersion`)
 - **Git**
 
 **Windows** (기본 개발 환경)
@@ -61,8 +61,14 @@ cmake --build --preset Ninja-Debug
 
 ### 엔진 데모 실행
 ```powershell
-./build/Ninja-Debug/Bin/App.exe
+./build/Ninja-Debug/Bin/App.exe                  # 게임만 (기본 백엔드 DirectX12)
+./build/Ninja-Debug/Bin/App.exe -EnableEditor    # 에디터까지 — 주지 않으면 에디터 모듈을 올리지 않는다
+./build/Ninja-Debug/Bin/App.exe -vk -EnableEditor # 백엔드 고르기: -dx11 · -dx12 · -vk · -gl
 ```
+실행 인자 전체는 [README 4절](../README.md#실행-인자)(정본: `Source/Core/Predefined/ArgumentList.xxx`)에 있습니다.
+
+> **셰이더 · 텍스처는 빌드가 굽지 않습니다.** HLSL 을 고쳤으면 `App.exe --bake-shaders`, `Resource/**/textures_raw/` 의 원본 이미지를
+> 고쳤으면 `App.exe --bake-textures`(Dev 빌드)로 굽고, 구운 결과(셰이더 바이너리 · DDS + `bake.stamp`)를 같이 커밋합니다.
 
 ### 자동화 테스트 실행 (CTest)
 엔진 코어나 리플렉션 시스템이 정상적으로 동작하는지 확인하려면 다음 명령어를 사용하세요:
@@ -75,6 +81,9 @@ ctest --preset Ninja-Debug-lint
 
 # 전체 (GPU 가 있어야 하는 렌더링 검증까지)
 ctest --test-dir build/Ninja-Debug --output-on-failure
+
+# CI 가 못 돌리는 GPU · 창 · DXC 시험 — 작업을 끝내기 전에 GPU 있는 기계에서 배포 구성으로
+ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
 ```
 > Ninja 는 단일 구성(single-config) 생성기라 `ctest -C Debug` 의 `-C` 는 아무 일도 하지 않습니다.
 > 구성은 프리셋(=빌드 디렉터리)이 정합니다.

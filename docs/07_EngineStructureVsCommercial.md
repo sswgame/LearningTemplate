@@ -37,7 +37,7 @@
 | 월드 | `UWorld` → `AActor` → `UActorComponent`. 액터는 `GWorld` 전역으로 월드를 찾는다 | Godot `SceneTree` → `Node` | `Scene` → `Object`(GameObject · Component) | **고쳤다.** 핸들 해석이 활성 씬을 `SceneManager` 에게 물어 Object 가 Scene 을 include 했다 → 슬롯은 Object 가 갖고 Scene 이 채운다(`GameObjectManager::setActiveManager`). |
 | 월드 ↔ 렌더러 | `UWorld` 는 `FScene`(렌더 씬 인터페이스)만 안다. 렌더러 본체를 모른다 | Godot 노드는 `RenderingServer` 에 RID 로만 말한다 | `SceneManager` | **고쳤다.** 에디터 툴바 하나 때문에 `FrameRenderer*` 를 들고 있었다 → 렌더러는 호스트가 내주는 선택 서비스(`EngineServiceList.xxx`). |
 | 기능 모듈 | `LevelSequence` · `MovieScene` 은 `Engine` 위의 모듈 — 액터를 알고, 액터는 모른다 | Godot `AnimationPlayer` 는 `scene/` 안의 노드 | `Sequencer` | **고쳤다.** `SequencePlayerComponent` 가 `Object/` 에 있어 Object ↔ Sequencer 가 순환했다 → `Sequencer/` 로. |
-| 서브시스템 수명 | `FEngineLoop` + `UEngineSubsystem`(자동 수집) | `PlayerLoop` | `EngineLoop` + `EngineServiceList.xxx`(X-macro 등록표, `owned` 열로 생성·바인딩 생성) + `EngineStartupStepList.xxx`(기동 단계와 의존) | **같은 모양.** 언리얼은 `USubsystem::Initialize` 안에서 `FSubsystemCollectionBase::InitializeDependency` 로 먼저 설 서브시스템을 적고 컬렉션이 그 순서로 초기화 · 역순으로 `Deinitialize` 한다. 여기도 단계마다 의존을 표에 적고 `EngineStartupSequence` 가 위상 정렬해 초기화 · 역순 종료한다(순환 · 모르는 이름은 기동 오류). 호스트(`EngineLoop` · 시험 하네스)는 단계 본문만 준다. 객체 해제(`reset`) 순서는 표 밖의 끝 정리로 남았다 — `ResourceManager::shutdown` 처럼 "다른 매니저의 소멸자 뒤" 가 필요한 것이 있어 초기화의 역순과 맞지 않는다. |
+| 서브시스템 수명 | `FEngineLoop` + `UEngineSubsystem`(자동 수집) | `PlayerLoop` | `EngineLoop` + `EngineServiceList.xxx`(X-macro 등록표, 낱말 칸 `Required`/`Optional` · `GameVisible`/`HostOnly` · `EngineCreated`/`HostCreated` 로 생성·바인딩 생성) + `EngineStartupStepList.xxx`(기동 단계와 의존) | **같은 모양.** 언리얼은 `USubsystem::Initialize` 안에서 `FSubsystemCollectionBase::InitializeDependency` 로 먼저 설 서브시스템을 적고 컬렉션이 그 순서로 초기화 · 역순으로 `Deinitialize` 한다. 여기도 단계마다 의존을 표에 식별자 목록으로 적고(오타 · 아래 줄 의존은 컴파일 오류) `EngineStartupSequence` 가 그 순서로 초기화 · 역순 종료한다. 호스트(`EngineLoop` · 시험 하네스, 공통 부트스트랩은 `EngineBootstrap`)는 단계마다 구조체 하나(`initialize` · `shutdown` · `destroy`)로 본문만 준다. 객체 해제도 모든 종료 뒤에 같은 역순으로 모든 단계를 돈다 — `ResourceManager::shutdown` 은 Resource 단계의 해제에 있어, 에셋을 드는 뒤 단계들의 소멸자가 먼저 돈다. |
 | 창·입력 | `ApplicationCore` (창) · `InputCore` — RHI 위 | Godot `DisplayServer` | `Window` · `Input` | **같다(고친 뒤).** Window 는 Resource(스플래시 그림) 위, Input 은 Window 위. RHI 는 이제 둘 다 모른다. |
 | 병렬 | `ParallelFor` · `TaskGraph` | Unity Jobs | `Core/Task` + `engine::runParallel` | **같다.** 병렬 시스템의 모양이 하나다(트랜스폼 계층이 첫 예). |
 
@@ -61,10 +61,10 @@
    `IRHIDevice::setRenderSurface`. 렌더러의 첨부 크기는 창이 아니라 **디바이스의 백버퍼 크기**
    (`IRHIDevice::resize` 가 적어 두고 `resizeInternal` 이 백엔드로 내려간다 — `initialize/initializeInternal` 과 같은 모양).
 4. **Scene → Renderer.** `SceneManager::setFrameRenderer/getFrameRenderer` — 소비자는 에디터 뷰포트 툴바 하나.
-   → 월드는 그리는 쪽을 모른다. → `EngineServiceList.xxx` 에 `SW_ENGINE_SERVICE_OPT( _pFrameRenderer … 0, 0 )`.
+   → 월드는 그리는 쪽을 모른다. → `EngineServiceList.xxx` 에 `SW_ENGINE_SERVICE_OPT( _pFrameRenderer, class, FrameRenderer, getFrameRenderer, HostOnly, HostCreated )`.
    호스트(`EngineLoop`)가 꽂고, 에디터는 `editor::getService<FrameRenderer>()` 로 받는다. 테스트 하네스에는 없다(선택 행).
 5. **Object ↔ Sequencer, Shader → Renderer.** `SequencePlayerComponent` 두 파일을 `Sequencer/` 로. 베이크의
-   "무엇을 구울지"(`collectAllRequests`, 파이프라인 XML · `FrameRendererUtil::getPassDefine`)와 "전부 굽기"
+   "무엇을 구울지"(`collectAllRequests` — 패스 종류 표 전체 × 뷰 모드, `FrameRendererUtil::getPassDefine`)와 "전부 굽기"
    (`bakeAllShaders`)를 `Renderer/Bake/ShaderBakeDriver` 로. `Shader/Compile/ShaderBaker` 에는 한 장 굽기 · 이름 짓기 ·
    최신 판정만 남는다. → 언리얼의 ShaderCore(한 장 컴파일) 와 Renderer/Engine(무엇을 컴파일할지) 의 선.
 
@@ -84,7 +84,8 @@ RHI → Renderer)는 자가 검사 조각으로 못박았다(`selfTestCases`).
   모델)은 2026-09 에 재 보고 기각했다(커밋 `c6777ae3`).
 - **`EngineLoop` 이 크다.** `FEngineLoop::Init` 도 그렇다. 서비스 생성·바인딩은 표(`EngineServiceList.xxx`)에서, 초기화 · 종료 순서는
   기동 단계 표(`EngineStartupStepList.xxx`)의 의존 칸에서 나온다. 남은 크기는 단계 본문이고, 본문은 단계마다 하는 일이 정말 달라 나누지 않는다.
-  표는 이름 순으로 적는다 — 줄 위치가 순서가 되면 의존 칸이 빠져도 아무것도 잡지 못한다(`EngineStartupSequenceTest`).
+  표는 기동 순서대로 적고, 의존 칸만으로 위상 정렬(동점은 이름 순)한 결과가 줄 순서와 같아야 한다 — 의존을 빼먹으면
+  `EngineStartupSequenceTest.TableIsWrittenInStartupOrder` 가 진다.
 - **`Scene` 이 기본 머티리얼을 든다.** 언리얼은 `UMaterial::GetDefaultMaterial` 이 엔진 에셋이라 월드가 모른다. 여기는
   씬이 인스턴스화할 때 머티리얼 없는 메시에 채워 준다 — 결과는 같고, 엣지는 Scene → Graphics 저층(허용 방향)이다.
 - **`Dialogue` · `Sequencer` · `Localization` 이 Engine 안에 있다.** 언리얼은 모듈/플러그인이지만 전부 Engine 위의

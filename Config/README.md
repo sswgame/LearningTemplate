@@ -7,9 +7,11 @@
 | 위치 | 역할 | Shipping |
 |------|------|----------|
 | `Config/Engine/EngineConfig.json` | 런타임 창/RHI/`enginedata` 포인터 (C++ `EngineConfig`) | 베이크되어 exe에 포함, 디스크 불필요 |
+| `Config/Engine/CookContract.json` | RHI 백엔드 표(이름 · 셰이더 폴더 · 명령줄 별칭 · 기본 백엔드)와 쿠킹 확장자 표 — C++(configure 때 `CookContract.gen.h`)와 Python 쿠커가 같이 읽는 단일 출처 | 빌드에 굳어 들어감 |
+| `Config/Engine/PackConfig.json` · `PackFormat.json` | 리소스 팩 쿠킹 설정(코덱 · 제외 폴더 — `textures_raw` 등)과 `.pack` 바이너리 포맷의 단일 출처(C++ 는 `PackFormat.gen.h`, Python 쿠커는 JSON 을 직접 읽는다) | 빌드 · 쿠킹 전용, 미포함 |
 | `Config/Game/GameConfig.json` | 팩 루트·gamedata 파일명 | 베이크 |
 | `Config/App/AppConfig.json` | Dev 게임킷 모듈 목록 | 미포함 (정적 링크) |
-| `Config/Editor/` | `EditorConfig.json` + `editordata.json` + 유저 레이아웃 | 미포함 |
+| `Config/Editor/` | `EditorConfig.json` + `editordata.json` + `TextureImportConfig.json`(텍스처 굽기 규칙: 포맷 · sRGB · 밉) + 유저 레이아웃 | 미포함 |
 | `Config/Environment/` | 머신 로컬 툴체인·파서 | **절대 미포함** |
 
 ## Environment (툴체인)

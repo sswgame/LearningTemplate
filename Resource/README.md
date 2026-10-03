@@ -12,10 +12,13 @@
 ## 경로 규칙
 
 - 코드에서 드라이브 절대경로는 쓰지 않습니다.
-- 검색 시 경로는 소문자로 정규화됩니다. 파일명은 소문자·숫자·언더바를 권장합니다.
-- 전역 ID: `engine/pipeline/forwardpipeline.xml`, `common/shaders/postoutline.hlsl`, `game/<pack>/maps/level01.xml`, `editor/textures/splash.dds`
+- 검색 시 경로는 소문자로 정규화됩니다. 그래서 `Resource/` 아래 파일 · 폴더 이름은 전부 소문자(`[a-z0-9_.-]+`)여야 하고(이 `README.md` 만 예외),
+  `CheckResourceCasing.py` 와 커밋 훅이 강제합니다.
+- 전역 ID: `engine/pipeline/forwardpipeline.xml`, `common/shaders/postoutline.hlsl`, `game/<pack>/maps/editortest.scene.xml`, `editor/textures/splash.dds`
 - 팩 상대 키: `pipeline/forwardpipeline.xml` → `game/<pack>/` → `common/` → `engine/` → `editor/` 순으로 검색
 - 셸 InputMap: `engine/input/default.input.xml` (폴백). 게임플레이: `game/<pack>/input/default.input.xml`
+- 데이터는 **지금 형식으로만** 읽습니다 — 옛 판 · 별칭(`Alias` · `ValueAlias`)을 짐작해 읽지 않습니다. 이름이나 형식을 바꾸면 이 폴더의 데이터를
+  새 모양으로 다시 씁니다. `ResourceDataSchemaTest` 가 이 폴더 데이터 전부가 모르는 이름 없이 읽히는지 단언합니다.
 
 ## 텍스처
 

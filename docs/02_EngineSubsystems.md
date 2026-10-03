@@ -9,8 +9,8 @@ SW Engine은 철저하게 모듈화되어 있으며, 각 기능은 서브시스�
 
 ### 1. 렌더링 및 그래픽스 (Graphics & RHI)
 - **[RHI (Render Hardware Interface)](../Source/Engine/Graphics/README.md)**
-  - DirectX 11/12, Vulkan 등을 추상화하는 하위 레벨 그래픽스 API입니다.
-  - Bindless 텍스처 접근과 Compute 중심의 모던 렌더링을 지원합니다.
+  - DirectX 11/12, Vulkan(1.3 이상), OpenGL 을 추상화하는 하위 레벨 그래픽스 API와, 그 위의 렌더러(`FrameRenderer` · `RenderGraph` · GPU 씬)입니다.
+  - Bindless 텍스처 접근과 Compute 중심의 모던 렌더링(GPU 컬링 · 간접 드로우)을 지원합니다. 바인딩 계약의 정본은 `Resource/engine/shaders/bindingslots.hlsli` 입니다.
   - **문서 이동:** `Source/Engine/Graphics/README.md`
 
 ### 2. 오브젝트 및 컴포넌트 시스템 (GameObject & Component)
@@ -31,6 +31,17 @@ SW Engine은 철저하게 모듈화되어 있으며, 각 기능은 서브시스�
 - **[ReflectionParser 툴](../Tools/ReflectionParser/README.md)**
   - 헤더에 작성된 `REFLECT()`, `PROPERTY()` 매크로를 Clang으로 읽어 메타데이터를 자동 생성하는 호스트 툴입니다.
   - **문서 이동:** `Source/Engine/Reflection/README.md` / `Tools/ReflectionParser/README.md`
+
+### 5. 엔진 루프와 기동 순서 (Engine Loop & Startup)
+- **[Engine 구조](../Source/Engine/README.md)**
+  - `Source/Engine` 의 폴더 티어(include 방향, `CheckEngineLayers` 가 강제)와 루트 파일 — `EngineLoop`, 기동 · 종료 단계 표
+    `EngineStartupStepList.xxx` 와 그것을 위상 정렬해 세우고 역순으로 내리는 `EngineStartupSequence`, 시험 하네스와 같이 쓰는 `EngineBootstrap`.
+  - **문서 이동:** `Source/Engine/README.md`
+
+### 6. 그 밖의 서브시스템
+- 씬 · 프리팹: [Source/Engine/Scene/README.md](../Source/Engine/Scene/README.md) · 입력: [Source/Engine/Input/README.md](../Source/Engine/Input/README.md) ·
+  애니메이션: [Source/Engine/Animation/README.md](../Source/Engine/Animation/README.md) · 물리(CCD): [Source/Engine/Physics/README.md](../Source/Engine/Physics/README.md) ·
+  공간 분할: [Source/Engine/Spatial/README.md](../Source/Engine/Spatial/README.md)
 
 ---
 [◀ 이전: 시작하기](01_GettingStarted.md) | [🏠 위키 홈으로 돌아가기](../README.md) | [▶ 다음: 핫리로드 및 ABI 가이드](03_LiveReload_and_ABI.md)

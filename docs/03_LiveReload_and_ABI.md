@@ -7,22 +7,30 @@ SW Engine의 가장 강력한 기능 중 하나는 게임을 실행한 채로 �
 
 ## 1. RuntimeAPI와 C-ABI 통신
 
-엔진의 실행 파일인 `App.exe`는 내부적으로 C++ 클래스(예: `GameObject`, `Component`)에 대해 아무것도 모릅니다. 대신 **순수 C-ABI(Extern "C")** 로 정의된 통신 규약인 `RuntimeAPI`를 통해서만 DLL 모듈(`Engine.dll`, `SWGame.dll`)과 통신합니다.
+엔진의 실행 파일인 `App.exe`는 `Engine` 과 `RuntimeAPI` 만 링크하고, 게임 · 에디터 클래스는 컴파일 때 전혀 모릅니다. 게임 · 에디터 모듈(`SWGame`, `EditorModule`, `GF_*` 킷)과는
+**순수 C-ABI(Extern "C")** 로 정의된 통신 규약인 `RuntimeAPI`(헤더 전용)의 함수 표를 통해서만 통신합니다(예: 게임 모듈의 `exportGameApi`).
 
 - **장점**: 컴파일러 종속성이나 C++ RTTI, 네임맹글링(Name Mangling) 문제가 없어 DLL을 런타임에 갈아끼우기(Swap)에 매우 유리합니다.
 
 ## 2. LiveReload 동작 원리
 
 ```text
-1. [개발자] C++ 코드 수정 후 빌드 (Ctrl+Shift+B)
-2. [App.exe] 파일 시스템 감시자(File Watcher)가 DLL 변경을 감지
-3. [App.exe] 다음 프레임 진입 시 메인 루프를 잠시 일시 정지(Fencing)
-4. [엔진] 기존 DLL에서 직렬화(Serialization)를 통해 현재 게임 상태를 메모리에 백업
-5. [엔진] `FreeLibrary` 호출로 기존 DLL 언로드
-6. [엔진] 새 DLL을 그림자 복사(Shadow Copy) 후 `LoadLibrary`
-7. [엔진] 백업해둔 게임 상태를 역직렬화(Deserialization)하여 복원
-8. [App.exe] 메인 루프 재개 (변경된 로직 즉시 적용!)
+1. [개발자] C++ 코드 수정 후 빌드 (IDE 빌드 · 에디터의 빌드 · Ctrl+F7 = ReloadGame, Ctrl+F6 = ReloadEditor)
+2. [App · LiveReloadManager] 파일 감시자가 DLL 변경을 감지하고, 파일이 잠잠해질 때까지 기다린다(이 프로세스가 시킨 빌드가 도는 동안은 모으기만)
+3. [App] 바뀐 모듈과 그것에 의존하는 모듈을 묶어(연쇄 리로드) 위상 순서를 정한다
+4. [App] 묶음의 새 DLL 을 모두 그림자 복사(Shadow Copy)해 올리고 엔진 ABI 도장(`swEngineAbiStamp:`)을 대조한다(prepare)
+5. [App · ModuleHost] 모듈마다 commit — suspendModules(워커 태스크 배수 → 게임 상태를 메모리에 직렬화 → 모듈 인스턴스 파괴) 뒤
+   옛 이미지를 새 이미지로 바꾼다(옛 이미지는 미뤄서 내린다)
+6. [App · ModuleHost] 리플렉션 타입을 다시 등록하고, 게임 API 표를 다시 묶어 인스턴스를 세운 뒤 상태를 역직렬화해 복원한다
+7. 메인 루프 재개 (변경된 로직 즉시 적용)
 ```
+
+- **실패 정책**: 적용(commit) **전**에 실패하면(빌드 실패 · ABI 도장 불일치 · 이미지 검증 실패) 옛 모듈을 그대로 두고 계속 돕니다.
+  적용 **뒤**의 결함(새 모듈의 생성 · 초기화 실패 등)만 리로드 그래프를 막습니다(`markGraphBroken`) — 고쳐서 다시 빌드하면 다음 리로드가 보존한 상태를 되살리고,
+  그 사이에는 씬 저장이 막힙니다.
+- **리로드 기계는 App 의 것입니다.** `LiveReloadManager` 는 `Source/App/Module/` 에 있고 Shipping 빌드에서는 파일째 빠집니다. Engine 은 지연 로드 훅이 묻는
+  `IModuleHandleProvider` 하나만 압니다. Linux 는 그림자 복사본의 SONAME 을 세대마다 바꿔(`ModuleImagePatch`) 의존 모듈이 옛 이미지에 묶이지 않게 합니다.
+- 에디터의 오브젝트 편집 Undo 는 엔진 데이터 명령으로 기록되어 에디터 모듈 리로드 뒤에도 되돌릴 수 있습니다.
 
 ## 3. ⚠️ 개발 시 필수 주의사항 (Gotchas)
 
@@ -38,8 +46,9 @@ SW Engine의 가장 강력한 기능 중 하나는 게임을 실행한 채로 �
 > RHI 자원이나 백그라운드 태스크(스레드)는 DLL이 언로드(`FreeLibrary`)되기 전에 확실히 멈추고 해제해야 합니다. 이전 DLL의 함수 포인터를 참조하는 비동기 태스크가 살아있으면 즉시 크래시가 발생합니다.
 
 > [!NOTE]
-> **3. 메모리 누수 방지**
-> 핫리로드 전 상태를 직렬화하고 복원하는 과정(`ObjectDiffSerializer`)에서 제대로 처리되지 않은 객체 레퍼런스는 메모리 누수나 댕글링 포인터를 유발할 수 있습니다. 상태 보존이 필요한 객체는 항상 `REFLECT()` 매크로를 통해 리플렉션 시스템에 등록하세요.
+> **3. 상태 보존은 리플렉션으로만**
+> 핫리로드 전후의 상태는 직렬화로 옮깁니다. 리플렉션에 등록되지 않은 필드(`REFLECT` · `PROPERTY` 가 없는 것)와 생포인터 참조는 옮겨지지 않아 비거나 댕글링이 됩니다.
+> 보존이 필요한 상태는 `PROPERTY` 로 등록하고, 다른 오브젝트는 생포인터가 아니라 `GameObjectHandle` · `ComponentHandle` 로 드세요.
 
 ---
 [◀ 이전: 서브시스템 개요](02_EngineSubsystems.md) | [🏠 위키 홈으로 돌아가기](../README.md) | [▶ 다음: 코딩 컨벤션](04_CodingGuidelines.md)

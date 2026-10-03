@@ -1,13 +1,35 @@
 # RHI 프레임/렌더타깃 계약 — 현황 분석과 재설계
 
-> 목적: `RenderThread::executeFrameBody` 의 프레임·오프스크린 순서가 지금은 **백엔드마다 다르게
-> 암묵적으로 의존하는 계약**이라 손댈 수 없다. 그 계약을 명시적으로 만들어 Vulkan 병렬 커맨드 기록과
-> 오프스크린 GPU 스톨 제거를 가능하게 하는 것이 이 문서의 목표다.
->
-> 배경: 2026-09-06 세션에서 이 순서를 바꾸는 시도를 두 번 했고 두 번 다 되돌렸다. 원인은 코드가 아니라
-> **계약이 문서화되어 있지 않다는 것**이었다. 실패 기록은 마지막 절에 남긴다.
+> 목적: `RenderThread::executeFrameBody` 의 프레임 · 렌더타깃 순서를 **명시적 계약**으로 적는다. 재설계(S1~S4, 5절)는 끝났고
+> 0절이 지금의 계약이다. 1~3절은 재설계 전의 분석으로, 코드 주석이 그 이름(R2 · S2 · S3 · 실패 기록 5차)을 가리키므로 남긴다.
+> 프레임 순서를 건드리기 전에 0절과 7절(함정)을 읽을 것.
 
-## 1. 지금의 흐름
+## 0. 지금의 계약
+
+`RenderThread::executeFrameBody` (RenderThread.cpp) — 두 경로가 같은 순서를 지난다.
+
+```
+pDevice->beginFrame( clearColor )                      # 수명주기만 — 펜스 대기(GPU 백프레셔), 이미지 획득, 기록 시작
+if (offscreen) cmd->beginRenderPass( gameRT, Clear )   # 에디터 게임뷰: 그래프가 게임 RT 에 그린다
+FrameRenderer::executePacket()                         # 그래프가 자기 리스트에 기록
+if (offscreen) cmd->prepareTextureForShaderRead( gameRT )  # 열린 렌더 패스도 여기서 닫힌다
+cmd->beginRenderPass( 백버퍼(핸들 0), offscreen ? Clear : Load )  # 백버퍼 경로는 그래프가 그린 것을 보존
+presentHook()                                          # 에디터 UI
+pDevice->endFrame( vsync )                             # 제출 + 프레젠트
+```
+
+| 연산 | 의미 | 호출 횟수 |
+|---|---|---|
+| `IRHIDevice::beginFrame( clearColor )` | **수명주기 전용** — 스왑체인 이미지 획득, 기록 시작. 렌더타깃을 바인딩하지 않는다 | 프레임당 정확히 1회, 맨 앞 |
+| `IRHICommandList::beginRenderPass( info )` | **렌더타깃 바인딩 전용** — 타깃 · 로드 op · 클리어. 타깃 핸들 `0` 은 백버퍼 | 필요한 만큼 |
+| `IRHICommandList::prepareTextureForShaderRead( tex )` | 샘플링용 레이아웃/상태 전환 | 필요한 만큼 |
+| `IRHIDevice::endFrame( vsync )` | 제출 + 프레젠트 | 프레임당 1회 |
+
+- `beginOffscreenPass` / `endOffscreenPass` 는 없다. 오프스크린도 같은 스트림 · 같은 제출이고, 순서는 큐 순서와 배리어가 보장한다.
+- 병렬 커맨드 기록: DX12 · Vulkan 활성(리스트마다 전용 얼로케이터/커맨드 풀). DX11 은 드라이버가 `DriverCommandLists=0` 을 보고하면 런타임 판정으로 꺼지고, GL 은 구조상 제외.
+- 스왑체인은 백엔드마다 구체 클래스(`D3D11RHISwapChain` · `D3D12RHISwapChain` · `VulkanRHISwapChain`)이고 디바이스가 소유한다 — 가상 인터페이스는 없고 GL 에는 스왑체인 객체가 없다.
+
+## 1. 재설계 전의 흐름 (기록)
 
 `RenderThread::executeFrameBody` (RenderThread.cpp)
 
@@ -89,22 +111,22 @@ RHIRenderPassBeginInfo )` 는 컬러 타깃 배열·로드 op·클리어 값을 
 
 | 연산 | 의미 | 호출 횟수 |
 |---|---|---|
-| `IRHISwapChain::beginFrame()` | **수명주기 전용** — 스왑체인 이미지 획득, 기록 시작 | 프레임당 정확히 1회, 맨 앞 |
+| `IRHIDevice::beginFrame()` | **수명주기 전용** — 스왑체인 이미지 획득, 기록 시작 | 프레임당 정확히 1회, 맨 앞 |
 | `IRHICommandList::beginRenderPass(info)` | **렌더타깃 바인딩 전용** — 타깃·로드 op·클리어 | 필요한 만큼 |
 | `IRHICommandList::prepareTextureForShaderRead(tex)` | 샘플링용 레이아웃/상태 전환 | 필요한 만큼 |
-| `IRHISwapChain::endFrame()` | 제출 + 프레젠트 | 프레임당 1회 |
+| `IRHIDevice::endFrame()` | 제출 + 프레젠트 | 프레임당 1회 |
 
 `beginOffscreenPass` / `endOffscreenPass` 는 **삭제한다.**
 
 ### 목표 흐름
 
 ```
-swapChain->beginFrame()                        # 수명주기만
+device->beginFrame()                           # 수명주기만
 FrameRenderer::executePacket()                 # 그래프가 자기 리스트에 기록,
                                                # Present 패스가 gameRT(또는 백버퍼)를 타깃으로 렌더패스
 if (offscreen) cmd->prepareTextureForShaderRead(gameRT)
 presentHook()                                  # UI: beginRenderPass(백버퍼, Load) … endRenderPass
-swapChain->endFrame()
+device->endFrame()
 ```
 
 **부수 효과(이득)**: Vulkan 의 오프스크린 별도 제출 + 펜스 블로킹이 사라진다. 순서는 큐 순서와
@@ -120,24 +142,14 @@ swapChain->endFrame()
 | ~~**S3**~~ | ✅ **완료**(`bfa00729`, `40a09b80`) — `beginOffscreenPass`/`endOffscreenPass` 호출부를 `beginRenderPass` + `prepareTextureForShaderRead` 로 교체하고 인터페이스와 4개 백엔드 구현에서 삭제. Vulkan 블로킹 제출과 오프스크린 전용 스트림이 사라졌다 | 중간(완료) |
 | ~~**S4**~~ | ✅ **완료**(`2f24e069`) — Vulkan 리스트가 자기 `VkCommandPool`/`VkCommandBuffer`/기록 상태 소유, 단일 스트림 세그먼트 제출, `_bParallelCommandRecording=1` | 중간(완료) |
 
-**네 단계 모두 완료됐다.** 최종 상태 요약:
+**네 단계 모두 완료됐다** — 결과가 0절의 계약이다. 프레임 순서를 다시 바꿀 때는 백엔드마다 `beginFrame` 이 하는 일이
+다르므로(2절 표) **한 단계에 한 백엔드씩** 바꾸고 매번 6절대로 검증한다.
 
-- `beginFrame`/`endFrame` = 프레임 수명주기 전용. 렌더타깃 바인딩은 `beginRenderPass` 하나로 통일.
-- `beginOffscreenPass`/`endOffscreenPass` 삭제. Vulkan 의 오프스크린 전용 스트림과 매 프레임
-  블로킹 제출도 함께 사라졌다.
-- 병렬 커맨드 기록: DX12·Vulkan 활성(각각 리스트마다 전용 얼로케이터/커맨드 풀 소유),
-  DX11 은 드라이버가 `DriverCommandLists=0` 을 보고해 런타임 판정으로 꺼짐, GL 은 구조상 제외.
-- 드로우 경로에서 Vulkan `vkUpdateDescriptorSets` 가 완전히 사라졌다(프레임 슬롯별 디스크립터 셋).
+## 6. 검증 프로토콜 — **렌더 패스 시험만으로는 부족하다**
 
-S1·S2 가 가장 위험했다. 백엔드마다 `beginFrame` 이 하는 일이 다르므로(위 표) **한 단계에 한 백엔드씩**
-바꾸고 매번 검증하는 편이 안전하다.
-
-## 6. 검증 프로토콜 — **테스트만으로는 절대 부족하다**
-
-2026-09-06 세션에서 두 번 다 **`RenderPassTest` 22개가 validation layer 켠 채로 전부 통과했는데
-실기에서 즉시 깨졌다.** 테스트는 에디터/ImGui 경로를 타지 않기 때문이다.
-
-각 단계마다 4개 백엔드를 실제로 띄워 확인할 것:
+렌더 패스 GPU 시험(`RenderPassGpuTest`)은 검증 레이어를 켜고도 에디터/ImGui 경로를 타지 않는다. 프레임 순서를 바꿨으면
+네 백엔드 × 에디터 유무 8조합을 실제로 띄워 본다. `AppSmokeTest`(AppTest, `hostgpu`)가 이 8조합을 띄워 종료 코드 0 · 로그 `[Error]` 0건을
+단언하므로 `ctest -L hostgpu` 가 기본 그물이고, 손으로 볼 때는 아래처럼 띄운다:
 
 ```powershell
 # 백엔드 4개 × 에디터 유무 2가지 = 8조합을 각각 8초 띄우고 로그의 오류를 센다
@@ -151,15 +163,13 @@ S1·S2 가 가장 위험했다. 백엔드마다 `beginFrame` 이 하는 일이 �
 .\App.exe -gl
 ```
 
-- **정상 기준선 = `[Error]` 3건** (전부 `Config/*.json` 없음 안내). 그 이상이면 회귀다.
+- **정상 기준선 = `[Error]` 0건.** 하나라도 있으면 회귀다.
 - Vulkan 은 `VUID` / `spec states` 문자열이 0건이어야 한다.
 - stderr 에 `CRASH` 가 없어야 한다.
 - 비결정적이므로 새로 고친 조합은 **3회 이상** 반복해 재현율을 본다.
 
-**에디터 유무를 반드시 둘 다 볼 것.** `-EnableEditor` 만 보던 동안 비에디터 경로는 DX12 가 시작
-직후 DEVICE_HUNG 으로 무너지고(오류 99~102건) Vulkan 은 백버퍼에 아무것도 안 그리는 상태였는데
-아무도 몰랐다(아래 3·4·5번 기록). 두 경로는 "그래프가 어디에 그리는가"가 다르므로 사실상 다른
-코드 경로다.
+**에디터 유무를 반드시 둘 다 볼 것.** 두 경로는 "그래프가 어디에 그리는가"가 다르므로 사실상 다른 코드 경로이고,
+한쪽만 보면 다른 쪽의 결함(아래 3·4·5차)이 가려진다.
 
 ## 7. 실패 기록 (같은 실수 반복 방지)
 
