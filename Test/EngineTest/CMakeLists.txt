@@ -37,6 +37,7 @@ sw_addTestExecutable(EngineTest
 		GF_RestaurantSim
 		GF_SurvivalHorror
 		GF_SideScrollConquest
+		GF_Fighting
 	LABELS
 		"unit;engine"
 	TIMEOUT

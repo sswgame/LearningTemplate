@@ -126,6 +126,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_Fighting",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
