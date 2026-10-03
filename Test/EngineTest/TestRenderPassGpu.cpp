@@ -181,15 +181,6 @@ namespace
             pFloorMesh->setLocalScale( sw::float3{ 6.0f, 1.0f, 6.0f } );
             return true;
         }
-
-        /** @brief 디바이스를 내리기 전에 GPU 자원을 놓습니다. */
-        void releaseRhi( sw::IRHIDevice* pDevice )
-        {
-            if ( _mesh != nullptr )
-                _mesh->releaseRhi( pDevice );
-            if ( _floor != nullptr )
-                _floor->releaseRhi( pDevice );
-        }
     };
 
     /**
@@ -326,10 +317,6 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererInitializeAndExecuteSmoke )
     device->waitIdle();
 
     // static Mesh 캐시가 죽은 디바이스를 붙잡지 않도록 디바이스 종료 전에 GPU 해제.
-    if ( cube != nullptr )
-        cube->releaseRhi( device.get() );
-
-    renderer.shutdown();
 }
 
 /**
@@ -378,11 +365,6 @@ SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileRebuildsPipelineStates )
     device->beginFrame( clear );
     SW_EXPECT_TRUE_MSG( renderer.execute( device.get(), &scene ), "PSO 재생성 후 프레임 실행" );
     device->endFrame( false, false );
-    device->waitIdle();
-
-    if ( cube != nullptr )
-        cube->releaseRhi( device.get() );
-    renderer.shutdown();
 }
 
 /**
@@ -417,8 +399,6 @@ SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileKeepsTaaHistory )
     device->endFrame( false, false );
     device->waitIdle();
     SW_EXPECT_TRUE_MSG( renderer.getTaaHistory() != 0, "셰이더 리로드 뒤 TAA 히스토리가 사라졌다 — 패스 자원 해제가 트랜지언트 자원을 놓았다" );
-
-    renderer.shutdown();
 }
 
 /**
@@ -467,12 +447,6 @@ SW_TEST_CASE( RenderPassGpuTest, GpuSceneBufferReusedAcrossPackets )
         else
             SW_EXPECT_EQUAL( instanceBufferAfterFrame1, instanceBuffer );
     }
-
-    device->waitIdle();
-    if ( cube != nullptr )
-        cube->releaseRhi( device.get() );
-
-    renderer.shutdown();
 }
 
 /**
@@ -539,11 +513,6 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialLifetimeFollowsPacket )
     device->beginFrame( clear );
     SW_EXPECT_TRUE( renderer.executePacket( device.get(), lateePacket ) );
     device->endFrame( false, false );
-
-    device->waitIdle();
-    if ( cube != nullptr )
-        cube->releaseRhi( device.get() );
-    renderer.shutdown();
 }
 
 /**
@@ -849,10 +818,6 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
         {
             SW_EXPECT_TRUE_MSG( false, ( label + ": 프레임 실행 실패" ).c_str() );
         }
-
-        renderer.shutdown();
-        if ( mesh != nullptr )
-            mesh->releaseRhi( device.get() );
     }
 
     // 형제 여덟(카메라 컬링·투명 정렬·뷰 모드 등)과 같은 규칙으로 빠진다. 예전엔 여기만 단언이라
@@ -926,7 +891,6 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteDrawsWithTheSpriteShader )
                 }
             }
         }
-        renderer.shutdown();
     }
 
     if ( attemptedCount == 0 )
@@ -1026,10 +990,6 @@ SW_TEST_CASE( RenderPassGpuTest, MainPassCullsWithCameraFrustumNotLight )
                                     .c_str() );
         }
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
-
-        if ( sharedMesh != nullptr )
-            sharedMesh->releaseRhi( device.get() );
-        renderer.shutdown();
     }
 
     if ( attemptedCount == 0 )
@@ -1179,10 +1139,6 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
             }
         }
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
-
-        if ( sharedMesh != nullptr )
-            sharedMesh->releaseRhi( device.get() );
-        renderer.shutdown();
     }
 
     if ( attemptedCount == 0 )
@@ -1298,10 +1254,6 @@ SW_TEST_CASE( RenderPassGpuTest, GpuGeneratedCommandsDrawOnlyVisibleInstances )
                                     .c_str() );
         }
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
-
-        if ( sharedMesh != nullptr )
-            sharedMesh->releaseRhi( device.get() );
-        renderer.shutdown();
     }
 
     if ( attemptedCount == 0 )
@@ -1447,12 +1399,6 @@ SW_TEST_CASE( RenderPassGpuTest, PerBatchMaterialColorsReachShader )
             }
         }
         SW_EXPECT_TRUE_MSG( bOk, device->getBackendName() );
-
-        if ( meshRed != nullptr )
-            meshRed->releaseRhi( device.get() );
-        if ( meshBlue != nullptr )
-            meshBlue->releaseRhi( device.get() );
-        renderer.shutdown();
     }
 
     if ( attemptedCount == 0 )
@@ -1559,12 +1505,6 @@ SW_TEST_CASE( RenderPassGpuTest, MultiBatchPassKeepsPerBatchConstants )
                                         .c_str() );
             }
         }
-
-        if ( meshLeft != nullptr )
-            meshLeft->releaseRhi( device.get() );
-        if ( meshRight != nullptr )
-            meshRight->releaseRhi( device.get() );
-        renderer.shutdown();
     }
 
     if ( attemptedCount == 0 )
@@ -1663,11 +1603,6 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceAnimationKeepsInstancesReadable )
             }
         }
 
-        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
-        {
-            if ( mesh != nullptr )
-                mesh->releaseRhi( device.get() );
-        }
         renderer.shutdown();
 
         SW_EXPECT_TRUE_MSG( bOk, ( sw::string( "backend " ) + sw::to_string( static_cast<uint32>( backend ) ) + " execute" ).c_str() );
@@ -1824,11 +1759,6 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
             }
         }
 
-        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
-        {
-            if ( mesh != nullptr )
-                mesh->releaseRhi( device.get() );
-        }
         renderer.shutdown();
 
         if ( bOk )
@@ -2000,10 +1930,6 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
         {
             SW_EXPECT_TRUE_MSG( false, ( label + ": 뷰 모드 씬 준비 실패" ).c_str() );
         }
-
-        if ( mesh != nullptr )
-            mesh->releaseRhi( device.get() );
-        renderer.shutdown();
     }
 
     if ( attemptedCount == 0 )
@@ -2066,10 +1992,6 @@ SW_TEST_CASE( RenderPassGpuTest, RendererSurvivesDeviceRecreate )
     SW_ASSERT_TRUE( freshRenderer.initialize( device.get() ) );
     const int64 drawnFresh = renderPacketFramesAndCountDrawn( freshRenderer, device.get(), scene, gtGpuScene );
     SW_EXPECT_TRUE_MSG( drawnFresh > 0, ( "재생성 뒤 새 렌더러도 빈 화면이다 (drawn " + sw::to_string( drawnFresh ) + ")" ).c_str() );
-
-    freshRenderer.shutdown();
-    material->releaseRhi( device.get() );
-    cube->releaseRhi( device.get() );
 }
 
 /**
@@ -2189,8 +2111,6 @@ SW_TEST_CASE( RenderPassGpuTest, DeviceDeathInvalidatesGpuHandles )
     SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
     SW_EXPECT_TRUE( cube->isRhiValid() );
     SW_EXPECT_TRUE( cube->getVertexBuffer() != 0 );
-
-    cube->releaseRhi( device.get() );
 }
 
 /**
@@ -2271,11 +2191,6 @@ SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
         SW_EXPECT_TRUE_MSG( distinct >= 2,
                             "디퍼드 파이프라인이 화면을 한 색으로 채웠다 — 지오메트리가 하나도 안 그려졌다" );
     }
-
-    if ( cube != nullptr )
-        cube->releaseRhi( device.get() );
-
-    renderer.shutdown();
 }
 
 /**
@@ -2432,13 +2347,6 @@ SW_TEST_CASE( RenderPassGpuTest, MergedSceneDrawsMatchPerBatch )
                 }
             }
         }
-
-        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
-        {
-            if ( mesh != nullptr )
-                mesh->releaseRhi( device.get() );
-        }
-        renderer.shutdown();
     }
 
     if ( attemptedCount == 0 )
@@ -2561,12 +2469,6 @@ SW_TEST_CASE( RenderPassGpuTest, AmbientOcclusionReachesBloom )
                                         .c_str() );
             }
         }
-
-        if ( cube != nullptr )
-            cube->releaseRhi( device.get() );
-        if ( floor != nullptr )
-            floor->releaseRhi( device.get() );
-        renderer.shutdown();
     }
 
     if ( attemptedCount == 0 )
@@ -2810,13 +2712,6 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
             }
             renderer.setMeshMorphDiag( -1 );
         }
-
-        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
-        {
-            if ( mesh != nullptr )
-                mesh->releaseRhi( device.get() );
-        }
-        renderer.shutdown();
     }
 
     if ( attemptedCount == 0 )
@@ -2869,7 +2764,6 @@ SW_TEST_CASE( RenderPassGpuTest, MeshPoolsRebuildWhenMeshContentChanges )
 
             vertexPool.release( device.get() );
             morphPool.release( device.get() );
-            mesh->releaseRhi( device.get() );
         }
     }
 
@@ -2918,8 +2812,6 @@ SW_TEST_CASE( RenderPassGpuTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
             SW_EXPECT_TRUE( material->initRhi( device.get() ) );
             SW_EXPECT_TRUE_MSG( material->getMaterialTextureSrvs().size() == firstCount,
                                 "다시 올린 뒤 텍스처 서수가 누적됐습니다 — DX11 · GL 이 엉뚱한 슬롯을 읽습니다" );
-
-            material->releaseRhi( device.get() );
         }
     }
 
@@ -3032,8 +2924,6 @@ SW_TEST_CASE( RenderPassGpuTest, ReloadedTextureIsReboundToMaterialsAndBatches )
             SW_EXPECT_EQUAL( after, builder.getOpaqueBatches()[0]._arrMaterialTexSrv[0] );
 
             builder.clear();
-            cube->releaseRhi( device.get() );
-            material->releaseRhi( device.get() );
         }
     }
 
@@ -3106,9 +2996,6 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
                                 "인스턴스가 커진 부모 레이아웃을 따라가지 않았습니다" );
             SW_EXPECT_TRUE_MSG( instance->getConstantBufferHandle() != firstBuffer,
                                 "상수버퍼를 다시 만들지 않고 더 큰 크기로 갱신했습니다 — 슬롯 밖으로 씁니다" );
-
-            instance->releaseRhi( device.get() );
-            parent->releaseRhi( device.get() );
         }
     }
 
@@ -3177,9 +3064,6 @@ SW_TEST_CASE( RenderPassGpuTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
             SW_EXPECT_FALSE( parent->isShaderLayoutSynced( backend ) );
             SW_EXPECT_TRUE( parent->ensureShaderLayout( device.get() ) );
             SW_EXPECT_TRUE( parent->isShaderLayoutSynced( backend ) );
-
-            instance->releaseRhi( device.get() );
-            parent->releaseRhi( device.get() );
         }
     }
 
@@ -3393,11 +3277,6 @@ SW_TEST_CASE( RenderPassGpuTest, FusedPostChainMatchesStaged )
             SW_LOG_WARNING( "FusedPostChainMatchesStaged: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
 
         // static Mesh 캐시가 죽은 디바이스를 붙잡지 않도록 디바이스 종료 전에 GPU 자원을 놓는다.
-        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
-        {
-            if ( mesh != nullptr )
-                mesh->releaseRhi( device.get() );
-        }
     }
 
     if ( comparedCount == 0 )
@@ -3477,8 +3356,6 @@ SW_TEST_CASE( RenderPassGpuTest, RenamedAttachmentsRenderTheSameImage )
             (void)renderPresentCaptureOf( device.get(), cube._scene, brokenPath.c_str(), listBroken, layoutBroken );
             SW_EXPECT_TRUE_MSG( collector.countContaining( "컬러 타깃 'SceneColor'" ) == 1, ( sw::string( pName ) + ": " + collector.joined() ).c_str() );
         }
-
-        cube.releaseRhi( device.get() );
     }
 
     if ( comparedCount == 0 )
@@ -3565,8 +3442,6 @@ SW_TEST_CASE( RenderPassGpuTest, RenamedGBufferAttachmentsRenderTheSameImage )
         }
         else if ( bOk == false )
             SW_LOG_WARNING( "RenamedGBufferAttachmentsRenderTheSameImage: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
-
-        cube.releaseRhi( device.get() );
     }
 
     if ( comparedCount == 0 )
@@ -3667,9 +3542,6 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceOverridesReachTheGpuOnEveryBackend )
             expectTextureReachesShader( parent->getMaterialTextureSrvs()[0], "지운 뒤" );
 
             rtScene.releaseGpu( device.get() );
-            instance->releaseRhi( device.get() );
-            cube->releaseRhi( device.get() );
-            parent->releaseRhi( device.get() );
         }
     }
 
@@ -3729,8 +3601,6 @@ SW_TEST_CASE( RenderPassGpuTest, DepthPrepassRendersTheSameImage )
         }
         else if ( bOk == false )
             SW_LOG_WARNING( "DepthPrepassRendersTheSameImage: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
-
-        cube.releaseRhi( device.get() );
     }
 
     if ( comparedCount == 0 )
@@ -3786,8 +3656,6 @@ SW_TEST_CASE( RenderPassGpuTest, ShadowPassCastsOnEveryBackend )
         }
         else if ( bOk == false )
             SW_LOG_WARNING( "ShadowPassCastsOnEveryBackend: %# 에서 파이프라인을 돌리지 못했습니다.", pName );
-
-        cube.releaseRhi( device.get() );
     }
 
     if ( comparedCount == 0 )
@@ -3894,12 +3762,8 @@ SW_TEST_CASE( RenderPassGpuTest, NormalsStayPerpendicularUnderNonUniformScale )
                                                 .c_str() );
                     }
                 }
-                renderer.shutdown();
             }
         }
-
-        quad->releaseRhi( device.get() );
-        material->releaseRhi( device.get() );
     }
 
     if ( comparedCount == 0 )
@@ -3978,8 +3842,6 @@ SW_TEST_CASE( RenderPassGpuTest, DepthAttachmentUnbindsItsShaderInputs )
                 SW_EXPECT_TRUE_MSG( hazardCount == 0,
                                     ( label + "깊이를 첨부로 걸 때 SRV 로도 걸려 있었다 (해저드 " + sw::to_string( hazardCount ) + " 줄)" + logs.joined() ).c_str() );
             }
-            renderer.shutdown();
-            cube.releaseRhi( device.get() );
         }
     }
 
@@ -4038,7 +3900,6 @@ SW_TEST_CASE( RenderPassGpuTest, MirroredMeshShowsItsOuterFaces )
                                       difference.describe() + ")" )
                                         .c_str() );
             }
-            cube.releaseRhi( device.get() );
         }
     }
 
@@ -4160,7 +4021,6 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialTexturesAreSampledLinearWrap )
                 bOk = bOk && countMixed( renderer, count );
                 SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
             }
-            renderer.shutdown();
         }
         quad->releaseRhi( device.get() );
         material->releaseRhi( device.get() );
@@ -4322,12 +4182,6 @@ SW_TEST_CASE( RenderPassGpuTest, EngineTextureSlotsAreSampledLinearClamp )
             }
             bOk = bOk && capture._sceneColor.readTransient( renderer, "SceneColor" ) && capture._bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
-            renderer.shutdown();
-        }
-        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
-        {
-            if ( mesh != nullptr )
-                mesh->releaseRhi( device.get() );
         }
         material->releaseRhi( device.get() );
         if ( bOk == false )
@@ -4549,7 +4403,6 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteFramesAndTintsArePerInstance )
                 }
             }
         }
-        renderer.shutdown();
     }
 
     if ( attemptedCount == 0 )
@@ -4649,12 +4502,6 @@ SW_TEST_CASE( RenderPassGpuTest, HalfResolutionAttachmentCoversItsWholeTarget )
             }
             bOk = bOk && sceneColor.readTransient( renderer, "SceneColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
-            renderer.shutdown();
-        }
-        for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
-        {
-            if ( mesh != nullptr )
-                mesh->releaseRhi( device.get() );
         }
         if ( bOk == false )
             continue;
