@@ -8,9 +8,8 @@
 #include "RuntimeAPI/Service/ServiceListColumns.h"
 
 // 서비스 **타입의 정의는 하나도 필요 없다.** 이 파일이 하는 일은 포인터를 담아 두고 참조로
-// 돌려주는 것뿐이라 전방 선언(EngineServices.h 가 목록에서 생성한다)으로 충분하다. 예전에는
-// 매니저 헤더 열다섯 개를 끌어와서, 105줄짜리 접착 파일이 엔진 전체에 의존하는 것처럼 보였다.
-// ShaderCache 와 GameObjectManager 까지 들어와 있었다.
+// 돌려주는 것뿐이라 전방 선언(EngineServices.h 가 목록에서 생성한다)으로 충분하다 — 매니저 헤더를 끌어오면
+// 이 접착 파일이 엔진 전체에 의존하게 된다.
 
 namespace sw
 {
@@ -22,8 +21,8 @@ namespace sw
         EngineServices s_services{};
         /**
          * @brief `areEngineServicesBound()` 의 답입니다. bind/unbind 때만 바뀝니다.
-         * @details 예전에는 부를 때마다 필수 서비스 22 칸을 훑었습니다. `Component::getTypeInfo()` 가 캐스트마다 그것을 불러,
-         *          캐스트 한 번의 절반이 이 훑기였습니다. 표는 bind/unbind 에서만 바뀌므로 그때 한 번 셉니다.
+         * @details 표는 bind/unbind 에서만 바뀌므로 그때 한 번 셉니다 — `Component::getTypeInfo()` 가 캐스트마다 이것을 부르므로
+         *          부를 때마다 필수 서비스를 훑으면 캐스트 비용의 절반이 됩니다.
          */
         atomic<bool> s_bServicesBound{ false };
     } // namespace

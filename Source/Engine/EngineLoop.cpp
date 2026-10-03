@@ -70,7 +70,7 @@ namespace sw
      * @brief `-gv_crashTest=N`: RHI 초기화 직후 일부러 크래시를 냅니다(리포트 경로 검증용). N 은 `CrashTestKind` 입니다.
      * @details 크래시 리포트는 크래시가 나야만 만들어집니다. 그래서 "덤프가 제대로 써지는가" 는 일부러
      *          죽여 보는 것 말고는 확인할 방법이 없습니다. 배포하고 나서 안 된다는 것을 알면 늦습니다. **죽는 방식마다** 따로 태워 봐야
-     *          합니다 — 예전에는 접근 위반 하나만 태울 수 있었고, 스택 오버플로 · abort 로 죽으면 아무것도 안 남는다는 것을 몰랐습니다.
+     *          합니다 — 접근 위반으로 남는 리포트가 스택 오버플로 · abort 에서도 남는다는 보장은 없습니다.
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출)", SW_KEEP_IN_SHIPPING );
     /**
@@ -751,7 +751,7 @@ namespace sw
                 _gpuSceneBuilder->buildFromScene( pActiveScene, packet._cameraPos );
 
                 // 그릴 것이 정해졌으니 **스냅샷을 내보내기 전에** GPU 쪽을 만들어 둔다. 렌더 스레드는 그리기만
-                // 하면 된다. 예전에는 새 메시가 등장한 프레임에 RT 가 정점 버퍼 생성을 통째로 떠안았다.
+                // 하면 된다(새 메시가 등장한 프레임에 RT 가 정점 버퍼 생성을 떠안지 않게).
                 if ( _gpuUploadQueue != nullptr )
                 {
                     _gpuSceneBuilder->requestGpuUploads( *_gpuUploadQueue );

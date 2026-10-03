@@ -126,13 +126,11 @@ namespace sw
 
     void FrameProfiler::beginFrame()
     {
-        // **여기서 누적을 지우지 않는다.** 예전에는 지웠는데, 그러면 `endFrame` 과 이 호출 사이에
-        // 렌더 스레드가 더한 샘플이 통째로 버려진다. 렌더 스레드는 게임 스레드와 다른 박자로 돌기
-        // 때문에 그 구간에 걸리는 스코프가 **매 프레임 같은 것들**이었고, 그 스코프만 골라 표에서
-        // 사라지거나(sampledFrames=0) 평균이 부풀었다 — 중첩된 구간의 합이 바깥 구간보다 커지는
-        // 표가 나왔다(upload 2628 + submitGraph 2703 > RT.Frame 4271).
+        // **여기서 누적을 지우지 않는다.** 지우면 `endFrame` 과 이 호출 사이에 렌더 스레드가 더한 샘플이 통째로 버려진다.
+        // 렌더 스레드는 게임 스레드와 다른 박자로 돌기 때문에 그 구간에 걸리는 스코프가 **매 프레임 같은 것들**이라, 그 스코프만
+        // 골라 표에서 사라지거나(sampledFrames=0) 중첩된 구간의 합이 바깥 구간보다 커지는 표가 나온다.
         //
-        // 지금은 `endFrame` 이 exchange 로 **읽으면서 0 으로 바꾼다**. 창이 닫힌 뒤 더해진 샘플은
+        // `endFrame` 이 exchange 로 **읽으면서 0 으로 바꾼다**. 창이 닫힌 뒤 더해진 샘플은
         // 버려지지 않고 다음 창으로 넘어간다. 그래서 이 함수는 창이 열렸다는 표시일 뿐이다.
     }
 
@@ -188,7 +186,7 @@ namespace sw
     void FrameProfiler::report( [[maybe_unused]] const utf8* pTitle ) const
     {
         // 보고는 Info 로그로만 나간다. 배포본에서는 SW_LOG_INFO 가 사라지므로 아래 전부가 출력
-        // 없는 계산이 된다. 구간을 다 돌고 평균까지 내고 버렸다. 로그가 컴파일될 때만 돈다.
+        // 없는 계산이 되므로 로그가 컴파일될 때만 돈다.
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
         const uint64 frames = _frameCount.load( std::memory_order_relaxed );
         if ( frames == 0 )

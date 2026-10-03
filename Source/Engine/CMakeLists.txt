@@ -78,9 +78,8 @@ else()
 endif()
 message(STATUS "[Engine] lz4=lz4::lz4 zstd=${swZstdTarget}")
 
-# 무엇으로 풀렸는지 configure 로그에 남긴다. 이 줄이 없던 동안 Linux CI 가
-# `libEngine.so: undefined reference to uncompress` 로 두 번 깨졌고, 그때마다 링크 구문만 보고는
-# ZLIB::ZLIB 이 실제로 무엇을 가리키는지(정적/공유, debug/release, vcpkg/시스템) 알 수 없었다.
+# 무엇으로 풀렸는지 configure 로그에 남긴다. Linux 에서 `libEngine.so: undefined reference to uncompress` 같은 링크
+# 오류가 나면 링크 구문만 보고는 ZLIB::ZLIB 이 실제로 무엇을 가리키는지(정적/공유, debug/release, vcpkg/시스템) 알 수 없다.
 get_target_property(swZlibType ZLIB::ZLIB TYPE)
 get_target_property(swZlibImportedConfig ZLIB::ZLIB IMPORTED_CONFIGURATIONS)
 get_target_property(swZlibLocationDebug ZLIB::ZLIB IMPORTED_LOCATION_DEBUG)
@@ -225,17 +224,14 @@ endif()
 # ------------------------------------------------------------------------------
 # 5) Unity — 제외 목록이 **없다.** 그게 정상이고, 다시 만들지 말 것
 #
-# 예전에는 한 클래스를 여러 .cpp 로 나눈 TU 19 개를 `sw_skipUnitySources` 로 손수 빼 두었다.
-# 그 목록은 **TU 를 나눌 때마다 같이 고쳐야 하는 자리**였고(하루에 셋이 늘기도 했다) 빠뜨려도
-# Ninja-* 프리셋은 유니티가 꺼져 있어 조용히 지나갔다. CI 에서만 터졌다.
+# `sw_skipUnitySources` 목록은 **TU 를 나눌 때마다 같이 고쳐야 하는 자리**가 되고, 빠뜨려도 Ninja-* 프리셋은
+# 유니티가 꺼져 있어 조용히 지나가 CI 에서만 터진다.
 #
-# 목록이 있던 이유는 "익명 네임스페이스가 합쳐져 이름이 부딪친다" 였는데, 그건 **이름 규칙으로
-# 이미 막혀 있다**. 익명 네임스페이스의 도우미는 클래스가 아니라 **TU 이름**을 딴다
-# (`ShaderBakeStampInternal` 등, AGENTS.md). `CheckCodeConventions` 의
+# "익명 네임스페이스가 합쳐져 이름이 부딪친다" 는 **이름 규칙으로 막혀 있다**. 익명 네임스페이스의 도우미는
+# 클래스가 아니라 **TU 이름**을 딴다(`ShaderBakeStampInternal` 등, AGENTS.md). `CheckCodeConventions` 의
 # `Naming/DuplicateInternalHelper` 가 그것을 검사한다. 목록이 아니라 린트가 지킨다.
 #
-# 목록 없이 유니티(CI-Debug) 빌드와 테스트 5/5 를 확인하고 지웠다(2026-09-13). 다시 넣고 싶어지면
-# 먼저 `cmake --build --preset CI-Debug` 로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
+# 다시 넣고 싶어지면 먼저 `cmake --build --preset CI-Debug` 로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
 # ------------------------------------------------------------------------------
 if(COMMAND sw_setUnityBuild)
     sw_setUnityBuild(Engine BATCH_SIZE 12)

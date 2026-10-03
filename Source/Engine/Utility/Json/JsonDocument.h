@@ -209,7 +209,7 @@ namespace sw
 
         /**
          * @brief 마지막 parse · load 가 실패한 이유입니다(성공했으면 빈 문자열). `XmlDocument::getLastError` 와 같은 꼴입니다.
-         * @details 구문 오류는 `경로:줄:열: 이유` 다. 예전 로그는 "Parse error in json text" 한 줄뿐이라 어느 파일 어디인지 알 수 없었다.
+         * @details 구문 오류는 `경로:줄:열: 이유` 다 — 어느 파일 어디인지 알 수 있게.
          */
         const string& getLastError() const { return _lastError; }
 

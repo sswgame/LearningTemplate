@@ -49,8 +49,7 @@ namespace sw
                                 "Load shared modules explicitly first (LiveReloadManager::loadSharedModule).",
                                 moduleName, moduleName );
             }
-            // **캐시 병합은 아래 오버로드가 한 자리에서 한다.** 예전에는 같은 18줄이 여기에도
-            // 한 벌 더 있었고(조건만 뒤집힌 같은 로직), 그러고 나서 아래를 불러 또 병합했다.
+            // **캐시 병합은 아래 오버로드가 한 자리에서 한다.**
             registerModuleTypes( moduleName, TypeRegistrar::getHead(), EnumRegistrar::getHead(), GlobalVariableRegistrar::getHead() );
 
             // 소비했으므로 비운다. 다음 DLL 이 자기 것만 매달도록.
@@ -95,8 +94,8 @@ namespace sw
             {
                 if ( scene && scene->getObjectManager() )
                 {
-                    // 살아 있는 컴포넌트에 기본값을 다시 찍지 않는다 — 기본값은 만들 때 한 번이다(`ComponentDefaults`). 예전에는 여기서
-                    // (`rebindAllCachedTypeInfo`) 씬의 모든 컴포넌트에 덮어써 게임이 바꾼 값이 모듈 로드마다 기본값으로 돌아갔다.
+                    // 살아 있는 컴포넌트에 기본값을 다시 찍지 않는다 — 기본값은 만들 때 한 번이다(`ComponentDefaults`). 여기서 덮어쓰면
+                    // 게임이 바꾼 값이 모듈 로드마다 기본값으로 돌아간다.
                     // TypeInfo 주소는 고정이라(`TypeRegistry`) 다시 묶을 것도 없다. 틱 항목만 다시 짓게 한다.
                     scene->getObjectManager()->markTickStagesDirty();
                 }

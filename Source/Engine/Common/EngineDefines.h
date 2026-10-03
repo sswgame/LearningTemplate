@@ -32,7 +32,7 @@ namespace sw
     {
         // `inline static` 이 아니라 `inline` 이다. 네임스페이스 스코프에서 `static` 은 내부 연결을
         // 주므로 `inline` 이 하는 일이 없어지고, TU 마다 사본이 하나씩 생긴다. 바로 위 `constant`
-        // 블록은 같은 뜻을 `inline constexpr` 로 적고 있었다. 한 파일에 두 철자를 두지 않는다.
+        // 블록도 `inline constexpr` 로 적는다. 한 파일에 두 철자를 두지 않는다.
 
         /** @brief 리소스 루트 폴더 이름입니다. */
         inline constexpr const utf8* kResourceFolder = "Resource";

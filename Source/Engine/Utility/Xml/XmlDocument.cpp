@@ -24,8 +24,8 @@ namespace sw
         /**
          * @brief 시작 태그의 끝(따옴표 밖의 첫 `>`) 위치입니다. 없으면 npos 입니다.
          * @details 접는 것은 **시작 태그의 속성뿐**이다. 그 뒤는 요소 텍스트인데, pugixml 은 텍스트 안의 `"` 를 이스케이프하지 않는다 —
-         *          예전에는 줄 끝까지 따옴표를 세어 `<item>The "Fire" and "Ice" …</item>` 같은 텍스트 속 공백에서 줄을 접었고, 읽을 때는
-         *          양 끝만 다듬으므로 그 줄바꿈 · 들여쓰기가 값에 영영 남았다(씬 · 직렬화한 문자열 목록 · 맵 값이 모두 이 길로 저장된다).
+         *          줄 끝까지 따옴표를 세면 `<item>The "Fire" and "Ice" …</item>` 같은 텍스트 속 공백에서 줄을 접게 되고, 읽을 때는
+         *          양 끝만 다듬으므로 그 줄바꿈 · 들여쓰기가 값에 영영 남는다(씬 · 직렬화한 문자열 목록 · 맵 값이 모두 이 길로 저장된다).
          */
         size_t findStartTagEnd( string_view line, size_t from )
         {
@@ -237,8 +237,8 @@ namespace sw
 
             /**
              * @brief 속성 · 자식 텍스트를 불리언으로 읽습니다. 없거나 비었으면 조용히 `fallback`, 불리언이 아닌 글이면 알리고 `fallback` 입니다.
-             * @details 예전에는 `StringUtil::parseBool` 이 읽지 못한 글을 말없이 폴백으로 돌려줘 `enabled="ture"` 가 아무 말 없이
-             *          기본값이 됐다. 정수 · 실수 형제(`getAttributeInt` · `getAttributeFloat`)는 이미 알렸다 — 같은 규칙이다.
+             * @details `enabled="ture"` 가 아무 말 없이 기본값이 되지 않게 알린다. 정수 · 실수 형제(`getAttributeInt` · `getAttributeFloat`)와
+             *          같은 규칙이다.
              * @param pKind 경고에 찍을 자리 종류("Attribute" · "Element").
              */
             [[nodiscard]] static bool parseNodeBool( const utf8* pKind, const utf8* pName, const utf8* pText, bool fallback )
@@ -318,7 +318,7 @@ namespace sw
         const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
         if ( pValue == nullptr )
             return fallback;
-        // 글이 있는데 숫자가 아니면 알린다 — 예전에는 조용히 폴백이라 "abc" · "1.5" 가 기본값으로 읽혔다.
+        // 글이 있는데 숫자가 아니면 알린다 — "abc" · "1.5" 가 조용히 기본값으로 읽히지 않게.
         int32 val{ fallback };
         if ( StringUtil::parseInt( pValue, val ) == false )
             SW_LOG_WARNING( "Attribute '%#' has an unreadable integer '%#' - using %#", pName, pValue, fallback );
@@ -603,7 +603,7 @@ namespace sw
 
         if ( result.status != pugi::status_ok )
         {
-            // `경로:줄:열: 이유` — IDE 터미널에서 눌러 그 자리로 간다. 예전에는 오프셋만 남고 어느 파일인지가 없었다.
+            // `경로:줄:열: 이유` — IDE 터미널에서 눌러 그 자리로 간다.
             uint32 line   = 0;
             uint32 column = 0;
             StringUtil::getLineAndColumn( xmlText, result.offset > 0 ? static_cast<size_t>( result.offset ) : 0, line, column );

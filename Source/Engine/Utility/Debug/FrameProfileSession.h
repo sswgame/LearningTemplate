@@ -11,8 +11,7 @@ namespace sw
     /**
      * @class FrameProfileSession
      * @brief 프레임 프로파일 한 회분의 진행 상태를 들고 판정합니다.
-     * @details 예전에는 상태 넷이 `EngineLoop` 의 **public 멤버**로 놓여 있었고 판정 규칙은 `tick`
-     *          한가운데 스무 줄로 박혀 있었습니다. 계측은 루프의 일이 아니라 계측의 일이므로 여기로 모읍니다.
+     * @details 계측은 루프의 일이 아니라 계측의 일이므로 상태와 판정 규칙을 여기로 모읍니다.
      *          `EngineLoop` 는 `begin` / `onFrameEnd` 두 줄만 부르고, 밖으로 나가는 것은 `isQuitRequested()`
      *          하나입니다. 상속이 아니라 합성인 이유: `EngineLoop` 는 가상 함수가 하나도 없고 App 이 **값으로**
      *          들고 있습니다. 계측 하나 때문에 `SW_API` 클래스에 vtable 을 만들고 소유 모델을 바꿀 일이 아닙니다.

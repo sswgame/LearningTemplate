@@ -15,7 +15,7 @@ namespace sw
         {
             /**
              * @brief 0~255 칸(높이 · 아틀라스 · 색)을 읽습니다. 범위를 넘으면 0 · 255 로 묶고 경고합니다.
-             * @details 예전에는 `int32` 로 읽어 그대로 잘라 넣어, 색 "300" 이 44 · "-1" 이 255 가 됐다(유니티 `Color32` 는 묶는다).
+             * @details 그대로 잘라 넣으면 색 "300" 이 44 · "-1" 이 255 가 된다(유니티 `Color32` 는 묶는다).
              */
             static uint8 readByteAttribute( const XmlNode& node, const utf8* pName, int32 fallback )
             {
@@ -142,7 +142,7 @@ namespace sw
                 for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
                     getFlagLayer( info._layer )[elementIndex] = TileMapXmlInternal::readFlag( tileNode, info );
 
-                // 높이 · 틴트가 없는 옛 맵은 레이어 값으로 보기를 만든다.
+                // 높이 · 틴트가 없는 맵은 레이어 값으로 보기를 만든다.
                 Visual tileVisual{};
                 if ( tileNode.findAttribute( "h" ) != nullptr )
                     tileVisual._height = TileMapXmlInternal::readByteAttribute( tileNode, "h", 0 );

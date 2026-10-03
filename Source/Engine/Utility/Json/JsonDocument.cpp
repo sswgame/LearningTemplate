@@ -193,9 +193,8 @@ namespace sw
         if ( pValue == nullptr || pValue->is_number() == false )
             return fallback;
         // **부호 없는 쪽을 먼저 본다.** nlohmann 의 `is_number_integer()` 는 부호 있는 정수와
-        // **부호 없는 정수 둘 다에 참**이다. 부호 없는 검사를 뒤에 두면 그 분기는 영영 돌지 않는다.
-        // `asUint` 는 순서가 맞았는데 여기와 `asFloat` 만 뒤집혀 있었다(`asFloat` 에서는 그 탓에
-        // 큰 부호 없는 값이 음수로 돌아왔다).
+        // **부호 없는 정수 둘 다에 참**이다. 부호 없는 검사를 뒤에 두면 그 분기는 영영 돌지 않는다
+        // (`asUint` · `asFloat` 도 같은 순서다 — 뒤집히면 큰 부호 없는 값이 음수로 돌아온다).
         if ( pValue->is_number_unsigned() )
             return static_cast<int64>( pValue->get<uint64>() );
         if ( pValue->is_number_integer() )

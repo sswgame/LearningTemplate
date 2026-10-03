@@ -70,9 +70,7 @@ namespace sw
 {
     /**
      * @brief `-gv_profileFrames=N`: 워밍업 뒤 N 프레임을 재고 보고한 다음 종료합니다.
-     * @details 선언이 여기 있는 이유: 이 스위치를 해석하고 판정하는 코드가 모두 이 파일에 있습니다. 예전에는
-     *          `EngineLoop.cpp` 의 다른 gv_ 들 사이에 선언만 놓여 있어서, 값을 읽는 곳과 규칙이 도는
-     *          곳이 갈라져 있었습니다.
+     * @details 선언이 여기 있는 이유: 이 스위치를 해석하고 판정하는 코드가 모두 이 파일에 있습니다.
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)", SW_KEEP_IN_SHIPPING );
     /**

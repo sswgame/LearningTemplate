@@ -2,12 +2,9 @@
  * @file ConfigManager.h
  * @brief Config/ 의 호스트 JSON(EngineConfig 등)을 관리합니다. Resource/ 팩 에셋이 아니므로 ResourceManager 와 분리합니다.
  *
- * @note **설정을 구분하는 것은 타입입니다. 이름 문자열이 아닙니다.** 예전에는 `hashed_string( "EngineConfig" )`
- *       를 호출부마다 손으로 적어 넘겼고(`EngineLoop` · `App` · 테스트 하네스, 셋이 같은 글자를 따로
- *       들고 있었습니다), 한 곳만 철자가 어긋나면 `getConfig` 가 조용히 nullptr 을 반환했습니다. 게다가
- *       표의 열쇠가 그 이름의 **해시**여서, 이름이 달라도 해시가 같으면 같은 칸을 가리켰습니다.
- *       `hashed_string` 자신은 intern 인덱스로 비교하는데(그래서 충돌이 없습니다) 표만 해시를 쓰고
- *       있었던 것입니다. 지금은 열쇠를 `T::StaticType()->_fullyQualifiedName` 에서 뽑습니다.
+ * @note **설정을 구분하는 것은 타입입니다. 이름 문자열이 아닙니다.** 열쇠는 `T::StaticType()->_fullyQualifiedName` 에서
+ *       뽑습니다 — 호출부마다 이름을 손으로 적으면 한 곳만 철자가 어긋나도 `getConfig` 가 조용히 nullptr 을 반환하고,
+ *       이름의 해시를 열쇠로 쓰면 이름이 달라도 해시가 같을 때 같은 칸을 가리킵니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -34,12 +31,10 @@ namespace sw
 
         /**
          * @brief 상대 Config 경로의 기준 디렉터리(보통 프로젝트 루트)를 지정합니다.
-         * @details `Config/...` 경로는 상대 경로라 예전에는 **현재 작업 디렉터리 기준**으로만 찾았습니다.
-         *          실행 파일은 `build/<preset>/Bin` 에서 도는데 `Config/` 는 프로젝트 루트에 있어서,
-         *          EngineConfig/GameConfig/AppConfig 가 실행할 때마다 모두 "없음" 으로 떨어지고 베이크된
-         *          기본값으로 조용히 대체되고 있었습니다(창 크기 · VSync · 리소스 우선순위 · 게임 키트 모듈 목록이
-         *          모두 무시됨). `Resource/` 는 상위 디렉터리를 거슬러 올라가 루트를 찾는데(`ResourceUtil`)
-         *          Config 만 그 혜택을 받지 못하고 있었습니다. 그 루트를 여기에 넣어 줍니다.
+         * @details `Config/...` 는 상대 경로입니다. 실행 파일은 `build/<preset>/Bin` 에서 도는데 `Config/` 는 프로젝트 루트에 있어,
+         *          **현재 작업 디렉터리 기준**으로 찾으면 EngineConfig/GameConfig/AppConfig 가 모두 "없음" 으로 떨어지고 베이크된
+         *          기본값으로 조용히 대체됩니다(창 크기 · VSync · 리소스 우선순위 · 게임 키트 모듈 목록이 모두 무시됨).
+         *          `Resource/` 처럼 거슬러 올라가 찾은 루트(`ResourceUtil`)를 여기에 넣어 줍니다.
          */
         void setRootDirectory( string_view rootDirectory ) { _rootDirectory = string( rootDirectory ); }
 

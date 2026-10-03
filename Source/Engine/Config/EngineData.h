@@ -18,8 +18,7 @@ namespace sw
     /**
      * @brief enginedata.xml 의 엔진 셸 경로입니다.
      * @details 읽기는 `XmlSerializer` 가 PROPERTY 그래프로 합니다. 필드를 하나 추가하면 읽기가 저절로
-     *          따라옵니다. 예전에는 필드마다 `takeChildText` 를 손으로 나열해서, 추가할 때 그 줄을
-     *          빠뜨리면 값이 조용히 기본값으로 남았습니다.
+     *          따라옵니다(필드마다 손으로 읽으면 한 줄을 빠뜨릴 때 값이 조용히 기본값으로 남습니다).
      */
     REFLECT()
     struct SW_API EngineData

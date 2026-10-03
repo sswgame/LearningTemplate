@@ -169,8 +169,8 @@ namespace sw
 
     private:
         /**
-         * @brief 숫자를 XML 텍스트로 바꿉니다. 받는 타입을 셋으로 고정합니다. 예전에는 오버로드 여섯이 암묵 변환을
-         *        허용해 int64 를 int32 로 잘라 적어도 컴파일이 됐습니다. 다른 타입은 여기서 컴파일 오류가 납니다.
+         * @brief 숫자를 XML 텍스트로 바꿉니다. 받는 타입을 셋으로 고정합니다 — 암묵 변환을 허용하면 int64 를 int32 로 잘라
+         *        적어도 컴파일이 됩니다. 다른 타입은 여기서 컴파일 오류가 납니다.
          */
         template <typename T>
         static StringBuilder<constant::kMaxBuffer32> formatNumber( T value )
@@ -242,7 +242,7 @@ namespace sw
         /**
          * @brief 마지막 parse · load 가 실패한 이유입니다(성공했으면 빈 문자열).
          * @details 구문 오류는 `경로:줄:열: 이유` 꼴이다 — IDE 터미널에서 눌러 그 자리로 간다. 파일이 없으면 `not found`, 읽지 못하면 `cannot read`.
-         *          예전에는 로그에 오프셋만 남고 어느 파일인지가 없었고, 부르는 쪽(씬 · 프리팹)은 구문 오류도 "File not found" 로 알렸다.
+         *          부르는 쪽(씬 · 프리팹)은 이것으로 구문 오류와 없는 파일을 가린다.
          */
         const string& getLastError() const { return _lastError; }
 

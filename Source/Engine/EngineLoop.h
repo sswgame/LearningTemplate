@@ -64,7 +64,7 @@ namespace sw
 
     /**
      * @class EngineLoop
-     * @brief 코어 매니저들을 소유하고 메인 루프(tick)를 돌립니다(예전에는 App 이 들고 있었습니다).
+     * @brief 코어 매니저들을 소유하고 메인 루프(tick)를 돌립니다.
      */
     class SW_API EngineLoop
     {
@@ -83,7 +83,7 @@ namespace sw
         /**
          * @brief 입력 등을 시작하는 프레임의 첫 단계입니다.
          * @param deltaSeconds 지난 프레임의 실제 시간(초). 입력 장치의 타이머(진동 길이 · 게임패드 재연결 주기)가 이 값으로 흐릅니다.
-         *                     예전에는 인자 없이 불려 입력이 늘 16 ms 로 흘렀고, 0.3 초 진동이 144 fps 에서 0.13 초로 끝났습니다.
+         *                     고정값으로 흘리면 0.3 초 진동이 144 fps 에서 0.13 초로 끝납니다.
          */
         void beginFrame( float32 deltaSeconds );
         /**
@@ -141,8 +141,8 @@ namespace sw
         /**
          * @brief 셸 디버그 ActionMap 에서 해당 액션이 이번 프레임에 발동했는지 반환합니다.
          * @details Engine 이 내주는 것은 **입력 사실**뿐입니다. 그 액션이 무엇을 뜻하는지(모듈을 다시 올린다,
-         *          에디터를 다시 올린다)는 그 장치를 가진 쪽이 정합니다. 예전에는 리로드 콜백을 받아 Engine 이
-         *          직접 부르는 함수가 있었고, 그래서 Shipping 헤더에도 리로드 델리게이트가 남아 있었습니다.
+         *          에디터를 다시 올린다)는 그 장치를 가진 쪽이 정합니다 — Engine 이 리로드 콜백을 들면 Shipping 헤더에도
+         *          리로드 델리게이트가 남습니다.
          */
         bool wasDebugActionTriggered( string_view actionName ) const;
 
@@ -196,8 +196,8 @@ namespace sw
         unique_ptr<GpuSceneBuilder> _gpuSceneBuilder;
         /**
          * @brief GT 가 프레임마다 채우는 패킷입니다. 링의 자리와 바꿔 가며 돕니다(`RenderThread::submit`). FrameRenderer 단계가 만들고 해제합니다.
-         * @details 지역 변수였을 때는 스냅샷의 배치 · 그룹 목록과 라이트 목록이 프레임마다 새로 할당됐습니다. 이제 링에서
-         *          돌아온 저장소를 그대로 다시 채웁니다.
+         * @details 링에서 돌아온 저장소를 그대로 다시 채웁니다(지역 변수로 두면 스냅샷의 배치 · 그룹 목록과 라이트 목록이
+         *          프레임마다 새로 할당됩니다).
          */
         unique_ptr<RenderFramePacket> _packetScratch;
         Delegate<void()>              _onScenesReleased;
@@ -205,8 +205,8 @@ namespace sw
         ModuleTypeLoaderDelegate _moduleTypeLoader;
         /**
          * @brief 셰이더 라이브 리로드입니다. **Shipping 에는 없고**(파일째 빌드에서 빠집니다) Debug 에서만 실제로 만들어집니다.
-         * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**입니다. 예전에는 RHI 가 들고 있었는데, RHI 는
-         *          디바이스 추상화이지 파일 감시자가 있을 곳이 아닙니다. 돌리는 쪽(EngineLoop)이 갖는 것이 맞습니다.
+         * @details 셰이더 파일을 지켜보다 다시 컴파일하는 **개발 도구**입니다. RHI 는 디바이스 추상화이지 파일 감시자가 있을 곳이
+         *          아니므로 돌리는 쪽(EngineLoop)이 갖습니다.
          */
 #if !defined( SW_SHIPPING )
         unique_ptr<LiveShaderManager> _liveShaderManager;
