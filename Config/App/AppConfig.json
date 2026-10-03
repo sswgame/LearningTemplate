@@ -48,6 +48,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_RealTimeStrategy",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
