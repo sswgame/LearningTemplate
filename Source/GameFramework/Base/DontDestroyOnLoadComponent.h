@@ -17,7 +17,6 @@ namespace sw
         virtual ~DontDestroyOnLoadComponent() override = default;
 
         void onBeginPlay() override;
-        void onEndPlay() override;
 
     private:
         PROPERTY()

@@ -18,11 +18,6 @@ namespace sw
         setTickGroup( TickGroup::DuringPhysics );
     }
 
-    void GravityComponent::onEndPlay()
-    {
-        Component::onEndPlay();
-    }
-
     void GravityComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );

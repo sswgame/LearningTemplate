@@ -34,7 +34,6 @@ namespace sw
         virtual ~ProjectileComponent() override = default;
 
         void onBeginPlay() override;
-        void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
         /** @brief 맞음 처리입니다(클래스 설명의 규칙). 물리 step 뒤 게임 스레드에서 불리고, 사라짐은 같은 틱 끝에 놓입니다. */
         void onOverlapBegin( const OverlapInfo& overlap ) override;

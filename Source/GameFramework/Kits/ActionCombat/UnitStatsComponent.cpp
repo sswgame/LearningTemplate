@@ -87,11 +87,6 @@ namespace sw
         syncHealthBar( true );
     }
 
-    void UnitStatsComponent::onEndPlay()
-    {
-        Component::onEndPlay();
-    }
-
     void UnitStatsComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );

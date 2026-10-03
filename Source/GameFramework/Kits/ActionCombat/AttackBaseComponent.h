@@ -29,7 +29,6 @@ namespace sw
         virtual ~AttackBaseComponent() override = default;
 
         void onBeginPlay() override;
-        void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
         /** @brief 겹친 것을 기억하고, 휘두르는 중이면 그 유닛에 피해를 줍니다. 상대의 트리거는 치지 않습니다. */
         void onOverlapBegin( const OverlapInfo& overlap ) override;

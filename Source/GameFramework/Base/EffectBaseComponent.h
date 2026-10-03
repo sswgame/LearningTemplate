@@ -33,7 +33,6 @@ namespace sw
          * @details 흐른 시간이 있으면(읽어 들인 상태) 타이머 · 알파 · 기준 알파를 그대로 두고 스프라이트에 다시 넣기만 합니다.
          */
         void onBeginPlay() override;
-        void onEndPlay() override;
         /** @brief 흐림을 진행해 스프라이트에 넣고, 다 흐려지면 오브젝트를 지웁니다. */
         void onTick( float32 deltaTime ) override;
 

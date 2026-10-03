@@ -29,11 +29,6 @@ namespace sw
         _currentDuration = 0.0f;
     }
 
-    void AttackBaseComponent::onEndPlay()
-    {
-        Component::onEndPlay();
-    }
-
     void AttackBaseComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );

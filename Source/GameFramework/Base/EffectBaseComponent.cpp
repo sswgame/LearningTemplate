@@ -42,11 +42,6 @@ namespace sw
         applyAlphaToSprites();
     }
 
-    void EffectBaseComponent::onEndPlay()
-    {
-        Component::onEndPlay();
-    }
-
     void EffectBaseComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );

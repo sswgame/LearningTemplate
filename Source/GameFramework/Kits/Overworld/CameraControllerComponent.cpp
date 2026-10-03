@@ -25,11 +25,6 @@ namespace sw
         setTickGroup( TickGroup::PrePhysics );
     }
 
-    void CameraControllerComponent::onEndPlay()
-    {
-        Component::onEndPlay();
-    }
-
     void CameraControllerComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );

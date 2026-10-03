@@ -42,11 +42,6 @@ namespace sw
         _currentLife = 0.0f;
     }
 
-    void ProjectileComponent::onEndPlay()
-    {
-        Component::onEndPlay();
-    }
-
     void ProjectileComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );

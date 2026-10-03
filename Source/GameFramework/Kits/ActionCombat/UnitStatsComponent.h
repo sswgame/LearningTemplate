@@ -25,7 +25,6 @@ namespace sw
         virtual ~UnitStatsComponent() override = default;
 
         void onBeginPlay() override;
-        void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
 
         /**

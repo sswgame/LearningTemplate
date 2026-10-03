@@ -27,9 +27,4 @@ namespace sw
         if ( _bPersistent && pSceneManager != nullptr )
             pSceneManager->markPersistent( pOwner );
     }
-
-    void DontDestroyOnLoadComponent::onEndPlay()
-    {
-        Component::onEndPlay();
-    }
 } // namespace sw

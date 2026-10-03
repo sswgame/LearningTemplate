@@ -15,7 +15,6 @@ namespace sw
         virtual ~GravityComponent() override = default;
 
         void onBeginPlay() override;
-        void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
 
         /** @brief 중력 가속도(초당 속도 변화)를 설정합니다. 보통 음수입니다. */
