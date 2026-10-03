@@ -156,6 +156,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_MonsterCollector",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }

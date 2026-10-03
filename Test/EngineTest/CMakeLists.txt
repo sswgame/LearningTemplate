@@ -42,6 +42,7 @@ sw_addTestExecutable(EngineTest
 		GF_GhostHunt
 		GF_BattleRoyale
 		GF_CoopScavenger
+		GF_MonsterCollector
 	LABELS
 		"unit;engine"
 	TIMEOUT
