@@ -33,6 +33,39 @@ namespace sw::editor
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
         struct InputMapEditorPanelInternal
         {
+            /** @brief 표의 열 하나입니다. 폭이 0 이면 남는 폭을 나눠 가집니다(Stretch). */
+            struct TableColumn
+            {
+                const utf8* _pLabel;
+                float32     _width;
+            };
+
+            /** @brief 표를 열고 열 · 머리 줄을 둡니다. 열렸으면 true 이고, 그때 부르는 쪽이 `ImGui::EndTable` 을 부릅니다. */
+            template <size_t kColumnCount>
+            static bool beginColumnTable( const utf8* pTableId, const TableColumn ( &arrColumn )[kColumnCount], ImGuiTableFlags flags )
+            {
+                if ( ImGui::BeginTable( pTableId, static_cast<int32>( kColumnCount ), flags ) == false )
+                    return false;
+                for ( const TableColumn& column : arrColumn )
+                {
+                    if ( column._width > 0.0f )
+                        ImGui::TableSetupColumn( column._pLabel, ImGuiTableColumnFlags_WidthFixed, column._width );
+                    else
+                        ImGui::TableSetupColumn( column._pLabel, ImGuiTableColumnFlags_WidthStretch );
+                }
+                ImGui::TableHeadersRow();
+                return true;
+            }
+
+            /** @brief 새 줄을 열고 첫 열에 이름을 쓴 뒤 둘째 열로 갑니다(액션 · 레이어 표의 줄 머리). */
+            static void beginNamedRow( const hashed_string& name )
+            {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextUnformatted( name.c_str() );
+                ImGui::TableNextColumn();
+            }
+
             /** @brief ImGui 키 하나와 엔진 키 하나의 짝입니다. 두 열거형에서 연속이 아닌 키만 표로 둡니다. */
             struct ImGuiKeyPair
             {
@@ -352,21 +385,17 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( "Input Layers", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            if ( ImGui::BeginTable( "LayerTable", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
+            static constexpr InputMapEditorPanelInternal::TableColumn kArrLayerColumn[] = {
+                {  "Layer Name",   0.0f},
+                {      "Active",  60.0f},
+                {    "Priority",  60.0f},
+                {"Stack Status", 110.0f}
+            };
+            if ( InputMapEditorPanelInternal::beginColumnTable( "LayerTable", kArrLayerColumn, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
             {
-                ImGui::TableSetupColumn( "Layer Name", ImGuiTableColumnFlags_WidthStretch );
-                ImGui::TableSetupColumn( "Active", ImGuiTableColumnFlags_WidthFixed, 60.0f );
-                ImGui::TableSetupColumn( "Priority", ImGuiTableColumnFlags_WidthFixed, 60.0f );
-                ImGui::TableSetupColumn( "Stack Status", ImGuiTableColumnFlags_WidthFixed, 110.0f );
-                ImGui::TableHeadersRow();
-
                 for ( const hashed_string& layerName : listLayer )
                 {
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    ImGui::TextUnformatted( layerName.c_str() );
-
-                    ImGui::TableNextColumn();
+                    InputMapEditorPanelInternal::beginNamedRow( layerName );
                     ImGui::PushID( layerName.c_str() );
                     bool bEnabled = _actionMap.isLayerEnabled( layerName );
                     if ( ImGui::Checkbox( "##Enabled", &bEnabled ) )
@@ -396,24 +425,21 @@ namespace sw::editor
     {
         const vector<hashed_string>& listAction = _actionMap.getActionNames();
 
-        if ( ImGui::BeginTable( "ActionTable", 7, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
+        static constexpr InputMapEditorPanelInternal::TableColumn kArrActionColumn[] = {
+            {       "Action",   0.0f},
+            {      "Trigger", 110.0f},
+            {     "UI Glyph",  90.0f},
+            {"State / Phase", 100.0f},
+            {    "Hold Time",  80.0f},
+            {       "Rebind",  75.0f},
+            {        "Reset",  60.0f}
+        };
+        if ( InputMapEditorPanelInternal::beginColumnTable( "ActionTable", kArrActionColumn,
+                                                            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
         {
-            ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthStretch );
-            ImGui::TableSetupColumn( "Trigger", ImGuiTableColumnFlags_WidthFixed, 110.0f );
-            ImGui::TableSetupColumn( "UI Glyph", ImGuiTableColumnFlags_WidthFixed, 90.0f );
-            ImGui::TableSetupColumn( "State / Phase", ImGuiTableColumnFlags_WidthFixed, 100.0f );
-            ImGui::TableSetupColumn( "Hold Time", ImGuiTableColumnFlags_WidthFixed, 80.0f );
-            ImGui::TableSetupColumn( "Rebind", ImGuiTableColumnFlags_WidthFixed, 75.0f );
-            ImGui::TableSetupColumn( "Reset", ImGuiTableColumnFlags_WidthFixed, 60.0f );
-            ImGui::TableHeadersRow();
-
             for ( const hashed_string& actionName : listAction )
             {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted( actionName.c_str() );
-
-                ImGui::TableNextColumn();
+                InputMapEditorPanelInternal::beginNamedRow( actionName );
                 const ActionTrigger trigger      = _actionMap.getBindingTrigger( actionName, 0 );
                 const utf8*         pTriggerName = ActionMap::actionTriggerToName( trigger );
                 ImGui::TextUnformatted( pTriggerName != nullptr ? pTriggerName : "Unknown" );
@@ -747,14 +773,15 @@ namespace sw::editor
         const vector<hashed_string>& listAction     = _actionMap.getActionNames();
         bool                         bFoundConflict = false;
 
-        if ( ImGui::BeginTable( "ConflictTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
+        static constexpr InputMapEditorPanelInternal::TableColumn kArrConflictColumn[] = {
+            {     "Action A",   0.0f},
+            {     "Action B",   0.0f},
+            {"Colliding Key", 100.0f},
+            {         "Swap",  75.0f},
+            {   "Override B",  85.0f}
+        };
+        if ( InputMapEditorPanelInternal::beginColumnTable( "ConflictTable", kArrConflictColumn, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
         {
-            ImGui::TableSetupColumn( "Action A", ImGuiTableColumnFlags_WidthStretch );
-            ImGui::TableSetupColumn( "Action B", ImGuiTableColumnFlags_WidthStretch );
-            ImGui::TableSetupColumn( "Colliding Key", ImGuiTableColumnFlags_WidthFixed, 100.0f );
-            ImGui::TableSetupColumn( "Swap", ImGuiTableColumnFlags_WidthFixed, 75.0f );
-            ImGui::TableSetupColumn( "Override B", ImGuiTableColumnFlags_WidthFixed, 85.0f );
-            ImGui::TableHeadersRow();
 
             for ( size_t idxA = 0; idxA < listAction.size(); ++idxA )
             {
@@ -1015,43 +1042,39 @@ namespace sw::editor
         const utf8*                      arrPlatforms[]      = { "Xbox Controller", "PlayStation DualSense", "Nintendo Switch Pro", "PC Keyboard / Mouse" };
         static constexpr InputDeviceType kArrPreviewDevice[] = { InputDeviceType::GamepadXbox, InputDeviceType::GamepadPlayStation, InputDeviceType::GamepadSwitch, InputDeviceType::KeyboardMouse };
         ImGui::Combo( "Target Platform", &_selectedGlyphPlatform, arrPlatforms, 4 );
-        const InputDeviceType previewDevice = kArrPreviewDevice[MathUtil::clamp( _selectedGlyphPlatform, 0, 3 )];
+        // 미리보기 장치와 아래 표의 플랫폼 이름이 같은 자리를 읽는다 — 범위 제한을 한 번만 한다.
+        const int32           platformIndex = MathUtil::clamp( _selectedGlyphPlatform, 0, 3 );
+        const InputDeviceType previewDevice = kArrPreviewDevice[platformIndex];
         ImGui::Separator();
 
-        const vector<hashed_string>& listAction = _actionMap.getActionNames();
-        if ( ImGui::BeginTable( "GlyphTable", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
+        const vector<hashed_string>&                              listAction        = _actionMap.getActionNames();
+        static constexpr InputMapEditorPanelInternal::TableColumn kArrGlyphColumn[] = {
+            {      "Action Name",   0.0f},
+            {      "Key Binding", 120.0f},
+            {"UI Prompt (Glyph)", 140.0f},
+            {   "Platform Style", 140.0f}
+        };
+        if ( InputMapEditorPanelInternal::beginColumnTable( "GlyphTable", kArrGlyphColumn, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
         {
-            ImGui::TableSetupColumn( "Action Name", ImGuiTableColumnFlags_WidthStretch );
-            ImGui::TableSetupColumn( "Key Binding", ImGuiTableColumnFlags_WidthFixed, 120.0f );
-            ImGui::TableSetupColumn( "UI Prompt (Glyph)", ImGuiTableColumnFlags_WidthFixed, 140.0f );
-            ImGui::TableSetupColumn( "Platform Style", ImGuiTableColumnFlags_WidthFixed, 140.0f );
-            ImGui::TableHeadersRow();
-
             for ( const hashed_string& actionName : listAction )
             {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::TextUnformatted( actionName.c_str() );
-
-                ImGui::TableNextColumn();
+                InputMapEditorPanelInternal::beginNamedRow( actionName );
                 const string glyph = _actionMap.getGlyphForAction( sw::hashed_string( actionName.view() ) );
                 ImGui::TextUnformatted( glyph.c_str() );
 
                 ImGui::TableNextColumn();
                 const string previewGlyph = _actionMap.getGlyphForAction( sw::hashed_string( actionName.view() ), previewDevice );
-                if ( _selectedGlyphPlatform == 0 )
+                if ( platformIndex == 0 )
                     ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.4f, 1.0f ), "[ Ⓨ Xbox ] %s", previewGlyph.c_str() );
-                else if ( _selectedGlyphPlatform == 1 )
+                else if ( platformIndex == 1 )
                     ImGui::TextColored( ImVec4( 0.3f, 0.6f, 1.0f, 1.0f ), "[ ▲ DualSense ] %s", previewGlyph.c_str() );
-                else if ( _selectedGlyphPlatform == 2 )
+                else if ( platformIndex == 2 )
                     ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "[ X Switch ] %s", previewGlyph.c_str() );
                 else
                     ImGui::TextColored( ImVec4( 0.9f, 0.9f, 0.9f, 1.0f ), "[ KeyCap ] %s", previewGlyph.c_str() );
 
                 ImGui::TableNextColumn();
-                // 위의 미리보기 장치 선택과 **같은 범위 제한(clamp)**을 쓴다. 한쪽만 제한하면 그 차이가
-                // 언젠가 배열 밖 읽기가 된다.
-                ImGui::TextDisabled( "%s", arrPlatforms[MathUtil::clamp( _selectedGlyphPlatform, 0, 3 )] );
+                ImGui::TextDisabled( "%s", arrPlatforms[platformIndex] );
             }
             ImGui::EndTable();
         }
