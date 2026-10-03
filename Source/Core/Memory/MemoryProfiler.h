@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/array.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/MemoryTag.h"
@@ -121,6 +122,10 @@ namespace sw
 
         /** @brief 태그별 할당 통계를 반환합니다. */
         const MemoryProfileStats& getStats( MemoryTag tag ) const;
+        /** @brief 모든 태그의 지금 살아 있는 바이트 합입니다. */
+        uint64 getLiveAllocatedBytes() const;
+        /** @brief 태그를 지금 살아 있는 바이트가 큰 순서로 늘어놓습니다(같으면 enum 순서). 보고와 에디터 패널이 같은 순서를 씁니다. */
+        array<MemoryTag, kMemoryTagCount> makeTagOrderByLiveBytes() const;
         /** @brief 모든 태그의 할당 횟수 누계를 합한 값입니다. 프레임당 할당 수는 두 시점의 차이입니다. */
         uint64 getTotalAllocationCount() const;
 

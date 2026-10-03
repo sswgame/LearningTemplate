@@ -5,6 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
@@ -55,6 +56,11 @@ namespace sw::editor
     {
         struct ImGuiEditorInternal
         {
+            /** @brief ImGui 할당을 sw 할당자로 보낸다 — 할당 헤더에 태그가 적혀 메모리 프로파일러의 Editor 줄로 세인다. */
+            static void* allocateForImGui( size_t size, void* /*pUserData*/ ) { return Memory::allocate( size ); }
+            /** @brief `allocateForImGui` 의 짝입니다. */
+            static void freeForImGui( void* pPtr, void* /*pUserData*/ ) { Memory::free( pPtr ); }
+
             static void loadSplashDefaultRenderPass( const TaskArgs& args )
             {
                 shared_ptr<RenderPassResource> pPass = args.get<shared_ptr<RenderPassResource>>( 0 );
@@ -174,6 +180,8 @@ namespace sw::editor
         {
             SW_LOG_TRACE( "Checking ImGui version and creating context" );
             IMGUI_CHECKVERSION();
+            // 컨텍스트보다 먼저 건다 — 이 모듈의 ImGui 할당이 모두 같은 할당자에서 잡히고 풀린다(컨텍스트는 shutdown 이 이 모듈 안에서 지운다).
+            ImGui::SetAllocatorFunctions( &ImGuiEditorInternal::allocateForImGui, &ImGuiEditorInternal::freeForImGui, nullptr );
             ImGui::CreateContext();
             ImPlot::CreateContext();
 

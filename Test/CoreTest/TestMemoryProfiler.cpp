@@ -213,3 +213,33 @@ SW_TEST_CASE( MemoryProfilerTest, EveryTagHasAName )
     SW_EXPECT_STREQ( "Game", MemoryProfiler::getMemoryTagName( MemoryTag::Game ) );
     SW_EXPECT_STREQ( "Invalid", MemoryProfiler::getMemoryTagName( MemoryTag::MaxTags ) );
 }
+
+/**
+ * @brief [MemoryProfilerTest] 태그 순서는 살아 있는 바이트가 큰 것부터이고, 합은 모든 태그의 합이다
+ * @details 보고(`-gv_profileFrames`)와 에디터 프로파일러 패널이 같은 순서로 줄을 낸다.
+ */
+SW_TEST_CASE( MemoryProfilerTest, TagOrderFollowsLiveBytes )
+{
+    MemoryProfiler profiler;
+    profiler.initialize();
+    profiler.setTrackingEnabled( true );
+
+    void* pDummy = reinterpret_cast<void*>( 0x1357'9BDF );
+    profiler.recordAllocation( pDummy, 1024, MemoryTag::Texture );
+    profiler.recordAllocation( pDummy, 4096, MemoryTag::Mesh );
+    profiler.recordAllocation( pDummy, 256, MemoryTag::Audio );
+
+    const array<MemoryTag, kMemoryTagCount> arrOrder = profiler.makeTagOrderByLiveBytes();
+    SW_EXPECT_TRUE( arrOrder[0] == MemoryTag::Mesh );
+    SW_EXPECT_TRUE( arrOrder[1] == MemoryTag::Texture );
+    SW_EXPECT_TRUE( arrOrder[2] == MemoryTag::Audio );
+    // 0 인 태그는 enum 순서 그대로 뒤에 온다.
+    SW_EXPECT_TRUE( arrOrder[3] == MemoryTag::Unknown );
+    SW_EXPECT_EQUAL( uint64( 1024 + 4096 + 256 ), profiler.getLiveAllocatedBytes() );
+
+    profiler.recordFree( pDummy, 1024, MemoryTag::Texture );
+    profiler.recordFree( pDummy, 4096, MemoryTag::Mesh );
+    profiler.recordFree( pDummy, 256, MemoryTag::Audio );
+    SW_EXPECT_EQUAL( uint64( 0 ), profiler.getLiveAllocatedBytes() );
+    profiler.shutdown();
+}

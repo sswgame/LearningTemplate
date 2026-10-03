@@ -379,6 +379,29 @@ namespace sw
         return _arrStat[tagIdx];
     }
 
+    uint64 MemoryProfiler::getLiveAllocatedBytes() const
+    {
+        uint64 total = 0;
+        for ( const MemoryProfileStats& stat : _arrStat )
+            total += stat._currentAllocatedBytes.load( std::memory_order_relaxed );
+        return total;
+    }
+
+    array<MemoryTag, kMemoryTagCount> MemoryProfiler::makeTagOrderByLiveBytes() const
+    {
+        // 정렬하는 동안 다른 스레드가 값을 바꿔도 비교가 흔들리지 않게 한 번 읽어 둔다.
+        array<uint64, kMemoryTagCount>    arrLiveBytes{};
+        array<MemoryTag, kMemoryTagCount> arrTag{};
+        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
+        {
+            arrLiveBytes[tagIndex] = _arrStat[tagIndex]._currentAllocatedBytes.load( std::memory_order_relaxed );
+            arrTag[tagIndex]       = static_cast<MemoryTag>( tagIndex );
+        }
+        std::stable_sort( arrTag.begin(), arrTag.end(), [&arrLiveBytes]( MemoryTag lhs, MemoryTag rhs )
+        { return arrLiveBytes[static_cast<uint32>( lhs )] > arrLiveBytes[static_cast<uint32>( rhs )]; } );
+        return arrTag;
+    }
+
     uint64 MemoryProfiler::getTotalAllocationCount() const
     {
         uint64 total = 0;

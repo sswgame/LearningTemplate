@@ -5,6 +5,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/MemoryTag.h"
 #include "Core/Process/Process.h"
 
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
@@ -362,6 +363,48 @@ SW_TEST_CASE( AppSmokeTest, EditorModeStartsAndExitsCleanly )
 
     if ( checkedCount == 0 )
         SW_TEST_SKIP( "no usable RHI backend on this machine — run where a GPU and driver exist" );
+}
+
+/**
+ * @brief [AppSmokeTest] 에디터를 켠 기동의 메모리가 용도 태그로 나뉘어 보고되는가
+ * @details `-gv_profileFrames` 보고의 태그 줄(`[Profile]   <태그>  <KB> KB  <몫>%  <블록> blocks`)을 읽는다. ImGui 의 할당(폰트 아틀라스 · 드로 리스트 ·
+ *          도킹 상태)은 에디터 모듈이 sw 할당자로 보내야 Editor 줄로 세이고, 진입점이 빠진 몫인 Unknown 은 작아야 한다. 태그 스코프가 컴파일되는
+ *          구성(Debug)에서만 본다.
+ */
+SW_TEST_CASE( AppSmokeTest, EditorMemoryIsAttributedByTag )
+{
+    if constexpr ( kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+
+    const AppRunResult result = runApp( "-gv_profileFrames=5 -EnableEditor -dx12", "[Profile]   " );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
+    if ( result._bBackendUnusableHere )
+        SW_TEST_SKIP( "DX12 is not usable on this machine" );
+    SW_EXPECT_EQUAL( 0, result._exitCode );
+
+    // 줄 모양: "[Profile]   Editor  15538.7 KB  77.6%  2383 blocks" — KB 의 정수부와 몫의 정수부만 읽는다.
+    uint64 editorKilobytes{ 0 };
+    uint64 unknownSharePercent{ 100 };
+    for ( const string& line : result._listMarkedLine )
+    {
+        const string_view text{ line };
+        const size_t      nameStart = text.find_first_not_of( ' ', string_view{ "[Profile]" }.size() );
+        const size_t      nameEnd   = text.find( ' ', nameStart );
+        if ( nameStart == string_view::npos || nameEnd == string_view::npos )
+            continue;
+        const string_view name         = text.substr( nameStart, nameEnd - nameStart );
+        const size_t      numberStart  = text.find_first_not_of( ' ', nameEnd );
+        const size_t      shareEnd     = text.find( '%' );
+        const size_t      shareStart   = shareEnd == string_view::npos ? string_view::npos : text.rfind( ' ', shareEnd );
+        const uint64      kilobytes    = numberStart == string_view::npos ? 0 : std::strtoull( line.c_str() + numberStart, nullptr, 10 );
+        const uint64      sharePercent = shareStart == string_view::npos ? 100 : std::strtoull( line.c_str() + shareStart + 1, nullptr, 10 );
+        if ( name == "Editor" )
+            editorKilobytes = kilobytes;
+        else if ( name == "Unknown" )
+            unknownSharePercent = sharePercent;
+    }
+    SW_EXPECT_TRUE_MSG( editorKilobytes > 4096, ( string( "Editor KB = " ) + to_string( editorKilobytes ) ).c_str() );
+    SW_EXPECT_TRUE_MSG( unknownSharePercent < 5, ( string( "Unknown share % = " ) + to_string( unknownSharePercent ) ).c_str() );
 }
 
 /**

@@ -220,11 +220,12 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( "Global Statistics By Tag", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            if ( ImGui::BeginTable( "MemoryStatsTable", 4,
+            if ( ImGui::BeginTable( "MemoryStatsTable", 5,
                                     ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
             {
                 ImGui::TableSetupColumn( "Tag" );
                 ImGui::TableSetupColumn( "Current Bytes" );
+                ImGui::TableSetupColumn( "Share" );
                 ImGui::TableSetupColumn( "Current Count" );
                 ImGui::TableSetupColumn( "Total Allocated" );
                 ImGui::TableHeadersRow();
@@ -232,12 +233,16 @@ namespace sw::editor
                 fixed_string<constant::kMaxBuffer32> arrBytesBuf;
                 fixed_string<constant::kMaxBuffer32> arrTotalBuf;
 
-                for ( uint32 tagIndex = 0; tagIndex < static_cast<uint32>( MemoryTag::MaxTags ); ++tagIndex )
+                // 지금 살아 있는 바이트가 큰 태그부터. 한 번도 할당하지 않은 태그는 줄을 내지 않는다(Unknown 은 늘 낸다 — 진입점이 빠진 몫이다).
+                const uint64 liveBytes = profiler.getLiveAllocatedBytes();
+                for ( const MemoryTag tag : profiler.makeTagOrderByLiveBytes() )
                 {
-                    MemoryTag   tag   = static_cast<MemoryTag>( tagIndex );
                     const auto& stats = profiler.getStats( tag );
+                    if ( tag != MemoryTag::Unknown && stats._totalAllocatedBytes.load() == 0 )
+                        continue;
 
-                    ProfilerPanelInternal::formatBytes( stats._currentAllocatedBytes.load(), arrBytesBuf );
+                    const uint64 currentBytes = stats._currentAllocatedBytes.load();
+                    ProfilerPanelInternal::formatBytes( currentBytes, arrBytesBuf );
                     ProfilerPanelInternal::formatBytes( stats._totalAllocatedBytes.load(), arrTotalBuf );
 
                     ImGui::TableNextRow();
@@ -245,6 +250,8 @@ namespace sw::editor
                     ImGui::Text( "%s", MemoryProfiler::getMemoryTagName( tag ) );
                     ImGui::TableNextColumn();
                     ImGui::Text( "%s", arrBytesBuf.c_str() );
+                    ImGui::TableNextColumn();
+                    ImGui::Text( "%.1f%%", liveBytes == 0 ? 0.0 : static_cast<float64>( currentBytes ) * 100.0 / static_cast<float64>( liveBytes ) );
                     ImGui::TableNextColumn();
                     ImGui::Text( "%u", static_cast<uint32>( stats._currentAllocationCount.load() ) );
                     ImGui::TableNextColumn();

@@ -38,6 +38,9 @@ namespace sw
         MaxTags
     };
 
+    /** @brief 태그 줄 수입니다(`MaxTags` 를 뺀 값의 개수). */
+    inline constexpr uint32 kMemoryTagCount = static_cast<uint32>( MemoryTag::MaxTags );
+
     /** @brief 태그 스코프가 일하는 구성인지입니다. 아니면 `ScopedMemoryTag` 와 `SW_MEMORY_SCOPE` 는 아무 일도 하지 않습니다. */
 #if defined( SW_DEBUG )
     inline constexpr bool kMemoryTagScopesEnabled = true;
