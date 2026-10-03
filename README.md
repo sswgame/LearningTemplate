@@ -63,7 +63,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
    - [11. GPU-Driven 간접 드로우 & 컴퓨트 디스패치](#511-gpu-driven-간접-드로우--컴퓨트-디스패치)
    - [12. 티어-3 바인드리스 리소스 테이블 (BindlessTable)](#512-티어-3-바인드리스-리소스-테이블-bindlesstable)
    - [13. RenderGraph 순차 쓰기/RMW 의존성 및 리소스 수명 주기 분석](#513-rendergraph-순차-쓰기rmw-의존성-및-리소스-수명-주기-분석)
-   - [14. C++17 Fluent Task Continuation & State Machine (TaskFuture / TaskPromise)](#514-c17-fluent-task-continuation--state-machine-taskfuture--taskpromise)
+   - [14. C++17 Fluent Task Continuation (TaskFuture / TaskPromise)](#514-c17-fluent-task-continuation-taskfuture--taskpromise)
    - [15. 트랜스폼 세대 카운터 (Transform Dirty Generation Counter)](#515-트랜스폼-세대-카운터-transform-dirty-generation-counter)
 6. [✍️ 코딩 컨벤션 및 네이밍 규칙](#6-코딩-컨벤션-및-네이밍-규칙)
 7. [🧪 자동화 테스트 스위트](#7-자동화-테스트-스위트)
@@ -648,9 +648,9 @@ for ( const auto& life : listLifetimes )
 
 ---
 
-### 5.14 C++17 Fluent Task Continuation & State Machine (TaskFuture / TaskPromise)
+### 5.14 C++17 Fluent Task Continuation (TaskFuture / TaskPromise)
 
-C++20 코루틴을 사용할 수 없는 C++17 환경에서도 콜백 지옥 없이 직관적인 비동기 파이프라인을 구축할 수 있도록 Monadic `.then()` 체이닝 및 단계별 상태 머신(`ITaskStateMachine`)을 제공합니다.
+C++20 코루틴을 사용할 수 없는 C++17 환경에서도 콜백 지옥 없이 직관적인 비동기 파이프라인을 구축할 수 있도록 Monadic `.then()` 체이닝과 `whenAll` · `whenAny` 콤비네이터를 제공합니다.
 
 #### 💡 `TaskManager (Job System)`와의 역할 차이 및 상호 보완성
 

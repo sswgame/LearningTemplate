@@ -554,20 +554,4 @@ namespace sw
         return pCtx->_promise.getFuture();
     }
 
-    /**
-     * @class ITaskStateMachine
-     * @brief C++17 에서 코루틴 대신 단계별(step-by-step) 비동기 실행을 지원하는 상태 머신 인터페이스입니다.
-     */
-    class SW_API ITaskStateMachine
-    {
-    public:
-        virtual ~ITaskStateMachine() = default;
-
-        /**
-         * @brief 상태 머신의 다음 단계를 실행합니다.
-         * @return 모든 단계가 끝났으면 true, 다음 프레임이나 비동기 대기 뒤에 계속해야 하면 false
-         */
-        virtual bool step() = 0;
-    };
-
 } // namespace sw
