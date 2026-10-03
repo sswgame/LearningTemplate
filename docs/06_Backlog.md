@@ -122,11 +122,6 @@ cd build/Ninja-Debug/Bin
 
 ### 1-1. 직렬화 · 리플렉션
 
-- **"지금 형식만 읽기" 원칙에 걸리는 리더가 몇 남았다**(G2 보고) — id 없는 부착 · 자기 이름 부착(`ObjectStateSerializer.cpp`), 전체 상태가 실린 프리팹 엔티티(`Scene.cpp`),
-  `SceneDocument::assignMissingFileIds`, animations 키 없는 클립(`SpriteClipAsset`), 시각 없는 스탬프(`GeneratedFiles`). 일부는 지금도 만들어지는 모양(프리팹을 못 읽은 채
-  저장한 엔티티 등)이라 하나씩 "지금 쓰는 쪽이 이 모양을 만드는가" 를 보고 지운다. 시험이 그 동작을 고정하는 곳: `TestObjectStateRoundTrip`(자기 이름 부착 ·
-  루트로 저장된 둘째 씬 컴포넌트), `TestPrefab`(실린 부모 무시), `TestSpriteClipAsset`(레거시 파일).
-
 - **씬 · 프리팹 파일을 넘는 오브젝트 참조가 없다.** 파일 안에서는 엔티티 `id` 로 가리킨다. 파일을 넘는 참조가 필요해지면 오브젝트마다 영속 GUID 를 싣는다.
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
@@ -609,6 +604,8 @@ cd build/Ninja-Debug/Bin
   `AssetDatabase::writeRegistryFiles`), 파이썬 `CookAssets.py` 는 스테이징만. 쿠킹은 왕복 검증한 엔티티만 바이너리로 바꾸고 나머지는 XML 로 남기며 WARNING 을 낸다.
 - **압축** — 팩 enum `PackCompressionType` 과 스트림 enum `CompressionCodecType` 은 독립된 디스크 포맷이다(`static_cast` 로 잇지 말 것). `CompressionCodecRegistry` 는 `EngineLoop` 가 소유하고
   Core 에는 슬롯만 있다. 모듈이 등록한 코덱은 그 모듈 shutdown 에서 `unregisterCodec`. zlib 은 Windows 에서 4 GB, LZ4 는 2 GB 가 한계다.
+- **씬 엔티티는 0 이 아닌 `id` 가 필수다** — `SceneDocument::loadXml` · `saveXml` · 쿠커가 거절한다. 손으로 씬 XML 이나 `EntityNode` 를 지을 때 `_fileId` 를 빠뜨리지 말 것.
+  이름만 남은 부착(id 0 + 이름)은 찾지 못한 부모 참조를 다른 id 공간으로 옮겨 적은 **지금 형식**이라(`SceneComponent::syncAttachSerializeFields`) 지우면 안 된다.
 - **씬 · 프리팹 손 XML 을 쓰지 말 것** — 임베디드 오브젝트 XML 은 리플렉션 산출물이다. 머티리얼 XML 에서 `_permutations` 를 빼먹으면 네 백엔드가 제각각 무너져 렌더러 버그로 오인한다
   — 실제 에셋 + `setPropertyValue` 로 간다.
 
