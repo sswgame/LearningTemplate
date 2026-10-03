@@ -162,6 +162,24 @@ namespace sw
 
         struct XmlDocumentInternal
         {
+            /**
+             * @brief pugixml 의 전역 할당 함수를 sw 할당자(`Memory::allocate` · `Memory::free`)로 바꿉니다. 처음 부를 때 한 번만 하고 되돌리지 않습니다.
+             * @details pugixml 의 할당 함수는 프로세스 전역(pugixml 라이브러리 하나)입니다. 바꾸기 전에 잡은 블록을 바꾼 뒤에 풀면 sw 할당자가 남의 블록을
+             *          받으므로, 문서 트리가 하나라도 생기기 전에(`XmlDocument::Impl` 의 첫 멤버) 부릅니다. 엔진에서 pugixml 을 쓰는 곳은 이 파일뿐입니다.
+             *          되돌리지 않는 이유도 같습니다 — 종료 중에 풀리는 문서가 CRT `free` 로 sw 블록을 풀게 됩니다.
+             */
+            static bool installSwAllocator()
+            {
+                static const bool s_bInstalled = setSwAllocator();
+                return s_bInstalled;
+            }
+
+            static bool setSwAllocator()
+            {
+                pugi::set_memory_management_functions( &Memory::allocate, &Memory::free );
+                return true;
+            }
+
             static pugi::xml_node asNode( void* pPtr )
             {
                 return pugi::xml_node{ static_cast<pugi::xml_node_struct*>( pPtr ) };
@@ -242,6 +260,7 @@ namespace sw
 
     struct XmlDocument::Impl
     {
+        bool               _bSwAllocator{ XmlDocumentInternal::installSwAllocator() }; ///< `doc` 보다 먼저 선다(할당 함수를 먼저 바꾼다)
         pugi::xml_document doc;
     };
 

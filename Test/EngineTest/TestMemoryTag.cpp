@@ -17,6 +17,7 @@
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -207,4 +208,36 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveDirtyFlagsAreTagged )
     SW_EXPECT_TRUE_MSG( animationGrowth >= entryBytes + dirtyWordBytes,
                         ( sw::string( "Animation bytes grew by " ) + sw::to_string( animationGrowth ) ).c_str() );
     registry.removeInstanceBatch( &batch );
+}
+
+/**
+ * @brief [MemoryTagTest] XML 문서(pugixml)의 버퍼 · 노드 페이지는 sw 할당자로 잡혀 그때의 태그로 세인다
+ * @details pugixml 은 읽은 글을 자기 버퍼로 복사하고 노드를 페이지에 담는다. 할당 함수를 sw 할당자로 바꾸지 않으면 그 둘이 CRT 에서 잡혀
+ *          태그 줄에는 `XmlDocument::Impl` 몇백 바이트만 늘어난다.
+ */
+SW_TEST_CASE( MemoryTagTest, XmlDocumentParseIsTagged )
+{
+    if constexpr ( sw::kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    const sw::MemoryProfiler* pProfiler = sw::MemoryProfiler::getActive();
+    if ( pProfiler == nullptr || pProfiler->isTrackingEnabled() == false )
+        SW_TEST_SKIP( "no tracking memory profiler in this host" );
+
+    sw::string xmlText{ "<root>" };
+    for ( uint32 index = 0; index < 512; ++index )
+    {
+        xmlText += "<item name=\"entry\" value=\"0123456789\"/>";
+    }
+    xmlText += "</root>";
+
+    const uint64 animationBefore = getLiveBytes( *pProfiler, sw::MemoryTag::Animation );
+    uint64       animationHeld{ 0 };
+    {
+        SW_MEMORY_SCOPE( Animation );
+        sw::XmlDocument document;
+        SW_ASSERT_TRUE( document.parse( xmlText, "memorytag.xml" ) );
+        animationHeld = getLiveBytes( *pProfiler, sw::MemoryTag::Animation ) - animationBefore;
+    }
+    SW_EXPECT_TRUE_MSG( animationHeld >= xmlText.size(), ( sw::string( "Animation bytes held by the document: " ) + sw::to_string( animationHeld ) ).c_str() );
+    SW_EXPECT_TRUE( getLiveBytes( *pProfiler, sw::MemoryTag::Animation ) < animationBefore + xmlText.size() );
 }
