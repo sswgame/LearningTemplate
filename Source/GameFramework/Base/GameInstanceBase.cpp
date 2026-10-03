@@ -48,13 +48,11 @@ namespace sw
         {
             static constexpr uint32 kMagic = 0x53575354u; // 'SWST' (SW State Snapshot)
             /**
-             * @brief 봉투 버전입니다. 2 부터 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실립니다.
+             * @brief 봉투 버전입니다. 읽기도 이 판만 받습니다. 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실립니다.
              * @details 토큰이 지금 프로세스와 같으면(핫 리로드) id 를 되살리고, 다르면(다른 실행의 세이브 파일) 읽고 버립니다.
              *          다른 실행에서 나간 id 를 되살리면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문입니다.
              */
             static constexpr uint32 kVersion = 2;
-            /** @brief 오브젝트마다 id 가 실리기 시작한 버전입니다. */
-            static constexpr uint32 kFirstVersionWithIdentity = 2;
         };
     } // namespace
 } // namespace sw
@@ -267,17 +265,14 @@ namespace sw
         for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
         {
             ObjectIdentity identity;
-            if ( format != SceneObjectFormat::StateOnly )
+            const size_t   identityBytes = ObjectStateSerializer::readIdentity( pData + offset, size - offset, identity );
+            if ( identityBytes == 0 )
             {
-                const size_t identityBytes = ObjectStateSerializer::readIdentity( pData + offset, size - offset, identity );
-                if ( identityBytes == 0 )
-                {
-                    SW_LOG_ERROR( "Failed to read object identity at index %u", objectIndex );
-                    bComplete = false;
-                    break;
-                }
-                offset += identityBytes;
+                SW_LOG_ERROR( "Failed to read object identity at index %u", objectIndex );
+                bComplete = false;
+                break;
             }
+            offset += identityBytes;
 
             GameObject*       pObj = bRestoreIdentity ? pObjectManager->createGameObjectWithId( hashed_string( "GameObject" ), identity._objectId )
                                                       : pObjectManager->createGameObject();
@@ -380,12 +375,10 @@ namespace sw
         uint32 magic = 0;
         Memory::copy( &magic, pInBuffer, sizeof( uint32 ) );
 
-        // 구버전/레거시 포맷 폴백
         if ( magic != StateEnvelopeInternal::kMagic )
         {
-            const bool bOk = deserializeSceneObjects( static_cast<const uint8*>( pInBuffer ), size, SceneObjectFormat::StateOnly );
-            onAfterStateDeserialize();
-            return bOk;
+            SW_LOG_ERROR( "State snapshot has no SWST header - not written by GameInstanceBase::serializeState" );
+            return false;
         }
 
         if ( size < sizeof( uint32 ) * 4 )
@@ -396,15 +389,16 @@ namespace sw
 
         uint32 version = 0;
         arch >> version;
-
-        SceneObjectFormat format = SceneObjectFormat::StateOnly;
-        if ( version >= StateEnvelopeInternal::kFirstVersionWithIdentity )
+        if ( version != StateEnvelopeInternal::kVersion )
         {
-            uint64 processToken = 0;
-            arch >> processToken;
-            const bool bSameProcess = ( processToken == ObjectStateSerializer::getProcessToken() );
-            format                  = bSameProcess ? SceneObjectFormat::RestoreIdentity : SceneObjectFormat::WithIdentity;
+            SW_LOG_ERROR( "State snapshot version %# is not this build's %#", version, StateEnvelopeInternal::kVersion );
+            return false;
         }
+
+        uint64 processToken = 0;
+        arch >> processToken;
+        const bool              bSameProcess = ( processToken == ObjectStateSerializer::getProcessToken() );
+        const SceneObjectFormat format       = bSameProcess ? SceneObjectFormat::RestoreIdentity : SceneObjectFormat::WithIdentity;
 
         // 1) 씬 오브젝트 복원
         vector<uint8> bytesScene;

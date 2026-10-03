@@ -23,6 +23,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "EngineTest/StateReloadTestUtil.h"
 
@@ -1039,8 +1040,11 @@ SW_TEST_CASE( GameFrameworkTest, SceneObjectCountBeyondTheDataIsNotReserved )
     SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "HugeCountProbe" ) );
     const ScopedSceneGameService scopedService{ sceneManager };
 
-    // 봉투 없는(레거시) 상태 — 첫 4 바이트가 오브젝트 수다. 뒤에는 4 바이트뿐이다.
-    const uint8 arrState[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x00, 0x00 };
+    // 봉투(SWST v2 · 토큰) 안의 씬 섹션 — 첫 4 바이트가 오브젝트 수다. 뒤에는 4 바이트뿐이다.
+    const uint8 arrSceneSection[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x00, 0x00 };
+    Archive     envelope;
+    envelope << static_cast<uint32>( 0x53575354u ) << static_cast<uint32>( 2 ) << static_cast<uint64>( 0 );
+    envelope.writeSection( arrSceneSection, static_cast<uint32>( sizeof( arrSceneSection ) ) );
 
     // 할당한 바이트 누계로 본다 — 운영체제가 큰 예약을 받아 주면 그 reserve 는 실패하지 않고 조용히 수십 GB 를 잡는다.
     const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
@@ -1057,9 +1061,34 @@ SW_TEST_CASE( GameFrameworkTest, SceneObjectCountBeyondTheDataIsNotReserved )
     GameInstanceBase instance;
     SW_TEST_DEFENSIVE_SCOPE( "a truncated scene snapshot that claims four billion objects" );
     const uint64 bytesBefore = sumAllocatedBytes();
-    SW_EXPECT_FALSE( instance.deserializeState( arrState, static_cast<uint32>( sizeof( arrState ) ) ) );
+    SW_EXPECT_FALSE( instance.deserializeState( envelope.getData(), static_cast<uint32>( envelope.getSize() ) ) );
     const uint64 allocatedBytes = sumAllocatedBytes() - bytesBefore;
     SW_EXPECT_TRUE_MSG( allocatedBytes < uint64{ 1 } * 1024 * 1024, "파일이 말한 오브젝트 수만큼 미리 잡았습니다" );
+}
+
+/**
+ * @brief [GameFrameworkTest] 봉투(SWST) 없는 상태 · 지금 판이 아닌 봉투는 읽지 않는다 — 스냅샷은 `serializeState` 가 쓴 지금 판만 받는다
+ * @details 봉투 없는 버퍼를 오브젝트 상태만 실린 옛 형식으로 짐작해 읽던 갈래가 있었다. 그 형식을 쓰는 곳은 없다(핫 리로드 · 세이브 모두 봉투를 쓴다).
+ */
+SW_TEST_CASE( GameFrameworkTest, SnapshotWithoutTheCurrentEnvelopeIsRefused )
+{
+    SceneManager sceneManager;
+    SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "EnvelopeProbe" ) );
+    const ScopedSceneGameService scopedService{ sceneManager };
+
+    GameInstanceBase instance;
+    SW_TEST_DEFENSIVE_SCOPE( "a state snapshot without the current envelope" );
+
+    // 봉투 없이 오브젝트 0 개 — 옛 형식으로 짐작하면 빈 씬으로 "성공" 한다.
+    const uint8 arrBare[4] = { 0x00, 0x00, 0x00, 0x00 };
+    SW_EXPECT_FALSE( instance.deserializeState( arrBare, static_cast<uint32>( sizeof( arrBare ) ) ) );
+
+    // 봉투 v1 — 토큰도 id 도 없던 판.
+    Archive envelopeV1;
+    envelopeV1 << static_cast<uint32>( 0x53575354u ) << static_cast<uint32>( 1 );
+    envelopeV1.writeSection( arrBare, static_cast<uint32>( sizeof( arrBare ) ) );
+    envelopeV1.writeSection( nullptr, 0 );
+    SW_EXPECT_FALSE( instance.deserializeState( envelopeV1.getData(), static_cast<uint32>( envelopeV1.getSize() ) ) );
 }
 
 /**

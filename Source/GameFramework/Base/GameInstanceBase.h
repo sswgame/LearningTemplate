@@ -114,7 +114,6 @@ namespace sw
         /** @brief `deserializeSceneObjects` 가 읽는 씬 오브젝트 데이터의 형식입니다. */
         enum class SceneObjectFormat : uint8
         {
-            StateOnly,      ///< 오브젝트마다 상태만 있습니다(봉투 v1 과 그 이전). 새 id 를 받습니다.
             WithIdentity,   ///< 오브젝트마다 id + 상태. 다른 실행에서 찍은 것이라 id 는 읽고 버립니다(새 id).
             RestoreIdentity ///< 오브젝트마다 id + 상태. 같은 프로세스에서 찍었으므로 원래 id 를 되살립니다(핫 리로드).
         };
