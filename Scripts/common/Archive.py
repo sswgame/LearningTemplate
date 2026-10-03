@@ -7,7 +7,6 @@ Scripts/common/Archive.py
 from __future__ import annotations
 
 import hashlib
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -196,16 +195,3 @@ def ensureCachedDownload(url: str,
         raise RuntimeError(f"[{label}] SHA256 mismatch for {destPath}")
     writeSidecarInternal(expectedHash or digest)
     return destPath
-
-
-def wipeDirContents(path: Path) -> None:
-    """
-    지정된 디렉터리 내부의 모든 파일과 하위 폴더를 깨끗하게 삭제합니다.
-    """
-    if not path.is_dir():
-        return
-    for child in path.iterdir():
-        if child.is_dir():
-            shutil.rmtree(child, ignore_errors=True)
-        else:
-            child.unlink(missing_ok=True)

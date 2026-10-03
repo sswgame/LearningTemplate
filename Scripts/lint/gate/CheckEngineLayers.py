@@ -14,9 +14,7 @@ Engine 레이어 금지 include 검사.
 경고로 찍고 실패시키지 않았다 — 근거 없는 목록이라 늘릴 기준도 없고, 실패하지 않으니 쌓여도
 아무도 몰랐다. 지금은 전체 그래프를 Tarjan SCC 로 줄이고 위상 순서를 티어로 쓴다.
 
-  python Scripts/lint/gate/CheckEngineLayers.py [--root <repo>] [--strict]
-
-(--strict 는 남겨 두었지만 이제 기본 동작과 같다. 티어 위반은 항상 실패다.)
+  python Scripts/lint/gate/CheckEngineLayers.py [--root <repo>]
 """
 
 from __future__ import annotations
@@ -262,9 +260,6 @@ class CheckEngineLayersGate(LintGate):
             },
         },
     ]
-
-    def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--strict", action="store_true", help="(옛 옵션) 티어 위반은 이제 항상 실패한다")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         engineDir = repositoryRoot / kDirSourceEngine

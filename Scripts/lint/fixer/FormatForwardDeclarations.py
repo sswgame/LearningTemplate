@@ -189,12 +189,6 @@ class FormatForwardDeclarationsFixer(LintFixer):
     )
 
 
-_gFixer = FormatForwardDeclarationsFixer()
-
-#: 옛 이름 — `PreCommitLint` · `FormatModified` · `RunClangFormat` 이 이 철자로 부른다.
-processFile = _gFixer.processFile
-formatForwardDeclarationsBatch = _gFixer.processFiles
-
 main = FormatForwardDeclarationsFixer.run
 
 

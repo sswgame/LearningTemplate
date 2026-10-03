@@ -189,13 +189,14 @@ def main() -> int:
     stagedCppFiles = getStagedCppFiles(projectRoot)
     if stagedCppFiles:
         print("\n[픽서] 전방 선언 순서 · 분기 중괄호 검사...")
+        listFixer = (
+            (FormatForwardDeclarations.FormatForwardDeclarationsFixer(), "전방 선언"),
+            (FormatBranchBraces.FormatBranchBracesFixer(), "분기 중괄호"),
+        )
         for filePath in stagedCppFiles:
-            for processFile, label in (
-                (FormatForwardDeclarations.processFile, "전방 선언"),
-                (FormatBranchBraces.processFile, "분기 중괄호"),
-            ):
+            for fixer, label in listFixer:
                 try:
-                    listViolation = processFile(filePath, checkOnly=True)
+                    listViolation = fixer.processFile(filePath, checkOnly=True)
                 except Exception as exception:
                     print(f"  [Warning] {filePath.relative_to(projectRoot)} {label} 검사 중 오류: {exception}")
                     continue

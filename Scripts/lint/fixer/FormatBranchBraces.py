@@ -409,12 +409,6 @@ class FormatBranchBracesFixer(LintFixer):
     )
 
 
-_gFixer = FormatBranchBracesFixer()
-
-#: 옛 이름 — `PreCommitLint` · `FormatModified` · `RunClangFormat` 이 이 철자로 부른다.
-processFile = _gFixer.processFile
-formatBranchBracesBatch = _gFixer.processFiles
-
 main = FormatBranchBracesFixer.run
 
 

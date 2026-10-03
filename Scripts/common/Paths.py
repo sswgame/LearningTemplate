@@ -17,17 +17,6 @@ from typing import Dict, Optional
 PathLike = str | Path
 
 
-def ensureScriptsOnPath() -> Path:
-    """
-    Scripts/ 디렉터리가 파이썬 탐색 경로(sys.path)에 없으면 중복되지 않게 추가합니다.
-    """
-    scriptsDir = Path(__file__).resolve().parents[1]
-    scriptsPathString = str(scriptsDir)
-    if scriptsPathString not in sys.path:
-        sys.path.insert(0, scriptsPathString)
-    return scriptsDir
-
-
 @functools.lru_cache(maxsize=1)
 def getProjectRoot() -> Path:
     """
@@ -47,20 +36,6 @@ def normalizePath(pathString: PathLike) -> str:
     if isinstance(pathString, str) and not pathString:
         return ""
     return Path(pathString).as_posix()
-
-
-def joinPath(root: PathLike, *relativeParts: PathLike) -> str:
-    """
-    루트와 상대 구간을 POSIX `/` 로 이어 붙입니다. root가 비면 empty.
-    """
-    if isinstance(root, str) and not root:
-        return ""
-    result = Path(root)
-    for part in relativeParts:
-        if isinstance(part, str) and not part:
-            continue
-        result = result / part
-    return result.as_posix()
 
 
 def startsWithPathComponent(path: PathLike, component: PathLike) -> bool:

@@ -56,7 +56,7 @@ def main() -> int:
 
     # 2. Forward Declaration 정렬 (enum -> struct -> class 및 그룹 간 빈 줄 삽입)
     print("\n[2/4] Forward Declaration 순서 및 그룹 정렬 중...")
-    fwdResults = FormatForwardDeclarations.formatForwardDeclarationsBatch(modifiedFiles, checkOnly=False)
+    fwdResults = FormatForwardDeclarations.FormatForwardDeclarationsFixer().processFiles(modifiedFiles, checkOnly=False)
     if fwdResults:
         for msg in fwdResults:
             print(f"  - {msg}")
@@ -65,7 +65,7 @@ def main() -> int:
 
     # 3. 한 줄짜리 if 본문의 중괄호 제거 (clang-format 이 되돌리지 않는다)
     print("\n[3/4] 한 줄짜리 if 본문의 중괄호 정리 중...")
-    braceResults = FormatBranchBraces.formatBranchBracesBatch(modifiedFiles, checkOnly=False)
+    braceResults = FormatBranchBraces.FormatBranchBracesFixer().processFiles(modifiedFiles, checkOnly=False)
     if braceResults:
         for msg in braceResults:
             print(f"  - {msg}")
