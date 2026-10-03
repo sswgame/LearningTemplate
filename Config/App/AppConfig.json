@@ -192,6 +192,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_AsymmetricHorror",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
