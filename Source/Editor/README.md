@@ -22,7 +22,7 @@
     로만 받습니다 — 백엔드 디바이스 클래스로 캐스팅하지 않습니다.
 - **Gui/**: ImGui 를 **직접 그리는** 공용 셸 — `EditorChrome`, `EditorMenuBar`, `EditorDockLayout`,
   `EditorDocumentPanel`, `EditorThemeUtil`, `EditorFontSetup`, `EditorNotificationManager`(토스트), `EditorPanelDump`(아래 "그려진 결과"),
-  `EditorActionMenuManager`(우클릭 메뉴), `EditorCommandGui`(커맨드 표 · 전역 단축키 · 메뉴 항목),
+  `EditorCommandGui`(커맨드 표 · 전역 단축키 · 메뉴 항목),
   인터페이스 `IEditorPanel` / `IEditorPopup`
 - **Widgets/**: 검색, 헤더, 툴바 구분선, 노드 그래프 캔버스(`EditorNodeGraph`), 뷰포트 입력 오버레이
 - **Workspace/**: ImGui 없는 **상태** — 컨텍스트·선택·트랜잭션(Undo)·서비스 로케이터·애셋 종류 ·

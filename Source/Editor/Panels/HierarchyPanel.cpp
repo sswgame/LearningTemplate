@@ -7,7 +7,6 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorUtil.h"
-#include "Editor/Common/Gui/EditorActionMenuManager.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -301,10 +300,6 @@ namespace sw::editor
                         ImGui::EndDisabled();
                     }
                 }
-
-                // 동적 확장 메뉴
-                if ( pContext != nullptr )
-                    pContext->getActionMenuManager().drawActionMenu( ActionMenuLocation::Hierarchy );
 
                 ImGui::Separator();
                 if ( ImGui::MenuItem( "Destroy GameObject", "Delete" ) )
@@ -623,10 +618,6 @@ namespace sw::editor
             {
                 if ( ImGui::MenuItem( "Create Empty GameObject" ) )
                     EditorSceneCommands::create( pManager, nullptr );
-
-                EditorContext* pMenuContext = EditorContext::get();
-                if ( pMenuContext != nullptr )
-                    pMenuContext->getActionMenuManager().drawActionMenu( ActionMenuLocation::Hierarchy );
                 ImGui::EndPopup();
             }
         }

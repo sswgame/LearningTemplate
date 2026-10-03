@@ -12,7 +12,6 @@
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorData.h"
-#include "Editor/Common/Gui/EditorActionMenuManager.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -77,7 +76,6 @@ namespace sw::editor
         _pSelectionManager          = make_unique<SelectionManager>();
         _pWorkspace                 = make_unique<EditorWorkspace>( _pSelectionManager.get() );
         _pNotificationManager       = make_unique<EditorNotificationManager>();
-        _pActionMenuManager         = make_unique<EditorActionMenuManager>();
         _pCommandRegistry           = make_unique<EditorCommandRegistry>();
         _pPanelManager              = make_unique<EditorPanelManager>();
         _pPopupManager              = make_unique<EditorPopupManager>();
@@ -110,7 +108,6 @@ namespace sw::editor
         _pPopupManager.reset();
         _pPanelManager.reset();
         _pCommandRegistry.reset();
-        _pActionMenuManager.reset();
         _pNotificationManager.reset();
         _pWorkspace.reset();
         _pSelectionManager.reset();

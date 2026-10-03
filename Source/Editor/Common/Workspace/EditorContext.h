@@ -13,7 +13,6 @@ namespace sw
 namespace sw::editor
 {
     class AssetHotReload;
-    class EditorActionMenuManager;
     class EditorCommandRegistry;
     class EditorNotificationManager;
     class EditorPanelManager;
@@ -56,7 +55,6 @@ namespace sw::editor
         SelectionManager&          getSelectionManager() { return *_pSelectionManager; }
         EditorWorkspace&           getWorkspace() { return *_pWorkspace; }
         EditorNotificationManager& getNotificationManager() { return *_pNotificationManager; }
-        EditorActionMenuManager&   getActionMenuManager() { return *_pActionMenuManager; }
         EditorCommandRegistry&     getCommandRegistry() { return *_pCommandRegistry; }
         EditorPanelManager&        getPanelManager() { return *_pPanelManager; }
         EditorPopupManager&        getPopupManager() { return *_pPopupManager; }
@@ -88,7 +86,6 @@ namespace sw::editor
         unique_ptr<SelectionManager>          _pSelectionManager;
         unique_ptr<EditorWorkspace>           _pWorkspace;
         unique_ptr<EditorNotificationManager> _pNotificationManager;
-        unique_ptr<EditorActionMenuManager>   _pActionMenuManager;
         unique_ptr<EditorCommandRegistry>     _pCommandRegistry;
         unique_ptr<EditorPanelManager>        _pPanelManager;
         unique_ptr<EditorPopupManager>        _pPopupManager;
