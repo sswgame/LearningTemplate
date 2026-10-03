@@ -79,6 +79,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   - `WitcherRpg`: 위쳐 RPG(위쳐 3 장르) — 괴물 도감 지식 · 해금된 약점 · 속성 배율(`WitcherBestiary`), 연금술 · 독성 · 변이 혼합물 · 명상 보충 · 오일(`WitcherAlchemy`), 표식 · 대체 시전 · 스태미나 · 아드레날린(`WitcherCombat`), 변이 슬롯 색 맞춤(`WitcherMutagens`), 계약 단서 순서 · 보상 흥정(`WitcherContract`).
   - `CreatureLife`: 생물 생활(포코피아 · 문스톤 아일랜드 장르) — 칸 패턴 서식지 레시피(회전 · 큰 것 먼저), 시간대 · 날씨 방문(결정적), 생물별 호감도(`ReputationState`) · 부탁(`QuestLog`), 능력 칸 변환 · 하루 횟수, 집 배정, 마을 매력도 단계(`CreatureTown`).
   - `RestaurantSim`: 식당 경영(셰프 RPG 장르) — 메뉴(Crafting 레시피 · 숙련도 품질), 재료 신선도 묶음(`IngredientStock`), 시장 시세, 손님 도착 · 성향 · 인내, 요리사 · 스테이션 병렬 조리, 서빙 · 계산 · 팁, 별점 이동 평균, 일 결산(`RestaurantSimulation`).
+  - `SurvivalHorror`: 생존 공포 · 조사(바이오하자드 · 홀스틴 · 애니그마 오브 피어 장르) — 격자 가방(`HorrorGridInventory`), 아이템 상자 · 조합 · 세이브 제한 · 정신력/손전등 · 열쇠 문 · 다이얼/순서 퍼즐 · 단서 보드 추리(`HorrorSession`), 턴제 초자연 전투(`HorrorEncounter`).
   - `ThemePark`: 롤러코스터 타이쿤 — 조각으로 쌓는 코스터 트랙(`CoasterTrackBuilder`: 오르막 체인 · 낙하 · 언덕 · 뱅크 회전 · 클로소이드 루프 ·
     브레이크 · 부스터, XML 레이아웃), 고정 스텝 열차 물리(`CoasterTrain`), 시험 운행으로 흥분 · 강도 · 멀미 평가(`CoasterRideAnalyzer`),
     손님 · 줄 · 표 · 입장료 · 운영비 · 공원 평점 경영 시뮬레이션(`ThemeParkSimulation`).

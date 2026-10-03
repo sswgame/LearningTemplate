@@ -114,6 +114,12 @@
             "_listDependencyModule": [
                 "GameFramework"
             ]
+        },
+        {
+            "_name": "GF_SurvivalHorror",
+            "_listDependencyModule": [
+                "GameFramework"
+            ]
         }
     ]
 }
