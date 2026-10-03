@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Core/Concurrency/ConcurrentQueue.h"
-#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Input/ActionMap.h"
@@ -1116,8 +1115,8 @@ SW_TEST_CASE( RawInputEventTest, TextPayloadTruncatesAtUtf8Boundary )
 /**
  * @brief [InputManagerTest] 모듈 이미지를 내리기 전의 정리는 입력 관리자의 콜백 넷 · 장치의 콜백 · 모듈이 등록한 장치를 뗀다
  * @details 입력 관리자는 모듈보다 오래 산다. 모듈이 단 콜백(장치 변경 · 게임패드 연결 · 글자 입력 · 조합, 키보드의 글자 입력)과 모듈이 등록한 장치(vtable 이
- *          그 이미지)는 이미지를 내린 뒤 부르면 내려간 코드로 뛴다. 여기서는 이 실행 파일의 이미지를 "모듈" 로 삼는다 — 엔진이 단 것(게임패드 슬롯의 연결
- *          콜백)은 범위 밖이라 그대로 남아야 한다.
+ *          그 이미지)는 이미지를 내린 뒤 부르면 내려간 코드로 뛴다. 범위는 콜백 스텁 · 장치 vtable 하나씩으로 좁힌다 — 배포 구성은 엔진까지 한 실행
+ *          파일이라 이미지 통째로 주면 엔진의 장치까지 내린다. 범위 밖(엔진이 단 게임패드 슬롯의 연결 콜백 · 엔진 장치)은 그대로 남아야 한다.
  */
 SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTheImage )
 {
@@ -1127,31 +1126,46 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
     SW_ASSERT_TRUE( input.initialize() );
     SW_ASSERT_NOT_NULL( input.getKeyboard() );
 
-    input.setActiveDeviceChangedCallback( SW_DELEGATE_FUNCTION( sw::InputManager::ActiveDeviceChangedDelegate, onProbeActiveDeviceChanged ) );
-    input.setGamepadConnectionCallback( SW_DELEGATE_FUNCTION( sw::InputManager::GamepadConnectionDelegate, onProbeGamepadConnection ) );
-    input.setTextInputCallback( SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onProbeTextInput ) );
-    input.setTextCompositionCallback( SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onProbeTextComposition ) );
-    input.getKeyboard()->setTextInputCallback( SW_DELEGATE_FUNCTION( sw::KeyboardDevice::TextInputDelegate, onProbeKeyboardText ) );
+    const sw::InputManager::ActiveDeviceChangedDelegate onActive       = SW_DELEGATE_FUNCTION( sw::InputManager::ActiveDeviceChangedDelegate, onProbeActiveDeviceChanged );
+    const sw::InputManager::GamepadConnectionDelegate   onConnection   = SW_DELEGATE_FUNCTION( sw::InputManager::GamepadConnectionDelegate, onProbeGamepadConnection );
+    const sw::InputManager::TextInputDelegate           onText         = SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onProbeTextInput );
+    const sw::InputManager::TextInputDelegate           onComposition  = SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onProbeTextComposition );
+    const sw::KeyboardDevice::TextInputDelegate         onKeyboardText = SW_DELEGATE_FUNCTION( sw::KeyboardDevice::TextInputDelegate, onProbeKeyboardText );
+    input.setActiveDeviceChangedCallback( onActive );
+    input.setGamepadConnectionCallback( onConnection );
+    input.setTextInputCallback( onText );
+    input.setTextCompositionCallback( onComposition );
+    input.getKeyboard()->setTextInputCallback( onKeyboardText );
     sw::unique_ptr<ProbeInputDevice> pProbe    = sw::make_unique<ProbeInputDevice>();
     ProbeInputDevice*                pProbeRaw = pProbe.get();
+    const uint8*                     pVtable   = static_cast<const uint8*>( sw::IModuleCodeHolder::findVtableAddress( static_cast<const sw::IInputDevice*>( pProbeRaw ) ) );
     input.registerDevice( std::move( pProbe ) );
     SW_EXPECT_TRUE( input.getDevice( sw::InputDeviceKind::Custom ) == pProbeRaw );
 
-    const void* pImageBegin{ nullptr };
-    const void* pImageEnd{ nullptr };
-    SW_ASSERT_TRUE( sw::FileUtil::findLoadedImageRange( reinterpret_cast<const void*>( &onProbeTextInput ), pImageBegin, pImageEnd ) );
-    bool bKeepImageMapped{ false };
-    SW_EXPECT_EQUAL( 6u, input.releaseModuleCodeWithin( pImageBegin, pImageEnd, bKeepImageMapped ) );
+    bool        bKeepImageMapped{ false };
+    const void* arrCode[] = { onActive.getCodeAddress(), onConnection.getCodeAddress(), onText.getCodeAddress(), onComposition.getCodeAddress(),
+                              onKeyboardText.getCodeAddress() };
+    for ( const void* pCode : arrCode )
+    {
+        const uint8* pStub = static_cast<const uint8*>( pCode );
+        SW_EXPECT_EQUAL( 1u, input.releaseModuleCodeWithin( pStub, pStub + 1, bKeepImageMapped ) );
+    }
+    SW_EXPECT_EQUAL( 1u, input.releaseModuleCodeWithin( pVtable, pVtable + 1, bKeepImageMapped ) );
     SW_EXPECT_FALSE( bKeepImageMapped );
     SW_EXPECT_TRUE( input.getDevice( sw::InputDeviceKind::Custom ) == nullptr );
+    SW_EXPECT_TRUE( input.getKeyboard() != nullptr && input.getMouse() != nullptr ); // 엔진 장치는 그대로다
 
-    // 뗀 뒤에는 아무것도 불리지 않는다. 두 번째 훑기는 뗄 것이 없다.
+    // 뗀 뒤에는 아무것도 불리지 않는다. 같은 범위의 두 번째 훑기는 뗄 것이 없다.
     s_inputProbeValue = 0;
     input.onTextInput( "a" );
     input.onTextComposition( "b" );
     input.getKeyboard()->notifyTextInput( "c" );
     input.setActiveDeviceType( sw::InputDeviceType::GamepadXbox );
     SW_EXPECT_EQUAL( 0, s_inputProbeValue );
-    SW_EXPECT_EQUAL( 0u, input.releaseModuleCodeWithin( pImageBegin, pImageEnd, bKeepImageMapped ) );
+    for ( const void* pCode : arrCode )
+    {
+        const uint8* pStub = static_cast<const uint8*>( pCode );
+        SW_EXPECT_EQUAL( 0u, input.releaseModuleCodeWithin( pStub, pStub + 1, bKeepImageMapped ) );
+    }
     input.shutdown();
 }
