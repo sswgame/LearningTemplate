@@ -25,9 +25,8 @@ namespace sw
             }
             case DialogueNodeOutput::Choice:
                 return asset.findChoiceNextNodeId( node._id, input._choiceIndex );
-            default:
-                return 0;
         }
+        return 0;
     }
 
     DialogueAssetNode DialogueCursor::makeNode( DialogueAssetNodeType type, int32 nodeId )
@@ -59,7 +58,6 @@ namespace sw
                 break;
             }
             case DialogueNodeBody::None:
-            default:
                 break;
         }
 

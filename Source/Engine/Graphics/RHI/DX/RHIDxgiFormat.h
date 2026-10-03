@@ -45,8 +45,6 @@ namespace sw
                 return DXGI_FORMAT_BC5_UNORM;
             case RHIFormat::BC7_UNORM:
                 return DXGI_FORMAT_BC7_UNORM;
-            default:
-                break;
         }
         SW_LOG_ASSERT( false, "Unsupported RHIFormat: %#", static_cast<uint32>( format ) );
         return DXGI_FORMAT_UNKNOWN;

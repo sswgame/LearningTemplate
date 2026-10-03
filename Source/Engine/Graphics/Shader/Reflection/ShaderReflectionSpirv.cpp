@@ -137,7 +137,6 @@ namespace sw
                     case SpirvType::Kind::Sampler:
                     case SpirvType::Kind::SampledImage:
                     case SpirvType::Kind::RuntimeArray:
-                    default:
                     {
                         outSize = 4;
                         return "Float";

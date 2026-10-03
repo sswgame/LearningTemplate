@@ -35,7 +35,6 @@ namespace sw
                     case RHIBufferState::Index:
                         return D3D12_RESOURCE_STATE_INDEX_BUFFER;
                     case RHIBufferState::Common:
-                    default:
                         return D3D12_RESOURCE_STATE_COMMON;
                 }
             }

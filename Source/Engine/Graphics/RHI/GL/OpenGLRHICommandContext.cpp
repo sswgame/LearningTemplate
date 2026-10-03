@@ -22,9 +22,8 @@ namespace sw
                     return GL_LINES;
                 case RHIPrimitiveTopology::PointList:
                     return GL_POINTS;
-                default:
-                    return GL_TRIANGLES;
             }
+            return GL_TRIANGLES;
         }
     } // namespace
 
@@ -307,7 +306,6 @@ namespace sw
                 break;
             }
             case RHIBufferState::Common:
-            default:
                 break;
         }
     }

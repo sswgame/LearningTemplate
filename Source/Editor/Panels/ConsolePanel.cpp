@@ -32,7 +32,6 @@ namespace sw::editor
                     case LogLevel::Trace:
                         return ImVec4( 0.6f, 0.6f, 0.6f, 1.0f );
                     case LogLevel::Count:
-                    default:
                         return ImVec4( 1.0f, 1.0f, 1.0f, 1.0f );
                 }
             }
@@ -169,7 +168,6 @@ namespace sw::editor
                     break;
                 }
                 case LogLevel::Count:
-                default:
                     break;
             }
         }

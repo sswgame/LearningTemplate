@@ -157,9 +157,8 @@ namespace sw
             case StreamingPriority::High:
             case StreamingPriority::Immediate:
                 return TaskPriority::Normal;
-            default:
-                return TaskPriority::Low;
         }
+        return TaskPriority::Low;
     }
 
     void AssetStreamingQueue::startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData, StreamingPriority priority )

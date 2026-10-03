@@ -110,8 +110,6 @@ namespace sw::editor
                         color                         = IM_COL32( ( rgb >> 16 ) & 0xFFu, ( rgb >> 8 ) & 0xFFu, rgb & 0xFFu, 255 );
                         break;
                     }
-                    default:
-                        break;
                 }
 
                 const float32 fx = static_cast<float32>( tileX );
@@ -351,8 +349,6 @@ namespace sw::editor
                 }
                 break;
             }
-            default:
-                break;
         }
         notifyDocumentEdited( "Paint Tile Map", "tilemap-paint" );
     }

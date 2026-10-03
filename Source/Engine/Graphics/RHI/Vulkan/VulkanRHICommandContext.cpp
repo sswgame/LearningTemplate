@@ -76,7 +76,6 @@ namespace sw
                     break;
                 }
                 case RHIBufferState::Common:
-                default:
                 {
                     access = 0;
                     stage  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;

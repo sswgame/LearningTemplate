@@ -60,11 +60,6 @@ namespace sw::editor
                 boxMin = ImVec2( viewportScreenPos.x + margin, viewportScreenPos.y + margin );
                 break;
             }
-            default:
-            {
-                boxMin = ImVec2( viewportScreenPos.x + viewportSize.x - boxW - margin, viewportScreenPos.y + viewportSize.y - boxH - margin );
-                break;
-            }
         }
         const ImVec2 boxMax = ImVec2( boxMin.x + boxW, boxMin.y + boxH );
 

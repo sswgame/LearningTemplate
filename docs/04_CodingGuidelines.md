@@ -113,6 +113,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 ### 분기문 및 초기화 규칙
 - 본문이 한 줄인 `if` 는 중괄호를 생략합니다. `else` / `else if` 가 붙은 사슬은 **모든 갈래가 한 줄일 때만** 생략하고, 한 갈래라도 여러 줄이면 전부 중괄호를 유지합니다.
 - 반복문(`for` / `while` / `do`)은 본문이 한 줄이어도 **항상 중괄호를 유지**합니다. `Scripts/lint/fixer/FormatBranchBraces.py` 가 `if` 계열만 정리하며, clang-format 의 `RemoveBracesLLVM` 은 반복문까지 벗겨내므로 쓰지 않습니다.
+- enum 을 `switch` 할 때 **모든 열거자를 다루면 `default:` 를 두지 않습니다**(LLVM 코딩 표준). 그래야 열거자를 늘리고 `case` 를 빠뜨리면 `-Werror=switch` 가 빌드를 세웁니다. 다 다뤘는데 `default:` 가 있으면 그 검사가 꺼지므로 그것 자체가 오류입니다(`-Werror=covered-switch-default`). 일부 열거자만 다루는 switch 는 `default:` 를 쓰고 나머지를 나열하지 않습니다(`-Wswitch-enum` · `-Wswitch-default` 는 끕니다). 범위 밖 값은 들어오는 자리(역직렬화가 모르는 열거자를 거절)에서 막고, 모든 `case` 에서 반환하는 함수는 switch 뒤에 폴백을 반환합니다. 파일마다 `#pragma` 로 switch 경고를 바꾸지 않습니다.
 - `switch` 의 `case` / `default` 는 본문이 **두 문장 이상이면 중괄호를 씌우고**, 한 문장이면 씌우지 않습니다. `break;` 도 한 문장으로 세므로 `case A:` 아래에 문장 하나와 `break;` 가 오면 중괄호를 씌우며, `case A: return X;` 는 그대로 둡니다. `break;` 는 중괄호 **안**에 둡니다. 본문에 전처리기 지시문이 끼어 있으면 건드리지 않습니다 — 본문의 끝이 글자만으로 정해지지 않아 여는 중괄호와 닫는 중괄호가 `#if` 의 반대편에 놓일 수 있습니다. 같은 스크립트가 자동 정리하며, clang-format 의 `InsertBraces` 는 case 라벨을 보지 않아 이 규칙을 표현하지 못합니다.
 - 부울(bool) 타입이 아닌 포인터 등은 명시적으로 `== nullptr` 혹은 `== false` 로 비교하세요. `!_bValid` 보다는 `_bValid == false` 를 권장합니다.
 - 비트 필드(bit field) 플래그(예: `uint8 _bFlag : 1;`)는 `true`/`false` 대신 `SW_TRUE`(1) / `SW_FALSE`(0)를 사용하여 대입 및 비교합니다.

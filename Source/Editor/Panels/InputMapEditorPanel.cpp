@@ -175,9 +175,8 @@ namespace sw::editor
                         return "PlayStation Gamepad";
                     case InputDeviceType::GamepadSwitch:
                         return "Nintendo Switch Gamepad";
-                    default:
-                        return "Unknown";
                 }
+                return "Unknown";
             }
 
             /** @brief 게임패드 배터리 잔량의 표시 이름입니다. */
@@ -193,9 +192,8 @@ namespace sw::editor
                         return "Medium";
                     case GamepadBatteryLevel::Full:
                         return "Full (100%)";
-                    default:
-                        return "Unknown";
                 }
+                return "Unknown";
             }
         };
     } // namespace

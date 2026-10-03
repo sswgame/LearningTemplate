@@ -68,7 +68,6 @@ namespace sw
                 case RHIFormat::BC7_UNORM:
                     return VK_FORMAT_BC7_UNORM_BLOCK;
                 case RHIFormat::Unknown: ///< 첨부 없음. Vulkan 에는 대응 값이 없다.
-                default:
                     break;
             }
             return VK_FORMAT_UNDEFINED;

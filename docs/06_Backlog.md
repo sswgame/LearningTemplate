@@ -116,12 +116,6 @@ cd build/Ninja-Debug/Bin
   `Renderer/Bake/`→`Renderer/Cook/`, `--bake-shaders`→`--cook-shaders`(옛 철자 없음), `bake.stamp`→`cook.stamp`, `TextureBaker`→`TextureImporter`(이미 `TextureImportConfig` ·
   `TextureImportRule` 과 짝), `BakeShippingHostDefaults.py`→`GenerateShippingHostDefaults.py`, 주석 · 문서의 "굽다"도 같은 구분으로. `ResourceManager`→`AssetManager`
   ("Resource" 는 디스크 트리 · 팩, "Asset" 은 읽은 객체), `EngineData`/`GameData`/`EditorData`→`EngineDefaultAssets`/`GameSettings`/`EditorToolDefaults`.
-- **enum switch 규칙을 LLVM 방식으로**(사용자 질문 2026-10-03 "default 요구 안 하는 게 낫나?" → 낫다): 모든 열거자를 다루는 switch 에는 `default:` 를 **두지 않고**
-  `-Werror=switch`(clang · GCC 의 -Wall 에 이미 있다)가 빠진 열거자를 잡게 한다 — `-Werror=covered-switch-default`(다 다뤘는데 default 가 있으면 오류),
-  `-Wno-switch-default` · `-Wno-switch-enum`(일부만 다루는 switch 는 default 를 써도 된다 — 지금은 clang-cl 의 -Wall(-Weverything) 때문에 쓸데없는 열거자까지 다 적는다).
-  값이 범위를 벗어나는 것은 입력 경계(역직렬화가 모르는 열거자를 거절)에서 막고, 반환이 있는 함수는 switch 뒤 `SW_UNREACHABLE` 류. 그러면 파일별
-  `#pragma clang diagnostic error "-Wswitch-enum"`(ActionMapGlyph.cpp · DialogueRunnerComponent.cpp)과 AGENTS 의 default 요구가 사라진다. cmake/Modules/Compiler 를
-  archmacro 워크트리가 고치는 중이라 그 병합 뒤에. 고칠 자리는 `-Wno-covered-switch-default` 를 뺀 빌드가 전부 짚어 준다.
 - **case 중괄호 일관성 규칙**(한 switch 안에서 한 case 라도 중괄호면 모두) — 픽서 패치 준비됨(스크래치), 39 파일 다시 쓰기 + AGENTS.md · 04 규칙 문장.
 - **한 파일에 클래스가 여럿이면 클래스마다 `namespace sw { }` 블록을 나눈다** — 규칙 + 가능하면 게이트, 트리 전체 적용.
 - **시험 코드의 `std::chrono` 직접 읽기 70 여 곳 → 엔진 시계(`CpuClock` 계열, 이름 변경 뒤 `MonotonicClock`)** + 직접 읽기를 막는 게이트.
@@ -451,6 +445,15 @@ cd build/Ninja-Debug/Bin
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
+
+- **enum switch 는 LLVM 방식**: 모든 열거자를 다루면 `default:` 없음(`-Werror=switch` 가 빠진 case 를, `-Werror=covered-switch-default` 가 다 다룬 switch 의
+  default 를 잡는다), 일부만 다루면 `default:`(`-Wno-switch-enum` · `-Wno-switch-default`). 파일별 `#pragma` 로 switch 경고를 바꾸지 않는다. 외부 헤더는 `SYSTEM`
+  include 여야 이 규칙이 그 안에 걸리지 않는다(ReflectionParser 의 nlohmann-json 이 일반 `-I` 였다).
+- **플랫폼 · 아키텍처 · 컴파일러는 SW_ 매크로로만 묻는다** — 컴파일러 내장 매크로(`_M_X64` · `__clang__` · `_MSC_VER` …)를 읽는 곳은
+  `Core/Common/TargetMacroCheck.h` 하나(CMake 판정과 대조해 `#error`), 나머지는 `CheckTargetMacros` 게이트가 막는다. 아키텍처 판정은
+  `CMAKE_CXX_COMPILER_ARCHITECTURE_ID` 기준(교차 컴파일에서 `CMAKE_SYSTEM_PROCESSOR` 는 틀린다). "MSVC 확장을 쓸 수 있는가" 는 `SW_PLATFORM_WINDOWS`
+  로 묻는다(clang-cl 도 그렇다 — `SW_COMPILER_MSVC` 로 물으면 clang-cl 이 다른 갈래로 간다). MinGW 를 지원하면 이 전제와 검사 헤더를 함께 바꾼다.
+  ReflectionParser(libclang)는 CMake 를 거치지 않으므로 `ParserConfig::load` 가 대상 매크로를 넘긴다. Linux arm64 · macOS 갈래는 실제 빌드로 확인된 적이 없다.
 
 - **패딩은 `RunPaddingReport.py`(libclang + 컴파일 DB 플래그) 로 본다** — clang-cl(MS ABI)은 `-Wpadded` 를 내지 않고 `-fdump-record-layouts` 는 필드 위치를 안 준다.
   libclang 에는 `-resource-dir` 를 직접 줘야 한다(안 주면 MSVC `offsetof` 가 상수식이 아니어서 constexpr 표가 오류로 무너진다). 줄인 타입의 회귀는 "크기 ≤ 필드 합을

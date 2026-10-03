@@ -153,8 +153,7 @@ namespace sw
                     return true;
                 return evaluateExpr( expr._listSubExpr[0], container ) == false;
             }
-            default:
-                return false;
         }
+        return false;
     }
 } // namespace sw

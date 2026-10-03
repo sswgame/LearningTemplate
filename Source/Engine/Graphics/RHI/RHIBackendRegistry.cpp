@@ -114,9 +114,8 @@ namespace sw
                         return tryLoadBackendModule( RHIBackend::OpenGL, "RHI_GL" );
                     case RHIBackend::Vulkan:
                         return tryLoadBackendModule( RHIBackend::Vulkan, "RHI_Vulkan" );
-                    default:
-                        return false;
                 }
+                return false;
             }
 #endif
         };

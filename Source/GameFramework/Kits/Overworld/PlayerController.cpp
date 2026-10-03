@@ -152,8 +152,6 @@ namespace sw
                 ++outX;
                 break;
             }
-            default:
-                break;
         }
     }
 

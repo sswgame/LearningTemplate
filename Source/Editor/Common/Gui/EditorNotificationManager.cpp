@@ -91,7 +91,6 @@ namespace sw::editor
                     break;
                 }
                 case NotificationType::Info:
-                default:
                 {
                     borderColor = ImVec4{ 0.2f, 0.5f, 0.9f, alpha };
                     titleColor  = ImVec4{ 0.4f, 0.7f, 1.0f, alpha };

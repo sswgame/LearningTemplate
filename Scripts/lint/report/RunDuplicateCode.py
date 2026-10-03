@@ -33,7 +33,7 @@
   - **플랫폼 구현**: 같은 함수의 Windows/POSIX 판은 이름과 뼈대가 닮지만 본체가 다르다. 다만 **가드나
     정책이 양쪽에 복사돼 있으면** 그것은 합칠 값이 있다(크래시 경로의 `try_lock` 이 그랬다).
   - **enum 레이블 나열**: 같은 열거형을 `switch` 하는 두 함수는 `case` 줄이 통째로 같아 보인다.
-    `-Wswitch-default` 때문에 `default:` 도 양쪽에 있다. **본체가 다르면 중복이 아니다**
+    **본체가 다르면 중복이 아니다**
     (`MaterialPacking` 의 두 switch 가 매번 올라온다).
   - **서비스 로케이터 둘**: `sw::editor::getService` 와 `sw::game::getService` 는 열두 줄이 닮았지만
     **서로 다른 DLL 의 서로 다른 레지스트리**다(`SW_GAMESERVICE_API` 가 그 경계다). 합치려면 내부

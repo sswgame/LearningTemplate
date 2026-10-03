@@ -189,7 +189,6 @@ namespace sw
                 case ShaderBindingKind::RwStructuredBuffer:
                 case ShaderBindingKind::RwTexture:
                 case ShaderBindingKind::Unknown:
-                default:
                     break;
             }
         }

@@ -41,7 +41,6 @@ namespace sw
                 switch ( type )
                 {
                     case RenderPassType::Invalid:
-                    default:
                         break;
                     case RenderPassType::Shadow:
                     {

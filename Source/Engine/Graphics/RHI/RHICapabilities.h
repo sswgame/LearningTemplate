@@ -68,8 +68,6 @@ namespace sw
                 case RHIBackend::Vulkan:
                 case RHIBackend::OpenGL:
                     return true;
-                default:
-                    break;
             }
             return false;
         }
@@ -156,8 +154,6 @@ namespace sw
                     caps._bThreadSafeResourceCreation = SW_TRUE;
                     break;
                 }
-                default:
-                    break;
             }
             return caps;
         }

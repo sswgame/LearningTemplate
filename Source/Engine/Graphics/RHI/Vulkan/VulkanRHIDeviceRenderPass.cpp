@@ -22,7 +22,6 @@ namespace sw
                 case RHIRenderPassLoadOp::DontCare:
                     return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
                 case RHIRenderPassLoadOp::Clear:
-                default:
                     return VK_ATTACHMENT_LOAD_OP_CLEAR;
             }
         }

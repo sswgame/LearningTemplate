@@ -28,9 +28,8 @@ namespace sw::editor
                 return "String";
             case GlobalVariableType::Enum:
                 return info._enumType.empty() == false ? info._enumType : "Enum";
-            default:
-                return "Unknown";
         }
+        return "Unknown";
     }
 
     string EditorGlobalVariableCommands::getPresetFolderPath()

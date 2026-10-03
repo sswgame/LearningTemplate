@@ -206,8 +206,6 @@ namespace sw
                         return kind == AnnotationBinding::Kind::Float;
                     case AnnotationValue::NetRole:
                         return kind == AnnotationBinding::Kind::NetRole;
-                    default:
-                        break;
                 }
                 return false;
             }

@@ -172,7 +172,6 @@ namespace sw
             case ShaderTargetFormat::SPIRV_OpenGL:
                 return ".spv";
             case ShaderTargetFormat::Count:
-            default:
                 break;
         }
         return ".bin";

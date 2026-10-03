@@ -58,8 +58,6 @@ namespace sw
         return #Token;
 #include "Core/Predefined/PredefinedAnnotationKind.xxx"
 #undef REGISTER_ANNOTATION_KIND
-            default:
-                break;
         }
         return "?";
     }

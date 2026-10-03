@@ -92,7 +92,6 @@ namespace sw
                     case StringTableTextFormat::KeyValue:
                         return table.loadFromKeyValueText( text );
                     case StringTableTextFormat::Json:
-                    default:
                         return table.loadFromJsonText( text );
                 }
             }

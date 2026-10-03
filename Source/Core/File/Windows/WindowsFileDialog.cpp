@@ -80,8 +80,6 @@ namespace sw
                 result = GetSaveFileNameW( &ofn );
                 break;
             }
-            default:
-                break;
         }
 
         if ( result == FALSE )

@@ -40,12 +40,17 @@ target_compile_options(sw_compiler_clang INTERFACE
 	# 실패를 알리는 결과([[nodiscard]])를 버리면 빌드가 선다. 실패할 수 있는 동사(load · save · parse · apply …)는 선언에 [[nodiscard]] 를
 	# 붙이고(`CheckFallibleNodiscard` 게이트), 일부러 버릴 때는 `(void)` 와 이유를 쓴다. 경고로 두면 빌드 로그에 한 번 보이고 사라진다.
 	-Werror=unused-result
+	# enum switch — 모든 열거자를 다룬 switch 에는 default: 를 두지 않는다(LLVM 코딩 표준). 그래야 열거자를 늘리고 case 를 빠뜨리면
+	# -Wswitch 가 빌드를 세운다. 다 다뤘는데 default: 가 있으면 그 검사가 꺼지므로 그것도 오류다. 일부만 다루는 switch 는 default: 를 쓴다.
+	-Werror=switch
+	-Werror=covered-switch-default
+	-Wno-switch-default # 모든 switch 에 default: 를 요구하지 않는다(위 규칙과 반대)
+	-Wno-switch-enum # 일부만 다루는 switch 가 상관없는 열거자를 다 적지 않아도 된다
 
 	# 경고 비활성화 (C++17+ 표준 및 엔진 아키텍처 지원, 알파벳 정렬)
 	-Wno-c++98-compat # C++17+ 타깃 프로젝트이므로 C++98 하위 호환성 경고 억제
 	-Wno-c++98-compat-pedantic # C++17+ 타깃 프로젝트이므로 C++98 pedantic 경고 억제
 	-Wno-cast-function-type-strict # C-ABI 동적 심볼(GetProcAddress/vkGetInstanceProcAddr 등) 함수 포인터 캐스팅 허용
-	-Wno-covered-switch-default # 모든 enum 케이스를 다루더라도 방어적 default: 레이블을 항상 작성할 수 있도록 허용 (-Wswitch-default 충돌 방지)
 	-Wno-exit-time-destructors # 정적 전역 레지스트라(SW_TEST_CASE, 리플렉션 등록 등)의 종료 소멸자 허용
 	-Wno-float-equal # SW_EXPECT_EQUAL 등 테스트 매크로의 정확한 값 비교(반올림 없는 왕복 검증)를 위해 부동소수점 == 허용
 	-Wno-global-constructors # 정적 전역 생성자(SW_GLOBAL_VARIABLE, 테스트 등록 등) 허용

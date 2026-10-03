@@ -429,8 +429,6 @@ namespace sw
                 ox = 0.85f;
                 break;
             }
-            default:
-                break;
         }
         constexpr float32 radius  = 0.45f;
         const float32     centerX = x + ox;

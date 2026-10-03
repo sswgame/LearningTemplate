@@ -37,8 +37,6 @@ namespace sw
 #include "Core/Predefined/PredefinedContainerKind.xxx"
 
 #undef REGISTER_CONTAINER_KIND
-            default:
-                break;
         }
         return "None";
     }
@@ -54,8 +52,6 @@ namespace sw
 #include "Core/Predefined/PredefinedContainerKind.xxx"
 
 #undef REGISTER_CONTAINER_KIND
-            default:
-                break;
         }
         return "sw::ContainerKind::None";
     }
@@ -71,8 +67,6 @@ namespace sw
                 return "Map";
             case ContainerKind::Sequence:
                 return "Vector";
-            default:
-                break;
         }
         return "Vector";
     }
@@ -109,8 +103,6 @@ namespace sw
 #include "Core/Predefined/PredefinedFunctionNetRole.xxx"
 
 #undef REGISTER_FUNCTION_NET_ROLE
-            default:
-                break;
         }
         return "Local";
     }
@@ -126,8 +118,6 @@ namespace sw
 #include "Core/Predefined/PredefinedFunctionNetRole.xxx"
 
 #undef REGISTER_FUNCTION_NET_ROLE
-            default:
-                break;
         }
         return "sw::FunctionNetRole::Local";
     }

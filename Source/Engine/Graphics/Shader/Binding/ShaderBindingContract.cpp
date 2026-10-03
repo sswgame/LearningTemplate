@@ -55,7 +55,6 @@ namespace sw
                     case ShaderBindingKind::Sampler:
                         return RegisterClass::Sampler;
                     case ShaderBindingKind::Unknown:
-                    default:
                         return RegisterClass::Other;
                 }
             }
@@ -75,7 +74,6 @@ namespace sw
                     case ShaderBindingKind::RwTexture:
                         return GlNamespace::Image;
                     case ShaderBindingKind::Unknown:
-                    default:
                         return GlNamespace::Other;
                 }
             }
@@ -93,7 +91,6 @@ namespace sw
                     case RegisterClass::Sampler:
                         return "s";
                     case RegisterClass::Other:
-                    default:
                         return "?";
                 }
             }
@@ -111,7 +108,6 @@ namespace sw
                     case GlNamespace::Image:
                         return "image unit";
                     case GlNamespace::Other:
-                    default:
                         return "?";
                 }
             }
@@ -133,7 +129,6 @@ namespace sw
                     case ShaderBindingKind::RwTexture:
                         return "RwTexture";
                     case ShaderBindingKind::Unknown:
-                    default:
                         return "Unknown";
                 }
             }
@@ -199,7 +194,6 @@ namespace sw
                         return kind == ShaderBindingKind::StructuredBuffer || kind == ShaderBindingKind::RwStructuredBuffer;
                     case RegisterClass::Sampler:
                     case RegisterClass::Other:
-                    default:
                         return false;
                 }
             }
@@ -494,7 +488,6 @@ namespace sw
                             break;
                         }
                         case Internal::RegisterClass::Other:
-                        default:
                             break;
                     }
                     if ( limit > 0 && reflectedA._bindPoint >= limit )

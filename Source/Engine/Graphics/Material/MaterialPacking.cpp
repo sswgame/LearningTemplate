@@ -339,8 +339,6 @@ namespace sw
             case MaterialPropertyType::Int3:
             case MaterialPropertyType::Int4:
                 return cpuType;
-            default:
-                break;
         }
         return cpuType;
     }
@@ -521,8 +519,6 @@ namespace sw
             case MaterialPropertyType::Keyword:
             case MaterialPropertyType::Unknown:
                 return false;
-            default:
-                break;
         }
         return MaterialPackingInternal::writeNumericValue( pDst, packSize, shaderType, prop._value );
     }

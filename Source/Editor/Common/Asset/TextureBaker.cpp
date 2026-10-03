@@ -102,7 +102,6 @@ namespace sw::editor
                 case TextureSwizzle::RGB1:
                     return kRgb1;
                 case TextureSwizzle::RGBA:
-                default:
                     return kRgba;
             }
         }

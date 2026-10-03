@@ -34,7 +34,6 @@ namespace sw::editor
                 return false;
             }
             case RegistrationResult::NullItem:
-            default:
                 return false;
         }
     }

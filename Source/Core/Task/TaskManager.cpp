@@ -858,8 +858,6 @@ namespace sw
             }
             case JoinCounter::RegisterResult::Registered:
                 break;
-            default:
-                break;
         }
 
         const bool bMainThread = isMainThread();

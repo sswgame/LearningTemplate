@@ -108,9 +108,8 @@ namespace sw
                 return "Editor";
             case MemoryTag::MaxTags:
                 return "MaxTags";
-            default:
-                return "Invalid";
         }
+        return "Invalid";
     }
 
     void MemoryProfiler::setCurrentMemoryTag( MemoryTag tag )

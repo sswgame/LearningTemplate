@@ -467,7 +467,6 @@ namespace sw
                 return bAny;
             }
             case BindingKind::Count:
-            default:
             {
                 // 이 저장소는 모든 switch 에 `default:` 를 요구한다(-Wswitch-default). 그래서 컴파일러가
                 // 이 switch 에서 빠진 종류를 짚어 주지 못한다. 컴파일 시점에 잡히는 것은 표에서 빠진 줄뿐이다
@@ -527,7 +526,6 @@ namespace sw
                 return false;
             }
             case ActionTrigger::Count:
-            default:
                 return false;
         }
     }

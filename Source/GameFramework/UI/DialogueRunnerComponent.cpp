@@ -9,13 +9,6 @@
 
 #include "GameFramework/Base/SaveGame.h"
 
-#if defined( SW_COMPILER_CLANG )
-    // `executeNode` 의 switch 는 `DialogueAssetNodeType` 을 빠짐없이 적는다. 이 저장소는 `default:` 를 요구하므로(-Wswitch-default)
-    // -Wswitch 는 빠진 종류를 짚지 못한다 — 이 파일만 -Wswitch-enum 을 오류로 켜서, 종류를 늘리고 여기를 빠뜨리면 빌드가 선다.
-    #pragma clang diagnostic push
-    #pragma clang diagnostic error "-Wswitch-enum"
-#endif
-
 namespace sw
 {
     namespace
@@ -88,9 +81,8 @@ namespace sw
                         return lhs > rhs;
                     case CompareOp::Less:
                         return lhs < rhs;
-                    default:
-                        return false;
                 }
+                return false;
             }
         };
     } // namespace
@@ -482,7 +474,6 @@ namespace sw
                 return;
             }
             case DialogueAssetNodeType::Count:
-            default:
             {
                 SW_LOG_WARNING( "DialogueRunner: node %# has unknown type %#; finishing the dialogue.", nodeId, static_cast<uint32>( node._type ) );
                 finishDialogue();
@@ -493,7 +484,3 @@ namespace sw
         stepFrom( nodeId, input, recursionDepth + 1 );
     }
 } // namespace sw
-
-#if defined( SW_COMPILER_CLANG )
-    #pragma clang diagnostic pop
-#endif

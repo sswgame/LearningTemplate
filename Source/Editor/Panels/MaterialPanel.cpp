@@ -187,7 +187,6 @@ namespace sw::editor
                     case MaterialPropertyType::ChannelMask:
                     case MaterialPropertyType::Keyword:
                     case MaterialPropertyType::Unknown:
-                    default:
                     {
                         return EditorWidgets::drawTextField( pLabel, prop._value );
                     }

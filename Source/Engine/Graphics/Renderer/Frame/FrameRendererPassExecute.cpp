@@ -204,7 +204,6 @@ namespace sw
                 return names._ambientOcclusion;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
-            default:
                 return names._sourceColor;
         }
     }
@@ -535,7 +534,6 @@ namespace sw
                 case RenderPassType::InstanceAnim:
                 case RenderPassType::InstanceSort:
                 case RenderPassType::MeshMorph:
-                default:
                 {
                     SW_LOG_WARNING( "Unknown pass type '%#' in '%#'", passType, passName );
                     break;

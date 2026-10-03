@@ -458,7 +458,6 @@ namespace sw
             }
 
             case RawInputEventType::None:
-            default:
                 break;
         }
     }

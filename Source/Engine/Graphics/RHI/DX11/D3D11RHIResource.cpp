@@ -471,7 +471,6 @@ namespace sw
                     break;
                 }
                 case RHITextureDimension::Texture2D:
-                default:
                 {
                     srvDesc.ViewDimension       = D3D11_SRV_DIMENSION_TEXTURE2D;
                     srvDesc.Texture2D.MipLevels = kAllMips;

@@ -331,6 +331,13 @@ namespace sw
   braces, every branch keeps them. Loops (`for`/`while`/`do`) always keep their
   braces, even for a single-statement body. Enforced by `FormatBranchBraces.py`
   (clang-format's `RemoveBracesLLVM` is not used: it strips loop braces too).
+- A `switch` over an enum that handles **every** enumerator has **no** `default:` (LLVM coding standard): adding an
+  enumerator and forgetting a `case` then stops the build (`-Werror=switch`), and a `default:` in a fully covered
+  switch is itself an error (`-Werror=covered-switch-default`) because it would silence that check. A switch that
+  handles only some enumerators uses `default:` and does not list the rest (`-Wswitch-enum` and `-Wswitch-default`
+  are off). Out-of-range values are rejected where they enter (deserialization refuses unknown enumerators); a
+  function that returns from every `case` returns its fallback after the switch. No per-file `#pragma` for switch
+  diagnostics.
 - A `switch` `case`/`default` whose body is more than one statement takes braces;
   a one-statement body does not. `break;` counts as a statement, so
   `case A: doIt(); break;` across two lines gets braces and `case A: return X;`

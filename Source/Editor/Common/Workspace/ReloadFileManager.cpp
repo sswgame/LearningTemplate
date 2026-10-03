@@ -251,8 +251,6 @@ namespace sw
                         pActionStr = "RenamedNew";
                         break;
                     }
-                    default:
-                        break;
                 }
                 SW_LOG_TRACE( "%# : %#/%#", pActionStr, changeEvent._directory.c_str(), changeEvent._filename.c_str() );
 #endif

@@ -122,8 +122,6 @@ namespace sw
                 std::shared_lock<std::shared_mutex> lock{ GlobalVariableInternal::s_stringVarMutex };
                 return *static_cast<string*>( _pData );
             }
-            default:
-                break;
         }
         return "";
     }
@@ -232,8 +230,6 @@ namespace sw
             {
                 return setValueAsString( strValue );
             }
-            default:
-                break;
         }
         return false;
     }
@@ -283,8 +279,6 @@ namespace sw
                 }
                 break;
             }
-            default:
-                break;
         }
 
         if ( _onValueChanged.isBound() )
@@ -558,8 +552,6 @@ namespace sw
                         }
                         break;
                     }
-                    default:
-                        break;
                 }
 
                 if ( info->_onValueChanged.isBound() )

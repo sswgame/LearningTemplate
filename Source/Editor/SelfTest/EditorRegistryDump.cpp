@@ -27,7 +27,6 @@ namespace sw::editor
                     case EditorPanelCategory::Tool:
                         return "Tool";
                     case EditorPanelCategory::Custom:
-                    default:
                         return "Custom";
                 }
             }

@@ -481,7 +481,6 @@ namespace sw::editor
             }
             case DialogueNodeFlow::WaitChoice: // 사람이 툴바 버튼으로 고른다
             case DialogueNodeFlow::Condition:
-            default:
                 return;
         }
     }
@@ -583,7 +582,6 @@ namespace sw::editor
                 return;
             }
             case DialogueNodeOutput::None:
-            default:
                 break;
         }
 
@@ -613,7 +611,6 @@ namespace sw::editor
             }
             case DialogueNodeBody::Condition:
             case DialogueNodeBody::None:
-            default:
                 break;
         }
     }
@@ -655,7 +652,6 @@ namespace sw::editor
                 break;
             }
             case DialogueNodeBody::None:
-            default:
                 break;
         }
 

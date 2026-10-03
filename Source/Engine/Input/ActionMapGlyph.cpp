@@ -14,13 +14,6 @@
  * (에디터의 Glyph Previewer 탭이 이것으로 플랫폼별 표기를 나란히 비교해 보여 줍니다).
  */
 
-#if defined( SW_COMPILER_CLANG )
-    // 아래 두 switch 는 `BindingKind` 를 빠짐없이 적는다. 이 저장소는 `default:` 를 요구하므로(-Wswitch-default) -Wswitch 는 빠진
-    // 종류를 짚지 못한다 — 이 파일만 -Wswitch-enum 을 오류로 켜서, 종류를 늘리고 여기를 빠뜨리면 빌드가 선다.
-    #pragma clang diagnostic push
-    #pragma clang diagnostic error "-Wswitch-enum"
-#endif
-
 namespace sw
 {
     namespace
@@ -131,7 +124,6 @@ namespace sw
                         return "[ Any Key ]";
                     case BindingKind::GamepadStick2D: // 게임패드 전용 — 키보드 표기가 없다
                     case BindingKind::Count:
-                    default:
                         return {};
                 }
             }
@@ -163,7 +155,6 @@ namespace sw
                     case BindingKind::VirtualJoystick2D:
                     case BindingKind::Shortcut:
                     case BindingKind::Count:
-                    default:
                         return {};
                 }
             }
@@ -200,7 +191,3 @@ namespace sw
         return "[ ? ]";
     }
 } // namespace sw
-
-#if defined( SW_COMPILER_CLANG )
-    #pragma clang diagnostic pop
-#endif

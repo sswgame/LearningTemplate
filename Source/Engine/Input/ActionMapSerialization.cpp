@@ -481,7 +481,6 @@ namespace sw
                         break; // 이름 말고 적을 것이 없다.
                     }
                     case BindingKind::Count:
-                    default:
                     {
                         // 종류를 늘리고 이 switch 를 빠뜨렸다. 이름은 표에서 왔으므로 `kind` 는
                         // 제대로 적혔지만 **딸린 특성이 하나도 없어** 다시 읽을 수 없는 줄이 된다.
@@ -636,7 +635,6 @@ namespace sw
                     break;
                 }
                 case BindingKind::Count:
-                default:
                 {
                     // 표는 이름을 알았는데 여기가 모른다. 종류를 늘리고 이 switch 를 빠뜨린 것이다.
                     SW_LOG_ERROR( "읽지 못한 바인딩 종류입니다 (kind=%#) — BindingKind 를 늘리고 loadUserBindings 를 빠뜨렸습니다.", pKindStr );

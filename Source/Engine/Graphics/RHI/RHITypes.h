@@ -615,9 +615,8 @@ namespace sw
                 return desc._arraySize >= 1;
             case RHITextureDimension::TextureCube:
                 return desc._arraySize == kCubeFaceCount && desc._width == desc._height;
-            default:
-                return false;
         }
+        return false;
     }
 
     /**
@@ -687,7 +686,6 @@ namespace sw
                 return RHIFormatBlockInfo{ 4, 4, 16 };
             case RHIFormat::D24_UNORM_S8_UINT:
             case RHIFormat::Unknown:
-            default:
                 return RHIFormatBlockInfo{ 1, 1, 0 };
         }
     }
@@ -722,7 +720,6 @@ namespace sw
             case RHIFormat::BC4_UNORM:
             case RHIFormat::BC5_UNORM:
             case RHIFormat::BC7_UNORM:
-            default:
                 return false;
         }
     }
