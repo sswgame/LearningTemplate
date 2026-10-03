@@ -2,6 +2,7 @@
 
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -480,6 +481,7 @@ namespace sw
     }
     PrefabAsset* PrefabManager::loadPrefab( string_view assetRelativePath )
     {
+        SW_MEMORY_SCOPE( Scene );
         const string resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
 
         const string cacheKey = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
@@ -570,6 +572,7 @@ namespace sw
 
     GameObject* PrefabManager::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName )
     {
+        SW_MEMORY_SCOPE( Scene );
         // 이 함수는 나머지 포인터를 모두 검사한다(`pAsset` · `pGameObject` · `pInstanceName`).
         // 매니저만 빠져 있었다. 활성 씬이 없을 때 `getObjectManager()` 는 nullptr 를 반환한다.
         if ( pGameObjectManager == nullptr )

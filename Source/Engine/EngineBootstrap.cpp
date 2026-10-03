@@ -35,6 +35,8 @@ namespace sw
 
     bool EngineBootstrap::initialize( EngineOwnedServices& owned, bool bDiagnostics )
     {
+        // 로거 · 명령줄 · 전역 변수 표다. 프로파일러가 아래에서 서므로 그 앞의 할당은 세이지 않는다.
+        SW_MEMORY_SCOPE( EngineMisc );
         _pOwned   = &owned;
         _bStarted = true;
         HashedStringPool::initialize();

@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -238,6 +239,7 @@ namespace sw
 
     shared_ptr<Mesh> MeshUtil::createPrimitive( string_view meshId )
     {
+        SW_MEMORY_SCOPE( Mesh );
         const utf8* pCanonical = canonicalPrimitiveIdVal( meshId );
         if ( pCanonical == nullptr )
             return {};
@@ -262,6 +264,7 @@ namespace sw
 
     shared_ptr<Mesh> MeshUtil::acquirePrimitive( string_view meshId )
     {
+        SW_MEMORY_SCOPE( Mesh );
         const utf8* pCanonical = canonicalPrimitiveIdVal( meshId );
         if ( pCanonical == nullptr )
             return {};

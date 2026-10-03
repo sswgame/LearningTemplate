@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/EngineStartupSequence.h"
@@ -22,6 +23,7 @@ namespace
             static EngineStartupResult initialize( StartupStepRecorder& recorder )
             {
                 recorder._listInitialized.push_back( Step );
+                recorder._listInitializeMemoryTag.push_back( MemoryProfiler::getCurrentMemoryTag() );
                 recorder._listEvent.push_back( string( "I:" ) + EngineStartupSequence::getStepName( Step ) );
                 return ( Step == recorder._resultStep ) ? recorder._result : EngineStartupResult::Succeeded;
             }
@@ -42,6 +44,7 @@ namespace
 #undef SW_ENGINE_STARTUP_STEP
 
         vector<EngineStartupStep> _listInitialized{};
+        vector<MemoryTag>         _listInitializeMemoryTag{}; ///< 초기화 본문이 불린 동안의 할당 태그(`_listInitialized` 와 같은 순서)
         vector<EngineStartupStep> _listShutdown{};
         vector<EngineStartupStep> _listDestroyed{};
         vector<string>            _listEvent{}; ///< 세 본문을 불린 순서대로 — "I:" 초기화, "S:" 종료, "D:" 해제
@@ -317,4 +320,33 @@ SW_TEST_CASE( EngineStartupSequenceTest, FailedRestartLeavesTheRestStopped )
     sequence.shutdownAll();
     SW_EXPECT_STREQ( "FrameRenderer RHI Headless Scene Input Audio ModuleImages Task ShaderCache EngineData Resource Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
+}
+
+/**
+ * @brief [EngineStartupSequenceTest] 단계 초기화(기동 · 재시작)는 표의 메모리 태그 칸 아래에서 돈다
+ * @details 단계 초기화가 잡는 메모리(태스크 큐 · 타입 표 · 디바이스 · 렌더러)가 용도 줄로 세이는 근거다. 시험 스레드의 태그(Unknown)가
+ *          아니라 단계마다 표에 적힌 태그여야 하고, 백엔드 교체처럼 단계를 다시 세울 때(`restartStoppedSteps`)도 같다.
+ */
+SW_TEST_CASE( EngineStartupSequenceTest, InitializeRunsUnderTheStepMemoryTag )
+{
+    if constexpr ( kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+
+    EngineStartupSequence sequence;
+    StartupStepRecorder   recorder;
+    SW_ASSERT_TRUE( sequence.initializeAll( recorder ) );
+    sequence.shutdownDependentsOf( EngineStartupStep::RHI );
+    SW_ASSERT_TRUE( sequence.restartStoppedSteps() );
+    SW_ASSERT_TRUE( recorder._listInitialized.size() > static_cast<size_t>( EngineStartupStep::Count ) );
+    SW_ASSERT_EQUAL( recorder._listInitialized.size(), recorder._listInitializeMemoryTag.size() );
+
+    uint32 wrongCount{ 0 };
+    for ( size_t order = 0; order < recorder._listInitialized.size(); ++order )
+    {
+        if ( recorder._listInitializeMemoryTag[order] != EngineStartupSequence::getStepMemoryTag( recorder._listInitialized[order] ) )
+            ++wrongCount;
+    }
+    SW_EXPECT_EQUAL( 0u, wrongCount );
+    SW_EXPECT_TRUE( MemoryProfiler::getCurrentMemoryTag() == MemoryTag::Unknown );
+    sequence.destroyAll();
 }

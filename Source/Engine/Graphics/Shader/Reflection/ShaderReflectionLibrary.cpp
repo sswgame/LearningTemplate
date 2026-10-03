@@ -6,6 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -282,6 +283,7 @@ namespace sw
 
     bool ShaderReflectionLibrary::loadManifest( string_view binDirectoryRelative, EntryMap& outMapEntry )
     {
+        SW_MEMORY_SCOPE( Shader );
         string manifestRelative( binDirectoryRelative );
         if ( manifestRelative.empty() == false && manifestRelative.back() != '/' )
             manifestRelative += '/';
@@ -290,6 +292,7 @@ namespace sw
 
     bool ShaderReflectionLibrary::tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
     {
+        SW_MEMORY_SCOPE( Shader );
         const string_view rhiFolder = ShaderBaker::getSubfolderForFormat( desc._targetFormat );
         const string_view ext       = ShaderBaker::getExtensionForFormat( desc._targetFormat );
         const string      binDirRel = makeBinDirRelativeInternal( desc._filePath, rhiFolder );
@@ -346,6 +349,7 @@ namespace sw
 
     bool ShaderReflectionLibrary::getOrReflect( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
     {
+        SW_MEMORY_SCOPE( Shader );
         // 1순위: 쿠킹 시점에 구운 매니페스트. 배포 빌드는 이 경로만 쓴다. DXIL 리플렉션은
         // dxcompiler.dll 이 필요해서 런타임에 하면 컴파일러를 같이 배포해야 한다.
         if ( tryGet( desc, outReflection ) )

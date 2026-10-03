@@ -6,6 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -35,6 +36,7 @@ namespace sw
 
     Texture2D* TextureCache::acquire( string_view relativePath, IRHIDevice* pDevice )
     {
+        SW_MEMORY_SCOPE( Texture );
         if ( relativePath.empty() || _impl == nullptr || pDevice == nullptr )
             return nullptr;
         const string key = FileUtil::normalizePath( relativePath );
@@ -55,6 +57,7 @@ namespace sw
 
     void TextureCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
+        SW_MEMORY_SCOPE( Texture );
         if ( relativePath.empty() || _impl == nullptr || pDevice == nullptr )
             return;
         const string key = FileUtil::normalizePath( relativePath );

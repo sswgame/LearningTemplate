@@ -2,6 +2,7 @@
 
 #include "Engine/EngineStartupSequence.h"
 
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringBuilder.h"
 
 namespace sw
@@ -12,12 +13,21 @@ namespace sw
         {
             /** @brief 표 그대로의 이름 · 의존 칸입니다(줄 순서 = `EngineStartupStep` 값). 의존 칸은 `{ A, B }` 를 글로 든다. */
             static constexpr EngineStartupNode kArrStepNode[] = {
-#define SW_ENGINE_STARTUP_STEP( Name, ... ) { #Name, #__VA_ARGS__ },
+#define SW_ENGINE_STARTUP_STEP( Name, Tag, ... ) { #Name, #__VA_ARGS__ },
 #include "Engine/EngineStartupStepList.xxx"
 #undef SW_ENGINE_STARTUP_STEP
             };
             static_assert( sizeof( kArrStepNode ) / sizeof( kArrStepNode[0] ) == static_cast<size_t>( EngineStartupStep::Count ),
                            "Startup node table must have one row per EngineStartupStep" );
+
+            /** @brief 표의 메모리 태그 칸입니다(줄 순서 = `EngineStartupStep` 값). 단계 초기화를 부르는 동안 건다. */
+            static constexpr MemoryTag kArrStepMemoryTag[] = {
+#define SW_ENGINE_STARTUP_STEP( Name, Tag, ... ) MemoryTag::Tag,
+#include "Engine/EngineStartupStepList.xxx"
+#undef SW_ENGINE_STARTUP_STEP
+            };
+            static_assert( sizeof( kArrStepMemoryTag ) / sizeof( kArrStepMemoryTag[0] ) == static_cast<size_t>( EngineStartupStep::Count ),
+                           "Startup memory tag table must have one row per EngineStartupStep" );
 
             static constexpr uint32 kNotFound = 0xFFFFFFFFu;
 
@@ -94,7 +104,7 @@ namespace sw
         }
 
 // `{ A, B }` 의 쉼표는 매크로 인자를 가르므로 가변 인자로 받아 다시 붙인다(`__VA_ARGS__` = `{ A, B }`).
-#define SW_ENGINE_STARTUP_STEP( Name, ... )                                        \
+#define SW_ENGINE_STARTUP_STEP( Name, Tag, ... )                                   \
     static_assert( areAllAbove( Name, std::initializer_list<uint32> __VA_ARGS__ ), \
                    "EngineStartupStepList.xxx: step " #Name " must be listed below every step it depends on" );
 #include "Engine/EngineStartupStepList.xxx"
@@ -151,6 +161,7 @@ namespace sw
                 continue;
             }
 
+            const ScopedMemoryTag     stepMemoryTag{ getStepMemoryTag( step ) };
             const EngineStartupResult result = pArrEntry[stepIndex]._pInitialize( pHost );
             if ( result == EngineStartupResult::Failed )
             {
@@ -221,6 +232,7 @@ namespace sw
         bool bRestarted = true;
         for ( const EngineStartupStep step : listStopped )
         {
+            const ScopedMemoryTag stepMemoryTag{ getStepMemoryTag( step ) };
             if ( _pArrEntry[static_cast<uint32>( step )]._pInitialize( _pHost ) == EngineStartupResult::Failed )
             {
                 SW_LOG_ERROR( "Startup step '%#' failed to restart", getStepName( step ) );
@@ -253,6 +265,14 @@ namespace sw
         if ( stepIndex >= static_cast<uint32>( EngineStartupStep::Count ) )
             return "Unknown";
         return EngineStartupSequenceInternal::kArrStepNode[stepIndex]._pName;
+    }
+
+    MemoryTag EngineStartupSequence::getStepMemoryTag( EngineStartupStep step )
+    {
+        const uint32 stepIndex = static_cast<uint32>( step );
+        if ( stepIndex >= static_cast<uint32>( EngineStartupStep::Count ) )
+            return MemoryTag::Unknown;
+        return EngineStartupSequenceInternal::kArrStepMemoryTag[stepIndex];
     }
 
     vector<EngineStartupNode> EngineStartupSequence::makeStepNodes()

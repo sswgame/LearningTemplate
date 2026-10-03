@@ -519,12 +519,18 @@ namespace sw
             _owned.createAll();
 
             // 만드는 방법이 특별한 것만 손으로 남는다(목록의 HostCreated 셋).
-            _audioSystem = IAudioSystem::create();
+            {
+                SW_MEMORY_SCOPE( Audio );
+                _audioSystem = IAudioSystem::create();
+            }
 #if !defined( SW_SHIPPING )
             _commandStack = make_unique<CommandStack>();
 #endif
             // 렌더러는 서비스 표에 실리므로(아래) 여기서 만든다. 초기화와 해제는 FrameRenderer 단계가 한다.
-            _frameRenderer = make_unique<FrameRenderer>();
+            {
+                SW_MEMORY_SCOPE( RenderCpu );
+                _frameRenderer = make_unique<FrameRenderer>();
+            }
 
             EngineServices services{};
             _bootstrap.fillServices( services );
@@ -663,6 +669,7 @@ namespace sw
 
         BLOCK( "RenderFramePacket 제출" )
         {
+            SW_MEMORY_SCOPE( RenderCpu );
             RenderFramePacket& packet = *_packetScratch;
             packet.resetForFrame();
             packet._bValid           = 1;

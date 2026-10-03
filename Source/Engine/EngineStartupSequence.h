@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/MemoryTag.h"
 
 namespace sw
 {
@@ -156,6 +157,8 @@ namespace sw
 
         /** @brief 단계 이름(표의 철자)입니다. */
         static const utf8* getStepName( EngineStartupStep step );
+        /** @brief 단계 초기화가 할당하는 메모리의 용도(표의 둘째 칸)입니다. 초기화 · 재시작을 부르는 동안 이 태그가 걸립니다. */
+        static MemoryTag getStepMemoryTag( EngineStartupStep step );
         /** @brief 표 그대로의 노드 목록입니다(줄 순서). */
         static vector<EngineStartupNode> makeStepNodes();
         /**

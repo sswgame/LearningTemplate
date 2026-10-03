@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
 
@@ -48,6 +49,7 @@ namespace sw
 {
     shared_ptr<const SpriteClipAsset> SpriteClipCache::acquire( string_view path )
     {
+        SW_MEMORY_SCOPE( Animation );
         if ( path.empty() )
             return nullptr;
 

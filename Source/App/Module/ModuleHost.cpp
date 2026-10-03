@@ -7,6 +7,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -229,6 +230,7 @@ namespace sw
         {
             BLOCK( "에디터: 뷰포트 / EditorModule 등록" )
             {
+                SW_MEMORY_SCOPE( Editor );
                 _pLiveReloadManager->setOnBeforeReload( config::kTargetEditorModule,
                                                         SW_DELEGATE_METHOD( LiveReloadManager::OnBeforeReloadDelegate, &ModuleHost::onBeforeEditorReload, this ) );
                 _pLiveReloadManager->setOnAfterReload( config::kTargetEditorModule,
@@ -255,6 +257,7 @@ namespace sw
         {
             BLOCK( "게임플레이 키트 및 SWGame 모듈 등록" )
             {
+                SW_MEMORY_SCOPE( Game );
                 const string   gameFrameworkModule = "GameFramework";
                 vector<string> listGameModule{ gameFrameworkModule };
 
@@ -386,18 +389,21 @@ namespace sw
 
     void ModuleHost::updateGame( float32 deltaTime )
     {
+        SW_MEMORY_SCOPE( Game );
         if ( _game != nullptr && _gameApi.update != nullptr && _frameState._bGameplayActive == SW_TRUE )
             _gameApi.update( _game, deltaTime );
     }
 
     void ModuleHost::fixedUpdateGame( float32 fixedDeltaTime )
     {
+        SW_MEMORY_SCOPE( Game );
         if ( _game != nullptr && _gameApi.fixedUpdate != nullptr && _frameState._bGameplayActive == SW_TRUE )
             _gameApi.fixedUpdate( _game, fixedDeltaTime );
     }
 
     void ModuleHost::updateEditorUi( float32 /*deltaTime*/ )
     {
+        SW_MEMORY_SCOPE( Editor );
         if ( hasEditor() == false )
             return;
 
@@ -412,6 +418,7 @@ namespace sw
 
     void ModuleHost::endEditorFrame()
     {
+        SW_MEMORY_SCOPE( Editor );
         if ( hasEditor() == false || _editorApi.endFrame == nullptr )
             return;
         _editorApi.endFrame( _editor );
@@ -444,6 +451,7 @@ namespace sw
 
     void ModuleHost::onAfterEditorReload( void* pLibraryModule )
     {
+        SW_MEMORY_SCOPE( Editor );
         if ( bindEditorApi( pLibraryModule ) == false )
         {
             markReloadGraphBroken( "EditorAPI bind failed after reload" );
@@ -471,6 +479,7 @@ namespace sw
 
     void ModuleHost::onAfterGameReload( void* pLibraryModule )
     {
+        SW_MEMORY_SCOPE( Game );
 #if defined( SW_SHIPPING )
         (void)pLibraryModule;
         if ( _gameApi.create == nullptr && bindGameApi( nullptr ) == false )
@@ -855,11 +864,13 @@ namespace sw
 
     bool ModuleHost::createEditorInstance()
     {
+        SW_MEMORY_SCOPE( Editor );
         return ModuleHostInternal::createInstance( _editorApi, _editor, _pWindow, _pRHI, "Editor" );
     }
 
     bool ModuleHost::createGameInstance()
     {
+        SW_MEMORY_SCOPE( Game );
         return ModuleHostInternal::createInstance( _gameApi, _game, _pWindow, _pRHI, "Game" );
     }
 } // namespace sw

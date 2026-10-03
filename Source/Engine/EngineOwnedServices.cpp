@@ -6,6 +6,7 @@
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Config/EngineData.h"
@@ -31,6 +32,14 @@
 
 #define SW_ENGINE_OWNED_RESET_ENTRY_HostCreated( member )
 #define SW_ENGINE_OWNED_RESET_ENTRY_EngineCreated( member ) { #member, &resetMember<&EngineOwnedServices::member> },
+#define SW_ENGINE_OWNED_CREATE_HostCreated( member, Type )
+// 만드는 동안 그 서비스의 메모리 용도 태그를 건다(`kServiceMemoryTag`). 생성자가 잡는 표 · 풀이 그 줄로 세인다.
+#define SW_ENGINE_OWNED_CREATE_EngineCreated( member, Type )                                           \
+    if ( member == nullptr )                                                                           \
+    {                                                                                                  \
+        const ScopedMemoryTag createMemoryTag{ EngineOwnedServicesInternal::kServiceMemoryTag<Type> }; \
+        member = make_unique<Type>();                                                                  \
+    }
 
 namespace sw
 {
@@ -44,6 +53,13 @@ namespace sw
             {
                 ( owned.*pMember ).reset();
             }
+
+            /**
+             * @brief 서비스를 만드는 동안 거는 메모리 용도 태그입니다. 적지 않은 서비스는 EngineMisc 입니다.
+             * @details 생성자가 큰 표 · 풀을 잡는 서비스(`TaskManager` 의 큐 · 노드 풀, `TypeRegistry` 의 표)만 제 줄로 보낸다.
+             */
+            template <typename T>
+            static constexpr MemoryTag kServiceMemoryTag = MemoryTag::EngineMisc;
 
             /** @brief 해제 표의 칸 하나입니다(멤버 이름과 해제 함수). */
             struct ResetEntry
@@ -66,6 +82,25 @@ namespace sw
             /** @brief @p order 번째로 놓을 칸의 자리입니다 — 목록의 역순(소멸자와 같은 순서). `destroyAll` 과 `makeDestroyOrder` 가 함께 쓴다. */
             static constexpr size_t getResetIndex( size_t order ) { return SW_COUNT_OF( kArrResetEntry ) - 1 - order; }
         };
+
+        template <>
+        constexpr MemoryTag EngineOwnedServicesInternal::kServiceMemoryTag<TaskManager> = MemoryTag::Task;
+        template <>
+        constexpr MemoryTag EngineOwnedServicesInternal::kServiceMemoryTag<TypeRegistry> = MemoryTag::Reflection;
+        template <>
+        constexpr MemoryTag EngineOwnedServicesInternal::kServiceMemoryTag<SceneManager> = MemoryTag::Scene;
+        template <>
+        constexpr MemoryTag EngineOwnedServicesInternal::kServiceMemoryTag<ResourceManager> = MemoryTag::Asset;
+        template <>
+        constexpr MemoryTag EngineOwnedServicesInternal::kServiceMemoryTag<AssetStreamingQueue> = MemoryTag::Asset;
+        template <>
+        constexpr MemoryTag EngineOwnedServicesInternal::kServiceMemoryTag<ShaderCache> = MemoryTag::Shader;
+        template <>
+        constexpr MemoryTag EngineOwnedServicesInternal::kServiceMemoryTag<RHIBackendRegistry> = MemoryTag::RenderCpu;
+        template <>
+        constexpr MemoryTag EngineOwnedServicesInternal::kServiceMemoryTag<RenderTargetRegistry> = MemoryTag::RenderCpu;
+        template <>
+        constexpr MemoryTag EngineOwnedServicesInternal::kServiceMemoryTag<DebugDrawQueue> = MemoryTag::RenderCpu;
     } // namespace
 } // namespace sw
 

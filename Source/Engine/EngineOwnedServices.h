@@ -42,12 +42,6 @@
 // **선언**을 지울 수 없어서(멤버 선언과 헤더 포함이 걸린다) 이 방식이 필요하다.
 #define SW_ENGINE_OWNED_STORAGE_HostCreated( member, Type )
 #define SW_ENGINE_OWNED_STORAGE_EngineCreated( member, Type ) unique_ptr<Type> member{};
-#define SW_ENGINE_OWNED_CREATE_HostCreated( member, Type )
-#define SW_ENGINE_OWNED_CREATE_EngineCreated( member, Type ) \
-    if ( member == nullptr )                                 \
-    {                                                        \
-        member = make_unique<Type>();                        \
-    }
 #define SW_ENGINE_OWNED_BIND_HostCreated( member )
 #define SW_ENGINE_OWNED_BIND_EngineCreated( member ) outServices.member = member.get();
 // NOLINTEND(bugprone-macro-parentheses)

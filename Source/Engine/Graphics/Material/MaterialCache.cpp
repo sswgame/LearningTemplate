@@ -6,6 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -48,6 +49,7 @@ namespace sw
 
     Material* MaterialCache::acquire( string_view relativePath, IRHIDevice* pDevice )
     {
+        SW_MEMORY_SCOPE( Material );
         if ( relativePath.empty() || _impl == nullptr )
             return nullptr;
 
@@ -136,6 +138,7 @@ namespace sw
 
     void MaterialCache::initializePending( IRHIDevice* pDevice )
     {
+        SW_MEMORY_SCOPE( Material );
         if ( pDevice == nullptr || _impl == nullptr || _impl->_pendingCount.load( std::memory_order_acquire ) == 0 )
             return;
 
@@ -176,6 +179,7 @@ namespace sw
 
     void MaterialCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
+        SW_MEMORY_SCOPE( Material );
         if ( relativePath.empty() || _impl == nullptr )
             return;
 

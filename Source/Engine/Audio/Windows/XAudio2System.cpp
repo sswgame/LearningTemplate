@@ -3,6 +3,7 @@
 #include "Engine/Audio/Windows/XAudio2System.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Task/TaskManager.h"
@@ -499,6 +500,7 @@ namespace sw
      */
     void XAudio2System::update( float32 )
     {
+        SW_MEMORY_SCOPE( Audio );
         if ( _impl == nullptr )
             return;
         std::scoped_lock<mutex>                     lock{ _impl->_voiceMutex };
@@ -540,6 +542,7 @@ namespace sw
 
     bool XAudio2System::preload( string_view path )
     {
+        SW_MEMORY_SCOPE( Audio );
         if ( path.empty() || _impl == nullptr )
             return false;
         return _impl->getOrLoadClip( path ) != nullptr;
@@ -734,6 +737,7 @@ namespace sw
      */
     bool XAudio2System::playInternal( string_view path, bool bLoop )
     {
+        SW_MEMORY_SCOPE( Audio );
         if ( _impl == nullptr || _impl->_bInitialized == SW_FALSE )
             return false;
 

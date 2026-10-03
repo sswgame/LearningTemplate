@@ -2,6 +2,8 @@
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 
+#include "Core/Memory/MemoryProfiler.h"
+
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -78,6 +80,7 @@ namespace sw
 
     const ShaderBindingLayout& ShaderBindingLayoutCache::getOrBuild( const RHIPipelineStateDesc& desc, RHIBackend backend )
     {
+        SW_MEMORY_SCOPE( Shader );
         const hashed_string key = makeCacheKey( desc, backend );
 
         {

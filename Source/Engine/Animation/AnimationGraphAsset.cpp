@@ -3,6 +3,7 @@
 #include "Engine/Animation/AnimationGraphAsset.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Utility/Json/JsonDocument.h"
 
@@ -10,6 +11,7 @@ namespace sw
 {
     bool AnimationGraphAsset::loadFromFile( string_view path )
     {
+        SW_MEMORY_SCOPE( Animation );
         _listNode.clear();
         _listLink.clear();
         if ( path.empty() )

@@ -9,6 +9,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Time/CpuClock.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -426,6 +427,7 @@ namespace sw
 
     void App::onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
+        SW_MEMORY_SCOPE( Editor );
         // 이 훅은 렌더 스레드가 부른다. ModuleHost 가 사라진 뒤에는 불리지 않는다. shutdown 이 ModuleHost 를 지우기 전에
         // drainRenderWorkers 로 큐를 비우고, 그 시점에는 메인 루프가 이미 끝나 새 프레임이 들어오지 않는다. 훅 델리게이트 자체를
         // 여기서 끊는 것은 오히려 위험하다. RenderThread::setPresentHook 은 잠금 없는 대입이라, 렌더 스레드가 도는 중에 바꾸면
@@ -447,6 +449,7 @@ namespace sw
 
     void App::onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
+        SW_MEMORY_SCOPE( Editor );
         if ( _moduleHost == nullptr )
             return;
 

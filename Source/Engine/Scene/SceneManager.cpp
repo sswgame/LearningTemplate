@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/CpuTimer.h"
 
@@ -123,6 +124,7 @@ namespace sw
      */
     Scene* SceneManager::createScene( string_view name )
     {
+        SW_MEMORY_SCOPE( Scene );
         unique_ptr<Scene> scene  = sw::make_unique<Scene>( name );
         Scene*            pScene = scene.get();
 
@@ -139,6 +141,7 @@ namespace sw
 
     Scene* SceneManager::createEmptyActiveScene( string_view name )
     {
+        SW_MEMORY_SCOPE( Scene );
         unique_ptr<Scene> scene     = sw::make_unique<Scene>( name );
         Scene*            pScene    = scene.get();
         Scene*            pPrevious = _pActiveScene;
@@ -205,6 +208,7 @@ namespace sw
 
     bool SceneManager::dispatchLoad( string_view path, TaskPromise<Scene*> promise )
     {
+        SW_MEMORY_SCOPE( Scene );
         _bLoadInFlight.store( true, std::memory_order_release );
         _asyncLoad->_bReady.store( false, std::memory_order_release );
         _asyncLoad->_promise             = std::move( promise );
@@ -358,6 +362,7 @@ namespace sw
      */
     void SceneManager::tickTransitions()
     {
+        SW_MEMORY_SCOPE( Scene );
         if ( _asyncLoad == nullptr || _asyncLoad->_bReady.load( std::memory_order_acquire ) == false )
             return;
 
@@ -462,6 +467,7 @@ namespace sw
      */
     void SceneManager::tick( float32 deltaTime )
     {
+        SW_MEMORY_SCOPE( Scene );
         if ( _pActiveScene == nullptr )
             return;
 

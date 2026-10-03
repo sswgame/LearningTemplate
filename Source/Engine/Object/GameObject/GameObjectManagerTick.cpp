@@ -5,6 +5,7 @@
  */
 #include "pch.h"
 
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineParallel.h"
@@ -280,6 +281,7 @@ namespace sw
 
     void GameObjectManager::stepPhysics( float32 deltaTime )
     {
+        SW_MEMORY_SCOPE( Physics );
         // 바디를 한 번에 맞춘다 — 틱 · 트랜스폼 적용이 끝난 뒤라 모두 같은 프레임의 자리를 본다. 꺼진 콜라이더는 빠진다(겹침이 끝난다).
         for ( BoxCollider2DComponent* pCollider : _listCollider )
             pCollider->syncPhysicsBody();

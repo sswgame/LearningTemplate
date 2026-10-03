@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Physics/CCD.h"
 
@@ -190,6 +191,7 @@ namespace sw
      */
     PhysicsWorld::BodyHandle PhysicsWorld::addBody( const AABB& aabb, uint8 layer, uint64 objectId )
     {
+        SW_MEMORY_SCOPE( Physics );
         PhysicsBodyState state{};
         state._aabb  = aabb;
         state._layer = layer;
@@ -198,6 +200,7 @@ namespace sw
 
     PhysicsWorld::BodyHandle PhysicsWorld::addBody( const PhysicsBodyState& state, uint64 objectId )
     {
+        SW_MEMORY_SCOPE( Physics );
         PhysicsBody body{};
         body._aabb        = state._aabb;
         body._stepAabb    = state._aabb; // 출발점은 더한 자리다 — 더하기 전 어딘가에서 쓸려 오지 않는다

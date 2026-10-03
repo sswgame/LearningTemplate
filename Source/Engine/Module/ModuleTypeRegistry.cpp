@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Module/ModuleCodeHolder.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -59,6 +60,7 @@ namespace sw
 
         void registerModuleTypes( string_view moduleName, TypeRegistrar* pTypeHead, EnumRegistrar* pEnumHead, GlobalVariableRegistrar* pVariableHead )
         {
+            SW_MEMORY_SCOPE( Reflection );
             // 전역 변수는 새로 뗀 것만 올린다(아래 캐시에 넣지 않는다). 모듈이 자기 변수를 읽기 전에 커맨드라인 보류값이 여기서 적용된다.
             if ( pVariableHead != nullptr )
                 getGlobalVariableManager().registerPendingVariables( moduleName, pVariableHead );
