@@ -31,8 +31,8 @@ namespace test
         shutdown();
         _backend = backend;
 
-        // 빌드에 없는 백엔드(리눅스의 DX) · 런타임이 없는 백엔드는 창을 띄우기 전에 거른다.
-        if ( sw::RHIAvailability::isAvailable( backend ) == false )
+        // 빌드에 없는 백엔드(리눅스의 DX · 배포본의 고르지 않은 백엔드) · 런타임이 없는 백엔드는 창을 띄우기 전에 거른다.
+        if ( isBackendInThisBuild( backend ) == false || sw::RHIAvailability::isAvailable( backend ) == false )
             return false;
 
         _window = sw::IWindow::createPlatformWindow();

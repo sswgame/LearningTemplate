@@ -68,7 +68,14 @@ SW_TEST_CASE( ShaderCompilerTest, BasicCompileAndReflection )
     desc._targetFormat = sw::ShaderTargetFormat::DXBC_D3D11;
 
     sw::ShaderCache         shaderCache;
-    sw::ShaderCompileResult cacheResult = shaderCache.getOrCompile( desc );
+    sw::ShaderCompileResult cacheResult;
+    {
+#if defined( SW_SHIPPING )
+        // 배포 팩은 링크한 백엔드의 셰이더만 싣는다 — 다른 백엔드의 바이너리를 찾다 남기는 Error 는 예상된 것이다(그 뒤 건너뛴다).
+        SW_TEST_DEFENSIVE_SCOPE( "a backend this shipping pack does not carry" );
+#endif
+        cacheResult = shaderCache.getOrCompile( desc );
+    }
     if ( sw::isShaderUnavailableInThisBuild( cacheResult ) )
         SW_TEST_SKIP( "Shader unavailable in this build (no compiler, or a backend this shipping pack does not carry)" );
 
@@ -213,7 +220,14 @@ SW_TEST_CASE( ShaderCompilerTest, MultiBackendShaderCacheIsolation )
     vkDesc._targetFormat         = sw::ShaderTargetFormat::SPIRV_Vulkan;
 
     // 1) DX11 컴파일 및 캐시 등록
-    sw::ShaderCompileResult dx11Res1 = shaderCache.getOrCompile( dx11Desc );
+    sw::ShaderCompileResult dx11Res1;
+    {
+#if defined( SW_SHIPPING )
+        // 배포 팩은 링크한 백엔드의 셰이더만 싣는다 — 다른 백엔드의 바이너리를 찾다 남기는 Error 는 예상된 것이다(그 뒤 건너뛴다).
+        SW_TEST_DEFENSIVE_SCOPE( "a backend this shipping pack does not carry" );
+#endif
+        dx11Res1 = shaderCache.getOrCompile( dx11Desc );
+    }
     if ( sw::isShaderUnavailableInThisBuild( dx11Res1 ) )
         SW_TEST_SKIP( "Shader unavailable in this build (no compiler, or a backend this shipping pack does not carry)" );
     SW_EXPECT_TRUE( dx11Res1._bSuccess );

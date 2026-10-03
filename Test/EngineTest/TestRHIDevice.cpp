@@ -175,6 +175,8 @@ SW_TEST_CASE( RHIDeviceTest, DeviceCreationAllBackends )
 {
     for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
     {
+        if ( test::isBackendInThisBuild( backend ) == false )
+            continue;
         sw::shared_ptr<sw::IRHIDevice> device = sw::RHI::createDevice( backend );
         if ( device != nullptr )
         {

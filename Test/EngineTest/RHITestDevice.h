@@ -19,6 +19,29 @@ namespace test
                                                             sw::RHIBackend::OpenGL };
 
     /**
+     * @brief 이 빌드가 그 백엔드를 링크했는가. 배포본은 `SW_RHI_TARGET_*` 로 고른 **하나만** 링크한다 — 나머지를 만들려 하면 엔진이
+     *        "이 빌드에 없습니다" Error 를 남기고(호스트 스위트는 예상 밖 Error 로 진다) 널을 돌려준다. 개발 구성은 넷 다 모듈로 짓는다
+     *        (이 호스트에 런타임이 없는 것은 `RHIAvailability` 가 따로 거른다).
+     */
+    constexpr bool isBackendInThisBuild( sw::RHIBackend backend )
+    {
+#if defined( SW_SHIPPING )
+    #if defined( SW_RHI_TARGET_DX11 )
+        return backend == sw::RHIBackend::DirectX11;
+    #elif defined( SW_RHI_TARGET_VULKAN )
+        return backend == sw::RHIBackend::Vulkan;
+    #elif defined( SW_RHI_TARGET_OPENGL )
+        return backend == sw::RHIBackend::OpenGL;
+    #else
+        return backend == sw::RHIBackend::DirectX12;
+    #endif
+#else
+        (void)backend;
+        return true;
+#endif
+    }
+
+    /**
      * @brief 디바이스가 필요한 케이스의 창 + 디바이스 한 벌(`RHIDeviceTest` · `RenderPassGpuTest`).
      * @details 케이스마다 창 만들기 · 디바이스 만들기 · 표면 붙이기 · 초기화 · 실패 시 되감기 12 줄과 끝의 내리기 6 줄을 손으로
      *          들고 있었다(두 파일 50 곳 남짓). 그리고 그 사이의 `SW_ASSERT_*` 가 실패하면 **내리기에 닿지 않았다** — 디바이스는
