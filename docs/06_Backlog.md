@@ -165,6 +165,8 @@ cd build/Ninja-Debug/Bin
 
 ### 1-5. 핫 리로드 · 모듈
 
+- **`RHIBackendRegistry::unloadModules` · `tryLoadModule` 은 아직 `unloadModuleImage` 를 쓰지 않는다** — RHI 모듈은 지금 등록을 남기지 않아 무해하다. 같은 창구로.
+
 - **RuntimeAPI 가 Engine 헤더를 include 한다** — `RuntimeAPI/Service/ModuleService.h` 가 `Engine/Common/EngineServiceList.xxx` 를 세 번 include 해 서비스 id 를 만든다.
   "RuntimeAPI 는 순수 계약" 과 어긋난다. 서비스 목록을 RuntimeAPI 쪽으로 옮기거나(Engine 이 그것을 include) 계약 문장을 사실대로 고칠지 정한다.
 
@@ -238,6 +240,8 @@ cd build/Ninja-Debug/Bin
   옛 규칙으로 지은 바이너리가 남은 프리셋은 다시 지어야 새 규칙을 따른다.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
+
+- **`ReflectionTest_Shard2` 가 부하 아래에서 30 초 시한에 닿는다**(혼자 18~21 초, CI-Debug `-j 4` 중 다른 빌드와 겹친 1 회 초과). 또 보이면 샤드를 늘린다.
 
 - **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩). 09-23 에 고친 DX11 기록 컨텍스트 결함과 모양은 같지만 단정하지 않았다.
   이제 시험 실행 파일에 크래시 핸들러가 있어 다음에는 스택이 남는다 — 직접 실행해 전체 출력을 파일로 받는다.
@@ -851,6 +855,11 @@ cd build/Ninja-Debug/Bin
 - **패널 시각 검증 사각** — 피킹 클릭 · 기즈모 우선순위는 사람이 눌러야 보인다. 그리기 회귀는 `Game View` 정점 수로 전후를 비교한다.
 
 ### 3-9. 핫 리로드 · 모듈 · 엔진 서비스
+
+- **핫 리로드가 아닌 곳에서 모듈 이미지를 내릴 때는 `engine::unloadModuleImage` 하나로** — `releaseModuleCode` 로 그 이미지 코드를 쥔 등록(디스패처 채널 등)을 떼고,
+  떼지 못하면 내리지 않으며, 끌어온 의존 이미지는 고정한다(리눅스는 DT_NEEDED 가 함께 내려가 종료 때 남은 채널 deleter 로 SEGFAULT, Windows 는 /DELAYLOAD 가
+  GameFramework 를 프로세스 끝까지 잡아 가려졌다). 섀도 사본 이름은 `<모듈>_temp_p<pid>_…` — 정리는 다른 살아 있는 프로세스의 사본을 남긴다(`Bin` 은 CTest `-j` 로 같이
+  도는 프로세스들 — AppCookTest 가 띄운 App 등 — 이 함께 쓴다).
 
 - **씬은 기동 단계 `ModuleTypes` 뒤에만 읽는다** — `TypeRegistry::areAllModuleTypesRegistered()` 가 거짓이면 `SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes` 가
   거절한다. 모듈 이미지 · 타입 등록은 그 단계에서 App 로더(`ModuleHost::loadModuleImages`)가 하고, 인스턴스는 RHI 뒤에 **게임 → 에디터** 순(그래야
