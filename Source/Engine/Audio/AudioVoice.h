@@ -66,6 +66,8 @@ namespace sw
         bool isPaused() const { return _bPaused == SW_TRUE; }
         /** @brief 클립 안의 재생 위치(클립 프레임)입니다. */
         float64 getPosition() const { return _position; }
+        /** @brief 페이드가 가는 목표 게인입니다(들림 판정 — 페이드인 첫 블록도 들리는 것으로 본다). */
+        float32 getFadeTarget() const { return _fadeTarget; }
         /** @brief 지금 걸린 페이드 게인입니다. */
         float32 getFadeGain() const { return _fadeGain; }
         /** @brief 클립입니다. */

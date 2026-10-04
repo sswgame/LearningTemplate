@@ -65,6 +65,8 @@ namespace sw
         bool isBusSolo( uint32 busIndex ) const { return _listBusState[busIndex]._bSolo == SW_TRUE; }
         /** @brief 데이터 볼륨(dB) 위에 더하는 오프셋(dB)입니다 — 스냅샷이 씁니다. */
         void setBusVolumeOffsetDb( uint32 busIndex, float32 offsetDb ) { _listBusState[busIndex]._volumeOffsetDb = offsetDb; }
+        /** @brief 스냅샷 오프셋(dB)입니다. */
+        float32 getBusVolumeOffsetDb( uint32 busIndex ) const { return _listBusState[busIndex]._volumeOffsetDb; }
         /** @brief 센드 레벨(dB)을 바꿉니다. 그 센드가 없으면 false 입니다. */
         bool setSendLevelDb( uint32 busIndex, uint32 targetBusIndex, float32 levelDb );
         /** @brief 센드 레벨(dB)입니다. 그 센드가 없으면 데이터 바닥 값입니다. */

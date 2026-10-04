@@ -114,6 +114,89 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 스냅샷이 버스 페이더에 더하는 오프셋입니다. */
+    REFLECT()
+    struct SW_API AudioSnapshotBusDesc
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Bus name" )
+        hashed_string _bus{};
+        PROPERTY( Tooltip = "Fader offset at full intensity (intensities add in dB)", Meta = "Units=dB" )
+        float32 _volumeDb{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 스냅샷이 바꾸는 센드 레벨입니다. */
+    REFLECT()
+    struct SW_API AudioSnapshotSendDesc
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Sending bus" )
+        hashed_string _bus{};
+        PROPERTY( Tooltip = "Receiving bus (the send must exist in the graph)" )
+        hashed_string _target{};
+        PROPERTY( Tooltip = "Send level at full intensity", Meta = "Units=dB" )
+        float32 _levelDb{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 스냅샷이 바꾸는 이펙트 파라미터입니다. */
+    REFLECT()
+    struct SW_API AudioSnapshotEffectDesc
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Bus that holds the effect" )
+        hashed_string _bus{};
+        PROPERTY( Tooltip = "Effect name on that bus (its _name, or its type when unnamed)" )
+        hashed_string _effect{};
+        PROPERTY( Tooltip = "Parameter name" )
+        hashed_string _parameter{};
+        PROPERTY( Tooltip = "Value at full intensity (frequencies blend on a log scale)" )
+        float32 _value{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 믹스 스냅샷 하나입니다(Wwise State/Mix · FMOD Snapshot · 언리얼 Sound Mix). 켜면 세기 0 → 1 로 들어오고, 끄면 1 → 0 으로 빠집니다.
+     * @details 세기는 시간(`startSnapshot` · `stopSnapshot`)이나 게임 값(`setSnapshotIntensity` — 리버브 존의 경계 블렌드)이 정합니다. 버스 오프셋은 세기 × dB 를
+     *          더하고, 센드 · 이펙트 파라미터는 켠 순서대로 지금 값 → 스냅샷 값을 세기만큼 보간합니다.
+     * @code
+     *     <AudioSnapshotDesc _name="Underwater" _fadeInSeconds="0.3" _fadeOutSeconds="0.6">
+     *         <_listEffectParameter><AudioSnapshotEffectDesc _bus="master" _effect="Muffle" _parameter="frequencyHz" _value="600" /></_listEffectParameter>
+     *     </AudioSnapshotDesc>
+     * @endcode
+     */
+    REFLECT()
+    struct SW_API AudioSnapshotDesc
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Snapshot name" )
+        hashed_string _name{};
+        PROPERTY( Tooltip = "Bus fader offsets" )
+        vector<AudioSnapshotBusDesc> _listBusVolume{};
+        PROPERTY( Tooltip = "Send levels" )
+        vector<AudioSnapshotSendDesc> _listSend{};
+        PROPERTY( Tooltip = "Effect parameters" )
+        vector<AudioSnapshotEffectDesc> _listEffectParameter{};
+        PROPERTY( Min = 0.0, Tooltip = "Time to reach full intensity", Meta = "Units=s" )
+        float32 _fadeInSeconds{ 0.5f };
+        PROPERTY( Min = 0.0, Tooltip = "Time to fall back to zero", Meta = "Units=s" )
+        float32 _fadeOutSeconds{ 0.5f };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @brief 믹서 그래프 하나입니다. 버스 목록과 보이스 상한입니다.
      * @details 버스 이름은 겹치지 않고, `master` 가 유일한 루트이며, 부모 · 센드 대상은 표에 있는 이름이고, 부모 · 센드가 고리를 만들지 않아야 합니다.
@@ -130,6 +213,8 @@ namespace sw
         vector<AudioAttenuationDesc> _listAttenuation{};
         PROPERTY( Tooltip = "How occlusion (0..1) turns into volume and low-pass" )
         AudioOcclusionDesc _occlusion{};
+        PROPERTY( Tooltip = "Mix snapshots (bus, send and effect parameter sets blended over time)" )
+        vector<AudioSnapshotDesc> _listSnapshot{};
         PROPERTY( Min = 1, Tooltip = "Most voices alive at once (real and virtual)" )
         uint32 _maxVoiceCount{ 256 };
         PROPERTY( Min = 1, Tooltip = "Most voices mixed at once; the quietest lowest-priority rest go virtual" )
@@ -146,6 +231,10 @@ namespace sw
 
         /** @brief 버스 번호입니다. 없으면 -1 입니다. */
         int32 findBusIndex( const hashed_string& name ) const;
+        /** @brief 스냅샷입니다. 없으면 nullptr 입니다. */
+        const AudioSnapshotDesc* findSnapshot( const hashed_string& name ) const;
+        /** @brief 버스의 이펙트 서술입니다. 없으면 nullptr 입니다. */
+        const AudioEffectDesc* findEffect( uint32 busIndex, const hashed_string& effectName ) const;
         /** @brief 감쇠 프리셋입니다. 없으면 nullptr 입니다. */
         const AudioAttenuationDesc* findAttenuation( const hashed_string& name ) const;
         /**
@@ -156,6 +245,8 @@ namespace sw
 
         /** @brief 감쇠 프리셋 목록을 검사합니다(이름 · 거리 · 곡선 점 순서). 이벤트 라이브러리도 같은 검사를 씁니다. */
         [[nodiscard]] static bool validateAttenuations( const vector<AudioAttenuationDesc>& listAttenuation, string_view sourceName );
+        /** @brief 스냅샷이 가리키는 버스 · 센드 · 이펙트 · 파라미터가 그래프에 있는지 검사합니다. */
+        [[nodiscard]] bool validateSnapshots( string_view sourceName ) const;
         /** @brief 곡선 점이 입력 오름차순인지입니다. */
         static bool isCurveSorted( const vector<AudioCurvePoint>& listPoint );
 

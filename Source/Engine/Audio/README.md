@@ -15,6 +15,8 @@
 | 버스 이펙트(바이쿼드 · 컴프레서 · 리미터 · 리버브 · 딜레이)와 이름 → 종류 등록부 | `Dsp/AudioEffect` |
 | 바이쿼드 계수(RBJ cookbook) · 스테레오 상태 · 크기 응답 | `Dsp/AudioBiquad` |
 | 공간화 — 리스너 · 에미터 · 감쇠 프리셋 · 팬 · 도플러 · 가림 · 가림 질의 창구 | `AudioSpatial` |
+| 사운드 이벤트 · 파라미터 데이터(`*.audioevents.xml`) | `AudioEvent` |
+| 이벤트 실행 — 쿨다운 · 상한 · 뺏기 · 컨테이너 · 파라미터 seek · 스냅샷 · 실제/가상 보이스 고르기 | `AudioEngineEvents.cpp` |
 | 형식 상수 · dB 변환 · 결정적 난수 · 버스 이름 | `AudioTypes.h` |
 | Windows 출력(XAudio2 스트리밍 보이스) · MP3 대체 디코더(Media Foundation) | `Windows/XAudio2System` |
 | 장치 없는 출력 | `NullAudioSystem` |
@@ -84,6 +86,49 @@
 - **가림(occlusion)** — 게임 스레드가 0..1 을 재서(`IAudioOcclusionQuery`, 엔진 기본은 물리 씬 레이캐스트) `setEmitterOcclusion` 으로 넣고, 엔진은
   `_occlusion._smoothingSeconds` 로 따라가며 볼륨(`_volumeDb` × 값)과 로우패스(20 kHz → `_lowPassHz`, 로그 축)로 바꿉니다. 프리셋의 `_bOcclusion` 이 끄면 무시.
   가림 · 막힘(obstruction)을 따로 두지 않습니다 — 한 값입니다.
+
+## 이벤트
+
+게임 코드는 이벤트 이름만 압니다 — `engine.postEvent( "Footstep", emitterId )`. 무슨 클립을 어떻게 낼지는 라이브러리(`*.audioevents.xml`,
+`AudioEventLibrary`)가 정합니다. Wwise Event + Random/Sequence/Blend 컨테이너 + Playback Limit + RTPC, FMOD Event + Multi Instrument + Parameter,
+언리얼 Sound Cue(Random · Concatenator) + Sound Concurrency 의 자리입니다.
+
+```xml
+<AudioEventLibrary>
+	<_listParameter><AudioParameterDesc _name="Speed" _minValue="0" _maxValue="1" _seekSpeed="2" /></_listParameter>
+	<_listEvent>
+		<AudioEventDesc _name="Footstep" _bus="sfx" _attenuation="Small" _container="Random" _maxInstances="4" _steal="Oldest"
+		                _priority="40" _cooldownSeconds="0.05" _volumeDbMin="-3" _pitchMin="-1" _pitchMax="1" _virtual="Stop">
+			<_listClip><AudioClipEntry _path="game/x/sounds/step_0.ogg" /><AudioClipEntry _path="game/x/sounds/step_1.ogg" _weight="2" /></_listClip>
+			<_listParameterMap>
+				<AudioParameterMapping _parameter="Speed" _target="Volume">
+					<_listPoint><AudioCurvePoint _x="0" _y="-12" /><AudioCurvePoint _x="1" _y="0" /></_listPoint>
+				</AudioParameterMapping>
+			</_listParameterMap>
+		</AudioEventDesc>
+	</_listEvent>
+</AudioEventLibrary>
+```
+
+- **컨테이너** `Random`(가중치, `_bAvoidRepeat` 이면 바로 앞 클립 제외) · `Sequence`(이벤트마다 커서) · `Layer`(전부 함께). 볼륨 · 피치 범위는 재생마다 한 번 뽑아
+  레이어가 나눠 씁니다. 난수는 엔진 씨앗(`setRandomSeed`)이라 결정적입니다.
+- **쿨다운** — 오디오 시각(렌더한 프레임)으로 잽니다. **동시 재생 상한** `_maxInstances`(0 = 무제한) + `_steal`: `Reject` · `Oldest` · `Quietest` · `Farthest`.
+  뺏긴 인스턴스는 `_fadeOutSeconds` 로 빠지고 상한 셈에서 빠집니다.
+- **실제 보이스 상한**(그래프의 `_maxRealVoiceCount`)과 **가상화**: 블록마다 들림(보이스 자신의 게인 — 거리 · 가림 · 파라미터 · 페이드 목표, 버스 페이더는 넣지 않음)이
+  `_inaudibleDb` 아래면 들리지 않는 것, 나머지는 우선순위 → 들림 순으로 상한까지 섞습니다. 밖의 보이스는 `_virtual` 이 정합니다: `Virtualize`(섞지 않고
+  시간만 흐름 — 다시 들리면 그 자리에서 0 게인부터 램프해 이어짐), `Stop`(들리지 않으면 바로, 들리는데 밀리면 한 블록 페이드로 멈춤), `KeepReal`(늘 섞음, 상한을 먼저 차지).
+- **파라미터(RTPC)** — `setParameter`(전역) · `setEmitterParameter`(에미터, 전역보다 앞섬). 라이브러리의 범위로 묶고 `_seekSpeed`(단위/초)로 따라갑니다.
+  `AudioParameterMapping` 곡선이 볼륨(dB, 더함) · 피치(반음, 더함) · 로우패스(Hz, 낮은 쪽)를 정합니다.
+- **올리기 검사** — `AudioEngine::loadEventLibrary( 이름, library )`: 파일 안 규칙(이름 · 클립 · 범위 · 곡선 순서 · 모르는 파라미터) + 그래프 대조(버스 · 감쇠) + 다른
+  라이브러리와 이벤트 · 파라미터 이름 겹침. 어긋나면 오류이고 올리지 않습니다. 같은 이름으로 다시 올리면 바꿉니다(핫 리로드 — 쿨다운 · 순서 커서는 이름으로 이어짐).
+  올릴 때 클립 디코드를 걸어 둡니다(뱅크 로드). 재생 중 인스턴스는 자기 라이브러리를 쥐고 끝까지 갑니다.
+
+## 스냅샷
+
+그래프 데이터의 `_listSnapshot`(Wwise State/Mix · FMOD Snapshot · 언리얼 Sound Mix). 스냅샷 하나는 버스 페이더 오프셋(dB) · 센드 레벨 · 이펙트 파라미터 묶음이고,
+`startSnapshot` / `stopSnapshot` 은 `_fadeInSeconds` / `_fadeOutSeconds` 로 세기 0 ↔ 1 을 옮기며, `setSnapshotIntensity` 는 세기를 바로 정합니다(리버브 존의 경계 블렌드).
+버스 오프셋은 세기 × dB 를 **더하고**, 센드 · 이펙트 파라미터는 데이터 값에서 시작해 **켠 순서대로** 세기만큼 보간합니다(주파수 파라미터는 로그 축). 다 빠지면
+데이터 값으로 돌아옵니다. 기본 그래프: `Underwater`(master Muffle 600 Hz · sfx -4 dB) · `PauseMenu` · `Cave` · `Hall`(리버브 센드 · 방 크기).
 
 ## 재생
 

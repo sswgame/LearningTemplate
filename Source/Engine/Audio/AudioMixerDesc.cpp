@@ -118,6 +118,8 @@ namespace sw
         }
         if ( validateAttenuations( _listAttenuation, sourceName ) == false )
             bValid = false;
+        if ( bValid && validateSnapshots( sourceName ) == false )
+            bValid = false;
         if ( _maxVoiceCount == 0 || _maxRealVoiceCount == 0 )
         {
             SW_LOG_ERROR( "%#: voice limits must be at least 1", sourceName );
@@ -180,6 +182,91 @@ namespace sw
             {
                 SW_LOG_ERROR( "%#: attenuation '%#' uses the Custom curve with no points", sourceName, attenuation._name.c_str() );
                 bValid = false;
+            }
+        }
+        return bValid;
+    }
+
+    const AudioSnapshotDesc* AudioMixerDesc::findSnapshot( const hashed_string& name ) const
+    {
+        for ( const AudioSnapshotDesc& snapshot : _listSnapshot )
+        {
+            if ( snapshot._name == name )
+                return &snapshot;
+        }
+        return nullptr;
+    }
+
+    const AudioEffectDesc* AudioMixerDesc::findEffect( uint32 busIndex, const hashed_string& effectName ) const
+    {
+        for ( const AudioEffectDesc& effect : _listBus[busIndex]._listEffect )
+        {
+            if ( effect.getEffectName() == effectName )
+                return &effect;
+        }
+        return nullptr;
+    }
+
+    bool AudioMixerDesc::validateSnapshots( string_view sourceName ) const
+    {
+        bool bValid = true;
+        for ( size_t snapshotIndex = 0; snapshotIndex < _listSnapshot.size(); ++snapshotIndex )
+        {
+            const AudioSnapshotDesc& snapshot = _listSnapshot[snapshotIndex];
+            const utf8*              pName    = snapshot._name.c_str();
+            if ( snapshot._name.empty() )
+            {
+                SW_LOG_ERROR( "%#: snapshot %# has no name", sourceName, snapshotIndex );
+                bValid = false;
+            }
+            for ( size_t otherIndex = snapshotIndex + 1; otherIndex < _listSnapshot.size(); ++otherIndex )
+            {
+                if ( _listSnapshot[otherIndex]._name == snapshot._name )
+                {
+                    SW_LOG_ERROR( "%#: snapshot '%#' is declared twice", sourceName, pName );
+                    bValid = false;
+                }
+            }
+            for ( const AudioSnapshotBusDesc& busVolume : snapshot._listBusVolume )
+            {
+                if ( findBusIndex( busVolume._bus ) < 0 )
+                {
+                    SW_LOG_ERROR( "%#: snapshot '%#' names unknown bus '%#'", sourceName, pName, busVolume._bus.c_str() );
+                    bValid = false;
+                }
+            }
+            for ( const AudioSnapshotSendDesc& send : snapshot._listSend )
+            {
+                const int32 busIndex = findBusIndex( send._bus );
+                bool        bFound   = false;
+                if ( busIndex >= 0 )
+                {
+                    for ( const AudioSendDesc& existing : _listBus[static_cast<size_t>( busIndex )]._listSend )
+                        bFound = bFound || existing._bus == send._target;
+                }
+                if ( bFound == false )
+                {
+                    SW_LOG_ERROR( "%#: snapshot '%#' changes send '%#' -> '%#' that the graph does not have", sourceName, pName, send._bus.c_str(), send._target.c_str() );
+                    bValid = false;
+                }
+            }
+            for ( const AudioSnapshotEffectDesc& effect : snapshot._listEffectParameter )
+            {
+                const int32            busIndex = findBusIndex( effect._bus );
+                const AudioEffectDesc* pEffect  = busIndex >= 0 ? findEffect( static_cast<uint32>( busIndex ), effect._effect ) : nullptr;
+                bool                   bKnown   = false;
+                if ( pEffect != nullptr )
+                {
+                    const AudioEffectTypeInfo* pTypeInfo = AudioEffectRegistry::findType( pEffect->_type );
+                    for ( uint32 parameterIndex = 0; pTypeInfo != nullptr && parameterIndex < pTypeInfo->_parameterCount; ++parameterIndex )
+                        bKnown = bKnown || effect._parameter == hashed_string( pTypeInfo->_pParameter[parameterIndex]._pName );
+                }
+                if ( bKnown == false )
+                {
+                    SW_LOG_ERROR( "%#: snapshot '%#' changes '%#.%#.%#' that the graph does not have", sourceName, pName, effect._bus.c_str(), effect._effect.c_str(),
+                                  effect._parameter.c_str() );
+                    bValid = false;
+                }
             }
         }
         return bValid;

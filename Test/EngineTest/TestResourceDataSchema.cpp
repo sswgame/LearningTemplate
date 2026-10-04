@@ -4,6 +4,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Character/BodyShape.h"
 #include "Engine/Character/FitPartData.h"
@@ -76,6 +77,7 @@ namespace
         static bool isPhysicsSettings( sw::string_view resourceId ) { return endsWith( resourceId, "physicssettings.xml" ); }
         static bool isPhysicsAsset( sw::string_view resourceId ) { return endsWith( resourceId, ".physics.xml" ); }
         static bool isAudioMixer( sw::string_view resourceId ) { return endsWith( resourceId, ".audiomixer.xml" ); }
+        static bool isAudioEvents( sw::string_view resourceId ) { return endsWith( resourceId, ".audioevents.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -273,6 +275,7 @@ namespace
             {    "physicssettings",     &isPhysicsSettings,                    &loadPhysicsSettings},
             {       "physicsasset",        &isPhysicsAsset,                       &loadPhysicsAsset},
             {         "audiomixer",          &isAudioMixer,        &loadCatalog<sw::AudioMixerDesc>},
+            {        "audioevents",         &isAudioEvents,     &loadCatalog<sw::AudioEventLibrary>},
         };
 
         /**
