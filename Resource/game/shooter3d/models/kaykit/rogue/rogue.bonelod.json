@@ -1,0 +1,12 @@
+{
+    "levels": [
+        {
+            "max_screen_size": 0.15,
+            "remove": [ "kneeIK.l", "control-toe-roll.l", "elbowIK.l", "handIK.l", "kneeIK.r", "control-toe-roll.r", "elbowIK.r", "handIK.r", "handslot.l", "handslot.r" ]
+        },
+        {
+            "max_screen_size": 0.05,
+            "remove": [ "toes.l", "toes.r", "hand.l", "hand.r" ]
+        }
+    ]
+}

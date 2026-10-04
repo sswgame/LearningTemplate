@@ -4,6 +4,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/SkeletonBoneLod.h"
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Character/BodyShape.h"
 #include "Engine/Character/FitPartData.h"
@@ -18,6 +19,7 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Input/InputMap.h"
+#include "Engine/Object/Animation/AnimationLod.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -201,6 +203,21 @@ namespace
             return skeleton.loadFromResource( resourceId );
         }
 
+        /** @brief 스켈레톤 곁 본 LOD 표 — 모르는 키 · 곁 스켈레톤에 없는 본 이름은 오류다. */
+        static bool isBoneLod( sw::string_view resourceId ) { return endsWith( resourceId, sw::SkeletonBoneLod::kExtension ); }
+        static bool loadBoneLod( const sw::string& resourceId )
+        {
+            const sw::string skeletonPath =
+                sw::string{ resourceId.substr( 0, resourceId.size() - sw::SkeletonBoneLod::kExtension.size() ) } + sw::string{ sw::Skeleton::kExtension };
+            sw::SkeletonBoneLod           boneLod;
+            sw::Skeleton                  skeleton;
+            sw::vector<sw::vector<uint8>> listMask;
+            return boneLod.loadFromResource( resourceId ) && skeleton.loadFromResource( skeletonPath ) && boneLod.buildMasks( skeleton, listMask, resourceId );
+        }
+
+        /** @brief 애니메이션 LOD 표(주기 단계 · 예산). */
+        static bool isAnimationLod( sw::string_view resourceId ) { return resourceId == sw::AnimationLodSettings::kResourcePath; }
+
         // 게임 데이터 — 키트 카탈로그가 읽는다(게임 모듈은 읽은 정의를 조립만 한다). 파일 이름은 게임이 여는 그대로다.
         template <typename TCatalog>
         static bool loadCatalog( const sw::string& resourceId )
@@ -286,6 +303,8 @@ namespace
             {              "items",               &isItems,           &loadCatalog<sw::ItemCatalog>},
             {         "appearance",      &isAppearanceData,                     &loadAppearanceData},
             {           "skeleton",            &isSkeleton,                           &loadSkeleton},
+            {            "bonelod",             &isBoneLod,                            &loadBoneLod},
+            {       "animationlod",        &isAnimationLod,  &loadCatalog<sw::AnimationLodSettings>},
         };
 
         /**

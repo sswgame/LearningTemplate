@@ -8,11 +8,14 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Object/Animation/AnimationLod.h"
+
 namespace sw
 {
     class AnimPlayer;
     class GameObjectManager;
     class SkeletalMeshComponent;
+    class SkeletonBoneLod;
 
     /**
      * @enum AnimationPhase
@@ -80,6 +83,31 @@ namespace sw
 namespace sw
 {
     /**
+     * @class IAnimationLodClient
+     * @brief LOD 판정을 받는 것(스켈레탈 유닛 · 스프라이트 애니메이터)입니다. `AnimationSystem::registerLodClient` 로 올립니다.
+     * @details 리플렉션 컴포넌트는 기반 클래스 하나만 두므로 컴포넌트가 이것을 구현한 작은 객체를 하나 듭니다(`SkeletalAnimatorBinding` 과 같은 자리).
+     *          판정은 게임 스레드에서 평가 앞에 한 번이고, 결과는 `applyAnimationLod` 로 받습니다.
+     */
+    class SW_API IAnimationLodClient
+    {
+    public:
+        IAnimationLodClient()                                        = default;
+        virtual ~IAnimationLodClient()                               = default;
+        IAnimationLodClient( const IAnimationLodClient& )            = delete;
+        IAnimationLodClient& operator=( const IAnimationLodClient& ) = delete;
+
+        /** @brief 월드 경계 구입니다. 없으면 false — 늘 보이고 가장 중요한 것으로 봅니다. */
+        virtual bool findAnimationLodBounds( float3& outCenter, float32& outRadius ) const = 0;
+        /** @brief 본 LOD 표입니다(없으면 nullptr). */
+        virtual const SkeletonBoneLod* findBoneLod() const { return nullptr; }
+        /** @brief 이번 프레임의 판정을 받습니다(게임 스레드). */
+        virtual void applyAnimationLod( const AnimationLodState& state ) = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class AnimationSystem
      * @brief 등록된 유닛을 의존(위 유닛 → 아래 유닛) 레벨로 나눠 단계마다 평가합니다. 언리얼 애니메이션 평가 · 유니티 Playable 그래프 평가의 자리입니다.
      * @details 프레임 순서: (0) 의존이 바뀌었으면 레벨을 다시 짓는다(위상 정렬, 고리는 오류로 알리고 남은 유닛은 마지막 레벨) → (1) 유닛마다 이번 프레임
@@ -108,8 +136,32 @@ namespace sw
         /** @brief 의존 · 리더가 바뀌었습니다. 다음 평가가 레벨을 다시 짓습니다. */
         void markOrderDirty() { _bOrderDirty = SW_TRUE; }
 
-        /** @brief 한 프레임을 평가합니다(게임 스레드, 틱 뒤). */
+        /** @brief 한 프레임을 평가합니다(게임 스레드, 틱 뒤). LOD 판정 → 단계들 순서입니다. */
         void evaluate( float32 deltaSeconds );
+
+        // --- LOD (AnimationLod.h) ---
+        /** @brief LOD 판정을 받을 것을 올립니다(유닛 · 스프라이트 애니메이터). */
+        void registerLodClient( IAnimationLodClient* pClient );
+        /** @brief 내립니다. 멱등입니다. */
+        void unregisterLodClient( IAnimationLodClient* pClient );
+        /**
+         * @brief 다음 평가가 쓸 뷰들입니다(주 시점 + 추가 뷰). 엔진 루프가 프레임마다 넣습니다. 한 번도 넣지 않았으면 LOD 는 꺼져 있습니다
+         *        (모든 클라이언트가 보이고 매 프레임 — 시험 · 서버 · 뷰가 없는 실행).
+         */
+        void setLodViews( const vector<AnimationLodView>& listView );
+        /** @brief 뷰를 지워 LOD 를 끕니다. */
+        void clearLodViews();
+        /** @brief LOD 표를 정합니다(시험 · 게임). 정하지 않으면 처음 판정 때 `AnimationLodSettings::kResourcePath` 를 읽습니다. */
+        void                        setLodSettings( const AnimationLodSettings& settings );
+        const AnimationLodSettings& getLodSettings() const { return _lodSettings; }
+        /** @brief 지난 판정에서 포즈 하나를 만드는 데 든 평균 시간(마이크로초, 지수 이동 평균)입니다 — 예산 배분이 씁니다. */
+        float32 getAverageEvaluationMicroseconds() const { return _averageEvaluationMicroseconds; }
+        /** @brief 비용 평균을 정합니다(시험 — 측정 대신 정한 값으로 예산을 돌린다). 0 이면 다시 잽니다. */
+        void setAverageEvaluationMicroseconds( float32 microseconds ) { _averageEvaluationMicroseconds = microseconds; }
+        /** @brief 지난 판정에서 예산 배분 뒤의 예상 비용(마이크로초)입니다. */
+        float32 getExpectedEvaluationMicroseconds() const { return _expectedEvaluationMicroseconds; }
+        /** @brief 지난 평가에서 실제로 포즈를 만든 유닛 수입니다. */
+        uint32 getPoseEvaluatedUnitCount() const { return _poseEvaluatedUnitCount; }
 
         /** @brief 등록된 유닛 수입니다. */
         uint32 getUnitCount() const { return static_cast<uint32>( _listUnit.size() ); }
@@ -123,6 +175,8 @@ namespace sw
         uint32 getActiveUnitCount() const { return _activeUnitCount; }
 
     private:
+        /** @brief LOD 판정(가시성 · 화면 크기 · 주기 · 본 LOD · 예산)을 하고 클라이언트에 알립니다. */
+        void updateLod();
         /** @brief 의존을 풀어 레벨을 다시 짓습니다. */
         void rebuildLevels();
         /** @brief 단계 하나를 레벨 순서로 돕니다. */
@@ -134,11 +188,22 @@ namespace sw
         vector<vector<SkeletalMeshComponent*>> _listLevel;
         vector<SkeletalMeshComponent*>         _listActive;     ///< 이번 프레임 단계를 도는 유닛(레벨 순서). 재사용합니다
         vector<uint32>                         _listLevelStart; ///< `_listActive` 안의 레벨 시작 위치(끝 하나 더)
+        vector<IAnimationLodClient*>           _listLodClient;
+        vector<AnimationLodView>               _listLodView;
+        vector<AnimationLodState>              _listScratchLodState;   ///< 판정 중 클라이언트마다의 상태(재사용)
+        vector<AnimationBudgetItem>            _listScratchBudgetItem; ///< 예산 배분 입력(재사용)
+        AnimationLodSettings                   _lodSettings;
         GameObjectManager*                     _pManager;
         uint64                                 _frameIndex;
         float32                                _deltaSeconds;
+        float32                                _averageEvaluationMicroseconds;
+        float32                                _expectedEvaluationMicroseconds;
         uint32                                 _activeUnitCount;
+        uint32                                 _poseEvaluatedUnitCount;
         uint8                                  _bOrderDirty;
         uint8                                  _bCycle;
+        uint8                                  _bLodViewsSet;      ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
+        uint8                                  _bLodSettingsReady; ///< 표를 정했거나 읽었다
+        uint8                                  _bLodApplied;       ///< 지난 프레임에 판정을 넣었다(꺼질 때 한 번 되돌린다)
     };
 } // namespace sw

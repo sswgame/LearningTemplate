@@ -611,6 +611,7 @@ namespace sw
         , _gpuUploadQueue{ nullptr }
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
+        , _listAnimationLodView{}
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
@@ -928,6 +929,20 @@ namespace sw
                 {
                     RenderViewCollector::collectExtraViews( *pActiveScene->getObjectManager(), pCam, packet._viewProj, outputWidth, outputHeight,
                                                             _renderViewClock, RenderViewCollector::getDefaultBudget(), *_renderViewScheduler, packet._listView );
+                }
+                // 애니메이션 LOD 의 뷰 — 주 시점과 이번 프레임에 그리는 추가 뷰(CCTV · 분할 화면). 다음 프레임 평가가 이것으로 가시성 · 화면 크기를 본다.
+                // 갱신 주기로 쉬는 추가 뷰는 넣지 않는다 — 그 뷰에만 보이는 캐릭터는 그 뷰가 그리는 프레임에만 포즈를 만든다.
+                if ( pActiveScene->getObjectManager() != nullptr )
+                {
+                    _listAnimationLodView.clear();
+                    if ( packet._bHasViewProj == SW_TRUE )
+                        _listAnimationLodView.push_back( AnimationLodView::make( packet._viewProj, packet._cameraPos ) );
+                    for ( const RenderViewRequest& view : packet._listView )
+                    {
+                        if ( view._bRender == SW_TRUE )
+                            _listAnimationLodView.push_back( AnimationLodView::make( view._viewProj, view._position ) );
+                    }
+                    pActiveScene->getObjectManager()->getAnimationSystem().setLodViews( _listAnimationLodView );
                 }
                 _gpuSceneBuilder->buildFromScene( pActiveScene, packet._cameraPos );
 

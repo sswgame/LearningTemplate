@@ -100,9 +100,10 @@ namespace sw
         [[nodiscard]] virtual bool compress( const AnimRawClip& rawClip, const AnimCodecSettings& settings, vector<uint8>& outBytes ) const = 0;
         /**
          * @brief 블롭을 @p time 초에서 샘플해 트랙 순서의 @p outPose 에 씁니다(본 수 = 트랙 수로 맞춥니다).
-         * @param pBytes 16 바이트 정렬된 블롭입니다(`AnimClip` 이 그렇게 보관합니다).
+         * @param pBytes     16 바이트 정렬된 블롭입니다(`AnimClip` 이 그렇게 보관합니다).
+         * @param pTrackMask 트랙마다 0 이면 그 트랙을 풀지 않습니다(본 LOD — 값은 단위 변환으로 남습니다). nullptr 이면 모든 트랙입니다.
          */
-        [[nodiscard]] virtual bool sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose ) const = 0;
+        [[nodiscard]] virtual bool sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask = nullptr ) const = 0;
     };
 } // namespace sw
 

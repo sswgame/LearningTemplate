@@ -9,6 +9,7 @@
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/SkeletonBoneLod.h"
 
 namespace sw
 {
@@ -106,6 +107,12 @@ namespace sw
                 static SharedTable<AnimClip> s_table;
                 return s_table;
             }
+
+            static SharedTable<SkeletonBoneLod>& getBoneLodTable()
+            {
+                static SharedTable<SkeletonBoneLod> s_table;
+                return s_table;
+            }
         };
     } // namespace
 } // namespace sw
@@ -172,5 +179,36 @@ namespace sw
     void AnimClipCache::clear()
     {
         AnimationAssetCacheInternal::getClipTable().clear();
+    }
+
+    shared_ptr<const SkeletonBoneLod> SkeletonBoneLodCache::acquire( string_view path )
+    {
+        return AnimationAssetCacheInternal::getBoneLodTable().acquire( path );
+    }
+
+    bool SkeletonBoneLodCache::reloadShared( string_view path )
+    {
+        return AnimationAssetCacheInternal::getBoneLodTable().reloadShared( path );
+    }
+
+    bool SkeletonBoneLodCache::isCached( string_view relativePath ) const
+    {
+        return AnimationAssetCacheInternal::getBoneLodTable().findLive( relativePath ) != nullptr;
+    }
+
+    void SkeletonBoneLodCache::reload( string_view relativePath, IRHIDevice* pDevice )
+    {
+        (void)pDevice;
+        (void)reloadShared( relativePath );
+    }
+
+    size_t SkeletonBoneLodCache::getCachedCount() const
+    {
+        return AnimationAssetCacheInternal::getBoneLodTable().countLive();
+    }
+
+    void SkeletonBoneLodCache::clear()
+    {
+        AnimationAssetCacheInternal::getBoneLodTable().clear();
     }
 } // namespace sw

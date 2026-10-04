@@ -173,8 +173,11 @@ namespace sw
         void loadGraph();
         /** @brief 클립의 트랙 → 본 표입니다(유닛 스켈레톤 기준, 처음 쓸 때 짓습니다). */
         const vector<int32>& getTrackMap( const AnimClip& clip, const Skeleton& skeleton );
-        /** @brief 클립을 @p time 에 샘플해 @p inoutPose(레퍼런스로 시작한 본 포즈)에 씁니다. */
-        void sampleClipIntoPose( const AnimClip& clip, float32 time, const Skeleton& skeleton, Pose& inoutPose );
+        /**
+         * @brief 클립을 @p time 에 샘플해 @p inoutPose(레퍼런스로 시작한 본 포즈)에 씁니다.
+         * @param pBoneMask 본 LOD 마스크(본 수, 0 = 풀지 않고 레퍼런스로 둔다). nullptr 이면 모든 본입니다.
+         */
+        void sampleClipIntoPose( const AnimClip& clip, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask = nullptr );
         /** @brief 레이어의 본 마스크를 스켈레톤에 맞춥니다. */
         void refreshLayerMask( LayerState& layer, const Skeleton& skeleton );
         /** @brief 시간 단계입니다. */
@@ -217,6 +220,7 @@ namespace sw
         Pose                                                     _scratchPose;
         Pose                                                     _scratchTrackPose;
         Pose                                                     _scratchLayerPose;
+        vector<uint8>                                            _listScratchTrackMask; ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
         shared_ptr<const AnimClip>                               _sequencerClip;
         BoneTransform                                            _rootMotionDelta;
         SkeletalMeshComponent*                                   _pUnit;

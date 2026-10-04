@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
@@ -13,6 +14,7 @@
 #include "Engine/EngineInitSequence.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
+#include "Engine/Object/Animation/AnimationLod.h"
 #include "Engine/Utility/Debug/FrameProfileSession.h"
 
 namespace sw
@@ -228,6 +230,8 @@ namespace sw
         unique_ptr<RenderViewScheduler> _renderViewScheduler;
         /** @brief 스케줄러의 시각(초) — 프레임 델타의 누적입니다. */
         float64 _renderViewClock;
+        /** @brief 애니메이션 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
+        vector<AnimationLodView> _listAnimationLodView;
 
         bool _bShellActionsBound;
         bool _bHeadless;

@@ -99,6 +99,7 @@ namespace sw
         , _scratchPose{}
         , _scratchTrackPose{}
         , _scratchLayerPose{}
+        , _listScratchTrackMask{}
         , _sequencerClip{}
         , _rootMotionDelta{}
         , _pUnit{ nullptr }
@@ -373,12 +374,24 @@ namespace sw
         return listBone;
     }
 
-    void SkeletalAnimatorComponent::sampleClipIntoPose( const AnimClip& clip, float32 time, const Skeleton& skeleton, Pose& inoutPose )
+    void SkeletalAnimatorComponent::sampleClipIntoPose( const AnimClip& clip, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask )
     {
-        if ( clip.sampleTracks( time, _scratchTrackPose ) == false )
-            return;
         const vector<int32>& listTrackToBone = getTrackMap( clip, skeleton );
-        AnimClip::copyTracksToPose( _scratchTrackPose, listTrackToBone, inoutPose );
+        // 본 LOD — 빠진 본의 트랙은 코덱이 풀지 않고(ACL 트랙 건너뛰기) 포즈에도 옮기지 않는다(레퍼런스로 부모를 따른다).
+        const uint8* pTrackMask = nullptr;
+        if ( pBoneMask != nullptr )
+        {
+            _listScratchTrackMask.resize( listTrackToBone.size() );
+            for ( size_t trackIndex = 0; trackIndex < listTrackToBone.size(); ++trackIndex )
+            {
+                const int32 boneIndex             = listTrackToBone[trackIndex];
+                _listScratchTrackMask[trackIndex] = ( boneIndex >= 0 && pBoneMask[static_cast<uint32>( boneIndex )] != 0 ) ? SW_TRUE : SW_FALSE;
+            }
+            pTrackMask = _listScratchTrackMask.data();
+        }
+        if ( clip.sampleTracks( time, _scratchTrackPose, pTrackMask ) == false )
+            return;
+        AnimClip::copyTracksToPose( _scratchTrackPose, listTrackToBone, inoutPose, pTrackMask );
         // 루트 모션을 뽑으면 그 본은 클립 시작 자리에 묶는다 — 움직임은 오브젝트가 맡는다.
         const int32 rootTrack = clip.getRootMotionTrack();
         if ( _bExtractRootMotion == SW_TRUE && rootTrack >= 0 && listTrackToBone[static_cast<size_t>( rootTrack )] >= 0 )
@@ -422,14 +435,15 @@ namespace sw
         const AnimPlayer& player   = _graphPlayer.getPlayer();
         const AnimClip*   pCurrent = static_cast<const AnimClip*>( player.getCurrentPlayable() );
         const AnimClip*   pNext    = static_cast<const AnimClip*>( player.getNextPlayable() );
+        const uint8*      pMask    = unit.findBoneLodMask();
 
         // pose 는 유닛이 레퍼런스(또는 리더 포즈)로 채워 둔 상태다. 지금 칸을 그 위에 샘플하고, 페이드 중이면 다음 칸과 섞는다.
         if ( pCurrent != nullptr )
-            sampleClipIntoPose( *pCurrent, player.getCurrentTime(), skeleton, pose );
+            sampleClipIntoPose( *pCurrent, player.getCurrentTime(), skeleton, pose, pMask );
         if ( pNext != nullptr )
         {
             _scratchPose.setToReference( skeleton );
-            sampleClipIntoPose( *pNext, player.getNextTime(), skeleton, _scratchPose );
+            sampleClipIntoPose( *pNext, player.getNextTime(), skeleton, _scratchPose, pMask );
             Pose::blend( pose, _scratchPose, player.getBlendAlpha(), pose );
         }
 
@@ -439,7 +453,7 @@ namespace sw
                 continue;
             refreshLayerMask( layer, skeleton );
             _scratchLayerPose.setToReference( skeleton );
-            sampleClipIntoPose( *layer._clip, layer._player.getCurrentTime(), skeleton, _scratchLayerPose );
+            sampleClipIntoPose( *layer._clip, layer._player.getCurrentTime(), skeleton, _scratchLayerPose, pMask );
             if ( layer._desc._blend == AnimLayerBlend::Override )
             {
                 Pose::blendMasked( pose, _scratchLayerPose, layer._desc._weight, layer._listBoneWeight.data(), pose );
@@ -454,7 +468,7 @@ namespace sw
         if ( _sequencerClip != nullptr && _sequencerWeight > 0.0f )
         {
             _scratchPose.setToReference( skeleton );
-            sampleClipIntoPose( *_sequencerClip, _sequencerTime, skeleton, _scratchPose );
+            sampleClipIntoPose( *_sequencerClip, _sequencerTime, skeleton, _scratchPose, pMask );
             Pose::blend( pose, _scratchPose, _sequencerWeight, pose );
         }
     }

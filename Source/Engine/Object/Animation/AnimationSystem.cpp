@@ -4,17 +4,25 @@
 
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/AnimPlayer.h"
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "AnimationSystem" );
+
+    /**
+     * @brief `-gv_animationLod=0` — 애니메이션 LOD(가시성 · 갱신 주기 · 본 LOD · 예산)를 끕니다. 비교 측정 · 진단용입니다.
+     */
+    SW_GLOBAL_VARIABLE_INT( gv_animationLod, 1, "Animation LOD: frustum visibility, update rate, bone LOD and budget (0 = every unit every frame)" );
 
     namespace
     {
@@ -43,13 +51,126 @@ namespace sw
         , _listLevel{}
         , _listActive{}
         , _listLevelStart{}
+        , _listLodClient{}
+        , _listLodView{}
+        , _listScratchLodState{}
+        , _listScratchBudgetItem{}
+        , _lodSettings{}
         , _pManager{ nullptr }
         , _frameIndex{ 0 }
         , _deltaSeconds{ 0.0f }
+        , _averageEvaluationMicroseconds{ 0.0f }
+        , _expectedEvaluationMicroseconds{ 0.0f }
         , _activeUnitCount{ 0 }
+        , _poseEvaluatedUnitCount{ 0 }
         , _bOrderDirty{ SW_FALSE }
         , _bCycle{ SW_FALSE }
+        , _bLodViewsSet{ SW_FALSE }
+        , _bLodSettingsReady{ SW_FALSE }
+        , _bLodApplied{ SW_FALSE }
     {
+    }
+
+    void AnimationSystem::registerLodClient( IAnimationLodClient* pClient )
+    {
+        if ( pClient == nullptr || std::find( _listLodClient.begin(), _listLodClient.end(), pClient ) != _listLodClient.end() )
+            return;
+        _listLodClient.push_back( pClient );
+    }
+
+    void AnimationSystem::unregisterLodClient( IAnimationLodClient* pClient )
+    {
+        const auto it = std::find( _listLodClient.begin(), _listLodClient.end(), pClient );
+        if ( it != _listLodClient.end() )
+            _listLodClient.erase( it );
+    }
+
+    void AnimationSystem::setLodViews( const vector<AnimationLodView>& listView )
+    {
+        _listLodView  = listView;
+        _bLodViewsSet = SW_TRUE;
+    }
+
+    void AnimationSystem::clearLodViews()
+    {
+        _listLodView.clear();
+        _bLodViewsSet = SW_FALSE;
+    }
+
+    void AnimationSystem::setLodSettings( const AnimationLodSettings& settings )
+    {
+        _lodSettings       = settings;
+        _bLodSettingsReady = SW_TRUE;
+    }
+
+    void AnimationSystem::updateLod()
+    {
+        if ( _listLodClient.empty() )
+            return;
+        SW_PROFILE_SCOPE( "GT.Animation.lod" );
+        const size_t clientCount = _listLodClient.size();
+        // 뷰가 없거나(시험 · 서버) 꺼져 있으면 판정하지 않는다 — 켜져 있다가 꺼진 첫 프레임에만 지난 판정을 되돌린다(가시성 훅을 직접 부르는 쪽을 덮지 않게).
+        if ( gv_animationLod == 0 || _bLodViewsSet == SW_FALSE )
+        {
+            if ( _bLodApplied == SW_TRUE )
+            {
+                const AnimationLodState fullState{};
+                for ( IAnimationLodClient* pClient : _listLodClient )
+                    pClient->applyAnimationLod( fullState );
+            }
+            _bLodApplied                    = SW_FALSE;
+            _expectedEvaluationMicroseconds = 0.0f;
+            return;
+        }
+        _bLodApplied = SW_TRUE;
+        if ( _bLodSettingsReady == SW_FALSE )
+        {
+            // 표가 없으면 단계 없는 기본(가시성만)이다. 있는데 틀리면 오류를 남기고 기본으로 간다.
+            _bLodSettingsReady = SW_TRUE;
+            if ( ResourceUtil::hasResource( AnimationLodSettings::kResourcePath ) )
+                (void)_lodSettings.loadFromResource( AnimationLodSettings::kResourcePath );
+        }
+
+        _listScratchLodState.resize( clientCount );
+        _listScratchBudgetItem.clear();
+        for ( size_t clientIndex = 0; clientIndex < clientCount; ++clientIndex )
+        {
+            const IAnimationLodClient* pClient = _listLodClient[clientIndex];
+            float3                     center{};
+            float32                    radius     = 0.0f;
+            float32                    screenSize = 1.0f;
+            bool                       bVisible   = true;
+            if ( pClient->findAnimationLodBounds( center, radius ) )
+            {
+                screenSize = 0.0f;
+                for ( const AnimationLodView& view : _listLodView )
+                    screenSize = MathUtil::max( screenSize, AnimationLodUtil::computeScreenSize( view, center, radius ) );
+                bVisible = screenSize > 0.0f;
+            }
+            AnimationLodState& state = _listScratchLodState[clientIndex];
+            state                    = AnimationLodUtil::makeState( _lodSettings, screenSize, bVisible, pClient->findBoneLod() );
+            // 예산은 포즈를 만드는 것만 센다 — 화면 밖에서 포즈를 건너뛰는 것은 이미 0 이다.
+            if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
+                _listScratchBudgetItem.push_back( AnimationBudgetItem{ state._significance, state._updateRateDivisor } );
+        }
+
+        _expectedEvaluationMicroseconds = AnimationLodUtil::allocateBudget( _listScratchBudgetItem.data(), static_cast<uint32>( _listScratchBudgetItem.size() ),
+                                                                            _averageEvaluationMicroseconds, _lodSettings._budgetMilliseconds * 1000.0f,
+                                                                            _lodSettings._maxUpdateRateDivisor );
+        size_t budgetIndex              = 0;
+        for ( size_t clientIndex = 0; clientIndex < clientCount; ++clientIndex )
+        {
+            AnimationLodState& state = _listScratchLodState[clientIndex];
+            if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
+            {
+                const uint32 budgeted = _listScratchBudgetItem[budgetIndex++]._updateRateDivisor;
+                // 예산이 늘린 주기는 보간을 켠다 — 덜 중요한 유닛이 뚝뚝 끊기지 않게(언리얼 예산 배분기의 보간과 같은 자리).
+                if ( budgeted > state._updateRateDivisor )
+                    state._bInterpolate = SW_TRUE;
+                state._updateRateDivisor = budgeted;
+            }
+            _listLodClient[clientIndex]->applyAnimationLod( state );
+        }
     }
 
     void AnimationSystem::registerUnit( SkeletalMeshComponent* pUnit )
@@ -145,6 +266,7 @@ namespace sw
     void AnimationSystem::evaluate( float32 deltaSeconds )
     {
         SW_PROFILE_SCOPE( "GT.Animation.evaluate" );
+        updateLod();
         if ( _bOrderDirty == SW_TRUE || ( _listLevel.empty() && _listUnit.empty() == false ) )
             rebuildLevels();
         ++_frameIndex;
@@ -163,16 +285,29 @@ namespace sw
             }
         }
         _listLevelStart.push_back( static_cast<uint32>( _listActive.size() ) );
-        _activeUnitCount = static_cast<uint32>( _listActive.size() );
+        _activeUnitCount        = static_cast<uint32>( _listActive.size() );
+        _poseEvaluatedUnitCount = 0;
         if ( _listActive.empty() )
             return;
 
         runPhase( AnimationPhase::Time );
         synchronizeGroups();
+
+        // 포즈 단계의 벽시계 시간을 잰다 — 예산 배분이 "유닛 하나에 얼마" 를 이 평균으로 본다(언리얼 예산 배분기도 전체 시간을 재서 나눈다).
+        uint32 poseUnitCount = 0;
+        for ( const SkeletalMeshComponent* pUnit : _listActive )
+            poseUnitCount += pUnit->isPoseNeededThisFrame() ? 1u : 0u;
+        const int64 poseStart = MonotonicClock::nowNanoseconds();
         runPhase( AnimationPhase::BasePose );
         runPhase( AnimationPhase::Attachment );
         runPhase( AnimationPhase::PostProcess );
         runPhase( AnimationPhase::SkinPalette );
+        _poseEvaluatedUnitCount = poseUnitCount;
+        if ( poseUnitCount > 0 )
+        {
+            const float32 sample           = static_cast<float32>( MonotonicClock::nowNanoseconds() - poseStart ) * 0.001f / static_cast<float32>( poseUnitCount );
+            _averageEvaluationMicroseconds = ( _averageEvaluationMicroseconds <= 0.0f ) ? sample : ( _averageEvaluationMicroseconds * 0.9f + sample * 0.1f );
+        }
 
         for ( SkeletalMeshComponent* pUnit : _listActive )
             pUnit->finishAnimationFrame();
