@@ -18,11 +18,6 @@ namespace sw
 
     StarSkirmishGame::~StarSkirmishGame() = default;
 
-    void StarSkirmishGame::configureBootstrap( BootstrapConfig& outConfig )
-    {
-        outConfig._packRoot = "game/starskirmish";
-    }
-
     bool StarSkirmishGame::onInitialize()
     {
         if ( _unitCatalog.loadFromResource( "game/starskirmish/data/units.xml" ) == false )

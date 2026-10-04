@@ -18,11 +18,6 @@ namespace sw
 
     NileCityGame::~NileCityGame() = default;
 
-    void NileCityGame::configureBootstrap( BootstrapConfig& outConfig )
-    {
-        outConfig._packRoot = "game/nilecity";
-    }
-
     bool NileCityGame::onInitialize()
     {
         if ( _cityCatalog.loadFromResource( "game/nilecity/data/city.xml" ) == false )

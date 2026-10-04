@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/MissingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -15,6 +16,7 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
 {
@@ -75,6 +77,37 @@ namespace sw
                     }
                 }
                 return missingCount;
+            }
+
+            /** @brief @p relativePath(리소스 기준)가 활성 게임이 아닌 게임 팩(`game/<다른 게임>/`)에 있으면 true 입니다. 활성 팩을 모르면 false 입니다. */
+            static bool isInOtherGamePack( string_view relativePath, string_view activePackRoot )
+            {
+                if ( activePackRoot.empty() || StringUtil::startsWith( relativePath, "game/", true ) == false )
+                    return false;
+                const string activePrefix = string( activePackRoot ) + "/";
+                return StringUtil::startsWith( relativePath, activePrefix, true ) == false;
+            }
+
+            /**
+             * @brief 문서의 엔티티 상태에 지금 등록되지 않은 컴포넌트 타입이 있으면 true 입니다(짓지 않고 원소 이름만 본다).
+             * @details 다른 게임의 팩은 그 게임 모듈의 컴포넌트를 쓴다 — 이 빌드에는 없는 모듈이다. 그런 씬을 지으면 모르는 타입마다 오류가 난다.
+             */
+            static bool usesUnregisteredComponentTypes( const SceneDocument& doc )
+            {
+                const TypeRegistry& registry = engine::getTypeRegistry();
+                for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
+                {
+                    XmlDocument xml;
+                    if ( entity._embeddedXml.empty() || xml.parse( entity._embeddedXml ) == false )
+                        continue;
+                    const XmlNode listComponent = xml.getRoot().findChild( "_listComponent" );
+                    for ( XmlNode component = listComponent.findChild(); component.isValid(); component = component.findNextSibling() )
+                    {
+                        if ( registry.findType( hashed_string( component.getName() ) ) == nullptr )
+                            return true;
+                    }
+                }
+                return false;
             }
         };
     } // namespace
@@ -203,8 +236,9 @@ namespace sw
         vector<string> listSceneFile;
         FileUtil::collectFiles( resourceRoot, ".xml", listSceneFile, true );
 
-        const string normalizedRoot = FileUtil::normalizeSeparators( resourceRoot );
+        const string normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string normalizedOut  = FileUtil::normalizeSeparators( cookedDir );
+        const string activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( GameConfig::getActive()._packRoot ) );
 
         uint32 writtenCount{ 0 };
         for ( const string& scenePath : listSceneFile )
@@ -217,6 +251,14 @@ namespace sw
             {
                 SW_LOG_ERROR( "Scene cook failed to read '%#'.", scenePath );
                 ++outFailedCount;
+                continue;
+            }
+            // 다른 게임의 씬이 그 게임 모듈의 컴포넌트를 쓰면 건너뛴다 — 이 빌드에 없는 모듈이고, 배포본은 활성 게임의 팩만 연다.
+            // 엔진 · 공용 타입만 쓰는 씬은 그대로 쿠킹한다(활성 팩의 모르는 타입은 아래에서 실패로 센다).
+            const string relativeScene = FileUtil::normalizeSeparators( scenePath ).substr( std::min( normalizedRoot.size() + 1, scenePath.size() ) );
+            if ( SceneCookerInternal::isInOtherGamePack( relativeScene, activePackRoot ) && SceneCookerInternal::usesUnregisteredComponentTypes( doc ) )
+            {
+                SW_LOG_INFO( "Scene cook: '%#' uses components of another game's module - skipped", relativeScene );
                 continue;
             }
 

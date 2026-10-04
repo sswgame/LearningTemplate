@@ -15,7 +15,7 @@
 | `NileCity` | 도시 건설(파라오 장르, `GF_CityBuilder`) — 절차 나일 강 · 범람원 · 사막, 도로 · 우물 · 농장 → 창고 → 바자 → 집 사슬, 순회 일꾼, 집 진화, 범람, 마우스 짓기 · 허물기, `-gv_nileAutoPlay=1` | `-DSW_ACTIVE_GAME=NileCity` |
 | `Shooter3D` | 1인칭 슈터(기반 `Combat`) — 소총 · 산탄총 · 권총, 히트스캔 · 퍼짐 · 반동, 드론 웨이브, Kenney 조준선(CC0) | `-DSW_ACTIVE_GAME=Shooter3D` |
 | `StarSkirmish` | 실시간 전략(스타크래프트 장르, `GF_RealTimeStrategy`) — 절차 맵(두 기지 · 광물 · 간헐천 · 절벽), 채취 · 생산 · 건설 · 전투 · 안개, 끌어 고르기 · 오른쪽 클릭 · 부대, 사람 대 AI 또는 `-gv_skirmishAutoPlay=1` AI 대 AI | `-DSW_ACTIVE_GAME=StarSkirmish` |
-| `ThemeParkTycoon` | 놀이공원 경영(롤러코스터 타이쿤 장르, `GF_ThemePark`) — 코스터를 짓고 시험 운행이 평가, 손님 · 줄 · 표 · 평점, 아이소메트릭 직교 시점 · 코스터 탑승 | `-DSW_ACTIVE_GAME=ThemeParkTycoon` |
+| `ThemeParkTycoon` | 놀이공원 경영(롤러코스터 타이쿤 장르, `GF_ThemePark`) — 코스터를 짓고 시험 운행이 평가, 손님 · 줄 · 표 · 평점, 아이소메트릭 직교 시점 · 코스터 탑승. **씬 · 프리팹 · 컴포넌트 구조의 본보기**(아래 레시피) | `-DSW_ACTIVE_GAME=ThemeParkTycoon` |
 | `VoxelCraft` | 복셀 샌드박스(마인크래프트 장르, `GF_Voxel`) — 지형 · 나무 · 광석, 부수기 · 놓기 · 핫바, 청크 다시 짓기 | `-DSW_ACTIVE_GAME=VoxelCraft` |
 
 고르지 않은 게임은 빌드되지 않습니다(CI 는 `Empty` 만 짓습니다). 다른 게임을 바꿨으면 그 게임을 골라 한 번 지어 확인합니다.
@@ -48,12 +48,39 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
    (아래 "Empty 는 왜 비어 있지 않은가" 참고).
 3. **필요한 키트 연결하기**: `MyGame/CMakeLists.txt` 의 `sw_addGameModule(SWGame KITS ...)` 에
    필요한 키트를 적습니다.
-4. **게임 리소스 폴더 만들기**: `Resource/game/mygame/` 을 만들고, `configureBootstrap` 에서
-   `outConfig._packRoot = "game/mygame";` 로 지정합니다.
+4. **게임 리소스 폴더 · 프리셋 만들기**: `Resource/game/mygame/` 을 만들고, 게임 프리셋 `Config/Game/MyGame.json`(파일 이름 = 게임 폴더 이름)에
+   `_packRoot` 를 `"game/mygame"` 로 적습니다. 시작 씬은 프리셋의 `_startupScene` 또는 팩의 `data/gamesettings.xml` `startMap` 입니다.
+   프리셋이 없으면 configure 가 멈춥니다.
 5. **CMake 활성화**: `-DSW_ACTIVE_GAME=MyGame`.
 6. **키트를 추가했다면**: 3번에서 새 키트를 링크했다면 `Config/App/AppConfig.json` 의
    `_listGameKitModule` 에도 넣어야 그 키트가 핫리로드됩니다. 안 넣으면 빌드·실행은 되고
    **그 키트만 리로드되지 않습니다** — 증상이 조용하니 기억해 두세요.
+
+## 새 게임 = 씬 + 프리팹 + 디렉터 · 뷰 컴포넌트
+
+게임 클래스(`XxxWorld`)가 코드로 오브젝트를 만들고 매 프레임 밀어 넣는 대신, 상용 엔진처럼 나눕니다. `ThemeParkTycoon` 이 이 모양입니다
+(`ThemeParkTycoon/README.md`). 다른 시험 게임(`PrimitiveStage` 를 쓰는 다섯)은 아직 옛 모양입니다.
+
+| 무엇 | 어디 |
+|------|------|
+| 고정 배치(땅 · 해 · 카메라 · 건물 · 장식 설정 · 디렉터) | 씬 `Resource/game/<팩>/maps/*.scene.xml` — 팩의 `data/gamesettings.xml` 의 `startMap` |
+| 데이터로 런타임에 생기는 것(유닛 · 손님 · 탄 · 짓는 건물) | 프리팹 `prefabs/*.prefab.xml` — `game::getService<AssetManager>()->getPrefabCache().spawn( … )` |
+| 규칙 · 상태 | 키트의 보통 클래스 — 씬 없이 시험한다(컴포넌트로 만들지 않는다) |
+| 규칙을 돌리고 스폰을 지시 | 디렉터 컴포넌트 하나(언리얼 GameMode/GameState) — `TickGroup::PrePhysics` |
+| 엔티티의 모습 | 뷰 컴포넌트 — 디렉터를 읽기만 하고 자기 오브젝트에만 쓴다, `TickGroup::PostUpdate` |
+| 장르 무관 카메라 · 장식 | GameFramework `Components/`(`OrthoCameraRigComponent` · `PropScatterComponent` …) |
+| 게임 클래스 | `requestFirstScene()` 과, 상태 저장 전에 디렉터가 세운 것을 걷는 일 |
+
+지킬 것:
+
+- **틱 안에서는 구조를 바꾸지 않는다.** 디렉터는 스폰 요청을 쌓고 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세운다(틱 안의 `addComponent` 는 nullptr).
+- **같은 그룹은 병렬이다.** 뷰는 자기 오브젝트에만 쓰고, 남의 컨테이너는 첨자(`operator[]` — Debug 경합 검출기가 쓰기로 센다) 대신 `data()` · const 참조로 읽는다.
+  다른 오브젝트에 값을 넣어야 하면(디렉터 → 카메라 리그) 읽는 쪽보다 **앞 그룹**에서 넣는다.
+- **프레임을 넘겨 드는 것은 핸들이다.** 디렉터 · 카메라 · 세운 오브젝트를 `GameObjectHandle` 로 들고 매 프레임 푼다. 씬의 다른 엔티티를 가리키는 PROPERTY 는
+  `GameObjectHandle` 이면 파일 id 로 저장되고 로드 · 쿠킹 뒤에도 이어진다.
+- **씬 · 프리팹 파일은 엔진 직렬화기로 쓴다**(에디터, 또는 오브젝트를 지어 `SceneManager::saveActiveScene` · `PrefabAsset::saveToXmlFile`). 손으로 쓴 XML 은 형식을 깨기 쉽다.
+- **게임 컴포넌트의 첫 `REFLECT` 는 다시 configure 해야 등록된다.** EngineTest 는 게임 모듈을 링크하지 않으므로 게임 팩의 씬 · 프리팹 검사
+  (`ResourceDataSchemaTest`)는 `Source/Games` 헤더에 선언된 타입만 모르는 타입으로 넘긴다. 쿠킹은 다른 게임 팩의 그런 씬을 건너뛴다(활성 팩만 쿠킹 대상).
 
 ## Empty 는 왜 비어 있지 않은가
 

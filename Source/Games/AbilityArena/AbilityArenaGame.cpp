@@ -20,11 +20,6 @@ namespace sw
 
     AbilityArenaGame::~AbilityArenaGame() = default;
 
-    void AbilityArenaGame::configureBootstrap( BootstrapConfig& outConfig )
-    {
-        outConfig._packRoot = "game/abilityarena";
-    }
-
     bool AbilityArenaGame::onInitialize()
     {
         // 클래스를 먼저 등록하고 데이터를 읽는다 — 읽을 때 모르는 클래스 이름은 경고한다.

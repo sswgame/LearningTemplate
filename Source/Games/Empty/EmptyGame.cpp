@@ -15,11 +15,6 @@ namespace sw
 
     EmptyGame::~EmptyGame() = default;
 
-    void EmptyGame::configureBootstrap( BootstrapConfig& outConfig )
-    {
-        outConfig._packRoot = "game/empty";
-    }
-
     bool EmptyGame::onInitialize()
     {
         // 이 템플릿이 하는 일은 벤치 하네스를 깨우는 것뿐이다. 새 게임을 시작하면 아래 두 줄과

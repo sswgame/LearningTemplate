@@ -1,0 +1,20 @@
+<Prefab formatVersion="0" name="ParkPath">
+	<GameObject _schemaVersion="0" _name="ParkPath" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2.4,0.3,2.4"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="None"
+			               _meshId="game/themepark/models/path_straight.mesh"
+			               _materialPath="game/themepark/materials/palette.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

@@ -1,0 +1,21 @@
+<Prefab formatVersion="0" name="FlatRide">
+	<GameObject _schemaVersion="0" _name="FlatRide" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="4,1,4"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="None"
+			               _meshId="Cylinder"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<FlatRideComponent _componentName="FlatRideComponent" _bActive="true" _director="0" _rideIndex="-1" _spin="0" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

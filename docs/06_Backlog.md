@@ -139,6 +139,14 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
+- **나머지 시험 게임을 씬 · 프리팹 · 디렉터/뷰 컴포넌트로** — `ThemeParkTycoon` 이 본보기다(`Source/Games/README.md` 레시피). `PrimitiveStage` 를 쓰는 다섯
+  (HarvestValley · NileCity · Shooter3D · StarSkirmish · VoxelCraft)과 AbilityArena. 그대로 쓰는 것: `OrthoCameraRigComponent`(HarvestValley · NileCity · StarSkirmish 의
+  직교 시점), `PropScatterComponent`(나무 · 바위), 디렉터의 "요청을 쌓고 `executeOrDeferPostTick` 한 번" 모양, 뷰의 PostUpdate · `data()` 읽기. 함정: 씬 · 프리팹은 엔진
+  직렬화기로 쓴다(오브젝트를 지어 `saveActiveScene` · `PrefabAsset::saveToXmlFile` — ThemePark 는 한 번 돌리고 지운 작성 코드로 썼다), 씬의 다른 엔티티는
+  `GameObjectHandle` PROPERTY 로 가리킨다, 1인칭 · 복셀 청크처럼 매 프레임 메시를 다시 짓는 것은 프리팹 스폰이 아니라 컴포넌트 안의 메시다.
+  측정할 것: 프리팹 스폰은 오브젝트마다 상태 XML 을 읽는다 — 코스터 하나(레일 ~90 · 기둥 · 승강장)는 지을 때 한 번이라 괜찮지만 수천 개를 프레임마다 세우는 게임
+  (RTS 탄 · 슈터 탄피)은 풀로 들 것.
+
 - **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
   스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
 - **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** (1) `CameraControllerComponent`(Overworld) · `UnitStatsComponent`(ActionCombat)는 장르 무관이라
@@ -323,7 +331,7 @@ cd build/Ninja-Debug/Bin
   `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
   `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.
 - **프레임당 힙 할당**은 `-gv_profileFrames` 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 재지 말 것).
-- **씬 로드 측정**: `Scripts/dev/GenerateStressScene.py` 로 큰 씬(도형 섞기) → `GameConfig.json` `_startupScene` → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지
+- **씬 로드 측정**: `Scripts/dev/GenerateStressScene.py` 로 큰 씬(도형 섞기) → 게임 프리셋(`Config/Game/Empty.json`) `_startupScene` → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지
   않으므로 쿠킹 효과는 `--cooked-dir=<repo>/Resource` 로 쿠킹하고 재고 지운다. `[SceneLoad]` 가 `.xml` 을 가리키면 쿠킹본을 안 읽은 것이다.
 - **벤치가 상태를 공유하면 단계 순서를 잰다.** 손대지 않은 대조군이 움직이면 하니스를 의심한다. 벤치 메시가 공유라 배치 결함을 가린 적이 있다 — 씬에서 온 메시로도 본다.
 - **GPU 업로드 비용은 호출당이다**(DX12 ~3.3 us) — 쪼개면 느려진다. 구간을 배열로 묶어 한 번에.
@@ -645,6 +653,9 @@ cd build/Ninja-Debug/Bin
 
 - **저장된 상태는 이름으로 다른 오브젝트를 가리키지 않는다**(`AGENTS.md`). 부모는 `_attachOwnerId`, 핸들 PROPERTY 는 `ObjectSaveOptions::getSavedObjectId`(프리팹은 0). 상태를 읽는
   길 아홉은 모두 `ObjectStateBatch` 를 지나고 `finish()` 가 이름 되찾기와 부착을 한 번에 한다. 못 푼 참조는 `keepUnresolvedAttach` 로 보존한다. 표는 `Source/Engine/Object/README.md`.
+- **핸들 PROPERTY 는 바이너리에서도 파일 id 로 적는다.** `GameObjectHandle` 은 내장 타입이라 기본 문맥에 8 바이트 처리기가 있다 — 글 처리기만 바꾸면 XML 은 맞고 바이너리
+  (쿠킹한 씬 · 세이브)는 런타임 id 를 실어, 쿠커 왕복 검증이 그 엔티티를 XML 로 남겼다. `ObjectStateSerializer` 가 글 · 바이너리 처리기를 함께 덮는다
+  (`ActionCombatTest.ObjectReferencesSurviveBinaryFileState`).
 - **빌리기는 포인터(이번 호출 · 프레임), 보관은 `GameObjectHandle` · `ComponentHandle` + `resolve*`.** 이름 기반 `GameObjectPtr` · `ComponentPtr` 를 되살리지 말 것. 게임 모듈은
   컴포넌트를 생포인터로 들지 않는다(상태 복원이 씬을 갈아엎는다). 되살릴 때 id 보존: `createGameObjectWithId`, `ComponentIdRestoreScope` 는 `onRegister` **전에**, 프로세스 토큰이
   다르면 id 를 버린다. 오브젝트 id 는 프로세스 전역이다 — 시험에서 "다음 = +1" 을 가정하지 말 것.
@@ -679,6 +690,9 @@ cd build/Ninja-Debug/Bin
   순서로 가르면 되돌리기마다 뒤집힌다), 그림자 빛은 `Scene::findShadowCastingDirectionalLight`. 프리미티브 등록부에 섞지 않는다(그릴 수 있는 것만 담는 계약).
 - **씬 로드** — `SceneManager` 대기열은 한 자리다. 밀려난 요청 · `shutdown` · 취소도 약속에 `nullptr` 을 채워야 `future.get()` 이 영원히 멈추지 않는다. 로드 중 모듈 팩토리가 바뀌면
   (`getFactoryHeadSerial`) 다시 짓는다. `SceneManager::shutdown` 은 씬을 내리기 **전에** 활성을 비운다.
+- **씬 쿠킹은 활성 게임 팩만 엄격하다.** 다른 게임 팩(`game/<다른 게임>/`)의 씬이 이 빌드에 없는 게임 모듈의 컴포넌트를 쓰면 건너뛴다(정보 줄) — 실패로 세면 다른
+  게임을 고른 빌드의 쿠킹이 모두 선다. 엔진 · 공용 타입만 쓰는 다른 팩의 씬은 그대로 쿠킹한다(`AppCookTest` 가 `game/empty` 를 본다). 활성 팩의 모르는 타입은 여전히 실패다
+  (`SceneTest.SceneCookFailsOnAComponentOfUnknownType`).
 - **물리** — `stepPhysics` 는 틱과 트랜스폼 적용 뒤에 한 번 돈다. 콜라이더는 틱하지 않고 틱 안의 질의는 지난 step 을 본다. `onOverlapBegin( const OverlapInfo& )` 안에서는 스폰 ·
   파괴해도 된다. 순간이동은 `teleportTo` · `BodyMoveType::Teleport`(아니면 연속 바디가 그 길을 쓴다). 셀 범위는 `CellRange` 하나, 셀 순회 변수는 int64(`MaxInt32` 로 접히면 안 끝난다),
   `toCellCoord` 는 float64 로 나눈 뒤 접는다. 공간 색인 규약은 `Source/Engine/Spatial/README.md`.

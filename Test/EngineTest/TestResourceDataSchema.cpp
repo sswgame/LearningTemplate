@@ -19,6 +19,7 @@
 
 #include "GameFramework/Ability/AbilityCatalog.h"
 #include "GameFramework/Combat/Weapon.h"
+#include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Simulation/ThemePark/ParkLayout.h"
@@ -126,6 +127,12 @@ namespace
         static bool isVoxelBlocks( sw::string_view resourceId ) { return isGameData( resourceId, "/data/blocks.xml" ); }
         static bool isCoasters( sw::string_view resourceId ) { return isGameData( resourceId, "/data/coasters.xml" ); }
         static bool isParkLayout( sw::string_view resourceId ) { return isGameData( resourceId, "/data/rides.xml" ); }
+        static bool isGameSettings( sw::string_view resourceId ) { return isGameData( resourceId, "/data/gamesettings.xml" ); }
+        static bool loadGameSettings( const sw::string& resourceId )
+        {
+            sw::GameSettings settings;
+            return settings.loadFromResource( resourceId );
+        }
         /** @brief 공원 배치는 같은 폴더의 코스터 레이아웃(`coasters.xml`)을 가리킨다 — 그것을 먼저 읽는다. */
         static bool loadParkLayout( const sw::string& resourceId )
         {
@@ -155,7 +162,61 @@ namespace
             {        "voxelblocks",         &isVoxelBlocks,    &loadCatalog<sw::VoxelBlockCatalog>},
             {           "coasters",            &isCoasters, &loadCatalog<sw::CoasterLayoutCatalog>},
             {         "parklayout",          &isParkLayout,                        &loadParkLayout},
+            {       "gamesettings",        &isGameSettings,                      &loadGameSettings},
         };
+
+        /**
+         * @brief 게임 모듈(`Source/Games` 아래 헤더)이 `REFLECT` 로 선언한 타입 이름을 모읍니다.
+         * @details EngineTest 는 게임 모듈을 링크하지 않는다 — 게임 팩의 씬 · 프리팹에 놓인 게임 컴포넌트는 여기서 모르는 타입이다. 그 이름이 실제로
+         *          게임 소스에 선언된 것일 때만 그 경고를 넘긴다(오타 · 지운 타입은 그대로 실패다). 게임 모듈의 타입은 게임 빌드의 쿠킹이 본다.
+         */
+        static void collectGameModuleTypeNames( const sw::string& resourceRoot, sw::vector<sw::string>& outListTypeName )
+        {
+            outListTypeName.clear();
+            const sw::string       repositoryRoot = sw::FileUtil::getDirectoryPart( sw::FileUtil::trimTrailingSlashes( resourceRoot ) );
+            sw::vector<sw::string> listHeader;
+            if ( sw::FileUtil::collectFiles( sw::FileUtil::joinPath( repositoryRoot, "Source/Games" ), ".h", listHeader, true ) == false )
+                return;
+            for ( const sw::string& headerPath : listHeader )
+            {
+                sw::string text;
+                if ( sw::FileUtil::readTextFile( headerPath, text ) == false )
+                    continue;
+                for ( size_t reflectPos = text.find( "REFLECT(" ); reflectPos != sw::string::npos; reflectPos = text.find( "REFLECT(", reflectPos + 1 ) )
+                {
+                    const size_t classPos = text.find( "class ", reflectPos );
+                    if ( classPos == sw::string::npos )
+                        break;
+                    size_t nameStart = classPos + 6;
+                    size_t nameEnd   = nameStart;
+                    while ( nameEnd < text.size() && ( std::isalnum( static_cast<uint8>( text[nameEnd] ) ) != 0 || text[nameEnd] == '_' ) )
+                        ++nameEnd;
+                    if ( nameEnd > nameStart )
+                        outListTypeName.push_back( text.substr( nameStart, nameEnd - nameStart ) );
+                }
+            }
+        }
+
+        /** @brief 모은 경고에서 게임 모듈 타입의 "모르는 타입" 줄을 뺀 나머지입니다. */
+        static sw::string removeGameModuleTypeWarnings( const sw::string& joined, const sw::vector<sw::string>& listGameTypeName )
+        {
+            sw::string result;
+            size_t     lineStart = 0;
+            while ( lineStart < joined.size() )
+            {
+                size_t lineEnd = joined.find( "\n  ", lineStart + 1 );
+                if ( lineEnd == sw::string::npos )
+                    lineEnd = joined.size();
+                const sw::string line        = joined.substr( lineStart, lineEnd - lineStart );
+                bool             bGameModule = false;
+                for ( const sw::string& typeName : listGameTypeName )
+                    bGameModule = bGameModule || line.find( "of unknown type '" + typeName + "'" ) != sw::string::npos;
+                if ( bGameModule == false )
+                    result += line;
+                lineStart = lineEnd;
+            }
+            return result;
+        }
 
         /** @brief 데이터로 보는 확장자입니다. 이 확장자인데 표의 어느 줄에도 맞지 않는 파일은 시험이 집니다(새 종류가 검사를 비켜 가지 않게). */
         static bool isDataFile( sw::string_view resourceId )
@@ -191,6 +252,9 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
     sw::vector<sw::string> listFilePath;
     SW_ASSERT_TRUE( sw::FileUtil::collectFiles( resourceRoot, "", listFilePath, true ) );
 
+    sw::vector<sw::string> listGameTypeName;
+    ResourceDataSchemaInternal::collectGameModuleTypeNames( resourceRoot, listGameTypeName );
+
     uint32 loadedCount{ 0 };
     for ( const sw::string& filePath : listFilePath )
     {
@@ -206,7 +270,8 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         test::ScopedLogCollector logs;
         const bool               bLoaded = pKind->_pLoad( resourceId );
         SW_EXPECT_TRUE_MSG( bLoaded, ( sw::string( pKind->_pLabel ) + " 를 읽지 못했습니다: " + resourceId + logs.joined() ).c_str() );
-        SW_EXPECT_TRUE_MSG( logs.joined().empty(), ( resourceId + " 를 읽으며 경고가 났습니다:" + logs.joined() ).c_str() );
+        const sw::string warnings = ResourceDataSchemaInternal::removeGameModuleTypeWarnings( logs.joined(), listGameTypeName );
+        SW_EXPECT_TRUE_MSG( warnings.empty(), ( resourceId + " 를 읽으며 경고가 났습니다:" + warnings ).c_str() );
         ++loadedCount;
     }
     // 장면 · 프리팹 · 파이프라인 · 렌더 패스 · 엔진 데이터가 실제로 훑였는지 — 경로를 못 찾아 0 개면 이 시험은 아무것도 보지 않은 것이다.

@@ -7,6 +7,7 @@
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
@@ -863,12 +864,28 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
 }
 
 /**
- * @brief [SceneTest] 씬 쿠킹은 모르는 타입의 컴포넌트가 든 씬을 쿠킹하지 않고 실패로 센다
+ * @brief [SceneTest] 씬 쿠킹은 활성 게임 팩에서 모르는 타입의 컴포넌트가 든 씬을 쿠킹하지 않고 실패로 센다 · 다른 게임 팩의 그런 씬은 건너뛴다
  * @details 모르는 타입은 `MissingComponent` 가 원문을 맡아 바이너리 왕복 검증을 통과하므로, 경고 한 줄로 넘기면 배포본에 동작하지 않는
  *          컴포넌트가 실린다(GameFramework 타입 없이 쿠킹된 spriteui 의 `HealthBarComponent` · `DamageNumberComponent` 등). 그 씬은 쓰지 않고, 실패가 빌드를 세운다.
+ *          다른 게임의 팩은 그 게임 모듈의 컴포넌트를 쓴다 — 이 빌드에 없는 모듈이라 실패로 세면 다른 게임을 고른 빌드가 모두 선다. 배포본은 활성 팩만 연다.
  */
 SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
 {
+    struct ScopedActivePack
+    {
+        sw::GameConfig _previous{ sw::GameConfig::getActive() };
+        explicit ScopedActivePack( const utf8* pPackRoot )
+        {
+            sw::GameConfig config = _previous;
+            config._packRoot      = pPackRoot;
+            sw::GameConfig::setActive( config );
+        }
+        ~ScopedActivePack() { sw::GameConfig::setActive( _previous ); }
+        ScopedActivePack( const ScopedActivePack& )            = delete;
+        ScopedActivePack& operator=( const ScopedActivePack& ) = delete;
+    };
+    const ScopedActivePack activePack( "game/demo" );
+
     const sw::string root   = test::makeTempDirectory( "scene_cook_unknown_root" );
     const sw::string cooked = test::makeTempDirectory( "scene_cook_unknown_out" );
 
@@ -892,6 +909,9 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
     const sw::string scenePath = sw::FileUtil::joinPath( root, "game/demo/maps/unknown.scene.xml" );
     sw::FileUtil::ensureParentDirectoryExists( scenePath );
     SW_ASSERT_TRUE( doc.saveXml( scenePath ) );
+    const sw::string otherGamePath = sw::FileUtil::joinPath( root, "game/othergame/maps/unknown.scene.xml" );
+    sw::FileUtil::ensureParentDirectoryExists( otherGamePath );
+    SW_ASSERT_TRUE( doc.saveXml( otherGamePath ) );
 
     uint32 missingComponentCount{ 0 };
     uint32 cookedCount{ 0 };
@@ -906,6 +926,7 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
     SW_EXPECT_EQUAL( 0u, cookedCount );
     SW_EXPECT_EQUAL( 1u, failedCount );
     SW_EXPECT_FALSE( sw::FileUtil::fileExists( sw::FileUtil::joinPath( cooked, "game/demo/maps/unknown.scene.bin" ) ) );
+    SW_EXPECT_FALSE( sw::FileUtil::fileExists( sw::FileUtil::joinPath( cooked, "game/othergame/maps/unknown.scene.bin" ) ) );
 }
 
 /**

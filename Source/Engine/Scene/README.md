@@ -142,6 +142,7 @@ classDiagram
 - **왕복 검증 뒤에만 바이너리로 바꿉니다.** 엔티티 상태를 쿠킹한 바이트를 즉시 되읽어 같은지 본 뒤 XML 을 버립니다.
 - **모르는 타입의 컴포넌트(`MissingComponent`)가 든 씬은 쓰지 않고 실패로 셉니다.** `MissingComponent` 는 원문을 들고 있어 왕복 검증을 통과하므로
   따로 셉니다(`SceneTest.SceneCookFailsOnAComponentOfUnknownType`). 실패는 App 종료 코드 → `CookAssets.py` 로 이어져 Shipping 빌드를 세웁니다.
+- **다른 게임 팩의 씬은 그 게임 모듈의 컴포넌트를 쓰면 건너뜁니다**(`game/<활성 게임이 아닌 팩>/` — 그 모듈은 이 빌드에 없다). 엔진 · 공용 타입만 쓰는 씬은 쿠킹합니다.
 - 산출물은 `<cookedDir>/<상대경로>/<이름>.scene.bin` 이고 소스 옆에 두지 않습니다 — 낡은 `.bin` 이 남아 Dev 런타임이 그것으로 물러나 실패를 가리지 않게.
 
 ---
