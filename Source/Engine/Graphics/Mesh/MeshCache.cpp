@@ -1,0 +1,155 @@
+#include "pch.h"
+
+#include "Engine/Graphics/Mesh/MeshCache.h"
+
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
+
+#include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+
+namespace sw
+{
+    SW_LOG_CALLER( "MeshCache" );
+
+    namespace
+    {
+        struct MeshCacheInternal
+        {
+            /** @brief 공유 표 하나입니다. 경로 → 약한 참조, 그리고 이미 경고한 경로. 잠금과 함께 둡니다. */
+            struct SharedTable
+            {
+                mutex                                 _mutex;
+                unordered_map<string, weak_ptr<Mesh>> _mapMesh;
+                unordered_set<string>                 _uniqueWarnedPath;
+            };
+
+            /** @brief 프로세스에 하나인 공유 표입니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않습니다). */
+            static SharedTable& getSharedTable()
+            {
+                static SharedTable s_table;
+                return s_table;
+            }
+
+            /** @brief 표의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 핫 리로드가 넘긴 철자도 같은 칸에 닿습니다. */
+            static string makeKey( string_view path ) { return FileUtil::normalizePath( path ); }
+
+            /** @brief 그 경로를 지금 쥔 메시입니다. 없으면 nullptr 입니다. */
+            static shared_ptr<Mesh> findLive( string_view path )
+            {
+                SharedTable&            table = getSharedTable();
+                const string            key   = makeKey( path );
+                std::scoped_lock<mutex> lock{ table._mutex };
+                const auto              it = table._mapMesh.find( key );
+                return ( it != table._mapMesh.end() ) ? it->second.lock() : nullptr;
+            }
+
+            /** @brief 읽지 못한 경로를 처음 한 번만 경고합니다. */
+            static void warnLoadFailureOnce( string_view path )
+            {
+                SharedTable&            table = getSharedTable();
+                std::scoped_lock<mutex> lock{ table._mutex };
+                if ( table._uniqueWarnedPath.insert( makeKey( path ) ).second )
+                    SW_LOG_WARNING( "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    shared_ptr<Mesh> MeshCache::acquire( string_view path )
+    {
+        SW_MEMORY_SCOPE( Mesh );
+        if ( path.empty() )
+            return nullptr;
+
+        shared_ptr<Mesh> live = MeshCacheInternal::findLive( path );
+        if ( live != nullptr )
+            return live;
+
+        // 읽기는 잠금 밖에서 한다(파일 IO). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받는다.
+        vector<RHIVertex> listVertex;
+        if ( MeshAssetFormat::loadFromResource( path, listVertex ) == false )
+        {
+            MeshCacheInternal::warnLoadFailureOnce( path );
+            return nullptr;
+        }
+        shared_ptr<Mesh> loaded = Mesh::create();
+        loaded->setVertices( std::move( listVertex ) );
+
+        MeshCacheInternal::SharedTable& table = MeshCacheInternal::getSharedTable();
+        std::scoped_lock<mutex>         lock{ table._mutex };
+        for ( auto iter = table._mapMesh.begin(); iter != table._mapMesh.end(); )
+        {
+            if ( iter->second.expired() )
+                iter = table._mapMesh.erase( iter );
+            else
+                ++iter;
+        }
+        weak_ptr<Mesh>&  slot   = table._mapMesh[MeshCacheInternal::makeKey( path )];
+        shared_ptr<Mesh> winner = slot.lock();
+        if ( winner != nullptr )
+            return winner;
+        slot = loaded;
+        return loaded;
+    }
+
+    bool MeshCache::reloadShared( string_view path, IRHIDevice* pDevice )
+    {
+        if ( path.empty() )
+            return false;
+        shared_ptr<Mesh> live = MeshCacheInternal::findLive( path );
+        if ( live == nullptr )
+            return false;
+
+        // 읽기에 실패하면 옛 정점을 지킨다(반쯤 쓴 파일을 저장 중에 본 경우 — 다음 감시 이벤트가 다시 읽는다).
+        vector<RHIVertex> listVertex;
+        if ( MeshAssetFormat::loadFromResource( path, listVertex ) == false )
+        {
+            SW_LOG_ERROR( "Hot-Reload failed for Mesh %#", path );
+            return false;
+        }
+
+        // 지난 프레임이 아직 옛 정점 버퍼로 그리고 있을 수 있다. setVertices 는 버퍼를 곧바로 돌려주므로 먼저 기다린다(TextureCache::reload 와 같은 이유).
+        if ( pDevice != nullptr )
+            pDevice->waitIdle();
+        live->setVertices( std::move( listVertex ) );
+        return true;
+    }
+
+    bool MeshCache::isCached( string_view relativePath ) const
+    {
+        return MeshCacheInternal::findLive( relativePath ) != nullptr;
+    }
+
+    void MeshCache::reload( string_view relativePath, IRHIDevice* pDevice )
+    {
+        (void)reloadShared( relativePath, pDevice ); // 쥔 쪽이 없으면 다시 읽을 것이 없다 — 다음에 읽는 쪽이 새 내용을 읽는다
+    }
+
+    size_t MeshCache::getCachedCount() const
+    {
+        MeshCacheInternal::SharedTable& table = MeshCacheInternal::getSharedTable();
+        std::scoped_lock<mutex>         lock{ table._mutex };
+        size_t                          liveCount{ 0 };
+        for ( const auto& [key, mesh] : table._mapMesh )
+        {
+            if ( mesh.expired() == false )
+                ++liveCount;
+        }
+        return liveCount;
+    }
+
+    void MeshCache::clear()
+    {
+        MeshCacheInternal::SharedTable& table = MeshCacheInternal::getSharedTable();
+        std::scoped_lock<mutex>         lock{ table._mutex };
+        table._mapMesh.clear();
+        table._uniqueWarnedPath.clear();
+    }
+} // namespace sw

@@ -1,8 +1,8 @@
 /**
  * @file AssetManager.h
- * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 로 소유합니다.
+ * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab · Mesh)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 로 소유합니다.
  * @note
- *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, ResourcePackManager.
+ *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, SpriteClipCache, MeshCache, ResourcePackManager.
  *   제외(수명이 다름):
  *   - ResourceUtil: Resource/ 경로 해석만 합니다(소유권 없음)
  *   - ShaderCache: 셰이더 컴파일 결과 캐시(RHI)
@@ -26,6 +26,7 @@ namespace sw
 {
     class IAssetCache;
     class MaterialCache;
+    class MeshCache;
     class PrefabCache;
     class ResourcePackManager;
     class SpriteClipCache;
@@ -104,7 +105,7 @@ namespace sw
         // ----------------------------------------------------------------------
         /**
          * @brief 경로 키 에셋 캐시를 등록부에 올립니다. 소유하지 않습니다.
-         * @details 내장 셋(Material · Texture · Prefab)은 생성자가 등록합니다. 모듈이 자기 에셋
+         * @details 내장 캐시(Material · Texture · Prefab · SpriteClip · Mesh)는 생성자가 등록합니다. 모듈이 자기 에셋
          *          종류를 더할 때 이것을 부릅니다. 그러면 종료 · 진단 · 재초기화가 **자동으로**
          *          그 캐시까지 훑습니다. 같은 포인터를 두 번 올리면 무시합니다.
          * @param pCache 매니저보다 오래 사는 캐시. nullptr 은 무시합니다.
@@ -164,12 +165,16 @@ namespace sw
         TextureCache&       getTextureManager();
         const TextureCache& getTextureManager() const;
 
+        /** @brief 경로 키 메시 에셋(`.mesh`) 캐시를 반환합니다. 표는 프로세스에 하나라 `MeshCache::acquire` 를 바로 불러도 같습니다. */
+        MeshCache&       getMeshCache();
+        const MeshCache& getMeshCache() const;
+
         /** @brief Prefab 로드 · 스폰 캐시를 반환합니다. */
         PrefabCache&       getPrefabCache();
         const PrefabCache& getPrefabCache() const;
 
     private:
-        /** @brief 이 매니저가 소유한 내장 캐시(머티리얼 · 텍스처 · 프리팹 · 스프라이트 클립)인지 봅니다. 종료 경고 · 모듈 코드 걷기에서 뺍니다. */
+        /** @brief 이 매니저가 소유한 내장 캐시(머티리얼 · 텍스처 · 프리팹 · 스프라이트 클립 · 메시)인지 봅니다. 종료 경고 · 모듈 코드 걷기에서 뺍니다. */
         bool isBuiltInAssetCache( const IAssetCache* pCache ) const;
 
         AssetDatabase                   _assetDatabase;
@@ -178,9 +183,10 @@ namespace sw
         unique_ptr<TextureCache>        _textureCache;
         unique_ptr<PrefabCache>         _prefabCache;
         unique_ptr<SpriteClipCache>     _spriteClipCache; ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
+        unique_ptr<MeshCache>           _meshCache;       ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<ResourcePackManager> _pPackManager;
         /**
-         * @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 넷은 위 멤버가, 모듈이 올린 것은 그 모듈이 소유합니다).
+         * @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 캐시는 위 멤버가, 모듈이 올린 것은 그 모듈이 소유합니다).
          * @details 종류 이름(`getAssetKindName`)은 **올릴 때** 복사합니다. 모듈이 자기 캐시를 내리지 않고 사라지면 그 포인터의 가상 함수 표도
          *          같이 사라지므로, 진단에서 이름을 다시 물으면 그 진단이 죽습니다. 사본이 있으면 무엇을 두고 갔는지 안전하게 말할 수 있습니다.
          *          같은 종류 이름의 둘째 캐시는 거절합니다(이름으로 찾는 쪽이 어느 것을 받을지 정해지지 않습니다).

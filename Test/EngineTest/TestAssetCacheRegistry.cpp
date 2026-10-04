@@ -49,18 +49,19 @@ namespace
 } // namespace
 
 /**
- * @brief [AssetCacheRegistryTest] 내장 캐시 넷은 등록부를 통해 보인다
+ * @brief [AssetCacheRegistryTest] 내장 캐시는 모두 등록부를 통해 보인다
  * @details 종료 · 진단 · 핫 리로드는 이름으로 캐시를 적지 않고 등록부를 훑는다 — 등록부에 빠진 캐시는 그 셋 모두에서 빠진다.
  */
 SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistry )
 {
     sw::AssetManager resources;
 
-    SW_ASSERT_EQUAL( size_t( 4 ), resources.getAllAssetCache().size() );
+    SW_ASSERT_EQUAL( size_t( 5 ), resources.getAllAssetCache().size() );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Material" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Texture" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Prefab" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "SpriteClip" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "Mesh" ) );
     SW_EXPECT_NULL( resources.findAssetCache( "NoSuchKind" ) );
     SW_EXPECT_NULL( resources.findAssetCache( "" ) );
 

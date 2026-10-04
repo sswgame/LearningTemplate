@@ -8,6 +8,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
@@ -27,6 +28,7 @@ namespace sw
         , _textureCache{ make_unique<TextureCache>() }
         , _prefabCache{ make_unique<PrefabCache>() }
         , _spriteClipCache{ make_unique<SpriteClipCache>() }
+        , _meshCache{ make_unique<MeshCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _registeredAssetCache{}
         , _contentSource{ ContentSource::Cooked }
@@ -36,6 +38,7 @@ namespace sw
         registerAssetCache( _textureCache.get() );
         registerAssetCache( _prefabCache.get() );
         registerAssetCache( _spriteClipCache.get() );
+        registerAssetCache( _meshCache.get() );
     }
 
     AssetManager::~AssetManager() = default;
@@ -154,7 +157,7 @@ namespace sw
     bool AssetManager::isBuiltInAssetCache( const IAssetCache* pCache ) const
     {
         return pCache != nullptr && ( pCache == _materialCache.get() || pCache == _textureCache.get() || pCache == _prefabCache.get() ||
-                                      pCache == _spriteClipCache.get() );
+                                      pCache == _spriteClipCache.get() || pCache == _meshCache.get() );
     }
 
     void AssetManager::unregisterAssetCache( const IAssetCache* pCache )
@@ -234,6 +237,16 @@ namespace sw
     const TextureCache& AssetManager::getTextureManager() const
     {
         return *_textureCache;
+    }
+
+    MeshCache& AssetManager::getMeshCache()
+    {
+        return *_meshCache;
+    }
+
+    const MeshCache& AssetManager::getMeshCache() const
+    {
+        return *_meshCache;
     }
 
     PrefabCache& AssetManager::getPrefabCache()

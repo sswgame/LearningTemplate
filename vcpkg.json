@@ -57,6 +57,8 @@
       "platform": "windows | linux"
     },
     "stb",
+    "cgltf",
+    "meshoptimizer",
     "zlib",
     "lz4",
     "zstd"

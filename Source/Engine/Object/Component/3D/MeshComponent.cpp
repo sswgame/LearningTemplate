@@ -6,6 +6,8 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -85,8 +87,9 @@ namespace sw
         const hashed_string hashedMeshId( string{ meshId }.c_str() );
         if ( _mesh != nullptr && _resolvedMeshId == hashedMeshId )
             return;
-        // **공유되는** 프리미티브를 받는다. 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
-        _mesh           = MeshUtil::acquirePrimitive( meshId );
+        // **공유되는** 메시를 받는다(`.mesh` 경로는 메시 캐시, 그 밖은 내장 도형). 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
+        // 읽지 못한 에셋은 메시 없이 남는다(그리지 않는다) — 캐시가 경로마다 한 번 경고하고, 핫 리로드 알림이 다시 해석한다.
+        _mesh           = MeshAssetFormat::isMeshAssetPath( meshId ) ? MeshCache::acquire( meshId ) : MeshUtil::acquirePrimitive( meshId );
         _resolvedMeshId = hashedMeshId;
         markRenderStateDirty();
     }
@@ -150,6 +153,12 @@ namespace sw
         // 지금 id 의 메시로 삼는다 — 시작 · 로드 뒤 해석이 런타임 지정을 덮지 않고, id 가 바뀌면 그 id 의 것으로 바뀐다.
         _resolvedMeshId = hashed_string( string{ _meshId.empty() ? getDefaultMeshId() : string_view{ _meshId } }.c_str() );
         markRenderStateDirty();
+    }
+
+    void MeshComponent::setMeshId( string_view meshId )
+    {
+        _meshId = string{ meshId };
+        resolveRuntimeMesh();
     }
 
     void MeshComponent::setMaterial( Material* pMaterial )

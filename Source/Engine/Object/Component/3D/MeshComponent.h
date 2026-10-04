@@ -50,13 +50,15 @@ namespace sw
         /** @brief 읽은 메시 id · 머티리얼 참조를 자원으로 풉니다(`resolveRenderAssets`). 편집 중 되돌리기 · 프리팹 드래그로 다시 만든 메시가 그려진다. */
         void onPostLoad() override { resolveRenderAssets(); }
         /**
-         * @brief `_meshId` 프리미티브를 GPU 메시로 해석합니다.
+         * @brief `_meshId` 를 메시로 해석합니다. `.mesh` 경로면 메시 캐시(`MeshCache::acquire`), 아니면 내장 도형입니다.
          * @details 지금 메시가 지금 id 로 잡은 것이면 그대로 둡니다(`_resolvedMeshId` — 머티리얼의 `_acquiredMaterialPath` 와 같은 규칙).
          *          "메시가 있으면 그대로" 로 판정하면 id 를 바꿔도(인스펙터 · 붙여넣기 · 되돌리기) 옛 메시를 그린다. 비어 있으면 타입의
          *          기본(`getDefaultMeshId` — 메시는 단위 큐브, 스프라이트는 사각형)입니다.
          */
         void resolveRuntimeMesh();
-        /** @brief 저장되는 메시 id 입니다(프리미티브 이름). 비어 있으면 타입의 기본입니다. */
+        /** @brief 저장되는 메시 id 를 바꾸고 곧바로 해석합니다(프리미티브 이름 또는 `.mesh` 에셋 경로). */
+        void setMeshId( string_view meshId );
+        /** @brief 저장되는 메시 id 입니다(프리미티브 이름 또는 `.mesh` 에셋 경로). 비어 있으면 타입의 기본입니다. */
         const string& getMeshId() const { return _meshId; }
 
         /** @brief 메시를 설정합니다. 저장되지 않는 런타임 지정이고, 메시 id 가 바뀔 때까지 유지됩니다. */

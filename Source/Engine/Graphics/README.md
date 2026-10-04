@@ -25,7 +25,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | **RHI/** | 백엔드 추상화·구현·(옵션) RHI DLL 모듈. 자세한 것은 [RHI/README.md](RHI/README.md) |
 | **Material/** | 머티리얼 정의·인스턴스·캐시. 파일이 곧 주제다 — `MaterialXml`(XML 읽기/쓰기) · `MaterialPacking`(타입 표·CB 패킹) · `MaterialPermutation`(define 조립·세대) |
 | **Shader/** | [Shader/README.md](Shader/README.md). `Compile/` 컴파일·캐시·쿠킹·핫리로드 · `Reflection/` 리플렉션과 매니페스트 · `Binding/` 슬롯 계약과 셰이더가 읽는 꼴 그대로의 값 묶음(`GpuLight` · `GpuSpriteInstanceData` — 컴포넌트가 채우므로 Renderer 아래에 둔다) |
-| **Mesh/** | CPU 메시 에셋(`Mesh`)과 기본 도형 생성기(`MeshUtil`). GPU 풀은 여기 없다 — Renderer/Scene/ |
+| **Mesh/** | CPU 메시 에셋(`Mesh`)과 기본 도형 생성기(`MeshUtil`), 메시 에셋 파일(`.mesh` — `MeshAssetFormat`)과 경로 캐시(`MeshCache`). GPU 풀은 여기 없다 — Renderer/Scene/ |
 | **Texture/** | `Texture2D` 에셋과 `TextureCache`(참조 수 + unique_ptr) |
 | **Upload/** | `GpuUploadQueue` — 게임 스레드가 스냅샷을 내보내기 **전에** 워커가 GPU 리소스를 만든다 |
 | **Renderer/** | [Renderer/README.md](Renderer/README.md). `Frame/` FrameRenderer 와 그 소유물 셋(PassConstantRing · RenderPsoCache · TransientAttachmentPool) · `Graph/` RenderGraph · `Pipeline/` 패스·파이프라인 리소스·입력 계약 · `Scene/` GpuSceneBuilder(GT) → GpuSceneSnapshot → GpuScene(RT) + GPU 정점/모프 풀 · `Light/` 라이트 버퍼 · `Debug/` 에디터가 읽는 통로(RenderTargetRegistry · DebugDrawQueue) · RenderThread |
@@ -76,6 +76,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | `ShaderReflection` · `ShaderReflectionLibrary` | Shader/Reflection/ | 바이트코드 리플렉션과 쿠킹된 매니페스트 |
 | `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingValidator` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 쿠킹된 바이너리 대조 |
 | `Mesh` · `MeshUtil` | Mesh/ | 메시 버퍼 · 기본 도형 생성 |
+| `MeshAssetFormat` · `MeshCache` | Mesh/ | `.mesh` 읽기 · 쓰기(쓰기는 에디터 모델 임포터), 경로당 `Mesh` 하나(약한 참조) · 제자리 핫 리로드. `MeshComponent::_meshId` 가 `.mesh` 경로면 여기서 받는다 |
 | `Texture2D` · `TextureCache` | Texture/ | 텍스처 에셋 · 캐시 |
 | `GpuUploadQueue` | Upload/ | GPU 리소스를 그리기 전에 워커로 만든다 |
 | `FrameRenderer` · `RenderView` | Renderer/Frame/ | 한 프레임 오케스트레이션과 뷰 |
