@@ -29,7 +29,7 @@ sw_addTestExecutable(EngineTest
 #
 # DXC 는 **배포 빌드에서도** 테스트 옆에 둔다. App 과 달리 테스트 바이너리는 Bin 이 아니라
 # TestBin 으로 나가므로(sw_addTestExecutable) 배포물에 셰이더 컴파일러가 섞이지 않는다.
-# 없으면 ShaderBindingContractTest.ReflectionNamesAreUniformAcrossBackends 가 DXIL 리플렉션을
+# 없으면 ShaderBindingValidatorTest.ReflectionNamesAreUniformAcrossBackends 가 DXIL 리플렉션을
 # 못 얻어 "forwardlit_ps g_SwMaterials 원소 없음: dx12" 로 실패한다 — 셰이더가 아니라 도구가
 # 없어서 나는 실패라 원인을 찾기 어렵다.
 sw_copyDxcDlls(EngineTest)

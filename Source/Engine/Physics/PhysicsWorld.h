@@ -19,7 +19,7 @@ namespace sw
         AABB   _stepAabb{}; ///< 지난 `step` 때의 자리 — 연속 바디는 여기서 `_aabb` 까지 쓸린다. 더할 때 · 순간이동 때는 `_aabb` 와 같다
         uint64 _objectId{ 0 };
         uint8  _layer{ 0 };
-        uint8  _bContinuous{ SW_FALSE }; ///< 연속 충돌(CCD) 바디면 SW_TRUE — `step` 이 지난 자리에서 지금 자리까지 쓸어 그 사이에 닿은 것도 겹침으로 낸다
+        uint8  _bContinuous{ SW_FALSE }; ///< 연속 충돌(ContinuousCollision) 바디면 SW_TRUE — `step` 이 지난 자리에서 지금 자리까지 쓸어 그 사이에 닿은 것도 겹침으로 낸다
         uint8  _bTrigger{ SW_FALSE };    ///< 트리거면 SW_TRUE — 겹침은 내지만 막지 않는다(유니티 `isTrigger` · 언리얼 Overlap 반응). 받는 쪽이 이벤트에서 본다
     };
 } // namespace sw
@@ -101,7 +101,7 @@ namespace sw
          *          쌍은 끝납니다(언리얼은 컴포넌트를 내릴 때 EndOverlap 을 낸다). 강체가 없으므로 적분하지 않습니다 — @p deltaTime 은 그때를 위한
          *          자리입니다. 매니저가 틱 · 트랜스폼 적용 뒤에 게임 스레드에서 부릅니다(`GameObjectManager::stepPhysics`).
          *
-         *          **연속 바디(`_bContinuous`)는 지난 step 의 자리에서 지금 자리까지 쓸립니다**(`CCD::sweepAabb`, 유니티 `CollisionDetectionMode2D.Continuous`).
+         *          **연속 바디(`_bContinuous`)는 지난 step 의 자리에서 지금 자리까지 쓸립니다**(`ContinuousCollision::sweepAabb`, 유니티 `CollisionDetectionMode2D.Continuous`).
          *          한 프레임에 얇은 바디를 통째로 건너뛴 총알도 그 바디와 겹친 것으로 칩니다 — 이번 step 에 시작하고, 다음 step 에(이미 지나갔으면)
          *          끝납니다. 출발점에서 이미 겹쳐 있던 것(닿은 때 0)은 쓸림으로 더하지 않습니다 — 그 겹침은 지난 step 이 쟀고, 지금도 겹치면 제자리
          *          겹침이 이어 갑니다.
@@ -118,7 +118,7 @@ namespace sw
         bool overlaps( BodyHandle a, BodyHandle b ) const;
         /** @brief box 와 겹치는 바디 핸들을 out 에 넣습니다. */
         void queryAabb( const AABB& box, uint8 layer, vector<BodyHandle>& outListHandle ) const;
-        /** @brief movingBox 가 displacement 만큼 움직일 때 layer 의 대상들과 연속 충돌(CCD)을 검사합니다. */
+        /** @brief movingBox 가 displacement 만큼 움직일 때 layer 의 대상들과 연속 충돌(ContinuousCollision)을 검사합니다. */
         bool sweepTest( const AABB& movingBox, const float3& displacement, uint8 layer, SweepHit& outHit ) const;
 
         /** @brief 레이어 필터를 반환합니다. */

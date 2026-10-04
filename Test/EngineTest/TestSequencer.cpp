@@ -394,15 +394,15 @@ SW_TEST_CASE( SequencerTest, ItemKindTableCoversEveryKind )
 {
     for ( int32 kindIndex = 0; kindIndex < static_cast<int32>( sw::SequenceItemKind::Count ); ++kindIndex )
     {
-        const sw::SequenceItemKindTraits* pTraits = sw::SequenceAsset::findItemKindTraits( static_cast<sw::SequenceItemKind>( kindIndex ) );
-        SW_ASSERT_NOT_NULL( pTraits );
-        SW_EXPECT_EQUAL( kindIndex, static_cast<int32>( pTraits->_kind ) );
+        const sw::SequenceItemKindInfo* pInfo = sw::SequenceAsset::findItemKindInfo( static_cast<sw::SequenceItemKind>( kindIndex ) );
+        SW_ASSERT_NOT_NULL( pInfo );
+        SW_EXPECT_EQUAL( kindIndex, static_cast<int32>( pInfo->_kind ) );
     }
     // 에디터 트랙 이름은 리플렉션 enum 이름이다.
     SW_EXPECT_STREQ( "Clip", sw::engine::getTypeRegistry().enumToString( sw::SequenceItemKind::Clip ) );
     SW_EXPECT_STREQ( "Event", sw::engine::getTypeRegistry().enumToString( sw::SequenceItemKind::Event ) );
-    SW_EXPECT_NULL( sw::SequenceAsset::findItemKindTraits( sw::SequenceItemKind::Count ) );
-    SW_EXPECT_NULL( sw::SequenceAsset::findItemKindTraits( static_cast<sw::SequenceItemKind>( -1 ) ) );
+    SW_EXPECT_NULL( sw::SequenceAsset::findItemKindInfo( sw::SequenceItemKind::Count ) );
+    SW_EXPECT_NULL( sw::SequenceAsset::findItemKindInfo( static_cast<sw::SequenceItemKind>( -1 ) ) );
 }
 
 /**

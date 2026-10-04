@@ -84,12 +84,12 @@ namespace sw::editor
         void Add( int32 type ) override
         {
             SequenceTrackItem item{};
-            item._kind                            = static_cast<SequenceItemKind>( type );
-            item._start                           = _frameMin;
-            item._end                             = _frameMin + 10;
-            const SequenceItemKindTraits* pTraits = SequenceAsset::findItemKindTraits( item._kind );
-            if ( pTraits != nullptr )
-                item._color = pTraits->_defaultColor;
+            item._kind                        = static_cast<SequenceItemKind>( type );
+            item._start                       = _frameMin;
+            item._end                         = _frameMin + 10;
+            const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
+            if ( pInfo != nullptr )
+                item._color = pInfo->_defaultColor;
             item._name = string( GetItemTypeName( type ) ) + " " + to_string( _listItem.size() );
             _listItem.push_back( item );
         }

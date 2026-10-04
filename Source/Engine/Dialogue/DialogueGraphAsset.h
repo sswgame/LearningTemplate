@@ -15,7 +15,7 @@ namespace sw
 
     /**
      * @brief 대화 노드 타입입니다.
-     * @details 종류를 더하면 `kArrDialogueNodeTraits` 에 줄 하나와 `DialogueRunnerComponent::executeNode` 의 case 하나를 더합니다.
+     * @details 종류를 더하면 `kArrDialogueNodeInfo` 에 줄 하나와 `DialogueRunnerComponent::executeNode` 의 case 하나를 더합니다.
      *          표는 static_assert 가, 러너 switch 는 그 파일의 -Wswitch-enum 오류가 빠뜨림을 짚습니다.
      */
     enum class DialogueAssetNodeType : uint8
@@ -58,7 +58,7 @@ namespace sw
     };
 
     /** @brief 노드 종류 하나의 특성입니다. 이름 · 핀 · 진행 방식 · 편집 칸 · 기본값이 모두 이 줄에서 옵니다. */
-    struct DialogueNodeTraits
+    struct DialogueNodeInfo
     {
         const utf8*           _pName;              /**< JSON `type` 값이자 화면 이름입니다. */
         const utf8*           _pDefaultSpeaker;    /**< 새 노드의 화자입니다. */
@@ -81,7 +81,7 @@ namespace sw
      * @brief 노드 종류 표입니다. **종류마다 한 줄이고, 순서는 `DialogueAssetNodeType` 값 순서입니다.**
      * @details 에셋 이름 해석 · 런타임 진행(`DialogueCursor`) · 에디터 그리기 · 추가 메뉴 · 인스펙터가 모두 이 표를 봅니다.
      */
-    inline constexpr DialogueNodeTraits kArrDialogueNodeTraits[] = {
+    inline constexpr DialogueNodeInfo kArrDialogueNodeInfo[] = {
         {   "Start",    "",                       "", float4( 0.2f, 0.9f, 0.3f, 1.0f ),    DialogueAssetNodeType::Start, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,      DialogueNodeBody::None, false, false, false, 0},
         {"Dialogue", "NPC", "Enter dialogue text...", float4( 0.4f, 0.7f, 1.0f, 1.0f ), DialogueAssetNodeType::Dialogue, DialogueNodeFlow::WaitAdvance,   DialogueNodeOutput::Next,      DialogueNodeBody::Text,  true,  true,  true, 0},
         {  "Choice",    "",         "Player options", float4( 0.8f, 0.5f, 1.0f, 1.0f ),   DialogueAssetNodeType::Choice,  DialogueNodeFlow::WaitChoice, DialogueNodeOutput::Choice,      DialogueNodeBody::Text,  true, false,  true, 2},
@@ -90,8 +90,8 @@ namespace sw
         {     "End",    "",                       "", float4( 0.9f, 0.3f, 0.3f, 1.0f ),      DialogueAssetNodeType::End,      DialogueNodeFlow::Finish,   DialogueNodeOutput::None,      DialogueNodeBody::None,  true, false,  true, 0},
     };
 
-    static_assert( SW_COUNT_OF( kArrDialogueNodeTraits ) == static_cast<size_t>( DialogueAssetNodeType::Count ),
-                   "DialogueAssetNodeType 을 늘렸으면 kArrDialogueNodeTraits 에도 줄을 더할 것" );
+    static_assert( SW_COUNT_OF( kArrDialogueNodeInfo ) == static_cast<size_t>( DialogueAssetNodeType::Count ),
+                   "DialogueAssetNodeType 을 늘렸으면 kArrDialogueNodeInfo 에도 줄을 더할 것" );
 
     /** @brief 대화 그래프 노드입니다. */
     struct DialogueAssetNode
@@ -144,7 +144,7 @@ namespace sw
         /** @brief 노드 타입 문자열을 파싱합니다. 모르는 이름이면 Dialogue 입니다. */
         static DialogueAssetNodeType parseNodeType( string_view typeStr );
         /** @brief 노드 타입의 특성 줄입니다. 범위 밖 값이면 nullptr 입니다. */
-        static const DialogueNodeTraits* findNodeTraits( DialogueAssetNodeType type );
+        static const DialogueNodeInfo* findNodeInfo( DialogueAssetNodeType type );
         /** @brief Start 노드를 반환합니다. 없으면 nullptr 입니다. */
         const DialogueAssetNode* findStartNode() const;
         /** @brief id 로 노드를 찾습니다. */

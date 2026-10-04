@@ -20,9 +20,9 @@
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Popups/CommandPalettePopup.h"
 #include "Editor/Popups/QuickLauncherPopup.h"
 
@@ -156,7 +156,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return pContext->getSelectionManager().getPrimaryObject();
+                return pContext->getEditorSelection().getPrimaryObject();
             }
 
             static Component* selectedComponent()
@@ -294,7 +294,7 @@ namespace sw::editor
             static string findSelectedPrefabPath( GameObject*& pOutObj )
             {
                 EditorContext* pContext = EditorContext::get();
-                pOutObj                 = ( pContext != nullptr ) ? pContext->getSelectionManager().getPrimaryObject() : nullptr;
+                pOutObj                 = ( pContext != nullptr ) ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
                 if ( pOutObj == nullptr )
                     return {};
                 return pContext->getWorkspace().getGameObjectPrefabPath( pOutObj->getObjectId() );
@@ -335,7 +335,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return 0;
-                return pContext->getSelectionManager().getSelectedObjectCount();
+                return pContext->getEditorSelection().getSelectedObjectCount();
             }
 
             static bool hasSelection()

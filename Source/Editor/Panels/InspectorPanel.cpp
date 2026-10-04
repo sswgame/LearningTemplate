@@ -13,11 +13,11 @@
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
@@ -128,7 +128,7 @@ namespace sw::editor
 
         EditorWidgets::drawSectionHeader( "Selection" );
 
-        const size_t selCount = pContext->getSelectionManager().getSelectedObjectCount();
+        const size_t selCount = pContext->getEditorSelection().getSelectedObjectCount();
         if ( selCount > 1 )
         {
             ImGui::TextColored( ImVec4{ 0.4f, 0.7f, 1.0f, 1.0f }, "Multi-Selection (%u objects)",

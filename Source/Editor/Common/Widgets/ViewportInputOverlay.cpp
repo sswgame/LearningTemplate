@@ -3,10 +3,10 @@
 #include "Editor/Common/Widgets/ViewportInputOverlay.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
-#include "Engine/Input/GamepadButtons.h"
+#include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
-#include "Engine/Input/KeyCodes.h"
+#include "Engine/Input/KeyCodeUtil.h"
 
 #include <imgui.h>
 

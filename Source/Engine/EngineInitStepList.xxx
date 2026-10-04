@@ -1,0 +1,38 @@
+/**
+ * @file Engine/EngineInitStepList.xxx
+ * @brief 엔진 기동 · 종료 단계와 그 의존의 단일 등록표입니다(X-macro). `EngineInitSequence` 가 읽습니다.
+ * @details include 하기 전에 `SW_ENGINE_STARTUP_STEP( Name, MemoryTag, { Dependency, ... } )` 를 정의합니다(#pragma once 없음).
+ *
+ * - **줄 순서가 초기화 순서**이고, 종료는 그 역순입니다(초기화한 단계만). 객체 해제는 모든 종료 뒤에 같은 역순으로 **모든 단계**를 돕니다.
+ * - `{}` 칸은 이 단계보다 **먼저 서야 하는** 단계입니다(UE `InitializeDependency`). 식별자라 오타는 컴파일 오류이고, 의존이 자기보다 아래
+ *   줄에 있어도 컴파일 오류입니다(`EngineInitSequence.cpp` 의 static_assert).
+ * - 순서는 의존 칸이 정합니다 — 의존만으로 위상 정렬(동점은 이름 순)한 결과가 이 표의 줄 순서와 같아야 합니다
+ *   (`EngineInitSequenceTest.TableIsWrittenInStartupOrder`). 의존을 빼먹어 계산 순서가 바뀌면 그 시험이 진다.
+ * - 둘째 칸은 그 단계의 초기화가 할당하는 메모리의 용도(`MemoryTag`)입니다. 초기화를 부르는 동안 그 태그가 걸립니다(`EngineInitSequence`).
+ * - 단계 본문은 호스트가 줄마다 구조체 하나로 줍니다: `<단계>StartupStep` 의 `initialize` · `shutdown` · `destroy`
+ *   (`EngineInitStepDefaults` 를 상속해 필요한 것만 정의 — `EngineLoop.cpp`, 시험 하네스). 구조체가 없으면 컴파일 오류입니다.
+ *   로거 · 명령줄 · 서비스 생성과 바인딩은 이 표 앞의 고정 부트스트랩이고, 그 종료는 표의 해제 뒤(`EngineBootstrap::shutdown`)입니다.
+ */
+
+//                      단계           태그        먼저 서야 하는 단계                     // 왜
+SW_ENGINE_STARTUP_STEP( Compression,   EngineMisc, {} )                                    // 코덱 레지스트리 + Core 슬롯 + 외부 코덱
+SW_ENGINE_STARTUP_STEP( Reflection,    Reflection, {} )                                    //
+SW_ENGINE_STARTUP_STEP( Config,        EngineMisc, { Reflection } )                        // 설정 역직렬화가 TypeInfo 를 쓴다
+SW_ENGINE_STARTUP_STEP( Resource,      Asset,      { Compression, Config } )               // 팩 루트는 GameConfig, 팩 스트림은 코덱
+SW_ENGINE_STARTUP_STEP( EngineData,    EngineMisc, { Reflection, Resource } )              //
+SW_ENGINE_STARTUP_STEP( ShaderCache,   Shader,     {} )                                    //
+SW_ENGINE_STARTUP_STEP( Task,          Task,       {} )                                    //
+SW_ENGINE_STARTUP_STEP( ModuleImages,  EngineMisc, { Compression, Reflection, Resource, Task } ) // 모듈을 내리며 타입 · 코덱 · 캐시를 떼고 태스크를 기다린다
+SW_ENGINE_STARTUP_STEP( Audio,         Audio,      { ModuleImages, Task } )                // 음성 스트리밍이 태스크를 쓰고, 모듈 콜백을 든다
+SW_ENGINE_STARTUP_STEP( Input,         EngineMisc, { ModuleImages } )                      // 모듈이 등록한 장치 · 콜백을 든다
+SW_ENGINE_STARTUP_STEP( ModuleTypes,   Reflection, { Config, ModuleImages, Reflection } )  // 호스트가 타입 공급자(GF · 킷 · 게임 모듈)를 올려 등록을 끝낸다 — 씬을 읽는 일은 이 뒤
+SW_ENGINE_STARTUP_STEP( Scene,         Scene,      { Audio, Input, ModuleImages, Resource, Task } ) // 컴포넌트가 입력 · 오디오 · 모듈 코드 · 에셋을 든다
+SW_ENGINE_STARTUP_STEP( Headless,      EngineMisc, { EngineData, ModuleTypes, Scene, ShaderCache } ) // 셰이더 베이크 · 씬 쿠킹(모든 컴포넌트 타입이 있어야 굽는다) — 하면 뒤 단계(창 · RHI · 렌더러)를 건너뛴다
+SW_ENGINE_STARTUP_STEP( RHI,           RenderCpu,  { Config, Headless } )                  // 백엔드 선택 · 창 · 디바이스
+SW_ENGINE_STARTUP_STEP( FrameRenderer, RenderCpu,  { RHI, Task } )                         //
+SW_ENGINE_STARTUP_STEP( RenderThread,  RenderCpu,  { FrameRenderer } )                     //
+SW_ENGINE_STARTUP_STEP( LiveShader,    Shader,     { FrameRenderer, RenderThread } )       // 재컴파일이 렌더 스레드를 세우고 렌더러에 알린다(Debug)
+SW_ENGINE_STARTUP_STEP( SceneRhi,      RenderCpu,  { RHI, Scene } )                        // 씬에 디바이스를 건다 — 종료는 이것을 떼는 것이 처음
+
+// `ResourceManager::shutdown` 은 Resource 단계의 해제에 있다 — 에셋을 드는 단계가 모두 Resource 뒤에 서므로, 역순 해제에서 그들의 소멸자가
+// 에셋을 놓은 뒤에 캐시를 비운다. 소멸자가 태스크를 기다리는 객체(에셋 스트리밍 큐)는 Task 에 의존하는 단계(Scene)가 해제한다.

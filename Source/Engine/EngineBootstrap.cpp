@@ -12,7 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/EngineOwnedServices.h"
+#include "Engine/EngineServiceCollection.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
@@ -33,7 +33,7 @@ namespace sw
         shutdown();
     }
 
-    bool EngineBootstrap::initialize( EngineOwnedServices& owned, bool bDiagnostics )
+    bool EngineBootstrap::initialize( EngineServiceCollection& owned, bool bDiagnostics )
     {
         // 이름 풀 · 로거 · 명령줄 · 전역 변수 표다.
         SW_MEMORY_SCOPE( EngineMisc );

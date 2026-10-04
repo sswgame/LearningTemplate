@@ -14,9 +14,9 @@
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
@@ -72,8 +72,8 @@ namespace sw::editor
 
     void EditorContext::initialize()
     {
-        _pSelectionManager          = make_unique<SelectionManager>();
-        _pWorkspace                 = make_unique<EditorWorkspace>( _pSelectionManager.get() );
+        _pEditorSelection           = make_unique<EditorSelection>();
+        _pWorkspace                 = make_unique<EditorWorkspace>( _pEditorSelection.get() );
         _pNotificationManager       = make_unique<EditorNotificationManager>();
         _pCommandRegistry           = make_unique<EditorCommandRegistry>();
         _pPanelManager              = make_unique<EditorPanelManager>();
@@ -109,7 +109,7 @@ namespace sw::editor
         _pCommandRegistry.reset();
         _pNotificationManager.reset();
         _pWorkspace.reset();
-        _pSelectionManager.reset();
+        _pEditorSelection.reset();
         _pRendererBackend = nullptr;
         _pRhiDevice       = nullptr;
         unbindLocalService<EditorContext>();

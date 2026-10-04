@@ -6,12 +6,12 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Input/Events/RawInputEvent.h"
-#include "Engine/Input/GamepadButtons.h"
+#include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputKeyMap.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/Utils/VirtualJoystick.h"
-#include "Engine/Input/Windows/GamepadXInput.h"
+#include "Engine/Input/Windows/XInputGamepadDevice.h"
 #include "Engine/Window/NativeWindowEvent.h"
 
 #include "TestFramework/TestFramework.h"
@@ -433,57 +433,57 @@ SW_TEST_CASE( InputManagerTest, InputMapGamepadStick2D )
 
 #if defined( SW_PLATFORM_WINDOWS )
 /**
- * @brief [InputManagerTest] GamepadButtons 이름 변환 및 매핑 양방향 검증
+ * @brief [InputManagerTest] GamepadButtonUtil 이름 변환 및 매핑 양방향 검증
  */
-SW_TEST_CASE( InputManagerTest, GamepadButtonsNameMapping )
+SW_TEST_CASE( InputManagerTest, GamepadButtonUtilNameMapping )
 {
     // 1) 이름 -> 버튼 열거형 (대소문자 무시)
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "A" ) == sw::GamepadButton::A );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "a" ) == sw::GamepadButton::A );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "B" ) == sw::GamepadButton::B );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "X" ) == sw::GamepadButton::X );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "Y" ) == sw::GamepadButton::Y );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadUp" ) == sw::GamepadButton::DPadUp );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "dpadup" ) == sw::GamepadButton::DPadUp );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadDown" ) == sw::GamepadButton::DPadDown );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadLeft" ) == sw::GamepadButton::DPadLeft );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadRight" ) == sw::GamepadButton::DPadRight );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "Start" ) == sw::GamepadButton::Start );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "Back" ) == sw::GamepadButton::Back );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "LeftShoulder" ) == sw::GamepadButton::LeftShoulder );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "RightShoulder" ) == sw::GamepadButton::RightShoulder );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "LeftThumb" ) == sw::GamepadButton::LeftThumb );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "RightThumb" ) == sw::GamepadButton::RightThumb );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "A" ) == sw::GamepadButton::A );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "a" ) == sw::GamepadButton::A );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "B" ) == sw::GamepadButton::B );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "X" ) == sw::GamepadButton::X );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "Y" ) == sw::GamepadButton::Y );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "DPadUp" ) == sw::GamepadButton::DPadUp );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "dpadup" ) == sw::GamepadButton::DPadUp );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "DPadDown" ) == sw::GamepadButton::DPadDown );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "DPadLeft" ) == sw::GamepadButton::DPadLeft );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "DPadRight" ) == sw::GamepadButton::DPadRight );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "Start" ) == sw::GamepadButton::Start );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "Back" ) == sw::GamepadButton::Back );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "LeftShoulder" ) == sw::GamepadButton::LeftShoulder );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "RightShoulder" ) == sw::GamepadButton::RightShoulder );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "LeftThumb" ) == sw::GamepadButton::LeftThumb );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "RightThumb" ) == sw::GamepadButton::RightThumb );
 
     // 알 수 없는 버튼 이름은 Count 반환
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "InvalidButton" ) == sw::GamepadButton::Count );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "" ) == sw::GamepadButton::Count );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "InvalidButton" ) == sw::GamepadButton::Count );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "" ) == sw::GamepadButton::Count );
 
     // 2) 버튼 열거형 -> 안정 문자열
-    SW_EXPECT_STREQ( "A", sw::GamepadButtons::toName( sw::GamepadButton::A ) );
-    SW_EXPECT_STREQ( "B", sw::GamepadButtons::toName( sw::GamepadButton::B ) );
-    SW_EXPECT_STREQ( "X", sw::GamepadButtons::toName( sw::GamepadButton::X ) );
-    SW_EXPECT_STREQ( "Y", sw::GamepadButtons::toName( sw::GamepadButton::Y ) );
-    SW_EXPECT_STREQ( "DPadUp", sw::GamepadButtons::toName( sw::GamepadButton::DPadUp ) );
-    SW_EXPECT_STREQ( "Start", sw::GamepadButtons::toName( sw::GamepadButton::Start ) );
-    SW_EXPECT_STREQ( "Back", sw::GamepadButtons::toName( sw::GamepadButton::Back ) );
-    SW_EXPECT_STREQ( "LeftShoulder", sw::GamepadButtons::toName( sw::GamepadButton::LeftShoulder ) );
-    SW_EXPECT_STREQ( "RightShoulder", sw::GamepadButtons::toName( sw::GamepadButton::RightShoulder ) );
-    SW_EXPECT_STREQ( "LeftThumb", sw::GamepadButtons::toName( sw::GamepadButton::LeftThumb ) );
-    SW_EXPECT_STREQ( "RightThumb", sw::GamepadButtons::toName( sw::GamepadButton::RightThumb ) );
+    SW_EXPECT_STREQ( "A", sw::GamepadButtonUtil::toName( sw::GamepadButton::A ) );
+    SW_EXPECT_STREQ( "B", sw::GamepadButtonUtil::toName( sw::GamepadButton::B ) );
+    SW_EXPECT_STREQ( "X", sw::GamepadButtonUtil::toName( sw::GamepadButton::X ) );
+    SW_EXPECT_STREQ( "Y", sw::GamepadButtonUtil::toName( sw::GamepadButton::Y ) );
+    SW_EXPECT_STREQ( "DPadUp", sw::GamepadButtonUtil::toName( sw::GamepadButton::DPadUp ) );
+    SW_EXPECT_STREQ( "Start", sw::GamepadButtonUtil::toName( sw::GamepadButton::Start ) );
+    SW_EXPECT_STREQ( "Back", sw::GamepadButtonUtil::toName( sw::GamepadButton::Back ) );
+    SW_EXPECT_STREQ( "LeftShoulder", sw::GamepadButtonUtil::toName( sw::GamepadButton::LeftShoulder ) );
+    SW_EXPECT_STREQ( "RightShoulder", sw::GamepadButtonUtil::toName( sw::GamepadButton::RightShoulder ) );
+    SW_EXPECT_STREQ( "LeftThumb", sw::GamepadButtonUtil::toName( sw::GamepadButton::LeftThumb ) );
+    SW_EXPECT_STREQ( "RightThumb", sw::GamepadButtonUtil::toName( sw::GamepadButton::RightThumb ) );
 
     // Count / 범위 밖은 nullptr 반환
-    SW_EXPECT_TRUE( sw::GamepadButtons::toName( sw::GamepadButton::Count ) == nullptr );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::toName( sw::GamepadButton::Count ) == nullptr );
 }
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS )
 /**
- * @brief [InputManagerTest] GamepadXInput 기본 상태 및 스틱 데드존 검증
+ * @brief [InputManagerTest] XInputGamepadDevice 기본 상태 및 스틱 데드존 검증
  */
-SW_TEST_CASE( InputManagerTest, GamepadXInputDefaultStateAndStickQuery )
+SW_TEST_CASE( InputManagerTest, XInputGamepadDeviceDefaultStateAndStickQuery )
 {
-    sw::GamepadXInput pad;
+    sw::XInputGamepadDevice pad;
     pad.poll( 0.016f ); // 연결되지 않은 슬롯 폴링
 
     for ( size_t btnIndex = 0; btnIndex < static_cast<size_t>( sw::GamepadButton::Count ); ++btnIndex )
@@ -629,19 +629,19 @@ SW_TEST_CASE( InputManagerTest, InputManager_AsyncPostAndBeginFrameDrain )
 }
 
 /**
- * @brief [GamepadDeviceTest] GamepadButtons::fromName 및 toName 크로스플랫폼 안정성 검증
+ * @brief [GamepadDeviceTest] GamepadButtonUtil::fromName 및 toName 크로스플랫폼 안정성 검증
  */
-SW_TEST_CASE( GamepadDeviceTest, GamepadButtonsFromNameAndToName )
+SW_TEST_CASE( GamepadDeviceTest, GamepadButtonUtilFromNameAndToName )
 {
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "A" ) == sw::GamepadButton::A );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "DPadUp" ) == sw::GamepadButton::DPadUp );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "RightTrigger" ) == sw::GamepadButton::Count );
-    SW_EXPECT_TRUE( sw::GamepadButtons::fromName( "NonExistent" ) == sw::GamepadButton::Count );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "A" ) == sw::GamepadButton::A );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "DPadUp" ) == sw::GamepadButton::DPadUp );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "RightTrigger" ) == sw::GamepadButton::Count );
+    SW_EXPECT_TRUE( sw::GamepadButtonUtil::fromName( "NonExistent" ) == sw::GamepadButton::Count );
 
-    const utf8* pNameA = sw::GamepadButtons::toName( sw::GamepadButton::A );
+    const utf8* pNameA = sw::GamepadButtonUtil::toName( sw::GamepadButton::A );
     SW_EXPECT_TRUE( pNameA != nullptr && sw::StringUtil::equals( pNameA, "A" ) );
 
-    const utf8* pNameStart = sw::GamepadButtons::toName( sw::GamepadButton::Start );
+    const utf8* pNameStart = sw::GamepadButtonUtil::toName( sw::GamepadButton::Start );
     SW_EXPECT_TRUE( pNameStart != nullptr && sw::StringUtil::equals( pNameStart, "Start" ) );
 }
 

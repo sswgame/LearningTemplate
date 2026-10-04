@@ -11,7 +11,7 @@
     #include "Engine/Input/Devices/MouseDevice.h"
     #include "Engine/Input/Events/RawInputEvent.h"
     #include "Engine/Input/InputKeyMap.h"
-    #include "Engine/Input/Windows/GamepadXInput.h"
+    #include "Engine/Input/Windows/XInputGamepadDevice.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
 
@@ -383,7 +383,7 @@ namespace sw
     void InputManager::registerPlatformGamepads()
     {
         // 슬롯 수 · 0번 캐시 · 연결 콜백은 엔진 정책이라 기반 클래스가 맡는다. 여기서 정하는 것은 XInput 이라는 것뿐이다.
-        registerGamepadSlots<GamepadXInput>();
+        registerGamepadSlots<XInputGamepadDevice>();
     }
 
     void InputManager::setCursorVisiblePlatform( bool bVisible )

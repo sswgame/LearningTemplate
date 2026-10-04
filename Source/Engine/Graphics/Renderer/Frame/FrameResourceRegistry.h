@@ -1,7 +1,7 @@
 /**
  * @file FrameResourceRegistry.h
  * @brief 패스 스코프 이름 → {텍스처 · 버퍼, bindless 인덱스} 레지스트리입니다.
- * @details ShaderBindingBinder 가 `g_<Name>Index` 패턴의 CB 멤버를 자동으로 채울 때 씁니다.
+ * @details ShaderParameterBinder 가 `g_<Name>Index` 패턴의 CB 멤버를 자동으로 채울 때 씁니다.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"

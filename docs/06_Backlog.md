@@ -651,7 +651,7 @@ cd build/Ninja-Debug/Bin
   가 컴포넌트 비트를 복사하면 안 된다. 변화는 `onOwnerActiveInHierarchyChanged` 로 알린다. `TickRegistry` 의 목록에 들어 있는 것이 곧 활성이다.
 - **플레이 수명주기** — 컴포넌트의 "시작됨" 비트가 시작 · 끝을 한 번씩 짝짓는다. 플레이 중 붙은 컴포넌트는 다음 틱 단계(`GT.Scene.tick.beginPlay`)에서 시작한다. 월드 플레이 상태는
   `SceneManager::setWorldPlaying`. 다시 만든 인스턴스(되돌리기 · 핫 리로드 · DontDestroyOnLoad)는 onBeginPlay 를 다시 받는다 — `markPersistent` 는 같은 id 로 **다시 만든다**.
-- **틱 선언** — 기본은 "`onTick` 을 오버라이드했는가"(`OverridesOnTick_v<T>`), 우선순위는 `kMaxTickPriority`(63). 다른 그룹의 선행 조건이 있으면 뒤따르는 쪽을 그 그룹으로 옮긴다.
+- **틱 선언** — 기본은 "`onTick` 을 오버라이드했는가"(`HasOnTickOverride_v<T>`), 우선순위는 `kMaxTickPriority`(63). 다른 그룹의 선행 조건이 있으면 뒤따르는 쪽을 그 그룹으로 옮긴다.
 - **기본값은 만들 때 한 번이다**(CDO 자리, `DefaultPatch`). 모듈 등록 · 리로드에서 살아 있는 값에 다시 찍지 말 것. `ComponentDefaults` 의 기본값 파일은 없어도 되는 파일이다
   ("시도했는가" 로 한 번만 연다). 프리팹 형식은 읽을 때 정해 든다(`PrefabStateFormat`), 쓰기는 `PrefabAsset::saveToFile` 하나, 오버라이드는 `타입#n` 키.
 - **찾지 말고 등록받는다.** 매 프레임 씬을 훑던 주광 조회가 GT 의 38 % 였다. 빛은 `LightRegistry`(종류별 칸), 카메라는 `CameraRegistry::selectCamera`(동률은 컴포넌트 id — 등록
@@ -700,23 +700,23 @@ cd build/Ninja-Debug/Bin
   D3D11 은 첨부 전이(`prepareTextureForRenderTarget`)가 그 텍스처가 걸린 PS SRV 슬롯을 뗀다(`D3D11RecordingState::_arrPixelSrvTexture`).
 - **머티리얼 텍스처 슬롯(t5..t8)의 샘플러는 `shaderslot::kMaterialTextureSampler`(LINEAR_WRAP) 하나** — GL 은 샘플러 객체를 유닛에 `glBindSampler`, DX11 은 정적 세트.
 
-- **패스 종류 하나 = `RenderPassType` 한 값 + `RenderPassTypeTraits.cpp` 의 case 하나**(기본 셰이더 · define · 포맷 · 클리어 · 입력 계약 · 플래그). 전용 실행이
+- **패스 종류 하나 = `RenderPassType` 한 값 + `RenderPassTypeInfo.cpp` 의 case 하나**(기본 셰이더 · define · 포맷 · 클리어 · 입력 계약 · 플래그). 전용 실행이
   필요할 때만 `executePass` 의 switch 에 case. 런타임 PSO 와 베이커가 같은 `selectRenderPassShader` 를 부른다. 마지막 열거자를 바꾸면
-  `kRenderPassTypeCount` 를 직접 고친다(`RenderPassTest.TypeTraitsTableCoversEveryEnumValue` 가 잡는다). 리플렉션 매니페스트는 키 순서로 쓴다(결정적).
+  `kRenderPassTypeCount` 를 직접 고친다(`RenderPassTest.TypeInfoTableCoversEveryEnumValue` 가 잡는다). 리플렉션 매니페스트는 키 순서로 쓴다(결정적).
 - **인스펙터 위젯 · CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나**(`InspectorBuiltinValue.h`) — 내장 타입을 더하면 `InspectorWidgetFor<T>` 특수화가
   없으면 컴파일이 선다. .xxx 의 문자열 줄은 `std::string`, 프로퍼티는 `sw::string`(`InspectorBuiltinCppType` 이 메운다).
 
 - **셰이더 이름 규칙은 C++ 와 같다**(AGENTS.md "### HLSL", `CheckShaderConventions` 게이트): 함수 camelCase(공유 헤더는 `sw…`), 타입 PascalCase
   (공유 헤더는 `Sw…`, `_t` 없음), 필드는 C++ 멤버 이름에서 `_` 를 뺀 것. `g_*` · cbuffer · 시맨틱 · 진입점(`VSMain` · `PSMain` · `CSMain`)은 C++ 가
   문자열로 묶으므로 바꾸면 같은 커밋에서 C++ 도 바꾼다. **셰이더 쪽 개명은 계약 검사를 조용히 끌 수 있다**(`validate` 는 표에 없는 이름을 건너뛴다) —
-  `ShaderBindingContractTest.EveryBoundNameIsInBakedReflection` 이 C++ 가 아는 이름이 구운 매니페스트에 있는지 본다.
+  `ShaderBindingValidatorTest.EveryBoundNameIsInBakedReflection` 이 C++ 가 아는 이름이 구운 매니페스트에 있는지 본다.
 
 - **렌더 스레드는 씬을 못 본다** — 런타임 경로의 `_pScene` 은 늘 null, `GpuSceneSnapshot` 이 유일한 통로다. CPU 폴백을 다시 만들지 말 것. 스레드 경계 타입은 `GpuSceneBuilder`(GT, GPU
   핸들 0) / `GpuSceneSnapshot` / `GpuScene`(RT)이다. 스냅샷은 GT 가 만든 것만 옮긴다 — RT 가 파생하는 값(`_indirectCommandCount`)을 실으면 GT 의 0 이 덮는다(증상: "카메라를 움직일
   때만 메시가 보인다"). 패킷은 자기완결이어야 하고 소유(`shared_ptr`)를 싣는다 — 생포인터는 `CheckRenderOwnership` 이 막고 예외는 `// SW_OWNERSHIP_RAW_OK: <이유>`.
-- **셰이더 바인딩 계약의 정본은 `bindingslots.hlsli` 하나**(HLSL · C++ 같은 파일 include). 백엔드는 shaderslot 상수만 쓰고 바인딩 숫자 리터럴은 금지, `ShaderBindingContract` 가 구운
+- **셰이더 바인딩 계약의 정본은 `bindingslots.hlsli` 하나**(HLSL · C++ 같은 파일 include). 백엔드는 shaderslot 상수만 쓰고 바인딩 숫자 리터럴은 금지, `ShaderBindingValidator` 가 구운
   바이너리를 대조한다(nogpu). `draw()` 에 CB 인자는 없다. 백엔드 간 공유 상수는 `RHITypes.h` `constant` 블록 하나 — 지금 값이 같아도 바뀔 수 있으면 공유하고 별칭도 금지.
-- **상수버퍼를 드로우 · 디스패치가 나눠 쓰면 안 된다**(같은 함정이 두 번: 패스 CB, 컬링 CB). 값이 바뀔 때만 쓰는 CB 는 `RHIConstantBufferShadow` 로 링의 모든 칸에 채운다(안 그러면
+- **상수버퍼를 드로우 · 디스패치가 나눠 쓰면 안 된다**(같은 함정이 두 번: 패스 CB, 컬링 CB). 값이 바뀔 때만 쓰는 CB 는 `RHIConstantBufferMirror` 로 링의 모든 칸에 채운다(안 그러면
   DX12 · Vulkan 이 세 프레임 중 둘을 0 으로 그린다). `updateConstantBuffer` 크기는 만든 크기를 넘으면 안 된다(GL 만 막는다) — 셰이더를 다시 구우면 머티리얼 CB 가 커질 수 있어
   `MaterialInstance` 가 `_constantByteSize` 로 다시 만든다. CB 칸 크기는 리플렉션, 쓰는 크기는 XML `shaderType` — 어긋나면 옆 프로퍼티 색이 오염된다(`writeBoundedValue`).
 - **셰이더 산출물 스테일 판정은 내용 해시 하나다**(`ShaderBaker::computeEffectiveSourceHash`, mtime 금지 — 구운 바이너리를 커밋하므로 git 이 mtime 을 섞는다). 스탬프 헤더 `SWBAKE 3`,
@@ -774,7 +774,7 @@ cd build/Ninja-Debug/Bin
   넣지 말 것(`createRendererBackend` 가 모르는 백엔드에 `nullptr`). 백엔드 능력은 이름이 아니라 `getCapabilities()` 런타임 값으로.
 - **백엔드 하나만 고쳐진 모양이 계속 나온다**(`createStructuredBuffer` 는 DX12 만 64 비트로 곱한다). 시험은 백엔드별 계약으로 쓴다. 안 쓰이는 경로는 조용히 썩는다 — 폴백은 지우고
   "아직 안 쓰는 기능" 은 시험과 함께 남긴다(인덱스 드로우의 유일한 검증은 `RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream`, `createIndexBuffer` 는 순수 가상).
-- **렌더 패스** — 패스 입력은 선언이 곧 바인딩이다(`RenderPassInputContract` 역할 표, 첨부 역할은 `_role` 선언 → 정본 이름 → 포맷). `findTransient` 의 핸들 0 은 백버퍼다 — 없는 첨부를
+- **렌더 패스** — 패스 입력은 선언이 곧 바인딩이다(`RenderPassInputSignature` 역할 표, 첨부 역할은 `_role` 선언 → 정본 이름 → 포맷). `findTransient` 의 핸들 0 은 백버퍼다 — 없는 첨부를
   열면 씬이 백버퍼로 간다. `beginColorPass` 가 false 면 그리지도 닫지도 않는다. WAR 간선은 "생산자 다음 쓰기", 같은 이름 패스는 거절, `executeParallel` 은 모든 레벨의 리스트를 먼저
   마련하고 못 하면 false(직렬 폴백은 앞 레벨을 두 번 그린다). 풀스크린 패스의 컬은 `None` 고정. 후처리 효과는 패스가 아니라 함수(`postchain.hlsl` + 퍼뮤테이션, 기준은
   `forwardpipelinestaged.xml` · `FusedPostChainMatchesStaged`). 깊이 프리패스는 `SW_PASS_DEPTH_PREPASS` · LessEqual, DX11 은 VS 만.
@@ -834,7 +834,7 @@ cd build/Ninja-Debug/Bin
   를 건너뛴다). 모달이 떠 있으면 키가 `InputManager` 까지 오지 않는다. 에디터 draw 스냅샷은 획득 → present **또는 포기**(`abandonPendingDraw`)로 끝난다. 입력 위젯은 `drawTextField` 하나.
 - **에디터 상태 · 설정** — 설정 파일 경계는 "앱이 다시 쓰는가": `EditorConfig.json`(전체 재생성 — 테마만), 손으로 정하는 경로는 읽기 전용 `editordata.json`. Game View 클리어 색은
   `_clearColor`. 상태를 소유자에게 옮길 때는 그 소유자가 언제 서는지부터 본다(테마가 `EditorContext::initialize()` 전에 읽혀 조용히 버려졌다). DPI: 96 DPI 기준값 × 배율, 테마에서 곱하고
-  되읽을 때 나눈다(짝이 깨지면 이중 배율). 에셋 핫 리로드는 에디터 소유(`ReloadFileManager`), 감시 접두어는 절대 경로.
+  되읽을 때 나눈다(짝이 깨지면 이중 배율). 에셋 핫 리로드는 에디터 소유(`FileWatchDispatcher`), 감시 접두어는 절대 경로.
 - **기계 훑기의 알려진 오탐** — 델리게이트로 묶인 `&Class::method` 는 "죽은 함수" 로 잡힌다. `EditorThemeUtil` 팔레트 · 킷의 소비자 없는 세터 · 게터는 정상이다. 쓰이는지는 `= delete` 로
   바꾸고 빌드해 센다.
 - **패널 시각 검증 사각** — 피킹 클릭 · 기즈모 우선순위는 사람이 눌러야 보인다. 그리기 회귀는 `Game View` 정점 수로 전후를 비교한다.
@@ -852,11 +852,11 @@ cd build/Ninja-Debug/Bin
   먼저 add_subdirectory 되어 GF · 킷 · 게임의 등록기가 배포본에서 빠져 있었다. 쿠킹은 `ContentSource::SourceTree`(팩은 산출물이라 입력이 아니다)이고, MissingComponent 가
   든 씬은 굽지 않고 실패(종료 코드 → CookAssets)로 센다.
 
-- **엔진 기동 · 종료 순서는 `EngineStartupStepList.xxx` 의 의존 칸이 정하고, 표는 그 순서대로 적는다**(UE `USubsystem` 의존 선언). 의존은 식별자 목록
+- **엔진 기동 · 종료 순서는 `EngineInitStepList.xxx` 의 의존 칸이 정하고, 표는 그 순서대로 적는다**(UE `USubsystem` 의존 선언). 의존은 식별자 목록
   `{ A, B }` 라 오타 · 아래 줄 의존은 컴파일 오류(static_assert), 정렬은 의존만 보고 동점은 이름 순, 그 결과가 줄 순서와 같은지
-  `EngineStartupSequenceTest.TableIsWrittenInStartupOrder` 가 본다(의존을 빼먹으면 진다). 종료는 초기화한 단계만 역순.
+  `EngineInitSequenceTest.TableIsWrittenInStartupOrder` 가 본다(의존을 빼먹으면 진다). 종료는 초기화한 단계만 역순.
   새 단계는 호스트(EngineLoop · 시험 하네스 `Test/TestFramework/main.cpp`)마다 `<단계>StartupStep` 구조체 하나(initialize · shutdown · destroy, 기본은 no-op)를 더한다 —
-  빠지면 `EngineStartupStepTable` 이 컴파일 오류. 해제(destroy)는 **표의 모든 단계**를 역순으로 돈다(실패 · 건너뜀 · 닿지 못한 단계 포함)라 본문은 null 안전이어야 하고,
+  빠지면 `EngineInitStepTable` 이 컴파일 오류. 해제(destroy)는 **표의 모든 단계**를 역순으로 돈다(실패 · 건너뜀 · 닿지 못한 단계 포함)라 본문은 null 안전이어야 하고,
   백엔드 교체는 `shutdownDependentsOf( RHI )` · `restartStoppedSteps()` 로 같은 initialize 본문을 다시 돌리므로 본문은 다시 설 수 있어야 한다(객체가 있으면 다시 쓰고
   디바이스 설정은 매번 건다 — 교체 뒤 `setMergeBatchesAcrossMaterials` 가 옛 디바이스 값으로 남던 결함이 이것). 로거 · 명령줄 · 크래시 핸들러는 두 호스트가 `EngineBootstrap`
   하나를 쓴다(로거 스레드는 메모리 프로파일러보다 먼저, 로거 객체는 맨 마지막 — 해제 중의 진단이 남는다). 서비스 표 칸은 낱말(`Required/Optional` ·
@@ -890,7 +890,7 @@ cd build/Ninja-Debug/Bin
   `destroyComponentsOfModule` 을 팩토리를 걷기 **전에**, DLL 은 "씬은 사라지고 서비스는 살아 있는" 구간에서만(`setOnScenesReleased`). 모듈 에셋 캐시는 `registerAssetCache` /
   `unregisterAssetCache` 짝(이름은 등록 때 복사). 로드 모듈의 코덱 · 로그 리스너(`releaseListenerCodeWithin`)도 내리기 전에 뗀다.
 - **절차 생성물은** `onBeforeStateSerialize` 에서 걷고 `onAfterStateDeserialize` 에서 다시 만든다(스냅샷에 실리면 메시 없는 유령). 리로드 전용 API 를 엔진에 넣지 않는다.
-- **엔진 서비스는 `EngineServiceList.xxx` 의 `owned` 열에서** `EngineOwnedServices::createAll()` / `bindInto()` 로 생성된다(호스트가 먼저 만든 것은 덮지 않는다, 정의는 `.cpp`, 자리는
+- **엔진 서비스는 `EngineServiceList.xxx` 의 `owned` 열에서** `EngineServiceCollection::createAll()` / `bindInto()` 로 생성된다(호스트가 먼저 만든 것은 덮지 않는다, 정의는 `.cpp`, 자리는
   `Source/Engine/` — `Common` 이면 `CheckEngineLayers` 가 막는다). 호스트 대조는 `CheckEngineServiceBinding`. 시험의 서비스 흔들기 창구는 `test::rebindEngineServices` 하나.
   `EngineServiceTest` 의 기대값도 같은 X-매크로라 `gameAllowed` 값 자체가 틀린 것은 못 잡는다.
 - **Engine 폴더 include 그래프는 DAG 다**(`RunEngineLayerGraph.py`, 다시 제안하지 말 목록은 `docs/07_EngineStructureVsCommercial.md` 4절). 일부러 그 층에 둔 것: 핸들 · `TagID` 는 Core,
@@ -908,7 +908,7 @@ cd build/Ninja-Debug/Bin
   에서 시작하므로 띄운 쪽의 태그를 인자로 넘겨 첫 줄에서 건다. 배열은 `sw_new_array` · `make_unique<T[]>`(맨 `new` 는 `Style/RawNew` 가 막는다). 외부 라이브러리는
   공개 설정 지점으로만 sw 할당자에 잇는다(pugixml `set_memory_management_functions`, nlohmann 할당자 인자, zlib zalloc · zstd advanced · LZ4 extState, stb STBI_*).
 
-- **메모리 태그(UE LLM 식)는 Debug 전용이다.** 거는 자리는 셋 — 기동 단계 표(`EngineStartupStepList.xxx`)의 태그 칸, 서비스 생성의 `kServiceMemoryTag<Type>`,
+- **메모리 태그(UE LLM 식)는 Debug 전용이다.** 거는 자리는 셋 — 기동 단계 표(`EngineInitStepList.xxx`)의 태그 칸, 서비스 생성의 `kServiceMemoryTag<Type>`,
   하위 시스템 진입점의 `SW_MEMORY_SCOPE`. 태스크 · 병렬 청크는 **만든 쪽의 태그를 상속**한다(`TaskNode` · `ParallelGroup` 의 패딩 자리, 크기 그대로). 분포와 sw 할당자 밖
   몫은 `-gv_profileFrames` 보고의 "memory by tag" 와 ProfilerPanel 에서 본다 — Unknown 이 커지면 진입점이 빠진 것이다. ImGui 는 `SetAllocatorFunctions` 로 sw 할당자를
   지나므로 에디터 실행의 alloc/frame 에 ImGui 할당이 들어간다. GPU 메모리는 대상이 아니다(CPU 힙만).
@@ -973,7 +973,7 @@ cd build/Ninja-Debug/Bin
 - **엔진 · 킷 컴포넌트는 태그를 붙이지 않는다** — 종류는 `GameObjectManager::forEachComponentOfType<T>` 로 찾는다(UE `GetAllActorsOfClass`). 프레임마다 쓰는
   소비자가 생기면 타입별 등록부(O(해당 타입))를 Release 로 재고 정한다. 글자 입력은 `InputManager::setTextInputCallback` 하나(UE `OnKeyChar`).
 
-- **도구 에셋 종류는 표 하나** — 대화 노드는 `kArrDialogueNodeTraits` 한 줄 + 러너 switch 의 case 하나(`-Wswitch-enum` 이 짚음), 다음 노드는 러너 · 에디터 미리보기가
+- **도구 에셋 종류는 표 하나** — 대화 노드는 `kArrDialogueNodeInfo` 한 줄 + 러너 switch 의 case 하나(`-Wswitch-enum` 이 짚음), 다음 노드는 러너 · 에디터 미리보기가
   같이 쓰는 `DialogueCursor::step`. 핀 번호 `nodeId*100+offset` 은 디스크 포맷. 타일맵 레이어 표(`kArrTileFlagLayerInfo`)의 XML 속성 이름과 줄 순서는 파일 형식이다
   (바꾸면 옛 맵의 그 레이어가 기본값으로 읽힌다 — `TileMapXmlTest.SavedBytesMatchTheExistingFormat`). `SequenceItemKind` 값은 JSON 정수라 번호를 바꾸지 말 것;
   시퀀서 이벤트는 `SequencePlayerComponent::registerSequenceEvent` 로 받는다.
@@ -985,7 +985,7 @@ cd build/Ninja-Debug/Bin
 
 - **입력** — 창 메시지는 큐에만 넣고 장치 상태를 바꾸는 길은 `beginFrame` 의 재생 하나다(포커스 · 포인터 진입도 큐 순서 안). `RawInputEventType` 은 뒤에만 덧붙인다(리플레이 파일이 번호를
   담는다). 입력 시험은 메시지 → `beginFrame` → 조회 → `endFrame`. XInput 트리거도 `setAxis( 4 · 5 )` 로 넣어야 데드존이 먹는다. 리바인딩은 바인딩 종류를 지킨다(`getRebindSlotIndex`),
-  바인딩 종류는 `kArrBindingKindTraits` 표 하나(+ `static_assert`, 저장소는 `-Wswitch-default`). 통합 InputMap 은 `InputManager::beginFrame` 이 갱신한다.
+  바인딩 종류는 `kArrBindingKindInfo` 표 하나(+ `static_assert`, 저장소는 `-Wswitch-default`). 통합 InputMap 은 `InputManager::beginFrame` 이 갱신한다.
 - **오디오** — 볼륨 · 음소거 상태는 `IAudioSystem` 이 들고 백엔드는 `applyVolume()` 통보만, 음소거는 마스터 보이스 한 곳, BGM 은 `_musicGeneration`. WAV 는 파서가 먼저(팩 안은 파서만).
   실제 보이스 동작은 장치 없이는 확인할 수 없다.
 - **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. 월드 UI(HP 바 ·

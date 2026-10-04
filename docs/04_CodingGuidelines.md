@@ -258,9 +258,9 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
   밖에서 넣는 define(`DX11` · `SW_PASS_*` · `MATERIAL_*` …), `bindingslots.hlsli` 의 매크로(C++ 가 같은 파일을 include 한다),
   머티리얼 구조체 필드(`.material` 이 이름으로 채운다), 셰이더 파일 이름이 그렇다. 그래서 `g_*` 에는 컨테이너 · 단수 · 줄임말
   규칙을 적용하지 않는다. 규칙에서 빼야 하는 이름은 게이트의 `kStringBoundName` 에 **이유와 함께** 적는다(지금은 진입점 셋).
-- **문자열로 묶인 이름을 바꾸려면 같은 커밋에서 C++ 도 바꾼다.** `ShaderBindingContract::validate` 는 계약 표에 없는 리플렉션
+- **문자열로 묶인 이름을 바꾸려면 같은 커밋에서 C++ 도 바꾼다.** `ShaderBindingValidator::validate` 는 계약 표에 없는 리플렉션
   이름을 조용히 건너뛰어서, 셰이더 쪽만 이름을 바꾸면 그 리소스의 검사가 아무 말 없이 꺼진다.
-  `ShaderBindingContractTest.EveryBoundNameIsInBakedReflection` 이 반대 방향(C++ 가 아는 이름이 구운 `reflection.manifest`
+  `ShaderBindingValidatorTest.EveryBoundNameIsInBakedReflection` 이 반대 방향(C++ 가 아는 이름이 구운 `reflection.manifest`
   에 있는가)을 봐서 그 개명을 실패로 만든다.
 
 ---

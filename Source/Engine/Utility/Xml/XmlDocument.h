@@ -72,7 +72,7 @@ namespace sw
         const utf8* findAttribute( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
         /**
          * @brief 속성 값을 글로 반환합니다. 없으면 빈 글입니다.
-         * @details `string_view` 를 받는 함수(`KeyCodes::fromName` 등)에 넘길 때 씁니다 — `findAttribute` 의 nullptr 로 `string_view` 를 만들면 미정의 동작(strlen)입니다.
+         * @details `string_view` 를 받는 함수(`KeyCodeUtil::fromName` 등)에 넘길 때 씁니다 — `findAttribute` 의 nullptr 로 `string_view` 를 만들면 미정의 동작(strlen)입니다.
          */
         string_view getAttributeText( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
         /** @brief 속성 값을 정수로 반환합니다. 정수가 아닌 글이면 알리고 `fallback` 입니다. */

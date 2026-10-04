@@ -21,7 +21,7 @@
 #include "Engine/Graphics/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassInputContract.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Graphics/Renderer/Scene/GpuMeshMorphPool.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
@@ -224,7 +224,7 @@ namespace sw
         struct FramePassContext
         {
             IRHICommandList* _pCmd{ nullptr };
-            /** @brief 엔진 PassCB 값(이름 기반)입니다. ShaderBindingBinder 가 리플렉션 오프셋에 기록합니다. */
+            /** @brief 엔진 PassCB 값(이름 기반)입니다. ShaderParameterBinder 가 리플렉션 오프셋에 기록합니다. */
             PassConstantValues _passValues{};
             /** @brief `g_World` 입니다. 인스턴스 버퍼가 없는 드로우(풀스크린 · 픽스처)의 월드 행렬입니다. 씬 메시는 인스턴스 버퍼에서 읽습니다. */
             float4x4           _world{};
@@ -366,7 +366,7 @@ namespace sw
         void registerDeclaredInputs( FramePassContext& ctx, const RenderGraphPassDesc& passDesc );
         /** @brief 역할의 셰이더 이름(intern 된 hashed_string)입니다. */
         const hashed_string& inputRoleName( RenderPassInputRole role ) const;
-        /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드 · 바인딩은 ShaderBindingBinder 가 합니다. */
+        /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드 · 바인딩은 ShaderParameterBinder 가 합니다. */
         void updatePassConstants( FramePassContext& ctx );
 
         /**
@@ -485,7 +485,7 @@ namespace sw
         const RenderGraphPassDesc* findPassDescByType( RenderPassType passType ) const;
 
         /**
-         * @brief 패스 종류의 표(RenderPassTypeTraits)와 파이프라인 XML 의 패스 서술로 패스 PSO 를 만듭니다.
+         * @brief 패스 종류의 표(RenderPassTypeInfo)와 파이프라인 XML 의 패스 서술로 패스 PSO 를 만듭니다.
          * @param pRtvFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(Present 변종). nullptr 이면 표의 고정 포맷 → 출력 선언 순입니다
          */
         RHIPipelineStateHandle createPsoForPassType( RenderPassType passType, const RHIFormat* pRtvFormatOverride = nullptr );

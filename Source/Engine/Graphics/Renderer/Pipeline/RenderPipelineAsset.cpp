@@ -6,8 +6,8 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassInputContract.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassInputSignature.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/ResourceManager.h"
@@ -259,7 +259,7 @@ namespace sw
         //      노멀이 없어 Lighting · SSAO 가 읽을 것이 없다.
         for ( const RenderGraphPassDesc& pass : _desc._listPass )
         {
-            const uint32 expectedColorCount = getRenderPassTypeTraits( RenderPassType::GBuffer )._colorTargetCount;
+            const uint32 expectedColorCount = getRenderPassTypeInfo( RenderPassType::GBuffer )._colorTargetCount;
             if ( pass._resolvedType != RenderPassType::GBuffer || pass._listResolvedColorOutput.empty() ||
                  pass._listResolvedColorOutput.size() == expectedColorCount )
                 continue;
@@ -273,7 +273,7 @@ namespace sw
         //    실행은 같은 해석(_listResolvedInput)을 그대로 건다.
         for ( const RenderGraphPassDesc& pass : _desc._listPass )
         {
-            const RenderPassInputContract* pContract = findRenderPassInputContract( pass._resolvedType );
+            const RenderPassInputSignature* pContract = findRenderPassInputSignature( pass._resolvedType );
             if ( pContract == nullptr )
                 continue;
 

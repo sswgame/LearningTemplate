@@ -92,7 +92,7 @@ namespace sw::editor
     SW_LOG_CALLER( "AssetHotReload" );
 
     AssetHotReload::AssetHotReload()
-        : _pReloadFileManager{ nullptr }
+        : _pFileWatchDispatcher{ nullptr }
         , _resourceWatchHandle{}
     {
     }
@@ -113,37 +113,37 @@ namespace sw::editor
             return false;
         }
 
-        _pReloadFileManager = make_unique<ReloadFileManager>();
-        if ( _pReloadFileManager->initialize() == false )
+        _pFileWatchDispatcher = make_unique<FileWatchDispatcher>();
+        if ( _pFileWatchDispatcher->initialize() == false )
         {
-            _pReloadFileManager.reset();
+            _pFileWatchDispatcher.reset();
             return false;
         }
 
         FileWatchMatchDelegate fileWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceFileChanged, this ) };
         // 감시 접두어는 **절대 경로**여야 한다 — 이벤트의 `_directory` 는 감시자가 열어 둔 절대 경로(리소스 루트)이고,
         // 접두어 비교는 그 둘을 그대로 맞춰 본다(상대 경로를 주면 비교가 항상 실패한다).
-        _resourceWatchHandle = _pReloadFileManager->registerWatch( ResourceUtil::getRootFolderPath(), listExtension, fileWatchDelegate );
+        _resourceWatchHandle = _pFileWatchDispatcher->registerWatch( ResourceUtil::getRootFolderPath(), listExtension, fileWatchDelegate );
         return _resourceWatchHandle.isValid();
     }
 
     void AssetHotReload::shutdown()
     {
-        if ( _pReloadFileManager == nullptr )
+        if ( _pFileWatchDispatcher == nullptr )
             return;
 
         if ( _resourceWatchHandle.isValid() )
-            _pReloadFileManager->unregisterWatch( _resourceWatchHandle );
+            _pFileWatchDispatcher->unregisterWatch( _resourceWatchHandle );
         _resourceWatchHandle = {};
 
-        _pReloadFileManager->shutdown();
-        _pReloadFileManager.reset();
+        _pFileWatchDispatcher->shutdown();
+        _pFileWatchDispatcher.reset();
     }
 
     void AssetHotReload::update()
     {
-        if ( _pReloadFileManager != nullptr )
-            _pReloadFileManager->update();
+        if ( _pFileWatchDispatcher != nullptr )
+            _pFileWatchDispatcher->update();
     }
 
     void AssetHotReload::onResourceFileChanged( const FileChangeEvent& changeEvent )

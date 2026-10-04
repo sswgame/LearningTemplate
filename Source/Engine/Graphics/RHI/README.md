@@ -25,7 +25,7 @@ RHI/
                      RHIShaderRequest(파이프라인 서술체 → 컴파일 요청 해석 · 그래픽스 스테이지 쌍 컴파일 — 넷이 각자 갖던 규칙 하나),
                      RHIGpuTimestamp(타임스탬프 칸 → 마이크로초 — 기준점 · 미기록 칸 규칙 하나),
                      RHIBufferSize(32비트 API 의 버퍼 크기 — 넘치면 만들지 않는다),
-                     RHIConstantBufferShadow(링 상수버퍼의 모든 칸이 마지막 값을 갖게 — DX12 · Vulkan),
+                     RHIConstantBufferMirror(링 상수버퍼의 모든 칸이 마지막 값을 갖게 — DX12 · Vulkan),
                      RHILiveCommandListUtil(종료 때 살아 있는 커맨드 리스트를 디바이스에서 떼는 도우미)
   DX/                D3D 전용. RHIDxgiFormat(포맷 변환) · RHIDxgiTearing(VSync 끄기 — ALLOW_TEARING 과 Present 플래그는 짝)
   Modules/           백엔드를 DLL 로 분리해 싣는 장치

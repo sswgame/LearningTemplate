@@ -171,7 +171,7 @@ namespace sw
         /**
          * @brief `_listInput` 하나하나의 (첨부 이름, 역할)입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
          * @details 직렬화 대상이 아닙니다. 실행은 이 목록을 그대로 걸고(역할 이름 = 셰이더의 `g_<Role>Index`),
-         *          검증은 패스 타입의 계약(RenderPassInputContract)과 대조합니다. 둘이 같은 해석을 봅니다.
+         *          검증은 패스 타입의 계약(RenderPassInputSignature)과 대조합니다. 둘이 같은 해석을 봅니다.
          */
         vector<ResolvedAttachment> _listResolvedInput;
 

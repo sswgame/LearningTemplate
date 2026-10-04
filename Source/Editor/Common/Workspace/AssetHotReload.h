@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Workspace/ReloadFileManager.h"
+#include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
 namespace sw
 {
@@ -64,7 +64,7 @@ namespace sw::editor
         /** @brief 바뀐 파일 하나를 `reloadChangedAsset` 으로 보냅니다(수정 이벤트만). */
         void onResourceFileChanged( const FileChangeEvent& changeEvent );
 
-        unique_ptr<ReloadFileManager> _pReloadFileManager;
-        FileWatchHandle               _resourceWatchHandle;
+        unique_ptr<FileWatchDispatcher> _pFileWatchDispatcher;
+        FileWatchHandle                 _resourceWatchHandle;
     };
 } // namespace sw::editor

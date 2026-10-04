@@ -9,8 +9,8 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -28,7 +28,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return nullptr;
-                return pContext->getSelectionManager().getPrimaryObject();
+                return pContext->getEditorSelection().getPrimaryObject();
             }
         };
     } // namespace
@@ -64,7 +64,7 @@ namespace sw::editor
         uint64         objectId{ 0 };
         if ( pContext != nullptr )
         {
-            GameObject* pPrimary       = pContext->getSelectionManager().getPrimaryObject();
+            GameObject* pPrimary       = pContext->getEditorSelection().getPrimaryObject();
             objectId                   = pPrimary != nullptr ? pPrimary->getObjectId() : 0;
             const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType::Prefab );
             if ( matching.empty() == false )

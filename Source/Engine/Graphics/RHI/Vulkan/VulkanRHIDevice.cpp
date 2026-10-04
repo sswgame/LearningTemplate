@@ -92,7 +92,7 @@ namespace sw
         , _listBindlessFree{}
         , _gpuBuffers{}
         , _mapCbSlotSize{}
-        , _constantBufferShadow{}
+        , _constantBufferMirror{}
         , _listBindlessSourceBuffer{}
         , _listUavSourceBuffer{}
         , _listUavSourceTexture{}
@@ -275,7 +275,7 @@ namespace sw
     {
         // 표 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
         std::shared_lock<std::shared_mutex> registryLock{ _bindlessMutex };
-        _constantBufferShadow.fillSlot( _currentFrame % constant::kMaxFrameCountInFlight,
+        _constantBufferMirror.fillSlot( _currentFrame % constant::kMaxFrameCountInFlight,
                                         [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
         { writeConstantBufferSlot( buffer, slot, pData, size ); } );
     }
@@ -310,7 +310,7 @@ namespace sw
                     vkFreeMemory( _device, record._memory, nullptr );
             } );
             _gpuBuffers.clear();
-            _constantBufferShadow.clear();
+            _constantBufferMirror.clear();
             for ( StructuredUploadSlot& slot : _arrStructuredUploadSlot )
             {
                 if ( slot._pMapped != nullptr && slot._memory != VK_NULL_HANDLE )

@@ -195,8 +195,8 @@ SW_TEST_CASE( ReflectionParserTest, FallbackCommentTest )
 SW_TEST_CASE( ReflectionParserTest, ParserUtilPathAndIncludeGeneration )
 {
     // 1) makeGeneratedPath 검증
-    const sw::string genCpp = sw::ParserUtil::makeGeneratedPath( "build/Ninja-Debug/Bin", "Source/Engine/Input/KeyCodes.h", ".gen.cpp" );
-    SW_EXPECT_EQUAL( sw::string( "build/Ninja-Debug/Bin/KeyCodes.gen.cpp" ), genCpp );
+    const sw::string genCpp = sw::ParserUtil::makeGeneratedPath( "build/Ninja-Debug/Bin", "Source/Engine/Input/KeyCodeUtil.h", ".gen.cpp" );
+    SW_EXPECT_EQUAL( sw::string( "build/Ninja-Debug/Bin/KeyCodeUtil.gen.cpp" ), genCpp );
 
     const sw::string genH = sw::ParserUtil::makeGeneratedPath( "output/dir", "Foo/Bar/MyActor.hpp", ".gen.h" );
     SW_EXPECT_EQUAL( sw::string( "output/dir/MyActor.gen.h" ), genH );

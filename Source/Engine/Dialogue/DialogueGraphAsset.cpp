@@ -16,19 +16,19 @@ namespace sw
     {
         struct DialogueGraphAssetInternal
         {
-            /** @brief 특성 표가 타입 값 순서대로인지 봅니다. `findNodeTraits` 가 값으로 바로 찾습니다. */
-            static constexpr bool isTraitsTableOrdered()
+            /** @brief 특성 표가 타입 값 순서대로인지 봅니다. `findNodeInfo` 가 값으로 바로 찾습니다. */
+            static constexpr bool isInfoTableOrdered()
             {
-                for ( size_t index = 0; index < SW_COUNT_OF( kArrDialogueNodeTraits ); ++index )
+                for ( size_t index = 0; index < SW_COUNT_OF( kArrDialogueNodeInfo ); ++index )
                 {
-                    if ( kArrDialogueNodeTraits[index]._type != static_cast<DialogueAssetNodeType>( index ) )
+                    if ( kArrDialogueNodeInfo[index]._type != static_cast<DialogueAssetNodeType>( index ) )
                         return false;
                 }
                 return true;
             }
         };
 
-        static_assert( DialogueGraphAssetInternal::isTraitsTableOrdered(), "kArrDialogueNodeTraits must be ordered by DialogueAssetNodeType" );
+        static_assert( DialogueGraphAssetInternal::isInfoTableOrdered(), "kArrDialogueNodeInfo must be ordered by DialogueAssetNodeType" );
     } // namespace
 } // namespace sw
 
@@ -239,26 +239,26 @@ namespace sw
 
     const utf8* DialogueGraphAsset::nodeTypeName( DialogueAssetNodeType type )
     {
-        const DialogueNodeTraits* pTraits = findNodeTraits( type );
-        return pTraits != nullptr ? pTraits->_pName : "Unknown";
+        const DialogueNodeInfo* pInfo = findNodeInfo( type );
+        return pInfo != nullptr ? pInfo->_pName : "Unknown";
     }
 
     DialogueAssetNodeType DialogueGraphAsset::parseNodeType( string_view typeStr )
     {
-        for ( const DialogueNodeTraits& traits : kArrDialogueNodeTraits )
+        for ( const DialogueNodeInfo& info : kArrDialogueNodeInfo )
         {
-            if ( typeStr == traits._pName )
-                return traits._type;
+            if ( typeStr == info._pName )
+                return info._type;
         }
         return DialogueAssetNodeType::Dialogue;
     }
 
-    const DialogueNodeTraits* DialogueGraphAsset::findNodeTraits( DialogueAssetNodeType type )
+    const DialogueNodeInfo* DialogueGraphAsset::findNodeInfo( DialogueAssetNodeType type )
     {
         const size_t index = static_cast<size_t>( type );
-        if ( index >= SW_COUNT_OF( kArrDialogueNodeTraits ) )
+        if ( index >= SW_COUNT_OF( kArrDialogueNodeInfo ) )
             return nullptr;
-        return &kArrDialogueNodeTraits[index];
+        return &kArrDialogueNodeInfo[index];
     }
 
     string DialogueGraphAsset::resolveLocalizedText( string_view textOrKey )

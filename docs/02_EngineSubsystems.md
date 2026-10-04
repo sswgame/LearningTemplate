@@ -35,12 +35,12 @@ SW Engine은 철저하게 모듈화되어 있으며, 각 기능은 서브시스�
 ### 5. 엔진 루프와 기동 순서 (Engine Loop & Startup)
 - **[Engine 구조](../Source/Engine/README.md)**
   - `Source/Engine` 의 폴더 티어(include 방향, `CheckEngineLayers` 가 강제)와 루트 파일 — `EngineLoop`, 기동 · 종료 단계 표
-    `EngineStartupStepList.xxx` 와 그것을 위상 정렬해 세우고 역순으로 내리는 `EngineStartupSequence`, 시험 하네스와 같이 쓰는 `EngineBootstrap`.
+    `EngineInitStepList.xxx` 와 그것을 위상 정렬해 세우고 역순으로 내리는 `EngineInitSequence`, 시험 하네스와 같이 쓰는 `EngineBootstrap`.
   - **문서 이동:** `Source/Engine/README.md`
 
 ### 6. 그 밖의 서브시스템
 - 씬 · 프리팹: [Source/Engine/Scene/README.md](../Source/Engine/Scene/README.md) · 입력: [Source/Engine/Input/README.md](../Source/Engine/Input/README.md) ·
-  애니메이션: [Source/Engine/Animation/README.md](../Source/Engine/Animation/README.md) · 물리(CCD): [Source/Engine/Physics/README.md](../Source/Engine/Physics/README.md) ·
+  애니메이션: [Source/Engine/Animation/README.md](../Source/Engine/Animation/README.md) · 물리(ContinuousCollision): [Source/Engine/Physics/README.md](../Source/Engine/Physics/README.md) ·
   공간 분할: [Source/Engine/Spatial/README.md](../Source/Engine/Spatial/README.md)
 
 ---

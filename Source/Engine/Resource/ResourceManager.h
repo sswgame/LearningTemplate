@@ -1,6 +1,6 @@
 /**
  * @file ResourceManager.h
- * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineOwnedServices` 로 소유합니다.
+ * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 로 소유합니다.
  * @note
  *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, ResourcePackManager.
  *   제외(수명이 다름):

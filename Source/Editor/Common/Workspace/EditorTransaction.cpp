@@ -1,13 +1,13 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/SceneManager.h"
@@ -47,7 +47,7 @@ namespace sw::editor
                 GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( notice._objectId ) );
                 if ( pContext != nullptr && pTarget != nullptr )
                 {
-                    SelectionManager& selection = pContext->getSelectionManager();
+                    EditorSelection& selection = pContext->getEditorSelection();
                     if ( notice._kind == ObjectEditKind::Destroyed && selection.hasObject( pTarget ) )
                         selection.selectObject( pTarget, SelectionMode::Remove );
                     else if ( notice._kind == ObjectEditKind::Recreated )

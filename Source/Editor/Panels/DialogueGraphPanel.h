@@ -62,10 +62,10 @@ namespace sw::editor
 
         /** @brief 지정한 타입의 노드를 특성 표의 기본값으로 추가합니다. */
         void addNode( DialogueAssetNodeType type );
-        /** @brief 노드 하나의 머리 · 핀 · 본문 요약을 그립니다. 모양은 특성 표(`kArrDialogueNodeTraits`)가 정합니다. */
+        /** @brief 노드 하나의 머리 · 핀 · 본문 요약을 그립니다. 모양은 특성 표(`kArrDialogueNodeInfo`)가 정합니다. */
         void drawNodeBody( const DialogueNode& node );
         /** @brief 선택한 노드의 편집 칸을 그립니다. 어떤 칸을 보일지는 특성 표가 정합니다. */
-        void drawNodeFields( DialogueNode& node, const DialogueNodeTraits& traits );
+        void drawNodeFields( DialogueNode& node, const DialogueNodeInfo& info );
         /** @brief 미리보기 재생을 한 틱 진행합니다. 기다리지 않는 노드는 곧바로 지납니다. */
         void tickPreview( float32 deltaSeconds );
         /** @brief 미리보기를 다음 노드로 보냅니다. 다음 노드는 러너와 같은 `DialogueCursor::step` 이 정합니다. */

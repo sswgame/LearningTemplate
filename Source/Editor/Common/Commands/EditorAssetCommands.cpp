@@ -728,8 +728,8 @@ namespace sw::editor
         const bool bFullyExit = ws.popPrefabIsolation();
         if ( frame._bSpawnedRoot == SW_TRUE && bSaveToPrefab == false && pManager != nullptr && pRoot != nullptr )
         {
-            if ( pContext->getSelectionManager().hasObject( pRoot ) )
-                pContext->getSelectionManager().selectObject( pRoot, SelectionMode::Remove );
+            if ( pContext->getEditorSelection().hasObject( pRoot ) )
+                pContext->getEditorSelection().selectObject( pRoot, SelectionMode::Remove );
             pManager->destroyObject( pRoot );
             pRoot = nullptr;
         }

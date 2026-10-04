@@ -54,7 +54,7 @@ namespace sw
          * @brief 이 리소스 트리가 구워야 할 요청을 모두 모읍니다(파이프라인 XML + 머티리얼).
          * @details 런타임이 만드는 퍼뮤테이션과 여기서 만드는 요청이 어긋나면 Shipping 이 매니페스트 미스로
          *          떨어집니다. 그래서 define 을 합치는 규칙과 패스 기본 셰이더를 고르는 규칙이 런타임과 같은 자리
-         *          (`RenderPassTypeTraits` 표 · `selectRenderPassShader` · `FrameRendererUtil`)를 봅니다. 그것이 이 함수가 렌더러 층에 있는 이유입니다.
+         *          (`RenderPassTypeInfo` 표 · `selectRenderPassShader` · `FrameRendererUtil`)를 봅니다. 그것이 이 함수가 렌더러 층에 있는 이유입니다.
          */
         static void collectAllRequests( string_view rootDir, vector<ShaderBakeRequest>& outListRequest );
     };

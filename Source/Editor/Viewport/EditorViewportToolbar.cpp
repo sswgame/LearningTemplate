@@ -11,9 +11,9 @@
 #include "Editor/Common/Gui/EditorCommandGui.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
@@ -191,7 +191,7 @@ namespace sw::editor
         if ( viewportWidth > 520.0f )
         {
             EditorContext* pContext = EditorContext::get();
-            if ( pContext != nullptr && pContext->getSelectionManager().getSelectedObjectCount() >= 2 )
+            if ( pContext != nullptr && pContext->getEditorSelection().getSelectedObjectCount() >= 2 )
             {
                 EditorWidgets::drawToolbarSeparator();
                 if ( ImGui::Button( "Align..." ) )

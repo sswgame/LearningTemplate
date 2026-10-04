@@ -54,7 +54,7 @@ endforeach()
 # 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다. 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
 # (위 `coreExclude` 는 다른 타겟이 짓는 것 — RHI 모듈 · 지연 로드 훅 — 이라 적지 않는다.)
 if(SW_SHIPPING_BUILD)
-    sw_excludeUnbuiltSources(ENGINE_SOURCES "Graphics/Shader/Compile/LiveShaderManager\\.(cpp|h)$")
+    sw_excludeUnbuiltSources(ENGINE_SOURCES "Graphics/Shader/Compile/ShaderRecompiler\\.(cpp|h)$")
 endif()
 
 # ResourcePackReader 가 uncompress 를 직접 부른다.

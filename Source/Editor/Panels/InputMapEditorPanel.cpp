@@ -16,11 +16,11 @@
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
-#include "Engine/Input/GamepadButtons.h"
+#include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputReplay.h"
-#include "Engine/Input/KeyCodes.h"
+#include "Engine/Input/KeyCodeUtil.h"
 
 #include <imgui.h>
 
@@ -541,7 +541,7 @@ namespace sw::editor
             for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
             {
                 const Key   key      = static_cast<Key>( keyIndex );
-                const utf8* pKeyName = KeyCodes::toName( key );
+                const utf8* pKeyName = KeyCodeUtil::toName( key );
                 if ( StringUtil::isNullOrEmpty( pKeyName ) == false )
                 {
                     if ( ImGui::Button( pKeyName, ImVec2( 80, 24 ) ) )
@@ -577,7 +577,7 @@ namespace sw::editor
         if ( _inputMap.hasBindingConflict( sw::InputSlot::fromKey( newKey ), sw::hashed_string( layer ), conflictingAction ) && conflictingAction != _selectedAction )
         {
             SW_LOG_WARNING( "'%#' 을(를) %# 에 바인딩합니다 — 같은 레이어의 '%#' 과(와) 겹칩니다.",
-                            _selectedAction.c_str(), sw::KeyCodes::toName( newKey ), conflictingAction.c_str() );
+                            _selectedAction.c_str(), sw::KeyCodeUtil::toName( newKey ), conflictingAction.c_str() );
         }
 
         // 키 하나로 바꿀 수 없는 바인딩(합성 축 · 스틱)이면 바뀌지 않는다 — 경고는 InputMap 이 남긴다. 그때 문서를 더럽히지 않는다.
@@ -628,7 +628,7 @@ namespace sw::editor
                 const Key key = static_cast<Key>( keyIndex );
                 if ( pInput->isKeyDown( key ) )
                 {
-                    const utf8* pName = KeyCodes::toName( key );
+                    const utf8* pName = KeyCodeUtil::toName( key );
                     if ( pName != nullptr )
                     {
                         ImGui::SameLine();

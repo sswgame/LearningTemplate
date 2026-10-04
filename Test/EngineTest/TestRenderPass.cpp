@@ -22,7 +22,7 @@
 #include "Engine/Graphics/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
@@ -418,11 +418,11 @@ SW_TEST_CASE( RenderPassTest, GpuTimestampPassCapacityMatchesSlotLayout )
 }
 
 /**
- * @brief [RenderPassTest] 패스 종류 표(RenderPassTypeTraits)는 RenderPassType 열거자마다 한 줄이고, 줄 순서가 값 순서다
+ * @brief [RenderPassTest] 패스 종류 표(RenderPassTypeInfo)는 RenderPassType 열거자마다 한 줄이고, 줄 순서가 값 순서다
  * @details 표의 크기(`kRenderPassTypeCount`)는 마지막 열거자로 정한다. 그 뒤에 열거자를 더하고 상수를 안 고치면 새 타입이
  *          Invalid 줄로 읽혀 PSO 도 실행도 조용히 빠진다 — 리플렉션이 아는 열거자 수와 대조해 막는다.
  */
-SW_TEST_CASE( RenderPassTest, TypeTraitsTableCoversEveryEnumValue )
+SW_TEST_CASE( RenderPassTest, TypeInfoTableCoversEveryEnumValue )
 {
     const sw::TypeRegistry& registry = sw::engine::getTypeRegistry();
     const sw::EnumInfo*     pByFqn   = registry.findEnum( sw::typeFqn<sw::RenderPassType>() );
@@ -434,20 +434,20 @@ SW_TEST_CASE( RenderPassTest, TypeTraitsTableCoversEveryEnumValue )
     {
         SW_EXPECT_TRUE_MSG( 0 <= value && value < static_cast<int64>( sw::kRenderPassTypeCount ), name.c_str() );
         const sw::RenderPassType type = static_cast<sw::RenderPassType>( value );
-        SW_EXPECT_TRUE_MSG( sw::getRenderPassTypeTraits( type )._type == type, name.c_str() );
+        SW_EXPECT_TRUE_MSG( sw::getRenderPassTypeInfo( type )._type == type, name.c_str() );
     }
 
     for ( uint32 typeIndex = 1; typeIndex < sw::kRenderPassTypeCount; ++typeIndex )
     {
-        const sw::RenderPassType        type   = static_cast<sw::RenderPassType>( typeIndex );
-        const sw::RenderPassTypeTraits& traits = sw::getRenderPassTypeTraits( type );
-        const sw::string                label  = sw::to_string( typeIndex );
-        SW_EXPECT_TRUE_MSG( traits._pDefaultShader != nullptr, ( "기본 셰이더가 없는 패스 타입 " + label ).c_str() );
+        const sw::RenderPassType      type  = static_cast<sw::RenderPassType>( typeIndex );
+        const sw::RenderPassTypeInfo& info  = sw::getRenderPassTypeInfo( type );
+        const sw::string              label = sw::to_string( typeIndex );
+        SW_EXPECT_TRUE_MSG( info._pDefaultShader != nullptr, ( "기본 셰이더가 없는 패스 타입 " + label ).c_str() );
         // 파이프라인 패스의 입력은 지오메트리 드로우가 정하거나(메시 패스) 입력 계약이 정한다 — 둘 중 정확히 하나다.
         if ( sw::isPipelinePassType( type ) )
         {
-            const bool bDrawsSceneMeshes = traits.hasFlag( sw::RenderPassTraitFlag::kDrawsSceneMeshes );
-            const bool bHasInputContract = traits.hasFlag( sw::RenderPassTraitFlag::kHasInputContract );
+            const bool bDrawsSceneMeshes = info.hasFlag( sw::RenderPassTraitFlag::kDrawsSceneMeshes );
+            const bool bHasInputContract = info.hasFlag( sw::RenderPassTraitFlag::kHasInputContract );
             SW_EXPECT_TRUE_MSG( bDrawsSceneMeshes != bHasInputContract, ( "입력을 정하는 쪽이 하나가 아닌 패스 타입 " + label ).c_str() );
         }
     }

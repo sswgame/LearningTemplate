@@ -6,7 +6,7 @@
 #if !defined( SW_SHIPPING )
 
     #include "Engine/Common/EngineServices.h"
-    #include "Engine/Graphics/Shader/Compile/LiveShaderManager.h"
+    #include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
     #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -26,7 +26,7 @@ SW_TEST_REQUIRES_HOST( LiveShaderTest, "recompiles shaders with DXC and edits th
 // ------------------------------------------------------------------------------
 /**
  * @brief [LiveShaderTest] 리로드 대상이 `ShaderCache` 에서 나오는지 검증.
- * @details 이 테스트의 요점은 **대상이 비어 있지 않다**는 것이다. `LiveShaderManager` 가 따로 채우는 자기 등록표를 보면,
+ * @details 이 테스트의 요점은 **대상이 비어 있지 않다**는 것이다. `ShaderRecompiler` 가 따로 채우는 자기 등록표를 보면,
  *          그 표를 채우는 호출부가 없을 때 `ReloadShaders`(Ctrl+F8) 단축키가 빈 표를 돌고 아무 일도 하지 않는다.
  *          `update()` 만 불러 빈 큐를 도는 시험은 그 상태에서도 초록이다.
  */
@@ -69,7 +69,7 @@ SW_TEST_CASE( LiveShaderTest, ReloadTargetsComeFromShaderCache )
  */
 SW_TEST_CASE( LiveShaderTest, ManualReloadWithNoTargetsIsNoop )
 {
-    sw::LiveShaderManager manager;
+    sw::ShaderRecompiler manager;
     SW_ASSERT_TRUE( manager.initialize() );
 
     manager.triggerReloadAll();
@@ -220,7 +220,7 @@ SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
         return;
     sw::engine::getShaderCache().clearCache();
     SW_ASSERT_TRUE( sw::engine::getShaderCache().getOrCompile( desc )._bSuccess );
-    sw::LiveShaderManager manager;
+    sw::ShaderRecompiler manager;
     SW_ASSERT_TRUE( manager.initialize() );
     manager.triggerReloadAll();
     manager.update();

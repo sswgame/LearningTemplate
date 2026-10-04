@@ -18,7 +18,7 @@
 | **`SmokeTest`** | 런타임 모듈 통합 스모크 테스트 | 게임 DLL 핫 리로드(`LiveReloadManager`)나 RHI 모듈 동적 로드 등 시스템 전체가 런타임에 제대로 맞물려 돌아가는지를 검증합니다. |
 | **`EditorTest`** | 에디터 로직 유닛 테스트 | 커맨드 스택·선택·뷰포트 수학·문서 dirty 계약 등 `EditorModule` 의 UI 없는 부분을 검증합니다. ImGui 렌더링은 타지 않습니다. |
 | **`EditorUiTest`** | ImGui 컨텍스트가 필요한 에디터 테스트 | `EditorTest` 는 **일부러 ImGui 를 링크하지 않는다** — 그 경계를 지키면서 컨텍스트만 있으면 도는 것(플랫폼 백엔드의 부분 초기화 수습 등)을 여기 담습니다. GPU·창이 필요한 것은 넣지 않습니다. |
-| **`AppTest`** | App(런처) 로직 + **실기동 스모크** | `App` 은 실행 파일이라 링크할 라이브러리가 없어, **소스를 파일 단위로 가져와** 혼자 도는 정책을 검증합니다(`FrameTimeline`, `nogpu`). 여기에 더해 `AppSmokeTest` 가 **진짜 `App.exe` 를 네 백엔드 × 에디터 유무로 띄워** 종료 코드와 `[Error]` 를 봅니다(`hostgpu`) — `EngineLoop` 을 돌리는 유일한 자동 그물입니다. |
+| **`AppTest`** | App(런처) 로직 + **실기동 스모크** | `App` 은 실행 파일이라 링크할 라이브러리가 없어, **소스를 파일 단위로 가져와** 혼자 도는 정책을 검증합니다(`FixedTimestep`, `nogpu`). 여기에 더해 `AppSmokeTest` 가 **진짜 `App.exe` 를 네 백엔드 × 에디터 유무로 띄워** 종료 코드와 `[Error]` 를 봅니다(`hostgpu`) — `EngineLoop` 을 돌리는 유일한 자동 그물입니다. |
 | **`TestFramework`** | 테스트 공통 프레임워크 | 테스트 등록/실행을 조정하고, `TestContext`(결과 수집)와 `TestFilter`(CLI/glob 선택)를 재사용 가능한 구성요소로 제공합니다. |
 
 

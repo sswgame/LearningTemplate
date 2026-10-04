@@ -27,7 +27,7 @@
 - **Widgets/**: 검색, 헤더, 툴바 구분선, 노드 그래프 캔버스(`EditorNodeGraph`), 뷰포트 입력 오버레이
 - **Workspace/**: ImGui 없는 **상태** — 컨텍스트·선택·트랜잭션(Undo)·서비스 로케이터·애셋 종류 ·
   플레이(PIE) 세션(`EditorPlaySession`, `EditorSessionPolicy`) · 에디터 확장 등록부의 공통 모양(`EditorRegistry<T>` · `EditorRegistrar<T>`) ·
-  에셋 파일 감시(`AssetHotReload` · `ReloadFileManager`)
+  에셋 파일 감시(`AssetHotReload` · `FileWatchDispatcher`)
 - **Commands/**: 패널이 쓰는 **ImGui 없는 로직** — 애셋/씬/트랜스폼/데이터테이블 변이와 파일 IO,
   그리고 커맨드 정의를 담는 `EditorCommandRegistry`.
   패널은 UI 만, 실제 동작은 여기입니다 (그래서 테스트가 붙습니다)

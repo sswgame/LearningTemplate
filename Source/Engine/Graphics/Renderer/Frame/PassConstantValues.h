@@ -1,9 +1,9 @@
 /**
  * @file PassConstantValues.h
  * @brief 패스 상수(PassCB)를 이름으로 담아 두는 값 저장소입니다.
- * @details FrameRenderer 가 프레임 · 패스 시드를 채우고 ShaderBindingBinder 가 리플렉션 오프셋으로
+ * @details FrameRenderer 가 프레임 · 패스 시드를 채우고 ShaderParameterBinder 가 리플렉션 오프셋으로
  *          꺼내 씁니다. 두 쪽이 함께 쓰는 값 타입이라 어느 한쪽 헤더에 두면 반대쪽이 쓰지도 않는
- *          헤더를 통째로 포함하게 됩니다(FrameRenderer.h 가 이 타입 하나 때문에 ShaderBindingBinder.h 를 끌어옵니다).
+ *          헤더를 통째로 포함하게 됩니다(FrameRenderer.h 가 이 타입 하나 때문에 ShaderParameterBinder.h 를 끌어옵니다).
  */
 #pragma once
 #include "Core/Common/Macros.h"

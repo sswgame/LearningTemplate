@@ -12,9 +12,9 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputSnapshot.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
-#include "Engine/Object/Component/2D/ColliderTileComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
+#include "Engine/Object/Component/2D/TileColliderComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -38,14 +38,14 @@
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Kits/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/ActionCombat/MeleeHitboxComponent.h"
-#include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
+#include "GameFramework/Kits/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
 #include "GameFramework/Kits/Overworld/CameraControllerComponent.h"
 #include "GameFramework/Kits/Overworld/PlayerController.h"
 #include "GameFramework/Kits/Overworld/PlayerLocomotion.h"
 #include "GameFramework/Kits/Overworld/TileMap.h"
-#include "GameFramework/Kits/Overworld/ZoneRuntime.h"
+#include "GameFramework/Kits/Overworld/ZoneTracker.h"
 #include "GameFramework/Kits/TurnBattle/BattleState.h"
 #include "GameFramework/Kits/TurnBattle/SaveGame.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
@@ -157,15 +157,15 @@ namespace
 } // namespace
 
 // ------------------------------------------------------------------------------
-// 1) 페이드 서비스(FadeService) — 화면 페이드 아웃/인 수명주기 및 알파 보간 검증
+// 1) 페이드 서비스(ScreenFade) — 화면 페이드 아웃/인 수명주기 및 알파 보간 검증
 // ------------------------------------------------------------------------------
 
 /**
- * @brief [GameFrameworkTest] FadeService 초기 상태, 페이드 아웃 및 페이드 인 알파 전이 검증
+ * @brief [GameFrameworkTest] ScreenFade 초기 상태, 페이드 아웃 및 페이드 인 알파 전이 검증
  */
-SW_TEST_CASE( GameFrameworkTest, FadeServiceLifecycle )
+SW_TEST_CASE( GameFrameworkTest, ScreenFadeLifecycle )
 {
-    FadeService fade;
+    ScreenFade fade;
     SW_EXPECT_FALSE( fade.isBusy() );
     SW_EXPECT_FALSE( fade.isFinished() );
     SW_EXPECT_EQUAL( static_cast<uint8>( FadePhase::Idle ), static_cast<uint8>( fade.getPhase() ) );
@@ -1221,11 +1221,11 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_StopDialogueDuringAction )
 }
 
 /**
- * @brief [GameFrameworkTest] FadeService 0초 즉시 전환 및 극단적 델타타임 스파이크 안전성 검증
+ * @brief [GameFrameworkTest] ScreenFade 0초 즉시 전환 및 극단적 델타타임 스파이크 안전성 검증
  */
-SW_TEST_CASE( GameFrameworkTest, FadeService_ZeroAndExtremeDeltaTimeEdgeCases )
+SW_TEST_CASE( GameFrameworkTest, ScreenFade_ZeroAndExtremeDeltaTimeEdgeCases )
 {
-    FadeService fade;
+    ScreenFade fade;
 
     // 1) 0초 즉시 페이드 아웃 (0-Division 방어 및 1프레임 내 완료)
     fade.beginFadeOut( 0.0f );
@@ -1390,12 +1390,12 @@ SW_TEST_CASE( GameFrameworkTest, GameData_CustomPropertyParsingAndQuery )
 }
 
 /**
- * @brief [GameFrameworkTest] ActionCombat 키트 MonsterDataCatalog 및 UnitStatsComponent 연동 검증
+ * @brief [GameFrameworkTest] ActionCombat 키트 MonsterCatalog 및 UnitStatsComponent 연동 검증
  */
-SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterDataCatalogAndStats )
+SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterCatalogAndStats )
 {
-    // 1) MonsterDataCatalog fallback 및 조회 검증
-    MonsterDataCatalog catalog;
+    // 1) MonsterCatalog fallback 및 조회 검증
+    MonsterCatalog catalog;
     (void)catalog.loadFromResource( "non_existent_monster.xml" ); // 없는 리소스 — 폴백 표가 심어지는지를 아래에서 본다
     const MonsterDef* pMonster = catalog.findMonster( "default_monster" );
     SW_ASSERT_NOT_NULL( pMonster );
@@ -1436,7 +1436,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterDataCatalogAndStats )
  */
 SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReachUnitStats )
 {
-    MonsterDataCatalog catalog;
+    MonsterCatalog catalog;
     {
         test::ScopedLogSuppressor suppressor;
         (void)catalog.loadFromResource( "non_existent_monster.xml" ); // 폴백 표를 본다
@@ -1481,7 +1481,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterStatsAreInMetersAndReach
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "<MonsterCatalog>\n  <Monster id=\"bat\"><Stats speed=\"150\"/></Monster>\n</MonsterCatalog>\n" ) );
     SW_TEST_DEFENSIVE_SCOPE( "a pixel-era speed is reported" );
     test::ScopedLogCollector logCollector;
-    MonsterDataCatalog       pixelCatalog;
+    MonsterCatalog           pixelCatalog;
     SW_ASSERT_TRUE( pixelCatalog.loadFromResource( path ) );
     SW_EXPECT_TRUE_MSG( logCollector.countContaining( "Monster 'bat': speed 150" ) == 1u, logCollector.joined().c_str() );
 }
@@ -1509,7 +1509,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatKit_MonsterArchetypeNamesAndUnknown
 
     SW_TEST_DEFENSIVE_SCOPE( "an unknown archetype name is reported" );
     test::ScopedLogCollector logCollector;
-    MonsterDataCatalog       catalog;
+    MonsterCatalog           catalog;
     SW_ASSERT_TRUE( catalog.loadFromResource( path ) );
 
     for ( uint32 value = 0; value < kArchetypeCount; ++value )
@@ -2153,7 +2153,7 @@ SW_TEST_CASE( GameFrameworkTest, ZoneRole_TagNameRoundTripsBackToTheSameRole )
     }
 
     // 그리고 그 태그가 실제로 존에 붙는다.
-    ZoneRuntime zones;
+    ZoneTracker zones;
     zones.setFromMap( "Levels/Dungeon_01.scene", "dungeon01", 16, 16, "" );
     SW_EXPECT_EQUAL( static_cast<int32>( ZoneRole::Dungeon ), static_cast<int32>( zones.getActiveRole() ) );
     SW_EXPECT_TRUE_MSG( zones.hasActiveZoneTag( "dungeon" ), "역할은 던전인데 태그가 안 붙었습니다" );
@@ -3026,7 +3026,7 @@ SW_TEST_CASE( GameFrameworkTest, BeginPlayAddsNoOwnershipTags )
     manager.beginPlay();
 
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<BoxCollider2DComponent>( manager, "Collider" ) );
-    SW_EXPECT_TRUE( spawnsWithoutTagComponent<ColliderTileComponent>( manager, "TileCollider" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<TileColliderComponent>( manager, "TileCollider" ) );
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<SpriteComponent>( manager, "Sprite" ) );
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<SpriteAnimatorComponent>( manager, "Animator" ) );
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<DontDestroyOnLoadComponent>( manager, "Persistent" ) );

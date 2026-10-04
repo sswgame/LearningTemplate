@@ -18,7 +18,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Physics/AABB.h"
-#include "Engine/Physics/CCD.h"
+#include "Engine/Physics/ContinuousCollision.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -197,7 +197,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
         {
-            SelectionManager& sel = pContext->getSelectionManager();
+            EditorSelection& sel = pContext->getEditorSelection();
             for ( GameObject* pDoomed : listSubtree )
             {
                 if ( sel.hasObject( pDoomed ) )

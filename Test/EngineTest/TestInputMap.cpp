@@ -534,7 +534,7 @@ SW_TEST_CASE( InputMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
     const sw::string stickKind    = sw::BindingKinds::toName( sw::BindingKind::GamepadStick2D );
     const sw::string shortcutKind = sw::BindingKinds::toName( sw::BindingKind::Shortcut );
     const sw::string singleKind   = sw::BindingKinds::toName( sw::BindingKind::SingleSlot );
-    const sw::string keyS         = sw::KeyCodes::toName( sw::Key::S );
+    const sw::string keyS         = sw::KeyCodeUtil::toName( sw::Key::S );
 
     sw::string xml = "<UserBindings>";
     xml += "<bind action=\"StickOk\" kind=\"" + stickKind + "\" stick=\"Right\" pad=\"3\"/>";

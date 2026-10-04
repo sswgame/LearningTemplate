@@ -173,9 +173,9 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   semantics, externally supplied defines (`DX11`, `SW_PASS_*`, `MATERIAL_*`), the macros in `bindingslots.hlsli`
   (C++ includes that file), material struct fields (`.material` files bind them) and shader file names.
   An exemption from the rules above is a named entry with its reason in the gate (`kStringBoundName`).
-- **Renaming a string-bound name changes C++ in the same commit.** `ShaderBindingContract::validate` skips
+- **Renaming a string-bound name changes C++ in the same commit.** `ShaderBindingValidator::validate` skips
   a reflected name it does not know, so a one-sided rename silently switches that resource's check off;
-  `ShaderBindingContractTest.EveryBoundNameIsInBakedReflection` fails instead when a name C++ binds is missing
+  `ShaderBindingValidatorTest.EveryBoundNameIsInBakedReflection` fails instead when a name C++ binds is missing
   from the baked `reflection.manifest`.
 
 ### Resource Assets

@@ -1,7 +1,7 @@
 #include "pch.h"
 
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "EditorTest/EditorTestServices.h"
 
@@ -32,8 +32,8 @@ SW_TEST_CASE( EditorWorkspaceTest, PrefabPathIsReadFromTheActiveScene )
     pFirst->getObjectManager()->mergePendingAdds();
     const uint64 heroId = pHero->getObjectId();
 
-    SelectionManager selectionManager;
-    EditorWorkspace  workspace{ &selectionManager };
+    EditorSelection editorSelection;
+    EditorWorkspace workspace{ &editorSelection };
     workspace.setGameObjectPrefabPath( heroId, "game/prefabs/hero.prefab" );
     SW_EXPECT_TRUE( pFirst->getEntityPrefabPath( heroId ) == "game/prefabs/hero.prefab" );
     SW_EXPECT_TRUE( workspace.getGameObjectPrefabPath( heroId ) == "game/prefabs/hero.prefab" );

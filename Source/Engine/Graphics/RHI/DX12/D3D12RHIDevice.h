@@ -14,7 +14,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
-#include "Engine/Graphics/RHI/Support/RHIConstantBufferShadow.h"
+#include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
@@ -367,7 +367,7 @@ namespace sw
          * @details 만들 때 크기를 넘는 쓰기는 자릅니다. 그대로 복사하면 다음 칸(다음 프레임의 값)까지 덮습니다.
          */
         void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
-        /** @brief 링이 넘어온 칸에 옛 값이 남은 상수버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferShadow`). `waitForRingSlot` 이 부릅니다. */
+        /** @brief 링이 넘어온 칸에 옛 값이 남은 상수버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferMirror`). `waitForRingSlot` 이 부릅니다. */
         void fillConstantBufferSlot();
         /**
          * @brief D3D12 InfoQueue 메시지를 로그로 비웁니다.
@@ -564,7 +564,7 @@ namespace sw
         vector<uint32>                                          _listFreeOffscreenDsvIndex;
         unordered_map<RHIBufferHandle, uint32>                  _mapCbAlignedSize;
         unordered_map<RHIBufferHandle, void*>                   _mapCbMapped;
-        RHIConstantBufferShadow                                 _constantBufferShadow; ///< 한 번 쓴 상수버퍼를 나머지 링 칸에도 채운다
+        RHIConstantBufferMirror                                 _constantBufferMirror; ///< 한 번 쓴 상수버퍼를 나머지 링 칸에도 채운다
 
         RHIHandleTable<D3D12PipelineStateRecord> _pipelineStates;
         vector<D3D12RenderPassRecord>            _listRenderPass;

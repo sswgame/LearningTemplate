@@ -14,7 +14,7 @@
  * SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator )
  *   Type* getter()        — assert 없음(널 허용). bound 검사에서 제외.
  *
- * creator — **누가 만드는가.** `EngineCreated` 면 `EngineOwnedServices`(Engine/EngineOwnedServices.h)가
+ * creator — **누가 만드는가.** `EngineCreated` 면 `EngineServiceCollection`(Engine/EngineServiceCollection.h)가
  *         `make_unique<Type>()` 으로 만들고 표에 연결합니다. 호스트(EngineLoop · TestFramework)는
  *         그 저장소를 하나 들고 `createAll()` · `bindInto()` 만 부르면 됩니다. 그래서 서비스를
  *         늘릴 때 **이 줄 하나만** 고치면 두 호스트가 함께 따라옵니다.

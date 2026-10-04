@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 
-#include "Engine/Physics/CCD.h"
+#include "Engine/Physics/ContinuousCollision.h"
 
 namespace sw
 {
@@ -433,7 +433,7 @@ namespace sw
         // 닿은 때 0 은 출발점에서 이미 겹쳐 있던 것이다 — 그 겹침은 지난 step 이 쟀고, 지금도 겹치면 제자리 겹침이 잇는다. 넣으면 떠난 쌍의
         // 끝이 한 step 늦는다.
         SweepHit   hit{};
-        const bool bEnteredWhileMoving = CCD::sweepAabb( body._stepAabb, relativeDisplacement, otherFrom, hit ) && hit._time > 0.0f;
+        const bool bEnteredWhileMoving = ContinuousCollision::sweepAabb( body._stepAabb, relativeDisplacement, otherFrom, hit ) && hit._time > 0.0f;
         if ( bEnteredWhileMoving == false )
             return;
         _listScratchPair.push_back( OverlapPair::makeOrdered( handle, body, candidate, *pOther, hit._time ) );
@@ -525,7 +525,7 @@ namespace sw
                 if ( _layers.shouldCollide( layer, body._layer ) )
                 {
                     SweepHit hit{};
-                    if ( CCD::sweepAabb( movingBox, displacement, body._aabb, hit ) )
+                    if ( ContinuousCollision::sweepAabb( movingBox, displacement, body._aabb, hit ) )
                     {
                         if ( hit._time < nearestHit._time || bFoundHit == false )
                         {
@@ -555,7 +555,7 @@ namespace sw
             if ( pBody != nullptr && _layers.shouldCollide( layer, pBody->_layer ) )
             {
                 SweepHit hit{};
-                if ( CCD::sweepAabb( movingBox, displacement, pBody->_aabb, hit ) )
+                if ( ContinuousCollision::sweepAabb( movingBox, displacement, pBody->_aabb, hit ) )
                 {
                     if ( hit._time < nearestHit._time || bFoundHit == false )
                     {

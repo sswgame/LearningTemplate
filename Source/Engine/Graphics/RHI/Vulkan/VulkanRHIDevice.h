@@ -5,7 +5,7 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/Support/RHIConstantBufferShadow.h"
+#include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
@@ -348,7 +348,7 @@ namespace sw
          * @details 만들 때 크기를 넘는 쓰기는 자릅니다. 자르지 않으면 다음 칸(다음 프레임의 값)까지 덮습니다.
          */
         void writeConstantBufferSlot( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size );
-        /** @brief 링이 넘어온 칸에 옛 값이 남은 상수버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferShadow`). 칸의 펜스를 지난 뒤 부릅니다. */
+        /** @brief 링이 넘어온 칸에 옛 값이 남은 상수버퍼를 마지막 값으로 채웁니다(`RHIConstantBufferMirror`). 칸의 펜스를 지난 뒤 부릅니다. */
         void fillConstantBufferSlot();
         /** @brief 불투명 텍스처 핸들을 VulkanTextureRecord 로 풉니다. */
         VulkanTextureRecord*       resolveTexture( RHITextureHandle handle );
@@ -624,7 +624,7 @@ namespace sw
         RHIHandleTable<VulkanBufferRecord> _gpuBuffers;
         /// @brief 링 상수버퍼 → 칸 하나의 크기입니다. 게임 스레드가 만들고 부수는 동안 렌더 스레드가 드로우마다 읽으므로 `_bindlessMutex` 로 지킵니다.
         unordered_map<RHIBufferHandle, uint32> _mapCbSlotSize;
-        RHIConstantBufferShadow                _constantBufferShadow; ///< 한 번 쓴 상수버퍼를 나머지 링 칸에도 채운다
+        RHIConstantBufferMirror                _constantBufferMirror; ///< 한 번 쓴 상수버퍼를 나머지 링 칸에도 채운다
         /// @brief 프레임 스트림 컨텍스트(백버퍼 패스 · Present · 프레임 세그먼트)가 쓰는 기록 상태입니다. 리스트는
         /// 각자 자기 것을 가지므로, 여기 있는 것은 "디바이스가 직접 여는 버퍼" 전용입니다.
         VulkanRecordingState _recordingState;

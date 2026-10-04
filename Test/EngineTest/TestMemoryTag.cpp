@@ -14,7 +14,7 @@
 #include "Engine/Compression/Lz4CompressionCodec.h"
 #include "Engine/Compression/ZlibCompressionCodec.h"
 #include "Engine/Compression/ZstdCompressionCodec.h"
-#include "Engine/EngineStartupSequence.h"
+#include "Engine/EngineInitSequence.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
@@ -47,19 +47,19 @@ namespace
  */
 SW_TEST_CASE( MemoryTagTest, EveryStartupStepHasATag )
 {
-    for ( uint32 stepIndex = 0; stepIndex < static_cast<uint32>( sw::EngineStartupStep::Count ); ++stepIndex )
+    for ( uint32 stepIndex = 0; stepIndex < static_cast<uint32>( sw::EngineInitStep::Count ); ++stepIndex )
     {
-        const sw::EngineStartupStep step = static_cast<sw::EngineStartupStep>( stepIndex );
-        SW_EXPECT_TRUE_MSG( sw::EngineStartupSequence::getStepMemoryTag( step ) != sw::MemoryTag::Unknown, sw::EngineStartupSequence::getStepName( step ) );
+        const sw::EngineInitStep step = static_cast<sw::EngineInitStep>( stepIndex );
+        SW_EXPECT_TRUE_MSG( sw::EngineInitSequence::getStepMemoryTag( step ) != sw::MemoryTag::Unknown, sw::EngineInitSequence::getStepName( step ) );
     }
-    SW_EXPECT_TRUE( sw::EngineStartupSequence::getStepMemoryTag( sw::EngineStartupStep::Task ) == sw::MemoryTag::Task );
-    SW_EXPECT_TRUE( sw::EngineStartupSequence::getStepMemoryTag( sw::EngineStartupStep::Reflection ) == sw::MemoryTag::Reflection );
+    SW_EXPECT_TRUE( sw::EngineInitSequence::getStepMemoryTag( sw::EngineInitStep::Task ) == sw::MemoryTag::Task );
+    SW_EXPECT_TRUE( sw::EngineInitSequence::getStepMemoryTag( sw::EngineInitStep::Reflection ) == sw::MemoryTag::Reflection );
 }
 
 /**
  * @brief [MemoryTagTest] 하네스 기동 뒤 주요 태그(태스크 · 리플렉션 · 씬 · 에셋 · 셰이더)에 살아 있는 바이트가 있다
  * @details 하네스는 `EngineLoop` 와 같은 부트스트랩 · 서비스 생성 · 기동 단계 표를 지난다. 서비스 생성(`kServiceMemoryTag`)과 단계 초기화
- *          (`EngineStartupStepList.xxx` 의 태그 칸)가 태그를 걸지 않으면 이 줄들이 0 이다.
+ *          (`EngineInitStepList.xxx` 의 태그 칸)가 태그를 걸지 않으면 이 줄들이 0 이다.
  */
 SW_TEST_CASE( MemoryTagTest, HarnessStartupIsAttributed )
 {

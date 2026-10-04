@@ -28,7 +28,7 @@ namespace sw
 
     /**
      * @brief 시퀀서 트랙 항목의 종류입니다. JSON 에는 정수(`"type"`)로 적힙니다 — 값을 바꾸면 기존 시퀀스 파일이 다른 종류로 읽힙니다.
-     * @details 종류를 더하면 값 하나와 `kArrSequenceItemKindTraits` 의 줄 하나를 더합니다(static_assert 가 짚습니다).
+     * @details 종류를 더하면 값 하나와 `kArrSequenceItemKindInfo` 의 줄 하나를 더합니다(static_assert 가 짚습니다).
      */
     ENUM()
     enum class SequenceItemKind : int32
@@ -39,7 +39,7 @@ namespace sw
     };
 
     /** @brief 항목 종류 하나가 타임라인에 무엇을 하는지입니다. */
-    struct SequenceItemKindTraits
+    struct SequenceItemKindInfo
     {
         SequenceItemKind _kind;          /**< 종류입니다. 표의 순번과 같아야 합니다. */
         uint32           _defaultColor;  /**< 에디터에서 새 항목에 칠하는 색(0xAABBGGRR)입니다. */
@@ -51,13 +51,13 @@ namespace sw
 namespace sw
 {
     /** @brief 항목 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceItemKind` 값 순서입니다.** */
-    inline constexpr SequenceItemKindTraits kArrSequenceItemKindTraits[] = {
+    inline constexpr SequenceItemKindInfo kArrSequenceItemKindInfo[] = {
         { SequenceItemKind::Clip, 0xFF80AA80u,  true, false},
         {SequenceItemKind::Event, 0xFF8080AAu, false,  true},
     };
 
-    static_assert( SW_COUNT_OF( kArrSequenceItemKindTraits ) == static_cast<size_t>( SequenceItemKind::Count ),
-                   "SequenceItemKind 를 늘렸으면 kArrSequenceItemKindTraits 에도 줄을 더할 것" );
+    static_assert( SW_COUNT_OF( kArrSequenceItemKindInfo ) == static_cast<size_t>( SequenceItemKind::Count ),
+                   "SequenceItemKind 를 늘렸으면 kArrSequenceItemKindInfo 에도 줄을 더할 것" );
 
     /** @brief 시퀀서 트랙 항목입니다(클립 또는 이벤트). */
     struct SequenceTrackItem
@@ -102,7 +102,7 @@ namespace sw
         /** @brief JSON 본문을 만듭니다. */
         string toJson() const;
         /** @brief 종류의 특성 줄입니다. 표에 없는 값이면 nullptr 입니다. */
-        static const SequenceItemKindTraits* findItemKindTraits( SequenceItemKind kind );
+        static const SequenceItemKindInfo* findItemKindInfo( SequenceItemKind kind );
         /** @brief 그 프레임에 걸쳐 있는 트랙 항목을 채웁니다. */
         void collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outListItem ) const;
 

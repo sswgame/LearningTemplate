@@ -63,7 +63,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 **종류를 코드가 정하지 않는다.** `MonsterDef` 의 보상은 `_mapDrop` 이고 `<Drop exp="10" souls="3"/>` 처럼
 **속성 이름이 곧 보상 이름**이다. `RuntimeHud` 가 게이지를 이름 맵으로 다루는 것과 같은 방식이다.
 
-**같은 문제는 같은 방식으로 푼다.** id → 행 조회는 `MonsterDataCatalog` · `SpeciesCatalog` 모두 맵이다. 한 프레임워크 안에서 같은
+**같은 문제는 같은 방식으로 푼다.** id → 행 조회는 `MonsterCatalog` · `SpeciesCatalog` 모두 맵이다. 한 프레임워크 안에서 같은
 일을 두 방식으로 하면 읽는 사람이 어느 쪽이 정석인지 알 수 없다. 다만 인덱스가 직렬화되는 곳(`SpeciesDef::_listMoveIndex`)은
 **벡터의 자리를 그대로 두고** 맵을 곁에 둔다.
 

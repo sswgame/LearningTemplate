@@ -9,8 +9,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/EngineBootstrap.h"
-#include "Engine/EngineOwnedServices.h"
-#include "Engine/EngineStartupSequence.h"
+#include "Engine/EngineInitSequence.h"
+#include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Utility/Debug/FrameProfileSession.h"
 
@@ -38,13 +38,13 @@ namespace sw
     class InputManager;
     class InputMap;
     class IRHIDevice;
-    class LiveShaderManager;
     class RenderTargetRegistry;
     class RenderThread;
     class ResourceManager;
     class RHI;
     class RHIBackendRegistry;
     class SceneManager;
+    class ShaderRecompiler;
     class TaskManager;
     class TypeRegistry;
 
@@ -161,17 +161,17 @@ namespace sw
         /** @brief 디바이스 재생성 뒤 내렸던 단계(렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스)를 다시 세웁니다. 모두 섰으면 true 입니다. */
         [[nodiscard]] bool rebindSceneAfterDeviceRecreate();
         /** @brief 셰이더 라이브 리로드 매니저입니다. Shipping 에서는 늘 nullptr 입니다. */
-        LiveShaderManager* getLiveShaderManager() const;
+        ShaderRecompiler* getShaderRecompiler() const;
         /** @brief 셰이더 강제 리로드 핫키를 처리합니다. Engine 자신의 개발 도구이므로 여기서 끝냅니다. */
         void pollShaderReloadHotkey();
 
-        // 기동 단계의 본문이다(`EngineLoop.cpp`). 표(`EngineStartupStepList.xxx`)의 줄마다 `<단계>StartupStep` 하나이고, 빠지면 컴파일 오류다.
-        // 중첩 타입이라 이 클래스의 private 을 그대로 쓰고, 바깥에서는 본문 표(`EngineStartupStepTable`)만 이름을 본다.
+        // 기동 단계의 본문이다(`EngineLoop.cpp`). 표(`EngineInitStepList.xxx`)의 줄마다 `<단계>StartupStep` 하나이고, 빠지면 컴파일 오류다.
+        // 중첩 타입이라 이 클래스의 private 을 그대로 쓰고, 바깥에서는 본문 표(`EngineInitStepTable`)만 이름을 본다.
 #define SW_ENGINE_STARTUP_STEP( Name, ... ) struct Name##StartupStep;
-#include "Engine/EngineStartupStepList.xxx"
+#include "Engine/EngineInitStepList.xxx"
 #undef SW_ENGINE_STARTUP_STEP
         template <class>
-        friend struct EngineStartupStepTable;
+        friend struct EngineInitStepTable;
 
     private:
         /**
@@ -179,7 +179,7 @@ namespace sw
          * @details 목록에 줄을 더하면 이 저장소가 같이 자랍니다. 만드는 방법이 특별한 셋
          *          (팩토리 · 구성별 조건부)만 아래에 손으로 남아 있습니다.
          */
-        EngineOwnedServices _owned;
+        EngineServiceCollection _owned;
 
         /** @brief 기동 표 밖의 부트스트랩(로거 · 크래시 핸들러 · 진단 도구 · 명령줄 · 전역 변수)입니다. 시험 하네스와 같은 것을 쓴다. `_owned` 보다 먼저 사라진다. */
         EngineBootstrap           _bootstrap;
@@ -209,7 +209,7 @@ namespace sw
          *          아니므로 돌리는 쪽(EngineLoop)이 갖습니다.
          */
 #if !defined( SW_SHIPPING )
-        unique_ptr<LiveShaderManager> _liveShaderManager;
+        unique_ptr<ShaderRecompiler> _shaderRecompiler;
 #endif
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack>   _commandStack;
@@ -221,8 +221,8 @@ namespace sw
 
         /** @brief `-gv_profileFrames` 계측 한 회분입니다. 판정은 모두 이 안에 있고 루프는 두 줄만 부릅니다. */
         FrameProfileSession _profileSession;
-        /** @brief 기동 단계의 순서(`EngineStartupStepList.xxx` 를 위상 정렬)와 초기화한 단계입니다. */
-        EngineStartupSequence _startup;
+        /** @brief 기동 단계의 순서(`EngineInitStepList.xxx` 를 위상 정렬)와 초기화한 단계입니다. */
+        EngineInitSequence _startup;
         /** @brief Config 단계가 읽은 엔진 설정입니다(`_configManager` 소유). Resource · EngineData · RHI 단계가 읽습니다. */
         const EngineConfig* _pEngineConfig;
     };

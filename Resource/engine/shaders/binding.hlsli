@@ -3,7 +3,7 @@
  *
  * - 셰이더는 `#include "binding.hlsli"` 하나만 하고, `g_ViewProj` / `g_World` 등 PassCB 필드와
  *   `swSampleShadow(uv)` / `swSampleSource(uv)` 등 헬퍼를 바로 쓴다(접근 함수 인다이렉션 없음).
- * - 엔진(C++ ShaderBindingBinder)이 ShaderReflection 으로 PassCB 멤버 이름을 읽어 값을 채운다.
+ * - 엔진(C++ ShaderParameterBinder)이 ShaderReflection 으로 PassCB 멤버 이름을 읽어 값을 채운다.
  *   따라서 이 파일의 PassCB 를 고치면 C++ 는 자동으로 따라온다 (미러 없음).
  * - 텍스처는 이름 규약: `uint g_<Name>Index` (PassCB) ↔ 엔진 리소스 `"<Name>"`.
  *   네이티브 bindless(DX12 / Vulkan): 인덱스로 무제한 텍스처 배열을 직접 샘플 (SM6.6 힙 인덱싱 아님).
@@ -292,7 +292,7 @@ float4x4 swLoadInstanceWorld( uint instanceSlot )
 //      ... SW_MATERIAL( instance.materialIndex ).color
 //      리플렉션 이름 g_SwMaterials(t9) ↔ 레지스트리 "SwMaterials" (배치마다 그 셰이더 타입의 버퍼를 등록한다).
 //      원소 레이아웃은 네 백엔드가 같다 — SPIR-V 도 DX 패킹(-fvk-use-dx-layout, ShaderCompiler.cpp)으로 굽고
-//      ShaderBindingContractTest.ReflectionNamesAreUniformAcrossBackends 가 구운 바이너리로 확인한다.
+//      ShaderBindingValidatorTest.ReflectionNamesAreUniformAcrossBackends 가 구운 바이너리로 확인한다.
 //      인덱스는 g_SwMaterialCount 로 클램프한다 — 잘못된 인덱스가 백엔드마다 다른 OOB 결과를 내지 않도록.
 //      **머티리얼은 픽셀 단계에서만 읽는다.** 정점 · 픽셀 두 단계가 g_SwMaterials 를 함께 읽으면 GL(ARB_gl_spirv) 드라이버가 구조 버퍼의
 //      이름 없는 멤버를 단계마다 다른 SPIR-V id 로 이름 짓고("_struct14_member0" · "_struct19_member0") 링크를 거절한다 — 그 배치는 패스

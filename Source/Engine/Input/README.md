@@ -23,7 +23,7 @@ InputManager
  ├─ IInputDevice 목록 (_listDevice)
  │   ├─ KeyboardDevice
  │   ├─ MouseDevice
- │   └─ GamepadDevice (Windows: GamepadXInput, 최대 4개)
+ │   └─ GamepadDevice (Windows: XInputGamepadDevice, 최대 4개)
  └─ InputMap  ← 게임 코드는 보통 여기까지만 봅니다
      └─ ActionEntry "Jump"
          └─ ActionBinding (Key::Space, GamepadButton::A, ...)
@@ -37,7 +37,7 @@ InputManager
 Input/
 ├─ InputManager.*          # 장치 레지스트리 + 원시 이벤트 큐 + 프레임 동기화
 ├─ IInputDevice.h          # 장치 공통 인터페이스 + InputSlot
-├─ KeyCodes.*, GamepadButtons.h, InputKeyMap.h   # 키/버튼 enum과 이름<->enum 변환, 플랫폼 VK 매핑
+├─ KeyCodeUtil.*, GamepadButtonUtil.h, InputKeyMap.h   # 키/버튼 enum과 이름<->enum 변환, 플랫폼 VK 매핑
 ├─ InputMap.h             # InputMap의 선언 전부 (구현은 아래 5개 .cpp에 나뉨)
 ├─ InputMap.cpp           #   핵심: 생성자, bind*() 등록, 레이어 스택, 리바인드, is/wasActionXxx() 조회
 ├─ InputMapEvaluate.cpp   #   매 프레임 상태 머신: update() / evaluateBindingDown() / evaluateTrigger()
@@ -49,8 +49,8 @@ Input/
 ├─ Devices/                # KeyboardDevice, MouseDevice, GamepadDevice 구현체
 ├─ Events/RawInputEvent.h  # OS 이벤트를 표현하는 값 타입 (postRawEvent로 큐에 들어감)
 ├─ Utils/VirtualJoystick.h # 마우스 드래그/터치 좌표 -> 2D 축 벡터 계산기 (InputMap의 VirtualJoystick2D 바인딩이 사용)
-├─ Windows/                # Win32/XInput 구현 (InputManagerWin32.cpp, GamepadXInput.*, InputKeyMapWin32.cpp)
-├─ Linux/                  # X11/커널 조이스틱 구현 (InputManagerX11.cpp, GamepadJoystick.*, InputKeyMapX11.cpp)
+├─ Windows/                # Win32/XInput 구현 (InputManagerWin32.cpp, XInputGamepadDevice.*, InputKeyMapWin32.cpp)
+├─ Linux/                  # X11/커널 조이스틱 구현 (InputManagerX11.cpp, LinuxJoystickGamepadDevice.*, InputKeyMapX11.cpp)
 └─ (Editor 연동은 Source/Editor/Panels/InputMapEditorPanel.cpp)
 ```
 
@@ -71,7 +71,7 @@ Input/
 
 **Linux 쪽 알려진 한계** (실기 미검증 — 리눅스 환경에서 빌드/실행 검증이 필요합니다):
 - 게임패드 버튼/축 배치는 Xbox 호환(`xpad` 드라이버) 기준 추정치입니다. SDL 같은 기기별 매핑 DB는 없어
-  다른 컨트롤러는 `GamepadJoystick.cpp`의 `kAxisXxx`/버튼 인덱스 조정이 필요할 수 있습니다.
+  다른 컨트롤러는 `LinuxJoystickGamepadDevice.cpp`의 `kAxisXxx`/버튼 인덱스 조정이 필요할 수 있습니다.
 - 럼블(force feedback)은 대응하는 evdev 노드를 찾아 `EV_FF`로 시도하고, 실패하면 조용히 무시합니다.
 - 텍스트 입력은 XIM의 커밋 문자열만 받고, CJK 입력기의 조합(preedit) 후보 창 렌더링은 구현하지 않았습니다.
 - 마우스 잠금은 창 전체 confine만 지원하고, 서브 사각형(`setMouseClipSubRect`) 클리핑은 아직 구현하지 않았습니다.

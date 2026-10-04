@@ -47,19 +47,19 @@ namespace sw
                 obj.set( "z" ).setFloat( static_cast<float64>( value._z ) );
             }
 
-            /** @brief 종류 표가 값 순서인지 봅니다. `findItemKindTraits` 가 값으로 바로 찾습니다. */
+            /** @brief 종류 표가 값 순서인지 봅니다. `findItemKindInfo` 가 값으로 바로 찾습니다. */
             static constexpr bool isKindTableOrdered()
             {
-                for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceItemKindTraits ); ++kindIndex )
+                for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceItemKindInfo ); ++kindIndex )
                 {
-                    if ( kArrSequenceItemKindTraits[kindIndex]._kind != static_cast<SequenceItemKind>( kindIndex ) )
+                    if ( kArrSequenceItemKindInfo[kindIndex]._kind != static_cast<SequenceItemKind>( kindIndex ) )
                         return false;
                 }
                 return true;
             }
         };
 
-        static_assert( SequenceAssetInternal::isKindTableOrdered(), "kArrSequenceItemKindTraits must be ordered by SequenceItemKind" );
+        static_assert( SequenceAssetInternal::isKindTableOrdered(), "kArrSequenceItemKindInfo must be ordered by SequenceItemKind" );
     } // namespace
 } // namespace sw
 
@@ -122,7 +122,7 @@ namespace sw
             // 종류는 정수 그대로 둔다 — 모르는 값(새 버전이 쓴 종류)도 다시 쓸 때 잃지 않고, 적용만 하지 않는다.
             const int64 rawKind = itemJson.get( "type" ).asInt( 0 );
             item._kind          = static_cast<SequenceItemKind>( static_cast<int32>( MathUtil::clamp<int64>( rawKind, MathUtil::MinInt32, MathUtil::MaxInt32 ) ) );
-            if ( findItemKindTraits( item._kind ) == nullptr )
+            if ( findItemKindInfo( item._kind ) == nullptr )
                 SW_LOG_WARNING( "Sequence item '%#' has unknown type %# - it is kept but not applied", item._name, rawKind );
             item._color       = static_cast<uint32>( itemJson.get( "color" ).asUint( 0xFFAA8080u ) );
             item._translation = SequenceAssetInternal::readVec3( itemJson, "translation", float3{} );
@@ -161,12 +161,12 @@ namespace sw
         return doc.dump( 2 );
     }
 
-    const SequenceItemKindTraits* SequenceAsset::findItemKindTraits( SequenceItemKind kind )
+    const SequenceItemKindInfo* SequenceAsset::findItemKindInfo( SequenceItemKind kind )
     {
         const int32 kindIndex = static_cast<int32>( kind );
         if ( kindIndex < 0 || kindIndex >= static_cast<int32>( SequenceItemKind::Count ) )
             return nullptr;
-        return &kArrSequenceItemKindTraits[kindIndex];
+        return &kArrSequenceItemKindInfo[kindIndex];
     }
 
     void SequenceAsset::collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outListItem ) const

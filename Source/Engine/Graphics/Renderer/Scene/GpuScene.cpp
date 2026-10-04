@@ -387,9 +387,9 @@ namespace sw
     {
         if ( pDevice == nullptr )
             return;
-        for ( auto& pair : _mapMaterialGpu )
+        for ( auto& pair : _mapMaterialGroupBuffer )
             pair.second._slot.release( pDevice );
-        _mapMaterialGpu.clear();
+        _mapMaterialGroupBuffer.clear();
         for ( GpuMeshBatch& batch : _snapshot._listAllBatch )
         {
             batch._materialBuffer = 0;
@@ -472,7 +472,7 @@ namespace sw
                     Memory::copy( _listMaterialScratch.data() + static_cast<size_t>( element ) * stride, bytes.data(), copy );
             }
 
-            GpuMaterialGpu& gpu = _mapMaterialGpu[group._shaderPath];
+            GpuMaterialGroupBuffer& gpu = _mapMaterialGroupBuffer[group._shaderPath];
             // 모자랄 때만 두 배로 키운다. 주의: "원소 수 × 2" 를 **매번** 요구하면 16 개를 넘은 뒤로는 머티리얼이 하나 늘 때마다 다시
             // 만든다(용량 34 < 요구 36 → 36, 다음엔 38 …). stride 가 달라지면 슬롯이 알아서 다시 만든다. 구조버퍼의 stride 는 뷰에 박혀 있어
             // 셰이더 선언과 달라지면 안 된다.
@@ -505,8 +505,8 @@ namespace sw
         for ( uint32 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
         {
             const GpuMaterialGroup& group = _snapshot._listMaterialGroup[groupIndex];
-            const auto              it    = _mapMaterialGpu.find( group._shaderPath );
-            if ( it == _mapMaterialGpu.end() )
+            const auto              it    = _mapMaterialGroupBuffer.find( group._shaderPath );
+            if ( it == _mapMaterialGroupBuffer.end() )
                 continue;
             listResolved[groupIndex]._buffer       = it->second._slot._buffer;
             listResolved[groupIndex]._srv          = it->second._slot._srv;

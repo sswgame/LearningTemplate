@@ -5,10 +5,10 @@
  * 소유권: App 은 최상위 창 콜백 · ModuleHost · EngineLoop 만 들고, 나머지 엔진 핵심 로직은 모두 EngineLoop 에 맡깁니다.
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
- *          시간 정책은 FrameTimeline, 백엔드 교체는 BackendSwapController, 모듈 수명은 ModuleHost 가 각자 맡습니다.
+ *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher, 모듈 수명은 ModuleHost 가 각자 맡습니다.
  */
 #pragma once
-#include "App/FrameTimeline.h"
+#include "App/FixedTimestep.h"
 
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
@@ -27,20 +27,20 @@ namespace sw
     class ModuleHost;
 
     /**
-     * @class BackendSwapController
+     * @class RHIBackendSwitcher
      * @brief gv_rhiBackend 변경을 받아 프레임 경계에서 백엔드를 교체합니다(전역 변수 훅부터 모듈 재생성까지).
      * @details 교체는 "렌더 워커 비우기 → 모듈 인스턴스 파괴 → 디바이스 재생성 → 모듈 재생성" 순서를 어기면 바로 죽습니다.
      *          그 순서를 아는 곳을 하나로 둡니다. 상용 엔진이 디바이스 상실 · 어댑터 변경 · 전체 화면 전환을 모두 같은 재생성
      *          경로로 모으는 것과 같은 이유입니다. 사유는 늘어도 순서를 아는 코드는 하나여야 합니다. App 만 쓰므로 App 과 한 파일에 둡니다.
      */
-    class BackendSwapController
+    class RHIBackendSwitcher
     {
     public:
-        BackendSwapController();
-        ~BackendSwapController() = default;
+        RHIBackendSwitcher();
+        ~RHIBackendSwitcher() = default;
 
-        BackendSwapController( const BackendSwapController& )            = delete;
-        BackendSwapController& operator=( const BackendSwapController& ) = delete;
+        RHIBackendSwitcher( const RHIBackendSwitcher& )            = delete;
+        RHIBackendSwitcher& operator=( const RHIBackendSwitcher& ) = delete;
 
         /**
          * @brief 협력 객체를 연결하고 gv_rhiBackend 변경 훅을 설치합니다.
@@ -144,8 +144,8 @@ namespace sw
         unique_ptr<ModuleHost> _moduleHost;
         unique_ptr<IWindow>    _window;
 
-        FrameTimeline         _frameTimeline;
-        BackendSwapController _backendSwap;
+        FixedTimestep      _fixedTimestep;
+        RHIBackendSwitcher _backendSwap;
 
         // 프레임마다 다시 만들 이유가 없는 델리게이트다. bindHostCallbacks 에서 한 번 묶는다.
         /** @brief 에디터 모드에서만 연결됩니다. 비어 있으면 EngineLoop 가 씬 카메라를 씁니다. */

@@ -38,7 +38,7 @@ namespace sw
     namespace
     {
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
-        struct BackendSwapControllerInternal
+        struct RHIBackendSwitcherInternal
         {
             /** @brief gv_rhiBackend 의 변수 정보를 찾습니다. 없으면 nullptr 입니다. */
             static GlobalVariableInfo* findBackendVariable()
@@ -57,7 +57,7 @@ namespace sw
         : _engineLoop{}
         , _moduleHost{ nullptr }
         , _window{ nullptr }
-        , _frameTimeline{}
+        , _fixedTimestep{}
         , _backendSwap{}
         , _viewCameraProvider{}
         , _initializeStartMicro{ 0 }
@@ -125,7 +125,7 @@ namespace sw
             return false;
         }
 
-        _frameTimeline.configure( pEngineConfig->_maxFrameDeltaTime,
+        _fixedTimestep.configure( pEngineConfig->_maxFrameDeltaTime,
                                   pEngineConfig->_fixedDeltaTime,
                                   pEngineConfig->_maxFixedStepPerFrame );
 
@@ -319,7 +319,7 @@ namespace sw
             MonotonicClock::nowMicroseconds() - _initializeStartMicro;
         SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)... startup %# ms", startupMicro / 1000 );
 
-        _frameTimeline.start();
+        _fixedTimestep.start();
 
         while ( _window->processMessages() )
         {
@@ -330,7 +330,7 @@ namespace sw
                 break;
             }
 
-            const FrameTime frameTime = _frameTimeline.advance();
+            const FrameTime frameTime = _fixedTimestep.advance();
 
             _engineLoop.beginFrame( frameTime._deltaTime );
             // 에디터 Play/Pause 상태를 여기서 한 번 고정한다. 아래 고정 스텝이 여러 번 돌아도 DLL 경계를 넘어 다시 묻지 않고,
@@ -483,9 +483,9 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // BackendSwapController
+    // RHIBackendSwitcher
     // ------------------------------------------------------------------------------
-    BackendSwapController::BackendSwapController()
+    RHIBackendSwitcher::RHIBackendSwitcher()
         : _pEngineLoop{ nullptr }
         , _pModuleHost{ nullptr }
         , _bEnableEditor{ SW_FALSE }
@@ -494,22 +494,22 @@ namespace sw
     {
     }
 
-    void BackendSwapController::initialize( EngineLoop* pEngineLoop, ModuleHost* pModuleHost, bool bEnableEditor )
+    void RHIBackendSwitcher::initialize( EngineLoop* pEngineLoop, ModuleHost* pModuleHost, bool bEnableEditor )
     {
         _pEngineLoop   = pEngineLoop;
         _pModuleHost   = pModuleHost;
         _bEnableEditor = bEnableEditor ? SW_TRUE : SW_FALSE;
 
-        GlobalVariableInfo* pBackendVariable = BackendSwapControllerInternal::findBackendVariable();
+        GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
         if ( pBackendVariable != nullptr )
-            pBackendVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &BackendSwapController::onBackendVariableChanged, this );
+            pBackendVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &RHIBackendSwitcher::onBackendVariableChanged, this );
     }
 
-    void BackendSwapController::shutdown()
+    void RHIBackendSwitcher::shutdown()
     {
         // **훅부터, 조건 없이 뗀다.** 훅은 `_pEngineLoop` 와 상관없이 `initialize` 가 걸어 두므로, 루프를 받지 못한 채 초기화된
         // 경우(도구 · 부분 초기화)에도 떼지 않으면 사라진 `this` 를 가리키는 콜백이 전역 변수에 남는다.
-        GlobalVariableInfo* pBackendVariable = BackendSwapControllerInternal::findBackendVariable();
+        GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
         if ( pBackendVariable != nullptr )
             pBackendVariable->_onValueChanged = {};
 
@@ -517,7 +517,7 @@ namespace sw
         _pModuleHost = nullptr;
     }
 
-    void BackendSwapController::applyIfPending()
+    void RHIBackendSwitcher::applyIfPending()
     {
         if ( _pEngineLoop == nullptr )
             return;
@@ -532,13 +532,13 @@ namespace sw
             // 값만 되돌린다. 변경 콜백(onBackendVariableChanged)은 GlobalVariableInfo 의 setValueAsInt/setValueFromString
             // (콘솔 · 에디터 패널) 경로에서만 불린다. 그래서 되돌림이 재시도 루프가 될 일은 없다. 심볼이 아니라 매니저가 든 주소로
             // 쓰므로 App 이 Engine.dll 의 변수를 import 할 필요가 없다.
-            GlobalVariableInfo* pBackendVariable = BackendSwapControllerInternal::findBackendVariable();
+            GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
             if ( pBackendVariable != nullptr )
                 *static_cast<RHIBackend*>( pBackendVariable->_pData ) = pRHI->getCommittedBackend();
         }
     }
 
-    void BackendSwapController::onBackendVariableChanged( const GlobalVariableInfo* pInfo )
+    void RHIBackendSwitcher::onBackendVariableChanged( const GlobalVariableInfo* pInfo )
     {
         RHI* pRHI = _pEngineLoop != nullptr ? _pEngineLoop->getRhi() : nullptr;
         if ( pInfo == nullptr || pRHI == nullptr )
@@ -556,7 +556,7 @@ namespace sw
         _bHandlingChange = SW_FALSE;
     }
 
-    bool BackendSwapController::applyPendingChange()
+    bool RHIBackendSwitcher::applyPendingChange()
     {
         if ( _pEngineLoop == nullptr || _pModuleHost == nullptr )
             return false;

@@ -10,7 +10,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
@@ -73,16 +73,16 @@ namespace sw
         if ( _pDevice == nullptr )
             return 0;
 
-        // 셰이더 · define · 기본 렌더 상태는 패스 종류의 표(RenderPassTypeTraits)가 정하고, 파이프라인 XML 의 패스 서술이 그 위를 조정한다.
+        // 셰이더 · define · 기본 렌더 상태는 패스 종류의 표(RenderPassTypeInfo)가 정하고, 파이프라인 XML 의 패스 서술이 그 위를 조정한다.
         // 셰이더와 define 은 베이커와 **같은 함수**(selectRenderPassShader)로 정한다 — 어긋나면 Shipping 에서 매니페스트 미스가 난다.
-        const RenderPassTypeTraits&     traits             = getRenderPassTypeTraits( passType );
+        const RenderPassTypeInfo&       info               = getRenderPassTypeInfo( passType );
         const RenderGraphPassDesc*      pPassDesc          = findPassDescByType( passType );
         const RenderPassShaderSelection shader             = selectRenderPassShader( passType, pPassDesc, engine::getEngineData() );
-        const bool                      bDepthTest         = traits.hasFlag( RenderPassTraitFlag::kDepthTest );
-        const bool                      bDefaultDepthWrite = traits.hasFlag( RenderPassTraitFlag::kDepthWrite );
-        const bool                      bDefaultBlend      = traits.hasFlag( RenderPassTraitFlag::kBlend );
-        const uint32                    numRenderTargets   = traits._colorTargetCount;
-        const RHIFormat*                pRtvFormats        = pRtvFormatOverride != nullptr ? pRtvFormatOverride : traits._pColorFormat;
+        const bool                      bDepthTest         = info.hasFlag( RenderPassTraitFlag::kDepthTest );
+        const bool                      bDefaultDepthWrite = info.hasFlag( RenderPassTraitFlag::kDepthWrite );
+        const bool                      bDefaultBlend      = info.hasFlag( RenderPassTraitFlag::kBlend );
+        const uint32                    numRenderTargets   = info._colorTargetCount;
+        const RHIFormat*                pRtvFormats        = pRtvFormatOverride != nullptr ? pRtvFormatOverride : info._pColorFormat;
 
         RHIPipelineStateDesc desc{};
         desc._vertexShaderPath = shader._shaderPath;
@@ -297,7 +297,7 @@ namespace sw
         {
             if ( passPso == 0 || FrameRendererUtil::drawsSceneMeshes( passType ) == false )
                 continue;
-            const bool                        bTransparentPass = getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
+            const bool                        bTransparentPass = getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
             const vector<MaterialPsoRequest>& listRequest      = bTransparentPass ? listTransparentRequest : listOpaqueRequest;
 
             for ( const MaterialPsoRequest& request : listRequest )

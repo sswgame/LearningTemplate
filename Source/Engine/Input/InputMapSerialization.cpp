@@ -3,9 +3,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Input/Events/RawInputEvent.h"
-#include "Engine/Input/GamepadButtons.h"
+#include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputMap.h"
-#include "Engine/Input/KeyCodes.h"
+#include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 /**
@@ -210,7 +210,7 @@ namespace sw
                 const utf8* pModifierAttr = bindNode.findAttribute( InputMapSerializationInternal::InputMapXml::kAttrModifier );
                 if ( StringUtil::isNullOrEmpty( pModifierAttr ) == false )
                 {
-                    Key modifierKey = KeyCodes::fromName( pModifierAttr );
+                    Key modifierKey = KeyCodeUtil::fromName( pModifierAttr );
                     if ( modifierKey == Key::Unknown )
                     {
                         if ( StringUtil::equals( pModifierAttr, "Ctrl", true ) || StringUtil::equals( pModifierAttr, "Control", true ) )
@@ -220,7 +220,7 @@ namespace sw
                         else if ( StringUtil::equals( pModifierAttr, "Alt", true ) )
                             modifierKey = Key::LeftAlt;
                     }
-                    const Key triggerKey = KeyCodes::fromName( pCode );
+                    const Key triggerKey = KeyCodeUtil::fromName( pCode );
                     if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
                     {
                         bindChord( hashed_string( pActionName ), modifierKey, triggerKey, trigger, hashed_string( bindLayer.view() ) );
@@ -230,7 +230,7 @@ namespace sw
 
                 if ( StringUtil::equals( pSource, InputMapSerializationInternal::InputMapXml::kSourceKey, true ) )
                 {
-                    const Key key = KeyCodes::fromName( pCode );
+                    const Key key = KeyCodeUtil::fromName( pCode );
                     if ( key != Key::Unknown )
                         bind( hashed_string( pActionName ), key, trigger, hashed_string( bindLayer.view() ) );
                 }
@@ -248,14 +248,14 @@ namespace sw
                     }
                     else
                     {
-                        const GamepadButton button = GamepadButtons::fromName( pCode );
+                        const GamepadButton button = GamepadButtonUtil::fromName( pCode );
                         if ( button != GamepadButton::Count )
                             bind( hashed_string( pActionName ), button, trigger, hashed_string( bindLayer.view() ) );
                     }
                 }
                 else if ( StringUtil::equals( pSource, InputMapSerializationInternal::InputMapXml::kSourceMouse, true ) )
                 {
-                    const MouseButton mouse = MouseButtons::fromName( pCode );
+                    const MouseButton mouse = MouseButtonUtil::fromName( pCode );
                     if ( mouse != MouseButton::Count )
                         bind( hashed_string( pActionName ), mouse, trigger, hashed_string( bindLayer.view() ) );
                 }
@@ -264,10 +264,10 @@ namespace sw
             // 2) <vector2d> 태그 파싱
             for ( XmlNode compNode = actionNode.findChild( "vector2d" ); compNode.isValid(); compNode = compNode.findNextSibling( "vector2d" ) )
             {
-                const Key     upKey          = KeyCodes::fromName( compNode.getAttributeText( "up" ) );
-                const Key     downKey        = KeyCodes::fromName( compNode.getAttributeText( "down" ) );
-                const Key     leftKey        = KeyCodes::fromName( compNode.getAttributeText( "left" ) );
-                const Key     rightKey       = KeyCodes::fromName( compNode.getAttributeText( "right" ) );
+                const Key     upKey          = KeyCodeUtil::fromName( compNode.getAttributeText( "up" ) );
+                const Key     downKey        = KeyCodeUtil::fromName( compNode.getAttributeText( "down" ) );
+                const Key     leftKey        = KeyCodeUtil::fromName( compNode.getAttributeText( "left" ) );
+                const Key     rightKey       = KeyCodeUtil::fromName( compNode.getAttributeText( "right" ) );
                 const float32 deadzone       = compNode.getAttributeFloat( "deadzone", 0.0f );
                 hashed_string compLayer      = layer;
                 const utf8*   pCompLayerAttr = compNode.findAttribute( "layer" );
@@ -283,8 +283,8 @@ namespace sw
             // 3) <axis1d> 태그 파싱
             for ( XmlNode axisNode = actionNode.findChild( "axis1d" ); axisNode.isValid(); axisNode = axisNode.findNextSibling( "axis1d" ) )
             {
-                const Key     posKey         = KeyCodes::fromName( axisNode.getAttributeText( "positive" ) );
-                const Key     negativeKey    = KeyCodes::fromName( axisNode.getAttributeText( "negative" ) );
+                const Key     posKey         = KeyCodeUtil::fromName( axisNode.getAttributeText( "positive" ) );
+                const Key     negativeKey    = KeyCodeUtil::fromName( axisNode.getAttributeText( "negative" ) );
                 hashed_string axisLayer      = layer;
                 const utf8*   pAxisLayerAttr = axisNode.findAttribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pAxisLayerAttr ) == false )
@@ -320,8 +320,8 @@ namespace sw
             // 5) <chord> 태그 파싱
             for ( XmlNode chordNode = actionNode.findChild( "chord" ); chordNode.isValid(); chordNode = chordNode.findNextSibling( "chord" ) )
             {
-                const Key     modifierKey       = KeyCodes::fromName( chordNode.getAttributeText( "modifier" ) );
-                const Key     triggerKey        = KeyCodes::fromName( chordNode.getAttributeText( "trigger" ) );
+                const Key     modifierKey       = KeyCodeUtil::fromName( chordNode.getAttributeText( "modifier" ) );
+                const Key     triggerKey        = KeyCodeUtil::fromName( chordNode.getAttributeText( "trigger" ) );
                 ActionTrigger trigger           = defaultTrigger;
                 const utf8*   pChordTriggerAttr = chordNode.findAttribute( "triggerMode" );
                 if ( StringUtil::isNullOrEmpty( pChordTriggerAttr ) == false )
@@ -398,19 +398,19 @@ namespace sw
                         {
                             const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
                             bindNode.appendAttribute( "source", "key" );
-                            bindNode.appendAttribute( "key", KeyCodes::toName( key ) );
+                            bindNode.appendAttribute( "key", KeyCodeUtil::toName( key ) );
                         }
                         else if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Mouse )
                         {
                             const MouseButton btn = static_cast<MouseButton>( b._arrSlot[0]._controlIndex );
                             bindNode.appendAttribute( "source", "mouse" );
-                            bindNode.appendAttribute( "button", MouseButtons::toName( btn ) );
+                            bindNode.appendAttribute( "button", MouseButtonUtil::toName( btn ) );
                         }
                         else if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
                         {
                             const GamepadButton btn = static_cast<GamepadButton>( b._arrSlot[0]._controlIndex );
                             bindNode.appendAttribute( "source", "gamepad" );
-                            bindNode.appendAttribute( "code", GamepadButtons::toName( btn ) );
+                            bindNode.appendAttribute( "code", GamepadButtonUtil::toName( btn ) );
                             bindNode.appendAttribute( "pad", static_cast<int32>( b._arrSlot[0]._deviceIndex ) );
                         }
                         break;
@@ -419,8 +419,8 @@ namespace sw
                     {
                         const Key negativeKey = static_cast<Key>( b._arrSlot[0]._controlIndex );
                         const Key posKey      = static_cast<Key>( b._arrSlot[1]._controlIndex );
-                        bindNode.appendAttribute( "negKey", KeyCodes::toName( negativeKey ) );
-                        bindNode.appendAttribute( "posKey", KeyCodes::toName( posKey ) );
+                        bindNode.appendAttribute( "negKey", KeyCodeUtil::toName( negativeKey ) );
+                        bindNode.appendAttribute( "posKey", KeyCodeUtil::toName( posKey ) );
                         break;
                     }
                     case BindingKind::Vector2DComposite:
@@ -429,10 +429,10 @@ namespace sw
                         const Key downKey  = static_cast<Key>( b._arrSlot[1]._controlIndex );
                         const Key leftKey  = static_cast<Key>( b._arrSlot[2]._controlIndex );
                         const Key rightKey = static_cast<Key>( b._arrSlot[3]._controlIndex );
-                        bindNode.appendAttribute( "up", KeyCodes::toName( upKey ) );
-                        bindNode.appendAttribute( "down", KeyCodes::toName( downKey ) );
-                        bindNode.appendAttribute( "left", KeyCodes::toName( leftKey ) );
-                        bindNode.appendAttribute( "right", KeyCodes::toName( rightKey ) );
+                        bindNode.appendAttribute( "up", KeyCodeUtil::toName( upKey ) );
+                        bindNode.appendAttribute( "down", KeyCodeUtil::toName( downKey ) );
+                        bindNode.appendAttribute( "left", KeyCodeUtil::toName( leftKey ) );
+                        bindNode.appendAttribute( "right", KeyCodeUtil::toName( rightKey ) );
                         bindNode.appendAttribute( "deadzone", b._deadzone );
                         break;
                     }
@@ -453,7 +453,7 @@ namespace sw
                     case BindingKind::VirtualJoystick2D:
                     {
                         const MouseButton activationButton = static_cast<MouseButton>( b._arrSlot[0]._controlIndex );
-                        bindNode.appendAttribute( "button", MouseButtons::toName( activationButton ) );
+                        bindNode.appendAttribute( "button", MouseButtonUtil::toName( activationButton ) );
                         bindNode.appendAttribute( "radius", b._scale );
                         bindNode.appendAttribute( "deadzone", b._deadzone );
                         bindNode.appendAttribute( "outerDeadzone", b._outerDeadzone );
@@ -463,14 +463,14 @@ namespace sw
                     {
                         const Key modifierKey = static_cast<Key>( b._arrSlot[0]._controlIndex );
                         const Key triggerKey  = static_cast<Key>( b._arrSlot[1]._controlIndex );
-                        bindNode.appendAttribute( "modKey", KeyCodes::toName( modifierKey ) );
-                        bindNode.appendAttribute( "trigKey", KeyCodes::toName( triggerKey ) );
+                        bindNode.appendAttribute( "modKey", KeyCodeUtil::toName( modifierKey ) );
+                        bindNode.appendAttribute( "trigKey", KeyCodeUtil::toName( triggerKey ) );
                         break;
                     }
                     case BindingKind::Shortcut:
                     {
                         const Key key = static_cast<Key>( b._arrSlot[0]._controlIndex );
-                        bindNode.appendAttribute( "key", KeyCodes::toName( key ) );
+                        bindNode.appendAttribute( "key", KeyCodeUtil::toName( key ) );
                         bindNode.appendAttribute( "modifierMask", static_cast<int32>( b._modifierMask ) );
                         break;
                     }
@@ -528,18 +528,18 @@ namespace sw
             {
                 case BindingKind::Axis1DComposite:
                 {
-                    const Key negativeKey = KeyCodes::fromName( bindNode.getAttributeText( "negKey" ) );
-                    const Key posKey      = KeyCodes::fromName( bindNode.getAttributeText( "posKey" ) );
+                    const Key negativeKey = KeyCodeUtil::fromName( bindNode.getAttributeText( "negKey" ) );
+                    const Key posKey      = KeyCodeUtil::fromName( bindNode.getAttributeText( "posKey" ) );
                     if ( negativeKey != Key::Unknown && posKey != Key::Unknown )
                         bindAxis1DComposite( hashed_string( pAction ), negativeKey, posKey, hashed_string( layer ) );
                     break;
                 }
                 case BindingKind::Vector2DComposite:
                 {
-                    const Key     upKey    = KeyCodes::fromName( bindNode.getAttributeText( "up" ) );
-                    const Key     downKey  = KeyCodes::fromName( bindNode.getAttributeText( "down" ) );
-                    const Key     leftKey  = KeyCodes::fromName( bindNode.getAttributeText( "left" ) );
-                    const Key     rightKey = KeyCodes::fromName( bindNode.getAttributeText( "right" ) );
+                    const Key     upKey    = KeyCodeUtil::fromName( bindNode.getAttributeText( "up" ) );
+                    const Key     downKey  = KeyCodeUtil::fromName( bindNode.getAttributeText( "down" ) );
+                    const Key     leftKey  = KeyCodeUtil::fromName( bindNode.getAttributeText( "left" ) );
+                    const Key     rightKey = KeyCodeUtil::fromName( bindNode.getAttributeText( "right" ) );
                     const float32 deadzone = bindNode.getAttributeFloat( "deadzone", 0.0f );
                     if ( upKey != Key::Unknown && downKey != Key::Unknown && leftKey != Key::Unknown && rightKey != Key::Unknown )
                         bindVector2D( hashed_string( pAction ), upKey, downKey, leftKey, rightKey, deadzone, hashed_string( layer ) );
@@ -566,7 +566,7 @@ namespace sw
                 }
                 case BindingKind::VirtualJoystick2D:
                 {
-                    const MouseButton activationButton = MouseButtons::fromName( bindNode.getAttributeText( "button" ) );
+                    const MouseButton activationButton = MouseButtonUtil::fromName( bindNode.getAttributeText( "button" ) );
                     const float32     radius           = bindNode.getAttributeFloat( "radius", 64.0f );
                     const float32     deadzone         = bindNode.getAttributeFloat( "deadzone", 0.1f );
                     const float32     outerDeadzone    = bindNode.getAttributeFloat( "outerDeadzone", 1.0f );
@@ -576,8 +576,8 @@ namespace sw
                 }
                 case BindingKind::Chord:
                 {
-                    const Key modifierKey = KeyCodes::fromName( bindNode.getAttributeText( "modKey" ) );
-                    const Key triggerKey  = KeyCodes::fromName( bindNode.getAttributeText( "trigKey" ) );
+                    const Key modifierKey = KeyCodeUtil::fromName( bindNode.getAttributeText( "modKey" ) );
+                    const Key triggerKey  = KeyCodeUtil::fromName( bindNode.getAttributeText( "trigKey" ) );
                     if ( modifierKey != Key::Unknown && triggerKey != Key::Unknown )
                         bindChord( hashed_string( pAction ), modifierKey, triggerKey, ActionTrigger::Pressed, hashed_string( layer ) );
                     break;
@@ -587,7 +587,7 @@ namespace sw
                     uint8 modifierMask{ 0 };
                     if ( InputMapSerializationInternal::tryGetModifierMask( bindNode, modifierMask ) == false )
                         break; // 경고했다 — 다른 수정 키 조합으로 묶지 않고 이 바인딩을 버린다
-                    const Key key = KeyCodes::fromName( bindNode.getAttributeText( "key" ) );
+                    const Key key = KeyCodeUtil::fromName( bindNode.getAttributeText( "key" ) );
                     if ( key != Key::Unknown )
                         bindShortcut( hashed_string( pAction ), key, modifierMask, ActionTrigger::Pressed, hashed_string( layer ) );
                     break;
@@ -603,19 +603,19 @@ namespace sw
                     const utf8* pSourceStr = bindNode.findAttribute( "source" );
                     if ( StringUtil::equals( pSourceStr, "key", true ) )
                     {
-                        const Key key = KeyCodes::fromName( bindNode.getAttributeText( "key" ) );
+                        const Key key = KeyCodeUtil::fromName( bindNode.getAttributeText( "key" ) );
                         if ( key != Key::Unknown )
                             bind( hashed_string( pAction ), key, ActionTrigger::Pressed, hashed_string( layer ) );
                     }
                     else if ( StringUtil::equals( pSourceStr, "mouse", true ) )
                     {
-                        const MouseButton btn = MouseButtons::fromName( bindNode.getAttributeText( "button" ) );
+                        const MouseButton btn = MouseButtonUtil::fromName( bindNode.getAttributeText( "button" ) );
                         if ( btn != MouseButton::Count )
                             bind( hashed_string( pAction ), btn, ActionTrigger::Pressed, hashed_string( layer ) );
                     }
                     else if ( StringUtil::equals( pSourceStr, "gamepad", true ) )
                     {
-                        const GamepadButton btn = GamepadButtons::fromName( bindNode.getAttributeText( "code" ) );
+                        const GamepadButton btn = GamepadButtonUtil::fromName( bindNode.getAttributeText( "code" ) );
                         uint8               padIndex{ 0 };
                         if ( btn != GamepadButton::Count && InputMapSerializationInternal::tryGetPadIndex( bindNode, padIndex ) )
                         {

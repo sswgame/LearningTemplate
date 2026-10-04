@@ -18,7 +18,7 @@
 #define SW_SERVICE_IS_GAME_VISIBLE_HostOnly      0
 #define SW_SERVICE_IS_GAME_VISIBLE( visibility ) SW_CONCAT( SW_SERVICE_IS_GAME_VISIBLE_, visibility )
 
-// creator 칸: `EngineCreated` 면 `EngineOwnedServices` 가 만들고, `HostCreated` 면 호스트가 직접 만든다.
+// creator 칸: `EngineCreated` 면 `EngineServiceCollection` 가 만들고, `HostCreated` 면 호스트가 직접 만든다.
 #define SW_SERVICE_IS_ENGINE_CREATED_EngineCreated 1
 #define SW_SERVICE_IS_ENGINE_CREATED_HostCreated   0
 #define SW_SERVICE_IS_ENGINE_CREATED( creator )    SW_CONCAT( SW_SERVICE_IS_ENGINE_CREATED_, creator )

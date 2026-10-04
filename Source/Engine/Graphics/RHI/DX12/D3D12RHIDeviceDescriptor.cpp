@@ -73,7 +73,7 @@ namespace sw
     {
         // 맵 조회가 게임 스레드의 만들기 · 부수기와 겹치지 않게 읽기 락을 쥔다(락 순서: 레지스트리 → 그림자).
         std::shared_lock<std::shared_mutex> registryLock{ _bindlessMutex };
-        _constantBufferShadow.fillSlot( _frameRing.currentIndex(), [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
+        _constantBufferMirror.fillSlot( _frameRing.currentIndex(), [this]( RHIBufferHandle buffer, uint32 slot, const void* pData, uint32 size )
         { writeConstantBufferSlot( buffer, slot, pData, size ); } );
     }
 

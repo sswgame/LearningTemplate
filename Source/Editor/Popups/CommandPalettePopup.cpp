@@ -8,8 +8,8 @@
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Popups/EditorPopupManager.h"
 
@@ -182,7 +182,7 @@ namespace sw::editor
                 GameObject*        pFound          = ( pCurrentObjects != nullptr ) ? pCurrentObjects->findGameObjectById( objId ) : nullptr;
                 EditorContext*     pRunContext     = EditorContext::get();
                 if ( pFound != nullptr && pRunContext != nullptr )
-                    pRunContext->getSelectionManager().selectObject( pFound, SelectionMode::Replace );
+                    pRunContext->getEditorSelection().selectObject( pFound, SelectionMode::Replace );
             };
             _listAllCommand.push_back( std::move( entry ) );
         } );

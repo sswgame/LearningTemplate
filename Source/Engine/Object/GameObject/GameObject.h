@@ -317,7 +317,7 @@ namespace sw
         ComponentStorage allocateComponentStorage( const TypeInfo* pTypeInfo, size_t typeSize );
         /**
          * @brief 막 만든 컴포넌트를 이 오브젝트에 붙입니다(소유자 · 풀 · 이름 · 기본값 · 목록 · primary 캐시 · 등록 · 틱 표시).
-         * @param bOverridesTick 타입이 `onTick` 을 오버라이드했는지(`OverridesOnTick_v`). 아니면 주 틱을 끕니다 — 돌 것이 없습니다.
+         * @param bOverridesTick 타입이 `onTick` 을 오버라이드했는지(`HasOnTickOverride_v`). 아니면 주 틱을 끕니다 — 돌 것이 없습니다.
          */
         void attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, PoolAllocator* pPool, bool bOverridesTick );
         /**
@@ -433,7 +433,7 @@ namespace sw
             return nullptr;
 
         T* pComp = sw_placement_new( storage._pMemory ) T( std::forward<Args>( args )... );
-        attachCreatedComponent( pComp, pTypeInfo, storage._pPool, OverridesOnTick_v<T> );
+        attachCreatedComponent( pComp, pTypeInfo, storage._pPool, HasOnTickOverride_v<T> );
         return pComp;
     }
 } // namespace sw

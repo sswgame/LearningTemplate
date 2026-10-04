@@ -15,7 +15,7 @@
 자리에서" 나타나므로 컴파일러는 도와주지 않는다.
 
 강제 규칙 — 셋이다:
-  1) `EngineCreated` 인 행은 `EngineOwnedServices` 가 채운다. 그러니 호스트는 **그 저장소의 `bindInto(`** 를
+  1) `EngineCreated` 인 행은 `EngineServiceCollection` 가 채운다. 그러니 호스트는 **그 저장소의 `bindInto(`** 를
      부르거나, 부르지 않겠다면 그 멤버들을 직접 대입해야 한다.
   2) `HostCreated` 이면서 `Required` 인 행(팩토리·구성별 조건부)은 호스트가 **직접** 대입해야 한다.
   3) 표에 없는 멤버를 대입하면 안 된다 (이름이 바뀐 뒤 남은 죽은 줄).
@@ -57,7 +57,7 @@ _kRequiredRow = re.compile(
 _kAnyRequiredRow = re.compile(r"^\s*SW_ENGINE_SERVICE(?:_CONST)?\s*\(\s*(?P<member>_p\w+)\s*,", re.M)
 _kOptionalRow = re.compile(r"^\s*SW_ENGINE_SERVICE_OPT\s*\(\s*(?P<member>_p\w+)\s*,", re.M)
 _kBindCall = re.compile(r"\bbindEngineServices\s*\(")
-# 생성된 저장소가 EngineCreated 행을 대신 꽂아 주는 자리 (`EngineOwnedServices::bindInto`, 그것을 부르는 `EngineBootstrap::fillServices`).
+# 생성된 저장소가 EngineCreated 행을 대신 꽂아 주는 자리 (`EngineServiceCollection::bindInto`, 그것을 부르는 `EngineBootstrap::fillServices`).
 _kGeneratedBindCall = re.compile(r"\b(?:bindInto|fillServices)\s*\(")
 _kAssignment = re.compile(r"\.(?P<member>_p\w+)\s*=")
 
@@ -137,7 +137,7 @@ def checkHosts(rootDir: Path) -> tuple[list[str], int]:
             if member in setAssigned:
                 continue
             errors.append(
-                f"{relPath}: `EngineOwnedServices::bindInto()` 도 부르지 않고 필수 서비스 `{member}` 도 "
+                f"{relPath}: `EngineServiceCollection::bindInto()` 도 부르지 않고 필수 서비스 `{member}` 도 "
                 f"채우지 않습니다 — 저장소를 쓰거나(권장) 목록의 EngineCreated 행을 전부 직접 꽂아야 합니다"
             )
         for member in sorted(setAssigned - setKnown):

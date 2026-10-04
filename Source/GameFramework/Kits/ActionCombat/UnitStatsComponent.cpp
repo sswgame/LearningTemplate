@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/GameEventUtil.h"
-#include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
+#include "GameFramework/Kits/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/UI/DamageNumberComponent.h"
 #include "GameFramework/UI/HealthBarComponent.h"
 

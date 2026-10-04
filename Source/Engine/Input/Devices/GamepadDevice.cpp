@@ -4,7 +4,7 @@
 
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Input/GamepadButtons.h"
+#include "Engine/Input/GamepadButtonUtil.h"
 
 namespace sw
 {
@@ -37,7 +37,7 @@ namespace sw
         };
     } // namespace
 
-    GamepadButton GamepadButtons::fromName( string_view name )
+    GamepadButton GamepadButtonUtil::fromName( string_view name )
     {
         if ( name.empty() )
             return GamepadButton::Count;
@@ -49,7 +49,7 @@ namespace sw
         return GamepadButton::Count;
     }
 
-    const utf8* GamepadButtons::toName( GamepadButton button )
+    const utf8* GamepadButtonUtil::toName( GamepadButton button )
     {
         for ( const GamepadDeviceInternal::GamepadNameEntry& entry : GamepadDeviceInternal::kArrGamepadNames )
         {

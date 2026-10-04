@@ -14,8 +14,8 @@
 #include "Engine/Config/EngineData.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/EngineBootstrap.h"
-#include "Engine/EngineOwnedServices.h"
-#include "Engine/EngineStartupSequence.h"
+#include "Engine/EngineInitSequence.h"
+#include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
@@ -52,29 +52,29 @@ namespace test
 namespace
 {
     /**
-     * @brief 하네스의 기동 단계 본문입니다. 순서는 `EngineLoop` 과 같은 표(`EngineStartupStepList.xxx`)가 정합니다.
-     * @details 줄마다 `<단계>StartupStep` 하나다(`EngineStartupStepDefaults` 상속 — 필요한 것만 정의). 하네스는 창 · RHI · 렌더러 · 헤드리스
+     * @brief 하네스의 기동 단계 본문입니다. 순서는 `EngineLoop` 과 같은 표(`EngineInitStepList.xxx`)가 정합니다.
+     * @details 줄마다 `<단계>StartupStep` 하나다(`EngineInitStepDefaults` 상속 — 필요한 것만 정의). 하네스는 창 · RHI · 렌더러 · 헤드리스
      *          작업을 세우지 않으므로 그 단계는 기본값이고, 오디오는 초기화하지 않고 종료만 부른다. 해제는 `EngineLoop` 과 같은 역순이다.
      */
     struct TestHost
     {
-        sw::EngineOwnedServices*          _pOwned{ nullptr };
+        sw::EngineServiceCollection*      _pOwned{ nullptr };
         sw::unique_ptr<sw::ConfigManager> _configManager{};
         sw::unique_ptr<sw::IAudioSystem>  _audioSystem{};
         sw::unique_ptr<sw::CommandStack>  _commandStack{};
         const sw::EngineConfig*           _pEngineConfig{ nullptr };
 
-        using Defaults = sw::EngineStartupStepDefaults<TestHost>;
+        using Defaults = sw::EngineInitStepDefaults<TestHost>;
 
         struct CompressionStartupStep : Defaults
         {
-            static sw::EngineStartupResult initialize( TestHost& host )
+            static sw::EngineInitResult initialize( TestHost& host )
             {
                 host._pOwned->_pCompressionCodecRegistry->initialize();
                 // 서비스와 **같은 인스턴스**를 Core 슬롯에도 꽂는다 — 안 꽂으면 CompressionStream 이
                 // 다른 레지스트리를 보게 되어 등록한 코덱이 테스트에서만 조용히 무시된다.
                 sw::CompressionCodecRegistry::setActive( host._pOwned->_pCompressionCodecRegistry.get() );
-                return sw::EngineStartupResult::Succeeded;
+                return sw::EngineInitResult::Succeeded;
             }
             // `EngineLoop` 과 같이 종료는 하지 않는다 — Core 슬롯이 이 레지스트리를 가리키는 동안 코덱을 비우면 뒤 단계의 해제(팩 내리기)가
             // 빈 레지스트리를 본다. 슬롯을 끊고 통째로 없애는 것은 해제다.
@@ -83,15 +83,15 @@ namespace
 
         struct ReflectionStartupStep : Defaults
         {
-            static sw::EngineStartupResult initialize( TestHost& host )
+            static sw::EngineInitResult initialize( TestHost& host )
             {
                 // 리플렉션은 설정보다 먼저다 — 설정(EngineConfig·GameConfig) 역직렬화가 TypeInfo 를 쓴다.
                 sw::engine::registerModuleTypes( "Engine" );
                 sw::engine::registerModuleTypes( "GameFramework" );
                 host._pOwned->_pTypeRegistry->registerPendingTypes( "TestFramework", sw::TypeRegistrar::getHead(), sw::EnumRegistrar::getHead() );
                 if ( sw::engine::bindGlobalVariableEnumNames() == false )
-                    return sw::EngineStartupResult::Failed;
-                return sw::EngineStartupResult::Succeeded;
+                    return sw::EngineInitResult::Failed;
+                return sw::EngineInitResult::Succeeded;
             }
             static void destroy( TestHost& host )
             {
@@ -102,7 +102,7 @@ namespace
 
         struct ConfigStartupStep : Defaults
         {
-            static sw::EngineStartupResult initialize( TestHost& host )
+            static sw::EngineInitResult initialize( TestHost& host )
             {
                 // 설정은 리소스 초기화보다 먼저 읽는다. `loadAssetRegistries` 는 `GameConfig::getActive()._packRoot` 로 게임
                 // 레지스트리 경로를 만든다 — 활성 설정이 없으면 시작 시점 GUID 표가 반쪽이 된다.
@@ -112,7 +112,7 @@ namespace
                 const sw::GameConfig* pGameConfig = host._configManager->ensureConfig<sw::GameConfig>( sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJson );
                 if ( pGameConfig != nullptr )
                     sw::GameConfig::setActive( *pGameConfig );
-                return sw::EngineStartupResult::Succeeded;
+                return sw::EngineInitResult::Succeeded;
             }
             static void destroy( TestHost& host )
             {
@@ -123,16 +123,16 @@ namespace
 
         struct ResourceStartupStep : Defaults
         {
-            static sw::EngineStartupResult initialize( TestHost& host )
+            static sw::EngineInitResult initialize( TestHost& host )
             {
                 if ( host._pOwned->_pResourceManager->initialize() == false )
-                    return sw::EngineStartupResult::Failed;
+                    return sw::EngineInitResult::Failed;
                 // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다 — 그 전제는 `mountContent` 의 인자에 드러나 있다.
                 if ( host._pEngineConfig != nullptr )
                     host._pOwned->_pResourceManager->mountContent( host._pEngineConfig->_listResourcePriority );
                 else
                     host._pOwned->_pResourceManager->mountContent( {} );
-                return sw::EngineStartupResult::Succeeded;
+                return sw::EngineInitResult::Succeeded;
             }
             static void destroy( TestHost& host ) { host._pOwned->destroyResourceManager(); }
         };
@@ -144,9 +144,9 @@ namespace
 
         struct ShaderCacheStartupStep : Defaults
         {
-            static sw::EngineStartupResult initialize( TestHost& host )
+            static sw::EngineInitResult initialize( TestHost& host )
             {
-                return host._pOwned->_pShaderCache->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
+                return host._pOwned->_pShaderCache->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
             }
             static void shutdown( TestHost& host ) { host._pOwned->_pShaderCache->shutdown(); }
             static void destroy( TestHost& host ) { host._pOwned->_pShaderCache.reset(); }
@@ -154,9 +154,9 @@ namespace
 
         struct TaskStartupStep : Defaults
         {
-            static sw::EngineStartupResult initialize( TestHost& host )
+            static sw::EngineInitResult initialize( TestHost& host )
             {
-                return host._pOwned->_pTaskManager->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
+                return host._pOwned->_pTaskManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
             }
             static void shutdown( TestHost& host ) { host._pOwned->_pTaskManager->shutdown(); }
             static void destroy( TestHost& host ) { host._pOwned->_pTaskManager.reset(); }
@@ -170,9 +170,9 @@ namespace
 
         struct InputStartupStep : Defaults
         {
-            static sw::EngineStartupResult initialize( TestHost& host )
+            static sw::EngineInitResult initialize( TestHost& host )
             {
-                return host._pOwned->_pInputManager->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
+                return host._pOwned->_pInputManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
             }
             static void shutdown( TestHost& host ) { host._pOwned->_pInputManager->shutdown(); }
             static void destroy( TestHost& host ) { host._pOwned->_pInputManager.reset(); }
@@ -180,20 +180,20 @@ namespace
 
         struct ModuleTypesStartupStep : Defaults
         {
-            static sw::EngineStartupResult initialize( TestHost& host )
+            static sw::EngineInitResult initialize( TestHost& host )
             {
                 // 하네스의 타입 공급자(엔진 · GameFramework · 시험 타입)는 시험 실행 파일과 함께 올라와 리플렉션 단계가 이미 모았다.
                 // 앱과 같이 이 단계가 끝나야 씬을 읽는다(`SceneManager::requestLoadFuture` · `SceneCooker::cookAllScenes`).
                 host._pOwned->_pTypeRegistry->markAllModuleTypesRegistered();
-                return sw::EngineStartupResult::Succeeded;
+                return sw::EngineInitResult::Succeeded;
             }
         };
 
         struct SceneStartupStep : Defaults
         {
-            static sw::EngineStartupResult initialize( TestHost& host )
+            static sw::EngineInitResult initialize( TestHost& host )
             {
-                return host._pOwned->_pSceneManager->initialize() ? sw::EngineStartupResult::Succeeded : sw::EngineStartupResult::Failed;
+                return host._pOwned->_pSceneManager->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
             }
             static void shutdown( TestHost& host ) { host._pOwned->_pSceneManager->shutdown(); }
             static void destroy( TestHost& host )
@@ -223,9 +223,9 @@ int main( int32 argc, utf8* argv[] )
     // ------------------------------------------------------------------------------
     // 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스는 저장소가 만든다. 선언 순서가 소멸 순서의 역이다:
     // 저장소 → 부트스트랩 → 호스트(단계가 소유하는 하네스 몫) 순으로 두어, 어디서 돌아가도 호스트 · 부트스트랩 · 저장소 순으로 사라진다.
-    sw::EngineOwnedServices owned;
-    sw::EngineBootstrap     bootstrap;
-    TestHost                host{};
+    sw::EngineServiceCollection owned;
+    sw::EngineBootstrap         bootstrap;
+    TestHost                    host{};
     host._pOwned = &owned;
 
     // 시험 실행 파일은 진단 도구(교착 감지기 · 메모리 프로파일러)를 늘 켠다.
@@ -249,10 +249,10 @@ int main( int32 argc, utf8* argv[] )
     // ------------------------------------------------------------------------------
     // 1) 기동 단계 — 리플렉션 · 설정 · 리소스 · 태스크 · 입력 · 씬
     // ------------------------------------------------------------------------------
-    // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 표(`EngineStartupStepList.xxx`)를 위상 정렬한 순서로 단계 구조체(`TestHost::<단계>StartupStep`)를
+    // 순서는 손으로 적지 않는다. `EngineLoop` 과 같은 표(`EngineInitStepList.xxx`)를 위상 정렬한 순서로 단계 구조체(`TestHost::<단계>StartupStep`)를
     // 부른다 — 하네스가 앱과 다른 순서로 서는 일이 구조로 막힌다. 종료와 해제는 아래 `destroyAll` 이 그 역순으로 한다.
-    sw::EngineStartupSequence startup;
-    int32                     result = -1;
+    sw::EngineInitSequence startup;
+    int32                  result = -1;
     if ( startup.initializeAll( host ) )
     {
         SW_LOG_INFO( "Core services initialized. Running tests..." );

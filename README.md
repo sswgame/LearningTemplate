@@ -63,7 +63,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
    - [4. 씬 관리 및 프리팹 (Prefab) 시스템](#54-씬-관리-및-프리팹-prefab-시스템)
    - [5. 모듈 핫리로드 (LiveReload) 시스템](#55-모듈-핫리로드-livereload-시스템)
    - [6. 공간 분할 인덱싱 (SpatialQuadTree & SpatialOctree)](#56-공간-분할-인덱싱-spatialquadtree--spatialoctree)
-   - [7. 런타임 파일 감시 & 에셋 핫리로드 (ReloadFileManager)](#57-런타임-파일-감시--에셋-핫리로드-reloadfilemanager)
+   - [7. 런타임 파일 감시 & 에셋 핫리로드 (FileWatchDispatcher)](#57-런타임-파일-감시--에셋-핫리로드-filewatchdispatcher)
    - [8. 멀티스레드 태스크 시스템 (Task DAG)](#58-멀티스레드-태스크-시스템-task-dag)
    - [9. 오디오 및 물리 시스템](#59-오디오-및-물리-시스템)
    - [10. 비동기 에셋 스트리밍 큐 (AssetStreamingQueue)](#510-비동기-에셋-스트리밍-큐-assetstreamingqueue)
@@ -105,8 +105,8 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
 - **Shipping (배포 모드)**:
   - 에디터 및 핫리로드 레이어가 제거되고, 모든 서브시스템이 단일 `.exe` 바이너리로 정적 링크(STATIC)됩니다.
 - **엔진 기동 · 종료**:
-  - 순서는 단계 표 하나(`Source/Engine/EngineStartupStepList.xxx`)가 정합니다. 단계마다 구조체 하나(`initialize` · `shutdown` · `destroy`)이고,
-    `EngineStartupSequence` 가 표의 의존을 위상 정렬해 세우고 역순으로 내립니다. `EngineLoop` 와 시험 하네스가 같은 부트스트랩(`EngineBootstrap`)을 씁니다.
+  - 순서는 단계 표 하나(`Source/Engine/EngineInitStepList.xxx`)가 정합니다. 단계마다 구조체 하나(`initialize` · `shutdown` · `destroy`)이고,
+    `EngineInitSequence` 가 표의 의존을 위상 정렬해 세우고 역순으로 내립니다. `EngineLoop` 와 시험 하네스가 같은 부트스트랩(`EngineBootstrap`)을 씁니다.
   - 씬은 모든 타입 공급자가 등록을 끝낸 단계(`ModuleTypes`) 뒤에만 읽고, `ModuleHost` 는 게임 인스턴스를 에디터보다 먼저 세웁니다.
 - **RuntimeAPI 계약**:
   - `App.exe`와 DLL 모듈 간의 통신은 순수 C-ABI 헤더(`RuntimeAPI`)의 함수 테이블을 통해 완전히 격리됩니다.
@@ -377,7 +377,7 @@ pObjectManager->findGameObjectsByTag( heroTag, listPlayer );
 ### 5.2 RHI 멀티 백엔드 렌더링 파이프라인
 
 `IRHIDevice`는 DirectX 11, DirectX 12, Vulkan(1.3 이상), OpenGL을 균일하게 추상화합니다. Dev 에서는 백엔드마다 `RHI_*` 모듈 DLL 이고,
-실행 중 `gv_rhiBackend` 를 바꾸면 App 이 프레임 경계에서 디바이스를 교체합니다(`BackendSwapController`).
+실행 중 `gv_rhiBackend` 를 바꾸면 App 이 프레임 경계에서 디바이스를 교체합니다(`RHIBackendSwitcher`).
 
 - **백엔드 선택**: 명령줄(`-dx11` · `-dx12` · `-vk` · `-gl`, [4절](#실행-인자)) > `EngineConfig` 의 기본값. 백엔드 목록은 `Config/Engine/CookContract.json` 한 곳입니다.
 - **프레임 그래프는 데이터입니다.** 패스 순서는 `Resource/engine/pipeline/*.xml`(`RenderPipelineAsset`)이, 패스의 바인딩 틀(포맷 · 클리어)은
@@ -486,16 +486,16 @@ octree.querySphere( sw::float3{ 15.0f, 5.0f, 15.0f }, 25.0f, listExplosionTarget
 
 ---
 
-### 5.7 런타임 파일 감시 & 에셋 핫리로드 (ReloadFileManager)
+### 5.7 런타임 파일 감시 & 에셋 핫리로드 (FileWatchDispatcher)
 
 텍스처, 셰이더, XML 파일이 외부 툴에서 수정되면 실시간으로 감지하여 콜백을 실행합니다. **에디터(Dev) 기능입니다** —
-`ReloadFileManager` 는 `Source/Editor/Common/Workspace` 에 있고 `AssetHotReload` 가 소유합니다(Windows `ReadDirectoryChangesW` · Linux `inotify`).
+`FileWatchDispatcher` 는 `Source/Editor/Common/Workspace` 에 있고 `AssetHotReload` 가 소유합니다(Windows `ReadDirectoryChangesW` · Linux `inotify`).
 
 ```cpp
-#include "Editor/Common/Workspace/ReloadFileManager.h"
+#include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
 // 경로 접두사 · 확장자가 맞는 변경만 콜백으로 온다
-const sw::FileWatchHandle handle = pReloadFileManager->registerWatch(
+const sw::FileWatchHandle handle = pFileWatchDispatcher->registerWatch(
     sw::ResourceUtil::getRootFolderPath(),
     { ".hlsl", ".hlsli" },
     SW_DELEGATE_LAMBDA( sw::FileWatchMatchDelegate, []( const sw::FileChangeEvent& event )
@@ -504,7 +504,7 @@ const sw::FileWatchHandle handle = pReloadFileManager->registerWatch(
     } ) );
 
 // 더 이상 필요 없으면 해제
-pReloadFileManager->unregisterWatch( handle );
+pFileWatchDispatcher->unregisterWatch( handle );
 ```
 
 텍스처 원본(`textures_raw/`)을 고치면 에디터가 DDS 를 다시 굽습니다.
@@ -548,7 +548,7 @@ sw::engine::runParallel( count, 2048, SW_DELEGATE_LAMBDA( sw::ParallelBlockDeleg
 
 ```cpp
 #include "Engine/Audio/IAudioSystem.h"
-#include "Engine/Physics/CCD.h"
+#include "Engine/Physics/ContinuousCollision.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
 // 오디오: 효과음은 비동기 재생, 배경음악은 루프 재생. 로딩 중에 preload 해 두면 첫 재생이 끊기지 않는다.
@@ -563,7 +563,7 @@ if ( physicsWorld.sweepTest( movingBox, sw::float3{ 500.0f, 0.0f, 0.0f }, layer,
     SW_LOG_INFO( "Hit object %# at t=%#", hit._hitObjectId, hit._time );
 ```
 
-연속 충돌(CCD)의 원리와 쓰는 법은 `Source/Engine/Physics/README.md` 에 있습니다.
+연속 충돌(ContinuousCollision)의 원리와 쓰는 법은 `Source/Engine/Physics/README.md` 에 있습니다.
 
 ---
 

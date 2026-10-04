@@ -63,13 +63,13 @@ namespace sw
         static string makePrebakedRelativePath( const ShaderCompileDesc& desc );
         /**
          * @brief 이 컴파일 요청의 로컬 라이브 캐시 경로입니다(`Saved/ShaderCache/<rhi>/<유효 소스 해시>-<opt|dbg>/<이름>`). 이름 규칙은 위와 같습니다.
-         * @details 런타임 컴파일 결과와 LiveShaderManager 의 재컴파일 결과가 같은 자리에 쓰입니다. 여기도 해시가 빠져
+         * @details 런타임 컴파일 결과와 ShaderRecompiler 의 재컴파일 결과가 같은 자리에 쓰입니다. 여기도 해시가 빠져
          *          있으면 처음 컴파일된 퍼뮤테이션 하나가 같은 셰이더의 다른 퍼뮤테이션 모두를 덮습니다.
          */
         static string makeLocalCachePath( const ShaderCompileDesc& desc );
         /**
          * @brief 실시간 컴파일이 실제로 쓰는 요청입니다. Debug 는 디버그 코드젠(RenderDoc 에서 한 줄씩 볼 수 있게), 그 밖은 요청 그대로입니다.
-         * @details 캐시의 실시간 컴파일과 `LiveShaderManager` 의 재컴파일이 **이 하나**로 코드젠을 정하고, 로컬 캐시 경로도 이것으로 만듭니다.
+         * @details 캐시의 실시간 컴파일과 `ShaderRecompiler` 의 재컴파일이 **이 하나**로 코드젠을 정하고, 로컬 캐시 경로도 이것으로 만듭니다.
          *          둘이 따로 정하면 Debug 의 한 폴더에 두 코드젠이 섞이고, 핫 리로드한 셰이더만 디버그 정보를 잃습니다.
          *          사전 베이크 바이너리는 이 규칙을 타지 않습니다(베이커는 늘 최적화 코드젠).
          */

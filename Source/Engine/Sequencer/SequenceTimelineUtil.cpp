@@ -31,15 +31,15 @@ namespace sw
             /** @brief 구간 동안 대상의 활성 · 트랜스폼을 정하는 종류인지 반환합니다. 표에 없는 종류는 아무것도 하지 않습니다. */
             static bool drivesTarget( const SequenceTrackItem& item )
             {
-                const SequenceItemKindTraits* pTraits = SequenceAsset::findItemKindTraits( item._kind );
-                return pTraits != nullptr && pTraits->_bDrivesTarget;
+                const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
+                return pInfo != nullptr && pInfo->_bDrivesTarget;
             }
 
             /** @brief 시작 프레임을 지날 때 알리는 종류인지 반환합니다. */
             static bool firesOnCross( const SequenceTrackItem& item )
             {
-                const SequenceItemKindTraits* pTraits = SequenceAsset::findItemKindTraits( item._kind );
-                return pTraits != nullptr && pTraits->_bFiresOnCross;
+                const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
+                return pInfo != nullptr && pInfo->_bFiresOnCross;
             }
 
             /** @brief 그 대상을 덮는 활성 클립이 하나라도 있으면 true 입니다. */

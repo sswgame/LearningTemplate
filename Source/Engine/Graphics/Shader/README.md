@@ -25,7 +25,7 @@ Shader/
   바이너리와 함께 **리플렉션 매니페스트**(`Reflection/ShaderReflectionLibrary`)도 굽습니다.
   세 조각으로 나뉘고 각자 입력이 다릅니다:
   - `Renderer/Bake/ShaderBakeRequest.cpp` — **무엇을 구울지**. `ShaderBakeRequest` 목록을 네 단계로 모은다:
-    (1) 파이프라인 XML 의 패스, (2) 패스 종류 표(`RenderPassTypeTraits`)의 **모든** 엔진 셰이더 — 런타임은 로드한 파이프라인과 무관하게
+    (1) 파이프라인 XML 의 패스, (2) 패스 종류 표(`RenderPassTypeInfo`)의 **모든** 엔진 셰이더 — 런타임은 로드한 파이프라인과 무관하게
     표 전체로 엔진 PSO 를 만든다, (3) 머티리얼 에셋, (4) 씬 메시 패스 × (머티리얼 없음 + 머티리얼) × `RenderViewMode` — 뷰 모드 define 은
     런타임 PSO 와 같은 `FrameRendererUtil::findViewModeDefine` 에서 얻는다.
     런타임이 만드는 퍼뮤테이션과 어긋나면 Shipping 이 매니페스트 미스로 떨어지므로, define 합치기 · 패스 기본 셰이더 · 뷰 모드 define 을
@@ -34,7 +34,7 @@ Shader/
   - `ShaderBakeStamp` — **이미 최신인가**. 판정은 파일 시간이 아니라 **내용 해시**다(`bake.stamp`).
     주의: 구운 바이너리를 커밋하는 저장소라 mtime 은 `git pull` 이 임의 순서로 덮어쓴다 — 파일 시간으로 판정하면 낡은 바이너리가 최신으로 보인다.
   - `ShaderBaker` — **굽고 이름 짓기**. 요청 하나를 받아 컴파일하고, 구운 파일 이름(스템·스테이지·퍼뮤테이션 해시)을 정한다.
-- `LiveShaderManager` — `ShaderCache` 가 든 셰이더를 **요청 시** 다시 컴파일합니다. `ReloadShaders`(Ctrl+F8) 가
+- `ShaderRecompiler` — `ShaderCache` 가 든 셰이더를 **요청 시** 다시 컴파일합니다. `ReloadShaders`(Ctrl+F8) 가
   `triggerReloadAll` → `update` 를 돌립니다. 파일 감시로 자동 재컴파일하지 않습니다.
 
 ### Reflection/ — 바이트코드에서 바인딩 메타로
@@ -57,8 +57,8 @@ Shader/
   조회할 수 있게 만듭니다. C++ 미러 struct 없이 리플렉션만 신뢰하는 구조의 핵심입니다.
 - `ShaderBindingLayoutCache` — (경로 + define + 백엔드) → 레이아웃. PSO 생성이 여기서 얻습니다.
   핫리로드 시 `invalidateByShaderPath` 로 무효화합니다.
-- `ShaderBindingContract` — **구운 바이너리의 리플렉션이 계약과 맞는지** 검사합니다.
-  `EngineTest --test_filter=ShaderBindingContractTest.*` 가 nogpu 로 이걸 돌립니다.
+- `ShaderBindingValidator` — **구운 바이너리의 리플렉션이 계약과 맞는지** 검사합니다.
+  `EngineTest --test_filter=ShaderBindingValidatorTest.*` 가 nogpu 로 이걸 돌립니다.
 - `GpuLight.h` · `GpuSpriteInstanceData.h` — 셰이더가 읽는 꼴 그대로 묶은 값(라이트 64 바이트 · 스프라이트 인스턴스 12 바이트).
   컴포넌트(Object 층)가 직접 채우므로 Object 가 include 할 수 있는 자리여야 합니다 — `Graphics/Renderer` 는 Object 위 티어라 거기 둘 수 없고,
   셰이더 계약을 두는 이 폴더가 Object 아래의 가장 가까운 자리입니다.

@@ -90,7 +90,7 @@ namespace sw
 
         // ------------------------------------------------------------------------------
         // 4-1) 리플렉션 구동 바인딩 — 셰이더가 선언한 레지스터로 CB/SRV 버퍼를 바인딩
-        //      (ShaderBindingBinder 가 ShaderBindingLayout 의 _registerIndex 를 slot 으로 전달)
+        //      (ShaderParameterBinder 가 ShaderBindingLayout 의 _registerIndex 를 slot 으로 전달)
         // ------------------------------------------------------------------------------
         /**
          * @brief 상수 버퍼를 지정한 레지스터 슬롯(bN)에 바인딩합니다.

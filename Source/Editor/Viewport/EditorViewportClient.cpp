@@ -16,10 +16,10 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Viewport/EditorCamera.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
@@ -348,7 +348,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        const bool bHasSelection = pContext->getSelectionManager().getSelectedObjectCount() > 0;
+        const bool bHasSelection = pContext->getEditorSelection().getSelectedObjectCount() > 0;
         EditorViewportToolbar::drawTransformBar( _toolbarSettings, anchorPos, bHasSelection );
     }
 
@@ -469,7 +469,7 @@ namespace sw::editor
         }
 
         vector<GameObject*> listSelected;
-        pContext->getSelectionManager().getSelectedObjects( listSelected );
+        pContext->getEditorSelection().getSelectedObjects( listSelected );
         vector<GameObject*> listGizmo;
         listGizmo.reserve( listSelected.size() );
         for ( GameObject* pRaw : listSelected )
@@ -652,7 +652,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        GameObject* pRaw = pContext->getSelectionManager().getPrimaryObject();
+        GameObject* pRaw = pContext->getEditorSelection().getPrimaryObject();
         if ( pRaw == nullptr )
             return;
 

@@ -87,7 +87,7 @@ namespace sw
     static_assert( sizeof( GpuBatchInfo ) == 8 * sizeof( uint32 ), "GpuBatchInfo 는 uint 여덟(32바이트) — binding.hlsli SwBatchData · gpucull.hlsl GpuBatchInfo 와 같아야 한다" );
 
     /// @brief 머티리얼 그룹의 GPU 버퍼입니다. RT 가 소유하고, 셰이더 경로를 키로 스냅샷을 넘어 재사용합니다.
-    struct GpuMaterialGpu
+    struct GpuMaterialGroupBuffer
     {
         RHIStructuredBufferSlot _slot;
         /** @brief 마지막으로 올린 바이트입니다. 같으면 업로드를 건너뜁니다(언리얼처럼 바뀐 것만 올립니다). */
@@ -228,8 +228,8 @@ namespace sw
         /** @brief 패킷에서 받은 스냅샷입니다. 이 안의 것만 GT 가 만든 값입니다. */
         GpuSceneSnapshot _snapshot;
         /// @brief 셰이더 경로 → 머티리얼 데이터 GPU 버퍼입니다(RT 영속, 스냅샷 교체와 무관).
-        unordered_map<string, GpuMaterialGpu> _mapMaterialGpu;
-        vector<uint8>                         _listMaterialScratch;
+        unordered_map<string, GpuMaterialGroupBuffer> _mapMaterialGroupBuffer;
+        vector<uint8>                                 _listMaterialScratch;
         /// @brief 그룹 → (버퍼, SRV, 원소 수) 표입니다. 배치 루프가 조회 대신 읽습니다. 프레임마다 다시 채웁니다.
         struct ResolvedGroup
         {

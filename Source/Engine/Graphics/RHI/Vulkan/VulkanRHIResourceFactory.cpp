@@ -151,7 +151,7 @@ namespace sw
         if ( buffer == 0 || pData == nullptr || size == 0 )
             return;
 
-        // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferShadow` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
+        // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferMirror` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
         // 세 프레임 중 두 프레임을 옛 값으로 그리던 것). 링 상수버퍼가 아니면(칸 크기가 없다) 버퍼 앞에 그대로 쓴다.
         // 디스크립터는 여기서 손대지 않는다. 드로우 직전 슬롯 세트를 쓸 때(flushSlotSet) 이번 프레임 칸의 오프셋을 넣는다.
         std::shared_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
@@ -167,7 +167,7 @@ namespace sw
             }
             return;
         }
-        _pDevice->_constantBufferShadow.write( buffer, _pDevice->_currentFrame % constant::kMaxFrameCountInFlight, pData, size,
+        _pDevice->_constantBufferMirror.write( buffer, _pDevice->_currentFrame % constant::kMaxFrameCountInFlight, pData, size,
                                                [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
         { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );
     }
@@ -420,7 +420,7 @@ namespace sw
         {
             std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             _pDevice->_mapCbSlotSize.erase( buffer );
-            _pDevice->_constantBufferShadow.forget( buffer );
+            _pDevice->_constantBufferMirror.forget( buffer );
         }
 
         VulkanRHIDevice::VulkanBufferRecord owned;

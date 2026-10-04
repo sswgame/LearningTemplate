@@ -462,7 +462,7 @@ namespace sw
             {
                 // 이 저장소는 모든 switch 에 `default:` 를 요구한다(-Wswitch-default). 그래서 컴파일러가
                 // 이 switch 에서 빠진 종류를 짚어 주지 못한다. 컴파일 시점에 잡히는 것은 표에서 빠진 줄뿐이다
-                // (`kArrBindingKindTraits` 의 static_assert). 여기까지 왔다는 것은 종류를 늘리고
+                // (`kArrBindingKindInfo` 의 static_assert). 여기까지 왔다는 것은 종류를 늘리고
                 // 이 switch 를 빠뜨렸다는 뜻이고, 그 액션은 영원히 발동하지 않는다.
                 // 평가는 매 프레임 도는 자리라 로그는 남기지 않고, 개발 빌드에서 단언으로 멈춘다.
                 SW_ASSERT( false );

@@ -15,10 +15,10 @@
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/Events/RawInputEvent.h"
-#include "Engine/Input/GamepadButtons.h"
+#include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputSnapshot.h"
-#include "Engine/Input/KeyCodes.h"
+#include "Engine/Input/KeyCodeUtil.h"
 
 namespace sw
 {
@@ -201,7 +201,7 @@ namespace sw
 
         /**
          * @brief 게임패드 슬롯 넷을 만들어 등록합니다. 플랫폼이 정하는 것은 **만드는 타입뿐**입니다.
-         * @tparam GamepadType 슬롯 번호를 받는 게임패드 장치(`GamepadXInput` · `GamepadJoystick`).
+         * @tparam GamepadType 슬롯 번호를 받는 게임패드 장치(`XInputGamepadDevice` · `LinuxJoystickGamepadDevice`).
          * @details 슬롯 수(4) · 0번을 편의 포인터로 잡는 것 · 연결 콜백을 이어 주는 것은 **엔진 정책**이라 여기 한 벌입니다 —
          *          플랫폼 파일마다 두면 한쪽만 고쳐 **그 플랫폼만 조용히 다르게** 동작합니다.
          */

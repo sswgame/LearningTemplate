@@ -21,7 +21,7 @@
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"

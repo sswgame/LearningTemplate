@@ -11,9 +11,9 @@
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
@@ -382,7 +382,7 @@ namespace sw::editor
                 }
 
                 const uint64 objectId  = pObj->getObjectId();
-                const bool   bSelected = pContext->getSelectionManager().hasObject( pObj );
+                const bool   bSelected = pContext->getEditorSelection().hasObject( pObj );
 
                 ImGui::PushID( static_cast<int32>( objectId ) );
 
@@ -632,11 +632,11 @@ namespace sw::editor
         // 단축키(Ctrl+D 복제, F2 이름 바꾸기, Delete 삭제)
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
         {
-            const ImGuiIO&    io               = ImGui::GetIO();
-            SelectionManager& selectionManager = pContext->getSelectionManager();
+            const ImGuiIO&   io              = ImGui::GetIO();
+            EditorSelection& editorSelection = pContext->getEditorSelection();
             // 사본으로 받는다. 아래 삭제가 순회 도중 선택 목록에서 항목을 뺀다.
             vector<GameObject*> listSel;
-            selectionManager.getSelectedObjects( listSel );
+            editorSelection.getSelectedObjects( listSel );
 
             if ( listSel.empty() == false )
             {
@@ -651,9 +651,9 @@ namespace sw::editor
                     }
                     if ( listNewCreated.empty() == false )
                     {
-                        selectionManager.clearObjectSelection();
+                        editorSelection.clearObjectSelection();
                         for ( GameObject* pNewGo : listNewCreated )
-                            selectionManager.selectObject( pNewGo, SelectionMode::Add );
+                            editorSelection.selectObject( pNewGo, SelectionMode::Add );
                     }
                 }
                 else if ( ImGui::IsKeyPressed( ImGuiKey_F2, false ) )
@@ -672,7 +672,7 @@ namespace sw::editor
                     {
                         EditorSceneCommands::destroy( pManager, pGo );
                     }
-                    selectionManager.clearObjectSelection();
+                    editorSelection.clearObjectSelection();
                 }
             }
         }

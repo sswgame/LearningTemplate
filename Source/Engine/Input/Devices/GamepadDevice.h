@@ -7,7 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
 
-#include "Engine/Input/GamepadButtons.h"
+#include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
 
 namespace sw

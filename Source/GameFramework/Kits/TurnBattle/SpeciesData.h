@@ -130,7 +130,7 @@ namespace sw
 
         /**
          * @brief id → 행 인덱스입니다. 벡터가 기준이고 이것은 조회용입니다.
-         * @details 형제 킷인 ActionCombat 의 MonsterDataCatalog 와 같은 hashed_string 맵 조회입니다. 인덱스는 SpeciesDef 에
+         * @details 형제 킷인 ActionCombat 의 MonsterCatalog 와 같은 hashed_string 맵 조회입니다. 인덱스는 SpeciesDef 에
          *          적혀 직렬화되므로 **벡터의 자리는 그대로 두고** 맵만 곁에 둡니다.
          */
         unordered_map<hashed_string, size_t> _mapMoveIndex;

@@ -364,7 +364,7 @@ namespace sw
         /**
          * @brief 주 틱에 들어갈지 설정합니다. 생성자에서 끄면(언리얼 `bCanEverTick = false`) 끈 것이 이깁니다.
          * @details **기본은 "`onTick` 을 오버라이드했는가"** 입니다(유니티: `Update` 가 있으면 부른다) — `GameObject::addComponent` 가
-         *          `OverridesOnTick_v` 로 판정해, 오버라이드하지 않은 타입은 끕니다. `Component` · `SceneComponent` 모두 같은 규칙입니다.
+         *          `HasOnTickOverride_v` 로 판정해, 오버라이드하지 않은 타입은 끕니다. `Component` · `SceneComponent` 모두 같은 규칙입니다.
          */
         void setCanEverTick( bool bCanEverTick );
         /**
@@ -490,16 +490,16 @@ namespace sw
      *          접근이 막히면) 오버라이드한 것으로 칩니다 — 그때는 생성자의 값을 그대로 둡니다.
      */
     template <typename T, typename = void>
-    struct OverridesOnTick : std::true_type
+    struct HasOnTickOverride : std::true_type
     {
     };
 
     template <typename T>
-    struct OverridesOnTick<T, std::void_t<decltype( &T::onTick )>>
+    struct HasOnTickOverride<T, std::void_t<decltype( &T::onTick )>>
         : std::bool_constant<std::is_same_v<decltype( &T::onTick ), void ( Component::* )( float32 )> == false>
     {
     };
 
     template <typename T>
-    inline constexpr bool OverridesOnTick_v = OverridesOnTick<T>::value;
+    inline constexpr bool HasOnTickOverride_v = HasOnTickOverride<T>::value;
 } // namespace sw

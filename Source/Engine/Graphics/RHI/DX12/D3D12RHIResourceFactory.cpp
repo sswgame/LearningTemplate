@@ -40,13 +40,13 @@ namespace sw
         if ( buffer == 0 || pData == nullptr )
             return;
 
-        // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferShadow` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
+        // 이번 프레임 칸에 쓰고, 나머지 칸은 링이 그 칸으로 돌아올 때 채운다(`RHIConstantBufferMirror` — 값이 바뀔 때만 쓰는 머티리얼 버퍼가
         // 세 프레임 중 두 프레임을 옛 값으로 그리지 않게). 조회와 복사는 읽기 락 안에서 한다 — 다른 스레드의 `destroyBuffer` 가 Unmap 하는
         // 도중에 쓰면 안 된다.
         std::shared_lock<std::shared_mutex> lock{ _pDevice->_bindlessMutex };
         if ( _pDevice->_mapCbMapped.contains( buffer ) == false )
             return;
-        _pDevice->_constantBufferShadow.write( buffer, _pDevice->_frameRing.currentIndex(), pData, size,
+        _pDevice->_constantBufferMirror.write( buffer, _pDevice->_frameRing.currentIndex(), pData, size,
                                                [this]( RHIBufferHandle target, uint32 slot, const void* pBytes, uint32 byteCount )
         { _pDevice->writeConstantBufferSlot( target, slot, pBytes, byteCount ); } );
 
@@ -561,7 +561,7 @@ namespace sw
             _pDevice->_mapCbMapped.erase( mapIt );
         }
         _pDevice->_mapCbAlignedSize.erase( buffer );
-        _pDevice->_constantBufferShadow.forget( buffer );
+        _pDevice->_constantBufferMirror.forget( buffer );
         Microsoft::WRL::ComPtr<ID3D12Resource> owned;
         if ( _pDevice->_gpuBuffers.take( buffer, owned ) == false )
             return;

@@ -12,7 +12,7 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) FadeService — 화면 페이드 아웃/인 알파 보간 서비스
+    // 1) ScreenFade — 화면 페이드 아웃/인 알파 보간 서비스
     // ------------------------------------------------------------------------------
     /** @brief 화면 페이드 아웃 · 인 단계입니다. */
     enum class FadePhase : uint8
@@ -24,11 +24,11 @@ namespace sw
     };
 
     /** @brief 화면 페이드 아웃 · 인 알파를 갱신합니다. */
-    class SW_GF_API FadeService
+    class SW_GF_API ScreenFade
     {
     public:
         /** @brief Idle · 알파 0 으로 시작합니다. */
-        FadeService();
+        ScreenFade();
 
         /** @brief 페이드 아웃을 시작합니다. */
         void beginFadeOut( float32 duration = 0.35f );
@@ -104,15 +104,15 @@ namespace sw
         /** @brief 현재 전환 단계를 반환합니다. */
         Phase getPhase() const { return _phase; }
         /** @brief 페이드 서비스를 반환합니다. */
-        FadeService& fade() { return _fade; }
+        ScreenFade& fade() { return _fade; }
         /** @brief 페이드 서비스를 반환합니다. */
-        const FadeService& fade() const { return _fade; }
+        const ScreenFade& fade() const { return _fade; }
 
         /** @brief 전환 콜백들을 설정합니다. */
         void setCallbacks( TransitionCallbacks callbacks ) { _callbacks = std::move( callbacks ); }
 
     private:
-        FadeService            _fade;
+        ScreenFade             _fade;
         TransitionCallbacks    _callbacks;
         Delegate<void()>       _pendingAction;
         float32                _pendingFadeInDuration;

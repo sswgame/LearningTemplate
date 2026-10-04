@@ -558,7 +558,7 @@ namespace sw
         updatePassConstants( _frameCtx );
         if ( packet._bHasViewProj != SW_FALSE )
             applyViewProjection( _frameCtx, packet._viewProj ); // 역행렬 · 절두체도 함께 갱신된다
-        // 값 업로드 · 바인딩은 드로우 직전 ShaderBindingBinder 가 한다. 여기서는 시드만 채운다.
+        // 값 업로드 · 바인딩은 드로우 직전 ShaderParameterBinder 가 한다. 여기서는 시드만 채운다.
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
 

@@ -60,7 +60,7 @@ namespace sw
 
         /**
          * @brief 한 프레임이 인정하는 최대 가변 델타(초)입니다. 디버거 정지 같은 긴 멈춤을 잘라 냅니다.
-         * @note 아래 셋은 0 이하여도 기동을 막지 않습니다. `FrameTimeline::configure` 가 그 자리에서
+         * @note 아래 셋은 0 이하여도 기동을 막지 않습니다. `FixedTimestep::configure` 가 그 자리에서
          *       내장 기본값으로 바꿉니다. 설정 파일 하나 때문에 프레임 루프가 서지 못하는 일을 막으려는 것입니다.
          */
         PROPERTY()
@@ -73,7 +73,7 @@ namespace sw
         /**
          * @brief 한 프레임이 돌릴 수 있는 고정 스텝 수의 상한입니다.
          * @details 상한을 넘긴 남은 시간은 버립니다. 남기면 느린 프레임이 더 많은 스텝을 불러
-         *          더 느려지는 악순환이 됩니다. FrameTimeline 이 이 값을 적용합니다.
+         *          더 느려지는 악순환이 됩니다. FixedTimestep 이 이 값을 적용합니다.
          */
         PROPERTY()
         uint32 _maxFixedStepPerFrame{ 6 };

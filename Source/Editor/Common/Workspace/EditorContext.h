@@ -17,11 +17,11 @@ namespace sw::editor
     class EditorNotificationManager;
     class EditorPanelManager;
     class EditorPopupManager;
+    class EditorSelection;
     class EditorWorkspace;
     class IImGuiRendererBackend;
     class InspectorComponentManager;
     class InspectorPropertyManager;
-    class SelectionManager;
 
     /** @brief 에디터가 소유하는 Game View RT 입니다. App 은 프레임마다 핸들만 조회합니다. */
     struct EditorGameView
@@ -55,7 +55,7 @@ namespace sw::editor
         /** @brief 활성 에디터 컨텍스트 포인터를 설정합니다. */
         static void setActive( EditorContext* pContext ) { s_pActiveContext = pContext; }
 
-        SelectionManager&          getSelectionManager() { return *_pSelectionManager; }
+        EditorSelection&           getEditorSelection() { return *_pEditorSelection; }
         EditorWorkspace&           getWorkspace() { return *_pWorkspace; }
         EditorNotificationManager& getNotificationManager() { return *_pNotificationManager; }
         EditorCommandRegistry&     getCommandRegistry() { return *_pCommandRegistry; }
@@ -86,7 +86,7 @@ namespace sw::editor
         EditorThemeConfig& getThemeConfig() { return _themeConfig; }
 
     private:
-        unique_ptr<SelectionManager>          _pSelectionManager;
+        unique_ptr<EditorSelection>           _pEditorSelection;
         unique_ptr<EditorWorkspace>           _pWorkspace;
         unique_ptr<EditorNotificationManager> _pNotificationManager;
         unique_ptr<EditorCommandRegistry>     _pCommandRegistry;

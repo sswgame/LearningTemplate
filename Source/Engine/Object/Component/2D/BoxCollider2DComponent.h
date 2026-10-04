@@ -46,7 +46,7 @@ namespace sw
         void  setColliderType( int32 type ) { _colliderType = type; }
 
         /**
-         * @brief 연속 충돌(CCD)로 판정하는지입니다(유니티 `Rigidbody2D.collisionDetectionMode = Continuous` · 언리얼 `bUseCCD`).
+         * @brief 연속 충돌(ContinuousCollision)로 판정하는지입니다(유니티 `Rigidbody2D.collisionDetectionMode = Continuous` · 언리얼 `bUseContinuousCollision`).
          * @details 켜면 물리가 지난 step 의 자리에서 지금 자리까지 상자를 쓸어, 한 프레임에 얇은 콜라이더를 건너뛴 것도 겹침으로 냅니다
          *          (`PhysicsWorld::step`). 빠른 것(투사체)에만 켭니다. 순간이동은 `SceneComponent::teleportTo` 로 합니다 — 그냥 옮기면 그 길도 쓸립니다.
          */

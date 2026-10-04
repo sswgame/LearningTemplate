@@ -3,7 +3,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/EngineOwnedServices.h"
+#include "Engine/EngineServiceCollection.h"
 
 #include "RuntimeAPI/Service/ModuleService.h"
 #include "RuntimeAPI/Service/ServiceListColumns.h"
@@ -143,7 +143,7 @@ SW_TEST_CASE( EngineServiceTest, MissingRequiredServiceIsReportedByName )
  */
 SW_TEST_CASE( EngineServiceTest, OwnedStorageFillsExactlyTheOwnedRows )
 {
-    EngineOwnedServices owned;
+    EngineServiceCollection owned;
     owned.createAll();
 
     EngineServices table{};
@@ -182,7 +182,7 @@ SW_TEST_CASE( EngineServiceTest, OwnedStorageFillsExactlyTheOwnedRows )
  */
 SW_TEST_CASE( EngineServiceTest, CreateAllKeepsWhatTheHostMadeFirst )
 {
-    EngineOwnedServices owned;
+    EngineServiceCollection owned;
 
     unique_ptr<CommandLineManager> preMade   = make_unique<CommandLineManager>();
     const CommandLineManager*      pExpected = preMade.get();
@@ -216,7 +216,7 @@ SW_TEST_CASE( EngineServiceTest, DestroyAllReleasesInReverseListOrder )
 #undef SW_ENGINE_SERVICE_OPT
 #undef SW_COLLECT_ENGINE_CREATED
 
-    const vector<const utf8*> listOrder = EngineOwnedServices::makeDestroyOrder();
+    const vector<const utf8*> listOrder = EngineServiceCollection::makeDestroyOrder();
     SW_ASSERT_TRUE( listOrder.size() == listExpected.size() );
     size_t queueOrder = listOrder.size();
     size_t taskOrder  = listOrder.size();
@@ -240,7 +240,7 @@ SW_TEST_CASE( EngineServiceTest, DestroyAllWhileBoundKeepsTaskManagerForStreamin
 {
     const EngineServices saved = engine::getBoundEngineServices();
 
-    EngineOwnedServices owned;
+    EngineServiceCollection owned;
     owned.createAll();
     EngineServices table = saved;
     owned.bindInto( table );

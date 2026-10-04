@@ -55,7 +55,7 @@ namespace sw
         , _listFreeOffscreenDsvIndex{}
         , _mapCbAlignedSize{}
         , _mapCbMapped{}
-        , _constantBufferShadow{}
+        , _constantBufferMirror{}
         , _pipelineStates{}
         , _listRenderPass{}
         , _swapChain{}

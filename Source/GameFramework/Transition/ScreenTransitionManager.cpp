@@ -9,10 +9,10 @@ namespace sw
     SW_LOG_CALLER( "ScreenTransition" );
 
     // ------------------------------------------------------------------------------
-    // 1) FadeService
+    // 1) ScreenFade
     // ------------------------------------------------------------------------------
 
-    FadeService::FadeService()
+    ScreenFade::ScreenFade()
         : _duration{ 0.35f }
         , _elapsed{ 0.0f }
         , _alpha{ 0.0f }
@@ -22,7 +22,7 @@ namespace sw
     {
     }
 
-    void FadeService::beginFadeOut( float32 duration )
+    void ScreenFade::beginFadeOut( float32 duration )
     {
         _phase     = FadePhase::FadingOut;
         _duration  = MathUtil::max( duration, 0.001f );
@@ -31,7 +31,7 @@ namespace sw
         _bFinished = SW_FALSE;
     }
 
-    void FadeService::beginFadeIn( float32 duration )
+    void ScreenFade::beginFadeIn( float32 duration )
     {
         _phase     = FadePhase::FadingIn;
         _duration  = MathUtil::max( duration, 0.001f );
@@ -40,7 +40,7 @@ namespace sw
         _bFinished = SW_FALSE;
     }
 
-    void FadeService::update( float32 deltaTime )
+    void ScreenFade::update( float32 deltaTime )
     {
         if ( _phase == FadePhase::Idle )
             return;
@@ -72,7 +72,7 @@ namespace sw
             _alpha = 1.0f;
     }
 
-    bool FadeService::isFinished() const
+    bool ScreenFade::isFinished() const
     {
         return _bFinished == SW_TRUE;
     }
@@ -157,6 +157,6 @@ namespace sw
     {
         _phase         = Phase::None;
         _pendingAction = nullptr;
-        _fade          = FadeService{};
+        _fade          = ScreenFade{};
     }
 } // namespace sw

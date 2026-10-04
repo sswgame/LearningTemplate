@@ -12,7 +12,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Graphics/Renderer/Frame/ShaderBindingBinder.h"
+#include "Engine/Graphics/Renderer/Frame/ShaderParameterBinder.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -41,7 +41,7 @@ namespace sw
         // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 구워 넣은
         // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다.
         //
-        // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 LiveShaderManager 가 ShaderCache 를 비웠고(수동 리로드)
+        // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 ShaderRecompiler 가 ShaderCache 를 비웠고(수동 리로드)
         // (그래야 새 바이트코드를 집는다) EngineLoop 이 렌더 스레드를 재웠으므로(waitIdle) 안전하다.
         // 셰이더 편집은 개발 중 가끔 있는 일이라 이때의 스톨은 감수한다.
         releasePassResources();
@@ -173,8 +173,8 @@ namespace sw
         const bool   bUpToDate       = ( ctx._lastBindPso == pso ) && ( ctx._lastCbBuffer == engineCb._buffer ) &&
                                ( ctx._lastCbValuesVersion == valuesVersion ) && ( ctx._lastCbRegistryVersion == registryVersion );
 
-        ShaderBindingBinder::bindGraphics( *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
-                                           engineCb, materialCb, _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv, bUpToDate );
+        ShaderParameterBinder::bindGraphics( *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
+                                             engineCb, materialCb, _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv, bUpToDate );
 
         ctx._lastBindPso           = pso;
         ctx._lastCbBuffer          = engineCb._buffer;

@@ -1386,7 +1386,7 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
 
         codeWithoutStrings = _kStringLiteralStripRe.sub('', line)
         # 주석도 코드가 아니다. 이걸 안 지우면 "float 판은 …" 같은 산문이 타입 사용으로 잡힌다
-        # (실제로 ZoneRuntime.h 의 한국어 주석이 Style/BasicTypeAlias 로 신고됐다).
+        # (실제로 ZoneTracker.h 의 한국어 주석이 Style/BasicTypeAlias 로 신고됐다).
         codeWithoutStrings = _kCommentStripRe.sub("", codeWithoutStrings)
 
         scanContext = LineScanContext(

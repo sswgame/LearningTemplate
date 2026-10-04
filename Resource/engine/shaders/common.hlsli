@@ -146,6 +146,6 @@ struct SwVertexInput
 };
 // 풀스크린 셰이더도 이 구조체를 쓴다 — 자기 구조체(`struct VSInput { float3 pos; float4 col; }` 등)를 두면 Vulkan·GL 에서
 // col 이 location 1(노멀) 을 읽는다(RHIDeviceTest.OffscreenDrawIsReadable 이 픽셀로 잡는다). 리플렉션 계약
-// 검사(ShaderBindingContract 5번 규칙)가 이 어긋남을 바이너리에서 잡는다.
+// 검사(ShaderBindingValidator 5번 규칙)가 이 어긋남을 바이너리에서 잡는다.
 
 #endif // SW_ENGINE_COMMON_HLSLI

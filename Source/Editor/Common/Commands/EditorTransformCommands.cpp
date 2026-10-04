@@ -8,8 +8,8 @@
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -246,7 +246,7 @@ namespace sw::editor
             return;
 
         vector<GameObject*> listSel;
-        pContext->getSelectionManager().getSelectedObjects( listSel );
+        pContext->getEditorSelection().getSelectedObjects( listSel );
         snapObjectsToGround( listSel );
     }
 
@@ -290,7 +290,7 @@ namespace sw::editor
             return;
 
         vector<GameObject*> listSel;
-        pContext->getSelectionManager().getSelectedObjects( listSel );
+        pContext->getEditorSelection().getSelectedObjects( listSel );
         alignObjects( listSel, axis, type );
     }
 
@@ -345,7 +345,7 @@ namespace sw::editor
             return;
 
         vector<GameObject*> listSel;
-        pContext->getSelectionManager().getSelectedObjects( listSel );
+        pContext->getEditorSelection().getSelectedObjects( listSel );
         distributeObjects( std::move( listSel ), axis );
     }
 

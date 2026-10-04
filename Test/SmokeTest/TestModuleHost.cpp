@@ -26,7 +26,7 @@ using namespace sw;
 // 1) ModuleHostTest — 디바이스가 없을 때의 호스트
 //
 // `RHI` 객체는 있는데 **디바이스가 없는 상태**가 실제로 존재한다: 백엔드 교체가 실패하면 디바이스만
-// 사라지고 RHI 는 남는다(`BackendSwapController::applyPendingChange` 의 실패 경로). 그 뒤 종료가
+// 사라지고 RHI 는 남는다(`RHIBackendSwitcher::applyPendingChange` 의 실패 경로). 그 뒤 종료가
 // 돌면 호스트는 반드시 `drainRenderWorkers` 를 지나가는데, `RHI::getDevice()` 는 **널 참조**를
 // 돌려주므로 `hasDevice()` 를 먼저 묻지 않으면 정상적인 실패가 종료 경로에서 SEGFAULT 로 끝난다.
 //

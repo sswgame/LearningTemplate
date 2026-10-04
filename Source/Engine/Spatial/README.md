@@ -3,7 +3,7 @@
 `Engine/Spatial` is an **opt-in** query toolkit (`SpatialHashGrid2D`, `SpatialQuadTree` / `SpatialOctree` over the shared `SpatialTree`, `BVHTree3D`).
 It is not the physics broadphase.
 
-`PhysicsWorld` keeps its own 3D cell map for AABB overlap because physics needs layer filters and CCD that these general indexes do not own. Gameplay or tools that need a standalone spatial query (overworld picks, editor overlays) should instantiate these types directly rather than going through `PhysicsWorld`.
+`PhysicsWorld` keeps its own 3D cell map for AABB overlap because physics needs layer filters and ContinuousCollision that these general indexes do not own. Gameplay or tools that need a standalone spatial query (overworld picks, editor overlays) should instantiate these types directly rather than going through `PhysicsWorld`.
 
 ## Query out-parameters are overwritten, never appended to
 

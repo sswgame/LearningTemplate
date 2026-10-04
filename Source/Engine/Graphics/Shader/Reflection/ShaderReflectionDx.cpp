@@ -141,7 +141,7 @@ namespace sw
              * @brief cbuffer 의 변수 목록을 멤버 표로 만듭니다. **구조체 하나로 감싼 cbuffer 는 한 겹 벗깁니다.**
              * @details 엔진 cbuffer(PassCB 등)는 맨 필드로 선언하지만, `cbuffer name { name_t data; }` 나
              *          `ConstantBuffer<name_t>` 처럼 구조체 하나로 감싼 cbuffer 도 리플렉션에는 "구조체 변수 하나짜리 CB" 로
-             *          보입니다. 엔진(ShaderBindingBinder)과 머티리얼 패커는 **필드 이름**으로 오프셋을 찾으므로 변수가
+             *          보입니다. 엔진(ShaderParameterBinder)과 머티리얼 패커는 **필드 이름**으로 오프셋을 찾으므로 변수가
              *          하나뿐이고 그것이 구조체면 그 멤버들을 CB 의 멤버로 올립니다. 오프셋은 구조체 시작(= 변수 StartOffset)
              *          기준으로 더합니다. 맨 필드 cbuffer 는 그대로 통과합니다.
              */

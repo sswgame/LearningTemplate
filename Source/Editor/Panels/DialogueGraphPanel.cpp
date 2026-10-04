@@ -111,15 +111,15 @@ namespace sw::editor
     {
         if ( EditorChrome::beginToolbar( "##DialogueToolbar" ) )
         {
-            for ( const DialogueNodeTraits& traits : kArrDialogueNodeTraits )
+            for ( const DialogueNodeInfo& info : kArrDialogueNodeInfo )
             {
-                if ( traits._bAddable == false )
+                if ( info._bAddable == false )
                     continue;
                 fixed_string<constant::kMaxBuffer64> label;
-                formatstring( label.data(), label.capacity(), "+ %#", traits._pName );
+                formatstring( label.data(), label.capacity(), "+ %#", info._pName );
                 if ( ImGui::Button( label.c_str() ) )
                 {
-                    addNode( traits._type );
+                    addNode( info._type );
                     notifyDocumentEdited( "Add Dialogue Node" );
                 }
                 ImGui::SameLine();
@@ -282,9 +282,9 @@ namespace sw::editor
             ImGui::TextColored( ImVec4( 0.2f, 0.8f, 1.0f, 1.0f ), "Node #%d (%s)", pSelectedNode->_id, DialogueGraphAsset::nodeTypeName( pSelectedNode->_type ) );
             ImGui::Separator();
 
-            const DialogueNodeTraits* pTraits = DialogueGraphAsset::findNodeTraits( pSelectedNode->_type );
-            if ( pTraits != nullptr )
-                drawNodeFields( *pSelectedNode, *pTraits );
+            const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( pSelectedNode->_type );
+            if ( pInfo != nullptr )
+                drawNodeFields( *pSelectedNode, *pInfo );
         }
 
         EditorChrome::endSection();
@@ -395,14 +395,14 @@ namespace sw::editor
 
         ImGui::SameLine();
         ImGui::TextDisabled( "Preview node #%d", _previewNodeId );
-        const DialogueGraphAsset  asset   = captureGraphData();
-        const DialogueAssetNode*  pNode   = asset.findNode( _previewNodeId );
-        const DialogueNodeTraits* pTraits = pNode != nullptr ? DialogueGraphAsset::findNodeTraits( pNode->_type ) : nullptr;
-        if ( pTraits == nullptr )
+        const DialogueGraphAsset asset = captureGraphData();
+        const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
+        const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
+        if ( pInfo == nullptr )
             return;
 
         // 기다리는 노드만 사람이 고른다. 고른 값은 러너와 같은 `DialogueCursor::step` 의 입력이 된다.
-        if ( pTraits->_flow == DialogueNodeFlow::WaitChoice )
+        if ( pInfo->_flow == DialogueNodeFlow::WaitChoice )
         {
             for ( int32 choiceIndex = 0; choiceIndex < static_cast<int32>( pNode->_listChoice.size() ); ++choiceIndex )
             {
@@ -417,7 +417,7 @@ namespace sw::editor
                 }
             }
         }
-        if ( pTraits->_flow == DialogueNodeFlow::Condition )
+        if ( pInfo->_flow == DialogueNodeFlow::Condition )
         {
             ImGui::SameLine();
             if ( ImGui::SmallButton( "True" ) )
@@ -436,16 +436,16 @@ namespace sw::editor
     {
         if ( _bPreviewPlaying == SW_FALSE || _previewNodeId <= 0 )
             return;
-        const DialogueGraphAsset  asset   = captureGraphData();
-        const DialogueAssetNode*  pNode   = asset.findNode( _previewNodeId );
-        const DialogueNodeTraits* pTraits = pNode != nullptr ? DialogueGraphAsset::findNodeTraits( pNode->_type ) : nullptr;
-        if ( pTraits == nullptr )
+        const DialogueGraphAsset asset = captureGraphData();
+        const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
+        const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
+        if ( pInfo == nullptr )
         {
             _bPreviewPlaying = SW_FALSE;
             return;
         }
 
-        switch ( pTraits->_flow )
+        switch ( pInfo->_flow )
         {
             case DialogueNodeFlow::PassThrough:
             {
@@ -488,10 +488,10 @@ namespace sw::editor
 
     void DialogueGraphPanel::enterPreviewNode( const DialogueGraphAsset& asset, int32 nodeId )
     {
-        _previewHoldSeconds               = 0.0f;
-        const DialogueAssetNode*  pNode   = asset.findNode( nodeId );
-        const DialogueNodeTraits* pTraits = pNode != nullptr ? DialogueGraphAsset::findNodeTraits( pNode->_type ) : nullptr;
-        if ( pTraits == nullptr )
+        _previewHoldSeconds            = 0.0f;
+        const DialogueAssetNode* pNode = asset.findNode( nodeId );
+        const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
+        if ( pInfo == nullptr )
         {
             _bPreviewPlaying = SW_FALSE;
             return;
@@ -499,9 +499,9 @@ namespace sw::editor
 
         _previewNodeId = nodeId;
         // 러너가 알리는 노드(대사 · 선택지)만 뷰포트에 보인다.
-        if ( pTraits->_flow == DialogueNodeFlow::WaitAdvance || pTraits->_flow == DialogueNodeFlow::WaitChoice )
+        if ( pInfo->_flow == DialogueNodeFlow::WaitAdvance || pInfo->_flow == DialogueNodeFlow::WaitChoice )
             EditorViewportPreview::applyDialogueLine( pNode->_speaker, pNode->_text );
-        if ( pTraits->_flow == DialogueNodeFlow::Finish )
+        if ( pInfo->_flow == DialogueNodeFlow::Finish )
             _bPreviewPlaying = SW_FALSE;
     }
 
@@ -516,27 +516,27 @@ namespace sw::editor
 
     void DialogueGraphPanel::drawNodeBody( const DialogueNode& node )
     {
-        const DialogueNodeTraits* pTraits = DialogueGraphAsset::findNodeTraits( node._type );
-        if ( pTraits == nullptr )
+        const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( node._type );
+        if ( pInfo == nullptr )
         {
             ImGui::TextDisabled( "[Unknown %u]", static_cast<uint32>( node._type ) );
             return;
         }
 
-        const ImVec4 headerColor( pTraits->_color._x, pTraits->_color._y, pTraits->_color._z, pTraits->_color._w );
-        if ( pTraits->_bHasSpeaker )
-            ImGui::TextColored( headerColor, "[%s: %s]", pTraits->_pName, node._speaker.empty() ? "(No Speaker)" : node._speaker.c_str() );
+        const ImVec4 headerColor( pInfo->_color._x, pInfo->_color._y, pInfo->_color._z, pInfo->_color._w );
+        if ( pInfo->_bHasSpeaker )
+            ImGui::TextColored( headerColor, "[%s: %s]", pInfo->_pName, node._speaker.empty() ? "(No Speaker)" : node._speaker.c_str() );
         else
-            ImGui::TextColored( headerColor, "[%s]", pTraits->_pName );
+            ImGui::TextColored( headerColor, "[%s]", pInfo->_pName );
 
-        if ( pTraits->_bHasInputPin )
+        if ( pInfo->_bHasInputPin )
             drawInputPin( node._id );
 
-        switch ( pTraits->_output )
+        switch ( pInfo->_output )
         {
             case DialogueNodeOutput::Next:
             {
-                if ( pTraits->_bHasInputPin )
+                if ( pInfo->_bHasInputPin )
                     ImGui::SameLine();
                 drawOutputPin( DialogueGraphPanelInternal::pinOut( node._id ), "Next ->" );
                 break;
@@ -575,7 +575,7 @@ namespace sw::editor
             }
         }
 
-        switch ( pTraits->_body )
+        switch ( pInfo->_body )
         {
             case DialogueNodeBody::Text:
             {
@@ -607,16 +607,16 @@ namespace sw::editor
         }
     }
 
-    void DialogueGraphPanel::drawNodeFields( DialogueNode& node, const DialogueNodeTraits& traits )
+    void DialogueGraphPanel::drawNodeFields( DialogueNode& node, const DialogueNodeInfo& info )
     {
-        if ( traits._bHasSpeaker )
+        if ( info._bHasSpeaker )
         {
             EditorWidgets::drawTextField( "Speaker", node._speaker );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
         }
 
-        switch ( traits._body )
+        switch ( info._body )
         {
             case DialogueNodeBody::Text:
             {
@@ -649,7 +649,7 @@ namespace sw::editor
             }
         }
 
-        if ( traits._output != DialogueNodeOutput::Choice )
+        if ( info._output != DialogueNodeOutput::Choice )
             return;
 
         ImGui::Text( "Choices (%zu):", node._listChoice.size() );

@@ -4,10 +4,10 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "EditorTest/EditorTestServices.h"
 
@@ -420,7 +420,7 @@ SW_TEST_CASE( EditorTransactionTest, UndoAndRedoMarkTheSceneDirty )
 
     CommandStack              stack;
     ScopedCommandStackService scopedStack{ stack };
-    SelectionManager          selection;
+    EditorSelection           selection;
     EditorWorkspace           workspace{ &selection };
     ScopedWorkspaceService    scopedWorkspace{ workspace };
 
@@ -458,7 +458,7 @@ SW_TEST_CASE( EditorTransactionTest, RemovingAComponentCanBeUndone )
 
     CommandStack              stack;
     ScopedCommandStackService scopedStack{ stack };
-    SelectionManager          selection;
+    EditorSelection           selection;
     EditorWorkspace           workspace{ &selection };
     ScopedWorkspaceService    scopedWorkspace{ workspace };
 
@@ -500,7 +500,7 @@ SW_TEST_CASE( EditorTransactionTest, ObjectEditsSurviveReleasingTheEditorCode )
 
     CommandStack              stack;
     ScopedCommandStackService scopedStack{ stack };
-    SelectionManager          selection;
+    EditorSelection           selection;
     EditorWorkspace           workspace{ &selection };
     ScopedWorkspaceService    scopedWorkspace{ workspace };
 

@@ -32,7 +32,7 @@
 | 월드 | `UWorld` → `AActor` → `UActorComponent`. 액터는 `GWorld` 전역으로 월드를 찾는다 | Godot `SceneTree` → `Node` | `Scene` → `Object`(GameObject · Component) | **더 좁다.** Object 는 Scene 을 모른다. 활성 월드 전역(`GWorld`)도 없다 — 핸들은 그것을 푸는 쪽이 든 `GameObjectManager` 가 푼다(`resolveGameObject` · `resolveComponent`). |
 | 월드 ↔ 렌더러 | `UWorld` 는 `FScene`(렌더 씬 인터페이스)만 안다. 렌더러 본체를 모른다 | Godot 노드는 `RenderingServer` 에 RID 로만 말한다 | `SceneManager` | **같다.** 씬은 렌더러를 모른다 — 렌더러는 호스트가 내주는 선택 서비스(`EngineServiceList.xxx`)다. |
 | 기능 모듈 | `LevelSequence` · `MovieScene` 은 `Engine` 위의 모듈 — 액터를 알고, 액터는 모른다 | Godot `AnimationPlayer` 는 `scene/` 안의 노드 | `Sequencer` | **같다.** `SequencePlayerComponent` 는 `Sequencer/` 에 있다 — Sequencer 가 Object 를 알고, Object 는 Sequencer 를 모른다. |
-| 서브시스템 수명 | `FEngineLoop` + `UEngineSubsystem`(자동 수집) | `PlayerLoop` | `EngineLoop` + `EngineServiceList.xxx`(X-macro 등록표, 낱말 칸 `Required`/`Optional` · `GameVisible`/`HostOnly` · `EngineCreated`/`HostCreated` 로 생성·바인딩 생성) + `EngineStartupStepList.xxx`(기동 단계와 의존) | **같은 모양.** 언리얼은 `USubsystem::Initialize` 안에서 `FSubsystemCollectionBase::InitializeDependency` 로 먼저 설 서브시스템을 적고 컬렉션이 그 순서로 초기화 · 역순으로 `Deinitialize` 한다. 여기도 단계마다 의존을 표에 식별자 목록으로 적고(오타 · 아래 줄 의존은 컴파일 오류) `EngineStartupSequence` 가 그 순서로 초기화 · 역순 종료한다. 호스트(`EngineLoop` · 시험 하네스, 공통 부트스트랩은 `EngineBootstrap`)는 단계마다 구조체 하나(`initialize` · `shutdown` · `destroy`)로 본문만 준다. 객체 해제도 모든 종료 뒤에 같은 역순으로 모든 단계를 돈다 — `ResourceManager::shutdown` 은 Resource 단계의 해제에 있어, 에셋을 드는 뒤 단계들의 소멸자가 먼저 돈다. |
+| 서브시스템 수명 | `FEngineLoop` + `UEngineSubsystem`(자동 수집) | `PlayerLoop` | `EngineLoop` + `EngineServiceList.xxx`(X-macro 등록표, 낱말 칸 `Required`/`Optional` · `GameVisible`/`HostOnly` · `EngineCreated`/`HostCreated` 로 생성·바인딩 생성) + `EngineInitStepList.xxx`(기동 단계와 의존) | **같은 모양.** 언리얼은 `USubsystem::Initialize` 안에서 `FSubsystemCollectionBase::InitializeDependency` 로 먼저 설 서브시스템을 적고 컬렉션이 그 순서로 초기화 · 역순으로 `Deinitialize` 한다. 여기도 단계마다 의존을 표에 식별자 목록으로 적고(오타 · 아래 줄 의존은 컴파일 오류) `EngineInitSequence` 가 그 순서로 초기화 · 역순 종료한다. 호스트(`EngineLoop` · 시험 하네스, 공통 부트스트랩은 `EngineBootstrap`)는 단계마다 구조체 하나(`initialize` · `shutdown` · `destroy`)로 본문만 준다. 객체 해제도 모든 종료 뒤에 같은 역순으로 모든 단계를 돈다 — `ResourceManager::shutdown` 은 Resource 단계의 해제에 있어, 에셋을 드는 뒤 단계들의 소멸자가 먼저 돈다. |
 | 창·입력 | `ApplicationCore` (창) · `InputCore` — RHI 위 | Godot `DisplayServer` | `Window` · `Input` | **같다.** Window 는 Resource(스플래시 그림) 위, Input 은 Window 위. RHI 는 둘 다 모른다. |
 | 병렬 | `ParallelFor` · `TaskGraph` | Unity Jobs | `Core/Task` + `engine::runParallel` | **같다.** 병렬 시스템의 모양이 하나다(트랜스폼 계층이 첫 예). |
 
@@ -75,9 +75,9 @@ RHI → Renderer)는 자가 검사 조각(`selfTestCases`)으로 못박혀 있�
   모델)은 두지 않는다 — 빌더가 내용이 그대로면 빌드를 건너뛰고, 움직임만 있으면 제자리 갱신하고, 바뀐 구간만 올리므로
   메시 종류가 8 → 1024 로 늘어도 빌드 비용이 평평하다(`-gv_benchMeshVariants` 로 잰다). 얻을 것이 남아 있지 않다.
 - **`EngineLoop` 이 크다.** `FEngineLoop::Init` 도 그렇다. 서비스 생성·바인딩은 표(`EngineServiceList.xxx`)에서, 초기화 · 종료 순서는
-  기동 단계 표(`EngineStartupStepList.xxx`)의 의존 칸에서 나온다. 남은 크기는 단계 본문이고, 본문은 단계마다 하는 일이 정말 달라 나누지 않는다.
+  기동 단계 표(`EngineInitStepList.xxx`)의 의존 칸에서 나온다. 남은 크기는 단계 본문이고, 본문은 단계마다 하는 일이 정말 달라 나누지 않는다.
   표는 기동 순서대로 적고, 의존 칸만으로 위상 정렬(동점은 이름 순)한 결과가 줄 순서와 같아야 한다 — 의존을 빼먹으면
-  `EngineStartupSequenceTest.TableIsWrittenInStartupOrder` 가 진다.
+  `EngineInitSequenceTest.TableIsWrittenInStartupOrder` 가 진다.
 - **`Scene` 이 기본 머티리얼을 든다.** 언리얼은 `UMaterial::GetDefaultMaterial` 이 엔진 에셋이라 월드가 모른다. 여기는
   씬이 인스턴스화할 때 머티리얼 없는 메시에 채워 준다 — 결과는 같고, 엣지는 Scene → Graphics 저층(허용 방향)이다.
 - **`Dialogue` · `Sequencer` · `Localization` 이 Engine 안에 있다.** 언리얼은 모듈/플러그인이지만 전부 Engine 위의

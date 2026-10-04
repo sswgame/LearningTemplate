@@ -9,7 +9,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
@@ -293,12 +293,12 @@ namespace sw
 
         // 일반 풀스크린 패스는 표의 플래그로 고르고, 전용 실행 코드가 있는 패스만 아래 switch 의 case 를 갖는다.
         // 열거자를 더하고 case 를 빠뜨리면 -Wswitch-enum 이 이 자리를 알린다.
-        const RenderPassTypeTraits& traits            = getRenderPassTypeTraits( passType );
-        const bool                  bTransparentBatch = traits.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
-        if ( traits.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) && pPassDesc != nullptr )
+        const RenderPassTypeInfo& info              = getRenderPassTypeInfo( passType );
+        const bool                bTransparentBatch = info.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
+        if ( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) && pPassDesc != nullptr )
         {
             // 일반 풀스크린 패스(표의 kGenericFullscreen: Lighting · SSAO · Bloom · Outline · Tonemap). **선언이 곧 바인딩**이다:
-            // 입력은 역할 이름으로 모두 걸고, 타깃은 선언한 출력 중 첫 번째로 있는 것이다. 계약(RenderPassInputContract)이
+            // 입력은 역할 이름으로 모두 걸고, 타깃은 선언한 출력 중 첫 번째로 있는 것이다. 계약(RenderPassInputSignature)이
             // 로드 시점에 같은 목록을 검사했다. 새 포스트 패스는 표의 한 줄로 여기를 탄다.
             registerDeclaredInputs( ctx, *pPassDesc );
 
@@ -317,7 +317,7 @@ namespace sw
             const RHIPipelineStateHandle pso = findPassPso( passType );
 
             // 기본 클리어는 표의 값(SSAO 는 흰색 = 가림 없음)이고 없으면 렌더러의 클리어 색이다. 첨부가 클리어 색을 선언했으면 그것이 우선이다.
-            const float4 defaultClear = traits._pDefaultClear != nullptr ? *traits._pDefaultClear : _clearColor;
+            const float4 defaultClear = info._pDefaultClear != nullptr ? *info._pDefaultClear : _clearColor;
             executeFullscreenPass( pso, *pTarget, getAttachmentClearColorOrDefault( pTarget->view(), defaultClear ) );
         }
         else

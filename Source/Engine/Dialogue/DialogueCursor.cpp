@@ -8,11 +8,11 @@ namespace sw
 {
     int32 DialogueCursor::step( const DialogueGraphAsset& asset, const DialogueAssetNode& node, const DialogueStepInput& input )
     {
-        const DialogueNodeTraits* pTraits = DialogueGraphAsset::findNodeTraits( node._type );
-        if ( pTraits == nullptr )
+        const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( node._type );
+        if ( pInfo == nullptr )
             return 0;
 
-        switch ( pTraits->_output )
+        switch ( pInfo->_output )
         {
             case DialogueNodeOutput::None:
             {
@@ -41,26 +41,26 @@ namespace sw
         node._id   = nodeId;
         node._type = type;
 
-        const DialogueNodeTraits* pTraits = DialogueGraphAsset::findNodeTraits( type );
-        if ( pTraits == nullptr )
+        const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( type );
+        if ( pInfo == nullptr )
             return node;
 
-        node._speaker = pTraits->_pDefaultSpeaker;
-        switch ( pTraits->_body )
+        node._speaker = pInfo->_pDefaultSpeaker;
+        switch ( pInfo->_body )
         {
             case DialogueNodeBody::Text:
             {
-                node._text = pTraits->_pDefaultBody;
+                node._text = pInfo->_pDefaultBody;
                 break;
             }
             case DialogueNodeBody::Condition:
             {
-                node._condition = pTraits->_pDefaultBody;
+                node._condition = pInfo->_pDefaultBody;
                 break;
             }
             case DialogueNodeBody::Action:
             {
-                node._actionCommand = pTraits->_pDefaultBody;
+                node._actionCommand = pInfo->_pDefaultBody;
                 break;
             }
             case DialogueNodeBody::None:
@@ -69,8 +69,8 @@ namespace sw
             }
         }
 
-        node._listChoice.reserve( pTraits->_defaultChoiceCount );
-        for ( uint32 choiceIndex = 0; choiceIndex < pTraits->_defaultChoiceCount; ++choiceIndex )
+        node._listChoice.reserve( pInfo->_defaultChoiceCount );
+        for ( uint32 choiceIndex = 0; choiceIndex < pInfo->_defaultChoiceCount; ++choiceIndex )
         {
             StringBuilder<constant::kMaxBuffer32> choiceBuilder;
             choiceBuilder.append( "Option " );

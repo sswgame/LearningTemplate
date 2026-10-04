@@ -18,8 +18,8 @@ sw_addTestExecutable(AppTest
 		AppTestUtil.cpp
 		TestAppCook.cpp
 		TestAppSmoke.cpp
-		TestFrameTimeline.cpp
-		${CMAKE_SOURCE_DIR}/Source/App/FrameTimeline.cpp
+		TestFixedTimestep.cpp
+		${CMAKE_SOURCE_DIR}/Source/App/FixedTimestep.cpp
 	LIBS
 		Engine
 	LABELS

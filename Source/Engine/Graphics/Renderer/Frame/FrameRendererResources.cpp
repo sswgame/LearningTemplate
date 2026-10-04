@@ -13,7 +13,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
 
 namespace sw
 {
@@ -38,25 +38,25 @@ namespace sw
                 SW_LOG_ERROR( "Failed to create the %# constant buffer - its compute dispatch is skipped", row._pUsage );
         }
 
-        // 엔진 PSO 는 패스 종류의 표(RenderPassTypeTraits)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
+        // 엔진 PSO 는 패스 종류의 표(RenderPassTypeInfo)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
         // 표의 EngineData 경로는 마지막 폴백일 뿐이다. 셰이더 베이커가 같은 표를 훑는다.
         const EngineData&     engineData = engine::getEngineData();
         const RHICapabilities caps       = _pDevice->getCapabilities();
         for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
         {
-            const RenderPassType        passType = static_cast<RenderPassType>( typeIndex );
-            const RenderPassTypeTraits& traits   = getRenderPassTypeTraits( passType );
-            if ( traits._pDefaultShader == nullptr )
+            const RenderPassType      passType = static_cast<RenderPassType>( typeIndex );
+            const RenderPassTypeInfo& info     = getRenderPassTypeInfo( passType );
+            if ( info._pDefaultShader == nullptr )
                 continue;
 
             RHIPipelineStateHandle pso{ 0 };
-            if ( traits.hasFlag( RenderPassTraitFlag::kCompute ) )
+            if ( info.hasFlag( RenderPassTraitFlag::kCompute ) )
             {
                 // 컬링 · 정렬은 간접 인자 버퍼 능력(_bGpuCulling)을, 애니메이션 · 모프는 구조버퍼 UAV(_bCompute)만 요구한다.
                 // DX11 은 한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를 같이 못 걸어 _bGpuCulling 이 0 이지만 _bCompute 는 1 이다.
-                const bool bCapable = traits.hasFlag( RenderPassTraitFlag::kRequiresGpuCulling ) ? caps._bGpuCulling != SW_FALSE : caps._bCompute != SW_FALSE;
+                const bool bCapable = info.hasFlag( RenderPassTraitFlag::kRequiresGpuCulling ) ? caps._bGpuCulling != SW_FALSE : caps._bCompute != SW_FALSE;
                 if ( bCapable )
-                    pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineData.*traits._pDefaultShader ).c_str(), FrameRendererUtil::Entry::kCSMain );
+                    pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineData.*info._pDefaultShader ).c_str(), FrameRendererUtil::Entry::kCSMain );
             }
             else
             {
@@ -138,7 +138,7 @@ namespace sw
     {
         // 패스 진입 시의 기본 슬롯. 실제 드로우는 bindForDraw 가 드로우마다 새 슬롯을 잡는다.
         _passCbRing.acquire( ctx._passCb, ctx._passCbIndex );
-        // 값은 드로우 직전 ShaderBindingBinder::bindGraphics 가 리플렉션 오프셋으로 채운다
+        // 값은 드로우 직전 ShaderParameterBinder::bindGraphics 가 리플렉션 오프셋으로 채운다
         // (ctx._passValues 에 이미 프레임 시드가 들어 있으므로 따로 먼저 올릴 필요가 없다).
     }
 
@@ -159,7 +159,7 @@ namespace sw
         const RHIPipelineStateHandle pso = _psoCache.findEnginePso( passType );
         if ( pso != 0 )
             return pso;
-        const RenderPassType fallbackType = getRenderPassTypeTraits( passType )._psoFallbackType;
+        const RenderPassType fallbackType = getRenderPassTypeInfo( passType )._psoFallbackType;
         return fallbackType != RenderPassType::Invalid ? _psoCache.findEnginePso( fallbackType ) : 0;
     }
 

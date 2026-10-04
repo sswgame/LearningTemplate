@@ -32,7 +32,7 @@ namespace sw
          *          요구하므로(-Wswitch-default) 컴파일러가 그 switch 에서 빠진 종류를 짚어 주지는 못합니다.
          *          대신 그 `default:` 가 소리를 냅니다(저장 · 로드는 오류 로그, 평가는 단언).
          */
-        struct BindingKindTraits
+        struct BindingKindInfo
         {
             BindingKind _kind;              ///< 표의 자리와 열거자가 어긋나지 않게 들고 있는 자기 값.
             const utf8* _pXmlName;          ///< XML `kind` 특성에 적히는 이름.
@@ -43,7 +43,7 @@ namespace sw
         constexpr uint32 kNoRebind = BindingKinds::kNoRebindSlot;
 
         // 종류를 더하면 **여기 한 줄**이다. 빠뜨리면 아래 static_assert 가 컴파일을 세운다.
-        constexpr BindingKindTraits kArrBindingKindTraits[] = {
+        constexpr BindingKindInfo kArrBindingKindInfo[] = {
             {       BindingKind::SingleSlot,          "single", 1,         0},
             {  BindingKind::Axis1DComposite,          "axis1d", 2, kNoRebind},
             {BindingKind::Vector2DComposite,        "vector2d", 4, kNoRebind},
@@ -55,16 +55,16 @@ namespace sw
             {BindingKind::VirtualJoystick2D, "virtualJoystick", 1, kNoRebind},
         };
 
-        static_assert( sizeof( kArrBindingKindTraits ) / sizeof( kArrBindingKindTraits[0] ) == static_cast<size_t>( BindingKind::Count ),
-                       "BindingKind 를 늘렸으면 kArrBindingKindTraits 에도 줄을 더할 것 — 이름과 충돌 슬롯 수가 여기서 온다." );
+        static_assert( sizeof( kArrBindingKindInfo ) / sizeof( kArrBindingKindInfo[0] ) == static_cast<size_t>( BindingKind::Count ),
+                       "BindingKind 를 늘렸으면 kArrBindingKindInfo 에도 줄을 더할 것 — 이름과 충돌 슬롯 수가 여기서 온다." );
 
         /** @brief 표에서 종류의 줄을 찾습니다. 범위 밖이면 nullptr 입니다. */
-        const BindingKindTraits* findBindingKindTraits( BindingKind kind )
+        const BindingKindInfo* findBindingKindInfo( BindingKind kind )
         {
-            for ( const BindingKindTraits& traits : kArrBindingKindTraits )
+            for ( const BindingKindInfo& info : kArrBindingKindInfo )
             {
-                if ( traits._kind == kind )
-                    return &traits;
+                if ( info._kind == kind )
+                    return &info;
             }
             return nullptr;
         }
@@ -93,32 +93,32 @@ namespace sw
 
     const utf8* BindingKinds::toName( BindingKind kind )
     {
-        const BindingKindTraits* pTraits = findBindingKindTraits( kind );
+        const BindingKindInfo* pInfo = findBindingKindInfo( kind );
         // 이름이 없으면 저장이 조용히 망가지므로, 모르는 종류는 빈 문자열로 **눈에 띄게** 둔다.
-        return ( pTraits != nullptr ) ? pTraits->_pXmlName : "";
+        return ( pInfo != nullptr ) ? pInfo->_pXmlName : "";
     }
 
     BindingKind BindingKinds::fromName( string_view name )
     {
-        for ( const BindingKindTraits& traits : kArrBindingKindTraits )
+        for ( const BindingKindInfo& info : kArrBindingKindInfo )
         {
             // string_view 오버로드를 쓴다. `name.data()` 는 널 종료가 보장되지 않는다.
-            if ( StringUtil::equals( name, string_view{ traits._pXmlName }, true ) )
-                return traits._kind;
+            if ( StringUtil::equals( name, string_view{ info._pXmlName }, true ) )
+                return info._kind;
         }
         return BindingKind::Count;
     }
 
     uint32 BindingKinds::getRebindSlotIndex( BindingKind kind )
     {
-        const BindingKindTraits* pTraits = findBindingKindTraits( kind );
-        return ( pTraits != nullptr ) ? pTraits->_rebindSlotIndex : kNoRebindSlot;
+        const BindingKindInfo* pInfo = findBindingKindInfo( kind );
+        return ( pInfo != nullptr ) ? pInfo->_rebindSlotIndex : kNoRebindSlot;
     }
 
     uint32 BindingKinds::getConflictSlotCount( BindingKind kind )
     {
-        const BindingKindTraits* pTraits = findBindingKindTraits( kind );
-        return ( pTraits != nullptr ) ? pTraits->_conflictSlotCount : 0;
+        const BindingKindInfo* pInfo = findBindingKindInfo( kind );
+        return ( pInfo != nullptr ) ? pInfo->_conflictSlotCount : 0;
     }
 
     InputMap::InputMap()

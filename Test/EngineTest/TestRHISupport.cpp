@@ -4,7 +4,7 @@
 
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
-#include "Engine/Graphics/RHI/Support/RHIConstantBufferShadow.h"
+#include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
@@ -265,11 +265,11 @@ SW_TEST_CASE( RHIGpuTimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegat
 }
 
 /**
- * @brief [RHIConstantBufferShadowTest] 한 번 쓴 값이 링이 도는 동안 나머지 칸에 채워지고, 다 채우면 목록에서 빠진다
+ * @brief [RHIConstantBufferMirrorTest] 한 번 쓴 값이 링이 도는 동안 나머지 칸에 채워지고, 다 채우면 목록에서 빠진다
  * @details 링 상수버퍼의 칸 `kMaxFrameCountInFlight` 개를 배열로 흉내 낸다. 칸 0 에 쓰고 링을 한 바퀴 돌리면 모든 칸이 같은 값이어야
  *          한다. 채우는 도중 짧은 쓰기는 앞부분만 덮고, 부순 버퍼는 채우지 않는다.
  */
-SW_TEST_CASE( RHIConstantBufferShadowTest, FillsStaleSlotsOnceAndForgets )
+SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
 {
     constexpr uint32 kSlotCount = sw::constant::kMaxFrameCountInFlight;
     constexpr uint32 kSlotBytes = 8;
@@ -282,7 +282,7 @@ SW_TEST_CASE( RHIConstantBufferShadowTest, FillsStaleSlotsOnceAndForgets )
         ++writeCount;
     };
 
-    sw::RHIConstantBufferShadow shadow;
+    sw::RHIConstantBufferMirror shadow;
     const uint8                 arrFirst[kSlotBytes] = { 1, 2, 3, 4, 5, 6, 7, 8 };
     shadow.write( 7, 0, arrFirst, kSlotBytes, writeSlot );
     SW_EXPECT_EQUAL( 1u, writeCount );

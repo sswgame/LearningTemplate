@@ -928,7 +928,7 @@ SW_TEST_CASE( GpuSceneTest, MaterialElementIdsPersistAcrossBuildsAndAreFreed )
  *
  *          픽셀로 보면 조명·톤매핑이 섞여 값이 흔들린다. 여기서는 **CPU 스냅샷**을 본다 —
  *          두 머티리얼이 서로 다른 원소를 받는가, 그리고 프로퍼티 값이 다르면 패킹된 바이트도 다른가.
- *          백엔드 간 패킹 일치는 ShaderBindingContractTest.ReflectionNamesAreUniformAcrossBackends 가 본다.
+ *          백엔드 간 패킹 일치는 ShaderBindingValidatorTest.ReflectionNamesAreUniformAcrossBackends 가 본다.
  */
 SW_TEST_CASE( GpuSceneTest, PerBatchMaterialElementsAreDistinct )
 {

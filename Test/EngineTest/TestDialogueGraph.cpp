@@ -252,17 +252,17 @@ SW_TEST_CASE( DialogueGraphTest, PlainTextResolvesToItself )
 /**
  * @brief [DialogueGraphTest] 특성 표가 노드 타입마다 한 줄이고 순서가 값 순서인지 검증
  */
-SW_TEST_CASE( DialogueGraphTest, NodeTraitsCoverEveryType )
+SW_TEST_CASE( DialogueGraphTest, NodeInfoCoversEveryType )
 {
     for ( uint32 typeIndex = 0; typeIndex < static_cast<uint32>( DialogueAssetNodeType::Count ); ++typeIndex )
     {
-        const DialogueAssetNodeType type    = static_cast<DialogueAssetNodeType>( typeIndex );
-        const DialogueNodeTraits*   pTraits = DialogueGraphAsset::findNodeTraits( type );
-        SW_ASSERT_NOT_NULL( pTraits );
-        SW_EXPECT_TRUE( pTraits->_type == type );
-        SW_EXPECT_TRUE( DialogueGraphAsset::parseNodeType( pTraits->_pName ) == type );
+        const DialogueAssetNodeType type  = static_cast<DialogueAssetNodeType>( typeIndex );
+        const DialogueNodeInfo*     pInfo = DialogueGraphAsset::findNodeInfo( type );
+        SW_ASSERT_NOT_NULL( pInfo );
+        SW_EXPECT_TRUE( pInfo->_type == type );
+        SW_EXPECT_TRUE( DialogueGraphAsset::parseNodeType( pInfo->_pName ) == type );
     }
-    SW_EXPECT_NULL( DialogueGraphAsset::findNodeTraits( DialogueAssetNodeType::Count ) );
+    SW_EXPECT_NULL( DialogueGraphAsset::findNodeInfo( DialogueAssetNodeType::Count ) );
     SW_EXPECT_EQUAL( string_view( "Unknown" ), string_view( DialogueGraphAsset::nodeTypeName( DialogueAssetNodeType::Count ) ) );
 }
 
@@ -293,14 +293,14 @@ SW_TEST_CASE( DialogueGraphTest, RunnerAndCursorAgreeOnEveryType )
         { ++finishedCount; } );
         SW_EXPECT_TRUE( runner.startDialogue( 2 ) );
 
-        const DialogueNodeTraits* pTraits = DialogueGraphAsset::findNodeTraits( type );
-        SW_ASSERT_NOT_NULL( pTraits );
-        if ( pTraits->_flow == DialogueNodeFlow::WaitAdvance )
+        const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( type );
+        SW_ASSERT_NOT_NULL( pInfo );
+        if ( pInfo->_flow == DialogueNodeFlow::WaitAdvance )
         {
             SW_EXPECT_EQUAL( 2, runner.getCurrentNodeId() );
             SW_EXPECT_TRUE( runner.advance() );
         }
-        else if ( pTraits->_flow == DialogueNodeFlow::WaitChoice )
+        else if ( pInfo->_flow == DialogueNodeFlow::WaitChoice )
         {
             SW_EXPECT_EQUAL( 2, runner.getCurrentNodeId() );
             SW_EXPECT_TRUE( runner.selectChoice( 1 ) );

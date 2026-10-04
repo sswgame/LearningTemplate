@@ -6,7 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
-#include "Engine/Input/KeyCodes.h"
+#include "Engine/Input/KeyCodeUtil.h"
 
 namespace sw
 {

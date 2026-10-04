@@ -70,11 +70,11 @@ DX11 · DX12 · OpenGL · Vulkan
 | `RHIRenderResource` · `RHIResidentBuffer` | RHI/ | GPU 자원 소유자의 등록부(디바이스 수명 통보) · 핸들+디바이스 |
 | `RHIStructuredBufferSlot` · `RHIConstantBufferSlot` | RHI/ | 버퍼 + 뷰/인덱스 한 벌 — 만들기·갱신·해제 순서를 타입이 안다. 구조버퍼는 용량이 변하고(`ensureCapacity`) 상수버퍼는 안 변한다(`create`) |
 | `Material` · `MaterialInstance` · `MaterialCache` | Material/ | 정의·인스턴스·캐시 |
-| `ShaderCompiler` · `ShaderCache` · `LiveShaderManager` | Shader/Compile/ | HLSL → 바이트코드, 디스크 캐시, 수동 리로드 |
+| `ShaderCompiler` · `ShaderCache` · `ShaderRecompiler` | Shader/Compile/ | HLSL → 바이트코드, 디스크 캐시, 수동 리로드 |
 | `ShaderBakeStamp` · `ShaderBaker` | Shader/Compile/ | 오프라인 베이크의 **메커니즘** — 이미 최신인지(내용 해시) · 한 장 굽고 이름 짓기 |
 | `ShaderBakeDriver` (+ `ShaderBakeRequest.cpp`) | Renderer/Bake/ | 오프라인 베이크의 **정책** — 무엇을 구울지(파이프라인 XML · 패스 종류 표 × 뷰 모드 · 머티리얼 → 요청) · 전부 굽기. 패스 종류를 아는 렌더러의 지식이라 여기 있다 |
 | `ShaderReflection` · `ShaderReflectionLibrary` | Shader/Reflection/ | 바이트코드 리플렉션과 구운 매니페스트 |
-| `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingContract` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 구운 바이너리 대조 |
+| `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingValidator` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 구운 바이너리 대조 |
 | `Mesh` · `MeshUtil` | Mesh/ | 메시 버퍼 · 기본 도형 생성 |
 | `Texture2D` · `TextureCache` | Texture/ | 텍스처 에셋 · 캐시 |
 | `GpuUploadQueue` | Upload/ | GPU 리소스를 그리기 전에 워커로 만든다 |
@@ -170,7 +170,7 @@ PSO desc → ShaderBindingLayoutCache.getOrBuild(desc, backend)   (컴파일 →
 FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/... 등록,
                PassConstantValues 에 g_ViewProj/g_World/... 값 채움
                     ↓
-드로우 직전 ShaderBindingBinder::bindGraphics(layout, registry, values, ...)
+드로우 직전 ShaderParameterBinder::bindGraphics(layout, registry, values, ...)
    - PassCB(b0)  : 리플렉션 멤버 오프셋에 값 기록 → 엔진 CB 슬롯 업로드 → bindConstantBuffer (패스마다 한 번)
    - g_SwMaterials(t9): 셰이더 타입별 StructuredBuffer<SwMaterialData> — GpuScene 이 Material/MaterialInstance 버퍼를
                     리플렉션 stride 로 채워 배치 전에 bindStructuredBuffer. PS 는 인스턴스의 _materialIndex 로 원소를 읽는다
@@ -189,7 +189,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 | `Shader/Binding/ShaderBindingLayout.{h,cpp}` | 스테이지별 `ShaderReflectionData` 병합 → 이름/레지스터/CB멤버 조회 + 지문 |
 | `Shader/Binding/ShaderBindingLayoutCache.{h,cpp}` | (경로+define+백엔드) 키 캐시. 핫리로드 시 `invalidateByShaderPath` |
 | `Renderer/Frame/FrameResourceRegistry.{h,cpp}` | 패스 스코프 이름→{텍스처/버퍼, bindless 인덱스} |
-| `Renderer/Frame/ShaderBindingBinder.{h,cpp}` | `bindGraphics` + `PassConstantValues` (대형 미러 struct 대체) |
+| `Renderer/Frame/ShaderParameterBinder.{h,cpp}` | `bindGraphics` + `PassConstantValues` (대형 미러 struct 대체) |
 | `Resource/engine/shaders/binding.hlsli` | PassCB(b0) + `g_SwInstances`(t4) + `SW_MATERIAL_BEGIN/END`(→ `g_SwMaterials` t9) + 텍스처 배열/슬롯 분기 + `swSampleShadow/Source/...` 헬퍼 (4백엔드) |
 
 **셰이더 작성 규칙**: `#include "binding.hlsli"` → `g_ViewProj` 등 PassCB 필드와 `SampleXxx(uv)` 를 바로
@@ -199,7 +199,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 **정점을 받는 셰이더는 `SwVertexInput`(common.hlsli) 하나만 쓴다.** DX 는 시맨틱 이름으로 묶지만 Vulkan·GL 은
 **선언 순서로 location** 을 매긴다 — `struct VSInput { pos; col }` 처럼 중간 속성을 빼면 col 이 노멀을 읽는다.
 리플렉션이 정점 입력(시맨틱·location)을 읽고
-`ShaderBindingContract` 5번 규칙이 `constant::arrVertexAttribute` 와 대조하므로, 어긋난 바이너리는 nogpu 테스트에서
+`ShaderBindingValidator` 5번 규칙이 `constant::arrVertexAttribute` 와 대조하므로, 어긋난 바이너리는 nogpu 테스트에서
 이름과 숫자로 떨어진다.
 
 ### 패스 입력 역할 계약 — 파이프라인 XML 의 선언이 곧 바인딩이다
@@ -210,10 +210,10 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 나머지 컬러는 SourceColor. 셰이더는 역할 이름으로 읽는다(`g_SourceColorIndex` · `g_AmbientOcclusionIndex` …).
 타깃은 선언한 출력 중 첫 번째로 존재하는 것이다.
 
-`RenderPassInputContract`(Pipeline/, 타입마다의 목록은 `RenderPassTypeTraits` 표의 칸)가 타입마다 읽는 역할의 필수/선택 목록이고, `RenderPipelineAsset::validate` 4번
+`RenderPassInputSignature`(Pipeline/, 타입마다의 목록은 `RenderPassTypeInfo` 표의 칸)가 타입마다 읽는 역할의 필수/선택 목록이고, `RenderPipelineAsset::validate` 4번
 검사가 로드 시점에 대조한다 — 계약에 없는 역할을 선언하면 "선언만 있고 바인딩되지 않는 입력", 필수 역할이 빠지면
 "셰이더가 kInvalidIndex 를 읽습니다", SourceColor 가 둘이면 오류. 새 역할이 필요하면 (1) enum 과
-이름표, (2) 패스 종류 표(`RenderPassTypeTraits`)의 계약 칸, (3) PassCB 의 `g_<Role>Index`, (4) 에뮬 슬롯 표(`swSampleIndex` · `commitBindlessTextureBindings`)
+이름표, (2) 패스 종류 표(`RenderPassTypeInfo`)의 계약 칸, (3) PassCB 의 `g_<Role>Index`, (4) 에뮬 슬롯 표(`swSampleIndex` · `commitBindlessTextureBindings`)
 네 곳이다. `FrameRenderer::setInputRoleEnabled( role, false )` 는 그 역할을 걸지 않는 쇼 플래그다(테스트가 켬/끔을 비교한다).
 
 **`ShaderBindingLayoutCache::getOrBuild`는 반드시 실제 디바이스의 `backend`를 받는다** (전역 `gv_rhiBackend`
@@ -341,14 +341,14 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 - **Vulkan 슬롯 세트 풀은 커맨드 버퍼 쌍이 들고 다닌다**(`VulkanDescriptorPoolSet`, 언리얼 `FVulkanDescriptorPoolSetContainer`). 쌍이 GPU 펜스를
   지나 돌아온 뒤 `beginCommandList` 가 통째로 리셋한다 — 할당 경로에 락이 없다.
 - **DX12 루트 시그니처 25/64 dword**: CB 는 루트 CBV, t/u 슬롯은 디스크립터 테이블(`flushSlotTables` 가 바뀐 테이블만 온라인 힙 블록에 복사).
-  `ShaderBindingContractTest.Dx12RootSignatureFitsBudget` 가 계약에서 예산을 계산한다.
+  `ShaderBindingValidatorTest.Dx12RootSignatureFitsBudget` 가 계약에서 예산을 계산한다.
 - **패스 상수버퍼는 드로우마다 슬롯을 받는다**(`PassConstantRing`, 기록 전에 `PassConstantRing::ensureCapacity` 로 배치 수만큼). 한 버퍼를 드로우들이
   나눠 쓰면 GPU 는 제출 뒤에 읽으므로 모두 마지막 값을 본다 — `RenderPassGpuTest.MultiBatchPassKeepsPerBatchConstants` 가 메시 둘로 고정한다.
 - **머티리얼 원소는 영속 ID**(GPUScene 식): 처음 본 쌍에만 자리를 주고, 안 쓰이면 지연 회수하되 **자리를 옮기지 않는다**(인스턴스에 적힌
   materialIndex 가 엉뚱한 원소를 가리키게 된다). `GpuSceneTest.MaterialElementIdsPersistAcrossBuildsAndAreFreed`.
 - **머티리얼 폴백 버퍼는 stride 마다 하나**(`ensureMaterialFallbackBuffers`, stride 는 `ShaderBindingSlot::_elementStride`) — SRV 의 구조 stride 는
   셰이더 선언과 같아야 한다(RDG 더미 버퍼와 같은 규칙).
-- **인스턴스 원소 레이아웃은 시험이 대조한다.** `ShaderBindingContractTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 구운 바이너리의
+- **인스턴스 원소 레이아웃은 시험이 대조한다.** `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 구운 바이너리의
   stride · 필드 오프셋을 `GpuInstance` 와, 컴퓨트 쪽 이름(`g_Instances` · `g_InstancesRW`)까지 같은 표로 본다.
 - **스프라이트 프레임 · 색은 인스턴스 칸**(`GpuInstance::_sprite` = `GpuSpriteInstanceData` 12 바이트, Custom Primitive Data 자리). 배치 키를
   건드리지 않아 같은 텍스처의 스프라이트는 한 드로우다. 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)이고 UV 는 메시의 것이다
@@ -419,7 +419,7 @@ build/Ninja-Release/Bin/App.exe -gv_benchMeshes=2000 -gv_benchMeshVariants=200 -
 ```powershell
 cmake --build --preset Ninja-Debug
 build/Ninja-Debug/Bin/App.exe --bake-shaders                                   # 구운 바이너리 + reflection.manifest 갱신 (계약 테스트가 이걸 읽는다)
-build/Ninja-Debug/Bin/EngineTest.exe --test_filter=ShaderBindingContractTest.*   # 계약 + 네 백엔드 리플렉션 레이아웃 일치
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=ShaderBindingValidatorTest.*   # 계약 + 네 백엔드 리플렉션 레이아웃 일치
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=RHIDeviceTest.*               # 컴퓨트 RW 텍스처 쓰기→읽기(4 백엔드) 포함
 build/Ninja-Debug/Bin/EngineTest.exe --test_filter=GpuSceneTest.*,RenderPassTest.*,RenderPassGpuTest.*   # 스냅샷 규칙 · 그래프 · 픽셀 패리티(FrameRendererParityAllBackends)
 py -3 Scripts/dev/BackendSmoke.py                                                # 실제 앱 경로: 네 백엔드 PPM 평균·큐브 픽셀 수

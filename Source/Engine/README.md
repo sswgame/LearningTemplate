@@ -89,20 +89,20 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Serialization/**: 직렬화 (BinarySerializer · JsonSerializer · XmlSerializer · Archive)
 - **Module/**: 모듈 DLL 쪽 계약만 둔다 — `ModuleTypeRegistry`(로드한 모듈의 타입 · 전역 변수 등록과 정리) · `ModuleHandleProvider`(지연 로드 훅이
   섀도 복사본을 묻는 창구) · `DelayLoadNotifyHook.cpp`(모듈 DLL 마다 컴파일되는 지연 로드 훅) · `EngineAbiStamp`(핫 리로드의 엔진 ABI 도장).
-  감시 · 섀도 복사 · 다시 로드(`LiveReloadManager`)는 App 의 `App/Module`, 에셋 파일 감시(`ReloadFileManager`)는 에디터의
+  감시 · 섀도 복사 · 다시 로드(`LiveReloadManager`)는 App 의 `App/Module`, 에셋 파일 감시(`FileWatchDispatcher`)는 에디터의
   `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleUnloadListener`)은 `Core/Module` 이다.
 - **Utility/**: Format (KeyValueFile), Json, Xml, CommandStack, Debug — 진짜 최하위 헬퍼만 둡니다.
 - **루트 파일 — 기동 · 종료**:
-  - `EngineStartupStepList.xxx`: 기동 단계의 등록표(X-macro). 줄 순서가 초기화 순서이고, 줄마다 단계 이름 · 그 초기화에 거는 메모리 태그 ·
-    먼저 서야 하는 단계 `{ A, B }` 를 적습니다. 의존이 자기보다 아래 줄이거나 오타면 컴파일 오류이고(`EngineStartupSequence.cpp` 의 static_assert),
-    의존만으로 위상 정렬한 순서가 줄 순서와 같아야 합니다(`EngineStartupSequenceTest.TableIsWrittenInStartupOrder`).
+  - `EngineInitStepList.xxx`: 기동 단계의 등록표(X-macro). 줄 순서가 초기화 순서이고, 줄마다 단계 이름 · 그 초기화에 거는 메모리 태그 ·
+    먼저 서야 하는 단계 `{ A, B }` 를 적습니다. 의존이 자기보다 아래 줄이거나 오타면 컴파일 오류이고(`EngineInitSequence.cpp` 의 static_assert),
+    의존만으로 위상 정렬한 순서가 줄 순서와 같아야 합니다(`EngineInitSequenceTest.TableIsWrittenInStartupOrder`).
     `ModuleTypes` 단계(호스트가 타입 공급자 — GF · 킷 · 게임 모듈 — 를 올려 등록을 끝냄)가 서야 씬을 읽고 굽습니다(`Headless` 가 그 뒤).
-  - `EngineStartupSequence`: 표를 읽어 초기화(`initializeAll`) → 초기화한 단계만 역순 종료(`shutdownAll`) → **모든 단계**를 역순 해제(`destroyAll`).
-    단계 본문은 호스트가 줄마다 구조체 하나 `<단계>StartupStep`(`initialize` · `shutdown` · `destroy`, `EngineStartupStepDefaults` 상속)로 줍니다 —
+  - `EngineInitSequence`: 표를 읽어 초기화(`initializeAll`) → 초기화한 단계만 역순 종료(`shutdownAll`) → **모든 단계**를 역순 해제(`destroyAll`).
+    단계 본문은 호스트가 줄마다 구조체 하나 `<단계>StartupStep`(`initialize` · `shutdown` · `destroy`, `EngineInitStepDefaults` 상속)로 줍니다 —
     `EngineLoop.cpp` 와 시험 하네스(`Test/TestFramework/main.cpp`)가 같은 표를 씁니다. 구조체가 빠지면 컴파일 오류입니다.
   - `EngineBootstrap`: 표 **앞**의 고정 부트스트랩(이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 교착 감지기 · 메모리 프로파일러 · 명령줄 · 전역 변수)과
     표 **뒤**의 끝 정리. 서비스 표를 언제 끊는지 · 로거를 언제 내리는지는 여기 한 곳이 정합니다. 두 호스트가 함께 씁니다.
-  - `EngineOwnedServices`: 호스트가 소유하는 서비스 저장소(`Common/EngineServiceList.xxx` 의 `EngineCreated` 줄에서 생성, `destroyAll` 은 목록의 역순).
+  - `EngineServiceCollection`: 호스트가 소유하는 서비스 저장소(`Common/EngineServiceList.xxx` 의 `EngineCreated` 줄에서 생성, `destroyAll` 은 목록의 역순).
   - `EngineLoop`(메인 루프 · 단계 구조체) · `EngineMinimal.h`(prelude)
 - **메모리 태그**(`Core/Memory/MemoryTag.h`, UE LLM 식): 할당을 용도로 나눕니다. 거는 자리는 하위 시스템의 **진입점**뿐입니다 — 기동 단계(표의 태그 칸),
   에셋 종류별 로드 · 씬 로드 · 렌더러 · 렌더 스레드 · 모듈 호출에서 `SW_MEMORY_SCOPE( Tag )`. 태스크와 엔진이 띄우는 스레드는 띄운 쪽의 태그를 잇습니다.

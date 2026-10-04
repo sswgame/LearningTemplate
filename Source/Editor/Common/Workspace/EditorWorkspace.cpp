@@ -5,8 +5,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
@@ -23,8 +23,8 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     // 생성자
     // ------------------------------------------------------------------------------
-    EditorWorkspace::EditorWorkspace( SelectionManager* pSelectionManager )
-        : _pSelectionManager{ pSelectionManager }
+    EditorWorkspace::EditorWorkspace( EditorSelection* pEditorSelection )
+        : _pEditorSelection{ pEditorSelection }
         , _selectedComponentId{ 0 }
         , _observedSceneGeneration{ 0 }
         , _scrollToComponentId{ 0 }
@@ -53,15 +53,15 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     uint64 EditorWorkspace::getSelectedObjectId() const
     {
-        if ( _pSelectionManager != nullptr )
-            return _pSelectionManager->getPrimaryObjectId();
+        if ( _pEditorSelection != nullptr )
+            return _pEditorSelection->getPrimaryObjectId();
         return 0;
     }
 
     GameObject* EditorWorkspace::getSelectedObject() const
     {
-        if ( _pSelectionManager != nullptr )
-            return _pSelectionManager->getPrimaryObject();
+        if ( _pEditorSelection != nullptr )
+            return _pEditorSelection->getPrimaryObject();
         return nullptr;
     }
 
@@ -75,24 +75,24 @@ namespace sw::editor
 
     void EditorWorkspace::clearSelection()
     {
-        if ( _pSelectionManager != nullptr )
-            _pSelectionManager->clearAll();
+        if ( _pEditorSelection != nullptr )
+            _pEditorSelection->clearAll();
         _selectedComponentId = 0;
         _selectedComponentKey.clear();
     }
 
     void EditorWorkspace::selectGameObject( GameObject* pObj, SelectionMode mode )
     {
-        if ( _pSelectionManager != nullptr )
-            _pSelectionManager->selectObject( pObj, mode );
+        if ( _pEditorSelection != nullptr )
+            _pEditorSelection->selectObject( pObj, mode );
         _selectedComponentId = 0;
         _selectedComponentKey.clear();
     }
 
     void EditorWorkspace::selectComponent( GameObject* pObj, Component* pComp )
     {
-        if ( _pSelectionManager != nullptr )
-            _pSelectionManager->selectObject( pObj, SelectionMode::Replace );
+        if ( _pEditorSelection != nullptr )
+            _pEditorSelection->selectObject( pObj, SelectionMode::Replace );
 
         if ( pComp != nullptr )
             _selectedComponentId = pComp->getComponentId();
@@ -128,8 +128,8 @@ namespace sw::editor
             return;
         }
 
-        if ( _pSelectionManager != nullptr )
-            _pSelectionManager->selectObject( pObj, SelectionMode::Replace );
+        if ( _pEditorSelection != nullptr )
+            _pEditorSelection->selectObject( pObj, SelectionMode::Replace );
 
         if ( _selectedComponentKey.empty() )
         {
@@ -149,8 +149,8 @@ namespace sw::editor
         _focusedAssetPath = ( pPath != nullptr ) ? pPath : "";
         if ( StringUtil::isNullOrEmpty( pPath ) == false )
         {
-            if ( _pSelectionManager != nullptr )
-                _pSelectionManager->selectAsset( pPath, SelectionMode::Replace );
+            if ( _pEditorSelection != nullptr )
+                _pEditorSelection->selectAsset( pPath, SelectionMode::Replace );
         }
     }
 

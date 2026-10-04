@@ -10,7 +10,7 @@
     #include "Engine/Input/Devices/MouseDevice.h"
     #include "Engine/Input/Events/RawInputEvent.h"
     #include "Engine/Input/InputKeyMap.h"
-    #include "Engine/Input/Linux/GamepadJoystick.h"
+    #include "Engine/Input/Linux/LinuxJoystickGamepadDevice.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
 
@@ -344,7 +344,7 @@ namespace sw
     {
         // 슬롯 수 · 0번 캐시 · 연결 콜백은 엔진 정책이라 기반 클래스가 맡는다. 여기서 정하는 것은 `/dev/input/js*`
         // 를 읽는 구현이라는 것뿐이다. 연결되지 않은 슬롯은 poll() 이 재시도 타이머로 넘어간다.
-        registerGamepadSlots<GamepadJoystick>();
+        registerGamepadSlots<LinuxJoystickGamepadDevice>();
     }
 
     void InputManager::setCursorVisiblePlatform( bool bVisible )

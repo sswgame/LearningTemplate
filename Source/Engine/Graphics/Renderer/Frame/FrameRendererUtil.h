@@ -12,7 +12,7 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -202,7 +202,7 @@ namespace sw
         /** @brief 뎁스만 쓰는 패스 타입인지 반환합니다. 출력 선언이 없을 때 컬러 RT 수를 정하는 기본값(0)의 근거입니다. */
         static bool isDepthOnlyPassType( RenderPassType passType )
         {
-            return getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kDepthOnly );
+            return getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDepthOnly );
         }
 
         /**
@@ -274,7 +274,7 @@ namespace sw
          */
         static bool drawsSceneMeshes( RenderPassType passType )
         {
-            return getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes );
+            return getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes );
         }
 
         /**
@@ -285,18 +285,18 @@ namespace sw
          */
         static bool usesMaterialShader( RenderPassType passType )
         {
-            return getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kUsesMaterialShader );
+            return getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kUsesMaterialShader );
         }
 
         /**
          * @brief 이 패스 타입이 셰이더에 **얹는 define** 입니다. 파이프라인 XML 의 `_listPermutation` 위에 더해집니다.
          * @details G버퍼 패스는 픽셀 출력 서명을 MRT 로 바꾸려고 `SW_PASS_GBUFFER=1` 을 C++ 에서 얹습니다. 그래서 "이 패스의
-         *          define 집합" 은 XML 만 보고 답하면 런타임과 어긋납니다. 런타임과 베이커가 같은 표(`RenderPassTypeTraits`)를 봅니다.
+         *          define 집합" 은 XML 만 보고 답하면 런타임과 어긋납니다. 런타임과 베이커가 같은 표(`RenderPassTypeInfo`)를 봅니다.
          */
         static vector<string> getPassDefine( RenderPassType passType )
         {
             vector<string> listDefine;
-            const utf8*    pDefine = getRenderPassTypeTraits( passType )._pPassDefine;
+            const utf8*    pDefine = getRenderPassTypeInfo( passType )._pPassDefine;
             if ( pDefine != nullptr )
                 listDefine.push_back( string{ pDefine } );
             return listDefine;
@@ -312,7 +312,7 @@ namespace sw
          */
         static bool appliesViewMode( RenderPassType passType )
         {
-            return getRenderPassTypeTraits( passType ).hasFlag( RenderPassTraitFlag::kAppliesViewMode );
+            return getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kAppliesViewMode );
         }
 
         /**
@@ -332,7 +332,7 @@ namespace sw
          */
         static bool hasPixelStage( RenderPassType passType )
         {
-            return getRenderPassTypeTraits( passType )._colorTargetCount > 0;
+            return getRenderPassTypeInfo( passType )._colorTargetCount > 0;
         }
 
         /**

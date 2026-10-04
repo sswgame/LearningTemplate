@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Engine/Physics/AABB.h"
-#include "Engine/Physics/CCD.h"
 #include "Engine/Physics/CollisionLayers.h"
+#include "Engine/Physics/ContinuousCollision.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
 #include "TestFramework/TestFramework.h"
@@ -186,9 +186,9 @@ SW_TEST_CASE( PhysicsTest, SpatialGridMassiveBodiesStressTest )
 }
 
 /**
- * @brief [PhysicsTest] CCD Swept AABB 초고속 투사체 벽 관통(Tunneling) 방지 검증
+ * @brief [PhysicsTest] ContinuousCollision Swept AABB 초고속 투사체 벽 관통(Tunneling) 방지 검증
  */
-SW_TEST_CASE( PhysicsTest, CCD_SweptAABBTunnelingPrevention )
+SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptAABBTunnelingPrevention )
 {
     // 얇은 벽 (Z in [49.5, 50.5])
     AABB wallBox{
@@ -204,7 +204,7 @@ SW_TEST_CASE( PhysicsTest, CCD_SweptAABBTunnelingPrevention )
     float3 bulletDisplacement{ 0.0f, 0.0f, 100.0f };
 
     SweepHit hit{};
-    bool     bCollided = CCD::sweepAabb( bulletBox, bulletDisplacement, wallBox, hit );
+    bool     bCollided = ContinuousCollision::sweepAabb( bulletBox, bulletDisplacement, wallBox, hit );
 
     SW_EXPECT_TRUE( bCollided );
     SW_EXPECT_TRUE( hit._bHit );
@@ -214,9 +214,9 @@ SW_TEST_CASE( PhysicsTest, CCD_SweptAABBTunnelingPrevention )
 }
 
 /**
- * @brief [PhysicsTest] CCD Swept Sphere 검증
+ * @brief [PhysicsTest] ContinuousCollision Swept Sphere 검증
  */
-SW_TEST_CASE( PhysicsTest, CCD_SweptSphere )
+SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptSphere )
 {
     AABB targetBox{
         float3{20.0f,  0.0f,  0.0f},
@@ -228,7 +228,7 @@ SW_TEST_CASE( PhysicsTest, CCD_SweptSphere )
     float3   disp{ 40.0f, 0.0f, 0.0f };
     SweepHit hit{};
 
-    bool bHit = CCD::sweepSphere( startCenter, radius, disp, targetBox, hit );
+    bool bHit = ContinuousCollision::sweepSphere( startCenter, radius, disp, targetBox, hit );
     SW_EXPECT_TRUE( bHit );
     SW_EXPECT_TRUE( hit._bHit );
     // 구 앞면이 targetBox minX(20.0)에 닿을 때 center = 19.0 -> t = 19.0 / 40.0 = 0.475
@@ -239,7 +239,7 @@ SW_TEST_CASE( PhysicsTest, CCD_SweptSphere )
 /**
  * @brief [PhysicsTest] PhysicsWorld sweepTest 브로드페이즈 & 최단 충돌체 선별 검증
  */
-SW_TEST_CASE( PhysicsTest, CCD_PhysicsWorldSweepTest )
+SW_TEST_CASE( PhysicsTest, ContinuousCollision_PhysicsWorldSweepTest )
 {
     PhysicsWorld world;
 
@@ -273,9 +273,9 @@ SW_TEST_CASE( PhysicsTest, CCD_PhysicsWorldSweepTest )
 }
 
 /**
- * @brief [PhysicsTest] CCD 모서리 스침(Corner Grazing) 및 평행 궤적 빗나감(Parallel Miss) 정밀 판별 검증
+ * @brief [PhysicsTest] ContinuousCollision 모서리 스침(Corner Grazing) 및 평행 궤적 빗나감(Parallel Miss) 정밀 판별 검증
  */
-SW_TEST_CASE( PhysicsTest, CCD_CornerGrazingAndParallelMiss )
+SW_TEST_CASE( PhysicsTest, ContinuousCollision_CornerGrazingAndParallelMiss )
 {
     AABB targetBox{
         float3{10.0f, 10.0f, 10.0f},
@@ -289,7 +289,7 @@ SW_TEST_CASE( PhysicsTest, CCD_CornerGrazingAndParallelMiss )
     };
     float3   missDisp{ 0.0f, 0.0f, 50.0f };
     SweepHit missHit{};
-    bool     bMiss = CCD::sweepAabb( missBox, missDisp, targetBox, missHit );
+    bool     bMiss = ContinuousCollision::sweepAabb( missBox, missDisp, targetBox, missHit );
     SW_EXPECT_FALSE( bMiss );
     SW_EXPECT_FALSE( missHit._bHit );
 
@@ -300,7 +300,7 @@ SW_TEST_CASE( PhysicsTest, CCD_CornerGrazingAndParallelMiss )
     };
     float3   diagDisp{ 30.0f, 30.0f, 30.0f };
     SweepHit diagHit{};
-    bool     bDiagHit = CCD::sweepAabb( diagBox, diagDisp, targetBox, diagHit );
+    bool     bDiagHit = ContinuousCollision::sweepAabb( diagBox, diagDisp, targetBox, diagHit );
     SW_EXPECT_TRUE( bDiagHit );
     SW_EXPECT_TRUE( diagHit._bHit );
     // min corner (10, 10, 10)에 max (1, 1, 1)이 닿는 시각: (10 - 1) / 30 = 9 / 30 = 0.3
@@ -327,7 +327,7 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
     sw::SweepHit hit{};
 
     // 1) 먼저 맞힌다 — 결과가 채워진다.
-    SW_EXPECT_TRUE( sw::CCD::sweepAabb( hittingBox, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_TRUE( sw::ContinuousCollision::sweepAabb( hittingBox, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_TRUE( hit._bHit );
 
     // 2) **같은 구조체로** 완전히 빗나가는 스윕을 한다.
@@ -335,14 +335,14 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
         sw::float3{-100.0f, -100.0f, -100.0f},
         sw::float3{ -99.0f,  -99.0f,  -99.0f}
     };
-    SW_EXPECT_FALSE( sw::CCD::sweepAabb( missingBox, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_FALSE( sw::ContinuousCollision::sweepAabb( missingBox, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_FALSE( hit._bHit );
     SW_EXPECT_NEAR_EQUAL( 1.0f, hit._time, 1e-4f );
 
     // 3) 구 스윕도 같은 약속이다.
-    SW_EXPECT_TRUE( sw::CCD::sweepSphere( sw::float3{ 0.0f, 10.5f, 10.5f }, 0.5f, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_TRUE( sw::ContinuousCollision::sweepSphere( sw::float3{ 0.0f, 10.5f, 10.5f }, 0.5f, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_TRUE( hit._bHit );
-    SW_EXPECT_FALSE( sw::CCD::sweepSphere( sw::float3{ -100.0f, -100.0f, -100.0f }, 0.5f, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_FALSE( sw::ContinuousCollision::sweepSphere( sw::float3{ -100.0f, -100.0f, -100.0f }, 0.5f, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_FALSE( hit._bHit );
 }
 
@@ -569,7 +569,7 @@ namespace
         return box;
     }
 
-    /** @brief @p box 자리의 연속(CCD) 바디 값입니다. */
+    /** @brief @p box 자리의 연속(ContinuousCollision) 바디 값입니다. */
     PhysicsBodyState makeContinuousState( const AABB& box )
     {
         PhysicsBodyState state;
@@ -648,7 +648,7 @@ SW_TEST_CASE( PhysicsTest, StepRespectsTheLayerMatrix )
 /**
  * @brief [PhysicsTest] 연속 바디는 한 step 에 건너뛴 얇은 바디와도 겹친다 — 그 step 에 시작하고 다음 step 에 끝난다
  * @details 겹침을 step 마다 끝 자리만 보면 한 프레임에 두께 0.1 벽보다 멀리 가는 총알은 벽과 한 번도 겹치지 않아 맞음 처리가 불리지
- *          않는다(터널링). 연속 바디는 지난 step 의 자리에서 지금 자리까지 쓸린다(`CCD::sweepAabb`). 같은 길을 간 이산 바디는 여전히 지나치고,
+ *          않는다(터널링). 연속 바디는 지난 step 의 자리에서 지금 자리까지 쓸린다(`ContinuousCollision::sweepAabb`). 같은 길을 간 이산 바디는 여전히 지나치고,
  *          레이어가 막은 벽은 쓸려도 닿지 않는다. 지나간 뒤 더 가도 다시 닿지 않는다 — 출발점은 지난 step 의 자리다(더한 자리가 아니다).
  */
 SW_TEST_CASE( PhysicsTest, ContinuousBodyOverlapsWhatItPassedThroughInOneStep )

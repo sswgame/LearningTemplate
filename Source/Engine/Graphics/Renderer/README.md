@@ -27,12 +27,12 @@ Renderer/
 - `RenderPipelineAssetCache` — 위 둘의 로드·캐시
 - `RenderPassType` (RenderPassAsset.h) — 패스 타입 이름. XML 의 `_type` 이 이 열거형으로
   해석되고, 해석되지 않으면 `RenderPipelineAsset::validate` 가 잡습니다.
-- `RenderPassTypeTraits` — 패스 종류 하나의 사실을 **enum 값마다 한 줄**로 모은 표입니다. 기본 셰이더(EngineData 칸) ·
+- `RenderPassTypeInfo` — 패스 종류 하나의 사실을 **enum 값마다 한 줄**로 모은 표입니다. 기본 셰이더(EngineData 칸) ·
   PSO 기본 상태 · 패스 define · 컬러 RT 수 · 그리는 대상(씬 메시 · 일반 풀스크린 · 컴퓨트) · 대신할 PSO · 입력 계약.
   엔진 PSO 등록(`ensurePassResources`) · 셰이더 베이크 요청 · `executePass` 디스패치 · 파이프라인 검증이 모두 이 표를
   enum 으로 읽습니다. 새 포스트 패스는 enum 한 줄 + 표의 case 하나이고, 전용 실행 코드가 필요한 패스만
   `executePass` 의 switch 에 case 를 더합니다.
-- `RenderPassInputContract` — 패스 입력의 **역할**(필수/선택). 타입마다의 목록은 위 표의 칸이고, 검증과 실행이 같은
+- `RenderPassInputSignature` — 패스 입력의 **역할**(필수/선택). 타입마다의 목록은 위 표의 칸이고, 검증과 실행이 같은
   칸을 보므로 "선언은 했는데 안 걸리는 입력" 이 생길 자리가 없습니다.
 
 - 첨부마다 해상도 나눗수(`RenderPassAttachment::_resolutionDivisor` — 1 · 2 · 4)가 있고, 패스는 출력 첨부의 크기로 렌더 패스를 엽니다.
@@ -84,7 +84,7 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
     만드는 일은 `FrameRendererPso` 가, 소유와 해제 순서(변형 → 패스 → Present)는 캐시가 안다
   - `TransientAttachmentPool` — 이름으로 찾는 프레임 첨부(렌더타깃) 풀과 "이번 프레임에 이미 클리어했는가"
 - `RenderView` — 뷰 하나의 행렬·절두체·컬링 상수버퍼. 메인 카메라와 그림자 라이트가 각자 갖는다
-- `ShaderBindingBinder` — 셰이더 리플렉션이 알려준 슬롯에 실제 값을 바인딩
+- `ShaderParameterBinder` — 셰이더 리플렉션이 알려준 슬롯에 실제 값을 바인딩
 - `PassConstantValues` — 이름으로 담아 두는 패스 상수 값 저장소
 - `FrameResourceRegistry` — 패스 스코프 이름→리소스 매핑
 - `RenderFramePacket` — 게임 스레드 → 렌더 스레드로 넘기는 프레임 데이터

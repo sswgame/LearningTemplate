@@ -3,7 +3,7 @@
 엔진이 켜질 때 **가장 먼저 실행되는 순수한 실행 파일(.exe)** 진입점입니다.
 
 ## 동작 흐름
-1. `App::initialize` 가 `EngineLoop::initialize` 를 부릅니다. 엔진 기동은 표(`Engine/EngineStartupStepList.xxx`) 순서로 돌고, 창 · RHI 디바이스도
+1. `App::initialize` 가 `EngineLoop::initialize` 를 부릅니다. 엔진 기동은 표(`Engine/EngineInitStepList.xxx`) 순서로 돌고, 창 · RHI 디바이스도
    그 표의 `RHI` 단계가 만듭니다. App 은 그 뒤 활성 창의 소유권을 넘겨받습니다(`acquireMainWindow`).
 2. **모듈 이미지는 기동 단계 `ModuleTypes` 에서 올립니다.** App 이 `EngineLoop::setModuleTypeLoader` 로 건 `App::loadModuleImages` 가
    (Dev) `LiveReloadManager` 를 만들고 `ModuleHost::loadModuleImages` 로 GameFramework → 키트 → `SWGame` 이미지를 올려 타입만 등록합니다
@@ -31,9 +31,9 @@ ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F
 ## 디렉터리 구조
 - **main.cpp**: `App` 을 만들고 `initialize` → `run` → `shutdown`. 초기화가 실패해도 `shutdown` 을 불러 일부만 선 서브시스템을 정해진 순서로 내린다.
 - **App.cpp / App.h**: 앱 생명주기. App 이 직접 아는 것은 **모듈 로더 배선·창 소유·프레임 순서·콜백 배선** 네 가지뿐입니다(엔진 기동 · 종료 순서는 `EngineLoop` 의 기동 표).
-  같은 파일에 `BackendSwapController` — `gv_rhiBackend` 변경을 받아 프레임 경계에서 백엔드를 교체합니다(App 만 쓴다).
+  같은 파일에 `RHIBackendSwitcher` — `gv_rhiBackend` 변경을 받아 프레임 경계에서 백엔드를 교체합니다(App 만 쓴다).
 - **AppConfig.h**: 부팅 때 읽는 설정(올릴 게임플레이 키트). 리플렉션 대상이라 따로 둡니다.
-- **FrameTimeline.cpp / .h**: 실시간 경과를 가변 델타와 고정 스텝 수로 나눕니다. AppTest 가 이 파일만 따로 컴파일합니다.
+- **FixedTimestep.cpp / .h**: 실시간 경과를 가변 델타와 고정 스텝 수로 나눕니다. AppTest 가 이 파일만 따로 컴파일합니다.
 - **Module/**: 모듈의 수명과 빌드.
   - `ModuleHost` — 모듈 이미지 로드(`loadModuleImages`), 에디터 · 게임 인스턴스의 만들기 · 내리기 · API 표 받기(두 모듈이 같은 템플릿 한 벌),
     직렬화를 통한 상태 보존, 태스크 · 렌더 워커 비우기(`drainRenderWorkers`).
@@ -41,7 +41,7 @@ ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F
   - `LiveReloadManager` — 핫 리로드(Dev 전용, Shipping 에서 파일째 빠진다). 그것만 쓰는 도우미 `ModuleImagePatch`(섀도 복사본 바이트) ·
     `ModuleCallGuard`(새 모듈 코드 호출 가드)도 같은 파일에 있습니다.
 
-쓰는 곳이 하나뿐인 도우미는 그 사용처와 한 파일에 둡니다(핫 리로드 도우미 → `LiveReloadManager`, `BackendSwapController` → `App`).
+쓰는 곳이 하나뿐인 도우미는 그 사용처와 한 파일에 둡니다(핫 리로드 도우미 → `LiveReloadManager`, `RHIBackendSwitcher` → `App`).
 
 ## 프레임 순서와 그 이유
 
@@ -49,14 +49,14 @@ ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F
 
 | 단계 | 왜 그 자리인가 |
 |---|---|
-| `FrameTimeline::advance` | 가변 델타를 잘라내고 이번 프레임의 고정 스텝 수를 확정한다. |
+| `FixedTimestep::advance` | 가변 델타를 잘라내고 이번 프레임의 고정 스텝 수를 확정한다. |
 | `EngineLoop::beginFrame` → `ModuleHost::beginFrame` | 에디터 Play 상태를 한 번 래치한다. 고정 스텝이 6번 돌아도 DLL 경계를 다시 넘지 않는다. |
 | `pollReloadHotkeys` | (Dev) 셸 액션을 갱신하고 리로드 단축키를 받는다. |
 | `fixedUpdateGame` × N → `updateGame` | 래치된 상태를 읽으므로 모든 스텝이 같은 답을 본다. |
 | `ModuleHost::updateEditorUi` | 에디터가 이번 프레임 입력을 처리한 **뒤** 게임 뷰포트 RT 와 씬 틱 여부를 확정한다. 이 질의를 앞으로 옮기면 **Step 한 칸이 틱 없이 소비**된다. |
 | `LiveReloadManager::update` | (Dev) 모듈 교체는 **틱 직전**에 한다 — 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어진다. |
 | `EngineLoop::tick` → `ModuleHost::endEditorFrame` | 래치된 프레임 상태(`ModuleFrameState`)를 그대로 넘긴다. 뷰 카메라는 tick 내부에서 지연 조회한다 — 미리 잡으면 씬 전환/핫리로드가 파괴한 객체를 역참조한다. |
-| `BackendSwapController::applyIfPending` → `EngineLoop::endFrame` | 백엔드 교체는 프레임 경계에서만 한다. |
+| `RHIBackendSwitcher::applyIfPending` → `EngineLoop::endFrame` | 백엔드 교체는 프레임 경계에서만 한다. |
 
 ## 시간 정책
 

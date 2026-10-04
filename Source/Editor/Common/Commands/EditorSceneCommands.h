@@ -6,7 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
-#include "Editor/Common/Workspace/SelectionManager.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 
 namespace sw
 {

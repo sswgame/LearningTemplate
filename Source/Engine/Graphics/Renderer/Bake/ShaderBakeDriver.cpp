@@ -15,7 +15,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Graphics/Shader/Binding/ShaderBindingContract.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
@@ -132,7 +132,7 @@ namespace sw
                     {
                         ShaderReflectionData reflection = ShaderReflection::reflect( bytecode, fmt );
                         // 구운 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름 · 숫자로 드러난다.
-                        summary._contractViolationCount += ShaderBindingContract::validate( reflection, fmt, outPath );
+                        summary._contractViolationCount += ShaderBindingValidator::validate( reflection, fmt, outPath );
                         mapManifest[outDir].emplace( fileName, std::move( reflection ) );
                     }
                 }

@@ -12,8 +12,8 @@
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
-#include "Editor/Common/Workspace/SelectionManager.h"
 
 namespace sw
 {
@@ -67,7 +67,7 @@ namespace sw::editor
     class EditorWorkspace
     {
     public:
-        explicit EditorWorkspace( SelectionManager* pSelectionManager );
+        explicit EditorWorkspace( EditorSelection* pEditorSelection );
         ~EditorWorkspace() = default;
 
         // ------------------------------------------------------------------------------
@@ -176,7 +176,7 @@ namespace sw::editor
         void clearPrefabIsolation();
 
     private:
-        SelectionManager*            _pSelectionManager;
+        EditorSelection*             _pEditorSelection;
         uint64                       _selectedComponentId;
         uint64                       _observedSceneGeneration;
         uint64                       _scrollToComponentId;
