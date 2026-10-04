@@ -1,0 +1,31 @@
+<Prefab formatVersion="0" name="BarrelSpawner">
+	<GameObject _schemaVersion="0" _name="BarrelSpawner" _bActive="true">
+		<_listComponent>
+			<SceneComponent _componentName="SceneComponent"
+			                _bActive="true"
+			                _localPosition="0,0,0"
+			                _localRotation="0,0,0"
+			                _localScale="1,1,1"
+			                _attachOwner="None"
+			                _attachOwnerId="0"
+			                _attachComponent="None" />
+			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<GimmickNodeDesc _id="every" _kind="Timer" _params="interval=5" />
+					<GimmickNodeDesc _id="spawn"
+					                 _kind="Spawner"
+					                 _params="maxCount=3; prefab=common/prefabs/gimmicks/shooter/explosivebarrel.prefab.xml; offset=0 1 0" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire>
+					<GimmickWireDesc _from="every.OnTick" _to="spawn.Spawn" _bInvert="false" />
+				</_listWire>
+				<_listRestPose />
+				<_stateBytes />
+			</GimmickCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

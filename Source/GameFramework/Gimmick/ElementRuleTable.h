@@ -147,9 +147,14 @@ namespace sw
         static constexpr int32 kMaxStatusCount   = 4;
         static constexpr int32 kMaxMaterialCount = 255;
 
+        /** @brief 공용 기본표 경로입니다. */
+        static constexpr const utf8* kDefaultPath = "common/data/elements/default.elements.xml";
+
         [[nodiscard]] bool loadFromResource( string_view path );
         [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
         void               clear();
+        /** @brief 경로의 표를 한 번 읽어 프로세스 동안 나눠 씁니다(오브젝트 원소 상태가 같은 표를 본다). 읽지 못했으면 nullptr 입니다. 여러 스레드에서 불려도 됩니다. */
+        static const ElementRuleTable* findShared( string_view path );
 
         /** @brief 깃발을 더합니다(이미 있으면 그 번호). 넘치면 −1 입니다. */
         int32 addFlag( const hashed_string& id );

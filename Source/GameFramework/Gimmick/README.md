@@ -89,3 +89,27 @@ floodStatus + through), 걸음 규칙(`Expire` — 상태가 재질 수치만큼
 - 자극은 위에서부터 **처음 맞는 한 줄만** 적용합니다(불: 얼음이면 녹이고, 아니면 탈 것에 붙인다).
 - 액션 어드벤처 키트의 `AdventureElementGrid` 는 이 격자 위에 키트의 재질 열거 · 설정을 얹은 것입니다 — 설정 값으로 기본표와 같은 모양의 표를 코드로 짓습니다
   (`ElementRuleTest.AdventureGridMatchesDefaultTable` 이 걸음마다 같은지 본다).
+
+## 장르 기믹 세트(`Genre/`)와 프리팹
+
+회로(B)와 센서를 다시 쓰는 작은 컴포넌트 + `Resource/common/prefabs/gimmicks/<장르>/*.prefab.xml`(엔진 직렬화기로 쓴 것 — 손으로 쓰지 않는다).
+시험: `GimmickGenreTest`(`Test/EngineTest/TestGimmickGenre.cpp` — 동작 + 모든 프리팹이 스폰되고 회로 검증을 지난다).
+
+| 장르 | 프리팹 | 컴포넌트 · 회로 |
+|------|--------|----------------|
+| 플랫포머 | movingplatform · crumbleplatform · onewayplatform · spring · conveyor · ladder · rope | `SplineComponent` + `Mover`, `CrumblePlatformComponent`, `OneWayPlatformComponent`(`isSolidFor`), `LaunchPadComponent`, `ConveyorComponent`, `ClimbZoneComponent`(`findClimbZone`) |
+| 어드벤처 | pushblock · floorswitch · lever · lockeddoor · torch | `PushBlockComponent`(칸 단위, 막히면 서고 Push 상호작용으로 민다), 센서만(레벨 회로가 배선), `Unlock` → `Latch` → `Door`, `ElementStatusComponent`(원소표의 1 × 1 칸) + `Signal` → `Light` |
+| 슈터 | explosivebarrel · jumppad · keycarddoor · turret · destructiblecover | `ExplosiveBarrelComponent`(사슬), `LaunchPadComponent`, `SwipeKeycard` → `Pulse` → `Door`, `TurretComponent`(고르기 · 시야 · 회전 · 히트스캔), `DestructibleComponent`(단계 · 파괴 훅) + 엄폐 스마트 오브젝트 |
+| 레이싱 | boostpad · itembox | `BoostPadComponent`(`GimmickBoostEvent`), `ItemBoxComponent`(씨앗 + 연 횟수 가중치 뽑기, 숨었다 되살아남) |
+| 공포 | scaretrigger · flickerlight · hidingspot | `ScareTriggerComponent`(연출 신호 · 소리, 한 번), `FlickerLightComponent`(퀘이크 빛 스타일 문자열), `HidingSpotComponent`(스마트 오브젝트 자리 + `State.Hidden`) |
+| 잠입 | squeakyfloor | `NoiseEmitterComponent`(올라서면 · 주기 · 직접 — `GimmickNoiseEvent`, `AiStimulus::_noiseRadius`), `LightExposure::computeExposure`(점 · 스폿 · 방향광, 가림) |
+| 메트로배니아 | abilitygate | `AbilityGateComponent`(능력 태그를 가진 것이 다가오면 몸을 끄고 열린 채 남음) |
+| RPG | gatheringnode | `GatheringNodeComponent`(Gather 상호작용 → 아이템 이벤트, 다 쓰면 꺼졌다 다시 자람) |
+| 공용 | hazardzone · elevator · rotatingplatform · barrelspawner | `Hazard` · `Elevator`(Toggled → Call1, 반전 → Call0) · `Rotator` · `Timer` → `Spawner` |
+
+- 장르 컴포넌트의 시간은 60 Hz 걸음 수로 셉니다(`GenreGimmickUtil::makeClock`). 몸 숨기기(`setBodyActive` — 씬 컴포넌트를 켜고 끔)와 상호작용 켜기는 틱 뒤로 미룹니다.
+- **기믹이 주는 피해(`GimmickDamageUtil`)는 틱 뒤에 대상 센서에 들어갑니다** — 병렬 틱에서 바로 넣으면 대상이 이번 틱에 먹을지가 스케줄에 달려 사슬 폭발 · 롤백이
+  결정적이지 않다. 늘 다음 틱에 먹습니다.
+- 이벤트("game" 채널): `GimmickLaunchEvent` · `GimmickBoostEvent` · `GimmickItemEvent` · `GimmickCueEvent`(연출 이름 — Scare · Explosion · Stage · Destroyed) ·
+  `GimmickNoiseEvent` · `GimmickDamageEvent`. 받는 쪽(이동 몸 · 차량 · 인벤토리 · 카메라 · 오디오)은 게임 · 키트입니다.
+- 프리팹의 콜라이더는 지금 `BoxCollider2DComponent`(트리거 겹침 폴백)입니다. 3D 물리 백엔드가 들어오면 3D 트리거 · 강체 콜라이더로 바꿉니다.

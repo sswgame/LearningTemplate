@@ -1,0 +1,39 @@
+<Prefab formatVersion="0" name="RotatingPlatform">
+	<GameObject _schemaVersion="0" _name="RotatingPlatform" _bActive="true">
+		<_listComponent>
+			<SceneComponent _componentName="SceneComponent"
+			                _bActive="true"
+			                _localPosition="0,0,0"
+			                _localRotation="0,0,0"
+			                _localScale="1,1,1"
+			                _attachOwner="None"
+			                _attachOwnerId="0"
+			                _attachComponent="None" />
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="4,0.3,1"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="SceneComponent#0"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<GimmickNodeDesc _id="spin" _kind="Rotator" _params="speed=45; axis=0 1 0" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire />
+				<_listRestPose />
+				<_stateBytes />
+			</GimmickCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

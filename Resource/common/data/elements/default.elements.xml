@@ -13,6 +13,7 @@
   <Material id="Metal" flags="Conductive"/>
   <Material id="Water" flags="Conductive"/>
   <Material id="Ice"/>
+  <Material id="Torch" flags="Flammable"/>
   <Stimulus id="Fire">
     <On material="Ice" setMaterial="Water" event="Melted"/>
     <On flag="Flammable" without="Burning" addStatus="Burning" event="Ignited"/>

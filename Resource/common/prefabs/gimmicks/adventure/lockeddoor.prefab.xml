@@ -1,0 +1,70 @@
+<Prefab formatVersion="0" name="LockedDoor">
+	<GameObject _schemaVersion="0" _name="LockedDoor" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerId="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="2,3"
+			                        _colliderType="0"
+			                        _bContinuous="false"
+			                        _bTrigger="false" />
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,3,0.3"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="BoxCollider2DComponent#0"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<InteractableComponent _componentName="InteractableComponent"
+			                       _bActive="true"
+			                       _interactionId="Unlock"
+			                       _catalogPath=""
+			                       _alignmentOffset="0,0,0"
+			                       _alignmentYaw="0"
+			                       _lastInteractor="0"
+			                       _cooldownRemaining="0"
+			                       _priority="0"
+			                       _bEnabled="true" />
+			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</GimmickSensorComponent>
+			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<GimmickNodeDesc _id="use" _kind="Interaction" _params="" />
+					<GimmickNodeDesc _id="unlocked" _kind="Latch" _params="" />
+					<GimmickNodeDesc _id="door" _kind="Door" _params="openTime=1; openOffset=0 3 0" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+					<item>0</item>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire>
+					<GimmickWireDesc _from="use.OnUsed" _to="unlocked.Set" _bInvert="false" />
+					<GimmickWireDesc _from="unlocked.Out" _to="door.Open" _bInvert="false" />
+				</_listWire>
+				<_listRestPose />
+				<_stateBytes />
+			</GimmickCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

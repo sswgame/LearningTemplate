@@ -1,0 +1,54 @@
+<Prefab formatVersion="0" name="DestructibleCover">
+	<GameObject _schemaVersion="0" _name="DestructibleCover" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerId="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="2,1"
+			                        _colliderType="0"
+			                        _bContinuous="false"
+			                        _bTrigger="false" />
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,1,0.5"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="BoxCollider2DComponent#0"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</GimmickSensorComponent>
+			<DestructibleComponent _componentName="DestructibleComponent" _bActive="true" _damageTaken="0" _stage="0">
+				<_listStageThreshold>
+					<item>20</item>
+					<item>50</item>
+				</_listStageThreshold>
+			</DestructibleComponent>
+			<SmartObjectComponent _componentName="SmartObjectComponent"
+			                      _bActive="true"
+			                      _smartObjectId="LowCover"
+			                      _catalogPath="">
+				<_listClaimant />
+			</SmartObjectComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

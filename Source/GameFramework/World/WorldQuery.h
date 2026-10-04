@@ -3,7 +3,7 @@
  * @brief 게임플레이가 월드에 묻는 기하 질의(광선 · 시야)의 좁은 창구 — 물리 백엔드를 모르고 씁니다.
  * @details 상호작용 시야(line of sight) · 기믹 레이저 · 포탑 조준이 이것만 부릅니다. 게임이 `IWorldQuery` 를 게임 서비스로 걸면(Jolt 백엔드의
  *          광선 질의) 그것을 쓰고, 없으면 엔진 `PhysicsWorld` 의 AABB 바디를 훑는 폴백(`PhysicsWorldQuery`)을 씁니다. 폴백은 트리거 바디를
- *          막는 것으로 치지 않고 레이어 0 의 충돌 행렬로 거릅니다.
+ *          막는 것으로 치지 않고 레이어 0 의 충돌 행렬로 거릅니다. 2D 콜라이더의 바디는 깊이가 없으므로(Z 0 한 점) 광선의 Z 와 상관없이 맞힙니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

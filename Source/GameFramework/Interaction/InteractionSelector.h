@@ -14,6 +14,8 @@
 
 namespace sw
 {
+    class GameObjectManager;
+
     /** @brief 거리 · 각을 재는 공간입니다. */
     ENUM()
     enum class InteractionSpace : uint8
@@ -62,6 +64,21 @@ namespace sw
         ILineOfSightQuery& operator=( const ILineOfSightQuery& ) = default;
 
         virtual bool hasLineOfSight( const float3& from, const float3& to, uint64 viewerObjectId, uint64 targetObjectId ) const = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 월드 질의(`WorldQuery` — 물리 백엔드 서비스 또는 `PhysicsWorld` 폴백)로 시야를 답합니다. */
+    class SW_GF_API WorldLineOfSightQuery final : public ILineOfSightQuery
+    {
+    public:
+        explicit WorldLineOfSightQuery( const GameObjectManager& manager );
+
+        bool hasLineOfSight( const float3& from, const float3& to, uint64 viewerObjectId, uint64 targetObjectId ) const override;
+
+    private:
+        const GameObjectManager& _manager;
     };
 } // namespace sw
 

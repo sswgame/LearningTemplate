@@ -9,7 +9,6 @@
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Interaction/InteractableComponent.h"
 #include "GameFramework/Interaction/InteractionAuthority.h"
-#include "GameFramework/World/WorldQuery.h"
 
 namespace sw
 {
@@ -19,24 +18,6 @@ namespace sw
         {
             /** @brief 진행 중 대상이 이 배율 거리 밖으로 나가면 취소합니다(경계에서 깜빡이지 않게 고를 때보다 넓다). */
             static constexpr float32 kKeepDistanceScale = 1.25f;
-
-            /** @brief 월드 질의(`WorldQuery`)로 시야를 답합니다. */
-            class WorldLineOfSight final : public ILineOfSightQuery
-            {
-            public:
-                explicit WorldLineOfSight( const GameObjectManager& manager )
-                    : _manager{ manager }
-                {
-                }
-
-                bool hasLineOfSight( const float3& from, const float3& to, uint64 viewerObjectId, uint64 targetObjectId ) const override
-                {
-                    return WorldQuery::hasLineOfSight( _manager, from, to, viewerObjectId, targetObjectId );
-                }
-
-            private:
-                const GameObjectManager& _manager;
-            };
         };
     } // namespace
 } // namespace sw
@@ -186,8 +167,8 @@ namespace sw
         }
         else
         {
-            const InteractorComponentInternal::WorldLineOfSight lineOfSight{ *pManager };
-            const int32                                         best = InteractionSelector::selectBest( viewer, _listCandidate, _bUseLineOfSight ? &lineOfSight : nullptr );
+            const WorldLineOfSightQuery lineOfSight{ *pManager };
+            const int32                 best = InteractionSelector::selectBest( viewer, _listCandidate, _bUseLineOfSight ? &lineOfSight : nullptr );
             if ( best >= 0 )
             {
                 const size_t index = static_cast<size_t>( best );

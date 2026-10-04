@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
@@ -63,6 +64,8 @@ namespace sw
 
         /** @brief 끝났습니다 — 쿨다운 · 기믹 센서 · 이벤트 · 권한 훅. 게임 스레드에서 부릅니다. */
         void completeInteraction( const GameObject& interactor );
+        /** @brief 마지막으로 끝낸 이입니다(밀기 방향 · 채집 보상 대상). */
+        GameObjectHandle getLastInteractor() const { return _lastInteractor; }
 
     private:
         void resolveDefinition();
@@ -76,6 +79,8 @@ namespace sw
         float3 _alignmentOffset;
         PROPERTY( Category = "Interaction", DisplayName = "Alignment Yaw", Tooltip = "Facing of the interactor at the alignment point, in this object's space", Meta = "Units=deg" )
         float32 _alignmentYaw;
+        PROPERTY( Category = "Interaction", DisplayName = "Last Interactor", Tooltip = "Who completed it last (runtime)" )
+        GameObjectHandle _lastInteractor;
         PROPERTY( Category = "Interaction", DisplayName = "Cooldown Remaining", Tooltip = "Seconds until usable again (runtime)", Meta = "Units=s" )
         float32 _cooldownRemaining;
         PROPERTY( Category = "Interaction", DisplayName = "Priority", Tooltip = "Higher wins over nearer candidates" )

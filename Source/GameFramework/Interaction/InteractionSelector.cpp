@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/World/WorldQuery.h"
+
 namespace sw
 {
     namespace
@@ -39,6 +41,16 @@ namespace sw
 
 namespace sw
 {
+    WorldLineOfSightQuery::WorldLineOfSightQuery( const GameObjectManager& manager )
+        : _manager{ manager }
+    {
+    }
+
+    bool WorldLineOfSightQuery::hasLineOfSight( const float3& from, const float3& to, uint64 viewerObjectId, uint64 targetObjectId ) const
+    {
+        return WorldQuery::hasLineOfSight( _manager, from, to, viewerObjectId, targetObjectId );
+    }
+
     bool InteractionSelector::isInReach( const InteractionViewer& viewer, const InteractionCandidate& candidate, float32& outDistance )
     {
         using Internal      = InteractionSelectorInternal;

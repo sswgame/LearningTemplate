@@ -24,6 +24,7 @@ namespace sw
         , _catalogPath{}
         , _alignmentOffset{}
         , _alignmentYaw{ 0.0f }
+        , _lastInteractor{}
         , _cooldownRemaining{ 0.0f }
         , _priority{ 0 }
         , _bEnabled{ true }

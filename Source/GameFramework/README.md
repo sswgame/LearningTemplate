@@ -56,7 +56,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `InteractorComponent` · `SmartObjectComponent` · `GrabberComponent`), 권한 훅(`IInteractionAuthority`). 2D · 3D 공용. `Interaction/README.md`
 - **Gimmick**: 데이터로 배선하는 레벨 장치 — 센서 · 연산자(AND · OR · NOT · 카운터 · 래치 · 지연 · 시퀀스) · 액추에이터(문 · 무버 · 엘리베이터 · 회전 · 스포너 ·
   위험 지대 · 빛 · 소리 · 켜기) 노드 등록부(`GimmickNodeRegistry`), 검증 · 고정 스텝 · 상태 바이트 회로(`GimmickCircuit`), 씬 컴포넌트(`GimmickCircuitComponent` ·
-  `GimmickSensorComponent`), 원소 상호작용 규칙표(`ElementRuleTable` · `ElementGrid` — 기본표 `common/data/elements/default.elements.xml`). 2D · 3D 공용. `Gimmick/README.md`
+  `GimmickSensorComponent`), 원소 상호작용 규칙표(`ElementRuleTable` · `ElementGrid` — 기본표 `common/data/elements/default.elements.xml`), 장르 기믹 세트(`Genre/` — 플랫포머 · 어드벤처 · 슈터 · 레이싱 · 공포 · 잠입 · 메트로배니아 · RPG, 프리팹 `common/prefabs/gimmicks`). 2D · 3D 공용. `Gimmick/README.md`
 - **Spline**: 곡선(`SplinePath` — Catmull-Rom · 3차 베지어 · 꺾은선, 호 길이 매개변수, 가장 가까운 점, 고른 간격 샘플)과 씬 컴포넌트(`SplineComponent`),
   누적 거리 표 계산(`ArcLengthUtil` — 코스터 트랙도 쓴다). 기믹 무버 · 카메라 레일 · 길이 함께 쓴다. `Spline/README.md`
 - **UI**: 장르 무관 UI 컴포넌트 — `RuntimeHud`, `DialogueRunnerComponent`,
