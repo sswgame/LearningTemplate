@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
+#include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -24,6 +25,10 @@ namespace sw
             static constexpr float32 kMoveIdle = 0.0f;
             static constexpr float32 kMoveWalk = 1.0f;
             static constexpr float32 kMoveRun  = 2.0f;
+            /** @brief 플레이어가 이만큼 움직이면 목적지를 다시 건다(미터) — 프레임마다 경로를 새로 구하지 않는다. */
+            static constexpr float32 kRetargetDistance = 0.5f;
+            /** @brief 이 빠르기 아래면 서 있는 클립을 튼다(m/s). */
+            static constexpr float32 kWalkSpeed = 0.3f;
         };
     } // namespace
 } // namespace sw
@@ -45,6 +50,7 @@ namespace sw
         , _runSpeed{ 3.2f }
         , _turnRate{ 6.0f }
         , _position{ 0.0f, 0.0f, 0.0f }
+        , _lastTarget{ 0.0f, 0.0f, 0.0f }
         , _yaw{ 0.0f }
         , _health{ 30.0f }
         , _maxHealth{ 30.0f }
@@ -83,6 +89,16 @@ namespace sw
         HealthBarComponent* pBar = pOwner != nullptr ? pOwner->getComponent<HealthBarComponent>() : nullptr;
         if ( pBar != nullptr )
             pBar->resetRatio( 1.0f );
+        // 내비메시 에이전트가 있으면 걷기는 그것이 맡는다 — 몸 요는 이 컴포넌트가 돌린다(휘두를 때 플레이어 쪽을 본다).
+        NavMeshAgentComponent* pAgent = pOwner != nullptr ? pOwner->getComponent<NavMeshAgentComponent>() : nullptr;
+        if ( pAgent != nullptr )
+        {
+            pAgent->setMaxSpeed( speed );
+            pAgent->setStoppingDistance( _reach * 0.85f );
+            pAgent->setRadius( _radius );
+            pAgent->warp( position );
+        }
+        _lastTarget = float3{ 1.0e9f, 0.0f, 1.0e9f };
     }
 
     void ShooterEnemyComponent::applyDamage( float32 amount )
@@ -145,6 +161,10 @@ namespace sw
         const float32 distance = toTarget.getLength();
         float32       moveCode = Internal::kMoveIdle;
         float32       wantYaw  = distance > 1.0e-4f ? MathUtil::atan2( toTarget._x, toTarget._z ) : _yaw;
+        // 내비메시 에이전트(프리팹)가 있으면 상자 더미를 경로로 돌아가고 이웃은 군중이 비킨다. 자리는 에이전트가 쓴다.
+        NavMeshAgentComponent* pAgent = pOwner->getComponent<NavMeshAgentComponent>();
+        if ( pAgent != nullptr )
+            _position = pAgent->getAgentPosition();
         switch ( _phase )
         {
             case ShooterEnemyPhase::Rising:
@@ -162,7 +182,29 @@ namespace sw
                     break;
                 }
                 if ( distance <= _reach * 0.85f )
+                {
+                    if ( pAgent != nullptr && pAgent->hasDestination() )
+                        pAgent->stop();
                     break;
+                }
+                if ( pAgent != nullptr )
+                {
+                    const float3 retarget = target - _lastTarget;
+                    const bool   bMoved   = retarget._x * retarget._x + retarget._z * retarget._z > Internal::kRetargetDistance * Internal::kRetargetDistance;
+                    if ( bMoved || pAgent->hasDestination() == false )
+                    {
+                        pAgent->setDestination( target );
+                        _lastTarget = target;
+                    }
+                    const float3& velocity = pAgent->getVelocity();
+                    const float32 speed    = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );
+                    if ( speed > Internal::kWalkSpeed )
+                    {
+                        wantYaw  = MathUtil::atan2( velocity._x, velocity._z );
+                        moveCode = speed >= _runSpeed ? Internal::kMoveRun : Internal::kMoveWalk;
+                    }
+                    break;
+                }
                 // 다가온다 — 이웃과 떨어지고 상자를 돌아간다(밀려난다). 이웃은 디렉터가 적은 이번 프레임의 자리다.
                 float3                          steer    = distance > 1.0e-4f ? toTarget * ( 1.0f / distance ) : float3{ 0.0f };
                 const GameObjectHandle          self     = pOwner->getHandle();
@@ -216,10 +258,14 @@ namespace sw
         const bool bTurning = _phase == ShooterEnemyPhase::Chasing || _phase == ShooterEnemyPhase::Attacking;
         if ( bTurning )
             _yaw = OrientationUtil::turnTowardAngle( _yaw, wantYaw, _turnRate * step );
+        // 쫓지 않는 동안(일어남 · 휘두름 · 움찔 · 쓰러짐)은 에이전트를 세운다.
+        if ( pAgent != nullptr && _phase != ShooterEnemyPhase::Chasing && pAgent->hasDestination() )
+            pAgent->stop();
         SceneComponent* pScene = pOwner->getPrimarySceneComponent();
         if ( pScene != nullptr )
         {
-            pScene->setLocalPosition( _position );
+            if ( pAgent == nullptr )
+                pScene->setLocalPosition( _position );
             pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         }
         updateAnimator( moveCode );

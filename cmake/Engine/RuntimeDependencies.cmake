@@ -106,3 +106,24 @@ function(sw_copyVulkanValidationRuntime TARGET_NAME)
     sw_copyVcpkgSharedLib(${TARGET_NAME} "mimalloc")
     sw_copyVcpkgSharedLib(${TARGET_NAME} "mimalloc-redirect")
 endfunction()
+
+# ------------------------------------------------------------------------------
+# 5) sw_copyTracyRuntime — TracyClient.dll(Engine 이 지연 로드한다)
+# vcpkg 의 Debug DLL 은 debug/bin/Debug/ 에 있어 applocal 이 찾지 못한다. 임포트 타깃이 아는 구성별 위치를 그대로 옮긴다.
+# Tracy 를 링크하지 않은 구성(Shipping · SW_ENABLE_TRACY=OFF · 리눅스 정적)은 아무것도 하지 않는다.
+# ------------------------------------------------------------------------------
+function(sw_copyTracyRuntime TARGET_NAME)
+    if(SW_SHIPPING_BUILD OR NOT SW_ENABLE_TRACY OR NOT WIN32 OR NOT TARGET Tracy::TracyClient)
+        return()
+    endif()
+
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        get_target_property(tracyDll Tracy::TracyClient IMPORTED_LOCATION_DEBUG)
+    else()
+        get_target_property(tracyDll Tracy::TracyClient IMPORTED_LOCATION_RELEASE)
+    endif()
+
+    if(tracyDll)
+        sw_queueRuntimeCopy(${TARGET_NAME} "${tracyDll}")
+    endif()
+endfunction()

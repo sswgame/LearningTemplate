@@ -10,3 +10,9 @@ sw_addVcpkgConfigLib(
 	PACKAGE Tracy
 	CONFIG_TARGET Tracy::TracyClient
 )
+
+# 임포트 타깃은 이 디렉터리에만 보인다. Engine(Source/Engine/CMakeLists.txt)이 정의 · include 경로를 Tracy 구현 소스에만 붙이려고
+# `$<TARGET_PROPERTY:Tracy::TracyClient,...>` 를 읽고, App · EngineTest 가 DLL 위치를 읽으므로 전역으로 올린다.
+if(TARGET Tracy::TracyClient)
+	set_target_properties(Tracy::TracyClient PROPERTIES IMPORTED_GLOBAL TRUE)
+endif()

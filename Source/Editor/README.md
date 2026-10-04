@@ -38,7 +38,8 @@
 
 ### 기능
 
-- **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler,
+- **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler(CPU 구간 · GPU 패스 · 카운터 실시간 표 + 프레임 그래프 — 집계는 ImGui 없는
+  `ProfilerScopeHistory`, "Open Tracy" 는 `Common/Commands/EditorTracyLauncher` 가 같은 판 Tracy 뷰어를 띄워 localhost 에 붙인다),
   Sequencer, Animation Graph, Animation Rewind(기록된 포즈 · 상태를 시간 막대로 훑기 — 훑으면 PIE 를 멈춘다), Dialogue Graph, Prefab Editor, Tile Map,
   Sprite Clip, User Settings(플레이어 옵션을 메뉴 바인딩 API 로 바꿔 보는 창 —
   셀프 시험 `userSettings.panelDrawsEveryTab`)

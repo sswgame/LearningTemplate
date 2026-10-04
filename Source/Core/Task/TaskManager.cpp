@@ -4,11 +4,14 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/Futex.h"
+#include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Task/TaskNode.h"
 #include "Core/Task/TaskNodePool.h"
 #include "Core/Time/MonotonicClock.h"
@@ -1209,6 +1212,12 @@ namespace sw
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
         CrashHandler::initializeCurrentThread();
         t_currentWorkerIndex = static_cast<int32>( workerId );
+        {
+            // 디버거 · 프로파일러(Tracy)가 같은 이름을 본다. 번호는 워커 슬롯 번호다.
+            fixed_string<constant::kMaxBuffer32> threadName;
+            formatstring( threadName.data(), threadName.capacity(), "Worker %#", workerId );
+            ThreadName::setCurrentThreadName( threadName.c_str() );
+        }
 
         WorkerSlot&  slot    = *std::as_const( _listWorkerSlot )[workerId];
         const uint64 idleBit = static_cast<uint64>( 1 ) << workerId;

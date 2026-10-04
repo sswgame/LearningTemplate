@@ -4,6 +4,7 @@
 #include "Core/File/AsyncFileIoBackend.h"
 
 #if defined( SW_PLATFORM_LINUX )
+    #include "Core/Concurrency/ThreadName.h"
     #include "Core/Log/Logger.h"
     #include "Core/Memory/MemoryProfiler.h"
     #include "Core/Process/CrashHandler.h"
@@ -220,6 +221,7 @@ namespace sw
         {
             const ScopedMemoryTag threadMemoryTag{ memoryTag };
             CrashHandler::initializeCurrentThread();
+            ThreadName::setCurrentThreadName( "IO.Uring" );
             armWakeRead();
             while ( true )
             {

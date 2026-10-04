@@ -9,6 +9,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Commands/EditorTracyLauncher.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -25,6 +26,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/ProfilerBackend.h"
 
 #include <imgui.h>
 
@@ -73,15 +76,47 @@ namespace sw::editor
         , _historyOffset{ 0 }
         , _catalogJob{}
         , _catalogCounts{}
+        , _scopeHistory{}
+        , _rowQuery{}
+        , _listScratchRow{}
+        , _listScratchSeries{}
+        , _arrFilter{}
+        , _lastTracyResult{ EditorTracyLaunchResult::Launched }
         , _bCatalogDirty{ SW_TRUE }
+        , _bCollect{ SW_TRUE }
+        , _bTracyTried{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
 
     void ProfilerPanel::drawContent()
     {
+        // 패널이 열려 있는 동안 엔진 프로파일러를 켜 두고 프레임마다 한 칸 담는다(탭과 무관 — 탭을 바꿔도 그래프가 끊기지 않게).
+        FrameProfiler* pProfiler = editor::getService<FrameProfiler>();
+        if ( pProfiler != nullptr )
+        {
+            if ( _bCollect == SW_TRUE && pProfiler->isEnabled() == false )
+                pProfiler->setEnabled( true );
+            std::ignore = _scopeHistory.capture( *pProfiler );
+        }
+
         if ( ImGui::BeginTabBar( "ProfilerTabs" ) )
         {
+            if ( ImGui::BeginTabItem( "CPU Scopes" ) )
+            {
+                drawScopeTab( ProfilerScopeKind::Cpu );
+                ImGui::EndTabItem();
+            }
+            if ( ImGui::BeginTabItem( "GPU Passes" ) )
+            {
+                drawScopeTab( ProfilerScopeKind::Gpu );
+                ImGui::EndTabItem();
+            }
+            if ( ImGui::BeginTabItem( "Counters" ) )
+            {
+                drawScopeTab( ProfilerScopeKind::Counter );
+                ImGui::EndTabItem();
+            }
             if ( ImGui::BeginTabItem( "Performance & Scene" ) )
             {
                 drawPerformanceTab();
@@ -99,6 +134,152 @@ namespace sw::editor
             }
             ImGui::EndTabBar();
         }
+    }
+
+    void ProfilerPanel::drawScopeTab( ProfilerScopeKind kind )
+    {
+        drawCaptureControls();
+        drawFrameGraph();
+        ImGui::Separator();
+        drawScopeTable( kind );
+    }
+
+    void ProfilerPanel::drawCaptureControls()
+    {
+        bool bCollect = _bCollect == SW_TRUE;
+        if ( ImGui::Checkbox( "Collect", &bCollect ) )
+        {
+            _bCollect                = bCollect ? SW_TRUE : SW_FALSE;
+            FrameProfiler* pProfiler = editor::getService<FrameProfiler>();
+            if ( pProfiler != nullptr )
+                pProfiler->setEnabled( bCollect );
+        }
+        ImGui::SameLine();
+        const uint64 capturedFrames = MathUtil::min( _scopeHistory.getCapturedFrameCount(), static_cast<uint64>( UINT32_MAX ) );
+        ImGui::TextDisabled( "%u frames window, %u captured", _scopeHistory.getWindowFrame(), static_cast<uint32>( capturedFrames ) );
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( "Clear" ) )
+            _scopeHistory.reset();
+
+        // Tracy — 시간축 분석은 외부 뷰어가 한다. 상태 한 줄과 여는 버튼.
+        ImGui::SameLine();
+        ImGui::TextUnformatted( "|" );
+        ImGui::SameLine();
+        const IProfilerBackend* pBackend = ProfilerBackend::getActiveBackend();
+        if ( ProfilerBackend::isTracyCompiled() == false )
+            ImGui::TextDisabled( "Tracy: not in this build" );
+        else if ( pBackend == nullptr )
+            ImGui::TextDisabled( "Tracy: off" );
+        else
+            ImGui::Text( "Tracy: on (port %u, viewer %s)", static_cast<uint32>( ProfilerBackend::getTracyPort() ),
+                         pBackend->isViewerConnected() ? "connected" : "waiting" );
+        ImGui::SameLine();
+        ImGui::BeginDisabled( ProfilerBackend::isTracyCompiled() == false );
+        if ( ImGui::SmallButton( "Open Tracy" ) )
+        {
+            _lastTracyResult = EditorTracyLauncher::openViewer();
+            _bTracyTried     = SW_TRUE;
+        }
+        ImGui::EndDisabled();
+        if ( _bTracyTried == SW_TRUE && _lastTracyResult != EditorTracyLaunchResult::Launched )
+            ImGui::TextColored( ImVec4{ 1.0f, 0.6f, 0.3f, 1.0f }, "%s", EditorTracyLauncher::describeResult( _lastTracyResult ) );
+    }
+
+    void ProfilerPanel::drawFrameGraph()
+    {
+        // 세 줄 — 게임 스레드 · 렌더 스레드 · GPU. 같은 축(ms)으로 그려야 누가 프레임을 정하는지 보인다.
+        static constexpr const utf8* kArrSeriesName[] = { "GT.Frame", "RT.Frame", "GPU.Frame" };
+        float32                      maxMicro{ 1000.0f };
+        for ( const utf8* pSeriesName : kArrSeriesName )
+        {
+            if ( _scopeHistory.copySeries( pSeriesName, _listScratchSeries ) == false )
+                continue;
+            for ( const float32 value : _listScratchSeries )
+                maxMicro = MathUtil::max( maxMicro, value );
+        }
+        const float32 maxMs = maxMicro / 1000.0f;
+        for ( const utf8* pSeriesName : kArrSeriesName )
+        {
+            if ( _scopeHistory.copySeries( pSeriesName, _listScratchSeries ) == false || _listScratchSeries.empty() )
+            {
+                ImGui::TextDisabled( "%s: no samples", pSeriesName );
+                continue;
+            }
+            for ( float32& value : _listScratchSeries )
+                value /= 1000.0f;
+            fixed_string<constant::kMaxBuffer64> overlay;
+            formatstring( overlay.data(), overlay.capacity(), "%# %# ms", pSeriesName,
+                          Fmt( static_cast<float64>( _listScratchSeries.back() ), Format().precision( 2 ) ) );
+            ImGui::PlotLines( pSeriesName, _listScratchSeries.data(), static_cast<int32>( _listScratchSeries.size() ), 0, overlay.c_str(), 0.0f,
+                              maxMs, ImVec2{ 0.0f, 48.0f } );
+        }
+    }
+
+    void ProfilerPanel::drawScopeTable( ProfilerScopeKind kind )
+    {
+        EditorWidgets::drawSearchField( "##profilerScopeFilter", _arrFilter, constant::kMaxBuffer128, "Filter scopes..." );
+        _rowQuery._kind       = kind;
+        _rowQuery._filterText = _arrFilter;
+
+        const bool            bCounter = kind == ProfilerScopeKind::Counter;
+        const utf8* const     pUnit    = bCounter ? "" : " (us)";
+        const ImGuiTableFlags flags    = ImGuiTableFlags_Sortable | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY |
+                                      ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp;
+        if ( ImGui::BeginTable( "##profilerScopes", 7, flags, ImGui::GetContentRegionAvail() ) == false )
+            return;
+
+        fixed_string<constant::kMaxBuffer32> header;
+        ImGui::TableSetupScrollFreeze( 0, 1 );
+        ImGui::TableSetupColumn( "Scope", ImGuiTableColumnFlags_WidthStretch, 3.0f, static_cast<ImGuiID>( ProfilerSortColumn::Name ) );
+        formatstring( header.data(), header.capacity(), "Last%#", pUnit );
+        ImGui::TableSetupColumn( header.c_str(), 0, 1.0f, static_cast<ImGuiID>( ProfilerSortColumn::Last ) );
+        formatstring( header.data(), header.capacity(), "Avg%#", pUnit );
+        ImGui::TableSetupColumn( header.c_str(), 0, 1.0f, static_cast<ImGuiID>( ProfilerSortColumn::Average ) );
+        formatstring( header.data(), header.capacity(), "p50%#", pUnit );
+        ImGui::TableSetupColumn( header.c_str(), 0, 1.0f, static_cast<ImGuiID>( ProfilerSortColumn::P50 ) );
+        formatstring( header.data(), header.capacity(), "p99%#", pUnit );
+        ImGui::TableSetupColumn( header.c_str(), ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending, 1.0f,
+                                 static_cast<ImGuiID>( ProfilerSortColumn::P99 ) );
+        formatstring( header.data(), header.capacity(), "Max%#", pUnit );
+        ImGui::TableSetupColumn( header.c_str(), 0, 1.0f, static_cast<ImGuiID>( ProfilerSortColumn::Max ) );
+        ImGui::TableSetupColumn( "Frames", ImGuiTableColumnFlags_NoSort, 0.8f );
+        ImGui::TableHeadersRow();
+
+        // 머리줄을 누르면 정렬이 바뀐다. 집계 쪽 정렬을 그대로 쓴다(ImGui 는 열 번호만 넘긴다).
+        ImGuiTableSortSpecs* pSortSpecs = ImGui::TableGetSortSpecs();
+        if ( pSortSpecs != nullptr && pSortSpecs->SpecsCount > 0 )
+        {
+            _rowQuery._sortColumn  = static_cast<ProfilerSortColumn>( pSortSpecs->Specs[0].ColumnUserID );
+            _rowQuery._bDescending = pSortSpecs->Specs[0].SortDirection == ImGuiSortDirection_Descending;
+        }
+
+        _scopeHistory.makeRows( _rowQuery, _listScratchRow );
+        for ( const ProfilerScopeRow& row : _listScratchRow )
+        {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted( row._name.c_str() );
+            const float64 arrValue[] = { row._last, row._average, row._p50, row._p99, row._max };
+            for ( const float64 value : arrValue )
+            {
+                ImGui::TableNextColumn();
+                if ( value < 0.0 )
+                    ImGui::TextDisabled( "-" );
+                else if ( bCounter )
+                    ImGui::Text( "%.0f", value );
+                else
+                    ImGui::Text( "%.1f", value );
+            }
+            ImGui::TableNextColumn();
+            ImGui::Text( "%u", row._sampleCount );
+        }
+        if ( _listScratchRow.empty() )
+        {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::TextDisabled( kind == ProfilerScopeKind::Gpu ? "No GPU timestamps yet (this backend may not support them)" : "No samples yet" );
+        }
+        ImGui::EndTable();
     }
 
     void ProfilerPanel::drawPerformanceTab()

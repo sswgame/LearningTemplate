@@ -1,6 +1,6 @@
 /**
  * @file ShooterEnemyComponent.h
- * @brief 스켈레톤 적 하나 — 땅에서 일어나 플레이어 쪽으로 걸어오며 이웃과 떨어지고 상자를 돌아가고, 닿으면 휘두르고, 맞으면 움찔하고, 쓰러집니다.
+ * @brief 스켈레톤 적 하나 — 땅에서 일어나 플레이어 쪽으로 걸어오며 이웃과 떨어지고 상자를 돌아가고(내비메시 에이전트), 닿으면 휘두르고, 맞으면 움찔하고, 쓰러집니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -98,7 +98,8 @@ namespace sw
         PROPERTY( Category = "Enemy", DisplayName = "Turn Rate", Tooltip = "How fast the body turns to its heading", Min = 0.0, Meta = "Units=rad/s" )
         float32 _turnRate;
 
-        float3            _position; ///< 발
+        float3            _position;   ///< 발
+        float3            _lastTarget; ///< 내비메시 에이전트에 마지막으로 건 목적지
         float32           _yaw;
         float32           _health;
         float32           _maxHealth;
