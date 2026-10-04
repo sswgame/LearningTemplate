@@ -57,6 +57,8 @@ namespace sw
         PROPERTY()
         string _shaderMeshMorph{ "engine/shaders/meshmorph.hlsl" };
         PROPERTY()
+        string _shaderMeshSkin{ "engine/shaders/meshskin.hlsl" };
+        PROPERTY()
         string _shaderInstanceSort{ "engine/shaders/instancesort.hlsl" };
         PROPERTY()
         string _shaderFullscreenTriangle{ "engine/shaders/fullscreentriangle.hlsl" };

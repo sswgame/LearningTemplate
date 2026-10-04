@@ -141,6 +141,14 @@ namespace sw
             float32 _frequency{ 0.0f };
             uint32  _vertexCount{ 0 };
         };
+        /** @brief 메시 스킨 디스패치 상수(meshskin.hlsl `SkinParams`, b0)입니다. */
+        struct GpuSkinParams
+        {
+            uint32 _skinVertexBase{ 0 };
+            uint32 _skinVertexCount{ 0 };
+            uint32 _skinBoneCount{ 0 };
+            uint32 _pad{ 0 };
+        };
         /** @brief 인스턴스 정렬 디스패치 상수(instancesort.hlsl `SortParams`, b0)입니다. */
         struct GpuSortParams
         {

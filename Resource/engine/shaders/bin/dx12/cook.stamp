@@ -13,6 +13,7 @@ SWCOOK 3
 7717b8533cdd5a0b forwardlit.hlsl
 778c01cab734f2c6 binding.hlsli
 7b589f7f72d93a5b fullscreenblit.hlsl
+7c625c2822ac9953 meshskin.hlsl
 94c48c72e58dff6e postoutline.hlsl
 980c18c4c174d3fb postoutline.hlsli
 9d56604bd35346ce instanceanim.hlsl

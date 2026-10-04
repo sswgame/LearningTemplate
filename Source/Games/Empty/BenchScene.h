@@ -60,11 +60,15 @@ namespace sw
         void update( float32 deltaTime );
 
         /** @brief 벤치가 씬을 만들어 두었으면 true. */
-        bool isActive() const { return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false; }
+        bool isActive() const { return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false || _bCharacterFraming == SW_TRUE; }
 
     private:
         /** @brief 씬을 확보하고 큐브 meshCount 개를 격자로 채웁니다. */
         void spawn( uint32 meshCount );
+        /** @brief `-gv_benchCharacters=N` — 스킨드 캐릭터 N 명을 한 줄로 세우고 Idle · Walking_A 를 번갈아 재생합니다. */
+        void spawnCharacters( uint32 characterCount );
+        /** @brief 캐릭터 줄이 화면에 차도록 씬의 카메라를 맞춥니다(허리 높이를 봅니다). */
+        void frameCharacterCameras( Scene* pScene, float32 halfExtent );
 
         /** @brief 인덱스로부터 결정적인 밝은 색을 만듭니다. */
         static float4 makeBenchColor( uint32 index );
@@ -160,7 +164,9 @@ namespace sw
         /** @brief 격자 한 변의 큐브 수. 카메라를 다시 맞출 때 씁니다. */
         uint32 _benchGridSide;
         /** @brief 늦게 생기는 에디터 카메라까지 한 번 더 맞췄으면 1. */
-        uint8                  _bRefreshedCameras : 1;
-        [[maybe_unused]] uint8 _reserved          : 7;
+        uint8 _bRefreshedCameras : 1;
+        /** @brief 캐릭터 벤치를 세웠으면 1 — 카메라를 캐릭터 기준으로 맞춥니다. */
+        uint8                  _bCharacterFraming : 1;
+        [[maybe_unused]] uint8 _reserved          : 6;
     };
 } // namespace sw

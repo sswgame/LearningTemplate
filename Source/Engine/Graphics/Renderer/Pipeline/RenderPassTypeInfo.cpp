@@ -172,6 +172,12 @@ namespace sw
                         info._flags          = Flag::kCompute;
                         break;
                     }
+                    case RenderPassType::MeshSkin:
+                    {
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderMeshSkin;
+                        info._flags          = Flag::kCompute;
+                        break;
+                    }
                 }
                 return info;
             }

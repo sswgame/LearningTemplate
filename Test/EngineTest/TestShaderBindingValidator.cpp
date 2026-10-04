@@ -682,8 +682,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
         }
     }
 
-    // 2) 계약 표 밖에서 C++ 가 이름으로 부르는 리소스(meshmorph 의 레스트 · 결과 버퍼)
-    const utf8* arrResourceName[] = { sw::shaderslot::resname::kMorphRestVertices, sw::shaderslot::resname::kMorphVerticesRw };
+    // 2) 계약 표 밖에서 C++ 가 이름으로 부르는 리소스(meshmorph · meshskin 의 레스트 · 결과 · 가중치 · 팔레트 버퍼)
+    const utf8* arrResourceName[] = { sw::shaderslot::resname::kMorphRestVertices, sw::shaderslot::resname::kMorphVerticesRw, sw::shaderslot::resname::kSkinWeights,
+                                      sw::shaderslot::resname::kSkinPalette };
     for ( const utf8* pName : arrResourceName )
         SW_EXPECT_TRUE_MSG( hasName( allNameSet._uniqueBindingName, pName ), ( sw::string( "리소스 '" ) + pName + "' 가 어느 매니페스트에도 없다" ).c_str() );
 

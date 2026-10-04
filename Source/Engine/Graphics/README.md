@@ -76,16 +76,16 @@ DX11 · DX12 · OpenGL · Vulkan
 | `ShaderReflection` · `ShaderReflectionLibrary` | Shader/Reflection/ | 바이트코드 리플렉션과 쿠킹된 매니페스트 |
 | `ShaderBindingSlots` · `ShaderBindingLayout` · `ShaderBindingValidator` | Shader/Binding/ | 슬롯 정본, 병합 레이아웃, 쿠킹된 바이너리 대조 |
 | `Mesh` · `MeshUtil` | Mesh/ | 메시 버퍼 · 기본 도형 생성 |
-| `MeshAssetFormat` · `MeshCache` | Mesh/ | `.mesh` 읽기 · 쓰기(쓰기는 에디터 모델 임포터), 경로당 `Mesh` 하나(약한 참조) · 제자리 핫 리로드. `MeshComponent::_meshId` 가 `.mesh` 경로면 여기서 받는다 |
+| `MeshAssetFormat` · `MeshCache` | Mesh/ | `.mesh` 읽기 · 쓰기(쓰기는 에디터 모델 임포터, 판 2 = 스킨 스트림), 경로당 `Mesh` 하나(약한 참조) · 제자리 핫 리로드. `MeshComponent::_meshId` 가 `.mesh` 경로면 여기서 받는다. 스킨드 메시는 `Mesh::setSkin`(정점마다 본 넷 · 가중치) |
 | `Texture2D` · `TextureCache` | Texture/ | 텍스처 에셋 · 캐시 |
 | `GpuUploadQueue` | Upload/ | GPU 리소스를 그리기 전에 워커로 만든다 |
 | `FrameRenderer` · `RenderView` | Renderer/Frame/ | 한 프레임 오케스트레이션과 뷰 |
 | `PassConstantRing` · `RenderPsoCache` · `TransientAttachmentPool` | Renderer/Frame/ | FrameRenderer 가 소유하는 셋 — 드로우별 상수버퍼 슬롯 링 · PSO 저장소(해제 순서) · 이름으로 찾는 첨부 풀 |
-| `FrameRendererCompute` | Renderer/Frame/ | 컴퓨트 프리패스 넷 — 인스턴스 애니메이션 · 메시 모프 · GPU 컬링 · 인스턴스 정렬. 그래프 패스가 아니라 그리기 전에 직접 걸린다 |
+| `FrameRendererCompute` | Renderer/Frame/ | 컴퓨트 프리패스 다섯 — 인스턴스 애니메이션 · 메시 모프 · 메시 스킨(GPU 스키닝) · GPU 컬링 · 인스턴스 정렬. 그래프 패스가 아니라 그리기 전에 직접 걸린다 |
 | `RenderGraph` | Renderer/Graph/ | 패스 의존성 정렬·배리어 추론 |
 | `RenderThread` | Renderer/ | 렌더 스레드 루프 |
 | `GpuSceneBuilder` → `GpuSceneSnapshot` → `GpuScene` | Renderer/Scene/ | GT 가 씬을 훑어 스냅샷을 만들고 RT 가 받아 GPU 버퍼로 올린다 — 두 클래스는 스냅샷 타입으로만 만난다 |
-| `GpuMeshVertexPool` · `GpuMeshMorphPool` | Renderer/Scene/ | RT 소유 GPU 풀 — 씬 정점을 한 버퍼에(멀티 드로우) · 모프 결과 |
+| `GpuMeshVertexPool` · `GpuMeshMorphPool` | Renderer/Scene/ | RT 소유 GPU 풀 — 씬 정점을 한 버퍼에(멀티 드로우) · 모프 · 스키닝 결과(언리얼 GPU Skin Cache 자리) |
 | `RenderPipelineAssetCache` · `RenderPassAsset` · `RenderPipelineAsset` | Renderer/Pipeline/ | XML/에셋 쪽 패스·파이프라인 |
 | `RenderFramePacket` | Renderer/Frame/ | 프레임 입력 패킷 |
 | `DebugDrawQueue` · `RenderTargetRegistry` | Renderer/Debug/ | 에디터가 읽는 디버그 통로 — 라인/스피어 큐 · 프레임 렌더타깃 목록 |

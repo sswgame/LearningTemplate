@@ -20,6 +20,12 @@
  * `createVertexBuffer` 는 UPLOAD 힙이라 UAV 가 될 수 없으며, DX11 은 구조버퍼와 정점 버퍼를 겸할 수
  * 없습니다. 그래서 결과를 **구조버퍼**에 두고 정점 셰이더가 `SV_VertexID` 로 읽습니다(정점 풀링).
  * 이미 네 백엔드에서 도는 `RHIStructuredBufferSlot` 을 그대로 쓰므로 백엔드 분기가 없습니다.
+ *
+ * [스키닝]
+ * 풀은 두 구간입니다: [모프 메시들][스킨드 메시들]. 모프 컴퓨트(meshmorph.hlsl)는 앞 구간을, 스키닝 컴퓨트(meshskin.hlsl)는 뒤 구간을
+ * 씁니다. 스킨 구간에는 정점마다 가중치 · 팔레트 행 번호(float4 둘, `_skinWeight`)가 한 번 올라가고, 팔레트(`_skinPalette`, 본 하나 =
+ * float4 셋)는 프레임마다 올라갑니다. 행 번호에는 그 메시의 팔레트 시작이 미리 더해져 있어 컴퓨트 디스패치는 하나입니다.
+ * 결과를 읽는 쪽(정점 셰이더)은 모프와 똑같아 새 그리기 코드가 없습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -32,6 +38,8 @@
 
 namespace sw
 {
+    struct GpuSkinPalette;
+
     class IRHIDevice;
     class Mesh;
 
@@ -56,6 +64,8 @@ namespace sw
 
     /// @brief 정점 하나가 차지하는 버퍼 원소(float4) 수입니다. 셰이더의 `SW_MORPH_FLOAT4_PER_VERTEX` 와 같아야 합니다.
     inline constexpr uint32 kMorphFloat4PerVertex = 2;
+    /// @brief 스킨 팔레트의 본 하나가 차지하는 버퍼 원소(float4) 수입니다(행벡터 4x4 의 0 · 1 · 2 열). 셰이더의 `SW_SKIN_FLOAT4_PER_BONE` 과 같아야 합니다.
+    inline constexpr uint32 kSkinFloat4PerBone = 3;
 
     /**
      * @class GpuMeshMorphPool
@@ -80,6 +90,16 @@ namespace sw
          * @param listMesh 소유하지 않는 포인터들. 스냅샷 배치가 소유를 들고 있는 동안에만 유효합니다.
          */
         void build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
+        /**
+         * @brief 모프 메시와 스킨드 메시를 함께 받아 풀을 맞춥니다. 모프가 앞 구간, 스킨이 뒤 구간입니다.
+         * @details 목록 둘이 지난 프레임과 같으면(포인터 · 내용 번호) 아무것도 하지 않습니다. 스킨 가중치도 한 번만 올립니다.
+         */
+        void build( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh );
+        /**
+         * @brief 이번 프레임 팔레트를 풀의 스킨 구간 순서로 올립니다. 팔레트가 없는 메시는 단위 행렬(바인드 포즈)입니다.
+         * @param pListRow 스냅샷의 팔레트 행(본 하나 = float4 셋). nullptr 이면 모두 단위입니다.
+         */
+        void uploadSkinPalettes( IRHIDevice* pDevice, const vector<GpuSkinPalette>& listPalette, const vector<float4>* pListRow );
 
         /** @brief 메시의 풀 시작 오프셋(정점 단위)을 반환합니다. 풀에 없으면 `kInvalidBase` 입니다. */
         uint32 baseOf( const Mesh* pMesh ) const;
@@ -88,10 +108,24 @@ namespace sw
         const RHIStructuredBufferSlot& getMorphBuffer() const { return _morph; }
         /** @brief 레스트 버퍼입니다. 컴퓨트가 SRV 로 읽습니다. */
         const RHIStructuredBufferSlot& getRestBuffer() const { return _rest; }
-        /** @brief 풀에 든 정점 수입니다. 0 이면 디스패치할 것이 없습니다. */
+        /** @brief 풀에 든 정점 수(모프 + 스킨)입니다. 정점 셰이더의 범위 검사 값입니다. */
         uint32 getVertexCount() const { return _vertexCount; }
+        /** @brief 모프 구간(앞)의 정점 수입니다. 모프 컴퓨트가 이만큼 돕니다. */
+        uint32 getMorphVertexCount() const { return _skinVertexBase; }
+        /** @brief 스킨 구간이 시작하는 정점입니다. */
+        uint32 getSkinVertexBase() const { return _skinVertexBase; }
+        /** @brief 스킨 구간의 정점 수입니다. */
+        uint32 getSkinVertexCount() const { return _vertexCount - _skinVertexBase; }
+        /** @brief 스킨 팔레트의 본 수(모든 스킨드 메시의 합)입니다. */
+        uint32 getSkinBoneCount() const { return _skinBoneCount; }
+        /** @brief 스킨 가중치 버퍼입니다(스킨 정점 하나 = float4 둘). */
+        const RHIStructuredBufferSlot& getSkinWeightBuffer() const { return _skinWeight; }
+        /** @brief 스킨 팔레트 버퍼입니다(본 하나 = float4 셋). */
+        const RHIStructuredBufferSlot& getSkinPaletteBuffer() const { return _skinPalette; }
         /** @brief 컴퓨트가 쓸 수 있는 상태인지(레스트 SRV 와 결과 UAV 가 둘 다 있는지) 확인합니다. */
         bool isDispatchable() const;
+        /** @brief 스키닝 컴퓨트가 쓸 수 있는 상태인지(스킨 정점 · 가중치 · 팔레트 SRV 가 있는지) 확인합니다. */
+        bool isSkinDispatchable() const;
 
         /** @brief 버퍼를 놓습니다. 디바이스가 바뀌거나 내려갈 때 부릅니다. */
         void release( IRHIDevice* pDevice );
@@ -102,12 +136,21 @@ namespace sw
 
         RHIStructuredBufferSlot _rest;
         RHIStructuredBufferSlot _morph;
+        RHIStructuredBufferSlot _skinWeight;
+        RHIStructuredBufferSlot _skinPalette;
         /// @brief 메시 → 풀 시작 오프셋(정점 단위)입니다.
         unordered_map<const Mesh*, uint32> _mapBase;
         /// @brief 지난 build 의 메시 목록입니다. 같으면 다시 만들지 않습니다.
         vector<const Mesh*> _listBuilt;
         /// @brief `_listBuilt` 와 같은 순서의 내용 번호(`Mesh::getContentId`)입니다. 포인터가 같아도 이것이 다르면 다른 메시다.
         vector<uint64> _listBuiltContentId;
+        /// @brief 스킨 구간의 메시들(풀 순서)과 그 팔레트 시작 본입니다.
+        vector<const Mesh*> _listSkinMesh;
+        vector<uint32>      _listSkinBoneBase;
+        /// @brief 팔레트를 풀 순서로 다시 모으는 자리입니다(프레임마다 재사용).
+        vector<float4> _listScratchPaletteRow;
         uint32         _vertexCount{ 0 };
+        uint32         _skinVertexBase{ 0 };
+        uint32         _skinBoneCount{ 0 };
     };
 } // namespace sw

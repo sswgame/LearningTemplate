@@ -92,6 +92,7 @@ namespace sw
             outArrRow[rowIndex++] = { &_arrView[viewIndex]._cullCb, sizeof( FrameRendererUtil::GpuCullParams ), "cull" };
         outArrRow[rowIndex++] = { &_instanceAnimCb, sizeof( FrameRendererUtil::GpuAnimParams ), "instance animation" };
         outArrRow[rowIndex++] = { &_meshMorphCb, sizeof( FrameRendererUtil::GpuMorphParams ), "mesh morph" };
+        outArrRow[rowIndex++] = { &_meshSkinCb, sizeof( FrameRendererUtil::GpuSkinParams ), "mesh skin" };
         outArrRow[rowIndex++] = { &_instanceSortCb, sizeof( FrameRendererUtil::GpuSortParams ), "instance sort" };
         SW_LOG_ASSERT( rowIndex == _s_kComputeConstantBufferCount, "compute constant buffer table has %# rows, expected %#", rowIndex,
                        _s_kComputeConstantBufferCount );

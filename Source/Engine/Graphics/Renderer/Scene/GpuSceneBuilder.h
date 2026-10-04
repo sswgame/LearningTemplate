@@ -18,6 +18,7 @@ namespace sw
 {
     struct PrimitiveInstanceEntry;
 
+    class GameObjectManager;
     class GpuUploadQueue;
     class Material;
     class MaterialInstance;
@@ -183,6 +184,12 @@ namespace sw
          *          퍼뮤테이션 세대를 올려 배치를 다시 만들게 합니다. 네이티브 bindless 는 머티리얼 바이트가 바뀌어 매 프레임 업로드가 가져갑니다.
          */
         void refreshReloadedTextures();
+        /**
+         * @brief 애니메이션 유닛의 스킨 팔레트를 스냅샷으로 옮깁니다(매 프레임 — 프리미티브 더티와 무관하게).
+         * @details 팔레트는 포즈가 바뀔 때마다 바뀌므로 수집 건너뛰기(아무도 바뀌지 않음) 판단 앞에서 따로 돕니다. 배열은 프레임마다 새로 만들어
+         *          공유합니다 — RT 가 지난 프레임 배열을 읽는 동안 덮어쓰지 않습니다.
+         */
+        void collectSkinPalettes( GameObjectManager& objects );
 
         /** @brief 기준 스냅샷입니다. 매 프레임 `exportCpuSnapshot` 이 복사해 내보냅니다. 퍼뮤테이션 표 · 머티리얼 그룹은 여기서 계속 자랍니다. */
         GpuSceneSnapshot _snapshot;
