@@ -32,6 +32,7 @@
 namespace sw
 {
     class LightComponent;
+    class ShadowCaster2DComponent;
 
     /**
      * @class LightRegistry
@@ -64,9 +65,18 @@ namespace sw
          */
         const vector<LightComponent*>& getAll( uint32 lightType ) const;
 
+        /** @brief 2D 그림자 가림막을 등록합니다(빛 목록 뒤에 그림자 원소로 붙는다 — `collectSceneLights`). 이미 있거나 nullptr 이면 무시합니다. */
+        void addShadowCaster( ShadowCaster2DComponent* pCaster );
+        /** @brief 2D 그림자 가림막을 뺍니다. 멱등입니다. */
+        void removeShadowCaster( ShadowCaster2DComponent* pCaster );
+        /** @brief 등록된 2D 그림자 가림막(등록 순서)입니다. 활성 판정은 부르는 쪽이 합니다. */
+        const vector<ShadowCaster2DComponent*>& getShadowCasters() const { return _registeredShadowCaster.getItems(); }
+
     private:
         /** @brief 종류마다 등록된 빛입니다(등록 순서). 소유하지 않습니다(수명은 GameObject 가 쥡니다). */
         array<RegistrationList<LightComponent>, shaderslot::kLightTypeCount> _arrRegisteredLight;
+        /** @brief 2D 그림자 가림막입니다. 빛이 아니라 종류 칸이 없습니다. */
+        RegistrationList<ShadowCaster2DComponent> _registeredShadowCaster;
         /** @brief 목록을 지킵니다. 등록/해제는 드물고, 조회는 게임 스레드 한 곳입니다. */
         mutable mutex _mutex;
     };

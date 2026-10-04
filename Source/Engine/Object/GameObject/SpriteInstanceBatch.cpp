@@ -31,7 +31,8 @@ namespace sw
         shutdown();
     }
 
-    bool SpriteInstanceBatch::initialize( GameObjectManager& manager, string_view texturePath, uint32 count, string_view materialPath )
+    bool SpriteInstanceBatch::initialize( GameObjectManager& manager, string_view texturePath, uint32 count, string_view materialPath,
+                                          string_view normalMapPath )
     {
         shutdown();
         if ( count == 0 )
@@ -56,7 +57,8 @@ namespace sw
 
         shared_ptr<MaterialInstance> instance;
         if ( pMaterial != nullptr && texturePath.empty() == false )
-            instance = SpriteRenderUtil::acquireTextureInstance( pMaterial, hashed_string( string{ texturePath }.c_str() ) );
+            instance = SpriteRenderUtil::acquireTextureInstance( pMaterial, hashed_string( string{ texturePath }.c_str() ),
+                                                                 normalMapPath.empty() ? hashed_string{} : hashed_string( normalMapPath ) );
 
         // 스프라이트 사각형은 공유 프리미티브다 — 같은 메시라야 스프라이트 컴포넌트와 한 배치로 묶인다.
         _batch                                  = sw::make_unique<MeshInstanceBatch>( MeshUtil::acquirePrimitive( "Sprite" ), pMaterial, std::move( instance ), count );

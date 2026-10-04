@@ -127,7 +127,7 @@ namespace sw
             return false;
         const uint32 count = static_cast<uint32>( _listBrushIndex.size() );
         _batch.setSorting( _sortingLayer, _orderInLayer );
-        if ( _batch.initialize( *pManager, _tileSet.getAtlasPath(), count, _materialPath ) == false )
+        if ( _batch.initialize( *pManager, _tileSet.getAtlasPath(), count, _materialPath, _tileSet.getNormalAtlasPath() ) == false )
             return false;
         _lastOwnerWorld = getOwnerWorld();
         _listAnimatedCell.clear();

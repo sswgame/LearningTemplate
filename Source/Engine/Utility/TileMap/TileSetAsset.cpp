@@ -176,15 +176,16 @@ namespace sw
             SW_LOG_ERROR( "%#: the root element must be <TileSet>", sourceName );
             return false;
         }
-        static constexpr const utf8* kArrRootAttribute[] = { "name", "atlas", "columns", "rows", "tileSize" };
+        static constexpr const utf8* kArrRootAttribute[] = { "name", "atlas", "normalAtlas", "columns", "rows", "tileSize" };
         if ( Internal::hasOnlyKnownAttributes( root, kArrRootAttribute, sourceName ) == false )
             return false;
 
         TileSetAsset loaded;
-        loaded._atlasPath   = string( root.getAttributeText( "atlas" ) );
-        loaded._columnCount = root.getAttributeInt( "columns", 1 );
-        loaded._rowCount    = root.getAttributeInt( "rows", 1 );
-        loaded._tileSize    = root.getAttributeFloat( "tileSize", 1.0f );
+        loaded._atlasPath       = string( root.getAttributeText( "atlas" ) );
+        loaded._normalAtlasPath = string( root.getAttributeText( "normalAtlas" ) );
+        loaded._columnCount     = root.getAttributeInt( "columns", 1 );
+        loaded._rowCount        = root.getAttributeInt( "rows", 1 );
+        loaded._tileSize        = root.getAttributeFloat( "tileSize", 1.0f );
         if ( loaded._columnCount <= 0 || loaded._rowCount <= 0 || loaded._tileSize <= 0.0f )
         {
             SW_LOG_ERROR( "%#: columns, rows and tileSize must be positive", sourceName );

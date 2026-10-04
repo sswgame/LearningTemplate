@@ -21,7 +21,9 @@ namespace sw
 
     SpriteComponent::SpriteComponent()
         : _textureName{}
+        , _normalMapName{}
         , _appliedTexture{}
+        , _appliedNormalMap{}
         , _clipPath{}
         , _clipFrame{ 0 }
         , _uvRect{ 0.0f, 0.0f, 1.0f, 1.0f }
@@ -57,6 +59,7 @@ namespace sw
     {
         MeshComponent::onPropertyChanged( propertyName );
         static const hashed_string s_textureName( "_textureName" );
+        static const hashed_string s_normalMapName( "_normalMapName" );
         static const hashed_string s_clipPath( "_clipPath" );
         static const hashed_string s_clipFrame( "_clipFrame" );
         static const hashed_string s_uvRect( "_uvRect" );
@@ -73,7 +76,7 @@ namespace sw
             refreshSpriteInstanceData();
             refreshDrawModeMesh();
         }
-        else if ( propertyName == s_textureName )
+        else if ( propertyName == s_textureName || propertyName == s_normalMapName )
         {
             refreshTextureInstance();
         }
@@ -95,6 +98,12 @@ namespace sw
     void SpriteComponent::setTextureName( string_view texture )
     {
         _textureName = string{ texture };
+        refreshTextureInstance();
+    }
+
+    void SpriteComponent::setNormalMapName( string_view normalMap )
+    {
+        _normalMapName = string{ normalMap };
         refreshTextureInstance();
     }
 
@@ -207,18 +216,21 @@ namespace sw
             // 이 컴포넌트가 건 인스턴스만 뗀다. 코드가 건 인스턴스(텍스처 칸을 쓰지 않는)는 그대로다.
             if ( _appliedTexture.empty() == false )
             {
-                _appliedTexture = hashed_string{};
+                _appliedTexture   = hashed_string{};
+                _appliedNormalMap = hashed_string{};
                 setMaterialInstance( nullptr );
             }
             return;
         }
 
         const hashed_string     texture( string{ textureName }.c_str() );
-        const MaterialInstance* pCurrent = getRawMaterialInstance();
-        if ( texture == _appliedTexture && pCurrent != nullptr && pCurrent->getParent() == pMaterial )
+        const hashed_string     normalMap = _normalMapName.empty() ? hashed_string{} : hashed_string( string_view( _normalMapName ) );
+        const MaterialInstance* pCurrent  = getRawMaterialInstance();
+        if ( texture == _appliedTexture && normalMap == _appliedNormalMap && pCurrent != nullptr && pCurrent->getParent() == pMaterial )
             return;
-        _appliedTexture = texture;
-        setMaterialInstance( SpriteRenderUtil::acquireTextureInstance( pMaterial, texture ) );
+        _appliedTexture   = texture;
+        _appliedNormalMap = normalMap;
+        setMaterialInstance( SpriteRenderUtil::acquireTextureInstance( pMaterial, texture, normalMap ) );
     }
 
     void SpriteComponent::refreshDrawModeMesh()

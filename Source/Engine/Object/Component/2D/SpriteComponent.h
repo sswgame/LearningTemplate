@@ -64,6 +64,11 @@ namespace sw
         /** @brief 텍스처를 바꾸고 인스턴스를 다시 맞춥니다. */
         void setTextureName( string_view texture );
 
+        /** @brief 노멀 맵 텍스처 경로입니다(빛 받는 머티리얼 `sprite2dlit.material` 이 읽는다). 비어 있으면 N·L 없이 비춥니다. */
+        const string& getNormalMapName() const { return _normalMapName; }
+        /** @brief 노멀 맵을 바꾸고 텍스처 인스턴스를 다시 맞춥니다. */
+        void setNormalMapName( string_view normalMap );
+
         /** @brief 스프라이트 클립(`.sprite.json`) 경로입니다. 비어 있으면 클립 없이 `_uvRect` 를 보입니다. */
         const string& getClipPath() const { return _clipPath; }
         /** @brief 클립을 바꾸고 읽습니다(같은 클립은 스프라이트끼리 나눠 갖습니다 — `SpriteClipCache::acquire`). */
@@ -140,8 +145,11 @@ namespace sw
         string_view getEffectiveTexture() const;
 
         PROPERTY( Category = "Rendering", DisplayName = "Texture", AssetPath, AssetType = "Texture", Tooltip = "Texture asset name; empty uses the clip atlas" )
-        string        _textureName;
-        hashed_string _appliedTexture; ///< 이 컴포넌트가 건 텍스처 인스턴스의 텍스처. 비어 있으면 건 것이 없다
+        string _textureName;
+        PROPERTY( Category = "Rendering", DisplayName = "Normal Map", AssetPath, AssetType = "Texture", Tooltip = "Normal map read by the lit sprite material" )
+        string        _normalMapName;
+        hashed_string _appliedTexture;   ///< 이 컴포넌트가 건 텍스처 인스턴스의 텍스처. 비어 있으면 건 것이 없다
+        hashed_string _appliedNormalMap; ///< 그 인스턴스의 노멀 맵
         /**
          * @brief 스프라이트 클립(`.sprite.json`) 경로입니다. 보일 프레임은 번호(`_clipFrame`)로 따로 듭니다 — 프레임마다 문자열을 만들어
          *        파싱하지 않고 번호 하나를 넘깁니다.

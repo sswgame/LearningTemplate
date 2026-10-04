@@ -42,12 +42,14 @@ namespace sw
         /**
          * @brief 항목 @p count 개를 만들어 @p manager 의 프리미티브 등록부에 넣습니다. 이미 있으면 먼저 놓습니다.
          * @param texturePath 비어 있으면 텍스처 없이 머티리얼의 색(흰색)에 항목 색을 곱한 단색 사각형입니다(HP 바).
+         * @param normalMapPath 빛 받는 머티리얼(`sprite2dlit.material`)의 노멀 맵입니다. 비어 있으면 노멀 맵 없이(N·L 없이) 비춥니다.
          * @param materialPath 비어 있으면 스프라이트 머티리얼(`SpriteRenderUtil::getSpriteMaterialPath`)입니다. 타일맵은 점 필터 · 빛 받는 머티리얼을 고릅니다.
          * @details 스프라이트 머티리얼을 캐시에서 잡고(디바이스 업로드는 캐시가 맡습니다) 공유 사각형 메시를 씁니다. 엔진 서비스가 없으면
          *          (CPU 시험) 머티리얼 없이 만듭니다 — 항목 값은 그대로 확인할 수 있습니다. 항목은 처음에 모두 숨겨져 있습니다.
          * @return 항목을 만들었으면 true 입니다(@p count 가 0 이면 false).
          */
-        [[nodiscard]] bool initialize( GameObjectManager& manager, string_view texturePath, uint32 count, string_view materialPath = {} );
+        [[nodiscard]] bool initialize( GameObjectManager& manager, string_view texturePath, uint32 count, string_view materialPath = {},
+                                       string_view normalMapPath = {} );
         /** @brief 등록부에서 빼고 머티리얼을 놓습니다. 멱등입니다. */
         void shutdown();
         /** @brief 항목이 있으면 true 입니다. */

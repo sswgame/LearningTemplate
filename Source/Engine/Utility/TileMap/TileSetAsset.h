@@ -83,7 +83,7 @@ namespace sw
      * @brief 아틀라스 하나와 그 칸으로 만든 브러시 목록입니다. 유니티 Tile Palette + Rule Tile · Animated Tile, Godot TileSet(terrain · animation · physics ·
      *        navigation layer)의 자리입니다.
      * @details 형식:
-     *          `<TileSet atlas="..." columns="8" rows="8" tileSize="1">`
+     *          `<TileSet atlas="..." normalAtlas="..."? columns="8" rows="8" tileSize="1">`
      *          `  <Tile name="dirt" cell="5" solid="true"/>`
      *          `  <Tile name="water" frames="12 13 14 15" fps="4" navCost="40"/>`
      *          `  <RuleTile name="ground" cell="5" solid="true" outside="same"> <Rule pattern=".x. xoo .o." cell="0"/> ... </RuleTile>`
@@ -112,6 +112,8 @@ namespace sw
 
         /** @brief 아틀라스 텍스처 경로입니다. */
         const string& getAtlasPath() const { return _atlasPath; }
+        /** @brief 아틀라스와 같은 칸 배치의 노멀 맵 경로입니다(빛 받는 타일). 비어 있으면 없습니다. */
+        const string& getNormalAtlasPath() const { return _normalAtlasPath; }
         int32         getColumnCount() const { return _columnCount; }
         int32         getRowCount() const { return _rowCount; }
         /** @brief 타일 한 칸의 월드 크기입니다. */
@@ -136,6 +138,7 @@ namespace sw
         [[nodiscard]] bool parseVisual( const XmlNode& node, string_view sourceName, bool bRequired, TileVisual& outVisual ) const;
 
         string            _atlasPath;
+        string            _normalAtlasPath;
         vector<TileBrush> _listBrush;
         float32           _tileSize{ 1.0f };
         int32             _columnCount{ 1 };

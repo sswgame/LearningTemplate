@@ -35,7 +35,9 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
+#include "Engine/Object/Component/2D/Light2DComponent.h"
 #include "Engine/Object/Component/2D/PixelPerfectCameraComponent.h"
+#include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -4606,4 +4608,127 @@ SW_TEST_CASE( RenderPassGpuTest, PixelArtSpritesSnapToTheAssetPixelGrid )
 
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend available for the pixel art test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 2D 점광의 감쇠가 식과 같고, 2D 가림막 뒤는 어둡고 가림막 안쪽은 밝다 — 4 백엔드
+ * @details 직교 카메라(높이 4) 앞의 흰 빛 받는 스프라이트(`sprite2dlit.material`) 6 × 6 을 원점의 점광(바깥 반경 2, 안 0, 지수 1)이 비춘다. 가운데 줄의 픽셀을
+ *          월드 X 로 옮겨 `PointLight2DComponent::computeAttenuation` × 255 와 견준다. 그다음 (1, 0) 에 0.2 × 1 상자 가림막을 두면 x > 1.1 은 0 이 되고,
+ *          가림막 안(x = 1)은 빛 쪽 변에 가려지지 않아 식 그대로다(자기 그림자 없음). 빛 쪽(x < 0.9)은 바뀌지 않는다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, Light2DFalloffAndShadowOnEveryBackend )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    constexpr float32 kOrthoHeight = 4.0f;
+    constexpr float32 kOuterRadius = 2.0f;
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady();
+
+        sw::Scene                    scene( "Light2DGpuScene" );
+        sw::ShadowCaster2DComponent* pCaster = nullptr;
+        if ( bOk )
+        {
+            sw::GameObject*      pCameraObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "Camera2D" ) );
+            sw::CameraComponent* pCamera       = pCameraObject->addComponent<sw::CameraComponent>();
+            pCamera->setRole( sw::CameraRole::Game );
+            pCamera->setOrthographic( true );
+            pCamera->setOrthoHeight( kOrthoHeight );
+            pCamera->setLocalPosition( sw::float3{ 0.0f, 0.0f, -4.0f } );
+
+            sw::GameObject*      pGround = scene.getObjectManager()->createGameObject( sw::hashed_string( "LitGround" ) );
+            sw::SpriteComponent* pSprite = pGround->addComponent<sw::SpriteComponent>();
+            pSprite->setMaterialPath( "engine/materials/sprite2dlit.material" );
+            pSprite->setLocalScale( sw::float3{ 6.0f, 6.0f, 1.0f } );
+            pSprite->resolveRenderAssets();
+
+            sw::GameObject*            pLightObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "Lamp" ) );
+            sw::PointLight2DComponent* pLight       = pLightObject->addComponent<sw::PointLight2DComponent>();
+            pLight->setColor( sw::float3{ 1.0f, 1.0f, 1.0f } );
+            pLight->setIntensity( 1.0f );
+            pLight->setRadius( 0.0f, kOuterRadius );
+            pLight->setFalloffExponent( 1.0f );
+
+            sw::GameObject*     pCasterObject = scene.getObjectManager()->createGameObject( sw::hashed_string( "Pillar" ) );
+            sw::SceneComponent* pCasterRoot   = pCasterObject->addComponent<sw::SceneComponent>();
+            pCasterRoot->setLocalPosition( sw::float3{ 1.0f, 0.0f, 0.0f } );
+            pCaster = pCasterObject->addComponent<sw::ShadowCaster2DComponent>();
+            pCaster->setSize( sw::float2{ 0.2f, 1.0f } );
+            pCaster->setActive( false );
+
+            bOk = scene.ensureDefaultCameras();
+            scene.getObjectManager()->flushSceneTransforms();
+            sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
+        }
+
+        // 가운데 줄을 그려 읽고, 픽셀 X → 월드 X 로 옮긴 값의 빨강을 돌려준다.
+        const auto renderRow = [&]( sw::vector<float32>& outListWorldX, sw::vector<int32>& outListRed )
+        {
+            outListWorldX.clear();
+            outListRed.clear();
+            for ( uint32 frame = 0; frame < 4 && bOk; ++frame )
+                bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            test::RHITestImage image;
+            if ( bOk == false || image.readTransient( renderer, "SceneColor" ) == false )
+                return false;
+            const float32 unit = kOrthoHeight / static_cast<float32>( image.getHeight() );
+            const uint32  row  = image.getHeight() / 2;
+            for ( uint32 x = 0; x < image.getWidth(); ++x )
+            {
+                outListWorldX.push_back( ( static_cast<float32>( x ) + 0.5f - 0.5f * static_cast<float32>( image.getWidth() ) ) * unit );
+                outListRed.push_back( static_cast<int32>( image.getPixel( x, row )._r ) );
+            }
+            return true;
+        };
+
+        sw::vector<float32> listWorldX;
+        sw::vector<int32>   listOpen;
+        sw::vector<int32>   listShadowed;
+        bOk = bOk && renderRow( listWorldX, listOpen );
+        if ( bOk )
+        {
+            pCaster->setActive( true );
+            bOk = renderRow( listWorldX, listShadowed );
+        }
+        if ( bOk == false )
+        {
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 실패" ).c_str() );
+            continue;
+        }
+
+        int32 worstFalloffError  = 0;
+        int32 worstLitSideChange = 0;
+        int32 brightestBehind    = 0;
+        int32 insideValue        = -1;
+        int32 insideExpected     = -1;
+        for ( size_t index = 0; index < listWorldX.size(); ++index )
+        {
+            const float32 worldX   = listWorldX[index];
+            const int32   expected = static_cast<int32>( sw::PointLight2DComponent::computeAttenuation( sw::MathUtil::abs( worldX ), 0.0f, kOuterRadius, 1.0f ) * 255.0f + 0.5f );
+            worstFalloffError      = sw::MathUtil::max( worstFalloffError, sw::MathUtil::abs( listOpen[index] - expected ) );
+            if ( worldX < 0.85f )
+                worstLitSideChange = sw::MathUtil::max( worstLitSideChange, sw::MathUtil::abs( listShadowed[index] - listOpen[index] ) );
+            if ( worldX > 1.2f )
+                brightestBehind = sw::MathUtil::max( brightestBehind, listShadowed[index] );
+            if ( insideValue < 0 && worldX >= 0.98f )
+            {
+                insideValue    = listShadowed[index];
+                insideExpected = expected;
+            }
+        }
+        SW_EXPECT_TRUE_MSG( worstFalloffError <= 6, ( label + "감쇠가 식과 다르다 (최대 차이 " + sw::to_string( worstFalloffError ) + "/255)" ).c_str() );
+        SW_EXPECT_TRUE_MSG( worstLitSideChange <= 2, ( label + "가림막이 빛 쪽 픽셀을 바꿨다 (" + sw::to_string( worstLitSideChange ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( brightestBehind <= 2, ( label + "가림막 뒤가 밝다 (" + sw::to_string( brightestBehind ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( insideValue - insideExpected ) <= 6,
+                            ( label + "가림막 안쪽이 자기 그림자를 받았다 (" + sw::to_string( insideValue ) + " vs " + sw::to_string( insideExpected ) + ")" ).c_str() );
+        SW_LOG_INFO( "%#2D light: falloff max error %#, lit side change %#, behind caster max %#, inside caster %# (expected %#)", label, worstFalloffError,
+                     worstLitSideChange, brightestBehind, insideValue, insideExpected );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend available for the 2D light test" );
 }

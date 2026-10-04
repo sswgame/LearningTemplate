@@ -355,6 +355,8 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 - **투명 순서의 정본은 CPU 한 곳**(`GpuSceneBuilder::sortTransparent` — 정렬 레이어 키 → 깊이 → 후보 번호). GPU 컬링이 투명 배치를 압축한 뒤
   `instancesort.hlsl` 은 깊이를 다시 재지 않고 **인스턴스 번호 오름차순**으로 되돌린다(배치 안의 인스턴스가 CPU 순서로 놓이므로). 깊이는 직교 카메라에서
   시선 축, 원근에서 거리다(`Render2DSettings::computeTransparentSortAxis`) — [2D/README.md](2D/README.md).
+- **2D 빛은 3D 와 같은 빛 목록(t12)이다**(`SW_LIGHT_TYPE_POINT2D` · `GLOBAL2D` · 그 뒤의 `SHADOW2D` 가림막 토막). 빛 받는 스프라이트(`sprite2dlit.hlsl` + `lighting2d.hlsli`)만
+  읽고 3D 조명 식(`swShadeLights`)은 건너뛴다 — 3D 빛이 하나도 없으면 키라이트로 폴백한다. 2D 게임은 `forward2dpipeline.xml`(그림자 맵 · 톤맵 없음, `-gv_renderPipeline`).
 - **스프라이트 프레임 · 색은 인스턴스 칸**(`GpuInstance::_sprite` = `GpuSpriteInstanceData` 16 바이트 — 프레임 · 색 · 픽셀 스냅, Custom Primitive Data 자리). 배치 키를
   건드리지 않아 같은 텍스처의 스프라이트는 한 드로우다. 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)이고 UV 는 메시의 것이다
   (`RenderPassGpuTest.SpriteFramesAndTintsArePerInstance`).

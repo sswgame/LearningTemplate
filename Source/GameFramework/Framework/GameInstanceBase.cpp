@@ -3,6 +3,7 @@
 #include "GameFramework/Framework/GameInstanceBase.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
@@ -61,6 +62,12 @@ namespace sw
 {
     SW_LOG_CALLER( "GameInstanceBase" );
 
+    /**
+     * @brief `-gv_startupScene=<리소스 경로>`: 게임 프리셋의 시작 씬 대신 이 씬을 연다(시험 · 스크린샷 — 에디터 없이 다른 씬을 띄운다).
+     * @details 에디터의 `-gv_editorStartupScene` 은 에디터를 켜야 듣는다. 이것은 게임 자신의 첫 씬(`getFirstScene`)을 바꾼다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_STRING( gv_startupScene, "", "게임이 처음 여는 씬을 이 리소스 경로로 바꾼다 (비우면 게임 프리셋의 시작 씬)" );
+
     bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRhiDevice )
     {
         _pWindow    = pWindow;
@@ -117,6 +124,8 @@ namespace sw
 
     const string& GameInstanceBase::getFirstScene() const
     {
+        if ( gv_startupScene.empty() == false )
+            return gv_startupScene;
         const string& runScene = GameConfig::getActive()._startupScene;
         if ( runScene.empty() == false )
             return runScene;

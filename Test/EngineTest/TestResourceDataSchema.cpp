@@ -18,6 +18,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Utility/TileMap/TileSetAsset.h"
+#include "Engine/Utility/Xml/TileMapXml.h"
 
 #include "GameFramework/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Ability/AbilityCatalog.h"
@@ -61,6 +62,7 @@ namespace
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
         static bool isSchedules( sw::string_view resourceId ) { return endsWith( resourceId, ".schedules.xml" ); }
         static bool isTileSet( sw::string_view resourceId ) { return endsWith( resourceId, ".tileset.xml" ); }
+        static bool isTileMap( sw::string_view resourceId ) { return endsWith( resourceId, ".tilemap.xml" ); }
         static bool isRender2DSettings( sw::string_view resourceId ) { return endsWith( resourceId, "/data/render2d.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
@@ -111,6 +113,19 @@ namespace
         {
             const sw::shared_ptr<sw::Material> material = sw::Material::create();
             return material != nullptr && material->loadFromFile( resourceId );
+        }
+
+        /** @brief 타일 레이어가 있으면 그 타일셋도 읽고 팔레트의 이름이 모두 타일셋에 있는지 본다. */
+        static bool loadTileMap( const sw::string& resourceId )
+        {
+            sw::TileMapXmlData map;
+            if ( map.load( resourceId ) == false )
+                return false;
+            if ( map._tileSetPath.empty() )
+                return true;
+            sw::TileSetAsset   tileSet;
+            sw::vector<uint16> listBrushIndex;
+            return tileSet.loadFromResource( map._tileSetPath ) && map.mapTileCells( tileSet, listBrushIndex );
         }
 
         static bool loadTileSet( const sw::string& resourceId )
@@ -176,6 +191,7 @@ namespace
             {         "spriteclip",          &isSpriteClip,                        &loadSpriteClip},
             {           "render2d",    &isRender2DSettings,                  &loadRender2DSettings},
             {            "tileset",             &isTileSet,                           &loadTileSet},
+            {            "tilemap",             &isTileMap,                           &loadTileMap},
             {      "camerapresets",       &isCameraPresets,  &loadCatalog<sw::CameraPresetCatalog>},
             {          "schedules",           &isSchedules,      &loadCatalog<sw::ScheduleCatalog>},
             {          "abilities",           &isAbilities,       &loadCatalog<sw::AbilityCatalog>},

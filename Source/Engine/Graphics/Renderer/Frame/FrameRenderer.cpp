@@ -28,6 +28,11 @@ namespace sw
      *          디퍼드는 레벨이 갈려(레벨 0 = Shadow + GBuffer) 병렬 기록이 실제로 도는 유일한 경로이기도 합니다.
      */
     SW_GLOBAL_VARIABLE_BOOL( gv_deferred, false, "기본 파이프라인을 디퍼드로 (기본 포워드)" );
+    /**
+     * @brief `-gv_renderPipeline=<파이프라인 XML>` 이면 그 파이프라인으로 그립니다(기본 · 디퍼드 선택보다 먼저).
+     * @details 2D 게임은 `engine/pipeline/forward2dpipeline.xml`(그림자 맵 · 톤맵 없음)을 고릅니다 — 톤맵은 흰색을 0.5 로 누릅니다.
+     */
+    SW_GLOBAL_VARIABLE_STRING( gv_renderPipeline, "", "이 파이프라인 XML 로 그린다 (비우면 기본 포워드 · gv_deferred)" );
 
     /**
      * @brief `-gv_drawMerge=0` 이면 같은 PSO · 머티리얼의 연속 배치를 멀티 드로우 하나로 묶지 않고 배치마다 한 번씩 부릅니다.
@@ -156,9 +161,11 @@ namespace sw
         if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
             rpm.loadRenderPass( engineDefaultAssets._defaultRenderPass );
 
-        // 인자 > `-gv_deferred` > EngineDefaultAssets 의 포워드 순으로 고른다. 디퍼드 경로(그리고 그 위의 조명)를
+        // 인자 > `-gv_renderPipeline` > `-gv_deferred` > EngineDefaultAssets 의 포워드 순으로 고른다. 디퍼드 경로(그리고 그 위의 조명)를
         // 측정 · 검증하려면 `-gv_deferred=1` 을 준다.
         string_view resolvedPipeline = pipelineXmlPath;
+        if ( resolvedPipeline.empty() && gv_renderPipeline.empty() == false )
+            resolvedPipeline = gv_renderPipeline;
         if ( resolvedPipeline.empty() && gv_deferred )
             resolvedPipeline = engineDefaultAssets._defaultDeferredPipeline;
         if ( resolvedPipeline.empty() )
