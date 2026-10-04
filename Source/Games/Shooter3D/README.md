@@ -30,7 +30,7 @@ cd build/Ninja-Debug/Bin
 
 - `Shooter3DGame` — 무기 카탈로그(`Resource/game/shooter3d/data/weapons.xml`)를 읽고 아레나를 둡니다.
 - `ShooterArena` — 이동 · 충돌(원 대 상자), 무기 셋, 히트스캔(상자 · 바닥 · 드론 중 가장 가까운 것), 드론 웨이브, 조준선 · 맞음 표시.
-- `textures/crosshair.dds` · `hitmarker.dds` — Kenney "Starter Kit FPS" 의 스프라이트(CC0). 출처는 `Resource/game/shooter3d/credits.md`,
-  다시 만드는 법은 `Scripts/generate/GenerateGameTextures.py`.
+- `textures_raw/crosshair.png` · `hitmarker.png` — Kenney "Starter Kit FPS" 의 스프라이트(CC0), `App --import-textures` 가 DDS 로 굽는다.
+  출처는 `Resource/game/shooter3d/credits.md`.
 
 연사 간격 · 피해 · 퍼짐 · 반동 · 탄창은 전부 `weapons.xml` 에 있습니다.

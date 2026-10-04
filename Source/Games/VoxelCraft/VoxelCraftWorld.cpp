@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelTerrain.h"
 
 namespace sw
@@ -381,7 +382,10 @@ namespace sw
             }
         }
 
+        const bool bWasOnGround = _body.isOnGround();
         _body.step( _world, wish, bJump, bSprint, deltaTime );
+        if ( bWasOnGround == false && _body.isOnGround() )
+            (void)GameSound::play( "game/voxelcraft/sounds/footstep_grass_000.ogg" );
         // 월드 밖으로 떨어지면 처음 자리로.
         if ( _body.getPosition()._y < -10.0f )
             _body.setPosition( findSpawnPosition() );
@@ -442,6 +446,7 @@ namespace sw
             return;
         ++_brokenCount;
         _breakProgress = 0.0f;
+        (void)GameSound::play( "game/voxelcraft/sounds/impact_soft_medium_000.ogg" );
         if ( drop != kVoxelAirBlock && _hotbar.addBlock( drop, 1 ) > 0 )
             SW_LOG_INFO( "[Voxel] hotbar is full - the %# is lost", pBlock->_name.c_str() );
         _bHasTarget = SW_FALSE;
@@ -461,7 +466,10 @@ namespace sw
         if ( _hotbar.consumeSelected( block ) == false )
             return;
         if ( _world.setBlock( cell, block ) )
+        {
             ++_placedCount;
+            (void)GameSound::play( "game/voxelcraft/sounds/impact_plank_medium_001.ogg" );
+        }
     }
 
     void VoxelCraftWorld::updateCameraAndHighlight()

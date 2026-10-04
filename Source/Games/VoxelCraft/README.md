@@ -30,4 +30,5 @@ cd build/Ninja-Debug/Bin
 
 - `VoxelCraftGame` — 블록 카탈로그(`Resource/game/voxelcraft/data/blocks.xml`)를 읽고 월드를 둡니다.
 - `VoxelCraftWorld` — 지형 꾸미기(광석 · 눈), 청크 메시 → 엔진 메시, 몸 · 시점, 부수기 · 놓기, 핫바, 블록 표시.
-- `textures/blocks.dds` — 이 저장소에서 그린 16 × 16 픽셀 아트 아틀라스(`Scripts/generate/GenerateGameTextures.py`, 출처는 `credits.md`).
+- `textures_raw/blocks.png` → `textures/blocks.dds` — Kenney Voxel Pack 타일(128 px) 4 × 4 아틀라스(`App --import-textures`, 출처는 `credits.md`).
+- `sounds/` — 부수기 · 놓기 · 착지 효과음.

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- VoxelCraft 의 블록. 블록 번호는 이 순서로 1 부터 붙는다(0 은 공기) — 순서를 바꾸면 저장된 월드의 블록이 바뀐다.
-     tile · top · bottom · side 는 textures/blocks.dds 아틀라스(4 x 4 칸, 칸 64 텍셀)의 칸 번호다(Scripts/generate/GenerateGameTextures.py 의 kTilePainters).
+     tile · top · bottom · side 는 textures/blocks.dds 아틀라스(4 x 4 칸, 칸 128 텍셀)의 칸 번호다 — 왼쪽 위부터 줄마다 0, 1, 2 …
+     (원본은 textures_raw/blocks.png, Kenney Voxel Pack 타일을 이 순서로 모은 것 — credits.md).
      hardness 는 맨손으로 부수는 데 걸리는 초, color 는 정점 색으로 곱해지는 틴트(알파 < 1 이면 반투명 메시로 간다). -->
-<BlockCatalog atlasColumns="4" atlasRows="4" tileTexels="64">
+<BlockCatalog atlasColumns="4" atlasRows="4" tileTexels="128">
   <Block id="grass" name="Grass" tile="2" top="0" side="1" hardness="0.6"/>
   <Block id="dirt" name="Dirt" tile="2" hardness="0.5"/>
   <Block id="stone" name="Stone" tile="3" hardness="1.5"/>
