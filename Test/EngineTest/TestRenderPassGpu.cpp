@@ -5086,6 +5086,50 @@ SW_TEST_CASE( RenderPassGpuTest, PortraitRendererDrawsAPrefabInIsolation )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 구조 버퍼를 앞에서부터 일부만 갱신하면 원본은 그 크기만 읽힌다 — 버퍼보다 짧은 원본의 뒤를 넘어 읽지 않는다
+ * @details 용량을 남겨 두는 풀(모프 · 스킨 풀)은 내용이 줄어도 버퍼를 다시 만들지 않고 앞에서부터 짧게 올린다. DX11 은 이 "오프셋 0 · 조각 하나" 를
+ *          상자 없는 `UpdateSubresource` 로 보냈는데, 상자가 없으면 드라이버가 버퍼 **전체** 길이를 원본에서 읽는다 — 원본 뒤를 넘어 읽다
+ *          드라이버 안에서 죽었다(Shooter3D 에서 스켈레톤 시체를 걷을 때). 원본을 페이지 끝에 붙이고 다음 페이지를 접근 불가로 두면, 한 바이트라도
+ *          넘어 읽는 순간 죽는다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, PartialStructuredBufferUploadReadsOnlyTheSourceRange )
+{
+#if SW_PLATFORM_WINDOWS
+    SYSTEM_INFO sysInfo{};
+    GetSystemInfo( &sysInfo );
+    const size_t pageSize = static_cast<size_t>( sysInfo.dwPageSize );
+    uint8*       pBase    = static_cast<uint8*>( VirtualAlloc( nullptr, pageSize * 2, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE ) );
+    SW_ASSERT_TRUE( pBase != nullptr );
+    DWORD oldProtect{ 0 };
+    SW_ASSERT_TRUE( VirtualProtect( pBase + pageSize, pageSize, PAGE_NOACCESS, &oldProtect ) != 0 );
+    const uint32 sourceSize = 256;
+    uint8*       pSource    = pBase + pageSize - sourceSize; // 원본의 끝 = 접근 불가 페이지의 시작
+    for ( uint32 byteIndex = 0; byteIndex < sourceSize; ++byteIndex )
+    {
+        pSource[byteIndex] = static_cast<uint8>( byteIndex );
+    }
+
+    test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pFactory = device.get()->getResourceFactory();
+        // 원본보다 훨씬 큰 버퍼(64 KB) — 풀이 용량을 남겨 둔 모양.
+        const sw::RHIBufferHandle buffer = pFactory->createStructuredBuffer( 16, 4096 );
+        SW_ASSERT_TRUE( buffer != 0 );
+        pFactory->updateStructuredBufferRange( buffer, pSource, sourceSize, 0 );
+        pFactory->updateStructuredBuffer( buffer, pSource, sourceSize );
+        device.get()->waitIdle();
+        pFactory->destroyBuffer( buffer );
+    }
+    VirtualFree( pBase, 0, MEM_RELEASE );
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the partial structured buffer upload test" );
+#else
+    SW_TEST_SKIP( "Guard pages are set up with the Windows memory API" );
+#endif
+}
+
+/**
  * @brief [RenderPassGpuTest] 물 정점 셰이더의 파도 함수(gerstner.hlsli)가 CPU 질의(WaterWaveMath)와 같은 변위를 낸다 — 네 백엔드
  * @details 컴퓨트 프로브(common/shaders/waterwaveprobe.hlsl)가 water.hlsl 과 같은 `swComputeGerstnerDisplacement` 를 표본 32 자리에서 불러 float 비트를
  *          RGBA8 텍스처에 싣고, 읽어 CPU 값과 견준다. GPU 의 sin · cos 는 정확도가 낮아 비트가 같지는 않다 — 1 mm 안이면 같은 식이다.

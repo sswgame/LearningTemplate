@@ -2,8 +2,20 @@
     "culture": "ko",
     "entries": [
         {
+            "source": "Assault Blaster",
+            "text": "돌격 블래스터"
+        },
+        {
             "source": "Assault Rifle",
             "text": "돌격 소총"
+        },
+        {
+            "source": "Bone Axe",
+            "text": "뼈 도끼"
+        },
+        {
+            "source": "Bone Shield",
+            "text": "뼈 방패"
         },
         {
             "source": "Combat Helmet",
@@ -30,6 +42,10 @@
             "text": "어려움"
         },
         {
+            "source": "Knight Helmet",
+            "text": "기사 투구"
+        },
+        {
             "source": "M4 Rifle",
             "text": "M4 소총"
         },
@@ -40,6 +56,10 @@
         {
             "source": "Normal",
             "text": "보통"
+        },
+        {
+            "source": "Notched Blade",
+            "text": "이 빠진 칼"
         },
         {
             "source": "Pistol",
@@ -64,6 +84,30 @@
         {
             "source": "Recon Vest",
             "text": "정찰 조끼"
+        },
+        {
+            "source": "Round Shield",
+            "text": "둥근 방패"
+        },
+        {
+            "source": "Rusted Helm",
+            "text": "녹슨 투구"
+        },
+        {
+            "source": "Scatter Blaster",
+            "text": "산탄 블래스터"
+        },
+        {
+            "source": "Sidearm Blaster",
+            "text": "보조 블래스터"
+        },
+        {
+            "source": "Tattered Cape",
+            "text": "해진 망토"
+        },
+        {
+            "source": "Travel Cape",
+            "text": "여행 망토"
         }
     ]
 }

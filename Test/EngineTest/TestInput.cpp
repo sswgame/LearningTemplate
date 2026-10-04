@@ -1256,11 +1256,11 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
 #if defined( SW_PLATFORM_WINDOWS )
 namespace
 {
-    sw::string s_lastTextInput; ///< 글자 입력 콜백이 마지막으로 받은 글자
+    sw::string s_receivedText; ///< 글자 입력 콜백이 받은 글자를 받은 순서대로 이은 것
 
     void onRecordTextInput( sw::string_view text )
     {
-        s_lastTextInput = sw::string( text );
+        s_receivedText.append( text.data(), text.size() );
     }
 } // namespace
 
@@ -1274,23 +1274,65 @@ SW_TEST_CASE( InputManagerTest, WmCharReachesTheTextInputCallback )
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     input.setTextInputCallback( SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onRecordTextInput ) );
-    s_lastTextInput.clear();
+    s_receivedText.clear();
 
     sw::NativeWindowEvent charEvent{};
     charEvent._message = WM_CHAR;
     charEvent._wParam  = 0xAC00; // '가'
     input.processNativeEvent( charEvent );
-    SW_EXPECT_TRUE( s_lastTextInput.empty() ); // 프레임이 시작해야 적용된다
+    SW_EXPECT_TRUE( s_receivedText.empty() ); // 프레임이 시작해야 적용된다
     input.beginFrame( 0.016f );
-    SW_EXPECT_TRUE( s_lastTextInput == "\xEA\xB0\x80" );
+    SW_EXPECT_TRUE( s_receivedText == "\xEA\xB0\x80" );
     input.endFrame();
 
-    s_lastTextInput.clear();
+    s_receivedText.clear();
     charEvent._wParam = 0x08; // 백스페이스
     input.processNativeEvent( charEvent );
     input.beginFrame( 0.016f );
-    SW_EXPECT_TRUE( s_lastTextInput.empty() );
+    SW_EXPECT_TRUE( s_receivedText.empty() );
     input.endFrame();
+
+    input.setTextInputCallback( {} );
+    input.shutdown();
+}
+
+/**
+ * @brief [InputManagerTest] 서로게이트 쌍으로 온 WM_CHAR 두 개는 UTF-8 4 바이트 한 글자가 되고, 짝 없는 서로게이트는 U+FFFD 한 글자가 된다
+ * @details Windows 는 BMP 밖 글자(이모지 · 확장 한자)를 높은 · 낮은 서로게이트 WM_CHAR 두 개로 보낸다. 반쪽마다 따로 인코딩하면 3 바이트 둘 —
+ *          UTF-8 이 아닌 글(CESU-8)이 된다. 짝 없는 반쪽은 버리지 않고 U+FFFD 로 바꾼다(`StringUtil::utf16ToUtf8` 과 같은 규칙).
+ */
+SW_TEST_CASE( InputManagerTest, WmCharSurrogatePairBecomesOneUtf8Character )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.setTextInputCallback( SW_DELEGATE_FUNCTION( sw::InputManager::TextInputDelegate, onRecordTextInput ) );
+
+    const auto sendChars = [&input]( std::initializer_list<WPARAM> listCodeUnit ) -> sw::string
+    {
+        s_receivedText.clear();
+        sw::NativeWindowEvent charEvent{};
+        charEvent._message = WM_CHAR;
+        for ( const WPARAM codeUnit : listCodeUnit )
+        {
+            charEvent._wParam = codeUnit;
+            input.processNativeEvent( charEvent );
+        }
+        input.beginFrame( 0.016f );
+        input.endFrame();
+        return s_receivedText;
+    };
+
+    SW_EXPECT_TRUE( sendChars( { 0xD83D, 0xDE00 } ) == "\xF0\x9F\x98\x80" ); // U+1F600
+    SW_EXPECT_TRUE( sendChars( { 0xD840, 0xDC0B } ) == "\xF0\xA0\x80\x8B" ); // U+2000B(확장 한자)
+    SW_EXPECT_TRUE( sendChars( { 0xDE00 } ) == "\xEF\xBF\xBD" );             // 높은 반쪽 없는 낮은 반쪽
+    SW_EXPECT_TRUE( sendChars( { 0xD83D, 'a' } ) == "\xEF\xBF\xBD"
+                                                    "a" ); // 낮은 반쪽 대신 다른 글자
+    SW_EXPECT_TRUE( sendChars( { 0xD83D, 0xD83D, 0xDE00 } ) == "\xEF\xBF\xBD"
+                                                               "\xF0\x9F\x98\x80" );
+
+    // 쌍이 프레임 경계에 걸려도 한 글자다 — 반쪽은 큐가 아니라 메시지를 받는 쪽이 들고 있다.
+    SW_EXPECT_TRUE( sendChars( { 0xD83D } ).empty() );
+    SW_EXPECT_TRUE( sendChars( { 0xDE00 } ) == "\xF0\x9F\x98\x80" );
 
     input.setTextInputCallback( {} );
     input.shutdown();

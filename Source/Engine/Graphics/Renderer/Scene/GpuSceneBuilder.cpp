@@ -825,27 +825,26 @@ namespace sw
 
         _snapshot._listSkinPalette.clear();
         shared_ptr<vector<float4>> listRow = make_shared<vector<float4>>();
-        for ( const vector<SkeletalMeshComponent*>& level : animation.getLevels() )
+        // 레벨(평가 순서)이 아니라 등록된 유닛 전부를 본다 — 유닛 하나가 빠지면(시체를 걷음) 레벨은 다음 평가까지 비어 있어, 레벨로 모으면
+        // 그 프레임의 모든 스킨드 메시가 팔레트 없이(단위 행렬 = 바인드 포즈) 한 번 그려진다.
+        for ( const SkeletalMeshComponent* pUnit : animation.getUnits() )
         {
-            for ( const SkeletalMeshComponent* pUnit : level )
+            const Mesh* pMesh = pUnit->getRawMesh();
+            if ( pMesh == nullptr || pMesh->hasSkin() == false )
+                continue;
+            const vector<float4x4>& listPalette = pUnit->getSkinPalette();
+            GpuSkinPalette          entry{};
+            entry._pMesh     = pMesh;
+            entry._firstRow  = static_cast<uint32>( listRow->size() );
+            entry._boneCount = static_cast<uint32>( listPalette.size() );
+            // 행벡터 4x4 의 0 · 1 · 2 열 — 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl).
+            for ( const float4x4& matrix : listPalette )
             {
-                const Mesh* pMesh = pUnit->getRawMesh();
-                if ( pMesh == nullptr || pMesh->hasSkin() == false )
-                    continue;
-                const vector<float4x4>& listPalette = pUnit->getSkinPalette();
-                GpuSkinPalette          entry{};
-                entry._pMesh     = pMesh;
-                entry._firstRow  = static_cast<uint32>( listRow->size() );
-                entry._boneCount = static_cast<uint32>( listPalette.size() );
-                // 행벡터 4x4 의 0 · 1 · 2 열 — 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl).
-                for ( const float4x4& matrix : listPalette )
-                {
-                    listRow->push_back( float4{ matrix._11, matrix._21, matrix._31, matrix._41 } );
-                    listRow->push_back( float4{ matrix._12, matrix._22, matrix._32, matrix._42 } );
-                    listRow->push_back( float4{ matrix._13, matrix._23, matrix._33, matrix._43 } );
-                }
-                _snapshot._listSkinPalette.push_back( entry );
+                listRow->push_back( float4{ matrix._11, matrix._21, matrix._31, matrix._41 } );
+                listRow->push_back( float4{ matrix._12, matrix._22, matrix._32, matrix._42 } );
+                listRow->push_back( float4{ matrix._13, matrix._23, matrix._33, matrix._43 } );
             }
+            _snapshot._listSkinPalette.push_back( entry );
         }
         _snapshot._pListSkinPaletteRow = std::move( listRow );
     }

@@ -156,7 +156,7 @@ class GameTableTest(unittest.TestCase):
                 variable = argument[1:].split("=", 1)[0]
                 listSource = list((kRepositoryRoot / "Source").rglob("*.cpp"))
                 self.assertTrue(any(variable in path.read_text(encoding="utf-8", errors="replace") for path in listSource
-                                    if "Games" in path.parts or "Graphics" in path.parts or "Empty" in path.parts), f"{name}: {variable}")
+                                    if "Games" in path.parts or "GameFramework" in path.parts or "Graphics" in path.parts or "Empty" in path.parts), f"{name}: {variable}")
 
     def testGoldenReferencesMatchTheTable(self) -> None:
         import json

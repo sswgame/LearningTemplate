@@ -8,6 +8,7 @@
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Destruction/FractureAssetCache.h"
 #include "Engine/Graphics/2D/SpriteMeshBuilder.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
@@ -42,6 +43,7 @@ namespace sw
         , _physicsAssetCache{ make_unique<PhysicsAssetCache>() }
         , _rigAssetCache{ make_unique<RigAssetCache>() }
         , _localizationReloadCache{ make_unique<LocalizationReloadCache>() }
+        , _fractureCache{ make_unique<FractureAssetCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _listBuiltInAssetCache{}
         , _registeredAssetCache{}
@@ -61,6 +63,7 @@ namespace sw
                                    _physicsAssetCache.get(),
                                    _rigAssetCache.get(),
                                    _localizationReloadCache.get(),
+                                   _fractureCache.get(),
                                    &MeshUtil::getPrimitiveCache(),
                                    &SpriteMeshBuilder::getSlicedMeshCache(),
                                    &SpriteRenderUtil::getTextureInstanceCache() };

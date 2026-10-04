@@ -32,4 +32,19 @@ namespace sw
         const float32 roll = MathUtil::atan2( -up.dot( noRollRight ), up.dot( noRollUp ) );
         return float3{ pitch, yaw, roll };
     }
+
+    float32 OrientationUtil::wrapAngle( float32 angle )
+    {
+        while ( angle > MathUtil::Pi )
+            angle -= 2.0f * MathUtil::Pi;
+        while ( angle < -MathUtil::Pi )
+            angle += 2.0f * MathUtil::Pi;
+        return angle;
+    }
+
+    float32 OrientationUtil::turnTowardAngle( float32 current, float32 target, float32 maxStep )
+    {
+        const float32 limit = MathUtil::max( maxStep, 0.0f );
+        return wrapAngle( current + MathUtil::clamp( wrapAngle( target - current ), -limit, limit ) );
+    }
 } // namespace sw

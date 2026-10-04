@@ -341,3 +341,13 @@ SW_TEST_CASE( SurfaceStateTest, TornTrianglesLeaveTheVisibleMask )
     SW_ASSERT_TRUE( MeshMerger::merge( vector_reference<const MeshMergeSource>( &source, 1 ), nullptr, merged, nullptr ) );
     SW_EXPECT_EQUAL( sleeve.getTriangleCount() - tornCount, merged._geometry.getTriangleCount() );
 }
+
+/**
+ * @brief [GeometryCutTest] 부호만 다른 대칭 꼭짓점(±1 · ±0.5 · ±0.25 상자)을 서로 다른 정점으로 용접한다 — 키가 겹치면 닫힌 상자가 열린 것으로 나온다
+ */
+SW_TEST_CASE( GeometryCutTest, WeldKeepsSymmetricCornersApart )
+{
+    SW_EXPECT_TRUE( GeometryCutUtil::isClosed( test::CharacterTestUtil::makeBox( float3( 0.0f, 0.0f, 0.0f ), float3( 1.0f, 0.5f, 0.25f ) ) ) );
+    SW_EXPECT_TRUE( GeometryCutUtil::isClosed( test::CharacterTestUtil::makeBox( float3( 0.0f, 0.0f, 0.0f ), float3( 2.0f, 1.0f, 0.5f ) ) ) );
+    SW_EXPECT_TRUE( GeometryCutUtil::isClosed( test::CharacterTestUtil::makeBox( float3( 0.0f, 0.0f, 0.0f ), float3( 0.5f, 0.5f, 0.5f ) ) ) );
+}

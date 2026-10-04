@@ -79,6 +79,13 @@ namespace sw
             return insertOrGetLive( key, std::move( created ) );
         }
 
+        /** @brief 그 키의 칸을 뗍니다. 쥔 쪽의 값은 그대로 살고, 다음 요청은 새로 짓습니다. */
+        void erase( const KeyType& key )
+        {
+            std::scoped_lock<mutex> lock{ _mutex };
+            _mapValue.erase( key );
+        }
+
         /** @brief 살아 있는 항목 수입니다. */
         size_t countLive() const
         {

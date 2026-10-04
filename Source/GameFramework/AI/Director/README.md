@@ -18,7 +18,7 @@ RDR2 무작위 조우(가중 풀 · 쿨다운 · 시각 · 장소 · 플레이�
   <Calendar weathers="sunny,rain"/>                                    <!-- 조건 이름 검사(선택, 일정과 같은 원소) -->
   <Intensity max="1" decayPerSecond="0.06" decayDelay="4">
     <Signal id="damageTaken" kind="impulse" scale="0.012" combat="true"/>   <!-- addSignal(양) 한 번에 양 × scale -->
-    <Signal id="dronesNear" kind="rate" scale="0.01" max="0.08" combat="true"/> <!-- setSignal(값) 동안 초마다 값 × scale -->
+    <Signal id="enemiesNear" kind="rate" scale="0.01" max="0.08" combat="true"/> <!-- setSignal(값) 동안 초마다 값 × scale -->
     <Signal id="lowAmmo" kind="level" scale="0.25"/>                       <!-- 긴장도의 바닥 -->
   </Intensity>
   <Phase id="BuildUp" spawnScale="1" spawnTags="Drone">
@@ -76,8 +76,8 @@ director.notifyDespawned( spawnId );                               // 스폰 개
 
 ## 쓰는 곳
 
-- `Shooter3D` — 드론 웨이브를 감독으로 바꿨다(`Resource/game/shooter3d/data/drones.director.xml` · `drones.spawns.xml`). 신호는 맞은 피해 · 쓰러뜨린 드론 ·
-  가까운 드론 수 · 탄 부족, 사건은 드론 스폰 · 무리/정예(절정 진입) · 탄(쉼 진입) · 수리(예산). 자동 플레이(`-gv_shooterAutoPlay=1`)는 씨앗이 고정이라 같은 프레임
+- `Shooter3D` — 스켈레톤 웨이브를 감독이 낸다(`Resource/game/shooter3d/data/arena.director.xml` · `arena.spawns.xml`). 신호는 맞은 피해 · 쓰러뜨린 적 ·
+  가까운 적 수 · 탄 부족, 사건은 스켈레톤 스폰 · 무리/정예(절정 진입) · 탄(쉼 진입) · 수리(예산). 자동 플레이(`-gv_shooterAutoPlay=1`)는 씨앗이 고정이라 같은 프레임
   시간이면 같은 페이싱이다(실제 프레임 시간은 실행마다 다르다).
 
 ## 상용 엔진과 견주면

@@ -345,3 +345,37 @@ SW_TEST_CASE( PhysicsScene2DTest, StepIsDeterministic )
         SW_EXPECT_TRUE( arrListPosition[0][bodyIndex]._y == arrListPosition[1][bodyIndex]._y );
     }
 }
+
+/**
+ * @brief [PhysicsScene2DTest] 지어 둔 셰이프를 묶은 컴파운드 — 자식의 로컬 자리가 그대로 들고, 자식을 지워도 산다. 지운 자식으로는 만들지 않는다
+ */
+SW_TEST_CASE( PhysicsScene2DTest, CompoundOfBuiltShapesKeepsChildOffsets )
+{
+    sw::unique_ptr<sw::IPhysicsScene2D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    const sw::PhysicsShapeDesc2D lower       = makeBox( sw::float2{ 0.5f, 0.5f } );
+    sw::PhysicsShapeDesc2D       upper       = makeBox( sw::float2{ 0.5f, 0.5f } );
+    upper._localPosition                     = sw::float2{ 0.0f, 1.0f };
+    const sw::PhysicsShapeHandle lowerShape  = pScene->createShape( sw::span<const sw::PhysicsShapeDesc2D>{ &lower, 1 }, sw::hashed_string{} );
+    const sw::PhysicsShapeHandle upperShape  = pScene->createShape( sw::span<const sw::PhysicsShapeDesc2D>{ &upper, 1 }, sw::hashed_string{} );
+    const sw::PhysicsShapeHandle arrChild[2] = { lowerShape, upperShape };
+    const sw::PhysicsShapeHandle compound    = pScene->createCompoundShape( sw::span<const sw::PhysicsShapeHandle>{ arrChild, 2 } );
+    SW_ASSERT_TRUE( compound.isValid() );
+    pScene->destroyShape( lowerShape );
+    pScene->destroyShape( upperShape );
+
+    sw::PhysicsBodyDesc2D desc;
+    desc._sharedShape = compound;
+    desc._type        = sw::PhysicsBodyType::Static;
+    SW_ASSERT_TRUE( pScene->createBody( desc ).isValid() );
+    sw::PhysicsQueryFilter filter;
+    sw::PhysicsCastHit2D   hit;
+    SW_ASSERT_TRUE( pScene->raycast( sw::float2{ 0.0f, 10.0f }, sw::float2{ 0.0f, -1.0f }, 100.0f, filter, hit ) );
+    SW_EXPECT_NEAR_EQUAL( 8.5f, hit._distance, 1e-3f ); // 위 자식의 윗면(y = 1.5)
+    SW_ASSERT_TRUE( pScene->raycast( sw::float2{ 0.0f, -10.0f }, sw::float2{ 0.0f, 1.0f }, 100.0f, filter, hit ) );
+    SW_EXPECT_NEAR_EQUAL( 9.5f, hit._distance, 1e-3f ); // 아래 자식의 밑면(y = -0.5)
+
+    SW_TEST_DEFENSIVE_SCOPE( "a compound of a destroyed shape is rejected" );
+    const sw::PhysicsShapeHandle arrStale[1] = { lowerShape };
+    SW_EXPECT_FALSE( pScene->createCompoundShape( sw::span<const sw::PhysicsShapeHandle>{ arrStale, 1 } ).isValid() );
+}

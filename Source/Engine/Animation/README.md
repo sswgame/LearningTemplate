@@ -81,6 +81,9 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
   길이가 있는 알림(구간 · NotifyState)은 시작에서 `Begin`, 끝(시작 + 길이, 한 바퀴 끝을 넘지 않음)에서 `End` 가 울리고 같은 시각이면 `End` 가 먼저입니다.
   `AnimFiredNotify::_pSource` · `_eventIndex` 가 구간 하나를 가립니다. 처리(이름 → 처리기)는 `Engine/Character/AnimNotifyComponent` — 애니메이터는 받는 쪽
   (`IAnimNotifyListener`, `Object/Animation/AnimNotifyListener.h`)에 프레임마다 한 번 넘깁니다.
+- **크로스페이드가 다른 크로스페이드로 끊기면 플레이어는 섞이던 한 칸을 버린다**(`AnimPlayer::getInterruptCount` 가 오른다). 스켈레탈 애니메이터는 끊긴 순간의
+  기본 포즈를 새 페이드 길이 동안 섞어 사라지게 해 이어 붙인다 — 포즈를 직접 섞는 다른 소비자(스프라이트는 프레임이라 해당 없음)도 같은 일을 해야 튀지 않는다.
+- **끝 자세로 끝나는 클립(겨누기 · 들어 올리기)을 반복 레이어로 돌리면 끝 → 처음에서 튄다** — 레이어 `_bLoop = SW_FALSE` 로 끝 자세를 쥔다.
 - **ACL 블롭은 16 바이트 정렬이어야 한다** — `AnimClip` 은 `AnimCodecBlock` 배열로 보관하고, 바이트 배열에서 재는 곳(`measureMaxError`)은 정렬된 사본을 만든다.
 - **ACL 의 정밀도 · shell 거리 기본값은 센티미터 단위**다(0.01 · 3.0). 엔진은 미터라 규칙의 `animation_precision` 0.0001 · `animation_shell_distance` 0.1 이 기본이다.
 | `BlendCurve` | 전환 곡선 · 길이(`BlendCurveSpec`)와 시간 → 가중치(`evaluateBlendWeight`). 카메라 디렉터 · 시퀀서 · 소켓 부착의 되돌아가기가 같은 구현을 쓴다 |
