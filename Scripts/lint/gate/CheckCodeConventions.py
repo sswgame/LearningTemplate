@@ -1325,6 +1325,36 @@ def readHeaderClassMembersInternal(headerPath: Path) -> dict:
         return {}
 
 
+#: 줄 안에서 블록 주석 상태를 바꾸거나 막는 자리 — 문자열 · 문자 리터럴(그 안의 `/*` 는 주석이 아니다), `//`, `/*`.
+_kBlockCommentTokenRe = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|//|/\*')
+
+
+def endsInsideBlockCommentInternal(line: str, bInsideAtStart: bool) -> bool:
+    """
+    줄 하나를 왼쪽부터 읽어, 줄이 끝날 때 블록 주석 안인지 돌려줍니다(`bInsideAtStart` 는 줄을 시작할 때의 상태).
+
+    주석 밖에서는 문자열 · 문자 리터럴을 건너뛴다 — `"a/*b"` 의 `/*` 를 주석 시작으로 읽으면 그 뒤 `*/` 가 나올 때까지 모든 줄이
+    검사에서 빠진다. `//` 뒤는 줄 끝까지 주석이다. 주석 안에서는 `*/` 만 찾는다(주석 안의 따옴표는 문자열이 아니다).
+    """
+    index = 0
+    bInside = bInsideAtStart
+    while True:
+        if bInside:
+            closeAt = line.find("*/", index)
+            if closeAt < 0:
+                return True
+            bInside = False
+            index = closeAt + 2
+        tokenMatch = _kBlockCommentTokenRe.search(line, index)
+        if tokenMatch is None:
+            return False
+        token = tokenMatch.group()
+        if token == "//":
+            return False
+        bInside = token == "/*"
+        index = tokenMatch.end()
+
+
 @functools.lru_cache(maxsize=None)
 def compileHeaderCtorReInternal(className: str) -> re.Pattern:
     """헤더 클래스 본문의 생성자 선언(`Name(...)`). 클래스 이름이 수천 개라 `re` 모듈 캐시(512)로는 줄마다 다시 컴파일된다."""
@@ -1381,13 +1411,12 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
     for lineNum, line in enumerate(lines, start=1):
         trimmed = line.strip()
 
-        # 블록 주석 처리
-        if "/*" in trimmed and "*/" not in trimmed:
-            inBlockComment = True
-            continue
+        # 블록 주석 처리 — 주석을 여는 줄 · 닫는 줄은 통째로 건너뛴다. 문자열 · `//` 안의 `/*` 는 주석을 열지 않는다.
         if inBlockComment:
-            if "*/" in trimmed:
-                inBlockComment = False
+            inBlockComment = endsInsideBlockCommentInternal(trimmed, True)
+            continue
+        if "/*" in trimmed and endsInsideBlockCommentInternal(trimmed, False):
+            inBlockComment = True
             continue
         if trimmed.startswith("//") or not trimmed:
             continue
