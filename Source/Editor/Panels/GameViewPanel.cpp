@@ -3,6 +3,7 @@
 #include "Editor/Panels/GameViewPanel.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -20,6 +21,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Utility/GameTimeScale.h"
 
 #include <imgui.h>
@@ -38,6 +40,7 @@ namespace sw::editor
         , _bConfirmUnsavedPlay{ false }
         , _bStartAtCamera{ false }
         , _bShowOverlay{ true }
+        , _bAutoplayButtonDrawn{ false }
     {
     }
 
@@ -232,6 +235,25 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::Checkbox( "HUD", &_bShowOverlay );
         EditorWidgets::drawTooltip( "게임이 DebugOverlayState 에 쓴 값을 캔버스 왼쪽 위에 표시합니다" );
+
+        drawAutoplayButton();
+    }
+
+    void GameViewPanel::drawAutoplayButton()
+    {
+        _bAutoplayButtonDrawn                   = false;
+        const GameAutoplayRegistration* pActive = GameAutoplay::findActive();
+        if ( pActive == nullptr )
+            return;
+        ImGui::SameLine();
+        const bool bOn = GameAutoplay::isOn();
+        if ( EditorWidgets::drawToggleButton( "Auto", bOn, editor::style::kOk ) )
+            (void)GameAutoplay::setOn( bOn == false ); // 등록은 위에서 확인했다
+        fixed_string<constant::kMaxBuffer256> tooltip;
+        formatstring( tooltip.data(), tooltip.capacity(), "%s autoplay: %s (%s, console: autoplay on|off)", pActive->_pGameName, pActive->_pDescription,
+                      pActive->_pVariableName );
+        EditorWidgets::drawTooltip( tooltip.c_str() );
+        _bAutoplayButtonDrawn = true;
     }
 
     void GameViewPanel::drawDebugCategoryPopup()

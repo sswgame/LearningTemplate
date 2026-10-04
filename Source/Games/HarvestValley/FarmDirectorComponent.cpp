@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
@@ -129,6 +130,7 @@ namespace sw
      * @details 배포본으로도 돌린다: `App -gv_farmAutoPlay=1 -gv_profileFrames=36000`(약 10 분 = 하루 다섯).
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_farmAutoPlay, 0, "HarvestValley: 농부도 AI 가 조종 (1=켜기)", SW_KEEP_IN_SHIPPING );
+    SW_GAME_AUTOPLAY( gv_farmAutoPlay, "HarvestValley", "The farmer is driven by the AI" );
 } // namespace sw
 
 namespace sw
@@ -806,7 +808,7 @@ namespace sw
 
     bool FarmDirectorComponent::isAutoPlayOn() const
     {
-        return _bAutoPlay || gv_farmAutoPlay != 0;
+        return _bAutoPlay || GameAutoplay::isOn();
     }
 
     const hashed_string& FarmDirectorComponent::getSelectedSeed() const

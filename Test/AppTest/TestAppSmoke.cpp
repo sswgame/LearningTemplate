@@ -633,6 +633,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|gameView.resizeEveryFrame",
         "EditorSelfTest|PASS|gameView.debugDraw",
         "EditorSelfTest|PASS|gameView.debugOverlay",
+        "EditorSelfTest|PASS|gameView.autoplayButton",
         "EditorSelfTest|PASS|console.tagFilter",
         "EditorSelfTest|PASS|console.devCommands",
         "EditorSelfTest|PASS|hierarchy.selectAllWith",

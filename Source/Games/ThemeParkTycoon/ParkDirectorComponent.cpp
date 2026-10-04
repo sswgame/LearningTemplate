@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
@@ -67,6 +68,7 @@ namespace sw
 
     /** @brief `-gv_parkAutoBuild=1` — 디렉터의 자동 짓기를 켭니다(씬의 `_bAutoBuild` 가 꺼져 있어도). 배포본 실행으로 입력 없이 공원이 크는 확인. */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_parkAutoBuild, 0, "ThemeParkTycoon: 돈이 모이면 자동으로 짓기 (1=켜기)", SW_KEEP_IN_SHIPPING );
+    SW_GAME_AUTOPLAY( gv_parkAutoBuild, "ThemeParkTycoon", "Build the next ride whenever cash allows" );
 } // namespace sw
 
 namespace sw
@@ -671,7 +673,7 @@ namespace sw
 
     bool ParkDirectorComponent::isAutoBuildOn() const
     {
-        return _bAutoBuild || gv_parkAutoBuild != 0;
+        return _bAutoBuild || GameAutoplay::isOn();
     }
 
     GameObjectManager* ParkDirectorComponent::getObjectManager() const

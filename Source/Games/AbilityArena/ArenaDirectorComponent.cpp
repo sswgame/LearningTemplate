@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Ability/AbilityCatalog.h"
 #include "GameFramework/Ability/AbilitySystemComponent.h"
@@ -59,6 +60,7 @@ namespace sw
      * @details 배포본 실행 파일로도 돌릴 수 있게 남긴다: `App -gv_arenaAutoPlay=1 -gv_profileFrames=1200`.
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_arenaAutoPlay, 0, "AbilityArena: 플레이어도 AI 가 조종 (1=켜기)", SW_KEEP_IN_SHIPPING );
+    SW_GAME_AUTOPLAY( gv_arenaAutoPlay, "AbilityArena", "The player is driven by the AI too" );
 } // namespace sw
 
 namespace sw
@@ -247,7 +249,7 @@ namespace sw
 
     bool ArenaDirectorComponent::isAutoPlayOn() const
     {
-        return _bAutoPlay || gv_arenaAutoPlay != 0;
+        return _bAutoPlay || GameAutoplay::isOn();
     }
 
     const ArenaDirectorComponent* ArenaDirectorComponent::resolveDirector( const GameObjectManager& manager, GameObjectHandle director )

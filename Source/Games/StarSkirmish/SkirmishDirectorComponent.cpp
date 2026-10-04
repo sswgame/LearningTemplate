@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Window/IWindow.h"
 
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
@@ -72,6 +73,7 @@ namespace sw
      * @details 배포본으로도 돌릴 수 있게 남긴다: `App -gv_skirmishAutoPlay=1`. 30 초마다 `[Skirmish] t=.. p0 workers .. army ..` 와 끝에 승패가 로그에 남는다.
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_skirmishAutoPlay, 0, "StarSkirmish: 두 플레이어 모두 AI 로 돌리기 (1=켜기)", SW_KEEP_IN_SHIPPING );
+    SW_GAME_AUTOPLAY( gv_skirmishAutoPlay, "StarSkirmish", "Both players are AI" );
 } // namespace sw
 
 namespace sw
@@ -718,7 +720,7 @@ namespace sw
 
     bool SkirmishDirectorComponent::isAutoPlayOn() const
     {
-        return _bAutoPlay || gv_skirmishAutoPlay != 0;
+        return _bAutoPlay || GameAutoplay::isOn();
     }
 
     GameObjectManager* SkirmishDirectorComponent::getObjectManager() const

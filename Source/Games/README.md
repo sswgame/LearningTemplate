@@ -20,6 +20,19 @@
 
 고르지 않은 게임은 빌드되지 않습니다(CI 는 `Empty` 만 짓습니다). 다른 게임을 바꿨으면 그 게임을 골라 한 번 지어 확인합니다.
 
+## 자동 플레이(입력 없이 AI 가 조종)
+
+자동 플레이가 있는 게임은 그 스위치 전역 변수 바로 아래에 한 줄로 등록합니다 — `Engine/Utility/GameAutoplay`.
+
+```cpp
+SW_TEST_GLOBAL_VARIABLE_INT( gv_shooterAutoPlay, 0, "Shooter3D: 조준 · 사격도 AI 가 (1=켜기)", SW_KEEP_IN_SHIPPING );
+SW_GAME_AUTOPLAY( gv_shooterAutoPlay, "Shooter3D", "Aim, shoot and move by AI" );
+```
+
+게임 코드는 `GameAutoplay::isOn()` 하나만 묻습니다(씬의 `_bAutoPlay` 같은 데이터 스위치와 OR). 켜짐은 그 전역 변수 하나에 있어 명령줄
+(`-gv_shooterAutoPlay=1`) · 전역 변수 패널 · 콘솔(`autoplay on|off`) · 에디터 Game View 툴바의 `Auto` 버튼이 모두 같은 값을 바꿉니다. 일곱 게임
+(AbilityArena · HarvestValley · NileCity · Shooter3D · StarSkirmish · VoxelCraft · ThemeParkTycoon — 이것만 `gv_parkAutoBuild`)이 등록돼 있습니다.
+
 ## 핫리로드 대상 모듈은 어디서 정하는가
 
 `Config/App/AppConfig.json` 의 `_listGameKitModule` 이 정본입니다. 엔진 기동 단계 `ModuleTypes` 에서 App 이 이 목록을

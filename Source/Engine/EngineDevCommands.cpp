@@ -18,6 +18,7 @@
     #include "Engine/Object/GameObject/GameObjectManager.h"
     #include "Engine/Scene/Scene.h"
     #include "Engine/Scene/SceneManager.h"
+    #include "Engine/Utility/GameAutoplay.h"
     #include "Engine/Utility/GameTimeScale.h"
 
 namespace sw
@@ -72,6 +73,28 @@ namespace sw
                 return true;
             }
 
+            static bool runAutoplay( const vector<string>& listArgument, string& outReply )
+            {
+                const GameAutoplayRegistration* pActive = GameAutoplay::findActive();
+                if ( pActive == nullptr )
+                {
+                    outReply = "this game has no autoplay (SW_GAME_AUTOPLAY)";
+                    return false;
+                }
+                if ( listArgument.size() > 1 )
+                    return false;
+                if ( listArgument.size() == 1 )
+                {
+                    const bool bOn  = StringUtil::equals( listArgument[0], "on", true ) || listArgument[0] == "1";
+                    const bool bOff = StringUtil::equals( listArgument[0], "off", true ) || listArgument[0] == "0";
+                    if ( bOn == bOff )
+                        return false;
+                    (void)GameAutoplay::setOn( bOn ); // 위에서 등록을 확인했다
+                }
+                outReply = string( pActive->_pGameName ) + " autoplay " + ( GameAutoplay::isOn() ? "on" : "off" ) + " (" + pActive->_pVariableName + ")";
+                return true;
+            }
+
             static bool runDebugDrawCategory( const vector<string>& listArgument, string& outReply )
             {
                 if ( engine::areEngineServicesBound() == false )
@@ -107,6 +130,8 @@ namespace sw
                     &EngineDevCommandsInternal::runTimeScale );
     SW_DEV_COMMAND( Teleport, "teleport", "teleport <object> <x> <y> <z>", "Teleport a named object of the active scene",
                     &EngineDevCommandsInternal::runTeleport );
+    SW_DEV_COMMAND( Autoplay, "autoplay", "autoplay [on|off]", "Show or switch the game's autoplay (AI drives the player - SW_GAME_AUTOPLAY)",
+                    &EngineDevCommandsInternal::runAutoplay );
     SW_DEV_COMMAND( DebugDrawCategory, "debugdraw.category", "debugdraw.category [<name> <on|off>]", "List or toggle DebugDrawQueue categories",
                     &EngineDevCommandsInternal::runDebugDrawCategory );
 } // namespace sw

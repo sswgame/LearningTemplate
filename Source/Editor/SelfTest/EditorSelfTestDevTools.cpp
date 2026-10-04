@@ -29,6 +29,7 @@
 #include "Engine/Utility/Console/DevCommandRegistry.h"
 #include "Engine/Utility/Console/DevConsole.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
+#include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Utility/GameTimeScale.h"
 
 #include <imgui.h>
@@ -157,6 +158,45 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
+            // gameView.autoplayButton — 게임이 자동 플레이를 등록하면 Game View 툴바에 버튼이 서고, 스위치가 그 게임의 값을 켠다
+            // ------------------------------------------------------------------------------
+            struct AutoplayProbe
+            {
+                int32                             _value{ 0 };
+                GameAutoplayRegistration          _registration{ "SelfTestGame", "AI plays the self test", "gv_selfTestAutoPlay", nullptr };
+                unique_ptr<GameAutoplayRegistrar> _pRegistrar;
+            };
+
+            static AutoplayProbe& getAutoplayProbe()
+            {
+                static AutoplayProbe s_probe;
+                return s_probe;
+            }
+
+            static EditorSelfTestStep runAutoplayButton( EditorSelfTestContext& context )
+            {
+                GameViewPanel* pPanel = openGameView( context );
+                if ( pPanel == nullptr )
+                    return EditorSelfTestStep::Done;
+                AutoplayProbe& probe     = getAutoplayProbe();
+                const uint32   stepIndex = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    probe._registration._pValue = &probe._value;
+                    probe._pRegistrar           = make_unique<GameAutoplayRegistrar>( &probe._registration );
+                    return EditorSelfTestStep::Continue;
+                }
+                const bool bDrawn = pPanel->wasAutoplayButtonDrawn();
+                if ( bDrawn == false && stepIndex < kMaxWaitFrame )
+                    return EditorSelfTestStep::Continue;
+                (void)context.expect( bDrawn, "the game view toolbar never drew the autoplay button for a registered game" );
+                (void)context.expect( GameAutoplay::setOn( true ) && probe._value == 1, "the autoplay switch did not turn the game's variable on" );
+                probe._pRegistrar.reset();
+                probe._value = 0;
+                return EditorSelfTestStep::Done;
+            }
+
+            // ------------------------------------------------------------------------------
             // console.devCommands — Output Log 의 입력 줄 콘솔이 개발 명령을 돌리고, 에디터가 등록한 명령이 등록부에 있으며, 답이 로그에 보인다
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runConsoleDevCommands( EditorSelfTestContext& context )
@@ -262,6 +302,7 @@ namespace sw::editor
 
     SW_EDITOR_SELF_TEST( GameViewDebugDraw, "gameView.debugDraw", 710, &EditorSelfTestDevToolsInternal::runDebugDrawReachesTheGameView );
     SW_EDITOR_SELF_TEST( GameViewDebugOverlay, "gameView.debugOverlay", 720, &EditorSelfTestDevToolsInternal::runDebugOverlayIsDrawn );
+    SW_EDITOR_SELF_TEST( GameViewAutoplay, "gameView.autoplayButton", 725, &EditorSelfTestDevToolsInternal::runAutoplayButton );
     SW_EDITOR_SELF_TEST( ConsoleTagFilter, "console.tagFilter", 730, &EditorSelfTestDevToolsInternal::runConsoleTagFilter );
     SW_EDITOR_SELF_TEST( ConsoleDevCommands, "console.devCommands", 735, &EditorSelfTestDevToolsInternal::runConsoleDevCommands );
     SW_EDITOR_SELF_TEST( HierarchySelectAllWith, "hierarchy.selectAllWith", 740, &EditorSelfTestDevToolsInternal::runSelectAllWithTag );

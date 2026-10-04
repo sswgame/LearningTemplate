@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Window/IWindow.h"
 
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
@@ -158,6 +159,7 @@ namespace sw
      * @details 배포본으로도 돌릴 수 있게 남긴다: `App -gv_nileAutoPlay=1`. 달마다 `[Nile] month N pop P money M` 이 로그에 남는다.
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_nileAutoPlay, 0, "NileCity: 자동 계획으로 도시를 짓고 돌리기 (1=켜기)", SW_KEEP_IN_SHIPPING );
+    SW_GAME_AUTOPLAY( gv_nileAutoPlay, "NileCity", "Build and run the city from the auto plan" );
 } // namespace sw
 
 namespace sw
@@ -758,7 +760,7 @@ namespace sw
 
     bool NileDirectorComponent::isAutoPlanOn() const
     {
-        return _bAutoPlay || _bAutoPlanToggle == SW_TRUE || gv_nileAutoPlay != 0;
+        return _bAutoPlay || _bAutoPlanToggle == SW_TRUE || GameAutoplay::isOn();
     }
 
     GameObjectManager* NileDirectorComponent::getObjectManager() const
