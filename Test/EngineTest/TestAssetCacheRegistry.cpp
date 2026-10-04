@@ -56,12 +56,13 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
 {
     sw::AssetManager resources;
 
-    SW_ASSERT_EQUAL( size_t( 5 ), resources.getAllAssetCache().size() );
+    SW_ASSERT_EQUAL( size_t( 6 ), resources.getAllAssetCache().size() );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Material" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Texture" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Prefab" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "SpriteClip" ) );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Mesh" ) );
+    SW_EXPECT_NOT_NULL( resources.findAssetCache( "StringTable" ) );
     SW_EXPECT_NULL( resources.findAssetCache( "NoSuchKind" ) );
     SW_EXPECT_NULL( resources.findAssetCache( "" ) );
 

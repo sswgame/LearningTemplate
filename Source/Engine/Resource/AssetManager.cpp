@@ -13,6 +13,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/IAssetCache.h"
+#include "Engine/Resource/LocalizationReloadCache.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Resource/SpriteClipCache.h"
@@ -29,6 +30,7 @@ namespace sw
         , _prefabCache{ make_unique<PrefabCache>() }
         , _spriteClipCache{ make_unique<SpriteClipCache>() }
         , _meshCache{ make_unique<MeshCache>() }
+        , _localizationReloadCache{ make_unique<LocalizationReloadCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _registeredAssetCache{}
         , _contentSource{ ContentSource::Cooked }
@@ -39,6 +41,7 @@ namespace sw
         registerAssetCache( _prefabCache.get() );
         registerAssetCache( _spriteClipCache.get() );
         registerAssetCache( _meshCache.get() );
+        registerAssetCache( _localizationReloadCache.get() );
     }
 
     AssetManager::~AssetManager() = default;
@@ -157,7 +160,8 @@ namespace sw
     bool AssetManager::isBuiltInAssetCache( const IAssetCache* pCache ) const
     {
         return pCache != nullptr && ( pCache == _materialCache.get() || pCache == _textureCache.get() || pCache == _prefabCache.get() ||
-                                      pCache == _spriteClipCache.get() || pCache == _meshCache.get() );
+                                      pCache == _spriteClipCache.get() || pCache == _meshCache.get() ||
+                                      pCache == _localizationReloadCache.get() );
     }
 
     void AssetManager::unregisterAssetCache( const IAssetCache* pCache )

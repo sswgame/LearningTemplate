@@ -9,6 +9,7 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Localization/PseudoLocalizer.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
@@ -515,6 +516,46 @@ SW_TEST_CASE( UserSettingsTest, LanguageSwitchChangesLocalizedString )
     SW_EXPECT_TRUE( settings.setPendingValue( "language.text", "fr_fr" ) == sw::UserSettingSetResult::Rejected );
     (void)settings.applyPending();
     SW_EXPECT_STREQ( "ko_kr", settings.getAppliedValue( "language.text" ) );
+}
+
+/**
+ * @brief [UserSettingsTest] 의사 문화권은 언어 설정의 선택지이고, 고르면 화면의 글이 바로 의사 글이 된다(Dev 빌드) — 거울 방식은 오른쪽→왼쪽이다
+ * @details 잘림 · 하드코딩 글을 찾는 사람이 명령줄 없이 옵션 메뉴에서 켤 수 있어야 한다(언리얼 `-culture=` · 유니티 Pseudo-Locale 선택과 같은 자리).
+ */
+SW_TEST_CASE( UserSettingsTest, PseudoLocaleIsSelectableThroughTheLanguageSetting )
+{
+    const sw::string folder      = test::makeTempDirectory( "settings_pseudo" );
+    const sw::string projectPath = sw::FileUtil::joinPath( folder, "p.locproject.json" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( projectPath, R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "p.strings.json" ] })" ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "p.strings.json" ), R"({ "culture": "en", "entries": { "MENU_START": { "source": "Start" } } })" ) );
+
+    sw::LocalizationManager localization;
+    SW_ASSERT_TRUE( localization.loadCultureTable( "engine/localization/engine.cultures.json" ) );
+    SW_ASSERT_TRUE( localization.mountProject( projectPath, sw::LocalizationScope::Game ) );
+
+    sw::UserSettingsManager settings;
+    sw::UserSettingsTargets targets;
+    targets._pLocalizationManager = &localization;
+    settings.initialize( targets );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1"><Category id="language"/>
+        <Setting id="language.text" category="language" type="enum" default="" optionsFrom="localization.languages" apply="immediate"
+                 target="applier:localization.language"/></UserSettingsSchema>)",
+                                                    "language.settings.xml" ) );
+    settings.reapplyAll();
+    sw::vector<sw::UserSettingOption> listOption;
+    settings.collectOptions( "language.text", listOption );
+#if !defined( SW_SHIPPING )
+    bool bListed{ false };
+    for ( const sw::UserSettingOption& option : listOption )
+        bListed = bListed || option._value == "qps_ploc";
+    SW_EXPECT_TRUE( bListed );
+    SW_EXPECT_TRUE( settings.setPendingValue( "language.text", "qps_ploc" ) == sw::UserSettingSetResult::Accepted );
+    SW_EXPECT_TRUE( sw::PseudoLocalizer::isPseudoText( localization.getString( sw::hashed_string( "MENU_START" ) ) ) );
+    SW_EXPECT_TRUE( settings.setPendingValue( "language.text", "qps_plocm" ) == sw::UserSettingSetResult::Accepted );
+    SW_EXPECT_TRUE( localization.isRightToLeft() );
+#else
+    SW_EXPECT_EQUAL( size_t( 1 ), listOption.size() ); // 배포본은 원문 문화권뿐이다
+#endif
 }
 
 /**

@@ -255,6 +255,16 @@ SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
     SW_EXPECT_STREQ( "Material", material._pCacheKindName );
     SW_EXPECT_TRUE( material._pfnImportSource == nullptr );
 
+    // 로컬라이제이션 표는 엔진 매니저가 그 프로젝트를 다시 읽는다 — 다른 `.json` 데이터는 여전히 다시 읽지 않는다.
+    for ( const sw::string_view path : { sw::string_view( "engine/localization/ko.translation.json" ), sw::string_view( "engine/localization/engine.strings.json" ),
+                                         sw::string_view( "game/shooter3d/data/localization/shooter3d.locproject.json" ) } )
+    {
+        const AssetReloadRoute localization = EditorAssetTypeRegistry::findReloadRoute( path );
+        SW_ASSERT_NOT_NULL( localization._pCacheKindName );
+        SW_EXPECT_STREQ( "StringTable", localization._pCacheKindName );
+    }
+    SW_EXPECT_NULL( EditorAssetTypeRegistry::findReloadRoute( "engine/localization/engine.cultures.json" )._pCacheKindName );
+
     // 메시 에셋은 캐시가 다시 읽고, glTF 원본은 모델 임포터를 먼저 탄다(쓰인 `.mesh` 가 다음 이벤트로 온다).
     const AssetReloadRoute mesh = EditorAssetTypeRegistry::findReloadRoute( "game/empty/models/crate.mesh" );
     SW_ASSERT_NOT_NULL( mesh._pCacheKindName );

@@ -7,6 +7,8 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/IAssetCache.h"
 
 #include "EngineTest/GameTestUtil.h"
 #include "EngineTest/LocalizationTestUtil.h"
@@ -189,6 +191,38 @@ SW_TEST_CASE( LocalizationManagerTest, ReloadChangedFilePicksUpNewTextAndKeepsOl
 
     // 프로젝트 밖의 파일은 다루지 않는다.
     SW_EXPECT_FALSE( loc.reloadChangedFile( sw::FileUtil::joinPath( folder, "other.json" ) ) );
+}
+
+/**
+ * @brief [LocalizationManagerTest] 에디터 핫 리로드의 길 — 에셋 캐시 등록부의 "StringTable" 이 바뀐 번역 표를 엔진 매니저에 넘겨 다시 읽힌다
+ * @details 에디터는 바뀐 파일의 종류로 캐시 이름을 찾아 `IAssetCache::reload` 를 부른다(`AssetHotReload`). 로컬라이제이션만 그 등록부 밖에 있으면
+ *          번역가가 저장해도 실행 중인 게임의 글이 그대로다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, HotReloadGoesThroughTheAssetCacheRegistry )
+{
+    const sw::string         folder           = test::makeTempDirectory( "loc_hot_reload" );
+    const sw::string         projectPath      = LocalizationManagerTestInternal::writeSampleProject( folder );
+    sw::LocalizationManager& loc              = sw::engine::getLocalizationManager();
+    const sw::string         previousLanguage = loc.getCurrentLanguage();
+    SW_ASSERT_TRUE( loc.mountProject( projectPath, sw::LocalizationScope::Game ) );
+    SW_ASSERT_TRUE( loc.setCurrentLanguage( "ko" ) );
+    SW_EXPECT_STREQ( "신비의 섬", loc.getString( sw::hashed_string( "ui.title" ) ) );
+
+    sw::AssetManager resources;
+    sw::IAssetCache* pCache          = resources.findAssetCache( "StringTable" );
+    const sw::string translationPath = sw::FileUtil::joinPath( folder, "ko.translation.json" );
+    SW_ASSERT_NOT_NULL( pCache );
+    SW_EXPECT_TRUE( pCache->isCached( translationPath ) );
+    LocalizationTestUtil::writeTranslation( folder, "ko", R"("ui.title": { "text": "수수께끼 섬" })" );
+    pCache->reload( translationPath, nullptr );
+    SW_EXPECT_STREQ( "수수께끼 섬", loc.getString( sw::hashed_string( "ui.title" ) ) );
+
+    pCache->clear(); // 캐시 비우기(재초기화)는 화면의 글을 지우지 않는다
+    SW_EXPECT_STREQ( "수수께끼 섬", loc.getString( sw::hashed_string( "ui.title" ) ) );
+
+    loc.unmountProjects( sw::LocalizationScope::Game );
+    loc.clearMissingKeys();
+    (void)loc.setCurrentLanguage( previousLanguage );
 }
 
 /**
