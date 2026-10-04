@@ -13,6 +13,7 @@
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
+#include "Editor/Common/Workspace/ConfigHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -57,6 +58,7 @@ namespace sw::editor
 {
     EditorContext::EditorContext()
         : _pRhiDevice{ nullptr }
+        , _pDockLayout{ nullptr }
         , _pRendererBackend{ nullptr }
         , _gameView{}
         , _bGameViewHovered{ SW_FALSE }
@@ -79,6 +81,7 @@ namespace sw::editor
         _pPanelManager              = make_unique<EditorPanelManager>();
         _pPopupManager              = make_unique<EditorPopupManager>();
         _pAssetHotReload            = make_unique<AssetHotReload>();
+        _pConfigHotReload           = make_unique<ConfigHotReload>();
         _pInspectorComponentManager = make_unique<InspectorComponentManager>();
         _pInspectorPropertyManager  = make_unique<InspectorPropertyManager>();
 
@@ -92,6 +95,8 @@ namespace sw::editor
         // 애셋 핫 리로드는 개발 기능이라 **에디터가 켜져 있을 때만** 감시가 돈다.
         // 리소스 루트가 없으면(팩만 실린 실행) 조용히 꺼진 채로 둔다.
         _pAssetHotReload->initialize();
+        // 설정 파일(EngineConfig · GameConfig · editortooldefaults)도 같은 방식으로 감시한다.
+        _pConfigHotReload->initialize();
     }
 
     void EditorContext::shutdown()
@@ -103,6 +108,7 @@ namespace sw::editor
 
         _pInspectorPropertyManager.reset();
         _pInspectorComponentManager.reset();
+        _pConfigHotReload.reset();
         _pAssetHotReload.reset();
         _pPopupManager.reset();
         _pPanelManager.reset();

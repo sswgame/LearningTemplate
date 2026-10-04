@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/String/TagID.h"
+
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
@@ -300,4 +302,42 @@ SW_TEST_CASE( EditorSceneCommandsTest, SurfaceSnapLandsOnTheWorldTopOfAScaledFlo
     float3 translation( 1.0f, 4.0f, 1.0f );
     EditorSceneCommands::snapTranslationToSurface( pCrate, translation );
     SW_EXPECT_NEAR_EQUAL( 1.0f + 0.5f, translation._y, 1e-3f ); // 바닥 윗면 1.0 + 상자 반 높이 0.5
+}
+
+/**
+ * @brief [EditorSceneCommandsTest] "같은 종류 · 같은 태그 모두 선택" 은 파생 컴포넌트와 아래 계층 태그까지 모은다
+ * @details 메시 컴포넌트를 고르면 메시가 있는 오브젝트가 모두, `Enemy` 태그를 고르면 `Enemy.Boss` 도 같이 골라져야 한다(유니티 Select All of Type ·
+ *          언리얼 Select All With Same Tag). 지울 표시가 된 오브젝트는 빠진다.
+ */
+SW_TEST_CASE( EditorSceneCommandsTest, CollectObjectsByComponentTypeAndTag )
+{
+    GameObjectManager manager;
+    GameObject*       pMeshed = manager.createGameObject( hashed_string( "Meshed" ) );
+    GameObject*       pPlain  = manager.createGameObject( hashed_string( "Plain" ) );
+    GameObject*       pEmpty  = manager.createGameObject( hashed_string( "Empty" ) );
+    GameObject*       pDoomed = manager.createGameObject( hashed_string( "Doomed" ) );
+    SW_ASSERT_NOT_NULL( pMeshed->addComponent<MeshComponent>() );
+    SW_ASSERT_NOT_NULL( pPlain->addComponent<SceneComponent>() );
+    SW_ASSERT_NOT_NULL( pDoomed->addComponent<SceneComponent>() );
+    pMeshed->addTag( TagID::request( "Enemy.Boss" ) );
+    pPlain->addTag( TagID::request( "Enemy" ) );
+    pEmpty->addTag( TagID::request( "Ally" ) );
+    pDoomed->addTag( TagID::request( "Enemy" ) );
+    manager.mergePendingAdds();
+    manager.destroyObject( pDoomed );
+
+    vector<GameObject*> listObject;
+    EditorSceneCommands::collectObjectsWithComponent( manager, SceneComponent::StaticType(), listObject );
+    SW_EXPECT_EQUAL( size_t( 2 ), listObject.size() ); // 메시 컴포넌트도 SceneComponent 다
+    EditorSceneCommands::collectObjectsWithComponent( manager, MeshComponent::StaticType(), listObject );
+    SW_ASSERT_EQUAL( size_t( 1 ), listObject.size() );
+    SW_EXPECT_TRUE( listObject[0] == pMeshed );
+
+    EditorSceneCommands::collectObjectsWithTag( manager, TagID::request( "Enemy" ), listObject );
+    SW_EXPECT_EQUAL( size_t( 2 ), listObject.size() );
+    EditorSceneCommands::collectObjectsWithTag( manager, TagID::request( "enemy.boss" ), listObject );
+    SW_ASSERT_EQUAL( size_t( 1 ), listObject.size() );
+    SW_EXPECT_TRUE( listObject[0] == pMeshed );
+    EditorSceneCommands::collectObjectsWithTag( manager, TagID{}, listObject );
+    SW_EXPECT_TRUE( listObject.empty() );
 }

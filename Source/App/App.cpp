@@ -10,6 +10,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/String/string_splitter.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -24,7 +25,10 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/GameTimeScale.h"
+#include "Engine/Window/DevConsoleOverlay.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/SplashWindow.h"
@@ -53,6 +57,13 @@ namespace sw
 {
     SW_LOG_CALLER( "App" );
 
+#if !defined( SW_SHIPPING )
+    /** @brief `-gv_devConsoleExec="timescale 0.5;gv_viewMode 2"`: 시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령(`;` 로 나눈다). 자동화 · 재현용입니다. */
+    SW_TEST_GLOBAL_VARIABLE_STRING( gv_devConsoleExec, "", "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)" );
+    /** @brief `-gv_devConsoleOpen=1`: 에디터 없이 띄울 때 게임 창의 개발 콘솔을 연 채로 시작합니다(화면 확인용). */
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_devConsoleOpen, 0, "게임 창 개발 콘솔을 연 채로 시작 (1=열기)" );
+#endif
+
     App::App()
         : _engineLoop{}
         , _moduleHost{ nullptr }
@@ -63,6 +74,7 @@ namespace sw
         , _viewCameraProvider{}
         , _initializeStartMicro{ 0 }
         , _bEnableEditor{ SW_FALSE }
+        , _bDevConsoleExecPending{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -118,7 +130,7 @@ namespace sw
 
         splash.updateStatus( "Loading Configuration & Display...", 0.40f );
 
-        const ConfigManager*      pConfigManager      = _engineLoop.getConfigManager();
+        ConfigManager*            pConfigManager      = _engineLoop.getConfigManager();
         const CommandLineManager* pCommandLineManager = _engineLoop.getCommandLineManager();
         if ( pConfigManager == nullptr || pCommandLineManager == nullptr )
         {
@@ -136,6 +148,8 @@ namespace sw
         _fixedTimestep.configure( pEngineConfig->_maxFrameDeltaTime,
                                   pEngineConfig->_fixedDeltaTime,
                                   pEngineConfig->_maxFixedStepPerFrame );
+        // 에디터가 Config/ 를 감시해 다시 읽으면(ConfigManager::reloadConfigFile) 프레임 시간 정책도 따라간다.
+        pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &App::onConfigReloaded, this ) );
 
         // 2. 창 소유권을 가져온다(초기화 중에는 숨긴 상태로 시작한다)
         splash.updateStatus( "Initializing Platform Window & Graphics...", 0.60f );
@@ -307,6 +321,10 @@ namespace sw
 
         _engineLoop.shutdown();
 
+#if !defined( SW_SHIPPING )
+        // 오버레이 창은 게임 창이 소유한 팝업이다 — 게임 창보다 먼저 없앤다.
+        _devConsoleOverlay.reset();
+#endif
         if ( _window != nullptr )
         {
             // App 이 소유한 활성 창을 파괴하기 전에 전역 포인터부터 끊는다(댕글링 방지).
@@ -330,9 +348,15 @@ namespace sw
         SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)... startup %# ms", startupMicro / 1000 );
 
         _fixedTimestep.start();
+        startDevConsole();
 
         while ( _window->processMessages() )
         {
+#if !defined( SW_SHIPPING )
+            runPendingDevConsoleExec();
+            if ( _devConsoleOverlay != nullptr )
+                _devConsoleOverlay->update();
+#endif
             // 프로파일 실행(-gv_profileFrames=N)은 목표 프레임을 채우면 스스로 끝난다.
             if ( _engineLoop.isQuitRequested() )
             {
@@ -340,7 +364,7 @@ namespace sw
                 break;
             }
 
-            const FrameTime frameTime = _fixedTimestep.advance();
+            const FrameTime frameTime = _fixedTimestep.advance( GameTimeScale::get() );
 
             // 사용자 설정의 화면 변경(창 방식 · 해상도 · VSync)은 OS 리사이즈와 같은 자리 — 프레임을 시작하기 전 — 에서 한다.
             _userSettingsHost.tick( frameTime._deltaTime );
@@ -431,8 +455,53 @@ namespace sw
         pRHI->getDevice().resize( width, height );
     }
 
+    void App::onConfigReloaded( const hashed_string& configTypeName )
+    {
+        if ( configTypeName != EngineConfig::StaticType()->_fullyQualifiedName )
+            return;
+        const ConfigManager* pConfigManager = _engineLoop.getConfigManager();
+        const EngineConfig*  pEngineConfig  = pConfigManager != nullptr ? pConfigManager->getConfig<EngineConfig>() : nullptr;
+        if ( pEngineConfig != nullptr )
+            _fixedTimestep.configure( pEngineConfig->_maxFrameDeltaTime, pEngineConfig->_fixedDeltaTime, pEngineConfig->_maxFixedStepPerFrame );
+    }
+
+    void App::startDevConsole()
+    {
+#if !defined( SW_SHIPPING )
+        _devConsoleOverlay = make_unique<DevConsoleOverlay>();
+        if ( _bEnableEditor == SW_FALSE )
+            (void)_devConsoleOverlay->initialize( _window.get() ); // 창을 만들지 못해도 시작 명령은 돈다(경고는 그쪽이 남긴다)
+        _bDevConsoleExecPending = gv_devConsoleExec.empty() ? SW_FALSE : SW_TRUE;
+        if ( gv_devConsoleOpen != 0 && _bEnableEditor == SW_FALSE )
+            _devConsoleOverlay->setOpen( true );
+#endif
+    }
+
+    void App::runPendingDevConsoleExec()
+    {
+#if !defined( SW_SHIPPING )
+        // 시작 씬이 다 열린 뒤에 돌린다 — 씬을 보는 명령(teleport · select · debugdraw.demo)이 빈 씬에 닿지 않게.
+        if ( _bDevConsoleExecPending == SW_FALSE || _devConsoleOverlay == nullptr || engine::areEngineServicesBound() == false )
+            return;
+        const SceneManager& sceneManager = engine::getSceneManager();
+        if ( sceneManager.isTransitioning() || sceneManager.getActiveScene() == nullptr )
+            return;
+        _bDevConsoleExecPending = SW_FALSE;
+        const string_splitter commands( string_view{ gv_devConsoleExec.c_str(), gv_devConsoleExec.size() }, { ";" } );
+        for ( const string_view command : commands.getSplitList() )
+        {
+            (void)_devConsoleOverlay->getConsole().submit( command ); // 답 · 실패는 로그에 남는다
+        }
+#endif
+    }
+
     bool App::onWindowMessage( const NativeWindowEvent& event )
     {
+#if !defined( SW_SHIPPING )
+        // 게임 창의 개발 콘솔이 먼저 본다. 열려 있는 동안의 키보드는 게임 입력으로 넘기지 않는다.
+        if ( _bEnableEditor == SW_FALSE && _devConsoleOverlay != nullptr && _devConsoleOverlay->handleEvent( event ) )
+            return false;
+#endif
         // 이벤트를 ModuleHost(ImGui 등)에 먼저 보낸다
         const bool bConsumedByEditor = ( _moduleHost != nullptr && _moduleHost->onWindowMessage( event ) );
 

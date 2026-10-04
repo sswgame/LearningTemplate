@@ -261,6 +261,53 @@ SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &runHierarchyTagF
 쓰지도 않고 기본 가시성 · 기본 도킹 배치로 뜹니다. `AppSmokeTest.EditorSelfTestsPassInsideTheEditor`(hostgpu)가 이렇게 띄워 알려진 시험이 모두
 PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니다.
 
+## Game View 의 개발 편의 기능
+
+- **Play / Simulate**: Play 는 플레이어가 조종하는 세션(게임 모듈 업데이트 · 게임 입력 · 게임 카메라), Simulate 는 **월드만** 돈다 — 씬은 틱하지만
+  게임 모듈 업데이트와 게임 입력이 꺼지고 에디터 카메라로 본다(언리얼 Simulate). 도는 중에 서로 바꿀 수 있다. 호스트는 `IEditor::isPlaying`
+  (= `EditorPlaySession::isPlayerActive`)으로 게임 모듈을 켜고, 씬 틱은 `isPaused` 가 정한다.
+- **Step · Step N**: 한 프레임 / 칸에 적은 프레임 수만큼 진행하고 일시정지한다(`EditorPlaySession::stepFrames`).
+- **Cam**(카메라에서 시작): Play 를 에디터 카메라 위치에서 시작한다 — `Player` 태그를 단 오브젝트, 없으면 게임 카메라를 든 오브젝트의 맨 위 조상을
+  순간이동한다. 월드 시작 직후와 첫 프레임 뒤 두 번 옮긴다(첫 틱에 스폰 자리로 되돌리는 게임이 있다).
+- **시간 배율**(`x1.00` 칸): `gv_timeScale`(`Engine/Utility/GameTimeScale`). 끌어서 바꾸고 오른쪽 클릭으로 1 로 되돌린다. 호스트의 프레임 시간이
+  곱해 게임 업데이트 · 씬 틱 · 고정 스텝이 같이 느려지거나 빨라진다. 에디터 UI · 에디터 카메라는 자기 시간으로 돈다.
+- **디버그 드로우**: 게임 코드가 `DebugDrawQueue`(엔진 서비스)에 넣은 선 · 구 · 상자 · 화살표 · 글자를 `debug_draw` 시각화(툴바 `Dbg`)가 그린다.
+  지속 시간(초)과 카테고리를 받는다. `Dbg Cat` 팝업이 카테고리를 켜고 끈다. 2D 뷰(직교 카메라가 Z 를 본다)에서는 구가 XY 원 하나다.
+  오버레이(시각화 · 피킹 · 기즈모)는 호스트가 그리는 것과 같은 카메라로 투영한다 — Play 중에는 게임 카메라다.
+- **Auto**(자동 플레이): 게임이 `SW_GAME_AUTOPLAY` 로 등록했으면 툴바에 서고, 누르면 그 게임의 자동 플레이 전역 변수를 켜고 끈다
+  (`GameAutoplay::setOn` — 전역 변수 표를 거쳐 써서 패널 · 콘솔과 같은 값이다). 자체 시험 `gameView.autoplayButton`.
+- **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값(`RuntimeHud::publishSnapshot` 등)을 캔버스 왼쪽 아래에 키 순서로 그린다.
+- 시험: `EditorPlaySessionTest`(Simulate · Step N · 카메라에서 시작), `DebugDrawQueueTest`, `DebugOverlayStateTest`, `FixedTimestepTest.TimeScale…`,
+  에디터 자체 시험 `gameView.debugDraw` · `gameView.debugOverlay`.
+
+## Output Log · 설정 · 선택 · 레이아웃
+
+- **로그 줄 → IDE**: 줄을 더블 클릭(또는 오른쪽 클릭 `Open in IDE`)하면 그 줄이 가리키는 소스 위치를 IDE 로 연다. 메시지 안의 위치
+  (`경로(줄,열)` · `경로:줄:열` — 컴파일러 · 셰이더 오류)가 먼저, 없으면 로그를 쓴 자리다. 명령 틀은 `editortooldefaults.json` 의
+  `_ideOpenCommand`(`{file}` · `{line}`), 비우면 VS Code(`code -g`, Windows 는 `cmd /c`)다. 판정은 `Common/Commands/EditorLogCommands`.
+- **카테고리 필터**: 툴바 `Tags` 팝업이 로그 카테고리(로그를 쓴 자리 `SW_LOG_CALLER`, 없으면 모듈 태그)마다 보이기를 켜고 끈다(`EditorLogTagFilter`).
+- **설정 파일 핫 리로드**: `Common/Workspace/ConfigHotReload` 가 `Config/` 의 `.json` 을 감시한다(에셋과 같은 `FileWatchDispatcher`, 루트만 다름).
+  호스트 설정(`ConfigManager` 가 파일에서 읽은 EngineConfig · GameConfig)은 `ConfigManager::reloadConfigFile` 이 **제자리에서** 다시 읽고
+  `onConfigReloaded` 로 알린다 — App 은 프레임 시간 정책, EngineLoop 는 게임 설정 활성본 · 선호 수직 동기화(다음 스왑체인부터). 에디터 도구 시드
+  (`editortooldefaults.json`)는 에디터가 다시 읽는다. 앱이 다시 쓰는 `EditorConfig.json` 은 다시 읽지 않는다.
+- **같은 종류 · 태그 모두 선택**: Hierarchy 오른쪽 클릭 `Select All With` — 그 오브젝트의 컴포넌트 종류(파생 포함) · 태그(아래 계층 포함)마다
+  (`EditorSceneCommands::collectObjectsWithComponent` · `collectObjectsWithTag` · `selectObjects`).
+- **이름 붙인 레이아웃**: `Panel > Layouts` — 이름을 적고 Save, 목록에서 고르면 불러오고 `x` 로 지운다. 도킹 배치(`<이름>.imgui.ini`)와 패널
+  가시성(`<이름>.windows.ini`)이 `Config/Editor/Layouts/` 에 남는다(git 무시). 불러오기는 다음 프레임 `NewFrame` 앞에서 한다
+  (`EditorDockLayout::applyPendingNamedLayout`) — 프레임 안에서 ImGui 설정을 읽으면 이미 있는 창 · 도킹 노드에 적용되지 않는다.
+- 시험: `EditorLogCommandsTest` · `ConfigHotReloadTest` · `EditorLayoutStoreTest` · `EditorSceneCommandsTest.CollectObjectsByComponentTypeAndTag`
+  (EditorTest), `ConfigManagerTest.ReloadConfigFileUpdatesInPlaceAndNotifies`(EngineTest), 에디터 자체 시험 `console.tagFilter` ·
+  `hierarchy.selectAllWith` · `layout.namedRoundTrip`.
+
+## 개발 콘솔(Output Log 입력 줄)
+
+Output Log 아래 입력 줄이 개발 콘솔(`Engine/Utility/Console/DevConsole`)입니다 — `help`, `gv_이름 [값]` · `get` · `set`, 개발 명령(`SW_DEV_COMMAND`),
+Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기록. 답은 로그(`DevConsole`)로 남아 같은 패널에 보입니다. 에디터가 등록하는 명령은
+`Common/Commands/EditorDevCommands.cpp` — `editor <커맨드 id>`(커맨드 팔레트의 id) · `play` · `simulate` · `pause` · `stop` · `step [N]` ·
+`select.type <컴포넌트 타입>` · `select.tag <태그>` · `layout.save <이름>` · `layout.load <이름>` · `debugdraw.demo [초]`(뷰포트 카메라 앞에 상자 · 구 · 화살표 · 글자와 HUD 값 하나 — 시각화가 도는지 보는 용도). 엔진 명령(`timescale` · `teleport` ·
+`debugdraw.category`)은 `Engine/EngineDevCommands.cpp`. 에디터 없이 띄운 게임 창에서는 `~` 오버레이가 같은 콘솔입니다(`Source/App/README.md`).
+시험: `DevConsoleTest` · `DevCommandRegistryTest` · `DevConsoleOverlayTest`(EngineTest), `DevCommandShippingTest`(AppTest), 자체 시험 `console.devCommands`.
+
 ## ⚠️ 핵심 특징 및 규칙
 - **Dev 모드 전용**: 이 폴더의 코드는 개발(Dev) 모드에서만 `MODULE DLL`로 빌드되고 동작합니다. 배포(Shipping) 빌드를 할 때는 **코드가 통째로 날아갑니다.**
 - **게임 로직 분리**: **절대 게임(Game) 로직이 이 폴더의 코드에 의존해서는 안 됩니다.** 게임 코드에서 `#include "Editor/"` 등을 호출하면 Shipping 빌드가 100% 터집니다.

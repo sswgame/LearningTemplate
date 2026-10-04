@@ -12,6 +12,7 @@
 sw_addTestExecutable(EditorTest
 	SOURCES
 		TestAssetHotReload.cpp
+		TestConfigHotReload.cpp
 		TestEditorAssetType.cpp
 		TestEditorAssetTypeActions.cpp
 		TestEditorBackgroundTask.cpp
@@ -19,7 +20,9 @@ sw_addTestExecutable(EditorTest
 		TestEditorDataTableCommands.cpp
 		TestEditorDrawReleaseQueue.cpp
 		TestEditorGlobalVariableCommands.cpp
+		TestEditorLayoutStore.cpp
 		TestEditorListFilter.cpp
+		TestEditorLogCommands.cpp
 		TestEditorPanelDocument.cpp
 		TestEditorRegistry.cpp
 		TestEditorPlaySession.cpp
@@ -45,6 +48,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorDataTableCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorResourceIndex.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorGlobalVariableCommands.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorLogCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorSceneCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorViewportPick.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorViewportPreview.cpp"
@@ -59,10 +63,12 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorBuiltinValue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/AssetHotReload.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/ConfigHotReload.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetType.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/AssetActions/EditorAssetTypeActions.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorContext.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorLayoutStore.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorService.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorTransaction.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorWorkspace.cpp"

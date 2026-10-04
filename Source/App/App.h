@@ -23,6 +23,7 @@ namespace sw
     struct NativeWindowEvent;
 
     class CommandLineManager;
+    class DevConsoleOverlay;
     class IWindow;
     class LiveReloadManager;
     class ModuleHost;
@@ -120,8 +121,15 @@ namespace sw
         /** @brief 셸 액션을 갱신하고 리로드 단축키를 처리합니다. Shipping 에서는 아무것도 하지 않습니다. */
         void pollReloadHotkeys( float32 deltaTime );
 
+        /** @brief 개발 콘솔 오버레이를 만들고 시작 명령(`-gv_devConsoleExec`)을 걸어 둡니다. Shipping 에서는 아무것도 하지 않습니다. */
+        void startDevConsole();
+        /** @brief 시작 씬이 열렸으면 걸어 둔 시작 명령을 한 번 돌립니다. 프레임마다 부릅니다. */
+        void runPendingDevConsoleExec();
+
         /** @brief 창 크기 변경 콜백입니다. */
         void onResize( const uint32 width, const uint32 height );
+        /** @brief 설정 파일을 다시 읽었습니다. EngineConfig 면 프레임 시간 정책(최대 델타 · 고정 스텝)을 다시 정합니다. */
+        void onConfigReloaded( const hashed_string& configTypeName );
         /** @brief 네이티브 창 이벤트를 전달합니다. */
         bool onWindowMessage( const NativeWindowEvent& event );
         /** @brief tick 안에서 필요할 때 조회하는 에디터 뷰 카메라입니다. */
@@ -141,6 +149,11 @@ namespace sw
          */
 #if !defined( SW_SHIPPING )
         unique_ptr<LiveReloadManager> _liveReloadManager;
+        /**
+         * @brief 게임 창의 개발 콘솔(`~`)입니다. **Shipping 에는 없습니다.** 에디터가 없을 때만 키를 받습니다(에디터는 Output Log 입력 줄이 있다).
+         * @details `-gv_devConsoleExec` 의 명령을 시작 씬이 열린 뒤 이 콘솔로 돌립니다(에디터가 있어도).
+         */
+        unique_ptr<DevConsoleOverlay> _devConsoleOverlay;
 #endif
         unique_ptr<ModuleHost> _moduleHost;
         unique_ptr<IWindow>    _window;
@@ -155,7 +168,8 @@ namespace sw
         /// @brief `initialize` 가 시작된 시각(마이크로초, steady_clock)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64 _initializeStartMicro;
 
-        uint8                  _bEnableEditor : 1;
-        [[maybe_unused]] uint8 _reserved      : 7;
+        uint8                  _bEnableEditor          : 1;
+        uint8                  _bDevConsoleExecPending : 1; ///< `-gv_devConsoleExec` 를 아직 돌리지 않았다
+        [[maybe_unused]] uint8 _reserved               : 6;
     };
 } // namespace sw

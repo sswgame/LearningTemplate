@@ -14,6 +14,9 @@
 | `Config/Editor/` | `EditorConfig.json` + `editortooldefaults.json` + `TextureImportConfig.json`(텍스처 임포트 규칙: 포맷 · sRGB · 밉) + `ModelImportConfig.json`(모델 임포트 규칙: 이동 · 원점 맞추기) + 유저 레이아웃 | 미포함 |
 | `Config/Environment/` | 머신 로컬 툴체인·파서 | **절대 미포함** |
 
+에디터가 떠 있으면 `Config/` 의 JSON 을 감시해 바뀐 설정을 다시 읽습니다(EngineConfig · GameConfig · editortooldefaults —
+`Source/Editor/README.md` "설정 파일 핫 리로드"). 창 크기처럼 기동 때만 쓰는 값은 다시 읽어도 다음 실행부터입니다.
+
 ## Environment (툴체인)
 
 | 파일 | 설명 |

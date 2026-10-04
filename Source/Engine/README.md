@@ -93,7 +93,16 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   섀도 복사본을 묻는 창구) · `DelayLoadNotifyHook.cpp`(모듈 DLL 마다 컴파일되는 지연 로드 훅) · `EngineAbiStamp`(핫 리로드의 엔진 ABI 도장).
   감시 · 섀도 복사 · 다시 로드(`LiveReloadManager`)는 App 의 `App/Module`, 에셋 파일 감시(`FileWatchDispatcher`)는 에디터의
   `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleUnloadListener`)은 `Core/Module` 이다.
-- **Utility/**: Format (KeyValueFile), Json, Xml, CommandStack, Debug — 진짜 최하위 헬퍼만 둡니다.
+- **Utility/**: Format (KeyValueFile), Json, Xml, CommandStack, Debug, `GameTimeScale`(게임 시간 배율 `gv_timeScale` — 호스트의 프레임 시간이
+  곱한다), `GameAutoplay`(게임의 자동 플레이 스위치 계약 — `SW_GAME_AUTOPLAY`, `Source/Games/README.md`), Console(개발 콘솔 — 아래) — 진짜 최하위
+  헬퍼만 둡니다.
+- **개발 콘솔 · 개발 명령(Shipping 에는 없다 — `SW_DEV_COMMANDS_ENABLED`)**: `Utility/Console/DevCommandRegistry` 가 명령 등록부(Engine 하나, 모듈을 내리면
+  그 모듈의 명령이 빠진다)이고, 명령은 자기 .cpp 에 `SW_DEV_COMMAND( 변수, "이름", "사용법", "설명", &본문 )` 한 줄로 등록합니다 — 본문은
+  `#if SW_DEV_COMMANDS_ENABLED` 안에 둡니다. 게임 · 키트의 치트(무적 · 아이템 주기 …)도 그렇게 그 게임 · 키트에 둡니다. `Utility/Console/DevConsole`
+  은 한 줄 해석(`help` · `get`/`set` · 명령 · `gv_이름 [값]`) · 자동완성 · 기록이고, 에디터 Output Log 입력 줄과 게임 창 오버레이
+  (`Window/DevConsoleOverlay` + 플랫폼 창 `Window/Windows/Win32DevConsoleWindow` · `Window/Linux/X11DevConsoleWindow`)가 같이 씁니다. 엔진 명령은
+  루트의 `EngineDevCommands.cpp`(`timescale` · `teleport` · `debugdraw.category`). Shipping 실행 파일에 등록부가 없는지는
+  `DevCommandShippingTest`(AppTest)가 바이너리를 훑어 봅니다.
 - **루트 파일 — 기동 · 종료**:
   - `EngineInitStepList.xxx`: 기동 단계의 등록표(X-macro). 줄 순서가 초기화 순서이고, 줄마다 단계 이름 · 그 초기화에 거는 메모리 태그 ·
     먼저 서야 하는 단계 `{ A, B }` 를 적습니다. 의존이 자기보다 아래 줄이거나 오타면 컴파일 오류이고(`EngineInitSequence.cpp` 의 static_assert),

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/TagID.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -8,6 +9,7 @@
 #include "EditorTest/EditorTestServices.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -340,4 +342,114 @@ SW_TEST_CASE( EditorPlaySessionTest, StopCancelsAQueuedPlay )
     SW_EXPECT_TRUE_MSG( data._state == PlaySessionState::Stopped, "거둔 Play 가 로드 뒤에 시작했습니다" );
     SW_EXPECT_FALSE( sceneManager.isWorldPlaying() );
     sceneManager.shutdown();
+}
+
+/**
+ * @brief [EditorPlaySessionTest] Simulate 는 월드를 시작하지만 플레이어 세션은 아니다 — 도중에 Play 로 바꿀 수 있다
+ * @details 호스트는 `isPlayerActive`(에디터 API 의 isPlaying)로 게임 모듈 업데이트 · 게임 입력 · 게임 카메라를 켠다. Simulate 가 Play 와 같으면
+ *          에디터 카메라로 월드만 지켜보는 자리가 없다.
+ */
+SW_TEST_CASE( EditorPlaySessionTest, SimulateRunsTheWorldWithoutThePlayer )
+{
+    SceneManager sceneManager;
+    SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "EditedLevel" ) );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+
+    PlaySessionData data;
+    EditorPlaySession::startSession( data, true );
+    SW_EXPECT_TRUE( data._state == PlaySessionState::Playing );
+    SW_EXPECT_TRUE( sceneManager.isWorldPlaying() );
+    SW_EXPECT_FALSE_MSG( EditorPlaySession::isPlayerActive( data ), "Simulate 가 플레이어 세션으로 답했습니다(게임 모듈 · 입력이 켜진다)" );
+
+    EditorPlaySession::startSession( data, false );
+    SW_EXPECT_TRUE( EditorPlaySession::isPlayerActive( data ) );
+    SW_EXPECT_TRUE( data._bHasSnapshot == SW_TRUE ); // 바꿔도 스냅샷은 처음 것 그대로
+
+    EditorPlaySession::setState( data, PlaySessionState::Stopped );
+    SW_EXPECT_FALSE( EditorPlaySession::isPlayerActive( data ) );
+    SW_EXPECT_FALSE( sceneManager.isWorldPlaying() );
+}
+
+/**
+ * @brief [EditorPlaySessionTest] Step N 은 N 프레임 동안 플레이어 세션으로 돌고 그 뒤 일시정지한다
+ */
+SW_TEST_CASE( EditorPlaySessionTest, StepFramesAdvancesThatManyFramesThenPauses )
+{
+    SceneManager sceneManager;
+    SW_ASSERT_NOT_NULL( sceneManager.createEmptyActiveScene( "EditedLevel" ) );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+
+    PlaySessionData data;
+    EditorPlaySession::setState( data, PlaySessionState::Paused );
+    EditorPlaySession::stepFrames( data, 3 );
+    for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
+    {
+        SW_EXPECT_TRUE_MSG( EditorPlaySession::isPlayerActive( data ), "Step 이 남았는데 플레이가 멈췄습니다" );
+        EditorPlaySession::consumePendingStep( data );
+    }
+    SW_EXPECT_FALSE( EditorPlaySession::isPlayerActive( data ) );
+    SW_EXPECT_TRUE( data._state == PlaySessionState::Paused );
+
+    // 멈춤에서 Step N 은 플레이를 시작해 진행하고, N 이 다 되면 일시정지다.
+    EditorPlaySession::setState( data, PlaySessionState::Stopped );
+    EditorPlaySession::stepFrames( data, 2 );
+    SW_EXPECT_TRUE( data._state == PlaySessionState::Playing );
+    EditorPlaySession::consumePendingStep( data );
+    SW_EXPECT_TRUE( data._state == PlaySessionState::Playing );
+    EditorPlaySession::consumePendingStep( data );
+    SW_EXPECT_TRUE( data._state == PlaySessionState::Paused );
+
+    EditorPlaySession::stepFrames( data, 0 ); // 0 은 무시한다
+    SW_EXPECT_EQUAL( 0u, data._pendingStepCount );
+    EditorPlaySession::setState( data, PlaySessionState::Stopped );
+}
+
+/**
+ * @brief [EditorPlaySessionTest] 카메라에서 시작은 'Player' 태그 오브젝트를, 없으면 게임 카메라를 든 오브젝트의 맨 위 조상을 옮긴다
+ * @details 시작할 때(월드 시작 직후) 한 번, 첫 프레임 뒤(`update`) 한 번 더 옮긴다 — 첫 틱에 스폰 자리로 되돌리는 게임이 있다. Simulate 는 옮기지 않는다.
+ */
+SW_TEST_CASE( EditorPlaySessionTest, StartAtCameraMovesThePlayer )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "EditedLevel" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    GameObjectManager*        pObjects = pScene->getObjectManager();
+
+    // 태그가 없으면 카메라를 든 오브젝트의 맨 위 조상이다(1 인칭 카메라가 몸의 자식).
+    GameObject* pBody = pObjects->createGameObject( hashed_string( "Body" ) );
+    GameObject* pHead = pObjects->createGameObject( hashed_string( "Head" ) );
+    SW_ASSERT_NOT_NULL( pBody->addComponent<SceneComponent>() );
+    CameraComponent* pCamera = pHead->addComponent<CameraComponent>();
+    SW_ASSERT_NOT_NULL( pCamera );
+    SW_ASSERT_TRUE( pHead->attachToParent( pBody ) );
+    pObjects->mergePendingAdds();
+    SW_EXPECT_TRUE( EditorPlaySession::findStartObject( *pObjects, pCamera ) == pBody );
+    SW_EXPECT_TRUE( EditorPlaySession::findStartObject( *pObjects, nullptr ) == nullptr );
+
+    // 'Player' 태그가 있으면 그것이 먼저다.
+    GameObject*     pPlayer     = pObjects->createGameObject( hashed_string( "Hero" ) );
+    SceneComponent* pPlayerRoot = pPlayer->addComponent<SceneComponent>();
+    SW_ASSERT_NOT_NULL( pPlayerRoot );
+    pPlayer->addTag( TagID::request( EditorPlaySession::kPlayerStartTag ) );
+    pObjects->mergePendingAdds();
+    SW_ASSERT_TRUE( EditorPlaySession::findStartObject( *pObjects, pCamera ) == pPlayer );
+
+    const float3    start{ 4.0f, 5.0f, 6.0f };
+    PlaySessionData data;
+    EditorPlaySession::setStartPosition( data, start );
+    EditorPlaySession::setState( data, PlaySessionState::Playing );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pPlayerRoot->getWorldPosition()._y, 1e-4f );
+
+    // 게임이 첫 틱에 스폰 자리로 되돌렸다 — 첫 프레임 끝(update)에 다시 옮긴다.
+    pPlayerRoot->setWorldPosition( float3{} );
+    EditorPlaySession::update( data );
+    SW_EXPECT_NEAR_EQUAL( 6.0f, pPlayerRoot->getWorldPosition()._z, 1e-4f );
+    EditorPlaySession::setState( data, PlaySessionState::Stopped );
+
+    // Simulate 는 옮기지 않는다.
+    pPlayerRoot->setWorldPosition( float3{} );
+    EditorPlaySession::startSession( data, true );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pPlayerRoot->getWorldPosition()._y, 1e-4f );
+    EditorPlaySession::setState( data, PlaySessionState::Stopped );
 }

@@ -16,6 +16,7 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -24,6 +25,7 @@
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
+#include "Editor/Viewport/EditorVisualizerGeometry.h"
 
 #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
@@ -100,6 +102,16 @@ namespace sw::editor
             static CameraComponent* getGameViewCamera()
             {
                 return EditorCamera::ensure( editor::getActiveScene() );
+            }
+
+            /**
+             * @brief 이번 프레임 Game View 이미지를 그린 카메라입니다 — 호스트가 그리는 카메라와 같은 규칙(`ImGuiEditor::getViewportCamera`)입니다.
+             * @details 오버레이(시각화 · 디버그 드로우 · 피킹)는 이 카메라로 투영해야 그림과 겹칩니다. Play 중에 에디터 카메라로 투영하면 게임 카메라가
+             *          그린 이미지 위에 엉뚱한 자리의 선이 그려진다.
+             */
+            static CameraComponent* getRenderedCamera()
+            {
+                return EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlayerActive() );
             }
         };
     } // namespace
@@ -360,7 +372,7 @@ namespace sw::editor
         else
             ImGui::Dummy( ImVec2{ canvasSize._x, canvasSize._y } );
 
-        CameraComponent* pCamera = EditorViewportClientInternal::getGameViewCamera();
+        CameraComponent* pCamera = EditorViewportClientInternal::getRenderedCamera();
         const float2     canvasPos{ imagePos.x, imagePos.y };
 
         if ( pCamera != nullptr )
@@ -392,6 +404,7 @@ namespace sw::editor
             visualizerArgs._pListCamera     = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getCameraRegistry().getAll() : nullptr;
             visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getColliders() : nullptr;
             visualizerArgs._pDebugDrawQueue = getService<DebugDrawQueue>();
+            visualizerArgs._bFlat2D         = EditorVisualizerGeometryUtil::isFlat2DView( pCamera->isOrthographic(), pCamera->getViewMatrix() );
             EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerMask );
 
             processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );

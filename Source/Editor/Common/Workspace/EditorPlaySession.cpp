@@ -3,11 +3,14 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/String/TagID.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -163,6 +166,27 @@ namespace sw::editor
             }
 
             /**
+             * @brief 시작 위치로 고른 오브젝트를 순간이동합니다. 옮길 것이 없으면 경고만 남깁니다.
+             * @return 옮겼으면 true
+             */
+            [[nodiscard]] static bool moveToStartPosition( const PlaySessionData& data )
+            {
+                Scene*             pScene   = editor::getActiveScene();
+                GameObjectManager* pObjects = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+                if ( pObjects == nullptr )
+                    return false;
+                GameObject*     pTarget = EditorPlaySession::findStartObject( *pObjects, pScene->getActiveGameCamera() );
+                SceneComponent* pRoot   = pTarget != nullptr ? pTarget->getComponent<SceneComponent>() : nullptr;
+                if ( pRoot == nullptr )
+                {
+                    SW_LOG_WARNING( "Start at camera: no object tagged '%#' and no game camera to move.", EditorPlaySession::kPlayerStartTag );
+                    return false;
+                }
+                pRoot->teleportTo( data._startPosition );
+                return true;
+            }
+
+            /**
              * @brief 컨텍스트가 들고 있는 플레이 상태입니다. 컨텍스트가 없으면 nullptr 입니다.
              * @details 에디터 셸이 아직 서지 않았거나 이미 내려간 시점에도 이 파사드가 불릴 수 있습니다(패널 정리 경로). 그때는
              *          "정지" 로 답해야 합니다.
@@ -191,7 +215,7 @@ namespace sw::editor
         const PlaySessionData* pData = EditorPlaySessionInternal::data();
         if ( pData == nullptr )
             return false;
-        if ( pData->_bStepPending == SW_TRUE )
+        if ( pData->_pendingStepCount > 0 )
             return true;
         return pData->_state == PlaySessionState::Playing;
     }
@@ -209,7 +233,85 @@ namespace sw::editor
     bool EditorPlaySession::hasPendingStep()
     {
         const PlaySessionData* pData = EditorPlaySessionInternal::data();
-        return pData != nullptr && pData->_bStepPending == SW_TRUE;
+        return pData != nullptr && pData->_pendingStepCount > 0;
+    }
+
+    bool EditorPlaySession::isSimulating()
+    {
+        const PlaySessionData* pData = EditorPlaySessionInternal::data();
+        return pData != nullptr && pData->_state != PlaySessionState::Stopped && pData->_bSimulate == SW_TRUE;
+    }
+
+    bool EditorPlaySession::isPlayerActive()
+    {
+        const PlaySessionData* pData = EditorPlaySessionInternal::data();
+        return pData != nullptr && isPlayerActive( *pData );
+    }
+
+    bool EditorPlaySession::isPlayerActive( const PlaySessionData& data )
+    {
+        if ( data._bSimulate == SW_TRUE )
+            return false;
+        return data._pendingStepCount > 0 || data._state == PlaySessionState::Playing;
+    }
+
+    void EditorPlaySession::play()
+    {
+        PlaySessionData* pData = EditorPlaySessionInternal::data();
+        if ( pData != nullptr )
+            startSession( *pData, false );
+    }
+
+    void EditorPlaySession::simulate()
+    {
+        PlaySessionData* pData = EditorPlaySessionInternal::data();
+        if ( pData != nullptr )
+            startSession( *pData, true );
+    }
+
+    void EditorPlaySession::startSession( PlaySessionData& data, bool bSimulate )
+    {
+        // 세션 종류는 도는 중에도 바꿀 수 있다(Simulate 로 지켜보다 Play 로 조종) — 상태 전환과 따로 둔다.
+        data._bSimulate = bSimulate ? SW_TRUE : SW_FALSE;
+        setState( data, PlaySessionState::Playing );
+    }
+
+    PlaySessionData* EditorPlaySession::findData()
+    {
+        return EditorPlaySessionInternal::data();
+    }
+
+    void EditorPlaySession::setStartPosition( PlaySessionData& data, const float3& position )
+    {
+        data._startPosition    = position;
+        data._bStartAtPosition = SW_TRUE;
+    }
+
+    void EditorPlaySession::clearStartPosition( PlaySessionData& data )
+    {
+        data._bStartAtPosition  = SW_FALSE;
+        data._bStartMovePending = SW_FALSE;
+    }
+
+    GameObject* EditorPlaySession::findStartObject( GameObjectManager& manager, CameraComponent* pGameCamera )
+    {
+        const TagID playerTag = TagID::request( kPlayerStartTag );
+        GameObject* pTagged   = nullptr;
+        manager.forEachGameObject( [&pTagged, playerTag]( GameObject* pObj )
+        {
+            if ( pTagged == nullptr && pObj != nullptr && pObj->isPendingDestroy() == false && pObj->hasTag( playerTag, true ) )
+                pTagged = pObj;
+        } );
+        if ( pTagged != nullptr )
+            return pTagged;
+
+        // 태그가 없으면 게임 카메라를 든 오브젝트 — 1 인칭은 그것이 플레이어다. 카메라가 자식이면 맨 위 조상을 옮긴다(몸째 간다).
+        GameObject* pOwner = pGameCamera != nullptr ? pGameCamera->getOwner() : nullptr;
+        while ( pOwner != nullptr && pOwner->getParent() != nullptr )
+        {
+            pOwner = pOwner->getParent();
+        }
+        return pOwner;
     }
 
     bool EditorPlaySession::isPlayQueued()
@@ -218,28 +320,40 @@ namespace sw::editor
         return pData != nullptr && pData->_bStartQueued != SW_FALSE;
     }
 
-    void EditorPlaySession::stepOnce()
+    void EditorPlaySession::stepFrames( uint32 frameCount )
     {
         PlaySessionData* pData = EditorPlaySessionInternal::data();
-        if ( pData == nullptr )
+        if ( pData != nullptr )
+            stepFrames( *pData, frameCount );
+    }
+
+    void EditorPlaySession::stepFrames( PlaySessionData& data, uint32 frameCount )
+    {
+        if ( frameCount == 0 )
             return;
-        if ( pData->_state == PlaySessionState::Stopped )
+        if ( data._state == PlaySessionState::Stopped )
         {
-            setState( PlaySessionState::Playing );
-            if ( pData->_state == PlaySessionState::Stopped ) // 시작을 미뤘다(씬을 여는 중) — 로드가 끝나면 플레이로 시작한다
+            setState( data, PlaySessionState::Playing );
+            if ( data._state == PlaySessionState::Stopped ) // 시작을 미뤘다(씬을 여는 중) — 로드가 끝나면 플레이로 시작한다
                 return;
         }
-        pData->_bStepPending = SW_TRUE;
+        data._pendingStepCount = frameCount < kMaxStepFrameCount ? frameCount : kMaxStepFrameCount;
     }
 
     void EditorPlaySession::consumePendingStep()
     {
         PlaySessionData* pData = EditorPlaySessionInternal::data();
-        if ( pData == nullptr || pData->_bStepPending == SW_FALSE )
+        if ( pData != nullptr )
+            consumePendingStep( *pData );
+    }
+
+    void EditorPlaySession::consumePendingStep( PlaySessionData& data )
+    {
+        if ( data._pendingStepCount == 0 )
             return;
-        pData->_bStepPending = SW_FALSE;
-        if ( pData->_state == PlaySessionState::Playing )
-            pData->_state = PlaySessionState::Paused;
+        --data._pendingStepCount;
+        if ( data._pendingStepCount == 0 && data._state == PlaySessionState::Playing )
+            data._state = PlaySessionState::Paused;
     }
 
     void EditorPlaySession::setState( PlaySessionState state )
@@ -258,6 +372,12 @@ namespace sw::editor
 
     void EditorPlaySession::update( PlaySessionData& data )
     {
+        // 첫 프레임이 지났다 — 첫 틱에 스폰 자리로 되돌린 게임이 있으니 한 번 더 옮긴다.
+        if ( data._bStartMovePending == SW_TRUE && data._state != PlaySessionState::Stopped )
+        {
+            data._bStartMovePending = SW_FALSE;
+            (void)EditorPlaySessionInternal::moveToStartPosition( data ); // 옮길 것이 없으면 시작할 때 이미 경고했다
+        }
         if ( data._bStartQueued == SW_FALSE )
             return;
         const SceneManager* pSceneManager = editor::getService<SceneManager>();
@@ -292,7 +412,7 @@ namespace sw::editor
         data._bStartQueued = SW_FALSE;
 
         PlaySessionData* pData          = &data;
-        pData->_bStepPending            = SW_FALSE;
+        pData->_pendingStepCount        = 0;
         const PlaySessionState previous = pData->_state;
         pData->_state                   = state;
 
@@ -307,9 +427,13 @@ namespace sw::editor
         {
             captureSnapshot( *pData );
             EditorPlaySessionInternal::setWorldPlaying( true );
+            // 카메라 위치에서 시작 — 플레이어가 조종하는 세션만. 월드가 시작한 뒤(onBeginPlay 가 스폰 자리를 정한 뒤)에 옮긴다.
+            if ( pData->_bStartAtPosition == SW_TRUE && pData->_bSimulate == SW_FALSE )
+                pData->_bStartMovePending = EditorPlaySessionInternal::moveToStartPosition( *pData ) ? SW_TRUE : SW_FALSE;
         }
         else if ( state == PlaySessionState::Stopped )
         {
+            pData->_bStartMovePending = SW_FALSE;
             EditorPlaySessionInternal::setWorldPlaying( false );
             restoreSnapshot( *pData );
         }

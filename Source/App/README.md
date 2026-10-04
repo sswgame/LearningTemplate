@@ -69,6 +69,16 @@ ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F
 프레임이 더 많은 스텝을 부르고 그래서 더 느려지는 되먹임(고정 스텝 스파이럴)에 빠집니다.
 상한을 넘긴 잔여 시간은 버립니다: 시뮬레이션이 실시간보다 느려지는 쪽을 택합니다.
 
+게임 시간 배율(`GameTimeScale` — `gv_timeScale`)은 최대 델타로 자른 **뒤에** 곱합니다(`FixedTimestep::advance( timeScale )`). 그래서 고정
+스텝 수도 따라 늘고 줄며(상한은 그대로), 0 이면 게임 시간이 멈춥니다.
+
+## 게임 창 개발 콘솔(Dev 전용)
+
+에디터 없이 띄우면 `~` 로 게임 창 위의 개발 콘솔(`DevConsoleOverlay`)을 엽니다 — 명령 · `gv_이름 [값]` 을 치고 Enter, Tab 자동완성, ↑↓ 기록,
+Esc · `~` 로 닫습니다. 열려 있는 동안 키보드는 게임 입력으로 넘기지 않습니다(`App::onWindowMessage` 가 먼저 묻는다). 에디터가 있으면 Output Log 의
+입력 줄이 같은 콘솔입니다. `-gv_devConsoleExec="timescale 0.5;gv_viewMode 2"` 는 시작 씬이 열린 뒤 명령을 돌리고(에디터가 있어도),
+`-gv_devConsoleOpen=1` 은 연 채로 시작합니다. Shipping 에는 없습니다.
+
 ## 모듈을 내리는 경로는 하나다
 
 종료·핫리로드·RHI 핫스왑은 모두 `ModuleHost::suspendModules( ModuleScope, bReleaseApiTable )`

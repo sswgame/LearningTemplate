@@ -12,6 +12,7 @@
 #include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorLayoutStore.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
@@ -85,9 +86,76 @@ namespace sw::editor
     EditorDockLayout::EditorDockLayout()
         : _imguiIniPath{}
         , _windowsIniPath{}
+        , _pendingLayoutIni{}
+        , _pendingLayoutVisibility{}
+        , _bLayoutPending{ SW_FALSE }
         , _bApplied{ SW_FALSE }
         , _reserved{ 0 }
     {
+    }
+
+    bool EditorDockLayout::saveNamedLayout( string_view name, string_view folder )
+    {
+        EditorContext* pContext = EditorContext::get();
+        string         safeName;
+        if ( pContext == nullptr || ImGui::GetCurrentContext() == nullptr || EditorLayoutStore::sanitizeName( name, safeName ) == false )
+            return false;
+        const string targetFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : string( folder );
+        if ( targetFolder.empty() )
+            return false;
+
+        KeyValueMap visibilityKv;
+        for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+        {
+            if ( entry._pInstance != nullptr )
+                visibilityKv[entry._id] = entry._pInstance->isOpen() ? "1" : "0";
+        }
+        size_t            iniSize  = 0;
+        const utf8* const pIniText = ImGui::SaveIniSettingsToMemory( &iniSize );
+        const bool        bSaved   = EditorLayoutStore::save( targetFolder, safeName, string_view( pIniText, iniSize ), visibilityKv );
+        if ( bSaved )
+            SW_LOG_INFO( "Saved layout '%#' to %#", safeName.c_str(), targetFolder.c_str() );
+        else
+            SW_LOG_WARNING( "Could not save layout '%#' to %#", safeName.c_str(), targetFolder.c_str() );
+        return bSaved;
+    }
+
+    bool EditorDockLayout::requestLoadNamedLayout( string_view name, string_view folder )
+    {
+        string safeName;
+        if ( EditorLayoutStore::sanitizeName( name, safeName ) == false )
+            return false;
+        const string sourceFolder = folder.empty() ? EditorLayoutStore::getDefaultFolder() : string( folder );
+        if ( EditorLayoutStore::load( sourceFolder, safeName, _pendingLayoutIni, _pendingLayoutVisibility ) == false )
+        {
+            SW_LOG_WARNING( "Layout '%#' was not found in %#", safeName.c_str(), sourceFolder.c_str() );
+            return false;
+        }
+        _bLayoutPending = SW_TRUE;
+        return true;
+    }
+
+    void EditorDockLayout::applyPendingNamedLayout()
+    {
+        if ( _bLayoutPending == SW_FALSE || ImGui::GetCurrentContext() == nullptr )
+            return;
+        _bLayoutPending = SW_FALSE;
+
+        // 가시성을 먼저 — 다시 열린 패널의 창이 이번 프레임에 만들어지며 읽은 도킹 설정을 받는다.
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext != nullptr && _pendingLayoutVisibility.empty() == false )
+        {
+            for ( const EditorPanelEntry& entry : pContext->getPanelManager().getPanels() )
+            {
+                if ( entry._pInstance != nullptr )
+                    entry._pInstance->setOpen( KeyValueFile::getBool( _pendingLayoutVisibility, entry._id.c_str(), entry._pInstance->isOpen() ) );
+            }
+        }
+        ImGui::LoadIniSettingsFromMemory( _pendingLayoutIni.c_str(), _pendingLayoutIni.size() );
+        // 기본 배치를 다시 덮지 않게 한다(읽은 도킹 노드가 비어 보여도 그것이 사용자의 배치다).
+        _bApplied = SW_TRUE;
+        _pendingLayoutIni.clear();
+        _pendingLayoutVisibility.clear();
     }
 
     void EditorDockLayout::initializePersistencePaths()

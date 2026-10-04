@@ -22,6 +22,7 @@
 #include "Editor/Common/Gui/EditorPanelDump.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
+#include "Editor/Common/Workspace/ConfigHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -268,6 +269,7 @@ namespace sw::editor
         {
             _editorContext = make_unique<EditorContext>();
             _editorContext->initialize();
+            _editorContext->setDockLayout( &_dockLayout );
             // 테마는 **컨텍스트가 활성화된 뒤에** 읽는다. 테마 상태를 컨텍스트가 들고 있으므로, 앞에서 부르면 적용한 테마가 갈 곳이
             // 없어 조용히 버려진다(실측: stored preset 이 0 에 머문다).
             EditorThemeUtil::loadFromConfig();
@@ -414,7 +416,10 @@ namespace sw::editor
         // 에셋 파일 감시는 **에디터 프레임에서만** 돈다. 리로드가 패널 그리기보다
         // 앞에 있어야 이번 프레임에 바뀐 머티리얼이 그대로 보인다.
         if ( _editorContext != nullptr )
+        {
             _editorContext->getAssetHotReload().update();
+            _editorContext->getConfigHotReload().update();
+        }
 
         BLOCK( "Editor Panels Draw" )
         {
@@ -545,6 +550,10 @@ namespace sw::editor
         const bool     bGameViewHovered = _editorContext != nullptr && _editorContext->isGameViewHovered();
         const bool     bGameViewFocused = _editorContext != nullptr && _editorContext->isGameViewFocused();
 
+        // Simulate 는 월드만 돈다 — 게임 입력을 주지 않는다(에디터 카메라 · 패널은 위의 ImGui 처리로 이미 받았다).
+        if ( EditorPlaySession::isSimulating() && ( event.isMouseInput() || event.isKeyboardInput() ) )
+            return true;
+
         if ( event.isMouseInput() )
         {
             if ( io.WantCaptureMouse && bGameViewHovered == false )
@@ -587,12 +596,14 @@ namespace sw::editor
 
     CameraComponent* ImGuiEditor::getViewportCamera() const
     {
-        return EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlaying() );
+        // Simulate 는 에디터 카메라를 그대로 쓴다. 게임 카메라는 플레이어가 조종하는 세션에서만.
+        return EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlayerActive() );
     }
 
     bool ImGuiEditor::isPlaying() const
     {
-        return EditorPlaySession::isPlaying();
+        // 호스트는 이 답으로 게임 모듈 업데이트를 켠다. Simulate 는 씬 틱만 하고(isPaused 가 false) 게임 모듈은 돌리지 않는다.
+        return EditorPlaySession::isPlayerActive();
     }
 
     bool ImGuiEditor::isPaused() const
@@ -629,6 +640,8 @@ namespace sw::editor
         if ( _platformBackend != nullptr )
             _platformBackend->newFrame();
 
+        // 이름 붙인 레이아웃은 프레임 밖에서 읽어야 이미 있는 창 · 도킹 노드에 적용된다.
+        _dockLayout.applyPendingNamedLayout();
         ImGui::NewFrame();
         ImGuizmo::BeginFrame();
         // 기즈모를 띄우는 패널이, 캔버스가 입력을 받을 수 있을 때 다시 켠다.

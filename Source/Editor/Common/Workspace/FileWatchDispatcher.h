@@ -41,8 +41,11 @@ namespace sw
         /** @brief 감시자와 등록된 감시를 정리합니다. */
         ~FileWatchDispatcher();
 
-        /** @brief 초기화합니다. */
-        bool initialize();
+        /**
+         * @brief 초기화합니다. 네이티브 감시자는 @p watchRootPath 아래를 봅니다(비우면 리소스 루트).
+         * @details 감시(`registerWatch`)의 접두사는 이 루트 아래여야 이벤트가 옵니다. 다른 루트(`Config/`)를 보려면 디스패처를 하나 더 둡니다.
+         */
+        bool initialize( string_view watchRootPath = {} );
         /** @brief 종료합니다. */
         void shutdown();
 

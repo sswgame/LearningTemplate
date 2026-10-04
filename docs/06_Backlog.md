@@ -140,14 +140,11 @@ cd build/Ninja-Debug/Bin
 
 - **에디터 · 개발 편의 기능(2026-10-04 사용자 승인, 순서대로).** 이미 있는 것(gv 표 · 커맨드 팔레트 · 핫 리로드 · Undo · PIE 재생/한 프레임 ·
   InputReplay · 기즈모 · 미니덤프 · RenderTargetPanel)은 다시 만들지 않는다.
-  - **B 빠른 이득** — GameView 가 `DebugOverlayState` 를 그린다(지금 아무도 안 읽음) · 진짜 Simulate(지금은 Play 와 같다) · 시간 배율 ·
-    N 프레임 진행 · "카메라 위치에서 시작" · `DebugDrawQueue` 에 상자 · 화살표 · 글자 · 지속시간 · 카테고리 · 로그 줄 클릭 → IDE ·
-    설정 파일 핫 리로드 · 타입/태그로 선택 · 이름 붙인 레이아웃.
   - **C 확장 지점** — 등록부(`EditorRegistry<T>` · `IEditorPanel` · `IInspectorComponent` · 시각화 · `EditorCommandRegistry`)를
     EditorFramework SHARED 로 떼어 내보내고, 키트 · 게임이 Dev 전용 `<Module>Editor` 모듈로 패널 · 인스펙터 · 시각화를 등록한다.
     지금은 EditorModule DLL 안의 함수 정적이라 다른 모듈이 못 쓴다. 첫 사용자는 ThemePark 배치 시각화.
-  - **D 콘솔 · 치트** — 명령 입력 콘솔(gv 설정 · 자동완성 · 기록) + 개발 명령 등록부(`SW_DEV_COMMAND`, Shipping 제외).
-  - **E 자동 플레이 버튼** — 일곱 게임의 `-gv_*AutoPlay` 를 한 계약(`GameAutoplay` 등록)으로 묶어 툴바 버튼.
+  - **D 콘솔 · 치트(남은 것)** — 게임 · 키트의 치트 명령(무적 · 아이템 주기 · 돈 …)을 각 게임 · 킷에 `SW_DEV_COMMAND` 로 단다(등록부 · 콘솔 ·
+    엔진 명령은 들어갔다 — `Source/Engine/README.md` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았다.
   - **F 카탈로그 편집기** — 카탈로그 계약 하나(ResourceDataSchemaTest 의 종류 표를 대체) · enum 이름 표(`CityCatalog.cpp` 의 하드코딩 개수 포함
     25 곳) · DataTablePanel 확장 편집기 · 저장 시 검증 · "어디서 쓰이나" 역색인 → 이름 바꾸기 시 참조 고침.
   - **G 프로파일링 · 캡처** — 에디터 안 `FrameProfiler` 스코프 표(p50 · p99) · 네 백엔드 GPU 타임스탬프(지금 GL 만) · RenderDoc 캡처 버튼 ·

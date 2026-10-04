@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -21,6 +22,14 @@
 
 namespace sw
 {
+    /** @brief 설정 하나를 파일에서 다시 읽었다는 알림입니다. 인자는 설정 타입의 이름(`T::StaticType()->_fullyQualifiedName`)입니다. */
+    using ConfigReloadedDelegate = MulticastDelegate<void( const hashed_string& configTypeName )>;
+
+    /**
+     * @class ConfigManager
+     * @brief 호스트 설정(EngineConfig · GameConfig …)의 표입니다. 파일에서 읽은 설정은 그 경로를 기억해 실행 중에 다시 읽을 수 있습니다
+     *        (`reloadConfigFile` — 에디터의 설정 파일 감시가 부릅니다).
+     */
     class SW_API ConfigManager
     {
     public:
@@ -64,8 +73,32 @@ namespace sw
                 return false;
             }
 
-            return loadConfigFromJson<T>( jsonStr, resolvedPath.c_str() );
+            if ( loadConfigFromJson<T>( jsonStr, resolvedPath.c_str() ) == false )
+                return false;
+            _mapSource[getConfigKey<T>()] = ConfigSource{ resolvedPath, &ConfigManager::reloadFromSource<T> };
+            return true;
         }
+
+        /**
+         * @brief 파일에서 읽은 설정 중 경로가 @p changedPath 인 것을 **제자리에서** 다시 읽고 `onConfigReloaded` 를 알립니다.
+         * @details 설정 객체는 바꾸지 않고 값만 덮어씁니다 — 기동 때 받아 둔 포인터(`EngineLoop::_pEngineConfig`)가 그대로 유효합니다. JSON 이
+         *          깨졌으면 경고를 남기고 이전 값을 그대로 둡니다. 경로는 `FileUtil::pathsEqualNormalized` 로 비교합니다.
+         * @return 아는 설정이고 다시 읽었으면 true. 모르는 경로 · 깨진 파일이면 false
+         */
+        [[nodiscard]] bool reloadConfigFile( string_view changedPath );
+        /** @brief 설정을 다시 읽을 때마다 부를 대상입니다. */
+        ConfigReloadedDelegate& onConfigReloaded() { return _onConfigReloaded; }
+        /** @brief 다시 읽을 수 있는(파일에서 읽은) 설정 수입니다. */
+        uint32 getReloadableCount() const { return static_cast<uint32>( _mapSource.size() ); }
+
+        /**
+         * @brief 호스트가 기동 때 만든 표입니다(에디터가 설정 파일 감시에 씁니다). 없으면 nullptr 입니다.
+         * @details 표는 `EngineLoop` 가 들고, 만든 직후 `setPrimary` 로 알리고 놓기 전에 거둡니다. 서비스 목록에 올리지 않은 것은 게임 모듈이 볼
+         *          이유가 없어서입니다.
+         */
+        static ConfigManager* findPrimary();
+        /** @brief 호스트의 표를 알립니다. 놓을 때 nullptr 를 넘깁니다. */
+        static void setPrimary( ConfigManager* pManager );
 
         /** @brief 설정 하나를 JSON 본문에서 읽어 등록합니다. */
         template <typename T>
@@ -143,6 +176,40 @@ namespace sw
         }
 
     private:
+        /** @brief 파일에서 읽은 설정 하나의 경로와 다시 읽는 함수입니다. */
+        struct ConfigSource
+        {
+            using ReloadFunc = bool ( * )( ConfigManager& manager, const string& resolvedPath );
+
+            string     _resolvedPath;
+            ReloadFunc _pReload{ nullptr };
+        };
+
+        /** @brief T 를 @p resolvedPath 에서 새로 읽어 표의 객체에 값으로 덮어씁니다. */
+        template <typename T>
+        [[nodiscard]] static bool reloadFromSource( ConfigManager& manager, const string& resolvedPath )
+        {
+            T* pExisting = manager.getConfig<T>();
+            if ( pExisting == nullptr )
+                return false;
+            string jsonStr;
+            if ( FileUtil::readTextFile( resolvedPath, jsonStr ) == false )
+            {
+                SW_LOG_WARNING( "Config reload: could not read %#", resolvedPath.c_str() );
+                return false;
+            }
+            unique_ptr<T> reloaded = make_unique<T>();
+            if ( JsonSerializer::deserialize( reloaded.get(), *T::StaticType(), jsonStr ) == false )
+            {
+                SW_LOG_WARNING( "Config reload: %# is not valid - keeping the previous values", resolvedPath.c_str() );
+                return false;
+            }
+            *pExisting = std::move( *reloaded );
+            SW_LOG_INFO( "Config reloaded from %#", resolvedPath.c_str() );
+            manager._onConfigReloaded.broadcast( T::StaticType()->_fullyQualifiedName );
+            return true;
+        }
+
         /**
          * @brief 설정 타입 하나를 가리키는 표의 열쇠입니다.
          * @details `hashed_string` 의 intern 인덱스라 **충돌이 없습니다**(해시와 달리). 그리고 T 에서
@@ -203,6 +270,8 @@ namespace sw
         }
 
         unordered_map<uint32, unique_ptr<IConfig>> _mapConfig;
+        unordered_map<uint32, ConfigSource>        _mapSource; ///< 파일에서 읽은 설정 → 경로 · 다시 읽는 함수
+        ConfigReloadedDelegate                     _onConfigReloaded;
         /// @brief 상대 Config 경로의 기준 디렉터리입니다. 비어 있으면 작업 디렉터리 · 실행 파일 위치만 봅니다.
         string _rootDirectory;
     };

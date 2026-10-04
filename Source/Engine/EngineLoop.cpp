@@ -155,6 +155,8 @@ namespace sw
             // 모두 "없음" 이 되어 조용히 기본값으로 떨어지므로, Resource/ 를 찾을 때 알아낸 프로젝트 루트를 넘긴다.
             loop._configManager = make_unique<ConfigManager>();
             loop._configManager->setRootDirectory( ResourceUtil::getProjectFolderPath() );
+            ConfigManager::setPrimary( loop._configManager.get() );
+            loop._configManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &EngineLoop::onConfigReloaded, &loop ) );
 
             loop._pEngineConfig = loop._configManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
             if ( loop._pEngineConfig == nullptr )
@@ -169,6 +171,7 @@ namespace sw
         {
             // `_pEngineConfig` 는 설정 매니저가 든 객체를 가리킨다. 같이 놓는다.
             loop._pEngineConfig = nullptr;
+            ConfigManager::setPrimary( nullptr );
             loop._configManager.reset();
         }
     };
@@ -601,6 +604,7 @@ namespace sw
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
+        , _sceneDeltaSeconds{ 0.0f }
         , _profileSession{}
         , _startup{}
         , _pEngineConfig{ nullptr }
@@ -683,6 +687,20 @@ namespace sw
         MemoryProfiler::reportMemoryLeaks( "EngineLoop::shutdown" );
     }
 
+    void EngineLoop::onConfigReloaded( const hashed_string& configTypeName )
+    {
+        if ( configTypeName == GameConfig::StaticType()->_fullyQualifiedName )
+        {
+            const GameConfig* pGameConfig = _configManager != nullptr ? _configManager->getConfig<GameConfig>() : nullptr;
+            if ( pGameConfig != nullptr )
+                GameConfig::setActive( *pGameConfig );
+            return;
+        }
+        // 수직 동기화는 다음에 스왑체인을 만들 때(창 크기 변경 · 백엔드 교체) 적용된다.
+        if ( configTypeName == EngineConfig::StaticType()->_fullyQualifiedName && _rhi != nullptr && _pEngineConfig != nullptr )
+            _rhi->setPreferredVSync( _pEngineConfig->_window._bVSync );
+    }
+
     void EngineLoop::beginFrame( float32 deltaSeconds )
     {
         if ( _owned._pInputManager != nullptr )
@@ -761,6 +779,7 @@ namespace sw
                 _audioSystem->update( deltaTime );
         }
 
+        _sceneDeltaSeconds = bTickScene ? deltaTime : 0.0f;
         BLOCK( "Scene update" )
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick" );
@@ -879,7 +898,8 @@ namespace sw
 
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->endFrame();
-        engine::getDebugDrawQueue().clear();
+        // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).
+        engine::getDebugDrawQueue().endFrame( _sceneDeltaSeconds );
     }
 
     bool EngineLoop::applyPendingBackendChange()

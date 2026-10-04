@@ -37,6 +37,45 @@ namespace sw::editor
                 }
             }
 
+            /** @brief 입력 줄의 Tab(자동완성) · ↑↓(기록)을 개발 콘솔로 처리합니다. */
+            static int32 onCommandLineEdit( ImGuiInputTextCallbackData* pData )
+            {
+                DevConsole* pConsole = static_cast<DevConsole*>( pData->UserData );
+                if ( pConsole == nullptr )
+                    return 0;
+                if ( pData->EventFlag == ImGuiInputTextFlags_CallbackCompletion )
+                {
+                    string         line( pData->Buf, static_cast<size_t>( pData->BufTextLen ) );
+                    vector<string> listCandidate;
+                    if ( pConsole->complete( line, listCandidate ) )
+                    {
+                        pData->DeleteChars( 0, pData->BufTextLen );
+                        pData->InsertChars( 0, line.c_str() );
+                    }
+                    if ( listCandidate.size() > 1 )
+                    {
+                        string candidates;
+                        for ( const string& candidate : listCandidate )
+                        {
+                            candidates += candidate;
+                            candidates += "  ";
+                        }
+                        SW_LOG_INFO( "%#", candidates.c_str() );
+                    }
+                    return 0;
+                }
+                if ( pData->EventFlag == ImGuiInputTextFlags_CallbackHistory )
+                {
+                    const string* pLine = pData->EventKey == ImGuiKey_UpArrow ? pConsole->moveHistoryBack() : pConsole->moveHistoryForward();
+                    if ( pLine != nullptr )
+                    {
+                        pData->DeleteChars( 0, pData->BufTextLen );
+                        pData->InsertChars( 0, pLine->c_str() );
+                    }
+                }
+                return 0;
+            }
+
             static const utf8* levelName( LogLevel level )
             {
                 static constexpr const utf8* kArrNames[] = { "Error", "Warning", "Info", "Trace" };
@@ -58,9 +97,13 @@ namespace sw::editor
         , _listDrawSnapshot{}
         , _listVisible{}
         , _cachedFilter{}
+        , _tagFilter{}
+        , _cachedTagRevision{ 0 }
         , _entriesMutex{}
         , _logListenerHandle{}
         , _filterBuffer{}
+        , _devConsole{}
+        , _commandBuffer{}
         , _arrLevelEnabled{ true, true, true, true }
         , _arrCachedLevelEnabled{ true, true, true, true }
         , _bAutoScroll{ true }
@@ -89,13 +132,17 @@ namespace sw::editor
             if ( levelIndex >= 4 || _arrLevelEnabled[levelIndex] == false )
                 continue;
 
-            if ( filter.matchesAny( { entry._message, entry._tag, entry._file } ) == false )
+            if ( _tagFilter.isTagVisible( getEntryCategory( entry ) ) == false )
+                continue;
+
+            if ( filter.matchesAny( { entry._message, entry._tag, entry._caller, entry._file } ) == false )
                 continue;
 
             _listVisible.push_back( &entry );
         }
 
-        _cachedFilter = filterStr;
+        _cachedFilter      = filterStr;
+        _cachedTagRevision = _tagFilter.getRevision();
         for ( int32 levelIndex = 0; levelIndex < 4; ++levelIndex )
             _arrCachedLevelEnabled[levelIndex] = _arrLevelEnabled[levelIndex];
     }
@@ -130,7 +177,7 @@ namespace sw::editor
             }
         }
 
-        const bool bFilterChanged = ( filterStr != _cachedFilter );
+        const bool bFilterChanged = ( filterStr != _cachedFilter ) || _cachedTagRevision != _tagFilter.getRevision();
 
         if ( bNewLogs || bFilterChanged || bLevelChanged )
             updateFilteredEntries( filterStr );
@@ -239,6 +286,17 @@ namespace sw::editor
             }
             EditorWidgets::drawTooltip( "필터링된 모든 콘솔 로그를 클립보드에 복사합니다" );
 
+            ImGui::SameLine();
+            fixed_string<constant::kMaxBuffer32> tagLabel;
+            if ( _tagFilter.getHiddenCount() > 0 )
+                formatstring( tagLabel.data(), tagLabel.capacity(), "Tags (-%u)", _tagFilter.getHiddenCount() );
+            else
+                formatstring( tagLabel.data(), tagLabel.capacity(), "Tags" );
+            if ( ImGui::Button( tagLabel.c_str() ) )
+                ImGui::OpenPopup( "##LogTagFilter" );
+            EditorWidgets::drawTooltip( "로그 태그(카테고리)마다 보이기를 켜고 끕니다" );
+            drawTagFilterPopup();
+
             EditorWidgets::drawSearchField( "##log_filter", _filterBuffer, "Filter (tag / message / file)", -1.0f, false );
             EditorWidgets::drawTooltip( "로그 메시지, 모듈 태그, 파일명으로 필터링하여 검색합니다" );
         }
@@ -280,7 +338,10 @@ namespace sw::editor
                 ImGui::TextDisabled( "[%s]", entry._timeStamp.c_str() );
                 ImGui::SameLine( 0.0f, 0.0f );
                 EditorThemeUtil::pushTextColor( EditorThemeUtil::getInfoColor() );
-                ImGui::Text( " [%s]", entry._tag.c_str() );
+                if ( entry._caller.empty() )
+                    ImGui::Text( " [%s]", entry._tag.c_str() );
+                else
+                    ImGui::Text( " [%s:%s]", entry._tag.c_str(), entry._caller.c_str() );
                 EditorThemeUtil::popTextColor();
                 ImGui::SameLine( 0.0f, 0.0f );
                 ImGui::TextColored( ConsolePanelInternal::colorForLevel( entry._level ), " [%s]", ConsolePanelInternal::levelName( entry._level ) );
@@ -292,12 +353,16 @@ namespace sw::editor
                 if ( entry._file.empty() == false )
                 {
                     fixed_string<constant::kMaxBuffer256> tooltipText;
-                    formatstring( tooltipText.data(), tooltipText.capacity(), "%s(%d)", entry._file.c_str(), entry._line );
+                    formatstring( tooltipText.data(), tooltipText.capacity(), "%s(%d) - double-click to open in IDE", entry._file.c_str(), entry._line );
                     EditorWidgets::drawTooltip( tooltipText.c_str() );
                 }
+                if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
+                    openEntryInIde( entry );
 
                 if ( ImGui::BeginPopupContextItem( "LogEntryCtx" ) )
                 {
+                    if ( ImGui::MenuItem( "Open in IDE" ) )
+                        openEntryInIde( entry );
                     if ( ImGui::MenuItem( "Copy Message" ) )
                         ImGui::SetClipboardText( entry._message.c_str() );
                     if ( ImGui::MenuItem( "Copy Full Log Line" ) )
@@ -322,6 +387,85 @@ namespace sw::editor
 
         EditorWidgets::drawCountLabel( static_cast<uint32>( _listVisible.size() ), static_cast<uint32>( _listDrawSnapshot.size() ),
                                        "lines" );
+        ImGui::SameLine();
+        drawCommandLine();
+    }
+
+    void ConsolePanel::drawCommandLine()
+    {
+        ImGui::SetNextItemWidth( -1.0f );
+        constexpr ImGuiInputTextFlags kFlags     = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackCompletion;
+        const bool                    bSubmitted = ImGui::InputTextWithHint( "##ConsoleCommand", "> command or gv_name [value] (Tab completes, Up/Down history, help)", _commandBuffer.data(),
+                                                                             _commandBuffer.capacity(), kFlags, &ConsolePanelInternal::onCommandLineEdit, &_devConsole );
+        if ( bSubmitted )
+        {
+            (void)_devConsole.submit( _commandBuffer.c_str() ); // 답 · 실패는 로그로 남아 이 패널에 보인다
+            _commandBuffer.clear();
+            _bAutoScroll = true;
+            ImGui::SetKeyboardFocusHere( -1 ); // 이어서 칠 수 있게 입력 줄에 머문다
+        }
+    }
+
+    const string& ConsolePanel::getEntryCategory( const LogEntry& entry )
+    {
+        return entry._caller.empty() ? entry._tag : entry._caller;
+    }
+
+    bool ConsolePanel::isMessageInSnapshot( string_view message ) const
+    {
+        for ( const LogEntry& entry : _listDrawSnapshot )
+        {
+            if ( entry._message == message )
+                return true;
+        }
+        return false;
+    }
+
+    bool ConsolePanel::isMessageVisible( string_view message ) const
+    {
+        for ( const LogEntry* pEntry : _listVisible )
+        {
+            if ( pEntry != nullptr && pEntry->_message == message )
+                return true;
+        }
+        return false;
+    }
+
+    void ConsolePanel::drawTagFilterPopup()
+    {
+        if ( ImGui::BeginPopup( "##LogTagFilter" ) == false )
+            return;
+        // 지금 들고 있는 로그에 나온 태그만 보인다(순서는 처음 나온 순서).
+        vector<string> listTag;
+        for ( const LogEntry& entry : _listDrawSnapshot )
+        {
+            const string& category = getEntryCategory( entry );
+            bool          bSeen{ false };
+            for ( const string& tag : listTag )
+            {
+                bSeen = bSeen || tag == category;
+            }
+            if ( bSeen == false )
+                listTag.push_back( category );
+        }
+        std::sort( listTag.begin(), listTag.end() );
+        if ( ImGui::MenuItem( "Show All" ) )
+            _tagFilter.showAll();
+        ImGui::Separator();
+        for ( const string& tag : listTag )
+        {
+            bool bVisible = _tagFilter.isTagVisible( tag );
+            if ( ImGui::Checkbox( tag.empty() ? "(none)" : tag.c_str(), &bVisible ) )
+                _tagFilter.setTagVisible( tag, bVisible );
+        }
+        ImGui::EndPopup();
+    }
+
+    void ConsolePanel::openEntryInIde( const LogEntry& entry )
+    {
+        EditorSourceLocation location;
+        if ( EditorLogCommands::findLogEntryLocation( entry._message, entry._file, entry._line, location ) )
+            (void)EditorLogCommands::openInIde( location ); // 실패는 openInIde 가 경고로 남긴다
     }
 
     void ConsolePanel::shutdown( IRHIDevice* /*rhiDevice*/ )

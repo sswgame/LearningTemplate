@@ -34,6 +34,8 @@ namespace sw::editor
         static void drawAssetsMenu();
         /** @brief 패널 표시 토글과 도킹 레이아웃 초기화를 담은 Panel 메뉴를 그립니다. */
         static void drawPanelMenu( EditorDockLayout& dockLayout );
+        /** @brief Panel 메뉴 안의 이름 붙인 레이아웃 메뉴(저장 · 불러오기 · 지우기)를 그립니다. */
+        static void drawNamedLayoutMenu( EditorDockLayout& dockLayout );
         /** @brief 메뉴바 오른쪽의 빌드 상태와 RHI·FPS 표시를 그립니다. */
         static void drawStatusArea();
     };

@@ -137,3 +137,47 @@ SW_TEST_CASE( ConfigManagerTest, MissingFileFallsBackToGeneratedThenCppDefaults 
         SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
     }
 }
+
+/**
+ * @brief [ConfigManagerTest] 파일에서 읽은 설정은 경로로 다시 읽히고, 객체는 그대로(포인터 유효) 값만 바뀌며 알림이 간다
+ * @details 에디터가 `Config/` 를 감시해 바뀐 파일을 `reloadConfigFile` 로 넘긴다. 새 객체로 바꾸면 기동 때 받아 둔 포인터
+ *          (`EngineLoop::_pEngineConfig`)가 댕글링이 된다. 깨진 JSON 은 이전 값을 지키고, 모르는 경로는 아무것도 하지 않는다.
+ */
+SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
+{
+    test::ScopedLogSuppressor suppressor;
+
+    const string rootDir = test::makeTempPath( "sw_config_reload_test" );
+    const string path    = FileUtil::joinPath( rootDir, "ReloadEngineConfig.json" );
+    FileUtil::ensureDirectoryExists( rootDir );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, makeEngineConfigJson( 800, 600 ) ) );
+
+    ConfigManager manager;
+    SW_ASSERT_TRUE( manager.loadConfig<EngineConfig>( path ) );
+    const EngineConfig* pBefore = manager.getConfig<EngineConfig>();
+    SW_ASSERT_NOT_NULL( pBefore );
+    SW_EXPECT_EQUAL( 1u, manager.getReloadableCount() );
+
+    uint32        notifyCount{ 0 };
+    hashed_string notifiedType{};
+    manager.onConfigReloaded().add( SW_DELEGATE_LAMBDA( Delegate<void( const hashed_string& )>, [&notifyCount, &notifiedType]( const hashed_string& typeName )
+    {
+        ++notifyCount;
+        notifiedType = typeName;
+    } ) );
+
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, makeEngineConfigJson( 1024, 768 ) ) );
+    SW_EXPECT_TRUE( manager.reloadConfigFile( path ) );
+    SW_EXPECT_TRUE_MSG( manager.getConfig<EngineConfig>() == pBefore, "다시 읽으며 설정 객체를 바꿨습니다(받아 둔 포인터가 댕글링이 된다)" );
+    SW_EXPECT_EQUAL( 1024u, pBefore->_window._width );
+    SW_EXPECT_EQUAL( 1u, notifyCount );
+    SW_EXPECT_TRUE( notifiedType == EngineConfig::StaticType()->_fullyQualifiedName );
+
+    // 모르는 경로는 아무것도 하지 않는다.
+    SW_EXPECT_FALSE( manager.reloadConfigFile( FileUtil::joinPath( rootDir, "Other.json" ) ) );
+    // 깨진 JSON 은 이전 값을 지킨다.
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, "{ \"_window\": { \"_width\": " ) );
+    SW_EXPECT_FALSE( manager.reloadConfigFile( path ) );
+    SW_EXPECT_EQUAL( 1024u, pBefore->_window._width );
+    SW_EXPECT_EQUAL( 1u, notifyCount );
+}

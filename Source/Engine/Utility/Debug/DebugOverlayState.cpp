@@ -2,6 +2,10 @@
 
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 
+#include "Core/Common/Defines.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
+
 namespace sw
 {
     void DebugOverlayState::setFloat( hashed_string key, float32 value )
@@ -30,9 +34,34 @@ namespace sw
         return it->second;
     }
 
+    void DebugOverlayState::remove( hashed_string key )
+    {
+        _mapFloat.erase( key );
+        _mapString.erase( key );
+    }
+
     void DebugOverlayState::clear()
     {
         _mapFloat.clear();
         _mapString.clear();
+    }
+
+    void DebugOverlayState::collectRows( vector<DebugOverlayRow>& outListRow ) const
+    {
+        outListRow.clear();
+        outListRow.reserve( _mapFloat.size() + _mapString.size() );
+        for ( const auto& [key, value] : _mapFloat )
+        {
+            fixed_string<constant::kMaxBuffer32> text;
+            formatstring( text.data(), text.capacity(), "%.2f", value );
+            outListRow.push_back( DebugOverlayRow{ string( key.c_str() ), string( text.c_str() ) } );
+        }
+        for ( const auto& [key, value] : _mapString )
+        {
+            if ( value.empty() == false )
+                outListRow.push_back( DebugOverlayRow{ string( key.c_str() ), value } );
+        }
+        std::sort( outListRow.begin(), outListRow.end(), []( const DebugOverlayRow& left, const DebugOverlayRow& right )
+        { return left._key < right._key; } );
     }
 } // namespace sw

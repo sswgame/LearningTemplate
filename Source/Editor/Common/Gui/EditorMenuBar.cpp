@@ -14,6 +14,7 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorLayoutStore.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -109,9 +110,40 @@ namespace sw::editor
             if ( ImGui::MenuItem( ICON_FA_TABLE_COLUMNS "  Reset Default Layout" ) )
                 dockLayout.requestResetDefault();
             EditorWidgets::drawTooltip( "도킹 창 배치를 기본 에디터 레이아웃으로 초기화합니다" );
+            drawNamedLayoutMenu( dockLayout );
 
             ImGui::EndMenu();
         }
+    }
+
+    void EditorMenuBar::drawNamedLayoutMenu( EditorDockLayout& dockLayout )
+    {
+        if ( ImGui::BeginMenu( "Layouts" ) == false )
+            return;
+
+        static fixed_string<constant::kMaxBuffer64> s_layoutName;
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 12.0f );
+        const bool bEnter = ImGui::InputTextWithHint( "##LayoutName", "layout name", s_layoutName.data(), s_layoutName.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        ImGui::SameLine();
+        if ( ( ImGui::Button( "Save" ) || bEnter ) && dockLayout.saveNamedLayout( s_layoutName.c_str() ) )
+            s_layoutName.clear();
+        EditorWidgets::drawTooltip( "지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Config/Editor/Layouts, 영숫자 · 공백 · _ · -)" );
+
+        vector<string> listName;
+        EditorLayoutStore::collectNames( EditorLayoutStore::getDefaultFolder(), listName );
+        if ( listName.empty() )
+            ImGui::TextDisabled( "No saved layouts." );
+        for ( const string& name : listName )
+        {
+            ImGui::PushID( name.c_str() );
+            if ( ImGui::MenuItem( name.c_str() ) )
+                (void)dockLayout.requestLoadNamedLayout( name ); // 파일이 사라졌으면 경고만 남긴다
+            ImGui::SameLine( ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - ImGui::GetFontSize() * 1.5f );
+            if ( ImGui::SmallButton( "x" ) && EditorLayoutStore::remove( EditorLayoutStore::getDefaultFolder(), name ) == false )
+                SW_LOG_WARNING( "Could not delete layout '%#'", name.c_str() );
+            ImGui::PopID();
+        }
+        ImGui::EndMenu();
     }
 
     void EditorMenuBar::drawStatusArea()

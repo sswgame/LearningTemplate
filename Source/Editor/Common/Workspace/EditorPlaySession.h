@@ -7,8 +7,16 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
+
+namespace sw
+{
+    class CameraComponent;
+    class GameObject;
+    class GameObjectManager;
+} // namespace sw
 
 namespace sw::editor
 {
@@ -46,27 +54,37 @@ namespace sw::editor
          * @details Stop 때 활성 씬의 세대가 다르면 플레이 중에 씬이 바뀐 것이다(게임 코드가 다음 레벨을 열었다). 그때는 편집하던 씬을 이 이름 ·
          *          소스 경로로 다시 세운 뒤 되돌린다(`EditorPlaySession::restoreSnapshot`).
          */
-        uint64           _sceneGeneration;
-        string           _sceneName;
-        string           _sceneSourcePath;
+        uint64 _sceneGeneration;
+        string _sceneName;
+        string _sceneSourcePath;
+        /** @brief "카메라 위치에서 시작" 의 위치입니다(`_bStartAtPosition` 일 때만 뜻이 있다). */
+        float3 _startPosition;
+        /** @brief 아직 진행할 Step 프레임 수입니다. 0 이 되면 일시정지로 돌아간다(`consumePendingStep`). */
+        uint32           _pendingStepCount;
         PlaySessionState _state{ PlaySessionState::Stopped };
         /** @brief 씬을 여는 중에 요청한 시작 상태입니다(`_bStartQueued` 일 때만 뜻이 있다). 로드가 끝난 프레임에 `update` 가 이 상태로 시작한다. */
         PlaySessionState       _queuedState{ PlaySessionState::Stopped };
-        uint8                  _bStepPending : 1;
-        uint8                  _bHasSnapshot : 1;
-        uint8                  _bStartQueued : 1; ///< 씬을 여는 중이라 시작을 미뤘다(언리얼 RequestPlaySession 의 대기 요청)
-        [[maybe_unused]] uint8 _reserved     : 5;
+        uint8                  _bHasSnapshot      : 1;
+        uint8                  _bStartQueued      : 1; ///< 씬을 여는 중이라 시작을 미뤘다(언리얼 RequestPlaySession 의 대기 요청)
+        uint8                  _bSimulate         : 1; ///< 월드만 돈다 — 게임 모듈 업데이트 · 게임 입력 없음, 에디터 카메라 유지(언리얼 Simulate)
+        uint8                  _bStartAtPosition  : 1; ///< 다음 Play 를 `_startPosition` 에서 시작한다
+        uint8                  _bStartMovePending : 1; ///< 시작 위치로 한 번 더 옮길 차례다(첫 프레임이 스폰 자리로 되돌린 것을 덮는다)
+        [[maybe_unused]] uint8 _reserved          : 3;
 
         PlaySessionData()
             : _listSnapshot{}
             , _sceneGeneration{ 0 }
             , _sceneName{}
             , _sceneSourcePath{}
+            , _startPosition{}
+            , _pendingStepCount{ 0 }
             , _state{ PlaySessionState::Stopped }
             , _queuedState{ PlaySessionState::Stopped }
-            , _bStepPending{ SW_FALSE }
             , _bHasSnapshot{ SW_FALSE }
             , _bStartQueued{ SW_FALSE }
+            , _bSimulate{ SW_FALSE }
+            , _bStartAtPosition{ SW_FALSE }
+            , _bStartMovePending{ SW_FALSE }
             , _reserved{ 0 }
         {
         }
@@ -84,6 +102,11 @@ namespace sw::editor
     class EditorPlaySession
     {
     public:
+        /** @brief "카메라 위치에서 시작" 이 먼저 찾는 태그입니다. 이 태그를 단 오브젝트가 없으면 게임 카메라를 든 오브젝트를 옮깁니다. */
+        static constexpr const utf8* kPlayerStartTag = "Player";
+        /** @brief 한 번에 진행할 수 있는 Step 프레임 수의 상한입니다. */
+        static constexpr uint32 kMaxStepFrameCount = 10000;
+
         /** @brief 현재 플레이 세션 상태를 반환합니다. */
         static PlaySessionState getState();
         /** @brief 플레이 중인지 여부를 반환합니다. Step 대기 중이면 true입니다. */
@@ -94,6 +117,15 @@ namespace sw::editor
         static bool isStopped();
         /** @brief 이번 프레임에 Step이 예약되어 있는지 반환합니다. */
         static bool hasPendingStep();
+        /** @brief Simulate(월드만 도는 세션)이면 true 입니다. 멈춤이면 false 입니다. */
+        static bool isSimulating();
+        /**
+         * @brief 플레이어가 조종하는 세션이 도는 중이면 true 입니다 — 게임 모듈 업데이트 · 게임 입력 · 게임 카메라가 켜진다.
+         * @details 플레이 중(또는 Step 대기)이고 Simulate 가 아닐 때입니다. Simulate 는 씬만 틱하고 이것은 false 입니다.
+         */
+        static bool isPlayerActive();
+        /** @brief `isPlayerActive` 의 본체입니다(상태를 인자로 받는다). */
+        static bool isPlayerActive( const PlaySessionData& data );
         /** @brief 씬을 여는 중이라 시작이 미뤄져 있으면 true 입니다(로드가 끝나면 `update` 가 시작한다). */
         static bool isPlayQueued();
 
@@ -110,16 +142,42 @@ namespace sw::editor
         static void update();
         /** @brief `update` 의 본체입니다(상태를 인자로 받는다). */
         static void update( PlaySessionData& data );
-        /** @brief 시뮬레이션을 시작합니다. */
-        static void play() { setState( PlaySessionState::Playing ); }
+        /** @brief 플레이어가 조종하는 플레이를 시작합니다(Simulate 중이면 플레이어 모드로 바꿉니다). */
+        static void play();
+        /** @brief 월드만 도는 Simulate 를 시작합니다(플레이 중이면 Simulate 로 바꿉니다). */
+        static void simulate();
+        /** @brief `play` · `simulate` 의 본체입니다. @p bSimulate 가 세션 종류를 정하고 상태를 플레이로 둡니다. */
+        static void startSession( PlaySessionData& data, bool bSimulate );
         /** @brief 시뮬레이션을 일시정지합니다. */
         static void pause() { setState( PlaySessionState::Paused ); }
         /** @brief 시뮬레이션을 정지하고 씬을 롤백 복구합니다. */
         static void stop() { setState( PlaySessionState::Stopped ); }
         /** @brief 한 프레임만 시뮬레이션한 뒤 일시정지합니다. */
-        static void stepOnce();
-        /** @brief 예약된 Step을 소비하고 일시정지로 되돌립니다. */
+        static void stepOnce() { stepFrames( 1 ); }
+        /** @brief @p frameCount 프레임을 진행한 뒤 일시정지합니다(멈춤이면 플레이를 시작한다). */
+        static void stepFrames( uint32 frameCount );
+        /** @brief `stepFrames` 의 본체입니다. 0 은 무시하고 `kMaxStepFrameCount` 로 자릅니다. */
+        static void stepFrames( PlaySessionData& data, uint32 frameCount );
+        /** @brief 예약된 Step 한 프레임을 소비하고, 다 쓰면 일시정지로 되돌립니다. */
         static void consumePendingStep();
+        /** @brief `consumePendingStep` 의 본체입니다. */
+        static void consumePendingStep( PlaySessionData& data );
+
+        /**
+         * @brief 다음 Play 를 @p position 에서 시작하게 합니다("카메라 위치에서 시작"). Simulate 에는 쓰지 않습니다.
+         * @details 시작할 때(월드 시작 직후)와 첫 프레임 뒤에 한 번 더 옮깁니다 — 첫 틱에 스폰 자리로 되돌리는 게임이 있다. 옮길 오브젝트는
+         *          `findStartObject` 가 고릅니다.
+         */
+        static void setStartPosition( PlaySessionData& data, const float3& position );
+        /** @brief "카메라 위치에서 시작" 을 끕니다. */
+        static void clearStartPosition( PlaySessionData& data );
+        /** @brief 지금 세션의 상태입니다. 컨텍스트가 없으면 nullptr 입니다(패널이 시작 위치를 정할 때 씁니다). */
+        static PlaySessionData* findData();
+        /**
+         * @brief 시작 위치로 옮길 오브젝트를 고릅니다. `kPlayerStartTag` 태그를 단 오브젝트, 없으면 게임 카메라를 든 오브젝트의 맨 위 조상입니다.
+         * @return 없으면 nullptr
+         */
+        static GameObject* findStartObject( GameObjectManager& manager, CameraComponent* pGameCamera );
 
         /**
          * @brief 활성 씬을 스냅샷으로 찍습니다(Play 시작). 활성 씬의 세대 · 이름 · 소스 경로와 오브젝트의 프리팹 연결도 함께 적습니다.

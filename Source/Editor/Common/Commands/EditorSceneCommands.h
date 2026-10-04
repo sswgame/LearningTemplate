@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "Editor/Common/Workspace/EditorSelection.h"
 
@@ -12,6 +13,8 @@ namespace sw
 {
     struct float3;
     struct ObjectSnapshot;
+    struct TagID;
+    struct TypeInfo;
 
     class Component;
     class GameObject;
@@ -50,6 +53,15 @@ namespace sw::editor
         static bool destroyComponent( GameObjectManager* pManager, GameObject* pObj, Component* pComp );
         /** @brief 워크스페이스 선택을 바꿉니다. */
         static void select( GameObject* pObj, SelectionMode mode = SelectionMode::Replace );
+        /**
+         * @brief @p pComponentType(또는 그 파생) 컴포넌트를 가진 오브젝트를 모읍니다(지울 표시가 된 것은 뺍니다). 순서는 매니저 순서입니다.
+         * @details "같은 종류 모두 선택" 의 판정입니다(유니티 Select All of Type). 파생을 넣는 것은 `forEachComponentOfType` 과 같은 규칙입니다.
+         */
+        static void collectObjectsWithComponent( GameObjectManager& manager, const TypeInfo* pComponentType, vector<GameObject*>& outListObject );
+        /** @brief 태그(@p tag 와 그 아래 계층 — `Enemy` 는 `Enemy.Boss` 도)를 단 오브젝트를 모읍니다. */
+        static void collectObjectsWithTag( GameObjectManager& manager, TagID tag, vector<GameObject*>& outListObject );
+        /** @brief 모은 오브젝트로 선택을 바꿉니다. 고른 수를 돌려줍니다(0 이면 선택을 건드리지 않습니다). */
+        static uint32 selectObjects( const vector<GameObject*>& listObject );
         /** @brief pNewParent가 pChild의 자손이면 true입니다. */
         static bool wouldCreateParentCycle( GameObject* pChild, GameObject* pNewParent );
         /** @brief 로컬 트랜스폼을 적용합니다. */

@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
@@ -47,6 +48,7 @@ namespace sw
 
     /** @brief `-gv_shooterAutoPlay=1` — 디렉터의 자동 플레이를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도). 조준 · 사격 · 이동을 AI 가 한다. */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_shooterAutoPlay, 0, "Shooter3D: 조준 · 사격도 AI 가 (1=켜기)", SW_KEEP_IN_SHIPPING );
+    SW_GAME_AUTOPLAY( gv_shooterAutoPlay, "Shooter3D", "Aim, shoot and move by AI" );
 } // namespace sw
 
 namespace sw
@@ -248,7 +250,7 @@ namespace sw
 
     bool ShooterDirectorComponent::isAutoPlayOn() const
     {
-        return _bAutoPlay || gv_shooterAutoPlay != 0;
+        return _bAutoPlay || GameAutoplay::isOn();
     }
 
     const ShooterDirectorComponent* ShooterDirectorComponent::resolveDirector( const GameObjectManager& manager, GameObjectHandle director )
