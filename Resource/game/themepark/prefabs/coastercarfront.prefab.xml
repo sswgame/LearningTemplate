@@ -1,0 +1,26 @@
+<Prefab formatVersion="0" name="CoasterCarFront">
+	<GameObject _schemaVersion="0" _name="CoasterCarFront" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,2,2"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="None"
+			               _meshId="game/themepark/models/coaster_train_front.mesh"
+			               _materialPath="game/themepark/materials/palette.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<CoasterCarComponent _componentName="CoasterCarComponent"
+			                     _bActive="true"
+			                     _director="0"
+			                     _coasterIndex="-1"
+			                     _carIndex="0"
+			                     _carSpacing="2.4" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

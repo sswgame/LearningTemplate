@@ -1,0 +1,395 @@
+<Scene formatVersion="1" name="ThemePark">
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="-133.0931,125,-133.0931"
+					                 _localRotation="0.5235988,0.7853982,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerId="0"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="625"
+					                 _orthoHeight="110"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+					<OrthoCameraRigComponent _componentName="OrthoCameraRigComponent"
+					                         _bActive="true"
+					                         _focus="20,0,20"
+					                         _yaw="0.7853982"
+					                         _pitch="0.5235988"
+					                         _distance="250"
+					                         _orthoHeight="110"
+					                         _minOrthoHeight="25"
+					                         _maxOrthoHeight="220"
+					                         _zoomStep="0.85"
+					                         _panSpeed="40"
+					                         _panReferenceHeight="110"
+					                         _rotateStep="1.5707964"
+					                         _farPlaneScale="2.5"
+					                         _bInputEnabled="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.9,0.8,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerId="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.5"
+					                           _ambient="0.28"
+					                           _shadowExtent="180"
+					                           _shadowDistance="360"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Grass">
+			<GameObject _schemaVersion="0" _name="Grass" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="20,-0.02,110"
+					               _localRotation="0,0,0"
+					               _localScale="260,1,340"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="Plane"
+					               _materialPath="game/themepark/materials/grass.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="ParkGate">
+			<GameObject _schemaVersion="0" _name="ParkGate" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="20,0,-40"
+					               _localRotation="0,0,0"
+					               _localScale="2.6,2.6,2.6"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/park_entrance.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="FoodStall">
+			<GameObject _schemaVersion="0" _name="FoodStall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="13,0,-34"
+					               _localRotation="0,-1.5707964,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/stall_food.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Bench1">
+			<GameObject _schemaVersion="0" _name="Bench1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="16,0,-31.5"
+					               _localRotation="0,-1.5707964,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/bench.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="TrashCan1">
+			<GameObject _schemaVersion="0" _name="TrashCan1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="16,0,-35.5"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/trash.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="DrinksStall">
+			<GameObject _schemaVersion="0" _name="DrinksStall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="27,0,-34"
+					               _localRotation="0,1.5707964,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/stall_drinks.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Bench2">
+			<GameObject _schemaVersion="0" _name="Bench2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="24,0,-31.5"
+					               _localRotation="0,1.5707964,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/bench.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="TrashCan2">
+			<GameObject _schemaVersion="0" _name="TrashCan2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="24,0,-35.5"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/trash.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="InformationStall">
+			<GameObject _schemaVersion="0" _name="InformationStall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="13,0,-29"
+					               _localRotation="0,-1.5707964,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/stall_information.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Bench3">
+			<GameObject _schemaVersion="0" _name="Bench3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="16,0,-26.5"
+					               _localRotation="0,-1.5707964,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/bench.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="TrashCan3">
+			<GameObject _schemaVersion="0" _name="TrashCan3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="16,0,-30.5"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/trash.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="ToiletStall">
+			<GameObject _schemaVersion="0" _name="ToiletStall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="27,0,-29"
+					               _localRotation="0,1.5707964,0"
+					               _localScale="2.4,2.4,2.4"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/stall_toilets.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="Bench4">
+			<GameObject _schemaVersion="0" _name="Bench4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="24,0,-26.5"
+					               _localRotation="0,1.5707964,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/bench.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="TrashCan4">
+			<GameObject _schemaVersion="0" _name="TrashCan4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="24,0,-30.5"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="game/themepark/models/trash.mesh"
+					               _materialPath="game/themepark/materials/palette.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="EdgeTrees">
+			<GameObject _schemaVersion="0" _name="EdgeTrees" _bActive="true">
+				<_listComponent>
+					<PropScatterComponent _componentName="PropScatterComponent"
+					                      _bActive="true"
+					                      _materialPath="game/themepark/materials/palette.material"
+					                      _propName="ParkTree"
+					                      _regionMin="-100,0,-45"
+					                      _regionMax="140,0,265"
+					                      _spacing="9"
+					                      _alongJitter="3"
+					                      _inwardJitter="4"
+					                      _scaleMin="3"
+					                      _scaleMax="4.5"
+					                      _seed="2654435769"
+					                      _mode="Edge">
+						<_listModel>
+							<PropScatterModel _meshId="game/themepark/models/tree.mesh" _weight="0.45" />
+							<PropScatterModel _meshId="game/themepark/models/tree_large.mesh" _weight="0.35" />
+							<PropScatterModel _meshId="game/themepark/models/flowers.mesh" _weight="0.2" />
+						</_listModel>
+						<_listExclusion>
+							<PropScatterExclusion _center="20,0,-40" _radius="14" />
+						</_listExclusion>
+						<_listSpawned />
+					</PropScatterComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="18" name="ParkDirector">
+			<GameObject _schemaVersion="0" _name="ParkDirector" _bActive="true">
+				<_listComponent>
+					<ParkDirectorComponent _componentName="ParkDirectorComponent"
+					                       _bActive="true"
+					                       _coasterDataPath="game/themepark/data/coasters.xml"
+					                       _parkDataPath="game/themepark/data/rides.xml"
+					                       _guestPrefab="game/themepark/prefabs/guest.prefab.xml"
+					                       _carFrontPrefab="game/themepark/prefabs/coastercarfront.prefab.xml"
+					                       _carPrefab="game/themepark/prefabs/coastercar.prefab.xml"
+					                       _railPrefab="game/themepark/prefabs/coasterrail.prefab.xml"
+					                       _supportPrefab="game/themepark/prefabs/coastersupport.prefab.xml"
+					                       _stationPrefab="game/themepark/prefabs/coasterstation.prefab.xml"
+					                       _rideEntrancePrefab="game/themepark/prefabs/rideentrance.prefab.xml"
+					                       _pathPrefab="game/themepark/prefabs/path.prefab.xml"
+					                       _flatRidePrefab="game/themepark/prefabs/flatride.prefab.xml"
+					                       _happyColor="0.3,0.85,0.35,1"
+					                       _contentColor="0.95,0.85,0.25,1"
+					                       _unhappyColor="0.9,0.25,0.2,1"
+					                       _cameraRig="1"
+					                       _gate="4"
+					                       _autoBuildInterval="20"
+					                       _bAutoBuild="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

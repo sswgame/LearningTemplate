@@ -1,0 +1,25 @@
+<Prefab formatVersion="0" name="ParkGuest">
+	<GameObject _schemaVersion="0" _name="ParkGuest" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.5,0.45,0.5"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="None"
+			               _meshId="Capsule"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="false" />
+			<ParkGuestComponent _componentName="ParkGuestComponent"
+			                    _bActive="true"
+			                    _director="0"
+			                    _guestIndex="-1"
+			                    _heightOffset="0.45" />
+		</_listComponent>
+	</GameObject>
+</Prefab>
