@@ -103,8 +103,8 @@ namespace sw
         : _targetTags{}
         , _range{ 15.0f }
         , _viewAngle{ 0.0f }
-        , _turnSpeed{ 180.0f }
-        , _aimTolerance{ 5.0f }
+        , _turnSpeed{ MathUtil::Pi }
+        , _aimTolerance{ 5.0f * MathUtil::DegreeToRadian }
         , _fireInterval{ 0.5f }
         , _damage{ 10.0f }
         , _target{}
@@ -141,7 +141,7 @@ namespace sw
         vector<InteractionCandidate> listCandidate;
         const TagContainer&          targetTags = _targetTags;
         const float32                range      = _range;
-        const float32                viewAngle  = _viewAngle * MathUtil::DegreeToRadian;
+        const float32                viewAngle  = _viewAngle;
         pManager->forEachGameObject( [&listCandidate, &targetTags, range, viewAngle]( GameObject* pObject )
         {
             const SceneComponent* pOther = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
@@ -165,11 +165,11 @@ namespace sw
         const float32 desiredYaw = MathUtil::atan2( toTarget._x, toTarget._z );
         float3        rotation   = pScene->getLocalRotation();
         const float32 delta      = ShooterGimmicksInternal::wrapAngle( desiredYaw - rotation._y );
-        const float32 maxTurn    = _turnSpeed * MathUtil::DegreeToRadian * GenreGimmickUtil::kStepTime;
+        const float32 maxTurn    = _turnSpeed * GenreGimmickUtil::kStepTime;
         rotation._y += MathUtil::clamp( delta, -maxTurn, maxTurn );
         pScene->setLocalRotation( rotation );
 
-        const bool bAimed = MathUtil::abs( delta ) <= _aimTolerance * MathUtil::DegreeToRadian + maxTurn;
+        const bool bAimed = MathUtil::abs( delta ) <= _aimTolerance + maxTurn;
         if ( bAimed == false || _cooldownSteps > 0 )
             return;
         _cooldownSteps      = GenreGimmickUtil::toSteps( _fireInterval, 1 );

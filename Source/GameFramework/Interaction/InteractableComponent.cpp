@@ -92,10 +92,10 @@ namespace sw
         resolveDefinition();
     }
 
-    void InteractableComponent::setAlignment( const float3& localOffset, float32 localYawDegrees )
+    void InteractableComponent::setAlignment( const float3& localOffset, float32 localYawRadians )
     {
         _alignmentOffset = localOffset;
-        _alignmentYaw    = localYawDegrees;
+        _alignmentYaw    = localYawRadians;
     }
 
     bool InteractableComponent::isAvailableFor( const GameObject& interactor ) const
@@ -111,14 +111,14 @@ namespace sw
         if ( pScene == nullptr )
         {
             outPosition = _alignmentOffset;
-            outYaw      = _alignmentYaw * MathUtil::DegreeToRadian;
+            outYaw      = _alignmentYaw;
             return;
         }
         const float4x4 world = pScene->getWorldMatrix();
         outPosition          = float3::transform( _alignmentOffset, world );
         // 오브젝트의 요(월드 회전의 앞 방향)에 로컬 요를 더한다.
         const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
-        outYaw               = MathUtil::atan2( forward._x, forward._z ) + _alignmentYaw * MathUtil::DegreeToRadian;
+        outYaw               = MathUtil::atan2( forward._x, forward._z ) + _alignmentYaw;
     }
 
     InteractionHighlight InteractableComponent::getHighlightRequest() const

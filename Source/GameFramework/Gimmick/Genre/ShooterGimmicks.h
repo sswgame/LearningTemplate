@@ -85,11 +85,11 @@ namespace sw
         TagContainer _targetTags;
         PROPERTY( Category = "Turret", DisplayName = "Range", Min = 0.0, Meta = "Units=m" )
         float32 _range;
-        PROPERTY( Category = "Turret", DisplayName = "View Angle", Min = 0.0, Tooltip = "Half angle it can see, 0 sees all around", Meta = "Units=deg" )
+        PROPERTY( Category = "Turret", DisplayName = "View Angle", Min = 0.0, Tooltip = "Half angle it can see, 0 sees all around", Meta = "Units=rad" )
         float32 _viewAngle;
-        PROPERTY( Category = "Turret", DisplayName = "Turn Speed", Min = 0.0, Meta = "Units=deg/s" )
+        PROPERTY( Category = "Turret", DisplayName = "Turn Speed", Min = 0.0, Meta = "Units=rad/s" )
         float32 _turnSpeed;
-        PROPERTY( Category = "Turret", DisplayName = "Aim Tolerance", Min = 0.0, Meta = "Units=deg" )
+        PROPERTY( Category = "Turret", DisplayName = "Aim Tolerance", Min = 0.0, Meta = "Units=rad" )
         float32 _aimTolerance;
         PROPERTY( Category = "Turret", DisplayName = "Fire Interval", Min = 0.01, Meta = "Units=s" )
         float32 _fireInterval;

@@ -72,9 +72,9 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY()
+        PROPERTY( Meta = "Units=m" )
         float3 _position{};
-        PROPERTY()
+        PROPERTY( Meta = "Units=rad" )
         float3 _rotation{};
         PROPERTY()
         float32 _intensity{ 1.0f };

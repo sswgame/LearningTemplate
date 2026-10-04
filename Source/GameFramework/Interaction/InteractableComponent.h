@@ -55,7 +55,7 @@ namespace sw
         bool    isEnabled() const { return _bEnabled; }
         int32   getPriority() const { return _priority; }
         float32 getCooldownRemaining() const { return _cooldownRemaining; }
-        void    setAlignment( const float3& localOffset, float32 localYawDegrees );
+        void    setAlignment( const float3& localOffset, float32 localYawRadians );
 
         /** @brief 강조를 요청하거나 거둡니다(아무 스레드). */
         void setHighlightRequested( bool bRequested ) { _bHighlightRequested.store( bRequested ? SW_TRUE : SW_FALSE, std::memory_order_relaxed ); }
@@ -77,7 +77,7 @@ namespace sw
         string _catalogPath;
         PROPERTY( Category = "Interaction", DisplayName = "Alignment Offset", Tooltip = "Where the interactor stands, in this object's space", Meta = "Units=m" )
         float3 _alignmentOffset;
-        PROPERTY( Category = "Interaction", DisplayName = "Alignment Yaw", Tooltip = "Facing of the interactor at the alignment point, in this object's space", Meta = "Units=deg" )
+        PROPERTY( Category = "Interaction", DisplayName = "Alignment Yaw", Tooltip = "Facing of the interactor at the alignment point, in this object's space", Meta = "Units=rad" )
         float32 _alignmentYaw;
         PROPERTY( Category = "Interaction", DisplayName = "Last Interactor", Tooltip = "Who completed it last (runtime)" )
         GameObjectHandle _lastInteractor;
