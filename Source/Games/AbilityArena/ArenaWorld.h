@@ -120,11 +120,16 @@ namespace sw
         /** @brief 메시 하나짜리 오브젝트를 만듭니다. */
         GameObject* createMeshObject( GameObjectManager& manager, const utf8* pName, const shared_ptr<Mesh>& mesh,
                                       const shared_ptr<MaterialInstance>& material, const float3& position, const float3& scale );
+        /** @brief 메시 에셋(`game/abilityarena/models/<pModel>.mesh`) 하나짜리 오브젝트를 키트 배율로 만듭니다. 읽지 못하면 nullptr 입니다. */
+        GameObject* createModelObject( GameObjectManager& manager, const utf8* pName, const utf8* pModel, const shared_ptr<MaterialInstance>& material,
+                                       const float3& position, float32 yaw );
+        /** @brief 무대 소품(바닥 · 벽 · 장식) 모델 하나를 세우고 걷을 목록에 넣습니다. */
+        void addStageModel( GameObjectManager& manager, const utf8* pModel, const float3& position, float32 yaw );
         /** @brief 유닛을 하나 세웁니다 — 메시 · 어빌리티 시스템(세트) · HP 바. */
         [[nodiscard]] bool spawnUnit( ArenaUnitKind kind, const float3& position, int32 level );
         /** @brief 다음 웨이브의 적을 원 위에 세웁니다. */
         void spawnWave();
-        /** @brief 바닥 · 빛을 세웁니다. */
+        /** @brief 바닥 · 벽 · 장식 · 빛을 세웁니다. */
         void spawnStage( GameObjectManager& manager );
         /** @brief 메시 · 머티리얼 인스턴스를 (처음 한 번) 만듭니다. */
         bool ensureRenderAssets( Scene& scene );
@@ -134,6 +139,8 @@ namespace sw
         void updateEnemies( float32 deltaTime );
         void updateProjectiles( float32 deltaTime );
         void updateDeaths( float32 deltaTime );
+        /** @brief 살아 있는 유닛 모델을 바라보는 쪽(`_facing`)으로 돌립니다. */
+        void updateUnitFacing();
         void updateCamera();
         void logStatus( float32 deltaTime );
         /** @brief 유닛을 @p direction 으로 이동 속도(`MoveSpeed`)만큼 움직이고 아레나 안에 가둡니다. 바라보는 방향도 바꿉니다. */
@@ -143,15 +150,13 @@ namespace sw
 
         vector<ArenaUnit>            _listUnit;
         vector<ArenaProjectile>      _listProjectile;
-        vector<GameObjectHandle>     _listStageObject; ///< 바닥 · 빛
-        shared_ptr<Mesh>             _pUnitMesh;
-        shared_ptr<Mesh>             _pCasterMesh;
+        vector<GameObjectHandle>     _listStageObject; ///< 바닥 · 벽 · 장식 · 빛
         shared_ptr<Mesh>             _pProjectileMesh;
-        shared_ptr<Mesh>             _pGroundMesh;
         shared_ptr<MaterialInstance> _pPlayerMaterial;
         shared_ptr<MaterialInstance> _pGruntMaterial;
         shared_ptr<MaterialInstance> _pCasterMaterial;
         shared_ptr<MaterialInstance> _pProjectileMaterial;
+        shared_ptr<MaterialInstance> _pStageMaterial; ///< 팔레트 텍스처만(색 흰색) — 무대 소품
         const AbilityCatalog*        _pCatalog;
         uint64                       _sceneGeneration;
         float32                      _playerRespawnTimer; ///< 0 이상이면 플레이어가 다시 서기까지 남은 시간

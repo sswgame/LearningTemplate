@@ -24,6 +24,7 @@
 #include "GameFramework/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Ability/CombatAttributeSet.h"
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/UI/HealthBarComponent.h"
 
 namespace sw
@@ -46,6 +47,16 @@ namespace sw
             static constexpr float32 kCasterPreferredMax = 9.0f;  ///< 원거리 적이 다가오는 거리(m)
             static constexpr float32 kCasterFireRange    = 12.0f; ///< 원거리 적이 쏘는 거리(m)
             static constexpr float32 kPi                 = 3.14159265f;
+            /**
+             * @brief Kenney Mini Dungeon 모델의 배율입니다. 키트는 바닥 한 칸이 1, 사람 키가 0.78 이라 2 배면 키 1.56 m · 칸 2 m 가 된다
+             *        (유닛 몸 반지름 0.5 m 와 맞고, 아레나 28 m 가 바닥 14 칸이다).
+             */
+            static constexpr float32     kModelScale     = 2.0f;
+            static constexpr float32     kTileSize       = 2.0f; ///< 바닥 · 벽 한 칸(m) = 키트 1 × kModelScale
+            static constexpr float32     kProjectileLift = 0.9f; ///< 투사체를 그리는 높이(m) — 맞음 판정은 발 높이 그대로, 모습만 가슴께로
+            static constexpr const utf8* kPaletteTexture = "game/abilityarena/textures/dungeon_colormap.dds";
+
+            static string makeModelPath( const utf8* pName ) { return string( "game/abilityarena/models/" ) + pName + ".mesh"; }
 
             /** @brief 키 하나 → 입력 번호입니다. 같은 번호에 키가 둘이면 어느 쪽이든 누르면 눌림이다. */
             struct KeyBinding
@@ -75,14 +86,17 @@ namespace sw
                 return float3{ flat._x / length, 0.0f, flat._z / length };
             }
 
-            /** @brief 유닛 색을 머티리얼 인스턴스로 만듭니다. */
-            static shared_ptr<MaterialInstance> createTint( Material* pMaterial, const float4& color )
+            /** @brief 유닛 색을 머티리얼 인스턴스로 만듭니다. @p bPalette 면 키트 팔레트 텍스처를 함께 건다(모델용). */
+            static shared_ptr<MaterialInstance> createTint( Material* pMaterial, const float4& color, bool bPalette )
             {
                 if ( pMaterial == nullptr )
                     return nullptr;
                 shared_ptr<MaterialInstance> pInstance = MaterialInstance::create( pMaterial );
-                if ( pInstance != nullptr )
-                    pInstance->setVectorParameter( hashed_string( "color" ), color );
+                if ( pInstance == nullptr )
+                    return nullptr;
+                pInstance->setVectorParameter( hashed_string( "color" ), color );
+                if ( bPalette )
+                    pInstance->setTextureParameter( hashed_string( "albedoMap" ), kPaletteTexture );
                 return pInstance;
             }
 
@@ -116,14 +130,12 @@ namespace sw
         : _listUnit{}
         , _listProjectile{}
         , _listStageObject{}
-        , _pUnitMesh{ nullptr }
-        , _pCasterMesh{ nullptr }
         , _pProjectileMesh{ nullptr }
-        , _pGroundMesh{ nullptr }
         , _pPlayerMaterial{ nullptr }
         , _pGruntMaterial{ nullptr }
         , _pCasterMaterial{ nullptr }
         , _pProjectileMaterial{ nullptr }
+        , _pStageMaterial{ nullptr }
         , _pCatalog{ nullptr }
         , _sceneGeneration{ 0 }
         , _playerRespawnTimer{ -1.0f }
@@ -222,6 +234,7 @@ namespace sw
         updateEnemies( deltaTime );
         updateProjectiles( deltaTime );
         updateDeaths( deltaTime );
+        updateUnitFacing();
         updateCamera();
         logStatus( deltaTime );
     }
@@ -281,7 +294,8 @@ namespace sw
         pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [this, pManager, projectile]()
         {
             ArenaProjectile spawned = projectile;
-            GameObject*     pObject = createMeshObject( *pManager, "ArenaProjectile", _pProjectileMesh, _pProjectileMaterial, spawned._position,
+            GameObject*     pObject = createMeshObject( *pManager, "ArenaProjectile", _pProjectileMesh, _pProjectileMaterial,
+                                                        spawned._position + float3{ 0.0f, ArenaWorldInternal::kProjectileLift, 0.0f },
                                                         float3{ ArenaWorldInternal::kProjectileRadius * 2.0f } );
             if ( pObject == nullptr )
                 return;
@@ -374,18 +388,44 @@ namespace sw
         return pObject;
     }
 
+    GameObject* ArenaWorld::createModelObject( GameObjectManager& manager, const utf8* pName, const utf8* pModel, const shared_ptr<MaterialInstance>& material,
+                                               const float3& position, float32 yaw )
+    {
+        GameObject*    pObject = createMeshObject( manager, pName, nullptr, material, position, float3{ ArenaWorldInternal::kModelScale } );
+        MeshComponent* pMesh   = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
+        if ( pMesh == nullptr )
+            return nullptr;
+        // 메시 캐시의 공유 메시를 경로로 받는다 — 읽지 못하면(경고는 캐시가 경로마다 한 번) 오브젝트를 걷는다.
+        pMesh->setMeshId( ArenaWorldInternal::makeModelPath( pModel ) );
+        if ( pMesh->getRawMesh() == nullptr )
+        {
+            manager.destroyObject( pObject );
+            return nullptr;
+        }
+        pMesh->setLocalRotation( float3{ 0.0f, yaw, 0.0f } );
+        return pObject;
+    }
+
+    void ArenaWorld::addStageModel( GameObjectManager& manager, const utf8* pModel, const float3& position, float32 yaw )
+    {
+        GameObject* pObject = createModelObject( manager, "ArenaProp", pModel, _pStageMaterial, position, yaw );
+        if ( pObject != nullptr )
+            _listStageObject.push_back( pObject->getHandle() );
+    }
+
     bool ArenaWorld::spawnUnit( ArenaUnitKind kind, const float3& position, int32 level )
     {
         GameObjectManager* pManager = findObjectManager();
         if ( pManager == nullptr )
             return false;
 
+        // 플레이어는 사람, 적은 오크 — 근접 · 원거리는 색(빨강 · 보라)으로 가른다.
         const bool                          bPlayer  = kind == ArenaUnitKind::Player;
-        const shared_ptr<Mesh>&             mesh     = kind == ArenaUnitKind::Caster ? _pCasterMesh : _pUnitMesh;
+        const utf8*                         pModel   = bPlayer ? "character_human" : "character_orc";
         const shared_ptr<MaterialInstance>& material = bPlayer ? _pPlayerMaterial : ( kind == ArenaUnitKind::Caster ? _pCasterMaterial : _pGruntMaterial );
         const utf8*                         pName    = bPlayer ? "ArenaPlayer" : ( kind == ArenaUnitKind::Caster ? "ArenaCaster" : "ArenaGrunt" );
 
-        GameObject* pObject = createMeshObject( *pManager, pName, mesh, material, position, float3{ 1.0f } );
+        GameObject* pObject = createModelObject( *pManager, pName, pModel, material, position, 0.0f );
         if ( pObject == nullptr )
             return false;
 
@@ -426,6 +466,7 @@ namespace sw
     void ArenaWorld::spawnWave()
     {
         ++_wave;
+        (void)GameSound::play( "game/abilityarena/sounds/maximize_001.ogg" );
         const uint32 gruntCount  = 2u + _wave;
         const uint32 casterCount = _wave / 2u;
         const uint32 totalCount  = gruntCount + casterCount;
@@ -442,10 +483,43 @@ namespace sw
 
     void ArenaWorld::spawnStage( GameObjectManager& manager )
     {
-        GameObject* pGround = createMeshObject( manager, "ArenaGround", _pGroundMesh, nullptr, float3{ 0.0f, -0.55f, 0.0f },
-                                                float3{ ArenaWorldInternal::kArenaHalfSize * 2.2f, 1.0f, ArenaWorldInternal::kArenaHalfSize * 2.2f } );
-        if ( pGround != nullptr )
-            _listStageObject.push_back( pGround->getHandle() );
+        // 바닥 — 2 m 칸을 아레나보다 한 칸 넓게 깔고(가끔 금 간 칸), 그 둘레에 벽. 귀퉁이는 기둥, 북쪽 벽에 깃발, 귀퉁이에 상자 · 물약 · 동전 · 바위 · 함정.
+        using Internal           = ArenaWorldInternal;
+        const int32   halfCount  = static_cast<int32>( Internal::kArenaHalfSize / Internal::kTileSize ) + 1;
+        const float32 wallOffset = static_cast<float32>( halfCount ) * Internal::kTileSize + Internal::kTileSize * 0.5f;
+        uint32        detailSeed = 0x9E3779B9u;
+        for ( int32 row = -halfCount; row < halfCount; ++row )
+        {
+            for ( int32 column = -halfCount; column < halfCount; ++column )
+            {
+                detailSeed ^= detailSeed << 13;
+                detailSeed ^= detailSeed >> 17;
+                detailSeed ^= detailSeed << 5;
+                const float3 center{ ( static_cast<float32>( column ) + 0.5f ) * Internal::kTileSize, 0.0f, ( static_cast<float32>( row ) + 0.5f ) * Internal::kTileSize };
+                addStageModel( manager, detailSeed % 7u == 0u ? "floor_detail" : "floor", center, static_cast<float32>( detailSeed % 4u ) * Internal::kPi * 0.5f );
+            }
+        }
+        for ( int32 index = -halfCount; index < halfCount; ++index )
+        {
+            const float32 along = ( static_cast<float32>( index ) + 0.5f ) * Internal::kTileSize;
+            addStageModel( manager, "wall", float3{ along, 0.0f, wallOffset }, 0.0f );
+            addStageModel( manager, "wall", float3{ along, 0.0f, -wallOffset }, 0.0f );
+            addStageModel( manager, "wall", float3{ wallOffset, 0.0f, along }, 0.0f );
+            addStageModel( manager, "wall", float3{ -wallOffset, 0.0f, along }, 0.0f );
+        }
+        const float32 corner = wallOffset - Internal::kTileSize;
+        addStageModel( manager, "column", float3{ corner, 0.0f, corner }, 0.0f );
+        addStageModel( manager, "column", float3{ -corner, 0.0f, corner }, 0.0f );
+        addStageModel( manager, "column", float3{ corner, 0.0f, -corner }, 0.0f );
+        addStageModel( manager, "column", float3{ -corner, 0.0f, -corner }, 0.0f );
+        // 깃발은 칸의 -Z 가장자리에 붙어 있다 — 북쪽 벽 안쪽 면에 걸리게 π 돌려 벽 바로 앞 칸에 둔다.
+        addStageModel( manager, "banner", float3{ -6.0f, 0.0f, corner }, Internal::kPi );
+        addStageModel( manager, "banner", float3{ 6.0f, 0.0f, corner }, Internal::kPi );
+        addStageModel( manager, "chest", float3{ corner - 1.8f, 0.0f, corner }, Internal::kPi * 1.25f );
+        addStageModel( manager, "potion", float3{ corner, 0.0f, corner - 2.0f }, 0.0f );
+        addStageModel( manager, "coin", float3{ corner - 2.0f, 0.0f, corner - 1.6f }, 0.4f );
+        addStageModel( manager, "rocks", float3{ -corner, 0.0f, -corner + 2.2f }, 0.0f );
+        addStageModel( manager, "trap", float3{ -corner + 2.2f, 0.0f, -corner }, 0.0f );
 
         GameObject* pLightObject = manager.createGameObject( hashed_string( "ArenaSun" ) );
         if ( pLightObject == nullptr )
@@ -463,30 +537,27 @@ namespace sw
 
     bool ArenaWorld::ensureRenderAssets( Scene& scene )
     {
-        if ( _pUnitMesh == nullptr )
-            _pUnitMesh = MeshUtil::createPrimitive( "Capsule" );
-        if ( _pCasterMesh == nullptr )
-            _pCasterMesh = MeshUtil::createPrimitive( "Cone" );
         if ( _pProjectileMesh == nullptr )
             _pProjectileMesh = MeshUtil::createPrimitive( "Sphere" );
-        if ( _pGroundMesh == nullptr )
-            _pGroundMesh = MeshUtil::createPlane( 24 );
-        if ( _pUnitMesh == nullptr || _pCasterMesh == nullptr || _pProjectileMesh == nullptr || _pGroundMesh == nullptr )
+        if ( _pProjectileMesh == nullptr )
         {
             SW_LOG_WARNING( "[Arena] could not create primitive meshes" );
             return false;
         }
 
         // 색은 종류마다 인스턴스 하나를 모두가 나눠 쓴다 — 유닛마다 만들지 않는다(배치가 갈리고, DX12 의 인스턴스 생성 경로를 매 스폰에 태우지 않는다).
+        // 유닛 모델은 팔레트 텍스처에 편 색을 반쯤 곱해 옷 색이 편(파랑 · 빨강 · 보라)으로 읽힌다.
         Material* pMaterial = scene.getMaterial();
         if ( _pPlayerMaterial == nullptr )
-            _pPlayerMaterial = ArenaWorldInternal::createTint( pMaterial, float4{ 0.25f, 0.55f, 1.0f, 1.0f } );
+            _pPlayerMaterial = ArenaWorldInternal::createTint( pMaterial, float4{ 0.55f, 0.75f, 1.0f, 1.0f }, true );
         if ( _pGruntMaterial == nullptr )
-            _pGruntMaterial = ArenaWorldInternal::createTint( pMaterial, float4{ 0.9f, 0.25f, 0.2f, 1.0f } );
+            _pGruntMaterial = ArenaWorldInternal::createTint( pMaterial, float4{ 1.0f, 0.5f, 0.45f, 1.0f }, true );
         if ( _pCasterMaterial == nullptr )
-            _pCasterMaterial = ArenaWorldInternal::createTint( pMaterial, float4{ 0.65f, 0.3f, 0.9f, 1.0f } );
+            _pCasterMaterial = ArenaWorldInternal::createTint( pMaterial, float4{ 0.8f, 0.55f, 1.0f, 1.0f }, true );
         if ( _pProjectileMaterial == nullptr )
-            _pProjectileMaterial = ArenaWorldInternal::createTint( pMaterial, float4{ 1.0f, 0.6f, 0.1f, 1.0f } );
+            _pProjectileMaterial = ArenaWorldInternal::createTint( pMaterial, float4{ 1.0f, 0.6f, 0.1f, 1.0f }, false );
+        if ( _pStageMaterial == nullptr )
+            _pStageMaterial = ArenaWorldInternal::createTint( pMaterial, float4{ 1.0f, 1.0f, 1.0f, 1.0f }, true );
         return true;
     }
 
@@ -685,7 +756,7 @@ namespace sw
 
                 MeshComponent* pMesh = pObject->getComponent<MeshComponent>();
                 if ( pMesh != nullptr )
-                    pMesh->setLocalPosition( projectile._position );
+                    pMesh->setLocalPosition( projectile._position + float3{ 0.0f, ArenaWorldInternal::kProjectileLift, 0.0f } );
 
                 // 처음 닿은 적대 유닛 하나. 같은 편 · 쓰러진 유닛은 지나간다.
                 for ( const ArenaUnit& unit : _listUnit )
@@ -706,6 +777,7 @@ namespace sw
                         (void)pTarget->applyGameplayEffectSpecToSelf( projectile._spec );
                     if ( projectile._extraSpec.isValid() )
                         (void)pTarget->applyGameplayEffectSpecToSelf( projectile._extraSpec );
+                    (void)GameSound::play( "game/abilityarena/sounds/impact_punch_medium_000.ogg" );
                     bFinished = true;
                     break;
                 }
@@ -746,17 +818,24 @@ namespace sw
             {
                 unit._deathTimer = ArenaWorldInternal::kDeathLinger;
                 if ( unit._kind == ArenaUnitKind::Player )
+                {
                     SW_LOG_INFO( "[Arena] the player fell on wave %# after %# kills", _wave, _killCount );
+                    (void)GameSound::play( "game/abilityarena/sounds/error_004.ogg" );
+                }
                 else
+                {
                     ++_killCount;
+                    (void)GameSound::play( "game/abilityarena/sounds/impact_punch_heavy_000.ogg" );
+                }
             }
             if ( unit._deathTimer >= 0.0f )
             {
                 // 쓰러진 유닛은 납작해지다가 걷힌다.
                 unit._deathTimer -= deltaTime;
                 MeshComponent* pMesh = pObject->getComponent<MeshComponent>();
+                const float32  scale = ArenaWorldInternal::kModelScale;
                 if ( pMesh != nullptr )
-                    pMesh->setLocalScale( float3{ 1.0f, MathUtil::max( 0.05f, unit._deathTimer / ArenaWorldInternal::kDeathLinger ), 1.0f } );
+                    pMesh->setLocalScale( float3{ scale, scale * MathUtil::max( 0.05f, unit._deathTimer / ArenaWorldInternal::kDeathLinger ), scale } );
                 if ( unit._deathTimer <= 0.0f )
                 {
                     pManager->destroyObject( pObject );
@@ -776,6 +855,17 @@ namespace sw
         }
         if ( aliveEnemyCount == 0 && bAnyEnemyLingering == false )
             spawnWave();
+    }
+
+    void ArenaWorld::updateUnitFacing()
+    {
+        // 모델의 앞(+Z)을 바라보는 쪽으로 — AI 는 움직이지 않고도 몸을 돌린다.
+        for ( const ArenaUnit& unit : _listUnit )
+        {
+            MeshComponent* pMesh = unit._deathTimer < 0.0f ? findMesh( unit._object ) : nullptr;
+            if ( pMesh != nullptr )
+                pMesh->setLocalRotation( float3{ 0.0f, MathUtil::atan2( unit._facing._x, unit._facing._z ), 0.0f } );
+        }
     }
 
     void ArenaWorld::updateCamera()

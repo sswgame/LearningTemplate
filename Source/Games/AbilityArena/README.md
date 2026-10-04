@@ -1,7 +1,8 @@
 # AbilityArena — 어빌리티 시스템 시험 게임
 
 `GameFramework/Ability`(언리얼 GAS 와 같은 어빌리티 시스템)를 실제 게임 흐름에서 쓰는 탑다운 웨이브 아레나입니다.
-키트를 링크하지 않습니다 — 어빌리티 시스템은 `GameFramework` 기반에 있습니다.
+키트를 링크하지 않습니다 — 어빌리티 시스템은 `GameFramework` 기반에 있습니다. 유닛 · 바닥 · 벽 · 소품은 Kenney Mini Dungeon 모델
+(`Resource/game/abilityarena/credits.md`)이고, 투사체만 내장 구입니다.
 
 ## 빌드 · 실행
 
@@ -25,8 +26,8 @@ cd build/Ninja-Debug/Bin
 | L · 3 | 3 | `GA_Heal` (`ApplyEffects`) | **코드 없는 데이터 어빌리티**, 레벨 스케일, 정화(`RemoveEffectsWithTag`) |
 | LeftShift · 4 | 4 | `GA_Dash` (`Dash`) | 시간이 걸리는 어빌리티(`waitDelay`), 이동 속도 ×3, 무적 태그가 피해 이펙트를 막음, 공격 막기(`BlockTag`) |
 
-적: **Grunt**(빨강 캡슐) — 다가와 때리고, 맞으면 가시(`GA_Thorns`, 피격 트리거 + `targetEffect` — 데이터만)로 때린 쪽에 고정 피해.
-**Caster**(보라 원뿔) — 거리를 두고 화염탄. 웨이브가 오를수록 수가 늘고 체력 · 공격력이 오릅니다. 플레이어는 쓰러지면 잠시 뒤 가운데에 다시 섭니다.
+적: **Grunt**(붉은 오크) — 다가와 때리고, 맞으면 가시(`GA_Thorns`, 피격 트리거 + `targetEffect` — 데이터만)로 때린 쪽에 고정 피해.
+**Caster**(보랏빛 오크) — 거리를 두고 화염탄. 웨이브가 오를수록 수가 늘고 체력 · 공격력이 오릅니다. 플레이어는 쓰러지면 잠시 뒤 가운데에 다시 섭니다.
 HP 바 · 피해 숫자는 어빌리티 시스템이 같은 오브젝트의 `HealthBarComponent` · `DamageNumberComponent` 로 띄웁니다.
 
 ## 파일
