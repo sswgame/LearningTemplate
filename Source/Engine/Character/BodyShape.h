@@ -34,6 +34,8 @@ namespace sw
     struct CharacterBoneArray;
 
     class CharacterDataReader;
+    class Pose;
+    class Skeleton;
     class XmlNode;
 
     /** @brief 본 하나의 비율 보정입니다. 스케일은 로컬 스케일에 곱하고, 오프셋은 로컬 위치에 더합니다. */
@@ -66,6 +68,11 @@ namespace sw
          * @details 매 프레임 애니메이션 평가 뒤, 스키닝 앞에서 부릅니다(가산 층이라 애니메이션과 겹친다). 배열에 없는 본은 건너뜁니다.
          */
         void apply( CharacterBoneArray& inoutBones ) const;
+        /**
+         * @brief 같은 보정을 애니메이션 포즈(SoA)에 겹칩니다 — 스켈레톤 본 이름으로 찾고, 스케일은 곱하고 오프셋은 더합니다.
+         * @details 레퍼런스 포즈에 걸면 "비율이 다른 스켈레톤" 이 됩니다 — 리타기터의 대상 레퍼런스 덮어쓰기(`PoseRetargeter::initialize`)로 넘깁니다.
+         */
+        void applyToPose( const Skeleton& skeleton, Pose& inoutPose ) const;
 
     private:
         BoneProportionEntry& findOrAddEntry( const hashed_string& bone );

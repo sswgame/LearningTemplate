@@ -75,7 +75,8 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
 
 ## 체형
 
-`BodyShapeSet::evaluate( 축 값들 )` → 모프 가중치(GPU 모프 풀에 걸 것) + `BoneProportion`. 본 비율은 **애니메이션 위의 가산 층**입니다 — 매 프레임 애니메이션이 로컬을
+`BodyShapeSet::evaluate( 축 값들 )` → 모프 가중치(GPU 모프 풀에 걸 것) + `BoneProportion`. `BoneProportion::applyToPose` 는 같은 보정을 애니메이션 포즈에
+겹칩니다 — 레퍼런스 포즈에 걸어 리타기터의 대상 레퍼런스(비율이 다른 스켈레톤)로 넘깁니다(`Source/Engine/Animation/README.md` 6 절). 본 비율은 **애니메이션 위의 가산 층**입니다 — 매 프레임 애니메이션이 로컬을
 정한 뒤 `BoneProportion::apply`(스케일은 곱, 오프셋은 더함) → 스키닝. `BodyShapeUtil` 은 같은 일을 CPU 형상에 해(모프 · 선형 블렌드 스키닝) 피팅 · 소켓 보정이
 체형을 건 바인드 형상을 보게 합니다.
 

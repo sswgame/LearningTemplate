@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Animation/Pose.h"
+#include "Engine/Animation/Skeleton.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/CharacterGeometry.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -121,6 +123,20 @@ namespace sw
             local = CharacterGeometryUtil::makeTransform( translation + entry._offset, rotation, scale );
         }
         inoutBones.computeModelTransforms();
+    }
+
+    void BoneProportion::applyToPose( const Skeleton& skeleton, Pose& inoutPose ) const
+    {
+        for ( const BoneProportionEntry& entry : _listEntry )
+        {
+            const int32 boneIndex = skeleton.findBoneIndex( entry._bone );
+            if ( boneIndex < 0 || static_cast<uint32>( boneIndex ) >= inoutPose.getBoneCount() )
+                continue;
+            BoneTransform local = inoutPose.getBoneTransform( static_cast<uint32>( boneIndex ) );
+            local._scale        = float3( local._scale._x * entry._scale._x, local._scale._y * entry._scale._y, local._scale._z * entry._scale._z );
+            local._translation  = local._translation + entry._offset;
+            inoutPose.setBoneTransform( static_cast<uint32>( boneIndex ), local );
+        }
     }
 } // namespace sw
 

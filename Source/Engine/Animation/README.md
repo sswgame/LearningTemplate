@@ -22,6 +22,7 @@
 | `SpriteClipAsset` · `SpriteClipPlayable` | 스프라이트 클립(`.sprite.json`)과 그 이름 붙은 구간을 `IAnimPlayable` 로 보이는 다리(2D 가 같은 재생 코드를 탄다) |
 | `BlendSpace` · `DualQuaternion` | 1D/2D 파라메트릭 블렌딩(행렬 하나), DQ 스키닝 수학(아래 2 · 3 절) |
 | `AnimJsonUtil` | 모르는 키를 오류로 보는 JSON 검사 · 본 변환 읽기 · 쓰기(스켈레톤 · 임포트 규칙 · 클립 곁 데이터가 함께 쓴다) |
+| `Retarget/` | 리타깃 — 프로필(`*.retarget.json`) · 런타임 리타기터(`PoseRetargeter`) · 오프라인 굽기(`RetargetBakeUtil`). 아래 6 절 |
 | `Rig/` | 후처리 리그 — 작업 포즈(`RigPoseBuffer`) · IK 풀이(`RigIkSolver`) · 스프링 사슬 · 리그 에셋(`*.rig.json`, 노드 등록부) · 실행기(`RigInstance`). 아래 5 절 |
 
 ## 0.1 파일 형식
@@ -224,3 +225,20 @@ for ( const sw::AnimFiredNotify& fired : pAnimator->getFiredNotifies() ) { /* �
   `RigIkSolver::makeFromToRotation` 을 쓴다.
 - `quaternion::inverse()` 는 const 가 아닌 값에서 **제자리 버전(void)** 이 골라진다 — 식 안에서는 `RigIkSolver::makeInverse` 를 쓴다.
 - 트위스트 본이 소스의 조상이면 소스에서 그 몫을 **부모 쪽(왼쪽)** 에서 빼야 손의 모델 방향이 남는다(흔들림과 비틀림은 교환되지 않는다).
+
+---
+
+## 6. 리타깃 (`Retarget/`) — 비율이 다른 스켈레톤 사이
+
+| 무엇 | 자리 |
+|------|------|
+| 프로필(데이터) | `RetargetProfile` · `*.retarget.json` — 원본 · 대상 스켈레톤 경로, `root` · `pelvis` 짝, `translation`(`ScaleByPelvisHeight` · `Copy` · `None`), `chains`(`name` · `source` · `target` 본 목록 · `ik_goal`). 본 수가 다른 사슬은 사슬 길이 비율로 짝짓는다 |
+| 런타임 | `PoseRetargeter`(순수) · `PoseRetargetComponent`(`Object/Component/3D` — 원본 유닛을 의존으로 걸고 기본 포즈 단계에서 옮긴다) |
+| 오프라인 굽기 | `RetargetBakeUtil::bakeClip` — 원본 클립을 표본율로 샘플 · 리타깃 · 코덱으로 압축, 알림 · 커브 · 반복 · 루트 모션 트랙을 옮긴다(저장은 `AnimClip::saveToFile`) |
+| 비율 | 대상 레퍼런스 덮어쓰기 — `BoneProportion::applyToPose`(`Engine/Character`)로 본 비율을 건 레퍼런스를 넘긴다 |
+
+한 번 옮기기: (1) 짝지은 본은 **모델 공간 회전 차이**(원본 × 원본 레퍼런스⁻¹ × 대상 레퍼런스)를 옮긴다 — 두 스켈레톤의 로컬 축 약속이 달라도 맞다.
+(2) 뿌리 · 골반 이동은 레퍼런스에서 움직인 만큼 × 골반 높이 비. (3) IK 목표 사슬(다리)의 끝을 "대상 끝 레퍼런스 + 원본 끝 움직임 × 비" 에 두고 2 본 IK(본 셋)
+또는 FABRIK — 보폭이 골반 이동과 같은 비라 발이 미끄러지지 않는다. 다 펴도 닿지 않는 목표(늘린 다리의 보폭 끝)면 골반을 그만큼 내린다(그러지 않으면 KayKit
+걷기에서 발이 4 cm 뜬다). 끝 본의 모델 회전은 (1) 의 값을 지킨다. KayKit 기사 · 해골은 같은 리그라, 시험은 해골 하수인의 다리를 본 비율로 1.25 배 늘려 보인다
+(`RetargetTest.KnightWalkOnProportionedMinion`, 프로필은 `game/shooter3d/rigs/knight_to_minion.retarget.json`).
