@@ -4,6 +4,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/DdsLoader.h"
 
 namespace sw
@@ -76,7 +77,8 @@ namespace sw
         if ( _handle != 0 )
             releaseRhi( pDevice );
 
-        DdsImageData image;
+        AssetLoadScope loadScope( "Texture", relativePath );
+        DdsImageData   image;
         if ( DdsLoader::loadFromResource( relativePath, image ) == false || image.isValid() == false )
         {
             SW_LOG_ERROR( "Texture2D: failed to load '%#'", relativePath );
@@ -95,6 +97,8 @@ namespace sw
             return false;
         }
 
+        loadScope.setBytes( image._bytes.size() );
+        loadScope.beginPhase( AssetLoadPhase::Upload );
         RHITextureDesc desc{};
         desc._width                    = image._width;
         desc._height                   = image._height;
@@ -142,6 +146,7 @@ namespace sw
         _format   = format;
         SW_LOG_INFO( "Texture2D '%#' ready: %#×%#, %# mips, format %#, srv %#", _path.c_str(), _width, _height, _mipCount,
                      static_cast<uint32>( _format ), _srv );
+        loadScope.setSucceeded();
         return true;
     }
 

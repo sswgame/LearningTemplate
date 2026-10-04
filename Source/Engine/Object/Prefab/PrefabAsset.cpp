@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -161,13 +162,15 @@ namespace sw
     bool PrefabAsset::loadFromXmlFile( string_view assetRelativePath )
     {
         _bValid = SW_FALSE;
-        string      absPath;
-        XmlDocument doc;
+        AssetLoadScope loadScope( "Prefab", assetRelativePath );
+        string         absPath;
+        XmlDocument    doc;
         if ( doc.loadPath( assetRelativePath, &absPath ) == false )
         {
             SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
             return false;
         }
+        loadScope.beginPhase( AssetLoadPhase::Decode );
 
         XmlNode root = doc.getRoot( PrefabAssetInternal::kRoot );
         if ( root.isValid() == false )
@@ -198,6 +201,8 @@ namespace sw
 
         _stateFormat = PrefabStateFormat::Xml;
         _bValid      = SW_TRUE;
+        loadScope.setBytes( _stateData.size() );
+        loadScope.setSucceeded();
         SW_LOG_INFO( "Loaded '%#' from %#", _name, absPath );
         return true;
     }

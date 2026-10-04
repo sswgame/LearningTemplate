@@ -15,6 +15,7 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 
 namespace sw
@@ -92,8 +93,10 @@ namespace sw
         _pRHIDevice = pRhi;
         _assetPath  = assetRelativePath;
 
+        AssetLoadScope loadScope( "Material", assetRelativePath );
         if ( loadFromFile( assetRelativePath ) == false )
             SW_LOG_WARNING( "Failed to load material file '%#'. Using fallback defaults.", assetRelativePath );
+        loadScope.beginPhase( AssetLoadPhase::Upload );
 
         uint32 bufferSize = static_cast<uint32>( _data._bytes.size() );
         if ( bufferSize == 0 )
@@ -123,6 +126,9 @@ namespace sw
         resolveTextureAssets( pRhi );
 
         SW_LOG_INFO( "Initialized '%#' with Bindless Descriptor Index %#", _desc._name.c_str(), _descriptorIndex );
+        loadScope.setBytes( _data._bytes.size() );
+        if ( _descriptorIndex != kInvalidDescriptorIndex )
+            loadScope.setSucceeded();
         return _descriptorIndex != kInvalidDescriptorIndex;
     }
 
