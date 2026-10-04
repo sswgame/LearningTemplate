@@ -426,9 +426,6 @@ cd build/Ninja-Debug/Bin
   한 번 — 같은 인자 5 회 재실행은 깨끗). GL 컨텍스트를 렌더 스레드와 다른 스레드가 같이 잡는 순간이 있다. 골든 러너가 진 판의 App 출력을
   `%TEMP%/sw_golden_<백엔드>_<회차>_app.log` 로 남기니, 다시 보이면 그 로그로 어느 스레드 · 단계인지 본다.
 
-- **`NetworkThreadTest.ConnectionsSurviveStalledGameThread` 의 50 ms 왕복 단언이 `-j 4` 부하에서 한 번 졌다**(2026-10-04 Shipping, 다시 돌리면 통과).
-  시간 상한 단언은 부하에 진다 — 다시 지면 상한을 늘리지 말고 "멈춘 게임 스레드에도 연결이 산다" 를 시간 대신 순서로 볼 수 있는지 본다.
-
 - **`Meta = "Units=m"` 철자를 `Units = m` 으로 다시 쓴다**(엔진 · GameFramework · 게임 헤더 130 줄 남짓 — 병렬 워크트리가 같은 헤더를 고치는 동안이라
   리플렉션 확장에서는 하지 않았다). `Units =` 는 단위 표(`ReflectUnits.h`)로 철자를 검사하고 `Meta` 는 검사하지 않는다. 다 옮긴 뒤 파서가 `Meta` 안의
   `Units` 를 표에 있는 단위면 거절하게 하고(표에 없는 `HP` 같은 글자만 `Meta` 에 남는다), 같은 커밋에 데이터 · 시험을 맞춘다.
