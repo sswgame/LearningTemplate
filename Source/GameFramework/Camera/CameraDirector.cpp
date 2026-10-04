@@ -33,7 +33,7 @@ namespace sw
         return true;
     }
 
-    bool CameraDirector::activatePreset( const CameraPresetCatalog& catalog, const hashed_string& id, const CameraBlendSpec& blend )
+    bool CameraDirector::activatePreset( const CameraPresetCatalog& catalog, const hashed_string& id, const BlendCurveSpec& blend )
     {
         const CameraPresetDef* pDef = catalog.findPreset( id );
         if ( pDef == nullptr )
@@ -42,10 +42,10 @@ namespace sw
         return true;
     }
 
-    void CameraDirector::activatePreset( const CameraPresetDef& def, const CameraBlendSpec& blend )
+    void CameraDirector::activatePreset( const CameraPresetDef& def, const BlendCurveSpec& blend )
     {
         // 낸 포즈가 있으면 켠 프리셋도 있다 — 블렌드는 둘 다 있을 때만 한다.
-        const bool bCut = _bHasPose == SW_FALSE || blend._curve == CameraBlendCurve::Cut || blend._duration <= 0.0f;
+        const bool bCut = _bHasPose == SW_FALSE || blend._curve == BlendCurve::Cut || blend._duration <= 0.0f;
         if ( bCut )
         {
             _bBlending   = SW_FALSE;

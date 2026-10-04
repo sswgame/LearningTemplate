@@ -30,7 +30,7 @@ namespace sw
 
             struct BlendKeyTimeLess
             {
-                bool operator()( const CameraBlendKey& lhs, const CameraBlendKey& rhs ) const { return lhs._time < rhs._time; }
+                bool operator()( const BlendCurveKey& lhs, const BlendCurveKey& rhs ) const { return lhs._time < rhs._time; }
             };
 
             template <size_t Count>
@@ -74,7 +74,7 @@ namespace sw
             }
 
             /** @brief 블렌드 속성과 `<Key>` 자식을 읽습니다. 빠진 칸은 @p inoutBlend 의 것이 남습니다. */
-            static void readBlend( const XmlNode& node, CameraBlendSpec& inoutBlend, string_view sourceName )
+            static void readBlend( const XmlNode& node, BlendCurveSpec& inoutBlend, string_view sourceName )
             {
                 readEnum( node, "curve", inoutBlend._curve, sourceName );
                 inoutBlend._duration        = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", inoutBlend._duration ) );
@@ -88,7 +88,7 @@ namespace sw
                 for ( ; keyNode; keyNode = keyNode.findNextSibling( "Key" ) )
                 {
                     warnUnknownAttributes( keyNode, kArrKeyAttribute, sourceName );
-                    CameraBlendKey key;
+                    BlendCurveKey key;
                     key._time  = MathUtil::saturate( keyNode.getAttributeFloat( "time", 0.0f ) );
                     key._value = keyNode.getAttributeFloat( "value", key._time );
                     if ( inoutBlend._listCustomKey.empty() == false && key._time < inoutBlend._listCustomKey.back()._time )
@@ -269,14 +269,14 @@ namespace sw
     {
         _catalog.clear();
         _listBlendRule.clear();
-        _defaultBlend = CameraBlendSpec{};
+        _defaultBlend = BlendCurveSpec{};
     }
 
-    const CameraBlendSpec& CameraPresetCatalog::getBlend( const hashed_string& from, const hashed_string& to ) const
+    const BlendCurveSpec& CameraPresetCatalog::getBlend( const hashed_string& from, const hashed_string& to ) const
     {
-        const hashed_string    any( CameraPresetInternal::kAnyPreset );
-        const CameraBlendSpec* pFromAny = nullptr;
-        const CameraBlendSpec* pToAny   = nullptr;
+        const hashed_string   any( CameraPresetInternal::kAnyPreset );
+        const BlendCurveSpec* pFromAny = nullptr;
+        const BlendCurveSpec* pToAny   = nullptr;
         for ( const CameraBlendRule& rule : _listBlendRule )
         {
             const bool bFromMatches = rule._from == from;

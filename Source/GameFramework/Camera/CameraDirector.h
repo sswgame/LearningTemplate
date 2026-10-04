@@ -30,9 +30,9 @@ namespace sw
         /** @brief 카탈로그의 프리셋을 켭니다. 블렌드는 `catalog.getBlend( 지금 프리셋, id )` 입니다. 없는 id 면 아무것도 바꾸지 않고 false 입니다. */
         [[nodiscard]] bool activatePreset( const CameraPresetCatalog& catalog, const hashed_string& id );
         /** @brief 카탈로그의 프리셋을 @p blend 로 켭니다(표를 무시한다). */
-        [[nodiscard]] bool activatePreset( const CameraPresetCatalog& catalog, const hashed_string& id, const CameraBlendSpec& blend );
+        [[nodiscard]] bool activatePreset( const CameraPresetCatalog& catalog, const hashed_string& id, const BlendCurveSpec& blend );
         /** @brief 정의를 그대로 켭니다(카탈로그 밖 — 시퀀서 · 코드로 지은 프리셋). */
-        void activatePreset( const CameraPresetDef& def, const CameraBlendSpec& blend );
+        void activatePreset( const CameraPresetDef& def, const BlendCurveSpec& blend );
 
         /** @brief 시간을 흘리고 이번 프레임의 포즈를 돌려줍니다. 켠 프리셋이 없으면 지난 포즈(처음엔 기본값) 그대로입니다. */
         const CameraPose& step( float32 deltaTime, const CameraTarget& target );
@@ -48,7 +48,7 @@ namespace sw
     private:
         CameraPresetDef _activeDef;
         CameraPresetDef _fromDef; ///< 살아 있는 나가는 쪽(`_bFromLive`)일 때만 쓴다
-        CameraBlendSpec _blend;
+        BlendCurveSpec  _blend;
         CameraPose      _activePose; ///< 들어오는 쪽 — 감쇠를 거친 포즈
         CameraPose      _fromPose;   ///< 나가는 쪽 — 살아 있으면 감쇠를 거친 포즈, 아니면 켠 순간에 고정한 포즈
         CameraPose      _outputPose;

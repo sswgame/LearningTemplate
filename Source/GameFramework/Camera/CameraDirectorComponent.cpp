@@ -56,7 +56,7 @@ namespace sw
         return _director.activatePreset( _catalog, id );
     }
 
-    bool CameraDirectorComponent::activatePreset( const hashed_string& id, const CameraBlendSpec& blend )
+    bool CameraDirectorComponent::activatePreset( const hashed_string& id, const BlendCurveSpec& blend )
     {
         return _director.activatePreset( _catalog, id, blend );
     }
