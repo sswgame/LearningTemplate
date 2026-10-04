@@ -42,6 +42,7 @@ cd build/Ninja-Debug-Shooter3D/Bin
 | 이동 · 점프 · 무기 셋 · 히트스캔 · 체력 · 조준선 · 탄도선 | `ShooterPlayerComponent` — 플레이어 오브젝트(카메라 · 손에 든 총 · 조준선 스프라이트와 같은 오브젝트) |
 | 1인칭 시점 · 마우스 잠금 · 손에 든 총 자리 | GameFramework `FirstPersonCameraComponent`(같은 오브젝트) — 손에 든 총(`ViewWeapon`) · 조준선은 카메라의 자식이라 시점을 따라간다 |
 | 화면에 나가는 시점 | `ViewCamera` 오브젝트(우선순위 10)의 `CameraDirectorComponent` — 프리셋 `data/shooter.cameras.xml`, 대상은 플레이어(카메라가 루트라 대상 = 눈 · 시점). 1인칭 프리셋은 플레이어 카메라와 정확히 겹친다 |
+| 감시 카메라 · 모니터 | `CctvCamera`(캡처 카메라, 렌더 텍스처 `rendertarget/shooter_cctv` 320×180 · 10 Hz · 그림자 · 후처리 끔, 모니터가 주 카메라 절두체에 있을 때만) 의 디렉터가 `data/cctv.cameras.xml` 의 `cctv_sweep`(남서 모서리에서 좌우로 훑기)을 쓴다. 북쪽 벽 `CctvMonitor` 의 `materials/cctvmonitor.material` 이 그 텍스처를 읽는다 |
 | 드론 하나 | `ShooterDroneComponent` — 플레이어 눈 쪽으로 오며 이웃과 떨어지고 상자를 돌아간다, 맞으면 번쩍 · HP 바 |
 | 모습 | 팔레트 머티리얼 `materials/palette.material`(상자 · 총 · 드론), 바닥 · 벽 `floor.material` · `wall.material`. 드론의 맞은 색 · 효과 색은 디렉터가 만든 머티리얼 인스턴스 |
 

@@ -1,0 +1,14 @@
+<!--
+	Shooter3D 감시 카메라 — CctvCamera(캡처 카메라, 렌더 텍스처 rendertarget/shooter_cctv 로 10 Hz)의 CameraDirectorComponent 가 읽는다.
+	북쪽 벽 모니터(CctvMonitor)가 그 텍스처를 머티리얼로 보여 준다. 각은 도, 거리는 m, 시간은 s 다.
+-->
+<CameraPresets>
+	<DefaultBlend curve="Cut" duration="0"/>
+
+	<!-- 남서쪽 모서리 높이에서 아레나 가운데를 보며 좌우로 천천히 훑는다. -->
+	<Preset id="cctv_sweep">
+		<View mode="Fixed" offset="-17 8 -17" lookAt="0 0 2"/>
+		<Lens fieldOfViewY="60" near="0.1" far="120"/>
+		<Sweep yaw="30" period="10"/>
+	</Preset>
+</CameraPresets>
