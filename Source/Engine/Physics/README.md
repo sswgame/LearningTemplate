@@ -59,6 +59,8 @@ Jolt 의 대상 기능 옵션(AVX2)과 정의는 Jolt 백엔드 소스에만 붙
   접촉 충격량(쉬는 상자는 무게 × 스텝).
 - **대량 생성 · 파괴**는 `createBodies` · `destroyBodies` 한 번으로(Jolt 는 넓은 단계를 한 번 고친다), 같은 모양은 `createShape` 로 미리 지어 나눠
   씁니다(파편 · 탄피). 풀에 넣어 다시 쓸 바디는 `setBodyEnabled( false )`.
+- **시작 각속도**는 만들 때 바디 상한(Jolt 기본 초당 15 바퀴) 조금 안쪽으로 줄입니다. 상한에 붙어 돌던 바디에서 읽은 값을 새 바디에 넘기면(갈라진 파괴
+  덩어리) 반올림으로 한 ulp 넘어 Jolt 가 단언합니다(`StartingAngularVelocityIsClampedToBodyLimit`).
 
 ### 0.3 씬의 물리와 컴포넌트
 

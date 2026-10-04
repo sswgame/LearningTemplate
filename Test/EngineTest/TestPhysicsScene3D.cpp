@@ -435,3 +435,20 @@ SW_TEST_CASE( PhysicsScene3DTest, BulkCompoundBodiesCreateAndDestroy )
     SW_EXPECT_FALSE( pScene->isBodyValid( listBody.back() ) );
     SW_EXPECT_TRUE( reused.getSlot().index() == listBody.back().getSlot().index() );
 }
+
+SW_TEST_CASE( PhysicsScene3DTest, StartingAngularVelocityIsClampedToBodyLimit )
+{
+    // 상한을 넘는 시작 각속도는 만들 때 줄인다 — 갈라진 파괴 덩어리가 상한에 붙어 돌던 부모의 운동을 이을 때 생긴다(Jolt 는 단언하고 값을 그대로 둔다).
+    sw::unique_ptr<sw::IPhysicsScene3D> pScene = makeScene();
+    SW_ASSERT_NOT_NULL( pScene.get() );
+    sw::PhysicsBodyDesc3D desc;
+    desc._listShape.push_back( makeSphere( 0.1f ) );
+    desc._position                   = sw::float3{ 0.0f, 3.0f, 0.0f };
+    desc._type                       = sw::PhysicsBodyType::Dynamic;
+    desc._angularVelocity            = sw::float3{ 1000.0f, 0.0f, 0.0f };
+    const sw::PhysicsBodyHandle body = pScene->createBody( desc );
+    SW_ASSERT_TRUE( body.isValid() );
+    const float32 speed = pScene->getAngularVelocity( body ).getLength();
+    SW_EXPECT_TRUE( speed > 1.0f );                              // 방향은 남긴다
+    SW_EXPECT_TRUE( speed <= 0.25f * sw::MathUtil::Pi * 60.0f ); // Jolt 기본 상한(초당 15 바퀴)
+}
