@@ -85,8 +85,11 @@ SW_TEST_CASE( AssetLoadProfilerTest, ScopesSplitPhasesAndAggregatePerKind )
     vector<AssetLoadRecord> listSlowest;
     profiler.collectSlowest( listSlowest );
     SW_ASSERT_EQUAL( size_t( 3 ), listSlowest.size() );
-    SW_EXPECT_STREQ( "probe/level.scene.xml", listSlowest[0]._path.c_str() ); // 26 ms > 5 ms > 0
-    SW_EXPECT_STREQ( "probe/broken.dds", listSlowest[2]._path.c_str() );
+    // 순서는 **잰 시간**으로 본다. 26 ms > 5 ms > 0 은 바쁜 기계(CI 의 -j 4, 낮은 우선순위)에서 5 ms 쪽이 선점돼 뒤집힐 수 있다 — 기록 순서
+    // (5 ms · 0 · 26 ms)가 그대로 나오면 이 검사가 진다.
+    SW_EXPECT_TRUE( listSlowest[0].computeTotalNanos() >= listSlowest[1].computeTotalNanos() );
+    SW_EXPECT_TRUE( listSlowest[1].computeTotalNanos() >= listSlowest[2].computeTotalNanos() );
+    SW_EXPECT_TRUE( listSlowest[0].computeTotalNanos() >= 25'000'000u ); // 가장 느린 것은 적어도 워커의 26 ms
     profiler.report( "AssetLoadProfilerTest" );
 
     // 끄면 모으지 않는다.

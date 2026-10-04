@@ -547,6 +547,32 @@ function(sw_registerTestRun TEST_NAME TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
+# sw_registerTestShards — 같은 실행을 SHARD_COUNT 개의 ctest 항목으로 가른다
+#   1 이면 TEST_NAME 하나(`sw_registerTestRun` 그대로), 넘으면 `<TEST_NAME>_Shard<k>` 마다 `--test_shard=<k-1>/<n>` 을 ARGS 뒤에 붙인다.
+#   나머지 인자(RUN_SERIAL · ARGS · LABELS · TIMEOUT · ASAN_OPTIONS)는 `sw_registerTestRun` 에 그대로 넘긴다.
+# ------------------------------------------------------------------------------
+function(sw_registerTestShards TEST_NAME TARGET_NAME SHARD_COUNT)
+	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "ARGS;LABELS;ASAN_OPTIONS" ${ARGN})
+	set(runSerial "")
+	if(ARG_RUN_SERIAL)
+		set(runSerial RUN_SERIAL)
+	endif()
+
+	if(SHARD_COUNT LESS_EQUAL 1)
+		sw_registerTestRun(${TEST_NAME} ${TARGET_NAME} ${runSerial}
+			ARGS ${ARG_ARGS} LABELS "${ARG_LABELS}" TIMEOUT ${ARG_TIMEOUT} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
+		return()
+	endif()
+
+	math(EXPR lastShard "${SHARD_COUNT} - 1")
+	foreach(shardIndex RANGE 0 ${lastShard})
+		math(EXPR shardNumber "${shardIndex} + 1")
+		sw_registerTestRun(${TEST_NAME}_Shard${shardNumber} ${TARGET_NAME} ${runSerial}
+			ARGS ${ARG_ARGS} --test_shard=${shardIndex}/${SHARD_COUNT} LABELS "${ARG_LABELS}" TIMEOUT ${ARG_TIMEOUT} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
+	endforeach()
+endfunction()
+
+# ------------------------------------------------------------------------------
 # sw_addTestExecutable — 테스트 실행 파일 타겟을 만들고 공통 PCH · 로그 태그 · ctest 등록을 한다
 #
 #   HOST_SPLIT    호스트 스위트(`SW_TEST_REQUIRES_HOST`)가 있는 실행 파일. ctest 항목을 둘로 가른다 —
@@ -557,16 +583,13 @@ endfunction()
 #   HOST_TIMEOUT  `_HostOnly` 의 제한 시간(기본: TIMEOUT).
 #   SHARDS        ctest 항목을 이 수만큼 `<타깃>_Shard<k>` 로 갈라 병렬로 돌린다(`--test_shard=<k-1>/<n>`). 케이스는 **스위트 안에서 번갈아**
 #                 나뉘므로 느린 스위트 하나가 끝을 정하는 실행 파일에 쓴다(ReflectionTest — 파서를 차례로 띄우는 스위트가 시간의 거의 전부).
-#                 스위트 이름을 적지 않는다. HOST_SPLIT 과는 아직 함께 쓰지 않는다.
+#                 스위트 이름을 적지 않는다. HOST_SPLIT 과 함께 쓰면 **`_NoGPU` 만** `<타깃>_NoGPU_Shard<k>` 로 가른다
+#                 (`--host_suites=exclude --test_shard=…`, CI 가 병렬로 도는 쪽). `_HostOnly` 는 직렬 하나 그대로다.
 #   RUN_SERIAL    다른 테스트와 겹치면 안 되는 실행 파일(같은 파일 · 같은 장치를 쓰는 경우). **지금 쓰는 타겟은 없다.**
 #                 쓸 때는 그 이유를 옆에 적는다.
 # ------------------------------------------------------------------------------
 function(sw_addTestExecutable TARGET_NAME)
 	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT;SHARDS" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
-	if(ARG_SHARDS AND ARG_HOST_SPLIT)
-		message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): SHARDS 와 HOST_SPLIT 은 아직 함께 쓰지 않는다")
-	endif()
-
 	if(NOT ARG_SOURCES)
 		file(GLOB_RECURSE ARG_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 	endif()
@@ -629,18 +652,13 @@ function(sw_addTestExecutable TARGET_NAME)
 		set(runSerial RUN_SERIAL)
 	endif()
 
-	if(NOT ARG_HOST_SPLIT AND ARG_SHARDS AND ARG_SHARDS GREATER 1)
-		math(EXPR lastShard "${ARG_SHARDS} - 1")
-		foreach(shardIndex RANGE 0 ${lastShard})
-			math(EXPR shardNumber "${shardIndex} + 1")
-			sw_registerTestRun(${TARGET_NAME}_Shard${shardNumber} ${TARGET_NAME} ${runSerial}
-				ARGS --test_shard=${shardIndex}/${ARG_SHARDS} LABELS "${labels}" TIMEOUT ${timeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
-		endforeach()
-		return()
+	set(shardCount 1)
+	if(ARG_SHARDS AND ARG_SHARDS GREATER 1)
+		set(shardCount ${ARG_SHARDS})
 	endif()
 
 	if(NOT ARG_HOST_SPLIT)
-		sw_registerTestRun(${TARGET_NAME} ${TARGET_NAME} ${runSerial}
+		sw_registerTestShards(${TARGET_NAME} ${TARGET_NAME} ${shardCount} ${runSerial}
 			LABELS "${labels}" TIMEOUT ${timeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
 		return()
 	endif()
@@ -650,7 +668,7 @@ function(sw_addTestExecutable TARGET_NAME)
 		set(hostTimeout ${ARG_HOST_TIMEOUT})
 	endif()
 
-	sw_registerTestRun(${TARGET_NAME}_NoGPU ${TARGET_NAME} ${runSerial}
+	sw_registerTestShards(${TARGET_NAME}_NoGPU ${TARGET_NAME} ${shardCount} ${runSerial}
 		ARGS --host_suites=exclude LABELS "${labels};nogpu" TIMEOUT ${timeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
 	# 직렬인 이유: 창을 띄우고 GPU 를 잡는다. 다른 GPU 테스트와 겹치면 서로를 느리게 만들고, 드라이버에 따라
 	# 서로의 디바이스 생성을 막는다.
