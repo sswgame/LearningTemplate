@@ -179,7 +179,7 @@ namespace sw
         }
 
         tryPlayerAttack( input );
-        updateActors( deltaTime, input._playerPos._x, input._playerPos._y );
+        updateActors( deltaTime, input._playerPos._x, input._playerPos._y, result );
         updateProjectiles( deltaTime );
         resolvePlayerHits( input._playerPos._x, input._playerPos._y, result );
         refreshCleared( result );
@@ -284,7 +284,7 @@ namespace sw
         }
     }
 
-    void ActionRoom::updateActors( float32 deltaTime, float32 playerX, float32 playerY )
+    void ActionRoom::updateActors( float32 deltaTime, float32 playerX, float32 playerY, ActionRoomFrameResult& out )
     {
         for ( Actor& actor : _listActor )
         {
@@ -301,7 +301,9 @@ namespace sw
             actor._attackTimer.tick( deltaTime );
             if ( actor._attackTimer.isActive() )
                 continue;
-            actor._attackTimer.start( ActionRoomTuning::kBossFireInterval );
+            // 늦음을 이어 발사 빈도가 fps 에 매이지 않게 한다(한 간격까지 — 멈춘 프레임 뒤에 몰아 쏘지 않는다).
+            actor._attackTimer.restart( ActionRoomTuning::kBossFireInterval );
+            ++out._bossShotCount;
 
             const float2 projDir = float2{ playerX - actor._position._x, playerY - actor._position._y }.normalize();
 

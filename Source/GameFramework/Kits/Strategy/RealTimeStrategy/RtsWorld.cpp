@@ -1236,7 +1236,8 @@ namespace sw
                 unit._agent.stop();
             if ( unit._cooldown.isActive() == false )
             {
-                unit._cooldown.start( unit._pDef->_cooldown );
+                // 늦음을 이어 공격 빈도가 고정 걸음 격자에 맞춰 내려가지 않게 한다(1.2 초가 25 걸음 = 1.25 초가 되지 않게).
+                unit._cooldown.restart( unit._pDef->_cooldown );
                 dealDamage( unit, *pTarget );
             }
             return;

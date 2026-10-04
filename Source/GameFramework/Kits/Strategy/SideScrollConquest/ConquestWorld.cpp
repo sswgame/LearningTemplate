@@ -400,7 +400,7 @@ namespace sw
             return;
         float32 dealt = 0.0f;
         applyAttack( ConquestTeam::Player, rules._commanderDamage, ConquestWorldInternal::kCommanderStructureRate, target, dealt );
-        _commander._attackCooldown.start( rules._commanderAttackInterval );
+        _commander._attackCooldown.restart( rules._commanderAttackInterval ); // 늦음을 잇는다 — 빈도가 걸음 크기에 매이지 않는다
     }
 
     void ConquestWorld::stepUnit( int32 unitIndex, float32 deltaTime )
@@ -493,7 +493,7 @@ namespace sw
             return;
         const float32 damage = def._damage * computeMoraleScale( unit._team, unit._x );
         applyAttack( unit._team, damage, def._structureScale, target, unit._damageDealt );
-        unit._attackCooldown.start( def._attackInterval );
+        unit._attackCooldown.restart( def._attackInterval ); // 늦음을 잇는다 — 빈도가 걸음 크기에 매이지 않는다
     }
 
     void ConquestWorld::stepCapture( float32 deltaTime )

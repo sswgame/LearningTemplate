@@ -428,3 +428,35 @@ SW_TEST_CASE( PartyArenaTest, RoundSeriesRanksRoundsAndCrownsFirstToTarget )
         won += event._kind == PartySeriesEvent::Kind::SeriesWon ? 1 : 0;
     SW_EXPECT_EQUAL( won, 1 );
 }
+
+/**
+ * @brief [PartyArenaTest] 아이템 스폰 빈도는 간격을 따른다 — 0.47 초 간격을 60 · 30 fps 로 60 초 돌리면 127 개(±1)
+ * @details 끝난 프레임에 간격으로 덮으면 지나친 몫을 버려 간격이 `ceil( 간격 / dt ) × dt` 로 는다 — 60 fps 124 개, 30 fps 120 개.
+ */
+SW_TEST_CASE( PartyArenaTest, ItemSpawnRateDoesNotDependOnFrameRate )
+{
+    for ( const float32 framesPerSecond : { 60.0f, 30.0f } )
+    {
+        PartyItemSpawner spawner;
+        SW_ASSERT_TRUE( spawner.loadFromXmlText( kPartyItemXml, "PartyArenaTest" ) );
+        PartyItemSpawnSettings settings = spawner.getSettings();
+        settings._minInterval           = 0.47f;
+        settings._maxInterval           = 0.47f;
+        settings._maxActive             = 100000;
+        settings._lifetime              = 0.0f; // 주울 때까지 — 자리가 차서 시계가 멈추지 않게
+        spawner.initialize( settings, 5u );
+        const float32          seconds    = 60.0f;
+        const int32            frameCount = static_cast<int32>( seconds * framesPerSecond + 0.5f );
+        int32                  spawnCount = 0;
+        vector<PartyItemEvent> listEvent;
+        for ( int32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
+            spawner.update( 1.0f / framesPerSecond );
+            listEvent.clear();
+            spawner.drainEvents( listEvent );
+            for ( const PartyItemEvent& event : listEvent )
+                spawnCount += event._kind == PartyItemEvent::Kind::Spawned ? 1 : 0;
+        }
+        SW_EXPECT_NEAR_EQUAL( seconds / 0.47f, static_cast<float32>( spawnCount ), 1.0f );
+    }
+}

@@ -74,7 +74,7 @@ namespace sw
         if ( _spawnTimer.isActive() )
             return;
         spawnOne();
-        _spawnTimer.start( rollInterval() );
+        _spawnTimer.restart( rollInterval() ); // 늦음을 잇는다 — 스폰 빈도가 fps 에 매이지 않는다
     }
 
     const PartyItemDef* PartyItemSpawner::pickWeighted()

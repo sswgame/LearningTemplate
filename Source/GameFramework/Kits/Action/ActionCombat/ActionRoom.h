@@ -52,6 +52,7 @@ namespace sw
     struct ActionRoomFrameResult
     {
         int32                  _damageToPlayer{ 0 }; ///< 이번 프레임 플레이어 피해
+        int32                  _bossShotCount{ 0 };  ///< 이번 프레임에 보스가 쏜 횟수(소리 · 연출)
         uint8                  _bClearedThisFrame : 1;
         uint8                  _bBossDefeated     : 1;
         uint8                  _bDashStarted      : 1;
@@ -209,8 +210,8 @@ namespace sw
         void spawnBoss( float32 x, float32 y );
         /** @brief 플레이어 공격을 시도합니다. */
         void tryPlayerAttack( const ActionRoomFrameInput& input );
-        /** @brief 액터를 갱신합니다. */
-        void updateActors( float32 deltaTime, float32 playerX, float32 playerY );
+        /** @brief 액터를 갱신합니다. 보스가 쏜 횟수를 @p out 에 더합니다. */
+        void updateActors( float32 deltaTime, float32 playerX, float32 playerY, ActionRoomFrameResult& out );
         /** @brief 투사체를 갱신합니다. */
         void updateProjectiles( float32 deltaTime );
         /** @brief 플레이어 피격을 처리합니다. */
