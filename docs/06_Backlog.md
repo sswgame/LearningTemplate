@@ -244,7 +244,7 @@ cd build/Ninja-Debug/Bin
   강체 컴포넌트가 `ISocketPhysicsBody` 를 구현해 `setPhysicsBody`, 표면 상태(`CharacterSurfaceState`)를 머티리얼 파라미터 · 마스크 텍스처로. **쿠킹**: 장비 정점 → 몸 전이
   (`SurfaceTransferUtil` — 모프 · 스킨 가중치)를 임포트 · 쿠킹 단계에, 아틀라스 굽기(`IMeshMergeHooks` 구현). **핫 리로드**: 소켓 · 레퍼런스 포즈 · 체형 · 피팅 표 · 부품
   피팅 · 표면 채널 파일을 고치면 외형을 다시 조립 — 소비자(외형 컴포넌트)가 `IAssetCache` 로 올린다(로더는 다 있다). **나중**: 천 시뮬레이션(Jolt 소프트 바디)이 같은 겹
-  정보를 충돌체로(Mutable 의 Clip with Mesh · Clip Deform 이 같은 문제를 푼다), 파괴 가능 메시(미리 쪼갠 조각)가 `GeometryCutUtil` 을 그대로 쓴다. 참고: 언리얼 Mutable(Customizable Object) ·
+  정보를 충돌체로(Mutable 의 Clip with Mesh · Clip Deform 이 같은 문제를 푼다). 참고: 언리얼 Mutable(Customizable Object) ·
   Skin Weights 전이, Character Creator 스마트 핏, Daz 오토핏 ⑤ 장비 해석 — 데이터 · 해석기는 있다(`GameFramework/Appearance` — 슬롯 표 · 세트 · 아이템 외형 · 꾸미기 스키마 · 규칙 · `CharacterAppearance`
   프리셋, 장착 조건은 `Equipment`, 공유 코드 · 플레이어 프리셋 · 네트워크 동기화, 형식은 그 README). 남은 것: 외형 컴포넌트(웨이브 3 —
   `CharacterAppearanceState` 를 쥐고 부품 유닛을 스폰(풀) · 부착 · 회수, 외형 상태가 바뀌면 같은 인스턴스를 다른 소켓으로, 떨어져 나감 이벤트를
@@ -279,7 +279,7 @@ cd build/Ninja-Debug/Bin
     래그돌은 char-phys 도] · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서 — reflect-ext 의 문서 생성 뒤) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
     [넷 다: 런타임 UI].
   - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 현지화 공정 · PoseModifierComponent(IK · 제약 ·
-    스프링 본) · 얼굴(표정 커브 · 립싱크 · 깜빡임/시선) [넷 다: char-anim] · 파괴 시스템 [대기: char-phys · char-geom] · 파티클/VFX [대기: cam-views] · 텍스처
+    스프링 본) · 얼굴(표정 커브 · 립싱크 · 깜빡임/시선) [넷 다: char-anim] · 파티클/VFX [대기: cam-views] · 텍스처
     밉 스트리밍 · 3D 내비메시 + 군중 회피 · 오디오 엔진 · 환경 오디오 · 카메라 5 · 6 단계 · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 · 탈것/말 ·
     천/머리카락 · 전술 AI · 볼류메트릭 안개/빛/구름 · 캐릭터 셰이딩 · 모션 캡처 공정 · 대규모 좌표 · PCG 저작 그래프 · GI/반사 프로브 · 플랫폼 서비스 ·
     패치/DLC · 모드/UGC.
@@ -870,6 +870,11 @@ cd build/Ninja-Debug/Bin
 - **강체 물리** — `ScenePhysics::step` 이 겹침 월드 다음에 돈다(고정 스텝 → 보간 자세를 트랜스폼에 → 이벤트). 컴포넌트가 쓴 자세와 다른 트랜스폼은 코드가 옮긴 것(순간이동)이다.
   vcpkg Jolt 는 설치 헤더가 부동소수 예외 비트를 켜고 라이브러리는 끈다 — `JPH::RegisterTypes()` 는 abort 하므로 백엔드가 라이브러리의 ID 로 등록한다(그 비트만 허용).
   Jolt 임포트 타깃의 `-mavx2` 는 Jolt 백엔드 소스에만 붙인다(`$<LINK_ONLY:>` + 소스 속성). Box2D 의 `totalNormalImpulse` 는 이완 반복까지 더해 약 두 배다.
+  `RigidBodyComponent` 는 오브젝트의 루트여야 몸의 자세가 오브젝트를 옮긴다(메시가 루트면 파괴 · 기믹 시험이 조용히 안 움직인다). 상한에 붙어 돌던 바디의 각속도를 새
+  바디에 넘기면 반올림으로 상한을 넘을 수 있어 `createBody` 가 줄인다.
+- **파쇄(평면 자르기)** — 모서리 교점은 끝점을 자리 순으로 정렬해 구한다(이웃 칸이 같은 모서리를 반대 방향으로 자르면 비트가 달라 틈이 생긴다). 세 칸이 만나는 곳에는 거의 같은
+  점이 생겨 그때만 용접 + 퇴화 삼각형 정리(`cleanPiece`)를 돈다(늘 돌리면 느리다). 귀 자르기는 일직선 점을 삼각형 없이 버리면 안 된다(T 자 틈). 안쪽 면 다시 짓기는 그 점을
+  쓰는 **모든** 면이 안쪽 면일 때만 뺀다. 쪼개기 결과가 바뀌면 `MeshFractureUtil::kAlgorithmVersion` 을 올린다(임포트 해시).
 - **"바뀌었나" 검사는 제곱 거리를 `MathUtil::EpsilonSquared` 와 비교한다**(`Epsilon` 이면 프레임당 1e-3 아래 움직임이 영원히 삼켜진다). `GpuSceneBuilder::bCamSame` 의 이력은 의도다.
   `float4x4::invert` 는 행렬식이 정확히 0 · NaN 일 때만 항등을 돌려준다(절대 임계값은 작은 부모 · 큰 직교 카메라를 깨뜨렸다).
 - **시퀀서** — "지나갔는가" 는 `previousFrame < start <= frame`, 이전 프레임 없음은 `kNoPreviousFrame`(INT32_MIN — -1 은 frameMin 0 과 겹친다). 프레임은 배 정밀도로 곱하고 천분의 일을

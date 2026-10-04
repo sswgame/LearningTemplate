@@ -61,10 +61,12 @@ namespace sw
         : _health{ 30.0f }
         , _radius{ 4.0f }
         , _damage{ 80.0f }
+        , _fuseTime{ 0.0f }
         , _fractureStrain{ 300.0f }
         , _blastImpulse{ 400.0f }
         , _damageTaken{ 0.0f }
         , _bExploded{ false }
+        , _fuseStepsLeft{ -1 }
         , _clock{ GenreGimmickUtil::makeClock() }
     {
     }
@@ -81,7 +83,19 @@ namespace sw
     {
         GameObject*             pOwner  = getOwner();
         GimmickSensorComponent* pSensor = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;
-        if ( pSensor == nullptr || _bExploded )
+        if ( pOwner == nullptr || _bExploded )
+            return;
+        if ( _fuseTime > 0.0f )
+        {
+            if ( _fuseStepsLeft < 0 )
+                _fuseStepsLeft = GenreGimmickUtil::toSteps( _fuseTime, 1 );
+            if ( --_fuseStepsLeft <= 0 )
+            {
+                explode( *pOwner );
+                return;
+            }
+        }
+        if ( pSensor == nullptr )
             return;
         _damageTaken += pSensor->consumeDamage();
         if ( _damageTaken >= _health )

@@ -24,7 +24,8 @@ namespace sw
     /**
      * @class ExplosiveBarrelComponent
      * @brief 피해가 `_health` 를 넘으면 터집니다 — `_radius` 안의 오브젝트에 거리 감쇠 피해(가까울수록 큼, 다른 드럼통도 터진다), "Explosion" 연출, 몸을 끕니다.
-     * @details 터짐은 걸음(60 Hz) 끝에 한 번 — 사슬 폭발은 다음 걸음에 이어집니다(한 프레임에 무한히 번지지 않는다). 반경에 닿은 파괴 오브젝트(자기 포함)에는
+     * @details 터짐은 걸음(60 Hz) 끝에 한 번 — 사슬 폭발은 다음 걸음에 이어집니다(한 프레임에 무한히 번지지 않는다). `_fuseTime` 이 있으면 플레이 시작부터 그만큼
+     *          지나 스스로 터집니다(시한 폭탄 · 쇼케이스). 반경에 닿은 파괴 오브젝트(자기 포함)에는
      *          중심 변형 `_fractureStrain` · 충격량 `_blastImpulse` 의 폭발 피해를 주고, 자기에게 파괴 컴포넌트가 있으면 몸을 끄지 않고 조각으로 날아갑니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Explosive Barrel", Tooltip = "Explodes after enough damage, damaging everything in a radius (chains)" )
@@ -51,6 +52,8 @@ namespace sw
         float32 _radius;
         PROPERTY( Category = "Barrel", DisplayName = "Damage", Min = 0.0, Tooltip = "Damage at the centre; falls off linearly to the radius" )
         float32 _damage;
+        PROPERTY( Category = "Barrel", DisplayName = "Fuse Time", Min = 0.0, Tooltip = "Explodes on its own this long after play starts (0 = only from damage)", Meta = "Units=s" )
+        float32 _fuseTime;
         PROPERTY( Category = "Barrel", DisplayName = "Fracture Strain", Min = 0.0, Tooltip = "Strain at the centre for destructible (fractured) objects in the radius" )
         float32 _fractureStrain;
         PROPERTY( Category = "Barrel", DisplayName = "Blast Impulse", Min = 0.0, Tooltip = "Impulse given to pieces broken off by the blast", Meta = "Units=N*s" )
@@ -60,6 +63,7 @@ namespace sw
         PROPERTY( Category = "Barrel", DisplayName = "Exploded", Tooltip = "Runtime" )
         bool _bExploded;
 
+        int32          _fuseStepsLeft; ///< 도화선이 다 타기까지 남은 걸음(-1 = 아직 세지 않음)
         FixedStepTimer _clock;
     };
 } // namespace sw

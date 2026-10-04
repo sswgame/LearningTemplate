@@ -148,3 +148,11 @@
 **삼각형 수.** 자를 때마다 앞 막음의 대각선 교점이 다음 막음의 고리에 일직선으로 쌓입니다. 칸마다 자르기를 마치면 안쪽 면을 평면마다 다시 짓습니다
 (`simplifyCaps` — 그 점을 쓰는 **모든** 면이 안쪽 면이고 그 모든 고리에서 일직선인 점만 함께 뺀다, 겉면이 쓰는 점은 그대로). 쪼개기 결과를 바꾸는 고침은
 `MeshFractureUtil::kAlgorithmVersion` 을 올립니다 — 임포트 원본 해시에 섞여 쿠킹한 `.fracture` 가 어긋남이 된다.
+
+## 7. 쇼케이스 — `game/empty/maps/destructionshowcase.scene.xml`
+
+벽돌 벽(200 조각, 앵커 바닥) · 나무 상자 셋(대리 부피 24 조각, `wood.destruction.xml`) · 폭발 통 둘(20 조각). `BarrelFuse` 가 1.5 초 도화선(`_fuseTime`)으로
+터지고 반경 3 m 안의 `BarrelChain` 이 사슬로 이어 터집니다 — 벽 아래쪽이 깨지고 받침을 잃은 위쪽이 큰 덩어리로 무너진다(지지 붕괴). 모델 원본은
+`Resource/game/empty/models_raw/`, 어떤 모델을 어떻게 쪼갤지는 `Config/Editor/ModelImportConfig.json` 의 `Destruction_*` 규칙(`App --import-models` 가
+`.mesh` 옆에 `.fracture` 를 쓴다). 보려면 `Config/Game/Empty.json` 의 `_startupScene` 을 이 씬으로 바꿔 App 을 띄웁니다
+(`-gv_screenshotFrame=900 -gv_screenshot=<경로>.ppm` 로 깨진 뒤를 찍는다). 시험: `DestructionShowcaseTest`(도화선 → 사슬 → 벽 · 상자가 깨진다).

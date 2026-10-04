@@ -101,7 +101,7 @@ floodStatus + through), 걸음 규칙(`Expire` — 상태가 재질 수치만큼
 |------|--------|----------------|
 | 플랫포머 | movingplatform · crumbleplatform · onewayplatform · spring · conveyor · ladder · rope | `SplineComponent` + `Mover`, `CrumblePlatformComponent`, `OneWayPlatformComponent`(`isSolidFor`), `LaunchPadComponent`, `ConveyorComponent`, `ClimbZoneComponent`(`findClimbZone`) |
 | 어드벤처 | pushblock · floorswitch · lever · lockeddoor · torch | `PushBlockComponent`(칸 단위, 막히면 서고 Push 상호작용으로 민다), 센서만(레벨 회로가 배선), `Unlock` → `Latch` → `Door`, `ElementStatusComponent`(원소표의 1 × 1 칸) + `Signal` → `Light` |
-| 슈터 | explosivebarrel · jumppad · keycarddoor · turret · destructiblecover | `ExplosiveBarrelComponent`(사슬 — 반경에 닿은 파괴 오브젝트를 그 자리에서 깬다), `LaunchPadComponent`, `SwipeKeycard` → `Pulse` → `Door`, `TurretComponent`(고르기 · 시야 · 회전 · 히트스캔), `DestructibleComponent`(단계 · 파괴 훅 — 파괴 컴포넌트가 있으면 단계마다 깎고 마지막에 조각으로) + 엄폐 스마트 오브젝트 |
+| 슈터 | explosivebarrel · jumppad · keycarddoor · turret · destructiblecover | `ExplosiveBarrelComponent`(사슬 — 반경에 닿은 파괴 오브젝트를 그 자리에서 깬다, `_fuseTime` 이 있으면 플레이 시작부터 그만큼 지나 스스로 터진다), `LaunchPadComponent`, `SwipeKeycard` → `Pulse` → `Door`, `TurretComponent`(고르기 · 시야 · 회전 · 히트스캔), `DestructibleComponent`(단계 · 파괴 훅 — 파괴 컴포넌트가 있으면 단계마다 깎고 마지막에 조각으로) + 엄폐 스마트 오브젝트 |
 | 레이싱 | boostpad · itembox | `BoostPadComponent`(`GimmickBoostEvent`), `ItemBoxComponent`(씨앗 + 연 횟수 가중치 뽑기, 숨었다 되살아남) |
 | 공포 | scaretrigger · flickerlight · hidingspot | `ScareTriggerComponent`(연출 신호 · 소리, 한 번), `FlickerLightComponent`(퀘이크 빛 스타일 문자열), `HidingSpotComponent`(스마트 오브젝트 자리 + `State.Hidden`) |
 | 잠입 | squeakyfloor | `NoiseEmitterComponent`(올라서면 · 주기 · 직접 — `GimmickNoiseEvent`, `AiStimulus::_noiseRadius`), `LightExposure::computeExposure`(점 · 스폿 · 방향광, 가림) |
