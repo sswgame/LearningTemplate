@@ -81,6 +81,7 @@ namespace sw
                 return pFile;
             }
 
+#if SW_PROFILER_BACKEND_COMPILED
             /** @brief Core 할당 관찰 → 활성 출력. 받는 쪽은 할당하지 않는다(Tracy 는 자기 할당기를 쓴다). */
             static void onAllocateObserved( const void* pPtr, size_t size, MemoryTag tag )
             {
@@ -97,6 +98,7 @@ namespace sw
             }
 
             static constexpr MemoryAllocationObserver kObserver{ &onAllocateObserved, &onFreeObserved };
+#endif
         };
 
         atomic<IProfilerBackend*> ProfilerBackendInternal::s_pActive{ nullptr };

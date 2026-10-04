@@ -26,6 +26,7 @@ namespace sw
 
     namespace
     {
+#if SW_PROFILER_BACKEND_COMPILED
         struct FrameRendererInternal
         {
             /** @brief RHI 백엔드를 외부 프로파일러의 GPU API 종류로 바꿉니다(뷰어가 큐 이름 옆에 보여 준다). */
@@ -45,6 +46,7 @@ namespace sw
                 return ProfilerGpuApi::Direct3D12;
             }
         };
+#endif
     } // namespace
 
     /**

@@ -9,8 +9,9 @@
 
 #include "TestFramework/TestFramework.h"
 
-// ProfilerBackend — 계측 한 줄(SW_PROFILE_SCOPE)이 엔진 표와 외부 프로파일러(Tracy)에 함께 남는 경로.
+// ProfilerBackend — 계측 한 줄(SW_PROFILE_SCOPE)이 엔진 표와 외부 프로파일러(Tracy)에 함께 남는 경로. Shipping 에는 외부 출력이 없다.
 
+#if SW_PROFILER_BACKEND_COMPILED
 namespace
 {
     /**
@@ -39,7 +40,6 @@ namespace
     }
 } // namespace
 
-#if SW_PROFILER_BACKEND_COMPILED
 /**
  * @brief [ProfilerBackendTest] 활성 출력이 있으면 계측 지점이 그 출력에 구간을 열고 닫는다
  */
