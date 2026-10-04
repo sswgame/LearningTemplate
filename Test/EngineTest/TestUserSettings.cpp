@@ -16,9 +16,10 @@
 
 // 사용자 설정(옵션 메뉴 백엔드) — 스키마 검사 · 적용기 등록부 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기 · 확인 카운트다운 · 키 바인딩 · 언어 · 접근성.
 
-SW_TEST_GLOBAL_VARIABLE_FLOAT( gv_userSettingsTestFloat, 1.0f, "UserSettingsTest 전용 실수 대상" );
-SW_TEST_GLOBAL_VARIABLE_INT( gv_userSettingsTestInt, 0, "UserSettingsTest 전용 정수 대상" );
-SW_TEST_GLOBAL_VARIABLE_BOOL( gv_userSettingsTestBool, false, "UserSettingsTest 전용 불리언 대상" );
+// 설정 대상은 등록된 전역 변수여야 한다 — Shipping 시험에서도 표에 있도록 남긴다(빠진 테스트 변수는 등록되지 않는다).
+SW_TEST_GLOBAL_VARIABLE_FLOAT( gv_userSettingsTestFloat, 1.0f, "UserSettingsTest 전용 실수 대상", SW_KEEP_IN_SHIPPING );
+SW_TEST_GLOBAL_VARIABLE_INT( gv_userSettingsTestInt, 0, "UserSettingsTest 전용 정수 대상", SW_KEEP_IN_SHIPPING );
+SW_TEST_GLOBAL_VARIABLE_BOOL( gv_userSettingsTestBool, false, "UserSettingsTest 전용 불리언 대상", SW_KEEP_IN_SHIPPING );
 
 namespace
 {

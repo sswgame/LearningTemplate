@@ -54,7 +54,8 @@ namespace sw
             static bool equalsText( string_view lhs, string_view rhs ) { return StringUtil::equals( lhs, rhs, true ); }
 
             /** @brief 판 @p fromVersion 의 단계를 적힌 순서대로 목록에 적용합니다. */
-            static void applyUpgradeSteps( const UserSettingsSchema& schema, uint32 fromVersion, vector<FileEntry>& inoutListEntry, string_view sourceName )
+            static void applyUpgradeSteps( const UserSettingsSchema& schema, uint32 fromVersion, vector<FileEntry>& inoutListEntry,
+                                           [[maybe_unused]] string_view sourceName )
             {
                 for ( const UserSettingsUpgradeStep& step : schema.getUpgradeSteps() )
                 {
