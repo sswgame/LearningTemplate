@@ -308,8 +308,7 @@ namespace sw
         // 진행이 다 찼다 — 세워 둔 Vitality 의 부활 시계를 한 번에 끝까지 돌린다.
         (void)downed._vitality.startRevive( reviver, 1.0f );
         downed._vitality.update( downed._vitality.getSettings()._reviveTime );
-        vector<VitalityEvent> listIgnored;
-        downed._vitality.drainEvents( listIgnored );
+        downed._vitality.discardEvents();
         downed._revive.reset();
         downed._downedBy = -1;
         pushEvent( BrEvent::Kind::PlayerRevived, target, reviver, downed._team, 0 );

@@ -147,6 +147,8 @@ namespace sw
         /** @brief 프레임 시간을 고정 걸음으로 나눠 나아갑니다. 눌림 입력은 첫 걸음에만 줍니다. 걸음 수를 돌려줍니다. */
         int32 advance( const ArcadeVehicleInput& input, float32 frameTime );
         void  drainEvents( vector<ArcadeVehicleEvent>& outListEvent );
+        /** @brief 쌓인 알림을 꺼내지 않고 버립니다(쓰지 않는 쪽 — 받을 목록을 만들어 복사하지 않는다). */
+        void discardEvents() { _listEvent.clear(); }
 
         /** @brief 앞 속도 @p speed 에서 조향 1 의 회전 속도(라디안/초)입니다 — 조향 반경 = 속도 / 이 값. */
         float32 computeSteerRate( float32 speed ) const;

@@ -114,18 +114,19 @@ namespace sw
     void GhostMansion::update( float32 deltaTime )
     {
         _encounter.update( deltaTime );
-        vector<GhostEvent> listEvent;
-        _encounter.drainEvents( listEvent );
+        // 게임에 넘길 목록에 바로 꺼내고, 이번에 들어온 구간만 훑는다(지역 목록 · 복사 없음).
+        const size_t firstNew = _listGhostEvent.size();
+        _encounter.drainEvents( _listGhostEvent );
         bool bCaughtAny = false;
-        for ( const GhostEvent& event : listEvent )
+        for ( size_t index = firstNew; index < _listGhostEvent.size(); ++index )
         {
+            const GhostEvent& event = _listGhostEvent.data()[index];
             if ( event._type != GhostEventType::Caught )
                 continue;
             bCaughtAny = true;
             _coinCount += event._coins;
             pushEvent( GhostMansionEventType::CoinsCollected, hashed_string{}, _currentRoom, event._coins );
         }
-        _listGhostEvent.insert( _listGhostEvent.end(), listEvent.begin(), listEvent.end() );
         const bool bCleared = bCaughtAny && _encounter.getGhosts().empty() == false && _encounter.countRemaining() == 0;
         if ( bCleared && isRoomLit( _currentRoom ) == false )
             lightRoom( _currentRoom );

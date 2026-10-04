@@ -104,6 +104,16 @@ SW_TEST_CASE( CombatStateTest, ShieldTakesDamageFirstAndPoiseBreaksThenRecovers 
     vitality.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 0u, listEvent.size() );
 
+    // 쓰지 않는 쪽은 꺼내지 않고 버린다 — 다음 꺼냄에 남지 않는다. 버릴 알림이 정말 있는지는 사본으로 먼저 본다.
+    (void)vitality.applyDamage( 0.0f, 30.0f, 9 ); // 경직 30 을 다 깎는다 — PoiseBroken
+    Vitality probe = vitality;
+    probe.drainEvents( listEvent );
+    SW_ASSERT_TRUE( hasVitalityEvent( listEvent, VitalityEventType::PoiseBroken ) );
+    listEvent.clear();
+    vitality.discardEvents();
+    vitality.drainEvents( listEvent );
+    SW_EXPECT_EQUAL( 0u, listEvent.size() );
+
     // 무적 중의 피해는 무시된다.
     vitality.setInvulnerable( 1.0f );
     result = vitality.applyDamage( 50.0f, 0.0f, 1 );

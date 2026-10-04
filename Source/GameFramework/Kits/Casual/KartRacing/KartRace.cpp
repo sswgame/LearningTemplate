@@ -200,8 +200,7 @@ namespace sw
             kart._motor.update( input, deltaTime );
             if ( _pTrack->applyBoostPad( kart._motor, kart._lastBoostPad ) )
                 pushEvent( KartRaceEvent::Kind::BoostPad, racer, -1, kart._lastBoostPad, _raceTime );
-            vector<ArcadeVehicleEvent> listMotorEvent;
-            kart._motor.drainEvents( listMotorEvent ); // 경기는 차 알림을 쓰지 않는다 — 쌓이지 않게 비운다
+            kart._motor.discardEvents(); // 경기는 차 알림을 쓰지 않는다 — 쌓이지 않게 비운다
 
             if ( kart._spinTime > 0.0f )
                 kart._spinTime = MathUtil::max( 0.0f, kart._spinTime - deltaTime );

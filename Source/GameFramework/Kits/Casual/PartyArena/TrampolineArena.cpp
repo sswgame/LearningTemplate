@@ -76,6 +76,7 @@ namespace sw
     TrampolineArena::TrampolineArena()
         : _listPlayer{}
         , _listEvent{}
+        , _listMatchEvent{}
         , _settings{}
         , _judge{}
         , _itemSpawner{}
@@ -172,13 +173,12 @@ namespace sw
         updateAttacks();
         _itemSpawner.update( deltaTime );
         pickUpItems();
-        vector<PartyItemEvent> listItemEvent;
-        _itemSpawner.drainEvents( listItemEvent );
+        _itemSpawner.discardEvents();
 
         _match.update( deltaTime );
-        vector<MatchEvent> listMatchEvent;
-        _match.drainEvents( listMatchEvent );
-        for ( const MatchEvent& event : listMatchEvent )
+        _listMatchEvent.clear();
+        _match.drainEvents( _listMatchEvent );
+        for ( const MatchEvent& event : _listMatchEvent )
         {
             if ( event._kind == MatchEvent::Kind::Respawned && isValidPlayer( event._participant ) )
                 respawn( event._participant );

@@ -200,6 +200,7 @@ namespace sw
 
         vector<TrampolinePlayer> _listPlayer;
         vector<TrampolineEvent>  _listEvent;
+        vector<MatchEvent>       _listMatchEvent; ///< 걸음마다 다시 쓰는 경기 알림 자리
         TrampolineSettings       _settings;
         TimingJudge              _judge;
         PartyItemSpawner         _itemSpawner;
