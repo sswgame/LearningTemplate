@@ -258,6 +258,37 @@ namespace sw
         }
     }
 
+    void RagdollComponent::detachBoneBodies( const vector<hashed_string>& listBone )
+    {
+        ScenePhysics*    pPhysics = getScenePhysics();
+        IPhysicsScene3D* pScene   = pPhysics != nullptr ? pPhysics->findScene3D() : nullptr;
+        if ( pScene == nullptr || _asset == nullptr )
+            return;
+        const size_t  bodyCount = _ragdoll._listBody.size();
+        vector<uint8> listDetached( bodyCount, SW_FALSE );
+        for ( size_t body = 0; body < bodyCount && body < _asset->_listBody.size(); ++body )
+        {
+            if ( std::find( listBone.begin(), listBone.end(), _asset->_listBody[body]._bone ) != listBone.end() )
+                listDetached[body] = SW_TRUE;
+        }
+        // 관절을 먼저 — 빠진 바디를 잇는 관절이 남으면 솔버가 넓은 단계 밖의 바디를 만진다.
+        for ( size_t body = 0; body < bodyCount; ++body )
+        {
+            const int32 parent           = _ragdoll._listParentBody[body];
+            const bool  bTouchesDetached = listDetached[body] == SW_TRUE || ( parent >= 0 && listDetached[static_cast<size_t>( parent )] == SW_TRUE );
+            if ( bTouchesDetached && _ragdoll._listJoint[body].isValid() )
+            {
+                pScene->destroyJoint( _ragdoll._listJoint[body] );
+                _ragdoll._listJoint[body] = PhysicsJointHandle{};
+            }
+        }
+        for ( size_t body = 0; body < bodyCount; ++body )
+        {
+            if ( listDetached[body] == SW_TRUE )
+                pScene->setBodyEnabled( _ragdoll._listBody[body], false );
+        }
+    }
+
     const PhysicsHitZoneDef* RagdollComponent::findHitZone( PhysicsBodyHandle body, int32& outBodyIndex ) const
     {
         outBodyIndex = _ragdoll.findBodyIndex( body );
@@ -600,7 +631,8 @@ namespace sw
         for ( size_t body = 0; body < _ragdoll._listBody.size(); ++body )
         {
             const uint8 bWantDynamic = body < _listBodyDynamic.size() ? _listBodyDynamic[body] : SW_FALSE;
-            if ( bWantDynamic == _listAppliedDynamic[body] )
+            // 꺼진 바디(잘려 나간 영역)는 시뮬레이션 밖이다 — 종류를 바꾸지 않는다.
+            if ( bWantDynamic == _listAppliedDynamic[body] || pScene->isBodyEnabled( _ragdoll._listBody[body] ) == false )
                 continue;
             pScene->setBodyType( _ragdoll._listBody[body], bWantDynamic == SW_TRUE ? PhysicsBodyType::Dynamic : PhysicsBodyType::Kinematic );
             const bool bPartialBody = _state == RagdollState::Partial && body < _listPartialMask.size() && _listPartialMask[body] == SW_TRUE;
@@ -612,6 +644,8 @@ namespace sw
             if ( impulse._bodyIndex < 0 || static_cast<size_t>( impulse._bodyIndex ) >= _ragdoll._listBody.size() )
                 continue;
             const PhysicsBodyHandle body = _ragdoll._listBody[static_cast<size_t>( impulse._bodyIndex )];
+            if ( pScene->isBodyEnabled( body ) == false )
+                continue;
             if ( impulse._point.getLengthSquared() > 0.0f )
                 pScene->addImpulseAtPoint( body, impulse._impulse, impulse._point );
             else
@@ -650,7 +684,7 @@ namespace sw
         const float32 fraction = static_cast<float32>( stepIndex + 1 ) / static_cast<float32>( stepCount > 0 ? stepCount : 1 );
         for ( size_t body = 0; body < bodyCount; ++body )
         {
-            if ( _listAppliedDynamic[body] == SW_TRUE )
+            if ( _listAppliedDynamic[body] == SW_TRUE || pScene->isBodyEnabled( _ragdoll._listBody[body] ) == false )
                 continue;
             const float3     position = float3::lerp( _listKinematicStartPosition[body], _listKinematicTargetPosition[body], fraction );
             const quaternion rotation = quaternion::slerp( _listKinematicStartRotation[body], _listKinematicTargetRotation[body], fraction );

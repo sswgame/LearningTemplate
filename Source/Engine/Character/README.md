@@ -113,6 +113,21 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
 - KayKit 스켈레톤 리그(41 뼈)의 물리 에셋: `Resource/game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.physics.xml`(16 바디 — 머리 ×2 · 몸통 · 골반 · 팔 ×0.6 ·
   다리 ×0.7, 셰이프는 스킨 정점이 그 뼈를 따르는 범위에서 골랐다).
 
+## 절단 런타임 — `DismembermentComponent`
+
+치명적 맞음(`HitInfo::_bFatal`)이 잘라 낼 수 있는 영역(`_listSeverableRegion`)의 뼈(래그돌 바디 → 물리 에셋 뼈 → 몸 영역 표 `*.fit.xml` 의 `<Region bones=…>`)에 들면
+`severRegion` 합니다(코드가 바로 불러도 된다):
+
+1. 유닛의 지금 스킨드 메시(인덱스 없는 삼각형 목록)를 자리로 이어 위상을 얻고, 영역 표로 정점마다 영역을 매겨 `DismembermentUtil::severRegions`.
+2. 남은 몸 = 원래 정점(UV 이음매 그대로)에서 잘린 삼각형을 빼고 남은 몸 캡을 스킨 정점으로 붙인 새 메시(`setMesh` — 보임 마스크 길).
+3. 떨어진 조각 = 잘린 삼각형 + 조각 캡을 지금 포즈로 CPU 스키닝한 정적 메시 + 그 정점의 볼록 껍질 강체(`_pieceLayer` · `_pieceMaterial` · `_pieceMass`)를 가진
+   새 오브젝트, 맞은 방향 × 충격량. 래그돌이 있으면 그 영역 뼈의 바디를 떼어 냅니다(`RagdollComponent::detachBoneBodies` — 시뮬레이션에서 빼고 그 바디에 걸린 관절을 지운다. 빠진 바디를 잇는 관절이
+   남으면 Jolt 솔버가 넓은 단계 밖의 바디를 만져 단언이 선다).
+4. 표면 상태(`CharacterSurfaceState`, 엔진 기본 채널 표)의 그 영역 `_bloodChannel` = 1 — 머티리얼 파라미터로 싣는 일은 외형 통합의 몫입니다.
+
+자른 자리 캡은 남은 쪽 · 떨어진 쪽이 **정점을 나눠 쓸 때만**(이어진 몸) 생깁니다 — KayKit 해골 · 기사처럼 부위마다 떨어진 껍질인 메시는 캡이 없습니다.
+KayKit 리그의 영역 표: `Resource/game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.fit.xml`(Head · Arm_L/R · Leg_L/R · Torso).
+
 ## 맞힘 — `CharacterHitUtil`
 
 광선(3D · 2D) → 맞은 바디 → 오브젝트(바디 사용자 값) → 히트 존(래그돌의 물리 에셋 바디 → 강체 컴포넌트의 `_hitZone`) → `Component::onHitReceived( HitInfo )`.

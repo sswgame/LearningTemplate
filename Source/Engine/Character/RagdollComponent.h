@@ -116,6 +116,11 @@ namespace sw
         bool getUp();
         /** @brief 맞음 반응 — @p bodyIndex 바디 아래를 `_hitReactionSeconds` 동안 동적으로(가중치는 줄어든다), 충격량은 그 바디의 @p point 에 줍니다. */
         void applyHitReaction( int32 bodyIndex, const float3& impulse, const float3& point );
+        /**
+         * @brief 이 뼈들의 바디를 래그돌에서 떼어 냅니다 — 시뮬레이션에서 빼고 그 바디에 걸린 관절(부모 · 자식 쪽)을 지웁니다(잘려 나간 영역 — 보이지 않는
+         *        바디가 부딪히거나 빠진 바디를 잇는 관절이 남지 않게). 되돌리지 않습니다(다시 세우려면 물리 에셋을 다시 읽는다).
+         */
+        void detachBoneBodies( const vector<hashed_string>& listBone );
         /** @brief 바디의 히트 존입니다. 이 래그돌의 바디가 아니거나 히트 존 이름이 비면 nullptr 입니다. @p outBodyIndex 는 바디 번호(아니면 -1). */
         const PhysicsHitZoneDef* findHitZone( PhysicsBodyHandle body, int32& outBodyIndex ) const;
 
