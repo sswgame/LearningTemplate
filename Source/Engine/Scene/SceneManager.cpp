@@ -16,7 +16,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Utility/CommandStack.h"
@@ -161,7 +161,7 @@ namespace sw
             unloadScene( pPrevious );
 
         if ( engine::areEngineServicesBound() )
-            engine::getResourceManager().garbageCollectUnusedAssets();
+            engine::getAssetManager().garbageCollectUnusedAssets();
 
         return pScene;
     }
@@ -462,7 +462,7 @@ namespace sw
 
         // 씬을 바꾼 직후, 더 이상 참조되지 않는 이전 씬의 에셋을 정리한다.
         if ( engine::areEngineServicesBound() )
-            engine::getResourceManager().garbageCollectUnusedAssets();
+            engine::getAssetManager().garbageCollectUnusedAssets();
     }
 
     /**

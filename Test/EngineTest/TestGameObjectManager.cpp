@@ -786,14 +786,14 @@ SW_TEST_CASE( GameObjectManagerTest, ParallelTransformFlushMatchesSerial )
 /**
  * @brief [GameObjectManagerTest] 코드젠은 추상이 아닌 컴포넌트 타입에만 생성 함수(`TypeInfo::_addComponent`)를 싣는다 — 이름으로 만드는 길은 그 칸만 본다
  * @details 컴포넌트 팩토리 표는 따로 없다(언리얼 `UClass` 가 리플렉션과 생성을 함께 든다). 추상 기반(`LightComponent`)과 컴포넌트가 아닌 반사 타입
- *          (`EngineData`)은 칸이 비어 이름으로 만들 수 없고, "Add Component" 목록에도 없다.
+ *          (`EngineDefaultAssets`)은 칸이 비어 이름으로 만들 수 없고, "Add Component" 목록에도 없다.
  */
 SW_TEST_CASE( GameObjectManagerTest, CodegenFillsCreationFunctionForConcreteComponentsOnly )
 {
     const TypeRegistry& registry   = engine::getTypeRegistry();
     const TypeInfo*     pScene     = registry.findType( hashed_string( "SceneComponent" ) );
     const TypeInfo*     pLight     = registry.findType( hashed_string( "LightComponent" ) );
-    const TypeInfo*     pEngineDat = registry.findType( hashed_string( "EngineData" ) );
+    const TypeInfo*     pEngineDat = registry.findType( hashed_string( "EngineDefaultAssets" ) );
     SW_ASSERT_TRUE( pScene != nullptr && pLight != nullptr && pEngineDat != nullptr );
     SW_EXPECT_TRUE( pScene->_addComponent != nullptr );
     SW_EXPECT_TRUE( pLight->_addComponent == nullptr );
@@ -806,7 +806,7 @@ SW_TEST_CASE( GameObjectManagerTest, CodegenFillsCreationFunctionForConcreteComp
     SW_ASSERT_NOT_NULL( pByName );
     SW_EXPECT_EQUAL( pScene, pByName->getTypeInfo() );
     SW_EXPECT_NULL( manager.addComponentByName( pObj, hashed_string( "LightComponent" ), false ) );
-    SW_EXPECT_NULL( manager.addComponentByName( pObj, hashed_string( "EngineData" ), false ) );
+    SW_EXPECT_NULL( manager.addComponentByName( pObj, hashed_string( "EngineDefaultAssets" ), false ) );
 
     const vector<hashed_string> listName = GameObjectManager::getRegisteredComponentTypeNames();
     SW_EXPECT_TRUE( std::find( listName.begin(), listName.end(), hashed_string( "SceneComponent" ) ) != listName.end() );

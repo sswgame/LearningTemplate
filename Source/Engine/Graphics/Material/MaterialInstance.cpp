@@ -16,7 +16,7 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -274,7 +274,7 @@ namespace sw
     {
         if ( _listTextureOverride.empty() || engine::areEngineServicesBound() == false )
             return false;
-        TextureCache& textures = engine::getResourceManager().getTextureManager();
+        TextureCache& textures = engine::getAssetManager().getTextureManager();
         bool          bChanged{ false };
         // 디바이스가 바뀌었으면 옛 디바이스로 빌린 것을 돌려주고 새로 빌린다(옛 것이 이미 죽었으면 forgetRhi 가 먼저 와서 비웠다).
         if ( _pTextureDevice != nullptr && _pTextureDevice != pRhi )
@@ -322,7 +322,7 @@ namespace sw
         for ( TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._pTexture != nullptr && bServicesBound )
-                engine::getResourceManager().getTextureManager().release( texture._acquiredPath, pRhi );
+                engine::getAssetManager().getTextureManager().release( texture._acquiredPath, pRhi );
             texture._pTexture = nullptr;
             texture._acquiredPath.clear();
         }

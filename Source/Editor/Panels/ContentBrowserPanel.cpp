@@ -22,7 +22,7 @@
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include <IconsFontAwesome6.h>
@@ -267,7 +267,7 @@ namespace sw::editor
         _listEntry = std::move( listEntry );
 
         // 서비스는 루프 **밖에서** 한 번 확인한다. 항목마다 다시 묻는 것은 같은 답을 여러 번 받는 일이다.
-        ResourceManager* pResources = editor::getService<ResourceManager>();
+        AssetManager* pResources = editor::getService<AssetManager>();
         if ( pResources != nullptr )
         {
             for ( const AssetEntry& entry : _listEntry )

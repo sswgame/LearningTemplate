@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Resource/ResourceUtil.h"
@@ -57,8 +57,8 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( pFileName ) )
                     return {};
 
-                const EditorData& data       = editor::getEditorData();
-                const string      editorRoot = ResourceUtil::getDomainFolderPath( path::kEditorPack );
+                const EditorToolDefaults& data       = editor::getEditorToolDefaults();
+                const string              editorRoot = ResourceUtil::getDomainFolderPath( path::kEditorPack );
                 if ( editorRoot.empty() == false )
                 {
                     const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, data._fontsFolder ), pFileName );
@@ -119,9 +119,9 @@ namespace sw::editor
         io.Fonts->SetFontLoader( ImGuiFreeType::GetFontLoader() );
         io.Fonts->FontLoaderFlags = ImGuiFreeTypeLoaderFlags_LightHinting;
 
-        const EditorData& data       = editor::getEditorData();
-        const string      basePath   = EditorFontSetupInternal::resolveFontFile( data._listBaseFont );
-        const string      koreanPath = EditorFontSetupInternal::resolveFontFile( data._listKoreanFont );
+        const EditorToolDefaults& data       = editor::getEditorToolDefaults();
+        const string              basePath   = EditorFontSetupInternal::resolveFontFile( data._listBaseFont );
+        const string              koreanPath = EditorFontSetupInternal::resolveFontFile( data._listKoreanFont );
 
         ImFont* pBaseFont{ nullptr };
         BLOCK( "Base Font" )

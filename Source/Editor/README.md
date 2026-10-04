@@ -33,7 +33,7 @@
   패널은 UI 만, 실제 동작은 여기입니다 (그래서 테스트가 붙습니다)
 - **Asset/**: 텍스처 임포트·임포트 (`TextureImporter`, `TextureImportConfig`, `ImageUtil`) + 헤드리스 임포트 진입점(`TextureImportEntry.cpp` — 아래
   "텍스처는 들일 때 임포트한다"). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
-- **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorData`)
+- **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorToolDefaults`)
 
 ### 기능
 

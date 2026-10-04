@@ -1,6 +1,6 @@
 /**
- * @file EditorData.h
- * @brief Config/Editor/editordata.json 에서 읽는 에디터 도구 시드입니다(배포용 Resource 데이터가 아닙니다).
+ * @file EditorToolDefaults.h
+ * @brief Config/Editor/editortooldefaults.json 에서 읽는 에디터 도구 시드입니다(배포용 Resource 데이터가 아닙니다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,16 +14,16 @@
 namespace sw::editor
 {
     // ------------------------------------------------------------------------------
-    // 1) EditorData: 맵 · 아틀라스 · 폰트 시드와 설정 폴더 · 도구 파일 이름
+    // 1) EditorToolDefaults: 맵 · 아틀라스 · 폰트 시드와 설정 폴더 · 도구 파일 이름
     //    사람이 적는 파일이고, 앱은 다시 쓰지 않는다(앱이 쓰는 것은 EditorConfig)
     // ------------------------------------------------------------------------------
 
     /**
-     * @brief editordata.json 의 에디터 도구 시드입니다.
+     * @brief editortooldefaults.json 의 에디터 도구 시드입니다.
      * @details 읽기는 `JsonSerializer` 가 PROPERTY 그래프로 합니다. 필드를 추가하면 읽기가 따라옵니다(손으로 파싱하지 않습니다).
      */
     REFLECT()
-    struct EditorData
+    struct EditorToolDefaults
     {
         REFLECT_BODY();
         PROPERTY()
@@ -105,7 +105,7 @@ namespace sw::editor
 
         /**
          * @brief 프로젝트 루트 기준 Host 경로에서 에디터 시드를 로드합니다.
-         * @param hostRelativePath 비어 있으면 `config::kFileRuntimeEditorData`(Config/Editor/editordata.json)
+         * @param hostRelativePath 비어 있으면 `config::kFileRuntimeEditorToolDefaults`(Config/Editor/editortooldefaults.json)
          */
         [[nodiscard]] bool loadFromHostPath( string_view hostRelativePath = {} );
     };

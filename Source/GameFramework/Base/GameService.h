@@ -83,7 +83,7 @@ namespace sw
          *          **한 번도 도달할 수 없었습니다.** 브레이크가 먼저 걸립니다.
          *
          *          실제로 이것에 부딪힌 곳: `TurnBattleSaveGame::loadFromFile` 의 텍스트 경로는
-         *          `GameData` 가 없으면 파티 상한으로 6 을 쓰도록 **이미 적혀 있는데**, 게임이
+         *          `GameSettings` 가 없으면 파티 상한으로 6 을 쓰도록 **이미 적혀 있는데**, 게임이
          *          붙지 않은 프로세스(도구 · 테스트)에서 그 폴백에 닿기 전에 죽었습니다.
          *
          *          짝인 `editor::getService<T>()` 는 처음부터 조용히 nullptr 을 반환합니다.

@@ -13,7 +13,7 @@
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
-#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorCommandGui.h"
 #include "Editor/Common/Gui/EditorFontSetup.h"
@@ -32,7 +32,7 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/Viewport/EditorCamera.h"
 
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -68,12 +68,12 @@ namespace sw::editor
                     return;
                 // `getService<T>()` 는 nullptr 을 반환할 수 있다. 이 둘은 **워커 스레드**에서 도는 스플래시 로드라, 서비스 연결이 아직
                 // 없거나 이미 끊긴 틈에 걸리면 조용히 죽는다.
-                const EngineData* pEngineData = editor::getService<const EngineData>();
-                if ( pEngineData == nullptr )
+                const EngineDefaultAssets* pEngineDefaultAssets = editor::getService<const EngineDefaultAssets>();
+                if ( pEngineDefaultAssets == nullptr )
                     return;
                 SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
-                if ( pPass->loadFromXmlFile( pEngineData->_defaultRenderPass ) == false )
-                    SW_LOG_WARNING( "Splash: could not read %#", pEngineData->_defaultRenderPass.c_str() );
+                if ( pPass->loadFromXmlFile( pEngineDefaultAssets->_defaultRenderPass ) == false )
+                    SW_LOG_WARNING( "Splash: could not read %#", pEngineDefaultAssets->_defaultRenderPass.c_str() );
             }
 
             static void loadSplashForwardPipeline( const TaskArgs& args )
@@ -81,12 +81,12 @@ namespace sw::editor
                 shared_ptr<RenderPipelineAsset> pPipeline = args.get<shared_ptr<RenderPipelineAsset>>( 0 );
                 if ( pPipeline == nullptr )
                     return;
-                const EngineData* pEngineData = editor::getService<const EngineData>();
-                if ( pEngineData == nullptr )
+                const EngineDefaultAssets* pEngineDefaultAssets = editor::getService<const EngineDefaultAssets>();
+                if ( pEngineDefaultAssets == nullptr )
                     return;
                 SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
-                if ( pPipeline->loadFromXmlFile( pEngineData->_defaultForwardPipeline ) == false )
-                    SW_LOG_WARNING( "Splash: could not read %#", pEngineData->_defaultForwardPipeline.c_str() );
+                if ( pPipeline->loadFromXmlFile( pEngineDefaultAssets->_defaultForwardPipeline ) == false )
+                    SW_LOG_WARNING( "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
             }
 
             /**
@@ -134,7 +134,7 @@ namespace sw::editor
     ImGuiEditor::ImGuiEditor()
         : _platformBackend{ nullptr }
         , _rendererBackend{ nullptr }
-        , _editorData{ nullptr }
+        , _editorToolDefaults{ nullptr }
         , _editorContext{ nullptr }
         , _dockLayout{}
         , _arrDrawSnapshot{}
@@ -168,10 +168,10 @@ namespace sw::editor
         BLOCK( "EditorConfig host load" )
         {
             EditorConfig::loadFromHost();
-            _editorData = make_unique<EditorData>();
-            if ( _editorData->loadFromHostPath() == false )
+            _editorToolDefaults = make_unique<EditorToolDefaults>();
+            if ( _editorToolDefaults->loadFromHostPath() == false )
                 SW_LOG_WARNING( "Editor data could not be read - using defaults" );
-            editor::setEditorData( _editorData.get() );
+            editor::setEditorToolDefaults( _editorToolDefaults.get() );
         }
 #endif
 
@@ -350,8 +350,8 @@ namespace sw::editor
             ImGui::DestroyContext();
 
         // 1) 에디터 데이터
-        editor::setEditorData( nullptr );
-        _editorData.reset();
+        editor::setEditorToolDefaults( nullptr );
+        _editorToolDefaults.reset();
     }
 
     void ImGuiEditor::shutdown()

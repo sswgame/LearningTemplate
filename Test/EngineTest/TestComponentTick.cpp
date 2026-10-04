@@ -905,7 +905,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, PrerequisiteInALaterGroupMovesTheDepen
 }
 
 /**
- * @brief [ComponentDefaultsTest] gamedata 의 기본값은 **기반 타입 노드부터** 적용된다
+ * @brief [ComponentDefaultsTest] gamesettings 의 기본값은 **기반 타입 노드부터** 적용된다
  * @details 적용은 한 곳(`applyTypeDefaults`)에서 뿌리 → 파생 순서로 체인 전체를 한다. 기반 생성자에서 적용하면
  *          그 시점에는 가상 `getTypeInfo()` 가 파생으로 디스패치되지 않아 언제나 `Component` 의 TypeInfo 만 나오고,
  *          중간 기반(`SceneComponent`)의 기본값이 적용되지 않는다.
@@ -919,16 +919,16 @@ SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
 
     // SceneComponent(기반)가 Scale 을, MeshComponent(파생)가 BoundsRadius 를 정한다.
     const sw::string xml =
-        "<GameData>\n"
+        "<GameSettings>\n"
         "  <Defaults>\n"
         "    <SceneComponent _localScale=\"2,3,4\" />\n"
         "    <MeshComponent _boundsRadius=\"7.5\" />\n"
         "  </Defaults>\n"
-        "</GameData>\n";
+        "</GameSettings>\n";
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, xml ) );
 
-    const sw::string previousPath{ sw::Component::getDefaultGamedataPath() };
-    sw::Component::setDefaultGamedataPath( defaultsPath );
+    const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
+    sw::Component::setDefaultGameSettingsPath( defaultsPath );
 
     {
         sw::GameObjectManager manager;
@@ -946,7 +946,7 @@ SW_TEST_CASE( ComponentDefaultsTest, BaseTypeDefaultsApplyBeforeDerived )
         SW_EXPECT_TRUE( sw::MathUtil::nearEqual( pMesh->getBoundsRadius(), 7.5f ) );
     }
 
-    sw::Component::setDefaultGamedataPath( previousPath );
+    sw::Component::setDefaultGameSettingsPath( previousPath );
     sw::ComponentDefaults::reloadDefaults();
 }
 
@@ -962,9 +962,9 @@ SW_TEST_CASE( ComponentDefaultsTest, ResolvedDefaultsStayPutWhileOtherTypesResol
         SW_TEST_SKIP( "ComponentDefaults service is not bound in this process." );
 
     const sw::string defaultsPath = test::makeTempPath( "test_component_defaults_stable.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, "<GameData><Defaults><MeshComponent _boundsRadius=\"7.5\" /></Defaults></GameData>\n" ) );
-    const sw::string previousPath{ sw::Component::getDefaultGamedataPath() };
-    sw::Component::setDefaultGamedataPath( defaultsPath );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, "<GameSettings><Defaults><MeshComponent _boundsRadius=\"7.5\" /></Defaults></GameSettings>\n" ) );
+    const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
+    sw::Component::setDefaultGameSettingsPath( defaultsPath );
 
     sw::ComponentDefaults& defaults  = sw::engine::getComponentDefaults();
     const sw::TypeInfo*    pMeshType = sw::MeshComponent::StaticType();
@@ -987,7 +987,7 @@ SW_TEST_CASE( ComponentDefaultsTest, ResolvedDefaultsStayPutWhileOtherTypesResol
     }
     SW_EXPECT_TRUE( defaults.findResolvedAddress( *pMeshType ) == pAddress );
 
-    sw::Component::setDefaultGamedataPath( previousPath );
+    sw::Component::setDefaultGameSettingsPath( previousPath );
     sw::ComponentDefaults::reloadDefaults();
 }
 
@@ -1002,9 +1002,9 @@ SW_TEST_CASE( ComponentDefaultsTest, ModuleRegistrationKeepsLiveValues )
         SW_TEST_SKIP( "ComponentDefaults service is not bound in this process." );
 
     const sw::string defaultsPath = test::makeTempPath( "test_component_defaults_restamp.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, "<GameData><Defaults><MeshComponent _boundsRadius=\"7.5\" /></Defaults></GameData>\n" ) );
-    const sw::string previousPath{ sw::Component::getDefaultGamedataPath() };
-    sw::Component::setDefaultGamedataPath( defaultsPath );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( defaultsPath, "<GameSettings><Defaults><MeshComponent _boundsRadius=\"7.5\" /></Defaults></GameSettings>\n" ) );
+    const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
+    sw::Component::setDefaultGameSettingsPath( defaultsPath );
 
     // 모듈 등록은 엔진 씬 매니저의 씬들을 돈다 — 그 씬에 둔다.
     sw::Scene* pScene = sw::engine::getSceneManager().getActiveScene();
@@ -1026,7 +1026,7 @@ SW_TEST_CASE( ComponentDefaultsTest, ModuleRegistrationKeepsLiveValues )
 
     pObjects->destroyObject( pObject );
     pObjects->processDeferredDestruction();
-    sw::Component::setDefaultGamedataPath( previousPath );
+    sw::Component::setDefaultGameSettingsPath( previousPath );
     sw::ComponentDefaults::reloadDefaults();
 }
 
@@ -1046,7 +1046,7 @@ SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
     }
     sw::ComponentDefaults& defaults = sw::engine::getComponentDefaults();
 
-    const sw::string previousPath{ sw::Component::getDefaultGamedataPath() };
+    const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
 
     // 일부러 없는 경로를 준다 — 이것이 "기본값 없음" 의 정상 상태다.
     const sw::string missingPath = test::makeTempPath( "no_such_component_defaults.xml" );
@@ -1073,29 +1073,29 @@ SW_TEST_CASE( ComponentDefaultsTest, MissingDefaultsFileIsOpenedOnlyOnce )
     const uint32 attempts = defaults.getLoadAttemptCount() - before;
     SW_EXPECT_TRUE_MSG( attempts <= 1, "없는 기본값 파일을 컴포넌트마다 다시 열었습니다" );
 
-    sw::Component::setDefaultGamedataPath( previousPath );
+    sw::Component::setDefaultGameSettingsPath( previousPath );
     sw::ComponentDefaults::reloadDefaults();
 }
 
 /**
  * @brief [ComponentDefaultsTest] 기본값 경로가 **값으로** 돌아오는지 검증
- * @details `getDefaultGamedataPath()` 가 `string_view` 를 돌려주면 그 뷰는 뮤텍스로 지키는 `_customDefaultsPath` 의
+ * @details `getDefaultGameSettingsPath()` 가 `string_view` 를 돌려주면 그 뷰는 뮤텍스로 지키는 `_customDefaultsPath` 의
  *          내부 버퍼를 가리키는데, **뮤텍스는 함수가 끝나면서 풀린다.** 받아 든 쪽이 그것을 들고 있는 동안 다른 곳에서
- *          `setDefaultGamedataPath` 를 부르면(길이가 달라지면 버퍼를 새로 잡는다) 뷰는 사라진 메모리를 가리킨다.
+ *          `setDefaultGameSettingsPath` 를 부르면(길이가 달라지면 버퍼를 새로 잡는다) 뷰는 사라진 메모리를 가리킨다.
  */
 SW_TEST_CASE( ComponentDefaultsTest, DefaultsPathIsReturnedByValue )
 {
-    const sw::string previousPath{ sw::Component::getDefaultGamedataPath() };
+    const sw::string previousPath{ sw::Component::getDefaultGameSettingsPath() };
 
-    sw::Component::setDefaultGamedataPath( "game/data/short.xml" );
-    const auto heldPath = sw::Component::getDefaultGamedataPath();
+    sw::Component::setDefaultGameSettingsPath( "game/data/short.xml" );
+    const auto heldPath = sw::Component::getDefaultGameSettingsPath();
 
     // 길이를 크게 바꿔 내부 버퍼를 **다시 잡게** 만든다.
-    sw::Component::setDefaultGamedataPath( sw::string( 4096, 'x' ) );
+    sw::Component::setDefaultGameSettingsPath( sw::string( 4096, 'x' ) );
 
     // 뷰를 돌려주면 여기서 사라진 버퍼를 읽는다 — ASAN 이 잡는다.
     SW_EXPECT_STREQ( "game/data/short.xml", sw::string( heldPath ).c_str() );
 
-    sw::Component::setDefaultGamedataPath( previousPath );
+    sw::Component::setDefaultGameSettingsPath( previousPath );
     sw::ComponentDefaults::reloadDefaults();
 }

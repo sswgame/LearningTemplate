@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -156,8 +156,8 @@ namespace sw::editor
 
         destroyGameView();
 
-        // editordata.json 의 _clearColor 를 쓴다(값을 여기 박아 두면 설정 파일이 조용히 무시된다).
-        const float4 gameViewClearColor = editor::getEditorData()._clearColor;
+        // editortooldefaults.json 의 _clearColor 를 쓴다(값을 여기 박아 두면 설정 파일이 조용히 무시된다).
+        const float4 gameViewClearColor = editor::getEditorToolDefaults()._clearColor;
 
         RHITextureDesc rtDesc{};
         rtDesc._width             = width;

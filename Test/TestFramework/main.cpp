@@ -11,7 +11,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/EngineBootstrap.h"
 #include "Engine/EngineInitSequence.h"
@@ -26,8 +26,8 @@
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
@@ -125,21 +125,21 @@ namespace
         {
             static sw::EngineInitResult initialize( TestHost& host )
             {
-                if ( host._pOwned->_pResourceManager->initialize() == false )
+                if ( host._pOwned->_pAssetManager->initialize() == false )
                     return sw::EngineInitResult::Failed;
                 // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다 — 그 전제는 `mountContent` 의 인자에 드러나 있다.
                 if ( host._pEngineConfig != nullptr )
-                    host._pOwned->_pResourceManager->mountContent( host._pEngineConfig->_listResourcePriority );
+                    host._pOwned->_pAssetManager->mountContent( host._pEngineConfig->_listResourcePriority );
                 else
-                    host._pOwned->_pResourceManager->mountContent( {} );
+                    host._pOwned->_pAssetManager->mountContent( {} );
                 return sw::EngineInitResult::Succeeded;
             }
-            static void destroy( TestHost& host ) { host._pOwned->destroyResourceManager(); }
+            static void destroy( TestHost& host ) { host._pOwned->destroyAssetManager(); }
         };
 
-        struct EngineDataStartupStep : Defaults
+        struct EngineDefaultAssetsStartupStep : Defaults
         {
-            static void destroy( TestHost& host ) { host._pOwned->_pEngineData.reset(); }
+            static void destroy( TestHost& host ) { host._pOwned->_pEngineDefaultAssets.reset(); }
         };
 
         struct ShaderCacheStartupStep : Defaults

@@ -18,9 +18,10 @@ namespace sw
 {
     struct DebugOverlayState;
     struct EngineConfig;
-    struct EngineData;
+    struct EngineDefaultAssets;
     struct RenderFramePacket;
 
+    class AssetManager;
     class AssetStreamingQueue;
     class CameraComponent;
     class CommandLineManager;
@@ -40,7 +41,6 @@ namespace sw
     class IRHIDevice;
     class RenderTargetRegistry;
     class RenderThread;
-    class ResourceManager;
     class RHI;
     class RHIBackendRegistry;
     class SceneManager;
@@ -126,7 +126,7 @@ namespace sw
         void setPostPresentHook( sw::PresentHookDelegate postPresentHook );
         void updateShellActions( float32 deltaTime );
         /**
-         * @brief 셸 디버그 액션 맵을 InputMap 리소스(`EngineData::_shellInputMap`)에서 만듭니다.
+         * @brief 셸 디버그 액션 맵을 InputMap 리소스(`EngineDefaultAssets::_shellInputMap`)에서 만듭니다.
          * @details 경로가 비었거나 읽지 못하면 오류를 남기고 **빈 맵**을 돌려줍니다. 손으로 적은 바인딩으로 바꿔 끼우지 않습니다 —
          *          그 내용은 리소스와 따로 낡고, 실패를 가립니다.
          */
@@ -223,7 +223,7 @@ namespace sw
         FrameProfileSession _profileSession;
         /** @brief 기동 단계의 순서(`EngineInitStepList.xxx` 를 위상 정렬)와 초기화한 단계입니다. */
         EngineInitSequence _startup;
-        /** @brief Config 단계가 읽은 엔진 설정입니다(`_configManager` 소유). Resource · EngineData · RHI 단계가 읽습니다. */
+        /** @brief Config 단계가 읽은 엔진 설정입니다(`_configManager` 소유). Resource · EngineDefaultAssets · RHI 단계가 읽습니다. */
         const EngineConfig* _pEngineConfig;
     };
 } // namespace sw

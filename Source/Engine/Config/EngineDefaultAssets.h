@@ -1,6 +1,6 @@
 /**
- * @file EngineData.h
- * @brief enginedata.xml 에서 읽는 엔진 셸 경로입니다(Scene / App / FrameRenderer / RHI).
+ * @file EngineDefaultAssets.h
+ * @brief enginedefaultassets.xml 에서 읽는 엔진 셸 경로입니다(Scene / App / FrameRenderer / RHI).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,16 +12,16 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) EngineData — 씬 폴백 머티리얼 · 셸 InputMap · 파이프라인 · 셰이더 폴백
-    //    게임플레이 경로는 GameData, 에디터 도구 경로는 EditorData
+    // 1) EngineDefaultAssets — 씬 폴백 머티리얼 · 셸 InputMap · 파이프라인 · 셰이더 폴백
+    //    게임플레이 경로는 GameSettings, 에디터 도구 경로는 EditorToolDefaults
     // ------------------------------------------------------------------------------
     /**
-     * @brief enginedata.xml 의 엔진 셸 경로입니다.
+     * @brief enginedefaultassets.xml 의 엔진 셸 경로입니다.
      * @details 읽기는 `XmlSerializer` 가 PROPERTY 그래프로 합니다. 필드를 하나 추가하면 읽기가 저절로
      *          따라옵니다(필드마다 손으로 읽으면 한 줄을 빠뜨릴 때 값이 조용히 기본값으로 남습니다).
      */
     REFLECT()
-    struct SW_API EngineData
+    struct SW_API EngineDefaultAssets
     {
         REFLECT_BODY();
         PROPERTY()
@@ -67,7 +67,7 @@ namespace sw
         PROPERTY()
         string _shaderTonemap{ "engine/shaders/tonemap.hlsl" };
 
-        /** @brief 리소스 경로(XML)에서 엔진 테이블을 로드합니다. 빈 경로면 path::kEngineData 를 씁니다. */
+        /** @brief 리소스 경로(XML)에서 엔진 테이블을 로드합니다. 빈 경로면 path::kEngineDefaultAssets 를 씁니다. */
 
         [[nodiscard]] bool loadFromResource( string_view assetRelativePath = {} );
     };

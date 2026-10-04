@@ -12,7 +12,7 @@
 #include "Engine/Utility/Format/KeyValueFile.h"
 
 #include "GameFramework/Base/GameService.h"
-#include "GameFramework/Data/GameData.h"
+#include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
 
 namespace sw
@@ -46,8 +46,8 @@ namespace sw
 
             static size_t partyCap()
             {
-                const GameData* pData    = game::getService<GameData>();
-                const int32     rawValue = pData != nullptr ? pData->getCustomPropertyInt( "maxPartySize", 6 ) : 6;
+                const GameSettings* pData    = game::getService<GameSettings>();
+                const int32         rawValue = pData != nullptr ? pData->getCustomPropertyInt( "maxPartySize", 6 ) : 6;
                 return static_cast<size_t>( MathUtil::clamp( rawValue > 0 ? rawValue : 6, 1, kHardPartyCap ) );
             }
 
@@ -80,7 +80,7 @@ namespace sw
         if ( _listParty.empty() == false )
             return;
 
-        const GameData* pData = game::getService<GameData>();
+        const GameSettings* pData = game::getService<GameSettings>();
         if ( pData == nullptr )
             return;
 
@@ -110,7 +110,7 @@ namespace sw
     {
         if ( _mapPath.empty() == false )
             return;
-        const GameData* pData = game::getService<GameData>();
+        const GameSettings* pData = game::getService<GameSettings>();
         if ( pData != nullptr )
             _mapPath = pData->_startMap;
     }

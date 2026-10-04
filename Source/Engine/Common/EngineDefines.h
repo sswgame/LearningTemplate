@@ -1,6 +1,6 @@
 /**
  * @file EngineDefines.h
- * @brief 엔진 기본 상수(뷰포트 크기 · 공간 셀 · 기본 언어)와 팩 · 폴더 이름입니다. 에셋 경로는 EngineData(enginedata.xml)가 정합니다.
+ * @brief 엔진 기본 상수(뷰포트 크기 · 공간 셀 · 기본 언어)와 팩 · 폴더 이름입니다. 에셋 경로는 EngineDefaultAssets(enginedefaultassets.xml)가 정합니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -26,7 +26,7 @@ namespace sw
     /**
      * @brief Resource 아래 팩 · 폴더 이름입니다.
      * @details XML 보다 먼저 리소스 루트를 찾아야 하므로 컴파일 상수로 둡니다.
-     *          파이프라인 · 셰이더 · InputMap 경로는 EngineData 가 정합니다.
+     *          파이프라인 · 셰이더 · InputMap 경로는 EngineDefaultAssets 가 정합니다.
      */
     namespace path
     {
@@ -63,7 +63,7 @@ namespace sw
         inline constexpr const utf8* kGlobalVarsFolder = "globalvars";
 
         /** @brief 엔진 셸 부트스트랩 XML 입니다(Resource 기준 상대 경로). */
-        inline constexpr const utf8* kEngineData = "engine/data/enginedata.xml";
+        inline constexpr const utf8* kEngineDefaultAssets = "engine/data/enginedefaultassets.xml";
         /** @brief 에셋 메타 파일 확장자입니다. */
         inline constexpr const utf8* kMetaExtension = ".meta";
     } // namespace path

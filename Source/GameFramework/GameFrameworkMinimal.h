@@ -9,6 +9,6 @@
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/Base/IGame.h"
 #include "GameFramework/Base/SaveGame.h"
-#include "GameFramework/Data/GameData.h"
+#include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/GameFrameworkExports.h"

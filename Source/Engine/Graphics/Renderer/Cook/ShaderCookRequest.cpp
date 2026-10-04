@@ -11,7 +11,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
@@ -111,8 +111,8 @@ namespace sw
 
             static void collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
             {
-                EngineData engineData;
-                if ( engineData.loadFromResource() == false )
+                EngineDefaultAssets engineDefaultAssets;
+                if ( engineDefaultAssets.loadFromResource() == false )
                     SW_LOG_WARNING( "Engine data could not be read - cooking with the built-in default passes" );
 
                 vector<MeshPassInfo>        listMeshPass;
@@ -137,7 +137,7 @@ namespace sw
                         // 셰이더 경로와 define 은 런타임 PSO 생성(createPsoForPassType)과 **같은 함수**로 정한다. 경로는 XML 의
                         // `_shaderPath`, 비어 있으면 패스 종류 표의 기본 셰이더다. define 은 XML 퍼뮤테이션 + 패스 define(G버퍼의
                         // `SW_PASS_GBUFFER=1` 처럼 C++ 이 얹는 것)이다. 패스 종류는 로드 때 enum 으로 해석한 값을 본다.
-                        const RenderPassShaderSelection passShader = selectRenderPassShader( pass._resolvedType, &pass, engineData );
+                        const RenderPassShaderSelection passShader = selectRenderPassShader( pass._resolvedType, &pass, engineDefaultAssets );
                         const string&                   shaderPath = passShader._shaderPath;
                         if ( shaderPath.empty() )
                             continue;
@@ -213,12 +213,12 @@ namespace sw
                         continue;
                     if ( info.hasFlag( RenderPassTraitFlag::kCompute ) )
                     {
-                        appendRequestUnique( outListRequest, engineData.*info._pDefaultShader, "CSMain", ShaderStage::Compute, {} );
+                        appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, "CSMain", ShaderStage::Compute, {} );
                         continue;
                     }
                     if ( FrameRendererUtil::drawsSceneMeshes( passType ) )
                     {
-                        const RenderPassShaderSelection passShader = selectRenderPassShader( passType, nullptr, engineData );
+                        const RenderPassShaderSelection passShader = selectRenderPassShader( passType, nullptr, engineDefaultAssets );
                         MeshPassInfo                    passInfo;
                         passInfo._shaderPath          = passShader._shaderPath;
                         passInfo._vertexEntryPoint    = FrameRendererUtil::Entry::kVSMain;
@@ -229,13 +229,13 @@ namespace sw
                         passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( passType );
                         listMeshPass.push_back( std::move( passInfo ) );
                     }
-                    appendRequestUnique( outListRequest, engineData.*info._pDefaultShader, "VSMain", ShaderStage::Vertex, {} );
-                    appendRequestUnique( outListRequest, engineData.*info._pDefaultShader, "PSMain", ShaderStage::Pixel, {} );
+                    appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, "VSMain", ShaderStage::Vertex, {} );
+                    appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, "PSMain", ShaderStage::Pixel, {} );
                 }
 
                 // 패스가 아닌 엔진 · 시험 셰이더.
                 const vector<string> listEngineShader = {
-                    engineData._shaderFullscreenTriangle,
+                    engineDefaultAssets._shaderFullscreenTriangle,
                     "engine/shaders/sprite2d.hlsl",
                     "common/shaders/provokingvertex.hlsl",
                     "common/shaders/instanceslotprobe.hlsl" };

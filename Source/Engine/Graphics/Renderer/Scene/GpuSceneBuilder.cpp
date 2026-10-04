@@ -19,7 +19,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
@@ -774,7 +774,7 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() == false )
             return;
-        const uint32 generation = engine::getResourceManager().getTextureManager().getReloadGeneration();
+        const uint32 generation = engine::getAssetManager().getTextureManager().getReloadGeneration();
         if ( generation == _lastTextureReloadGeneration )
             return;
         _lastTextureReloadGeneration = generation;

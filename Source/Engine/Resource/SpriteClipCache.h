@@ -15,7 +15,7 @@ namespace sw
 
     /**
      * @class SpriteClipCache
-     * @brief 스프라이트 클립을 경로로 나눠 주고, 에셋 캐시 등록부(`ResourceManager`)에 보여 핫 리로드 · 종료 · 진단이 다른 캐시와 같은 길을 탑니다.
+     * @brief 스프라이트 클립을 경로로 나눠 주고, 에셋 캐시 등록부(`AssetManager`)에 보여 핫 리로드 · 종료 · 진단이 다른 캐시와 같은 길을 탑니다.
      * @details 표는 프로세스에 하나입니다 — 씬 로드 워커와 게임 모듈이 서비스 없이 부릅니다(`acquire`). 이 객체는 그 표를 등록부에 보이는 창구일 뿐
      *          상태를 갖지 않습니다. 표는 약한 참조(`MeshUtil::acquirePrimitive` 와 같은 모양)라 마지막 사용자가 놓으면 사라집니다.
      */

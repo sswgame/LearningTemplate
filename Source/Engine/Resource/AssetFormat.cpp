@@ -5,7 +5,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 
 #include "sw/config/CookContract.gen.h"
 
@@ -212,7 +212,7 @@ namespace sw
     bool AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind kind, XmlDocument& doc, XmlNode& root, AssetFormatVersion currentVersion )
     {
         if ( engine::areEngineServicesBound() )
-            return engine::getResourceManager().getAssetFormatRegistry().upgradeXml( kind, doc, root, currentVersion );
+            return engine::getAssetManager().getAssetFormatRegistry().upgradeXml( kind, doc, root, currentVersion );
 
         // 호출마다 새로 만든다 — 공유하는 정적 등록부는 여러 로더 스레드의 `ensureBuiltins` 가 겹쳐 쓴다.
         AssetFormatRegistry builtinRegistry;

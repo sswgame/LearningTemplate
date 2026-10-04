@@ -14,7 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -36,7 +36,7 @@ namespace sw::editor
             return false;
 
         // 캐시된 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽도록 한다.
-        ResourceManager* pResources = editor::getService<ResourceManager>();
+        AssetManager* pResources = editor::getService<AssetManager>();
         if ( pResources != nullptr )
             pResources->getPrefabCache().reload( prefabPath, nullptr );
         SW_LOG_INFO( "Saved prefab changes to %#", string{ prefabPath }.c_str() );
@@ -50,7 +50,7 @@ namespace sw::editor
         if ( pObj == nullptr || prefabPath.empty() )
             return false;
 
-        ResourceManager* pResources = editor::getService<ResourceManager>();
+        AssetManager* pResources = editor::getService<AssetManager>();
         if ( pResources == nullptr )
             return false;
 

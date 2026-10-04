@@ -12,7 +12,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   장르 무관 컴포넌트(`FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`).
   공유 타입은 `GameFrameworkMinimal.h`. "game" 채널의 수명주기 이벤트(`GameEvents.h`)는 프레임워크가 그 자리에서 낸다 —
   `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료, `GameModeStateMachine` 이 일시정지 진입 · 해제
-- **Data**: `GameData`, `GameStrings`
+- **Data**: `GameSettings`, `GameStrings`
 - **Transition**: `GameModeStateMachine`(일시정지 모드 전이에 `GamePausedEvent` · `GameResumedEvent`), `ScreenTransitionManager`
 - **UI**: 장르 무관 UI 컴포넌트 — `RuntimeHud`, `DialogueRunnerComponent`,
   `HealthBarComponent`, `DamageNumberComponent`. HP 바 · 데미지 숫자는 월드 공간 스프라이트(`SpriteInstanceBatch`)로 그린다 — 저장되는

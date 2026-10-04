@@ -10,7 +10,7 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/ReflectedXmlFile.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 

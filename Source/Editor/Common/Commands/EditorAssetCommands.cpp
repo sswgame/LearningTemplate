@@ -29,7 +29,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -566,7 +566,7 @@ namespace sw::editor
             const string rel = AssetDatabase::toRelativePath( destPath );
             if ( rel.empty() == false )
             {
-                ResourceManager* pResources = editor::getService<ResourceManager>();
+                AssetManager* pResources = editor::getService<AssetManager>();
                 if ( pResources != nullptr )
                     pResources->getAssetDatabase().ensureMeta( rel, true );
             }

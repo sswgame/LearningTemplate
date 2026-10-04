@@ -6,7 +6,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
-#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -31,7 +31,7 @@ namespace sw::editor
         , _selectedKey{ -1 }
         , _selectedAnimation{ -1 }
     {
-        const string& atlas = editor::getEditorData()._spriteAtlas;
+        const string& atlas = editor::getEditorToolDefaults()._spriteAtlas;
         if ( atlas.empty() == false )
             _atlasPath = atlas.c_str();
         _listFrame.push_back( Frame{} );
@@ -52,12 +52,12 @@ namespace sw::editor
         {
             saveJson();
             if ( getLoadedAssetPath().empty() )
-                _status = string{ "Saved " } + getEditorData()._spriteClipFile;
+                _status = string{ "Saved " } + getEditorToolDefaults()._spriteClipFile;
             else
                 _status = string{ "Saved " } + getLoadedAssetPath();
         }
-        ImGui::TextDisabled( "%s/%s/%s (separate from AnimGraph)", getEditorData()._configFolder.c_str(),
-                             getEditorData()._editorConfigFolder.c_str(), getEditorData()._spriteClipFile.c_str() );
+        ImGui::TextDisabled( "%s/%s/%s (separate from AnimGraph)", getEditorToolDefaults()._configFolder.c_str(),
+                             getEditorToolDefaults()._editorConfigFolder.c_str(), getEditorToolDefaults()._spriteClipFile.c_str() );
 
         ImGui::Separator();
         ImGui::TextUnformatted( "Frames (u,v,w,h,durationMs)" );

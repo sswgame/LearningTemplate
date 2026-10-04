@@ -1,7 +1,7 @@
 /**
  * @file ShaderCache.h
  * @brief 셰이더 컴파일 결과 캐시 매니저입니다.
- * @note ResourceManager 가 아닙니다. 셰이더 바이트코드는 RHI · 컴파일러 수명이며 팩 에셋 인스턴스와 분리합니다.
+ * @note AssetManager 가 아닙니다. 셰이더 바이트코드는 RHI · 컴파일러 수명이며 팩 에셋 인스턴스와 분리합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

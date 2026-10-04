@@ -130,7 +130,7 @@ namespace sw::editor
 
         /**
          * @brief 에디터 설정을 거치지 않은 기본 임포트 설정 경로(`<프로젝트>/Config/Editor/TextureImportConfig.json`)입니다.
-         * @details 헤드리스 임포트 · 시험이 씁니다. 에디터가 떠 있을 때는 `EditorData` 가 정한 경로를 씁니다(`importChangedSourceImage`).
+         * @details 헤드리스 임포트 · 시험이 씁니다. 에디터가 떠 있을 때는 `EditorToolDefaults` 가 정한 경로를 씁니다(`importChangedSourceImage`).
          */
         static string makeDefaultImportConfigPath();
     };

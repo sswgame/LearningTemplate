@@ -9,8 +9,8 @@
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/IAssetCache.h"
-#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -41,8 +41,8 @@ SW_TEST_CASE( AssetHotReloadTest, ReloadedAssetReachesComponentsThroughTheirAsse
 
     clip._listFrame[1]._uvRect = sw::float4{ 0.5f, 0.5f, 0.5f, 0.5f };
     SW_ASSERT_TRUE( clip.saveToFile( clipPath ) );
-    sw::ResourceManager resources;
-    sw::IAssetCache*    pCache = resources.findAssetCache( "SpriteClip" );
+    sw::AssetManager resources;
+    sw::IAssetCache* pCache = resources.findAssetCache( "SpriteClip" );
     SW_ASSERT_NOT_NULL( pCache );
     pCache->reload( clipPath, nullptr );
 

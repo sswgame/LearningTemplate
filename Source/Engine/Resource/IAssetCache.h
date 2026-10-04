@@ -12,7 +12,7 @@
  * 가져옵니다. **등록부를 훑어서 되는 일**(종료 · 진단 · 재초기화)만 이 인터페이스로 하고, 종류마다
  * 다른 것(무엇을 어떻게 읽어 오는가)은 구체 캐시가 그대로 갖습니다.
  *
- * @note 수명은 `ResourceManager` 가 쥡니다. 등록부는 **소유하지 않는 포인터**만 들고 있으므로,
+ * @note 수명은 `AssetManager` 가 쥡니다. 등록부는 **소유하지 않는 포인터**만 들고 있으므로,
  *       등록한 캐시는 매니저보다 오래 살아야 합니다.
  */
 #pragma once
@@ -42,7 +42,7 @@ namespace sw
 
         /**
          * @brief 이 캐시가 다루는 에셋 종류의 이름입니다("Material" · "Texture" · "Prefab").
-         * @details 진단 로그와 `ResourceManager::findAssetCache` 의 키입니다. 사람이 읽는 이름이지
+         * @details 진단 로그와 `AssetManager::findAssetCache` 의 키입니다. 사람이 읽는 이름이지
          *          확장자가 아닙니다. 확장자는 에디터의 `EditorAssetTypeRegistry` 가 압니다.
          */
         virtual const utf8* getAssetKindName() const = 0;

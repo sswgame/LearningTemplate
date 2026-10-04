@@ -145,12 +145,12 @@ _kUbiquitousHeaders: frozenset[str] = frozenset(
 # 티어가 아니라 **배선**인 파일. 모든 서브시스템을 알아야 하므로 티어 검사에서 뺀다.
 #   - EngineServices.cpp   : 서비스 로케이터 구현. 노출하는 모든 매니저를 include 해야 한다.
 #   - ReflectGenerated.h   : .gen.cpp 전용 preamble.
-#   - ResourceManager.cpp  : 리소스 파사드 구현.
+#   - AssetManager.cpp  : 리소스 파사드 구현.
 _kWiringFiles: frozenset[str] = frozenset(
     {
         "Source/Engine/Common/EngineServices.cpp",
         "Source/Engine/Reflection/ReflectGenerated.h",
-        "Source/Engine/Resource/ResourceManager.cpp",
+        "Source/Engine/Resource/AssetManager.cpp",
     }
 )
 

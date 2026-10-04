@@ -427,14 +427,14 @@ public:
 ```cpp
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 
 // 1. 비동기 씬 로드 (TaskManager 워커에서 파싱하고, 끝나면 tickTransitions 가 활성 씬으로 바꿔 넣는다)
 //    경로는 도메인을 포함한 리소스 id 다(engine/ · common/ · game/<게임>/).
 sw::TaskFuture<sw::Scene*> sceneFuture = sw::engine::getSceneManager().requestLoadFuture( "game/empty/maps/editortest.scene.xml" );
 
 // 2. 프리팹 스폰 (Dev 는 XML/JSON 저작본, Shipping 은 쿠킹된 .prefab.bin 을 읽는다)
-sw::GameObject* pProp = sw::engine::getResourceManager().getPrefabCache().spawn(
+sw::GameObject* pProp = sw::engine::getAssetManager().getPrefabCache().spawn(
     pObjectManager, "game/empty/prefabs/testprop.prefab.xml" );
 ```
 

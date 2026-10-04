@@ -1,7 +1,7 @@
 /**
  * @file RenderPipelineAssetCache.h
  * @brief RenderPass(어태치먼트 · RHI)와 RenderPipeline(프레임 그래프) XML 에셋 캐시입니다.
- * @note FrameRenderer 가 소유합니다. 렌더러 수명을 따르므로 ResourceManager 에 넣지 않습니다.
+ * @note FrameRenderer 가 소유합니다. 렌더러 수명을 따르므로 AssetManager 에 넣지 않습니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"

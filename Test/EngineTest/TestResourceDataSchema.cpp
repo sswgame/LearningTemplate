@@ -4,7 +4,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -40,7 +40,7 @@ namespace
         static bool isPrefab( sw::string_view resourceId ) { return endsWith( resourceId, ".prefab.xml" ) || endsWith( resourceId, ".prefab.json" ); }
         static bool isPipeline( sw::string_view resourceId ) { return startsWith( resourceId, "engine/pipeline/" ) && endsWith( resourceId, ".xml" ); }
         static bool isRenderPass( sw::string_view resourceId ) { return startsWith( resourceId, "engine/renderpass/" ) && endsWith( resourceId, ".xml" ); }
-        static bool isEngineData( sw::string_view resourceId ) { return endsWith( resourceId, "enginedata.xml" ); }
+        static bool isEngineDefaultAssets( sw::string_view resourceId ) { return endsWith( resourceId, "enginedefaultassets.xml" ); }
         static bool isInputMap( sw::string_view resourceId ) { return endsWith( resourceId, ".input.xml" ); }
         static bool isMaterial( sw::string_view resourceId ) { return endsWith( resourceId, ".material" ); }
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
@@ -77,9 +77,9 @@ namespace
             return pass.loadFromXmlFile( resourceId );
         }
 
-        static bool loadEngineData( const sw::string& resourceId )
+        static bool loadEngineDefaultAssets( const sw::string& resourceId )
         {
-            sw::EngineData data;
+            sw::EngineDefaultAssets data;
             return data.loadFromResource( resourceId );
         }
 
@@ -103,14 +103,14 @@ namespace
 
         /** @brief 데이터 종류 표입니다. 앞의 줄이 먼저 맞습니다. */
         static constexpr DataKind kArrDataKind[] = {
-            {     "scene",      &isScene,      &loadScene},
-            {    "prefab",     &isPrefab,     &loadPrefab},
-            {  "pipeline",   &isPipeline,   &loadPipeline},
-            {"renderpass", &isRenderPass, &loadRenderPass},
-            {"enginedata", &isEngineData, &loadEngineData},
-            {  "inputmap",   &isInputMap,   &loadInputMap},
-            {  "material",   &isMaterial,   &loadMaterial},
-            {"spriteclip", &isSpriteClip, &loadSpriteClip},
+            {              "scene",               &isScene,               &loadScene},
+            {             "prefab",              &isPrefab,              &loadPrefab},
+            {           "pipeline",            &isPipeline,            &loadPipeline},
+            {         "renderpass",          &isRenderPass,          &loadRenderPass},
+            {"enginedefaultassets", &isEngineDefaultAssets, &loadEngineDefaultAssets},
+            {           "inputmap",            &isInputMap,            &loadInputMap},
+            {           "material",            &isMaterial,            &loadMaterial},
+            {         "spriteclip",          &isSpriteClip,          &loadSpriteClip},
         };
 
         /** @brief 데이터로 보는 확장자입니다. 이 확장자인데 표의 어느 줄에도 맞지 않는 파일은 시험이 집니다(새 종류가 검사를 비켜 가지 않게). */

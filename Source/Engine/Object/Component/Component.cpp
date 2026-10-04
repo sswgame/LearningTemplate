@@ -40,12 +40,12 @@ namespace sw
         // 뿌리 → 파생 순서로 적용하는 일은 `ComponentDefaults::apply` 가 맡는다.
     }
 
-    void Component::setDefaultGamedataPath( string_view path )
+    void Component::setDefaultGameSettingsPath( string_view path )
     {
         ComponentDefaults::setDefaultsPath( path );
     }
 
-    string Component::getDefaultGamedataPath()
+    string Component::getDefaultGameSettingsPath()
     {
         return ComponentDefaults::getDefaultsPath();
     }

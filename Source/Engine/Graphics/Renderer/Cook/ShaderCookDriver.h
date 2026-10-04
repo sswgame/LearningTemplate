@@ -39,7 +39,7 @@ namespace sw
     struct SW_API ShaderCookDriver
     {
         /**
-         * @brief 렌더 파이프라인 에셋(pipeline XML)과 엔진 부트스트랩 데이터(enginedata.xml)를 바탕으로
+         * @brief 렌더 파이프라인 에셋(pipeline XML)과 엔진 부트스트랩 데이터(enginedefaultassets.xml)를 바탕으로
          *        게임 런타임에 실제로 필요한 셰이더와 퍼뮤테이션만 네 RHI 바이너리로 한꺼번에 쿠킹합니다.
          * @param resourceRoot 리소스 루트 디렉터리(비어 있으면 ResourceUtil 기준으로 자동 탐색)
          * @param targetFormat 대상 포맷(Count 면 DX11, DX12, Vulkan, OpenGL 모두 쿠킹)

@@ -4,7 +4,7 @@
 
 #include "Core/Container/map.h"
 
-#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -15,9 +15,9 @@ namespace sw::editor
 {
     namespace
     {
-        ModuleService      s_editorService{};
-        map<uint64, void*> s_mapLocalService{};
-        EditorData*        s_pEditorData{ nullptr };
+        ModuleService       s_editorService{};
+        map<uint64, void*>  s_mapLocalService{};
+        EditorToolDefaults* s_pEditorToolDefaults{ nullptr };
     } // namespace
 
     void bindEditorService( const ModuleService& service )
@@ -56,7 +56,7 @@ namespace sw::editor
         }
     } // namespace internal
 
-    EditorData& getEditorData()
+    EditorToolDefaults& getEditorToolDefaults()
     {
         // **참조를 반환하는 API 에는 "없다" 고 답할 자리가 없다.** 그런데 `SW_LOG_ASSERT` 는
         // Debug 에서만 멈추고 Release · Shipping 에서는 로그만 남긴 뒤 **그대로 널을 역참조한다.**
@@ -70,18 +70,18 @@ namespace sw::editor
         // `engine::getXxx()` 의 같은 모양은 기본값으로 떨어지지 않는다. 그쪽은 `TaskManager` 같은 하위
         // 시스템이라 지어낼 기본값이 없고, 필수 서비스가 연결됐는지는
         // `CheckEngineServiceBinding` 린트가 따로 지킨다.
-        SW_LOG_ASSERT( s_pEditorData != nullptr, "EditorData is not bound — falling back to defaults" );
-        if ( s_pEditorData == nullptr )
+        SW_LOG_ASSERT( s_pEditorToolDefaults != nullptr, "EditorToolDefaults is not bound — falling back to defaults" );
+        if ( s_pEditorToolDefaults == nullptr )
         {
-            static EditorData s_defaultEditorData{};
-            return s_defaultEditorData;
+            static EditorToolDefaults s_defaultEditorToolDefaults{};
+            return s_defaultEditorToolDefaults;
         }
-        return *s_pEditorData;
+        return *s_pEditorToolDefaults;
     }
 
-    void setEditorData( EditorData* pData )
+    void setEditorToolDefaults( EditorToolDefaults* pData )
     {
-        s_pEditorData = pData;
+        s_pEditorToolDefaults = pData;
     }
 
     Scene* getActiveScene()

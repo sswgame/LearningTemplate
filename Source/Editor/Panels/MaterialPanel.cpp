@@ -17,7 +17,7 @@
 
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 
 #include <imgui.h>
 
@@ -288,8 +288,8 @@ namespace sw::editor
             _status = "Save failed";
             return false;
         }
-        ResourceManager* pResources = editor::getService<ResourceManager>();
-        EditorContext*   pContext   = EditorContext::get();
+        AssetManager*  pResources = editor::getService<AssetManager>();
+        EditorContext* pContext   = EditorContext::get();
         if ( pResources != nullptr && pContext != nullptr )
             pResources->getMaterialManager().reload( getLoadedAssetPath(), pContext->getRhiDevice() );
         applyLivePreview();

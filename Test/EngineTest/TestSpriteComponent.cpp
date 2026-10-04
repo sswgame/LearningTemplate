@@ -11,7 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Resource/SpriteClipCache.h"
 
@@ -62,7 +62,7 @@ SW_TEST_CASE( SpriteComponentTest, SpriteDrawsATexturedQuadWithTheSpriteMaterial
 
     // 스프라이트 머티리얼. 저장된 머티리얼 참조가 비어 있으면 이것이 기본이다.
     SW_ASSERT_NOT_NULL( pSprite->getMaterial() );
-    SW_EXPECT_TRUE( sw::engine::getResourceManager().getMaterialManager().isCached( kSpriteMaterialPath ) );
+    SW_EXPECT_TRUE( sw::engine::getAssetManager().getMaterialManager().isCached( kSpriteMaterialPath ) );
 
     // 텍스처는 그 머티리얼의 인스턴스로 덮어쓴다.
     sw::MaterialInstance* pInstance = pSprite->getRawMaterialInstance();
@@ -235,8 +235,8 @@ SW_TEST_CASE( SpriteComponentTest, ReloadedClipReachesSpritesThatHoldIt )
     SW_ASSERT_TRUE( clip.saveToFile( clipPath ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, sw::SpriteClipCache::acquire( clipPath )->findFrame( 1 )->_uvRect._x, 1e-4f ); // 사용 중에는 캐시가 옛 내용을 준다
 
-    sw::ResourceManager resources;
-    sw::IAssetCache*    pCache = resources.findAssetCache( "SpriteClip" );
+    sw::AssetManager resources;
+    sw::IAssetCache* pCache = resources.findAssetCache( "SpriteClip" );
     SW_ASSERT_NOT_NULL( pCache );
     SW_EXPECT_TRUE( pCache->isCached( clipPath ) );
     pCache->reload( clipPath, nullptr );

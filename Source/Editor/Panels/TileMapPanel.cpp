@@ -6,7 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
-#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -46,11 +46,11 @@ namespace sw::editor
         , _flagLayer{ TileFlagLayer::Walkable }
         , _bErase{ false }
     {
-        const EditorData& editorData = editor::getEditorData();
-        if ( editorData._defaultMap.empty() == false )
-            _pathBuffer = editorData._defaultMap.c_str();
-        if ( editorData._warpMap.empty() == false )
-            _warpTarget = editorData._warpMap.c_str();
+        const EditorToolDefaults& editorToolDefaults = editor::getEditorToolDefaults();
+        if ( editorToolDefaults._defaultMap.empty() == false )
+            _pathBuffer = editorToolDefaults._defaultMap.c_str();
+        if ( editorToolDefaults._warpMap.empty() == false )
+            _warpTarget = editorToolDefaults._warpMap.c_str();
         resize( 8, 8 );
     }
 

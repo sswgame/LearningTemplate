@@ -61,9 +61,9 @@
 					                _attachOwner="None"
 					                _attachComponent="None" />
 					<DamageNumberComponent _damageValue="123"
-					                   _lifeTime="0"
-					                   _floatSpeed="0"
-					                   _glyphSize="0.42,0.56" />
+					                       _lifeTime="0"
+					                       _floatSpeed="0"
+					                       _glyphSize="0.42,0.56" />
 				</_listComponent>
 			</GameObject>
 		</entity>

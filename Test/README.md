@@ -203,7 +203,7 @@ SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [bHadCodec]()
 } ) );
 ```
 
-Cleanup은 등록한 역순으로 실행됩니다. ResourceManager 전체 shutdown이나 전역 Scene 초기화처럼
+Cleanup은 등록한 역순으로 실행됩니다. AssetManager 전체 shutdown이나 전역 Scene 초기화처럼
 다른 테스트와 엔진 서비스에 영향을 주는 작업은 자동으로 수행하지 않습니다.
 
 **오브젝트는 지역 `GameObjectManager` 로 만듭니다.** 전역 활성 씬을 빌리면 테스트끼리 상태가 샙니다.

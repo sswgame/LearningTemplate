@@ -20,7 +20,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -185,7 +185,7 @@ namespace sw::editor
         string previousAcquiredPath;
         if ( assetPath.empty() == false )
         {
-            ResourceManager* pResources = editor::getService<ResourceManager>();
+            AssetManager* pResources = editor::getService<AssetManager>();
             if ( pResources != nullptr )
             {
                 // 같은 경로를 다시 걸 때는 이미 들고 있는 참조를 그대로 쓴다. 부를 때마다 올리면 편집 한 번에 참조가 하나씩 쌓이고,
@@ -226,7 +226,7 @@ namespace sw::editor
         // 메시가 아직 그 포인터를 들고 있을 수 있다.
         if ( previousAcquiredPath.empty() == false )
         {
-            ResourceManager* pResources = editor::getService<ResourceManager>();
+            AssetManager* pResources = editor::getService<AssetManager>();
             if ( pResources != nullptr )
                 pResources->getMaterialManager().release( previousAcquiredPath );
         }

@@ -10,7 +10,7 @@
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
@@ -47,7 +47,7 @@ namespace sw
                     return;
 
                 string resolved;
-                if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
+                if ( engine::getAssetManager().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
                     node._prefab = std::move( resolved );
             }
         };
@@ -178,7 +178,7 @@ namespace sw
             else if ( entity._prefab.empty() == false && engine::areEngineServicesBound() )
             {
                 Uuid prefabGuid{};
-                if ( engine::getResourceManager().getAssetDatabase().tryGetGuid( entity._prefab, prefabGuid ) && prefabGuid.isNull() == false )
+                if ( engine::getAssetManager().getAssetDatabase().tryGetGuid( entity._prefab, prefabGuid ) && prefabGuid.isNull() == false )
                     sceneObjectNode.appendAttribute( "prefabGuid", prefabGuid.toString() );
             }
             if ( entity._prefabOverrideXml.empty() == false )
@@ -325,7 +325,7 @@ namespace sw
             if ( prefabGuid.empty() && entity._prefab.empty() == false && engine::areEngineServicesBound() )
             {
                 Uuid resolvedGuid{};
-                if ( engine::getResourceManager().getAssetDatabase().tryGetGuid( entity._prefab, resolvedGuid ) && resolvedGuid.isNull() == false )
+                if ( engine::getAssetManager().getAssetDatabase().tryGetGuid( entity._prefab, resolvedGuid ) && resolvedGuid.isNull() == false )
                     prefabGuid = resolvedGuid.toString();
             }
 

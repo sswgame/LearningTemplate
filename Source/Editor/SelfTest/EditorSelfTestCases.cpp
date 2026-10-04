@@ -19,7 +19,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -233,7 +233,7 @@ namespace sw::editor
                 constexpr const utf8* kFirstPath  = "engine/materials/benchtextured.material";
                 constexpr const utf8* kSecondPath = "engine/materials/sprite2d.material";
 
-                ResourceManager* pResources = editor::getService<ResourceManager>();
+                AssetManager* pResources = editor::getService<AssetManager>();
                 if ( context.expect( pResources != nullptr, "no resource manager" ) == false )
                     return EditorSelfTestStep::Done;
                 const MaterialCache& cache = pResources->getMaterialManager();

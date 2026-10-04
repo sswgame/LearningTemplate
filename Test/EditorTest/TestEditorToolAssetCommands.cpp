@@ -17,7 +17,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -315,7 +315,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
         prefab.setFromGameObject( pSource );
         SW_ASSERT_TRUE( prefab.saveToXmlFile( prefabPath ) );
         SW_ASSERT_TRUE( prefab.saveToBinaryFile( AssetCookPath::toCookedPath( prefabPath ) ) ); // 배포본은 쿠킹본만 읽는다
-        engine::getResourceManager().getPrefabCache().reload( prefabPath );
+        engine::getAssetManager().getPrefabCache().reload( prefabPath );
     }
 
     SceneManager manager;
@@ -341,7 +341,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
     SW_ASSERT_NOT_NULL( pInstance );
     GameObjectManager scratch;
     GameObject*       pCdo    = scratch.createGameObject( hashed_string( "Cdo" ) );
-    PrefabAsset*      pPrefab = engine::getResourceManager().getPrefabCache().loadPrefab( prefabPath );
+    PrefabAsset*      pPrefab = engine::getAssetManager().getPrefabCache().loadPrefab( prefabPath );
     SW_ASSERT_TRUE( pPrefab != nullptr && pPrefab->applyStateTo( pCdo ) );
 
     vector<PrefabOverrideItem> listOverride;

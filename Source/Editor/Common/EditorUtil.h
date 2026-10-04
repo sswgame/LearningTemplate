@@ -43,7 +43,7 @@ namespace sw::editor
 
         /**
          * @brief 호스트 상대 경로를 프로젝트 루트 기준 절대 경로로 만듭니다. 이미 절대 경로면 그대로 둡니다.
-         * @details 설정 파일을 다루는 곳(`EditorConfig::loadFromHost` · `saveToHost` · `EditorData::loadFromHostPath`)이 함께 씁니다.
+         * @details 설정 파일을 다루는 곳(`EditorConfig::loadFromHost` · `saveToHost` · `EditorToolDefaults::loadFromHostPath`)이 함께 씁니다.
          *          "절대 경로인가" 는 `FileUtil::isAbsolutePath` 로 판정합니다(손 판정은 드라이브 문자 검사 같은 것을 빠뜨리기 쉽습니다).
          * @return 프로젝트 루트를 찾지 못하면 구분자만 정규화한 입력을 그대로 반환합니다.
          */

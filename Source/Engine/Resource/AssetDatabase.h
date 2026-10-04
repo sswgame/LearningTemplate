@@ -104,7 +104,7 @@ namespace sw
         static string makeRegistryText( string_view resourceRoot, string_view domain, uint32& outFailedCount );
         /**
          * @brief 리소스 루트의 도메인마다(`engine` · `common` · `game/<이름>` …) `<cookedDir>/<domain>/assetregistry.txt` 를 씁니다. 쓴 파일 수를 돌려줍니다.
-         * @details 팩 하나가 도메인 하나이고, 런타임은 도메인마다 이 파일을 읽습니다(`ResourceManager::loadAssetRegistries`). `.meta` 가 없는 도메인은 건너뜁니다.
+         * @details 팩 하나가 도메인 하나이고, 런타임은 도메인마다 이 파일을 읽습니다(`AssetManager::loadAssetRegistries`). `.meta` 가 없는 도메인은 건너뜁니다.
          */
         static uint32 writeRegistryFiles( string_view resourceRoot, string_view cookedDir, uint32& outFailedCount );
 

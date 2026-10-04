@@ -17,7 +17,7 @@ Shader/
 - `ShaderCompiler` — DXC / D3DCompiler 로 HLSL 을 DXIL · SPIR-V · DXBC 로 만듭니다. Vulkan SPIR-V 타깃 판은
   `RHI/Vulkan/VulkanRHIApiVersion.h`(1.3 → SPIR-V 1.6)이 정합니다 — 디바이스 최소 판과 같은 값입니다. GL 용 SPIR-V 는 `vulkan1.1` 타깃입니다.
 - `ShaderCache` — (경로 + define + 타깃) → 컴파일 결과. 쿠킹된 바이너리 · 로컬 라이브 캐시(`Saved/ShaderCache/`) · 실시간 컴파일
-  세 갈래가 같은 항목을 만들고, 쿠킹된 파일 이름에는 퍼뮤테이션 해시가 들어갑니다. `ResourceManager` 의 에셋 캐시가 아닙니다 —
+  세 갈래가 같은 항목을 만들고, 쿠킹된 파일 이름에는 퍼뮤테이션 해시가 들어갑니다. `AssetManager` 의 에셋 캐시가 아닙니다 —
   셰이더 바이트코드는 RHI/컴파일러 수명입니다. `shutdown` 이 리플렉션 매니페스트 캐시도 비웁니다.
 - `ShaderCooker` — 오프라인 쿠킹의 **메커니즘**. 한 장을 쿠킹하고 이름을 짓는다. "무엇을 쿠킹할지" 와
   "전부 쿠킹"(`App.exe --cook-shaders` 가 부르는 것)는 파이프라인 XML 과 패스 종류를 아는 렌더러의 정책이라

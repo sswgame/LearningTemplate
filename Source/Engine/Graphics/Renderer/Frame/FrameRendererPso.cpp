@@ -77,7 +77,7 @@ namespace sw
         // 셰이더와 define 은 쿠커와 **같은 함수**(selectRenderPassShader)로 정한다 — 어긋나면 Shipping 에서 매니페스트 미스가 난다.
         const RenderPassTypeInfo&       info               = getRenderPassTypeInfo( passType );
         const RenderGraphPassDesc*      pPassDesc          = findPassDescByType( passType );
-        const RenderPassShaderSelection shader             = selectRenderPassShader( passType, pPassDesc, engine::getEngineData() );
+        const RenderPassShaderSelection shader             = selectRenderPassShader( passType, pPassDesc, engine::getEngineDefaultAssets() );
         const bool                      bDepthTest         = info.hasFlag( RenderPassTraitFlag::kDepthTest );
         const bool                      bDefaultDepthWrite = info.hasFlag( RenderPassTraitFlag::kDepthWrite );
         const bool                      bDefaultBlend      = info.hasFlag( RenderPassTraitFlag::kBlend );

@@ -53,7 +53,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        string _engineData{ "engine/data/enginedata.xml" }; ///< 엔진 셸 부트스트랩 XML(리소스 경로)
+        string _engineDefaultAssets{ "engine/data/enginedefaultassets.xml" }; ///< 엔진 셸 부트스트랩 XML(리소스 경로)
 
         PROPERTY()
         WindowConfig _window; ///< 창·백엔드 설정

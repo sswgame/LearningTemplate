@@ -10,7 +10,7 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
-#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -28,7 +28,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -48,13 +48,13 @@ namespace sw::editor
          */
         struct ToolDocumentDesc
         {
-            const utf8* _pLabel;                ///< "animation graph" — 로그 · 상태 문구에 들어간다
-            string EditorData::* _pDefaultFile; ///< 경로가 비었을 때 여는 기본 파일(`EditorData` 칸). nullptr 이면 기본 문서가 없다
+            const utf8* _pLabel;                        ///< "animation graph" — 로그 · 상태 문구에 들어간다
+            string EditorToolDefaults::* _pDefaultFile; ///< 경로가 비었을 때 여는 기본 파일(`EditorToolDefaults` 칸). nullptr 이면 기본 문서가 없다
         };
 
-        constexpr ToolDocumentDesc kAnimGraphDocument{ "animation graph", &EditorData::_animGraphDataFile };
-        constexpr ToolDocumentDesc kDialogueGraphDocument{ "dialogue graph", &EditorData::_dialogueGraphDataFile };
-        constexpr ToolDocumentDesc kSpriteClipDocument{ "sprite clip", &EditorData::_spriteClipFile };
+        constexpr ToolDocumentDesc kAnimGraphDocument{ "animation graph", &EditorToolDefaults::_animGraphDataFile };
+        constexpr ToolDocumentDesc kDialogueGraphDocument{ "dialogue graph", &EditorToolDefaults::_dialogueGraphDataFile };
+        constexpr ToolDocumentDesc kSpriteClipDocument{ "sprite clip", &EditorToolDefaults::_spriteClipFile };
         constexpr ToolDocumentDesc kTileMapDocument{ "tile map", nullptr };
         constexpr ToolDocumentDesc kSequenceDocument{ "sequence", nullptr };
 
@@ -81,7 +81,7 @@ namespace sw::editor
                     return resolveExistingOrRelativePath( path );
                 if ( desc._pDefaultFile == nullptr )
                     return {};
-                return EditorUtil::resolveEditorConfigFile( ( getEditorData().*desc._pDefaultFile ).c_str() );
+                return EditorUtil::resolveEditorConfigFile( ( getEditorToolDefaults().*desc._pDefaultFile ).c_str() );
             }
 
             template <typename TAsset>
@@ -236,7 +236,7 @@ namespace sw::editor
         if ( outPrefabPath.empty() && pContext != nullptr )
             outPrefabPath = pContext->getWorkspace().getFocusedAssetPath();
 
-        ResourceManager* pResources = editor::getService<ResourceManager>();
+        AssetManager* pResources = editor::getService<AssetManager>();
         if ( pResources == nullptr || outPrefabPath.empty() )
             return;
 
@@ -301,7 +301,7 @@ namespace sw::editor
             return;
         }
 
-        ResourceManager* pResources = editor::getService<ResourceManager>();
+        AssetManager* pResources = editor::getService<AssetManager>();
         if ( pResources == nullptr )
             return;
         PrefabAsset* pLoaded = pResources->getPrefabCache().loadPrefab( prefabPath );

@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Json/JsonDocument.h"
@@ -39,7 +39,7 @@ namespace sw
                     return resolvedPath;
 
                 string mappedPath;
-                if ( engine::getResourceManager().getAssetDatabase().tryGetPath( guid, mappedPath ) && mappedPath.empty() == false )
+                if ( engine::getAssetManager().getAssetDatabase().tryGetPath( guid, mappedPath ) && mappedPath.empty() == false )
                     resolvedPath = std::move( mappedPath );
                 return resolvedPath;
             }
@@ -320,7 +320,7 @@ namespace sw
         }
 
         if ( engine::areEngineServicesBound() )
-            engine::getResourceManager().getAssetDatabase().ensureMeta( assetRelativePath );
+            engine::getAssetManager().getAssetDatabase().ensureMeta( assetRelativePath );
         SW_LOG_INFO( "Saved '%#' -> %#", _name, absPath );
         return true;
     }
@@ -348,7 +348,7 @@ namespace sw
         }
 
         if ( engine::areEngineServicesBound() )
-            engine::getResourceManager().getAssetDatabase().ensureMeta( assetRelativePath );
+            engine::getAssetManager().getAssetDatabase().ensureMeta( assetRelativePath );
         SW_LOG_INFO( "Saved '%#' JSON %#", _name, absPath );
         return true;
     }
@@ -497,7 +497,7 @@ namespace sw
 
         // 배포 구성은 쿠킹본만 읽는다. 소스 트리를 올린 쿠킹(`ContentSource::SourceTree`)만 소스를 읽는다 — 쿠킹의 입력은 소스다.
 #if defined( SW_SHIPPING )
-        const bool bReadsSource = engine::areEngineServicesBound() && engine::getResourceManager().getContentSource() == ContentSource::SourceTree;
+        const bool bReadsSource = engine::areEngineServicesBound() && engine::getAssetManager().getContentSource() == ContentSource::SourceTree;
 #else
         constexpr bool bReadsSource = true;
 #endif

@@ -99,11 +99,11 @@ namespace sw
         }
 
         /**
-         * @brief `ResourceManager` 를 종료하고 해제합니다. 호스트의 Resource 단계 해제(`destroy`)가 부릅니다.
+         * @brief `AssetManager` 를 종료하고 해제합니다. 호스트의 Resource 단계 해제(`destroy`)가 부릅니다.
          * @details 에셋 캐시를 비우므로 에셋을 든 다른 매니저가 모두 해제된 **뒤**여야 합니다. 표에서 Resource 는 Scene · Audio · Input ·
          *          렌더러보다 먼저 서므로 역순 해제에서 자연히 그 뒤입니다.
          */
-        void destroyResourceManager();
+        void destroyAssetManager();
         /**
          * @brief 코덱 레지스트리를 Core 슬롯에서 떼고 해제합니다. 호스트의 Compression 단계 해제가 부릅니다.
          * @details 슬롯이 이 레지스트리를 가리키면 먼저 비웁니다. 그 뒤의 압축 경로(`CompressionStream`)는 내장 코덱만 씁니다.

@@ -7,7 +7,7 @@
         "_defaultRHI": "DirectX12",
         "_clearColor": "0.12,0.15,0.18,1"
     },
-    "_engineData": "engine/data/enginedata.xml",
+    "_engineDefaultAssets": "engine/data/enginedefaultassets.xml",
     "_maxFrameDeltaTime": 0.1,
     "_listResourcePriority": [
         "game",

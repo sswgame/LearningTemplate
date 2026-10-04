@@ -9,7 +9,7 @@
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
@@ -18,8 +18,8 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
@@ -90,7 +90,7 @@ namespace sw
         template <>
         constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<SceneManager> = MemoryTag::Scene;
         template <>
-        constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<ResourceManager> = MemoryTag::Asset;
+        constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<AssetManager> = MemoryTag::Asset;
         template <>
         constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<AssetStreamingQueue> = MemoryTag::Asset;
         template <>
@@ -121,11 +121,11 @@ namespace sw
 #undef SW_ENGINE_SERVICE_OPT
     }
 
-    void EngineServiceCollection::destroyResourceManager()
+    void EngineServiceCollection::destroyAssetManager()
     {
-        if ( _pResourceManager != nullptr )
-            _pResourceManager->shutdown();
-        _pResourceManager.reset();
+        if ( _pAssetManager != nullptr )
+            _pAssetManager->shutdown();
+        _pAssetManager.reset();
     }
 
     void EngineServiceCollection::destroyCompressionCodecRegistry()

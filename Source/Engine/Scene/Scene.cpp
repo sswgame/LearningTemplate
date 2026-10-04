@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
@@ -18,17 +18,17 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/SceneDocument.h"
 
 namespace sw
 {
     /**
-     * @brief `-gv_defaultMaterial=<path>`: 씬 기본 머티리얼을 EngineData 대신 이 경로로 정합니다.
+     * @brief `-gv_defaultMaterial=<path>`: 씬 기본 머티리얼을 EngineDefaultAssets 대신 이 경로로 정합니다.
      * @details 벤치 · 시각 검증용입니다(예: engine/materials/benchtextured.material 로 텍스처 샘플링 경로를 봅니다).
-     *          비어 있으면 EngineData._defaultMaterial 을 씁니다.
+     *          비어 있으면 EngineDefaultAssets._defaultMaterial 을 씁니다.
      */
-    SW_GLOBAL_VARIABLE_STRING( gv_defaultMaterial, "", "씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineData)" );
+    SW_GLOBAL_VARIABLE_STRING( gv_defaultMaterial, "", "씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineDefaultAssets)" );
 
     namespace
     {
@@ -42,7 +42,7 @@ namespace sw
                 // -gv_defaultMaterial 이 있으면 그것이 먼저다(선언은 이 파일 위쪽).
                 if ( gv_defaultMaterial.empty() == false )
                     return gv_defaultMaterial;
-                return engine::getEngineData()._defaultMaterial;
+                return engine::getEngineDefaultAssets()._defaultMaterial;
             }
 
             /**
@@ -70,7 +70,7 @@ namespace sw
                     if ( pMeshComp->getMaterial() == nullptr && pMeshComp->getRawMaterialInstance() == nullptr && pDefaultMaterial != nullptr )
                         pMeshComp->setMaterial( pDefaultMaterial );
                 } );
-                engine::getResourceManager().getMaterialManager().initializePending( pRhiDevice );
+                engine::getAssetManager().getMaterialManager().initializePending( pRhiDevice );
                 pObjectManager->flushSceneTransforms();
             }
 
@@ -107,7 +107,7 @@ namespace sw
                     return cachedIt->second.empty() ? nullptr : &cachedIt->second;
 
                 string             baseState;
-                const PrefabAsset* pPrefab = engine::getResourceManager().getPrefabCache().loadPrefab( prefabPath );
+                const PrefabAsset* pPrefab = engine::getAssetManager().getPrefabCache().loadPrefab( prefabPath );
                 if ( pPrefab != nullptr && PrefabOverrides::makeBaseState( *pPrefab, baseState ) == false )
                 {
                     SW_LOG_WARNING( "Prefab '%#' could not be built as a base state", prefabPath );
@@ -152,7 +152,7 @@ namespace sw
             {
                 releaseDefaultMaterial();
                 _defaultMaterialPath = materialPath;
-                _pMaterial           = engine::getResourceManager().getMaterialManager().acquire( materialPath, pRhiDevice );
+                _pMaterial           = engine::getAssetManager().getMaterialManager().acquire( materialPath, pRhiDevice );
                 if ( _pMaterial == nullptr )
                 {
                     SW_LOG_ERROR( "Failed to acquire Material from %#", materialPath );
@@ -193,7 +193,7 @@ namespace sw
                 bool       bStateMade     = false;
                 if ( bHasSavedState )
                 {
-                    bStateMade = engine::getResourceManager().getPrefabCache().loadPrefab( entity._prefab ) != nullptr;
+                    bStateMade = engine::getAssetManager().getPrefabCache().loadPrefab( entity._prefab ) != nullptr;
                 }
                 else
                 {
@@ -309,7 +309,7 @@ namespace sw
 
             if ( node._prefab.empty() == false && engine::areEngineServicesBound() )
             {
-                const Uuid guid = engine::getResourceManager().getAssetDatabase().ensureMeta( node._prefab );
+                const Uuid guid = engine::getAssetManager().getAssetDatabase().ensureMeta( node._prefab );
                 if ( guid.isNull() == false )
                     node._prefabGuid = guid.toString();
             }
@@ -459,7 +459,7 @@ namespace sw
     void Scene::releaseDefaultMaterial()
     {
         if ( _defaultMaterialPath.empty() == false )
-            engine::getResourceManager().getMaterialManager().release( _defaultMaterialPath );
+            engine::getAssetManager().getMaterialManager().release( _defaultMaterialPath );
         _pMaterial = nullptr;
         _defaultMaterialPath.clear();
     }

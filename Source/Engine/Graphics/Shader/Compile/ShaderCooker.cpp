@@ -11,7 +11,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

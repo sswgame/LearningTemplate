@@ -1,5 +1,5 @@
 /**
- * @file ResourceManager.h
+ * @file AssetManager.h
  * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 로 소유합니다.
  * @note
  *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, ResourcePackManager.
@@ -31,7 +31,7 @@ namespace sw
     class SpriteClipCache;
     class TextureCache;
 
-    /** @brief `ResourceManager::mountContent` 가 무엇을 콘텐츠로 올리는지입니다. */
+    /** @brief `AssetManager::mountContent` 가 무엇을 콘텐츠로 올리는지입니다. */
     enum class ContentSource : uint8
     {
         Cooked,     ///< 실행 — 쿠킹한 팩을 마운트한다. 느슨한 `Resource/` 파일은 개발 구성에서만 읽는다
@@ -39,19 +39,19 @@ namespace sw
     };
 
     /**
-     * @class ResourceManager
+     * @class AssetManager
      * @brief 에셋 식별 · 스키마 · 인스턴스 캐시와 VFS 팩 매니저를 한 객체로 소유합니다.
      */
-    class SW_API ResourceManager final : public IModuleUnloadListener
+    class SW_API AssetManager final : public IModuleUnloadListener
     {
     public:
         /** @brief 빈 매니저로 만듭니다. initialize() 전에 바인딩해도 됩니다. */
-        ResourceManager();
+        AssetManager();
         /** @brief 캐시를 해제합니다. */
-        ~ResourceManager() override;
+        ~AssetManager() override;
 
-        ResourceManager( const ResourceManager& )            = delete;
-        ResourceManager& operator=( const ResourceManager& ) = delete;
+        AssetManager( const AssetManager& )            = delete;
+        AssetManager& operator=( const AssetManager& ) = delete;
 
         /**
          * @brief Resource/ 검색 루트를 잡고 내장 XML migrator 를 등록합니다. 팩 마운트는 `mountContent` 가 합니다.

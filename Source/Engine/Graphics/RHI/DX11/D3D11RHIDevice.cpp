@@ -9,7 +9,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
 
     #include "Engine/Common/EnginePlatformHeaders.h"
-    #include "Engine/Config/EngineData.h"
+    #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiMemoryBudget.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"

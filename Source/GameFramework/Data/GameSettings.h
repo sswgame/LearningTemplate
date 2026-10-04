@@ -1,5 +1,5 @@
 /**
- * @file GameData.h
+ * @file GameSettings.h
  * @brief 게임플레이 씬 흐름 · 다국어 · 입력 · 세이브 부트스트랩과 커스텀 게임 데이터입니다.
  */
 #pragma once
@@ -14,7 +14,7 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) GameData — 씬 흐름 · 입력 · 다국어 · 세이브 부트스트랩과 범용 커스텀 설정
+    // 1) GameSettings — 씬 흐름 · 입력 · 다국어 · 세이브 부트스트랩과 범용 커스텀 설정
     // ------------------------------------------------------------------------------
     /**
      * @brief 씬 흐름 · 기본 세이브 · 다국어 · 입력과 범용 게임플레이 튜닝 설정입니다.
@@ -22,7 +22,7 @@ namespace sw
      *          다국어 · 입력 맵을 적용하며, 씬 칸은 `getFirstScene` · `getEntranceScene`, 세이브 경로는 경로 없는 `saveStateToFile` 이 씁니다.
      */
     REFLECT()
-    struct SW_GF_API GameData
+    struct SW_GF_API GameSettings
     {
     public:
         REFLECT_BODY();
@@ -74,9 +74,9 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) BootstrapConfig — 팩 루트 + GameData
+    // 2) BootstrapConfig — 팩 루트 + GameSettings
     // ------------------------------------------------------------------------------
-    /** @brief Resource 아래 팩 루트와 gamedata 로딩입니다. */
+    /** @brief Resource 아래 팩 루트와 gamesettings 로딩입니다. */
     REFLECT()
     struct SW_GF_API BootstrapConfig
     {
@@ -87,12 +87,12 @@ namespace sw
         string _packRoot{}; ///< Resource 상대 팩 폴더
 
         PROPERTY()
-        GameData _data{}; ///< `{packRoot}/data/gamedata.xml` 테이블
+        GameSettings _data{}; ///< `{packRoot}/data/gamesettings.xml` 테이블
 
         /** @brief packRoot 아래 상대 경로를 Resource 상대 경로로 만듭니다. */
         string resolve( string_view packRelative ) const;
 
-        /** @brief `{packRoot}/data/gamedata.xml` 을 읽고, 그 경로를 컴포넌트 기본값 경로(`Component::setDefaultGamedataPath`)로 등록합니다. */
-        [[nodiscard]] bool load( string_view gamedataFileName = "data/gamedata.xml" );
+        /** @brief `{packRoot}/data/gamesettings.xml` 을 읽고, 그 경로를 컴포넌트 기본값 경로(`Component::setDefaultGameSettingsPath`)로 등록합니다. */
+        [[nodiscard]] bool load( string_view gameSettingsFileName = "data/gamesettings.xml" );
     };
 } // namespace sw

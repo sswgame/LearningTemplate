@@ -39,7 +39,7 @@ SW_ENGINE_SERVICE( _pSceneManager, class, SceneManager, getSceneManager, Require
 SW_ENGINE_SERVICE( _pInputManager, class, InputManager, getInputManager, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pAudioSystem, class, IAudioSystem, getAudioSystem, Required, GameVisible, HostCreated )
 SW_ENGINE_SERVICE( _pEventDispatcher, class, EventDispatcher, getEventDispatcher, Required, GameVisible, EngineCreated )
-SW_ENGINE_SERVICE( _pResourceManager, class, ResourceManager, getResourceManager, Required, GameVisible, EngineCreated )
+SW_ENGINE_SERVICE( _pAssetManager, class, AssetManager, getAssetManager, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pAssetStreamingQueue, class, AssetStreamingQueue, getAssetStreamingQueue, Required, HostOnly, EngineCreated )
 // CommandStack 은 에디터 Undo/Redo 전용이라 Shipping 에서는 아예 만들지 않는다
 // (EngineLoop 의 #if !defined(SW_SHIPPING) 참고). 그런데 Required 면
@@ -56,7 +56,7 @@ SW_ENGINE_SERVICE( _pComponentDefaults, class, ComponentDefaults, getComponentDe
 SW_ENGINE_SERVICE( _pFrameProfiler, class, FrameProfiler, getFrameProfiler, Required, GameVisible, EngineCreated )
 
 
-SW_ENGINE_SERVICE_CONST( _pEngineData, struct, EngineData, getEngineData, Required, HostOnly, EngineCreated )
+SW_ENGINE_SERVICE_CONST( _pEngineDefaultAssets, struct, EngineDefaultAssets, getEngineDefaultAssets, Required, HostOnly, EngineCreated )
 
 SW_ENGINE_SERVICE_OPT( _pMemoryProfiler, class, MemoryProfiler, getMemoryProfiler, HostOnly, HostCreated )
 // 렌더 타깃 목록. 렌더러가 공개하고 에디터 패널이 읽는다(패널은 렌더러 내부 상태 대신 이 목록만 본다).

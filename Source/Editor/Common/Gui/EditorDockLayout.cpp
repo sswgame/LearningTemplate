@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
@@ -95,9 +95,9 @@ namespace sw::editor
         _imguiIniPath.clear();
         _windowsIniPath.clear();
 
-        const EditorData& data        = getEditorData();
-        const string      imguiPath   = EditorUtil::resolveEditorConfigFile( data._imguiIniFile.c_str() );
-        const string      windowsPath = EditorUtil::resolveEditorConfigFile( data._windowsIniFile.c_str() );
+        const EditorToolDefaults& data        = getEditorToolDefaults();
+        const string              imguiPath   = EditorUtil::resolveEditorConfigFile( data._imguiIniFile.c_str() );
+        const string              windowsPath = EditorUtil::resolveEditorConfigFile( data._windowsIniFile.c_str() );
         if ( imguiPath.empty() || windowsPath.empty() )
         {
             SW_LOG_WARNING( "Failed to resolve Config/Editor - layout will not persist." );

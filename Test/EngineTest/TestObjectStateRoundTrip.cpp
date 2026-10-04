@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -75,7 +75,10 @@ namespace sw
         int32 _kept{ 0 };
         int32 _dropped{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     const TypeInfo* SchemaShiftComponent::StaticType()
     {
         static const TypeInfo* s_pType = []()
@@ -240,7 +243,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXml )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
-    sw::MaterialCache&    cache = sw::engine::getResourceManager().getMaterialManager();
+    sw::MaterialCache&    cache = sw::engine::getAssetManager().getMaterialManager();
     SW_ASSERT_TRUE_MSG( cache.isCached( kPath ) == false, "다른 시험이 이 머티리얼을 잡고 있다 — 참조 검사가 비었다" );
 
     sw::GameObjectManager manager;

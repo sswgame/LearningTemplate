@@ -196,7 +196,7 @@ namespace sw
         // 개발 중 한 번씩 일어나는 일이므로, 그 순간에 생성이 돌지 않게 하는 것은 부르는
         // 쪽의 몫이다.
 
-        // 어느 프로퍼티에 무엇을 넣을지는 **타입당 한 번만** 푼다(문서의 GameData · Defaults 찾기도 그때 한 번). 인스턴스마다는 memcpy
+        // 어느 프로퍼티에 무엇을 넣을지는 **타입당 한 번만** 푼다(문서의 GameSettings · Defaults 찾기도 그때 한 번). 인스턴스마다는 memcpy
         // 몇 번이다.
         const ResolvedDefaults& resolved = resolveFor( typeInfo );
         for ( const DefaultPatch& patch : resolved._listPatch )
@@ -220,7 +220,7 @@ namespace sw
         vector<const TypeInfo*> listType;
         ComponentDefaultsInternal::collectTypeChain( typeInfo, listType );
 
-        const XmlNode root         = _defaultsDoc.getRoot( "GameData" );
+        const XmlNode root         = _defaultsDoc.getRoot( "GameSettings" );
         const XmlNode defaultsNode = root.isValid() ? root.findChild( "Defaults" ) : XmlNode{};
 
         for ( const TypeInfo* pLevelType : listType )

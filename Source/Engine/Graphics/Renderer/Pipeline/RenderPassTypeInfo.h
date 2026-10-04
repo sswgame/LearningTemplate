@@ -13,7 +13,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Common/Common.h"
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassInputSignature.h"
@@ -68,8 +68,8 @@ namespace sw
      */
     struct RenderPassTypeInfo
     {
-        /** @brief 파이프라인 XML 이 `_shaderPath` 를 적지 않았을 때 쓰는 셰이더입니다(EngineData 의 칸). nullptr 이면 엔진 PSO 가 없습니다. */
-        string EngineData::* _pDefaultShader{ nullptr };
+        /** @brief 파이프라인 XML 이 `_shaderPath` 를 적지 않았을 때 쓰는 셰이더입니다(EngineDefaultAssets 의 칸). nullptr 이면 엔진 PSO 가 없습니다. */
+        string EngineDefaultAssets::* _pDefaultShader{ nullptr };
         /** @brief 패스가 셰이더에 얹는 define 입니다. 파이프라인 XML 의 `_listPermutation` 뒤에 붙습니다. nullptr 이면 없습니다. */
         const utf8* _pPassDefine{ nullptr };
         /** @brief 고정 컬러 포맷(`_colorTargetCount` 개)입니다. nullptr 이면 패스가 선언한 출력의 포맷을 씁니다. */
@@ -114,5 +114,5 @@ namespace sw
      *          아무도 쿠킹하지 않아 Shipping 에서 그 패스의 드로우가 사라집니다.
      * @param pPassDesc 파이프라인의 패스 서술(nullptr 이면 표의 기본값만 씁니다)
      */
-    SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const EngineData& engineData );
+    SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const EngineDefaultAssets& engineDefaultAssets );
 } // namespace sw

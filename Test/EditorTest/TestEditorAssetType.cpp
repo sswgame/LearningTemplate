@@ -7,8 +7,8 @@
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/IAssetCache.h"
-#include "Engine/Resource/ResourceManager.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -206,22 +206,22 @@ SW_TEST_CASE( EditorAssetTypeTest, HierarchyBadgeComesFromReflectionCategory )
 
 /**
  * @brief [EditorAssetTypeTest] 프로젝트 상대 경로 해석은 이미 절대인 경로를 건드리지 않는다
- * @details 설정 파일을 다루는 세 곳(EditorConfig 의 load/save, `EditorData::loadFromHostPath`)이 이 함수 하나를 쓴다.
+ * @details 설정 파일을 다루는 세 곳(EditorConfig 의 load/save, `EditorToolDefaults::loadFromHostPath`)이 이 함수 하나를 쓴다.
  *          "절대 경로인가" 를 손으로 다시 적으면 `FileUtil::isAbsolutePath` 와 어긋나기 쉽다(드라이브 문자가 글자인지 보지 않는 식).
  */
 SW_TEST_CASE( EditorAssetTypeTest, ProjectRelativePathLeavesAbsoluteAlone )
 {
     // 절대 경로는 구분자만 정규화되고 그대로 나온다 — 프로젝트 루트가 앞에 붙지 않는다.
-    const sw::string driveAbs = sw::editor::EditorUtil::resolveProjectRelativePath( "C:\\Temp\\editordata.json" );
-    SW_EXPECT_STREQ( "C:/Temp/editordata.json", driveAbs.c_str() );
+    const sw::string driveAbs = sw::editor::EditorUtil::resolveProjectRelativePath( "C:\\Temp\\editortooldefaults.json" );
+    SW_EXPECT_STREQ( "C:/Temp/editortooldefaults.json", driveAbs.c_str() );
 
-    const sw::string rootAbs = sw::editor::EditorUtil::resolveProjectRelativePath( "/var/tmp/editordata.json" );
-    SW_EXPECT_STREQ( "/var/tmp/editordata.json", rootAbs.c_str() );
+    const sw::string rootAbs = sw::editor::EditorUtil::resolveProjectRelativePath( "/var/tmp/editortooldefaults.json" );
+    SW_EXPECT_STREQ( "/var/tmp/editortooldefaults.json", rootAbs.c_str() );
 
     // 상대 경로는 프로젝트 루트가 있으면 그 아래로 간다. 루트를 못 찾으면 입력 그대로다 —
     // 어느 쪽이든 **입력이 뒤에 그대로 남아 있어야** 한다.
-    const sw::string relative = sw::editor::EditorUtil::resolveProjectRelativePath( "Config" + sw::string( 1, '\\' ) + "Editor/editordata.json" );
-    SW_EXPECT_TRUE( relative.find( "Config/Editor/editordata.json" ) != sw::string::npos );
+    const sw::string relative = sw::editor::EditorUtil::resolveProjectRelativePath( "Config" + sw::string( 1, '\\' ) + "Editor/editortooldefaults.json" );
+    SW_EXPECT_TRUE( relative.find( "Config/Editor/editortooldefaults.json" ) != sw::string::npos );
     SW_EXPECT_TRUE( relative.find( "\\" ) == sw::string::npos ); // 역슬래시는 남지 않는다
 
     // 빈 입력은 빈 결과이거나 루트 그 자체다 — 어느 쪽이든 터지지 않는다.
@@ -294,7 +294,7 @@ SW_TEST_CASE( EditorAssetTypeTest, EveryReloadCacheNameIsRegisteredInTheEngine )
     sw::editor::EditorAssetTypeRegistry::appendReloadCacheKindNames( listKindName );
     SW_ASSERT_TRUE( listKindName.empty() == false );
 
-    sw::ResourceManager resources;
+    sw::AssetManager resources;
     for ( sw::string_view kindName : listKindName )
     {
         const sw::IAssetCache* pCache = resources.findAssetCache( kindName );

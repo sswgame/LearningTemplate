@@ -46,7 +46,7 @@ namespace sw
                     }
                     case RenderPassType::Shadow:
                     {
-                        info._pDefaultShader   = &EngineData::_shaderShadowDepth;
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderShadowDepth;
                         info._colorTargetCount = 0;
                         info._flags            = Flag::kDepthTest | Flag::kDepthWrite | Flag::kDepthOnly | Flag::kDrawsSceneMeshes;
                         break;
@@ -54,7 +54,7 @@ namespace sw
                     case RenderPassType::DepthPrepass:
                     {
                         // 그림자와 같은 셰이더 파일을 카메라 행렬로 그린다(패스 define 이 행렬을 고른다).
-                        info._pDefaultShader   = &EngineData::_shaderShadowDepth;
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderShadowDepth;
                         info._pPassDefine      = kPassDepthPrepassDefine;
                         info._colorTargetCount = 0;
                         info._psoFallbackType  = RenderPassType::Shadow;
@@ -63,14 +63,14 @@ namespace sw
                     }
                     case RenderPassType::ForwardOpaque:
                     {
-                        info._pDefaultShader = &EngineData::_shaderForwardLit;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
                         info._flags          = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::GBuffer:
                     {
                         // define 은 이 PSO 를 물려받는 머티리얼 변형까지 MRT 서명으로 컴파일되게 한다.
-                        info._pDefaultShader   = &EngineData::_shaderGBuffer;
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderGBuffer;
                         info._pPassDefine      = kPassGBufferDefine;
                         info._pColorFormat     = kArrGBufferColorFormat;
                         info._colorTargetCount = 2;
@@ -79,7 +79,7 @@ namespace sw
                     }
                     case RenderPassType::Lighting:
                     {
-                        info._pDefaultShader = &EngineData::_shaderDeferredLighting;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderDeferredLighting;
                         info._inputContract  = makeContract( { Role::GBufferAlbedo, Role::GBufferNormal, Role::SceneDepth }, { Role::ShadowMap } );
                         info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
                         break;
@@ -87,14 +87,14 @@ namespace sw
                     case RenderPassType::Transparent:
                     {
                         // 블렌드를 켜고 깊이 쓰기를 끄는 것까지가 패스의 몫이다. 어떤 퍼뮤테이션으로 그릴지는 머티리얼이 정한다.
-                        info._pDefaultShader  = &EngineData::_shaderForwardLit;
+                        info._pDefaultShader  = &EngineDefaultAssets::_shaderForwardLit;
                         info._psoFallbackType = RenderPassType::ForwardOpaque;
                         info._flags           = Flag::kDepthTest | Flag::kBlend | Flag::kDrawsTransparentBatch | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::SSAO:
                     {
-                        info._pDefaultShader = &EngineData::_shaderSsao;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderSsao;
                         info._pDefaultClear  = &kNoOcclusionClear;
                         info._inputContract  = makeContract( { Role::GBufferNormal, Role::SceneDepth }, {} );
                         info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
@@ -102,21 +102,21 @@ namespace sw
                     }
                     case RenderPassType::Bloom:
                     {
-                        info._pDefaultShader = &EngineData::_shaderPostBloom;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderPostBloom;
                         info._inputContract  = makeContract( { Role::SourceColor }, { Role::AmbientOcclusion } );
                         info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
                         break;
                     }
                     case RenderPassType::Outline:
                     {
-                        info._pDefaultShader = &EngineData::_shaderPostOutline;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderPostOutline;
                         info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
                         info._flags          = Flag::kGenericFullscreen | Flag::kHasInputContract;
                         break;
                     }
                     case RenderPassType::TAA:
                     {
-                        info._pDefaultShader = &EngineData::_shaderTaa;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderTaa;
                         info._inputContract  = makeContract( { Role::SourceColor }, {} );
                         info._flags          = Flag::kHasInputContract;
                         break;
@@ -124,7 +124,7 @@ namespace sw
                     case RenderPassType::Tonemap:
                     {
                         // 톤매핑 PSO 가 없어도 그림은 나가야 하므로 Present(단순 블릿)로 대신한다.
-                        info._pDefaultShader  = &EngineData::_shaderTonemap;
+                        info._pDefaultShader  = &EngineDefaultAssets::_shaderTonemap;
                         info._psoFallbackType = RenderPassType::Present;
                         info._inputContract   = makeContract( { Role::SourceColor }, {} );
                         info._flags           = Flag::kGenericFullscreen | Flag::kHasInputContract;
@@ -134,7 +134,7 @@ namespace sw
                     {
                         // 입력은 모두 선택이다. 선언이 없으면 "가장 나중 컬러" 로 폴백하고(resolvePresentSource),
                         // 후처리 체인(postchain.hlsl)을 겸하면 깊이 · AO 를 읽는다.
-                        info._pDefaultShader = &EngineData::_shaderFullscreenBlit;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderFullscreenBlit;
                         info._inputContract  = makeContract( {}, { Role::SourceColor, Role::SceneDepth, Role::AmbientOcclusion } );
                         info._flags          = Flag::kHasInputContract;
                         break;
@@ -142,33 +142,33 @@ namespace sw
                     case RenderPassType::ForwardOpaqueNoDepthWrite:
                     {
                         // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 한다.
-                        info._pDefaultShader = &EngineData::_shaderForwardLit;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
                         info._flags          = Flag::kDepthTest | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::GpuCull:
                     {
-                        info._pDefaultShader = &EngineData::_shaderGpuCull;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderGpuCull;
                         info._flags          = Flag::kCompute | Flag::kRequiresGpuCulling;
                         break;
                     }
                     case RenderPassType::InstanceAnim:
                     {
                         // 인스턴스 버퍼 UAV 하나만 쓰므로 컬링 능력(간접 인자 제약)과 무관하다.
-                        info._pDefaultShader = &EngineData::_shaderInstanceAnim;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceAnim;
                         info._flags          = Flag::kCompute;
                         break;
                     }
                     case RenderPassType::InstanceSort:
                     {
                         // 컬링이 압축한 가시 목록을 정렬하므로 컬링과 같은 조건이다.
-                        info._pDefaultShader = &EngineData::_shaderInstanceSort;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceSort;
                         info._flags          = Flag::kCompute | Flag::kRequiresGpuCulling;
                         break;
                     }
                     case RenderPassType::MeshMorph:
                     {
-                        info._pDefaultShader = &EngineData::_shaderMeshMorph;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderMeshMorph;
                         info._flags          = Flag::kCompute;
                         break;
                     }
@@ -233,7 +233,7 @@ namespace sw
         return index < kRenderPassTypeCount ? s_infoTable._arrRow[index] : s_infoTable._arrRow[0];
     }
 
-    RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const EngineData& engineData )
+    RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const EngineDefaultAssets& engineDefaultAssets )
     {
         const RenderPassTypeInfo& info = getRenderPassTypeInfo( type );
 
@@ -241,7 +241,7 @@ namespace sw
         if ( pPassDesc != nullptr && pPassDesc->_shaderPath.empty() == false )
             selection._shaderPath = pPassDesc->_shaderPath;
         else if ( info._pDefaultShader != nullptr )
-            selection._shaderPath = engineData.*info._pDefaultShader;
+            selection._shaderPath = engineDefaultAssets.*info._pDefaultShader;
 
         if ( pPassDesc != nullptr )
             selection._listDefine = pPassDesc->_listPermutation;

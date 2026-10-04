@@ -719,7 +719,7 @@ namespace sw::editor
 
         // 이 함수의 **모든 분기는 무언가를 그리고 끝난다.** 아무것도 그리지 않고 돌아가면 인스펙터에는 **빈 칸 하나**만 남아,
         // 값이 비었는지, 그리지 못하는 것인지, 버그인지 화면만 보고는 구분할 수 없다(모르는 타입도 "No inspector for ..." 라고
-        // 알린다). 맵 프로퍼티도 실제로 있다(`GameData::_mapCustomProperty` 등).
+        // 알린다). 맵 프로퍼티도 실제로 있다(`GameSettings::_mapCustomProperty` 등).
         void* pContainer = prop.getRawPtr( pInstance );
         if ( pContainer == nullptr )
         {

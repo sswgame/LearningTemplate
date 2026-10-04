@@ -8,7 +8,7 @@
 #include "Engine/Audio/IAudioSystem.h"
 
 #include "GameFramework/Base/GameService.h"
-#include "GameFramework/Data/GameData.h"
+#include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/Data/GameStrings.h"
 
 namespace sw
@@ -44,10 +44,10 @@ namespace sw
         formatstring( _statusText.data(), _statusText.capacity(), GameStrings::get( "battle.wild_appeared", "A wild %# appeared!" ),
                       _foe._nickname.c_str() );
         SW_LOG_TRACE( "%#", _statusText.c_str() );
-        const GameData* pGameData = game::getService<GameData>();
-        if ( pGameData != nullptr )
+        const GameSettings* pGameSettings = game::getService<GameSettings>();
+        if ( pGameSettings != nullptr )
         {
-            const string_view bgm = pGameData->getCustomProperty( "dungeonBgm" );
+            const string_view bgm = pGameSettings->getCustomProperty( "dungeonBgm" );
             if ( bgm.empty() == false )
             {
                 IAudioSystem* pAudio = game::getService<IAudioSystem>();

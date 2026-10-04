@@ -77,7 +77,7 @@ SW_TEST_CASE( AppCookTest, SceneCookBuildsGameFrameworkComponents )
 /**
  * @brief [AppCookTest] 씬 쿠킹은 소스 트리를 읽어 오류 · 경고 없이 끝난다 — 배포 구성도 같다
  * @details 쿠킹은 소스 트리를 올린다(`ContentSource::SourceTree`). 배포 구성의 쿠킹이 실행처럼 팩만 읽고 느슨한 파일을 막으면, 팩이 없는 첫 빌드에서
- *          `engine/data/enginedata.xml` 을 찾지 못하고 옮긴 프리팹을 GUID 로 찾지 못해 쿠킹본 `.bin` 을 요구하며, 팩이 있는 빌드에서는 지난 빌드의
+ *          `engine/data/enginedefaultassets.xml` 을 찾지 못하고 옮긴 프리팹을 GUID 로 찾지 못해 쿠킹본 `.bin` 을 요구하며, 팩이 있는 빌드에서는 지난 빌드의
  *          팩을 입력으로 읽는다.
  */
 SW_TEST_CASE( AppCookTest, SceneCookReadsTheSourceTreeCleanly )

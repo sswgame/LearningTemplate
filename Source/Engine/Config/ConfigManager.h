@@ -1,6 +1,6 @@
 /**
  * @file ConfigManager.h
- * @brief Config/ 의 호스트 JSON(EngineConfig 등)을 관리합니다. Resource/ 팩 에셋이 아니므로 ResourceManager 와 분리합니다.
+ * @brief Config/ 의 호스트 JSON(EngineConfig 등)을 관리합니다. Resource/ 팩 에셋이 아니므로 AssetManager 와 분리합니다.
  *
  * @note **설정을 구분하는 것은 타입입니다. 이름 문자열이 아닙니다.** 열쇠는 `T::StaticType()->_fullyQualifiedName` 에서
  *       뽑습니다 — 호출부마다 이름을 손으로 적으면 한 곳만 철자가 어긋나도 `getConfig` 가 조용히 nullptr 을 반환하고,

@@ -10,7 +10,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
 
 namespace sw
@@ -262,7 +262,7 @@ namespace sw
         //
         // 본문 맨 앞에서 이 플래그를 켜면 두 가지가 깨진다.
         //  1) 루트를 못 찾아 false 로 나가도 "초기화됨" 으로 남는다. `App::initialize` 는 반환값을
-        //     보지 않으므로, 실패를 검사하는 유일한 호출부(`ResourceManager::initialize`)가 그 다음에
+        //     보지 않으므로, 실패를 검사하는 유일한 호출부(`AssetManager::initialize`)가 그 다음에
         //     true 를 받아 **빈 경로로** 팩 마운트와 레지스트리 로드를 진행한다.
         //  2) 다른 스레드가 초기화 도중에 true 를 보고 아직 비어 있는 경로를 읽는다.
         //
@@ -502,7 +502,7 @@ namespace sw
 
     ResourcePackManager& ResourceUtil::getPackManager()
     {
-        return engine::getResourceManager().getPackManager();
+        return engine::getAssetManager().getPackManager();
     }
 
     string ResourceUtil::getDomainFolderPath( string_view domainName, string_view subFolder )

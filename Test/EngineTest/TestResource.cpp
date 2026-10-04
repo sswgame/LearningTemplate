@@ -9,9 +9,9 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/DdsLoader.h"
-#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -174,8 +174,8 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
     SW_ASSERT_TRUE( root.isValid() );
 
     sw::AssetFormatVersion source = 99;
-    SW_EXPECT_TRUE( sw::engine::getResourceManager().getAssetFormatRegistry().upgradeXml( sw::AssetKind::Material, doc, root,
-                                                                                          sw::AssetFormatVersions::kMaterial, &source ) );
+    SW_EXPECT_TRUE( sw::engine::getAssetManager().getAssetFormatRegistry().upgradeXml( sw::AssetKind::Material, doc, root,
+                                                                                       sw::AssetFormatVersions::kMaterial, &source ) );
     SW_EXPECT_EQUAL( sw::AssetFormatVersions::kMaterial, source );
     SW_EXPECT_TRUE( root.findAttribute( "formatVersion" ) != nullptr );
     SW_EXPECT_STREQ( "0", root.findAttribute( "formatVersion" ) );
@@ -591,11 +591,11 @@ SW_TEST_CASE( ResourceTest, AssetStreamingQueueDataRequest )
 }
 
 /**
- * @brief [ResourceTest] ResourceManager의 ResourcePackManager 소유권 및 라이프사이클 검증
+ * @brief [ResourceTest] AssetManager의 ResourcePackManager 소유권 및 라이프사이클 검증
  */
-SW_TEST_CASE( ResourceTest, ResourceManagerPackManagerOwnership )
+SW_TEST_CASE( ResourceTest, AssetManagerPackManagerOwnership )
 {
-    sw::ResourceManager resManager;
+    sw::AssetManager resManager;
     SW_ASSERT_TRUE( resManager.initialize() );
 
     sw::ResourcePackManager& packMgr = resManager.getPackManager();
@@ -923,7 +923,7 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
         expected.pop_back();
 
     sw::Uuid   guid{};
-    const bool bFound = sw::engine::getResourceManager().getAssetDatabase().tryGetGuid( pAsset, guid );
+    const bool bFound = sw::engine::getAssetManager().getAssetDatabase().tryGetGuid( pAsset, guid );
     SW_EXPECT_TRUE_MSG( bFound, "시작 시점에 readme.md 의 GUID 를 모른다 — 레지스트리/.meta 스캔이 안 돌았다" );
     if ( bFound )
         SW_EXPECT_STREQ( expected.c_str(), guid.toString().c_str() );
@@ -945,8 +945,8 @@ SW_TEST_CASE( ResourceTest, OutOfRangeFormatVersionIsRejected )
         sw::XmlNode root = doc.getRoot( "MaterialDesc" );
         SW_ASSERT_TRUE( root.isValid() );
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE_MSG( sw::engine::getResourceManager().getAssetFormatRegistry().upgradeXml( sw::AssetKind::Material, doc, root,
-                                                                                                   sw::AssetFormatVersions::kMaterial ),
+        SW_EXPECT_FALSE_MSG( sw::engine::getAssetManager().getAssetFormatRegistry().upgradeXml( sw::AssetKind::Material, doc, root,
+                                                                                                sw::AssetFormatVersions::kMaterial ),
                              pVersion );
     }
 }
@@ -1029,12 +1029,12 @@ SW_TEST_CASE( ResourceTest, EveryPathTheEditorHoldsBecomesOneResourceId )
 /**
  * @brief [ResourceTest] 쿠킹이 올리는 소스 트리 콘텐츠(`ContentSource::SourceTree`)는 팩을 마운트하지 않고 느슨한 소스 파일을 읽는다 — 배포 구성도 같다
  * @details 배포 구성의 씬 쿠킹(`App --cook-scenes`)이 실행처럼 팩을 마운트하고 느슨한 파일을 막으면, 팩은 쿠킹의 산출물이라 첫 빌드에서는
- *          아무것도 없어 `enginedata.xml` · 옮긴 프리팹(GUID 표) · `quadrants.sprite.json` 을 읽지 못하고, 다음 빌드부터는 지난 빌드의 팩을 입력으로
+ *          아무것도 없어 `enginedefaultassets.xml` · 옮긴 프리팹(GUID 표) · `quadrants.sprite.json` 을 읽지 못하고, 다음 빌드부터는 지난 빌드의 팩을 입력으로
  *          읽는다. 배포 구성에서는 실행 파일 옆에 팩이 있으므로 이 시험이 그것을 마운트하지 않는지까지 본다.
  */
 SW_TEST_CASE( ResourceTest, SourceTreeContentMountsNoPackAndReadsLooseFiles )
 {
-    sw::ResourceManager resources;
+    sw::AssetManager resources;
     SW_ASSERT_TRUE( resources.initialize() );
     SW_EXPECT_TRUE( resources.getContentSource() == sw::ContentSource::Cooked );
 

@@ -18,7 +18,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -166,8 +166,8 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryPipelinePassShaderIsRequested )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
-    sw::EngineData engineData;
-    SW_ASSERT_TRUE( engineData.loadFromResource() );
+    sw::EngineDefaultAssets engineDefaultAssets;
+    SW_ASSERT_TRUE( engineDefaultAssets.loadFromResource() );
 
     const sw::string tempRoot    = test::makeTempDirectory( "cook_pipeline_probe" );
     const sw::string pipelineDir = sw::FileUtil::joinPath( tempRoot, "pipeline" );
@@ -200,7 +200,7 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryPipelinePassShaderIsRequested )
     {
         for ( const sw::RenderGraphPassDesc& pass : probe.getGraphPass() )
         {
-            const sw::RenderPassShaderSelection shader = sw::selectRenderPassShader( pass._resolvedType, &pass, engineData );
+            const sw::RenderPassShaderSelection shader = sw::selectRenderPassShader( pass._resolvedType, &pass, engineDefaultAssets );
             const sw::string                    label  = probe.getDesc()._name + "/" + pass._name;
             SW_EXPECT_TRUE_MSG( shader._shaderPath.empty() == false, ( label + ": 기본 셰이더가 없다" ).c_str() );
             const uint64     permutationHash = sw::ShaderCooker::computePermutationHash( shader._listDefine );
@@ -237,8 +237,8 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryViewModeVariantOfEveryMeshPassTypeIsRe
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
-    sw::EngineData engineData;
-    SW_ASSERT_TRUE( engineData.loadFromResource() );
+    sw::EngineDefaultAssets engineDefaultAssets;
+    SW_ASSERT_TRUE( engineDefaultAssets.loadFromResource() );
 
     const sw::string emptyRoot = test::makeTempDirectory( "cook_no_pipeline" );
     SW_ASSERT_TRUE( emptyRoot.empty() == false );
@@ -253,7 +253,7 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryViewModeVariantOfEveryMeshPassTypeIsRe
         const sw::RenderPassType passType = static_cast<sw::RenderPassType>( typeIndex );
         if ( sw::FrameRendererUtil::drawsSceneMeshes( passType ) == false )
             continue;
-        const sw::RenderPassShaderSelection passShader = sw::selectRenderPassShader( passType, nullptr, engineData );
+        const sw::RenderPassShaderSelection passShader = sw::selectRenderPassShader( passType, nullptr, engineDefaultAssets );
         if ( passShader._shaderPath.empty() )
             continue;
 

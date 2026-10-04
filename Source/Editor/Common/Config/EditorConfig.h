@@ -4,7 +4,7 @@
  *
  * @details 여기 있는 값은 에디터가 `saveToHost()` 로 **파일 전체를 다시 만들어** 덮어씁니다(테마 대화 상자의 저장).
  *          그래서 손으로 적은 것(주석 · 순서 · 손으로 고른 목록)은 여기 두면 안 됩니다. 그런 설정은 읽기 전용인
- *          `EditorData`(editordata.json)에 있습니다.
+ *          `EditorToolDefaults`(editortooldefaults.json)에 있습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -17,7 +17,7 @@ namespace sw::editor
     /**
      * @brief 에디터가 저장하는 상태입니다(Shipping 에는 없습니다).
      * @details 지금은 테마뿐입니다. **필드를 늘리기 전에** 그 값을 앱이 쓰는지 사람이 쓰는지 확인하십시오. 사람이 쓰는
-     *          것은 `EditorData` 에 둡니다.
+     *          것은 `EditorToolDefaults` 에 둡니다.
      */
     REFLECT()
     struct EditorConfig : IConfig

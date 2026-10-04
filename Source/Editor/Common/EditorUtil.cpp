@@ -6,7 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
-#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -17,7 +17,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 
 namespace sw::editor
 {
@@ -38,14 +38,14 @@ namespace sw::editor
 
     string EditorUtil::getEditorConfigDirectory()
     {
-        const EditorData& editorData  = getEditorData();
-        const string      projectRoot = getProjectRootPath();
+        const EditorToolDefaults& editorToolDefaults = getEditorToolDefaults();
+        const string              projectRoot        = getProjectRootPath();
         if ( projectRoot.empty() )
             return {};
 
         const string configDir =
-            FileUtil::joinPath( FileUtil::joinPath( projectRoot, editorData._configFolder ), editorData._editorConfigFolder );
-        const string markerFile = FileUtil::joinPath( configDir, editorData._imguiIniFile );
+            FileUtil::joinPath( FileUtil::joinPath( projectRoot, editorToolDefaults._configFolder ), editorToolDefaults._editorConfigFolder );
+        const string markerFile = FileUtil::joinPath( configDir, editorToolDefaults._imguiIniFile );
         FileUtil::ensureParentDirectoryExists( markerFile );
         return configDir;
     }
@@ -87,10 +87,10 @@ namespace sw::editor
         }
 
         // `getService<T>()` 는 nullptr 을 반환할 수 있다(문서에 그렇게 적혀 있다). 역참조하기 전에 확인한다.
-        ResourceManager* pResources = editor::getService<ResourceManager>();
+        AssetManager* pResources = editor::getService<AssetManager>();
         if ( pResources == nullptr )
         {
-            SW_LOG_WARNING( "ResourceManager 서비스가 없어 프리팹을 스폰할 수 없습니다: %#", pPath );
+            SW_LOG_WARNING( "AssetManager 서비스가 없어 프리팹을 스폰할 수 없습니다: %#", pPath );
             return nullptr;
         }
 

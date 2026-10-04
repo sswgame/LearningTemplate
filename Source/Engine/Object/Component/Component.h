@@ -240,10 +240,10 @@ namespace sw
         /** @brief 가상 소멸자입니다. 해체는 GameObjectManager::destroyComponentInstance 가 맡습니다(해제 콜백 · 소멸 · 풀 반납). */
         virtual ~Component() = default;
 
-        /** @brief 게임 컴포넌트 기본값 XML(gamedata.xml) 경로를 지정합니다. 비어 있으면 주입하지 않습니다. */
-        static void setDefaultGamedataPath( string_view path );
+        /** @brief 게임 컴포넌트 기본값 XML(gamesettings.xml) 경로를 지정합니다. 비어 있으면 주입하지 않습니다. */
+        static void setDefaultGameSettingsPath( string_view path );
         /** @brief 현재 게임 컴포넌트 기본값 XML 경로를 반환합니다. */
-        static string getDefaultGamedataPath();
+        static string getDefaultGameSettingsPath();
 
         /**
          * @brief 게임플레이가 시작될 때 불리는 초기화 콜백입니다. 인스턴스마다 **정확히 한 번**, `onEndPlay` 와 짝을 이룹니다.
@@ -353,7 +353,7 @@ namespace sw
         /** @brief 등록된 모든 서브틱 목록을 반환합니다. */
         const vector<SubTickInfo>& getAllSubTicks() const { return _listSubTick; }
 
-        /** @brief 구체 타입의 TypeInfo 로 gamedata 기본값을 주입합니다. */
+        /** @brief 구체 타입의 TypeInfo 로 gamesettings 기본값을 주입합니다. */
         void applyTypeDefaults( const TypeInfo* pTypeInfo );
         /** @brief 소유자 GameObject 를 설정합니다. */
         void setOwner( GameObject* pOwner ) { _pOwner = pOwner; }

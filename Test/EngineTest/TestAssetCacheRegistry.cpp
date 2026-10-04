@@ -7,13 +7,13 @@
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/IAssetCache.h"
-#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/SpriteClipCache.h"
 
 #include "TestFramework/TestFramework.h"
 
-// AssetCacheRegistryTest — 에셋 캐시 등록부(종료 · 진단 · 핫 리로드가 훑는 정본). 전역을 건드리지 않는다(지역 ResourceManager).
+// AssetCacheRegistryTest — 에셋 캐시 등록부(종료 · 진단 · 핫 리로드가 훑는 정본). 전역을 건드리지 않는다(지역 AssetManager).
 
 namespace
 {
@@ -54,7 +54,7 @@ namespace
  */
 SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistry )
 {
-    sw::ResourceManager resources;
+    sw::AssetManager resources;
 
     SW_ASSERT_EQUAL( size_t( 4 ), resources.getAllAssetCache().size() );
     SW_EXPECT_NOT_NULL( resources.findAssetCache( "Material" ) );
@@ -77,8 +77,8 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
  */
 SW_TEST_CASE( AssetCacheRegistryTest, RegisterIgnoresNullAndDuplicates )
 {
-    sw::ResourceManager resources;
-    ProbeAssetCache     probe;
+    sw::AssetManager resources;
+    ProbeAssetCache  probe;
 
     const size_t builtInCount = resources.getAllAssetCache().size();
 
@@ -98,7 +98,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, RegisterIgnoresNullAndDuplicates )
  */
 SW_TEST_CASE( AssetCacheRegistryTest, SecondCacheWithTheSameKindNameIsRejected )
 {
-    sw::ResourceManager   resources;
+    sw::AssetManager      resources;
     ImpostorMaterialCache impostor;
     const size_t          builtInCount = resources.getAllAssetCache().size();
 
@@ -118,8 +118,8 @@ SW_TEST_CASE( AssetCacheRegistryTest, SecondCacheWithTheSameKindNameIsRejected )
  */
 SW_TEST_CASE( AssetCacheRegistryTest, ClearAssetCachesReachesEveryRegisteredCache )
 {
-    sw::ResourceManager resources;
-    ProbeAssetCache     probe;
+    sw::AssetManager resources;
+    ProbeAssetCache  probe;
     resources.registerAssetCache( &probe );
 
     SW_ASSERT_FALSE( probe._bCleared );
@@ -142,8 +142,8 @@ SW_TEST_CASE( AssetCacheRegistryTest, ClearAssetCachesReachesEveryRegisteredCach
  */
 SW_TEST_CASE( AssetCacheRegistryTest, UnregisterRemovesOnlyThatCache )
 {
-    sw::ResourceManager resources;
-    ProbeAssetCache     probe;
+    sw::AssetManager resources;
+    ProbeAssetCache  probe;
 
     const size_t builtInCount = resources.getAllAssetCache().size();
     resources.registerAssetCache( &probe );
@@ -171,8 +171,8 @@ SW_TEST_CASE( AssetCacheRegistryTest, UnregisterRemovesOnlyThatCache )
  */
 SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
 {
-    sw::ResourceManager resources;
-    ProbeAssetCache     probe;
+    sw::AssetManager resources;
+    ProbeAssetCache  probe;
 
     sw::string               warningText;
     const sw::DelegateHandle handle = sw::Logger::addGlobalListener(
@@ -203,8 +203,8 @@ SW_TEST_CASE( AssetCacheRegistryTest, LeftoverModuleCacheIsNamedInAWarning )
 SW_TEST_CASE( AssetCacheRegistryTest, ReleaseModuleCodeDropsCachesOfThatImage )
 {
     SW_TEST_DEFENSIVE_SCOPE( "releaseModuleCode warns about a cache the module left registered" );
-    sw::ResourceManager resources;
-    ProbeAssetCache     probe;
+    sw::AssetManager resources;
+    ProbeAssetCache  probe;
     resources.registerAssetCache( &probe );
     const size_t registeredCount = resources.getAllAssetCache().size();
 

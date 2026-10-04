@@ -278,7 +278,7 @@ Games / GameFramework 에서는 `EngineServices` 대신 **`GameService`** 를 �
 #include "GameFramework/Base/GameService.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
-GameObject* go = game::getService<ResourceManager>()->getPrefabCache().spawn(
+GameObject* go = game::getService<AssetManager>()->getPrefabCache().spawn(
     mgr,
     "game/<pack>/prefabs/bullet.prefab.json",
     "Projectile" );
@@ -387,7 +387,7 @@ mgr->destroyComponent( comp );  // 처리 때 핸들로 다시 찾으므로 그 
 | `onTick`에서 `addComponent` 후 바로 `->` | `nullptr` 역참조 | `executeOrDeferPostTick` 안에 생성+초기화 |
 | tick 중 `attachToParent` 의 결과를 바로 기대 | 아직 안 붙어 있다 | 동결 중에는 **미뤄진다** — 틱 직후 구조 변경 큐가 부른 순서대로 붙인다(같은 틱에 붙인 씬 컴포넌트 뒤에) |
 | tick 중 상태 읽기(`ObjectStateSerializer::load*` 제자리) | 거절(false + 오류) | 컴포넌트를 모두 다시 만드는 일이라 틱 중에는 못 한다 — `executeOrDeferPostTick` 으로 감쌀 것 |
-| Games에서 `engine::getResourceManager` | 레이어 위반(`CheckEngineLayers` 가 `EngineServices.h` include 를 막는다) | `game::getService<ResourceManager>()` |
+| Games에서 `engine::getAssetManager` | 레이어 위반(`CheckEngineLayers` 가 `EngineServices.h` include 를 막는다) | `game::getService<AssetManager>()` |
 | 태그 추가 직후 같은 프레임에 `findGameObjectsByTag` | 아직 안 보일 수 있음 | post-tick 이후, 또는 같은 deferred 블록 안에서 처리 |
 
 ---

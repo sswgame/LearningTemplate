@@ -20,7 +20,7 @@
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -52,8 +52,8 @@
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetDatabase.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneCooker.h"
@@ -141,7 +141,7 @@ namespace sw
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
-            // 설정은 리소스 초기화보다 먼저 읽는다(Resource 의 의존 칸). `ResourceManager::mountContent` 는 GameConfig 의 `_packRoot` 가
+            // 설정은 리소스 초기화보다 먼저 읽는다(Resource 의 의존 칸). `AssetManager::mountContent` 는 GameConfig 의 `_packRoot` 가
             // 정해져 있어야 팩을 제대로 마운트하고 게임 도메인의 `assetregistry.txt` 를 읽는다.
             // Config/ 는 프로젝트 루트에 있고 실행 파일은 build/<preset>/Bin 에서 돈다. 작업 디렉터리 기준으로만 찾으면
             // 모두 "없음" 이 되어 조용히 기본값으로 떨어지므로, Resource/ 를 찾을 때 알아낸 프로젝트 루트를 넘긴다.
@@ -169,32 +169,32 @@ namespace sw
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
-            if ( loop._owned._pResourceManager->initialize() == false )
+            if ( loop._owned._pAssetManager->initialize() == false )
                 return EngineInitResult::Failed;
             // GameConfig 가 활성화된 뒤라야 "game" 토큰이 팩 루트로 풀린다. 그 전제는 `mountContent` 의 인자에 드러나 있다.
             // 설정의 우선순위 목록이 비어 있으면 지금 것을 쓴다. 씬 쿠킹(Headless 단계)의 입력은 소스 트리다 — 팩은 그 산출물이다.
             bool bCookScenes = false;
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes );
             const ContentSource contentSource = bCookScenes ? ContentSource::SourceTree : ContentSource::Cooked;
-            loop._owned._pResourceManager->mountContent( loop._pEngineConfig->_listResourcePriority, contentSource );
+            loop._owned._pAssetManager->mountContent( loop._pEngineConfig->_listResourcePriority, contentSource );
             return EngineInitResult::Succeeded;
         }
-        // 에셋 캐시를 비운다(`ResourceManager::shutdown`). 에셋을 드는 단계(셰이더 캐시 · 오디오 · 입력 · 씬 · 렌더러)는 모두 이 단계 뒤에
+        // 에셋 캐시를 비운다(`AssetManager::shutdown`). 에셋을 드는 단계(셰이더 캐시 · 오디오 · 입력 · 씬 · 렌더러)는 모두 이 단계 뒤에
         // 서므로, 역순 해제에서 그들의 소멸자가 에셋을 놓은 다음이다.
-        static void destroy( EngineLoop& loop ) { loop._owned.destroyResourceManager(); }
+        static void destroy( EngineLoop& loop ) { loop._owned.destroyAssetManager(); }
     };
 
-    struct EngineLoop::EngineDataStartupStep : EngineInitStepDefaults<EngineLoop>
+    struct EngineLoop::EngineDefaultAssetsStartupStep : EngineInitStepDefaults<EngineLoop>
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
-            const bool bEngineDataLoaded = ( loop._pEngineConfig->_engineData.empty() == false ) ? loop._owned._pEngineData->loadFromResource( loop._pEngineConfig->_engineData )
-                                                                                                 : loop._owned._pEngineData->loadFromResource();
-            if ( bEngineDataLoaded == false )
+            const bool bEngineDefaultAssetsLoaded = ( loop._pEngineConfig->_engineDefaultAssets.empty() == false ) ? loop._owned._pEngineDefaultAssets->loadFromResource( loop._pEngineConfig->_engineDefaultAssets )
+                                                                                                                   : loop._owned._pEngineDefaultAssets->loadFromResource();
+            if ( bEngineDefaultAssetsLoaded == false )
                 SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
             return EngineInitResult::Succeeded;
         }
-        static void destroy( EngineLoop& loop ) { loop._owned._pEngineData.reset(); }
+        static void destroy( EngineLoop& loop ) { loop._owned._pEngineDefaultAssets.reset(); }
     };
 
     struct EngineLoop::ShaderCacheStartupStep : EngineInitStepDefaults<EngineLoop>
@@ -701,7 +701,7 @@ namespace sw
 
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).
         if ( _rhi != nullptr && _rhi->hasDevice() )
-            _owned._pResourceManager->getMaterialManager().initializePending( &_rhi->getDevice() );
+            _owned._pAssetManager->getMaterialManager().initializePending( &_rhi->getDevice() );
 
         // 패킷 · 씬 스냅샷은 FrameRenderer 단계가 만든다. 그 단계가 서지 않았으면(헤드리스 작업) 낼 패킷이 없다.
         if ( _packetScratch == nullptr || _gpuSceneBuilder == nullptr )
@@ -902,7 +902,7 @@ namespace sw
 
         if ( _bShellActionsBound == false )
         {
-            _mapDebugAction     = createShellInputMap( engine::getEngineData()._shellInputMap );
+            _mapDebugAction     = createShellInputMap( engine::getEngineDefaultAssets()._shellInputMap );
             _bShellActionsBound = true;
         }
 

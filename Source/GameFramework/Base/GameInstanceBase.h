@@ -9,7 +9,7 @@
 #include "Core/Task/TaskFuture.h"
 
 #include "GameFramework/Base/IGame.h"
-#include "GameFramework/Data/GameData.h"
+#include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -32,13 +32,13 @@ namespace sw
         virtual ~GameInstanceBase() override = default;
 
         /**
-         * @brief configureBootstrap 으로 부트스트랩을 채우고(GameConfig 의 팩 루트가 있으면 그것이 우선) gamedata 를 읽은 뒤 onInitialize 를 부릅니다.
-         * @details 읽은 `GameData` 를 게임 서비스로 묶고(`game::getService<GameData>()`), 다국어(`_localizationDirectory` · `_stringsData`)와
+         * @brief configureBootstrap 으로 부트스트랩을 채우고(GameConfig 의 팩 루트가 있으면 그것이 우선) gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
+         * @details 읽은 `GameSettings` 를 게임 서비스로 묶고(`game::getService<GameSettings>()`), 다국어(`_localizationDirectory` · `_stringsData`)와
          *          게임플레이 입력 맵(`_inputMap`)을 여기서 적용합니다. 커스텀 칸을 읽는 킷 코드(`TurnBattleSaveGame` 의 파티 상한 · 스타터)는
          *          이 서비스로 읽습니다 — 서비스로 묶지 않으면 제품에서 늘 기본값을 씁니다.
          */
         bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) final;
-        /** @brief onShutdown 뒤에 `GameData` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
+        /** @brief onShutdown 뒤에 `GameSettings` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
         void shutdown() final;
         /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 낸 뒤 onUpdate 로 한 프레임을 넘깁니다. */
         void update( float32 deltaTime ) final;
@@ -59,7 +59,7 @@ namespace sw
         [[nodiscard]] bool restoreSnapshot( const vector<uint8>& inBytes );
 
         /**
-         * @brief Shipping/Gameplay: 씬과 게임 상태 전체를 바이너리 파일로 저장합니다. 경로를 비우면 기본 세이브 경로(`GameData::_defaultSavePath`)입니다.
+         * @brief Shipping/Gameplay: 씬과 게임 상태 전체를 바이너리 파일로 저장합니다. 경로를 비우면 기본 세이브 경로(`GameSettings::_defaultSavePath`)입니다.
          * @details 경로가 정해졌으면 성공 · 실패와 함께 `SaveGameSavedEvent` 를 "game" 채널에 냅니다. 경로가 없으면 알리고 아무것도 내지 않습니다.
          */
         [[nodiscard]] bool saveStateToFile( string_view filePath = {} );
@@ -71,7 +71,7 @@ namespace sw
         [[nodiscard]] bool loadStateFromFile( string_view filePath = {} );
 
         // --------------------------------------------------------------------------
-        // 부트스트랩 씬 흐름 (GameData 의 씬 칸을 읽는 자리)
+        // 부트스트랩 씬 흐름 (GameSettings 의 씬 칸을 읽는 자리)
         // --------------------------------------------------------------------------
         /** @brief 게임이 처음 여는 씬입니다 — 실행 설정의 시작 씬(`GameConfig::_startupScene`) > 타이틀 씬 > 시작 맵. 셋 다 비었으면 빈 문자열입니다. */
         const string& getFirstScene() const;
@@ -127,7 +127,7 @@ namespace sw
         /** @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 되살릴지를 알려 줍니다. */
         [[nodiscard]] bool deserializeSceneObjects( const uint8* pData, size_t size, SceneObjectFormat format );
 
-        BootstrapConfig _bootstrap{};           ///< 팩 루트와 gamedata
+        BootstrapConfig _bootstrap{};           ///< 팩 루트와 gamesettings
         IWindow*        _pWindow{ nullptr };    ///< 호스트 윈도우 (App 이 소유)
         IRHIDevice*     _pRhiDevice{ nullptr }; ///< 활성 RHI 디바이스
 
@@ -139,7 +139,7 @@ namespace sw
             TaskFuture<Scene*> _future;
         };
 
-        /** @brief `GameData` 의 다국어 · 입력 맵 칸을 적용합니다. 못 읽은 것은 알리고 넘어갑니다(게임은 뜬다). */
+        /** @brief `GameSettings` 의 다국어 · 입력 맵 칸을 적용합니다. 못 읽은 것은 알리고 넘어갑니다(게임은 뜬다). */
         void applyBootstrap();
         /**
          * @brief @p scenePath 의 로드를 `SceneManager` 에 맡기고 `SceneLoadRequestedEvent` 를 냅니다.

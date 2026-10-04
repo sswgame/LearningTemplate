@@ -13,7 +13,7 @@ namespace sw::editor
     class EditorFontSetup
     {
     public:
-        /** @brief EditorData 에 적힌 후보로 ImGui 본문 · 한글 · 아이콘 폰트를 구성합니다. */
+        /** @brief EditorToolDefaults 에 적힌 후보로 ImGui 본문 · 한글 · 아이콘 폰트를 구성합니다. */
         static void apply();
     };
 } // namespace sw::editor

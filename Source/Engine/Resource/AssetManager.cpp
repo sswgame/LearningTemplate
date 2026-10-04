@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -18,9 +18,9 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "ResourceManager" );
+    SW_LOG_CALLER( "AssetManager" );
 
-    ResourceManager::ResourceManager()
+    AssetManager::AssetManager()
         : _assetDatabase{}
         , _assetFormatRegistry{}
         , _materialCache{ make_unique<MaterialCache>() }
@@ -38,13 +38,13 @@ namespace sw
         registerAssetCache( _spriteClipCache.get() );
     }
 
-    ResourceManager::~ResourceManager() = default;
+    AssetManager::~AssetManager() = default;
 
-    bool ResourceManager::initialize()
+    bool AssetManager::initialize()
     {
         if ( ResourceUtil::initialize() == false )
         {
-            SW_LOG_ERROR( "Failed to initialize ResourceManager!" );
+            SW_LOG_ERROR( "Failed to initialize AssetManager!" );
             return false;
         }
 
@@ -52,7 +52,7 @@ namespace sw
         return true;
     }
 
-    bool ResourceManager::mountContent( const vector<string>& listSearchPriority, ContentSource source )
+    bool AssetManager::mountContent( const vector<string>& listSearchPriority, ContentSource source )
     {
         // 우선순위 적용과 마운트를 **여기서 붙여 둔다.** 둘을 호출자에게 맡기면 순서를 뒤집거나
         // 사이에 다른 것을 끼워 넣을 수 있고, 실제로 그래서 팩이 게임 도메인 없이 실린 적이 있다.
@@ -70,13 +70,13 @@ namespace sw
         return bMounted;
     }
 
-    bool ResourceManager::mountStartupPacks()
+    bool AssetManager::mountStartupPacks()
     {
         if ( _pPackManager == nullptr )
             return false;
 
         // 팩 폴더는 **실행 파일 기준**으로 찾는다. 작업 디렉터리 기준 상대 경로("Bin/Packs")면 EngineLoop 을 거치지 않고
-        // ResourceManager 만 직접 세우는 쪽(테스트 · 툴)이 아무것도 마운트하지 못하고, Shipping 은 느슨한 Resource/ 가
+        // AssetManager 만 직접 세우는 쪽(테스트 · 툴)이 아무것도 마운트하지 못하고, Shipping 은 느슨한 Resource/ 가
         // 없으니 그대로 모든 리소스 로드 실패가 된다.
         const string exeDir         = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
         const string arrCandidate[] = { FileUtil::joinPath( exeDir, "Packs" ),
@@ -93,7 +93,7 @@ namespace sw
         return false;
     }
 
-    uint32 ResourceManager::loadAssetRegistries()
+    uint32 AssetManager::loadAssetRegistries()
     {
         // 에셋 식별자(GUID) 표를 시작 시점에 채운다 — 이름을 바꾼 프리팹의 GUID 복구가 "그 세션에서 먼저 로드됐을 때만" 동작하지 않게.
         // 팩이면 쿠커가 만든 assetregistry.txt 를 도메인마다 읽고(배포본은 .meta 를 싣지 않는다), 없으면(느슨한 트리) .meta 를 훑는다.
@@ -120,7 +120,7 @@ namespace sw
         return registered;
     }
 
-    void ResourceManager::shutdown()
+    void AssetManager::shutdown()
     {
         if ( _pPackManager != nullptr )
             _pPackManager->unmountAll();
@@ -132,14 +132,14 @@ namespace sw
         _assetDatabase.clear();
     }
 
-    void ResourceManager::garbageCollectUnusedAssets()
+    void AssetManager::garbageCollectUnusedAssets()
     {
         engine::getAssetStreamingQueue().clearCompletionRecord();
         // 캐시 자체는 참조가 0 이 되는 자리에서 스스로 지운다(`MaterialCache::release`).
         // 여기서는 아직 할 일이 없다. 있게 되면 등록부를 훑는다.
     }
 
-    void ResourceManager::registerAssetCache( IAssetCache* pCache )
+    void AssetManager::registerAssetCache( IAssetCache* pCache )
     {
         if ( pCache == nullptr )
             return;
@@ -151,35 +151,35 @@ namespace sw
             SW_LOG_WARNING( "Asset cache kind '%#' is already registered by another cache - keeping the first", kindName );
     }
 
-    bool ResourceManager::isBuiltInAssetCache( const IAssetCache* pCache ) const
+    bool AssetManager::isBuiltInAssetCache( const IAssetCache* pCache ) const
     {
         return pCache != nullptr && ( pCache == _materialCache.get() || pCache == _textureCache.get() || pCache == _prefabCache.get() ||
                                       pCache == _spriteClipCache.get() );
     }
 
-    void ResourceManager::unregisterAssetCache( const IAssetCache* pCache )
+    void AssetManager::unregisterAssetCache( const IAssetCache* pCache )
     {
         (void)_registeredAssetCache.remove( pCache ); // 올라 있지 않으면 할 일이 없다(멱등)
     }
 
-    vector<IAssetCache*> ResourceManager::getAllAssetCache() const
+    vector<IAssetCache*> AssetManager::getAllAssetCache() const
     {
         return _registeredAssetCache.getItems();
     }
 
-    IAssetCache* ResourceManager::findAssetCache( string_view assetKindName ) const
+    IAssetCache* AssetManager::findAssetCache( string_view assetKindName ) const
     {
         // 이름은 등록 시점 사본으로 맞춘다. 죽은 모듈의 가상 함수를 부르지 않는다.
         return _registeredAssetCache.findByName( assetKindName );
     }
 
-    void ResourceManager::clearAssetCaches()
+    void AssetManager::clearAssetCaches()
     {
         for ( IAssetCache* pCache : _registeredAssetCache.getItems() )
             pCache->clear();
     }
 
-    void ResourceManager::warnAboutRemainingModuleCaches() const
+    void AssetManager::warnAboutRemainingModuleCaches() const
     {
         for ( uint32 index = 0; index < _registeredAssetCache.getCount(); ++index )
         {
@@ -193,7 +193,7 @@ namespace sw
         }
     }
 
-    uint32 ResourceManager::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    uint32 AssetManager::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
     {
         (void)outKeepImageMapped;
         vector<IAssetCache*> listModuleCache;
@@ -216,42 +216,42 @@ namespace sw
         return releasedCount;
     }
 
-    MaterialCache& ResourceManager::getMaterialManager()
+    MaterialCache& AssetManager::getMaterialManager()
     {
         return *_materialCache;
     }
 
-    const MaterialCache& ResourceManager::getMaterialManager() const
+    const MaterialCache& AssetManager::getMaterialManager() const
     {
         return *_materialCache;
     }
 
-    TextureCache& ResourceManager::getTextureManager()
+    TextureCache& AssetManager::getTextureManager()
     {
         return *_textureCache;
     }
 
-    const TextureCache& ResourceManager::getTextureManager() const
+    const TextureCache& AssetManager::getTextureManager() const
     {
         return *_textureCache;
     }
 
-    PrefabCache& ResourceManager::getPrefabCache()
+    PrefabCache& AssetManager::getPrefabCache()
     {
         return *_prefabCache;
     }
 
-    const PrefabCache& ResourceManager::getPrefabCache() const
+    const PrefabCache& AssetManager::getPrefabCache() const
     {
         return *_prefabCache;
     }
 
-    ResourcePackManager& ResourceManager::getPackManager()
+    ResourcePackManager& AssetManager::getPackManager()
     {
         return *_pPackManager;
     }
 
-    const ResourcePackManager& ResourceManager::getPackManager() const
+    const ResourcePackManager& AssetManager::getPackManager() const
     {
         return *_pPackManager;
     }

@@ -24,7 +24,7 @@ namespace sw
     /**
      * @class ResourceUtil
      * @brief 리소스 도메인 루트 · 검색 루트를 해석하고, 논리 경로 ↔ 절대 경로를 바꾸며, 마운트된 VFS .pack 에서 읽습니다.
-     * @note 경로 I/O 만 맡습니다. 에셋 소유권은 ResourceManager 에 있습니다.
+     * @note 경로 I/O 만 맡습니다. 에셋 소유권은 AssetManager 에 있습니다.
      */
     class SW_API ResourceUtil
     {

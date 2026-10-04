@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Config/EditorData.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -15,8 +15,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/IAssetCache.h"
-#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 
@@ -58,14 +58,14 @@ namespace sw::editor
 
             /**
              * @brief 실제로 감시할 확장자 목록을 정합니다.
-             * @details `editordata.json` 의 `_listHotReloadExtension` 이 정책이고, 다시 읽을 캐시가 있는 종류(`EditorAssetTypeRegistry`)가 한계입니다.
+             * @details `editortooldefaults.json` 의 `_listHotReloadExtension` 이 정책이고, 다시 읽을 캐시가 있는 종류(`EditorAssetTypeRegistry`)가 한계입니다.
              *          설정이 비어 있으면 그 종류 전부를 봅니다. 설정에 처리할 수 없는 확장자가 있으면 경고하고 뺍니다.
              */
             static vector<string> resolveWatchExtensions()
             {
                 // 반환 객체는 하나다 — 두 지역 변수를 각각 return 하면 NRVO 가 빠진다(`-Wnrvo`).
                 vector<string>        listExtension{};
-                const vector<string>& listConfigured = getEditorData()._listHotReloadExtension;
+                const vector<string>& listConfigured = getEditorToolDefaults()._listHotReloadExtension;
                 if ( listConfigured.empty() )
                 {
                     EditorAssetTypeRegistry::appendReloadableSuffixes( listExtension );
@@ -82,7 +82,7 @@ namespace sw::editor
                         listExtension.push_back( extension );
                         continue;
                     }
-                    SW_LOG_WARNING( "핫리로드 확장자 '%#' 는 처리기가 없어 무시합니다 (editordata.json)", extension.c_str() );
+                    SW_LOG_WARNING( "핫리로드 확장자 '%#' 는 처리기가 없어 무시합니다 (editortooldefaults.json)", extension.c_str() );
                 }
                 return listExtension;
             }
@@ -172,8 +172,8 @@ namespace sw::editor
             return true;
 
         // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 넘겨준 서비스를 쓴다.
-        ResourceManager* pResources = getService<ResourceManager>();
-        IAssetCache*     pCache     = ( pResources != nullptr ) ? pResources->findAssetCache( route._pCacheKindName ) : nullptr;
+        AssetManager* pResources = getService<AssetManager>();
+        IAssetCache*  pCache     = ( pResources != nullptr ) ? pResources->findAssetCache( route._pCacheKindName ) : nullptr;
         if ( pCache == nullptr )
         {
             SW_LOG_WARNING( "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );

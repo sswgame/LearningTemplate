@@ -19,7 +19,7 @@ SW_ENGINE_STARTUP_STEP( Compression,   EngineMisc, {} )                         
 SW_ENGINE_STARTUP_STEP( Reflection,    Reflection, {} )                                    //
 SW_ENGINE_STARTUP_STEP( Config,        EngineMisc, { Reflection } )                        // 설정 역직렬화가 TypeInfo 를 쓴다
 SW_ENGINE_STARTUP_STEP( Resource,      Asset,      { Compression, Config } )               // 팩 루트는 GameConfig, 팩 스트림은 코덱
-SW_ENGINE_STARTUP_STEP( EngineData,    EngineMisc, { Reflection, Resource } )              //
+SW_ENGINE_STARTUP_STEP( EngineDefaultAssets,    EngineMisc, { Reflection, Resource } )              //
 SW_ENGINE_STARTUP_STEP( ShaderCache,   Shader,     {} )                                    //
 SW_ENGINE_STARTUP_STEP( Task,          Task,       {} )                                    //
 SW_ENGINE_STARTUP_STEP( ModuleImages,  EngineMisc, { Compression, Reflection, Resource, Task } ) // 모듈을 내리며 타입 · 코덱 · 캐시를 떼고 태스크를 기다린다
@@ -27,12 +27,12 @@ SW_ENGINE_STARTUP_STEP( Audio,         Audio,      { ModuleImages, Task } )     
 SW_ENGINE_STARTUP_STEP( Input,         EngineMisc, { ModuleImages } )                      // 모듈이 등록한 장치 · 콜백을 든다
 SW_ENGINE_STARTUP_STEP( ModuleTypes,   Reflection, { Config, ModuleImages, Reflection } )  // 호스트가 타입 공급자(GF · 킷 · 게임 모듈)를 올려 등록을 끝낸다 — 씬을 읽는 일은 이 뒤
 SW_ENGINE_STARTUP_STEP( Scene,         Scene,      { Audio, Input, ModuleImages, Resource, Task } ) // 컴포넌트가 입력 · 오디오 · 모듈 코드 · 에셋을 든다
-SW_ENGINE_STARTUP_STEP( Headless,      EngineMisc, { EngineData, ModuleTypes, Scene, ShaderCache } ) // 셰이더 쿠킹 · 씬 쿠킹(모든 컴포넌트 타입이 있어야 쿠킹한다) — 하면 뒤 단계(창 · RHI · 렌더러)를 건너뛴다
+SW_ENGINE_STARTUP_STEP( Headless,      EngineMisc, { EngineDefaultAssets, ModuleTypes, Scene, ShaderCache } ) // 셰이더 쿠킹 · 씬 쿠킹(모든 컴포넌트 타입이 있어야 쿠킹한다) — 하면 뒤 단계(창 · RHI · 렌더러)를 건너뛴다
 SW_ENGINE_STARTUP_STEP( RHI,           RenderCpu,  { Config, Headless } )                  // 백엔드 선택 · 창 · 디바이스
 SW_ENGINE_STARTUP_STEP( FrameRenderer, RenderCpu,  { RHI, Task } )                         //
 SW_ENGINE_STARTUP_STEP( RenderThread,  RenderCpu,  { FrameRenderer } )                     //
 SW_ENGINE_STARTUP_STEP( LiveShader,    Shader,     { FrameRenderer, RenderThread } )       // 재컴파일이 렌더 스레드를 세우고 렌더러에 알린다(Debug)
 SW_ENGINE_STARTUP_STEP( SceneRhi,      RenderCpu,  { RHI, Scene } )                        // 씬에 디바이스를 건다 — 종료는 이것을 떼는 것이 처음
 
-// `ResourceManager::shutdown` 은 Resource 단계의 해제에 있다 — 에셋을 드는 단계가 모두 Resource 뒤에 서므로, 역순 해제에서 그들의 소멸자가
+// `AssetManager::shutdown` 은 Resource 단계의 해제에 있다 — 에셋을 드는 단계가 모두 Resource 뒤에 서므로, 역순 해제에서 그들의 소멸자가
 // 에셋을 놓은 뒤에 캐시를 비운다. 소멸자가 태스크를 기다리는 객체(에셋 스트리밍 큐)는 Task 에 의존하는 단계(Scene)가 해제한다.

@@ -5,7 +5,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
@@ -151,18 +151,18 @@ namespace sw
         // 동기 경로(execute)는 렌더러 자신의 빌더가 배치를 만든다. 패킷 경로의 빌더(EngineLoop)에는 EngineLoop 가 같은 값을 준다.
         _sceneBuilder.setMergeBatchesAcrossMaterials( pDevice->supportsNativeBindlessSampling() );
 
-        const EngineData&         engineData = engine::getEngineData();
-        RenderPipelineAssetCache& rpm        = *_renderPipelineAssetCache;
+        const EngineDefaultAssets& engineDefaultAssets = engine::getEngineDefaultAssets();
+        RenderPipelineAssetCache&  rpm                 = *_renderPipelineAssetCache;
         if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
-            rpm.loadRenderPass( engineData._defaultRenderPass );
+            rpm.loadRenderPass( engineDefaultAssets._defaultRenderPass );
 
-        // 인자 > `-gv_deferred` > EngineData 의 포워드 순으로 고른다. 디퍼드 경로(그리고 그 위의 조명)를
+        // 인자 > `-gv_deferred` > EngineDefaultAssets 의 포워드 순으로 고른다. 디퍼드 경로(그리고 그 위의 조명)를
         // 측정 · 검증하려면 `-gv_deferred=1` 을 준다.
         string_view resolvedPipeline = pipelineXmlPath;
         if ( resolvedPipeline.empty() && gv_deferred )
-            resolvedPipeline = engineData._defaultDeferredPipeline;
+            resolvedPipeline = engineDefaultAssets._defaultDeferredPipeline;
         if ( resolvedPipeline.empty() )
-            resolvedPipeline = engineData._defaultForwardPipeline;
+            resolvedPipeline = engineDefaultAssets._defaultForwardPipeline;
 
         if ( loadPipeline( resolvedPipeline ) == false )
         {

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Data/GameData.h"
+#include "GameFramework/Data/GameSettings.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
@@ -10,9 +10,9 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameData" );
+    SW_LOG_CALLER( "GameSettings" );
 
-    string_view GameData::getCustomProperty( string_view key, string_view fallback ) const
+    string_view GameSettings::getCustomProperty( string_view key, string_view fallback ) const
     {
         const auto it = _mapCustomProperty.find( string( key ) );
         if ( it != _mapCustomProperty.end() )
@@ -26,7 +26,7 @@ namespace sw
     //   (2) **bool 은 대소문자를 가리지 않는다.** `StringUtil::parseBool` 은 `TRUE` · `yes` · `on` 도 안다.
     // 파서는 `string_view` 로 받으므로 `string` 을 만들지 않는다.
     // 값이 있는데 못 읽으면 알린다(없거나 빈 값은 조용히 fallback) — `KeyValueFile` 의 형제 조회와 같은 규칙이다.
-    int32 GameData::getCustomPropertyInt( string_view key, int32 fallback ) const
+    int32 GameSettings::getCustomPropertyInt( string_view key, int32 fallback ) const
     {
         const string_view text = getCustomProperty( key );
         int32             value{ 0 };
@@ -34,11 +34,11 @@ namespace sw
             return fallback;
         if ( StringUtil::parseInt( text, value ) )
             return value;
-        SW_LOG_WARNING( "GameData '%#' has an unreadable integer '%#' - using %#", key, text, fallback );
+        SW_LOG_WARNING( "GameSettings '%#' has an unreadable integer '%#' - using %#", key, text, fallback );
         return fallback;
     }
 
-    float32 GameData::getCustomPropertyFloat( string_view key, float32 fallback ) const
+    float32 GameSettings::getCustomPropertyFloat( string_view key, float32 fallback ) const
     {
         const string_view text = getCustomProperty( key );
         float32           value{ 0.0f };
@@ -46,11 +46,11 @@ namespace sw
             return fallback;
         if ( StringUtil::parseFloat( text, value ) )
             return value;
-        SW_LOG_WARNING( "GameData '%#' has an unreadable number '%#' - using %#", key, text, fallback );
+        SW_LOG_WARNING( "GameSettings '%#' has an unreadable number '%#' - using %#", key, text, fallback );
         return fallback;
     }
 
-    bool GameData::getCustomPropertyBool( string_view key, bool bFallback ) const
+    bool GameSettings::getCustomPropertyBool( string_view key, bool bFallback ) const
     {
         const string_view text = getCustomProperty( key );
         bool              value{ bFallback };
@@ -58,11 +58,11 @@ namespace sw
             return bFallback;
         if ( StringUtil::tryParseBool( text, value ) )
             return value;
-        SW_LOG_WARNING( "GameData '%#' has an unreadable boolean '%#' - using %#", key, text, bFallback ? "true" : "false" );
+        SW_LOG_WARNING( "GameSettings '%#' has an unreadable boolean '%#' - using %#", key, text, bFallback ? "true" : "false" );
         return bFallback;
     }
 
-    bool GameData::loadFromResource( string_view assetRelativePath )
+    bool GameSettings::loadFromResource( string_view assetRelativePath )
     {
         // 게임별 기본 경로를 엔진이 알 필요는 없다. 경로가 없으면 로드할 것도 없다.
         if ( assetRelativePath.empty() )
@@ -75,20 +75,20 @@ namespace sw
         // **먼저 비운다.** 형제인 `SpeciesCatalog::loadFromResource` 도 그렇게 한다.
         // 주의: 안 비우면 팩을 바꿔 다시 읽을 때 앞 팩의 커스텀 프로퍼티가 그대로 남아,
         // 새 팩에 없는 키를 물으면 **없어진 팩의 값**이 나온다.
-        *this = GameData{};
+        *this = GameSettings{};
 
         XmlDocument doc;
         string      absPath;
         if ( doc.loadResource( path, &absPath ) == false )
         {
-            SW_LOG_WARNING( "Failed to parse gamedata from %# — using built-in defaults.", path );
+            SW_LOG_WARNING( "Failed to parse gamesettings from %# — using built-in defaults.", path );
             return false;
         }
 
-        XmlNode root = doc.getRoot( "GameData" );
+        XmlNode root = doc.getRoot( "GameSettings" );
         if ( root.isValid() == false )
         {
-            SW_LOG_WARNING( "Missing <GameData> in %# — using defaults.", absPath );
+            SW_LOG_WARNING( "Missing <GameSettings> in %# — using defaults.", absPath );
             return false;
         }
 
@@ -150,10 +150,10 @@ namespace sw
         return FileUtil::joinPath( pack, FileUtil::normalizePath( packRelative ) );
     }
 
-    bool BootstrapConfig::load( string_view gamedataFileName )
+    bool BootstrapConfig::load( string_view gameSettingsFileName )
     {
-        const string path = resolve( gamedataFileName );
-        Component::setDefaultGamedataPath( path );
+        const string path = resolve( gameSettingsFileName );
+        Component::setDefaultGameSettingsPath( path );
         return _data.loadFromResource( path );
     }
 } // namespace sw

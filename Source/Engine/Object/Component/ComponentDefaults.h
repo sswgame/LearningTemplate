@@ -1,6 +1,6 @@
 /**
  * @file ComponentDefaults.h
- * @brief 게임 gamedata.xml 의 `<Defaults>` 를 Component PROPERTY 에 주입합니다.
+ * @brief 게임 gamesettings.xml 의 `<Defaults>` 를 Component PROPERTY 에 주입합니다.
  *
  * 기본값은 **만들 때 한 번** 들어갑니다(언리얼 CDO 의 자리). 살아 있는 인스턴스에 다시 찍지 않습니다 — 모듈 로드 · 핫 리로드에서
  * 다시 찍으면 게임이 바꾼 값이 기본값으로 돌아갑니다.
@@ -28,7 +28,7 @@ namespace sw
 
     /**
      * @class ComponentDefaults
-     * @brief 게임 부트스트랩이 지정한 gamedata.xml 의 `<Defaults>` 를 리플렉션으로 주입하는 서비스입니다.
+     * @brief 게임 부트스트랩이 지정한 gamesettings.xml 의 `<Defaults>` 를 리플렉션으로 주입하는 서비스입니다.
      */
     class SW_API ComponentDefaults
     {
@@ -42,10 +42,10 @@ namespace sw
         /** @brief 인스턴스에 XML 기본값을 리플렉션으로 주입합니다(뿌리 타입부터 파생 순). 여러 스레드가 함께 불러도 됩니다. */
         void apply( void* pInstance, const TypeInfo& typeInfo );
 
-        /** @brief 게임 gamedata.xml 리소스 경로를 지정합니다. 비어 있으면 주입하지 않습니다. */
+        /** @brief 게임 gamesettings.xml 리소스 경로를 지정합니다. 비어 있으면 주입하지 않습니다. */
         void setPath( string_view path );
 
-        /** @brief 현재 게임 gamedata.xml 리소스 경로를 반환합니다. */
+        /** @brief 현재 게임 gamesettings.xml 리소스 경로를 반환합니다. */
         string getPath() const;
 
         /** @brief 캐시된 기본값 XML 문서를 다시 로드합니다. */

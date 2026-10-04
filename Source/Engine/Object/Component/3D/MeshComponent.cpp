@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/AABB.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {
@@ -61,7 +61,7 @@ namespace sw
         if ( path == _acquiredMaterialPath || engine::areEngineServicesBound() == false )
             return;
 
-        MaterialCache& cache     = engine::getResourceManager().getMaterialManager();
+        MaterialCache& cache     = engine::getAssetManager().getMaterialManager();
         Material*      pMaterial = nullptr;
         if ( path.empty() == false )
         {
@@ -106,7 +106,7 @@ namespace sw
         {
             _pMaterial = nullptr;
             if ( engine::areEngineServicesBound() )
-                engine::getResourceManager().getMaterialManager().release( _acquiredMaterialPath.c_str() );
+                engine::getAssetManager().getMaterialManager().release( _acquiredMaterialPath.c_str() );
             _acquiredMaterialPath = hashed_string{};
         }
         SceneComponent::onUnregister( manager );

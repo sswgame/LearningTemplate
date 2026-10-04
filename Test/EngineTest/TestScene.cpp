@@ -21,7 +21,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
@@ -381,7 +381,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
     SW_ASSERT_TRUE( doc.saveXml( tempSceneXml ) );
 
     if ( sw::engine::areEngineServicesBound() )
-        sw::engine::getResourceManager().getAssetDatabase().registerMapping( "prefabs/new_hero.prefab.xml", heroGuid );
+        sw::engine::getAssetManager().getAssetDatabase().registerMapping( "prefabs/new_hero.prefab.xml", heroGuid );
 
     sw::SceneDocument loadedDoc{};
     SW_ASSERT_TRUE( loadedDoc.loadXml( tempSceneXml ) );
@@ -1441,7 +1441,7 @@ SW_TEST_CASE( SceneTest, BrokenSceneFileSaysWhereNotFileNotFound )
 
 /**
  * @brief [SceneTest] 엔진 서비스 없이도 XML 씬 · 프리팹을 읽고, 지원하는 것보다 새 형식 · 올릴 단계가 없는 옛 판은 그때도 거절한다
- * @details 단독 도구 · 테스트는 서비스를 묶지 않고 에셋을 읽는다. 로더가 `getResourceManager()` 로 형식 등록부를 꺼내면 거기서 assert 다 —
+ * @details 단독 도구 · 테스트는 서비스를 묶지 않고 에셋을 읽는다. 로더가 `getAssetManager()` 로 형식 등록부를 꺼내면 거기서 assert 다 —
  *          같은 함수의 GUID 블록과 바이너리 로더는 이미 서비스가 있는지 묻는다. 서비스가 없을 때는 내장 migrator 만 든 등록부로 판정한다.
  */
 SW_TEST_CASE( SceneTest, XmlAssetsLoadWithoutEngineServices )

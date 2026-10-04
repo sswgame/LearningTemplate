@@ -11,7 +11,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {
@@ -54,7 +54,7 @@ namespace sw
             return nullptr;
 
         const string key = FileUtil::normalizePath( relativePath );
-        engine::getResourceManager().getAssetDatabase().ensureMeta( key );
+        engine::getAssetManager().getAssetDatabase().ensureMeta( key );
 
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
         Impl::Entry&                        entry = _impl->_mapEntry[key];
@@ -210,7 +210,7 @@ namespace sw
      *          캐시가 디바이스를 들고 있으면 백엔드 교체 때 죽은 포인터가 됩니다) 캐시도 들고 있지
      *          않으므로 여기서 `releaseRhi` 를 부를 방법이 없습니다.
      *
-     *          지금 이 함수로 오는 길은 `ResourceManager::shutdown` → `clearAssetCaches()` 하나뿐이고,
+     *          지금 이 함수로 오는 길은 `AssetManager::shutdown` → `clearAssetCaches()` 하나뿐이고,
      *          `EngineLoop::shutdown` 이 그보다 **먼저** `_rhi->shutdown()` 을 불러 등록부 전체에
      *          `releaseRhi` 를 밀어 둡니다. 평소 경로는 참조가 0 이 되는 `release()` 쪽입니다.
      */

@@ -47,7 +47,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **prelude·경로 헬퍼**: `EngineMinimal.h`, `Common/Common.h`, `Resource/ResourceUtil.h`.
   타입 별칭·전방 선언 우산 헤더와 리소스 경로 해석 헬퍼라 어느 티어에서든 쓸 수 있습니다.
 - **배선 파일**: `Common/EngineServices.cpp`, `Reflection/ReflectGenerated.h`,
-  `Resource/ResourceManager.cpp`. 노출하는 모든 서브시스템을 알아야 하는 자리입니다.
+  `Resource/AssetManager.cpp`. 노출하는 모든 서브시스템을 알아야 하는 자리입니다.
 
 금지 include 자동화: `py -3 Scripts/lint/gate/CheckEngineLayers.py` — 위반은 실패입니다.
 
@@ -63,21 +63,21 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Reflection/**: 매크로 · TypeRegistry · Builtins. [Reflection/README.md](Reflection/README.md) · 생성기 [ReflectionParser](../../Tools/ReflectionParser/README.md)
 - **Graphics/**: RHI · Material · Shader · FrameRenderer. [Graphics/README.md](Graphics/README.md)
 - **Input/**: InputManager · InputMap · 장치(Keyboard/Mouse/Gamepad) 추상화. [Input/README.md](Input/README.md)
-- **Resource/**: AssetDatabase · ResourceManager · ResourceUtil · ResourcePackManager (VFS .pack) · AssetStreamingQueue
+- **Resource/**: AssetDatabase · AssetManager · ResourceUtil · ResourcePackManager (VFS .pack) · AssetStreamingQueue
   - **에셋 종류를 늘리는 자리는 `IAssetCache` 다.** 경로를 키로 무언가를 들고 있는 캐시는 그 인터페이스를
-    구현하고 `ResourceManager::registerAssetCache` 로 올린다. 그러면 종료·비우기·진단이 **등록부를 훑어**
+    구현하고 `AssetManager::registerAssetCache` 로 올린다. 그러면 종료·비우기·진단이 **등록부를 훑어**
     그 캐시까지 지나간다 — 종료 경로에 캐시 이름을 따로 적지 않는다.
     핫리로드가 디바이스를 **인자로** 받는 것도 그 계약이다 — 캐시가 마지막으로 본 디바이스를 들고 있으면
     백엔드를 바꾼 뒤 죽은 포인터가 된다.
   - **모듈(게임·에디터·키트)도 자기 에셋 종류를 올릴 수 있다.** 창구는 이미 열려 있다 —
-    `ResourceManager` 는 게임 모듈에도 노출되는 서비스이고(`EngineServiceList.xxx` 의 `GameVisible`),
+    `AssetManager` 는 게임 모듈에도 노출되는 서비스이고(`EngineServiceList.xxx` 의 `GameVisible`),
     `IAssetCache.h` 는 모듈이 그냥 include 하면 된다. 규칙은 하나뿐이고 그것이 전부다:
 
     ```cpp
     // 모듈 초기화에서
-    getService<ResourceManager>()->registerAssetCache( &_myCache );
+    getService<AssetManager>()->registerAssetCache( &_myCache );
     // 모듈 종료에서 — **반드시**
-    getService<ResourceManager>()->unregisterAssetCache( &_myCache );
+    getService<AssetManager>()->unregisterAssetCache( &_myCache );
     ```
 
     등록부는 **포인터만** 든다. 모듈 DLL 이 내려가면 그 포인터도 가상 함수 표도 같이 사라지므로,

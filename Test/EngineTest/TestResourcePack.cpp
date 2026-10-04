@@ -11,9 +11,9 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/PackCompressionUtil.h"
-#include "Engine/Resource/ResourceManager.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourcePackReader.h"
 #include "Engine/Resource/ResourcePackTypes.h"
@@ -51,8 +51,8 @@ namespace sw
                 packManager.unmountAll();
                 packManager.setAllowLooseFiles( true );
                 ResourceUtil::setSearchPriority( _listSearchPriority );
-                engine::getResourceManager().mountStartupPacks();
-                engine::getResourceManager().loadAssetRegistries();
+                engine::getAssetManager().mountStartupPacks();
+                engine::getAssetManager().loadAssetRegistries();
             }
 
             GlobalVfsScope( const GlobalVfsScope& )            = delete;

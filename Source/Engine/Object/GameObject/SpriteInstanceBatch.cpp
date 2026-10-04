@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {
@@ -40,7 +40,7 @@ namespace sw
         if ( engine::areEngineServicesBound() )
         {
             const hashed_string materialPath = SpriteRenderUtil::getSpriteMaterialPath();
-            MaterialCache&      cache        = engine::getResourceManager().getMaterialManager();
+            MaterialCache&      cache        = engine::getAssetManager().getMaterialManager();
             pMaterial                        = cache.acquire( materialPath.c_str(), nullptr );
             if ( pMaterial != nullptr )
             {
@@ -76,7 +76,7 @@ namespace sw
         if ( _acquiredMaterialPath.empty() )
             return;
         if ( engine::areEngineServicesBound() )
-            engine::getResourceManager().getMaterialManager().release( _acquiredMaterialPath.c_str() );
+            engine::getAssetManager().getMaterialManager().release( _acquiredMaterialPath.c_str() );
         _acquiredMaterialPath = hashed_string{};
     }
 

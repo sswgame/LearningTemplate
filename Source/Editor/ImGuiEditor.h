@@ -13,7 +13,7 @@
 
 namespace sw::editor
 {
-    struct EditorData;
+    struct EditorToolDefaults;
 
     class EditorContext;
     class IImGuiPlatformBackend;
@@ -96,7 +96,7 @@ namespace sw::editor
 
         unique_ptr<IImGuiPlatformBackend> _platformBackend;
         unique_ptr<IImGuiRendererBackend> _rendererBackend;
-        unique_ptr<EditorData>            _editorData;
+        unique_ptr<EditorToolDefaults>    _editorToolDefaults;
         unique_ptr<EditorContext>         _editorContext;
         EditorDockLayout                  _dockLayout;
         EditorDrawDataSnapshot            _arrDrawSnapshot[constant::kMaxFrameCountInFlight];

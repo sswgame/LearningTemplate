@@ -15,7 +15,7 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 
 namespace sw
 {
@@ -135,7 +135,7 @@ namespace sw
         // (SM5.0 은 리소스 배열 동적 인덱싱이 없고, GL 은 SPIR-V 라 ARB_bindless_texture 를 못 쓴다) 엔진이
         // 머티리얼 텍스처를 t5..t8 고정 슬롯에 바인딩하고 CB 에는 **서수**를 넣는다.
         const bool    bNativeBindless = pRhi->supportsNativeBindlessSampling();
-        TextureCache& textures        = engine::getResourceManager().getTextureManager();
+        TextureCache& textures        = engine::getAssetManager().getTextureManager();
         _textureReloadGeneration      = textures.getReloadGeneration();
         for ( const MaterialProperty& prop : _data._listProperty )
         {
@@ -169,7 +169,7 @@ namespace sw
     {
         if ( _listAcquiredTexturePath.empty() || _pRHIDevice == nullptr || engine::areEngineServicesBound() == false )
             return false;
-        TextureCache& textures   = engine::getResourceManager().getTextureManager();
+        TextureCache& textures   = engine::getAssetManager().getTextureManager();
         const uint32  generation = textures.getReloadGeneration();
         if ( generation == _textureReloadGeneration )
             return false;
@@ -216,7 +216,7 @@ namespace sw
             return;
         if ( engine::areEngineServicesBound() )
         {
-            TextureCache& textures = engine::getResourceManager().getTextureManager();
+            TextureCache& textures = engine::getAssetManager().getTextureManager();
             for ( const string& path : _listAcquiredTexturePath )
                 textures.release( path, pRhi );
         }

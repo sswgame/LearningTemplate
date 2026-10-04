@@ -44,7 +44,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Resource/ResourceManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
@@ -848,7 +848,7 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteDrawsWithTheSpriteShader )
                 pSprite->setTextureName( "engine/textures/perlin.dds" );
                 pSprite->resolveRenderAssets();
                 // 엔진 루프가 패킷을 내기 전에 하는 일 — 컴포넌트가 디바이스 없이 잡은 머티리얼을 올린다.
-                sw::engine::getResourceManager().getMaterialManager().initializePending( device.get() );
+                sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
                 bOk = pSprite->getMaterial() != nullptr && pSprite->getMaterial()->isRhiValid();
                 SW_EXPECT_TRUE_MSG( bOk, ( label + ": 스프라이트 머티리얼이 올라가지 않았다" ).c_str() );
             }
@@ -2719,7 +2719,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialRequestedWithoutADeviceIsUploadedLater 
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
-    sw::MaterialCache&    cache = sw::engine::getResourceManager().getMaterialManager();
+    sw::MaterialCache&    cache = sw::engine::getAssetManager().getMaterialManager();
 
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
     for ( test::RHITestDevice& device : sweep )
@@ -2779,7 +2779,7 @@ SW_TEST_CASE( RenderPassGpuTest, ReloadedTextureIsReboundToMaterialsAndBatches )
             builder.buildFromScene( &scene, camPos );
             SW_ASSERT_EQUAL( size_t( 1 ), builder.getOpaqueBatches().size() );
 
-            sw::TextureCache& textures = sw::engine::getResourceManager().getTextureManager();
+            sw::TextureCache& textures = sw::engine::getAssetManager().getTextureManager();
             textures.reload( kTexturePath, device.get() );
             const sw::Texture2D* pTexture = textures.find( kTexturePath );
             SW_ASSERT_NOT_NULL( pTexture );
@@ -3463,7 +3463,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceOverridesReachTheGpuOnEveryBackend )
                     sw::Memory::copy( &value, instance->getBuffer().data() + pProp->_offset, sizeof( value ) );
                 return value;
             };
-            sw::TextureCache& textures = sw::engine::getResourceManager().getTextureManager();
+            sw::TextureCache& textures = sw::engine::getAssetManager().getTextureManager();
             // 텍스처가 셰이더에 닿았는가 — 네이티브는 인스턴스 바이트의 SRV 인덱스, 슬롯 바인딩 백엔드는 배치 슬롯(부모의 albedoMap 자리 0).
             auto expectTextureReachesShader = [&]( sw::RHIDescriptorIndex expectedSrv, const utf8* pWhen )
             {
@@ -3949,7 +3949,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialTexturesAreSampledLinearWrap )
             if ( bOk )
             {
                 renderer.setViewMode( sw::RenderViewMode::Unlit );
-                sw::engine::getResourceManager().getMaterialManager().initializePending( device.get() );
+                sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
                 constexpr uint32 kWarmupFrameCount = 4;
                 for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
                 {
@@ -4229,7 +4229,7 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteFramesAndTintsArePerInstance )
             if ( bOk )
             {
                 scene.getObjectManager()->flushSceneTransforms();
-                sw::engine::getResourceManager().getMaterialManager().initializePending( device.get() );
+                sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
                 // 첫 프레임에는 GpuScene 업로드 · 텍스처가 아직이라 몇 장 돌린다.
                 constexpr uint32 kWarmupFrameCount = 4;
                 for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )

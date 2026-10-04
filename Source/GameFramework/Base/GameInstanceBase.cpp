@@ -69,11 +69,11 @@ namespace sw
         const GameConfig& gameCfg = GameConfig::getActive();
         if ( gameCfg._packRoot.empty() == false )
             _bootstrap._packRoot = gameCfg._packRoot;
-        const string_view gameDataFile =
-            gameCfg._gameDataFile.empty() ? string_view( "data/gamedata.xml" ) : string_view( gameCfg._gameDataFile );
-        if ( _bootstrap.load( gameDataFile ) == false )
+        const string_view gameSettingsFile =
+            gameCfg._gameSettingsFile.empty() ? string_view( "data/gamesettings.xml" ) : string_view( gameCfg._gameSettingsFile );
+        if ( _bootstrap.load( gameSettingsFile ) == false )
             SW_LOG_TRACE( "No custom bootstrap in pack '%#' — using defaults.", _bootstrap._packRoot );
-        game::bindLocalService<GameData>( &_bootstrap._data );
+        game::bindLocalService<GameSettings>( &_bootstrap._data );
         applyBootstrap();
         return onInitialize();
     }
@@ -82,8 +82,8 @@ namespace sw
     {
         onShutdown();
         // 다른 인스턴스(리로드가 먼저 만든 새 것)가 묶은 것은 건드리지 않는다.
-        if ( game::getService<GameData>() == &_bootstrap._data )
-            game::unbindLocalService<GameData>();
+        if ( game::getService<GameSettings>() == &_bootstrap._data )
+            game::unbindLocalService<GameSettings>();
         _listPendingSceneLoad.clear();
         _pWindow    = nullptr;
         _pRhiDevice = nullptr;
@@ -91,17 +91,17 @@ namespace sw
 
     void GameInstanceBase::applyBootstrap()
     {
-        const GameData& data = _bootstrap._data;
+        const GameSettings& data = _bootstrap._data;
 
         // 다국어 — 팩 폴더가 있으면 그것, 없으면 단일 문자열 파일.
         if ( data._localizationDirectory.empty() == false )
         {
             if ( GameStrings::initialize( data._localizationDirectory, data._defaultLanguage, data._fallbackLanguage ) == false )
-                SW_LOG_WARNING( "GameData localization '%#' could not be loaded - strings show their keys", data._localizationDirectory.c_str() );
+                SW_LOG_WARNING( "GameSettings localization '%#' could not be loaded - strings show their keys", data._localizationDirectory.c_str() );
         }
         else if ( data._stringsData.empty() == false && GameStrings::loadFromResource( data._stringsData ) == false )
         {
-            SW_LOG_WARNING( "GameData strings '%#' could not be loaded - strings show their keys", data._stringsData.c_str() );
+            SW_LOG_WARNING( "GameSettings strings '%#' could not be loaded - strings show their keys", data._stringsData.c_str() );
         }
 
         // 게임플레이 입력 맵 — `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵(`PlayerController` 가 읽는 맵)이다.
@@ -109,9 +109,9 @@ namespace sw
         {
             InputManager* pInput = game::getService<InputManager>();
             if ( pInput == nullptr )
-                SW_LOG_WARNING( "GameData input map '%#' is not loaded - no InputManager service", data._inputMap.c_str() );
+                SW_LOG_WARNING( "GameSettings input map '%#' is not loaded - no InputManager service", data._inputMap.c_str() );
             else if ( pInput->getInputMap().loadFromResource( data._inputMap ) == false )
-                SW_LOG_WARNING( "GameData input map '%#' could not be loaded - gameplay actions keep their current bindings", data._inputMap.c_str() );
+                SW_LOG_WARNING( "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", data._inputMap.c_str() );
         }
     }
 
@@ -453,7 +453,7 @@ namespace sw
         const string_view path = filePath.empty() ? string_view( _bootstrap._data._defaultSavePath ) : filePath;
         if ( path.empty() )
         {
-            SW_LOG_ERROR( "No save path was given and GameData has no defaultSavePath - nothing is saved" );
+            SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is saved" );
             return false;
         }
         vector<uint8> snapshotBytes;
@@ -471,7 +471,7 @@ namespace sw
         const string_view path = filePath.empty() ? string_view( _bootstrap._data._defaultSavePath ) : filePath;
         if ( path.empty() )
         {
-            SW_LOG_ERROR( "No save path was given and GameData has no defaultSavePath - nothing is loaded" );
+            SW_LOG_ERROR( "No save path was given and GameSettings has no defaultSavePath - nothing is loaded" );
             return false;
         }
         vector<uint8> snapshotBytes;

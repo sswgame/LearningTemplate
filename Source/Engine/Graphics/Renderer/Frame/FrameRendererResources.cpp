@@ -8,7 +8,7 @@
 #include "pch.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Config/EngineData.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
@@ -39,9 +39,9 @@ namespace sw
         }
 
         // 엔진 PSO 는 패스 종류의 표(RenderPassTypeInfo)를 enum 순서로 훑어 만든다. 셰이더 경로는 파이프라인 XML 패스 설정이 먼저이고
-        // 표의 EngineData 경로는 마지막 폴백일 뿐이다. 셰이더 쿠커가 같은 표를 훑는다.
-        const EngineData&     engineData = engine::getEngineData();
-        const RHICapabilities caps       = _pDevice->getCapabilities();
+        // 표의 EngineDefaultAssets 경로는 마지막 폴백일 뿐이다. 셰이더 쿠커가 같은 표를 훑는다.
+        const EngineDefaultAssets& engineDefaultAssets = engine::getEngineDefaultAssets();
+        const RHICapabilities      caps                = _pDevice->getCapabilities();
         for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
         {
             const RenderPassType      passType = static_cast<RenderPassType>( typeIndex );
@@ -56,7 +56,7 @@ namespace sw
                 // DX11 은 한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를 같이 못 걸어 _bGpuCulling 이 0 이지만 _bCompute 는 1 이다.
                 const bool bCapable = info.hasFlag( RenderPassTraitFlag::kRequiresGpuCulling ) ? caps._bGpuCulling != SW_FALSE : caps._bCompute != SW_FALSE;
                 if ( bCapable )
-                    pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineData.*info._pDefaultShader ).c_str(), FrameRendererUtil::Entry::kCSMain );
+                    pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineDefaultAssets.*info._pDefaultShader ).c_str(), FrameRendererUtil::Entry::kCSMain );
             }
             else
             {

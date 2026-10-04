@@ -19,7 +19,7 @@ namespace sw
         string _packRoot{};
 
         PROPERTY()
-        string _gameDataFile{ "data/gamedata.xml" };
+        string _gameSettingsFile{ "data/gamesettings.xml" };
 
         /**
          * @brief 게임이 시작할 때 여는 씬(리소스 경로)입니다. 비면 씬 없이 뜹니다.

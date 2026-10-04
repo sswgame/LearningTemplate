@@ -21,7 +21,7 @@ namespace sw
 
 namespace sw::editor
 {
-    struct EditorData;
+    struct EditorToolDefaults;
 
     namespace internal
     {
@@ -82,8 +82,8 @@ namespace sw::editor
         return nullptr;
     }
 
-    EditorData& getEditorData();
-    void        setEditorData( EditorData* pData );
+    EditorToolDefaults& getEditorToolDefaults();
+    void                setEditorToolDefaults( EditorToolDefaults* pData );
 
     // ------------------------------------------------------------------------------
     // 활성 씬 바로가기

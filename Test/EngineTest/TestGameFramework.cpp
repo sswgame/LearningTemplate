@@ -34,7 +34,7 @@
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/Base/GravityComponent.h"
 #include "GameFramework/Base/SaveGame.h"
-#include "GameFramework/Data/GameData.h"
+#include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Kits/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/ActionCombat/MeleeHitboxComponent.h"
@@ -634,7 +634,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseSnapshotAndFileRoundTrip )
 
 /**
  * @brief [GameFrameworkTest] `GameInstanceBase` 의 세이브 · 로드는 끝난 자리에서 "game" 채널에 `SaveGameSavedEvent` · `SaveGameLoadedEvent` 를 낸다
- * @details 성공 · 실패 모두 경로와 결과를 싣는다. 경로가 정해지지 않은 저장(인자 없음 · GameData 기본 경로 없음)은 시도가 아니므로 내지 않는다.
+ * @details 성공 · 실패 모두 경로와 결과를 싣는다. 경로가 정해지지 않은 저장(인자 없음 · GameSettings 기본 경로 없음)은 시도가 아니므로 내지 않는다.
  */
 SW_TEST_CASE( GameFrameworkTest, GameInstanceBasePublishesSaveAndLoadCompleted )
 {
@@ -1362,31 +1362,31 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_OutOfBoundsQueriesSafety )
 }
 
 /**
- * @brief [GameFrameworkTest] GameData 범용 커스텀 프로퍼티 저장소 및 타입별 조회 헬퍼 검증
+ * @brief [GameFrameworkTest] GameSettings 범용 커스텀 프로퍼티 저장소 및 타입별 조회 헬퍼 검증
  */
-SW_TEST_CASE( GameFrameworkTest, GameData_CustomPropertyParsingAndQuery )
+SW_TEST_CASE( GameFrameworkTest, GameSettings_CustomPropertyParsingAndQuery )
 {
-    GameData gameData;
-    gameData._mapCustomProperty["dungeonBgm"]    = "audio/bgm_dungeon.mp3";
-    gameData._mapCustomProperty["maxPartySize"]  = "8";
-    gameData._mapCustomProperty["encounterRate"] = "0.45";
-    gameData._mapCustomProperty["enableShadows"] = "true";
+    GameSettings gameSettings;
+    gameSettings._mapCustomProperty["dungeonBgm"]    = "audio/bgm_dungeon.mp3";
+    gameSettings._mapCustomProperty["maxPartySize"]  = "8";
+    gameSettings._mapCustomProperty["encounterRate"] = "0.45";
+    gameSettings._mapCustomProperty["enableShadows"] = "true";
 
     // 문자열 조회
-    SW_EXPECT_EQUAL( sw::string_view( "audio/bgm_dungeon.mp3" ), gameData.getCustomProperty( "dungeonBgm" ) );
-    SW_EXPECT_EQUAL( sw::string_view( "fallback_value" ), gameData.getCustomProperty( "non_existent_key", "fallback_value" ) );
+    SW_EXPECT_EQUAL( sw::string_view( "audio/bgm_dungeon.mp3" ), gameSettings.getCustomProperty( "dungeonBgm" ) );
+    SW_EXPECT_EQUAL( sw::string_view( "fallback_value" ), gameSettings.getCustomProperty( "non_existent_key", "fallback_value" ) );
 
     // 정수 조회
-    SW_EXPECT_EQUAL( 8, gameData.getCustomPropertyInt( "maxPartySize", 6 ) );
-    SW_EXPECT_EQUAL( 10, gameData.getCustomPropertyInt( "non_existent_int", 10 ) );
+    SW_EXPECT_EQUAL( 8, gameSettings.getCustomPropertyInt( "maxPartySize", 6 ) );
+    SW_EXPECT_EQUAL( 10, gameSettings.getCustomPropertyInt( "non_existent_int", 10 ) );
 
     // 실수 조회
-    SW_EXPECT_NEAR_EQUAL( 0.45f, gameData.getCustomPropertyFloat( "encounterRate", 0.1f ), 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, gameData.getCustomPropertyFloat( "non_existent_float", 1.0f ), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.45f, gameSettings.getCustomPropertyFloat( "encounterRate", 0.1f ), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, gameSettings.getCustomPropertyFloat( "non_existent_float", 1.0f ), 1e-4f );
 
     // 부울 조회
-    SW_EXPECT_TRUE( gameData.getCustomPropertyBool( "enableShadows", false ) );
-    SW_EXPECT_FALSE( gameData.getCustomPropertyBool( "non_existent_bool", false ) );
+    SW_EXPECT_TRUE( gameSettings.getCustomPropertyBool( "enableShadows", false ) );
+    SW_EXPECT_FALSE( gameSettings.getCustomPropertyBool( "non_existent_bool", false ) );
 }
 
 /**
@@ -2431,44 +2431,44 @@ SW_TEST_CASE( GameFrameworkTest, TransitionActionCanStartAnotherTransition )
  *          `maxPartySize=six` 같은 오타가 조용히 0 이 된다 — fallback 이 있는데도 쓰이지 않는다. bool 도 `true`/`True`/`1` 만
  *          알면 `TRUE` · `yes` · `on` 은 전부 fallback 으로 떨어진다.
  */
-SW_TEST_CASE( GameFrameworkTest, GameData_UnreadableValueFallsBackInsteadOfBecomingZero )
+SW_TEST_CASE( GameFrameworkTest, GameSettings_UnreadableValueFallsBackInsteadOfBecomingZero )
 {
-    GameData gameData;
-    gameData._mapCustomProperty["brokenInt"]   = "six";
-    gameData._mapCustomProperty["brokenFloat"] = "half";
-    gameData._mapCustomProperty["emptyInt"]    = "";
-    gameData._mapCustomProperty["upperBool"]   = "TRUE";
-    gameData._mapCustomProperty["yesBool"]     = "yes";
-    gameData._mapCustomProperty["offBool"]     = "OFF";
-    gameData._mapCustomProperty["paddedInt"]   = "  12  ";
-    gameData._mapCustomProperty["typoBool"]    = "ture";
+    GameSettings gameSettings;
+    gameSettings._mapCustomProperty["brokenInt"]   = "six";
+    gameSettings._mapCustomProperty["brokenFloat"] = "half";
+    gameSettings._mapCustomProperty["emptyInt"]    = "";
+    gameSettings._mapCustomProperty["upperBool"]   = "TRUE";
+    gameSettings._mapCustomProperty["yesBool"]     = "yes";
+    gameSettings._mapCustomProperty["offBool"]     = "OFF";
+    gameSettings._mapCustomProperty["paddedInt"]   = "  12  ";
+    gameSettings._mapCustomProperty["typoBool"]    = "ture";
 
     // 못 읽은 값은 fallback 이 되고 **알린다**. 빈 값 · 없는 키는 조용하다.
     test::ScopedLogCollector logs;
     {
         test::ScopedDefensiveTestLog expected( "custom properties that do not parse" );
-        SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyInt( "brokenInt", 6 ) == 6, "못 읽은 정수가 0 이 됐습니다" );
-        SW_EXPECT_NEAR_EQUAL( 0.5f, gameData.getCustomPropertyFloat( "brokenFloat", 0.5f ), 1e-4f );
-        SW_EXPECT_TRUE( gameData.getCustomPropertyBool( "typoBool", true ) );
+        SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyInt( "brokenInt", 6 ) == 6, "못 읽은 정수가 0 이 됐습니다" );
+        SW_EXPECT_NEAR_EQUAL( 0.5f, gameSettings.getCustomPropertyFloat( "brokenFloat", 0.5f ), 1e-4f );
+        SW_EXPECT_TRUE( gameSettings.getCustomPropertyBool( "typoBool", true ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "'brokenInt' has an unreadable integer 'six'" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "'brokenFloat' has an unreadable number 'half'" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "'typoBool' has an unreadable boolean 'ture'" ) == 1, logs.joined().c_str() );
-    SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyInt( "emptyInt", 6 ) == 6, "빈 값이 0 이 됐습니다" );
-    SW_EXPECT_TRUE( gameData.getCustomPropertyBool( "missingBool", true ) );
+    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyInt( "emptyInt", 6 ) == 6, "빈 값이 0 이 됐습니다" );
+    SW_EXPECT_TRUE( gameSettings.getCustomPropertyBool( "missingBool", true ) );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "unreadable" ) == 3, logs.joined().c_str() );
 
     // 대소문자와 흔한 철자를 모두 안다 — 반만 아는 사본이 아니다.
-    SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyBool( "upperBool", false ), "TRUE 를 못 읽었습니다" );
-    SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyBool( "yesBool", false ), "yes 를 못 읽었습니다" );
-    SW_EXPECT_TRUE_MSG( gameData.getCustomPropertyBool( "offBool", true ) == false, "OFF 를 못 읽었습니다" );
+    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyBool( "upperBool", false ), "TRUE 를 못 읽었습니다" );
+    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyBool( "yesBool", false ), "yes 를 못 읽었습니다" );
+    SW_EXPECT_TRUE_MSG( gameSettings.getCustomPropertyBool( "offBool", true ) == false, "OFF 를 못 읽었습니다" );
 
     // 앞뒤 공백도 파서가 다룬다.
-    SW_EXPECT_EQUAL( 12, gameData.getCustomPropertyInt( "paddedInt", 6 ) );
+    SW_EXPECT_EQUAL( 12, gameSettings.getCustomPropertyInt( "paddedInt", 6 ) );
 
     // 멀쩡한 값은 그대로다.
-    gameData._mapCustomProperty["goodInt"] = "8";
-    SW_EXPECT_EQUAL( 8, gameData.getCustomPropertyInt( "goodInt", 6 ) );
+    gameSettings._mapCustomProperty["goodInt"] = "8";
+    SW_EXPECT_EQUAL( 8, gameSettings.getCustomPropertyInt( "goodInt", 6 ) );
 }
 
 /**
@@ -2755,15 +2755,15 @@ SW_TEST_CASE( GameFrameworkTest, TurnBattleSaveGame_HugeLevelIsCapped )
 SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking )
 {
     // EngineTest 프로세스에는 게임이 붙어 있지 않다.
-    SW_EXPECT_TRUE_MSG( game::getService<GameData>() == nullptr, "테스트 프로세스에 GameData 가 붙어 있습니다" );
+    SW_EXPECT_TRUE_MSG( game::getService<GameSettings>() == nullptr, "테스트 프로세스에 GameSettings 가 붙어 있습니다" );
     SW_EXPECT_TRUE_MSG( game::getService<SpeciesCatalog>() == nullptr, "테스트 프로세스에 SpeciesCatalog 가 붙어 있습니다" );
 
     // 붙이면 그것이 돌아오고, 떼면 다시 nullptr 이다.
-    GameData gameData;
-    game::bindLocalService<GameData>( &gameData );
-    SW_EXPECT_EQUAL( &gameData, game::getService<GameData>() );
-    game::unbindLocalService<GameData>();
-    SW_EXPECT_TRUE( game::getService<GameData>() == nullptr );
+    GameSettings gameSettings;
+    game::bindLocalService<GameSettings>( &gameSettings );
+    SW_EXPECT_EQUAL( &gameSettings, game::getService<GameSettings>() );
+    game::unbindLocalService<GameSettings>();
+    SW_EXPECT_TRUE( game::getService<GameSettings>() == nullptr );
 }
 
 /**
@@ -2908,17 +2908,17 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotRestoreThatStopsHalfwayFails )
 }
 
 /**
- * @brief [GameFrameworkTest] GameData 의 칸은 읽힌다 — 서비스로 묶이고, 다국어 · 입력 맵이 적용되고, 씬 흐름 · 세이브 경로 · 턴제 시작 맵이 그것을 쓴다
- * @details `GameInstanceBase` 가 gamedata 를 읽기만 하고 서비스로 묶지 않으면 커스텀 칸을 읽는 킷 코드(`TurnBattleSaveGame` 의 파티 상한)조차
+ * @brief [GameFrameworkTest] GameSettings 의 칸은 읽힌다 — 서비스로 묶이고, 다국어 · 입력 맵이 적용되고, 씬 흐름 · 세이브 경로 · 턴제 시작 맵이 그것을 쓴다
+ * @details `GameInstanceBase` 가 gamesettings 를 읽기만 하고 서비스로 묶지 않으면 커스텀 칸을 읽는 킷 코드(`TurnBattleSaveGame` 의 파티 상한)조차
  *          제품에서 늘 기본값이고, 표준 칸은 읽는 곳이 없다. 게임플레이 입력 맵도 읽고 갱신해야 한다.
  */
-SW_TEST_CASE( GameFrameworkTest, BootstrapGameDataIsBoundAndApplied )
+SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
 {
     // 실행 설정 · 서비스 · 전역 기본값 경로는 시험이 빠져나가도 되돌린다.
     struct ScopedRunState
     {
         GameConfig   _oldConfig{ GameConfig::getActive() };
-        string       _oldGamedataPath{ Component::getDefaultGamedataPath() };
+        string       _oldGameSettingsPath{ Component::getDefaultGameSettingsPath() };
         InputManager _input;
 
         ScopedRunState()
@@ -2934,7 +2934,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameDataIsBoundAndApplied )
             GameStrings::clear();
             game::unbindGameService();
             _input.shutdown();
-            Component::setDefaultGamedataPath( _oldGamedataPath );
+            Component::setDefaultGameSettingsPath( _oldGameSettingsPath );
             GameConfig::setActive( _oldConfig );
         }
         ScopedRunState( const ScopedRunState& )            = delete;
@@ -2942,7 +2942,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameDataIsBoundAndApplied )
     };
     ScopedRunState runState;
 
-    // 팩에 gamedata.xml 이 없다 — configureBootstrap 이 채운 값이 그대로 남는다. 실행 시작 씬도 없다.
+    // 팩에 gamesettings.xml 이 없다 — configureBootstrap 이 채운 값이 그대로 남는다. 실행 시작 씬도 없다.
     GameConfig runConfig = runState._oldConfig;
     runConfig._packRoot  = "game/no_such_pack";
     runConfig._startupScene.clear();
@@ -2961,7 +2961,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameDataIsBoundAndApplied )
     protected:
         void configureBootstrap( BootstrapConfig& outConfig ) override
         {
-            GameData& data                          = outConfig._data;
+            GameSettings& data                      = outConfig._data;
             data._startMap                          = "game/test/maps/start.scene.xml";
             data._titleScene                        = "game/test/maps/title.scene.xml";
             data._inputMap                          = "engine/input/default.input.xml";
@@ -2979,7 +2979,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameDataIsBoundAndApplied )
     SW_ASSERT_TRUE( instance.initialize( nullptr, nullptr ) );
 
     // 1) 서비스 — 커스텀 칸을 읽는 킷 코드가 데이터의 값을 쓴다
-    SW_ASSERT_NOT_NULL( game::getService<GameData>() );
+    SW_ASSERT_NOT_NULL( game::getService<GameSettings>() );
     TurnBattleSaveGame party{};
     party.setPartyFrom( vector<PartyMember>( 5 ) );
     SW_EXPECT_EQUAL( size_t( 3 ), party._listParty.size() );
@@ -3011,7 +3011,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameDataIsBoundAndApplied )
     SW_EXPECT_STREQ( "game/test/maps/start.scene.xml", loaded._mapPath.c_str() );
 
     instance.shutdown();
-    SW_EXPECT_NULL( game::getService<GameData>() );
+    SW_EXPECT_NULL( game::getService<GameSettings>() );
 }
 
 /**
