@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
@@ -98,6 +99,7 @@ namespace sw
     {
         _listBuiltCandidate.clear();
         _lastCameraPos              = float3{};
+        _lastTransparentSortAxis    = float3{};
         _lastPrimitiveSetGeneration = 0;
         _lastPermutationGeneration  = 0;
         _snapshot._bCpuDirty        = SW_TRUE;
@@ -255,6 +257,7 @@ namespace sw
         candidate._bReverseCulling   = GpuSceneBuilderInternal::computeReverseCulling( world );
         candidate._spinSeed          = pMeshComp->getGpuSpinSeed();
         candidate._sprite            = pMeshComp->getSpriteInstanceData();
+        candidate._sortKey           = pMeshComp->getSortKey();
         // 소유를 싣는다. RT 가 upload() 에서 역참조한다. 스냅샷은 머티리얼 · 인스턴스의 소유도
         // 함께 싣는다(렌더 스레드가 패킷을 다 쓸 때까지 살아 있어야 한다). 세 줄 모두 **날 포인터로
         // 먼저 비교**한다. 같으면 대입하지 않아 참조 카운트를 건드리지 않는다.
@@ -288,6 +291,7 @@ namespace sw
         candidate._bReverseCulling           = GpuSceneBuilderInternal::computeReverseCulling( item._world );
         candidate._spinSeed                  = item._spinSeed;
         candidate._sprite                    = item._sprite;
+        candidate._sortKey                   = pBatch->getSortKey();
         // 메시 컴포넌트 판과 같은 규칙: 날 포인터로 먼저 견주고, 다르면 소유를 싣는다.
         if ( candidate._mesh.get() != pMesh )
             candidate._mesh = pBatch->getMesh();
@@ -425,7 +429,9 @@ namespace sw
         const uint64             setGeneration = primitives.getSetGeneration();
         const bool               bHasCache     = _listBuiltCandidate.empty() == false;
         const bool               bSetSame      = bHasCache && ( setGeneration == _lastPrimitiveSetGeneration );
-        const bool               bCamSame      = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::Epsilon );
+        // 정렬 축이 바뀌어도(직교 ↔ 원근 카메라 전환) 투명 순서가 바뀐다 — 카메라가 그대로인 것으로 보지 않는다.
+        const bool bCamSame = bHasCache && ( float3::getDistanceSquared( cameraPos, _lastCameraPos ) <= MathUtil::Epsilon ) &&
+                              ( float3::getDistanceSquared( _transparentSortAxis, _lastTransparentSortAxis ) <= MathUtil::Epsilon );
         // 퍼뮤테이션은 프리미티브를 더럽히지 않는다. 머티리얼 · 인스턴스의 정적 스위치 · 키워드 · 멀티컴파일을
         // 바꾸면 그릴 셰이더가 달라지는데 씬에서는 아무 일도 일어나지 않은 것처럼 보인다. 세대로 가른다.
         const uint64 permutationGeneration = MaterialUtil::getPermutationGeneration();
@@ -766,6 +772,7 @@ namespace sw
         // 번갈아 쓰므로 프레임당 힙 할당이 생기지 않는다.
         _listBuiltCandidate.swap( _listScratchCandidate );
         _lastCameraPos              = cameraPos;
+        _lastTransparentSortAxis    = _transparentSortAxis;
         _lastPrimitiveSetGeneration = setGeneration;
         _lastPermutationGeneration  = permutationGeneration;
         _snapshot._bCpuDirty        = SW_TRUE;
@@ -857,21 +864,23 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.GpuScene.build.sortTransparent" );
 
         // 키를 한 번만 구한다. 비교 함수 안에서 거리를 다시 구하면 원소마다 raw 를 무작위로 다시 읽는다(헤더 주석).
+        // 정렬 레이어 키 0 은 "기본" 자리표다 — 표의 기본 키로 바꿔야 Default 레이어의 스프라이트와 3D 투명 물체가 한 줄에 선다.
+        const uint32 defaultSortKey   = Render2DSettings::getActive().getDefaultSortKey();
+        const bool   bAxisDepth       = _transparentSortAxis.getLengthSquared() > MathUtil::Epsilon;
         const size_t transparentCount = _listScratchTransparentIdx.size();
         _listTransparentSortKey.resize( transparentCount );
         for ( size_t sortIndex = 0; sortIndex < transparentCount; ++sortIndex )
         {
-            const uint32 candidateIndex                         = _listScratchTransparentIdx[sortIndex];
-            _listTransparentSortKey[sortIndex]._distanceSquared = float3::getDistanceSquared( _listScratchRaw[candidateIndex]._boundsCenter, cameraPos );
-            _listTransparentSortKey[sortIndex]._candidateIndex  = candidateIndex;
+            const uint32        candidateIndex = _listScratchTransparentIdx[sortIndex];
+            const float3&       center         = _listScratchRaw[candidateIndex]._boundsCenter;
+            const uint32        sortKey        = _listScratchCandidate[candidateIndex]._sortKey;
+            TransparentSortKey& key            = _listTransparentSortKey[sortIndex];
+            key._sortKey                       = ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
+            key._depth                         = bAxisDepth ? ( center - cameraPos ).dot( _transparentSortAxis ) : float3::getDistanceSquared( center, cameraPos );
+            key._candidateIndex                = candidateIndex;
         }
-        // 먼 것부터. 거리가 같으면 후보 인덱스로 가른다. 정렬이 결정적이어야 "순서가 그대로" 판정이 흔들리지 않는다.
-        const auto isFartherFirst = []( const TransparentSortKey& keyA, const TransparentSortKey& keyB )
-        {
-            if ( keyA._distanceSquared != keyB._distanceSquared )
-                return keyA._distanceSquared > keyB._distanceSquared;
-            return keyA._candidateIndex < keyB._candidateIndex;
-        };
+        // 레이어 키 → 먼 것 → 후보 인덱스. 정렬이 결정적이어야 "순서가 그대로" 판정이 흔들리지 않는다.
+        const auto isFartherFirst = &GpuSceneBuilder::isDrawnBefore;
 
         // **지난 프레임 순서에서 출발한다.** 나누기를 다시 하지 않은 프레임이면 `_listScratchTransparentIdx` 가 지난 정렬 결과
         // 그대로라, 한 프레임에 조금씩 움직인 물체들은 거의 정렬돼 있다. 삽입 정렬은 (원소 수 + 뒤집힌 쌍 수) 에 비례한다.
@@ -898,6 +907,20 @@ namespace sw
             std::sort( _listTransparentSortKey.begin(), _listTransparentSortKey.end(), isFartherFirst );
         for ( size_t sortIndex = 0; sortIndex < transparentCount; ++sortIndex )
             _listScratchTransparentIdx[sortIndex] = _listTransparentSortKey[sortIndex]._candidateIndex;
+    }
+
+    bool GpuSceneBuilder::isDrawnBefore( const TransparentSortKey& keyA, const TransparentSortKey& keyB )
+    {
+        if ( keyA._sortKey != keyB._sortKey )
+            return keyA._sortKey < keyB._sortKey;
+        if ( keyA._depth != keyB._depth )
+            return keyA._depth > keyB._depth;
+        return keyA._candidateIndex < keyB._candidateIndex;
+    }
+
+    void GpuSceneBuilder::setTransparentSortAxis( const float3& axis )
+    {
+        _transparentSortAxis = axis;
     }
 
     bool GpuSceneBuilder::refreshInstancesInPlace( bool bPartialCollect )

@@ -6,6 +6,9 @@
 #include "Engine/Animation/AnimGraphAsset.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Audio/AudioEvent.h"
+#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMusic.h"
 #include "Engine/Character/BodyShape.h"
 #include "Engine/Character/FitPartData.h"
 #include "Engine/Character/FitSolver.h"
@@ -15,6 +18,7 @@
 #include "Engine/Character/SurfaceState.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -30,6 +34,8 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
+#include "Engine/Utility/TileMap/TileSetAsset.h"
+#include "Engine/Utility/Xml/TileMapXml.h"
 
 #include "GameFramework/AI/Director/AiDirectorProfile.h"
 #include "GameFramework/AI/Schedule/ScheduleCatalog.h"
@@ -94,6 +100,12 @@ namespace
         }
         static bool isElementRules( sw::string_view resourceId ) { return endsWith( resourceId, ".elements.xml" ); }
         static bool isInteractions( sw::string_view resourceId ) { return endsWith( resourceId, ".interactions.xml" ); }
+        static bool isTileSet( sw::string_view resourceId ) { return endsWith( resourceId, ".tileset.xml" ); }
+        static bool isTileMap( sw::string_view resourceId ) { return endsWith( resourceId, ".tilemap.xml" ); }
+        static bool isRender2DSettings( sw::string_view resourceId ) { return endsWith( resourceId, "/data/render2d.xml" ); }
+        static bool isAudioMixer( sw::string_view resourceId ) { return endsWith( resourceId, ".audiomixer.xml" ); }
+        static bool isAudioEvents( sw::string_view resourceId ) { return endsWith( resourceId, ".audioevents.xml" ); }
+        static bool isAudioMusic( sw::string_view resourceId ) { return endsWith( resourceId, ".music.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -170,6 +182,31 @@ namespace
         {
             sw::PhysicsAsset asset;
             return asset.loadFromResource( resourceId );
+        }
+
+        /** @brief 타일 레이어가 있으면 그 타일셋도 읽고 팔레트의 이름이 모두 타일셋에 있는지 본다. */
+        static bool loadTileMap( const sw::string& resourceId )
+        {
+            sw::TileMapXmlData map;
+            if ( map.load( resourceId ) == false )
+                return false;
+            if ( map._tileSetPath.empty() )
+                return true;
+            sw::TileSetAsset   tileSet;
+            sw::vector<uint16> listBrushIndex;
+            return tileSet.loadFromResource( map._tileSetPath ) && map.mapTileCells( tileSet, listBrushIndex );
+        }
+
+        static bool loadTileSet( const sw::string& resourceId )
+        {
+            sw::TileSetAsset tileSet;
+            return tileSet.loadFromResource( resourceId );
+        }
+
+        static bool loadRender2DSettings( const sw::string& resourceId )
+        {
+            sw::Render2DSettings settings;
+            return settings.loadFromResource( resourceId );
         }
 
         static bool loadSpriteClip( const sw::string& resourceId )
@@ -275,6 +312,9 @@ namespace
             {           "material",            &isMaterial,                           &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                         &loadSpriteClip},
             {      "camerapresets",       &isCameraPresets,   &loadCatalog<sw::CameraPresetCatalog>},
+            {           "render2d",    &isRender2DSettings,                   &loadRender2DSettings},
+            {            "tileset",             &isTileSet,                            &loadTileSet},
+            {            "tilemap",             &isTileMap,                            &loadTileMap},
             {       "elementrules",        &isElementRules,      &loadCatalog<sw::ElementRuleTable>},
             {       "interactions",        &isInteractions,    &loadCatalog<sw::InteractionCatalog>},
             {    "physicssettings",     &isPhysicsSettings,                    &loadPhysicsSettings},
@@ -304,6 +344,9 @@ namespace
             {         "appearance",      &isAppearanceData,                     &loadAppearanceData},
             {           "skeleton",            &isSkeleton,                           &loadSkeleton},
             {          "animgraph",           &isAnimGraph,                          &loadAnimGraph},
+            {         "audiomixer",          &isAudioMixer,        &loadCatalog<sw::AudioMixerDesc>},
+            {        "audioevents",         &isAudioEvents,     &loadCatalog<sw::AudioEventLibrary>},
+            {         "audiomusic",          &isAudioMusic,        &loadCatalog<sw::AudioMusicDesc>},
         };
 
         /**

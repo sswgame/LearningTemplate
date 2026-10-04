@@ -12,6 +12,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -19,6 +20,21 @@ namespace sw
     {
         struct ReflectionCoreInternal
         {
+            /** @brief `describeType` 의 인자 목록 — `타입 이름 = 기본값` 꼴입니다. */
+            template <typename TBuilder>
+            static void appendParameterList( TBuilder& out, const vector<FunctionParameterInfo>& listParameter )
+            {
+                for ( size_t paramIndex = 0; paramIndex < listParameter.size(); ++paramIndex )
+                {
+                    const FunctionParameterInfo& parameter = listParameter[paramIndex];
+                    out.appendFormat( "%#%#", paramIndex == 0 ? "" : ", ", parameter._typeName.c_str() );
+                    if ( parameter._name.empty() == false )
+                        out.appendFormat( " %#", parameter._name.c_str() );
+                    if ( parameter.hasDefaultValue() )
+                        out.appendFormat( " = %#", parameter._defaultValue.c_str() );
+                }
+            }
+
             /**
              * @brief 이름 해시가 같은데 값이 다른 열거자 둘을 찾습니다. 없으면 false 입니다.
              * @details 바이너리는 enum 을 열거자 **이름 해시**로 싣는다(대소문자 무시). 같은 해시의 두 이름(`Red` · `RED`, 드물게 FNV 충돌)이 다른 값을
@@ -125,11 +141,25 @@ namespace sw
         , _displayName{}
         , _tooltip{}
         , _mapCustomMeta{}
+        , _editCondition{}
+        , _fileFilter{}
+        , _uiMinRange{ 0.0f }
+        , _uiMaxRange{ 1.0f }
+        , _bHasUiMinRange{ SW_FALSE }
+        , _bHasUiMaxRange{ SW_FALSE }
+        , _bEditConditionHides{ SW_FALSE }
+        , _bColorHdr{ SW_FALSE }
+        , _bMultiline{ SW_FALSE }
+        , _reservedDisplay{ 0 }
         , _defaultValue{}
 #else
         : _defaultValue{}
 #endif
         , _assetType{}
+        , _repNotify{}
+        , _validate{}
+        , _configSection{}
+        , _configKey{}
         , _minRange{ 0.0f }
         , _maxRange{ 1.0f }
         , _bHasMinRange{ SW_FALSE }
@@ -145,6 +175,11 @@ namespace sw
 #else
         , _reservedFlags{ 0 }
 #endif
+        , _bReplicated{ SW_FALSE }
+        , _bSaveGame{ SW_FALSE }
+        , _bInterp{ SW_FALSE }
+        , _bConfig{ SW_FALSE }
+        , _reservedRoles{ 0 }
     {
     }
 
@@ -178,6 +213,8 @@ namespace sw
         , _nestedContainer{ nullptr }
         , _onPropertyBoundChanged{}
         , _pValueAccessor{ nullptr }
+        , _pRepNotify{ nullptr }
+        , _pValidate{ nullptr }
         , _offset{ 0 }
         , _name{}
         , _typeName{}
@@ -259,6 +296,8 @@ namespace sw
         , _nestedContainer{ nullptr }
         , _onPropertyBoundChanged{}
         , _pValueAccessor{ nullptr }
+        , _pRepNotify{ nullptr }
+        , _pValidate{ nullptr }
         , _offset{ offset }
         , _name{ name }
         , _typeName{ typeName }
@@ -276,6 +315,31 @@ namespace sw
     {
         if ( alias.empty() == false )
             _listAlias.push_back( alias );
+    }
+
+    FunctionParameterInfo::FunctionParameterInfo() noexcept
+        : _name{}
+        , _typeName{}
+        , _defaultValue{}
+        , _pType{ nullptr }
+    {
+    }
+
+    FunctionParameterInfo::FunctionParameterInfo( string name, string typeName, string defaultValue, const ReflectTypeOps* pType )
+        : _name{ std::move( name ) }
+        , _typeName{ std::move( typeName ) }
+        , _defaultValue{ std::move( defaultValue ) }
+        , _pType{ pType }
+    {
+    }
+
+    EventInfo::EventInfo() noexcept
+        : _name{}
+        , _listParameter{}
+        , _metadata{}
+        , _pOps{ nullptr }
+        , _offset{ 0 }
+    {
     }
 
     EnumInfo::EnumInfo() noexcept
@@ -302,12 +366,14 @@ namespace sw
         : _size{ 0 }
         , _destroyInstance{ nullptr }
         , _addComponent{ nullptr }
+        , _pValidate{ nullptr }
         , _name{}
         , _fullyQualifiedName{}
         , _parentFQN{}
         , _moduleName{}
         , _listProperty{}
         , _listMethod{}
+        , _listEvent{}
         , _metadata{}
         , _listPropertyWithBase{}
         , _mapNameToPropertyWithBase{}
@@ -327,7 +393,12 @@ namespace sw
         , _bIsPODCalculated{ SW_FALSE }
         , _bListPropertyWithBaseBuilt{ SW_FALSE }
         , _bBuildingPropertyWithBase{ SW_FALSE }
-        , _reservedPadding{ 0, 0, 0 } {}
+        , _bHasSaveGameProperty{ SW_FALSE }
+        , _bSaveGameCalculated{ SW_FALSE }
+        , _bHasValidator{ SW_FALSE }
+        , _bValidatorCalculated{ SW_FALSE }
+        , _reservedCacheFlags{ 0 }
+        , _reservedPadding{ 0, 0 } {}
 
     TypeInfo::TypeInfo( const TypeInfo& other )
         : TypeInfo()
@@ -352,6 +423,8 @@ namespace sw
         _bIsPODCalculated           = SW_FALSE;
         _bListPropertyWithBaseBuilt = SW_FALSE;
         _bBuildingPropertyWithBase  = SW_FALSE;
+        _bSaveGameCalculated        = SW_FALSE;
+        _bValidatorCalculated       = SW_FALSE;
     }
 
     void TypeInfo::invalidateDerivedCaches()
@@ -372,12 +445,14 @@ namespace sw
         _size               = other._size;
         _destroyInstance    = other._destroyInstance;
         _addComponent       = other._addComponent;
+        _pValidate          = other._pValidate;
         _name               = other._name;
         _fullyQualifiedName = other._fullyQualifiedName;
         _parentFQN          = other._parentFQN;
         _moduleName         = other._moduleName;
         _listProperty       = other._listProperty;
         _listMethod         = other._listMethod;
+        _listEvent          = other._listEvent;
         _metadata           = other._metadata;
         _typeId             = other._typeId;
         _bAbstract          = other._bAbstract;
@@ -397,12 +472,14 @@ namespace sw
         _size               = other._size;
         _destroyInstance    = other._destroyInstance;
         _addComponent       = other._addComponent;
+        _pValidate          = other._pValidate;
         _name               = other._name;
         _fullyQualifiedName = other._fullyQualifiedName;
         _parentFQN          = other._parentFQN;
         _moduleName         = other._moduleName;
         _listProperty       = std::move( other._listProperty );
         _listMethod         = std::move( other._listMethod );
+        _listEvent          = std::move( other._listEvent );
         _metadata           = std::move( other._metadata );
         _typeId             = other._typeId;
         _bAbstract          = other._bAbstract;
@@ -418,6 +495,24 @@ namespace sw
         other._bIsCacheBuilt   = SW_FALSE;
 
         return *this;
+    }
+
+    bool TypeInfo::hasSaveGameProperty() const
+    {
+        if ( _bSaveGameCalculated == SW_TRUE )
+            return _bHasSaveGameProperty == SW_TRUE;
+        bool bHasSaveGame = false;
+        for ( const PropertyInfo& prop : getPropertiesWithBase() )
+        {
+            if ( prop._metadata._bSaveGame == SW_TRUE )
+            {
+                bHasSaveGame = true;
+                break;
+            }
+        }
+        _bHasSaveGameProperty = bHasSaveGame ? SW_TRUE : SW_FALSE;
+        _bSaveGameCalculated  = SW_TRUE;
+        return bHasSaveGame;
     }
 
     bool TypeInfo::usesPodCopyFastPath() const
@@ -776,9 +871,14 @@ namespace sw
             for ( const FunctionInfo& method : level._listMethod )
             {
                 out.appendFormat( "    FUNCTION %#(", method._name.c_str() );
-                for ( size_t paramIndex = 0; paramIndex < method._listParameterTypeName.size(); ++paramIndex )
-                    out.appendFormat( "%#%#", paramIndex == 0 ? "" : ", ", method._listParameterTypeName[paramIndex].c_str() );
+                ReflectionCoreInternal::appendParameterList( out, method._listParameter );
                 out.appendFormat( ") -> %#\n", method._returnTypeName.empty() ? "void" : method._returnTypeName.c_str() );
+            }
+            for ( const EventInfo& event : level._listEvent )
+            {
+                out.appendFormat( "    EVENT %#(", event._name.c_str() );
+                ReflectionCoreInternal::appendParameterList( out, event._listParameter );
+                out.append( ")\n" );
             }
         }
         return string( out.view() );
@@ -839,6 +939,14 @@ namespace sw
         {
             if ( pType != nullptr )
                 (void)pType->buildAncestorDisplay();
+        }
+        // 지연 판정(세이브 옵트인 · 검증 함수 유무)도 여기서 한 번 — 로드 워커가 처음 물을 때 같은 바이트의 캐시 비트를 함께 쓰지 않게.
+        for ( const TypeInfo* pType : listType )
+        {
+            if ( pType == nullptr )
+                continue;
+            (void)pType->hasSaveGameProperty();
+            (void)ReflectionValidation::hasValidator( *pType );
         }
     }
 
@@ -1194,6 +1302,7 @@ namespace sw
     {
         _listProperty.clear();
         _listMethod.clear();
+        _listEvent.clear();
         _listPropertyWithBase.clear();
         _mapNameToPropertyWithBase.clear();
         _mapNameToProperty.clear();
@@ -1205,6 +1314,9 @@ namespace sw
         _bIsPODCalculated           = SW_FALSE;
         _bIsPODFastPath             = SW_FALSE;
         _bListPropertyWithBaseBuilt = SW_FALSE;
+        _bSaveGameCalculated        = SW_FALSE;
+        _bValidatorCalculated       = SW_FALSE;
+        _pValidate                  = nullptr;
     }
 
     bool TypeInfo::buildAncestorDisplay() const
@@ -1237,6 +1349,46 @@ namespace sw
             _arrAncestorNameIndex[index].store( arrChain[chainCount - 1 - index], std::memory_order_relaxed );
         _ancestorDepth.store( static_cast<uint8>( chainCount - 1 ), std::memory_order_release );
         return true;
+    }
+
+    uint32 TypeInfo::collectTypeChain( const TypeInfo* ( &outArrType )[constants::reflection::kMaxParentChainDepth] ) const
+    {
+        uint32          depth    = 0;
+        const TypeInfo* pCurrent = this;
+        while ( pCurrent != nullptr && depth < constants::reflection::kMaxParentChainDepth )
+        {
+            outArrType[depth++] = pCurrent;
+            if ( pCurrent->_parentFQN.empty() )
+                break;
+            pCurrent = pCurrent->getParentType();
+        }
+        return depth;
+    }
+
+    const EventInfo* TypeInfo::findEventInHierarchy( const hashed_string& eventName ) const
+    {
+        const TypeInfo* arrChain[constants::reflection::kMaxParentChainDepth];
+        const uint32    depth = collectTypeChain( arrChain );
+        for ( uint32 level = 0; level < depth; ++level )
+        {
+            const EventInfo* pEvent = arrChain[level]->findEvent( eventName );
+            if ( pEvent != nullptr )
+                return pEvent;
+        }
+        return nullptr;
+    }
+
+    const FunctionInfo* TypeInfo::findMethodInHierarchy( const hashed_string& methodName ) const
+    {
+        const TypeInfo* arrChain[constants::reflection::kMaxParentChainDepth];
+        const uint32    depth = collectTypeChain( arrChain );
+        for ( uint32 level = 0; level < depth; ++level )
+        {
+            const FunctionInfo* pMethod = arrChain[level]->findMethod( methodName );
+            if ( pMethod != nullptr )
+                return pMethod;
+        }
+        return nullptr;
     }
 
     const PropertyInfo* TypeInfo::findPropertyInHierarchy( const hashed_string& propNameOrAlias ) const

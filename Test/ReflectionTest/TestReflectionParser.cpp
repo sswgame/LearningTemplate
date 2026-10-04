@@ -1446,3 +1446,238 @@ SW_TEST_CASE( ReflectionParserTest, LocalConfigCannotOverrideCommittedDefaults )
     SW_EXPECT_TRUE_MSG( log.find( "emit.flag_ops_marker" ) != sw::string::npos, log.c_str() );
     SW_EXPECT_TRUE_MSG( log.find( "default_parser_args" ) != sw::string::npos, log.c_str() );
 }
+
+/**
+ * @brief [ReflectionParserTest] 함수 인자의 이름 · 기본 인자, 이벤트(멀티캐스트 델리게이트 PROPERTY)의 인자 이름을 코드젠한다 — 이벤트에 맞지 않는 애노테이션은 멈춘다
+ * @details 인자 이름 · 기본 인자는 타입에 남지 않아 소스 토큰에서 읽는다. 이벤트 인자 이름은 별칭(`using ScoreEvent = …`)으로 적어도
+ *          그 별칭 선언에서 읽는다. 한 번의 실행에 성한 헤더 하나와 깨진 헤더 둘을 넣는다(깨진 것은 그 헤더만 실패).
+ */
+SW_TEST_CASE( ReflectionParserTest, FunctionParametersAndEventsAreGenerated )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const sw::string       kHeaderHead = "#pragma once\n"
+                                         "#include \"Core/Common/Types.h\"\n"
+                                         "#include \"Core/Delegate/Delegate.h\"\n"
+                                         "#include \"Engine/Reflection/ReflectionMacros.h\"\n";
+    sw::vector<TempHeader> listHeader;
+    listHeader.push_back( TempHeader{ "ParamEventSample", kHeaderHead +
+                                                              "namespace sw\n"
+                                                              "{\n"
+                                                              "\tusing ScoreEvent = MulticastDelegate<void( int32 score, bool bBest )>;\n"
+                                                              "\tREFLECT()\n"
+                                                              "\tstruct ParamEventSampleActor\n"
+                                                              "\t{\n"
+                                                              "\t\tREFLECT_BODY();\n"
+                                                              "\t\tPROPERTY( Category = \"Signals\" )\n"
+                                                              "\t\tMulticastDelegate<void( const string& label, uint8 )> _onLabel;\n"
+                                                              "\t\tPROPERTY()\n"
+                                                              "\t\tScoreEvent _onScored;\n"
+                                                              "\t\tFUNCTION()\n"
+                                                              "\t\tvoid configure( int32 count, float32 scale = 2.0f, const string& label = \"a, b\" ) {}\n"
+                                                              "\t};\n"
+                                                              "}\n" } );
+    listHeader.push_back( TempHeader{ "EventFlagSample", kHeaderHead +
+                                                             "namespace sw\n"
+                                                             "{\n"
+                                                             "\tREFLECT()\n"
+                                                             "\tstruct EventFlagSampleActor\n"
+                                                             "\t{\n"
+                                                             "\t\tREFLECT_BODY();\n"
+                                                             "\t\tPROPERTY( Default = \"1\" )\n"
+                                                             "\t\tMulticastDelegate<void()> _onFlagged;\n"
+                                                             "\t};\n"
+                                                             "}\n" } );
+    listHeader.push_back( TempHeader{ "EventReturnSample", kHeaderHead +
+                                                               "namespace sw\n"
+                                                               "{\n"
+                                                               "\tREFLECT()\n"
+                                                               "\tstruct EventReturnSampleActor\n"
+                                                               "\t{\n"
+                                                               "\t\tREFLECT_BODY();\n"
+                                                               "\t\tPROPERTY()\n"
+                                                               "\t\tMulticastDelegate<int32()> _onAsked;\n"
+                                                               "\t};\n"
+                                                               "}\n" } );
+    const ParserRunResult run = runParserOnTempHeaders( parserExe, listHeader, "--dump" );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), run._listGeneratedCpp.size() );
+    const sw::string& generated = run._listGeneratedCpp[0];
+
+    // 함수 인자: 이름 · 정규 타입 · 기본 인자 글(쉼표가 든 문자열 그대로) · 변환 표
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"count\", \"int32\", \"\", &::sw::ReflectTypeOpsOf<int32>::kOps )" ) != sw::string::npos,
+                        generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"scale\", \"float32\", \"2.0f\", &::sw::ReflectTypeOpsOf<float32>::kOps )" ) != sw::string::npos,
+                        generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "\"label\", \"string\", \"\\\"a, b\\\"\"" ) != sw::string::npos, generated.c_str() );
+
+    // 이벤트: 프로퍼티 목록이 아니라 이벤트 목록, 인자 이름은 필드 선언 · 별칭 선언에서, 이름 없는 인자는 빈 이름
+    SW_EXPECT_TRUE_MSG( generated.find( "ReflectEventOpsOf<decltype(sw::ParamEventSampleActor::_onLabel)>" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"label\", \"string\", \"\", nullptr )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"\", \"uint8\", \"\", nullptr )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"score\", \"int32\", \"\", nullptr )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"bBest\", \"bool\", \"\", nullptr )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "e._offset = offsetof(sw::ParamEventSampleActor, _onLabel);" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "info._listProperty" ) == sw::string::npos, generated.c_str() );
+
+    // 깨진 헤더 둘은 그 헤더만 실패한다
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[1].find( "EventFlagSampleActor" ) == sw::string::npos, run._listGeneratedCpp[1].c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[2].find( "EventReturnSampleActor" ) == sw::string::npos, run._listGeneratedCpp[2].c_str() );
+#if defined( SW_DEBUG )
+    SW_EXPECT_TRUE_MSG( run._log.find( "takes display metadata only" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "must be MulticastDelegate<void( ... )>" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "FUNCTION configure(int32 count, float32 scale = 2.0f, string label = \"a, b\")" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "EVENT _onScored(int32 score, bool bBest)" ) != sw::string::npos, run._log.c_str() );
+#endif
+}
+
+/**
+ * @brief [ReflectionParserTest] 역할 애노테이션 — `RepNotify` 는 같은 타입의 `void fn()` · `void fn( const T& )` 만, `Interp` 는 섞을 수 있는 타입만. 다른 모양은 그 헤더만 실패한다
+ */
+SW_TEST_CASE( ReflectionParserTest, PropertyRoleAnnotationsAreValidated )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    // 성한 헤더 하나(RepNotify 두 모양 · SaveGame · Config) + 깨진 헤더 셋(없는 함수 · 다른 인자 타입 · 섞을 수 없는 Interp)을 한 번에 돌린다.
+    const sw::string kHeaderHead = "#pragma once\n"
+                                   "#include \"Core/Common/Types.h\"\n"
+                                   "#include \"Core/Container/string.h\"\n"
+                                   "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                   "namespace sw\n"
+                                   "{\n"
+                                   "\tREFLECT()\n";
+    const auto       makeHeader  = [&kHeaderHead]( const sw::string& typeName, const sw::string& body )
+    {
+        return kHeaderHead + "\tstruct " + typeName + "\n\t{\n\t\tREFLECT_BODY();\n" + body + "\t};\n}\n";
+    };
+    sw::vector<TempHeader> listHeader;
+    listHeader.push_back( TempHeader{ "RoleGoodSample", makeHeader( "RoleGoodSampleActor", "\t\tPROPERTY( RepNotify = onHp, SaveGame )\n\t\tint32 _hp;\n"
+                                                                                           "\t\tPROPERTY( RepNotify = onMp, ConfigSection = \"Stats\" )\n\t\tint32 _mp;\n"
+                                                                                           "\t\tvoid onHp( const int32& oldValue ) {}\n"
+                                                                                           "\t\tvoid onMp() {}\n" ) } );
+    listHeader.push_back( TempHeader{ "RoleMissingSample", makeHeader( "RoleMissingSampleActor", "\t\tPROPERTY( RepNotify = onNothing )\n\t\tint32 _hp;\n" ) } );
+    listHeader.push_back( TempHeader{ "RoleShapeSample", makeHeader( "RoleShapeSampleActor", "\t\tPROPERTY( RepNotify = onHp )\n\t\tint32 _hp;\n"
+                                                                                             "\t\tvoid onHp( float32 oldValue ) {}\n" ) } );
+    listHeader.push_back( TempHeader{ "RoleInterpSample", makeHeader( "RoleInterpSampleActor", "\t\tPROPERTY( Interp )\n\t\tstring _label;\n" ) } );
+    const ParserRunResult run = runParserOnTempHeaders( parserExe, listHeader );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 4 ), run._listGeneratedCpp.size() );
+
+    const sw::string& generated = run._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "->onHp( *static_cast<const PropDecl*>( pOldValue ) );" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "->onMp(); };" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bReplicated = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bSaveGame = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._configSection = \"Stats\";" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bConfig = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
+
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    for ( size_t brokenIndex = 1; brokenIndex < 4; ++brokenIndex )
+        SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[brokenIndex].find( "struct Registrar" ) == sw::string::npos, run._listGeneratedCpp[brokenIndex].c_str() );
+#if defined( SW_DEBUG )
+    SW_EXPECT_TRUE_MSG( run._log.find( "RoleMissingSampleActor::_hp" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "RoleShapeSampleActor::_hp" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "PROPERTY( Interp ) on 'sw::RoleInterpSampleActor::_label'" ) != sw::string::npos, run._log.c_str() );
+#endif
+}
+
+/**
+ * @brief [ReflectionParserTest] 표시 메타 — `Units` 는 단위 표에 있어야 하고(커스텀 메타 `Units` 로 실린다), `EditCondition` 은 네 꼴 중 하나, C 고정 배열의 원소는 컨테이너가 아니다
+ */
+SW_TEST_CASE( ReflectionParserTest, DisplayMetadataIsValidated )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    sw::vector<TempHeader> listHeader;
+    listHeader.push_back( TempHeader{ "DisplayGoodSample", makeReflectedHeader( "DisplayGoodSampleActor", "Units = m/s, UiMin = 0, UiMax = 30, EditCondition = \"!_bLocked\"", "float32" ) } );
+    listHeader.push_back( TempHeader{ "DisplayUnitSample", makeReflectedHeader( "DisplayUnitSampleActor", "Units = furlong", "float32" ) } );
+    listHeader.push_back( TempHeader{ "DisplayConditionSample", makeReflectedHeader( "DisplayConditionSampleActor", "EditCondition = \"a && b\"", "float32" ) } );
+    listHeader.push_back( TempHeader{ "DisplayArraySample", "#pragma once\n"
+                                                            "#include \"Core/Common/Types.h\"\n"
+                                                            "#include \"Core/Container/vector.h\"\n"
+                                                            "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                            "namespace sw\n"
+                                                            "{\n"
+                                                            "\tREFLECT()\n"
+                                                            "\tstruct DisplayArraySampleActor\n"
+                                                            "\t{\n"
+                                                            "\t\tREFLECT_BODY();\n"
+                                                            "\t\tPROPERTY()\n"
+                                                            "\t\tint32 _arrGood[4];\n"
+                                                            "\t\tPROPERTY()\n"
+                                                            "\t\tvector<int32> _arrBad[2];\n"
+                                                            "\t};\n"
+                                                            "}\n" } );
+    const ParserRunResult run = runParserOnTempHeaders( parserExe, listHeader );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 4 ), run._listGeneratedCpp.size() );
+
+    const sw::string& generated = run._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "{ ::sw::hashed_string( \"Units\" ), \"m/s\" }," ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._uiMaxRange   = 30.000000f;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._editCondition = \"!_bLocked\";" ) != sw::string::npos, generated.c_str() );
+
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    for ( size_t brokenIndex = 1; brokenIndex < 4; ++brokenIndex )
+        SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[brokenIndex].find( "struct Registrar" ) == sw::string::npos, run._listGeneratedCpp[brokenIndex].c_str() );
+#if defined( SW_DEBUG )
+    SW_EXPECT_TRUE_MSG( run._log.find( "Units = furlong" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "EditCondition = \"a && b\"" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "DisplayArraySampleActor::_arrBad" ) != sw::string::npos, run._log.c_str() );
+#endif
+}
+
+/**
+ * @brief [ReflectionParserTest] 검증 함수 — `Validate = fn` 은 같은 타입의 `void fn( ValidationContext& )` 여야 한다(없거나 모양이 다르면 그 헤더만 실패)
+ */
+SW_TEST_CASE( ReflectionParserTest, ValidateFunctionsAreChecked )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const auto makeHeader = []( const sw::string& typeName, const sw::string& reflectArgs, const sw::string& body )
+    {
+        return sw::string( "#pragma once\n"
+                           "#include \"Core/Common/Types.h\"\n"
+                           "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                           "namespace sw\n"
+                           "{\n"
+                           "\tclass ValidationContext;\n"
+                           "\tREFLECT( " ) +
+               reflectArgs + " )\n\tstruct " + typeName + "\n\t{\n\t\tREFLECT_BODY();\n" + body + "\t};\n}\n";
+    };
+    sw::vector<TempHeader> listHeader;
+    listHeader.push_back( TempHeader{ "ValidateGoodSample", makeHeader( "ValidateGoodSampleActor", "Validate = checkAll",
+                                                                        "\t\tPROPERTY( Validate = checkHp )\n\t\tint32 _hp;\n"
+                                                                        "\t\tvoid checkHp( ValidationContext& context ) const;\n"
+                                                                        "\t\tvoid checkAll( ValidationContext& context );\n" ) } );
+    listHeader.push_back( TempHeader{ "ValidateMissingSample", makeHeader( "ValidateMissingSampleActor", "Validate = noSuchCheck", "\t\tPROPERTY()\n\t\tint32 _hp;\n" ) } );
+    listHeader.push_back( TempHeader{ "ValidateShapeSample", makeHeader( "ValidateShapeSampleActor", "",
+                                                                         "\t\tPROPERTY( Validate = checkHp )\n\t\tint32 _hp;\n"
+                                                                         "\t\tbool checkHp() const;\n" ) } );
+    const ParserRunResult run = runParserOnTempHeaders( parserExe, listHeader );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), run._listGeneratedCpp.size() );
+
+    const sw::string& generated = run._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "info._pValidate = []( const void* pInstance, ::sw::ValidationContext& context )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "->checkAll( context ); };" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._pValidate = []( const void* pInstance, ::sw::ValidationContext& context )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._validate = \"checkHp\";" ) != sw::string::npos, generated.c_str() );
+
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[1].find( "struct Registrar" ) == sw::string::npos, run._listGeneratedCpp[1].c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[2].find( "struct Registrar" ) == sw::string::npos, run._listGeneratedCpp[2].c_str() );
+#if defined( SW_DEBUG )
+    SW_EXPECT_TRUE_MSG( run._log.find( "REFLECT( Validate = noSuchCheck )" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "ValidateShapeSampleActor::_hp" ) != sw::string::npos, run._log.c_str() );
+#endif
+}

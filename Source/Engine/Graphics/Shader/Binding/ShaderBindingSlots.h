@@ -90,11 +90,15 @@ namespace sw
         inline constexpr uint32 kLightTypeDirectional = SW_LIGHT_TYPE_DIRECTIONAL;
         inline constexpr uint32 kLightTypePoint       = SW_LIGHT_TYPE_POINT;
         inline constexpr uint32 kLightTypeSpot        = SW_LIGHT_TYPE_SPOT;
+        inline constexpr uint32 kLightTypePoint2D     = SW_LIGHT_TYPE_POINT2D;
+        inline constexpr uint32 kLightTypeGlobal2D    = SW_LIGHT_TYPE_GLOBAL2D;
         inline constexpr uint32 kLightTypeCount       = SW_LIGHT_TYPE_COUNT;
 
         // 패스 플래그 — PassCB `g_Flags` 의 비트(bindingslots.hlsli 9).
         inline constexpr uint32 kPassFlagNativeBindless = SW_PASS_FLAG_NATIVE_BINDLESS;
         inline constexpr uint32 kPassFlagSkipPost       = SW_PASS_FLAG_SKIP_POST;
+        /// @brief 2D 그림자 가림막 토막 원소의 종류입니다. 빛 종류가 아니라(등록부 칸이 없다) `kLightTypeCount` 밖입니다.
+        inline constexpr uint32 kLightTypeShadow2D = SW_LIGHT_TYPE_SHADOW2D;
         /// @brief 한 프레임에 GPU 로 보내는 라이트 수 상한입니다. 넘으면 엔진이 잘라 보내고 경고합니다.
         inline constexpr uint32 kMaxFrameLight = SW_MAX_FRAME_LIGHT;
 
@@ -223,7 +227,8 @@ namespace sw
         static_assert( kLightBuffer == kMorphVertexBuffer + 1, "라이트 버퍼는 모프 정점 다음이다" );
         static_assert( kBatchBuffer == kLightBuffer + 1 && kBatchBuffer + 1 == kSrvSlotCount, "배치 표는 라이트 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
-                           kLightTypeSpot < kLightTypeCount,
+                           kLightTypeSpot < kLightTypeCount && kLightTypePoint2D < kLightTypeCount && kLightTypeGlobal2D < kLightTypeCount &&
+                           kLightTypeShadow2D >= kLightTypeCount,
                        "라이트 타입 값이 타입 수 안에 있어야 한다" );
         static_assert( SW_SLOT_ENGINE_TEX3 == kEngineTexture0 + kEngineTextureCount - 1, "엔진 텍스처 슬롯은 연속이어야 한다" );
         static_assert( kPassConstantBuffer != kMaterialConstantBuffer && kMaterialConstantBuffer < kConstantBufferSlotCount &&

@@ -3,6 +3,7 @@
 #include "GameFramework/Framework/GameInstanceBase.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
@@ -131,8 +132,16 @@ namespace sw
         }
     }
 
+    /**
+     * @brief `"-gv_firstScene=<리소스 경로>"` — 실행 설정의 시작 씬 대신 이 씬을 처음 엽니다(에디터 없이 다른 씬을 띄워 보는 자리 — 환경 쇼케이스).
+     * @note PowerShell 은 점이 든 인자를 쪼갠다 — 따옴표로 감쌀 것.
+     */
+    SW_TEST_GLOBAL_VARIABLE_STRING( gv_firstScene, "", "실행 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)", SW_KEEP_IN_SHIPPING );
+
     const string& GameInstanceBase::getFirstScene() const
     {
+        if ( gv_firstScene.empty() == false )
+            return gv_firstScene;
         const string& runScene = GameConfig::getActive()._startupScene;
         if ( runScene.empty() == false )
             return runScene;

@@ -1,0 +1,114 @@
+<!--
+	엔진 기본 믹서 그래프(AudioMixerDesc). master 가 유일한 루트이고, 사용자 설정의 버스 볼륨(audio.busVolume)은 이 이름들로 찾아간다.
+	reverb 는 이펙트 리턴 버스다 — sfx · voice · ambient 가 센드로 보낸다(리버브만 나오도록 dry 0).
+	master 의 리미터가 출력 피크를 -1 dBFS 아래로 묶는다.
+	master 의 Muffle(로우패스, 평소 20 kHz = 거르지 않음)은 스냅샷이 내려 쓴다.
+	스냅샷: Underwater(물속) · PauseMenu(일시정지 메뉴) · Cave · Hall(리버브 존이 세기로 건다).
+	감쇠 프리셋은 소리(이벤트 · 클립)가 이름으로 고른다. 가림(0..1)은 최대에서 -12 dB · 900 Hz 로우패스다.
+-->
+<AudioMixerDesc _maxVoiceCount="256" _maxRealVoiceCount="64" _inaudibleDb="-60">
+	<_listBus>
+		<AudioBusDesc _name="master">
+			<_listEffect>
+				<AudioEffectDesc _type="LowPass" _name="Muffle" />
+				<AudioEffectDesc _type="Limiter">
+					<_listParameter>
+						<AudioEffectParameterDesc _name="ceilingDb" _value="-1" />
+						<AudioEffectParameterDesc _name="lookaheadMs" _value="2" />
+					</_listParameter>
+				</AudioEffectDesc>
+			</_listEffect>
+		</AudioBusDesc>
+		<AudioBusDesc _name="music" _parent="master" />
+		<AudioBusDesc _name="sfx" _parent="master">
+			<_listSend>
+				<AudioSendDesc _bus="reverb" _levelDb="-14" />
+			</_listSend>
+		</AudioBusDesc>
+		<AudioBusDesc _name="voice" _parent="master">
+			<_listSend>
+				<AudioSendDesc _bus="reverb" _levelDb="-18" />
+			</_listSend>
+		</AudioBusDesc>
+		<AudioBusDesc _name="ambient" _parent="master">
+			<_listSend>
+				<AudioSendDesc _bus="reverb" _levelDb="-12" />
+			</_listSend>
+		</AudioBusDesc>
+		<AudioBusDesc _name="ui" _parent="master" />
+		<AudioBusDesc _name="reverb" _parent="master">
+			<_listEffect>
+				<AudioEffectDesc _type="Reverb">
+					<_listParameter>
+						<AudioEffectParameterDesc _name="roomSize" _value="0.6" />
+						<AudioEffectParameterDesc _name="damping" _value="0.5" />
+						<AudioEffectParameterDesc _name="wet" _value="0.33" />
+						<AudioEffectParameterDesc _name="dry" _value="0" />
+					</_listParameter>
+				</AudioEffectDesc>
+			</_listEffect>
+		</AudioBusDesc>
+	</_listBus>
+	<_listAttenuation>
+		<AudioAttenuationDesc _name="Default" _curve="Inverse" _minDistance="1" _maxDistance="40" />
+		<AudioAttenuationDesc _name="Small" _curve="Inverse" _minDistance="0.5" _maxDistance="20">
+			<_listLowPassPoint>
+				<AudioCurvePoint _x="4" _y="20000" />
+				<AudioCurvePoint _x="20" _y="4000" />
+			</_listLowPassPoint>
+		</AudioAttenuationDesc>
+		<AudioAttenuationDesc _name="Large" _curve="Inverse" _minDistance="4" _maxDistance="120">
+			<_listLowPassPoint>
+				<AudioCurvePoint _x="30" _y="20000" />
+				<AudioCurvePoint _x="120" _y="2500" />
+			</_listLowPassPoint>
+		</AudioAttenuationDesc>
+		<AudioAttenuationDesc _name="Linear" _curve="Linear" _minDistance="1" _maxDistance="30" />
+		<AudioAttenuationDesc _name="Vehicle" _curve="Inverse" _minDistance="3" _maxDistance="80" _dopplerFactor="1" />
+		<AudioAttenuationDesc _name="Ambient" _curve="Linear" _minDistance="2" _maxDistance="25" _bOcclusion="false" />
+	</_listAttenuation>
+	<_occlusion _volumeDb="-12" _lowPassHz="900" _smoothingSeconds="0.15" />
+	<_listSnapshot>
+		<AudioSnapshotDesc _name="Underwater" _fadeInSeconds="0.3" _fadeOutSeconds="0.6">
+			<_listBusVolume>
+				<AudioSnapshotBusDesc _bus="sfx" _volumeDb="-4" />
+				<AudioSnapshotBusDesc _bus="ambient" _volumeDb="-8" />
+			</_listBusVolume>
+			<_listEffectParameter>
+				<AudioSnapshotEffectDesc _bus="master" _effect="Muffle" _parameter="frequencyHz" _value="600" />
+			</_listEffectParameter>
+		</AudioSnapshotDesc>
+		<AudioSnapshotDesc _name="PauseMenu" _fadeInSeconds="0.2" _fadeOutSeconds="0.3">
+			<_listBusVolume>
+				<AudioSnapshotBusDesc _bus="sfx" _volumeDb="-18" />
+				<AudioSnapshotBusDesc _bus="ambient" _volumeDb="-12" />
+				<AudioSnapshotBusDesc _bus="voice" _volumeDb="-12" />
+				<AudioSnapshotBusDesc _bus="music" _volumeDb="-6" />
+			</_listBusVolume>
+			<_listEffectParameter>
+				<AudioSnapshotEffectDesc _bus="master" _effect="Muffle" _parameter="frequencyHz" _value="3000" />
+			</_listEffectParameter>
+		</AudioSnapshotDesc>
+		<AudioSnapshotDesc _name="Cave" _fadeInSeconds="0" _fadeOutSeconds="0">
+			<_listSend>
+				<AudioSnapshotSendDesc _bus="sfx" _target="reverb" _levelDb="-4" />
+				<AudioSnapshotSendDesc _bus="voice" _target="reverb" _levelDb="-8" />
+				<AudioSnapshotSendDesc _bus="ambient" _target="reverb" _levelDb="-4" />
+			</_listSend>
+			<_listEffectParameter>
+				<AudioSnapshotEffectDesc _bus="reverb" _effect="Reverb" _parameter="roomSize" _value="0.92" />
+				<AudioSnapshotEffectDesc _bus="reverb" _effect="Reverb" _parameter="damping" _value="0.3" />
+			</_listEffectParameter>
+		</AudioSnapshotDesc>
+		<AudioSnapshotDesc _name="Hall" _fadeInSeconds="0" _fadeOutSeconds="0">
+			<_listSend>
+				<AudioSnapshotSendDesc _bus="sfx" _target="reverb" _levelDb="-8" />
+				<AudioSnapshotSendDesc _bus="voice" _target="reverb" _levelDb="-10" />
+			</_listSend>
+			<_listEffectParameter>
+				<AudioSnapshotEffectDesc _bus="reverb" _effect="Reverb" _parameter="roomSize" _value="0.8" />
+				<AudioSnapshotEffectDesc _bus="reverb" _effect="Reverb" _parameter="preDelayMs" _value="25" />
+			</_listEffectParameter>
+		</AudioSnapshotDesc>
+	</_listSnapshot>
+</AudioMixerDesc>

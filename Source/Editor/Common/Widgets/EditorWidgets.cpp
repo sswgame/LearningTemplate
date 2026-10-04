@@ -311,6 +311,13 @@ namespace sw::editor
                                  ImGuiInputTextFlags_CallbackResize, &EditorWidgetsInternal::resizeStringCallback, &text );
     }
 
+    bool EditorWidgets::drawTextFieldMultiline( const utf8* pLabel, string& text, const uint32 lineCount )
+    {
+        const ImVec2 size( -1.0f, ImGui::GetTextLineHeight() * static_cast<float32>( lineCount ) + ImGui::GetStyle().FramePadding.y * 2.0f );
+        return ImGui::InputTextMultiline( pLabel != nullptr ? pLabel : "##text", text.data(), text.capacity() + 1, size, ImGuiInputTextFlags_CallbackResize,
+                                          &EditorWidgetsInternal::resizeStringCallback, &text );
+    }
+
     bool EditorWidgets::drawAssetSlot( const utf8* pLabel, string& assetPath, const utf8* pExpectedExt, float32 labelWidth )
     {
         ImGui::PushID( pLabel );

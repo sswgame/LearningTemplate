@@ -118,6 +118,20 @@ namespace sw
          *          (`SpriteComponent`)입니다 — 그래서 세터는 protected 입니다(읽는 셰이더가 없는 메시에 색을 줄 수 있는 것처럼 보이지 않게).
          */
         const GpuSpriteInstanceData& getSpriteInstanceData() const { return _spriteInstanceData; }
+        /**
+         * @brief 2D 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU, 0 = 끔)를 정합니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시합니다.
+         * @details 픽셀 퍼펙트 카메라가 줌이 바뀔 때 씬의 메시 모두에 알리고, 새로 등록되는 메시는 카메라 등록부의 값을 읽습니다. 읽는 셰이더는 sprite2d 입니다.
+         */
+        void setPixelSnapUnit( float32 unit );
+
+        /**
+         * @brief 투명 큐의 정렬 키입니다(`Render2DSettings::makeSortKey` — 정렬 레이어 · 레이어 안 순서). 0 은 `Default` 레이어 · 순서 0 입니다.
+         * @details 투명 물체는 이 키가 작은 것부터 그려지고, 키가 같을 때만 깊이로 가립니다(유니티 `Renderer.sortingLayerID` · `sortingOrder`).
+         *          저장하지 않습니다 — 저장되는 이름 · 순서는 파생(`SpriteComponent`)이 들고 여기로 풀어 넣습니다. 불투명은 이 키를 보지 않습니다.
+         */
+        void setSortKey( uint32 sortKey );
+        /** @brief 투명 큐의 정렬 키입니다. 0 은 기본(`Default` 레이어 · 순서 0)입니다. */
+        uint32 getSortKey() const { return _sortKey; }
 
         /** @brief 바운드 반지름(메시 공간)의 최소값을 설정합니다. 메시가 아는 경계보다 작으면 메시의 것이 쓰입니다(키우기만 한다). */
         void setBoundsRadius( float32 radius );
@@ -189,6 +203,8 @@ namespace sw
         uint32 _gpuSpinSeed;
         /** @brief GPU 인스턴스의 스프라이트 칸입니다. 저장하지 않습니다 — 파생의 저장되는 값(프레임 · 색)에서 만듭니다. */
         GpuSpriteInstanceData _spriteInstanceData;
+        /** @brief 투명 큐의 정렬 키입니다(0 = 기본). 저장하지 않습니다. */
+        uint32 _sortKey;
         /** @brief 등록 시점에 받은 등록부입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */
         PrimitiveRegistry* _pPrimitiveRegistry;
         /** @brief 등록부 슬롯입니다. 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. */

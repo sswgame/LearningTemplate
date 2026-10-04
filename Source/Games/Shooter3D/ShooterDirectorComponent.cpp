@@ -50,7 +50,7 @@ namespace sw
             /** @brief 이 게임이 아는 조우 · 보상 · 스폰 id 입니다 — 프로필이 다른 이름을 쓰면 시작할 때 알린다. */
             static constexpr const utf8* kArrKnownEncounter[] = { "swarm", "elite", "ammo", "repair" };
             static constexpr const utf8* kArrKnownSpawn[]     = { "skeleton" };
-            static constexpr const utf8* kSoundEnemyDown      = "game/shooter3d/sounds/impact_metal_medium_000.ogg";
+            static constexpr const utf8* kEventEnemyDown      = "EnemyDown"; ///< shooter3d.audioevents.xml
 
             /** @brief 원(XZ) 가운데에서 가장 가까운 상자 위 점입니다. */
             static float3 closestPointXz( const float3& point, const float3& boxMin, const float3& boxMax )
@@ -150,7 +150,7 @@ namespace sw
         , _tracerPool{}
         , _listPendingEnemy{}
         , _listPendingEffect{}
-        , _listPendingSound{}
+        , _listPendingEnemyDown{}
         , _listColorLook{}
         , _pendingStateBytes{}
         , _motionTrace{}
@@ -256,7 +256,7 @@ namespace sw
             }
             logStatus( step );
         }
-        const bool bPending = _listPendingEnemy.empty() == false || _listPendingEffect.empty() == false || _listPendingSound.empty() == false || _bAmmoPending == SW_TRUE ||
+        const bool bPending = _listPendingEnemy.empty() == false || _listPendingEffect.empty() == false || _listPendingEnemyDown.empty() == false || _bAmmoPending == SW_TRUE ||
                               _pendingHeal > 0.0f;
         if ( bPending )
             scheduleFlush();
@@ -521,9 +521,9 @@ namespace sw
             _bAmmoPending = SW_FALSE;
             _pendingHeal  = 0.0f;
         }
-        for ( const utf8* pPath : _listPendingSound )
-            (void)GameSound::play( pPath );
-        _listPendingSound.clear();
+        for ( const float3& position : _listPendingEnemyDown )
+            (void)GameSound::postEventAt( hashed_string( ShooterDirectorComponentInternal::kEventEnemyDown ), position );
+        _listPendingEnemyDown.clear();
     }
 
     void ShooterDirectorComponent::spawnEffectPools( GameObjectManager& manager )
@@ -680,7 +680,7 @@ namespace sw
                     if ( record._spawnId != 0 )
                         (void)_director.notifyDespawned( record._spawnId );
                 }
-                _listPendingSound.push_back( ShooterDirectorComponentInternal::kSoundEnemyDown );
+                _listPendingEnemyDown.push_back( pEnemy->getPosition() );
             }
             const bool bGone = pEnemy == nullptr || pEnemy->isRemovable();
             if ( bGone )

@@ -9,6 +9,7 @@
 set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/CommandLine/CommandLineManager.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Common/Macros.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Common/TopologicalSortUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/CompressionCodecRegistry.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/CompressionStream.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Compression/NullCompressionCodec.cpp"
@@ -31,6 +32,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/PlatformSocketUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Network/UdpNetTransport.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Event/EventDispatcher.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/File/AsyncFileIo.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/FileUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/IFileWatcher.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/PlatformFileUtil.cpp"
@@ -62,6 +64,7 @@ set(cfSources
 )
 
 set(listWindowsSource
+	"${CMAKE_CURRENT_SOURCE_DIR}/File/Windows/WindowsAsyncFileIoBackend.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/Windows/WindowsFileDialog.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/Windows/WindowsFileWatcher.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Windows/WindowsCallStackCapture.cpp"
@@ -74,6 +77,7 @@ set(listPosixSource
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Posix/PosixProcess.cpp"
 )
 set(listLinuxSource
+	"${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxAsyncFileIoBackend.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileDialog.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/Linux/LinuxFileWatcher.cpp"
 )

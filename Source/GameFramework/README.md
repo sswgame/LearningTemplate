@@ -15,7 +15,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   쓰는 예는 `Source/Games/AbilityArena`
 - **Framework**: 게임 모듈의 수명과 배선 — `IGame`, `GameInstanceBase`, 서비스 로케이터(`GameService`), 세이브 베이스(`SaveGame`),
   "game" 채널 이벤트(`GameEvents.h` · 내는 길 `GameEventUtil`), 모드 전이(`GameModeStateMachine` — 일시정지 진입 · 해제에 `GamePausedEvent` · `GameResumedEvent`),
-  화면 전환(`ScreenTransitionManager`). `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료를 그 자리에서 낸다. `onInitialize` 뒤에 사용자 설정을 다시 넣는다(`UserSettingsManager::reapplyAll` — 언어 · 입력 맵이 그때 선다). 공유 타입은 루트의 `GameFrameworkMinimal.h`.
+  화면 전환(`ScreenTransitionManager`), 소리(`GameSound` — 이벤트 라이브러리 올리기 · 내리기, 2D 이벤트 `postEvent`, 월드 자리 원샷 `postEventAt`(한 번 쓰는 에미터), 클립 `play( path, bus )`;
+  따라 움직이는 · 루프 소리는 엔진의 `AudioEmitterComponent`, 자세한 것은 `Source/Engine/Audio/README.md`). `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료를 그 자리에서 낸다. `onInitialize` 뒤에 사용자 설정을 다시 넣는다(`UserSettingsManager::reapplyAll` — 언어 · 입력 맵이 그때 선다). 공유 타입은 루트의 `GameFrameworkMinimal.h`.
   PROPERTY 가 아닌 컴포넌트 상태(디렉터가 든 키트 시뮬레이션)는 `ComponentStateStore` 가 상태 봉투의 세 번째 섹션으로 실어 핫 리로드 · 세이브를 넘긴다 —
   게임이 `onBeforeStateSerialize` 에서 `getComponentStateStore().capture<T>( manager )`, `onAfterStateDeserialize` 에서 `restore<T>( manager )` 를 부르고,
   컴포넌트는 `writeState( Archive& )` · `restoreState( vector<uint8>&& )`(시작 전이면 들고 있다가 `onBeginPlay` 에서 적용)를 둔다. 같은 실행은 컴포넌트 id,
@@ -28,7 +29,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 - **Components**: 장르 무관 씬 컴포넌트 — `FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`, 체크포인트 · 보스 앞 · 지역 경계 볼륨
   (`AutosaveTriggerComponent` — 태그가 맞는 활성자가 트리거에 들면 게임 서비스 `AutosaveManager` 에 까닭과 이름을 넘긴다, 한 번), 비스듬히 내려다보는 직교 카메라
   (`OrthoCameraRigComponent` — WASD · 방향키 이동(WASD 끄기 · 초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), Q/E 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)), 장식 흩뿌리기
-  (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽에, 제외 원, 플레이 시작에 세우고 끝에 걷는다). 계산은 `OrthoCameraRigMath` · `PropScatterMath` 로
+  (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(`Rules` 모드 — Engine `Environment/Placement` 의 `PlacementRule`: 밀도 · 최소 거리 ·
+  경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`). 계산은 `OrthoCameraRigMath` · `PropScatterMath` 로
   떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스(또는 입력 맵 액션 `_lookAction`) 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리(카메라의 부모 공간) · 손에 든 뷰 모델 자리, 계산은
   `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다
 - **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 모드 계산(`CameraMode` — 입력 · 제약 · 프레이밍 · 스프링 암 · 훑기),
@@ -219,7 +221,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 알림을 꺼내는 `drainEvents( outListEvent )` 는 기반 · 키트 모두 **받는 쪽 목록 뒤에 붙이고 자기 목록을 비웁니다**(바꿔치기하지 않는다). 매 프레임 같은 목록을 다시 쓰는 쪽은 먼저 `clear()` 합니다.
 
 키트 하나는 장르 묶음 아래 `Kits/<묶음>/<이름>/CMakeLists.txt` 에 `sw_addGameFrameworkKit(GF_<이름>)` 한 줄, `Kits/CMakeLists.txt` 의 `add_subdirectory(<묶음>/<이름>)`,
-`Config/App/AppConfig.json` 의 `_listGameKitModule`, 시험은 `Test/EngineTest/CMakeLists.txt` 의 `LIBS` 입니다. 엔진 없이 돌릴 수 있는 규칙(계산 · 데이터)은
+같은 폴더의 매니페스트 `GF_<이름>.module.json`(이름 · 버전 · `_kind: Kit` · 의존 · 플랫폼 · 구성 — `Source/Games/README.md`)입니다. 시험 실행 파일은 켜진 키트를 레지스트리로 링크합니다. 엔진 없이 돌릴 수 있는 규칙(계산 · 데이터)은
 컴포넌트가 아닌 보통 클래스로 두어 시험이 씬 없이 부르게 합니다 — 지금의 키트 넷이 그렇게 되어 있습니다.
 
 ## 무엇이 키트에 들어가고 무엇이 기반에 남는가

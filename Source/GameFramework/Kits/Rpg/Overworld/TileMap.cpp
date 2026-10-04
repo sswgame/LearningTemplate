@@ -160,7 +160,7 @@ namespace sw
         return nullptr;
     }
 
-    TileVisual TileMap::getTileVisual( int32 x, int32 y ) const
+    OverworldTileVisual TileMap::getTileVisual( int32 x, int32 y ) const
     {
         if ( isInBounds( x, y ) == false )
             return {};
@@ -188,7 +188,7 @@ namespace sw
         setFlag( TileFlagLayer::PassThrough, x, y, bPassThrough );
     }
 
-    void TileMap::setTileVisual( int32 x, int32 y, const TileVisual& visual )
+    void TileMap::setTileVisual( int32 x, int32 y, const OverworldTileVisual& visual )
     {
         if ( isInBounds( x, y ) )
             _data._listVisual[indexOf( x, y )] = visual;
@@ -275,7 +275,7 @@ namespace sw
 
     void TileMap::debugLogTileHd2d( int32 x, int32 y ) const
     {
-        [[maybe_unused]] const TileVisual tileVisual = getTileVisual( x, y );
+        [[maybe_unused]] const OverworldTileVisual tileVisual = getTileVisual( x, y );
         SW_LOG_TRACE( "tile (%#,%#) h=%# tint=(%#,%#,%#) flags walk=%# enc=%# pt=%#",
                       x, y, tileVisual._height, tileVisual._tintR, tileVisual._tintG, tileVisual._tintB,
                       isWalkable( x, y ) ? 1 : 0, isEncounterTile( x, y ) ? 1 : 0, isPassThrough( x, y ) ? 1 : 0 );

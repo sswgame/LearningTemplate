@@ -9,62 +9,13 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CallStackCapture.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
-
-// 보고는 Info 로그로만 나간다. 그것이 사라지는 구성(Shipping)에는 도우미도 두지 않는다.
-
-#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
-namespace sw
-{
-    namespace
-    {
-        struct FrameProfileSessionInternal
-        {
-            /** @brief 바이트를 KB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
-            static constexpr uint64 toKilobytesX10( uint64 bytes ) { return ( bytes * 10 ) / 1024; }
-
-            /**
-             * @brief 태그별 지금 살아 있는 바이트를 큰 순서로 한 줄씩 남깁니다. 0 인 태그는 건너뜁니다.
-             * @details 플랫폼 힙을 잴 수 있으면(Windows Debug CRT) 태그가 볼 수 없는 몫도 한 줄로 낸다 — CRT 힙에서 태그 합과 sw 블록 헤더를 뺀 값이다.
-             *          `std::allocator` · 외부 라이브러리 · CRT 직접 호출에 더해, 프로파일러가 서기 전(정적 초기화)에 잡은 sw 블록과 정렬 할당의 CRT 여분도
-             *          여기 들어간다. 프로파일러는 부트스트랩 맨 앞에서 서므로 기동 직후 이 줄은 수십 KB 다.
-             */
-            static void reportMemoryTags( const MemoryProfiler& memory )
-            {
-                const uint64 liveBytes = memory.getLiveAllocatedBytes();
-                const uint64 liveCount = memory.getLiveAllocationCount();
-                const uint64 totalX10  = toKilobytesX10( liveBytes );
-                SW_LOG_INFO( "[Profile] memory by tag (live, sw 할당자)  %#.%# KB in %# blocks", totalX10 / 10, totalX10 % 10, liveCount );
-                for ( const MemoryTag tag : memory.makeTagOrderByLiveBytes() )
-                {
-                    const MemoryProfileStats& stats = memory.getStats( tag );
-                    const uint64              bytes = stats._currentAllocatedBytes.load( std::memory_order_relaxed );
-                    if ( bytes == 0 )
-                        continue;
-                    const uint64 kbX10        = toKilobytesX10( bytes );
-                    const uint64 sharePermill = liveBytes == 0 ? 0 : ( bytes * 1000 ) / liveBytes;
-                    SW_LOG_INFO( "[Profile]   %#  %#.%# KB  %#.%#%%  %# blocks", MemoryProfiler::getMemoryTagName( tag ), kbX10 / 10, kbX10 % 10,
-                                 sharePermill / 10, sharePermill % 10, stats._currentAllocationCount.load( std::memory_order_relaxed ) );
-                }
-
-                const uint64 platformBytes = MemoryProfiler::getPlatformHeapBytes();
-                const uint64 swBlockBytes  = liveBytes + liveCount * Memory::getAllocationHeaderSize();
-                if ( platformBytes > swBlockBytes )
-                {
-                    const uint64 outsideX10 = toKilobytesX10( platformBytes - swBlockBytes );
-                    SW_LOG_INFO( "[Profile]   (sw 할당자 밖 — std::allocator · 외부 라이브러리 · 정적 초기화)  %#.%# KB", outsideX10 / 10, outsideX10 % 10 );
-                }
-            }
-        };
-    } // namespace
-} // namespace sw
-#endif
+#include "Engine/Utility/Debug/MemoryBudgetMonitor.h"
 
 namespace sw
 {
@@ -74,25 +25,39 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)", SW_KEEP_IN_SHIPPING );
     /**
+     * @brief `-gv_profileSeconds=S`: 워밍업 뒤 S 초를 재고 보고한 다음 종료합니다. `-gv_profileFrames` 와 함께 주면 먼저 닿는 쪽이 끝냅니다.
+     * @details 장시간 실행(soak · `Scripts/qa/Soak.py`)이 쓴다. 프레임 상한이 없으면 같은 프레임 수가 장면마다 몇 초인지 모른다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_profileSeconds, 0, "프레임 프로파일 측정 시간(초, 0=사용 안 함)", SW_KEEP_IN_SHIPPING );
+    /**
      * @brief `-gv_profileAllocSites=N`: 측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고합니다 (0=끄기).
      * @details 프레임당 할당 **횟수**는 시간 표에 보이지 않는 비용입니다. 잡았다 놓는 것은 살아 있는 양에 남지 않습니다.
      *          할당마다 콜스택을 잡으므로 느립니다. 숫자를 읽는 용도이지 프레임 시간을 같이 재는 용도가 아닙니다.
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_profileAllocSites, 0, "측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기)" );
 
+    bool FrameProfileSession::isMeasureWindowDone( uint64 frames, uint64 frameTarget, int64 elapsedMicro, int64 secondsTarget )
+    {
+        const bool bFramesDone  = frameTarget > 0 && frames >= frameTarget;
+        const bool bSecondsDone = secondsTarget > 0 && elapsedMicro >= secondsTarget * 1000000;
+        return bFramesDone || bSecondsDone;
+    }
+
     void FrameProfileSession::begin()
     {
-        if ( gv_profileFrames <= 0 )
+        if ( gv_profileFrames <= 0 && gv_profileSeconds <= 0 )
             return;
 
-        _frameTarget = static_cast<uint64>( gv_profileFrames );
+        _frameTarget   = gv_profileFrames > 0 ? static_cast<uint64>( gv_profileFrames ) : 0;
+        _secondsTarget = gv_profileSeconds > 0 ? static_cast<int64>( gv_profileSeconds ) : 0;
+        _bActive       = SW_TRUE;
         engine::getFrameProfiler().setEnabled( true );
-        SW_LOG_INFO( "[Profile] 계측 활성화 — 워밍업 %# + 측정 %# 프레임", kWarmupFrames, _frameTarget );
+        SW_LOG_INFO( "[Profile] 계측 활성화 — 워밍업 %# + 측정 %# 프레임 / %# 초 (0 = 그 기준 없음)", kWarmupFrames, _frameTarget, _secondsTarget );
     }
 
     void FrameProfileSession::onFrameEnd()
     {
-        if ( _frameTarget == 0 || _bReported == SW_TRUE )
+        if ( _bActive == SW_FALSE || _bReported == SW_TRUE )
             return;
 
         FrameProfiler& profiler = engine::getFrameProfiler();
@@ -116,6 +81,7 @@ namespace sw
             if ( MemoryProfiler* pMemory = MemoryProfiler::getActive(); pMemory != nullptr )
             {
                 pMemory->setTrackingEnabled( true );
+                pMemory->resetPeaks();
                 if ( gv_profileAllocSites > 0 )
                     pMemory->setDetailedTrackingEnabled( true );
                 _allocationCountAtStart     = pMemory->getTotalAllocationCount();
@@ -124,7 +90,7 @@ namespace sw
             return;
         }
 
-        if ( frames < _frameTarget )
+        if ( isMeasureWindowDone( frames, _frameTarget, MonotonicClock::nowMicroseconds() - _measureStartMicro, _secondsTarget ) == false )
             return;
 
         _bReported = SW_TRUE;
@@ -148,7 +114,7 @@ namespace sw
         if ( pMemory == nullptr )
             return;
 
-        FrameProfileSessionInternal::reportMemoryTags( *pMemory );
+        MemoryBudgetMonitor::logMemoryReport( *pMemory, "profile window" );
 
         const uint64 allocationCount = pMemory->getTotalAllocationCount() - _allocationCountAtStart;
         const uint64 perFrameX10     = ( allocationCount * 10 ) / frames;

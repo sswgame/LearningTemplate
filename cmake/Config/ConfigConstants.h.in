@@ -21,7 +21,6 @@ namespace sw::config
     // -------------------------------------------------------------------------
     // 3) 런타임 게임/엔진/에디터 설정 파일 경로
     // -------------------------------------------------------------------------
-    inline constexpr const utf8* kFileRuntimeAppConfig    = "@SW_FILE_RUNTIME_APP_CONFIG@";
     inline constexpr const utf8* kFileRuntimeEditorConfig = "@SW_FILE_RUNTIME_EDITOR_CONFIG@";
     inline constexpr const utf8* kFileRuntimeEditorToolDefaults   = "@SW_FILE_RUNTIME_EDITOR_TOOL_DEFAULTS@";
     inline constexpr const utf8* kFileRuntimeEngineConfig = "@SW_FILE_RUNTIME_ENGINE_CONFIG@";

@@ -27,6 +27,7 @@ namespace sw::editor
         string _absolutePath;
         string _extension;
         bool   _bIsDirectory{ false };
+        bool   _bReadOnly{ false }; ///< 파일이 읽기 전용이다(버전 관리 잠금 전 · 손으로 막음). 목록을 만들 때 워커가 잰다.
     };
 } // namespace sw::editor
 

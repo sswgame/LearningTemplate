@@ -1,0 +1,21 @@
+{
+    "_name": "SWGame",
+    "_version": "1.0.0",
+    "_kind": "Game",
+    "_description": "Shooter3D — 1인칭 · 3인칭 슈터 시험 게임 — 무기 규칙(Combat) · 캐릭터(애니메이션 · 외형 · 소켓) · 페이싱 감독 — 키트 없음",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true,
+    "_listModuleOverride": []
+}

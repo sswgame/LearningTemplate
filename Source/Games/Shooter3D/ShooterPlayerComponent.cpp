@@ -60,10 +60,11 @@ namespace sw
             /** @brief 자동 플레이가 쏘기 시작하는 거리(m) — 사람처럼 다가온 적을 쏜다(멀리서 다 잡으면 아레나가 비어 보인다). */
             static constexpr float32 kAutoEngageDistance = 7.0f;
             /** @brief 자동 조준의 최대 각속도(rad/s) — 약 170°/s. */
-            static constexpr float32     kAutoTurnRate  = 3.0f;
-            static constexpr const utf8* kSoundLand     = "game/shooter3d/sounds/footstep_concrete_000.ogg";
-            static constexpr const utf8* kSoundHitEnemy = "game/shooter3d/sounds/impact_metal_light_001.ogg";
-            static constexpr const utf8* kSoundHitCover = "game/shooter3d/sounds/impact_plank_medium_000.ogg";
+            static constexpr float32 kAutoTurnRate = 3.0f;
+            // 사운드 이벤트 이름(shooter3d.audioevents.xml) — 플레이어 자신의 소리라 2D 로 낸다.
+            static constexpr const utf8* kSoundLand     = "Land";
+            static constexpr const utf8* kSoundHitEnemy = "HitEnemy";
+            static constexpr const utf8* kSoundHitCover = "HitCover";
 
             static float3 flatten( const float3& value ) { return float3{ value._x, 0.0f, value._z }; }
 
@@ -713,8 +714,8 @@ namespace sw
         }
         _listPendingEffect.clear();
         _listPendingTracer.clear();
-        for ( const utf8* pPath : _listPendingSound )
-            (void)GameSound::play( pPath );
+        for ( const utf8* pEvent : _listPendingSound )
+            (void)GameSound::postEvent( hashed_string( pEvent ) );
         _listPendingSound.clear();
         if ( _bWeaponModelDirty == SW_TRUE )
         {

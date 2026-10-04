@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -77,6 +78,11 @@ namespace sw
     void PropScatterMath::computePlacements( const PropScatterParams& params, vector<PropScatterPlacement>& outListPlacement )
     {
         outListPlacement.clear();
+        if ( params._mode == PropScatterMode::Rules )
+        {
+            computeRulePlacements( params, nullptr, outListPlacement );
+            return;
+        }
         if ( params._spacing <= 0.0f || params._listModel.empty() )
             return;
         using Internal         = PropScatterComponentInternal;
@@ -117,6 +123,42 @@ namespace sw
         }
     }
 
+    void PropScatterMath::computeRulePlacements( const PropScatterParams& params, const IPlacementSurface* pSurface, vector<PropScatterPlacement>& outListPlacement )
+    {
+        outListPlacement.clear();
+        if ( params._listModel.empty() )
+            return;
+        vector<float32> listWeight;
+        listWeight.reserve( params._listModel.size() );
+        for ( const PropScatterModel& model : params._listModel )
+            listWeight.push_back( model._weight );
+        vector<PlacementExclusion> listExclusion;
+        listExclusion.reserve( params._listExclusion.size() );
+        for ( const PropScatterExclusion& exclusion : params._listExclusion )
+        {
+            PlacementExclusion circle;
+            circle._center = float2{ exclusion._center._x, exclusion._center._z };
+            circle._radius = exclusion._radius;
+            listExclusion.push_back( circle );
+        }
+        PlacementRegion region;
+        region._min = float2{ params._regionMin._x, params._regionMin._z };
+        region._max = float2{ params._regionMax._x, params._regionMax._z };
+        vector<PlacementInstance> listInstance;
+        PlacementScatter::scatter( params._rule, region, pSurface, listExclusion, listWeight, listInstance );
+        outListPlacement.reserve( listInstance.size() );
+        for ( const PlacementInstance& instance : listInstance )
+        {
+            PropScatterPlacement placement;
+            // 표면이 없으면 높이 0 평면이다 — 영역의 y 에 얹는다.
+            placement._position   = float3{ instance._planePosition._x, instance._height + ( pSurface == nullptr ? params._regionMin._y : 0.0f ), instance._planePosition._y };
+            placement._scale      = instance._scale;
+            placement._yaw        = instance._yaw;
+            placement._modelIndex = instance._entryIndex;
+            outListPlacement.push_back( placement );
+        }
+    }
+
     PropScatterComponent::PropScatterComponent()
         : _listModel{}
         , _listExclusion{}
@@ -131,6 +173,7 @@ namespace sw
         , _scaleMax{ 1.0f }
         , _seed{ 0x9E3779B9u }
         , _mode{ PropScatterMode::Edge }
+        , _rule{}
         , _listSpawned{}
     {
     }
@@ -173,6 +216,7 @@ namespace sw
         params._scaleMax      = _scaleMax;
         params._seed          = _seed;
         params._mode          = _mode;
+        params._rule          = _rule;
         return params;
     }
 
@@ -184,7 +228,27 @@ namespace sw
         if ( pManager == nullptr )
             return;
         vector<PropScatterPlacement> listPlacement;
-        PropScatterMath::computePlacements( makeParams(), listPlacement );
+        const PropScatterParams      params = makeParams();
+        if ( params._mode == PropScatterMode::Rules )
+        {
+            // 규칙 모드는 영역 가운데 아래의 지형을 표면으로 읽는다(없으면 영역 y 의 평면).
+            const float32           centerX  = 0.5f * ( params._regionMin._x + params._regionMax._x );
+            const float32           centerZ  = 0.5f * ( params._regionMin._z + params._regionMax._z );
+            const TerrainComponent* pTerrain = TerrainComponent::findTerrainAt( *pManager, centerX, centerZ );
+            if ( pTerrain != nullptr )
+            {
+                const TerrainPlacementSurface surface( pTerrain->getHeightfield() );
+                PropScatterMath::computeRulePlacements( params, &surface, listPlacement );
+            }
+            else
+            {
+                PropScatterMath::computeRulePlacements( params, nullptr, listPlacement );
+            }
+        }
+        else
+        {
+            PropScatterMath::computePlacements( params, listPlacement );
+        }
         _listSpawned.reserve( listPlacement.size() );
         const hashed_string propName( _propName.c_str() );
         for ( const PropScatterPlacement& placement : listPlacement )

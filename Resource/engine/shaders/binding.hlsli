@@ -277,7 +277,7 @@ SwInstanceData swLoadInstance( uint instanceSlot )
 	instance.uvStart        = 0u;          // (0, 0)
 	instance.uvEnd          = 0xFFFFFFFFu; // (1, 1) — 텍스처 전체
 	instance.tint           = 0xFFFFFFFFu; // 흰색 불투명
-	instance.reserved       = 0u;
+	instance.pixelSnap      = 0.0f;        // 스냅 없음
 	return instance;
 }
 
@@ -574,6 +574,34 @@ float4 swSampleMaterialTexture( uint index, float2 uv )
 	return float4( 1, 1, 1, 1 );
 }
 #endif
+
+/** @brief 머티리얼 텍스처의 크기(텍셀)입니다. 텍스처가 없으면 (1, 1) 입니다. 인덱스의 뜻은 `swSampleMaterialTexture` 와 같습니다. */
+float2 swComputeMaterialTextureSize( uint index )
+{
+	uint width  = 1u;
+	uint height = 1u;
+#if defined( SW_NATIVE_BINDLESS )
+	if ( index != kInvalidIndex )
+		g_SwBindlessTex2D[NonUniformResourceIndex( index )].GetDimensions( width, height );
+#else
+	if ( index == 0 ) g_SwMaterialTex0.GetDimensions( width, height );
+	if ( index == 1 ) g_SwMaterialTex1.GetDimensions( width, height );
+	if ( index == 2 ) g_SwMaterialTex2.GetDimensions( width, height );
+	if ( index == 3 ) g_SwMaterialTex3.GetDimensions( width, height );
+#endif
+	return float2( max( width, 1u ), max( height, 1u ) );
+}
+
+/**
+ * @brief 머티리얼 텍스처를 **점 필터**로 읽습니다(픽셀 아트). UV 를 텍셀 중심에 붙여 선형 샘플러로도 텍셀 하나만 읽게 합니다.
+ * @details 샘플러를 바꾸지 않는 이유: GL 은 결합 샘플러라 슬롯의 샘플러를 셰이더가 고를 수 없다 — 네 백엔드가 같은 식으로 같은 그림을 내게
+ *          UV 를 붙인다. 확대(텍셀 하나가 화면 픽셀 하나 이상)에서는 붙인 UV 의 미분이 텍셀 하나를 넘지 않아 밉 0 을 읽는다.
+ */
+float4 swSampleMaterialTexturePoint( uint index, float2 uv )
+{
+	const float2 size = swComputeMaterialTextureSize( index );
+	return swSampleMaterialTexture( index, ( floor( uv * size ) + 0.5f ) / size );
+}
 
 float4 swSampleShadow( float2 uv )      { return swSampleIndex( g_ShadowMapIndex, uv ); }
 float4 swSampleAlbedo( float2 uv )      { return swSampleIndex( g_GBufferAlbedoIndex, uv ); }

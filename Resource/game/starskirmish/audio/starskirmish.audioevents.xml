@@ -1,0 +1,41 @@
+<!--
+	StarSkirmish 사운드 이벤트(AudioEventLibrary). 위에서 내려다보는 직교 카메라라 리스너는 화면 평면(2D) — 유닛이 부서진 자리가 화면 좌우로 팬된다.
+	선택 · 완성 · 막힘 알림은 ui 버스의 2D 소리다.
+-->
+<AudioEventLibrary>
+	<_listAttenuation>
+		<AudioAttenuationDesc _name="Battlefield" _curve="Linear" _minDistance="8" _maxDistance="60" _bOcclusion="false" />
+	</_listAttenuation>
+	<_listEvent>
+		<AudioEventDesc _name="Select" _bus="ui" _priority="70" _cooldownSeconds="0.05" _maxInstances="1" _steal="Oldest">
+			<_listClip>
+				<AudioClipEntry _path="game/starskirmish/sounds/select_004.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="Built" _bus="ui" _priority="70" _maxInstances="2">
+			<_listClip>
+				<AudioClipEntry _path="game/starskirmish/sounds/confirmation_003.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="Blocked" _bus="ui" _priority="70" _cooldownSeconds="1" _maxInstances="1" _steal="Reject">
+			<_listClip>
+				<AudioClipEntry _path="game/starskirmish/sounds/error_003.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+		<AudioEventDesc _name="UnitDied"
+		                _bus="sfx"
+		                _attenuation="Battlefield"
+		                _priority="50"
+		                _maxInstances="4"
+		                _steal="Quietest"
+		                _volumeDbMin="-3"
+		                _volumeDbMax="0"
+		                _pitchMin="-2"
+		                _pitchMax="1"
+		                _virtual="Stop">
+			<_listClip>
+				<AudioClipEntry _path="game/starskirmish/sounds/impact_metal_heavy_000.ogg" />
+			</_listClip>
+		</AudioEventDesc>
+	</_listEvent>
+</AudioEventLibrary>

@@ -1,0 +1,15 @@
+{
+    "_name": "EditorModule",
+    "_version": "1.0.0",
+    "_kind": "Editor",
+    "_description": "인게임 에디터 모듈(Dev 전용, -EnableEditor 로 올린다)",
+    "_listDependency": [],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev"
+    ],
+    "_bEnabledByDefault": true
+}

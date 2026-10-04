@@ -3,6 +3,7 @@
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -36,6 +37,7 @@ namespace sw
 {
     bool DialogueGraphAsset::loadFromFile( string_view path )
     {
+        SW_MEMORY_SCOPE( Script );
         _listNode.clear();
         _listLink.clear();
         if ( path.empty() )

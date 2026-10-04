@@ -13,13 +13,13 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 | 티어 | 폴더 | 뜻 |
 |---|---|---|
 | 0 | `Common` · `Compression` | 토대. Engine 의 어느 것도 참조하지 않는다. |
-| 1 | `Audio` · `Reflection` · `Utility` | 리플렉션과, 토대 위의 잎 서브시스템·헬퍼. |
+| 1 | `Reflection` · `Utility` | 리플렉션과, 토대 위의 잎 헬퍼. |
 | 2 | `Animation` · `Localization` · `Serialization` | 리플렉션 위에 올라가는 직렬화와 에셋형 잎. |
-| 3 | `Config` · `Dialogue` · `Physics` | 설정 — 리플렉션·직렬화로 읽힌다. 물리(설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터)도 여기다. |
+| 3 | `Audio` · `Config` · `Dialogue` · `Physics` | 설정 — 리플렉션·직렬화로 읽힌다. 물리(설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터)와 오디오(믹서 그래프 · 이벤트 · 음악 데이터)도 여기다. |
 | 4 | `Resource` · `Spatial` | 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. 공간 분할은 물리의 `AABB` 위에 선다. |
 | 5 | `Graphics`(Renderer 제외) · `Window` | RHI · 셰이더 · 머티리얼 · 메시 · 텍스처 — **디바이스와 GPU 에셋**. 창은 표면(`Common/IRenderSurface`)으로만 RHI 에 보인다. |
 | 6 | `Input` · `Object` | 컴포넌트 모델. 컴포넌트가 머티리얼·메시(5)를 든다 — 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 드는 것과 같은 자리. |
-| 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. |
+| 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` · `Environment` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트 · 지형 · 식생 · 물). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. |
 | 8 | `Graphics/Renderer` · `Module` · `Telemetry` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Cook)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. 텔레메트리 · 크래시 보고는 동의를 사용자 설정(7)에서 읽는다. |
 | 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
 
@@ -60,6 +60,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Object/**: GameObject · Component · Prefab. 틱/구조 동결·사용법은 [Object/README.md](Object/README.md)
 - **Scene/**: Scene · SceneManager · SceneDocument · SceneCooker · ObjectUndoUtil ([Scene/README.md](Scene/README.md))
 - **Character/**: 캐릭터 외형의 형상 쪽 — 소켓 에셋 · 해석된 소켓 표 · 레퍼런스 포즈 덮어쓰기 · 체형 · 장비 피팅(`FitSolver`) · 병합 · 절단 · 표면 상태 · `SocketBindingComponent` ([Character/README.md](Character/README.md))
+- **Environment/**: 지형(높이장 · 청크 LOD · 스플랫 레이어) · 식생(규칙 배치 · GPU 인스턴스 · 바람) · 물(거스트너 · 수면 질의) · 2D/3D 공용 배치 규칙 ([Environment/README.md](Environment/README.md))
 - **Spatial/**: 2D/3D 공간 분할 가속 구조체(BVHTree3D · SpatialHashGrid2D · SpatialQuadTree · SpatialOctree) ([Spatial/README.md](Spatial/README.md))
 - **Reflection/**: 매크로 · TypeRegistry · Builtins. [Reflection/README.md](Reflection/README.md) · 생성기 [ReflectionParser](../../Tools/ReflectionParser/README.md)
 - **Graphics/**: RHI · Material · Shader · FrameRenderer. [Graphics/README.md](Graphics/README.md)
@@ -68,6 +69,8 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Telemetry/**: 텔레메트리(동의 · 스키마 · 표본 · 묶음 · JSON lines 스풀 · 회전 · 올리기 · 장면별 프레임 시간 요약)와 크래시 보고(다음 실행의 묶음 ·
   동의 local/ask/send · 보고 프로세스 · multipart 업로드). 바깥으로는 `IHttpClient` 창구로만 나가고 기본 창구는 보내지 않는다. [Telemetry/README.md](Telemetry/README.md)
 - **Resource/**: AssetDatabase · AssetManager · ResourceUtil · ResourcePackManager (VFS .pack) · AssetStreamingQueue · AssetLoadProfiler
+  (팩 리더는 위치 지정 읽기라 여러 스레드가 잠금 없이 읽고 — 매니저는 리더를 찾는 동안만 잠근다 — `readFileAsync` 로 `AsyncFileIo` 에 구간 읽기를 걸어 해제 · CRC 를 태스크 워커에서 한다.
+  스트리밍 큐의 바이트 요청은 `ResourceUtil::readBinaryResourceAsync` 로 간다)
   - **에셋 로드 시간은 `AssetLoadScope` 로 잰다**(`AssetLoadProfiler` — 종류별 수 · 바이트 · IO / 해석 / GPU 올리기 시간 · 가장 긴 로드 · 비동기(워커 스레드)
     · 실패, 가장 느린 16 개, 프레임 프로파일러 구간 `Asset.<종류>.<단계>` · `Asset.Bytes`). 텍스처 · 메시 · 머티리얼 · 프리팹 · 씬 로더가 연다 — 새 로더도
     `AssetLoadScope scope( "Kind", path )` → `beginPhase` → `setBytes` → `setSucceeded`(안 부르면 실패). `-gv_assetLoadProfile=0` 은 끄고,
@@ -99,9 +102,12 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   섀도 복사본을 묻는 창구) · `DelayLoadNotifyHook.cpp`(모듈 DLL 마다 컴파일되는 지연 로드 훅) · `EngineAbiStamp`(핫 리로드의 엔진 ABI 도장).
   감시 · 섀도 복사 · 다시 로드(`LiveReloadManager`)는 App 의 `App/Module`, 에셋 파일 감시(`FileWatchDispatcher`)는 에디터의
   `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleUnloadListener`)은 `Core/Module` 이다.
+- **Module/** 의 `ModuleCatalog` 는 모듈 매니페스트(`<모듈>.module.json`)를 읽고 켜짐 · 플랫폼 · 구성 · 의존 · 버전 · 순환을 보고 적재 순서를 정한다(App 이 쓴다 — CMake 와 같은 규칙).
 - **Utility/**: Format (KeyValueFile), Json, Xml, CommandStack, Debug, `GameTimeScale`(게임 시간 배율 `gv_timeScale` — 호스트의 프레임 시간이
-  곱한다), `GameAutoplay`(게임의 자동 플레이 스위치 계약 — `SW_GAME_AUTOPLAY`, `Source/Games/README.md`), Console(개발 콘솔 — 아래) — 진짜 최하위
+  곱한다), `GameAutoplay`(게임의 자동 플레이 스위치 계약 — `SW_GAME_AUTOPLAY`, `Source/Games/README.md`), Console(개발 콘솔 — 아래), TileMap(타일셋 · 규칙 타일 해석 · 충돌 사각형 병합 · 외곽선 · 이동 비용) — 진짜 최하위
   헬퍼만 둡니다.
+  `Debug/MemoryBudgetMonitor` 는 메모리 태그 예산(`Config/Engine/MemoryBudget.json`, 모르는 태그 · 키는 오류) · 프레임 끝 예산 검사 · `-gv_memoryReport` 표 ·
+  FrameProfiler 카운터를 맡습니다(`EngineLoop::endFrame`, 표는 `-gv_profileFrames` 보고와 같은 함수).
 - **개발 콘솔 · 개발 명령(Shipping 에는 없다 — `SW_DEV_COMMANDS_ENABLED`)**: `Utility/Console/DevCommandRegistry` 가 명령 등록부(Engine 하나, 모듈을 내리면
   그 모듈의 명령이 빠진다)이고, 명령은 자기 .cpp 에 `SW_DEV_COMMAND( 변수, "이름", "사용법", "설명", &본문 )` 한 줄로 등록합니다 — 본문은
   `#if SW_DEV_COMMANDS_ENABLED` 안에 둡니다. 게임 · 키트의 치트(무적 · 아이템 주기 …)도 그렇게 그 게임 · 키트에 둡니다. `Utility/Console/DevConsole`

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 식생(FoliageComponent) 풀 — 그림자를 드리우지 않는다(수만 포기의 흔들리지 않는 그림자는 비용만 크고 틀린 그림이다).
+     바람 · 카메라 · 휘게 하는 구 · 페이드는 컴포넌트가 틱마다 인스턴스에 싣는다. 프로퍼티 이름 · 타입은 foliage.hlsl 의 SW_MATERIAL 구조체와 같다.
+     MATERIAL_VERTEX_DEFORM 은 깊이 프리패스에서 빠지게 한다(shadowdepth.hlsl) — 흔들린 정점이 프리패스 깊이와 어긋나지 않게. -->
+<MaterialDesc formatVersion="0" name="Grass" shaderPath="engine/shaders/foliage.hlsl" blendMode="Opaque">
+	<_properties>
+		<item name="tint" type="Vector4" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Tint" group="Foliage"/>
+		<item name="windParams" type="Vector4" shaderType="Float4" defaultValue="1.0 0.0 0.35 0.0" displayName="Wind Direction XZ, Strength, Time" group="Wind"/>
+		<item name="windWave" type="Vector4" shaderType="Float4" defaultValue="1.2 0.25 0.25 1.0" displayName="Sway Hz, Gust, Gust Hz, Sway Height" group="Wind"/>
+		<item name="viewParams" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 1.0" displayName="Camera Position, Bend Strength" group="Foliage"/>
+		<item name="fadeParams" type="Vector4" shaderType="Float4" defaultValue="60.0 80.0 0.0 0.0" displayName="Fade Start, Fade End" group="Foliage"/>
+		<item name="influencer0" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 0" group="Interaction"/>
+		<item name="influencer1" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 1" group="Interaction"/>
+		<item name="influencer2" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 2" group="Interaction"/>
+		<item name="influencer3" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 0.0 0.0" displayName="Influencer 3" group="Interaction"/>
+		<item name="albedoMap" type="Texture2D" displayName="Albedo" group="Foliage" bSrgb="1"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_VERTEX_DEFORM</item>
+			<item>MATERIAL_SHADOW_CAST_OFF</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDesc>

@@ -2,6 +2,8 @@
 
 #include "GameFramework/UI/RuntimeHud.h"
 
+#include "Core/Memory/MemoryProfiler.h"
+
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 
 #include "GameFramework/Framework/GameService.h"
@@ -57,6 +59,7 @@ namespace sw
 
     void RuntimeHud::setDialogue( string_view line )
     {
+        SW_MEMORY_SCOPE( UI );
         if ( _dialogue == line )
             return;
         _dialogue.assign( line );
@@ -69,6 +72,7 @@ namespace sw
 
     void RuntimeHud::setGauge( const hashed_string& key, float32 fill, float32 x, float32 y, float32 w, float32 h )
     {
+        SW_MEMORY_SCOPE( UI );
         _mapGauge[key] = HudGauge{ fill, x, y, w, h };
     }
 
@@ -100,6 +104,7 @@ namespace sw
 
     void RuntimeHud::publishSnapshot( bool actionMode ) const
     {
+        SW_MEMORY_SCOPE( UI );
         DebugOverlayState* pOverlay = game::getService<DebugOverlayState>();
         if ( pOverlay == nullptr )
             return;

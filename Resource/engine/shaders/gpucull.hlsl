@@ -41,7 +41,7 @@ struct GpuBatchInfo
 {
 	uint instanceBase;
 	uint instanceCount;
-	uint sortMode;        // 0 = 없음(불투명), 1 = CPU 순서 유지, 2 = 압축 뒤 GPU 깊이 정렬
+	uint sortMode;        // 0 = 없음(불투명), 1 = CPU 순서 유지, 2 = 압축 뒤 CPU 순서로 되돌림
 	uint morphVertexBase; // 정점 셰이더용 — 여기서는 안 읽는다 (binding.hlsli SwBatchData 와 같은 표)
 	uint firstVertex;     // 정점 셰이더용 — 여기서는 안 읽는다
 	uint pad0;
@@ -93,7 +93,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
 	// sortMode 1 = 압축을 포기하는 배치. 인스턴스는 배치마다 연속으로 놓이므로 instanceId 가 곧 자기 자리다 —
 	// 제자리 매핑을 적고 개수는 CPU 가 채운 값을 그대로 둔다. GPU 정렬 한계(SW_SORT_MAX_ELEMENTS)를 넘는
-	// 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instancesort.hlsl 이 깊이순으로 되돌린다.
+	// 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instancesort.hlsl 이 CPU 정렬 순서로 되돌린다.
 	if (g_BatchInfo[batchIndex].sortMode == 1u)
 	{
 		g_VisibleInstanceIds[instanceId] = instanceId;

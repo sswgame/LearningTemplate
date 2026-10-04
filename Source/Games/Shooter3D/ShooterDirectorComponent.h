@@ -226,7 +226,7 @@ namespace sw
         EffectPool               _tracerPool;
         vector<EnemyRequest>     _listPendingEnemy;
         vector<EffectRequest>    _listPendingEffect;
-        vector<const utf8*>      _listPendingSound; ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
+        vector<float3>           _listPendingEnemyDown; ///< 처치 소리를 낼 자리(틱 뒤 — 오디오 이벤트는 게임 스레드에서)
         vector<ColorLook>        _listColorLook;
         vector<uint8>            _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         string                   _motionTrace;       ///< 움직임 기록 CSV(진단 — 끝날 때 파일로)

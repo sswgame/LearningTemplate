@@ -26,11 +26,6 @@ target_link_libraries(App
 target_compile_definitions(App PRIVATE "SW_LOG_TAG=\"Engine\"" SW_APP_INTERNAL)
 sw_configurePch(App "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 
-sw_addReflectionStep(App
-    INCLUDES "${CMAKE_SOURCE_DIR}/Source"
-    HEADERS
-        "${CMAKE_CURRENT_SOURCE_DIR}/AppConfig.h"
-)
 
 # ------------------------------------------------------------------------------
 # 1) 런타임 DLL 복사: DXC, Vulkan 검증 레이어(+mimalloc)

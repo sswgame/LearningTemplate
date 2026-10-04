@@ -2,6 +2,7 @@
 
 #include "Engine/EngineInitSequence.h"
 
+#include "Core/Common/TopologicalSortUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringBuilder.h"
 
@@ -304,49 +305,22 @@ namespace sw
                 return false;
         }
 
-        // Kahn: 남은 의존이 0 인 노드 중 **이름이 가장 앞인** 것을 고른다 — 목록 순서를 보지 않으므로 순서는 의존 칸만이 정한다
-        // (표를 기동 순서로 적고, 그것이 이 결과와 같은지 시험이 본다). 노드가 스무 개 남짓이라 매번 처음부터 훑는다.
-        vector<uint32> listRemaining( nodeCount, 0 );
-        for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
-            listRemaining[nodeIndex] = static_cast<uint32>( outGraph._listDependency[nodeIndex].size() );
-        vector<uint8> listEmitted( nodeCount, SW_FALSE );
-        outGraph._listOrder.reserve( nodeCount );
-        while ( outGraph._listOrder.size() < nodeCount )
+        // 남은 의존이 0 인 노드 중 **이름이 가장 앞인** 것을 고른다(`TopologicalSortUtil` — 모듈 적재 순서와 같은 규칙). 목록 순서를 보지 않으므로
+        // 순서는 의존 칸만이 정한다(표를 기동 순서로 적고, 그것이 이 결과와 같은지 시험이 본다).
+        vector<string_view> listName;
+        listName.reserve( nodeCount );
+        for ( const EngineInitNode& node : listNode )
+            listName.push_back( node._pName );
+        vector<uint32> listUnsorted;
+        if ( TopologicalSortUtil::sortByDependency( listName, outGraph._listDependency, outGraph._listOrder, listUnsorted ) == false )
         {
-            uint32 readyIndex = EngineInitSequenceInternal::kNotFound;
-            for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
-            {
-                if ( listEmitted[nodeIndex] == SW_TRUE || listRemaining[nodeIndex] != 0 )
-                    continue;
-                if ( readyIndex == EngineInitSequenceInternal::kNotFound ||
-                     string_view{ listNode[nodeIndex]._pName } < string_view{ listNode[readyIndex]._pName } )
-                    readyIndex = nodeIndex;
-            }
-            if ( readyIndex == EngineInitSequenceInternal::kNotFound )
-            {
-                // 남은 노드는 모두 서로를 기다린다 — 순환(이나 순환에 매달린 노드)이다.
-                StringBuilder<constant::kMaxBuffer512> sb;
-                sb.append( "Startup steps in or behind a dependency cycle:" );
-                for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
-                {
-                    if ( listEmitted[nodeIndex] == SW_FALSE )
-                        sb.append( ' ' ).append( listNode[nodeIndex]._pName );
-                }
-                outError = string( sb.c_str() );
-                outGraph._listOrder.clear();
-                return false;
-            }
-
-            listEmitted[readyIndex] = SW_TRUE;
-            outGraph._listOrder.push_back( readyIndex );
-            for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
-            {
-                for ( const uint32 dependencyIndex : outGraph._listDependency[nodeIndex] )
-                {
-                    if ( dependencyIndex == readyIndex )
-                        --listRemaining[nodeIndex];
-                }
-            }
+            // 남은 노드는 모두 서로를 기다린다 — 순환(이나 순환에 매달린 노드)이다.
+            StringBuilder<constant::kMaxBuffer512> sb;
+            sb.append( "Startup steps in or behind a dependency cycle:" );
+            for ( const uint32 nodeIndex : listUnsorted )
+                sb.append( ' ' ).append( listNode[nodeIndex]._pName );
+            outError = string( sb.c_str() );
+            return false;
         }
         return true;
     }

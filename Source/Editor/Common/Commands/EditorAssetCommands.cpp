@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/AssetActions/EditorAssetTypeActions.h"
+#include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorUtil.h"
@@ -105,7 +106,10 @@ namespace sw::editor
                 item._name         = FileUtil::getFileNamePart( item._absolutePath );
                 item._bIsDirectory = bIsDirectory;
                 if ( item._bIsDirectory == false )
+                {
                     item._extension = FileUtil::getExtension( item._name );
+                    item._bReadOnly = FileUtil::isReadOnlyFile( item._absolutePath );
+                }
 
                 if ( rootNorm.empty() == false )
                 {
@@ -487,11 +491,31 @@ namespace sw::editor
         SceneManager* pSceneManager = editor::getService<SceneManager>();
         if ( pSceneManager == nullptr )
             return false;
+
+        // 버전 관리가 읽기 전용으로 둔 파일(git LFS lockable — 잠그기 전)에는 쓰지 않고 이유를 말한다. 쓰기 실패 로그만으로는 "잠가야 한다" 가 안 보인다.
+        Scene*         pScene     = pSceneManager->getActiveScene();
+        const string   targetPath = path.empty() && pScene != nullptr ? pScene->getSourcePath() : string{ path };
+        const string   targetAbs  = FileUtil::isAbsolutePath( targetPath ) ? targetPath : FileUtil::joinPath( ResourceUtil::getRootFolderPath(), targetPath );
+        EditorContext* pContext   = EditorContext::get();
+        if ( targetPath.empty() == false && FileUtil::isReadOnlyFile( targetAbs ) )
+        {
+            if ( pContext != nullptr )
+                pContext->getNotificationManager().push( "Save", "The scene file is read-only - Check Out (lock) it in the Content Browser first",
+                                                         NotificationType::Warning );
+            SW_LOG_WARNING( "Scene '%#' is read-only (not checked out) - not saved", targetAbs.c_str() );
+            return false;
+        }
+
         if ( pSceneManager->saveActiveScene( path ) == false )
             return false;
-        EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
+        {
             pContext->getWorkspace().clearSceneDirty();
+            // 저장한 씬에 검증 규칙을 돌린다(결과는 로그로 — 저장을 막지 않는다).
+            pScene = pSceneManager->getActiveScene();
+            if ( pScene != nullptr )
+                pContext->getAssetValidation().requestValidation( pScene->getSourcePath() );
+        }
         return true;
     }
 

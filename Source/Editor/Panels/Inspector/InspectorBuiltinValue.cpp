@@ -135,13 +135,13 @@ namespace sw::editor
 
     bool InspectorBuiltinValueUtil::prepareMethodArgs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot )
     {
-        const size_t paramCount = method._listParameterTypeName.size();
+        const size_t paramCount = method._listParameter.size();
         bool         bAllFilled = paramCount <= kMaxMethodArgCount;
         inoutListSlot.resize( paramCount < kMaxMethodArgCount ? paramCount : kMaxMethodArgCount );
         for ( size_t paramIndex = 0; paramIndex < inoutListSlot.size(); ++paramIndex )
         {
             InspectorMethodArgSlot&      slot = inoutListSlot[paramIndex];
-            const InspectorBuiltinValue* pRow = findBuiltin( method._listParameterTypeName[paramIndex] );
+            const InspectorBuiltinValue* pRow = findBuiltin( method._listParameter[paramIndex]._typeName );
             if ( pRow == nullptr )
             {
                 slot._value.reset();

@@ -7,6 +7,8 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include <thread>
+
 using namespace sw;
 
 // ------------------------------------------------------------------------------
@@ -240,4 +242,198 @@ SW_TEST_CASE( MemoryProfilerTest, TagOrderFollowsLiveBytes )
     profiler.recordFree( pDummy, 256, MemoryTag::Audio );
     SW_EXPECT_EQUAL( uint64( 0 ), profiler.getLiveAllocatedBytes() );
     profiler.shutdown();
+}
+
+/**
+ * @brief [MemoryProfilerTest] 최고치는 해제해도 내려가지 않고, resetPeaks 가 지금 값으로 되돌린다
+ */
+SW_TEST_CASE( MemoryProfilerTest, PeakKeepsTheHighWaterMark )
+{
+    MemoryProfiler profiler;
+    profiler.initialize();
+    profiler.setTrackingEnabled( true );
+
+    void* const pFirst  = reinterpret_cast<void*>( 0x1000 );
+    void* const pSecond = reinterpret_cast<void*>( 0x2000 );
+    (void)profiler.recordAllocation( pFirst, 3000, MemoryTag::Audio );
+    (void)profiler.recordAllocation( pSecond, 5000, MemoryTag::Audio );
+    profiler.recordFree( pSecond, 5000, MemoryTag::Audio );
+
+    const MemoryProfileStats& stats = profiler.getStats( MemoryTag::Audio );
+    SW_EXPECT_EQUAL( uint64{ 3000 }, stats._currentAllocatedBytes.load() );
+    SW_EXPECT_EQUAL( uint64{ 8000 }, stats._peakAllocatedBytes.load() );
+    SW_EXPECT_EQUAL( uint64{ 2 }, stats._peakAllocationCount.load() );
+
+    profiler.resetPeaks();
+    SW_EXPECT_EQUAL( uint64{ 3000 }, stats._peakAllocatedBytes.load() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, stats._peakAllocationCount.load() );
+    profiler.recordFree( pFirst, 3000, MemoryTag::Audio );
+    profiler.shutdown();
+}
+
+/**
+ * @brief [MemoryProfilerTest] 예산을 넘으면 그때 한 번 알리고, 넘어 있는 동안은 다시 알리지 않으며, 90 % 아래로 내려가면 다시 건다
+ */
+SW_TEST_CASE( MemoryProfilerTest, BudgetWarnsOnceAndRearmsBelowNinetyPercent )
+{
+    MemoryProfiler profiler;
+    profiler.initialize();
+    profiler.setTrackingEnabled( true );
+    profiler.setBudget( MemoryTag::Texture, 10000 );
+    SW_EXPECT_EQUAL( uint64{ 10000 }, profiler.getBudget( MemoryTag::Texture ) );
+
+    void* const pBlock = reinterpret_cast<void*>( 0x3000 );
+    (void)profiler.recordAllocation( pBlock, 9000, MemoryTag::Texture );
+    SW_EXPECT_EQUAL( 0u, profiler.reportExceededBudgets() ); // 아직 안 넘었다
+
+    void* const pExtra = reinterpret_cast<void*>( 0x4000 );
+    (void)profiler.recordAllocation( pExtra, 2000, MemoryTag::Texture );
+    vector<MemoryTag> listExceeded;
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_EQUAL( 1u, profiler.reportExceededBudgets( &listExceeded ) );
+    }
+    SW_ASSERT_EQUAL( size_t{ 1 }, listExceeded.size() );
+    SW_EXPECT_TRUE( listExceeded[0] == MemoryTag::Texture );
+    SW_EXPECT_EQUAL( 0u, profiler.reportExceededBudgets() ); // 넘어 있는 동안은 다시 알리지 않는다
+
+    // 9500 은 예산의 95 % — 아직 다시 걸지 않는다. 8500(85 %)이면 다시 건다.
+    profiler.recordFree( pExtra, 2000, MemoryTag::Texture );
+    (void)profiler.recordAllocation( pExtra, 500, MemoryTag::Texture );
+    SW_EXPECT_EQUAL( 0u, profiler.reportExceededBudgets() );
+    profiler.recordFree( pExtra, 500, MemoryTag::Texture );
+    profiler.recordFree( pBlock, 9000, MemoryTag::Texture );
+    (void)profiler.recordAllocation( pBlock, 8500, MemoryTag::Texture );
+    SW_EXPECT_EQUAL( 0u, profiler.reportExceededBudgets() );
+    (void)profiler.recordAllocation( pExtra, 4000, MemoryTag::Texture );
+    {
+        test::ScopedLogSuppressor suppressor;
+        SW_EXPECT_EQUAL( 1u, profiler.reportExceededBudgets() ); // 다시 넘었다
+    }
+
+    // 예산이 없는 태그는 보지 않는다.
+    profiler.clearBudgets();
+    SW_EXPECT_EQUAL( 0u, profiler.reportExceededBudgets() );
+    profiler.recordFree( pExtra, 4000, MemoryTag::Texture );
+    profiler.recordFree( pBlock, 8500, MemoryTag::Texture );
+    profiler.shutdown();
+}
+
+/**
+ * @brief [MemoryProfilerTest] 추적을 끄면 할당 · 해제를 세지 않는다(콜 스택 해시도 0) — 꺼진 길은 분기 하나다
+ */
+SW_TEST_CASE( MemoryProfilerTest, DisabledTrackingRecordsNothing )
+{
+    MemoryProfiler profiler;
+    profiler.initialize();
+    profiler.setTrackingEnabled( false );
+    profiler.setDetailedTrackingEnabled( true );
+
+    void* const  pBlock = reinterpret_cast<void*>( 0x5000 );
+    const uint64 hash   = profiler.recordAllocation( pBlock, 4096, MemoryTag::Physics );
+    SW_EXPECT_EQUAL( uint64{ 0 }, hash );
+    const MemoryProfileStats& stats = profiler.getStats( MemoryTag::Physics );
+    SW_EXPECT_EQUAL( uint64{ 0 }, stats._currentAllocatedBytes.load() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, stats._totalAllocationCount.load() );
+    SW_EXPECT_EQUAL( uint64{ 0 }, stats._peakAllocatedBytes.load() );
+    SW_EXPECT_TRUE( profiler.getTopCallStacks().empty() );
+    profiler.recordFree( pBlock, 4096, MemoryTag::Physics );
+    SW_EXPECT_EQUAL( uint64{ 0 }, stats._totalFreedBytes.load() );
+    profiler.shutdown();
+}
+
+/**
+ * @brief [MemoryProfilerTest] 기준선 뒤로 늘어난 태그만 큰 순서로 나온다(종료 누수 보고의 재료)
+ */
+SW_TEST_CASE( MemoryProfilerTest, TagGrowthSinceBaselineNamesTheGrownTags )
+{
+    MemoryProfiler profiler;
+    profiler.initialize();
+    profiler.setTrackingEnabled( true );
+    SW_EXPECT_TRUE( profiler.collectTagGrowthSinceBaseline().empty() ); // 기준선 전
+
+    void* const pKept = reinterpret_cast<void*>( 0x6000 );
+    (void)profiler.recordAllocation( pKept, 100, MemoryTag::Scene );
+    profiler.captureTagBaseline();
+    SW_EXPECT_TRUE( profiler.hasTagBaseline() );
+
+    void* const pSmall = reinterpret_cast<void*>( 0x7000 );
+    void* const pLarge = reinterpret_cast<void*>( 0x8000 );
+    (void)profiler.recordAllocation( pSmall, 64, MemoryTag::UI );
+    (void)profiler.recordAllocation( pLarge, 640, MemoryTag::Script );
+    profiler.recordFree( pKept, 100, MemoryTag::Scene ); // 줄어든 태그는 나오지 않는다
+
+    const vector<MemoryTagGrowth> listGrowth = profiler.collectTagGrowthSinceBaseline();
+    SW_ASSERT_EQUAL( size_t{ 2 }, listGrowth.size() );
+    SW_EXPECT_TRUE( listGrowth[0]._tag == MemoryTag::Script );
+    SW_EXPECT_EQUAL( int64{ 640 }, listGrowth[0]._byteDelta );
+    SW_EXPECT_TRUE( listGrowth[1]._tag == MemoryTag::UI );
+    SW_EXPECT_EQUAL( int64{ 1 }, listGrowth[1]._countDelta );
+
+    profiler.recordFree( pSmall, 64, MemoryTag::UI );
+    profiler.recordFree( pLarge, 640, MemoryTag::Script );
+    SW_EXPECT_TRUE( profiler.collectTagGrowthSinceBaseline().empty() );
+    profiler.shutdown();
+}
+
+/**
+ * @brief [MemoryProfilerTest] 데이터가 적는 태그 이름은 대소문자를 가리지 않고 찾고, 모르는 이름은 거절한다
+ */
+SW_TEST_CASE( MemoryProfilerTest, FindsTagsByName )
+{
+    MemoryTag tag{ MemoryTag::Unknown };
+    SW_EXPECT_TRUE( MemoryProfiler::findMemoryTagByName( "texture", tag ) );
+    SW_EXPECT_TRUE( tag == MemoryTag::Texture );
+    SW_EXPECT_TRUE( MemoryProfiler::findMemoryTagByName( "UI", tag ) );
+    SW_EXPECT_TRUE( tag == MemoryTag::UI );
+    SW_EXPECT_TRUE( MemoryProfiler::findMemoryTagByName( "Script", tag ) );
+    SW_EXPECT_TRUE( tag == MemoryTag::Script );
+    SW_EXPECT_FALSE( MemoryProfiler::findMemoryTagByName( "Textures", tag ) );
+    SW_EXPECT_FALSE( MemoryProfiler::findMemoryTagByName( "", tag ) );
+}
+
+/**
+ * @brief [MemoryProfilerTest] 다른 스레드의 스코프 태그로 잡은 블록을 이 스레드에서 풀어도 같은 줄에서 빠지고, 명시 태그는 스코프를 이긴다
+ * @details 태그는 스레드 로컬이고 해제는 헤더에 적힌 태그로 뺀다. 워커가 잡고 게임 스레드가 푸는 버퍼(로드 결과)가 그 모양이다.
+ */
+SW_TEST_CASE( MemoryProfilerTest, TagsFollowTheBlockAcrossThreads )
+{
+    if constexpr ( kMemoryTagScopesEnabled == false )
+        SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
+    MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+    if ( pProfiler == nullptr )
+        SW_TEST_SKIP( "no active memory profiler in this host" );
+    const bool bWasTracking = pProfiler->isTrackingEnabled();
+    pProfiler->setTrackingEnabled( true );
+
+    constexpr uint32 kBlockCount = 64;
+    constexpr size_t kBlockBytes = 1024;
+    const uint64     uiBase      = pProfiler->getStats( MemoryTag::UI )._currentAllocatedBytes.load();
+    const uint64     physicsBase = pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load();
+
+    vector<void*> listBlock( kBlockCount, nullptr );
+    void**        ppBlock = listBlock.data();
+    void*         pExplicit{ nullptr };
+    std::thread   worker( [ppBlock, &pExplicit]()
+    {
+        SW_MEMORY_SCOPE( UI );
+        for ( uint32 index = 0; index < kBlockCount; ++index )
+            ppBlock[index] = Memory::allocate( kBlockBytes );
+        // 스코프가 UI 여도 명시한 태그로 센다.
+        pExplicit = Memory::allocate( kBlockBytes, MemoryTag::Physics );
+    } );
+    worker.join();
+
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::UI )._currentAllocatedBytes.load() >= uiBase + kBlockCount * kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load() >= physicsBase + kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::UI )._peakAllocatedBytes.load() >= uiBase + kBlockCount * kBlockBytes );
+
+    // 이 스레드(태그가 UI 가 아니다)에서 푼다.
+    for ( void* pBlock : listBlock )
+        Memory::free( pBlock );
+    Memory::free( pExplicit );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::UI )._currentAllocatedBytes.load() < uiBase + kBlockBytes );
+    SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load() < physicsBase + kBlockBytes );
+
+    pProfiler->setTrackingEnabled( bWasTracking );
 }

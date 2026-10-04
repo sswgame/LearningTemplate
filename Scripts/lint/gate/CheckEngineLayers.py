@@ -101,7 +101,6 @@ _kEngineTier: dict[str, int] = {
     # — Core 를 압축 라이브러리에 종속시키지 않으려고 여기 둔다(Source/Engine/CMakeLists.txt 주석 참고).
     "Compression": 0,
     # 1: 리플렉션과, 토대 위의 잎 서브시스템·헬퍼.
-    "Audio": 1,
     "Reflection": 1,
     "Utility": 1,
     # 2: 리플렉션 위에 올라가는 직렬화와 에셋형 잎.
@@ -109,6 +108,8 @@ _kEngineTier: dict[str, int] = {
     "Localization": 2,
     "Serialization": 2,
     # 3: 설정 — 리플렉션·직렬화로 읽힌다. 물리도 같은 자리다 — 설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터다.
+    # 오디오 — 믹서 그래프 · 이벤트 · 음악 데이터를 리플렉션 · 직렬화로 읽는다(설정과 같은 자리).
+    "Audio": 3,
     "Config": 3,
     "Dialogue": 3,
     "Physics": 3,
@@ -128,6 +129,8 @@ _kEngineTier: dict[str, int] = {
     "UserSettings": 7,
     # 캐릭터 외형 형상(소켓 · 피팅 · 병합 · 절단 · 체형)과 소켓 부착 컴포넌트. 컴포넌트 모델(6) 위의 기능 모듈이라 Sequencer 와 같은 자리다.
     "Character": 7,
+    # 지형 · 식생 · 물 — 컴포넌트(6)가 메시 · 머티리얼(5)로 그리는 월드 기능. 씬을 모르고 오브젝트 매니저만 본다.
+    "Environment": 7,
     # 8: 그리는 쪽 · 핫리로드. 씬과 컴포넌트를 읽는다.
     _kGraphicsRendererLayerName: 8,
     "Module": 8,

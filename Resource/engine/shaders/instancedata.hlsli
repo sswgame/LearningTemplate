@@ -8,7 +8,7 @@
  * 스프라이트 칸(uvStart · uvEnd · tint)은 **머티리얼 인스턴스를 만들지 않고** 인스턴스마다 다른 값을 싣는 자리다(언리얼 Custom Primitive
  * Data · 유니티 MaterialPropertyBlock 의 자리). 배치 키는 머티리얼 인스턴스라, 프레임마다 바뀌는 아틀라스 프레임 · 색을 인스턴스로
  * 바꾸면 스프라이트마다 배치가 갈린다. 여기 실으면 같은 텍스처의 스프라이트는 프레임 · 색이 달라도 한 드로우다.
- * 지금 읽는 셰이더는 sprite2d.hlsl 하나다(다른 셰이더에서는 그냥 실려 다니는 12 바이트).
+ * 지금 읽는 셰이더는 sprite2d.hlsl 하나다(다른 셰이더에서는 그냥 실려 다니는 16 바이트 — 프레임 · 색 · 픽셀 스냅).
  */
 
 #ifndef SW_ENGINE_INSTANCEDATA_HLSLI
@@ -26,7 +26,7 @@ struct SwInstanceData
 	uint     uvStart;   // 사각형의 왼쪽 위 꼭짓점이 읽는 UV (u, v) — unorm16 둘(u 가 하위 16비트)
 	uint     uvEnd;     // 오른쪽 아래 꼭짓점이 읽는 UV — unorm16 둘. uvEnd.u < uvStart.u 면 좌우가 뒤집힌다
 	uint     tint;      // 인스턴스 색 RGBA8 unorm(r 이 하위 바이트). 머티리얼 색 · 텍스처에 곱한다
-	uint     reserved;  // 16 바이트 정렬을 채운다(0)
+	float    pixelSnap; // 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU). 0 이면 끈다 — sprite2d.hlsl 이 인스턴스 원점을 이 격자에 붙인다
 };
 
 /** @brief unorm16 둘을 [0, 1] 실수 둘로 푼다(하위 16비트가 x). C++ `GpuSpriteInstanceData::makeUnorm16x2` 의 역이다. */

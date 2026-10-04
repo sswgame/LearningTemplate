@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -158,18 +159,21 @@ namespace sw::editor
         if ( relPath.empty() )
             return;
 
+        // 바뀐 파일(에디터 저장 · 임포트 산출물 · 바깥 도구의 쓰기)마다 검증 규칙을 돌린다 — 결과는 로그로 남는다.
+        if ( EditorContext* pContext = EditorContext::get(); pContext != nullptr )
+            pContext->getAssetValidation().requestValidation( relPath );
+
         (void)reloadChangedAsset( relPath );
     }
 
     bool AssetHotReload::reloadChangedAsset( string_view relativePath )
     {
         const AssetReloadRoute route = EditorAssetTypeRegistry::findReloadRoute( relativePath );
-        if ( route._pCacheKindName == nullptr )
-            return false;
-
-        // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다.
+        // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다(그 결과를 읽는 캐시가 없어도 임포트는 한다).
         if ( route._pfnImportSource != nullptr && route._pfnImportSource( relativePath ) )
             return true;
+        if ( route._pCacheKindName == nullptr )
+            return false;
 
         // 에디터는 `EngineServices.h` 를 볼 수 없다(모듈 경계). 호스트가 넘겨준 서비스를 쓴다.
         AssetManager* pResources = getService<AssetManager>();

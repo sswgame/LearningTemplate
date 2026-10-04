@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/Common.h"
+#include "Engine/Reflection/ReflectUnits.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 
 #include "ReflectionParser/AnnotationApply.h"
@@ -490,6 +491,19 @@ namespace sw
                 if ( type.kind == CXType_Invalid )
                     return node;
 
+                // C 고정 배열(`int32 _arr[4]`)은 `std::array` 와 같은 고정 시퀀스다 — 래퍼(`ArrayWrapper`)가 둘을 같이 다룬다.
+                if ( type.kind == CXType_ConstantArray )
+                {
+                    const CXType elementType = clang_getArrayElementType( type );
+                    markContainer( *node, ContainerKind::Sequence, string( annotation::kFixedArrayWrapperStem ) );
+                    node->_typeName        = annotation::kFixedArrayTypeName;
+                    node->_elementTypeName = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( elementType ) ) );
+                    node->_elementNested   = makeContainerFromType( elementType, session );
+                    if ( node->_elementNested != nullptr && node->_elementNested->_bIsContainer == SW_FALSE )
+                        node->_elementNested.reset();
+                    return node;
+                }
+
                 const string             spelling = takeString( clang_getTypeSpelling( type ) );
                 const ContainerTypeRule* rule     = session._containerTypeMap.match( spelling );
 
@@ -556,17 +570,19 @@ namespace sw
             /** @brief REFLECT 타입 하나의 멤버를 한 번의 자식 순회로 모으는 상태입니다. */
             struct MemberCollector
             {
-                ParsedTypeInfo*        _pType;
-                const ParserSession*   _pSession;
-                uint32                 _baseCount;
-                uint8                  _bSkipConstructors : 1; ///< Abstract / Static 타입은 생성할 수 없다(Unreal UCLASS(Abstract))
-                uint8                  _bBodyFound        : 1;
-                uint8                  _bHasError         : 1;
-                [[maybe_unused]] uint8 _reserved          : 5;
+                ParsedTypeInfo*               _pType;
+                const ParserSession*          _pSession;
+                vector<ParsedMethodSignature> _listMethodSignature; ///< FUNCTION 여부와 무관하게 이 타입이 선언한 메서드(애노테이션이 이름으로 가리킬 때 대조)
+                uint32                        _baseCount;
+                uint8                         _bSkipConstructors : 1; ///< Abstract / Static 타입은 생성할 수 없다(Unreal UCLASS(Abstract))
+                uint8                         _bBodyFound        : 1;
+                uint8                         _bHasError         : 1;
+                [[maybe_unused]] uint8        _reserved          : 5;
 
                 MemberCollector( ParsedTypeInfo& type, const ParserSession& session )
                     : _pType{ &type }
                     , _pSession{ &session }
+                    , _listMethodSignature{}
                     , _baseCount{ 0 }
                     , _bSkipConstructors{ SW_FALSE }
                     , _bBodyFound{ SW_FALSE }
@@ -628,12 +644,307 @@ namespace sw
                 collector._bHasError = SW_TRUE;
             }
 
-            /** @brief 필드 선언에서 PROPERTY 메타를 수집합니다. */
+            // ------------------------------------------------------------------------------
+            // 토큰 — 인자 이름 · 기본 인자처럼 AST 타입에 남지 않는 것을 소스 토큰에서 읽는다
+            // ------------------------------------------------------------------------------
+            /** @brief 커서 범위의 토큰 철자 · 종류입니다. */
+            struct SourceToken
+            {
+                string      _spelling;
+                CXTokenKind _kind;
+            };
+
+            /** @brief 위치를 매크로를 **쓴** 자리로 옮깁니다. 매크로 정의 안(명령줄 `-D` 버퍼)의 위치로는 소스 토큰을 읽을 수 없습니다. */
+            static CXSourceLocation getExpansionPoint( const CXTranslationUnit translationUnit, const CXSourceLocation location )
+            {
+                CXFile file   = nullptr;
+                uint32 line   = 0;
+                uint32 column = 0;
+                clang_getExpansionLocation( location, &file, &line, &column, nullptr );
+                return ( file != nullptr ) ? clang_getLocation( translationUnit, file, line, column ) : location;
+            }
+
+            /**
+             * @brief 커서 범위의 소스 토큰입니다.
+             * @details 범위의 시작이 애노테이션 매크로(`PROPERTY(...)` 가 전개한 `__attribute__`) 안이면 그 위치는 매크로 정의 쪽이라, 범위를
+             *          그대로 토큰으로 읽으면 선언의 토큰이 하나도 나오지 않는다. 양 끝을 전개 위치로 옮겨 읽는다.
+             */
+            static vector<SourceToken> tokenizeCursor( const CXCursor cursor )
+            {
+                vector<SourceToken>     listToken;
+                const CXTranslationUnit translationUnit = clang_Cursor_getTranslationUnit( cursor );
+                const CXSourceRange     extent          = clang_getCursorExtent( cursor );
+                const CXSourceRange     sourceRange     = clang_getRange( getExpansionPoint( translationUnit, clang_getRangeStart( extent ) ),
+                                                                          getExpansionPoint( translationUnit, clang_getRangeEnd( extent ) ) );
+                CXToken*                pToken          = nullptr;
+                uint32                  tokenCount      = 0;
+                clang_tokenize( translationUnit, sourceRange, &pToken, &tokenCount );
+                listToken.reserve( tokenCount );
+                for ( uint32 tokenIndex = 0; tokenIndex < tokenCount; ++tokenIndex )
+                {
+                    listToken.push_back( SourceToken{ takeString( clang_getTokenSpelling( translationUnit, pToken[tokenIndex] ) ),
+                                                      clang_getTokenKind( pToken[tokenIndex] ) } );
+                }
+                clang_disposeTokens( translationUnit, pToken, tokenCount );
+                return listToken;
+            }
+
+            /** @brief 여는 괄호류면 +1, 닫는 괄호류면 -1 입니다. `<` · `>` 도 셉니다(템플릿 인자 안의 쉼표를 가르지 않게). */
+            static int32 getBracketDelta( const string_view spelling ) noexcept
+            {
+                if ( spelling == "(" || spelling == "[" || spelling == "{" || spelling == "<" )
+                    return 1;
+                if ( spelling == ")" || spelling == "]" || spelling == "}" || spelling == ">" )
+                    return -1;
+                if ( spelling == ">>" )
+                    return -2;
+                return 0;
+            }
+
+            /** @brief 토큰을 C++ 식 글로 잇습니다. 이름 · 숫자끼리만 띄웁니다(`Mode::Fast` · `-1` · `sw::string("a b")`). */
+            static string joinTokens( const vector<SourceToken>& listToken, const size_t begin, const size_t end )
+            {
+                string text;
+                for ( size_t tokenIndex = begin; tokenIndex < end; ++tokenIndex )
+                {
+                    const SourceToken& token     = listToken[tokenIndex];
+                    const bool         bWordLike = token._kind == CXToken_Identifier || token._kind == CXToken_Keyword || token._kind == CXToken_Literal;
+                    if ( bWordLike && tokenIndex > begin )
+                    {
+                        const CXTokenKind previousKind = listToken[tokenIndex - 1]._kind;
+                        if ( previousKind == CXToken_Identifier || previousKind == CXToken_Keyword || previousKind == CXToken_Literal )
+                            text.push_back( ' ' );
+                    }
+                    text += token._spelling;
+                }
+                return text;
+            }
+
+            /**
+             * @brief 인자 선언 하나의 기본 인자(`= 식`)를 C++ 글 그대로 읽습니다. 없으면 빈 문자열입니다.
+             * @details 기본 인자는 타입에 남지 않아 AST 의 인자 커서 범위를 토큰으로 읽는다. 괄호 밖의 첫 `=` 뒤가 식이다.
+             */
+            static string readDefaultArgument( const CXCursor parameterCursor )
+            {
+                const vector<SourceToken> listToken = tokenizeCursor( parameterCursor );
+                int32                     depth     = 0;
+                for ( size_t tokenIndex = 0; tokenIndex < listToken.size(); ++tokenIndex )
+                {
+                    const string& spelling = listToken[tokenIndex]._spelling;
+                    if ( depth == 0 && spelling == "=" )
+                        return joinTokens( listToken, tokenIndex + 1, listToken.size() );
+                    depth += getBracketDelta( spelling );
+                }
+                return {};
+            }
+
+            /** @brief 타입 이름을 이루는 낱말(이름 · `int` 같은 키워드)인지 봅니다. 한정자(`const` · `struct` …)는 아닙니다. */
+            static bool isTypeWord( const SourceToken& token ) noexcept
+            {
+                if ( token._kind == CXToken_Identifier )
+                    return true;
+                if ( token._kind != CXToken_Keyword )
+                    return false;
+                const string_view spelling = token._spelling;
+                return spelling != "const" && spelling != "volatile" && spelling != "struct" && spelling != "class" && spelling != "enum" &&
+                       spelling != "typename";
+            }
+
+            /**
+             * @brief 인자 선언 토큰 한 덩이(`const DamageEvent& damage`)에서 이름을 꺼냅니다. 이름 없이 적었으면 빈 문자열입니다.
+             * @details 마지막 토큰이 이름이고 그 앞에 타입이 남아야 이름이다 — `int32` · `sw::TagID` · `const Foo` 는 이름이 없다.
+             */
+            static string findParameterName( const vector<SourceToken>& listToken, const size_t begin, const size_t end )
+            {
+                if ( end <= begin + 1 )
+                    return {};
+                const SourceToken& last = listToken[end - 1];
+                if ( last._kind != CXToken_Identifier || listToken[end - 2]._spelling == "::" )
+                    return {};
+                for ( size_t tokenIndex = begin; tokenIndex + 1 < end; ++tokenIndex )
+                {
+                    if ( isTypeWord( listToken[tokenIndex] ) )
+                        return last._spelling;
+                }
+                return {};
+            }
+
+            /**
+             * @brief `MulticastDelegate<void( int32 amount, TagID tag )>` 의 인자 이름들을 소스 토큰에서 읽습니다.
+             * @details 함수 타입의 인자 이름은 타입에 남지 않는다. 필드 선언에 시그니처가 없으면(별칭 `using DamagedEvent = …` 으로 적었으면)
+             *          그 별칭 선언을 읽는다. 못 찾으면 빈 목록 — 이름은 표시용이라 없어도 묶기 · 호출은 된다.
+             */
+            static vector<string> readEventParameterNames( const CXCursor fieldCursor )
+            {
+                vector<SourceToken> listToken = tokenizeCursor( fieldCursor );
+                auto                findStart = [&listToken]() -> size_t
+                {
+                    for ( size_t tokenIndex = 0; tokenIndex + 1 < listToken.size(); ++tokenIndex )
+                    {
+                        if ( listToken[tokenIndex]._spelling == annotation::kEventTemplateLeaf && listToken[tokenIndex + 1]._spelling == "<" )
+                            return tokenIndex + 2;
+                    }
+                    return listToken.size();
+                };
+                size_t cursorIndex = findStart();
+                if ( cursorIndex == listToken.size() )
+                {
+                    const CXCursor aliasDeclaration = clang_getTypeDeclaration( clang_getCursorType( fieldCursor ) );
+                    if ( clang_Cursor_isNull( aliasDeclaration ) == 0 )
+                    {
+                        listToken   = tokenizeCursor( aliasDeclaration );
+                        cursorIndex = findStart();
+                    }
+                }
+
+                // 반환 타입 뒤의 첫 `(` 부터 짝이 맞는 `)` 까지가 인자 목록이다.
+                while ( cursorIndex < listToken.size() && listToken[cursorIndex]._spelling != "(" )
+                    ++cursorIndex;
+                vector<string> listName;
+                if ( cursorIndex >= listToken.size() )
+                    return listName;
+
+                int32  depth      = 0;
+                size_t chunkStart = cursorIndex + 1;
+                for ( size_t tokenIndex = cursorIndex; tokenIndex < listToken.size(); ++tokenIndex )
+                {
+                    const string& spelling = listToken[tokenIndex]._spelling;
+                    const int32   delta    = getBracketDelta( spelling );
+                    if ( depth == 1 && ( spelling == "," || ( delta < 0 && spelling == ")" ) ) )
+                    {
+                        if ( tokenIndex > chunkStart )
+                            listName.push_back( findParameterName( listToken, chunkStart, tokenIndex ) );
+                        chunkStart = tokenIndex + 1;
+                    }
+                    depth += delta;
+                    if ( depth == 0 )
+                        break;
+                }
+                return listName;
+            }
+
+            /** @brief 인자 이름 · 정규 타입 · 기본 인자를 채웁니다. */
+            static void fillParameters( const CXCursor cursor, ParsedFunctionInfo& method, const ParserSession& session )
+            {
+                const int32 numArgs = clang_Cursor_getNumArguments( cursor );
+                for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
+                {
+                    const CXCursor      argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
+                    ParsedParameterInfo parameter;
+                    parameter._name         = getCursorSpelling( argCursor );
+                    parameter._typeName     = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) );
+                    parameter._defaultValue = readDefaultArgument( argCursor );
+                    method._listParameter.push_back( std::move( parameter ) );
+                }
+            }
+
+            /** @brief 필드 타입이 리플렉션 이벤트(멀티캐스트 델리게이트)인지 봅니다. */
+            static bool isEventType( const CXType fieldType )
+            {
+                const string canonical = takeString( clang_getTypeSpelling( clang_getCanonicalType( fieldType ) ) );
+                return StringUtil::startsWith( canonical, annotation::kEventTemplatePrefix );
+            }
+
+            /**
+             * @brief 이벤트에 받는 애노테이션인지 봅니다 — 표시 메타(`Category` · `DisplayName` · `Tooltip` · `Meta` · `HideInInspector`)와 `Name` 만.
+             * @details 직렬화 · 범위 · 네트워크 플래그는 값이 아닌 구독 목록에 뜻이 없다. 조용히 버리지 않고 그 헤더를 멈춘다.
+             */
+            static bool isEventAnnotationField( const string_view fieldId ) noexcept
+            {
+                return fieldId == "Category" || fieldId == "DisplayName" || fieldId == "Tooltip" || fieldId == "Meta" || fieldId == "HideInInspector" ||
+                       fieldId == "Name";
+            }
+
+            /**
+             * @brief 이벤트 필드 타입의 함수 타입(`void( int32, const string& )`)을 **적힌 꼴로** 찾습니다.
+             * @details 정규 타입에서 꺼내면 인자 타입이 펼쳐진 철자(`sw::basic_string<char>`)라 정규 이름(`string`)이 되지 않는다. 별칭
+             *          (`using ScoreEvent = …`)은 벗겨 적힌 템플릿 인자를 읽고, 그래도 못 찾으면 정규 타입으로 물러선다.
+             */
+            static CXType findEventFunctionType( const CXType fieldType )
+            {
+                CXType current = fieldType;
+                for ( int32 depth = 0; depth < 8; ++depth )
+                {
+                    const CXType named = ( current.kind == CXType_Elaborated ) ? clang_Type_getNamedType( current ) : current;
+                    if ( named.kind == CXType_Typedef )
+                    {
+                        current = clang_getTypedefDeclUnderlyingType( clang_getTypeDeclaration( named ) );
+                        continue;
+                    }
+                    const CXType written = clang_Type_getTemplateArgumentAsType( named, 0 );
+                    if ( written.kind == CXType_FunctionProto )
+                        return written;
+                    break;
+                }
+                return clang_Type_getTemplateArgumentAsType( clang_getCanonicalType( fieldType ), 0 );
+            }
+
+            /** @brief `PROPERTY()` 가 붙은 멀티캐스트 델리게이트 필드를 이벤트로 수집합니다. */
+            static void collectEvent( const CXCursor cursor, const string& spelling, const CXType fieldType, MemberCollector& collector )
+            {
+                const ParserSession& session = *collector._pSession;
+                ParsedEventInfo      event;
+                event._memberName             = getCursorSpelling( cursor );
+                event._annotation._memberName = event._memberName;
+                event._annotation._name       = event._memberName;
+                event._annotation._typeName   = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( fieldType ) ) );
+                const string owner            = makeMemberOwnerName( collector._pType->_fullyQualifiedName, event._memberName );
+                if ( applyAnnotation( spelling, event._annotation, session, owner ) == false )
+                {
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
+                for ( const string& token : AnnotationApply::splitAnnotationArgs( AnnotationApply::annotationArgumentText( spelling, annotation::kPropertyPrefix ) ) )
+                {
+                    const size_t             eqPos    = token.find( '=' );
+                    const AnnotationBinding* pBinding = ( eqPos == string::npos )
+                                                          ? session._annotationMeta.findBare( annotation::kPropertyScope, token )
+                                                          : session._annotationMeta.findKey( annotation::kPropertyScope, StringUtil::trim( string_view( token ).substr( 0, eqPos ) ) );
+                    if ( pBinding != nullptr && isEventAnnotationField( pBinding->_field ) == false )
+                    {
+                        SW_LOG_ERROR( "ERROR: PROPERTY() on event '%#' has '%#'. An event (multicast delegate) takes display metadata only "
+                                      "(Category, DisplayName, Tooltip, Meta, HideInInspector, Name).",
+                                      owner, token );
+                        collector._bHasError = SW_TRUE;
+                        return;
+                    }
+                }
+
+                // 함수 타입은 MulticastDelegate 의 첫 템플릿 인자다. 반환은 void 만 받는다 — broadcast 는 반환값을 모으지 않는다.
+                const CXType functionType = findEventFunctionType( fieldType );
+                const CXType resultType   = clang_getResultType( functionType );
+                if ( functionType.kind != CXType_FunctionProto || resultType.kind != CXType_Void )
+                {
+                    SW_LOG_ERROR( "ERROR: event '%#' must be MulticastDelegate<void( ... )> - broadcast does not collect return values.", owner );
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
+                const vector<string> listName = readEventParameterNames( cursor );
+                const int32          argCount = clang_getNumArgTypes( functionType );
+                for ( int32 argIndex = 0; argIndex < argCount; ++argIndex )
+                {
+                    ParsedParameterInfo parameter;
+                    parameter._typeName = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( clang_getArgType( functionType, static_cast<uint32>( argIndex ) ) ) ) );
+                    if ( static_cast<size_t>( argIndex ) < listName.size() )
+                        parameter._name = listName[static_cast<size_t>( argIndex )];
+                    event._listParameter.push_back( std::move( parameter ) );
+                }
+                collector._pType->_listEvent.push_back( std::move( event ) );
+            }
+
+            /** @brief 필드 선언에서 PROPERTY 메타를 수집합니다. 멀티캐스트 델리게이트면 이벤트로 수집합니다. */
             static void collectField( const CXCursor cursor, MemberCollector& collector )
             {
                 const string spelling = findAnnotateAttr( cursor, annotation::kPropertyPrefix );
                 if ( spelling.empty() && hasSourceAnnotation( cursor, annotation::kProperty, collector._pSession->_config ) == false )
                     return;
+
+                if ( isEventType( clang_getCursorType( cursor ) ) )
+                {
+                    const string eventSpelling = spelling.empty() ? extractSourceAnnotation( cursor, annotation::kProperty, collector._pSession->_config ) : spelling;
+                    collectEvent( cursor, eventSpelling, clang_getCursorType( cursor ), collector );
+                    return;
+                }
 
                 const ParserSession& session   = *collector._pSession;
                 const CXType         fieldType = resolvePropertyAlias( clang_getCursorType( cursor ), session ); // 사용자 별칭은 벗긴다
@@ -663,6 +974,11 @@ namespace sw
                     return;
                 }
                 fillContainerDetails( prop, fieldType, session );
+                if ( isInterpAllowed( prop, owner ) == false || applyDisplayMeta( prop, fieldType, owner ) == false )
+                {
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
                 collector._pType->_listProperty.push_back( std::move( prop ) );
             }
 
@@ -712,6 +1028,11 @@ namespace sw
                     collector._bHasError = SW_TRUE;
                     return;
                 }
+                if ( isInterpAllowed( prop, owner ) == false || applyDisplayMeta( prop, valueType, owner ) == false )
+                {
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
                 collector._pType->_listProperty.push_back( std::move( prop ) );
             }
 
@@ -755,18 +1076,6 @@ namespace sw
                 return CXChildVisit_Continue;
             }
 
-            /** @brief 인자 타입들을 정규 이름으로 채웁니다. */
-            static void fillParameterTypes( const CXCursor cursor, ParsedFunctionInfo& method, const ParserSession& session )
-            {
-                const int32 numArgs = clang_Cursor_getNumArguments( cursor );
-                for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
-                {
-                    const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
-                    method._listParameterTypeName.push_back(
-                        session._typeNameMap.normalize( takeString( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
-                }
-            }
-
             /** @brief REFLECT 타입은 사용자 · 암시 생성자를 자동 등록합니다(FUNCTION 불필요). 복사 · 이동 · 삭제된 것은 뺍니다. */
             static void collectConstructor( const CXCursor cursor, const string& functionSpelling, MemberCollector& collector )
             {
@@ -784,7 +1093,7 @@ namespace sw
                 method._returnTypeName = annotation::kVoidTypeName;
                 method._bConstructor   = SW_TRUE;
                 method._category       = annotation::kConstructorCategory;
-                fillParameterTypes( cursor, method, *collector._pSession );
+                fillParameters( cursor, method, *collector._pSession );
 
                 const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, annotation::kCtorLookupName );
                 if ( functionSpelling.empty() == false && applyAnnotation( functionSpelling, method, *collector._pSession, owner ) == false )
@@ -815,7 +1124,7 @@ namespace sw
                 method._returnTypeName = session._typeNameMap.normalize( takeString( clang_getTypeSpelling( clang_getCursorResultType( cursor ) ) ) );
                 method._bStatic        = clang_CXXMethod_isStatic( cursor ) != 0 ? SW_TRUE : SW_FALSE;
                 method._bConst         = clang_CXXMethod_isConst( cursor ) != 0 ? SW_TRUE : SW_FALSE;
-                fillParameterTypes( cursor, method, session );
+                fillParameters( cursor, method, session );
 
                 const string owner = makeMemberOwnerName( collector._pType->_fullyQualifiedName, method._name );
                 if ( bHasAttr && applyAnnotation( functionSpelling, method, session, owner ) == false )
@@ -824,6 +1133,175 @@ namespace sw
                     return;
                 }
                 collector._pType->_listMethod.push_back( std::move( method ) );
+            }
+
+            /** @brief 메서드의 이름 · 인자 타입을 적어 둡니다. FUNCTION 이 없어도 — `RepNotify` 처럼 애노테이션이 이름으로 가리킬 수 있다. */
+            static void recordMethodSignature( const CXCursor cursor, const string& name, MemberCollector& collector )
+            {
+                ParsedMethodSignature signature;
+                signature._name     = name;
+                const int32 numArgs = clang_Cursor_getNumArguments( cursor );
+                for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
+                {
+                    const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
+                    signature._listParameterTypeName.push_back(
+                        collector._pSession->_typeNameMap.normalize( takeString( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
+                }
+                collector._listMethodSignature.push_back( std::move( signature ) );
+            }
+
+            /** @brief 검증 함수(`void fn( ValidationContext& )`)가 그 이름으로 선언됐는지 봅니다. */
+            static bool isValidatorDeclared( const MemberCollector& collector, const string_view name )
+            {
+                for ( const ParsedMethodSignature& signature : collector._listMethodSignature )
+                {
+                    if ( signature._name == name && signature._listParameterTypeName.size() == 1 &&
+                         signature._listParameterTypeName[0] == annotation::kValidationContextTypeName )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief 이름이 같은 메서드 중 인자 수가 @p maxParameterCount 이하인 첫 것입니다. 없으면 nullptr 입니다. */
+            static const ParsedMethodSignature* findMethodSignature( const MemberCollector& collector, const string_view name, const size_t maxParameterCount )
+            {
+                for ( const ParsedMethodSignature& signature : collector._listMethodSignature )
+                {
+                    if ( signature._name == name && signature._listParameterTypeName.size() <= maxParameterCount )
+                        return &signature;
+                }
+                return nullptr;
+            }
+
+            /**
+             * @brief 프로퍼티 애노테이션이 이름으로 가리키는 메서드가 있고 모양이 맞는지 봅니다(`RepNotify`).
+             * @details 같은 타입이 선언한 메서드만 찾는다 — 생성 코드는 그 메서드를 직접 부르므로 이름이 틀리면 컴파일 오류가 엉뚱한 .gen.cpp 에서 난다.
+             *          여기서 그 헤더의 이름으로 멈춘다. `RepNotify` 는 `void fn()` 또는 `void fn( const T& )`(T = 프로퍼티 타입)이다.
+             */
+            static void validateMemberFunctions( MemberCollector& collector )
+            {
+                if ( collector._pType->_validate.empty() == false && isValidatorDeclared( collector, collector._pType->_validate ) == false )
+                {
+                    SW_LOG_ERROR( "ERROR: REFLECT( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
+                                  collector._pType->_validate, collector._pType->_fullyQualifiedName, collector._pType->_validate );
+                    collector._bHasError = SW_TRUE;
+                }
+                for ( ParsedPropertyInfo& prop : collector._pType->_listProperty )
+                {
+                    if ( prop._validate.empty() == false && isValidatorDeclared( collector, prop._validate ) == false )
+                    {
+                        SW_LOG_ERROR( "ERROR: PROPERTY( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
+                                      prop._validate, makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._name ), prop._validate );
+                        collector._bHasError = SW_TRUE;
+                    }
+                    if ( prop._repNotify.empty() )
+                        continue;
+                    const string                 owner      = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._name );
+                    const ParsedMethodSignature* pSignature = findMethodSignature( collector, prop._repNotify, 1 );
+                    const bool                   bTakesOld  = pSignature != nullptr && pSignature->_listParameterTypeName.size() == 1;
+                    if ( pSignature == nullptr || ( bTakesOld && pSignature->_listParameterTypeName[0] != prop._typeName ) )
+                    {
+                        SW_LOG_ERROR( "ERROR: PROPERTY( RepNotify = %# ) on '%#' needs a method of the same type named '%#' taking nothing or the old "
+                                      "value (const %#&).",
+                                      prop._repNotify, owner, prop._repNotify, prop._typeName );
+                        collector._bHasError = SW_TRUE;
+                        continue;
+                    }
+                    prop._bRepNotifyTakesOldValue = bTakesOld ? SW_TRUE : SW_FALSE;
+                }
+            }
+
+            /**
+             * @brief 표시 메타를 검사하고 정리합니다 — `Units` 는 단위 표에 있어야 하고(커스텀 메타 `Units` 로 싣는다), `EditCondition` 은 네 꼴 중 하나여야 하며,
+             *        C 고정 배열의 원소는 컨테이너일 수 없습니다.
+             * @details 조건식이 가리키는 이름은 기반 클래스의 것일 수 있어 여기서는 꼴만 본다 — 이름은 등록된 뒤 `PropertyEditCondition::parse` 가 보고,
+             *          `ReflectionDisplayMetaTest.EveryEditConditionResolves` 가 모든 타입을 대조한다.
+             */
+            static bool applyDisplayMeta( ParsedPropertyInfo& prop, const CXType fieldType, const string_view owner )
+            {
+                if ( prop._units.empty() == false )
+                {
+                    if ( ReflectUnitUtil::findUnit( prop._units ) == nullptr )
+                    {
+                        SW_LOG_ERROR( "ERROR: PROPERTY( Units = %# ) on '%#' - unknown unit. Known: %#. A free-form label is written Meta = \"Units=…\".",
+                                      prop._units, owner, ReflectUnitUtil::makeUnitList() );
+                        return false;
+                    }
+                    for ( const auto& [key, value] : prop._listCustomMeta )
+                    {
+                        if ( key == "Units" )
+                        {
+                            SW_LOG_ERROR( "ERROR: '%#' gives Units twice (Units = %# and Meta = \"Units=%#\").", owner, prop._units, value );
+                            return false;
+                        }
+                    }
+                    prop._listCustomMeta.emplace_back( "Units", prop._units );
+                }
+
+                if ( prop._editCondition.empty() == false && isEditConditionWellFormed( prop._editCondition ) == false )
+                {
+                    SW_LOG_ERROR( "ERROR: PROPERTY( EditCondition = \"%#\" ) on '%#' - use name, !name, name == Value or name != Value.", prop._editCondition, owner );
+                    return false;
+                }
+
+                if ( fieldType.kind == CXType_ConstantArray && prop._containerTree != nullptr && prop._containerTree->_elementNested != nullptr )
+                {
+                    SW_LOG_ERROR( "ERROR: PROPERTY() on '%#' is a fixed array of containers - use a container of containers (vector<array<…>>) instead.", owner );
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 식별자(영문 · 숫자 · `_`, 숫자로 시작하지 않는다)인지 봅니다. */
+            static bool isIdentifier( const string_view text ) noexcept
+            {
+                if ( text.empty() || ( '0' <= text.front() && text.front() <= '9' ) )
+                    return false;
+                for ( const utf8 character : text )
+                {
+                    const bool bWord = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' ) ||
+                                       character == '_';
+                    if ( bWord == false )
+                        return false;
+                }
+                return true;
+            }
+
+            /** @brief `name` · `!name` · `name == Value` · `name != Value` 꼴인지 봅니다(값은 식별자 · 정수 · `Enum::Value`). */
+            static bool isEditConditionWellFormed( const string_view text )
+            {
+                const string_view trimmed = StringUtil::trim( text );
+                const size_t      opPos   = trimmed.find( "==" ) != string_view::npos ? trimmed.find( "==" ) : trimmed.find( "!=" );
+                if ( opPos == string_view::npos )
+                {
+                    const string_view name = ( trimmed.empty() == false && trimmed.front() == '!' ) ? StringUtil::trim( trimmed.substr( 1 ) ) : trimmed;
+                    return isIdentifier( name );
+                }
+                const string_view name  = StringUtil::trim( trimmed.substr( 0, opPos ) );
+                string_view       value = StringUtil::trim( trimmed.substr( opPos + 2 ) );
+                const size_t      scope = value.rfind( "::" );
+                if ( scope != string_view::npos )
+                    value = value.substr( scope + 2 );
+                int64 number{ 0 };
+                return isIdentifier( name ) && ( isIdentifier( value ) || StringUtil::parseInt64( value, number ) );
+            }
+
+            /** @brief `Interp` 는 시퀀서가 섞을 수 있는 타입에만 — 컨테이너 · 비트필드 · 그 밖의 타입은 그 헤더를 멈춥니다. */
+            static bool isInterpAllowed( const ParsedPropertyInfo& prop, const string_view owner )
+            {
+                if ( prop._bInterp == SW_FALSE )
+                    return true;
+                bool bKnownType = false;
+                for ( const utf8* pTypeName : annotation::kArrInterpTypeName )
+                {
+                    if ( prop._typeName == pTypeName )
+                        bKnownType = true;
+                }
+                if ( bKnownType && prop._bIsContainer == SW_FALSE && prop._bIsBitField == SW_FALSE )
+                    return true;
+                SW_LOG_ERROR( "ERROR: PROPERTY( Interp ) on '%#' (%#) - only a single number, float2/3/4 or quaternion can be animated by a value track.",
+                              owner, prop._typeName );
+                return false;
             }
 
             /** @brief 함수 꼴 멤버 하나 — 마커 · 생성자 · 메서드로 나눕니다. */
@@ -849,6 +1327,7 @@ namespace sw
                 }
                 if ( kind == CXCursor_CXXMethod )
                 {
+                    recordMethodSignature( cursor, spelling, collector );
                     if ( annotation._propertySpelling.empty() == false )
                     {
                         if ( annotation._functionSpelling.empty() == false )
@@ -1162,6 +1641,8 @@ namespace sw
         {
             AstVisitorInternal::MemberCollector collector( typeInfo, *_pSession );
             clang_visitChildren( cursor, AstVisitorInternal::memberCollectVisitor, &collector );
+            // 메서드는 프로퍼티 뒤에 선언될 수 있다 — 이름으로 가리키는 애노테이션은 멤버를 다 모은 뒤에 대조한다.
+            AstVisitorInternal::validateMemberFunctions( collector );
             if ( collector._bHasError == SW_TRUE )
             {
                 markHeaderError( outHeader );

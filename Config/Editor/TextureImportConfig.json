@@ -70,6 +70,19 @@
       "format": "BC1_UNORM"
     },
     {
+      "name": "Terrain_Weights",
+      "inherits": "Base_Uncompressed",
+      "include_patterns": ["*_splat.*"],
+      "srgb": false,
+      "generate_mips": false
+    },
+    {
+      "name": "Terrain_Detail",
+      "inherits": "Base_Uncompressed",
+      "include_patterns": ["*/textures_raw/terrain/*_detail.*"],
+      "srgb": false
+    },
+    {
       "name": "HDR_Cubemaps",
       "inherits": "Base_HDR",
       "include_patterns": ["*.hdr", "*_sky.*", "*_env.*"]

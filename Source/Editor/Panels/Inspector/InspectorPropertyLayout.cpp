@@ -7,6 +7,7 @@
     #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 
     #include "Core/Math/MathUtil.h"
+    #include "Core/String/StringUtil.h"
 
     #include "Editor/Common/Widgets/EditorListFilter.h"
 
@@ -98,6 +99,13 @@ namespace sw::editor
             unit._suffix    = "%";
             return unit;
         }
+        // 0..100 으로 저장한 백분율은 그대로 보이고 글자만 `%` 다.
+        if ( *pUnits == "percent" )
+        {
+            unit._dragSpeed = kPercentDragSpeed;
+            unit._suffix    = "%";
+            return unit;
+        }
         unit._suffix = *pUnits;
         return unit;
     }
@@ -115,6 +123,88 @@ namespace sw::editor
                 format += '%';
         }
         return format;
+    }
+
+    InspectorNumericRange InspectorPropertyLayout::getNumericRange( const PropertyInfo& prop )
+    {
+        const PropertyMetadata& meta = prop._metadata;
+        InspectorNumericRange   range;
+        range._bHasClampMin = meta._bHasMinRange != SW_FALSE;
+        range._bHasClampMax = meta._bHasMaxRange != SW_FALSE;
+        range._clampMin     = static_cast<float64>( meta._minRange );
+        range._clampMax     = static_cast<float64>( meta._maxRange );
+
+        range._bHasWidgetMin = meta._bHasUiMinRange != SW_FALSE || range._bHasClampMin;
+        range._bHasWidgetMax = meta._bHasUiMaxRange != SW_FALSE || range._bHasClampMax;
+        range._widgetMin     = meta._bHasUiMinRange != SW_FALSE ? static_cast<float64>( meta._uiMinRange ) : range._clampMin;
+        range._widgetMax     = meta._bHasUiMaxRange != SW_FALSE ? static_cast<float64>( meta._uiMaxRange ) : range._clampMax;
+
+        const bool bSliderMeta = prop.findCustomMeta( hashed_string( "Slider" ) ) != nullptr;
+        range._bSlider         = meta.hasFullUiRange() || ( meta.hasFullRange() && bSliderMeta );
+        return range;
+    }
+
+    float64 InspectorPropertyLayout::clampToAllowedRange( const InspectorNumericRange& range, float64 value )
+    {
+        if ( range._bHasClampMin && value < range._clampMin )
+            value = range._clampMin;
+        if ( range._bHasClampMax && range._clampMax < value )
+            value = range._clampMax;
+        return value;
+    }
+
+    bool InspectorPropertyLayout::isColorRequested( const PropertyInfo& prop )
+    {
+        if ( prop._metadata._bColorHdr != SW_FALSE || prop.findCustomMeta( hashed_string( "Color" ) ) != nullptr )
+            return true;
+        return StringUtil::stristr( prop._name.c_str(), "color" ) != nullptr;
+    }
+
+    bool InspectorPropertyLayout::matchesFileFilter( string_view filter, string_view path )
+    {
+        filter = StringUtil::trim( filter );
+        if ( filter.empty() )
+            return true;
+        size_t start = 0;
+        while ( start <= filter.size() )
+        {
+            const size_t      separator = filter.find_first_of( ";,", start );
+            const size_t      end       = ( separator == string_view::npos ) ? filter.size() : separator;
+            const string_view pattern   = StringUtil::trim( filter.substr( start, end - start ) );
+            // `*.png` 는 확장자 비교, `*` 는 무엇이든, 그 밖은 파일 이름 끝 비교다.
+            if ( pattern == "*" || pattern == "*.*" )
+                return true;
+            const string_view suffix = StringUtil::startsWith( pattern, "*" ) ? pattern.substr( 1 ) : pattern;
+            if ( suffix.empty() == false && StringUtil::endsWith( path, suffix, true ) )
+                return true;
+            if ( separator == string_view::npos )
+                break;
+            start = separator + 1;
+        }
+        return false;
+    }
+
+    string InspectorPropertyLayout::formatParameterList( const vector<FunctionParameterInfo>& listParameter )
+    {
+        string text;
+        for ( size_t paramIndex = 0; paramIndex < listParameter.size(); ++paramIndex )
+        {
+            const FunctionParameterInfo& parameter = listParameter[paramIndex];
+            if ( paramIndex > 0 )
+                text += ", ";
+            text += parameter._typeName;
+            if ( parameter._name.empty() == false )
+            {
+                text += " ";
+                text += parameter._name;
+            }
+            if ( parameter.hasDefaultValue() )
+            {
+                text += " = ";
+                text += parameter._defaultValue;
+            }
+        }
+        return text;
     }
 } // namespace sw::editor
 

@@ -15,14 +15,26 @@
 			<_listShape>
 				<PhysicsShapeDesc3D _type="Capsule" _radius="0.1" _halfHeight="0.12" _localPosition="0,0.25,0" />
 			</_listShape>
-			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.4" _swingLimitPlane="0.4" _twistMin="-0.3" _twistMax="0.3" />
+			<_joint _type="Cone"
+			        _twistAxis="0,1,0"
+			        _normalAxis="1,0,0"
+			        _swingLimitNormal="0.4"
+			        _swingLimitPlane="0.4"
+			        _twistMin="-0.3"
+			        _twistMax="0.3" />
 			<_hitZone _name="Torso" _damageMultiplier="1" />
 		</PhysicsAssetBodyDef>
 		<PhysicsAssetBodyDef _bone="head" _mass="5" _material="Flesh">
 			<_listShape>
 				<PhysicsShapeDesc3D _type="Sphere" _radius="0.15" _localPosition="0,0.15,0" />
 			</_listShape>
-			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.6" _swingLimitPlane="0.6" _twistMin="-0.5" _twistMax="0.5" />
+			<_joint _type="Cone"
+			        _twistAxis="0,1,0"
+			        _normalAxis="1,0,0"
+			        _swingLimitNormal="0.6"
+			        _swingLimitPlane="0.6"
+			        _twistMin="-0.5"
+			        _twistMax="0.5" />
 			<_hitZone _name="Head" _damageMultiplier="2.5" />
 		</PhysicsAssetBodyDef>
 	</_listBody>

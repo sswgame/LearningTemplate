@@ -32,6 +32,8 @@ from LintGate import GateResult, LintGate  # noqa: E402
 _kImportedFolderName = "textures"
 #: 원본 텍스처 폴더 이름.
 _kRawFolderName = "textures_raw"
+#: 원본 이미지를 두어도 되는 폴더 — 이미지를 읽는 임포터의 원본 폴더다(높이장 원본은 16 비트 PNG · `App --import-heightfields`).
+_kRawImageFolderNames = frozenset({_kRawFolderName, "heightfields_raw"})
 #: 런타임 텍스처 폴더에 둘 수 있는 확장자(임포트된 텍스처와 그 옆 데이터).
 _kImportedFolderSuffix = frozenset({".dds", ".json", ".meta"})
 #: 원본 이미지 확장자 — `textures_raw/` 밖에 있으면 런타임이 읽지 못하는 파일이다.
@@ -46,11 +48,12 @@ def findTextureFolderViolations(resourceRelativePaths: Iterable[str]) -> list[st
         folders = parts[:-1]
         suffix = os.path.splitext(parts[-1])[1].lower()
         inRaw = _kRawFolderName in folders
+        inRawImage = any(folder in _kRawImageFolderNames for folder in folders)
         inImported = _kImportedFolderName in folders
 
         if inImported and suffix not in _kImportedFolderSuffix:
             violations.append(f"[Texture Folder] `textures/` 에는 .dds 와 데이터만 둡니다: Resource/{relPath}")
-        elif suffix in _kSourceImageSuffix and not inRaw:
+        elif suffix in _kSourceImageSuffix and not inRawImage:
             violations.append(f"[Texture Folder] 원본 이미지는 `textures_raw/` 에 둡니다: Resource/{relPath}")
         elif inRaw and suffix == ".dds":
             violations.append(f"[Texture Folder] 임포트된 DDS 는 `textures/` 에 둡니다: Resource/{relPath}")

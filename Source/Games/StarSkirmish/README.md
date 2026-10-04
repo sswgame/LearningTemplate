@@ -65,7 +65,8 @@ cd build/Ninja-Debug-StarSkirmish/Bin
 
 ## 파일 · 데이터
 
-- `StarSkirmishGame` — 첫 씬을 열고, 상태 저장 전에 디렉터가 세운 것을 걷습니다.
+- `StarSkirmishGame` — 사운드 이벤트(`audio/starskirmish.audioevents.xml`)를 올리고, 첫 씬을 열고, 상태 저장 전에 디렉터가 세운 것을 걷습니다.
+  알림(`Select` · `Built` · `Blocked`)은 `ui` 버스 2D, 부서진 유닛(`UnitDied`)은 그 자리에서 — 직교 카메라라 리스너가 화면 평면(2D)이 되어 화면 좌우로 팬됩니다.
 - `SkirmishDirectorComponent` — 유닛 데이터 읽기 · 판 · 사람 입력(고르기 · 명령 · 생산 · 건설 · 부대) · 알림 · 스폰. 자동 플레이(`_bAutoPlay`,
   `-gv_skirmishAutoPlay=1` 도 켠다)면 컴퓨터 대 컴퓨터. 유닛 데이터 · 프리팹 경로 · 카메라 리그 · 구경 시점은 PROPERTY 입니다.
 - `SkirmishUnitComponent` · `SkirmishDragComponent` — 뷰. 유닛 → 모델 표는 `SkirmishUnitComponent` 에 있습니다.

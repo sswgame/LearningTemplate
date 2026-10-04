@@ -1,0 +1,20 @@
+{
+    "_name": "GF_TacticsSrpg",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "택틱스 SRPG 키트(G 제네레이션 · 메탈슬러그 택틱스 장르) — 기체 · 파일럿 · 무기 · 지형 카탈로그 · 전장 · 페이즈 · 이동 범위 · ZOC ·",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

@@ -22,6 +22,7 @@ namespace sw
     SpriteInstanceBatch::SpriteInstanceBatch()
         : _batch{}
         , _acquiredMaterialPath{}
+        , _sortKey{ 0 }
     {
     }
 
@@ -30,7 +31,8 @@ namespace sw
         shutdown();
     }
 
-    bool SpriteInstanceBatch::initialize( GameObjectManager& manager, string_view texturePath, uint32 count )
+    bool SpriteInstanceBatch::initialize( GameObjectManager& manager, string_view texturePath, uint32 count, string_view materialPath,
+                                          string_view normalMapPath )
     {
         shutdown();
         if ( count == 0 )
@@ -39,23 +41,24 @@ namespace sw
         Material* pMaterial = nullptr;
         if ( engine::areEngineServicesBound() )
         {
-            const hashed_string materialPath = SpriteRenderUtil::getSpriteMaterialPath();
+            const hashed_string resolvedPath = materialPath.empty() ? SpriteRenderUtil::getSpriteMaterialPath() : hashed_string( materialPath );
             MaterialCache&      cache        = engine::getAssetManager().getMaterialManager();
-            pMaterial                        = cache.acquire( materialPath.c_str(), nullptr );
+            pMaterial                        = cache.acquire( resolvedPath.c_str(), nullptr );
             if ( pMaterial != nullptr )
             {
-                cache.requestInitialize( materialPath.c_str() );
-                _acquiredMaterialPath = materialPath;
+                cache.requestInitialize( resolvedPath.c_str() );
+                _acquiredMaterialPath = resolvedPath;
             }
             else
             {
-                SW_LOG_WARNING( "Sprite material '%#' could not be acquired - the sprites use the scene default material", materialPath.c_str() );
+                SW_LOG_WARNING( "Sprite material '%#' could not be acquired - the sprites use the scene default material", resolvedPath.c_str() );
             }
         }
 
         shared_ptr<MaterialInstance> instance;
         if ( pMaterial != nullptr && texturePath.empty() == false )
-            instance = SpriteRenderUtil::acquireTextureInstance( pMaterial, hashed_string( string{ texturePath }.c_str() ) );
+            instance = SpriteRenderUtil::acquireTextureInstance( pMaterial, hashed_string( string{ texturePath }.c_str() ),
+                                                                 normalMapPath.empty() ? hashed_string{} : hashed_string( normalMapPath ) );
 
         // 스프라이트 사각형은 공유 프리미티브다 — 같은 메시라야 스프라이트 컴포넌트와 한 배치로 묶인다.
         _batch                                  = sw::make_unique<MeshInstanceBatch>( MeshUtil::acquirePrimitive( "Sprite" ), pMaterial, std::move( instance ), count );
@@ -65,8 +68,16 @@ namespace sw
             _batch->setBoundsRadius( index, kUnitQuadHalfDiagonal );
             _batch->setEntryVisible( index, false );
         }
+        _batch->setSortKey( _sortKey );
         manager.getPrimitiveRegistry().addInstanceBatch( _batch.get() );
         return true;
+    }
+
+    void SpriteInstanceBatch::setSorting( const hashed_string& layerName, int32 orderInLayer )
+    {
+        _sortKey = SpriteRenderUtil::resolveSortKey( layerName, orderInLayer, "SpriteInstanceBatch" );
+        if ( _batch != nullptr )
+            _batch->setSortKey( _sortKey );
     }
 
     void SpriteInstanceBatch::shutdown()

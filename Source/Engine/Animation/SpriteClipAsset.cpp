@@ -66,7 +66,7 @@ namespace sw
         _atlasPath = root.get( "atlas" ).asString();
 
         // 키가 빠진 프레임은 구조체 기본값이다(UV 전체). 시간이 빠지면 0 = 애니메이터의 프레임 속도. 에디터는 다섯 키를 늘 다 쓴다.
-        forEachObjectInArray( root, "frames", [this]( const JsonValue& frameJson, size_t /*frameIndex*/ )
+        forEachObjectInArray( root, "frames", [this, sourceLabel]( const JsonValue& frameJson, size_t frameIndex )
         {
             SpriteClipFrame frame{};
             frame._uvRect._x  = static_cast<float32>( frameJson.get( "u" ).asFloat( 0.0 ) );
@@ -74,6 +74,23 @@ namespace sw
             frame._uvRect._z  = static_cast<float32>( frameJson.get( "w" ).asFloat( 1.0 ) );
             frame._uvRect._w  = static_cast<float32>( frameJson.get( "h" ).asFloat( 1.0 ) );
             frame._durationMs = static_cast<int32>( frameJson.get( "durationMs" ).asInt( 0 ) );
+            // 9-슬라이스 테두리는 선택 키다. 숫자 넷의 배열이 아니면 데이터 오류라 알리고 테두리 없이 읽는다.
+            const JsonValue borderJson = frameJson.get( "border" );
+            if ( borderJson.isValid() )
+            {
+                if ( borderJson.isArray() && borderJson.size() == 4 )
+                {
+                    frame._border._x = MathUtil::saturate( static_cast<float32>( borderJson.at( 0 ).asFloat( 0.0 ) ) );
+                    frame._border._y = MathUtil::saturate( static_cast<float32>( borderJson.at( 1 ).asFloat( 0.0 ) ) );
+                    frame._border._z = MathUtil::saturate( static_cast<float32>( borderJson.at( 2 ).asFloat( 0.0 ) ) );
+                    frame._border._w = MathUtil::saturate( static_cast<float32>( borderJson.at( 3 ).asFloat( 0.0 ) ) );
+                }
+                else
+                {
+                    SW_LOG_ERROR( "Sprite clip '%#' frame %#: \"border\" must be [left, bottom, right, top] fractions - read without a border",
+                                  string( sourceLabel ), frameIndex );
+                }
+            }
             _listFrame.push_back( frame );
         } );
 
@@ -131,6 +148,15 @@ namespace sw
             frameJson.set( "w" ).setFloat( static_cast<float64>( frame._uvRect._z ) );
             frameJson.set( "h" ).setFloat( static_cast<float64>( frame._uvRect._w ) );
             frameJson.set( "durationMs" ).setInt( frame._durationMs );
+            if ( frame.hasBorder() )
+            {
+                const JsonValue borderJson = frameJson.set( "border" );
+                borderJson.setArray();
+                borderJson.pushBack().setFloat( static_cast<float64>( frame._border._x ) );
+                borderJson.pushBack().setFloat( static_cast<float64>( frame._border._y ) );
+                borderJson.pushBack().setFloat( static_cast<float64>( frame._border._z ) );
+                borderJson.pushBack().setFloat( static_cast<float64>( frame._border._w ) );
+            }
         }
 
         const JsonValue keysVal = root.set( "transformKeys" );

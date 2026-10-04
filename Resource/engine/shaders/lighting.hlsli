@@ -86,19 +86,18 @@ float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float 
 	float3 lit = albedo * g_KeyLightColor.rgb * g_KeyLightColor.a;
 
 	const uint lightCount = ( g_SwLightsIndex == kInvalidIndex ) ? 0u : g_SwLightCount;
-	if ( lightCount == 0u )
-	{
-		const float3 keyDirection      = normalize( -g_KeyLightDirIntensity.xyz );
-		const float  keyNormalDotLight = saturate( dot( normal, keyDirection ) );
-		lit += albedo * keyNormalDotLight * g_KeyLightDirIntensity.w * g_KeyLightColor.rgb * shadow;
-		return lit;
-	}
+	// 3D 빛이 하나도 없으면(빛 목록이 비었거나 2D 빛 · 그림자 토막뿐) 키라이트 하나로 폴백한다 — 2D 빛을 둔 씬의 3D 물체가 까맣게 죽지 않게.
+	bool bAnyLight3d = false;
 
 	for ( uint lightIndex = 0u; lightIndex < lightCount; ++lightIndex )
 	{
 		const SwLightData light = g_SwLights[lightIndex];
 
 		const uint lightType = (uint)( light.directionType.w + 0.5f );
+		// 2D 빛 · 그림자 토막은 빛 받는 스프라이트(lighting2d.hlsli)의 것이다.
+		if ( lightType > SW_LIGHT_TYPE_SPOT )
+			continue;
+		bAnyLight3d = true;
 
 		float3 toLight     = -light.directionType.xyz;
 		float  attenuation = 1.0f;
@@ -136,6 +135,12 @@ float3 swShadeLights( float3 albedo, float3 worldPosition, float3 normal, float 
 		lit += albedo * normalDotLight * attenuation * light.colorIntensity.a * light.colorIntensity.rgb * shadowTerm;
 	}
 
+	if ( bAnyLight3d == false )
+	{
+		const float3 keyDirection      = normalize( -g_KeyLightDirIntensity.xyz );
+		const float  keyNormalDotLight = saturate( dot( normal, keyDirection ) );
+		lit += albedo * keyNormalDotLight * g_KeyLightDirIntensity.w * g_KeyLightColor.rgb * shadow;
+	}
 	return lit;
 }
 

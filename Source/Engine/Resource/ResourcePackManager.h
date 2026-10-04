@@ -26,7 +26,7 @@ namespace sw
     {
         string                         _domainName{};  ///< 팩 도메인 식별자(예: "engine", "common", "game_empty")
         int32                          _priority{ 0 }; ///< 높을수록 우선 탐색
-        unique_ptr<ResourcePackReader> _pReader;
+        shared_ptr<ResourcePackReader> _pReader;       ///< 읽는 쪽이 잠금 밖에서 쓰는 동안 언마운트돼도 살아 있게 함께 든다
     };
 } // namespace sw
 
@@ -88,6 +88,12 @@ namespace sw
         [[nodiscard]] bool readTextFile( string_view relativePath, string& outText, string* pOutMountedPackPath = nullptr ) const;
 
         /**
+         * @brief 마운트된 팩을 우선순위 순서대로 찾아 그 항목을 @p io 로 비동기로 읽습니다(`ResourcePackReader::readFileAsync`).
+         * @return 건 읽기의 핸들. 어느 팩에도 없으면 아무것도 걸지 않고 `isValid() == false` 인 핸들입니다(@p onComplete 는 불리지 않는다).
+         */
+        AsyncReadHandle readFileAsync( AsyncFileIo& io, string_view relativePath, AsyncIoPriority priority, const ResourceReadCompleteDelegate& onComplete ) const;
+
+        /**
          * @brief DLC 소유권 검증 콜백을 등록합니다.
          */
         void setDlcEntitlementValidator( DlcEntitlementDelegate validator );
@@ -112,6 +118,14 @@ namespace sw
         bool scanAndMountPacks( string_view packsDirectory, const vector<string>& listPriority );
 
     private:
+        /**
+         * @brief 경로를 가진 팩의 리더를 잠금 안에서 찾아 사본을 돌려줍니다. 읽기는 부르는 쪽이 잠금 밖에서 합니다 — 한 팩의 읽기가 다른 팩
+         *        · 다른 스레드의 읽기를 줄 세우지 않는다.
+         * @param outPathHash 그 팩 안에서 찾은 해시(전체 경로 또는 도메인을 뗀 경로)
+         * @param outPathInPack 그 팩 안의 경로(@p relativePath 를 가리킨다)
+         */
+        shared_ptr<ResourcePackReader> findReaderWithFile( string_view relativePath, uint64& outPathHash, string_view& outPathInPack ) const;
+
         mutable mutex          _vfsMutex;
         vector<MountedPack>    _listMountedPack;
         DlcEntitlementDelegate _dlcValidator;

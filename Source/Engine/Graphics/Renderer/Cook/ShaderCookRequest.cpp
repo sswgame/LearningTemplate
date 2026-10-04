@@ -237,6 +237,7 @@ namespace sw
                 const vector<string> listEngineShader = {
                     engineDefaultAssets._shaderFullscreenTriangle,
                     "engine/shaders/sprite2d.hlsl",
+                    "engine/shaders/sprite2dlit.hlsl",
                     "common/shaders/provokingvertex.hlsl",
                     "common/shaders/instanceslotprobe.hlsl" };
                 for ( const string& path : listEngineShader )
@@ -247,7 +248,8 @@ namespace sw
 
                 const vector<string> listEngineComputeShader = {
                     "common/shaders/samplecompute.hlsl",
-                    "common/shaders/computetexturewrite.hlsl" };
+                    "common/shaders/computetexturewrite.hlsl",
+                    "common/shaders/waterwaveprobe.hlsl" };
                 for ( const string& path : listEngineComputeShader )
                 {
                     appendRequestUnique( outListRequest, path, "CSMain", ShaderStage::Compute, {} );
@@ -274,6 +276,11 @@ namespace sw
 
                     appendRequestUnique( outListRequest, variant._shaderPath, "VSMain", ShaderStage::Vertex, variant._listDefine );
                     appendRequestUnique( outListRequest, variant._shaderPath, "PSMain", ShaderStage::Pixel, variant._listDefine );
+                    // 정의 없는 변형도 — 머티리얼이 원소 레이아웃을 읽는 자리다(`Material::ensureShaderLayout` 은 define 없이 리플렉션한다). 패스 기본
+                    // 셰이더(forwardlit)는 위 1) 에서 이미 쿠킹되지만, 머티리얼만 쓰는 셰이더(지형 · 식생 · 물)는 여기서 쿠킹하지 않으면 Shipping 에서
+                    // 매니페스트를 못 찾아 XML 순서 패킹으로 남는다.
+                    appendRequestUnique( outListRequest, variant._shaderPath, "VSMain", ShaderStage::Vertex, {} );
+                    appendRequestUnique( outListRequest, variant._shaderPath, "PSMain", ShaderStage::Pixel, {} );
                 }
 
                 // 4) 패스 x (머티리얼 없음 + 머티리얼) x 뷰 모드: 런타임이 실제로 요구하는 조합

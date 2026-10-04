@@ -391,8 +391,11 @@ namespace sw
      */
     void Scene::tick( float32 deltaTime )
     {
-        if ( _objectManager != nullptr )
-            _objectManager->tick( deltaTime );
+        if ( _objectManager == nullptr )
+            return;
+        _objectManager->tick( deltaTime );
+        // 틱이 옮긴 자리로 리스너(리스너 컴포넌트, 없으면 게임 카메라) · 에미터 · 가림 · 리버브 존을 오디오 엔진에 넣는다.
+        _objectManager->getSceneAudio().update( deltaTime, getActiveGameCamera(), _objectManager->getScenePhysics().findScene3D() );
     }
 
     /**

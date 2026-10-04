@@ -13,6 +13,14 @@
 
 namespace sw
 {
+    struct ReflectEventOps;
+    struct ReflectTypeOps;
+
+    class ValidationContext;
+
+    /** @brief 검증 함수를 부릅니다(생성 코드가 만든다 — `PROPERTY( Validate = fn )` · `REFLECT( Validate = fn )`). */
+    using ReflectValidateFunction = void ( * )( const void* pInstance, ValidationContext& context );
+
     class Component;
     class GameObject;
 
@@ -65,6 +73,19 @@ namespace sw
         string                               _displayName;
         string                               _tooltip;
         unordered_map<hashed_string, string> _mapCustomMeta;
+        /** @brief `EditCondition = "…"` — 인스펙터가 이 식이 거짓이면 막는다(`PropertyEditCondition`). */
+        string _editCondition;
+        /** @brief `FileFilter = "*.png;*.dds"` — 경로 칸이 받는 파일입니다. */
+        string _fileFilter;
+        /** @brief `UiMin` · `UiMax` — 인스펙터 슬라이더 · 드래그 범위입니다. 허용 범위(`_minRange` · `_maxRange`)와 따로입니다. */
+        float32                _uiMinRange;
+        float32                _uiMaxRange;
+        uint8                  _bHasUiMinRange      : 1;
+        uint8                  _bHasUiMaxRange      : 1;
+        uint8                  _bEditConditionHides : 1; ///< 조건이 거짓이면 막지 않고 숨긴다
+        uint8                  _bColorHdr           : 1; ///< 색을 HDR(1 을 넘는 값)로 고친다
+        uint8                  _bMultiline          : 1; ///< 여러 줄 글 칸
+        [[maybe_unused]] uint8 _reservedDisplay     : 3;
 #endif
         /**
          * @brief 에셋이 이 프로퍼티를 생략할 때 쓰는 저작 기본값 (PROPERTY(Default="...")).
@@ -72,9 +93,17 @@ namespace sw
          */
         string _defaultValue;
         /** @brief 소프트 에셋 힌트 (PROPERTY(AssetPath) / AssetType="Texture"). */
-        string  _assetType;
-        float32 _minRange;
-        float32 _maxRange;
+        string _assetType;
+        /** @brief `RepNotify = fn` — 받은 값으로 바꾼 뒤 부르는 같은 타입의 메서드 이름입니다. 부르는 길은 `PropertyInfo::_pRepNotify` 입니다. */
+        hashed_string _repNotify;
+        /** @brief `Validate = fn` — 검증 함수 이름입니다(결과 메시지 · 문서용). 부르는 길은 `PropertyInfo::_pValidate` 입니다. */
+        hashed_string _validate;
+        /** @brief `ConfigSection = "…"` — 비면 선언한 타입의 이름입니다(`PropertyRoleUtil::collectConfigBindings`). */
+        hashed_string _configSection;
+        /** @brief `ConfigKey = "…"` — 비면 프로퍼티 이름입니다. */
+        hashed_string _configKey;
+        float32       _minRange;
+        float32       _maxRange;
         /**
          * @brief 아래 · 위 경계가 각각 적혀 있는가(`PROPERTY( Min = … )` · `Max = …`). 적힌 쪽만 막는다.
          * @details 표시가 하나면 `Min = 0` 만 적은 프로퍼티의 위 경계가 기본값 1 로 남아 인스펙터가 그 값을 1 에서 막는다.
@@ -106,12 +135,34 @@ namespace sw
 #else
         [[maybe_unused]] uint8 _reservedFlags : 1;
 #endif
+        /** @brief 네트워크 복제 대상입니다(`Replicated` · `RepNotify`). 네트워크 계층이 `PropertyRoleUtil::collectReplicatedProperties` 로 모읍니다. */
+        uint8 _bReplicated : 1;
+        /**
+         * @brief 세이브 대상입니다(`SaveGame`). 타입(기반 포함)에 이것이 하나라도 있으면 세이브 직렬화(`SerializeContext::setSaveGameOnly`)가
+         *        이것만 씁니다 — 하나도 없는 타입은 전부 씁니다(`TypeInfo::hasSaveGameProperty`).
+         */
+        uint8 _bSaveGame : 1;
+        /** @brief 시퀀서 값 트랙이 섞을 수 있습니다(`Interp` — 숫자 · float2/3/4 · quaternion 만, 파서가 막는다). */
+        uint8 _bInterp : 1;
+        /** @brief 설정 파일의 (섹션 · 키) 칸과 묶습니다(`Config` · `ConfigSection` · `ConfigKey`). */
+        uint8                  _bConfig       : 1;
+        [[maybe_unused]] uint8 _reservedRoles : 4;
 
         /** @brief 범위 · 플래그를 끈 기본값으로 만듭니다. */
         PropertyMetadata() noexcept;
 
         /** @brief 아래 · 위 경계가 둘 다 있으면(슬라이더로 그릴 수 있으면) true 입니다. */
         bool hasFullRange() const noexcept { return _bHasMinRange != SW_FALSE && _bHasMaxRange != SW_FALSE; }
+
+        /** @brief 슬라이더 범위(`UiMin` · `UiMax`)가 둘 다 있으면 true 입니다. Shipping 에는 없습니다. */
+        bool hasFullUiRange() const noexcept
+        {
+#if !defined( SW_SHIPPING )
+            return _bHasUiMinRange != SW_FALSE && _bHasUiMaxRange != SW_FALSE;
+#else
+            return false;
+#endif
+        }
 
         /** @brief 커스텀 메타데이터 태그를 조회합니다. (Shipping 빌드에서는 nullptr) */
         const string* findCustomMeta( const hashed_string& key ) const noexcept
@@ -198,6 +249,11 @@ namespace sw
          *          직렬화기 · 인스펙터 · 비교 도구가 바뀐 것 없이 그 자리를 읽고 씁니다.
          */
         using ValueAccessor = void* (*)( void* pInstance );
+        /**
+         * @brief `RepNotify` 함수를 부릅니다(생성 코드가 만든다). @p pOldValue 는 바뀌기 전 값의 자리(프로퍼티의 선언 타입)이고,
+         *        함수가 이전 값을 받지 않으면 쓰지 않습니다.
+         */
+        using RepNotifyFunction = void ( * )( void* pInstance, const void* pOldValue );
 
         shared_ptr<IContainerWrapper>   _containerWrapper;
         shared_ptr<NestedContainerInfo> _nestedContainer; ///< 컨테이너일 때 전체 중첩 사슬
@@ -205,7 +261,11 @@ namespace sw
 
         /** @brief 값이 객체 밖에 있으면 그 자리를 찾는 함수입니다. nullptr 이면 값은 `인스턴스 + _offset` 에 있습니다. */
         ValueAccessor _pValueAccessor;
-        size_t        _offset;
+        /** @brief `RepNotify` 를 부르는 함수입니다. 없으면 nullptr 입니다(`PropertyRoleUtil::callRepNotify`). */
+        RepNotifyFunction _pRepNotify;
+        /** @brief `Validate = fn` 을 부르는 함수입니다. 없으면 nullptr 입니다(`ReflectionValidation::validateObject`). */
+        ReflectValidateFunction _pValidate;
+        size_t                  _offset;
 
         hashed_string         _name;
         hashed_string         _typeName;
@@ -739,21 +799,80 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 함수 · 이벤트의 인자 하나입니다. 순서는 선언 순서입니다. */
+    struct SW_API FunctionParameterInfo
+    {
+        string _name;     ///< 선언에 적힌 이름. 이름 없이 적었으면 비어 있다
+        string _typeName; ///< 정규 타입 이름(`int32` · `string` · `DamageEvent`) — const · 참조는 벗겼다
+        /** @brief 기본 인자의 C++ 식 그대로(`1.0f` · `"idle"` · `Mode::Fast`). 없으면 비어 있다. `ReflectionInvoke` 가 인자를 빼먹은 호출에 이것을 읽어 넣는다. */
+        string _defaultValue;
+        /** @brief 이 인자 타입의 이름 · 값 변환(`ReflectTypeOpsOf<T>::kOps`)입니다. 이벤트는 `EventInfo::setOps` 가 채웁니다. */
+        const ReflectTypeOps* _pType;
+
+        FunctionParameterInfo() noexcept;
+        FunctionParameterInfo( string name, string typeName, string defaultValue, const ReflectTypeOps* pType );
+
+        /** @brief 기본 인자가 있으면 true 입니다. */
+        bool hasDefaultValue() const noexcept { return _defaultValue.empty() == false; }
+    };
+} // namespace sw
+
+namespace sw
+{
     /// @brief 리플렉션 메서드: 이름, 시그니처, invoker
     struct SW_API FunctionInfo
     {
-        string                                        _name;
-        hashed_string                                 _hashName;
-        string                                        _returnTypeName;        ///< clang 표기(예: void, int32)
-        vector<string>                                _listParameterTypeName; ///< 선언 순서대로의 clang 표기
-        FunctionMetadata                              _metadata;
-        Delegate<TaskValue( void*, const TaskArgs& )> _invoker; ///< instance + args → TaskValue
+        string                        _name;
+        hashed_string                 _hashName;
+        string                        _returnTypeName; ///< 정규 타입 이름(예: void, int32)
+        vector<FunctionParameterInfo> _listParameter;  ///< 선언 순서대로의 인자(이름 · 타입 · 기본 인자)
+        FunctionMetadata              _metadata;
+        /**
+         * @brief 인자 묶음을 받아 부르는 함수입니다. 인자는 **그 C++ 타입 그대로**(`args.get<T>`) 넣어야 합니다 — 타입이 다르면 Debug 는 단언,
+         *        Release 는 잘못 읽습니다. 타입을 모르는 쪽(콘솔 · 비주얼 스크립팅)은 `ReflectionInvoke::call` 로 부릅니다(인자를 바꿔 넣는다).
+         */
+        Delegate<TaskValue( void*, const TaskArgs& )> _invoker;
+        /** @brief 반환 타입의 이름 · 값 변환입니다. void · 생성자면 nullptr 입니다. */
+        const ReflectTypeOps* _pReturnType = nullptr;
+
+        /** @brief 인자 개수입니다. */
+        uint32 getParameterCount() const noexcept { return static_cast<uint32>( _listParameter.size() ); }
 
         /** @brief 커스텀 메타데이터 태그를 조회합니다. */
         const string* findCustomMeta( const hashed_string& key ) const noexcept
         {
             return _metadata.findCustomMeta( key );
         }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 리플렉션 이벤트 — `PROPERTY()` 를 붙인 멀티캐스트 델리게이트 필드(`MulticastDelegate<void( Args... )>`)입니다.
+     * @details 값이 아니라 구독 목록이라 직렬화 · 인스펙터 값 편집에 들지 않습니다. 이름으로 찾아(`TypeInfo::findEventInHierarchy`) 타입을 모른 채
+     *          묶고 · 풀고 · 부릅니다(`ReflectionInvoke::bindEvent` · `broadcastEvent`). 에디터 · 비주얼 스크립팅 · 기믹 배선이 쓰는 자리입니다.
+     */
+    struct SW_API EventInfo
+    {
+        hashed_string                 _name;
+        vector<FunctionParameterInfo> _listParameter; ///< 이름은 선언에서, 변환 표는 `setOps` 가 템플릿 인자에서
+        PropertyMetadata              _metadata;      ///< 표시 메타(Category · DisplayName · Tooltip · Meta · HideInInspector)만 쓴다
+        /** @brief 묶기 · 풀기 · 부르기 · 인자 변환 표입니다(`ReflectEventOpsOf<필드 타입>::kOps`). */
+        const ReflectEventOps* _pOps;
+        size_t                 _offset; ///< 인스턴스 안 델리게이트 필드의 자리
+
+        EventInfo() noexcept;
+
+        /** @brief 표를 걸고, 인자 변환 표를 템플릿 인자에서 채웁니다. 선언에서 이름을 못 읽은 인자도 자리는 채웁니다. */
+        void setOps( const ReflectEventOps* pOps );
+
+        /** @brief 인스턴스 안 델리게이트 필드의 자리입니다. */
+        void* getEventPtr( void* pInstance ) const noexcept { return reinterpret_cast<utf8*>( pInstance ) + _offset; }
+        /** @brief 인스턴스 안 델리게이트 필드의 자리입니다. */
+        const void* getEventPtr( const void* pInstance ) const noexcept { return reinterpret_cast<const utf8*>( pInstance ) + _offset; }
+        /** @brief 인자 개수입니다. */
+        uint32 getParameterCount() const noexcept { return static_cast<uint32>( _listParameter.size() ); }
     };
 } // namespace sw
 
@@ -772,12 +891,15 @@ namespace sw
          *          타입마다 채웁니다. 모듈 코드를 가리키므로 모듈 해제(`clearContent`)가 비우고, 같은 FQN 의 재등록이 새 이미지의 주소로 덮습니다.
          */
         Component* ( *_addComponent )( GameObject* pOwner );
+        /** @brief `REFLECT( Validate = fn )` — 타입 검증 함수입니다. 없으면 nullptr 입니다. 모듈 코드라 `clearContent` 가 비웁니다. */
+        ReflectValidateFunction                                   _pValidate;
         hashed_string                                             _name;
         hashed_string                                             _fullyQualifiedName;
         hashed_string                                             _parentFQN;
         hashed_string                                             _moduleName;
         vector<PropertyInfo>                                      _listProperty;
         vector<FunctionInfo>                                      _listMethod;
+        vector<EventInfo>                                         _listEvent; ///< 이 타입이 선언한 이벤트(기반의 것은 `findEventInHierarchy` 가 걷는다)
         TypeMetadata                                              _metadata;
         mutable vector<PropertyInfo>                              _listPropertyWithBase;
         mutable unordered_map<hashed_string, const PropertyInfo*> _mapNameToPropertyWithBase; ///< 계층 병합 목록의 이름 · 별칭 → 항목. 목록과 함께 만듭니다
@@ -839,8 +961,15 @@ namespace sw
          *          `registerClass` 는 공개 API 이고 그 값을 검사하지 않으며, 모듈이 따로따로
          *          등록되는 핫 리로드에서는 A→B→A 가 만들어질 수 있습니다.
          */
-        mutable uint8          _bBuildingPropertyWithBase : 1;
-        [[maybe_unused]] uint8 _reservedPadding[3];
+        mutable uint8 _bBuildingPropertyWithBase : 1;
+        /** @brief `hasSaveGameProperty` 의 답과 그것을 구했는지입니다. 상속 목록 캐시와 함께 비웁니다. */
+        mutable uint8 _bHasSaveGameProperty : 1;
+        mutable uint8 _bSaveGameCalculated  : 1;
+        /** @brief `ReflectionValidation::hasValidator` 의 답과 그것을 구했는지입니다. 상속 목록 캐시와 함께 비웁니다. */
+        mutable uint8          _bHasValidator        : 1;
+        mutable uint8          _bValidatorCalculated : 1;
+        [[maybe_unused]] uint8 _reservedCacheFlags   : 4;
+        [[maybe_unused]] uint8 _reservedPadding[2];
 
         /** @brief 빈 TypeInfo 를 만듭니다. */
         TypeInfo() noexcept;
@@ -906,6 +1035,11 @@ namespace sw
 
         /** @brief 직렬화/복사 시 memcpy POD 경로를 쓸 수 있으면 true. */
         bool usesPodCopyFastPath() const;
+        /**
+         * @brief 상속분까지 `SaveGame` 프로퍼티가 하나라도 있으면 true 입니다 — 세이브 직렬화가 그것만 쓰는 타입(옵트인)인가.
+         * @details 상속 목록 캐시와 같이 비우고 다시 구합니다(`clearInheritedProperties`).
+         */
+        bool hasSaveGameProperty() const;
         /** @brief 이 타입이 targetFqn이거나 그 파생이면 true. 부모가 미등록이어도 `_parentFQN` 이 같으면 true. */
         bool isDerivedFrom( const hashed_string& targetFqn ) const;
         /**
@@ -1108,6 +1242,39 @@ namespace sw
                 func( method );
             }
         }
+
+        /** @brief 이 타입이 선언한 이벤트를 이름으로 찾습니다. */
+        const EventInfo* findEvent( const hashed_string& eventName ) const
+        {
+            for ( const EventInfo& event : _listEvent )
+            {
+                if ( event._name == eventName )
+                    return &event;
+            }
+            return nullptr;
+        }
+
+        /** @brief 자기부터 기반으로 올라가며 이벤트를 이름으로 찾습니다(파생이 이긴다). */
+        const EventInfo* findEventInHierarchy( const hashed_string& eventName ) const;
+        /** @brief 자기부터 기반으로 올라가며 메서드를 이름으로 찾습니다(파생이 이긴다). */
+        const FunctionInfo* findMethodInHierarchy( const hashed_string& methodName ) const;
+
+        /** @brief 기반부터 파생 순서로 이벤트를 순회합니다. */
+        template <typename Func>
+        void forEachEventWithBase( Func&& func ) const
+        {
+            const TypeInfo* arrChain[constants::reflection::kMaxParentChainDepth];
+            uint32          depth = collectTypeChain( arrChain );
+            while ( depth > 0 )
+            {
+                --depth;
+                for ( const EventInfo& event : arrChain[depth]->_listEvent )
+                    func( event );
+            }
+        }
+
+        /** @brief 자기부터 기반까지의 사슬을 @p outArrType 에 담고 길이를 돌려줍니다(풀리지 않는 부모에서 끝나고, 순환이면 상한에서 멈춘다). */
+        uint32 collectTypeChain( const TypeInfo* ( &outArrType )[constants::reflection::kMaxParentChainDepth] ) const;
     };
 
 } // namespace sw

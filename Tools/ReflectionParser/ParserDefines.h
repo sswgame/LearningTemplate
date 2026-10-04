@@ -52,6 +52,24 @@ namespace sw
         inline constexpr const utf8* kVoidTypeName          = "void";
         inline constexpr const utf8* kDefaultMethodCategory = "General";
         inline constexpr const utf8* kConstructorCategory   = "Constructor";
+
+        /**
+         * @brief 리플렉션 이벤트가 되는 필드 타입입니다 — `PROPERTY()` 가 붙은 멀티캐스트 델리게이트는 값이 아니라 이벤트로 수집합니다.
+         * @details 판정은 정규 타입 철자의 머리(`kEventTemplatePrefix`)로, 인자 이름은 소스 토큰의 템플릿 이름(`kEventTemplateLeaf`)부터 읽습니다.
+         */
+        inline constexpr const utf8* kEventTemplatePrefix = "sw::MulticastDelegate<";
+        inline constexpr const utf8* kEventTemplateLeaf   = "MulticastDelegate";
+
+        /** @brief 검증 함수(`Validate = fn`)의 인자 타입 — 정규 이름(`sw::` 와 참조를 벗긴 것)입니다. */
+        inline constexpr const utf8* kValidationContextTypeName = "ValidationContext";
+
+        /** @brief C 고정 배열(`T _arr[N]`)의 컨테이너 이름 · 래퍼 줄기입니다 — `std::array` 와 같은 `ArrayWrapper` 를 쓴다. */
+        inline constexpr const utf8* kFixedArrayTypeName    = "array";
+        inline constexpr const utf8* kFixedArrayWrapperStem = "Array";
+
+        /** @brief `PROPERTY( Interp )` 를 받는 정규 타입 이름입니다 — 시퀀서 값 트랙이 섞을 수 있는 것(`PropertyRoleUtil::isInterpolatable` 과 같은 목록). */
+        inline constexpr const utf8* kArrInterpTypeName[] = { "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32",
+                                                              "uint64", "float32", "float64", "float2", "float3", "float4", "quaternion" };
     } // namespace annotation
 
     // ------------------------------------------------------------------------------

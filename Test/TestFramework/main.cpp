@@ -3,6 +3,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Event/EventDispatcher.h"
+#include "Core/File/AsyncFileIo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
@@ -161,6 +162,17 @@ namespace
             }
             static void shutdown( TestHost& host ) { host._pOwned->_pTaskManager->shutdown(); }
             static void destroy( TestHost& host ) { host._pOwned->_pTaskManager.reset(); }
+        };
+
+        struct FileIoStartupStep : Defaults
+        {
+            static sw::EngineInitResult initialize( TestHost& host )
+            {
+                sw::AsyncFileIoSettings settings{};
+                settings._pTaskManager = host._pOwned->_pTaskManager.get();
+                return host._pOwned->_pAsyncFileIo->initialize( settings ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+            }
+            static void shutdown( TestHost& host ) { host._pOwned->_pAsyncFileIo->shutdown(); }
         };
 
         struct AudioStartupStep : Defaults

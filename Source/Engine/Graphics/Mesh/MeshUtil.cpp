@@ -233,6 +233,8 @@ namespace sw
             return "capsule";
         if ( StringUtil::equals( meshId, "Cone", true ) )
             return "cone";
+        if ( StringUtil::equals( meshId, "GrassClump", true ) )
+            return "grassclump";
         return nullptr;
     }
 
@@ -259,6 +261,8 @@ namespace sw
             pMesh = createCylinder();
         else if ( canonical == "capsule" )
             pMesh = createCapsule();
+        else if ( canonical == "grassclump" )
+            pMesh = createGrassClump();
         else
             pMesh = createCone();
         if ( pMesh != nullptr && vertexColor == PrimitiveVertexColor::White )
@@ -606,6 +610,79 @@ namespace sw
         }
 
         mesh->setVertices( std::move( listVert ) );
+        return mesh;
+    }
+
+    shared_ptr<Mesh> MeshUtil::createGrassClump( uint32 bladeCount )
+    {
+        bladeCount = MathUtil::max( bladeCount, 1u );
+        // 고정 씨앗 xorshift — 포기 모양이 실행마다 같아야 스크린샷이 비교된다.
+        uint32 state    = 0x2545F491u;
+        auto   nextUnit = [&state]() -> float32
+        {
+            state ^= state << 13;
+            state ^= state >> 17;
+            state ^= state << 5;
+            return static_cast<float32>( state >> 8 ) * ( 1.0f / 16777216.0f );
+        };
+
+        constexpr uint32  kSegmentCount = 3;
+        constexpr float32 kTwoPi        = 6.28318530718f;
+        vector<RHIVertex> listVertex;
+        listVertex.reserve( static_cast<size_t>( bladeCount ) * kSegmentCount * 12 );
+        for ( uint32 bladeIndex = 0; bladeIndex < bladeCount; ++bladeIndex )
+        {
+            const float32 angle  = nextUnit() * kTwoPi;
+            const float32 radius = nextUnit() * 0.22f;
+            const float32 height = 0.5f + nextUnit() * 0.3f;
+            const float32 width  = 0.05f + nextUnit() * 0.03f;
+            const float32 lean   = 0.08f + nextUnit() * 0.18f;
+            const float32 facing = nextUnit() * kTwoPi;
+            const float3  root{ MathUtil::cos( angle ) * radius, 0.0f, MathUtil::sin( angle ) * radius };
+            const float3  across{ MathUtil::cos( facing ), 0.0f, MathUtil::sin( facing ) };
+            const float3  outward{ -across._z, 0.0f, across._x };
+            const float3  normal = ( outward * 0.35f + float3::Up ).normalize();
+            // 잎은 위로 갈수록 가늘어지고 outward 쪽으로 휜다(포물선). 마디마다 (왼쪽, 오른쪽) 두 점.
+            float3 arrLeft[kSegmentCount + 1];
+            float3 arrRight[kSegmentCount + 1];
+            for ( uint32 node = 0; node <= kSegmentCount; ++node )
+            {
+                const float32 ratio     = static_cast<float32>( node ) / static_cast<float32>( kSegmentCount );
+                const float32 halfWidth = 0.5f * width * ( 1.0f - ratio );
+                const float3  center    = root + float3::Up * ( height * ratio ) + outward * ( lean * ratio * ratio );
+                arrLeft[node]           = center - across * halfWidth;
+                arrRight[node]          = center + across * halfWidth;
+            }
+            auto pushVertex = [&listVertex, &normal]( const float3& position, float32 u, float32 v )
+            {
+                listVertex.push_back( RHIVertex{
+                    { position._x, position._y, position._z },
+                    { normal._x, normal._y, normal._z },
+                    { u, v },
+                    { 1.0f, 1.0f, 1.0f, 1.0f }
+                } );
+            };
+            for ( uint32 node = 0; node < kSegmentCount; ++node )
+            {
+                const float32 v0 = 1.0f - static_cast<float32>( node ) / static_cast<float32>( kSegmentCount );
+                const float32 v1 = 1.0f - static_cast<float32>( node + 1 ) / static_cast<float32>( kSegmentCount );
+                // 앞면과 뒷면(감김을 뒤집은 같은 삼각형) — 끝 마디는 폭이 0 이라 삼각형 하나가 납작해지지만 그대로 둔다(넓이 0 은 그려지지 않는다).
+                pushVertex( arrLeft[node], 0.0f, v0 );
+                pushVertex( arrLeft[node + 1], 0.0f, v1 );
+                pushVertex( arrRight[node + 1], 1.0f, v1 );
+                pushVertex( arrLeft[node], 0.0f, v0 );
+                pushVertex( arrRight[node + 1], 1.0f, v1 );
+                pushVertex( arrRight[node], 1.0f, v0 );
+                pushVertex( arrLeft[node], 0.0f, v0 );
+                pushVertex( arrRight[node + 1], 1.0f, v1 );
+                pushVertex( arrLeft[node + 1], 0.0f, v1 );
+                pushVertex( arrLeft[node], 0.0f, v0 );
+                pushVertex( arrRight[node], 1.0f, v0 );
+                pushVertex( arrRight[node + 1], 1.0f, v1 );
+            }
+        }
+        shared_ptr<Mesh> mesh = Mesh::create();
+        mesh->setVertices( std::move( listVertex ) );
         return mesh;
     }
 } // namespace sw
