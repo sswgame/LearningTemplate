@@ -52,6 +52,7 @@ flowchart LR
 | `ReflectionInvoke.*` | 이름으로 부르기 · 이벤트 묶기/부르기(`ReflectionInvoke`) — 콘솔 · 비주얼 스크립팅 · 기믹 배선 · 에디터가 쓴다 |
 | `PropertyEditCondition.*` | `EditCondition` 식을 풀고 판정(인스펙터가 막거나 숨긴다) — ImGui 를 모른다 |
 | `ReflectUnits.h` | `Units = …` 단위 표와 단위 사이 변환(헤더 전용 — 파서도 같은 표로 철자를 본다) |
+| `ReflectionValidation.*` | 검증 함수(`Validate = fn`)를 돌리고(`ReflectionValidation`) 결과를 모은다(`ValidationContext` · `ValidationIssueLog`) |
 | `PropertyRoleUtil.*` | 역할 플래그(`Replicated` · `RepNotify` · `SaveGame` · `Interp` · `Config`)를 읽는 쪽의 도우미 — 모으기 · RepNotify 부르기 · 값 섞기 · 설정 묶음 |
 | `Rpc/` | RPC용 리플렉션 보조(`ReflectionRpc.h`) |
 
@@ -235,6 +236,29 @@ int32 _arrSlot[3] = { 1, 2, 3 };                        // C 고정 배열 = std
   `ReflectionDisplayMetaTest.EveryEditConditionResolves` 가 등록된 모든 타입을 대조합니다.
 - 위젯은 `UiMin` · `UiMax`(없으면 `Min` · `Max`) 안에서 움직이고, 값은 늘 `Min` · `Max` 로 막습니다(`InspectorPropertyLayout::getNumericRange`).
 
+### 9) 검증 함수
+
+```cpp
+REFLECT( Validate = validateRange )                 // 타입 검증
+struct SpawnerComponent : public Component
+{
+    REFLECT_BODY();
+    PROPERTY( Validate = validatePrefab )            // 프로퍼티 검증
+    string _prefab;
+    PROPERTY() int32 _min = 0;
+    PROPERTY() int32 _max = 10;
+    void validatePrefab( ValidationContext& context ) const { if ( _prefab.empty() ) context.addWarning( "no prefab" ); }
+    void validateRange( ValidationContext& context ) const { if ( _max < _min ) context.addError( "min > max" ); }
+};
+```
+
+- 모양은 같은 타입의 `void fn( ValidationContext& context ) [const]` 하나입니다. 없거나 모양이 다르면 파서 오류입니다(`RepNotify` 와 같은 대조).
+- `ReflectionValidation::validateObject( type, pInstance, context )` 가 프로퍼티 검증(상속분), 값으로 든 반사 구조체 · 그 시퀀스의 원소, 타입 검증(기반부터)을
+  돕니다. 검증 함수가 없는 타입은 `hasValidator` 가 false 라 돌지 않습니다(등록 배치 끝에 한 번 구해 둔다).
+- 오브젝트는 `ObjectValidation::reportGameObject` 가 컴포넌트마다 돌려 `ValidationIssueLog`(출처 = 오브젝트 id)에서 바꿉니다. 로드(`ObjectStateBatch::finish` —
+  값을 다 읽고 `onPostLoad` 뒤) · 글 저장(`ObjectStateSerializer::saveToText` — 씬 · 프리팹 저작) · 인스펙터 편집 뒤에 불립니다. 바이너리 상태(플레이 · 되돌리기
+  스냅숏)는 보지 않습니다. 검증은 결과만 적고 값을 고치거나 로드 · 저장을 멈추지 않습니다. 맵 검사 패널이 `ValidationIssueLog::collectIssues` 를 읽습니다.
+
 ---
 
 ## 런타임에서 쓰기
@@ -289,6 +313,7 @@ CMake 헬퍼: `cmake/Engine/ReflectionCodeGen.cmake` (`sw_addReflectionStep`)
 | `PROPERTY()` + `MulticastDelegate<void(…)>` | 이벤트(6절) |
 | `PROPERTY( Replicated · RepNotify · SaveGame · Interp · Config … )` | 역할 플래그(7절) |
 | `PROPERTY( EditCondition · Units · UiMin/UiMax · ColorHdr · Multiline · FileFilter )` | 표시 메타(8절) |
+| `PROPERTY( Validate = fn )` · `REFLECT( Validate = fn )` | 검증 함수(9절) |
 | `ENUM(...)` | 열거형. `Flags`, `Invalid=`, `Count=` |
 | `REFLECT_CONTAINER(...)` | 커스텀 컨테이너를 Sequence/Map으로 |
 

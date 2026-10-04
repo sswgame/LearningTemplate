@@ -28,6 +28,8 @@ string.Category = Category
 string.DisplayName = DisplayName
 string.Tooltip = Tooltip
 string.Meta = Meta, meta, CustomMeta
+# 타입 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 로드 · 저장 · 인스펙터 편집 뒤에 불린다(ReflectionValidation)
+string.Validate = Validate
 
 [ENUM]
 string.Alias = Alias
@@ -87,6 +89,8 @@ flag.Interp = Interp
 flag.Config = Config
 string.ConfigSection = ConfigSection
 string.ConfigKey = ConfigKey
+# 프로퍼티 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 문제는 context.addError · addWarning 으로 적는다
+string.Validate = Validate
 
 [FUNCTION]
 netrole.Server = Server

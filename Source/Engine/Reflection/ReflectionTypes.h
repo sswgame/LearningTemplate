@@ -16,6 +16,11 @@ namespace sw
     struct ReflectEventOps;
     struct ReflectTypeOps;
 
+    class ValidationContext;
+
+    /** @brief 검증 함수를 부릅니다(생성 코드가 만든다 — `PROPERTY( Validate = fn )` · `REFLECT( Validate = fn )`). */
+    using ReflectValidateFunction = void ( * )( const void* pInstance, ValidationContext& context );
+
     class Component;
     class GameObject;
 
@@ -91,6 +96,8 @@ namespace sw
         string _assetType;
         /** @brief `RepNotify = fn` — 받은 값으로 바꾼 뒤 부르는 같은 타입의 메서드 이름입니다. 부르는 길은 `PropertyInfo::_pRepNotify` 입니다. */
         hashed_string _repNotify;
+        /** @brief `Validate = fn` — 검증 함수 이름입니다(결과 메시지 · 문서용). 부르는 길은 `PropertyInfo::_pValidate` 입니다. */
+        hashed_string _validate;
         /** @brief `ConfigSection = "…"` — 비면 선언한 타입의 이름입니다(`PropertyRoleUtil::collectConfigBindings`). */
         hashed_string _configSection;
         /** @brief `ConfigKey = "…"` — 비면 프로퍼티 이름입니다. */
@@ -256,7 +263,9 @@ namespace sw
         ValueAccessor _pValueAccessor;
         /** @brief `RepNotify` 를 부르는 함수입니다. 없으면 nullptr 입니다(`PropertyRoleUtil::callRepNotify`). */
         RepNotifyFunction _pRepNotify;
-        size_t            _offset;
+        /** @brief `Validate = fn` 을 부르는 함수입니다. 없으면 nullptr 입니다(`ReflectionValidation::validateObject`). */
+        ReflectValidateFunction _pValidate;
+        size_t                  _offset;
 
         hashed_string         _name;
         hashed_string         _typeName;
@@ -882,6 +891,8 @@ namespace sw
          *          타입마다 채웁니다. 모듈 코드를 가리키므로 모듈 해제(`clearContent`)가 비우고, 같은 FQN 의 재등록이 새 이미지의 주소로 덮습니다.
          */
         Component* ( *_addComponent )( GameObject* pOwner );
+        /** @brief `REFLECT( Validate = fn )` — 타입 검증 함수입니다. 없으면 nullptr 입니다. 모듈 코드라 `clearContent` 가 비웁니다. */
+        ReflectValidateFunction                                   _pValidate;
         hashed_string                                             _name;
         hashed_string                                             _fullyQualifiedName;
         hashed_string                                             _parentFQN;
@@ -952,9 +963,12 @@ namespace sw
          */
         mutable uint8 _bBuildingPropertyWithBase : 1;
         /** @brief `hasSaveGameProperty` 의 답과 그것을 구했는지입니다. 상속 목록 캐시와 함께 비웁니다. */
-        mutable uint8          _bHasSaveGameProperty : 1;
-        mutable uint8          _bSaveGameCalculated  : 1;
-        [[maybe_unused]] uint8 _reservedCacheFlags   : 6;
+        mutable uint8 _bHasSaveGameProperty : 1;
+        mutable uint8 _bSaveGameCalculated  : 1;
+        /** @brief `ReflectionValidation::hasValidator` 의 답과 그것을 구했는지입니다. 상속 목록 캐시와 함께 비웁니다. */
+        mutable uint8          _bHasValidator        : 1;
+        mutable uint8          _bValidatorCalculated : 1;
+        [[maybe_unused]] uint8 _reservedCacheFlags   : 4;
         [[maybe_unused]] uint8 _reservedPadding[2];
 
         /** @brief 빈 TypeInfo 를 만듭니다. */

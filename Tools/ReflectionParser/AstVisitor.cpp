@@ -1150,6 +1150,18 @@ namespace sw
                 collector._listMethodSignature.push_back( std::move( signature ) );
             }
 
+            /** @brief 검증 함수(`void fn( ValidationContext& )`)가 그 이름으로 선언됐는지 봅니다. */
+            static bool isValidatorDeclared( const MemberCollector& collector, const string_view name )
+            {
+                for ( const ParsedMethodSignature& signature : collector._listMethodSignature )
+                {
+                    if ( signature._name == name && signature._listParameterTypeName.size() == 1 &&
+                         signature._listParameterTypeName[0] == annotation::kValidationContextTypeName )
+                        return true;
+                }
+                return false;
+            }
+
             /** @brief 이름이 같은 메서드 중 인자 수가 @p maxParameterCount 이하인 첫 것입니다. 없으면 nullptr 입니다. */
             static const ParsedMethodSignature* findMethodSignature( const MemberCollector& collector, const string_view name, const size_t maxParameterCount )
             {
@@ -1168,8 +1180,20 @@ namespace sw
              */
             static void validateMemberFunctions( MemberCollector& collector )
             {
+                if ( collector._pType->_validate.empty() == false && isValidatorDeclared( collector, collector._pType->_validate ) == false )
+                {
+                    SW_LOG_ERROR( "ERROR: REFLECT( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
+                                  collector._pType->_validate, collector._pType->_fullyQualifiedName, collector._pType->_validate );
+                    collector._bHasError = SW_TRUE;
+                }
                 for ( ParsedPropertyInfo& prop : collector._pType->_listProperty )
                 {
+                    if ( prop._validate.empty() == false && isValidatorDeclared( collector, prop._validate ) == false )
+                    {
+                        SW_LOG_ERROR( "ERROR: PROPERTY( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
+                                      prop._validate, makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._name ), prop._validate );
+                        collector._bHasError = SW_TRUE;
+                    }
                     if ( prop._repNotify.empty() )
                         continue;
                     const string                 owner      = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._name );

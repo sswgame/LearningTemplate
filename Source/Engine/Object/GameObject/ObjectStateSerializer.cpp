@@ -14,6 +14,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectValidation.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -297,6 +298,9 @@ namespace sw
         const TypeInfo* pTypeInfo = pGameObject->getTypeInfo();
         if ( pTypeInfo == nullptr )
             return {};
+
+        // 글로 저장하는 길(씬 · 프리팹 저작)은 쓰기 전에 검증한다 — 결과만 남기고 저장은 그대로 한다. 바이너리(플레이 · 되돌리기 스냅숏)는 보지 않는다.
+        (void)ObjectValidation::reportGameObject( *pGameObject, true );
 
         SerializeContext                                     ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
         const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options };
@@ -602,6 +606,13 @@ namespace sw
                 if ( pComp != nullptr && pComp->isPendingDestroy() == false )
                     pComp->onPostLoad();
             }
+        }
+
+        // 5) 읽은 값을 검증한다(`Validate = fn`) — 결과는 `ValidationIssueLog` 로 간다(맵 검사). 값을 고치거나 로드를 멈추지 않는다.
+        for ( const Entry& entry : _listEntry )
+        {
+            if ( entry._bLoadedState == true && entry._pObject->isPendingDestroy() == false )
+                (void)ObjectValidation::reportGameObject( *entry._pObject, true );
         }
     }
 

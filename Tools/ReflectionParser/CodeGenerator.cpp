@@ -401,6 +401,12 @@ namespace sw
                 emit.linef( "p._pRepNotify = []( void* pInstance, const void* ) { static_cast<%#*>( pInstance )->%#(); };", typeInfo._fullyQualifiedName,
                             prop._repNotify );
         }
+        if ( prop._validate.empty() == false )
+        {
+            // 파서가 모양을 확인했다 — const 든 아니든 부를 수 있게 인스턴스를 그 타입으로 돌려 부른다.
+            emit.linef( "p._pValidate = []( const void* pInstance, ::sw::ValidationContext& context ) { static_cast<%#*>( const_cast<void*>( pInstance ) )->%#( context ); };",
+                        typeInfo._fullyQualifiedName, prop._validate );
+        }
         if ( prop._listAlias.empty() == false )
         {
             emit.line( "p._listAlias = {" );
@@ -554,6 +560,11 @@ namespace sw
             fe.flagIf( typeInfo._bStatic, "info._bStatic" );
             // 컴포넌트 생성 함수는 타입 줄의 칸이다(언리얼 `UClass` 의 생성자 칸과 같은 자리). 이름으로 만드는 길은 이 칸만 본다.
             fe.flagIf( typeInfo.requiresComponentFactory(), "info._addComponent", "&::sw::GameObject::addComponentTo<" + typeInfo._fullyQualifiedName + ">" );
+            if ( typeInfo._validate.empty() == false )
+            {
+                fe.linef( "info._pValidate = []( const void* pInstance, ::sw::ValidationContext& context ) { static_cast<%#*>( const_cast<void*>( pInstance ) )->%#( context ); };",
+                          typeInfo._fullyQualifiedName, typeInfo._validate );
+            }
         }
 
         appendTemplate( out, templatefile::kTypeRegistrarBegin, {

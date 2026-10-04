@@ -36,6 +36,7 @@ REGISTER_ANNOTATION_FIELD_FN( Reflect, Meta, _listCustomMeta, appendCustomMeta, 
 REGISTER_ANNOTATION_FIELD( Reflect, Abstract, _bAbstract, Manual )
 REGISTER_ANNOTATION_FIELD( Reflect, Static, _bStatic, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Reflect, Alias, _listAlias, appendAlias, Manual )
+REGISTER_ANNOTATION_FIELD( Reflect, Validate, _validate, Manual )
 
 // ── ENUM ─────────────────────────────────────────────────────────
 REGISTER_ANNOTATION_FIELD_FN( Enum, Meta, _listCustomMeta, appendCustomMeta, Editor )
@@ -71,6 +72,7 @@ REGISTER_ANNOTATION_FIELD( Property, Interp, _bInterp, Runtime )
 REGISTER_ANNOTATION_FIELD( Property, Config, _bConfig, Runtime )
 REGISTER_ANNOTATION_FIELD_FN( Property, ConfigSection, _configSection, applyConfigSection, Runtime )
 REGISTER_ANNOTATION_FIELD_FN( Property, ConfigKey, _configKey, applyConfigKey, Runtime )
+REGISTER_ANNOTATION_FIELD( Property, Validate, _validate, Runtime )
 REGISTER_ANNOTATION_FIELD_FN( Property, MinRange, _minRange, applyMinRange, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Property, MaxRange, _maxRange, applyMaxRange, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Property, UiMinRange, _uiMinRange, applyUiMinRange, Manual )

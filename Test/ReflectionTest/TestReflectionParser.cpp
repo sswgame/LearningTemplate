@@ -1633,3 +1633,51 @@ SW_TEST_CASE( ReflectionParserTest, DisplayMetadataIsValidated )
     SW_EXPECT_TRUE_MSG( run._log.find( "DisplayArraySampleActor::_arrBad" ) != sw::string::npos, run._log.c_str() );
 #endif
 }
+
+/**
+ * @brief [ReflectionParserTest] 검증 함수 — `Validate = fn` 은 같은 타입의 `void fn( ValidationContext& )` 여야 한다(없거나 모양이 다르면 그 헤더만 실패)
+ */
+SW_TEST_CASE( ReflectionParserTest, ValidateFunctionsAreChecked )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const auto makeHeader = []( const sw::string& typeName, const sw::string& reflectArgs, const sw::string& body )
+    {
+        return sw::string( "#pragma once\n"
+                           "#include \"Core/Common/Types.h\"\n"
+                           "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                           "namespace sw\n"
+                           "{\n"
+                           "\tclass ValidationContext;\n"
+                           "\tREFLECT( " ) +
+               reflectArgs + " )\n\tstruct " + typeName + "\n\t{\n\t\tREFLECT_BODY();\n" + body + "\t};\n}\n";
+    };
+    sw::vector<TempHeader> listHeader;
+    listHeader.push_back( TempHeader{ "ValidateGoodSample", makeHeader( "ValidateGoodSampleActor", "Validate = checkAll",
+                                                                        "\t\tPROPERTY( Validate = checkHp )\n\t\tint32 _hp;\n"
+                                                                        "\t\tvoid checkHp( ValidationContext& context ) const;\n"
+                                                                        "\t\tvoid checkAll( ValidationContext& context );\n" ) } );
+    listHeader.push_back( TempHeader{ "ValidateMissingSample", makeHeader( "ValidateMissingSampleActor", "Validate = noSuchCheck", "\t\tPROPERTY()\n\t\tint32 _hp;\n" ) } );
+    listHeader.push_back( TempHeader{ "ValidateShapeSample", makeHeader( "ValidateShapeSampleActor", "",
+                                                                         "\t\tPROPERTY( Validate = checkHp )\n\t\tint32 _hp;\n"
+                                                                         "\t\tbool checkHp() const;\n" ) } );
+    const ParserRunResult run = runParserOnTempHeaders( parserExe, listHeader );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), run._listGeneratedCpp.size() );
+
+    const sw::string& generated = run._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "info._pValidate = []( const void* pInstance, ::sw::ValidationContext& context )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "->checkAll( context ); };" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._pValidate = []( const void* pInstance, ::sw::ValidationContext& context )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._validate = \"checkHp\";" ) != sw::string::npos, generated.c_str() );
+
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[1].find( "struct Registrar" ) == sw::string::npos, run._listGeneratedCpp[1].c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[2].find( "struct Registrar" ) == sw::string::npos, run._listGeneratedCpp[2].c_str() );
+#if defined( SW_DEBUG )
+    SW_EXPECT_TRUE_MSG( run._log.find( "REFLECT( Validate = noSuchCheck )" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "ValidateShapeSampleActor::_hp" ) != sw::string::npos, run._log.c_str() );
+#endif
+}

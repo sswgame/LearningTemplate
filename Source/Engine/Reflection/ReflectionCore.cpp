@@ -12,6 +12,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -156,6 +157,7 @@ namespace sw
 #endif
         , _assetType{}
         , _repNotify{}
+        , _validate{}
         , _configSection{}
         , _configKey{}
         , _minRange{ 0.0f }
@@ -212,6 +214,7 @@ namespace sw
         , _onPropertyBoundChanged{}
         , _pValueAccessor{ nullptr }
         , _pRepNotify{ nullptr }
+        , _pValidate{ nullptr }
         , _offset{ 0 }
         , _name{}
         , _typeName{}
@@ -294,6 +297,7 @@ namespace sw
         , _onPropertyBoundChanged{}
         , _pValueAccessor{ nullptr }
         , _pRepNotify{ nullptr }
+        , _pValidate{ nullptr }
         , _offset{ offset }
         , _name{ name }
         , _typeName{ typeName }
@@ -362,6 +366,7 @@ namespace sw
         : _size{ 0 }
         , _destroyInstance{ nullptr }
         , _addComponent{ nullptr }
+        , _pValidate{ nullptr }
         , _name{}
         , _fullyQualifiedName{}
         , _parentFQN{}
@@ -390,6 +395,8 @@ namespace sw
         , _bBuildingPropertyWithBase{ SW_FALSE }
         , _bHasSaveGameProperty{ SW_FALSE }
         , _bSaveGameCalculated{ SW_FALSE }
+        , _bHasValidator{ SW_FALSE }
+        , _bValidatorCalculated{ SW_FALSE }
         , _reservedCacheFlags{ 0 }
         , _reservedPadding{ 0, 0 } {}
 
@@ -417,6 +424,7 @@ namespace sw
         _bListPropertyWithBaseBuilt = SW_FALSE;
         _bBuildingPropertyWithBase  = SW_FALSE;
         _bSaveGameCalculated        = SW_FALSE;
+        _bValidatorCalculated       = SW_FALSE;
     }
 
     void TypeInfo::invalidateDerivedCaches()
@@ -437,6 +445,7 @@ namespace sw
         _size               = other._size;
         _destroyInstance    = other._destroyInstance;
         _addComponent       = other._addComponent;
+        _pValidate          = other._pValidate;
         _name               = other._name;
         _fullyQualifiedName = other._fullyQualifiedName;
         _parentFQN          = other._parentFQN;
@@ -463,6 +472,7 @@ namespace sw
         _size               = other._size;
         _destroyInstance    = other._destroyInstance;
         _addComponent       = other._addComponent;
+        _pValidate          = other._pValidate;
         _name               = other._name;
         _fullyQualifiedName = other._fullyQualifiedName;
         _parentFQN          = other._parentFQN;
@@ -930,6 +940,14 @@ namespace sw
             if ( pType != nullptr )
                 (void)pType->buildAncestorDisplay();
         }
+        // 지연 판정(세이브 옵트인 · 검증 함수 유무)도 여기서 한 번 — 로드 워커가 처음 물을 때 같은 바이트의 캐시 비트를 함께 쓰지 않게.
+        for ( const TypeInfo* pType : listType )
+        {
+            if ( pType == nullptr )
+                continue;
+            (void)pType->hasSaveGameProperty();
+            (void)ReflectionValidation::hasValidator( *pType );
+        }
     }
 
 #if !defined( SW_SHIPPING )
@@ -1297,6 +1315,8 @@ namespace sw
         _bIsPODFastPath             = SW_FALSE;
         _bListPropertyWithBaseBuilt = SW_FALSE;
         _bSaveGameCalculated        = SW_FALSE;
+        _bValidatorCalculated       = SW_FALSE;
+        _pValidate                  = nullptr;
     }
 
     bool TypeInfo::buildAncestorDisplay() const

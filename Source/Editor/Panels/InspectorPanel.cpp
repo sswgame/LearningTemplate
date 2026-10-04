@@ -30,6 +30,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectValidation.h"
 #include "Engine/Reflection/PropertyEditCondition.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionContainers.h"
@@ -575,6 +576,11 @@ namespace sw::editor
             _pEditTargetComponent->onPropertyChanged( prop._name );
         else if ( _pEditTargetObject != nullptr )
             _pEditTargetObject->onPropertyChanged( prop._name );
+
+        // 고친 값을 검증해 맵 검사 결과를 바꾼다(로그는 남기지 않는다 — 끄는 동안 프레임마다 온다).
+        const GameObject* pOwner = ( _pEditTargetComponent != nullptr ) ? _pEditTargetComponent->getOwner() : _pEditTargetObject;
+        if ( pOwner != nullptr )
+            (void)ObjectValidation::reportGameObject( *pOwner, false );
     }
 
     void InspectorPanel::drawPropertyWidgetBody( void* pInstance, const PropertyInfo& prop )

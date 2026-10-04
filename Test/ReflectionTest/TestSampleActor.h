@@ -848,6 +848,98 @@ namespace sw
     };
 } // namespace sw
 
+namespace sw
+{
+    /** @brief 검증 샘플 — 값으로 들리는 구조체입니다(`ReflectionValidationTest`). */
+    REFLECT()
+    struct ValidatedPart
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Validate = validateWeight )
+        float32 _weight = 1.0f;
+
+        /** @brief 무게는 음수가 아니다. */
+        void validateWeight( ValidationContext& context ) const
+        {
+            if ( _weight < 0.0f )
+                context.addError( "weight is negative" );
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 검증 샘플 — 프로퍼티 검증 · 타입 검증 · 값 구조체 · 그 시퀀스입니다(`ReflectionValidationTest`). */
+    REFLECT( Validate = validateRange )
+    struct ValidatedActor
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Validate = validateName )
+        string _name = "ok";
+
+        PROPERTY()
+        int32 _min = 0;
+
+        PROPERTY()
+        int32 _max = 10;
+
+        PROPERTY()
+        ValidatedPart _part;
+
+        PROPERTY()
+        vector<ValidatedPart> _listPart;
+
+        /** @brief 이름은 비지 않는다(경고). */
+        void validateName( ValidationContext& context ) const
+        {
+            if ( _name.empty() )
+                context.addWarning( "name is empty" );
+        }
+
+        /** @brief 아래 경계가 위 경계를 넘지 않는다. const 가 아니어도 된다. */
+        void validateRange( ValidationContext& context )
+        {
+            if ( _max < _min )
+                context.addError( "min is greater than max" );
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 검증 함수는 상속된다 — 이 타입은 자기 것이 없어도 기반의 것이 돈다. */
+    REFLECT()
+    struct ValidatedChildActor : public ValidatedActor
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _extra = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 검증 함수가 있는 컴포넌트입니다 — 오브젝트 로드 · 저장 · 인스펙터 편집 길을 본다(`ReflectionValidationTest`). */
+    REFLECT( Validate = validateSpeed )
+    struct ValidatedComponent : public Component
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        float32 _speed = 1.0f;
+
+        /** @brief 속도는 0 보다 크다. */
+        void validateSpeed( ValidationContext& context ) const
+        {
+            if ( _speed <= 0.0f )
+                context.addError( "speed must be positive" );
+        }
+    };
+} // namespace sw
+
 // ------------------------------------------------------------------------------
 // 5) ENUM Flags — 전역 비트플래그 샘플
 // ------------------------------------------------------------------------------

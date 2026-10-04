@@ -59,6 +59,8 @@ namespace sw
                         out.append( "  [abstract]" );
                     if ( type._bStatic == SW_TRUE )
                         out.append( "  [static]" );
+                    if ( type._validate.empty() == false )
+                        out.appendFormat( "  Validate=%#", type._validate );
                     out.append( "\n" );
                     for ( const ParsedPropertyInfo& prop : type._listProperty )
                     {
@@ -113,6 +115,8 @@ namespace sw
                             out.appendFormat( "  EditCondition=\"%#\"%#", prop._editCondition, prop._bEditConditionHides == SW_TRUE ? "(hides)" : "" );
                         if ( prop._fileFilter.empty() == false )
                             out.appendFormat( "  FileFilter=\"%#\"", prop._fileFilter );
+                        if ( prop._validate.empty() == false )
+                            out.appendFormat( "  Validate=%#", prop._validate );
                         if ( prop._repNotify.empty() == false )
                             out.appendFormat( "  RepNotify=%#%#", prop._repNotify, prop._bRepNotifyTakesOldValue == SW_TRUE ? "(old)" : "()" );
                         if ( prop._configSection.empty() == false || prop._configKey.empty() == false )

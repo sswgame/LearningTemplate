@@ -44,7 +44,8 @@ Object/
 │  ├─ PrimitiveRegistry.* · LightRegistry.*  # 빛 등록부는 종류(방향광 · 점광 · 스포트)마다 칸 하나
 │  ├─ CameraRegistry.*          # 카메라 등록부 + 역할 · 우선순위 선택 규칙 하나(게임 · 에디터 카메라가 같이 쓴다)
 │  ├─ MeshInstanceBatch.* · SpriteInstanceBatch.*  # 컴포넌트 없이 인스턴스 N 개를 드는 렌더 프리미티브(PrimitiveRegistry 에 등록)
-│  └─ ObjectStateSerializer.*
+│  ├─ ObjectStateSerializer.*
+│  └─ ObjectValidation.*        # 컴포넌트의 리플렉션 검증 함수(`Validate = fn`)를 돌려 ValidationIssueLog 에 둔다 — 로드(묶음 끝) · 글 저장 · 인스펙터 편집
 ├─ Component/           # 기반 Component + 엔진 기본 컴포넌트
 │  ├─ Component.h
 │  ├─ SceneComponent.*  # 트랜스폼·부모/자식 (값은 아래 저장소의 칸에 있다)

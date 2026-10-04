@@ -60,6 +60,7 @@ namespace sw
         string                          _defaultValue;
         string                          _assetType;
         string                          _repNotify;     ///< `RepNotify = fn` — 같은 타입의 메서드 이름(모양은 `validateMemberFunctions` 가 본다)
+        string                          _validate;      ///< `Validate = fn` — 같은 타입의 `void fn( ValidationContext& )`
         string                          _configSection; ///< `ConfigSection = "…"`
         string                          _configKey;     ///< `ConfigKey = "…"`
         string                          _editCondition; ///< `EditCondition = "…"` — 식은 런타임(`PropertyEditCondition`)이 푼다
@@ -117,6 +118,7 @@ namespace sw
             , _defaultValue{}
             , _assetType{}
             , _repNotify{}
+            , _validate{}
             , _configSection{}
             , _configKey{}
             , _editCondition{}
@@ -258,6 +260,7 @@ namespace sw
         string                       _displayName;
         string                       _tooltip;
         vector<string>               _listAlias;
+        string                       _validate; ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
         vector<pair<string, string>> _listCustomMeta;
         vector<ParsedPropertyInfo>   _listProperty;
         vector<ParsedFunctionInfo>   _listMethod;
@@ -277,6 +280,7 @@ namespace sw
             , _displayName{}
             , _tooltip{}
             , _listAlias{}
+            , _validate{}
             , _listCustomMeta{}
             , _listProperty{}
             , _listMethod{}

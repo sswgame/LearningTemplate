@@ -60,6 +60,9 @@ namespace sw
         inline constexpr const utf8* kEventTemplatePrefix = "sw::MulticastDelegate<";
         inline constexpr const utf8* kEventTemplateLeaf   = "MulticastDelegate";
 
+        /** @brief 검증 함수(`Validate = fn`)의 인자 타입 — 정규 이름(`sw::` 와 참조를 벗긴 것)입니다. */
+        inline constexpr const utf8* kValidationContextTypeName = "ValidationContext";
+
         /** @brief C 고정 배열(`T _arr[N]`)의 컨테이너 이름 · 래퍼 줄기입니다 — `std::array` 와 같은 `ArrayWrapper` 를 쓴다. */
         inline constexpr const utf8* kFixedArrayTypeName    = "array";
         inline constexpr const utf8* kFixedArrayWrapperStem = "Array";
