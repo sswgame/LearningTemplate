@@ -12,6 +12,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Casual/CardGame/PokerHand.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -162,16 +163,16 @@ namespace sw
         void               finishShowdown();
         void               finishUncontested( int32 winnerSeat );
 
-        vector<PokerSeat>  _listSeat;
-        vector<PokerPot>   _listLastPot;
-        vector<PokerEvent> _listEvent;
-        CardPile           _deck;
-        CardPile           _board;
-        PokerSettings      _settings;
-        int32              _button;
-        int32              _currentSeat;
-        int32              _currentBet;
-        int32              _lastRaiseSize;
-        PokerStreet        _street;
+        vector<PokerSeat>       _listSeat;
+        vector<PokerPot>        _listLastPot;
+        EventBuffer<PokerEvent> _eventBuffer;
+        CardPile                _deck;
+        CardPile                _board;
+        PokerSettings           _settings;
+        int32                   _button;
+        int32                   _currentSeat;
+        int32                   _currentBet;
+        int32                   _lastRaiseSize;
+        PokerStreet             _street;
     };
 } // namespace sw

@@ -60,7 +60,7 @@ namespace sw
         WalletBalance& balance = findOrAddBalance( currency );
         balance._amount += amount;
         ++_revision;
-        _listEvent.push_back( WalletEvent{ currency, amount, balance._amount } );
+        _eventBuffer.push( WalletEvent{ currency, amount, balance._amount } );
     }
 
     bool Wallet::trySpend( const hashed_string& currency, int64 amount )
@@ -74,7 +74,7 @@ namespace sw
         WalletBalance& balance = findOrAddBalance( currency );
         balance._amount -= amount;
         ++_revision;
-        _listEvent.push_back( WalletEvent{ currency, -amount, balance._amount } );
+        _eventBuffer.push( WalletEvent{ currency, -amount, balance._amount } );
         return true;
     }
 
@@ -89,14 +89,13 @@ namespace sw
     void Wallet::clear()
     {
         _listBalance.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         ++_revision;
     }
 
     void Wallet::drainEvents( vector<WalletEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     int64 Wallet::getBalance( const hashed_string& currency ) const
@@ -166,16 +165,6 @@ namespace sw
         return "Unknown";
     }
 
-    bool ShopCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &ShopCatalog::loadRoot, path, "ShopCatalog" );
-    }
-
-    bool ShopCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &ShopCatalog::loadRoot, xmlText, sourceName, "ShopCatalog" );
-    }
-
     uint32 ShopCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
@@ -229,7 +218,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     ShopState::ShopState()
         : _listRuntime{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pShopCatalog{ nullptr }
         , _pItemCatalog{ nullptr }
         , _pConditionEvaluator{ nullptr }
@@ -241,7 +230,7 @@ namespace sw
         _pShopCatalog = pShopCatalog;
         _pItemCatalog = pItemCatalog;
         _listRuntime.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         if ( _pShopCatalog == nullptr )
             return;
         for ( const ShopDef& shop : _pShopCatalog->getShops() )
@@ -313,7 +302,7 @@ namespace sw
         int32& stockCount = pRuntime->_listStockCount[static_cast<size_t>( stockIndex )];
         if ( stockCount >= 0 )
             stockCount -= count;
-        _listEvent.push_back( ShopEvent{ shopId, itemId, total, count, ShopEvent::Kind::Bought } );
+        _eventBuffer.push( ShopEvent{ shopId, itemId, total, count, ShopEvent::Kind::Bought } );
         if ( pOutPaid != nullptr )
             *pOutPaid = total;
         return ShopResult::Ok;
@@ -361,7 +350,7 @@ namespace sw
             float32& factor = pRuntime->_listSellFactor[static_cast<size_t>( saturationIndex )];
             factor          = MathUtil::max( pShop->_minSellFactor, factor - pShop->_saturation * static_cast<float32>( count ) );
         }
-        _listEvent.push_back( ShopEvent{ shopId, itemId, total, count, ShopEvent::Kind::Sold } );
+        _eventBuffer.push( ShopEvent{ shopId, itemId, total, count, ShopEvent::Kind::Sold } );
         return ShopResult::Ok;
     }
 
@@ -389,7 +378,7 @@ namespace sw
                 if ( stock._count < 0 || stock._restock <= 0 || stockCount >= stock._count )
                     continue;
                 const int32 newCount = MathUtil::min( stock._count, stockCount + stock._restock );
-                _listEvent.push_back( ShopEvent{ runtime._shopId, stock._itemId, 0, newCount - stockCount, ShopEvent::Kind::Restocked } );
+                _eventBuffer.push( ShopEvent{ runtime._shopId, stock._itemId, 0, newCount - stockCount, ShopEvent::Kind::Restocked } );
                 stockCount = newCount;
             }
         }
@@ -397,8 +386,7 @@ namespace sw
 
     void ShopState::drainEvents( vector<ShopEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     int32 ShopState::computeBuyPrice( const hashed_string& shopId, const hashed_string& itemId ) const

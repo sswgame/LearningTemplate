@@ -43,14 +43,14 @@ namespace sw
 
     AbilityTaskWaitDelay::AbilityTaskWaitDelay( float32 seconds, const Delegate<void()>& onFinished )
         : _onFinished{ onFinished }
-        , _remainingTime{ seconds }
+        , _delay{ seconds }
     {
     }
 
     void AbilityTaskWaitDelay::onActivate()
     {
         // 0 이하의 지연은 다음 틱이 아니라 지금 끝난다 — "바로" 를 뜻한 호출이 한 프레임 늦지 않게.
-        if ( _remainingTime <= 0.0f )
+        if ( _delay.isActive() == false )
             onTick( 0.0f );
     }
 
@@ -58,8 +58,8 @@ namespace sw
     {
         if ( isFinished() )
             return;
-        _remainingTime -= deltaTime;
-        if ( _remainingTime > 0.0f )
+        _delay.tick( deltaTime );
+        if ( _delay.isActive() )
             return;
 
         // 끝을 먼저 적고 부른다 — 콜백이 어빌리티를 끝내도(작업 정리) 이 작업이 다시 불리지 않는다.

@@ -12,6 +12,8 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -148,7 +150,7 @@ namespace sw
         int32 advance( const ArcadeVehicleInput& input, float32 frameTime );
         void  drainEvents( vector<ArcadeVehicleEvent>& outListEvent );
         /** @brief 쌓인 알림을 꺼내지 않고 버립니다(쓰지 않는 쪽 — 받을 목록을 만들어 복사하지 않는다). */
-        void discardEvents() { _listEvent.clear(); }
+        void discardEvents() { _eventBuffer.clear(); }
 
         /** @brief 앞 속도 @p speed 에서 조향 1 의 회전 속도(라디안/초)입니다 — 조향 반경 = 속도 / 이 값. */
         float32 computeSteerRate( float32 speed ) const;
@@ -165,8 +167,8 @@ namespace sw
         int32                        getDriftDirection() const { return _driftDirection; }
         float32                      getDriftCharge() const { return _driftCharge; }
         int32                        getDriftTier() const;
-        float32                      getBoostTime() const { return _boostTime; }
-        bool                         isBoosting() const { return _boostTime > 0.0f; }
+        float32                      getBoostTime() const { return _boost.getRemaining(); }
+        bool                         isBoosting() const { return _boost.isActive(); }
         bool                         isAirborne() const { return _bAirborne != SW_FALSE; }
         float32                      getNitroGauge() const { return _nitroGauge; }
         int32                        getNitroCount() const { return _nitroCount; }
@@ -182,18 +184,18 @@ namespace sw
         void    updateVertical( const ArcadeVehicleInput& input, float32 deltaTime );
         void    pushEvent( ArcadeVehicleEvent::Kind kind, int32 value );
 
-        ArcadeVehicleSettings      _settings;
-        vector<ArcadeVehicleEvent> _listEvent;
-        FixedStepTimer             _timer;
-        const IVehicleGround*      _pGround;
-        float3                     _position;
-        float3                     _velocity; ///< 월드 속도(_y 는 위아래)
-        float32                    _yaw;
-        float32                    _driftCharge; ///< 이번 드리프트의 시간
-        float32                    _boostTime;
-        float32                    _nitroGauge; ///< 0..1
-        int32                      _nitroCount;
-        int32                      _driftDirection; ///< −1 왼쪽 · 1 오른쪽 · 0 드리프트 아님
-        uint8                      _bAirborne;
+        ArcadeVehicleSettings           _settings;
+        EventBuffer<ArcadeVehicleEvent> _eventBuffer;
+        FixedStepTimer                  _timer;
+        const IVehicleGround*           _pGround;
+        float3                          _position;
+        float3                          _velocity; ///< 월드 속도(_y 는 위아래)
+        float32                         _yaw;
+        float32                         _driftCharge; ///< 이번 드리프트의 시간
+        Countdown                       _boost;
+        float32                         _nitroGauge; ///< 0..1
+        int32                           _nitroCount;
+        int32                           _driftDirection; ///< −1 왼쪽 · 1 오른쪽 · 0 드리프트 아님
+        uint8                           _bAirborne;
     };
 } // namespace sw

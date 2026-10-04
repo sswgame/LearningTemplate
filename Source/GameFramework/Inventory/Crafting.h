@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Inventory/ItemBag.h"
 
@@ -56,12 +57,12 @@ namespace sw
      * @brief `<RecipeCatalog><Recipe id="potion" station="Alchemy" time="2" level="1" known="false"><In item="herb" count="2"/>
      *        <Tool item="mortar"/><Out item="potion" count="1"/></Recipe></RecipeCatalog>` 를 읽습니다.
      */
-    class SW_GF_API RecipeCatalog
+    class SW_GF_API RecipeCatalog : public XmlCatalog<RecipeCatalog>
     {
+        friend class XmlCatalog<RecipeCatalog>;
+
     public:
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addRecipe( const RecipeDef& recipe ) { (void)_catalog.add( recipe ); }
+        void addRecipe( const RecipeDef& recipe ) { (void)_catalog.add( recipe ); }
 
         const RecipeDef*         findRecipe( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<RecipeDef>& getRecipes() const { return _catalog.getAll(); }
@@ -69,7 +70,8 @@ namespace sw
         void findRecipesFor( const hashed_string& itemId, vector<const RecipeDef*>& outListRecipe ) const;
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "RecipeCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<RecipeDef> _catalog{};
     };

@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Progression/Reputation.h"
 
@@ -249,15 +250,14 @@ namespace sw
      *     </WesternCatalog>
      * @endcode
      */
-    class SW_GF_API WesternCatalog
+    class SW_GF_API WesternCatalog : public XmlCatalog<WesternCatalog>
     {
+        friend class XmlCatalog<WesternCatalog>;
+
     public:
         static constexpr const utf8* kHonorFactionId = "honor"; ///< 명예가 쓰는 평판 세력 id
 
         WesternCatalog();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         const WesternCrimeDef*       findCrime( const hashed_string& id ) const { return _crimeCatalog.find( id ); }
         const WesternRegionDef*      findRegion( const hashed_string& id ) const { return _regionCatalog.find( id ); }
@@ -285,8 +285,9 @@ namespace sw
         hashed_string getCurrency() const { return _currency; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
-        void   loadHonor( const XmlNode& node );
+        static constexpr const utf8* kXmlRootName = "WesternCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        void                         loadHonor( const XmlNode& node );
 
         GameCatalog<WesternCrimeDef>       _crimeCatalog;
         GameCatalog<WesternRegionDef>      _regionCatalog;

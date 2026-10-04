@@ -75,7 +75,7 @@ namespace sw
 {
     TrampolineArena::TrampolineArena()
         : _listPlayer{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listMatchEvent{}
         , _settings{}
         , _judge{}
@@ -127,7 +127,7 @@ namespace sw
         item._center                = float3{};
         item._spawnRadius           = _settings._arenaRadius * 0.75f;
         _itemSpawner.initialize( item, seed );
-        _listEvent.clear();
+        _eventBuffer.clear();
         _timer = FixedStepTimer( _settings._step, 0.25f );
         _time  = 0.0f;
         return true;
@@ -138,7 +138,7 @@ namespace sw
         _match.start();
         for ( int32 player = 0; player < getPlayerCount(); ++player )
             respawn( player );
-        _listEvent.clear(); // 첫 출발은 부활로 알리지 않는다
+        _eventBuffer.clear(); // 첫 출발은 부활로 알리지 않는다
     }
 
     void TrampolineArena::setInput( int32 player, const TrampolineInput& input )
@@ -236,8 +236,7 @@ namespace sw
 
     void TrampolineArena::drainEvents( vector<TrampolineEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     // --- 걸음 -------------------------------------------------------------------------------------
@@ -251,17 +250,15 @@ namespace sw
 
     void TrampolineArena::updatePlayer( int32 player, float32 deltaTime )
     {
-        using Internal          = TrampolineArenaInternal;
-        TrampolinePlayer& body  = _listPlayer[static_cast<size_t>( player )];
-        body._attackCooldown    = MathUtil::max( 0.0f, body._attackCooldown - deltaTime );
-        body._stunTimer         = MathUtil::max( 0.0f, body._stunTimer - deltaTime );
-        body._invulnerableTimer = MathUtil::max( 0.0f, body._invulnerableTimer - deltaTime );
-        if ( body._heavyTimer > 0.0f )
+        using Internal         = TrampolineArenaInternal;
+        TrampolinePlayer& body = _listPlayer[static_cast<size_t>( player )];
+        body._attackCooldown.tick( deltaTime );
+        body._stunTimer.tick( deltaTime );
+        body._invulnerableTimer.tick( deltaTime );
+        if ( body._heavyTimer.isActive() )
         {
-            body._heavyTimer -= deltaTime;
-            if ( body._heavyTimer <= 0.0f )
+            if ( body._heavyTimer.tick( deltaTime ) )
             {
-                body._heavyTimer     = 0.0f;
                 body._knockbackTaken = 1.0f;
                 body._knockbackDealt = 1.0f;
             }
@@ -287,8 +284,8 @@ namespace sw
                 const bool bNoPressYet = body._jumpPressTime < body._landTime - _judge.getEarliestWidth();
                 if ( body._input._bJumpPressed == SW_TRUE && bNoPressYet )
                     body._jumpPressTime = _time;
-                body._contactTimer -= deltaTime;
-                if ( body._contactTimer > 0.0f )
+                body._contactTimer.tick( deltaTime );
+                if ( body._contactTimer.isActive() )
                     return;
                 // 눌림이 끝났다 — 닿은 순간을 목표로 점프 입력을 판정한다.
                 const TimingResult result   = _judge.judge( body._landTime, body._jumpPressTime );
@@ -305,35 +302,33 @@ namespace sw
         const TrampolineInput& input = body._input;
         if ( input._bJumpPressed == SW_TRUE )
             body._jumpPressTime = _time;
-        const bool bCanControl = body._stunTimer <= 0.0f && body._bPounding == SW_FALSE;
+        const bool bCanControl = body._stunTimer.isActive() == false && body._bPounding == SW_FALSE;
         if ( bCanControl && input._bPoundPressed == SW_TRUE && body._position._y >= _settings._poundMinHeight )
         {
-            body._bPounding   = SW_TRUE;
-            body._attackTimer = 0.0f;
-            body._velocity    = float3{ 0.0f, -_settings._poundSpeed, 0.0f };
+            body._bPounding = SW_TRUE;
+            body._attackTimer.clear();
+            body._velocity = float3{ 0.0f, -_settings._poundSpeed, 0.0f };
         }
-        else if ( bCanControl && input._bAttackPressed == SW_TRUE && body._attackCooldown <= 0.0f )
+        else if ( bCanControl && input._bAttackPressed == SW_TRUE && body._attackCooldown.isActive() == false )
         {
             float3        direction{ input._moveX, 0.0f, input._moveZ };
             const float32 length = Internal::computeFlatLength( direction );
             direction            = length > Internal::kTiny ? direction / length : body._facing;
             body._facing         = direction;
-            body._attackTimer    = _settings._attackDuration;
-            body._attackCooldown = _settings._attackCooldown;
-            body._bHitThisDash   = SW_FALSE;
-            body._velocity._x    = direction._x * _settings._attackDashSpeed;
-            body._velocity._z    = direction._z * _settings._attackDashSpeed;
-            body._velocity._y    = MathUtil::max( body._velocity._y, 0.0f );
+            body._attackTimer.start( _settings._attackDuration );
+            body._attackCooldown.start( _settings._attackCooldown );
+            body._bHitThisDash = SW_FALSE;
+            body._velocity._x  = direction._x * _settings._attackDashSpeed;
+            body._velocity._z  = direction._z * _settings._attackDashSpeed;
+            body._velocity._y  = MathUtil::max( body._velocity._y, 0.0f );
             pushEvent( TrampolineEvent::Kind::Attacked, player, -1, 0 );
         }
 
-        if ( body._attackTimer > 0.0f )
+        if ( body._attackTimer.isActive() )
         {
-            body._attackTimer -= deltaTime;
-            if ( body._attackTimer <= 0.0f )
+            if ( body._attackTimer.tick( deltaTime ) )
             {
                 // 돌진이 끝나면 공중 이동 속도로 돌아온다.
-                body._attackTimer   = 0.0f;
                 const float32 speed = Internal::computeFlatLength( body._velocity );
                 if ( speed > _settings._airMoveSpeed )
                 {
@@ -354,7 +349,7 @@ namespace sw
             body._velocity._z *= keep;
         }
 
-        if ( body._bPounding == SW_FALSE && body._attackTimer <= 0.0f )
+        if ( body._bPounding == SW_FALSE && body._attackTimer.isActive() == false )
             body._velocity._y -= _settings._gravity * deltaTime;
         body._position += body._velocity * deltaTime;
 
@@ -395,7 +390,7 @@ namespace sw
         body._velocity         = float3{};
         body._state            = TrampolinePlayerState::Contact;
         body._landTime         = _time;
-        body._contactTimer     = _settings._contactTime;
+        body._contactTimer.start( _settings._contactTime );
         pushEvent( TrampolineEvent::Kind::Landed, player, -1, 0 );
         if ( body._bPounding == SW_FALSE )
             return;
@@ -407,7 +402,7 @@ namespace sw
         {
             TrampolinePlayer& target   = _listPlayer[static_cast<size_t>( other )];
             const bool        bOnBoard = target._state == TrampolinePlayerState::Air || target._state == TrampolinePlayerState::Contact;
-            if ( other == player || bOnBoard == false || target._invulnerableTimer > 0.0f || target._position._y >= _settings._poundHitHeight )
+            if ( other == player || bOnBoard == false || target._invulnerableTimer.isActive() || target._position._y >= _settings._poundHitHeight )
                 continue;
             float3        away     = float3{ target._position._x - body._position._x, 0.0f, target._position._z - body._position._z };
             const float32 distance = Internal::computeFlatLength( away );
@@ -451,7 +446,7 @@ namespace sw
         event._player = player;
         event._value  = body._combo;
         event._grade  = grade;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     void TrampolineArena::updateAttacks()
@@ -461,13 +456,13 @@ namespace sw
         for ( int32 attacker = 0; attacker < getPlayerCount(); ++attacker )
         {
             TrampolinePlayer& body = _listPlayer[static_cast<size_t>( attacker )];
-            if ( body._attackTimer <= 0.0f || body._bHitThisDash == SW_TRUE || body._state != TrampolinePlayerState::Air )
+            if ( body._attackTimer.isActive() == false || body._bHitThisDash == SW_TRUE || body._state != TrampolinePlayerState::Air )
                 continue;
             for ( int32 victim = 0; victim < getPlayerCount(); ++victim )
             {
                 TrampolinePlayer& target   = _listPlayer[static_cast<size_t>( victim )];
                 const bool        bOnBoard = target._state == TrampolinePlayerState::Air || target._state == TrampolinePlayerState::Contact;
-                if ( victim == attacker || bOnBoard == false || target._invulnerableTimer > 0.0f )
+                if ( victim == attacker || bOnBoard == false || target._invulnerableTimer.isActive() )
                     continue;
                 if ( float3::getDistance( body._position, target._position ) > reach )
                     continue;
@@ -495,11 +490,11 @@ namespace sw
         target._velocity._x      = direction._x * power;
         target._velocity._z      = direction._z * power;
         target._velocity._y      = MathUtil::max( target._velocity._y, power * 0.3f );
-        target._stunTimer        = _settings._stunTime;
-        target._attackTimer      = 0.0f;
-        target._bPounding        = SW_FALSE;
-        target._lastHitter       = attacker;
-        target._lastHitTime      = _time;
+        target._stunTimer.start( _settings._stunTime );
+        target._attackTimer.clear();
+        target._bPounding   = SW_FALSE;
+        target._lastHitter  = attacker;
+        target._lastHitTime = _time;
         if ( target._state == TrampolinePlayerState::Contact )
             target._state = TrampolinePlayerState::Air; // 면에서 떠밀려 난다
         _match.reportDamage( attacker, victim, 1.0f );
@@ -526,8 +521,8 @@ namespace sw
         body                        = TrampolinePlayer{};
         body._input                 = input;
         body._position              = makeSpawnPosition( player );
-        body._invulnerableTimer     = _settings._spawnInvulnerable;
-        body._state                 = TrampolinePlayerState::Air;
+        body._invulnerableTimer.start( _settings._spawnInvulnerable );
+        body._state = TrampolinePlayerState::Air;
         pushEvent( TrampolineEvent::Kind::Respawned, player, -1, 0 );
     }
 
@@ -547,7 +542,7 @@ namespace sw
             event._kind   = TrampolineEvent::Kind::ItemPicked;
             event._player = player;
             event._itemId = item._itemId;
-            _listEvent.push_back( event );
+            _eventBuffer.push( event );
         }
     }
 
@@ -560,7 +555,7 @@ namespace sw
         }
         else if ( def._effect == TrampolineArenaInternal::getHeavyName() )
         {
-            body._heavyTimer     = def._stats.getValue( TrampolineArenaInternal::getDurationName(), 8.0f );
+            body._heavyTimer.start( def._stats.getValue( TrampolineArenaInternal::getDurationName(), 8.0f ) );
             body._knockbackTaken = def._stats.getValue( TrampolineArenaInternal::getKnockbackTakenName(), 0.5f );
             body._knockbackDealt = def._stats.getValue( TrampolineArenaInternal::getKnockbackDealtName(), 1.5f );
         }
@@ -577,6 +572,6 @@ namespace sw
         event._player = player;
         event._other  = other;
         event._value  = value;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

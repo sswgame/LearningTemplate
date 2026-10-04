@@ -12,6 +12,8 @@
 
 #include "GameFramework/Data/StatBlock.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -112,19 +114,19 @@ namespace sw
         void resolveSkillCheck( bool bSuccess, const hashed_string& grade );
         void pushEvent( InteractionEvent::Kind kind, uint32 actorId, float32 value = 0.0f );
 
-        InteractionConfig        _config;
-        vector<uint32>           _listParticipant; ///< 붙은 순서
-        vector<InteractionEvent> _listEvent;
-        const TimingJudge*       _pJudge;
-        GameRandom               _random;
-        uint32                   _seed;
-        uint32                   _skillCheckActor;
-        float32                  _progress;
-        float32                  _time;
-        float32                  _skillCheckCountdown; ///< 다음 체크까지(참가자가 있는 동안만 준다)
-        float32                  _skillCheckTarget;
-        uint8                    _bCompleted;
-        uint8                    _bSkillCheckPending;
-        uint8                    _bRegressing;
+        InteractionConfig             _config;
+        vector<uint32>                _listParticipant; ///< 붙은 순서
+        EventBuffer<InteractionEvent> _eventBuffer;
+        const TimingJudge*            _pJudge;
+        GameRandom                    _random;
+        uint32                        _seed;
+        uint32                        _skillCheckActor;
+        float32                       _progress;
+        float32                       _time;
+        Countdown                     _skillCheckCountdown; ///< 다음 체크까지(참가자가 있는 동안만 준다)
+        float32                       _skillCheckTarget;
+        uint8                         _bCompleted;
+        uint8                         _bSkillCheckPending;
+        uint8                         _bRegressing;
     };
 } // namespace sw

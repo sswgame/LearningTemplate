@@ -349,11 +349,11 @@ SW_TEST_CASE( KartRacingTest, ItemEffectsHitBlockAndHome )
     const KartRaceEvent* pHit = findEvent( listEvent, KartRaceEvent::Kind::Hit, 0 );
     SW_ASSERT_NOT_NULL( pHit );
     SW_EXPECT_EQUAL( pHit->_other, 2 );
-    SW_EXPECT_TRUE( race.findRacer( 0 )->_spinTime > 0.0f );
+    SW_EXPECT_TRUE( race.findRacer( 0 )->_spinTime.isActive() );
     SW_EXPECT_TRUE( race.findRacer( 0 )->_motor.getForwardSpeed() < 0.5f );
     race.setInput( 0, makeThrottle( 0.0f ) );
     runSteps( race, 60 );
-    SW_EXPECT_NEAR_EQUAL( race.findRacer( 0 )->_spinTime, 0.0f, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( race.findRacer( 0 )->_spinTime.getRemaining(), 0.0f, 0.0001f );
 
     // 2) 방어막은 한 번을 막는다.
     placeOnTrack( race, 0, -6.0f, -3.0f );
@@ -367,7 +367,7 @@ SW_TEST_CASE( KartRacingTest, ItemEffectsHitBlockAndHome )
     race.drainEvents( listEvent );
     SW_EXPECT_TRUE( findEvent( listEvent, KartRaceEvent::Kind::ShieldBlocked, 0 ) != nullptr );
     SW_EXPECT_TRUE( findEvent( listEvent, KartRaceEvent::Kind::Hit, 0 ) == nullptr );
-    SW_EXPECT_NEAR_EQUAL( race.findRacer( 0 )->_shieldTime, 0.0f, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( race.findRacer( 0 )->_shieldTime.getRemaining(), 0.0f, 0.0001f );
 
     // 3) 빨간 껍질 — 바로 앞 순위(옆 앞의 2 번)를 잡아 돌아 들어간다.
     placeOnTrack( race, 0, -1.0f, -4.0f );

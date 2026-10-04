@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Inventory/LootTable.h"
 
@@ -72,14 +73,14 @@ namespace sw
      * @details `places` 를 적으면 표는 그 인원 기준이고, 실제 인원이 다르면 순위를 그 인원으로 늘려 고릅니다(4 명 경기의 4 등 = 8 명 표의 8 등).
      *          어느 구간에도 들지 않는 순위는 가장 가까운 구간의 표를 씁니다.
      */
-    class SW_GF_API KartItemCatalog
+    class SW_GF_API KartItemCatalog : public XmlCatalog<KartItemCatalog>
     {
+        friend class XmlCatalog<KartItemCatalog>;
+
     public:
         KartItemCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addItem( const KartItemDef& def ) { (void)_catalog.add( def ); }
+        void addItem( const KartItemDef& def ) { (void)_catalog.add( def ); }
         /** @brief 순위 구간의 표를 더합니다. @p listEntry 는 기반 전리품 항목(아이템 · 가중치)입니다. */
         void addRankTable( int32 fromPlace, int32 toPlace, const vector<LootEntry>& listEntry );
         /** @brief 표가 기준으로 삼는 인원입니다(0 = 늘리지 않는다). */
@@ -97,7 +98,8 @@ namespace sw
         const LootCatalog&              getLootCatalog() const { return _lootCatalog; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "KartItemCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<KartItemDef> _catalog;
         LootCatalog              _lootCatalog;

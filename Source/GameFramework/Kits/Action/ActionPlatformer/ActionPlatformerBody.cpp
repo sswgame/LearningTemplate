@@ -151,7 +151,7 @@ namespace sw
         , _velocity{}
         , _anchor{}
         , _ropeLength{ 0.0f }
-        , _drillSearchTimer{ 0.0f }
+        , _drillSearchTimer{}
         , _events{ 0 }
         , _mode{ ActionMoveMode::Normal }
         , _bInsideDirt{ SW_FALSE }
@@ -272,11 +272,11 @@ namespace sw
             return false;
         if ( _mode == ActionMoveMode::Glide )
             setGlide( false );
-        _position         = position;
-        _velocity         = direction * _settings._drillSpeed;
-        _drillSearchTimer = _settings._drillEntryTime;
-        _bInsideDirt      = SW_FALSE;
-        _mode             = ActionMoveMode::Drill;
+        _position = position;
+        _velocity = direction * _settings._drillSpeed;
+        _drillSearchTimer.start( _settings._drillEntryTime );
+        _bInsideDirt = SW_FALSE;
+        _mode        = ActionMoveMode::Drill;
         _events |= ActionBodyEvent::kDrillEntered;
         return true;
     }
@@ -349,8 +349,8 @@ namespace sw
         }
         if ( _bInsideDirt == SW_FALSE )
         {
-            _drillSearchTimer -= deltaTime;
-            if ( _drillSearchTimer <= 0.0f )
+            _drillSearchTimer.tick( deltaTime );
+            if ( _drillSearchTimer.isActive() == false )
             {
                 returnToMotor( _velocity * 0.5f );
                 _events |= ActionBodyEvent::kDrillAborted;

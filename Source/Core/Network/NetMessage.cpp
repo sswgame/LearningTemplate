@@ -31,55 +31,114 @@ namespace sw
         return host.broadcast( channel, _writer.getBytes().data(), _writer.getByteCount(), exceptId );
     }
 
+    bool INetMessageHandler::isMessageKindHandled( uint8 kind ) const
+    {
+        const uint8 rangeBase = getMessageRangeBase();
+        if ( NetMessageRange::isInRange( kind, rangeBase ) == false )
+            return false;
+        return ( ( getMessageKindMask() >> ( kind - rangeBase ) ) & 1u ) != 0;
+    }
+
+    NetHandleResult INetMessageHandler::handleMessage( int32 connectionId, const uint8* pData, int32 size, NetChannelType channel )
+    {
+        if ( pData == nullptr || size <= 0 || isMessageKindHandled( pData[0] ) == false )
+            return NetHandleResult::NotMine;
+        BitReader body( pData + 1, size - 1 );
+        return handleNetMessage( NetMessageContext{ pData, size, connectionId, channel, pData[0] }, body );
+    }
+
     NetMessageRouter::NetMessageRouter()
-        : _arrHandler{}
-        , _receiveBuffer{}
+        : _listHandler{}
+        , _arrKindHandler{}
+        , _inbound{}
+        , _malformedCount{ 0 }
     {
     }
 
     void NetMessageRouter::addHandler( INetMessageHandler* pHandler )
     {
-        if ( pHandler == nullptr )
+        if ( pHandler == nullptr || std::find( _listHandler.begin(), _listHandler.end(), pHandler ) != _listHandler.end() )
             return;
-        vector<INetMessageHandler*>& listHandler = _arrHandler[pHandler->getMessageRangeBase() >> 4];
-        if ( std::find( listHandler.begin(), listHandler.end(), pHandler ) == listHandler.end() )
-            listHandler.push_back( pHandler );
+        _listHandler.push_back( pHandler );
+        rebuildKindTable();
     }
 
     void NetMessageRouter::removeHandler( INetMessageHandler* pHandler )
     {
-        for ( vector<INetMessageHandler*>& listHandler : _arrHandler )
-            listHandler.erase( std::remove( listHandler.begin(), listHandler.end(), pHandler ), listHandler.end() );
+        _listHandler.erase( std::remove( _listHandler.begin(), _listHandler.end(), pHandler ), _listHandler.end() );
+        rebuildKindTable();
     }
 
-    bool NetMessageRouter::dispatch( int32 connectionId, const uint8* pData, int32 size )
+    void NetMessageRouter::rebuildKindTable()
+    {
+        for ( INetMessageHandler*& pSlot : _arrKindHandler )
+            pSlot = nullptr;
+        for ( INetMessageHandler* pHandler : _listHandler )
+        {
+            const uint8  rangeBase = pHandler->getMessageRangeBase();
+            const uint16 kindMask  = pHandler->getMessageKindMask();
+            for ( int32 offset = 0; offset < NetMessageRange::kSize; ++offset )
+            {
+                if ( ( ( kindMask >> offset ) & 1u ) == 0 )
+                    continue;
+                const int32 kind = static_cast<int32>( rangeBase ) + offset;
+                if ( kind >= kKindCount )
+                    break;
+                if ( _arrKindHandler[kind] != nullptr )
+                {
+                    SW_LOG_ERROR( "NetMessageRouter: message kind 0x%02x is claimed by two handlers - the first one keeps it", kind );
+                    continue;
+                }
+                _arrKindHandler[kind] = pHandler;
+            }
+        }
+    }
+
+    NetHandleResult NetMessageRouter::dispatch( const NetMessageContext& context, const uint8* pData, int32 size )
     {
         if ( pData == nullptr || size <= 0 )
-            return false;
-        for ( INetMessageHandler* pHandler : _arrHandler[pData[0] >> 4] )
-        {
-            if ( pHandler->handleNetMessage( connectionId, pData, size ) )
-                return true;
-        }
-        return false;
+            return NetHandleResult::NotMine;
+        INetMessageHandler* pHandler = _arrKindHandler[pData[0]];
+        if ( pHandler == nullptr )
+            return NetHandleResult::NotMine;
+        BitReader             body( pData + 1, size - 1 );
+        const NetHandleResult result = pHandler->handleNetMessage( NetMessageContext{ pData, size, context._connectionId, context._channel, pData[0] }, body );
+        if ( result == NetHandleResult::Malformed )
+            ++_malformedCount;
+        return result;
     }
 
-    int32 NetMessageRouter::pump( NetHost& host, vector<NetReceivedMessage>* pOutUnhandled )
+    void NetMessageRouter::dispatchEvent( const NetHostEvent& event )
     {
-        int32          count        = 0;
-        int32          connectionId = -1;
-        NetChannelType channel      = NetChannelType::ReliableOrdered;
-        while ( host.receiveMessage( connectionId, channel, _receiveBuffer ) )
+        for ( INetMessageHandler* pHandler : _listHandler )
         {
-            ++count;
-            if ( dispatch( connectionId, _receiveBuffer.data(), static_cast<int32>( _receiveBuffer.size() ) ) || pOutUnhandled == nullptr )
-                continue;
-            NetReceivedMessage message;
-            message._buffer       = _receiveBuffer;
-            message._connectionId = connectionId;
-            message._channel      = channel;
-            pOutUnhandled->push_back( std::move( message ) );
+            if ( event._kind == NetHostEvent::Kind::Connected )
+                pHandler->onConnectionOpened( event._connectionId );
+            else
+                pHandler->onConnectionClosed( event._connectionId, event._reason );
         }
-        return count;
+    }
+
+    int32 NetMessageRouter::pump( NetHost& host, vector<NetReceivedMessage>* pOutUnhandled, vector<NetHostEvent>* pOutListEvent )
+    {
+        host.drainInbound( _inbound );
+        for ( const NetHostEvent& event : _inbound._listEvent )
+            dispatchEvent( event );
+        if ( pOutListEvent != nullptr )
+            pOutListEvent->insert( pOutListEvent->end(), _inbound._listEvent.begin(), _inbound._listEvent.end() );
+        for ( const NetInboundMessage& message : _inbound._listMessage )
+        {
+            const uint8* pData = _inbound._bytes.data() + message._offset;
+            if ( dispatch( NetMessageContext{ pData, message._size, message._connectionId, message._channel, message._size > 0 ? pData[0] : uint8{ 0 } }, pData, message._size ) !=
+                     NetHandleResult::NotMine ||
+                 pOutUnhandled == nullptr )
+                continue;
+            NetReceivedMessage unhandled;
+            unhandled._buffer.assign( pData, pData + message._size );
+            unhandled._connectionId = message._connectionId;
+            unhandled._channel      = message._channel;
+            pOutUnhandled->push_back( std::move( unhandled ) );
+        }
+        return static_cast<int32>( _inbound._listMessage.size() );
     }
 } // namespace sw

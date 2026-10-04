@@ -35,7 +35,7 @@ namespace sw
         , _keyBag{}
         , _listBoo{}
         , _listSearched{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listGhostEvent{}
         , _currentRoom{}
         , _pCatalog{ nullptr }
@@ -57,7 +57,7 @@ namespace sw
         _random.setSeed( GameHash::mix32( seed ^ 0xB00B00u ) );
         _encounter.initialize( pCatalog, seed );
         _keyBag.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listGhostEvent.clear();
         _currentRoom = hashed_string{};
         _coinCount   = 0;
@@ -136,8 +136,8 @@ namespace sw
             GhostBooRuntime& boo = _listBoo[booIndex];
             if ( boo._state != GhostBooState::Revealed )
                 continue;
-            boo._timer -= deltaTime;
-            if ( boo._timer <= 0.0f )
+            boo._timer.tick( deltaTime );
+            if ( boo._timer.isActive() == false )
                 moveBooAway( booIndex );
         }
     }
@@ -205,8 +205,7 @@ namespace sw
 
     void GhostMansion::drainEvents( vector<GhostMansionEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void GhostMansion::drainGhostEvents( vector<GhostEvent>& outListEvent )
@@ -276,7 +275,7 @@ namespace sw
     {
         GhostBooRuntime& boo = _listBoo[booIndex];
         boo._state           = GhostBooState::Revealed;
-        boo._timer           = _pCatalog->getBoos()[booIndex]._escapeTime;
+        boo._timer.start( _pCatalog->getBoos()[booIndex]._escapeTime );
         pushEvent( GhostMansionEventType::BooRevealed, _pCatalog->getBoos()[booIndex]._id, boo._room );
     }
 
@@ -320,7 +319,7 @@ namespace sw
         boo._furniture = listHideout.empty() ? hashed_string{}
                                              : listHideout[static_cast<size_t>( _random.nextInt( 0, static_cast<int32>( listHideout.size() ) - 1 ) )];
         boo._state     = GhostBooState::Hiding;
-        boo._timer     = 0.0f;
+        boo._timer.clear();
         pushEvent( GhostMansionEventType::BooEscaped, _pCatalog->getBoos()[booIndex]._id, boo._room );
     }
 
@@ -331,6 +330,6 @@ namespace sw
         event._id    = id;
         event._room  = room;
         event._count = count;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

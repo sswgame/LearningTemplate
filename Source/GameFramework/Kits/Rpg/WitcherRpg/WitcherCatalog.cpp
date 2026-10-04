@@ -50,16 +50,6 @@ namespace sw
     {
     }
 
-    bool WitcherCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &WitcherCatalog::loadRoot, path, "WitcherCatalog" );
-    }
-
-    bool WitcherCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &WitcherCatalog::loadRoot, xmlText, sourceName, "WitcherCatalog" );
-    }
-
     hashed_string WitcherCatalog::getSkillColor( const hashed_string& skillId ) const
     {
         const WitcherSkillColorDef* pColor = _skillColorCatalog.find( skillId );

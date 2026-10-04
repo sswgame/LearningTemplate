@@ -64,14 +64,14 @@ namespace sw
         , _listPalletState{}
         , _listLocker{}
         , _listLockerOccupant{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listInteractionScratch{}
         , _listVitalityScratch{}
         , _match{}
         , _timer{}
         , _hatchPosition{}
         , _pCatalog{ nullptr }
-        , _collapseRemaining{ 0.0f }
+        , _collapseRemaining{}
         , _completedGeneratorCount{ 0 }
         , _survivorTeam{ -1 }
         , _killerTeam{ -1 }
@@ -101,10 +101,10 @@ namespace sw
         _listPalletState.clear();
         _listLocker.clear();
         _listLockerOccupant.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _match.initialize( MatchSettings{} );
-        _timer                   = FixedStepTimer( _settings._fixedStep, 0.25f );
-        _collapseRemaining       = 0.0f;
+        _timer = FixedStepTimer( _settings._fixedStep, 0.25f );
+        _collapseRemaining.clear();
         _completedGeneratorCount = 0;
         _survivorTeam            = -1;
         _killerTeam              = -1;
@@ -377,7 +377,7 @@ namespace sw
         leaveActivity( survivor );
         _listPalletState[static_cast<size_t>( pallet )] = PalletState::Dropped;
         pushEvent( AsymmetricHorrorEvent::Kind::PalletDropped, survivor, pallet, 0.0f, position );
-        if ( _killer._stunRemaining <= 0.0f && isNear( _killer._position, position, rules._palletStunRange ) )
+        if ( _killer._stunRemaining.isActive() == false && isNear( _killer._position, position, rules._palletStunRange ) )
         {
             // 판자에 맞은 살인마는 기절하고, 들고 있던 생존자를 떨어뜨린다.
             if ( _killer._carrying >= 0 )
@@ -401,8 +401,8 @@ namespace sw
         const bool bFast       = target._lastMoveSpeed >= rules._survivorSpeed * rules._fastVaultSpeedRatio;
         target._activity       = SurvivorActivity::Vaulting;
         target._activityTarget = window;
-        target._vaultRemaining = bFast ? rules._fastVaultTime : rules._mediumVaultTime;
-        target._vaultExit      = HorrorMatchInternal::computeVaultExit( target._position, frame._position );
+        target._vaultRemaining.start( bFast ? rules._fastVaultTime : rules._mediumVaultTime );
+        target._vaultExit = HorrorMatchInternal::computeVaultExit( target._position, frame._position );
         pushEvent( AsymmetricHorrorEvent::Kind::Vaulted, survivor, window, bFast ? 1.0f : 0.0f, frame._position );
         awardScore( target._score, "Vault", 1.0f );
         if ( bFast )
@@ -505,7 +505,7 @@ namespace sw
 
     KillerAttackResult HorrorMatch::killerAttack()
     {
-        if ( _killer._pDef == nullptr || _killer.canAct() == false || _killer._carrying >= 0 || _killer._attackCooldown > 0.0f || isEnded() )
+        if ( _killer._pDef == nullptr || _killer.canAct() == false || _killer._carrying >= 0 || _killer._attackCooldown.isActive() || isEnded() )
             return KillerAttackResult::NotReady;
         const HorrorKillerDef& def    = *_killer._pDef;
         const float32          minDot = MathUtil::cos( MathUtil::toRadian( def._lungeAngle * 0.5f ) );
@@ -532,14 +532,14 @@ namespace sw
         }
         if ( victim < 0 )
         {
-            _killer._attackCooldown = def._missCooldown;
+            _killer._attackCooldown.start( def._missCooldown );
             pushEvent( AsymmetricHorrorEvent::Kind::Missed, -1, -1, 0.0f, _killer._position );
             return KillerAttackResult::Missed;
         }
 
         HorrorSurvivor& target = _listSurvivor[static_cast<size_t>( victim )];
         leaveActivity( victim );
-        _killer._attackCooldown = def._hitCooldown;
+        _killer._attackCooldown.start( def._hitCooldown );
         _match.reportDamage( _killer._participant, target._participant, 1.0f );
         (void)target._vitality.applyDamage( 1.0f, 0.0f, -1 );
         _listVitalityScratch.clear();
@@ -552,8 +552,8 @@ namespace sw
             pushEvent( AsymmetricHorrorEvent::Kind::Downed, victim, -1, 0.0f, target._position );
             return KillerAttackResult::Downed;
         }
-        target._state          = SurvivorState::Injured;
-        target._hasteRemaining = _pCatalog->getRules()._hitHasteTime;
+        target._state = SurvivorState::Injured;
+        target._hasteRemaining.start( _pCatalog->getRules()._hitHasteTime );
         pushEvent( AsymmetricHorrorEvent::Kind::Hit, victim, -1, 0.0f, target._position );
         return KillerAttackResult::Hit;
     }
@@ -627,7 +627,7 @@ namespace sw
         if ( _listPalletState[static_cast<size_t>( pallet )] != PalletState::Dropped ||
              isNear( _killer._position, _listPallet[static_cast<size_t>( pallet )], _pCatalog->getRules()._interactRange ) == false )
             return false;
-        _killer._busyRemaining  = _pCatalog->getRules()._palletBreakTime;
+        _killer._busyRemaining.start( _pCatalog->getRules()._palletBreakTime );
         _killer._breakingPallet = pallet;
         return true;
     }
@@ -639,9 +639,9 @@ namespace sw
         const HorrorWindow& frame = _listWindow[static_cast<size_t>( window )];
         if ( isNear( _killer._position, frame._position, _pCatalog->getRules()._interactRange ) == false )
             return false;
-        _killer._busyRemaining = _pCatalog->getRules()._killerVaultTime;
-        _killer._busyExit      = HorrorMatchInternal::computeVaultExit( _killer._position, frame._position );
-        _killer._bVaulting     = SW_TRUE;
+        _killer._busyRemaining.start( _pCatalog->getRules()._killerVaultTime );
+        _killer._busyExit  = HorrorMatchInternal::computeVaultExit( _killer._position, frame._position );
+        _killer._bVaulting = SW_TRUE;
         pushEvent( AsymmetricHorrorEvent::Kind::Vaulted, -1, window, 0.0f, frame._position );
         return true;
     }
@@ -653,8 +653,8 @@ namespace sw
         const float3& position = _listLocker[static_cast<size_t>( locker )];
         if ( isNear( _killer._position, position, _pCatalog->getRules()._interactRange ) == false )
             return false;
-        _killer._busyRemaining = _pCatalog->getRules()._lockerSearchTime;
-        const int32 occupant   = _listLockerOccupant[static_cast<size_t>( locker )];
+        _killer._busyRemaining.start( _pCatalog->getRules()._lockerSearchTime );
+        const int32 occupant = _listLockerOccupant[static_cast<size_t>( locker )];
         if ( occupant < 0 )
             return false;
 
@@ -696,9 +696,9 @@ namespace sw
 
     bool HorrorMatch::useKillerAbility()
     {
-        if ( _killer._pDef == nullptr || _killer.canAct() == false || _killer._abilityCooldown > 0.0f || isEnded() )
+        if ( _killer._pDef == nullptr || _killer.canAct() == false || _killer._abilityCooldown.isActive() || isEnded() )
             return false;
-        _killer._abilityCooldown = _killer._pDef->_abilityCooldown;
+        _killer._abilityCooldown.start( _killer._pDef->_abilityCooldown );
         return true;
     }
 
@@ -722,7 +722,7 @@ namespace sw
             return rules._crawlSpeed;
         if ( target.canAct() == false || target._activity == SurvivorActivity::InLocker )
             return 0.0f;
-        return rules._survivorSpeed * ( target._hasteRemaining > 0.0f ? rules._hitHasteScale : 1.0f );
+        return rules._survivorSpeed * ( target._hasteRemaining.isActive() ? rules._hitHasteScale : 1.0f );
     }
 
     float32 HorrorMatch::computeKillerSpeed() const
@@ -730,7 +730,7 @@ namespace sw
         if ( _killer._pDef == nullptr || _pCatalog == nullptr || _killer.canAct() == false )
             return 0.0f;
         float32 speed = _pCatalog->getRules()._survivorSpeed * _killer._pDef->_speedRatio;
-        if ( _killer._attackCooldown > 0.0f )
+        if ( _killer._attackCooldown.isActive() )
             speed *= _killer._pDef->_cooldownSpeedScale;
         if ( _killer._carrying >= 0 )
             speed *= _killer._pDef->_carrySpeedScale;
@@ -749,7 +749,7 @@ namespace sw
             AiStimulus stimulus;
             stimulus._position    = survivor._position;
             stimulus._id          = static_cast<uint64>( index + 1 );
-            stimulus._noiseRadius = survivor._noiseRemaining > 0.0f ? survivor._noiseRadius : 0.0f;
+            stimulus._noiseRadius = survivor._noiseRemaining.isActive() ? survivor._noiseRadius : 0.0f;
             outListStimulusEntry.push_back( stimulus );
         }
     }
@@ -793,10 +793,10 @@ namespace sw
         outSnapshot._tick              = _tick;
         outSnapshot._phase             = _match.getPhase();
         outSnapshot._killerPosition    = _killer._position;
-        outSnapshot._killerStun        = _killer._stunRemaining;
-        outSnapshot._killerCooldown    = _killer._attackCooldown;
+        outSnapshot._killerStun        = _killer._stunRemaining.getRemaining();
+        outSnapshot._killerCooldown    = _killer._attackCooldown.getRemaining();
         outSnapshot._killerCarrying    = _killer._carrying;
-        outSnapshot._collapseRemaining = _collapseRemaining;
+        outSnapshot._collapseRemaining = _collapseRemaining.getRemaining();
         outSnapshot._bGatesPowered     = _bGatesPowered;
         outSnapshot._bHatchOpen        = _bHatchOpen;
         outSnapshot._bCollapseStarted  = _bCollapseStarted;
@@ -838,8 +838,7 @@ namespace sw
 
     void HorrorMatch::drainEvents( vector<AsymmetricHorrorEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     // --- 걸음 -------------------------------------------------------------------------------------
@@ -867,15 +866,13 @@ namespace sw
 
     void HorrorMatch::stepKiller( float32 deltaTime )
     {
-        _killer._attackCooldown  = MathUtil::max( 0.0f, _killer._attackCooldown - deltaTime );
-        _killer._abilityCooldown = MathUtil::max( 0.0f, _killer._abilityCooldown - deltaTime );
-        _killer._stunRemaining   = MathUtil::max( 0.0f, _killer._stunRemaining - deltaTime );
-        if ( _killer._busyRemaining <= 0.0f )
+        _killer._attackCooldown.tick( deltaTime );
+        _killer._abilityCooldown.tick( deltaTime );
+        _killer._stunRemaining.tick( deltaTime );
+        if ( _killer._busyRemaining.isActive() == false )
             return;
-        _killer._busyRemaining -= deltaTime;
-        if ( _killer._busyRemaining > 0.0f )
+        if ( _killer._busyRemaining.tick( deltaTime ) == false )
             return;
-        _killer._busyRemaining = 0.0f;
         if ( _killer._breakingPallet >= 0 )
         {
             const int32 pallet                              = _killer._breakingPallet;
@@ -897,17 +894,16 @@ namespace sw
     {
         HorrorSurvivor&              survivor = _listSurvivor[static_cast<size_t>( survivorIndex )];
         const AsymmetricHorrorRules& rules    = _pCatalog->getRules();
-        survivor._hasteRemaining              = MathUtil::max( 0.0f, survivor._hasteRemaining - deltaTime );
-        survivor._noiseRemaining              = MathUtil::max( 0.0f, survivor._noiseRemaining - deltaTime );
-        if ( survivor._noiseRemaining <= 0.0f )
+        survivor._hasteRemaining.tick( deltaTime );
+        survivor._noiseRemaining.tick( deltaTime );
+        if ( survivor._noiseRemaining.isActive() == false )
             survivor._noiseRadius = 0.0f;
 
         if ( survivor._activity == SurvivorActivity::Vaulting )
         {
-            survivor._vaultRemaining -= deltaTime;
-            if ( survivor._vaultRemaining <= 0.0f )
+            survivor._vaultRemaining.tick( deltaTime );
+            if ( survivor._vaultRemaining.isActive() == false )
             {
-                survivor._vaultRemaining = 0.0f;
                 survivor._position       = survivor._vaultExit;
                 survivor._activity       = SurvivorActivity::None;
                 survivor._activityTarget = -1;
@@ -1077,7 +1073,7 @@ namespace sw
             _bHatchOpen = SW_TRUE;
             pushEvent( AsymmetricHorrorEvent::Kind::HatchOpened, -1, -1, 0.0f, _hatchPosition );
         }
-        if ( _bCollapseStarted == SW_FALSE || _collapseRemaining <= 0.0f )
+        if ( _bCollapseStarted == SW_FALSE || _collapseRemaining.isActive() == false )
             return;
         bool bSlowed = false;
         for ( const HorrorSurvivor& survivor : _listSurvivor )
@@ -1085,11 +1081,10 @@ namespace sw
             const bool bHelpless = survivor._state == SurvivorState::Dying || survivor._state == SurvivorState::Carried || survivor._state == SurvivorState::Hooked;
             bSlowed              = bSlowed || bHelpless;
         }
-        _collapseRemaining -= deltaTime * ( bSlowed ? rules._collapseSlowScale : 1.0f );
-        if ( _collapseRemaining > 0.0f )
+        _collapseRemaining.tick( deltaTime * ( bSlowed ? rules._collapseSlowScale : 1.0f ) );
+        if ( _collapseRemaining.isActive() )
             return;
         // 붕괴가 끝났다 — 아직 남은 생존자는 모두 희생된다.
-        _collapseRemaining = 0.0f;
         for ( int32 survivor = 0; survivor < getSurvivorCount(); ++survivor )
         {
             if ( _listSurvivor[static_cast<size_t>( survivor )].isStanding() )
@@ -1278,7 +1273,7 @@ namespace sw
             }
             case SurvivorActivity::Vaulting:
             {
-                survivor._vaultRemaining = 0.0f;
+                survivor._vaultRemaining.clear();
                 break;
             }
             case SurvivorActivity::None:
@@ -1305,8 +1300,8 @@ namespace sw
 
     void HorrorMatch::stunKiller( float32 seconds )
     {
-        _killer._stunRemaining  = MathUtil::max( _killer._stunRemaining, seconds );
-        _killer._busyRemaining  = 0.0f;
+        _killer._stunRemaining.extendTo( seconds );
+        _killer._busyRemaining.clear();
         _killer._breakingPallet = -1;
         if ( _killer._bVaulting == SW_TRUE )
         {
@@ -1320,9 +1315,9 @@ namespace sw
     {
         if ( _bCollapseStarted == SW_TRUE )
             return;
-        _bCollapseStarted  = SW_TRUE;
-        _collapseRemaining = _pCatalog->getRules()._collapseTime;
-        pushEvent( AsymmetricHorrorEvent::Kind::CollapseStarted, -1, -1, _collapseRemaining, float3{} );
+        _bCollapseStarted = SW_TRUE;
+        _collapseRemaining.start( _pCatalog->getRules()._collapseTime );
+        pushEvent( AsymmetricHorrorEvent::Kind::CollapseStarted, -1, -1, _collapseRemaining.getRemaining(), float3{} );
     }
 
     void HorrorMatch::resolveEnd()
@@ -1399,7 +1394,7 @@ namespace sw
         {
             HorrorSurvivor& target = _listSurvivor[static_cast<size_t>( survivor )];
             target._noiseRadius    = MathUtil::max( target._noiseRadius, radius );
-            target._noiseRemaining = _settings._fixedStep * 2.0f;
+            target._noiseRemaining.start( _settings._fixedStep * 2.0f );
         }
         pushEvent( AsymmetricHorrorEvent::Kind::Noise, survivor, -1, radius, position );
     }
@@ -1412,6 +1407,6 @@ namespace sw
         event._target   = target;
         event._value    = value;
         event._position = position;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

@@ -52,16 +52,6 @@ namespace sw
     {
     }
 
-    bool VoxelBlockCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &VoxelBlockCatalog::loadRoot, path, "BlockCatalog" );
-    }
-
-    bool VoxelBlockCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &VoxelBlockCatalog::loadRoot, xmlText, sourceName, "BlockCatalog" );
-    }
-
     VoxelBlockIndex VoxelBlockCatalog::addBlock( const VoxelBlockDef& block )
     {
         // 번호 = 자리 + 1. 같은 id 는 그 자리를 그대로 쓴다(저장된 월드의 번호가 바뀌지 않게).

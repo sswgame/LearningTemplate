@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 
 #include "GameFramework/GameFrameworkMinimal.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/FacingDir.h"
 
 namespace sw
@@ -69,7 +70,7 @@ namespace sw
     private:
         LocomotionState _state;
         FacingDir       _facing;
-        float32         _stateTimer; ///< Walk · Interact 남은 시간(초)
+        Countdown       _stateTimer; ///< Walk · Interact 남은 시간(초)
     };
 
 } // namespace sw

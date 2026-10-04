@@ -9,6 +9,7 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/GridTopology.h"
 
 #include <algorithm>
 
@@ -49,9 +50,7 @@ namespace sw
             _listCost[static_cast<size_t>( startIndex )]      = 0;
             _listStoppable[static_cast<size_t>( startIndex )] = SW_TRUE; // 제자리는 늘 선다
             pushOpen( 0, startIndex );
-            static constexpr int32 kArrOffsetX[8] = { 1, -1, 0, 0, 1, 1, -1, -1 };
-            static constexpr int32 kArrOffsetY[8] = { 0, 0, 1, -1, 1, -1, 1, -1 };
-            const int32            directionCount = bDiagonal ? 8 : 4;
+            const int32 directionCount = bDiagonal ? GridTopology::kNeighborCount : GridTopology::kOrthogonalCount;
             while ( _listOpen.empty() == false )
             {
                 std::pop_heap( _listOpen.begin(), _listOpen.end(), &GridReachability::isWorse );
@@ -62,7 +61,7 @@ namespace sw
                 const int2 cell{ entry._index % _width, entry._index / _width };
                 for ( int32 direction = 0; direction < directionCount; ++direction )
                 {
-                    const int2 next{ cell._x + kArrOffsetX[direction], cell._y + kArrOffsetY[direction] };
+                    const int2 next = GridTopology::getNeighbor( cell, direction );
                     if ( isInside( next ) == false )
                         continue;
                     const int32 step = stepCost( cell, next );
@@ -111,11 +110,12 @@ namespace sw
             std::push_heap( _listOpen.begin(), _listOpen.end(), &GridReachability::isWorse );
         }
 
-        vector<int32>     _listCost{};
-        vector<int32>     _listParent{};
-        vector<uint8>     _listStoppable{};
-        vector<OpenEntry> _listOpen{};
-        int32             _width{ 0 };
-        int32             _height{ 0 };
+        vector<int32>             _listCost{};
+        vector<int32>             _listParent{};
+        vector<uint8>             _listStoppable{};
+        vector<OpenEntry>         _listOpen{};
+        mutable GridSearchScratch _cellMarks{}; ///< `collectAttackCells` 의 "한 칸 한 번" 표시
+        int32                     _width{ 0 };
+        int32                     _height{ 0 };
     };
 } // namespace sw

@@ -13,21 +13,32 @@
 namespace sw
 {
     /**
+     * @brief 흉내 거르개 — true 를 돌려준 패킷은 버립니다(손실 난수와 별개, 난수를 쓰지 않는다). 특정 패킷만 잃는 시험(핸드셰이크 `Accepted` 하나 ·
+     *        위조 주소로 간 답 전부)에 씁니다. 흉내의 잠금 안에서 불리므로 전송을 다시 부르지 않는다.
+     */
+    using NetEmulationDropFilter = bool ( * )( const NetAddress& to, const uint8* pData, int32 size, void* pContext );
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct NetEmulationConditions
      * @brief 한 방향(보내는 쪽) 회선의 나쁨입니다. 양쪽에 씌우면 왕복이 된다.
      */
     struct SW_API NetEmulationConditions
     {
-        float64 _latency{ 0.0 };               ///< 한쪽 지연(초)
-        float64 _jitter{ 0.0 };                ///< ± 흔들림(초) — 지연보다 크면 순서도 바뀐다
-        float64 _reorderDelay{ 0.05 };         ///< 순서를 뒤바꿀 때 그 패킷에 더하는 지연(초)
-        float32 _lossRate{ 0.0f };             ///< 0..1
-        float32 _duplicateRate{ 0.0f };        ///< 0..1 — 같은 패킷이 한 번 더 간다
-        float32 _reorderRate{ 0.0f };          ///< 0..1 — 그 패킷을 `_reorderDelay` 만큼 늦춰 뒤 패킷이 앞지른다
-        int32   _bandwidthBytesPerSecond{ 0 }; ///< 0 보다 크면 회선 속도 — 넘치는 만큼 줄을 선다
-        int32   _maxQueuedBytes{ 256 * 1024 }; ///< 대역폭 줄이 이만큼을 넘으면 새 패킷을 버린다(라우터 큐 넘침)
+        float64                _latency{ 0.0 };               ///< 한쪽 지연(초)
+        float64                _jitter{ 0.0 };                ///< ± 흔들림(초) — 지연보다 크면 순서도 바뀐다
+        float64                _reorderDelay{ 0.05 };         ///< 순서를 뒤바꿀 때 그 패킷에 더하는 지연(초)
+        float32                _lossRate{ 0.0f };             ///< 0..1
+        float32                _duplicateRate{ 0.0f };        ///< 0..1 — 같은 패킷이 한 번 더 간다
+        float32                _reorderRate{ 0.0f };          ///< 0..1 — 그 패킷을 `_reorderDelay` 만큼 늦춰 뒤 패킷이 앞지른다
+        int32                  _bandwidthBytesPerSecond{ 0 }; ///< 0 보다 크면 회선 속도 — 넘치는 만큼 줄을 선다
+        int32                  _maxQueuedBytes{ 256 * 1024 }; ///< 대역폭 줄이 이만큼을 넘으면 새 패킷을 버린다(라우터 큐 넘침)
+        NetEmulationDropFilter _pDropFilter{ nullptr };       ///< 있으면 보내기마다 먼저 묻는다 — true 면 버린다
+        void*                  _pDropFilterContext{ nullptr };
 
-        /** @brief 무엇이라도 켜져 있으면 true 입니다(꺼져 있으면 흉내는 그대로 넘긴다). */
+        /** @brief 회선을 나쁘게 하는 것이 무엇이라도 켜져 있으면 true 입니다(꺼져 있으면 흉내는 그대로 넘긴다). 거르개는 따로 — 지연 없이 거르기만 한다. */
         bool isActive() const;
         /**
          * @brief 전역 변수에서 읽습니다 — `-gv_netEmuLatencyMs` · `-gv_netEmuJitterMs` · `-gv_netEmuLossPercent` · `-gv_netEmuDuplicatePercent` ·
@@ -47,6 +58,7 @@ namespace sw
         uint64 _duplicatedCount{ 0 };
         uint64 _reorderedCount{ 0 }; ///< 일부러 늦춘 패킷
         uint64 _queueDropCount{ 0 }; ///< 그중 대역폭 큐 넘침
+        uint64 _filteredCount{ 0 };  ///< 그중 거르개가 버린 것
     };
 } // namespace sw
 

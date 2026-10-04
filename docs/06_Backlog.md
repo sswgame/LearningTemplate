@@ -203,7 +203,9 @@ cd build/Ninja-Debug/Bin
   (5) 게임 스키마에 키 바인딩 설정 — Shooter3D 는 입력 맵(`data/shooter.input.xml`)을 쓰니 그 액션부터. 다른 시험 게임은 아직 키를 직접 묻는다(입력 맵으로 옮길 것). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
 - **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 작은 것: `RestaurantSimulation::placeOrder` 의 후보 목록 둘(가중치가 모두 0 일 때 결과가 달라져 손대지 않았다).
-  - 중간: `EventBuffer<T>`(drainEvents 27 곳) · `SpatialHashGrid2D` · `GridTopology` + 재사용 스크래치 BFS · NetConnection 메시지 버퍼 재사용 ·
+  - 중간: `SpatialHashGrid2D`(RTS 버킷 · NetMmo 관심 격자 — 둘의 질의 모양이 달라 함께 뽑을 이득을 아직 못 봤다) · 키트의 칸 저장소를
+    `GridTopology` 위로(CreatureTown · FarmField · TileMap · ActionPlatformerBody 의 `y × 너비 + x` 손셈 — 이웃 표 · 탐색은 이미 옮겼다) ·
+    NetConnection 메시지 버퍼 재사용 ·
     `GameFlags` 와 `IFlagStore` 하나로 · TurnBattle 키트 정리.
   - 동작이 바뀌는 것(시험 먼저): `NetPrioritizer` 공유 · 아이템/효과 처리기 등록부 · `TimedModifierSet`.
 
@@ -379,17 +381,13 @@ cd build/Ninja-Debug/Bin
 
 ### 1-7. Core · 태스크
 
-- **Windows UDP 소켓 설정은 Windows 에서 돌려 보지 않았다**(2026-10-03 네트워크 정리). `PlatformSocketUtil` 의 `SIO_UDP_CONNRESET` 끄기(`_WSAIOW( IOC_VENDOR, 12 )`),
-  `SO_RCVBUF` · `SO_SNDBUF` 1 MB, `waitReadable` 의 `WSAPoll` — Windows 빌드에서 `NetworkTest.UdpTransportSendsDatagramsOverLocalhost` 와
-  `NetworkThreadTest.UdpHostsRunOnThreadsOverLocalhost` 를 돌리고, 닫힌 포트로 보낸 뒤에도 `receive` 가 계속 되는지 본다.
-
-- **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 손실 많은 회선에서 신뢰 순서 채널이 몇 초 밀린다 —
-  250 ms · 손실 15 % 에서 파괴 사건 최대 지연 4.1 초(247 틱), 100 ms · 5 % 에서 0.8 초. 재전송이 RTT × 1.5 뒤이고 앞 메시지를 기다리는 머리 막힘이라서다.
-  사건을 비신뢰로 겹쳐 보내기(번호가 있어 받는 쪽은 이미 순서를 맞춘다) 또는 NACK 재전송으로 줄인다. ② 롤백(파괴 상태 저장 · 되돌리기, `RollbackSession` 에
+- **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 신뢰 순서 채널의 머리 막힘 — 재전송을 RTT + 50 ms · 빠른 재전송으로
+  바꿔 250 ms · 손실 15 % 의 파괴 사건 최대 지연이 4.1 → 1.3 초(247 → 79 틱)다. 남은 지연의 대부분(평균 0.57 초 중 약 0.3 초)은 앞 메시지를 기다리는 몫이라,
+  더 줄이려면 순서가 필요 없는 메시지(번호로 스스로 순서를 맞추는 파괴 사건)를 "신뢰 · 순서 없음" 채널로 보낸다(측정: 평균 0.88 → 0.44 초, 최대는 그대로 —
+  최대는 한 메시지가 거듭 잃는 몫). 종류마다 흐름을 나누는 것은 파괴 사건처럼 한 종류가 대부분이면 효과가 없다. ② 롤백(파괴 상태 저장 · 되돌리기, `RollbackSession` 에
   `makeNetworkSnapshot` 바이트 싣기)은 하지 않았다. ③ 부서지기 전 움직이는 파괴 오브젝트(상자 · 드럼통)의 자세는 파괴 키트가 보내지 않는다 — 게임이
   `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ 전용 서버 프로세스 모드(창 · 렌더러 없는 App 서버 +
-  UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다. ⑤ `NetHost` — `Accepted` 를 잃고
-  데이터 패킷으로 연결되면 클라이언트의 `getClientIndex()` 가 −1 로 남는다(네트워크 리팩토링 N2). ⑥ `NetSimDestructionMatrixTest`(나쁜 회선 둘)는 Debug 40 초라
+  UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다. ⑤ `NetSimDestructionMatrixTest`(나쁜 회선 둘)는 Debug 40 초라
   호스트 스위트로 두었다 — `EngineTest_NoGPU` 가 이미 100 초를 넘어(한도 180) `SHARDS` 와 `HOST_SPLIT` 을 함께 쓸 수 있게 되면 nogpu 로 옮긴다.
 
 - **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는
@@ -1291,6 +1289,10 @@ cd build/Ninja-Debug/Bin
 
 - **Debug 기동은 CRT 누수 보고를 stderr 로도 낸다**(`EngineBootstrap` 의 진단 갈래가 `MemoryProfiler::enableMemoryLeakChecks` 를 부른다 — 누수 덤프가 콘솔 · CI 로그에
   나온다, `MemoryTagTest.DiagnosticBootstrapEnablesPlatformLeakChecks`).
+- **Windows UDP 는 돈다**(2026-10-05, `NetworkTest.UdpTransportSendsDatagramsOverLocalhost` · `NetworkThreadTest.UdpHostsRunOnThreadsOverLocalhost`, 닫힌 포트로 보낸 뒤
+  받기 포함). `SIO_UDP_CONNRESET` 끄기와 받기 고리의 "오류는 건너뛰고 다음 것" 을 둘 다 빼도 시험은 통과한다 — 루프백 ICMP 리셋을 이 시험이 재현하지 못하니 두 방어를 지우지 말 것.
+- **신뢰 재전송 간격을 짧게 고정하면 꼬리는 줄지만 회선을 먹는다**(2026-10-05 측정). 0.1 초 고정은 250 ms · 15 % 에서 사건 최대 지연 1.0 초였지만 메시지당
+  재전송 3.5 번 · 서버 올림 3 배로 파괴 시험(덩어리 오차)이 졌다. RTT + 50 ms 와 빠른 재전송(뒤 패킷 셋 확인)이 재전송 1.9 배 · 올림 +9 % 로 4.1 → 1.3 초다.
 - **확인만 담은 패킷이 확인을 부르면 한가한 연결이 30 Hz 로 핑퐁한다**(`NetConnection` 확인 요청 비트의 이유). 요청을 끄면 거꾸로 두 쪽 유지 시각이 맞물려 한쪽은
   늘 답만 보내 RTT 표본이 0 이 된다 — 그래서 답이라도 마지막 요청에서 유지 간격이 지나면 요청한다. RTT 는 "요청 패킷이 가장 새 확인으로" 돌아올 때만 잰다(묶음으로 늦게
   확인된 것은 상대가 기다렸다 보낸 시간이 섞인다).
@@ -1389,6 +1391,9 @@ cd build/Ninja-Debug/Bin
   바인딩 종류는 `kArrBindingKindInfo` 표 하나(+ `static_assert`, 저장소는 `-Wswitch-default`). 통합 InputMap 은 `InputManager::beginFrame` 이 갱신한다.
 - **오디오** — 믹스는 전부 `AudioEngine`(플랫폼 무관)이 하고 백엔드는 출력 장치만 연다(XAudio2 는 스트리밍 보이스 하나). 장치가 없으면 `IAudioSystem::update` 가
   흐른 시간만큼 렌더한다. 볼륨 · 음소거는 같은 이름 버스의 사용자 볼륨, 음소거는 master 한 곳. 소리 동작은 `AudioEngine::render` 로 버퍼에 렌더해 숫자로 잰다(`Audio/README.md`).
+- **반복 간격(연사 · 스폰 · 자동 공격)은 끝난 걸음에 `Countdown::restart`** — 간격으로 덮으면(`start` · `= 간격`) 지나친 몫을 버려 빈도가 fps · 고정 걸음에
+  매이고, float 로 걸음을 빼면 0 에 조금 못 미쳐 한 걸음을 더 기다린다(RTS 0.05 초 걸음에서 1.2 초 → 1.25 초). 잇는 몫은 한 간격까지라 몰아 내지 않는다.
+  시험 게임의 Voxel 블록 놓기 · Shooter3D 적 공격은 아직 손으로 센다(디렉터 베이스 작업과 겹쳐 옮기지 않았다).
 - **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. 월드 UI(HP 바 ·
   데미지 숫자)는 저장되지 않는 `SpriteInstanceBatch` 로 그린다 — 자식 컴포넌트로 만들면 씬 · 프리팹 · 스냅샷에 저장돼 다음 시작에 겹친다. 스프라이트 UV · 색은 인스턴스에 싣는다(같은 텍스처는
   한 배치). 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`, 글리프 · 클립은 `Scripts/generate/GenerateSpriteTextures.py`.

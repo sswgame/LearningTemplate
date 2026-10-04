@@ -37,7 +37,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (`CameraDirector`), 그것을 카메라에 쓰는 `CameraDirectorComponent`, 플레이어마다 뷰 타깃을 바꾸는 `CameraManagerComponent`. 아래 "카메라" 절
 - **Utility**: 장르 무관 계산 도구 — 씨앗 고정 난수 · 좌표 해시(`GameRandom` · `GameHash` — 가중치 고르기 `pickWeightedIndex` · 섞기 `shuffle`), 값 노이즈(`ValueNoise`),
   광선 판정(`RayMath` — 구 · 상자 · 캡슐 · 바닥 평면 · 원뿔), 앞 · 위 → 오일러(`OrientationUtil` — 롤이 있는 차량 · 카메라), 2D 네 방향(`FacingDir`),
-  고정 스텝 누적기(`FixedStepTimer`), 게임 시간 타이머(`TimerQueue`), 시뮬레이션 상태 바이트의 공통 모양(`StateArchiveUtil` — 머리(표 · 버전) · 이름 ·
+  고정 스텝 누적기(`FixedStepTimer`), 게임 시간 타이머(`TimerQueue`), 쿨다운 · 지속 시간 · 반복 간격 값(`Countdown` — `tick` 이 끝난 걸음에 한 번 true,
+  반복은 그 걸음에 `restart` 로 다시 걸어 지나친 몫을 한 간격까지 잇는다), 초당 비율 → 정수 발생(`RateAccumulator` — 손님 도착 · 운영비),
+  시뮬레이션 알림 버퍼(`EventBuffer<T>` — `drainEvents` 의 몸통 `drainTo`, 빈 목록이면 저장소를 맞바꿔 프레임마다 할당 · 복사하지 않는다),
+  칸 격자의 모양(`GridTopology` — 칸 번호 · 경계 · 이웃 순서 하나: 직교 넷 → 대각선 넷, 내비 · 원소 격자 · 키트가 같은 표)과 너비 우선 탐색 ·
+  "한 칸 한 번" 표시 스크래치(`GridSearchScratch` — 세대 번호로 비워 호출마다 W × H 를 잡거나 지우지 않는다),
+  시뮬레이션 상태 바이트의 공통 모양(`StateArchiveUtil` — 머리(표 · 버전) · 이름 ·
   남은 바이트로 상한을 둔 개수 · 난수 · 걸음 타이머). 셋 이상의 키트에 같은 것이 따로 있던 것을 모았다(아래 "새 장르 키트").
   키트 시뮬레이션의 `writeState` · `readState`(`FarmField` · `CitySimulation` · `RtsWorld` · `ThemeParkSimulation` · `VoxelWorld` …)는 임시에 읽어 끝까지 맞을 때만
   바꾸고, 정의는 카탈로그 id 로, 유닛 참조는 세대 든 id 로 적으며, 다시 만들 수 있는 것(길 · 격자 발자국 · 흐름장)은 적지 않는다
@@ -45,8 +50,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   타이밍 판정(`TimingJudge` — 리듬 · 타이밍 공격 · 스킬 체크 · 저스트 프레임), 1인칭 시점(`FirstPersonLook`)
 - **Data**: 데이터를 읽고 담는 틀 — `GameSettings`, `GameStrings`, 경로마다 한 번 읽어 나눠 쓰는 표의 캐시(`GameDataCache<T>` — 게임 서비스가 묶이면
   에셋 캐시 등록부에 올라 에디터 핫 리로드가 새 표로 바꾸고 `getReloadCount` 를 올린다, 옛 표는 모듈이 내릴 때까지 산다), 데이터 XML 읽기(`GameDataXml` — 문서 · 루트 · id 확인 · 숫자 목록 · 토큰 목록,
-  카탈로그 로더 템플릿 `loadFile` · `loadText` — 카탈로그의 `loadFromResource` · `loadFromXmlText` 는 `GameDataXml::loadFile( *this, &X::loadRoot, path, "Root" )`
-  한 줄이고 루트 읽기는 비공개로 둔다, 읽은 수 0 · false 는 실패), id 카탈로그(`GameCatalog<T>` —
+  다른 카탈로그를 함께 받는 루트 읽기용 로더 템플릿 `loadFile` · `loadText`), 카탈로그 베이스(`XmlCatalog<T>` — 물려받으면 `loadFromResource` ·
+  `loadFromXmlText` 가 생기고 카탈로그는 `kXmlRootName` 과 비공개 `loadRoot` 만 둔다, 읽은 수 0 · false 는 실패), id 카탈로그(`GameCatalog<T>` —
   읽은 순서 + 해시 조회), 이름 → 수치(`StatBlock` — 여러 자원 비용 `canAfford` · `trySpend`), 시간 → 값 꺾은선(`GameCurve` — 스폰 · 페이싱 곡선)
 - **AI**: 블랙보드(`Blackboard`), 행동 트리(`BehaviorTree` 정의 · `BehaviorTreeRunner` 실행 — 반응형 셀렉터 · 관찰 중단 · 데코레이터), 감각(`AiPerception` — 시야 각 ·
   거리 · 가림 · 소리 · 기억), 스폰 감독(`SpawnDirector` — 시간에 따라 쌓이는 예산 · 곡선 · 종류 상한 · 태그), NPC 하루 일정(`AI/Schedule` — `*.schedules.xml` 루틴 ·
@@ -163,7 +168,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
         Play Mode + Network Simulator 의 자리). 서버 월드 1 + 클라이언트 월드 N 이 **각자 씬 · 오브젝트 매니저 · 물리**를 갖고, 루프백 망 위에 끝점마다
         흉내(`NetEmulationTransport`)를 씌워 클라이언트마다 올림 · 내림 조건(지연 · 흔들림 · 손실 · 중복 · 순서 · 대역폭)을 따로 준다. 시각은 틱 × 간격,
         모든 난수는 씨앗에서 — 같은 씨앗이면 같은 패킷이 같은 틱에 도착한다. 게임은 `INetSimGame::createSession( world )` 에서 월드 내용을 짓고 세션
-        (`INetSimSession` — `onTickBegin` · `onTickEnd` · `onHostEvent`)을 돌려준다. 늦은 참가 · 떠남(`addClient` · `removeClient`, 떠나면 끊김 알림이 간다).
+        (`INetSimSession` — `onTickBegin` · `onTickEnd` · `onHostEvent`)을 돌려준다. 키트의 연결 수명은 라우터가 처리기에 넘기므로(`onConnectionOpened` ·
+        `onConnectionClosed`) `onHostEvent` 는 게임 몫만 한다(틱 앞, 라우터가 사건을 알린 바로 뒤에 불린다). 늦은 참가 · 떠남(`addClient` · `removeClient`, 떠나면 끊김 알림이 간다).
         엔진 루프는 활성 씬 하나만 틱하므로 하니스는 월드마다 `GameObjectManager::tick` 을 직접 부른다(씬의 `tick` 이 아니다 — 오디오 리스너는 프로세스에
         하나). 렌더러 · 오디오는 쓰지 않는다(nogpu 시험 · 게임 자동화). 틱 순서는 받은 것 나눠 주기 → 오브젝트 틱 → 보내기 — 깨끗한 회선이면 틱 N 에
         보낸 것을 틱 N + 1 이 받는다. 시험: `NetSimHarnessTest`.

@@ -92,16 +92,6 @@ namespace sw
     {
     }
 
-    bool MechCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &MechCatalog::loadRoot, path, "MechCatalog" );
-    }
-
-    bool MechCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &MechCatalog::loadRoot, xmlText, sourceName, "MechCatalog" );
-    }
-
     const StatBlock& MechCatalog::getClassModifier( MechRangeClass rangeClass ) const
     {
         const size_t index = MathUtil::min( static_cast<size_t>( rangeClass ), static_cast<size_t>( MechRangeClass::Count ) - 1 );

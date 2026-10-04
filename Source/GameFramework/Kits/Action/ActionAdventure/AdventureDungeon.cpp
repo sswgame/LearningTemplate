@@ -130,16 +130,6 @@ namespace sw
         return -1;
     }
 
-    bool AdventureDungeonCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &AdventureDungeonCatalog::loadRoot, path, "AdventureDungeons" );
-    }
-
-    bool AdventureDungeonCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &AdventureDungeonCatalog::loadRoot, xmlText, sourceName, "AdventureDungeons" );
-    }
-
     uint32 AdventureDungeonCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
@@ -207,7 +197,7 @@ namespace sw
     AdventureDungeonState::AdventureDungeonState()
         : _pCatalog{ nullptr }
         , _listRuntime{}
-        , _listEvent{}
+        , _eventBuffer{}
     {
     }
 
@@ -215,7 +205,7 @@ namespace sw
     {
         _pCatalog = pCatalog;
         _listRuntime.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         if ( pCatalog == nullptr )
             return;
         _listRuntime.resize( pCatalog->getDungeons().size() );
@@ -352,7 +342,7 @@ namespace sw
             return false;
         const AdventureDeviceDef& def = pDungeon->_listDevice[static_cast<size_t>( index )];
         if ( def._kind == AdventureDeviceKind::TimedSwitch )
-            pRuntime->_listDevice[static_cast<size_t>( index )]._timer = def._duration;
+            pRuntime->_listDevice[static_cast<size_t>( index )]._timer.start( def._duration );
         else if ( def._kind != AdventureDeviceKind::Switch )
             return false;
         setDeviceActive( *pDungeon, index, true, flags );
@@ -387,7 +377,7 @@ namespace sw
         if ( def._kind != AdventureDeviceKind::TorchGroup || device._bActive == SW_TRUE || device._litCount >= def._torchCount )
             return false;
         if ( device._litCount == 0 )
-            device._timer = def._duration;
+            device._timer.start( def._duration );
         ++device._litCount;
         if ( device._litCount >= def._torchCount )
             setDeviceActive( *pDungeon, index, true, flags );
@@ -409,19 +399,15 @@ namespace sw
                 DeviceRuntime&            device = runtime._listDevice[deviceIndex];
                 if ( def._kind == AdventureDeviceKind::TimedSwitch && device._bActive == SW_TRUE )
                 {
-                    device._timer -= deltaTime;
-                    if ( device._timer <= 0.0f )
-                    {
-                        device._timer = 0.0f;
+                    device._timer.tick( deltaTime );
+                    if ( device._timer.isActive() == false )
                         setDeviceActive( dungeon, static_cast<int32>( deviceIndex ), false, flags );
-                    }
                 }
                 else if ( def._kind == AdventureDeviceKind::TorchGroup && device._bActive == SW_FALSE && device._litCount > 0 && def._duration > 0.0f )
                 {
-                    device._timer -= deltaTime;
-                    if ( device._timer <= 0.0f )
+                    device._timer.tick( deltaTime );
+                    if ( device._timer.isActive() == false )
                     {
-                        device._timer    = 0.0f;
                         device._litCount = 0;
                         pushEvent( AdventureDungeonEventType::TorchesFailed, dungeon._id, def._id );
                     }
@@ -432,8 +418,7 @@ namespace sw
 
     void AdventureDungeonState::drainEvents( vector<AdventureDungeonEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     const AdventureDungeonProgress* AdventureDungeonState::findProgress( const hashed_string& dungeonId ) const
@@ -475,6 +460,6 @@ namespace sw
         event._id      = id;
         event._item    = item;
         event._count   = count;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

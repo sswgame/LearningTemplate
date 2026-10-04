@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -100,11 +101,11 @@ namespace sw
         DayPhase computePhase( float32 hour ) const { return computePhaseAt( _settings, hour ); }
         void     advanceGameSeconds( float32 gameSeconds );
 
-        WorldClockSettings      _settings;
-        vector<WorldClockEvent> _listEvent;
-        float32                 _secondOfDay; ///< 0.._secondsPerDay
-        float32                 _timeScale;
-        int32                   _day;
-        uint8                   _bPaused;
+        WorldClockSettings           _settings;
+        EventBuffer<WorldClockEvent> _eventBuffer;
+        float32                      _secondOfDay; ///< 0.._secondsPerDay
+        float32                      _timeScale;
+        int32                        _day;
+        uint8                        _bPaused;
     };
 } // namespace sw

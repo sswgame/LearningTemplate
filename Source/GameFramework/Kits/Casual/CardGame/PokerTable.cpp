@@ -102,7 +102,7 @@ namespace sw
     PokerTable::PokerTable()
         : _listSeat{}
         , _listLastPot{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _deck{}
         , _board{}
         , _settings{}
@@ -124,7 +124,7 @@ namespace sw
         _button      = static_cast<int32>( listStack.size() ) - 1;
         _currentSeat = -1;
         _street      = PokerStreet::HandOver;
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listLastPot.clear();
     }
 
@@ -207,9 +207,9 @@ namespace sw
         const int32 smallBlindSeat = playerCount == 2 ? _button : findNextSeat( _button, false );
         const int32 bigBlindSeat   = findNextSeat( smallBlindSeat, false );
         commitChips( smallBlindSeat, _settings._smallBlind );
-        _listEvent.push_back( PokerEvent{ smallBlindSeat, _listSeat[static_cast<size_t>( smallBlindSeat )]._committed, PokerEvent::Kind::Blind } );
+        _eventBuffer.push( PokerEvent{ smallBlindSeat, _listSeat[static_cast<size_t>( smallBlindSeat )]._committed, PokerEvent::Kind::Blind } );
         commitChips( bigBlindSeat, _settings._bigBlind );
-        _listEvent.push_back( PokerEvent{ bigBlindSeat, _listSeat[static_cast<size_t>( bigBlindSeat )]._committed, PokerEvent::Kind::Blind } );
+        _eventBuffer.push( PokerEvent{ bigBlindSeat, _listSeat[static_cast<size_t>( bigBlindSeat )]._committed, PokerEvent::Kind::Blind } );
         _currentBet    = MathUtil::max( _listSeat[static_cast<size_t>( smallBlindSeat )]._committed, _listSeat[static_cast<size_t>( bigBlindSeat )]._committed );
         _lastRaiseSize = _settings._bigBlind;
 
@@ -244,26 +244,26 @@ namespace sw
             case PokerActionKind::Fold:
             {
                 pokerSeat._bFolded = SW_TRUE;
-                _listEvent.push_back( PokerEvent{ seat, 0, PokerEvent::Kind::Fold } );
+                _eventBuffer.push( PokerEvent{ seat, 0, PokerEvent::Kind::Fold } );
                 break;
             }
             case PokerActionKind::Check:
             {
                 if ( toCall > 0 )
                     return false;
-                _listEvent.push_back( PokerEvent{ seat, 0, PokerEvent::Kind::Check } );
+                _eventBuffer.push( PokerEvent{ seat, 0, PokerEvent::Kind::Check } );
                 break;
             }
             case PokerActionKind::Call:
             {
                 if ( toCall <= 0 )
                 {
-                    _listEvent.push_back( PokerEvent{ seat, 0, PokerEvent::Kind::Check } );
+                    _eventBuffer.push( PokerEvent{ seat, 0, PokerEvent::Kind::Check } );
                     break;
                 }
                 const int32 paid = MathUtil::min( toCall, pokerSeat._stack );
                 commitChips( seat, paid );
-                _listEvent.push_back( PokerEvent{ seat, paid, PokerEvent::Kind::Call } );
+                _eventBuffer.push( PokerEvent{ seat, paid, PokerEvent::Kind::Call } );
                 break;
             }
             case PokerActionKind::Raise:
@@ -299,7 +299,7 @@ namespace sw
                 for ( PokerSeat& other : _listSeat )
                     other._bActed = SW_FALSE;
             }
-            _listEvent.push_back( PokerEvent{ seat, raiseTo, bAllIn ? PokerEvent::Kind::AllIn : PokerEvent::Kind::Raise } );
+            _eventBuffer.push( PokerEvent{ seat, raiseTo, bAllIn ? PokerEvent::Kind::AllIn : PokerEvent::Kind::Raise } );
         }
         pokerSeat._bActed = SW_TRUE;
         afterAction( seat );
@@ -367,7 +367,7 @@ namespace sw
         _currentBet    = 0;
         _lastRaiseSize = _settings._bigBlind;
         dealBoard( street == PokerStreet::Flop ? 3 : 1 );
-        _listEvent.push_back( PokerEvent{ -1, static_cast<int32>( street ), PokerEvent::Kind::Street } );
+        _eventBuffer.push( PokerEvent{ -1, static_cast<int32>( street ), PokerEvent::Kind::Street } );
     }
 
     void PokerTable::dealBoard( int32 count )
@@ -421,7 +421,7 @@ namespace sw
             pokerSeat._won       = listWon[static_cast<size_t>( seat )];
             pokerSeat._stack += pokerSeat._won;
             if ( pokerSeat._won > 0 )
-                _listEvent.push_back( PokerEvent{ seat, pokerSeat._won, PokerEvent::Kind::Win } );
+                _eventBuffer.push( PokerEvent{ seat, pokerSeat._won, PokerEvent::Kind::Win } );
         }
         _street      = PokerStreet::HandOver;
         _currentSeat = -1;
@@ -440,14 +440,13 @@ namespace sw
         PokerSeat& winner = _listSeat[static_cast<size_t>( winnerSeat )];
         winner._won       = computePotTotal();
         winner._stack += winner._won;
-        _listEvent.push_back( PokerEvent{ winnerSeat, winner._won, PokerEvent::Kind::Win } );
+        _eventBuffer.push( PokerEvent{ winnerSeat, winner._won, PokerEvent::Kind::Win } );
         _street      = PokerStreet::HandOver;
         _currentSeat = -1;
     }
 
     void PokerTable::drainEvents( vector<PokerEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

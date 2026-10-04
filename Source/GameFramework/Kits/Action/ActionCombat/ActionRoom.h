@@ -13,6 +13,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/GameFrameworkMinimal.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/FacingDir.h"
 
 namespace sw
@@ -51,6 +52,7 @@ namespace sw
     struct ActionRoomFrameResult
     {
         int32                  _damageToPlayer{ 0 }; ///< 이번 프레임 플레이어 피해
+        int32                  _bossShotCount{ 0 };  ///< 이번 프레임에 보스가 쏜 횟수(소리 · 연출)
         uint8                  _bClearedThisFrame : 1;
         uint8                  _bBossDefeated     : 1;
         uint8                  _bDashStarted      : 1;
@@ -119,7 +121,7 @@ namespace sw
         /** @brief 클리어 여부를 반환합니다. */
         bool isCleared() const { return _bCleared != SW_FALSE; }
         /** @brief 플레이어 무적 여부를 반환합니다. */
-        bool isPlayerInvulnerable() const { return _invulnTimer > 0.0f; }
+        bool isPlayerInvulnerable() const { return _invulnerable.isActive(); }
         /** @brief 대시 쿨다운 게이지(0~1)를 반환합니다. */
         float32 getDashFill() const;
         /** @brief 보스 HP 게이지(0~1)를 반환합니다. */
@@ -155,7 +157,7 @@ namespace sw
             float32                _hpMax;
             float32                _radius;
             float32                _speed;
-            float32                _attackTimer; ///< 다음 투사체까지
+            Countdown              _attackTimer; ///< 다음 투사체까지
             uint8                  _bAlive   : 1;
             [[maybe_unused]] uint8 _reserved : 7;
 
@@ -167,7 +169,7 @@ namespace sw
                 , _hpMax{ 1.0f }
                 , _radius{ 0.35f }
                 , _speed{ 1.6f }
-                , _attackTimer{ 0.0f }
+                , _attackTimer{}
                 , _bAlive{ SW_TRUE }
                 , _reserved{ 0 }
             {
@@ -182,7 +184,7 @@ namespace sw
         {
             float2                 _position;
             float2                 _velocity;
-            float32                _life; ///< 남은 수명(초)
+            Countdown              _life; ///< 남은 수명(초)
             float32                _radius;
             uint8                  _bAlive   : 1;
             [[maybe_unused]] uint8 _reserved : 7;
@@ -191,7 +193,7 @@ namespace sw
             Projectile()
                 : _position{}
                 , _velocity{}
-                , _life{ 0.0f }
+                , _life{}
                 , _radius{ 0.2f }
                 , _bAlive{ SW_TRUE }
                 , _reserved{ 0 }
@@ -208,8 +210,8 @@ namespace sw
         void spawnBoss( float32 x, float32 y );
         /** @brief 플레이어 공격을 시도합니다. */
         void tryPlayerAttack( const ActionRoomFrameInput& input );
-        /** @brief 액터를 갱신합니다. */
-        void updateActors( float32 deltaTime, float32 playerX, float32 playerY );
+        /** @brief 액터를 갱신합니다. 보스가 쏜 횟수를 @p out 에 더합니다. */
+        void updateActors( float32 deltaTime, float32 playerX, float32 playerY, ActionRoomFrameResult& out );
         /** @brief 투사체를 갱신합니다. */
         void updateProjectiles( float32 deltaTime );
         /** @brief 플레이어 피격을 처리합니다. */
@@ -235,9 +237,9 @@ namespace sw
         CollisionLayers        _layers;
         vector<Actor>          _listActor;
         vector<Projectile>     _listProjectile;
-        float32                _attackCooldown;
-        float32                _dashCooldown;
-        float32                _invulnTimer; ///< 피격 후 무적
+        Countdown              _attackCooldown;
+        Countdown              _dashCooldown;
+        Countdown              _invulnerable; ///< 피격 후 무적
         float32                _bossMaxHp;
         uint8                  _bCleared : 1;
         [[maybe_unused]] uint8 _reserved : 7;

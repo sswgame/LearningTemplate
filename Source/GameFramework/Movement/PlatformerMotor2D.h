@@ -11,6 +11,7 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -132,7 +133,7 @@ namespace sw
         const float2& getPosition() const { return _position; }
         const float2& getVelocity() const { return _velocity; }
         bool          isGrounded() const { return _bGrounded != SW_FALSE; }
-        bool          isDashing() const { return _dashTimer > 0.0f; }
+        bool          isDashing() const { return _dash.isActive(); }
         bool          isClimbing() const { return _bClimbing != SW_FALSE; }
         /** @brief 붙은 벽 쪽(−1 왼쪽, 1 오른쪽, 0 없음)입니다 — 벽 미끄러짐 중. */
         int32                     getWallSide() const { return _wallSide; }
@@ -152,12 +153,12 @@ namespace sw
         PlatformerSettings _settings;
         float2             _position;
         float2             _velocity;
-        float32            _coyoteTimer;
-        float32            _jumpBufferTimer;
-        float32            _wallLockTimer;
-        float32            _dashTimer;
-        float32            _dashCooldownTimer;
-        float32            _dropTimer;
+        Countdown          _coyote;
+        Countdown          _jumpBuffer;
+        Countdown          _wallLock;
+        Countdown          _dash;
+        Countdown          _dashCooldown;
+        Countdown          _dropThrough;
         int32              _extraJumpsLeft;
         int32              _airDashesLeft;
         int32              _wallSide;

@@ -943,3 +943,27 @@ SW_TEST_CASE( ActionCombatTest, UnitSpawnsDamageNumbersWhenAsked )
     SW_EXPECT_NEAR_EQUAL( expected._y, pNumberRoot->getWorldPosition()._y, 1e-4f );
     manager.endPlay();
 }
+
+/**
+ * @brief [ActionCombatTest] 보스 발사 빈도는 프레임률과 상관없다 — 20 · 30 · 60 fps 로 120 초면 1 + (120 − 1.2) / 1.6 = 75.25 발(±1)
+ * @details 끝난 프레임에 간격으로 덮으면 지나친 몫을 버린다 — float 로 dt 를 빼다 0 에 조금 못 미치는 프레임이 생겨 20 fps 72 발, 30 fps 73 발이 된다.
+ *          쏜 횟수는 프레임 결과(`ActionRoomFrameResult::_bossShotCount`)로 센다.
+ */
+SW_TEST_CASE( ActionCombatTest, BossFireRateDoesNotDependOnFrameRate )
+{
+    EventDispatcher                    dispatcher;
+    const ScopedEventDispatcherService scopedDispatcher{ dispatcher };
+    const float32                      design = 1.0f + ( 120.0f - 1.2f ) / 1.6f;
+    for ( const float32 framesPerSecond : { 20.0f, 30.0f, 60.0f } )
+    {
+        ActionRoom room;
+        room.beginBoss();
+        ActionRoomFrameInput input;
+        input._playerPos       = float2{ 7.0f, 60.0f }; // 멀리 서서 치지 않는다
+        const int32 frameCount = static_cast<int32>( 120.0f * framesPerSecond + 0.5f );
+        int32       shotCount  = 0;
+        for ( int32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+            shotCount += room.update( 1.0f / framesPerSecond, input )._bossShotCount;
+        SW_EXPECT_NEAR_EQUAL( design, static_cast<float32>( shotCount ), 1.0f );
+    }
+}

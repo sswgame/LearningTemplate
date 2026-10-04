@@ -11,6 +11,7 @@
 
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -62,17 +63,17 @@ namespace sw
      * @brief `<SkillTreeCatalog><Tree id="combat"><Skill id="power" maxRank="3" cost="1" level="2" spent="0" requires="basic:1,stance"
      *        group="" ability="PowerStrike"><Stats attack="5"/></Skill></Tree></SkillTreeCatalog>` 를 읽습니다(`<Stats>` 는 랭크 하나의 몫).
      */
-    class SW_GF_API SkillTreeCatalog
+    class SW_GF_API SkillTreeCatalog : public XmlCatalog<SkillTreeCatalog>
     {
-    public:
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
+        friend class XmlCatalog<SkillTreeCatalog>;
 
+    public:
         const SkillTreeDef*         findTree( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<SkillTreeDef>& getTrees() const { return _catalog.getAll(); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "SkillTreeCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<SkillTreeDef> _catalog{};
     };

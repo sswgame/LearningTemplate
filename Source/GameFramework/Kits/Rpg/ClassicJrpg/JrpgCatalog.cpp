@@ -53,16 +53,6 @@ namespace sw
     {
     }
 
-    bool JrpgCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &JrpgCatalog::loadRoot, path, "JrpgCatalog" );
-    }
-
-    bool JrpgCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &JrpgCatalog::loadRoot, xmlText, sourceName, "JrpgCatalog" );
-    }
-
     void JrpgCatalog::clear()
     {
         _classCatalog.clear();

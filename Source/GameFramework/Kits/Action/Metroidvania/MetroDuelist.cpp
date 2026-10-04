@@ -27,7 +27,7 @@ namespace sw
         , _stamina{}
         , _time{ 0.0f }
         , _parryPressTime{ MetroDuelistInternal::kNeverPressed }
-        , _riposteRemaining{ 0.0f }
+        , _riposteWindow{}
         , _damageTakenScale{ 1.0f }
         , _bGuarding{ SW_FALSE }
     {
@@ -41,9 +41,9 @@ namespace sw
             _vitality.initialize( pCatalog->getRules()._health );
             _stamina.initialize( pCatalog->getRules()._stamina );
         }
-        _time             = 0.0f;
-        _parryPressTime   = MetroDuelistInternal::kNeverPressed;
-        _riposteRemaining = 0.0f;
+        _time           = 0.0f;
+        _parryPressTime = MetroDuelistInternal::kNeverPressed;
+        _riposteWindow.clear();
         _damageTakenScale = 1.0f;
         _bGuarding        = SW_FALSE;
     }
@@ -53,7 +53,7 @@ namespace sw
         if ( deltaTime <= 0.0f )
             return;
         _time += deltaTime;
-        _riposteRemaining = MathUtil::max( 0.0f, _riposteRemaining - deltaTime );
+        _riposteWindow.tick( deltaTime );
         _vitality.update( deltaTime );
         _stamina.update( deltaTime );
     }
@@ -78,8 +78,8 @@ namespace sw
         const TimingResult parry = rules._parryJudge.judge( _time, _parryPressTime );
         if ( parry.isHit() )
         {
-            _parryPressTime     = MetroDuelistInternal::kNeverPressed;
-            _riposteRemaining   = rules._riposteTime;
+            _parryPressTime = MetroDuelistInternal::kNeverPressed;
+            _riposteWindow.start( rules._riposteTime );
             outcome._result     = MetroDefenseResult::Parried;
             outcome._parryGrade = parry._pWindow->_grade;
             return outcome;
@@ -114,9 +114,9 @@ namespace sw
         if ( _pCatalog == nullptr )
             return baseDamage;
         const float32 multiplier = _pCatalog->getRules()._riposteMultiplier;
-        if ( _riposteRemaining > 0.0f )
+        if ( _riposteWindow.isActive() )
         {
-            _riposteRemaining = 0.0f;
+            _riposteWindow.clear();
             return baseDamage * multiplier;
         }
         if ( target.getVitality().isPoiseBroken() )

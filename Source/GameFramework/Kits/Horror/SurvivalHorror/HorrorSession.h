@@ -17,6 +17,7 @@
 #include "GameFramework/Inventory/GridInventory.h"
 #include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/World/GameFlags.h"
 
 namespace sw
@@ -179,7 +180,7 @@ namespace sw
         unordered_map<hashed_string, int32> _mapDialAttempt;      ///< 다이얼 자물쇠 → 틀린 횟수
         unordered_map<hashed_string, int32> _mapSequenceProgress; ///< 순서 퍼즐 → 맞힌 걸음 수
         vector<HorrorClueLink>              _listClueLink;
-        vector<SurvivalHorrorEvent>         _listEvent;
+        EventBuffer<SurvivalHorrorEvent>    _eventBuffer;
         hashed_string                       _currentArea;
         const HorrorCatalog*                _pCatalog;
         AreaGraph*                          _pAreaGraph;

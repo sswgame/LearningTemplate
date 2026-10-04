@@ -52,15 +52,6 @@ namespace sw
     // ------------------------------------------------------------------------------
     // SkillTreeCatalog
     // ------------------------------------------------------------------------------
-    bool SkillTreeCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &SkillTreeCatalog::loadRoot, path, "SkillTreeCatalog" );
-    }
-
-    bool SkillTreeCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &SkillTreeCatalog::loadRoot, xmlText, sourceName, "SkillTreeCatalog" );
-    }
 
     uint32 SkillTreeCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {

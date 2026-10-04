@@ -18,6 +18,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Casual/CardGame/HwatuDeck.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -212,14 +213,14 @@ namespace sw
         void finishGame( int32 winner );
         bool areHandsEmpty() const;
 
-        vector<MatgoPlayer> _listPlayer;
-        vector<MatgoEvent>  _listEvent;
-        vector<int32>       _listSettlement;
-        CardPile            _floor;
-        CardPile            _drawPile;
-        MatgoSettings       _settings;
-        int32               _currentPlayer;
-        int32               _winner;
-        MatgoPhase          _phase;
+        vector<MatgoPlayer>     _listPlayer;
+        EventBuffer<MatgoEvent> _eventBuffer;
+        vector<int32>           _listSettlement;
+        CardPile                _floor;
+        CardPile                _drawPile;
+        MatgoSettings           _settings;
+        int32                   _currentPlayer;
+        int32                   _winner;
+        MatgoPhase              _phase;
     };
 } // namespace sw

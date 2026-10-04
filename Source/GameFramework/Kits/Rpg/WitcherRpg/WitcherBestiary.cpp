@@ -11,7 +11,7 @@ namespace sw
 {
     WitcherBestiary::WitcherBestiary()
         : _listEntry{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pCatalog{ nullptr }
         , _pChart{ nullptr }
     {
@@ -22,7 +22,7 @@ namespace sw
         _pCatalog = pCatalog;
         _pChart   = pChart;
         _listEntry.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
     }
 
     bool WitcherBestiary::readBook( const hashed_string& monsterId )
@@ -90,8 +90,7 @@ namespace sw
 
     void WitcherBestiary::drainEvents( vector<WitcherBestiaryEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     WitcherBestiary::Entry* WitcherBestiary::findEntryMutable( const hashed_string& monsterId )
@@ -133,7 +132,7 @@ namespace sw
         raised._kind      = WitcherBestiaryEvent::Kind::KnowledgeRaised;
         raised._monsterId = monsterId;
         raised._value     = newLevel;
-        _listEvent.push_back( raised );
+        _eventBuffer.push( raised );
         for ( const WitcherWeakness& weakness : pMonster->_listWeakness )
         {
             if ( weakness._knowledge <= oldLevel || weakness._knowledge > newLevel )
@@ -143,7 +142,7 @@ namespace sw
             revealed._monsterId  = monsterId;
             revealed._weaknessId = weakness._id;
             revealed._value      = newLevel;
-            _listEvent.push_back( revealed );
+            _eventBuffer.push( revealed );
         }
         return true;
     }

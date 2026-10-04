@@ -23,6 +23,8 @@
 #include "GameFramework/Kits/Casual/KartRacing/KartAi.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartItems.h"
 #include "GameFramework/Movement/ArcadeVehicleMotor.h"
+#include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
@@ -94,8 +96,8 @@ namespace sw
         float32               _lapStartTime{ 0.0f };
         float32               _bestLapTime{ 0.0f }; ///< 0 = 아직 없음
         float32               _finishTime{ 0.0f };  ///< 0 = 결승 전 · 들어오지 못함
-        float32               _spinTime{ 0.0f };    ///< > 0 이면 맞아서 도는 중(조작 불가)
-        float32               _shieldTime{ 0.0f };
+        Countdown             _spinTime{};          ///< 남아 있으면 맞아서 도는 중(조작 불가)
+        Countdown             _shieldTime{};
         float32               _wrongWayTime{ 0.0f };
         float32               _itemHeldTime{ 0.0f };
         float32               _speedScale{ 1.0f };  ///< 러버밴딩 배율
@@ -209,7 +211,7 @@ namespace sw
 
         KartRacePhase    getPhase() const { return _phase; }
         float32          getRaceTime() const { return _raceTime; }
-        float32          getCountdown() const { return _countdown; }
+        float32          getCountdown() const { return _countdown.getRemaining(); }
         float32          getBestLapTime() const { return _bestLapTime; }
         int32            getRacerCount() const { return static_cast<int32>( _listRacer.size() ); }
         const KartRacer* findRacer( int32 racer ) const;
@@ -236,23 +238,23 @@ namespace sw
         void               resolveRaceEnd();
         void               pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time );
 
-        vector<KartRacer>      _listRacer;
-        vector<KartProjectile> _listProjectile;
-        vector<KartRaceEvent>  _listEvent;
-        vector<float32>        _listItemBoxTimer; ///< 0 = 놓여 있다
-        vector<int32>          _listPlaceOrder;   ///< 순위 순서의 차 번호
-        KartRaceSettings       _settings;
-        GameRandom             _random;
-        FixedStepTimer         _timer;
-        const KartTrack*       _pTrack;
-        const KartItemCatalog* _pItemCatalog;
-        KartGhost*             _pGhost;
-        float32                _raceTime;
-        float32                _countdown;
-        float32                _bestLapTime;
-        float32                _firstFinishTime; ///< < 0 = 아직 아무도
-        int32                  _ghostRacer;
-        int32                  _finishedCount;
-        KartRacePhase          _phase;
+        vector<KartRacer>          _listRacer;
+        vector<KartProjectile>     _listProjectile;
+        EventBuffer<KartRaceEvent> _eventBuffer;
+        vector<Countdown>          _listItemBoxTimer; ///< 끝나 있으면 놓여 있다
+        vector<int32>              _listPlaceOrder;   ///< 순위 순서의 차 번호
+        KartRaceSettings           _settings;
+        GameRandom                 _random;
+        FixedStepTimer             _timer;
+        const KartTrack*           _pTrack;
+        const KartItemCatalog*     _pItemCatalog;
+        KartGhost*                 _pGhost;
+        float32                    _raceTime;
+        Countdown                  _countdown;
+        float32                    _bestLapTime;
+        float32                    _firstFinishTime; ///< < 0 = 아직 아무도
+        int32                      _ghostRacer;
+        int32                      _finishedCount;
+        KartRacePhase              _phase;
     };
 } // namespace sw

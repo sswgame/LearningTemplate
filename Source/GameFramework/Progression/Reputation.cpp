@@ -24,16 +24,6 @@ namespace sw
 
 namespace sw
 {
-    bool ReputationCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &ReputationCatalog::loadRoot, path, "ReputationCatalog" );
-    }
-
-    bool ReputationCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &ReputationCatalog::loadRoot, xmlText, sourceName, "ReputationCatalog" );
-    }
-
     uint32 ReputationCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
@@ -73,7 +63,7 @@ namespace sw
 
     ReputationState::ReputationState()
         : _listEntry{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pCatalog{ nullptr }
     {
     }
@@ -82,7 +72,7 @@ namespace sw
     {
         _pCatalog = pCatalog;
         _listEntry.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
     }
 
     ReputationState::Entry& ReputationState::acquireEntry( const hashed_string& factionId )
@@ -127,7 +117,7 @@ namespace sw
             event._oldTier   = oldTier >= 0 ? pFaction->_listTier[static_cast<size_t>( oldTier )]._name : hashed_string{};
             event._newTier   = newTier >= 0 ? pFaction->_listTier[static_cast<size_t>( newTier )]._name : hashed_string{};
             event._value     = entry._value;
-            _listEvent.push_back( event );
+            _eventBuffer.push( event );
         }
         return entry._value - oldValue;
     }
@@ -189,7 +179,6 @@ namespace sw
 
     void ReputationState::drainEvents( vector<ReputationEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw
