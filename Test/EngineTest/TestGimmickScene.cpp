@@ -214,3 +214,55 @@ SW_TEST_CASE( GimmickSceneTest, ShowcaseSceneWiresAcrossObjects )
     SW_EXPECT_FALSE( pCircuit->getCircuit().getOutput( pCircuit->findNode( "bothLit" ), hashed_string( "Out" ) ) );
     manager.endPlay();
 }
+
+/**
+ * @brief [GimmickSceneTest] 레이저 · 근접 센서와 위험 지대 · 켜기 액추에이터 — 상자가 광선을 막으면 Blocked, 태그 대상이 반경에 들면 Near(2D 평면 거리),
+ *        위험 지대는 켜진 동안 겹친 것의 센서에 피해를 주고, Enable 은 대상 오브젝트를 끈다
+ */
+SW_TEST_CASE( GimmickSceneTest, LaserProximityHazardEnable )
+{
+    GameObjectManager manager;
+    GameObject*       pEmitter = manager.createGameObject( hashed_string( "LaserEmitter" ) );
+    pEmitter->addComponent<SceneComponent>();
+    GameObject* pBlocker = GimmickSceneTestInternal::spawnBox( manager, "Blocker", float3{ 0.0f, 20.0f, 0.0f }, false );
+    GameObject* pSeeker  = manager.createGameObject( hashed_string( "Seeker" ) );
+    pSeeker->addComponent<SceneComponent>()->setLocalPosition( float3{ 0.0f, -40.0f, 30.0f } );
+    pSeeker->addTag( TagID::request( "Player" ) );
+    GameObject* pZone = GimmickSceneTestInternal::spawnBox( manager, "Zone", float3{ 40.0f, 0.0f, 0.0f }, true );
+    pZone->addComponent<GimmickSensorComponent>();
+    GameObject* pVictim = GimmickSceneTestInternal::spawnBox( manager, "Victim", float3{ 40.5f, 0.0f, 0.0f }, false );
+    pVictim->addComponent<GimmickSensorComponent>();
+    GameObject* pLamp = manager.createGameObject( hashed_string( "Lamp" ) );
+    pLamp->addComponent<SceneComponent>();
+
+    GameObject*              pLogic   = manager.createGameObject( hashed_string( "Logic" ) );
+    GimmickCircuitComponent* pCircuit = pLogic->addComponent<GimmickCircuitComponent>();
+    pCircuit->addNode( "beam", "Laser", "range=10; direction=1 0 0", pEmitter->getHandle() );
+    pCircuit->addNode( "near", "Proximity", "radius=5; tag=Player; planar=1", pEmitter->getHandle() );
+    pCircuit->addNode( "hazard", "Hazard", "onTime=1; offTime=1; damage=7; damageInterval=0.5", pZone->getHandle() );
+    pCircuit->addNode( "lamp", "Enable", "", pLamp->getHandle() );
+    pCircuit->addWire( "beam.Blocked", "lamp.Enable", true );
+    SW_ASSERT_TRUE( pCircuit->rebuild() );
+    const int32 beam      = pCircuit->findNode( "beam" );
+    const int32 proximity = pCircuit->findNode( "near" );
+
+    manager.beginPlay();
+    GimmickSceneTestInternal::tickFrames( manager, 3 );
+    SW_EXPECT_FALSE( pCircuit->getCircuit().getOutput( beam, hashed_string( "Blocked" ) ) );
+    SW_EXPECT_FALSE( pCircuit->getCircuit().getOutput( proximity, hashed_string( "Near" ) ) );
+    SW_EXPECT_TRUE( pLamp->isActive() );
+
+    pBlocker->getPrimarySceneComponent()->setLocalPosition( float3{ 5.0f, 0.0f, 0.0f } ); // 광선 위
+    pSeeker->getPrimarySceneComponent()->setLocalPosition( float3{ 3.0f, 0.0f, 30.0f } ); // XY 거리 3(Z 는 그리기 순서)
+    GimmickSceneTestInternal::tickFrames( manager, 4 );
+    SW_EXPECT_TRUE( pCircuit->getCircuit().getOutput( beam, hashed_string( "Blocked" ) ) );
+    SW_EXPECT_TRUE( pCircuit->getCircuit().getOutput( proximity, hashed_string( "Near" ) ) );
+    SW_EXPECT_FALSE( pLamp->isActive() ); // 광선이 막히면 끈다
+
+    // 위험 지대 — 1 초 켜짐 · 1 초 꺼짐, 켜진 동안 0.5 초마다 7(켜지는 걸음 포함). 걸음 7..126 에는 30 · 120 걸음의 두 번이다
+    // (첫 켜짐 0 걸음에는 아직 겹친 것이 없다 — 겹침은 첫 물리 step 뒤에 온다).
+    (void)pVictim->getComponent<GimmickSensorComponent>()->consumeDamage();
+    GimmickSceneTestInternal::tickFrames( manager, 120 );
+    SW_EXPECT_NEAR_EQUAL( 14.0f, pVictim->getComponent<GimmickSensorComponent>()->consumeDamage(), 1.0e-3f );
+    manager.endPlay();
+}
