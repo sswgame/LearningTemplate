@@ -3,6 +3,7 @@
 #include "Engine/Input/InputManager.h"
 
 #if defined( SW_PLATFORM_LINUX )
+    #include "Core/Common/X11Headers.h"
     #include "Core/String/fixed_string.h"
 
     #include "Engine/Input/Devices/GamepadDevice.h"
@@ -15,6 +16,8 @@
     #include "Engine/Window/NativeWindowEvent.h"
 
     #include <X11/XKBlib.h>
+
+    #include "Core/Common/X11MacroUndef.h"
 
 namespace sw
 {

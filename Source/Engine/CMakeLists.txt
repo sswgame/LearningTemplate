@@ -252,6 +252,9 @@ endif()
 # `Naming/DuplicateInternalHelper` 가 그것을 검사한다. 목록이 아니라 린트가 지킨다.
 #
 # 다시 넣고 싶어지면 먼저 `cmake --build --preset CI-Debug` 로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
+#
+# 매크로는 이름 규칙으로 못 막는다. X11 을 include 하는 .cpp(`Convex` · `None` … 매크로)는 리눅스에서 `sw_setUnityBuild` 가
+# include 줄을 보고 저절로 묶음에서 뺀다 — 이것도 목록이 아니다(`cmake/Modules/Options/UnityBuild.cmake`).
 # ------------------------------------------------------------------------------
 if(COMMAND sw_setUnityBuild)
     sw_setUnityBuild(Engine BATCH_SIZE 12)

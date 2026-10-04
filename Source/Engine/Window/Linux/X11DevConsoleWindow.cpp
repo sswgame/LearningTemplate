@@ -13,6 +13,7 @@
     #include "Engine/Window/IWindow.h"
 
     #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/X11Headers.h"
 
 namespace sw
 {

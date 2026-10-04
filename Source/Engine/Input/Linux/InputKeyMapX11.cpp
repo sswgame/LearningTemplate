@@ -3,7 +3,7 @@
 #include "Engine/Input/InputKeyMap.h"
 
 #if defined( SW_PLATFORM_LINUX )
-    #include "Core/Common/PlatformOsHeaders.h"
+    #include "Core/Common/X11Headers.h"
 
 namespace sw
 {

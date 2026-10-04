@@ -85,6 +85,7 @@ Scripts/
   │     │     ├── CheckTextureFolders.py      # 런타임 textures/ 에는 DDS 만, 원본 이미지는 textures_raw/ 에만
   │     │     ├── CheckAssetRules.py          # 에셋 검증 규칙의 오류 심각도(이름 · 텍스처 · 메시 예산 · 참조 · 머티리얼 · 컴포넌트 · id · guid · 팩 규칙)
   │     │     ├── CheckTargetMacros.py        # 플랫폼 · 아키텍처 · 컴파일러를 SW_* 매크로로만 묻기 (컴파일러 내장 매크로 금지)
+  │     │     ├── CheckX11Isolation.py        # X11 헤더는 X11 구현 .cpp 에서만 · 뒤에 매크로 지우기 · 서드파티와 한 TU 에 두지 않기
   │     │     ├── CheckCookContract.py        # 쿠커가 쿠킹 표대로 고르는지
   │     │     ├── CheckShaderConventions.py   # HLSL 명명 규칙(AGENTS.md 의 HLSL 절)
   │     │     ├── CheckCmakeConventions.py    # CMake 명명 규칙

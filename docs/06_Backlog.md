@@ -686,6 +686,9 @@ cd build/Ninja-Debug/Bin
   스택을 뜬다. 리눅스 파일 하나는 `clang++ -fsyntax-only -DSW_PLATFORM_LINUX … -include Source/Core/pch.h <file>` 로 검사할 수 있다.
 - **Ubuntu 26.04 는 `libxml2.so.2` 가 없어 번들 `ld.lld` 가 뜨지 못한다** — 시스템 lld 를 `--ld-path=/usr/bin/ld.lld` 로 EXE · SHARED · MODULE 세 링커 플래그 모두에
   (`SetupLinuxDevEnvironment.py` 가 안내한다). 리눅스 LLVM 은 `/usr/lib/llvm-*` glob 자연순 내림차순으로 찾는다(손목록은 새 배포판을 비켜간다).
+- **X11 헤더는 X11 을 쓰는 `.cpp` 에서만**(`Core/Common/X11Headers.h`, 게이트 `CheckX11Isolation.py`). `PlatformOsHeaders.h` 가 X11 을 들고 있을 때 PCH 로
+  모든 TU 에 `Convex` · `None` 같은 매크로가 퍼져 Jolt(`EShapeType::Convex`)가 리눅스 다섯 잡을 세웠다 — Windows 빌드는 원리상 못 본다. 유니티 빌드는 X11 `.cpp` 를
+  include 줄을 보고 묶음에서 뺀다(`sw_skipUnityForX11Sources`).
 - **리눅스 CI 는 ubuntu-22.04 의 `libclang-dev`(16 미만)다.** 파서에 새 libclang API 를 쓰면 리눅스 잡만 선다 — `CINDEX_VERSION` 으로 가른다. CI 러너 파이썬은 3.10 이라
   f-string 식 안의 백슬래시 · 여러 줄 식이 configure 를 죽인다(`CheckPythonMinimumVersion.py`). GH Windows 러너는 cp1252 라 한글을 print 하는 스크립트가 빌드째 죽는다
   (증상: `sccache stats: 0 hits, 0 misses`) — 스크립트는 `Scripts/common` 을 import 한다(UTF-8 stdout). 재현은 `PYTHONIOENCODING=cp1252`.

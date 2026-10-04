@@ -2,6 +2,8 @@
  * @file PlatformOsHeaders.h
  * @brief OS 시스템 헤더만 포함합니다. DirectX · Vulkan · DXC 는 넣지 않습니다.
  * @note 그래픽 API 헤더는 Engine/Common/EnginePlatformHeaders.h 에 있습니다.
+ * @note X11 은 넣지 않습니다 — 이 헤더는 PCH 를 거쳐 모든 TU 에 들어가므로, X11 의 흔한 이름 매크로(`Convex` · `None` …)가
+ *       서드파티 헤더까지 덮습니다. X11 을 쓰는 `.cpp` 가 `Core/Common/X11Headers.h` 를 직접 include 합니다.
  */
 #pragma once
 // ------------------------------------------------------------------------------
@@ -48,14 +50,8 @@
     #include <sys/wait.h>
     #include <unistd.h>
 
-    #include <X11/Xatom.h>
-    #include <X11/Xlib.h>
-    #include <X11/Xutil.h>
-    #include <X11/keysym.h>
     #include <sys/eventfd.h>
     #include <sys/inotify.h>
-
-    #include "Core/Common/X11MacroUndef.h"
 #else
     #error "NOT SUPPORTED PLATFORM"
 #endif
