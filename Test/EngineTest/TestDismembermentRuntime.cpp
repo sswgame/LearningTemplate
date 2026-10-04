@@ -34,8 +34,8 @@ namespace
         static constexpr float32     kFrame        = 1.0f / 60.0f;
         static constexpr const utf8* kMeshPath     = "game/shooter3d/models/kaykit/skeleton_warrior.mesh";
         static constexpr const utf8* kSkeletonPath = "game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.json";
-        static constexpr const utf8* kPhysicsPath  = "game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.physics.xml";
-        static constexpr const utf8* kRegionPath   = "game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.fit.xml";
+        static constexpr const utf8* kPhysicsPath  = "game/shooter3d/characters/skeleton_warrior/skeleton_warrior.physics.xml";
+        static constexpr const utf8* kRegionPath   = "game/shooter3d/characters/skeleton_warrior/skeleton_warrior.fit.xml";
 
         static void tickFor( GameObjectManager& manager, uint32 frameCount )
         {

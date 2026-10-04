@@ -111,5 +111,6 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 플래그에 기대고 있어 타깃·플래그 이름은 바꾸지 않습니다.
 
 그래서 파일을 나눠 두었습니다 — `EmptyGame` 은 작은 템플릿이고, 벤치는 `BenchScene`(+ 틱 안에서 위치를 쓰는
-`BenchMoverComponent`, `-gv_benchTickMovers=N`)에 전부 들어 있습니다. 새 게임을 시작할 때 지울 경계가 파일 경계와 같아야 하기 때문입니다.
+`BenchMoverComponent`, `-gv_benchTickMovers=N`) · 전투 연출(`BenchCombatComponent`, `-gv_benchCombat=1` — KayKit 스켈레톤이 걸으며 발소리 알림 →
+머리 · 가슴 맞음(히트 존 · 움찔) → 180 프레임 치명적 맞음(래그돌 · 손 소켓의 칼이 물리로 떨어짐) → 900 프레임 기상, 로그 `[BenchCombat]`)에 전부 들어 있습니다. 새 게임을 시작할 때 지울 경계가 파일 경계와 같아야 하기 때문입니다.
 벤치가 아니면 `EmptyGame` 은 첫 씬을 요청합니다(`requestFirstScene`). 에디터가 뜨면 에디터의 시작 씬 요청이 나중이라 그쪽이 열립니다.

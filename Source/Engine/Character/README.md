@@ -110,7 +110,7 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
 - **기상**(`getUp`): 가라앉은 뒤(`isSettled` — 모든 바디가 `_settleSpeed` 보다 느리게 `_settleSeconds`) 골반의 앞이 위를 보면 누움 클립, 아니면 엎드림 클립을 고르고,
   그 클립 첫 자세의 골반 → `_partialRootBone` 방향을 래그돌의 것에 맞추도록 오브젝트를 돌리고 골반 아래로 옮긴 뒤 래그돌 자세에서 섞어 돌아옵니다. 클립이 끝나면 `_getUpExitState`.
 - 히트 존: 맞은 바디 → `findHitZone` → 물리 에셋 바디의 `_hitZone`(이름 · 피해 배율). `CharacterHitUtil::resolveHitZone` 이 래그돌을 먼저 봅니다.
-- KayKit 스켈레톤 리그(41 뼈)의 물리 에셋: `Resource/game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.physics.xml`(16 바디 — 머리 ×2 · 몸통 · 골반 · 팔 ×0.6 ·
+- KayKit 스켈레톤 리그(41 뼈)의 물리 에셋: `Resource/game/shooter3d/characters/skeleton_warrior/skeleton_warrior.physics.xml`(16 바디 — 머리 ×2 · 몸통 · 골반 · 팔 ×0.6 ·
   다리 ×0.7, 셰이프는 스킨 정점이 그 뼈를 따르는 범위에서 골랐다).
 
 ## 절단 런타임 — `DismembermentComponent`
@@ -126,7 +126,7 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
 4. 표면 상태(`CharacterSurfaceState`, 엔진 기본 채널 표)의 그 영역 `_bloodChannel` = 1 — 머티리얼 파라미터로 싣는 일은 외형 통합의 몫입니다.
 
 자른 자리 캡은 남은 쪽 · 떨어진 쪽이 **정점을 나눠 쓸 때만**(이어진 몸) 생깁니다 — KayKit 해골 · 기사처럼 부위마다 떨어진 껍질인 메시는 캡이 없습니다.
-KayKit 리그의 영역 표: `Resource/game/shooter3d/models/kaykit/skeleton_warrior/skeleton_warrior.fit.xml`(Head · Arm_L/R · Leg_L/R · Torso).
+KayKit 리그의 영역 표: `Resource/game/shooter3d/characters/skeleton_warrior/skeleton_warrior.fit.xml`(Head · Arm_L/R · Leg_L/R · Torso).
 
 ## 맞힘 — `CharacterHitUtil`
 

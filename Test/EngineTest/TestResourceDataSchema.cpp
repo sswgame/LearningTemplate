@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Animation/AnimJsonUtil.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Character/AnimNotifyTable.h"
@@ -29,6 +30,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
+#include "Engine/Utility/Json/JsonDocument.h"
 
 #include "GameFramework/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Ability/AbilityCatalog.h"
@@ -176,6 +178,33 @@ namespace
         static bool                  isPartFit( sw::string_view resourceId ) { return endsWith( resourceId, ".partfit.xml" ); }
         static bool                  isSurfaceChannels( sw::string_view resourceId ) { return endsWith( resourceId, ".surfacechannels.xml" ); }
         static bool                  isNotifyTable( sw::string_view resourceId ) { return endsWith( resourceId, ".notifies.xml" ); }
+        static bool                  isClipData( sw::string_view resourceId ) { return endsWith( resourceId, ".clips.json" ); }
+        /** @brief 모델 임포트 곁 데이터(`<모델>.clips.json`) — 임포터(`ModelImporter::readClipData`)와 같은 키 규칙(모르는 키는 오류)으로 본다. */
+        static bool loadClipData( const sw::string& resourceId )
+        {
+            sw::JsonDocument document;
+            if ( document.loadResource( resourceId ) == false )
+                return false;
+            const sw::JsonValue root = document.getRoot();
+            if ( sw::AnimJsonUtil::hasOnlyKnownKeys( root, { "clips" }, resourceId ) == false || root.get( "clips" ).isObject() == false )
+                return false;
+            const sw::JsonValue clips = root.get( "clips" );
+            for ( const sw::string& clipName : clips.getMemberNames() )
+            {
+                const sw::JsonValue clip = clips.get( clipName, false );
+                if ( sw::AnimJsonUtil::hasOnlyKnownKeys( clip, { "loop", "notifies", "curves" }, resourceId ) == false )
+                    return false;
+                const sw::JsonValue notifies = clip.get( "notifies" );
+                for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
+                {
+                    const sw::JsonValue notify = notifies.at( notifyIndex );
+                    if ( sw::AnimJsonUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, resourceId ) == false || notify.get( "name" ).isString() == false ||
+                         notify.get( "time" ).isNumber() == false )
+                        return false;
+                }
+            }
+            return true;
+        }
         /** @brief 알림 표 — 처리기 이름 · 인자를 엔진 기본 처리기 등록부에 대조한다. */
         static bool loadNotifyTable( const sw::string& resourceId )
         {
@@ -287,6 +316,7 @@ namespace
             {        "socketkinds",         &isSocketKinds,       &loadCatalog<sw::SocketKindTable>},
             {            "sockets",             &isSockets,                            &loadSockets},
             {        "notifytable",         &isNotifyTable,                        &loadNotifyTable},
+            {           "clipdata",            &isClipData,                           &loadClipData},
             {      "referencepose",       &isReferencePose, &loadCatalog<sw::ReferencePoseOverride>},
             {          "bodyshape",           &isBodyShape,          &loadCatalog<sw::BodyShapeSet>},
             {          "fittables",           &isFitTables,                          &loadFitTables},
