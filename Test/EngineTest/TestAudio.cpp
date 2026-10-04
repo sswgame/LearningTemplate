@@ -3,8 +3,10 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -413,5 +415,77 @@ SW_TEST_CASE( AudioSystemTest, FloatAndExtensibleWavsDecode )
     SW_EXPECT_TRUE( pAudioSystem->preload( extFloatPath ) );
     SW_EXPECT_FALSE( pAudioSystem->preload( "NonExistentSoundFile.wav" ) );
 
+    pAudioSystem->shutdown();
+}
+
+/**
+ * @brief [AudioSystemTest] 공통 디코더가 WAV 의 형식 칸(채널 · 비트 · float · 확장형)을 그대로 옮긴다
+ * @details 재생 백엔드는 이 칸을 자기 형식 구조체로 옮기기만 한다. 여기서 틀리면 소리가 빠르거나 찢어진 채 나고, 로그에는 아무것도 남지 않는다.
+ */
+SW_TEST_CASE( AudioSystemTest, DecoderKeepsWavFormatFields )
+{
+    const sw::string extensiblePath = test::makeTempPath( "decode_ext24_6ch.wav" );
+    const sw::string floatPath      = test::makeTempPath( "decode_float32.wav" );
+    SW_ASSERT_TRUE( writeFormattedWav( extensiblePath, 1u, 6u, 24u, 1u ) );
+    SW_ASSERT_TRUE( writeFormattedWav( floatPath, 3u, 2u, 32u, 0u ) );
+
+    sw::vector<uint8> listBytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( extensiblePath, listBytes ) );
+    sw::AudioPcm pcm;
+    SW_ASSERT_TRUE( sw::AudioClipDecoder::decode( extensiblePath, listBytes.data(), listBytes.size(), pcm ) );
+    SW_EXPECT_EQUAL( 6u, static_cast<uint32>( pcm._channelCount ) );
+    SW_EXPECT_EQUAL( 24u, static_cast<uint32>( pcm._bitsPerSample ) );
+    SW_EXPECT_EQUAL( 48000u, pcm._sampleRate );
+    SW_EXPECT_EQUAL( 0x3Fu, pcm._channelMask );
+    SW_EXPECT_TRUE( pcm._bExtensible == SW_TRUE );
+    SW_EXPECT_TRUE( pcm._bFloat == SW_FALSE );
+    SW_EXPECT_EQUAL( static_cast<size_t>( pcm.getBlockAlign() ) * 64u, pcm._listData.size() );
+
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( floatPath, listBytes ) );
+    SW_ASSERT_TRUE( sw::AudioClipDecoder::decodeWav( listBytes.data(), listBytes.size(), pcm ) );
+    SW_EXPECT_TRUE( pcm._bFloat == SW_TRUE );
+    SW_EXPECT_TRUE( pcm._bExtensible == SW_FALSE );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( pcm._channelCount ) );
+
+    // 잘린 파일은 거부한다(데이터 청크 길이가 파일보다 길다).
+    listBytes.resize( listBytes.size() / 2 );
+    SW_EXPECT_FALSE( sw::AudioClipDecoder::decodeWav( listBytes.data(), listBytes.size(), pcm ) );
+
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( extensiblePath ) );
+    SW_EXPECT_TRUE( sw::FileUtil::removeFile( floatPath ) );
+}
+
+/**
+ * @brief [AudioSystemTest] OGG Vorbis 를 16 비트 PCM 으로 푼다 — 팩 안에서도 되도록 바이트에서 푼다
+ * @details Media Foundation 은 Vorbis 를 모른다. 게임 효과음(Kenney 팩)이 OGG 라 이 디코더가 없으면 재생이 조용히 실패한다.
+ *          시험 자료는 `game/empty/sounds/click.ogg`(Kenney CC0)다.
+ */
+SW_TEST_CASE( AudioSystemTest, OggVorbisDecodesToPcm )
+{
+    sw::vector<uint8> listBytes;
+    SW_ASSERT_TRUE( sw::ResourceUtil::readBinaryResource( "game/empty/sounds/click.ogg", listBytes ) );
+
+    sw::AudioPcm pcm;
+    SW_ASSERT_TRUE( sw::AudioClipDecoder::decode( "game/empty/sounds/click.ogg", listBytes.data(), listBytes.size(), pcm ) );
+    SW_EXPECT_TRUE( pcm._channelCount == 1u || pcm._channelCount == 2u );
+    SW_EXPECT_TRUE( pcm._sampleRate >= 22050u && pcm._sampleRate <= 48000u );
+    SW_EXPECT_EQUAL( 16u, static_cast<uint32>( pcm._bitsPerSample ) );
+    SW_EXPECT_TRUE( pcm._bFloat == SW_FALSE );
+    // 클릭 하나도 수 ms 는 된다 — 프레임이 없으면 머리만 읽고 소리는 풀지 않은 것이다. (압축 크기와는 견주지 않는다: 짧은 소리는
+    // Vorbis 머리의 코드북이 파일 대부분이라 풀어도 더 작을 수 있다.)
+    const size_t frameCount = pcm._listData.size() / pcm.getBlockAlign();
+    SW_EXPECT_TRUE( frameCount * 1000u / pcm._sampleRate >= 5u );
+    SW_EXPECT_EQUAL( size_t{ 0 }, pcm._listData.size() % pcm.getBlockAlign() );
+
+    // OGG 가 아닌 바이트 · 머리만 남은 바이트는 거부한다.
+    sw::AudioPcm            rejected;
+    const sw::vector<uint8> listGarbage( 256, uint8{ 0x5A } );
+    SW_EXPECT_FALSE( sw::AudioClipDecoder::decodeOgg( listGarbage.data(), listGarbage.size(), rejected ) );
+    SW_EXPECT_FALSE( sw::AudioClipDecoder::decodeOgg( listBytes.data(), 64, rejected ) );
+
+    // 재생 시스템도 같은 파일을 읽는다(소리를 내지 않는 구성은 파일이 있는지만 본다).
+    sw::unique_ptr<sw::IAudioSystem> pAudioSystem = sw::IAudioSystem::create();
+    SW_ASSERT_TRUE( pAudioSystem->initialize() );
+    SW_EXPECT_TRUE( pAudioSystem->preload( "game/empty/sounds/click.ogg" ) );
     pAudioSystem->shutdown();
 }

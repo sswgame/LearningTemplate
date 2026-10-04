@@ -5,6 +5,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 
+#include "Engine/Audio/AudioClipDecoder.h"
+
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Task/TaskManager.h"
 
@@ -27,9 +29,6 @@ namespace sw
                 WAVEFORMATEXTENSIBLE _format{};
                 vector<uint8>        _listData;
             };
-
-            /** @brief 확장형 WAV 의 하위 형식 GUID 에서 "PCM · IEEE float" 뒤 12 바이트입니다(KSDATAFORMAT_SUBTYPE_* 공통 꼬리). */
-            inline static constexpr uint8 kArrSubFormatTail[12] = { 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 };
 
             struct VoiceBuffer
             {
@@ -69,110 +68,50 @@ namespace sw
                 }
             };
 
-            /**
-             * @brief 리틀 엔디언 16비트 정수를 정렬과 상관없이 안전하게 읽습니다.
-             */
-            static inline uint16 readUint16LE( const uint8* pBytes )
+            /** @brief 공통 디코더의 결과를 XAudio2 형식으로 옮깁니다. 확장형이었으면 확장형으로 넘깁니다(24 비트 · 다채널 · float). */
+            static void movePcmToClip( AudioPcm&& pcm, PcmClip& outClip )
             {
-                return static_cast<uint16>( pBytes[0] ) |
-                       static_cast<uint16>( static_cast<uint16>( pBytes[1] ) << 8 );
-            }
-
-            /**
-             * @brief 리틀 엔디언 32비트 정수를 정렬과 상관없이 안전하게 읽습니다.
-             */
-            static inline uint32 readUint32LE( const uint8* pBytes )
-            {
-                return static_cast<uint32>( pBytes[0] ) |
-                       ( static_cast<uint32>( pBytes[1] ) << 8 ) |
-                       ( static_cast<uint32>( pBytes[2] ) << 16 ) |
-                       ( static_cast<uint32>( pBytes[3] ) << 24 );
-            }
-
-            /**
-             * @brief 메모리 버퍼의 표준 RIFF WAV 데이터를 파싱해 PCM 데이터를 뽑습니다.
-             */
-            [[nodiscard]] static bool parseWavPcmMemory( const uint8* pBytes, size_t byteCount, PcmClip& outClip )
-            {
-                if ( pBytes == nullptr || byteCount < 44 )
-                    return false;
-
-                if ( Memory::compare( pBytes, "RIFF", 4 ) != 0 || Memory::compare( pBytes + 8, "WAVE", 4 ) != 0 )
-                    return false;
-
-                size_t               offset = 12;
-                const uint8*         pData  = nullptr;
-                uint32               dataSize{ 0 };
                 WAVEFORMATEXTENSIBLE fmt{};
-                bool                 bHaveFmt{ false };
-                uint16               baseFormatTag{ 0 }; ///< PCM · IEEE float — 확장형이면 하위 형식에서 읽는다
-
-                while ( offset + 8 <= byteCount )
+                fmt.Format.wFormatTag      = pcm._bFloat ? WAVE_FORMAT_IEEE_FLOAT : WAVE_FORMAT_PCM;
+                fmt.Format.nChannels       = pcm._channelCount;
+                fmt.Format.nSamplesPerSec  = pcm._sampleRate;
+                fmt.Format.wBitsPerSample  = pcm._bitsPerSample;
+                fmt.Format.nBlockAlign     = pcm.getBlockAlign();
+                fmt.Format.nAvgBytesPerSec = pcm._sampleRate * fmt.Format.nBlockAlign;
+                fmt.Format.cbSize          = 0;
+                if ( pcm._bExtensible )
                 {
-                    const utf8*  pChunkId  = reinterpret_cast<const utf8*>( pBytes + offset );
-                    const uint32 chunkSize = readUint32LE( pBytes + offset + 4 );
-                    offset += 8;
-
-                    if ( offset + chunkSize > byteCount )
-                        break;
-
-                    if ( Memory::compare( pChunkId, "fmt ", 4 ) == 0 && chunkSize >= 16 )
-                    {
-                        const uint8* pFmt          = pBytes + offset;
-                        fmt.Format.wFormatTag      = readUint16LE( pFmt + 0 );
-                        fmt.Format.nChannels       = readUint16LE( pFmt + 2 );
-                        fmt.Format.nSamplesPerSec  = readUint32LE( pFmt + 4 );
-                        fmt.Format.nAvgBytesPerSec = readUint32LE( pFmt + 8 );
-                        fmt.Format.nBlockAlign     = readUint16LE( pFmt + 12 );
-                        fmt.Format.wBitsPerSample  = readUint16LE( pFmt + 14 );
-                        fmt.Format.cbSize          = 0;
-                        baseFormatTag              = fmt.Format.wFormatTag;
-                        // 확장형(0xFFFE): 유효 비트 · 채널 마스크 · 하위 형식 GUID 가 뒤에 온다. 하위 형식이 PCM · IEEE float 일 때만 받는다.
-                        if ( fmt.Format.wFormatTag == WAVE_FORMAT_EXTENSIBLE )
-                        {
-                            baseFormatTag = 0;
-                            if ( chunkSize >= 40 && Memory::compare( pFmt + 28, kArrSubFormatTail, sizeof( kArrSubFormatTail ) ) == 0 )
-                            {
-                                fmt.Format.cbSize               = 22;
-                                fmt.Samples.wValidBitsPerSample = readUint16LE( pFmt + 18 );
-                                fmt.dwChannelMask               = readUint32LE( pFmt + 20 );
-                                Memory::copy( &fmt.SubFormat, pFmt + 24, sizeof( fmt.SubFormat ) );
-                                baseFormatTag = static_cast<uint16>( readUint32LE( pFmt + 24 ) );
-                            }
-                        }
-                        bHaveFmt = true;
-                    }
-                    else if ( Memory::compare( pChunkId, "data", 4 ) == 0 )
-                    {
-                        pData    = pBytes + offset;
-                        dataSize = chunkSize;
-                    }
-                    offset += chunkSize + ( chunkSize & 1u );
+                    fmt.Format.wFormatTag           = WAVE_FORMAT_EXTENSIBLE;
+                    fmt.Format.cbSize               = 22;
+                    fmt.Samples.wValidBitsPerSample = pcm._validBitsPerSample;
+                    fmt.dwChannelMask               = pcm._channelMask;
+                    // KSDATAFORMAT_SUBTYPE_PCM · _IEEE_FLOAT 와 같은 값이다(Data1 이 형식 태그, 나머지는 공통). ksmedia.h 의 GUID 정의를 끌어오지 않는다.
+                    fmt.SubFormat = GUID{
+                        pcm._bFloat ? DWORD{ WAVE_FORMAT_IEEE_FLOAT }
+                                    : DWORD{ WAVE_FORMAT_PCM },
+                        0x0000,
+                        0x0010,
+                        { 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 }
+                    };
                 }
-
-                if ( bHaveFmt == false || pData == nullptr || dataSize == 0 )
-                    return false;
-                // PCM 과 IEEE float(확장형 포함)를 받는다(24 비트 · 다채널 · 부동소수 WAV). XAudio2 는 둘 다 그대로 재생한다.
-                if ( ( baseFormatTag != WAVE_FORMAT_PCM && baseFormatTag != WAVE_FORMAT_IEEE_FLOAT ) || fmt.Format.nChannels == 0 ||
-                     fmt.Format.nSamplesPerSec == 0 || fmt.Format.nBlockAlign == 0 )
-                    return false;
-
-                outClip._format = fmt;
-                outClip._listData.assign( pData, pData + dataSize );
-                return true;
+                outClip._format   = fmt;
+                outClip._listData = std::move( pcm._listData );
             }
 
             /**
-             * @brief 표준 RIFF WAV 파일의 fmt · data 청크를 파싱해 PCM 데이터를 뽑습니다.
+             * @brief WAV · OGG 를 공통 디코더로 풉니다. 바이트에서 풀므로 팩 안의 파일도 됩니다.
              * @param path 리소스 상대 경로와 절대 경로를 모두 받습니다. 리소스로 먼저 찾고, 없으면 파일로 읽습니다.
              */
-            [[nodiscard]] static bool loadWavPcm( string_view path, PcmClip& outClip )
+            [[nodiscard]] static bool loadDecodedClip( string_view path, PcmClip& outClip )
             {
                 vector<uint8> listFile;
                 if ( ResourceUtil::readBinaryResource( path, listFile ) == false && FileUtil::readFile( path, listFile ) == false )
                     return false;
-
-                return parseWavPcmMemory( listFile.data(), listFile.size(), outClip );
+                AudioPcm pcm;
+                if ( AudioClipDecoder::decode( path, listFile.data(), listFile.size(), pcm ) == false )
+                    return false;
+                movePcmToClip( std::move( pcm ), outClip );
+                return true;
             }
 
             /**
@@ -259,9 +198,15 @@ namespace sw
             /** @brief 확장자에 맞는 디코더로 PCM 을 뽑습니다. */
             [[nodiscard]] static bool loadClip( string_view path, PcmClip& outClip )
             {
-                // WAV 는 직접 읽는다(팩 안에서도 된다). 직접 못 읽는 WAV(ADPCM 등)는 Media Foundation 에 넘긴다.
-                if ( FileUtil::hasExtension( path, ".wav" ) && loadWavPcm( path, outClip ) )
-                    return true;
+                // WAV · OGG 는 공통 디코더가 읽는다(팩 안에서도 된다). 못 푼 OGG 는 실패다 — Media Foundation 은 Vorbis 를 모른다.
+                // 공통 디코더가 못 읽는 WAV(ADPCM 등)와 다른 형식(MP3 등)은 Media Foundation 에 넘긴다.
+                if ( AudioClipDecoder::isSupportedExtension( path ) )
+                {
+                    if ( loadDecodedClip( path, outClip ) )
+                        return true;
+                    if ( FileUtil::hasExtension( path, ".ogg" ) )
+                        return false;
+                }
 
                 string absPath = ResourceUtil::getResourcePath( path );
                 if ( absPath.empty() )
