@@ -18,11 +18,6 @@ namespace sw
 
     Shooter3DGame::~Shooter3DGame() = default;
 
-    void Shooter3DGame::configureBootstrap( BootstrapConfig& outConfig )
-    {
-        outConfig._packRoot = "game/shooter3d";
-    }
-
     bool Shooter3DGame::onInitialize()
     {
         if ( _weaponCatalog.loadFromResource( "game/shooter3d/data/weapons.xml" ) == false )

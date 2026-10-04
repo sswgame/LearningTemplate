@@ -18,11 +18,6 @@ namespace sw
 
     HarvestValleyGame::~HarvestValleyGame() = default;
 
-    void HarvestValleyGame::configureBootstrap( BootstrapConfig& outConfig )
-    {
-        outConfig._packRoot = "game/harvestvalley";
-    }
-
     bool HarvestValleyGame::onInitialize()
     {
         if ( _cropCatalog.loadFromResource( "game/harvestvalley/data/crops.xml" ) == false )

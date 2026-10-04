@@ -20,7 +20,6 @@ namespace sw
         ~ThemeParkTycoonGame() override;
 
     protected:
-        void configureBootstrap( BootstrapConfig& outConfig ) override;
         bool onInitialize() override;
         void onShutdown() override;
         void onUpdate( float32 deltaTime ) override;

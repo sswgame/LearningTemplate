@@ -48,8 +48,9 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
    (아래 "Empty 는 왜 비어 있지 않은가" 참고).
 3. **필요한 키트 연결하기**: `MyGame/CMakeLists.txt` 의 `sw_addGameModule(SWGame KITS ...)` 에
    필요한 키트를 적습니다.
-4. **게임 리소스 폴더 만들기**: `Resource/game/mygame/` 을 만들고, `configureBootstrap` 에서
-   `outConfig._packRoot = "game/mygame";` 로 지정합니다.
+4. **게임 리소스 폴더 · 프리셋 만들기**: `Resource/game/mygame/` 을 만들고, 게임 프리셋 `Config/Game/MyGame.json`(파일 이름 = 게임 폴더 이름)에
+   `_packRoot` 를 `"game/mygame"` 로 적습니다. 시작 씬은 프리셋의 `_startupScene` 또는 팩의 `data/gamesettings.xml` `startMap` 입니다.
+   프리셋이 없으면 configure 가 멈춥니다.
 5. **CMake 활성화**: `-DSW_ACTIVE_GAME=MyGame`.
 6. **키트를 추가했다면**: 3번에서 새 키트를 링크했다면 `Config/App/AppConfig.json` 의
    `_listGameKitModule` 에도 넣어야 그 키트가 핫리로드됩니다. 안 넣으면 빌드·실행은 되고

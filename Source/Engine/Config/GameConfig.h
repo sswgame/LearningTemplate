@@ -7,8 +7,9 @@
 namespace sw
 {
     /**
-     * @brief Dev 호스트의 활성 게임 팩 선택입니다(배포 콘텐츠는 Resource/.../data).
-     * @details Shipping 은 생성된 JSON 기본값을 쓰며 디스크의 Config/Game 을 요구하지 않습니다.
+     * @brief 활성 게임의 프리셋(`Config/Game/<SW_ACTIVE_GAME>.json`)입니다 — 팩 루트 · gamesettings 파일 · 시작 씬.
+     * @details 빌드가 `SW_ACTIVE_GAME` 으로 프리셋 파일을 고른다(`config::kFileRuntimeGameConfig`). Shipping 은 그 파일을 생성 헤더로 구워 넣어
+     *          디스크의 Config/Game 을 요구하지 않습니다. 게임마다 하나라, 게임을 바꿔도 다른 게임의 팩 루트 · 시작 씬을 읽지 않습니다.
      */
     REFLECT()
     struct SW_API GameConfig : IConfig

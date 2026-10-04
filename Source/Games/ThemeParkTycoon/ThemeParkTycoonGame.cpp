@@ -15,11 +15,6 @@ namespace sw
 
     ThemeParkTycoonGame::~ThemeParkTycoonGame() = default;
 
-    void ThemeParkTycoonGame::configureBootstrap( BootstrapConfig& outConfig )
-    {
-        outConfig._packRoot = "game/themepark";
-    }
-
     bool ThemeParkTycoonGame::onInitialize()
     {
         if ( _parkWorld.loadData( "game/themepark/data/coasters.xml", "game/themepark/data/rides.xml" ) == false )

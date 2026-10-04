@@ -18,11 +18,6 @@ namespace sw
 
     VoxelCraftGame::~VoxelCraftGame() = default;
 
-    void VoxelCraftGame::configureBootstrap( BootstrapConfig& outConfig )
-    {
-        outConfig._packRoot = "game/voxelcraft";
-    }
-
     bool VoxelCraftGame::onInitialize()
     {
         if ( _blockCatalog.loadFromResource( "game/voxelcraft/data/blocks.xml" ) == false )

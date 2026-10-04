@@ -9,6 +9,16 @@ include_guard(GLOBAL)
 # 1~3. Constants.py 의 상수를 CMake 변수로 (SW_GENERATED_CMAKE_VARS 도 거기서 정한다)
 include("${CMAKE_CURRENT_LIST_DIR}/LoadConfigConstants.cmake")
 
+# 3-1. 활성 게임의 프리셋(Config/Game/<SW_ACTIVE_GAME>.json) — 팩 루트 · gamesettings · 시작 씬. 게임을 바꾸는 것은 프리셋을 바꾸는 것이다.
+set(SW_FILE_RUNTIME_GAME_CONFIG "${SW_DIR_RUNTIME_GAME_PRESET}/${SW_ACTIVE_GAME}.json")
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}")
+	message(FATAL_ERROR
+		"SW_ACTIVE_GAME='${SW_ACTIVE_GAME}' has no game preset ${SW_FILE_RUNTIME_GAME_CONFIG}\n"
+		"  Add it next to the other presets in ${SW_DIR_RUNTIME_GAME_PRESET}/ (_packRoot, _gameSettingsFile, _startupScene)")
+endif()
+# 프리셋을 고치면 생성 헤더(Shipping 기본값)도 다시 만든다.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}")
+
 # 4. 가져온 CMake 변수들을 바탕으로 C++ 헤더(ConfigConstants.h) 생성
 configure_file(
 	"${CMAKE_CURRENT_LIST_DIR}/ConfigConstants.h.in"
@@ -41,6 +51,6 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 # 6. Shipping/Dev 폴백용 호스트 기본값 생성 (커밋된 Engine/Game Config JSON)
 set(SW_SHIPPING_HOST_DEFAULTS_H "${CMAKE_BINARY_DIR}/generated/sw/config/ShippingHostDefaults.h")
 sw_executePythonScript("Scripts/generate/GenerateShippingHostDefaults.py"
-	ARGS "${SW_SHIPPING_HOST_DEFAULTS_H}"
+	ARGS "${SW_SHIPPING_HOST_DEFAULTS_H}" "${SW_FILE_RUNTIME_GAME_CONFIG}"
 	REQUIRED
 )
