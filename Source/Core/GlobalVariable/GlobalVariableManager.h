@@ -35,18 +35,56 @@ namespace sw
     };
 
     /**
-     * @brief 테스트용 전역 변수(`SW_TEST_GLOBAL_VARIABLE_*`)를 Shipping 에도 남길지입니다. 매크로의 마지막 선택 인자
-     *        `SW_KEEP_IN_SHIPPING` 으로만 씁니다.
-     * @details 생략하면 Shipping 에서 빠집니다. 빠진 변수는 등록되지 않아 실행 인자로도 에디터로도 바꿀 수 없고, 기본값으로만
-     *          읽힙니다. 배포 실행 파일을 스크립트가 조종하는 스위치(Shipping 검증이 쓰는 `-gv_profileFrames` 같은 것)만 남깁니다.
-     * @note 빠진 변수를 `const` 로 만들지 않는 이유: 같은 TU 안에서 컴파일 시간 상수가 되어, 그 값을 루프 상한으로 쓰는 벤치 코드가
-     *       Shipping 에서만 `-Wtautological-unsigned-zero-compare`(`step < 0` 은 늘 거짓) 경고를 냈습니다. 스위치를 하나 더할 때마다
-     *       Shipping 빌드에서만 드러나는 함정이 되므로, 등록만 빼고 보통 변수로 둡니다.
+     * @brief C++ 타입 → 전역 변수 저장 타입입니다. 정의 매크로가 첫 인자(타입)로 고릅니다. 특수화가 없는 타입은 컴파일 오류입니다.
+     * @details `StorageType` 은 등록 정보의 기본값(`std::variant`)에 담는 타입이고, `kTypeSize` 는 enum 을 쓸 때의 바이트 수입니다.
      */
-    enum class GlobalVariableShipping : uint8
+    template <typename T, typename = void>
+    struct GlobalVariableTraits;
+
+    /** @brief bool 변수입니다. */
+    template <>
+    struct GlobalVariableTraits<bool>
     {
-        Drop,
-        Keep
+        using StorageType                             = bool;
+        static constexpr GlobalVariableType kType     = GlobalVariableType::Boolean;
+        static constexpr uint32             kTypeSize = 4u;
+    };
+
+    /** @brief int32 변수입니다. */
+    template <>
+    struct GlobalVariableTraits<int32>
+    {
+        using StorageType                             = int32;
+        static constexpr GlobalVariableType kType     = GlobalVariableType::Int32;
+        static constexpr uint32             kTypeSize = 4u;
+    };
+
+    /** @brief float32 변수입니다. */
+    template <>
+    struct GlobalVariableTraits<float32>
+    {
+        using StorageType                             = float32;
+        static constexpr GlobalVariableType kType     = GlobalVariableType::Float;
+        static constexpr uint32             kTypeSize = 4u;
+    };
+
+    /** @brief sw::string 변수입니다. */
+    template <>
+    struct GlobalVariableTraits<string>
+    {
+        using StorageType                             = string;
+        static constexpr GlobalVariableType kType     = GlobalVariableType::String;
+        static constexpr uint32             kTypeSize = 4u;
+    };
+
+    /** @brief enum 변수입니다. int32 로 읽고 쓰며, 실제 크기(`sizeof`)만큼만 씁니다. */
+    template <typename T>
+    struct GlobalVariableTraits<T, std::enable_if_t<std::is_enum_v<T>>>
+    {
+        static_assert( sizeof( T ) <= sizeof( int64 ), "global variable enum is wider than 8 bytes" );
+        using StorageType                             = int32;
+        static constexpr GlobalVariableType kType     = GlobalVariableType::Enum;
+        static constexpr uint32             kTypeSize = static_cast<uint32>( sizeof( T ) );
     };
 
     /** @brief 전역 변수 하나의 메타데이터와 현재 값 포인터입니다. */
@@ -61,7 +99,7 @@ namespace sw
         string                                     _moduleName;
         uint32                                     _typeSize{ 4 };
         /**
-         * @brief 테스트용(`SW_TEST_GLOBAL_VARIABLE_*`)이면 true 입니다.
+         * @brief 테스트용(`SW_TEST_GLOBAL_VARIABLE` · `SW_TEST_GLOBAL_VARIABLE_SHIPPED`)이면 true 입니다.
          * @details 에디터 목록과 프리셋에서 빠집니다. 실행 인자(`-gv_*`)와 `findVariable` 은 그대로 됩니다.
          */
         bool _bTestOnly{ false };
@@ -223,155 +261,72 @@ namespace sw
         /** @brief `getHead()` 리스트의 앞에 연결합니다. */
         GlobalVariableRegistrar( const utf8* pName, GlobalVariableType type, void* pData, const std::variant<bool, int32, float32, string>& defaultValue, const utf8* pDescription, const utf8* pEnumType = "", const utf8* pModuleName = "", uint32 typeSize = 4, bool bTestOnly = false );
 
+        /**
+         * @brief 정의 매크로가 부르는 판입니다. 저장 타입 · 크기는 `GlobalVariableTraits<T>` 가, 기본값은 지금 @p variable 의 값이 정합니다.
+         * @details 매크로가 변수를 기본값으로 초기화한 바로 다음 줄에서 만들어지므로(같은 TU 의 정적 초기화는 선언 순서다) 읽는 값이 곧 기본값입니다.
+         *          @p pTypeName 은 매크로 첫 인자의 글(`#type`)이고 enum 일 때만 남깁니다 — 에디터 · 명령줄이 그 이름으로 리플렉션 enum 표를 찾습니다.
+         */
+        template <typename T>
+        GlobalVariableRegistrar( const utf8* pName, T& variable, const utf8* pTypeName, const utf8* pDescription, bool bTestOnly )
+            : GlobalVariableRegistrar( pName, GlobalVariableTraits<T>::kType, &variable,
+                                       static_cast<typename GlobalVariableTraits<T>::StorageType>( variable ), pDescription,
+                                       GlobalVariableTraits<T>::kType == GlobalVariableType::Enum ? pTypeName : "", "",
+                                       GlobalVariableTraits<T>::kTypeSize, bTestOnly )
+        {
+        }
+
         /** @brief 아직 아무도 떼어 가지 않은 등록자들의 리스트 헤드입니다(Engine.dll 이 가진다). 떼어 등록한 쪽이 nullptr 로 비웁니다. */
         static GlobalVariableRegistrar*& getHead();
     };
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// 4) 정의 · 참조 매크로 — 일반(`SW_GLOBAL_VARIABLE_*`)과 테스트용(`SW_TEST_GLOBAL_VARIABLE_*`)
+// 4) 정의 · 참조 매크로 — 첫 인자가 타입이고, 종류는 매크로 이름이 정한다
 // ------------------------------------------------------------------------------
-// 일반: 에디터 목록 · 프리셋 · 실행 인자 모두에 나온다. 런타임에 바꿔 볼 설정(`gv_viewMode`, `gv_rhiBackend` …)이다.
-// 테스트용: 벤치 · 자동화 · 진단 스위치다. 에디터 목록과 프리셋에서 빠지고(`_bTestOnly`), **Shipping 에서도 빠진다** — 그 빌드에서는
-//          등록되지 않아 기본값으로만 읽힌다(GlobalVariableShipping 참고). 배포 실행 파일을 스크립트가 조종해야 하는 것만 마지막 인자로
-//          `SW_KEEP_IN_SHIPPING` 을 준다. 다른 TU 에서 참조할 때도 `SW_EXTERN_TEST_*` 에 같은 인자를 준다 — 참조만 보고도 배포 빌드에서
-//          값을 바꿀 수 있는지 알 수 있게 하려는 것이다(어긋나면 `CheckGlobalVariableKinds` 게이트가 막는다).
+// `SW_GLOBAL_VARIABLE`              일반: 에디터 목록 · 프리셋 · 실행 인자 모두에 나온다. 런타임에 바꿔 볼 설정(`gv_viewMode` …).
+// `SW_TEST_GLOBAL_VARIABLE`         테스트용: 벤치 · 자동화 · 진단 스위치. 에디터 목록 · 프리셋에서 빠지고(`_bTestOnly`), **Shipping 에서는
+//                                   등록되지 않아** 기본값으로만 읽힌다(실행 인자로도 에디터로도 못 바꾼다).
+// `SW_TEST_GLOBAL_VARIABLE_SHIPPED` 테스트용인데 Shipping 에도 등록된다. 배포 실행 파일을 스크립트가 조종하는 스위치(`gv_profileFrames` ·
+//                                   `gv_screenshot*` · `gv_crashTest` …)만 이것으로 둔다.
+// `SW_EXTERN_GLOBAL_VARIABLE`       다른 TU 에서 참조한다. 종류와 상관없이 같다. 타입이 정의와 어긋나면 `CheckGlobalVariableKinds` 게이트가 막는다.
 //
-//     SW_TEST_GLOBAL_VARIABLE_INT( gv_benchMeshes, 0, "…" );                            // Shipping 에서 빠진다
-//     SW_TEST_GLOBAL_VARIABLE_INT( gv_profileFrames, 0, "…", SW_KEEP_IN_SHIPPING );    // Shipping 에 남는다
+//     SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "…" );
+//     SW_GLOBAL_VARIABLE( RHIBackend, gv_rhiBackend, RHIBackend::DirectX12, "…" );   // enum — `#type` 이 리플렉션 enum 이름이다
+//     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMeshes, 0, "…" );
+//     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_profileFrames, 0, "…" );
+//     SW_EXTERN_GLOBAL_VARIABLE( int32, gv_viewMode );
 //
-// 선택 인자는 **C++17 에서도** 되도록 `__VA_OPT__`(C++20) 대신 인자 개수로 고른다(`…_PICK*_IMPL`). 끝에 붙인 `~` 는 가변 인자가
-// 비지 않게 하는 자리다(C++17 은 빈 가변 인자를 허용하지 않는다). MSVC 계열 전처리기는 `__VA_ARGS__` 를 다른 매크로에 한 덩어리로
-// 넘기므로 `SW_GLOBAL_VARIABLE_EXPAND_IMPL` 로 한 번 더 펼친다.
+// 타입은 `bool` · `int32` · `float32` · `sw::string` · enum 이다(`GlobalVariableTraits`). enum 은 리플렉션에 등록된 이름 그대로 적는다
+// (`#type` 이 그 글이 된다 — `sw::RHIBackend` 처럼 한정하면 찾지 못한다). 기본값은 변수 초기화에만 쓰고, 등록자는 그 변수에서 읽는다.
+// Shipping 에서 빠진 테스트용 변수를 `const` 로 만들지 않는다: 같은 TU 에서 컴파일 시간 상수가 되면 그 값을 루프 상한으로 쓰는 벤치
+// 코드가 Shipping 에서만 `-Wtautological-unsigned-zero-compare` 경고를 낸다. 등록만 빼고 보통 변수로 둔다.
 //
-// 아래 정의들에서 `name` 은 **선언자 이름**이면서 `#name`(문자열화)과 `sw_reg_##name`(토큰 붙이기)으로도 쓰인다.
-// 셋 다 괄호를 씌우면 깨진다. 값 인자(`defaultVal`)는 괄호와 static_cast 로 이미 감싸 두었다.
+// `name` 은 **선언자 이름**이면서 `#name`(문자열화)과 `sw_reg_##name`(토큰 붙이기)으로도 쓰이고, `type` 은 선언 타입이면서 `#type` 이다.
+// 괄호를 씌우면 깨진다. 값 인자(`defaultValue`)는 괄호로 감싸 두었다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 
-/** @brief 테스트용 매크로의 마지막 선택 인자입니다. 주면 그 변수가 Shipping 에도 남습니다. */
-#define SW_KEEP_IN_SHIPPING ::sw::GlobalVariableShipping::Keep
+/** @brief 전역 변수를 정의하고 등록 리스트에 매답니다: `( type, name, defaultValue, desc )`. */
+#define SW_GLOBAL_VARIABLE( type, name, defaultValue, desc )      \
+    extern type                          name;                    \
+    type                                 name = ( defaultValue ); \
+    static ::sw::GlobalVariableRegistrar sw_reg_##name( #name, name, #type, desc, false )
 
-#define SW_GLOBAL_VARIABLE_EXPAND_IMPL( x )                              x
-#define SW_GLOBAL_VARIABLE_PICK3_IMPL( a1, a2, picked, ... )             picked
-#define SW_GLOBAL_VARIABLE_PICK4_IMPL( a1, a2, a3, picked, ... )         picked
-#define SW_GLOBAL_VARIABLE_PICK5_IMPL( a1, a2, a3, a4, picked, ... )     picked
-#define SW_GLOBAL_VARIABLE_PICK6_IMPL( a1, a2, a3, a4, a5, picked, ... ) picked
-#define SW_GLOBAL_VARIABLE_ASSERT_KEEP_IMPL( keep ) \
-    static_assert( ( keep ) == ::sw::GlobalVariableShipping::Keep, "the optional last argument must be SW_KEEP_IN_SHIPPING" )
+/** @brief 테스트용 전역 변수인데 Shipping 에도 등록합니다: `( type, name, defaultValue, desc )`. */
+#define SW_TEST_GLOBAL_VARIABLE_SHIPPED( type, name, defaultValue, desc ) \
+    extern type                          name;                            \
+    type                                 name = ( defaultValue );         \
+    static ::sw::GlobalVariableRegistrar sw_reg_##name( #name, name, #type, desc, true )
 
-// 스칼라 네 종류의 저장 타입과, 기본값을 그 타입으로 바꾸는 식. 종류 이름은 GlobalVariableType 의 열거자와 같다.
-#define SW_GLOBAL_VARIABLE_STORAGE_Boolean_IMPL          bool
-#define SW_GLOBAL_VARIABLE_STORAGE_Int32_IMPL            int32
-#define SW_GLOBAL_VARIABLE_STORAGE_Float_IMPL            float32
-#define SW_GLOBAL_VARIABLE_STORAGE_String_IMPL           sw::string
-#define SW_GLOBAL_VARIABLE_CONVERT_Boolean_IMPL( value ) static_cast<bool>( value )
-#define SW_GLOBAL_VARIABLE_CONVERT_Int32_IMPL( value )   static_cast<int32>( value )
-#define SW_GLOBAL_VARIABLE_CONVERT_Float_IMPL( value )   static_cast<float32>( value )
-#define SW_GLOBAL_VARIABLE_CONVERT_String_IMPL( value ) \
-    sw::string { ( value ) }
-
-/** @brief 변수를 정의하고 등록 리스트에 매다는 몸통입니다. 일반 · 테스트용이 함께 씁니다. */
-#define SW_GLOBAL_VARIABLE_REGISTERED_IMPL( storageType, name, initValue, type, registrarDefault, desc, enumTypeName, typeSize, bTestOnly ) \
-    extern storageType                   name;                                                                                              \
-    storageType                          name = ( initValue );                                                                              \
-    static ::sw::GlobalVariableRegistrar sw_reg_##name( #name, type, &name, registrarDefault, desc, enumTypeName, "", typeSize, bTestOnly )
-
-/** @brief Shipping 에서 빠진 테스트용 변수입니다. 등록하지 않고 기본값으로 초기화한 변수만 남깁니다. */
-#define SW_GLOBAL_VARIABLE_UNREGISTERED_IMPL( storageType, name, initValue ) \
-    extern storageType name;                                                 \
-    storageType        name = ( initValue )
-
-#define SW_GLOBAL_VARIABLE_SCALAR_IMPL( kind, name, defaultVal, desc, bTestOnly )                                               \
-    SW_GLOBAL_VARIABLE_REGISTERED_IMPL( SW_GLOBAL_VARIABLE_STORAGE_##kind##_IMPL, name, defaultVal,                             \
-                                        ::sw::GlobalVariableType::kind, SW_GLOBAL_VARIABLE_CONVERT_##kind##_IMPL( defaultVal ), \
-                                        desc, "", 4u, bTestOnly )
-
-#define SW_GLOBAL_VARIABLE_ENUM_IMPL( name, enumType, defaultVal, desc, bTestOnly )                 \
-    SW_GLOBAL_VARIABLE_REGISTERED_IMPL( enumType, name, defaultVal, ::sw::GlobalVariableType::Enum, \
-                                        static_cast<int32>( defaultVal ), desc, #enumType,          \
-                                        static_cast<uint32>( sizeof( enumType ) ), bTestOnly )
-
-/** @brief bool 전역 변수를 정의하고 등록 리스트에 매답니다. */
-#define SW_GLOBAL_VARIABLE_BOOL( name, defaultVal, desc ) SW_GLOBAL_VARIABLE_SCALAR_IMPL( Boolean, name, defaultVal, desc, false )
-/** @brief int32 전역 변수를 정의하고 등록 리스트에 매답니다. */
-#define SW_GLOBAL_VARIABLE_INT( name, defaultVal, desc ) SW_GLOBAL_VARIABLE_SCALAR_IMPL( Int32, name, defaultVal, desc, false )
-/** @brief float32 전역 변수를 정의하고 등록 리스트에 매답니다. */
-#define SW_GLOBAL_VARIABLE_FLOAT( name, defaultVal, desc ) SW_GLOBAL_VARIABLE_SCALAR_IMPL( Float, name, defaultVal, desc, false )
-/** @brief sw::string 전역 변수를 정의하고 등록 리스트에 매답니다. */
-#define SW_GLOBAL_VARIABLE_STRING( name, defaultVal, desc ) SW_GLOBAL_VARIABLE_SCALAR_IMPL( String, name, defaultVal, desc, false )
-/** @brief enum 전역 변수를 정의하고 등록 리스트에 매답니다. */
-#define SW_GLOBAL_VARIABLE_ENUM( name, enumType, defaultVal, desc ) SW_GLOBAL_VARIABLE_ENUM_IMPL( name, enumType, defaultVal, desc, false )
-
-// 테스트용 정의: 인자 넷(마지막이 SW_KEEP_IN_SHIPPING)이면 KEEP, 셋이면 DROP 을 고른다.
-#define SW_GLOBAL_VARIABLE_TEST_KEEP_IMPL( kind, name, defaultVal, desc, keep ) \
-    SW_GLOBAL_VARIABLE_ASSERT_KEEP_IMPL( keep );                                \
-    SW_GLOBAL_VARIABLE_SCALAR_IMPL( kind, name, defaultVal, desc, true )
-#define SW_GLOBAL_VARIABLE_TEST_KEEP_ENUM_IMPL( name, enumType, defaultVal, desc, keep ) \
-    SW_GLOBAL_VARIABLE_ASSERT_KEEP_IMPL( keep );                                         \
-    SW_GLOBAL_VARIABLE_ENUM_IMPL( name, enumType, defaultVal, desc, true )
+/** @brief 테스트용 전역 변수입니다. Shipping 에서는 등록하지 않고 기본값으로 초기화한 변수만 남깁니다: `( type, name, defaultValue, desc )`. */
 #if defined( SW_SHIPPING )
-    #define SW_GLOBAL_VARIABLE_TEST_DROP_IMPL( kind, name, defaultVal, desc ) \
-        SW_GLOBAL_VARIABLE_UNREGISTERED_IMPL( SW_GLOBAL_VARIABLE_STORAGE_##kind##_IMPL, name, SW_GLOBAL_VARIABLE_CONVERT_##kind##_IMPL( defaultVal ) )
-    #define SW_GLOBAL_VARIABLE_TEST_DROP_ENUM_IMPL( name, enumType, defaultVal, desc ) SW_GLOBAL_VARIABLE_UNREGISTERED_IMPL( enumType, name, defaultVal )
+    #define SW_TEST_GLOBAL_VARIABLE( type, name, defaultValue, desc ) \
+        extern type name;                                             \
+        type        name = ( defaultValue )
 #else
-    #define SW_GLOBAL_VARIABLE_TEST_DROP_IMPL( kind, name, defaultVal, desc ) SW_GLOBAL_VARIABLE_SCALAR_IMPL( kind, name, defaultVal, desc, true )
-    #define SW_GLOBAL_VARIABLE_TEST_DROP_ENUM_IMPL( name, enumType, defaultVal, desc ) \
-        SW_GLOBAL_VARIABLE_ENUM_IMPL( name, enumType, defaultVal, desc, true )
+    #define SW_TEST_GLOBAL_VARIABLE( type, name, defaultValue, desc ) SW_TEST_GLOBAL_VARIABLE_SHIPPED( type, name, defaultValue, desc )
 #endif
-#define SW_GLOBAL_VARIABLE_TEST_SCALAR_IMPL( kind, ... )                                           \
-    SW_GLOBAL_VARIABLE_EXPAND_IMPL( SW_GLOBAL_VARIABLE_EXPAND_IMPL( SW_GLOBAL_VARIABLE_PICK5_IMPL( \
-        __VA_ARGS__, SW_GLOBAL_VARIABLE_TEST_KEEP_IMPL, SW_GLOBAL_VARIABLE_TEST_DROP_IMPL, ~) )( kind, __VA_ARGS__ ) )
-
-/** @brief 테스트용 bool 전역 변수입니다: `( name, defaultVal, desc [, SW_KEEP_IN_SHIPPING] )`. */
-#define SW_TEST_GLOBAL_VARIABLE_BOOL( ... ) SW_GLOBAL_VARIABLE_TEST_SCALAR_IMPL( Boolean, __VA_ARGS__ )
-/** @brief 테스트용 int32 전역 변수입니다: `( name, defaultVal, desc [, SW_KEEP_IN_SHIPPING] )`. */
-#define SW_TEST_GLOBAL_VARIABLE_INT( ... ) SW_GLOBAL_VARIABLE_TEST_SCALAR_IMPL( Int32, __VA_ARGS__ )
-/** @brief 테스트용 float32 전역 변수입니다: `( name, defaultVal, desc [, SW_KEEP_IN_SHIPPING] )`. */
-#define SW_TEST_GLOBAL_VARIABLE_FLOAT( ... ) SW_GLOBAL_VARIABLE_TEST_SCALAR_IMPL( Float, __VA_ARGS__ )
-/** @brief 테스트용 sw::string 전역 변수입니다: `( name, defaultVal, desc [, SW_KEEP_IN_SHIPPING] )`. */
-#define SW_TEST_GLOBAL_VARIABLE_STRING( ... ) SW_GLOBAL_VARIABLE_TEST_SCALAR_IMPL( String, __VA_ARGS__ )
-/** @brief 테스트용 enum 전역 변수입니다: `( name, enumType, defaultVal, desc [, SW_KEEP_IN_SHIPPING] )`. */
-#define SW_TEST_GLOBAL_VARIABLE_ENUM( ... )                                                        \
-    SW_GLOBAL_VARIABLE_EXPAND_IMPL( SW_GLOBAL_VARIABLE_EXPAND_IMPL( SW_GLOBAL_VARIABLE_PICK6_IMPL( \
-        __VA_ARGS__, SW_GLOBAL_VARIABLE_TEST_KEEP_ENUM_IMPL, SW_GLOBAL_VARIABLE_TEST_DROP_ENUM_IMPL, ~) )( __VA_ARGS__ ) )
 
 // NOLINTEND(bugprone-macro-parentheses)
 
-/** @brief 다른 TU 에서 bool 전역 변수를 참조합니다. */
-#define SW_EXTERN_GLOBAL_VARIABLE_BOOL( name ) extern bool name
-/** @brief 다른 TU 에서 int32 전역 변수를 참조합니다. */
-#define SW_EXTERN_GLOBAL_VARIABLE_INT( name ) extern int32 name
-/** @brief 다른 TU 에서 float32 전역 변수를 참조합니다. */
-#define SW_EXTERN_GLOBAL_VARIABLE_FLOAT( name ) extern float32 name
-/** @brief 다른 TU 에서 sw::string 전역 변수를 참조합니다. */
-#define SW_EXTERN_GLOBAL_VARIABLE_STRING( name ) extern sw::string name
-/** @brief 다른 TU 에서 enum 전역 변수를 참조합니다. */
-#define SW_EXTERN_GLOBAL_VARIABLE_ENUM( name, enumType ) extern enumType name
-
-// 테스트용 참조: 정의와 같은 인자를 준다. 선언 모양은 빌드와 상관없이 같다(빠진 변수도 등록만 빠진 보통 변수다).
-#define SW_GLOBAL_VARIABLE_EXTERN_TEST_DROP_IMPL( storageType, name ) extern storageType name
-#define SW_GLOBAL_VARIABLE_EXTERN_TEST_KEEP_IMPL( storageType, name, keep ) \
-    SW_GLOBAL_VARIABLE_ASSERT_KEEP_IMPL( keep );                            \
-    extern storageType name
-#define SW_GLOBAL_VARIABLE_EXTERN_TEST_SCALAR_KEEP_IMPL( kind, name, keep ) \
-    SW_GLOBAL_VARIABLE_EXTERN_TEST_KEEP_IMPL( SW_GLOBAL_VARIABLE_STORAGE_##kind##_IMPL, name, keep )
-#define SW_GLOBAL_VARIABLE_EXTERN_TEST_SCALAR_DROP_IMPL( kind, name ) \
-    SW_GLOBAL_VARIABLE_EXTERN_TEST_DROP_IMPL( SW_GLOBAL_VARIABLE_STORAGE_##kind##_IMPL, name )
-#define SW_GLOBAL_VARIABLE_EXTERN_TEST_ENUM_KEEP_IMPL( name, enumType, keep ) SW_GLOBAL_VARIABLE_EXTERN_TEST_KEEP_IMPL( enumType, name, keep )
-#define SW_GLOBAL_VARIABLE_EXTERN_TEST_ENUM_DROP_IMPL( name, enumType )       SW_GLOBAL_VARIABLE_EXTERN_TEST_DROP_IMPL( enumType, name )
-#define SW_GLOBAL_VARIABLE_EXTERN_TEST_SCALAR_IMPL( kind, ... )                                    \
-    SW_GLOBAL_VARIABLE_EXPAND_IMPL( SW_GLOBAL_VARIABLE_EXPAND_IMPL( SW_GLOBAL_VARIABLE_PICK3_IMPL( \
-        __VA_ARGS__, SW_GLOBAL_VARIABLE_EXTERN_TEST_SCALAR_KEEP_IMPL, SW_GLOBAL_VARIABLE_EXTERN_TEST_SCALAR_DROP_IMPL, ~) )( kind, __VA_ARGS__ ) )
-
-/** @brief 다른 TU 에서 테스트용 bool 전역 변수를 참조합니다: `( name [, SW_KEEP_IN_SHIPPING] )`. */
-#define SW_EXTERN_TEST_GLOBAL_VARIABLE_BOOL( ... ) SW_GLOBAL_VARIABLE_EXTERN_TEST_SCALAR_IMPL( Boolean, __VA_ARGS__ )
-/** @brief 다른 TU 에서 테스트용 int32 전역 변수를 참조합니다: `( name [, SW_KEEP_IN_SHIPPING] )`. */
-#define SW_EXTERN_TEST_GLOBAL_VARIABLE_INT( ... ) SW_GLOBAL_VARIABLE_EXTERN_TEST_SCALAR_IMPL( Int32, __VA_ARGS__ )
-/** @brief 다른 TU 에서 테스트용 float32 전역 변수를 참조합니다: `( name [, SW_KEEP_IN_SHIPPING] )`. */
-#define SW_EXTERN_TEST_GLOBAL_VARIABLE_FLOAT( ... ) SW_GLOBAL_VARIABLE_EXTERN_TEST_SCALAR_IMPL( Float, __VA_ARGS__ )
-/** @brief 다른 TU 에서 테스트용 sw::string 전역 변수를 참조합니다: `( name [, SW_KEEP_IN_SHIPPING] )`. */
-#define SW_EXTERN_TEST_GLOBAL_VARIABLE_STRING( ... ) SW_GLOBAL_VARIABLE_EXTERN_TEST_SCALAR_IMPL( String, __VA_ARGS__ )
-/** @brief 다른 TU 에서 테스트용 enum 전역 변수를 참조합니다: `( name, enumType [, SW_KEEP_IN_SHIPPING] )`. */
-#define SW_EXTERN_TEST_GLOBAL_VARIABLE_ENUM( ... )                                                 \
-    SW_GLOBAL_VARIABLE_EXPAND_IMPL( SW_GLOBAL_VARIABLE_EXPAND_IMPL( SW_GLOBAL_VARIABLE_PICK4_IMPL( \
-        __VA_ARGS__, SW_GLOBAL_VARIABLE_EXTERN_TEST_ENUM_KEEP_IMPL, SW_GLOBAL_VARIABLE_EXTERN_TEST_ENUM_DROP_IMPL, ~) )( __VA_ARGS__ ) )
+/** @brief 다른 TU 에서 전역 변수를 참조합니다: `( type, name )`. 정의의 종류(일반 · 테스트용)와 상관없이 같습니다. */
+#define SW_EXTERN_GLOBAL_VARIABLE( type, name ) extern type name

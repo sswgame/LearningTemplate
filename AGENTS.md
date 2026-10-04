@@ -58,12 +58,13 @@ cmake --build --preset Ninja-Debug
 - Classes, structs, enums: `PascalCase`; interfaces: `I` + `PascalCase`.
 - Functions: `camelCase`; members: `_camelCase`; locals: `camelCase`.
 - Constants: `kPascalCase`; globals: `gv_camelCase`.
-- Global variables come in two kinds (`Core/GlobalVariable/GlobalVariableManager.h`). Runtime settings someone would change
-  in the editor use `SW_GLOBAL_VARIABLE_*`. Bench, automation and diagnostic switches use `SW_TEST_GLOBAL_VARIABLE_*`: they
-  stay settable with `-gv_*` but are hidden from the editor panel and presets and are **not registered in Shipping**. Add
-  `SW_KEEP_IN_SHIPPING` as the last argument only when scripts must drive the shipped executable with it
-  (`gv_profileFrames`, `gv_screenshot*`, `gv_crashTest`, `gv_bench*`). An `extern` uses the matching `SW_EXTERN_…` form with the same
-  argument; `CheckGlobalVariableKinds.py` blocks mismatches.
+- Global variables come in two kinds (`Core/GlobalVariable/GlobalVariableManager.h`); every macro takes the type first
+  (`bool`, `int32`, `float32`, `sw::string` or a reflected enum). Runtime settings someone would change in the editor use
+  `SW_GLOBAL_VARIABLE( type, name, default, desc )`. Bench, automation and diagnostic switches use `SW_TEST_GLOBAL_VARIABLE`: they
+  stay settable with `-gv_*` but are hidden from the editor panel and presets and are **not registered in Shipping**. Use
+  `SW_TEST_GLOBAL_VARIABLE_SHIPPED` only when scripts must drive the shipped executable with it
+  (`gv_profileFrames`, `gv_screenshot*`, `gv_crashTest`, `gv_bench*`). An `extern` is `SW_EXTERN_GLOBAL_VARIABLE( type, name )` for
+  every kind; `CheckGlobalVariableKinds.py` blocks a type that differs from the definition.
 - Static variables: `s_camelCase`; private statics: `_s_camelCase`.
 - Macros: `SW_SCREAMING_CASE`.
 - Raw pointers use a `p` prefix (`pObject`, `_pObject`); double pointers use
@@ -309,7 +310,7 @@ namespace sw
     `#elif SW_PLATFORM_LINUX`) are one block per translation unit. Do not merge them.
   - `REFLECT`-generated types cannot move into an anonymous namespace — the generated
     `.gen.cpp` refers to them by qualified name (`sw::MockMeshComponent`).
-  - `SW_GLOBAL_VARIABLE_*` declares `extern`; it is deliberately external linkage and stays out.
+  - `SW_GLOBAL_VARIABLE` (and its test forms) declares `extern`; it is deliberately external linkage and stays out.
   - `main` and functions declared in a header stay at namespace scope.
 
 ## C++ style

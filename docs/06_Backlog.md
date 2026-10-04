@@ -1266,8 +1266,8 @@ cd build/Ninja-Debug/Bin
 - **락을 잡은 getter 는 자기 멤버의 뷰 · 참조를 돌려주면 안 된다**(값으로). 콜백을 부르는 순회는 인덱스로 돌고 부르기 전에 델리게이트를 복사한다. `MulticastDelegate` 는 복사 · 이동 넷을 직접
   적는다. `Delegate` 의 인라인 람다를 옮기면 원본 소멸자를 부른다.
 - **`EventDispatcher`** — 큐(`push`)는 아무 스레드나, 버스(`subscribe` · `publish`)는 `processEvents` 를 부르는 스레드만. 큐에 남은 이벤트는 `destroyQueuedEvents()`.
-- **명령줄** — 미등록 `gv_` 키는 `_mapPendingGlobal` 에 남았다가 모듈이 변수를 올릴 때 적용된다. gv_ 선언은 읽는 파일에, `extern` 재선언 금지(`SW_EXTERN_GLOBAL_VARIABLE_*` 은 정의 파일 밖에서
-  읽을 때만 — `CheckGlobalVariableKinds`). 시험용 전역 변수는 `SW_TEST_GLOBAL_VARIABLE_*`(Shipping 에서 빠진다), 배포본을 스크립트가 조종할 것만 `SW_KEEP_IN_SHIPPING`. bool 이 아닌 `-gv_*` 에
+- **명령줄** — 미등록 `gv_` 키는 `_mapPendingGlobal` 에 남았다가 모듈이 변수를 올릴 때 적용된다. gv_ 선언은 읽는 파일에, `extern` 재선언 금지(`SW_EXTERN_GLOBAL_VARIABLE` 은 정의 파일 밖에서
+  읽을 때만 — `CheckGlobalVariableKinds`). 시험용 전역 변수는 `SW_TEST_GLOBAL_VARIABLE`(Shipping 에서 빠진다), 배포본을 스크립트가 조종할 것만 `SW_TEST_GLOBAL_VARIABLE_SHIPPED`. bool 이 아닌 `-gv_*` 에
   값을 빠뜨리면 경고 + 기본값.
 - **싱글턴을 옮기지 않는 자리**: `CrashContextStore`(시그널 핸들러가 읽는다), 등록자 헤드 · `TestRegistry`(main 이전 자기 등록), `TagID` · `hashed_string` 인터닝(프로세스 전역이어야 뜻이 있다).
   Core 에 인스턴스가 필요하면 Logger 모양 — 인스턴스는 `EngineLoop`, Core 에는 포인터 슬롯.
