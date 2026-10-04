@@ -246,6 +246,23 @@ SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &runHierarchyTagF
 쓰지도 않고 기본 가시성 · 기본 도킹 배치로 뜹니다. `AppSmokeTest.EditorSelfTestsPassInsideTheEditor`(hostgpu)가 이렇게 띄워 알려진 시험이 모두
 PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니다.
 
+## Game View 의 개발 편의 기능
+
+- **Play / Simulate**: Play 는 플레이어가 조종하는 세션(게임 모듈 업데이트 · 게임 입력 · 게임 카메라), Simulate 는 **월드만** 돈다 — 씬은 틱하지만
+  게임 모듈 업데이트와 게임 입력이 꺼지고 에디터 카메라로 본다(언리얼 Simulate). 도는 중에 서로 바꿀 수 있다. 호스트는 `IEditor::isPlaying`
+  (= `EditorPlaySession::isPlayerActive`)으로 게임 모듈을 켜고, 씬 틱은 `isPaused` 가 정한다.
+- **Step · Step N**: 한 프레임 / 칸에 적은 프레임 수만큼 진행하고 일시정지한다(`EditorPlaySession::stepFrames`).
+- **Cam**(카메라에서 시작): Play 를 에디터 카메라 위치에서 시작한다 — `Player` 태그를 단 오브젝트, 없으면 게임 카메라를 든 오브젝트의 맨 위 조상을
+  순간이동한다. 월드 시작 직후와 첫 프레임 뒤 두 번 옮긴다(첫 틱에 스폰 자리로 되돌리는 게임이 있다).
+- **시간 배율**(`x1.00` 칸): `gv_timeScale`(`Engine/Utility/GameTimeScale`). 끌어서 바꾸고 오른쪽 클릭으로 1 로 되돌린다. 호스트의 프레임 시간이
+  곱해 게임 업데이트 · 씬 틱 · 고정 스텝이 같이 느려지거나 빨라진다. 에디터 UI · 에디터 카메라는 자기 시간으로 돈다.
+- **디버그 드로우**: 게임 코드가 `DebugDrawQueue`(엔진 서비스)에 넣은 선 · 구 · 상자 · 화살표 · 글자를 `debug_draw` 시각화(툴바 `Dbg`)가 그린다.
+  지속 시간(초)과 카테고리를 받는다. `Dbg Cat` 팝업이 카테고리를 켜고 끈다. 2D 뷰(직교 카메라가 Z 를 본다)에서는 구가 XY 원 하나다.
+  오버레이(시각화 · 피킹 · 기즈모)는 호스트가 그리는 것과 같은 카메라로 투영한다 — Play 중에는 게임 카메라다.
+- **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값(`RuntimeHud::publishSnapshot` 등)을 캔버스 왼쪽 위에 키 순서로 그린다.
+- 시험: `EditorPlaySessionTest`(Simulate · Step N · 카메라에서 시작), `DebugDrawQueueTest`, `DebugOverlayStateTest`, `FixedTimestepTest.TimeScale…`,
+  에디터 자체 시험 `gameView.debugDraw` · `gameView.debugOverlay`.
+
 ## ⚠️ 핵심 특징 및 규칙
 - **Dev 모드 전용**: 이 폴더의 코드는 개발(Dev) 모드에서만 `MODULE DLL`로 빌드되고 동작합니다. 배포(Shipping) 빌드를 할 때는 **코드가 통째로 날아갑니다.**
 - **게임 로직 분리**: **절대 게임(Game) 로직이 이 폴더의 코드에 의존해서는 안 됩니다.** 게임 코드에서 `#include "Editor/"` 등을 호출하면 Shipping 빌드가 100% 터집니다.

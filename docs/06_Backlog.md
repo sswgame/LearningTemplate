@@ -134,9 +134,7 @@ cd build/Ninja-Debug/Bin
 
 - **에디터 · 개발 편의 기능(2026-10-04 사용자 승인, 순서대로).** 이미 있는 것(gv 표 · 커맨드 팔레트 · 핫 리로드 · Undo · PIE 재생/한 프레임 ·
   InputReplay · 기즈모 · 미니덤프 · RenderTargetPanel)은 다시 만들지 않는다.
-  - **B 빠른 이득** — GameView 가 `DebugOverlayState` 를 그린다(지금 아무도 안 읽음) · 진짜 Simulate(지금은 Play 와 같다) · 시간 배율 ·
-    N 프레임 진행 · "카메라 위치에서 시작" · `DebugDrawQueue` 에 상자 · 화살표 · 글자 · 지속시간 · 카테고리 · 로그 줄 클릭 → IDE ·
-    설정 파일 핫 리로드 · 타입/태그로 선택 · 이름 붙인 레이아웃.
+  - **B 빠른 이득(남은 것)** — 로그 줄 클릭 → IDE · 설정 파일 핫 리로드 · 타입/태그로 선택 · 이름 붙인 레이아웃.
   - **C 확장 지점** — 등록부(`EditorRegistry<T>` · `IEditorPanel` · `IInspectorComponent` · 시각화 · `EditorCommandRegistry`)를
     EditorFramework SHARED 로 떼어 내보내고, 키트 · 게임이 Dev 전용 `<Module>Editor` 모듈로 패널 · 인스펙터 · 시각화를 등록한다.
     지금은 EditorModule DLL 안의 함수 정적이라 다른 모듈이 못 쓴다. 첫 사용자는 ThemePark 배치 시각화.

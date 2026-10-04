@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
 
 #include "Editor/Viewport/EditorVisualizerGeometry.h"
 
@@ -73,9 +74,10 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, DebugDrawQueueBecomesWorldSegments )
     queue.drawLine( float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 2.0f, 3.0f }, lineColor );
     const float3 center{ 1.0f, 0.0f, -2.0f };
     queue.drawSphere( center, 2.0f, sphereColor );
+    queue.endFrame( 0.0f ); // 넣은 것은 프레임 끝에 보이는 목록이 된다
 
     vector<EditorWorldSegment> listSegment;
-    EditorVisualizerGeometryUtil::appendDebugDrawSegments( queue, listSegment );
+    EditorVisualizerGeometryUtil::appendDebugDrawSegments( queue, false, listSegment );
     SW_ASSERT_EQUAL( size_t( 1 + 3 * EditorVisualizerGeometryUtil::kSphereCircleSegmentCount ), listSegment.size() );
     SW_EXPECT_NEAR_EQUAL( 3.0f, listSegment[0]._to._z, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, listSegment[0]._color._x, 1e-6f );
@@ -98,6 +100,40 @@ SW_TEST_CASE( EditorVisualizerGeometryTest, DebugDrawQueueBecomesWorldSegments )
     SW_EXPECT_NEAR_EQUAL( 2.0f, maxAbsZ, 1e-4f );
 
     // 뒤에 붙인다(부르는 쪽이 비운다).
-    EditorVisualizerGeometryUtil::appendDebugDrawSegments( queue, listSegment );
+    EditorVisualizerGeometryUtil::appendDebugDrawSegments( queue, false, listSegment );
     SW_EXPECT_EQUAL( size_t( 2 * ( 1 + 3 * EditorVisualizerGeometryUtil::kSphereCircleSegmentCount ) ), listSegment.size() );
+}
+
+/**
+ * @brief [EditorVisualizerGeometryTest] 2D 뷰에서 구는 XY 평면의 원 하나다
+ * @details 다른 두 대원은 Z 축을 보는 직교 뷰에서 중심을 지나는 선분으로 겹쳐 보일 뿐이라, 2D 게임의 원 디버그가 십자 모양으로 나왔다.
+ */
+SW_TEST_CASE( EditorVisualizerGeometryTest, DebugDrawSphereIsOneCircleInA2DView )
+{
+    DebugDrawQueue queue;
+    queue.drawSphere( float3{ 3.0f, 4.0f, 0.0f }, 1.0f, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
+    queue.endFrame( 0.0f );
+
+    vector<EditorWorldSegment> listSegment;
+    EditorVisualizerGeometryUtil::appendDebugDrawSegments( queue, true, listSegment );
+    SW_ASSERT_EQUAL( size_t( EditorVisualizerGeometryUtil::kSphereCircleSegmentCount ), listSegment.size() );
+    for ( const EditorWorldSegment& segment : listSegment )
+    {
+        SW_EXPECT_NEAR_EQUAL( 0.0f, segment._from._z, 1e-6f );
+        SW_EXPECT_NEAR_EQUAL( 0.0f, segment._to._z, 1e-6f );
+    }
+}
+
+/**
+ * @brief [EditorVisualizerGeometryTest] 직교 카메라가 Z 축을 볼 때만 2D 뷰다
+ */
+SW_TEST_CASE( EditorVisualizerGeometryTest, Flat2DViewNeedsAnOrthographicCameraAlongZ )
+{
+    const float4x4 lookAlongZ = float4x4::Identity;
+    SW_EXPECT_TRUE( EditorVisualizerGeometryUtil::isFlat2DView( true, lookAlongZ ) );
+    SW_EXPECT_FALSE( EditorVisualizerGeometryUtil::isFlat2DView( false, lookAlongZ ) );
+
+    // 위에서 내려다보는(시선이 Y 축) 직교 뷰는 3D 다 — 등각 · 탑다운 3D 게임.
+    const float4x4 lookDown = float4x4::createRotationX( MathUtil::Pi * 0.5f );
+    SW_EXPECT_FALSE( EditorVisualizerGeometryUtil::isFlat2DView( true, lookDown ) );
 }

@@ -55,8 +55,12 @@ namespace sw
         /** @brief 타이머와 누산기를 0 에서 다시 시작합니다. 루프 진입 직전에 한 번 부릅니다. */
         void start();
 
-        /** @brief 한 프레임을 진행하고 그 시간 분해 결과를 반환합니다. */
-        FrameTime advance();
+        /**
+         * @brief 한 프레임을 진행하고 그 시간 분해 결과를 반환합니다.
+         * @param timeScale 게임 시간 배율(`GameTimeScale`). 최대 델타로 자른 **뒤에** 곱하므로 빨리 감기는 한 프레임에 상한보다 긴 시간을 흘리고,
+         *                  고정 스텝 수도 그만큼 늘어납니다(스텝 상한은 그대로). 0 이면 시간이 멈춥니다.
+         */
+        FrameTime advance( float32 timeScale = 1.0f );
 
     private:
         GameTimer _timer;

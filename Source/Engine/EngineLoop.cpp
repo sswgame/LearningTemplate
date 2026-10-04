@@ -542,6 +542,7 @@ namespace sw
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
+        , _sceneDeltaSeconds{ 0.0f }
         , _profileSession{}
         , _startup{}
         , _pEngineConfig{ nullptr }
@@ -702,6 +703,7 @@ namespace sw
                 _audioSystem->update( deltaTime );
         }
 
+        _sceneDeltaSeconds = bTickScene ? deltaTime : 0.0f;
         BLOCK( "Scene update" )
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick" );
@@ -810,7 +812,8 @@ namespace sw
 
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->endFrame();
-        engine::getDebugDrawQueue().clear();
+        // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).
+        engine::getDebugDrawQueue().endFrame( _sceneDeltaSeconds );
     }
 
     bool EngineLoop::applyPendingBackendChange()

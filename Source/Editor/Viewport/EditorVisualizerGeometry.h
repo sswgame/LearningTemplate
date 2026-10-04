@@ -9,6 +9,8 @@
 
 namespace sw
 {
+    struct float4x4;
+
     class BoxCollider2DComponent;
     class DebugDrawQueue;
 } // namespace sw
@@ -21,6 +23,23 @@ namespace sw::editor
         float3 _from{};
         float3 _to{};
         float4 _color{ 1.0f, 1.0f, 1.0f, 1.0f };
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @brief `debug_draw` 시각화가 마지막으로 그린 양입니다. 에디터 자체 시험(`gameView.debugDraw`)이 "그려졌다" 를 확인할 때 읽습니다.
+     * @details 시각화는 그리기 함수 하나라 자기 상태를 둘 곳이 없어 이 값 하나만 둡니다. 그린 프레임 번호(ImGui 프레임)를 같이 적습니다.
+     */
+    struct EditorDebugDrawStats
+    {
+        uint32 _segmentCount{ 0 };
+        uint32 _textCount{ 0 };
+        int32  _frame{ -1 };
+
+        /** @brief 에디터 모듈 하나의 값입니다. */
+        static EditorDebugDrawStats& get();
     };
 } // namespace sw::editor
 
@@ -45,9 +64,17 @@ namespace sw::editor
         static void computeColliderCorners( const BoxCollider2DComponent& collider, float3 ( &outArrCorner )[4] );
 
         /**
-         * @brief 디버그 큐의 선 · 구를 월드 선분으로 이어 붙입니다(구는 대원 셋, 각 `kSphereCircleSegmentCount` 선분).
+         * @brief 디버그 큐가 확정한(`getVisible*`) 선 · 구를 월드 선분으로 이어 붙입니다. 구는 대원 셋, 각 `kSphereCircleSegmentCount` 선분입니다.
+         * @param bFlat2D 2D 뷰(직교 카메라가 Z 축을 본다)면 true — 구는 XY 평면의 원 하나만 냅니다. 다른 두 대원은 그 뷰에서 중심을 지나는
+         *                선으로 겹쳐 보일 뿐입니다.
          * @details @p outListSegment 를 비우지 않고 뒤에 붙입니다 — 부르는 쪽이 프레임마다 재사용 버퍼를 비웁니다.
          */
-        static void appendDebugDrawSegments( const DebugDrawQueue& queue, vector<EditorWorldSegment>& outListSegment );
+        static void appendDebugDrawSegments( const DebugDrawQueue& queue, bool bFlat2D, vector<EditorWorldSegment>& outListSegment );
+        /**
+         * @brief 이 뷰가 2D(직교 투영이고 시선이 월드 Z 축과 나란하다)인지 판단합니다.
+         * @param bOrthographic 카메라가 직교 투영인가
+         * @param view          카메라의 뷰 행렬
+         */
+        static bool isFlat2DView( bool bOrthographic, const float4x4& view );
     };
 } // namespace sw::editor

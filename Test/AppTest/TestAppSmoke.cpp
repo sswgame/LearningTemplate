@@ -631,6 +631,8 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|preview.materialHoldsOneReference",
         "EditorSelfTest|PASS|hierarchy.tagFilter",
         "EditorSelfTest|PASS|gameView.resizeEveryFrame",
+        "EditorSelfTest|PASS|gameView.debugDraw",
+        "EditorSelfTest|PASS|gameView.debugOverlay",
         "EditorSelfTest|PASS|profiler.gpuMemoryTab",
     };
 

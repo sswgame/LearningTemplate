@@ -41,8 +41,10 @@ namespace sw::editor
         const vector<CameraComponent*>* _pListCamera{ nullptr };
         /** @brief 씬의 콜라이더 등록부 목록입니다(`GameObjectManager::getColliders`). 매니저가 없으면 nullptr 입니다. */
         const vector<BoxCollider2DComponent*>* _pListCollider{ nullptr };
-        /** @brief 이번 프레임의 디버그 선 · 구 큐입니다(`DebugDrawQueue` 엔진 서비스). 없으면 nullptr 입니다. */
+        /** @brief 이번 프레임의 디버그 도형 큐입니다(`DebugDrawQueue` 엔진 서비스). 없으면 nullptr 입니다. */
         const DebugDrawQueue* _pDebugDrawQueue{ nullptr };
+        /** @brief 2D 뷰(직교 카메라가 월드 Z 축을 본다)면 true 입니다(`EditorVisualizerGeometryUtil::isFlat2DView`). */
+        bool _bFlat2D{ false };
     };
 } // namespace sw::editor
 

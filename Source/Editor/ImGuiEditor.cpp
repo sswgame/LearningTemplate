@@ -545,6 +545,10 @@ namespace sw::editor
         const bool     bGameViewHovered = _editorContext != nullptr && _editorContext->isGameViewHovered();
         const bool     bGameViewFocused = _editorContext != nullptr && _editorContext->isGameViewFocused();
 
+        // Simulate 는 월드만 돈다 — 게임 입력을 주지 않는다(에디터 카메라 · 패널은 위의 ImGui 처리로 이미 받았다).
+        if ( EditorPlaySession::isSimulating() && ( event.isMouseInput() || event.isKeyboardInput() ) )
+            return true;
+
         if ( event.isMouseInput() )
         {
             if ( io.WantCaptureMouse && bGameViewHovered == false )
@@ -587,12 +591,14 @@ namespace sw::editor
 
     CameraComponent* ImGuiEditor::getViewportCamera() const
     {
-        return EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlaying() );
+        // Simulate 는 에디터 카메라를 그대로 쓴다. 게임 카메라는 플레이어가 조종하는 세션에서만.
+        return EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlayerActive() );
     }
 
     bool ImGuiEditor::isPlaying() const
     {
-        return EditorPlaySession::isPlaying();
+        // 호스트는 이 답으로 게임 모듈 업데이트를 켠다. Simulate 는 씬 틱만 하고(isPaused 가 false) 게임 모듈은 돌리지 않는다.
+        return EditorPlaySession::isPlayerActive();
     }
 
     bool ImGuiEditor::isPaused() const

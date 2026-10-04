@@ -29,12 +29,12 @@ namespace sw
         _timer.startTimer();
     }
 
-    FrameTime FixedTimestep::advance()
+    FrameTime FixedTimestep::advance( float32 timeScale )
     {
         _timer.updateTimer();
 
         FrameTime frameTime{};
-        frameTime._deltaTime      = MathUtil::min( _timer.getDeltaTime(), _maxFrameDeltaTime );
+        frameTime._deltaTime      = MathUtil::min( _timer.getDeltaTime(), _maxFrameDeltaTime ) * MathUtil::max( timeScale, 0.0f );
         frameTime._fixedDeltaTime = _fixedDeltaTime;
 
         _accumulator += frameTime._deltaTime;

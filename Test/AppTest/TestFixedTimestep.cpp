@@ -71,6 +71,31 @@ SW_TEST_CASE( FixedTimestepTest, StepCountIsCappedAndTheOverflowIsDropped )
 }
 
 /**
+ * @brief [FixedTimestepTest] 시간 배율은 자른 델타에 곱해지고 고정 스텝 수도 따라간다 — 0 이면 멈춘다
+ */
+SW_TEST_CASE( FixedTimestepTest, TimeScaleMultipliesTheClampedDelta )
+{
+    FixedTimestep timeline;
+    timeline.configure( 0.25f, 0.0625f, 16 );
+    timeline.start();
+
+    sleepLongerThanAnyClamp();
+    const FrameTime slow = timeline.advance( 0.5f );
+    SW_EXPECT_NEAR_EQUAL( 0.125f, slow._deltaTime, 0.0001f );
+    SW_EXPECT_EQUAL( 2u, slow._fixedStepCount );
+
+    sleepLongerThanAnyClamp();
+    const FrameTime fast = timeline.advance( 2.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, fast._deltaTime, 0.0001f );
+    SW_EXPECT_EQUAL( 8u, fast._fixedStepCount );
+
+    sleepLongerThanAnyClamp();
+    const FrameTime frozen = timeline.advance( 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, frozen._deltaTime, 0.0001f );
+    SW_EXPECT_EQUAL( 0u, frozen._fixedStepCount );
+}
+
+/**
  * @brief [FixedTimestepTest] 0 이하 설정은 내장 기본값으로 되돌린다
  * @details 설정 파일 하나가 프레임 루프를 세우지 못하게 하는 자리다. 고정 델타가 0 이면
  *          스텝 수 계산이 0 으로 나누기가 된다.

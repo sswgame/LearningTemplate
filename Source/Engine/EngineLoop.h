@@ -218,6 +218,8 @@ namespace sw
         bool _bShellActionsBound;
         bool _bHeadless;
         bool _bHeadlessTaskFailed;
+        /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */
+        float32 _sceneDeltaSeconds;
 
         /** @brief `-gv_profileFrames` 계측 한 회분입니다. 판정은 모두 이 안에 있고 루프는 두 줄만 부릅니다. */
         FrameProfileSession _profileSession;

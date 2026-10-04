@@ -12,11 +12,15 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Viewport/EditorCamera.h"
 
+#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Utility/GameTimeScale.h"
 
 #include <imgui.h>
 
@@ -26,7 +30,14 @@ namespace sw::editor
 
     GameViewPanel::GameViewPanel()
         : _viewportClient{}
+        , _listOverlayRow{}
+        , _listDebugCategory{}
+        , _lastOverlayRowCount{ 0 }
+        , _stepFrameCount{ 10 }
+        , _pendingSession{ PendingSession::Play }
         , _bConfirmUnsavedPlay{ false }
+        , _bStartAtCamera{ false }
+        , _bShowOverlay{ true }
     {
     }
 
@@ -59,6 +70,8 @@ namespace sw::editor
         {
             drawTransportControls();
             EditorWidgets::drawToolbarSeparator();
+            drawSessionOptions();
+            EditorWidgets::drawToolbarSeparator();
             _viewportClient.drawViewportToolbar( ImGui::GetContentRegionAvail().x );
         }
         EditorChrome::endToolbar();
@@ -73,7 +86,7 @@ namespace sw::editor
             ImGui::TextUnformatted( "Scene has unsaved changes. Play anyway?" );
             if ( ImGui::Button( "Play" ) )
             {
-                EditorPlaySession::play();
+                startSession( _pendingSession );
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
@@ -102,6 +115,7 @@ namespace sw::editor
         {
             const float2 barAnchor{ imagePos.x + size.x * 0.5f, imagePos.y + 8.0f };
             _viewportClient.drawTransformBar( barAnchor );
+            drawDebugOverlay( float2{ imagePos.x, imagePos.y } );
 
             InputManager* pInput = getService<InputManager>();
             if ( pInput != nullptr && ViewportInputOverlay::getConfig()._bEnabled == SW_TRUE )
@@ -117,6 +131,7 @@ namespace sw::editor
         const PlaySessionState currentState = EditorPlaySession::getState();
         EditorContext*         pContext     = EditorContext::get();
         const bool             bSceneDirty  = ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() );
+        const bool             bSimulating  = EditorPlaySession::isSimulating();
 
         if ( EditorPlaySession::isPlayQueued() )
         {
@@ -124,38 +139,44 @@ namespace sw::editor
             EditorWidgets::drawTooltip( "씬을 여는 중 — 로드가 끝나면 플레이를 시작합니다 (Stop 으로 취소)" );
             ImGui::SameLine();
         }
-        if ( currentState == PlaySessionState::Playing )
+        if ( currentState == PlaySessionState::Playing && bSimulating == false )
         {
             EditorWidgets::drawChip( "Playing", editor::style::kOk );
             EditorWidgets::drawTooltip( "현재 게임 실행 중" );
-            ImGui::SameLine();
         }
         else if ( ImGui::Button( "Play" ) )
         {
+            _pendingSession = PendingSession::Play;
             if ( bSceneDirty && EditorPlaySession::isStopped() )
                 _bConfirmUnsavedPlay = true;
             else
-                EditorPlaySession::play();
+                startSession( PendingSession::Play );
         }
-        if ( currentState != PlaySessionState::Playing )
+        if ( currentState != PlaySessionState::Playing || bSimulating )
             EditorWidgets::drawTooltip( "게임 플레이 모드를 시작합니다 (게임 뷰 입력 및 플레이어 컨트롤 활성화)" );
 
         ImGui::SameLine();
-        if ( ImGui::Button( "Simulate" ) )
+        if ( currentState == PlaySessionState::Playing && bSimulating )
         {
+            EditorWidgets::drawChip( "Simulating", editor::style::kOk );
+            EditorWidgets::drawTooltip( "월드만 도는 중 — 게임 모듈 업데이트 · 게임 입력 없이 에디터 카메라로 봅니다" );
+        }
+        else if ( ImGui::Button( "Simulate" ) )
+        {
+            _pendingSession = PendingSession::Simulate;
             if ( bSceneDirty && EditorPlaySession::isStopped() )
                 _bConfirmUnsavedPlay = true;
             else
-                EditorPlaySession::play();
+                startSession( PendingSession::Simulate );
         }
-        EditorWidgets::drawTooltip( "시뮬레이션 모드를 시작합니다 (에디터 카메라를 유지하며 물리/게임 로직 실행)" );
+        if ( currentState != PlaySessionState::Playing || bSimulating == false )
+            EditorWidgets::drawTooltip( "시뮬레이션 모드를 시작합니다 (씬만 틱 — 게임 모듈 업데이트 · 게임 입력 없음, 에디터 카메라 유지)" );
 
         ImGui::SameLine();
         if ( currentState == PlaySessionState::Paused )
         {
             EditorWidgets::drawChip( "Paused", editor::style::kWarn );
             EditorWidgets::drawTooltip( "게임 일시 정지됨" );
-            ImGui::SameLine();
         }
         else if ( ImGui::Button( "Pause" ) )
             EditorPlaySession::pause();
@@ -168,6 +189,16 @@ namespace sw::editor
         EditorWidgets::drawTooltip( "게임을 정확히 1프레임 전진시킵니다" );
 
         ImGui::SameLine();
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
+        ImGui::InputInt( "##StepFrameCount", &_stepFrameCount, 0, 0 );
+        _stepFrameCount = MathUtil::clamp( _stepFrameCount, 1, static_cast<int32>( EditorPlaySession::kMaxStepFrameCount ) );
+        EditorWidgets::drawTooltip( "'Step N' 이 진행할 프레임 수" );
+        ImGui::SameLine();
+        if ( ImGui::Button( "Step N" ) )
+            EditorPlaySession::stepFrames( static_cast<uint32>( _stepFrameCount ) );
+        EditorWidgets::drawTooltip( "왼쪽 칸의 프레임 수만큼 진행한 뒤 일시 정지합니다" );
+
+        ImGui::SameLine();
         if ( ImGui::Button( "Stop" ) )
         {
             EditorPlaySession::stop();
@@ -176,5 +207,106 @@ namespace sw::editor
                 pContext->getWorkspace().remapSelectionByObjectName( pObjectManager );
         }
         EditorWidgets::drawTooltip( "게임을 중지하고 초기 씬 상태로 복원합니다" );
+    }
+
+    void GameViewPanel::drawSessionOptions()
+    {
+        ImGui::Checkbox( "Cam", &_bStartAtCamera );
+        EditorWidgets::drawTooltip( "Play 를 에디터 카메라 위치에서 시작합니다 ('Player' 태그 오브젝트, 없으면 게임 카메라를 든 오브젝트를 옮깁니다)" );
+
+        ImGui::SameLine();
+        float32 timeScale = GameTimeScale::get();
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 5.0f );
+        if ( ImGui::DragFloat( "##TimeScale", &timeScale, 0.01f, GameTimeScale::kMinScale, GameTimeScale::kMaxScale, "x%.2f" ) )
+            GameTimeScale::set( timeScale );
+        if ( ImGui::IsItemClicked( ImGuiMouseButton_Right ) )
+            GameTimeScale::set( 1.0f );
+        EditorWidgets::drawTooltip( "게임 시간 배율 (gv_timeScale) — 끌어서 바꾸고, 오른쪽 클릭으로 x1.00 으로 되돌립니다" );
+
+        ImGui::SameLine();
+        if ( ImGui::Button( "Dbg Cat" ) )
+            ImGui::OpenPopup( "##DebugDrawCategories" );
+        EditorWidgets::drawTooltip( "DebugDrawQueue 카테고리를 켜고 끕니다" );
+        drawDebugCategoryPopup();
+
+        ImGui::SameLine();
+        ImGui::Checkbox( "HUD", &_bShowOverlay );
+        EditorWidgets::drawTooltip( "게임이 DebugOverlayState 에 쓴 값을 캔버스 왼쪽 위에 표시합니다" );
+    }
+
+    void GameViewPanel::drawDebugCategoryPopup()
+    {
+        if ( ImGui::BeginPopup( "##DebugDrawCategories" ) == false )
+            return;
+        DebugDrawQueue* pQueue = getService<DebugDrawQueue>();
+        _listDebugCategory.clear();
+        if ( pQueue != nullptr )
+            pQueue->collectCategories( _listDebugCategory );
+        if ( _listDebugCategory.empty() )
+            ImGui::TextDisabled( "No debug draw yet." );
+        for ( const hashed_string& category : _listDebugCategory )
+        {
+            bool bEnabled = pQueue->isCategoryEnabled( category );
+            if ( ImGui::Checkbox( category.c_str(), &bEnabled ) )
+                pQueue->setCategoryEnabled( category, bEnabled );
+        }
+        ImGui::EndPopup();
+    }
+
+    void GameViewPanel::startSession( PendingSession session )
+    {
+        // 카메라에서 시작은 플레이어가 조종하는 세션만 쓴다(Simulate 는 옮길 플레이어가 없다). 멈춤에서 시작할 때만 정한다.
+        PlaySessionData* pData = EditorPlaySession::findData();
+        if ( pData != nullptr && EditorPlaySession::isStopped() )
+        {
+            const CameraComponent* pEditorCamera = EditorCamera::find( editor::getActiveScene() );
+            if ( _bStartAtCamera && pEditorCamera != nullptr )
+                EditorPlaySession::setStartPosition( *pData, pEditorCamera->getWorldPosition() );
+            else
+                EditorPlaySession::clearStartPosition( *pData );
+        }
+        if ( session == PendingSession::Simulate )
+            EditorPlaySession::simulate();
+        else
+            EditorPlaySession::play();
+    }
+
+    void GameViewPanel::drawDebugOverlay( const float2& canvasPos )
+    {
+        _lastOverlayRowCount              = 0;
+        const DebugOverlayState* pOverlay = getService<DebugOverlayState>();
+        if ( _bShowOverlay == false || pOverlay == nullptr || pOverlay->_bVisible == SW_FALSE )
+            return;
+        pOverlay->collectRows( _listOverlayRow );
+        if ( _listOverlayRow.empty() )
+            return;
+
+        // 키 열 너비를 맞춰 값이 한 줄로 서게 한다.
+        float32 keyWidth   = 0.0f;
+        float32 valueWidth = 0.0f;
+        for ( const DebugOverlayRow& row : _listOverlayRow )
+        {
+            keyWidth   = MathUtil::max( keyWidth, ImGui::CalcTextSize( row._key.c_str() ).x );
+            valueWidth = MathUtil::max( valueWidth, ImGui::CalcTextSize( row._value.c_str() ).x );
+        }
+
+        constexpr float32 kPadding   = 6.0f;
+        constexpr float32 kColumnGap = 12.0f;
+        constexpr float32 kTopOffset = 36.0f; // 트랜스폼 바 아래
+        const float32     lineHeight = ImGui::GetTextLineHeight();
+        const ImVec2      boxMin{ canvasPos._x + 8.0f, canvasPos._y + kTopOffset };
+        const ImVec2      boxMax{ boxMin.x + kPadding * 2.0f + keyWidth + kColumnGap + valueWidth,
+                             boxMin.y + kPadding * 2.0f + lineHeight * static_cast<float32>( _listOverlayRow.size() ) };
+        ImDrawList*       pDrawList = ImGui::GetWindowDrawList();
+        pDrawList->AddRectFilled( boxMin, boxMax, IM_COL32( 0, 0, 0, 150 ), 4.0f );
+
+        float32 lineY = boxMin.y + kPadding;
+        for ( const DebugOverlayRow& row : _listOverlayRow )
+        {
+            pDrawList->AddText( ImVec2( boxMin.x + kPadding, lineY ), IM_COL32( 160, 200, 255, 255 ), row._key.c_str() );
+            pDrawList->AddText( ImVec2( boxMin.x + kPadding + keyWidth + kColumnGap, lineY ), IM_COL32( 255, 255, 255, 255 ), row._value.c_str() );
+            lineY += lineHeight;
+        }
+        _lastOverlayRowCount = static_cast<uint32>( _listOverlayRow.size() );
     }
 } // namespace sw::editor

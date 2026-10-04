@@ -25,6 +25,7 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/SplashWindow.h"
@@ -337,7 +338,7 @@ namespace sw
                 break;
             }
 
-            const FrameTime frameTime = _fixedTimestep.advance();
+            const FrameTime frameTime = _fixedTimestep.advance( GameTimeScale::get() );
 
             _engineLoop.beginFrame( frameTime._deltaTime );
             // 에디터 Play/Pause 상태를 여기서 한 번 고정한다. 아래 고정 스텝이 여러 번 돌아도 DLL 경계를 넘어 다시 묻지 않고,
