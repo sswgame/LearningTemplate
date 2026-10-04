@@ -13,6 +13,7 @@ sw_addTestExecutable(EditorTest
 	SOURCES
 		TestAssetHotReload.cpp
 		TestEditorAssetType.cpp
+		TestEditorAssetValidation.cpp
 		TestEditorAssetTypeActions.cpp
 		TestEditorBackgroundTask.cpp
 		TestEditorCommandRegistry.cpp
@@ -26,6 +27,7 @@ sw_addTestExecutable(EditorTest
 		TestEditorResourceIndex.cpp
 		TestEditorSceneCommands.cpp
 		TestEditorSessionPolicy.cpp
+		TestEditorSourceControl.cpp
 		TestEditorTransaction.cpp
 		TestEditorTransformCommands.cpp
 		TestEditorToolAssetCommands.cpp
@@ -43,6 +45,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/EditorDrawReleaseQueue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorCommandRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorDataTableCommands.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorExternalToolJob.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorResourceIndex.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorGlobalVariableCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorSceneCommands.cpp"
@@ -70,11 +73,14 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorSelection.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/AssetImportPathFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/AssetImportStamp.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/EditorAssetValidation.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ImageUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImportConfig.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/ModelImporter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImportConfig.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImporter.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/SourceControl/EditorSourceControl.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/SourceControl/SourceControlProvider.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorVisualizerGeometry.cpp"
 	LIBS
 		Engine

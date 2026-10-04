@@ -113,6 +113,9 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
+- **모든 머티리얼(20 개)의 `UseNormalMap` 정적 스위치 키워드 `MATERIAL_NORMALMAP` 을 읽는 셰이더가 없다**(에셋 검증 `material-dead-switches` 경고).
+  노멀 맵을 셰이더에 넣거나 스위치를 지운다 — 지금은 퍼뮤테이션 표에만 있는 죽은 칸이다.
+
 - **머티리얼 해제가 렌더 스레드의 병렬 기록과 겹친다.** 마지막 참조가 게임 스레드에서 놓이면(`GpuSceneBuilder::buildFromScene` 의 후보 교체 →
   `~Material` → `releaseRhi`) `unregisterBindlessResource` 가 렌더 스레드의 병렬 기록 중에 돌 수 있다(`assertRegistryMutableNow` — 플래그 읽기가 경합이라 단언이
   늘 서지는 않는다). 올리기 쪽은 `EngineLoop` 가 기다린다(3-7). 해제도 렌더 스레드 · 펜스 뒤로 미루거나 같은 자리에서 기다려야 한다. 지금 피하는 법: 런타임에
@@ -165,6 +168,9 @@ cd build/Ninja-Debug/Bin
   내보내는 일이다. 쓰는 모듈이 생기면 그때.
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
+
+- **아무도 이름을 부르지 않는 메시가 45 개다**(에셋 검증 `orphans` 경고 — NileCity 건물 · StarSkirmish 탈것 · ThemePark 코스터 조각 등 Kenney 키트에서 들여온 것).
+  쓸 계획이 없으면 `models_raw/` 원본과 함께 지우고, 코드가 이름을 조립해 부르는 것이면 규칙의 `exclude_patterns` 에 적는다.
 
 - **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`. (1) 메뉴 UI(런타임 UI 프레임워크 뒤) ·
   `UserSettingsPanel` 대신 키를 눌러 받는 리바인딩 창. (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 그림자 · 시야 거리 · 후처리 ·
@@ -627,6 +633,9 @@ cd build/Ninja-Debug/Bin
   비동기 로거는 크래시 직전 메시지를 잃는다 — 직접 진단은 `fopen` + `fflush` + `fclose`.
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
+
+- **파이썬 도구의 단위 시험은 `Test/PythonTest/Test*.py`** — 파일을 놓으면 CTest 항목(`PythonTest_<이름>`, `nogpu`)이다. Blender 애드온처럼 바깥 모듈(bpy)을
+  쓰는 것은 그 import 를 한 파일에 가두고 나머지를 시험한다(`TestBlenderExporter` 가 빈 패키지 모듈을 세워 읽는다).
 
 - **주석 정리에서 마커(예전 · 날짜 · 백로그)로만 뽑으면 과거형 경위("~를 각자 들고 있었습니다")가 영역마다 ~10 % 남는다** — `(었|았|였)(는데|다|습니다)` 로 한 번 더 훑는다.
   빌드가 도는 동안 헤더를 고치면 PCH 크기 불일치("modified since the precompiled header")로 빌드가 진다 — 편집과 빌드를 겹치지 말 것.

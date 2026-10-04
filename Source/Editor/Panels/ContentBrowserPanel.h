@@ -90,6 +90,10 @@ namespace sw::editor
 
         /** @brief 폴더 카드 아이콘을 그립니다. */
         void drawFolderThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos );
+        /** @brief 잠금 · 읽기 전용 파일이면 타일 오른쪽 위에 자물쇠를 그리고 도구 설명에 이유를 보입니다. */
+        static void drawSourceControlBadge( ImDrawList* pDrawList, const float2& topRight, const AssetEntry& entry );
+        /** @brief 항목의 버전 관리 상태 글입니다(잠금 · 읽기 전용이 아니면 빈 문자열). */
+        static string describeSourceControlStatus( const AssetEntry& entry );
 
         /** @brief 폴더 이동 히스토리 항목 */
         struct HistoryEntry

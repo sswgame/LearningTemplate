@@ -8,6 +8,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
@@ -21,6 +22,7 @@
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Gui/EditorPanelDump.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -414,7 +416,11 @@ namespace sw::editor
         // 에셋 파일 감시는 **에디터 프레임에서만** 돈다. 리로드가 패널 그리기보다
         // 앞에 있어야 이번 프레임에 바뀐 머티리얼이 그대로 보인다.
         if ( _editorContext != nullptr )
+        {
             _editorContext->getAssetHotReload().update();
+            _editorContext->getAssetValidation().update();
+            _editorContext->getSourceControl().update();
+        }
 
         BLOCK( "Editor Panels Draw" )
         {

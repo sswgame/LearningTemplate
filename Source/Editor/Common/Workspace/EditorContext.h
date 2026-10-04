@@ -13,11 +13,13 @@ namespace sw
 namespace sw::editor
 {
     class AssetHotReload;
+    class EditorAssetValidation;
     class EditorCommandRegistry;
     class EditorNotificationManager;
     class EditorPanelManager;
     class EditorPopupManager;
     class EditorSelection;
+    class EditorSourceControl;
     class EditorWorkspace;
     class IImGuiRendererBackend;
     class InspectorComponentManager;
@@ -62,6 +64,10 @@ namespace sw::editor
         EditorPanelManager&        getPanelManager() { return *_pPanelManager; }
         EditorPopupManager&        getPopupManager() { return *_pPopupManager; }
         AssetHotReload&            getAssetHotReload() { return *_pAssetHotReload; }
+        /** @brief 저장 · 임포트 직후 에셋 검증입니다. */
+        EditorAssetValidation& getAssetValidation() { return *_pAssetValidation; }
+        /** @brief 버전 관리 잠금(체크아웃) 창구입니다. */
+        EditorSourceControl&       getSourceControl() { return *_pSourceControl; }
         InspectorComponentManager& getInspectorComponentManager() { return *_pInspectorComponentManager; }
         InspectorPropertyManager&  getInspectorPropertyManager() { return *_pInspectorPropertyManager; }
 
@@ -93,6 +99,8 @@ namespace sw::editor
         unique_ptr<EditorPanelManager>        _pPanelManager;
         unique_ptr<EditorPopupManager>        _pPopupManager;
         unique_ptr<AssetHotReload>            _pAssetHotReload;
+        unique_ptr<EditorAssetValidation>     _pAssetValidation;
+        unique_ptr<EditorSourceControl>       _pSourceControl;
         unique_ptr<InspectorComponentManager> _pInspectorComponentManager;
         unique_ptr<InspectorPropertyManager>  _pInspectorPropertyManager;
         IRHIDevice*                           _pRhiDevice;
