@@ -17,6 +17,17 @@ namespace sw
     SW_DECLARE_DELEGATE( bool, WindowCloseQueryDelegate, void );
 
     /**
+     * @brief 창을 화면에 놓는 방식입니다.
+     * @details 전용 전체 화면(디스플레이 모드 변경)은 두지 않습니다. 플립 모델 · 티어링 스왑체인과 함께 쓰면 Present 규칙이 달라지고 Alt+Tab 이
+     *          모드를 되돌리므로, 전체 화면은 모니터를 덮는 테두리 없는 창 하나로 합니다(Unreal `WindowedFullscreen` · Unity `FullScreenWindow`).
+     */
+    enum class WindowDisplayMode : uint8
+    {
+        Windowed = 0,         ///< 테두리 · 제목 줄이 있는 창. 클라이언트 크기를 그대로 씁니다.
+        BorderlessFullscreen, ///< 창이 놓인 모니터를 덮는 테두리 없는 창. 크기는 모니터 크기입니다.
+    };
+
+    /**
      * @class IWindow
      * @brief 애플리케이션의 주 화면이나 보조 화면을 추상화하는 기본 인터페이스입니다.
      * @details 플랫폼별(Windows, Linux) 구체 클래스가 이 인터페이스를 상속해 구현합니다.
@@ -77,6 +88,23 @@ namespace sw
         virtual uint32 getWidth() const { return _width; }
         /** @brief 클라이언트 높이를 반환합니다. */
         virtual uint32 getHeight() const { return _height; }
+
+        /**
+         * @brief 창 방식과 (창 모드일 때의) 클라이언트 크기를 바꿉니다.
+         * @details 크기가 바뀌면 플랫폼의 크기 통보가 `setResizeCallback` 의 콜백을 부릅니다 — 스왑체인은 그 길(App::onResize 가 렌더 스레드를
+         *          기다린 뒤 resize)로만 바뀝니다. Win32 는 이 호출 안에서 같은 스레드로 통보하고, X11 은 다음 `processMessages` 에서 통보합니다.
+         *          **창 스레드(메인 스레드)에서만 부릅니다.** `BorderlessFullscreen` 이면 @p width · @p height 는 무시하고 모니터 크기를 씁니다.
+         * @return 지원하지 않는 플랫폼이면 false 입니다.
+         */
+        virtual bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
+        {
+            (void)mode;
+            (void)width;
+            (void)height;
+            return false;
+        }
+        /** @brief 마지막 `setDisplayMode` 가 고른 창 방식입니다. */
+        WindowDisplayMode getDisplayMode() const { return _displayMode; }
 
         // ------------------------------------------------------------------------------
         // IRenderSurface: RHI 가 창 시스템을 모르는 채로 묻는 다섯 가지
@@ -177,7 +205,8 @@ namespace sw
         uint8                  _bRecreating       : 1;
         uint8                  _bVisibleRequested : 1; /**< 마지막 showWindow() 의 인자. 화면 상태가 아니라 **의도**. */
         [[maybe_unused]] uint8 _reserved          : 5;
-        uint8                  _arrReserved[7];
+        WindowDisplayMode      _displayMode; /**< 마지막 `setDisplayMode` 가 고른 방식. */
+        uint8                  _arrReserved[6];
         /** @brief 다시 만들 때 놓을 위치입니다. 플랫폼 생성자가 자기 "알아서" 값으로 채웁니다. */
         int32 _restoreX;
         int32 _restoreY;

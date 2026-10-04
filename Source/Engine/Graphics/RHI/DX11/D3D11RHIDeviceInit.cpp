@@ -54,7 +54,8 @@ namespace sw
 
         // VSync 를 끄려면 티어링 허용 스왑체인이어야 한다. 동기화 간격 0 만으로는 DWM 합성이
         // vblank 에 맞춰 넘겨 주므로 화면 주사율에 그대로 붙는다(RHIDxgiTearing.h).
-        const bool bAllowTearing = ( desc._bVSync == false ) && queryDxgiAllowTearing();
+        // VSync 는 실행 중에도 바뀌므로(`IRHIDevice::setVSync`) 지원하면 늘 티어링 허용으로 만든다 — 켜진 VSync 는 Present( 1, 0 ) 이다.
+        const bool bAllowTearing = queryDxgiAllowTearing();
         swapChainDesc.Flags      = bAllowTearing ? static_cast<UINT>( DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING ) : 0u;
 
         UINT createDeviceFlags{ 0 };

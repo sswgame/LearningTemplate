@@ -120,6 +120,32 @@ namespace sw
         return false;
     }
 
+    bool X11Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
+    {
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+            return false;
+
+        Display*   pDisplay    = static_cast<Display*>( _pX11Display );
+        const bool bFullscreen = mode == WindowDisplayMode::BorderlessFullscreen;
+        _displayMode           = mode;
+
+        // 창 관리자에게 상태 변경을 청한다(EWMH). 1 = _NET_WM_STATE_ADD, 0 = _NET_WM_STATE_REMOVE, l[3] = 1 은 "일반 앱" 출처다.
+        XEvent event{};
+        event.xclient.type         = ClientMessage;
+        event.xclient.window       = static_cast<Window>( _x11Window );
+        event.xclient.message_type = XInternAtom( pDisplay, "_NET_WM_STATE", 0 );
+        event.xclient.format       = 32;
+        event.xclient.data.l[0]    = bFullscreen ? 1 : 0;
+        event.xclient.data.l[1]    = static_cast<int64>( XInternAtom( pDisplay, "_NET_WM_STATE_FULLSCREEN", 0 ) );
+        event.xclient.data.l[2]    = 0;
+        event.xclient.data.l[3]    = 1;
+        XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event );
+        if ( bFullscreen == false )
+            XResizeWindow( pDisplay, static_cast<Window>( _x11Window ), width, height );
+        XFlush( pDisplay );
+        return true;
+    }
+
     void X11Window::captureRestorePosition()
     {
         if ( _pX11Display == nullptr || _x11Window == 0 )
@@ -206,6 +232,14 @@ namespace sw
 
     void X11Window::destroy()
     {
+    }
+
+    bool X11Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
+    {
+        (void)width;
+        (void)height;
+        _displayMode = mode;
+        return false;
     }
 
     void X11Window::captureRestorePosition()

@@ -25,6 +25,7 @@ namespace sw
         , _bRecreating{ SW_FALSE }
         , _bVisibleRequested{ SW_FALSE }
         , _reserved{ 0 }
+        , _displayMode{ WindowDisplayMode::Windowed }
         , _arrReserved{}
         , _restoreX{ 0 }
         , _restoreY{ 0 }
@@ -109,6 +110,9 @@ namespace sw
 
         const string title = StringUtil::utf16ToUtf8( _title.c_str() );
         const bool   bOk   = initializeWindow( title.c_str(), width, height );
+        // 새 창은 늘 창 모드로 선다. 전체 화면이던 창은 보이기 전에 같은 방식으로 되돌린다(크기 통보는 `_bRecreating` 이 삼킨다).
+        if ( bOk && _displayMode != WindowDisplayMode::Windowed )
+            (void)setDisplayMode( _displayMode, width, height );
         if ( bOk && bWasVisible )
             showWindow( true );
 

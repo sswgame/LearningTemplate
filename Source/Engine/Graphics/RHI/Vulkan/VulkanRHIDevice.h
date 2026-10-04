@@ -182,7 +182,9 @@ namespace sw
         void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
 
         /** @brief 크기를 적고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
-        void               resizeInternal( uint32 width, uint32 height ) override;
+        void resizeInternal( uint32 width, uint32 height ) override;
+        /** @brief present 모드를 새 VSync 값으로 바꾸도록 스왑체인을 다음 `beginFrame` 에서 다시 만들게 표시합니다. */
+        void               applyVSyncInternal() override;
         [[nodiscard]] bool createRenderPass();
         /** @brief 프레임을 엽니다(펜스 대기 · 스왑체인 이미지 획득 · 커맨드 버퍼 기록 시작). */
         void beginFrame( const float4& clearColor ) override;

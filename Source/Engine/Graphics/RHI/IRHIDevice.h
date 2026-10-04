@@ -96,6 +96,12 @@ namespace sw
         virtual void resizeInternal( uint32 width, uint32 height ) = 0;
 
         /**
+         * @brief `setVSync` 가 값을 적은 뒤 부릅니다. 동기화를 프레젠트 인자로 고르는 백엔드(DXGI · GL)는 할 일이 없습니다.
+         * @details 스왑체인의 present 모드가 동기화를 정하는 백엔드(Vulkan)는 여기서 스왑체인을 다시 만들게 표시합니다.
+         */
+        virtual void applyVSyncInternal() {}
+
+        /**
          * @brief GPU 에 제출된 작업이 모두 끝날 때까지 기다립니다.
          * @details **렌더 스레드가 떠 있고 다른 스레드에서 부르면, 먼저 렌더 스레드가 받은 일을 모두 끝낼 때까지 기다립니다**
          *          (`setRenderThreadDrain`). 게임 스레드에서 부르는 쪽(비동기 씬 로드 완료 `SceneManager::tickTransitions` · 텍스처 · 머티리얼
@@ -290,6 +296,12 @@ namespace sw
          *          CLI 도 효과가 없어 프레임이 모니터 주사율에 묶입니다.
          */
         bool isVSyncEnabled() const { return _bPreferredVSync; }
+        /**
+         * @brief 실행 중에 VSync 를 바꿉니다. **렌더 스레드가 멈춘 상태에서만** 부릅니다(`RenderThread::waitIdle` 뒤 — 리사이즈와 같은 규칙).
+         * @details 다음 `endFrame` 부터 새 값으로 프레젠트합니다. DXGI 스왑체인은 티어링을 지원하면 늘 티어링 허용으로 만들어 두므로 다시 만들지
+         *          않습니다. Vulkan 은 present 모드가 바뀌므로 다음 `beginFrame` 에서 스왑체인을 다시 만듭니다.
+         */
+        void setVSync( bool bVSync );
         // ------------------------------------------------------------------------------
         // 4) 커맨드 리스트 — 생성, 그래픽스 스레드에서만 execute
         // ------------------------------------------------------------------------------

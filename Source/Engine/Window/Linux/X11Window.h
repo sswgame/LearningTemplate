@@ -29,6 +29,9 @@ namespace sw
         /** @brief X11 창이 지금 화면에 보이는지(창 관리자가 매핑했는지) 반환합니다. */
         bool isVisible() const override;
 
+        /** @brief EWMH `_NET_WM_STATE_FULLSCREEN` 을 켜고 끄고, 창 모드면 `XResizeWindow` 로 크기를 바꿉니다. 크기 통보는 다음 ConfigureNotify 입니다. */
+        bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
+
 #if defined( SW_PLATFORM_LINUX )
         /** @brief X11 창 핸들을 반환합니다. */
         void* getNativeHandle() const override { return reinterpret_cast<void*>( _x11Window ); }
