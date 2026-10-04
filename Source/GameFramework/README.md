@@ -61,7 +61,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   아케이드 차량(`ArcadeVehicleMotor` — 속도에 따른 조향 · 드리프트 미니터보 단계 · 니트로 · 오프로드 · 점프, 지면은 `IVehicleGround`)
 - **Navigation**: 격자(`NavGrid`), A*(`GridPathfinder`), 흐름장(`FlowField`), 걷는 행위자(`NavAgent` · `Steering`), SRPG 이동 범위(`GridReachability`)
 - **Progression**: 경험치 곡선 · 레벨(`ExperienceCurve` · `LevelProgress`), 스킬 트리(`SkillTreeCatalog` · `SkillTreeState`), 평판 · 호감도(`ReputationCatalog` ·
-  `ReputationState`), 로그라이트 지도(`RunMap`)
+  `ReputationState`), 로그라이트 지도(`RunMap`), 로컬 통계(`StatCatalog` · `PlayerStats` — `<Stats><Stat id kind="Counter|Max|Min|Time" max/>` 정의, `increment` ·
+  `submit`(기록이 좋아질 때만) · `addTime`, 바뀔 때만 듣는 쪽에 `StatChange`, 프로필 파일 `saveToFile` · `loadFromFile` — 업적의 바탕, Steam Stats 의 로컬 판)
 - **Quest**: 퀘스트(`QuestCatalog` · `QuestLog` — 선행 · 레벨 · 단계 · 목표 · 선택 목표 · 분기 · 보상 알림 · 시간 제한 · 반복)
 - **World**: 시계(`WorldClock` — 시 · 때 · 날 · 계절 · 해 · 햇빛 · 잠), 날씨(`WeatherCatalog` · `WeatherSystem` — 계절 가중치 · 섞기 · 예보),
   방 · 지역 그래프(`AreaGraph` — 잠금 조건 · 일방통행 · 발견 · 탐색률 · 막힌 경계 · 코드로 짓기 · 다른 XML 안에 적기), 진행형 상호작용(`InteractionProgress` — 여럿 · 끊김 · 퇴행 · 스킬 체크),
