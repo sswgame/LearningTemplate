@@ -648,6 +648,74 @@ namespace sw
                                           hashed_string{} );
     }
 
+    /**
+     * @class MockSubTickMoverComponent
+     * @brief 서브틱 하나(`kMoveSubTick`)에서 다른 오브젝트의 위치를 읽고 자기 위치를 쓰는 씬 컴포넌트입니다 — 선행 조건 사슬의 트랜스폼 가시성을 봅니다.
+     * @details 쓰는 값은 (`_pWatched` 의 로컬 위치, 없으면 원점) + `_offset` 입니다. 사슬 A→B→C 에서 C 가 쓰는 값은 같은 프레임의 A · B 결과에 기댑니다.
+     */
+    class MockSubTickMoverComponent : public SceneComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr uint32 kMoveSubTick = 1;
+
+        SceneComponent*   _pWatched{ nullptr };           ///< 서브틱 안에서 읽을 다른 오브젝트의 씬 컴포넌트
+        float3            _offset{};                      ///< 읽은 위치에 더해 쓸 값
+        float3            _observedLocal{};               ///< 서브틱 안에서 읽은 `_pWatched` 의 로컬 위치
+        float3            _observedWorld{};               ///< 서브틱 안에서 읽은 `_pWatched` 의 월드 위치
+        const GameObject* _pTickingObjectSeen{ nullptr }; ///< 서브틱 안에서 본 `GameObjectManager::getTickingObject()`
+        SceneComponent*   _pAttachChild{ nullptr };       ///< 서브틱에서 이 컴포넌트를 `_pAttachParent` 에 `KeepWorld` 로 붙인다(틱 중이라 미뤄진다)
+        SceneComponent*   _pAttachParent{ nullptr };
+        GameObject*       _pDestroyObject{ nullptr }; ///< 서브틱에서 이 오브젝트를 파괴한다(틱 중이라 삭제 표시만 선다)
+        uint32            _subTickCount{ 0 };
+        uint8             _bWriteOnSubTick{ SW_TRUE };
+
+        MockSubTickMoverComponent()
+        {
+            setCanEverTick( false );
+        }
+
+        const TypeInfo* getTypeInfo() const override
+        {
+            return StaticType();
+        }
+
+        void onSubTick( uint32 subTickId, float32 deltaTime ) override
+        {
+            SceneComponent::onSubTick( subTickId, deltaTime );
+            ++_subTickCount;
+            _pTickingObjectSeen = GameObjectManager::getTickingObject();
+            float3 base{};
+            if ( _pWatched != nullptr )
+            {
+                _observedLocal = _pWatched->getLocalPosition();
+                _observedWorld = _pWatched->getWorldPosition();
+                base           = _observedLocal;
+            }
+            if ( _bWriteOnSubTick == SW_TRUE )
+                setLocalPosition( base + _offset );
+            if ( _pAttachChild != nullptr && _pAttachParent != nullptr )
+                (void)_pAttachChild->attachToComponent( _pAttachParent, AttachRule::KeepWorld );
+            if ( _pDestroyObject != nullptr && getOwner() != nullptr && getOwner()->getManager() != nullptr )
+            {
+                getOwner()->getManager()->destroyObject( _pDestroyObject );
+                _pDestroyObject = nullptr;
+            }
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
+    inline const TypeInfo* MockSubTickMoverComponent::StaticType()
+    {
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockSubTickMoverComponent>, hashed_string( "MockSubTickMoverComponent" ),
+                                          hashed_string( "sw::MockSubTickMoverComponent" ),
+                                          sizeof( MockSubTickMoverComponent ),
+                                          hashed_string( "sw::SceneComponent" ) );
+    }
+
     class MockPoolLifecycleComponent : public Component
     {
     public:

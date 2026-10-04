@@ -943,7 +943,8 @@ cd build/Ninja-Debug/Bin
   지난다. 틱 중 `addComponent` 는 `nullptr` — `executeOrDeferPostTick`. 시험은 틱 **안에서** 본 값을 목 훅으로 기록한다(`getComponentCount` 는 미룸과 해제를 가르지 못한다).
 - **틱 중 트랜스폼 쓰기** — 자기 오브젝트를 틱하는 스레드면 칸의 대기 자리에, 남의 오브젝트면 쓰기 큐로(`SceneComponent::queueTickWrite` 하나). 남의 값은 늘 틱 전 값을 읽는다.
   큐는 (대상, 쓴 오브젝트 id, 순번)으로 정렬해 적용하므로 결과가 스레드 배정에 달리지 않는다. 워커가 쓰는 더티 플래그는 바이트 · `atomic<uint8>` relaxed(비트필드는 이웃
-  비트를 덮고, 같은 값을 겹쳐 쓰는 것도 데이터 경쟁이다).
+  비트를 덮고, 같은 값을 겹쳐 쓰는 것도 데이터 경쟁이다). 예외는 서브틱 선행 조건의 스테이지 경계다 — 기다리는 스테이지 앞에서 그때까지의 쓰기를 적용 · 플러시한다
+  (`applyStageTransforms`). 그 단계에 attach · detach 가 미뤄졌으면(`deferHierarchyChange`) 그 뒤로는 앞당기지 않는다 — `KeepWorld` 부착이 먼저 적용된 쓰기를 덮는다.
 - **월드 합성은 `updateWorldTransformFromParent` 한 곳이고, 렌더 더티를 찍는 곳은 `onWorldTransformUpdated` 하나다.** 합성 경로를 하나 더 만들면 메시가 화면에서 얼어붙는다.
   트랜스폼 값은 전역 `SceneTransformStorage`(256 칸 페이지, 옮기지 않는다)에 있고 컴포넌트는 칸 번호만 든다. 쓰기 알고리즘은 `SceneTransformHierarchy` 가 갖는다.
 - **부착** — 오브젝트의 루트 씬 컴포넌트는 하나(둘째는 primary 아래로), `AttachRule { KeepRelative, KeepWorld }`, `canAttachTo`(다른 매니저 · 소켓을 거친 순환 · 파괴 대기 부모)는
@@ -964,6 +965,8 @@ cd build/Ninja-Debug/Bin
 - **플레이 수명주기** — 컴포넌트의 "시작됨" 비트가 시작 · 끝을 한 번씩 짝짓는다. 플레이 중 붙은 컴포넌트는 다음 틱 단계(`GT.Scene.tick.beginPlay`)에서 시작한다. 월드 플레이 상태는
   `SceneManager::setWorldPlaying`. 다시 만든 인스턴스(되돌리기 · 핫 리로드 · DontDestroyOnLoad)는 onBeginPlay 를 다시 받는다 — `markPersistent` 는 같은 id 로 **다시 만든다**.
 - **틱 선언** — 기본은 "`onTick` 을 오버라이드했는가"(`HasOnTickOverride_v<T>`), 우선순위는 `kMaxTickPriority`(63). 다른 그룹의 선행 조건이 있으면 뒤따르는 쪽을 그 그룹으로 옮긴다.
+  **선행 조건을 가진 서브틱만 스테이지로 간다**(그룹마다 보통 길 뒤) — 나머지는 선행 조건이 씬에 있어도 보통 길이다(무버 8000 의 틱 p50 600 → 140 us). 단계
+  (`TickPhase`)는 한 오브젝트 안의 순서일 뿐이다. 선행 조건 핸들은 등록이 준 것을 쓴다 — 소유 오브젝트 id 가 없는 손수 만든 핸들은 거절된다.
 - **기본값은 만들 때 한 번이다**(CDO 자리, `DefaultPatch`). 모듈 등록 · 리로드에서 살아 있는 값에 다시 찍지 말 것. `ComponentDefaults` 의 기본값 파일은 없어도 되는 파일이다
   ("시도했는가" 로 한 번만 연다). 프리팹 형식은 읽을 때 정해 든다(`PrefabStateFormat`), 쓰기는 `PrefabAsset::saveToFile` 하나, 오버라이드는 `타입#n` 키.
 - **찾지 말고 등록받는다.** 매 프레임 씬을 훑던 주광 조회가 GT 의 38 % 였다. 빛은 `LightRegistry`(종류별 칸), 카메라는 `CameraRegistry::selectCamera`(동률은 컴포넌트 id — 등록
