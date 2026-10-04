@@ -325,7 +325,7 @@ namespace sw
         for ( uint32 variantIndex = 0; variantIndex < meshVariantCount; ++variantIndex )
         {
             const utf8*      pShapeId = kArrBenchShape[variantIndex % shapeCount];
-            shared_ptr<Mesh> variant  = MeshUtil::createPrimitive( pShapeId );
+            shared_ptr<Mesh> variant  = MeshUtil::createPrimitive( pShapeId, PrimitiveVertexColor::Diagnostic );
             if ( variant == nullptr )
             {
                 SW_LOG_ERROR( "[Bench] 도형 '%#' 을 만들지 못했습니다.", pShapeId );

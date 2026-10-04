@@ -236,7 +236,7 @@ namespace sw
         return nullptr;
     }
 
-    shared_ptr<Mesh> MeshUtil::createPrimitive( string_view meshId )
+    shared_ptr<Mesh> MeshUtil::createPrimitive( string_view meshId, PrimitiveVertexColor vertexColor )
     {
         SW_MEMORY_SCOPE( Mesh );
         const utf8* pCanonical = canonicalPrimitiveIdVal( meshId );
@@ -244,21 +244,37 @@ namespace sw
             return {};
 
         const string_view canonical( pCanonical );
+        shared_ptr<Mesh>  pMesh;
         if ( canonical == "cube" )
-            return createUnitCube();
-        if ( canonical == "quad" )
-            return createRectMesh();
-        if ( canonical == "sprite" )
-            return createSpriteQuad();
-        if ( canonical == "plane" )
-            return createPlane();
-        if ( canonical == "sphere" )
-            return createSphere();
-        if ( canonical == "cylinder" )
-            return createCylinder();
-        if ( canonical == "capsule" )
-            return createCapsule();
-        return createCone();
+            pMesh = createUnitCube();
+        else if ( canonical == "quad" )
+            pMesh = createRectMesh();
+        else if ( canonical == "sprite" )
+            pMesh = createSpriteQuad();
+        else if ( canonical == "plane" )
+            pMesh = createPlane();
+        else if ( canonical == "sphere" )
+            pMesh = createSphere();
+        else if ( canonical == "cylinder" )
+            pMesh = createCylinder();
+        else if ( canonical == "capsule" )
+            pMesh = createCapsule();
+        else
+            pMesh = createCone();
+        if ( pMesh != nullptr && vertexColor == PrimitiveVertexColor::White )
+        {
+            // 생성기는 검증 색으로 만든다. 게임이 쓰는 도형은 색을 모두 1 로 — 머티리얼 색이 그대로 보이게.
+            vector<RHIVertex> listVertex = pMesh->getVertices();
+            for ( RHIVertex& vertex : listVertex )
+            {
+                vertex._arrColor[0] = 1.0f;
+                vertex._arrColor[1] = 1.0f;
+                vertex._arrColor[2] = 1.0f;
+                vertex._arrColor[3] = 1.0f;
+            }
+            pMesh->setVertices( std::move( listVertex ) );
+        }
+        return pMesh;
     }
 
     shared_ptr<Mesh> MeshUtil::acquirePrimitive( string_view meshId )

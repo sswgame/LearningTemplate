@@ -341,3 +341,35 @@ SW_TEST_CASE( MeshPrimitiveTest, SpriteQuadReadsTheSameFromBothSides )
     SW_EXPECT_EQUAL( 2u, frontCount );
     SW_EXPECT_EQUAL( 2u, backCount );
 }
+
+/**
+ * @brief [MeshPrimitiveTest] 이름으로 받는 내장 도형(게임 · 씬 · 에디터)은 정점 색이 흰색이고, 검증 색은 따로 고를 때만 온다
+ * @details 셰이더는 정점 색에 머티리얼 색을 곱한다. 생성기의 검증 색(큐브의 면별 색 · 곡면의 노멀 음영 · 평면의 바둑판)이 게임으로 새면
+ *          회색으로 칠한 벽이 면마다 초록 · 주황으로 그려진다(Shooter3D 의 벽이 그랬다).
+ */
+SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked )
+{
+    const utf8* const arrId[] = { "Cube", "Quad", "Sprite", "Plane", "Sphere", "Cylinder", "Capsule", "Cone" };
+    for ( const utf8* pId : arrId )
+    {
+        const sw::shared_ptr<sw::Mesh> acquired = sw::MeshUtil::acquirePrimitive( pId );
+        const sw::shared_ptr<sw::Mesh> created  = sw::MeshUtil::createPrimitive( pId );
+        SW_ASSERT_NOT_NULL( acquired.get() );
+        SW_ASSERT_NOT_NULL( created.get() );
+        for ( const sw::Mesh* pMesh : { acquired.get(), created.get() } )
+        {
+            bool bAllWhite = true;
+            for ( const sw::RHIVertex& vertex : pMesh->getVertices() )
+                bAllWhite = bAllWhite && vertex._arrColor[0] == 1.0f && vertex._arrColor[1] == 1.0f && vertex._arrColor[2] == 1.0f && vertex._arrColor[3] == 1.0f;
+            SW_EXPECT_TRUE_MSG( bAllWhite, ( sw::string( "vertex colors are not white: " ) + pId ).c_str() );
+        }
+    }
+
+    // 검증 색을 고르면 큐브의 면이 서로 다른 색이다(벤치 · 렌더 시험이 면을 가려 본다).
+    const sw::shared_ptr<sw::Mesh> diagnostic = sw::MeshUtil::createPrimitive( "Cube", sw::PrimitiveVertexColor::Diagnostic );
+    SW_ASSERT_NOT_NULL( diagnostic.get() );
+    const sw::vector<sw::RHIVertex>& listVertex = diagnostic->getVertices();
+    SW_ASSERT_TRUE( listVertex.size() >= 12u );
+    SW_EXPECT_TRUE( listVertex[0]._arrColor[0] != listVertex[6]._arrColor[0] || listVertex[0]._arrColor[1] != listVertex[6]._arrColor[1] ||
+                    listVertex[0]._arrColor[2] != listVertex[6]._arrColor[2] );
+}

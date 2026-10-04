@@ -18,10 +18,22 @@ namespace sw
     class Mesh;
 
     /**
+     * @enum PrimitiveVertexColor
+     * @brief 내장 도형의 정점 색입니다. 셰이더는 정점 색에 머티리얼 색을 곱합니다.
+     */
+    enum class PrimitiveVertexColor : uint8
+    {
+        White,      ///< 모두 1 — 머티리얼 색이 그대로 보입니다. 게임 · 씬 · 에디터가 쓰는 도형입니다(상용 엔진의 기본 도형과 같다)
+        Diagnostic, ///< 면마다 다른 색 · 노멀에서 뽑은 음영 · 평면의 바둑판 — 어느 면 · 어느 칸인지 그림에서 읽히게 하는 검증용(벤치 · 렌더 시험)
+    };
+
+    /**
      * @struct MeshUtil
      * @brief 원점 중심 단위 도형을 만듭니다. 모두 삼각형 목록이고 인덱스는 쓰지 않습니다.
      * @note 감김은 **바깥을 향합니다**(이 엔진의 앞면 규약). 뒤집히면 후면 컬링에 화면에서 사라지므로
      *       `MeshPrimitiveTest.PrimitivesAreClosedAndOutwardFacing` 이 그것을 고정합니다.
+     * @note 개별 `createXxx` 는 **검증용 색**(`PrimitiveVertexColor::Diagnostic`)으로 만듭니다. 게임 · 씬이 쓰는 이름 창구
+     *       (`createPrimitive` · `acquirePrimitive`)는 기본이 흰색입니다. 검증 색이 게임에 새면 회색으로 칠한 벽이 면마다 초록 · 주황이 된다.
      */
     struct SW_API MeshUtil
     {
@@ -65,9 +77,9 @@ namespace sw
          * @brief 프리미티브 id 로 내장 도형을 새로 만듭니다.
          * @details 비었거나 "Cube" 면 큐브, "Quad"/"Rect" 면 쿼드, "Sprite" 면 양면 스프라이트 사각형, "Plane"/"Ground" 면 바닥 평면,
          *          "Sphere" · "Cylinder" · "Capsule" · "Cone" 은 각각의 곡면 도형입니다. 모르면 nullptr 입니다.
-         *          씬 XML 의 `_meshId` 와 벤치의 도형 섞기가 같은 이름을 씁니다.
+         *          씬 XML 의 `_meshId` 와 벤치의 도형 섞기가 같은 이름을 씁니다. 정점 색은 @p vertexColor 입니다(기본 흰색 — 게임이 쓰는 색).
          */
-        static shared_ptr<Mesh> createPrimitive( string_view meshId );
+        static shared_ptr<Mesh> createPrimitive( string_view meshId, PrimitiveVertexColor vertexColor = PrimitiveVertexColor::White );
 
         /**
          * @brief 프리미티브 id 로 **공유되는** 내장 도형을 반환합니다. 같은 id 면 같은 객체입니다.
@@ -80,7 +92,7 @@ namespace sw
          *          갈리고 GPU 정점 버퍼도 8000 벌이 됩니다.
          *
          *          캐시는 `weak_ptr` 이라 아무도 안 쓰면 알아서 사라집니다. 수명을 따로 관리하지
-         *          않으므로 디바이스가 내려갈 때 붙들고 있는 것이 없습니다.
+         *          않으므로 디바이스가 내려갈 때 붙들고 있는 것이 없습니다. 정점 색은 흰색입니다(`PrimitiveVertexColor::White`).
          */
         static shared_ptr<Mesh> acquirePrimitive( string_view meshId );
     };
