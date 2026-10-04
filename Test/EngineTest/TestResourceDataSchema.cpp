@@ -18,6 +18,7 @@
 #include "Engine/Scene/SceneDocument.h"
 
 #include "GameFramework/Ability/AbilityCatalog.h"
+#include "GameFramework/Camera/CameraPreset.h"
 #include "GameFramework/Combat/Weapon.h"
 #include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
@@ -54,6 +55,7 @@ namespace
         static bool isInputMap( sw::string_view resourceId ) { return endsWith( resourceId, ".input.xml" ); }
         static bool isMaterial( sw::string_view resourceId ) { return endsWith( resourceId, ".material" ); }
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
+        static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -154,6 +156,7 @@ namespace
             {           "inputmap",            &isInputMap,                          &loadInputMap},
             {           "material",            &isMaterial,                          &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                        &loadSpriteClip},
+            {      "camerapresets",       &isCameraPresets,  &loadCatalog<sw::CameraPresetCatalog>},
             {          "abilities",           &isAbilities,       &loadCatalog<sw::AbilityCatalog>},
             {              "crops",               &isCrops,          &loadCatalog<sw::CropCatalog>},
             {               "city",                &isCity,          &loadCatalog<sw::CityCatalog>},

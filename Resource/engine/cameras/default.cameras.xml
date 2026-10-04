@@ -1,0 +1,38 @@
+<!-- 카메라 프리셋 예시 — CameraPresetCatalog 가 읽는다. 각(pitch · yaw · fieldOfViewY)은 도, 거리는 m, 시간은 s 다. -->
+<CameraPresets>
+    <DefaultBlend curve="SmoothStep" duration="0.5"/>
+
+    <Preset id="topdown">
+        <View mode="OrthoTopDown" pitch="30" yaw="45" distance="250" offset="0 0 0"/>
+        <Lens orthographic="true" orthoHeight="110" near="0.1" far="625"/>
+        <Damping position="0.15" orientation="0.1"/>
+        <BlendIn curve="EaseInOut" duration="0.6" exponent="2"/>
+    </Preset>
+
+    <Preset id="orbit">
+        <View mode="Orbit" pitch="25" yaw="0" distance="12" offset="0 1.5 0"/>
+        <Lens fieldOfViewY="45" near="0.1" far="500"/>
+        <Damping position="0.2" orientation="0.1"/>
+    </Preset>
+
+    <Preset id="follow">
+        <View mode="Follow" pitch="15" yaw="0" distance="6" offset="0 1.6 0"/>
+        <Lens fieldOfViewY="60" near="0.1" far="500"/>
+        <Damping position="0.25" orientation="0.15"/>
+        <BlendIn curve="Spring" duration="0.8" springFrequency="1.2" springDamping="1"/>
+    </Preset>
+
+    <Preset id="firstperson">
+        <View mode="FirstPerson" offset="0 1.7 0"/>
+        <Lens fieldOfViewY="70" near="0.05" far="500"/>
+        <BlendIn curve="Custom" duration="0.4">
+            <Key time="0" value="0"/>
+            <Key time="0.5" value="0.8"/>
+            <Key time="1" value="1"/>
+        </BlendIn>
+    </Preset>
+
+    <!-- 1인칭으로 들어가고 나올 때는 끊어 바꾼다(머리 안을 지나가는 블렌드를 보이지 않는다). -->
+    <Blend from="*" to="firstperson" curve="Cut"/>
+    <Blend from="firstperson" to="*" curve="Cut"/>
+</CameraPresets>
