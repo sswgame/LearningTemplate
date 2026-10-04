@@ -13,6 +13,8 @@ Scripts/lint/gate/CheckGamePresets.py
 - 프리셋에는 게임 폴더가 있어야 한다(지운 게임의 프리셋이 남지 않게).
 - `_packRoot` 는 `game/<폴더>` 이고 `Resource/<_packRoot>/` 가 있어야 한다.
 - `_startupScene` 이 있으면 그 파일이 `Resource/` 아래에 있어야 한다.
+- Empty 가 아닌 게임마다 CMake 프리셋 `Ninja-Debug-<게임>`(configure · build)이 있고 `SW_ACTIVE_GAME` 이 그 게임이다 — 게임은 프리셋으로 바꾼다
+  (빌드 폴더가 게임마다 따로라 두 작업이 서로의 활성 게임을 바꾸지 않는다). Empty 는 `Ninja-Debug` 다.
 """
 
 from __future__ import annotations
@@ -30,6 +32,40 @@ from LintGate import GateResult, LintGate  # noqa: E402
 #: 게임 프리셋 폴더(Constants.py 의 kDirRuntimeGamePreset 와 같다).
 _kPresetFolder = "Config/Game"
 _kGamesFolder = "Source/Games"
+#: 기본 게임 — CMake 프리셋 `Ninja-Debug` 가 그것이다.
+_kDefaultGame = "Empty"
+_kGamePresetPrefix = "Ninja-Debug-"
+
+
+def findCMakePresetViolations(repositoryRoot: Path, listGame: list[str]) -> list[str]:
+    """게임마다 `Ninja-Debug-<게임>` configure · build 프리셋이 있고 활성 게임이 맞는지 봅니다."""
+    presetPath = repositoryRoot / "CMakePresets.json"
+    if presetPath.is_file() is False:
+        return []
+    try:
+        data = json.loads(presetPath.read_text(encoding="utf-8"))
+    except ValueError as error:
+        return [f"[Game Preset] CMakePresets.json 을 읽지 못했습니다 ({error})"]
+    mapConfigure = {preset.get("name"): preset for preset in data.get("configurePresets", [])}
+    setBuild = {preset.get("configurePreset") for preset in data.get("buildPresets", [])}
+    violations: list[str] = []
+    for game in listGame:
+        if game == _kDefaultGame:
+            continue
+        name = _kGamePresetPrefix + game
+        preset = mapConfigure.get(name)
+        if preset is None:
+            violations.append(f"[Game Preset] CMake configure 프리셋이 없습니다: {name}")
+            continue
+        if preset.get("cacheVariables", {}).get("SW_ACTIVE_GAME") != game:
+            violations.append(f"[Game Preset] {name} 의 SW_ACTIVE_GAME 이 `{game}` 가 아닙니다")
+        if name not in setBuild:
+            violations.append(f"[Game Preset] CMake build 프리셋이 없습니다: {name}")
+    for name, preset in mapConfigure.items():
+        activeGame = preset.get("cacheVariables", {}).get("SW_ACTIVE_GAME")
+        if activeGame is not None and activeGame not in listGame:
+            violations.append(f"[Game Preset] CMake 프리셋 {name} 이 없는 게임 `{activeGame}` 을 고릅니다")
+    return violations
 
 
 def findGamePresetViolations(repositoryRoot: Path) -> tuple[list[str], int]:
@@ -63,6 +99,7 @@ def findGamePresetViolations(repositoryRoot: Path) -> tuple[list[str], int]:
         startupScene = str(data.get("_startupScene", ""))
         if startupScene and (resourceRoot / startupScene).is_file() is False:
             violations.append(f"[Game Preset] `_startupScene` 파일이 없습니다: {presetPath} → Resource/{startupScene}")
+    violations.extend(findCMakePresetViolations(repositoryRoot, listGame))
     return violations, len(listGame)
 
 
@@ -90,6 +127,15 @@ class CheckGamePresetsGate(LintGate):
             "files": {
                 "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
                 "Config/Game/Probe.json": '{ "_packRoot": "game/nowhere" }',
+            },
+        },
+        {
+            "name": "CMake 프리셋 없는 게임",
+            "files": {
+                "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
+                "Config/Game/Probe.json": '{ "_packRoot": "game/probe" }',
+                "Resource/game/probe/readme.md": "probe",
+                "CMakePresets.json": '{ "configurePresets": [], "buildPresets": [] }',
             },
         },
         {
