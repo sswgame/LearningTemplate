@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HarvestValley 마을 사람의 하루 — ScheduleCatalog 가 읽는다(GameFramework/AI/Schedule).
+     시각은 H:MM, 자리는 월드 x y z(지면 XZ), speed 는 게임 1 분에 걷는 거리. 루틴은 조건(days · seasons · weathers · flags · tags)이 맞는 날 쓰고,
+     같은 시각에 칸이 여럿이면 priority 가 높은 것이 이긴다. 축제(Event)는 그날 그 시간만 덮는다. 약속(Appointment)은 Meet 칸이 가리키는 NPC 들이 모이는 시간 · 장소다. -->
+<Schedules>
+  <Calendar days="Mon,Tue,Wed,Thu,Fri,Sat,Sun" seasons="Spring,Summer,Fall,Winter" weathers="sunny,rain"/>
+
+  <Place id="general_store" area="town" position="24 0 6" radius="1"/>
+  <Place id="clinic" area="town" position="30 0 12" radius="1"/>
+  <Place id="town_square" area="town" position="20 0 14" radius="4"/>
+  <Place id="saloon" area="town" position="34 0 18" radius="2"/>
+  <Place id="river" area="river" position="6 0 26" radius="3"/>
+  <Place id="pierre_house" area="town" position="22 0 2"/>
+  <Place id="harvey_house" area="town" position="32 0 8"/>
+  <Place id="linus_tent" area="hills" position="2 0 30"/>
+
+  <Spot id="square_bench_west" kind="Bench" area="town" position="18 0 14"/>
+  <Spot id="square_bench_east" kind="Bench" area="town" position="22 0 14"/>
+  <Spot id="river_fishing_spot" kind="FishingSpot" area="river" position="7 0 25"/>
+
+  <Interrupt id="Talk" priority="10" timeout="20"/>
+  <Interrupt id="Combat" priority="80"/>
+  <Interrupt id="Alarm" priority="60" timeout="120"/>
+
+  <Appointment id="friday_drinks" place="saloon" start="19:00" end="21:00" wait="30" priority="40" days="Fri"/>
+
+  <Archetype id="villager">
+    <Routine id="sleep">
+      <Block start="0:00" end="7:00" activity="Sleep"/>
+      <Block start="22:00" end="24:00" activity="Sleep"/>
+    </Routine>
+  </Archetype>
+
+  <Npc id="pierre" archetype="villager" home="pierre_house" speed="12" tags="Job.Shopkeeper">
+    <Routine id="weekday" days="Mon,Tue,Thu,Fri,Sat">
+      <Block start="9:00" end="17:00" activity="WorkAt" place="general_store" animation="Sweep"/>
+      <Block start="17:00" end="19:00" activity="UseObject" objectKind="Bench" place="town_square"/>
+      <Block activity="Meet" appointment="friday_drinks"/>
+    </Routine>
+    <Routine id="day_off" days="Wed,Sun">
+      <Block start="10:00" end="15:00" activity="Wander" place="town_square" every="30"/>
+    </Routine>
+    <Routine id="rain_indoors" priority="10" weathers="rain">
+      <Block start="17:00" end="22:00" activity="StayHome"/>
+    </Routine>
+  </Npc>
+
+  <Npc id="harvey" archetype="villager" home="harvey_house" speed="10" tags="Job.Doctor">
+    <Routine id="clinic" days="Mon,Tue,Wed,Thu,Fri">
+      <Block start="9:00" end="15:00" activity="WorkAt" place="clinic"/>
+      <Block start="15:00" end="17:00" activity="GoTo" place="river" phases="Day"/>
+      <Block activity="Meet" appointment="friday_drinks"/>
+    </Routine>
+    <Routine id="weekend" days="Sat,Sun">
+      <Block start="10:00" end="13:00" activity="UseObject" objectKind="FishingSpot" place="river"/>
+    </Routine>
+  </Npc>
+
+  <Npc id="linus" archetype="villager" home="linus_tent" speed="8" idle="StayHome">
+    <Routine id="forage">
+      <Block start="8:00" end="12:00" activity="Wander" place="river" every="40"/>
+      <Block start="18:00" end="21:00" activity="Wander" place="town_square" every="20" flags="metLinus"/>
+    </Routine>
+  </Npc>
+
+  <Event id="egg_festival" priority="100" seasons="Spring" daysOfSeason="13" archetypes="villager">
+    <Block start="9:00" end="14:00" activity="Attend" place="town_square"/>
+  </Event>
+  <Event id="flower_dance" priority="100" seasons="Summer" daysOfSeason="24" npcs="pierre,harvey">
+    <Block start="9:00" end="14:00" activity="Attend" place="river"/>
+  </Event>
+</Schedules>

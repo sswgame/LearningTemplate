@@ -300,6 +300,13 @@ cd build/Ninja-Debug/Bin
   얼굴(표정 커브 · 립싱크 · 깜빡임/시선) · 군중 포즈 공유 · 되감기 디버거. cam-views 병합 뒤: 파티클/VFX · 데칼 · 하늘/시간대/높이 안개(WorldClock ·
   WeatherSystem 을 렌더에 연결). 그 뒤: 월드 파티션 · GI/반사 프로브 · 환경 오디오, 1-4 의 C · F. 마지막: Shooter3D 통합(KayKit CC0 캐릭터 · 스켈레톤
   적 · 장비 · 프리셋 · 카메라 프리셋을 바꿔 가며 4 백엔드 스크린샷). **2D · 3D 에 다 쓰이는 기능은 공통 코어로**(사용자 지시) — 각 에이전트가 맡는다.
+- **NPC 하루 일정(`GameFramework/AI/Schedule`, 2026-10-04) — 연결할 것.** 일정 데이터 · 런타임 · 화면 밖 LOD · 잠 · 저장 · 추적은 들어갔다(`AI/Schedule/README.md`).
+  남은 것 — (1) gimmick 병합 뒤: 스마트 오브젝트 시스템이 `IScheduleActivityLocator` 를 구현(`reserve` 는 NPC · 종류 · 날 · 시간 창에 멱등, 지금 점유만 되면
+  어댑터가 예약표를 들고 칸 시작에 점유), 끼어들기(말 걸기)를 상호작용 프레임워크에서 `pushInterruption( "Talk" )` 로. (2) char-anim 병합 뒤:
+  `IScheduleActivityAnimator` 구현 — `_animation` 이름을 애니메이터 그래프 상태로. (3) 쓰는 게임이 없다 — HarvestValley 마을 사람(데이터
+  `game/harvestvalley/data/villagers.schedules.xml` 은 있다, 몸은 `NavAgent` 가 `ScheduleNpcView` 를 따라감, 저장은 `ScheduleSaveState` 를 게임 세이브에).
+  (4) 에디터 패널(`dumpTimeline` · `explainNpc` 글을 그대로). (5) 주 단위 · 날짜 범위 일정, 자정을 넘는 칸, 관계 단계(호감도 수치 조건 — 지금은 태그로) 는 없다.
+
 - **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
   스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
 - **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** (1) `CameraControllerComponent`(Overworld) · `UnitStatsComponent`(ActionCombat)는 장르 무관이라
@@ -1179,6 +1186,8 @@ cd build/Ninja-Debug/Bin
 - **마우스 `getSmoothDelta` 는 프레임당 한 번 `IInputDevice::onEventsDispatched( dt )` 에서 정해진다** — `setSmoothing(f)` 는 1/60 초 동안 남기는 비율
   (τ = -(1/60)/ln f, 60 Hz 에서 옛 계수와 같다). 이벤트 처리기 안에서 스무딩을 다시 돌리면 폴링 레이트마다 감각이 달라진다. 프레임 이동은 `getMovementDelta()` 하나.
 - **2D 콜라이더 판정은 `overlapsBounds`(순수 기하)와 `isTouching`(레이어 반영) 둘** — 둘 다 바디 등록 여부와 무관하게 같은 답(Unity `Bounds.Intersects` · `IsTouching`).
+- **일정의 "일찍 나서기" 는 앞 칸의 끝을 빌린다** — 앞 칸의 우선순위가 더 높으면(약속 · 축제) 빌리지 않는다. 빌리면 점심 약속 중에 일하러 나서 약속 출석
+  판정이 깨진다. 화면 밖 일정이 화면 안과 같으려면 판정 자리(계획 출발점 · 끼어든 자리)를 LOD 와 상관없는 계획 경로로 잰다(`AI/Schedule/README.md`).
 - **엔진 · 킷 컴포넌트는 태그를 붙이지 않는다** — 종류는 `GameObjectManager::forEachComponentOfType<T>` 로 찾는다(UE `GetAllActorsOfClass`). 프레임마다 쓰는
   소비자가 생기면 타입별 등록부(O(해당 타입))를 Release 로 재고 정한다. 글자 입력은 `InputManager::setTextInputCallback` 하나(UE `OnKeyChar`).
 
