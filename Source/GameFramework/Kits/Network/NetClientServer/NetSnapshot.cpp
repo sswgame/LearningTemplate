@@ -23,8 +23,11 @@ namespace sw
         { return lhs._entityId < rhs._entityId; } );
     }
 
-    void NetSnapshot::writeDelta( BitWriter& writer, const NetSnapshot* pBaseline, int32 maxBytes, NetSnapshot& outWritten, const vector<int32>* pListOrder ) const
+    void NetSnapshot::writeDelta( BitWriter& writer, const NetSnapshot* pBaseline, int32 maxBytes, NetSnapshot& outWritten, const vector<int32>* pListOrder,
+                                  vector<uint8>* pOutListCurrent ) const
     {
+        if ( pOutListCurrent != nullptr )
+            pOutListCurrent->assign( _listEntity.size(), uint8{ 0 } );
         outWritten                         = NetSnapshot{};
         outWritten._tick                   = _tick;
         outWritten._lastProcessedInputTick = _lastProcessedInputTick;
@@ -68,10 +71,15 @@ namespace sw
         const size_t entityCount = pListOrder != nullptr ? pListOrder->size() : _listEntity.size();
         for ( size_t orderIndex = 0; orderIndex < entityCount; ++orderIndex )
         {
-            const NetEntityState& entity = _listEntity[pListOrder != nullptr ? static_cast<size_t>( ( *pListOrder )[orderIndex] ) : orderIndex];
-            const NetEntityState* pOld   = pBaseline != nullptr ? pBaseline->findEntity( entity._entityId ) : nullptr;
+            const size_t          entityIndex = pListOrder != nullptr ? static_cast<size_t>( ( *pListOrder )[orderIndex] ) : orderIndex;
+            const NetEntityState& entity      = _listEntity[entityIndex];
+            const NetEntityState* pOld        = pBaseline != nullptr ? pBaseline->findEntity( entity._entityId ) : nullptr;
             if ( pOld != nullptr && pOld->_typeId == entity._typeId && pOld->_buffer == entity._buffer )
+            {
+                if ( pOutListCurrent != nullptr )
+                    ( *pOutListCurrent )[entityIndex] = 1; // 받는 쪽 기준이 이미 지금 상태다
                 continue;
+            }
             const int32 size = static_cast<int32>( entity._buffer.size() );
             if ( size > kMaxEntityBytes )
                 continue; // 받는 쪽이 읽지 않는 크기 — 싣지도 재구성에 넣지도 않는다
@@ -82,6 +90,8 @@ namespace sw
             writer.writeVarUint( entity._entityId );
             writer.writeVarUint( entity._typeId );
             writer.writeBlob( entity._buffer.data(), size );
+            if ( pOutListCurrent != nullptr )
+                ( *pOutListCurrent )[entityIndex] = 1;
             bool bReplaced = false;
             for ( NetEntityState& written : outWritten._listEntity )
             {

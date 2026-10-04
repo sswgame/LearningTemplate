@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Kits/Network/NetClientServer/ReplicationClient.h"
 #include "GameFramework/Kits/Network/NetClientServer/ReplicationServer.h"
@@ -60,12 +61,15 @@ namespace
         ReplicationTable* _pTable;
     };
 
-    /** @brief 클라이언트 — 받은 스냅숏을 쌓는다(시험은 가장 새 것을 본다). */
+    /** @brief 클라이언트 — 가장 새 스냅숏과, 엔티티마다 그 상태가 서버 틱 몇에 만들어졌는지(틱 도장)의 가장 큰 뒤처짐을 든다. */
     class TableClientSession final : public INetSimSession
     {
     public:
         explicit TableClientSession( NetSimWorld& world )
             : _client{}
+            , _listMaxStaleness{}
+            , _measureFromTick{ 0xFFFFFFFFu }
+            , _lastSeenTick{ 0 }
         {
             ReplicationClientSettings settings;
             settings._tickInterval = kReplicationTickSeconds;
@@ -77,12 +81,40 @@ namespace
         {
             (void)world;
             _client.update( deltaTime );
+            const NetSnapshot* pLatest = _client.getLatest();
+            if ( pLatest == nullptr || pLatest->_tick == _lastSeenTick )
+                return;
+            _lastSeenTick = pLatest->_tick;
+            if ( pLatest->_tick < _measureFromTick )
+                return;
+            for ( const NetEntityState& entity : pLatest->_listEntity )
+            {
+                if ( entity._buffer.size() < 4 || entity._entityId >= _listMaxStaleness.size() )
+                    continue;
+                uint32 stampTick = 0;
+                for ( size_t index = 0; index < 4; ++index )
+                    stampTick |= static_cast<uint32>( entity._buffer[index] ) << ( 8 * index );
+                uint32& maxStaleness = _listMaxStaleness[entity._entityId];
+                maxStaleness         = MathUtil::max( maxStaleness, pLatest->_tick - stampTick );
+            }
+        }
+
+        /** @brief 이 틱부터 받은 스냅숏으로 낡은 정도를 잽니다. 엔티티 id 는 @p entityCount 보다 작다. */
+        void beginMeasure( uint32 fromTick, uint32 entityCount )
+        {
+            _measureFromTick = fromTick;
+            _listMaxStaleness.assign( entityCount, 0u );
         }
 
         const ReplicationClient& getClient() const { return _client; }
+        /** @brief 잰 동안 그 엔티티의 상태가 서버보다 가장 많이 뒤처진 틱 수입니다. */
+        uint32 getMaxStaleness( uint32 entityId ) const { return _listMaxStaleness[entityId]; }
 
     private:
         ReplicationClient _client;
+        vector<uint32>    _listMaxStaleness; ///< 엔티티 id 자리
+        uint32            _measureFromTick;
+        uint32            _lastSeenTick;
     };
 
     class TableGame final : public INetSimGame
@@ -96,6 +128,17 @@ namespace
         }
 
         ReplicationTable _table;
+    };
+
+    /** @brief 종류 번호를 우선도로 씁니다(종류 10 = 우선도 10). */
+    class TypePriorityPolicy final : public IReplicationPolicy
+    {
+    public:
+        float32 computePriority( int32 connectionId, const NetEntityState& entity ) const override
+        {
+            (void)connectionId;
+            return static_cast<float32>( entity._typeId );
+        }
     };
 
     TableClientSession& getTableClient( const NetSimHarness& harness, int32 worldIndex )
@@ -151,4 +194,44 @@ SW_TEST_CASE( NetSimReplicationTest, MassRemovalStaysUnderMessageLimit )
     const uint32 latestTick = getTableClient( harness, client ).getClient().getLatest()->_tick;
     harness.stepTicks( 10 );
     SW_EXPECT_TRUE( getTableClient( harness, client ).getClient().getLatest()->_tick > latestTick );
+}
+
+/**
+ * @brief [NetSimReplicationTest] 예산이 늘 차는 회선에서도 낮은 우선도 엔티티가 굶지 않는다 — 우선도를 스냅샷마다 쌓고 실은 것만 0 으로 돌린다
+ * @details 우선도 10 엔티티 넷(틱마다 바뀜, 각 244 B)이 1000 B 예산을 채운다. 우선도를 틱마다 새로 매겨 정렬하던 때는 우선도 1 엔티티가 바뀐 채 영영
+ *          실리지 않아 클라이언트에 나타나지도 않았다.
+ */
+SW_TEST_CASE( NetSimReplicationTest, LowPriorityEntitiesAreNotStarved )
+{
+    constexpr uint32   kHighCount = 4;
+    constexpr uint32   kLowId     = kHighCount + 1;
+    TypePriorityPolicy policy;
+    TableGame          game;
+    game._table._pPolicy    = &policy;
+    game._table._bStampTick = SW_TRUE;
+    for ( uint32 entityId = 1; entityId <= kHighCount; ++entityId )
+        game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), entityId, 10 } );
+    game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), kLowId, 1 } );
+    NetSimSettings settings;
+    settings._hostSettings._sendInterval = 1.0 / 60.0; // 스냅숏마다 한 패킷 — 순서만 채널이 앞 스냅숏을 지우지 않게
+    NetSimHarness harness;
+    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    const int32 client = harness.addClient( NetSimLinkConditions{} );
+    harness.stepTicks( 60 );
+
+    TableClientSession& session = getTableClient( harness, client );
+    session.beginMeasure( harness.getServer().getLocalTick(), kLowId + 1 );
+    harness.stepTicks( 600 );
+    const NetSnapshot* pLatest = session.getClient().getLatest();
+    SW_ASSERT_NOT_NULL( pLatest );
+    uint32 maxHighStaleness = 0;
+    for ( uint32 entityId = 1; entityId <= kHighCount; ++entityId )
+        maxHighStaleness = MathUtil::max( maxHighStaleness, session.getMaxStaleness( entityId ) );
+    const bool bLowSeen = pLatest->findEntity( kLowId ) != nullptr;
+    SW_LOG_INFO( "[NetSimReplication] saturated budget over 600 ticks: priority-10 entities at most %# ticks stale, priority-1 entity %# (seen %#)", maxHighStaleness,
+                 session.getMaxStaleness( kLowId ), bLowSeen );
+    SW_ASSERT_TRUE_MSG( bLowSeen, "the low-priority entity reaches the client" );
+    // 쌓인 1 이 10 을 넘는 열한 번째쯤 — 실린 스냅숏이 패킷으로 나가기 전에 다음 스냅숏에 밀리면(순서만 채널) 한 차례 더.
+    SW_EXPECT_TRUE( session.getMaxStaleness( kLowId ) <= 24 );
+    SW_EXPECT_TRUE( maxHighStaleness <= 4 ); // 높은 것은 여전히 거의 매번
 }

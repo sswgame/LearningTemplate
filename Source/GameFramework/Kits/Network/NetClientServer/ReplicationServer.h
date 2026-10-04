@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/NetMessage.h"
 #include "Core/Network/NetParallel.h"
+#include "Core/Network/NetPrioritizer.h"
 #include "Core/Network/NetTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -41,7 +42,10 @@ namespace sw
             (void)entity;
             return true;
         }
-        /** @brief 패킷이 모자랄 때 먼저 싣는 순서(클수록 먼저)입니다. */
+        /**
+         * @brief 스냅샷마다 쌓는 우선도입니다(클수록 자주). 쌓인 것이 큰 엔티티부터 예산에 싣고, 실으면 0 으로 돌린다 — 예산이 늘 차도 낮은 우선도가
+         *        쌓여 언젠가 간다(`NetPrioritizer`). 우선도 1 은 우선도 10 이 예산을 채운 틱 열 번에 한 번쯤 간다.
+         */
         virtual float32 computePriority( int32 connectionId, const NetEntityState& entity ) const
         {
             (void)connectionId;
@@ -121,8 +125,9 @@ namespace sw
 
         struct ClientState
         {
-            vector<NetSnapshot> _listSent{};  ///< 틱 % 크기 자리 — 보낸(재구성된) 스냅샷
-            deque<InputEntry>   _listInput{}; ///< 틱 오름차순
+            NetPrioritizer      _prioritizer{}; ///< 관련 엔티티마다 쌓인 우선도
+            vector<NetSnapshot> _listSent{};    ///< 틱 % 크기 자리 — 보낸(재구성된) 스냅샷
+            deque<InputEntry>   _listInput{};   ///< 틱 오름차순
             vector<uint8>       _lastInput{};
             float32             _viewTick{ 0.0f };
             uint32              _ackedTick{ 0 };
@@ -136,8 +141,9 @@ namespace sw
         struct SnapshotScratch
         {
             NetSnapshot      _filtered{}; ///< 클라이언트 하나의 관련 엔티티
-            vector<float32>  _listPriority{};
-            vector<int32>    _listOrder{};
+            vector<uint32>   _listOrderEntity{};
+            vector<int32>    _listOrder{};   ///< 위 순서를 `_filtered` 자리로
+            vector<uint8>    _listCurrent{}; ///< `_filtered` 자리마다 받는 쪽이 지금 상태를 갖게 됐나
             NetMessageWriter _messageWriter{};
         };
 

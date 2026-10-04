@@ -128,8 +128,8 @@ namespace sw
         NetSnapshot& filtered            = scratch._filtered;
         filtered._tick                   = _world._tick;
         filtered._lastProcessedInputTick = client._lastProcessedInputTick;
-        vector<float32>& listPriority    = scratch._listPriority;
-        listPriority.clear();
+        NetPrioritizer& prioritizer      = client._prioritizer;
+        prioritizer.beginAccumulate();
         size_t relevantCount = 0;
         for ( const NetEntityState& entity : std::as_const( _world._listEntity ) ) // 여러 워커가 함께 읽는다
         {
@@ -140,16 +140,17 @@ namespace sw
             else
                 filtered._listEntity.push_back( entity );
             ++relevantCount;
-            listPriority.push_back( _pPolicy->computePriority( connectionId, entity ) );
+            prioritizer.accumulate( entity._entityId, _pPolicy->computePriority( connectionId, entity ), 1.0f ); // 스냅샷 하나 = 한 번
         }
         filtered._listEntity.resize( relevantCount );
+        prioritizer.removeUntouched(); // 더는 관련 없는 엔티티는 잊는다(다시 관련되면 0 에서)
+        // 쌓인 것이 큰 것부터 — 관련 엔티티는 id 순이라 자리를 이분 탐색으로 찾는다.
+        vector<uint32>& listOrderEntity = scratch._listOrderEntity;
+        prioritizer.collectOrder( listOrderEntity );
         vector<int32>& listOrder = scratch._listOrder;
-        listOrder.resize( relevantCount );
-        for ( size_t index = 0; index < listOrder.size(); ++index )
-            listOrder[index] = static_cast<int32>( index );
-        std::stable_sort( listOrder.begin(), listOrder.end(),
-                          [&listPriority]( int32 lhs, int32 rhs )
-        { return listPriority[static_cast<size_t>( lhs )] > listPriority[static_cast<size_t>( rhs )]; } );
+        listOrder.resize( listOrderEntity.size() );
+        for ( size_t index = 0; index < listOrderEntity.size(); ++index )
+            listOrder[index] = static_cast<int32>( filtered.findEntity( listOrderEntity[index] ) - filtered._listEntity.data() );
 
         // 기준 — 클라이언트가 확인한 틱의 우리가 보낸 재구성. 너무 오래돼 덮였으면 기준 없이.
         const NetSnapshot* pBaseline = nullptr;
@@ -165,12 +166,18 @@ namespace sw
         if ( &slot == pBaseline )
         {
             NetSnapshot written;
-            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, written, &listOrder );
+            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, written, &listOrder, &scratch._listCurrent );
             slot = std::move( written );
         }
         else
         {
-            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, slot, &listOrder );
+            filtered.writeDelta( writer, pBaseline, _settings._snapshotBudgetBytes, slot, &listOrder, &scratch._listCurrent );
+        }
+        // 실었거나 받는 쪽이 이미 지금 상태인 것만 0 으로 — 못 실은 것은 쌓인 채로 다음 스냅샷에서 앞선다.
+        for ( size_t index = 0; index < filtered._listEntity.size(); ++index )
+        {
+            if ( scratch._listCurrent[index] != 0 )
+                prioritizer.markSent( filtered._listEntity[index]._entityId );
         }
         (void)scratch._messageWriter.send( *_pHost, connectionId, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 — NetHost 가 지킨다
     }

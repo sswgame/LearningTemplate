@@ -60,9 +60,10 @@ namespace sw
          *        사라진 엔티티는 싣지 않고 @p outWritten 에 실은 것만 반영한다(받는 쪽 재구성 = 기준 + 실은 것 — 못 실은 것은 다음 델타가 다시 고른다).
          *        `kMaxEntityBytes` 를 넘는 엔티티도 싣지 않는다.
          * @param pListOrder 싣는 순서(`_listEntity` 의 자리 — 우선도 높은 것 먼저). 없으면 id 순.
+         * @param pOutListCurrent 있으면 `_listEntity` 자리마다 1 = 받는 쪽이 이 델타로 지금 상태를 갖는다(실었거나 기준과 같다), 0 = 못 실었다.
          */
-        void writeDelta( BitWriter& writer, const NetSnapshot* pBaseline, int32 maxBytes, NetSnapshot& outWritten,
-                         const vector<int32>* pListOrder = nullptr ) const;
+        void writeDelta( BitWriter& writer, const NetSnapshot* pBaseline, int32 maxBytes, NetSnapshot& outWritten, const vector<int32>* pListOrder = nullptr,
+                         vector<uint8>* pOutListCurrent = nullptr ) const;
         /** @brief 델타를 읽어 @p pBaseline 위에 재구성합니다. 깨졌으면 false 입니다. */
         [[nodiscard]] static bool readDelta( BitReader& reader, const NetSnapshot* pBaseline, NetSnapshot& outSnapshot );
     };

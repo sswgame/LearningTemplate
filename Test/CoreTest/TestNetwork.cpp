@@ -5,6 +5,7 @@
 #include "Core/Network/NetEmulation.h"
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetMessage.h"
+#include "Core/Network/NetPrioritizer.h"
 #include "Core/Network/NetSendBudget.h"
 #include "Core/Network/NetTransport.h"
 #include "Core/Network/SequenceBuffer.h"
@@ -260,6 +261,58 @@ SW_TEST_CASE( NetworkTest, SendBudgetClampsToMessageLimit )
     budget.reserveBits( 1 );
     SW_EXPECT_TRUE( budget.hasExceeded() );
     SW_EXPECT_EQUAL( 0, NetSendBudget( -5 ).getMaxBits() );
+}
+
+/**
+ * @brief [NetworkTest] 누적 우선도는 큰 것부터 · 같으면 id 순으로 늘 같은 순서이고, 보낸 것만 0 으로 돌아가 예산이 늘 차도 낮은 우선도가 차례를 얻는다
+ */
+SW_TEST_CASE( NetworkTest, PrioritizerOrderIsDeterministic )
+{
+    NetPrioritizer prioritizer;
+    vector<uint32> listOrder;
+    prioritizer.beginAccumulate();
+    prioritizer.accumulate( 30, 2.0f, 0.5f );
+    prioritizer.accumulate( 10, 1.0f, 1.0f );
+    prioritizer.accumulate( 20, 4.0f, 1.0f );
+    prioritizer.accumulate( 5, 1.0f, 1.0f );
+    prioritizer.removeUntouched();
+    prioritizer.collectOrder( listOrder );
+    SW_ASSERT_EQUAL( size_t{ 4 }, listOrder.size() );
+    SW_EXPECT_EQUAL( 20u, listOrder[0] );
+    SW_EXPECT_EQUAL( 5u, listOrder[1] ); // 1.0 셋 — id 순
+    SW_EXPECT_EQUAL( 10u, listOrder[2] );
+    SW_EXPECT_EQUAL( 30u, listOrder[3] );
+
+    // 이번 틱에 쌓이지 않은 것(더는 관련 없음)은 잊는다.
+    prioritizer.beginAccumulate();
+    prioritizer.accumulate( 20, 4.0f, 1.0f );
+    prioritizer.accumulate( 10, 1.0f, 1.0f );
+    prioritizer.removeUntouched();
+    SW_EXPECT_EQUAL( 2, prioritizer.getCount() );
+    SW_EXPECT_NEAR_EQUAL( 8.0f, prioritizer.getAccumulated( 20 ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, prioritizer.getAccumulated( 5 ), 1.0e-6f );
+
+    // 한 번에 둘만 보낼 수 있고 우선도 10 둘이 늘 있다 — 우선도 1 은 쌓여서 열 번째쯤 차례가 온다.
+    prioritizer.clear();
+    int32 firstLowRound = -1;
+    for ( int32 round = 0; round < 30 && firstLowRound < 0; ++round )
+    {
+        prioritizer.beginAccumulate();
+        prioritizer.accumulate( 1, 10.0f, 1.0f );
+        prioritizer.accumulate( 2, 10.0f, 1.0f );
+        prioritizer.accumulate( 3, 1.0f, 1.0f );
+        prioritizer.removeUntouched();
+        prioritizer.collectOrder( listOrder );
+        for ( size_t index = 0; index < 2; ++index )
+        {
+            prioritizer.markSent( listOrder[index] );
+            if ( listOrder[index] == 3 )
+                firstLowRound = round;
+        }
+    }
+    SW_EXPECT_TRUE( 8 <= firstLowRound && firstLowRound <= 12 );
+    prioritizer.remove( 3 );
+    SW_EXPECT_EQUAL( 2, prioritizer.getCount() );
 }
 
 /**
