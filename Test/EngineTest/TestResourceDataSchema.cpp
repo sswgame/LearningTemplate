@@ -23,6 +23,9 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Input/InputMap.h"
+#include "Engine/Localization/CultureInfo.h"
+#include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Localization/TranslationMemory.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -106,6 +109,11 @@ namespace
         static bool isAudioMixer( sw::string_view resourceId ) { return endsWith( resourceId, ".audiomixer.xml" ); }
         static bool isAudioEvents( sw::string_view resourceId ) { return endsWith( resourceId, ".audioevents.xml" ); }
         static bool isAudioMusic( sw::string_view resourceId ) { return endsWith( resourceId, ".music.xml" ); }
+        static bool isCultureTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::CultureTable::kFileSuffix ); }
+        static bool isLocalizationProject( sw::string_view resourceId ) { return endsWith( resourceId, sw::LocalizationProject::kFileSuffix ); }
+        static bool isSourceStringTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::SourceStringTable::kFileSuffix ); }
+        static bool isTranslationTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationTable::kFileSuffix ); }
+        static bool isTranslationMemory( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationMemory::kFileSuffix ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -209,6 +217,21 @@ namespace
             return settings.loadFromResource( resourceId );
         }
 
+        /** @brief 로컬라이제이션 JSON 문서(`loadFromJsonText( text, name, &error )` 모양)를 읽습니다. 모르는 칸은 오류 글로 돌아온다. */
+        template <typename TDocument>
+        static bool loadLocalizationDocument( const sw::string& resourceId )
+        {
+            sw::string text;
+            if ( sw::ResourceUtil::readTextResource( resourceId, text ) == false )
+                return false;
+            TDocument  document;
+            sw::string error;
+            if ( document.loadFromJsonText( text, resourceId, &error ) )
+                return true;
+            SW_LOG_WARNING( "%#", error.c_str() );
+            return false;
+        }
+
         static bool loadSpriteClip( const sw::string& resourceId )
         {
             sw::SpriteClipAsset clip;
@@ -303,50 +326,55 @@ namespace
 
         /** @brief 데이터 종류 표입니다. 앞의 줄이 먼저 맞습니다. */
         static constexpr DataKind kArrDataKind[] = {
-            {              "scene",               &isScene,                              &loadScene},
-            {             "prefab",              &isPrefab,                             &loadPrefab},
-            {           "pipeline",            &isPipeline,                           &loadPipeline},
-            {         "renderpass",          &isRenderPass,                         &loadRenderPass},
-            {"enginedefaultassets", &isEngineDefaultAssets,                &loadEngineDefaultAssets},
-            {           "inputmap",            &isInputMap,                           &loadInputMap},
-            {           "material",            &isMaterial,                           &loadMaterial},
-            {         "spriteclip",          &isSpriteClip,                         &loadSpriteClip},
-            {      "camerapresets",       &isCameraPresets,   &loadCatalog<sw::CameraPresetCatalog>},
-            {           "render2d",    &isRender2DSettings,                   &loadRender2DSettings},
-            {            "tileset",             &isTileSet,                            &loadTileSet},
-            {            "tilemap",             &isTileMap,                            &loadTileMap},
-            {       "elementrules",        &isElementRules,      &loadCatalog<sw::ElementRuleTable>},
-            {       "interactions",        &isInteractions,    &loadCatalog<sw::InteractionCatalog>},
-            {    "physicssettings",     &isPhysicsSettings,                    &loadPhysicsSettings},
-            {       "physicsasset",        &isPhysicsAsset,                       &loadPhysicsAsset},
-            {          "schedules",           &isSchedules,       &loadCatalog<sw::ScheduleCatalog>},
-            {         "aidirector",          &isAiDirector,     &loadCatalog<sw::AiDirectorProfile>},
-            {         "spawntable",          &isSpawnTable,            &loadCatalog<sw::SpawnTable>},
-            {    "telemetryschema",     &isTelemetrySchema,       &loadCatalog<sw::TelemetrySchema>},
-            {       "usersettings",  &isUserSettingsSchema,                 &loadUserSettingsSchema},
-            {          "abilities",           &isAbilities,        &loadCatalog<sw::AbilityCatalog>},
-            {              "crops",               &isCrops,           &loadCatalog<sw::CropCatalog>},
-            {               "city",                &isCity,           &loadCatalog<sw::CityCatalog>},
-            {            "weapons",             &isWeapons,         &loadCatalog<sw::WeaponCatalog>},
-            {           "rtsunits",            &isRtsUnits,            &loadCatalog<sw::RtsCatalog>},
-            {        "voxelblocks",         &isVoxelBlocks,     &loadCatalog<sw::VoxelBlockCatalog>},
-            {           "coasters",            &isCoasters,  &loadCatalog<sw::CoasterLayoutCatalog>},
-            {         "parklayout",          &isParkLayout,                         &loadParkLayout},
-            {       "gamesettings",        &isGameSettings,                       &loadGameSettings},
-            {        "socketkinds",         &isSocketKinds,       &loadCatalog<sw::SocketKindTable>},
-            {            "sockets",             &isSockets,                            &loadSockets},
-            {      "referencepose",       &isReferencePose, &loadCatalog<sw::ReferencePoseOverride>},
-            {          "bodyshape",           &isBodyShape,          &loadCatalog<sw::BodyShapeSet>},
-            {          "fittables",           &isFitTables,                          &loadFitTables},
-            {            "partfit",             &isPartFit,                            &loadPartFit},
-            {    "surfacechannels",     &isSurfaceChannels,   &loadCatalog<sw::SurfaceChannelTable>},
-            {              "items",               &isItems,           &loadCatalog<sw::ItemCatalog>},
-            {         "appearance",      &isAppearanceData,                     &loadAppearanceData},
-            {           "skeleton",            &isSkeleton,                           &loadSkeleton},
-            {          "animgraph",           &isAnimGraph,                          &loadAnimGraph},
-            {         "audiomixer",          &isAudioMixer,        &loadCatalog<sw::AudioMixerDesc>},
-            {        "audioevents",         &isAudioEvents,     &loadCatalog<sw::AudioEventLibrary>},
-            {         "audiomusic",          &isAudioMusic,        &loadCatalog<sw::AudioMusicDesc>},
+            {              "scene",               &isScene,                                         &loadScene},
+            {             "prefab",              &isPrefab,                                        &loadPrefab},
+            {           "pipeline",            &isPipeline,                                      &loadPipeline},
+            {         "renderpass",          &isRenderPass,                                    &loadRenderPass},
+            {"enginedefaultassets", &isEngineDefaultAssets,                           &loadEngineDefaultAssets},
+            {           "inputmap",            &isInputMap,                                      &loadInputMap},
+            {           "material",            &isMaterial,                                      &loadMaterial},
+            {         "spriteclip",          &isSpriteClip,                                    &loadSpriteClip},
+            {      "camerapresets",       &isCameraPresets,              &loadCatalog<sw::CameraPresetCatalog>},
+            {           "render2d",    &isRender2DSettings,                              &loadRender2DSettings},
+            {            "tileset",             &isTileSet,                                       &loadTileSet},
+            {            "tilemap",             &isTileMap,                                       &loadTileMap},
+            {       "elementrules",        &isElementRules,                 &loadCatalog<sw::ElementRuleTable>},
+            {       "interactions",        &isInteractions,               &loadCatalog<sw::InteractionCatalog>},
+            {    "physicssettings",     &isPhysicsSettings,                               &loadPhysicsSettings},
+            {       "physicsasset",        &isPhysicsAsset,                                  &loadPhysicsAsset},
+            {          "schedules",           &isSchedules,                  &loadCatalog<sw::ScheduleCatalog>},
+            {         "aidirector",          &isAiDirector,                &loadCatalog<sw::AiDirectorProfile>},
+            {         "spawntable",          &isSpawnTable,                       &loadCatalog<sw::SpawnTable>},
+            {    "telemetryschema",     &isTelemetrySchema,                  &loadCatalog<sw::TelemetrySchema>},
+            {       "usersettings",  &isUserSettingsSchema,                            &loadUserSettingsSchema},
+            {          "abilities",           &isAbilities,                   &loadCatalog<sw::AbilityCatalog>},
+            {              "crops",               &isCrops,                      &loadCatalog<sw::CropCatalog>},
+            {               "city",                &isCity,                      &loadCatalog<sw::CityCatalog>},
+            {            "weapons",             &isWeapons,                    &loadCatalog<sw::WeaponCatalog>},
+            {           "rtsunits",            &isRtsUnits,                       &loadCatalog<sw::RtsCatalog>},
+            {        "voxelblocks",         &isVoxelBlocks,                &loadCatalog<sw::VoxelBlockCatalog>},
+            {           "coasters",            &isCoasters,             &loadCatalog<sw::CoasterLayoutCatalog>},
+            {         "parklayout",          &isParkLayout,                                    &loadParkLayout},
+            {       "gamesettings",        &isGameSettings,                                  &loadGameSettings},
+            {        "socketkinds",         &isSocketKinds,                  &loadCatalog<sw::SocketKindTable>},
+            {            "sockets",             &isSockets,                                       &loadSockets},
+            {      "referencepose",       &isReferencePose,            &loadCatalog<sw::ReferencePoseOverride>},
+            {          "bodyshape",           &isBodyShape,                     &loadCatalog<sw::BodyShapeSet>},
+            {          "fittables",           &isFitTables,                                     &loadFitTables},
+            {            "partfit",             &isPartFit,                                       &loadPartFit},
+            {    "surfacechannels",     &isSurfaceChannels,              &loadCatalog<sw::SurfaceChannelTable>},
+            {              "items",               &isItems,                      &loadCatalog<sw::ItemCatalog>},
+            {         "appearance",      &isAppearanceData,                                &loadAppearanceData},
+            {           "skeleton",            &isSkeleton,                                      &loadSkeleton},
+            {          "animgraph",           &isAnimGraph,                                     &loadAnimGraph},
+            {         "audiomixer",          &isAudioMixer,                   &loadCatalog<sw::AudioMixerDesc>},
+            {        "audioevents",         &isAudioEvents,                &loadCatalog<sw::AudioEventLibrary>},
+            {         "audiomusic",          &isAudioMusic,                   &loadCatalog<sw::AudioMusicDesc>},
+            {       "culturetable",        &isCultureTable,        &loadLocalizationDocument<sw::CultureTable>},
+            {"localizationproject", &isLocalizationProject, &loadLocalizationDocument<sw::LocalizationProject>},
+            {        "stringtable",   &isSourceStringTable,   &loadLocalizationDocument<sw::SourceStringTable>},
+            {   "translationtable",    &isTranslationTable,    &loadLocalizationDocument<sw::TranslationTable>},
+            {  "translationmemory",   &isTranslationMemory,   &loadLocalizationDocument<sw::TranslationMemory>},
         };
 
         /**

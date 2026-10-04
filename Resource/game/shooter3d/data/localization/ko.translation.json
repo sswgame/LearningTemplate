@@ -1,0 +1,77 @@
+{
+    "culture": "ko",
+    "entries": {
+        "Assault Blaster": {
+            "text": "돌격 블래스터",
+            "sourceHash": "9064a88c950f19f1"
+        },
+        "Assault Rifle": {
+            "text": "돌격 소총",
+            "sourceHash": "67220abc0f738d9a"
+        },
+        "Bone Axe": {
+            "text": "뼈 도끼",
+            "sourceHash": "9e2cdbf7cb3d6953"
+        },
+        "Bone Shield": {
+            "text": "뼈 방패",
+            "sourceHash": "0201be6b95ece038"
+        },
+        "Knight Helmet": {
+            "text": "기사 투구",
+            "sourceHash": "4733227ae193d121"
+        },
+        "Notched Blade": {
+            "text": "이 빠진 칼",
+            "sourceHash": "0bda544f4c061f1a"
+        },
+        "Pistol": {
+            "text": "권총",
+            "sourceHash": "9fbfefa835da8476"
+        },
+        "Pump Shotgun": {
+            "text": "펌프 산탄총",
+            "sourceHash": "91f761c37c27a1e1"
+        },
+        "Round Shield": {
+            "text": "둥근 방패",
+            "sourceHash": "b63752b781a90fd4"
+        },
+        "Rusted Helm": {
+            "text": "녹슨 투구",
+            "sourceHash": "e74fbfb19151f99e"
+        },
+        "Scatter Blaster": {
+            "text": "산탄 블래스터",
+            "sourceHash": "39e9e7704ab22440"
+        },
+        "Sidearm Blaster": {
+            "text": "보조 블래스터",
+            "sourceHash": "7a752ad1e408f25d"
+        },
+        "Tattered Cape": {
+            "text": "해진 망토",
+            "sourceHash": "add8e4bee185648f"
+        },
+        "Travel Cape": {
+            "text": "여행 망토",
+            "sourceHash": "9b537522d0556b6c"
+        },
+        "settings.gameplay.difficulty": {
+            "text": "난이도",
+            "sourceHash": "c43eabc5a66b8450"
+        },
+        "settings.gameplay.difficulty.easy": {
+            "text": "쉬움",
+            "sourceHash": "483d9e6c1ccd1f9b"
+        },
+        "settings.gameplay.difficulty.hard": {
+            "text": "어려움",
+            "sourceHash": "58c7b5d87587287c"
+        },
+        "settings.gameplay.difficulty.normal": {
+            "text": "보통",
+            "sourceHash": "9ff3121d30f88d52"
+        }
+    }
+}

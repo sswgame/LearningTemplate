@@ -65,6 +65,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Reflection/**: 매크로 · TypeRegistry · Builtins. [Reflection/README.md](Reflection/README.md) · 생성기 [ReflectionParser](../../Tools/ReflectionParser/README.md)
 - **Graphics/**: RHI · Material · Shader · FrameRenderer. [Graphics/README.md](Graphics/README.md)
 - **Input/**: InputManager · InputMap · 장치(Keyboard/Mouse/Gamepad) 추상화. [Input/README.md](Input/README.md)
+- **Localization/**: 문자열 표(원문 · 문화권 번역 · 낡은 번역 판정) · 문화권 데이터 · ICU 메시지 포맷(복수형 · 고르기 · 숫자 · 날짜) · 의사 로컬라이제이션 · `SW_LOCTEXT`. [Localization/README.md](Localization/README.md)
 - **UserSettings/**: 플레이어 옵션 메뉴의 백엔드 — 데이터 스키마 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기/확인 카운트다운 · 메뉴 바인딩 API. [UserSettings/README.md](UserSettings/README.md)
 - **Telemetry/**: 텔레메트리(동의 · 스키마 · 표본 · 묶음 · JSON lines 스풀 · 회전 · 올리기 · 장면별 프레임 시간 요약)와 크래시 보고(다음 실행의 묶음 ·
   동의 local/ask/send · 보고 프로세스 · multipart 업로드). 바깥으로는 `IHttpClient` 창구로만 나가고 기본 창구는 보내지 않는다. [Telemetry/README.md](Telemetry/README.md)
@@ -95,7 +96,8 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
     내리지 않고 사라지면 다음 비우기가 죽은 코드로 뛴다(엔진 쪽 "Statics die on hot reload" 와 같은 함정).
     두고 가면 종료가 **이름으로** 경고한다 — 등록 시점에 이름을 복사해 두므로 그 진단은 죽은
     포인터를 건드리지 않는다.
-  - **티어 때문에 Resource 에 사는 것**: `SpriteClipCache` · `AnimationAssetCache`(스켈레톤 · 애니메이션 클립)는 `IAssetCache` 를 구현하므로 Animation(티어 2)이 아니라 Resource(티어 4)에,
+  - **티어 때문에 Resource 에 사는 것 셋**: `SpriteClipCache` · `AnimationAssetCache`(스켈레톤 · 애니메이션 클립)는 `IAssetCache` 를 구현하므로 Animation(티어 2)이 아니라 Resource(티어 4)에,
+    `LocalizationReloadCache`(로컬라이제이션 파일의 핫 리로드 창구 — 글은 `LocalizationManager` 가 갖고 `clear()` 는 아무것도 지우지 않는다)도 같은 이유로 여기에,
     `PackCompressionUtil` 은 팩 타입(`ResourcePackTypes.h`)을 쓰므로 Compression(티어 0)이 아니라 Resource 에 둔다.
 - **Serialization/**: 직렬화 (BinarySerializer · JsonSerializer · XmlSerializer · Archive)
 - **Module/**: 모듈 DLL 쪽 계약만 둔다 — `ModuleTypeRegistry`(로드한 모듈의 타입 · 전역 변수 등록과 정리) · `ModuleHandleProvider`(지연 로드 훅이

@@ -13,8 +13,8 @@ _kCommentOrLiteralRe = re.compile(r"//[^\n]*|/\*.*?\*/|\"(?:\\.|[^\"\\\n])*\"|'(
 
 
 def blankMatchInternal(text: str) -> str:
-    """줄바꿈을 남기고 나머지를 공백으로 바꾼다."""
-    return re.sub(r"[^\n]", " ", text)
+    """줄바꿈을 남기고 나머지를 공백으로 바꾼다. 주석 · 리터럴마다 불리므로 정규식 대신 줄 단위로 길이만 센다."""
+    return "\n".join(" " * len(part) for part in text.split("\n"))
 
 
 def blankCommentsAndLiterals(text: str) -> str:

@@ -110,16 +110,9 @@ namespace sw
     {
         const GameSettings& data = _bootstrap._data;
 
-        // 다국어 — 팩 폴더가 있으면 그것, 없으면 단일 문자열 파일.
-        if ( data._localizationDirectory.empty() == false )
-        {
-            if ( GameStrings::initialize( data._localizationDirectory, data._defaultLanguage, data._fallbackLanguage ) == false )
-                SW_LOG_WARNING( "GameSettings localization '%#' could not be loaded - strings show their keys", data._localizationDirectory.c_str() );
-        }
-        else if ( data._stringsData.empty() == false && GameStrings::loadFromResource( data._stringsData ) == false )
-        {
-            SW_LOG_WARNING( "GameSettings strings '%#' could not be loaded - strings show their keys", data._stringsData.c_str() );
-        }
+        // 다국어 — 게임의 로컬라이제이션 프로젝트를 올린다(엔진 프로젝트는 엔진이 기동 때 올렸다).
+        if ( data._localizationProject.empty() == false && GameStrings::initialize( data._localizationProject, data._defaultLanguage, data._fallbackLanguage ) == false )
+            SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", data._localizationProject.c_str() );
 
         // 게임플레이 입력 맵 — `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵(`PlayerController` 가 읽는 맵)이다.
         if ( data._inputMap.empty() == false )

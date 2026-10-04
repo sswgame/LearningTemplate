@@ -1,0 +1,484 @@
+msgid ""
+msgstr ""
+"Language: ja\n"
+"X-Localization-Project: engine\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Message-Format: ICU\n"
+"X-Generator: SWEngine LocalizationTools\n"
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.foe_fainted"
+msgid "{name} fainted! You won!"
+msgstr ""
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.got_away"
+msgid "Got away safely!"
+msgstr ""
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.no_move"
+msgid "{name} has no usable move!"
+msgstr ""
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.no_pp"
+msgid "{name} has no PP!"
+msgstr ""
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.player_fainted"
+msgid "{name} fainted..."
+msgstr ""
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.prompt_fight"
+msgid "Fight: 1/2 moves, Enter=Move0, Esc=Run"
+msgstr ""
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.used_move"
+msgid "{name} used {move}!"
+msgstr ""
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.used_move_dmg"
+msgid "{name} used {move}! ({damage} dmg)"
+msgstr ""
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.what_will"
+msgid "What will {name} do?"
+msgstr ""
+
+#: Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp
+msgctxt "battle.wild_appeared"
+msgid "A wild {name} appeared!"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.colorVision"
+msgid "Color Vision Mode"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.colorVision.deuteranopia"
+msgid "Deuteranopia"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.colorVision.protanopia"
+msgid "Protanopia"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.colorVision.tritanopia"
+msgid "Tritanopia"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.reduceFlashing"
+msgid "Reduce Flashing"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.subtitleBackground"
+msgid "Subtitle Background"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.subtitleSize"
+msgid "Subtitle Size"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.subtitles"
+msgid "Subtitles"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.textSize"
+msgid "Text Size"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.accessibility.uiScale"
+msgid "UI Scale"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.ambientVolume"
+msgid "Ambient Volume"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.masterVolume"
+msgid "Master Volume"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.musicVolume"
+msgid "Music Volume"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.mute"
+msgid "Mute All"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.sfxVolume"
+msgid "Effects Volume"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.uiVolume"
+msgid "Interface Volume"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.audio.voiceVolume"
+msgid "Voice Volume"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.accessibility"
+msgid "Accessibility"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.audio"
+msgid "Audio"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.controls"
+msgid "Controls"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.display"
+msgid "Display"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.gameplay"
+msgid "Gameplay"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.graphics"
+msgid "Graphics"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.category.language"
+msgid "Language"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.common.off"
+msgid "Off"
+msgstr ""
+
+#. Display-change confirmation dialog; seconds counts down
+#. Max length: 80
+msgctxt "settings.confirm.keepChanges"
+msgid "Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}."
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.aimMode"
+msgid "Aim"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.crouchMode"
+msgid "Crouch"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.gamepadSensitivity"
+msgid "Gamepad Sensitivity"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.hold"
+msgid "Hold"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.invertY"
+msgid "Invert Vertical Look"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.mouseSensitivity"
+msgid "Mouse Sensitivity"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.sprintMode"
+msgid "Sprint"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.stickDeadzone"
+msgid "Stick Dead Zone"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.controls.toggle"
+msgid "Toggle"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.resolution"
+msgid "Resolution"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.vsync"
+msgid "Vertical Sync"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.windowMode"
+msgid "Window Mode"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.windowMode.borderless"
+msgid "Borderless"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.display.windowMode.windowed"
+msgid "Windowed"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.gameplay.cameraShake"
+msgid "Camera Shake"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.gameplay.fieldOfView"
+msgid "Field of View"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.gameplay.headBob"
+msgid "Head Bob"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.effectsQuality"
+msgid "Effects Quality"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.foliageDensity"
+msgid "Foliage Density"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.motionBlur"
+msgid "Motion Blur"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.postQuality"
+msgid "Post-Processing Quality"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality"
+msgid "Graphics Quality"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality.custom"
+msgid "Custom"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality.high"
+msgid "High"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality.low"
+msgid "Low"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality.medium"
+msgid "Medium"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.quality.ultra"
+msgid "Ultra"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.renderScale"
+msgid "Render Scale"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.shadowQuality"
+msgid "Shadow Quality"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.textureQuality"
+msgid "Texture Quality"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.upscaler"
+msgid "Upscaler"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.upscaler.spatial"
+msgid "Spatial"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.graphics.viewDistance"
+msgid "View Distance"
+msgstr ""
+
+#. Context: Options menu label
+#. Max length: 32
+#: engine/settings/engine.settings.xml
+msgctxt "settings.language.text"
+msgid "Text Language"
+msgstr ""
+
+#. Shown after applying settings marked apply=restart
+#. Max length: 80
+msgctxt "settings.restartRequired"
+msgid "{count, plural, one {# setting takes} other {# settings take}} effect after a restart."
+msgstr ""

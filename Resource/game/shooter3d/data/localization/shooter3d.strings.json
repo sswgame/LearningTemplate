@@ -1,0 +1,135 @@
+{
+    "culture": "en",
+    "entries": {
+        "Assault Blaster": {
+            "source": "Assault Blaster",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Assault Rifle": {
+            "source": "Assault Rifle",
+            "context": "Weapon name",
+            "origins": [
+                "game/shooter3d/data/weapons.xml"
+            ]
+        },
+        "Bone Axe": {
+            "source": "Bone Axe",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Bone Shield": {
+            "source": "Bone Shield",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Knight Helmet": {
+            "source": "Knight Helmet",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Notched Blade": {
+            "source": "Notched Blade",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Pistol": {
+            "source": "Pistol",
+            "context": "Weapon name",
+            "origins": [
+                "game/shooter3d/data/weapons.xml"
+            ]
+        },
+        "Pump Shotgun": {
+            "source": "Pump Shotgun",
+            "context": "Weapon name",
+            "origins": [
+                "game/shooter3d/data/weapons.xml"
+            ]
+        },
+        "Round Shield": {
+            "source": "Round Shield",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Rusted Helm": {
+            "source": "Rusted Helm",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Scatter Blaster": {
+            "source": "Scatter Blaster",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Sidearm Blaster": {
+            "source": "Sidearm Blaster",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Tattered Cape": {
+            "source": "Tattered Cape",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Travel Cape": {
+            "source": "Travel Cape",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "settings.gameplay.difficulty": {
+            "source": "Difficulty",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "game/shooter3d/data/shooter3d.settings.xml"
+            ]
+        },
+        "settings.gameplay.difficulty.easy": {
+            "source": "Easy",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "game/shooter3d/data/shooter3d.settings.xml"
+            ]
+        },
+        "settings.gameplay.difficulty.hard": {
+            "source": "Hard",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "game/shooter3d/data/shooter3d.settings.xml"
+            ]
+        },
+        "settings.gameplay.difficulty.normal": {
+            "source": "Normal",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "game/shooter3d/data/shooter3d.settings.xml"
+            ]
+        }
+    }
+}

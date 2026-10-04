@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
 
-#include "Core/Container/map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -12,7 +12,6 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw::editor
 {
@@ -20,119 +19,38 @@ namespace sw::editor
     {
         struct EditorDataTableCommandsInternal
         {
-            enum class LocalizationLanguage : uint8
-            {
-                EnUS = 0,
-                KoKR,
-                JaJP
-            };
+            static constexpr const utf8* kEngineProject = "engine/localization/engine.locproject.json";
 
-            static const utf8* languageFileStem( LocalizationLanguage lang )
+            /** @brief 원문 표들을 읽습니다. 못 읽은 표가 있으면 false 입니다. */
+            [[nodiscard]] static bool readSourceTables( const LocalizationSheet& sheet, vector<SourceStringTable>& outListTable )
             {
-                if ( lang == LocalizationLanguage::EnUS )
-                    return "en_US";
-                if ( lang == LocalizationLanguage::KoKR )
-                    return "ko_KR";
-                return "ja_JP";
+                outListTable.clear();
+                bool bAllRead{ true };
+                for ( const string& tablePath : sheet._listTablePath )
+                {
+                    SourceStringTable& table = outListTable.emplace_back();
+                    string             error;
+                    if ( table.loadFromFile( tablePath, &error ) == false )
+                    {
+                        SW_LOG_WARNING( "String table '%#' cannot be read - it is not shown and saving will not overwrite it: %#", tablePath.c_str(), error.c_str() );
+                        bAllRead = false;
+                    }
+                }
+                return bAllRead;
             }
 
-            static void setLocalizationField( LocalizationRecord& record, LocalizationLanguage lang, string_view value )
+            /** @brief 번역 표 하나를 읽습니다 — 파일이 없으면 빈 표로 true, 있는데 못 읽으면 false 입니다. */
+            [[nodiscard]] static bool readTranslation( const string& path, string_view culture, TranslationTable& outTable )
             {
-                if ( lang == LocalizationLanguage::EnUS )
-                    record._enUS = string{ value };
-                else if ( lang == LocalizationLanguage::KoKR )
-                    record._koKR = string{ value };
-                else
-                    record._jaJP = string{ value };
-            }
-
-            static const string& getLocalizationField( const LocalizationRecord& record, LocalizationLanguage lang )
-            {
-                if ( lang == LocalizationLanguage::EnUS )
-                    return record._enUS;
-                if ( lang == LocalizationLanguage::KoKR )
-                    return record._koKR;
-                return record._jaJP;
-            }
-
-            /** @brief 언어 파일의 경로입니다. 활성 게임에 `data/localization` 도메인이 없으면 비어 있습니다. */
-            static string languageFilePath( LocalizationLanguage lang, const string& localizationFolder )
-            {
-                return FileUtil::joinPath( localizationFolder, string{ languageFileStem( lang ) } + ".json" );
-            }
-
-            /** @brief 있는 언어 파일이 읽히는가 — 없으면 true(새로 만든다), 있는데 JSON 객체로 읽히지 않으면 false 입니다. */
-            static bool isLanguageFileReadable( const string& path, JsonDocument& outDoc )
-            {
-                if ( path.empty() || FileUtil::fileExists( path ) == false )
+                outTable = TranslationTable{};
+                outTable.setCulture( culture );
+                if ( FileUtil::fileExists( path ) == false )
                     return true;
-                return outDoc.loadFile( path ) && outDoc.getRoot().isObject();
-            }
-
-            /**
-             * @brief 언어 파일 하나를 표에 합칩니다. 파일이 있는데 읽지 못하면 false 입니다(없으면 true — 아직 번역이 없다).
-             * @details 활성 게임에 `data/localization` 도메인이 없으면 localizationFolder 가 비고, joinPath 는 빈 경로를 반환한다. 그대로 넘기면
-             *          파일 계층이 "File not found: " 로 **이름 없는** 에러를 언어 수만큼 남긴다. 없는 것은 파일이 아니라 폴더다.
-             */
-            static bool mergeLanguageJson( LocalizationLanguage lang, const string& localizationFolder, map<string, LocalizationRecord>& mapRecord )
-            {
-                const string path = languageFilePath( lang, localizationFolder );
-                JsonDocument doc;
-                if ( isLanguageFileReadable( path, doc ) == false )
-                {
-                    SW_LOG_WARNING( "Localization file '%#' cannot be read - its strings are not shown and saving will not overwrite it", path );
-                    return false;
-                }
-                if ( doc.getRoot().isObject() == false )
+                string error;
+                if ( outTable.loadFromFile( path, &error ) )
                     return true;
-
-                const vector<string> listKey = doc.getRoot().getMemberNames();
-                for ( const string& key : listKey )
-                {
-                    LocalizationRecord& record = mapRecord[key];
-                    record._key                = key;
-                    setLocalizationField( record, lang, doc.getRoot().get( key ).asString() );
-                }
-                return true;
-            }
-
-            /**
-             * @brief 언어 하나를 파일로 씁니다. **읽지 못한 기존 파일은 덮지 않습니다** — false 입니다.
-             * @details 깨진 파일(끝의 쉼표 · 병합 표식)을 읽을 때 건너뛰면 그 언어의 칸이 모두 비고, 저장이 빈 칸으로 그 파일을 다시
-             *          써서 **그 언어의 번역이 모두 지워진다.**
-             */
-            [[nodiscard]] static bool writeLanguageJson( LocalizationLanguage lang, const string& localizationFolder, const vector<LocalizationRecord>& listRecord )
-            {
-                const string path = languageFilePath( lang, localizationFolder );
-                if ( path.empty() )
-                    return false;
-                JsonDocument existing;
-                if ( isLanguageFileReadable( path, existing ) == false )
-                {
-                    SW_LOG_ERROR( "Localization file '%#' cannot be read - it is not overwritten (fix the file and save again)", path );
-                    return false;
-                }
-
-                JsonDocument    doc;
-                const JsonValue root = doc.makeObject();
-
-                for ( const LocalizationRecord& record : listRecord )
-                {
-                    const string& val = getLocalizationField( record, lang );
-                    if ( val.empty() == false )
-                        root.set( record._key ).setString( val );
-                }
-
-                if ( doc.saveFile( path, 4 ) == false )
-                {
-                    SW_LOG_ERROR( "Localization file '%#' could not be written", path );
-                    return false;
-                }
-
-                LocalizationManager* pLocalizationManager = editor::getService<LocalizationManager>();
-                if ( pLocalizationManager != nullptr && pLocalizationManager->loadLanguageJson( languageFileStem( lang ), doc.dump( 4 ) ) == false )
-                    SW_LOG_WARNING( "Saved '%#' but the running game could not reload it", path );
-                return true;
+                SW_LOG_WARNING( "Translation table '%#' cannot be read - its strings are not shown and saving will not overwrite it: %#", path.c_str(), error.c_str() );
+                return false;
             }
         };
     } // namespace
@@ -144,8 +62,7 @@ namespace sw::editor
 
     string EditorDataTableCommands::getLocalizationFolderPath()
     {
-        return ResourceUtil::getDomainFolderPath(
-            GameConfig::getActive()._packRoot, FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) );
+        return ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, FileUtil::joinPath( path::kDataFolder, path::kLocalizationFolder ) );
     }
 
     string EditorDataTableCommands::getGameDataFolderPath()
@@ -153,49 +70,166 @@ namespace sw::editor
         return ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kDataFolder );
     }
 
-    bool EditorDataTableCommands::loadLocalization( vector<LocalizationRecord>& outList )
+    void EditorDataTableCommands::collectLocalizationProjects( vector<string>& outListProjectPath )
     {
-        return loadLocalizationFrom( getLocalizationFolderPath(), outList );
+        outListProjectPath.clear();
+        const string enginePath = ResourceUtil::getResourcePath( EditorDataTableCommandsInternal::kEngineProject );
+        if ( enginePath.empty() == false && FileUtil::fileExists( enginePath ) )
+            outListProjectPath.push_back( FileUtil::normalizeSeparators( enginePath ) );
+
+        const string   gameFolder = getLocalizationFolderPath();
+        vector<string> listFile;
+        if ( gameFolder.empty() == false && FileUtil::collectFiles( gameFolder, ".json", listFile, false ) )
+        {
+            for ( const string& filePath : listFile )
+            {
+                if ( StringUtil::endsWith( filePath, LocalizationProject::kFileSuffix, true ) )
+                    outListProjectPath.push_back( FileUtil::normalizeSeparators( filePath ) );
+            }
+        }
     }
 
-    bool EditorDataTableCommands::saveLocalization( vector<LocalizationRecord>& listRecord )
+    bool EditorDataTableCommands::loadLocalizationProject( string_view projectPathView, LocalizationSheet& outSheet )
     {
-        return saveLocalizationTo( getLocalizationFolderPath(), listRecord );
-    }
+        const string projectPath( projectPathView ); // @p outSheet 의 경로를 넘겨받았을 수 있다 — 비우기 전에 복사한다
+        outSheet = LocalizationSheet{};
+        LocalizationProject project;
+        string              error;
+        if ( project.loadFromFile( projectPath, &error ) == false )
+        {
+            SW_LOG_WARNING( "Localization project cannot be read: %#", error.c_str() );
+            return false;
+        }
+        outSheet._projectPath   = string( projectPath );
+        outSheet._sourceCulture = project._sourceCulture;
+        outSheet._listCulture   = project._listCulture;
+        for ( const string& tableName : project._listStringTable )
+            outSheet._listTablePath.push_back( LocalizationProject::makeSiblingPath( projectPath, tableName ) );
 
-    bool EditorDataTableCommands::loadLocalizationFrom( string_view folder, vector<LocalizationRecord>& outList )
-    {
-        outList.clear();
-        const string localizationFolder{ folder };
+        vector<SourceStringTable> listTable;
+        bool                      bAllRead = EditorDataTableCommandsInternal::readSourceTables( outSheet, listTable );
+        vector<TranslationTable>  listTranslation( outSheet._listCulture.size() );
+        for ( size_t cultureIndex = 0; cultureIndex < outSheet._listCulture.size(); ++cultureIndex )
+        {
+            const string path = LocalizationProject::makeTranslationPath( projectPath, outSheet._listCulture[cultureIndex] );
+            bAllRead          = EditorDataTableCommandsInternal::readTranslation( path, outSheet._listCulture[cultureIndex], listTranslation[cultureIndex] ) && bAllRead;
+        }
 
-        map<string, LocalizationRecord> mapRecord;
-        bool                            bAllRead = true;
-        bAllRead &= EditorDataTableCommandsInternal::mergeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::EnUS, localizationFolder, mapRecord );
-        bAllRead &= EditorDataTableCommandsInternal::mergeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::KoKR, localizationFolder, mapRecord );
-        bAllRead &= EditorDataTableCommandsInternal::mergeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::JaJP, localizationFolder, mapRecord );
-
-        outList.reserve( mapRecord.size() );
-        for ( auto& pair : mapRecord )
-            outList.push_back( std::move( pair.second ) );
+        for ( size_t tableIndex = 0; tableIndex < listTable.size(); ++tableIndex )
+        {
+            for ( const auto& [key, entry] : listTable[tableIndex].getEntries() )
+            {
+                LocalizationRecord& record = outSheet._listRecord.emplace_back();
+                record._key                = key;
+                record._source             = entry._source;
+                record._context            = entry._context;
+                record._comment            = entry._comment;
+                record._maxLength          = entry._maxLength;
+                record._tableIndex         = static_cast<uint32>( tableIndex );
+                for ( const TranslationTable& translation : listTranslation )
+                {
+                    const TranslationEntry* pTranslation = translation.findEntry( key );
+                    record._listTranslation.push_back( pTranslation != nullptr ? pTranslation->_text : string{} );
+                    record._listState.push_back( translation.computeState( key, &entry ) );
+                }
+            }
+        }
         return bAllRead;
     }
 
-    bool EditorDataTableCommands::saveLocalizationTo( string_view folder, vector<LocalizationRecord>& listRecord )
+    bool EditorDataTableCommands::saveLocalizationProject( LocalizationSheet& inoutSheet )
     {
-        const string localizationFolder{ folder };
-        FileUtil::ensureDirectoryExists( localizationFolder );
+        // 디스크의 지금 내용 위에 고친 줄만 얹는다 — 수집기가 적은 자리 · 번역가 메모 · 검토 표시를 지킨다.
+        vector<SourceStringTable> listTable;
+        if ( EditorDataTableCommandsInternal::readSourceTables( inoutSheet, listTable ) == false )
+        {
+            SW_LOG_ERROR( "Localization is not saved - a string table could not be read (fix it and save again)" );
+            return false;
+        }
+        bool                     bAllWritten{ true };
+        vector<TranslationTable> listTranslation( inoutSheet._listCulture.size() );
+        vector<uint8>            listWritable( inoutSheet._listCulture.size(), 1 );
+        for ( size_t cultureIndex = 0; cultureIndex < inoutSheet._listCulture.size(); ++cultureIndex )
+        {
+            const string path = LocalizationProject::makeTranslationPath( inoutSheet._projectPath, inoutSheet._listCulture[cultureIndex] );
+            if ( EditorDataTableCommandsInternal::readTranslation( path, inoutSheet._listCulture[cultureIndex], listTranslation[cultureIndex] ) == false )
+            {
+                SW_LOG_ERROR( "Translation table '%#' could not be read - it is not overwritten (fix the file and save again)", path.c_str() );
+                listWritable[cultureIndex] = 0;
+                bAllWritten                = false;
+            }
+        }
 
-        bool bAllWritten = true;
-        bAllWritten &= EditorDataTableCommandsInternal::writeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::EnUS, localizationFolder, listRecord );
-        bAllWritten &= EditorDataTableCommandsInternal::writeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::KoKR, localizationFolder, listRecord );
-        bAllWritten &= EditorDataTableCommandsInternal::writeLanguageJson( EditorDataTableCommandsInternal::LocalizationLanguage::JaJP, localizationFolder, listRecord );
+        for ( const string& removedKey : inoutSheet._listRemovedKey )
+        {
+            for ( SourceStringTable& table : listTable )
+                (void)table.removeEntry( removedKey );
+            for ( TranslationTable& translation : listTranslation )
+                (void)translation.removeEntry( removedKey );
+        }
+
+        for ( const LocalizationRecord& record : inoutSheet._listRecord )
+        {
+            if ( record._bModified == false || listTable.empty() )
+                continue;
+            const uint32     tableIndex = record._tableIndex < listTable.size() ? record._tableIndex : 0u;
+            SourceTextEntry& source     = listTable[tableIndex].getOrAddEntry( record._key );
+            source._source              = record._source;
+            source._context             = record._context;
+            source._comment             = record._comment;
+            source._maxLength           = record._maxLength;
+            const uint64 sourceHash     = LocalizationTextUtil::computeSourceHash( record._source );
+            for ( size_t cultureIndex = 0; cultureIndex < listTranslation.size() && cultureIndex < record._listTranslation.size(); ++cultureIndex )
+            {
+                TranslationTable& translation = listTranslation[cultureIndex];
+                const string&     text        = record._listTranslation[cultureIndex];
+                if ( text.empty() )
+                {
+                    (void)translation.removeEntry( record._key );
+                    continue;
+                }
+                const TranslationEntry* pExisting = translation.findEntry( record._key );
+                if ( pExisting != nullptr && pExisting->_text == text )
+                    continue; // 번역은 그대로 — 원문만 고쳤으면 이 번역은 낡은 것이 된다
+                TranslationEntry& entry = translation.getOrAddEntry( record._key );
+                entry._text             = text;
+                entry._sourceHash       = sourceHash;
+                entry._bReview          = false;
+            }
+        }
+
+        for ( size_t tableIndex = 0; tableIndex < listTable.size(); ++tableIndex )
+        {
+            if ( listTable[tableIndex].saveToFile( inoutSheet._listTablePath[tableIndex] ) == false )
+            {
+                SW_LOG_ERROR( "String table '%#' could not be written", inoutSheet._listTablePath[tableIndex].c_str() );
+                bAllWritten = false;
+            }
+        }
+        for ( size_t cultureIndex = 0; cultureIndex < listTranslation.size(); ++cultureIndex )
+        {
+            if ( listWritable[cultureIndex] == 0 )
+                continue;
+            const string path = LocalizationProject::makeTranslationPath( inoutSheet._projectPath, inoutSheet._listCulture[cultureIndex] );
+            if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::fileExists( path ) == false )
+                continue; // 번역이 하나도 없는 문화권의 빈 파일은 만들지 않는다
+            if ( listTranslation[cultureIndex].saveToFile( path ) == false )
+            {
+                SW_LOG_ERROR( "Translation table '%#' could not be written", path.c_str() );
+                bAllWritten = false;
+            }
+        }
         if ( bAllWritten == false )
             return false; // 고친 표시를 지우지 않는다 — 저장되지 않은 것이 남아 있다
 
-        for ( LocalizationRecord& record : listRecord )
+        for ( LocalizationRecord& record : inoutSheet._listRecord )
             record._bModified = false;
+        inoutSheet._listRemovedKey.clear();
 
-        SW_LOG_INFO( "Successfully saved all localization tables." );
+        LocalizationManager* pLocalizationManager = editor::getService<LocalizationManager>();
+        if ( pLocalizationManager != nullptr )
+            (void)pLocalizationManager->reloadChangedFile( inoutSheet._projectPath );
+        SW_LOG_INFO( "Saved localization project '%#'.", inoutSheet._projectPath.c_str() );
         return true;
     }
 

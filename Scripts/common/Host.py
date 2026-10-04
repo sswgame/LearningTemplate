@@ -108,6 +108,71 @@ def getAllStagedFiles(root: Path | None = None) -> list[Path]:
     return sorted(listGitFilesInternal(root or getProjectRoot(), _kStagedFileArgument, None))
 
 
+def getMergeHeadRevisions(root: Path | None = None) -> list[str]:
+    """
+    병합 커밋을 만드는 중이면 `MERGE_HEAD` 의 커밋들(문어발 병합이면 여럿)을, 아니면 빈 목록을 돌려줍니다.
+
+    `MERGE_HEAD` 의 자리는 `git rev-parse --git-path` 로 묻는다 — 워크트리에서는 `.git` 이 파일이라 경로를 직접 만들면 틀린다.
+    """
+    projectRoot = root or getProjectRoot()
+    gitResult = runGit(["rev-parse", "--git-path", "MERGE_HEAD"], cwd=projectRoot)
+    if gitResult.returncode != 0:
+        return []
+    mergeHeadPath = Path(gitResult.stdout.strip())
+    if not mergeHeadPath.is_absolute():
+        mergeHeadPath = projectRoot / mergeHeadPath
+    try:
+        text = mergeHeadPath.read_text(encoding="utf-8")
+    except OSError:
+        return []
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+def mapBlobByPathInternal(projectRoot: Path, listGitArgument: list[str], blobFieldIndex: int) -> dict[str, str]:
+    """`ls-files -s -z` · `ls-tree -r -z` 출력을 {저장소 기준 경로: blob id} 로 읽습니다. 병합 미해결 칸(stage 1~3)은 뺀다."""
+    gitResult = runGit(listGitArgument, cwd=projectRoot)
+    mapBlob: dict[str, str] = {}
+    if gitResult.returncode != 0:
+        return mapBlob
+    bIndex = listGitArgument[0] == "ls-files"
+    for entry in gitResult.stdout.split("\0"):
+        head, separator, relPath = entry.partition("\t")
+        if not separator:
+            continue
+        listField = head.split()
+        if bIndex and listField[-1] != "0":
+            continue
+        mapBlob[relPath] = listField[blobFieldIndex]
+    return mapBlob
+
+
+def listFilesUnlikeEveryParent(listPath: Sequence[Path],
+                               listParentRevision: Sequence[str],
+                               root: Path | None = None) -> list[Path]:
+    """
+    staged 내용(인덱스의 blob)이 **어느 부모의 같은 경로 blob 과도 다른** 파일만 남깁니다 — 병합 커밋에서 파일 단위로 검사할 대상.
+
+    한쪽 부모와 바이트가 같은 파일은 그 부모 커밋을 만들 때 커밋 훅이 같은 내용을 이미 검사했다. 남는 것은 충돌 해결 · 자동 병합으로
+    내용이 새로 생긴 파일이다. 인덱스에 없거나 저장소 밖이라 대조할 수 없는 파일은 남긴다(모르면 검사한다).
+    """
+    projectRoot = root or getProjectRoot()
+    mapIndexBlob = mapBlobByPathInternal(projectRoot, ["ls-files", "-s", "-z"], 1)
+    listParentBlob = [mapBlobByPathInternal(projectRoot, ["ls-tree", "-r", "-z", "--full-tree", revision], 2)
+                      for revision in listParentRevision]
+    resolvedRoot = projectRoot.resolve()
+    listKept: list[Path] = []
+    for path in listPath:
+        try:
+            relPath = path.resolve().relative_to(resolvedRoot).as_posix()
+        except ValueError:
+            listKept.append(path)
+            continue
+        indexBlob = mapIndexBlob.get(relPath)
+        if indexBlob is None or not any(mapBlob.get(relPath) == indexBlob for mapBlob in listParentBlob):
+            listKept.append(path)
+    return listKept
+
+
 def getStagedCppFiles(root: Path | None = None,
                       extensions: set[str] | None = None) -> list[Path]:
     """

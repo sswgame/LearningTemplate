@@ -4,4 +4,5 @@
 <GameSettings>
   <startMap>game/shooter3d/maps/arena.scene.xml</startMap>
   <inputMap>game/shooter3d/data/shooter.input.xml</inputMap>
+  <localizationProject>game/shooter3d/data/localization/shooter3d.locproject.json</localizationProject>
 </GameSettings>

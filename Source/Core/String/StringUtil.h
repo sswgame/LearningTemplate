@@ -82,6 +82,13 @@ namespace sw
          */
         static string escapeInvalidUtf8( string_view text );
         /**
+         * @brief @p text 의 @p inoutOffset 자리에서 UTF-8 글자 하나를 읽어 코드 포인트를 돌려주고, 오프셋을 그 글자 뒤로 옮깁니다.
+         * @details 잘못된 바이트는 U+FFFD 로 읽고 한 바이트 이상 넘깁니다(무한 반복이 없습니다). 오프셋이 끝이면 0 을 돌려주고 옮기지 않습니다.
+         */
+        static uint32 decodeUtf8( string_view text, size_t& inoutOffset );
+        /** @brief 코드 포인트 하나를 UTF-8 로 @p inoutText 끝에 덧붙입니다. */
+        static void appendUtf8( string& inoutText, uint32 codepoint );
+        /**
          * @brief 바이트 오프셋이 몇째 줄 · 몇째 글자인지 셉니다(둘 다 1 부터). 열은 바이트가 아니라 UTF-8 글자 수입니다.
          * @details 파서 오류를 `경로:줄:열` 로 적을 때 쓴다 — IDE 터미널은 그 꼴을 눌러 그 자리로 간다. 오프셋이 글 밖이면 끝 자리입니다.
          */

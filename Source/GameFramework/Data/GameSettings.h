@@ -42,10 +42,7 @@ namespace sw
         string _defaultSavePath{}; ///< 기본 세이브 슬롯 경로(파일 경로 — 경로 없는 `GameInstanceBase::saveStateToFile` · `loadStateFromFile`)
 
         PROPERTY()
-        string _stringsData{}; ///< 문자열 테이블 (단일 파일 폴백)
-
-        PROPERTY()
-        string _localizationDirectory{}; ///< 다국어 팩 디렉터리
+        string _localizationProject{}; ///< 로컬라이제이션 프로젝트(`*.locproject.json`, 리소스 경로) — 원문 표 · 문화권 번역 표가 그 옆에 있다
 
         PROPERTY()
         string _defaultLanguage{ "ko_kr" }; ///< 기본 활성 언어
