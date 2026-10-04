@@ -64,6 +64,13 @@ namespace sw
                 return listLine;
             }
 
+            /** @brief 파일이 이름표(`_componentName`)를 적었으면 true 입니다 — 적지 않은 옛 파일만 기본값(타입 이름)으로 읽혀야 한다. */
+            static bool isLabelledFile( const string& path )
+            {
+                string text;
+                return FileUtil::readTextFile( path, text ) && text.find( "_componentName" ) != string::npos;
+            }
+
             /**
              * @brief 매니저의 컴포넌트마다 이름표를 `Named<번호>` 로 바꿉니다(모르는 타입은 뺍니다).
              * @return 바꾸기 전 이름표가 타입 이름이 **아니던** 컴포넌트 수입니다 — 이름표가 없는 옛 파일이면 0 이어야 합니다.
@@ -1591,7 +1598,8 @@ SW_TEST_CASE( SceneTest, ComponentNameSurvivesSceneFilesAndCooking )
 }
 
 /**
- * @brief [SceneTest] 저장소의 실제 씬 · 프리팹이 모두 읽히고(이름표가 없는 옛 파일 — 기본값은 타입 이름), 이름표를 달아 다시 쓰면 그대로 돌아온다
+ * @brief [SceneTest] 저장소의 실제 씬 · 프리팹이 모두 읽히고(이름표가 없는 옛 파일 — 기본값은 타입 이름, 이름표를 적은 파일 — 그 이름), 이름표를 달아
+ *        다시 쓰면 그대로 돌아온다
  */
 SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
 {
@@ -1617,7 +1625,9 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
             SW_ASSERT_TRUE_MSG( opened.loadXml( path ), path.c_str() );
             sw::Scene* pOpened = manager.createScene( "RepositoryScene" );
             SW_ASSERT_TRUE_MSG( pOpened->instantiate( opened ), path.c_str() );
-            SW_EXPECT_TRUE_MSG( sw::SceneTestInternal::renameEveryComponent( pOpened->getObjectManager() ) == 0, path.c_str() );
+            const uint32 sceneLabelCount = sw::SceneTestInternal::renameEveryComponent( pOpened->getObjectManager() );
+            if ( sw::SceneTestInternal::isLabelledFile( path ) == false )
+                SW_EXPECT_TRUE_MSG( sceneLabelCount == 0, path.c_str() );
             const sw::vector<sw::string> listExpected = sw::SceneTestInternal::collectComponentNames( pOpened->getObjectManager() );
 
             sw::SceneDocument saved;
@@ -1640,7 +1650,9 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
         sw::GameObjectManager authoring;
         sw::GameObject*       pAuthored = authoring.createGameObject( sw::hashed_string( "RepositoryPrefab" ) );
         SW_ASSERT_TRUE_MSG( prefab.applyStateTo( pAuthored ), path.c_str() );
-        SW_EXPECT_TRUE_MSG( sw::SceneTestInternal::renameEveryComponent( &authoring ) == 0, path.c_str() );
+        const uint32 prefabLabelCount = sw::SceneTestInternal::renameEveryComponent( &authoring );
+        if ( sw::SceneTestInternal::isLabelledFile( path ) == false )
+            SW_EXPECT_TRUE_MSG( prefabLabelCount == 0, path.c_str() );
         const sw::vector<sw::string> listExpected = sw::SceneTestInternal::collectComponentNames( &authoring );
 
         sw::PrefabAsset resaved;
