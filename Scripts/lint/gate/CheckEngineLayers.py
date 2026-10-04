@@ -124,6 +124,8 @@ _kEngineTier: dict[str, int] = {
     # 7: 월드와, 오브젝트 위에서 도는 기능 모듈. 월드는 액터를 알고 액터는 월드를 모른다.
     "Scene": 7,
     "Sequencer": 7,
+    # 지형 · 식생 · 물 — 컴포넌트(6)가 메시 · 머티리얼(5)로 그리는 월드 기능. 씬을 모르고 오브젝트 매니저만 본다.
+    "Environment": 7,
     # 8: 그리는 쪽 · 핫리로드. 씬과 컴포넌트를 읽는다.
     _kGraphicsRendererLayerName: 8,
     "Module": 8,
