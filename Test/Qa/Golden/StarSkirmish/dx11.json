@@ -1,0 +1,75 @@
+{
+  "game": "StarSkirmish",
+  "backend": "dx11",
+  "runs": 3,
+  "capture": {
+    "width": 320,
+    "height": 180,
+    "frame": 180,
+    "arguments": [
+      "-gv_skirmishAutoPlay=1"
+    ]
+  },
+  "metrics": {
+    "background": [
+      28.0,
+      33.0,
+      39.0
+    ],
+    "foregroundFraction": 0.40229,
+    "foregroundMean": [
+      89.86,
+      76.2,
+      59.99
+    ],
+    "meanColor": [
+      52.85,
+      50.19,
+      47.31
+    ],
+    "redMinusBlue": 29.86,
+    "edgeDensity": 0.00587,
+    "gridLuma": [
+      32.19,
+      32.53,
+      58.81,
+      65.54,
+      65.54,
+      64.62,
+      32.71,
+      32.19,
+      32.19,
+      33.0,
+      80.49,
+      72.52,
+      81.96,
+      82.25,
+      33.0,
+      32.19,
+      32.19,
+      33.0,
+      81.6,
+      82.08,
+      73.03,
+      79.67,
+      33.0,
+      32.19,
+      32.19,
+      32.53,
+      53.71,
+      54.53,
+      54.49,
+      49.55,
+      32.41,
+      32.19
+    ]
+  },
+  "tolerance": {
+    "foregroundFraction": 0.04,
+    "foregroundMean": 10.0,
+    "meanColor": 8.0,
+    "redMinusBlue": 10.0,
+    "edgeDensity": 0.04,
+    "gridLuma": 24.0
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "game": "Shooter3D",
+  "backend": "dx12",
+  "runs": 5,
+  "capture": {
+    "width": 320,
+    "height": 180,
+    "frame": 180,
+    "arguments": [
+      "-gv_shooterAutoPlay=1"
+    ]
+  },
+  "metrics": {
+    "background": [
+      -1.0,
+      -1.0,
+      -1.0
+    ],
+    "foregroundFraction": 1.0,
+    "foregroundMean": [
+      53.64,
+      49.41,
+      48.67
+    ],
+    "meanColor": [
+      53.64,
+      49.41,
+      48.67
+    ],
+    "redMinusBlue": 4.98,
+    "edgeDensity": 0.01306,
+    "gridLuma": [
+      36.91,
+      35.51,
+      34.9,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      50.52,
+      46.97,
+      53.13,
+      48.05,
+      41.67,
+      40.01,
+      40.36,
+      43.79,
+      58.95,
+      59.17,
+      63.69,
+      65.93,
+      62.29,
+      60.77,
+      58.02,
+      54.56,
+      65.71,
+      64.85,
+      68.37,
+      66.83,
+      65.29,
+      54.28,
+      51.8,
+      68.22
+    ]
+  },
+  "tolerance": {
+    "foregroundFraction": 0.04,
+    "foregroundMean": 19.06472,
+    "meanColor": 19.06472,
+    "redMinusBlue": 10.0,
+    "edgeDensity": 0.04,
+    "gridLuma": 80.09058
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "game": "Empty",
+  "machines": {
+    "SW|AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD|dx12": {
+      "arguments": [
+        "-gv_benchMeshes=8",
+        "-gv_benchAnimate=0",
+        "-gv_profileFrames=600",
+        "-dx12"
+      ],
+      "frames": 600,
+      "recorded": "2026-10-04",
+      "runs": 3,
+      "scopes": {
+        "GT.Frame": {
+          "avg_us": 1142,
+          "p50_us": 851,
+          "p99_us": 4194
+        },
+        "GT.Game.update": {
+          "avg_us": 2,
+          "p50_us": 2,
+          "p99_us": 4
+        },
+        "GT.Scene.tick": {
+          "avg_us": 9,
+          "p50_us": 7,
+          "p99_us": 45
+        },
+        "RT.ExecutePacket": {
+          "avg_us": 351,
+          "p50_us": 327,
+          "p99_us": 458
+        },
+        "RT.Frame": {
+          "avg_us": 1166,
+          "p50_us": 851,
+          "p99_us": 4194
+        },
+        "Wall.Frame": {
+          "avg_us": 1176
+        }
+      }
+    }
+  }
+}

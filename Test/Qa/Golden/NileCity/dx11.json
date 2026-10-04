@@ -1,0 +1,75 @@
+{
+  "game": "NileCity",
+  "backend": "dx11",
+  "runs": 3,
+  "capture": {
+    "width": 320,
+    "height": 180,
+    "frame": 180,
+    "arguments": [
+      "-gv_nileAutoPlay=1"
+    ]
+  },
+  "metrics": {
+    "background": [
+      28.0,
+      33.0,
+      39.0
+    ],
+    "foregroundFraction": 0.66014,
+    "foregroundMean": [
+      104.07,
+      104.06,
+      68.82
+    ],
+    "meanColor": [
+      78.2,
+      79.77,
+      58.57
+    ],
+    "redMinusBlue": 35.25,
+    "edgeDensity": 0.02473,
+    "gridLuma": [
+      70.25,
+      87.06,
+      79.27,
+      101.81,
+      104.09,
+      105.73,
+      104.58,
+      32.19,
+      69.43,
+      80.46,
+      81.9,
+      103.94,
+      103.98,
+      107.42,
+      105.89,
+      32.19,
+      70.72,
+      93.53,
+      88.61,
+      94.98,
+      102.12,
+      105.4,
+      105.7,
+      32.19,
+      44.4,
+      50.06,
+      46.16,
+      53.92,
+      54.74,
+      55.45,
+      53.17,
+      32.19
+    ]
+  },
+  "tolerance": {
+    "foregroundFraction": 0.04,
+    "foregroundMean": 10.0,
+    "meanColor": 8.0,
+    "redMinusBlue": 10.0,
+    "edgeDensity": 0.04,
+    "gridLuma": 24.0
+  }
+}

@@ -14,8 +14,8 @@ CMake는 빌드만 담당하고, 도구 탐색·설정·보조 생성 및 코드
 ## Layout
 
 **폴더가 곧 성격이다.** 새 스크립트는 "무엇을 하는가" 로 자리를 고른다 — 도구를 찾아 설치하면 `setup/`, 파일을 만들어 내면 `generate/`,
-검사 · 수정이면 `lint/` 의 네 폴더 중 하나, 사람이 가끔 돌리는 실험 도구면 `dev/`, 에셋을 규칙으로 훑으면
-`qa/`, 사람과 git 이 부르는 에셋 비교 · 병합이면 `asset/`. 모두 `common/` 만 import 하고 서로는 부르지 않는다
+검사 · 수정이면 `lint/` 의 네 폴더 중 하나, 사람이 가끔 돌리는 실험 도구면 `dev/`, 빌드된 App 을 돌려 그림 · 시간 · 메모리를 기준과 견주거나 에셋을
+규칙으로 훑으면 `qa/`, 사람과 git 이 부르는 에셋 비교 · 병합이면 `asset/`. 모두 `common/` 만 import 하고 서로는 부르지 않는다
 (`common` 은 위층을 부르지 않는다).
 
 ```
@@ -32,7 +32,9 @@ Scripts/
   │     ├── Parallel.py               # 동시 처리 한 자리 — 워커 수 정책과 map/flatMap (스레드인 이유가 적혀 있다)
   │     ├── TranslationUnits.py       # 컴파일 DB 를 읽어 TU 를 골라 하나씩 돌리는 자리 (clang-tidy · 경고 스윕)
   │     ├── AppBinary.py              # 빌드된 App 을 찾고 헤드리스로 셰이더를 쿠킹하는 자리
+  │     ├── AppRun.py                 # App 한 판 — 출력 모으기 · 못 도는 백엔드 판정 · 프로파일 표 읽기 · 밖에서 메모리 · 핸들 재기(qa/ 셋이 쓴다)
   │     ├── AssetValidation.py        # 에셋 검증 규칙 — 규칙 표(Config/Editor/AssetValidationRules.json)의 `check` 이름이 고르는 연산자들
+  │     ├── ImageMetrics.py           # 스크린샷 비교 — PPM · PNG 읽기/쓰기, 축소, 배경을 뺀 지표 · 잡음 바닥에서 정한 허용 오차
   │     ├── XmlAssetMerge.py          # XML 에셋 의미 비교 · 3-way 병합(엔티티 id · 컴포넌트 · 속성 단위), 엔진 저장기와 같은 서식으로 쓰기
   │     ├── AssetPipeline.py          # 쿠커의 기본 출력 폴더 찾기 — 가장 최근에 구성된 build/*/Bin/<subDir>
   │     ├── CookContract.py           # 쿠킹 표(`Config/Engine/CookContract.json`)를 읽은 결과 — 헤더 생성기 · 쿠커 · 게이트가 같은 객체를 쓴다
@@ -113,8 +115,11 @@ Scripts/
   │     ├── GenerateStressScene.py    # 로드 경로를 재기 위한 큰 씬
   │     └── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 그 케이스가 사는 실행 파일을 `Bin` 에서
   │
-  ├── qa/                             # [QA] 에셋을 규칙으로 훑는다
-  │     └── ValidateAssets.py         # 에셋 검증 표(파일 · 규칙 · 심각도 · 메시지) — 게이트와 같은 코드, 경고까지 · JSON 출력
+  ├── qa/                             # [QA] 빌드된 App 을 돌려 기준과 견주거나(hostgpu · soak · perf CTest 와 사람이 부른다) 에셋을 규칙으로 훑는다
+  │     ├── ValidateAssets.py         # 에셋 검증 표(파일 · 규칙 · 심각도 · 메시지) — 게이트와 같은 코드, 경고까지 · JSON 출력
+  │     ├── GoldenImages.py           # 시험 게임 자동 플레이 × 네 백엔드 캡처를 Test/Qa/Golden 기준과 지표로 비교(`--record` 로 기준을 뜬다)
+  │     ├── Soak.py                   # 자동 플레이 장시간 실행 — 메모리 · 핸들 증가 기울기, 프레임 p50 · p99
+  │     └── PerfRegression.py         # Release 프레임 p50 · p99 를 이 기계의 기준(Test/Qa/Perf)과 비교
   │
   ├── asset/                          # [에셋 도구] 사람과 git 이 부르는 에셋 비교 · 병합
   │     └── AssetMerge.py             # XML 에셋 의미 diff · 3-way merge, git 병합 · 비교 드라이버(아래 절)
@@ -138,6 +143,9 @@ py -3 -m Scripts docs                 # Doxygen API 레퍼런스 문서 생성 (
 py -3 -m Scripts test SceneTest.*     # 스위트 · 케이스 이름으로 테스트 실행 (RunTests)
 py -3 -m Scripts validate-assets      # 에셋 검증 표 (ValidateAssets) — `--severity error` 는 게이트와 같은 판정
 py -3 -m Scripts asset-merge diff a.scene.xml b.scene.xml   # XML 에셋 의미 비교 (AssetMerge)
+py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe   # 골든 이미지 (GoldenImages)
+py -3 -m Scripts soak --app <App> --minutes 10                # 장시간 실행 (Soak)
+py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe   # 성능 회귀 (PerfRegression)
 ```
 
 ## 개별 스크립트 실행

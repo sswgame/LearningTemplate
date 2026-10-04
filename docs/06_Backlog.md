@@ -389,6 +389,8 @@ cd build/Ninja-Debug/Bin
   ASan 과 같이 돌린다(서드파티 디코더만 떼어 /MT 로 돌리면 Windows 에서도 된다 — stb_vorbis 를 그렇게 확인했다).
 - **stb_vorbis 1.22 는 조작한 설정 헤더(코드북 항목 수)로 수백 MB ~ GB 를 할당한다**(libFuzzer OOM, 주석 헤더 길이 검사 뒤에도 남는다). 죽지는 않지만
   4 KB 파일 하나로 메모리를 다 쓸 수 있다 — `stb_vorbis_alloc` 고정 버퍼로 상한을 두거나 vcpkg 판을 올린다(CVE-2023-4567x 묶음이 고쳐진 판).
+- **골든 이미지 기준은 한 PC(RTX 3070 Ti Laptop · 그 드라이버)에서 뜬 것이다** — 다른 GPU · 드라이버는 허용 오차를 넘을 수 있다. 다른 기계에서 지면 그 기계에서 `--record` 로 뜬
+  기준과 견줘 차이가 드라이버인지 회귀인지 가른 뒤, 기계별 기준(`<백엔드>.<기계>.json`)이 필요한지 정한다.
 
 
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
@@ -399,10 +401,12 @@ cd build/Ninja-Debug/Bin
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
+- **GL 백엔드 `[Error] bindGraphicsContext failed - the context is held by another thread`**(2026-10-04, NileCity 자동 플레이 320×180 Debug, 골든 기록 중
+  한 번 — 같은 인자 5 회 재실행은 깨끗). GL 컨텍스트를 렌더 스레드와 다른 스레드가 같이 잡는 순간이 있다. 골든 러너가 진 판의 App 출력을
+  `%TEMP%/sw_golden_<백엔드>_<회차>_app.log` 로 남기니, 다시 보이면 그 로그로 어느 스레드 · 단계인지 본다.
+
 - **`NetworkThreadTest.ConnectionsSurviveStalledGameThread` 의 50 ms 왕복 단언이 `-j 4` 부하에서 한 번 졌다**(2026-10-04 Shipping, 다시 돌리면 통과).
   시간 상한 단언은 부하에 진다 — 다시 지면 상한을 늘리지 말고 "멈춘 게임 스레드에도 연결이 산다" 를 시간 대신 순서로 볼 수 있는지 본다.
-
-- **`-gv_profileFrames=90000` 실행이 약 60 초에 종료 0 · 스크린샷 없이 끝났다**(2026-10-04). 프로파일 세션에 시간 상한이 있는지부터 본다.
 
 - **`ReflectionTest_Shard2` 가 부하 아래에서 30 초 시한에 닿는다**(혼자 18~21 초, CI-Debug `-j 4` 중 다른 빌드와 겹친 1 회 초과). 또 보이면 샤드를 늘린다.
 
@@ -510,6 +514,8 @@ cd build/Ninja-Debug/Bin
 - **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` ·
   `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
   `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.
+- **`-gv_profileFrames=N` 은 프레임 수다** — VSync 가 꺼진 가벼운 장면은 1500 fps 라 90000 프레임이 1 분에 끝난다(시간 상한은 없다). 시간으로 재려면
+  `-gv_profileSeconds=S`(먼저 닿는 쪽이 끝낸다 — soak 이 쓴다).
 - **프레임당 힙 할당**은 `-gv_profileFrames` 보고의 `alloc/frame`, 콜스택은 `-gv_profileAllocSites=N`(Debug App — 횟수는 최적화와 무관, 시간은 같이 재지 말 것).
 - **씬 로드 측정**: `Scripts/dev/GenerateStressScene.py` 로 큰 씬(도형 섞기) → 게임 프리셋(`Config/Game/Empty.json`) `_startupScene` → `[SceneLoad]` 줄. Dev 는 `Cooked/` 를 마운트하지
   않으므로 쿠킹 효과는 `--cooked-dir=<repo>/Resource` 로 쿠킹하고 재고 지운다. `[SceneLoad]` 가 `.xml` 을 가리키면 쿠킹본을 안 읽은 것이다.
