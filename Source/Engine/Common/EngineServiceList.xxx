@@ -21,7 +21,7 @@
  *         `HostCreated` 면 만드는 방법이 특별해서 호스트가 직접 만들고 직접 연결합니다. 지금은 셋뿐이고 이유가 있습니다.
  *           - IAudioSystem  : 팩토리(`IAudioSystem::create()`)가 플랫폼에 따라 구현을 고릅니다.
  *           - CommandStack  : 배포본에는 **아예 만들지 않습니다**(`#if !defined(SW_SHIPPING)`).
- *           - MemoryProfiler: Debug 에서만 만듭니다.
+ *           - MemoryProfiler: 배포본이 아니면 만듭니다(추적은 Debug · 시험 하네스만 켜 둡니다).
  *         `CheckEngineServiceBinding.py` 가 `Required, …, HostCreated` 행을 호스트가 실제로 채우는지 봅니다.
  *
  * 칸은 숫자가 아니라 낱말입니다. 값이 필요한 곳은 `RuntimeAPI/Service/ServiceListColumns.h` 의 매크로로 바꾸고,

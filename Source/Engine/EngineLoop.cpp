@@ -156,6 +156,9 @@ namespace sw
             const GameConfig* pGameConfig = loop._configManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
             if ( pGameConfig != nullptr )
                 GameConfig::setActive( *pGameConfig );
+
+            // 메모리 태그 예산(데이터). 틀린 표는 오류를 남기고 예산 없이 간다 — 진단 설정 하나로 기동을 세우지 않는다.
+            (void)loop._memoryBudgetMonitor.loadBudgetFile( FileUtil::joinPath( ResourceUtil::getProjectFolderPath(), MemoryBudgetMonitor::kBudgetFile ) );
             return EngineInitResult::Succeeded;
         }
         static void destroy( EngineLoop& loop )
@@ -821,6 +824,8 @@ namespace sw
         const bool bReportedNow = bReportedBefore == false && _profileSession.hasReported();
         if ( bReportedNow && _rhi != nullptr && _rhi->hasDevice() )
             _rhi->getDevice().getMemoryLedger().report( _rhi->getDevice().getBackendName() );
+
+        _memoryBudgetMonitor.onFrameEnd();
 
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->endFrame();

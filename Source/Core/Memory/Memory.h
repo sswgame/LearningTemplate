@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
+#include "Core/Memory/MemoryTag.h"
 
 namespace sw
 {
@@ -41,6 +42,14 @@ namespace sw
         // 일반 할당 함수
         static void* allocate( size_t size );
         static void  free( void* pPtr );
+
+        /**
+         * @brief 용도 태그를 그 자리에서 정해 할당합니다(스레드의 태그 스코프를 보지 않는다). 해제는 보통의 `free` 입니다.
+         * @details 버퍼를 잡는 곳과 쓰는 하위 시스템이 다를 때 씁니다 — 예컨대 IO 스레드가 텍스처 로드를 위해 잡는 버퍼. 배포본에서는 태그를 버립니다.
+         */
+        static void* allocate( size_t size, MemoryTag tag );
+        /** @brief `allocate( size, tag )` 의 정렬 판입니다. 해제는 `freeAligned` 입니다. */
+        static void* allocateAligned( size_t size, size_t alignment, MemoryTag tag );
 
         /** @brief 할당 블록 하나가 사용자 크기 앞에 더 잡는 헤더 바이트입니다(크기 · 태그 · 콜스택 해시). 배포본은 헤더가 없어 0 입니다. */
         static size_t getAllocationHeaderSize();

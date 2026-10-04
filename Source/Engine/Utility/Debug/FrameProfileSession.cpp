@@ -9,62 +9,13 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CallStackCapture.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
-
-// 보고는 Info 로그로만 나간다. 그것이 사라지는 구성(Shipping)에는 도우미도 두지 않는다.
-
-#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
-namespace sw
-{
-    namespace
-    {
-        struct FrameProfileSessionInternal
-        {
-            /** @brief 바이트를 KB 의 10 배로 바꿉니다(소수 한 자리를 정수로 찍기 위해). */
-            static constexpr uint64 toKilobytesX10( uint64 bytes ) { return ( bytes * 10 ) / 1024; }
-
-            /**
-             * @brief 태그별 지금 살아 있는 바이트를 큰 순서로 한 줄씩 남깁니다. 0 인 태그는 건너뜁니다.
-             * @details 플랫폼 힙을 잴 수 있으면(Windows Debug CRT) 태그가 볼 수 없는 몫도 한 줄로 낸다 — CRT 힙에서 태그 합과 sw 블록 헤더를 뺀 값이다.
-             *          `std::allocator` · 외부 라이브러리 · CRT 직접 호출에 더해, 프로파일러가 서기 전(정적 초기화)에 잡은 sw 블록과 정렬 할당의 CRT 여분도
-             *          여기 들어간다. 프로파일러는 부트스트랩 맨 앞에서 서므로 기동 직후 이 줄은 수십 KB 다.
-             */
-            static void reportMemoryTags( const MemoryProfiler& memory )
-            {
-                const uint64 liveBytes = memory.getLiveAllocatedBytes();
-                const uint64 liveCount = memory.getLiveAllocationCount();
-                const uint64 totalX10  = toKilobytesX10( liveBytes );
-                SW_LOG_INFO( "[Profile] memory by tag (live, sw 할당자)  %#.%# KB in %# blocks", totalX10 / 10, totalX10 % 10, liveCount );
-                for ( const MemoryTag tag : memory.makeTagOrderByLiveBytes() )
-                {
-                    const MemoryProfileStats& stats = memory.getStats( tag );
-                    const uint64              bytes = stats._currentAllocatedBytes.load( std::memory_order_relaxed );
-                    if ( bytes == 0 )
-                        continue;
-                    const uint64 kbX10        = toKilobytesX10( bytes );
-                    const uint64 sharePermill = liveBytes == 0 ? 0 : ( bytes * 1000 ) / liveBytes;
-                    SW_LOG_INFO( "[Profile]   %#  %#.%# KB  %#.%#%%  %# blocks", MemoryProfiler::getMemoryTagName( tag ), kbX10 / 10, kbX10 % 10,
-                                 sharePermill / 10, sharePermill % 10, stats._currentAllocationCount.load( std::memory_order_relaxed ) );
-                }
-
-                const uint64 platformBytes = MemoryProfiler::getPlatformHeapBytes();
-                const uint64 swBlockBytes  = liveBytes + liveCount * Memory::getAllocationHeaderSize();
-                if ( platformBytes > swBlockBytes )
-                {
-                    const uint64 outsideX10 = toKilobytesX10( platformBytes - swBlockBytes );
-                    SW_LOG_INFO( "[Profile]   (sw 할당자 밖 — std::allocator · 외부 라이브러리 · 정적 초기화)  %#.%# KB", outsideX10 / 10, outsideX10 % 10 );
-                }
-            }
-        };
-    } // namespace
-} // namespace sw
-#endif
+#include "Engine/Utility/Debug/MemoryBudgetMonitor.h"
 
 namespace sw
 {
@@ -116,6 +67,7 @@ namespace sw
             if ( MemoryProfiler* pMemory = MemoryProfiler::getActive(); pMemory != nullptr )
             {
                 pMemory->setTrackingEnabled( true );
+                pMemory->resetPeaks();
                 if ( gv_profileAllocSites > 0 )
                     pMemory->setDetailedTrackingEnabled( true );
                 _allocationCountAtStart     = pMemory->getTotalAllocationCount();
@@ -148,7 +100,7 @@ namespace sw
         if ( pMemory == nullptr )
             return;
 
-        FrameProfileSessionInternal::reportMemoryTags( *pMemory );
+        MemoryBudgetMonitor::logMemoryReport( *pMemory, "profile window" );
 
         const uint64 allocationCount = pMemory->getTotalAllocationCount() - _allocationCountAtStart;
         const uint64 perFrameX10     = ( allocationCount * 10 ) / frames;

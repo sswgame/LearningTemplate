@@ -7,6 +7,7 @@
 | 위치 | 역할 | Shipping |
 |------|------|----------|
 | `Config/Engine/EngineConfig.json` | 런타임 창/RHI/`enginedefaultassets` 포인터 (C++ `EngineConfig`) | 생성되어 exe에 포함, 디스크 불필요 |
+| `Config/Engine/MemoryBudget.json` | 메모리 태그 예산(`_listBudget: [{ _tag, _megabytes }]`) — 넘으면 `[MemoryBudget]` 경고 한 번(`MemoryBudgetMonitor`) | 미포함(배포본에는 프로파일러가 없다) |
 | `Config/Engine/CookContract.json` | RHI 백엔드 표(이름 · 셰이더 폴더 · 명령줄 별칭 · 기본 백엔드)와 쿠킹 확장자 표 — C++(configure 때 `CookContract.gen.h`)와 Python 쿠커가 같이 읽는 단일 출처 | 빌드에 굳어 들어감 |
 | `Config/Engine/PackConfig.json` · `PackFormat.json` | 리소스 팩 쿠킹 설정(코덱 · 제외 폴더 — `textures_raw` 등)과 `.pack` 바이너리 포맷의 단일 출처(C++ 는 `PackFormat.gen.h`, Python 쿠커는 JSON 을 직접 읽는다) | 빌드 · 쿠킹 전용, 미포함 |
 | `Config/Game/<게임>.json` | 게임 프리셋 — 팩 루트·gamesettings 파일명·시작 씬. `SW_ACTIVE_GAME` 이 고르고, Shipping 은 그 파일을 구워 넣는다 | 생성 |

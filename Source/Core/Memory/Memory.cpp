@@ -39,11 +39,11 @@ namespace sw
              * @brief 사용자 블록 앞의 헤더를 채우고 프로파일러에 할당을 알립니다. `allocate` · `allocateAligned` 가 함께 씁니다.
              * @return 사용자 블록 주소(`pUserPtr`) 그대로입니다.
              */
-            static void* writeAllocHeader( void* pUserPtr, void* pRawPtr, size_t size )
+            static void* writeAllocHeader( void* pUserPtr, void* pRawPtr, size_t size, MemoryTag tag )
             {
                 AllocHeader* pHeader = reinterpret_cast<AllocHeader*>( static_cast<utf8*>( pUserPtr ) - sizeof( AllocHeader ) );
                 pHeader->_size       = size;
-                pHeader->_tag        = MemoryProfiler::getCurrentMemoryTag();
+                pHeader->_tag        = tag;
                 pHeader->_magic      = kAllocMagic;
                 pHeader->_hash       = 0;
                 pHeader->_pRawPtr    = pRawPtr;
@@ -90,6 +90,15 @@ namespace sw
      */
     void* Memory::allocateAligned( size_t size, size_t alignment )
     {
+#if defined( SW_SHIPPING )
+        return allocateAligned( size, alignment, MemoryTag::Unknown );
+#else
+        return allocateAligned( size, alignment, MemoryProfiler::getCurrentMemoryTag() );
+#endif
+    }
+
+    void* Memory::allocateAligned( size_t size, size_t alignment, [[maybe_unused]] MemoryTag tag )
+    {
         const size_t align = MathUtil::max( alignment, sizeof( void* ) );
 
 #if defined( SW_SHIPPING )
@@ -123,7 +132,7 @@ namespace sw
 
         const uintptr_t rawAddr  = reinterpret_cast<uintptr_t>( pRawPtr );
         const uintptr_t userAddr = MathUtil::align( rawAddr + sizeof( AllocHeader ), static_cast<uintptr_t>( align ) );
-        return MemoryInternal::writeAllocHeader( reinterpret_cast<void*>( userAddr ), pRawPtr, size );
+        return MemoryInternal::writeAllocHeader( reinterpret_cast<void*>( userAddr ), pRawPtr, size, tag );
 #endif // SW_SHIPPING
     }
 
@@ -163,6 +172,15 @@ namespace sw
     {
 #if defined( SW_SHIPPING )
         return ::malloc( size );
+#else
+        return allocate( size, MemoryProfiler::getCurrentMemoryTag() );
+#endif
+    }
+
+    void* Memory::allocate( size_t size, [[maybe_unused]] MemoryTag tag )
+    {
+#if defined( SW_SHIPPING )
+        return ::malloc( size );
 #else  // SW_SHIPPING
        // allocateAligned 와 같은 이유로 오버플로할 크기를 먼저 거절한다.
         if ( size > SIZE_MAX - sizeof( AllocHeader ) )
@@ -173,7 +191,7 @@ namespace sw
         if ( pRawPtr == nullptr )
             return nullptr;
 
-        return MemoryInternal::writeAllocHeader( static_cast<utf8*>( pRawPtr ) + sizeof( AllocHeader ), pRawPtr, size );
+        return MemoryInternal::writeAllocHeader( static_cast<utf8*>( pRawPtr ) + sizeof( AllocHeader ), pRawPtr, size, tag );
 #endif // SW_SHIPPING
     }
 

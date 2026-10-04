@@ -8,6 +8,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/array.h"
+#include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/MemoryTag.h"
@@ -28,6 +29,25 @@ namespace sw
          *          상용 엔진이 프레임당 할당 수로 감시하는 것입니다. 두 시점의 차이를 프레임 수로 나눠 읽습니다(`FrameProfileSession`).
          */
         atomic<uint64> _totalAllocationCount{ 0 };
+        /** @brief 추적을 켠 뒤(또는 `resetPeaks` 뒤) 살아 있던 바이트의 최고치입니다. 프레임 안에서 잡았다 놓은 순간 최고치도 잡힌다. */
+        atomic<uint64> _peakAllocatedBytes{ 0 };
+        /** @brief 살아 있던 할당 수의 최고치입니다. */
+        atomic<uint64> _peakAllocationCount{ 0 };
+        /** @brief 예산(바이트)입니다. 0 이면 예산이 없다. 데이터(`Config/Engine/MemoryBudget.json`)가 정한다. */
+        atomic<uint64> _budgetBytes{ 0 };
+        /** @brief 지금 예산을 넘은 상태로 알렸으면 true 입니다(경고는 넘을 때 한 번, 90 % 아래로 내려가면 다시 건다). */
+        atomic<bool> _bOverBudget{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 기준선 뒤로 태그 하나가 늘어난 양입니다(`collectTagGrowthSinceBaseline`). */
+    struct MemoryTagGrowth
+    {
+        MemoryTag _tag{ MemoryTag::Unknown };
+        int64     _byteDelta{ 0 };  ///< 살아 있는 바이트의 차이
+        int64     _countDelta{ 0 }; ///< 살아 있는 블록 수의 차이
     };
 } // namespace sw
 
@@ -62,6 +82,8 @@ namespace sw
     public:
         /** @brief 태그 표시 이름을 반환합니다. */
         static const utf8* getMemoryTagName( MemoryTag tag );
+        /** @brief 표시 이름(대소문자 무시)으로 태그를 찾습니다. 데이터(예산 표)가 태그를 이름으로 적습니다. 모르는 이름이면 false 입니다. */
+        [[nodiscard]] static bool findMemoryTagByName( string_view name, MemoryTag& outTag );
         /** @brief 현재 스레드의 할당 태그를 설정합니다. */
         static void setCurrentMemoryTag( MemoryTag tag );
         /** @brief 현재 스레드의 할당 태그를 반환합니다. */
@@ -142,6 +164,37 @@ namespace sw
          */
         uint64 getLiveAllocationCount() const;
 
+        // ------------------------------------------------------------------------------
+        // 3) 최고치 · 예산 · 기준선(누수) — UE LLM 의 태그별 최고치 · 예산(`LLM_TRACKER`)과 같은 자리
+        // ------------------------------------------------------------------------------
+        /** @brief 모든 태그의 최고치를 지금 값으로 되돌립니다(측정 창을 새로 시작할 때). */
+        void resetPeaks();
+        /** @brief 태그 @p tag 의 예산을 @p budgetBytes 로 둡니다. 0 이면 예산을 없앱니다. */
+        void setBudget( MemoryTag tag, uint64 budgetBytes );
+        /** @brief 태그의 예산(바이트)입니다. 없으면 0 입니다. */
+        uint64 getBudget( MemoryTag tag ) const;
+        /** @brief 모든 예산을 없앱니다. */
+        void clearBudgets();
+        /**
+         * @brief 살아 있는 바이트를 예산과 견줘, **이번에 새로** 넘은 태그마다 경고 한 줄을 남깁니다. 프레임마다 한 번 부릅니다(태그 수만큼 원자 읽기).
+         * @details 넘은 상태는 기억합니다 — 넘어 있는 동안 다시 경고하지 않고, 예산의 90 % 아래로 내려가면 다시 겁니다(경계에서 오락가락할 때 로그가 넘치지 않게).
+         * @param pOutListNewlyExceeded 있으면 이번에 새로 넘은 태그를 담습니다.
+         * @return 이번에 새로 넘은 태그 수입니다.
+         */
+        uint32 reportExceededBudgets( vector<MemoryTag>* pOutListNewlyExceeded = nullptr );
+
+        /** @brief 태그별 살아 있는 바이트 · 블록 수를 기준선으로 찍습니다(`captureMemoryLeakBaseline` 이 활성 프로파일러에 부른다). */
+        void captureTagBaseline();
+        /** @brief 기준선을 찍었으면 true 입니다. */
+        bool hasTagBaseline() const { return _bHasTagBaseline; }
+        /** @brief 기준선보다 살아 있는 바이트나 블록이 **늘어난** 태그를 큰 순서로 돌려줍니다. 기준선이 없으면 비어 있습니다. */
+        vector<MemoryTagGrowth> collectTagGrowthSinceBaseline() const;
+        /**
+         * @brief 기준선보다 늘어난 태그를 stderr 로 한 줄씩 남깁니다(로거가 내려간 뒤에도 보이게 — CRT 누수 보고와 같은 길). 엔진 종료 끝에 Debug 에서 부릅니다.
+         * @return 늘어난 태그 수입니다.
+         */
+        uint32 reportTagGrowthSinceBaseline( const utf8* pPhaseTag ) const;
+
         /** @brief 콜 스택별 집계를 @p order 기준 내림차순으로 정렬해 반환합니다(세부 추적이 켜져 있을 때만 채워집니다). */
         vector<CallStackAllocInfo> getTopCallStacks( TopCallStackOrder order = TopCallStackOrder::LiveBytes ) const;
 
@@ -151,6 +204,10 @@ namespace sw
         atomic<bool> _bDetailedTrackingEnabled;
 
         MemoryProfileStats _arrStat[static_cast<uint32>( MemoryTag::MaxTags )];
+
+        array<uint64, kMemoryTagCount> _arrBaselineBytes; ///< `captureTagBaseline` 시점의 태그별 살아 있는 바이트
+        array<uint64, kMemoryTagCount> _arrBaselineCount; ///< 같은 시점의 태그별 살아 있는 블록 수
+        bool                           _bHasTagBaseline;
 
         // 콜 스택 세부 추적용(_bDetailedTrackingEnabled 가 true 일 때만 쓴다)
         mutable mutex                             _stackMapMutex;
@@ -192,8 +249,8 @@ namespace sw
     };
 } // namespace sw
 
-/** @brief 스코프 동안 할당을 `MemoryTag::tag` 로 분류합니다. `kMemoryTagScopesEnabled` 가 아닌 구성에서는 아무 일도 하지 않습니다. */
-#if defined( SW_DEBUG )
+/** @brief 스코프 동안 할당을 `MemoryTag::tag` 로 분류합니다. `kMemoryTagScopesEnabled` 가 아닌 구성(배포본)에서는 아무 일도 하지 않습니다. */
+#if !defined( SW_SHIPPING )
     #define SW_MEMORY_SCOPE( tag ) const sw::ScopedMemoryTag SW_CONCAT( _swMemoryScope_, __LINE__ )( sw::MemoryTag::tag )
 #else
     #define SW_MEMORY_SCOPE( tag ) ( (void)0 )

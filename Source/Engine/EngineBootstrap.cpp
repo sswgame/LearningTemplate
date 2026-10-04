@@ -43,12 +43,15 @@ namespace sw
         // 메모리 프로파일러가 맨 먼저 선다. 그 앞에서 잡은 sw 블록(로거의 큐 · 이름 풀)은 태그에 세이지 않고 "sw 할당자 밖" 몫으로 보인다.
         // 플랫폼 누수 추적은 그보다도 먼저 켠다(Windows Debug CRT: 할당 추적 + 보고를 stderr 로). `EngineLoop` 가 기동 뒤 기준선을 찍고
         // 종료 뒤 `reportMemoryLeaks` 로 비교한다 — 켜지 않으면 누수 덤프가 디버거 출력으로만 나가 콘솔 · CI 에서 보이지 않는다.
+        // 메모리 프로파일러는 배포본이 아닌 모든 구성에 선다(태그 · 최고치 · 예산 · 보고). 추적은 진단 구성(Debug · 시험)에서 켜 두고, Release 는 꺼 둔 채
+        // `-gv_memoryTracking=1` 로 켠다 — 꺼져 있으면 할당마다 분기 하나다. 플랫폼 누수 검사는 진단 구성만.
         if ( bDiagnostics )
-        {
             MemoryProfiler::enableMemoryLeakChecks();
-            _memoryProfiler = make_unique<MemoryProfiler>();
-            _memoryProfiler->initialize();
-        }
+#if !defined( SW_SHIPPING )
+        _memoryProfiler = make_unique<MemoryProfiler>();
+        _memoryProfiler->initialize();
+        _memoryProfiler->setTrackingEnabled( bDiagnostics );
+#endif
         HashedStringPool::initialize();
 
         _logger = make_unique<Logger>();
@@ -119,9 +122,6 @@ namespace sw
         // 로거 객체는 맨 마지막에 놓는다 — 그 사이의 로그는 출력에 바로 쓰인다.
         if ( _logger != nullptr )
             _logger->shutdown();
-        if ( _memoryProfiler != nullptr )
-            _memoryProfiler->shutdown();
-        _memoryProfiler.reset();
         if ( _deadlockDetector != nullptr )
             _deadlockDetector->shutdown();
         _deadlockDetector.reset();
@@ -130,5 +130,16 @@ namespace sw
         HashedStringPool::shutdown();
         CrashHandler::shutdown();
         _logger.reset();
+
+        // 프로파일러는 맨 끝이다 — 위의 해제가 모두 태그 줄에서 빠진 뒤에 기동 뒤 기준선과 견준다(어느 용도가 남았나, Debug). 플랫폼 누수 검사(CRT)는
+        // 바이트만 말하고, 이 보고는 그 바이트가 어느 하위 시스템의 것인지 말한다.
+        if ( _memoryProfiler != nullptr )
+        {
+#if defined( SW_DEBUG )
+            (void)_memoryProfiler->reportTagGrowthSinceBaseline( "shutdown" );
+#endif
+            _memoryProfiler->shutdown();
+        }
+        _memoryProfiler.reset();
     }
 } // namespace sw

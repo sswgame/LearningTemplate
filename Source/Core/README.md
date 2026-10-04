@@ -113,12 +113,18 @@
 - 외부 라이브러리(pugixml · JSON · zlib · zstd · LZ4 · stb_image · ImGui)도 할당 훅으로 sw 할당자에 보낸다 — 태그 보고에 잡히게.
 
 ## 메모리 태그
-- `MemoryTag`(`Memory/MemoryTag.h`)는 할당을 **용도**로 나눈다(UE LLM 의 태그와 같은 역할). 스레드 로컬 값 하나를 할당 헤더에 적고
+- `MemoryTag`(`Memory/MemoryTag.h`)는 할당을 **용도**로 나눈다(UE LLM 의 태그와 같은 역할 — Texture · Mesh · Audio · Animation · Physics · UI · Script …). 스레드 로컬 값 하나를 할당 헤더에 적고
   `MemoryProfiler` 가 태그별로 센다. 해제는 헤더의 태그로 빼므로 어느 스레드에서 풀어도 같은 줄에서 빠진다.
 - 거는 자리는 하위 시스템의 **진입점**(기동 단계 · 서비스 생성 · 에셋 종류별 로드 · 씬 로드 · 렌더러 · 모듈 호출)이다 — `SW_MEMORY_SCOPE( Tag )` / `ScopedMemoryTag`.
 - 태스크는 만든 쪽의 태그를 노드에 담아 실행 중에 쓰고(`Task/README.md`), 엔진이 띄우는 스레드는 띄운 쪽의 태그를 받아 첫 줄에서 건다.
   새 스레드는 `Unknown` 에서 시작한다 — `Unknown` 줄이 크면 진입점이 빠진 것이다.
-- 태그를 읽는 것은 `SW_DEBUG` 구성의 `MemoryProfiler` 뿐이라 다른 구성에서는 스코프 비용이 0 이다.
+- 스코프 · 할당 헤더 · `MemoryProfiler` 는 배포본이 아닌 모든 구성에 있다. 추적은 Debug · 시험 하네스에서 켜져 있고 Release 는 꺼 둔 채 `-gv_memoryTracking=1` 로 켠다 —
+  꺼져 있으면 할당마다 분기 하나다(Release 64 B 할당 + 해제 63 ns → 켜면 73 ns, `MemoryTagBenchTest`). 배포본에는 헤더도 프로파일러도 없다.
+- 명시 태그: 잡는 곳과 쓰는 하위 시스템이 다른 버퍼는 `Memory::allocate( size, tag )` · `allocateAligned( size, align, tag )` 로 그 자리에서 태그를 준다.
+- 태그마다 살아 있는 바이트 · 블록, **최고치**(`_peakAllocatedBytes` · `resetPeaks`), **예산**(`setBudget` · `reportExceededBudgets` — 넘을 때 경고 한 번, 90 % 아래로 내려가면 다시 건다)을 든다.
+  예산 데이터 · 프레임 검사 · 표 보고(`-gv_memoryReport=1`) · FrameProfiler 카운터(`Mem.LiveKB` · 예산 있는 태그의 `Mem.<태그>KB`)는 Engine 의 `MemoryBudgetMonitor` 가 한다.
+- 누수 보고: `captureMemoryLeakBaseline` 이 태그별 기준선도 찍고, Debug 종료 끝(`EngineBootstrap::shutdown`, 프로파일러만 남은 때)에 기준선보다 늘어난 태그를
+  stderr 로 남긴다(`[MemoryLeak] shutdown - tag …`). CRT 검사는 힙 **합계**만 견주므로 서비스가 내려가 합계가 줄면 남은 블록을 보지 못한다 — 태그 보고는 본다.
 - 새 태그를 더하면 `MemoryProfiler::getMemoryTagName` 의 이름 표에도 한 줄을 더한다(줄 수는 static_assert 가 본다).
 
 ## 시간

@@ -371,6 +371,10 @@ cd build/Ninja-Debug/Bin
 - **TaskManager 스테이지 디버그 이름** — 프로파일러에 연결할 때 넣는다(지금은 연결돼 있지 않다).
 - **`fixed_string` 의 해시가 FNV(`computeHash64`)다.** 느리지만 프로파일에 안 보여 두었다(낮음).
 
+- **종료 끝까지 남는 sw 블록이 있다**(Debug App `-dx12 -gv_profileFrames=5`, 2026-10-04): 모든 서비스를 내린 뒤에도 Scene ~57 KB(3 블록) · Unknown ~18 KB(15) ·
+  Mesh 0.7 KB(6) · Material 0.2 KB(4) 가 살아 있다(`[MemoryLeak] shutdown - tag …`). CRT 검사는 합계만 봐 "no CRT leaks" 라고 한다. 정적 캐시인지 진짜 누수인지
+  가린다 — 세부 추적(`setDetailedTrackingEnabled`)을 켜고 `destroyAll` 뒤 `getTopCallStacks( LiveBytes )`.
+
 ### 1-8. 성능 (재고 나서 정할 것)
 
 - **DX12 · Vulkan Present 히치.** 큐브 100 · 600 프레임 중 40 프레임이 1~18 ms 다(DX11 은 없다). 다음 후보는 DXGI 대기 가능 스왑체인
@@ -1142,7 +1146,7 @@ cd build/Ninja-Debug/Bin
   에서 시작하므로 띄운 쪽의 태그를 인자로 넘겨 첫 줄에서 건다. 배열은 `sw_new_array` · `make_unique<T[]>`(맨 `new` 는 `Style/RawNew` 가 막는다). 외부 라이브러리는
   공개 설정 지점으로만 sw 할당자에 잇는다(pugixml `set_memory_management_functions`, nlohmann 할당자 인자, zlib zalloc · zstd advanced · LZ4 extState, stb STBI_*).
 
-- **메모리 태그(UE LLM 식)는 Debug 전용이다.** 거는 자리는 셋 — 기동 단계 표(`EngineInitStepList.xxx`)의 태그 칸, 서비스 생성의 `kServiceMemoryTag<Type>`,
+- **메모리 태그(UE LLM 식)는 배포본이 아닌 구성 모두에 있고 추적은 Debug · 시험만 켜져 있다**(Release 는 `-gv_memoryTracking=1`). 거는 자리는 셋 — 기동 단계 표(`EngineInitStepList.xxx`)의 태그 칸, 서비스 생성의 `kServiceMemoryTag<Type>`,
   하위 시스템 진입점의 `SW_MEMORY_SCOPE`. 태스크 · 병렬 청크는 **만든 쪽의 태그를 상속**한다(`TaskNode` · `ParallelGroup` 의 패딩 자리, 크기 그대로). 분포와 sw 할당자 밖
   몫은 `-gv_profileFrames` 보고의 "memory by tag" 와 ProfilerPanel 에서 본다 — Unknown 이 커지면 진입점이 빠진 것이다. ImGui 는 `SetAllocatorFunctions` 로 sw 할당자를
   지나므로 에디터 실행의 alloc/frame 에 ImGui 할당이 들어간다. GPU 메모리는 대상이 아니다(CPU 힙만).

@@ -6,6 +6,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
@@ -91,11 +92,25 @@ namespace sw
                 "Audio",
                 "Physics",
                 "RenderCpu",
+                "UI",
+                "Script",
                 "Editor",
                 "Game",
             };
             static_assert( sizeof( kArrTagName ) / sizeof( kArrTagName[0] ) == static_cast<size_t>( MemoryTag::MaxTags ),
                            "kArrTagName must have one name per MemoryTag" );
+
+            /** @brief @p counter 를 @p value 까지 올립니다(더 크면 그대로). 새 최고치가 아니면 읽기 한 번으로 끝난다. */
+            static void raiseToAtLeast( atomic<uint64>& counter, uint64 value )
+            {
+                uint64 current = counter.load( std::memory_order_relaxed );
+                while ( current < value && counter.compare_exchange_weak( current, value, std::memory_order_relaxed, std::memory_order_relaxed ) == false )
+                {
+                }
+            }
+
+            /** @brief 넘은 예산을 다시 감시하는 문턱(예산의 90 %)입니다. 경계에서 오락가락할 때 경고가 넘치지 않게 한다. */
+            static constexpr uint64 kBudgetRearmPercent = 90;
 
             static inline thread_local bool       t_bIsInsideProfiler = false;
             static inline atomic<MemoryProfiler*> s_activeProfiler{ nullptr };
@@ -112,6 +127,19 @@ namespace sw
         if ( tagIndex >= static_cast<uint32>( MemoryTag::MaxTags ) )
             return "Invalid";
         return MemoryProfilerInternal::kArrTagName[tagIndex];
+    }
+
+    bool MemoryProfiler::findMemoryTagByName( string_view name, MemoryTag& outTag )
+    {
+        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
+        {
+            if ( StringUtil::equals( name, MemoryProfilerInternal::kArrTagName[tagIndex], true ) )
+            {
+                outTag = static_cast<MemoryTag>( tagIndex );
+                return true;
+            }
+        }
+        return false;
     }
 
     void MemoryProfiler::setCurrentMemoryTag( MemoryTag tag )
@@ -154,6 +182,10 @@ namespace sw
 
     void MemoryProfiler::captureMemoryLeakBaseline()
     {
+        // 태그별 기준선은 플랫폼 검사와 따로 찍는다 — 종료 끝에 어느 용도가 늘었는지(`reportTagGrowthSinceBaseline`) 본다.
+        MemoryProfiler* pActive = getActive();
+        if ( pActive != nullptr )
+            pActive->captureTagBaseline();
 #if defined( SW_HAS_CRT_LEAK_CHECK )
         _CrtMemCheckpoint( &MemoryProfilerInternal::s_leakBaseline );
         MemoryProfilerInternal::s_bHasLeakBaseline = true;
@@ -217,6 +249,9 @@ namespace sw
         : _bInitialized{ false }
         , _bTrackingEnabled{ true }
         , _bDetailedTrackingEnabled{ false }
+        , _arrBaselineBytes{}
+        , _arrBaselineCount{}
+        , _bHasTagBaseline{ false }
     {
     }
 
@@ -277,10 +312,13 @@ namespace sw
         if ( tagIdx >= static_cast<uint32>( MemoryTag::MaxTags ) )
             tagIdx = 0;
 
-        _arrStat[tagIdx]._totalAllocatedBytes.fetch_add( size, std::memory_order_relaxed );
-        _arrStat[tagIdx]._currentAllocatedBytes.fetch_add( size, std::memory_order_relaxed );
-        _arrStat[tagIdx]._currentAllocationCount.fetch_add( 1, std::memory_order_relaxed );
-        _arrStat[tagIdx]._totalAllocationCount.fetch_add( 1, std::memory_order_relaxed );
+        MemoryProfileStats& stats = _arrStat[tagIdx];
+        stats._totalAllocatedBytes.fetch_add( size, std::memory_order_relaxed );
+        const uint64 liveBytes = stats._currentAllocatedBytes.fetch_add( size, std::memory_order_relaxed ) + size;
+        const uint64 liveCount = stats._currentAllocationCount.fetch_add( 1, std::memory_order_relaxed ) + 1;
+        stats._totalAllocationCount.fetch_add( 1, std::memory_order_relaxed );
+        MemoryProfilerInternal::raiseToAtLeast( stats._peakAllocatedBytes, liveBytes );
+        MemoryProfilerInternal::raiseToAtLeast( stats._peakAllocationCount, liveCount );
 
         uint64 outHash{ 0 };
 
@@ -398,6 +436,110 @@ namespace sw
         std::stable_sort( arrTag.begin(), arrTag.end(), [&arrLiveBytes]( MemoryTag lhs, MemoryTag rhs )
         { return arrLiveBytes[static_cast<uint32>( lhs )] > arrLiveBytes[static_cast<uint32>( rhs )]; } );
         return arrTag;
+    }
+
+    void MemoryProfiler::resetPeaks()
+    {
+        for ( MemoryProfileStats& stats : _arrStat )
+        {
+            stats._peakAllocatedBytes.store( stats._currentAllocatedBytes.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+            stats._peakAllocationCount.store( stats._currentAllocationCount.load( std::memory_order_relaxed ), std::memory_order_relaxed );
+        }
+    }
+
+    void MemoryProfiler::setBudget( MemoryTag tag, uint64 budgetBytes )
+    {
+        const uint32        tagIndex = static_cast<uint32>( tag ) < kMemoryTagCount ? static_cast<uint32>( tag ) : 0;
+        MemoryProfileStats& stats    = _arrStat[tagIndex];
+        stats._budgetBytes.store( budgetBytes, std::memory_order_relaxed );
+        stats._bOverBudget.store( false, std::memory_order_relaxed );
+    }
+
+    uint64 MemoryProfiler::getBudget( MemoryTag tag ) const
+    {
+        return getStats( tag )._budgetBytes.load( std::memory_order_relaxed );
+    }
+
+    void MemoryProfiler::clearBudgets()
+    {
+        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
+            setBudget( static_cast<MemoryTag>( tagIndex ), 0 );
+    }
+
+    uint32 MemoryProfiler::reportExceededBudgets( vector<MemoryTag>* pOutListNewlyExceeded )
+    {
+        uint32 newlyExceededCount{ 0 };
+        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
+        {
+            MemoryProfileStats& stats  = _arrStat[tagIndex];
+            const uint64        budget = stats._budgetBytes.load( std::memory_order_relaxed );
+            if ( budget == 0 )
+                continue;
+            const uint64 liveBytes = stats._currentAllocatedBytes.load( std::memory_order_relaxed );
+            const bool   bWasOver  = stats._bOverBudget.load( std::memory_order_relaxed );
+            if ( bWasOver == false && liveBytes > budget )
+            {
+                stats._bOverBudget.store( true, std::memory_order_relaxed );
+                ++newlyExceededCount;
+                if ( pOutListNewlyExceeded != nullptr )
+                    pOutListNewlyExceeded->push_back( static_cast<MemoryTag>( tagIndex ) );
+                SW_LOG_WARNING( "[MemoryBudget] %# is over budget: %# KB live (peak %# KB) > %# KB budget", MemoryProfilerInternal::kArrTagName[tagIndex],
+                                liveBytes / 1024, stats._peakAllocatedBytes.load( std::memory_order_relaxed ) / 1024, budget / 1024 );
+            }
+            else if ( bWasOver && liveBytes * 100 < budget * MemoryProfilerInternal::kBudgetRearmPercent )
+            {
+                stats._bOverBudget.store( false, std::memory_order_relaxed );
+            }
+        }
+        return newlyExceededCount;
+    }
+
+    void MemoryProfiler::captureTagBaseline()
+    {
+        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
+        {
+            _arrBaselineBytes[tagIndex] = _arrStat[tagIndex]._currentAllocatedBytes.load( std::memory_order_relaxed );
+            _arrBaselineCount[tagIndex] = _arrStat[tagIndex]._currentAllocationCount.load( std::memory_order_relaxed );
+        }
+        _bHasTagBaseline = true;
+    }
+
+    vector<MemoryTagGrowth> MemoryProfiler::collectTagGrowthSinceBaseline() const
+    {
+        vector<MemoryTagGrowth> listGrowth;
+        if ( _bHasTagBaseline == false )
+            return listGrowth;
+        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
+        {
+            const int64 byteDelta = static_cast<int64>( _arrStat[tagIndex]._currentAllocatedBytes.load( std::memory_order_relaxed ) ) -
+                                    static_cast<int64>( _arrBaselineBytes[tagIndex] );
+            const int64 countDelta = static_cast<int64>( _arrStat[tagIndex]._currentAllocationCount.load( std::memory_order_relaxed ) ) -
+                                     static_cast<int64>( _arrBaselineCount[tagIndex] );
+            if ( byteDelta > 0 || countDelta > 0 )
+                listGrowth.push_back( MemoryTagGrowth{ static_cast<MemoryTag>( tagIndex ), byteDelta, countDelta } );
+        }
+        std::sort( listGrowth.begin(), listGrowth.end(), []( const MemoryTagGrowth& lhs, const MemoryTagGrowth& rhs )
+        { return lhs._byteDelta > rhs._byteDelta; } );
+        return listGrowth;
+    }
+
+    uint32 MemoryProfiler::reportTagGrowthSinceBaseline( const utf8* pPhaseTag ) const
+    {
+        if ( _bHasTagBaseline == false )
+            return 0;
+        const utf8*                   pPhase     = StringUtil::isNullOrEmpty( pPhaseTag ) ? "shutdown" : pPhaseTag;
+        const vector<MemoryTagGrowth> listGrowth = collectTagGrowthSinceBaseline();
+        if ( listGrowth.empty() )
+        {
+            MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - no memory tag grew since the post-init baseline.", pPhase );
+            return 0;
+        }
+        for ( const MemoryTagGrowth& growth : listGrowth )
+        {
+            MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# - tag %# grew by %# bytes in %# blocks since the post-init baseline.", pPhase,
+                                                      getMemoryTagName( growth._tag ), growth._byteDelta, growth._countDelta );
+        }
+        return static_cast<uint32>( listGrowth.size() );
     }
 
     uint64 MemoryProfiler::getTotalAllocationCount() const
