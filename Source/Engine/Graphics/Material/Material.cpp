@@ -15,6 +15,7 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 
 namespace sw
@@ -92,8 +93,10 @@ namespace sw
         _pRHIDevice = pRhi;
         _assetPath  = assetRelativePath;
 
+        AssetLoadScope loadScope( "Material", assetRelativePath );
         if ( loadFromFile( assetRelativePath ) == false )
             SW_LOG_WARNING( "Failed to load material file '%#'. Using fallback defaults.", assetRelativePath );
+        loadScope.beginPhase( AssetLoadPhase::Upload );
 
         uint32 bufferSize = static_cast<uint32>( _data._bytes.size() );
         if ( bufferSize == 0 )
@@ -123,6 +126,9 @@ namespace sw
         resolveTextureAssets( pRhi );
 
         SW_LOG_INFO( "Initialized '%#' with Bindless Descriptor Index %#", _desc._name.c_str(), _descriptorIndex );
+        loadScope.setBytes( _data._bytes.size() );
+        if ( _descriptorIndex != kInvalidDescriptorIndex )
+            loadScope.setSucceeded();
         return _descriptorIndex != kInvalidDescriptorIndex;
     }
 
@@ -273,10 +279,11 @@ namespace sw
         releaseTextureAssets( pRhi );
         if ( pRhi != nullptr )
         {
+            // 마지막 소유를 게임 스레드가 놓을 수 있다(GpuScene 후보 · 걷은 뷰) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
             if ( _descriptorIndex != kInvalidDescriptorIndex )
-                pRhi->getResourceFactory()->unregisterBindlessResource( _descriptorIndex );
+                pRhi->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
             if ( _constantBuffer != 0 )
-                pRhi->getResourceFactory()->destroyBuffer( _constantBuffer );
+                pRhi->releaseHandle( RHIHandleKind::Buffer, _constantBuffer );
         }
         _constantBuffer  = 0;
         _descriptorIndex = kInvalidDescriptorIndex;

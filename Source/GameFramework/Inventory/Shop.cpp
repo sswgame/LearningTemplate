@@ -168,17 +168,12 @@ namespace sw
 
     bool ShopCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "ShopCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &ShopCatalog::loadRoot, path, "ShopCatalog" );
     }
 
     bool ShopCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "ShopCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &ShopCatalog::loadRoot, xmlText, sourceName, "ShopCatalog" );
     }
 
     uint32 ShopCatalog::loadRoot( const XmlNode& root, string_view sourceName )

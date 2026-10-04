@@ -4,7 +4,7 @@
  *
  * @details 빌드: `cmake --preset Ninja-Debug-Shooter3D`. 조작은 `Source/Games/Shooter3D/README.md`. `-gv_shooterAutoPlay=1` 이면 조준 · 사격도 AI 가 한다.
  *          아레나는 씬(`game/shooter3d/maps/arena.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `ShooterDirectorComponent` ·
- *          `ShooterPlayerComponent` 가 섭니다. 이 클래스는 무기 카탈로그를 게임 서비스로 걸고, 첫 씬을 열고, 상태 저장 전에 디렉터가 세운 것을 걷습니다.
+ *          `ShooterPlayerComponent` 가 섭니다. 이 클래스는 무기 카탈로그를 게임 서비스로 걸고, 첫 씬을 열고, 상태 저장 전에 판의 진행(웨이브 · 처치 수)을 싣고 디렉터가 세운 것을 걷으며, 복원 뒤 진행을 돌려줍니다.
  */
 #pragma once
 #include "GameFramework/Combat/Weapon.h"
@@ -23,6 +23,7 @@ namespace sw
         bool onInitialize() override;
         void onShutdown() override;
         void onBeforeStateSerialize() override;
+        void onAfterStateDeserialize() override;
 
     private:
         WeaponCatalog _weaponCatalog;

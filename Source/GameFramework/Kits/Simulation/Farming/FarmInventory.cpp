@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Simulation/Farming/FarmInventory.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 
 namespace sw
@@ -11,6 +13,29 @@ namespace sw
         , _shippingBin{}
         , _gold{ 0 }
     {
+    }
+
+    void FarmInventory::writeState( Archive& outArchive ) const
+    {
+        _bag.writeState( outArchive );
+        _shippingBin.writeState( outArchive );
+        outArchive << _gold;
+    }
+
+    bool FarmInventory::readState( Archive& archive )
+    {
+        ItemBag bag;
+        ItemBag shippingBin;
+        int32   gold = 0;
+        if ( bag.readState( archive ) == false || shippingBin.readState( archive ) == false )
+            return false;
+        archive >> gold;
+        if ( archive.isError() || gold < 0 )
+            return false;
+        _bag         = std::move( bag );
+        _shippingBin = std::move( shippingBin );
+        _gold        = gold;
+        return true;
     }
 
     void FarmInventory::addItem( const hashed_string& itemId, int32 count )

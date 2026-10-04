@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /**
      * @class ItemBag
      * @brief 개수가 0 이 되면 항목을 지웁니다(빈 칸이 쌓이지 않는다). 슬롯 · 무게 같은 장르 규칙은 이 위에 얹습니다(핫바 · 칸 인벤토리).
@@ -38,6 +40,11 @@ namespace sw
         /** @brief 가진 아이템 id 입니다(순서는 정해지지 않는다 — 보일 때는 호출부가 정렬한다). */
         void                                       getItemIds( vector<hashed_string>& outListItem ) const;
         const unordered_map<hashed_string, int32>& getItems() const { return _mapItem; }
+
+        /** @brief 아이템을 이름 순으로 씁니다(같은 가방이면 같은 바이트). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 가방은 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         unordered_map<hashed_string, int32> _mapItem;

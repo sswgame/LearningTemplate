@@ -28,8 +28,9 @@ namespace sw
     /**
      * @class VoxelDirectorComponent
      * @brief 월드 한 판입니다. 플레이가 시작되면 씨앗으로 지형을 짓고 청크 오브젝트를 세웁니다.
-     * @details 블록 상태는 런타임 상태라 핫 리로드에서 씨앗대로 다시 섭니다(PROPERTY 만 남는다). 세운 청크는 핸들로 들고 상태 저장 전에 걷습니다
-     *          (`despawnRuntime`) — 남은 디렉터는 다음 틱에 청크를 다시 세우고 모두 다시 짓는다(블록은 그대로).
+     * @details 블록(부수고 놓은 것 포함)은 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드 · 세이브를 넘깁니다
+     *          (`VoxelCraftGame`). 세운 청크는 핸들로 들고 상태 저장 전에 걷습니다(`despawnRuntime`) — 남은 디렉터는 다음 틱에 청크를 다시 세우고
+     *          모두 다시 짓는다(블록은 그대로).
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Director", Tooltip = "Owns the voxel world: terrain, block edits, chunk spawns and rebuild scheduling" )
     class VoxelDirectorComponent : public Component
@@ -49,6 +50,13 @@ namespace sw
 
         /** @brief 세운 청크를 모두 지웁니다(상태 저장 전). */
         void despawnRuntime();
+        /** @brief 블록(부수고 놓은 것 포함)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 블록을 되살립니다 — `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
+         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 가 지형을 지은 뒤 적용합니다. 읽지 못하면 알리고 씨앗대로의 섬으로 시작합니다.
+         */
+        void restoreState( vector<uint8>&& bytes );
         /** @brief 블록 하나를 바꿉니다 — 틱 뒤 게임 스레드에서만(플레이어 · 청크가 월드를 읽는 동안 쓰지 않는다). 월드 밖이면 false 입니다. */
         [[nodiscard]] bool applyBlockEdit( const VoxelCoord& coord, VoxelBlockIndex block );
 
@@ -64,7 +72,9 @@ namespace sw
         static const VoxelDirectorComponent* resolveDirector( const GameObjectManager& manager, GameObjectHandle director );
 
     private:
-        void               initializeWorld();
+        void initializeWorld();
+        /** @brief 들고 있던 복원 바이트를 적용하고 청크를 다시 세우게 합니다. */
+        void               applyPendingState();
         void               decorateTerrain();
         void               scheduleFlush();
         void               flushPending();
@@ -86,7 +96,8 @@ namespace sw
         bool _bAutoPlay;
 
         VoxelWorld               _world;
-        vector<GameObjectHandle> _listChunk; ///< 청크 번호(z × 청크 수 X + x) 순
+        vector<GameObjectHandle> _listChunk;         ///< 청크 번호(z × 청크 수 X + x) 순
+        vector<uint8>            _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         float32                  _statusTimer;
         uint8                    _bWorldReady     : 1;
         uint8                    _bChunksSpawned  : 1; ///< 청크 오브젝트가 서 있다(걷으면 다음 틱이 다시 세운다)

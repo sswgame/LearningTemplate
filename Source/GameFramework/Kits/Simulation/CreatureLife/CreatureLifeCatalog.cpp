@@ -167,17 +167,12 @@ namespace sw
 
     bool CreatureLifeCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "CreatureLifeCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &CreatureLifeCatalog::loadRoot, path, "CreatureLifeCatalog" );
     }
 
     bool CreatureLifeCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "CreatureLifeCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &CreatureLifeCatalog::loadRoot, xmlText, sourceName, "CreatureLifeCatalog" );
     }
 
     void CreatureLifeCatalog::addHabitat( const HabitatDef& habitat )

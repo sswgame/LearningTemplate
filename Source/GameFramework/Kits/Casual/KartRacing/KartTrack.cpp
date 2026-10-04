@@ -377,17 +377,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool KartTrackCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "KartTrackCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &KartTrackCatalog::loadRoot, path, "KartTrackCatalog" );
     }
 
     bool KartTrackCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "KartTrackCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &KartTrackCatalog::loadRoot, xmlText, sourceName, "KartTrackCatalog" );
     }
 
     uint32 KartTrackCatalog::loadRoot( const XmlNode& root, string_view sourceName )

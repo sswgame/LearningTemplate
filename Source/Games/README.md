@@ -86,10 +86,13 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 | 엔티티의 모습 | 뷰 컴포넌트 — 디렉터를 읽기만 하고 자기 오브젝트에만 쓴다, `TickGroup::PostUpdate` |
 | 엔티티 하나의 입력 · AI | 컨트롤러 컴포넌트 — 뷰와 같은 규칙(디렉터를 읽기만, 자기 오브젝트에만 쓴다), 기본 그룹 `DuringPhysics` |
 | 장르 무관 카메라 · 장식 | GameFramework `Components/`(`OrthoCameraRigComponent` · `FirstPersonCameraComponent` · `PropScatterComponent` …) |
-| 게임 클래스 | `requestFirstScene()` 과, 상태 저장 전에 디렉터가 세운 것을 걷는 일 |
+| 게임 클래스 | `requestFirstScene()` 과, 상태 저장 전에 디렉터의 시뮬레이션을 싣고(`getComponentStateStore().capture<디렉터>`) 디렉터가 세운 것을 걷는 일, 복원 뒤 돌려주는 일(`restore<디렉터>`) |
 
 지킬 것:
 
+- **디렉터의 시뮬레이션은 `writeState` · `restoreState` 로 넘긴다.** 키트의 보통 클래스는 PROPERTY 가 아니라 핫 리로드 · 세이브에서 사라진다 — 디렉터가
+  `writeState( Archive& )`(첫 값은 `StateArchiveUtil::writeHeader` 의 표 · 버전)와 `restoreState( vector<uint8>&& )`(시작 전이면 들고 있다가 `onBeginPlay` 가
+  데이터를 읽은 뒤 적용, 읽지 못하면 새 판)를 두고, 게임 클래스가 실어 돌려준다(`GameFramework/README.md` Framework 절). 형식을 바꾸면 디렉터의 버전을 올린다.
 - **틱 안에서는 구조를 바꾸지 않는다.** 디렉터는 스폰 요청을 쌓고 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세운다(틱 안의 `addComponent` 는 nullptr).
 - **같은 그룹은 병렬이다.** 뷰는 자기 오브젝트에만 쓰고, 남의 컨테이너는 첨자(`operator[]` — Debug 경합 검출기가 쓰기로 센다) 대신 `data()` · const 참조로 읽는다.
   다른 오브젝트에 값을 넣어야 하면(디렉터 → 카메라 리그) 읽는 쪽보다 **앞 그룹**에서 넣는다.

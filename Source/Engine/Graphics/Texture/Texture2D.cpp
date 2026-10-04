@@ -4,6 +4,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/DdsLoader.h"
 
 namespace sw
@@ -77,7 +78,8 @@ namespace sw
         if ( _handle != 0 )
             releaseRhi( pDevice );
 
-        DdsImageData image;
+        AssetLoadScope loadScope( "Texture", relativePath );
+        DdsImageData   image;
         if ( DdsLoader::loadFromResource( relativePath, image ) == false || image.isValid() == false )
         {
             SW_LOG_ERROR( "Texture2D: failed to load '%#'", relativePath );
@@ -96,6 +98,8 @@ namespace sw
             return false;
         }
 
+        loadScope.setBytes( image._bytes.size() );
+        loadScope.beginPhase( AssetLoadPhase::Upload );
         RHITextureDesc desc{};
         desc._width                    = image._width;
         desc._height                   = image._height;
@@ -143,6 +147,7 @@ namespace sw
         _format   = format;
         SW_LOG_INFO( "Texture2D '%#' ready: %#×%#, %# mips, format %#, srv %#", _path.c_str(), _width, _height, _mipCount,
                      static_cast<uint32>( _format ), _srv );
+        loadScope.setSucceeded();
         return true;
     }
 
@@ -217,11 +222,11 @@ namespace sw
 
         if ( pDevice != nullptr )
         {
-            IRHIResourceFactory* pResource = pDevice->getResourceFactory();
+            // 마지막 소유가 게임 스레드에서 놓일 수 있다(머티리얼과 함께) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
             if ( _srv != kInvalidDescriptorIndex )
-                pResource->unregisterBindlessTexture( _srv );
+                pDevice->releaseHandle( RHIHandleKind::BindlessTexture, _srv );
             if ( _handle != 0 )
-                pResource->destroyTexture( _handle );
+                pDevice->releaseHandle( RHIHandleKind::Texture, _handle );
         }
         _handle  = 0;
         _srv     = kInvalidDescriptorIndex;

@@ -11,6 +11,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Resource/AssetLoadProfiler.h"
 
 namespace sw
 {
@@ -73,12 +74,15 @@ namespace sw
             return live;
 
         // 읽기는 잠금 밖에서 한다(파일 IO). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받는다.
-        MeshAssetData data{};
+        MeshAssetData  data{};
+        AssetLoadScope loadScope( "Mesh", path );
         if ( MeshAssetFormat::loadFromResource( path, data ) == false )
         {
             MeshCacheInternal::warnLoadFailureOnce( path );
             return nullptr;
         }
+        loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
+        loadScope.setSucceeded();
         shared_ptr<Mesh> loaded = Mesh::create();
         loaded->setVertices( std::move( data._listVertex ) );
         if ( data._skinBoneCount > 0 )

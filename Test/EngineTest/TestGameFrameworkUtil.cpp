@@ -148,6 +148,55 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXmlReadsRootsIdsNumbersAndTokens )
 }
 
 /**
+ * @brief [GameFrameworkUtilTest] 카탈로그 로더 템플릿(`GameDataXml::loadText` · `loadFile`)은 루트를 카탈로그의 비공개 루트 읽기에 넘기고, 루트가 없거나
+ *        읽은 수가 0(또는 false)이면 실패다 — 다른 카탈로그를 함께 넘기는 판도 같다
+ * @details 카탈로그 마흔여섯이 같던 문서 · 루트 · 경고 몸통을 이 한 곳이 맡는다. 0 을 성공으로 넘기면 원소 이름을 틀린 파일이 텅 빈 카탈로그가 된다.
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, CatalogLoaderTemplateHandsTheRootToThePrivateReader )
+{
+    class CountingCatalog
+    {
+    public:
+        bool loadFromXmlText( string_view xmlText ) { return GameDataXml::loadText( *this, &CountingCatalog::loadRoot, xmlText, "CountingCatalog", "Catalog" ); }
+        bool loadWithBonus( string_view xmlText, const int32& bonus )
+        {
+            return GameDataXml::loadText( *this, &CountingCatalog::loadRootWithBonus, bonus, xmlText, "CountingCatalog", "Catalog" );
+        }
+        bool loadFromResource( string_view path ) { return GameDataXml::loadFile( *this, &CountingCatalog::loadRoot, path, "Catalog" ); }
+
+        int32 _itemCount{ 0 };
+
+    private:
+        uint32 loadRoot( const XmlNode& root, string_view sourceName )
+        {
+            (void)sourceName;
+            _itemCount = 0;
+            for ( XmlNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+                ++_itemCount;
+            return static_cast<uint32>( _itemCount );
+        }
+        bool loadRootWithBonus( const XmlNode& root, const int32& bonus, string_view sourceName )
+        {
+            const bool bLoaded = loadRoot( root, sourceName ) > 0;
+            _itemCount += bonus;
+            return bLoaded;
+        }
+    };
+
+    CountingCatalog catalog;
+    SW_EXPECT_TRUE( catalog.loadFromXmlText( "<Catalog><Item/><Item/></Catalog>" ) );
+    SW_EXPECT_EQUAL( 2, catalog._itemCount );
+    {
+        test::ScopedDefensiveTestLog expected( "catalog root missing, empty catalog and missing file" );
+        SW_EXPECT_FALSE( catalog.loadFromXmlText( "<Catalog><Thing/></Catalog>" ) ); // 읽은 것이 0
+        SW_EXPECT_FALSE( catalog.loadFromXmlText( "<Other><Item/></Other>" ) );      // 루트가 없다
+        SW_EXPECT_FALSE( catalog.loadFromResource( "game/none/no_such_catalog.xml" ) );
+    }
+    SW_EXPECT_TRUE( catalog.loadWithBonus( "<Catalog><Item/></Catalog>", 10 ) );
+    SW_EXPECT_EQUAL( 11, catalog._itemCount );
+}
+
+/**
  * @brief [GameFrameworkUtilTest] 카탈로그는 읽은 순서를 지키고 같은 id 는 그 자리에서 바꾸며 빈 id 는 받지 않는다 · 아이템 봉투는 0 이 되면 지우고 모자라면 옮기지 않는다
  */
 SW_TEST_CASE( GameFrameworkUtilTest, CatalogKeepsOrderAndItemBagMovesItems )

@@ -51,6 +51,14 @@ namespace sw
             }
         };
     } // namespace
+
+#if !defined( SW_SHIPPING )
+    /**
+     * @brief `-gv_reloadGameAtFrame=N`: N 번째 프레임에 게임 모듈(SWGame) 핫 리로드를 한 번 요청합니다(리로드 단축키와 같은 길).
+     * @details 디렉터의 시뮬레이션이 리로드를 넘는지 손 없이 확인하는 스위치입니다 — 로그의 `[ReloadProbe]` 앞뒤 상태 줄을 견준다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_reloadGameAtFrame, 0, "이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함)" );
+#endif
 } // namespace sw
 
 namespace sw
@@ -443,6 +451,12 @@ namespace sw
         {
             onForceReload( config::kTargetGameModule );
             SW_LOG_INFO( "%#: force SWGame reload", InputMapDefaults::kReloadGameAction );
+        }
+        if ( gv_reloadGameAtFrame > 0 && engine::getFrameProfiler().getFrameCount() == static_cast<uint64>( gv_reloadGameAtFrame ) )
+        {
+            SW_LOG_INFO( "[ReloadProbe] frame %# - forcing SWGame reload", gv_reloadGameAtFrame );
+            gv_reloadGameAtFrame = 0; // 한 번만. 프로파일러가 프레임 수를 되돌리면(워밍업 뒤) 같은 번호가 다시 온다
+            onForceReload( config::kTargetGameModule );
         }
         if ( _bEnableEditor == SW_TRUE && _engineLoop.wasDebugActionTriggered( InputMapDefaults::kReloadEditorAction ) )
         {

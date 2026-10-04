@@ -12,6 +12,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 청크 한 변(X · Z)의 블록 수입니다. */
     constexpr int32 kVoxelChunkSize = 16;
     /** @brief 월드(청크)의 높이(Y)입니다. 청크는 세로로 나누지 않습니다. */
@@ -72,6 +74,14 @@ namespace sw
         int32                    getSizeZ() const { return _chunkCountZ * kVoxelChunkSize; }
         /** @brief 번호가 @p block 인 블록 수입니다(시험 · 디버그). */
         uint32 countBlocks( VoxelBlockIndex block ) const;
+
+        /** @brief 청크마다 블록을 같은 블록이 이어지는 구간(번호 · 길이)으로 씁니다(핫 리로드 · 세이브). 지형이 대부분 공기 · 돌이라 작게 남는다. */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 블록을 바꾸고 모든 청크를 다시 짓게 표시합니다. `initialize` 한 뒤에 부릅니다(같은 청크 수 · 카탈로그).
+         * @return 청크 수가 다르거나, 카탈로그에 없는 블록 번호가 있거나, 깨졌으면 false 이고 그대로입니다.
+         */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         VoxelChunk* findChunkMutable( int32 chunkX, int32 chunkZ );

@@ -29,6 +29,7 @@
 namespace sw
 {
     class AbilitySystemComponent;
+    class Archive;
     class GameObject;
     class GameObjectManager;
     class MaterialInstance;
@@ -77,6 +78,13 @@ namespace sw
 
         /** @brief 세운 유닛 · 투사체를 모두 지웁니다(상태 저장 전). 다음 틱이 플레이어와 지금 웨이브를 다시 세운다. */
         void despawnRuntime();
+        /** @brief 판의 진행(웨이브 · 처치 수)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 유닛 · 투사체는 모습이라 걷고 다시 세운다. */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 진행을 되살립니다 — 다시 만든 디렉터는 같은 웨이브를 새로 세웁니다(상태 저장 전에 걷은 판과 같다).
+         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 끝에 적용합니다. 읽지 못하면 알리고 웨이브 1 부터 시작합니다.
+         */
+        void restoreState( vector<uint8>&& bytes );
 
         // ---- 다른 컴포넌트가 읽는 것(PrePhysics 뒤의 그룹) ----
         /** @brief 이번 프레임의 유닛 모습입니다. 워커에서는 첨자 대신 `data()` 로 읽는다. */
@@ -141,6 +149,8 @@ namespace sw
         };
 
     private:
+        /** @brief 들고 있던 복원 바이트를 적용합니다. */
+        void applyPendingState();
         void requestWave( bool bAdvance );
         void requestUnit( ArenaUnitKind kind, const float3& position, int32 level );
         /** @brief 쌓인 스폰 · 효과음을 틱 뒤 한 번으로 미룹니다(틱 밖이면 바로). */
@@ -195,8 +205,9 @@ namespace sw
         vector<ArenaUnitView>        _listUnitView;
         vector<GameObjectHandle>     _listProjectile;
         vector<SpawnRequest>         _listPendingUnit;
-        vector<const utf8*>          _listPendingSound; ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
-        shared_ptr<MaterialInstance> _arrTint[4];       ///< 플레이어 · Grunt · Caster(`ArenaUnitKind` 순) · 투사체
+        vector<const utf8*>          _listPendingSound;  ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
+        vector<uint8>                _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
+        shared_ptr<MaterialInstance> _arrTint[4];        ///< 플레이어 · Grunt · Caster(`ArenaUnitKind` 순) · 투사체
         float3                       _playerFocus;
         float32                      _playerRespawnTimer; ///< 0 이상이면 플레이어가 다시 서기까지 남은 시간
         float32                      _statusLogTimer;

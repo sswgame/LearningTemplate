@@ -3,12 +3,77 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/vector.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Common/IRenderSurface.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct IRHIDeviceInternal
+        {
+            /** @brief 핸들 하나를 그 종류의 팩터리 함수로 내립니다. */
+            static void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 handle )
+            {
+                switch ( kind )
+                {
+                    case RHIHandleKind::BindlessResource:
+                    {
+                        factory.unregisterBindlessResource( static_cast<RHIDescriptorIndex>( handle ) );
+                        return;
+                    }
+                    case RHIHandleKind::BindlessTexture:
+                    {
+                        factory.unregisterBindlessTexture( static_cast<RHIDescriptorIndex>( handle ) );
+                        return;
+                    }
+                    case RHIHandleKind::Buffer:
+                    {
+                        factory.destroyBuffer( static_cast<RHIBufferHandle>( handle ) );
+                        return;
+                    }
+                    case RHIHandleKind::Texture:
+                    {
+                        factory.destroyTexture( static_cast<RHITextureHandle>( handle ) );
+                        return;
+                    }
+                }
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환입니다(`IRHIDevice::releaseHandle`). */
+    struct RHIDeferredHandleQueue
+    {
+        struct Entry
+        {
+            uint64        _handle{ 0 };
+            RHIHandleKind _kind{ RHIHandleKind::BindlessResource };
+        };
+
+        mutable mutex  _mutex;
+        vector<Entry>  _listHandle;     ///< `_mutex` 아래
+        atomic<uint32> _framesInFlight; ///< 렌더 스레드에 넘겼고 아직 끝나지 않은 프레임 수
+
+        RHIDeferredHandleQueue()
+            : _mutex{}
+            , _listHandle{}
+            , _framesInFlight{ 0 }
+        {
+        }
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -52,6 +117,8 @@ namespace sw
         // 렌더 스레드가 받은 일을 먼저 모두 끝내야 한다. 렌더 스레드 자신이 부르면 기다릴 것이 없다.
         if ( _pfnRenderThreadDrain != nullptr && std::this_thread::get_id() != _renderThreadId )
             _pfnRenderThreadDrain( _pRenderThreadDrainContext );
+        // 렌더 스레드가 받은 일을 다 끝냈다 — 그 사이 미룬 핸들을 지금 내린다(GPU 대기 전에 넣어야 같은 대기가 해제 큐까지 비운다).
+        flushDeferredHandleReleases();
         waitIdleInternal();
     }
 
@@ -95,6 +162,61 @@ namespace sw
         _pfnRenderThreadDrain      = pfnDrain;
         _pRenderThreadDrainContext = ( pfnDrain != nullptr ) ? pContext : nullptr;
         _renderThreadId            = ( pfnDrain != nullptr ) ? renderThreadId : std::thread::id{};
+        // 렌더 스레드가 서거나 풀리는 자리다 — 든 프레임이 없으니 미룬 것을 내리고 셈을 처음부터 한다.
+        _pDeferredHandleQueue->_framesInFlight.store( 0, std::memory_order_release );
+        flushDeferredHandleReleases();
+    }
+
+    void IRHIDevice::releaseHandle( RHIHandleKind kind, uint64 handle )
+    {
+        if ( handle == 0 && ( kind == RHIHandleKind::Buffer || kind == RHIHandleKind::Texture ) )
+            return;
+        const bool bRenderThreadBusy = _pDeferredHandleQueue->_framesInFlight.load( std::memory_order_acquire ) != 0;
+        if ( bRenderThreadBusy && std::this_thread::get_id() != _renderThreadId )
+        {
+            std::scoped_lock<mutex> lock{ _pDeferredHandleQueue->_mutex };
+            _pDeferredHandleQueue->_listHandle.push_back( RHIDeferredHandleQueue::Entry{ handle, kind } );
+            return;
+        }
+        IRHIResourceFactory* pFactory = getResourceFactory();
+        if ( pFactory != nullptr )
+            IRHIDeviceInternal::releaseNow( *pFactory, kind, handle );
+    }
+
+    void IRHIDevice::flushDeferredHandleReleases()
+    {
+        vector<RHIDeferredHandleQueue::Entry> listHandle;
+        {
+            std::scoped_lock<mutex> lock{ _pDeferredHandleQueue->_mutex };
+            if ( _pDeferredHandleQueue->_listHandle.empty() )
+                return;
+            listHandle.swap( _pDeferredHandleQueue->_listHandle );
+        }
+        IRHIResourceFactory* pFactory = getResourceFactory();
+        if ( pFactory == nullptr )
+            return; // 팩터리가 이미 없다 — 백엔드 자원과 함께 갔다
+        for ( const RHIDeferredHandleQueue::Entry& entry : listHandle )
+            IRHIDeviceInternal::releaseNow( *pFactory, entry._kind, entry._handle );
+    }
+
+    void IRHIDevice::notifyRenderFrameQueued()
+    {
+        _pDeferredHandleQueue->_framesInFlight.fetch_add( 1, std::memory_order_acq_rel );
+    }
+
+    void IRHIDevice::notifyRenderFrameRetired()
+    {
+        // 셈이 0 이면 내리지 않는다 — 렌더 스레드를 다시 세운 뒤(셈을 비웠다) 앞 프레임의 통보가 늦게 오는 일.
+        uint32 current = _pDeferredHandleQueue->_framesInFlight.load( std::memory_order_acquire );
+        while ( current != 0 && _pDeferredHandleQueue->_framesInFlight.compare_exchange_weak( current, current - 1, std::memory_order_acq_rel ) == false )
+        {
+        }
+    }
+
+    size_t IRHIDevice::getDeferredHandleCount() const
+    {
+        std::scoped_lock<mutex> lock{ _pDeferredHandleQueue->_mutex };
+        return _pDeferredHandleQueue->_listHandle.size();
     }
 
     IRHIDevice::~IRHIDevice()
@@ -115,6 +237,7 @@ namespace sw
         , _bImmediateSubmit{ false }
         , _bParallelRecording{ false }
         , _memoryLedger{ make_unique<RHIMemoryLedger>() }
+        , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
     {
     }
 
@@ -178,6 +301,7 @@ namespace sw
         // 순서가 계약이다(헤더 참고). 백엔드는 이 순서를 다시 적지 않고 단계 훅만 채운다.
         // 1 은 **자원을 내리기 전에** 알린다 — 언리얼 FRenderResource::ReleaseRHI 자리. 든 쪽이 해제 큐에 넘긴 자원은 2 가 GPU 를 기다린 뒤 비운다.
         RHIRenderResource::releaseAllFor( this );
+        flushDeferredHandleReleases();
         waitIdleInternal();
         detachCommandRecordingInternal();
         shutdownInternal();

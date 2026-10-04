@@ -2,6 +2,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBody.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelHotbar.h"
@@ -379,4 +381,73 @@ SW_TEST_CASE( VoxelTest, HotbarStacksAndConsumes )
     SW_EXPECT_EQUAL( 8, hotbar.getSelectedIndex() );
     hotbar.selectRelative( 3 );
     SW_EXPECT_EQUAL( 2, hotbar.getSelectedIndex() );
+}
+
+/**
+ * @brief [VoxelTest] 월드 블록(부수고 놓은 것 포함) · 핫바를 쓰고 새 월드 · 핫바에 읽으면 같고, 모든 청크가 다시 짓기로 표시된다
+ * @details 핫 리로드 · 세이브가 디렉터의 월드를 이 바이트로 옮긴다. 블록은 같은 블록이 이어지는 구간으로 쓰므로 지형 월드는 원본보다 훨씬 작다.
+ *          청크 수가 다르거나, 카탈로그에 없는 블록 번호이거나, 잘린 바이트는 거절하고 그대로 둔다.
+ */
+SW_TEST_CASE( VoxelTest, StateRoundTripKeepsEditsAndMarksChunksDirty )
+{
+    VoxelTestScene original;
+    SW_ASSERT_TRUE( original.initialize( 3, 2 ) );
+    (void)VoxelTerrainGenerator::fillWorld( original._world, VoxelTerrainSettings{} );
+    const VoxelBlockIndex stone = original.findBlock( "stone" );
+    const VoxelBlockIndex log   = original.findBlock( "log" );
+    SW_ASSERT_TRUE( original._world.setBlock( 5, 60, 7, log ) );             // 하늘에 놓은 통나무
+    SW_ASSERT_TRUE( original._world.setBlock( 20, 1, 20, kVoxelAirBlock ) ); // 땅속을 판 자리
+    VoxelHotbar hotbar;
+    SW_EXPECT_EQUAL( 0, hotbar.addBlock( stone, 40 ) );
+    hotbar.select( 4 );
+
+    Archive written;
+    original._world.writeState( written );
+    hotbar.writeState( written );
+    const uint64 rawBytes = static_cast<uint64>( 3 * 2 ) * static_cast<uint64>( kVoxelChunkVolume );
+    SW_EXPECT_TRUE( written.getSize() * 4 < rawBytes ); // 구간으로 쓰면 원본의 4 분의 1 보다 작다
+
+    VoxelTestScene restored;
+    SW_ASSERT_TRUE( restored.initialize( 3, 2 ) );
+    for ( int32 chunkZ = 0; chunkZ < 2; ++chunkZ )
+    {
+        for ( int32 chunkX = 0; chunkX < 3; ++chunkX )
+            restored._world.clearChunkDirty( chunkX, chunkZ );
+    }
+    VoxelHotbar restoredHotbar;
+    Archive     reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored._world.readState( reader ) );
+    SW_ASSERT_TRUE( restoredHotbar.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64( 0 ), reader.getRemainingBytes() );
+
+    SW_EXPECT_EQUAL( static_cast<int32>( log ), static_cast<int32>( restored._world.getBlock( 5, 60, 7 ) ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( kVoxelAirBlock ), static_cast<int32>( restored._world.getBlock( 20, 1, 20 ) ) );
+    SW_EXPECT_EQUAL( original._world.countBlocks( stone ), restored._world.countBlocks( stone ) );
+    SW_EXPECT_EQUAL( original._world.countBlocks( kVoxelAirBlock ), restored._world.countBlocks( kVoxelAirBlock ) );
+    for ( int32 chunkZ = 0; chunkZ < 2; ++chunkZ )
+    {
+        for ( int32 chunkX = 0; chunkX < 3; ++chunkX )
+            SW_EXPECT_TRUE( restored._world.isChunkDirty( chunkX, chunkZ ) );
+    }
+    SW_EXPECT_EQUAL( 40, restoredHotbar.countBlock( stone ) );
+    SW_EXPECT_EQUAL( 4, restoredHotbar.getSelectedIndex() );
+
+    BLOCK( "청크 수가 다른 월드 · 모르는 블록 · 잘린 바이트는 거절하고 그대로 둔다" )
+    {
+        VoxelTestScene smallScene;
+        SW_ASSERT_TRUE( smallScene.initialize( 1, 1 ) );
+        Archive smallReader( written.getData(), written.getSize() );
+        SW_EXPECT_FALSE( smallScene._world.readState( smallReader ) );
+
+        Archive unknownBlock;
+        unknownBlock << int32( 1 ) << int32( 1 ) << VoxelBlockIndex( 200 ) << uint32( kVoxelChunkVolume ) << kVoxelAirBlock << uint32( 0 );
+        Archive unknownReader( unknownBlock.getData(), unknownBlock.getSize() );
+        SW_EXPECT_FALSE( smallScene._world.readState( unknownReader ) );
+
+        VoxelTestScene cutScene;
+        SW_ASSERT_TRUE( cutScene.initialize( 3, 2 ) );
+        Archive cut( written.getData(), written.getSize() / 2 );
+        SW_EXPECT_FALSE( cutScene._world.readState( cut ) );
+        SW_EXPECT_EQUAL( static_cast<uint32>( 3 * 2 * kVoxelChunkVolume ), cutScene._world.countBlocks( kVoxelAirBlock ) );
+    }
 }

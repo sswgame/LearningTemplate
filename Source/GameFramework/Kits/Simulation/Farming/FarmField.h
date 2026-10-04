@@ -15,6 +15,7 @@ namespace sw
 {
     struct CropDef;
 
+    class Archive;
     class CropCatalog;
 
     /** @brief 밭 한 칸에 무엇을 하려다 어떻게 됐는지입니다. UI 가 이유를 띄우고 시험이 읽습니다. */
@@ -89,6 +90,11 @@ namespace sw
         uint32 getReadyCount() const;
         /** @brief 칸의 작물이 다 자라기까지의 비율(0..1)입니다. 작물이 없으면 0 입니다. */
         float32 computeGrowthRatio( int32 x, int32 y ) const;
+
+        /** @brief 칸마다 작물 · 자람 · 상태를 씁니다(핫 리로드 · 세이브). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 칸을 바꿉니다. 밭 크기가 다르거나 깨졌으면 false 이고 그대로입니다(카탈로그는 `initialize` 의 것). */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         FarmTile*      findTileMutable( int32 x, int32 y );

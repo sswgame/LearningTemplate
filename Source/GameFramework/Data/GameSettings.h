@@ -13,6 +13,8 @@
 
 namespace sw
 {
+    class XmlNode;
+
     // ------------------------------------------------------------------------------
     // 1) GameSettings — 씬 흐름 · 입력 · 다국어 · 세이브 부트스트랩과 범용 커스텀 설정
     // ------------------------------------------------------------------------------
@@ -68,6 +70,10 @@ namespace sw
 
         /** @brief 리소스 경로(XML)에서 부트스트랩 테이블을 로드합니다. */
         [[nodiscard]] bool loadFromResource( string_view assetRelativePath = {} );
+
+    private:
+        /** @brief `<GameSettings>` 루트의 표준 칸과 커스텀 칸을 읽습니다(`GameDataXml::loadFile`). */
+        [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );
     };
 } // namespace sw
 

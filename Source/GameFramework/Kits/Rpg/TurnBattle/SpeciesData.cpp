@@ -7,6 +7,8 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
+#include "GameFramework/Data/GameDataXml.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "SpeciesCatalog" );
@@ -62,24 +64,17 @@ namespace sw
     bool SpeciesCatalog::loadFromResource( string_view assetRelativePath )
     {
         clear();
+        if ( GameDataXml::loadFile( *this, &SpeciesCatalog::loadRoot, assetRelativePath, "SpeciesCatalog" ) )
+            return true;
+        // 파일 · 루트가 없거나 표가 비었다(읽기 쪽이 이미 까닭을 알렸다) — 폴백 표를 심는다.
+        SW_LOG_WARNING( "%# gave no species table — using fallback table.", assetRelativePath );
+        clear();
+        seedFallback();
+        return false;
+    }
 
-        XmlDocument doc;
-        string      absPath;
-        if ( doc.loadResource( assetRelativePath, &absPath ) == false )
-        {
-            SW_LOG_ERROR( "Failed to read %# — using fallback table.", assetRelativePath );
-            seedFallback();
-            return false;
-        }
-
-        XmlNode root = doc.getRoot( "SpeciesCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_ERROR( "Missing <SpeciesCatalog> in %# — using fallback.", absPath );
-            seedFallback();
-            return false;
-        }
-
+    bool SpeciesCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    {
         XmlNode movesNode = root.findChild( "moves" );
         if ( movesNode.isValid() )
         {
@@ -141,13 +136,12 @@ namespace sw
 
         if ( _listMove.empty() || _listSpecies.empty() )
         {
-            SW_LOG_ERROR( "Empty table in %# — using fallback.", absPath );
-            seedFallback();
+            SW_LOG_WARNING( "Empty move or species table in %#", sourceName );
             return false;
         }
 
         SW_LOG_INFO( "Loaded %# moves, %# species from %#",
-                     static_cast<uint32>( _listMove.size() ), static_cast<uint32>( _listSpecies.size() ), absPath );
+                     static_cast<uint32>( _listMove.size() ), static_cast<uint32>( _listSpecies.size() ), sourceName );
         return true;
     }
 

@@ -88,17 +88,12 @@ namespace sw
 
     bool RhythmChart::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "Chart", root, sourceName ) && loadRoot( root, sourceName );
+        return GameDataXml::loadFile( *this, &RhythmChart::loadRoot, path, "Chart" );
     }
 
     bool RhythmChart::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "Chart", root ) && loadRoot( root, sourceName );
+        return GameDataXml::loadText( *this, &RhythmChart::loadRoot, xmlText, sourceName, "Chart" );
     }
 
     float32 RhythmChart::convertBeatToSeconds( float32 beat ) const

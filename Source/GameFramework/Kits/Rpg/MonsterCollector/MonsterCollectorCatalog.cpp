@@ -114,17 +114,12 @@ namespace sw
 
     bool MonsterCollectorCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "MonsterCollectorCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &MonsterCollectorCatalog::loadRoot, path, "MonsterCollectorCatalog" );
     }
 
     bool MonsterCollectorCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "MonsterCollectorCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &MonsterCollectorCatalog::loadRoot, xmlText, sourceName, "MonsterCollectorCatalog" );
     }
 
     void MonsterCollectorCatalog::clear()

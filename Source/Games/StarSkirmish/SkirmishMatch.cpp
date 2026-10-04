@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "SkirmishMatch" );
@@ -111,6 +113,39 @@ namespace sw
                 _arrAi[player].initialize( &_world, player, SkirmishMatchInternal::makeAiSettings( style ) );
         }
         SW_LOG_INFO( "[Skirmish] match start - %#", bHumanPlayer ? "you (blue, south-west) vs computer (red)" : "computer (rush, blue) vs computer (macro, red)" );
+    }
+
+    void SkirmishMatch::writeState( Archive& outArchive ) const
+    {
+        outArchive << _bHumanPlayer;
+        _world.writeState( outArchive );
+        for ( int32 player = 0; player < kPlayerCount; ++player )
+        {
+            if ( _arrAiActive[player] == SW_TRUE )
+                _arrAi[player].writeState( outArchive );
+        }
+        outArchive << _statusTimer;
+        outArchive << _huntTimer;
+        outArchive << _bReportedOver;
+    }
+
+    bool SkirmishMatch::readState( Archive& archive )
+    {
+        uint8 bHumanPlayer = SW_FALSE;
+        archive >> bHumanPlayer;
+        if ( archive.isError() || bHumanPlayer != _bHumanPlayer || _world.readState( archive ) == false )
+            return false;
+        for ( int32 player = 0; player < kPlayerCount; ++player )
+        {
+            if ( _arrAiActive[player] == SW_TRUE && _arrAi[player].readState( archive ) == false )
+                return false;
+        }
+        archive >> _statusTimer;
+        archive >> _huntTimer;
+        archive >> _bReportedOver;
+        _listEvent.clear();
+        _listFrameEvent.clear();
+        return archive.isOk();
     }
 
     void SkirmishMatch::paintMap()

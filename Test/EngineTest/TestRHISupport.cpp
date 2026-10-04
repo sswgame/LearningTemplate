@@ -339,6 +339,45 @@ SW_TEST_CASE( RHIDeviceShutdownTest, StepsRunInContractOrder )
 }
 
 /**
+ * @brief [RHIDeferredHandleTest] 렌더 스레드가 프레임을 들고 있는 동안 다른 스레드가 내리는 핸들은 미뤄지고, 프레임이 끝난 뒤 · `waitIdle` 이 내린다
+ * @details 게임 스레드가 GPU 머티리얼(인스턴스)의 마지막 소유를 놓는 순간 렌더 스레드가 병렬 기록 중이면 bindless 표를 바꾸면 안 된다 — 핫 리로드로 뷰를
+ *          걷은 StarSkirmish · VoxelCraft · Shooter3D 가 Debug 단언으로 죽었다. 렌더 스레드 자신 · 쉬는 렌더 스레드에서는 바로 내린다.
+ */
+SW_TEST_CASE( RHIDeferredHandleTest, ReleasesWaitForTheRenderThreadFrame )
+{
+    test::FakeRHIDevice device;
+
+    // 렌더 스레드가 든 프레임이 없으면 바로 내린다.
+    device.releaseHandle( sw::RHIHandleKind::BindlessResource, 7 );
+    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+
+    // 프레임을 넘긴 뒤 다른 스레드(렌더 스레드가 아니다)가 내리면 미룬다.
+    device.notifyRenderFrameQueued();
+    device.releaseHandle( sw::RHIHandleKind::BindlessResource, 8 );
+    device.releaseHandle( sw::RHIHandleKind::Buffer, 9 );
+    device.releaseHandle( sw::RHIHandleKind::Buffer, 0 ); // 빈 핸들은 무시
+    SW_EXPECT_EQUAL( size_t( 2 ), device.getDeferredHandleCount() );
+
+    // 프레임이 끝나도 렌더 스레드가 비우기 전까지는 남는다 — 비우면 내린다.
+    device.notifyRenderFrameRetired();
+    SW_EXPECT_EQUAL( size_t( 2 ), device.getDeferredHandleCount() );
+    device.flushDeferredHandleReleases();
+    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+
+    // 남는 프레임 통보는 셈을 음수로 만들지 않는다.
+    device.notifyRenderFrameRetired();
+    device.releaseHandle( sw::RHIHandleKind::Texture, 10 );
+    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+
+    // waitIdle 은 렌더 스레드를 비운 뒤 미룬 것을 내린다.
+    device.notifyRenderFrameQueued();
+    device.releaseHandle( sw::RHIHandleKind::BindlessTexture, 11 );
+    SW_EXPECT_EQUAL( size_t( 1 ), device.getDeferredHandleCount() );
+    device.waitIdle();
+    SW_EXPECT_EQUAL( size_t( 0 ), device.getDeferredHandleCount() );
+}
+
+/**
  * @brief [RHINativeHandlesTest] `IRHIDevice::queryNativeHandles` 가 다른 판의 `RHINativeHandles` 를 거절하고, 맞는 판에는 백엔드 훅이 채운 값을 준다.
  * @details 에디터(EditorModule)는 RHI 백엔드의 구체 클래스를 모르고 이 POD 하나로 네이티브 핸들을 받는다. 따로 지은 모듈이 다른 판의 구조체를
  *          보내면 Engine 이 한 칸도 쓰지 않고 거절해야 한다 — 쓰면 다른 레이아웃 위에 핸들을 적어 조용히 깨진다. 판 번호와 크기를 각각 어긋나게 한다.

@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
+#include "GameFramework/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -12,12 +15,14 @@ namespace sw
     {
         struct ThemeParkInternal
         {
-            static constexpr float32 kLeaveEnergy      = 0.1f;
-            static constexpr float32 kLeaveHappiness   = 0.15f;
-            static constexpr float32 kNauseaPerRating  = 0.06f;  ///< 멀미 평가 1 이 손님 멀미에 더하는 양
-            static constexpr float32 kQueueUnhappiness = 0.002f; ///< 줄에서 초당 줄어드는 행복
-            static constexpr float32 kWanderRadius     = 6.0f;
-            static constexpr float32 kPi               = 3.14159265358979f;
+            static constexpr uint32  kMinRideStateBytes  = 64; ///< 놀이기구 하나의 상태가 적어도 쓰는 바이트(개수 상한)
+            static constexpr uint32  kMinGuestStateBytes = 80; ///< 손님 하나의 상태가 적어도 쓰는 바이트(개수 상한)
+            static constexpr float32 kLeaveEnergy        = 0.1f;
+            static constexpr float32 kLeaveHappiness     = 0.15f;
+            static constexpr float32 kNauseaPerRating    = 0.06f;  ///< 멀미 평가 1 이 손님 멀미에 더하는 양
+            static constexpr float32 kQueueUnhappiness   = 0.002f; ///< 줄에서 초당 줄어드는 행복
+            static constexpr float32 kWanderRadius       = 6.0f;
+            static constexpr float32 kPi                 = 3.14159265358979f;
 
             static float3 lerpPosition( const float3& from, const float3& to, float32 alpha )
             {
@@ -572,5 +577,182 @@ namespace sw
         const auto guestIter = std::lower_bound( _listGuest.begin(), _listGuest.end(), guestId, []( const ParkGuest& guest, uint32 id )
         { return guest._id < id; } );
         return ( guestIter != _listGuest.end() && guestIter->_id == guestId ) ? &*guestIter : nullptr;
+    }
+} // namespace sw
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 상태 쓰기 · 읽기(핫 리로드 · 세이브)
+    // ------------------------------------------------------------------------------
+    void ThemeParkSimulation::writeState( Archive& outArchive ) const
+    {
+        const auto writeIdList = [&outArchive]( const vector<uint32>& listId )
+        {
+            outArchive << static_cast<uint32>( listId.size() );
+            for ( const uint32 id : listId )
+                outArchive << id;
+        };
+        outArchive << _settings._entryFee;
+        outArchive << static_cast<uint32>( _listRide.size() );
+        for ( const ParkRide& ride : _listRide )
+        {
+            StateArchiveUtil::writeName( outArchive, ride._id );
+            outArchive << string_view( ride._name );
+            outArchive << ride._excitement;
+            outArchive << ride._intensity;
+            outArchive << ride._nausea;
+            outArchive << ride._cycleTime;
+            outArchive << ride._entrance;
+            outArchive << ride._capacity;
+            outArchive << ride._price;
+            outArchive << ride._runningCostPerMinute;
+            outArchive << ride._bOpen;
+            writeIdList( ride._listQueue );
+            writeIdList( ride._listRider );
+            outArchive << ride._cycleTimer;
+            outArchive << ride._totalRiders;
+            outArchive << ride._totalIncome;
+        }
+        outArchive << static_cast<uint32>( _listGuest.size() );
+        for ( const ParkGuest& guest : _listGuest )
+        {
+            outArchive << guest._position;
+            outArchive << guest._walkFrom;
+            outArchive << guest._walkTo;
+            outArchive << guest._id;
+            outArchive << guest._cash;
+            outArchive << guest._targetRideIndex;
+            outArchive << guest._rideCount;
+            outArchive << guest._happiness;
+            outArchive << guest._nausea;
+            outArchive << guest._energy;
+            outArchive << guest._minIntensity;
+            outArchive << guest._maxIntensity;
+            outArchive << guest._nauseaTolerance;
+            outArchive << guest._walkTimer;
+            outArchive << guest._walkDuration;
+            outArchive << guest._queueTime;
+            outArchive << static_cast<uint8>( guest._state );
+            outArchive << static_cast<uint8>( guest._thought );
+        }
+        StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
+        StateArchiveUtil::writeRandom( outArchive, _random );
+        outArchive << _arrivalAccumulator;
+        outArchive << _costAccumulator;
+        outArchive << _elapsedTime;
+        outArchive << _cash;
+        outArchive << _parkRating;
+        outArchive << _nextGuestId;
+        outArchive << _totalVisitorCount;
+    }
+
+    bool ThemeParkSimulation::readState( Archive& archive )
+    {
+        const auto readIdList = [&archive]( vector<uint32>& outListId )
+        {
+            uint32 count = 0;
+            if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), count ) == false )
+                return false;
+            outListId.resize( count );
+            for ( uint32& id : outListId )
+                archive >> id;
+            return archive.isOk();
+        };
+        int32 entryFee = 0;
+        archive >> entryFee;
+        uint32 rideCount = 0;
+        if ( archive.isError() || StateArchiveUtil::readCount( archive, ThemeParkInternal::kMinRideStateBytes, rideCount ) == false )
+            return false;
+        vector<ParkRide> listRide( rideCount );
+        for ( ParkRide& ride : listRide )
+        {
+            if ( StateArchiveUtil::readName( archive, ride._id ) == false )
+                return false;
+            archive >> ride._name;
+            archive >> ride._excitement;
+            archive >> ride._intensity;
+            archive >> ride._nausea;
+            archive >> ride._cycleTime;
+            archive >> ride._entrance;
+            archive >> ride._capacity;
+            archive >> ride._price;
+            archive >> ride._runningCostPerMinute;
+            archive >> ride._bOpen;
+            if ( readIdList( ride._listQueue ) == false || readIdList( ride._listRider ) == false )
+                return false;
+            archive >> ride._cycleTimer;
+            archive >> ride._totalRiders;
+            archive >> ride._totalIncome;
+            if ( archive.isError() )
+                return false;
+        }
+        uint32 guestCount = 0;
+        if ( StateArchiveUtil::readCount( archive, ThemeParkInternal::kMinGuestStateBytes, guestCount ) == false )
+            return false;
+        vector<ParkGuest> listGuest( guestCount );
+        for ( ParkGuest& guest : listGuest )
+        {
+            uint8 state   = 0;
+            uint8 thought = 0;
+            archive >> guest._position;
+            archive >> guest._walkFrom;
+            archive >> guest._walkTo;
+            archive >> guest._id;
+            archive >> guest._cash;
+            archive >> guest._targetRideIndex;
+            archive >> guest._rideCount;
+            archive >> guest._happiness;
+            archive >> guest._nausea;
+            archive >> guest._energy;
+            archive >> guest._minIntensity;
+            archive >> guest._maxIntensity;
+            archive >> guest._nauseaTolerance;
+            archive >> guest._walkTimer;
+            archive >> guest._walkDuration;
+            archive >> guest._queueTime;
+            archive >> state;
+            archive >> thought;
+            const bool bEnumValid = state <= static_cast<uint8>( ParkGuestState::Left ) && thought <= static_cast<uint8>( ParkGuestThought::NothingToRide );
+            const bool bRideValid = -1 <= guest._targetRideIndex && guest._targetRideIndex < static_cast<int32>( rideCount );
+            if ( archive.isError() || bEnumValid == false || bRideValid == false )
+                return false;
+            guest._state   = static_cast<ParkGuestState>( state );
+            guest._thought = static_cast<ParkGuestThought>( thought );
+        }
+        FixedStepTimer stepTimer = _stepTimer;
+        GameRandom     random;
+        if ( StateArchiveUtil::readStepTimer( archive, stepTimer ) == false || StateArchiveUtil::readRandom( archive, random ) == false )
+            return false;
+        float32 arrivalAccumulator = 0.0f;
+        float32 costAccumulator    = 0.0f;
+        float32 elapsedTime        = 0.0f;
+        int32   cash               = 0;
+        int32   parkRating         = 0;
+        uint32  nextGuestId        = 0;
+        uint32  totalVisitorCount  = 0;
+        archive >> arrivalAccumulator;
+        archive >> costAccumulator;
+        archive >> elapsedTime;
+        archive >> cash;
+        archive >> parkRating;
+        archive >> nextGuestId;
+        archive >> totalVisitorCount;
+        if ( archive.isError() )
+            return false;
+
+        _settings._entryFee = entryFee;
+        _listRide           = std::move( listRide );
+        _listGuest          = std::move( listGuest );
+        _stepTimer          = stepTimer;
+        _random             = random;
+        _arrivalAccumulator = arrivalAccumulator;
+        _costAccumulator    = costAccumulator;
+        _elapsedTime        = elapsedTime;
+        _cash               = cash;
+        _parkRating         = parkRating;
+        _nextGuestId        = nextGuestId;
+        _totalVisitorCount  = totalVisitorCount;
+        return true;
     }
 } // namespace sw

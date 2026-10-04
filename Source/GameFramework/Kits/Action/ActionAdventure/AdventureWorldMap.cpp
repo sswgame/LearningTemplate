@@ -40,17 +40,12 @@ namespace sw
 
     bool AdventureWorldMap::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "AdventureWorld", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &AdventureWorldMap::loadRoot, path, "AdventureWorld" );
     }
 
     bool AdventureWorldMap::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "AdventureWorld", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &AdventureWorldMap::loadRoot, xmlText, sourceName, "AdventureWorld" );
     }
 
     void AdventureWorldMap::readLandmarks( const XmlNode& root, const utf8* pNodeName, AdventureLandmarkKind kind, string_view sourceName, uint32& inoutCount )

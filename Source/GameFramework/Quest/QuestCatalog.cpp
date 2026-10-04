@@ -50,17 +50,12 @@ namespace sw
 
     bool QuestCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "QuestCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &QuestCatalog::loadRoot, path, "QuestCatalog" );
     }
 
     bool QuestCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "QuestCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &QuestCatalog::loadRoot, xmlText, sourceName, "QuestCatalog" );
     }
 
     uint32 QuestCatalog::loadRoot( const XmlNode& root, string_view sourceName )

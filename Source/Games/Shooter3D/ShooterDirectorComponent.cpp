@@ -12,10 +12,12 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
+#include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/Shooter3D/ShooterDroneComponent.h"
 #include "Games/Shooter3D/ShooterEffectComponent.h"
@@ -30,6 +32,8 @@ namespace sw
         struct ShooterDirectorComponentInternal
         {
             static constexpr float32     kStatusInterval = 5.0f;
+            static constexpr uint32      kStateTag       = 0x544F4853u; ///< 'SHOT'
+            static constexpr uint32      kStateVersion   = 1;
             static constexpr float4      kBurstColor{ 1.0f, 0.6f, 0.15f, 1.0f };
             static constexpr const utf8* kSoundDroneDown = "game/shooter3d/sounds/impact_metal_medium_000.ogg";
 
@@ -111,6 +115,7 @@ namespace sw
         , _listPendingEffect{}
         , _listPendingSound{}
         , _listColorLook{}
+        , _pendingStateBytes{}
         , _droneLook{}
         , _droneFlashLook{}
         , _playerEye{ 0.0f, 1.6f, -16.0f }
@@ -139,8 +144,45 @@ namespace sw
         _waveTimer = _waveDelay;
         _wave      = 0;
         _killCount = 0;
+        if ( _pendingStateBytes.empty() == false )
+            applyPendingState();
         updatePlayerView();
         scheduleFlush();
+    }
+
+    void ShooterDirectorComponent::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeHeader( outArchive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion );
+        outArchive << _wave;
+        outArchive << _killCount;
+    }
+
+    void ShooterDirectorComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( _bStarted == SW_TRUE )
+            applyPendingState();
+    }
+
+    void ShooterDirectorComponent::applyPendingState()
+    {
+        Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
+        uint32     wave      = 0;
+        uint32     killCount = 0;
+        const bool bHeader   = StateArchiveUtil::readHeader( archive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion );
+        archive >> wave;
+        archive >> killCount;
+        _pendingStateBytes.clear();
+        if ( bHeader == false || archive.isError() || archive.getRemainingBytes() != 0 )
+        {
+            SW_LOG_WARNING( "[Shooter] the saved arena state does not match this build - starting from wave 1" );
+            return;
+        }
+        // 드론은 걷었다 — 웨이브 대기 뒤 `requestWave` 가 하나 올리므로 하나 앞에 둔다(같은 웨이브를 새로 세운다).
+        _wave      = wave > 0 ? wave - 1 : 0;
+        _killCount = killCount;
+        despawnRuntime();
+        SW_LOG_INFO( "[Shooter] arena state restored - wave %#, %# kills", wave, _killCount );
     }
 
     void ShooterDirectorComponent::onEndPlay()

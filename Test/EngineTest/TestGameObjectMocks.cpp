@@ -56,5 +56,6 @@ namespace sw
         MockPoolLifecycleComponent::StaticType();
         MockPostLoadSpawnerComponent::StaticType();
         MockPostLoadProbeComponent::StaticType();
+        MockRuntimeStateComponent::StaticType();
     }
 } // namespace sw

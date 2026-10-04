@@ -7,6 +7,7 @@
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Ability/CombatAttributeSet.h"
+#include "GameFramework/Data/GameDataXml.h"
 
 namespace sw
 {
@@ -178,39 +179,12 @@ namespace sw
 
     bool AbilityCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        string      absPath;
-        if ( doc.loadPath( path, &absPath ) == false )
-        {
-            SW_LOG_WARNING( "Failed to read ability catalog %#", path );
-            return false;
-        }
-        const XmlNode root = doc.getRoot( "AbilityCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <AbilityCatalog> root in %#", absPath );
-            return false;
-        }
-        const uint32 loadedCount = loadRoot( root, absPath );
-        SW_LOG_INFO( "Loaded %# ability catalog entries from %#", loadedCount, absPath );
-        return loadedCount > 0;
+        return GameDataXml::loadFile( *this, &AbilityCatalog::loadRoot, path, "AbilityCatalog" );
     }
 
     bool AbilityCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        if ( doc.parse( xmlText, sourceName ) == false )
-        {
-            SW_LOG_WARNING( "Failed to parse ability catalog text %#", sourceName );
-            return false;
-        }
-        const XmlNode root = doc.getRoot( "AbilityCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <AbilityCatalog> root in %#", sourceName );
-            return false;
-        }
-        return loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &AbilityCatalog::loadRoot, xmlText, sourceName, "AbilityCatalog" );
     }
 
     void AbilityCatalog::clearDefinitions()

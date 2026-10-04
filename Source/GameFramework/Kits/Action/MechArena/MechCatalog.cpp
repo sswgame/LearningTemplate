@@ -94,17 +94,12 @@ namespace sw
 
     bool MechCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "MechCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &MechCatalog::loadRoot, path, "MechCatalog" );
     }
 
     bool MechCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "MechCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &MechCatalog::loadRoot, xmlText, sourceName, "MechCatalog" );
     }
 
     const StatBlock& MechCatalog::getClassModifier( MechRangeClass rangeClass ) const
