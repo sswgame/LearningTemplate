@@ -9,7 +9,7 @@ namespace sw
     InteractionSession::InteractionSession()
         : _pDef{ nullptr }
         , _holdProgress{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listHoldEvent{}
         , _actorId{ 0 }
         , _stepIndex{ 0 }
@@ -26,7 +26,7 @@ namespace sw
         _actorId   = actorId;
         _stepIndex = 0;
         _state     = InteractionSessionState::Active;
-        _listEvent.push_back( InteractionSessionEvent::Started );
+        _eventBuffer.push( InteractionSessionEvent::Started );
         beginStep();
         return true;
     }
@@ -66,11 +66,11 @@ namespace sw
         if ( _stepIndex + 1 >= getStepCount() )
         {
             _state = InteractionSessionState::Completed;
-            _listEvent.push_back( InteractionSessionEvent::Completed );
+            _eventBuffer.push( InteractionSessionEvent::Completed );
             return;
         }
         ++_stepIndex;
-        _listEvent.push_back( InteractionSessionEvent::StepCompleted );
+        _eventBuffer.push( InteractionSessionEvent::StepCompleted );
         beginStep();
     }
 
@@ -121,7 +121,7 @@ namespace sw
         if ( _state != InteractionSessionState::Active )
             return;
         _state = InteractionSessionState::Cancelled;
-        _listEvent.push_back( InteractionSessionEvent::Cancelled );
+        _eventBuffer.push( InteractionSessionEvent::Cancelled );
     }
 
     float32 InteractionSession::getStepProgress() const
@@ -150,7 +150,6 @@ namespace sw
 
     void InteractionSession::drainEvents( vector<InteractionSessionEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

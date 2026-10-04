@@ -50,7 +50,7 @@ namespace sw
     ScavengerExpedition::ScavengerExpedition()
         : _listCrew{}
         , _listShipScrap{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listSpawnScratch{}
         , _data{}
         , _quota{}
@@ -78,7 +78,7 @@ namespace sw
         _seed = seed;
         _random.setSeed( seed );
         _listShipScrap.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _facility.clear();
         _pMoon          = nullptr;
         _hoursOnMoon    = 0.0f;
@@ -330,8 +330,7 @@ namespace sw
 
     void ScavengerExpedition::drainEvents( vector<ScavengerEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     int64 ScavengerExpedition::getCredits() const { return _data._pCatalog != nullptr ? _wallet.getBalance( _data._pCatalog->getCurrency() ) : 0; }
@@ -534,7 +533,7 @@ namespace sw
             event._id      = spawn._entryId;
             event._value   = static_cast<int32>( spawn._spawnId );
             event._bIndoor = bIndoor ? SW_TRUE : SW_FALSE;
-            _listEvent.push_back( event );
+            _eventBuffer.push( event );
         }
     }
 
@@ -545,6 +544,6 @@ namespace sw
         event._player = player;
         event._value  = value;
         event._id     = id;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

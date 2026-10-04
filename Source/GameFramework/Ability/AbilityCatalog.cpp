@@ -178,16 +178,6 @@ namespace sw
         _mapAbilitySet.insert_or_assign( def._id, def );
     }
 
-    bool AbilityCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &AbilityCatalog::loadRoot, path, "AbilityCatalog" );
-    }
-
-    bool AbilityCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &AbilityCatalog::loadRoot, xmlText, sourceName, "AbilityCatalog" );
-    }
-
     void AbilityCatalog::clearDefinitions()
     {
         _mapEffect.clear();

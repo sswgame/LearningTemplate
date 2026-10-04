@@ -9,6 +9,7 @@
 #include "Core/Common/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -96,7 +97,7 @@ namespace sw
         float32               _maxBonus;
         float32               _regenScale;
         float32               _sinceUse; ///< 마지막으로 쓴 뒤 지난 시간
-        float32               _overheatPenaltyRemaining;
+        Countdown             _overheatPenalty;
         uint8                 _bLocked; ///< 탈진 · 과열 잠금
     };
 } // namespace sw

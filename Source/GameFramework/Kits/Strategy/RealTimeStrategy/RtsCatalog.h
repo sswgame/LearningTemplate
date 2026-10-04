@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -76,13 +77,12 @@ namespace sw
      * @class RtsCatalog
      * @brief `<RtsCatalog supplyMax="200"><Unit id="worker" kind="Unit" hp="45" .../></RtsCatalog>` 를 읽습니다(키는 `Resource/game/starskirmish/data/units.xml`).
      */
-    class SW_GF_API RtsCatalog
+    class SW_GF_API RtsCatalog : public XmlCatalog<RtsCatalog>
     {
+        friend class XmlCatalog<RtsCatalog>;
+
     public:
         RtsCatalog();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         const RtsUnitDef*         findUnit( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<RtsUnitDef>& getUnits() const { return _catalog.getAll(); }
@@ -91,7 +91,8 @@ namespace sw
         int32 getSupplyMax() const { return _supplyMax; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "RtsCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<RtsUnitDef> _catalog;
         int32                   _supplyMax;

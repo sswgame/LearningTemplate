@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Workspace/EditorSelection.h"
 

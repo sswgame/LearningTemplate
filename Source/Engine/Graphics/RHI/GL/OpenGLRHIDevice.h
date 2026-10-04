@@ -13,11 +13,12 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 
 namespace sw
 {
+    struct RHIGpuMemoryBudget;
+
     class IOpenGLPlatformContext;
     class OpenGLRHICommandContext;
     class OpenGLRHIResourceFactory;

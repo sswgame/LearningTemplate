@@ -44,13 +44,21 @@ HP 바 · 피해 숫자는 어빌리티 시스템이 같은 오브젝트의 `Hea
 | 웨이브 · 쓰러뜨린 수 · 플레이어 다시 세우기 · 투사체 스폰 · 로그 | `ArenaDirectorComponent`(씬에 하나 — 언리얼 GameMode/GameState 자리) |
 | 유닛 하나의 입력 · AI | `ArenaPlayerControllerComponent` · `ArenaEnemyControllerComponent`(공통 부분 `ArenaControllerComponent`) — 유닛 프리팹에 붙는다 |
 | 투사체 하나 | `ArenaProjectileComponent` — 자기를 옮기고 처음 닿은 적대 유닛에 이펙트를 건다 |
-| 카메라 | `ArenaCameraComponent` — 디렉터가 적은 플레이어 자리를 오프셋 위에서 본다 |
+| 카메라 | `ArenaCameraComponent` — 플레이어 메시의 이번 프레임 자리를 오프셋 위에서 본다 |
 | 모습 | 팔레트 머티리얼 `materials/palette.material`(albedoMap = 키트 색 칸 텍스처). 편 색(플레이어 파랑 · Grunt 빨강 · Caster 보라)과 투사체 주황은 디렉터의 PROPERTY 이고, 디렉터가 머티리얼 인스턴스 하나씩을 만들어 나눠 쓴다 |
 
 **틱.** 디렉터는 `TickGroup::PrePhysics` 에서 쓰러짐 · 웨이브 · 다시 세우기를 돌리고 이번 프레임의 유닛 모습(자리 · 편 · 살아 있음, `ArenaUnitView`)을 적습니다.
 컨트롤러 · 투사체는 기본 그룹(`DuringPhysics`)에서 그것을 **읽기만** 하고(목록은 `data()` 로) 자기 오브젝트에만 씁니다. 컨트롤러는 같은 오브젝트의 어빌리티
 시스템과 같은 워커에서 돌기 때문에 입력 번호를 누르면 어빌리티가 그 자리에서 발동하고, 다른 유닛에 거는 이펙트는 어빌리티 시스템이 틱 뒤로 미룹니다. 카메라는
-`PostUpdate` 입니다. 틱 안에서는 오브젝트를 만들 수 없으므로 디렉터는 스폰 요청 · 효과음을 쌓아 두고 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세웁니다.
+`PostUpdate` 입니다.
+
+**이번 프레임의 플레이어 자리.** 유닛 모습의 자리는 디렉터가 PrePhysics 에서 적은 **틱 전** 자리라, 그것을 쫓으면 한 프레임(플레이어 한 걸음)
+늦습니다. 그래서 적 컨트롤러는 주 틱이 아니라 서브틱(`kChaseSubTick`)에서 돌고 대상(플레이어) 컨트롤러의 주 틱을 선행 조건으로 겁니다
+(`getTickHandle` · `addSubTickPrerequisite`, 대상이 바뀌면 갈아 건다). 엔진이 그 서브틱 앞에서 플레이어의 이번 프레임 쓰기를 적용하므로 적은
+플레이어 메시의 월드 자리를 바로 읽습니다. 카메라는 물리 뒤 단계라 적용이 이미 끝났으므로 플레이어 메시의 자리를 직접 읽습니다(`getPlayerObject`).
+자동 플레이 900 프레임 3 회: 적이 쫓는 자리와 플레이어 자리의 차이 평균이 걸음의 100 % → 2~5 %(대상이 바뀐 첫 프레임만 남는다), 카메라는 100 % → 0.
+
+틱 안에서는 오브젝트를 만들 수 없으므로 디렉터는 스폰 요청 · 효과음을 쌓아 두고 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세웁니다.
 투사체 발사(어빌리티가 워커에서 부른다)는 틱 뒤로 미룬 일 하나로 세웁니다.
 
 **어빌리티가 디렉터를 찾는 길.** 어빌리티는 게임 서비스를 쓰지 않고 `ArenaDirectorComponent::findForUnit` 으로 찾습니다 — 같은 오브젝트의 컨트롤러가 든

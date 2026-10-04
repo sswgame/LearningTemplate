@@ -13,6 +13,7 @@
 
 #include "GameFramework/Combat/LockOnSelector.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -74,8 +75,8 @@ namespace sw
         bool                    hasTarget() const { return _selector.hasTarget(); }
         const float3&           getTargetPosition() const { return _targetPosition; }
         bool                    isHeld() const { return _bHeld == SW_TRUE; }
-        bool                    isEvading() const { return _evadeRemaining > 0.0f; }
-        bool                    isInvulnerable() const { return _invulnerableRemaining > 0.0f; }
+        bool                    isEvading() const { return _evade.isActive(); }
+        bool                    isInvulnerable() const { return _invulnerable.isActive(); }
 
     private:
         void refreshTargetPosition( const vector<LockOnCandidate>& listCandidate );
@@ -83,8 +84,8 @@ namespace sw
         AdventureTargetingSettings _settings;
         LockOnSelector             _selector;
         float3                     _targetPosition;
-        float32                    _evadeRemaining;
-        float32                    _invulnerableRemaining;
+        Countdown                  _evade;
+        Countdown                  _invulnerable;
         AdventureTargetingState    _state;
         uint8                      _bHeld;
     };

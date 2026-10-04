@@ -11,7 +11,9 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -52,14 +54,14 @@ namespace sw
      * @brief `<PartySeries winScore="5" placementPoints="3,2,1,0"><Round id="trampoline" time="60" scoreLimit="5"/>...</PartySeries>` 를 읽습니다.
      * @details 라운드 목록이 끝나면 처음부터 다시 돕니다.
      */
-    class SW_GF_API PartyRoundSeries
+    class SW_GF_API PartyRoundSeries : public XmlCatalog<PartyRoundSeries>
     {
+        friend class XmlCatalog<PartyRoundSeries>;
+
     public:
         PartyRoundSeries();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addRound( const PartyRoundDef& round ) { _listRound.push_back( round ); }
+        void addRound( const PartyRoundDef& round ) { _listRound.push_back( round ); }
         /** @brief 순위 점수입니다([0] = 1 위). 목록보다 낮은 순위는 0 점입니다. */
         void setPlacementPoints( const vector<int32>& listPoint ) { _listPlacementPoint = listPoint; }
         void setWinScore( int32 winScore ) { _winScore = winScore > 0 ? winScore : 1; }
@@ -84,15 +86,16 @@ namespace sw
         void                         drainEvents( vector<PartySeriesEvent>& outListEvent );
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
-        void   pushEvent( PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points );
+        static constexpr const utf8* kXmlRootName = "PartySeries"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        void                         pushEvent( PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points );
 
-        vector<PartyRoundDef>    _listRound;
-        vector<int32>            _listPlacementPoint;
-        vector<int32>            _listTotal;
-        vector<PartySeriesEvent> _listEvent;
-        int32                    _winScore;
-        int32                    _roundNumber;
-        int32                    _winner;
+        vector<PartyRoundDef>         _listRound;
+        vector<int32>                 _listPlacementPoint;
+        vector<int32>                 _listTotal;
+        EventBuffer<PartySeriesEvent> _eventBuffer;
+        int32                         _winScore;
+        int32                         _roundNumber;
+        int32                         _winner;
     };
 } // namespace sw

@@ -246,7 +246,7 @@ namespace sw
         {
             const uint64 childId  = _objectId;
             const uint64 parentId = pParent->getObjectId();
-            pManager->deferStructuralChange( [pManager, childId, parentId, rule]()
+            pManager->deferHierarchyChange( [pManager, childId, parentId, rule]()
             {
                 GameObject* pChildObj  = pManager->findGameObjectById( childId );
                 GameObject* pParentObj = pManager->findGameObjectById( parentId );
@@ -275,7 +275,7 @@ namespace sw
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
             const uint64 childId = _objectId;
-            pManager->deferStructuralChange( [pManager, childId, rule]()
+            pManager->deferHierarchyChange( [pManager, childId, rule]()
             {
                 GameObject* pChildObj = pManager->findGameObjectById( childId );
                 if ( pChildObj != nullptr )

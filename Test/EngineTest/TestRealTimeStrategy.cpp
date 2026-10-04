@@ -593,3 +593,32 @@ SW_TEST_CASE( RealTimeStrategyTest, StateRoundTripContinuesTheSameMatch )
         SW_EXPECT_EQUAL( 0, cutScene._world.getPlayerCount() );
     }
 }
+
+/**
+ * @brief [RealTimeStrategyTest] 공격 빈도는 쿨다운을 따른다 — 0.05 초 고정 걸음에서 1.2 초 쿨다운 포탑이 120 초에 100 번(±1.5) 쏜다
+ * @details 쿨다운이 끝난 걸음에 간격으로 덮으면 지나친 몫을 버리고, float 로 0.05 를 24 번 빼면 0 에 조금 못 미쳐 한 걸음을 더 기다린다
+ *          — 25 걸음(1.25 초)마다라 96 번이 된다(1.5 초 → 1.55 초, 2.0 초 → 2.05 초도 같다).
+ */
+SW_TEST_CASE( RealTimeStrategyTest, AttackRateFollowsTheCooldownNotTheStepGrid )
+{
+    constexpr const utf8* kRateXml = R"(
+<RtsCatalog supplyMax="200">
+  <Unit id="cannon" kind="Building" hp="500" footprint="2" damage="10" range="8" cooldown="1.2" targets="Ground" sight="10"/>
+  <Unit id="block" kind="Building" hp="100000" footprint="2" sight="2"/>
+</RtsCatalog>
+)";
+    RtsCatalog            catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kRateXml, "RealTimeStrategyTest" ) );
+    RtsWorld world;
+    world.initialize( &catalog, 32, 32, RtsSettings{} );
+    const int32     blue    = world.addPlayer( 0, 0, 0, float3{ 2.0f, 0.0f, 2.0f } );
+    const int32     red     = world.addPlayer( 1, 0, 0, float3{ 28.0f, 0.0f, 28.0f } );
+    const RtsUnitId cannon  = world.spawnUnit( hashed_string( "cannon" ), blue, float3{ 10.0f, 0.0f, 10.0f } );
+    const RtsUnitId blockId = world.spawnUnit( hashed_string( "block" ), red, float3{ 14.0f, 0.0f, 10.0f } );
+    SW_ASSERT_TRUE( cannon.isValid() && blockId.isValid() );
+    const float32 seconds = 120.0f;
+    for ( int32 frameIndex = 0; frameIndex < static_cast<int32>( seconds * 10.0f ); ++frameIndex )
+        world.update( 0.1f );
+    const float32 shotCount = ( 100000.0f - world.findUnit( blockId )->_hp ) / 10.0f;
+    SW_EXPECT_NEAR_EQUAL( seconds / 1.2f, shotCount, 1.5f );
+}

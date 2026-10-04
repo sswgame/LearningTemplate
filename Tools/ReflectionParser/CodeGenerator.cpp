@@ -714,7 +714,7 @@ namespace sw
         if ( bNeedFlags )
         {
             // 비트 연산자(|, &, ^, ~, |=, &=, ^=)와 hasFlag/hasAnyFlag/setFlag/clearFlag 는 enum 마다
-            // 코드젠하지 않고, Core/Common/EnumUtil.h 의 제네릭 sw::IsBitFlagEnum<E> 트레이트와 전역
+            // 코드젠하지 않고, Core/Common/BitFlagTrait.h 의 제네릭 sw::IsBitFlagEnum<E> 트레이트와 EnumUtil.h 의 전역
             // 스코프 SFINAE 연산자로 통일한다. 로직이 모든 enum 에서 같아 타입별 코드젠이 필요
             // 없다. 여기서는 그 트레이트를 켜는(opt-in) 한 줄짜리 명시적 특수화만 생성한다.
             //
@@ -722,7 +722,8 @@ namespace sw
             // 모으는 우산(`FlagOps.gen.h`)이 타깃 전 TU 에 `/FI` 로 들어가므로, 여기서 원본 헤더를
             // 들이면 그 헤더가 끌어오는 것 전부가 **모든 TU 에 이미 있는 이름**이 되어 다른 헤더들의
             // include 누락을 통째로 가린다. 불투명 열거형 선언은 완전한 타입이라 특수화에 이것으로 충분하다.
-            emit.line( "#include \"Core/Common/EnumUtil.h\"" );
+            // 같은 이유로 트레이트도 `<type_traits>` 만 드는 `BitFlagTrait.h` 에서 받는다 — `EnumUtil.h` 는 `Macros.h` 를 끌어온다.
+            emit.line( "#include \"Core/Common/BitFlagTrait.h\"" );
             emit.blank();
             for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
             {

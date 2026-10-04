@@ -11,6 +11,7 @@
 #include "GameFramework/AI/Blackboard.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -90,7 +91,7 @@ namespace sw
         Blackboard         _blackboard;
         RtsAiSettings      _settings;
         RtsWorld*          _pWorld;
-        float32            _thinkTimer;
+        Countdown          _thinkTimer;
         int32              _player;
         int32              _attackWaveCount;
     };

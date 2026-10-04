@@ -64,7 +64,7 @@ namespace sw
 
     WitcherInvestigation::WitcherInvestigation()
         : _listFound{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pContract{ nullptr }
         , _pQuestLog{ nullptr }
         , _stepIndex{ 0 }
@@ -77,7 +77,7 @@ namespace sw
         _pQuestLog = pQuestLog;
         _stepIndex = 0;
         _listFound.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         return _pContract != nullptr;
     }
 
@@ -121,7 +121,7 @@ namespace sw
         found._kind   = WitcherInvestigationEvent::Kind::ClueFound;
         found._stepId = step._id;
         found._clueId = clueId;
-        _listEvent.push_back( found );
+        _eventBuffer.push( found );
         if ( _pQuestLog != nullptr )
             (void)_pQuestLog->notify( hashed_string( kClueNotifyKind ), clueId );
         if ( computeOpenOrder() >= 0 )
@@ -134,7 +134,7 @@ namespace sw
             WitcherInvestigationEvent completed;
             completed._kind   = WitcherInvestigationEvent::Kind::StepCompleted;
             completed._stepId = stepId;
-            _listEvent.push_back( completed );
+            _eventBuffer.push( completed );
             if ( _pQuestLog != nullptr )
                 (void)_pQuestLog->notify( hashed_string( kStepNotifyKind ), stepId );
             ++_stepIndex;
@@ -144,7 +144,7 @@ namespace sw
         {
             WitcherInvestigationEvent solved;
             solved._kind = WitcherInvestigationEvent::Kind::Solved;
-            _listEvent.push_back( solved );
+            _eventBuffer.push( solved );
         }
         return WitcherClueResult::Found;
     }
@@ -173,8 +173,7 @@ namespace sw
 
     void WitcherInvestigation::drainEvents( vector<WitcherInvestigationEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     int32 WitcherInvestigation::computeOpenOrder() const

@@ -8,7 +8,6 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Data/StatBlock.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Inventory/EquipCondition.h"
 #include "GameFramework/Inventory/Inventory.h"
@@ -18,6 +17,7 @@ namespace sw
     struct ItemDef;
 
     class ItemCatalog;
+    class StatBlock;
 
     /** @brief 장비 칸 하나입니다. */
     struct EquipSlot

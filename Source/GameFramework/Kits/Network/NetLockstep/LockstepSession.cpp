@@ -142,39 +142,36 @@ namespace sw
             (void)_pHost->sendMessage( 0, NetChannelType::ReliableOrdered, writer.getBytes() );
     }
 
-    void LockstepSession::relay( int32 fromConnectionId, const uint8* pData, int32 size )
+    void LockstepSession::relay( const NetMessageContext& context )
     {
         if ( _pHost != nullptr && _pHost->isServer() )
-            (void)_pHost->broadcast( NetChannelType::ReliableOrdered, pData, size, fromConnectionId );
+            (void)_pHost->broadcast( NetChannelType::ReliableOrdered, context._pMessage, context._messageSize, context._connectionId );
     }
 
-    bool LockstepSession::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
+    NetHandleResult LockstepSession::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        if ( size <= 0 || ( pData[0] != NetLockstepMessage::kInput && pData[0] != NetLockstepMessage::kChecksum ) )
-            return false;
-        BitReader   reader( pData + 1, size - 1 );
-        const int32 player = static_cast<int32>( reader.readVarUint() );
+        const int32 player = static_cast<int32>( body.readVarUint() );
         // 서버는 클라이언트가 자기 번호로만 보내게 한다(남의 입력을 위조하지 못하게).
-        if ( _pHost != nullptr && _pHost->isServer() && player != connectionId + 1 )
-            return true;
-        const uint32 tick = static_cast<uint32>( reader.readVarUint() );
-        if ( pData[0] == NetLockstepMessage::kInput )
+        if ( _pHost != nullptr && _pHost->isServer() && player != context._connectionId + 1 )
+            return NetHandleResult::Handled;
+        const uint32 tick = static_cast<uint32>( body.readVarUint() );
+        if ( context._kind == NetLockstepMessage::kInput )
         {
-            vector<uint8> listInput( static_cast<size_t>( MathUtil::min<uint64>( 1024, reader.readVarUint() ) ) );
-            if ( listInput.empty() == false && reader.readBytes( listInput.data(), static_cast<int32>( listInput.size() ) ) == false )
-                return true;
-            if ( reader.hasOverflowed() )
-                return true;
+            vector<uint8> listInput( static_cast<size_t>( MathUtil::min<uint64>( 1024, body.readVarUint() ) ) );
+            if ( listInput.empty() == false && body.readBytes( listInput.data(), static_cast<int32>( listInput.size() ) ) == false )
+                return NetHandleResult::Malformed;
+            if ( body.hasOverflowed() )
+                return NetHandleResult::Malformed;
             storeInput( player, tick, listInput );
         }
         else
         {
-            const uint32 checksum = reader.readUint32();
-            if ( reader.hasOverflowed() )
-                return true;
+            const uint32 checksum = body.readUint32();
+            if ( body.hasOverflowed() )
+                return NetHandleResult::Malformed;
             storeChecksum( player, tick, checksum );
         }
-        relay( connectionId, pData, size );
-        return true;
+        relay( context );
+        return NetHandleResult::Handled;
     }
 } // namespace sw

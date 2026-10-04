@@ -10,6 +10,7 @@
 
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Utility/GameRandom.h"
 
@@ -48,18 +49,18 @@ namespace sw
      * @brief `<WeatherCatalog transition="60"><Weather id="rain" weight="1" seasons="Spring:3,Summer:1" minDuration="600" maxDuration="1800">
      *        <Values wetness="1" wind="0.4"/></Weather></WeatherCatalog>` 를 읽습니다.
      */
-    class SW_GF_API WeatherCatalog
+    class SW_GF_API WeatherCatalog : public XmlCatalog<WeatherCatalog>
     {
-    public:
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
+        friend class XmlCatalog<WeatherCatalog>;
 
+    public:
         const WeatherDef*         findWeather( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<WeatherDef>& getWeathers() const { return _catalog.getAll(); }
         float32                   getTransitionTime() const { return _transitionTime; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "WeatherCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<WeatherDef> _catalog{};
         float32                 _transitionTime{ 60.0f };

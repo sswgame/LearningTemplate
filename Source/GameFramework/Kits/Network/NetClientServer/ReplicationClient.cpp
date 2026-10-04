@@ -27,13 +27,24 @@ namespace sw
         _pHost    = pHost;
         _settings = settings;
         _listSnapshot.assign( static_cast<size_t>( MathUtil::max( 4, settings._historySize ) ), NetSnapshot{} );
+        _decodeFailureCount = 0;
+        resetHistory();
+    }
+
+    void ReplicationClient::resetHistory()
+    {
         for ( NetSnapshot& snapshot : _listSnapshot )
             snapshot._tick = 0xFFFFFFFFu;
         _listRecentInput.clear();
-        _renderTime         = 0.0f;
-        _decodeFailureCount = 0;
-        _latestTick         = 0;
-        _bHasSnapshot       = SW_FALSE;
+        _renderTime   = 0.0f;
+        _latestTick   = 0;
+        _bHasSnapshot = SW_FALSE;
+    }
+
+    void ReplicationClient::onConnectionOpened( int32 connectionId )
+    {
+        (void)connectionId;
+        resetHistory();
     }
 
     const NetSnapshot* ReplicationClient::findSnapshot( uint32 tick ) const
@@ -44,25 +55,23 @@ namespace sw
 
     const NetSnapshot* ReplicationClient::getLatest() const { return _bHasSnapshot ? findSnapshot( _latestTick ) : nullptr; }
 
-    bool ReplicationClient::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
+    NetHandleResult ReplicationClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        (void)connectionId; // 클라이언트 — 받는 쪽은 서버 하나
-        // 영역 안이어도 자기 종류가 아니면 넘긴다 — 라우터가 같은 영역의 다음 처리기에 묻는다(`INetMessageHandler` 계약).
-        if ( size <= 0 || pData[0] != NetClientServerMessage::kSnapshot )
-            return false;
+        (void)context; // 클라이언트 — 받는 쪽은 서버 하나
         // 기준 틱을 먼저 엿보고 그 스냅샷을 찾는다.
-        BitReader    peek( pData + 1, size - 1 );
+        BitReader    peek         = body;
         const uint32 tick         = static_cast<uint32>( peek.readVarUint() );
         const uint32 baselineCode = static_cast<uint32>( peek.readVarUint() );
+        if ( peek.hasOverflowed() )
+            return NetHandleResult::Malformed;
         if ( _bHasSnapshot && tick <= _latestTick )
-            return true; // 늦게 온 옛것
+            return NetHandleResult::Handled; // 늦게 온 옛것
         const NetSnapshot* pBaseline = baselineCode != 0 ? findSnapshot( baselineCode - 1u ) : nullptr;
-        BitReader          reader( pData + 1, size - 1 );
         NetSnapshot        snapshot;
-        if ( NetSnapshot::readDelta( reader, pBaseline, snapshot ) == false )
+        if ( NetSnapshot::readDelta( body, pBaseline, snapshot ) == false )
         {
-            ++_decodeFailureCount;
-            return true;
+            ++_decodeFailureCount; // 기준을 이미 잃은 델타도 여기로 온다 — 형식은 맞으니 깨짐으로 세지 않는다
+            return NetHandleResult::Handled;
         }
         const bool bFirst                                                 = _bHasSnapshot == SW_FALSE;
         _listSnapshot[static_cast<size_t>( tick % _listSnapshot.size() )] = std::move( snapshot );
@@ -76,7 +85,7 @@ namespace sw
             writer.writeVarUint( tick );
             (void)_pHost->sendMessage( 0, NetChannelType::UnreliableSequenced, writer.getBytes() );
         }
-        return true;
+        return NetHandleResult::Handled;
     }
 
     void ReplicationClient::update( float32 deltaTime )

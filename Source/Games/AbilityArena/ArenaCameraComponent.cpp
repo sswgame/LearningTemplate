@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -26,7 +27,7 @@ namespace sw
     void ArenaCameraComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 디렉터(PrePhysics)가 이번 프레임의 플레이어 자리를 적은 뒤에 읽는다.
+        // 플레이어 컨트롤러(DuringPhysics)가 옮긴 자리가 적용된 뒤(물리 뒤 단계)에 읽는다.
         setTickGroup( TickGroup::PostUpdate );
         applyToCamera( float3{ 0.0f, 0.0f, 0.0f } );
     }
@@ -37,7 +38,16 @@ namespace sw
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const ArenaDirectorComponent* pDirector = pManager != nullptr ? ArenaDirectorComponent::resolveDirector( *pManager, _director ) : nullptr;
-        applyToCamera( pDirector != nullptr ? pDirector->getPlayerFocus() : float3{ 0.0f, 0.0f, 0.0f } );
+        if ( pDirector == nullptr )
+        {
+            applyToCamera( float3{ 0.0f, 0.0f, 0.0f } );
+            return;
+        }
+        // 디렉터의 초점은 PrePhysics 에서 적은 틱 전 자리다 — 그대로 쓰면 한 프레임 늦게 따라간다. 이 그룹은 물리 뒤 단계라 플레이어 컨트롤러의
+        // 이번 프레임 쓰기가 이미 적용됐으므로 플레이어 메시의 자리를 바로 읽는다.
+        const GameObject*    pPlayer = pManager->resolveGameObject( pDirector->getPlayerObject() );
+        const MeshComponent* pMesh   = pPlayer != nullptr ? pPlayer->getComponent<MeshComponent>() : nullptr;
+        applyToCamera( pMesh != nullptr ? pMesh->getWorldPosition() : pDirector->getPlayerFocus() );
     }
 
     void ArenaCameraComponent::applyToCamera( const float3& focus )

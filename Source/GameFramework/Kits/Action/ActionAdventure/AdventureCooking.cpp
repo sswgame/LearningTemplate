@@ -76,16 +76,6 @@ namespace sw
     {
     }
 
-    bool AdventureCooking::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &AdventureCooking::loadRoot, path, "AdventureCooking" );
-    }
-
-    bool AdventureCooking::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &AdventureCooking::loadRoot, xmlText, sourceName, "AdventureCooking" );
-    }
-
     uint32 AdventureCooking::loadRoot( const XmlNode& root, string_view sourceName )
     {
         _station               = AdventureCookingInternal::readName( root, "station", "CookingPot" );

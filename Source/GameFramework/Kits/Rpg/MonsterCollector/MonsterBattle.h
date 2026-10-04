@@ -13,6 +13,7 @@
 #include "GameFramework/Combat/TurnOrder.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterInstance.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -234,17 +235,17 @@ namespace sw
         int32   findFirstUsable( int32 side ) const;
         void    setOutcome( MonsterBattleOutcome outcome );
 
-        Side                           _arrSide[kSideCount];
-        vector<MonsterBattleEvent>     _listEvent;
-        TurnOrder                      _turnOrder;
-        GameRandom                     _random;
-        MonsterInstance                _captured;
-        hashed_string                  _weatherId;
-        const MonsterCollectorCatalog* _pCatalog;
-        const ElementChart*            _pChart;
-        int32                          _weatherTurns;
-        int32                          _escapeAttempts;
-        MonsterBattleOutcome           _outcome;
-        bool                           _bWild;
+        Side                            _arrSide[kSideCount];
+        EventBuffer<MonsterBattleEvent> _eventBuffer;
+        TurnOrder                       _turnOrder;
+        GameRandom                      _random;
+        MonsterInstance                 _captured;
+        hashed_string                   _weatherId;
+        const MonsterCollectorCatalog*  _pCatalog;
+        const ElementChart*             _pChart;
+        int32                           _weatherTurns;
+        int32                           _escapeAttempts;
+        MonsterBattleOutcome            _outcome;
+        bool                            _bWild;
     };
 } // namespace sw

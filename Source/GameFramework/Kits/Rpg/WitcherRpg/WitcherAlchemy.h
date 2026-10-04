@@ -11,6 +11,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Inventory/Crafting.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -39,7 +40,7 @@ namespace sw
     struct WitcherActiveEffect
     {
         hashed_string _itemId{};
-        float32       _remaining{ 0.0f };
+        Countdown     _remaining{};
         float32       _lockedToxicity{ 0.0f }; ///< 변이 혼합물 — 효과가 끝날 때까지 줄지 않는 몫
     };
 } // namespace sw

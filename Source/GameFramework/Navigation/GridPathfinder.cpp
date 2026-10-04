@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Navigation/NavGrid.h"
+#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {
@@ -13,10 +14,6 @@ namespace sw
         struct GridPathfinderInternal
         {
             static constexpr float32 kDiagonalFactor = 1.41421356f;
-
-            /** @brief 8 방향 — 앞 넷이 직교, 뒤 넷이 대각선입니다. */
-            static constexpr int32 kArrOffsetX[8] = { 1, -1, 0, 0, 1, 1, -1, -1 };
-            static constexpr int32 kArrOffsetY[8] = { 0, 0, 1, -1, 1, -1, 1, -1 };
         };
     } // namespace
 } // namespace sw
@@ -150,7 +147,7 @@ namespace sw
             const float32 costSoFar = _listCostSoFar[static_cast<size_t>( current._index )];
             for ( int32 direction = 0; direction < directionCount; ++direction )
             {
-                const int2 next{ cell._x + GridPathfinderInternal::kArrOffsetX[direction], cell._y + GridPathfinderInternal::kArrOffsetY[direction] };
+                const int2 next = GridTopology::getNeighbor( cell, direction ); // 앞 넷이 직교, 뒤 넷이 대각선
                 if ( grid.isWalkable( next ) == false )
                     continue;
                 const bool bDiagonal = direction >= 4;

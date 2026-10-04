@@ -77,16 +77,6 @@ namespace sw
     {
     }
 
-    bool StatCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &StatCatalog::loadRoot, path, "Stats" );
-    }
-
-    bool StatCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &StatCatalog::loadRoot, xmlText, sourceName, "Stats" );
-    }
-
     void StatCatalog::addStat( const StatDef& def )
     {
         if ( def._id.empty() )

@@ -35,7 +35,7 @@ namespace sw
 {
     BrZone::BrZone()
         : _settings{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pTerrain{ nullptr }
         , _random{}
         , _center{}
@@ -57,7 +57,7 @@ namespace sw
         _pTerrain = pTerrain;
         _mapSize  = MathUtil::max( 1.0f, mapSize );
         _random.setSeed( seed );
-        _listEvent.clear();
+        _eventBuffer.clear();
         const float32 half = _mapSize * 0.5f;
         _center            = float2{ half, half };
         _radius            = _settings._startRadius > 0.0f ? _settings._startRadius : half * MathUtil::sqrt( 2.0f );
@@ -137,8 +137,7 @@ namespace sw
 
     void BrZone::drainEvents( vector<BrZoneEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void BrZone::writeState( BitWriter& writer ) const
@@ -237,6 +236,6 @@ namespace sw
         event._phase  = _phaseIndex;
         event._center = _stage == BrZoneStage::Waiting ? _nextCenter : _center;
         event._radius = _stage == BrZoneStage::Waiting ? _nextRadius : _radius;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

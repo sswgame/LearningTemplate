@@ -13,6 +13,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Animation/Rig/RigIkSolver.h"
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Rig/RigSpringChain.h"

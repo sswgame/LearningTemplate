@@ -126,7 +126,7 @@ namespace sw
         , _listHabitat{}
         , _listCreature{}
         , _listHouse{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listReputationScratch{}
         , _listQuestScratch{}
         , _friendship{}
@@ -153,7 +153,7 @@ namespace sw
         _listHabitat.clear();
         _listCreature.clear();
         _listHouse.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _friendship.initialize( pReputationCatalog );
         _questLog.initialize( pQuestCatalog );
         _day            = 0;
@@ -161,7 +161,7 @@ namespace sw
         _lastAttractKey = -1;
         _appealTier     = -1;
         updateAppealTier();
-        _listEvent.clear(); // 처음 단계는 알리지 않는다
+        _eventBuffer.clear(); // 처음 단계는 알리지 않는다
     }
 
     bool CreatureTown::setObject( int32 x, int32 y, const hashed_string& object )
@@ -211,7 +211,7 @@ namespace sw
                 creature._arrivalDay = _day;
                 creature._listAbilityUse.assign( species._listAbility.size(), 0 );
                 _listCreature.push_back( creature );
-                _listEvent.push_back( CreatureTownEvent{ species._id, {}, instance._id, CreatureTownEvent::Kind::CreatureArrived } );
+                _eventBuffer.push( CreatureTownEvent{ species._id, {}, instance._id, CreatureTownEvent::Kind::CreatureArrived } );
                 (void)_friendship.changeValue( species._id, 0 ); // 세력 자리를 만들어 둔다(시작값)
                 ++arrivedCount;
             }
@@ -323,7 +323,7 @@ namespace sw
         ++usedCount;
         if ( pRule->_yieldItem.empty() == false && pYieldInventory != nullptr )
             (void)pYieldInventory->addItem( pRule->_yieldItem, pRule->_yieldCount );
-        _listEvent.push_back( CreatureTownEvent{ speciesId, pRule->_yieldItem, tileIndex, CreatureTownEvent::Kind::AbilityUsed } );
+        _eventBuffer.push( CreatureTownEvent{ speciesId, pRule->_yieldItem, tileIndex, CreatureTownEvent::Kind::AbilityUsed } );
         (void)setObject( x, y, pRule->_to );
         return CreatureAbilityResult::Ok;
     }
@@ -402,8 +402,7 @@ namespace sw
 
     void CreatureTown::drainEvents( vector<CreatureTownEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     const hashed_string* CreatureTown::findObject( int32 x, int32 y ) const
@@ -555,7 +554,7 @@ namespace sw
             if ( listKept[oldIndex] != SW_FALSE )
                 continue;
             const HabitatInstance& old = _listHabitat[oldIndex];
-            _listEvent.push_back( CreatureTownEvent{ old._habitatId, {}, old._id, CreatureTownEvent::Kind::HabitatLost } );
+            _eventBuffer.push( CreatureTownEvent{ old._habitatId, {}, old._id, CreatureTownEvent::Kind::HabitatLost } );
             for ( TownCreature& creature : _listCreature )
             {
                 if ( creature._habitat == old._id )
@@ -567,7 +566,7 @@ namespace sw
             if ( match._id >= 0 )
                 continue;
             match._id = _nextHabitatId++;
-            _listEvent.push_back( CreatureTownEvent{ match._habitatId, {}, match._id, CreatureTownEvent::Kind::HabitatFormed } );
+            _eventBuffer.push( CreatureTownEvent{ match._habitatId, {}, match._id, CreatureTownEvent::Kind::HabitatFormed } );
         }
         _listHabitat = std::move( listMatch );
 
@@ -643,7 +642,7 @@ namespace sw
         _friendship.drainEvents( _listReputationScratch );
         for ( const ReputationEvent& reputationEvent : _listReputationScratch )
         {
-            _listEvent.push_back(
+            _eventBuffer.push(
                 CreatureTownEvent{ reputationEvent._factionId, reputationEvent._newTier, reputationEvent._value, CreatureTownEvent::Kind::FriendshipTierChanged } );
         }
         updateAppealTier();
@@ -664,7 +663,7 @@ namespace sw
                 const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( creature._speciesId );
                 if ( pSpecies == nullptr || pSpecies->offersRequest( questEvent._questId ) == false )
                     continue;
-                _listEvent.push_back( CreatureTownEvent{ creature._speciesId, questEvent._questId, 0, CreatureTownEvent::Kind::RequestCompleted } );
+                _eventBuffer.push( CreatureTownEvent{ creature._speciesId, questEvent._questId, 0, CreatureTownEvent::Kind::RequestCompleted } );
                 (void)_friendship.changeValue( creature._speciesId, _settings._requestPoints );
                 bFriendshipChanged = true;
                 break;
@@ -689,7 +688,7 @@ namespace sw
         if ( tier == _appealTier )
             return;
         _appealTier = tier;
-        _listEvent.push_back( CreatureTownEvent{ {}, getAppealTierName(), tier, CreatureTownEvent::Kind::AppealTierChanged } );
+        _eventBuffer.push( CreatureTownEvent{ {}, getAppealTierName(), tier, CreatureTownEvent::Kind::AppealTierChanged } );
     }
 
     int2 CreatureTown::computeCreatureAnchor( const TownCreature& creature ) const

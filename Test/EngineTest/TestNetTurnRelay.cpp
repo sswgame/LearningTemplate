@@ -75,7 +75,7 @@ namespace
                 for ( const NetHostEvent& event : listHostEvent )
                 {
                     if ( event._kind == NetHostEvent::Kind::Disconnected )
-                        _server.onDisconnected( event._connectionId );
+                        _server.onConnectionClosed( event._connectionId, event._reason );
                 }
                 int32          connectionId = -1;
                 NetChannelType channel      = NetChannelType::Unreliable;
@@ -87,7 +87,7 @@ namespace
                         continue;
                     _listClientHost[index].update( _time );
                     while ( _listClientHost[index].receiveMessage( connectionId, channel, buffer ) )
-                        (void)_listClient[index].handleMessage( buffer );
+                        (void)_listClient[index].handleMessage( 0, buffer );
                 }
             }
         }
@@ -221,7 +221,7 @@ SW_TEST_CASE( NetTurnRelayTest, RoomsEnforceTurnsAndResyncReturningPlayers )
         NetChannelType channel      = NetChannelType::Unreliable;
         vector<uint8>  buffer;
         while ( fourthHost.receiveMessage( connectionId, channel, buffer ) )
-            (void)fourth.handleMessage( buffer );
+            (void)fourth.handleMessage( 0, buffer );
     }
     listEvent.clear();
     fourth.drainEvents( listEvent );

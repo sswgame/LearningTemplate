@@ -13,6 +13,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -142,17 +143,17 @@ namespace sw
         int32 drawInto( int32 player, int32 count );
         bool  hasColor( int32 player, UnoColor color, uint16 exceptCardId ) const;
 
-        vector<CardPile> _listHand;
-        vector<UnoEvent> _listEvent;
-        CardPile         _drawPile;
-        CardPile         _discardPile;
-        UnoSettings      _settings;
-        GameRandom       _random;
-        int32            _currentPlayer;
-        int32            _direction;
-        int32            _pendingDraw;
-        int32            _unoTarget; ///< 우노를 외치지 않고 한 장 남긴 사람(−1 = 없음)
-        int32            _winner;
-        UnoColor         _color;
+        vector<CardPile>      _listHand;
+        EventBuffer<UnoEvent> _eventBuffer;
+        CardPile              _drawPile;
+        CardPile              _discardPile;
+        UnoSettings           _settings;
+        GameRandom            _random;
+        int32                 _currentPlayer;
+        int32                 _direction;
+        int32                 _pendingDraw;
+        int32                 _unoTarget; ///< 우노를 외치지 않고 한 장 남긴 사람(−1 = 없음)
+        int32                 _winner;
+        UnoColor              _color;
     };
 } // namespace sw

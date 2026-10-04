@@ -119,24 +119,19 @@ namespace sw
     void NetSimWorld::tick( float32 deltaTime )
     {
         _listUnhandled.clear();
-        (void)_router.pump( _host, &_listUnhandled );
+        _listEvent.clear();
+        (void)_router.pump( _host, &_listUnhandled, &_listEvent );
         if ( _pSession != nullptr )
+        {
+            for ( const NetHostEvent& event : _listEvent )
+                _pSession->onHostEvent( *this, event );
             _pSession->onTickBegin( *this, deltaTime );
+        }
         // 씬의 `tick` 이 아니라 매니저를 바로 — 씬은 오디오 리스너 · 에미터를 프로세스에 하나인 오디오 엔진에 넣는다(월드가 여럿이면 서로 덮는다).
         getObjectManager().tick( deltaTime );
         if ( _pSession != nullptr )
             _pSession->onTickEnd( *this, deltaTime );
         ++_localTick;
-    }
-
-    void NetSimWorld::dispatchEvents()
-    {
-        _listEvent.clear();
-        _host.drainEvents( _listEvent );
-        if ( _pSession == nullptr )
-            return;
-        for ( const NetHostEvent& event : _listEvent )
-            _pSession->onHostEvent( *this, event );
     }
 
     void NetSimWorld::stop()
@@ -355,9 +350,6 @@ namespace sw
         _pServer->getHost().update( _time );
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
             pWorld->getHost().update( _time );
-        _pServer->dispatchEvents();
-        for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
-            pWorld->dispatchEvents();
     }
 
     void NetSimHarness::stepTicks( uint32 tickCount )

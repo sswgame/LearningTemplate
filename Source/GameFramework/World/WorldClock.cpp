@@ -38,7 +38,7 @@ namespace sw
 
     WorldClock::WorldClock()
         : _settings{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _secondOfDay{ 0.0f }
         , _timeScale{ 1.0f }
         , _day{ 0 }
@@ -53,7 +53,7 @@ namespace sw
         _settings._daysPerSeason = MathUtil::max( 1, _settings._daysPerSeason );
         if ( _settings._listSeason.empty() )
             _settings._listSeason.push_back( hashed_string( "Default" ) );
-        _listEvent.clear();
+        _eventBuffer.clear();
         _timeScale = 1.0f;
         _bPaused   = SW_FALSE;
         setTime( 0, _settings._startHour );
@@ -149,24 +149,23 @@ namespace sw
                 const int32 seasonBefore = getSeasonIndex();
                 const int32 yearBefore   = getYear();
                 ++_day;
-                _listEvent.push_back( WorldClockEvent{ _day, WorldClockEvent::Kind::DayChanged } );
+                _eventBuffer.push( WorldClockEvent{ _day, WorldClockEvent::Kind::DayChanged } );
                 if ( getSeasonIndex() != seasonBefore )
-                    _listEvent.push_back( WorldClockEvent{ getSeasonIndex(), WorldClockEvent::Kind::SeasonChanged } );
+                    _eventBuffer.push( WorldClockEvent{ getSeasonIndex(), WorldClockEvent::Kind::SeasonChanged } );
                 if ( getYear() != yearBefore )
-                    _listEvent.push_back( WorldClockEvent{ getYear(), WorldClockEvent::Kind::YearChanged } );
+                    _eventBuffer.push( WorldClockEvent{ getYear(), WorldClockEvent::Kind::YearChanged } );
             }
             const float32 hourAfter = getHour();
             if ( static_cast<int32>( hourAfter ) != hourIntBefore )
-                _listEvent.push_back( WorldClockEvent{ static_cast<int32>( hourAfter ), WorldClockEvent::Kind::HourChanged } );
+                _eventBuffer.push( WorldClockEvent{ static_cast<int32>( hourAfter ), WorldClockEvent::Kind::HourChanged } );
             const DayPhase phaseAfter = computePhase( hourAfter );
             if ( phaseAfter != phaseBefore )
-                _listEvent.push_back( WorldClockEvent{ static_cast<int32>( phaseAfter ), WorldClockEvent::Kind::PhaseChanged } );
+                _eventBuffer.push( WorldClockEvent{ static_cast<int32>( phaseAfter ), WorldClockEvent::Kind::PhaseChanged } );
         }
     }
 
     void WorldClock::drainEvents( vector<WorldClockEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

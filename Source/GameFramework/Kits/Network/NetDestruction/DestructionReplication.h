@@ -94,8 +94,7 @@ namespace sw
      * @code
      *     server.initialize( &host, &manager, settings );
      *     server.registerObject( netId, *pFracture );           // 서버 · 클라이언트가 같은 번호(씬 엔티티 순서 등)
-     *     router.addHandler( &server );
-     *     // 호스트 사건: Connected → server.onConnected( id ), Disconnected → server.onDisconnected( id )
+     *     router.addHandler( &server );                         // 연결 사건도 라우터가 넘긴다(늦은 참가 스냅숏)
      *     server.update( serverTick );                          // 월드 틱 뒤
      * @endcode
      */
@@ -107,14 +106,16 @@ namespace sw
         void initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationSettings& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 서버 쪽은 권한을 켠다. 같은 번호면 바꾼다. */
         void registerObject( uint32 netId, FractureComponentBase& component );
-        /** @brief 클라이언트가 들어왔다 — 사건이 있는 오브젝트마다 스냅숏을 보낸다(다음 `update`). */
-        void onConnected( int32 connectionId );
-        void onDisconnected( int32 connectionId );
         /** @brief 월드 틱 뒤에 부릅니다 — 새 사건 → 스냅숏 → 자세 → 해시 순으로 보낸다. */
         void update( uint32 serverTick );
 
-        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kDestruction; }
-        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
+        uint8           getMessageRangeBase() const override { return NetKitMessageRange::kDestruction; }
+        uint16          getMessageKindMask() const override { return 1u << ( NetDestructionMessage::kSnapshotRequest - NetKitMessageRange::kDestruction ); }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        /** @brief 클라이언트가 들어왔다 — 사건이 있는 오브젝트마다 스냅숏을 보낸다(다음 `update`). */
+        void onConnectionOpened( int32 connectionId ) override;
+        /** @brief 그 연결에 쌓인 스냅숏 요청을 지운다. */
+        void onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override;
 
         const DestructionReplicationStats& getStats() const { return _stats; }
 
@@ -188,7 +189,14 @@ namespace sw
         void skipNextEvent( uint32 netId );
 
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kDestruction; }
-        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
+        /** @brief 사건 · 스냅숏 조각 · 자세 · 해시 — 같은 영역의 스냅숏 요청은 서버가 맡는다. */
+        uint16 getMessageKindMask() const override
+        {
+            constexpr uint8 kBase = NetKitMessageRange::kDestruction;
+            return static_cast<uint16>( ( 1u << ( NetDestructionMessage::kEvent - kBase ) ) | ( 1u << ( NetDestructionMessage::kSnapshotPart - kBase ) ) |
+                                        ( 1u << ( NetDestructionMessage::kPose - kBase ) ) | ( 1u << ( NetDestructionMessage::kHash - kBase ) ) );
+        }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
 
         /** @brief 덩어리를 그리는 서버 틱(보간 지연만큼 과거, 소수)입니다. 자세를 하나도 받지 않았으면 음수입니다. */
         float32                            getRenderTick() const { return _renderTick; }

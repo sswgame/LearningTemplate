@@ -13,6 +13,7 @@
 #include "GameFramework/Combat/TurnOrder.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgCatalog.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -219,22 +220,22 @@ namespace sw
         int32 findLivingEnemy( int32 preferred ) const;
         void  finishIfDecided();
 
-        vector<JrpgEnemyState>  _listEnemy;
-        vector<JrpgCommand>     _listCommand;   ///< 멤버 자리마다
-        vector<uint8>           _listDefending; ///< 이번 라운드 방어 중(멤버 자리마다)
-        vector<JrpgBattleEvent> _listEvent;
-        TurnOrder               _turnOrder;
-        GameRandom              _random;
-        JrpgBattleSettings      _settings;
-        const JrpgCatalog*      _pCatalog;
-        const TimingJudge*      _pJudge;
-        const IJrpgTimingInput* _pTimingInput;
-        JrpgParty*              _pParty;
-        int64                   _rewardExp;
-        int64                   _rewardGold;
-        int32                   _comboPoints;
-        int32                   _round;
-        int32                   _fleeAttempts;
-        JrpgBattleOutcome       _outcome;
+        vector<JrpgEnemyState>       _listEnemy;
+        vector<JrpgCommand>          _listCommand;   ///< 멤버 자리마다
+        vector<uint8>                _listDefending; ///< 이번 라운드 방어 중(멤버 자리마다)
+        EventBuffer<JrpgBattleEvent> _eventBuffer;
+        TurnOrder                    _turnOrder;
+        GameRandom                   _random;
+        JrpgBattleSettings           _settings;
+        const JrpgCatalog*           _pCatalog;
+        const TimingJudge*           _pJudge;
+        const IJrpgTimingInput*      _pTimingInput;
+        JrpgParty*                   _pParty;
+        int64                        _rewardExp;
+        int64                        _rewardGold;
+        int32                        _comboPoints;
+        int32                        _round;
+        int32                        _fleeAttempts;
+        JrpgBattleOutcome            _outcome;
     };
 } // namespace sw

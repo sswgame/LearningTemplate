@@ -25,7 +25,7 @@ namespace sw
 {
     UnoGame::UnoGame()
         : _listHand{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _drawPile{}
         , _discardPile{}
         , _settings{}
@@ -115,7 +115,7 @@ namespace sw
         _unoTarget     = -1;
         _winner        = -1;
         _color         = layout._color;
-        _listEvent.clear();
+        _eventBuffer.clear();
     }
 
     bool UnoGame::isPlayable( const Card& card ) const
@@ -163,7 +163,7 @@ namespace sw
                 (void)_discardPile.drawInto( _drawPile, _discardPile.getCount() );
                 _drawPile.shuffle( _random );
                 _discardPile.push( top );
-                _listEvent.push_back( UnoEvent{ -1, _drawPile.getCount(), Card::kNoCard, UnoEvent::Kind::Reshuffled } );
+                _eventBuffer.push( UnoEvent{ -1, _drawPile.getCount(), Card::kNoCard, UnoEvent::Kind::Reshuffled } );
             }
             Card card;
             if ( _drawPile.draw( card ) == false )
@@ -194,21 +194,21 @@ namespace sw
         _unoTarget = -1; // 앞사람을 잡을 기회는 다음 행동에서 닫힌다
         (void)hand.removeAt( index );
         _discardPile.push( card );
-        _listEvent.push_back( UnoEvent{ player, 0, card._id, UnoEvent::Kind::Played } );
+        _eventBuffer.push( UnoEvent{ player, 0, card._id, UnoEvent::Kind::Played } );
         _color = bWild ? chosenColor : static_cast<UnoColor>( card._suit );
         if ( bWild )
-            _listEvent.push_back( UnoEvent{ player, static_cast<int32>( _color ), card._id, UnoEvent::Kind::ColorChosen } );
+            _eventBuffer.push( UnoEvent{ player, static_cast<int32>( _color ), card._id, UnoEvent::Kind::ColorChosen } );
         if ( hand.getCount() == 1 )
         {
             if ( bDeclareUno )
-                _listEvent.push_back( UnoEvent{ player, 0, Card::kNoCard, UnoEvent::Kind::UnoDeclared } );
+                _eventBuffer.push( UnoEvent{ player, 0, Card::kNoCard, UnoEvent::Kind::UnoDeclared } );
             else
                 _unoTarget = player;
         }
         if ( hand.isEmpty() )
         {
             _winner = player;
-            _listEvent.push_back( UnoEvent{ player, 0, Card::kNoCard, UnoEvent::Kind::Won } );
+            _eventBuffer.push( UnoEvent{ player, 0, Card::kNoCard, UnoEvent::Kind::Won } );
             return true;
         }
 
@@ -216,14 +216,14 @@ namespace sw
         {
             case UnoValue::Skip:
             {
-                _listEvent.push_back( UnoEvent{ findNextPlayer( player, 1 ), 0, Card::kNoCard, UnoEvent::Kind::Skipped } );
+                _eventBuffer.push( UnoEvent{ findNextPlayer( player, 1 ), 0, Card::kNoCard, UnoEvent::Kind::Skipped } );
                 _currentPlayer = findNextPlayer( player, 2 );
                 break;
             }
             case UnoValue::Reverse:
             {
                 _direction = -_direction;
-                _listEvent.push_back( UnoEvent{ player, _direction, Card::kNoCard, UnoEvent::Kind::Reversed } );
+                _eventBuffer.push( UnoEvent{ player, _direction, Card::kNoCard, UnoEvent::Kind::Reversed } );
                 // 둘이면 리버스는 스킵 — 다시 내 차례.
                 _currentPlayer = getPlayerCount() == 2 ? player : findNextPlayer( player, 1 );
                 break;
@@ -242,8 +242,8 @@ namespace sw
                 const int32 victim = findNextPlayer( player, 1 );
                 const int32 drawn  = drawInto( victim, amount + _pendingDraw );
                 _pendingDraw       = 0;
-                _listEvent.push_back( UnoEvent{ victim, drawn, Card::kNoCard, UnoEvent::Kind::Drew } );
-                _listEvent.push_back( UnoEvent{ victim, 0, Card::kNoCard, UnoEvent::Kind::Skipped } );
+                _eventBuffer.push( UnoEvent{ victim, drawn, Card::kNoCard, UnoEvent::Kind::Drew } );
+                _eventBuffer.push( UnoEvent{ victim, 0, Card::kNoCard, UnoEvent::Kind::Skipped } );
                 _currentPlayer = findNextPlayer( player, 2 );
                 break;
             }
@@ -264,7 +264,7 @@ namespace sw
         const int32 count = _pendingDraw > 0 ? _pendingDraw : 1;
         const int32 drawn = drawInto( player, count );
         _pendingDraw      = 0;
-        _listEvent.push_back( UnoEvent{ player, drawn, Card::kNoCard, UnoEvent::Kind::Drew } );
+        _eventBuffer.push( UnoEvent{ player, drawn, Card::kNoCard, UnoEvent::Kind::Drew } );
         _currentPlayer = findNextPlayer( player, 1 );
         return true;
     }
@@ -279,11 +279,11 @@ namespace sw
             return false;
         if ( caller == target )
         {
-            _listEvent.push_back( UnoEvent{ target, 0, Card::kNoCard, UnoEvent::Kind::UnoDeclared } );
+            _eventBuffer.push( UnoEvent{ target, 0, Card::kNoCard, UnoEvent::Kind::UnoDeclared } );
             return true;
         }
         const int32 drawn = drawInto( target, _settings._unoPenalty );
-        _listEvent.push_back( UnoEvent{ target, drawn, Card::kNoCard, UnoEvent::Kind::UnoPenalty } );
+        _eventBuffer.push( UnoEvent{ target, drawn, Card::kNoCard, UnoEvent::Kind::UnoPenalty } );
         return true;
     }
 
@@ -312,7 +312,6 @@ namespace sw
 
     void UnoGame::drainEvents( vector<UnoEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

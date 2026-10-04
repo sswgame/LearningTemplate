@@ -77,15 +77,6 @@ namespace test
             _replication.update( world.getLocalTick() );
         }
 
-        void onHostEvent( NetSimWorld& world, const NetHostEvent& event ) override
-        {
-            (void)world;
-            if ( event._kind == NetHostEvent::Kind::Connected )
-                _replication.onConnected( event._connectionId );
-            else
-                _replication.onDisconnected( event._connectionId );
-        }
-
         DestructionReplicationServer _replication;
         ShowcaseObjects              _objects;
     };

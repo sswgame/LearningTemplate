@@ -24,6 +24,7 @@
     #include <xcb/xcb.h>
 #endif
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
+#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 
 namespace sw
 {

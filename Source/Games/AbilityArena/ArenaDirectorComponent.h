@@ -101,9 +101,11 @@ namespace sw
          */
         void launchProjectile( const AbilitySystemComponent& from, const float3& facing, const GameplayEffectSpec& spec, const GameplayEffectSpec& extraSpec,
                                float32 speed, float32 range ) const;
-        /** @brief 플레이어의 자리(없으면 아레나 가운데)입니다 — 카메라가 따라간다. */
+        /** @brief 이번 프레임 모습의 플레이어 자리(틱 전, 없으면 아레나 가운데)입니다. */
         const float3& getPlayerFocus() const { return _playerFocus; }
-        float32       getArenaHalfSize() const { return _arenaHalfSize; }
+        /** @brief 이번 프레임 모습의 플레이어 오브젝트입니다(없으면 빈 핸들). 뒤 단계(PostPhysics 이후)는 이것의 트랜스폼으로 이번 프레임 자리를 읽는다. */
+        GameObjectHandle getPlayerObject() const { return _playerObject; }
+        float32          getArenaHalfSize() const { return _arenaHalfSize; }
         /** @brief 플레이어도 AI 가 움직이면 true 입니다(`_bAutoPlay` 또는 `-gv_arenaAutoPlay=1`). */
         bool   isAutoPlayOn() const;
         uint32 getWave() const { return _wave; }
@@ -209,6 +211,7 @@ namespace sw
         vector<uint8>                _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         shared_ptr<MaterialInstance> _arrTint[4];        ///< 플레이어 · Grunt · Caster(`ArenaUnitKind` 순) · 투사체
         float3                       _playerFocus;
+        GameObjectHandle             _playerObject;       ///< 이번 프레임 모습의 플레이어(`getPlayerObject`)
         float32                      _playerRespawnTimer; ///< 0 이상이면 플레이어가 다시 서기까지 남은 시간
         float32                      _statusLogTimer;
         uint32                       _wave;

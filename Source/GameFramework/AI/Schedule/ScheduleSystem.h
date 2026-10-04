@@ -25,6 +25,7 @@
 #include "GameFramework/AI/Schedule/ScheduleLocator.h"
 #include "GameFramework/AI/Schedule/SchedulePathing.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/World/WorldClock.h"
 
 namespace sw
@@ -381,7 +382,7 @@ namespace sw
         StraightSchedulePathing    _defaultPathing; ///< 곧은 선
         ScheduleSystemSettings     _settings;
         vector<NpcRuntime>         _listNpc;
-        vector<ScheduleEvent>      _listEvent;
+        EventBuffer<ScheduleEvent> _eventBuffer;
         vector<AppointmentCheck>   _listAppointmentCheck;
         vector<int32>              _listBrokenAppointment; ///< 오늘 깨진 약속 자리
         vector<int32>              _listMetAppointment;    ///< 오늘 모인 약속 자리(사건을 한 번만)

@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Inventory/Crafting.h"
 #include "GameFramework/Inventory/GridInventory.h"
@@ -180,13 +181,12 @@ namespace sw
      *        <Sequence id="bells" steps="low,high,mid" flag="bellsDone" mistakeSanity="5"/><Document id="diary" title="Diary" clues="knife,gloves"/>
      *        <Deduction id="culprit" answer="butler" links="knife-gloves,gloves-pantry" flag="caseSolved" wrongSanity="15"/></HorrorCatalog>` 를 읽습니다.
      */
-    class SW_GF_API HorrorCatalog
+    class SW_GF_API HorrorCatalog : public XmlCatalog<HorrorCatalog>
     {
+        friend class XmlCatalog<HorrorCatalog>;
+
     public:
         HorrorCatalog();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         /** @brief 조합 작업대 이름(`Combine`)입니다. */
         static hashed_string getCombineStation() { return hashed_string( "Combine" ); }
@@ -207,7 +207,8 @@ namespace sw
         void                         setRules( const SurvivalHorrorRules& rules ) { _rules = rules; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "HorrorCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<HorrorItemDef>      _itemCatalog;
         GameCatalog<HorrorMonsterDef>   _monsterCatalog;

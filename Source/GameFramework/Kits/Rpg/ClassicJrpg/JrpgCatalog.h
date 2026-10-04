@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Progression/LevelProgress.h"
 
@@ -181,14 +182,14 @@ namespace sw
      *          `<Enemy id="wyrd" hp="120" str="14" agi="6" vit="8" exp="30" gold="20" attackType="Blunt" weak="Sun" cast="flame" castTurns="2" castEvery="2" locks="Sword,Moon" boss="false"/>`
      *          `<Area id="field" rate="0.0625" grace="4"><Group enemies="slime,slime" weight="3"/></Area>`
      */
-    class SW_GF_API JrpgCatalog
+    class SW_GF_API JrpgCatalog : public XmlCatalog<JrpgCatalog>
     {
+        friend class XmlCatalog<JrpgCatalog>;
+
     public:
         JrpgCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               clear();
+        void clear();
 
         const JrpgClassDef*    findClass( const hashed_string& id ) const { return _classCatalog.find( id ); }
         const JrpgSpellDef*    findSpell( const hashed_string& id ) const { return _spellCatalog.find( id ); }
@@ -199,10 +200,11 @@ namespace sw
         const ExperienceCurve& getCurve() const { return _curve; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
-        void   loadClass( const XmlNode& node, const utf8* pId );
-        void   loadSpell( const XmlNode& node, const utf8* pId, string_view sourceName );
-        void   loadEnemy( const XmlNode& node, const utf8* pId );
+        static constexpr const utf8* kXmlRootName = "JrpgCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        void                         loadClass( const XmlNode& node, const utf8* pId );
+        void                         loadSpell( const XmlNode& node, const utf8* pId, string_view sourceName );
+        void                         loadEnemy( const XmlNode& node, const utf8* pId );
 
         GameCatalog<JrpgClassDef>  _classCatalog;
         GameCatalog<JrpgSpellDef>  _spellCatalog;
