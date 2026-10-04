@@ -10,11 +10,9 @@ namespace sw
     {
         struct ElementGridInternal
         {
-            static constexpr int32 kNeighborCount             = 4;
-            static constexpr int32 kNeighborX[kNeighborCount] = { 1, -1, 0, 0 };
-            static constexpr int32 kNeighborY[kNeighborCount] = { 0, 0, 1, -1 };
-            static constexpr int32 kMaxStatusValue            = 255;
-            static constexpr int32 kNeverExpires              = 1 << 30;
+
+            static constexpr int32 kMaxStatusValue = 255;
+            static constexpr int32 kNeverExpires   = 1 << 30;
         };
     } // namespace
 } // namespace sw
@@ -23,10 +21,9 @@ namespace sw
 {
     ElementGrid::ElementGrid()
         : _listCell{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listPending{}
-        , _listFloodQueue{}
-        , _listVisited{}
+        , _floodSearch{}
         , _pTable{ nullptr }
         , _timer{}
         , _wind{}
@@ -44,7 +41,7 @@ namespace sw
         _timer  = FixedStepTimer( MathUtil::max( 0.001f, pTable != nullptr ? pTable->getStepTime() : 0.25f ), 1.0f );
         _listCell.clear();
         _listCell.resize( static_cast<size_t>( _width ) * static_cast<size_t>( _height ) );
-        _listEvent.clear();
+        _eventBuffer.clear();
         _wind      = int2{};
         _stepCount = 0;
     }
@@ -122,7 +119,7 @@ namespace sw
         ElementEvent event;
         event._name = name;
         event._cell = cell;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     int32 ElementGrid::applyStimulus( const int2& cell, int32 stimulus )
@@ -145,28 +142,27 @@ namespace sw
                 return 1;
             }
             // 너비 우선으로 이어진 칸(네 이웃, 이웃 순서 고정 — 알림 순서도 늘 같다)에 상태를 붙인다.
-            _listVisited.assign( _listCell.size(), SW_FALSE );
-            _listFloodQueue.clear();
-            _listFloodQueue.push_back( cell );
-            _listVisited[static_cast<size_t>( toIndex( cell ) )] = SW_TRUE;
-            for ( size_t head = 0; head < _listFloodQueue.size(); ++head )
+            const GridTopology topology{ _width, _height };
+            _floodSearch.begin( topology.getCellCount() );
+            _floodSearch.visit( toIndex( cell ), -1 );
+            while ( _floodSearch.hasNext() )
             {
-                const int2 current = _listFloodQueue[head];
+                const int32 index   = _floodSearch.popNext();
+                const int2  current = topology.toCell( index );
                 addStatus( getCell( current ), rule._floodStatus );
                 pushEvent( rule._event, current );
-                for ( int32 neighbor = 0; neighbor < ElementGridInternal::kNeighborCount; ++neighbor )
+                for ( int32 neighbor = 0; neighbor < GridTopology::kOrthogonalCount; ++neighbor )
                 {
-                    const int2 next{ current._x + ElementGridInternal::kNeighborX[neighbor], current._y + ElementGridInternal::kNeighborY[neighbor] };
+                    const int2 next = GridTopology::getNeighbor( current, neighbor );
                     if ( isInside( next ) == false )
                         continue;
-                    const size_t nextIndex = static_cast<size_t>( toIndex( next ) );
-                    if ( _listVisited[nextIndex] == SW_TRUE || _pTable->hasFlag( _listCell[nextIndex]._material, rule._floodThrough ) == false )
+                    const int32 nextIndex = toIndex( next );
+                    if ( _floodSearch.isVisited( nextIndex ) || _pTable->hasFlag( _listCell[static_cast<size_t>( nextIndex )]._material, rule._floodThrough ) == false )
                         continue;
-                    _listVisited[nextIndex] = SW_TRUE;
-                    _listFloodQueue.push_back( next );
+                    _floodSearch.visit( nextIndex, index );
                 }
             }
-            return static_cast<int32>( _listFloodQueue.size() );
+            return static_cast<int32>( _floodSearch.getVisitOrder().size() );
         }
         return 0;
     }
@@ -193,11 +189,10 @@ namespace sw
             }
             return;
         }
-        for ( int32 neighbor = 0; neighbor < ElementGridInternal::kNeighborCount; ++neighbor )
+        for ( int32 neighbor = 0; neighbor < GridTopology::kOrthogonalCount; ++neighbor )
             _listPending.push_back( PendingChange{
-                int2{ position._x + ElementGridInternal::kNeighborX[neighbor], position._y + ElementGridInternal::kNeighborY[neighbor] },
-                ruleIndex
-            } );
+                GridTopology::getNeighbor( position, neighbor ),
+                ruleIndex } );
     }
 
     void ElementGrid::step()
@@ -253,9 +248,9 @@ namespace sw
                         }
                         case ElementStepRuleKind::Convert:
                         {
-                            for ( int32 neighbor = 0; neighbor < ElementGridInternal::kNeighborCount; ++neighbor )
+                            for ( int32 neighbor = 0; neighbor < GridTopology::kOrthogonalCount; ++neighbor )
                             {
-                                const int2 next{ x + ElementGridInternal::kNeighborX[neighbor], y + ElementGridInternal::kNeighborY[neighbor] };
+                                const int2 next = GridTopology::getNeighbor( int2{ x, y }, neighbor );
                                 if ( isInside( next ) && getMaterial( next ) == rule._material )
                                     _listPending.push_back( PendingChange{ next, static_cast<int32>( ruleIndex ) } );
                             }
@@ -320,8 +315,7 @@ namespace sw
 
     void ElementGrid::drainEvents( vector<ElementEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     uint32 ElementGrid::computeStateHash() const

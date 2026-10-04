@@ -228,6 +228,12 @@ namespace sw
          *          먼저 돌아 붙일 씬 컴포넌트가 없고, 오브젝트는 루트로 남는다.
          */
         void deferStructuralChange( StructuralChangeDelegate func );
+        /**
+         * @brief 틱 중의 계층 변경(attach · detach)을 구조 변경 큐에 넣고, 이번 단계에 계층 변경이 미뤄졌다고 적습니다.
+         * @details 그 뒤로는 스테이지 경계의 트랜스폼 적용(`applyStageTransforms`)을 하지 않습니다 — 미룬 계층 변경보다 뒤에 부른 쓰기가
+         *          그 변경보다 먼저 적용되면 `KeepWorld` 부착이 쓴 로컬 값을 다시 구해 덮는다(규칙: 구조 변경 뒤에 쓰기).
+         */
+        void deferHierarchyChange( StructuralChangeDelegate func );
 
         /**
          * @brief 병렬 틱 중의 트랜스폼 쓰기 한 건을 슬롯 큐에 올립니다. 세터가 `isStructuralMutationFrozen()` 일 때 부릅니다.
@@ -237,9 +243,9 @@ namespace sw
         void queueTransformWrite( const SceneTransformWrite& write );
 
         /**
-         * @brief 이 스레드가 지금 틱하고 있는 오브젝트입니다. 오브젝트 그룹 틱(보통 경로)이 항목을 도는 동안만 채워지고, 그 밖에서는 nullptr 입니다.
-         * @details 씬 컴포넌트의 세터가 "내 오브젝트를 틱하는 스레드인가" 를 묻습니다. 그렇다면 한 오브젝트의 항목은 한 워커가 도므로
-         *          칸의 대기 자리에 잠금 없이 바로 쓰고, 아니면(다른 오브젝트의 컴포넌트 · 선행 조건 스테이지 경로) 쓰기 큐로 갑니다.
+         * @brief 이 스레드가 지금 틱하고 있는 오브젝트입니다. 오브젝트 그룹 틱 · 선행 조건 스테이지가 항목을 도는 동안 채워지고, 그 밖에서는 nullptr 입니다.
+         * @details 씬 컴포넌트의 세터가 "내 오브젝트를 틱하는 스레드인가" 를 묻습니다. 그렇다면 한 오브젝트의 항목은 동시에 한 워커만 도므로
+         *          칸의 대기 자리에 잠금 없이 바로 쓰고, 아니면(다른 오브젝트의 컴포넌트) 쓰기 큐로 갑니다.
          */
         static const GameObject* getTickingObject();
 
@@ -382,6 +388,8 @@ namespace sw
          *          틱하지 않는 MeshComponent 를 붙였다 떼는 것으로는 오르지 않습니다. 다시 지을 때도 바뀐 오브젝트의 컴포넌트 몇 개만 훑습니다.
          */
         uint32 getTickStageBuildCount() const { return _tickStageBuildCount.load( std::memory_order_relaxed ); }
+        /** @brief 선행 조건 스테이지 경계에서 틱 중 트랜스폼 쓰기를 적용한 횟수(누적)입니다. 진단 · 회귀 테스트용입니다. */
+        uint32 getStageTransformApplyCount() const { return _stageTransformApplyCount; }
 
         /** @brief 이름으로 만들 수 있는 컴포넌트 타입(리플렉션 표에서 `_addComponent` 가 있는 타입)의 짧은 이름 목록입니다. 에디터의 "Add Component" 가 씁니다. */
         static vector<hashed_string> getRegisteredComponentTypeNames();
@@ -429,8 +437,8 @@ namespace sw
 
         /**
          * @brief 등록부의 오브젝트를 TickGroup 순으로 틱합니다.
-         * @details 보통은 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눕니다(한 오브젝트의 항목은 한 워커가 순서대로).
-         *          서브틱 선행 조건이 하나라도 있으면 등록부가 지은 DAG 스테이지를 차례로 돕니다. 그 캐시는 등록부 세대로 무효화됩니다.
+         * @details 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나누고(한 오브젝트의 항목은 한 워커가 순서대로), 이어서 그 그룹의 선행 조건
+         *          스테이지(등록부가 짓는다 — 선행 조건을 가진 항목만)를 차례로 돕니다.
          */
         void tickComponents( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
         /** @brief 플레이 중에 붙어 줄을 선 컴포넌트의 onBeginPlay 를 부릅니다(게임 스레드, 틱 밖). 도는 중에 선 것은 다음 번에 돕니다. */
@@ -444,6 +452,12 @@ namespace sw
         void tickComponentsPhase( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
         /** @brief 틱이 남긴 것을 적용합니다 — 지연 구조 변경 → 틱 쓰기 → 틱 뒤 큐 · 병합 · 시작(게임 스레드, 틱 밖). 물리 앞 · 프레임 끝에 한 번씩. */
         void applyTickResults();
+        /**
+         * @brief 선행 조건 스테이지 사이(게임 스레드, 동결 중)에서 그때까지 쌓인 틱 중 트랜스폼 쓰기를 적용하고 플러시합니다.
+         * @details 기다리는 항목이 있는 스테이지 앞에서만 불립니다(`TickStage::_bApplyBefore`). 구조 변경 · 틱 뒤 큐는 그대로 단계 끝이고,
+         *          이번 단계에 계층 변경이 미뤄졌으면(`deferHierarchyChange`) 아무것도 하지 않습니다.
+         */
+        void applyStageTransforms();
         /** @brief 새 ObjectId 를 발급합니다. */
         uint64 generateNewId();
         /** @brief `_mutex` 를 쥔 채 @p objectId 로 오브젝트를 만들어 이름 맵 · id 표 · 병합 대기 목록에 올립니다. */
@@ -588,18 +602,18 @@ namespace sw
         void                            stepOverlapWorld( float32 deltaTime );
         vector<BoxCollider2DComponent*> _listCollider; ///< `registerCollider` 한 콜라이더. 콜라이더가 자기 자리(`_colliderIndex`)를 든다
 
-        atomic<bool>            _bTicking;                ///< 컴포넌트 틱 중(`isStructuralMutationFrozen`)
-        bool                    _bProcessingDestruction;  ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다
-        uint64                  _lastStageGeneration;     ///< DAG 스테이지 캐시(`_listCachedTickStage`)를 지은 등록부 세대
-        atomic<uint32>          _tickStageBuildCount;     ///< 등록부가 항목을 다시 지은 틱의 수(진단)
-        vector<TickStage>       _listCachedTickStage;     ///< 선행 조건이 있을 때만 쓰는 DAG 스테이지(등록부가 짓습니다)
-        vector<GameObject*>     _listPlayWalk;            ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)
-        atomic<bool>            _bHasBegunPlay;           ///< 플레이 중(`hasBegunPlay`)
-        mutex                   _beginPlayMutex;          ///< 시작 줄을 지킵니다(비동기 씬 로드는 워커에서 붙입니다)
-        vector<ComponentHandle> _listPendingBeginPlay;    ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
-        vector<ComponentHandle> _listProcessingBeginPlay; ///< 도는 중인 시작 줄(할당 재사용)
-        DeferredDelegateQueue   _deferredStructuralQueue; ///< 틱이 미룬 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성), 부른 순서. 틱 직후 가장 먼저 돈다
-        DeferredDelegateQueue   _deferredPostTickQueue;   ///< 틱이 미룬 스폰 · 데미지 · 태그(`deferPostTick`)
+        atomic<bool>            _bTicking;                 ///< 컴포넌트 틱 중(`isStructuralMutationFrozen`)
+        bool                    _bProcessingDestruction;   ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다
+        atomic<uint8>           _bDeferredHierarchyChange; ///< 이번 단계에 계층 변경이 미뤄졌는지 — 그 뒤로는 스테이지 경계 적용을 하지 않는다
+        uint32                  _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
+        atomic<uint32>          _tickStageBuildCount;      ///< 등록부가 항목을 다시 지은 틱의 수(진단)
+        vector<GameObject*>     _listPlayWalk;             ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)
+        atomic<bool>            _bHasBegunPlay;            ///< 플레이 중(`hasBegunPlay`)
+        mutex                   _beginPlayMutex;           ///< 시작 줄을 지킵니다(비동기 씬 로드는 워커에서 붙입니다)
+        vector<ComponentHandle> _listPendingBeginPlay;     ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
+        vector<ComponentHandle> _listProcessingBeginPlay;  ///< 도는 중인 시작 줄(할당 재사용)
+        DeferredDelegateQueue   _deferredStructuralQueue;  ///< 틱이 미룬 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성), 부른 순서. 틱 직후 가장 먼저 돈다
+        DeferredDelegateQueue   _deferredPostTickQueue;    ///< 틱이 미룬 스폰 · 데미지 · 태그(`deferPostTick`)
 
         /** @brief 트랜스폼 계층입니다. PhysicsWorld 처럼 매니저가 소유만 합니다. */
         SceneTransformHierarchy _transformHierarchy;

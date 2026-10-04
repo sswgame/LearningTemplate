@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
 
@@ -55,14 +56,14 @@ namespace sw
      * @brief `<DeckBattleCatalog><Card id="strike" name="Strike" cost="1" effects="Damage:6"/></DeckBattleCatalog>` 를 읽습니다.
      *        `effects` 는 쉼표로 나눈 `종류:양`(Damage · Block · Draw · Energy)입니다.
      */
-    class SW_GF_API DeckBattleCatalog
+    class SW_GF_API DeckBattleCatalog : public XmlCatalog<DeckBattleCatalog>
     {
+        friend class XmlCatalog<DeckBattleCatalog>;
+
     public:
         DeckBattleCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        int32              addCard( const DeckBattleCardDef& def ) { return _catalog.add( def ); }
+        int32 addCard( const DeckBattleCardDef& def ) { return _catalog.add( def ); }
 
         const DeckBattleCardDef* findCard( const hashed_string& id ) const { return _catalog.find( id ); }
         int32                    findIndex( const hashed_string& id ) const { return _catalog.findIndex( id ); }
@@ -70,7 +71,8 @@ namespace sw
         int32                    getCount() const { return static_cast<int32>( _catalog.getCount() ); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "DeckBattleCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<DeckBattleCardDef> _catalog;
     };

@@ -6,6 +6,7 @@
 #include "Engine/Character/ResolvedSocketTable.h"
 #include "Engine/Character/SocketBindingComponent.h"
 #include "Engine/Character/SocketSet.h"
+#include "Engine/Object/Component/Physics/SocketPhysicsBody.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

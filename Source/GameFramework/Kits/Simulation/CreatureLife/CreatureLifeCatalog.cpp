@@ -165,16 +165,6 @@ namespace sw
     {
     }
 
-    bool CreatureLifeCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &CreatureLifeCatalog::loadRoot, path, "CreatureLifeCatalog" );
-    }
-
-    bool CreatureLifeCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &CreatureLifeCatalog::loadRoot, xmlText, sourceName, "CreatureLifeCatalog" );
-    }
-
     void CreatureLifeCatalog::addHabitat( const HabitatDef& habitat )
     {
         if ( habitat._width <= 0 || habitat._height <= 0 || static_cast<int32>( habitat._listCell.size() ) != habitat._width * habitat._height )

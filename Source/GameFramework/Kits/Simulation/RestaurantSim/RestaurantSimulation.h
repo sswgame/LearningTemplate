@@ -17,6 +17,8 @@
 #include "GameFramework/Kits/Simulation/RestaurantSim/IngredientStock.h"
 #include "GameFramework/Progression/LevelProgress.h"
 #include "GameFramework/Progression/Reputation.h"
+#include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
@@ -285,35 +287,35 @@ namespace sw
         const RecipeDef* findRecipe( const DishDef& dish ) const;
         float32          computeDishDemand( const DishDef& dish, int64 price ) const;
 
-        vector<StaffMember>        _listStaff;
-        vector<RestaurantCustomer> _listCustomer;
-        deque<KitchenOrder>        _listOrder;
-        vector<MenuEntry>          _listMenu;
-        vector<StationSlot>        _listStation;
-        vector<float32>            _listSatisfaction; ///< 최근 N 손님(오래된 것이 앞)
-        vector<RestaurantEvent>    _listEvent;
-        vector<ReputationEvent>    _listReputationScratch;
-        vector<IngredientSpoilage> _listSpoilageScratch;
-        Inventory                  _inventory;
-        IngredientStock            _stock;
-        Crafter                    _crafter;
-        ShopState                  _market;
-        Wallet                     _wallet;
-        ReputationState            _reputation;
-        RestaurantSettings         _settings;
-        RestaurantDaySummary       _today;
-        FixedStepTimer             _stepTimer;
-        GameRandom                 _random;
-        hashed_string              _weatherId;
-        const RestaurantCatalog*   _pCatalog;
-        const RecipeCatalog*       _pRecipeCatalog;
-        const ShopCatalog*         _pShopCatalog;
-        const ExperienceCurve*     _pStaffCurve;
-        float32                    _minutes; ///< 문을 연 뒤 지난 분
-        float32                    _arrivalAccumulator;
-        int64                      _pendingSpoilageCost;
-        int32                      _day;
-        int32                      _nextCustomerId;
-        uint8                      _bOpen;
+        vector<StaffMember>          _listStaff;
+        vector<RestaurantCustomer>   _listCustomer;
+        deque<KitchenOrder>          _listOrder;
+        vector<MenuEntry>            _listMenu;
+        vector<StationSlot>          _listStation;
+        vector<float32>              _listSatisfaction; ///< 최근 N 손님(오래된 것이 앞)
+        EventBuffer<RestaurantEvent> _eventBuffer;
+        vector<ReputationEvent>      _listReputationScratch;
+        vector<IngredientSpoilage>   _listSpoilageScratch;
+        Inventory                    _inventory;
+        IngredientStock              _stock;
+        Crafter                      _crafter;
+        ShopState                    _market;
+        Wallet                       _wallet;
+        ReputationState              _reputation;
+        RestaurantSettings           _settings;
+        RestaurantDaySummary         _today;
+        FixedStepTimer               _stepTimer;
+        GameRandom                   _random;
+        hashed_string                _weatherId;
+        const RestaurantCatalog*     _pCatalog;
+        const RecipeCatalog*         _pRecipeCatalog;
+        const ShopCatalog*           _pShopCatalog;
+        const ExperienceCurve*       _pStaffCurve;
+        float32                      _minutes; ///< 문을 연 뒤 지난 분
+        RateAccumulator              _arrival; ///< 손님 도착(명)
+        int64                        _pendingSpoilageCost;
+        int32                        _day;
+        int32                        _nextCustomerId;
+        uint8                        _bOpen;
     };
 } // namespace sw

@@ -22,11 +22,14 @@ SW Engine 프로젝트에 기여하거나 새로운 게임 모듈을 작성할 �
 | **출력 매개변수 (Out Param)** | `out` + PascalCase / 포인터는 `pOut`, 이중 포인터는 `ppOut` | `outConfig`, `pOutBuffer`, `ppOutObject`, `outListItem` |
 
 ### 전역 변수는 두 종류
-- 에디터에서 바꿀 런타임 설정은 `SW_GLOBAL_VARIABLE_*` 로 선언합니다.
-- 벤치 · 자동화 · 진단 스위치는 `SW_TEST_GLOBAL_VARIABLE_*` 로 선언합니다. `-gv_*` 로는 그대로 정할 수 있지만 에디터 패널 · 프리셋에 보이지 않고
-  **Shipping 에는 등록되지 않습니다.** 스크립트가 배포 실행 파일을 그 변수로 몰아야 할 때만 마지막 인자로 `SW_KEEP_IN_SHIPPING` 을 줍니다
+- 매크로는 모두 타입을 첫 인자로 받습니다(`bool` · `int32` · `float32` · `sw::string` · 리플렉션 enum). enum 이름은 `#type` 으로 만들므로
+  리플렉션에 등록된 이름 그대로 적습니다.
+- 에디터에서 바꿀 런타임 설정은 `SW_GLOBAL_VARIABLE( type, name, default, desc )` 로 선언합니다.
+- 벤치 · 자동화 · 진단 스위치는 `SW_TEST_GLOBAL_VARIABLE` 로 선언합니다. `-gv_*` 로는 그대로 정할 수 있지만 에디터 패널 · 프리셋에 보이지 않고
+  **Shipping 에는 등록되지 않습니다.** 스크립트가 배포 실행 파일을 그 변수로 몰아야 할 때만 `SW_TEST_GLOBAL_VARIABLE_SHIPPED` 로 선언합니다
   (`gv_profileFrames`, `gv_screenshot*`, `gv_crashTest`, `gv_bench*`).
-- `extern` 은 같은 인자의 `SW_EXTERN_…` 판으로 씁니다. 어긋나면 `CheckGlobalVariableKinds.py` 가 막습니다(`Core/GlobalVariable/GlobalVariableManager.h`).
+- `extern` 은 종류와 상관없이 `SW_EXTERN_GLOBAL_VARIABLE( type, name )` 입니다. 타입이 정의와 어긋나면 `CheckGlobalVariableKinds.py` 가 막습니다
+  (`Core/GlobalVariable/GlobalVariableManager.h`).
 
 ### 변수 및 자료구조 특수 접두/접미어
 - **포인터(Pointer)**: `p` 접두어 (`_pObject`, `pMember`) / 이중 포인터는 `pp` (`_ppMember`, `ppMember`) — 삼중 포인터 이상(`ppp`, `_ppp`, `***`)은 구조적 결함이므로 엄격히 금지
@@ -197,7 +200,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
      실제 번역 단위에는 하나뿐이다. 합치지 않는다.
    - `REFLECT` 코드젠 타입은 익명 네임스페이스로 못 옮긴다 — 생성된 `.gen.cpp` 가 한정 이름
      (`sw::MockMeshComponent`)으로 참조한다.
-   - `SW_GLOBAL_VARIABLE_*` 은 `extern` 을 붙여 **외부 링키지를 의도**하므로 밖에 둔다.
+   - `SW_GLOBAL_VARIABLE`(테스트용 판 포함)은 `extern` 을 붙여 **외부 링키지를 의도**하므로 밖에 둔다.
    - `main` 과 헤더에 선언된 함수는 네임스페이스 스코프에 그대로 둔다.
 5. **익명 네임스페이스 바로 안의 상수 이름은 다른 `.cpp` 와 겹치지 않게 한다.** 유니티 빌드(`CI-*`)는 `.cpp` 를 한 번역 단위로
    묶으므로 두 파일의 `constexpr int32 kLimit` 이 재정의로 충돌한다. 그 TU 의 `XxxInternal` 구조체 안 `static constexpr` 로 옮기거나

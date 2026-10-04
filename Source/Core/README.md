@@ -4,7 +4,7 @@
 문자열, 로그, 파일, 델리게이트, 컨테이너 래퍼, 동시성, 메모리 진단이 여기 있습니다.
 
 ## 디렉터리
-- **Common/**: `Types.h` · `Macros.h` · `Defines.h`(버퍼 크기 상수) · `StdHeaders.h` · `PlatformOsHeaders.h` · `EnumUtil.h` · `VarIntUtil.h`(LEB128 · ZigZag) ·
+- **Common/**: `Types.h` · `Macros.h` · `Defines.h`(버퍼 크기 상수) · `StdHeaders.h` · `PlatformOsHeaders.h` · `EnumUtil.h`(비트플래그 연산자) · `BitFlagTrait.h`(`IsBitFlagEnum` 기본 템플릿만 — 강제 include 되는 생성 `*.gen.h` 가 이것만 든다) · `VarIntUtil.h`(LEB128 · ZigZag) ·
   `BuildInfo.h`(`sw::build::kConfigName` · `kPlatformName` — 값은 CMake 가 정한다) · `TopologicalSortUtil`(의존 위상 정렬 — 동점은 이름 순, 순환 경로 찾기. 엔진 기동 단계 · 모듈 적재 순서가 함께 쓴다) · `TargetMacroCheck.h`(아래 "타깃 매크로") ·
   `X11MacroUndef.h`(Xlib · GLX 를 포함한 바로 뒤에 다시 include)
 - **Predefined/**: 엔진과 ReflectionParser 가 함께 include 하는 X-매크로 표(`*.xxx` — 명령줄 인자 · 고정 이름 · 컨테이너 종류 · 애노테이션 종류)와 `AnnotationMeta.txt`
@@ -50,7 +50,7 @@
     `LossPercent` · `DuplicatePercent` · `ReorderPercent` · `BandwidthKilobytesPerSecond` 로 `NetEmulationConditions::makeFromGlobalVariables` —
     언리얼 PktLag · PktLoss · PktDup · PktOrder · 유니티 Network Simulator 의 자리. `NetHost` 는 그냥 전송으로 받는다)
 - **Math/**: `VectorMath` · `MatrixMath` · `MathUtil` · `Frustum`
-- **Time/**: `MonotonicClock`(아래 "시간") · `GameTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE_*`)
+- **Time/**: `MonotonicClock`(아래 "시간") · `GameTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE`)
 - **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.
   - `ILogSink` / `Logger` — 매크로가 말을 거는 파사드. 포맷 · 타임스탬프 · 리스너 · 비동기 큐 · 상세도 ·
     Caller 표를 맡는다. 테스트 프레임워크는 이 인터페이스를 구현해 기존 싱크를 **감싼다**(로그 가로채기).

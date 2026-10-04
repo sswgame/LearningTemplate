@@ -28,7 +28,7 @@ namespace sw
         , _timeline{}
         , _gun{}
         , _listProjectile{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _nextProjectileId{ 1 }
         , _comboIndex{ -1 }
         , _attackBufferFrames{ 0 }
@@ -45,7 +45,7 @@ namespace sw
         _pCombo   = pCatalog != nullptr ? pCatalog->findCombo( comboId ) : nullptr;
         _timeline.cancel();
         _listProjectile.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _comboIndex         = -1;
         _attackBufferFrames = 0;
         _parryFrames        = 0;
@@ -220,8 +220,7 @@ namespace sw
 
     void ActionCombatRig::drainEvents( vector<ActionCombatEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void ActionCombatRig::startMove( int32 comboIndex )
@@ -249,6 +248,6 @@ namespace sw
         event._type  = type;
         event._id    = id;
         event._value = value;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

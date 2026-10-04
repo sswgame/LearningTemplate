@@ -75,7 +75,7 @@ namespace sw
     FightingMatch::FightingMatch()
         : _arrFighter{}
         , _settings{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listHitboxScratch{}
         , _frame{ 0 }
         , _round{ 0 }
@@ -90,7 +90,7 @@ namespace sw
     void FightingMatch::initialize( const FighterDef& fighter0, const FighterDef& fighter1, const FightingSettings& settings )
     {
         _settings = settings;
-        _listEvent.clear();
+        _eventBuffer.clear();
         _frame                                 = 0;
         _round                                 = 0;
         _lastRoundWinner                       = -1;
@@ -1046,13 +1046,12 @@ namespace sw
         event._player = player;
         event._value  = value;
         event._moveId = moveId;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     void FightingMatch::drainEvents( vector<FightingEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     // ------------------------------------------------------------------------------
@@ -1195,7 +1194,7 @@ namespace sw
         _lastRoundWinner      = lastRoundWinner;
         _matchWinner          = matchWinner;
         _phase                = static_cast<FightingPhase>( phase );
-        _listEvent.clear();
+        _eventBuffer.clear();
         return true;
     }
 } // namespace sw

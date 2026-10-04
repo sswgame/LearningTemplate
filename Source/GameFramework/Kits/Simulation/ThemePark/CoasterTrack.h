@@ -16,6 +16,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -210,20 +211,21 @@ namespace sw
      * @brief `<CoasterCatalog><Layout id="..." name="..." startHeight="1"><Piece type="LiftHill" length="30" height="25"/>...` 를 읽습니다.
      * @details 모르는 조각 이름은 경고하고 그 조각만 건너뜁니다. 같은 id 는 뒤의 것이 이깁니다.
      */
-    class SW_GF_API CoasterLayoutCatalog
+    class SW_GF_API CoasterLayoutCatalog : public XmlCatalog<CoasterLayoutCatalog>
     {
+        friend class XmlCatalog<CoasterLayoutCatalog>;
+
     public:
         CoasterLayoutCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addLayout( const CoasterLayoutDef& layout );
+        void addLayout( const CoasterLayoutDef& layout );
 
         const CoasterLayoutDef*         findLayout( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<CoasterLayoutDef>& getLayouts() const { return _catalog.getAll(); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "CoasterCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<CoasterLayoutDef> _catalog; ///< 읽은 순서(게임이 차례로 바꿔 탄다)
     };

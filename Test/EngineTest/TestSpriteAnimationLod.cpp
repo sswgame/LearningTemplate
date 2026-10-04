@@ -131,6 +131,7 @@ SW_TEST_CASE( SpriteAnimationLodTest, UpdateRateDivisorThrottlesFramePushes )
     SW_EXPECT_EQUAL( 2u, pushedCount );
 }
 
+#if SW_ANIMATION_REWIND_ENABLED // 되감기 기록기는 Shipping 에 없다
 /**
  * @brief [SpriteAnimationLodTest] 되감기는 스프라이트 애니메이터의 상태(구간 이름 · 시각 · 프레임)를 남기고, 되감는 동안 기록된 프레임을 건 채 흐르지 않는다
  */
@@ -185,3 +186,4 @@ SW_TEST_CASE( SpriteAnimationLodTest, RewindRecordsAndRestoresSpriteFrames )
     AnimationRewindRecorder::setRecordingRequested( bWasOn );
     AnimationRewindRecorder::setRequestedWindowSeconds( previousSeconds );
 }
+#endif // SW_ANIMATION_REWIND_ENABLED

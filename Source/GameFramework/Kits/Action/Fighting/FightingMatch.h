@@ -18,6 +18,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Input/InputCommandBuffer.h"
 #include "GameFramework/Kits/Action/Fighting/FighterCatalog.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -247,16 +248,16 @@ namespace sw
         void  endRound( int32 winner, FightingEvent::Kind reason );
         void  pushEvent( FightingEvent::Kind kind, int32 player, int32 value, const hashed_string& moveId = hashed_string() );
 
-        FighterRuntime        _arrFighter[kPlayerCount];
-        FightingSettings      _settings;
-        vector<FightingEvent> _listEvent;
-        vector<MoveHitbox>    _listHitboxScratch; ///< 판정용 임시(상태 아님)
-        int32                 _frame;
-        int32                 _round;
-        int32                 _roundFramesRemaining;
-        int32                 _phaseFrames;
-        int32                 _lastRoundWinner;
-        int32                 _matchWinner;
-        FightingPhase         _phase;
+        FighterRuntime             _arrFighter[kPlayerCount];
+        FightingSettings           _settings;
+        EventBuffer<FightingEvent> _eventBuffer;
+        vector<MoveHitbox>         _listHitboxScratch; ///< 판정용 임시(상태 아님)
+        int32                      _frame;
+        int32                      _round;
+        int32                      _roundFramesRemaining;
+        int32                      _phaseFrames;
+        int32                      _lastRoundWinner;
+        int32                      _matchWinner;
+        FightingPhase              _phase;
     };
 } // namespace sw

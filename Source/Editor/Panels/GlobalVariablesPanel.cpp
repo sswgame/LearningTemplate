@@ -216,7 +216,7 @@ namespace sw::editor
 
         for ( const string& varName : listAllName )
         {
-            // 테스트용(`SW_TEST_GLOBAL_VARIABLE_*`)은 벤치 · 자동화 스위치라 여기 두지 않는다. 실행 인자로만 준다. 개수에서도 뺀다.
+            // 테스트용(`SW_TEST_GLOBAL_VARIABLE`)은 벤치 · 자동화 스위치라 여기 두지 않는다. 실행 인자로만 준다. 개수에서도 뺀다.
             GlobalVariableInfo* pInfo = pGvm->findVariable( varName );
             if ( pInfo == nullptr || pInfo->_bTestOnly )
                 continue;

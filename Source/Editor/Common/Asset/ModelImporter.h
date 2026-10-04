@@ -1,6 +1,6 @@
 /**
  * @file ModelImporter.h
- * @brief glTF 2.0 모델 원본(`models_raw/` 의 `.glb` · `.gltf`)을 엔진 에셋(`models/` 의 `.mesh` · 스켈레톤 · 부착 메시 · 애니메이션 클립)으로 임포트합니다.
+ * @brief glTF 2.0 모델 원본(`models_raw/` 의 `.glb` · `.gltf` · `.vrm`)을 엔진 에셋(`models/` 의 `.mesh` · 스켈레톤 · 부착 메시 · 애니메이션 클립)으로 임포트합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -8,6 +8,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
+
+#include "Editor/Common/Asset/VrmMaterialImporter.h"
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Skeleton.h"
@@ -61,6 +63,34 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
+     * @struct ModelImportSection
+     * @brief 머티리얼 하나가 쓰는 삼각형만 모은 메시와 그 툰 머티리얼입니다(VRM). 스킨드 모델이면 본 영향 · 스켈레톤이 본 메시와 같습니다.
+     */
+    struct ModelImportSection
+    {
+        string           _fileStem; ///< 출력 파일 이름(소문자, 겹치면 번호를 붙임)
+        MeshAssetData    _mesh;
+        ToonMaterialDesc _material;
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @struct ModelImportTexture
+     * @brief 머티리얼이 쓰는 glTF 텍스처 하나의 원본 이미지(내장 바이트 그대로)입니다.
+     */
+    struct ModelImportTexture
+    {
+        string        _fileStem;  ///< 원본 이미지 파일 이름(소문자, 확장자 없음)
+        string        _extension; ///< ".png" · ".jpg"
+        vector<uint8> _bytes;
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
      * @struct ModelImportResult
      * @brief glTF 하나를 읽은 결과 전부입니다. 스킨이 없는 모델은 메시만 있습니다.
      */
@@ -70,7 +100,13 @@ namespace sw::editor
         Skeleton                      _skeleton;
         vector<ModelImportAttachment> _listAttachment;
         vector<ModelImportClip>       _listClip;
-        uint8                         _bSkinned{ SW_FALSE };
+        /** @brief VRM 이면 머티리얼마다 하나입니다(glTF 머티리얼 순서, 삼각형이 없는 머티리얼은 빠짐). 아니면 비어 있습니다. */
+        vector<ModelImportSection> _listSection;
+        /** @brief glTF 텍스처 번호 → 원본 이미지입니다. 구간 머티리얼이 쓰는 텍스처만 채워집니다(나머지는 빈 칸). */
+        vector<ModelImportTexture> _listTexture;
+        /** @brief 머티리얼이 지원하지 않는 VRM 키의 이름입니다(값이 효과 없는 기본값이면 빠짐). 임포트는 경고로 알립니다. */
+        vector<string> _listIgnoredMaterialKey;
+        uint8          _bSkinned{ SW_FALSE };
     };
 } // namespace sw::editor
 
@@ -91,6 +127,9 @@ namespace sw::editor
      *          `parts/<노드>.mesh`(관절 아래 스킨 없는 메시 — 노드 로컬 공간, 부모 본과 로컬 변환은 스켈레톤의 부착 표에) ·
      *          `clips/<클립>.animclip`(애니메이션마다 하나 — 관절마다 균일 표본으로 다시 뽑아 규칙의 코덱으로 압축, 클립마다 압축률 · 최대 오차를 로그로 보고).
      *          클립의 반복 · 알림 · 커브는 원본 옆 곁 데이터 `<y>.clips.json` 이 정합니다(원본 해시에 섞입니다). 옆 폴더는 임포트마다 지우고 다시 씁니다.
+     *
+     *          **VRM**(머티리얼에 MToon 값 — 0.x `extensions.VRM` · 1.0 `VRMC_materials_mtoon`): 머티리얼마다 `sections/<머티리얼>.mesh` 와 툰 머티리얼
+     *          `materials/<머티리얼>.material` 을 옆 폴더에 더 쓰고, 그 머티리얼이 쓰는 내장 이미지를 `<x>/textures_raw/<y>/` 로 꺼냅니다(`VrmMaterialImporter`).
      */
     struct ModelImporter
     {

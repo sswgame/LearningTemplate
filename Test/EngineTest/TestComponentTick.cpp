@@ -463,9 +463,10 @@ SW_TEST_CASE( ComponentSubTickHybridTest, DeepHierarchyMultiComponentMultiSubTic
     SW_EXPECT_TRUE( idxGP1_PostPhysLate < idxC1_PostPhysNorm );
     SW_EXPECT_TRUE( idxC1_PostPhysNorm < idxP1_PostPhysEarly );
 
-    // 4) PostPhysics 항목들은 모두 PostUpdate 항목들보다 먼저 실행되어야 함
+    // 4) PostPhysics 항목들은 모두 PostUpdate 항목들보다 먼저 실행되어야 함. 단계(TickPhase)는 한 오브젝트 안의 순서다 — 선행 조건이 없는
+    //    다른 오브젝트의 PostUpdate 항목 둘(C2 · GP1_2)은 보통 길에서 나란히 돌아 서로의 순서가 없다.
     SW_EXPECT_TRUE( idxP1_PostPhysEarly < idxC2_PostUpdateMain );
-    SW_EXPECT_TRUE( idxC2_PostUpdateMain < idxGP1_PostUpFin );
+    SW_EXPECT_TRUE( idxP1_PostPhysEarly < idxGP1_PostUpFin );
 }
 
 /**
@@ -674,6 +675,8 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
     vector<sw::GameObject*>             listActor;
     vector<MockSubTickStressComponent*> listCompA;
     vector<MockSubTickStressComponent*> listCompB;
+    vector<sw::SubTickHandle>           listHandleA1; // 선행 조건 핸들은 등록이 준 것을 쓴다(소유 오브젝트 id 가 든다)
+    vector<sw::SubTickHandle>           listHandleA2;
     listActor.reserve( kActorCount );
     listCompA.reserve( kActorCount );
     listCompB.reserve( kActorCount );
@@ -708,8 +711,8 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
         pCompB->_subTickGlobalIdOffset = static_cast<uint32>( actorIdx * 6 + 3 );
 
         // SubTick 등록 (CompA: 1, 2 / CompB: 1, 2)
-        pCompA->registerSubTick( sw::TickGroup::DuringPhysics, 1, sw::TickPhase::Early );
-        pCompA->registerSubTick( sw::TickGroup::PostPhysics, 2, sw::TickPhase::Normal );
+        listHandleA1.push_back( pCompA->registerSubTick( sw::TickGroup::DuringPhysics, 1, sw::TickPhase::Early ) );
+        listHandleA2.push_back( pCompA->registerSubTick( sw::TickGroup::PostPhysics, 2, sw::TickPhase::Normal ) );
 
         pCompB->registerSubTick( sw::TickGroup::DuringPhysics, 1, sw::TickPhase::Normal );
         pCompB->registerSubTick( sw::TickGroup::PostPhysics, 2, sw::TickPhase::Late );
@@ -726,12 +729,8 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
         const size_t actorAIdx = diamondIdx * 2;
         const size_t actorBIdx = diamondIdx * 2 + 1;
 
-        auto* pCompA1 = listCompA[actorAIdx];
         auto* pCompB1 = listCompB[actorBIdx];
-
-        const sw::SubTickHandle hA = sw::SubTickHandle{ pCompA1->getComponentId(), 1 };
-
-        pCompB1->addSubTickPrerequisite( 1, hA );
+        SW_EXPECT_TRUE( pCompB1->addSubTickPrerequisite( 1, listHandleA1[actorAIdx] ) );
 
         const uint32 gIdA = static_cast<uint32>( actorAIdx * 6 + 1 );
         const uint32 gIdB = static_cast<uint32>( actorBIdx * 6 + 3 + 1 );
@@ -742,11 +741,8 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
     // T0 -> T1 -> T2 -> ... -> T9
     for ( size_t chainIdx = 0; chainIdx < 9; ++chainIdx )
     {
-        auto* pCompSrc = listCompA[chainIdx];
         auto* pCompDst = listCompA[chainIdx + 1];
-
-        const sw::SubTickHandle hSrc = sw::SubTickHandle{ pCompSrc->getComponentId(), 2 };
-        pCompDst->addSubTickPrerequisite( 2, hSrc );
+        SW_EXPECT_TRUE( pCompDst->addSubTickPrerequisite( 2, listHandleA2[chainIdx] ) );
 
         const uint32 gIdSrc = static_cast<uint32>( chainIdx * 6 + 2 );
         const uint32 gIdDst = static_cast<uint32>( ( chainIdx + 1 ) * 6 + 2 );

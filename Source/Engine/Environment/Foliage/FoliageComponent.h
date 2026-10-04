@@ -11,13 +11,13 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Placement/PlacementRule.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class EnvironmentMaterial;
     class GameObjectManager;
     class Mesh;
     class MeshInstanceBatch;

@@ -14,7 +14,10 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -102,18 +105,18 @@ namespace sw
      *        <Door id="crack" kind="Condition" requires="bombs>=1"/><Treasure id="c1" area="hall" item="SmallKey"/>
      *        <Device id="eye" kind="Switch"/><Device id="torches" kind="TorchGroup" torches="2" duration="6"/></Dungeon></AdventureDungeons>` 를 읽습니다.
      */
-    class SW_GF_API AdventureDungeonCatalog
+    class SW_GF_API AdventureDungeonCatalog : public XmlCatalog<AdventureDungeonCatalog>
     {
-    public:
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
+        friend class XmlCatalog<AdventureDungeonCatalog>;
 
+    public:
         const AdventureDungeonDef*         findDungeon( const hashed_string& id ) const { return _catalog.find( id ); }
         int32                              findDungeonIndex( const hashed_string& id ) const { return _catalog.findIndex( id ); }
         const vector<AdventureDungeonDef>& getDungeons() const { return _catalog.getAll(); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "AdventureDungeons"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<AdventureDungeonDef> _catalog{};
     };
@@ -216,9 +219,9 @@ namespace sw
         /** @brief 장치 하나의 지금 상태입니다. */
         struct DeviceRuntime
         {
-            float32 _timer{ 0.0f }; ///< 시간제 스위치 · 횃불 묶음의 남은 시간
-            int32   _litCount{ 0 };
-            uint8   _bActive{ SW_FALSE };
+            Countdown _timer{}; ///< 시간제 스위치 · 횃불 묶음의 남은 시간
+            int32     _litCount{ 0 };
+            uint8     _bActive{ SW_FALSE };
         };
 
         /** @brief 던전 하나의 지금 상태입니다. */
@@ -233,8 +236,8 @@ namespace sw
         void            pushEvent( AdventureDungeonEventType type, const hashed_string& dungeonId, const hashed_string& id, const hashed_string& item = hashed_string{},
                                    int32 count = 0 );
 
-        const AdventureDungeonCatalog* _pCatalog;
-        vector<DungeonRuntime>         _listRuntime; ///< 카탈로그 던전 순서
-        vector<AdventureDungeonEvent>  _listEvent;
+        const AdventureDungeonCatalog*     _pCatalog;
+        vector<DungeonRuntime>             _listRuntime; ///< 카탈로그 던전 순서
+        EventBuffer<AdventureDungeonEvent> _eventBuffer;
     };
 } // namespace sw

@@ -65,6 +65,7 @@ namespace sw
                 string         _vertexEntryPoint;
                 string         _pixelEntryPoint;
                 vector<string> _listPermutation;
+                RenderPassType _passType{ RenderPassType::Invalid };
                 bool           _bUsesMaterialShader{ false };
                 bool           _bAppliesViewMode{ false };
                 bool           _bHasPixelStage{ false };
@@ -151,6 +152,7 @@ namespace sw
                             passInfo._vertexEntryPoint    = pass._vertexEntryPoint.empty() ? "VSMain" : pass._vertexEntryPoint;
                             passInfo._pixelEntryPoint     = pass._pixelEntryPoint.empty() ? "PSMain" : pass._pixelEntryPoint;
                             passInfo._listPermutation     = listPassDefine;
+                            passInfo._passType            = pass._resolvedType;
                             passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._resolvedType );
                             passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( pass._resolvedType );
                             passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment );
@@ -224,6 +226,7 @@ namespace sw
                         passInfo._vertexEntryPoint    = FrameRendererUtil::Entry::kVSMain;
                         passInfo._pixelEntryPoint     = FrameRendererUtil::Entry::kPSMain;
                         passInfo._listPermutation     = passShader._listDefine;
+                        passInfo._passType            = passType;
                         passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( passType );
                         passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( passType );
                         passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( passType );
@@ -297,6 +300,9 @@ namespace sw
                     listDrawVariant.push_back( MaterialVariantInfo{ passInfo._shaderPath, passInfo._listPermutation } );
                     for ( const MaterialVariantInfo& variant : listMaterialVariant )
                     {
+                        // 패스가 그리지 않는 머티리얼(외곽선 패스 · 외곽선을 켜지 않은 머티리얼)은 런타임도 변형을 만들지 않는다.
+                        if ( FrameRendererUtil::drawsMaterialInPass( passInfo._passType, &variant._listDefine ) == false )
+                            continue;
                         // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다. 그림자 · 뎁스는 자기 셰이더에
                         // define 만 얹는다(usesMaterialShader 와 같은 규칙).
                         const string& shaderPath = passInfo._bUsesMaterialShader ? variant._shaderPath : passInfo._shaderPath;

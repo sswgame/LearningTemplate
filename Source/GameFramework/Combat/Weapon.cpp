@@ -31,16 +31,6 @@ namespace sw
     {
     }
 
-    bool WeaponCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &WeaponCatalog::loadRoot, path, "WeaponCatalog" );
-    }
-
-    bool WeaponCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &WeaponCatalog::loadRoot, xmlText, sourceName, "WeaponCatalog" );
-    }
-
     void WeaponCatalog::addWeapon( const WeaponDef& weapon )
     {
         (void)_catalog.add( weapon ); // 빈 id 는 카탈로그가 거른다
@@ -93,8 +83,8 @@ namespace sw
     WeaponState::WeaponState()
         : _def{}
         , _random{ 1u }
-        , _cooldown{ 0.0f }
-        , _reloadRemaining{ 0.0f }
+        , _cooldown{}
+        , _reload{}
         , _currentSpread{ 0.0f }
         , _magazineAmmo{ 0 }
         , _reserveAmmo{ 0 }
@@ -105,33 +95,28 @@ namespace sw
     {
         _def = weapon;
         _random.setSeed( spreadSeed );
-        _cooldown        = 0.0f;
-        _reloadRemaining = 0.0f;
-        _currentSpread   = weapon._minSpread;
-        _magazineAmmo    = weapon._magazineSize;
-        _reserveAmmo     = MathUtil::clamp( reserveAmmo, 0, weapon._maxReserveAmmo );
+        _cooldown.clear();
+        _reload.clear();
+        _currentSpread = weapon._minSpread;
+        _magazineAmmo  = weapon._magazineSize;
+        _reserveAmmo   = MathUtil::clamp( reserveAmmo, 0, weapon._maxReserveAmmo );
     }
 
     void WeaponState::update( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;
-        // 이번 프레임 안에서 준비된 총만 0 아래로 내려가 늦은 몫을 든다. 이미 준비돼 있던 총(쉬는 중)은 0 에 머문다 — 쉰 시간을 다음 발로 잇지 않는다.
-        _cooldown      = _cooldown > 0.0f ? _cooldown - deltaTime : 0.0f;
+        // 이번 프레임 안에서 준비된 총만 늦은 몫을 든다. 이미 준비돼 있던 총(쉬는 중)은 0 에 머문다 — 쉰 시간을 다음 발로 잇지 않는다.
+        _cooldown.tick( deltaTime );
         _currentSpread = MathUtil::max( _def._minSpread, _currentSpread - _def._spreadRecovery * deltaTime );
 
-        if ( _reloadRemaining > 0.0f )
+        if ( _reload.tick( deltaTime ) )
         {
-            _reloadRemaining -= deltaTime;
-            if ( _reloadRemaining <= 0.0f )
-            {
-                // 재장전 끝 — 예비탄에서 빈 만큼만 옮긴다.
-                _reloadRemaining   = 0.0f;
-                const int32 needed = _def._magazineSize - _magazineAmmo;
-                const int32 moved  = MathUtil::min( needed, _reserveAmmo );
-                _magazineAmmo += moved;
-                _reserveAmmo -= moved;
-            }
+            // 재장전 끝 — 예비탄에서 빈 만큼만 옮긴다.
+            const int32 needed = _def._magazineSize - _magazineAmmo;
+            const int32 moved  = MathUtil::min( needed, _reserveAmmo );
+            _magazineAmmo += moved;
+            _reserveAmmo -= moved;
         }
     }
 
@@ -139,11 +124,11 @@ namespace sw
     {
         outShot._listRay.clear();
         outShot._spreadAtFire = _currentSpread;
-        if ( _reloadRemaining > 0.0f )
+        if ( _reload.isActive() )
             return WeaponFireResult::Reloading;
         if ( _def._bAutomatic == SW_FALSE && bTriggerJustPressed == false )
             return WeaponFireResult::SemiAutoHeld;
-        if ( _cooldown > 0.0f )
+        if ( _cooldown.isActive() )
             return WeaponFireResult::Cooling;
         if ( _magazineAmmo <= 0 )
         {
@@ -154,8 +139,8 @@ namespace sw
         }
 
         --_magazineAmmo;
-        // 늦은 몫을 다음 간격에서 뺀다(연사가 fps 에 매이지 않는다). 몫은 한 간격까지만 — 결과가 0 이상이라 한 번 당기면 한 발이다.
-        _cooldown                   = MathUtil::max( _cooldown, -_def._fireInterval ) + _def._fireInterval;
+        // 늦은 몫을 다음 간격에서 뺀다(연사가 fps 에 매이지 않는다). 몫은 한 간격까지만 — 한 번 당기면 한 발이다.
+        _cooldown.restart( _def._fireInterval );
         const float32 coneHalfAngle = _currentSpread * WeaponInternal::kDegreeToRadian;
         for ( int32 pelletIndex = 0; pelletIndex < _def._pelletCount; ++pelletIndex )
         {
@@ -170,10 +155,10 @@ namespace sw
 
     bool WeaponState::startReload()
     {
-        const bool bCannotReload = _reloadRemaining > 0.0f || _magazineAmmo >= _def._magazineSize || _reserveAmmo <= 0;
+        const bool bCannotReload = _reload.isActive() || _magazineAmmo >= _def._magazineSize || _reserveAmmo <= 0;
         if ( bCannotReload )
             return false;
-        _reloadRemaining = MathUtil::max( 1.0e-3f, _def._reloadTime );
+        _reload.start( MathUtil::max( 1.0e-3f, _def._reloadTime ) );
         return true;
     }
 

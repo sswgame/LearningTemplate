@@ -82,7 +82,8 @@ namespace
     {
         int32                  _exitCode = -1;
         sw::string             _log;
-        sw::vector<sw::string> _listGeneratedCpp; ///< 헤더 순서대로 .gen.cpp 내용(지우기 전에 읽는다). 안 만들어졌으면 빈 문자열
+        sw::vector<sw::string> _listGeneratedCpp;    ///< 헤더 순서대로 .gen.cpp 내용(지우기 전에 읽는다). 안 만들어졌으면 빈 문자열
+        sw::vector<sw::string> _listGeneratedHeader; ///< 헤더 순서대로 .gen.h 내용. 안 만들어졌으면 빈 문자열
     };
 
     /**
@@ -143,6 +144,12 @@ namespace
             if ( sw::FileUtil::fileExists( genCpp ) && sw::FileUtil::readTextFile( genCpp, generated ) == false )
                 generated.clear(); // 못 읽은 산출물은 빈 것으로 본다 — 시험이 내용으로 진다
             result._listGeneratedCpp.push_back( generated );
+
+            const sw::string genHeader = sw::FileUtil::joinPath( outGenDir, header._fileStem + ".gen.h" );
+            sw::string       generatedHeader;
+            if ( sw::FileUtil::fileExists( genHeader ) && sw::FileUtil::readTextFile( genHeader, generatedHeader ) == false )
+                generatedHeader.clear();
+            result._listGeneratedHeader.push_back( generatedHeader );
         }
         return result;
     }
@@ -1382,6 +1389,67 @@ SW_TEST_CASE( ReflectionParserTest, IncludedHeaderChangeRegeneratesAndIsInTheDep
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( genPath, generated ) );
     SW_EXPECT_TRUE_MSG( generated.find( "_bAbstract = 1" ) != sw::string::npos,
                         "include 한 기반이 추상이 됐는데 생성 코드가 옛것(만들 수 있는 타입)으로 남았습니다" );
+}
+
+/**
+ * @brief [ReflectionParserTest] ENUM(Flags) 의 .gen.h 는 트레이트 헤더 하나만 include 하고, 그 트레이트 헤더는 `<type_traits>` 만 든다
+ * @details `.gen.h` 를 모은 `FlagOps.gen.h` 는 타깃의 모든 TU 에 강제 include 된다. 여기서 엔진 헤더(`EnumUtil.h` → `Macros.h`)를 들이면
+ *          그 이름이 어디에나 있는 이름이 되어, `SW_API` 를 쓰면서 `Macros.h` 를 include 하지 않은 헤더도 빌드와 `RunHeaderSelfContained` 를 통과한다.
+ */
+SW_TEST_CASE( ReflectionParserTest, FlagTraitHeaderIncludesOnlyTheTrait )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const ParserRunResult run = runParserOnTempHeader( parserExe, "FlagTraitSample",
+                                                       "#pragma once\n"
+                                                       "#include \"Core/Common/Types.h\"\n"
+                                                       "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                       "namespace sw\n"
+                                                       "{\n"
+                                                       "\tENUM( Flags )\n"
+                                                       "\tenum class FlagTraitSample : uint8\n"
+                                                       "\t{\n"
+                                                       "\t\tNone = 0,\n"
+                                                       "\t\tFirst = 1,\n"
+                                                       "\t};\n"
+                                                       "}\n" );
+    SW_ASSERT_TRUE_MSG( run._exitCode == 0, run._log.c_str() );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), run._listGeneratedHeader.size() );
+    const sw::string& generated = run._listGeneratedHeader[0];
+    SW_ASSERT_TRUE_MSG( generated.find( "IsBitFlagEnum<sw::FlagTraitSample>" ) != sw::string::npos, generated.c_str() );
+
+    const auto collectIncludes = []( const sw::string& text )
+    {
+        sw::vector<sw::string> listInclude;
+        size_t                 begin = 0;
+        while ( begin < text.size() )
+        {
+            size_t end = text.find( '\n', begin );
+            if ( end == sw::string::npos )
+                end = text.size();
+            // 체크아웃이 CRLF 일 수 있다(core.autocrlf) — 줄 끝의 \r 은 뺀다.
+            const size_t     lineEnd = ( end > begin && text[end - 1] == '\r' ) ? end - 1 : end;
+            const sw::string line    = text.substr( begin, lineEnd - begin );
+            if ( line.rfind( "#include", 0 ) == 0 )
+                listInclude.push_back( line );
+            begin = end + 1;
+        }
+        return listInclude;
+    };
+
+    const sw::vector<sw::string> listGeneratedInclude = collectIncludes( generated );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listGeneratedInclude.size() );
+    SW_EXPECT_TRUE_MSG( listGeneratedInclude[0] == "#include \"Core/Common/BitFlagTrait.h\"", generated.c_str() );
+
+    sw::string traitText;
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile(
+        sw::FileUtil::joinPath( sw::ResourceUtil::getProjectFolderPath(), "Source/Core/Common/BitFlagTrait.h" ), traitText ) );
+    const sw::vector<sw::string> listTraitInclude = collectIncludes( traitText );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listTraitInclude.size() );
+    SW_EXPECT_TRUE_MSG( listTraitInclude[0] == "#include <type_traits>", traitText.c_str() );
 }
 
 /**

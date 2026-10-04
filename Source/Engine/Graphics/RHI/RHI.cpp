@@ -54,7 +54,7 @@ namespace sw
 
     // EngineConfig 로드 실패 시에도 WindowConfig::_defaultRHI(cpp 기본값)와 같은 백엔드로 기동하도록 맞춥니다.
     // 이 플랫폼에서 쓸 수 없으면 RHI::initialize 가 getDefaultPlatformBackend() 로 폴백합니다.
-    SW_GLOBAL_VARIABLE_ENUM( gv_rhiBackend, RHIBackend, RHIBackend::SW_RHI_BACKEND_DEFAULT, "Current RHI Backend" );
+    SW_GLOBAL_VARIABLE( RHIBackend, gv_rhiBackend, RHIBackend::SW_RHI_BACKEND_DEFAULT, "Current RHI Backend" );
 
     RHIPipelineStateDesc::RHIPipelineStateDesc() noexcept
         : _vertexShaderPath{}

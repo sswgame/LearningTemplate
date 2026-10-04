@@ -18,7 +18,6 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Ability/AbilitySystemEvents.h"
 #include "GameFramework/Ability/AbilitySystemTypes.h"
 #include "GameFramework/Ability/AttributeSet.h"
 #include "GameFramework/Ability/GameplayEffect.h"
@@ -26,6 +25,9 @@
 
 namespace sw
 {
+    struct GameplayCueEvent;
+    struct GameplayEventData;
+
     class AbilityCatalog;
     class AbilitySystemModuleUnloadGuard;
     class GameplayAbility;

@@ -8,11 +8,14 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/AnimGraphAsset.h"
 #include "Engine/Animation/AnimPlayer.h"
 
 namespace sw
 {
+    struct AnimGraphNode;
+
+    class AnimGraphAsset;
+
     /**
      * @class IAnimPlayableSource
      * @brief 상태(노드) 이름을 재생할 것으로 풉니다. 스프라이트 애니메이터는 클립의 이름 붙은 구간을, 스켈레탈 애니메이터는 클립 집합을 줍니다.

@@ -5,7 +5,8 @@
 # VcpkgGate.cmake(project() 전)에서 include. 역할:
 # 1. vcpkg 루트 탐색 (SetupVcpkg.py / 환경 변수)
 # 2. VCPKG_TARGET_TRIPLET 자동 결정
-# 3. manifest 해시 비교로 install skip 게이트
+# 3. install 게이트 — 스탬프(매니페스트 해시)가 같으면 바로 skip, 다르면 `vcpkg install --dry-run` 계획으로:
+#    지을 것이 없으면 skip, 이미 깔린 포트를 지우게 되면 멈추고 경고(공유 설치 폴더), 빠진 포트가 있을 때만 install
 # 4. sw_toolchain_vcpkg INTERFACE (include 경로 + SW_VCPKG)
 #
 # project() 이후 루트가 sw_vcpkgWriteManifestStamp() 를 호출해
@@ -95,6 +96,100 @@ function(sw_vcpkgComputeManifestHashLegacy OUT_VAR)
 endfunction()
 
 # ------------------------------------------------------------------------------
+# 1b) sw_vcpkgPlanManifestInstall — 이 매니페스트를 공유 설치 폴더에 깔면 무엇이 바뀌는지(`vcpkg install --dry-run`)
+# 설치 폴더 · 스탬프는 워크트리 모두가 나눠 쓴다. 해시만 다르다고 설치하면 옛 매니페스트의 워크트리가 다른 워크트리가 쓰는
+# 포트를 지운다 — 그래서 설치 여부는 계획(지울 것 · 지을 것)으로 정한다.
+# OUT_STATUS: OK(계획을 얻음) · FAILED(vcpkg 를 돌리지 못함). OUT_REMOVE · OUT_BUILD: 지울 · 지을(다시 지을 포함) 포트 목록
+# ------------------------------------------------------------------------------
+function(sw_vcpkgPlanManifestInstall swSrcDir OUT_STATUS OUT_REMOVE OUT_BUILD)
+    set(${OUT_STATUS} "FAILED" PARENT_SCOPE)
+    set(${OUT_REMOVE} "" PARENT_SCOPE)
+    set(${OUT_BUILD} "" PARENT_SCOPE)
+
+    if(NOT DEFINED sw_vcpkg_root OR sw_vcpkg_root STREQUAL "")
+        return()
+    endif()
+
+    if(CMAKE_HOST_WIN32)
+        set(swVcpkgExe "${sw_vcpkg_root}/vcpkg.exe")
+    else()
+        set(swVcpkgExe "${sw_vcpkg_root}/vcpkg")
+    endif()
+
+    if(NOT EXISTS "${swVcpkgExe}")
+        return()
+    endif()
+
+    set(swArgs
+        install --dry-run
+        "--triplet=${VCPKG_TARGET_TRIPLET}"
+        "--host-triplet=${VCPKG_HOST_TRIPLET}"
+        "--x-install-root=${VCPKG_INSTALLED_DIR}"
+        "--x-manifest-root=${swSrcDir}"
+    )
+
+    foreach(overlayPort IN LISTS VCPKG_OVERLAY_PORTS)
+        list(APPEND swArgs "--overlay-ports=${overlayPort}")
+    endforeach()
+
+    set(swOverlayTriplets "${VCPKG_OVERLAY_TRIPLETS}")
+
+    if(swOverlayTriplets STREQUAL "" AND DEFINED ENV{VCPKG_OVERLAY_TRIPLETS})
+        set(swOverlayTriplets "$ENV{VCPKG_OVERLAY_TRIPLETS}")
+    endif()
+
+    if(swOverlayTriplets STREQUAL "")
+        set(swOverlayTriplets "${swSrcDir}/cmake/Modules/Toolchain/Vcpkg")
+    endif()
+
+    foreach(overlayTriplet IN LISTS swOverlayTriplets)
+        list(APPEND swArgs "--overlay-triplets=${overlayTriplet}")
+    endforeach()
+
+    execute_process(
+        COMMAND "${swVcpkgExe}" ${swArgs}
+        WORKING_DIRECTORY "${swSrcDir}"
+        RESULT_VARIABLE swResult
+        OUTPUT_VARIABLE swOutput
+        ERROR_VARIABLE swError
+    )
+
+    if(NOT swResult EQUAL 0)
+        message(STATUS "[vcpkg] dry-run failed (${swResult}): ${swError}")
+        return()
+    endif()
+
+    # 절마다 머리 줄("The following packages will be removed:" 등) 아래에 포트가 한 줄씩 온다.
+    string(REPLACE "\r" "" swOutput "${swOutput}")
+    string(REPLACE "\n" ";" swLines "${swOutput}")
+    set(swSection "")
+    set(swRemove "")
+    set(swBuild "")
+
+    foreach(line IN LISTS swLines)
+        if(line MATCHES "^The following packages will be removed")
+            set(swSection "remove")
+        elseif(line MATCHES "^The following packages will be (built and installed|rebuilt)")
+            set(swSection "build")
+        elseif(line MATCHES "^The following packages")
+            set(swSection "")
+        elseif(line MATCHES "^ +[*]? *([^ :]+):")
+            if(swSection STREQUAL "remove")
+                list(APPEND swRemove "${CMAKE_MATCH_1}")
+            elseif(swSection STREQUAL "build")
+                list(APPEND swBuild "${CMAKE_MATCH_1}")
+            endif()
+        elseif(NOT line MATCHES "^ ")
+            set(swSection "")
+        endif()
+    endforeach()
+
+    set(${OUT_STATUS} "OK" PARENT_SCOPE)
+    set(${OUT_REMOVE} "${swRemove}" PARENT_SCOPE)
+    set(${OUT_BUILD} "${swBuild}" PARENT_SCOPE)
+endfunction()
+
+# ------------------------------------------------------------------------------
 # 2) sw_vcpkgWriteManifestStamp — project() 이후 현재 해시를 스탬프에 기록
 # 다음 configure의 install gate가 스탬프와 비교해 재설치를 건너뜀
 # 경로: ${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha
@@ -105,6 +200,13 @@ function(sw_vcpkgWriteManifestStamp)
     endif()
 
     if(NOT DEFINED VCPKG_INSTALLED_DIR OR NOT DEFINED VCPKG_TARGET_TRIPLET)
+        return()
+    endif()
+
+    # 설치를 거절한 configure(다른 워크트리가 쓰는 포트를 지우게 되는 옛 매니페스트)는 스탬프를 자기 해시로 덮지 않는다.
+    get_property(swStampHeld GLOBAL PROPERTY SW_VCPKG_STAMP_HELD)
+
+    if(swStampHeld)
         return()
     endif()
 
@@ -291,15 +393,34 @@ elseif(swTreeReady AND swManifestHash STREQUAL "")
     set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg 매니페스트 모드" FORCE)
     set(VCPKG_MANIFEST_INSTALL OFF CACHE BOOL "매니페스트에서 vcpkg 자동 설치" FORCE)
     message(STATUS "[vcpkg] Installed tree present (no manifest hash) — VCPKG_MANIFEST_INSTALL=OFF")
+elseif(swTreeReady)
+    # 스탬프가 다르다(이 매니페스트가 바뀌었거나, 설치 폴더를 나눠 쓰는 다른 워크트리가 덮었다). 해시만으로 설치하지 않고 계획을 본다.
+    set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg 매니페스트 모드" FORCE)
+    sw_vcpkgPlanManifestInstall("${swSrcDir}" swPlanStatus swPlanRemove swPlanBuild)
+
+    if(NOT swPlanStatus STREQUAL "OK")
+        set(VCPKG_MANIFEST_INSTALL ON CACHE BOOL "매니페스트에서 vcpkg 자동 설치" FORCE)
+        message(STATUS "[vcpkg] Manifest changed or stamp missing — could not plan the install, install enabled")
+    elseif(swPlanRemove)
+        # 지우게 되면 멈춘다 — 다른 워크트리(최신 main)가 쓰는 포트일 수 있다. 빠진 포트는 find_package 에서 드러난다.
+        set(VCPKG_MANIFEST_INSTALL OFF CACHE BOOL "매니페스트에서 vcpkg 자동 설치" FORCE)
+        set_property(GLOBAL PROPERTY SW_VCPKG_STAMP_HELD TRUE)
+        message(WARNING
+            "[vcpkg] Install skipped: this manifest would remove ports from the shared installed tree:\n"
+            "  ${swPlanRemove}\n"
+            "Another worktree (or main) uses them. Merge the latest main (vcpkg.json) into this worktree, "
+            "or configure with -DSW_VCPKG_FORCE_INSTALL=ON if removing them is intended.")
+    elseif(swPlanBuild)
+        set(VCPKG_MANIFEST_INSTALL ON CACHE BOOL "매니페스트에서 vcpkg 자동 설치" FORCE)
+        message(STATUS "[vcpkg] Manifest needs ports that are not installed (${swPlanBuild}) — install enabled")
+    else()
+        set(VCPKG_MANIFEST_INSTALL OFF CACHE BOOL "매니페스트에서 vcpkg 자동 설치" FORCE)
+        message(STATUS "[vcpkg] Stamp differs but every port of this manifest is already installed — skipping install (VCPKG_MANIFEST_INSTALL=OFF)")
+    endif()
 else()
     set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg 매니페스트 모드" FORCE)
     set(VCPKG_MANIFEST_INSTALL ON CACHE BOOL "매니페스트에서 vcpkg 자동 설치" FORCE)
-
-    if(swTreeReady)
-        message(STATUS "[vcpkg] Manifest changed or stamp missing — install enabled")
-    else()
-        message(STATUS "[vcpkg] Installed tree missing — install enabled")
-    endif()
+    message(STATUS "[vcpkg] Installed tree missing — install enabled")
 endif()
 
 # ------------------------------------------------------------------------------

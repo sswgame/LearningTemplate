@@ -18,6 +18,7 @@
 | `Codec/AnimCodec` | 코덱 인터페이스(압축 → 코덱 id + 불투명 블롭, 런타임 샘플) · 등록부(이름 → 코덱) · 오차 측정(모델 공간 가상 정점) |
 | `Codec/Raw` · `Codec/Acl` | 기준 코덱(float 그대로) · ACL 2.1 백엔드. **ACL · RTM 헤더는 `Codec/Acl/` 의 .cpp 에서만 include 한다**(게이트가 막는다) |
 | `AnimPlayback` | `IAnimPlayable`(길이 · 기본 반복 · 알림) · `AnimClipCursor`(시간 · 반복 · 끝) · `AnimNotifyTrack`(지나간 알림을 정확히 한 번) |
+| `AnimNotifyPhase` | 울린 알림의 종류(`Instant` · `Begin` · `End`) 하나. `Component.h`(PCH 안)가 이것만 include 한다 — `AnimPlayback.h` 를 고쳐도 PCH 가 다시 지어지지 않게 |
 | `AnimPlayer` | 두 칸 크로스페이드 플레이어 · `AnimSyncGroup`(리더 위상 맞추기) · `AnimParameterSet`(상태 기계 파라미터) |
 | `AnimGraphAsset` · `AnimGraphPlayer` | 그래프 JSON(노드 = 상태, 링크 = 전이: 조건 `>` `<` `>=` `<=` `==` `!=` `trigger` · 블렌드 · 노드 반복)과 그것을 돌리는 상태 기계 |
 | `SpriteClipAsset` · `SpriteClipPlayable` | 스프라이트 클립(`.sprite.json`)과 그 이름 붙은 구간을 `IAnimPlayable` 로 보이는 다리(2D 가 같은 재생 코드를 탄다) |

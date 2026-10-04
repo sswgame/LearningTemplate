@@ -53,6 +53,7 @@ namespace sw
         MockFlyingVehicleComponent::StaticType();
         MockMidTickDeactivatorComponent::StaticType();
         MockSubTickStressComponent::StaticType();
+        MockSubTickMoverComponent::StaticType();
         MockPoolLifecycleComponent::StaticType();
         MockPostLoadSpawnerComponent::StaticType();
         MockPostLoadProbeComponent::StaticType();

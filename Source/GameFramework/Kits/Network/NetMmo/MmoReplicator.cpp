@@ -375,7 +375,7 @@ namespace sw
             {
                 const uint32 entityId = entity._entityId;
                 _mapEntity[entityId]  = std::move( entity );
-                _listEvent.push_back( MmoClientEvent{ entityId, MmoClientEvent::Kind::Entered } );
+                _eventBuffer.push( MmoClientEvent{ entityId, MmoClientEvent::Kind::Entered } );
             }
         }
         else if ( pData[0] == NetMmoMessage::kLeave )
@@ -385,7 +385,7 @@ namespace sw
             {
                 const uint32 entityId = static_cast<uint32>( reader.readVarUint() );
                 if ( _mapEntity.erase( entityId ) > 0 )
-                    _listEvent.push_back( MmoClientEvent{ entityId, MmoClientEvent::Kind::Left } );
+                    _eventBuffer.push( MmoClientEvent{ entityId, MmoClientEvent::Kind::Left } );
             }
         }
         else if ( pData[0] == NetMmoMessage::kUpdate )
@@ -400,7 +400,7 @@ namespace sw
                     continue; // 들어옴보다 먼저 왔거나 이미 나갔다 — 버린다
                 entityIter->second._position  = update._position;
                 entityIter->second._listState = std::move( update._listState );
-                _listEvent.push_back( MmoClientEvent{ update._entityId, MmoClientEvent::Kind::Updated } );
+                _eventBuffer.push( MmoClientEvent{ update._entityId, MmoClientEvent::Kind::Updated } );
             }
         }
         return true;
@@ -408,8 +408,7 @@ namespace sw
 
     void MmoClientView::drainEvents( vector<MmoClientEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     const MmoEntity* MmoClientView::findEntity( uint32 entityId ) const

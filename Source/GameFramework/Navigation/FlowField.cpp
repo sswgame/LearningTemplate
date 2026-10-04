@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Navigation/NavGrid.h"
+#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {
@@ -14,13 +15,11 @@ namespace sw
         {
             static constexpr float32 kDiagonalFactor = 1.41421356f;
             static constexpr float32 kUnreached      = -1.0f;
-            static constexpr int32   kArrOffsetX[8]  = { 1, -1, 0, 0, 1, 1, -1, -1 };
-            static constexpr int32   kArrOffsetY[8]  = { 0, 0, 1, -1, 1, -1, 1, -1 };
 
             /** @brief 대각선 걸음이 두 직교 이웃을 지나도 되는가(모서리 깎기 금지)입니다. */
             static bool canStep( const NavGrid& grid, const int2& from, int32 direction )
             {
-                const int2 next{ from._x + kArrOffsetX[direction], from._y + kArrOffsetY[direction] };
+                const int2 next = GridTopology::getNeighbor( from, direction );
                 if ( grid.isWalkable( next ) == false )
                     return false;
                 return direction < 4 || ( grid.isWalkable( next._x, from._y ) && grid.isWalkable( from._x, next._y ) );
@@ -80,7 +79,7 @@ namespace sw
             {
                 if ( FlowFieldInternal::canStep( grid, cell, direction ) == false )
                     continue;
-                const int2    next{ cell._x + FlowFieldInternal::kArrOffsetX[direction], cell._y + FlowFieldInternal::kArrOffsetY[direction] };
+                const int2    next      = GridTopology::getNeighbor( cell, direction );
                 const int32   nextIndex = grid.computeIndex( next );
                 const float32 distance  = current._distance + enterCost * ( direction >= 4 ? FlowFieldInternal::kDiagonalFactor : 1.0f );
                 float32&      slot      = _listDistance[static_cast<size_t>( nextIndex )];
@@ -107,7 +106,7 @@ namespace sw
                 {
                     if ( FlowFieldInternal::canStep( grid, int2{ x, y }, direction ) == false )
                         continue;
-                    const float32 neighborDistance = _listDistance[static_cast<size_t>( ( y + FlowFieldInternal::kArrOffsetY[direction] ) * _width + x + FlowFieldInternal::kArrOffsetX[direction] )];
+                    const float32 neighborDistance = _listDistance[static_cast<size_t>( ( y + GridTopology::kArrOffsetY[direction] ) * _width + x + GridTopology::kArrOffsetX[direction] )];
                     if ( neighborDistance >= 0.0f && neighborDistance < bestDistance )
                     {
                         bestDistance  = neighborDistance;
@@ -154,7 +153,7 @@ namespace sw
         const int8 direction = getDirectionIndex( cell );
         if ( direction == kNoDirection )
             return cell;
-        return int2{ cell._x + FlowFieldInternal::kArrOffsetX[direction], cell._y + FlowFieldInternal::kArrOffsetY[direction] };
+        return GridTopology::getNeighbor( cell, direction );
     }
 
     float3 FlowField::sampleDirection( const NavGrid& grid, const float3& worldPosition ) const

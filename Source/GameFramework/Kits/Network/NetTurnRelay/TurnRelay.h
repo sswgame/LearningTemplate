@@ -12,6 +12,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetKitMessageRange.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -157,14 +158,14 @@ namespace sw
         void      broadcastRoom( const TurnRoom& room, const vector<uint8>& buffer );
         uint32    nextToken();
 
-        vector<TurnRoom>       _listRoom;
-        vector<TurnRelayEvent> _listEvent;
-        ITurnPolicy            _defaultPolicy;
-        NetHost*               _pHost;
-        const ITurnPolicy*     _pPolicy;
-        int32                  _seatCount;
-        uint32                 _tokenState;
-        NetMessageWriter       _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
+        vector<TurnRoom>            _listRoom;
+        EventBuffer<TurnRelayEvent> _eventBuffer;
+        ITurnPolicy                 _defaultPolicy;
+        NetHost*                    _pHost;
+        const ITurnPolicy*          _pPolicy;
+        int32                       _seatCount;
+        uint32                      _tokenState;
+        NetMessageWriter            _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
 } // namespace sw
 
@@ -193,14 +194,14 @@ namespace sw
         const vector<TurnAction>& getActions() const { return _listAction; }
 
     private:
-        vector<TurnAction>     _listAction;
-        vector<TurnRelayEvent> _listEvent;
-        NetHost*               _pHost;
-        uint32                 _roomId;
-        uint32                 _token;
-        int32                  _seat;
-        int32                  _nextSubmitId;
-        uint8                  _bStarted;
-        NetMessageWriter       _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
+        vector<TurnAction>          _listAction;
+        EventBuffer<TurnRelayEvent> _eventBuffer;
+        NetHost*                    _pHost;
+        uint32                      _roomId;
+        uint32                      _token;
+        int32                       _seat;
+        int32                       _nextSubmitId;
+        uint8                       _bStarted;
+        NetMessageWriter            _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
 } // namespace sw

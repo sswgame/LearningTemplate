@@ -12,7 +12,8 @@
 `ReflectionParser` 가 만드는 `FlagOps.gen.h` 는 `/FI` 로 타깃 **전 TU** 에 강제 include 된다. 그것이 무엇이든
 include 하면 그 이름은 어디서나 "이미 있는" 것이 되어 누락이 보이지 않고, 그 내용은 "플래그 열거형을 가진 헤더가
 무엇이냐" 에 따라 바뀌므로 **오늘 서는 헤더가 내 코드를 안 고쳐도 내일 못 선다.** 그래서 `FlagOps.gen.h` 와 그것이
-include 하는 `*.gen.h` 는 불투명 열거형 전방 선언과 `IsBitFlagEnum` 특수화만 든다(엔진 헤더를 include 하지 않는다).
+include 하는 `*.gen.h` 는 불투명 열거형 전방 선언과 `IsBitFlagEnum` 특수화만 든다(`Core/Common/BitFlagTrait.h` —
+`<type_traits>` 만 — 밖에는 include 하지 않는다).
 
 [게이트가 아니다]
 `Run*` 은 보고하고 `Check*` 이 막는다(`RunBuildWarnings.py` 와 같은 규칙). 막지 않는 이유는 비용이다 —

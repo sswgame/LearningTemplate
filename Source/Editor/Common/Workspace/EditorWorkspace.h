@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/Workspace/EditorSelection.h"

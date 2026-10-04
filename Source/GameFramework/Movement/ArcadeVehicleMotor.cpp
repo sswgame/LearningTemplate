@@ -26,14 +26,14 @@ namespace sw
 {
     ArcadeVehicleMotor::ArcadeVehicleMotor()
         : _settings{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _timer{ 1.0f / 60.0f, 0.25f }
         , _pGround{ nullptr }
         , _position{}
         , _velocity{}
         , _yaw{ 0.0f }
         , _driftCharge{ 0.0f }
-        , _boostTime{ 0.0f }
+        , _boost{}
         , _nitroGauge{ 0.0f }
         , _nitroCount{ 0 }
         , _driftDirection{ 0 }
@@ -43,17 +43,17 @@ namespace sw
 
     void ArcadeVehicleMotor::reset( const float3& position, float32 yaw )
     {
-        _position       = position;
-        _velocity       = float3{};
-        _yaw            = yaw;
-        _driftCharge    = 0.0f;
-        _boostTime      = 0.0f;
+        _position    = position;
+        _velocity    = float3{};
+        _yaw         = yaw;
+        _driftCharge = 0.0f;
+        _boost.clear();
         _nitroGauge     = 0.0f;
         _nitroCount     = 0;
         _driftDirection = 0;
         _bAirborne      = SW_FALSE;
         _timer.reset();
-        _listEvent.clear();
+        _eventBuffer.clear();
     }
 
     void ArcadeVehicleMotor::addImpulse( const float3& impulse )
@@ -69,13 +69,13 @@ namespace sw
     {
         if ( duration <= 0.0f )
             return;
-        if ( _boostTime <= 0.0f )
+        if ( _boost.isActive() == false )
         {
             const float3 forward = computeForward();
             _velocity._x += forward._x * _settings._boostImpulse;
             _velocity._z += forward._z * _settings._boostImpulse;
         }
-        _boostTime = MathUtil::max( _boostTime, duration );
+        _boost.extendTo( duration );
         pushEvent( ArcadeVehicleEvent::Kind::BoostStarted, source );
     }
 
@@ -149,15 +149,8 @@ namespace sw
         _velocity._z = newCos * newAhead - newSin * newSide;
 
         // 7) 부스트 시간.
-        if ( _boostTime > 0.0f )
-        {
-            _boostTime -= deltaTime;
-            if ( _boostTime <= 0.0f )
-            {
-                _boostTime = 0.0f;
-                pushEvent( ArcadeVehicleEvent::Kind::BoostEnded, 0 );
-            }
-        }
+        if ( _boost.tick( deltaTime ) )
+            pushEvent( ArcadeVehicleEvent::Kind::BoostEnded, 0 );
 
         // 8) 위치 · 위아래.
         _position._x += _velocity._x * deltaTime;
@@ -180,8 +173,7 @@ namespace sw
 
     void ArcadeVehicleMotor::drainEvents( vector<ArcadeVehicleEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     float32 ArcadeVehicleMotor::computeSteerRate( float32 speed ) const
@@ -383,6 +375,6 @@ namespace sw
         ArcadeVehicleEvent event;
         event._kind  = kind;
         event._value = value;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

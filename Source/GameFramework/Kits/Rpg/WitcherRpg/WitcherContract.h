@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -80,11 +81,11 @@ namespace sw
         int32 computeOpenOrder() const;
         bool  isFoundInternal( const hashed_string& clueId ) const;
 
-        vector<hashed_string>             _listFound; ///< 지금 단계에서 찾은 단서
-        vector<WitcherInvestigationEvent> _listEvent;
-        const WitcherContractDef*         _pContract;
-        QuestLog*                         _pQuestLog;
-        int32                             _stepIndex;
+        vector<hashed_string>                  _listFound; ///< 지금 단계에서 찾은 단서
+        EventBuffer<WitcherInvestigationEvent> _eventBuffer;
+        const WitcherContractDef*              _pContract;
+        QuestLog*                              _pQuestLog;
+        int32                                  _stepIndex;
     };
 } // namespace sw
 

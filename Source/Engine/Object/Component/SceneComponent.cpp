@@ -383,7 +383,7 @@ namespace sw
             GameObjectManager*        pManager     = _pManager;
             const sw::ComponentHandle selfHandle   = getHandle();
             const sw::ComponentHandle parentHandle = ( pParent != nullptr ) ? pParent->getHandle() : sw::ComponentHandle{};
-            pManager->deferStructuralChange( [pManager, selfHandle, parentHandle, rule]()
+            pManager->deferHierarchyChange( [pManager, selfHandle, parentHandle, rule]()
             {
                 SceneComponent* pSelf           = static_cast<SceneComponent*>( pManager->resolveComponent( selfHandle ) );
                 SceneComponent* pResolvedParent = parentHandle.isValid() ? static_cast<SceneComponent*>( pManager->resolveComponent( parentHandle ) ) : nullptr;
@@ -422,7 +422,7 @@ namespace sw
         {
             GameObjectManager*        pManager   = _pManager;
             const sw::ComponentHandle selfHandle = getHandle();
-            pManager->deferStructuralChange( [pManager, selfHandle, rule]()
+            pManager->deferHierarchyChange( [pManager, selfHandle, rule]()
             {
                 SceneComponent* pSelf = static_cast<SceneComponent*>( pManager->resolveComponent( selfHandle ) );
                 if ( pSelf != nullptr )

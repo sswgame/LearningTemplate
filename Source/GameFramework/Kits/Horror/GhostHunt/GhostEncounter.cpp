@@ -53,7 +53,7 @@ namespace sw
         : _pCatalog{ nullptr }
         , _random{}
         , _listGhost{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _strobeCharge{ 0.0f }
         , _surgeGauge{ 0.0f }
         , _suctionTarget{ 0 }
@@ -73,7 +73,7 @@ namespace sw
     void GhostEncounter::clear()
     {
         _listGhost.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _strobeCharge  = 0.0f;
         _surgeGauge    = 0.0f;
         _suctionTarget = 0;
@@ -204,10 +204,10 @@ namespace sw
         }
         // 도망 방향 바꾸기 — 흡입이 이 시계를 쥔다(update 는 흡입 중인 유령을 건너뛴다).
         GhostInstance* pStill = findGhostMutable( ghostId );
-        pStill->_timer -= deltaTime;
-        if ( pStill->_timer <= 0.0f )
+        pStill->_timer.tick( deltaTime );
+        if ( pStill->_timer.isActive() == false )
         {
-            pStill->_timer += pStill->_pDef->_fleeInterval;
+            pStill->_timer.restart( pStill->_pDef->_fleeInterval );
             chooseFleeDirection( *pStill );
         }
         return tick;
@@ -247,8 +247,8 @@ namespace sw
         {
             if ( ghost._state == GhostState::Caught || ghost._state == GhostState::Sucking )
                 continue;
-            ghost._timer -= deltaTime;
-            if ( ghost._timer > 0.0f )
+            ghost._timer.tick( deltaTime );
+            if ( ghost._timer.isActive() )
                 continue;
             switch ( ghost._state )
             {
@@ -283,8 +283,7 @@ namespace sw
 
     void GhostEncounter::drainEvents( vector<GhostEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     const GhostInstance* GhostEncounter::findGhost( uint32 ghostId ) const
@@ -328,34 +327,34 @@ namespace sw
         {
             case GhostState::Hidden:
             {
-                ghost._timer = def._hideTime;
+                ghost._timer.start( def._hideTime );
                 break;
             }
             case GhostState::Visible:
             {
-                ghost._timer = def._appearTime;
+                ghost._timer.start( def._appearTime );
                 pushEvent( GhostEventType::Appeared, ghost._id );
                 break;
             }
             case GhostState::Attacking:
             {
-                ghost._timer = def._attackTime;
+                ghost._timer.start( def._attackTime );
                 break;
             }
             case GhostState::Stunned:
             {
-                ghost._timer = def._stunTime;
+                ghost._timer.start( def._stunTime );
                 pushEvent( GhostEventType::Stunned, ghost._id );
                 break;
             }
             case GhostState::Sucking:
             {
-                ghost._timer = def._fleeInterval;
+                ghost._timer.start( def._fleeInterval );
                 break;
             }
             case GhostState::Caught:
             {
-                ghost._timer = 0.0f;
+                ghost._timer.clear();
                 break;
             }
         }
@@ -388,6 +387,6 @@ namespace sw
         event._ghostId = ghostId;
         event._amount  = amount;
         event._coins   = coins;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

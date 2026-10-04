@@ -101,24 +101,24 @@ namespace sw
      *          죽여 보는 것 말고는 확인할 방법이 없습니다. 배포하고 나서 안 된다는 것을 알면 늦습니다. **죽는 방식마다** 따로 태워 봐야
      *          합니다 — 접근 위반으로 남는 리포트가 스택 오버플로 · abort 에서도 남는다는 보장은 없습니다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출)" );
     /**
      * @brief `-gv_rhiSwapAtFrame=N -gv_rhiSwapTo=<backend>`: N 번째 프레임에 백엔드 교체를 요청합니다.
      * @details 에디터 메뉴 없이(헤드리스로) 교체를 재현 · 검증하는 창구입니다. 요청 방식은 에디터
      *          패널과 같습니다(`GlobalVariableInfo::setValueAsInt` → 변경 콜백 → RHIBackendSwitcher 가 다음 프레임에
      *          적용). C++ 대입(`gv_rhiBackend = x`)은 콜백을 부르지 않아 아무 일도 일어나지 않습니다. 0 이면 꺼져 있습니다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_rhiSwapAtFrame, 0, "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)" );
-    SW_TEST_GLOBAL_VARIABLE_ENUM( gv_rhiSwapTo, RHIBackend, RHIBackend::DirectX12, "gv_rhiSwapAtFrame 에 바꿀 백엔드" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSwapAtFrame, 0, "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( RHIBackend, gv_rhiSwapTo, RHIBackend::DirectX12, "gv_rhiSwapAtFrame 에 바꿀 백엔드" );
     /**
      * @brief `-gv_dumpReflection=CameraComponent,CameraRole`: 첫 프레임에 그 타입 · enum 의 등록 내용을 로그로 남깁니다(`TypeRegistry::describeType`).
      * @details 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다. 한 번 찍고 비운다.
      */
-    SW_TEST_GLOBAL_VARIABLE_STRING( gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
     /** @brief 활성 씬의 강체 물리(바디 셰이프 · 캐릭터 캡슐)를 디버그 선으로 그립니다(`ScenePhysics::drawDebug` → `DebugDrawQueue`). */
-    SW_GLOBAL_VARIABLE_BOOL( gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
+    SW_GLOBAL_VARIABLE( bool, gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
     /** @brief `-gv_telemetryFolder=<경로>`: 텔레메트리 스풀 폴더입니다(자동화 — 사용자 폴더를 건드리지 않는다). 비면 사용자 설정 파일 옆의 `telemetry/`. */
-    SW_TEST_GLOBAL_VARIABLE_STRING( gv_telemetryFolder, "", "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_telemetryFolder, "", "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)" );
 
 } // namespace sw
 
@@ -447,9 +447,9 @@ namespace sw
                 MemoryProfiler::captureMemoryLeakBaseline();
                 loop._bHeadless = true;
                 SW_LOG_INFO( "Starting Headless (ImportLipSync)..." );
-                LipSyncSettings lipSyncSettings{};
-                uint32          lipSyncFailedCount = 0;
-                uint32          lipSyncCount       = 0;
+                LipSyncSettings         lipSyncSettings{};
+                uint32                  lipSyncFailedCount = 0;
+                [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
                 if ( lipSyncSettings.loadFromResource( LipSyncSettings::kResourcePath ) )
                     lipSyncCount = LipSyncImport::importAll( ResourceUtil::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
                 else

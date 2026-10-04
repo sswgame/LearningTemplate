@@ -51,16 +51,6 @@ namespace sw
     {
     }
 
-    bool RestaurantCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &RestaurantCatalog::loadRoot, path, "RestaurantCatalog" );
-    }
-
-    bool RestaurantCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &RestaurantCatalog::loadRoot, xmlText, sourceName, "RestaurantCatalog" );
-    }
-
     float32 RestaurantCatalog::getArrivalRate( int32 hour ) const
     {
         if ( hour < 0 || hour >= kHoursPerDay )

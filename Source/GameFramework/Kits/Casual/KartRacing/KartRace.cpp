@@ -45,7 +45,7 @@ namespace sw
     KartRace::KartRace()
         : _listRacer{}
         , _listProjectile{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listItemBoxTimer{}
         , _listPlaceOrder{}
         , _settings{}
@@ -55,7 +55,7 @@ namespace sw
         , _pItemCatalog{ nullptr }
         , _pGhost{ nullptr }
         , _raceTime{ 0.0f }
-        , _countdown{ 0.0f }
+        , _countdown{}
         , _bestLapTime{ 0.0f }
         , _firstFinishTime{ -1.0f }
         , _ghostRacer{ -1 }
@@ -73,15 +73,15 @@ namespace sw
         _timer = FixedStepTimer{ settings._step, 0.25f };
         _listRacer.clear();
         _listProjectile.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listPlaceOrder.clear();
         _listItemBoxTimer.clear();
         if ( pTrack != nullptr )
-            _listItemBoxTimer.resize( pTrack->getItemBoxPositions().size(), 0.0f );
-        _pGhost          = nullptr;
-        _ghostRacer      = -1;
-        _raceTime        = 0.0f;
-        _countdown       = 0.0f;
+            _listItemBoxTimer.resize( pTrack->getItemBoxPositions().size() );
+        _pGhost     = nullptr;
+        _ghostRacer = -1;
+        _raceTime   = 0.0f;
+        _countdown.clear();
         _bestLapTime     = 0.0f;
         _firstFinishTime = -1.0f;
         _finishedCount   = 0;
@@ -129,11 +129,11 @@ namespace sw
             kart._ai.reset();
             kart._progress = computeProgress( kart );
         }
-        _phase     = KartRacePhase::Countdown;
-        _countdown = _settings._countdownTime;
-        _raceTime  = 0.0f;
+        _phase = KartRacePhase::Countdown;
+        _countdown.start( _settings._countdownTime );
+        _raceTime = 0.0f;
         updatePlaces();
-        if ( _countdown <= 0.0f )
+        if ( _countdown.isActive() == false )
         {
             _phase = KartRacePhase::Racing;
             pushEvent( KartRaceEvent::Kind::RaceStarted, -1, -1, 0, 0.0f );
@@ -168,11 +168,10 @@ namespace sw
         const float32 deltaTime = _settings._step;
         if ( _phase == KartRacePhase::Countdown )
         {
-            _countdown -= deltaTime;
-            if ( _countdown <= 0.0f )
+            _countdown.tick( deltaTime );
+            if ( _countdown.isActive() == false )
             {
-                _countdown = 0.0f;
-                _phase     = KartRacePhase::Racing;
+                _phase = KartRacePhase::Racing;
                 pushEvent( KartRaceEvent::Kind::RaceStarted, -1, -1, 0, 0.0f );
             }
             return;
@@ -202,10 +201,8 @@ namespace sw
                 pushEvent( KartRaceEvent::Kind::BoostPad, racer, -1, kart._lastBoostPad, _raceTime );
             kart._motor.discardEvents(); // 경기는 차 알림을 쓰지 않는다 — 쌓이지 않게 비운다
 
-            if ( kart._spinTime > 0.0f )
-                kart._spinTime = MathUtil::max( 0.0f, kart._spinTime - deltaTime );
-            if ( kart._shieldTime > 0.0f )
-                kart._shieldTime = MathUtil::max( 0.0f, kart._shieldTime - deltaTime );
+            kart._spinTime.tick( deltaTime );
+            kart._shieldTime.tick( deltaTime );
             if ( kart._itemId.empty() == false )
                 kart._itemHeldTime += deltaTime;
             updateProgress( racer );
@@ -222,7 +219,7 @@ namespace sw
     {
         KartRacer& kart = _listRacer[static_cast<size_t>( racer )];
         outUseItem      = false;
-        if ( kart._spinTime > 0.0f )
+        if ( kart._spinTime.isActive() )
         {
             kart._input = KartRacerInput{}; // 도는 동안의 눌림은 버린다
             return ArcadeVehicleInput{};
@@ -232,7 +229,7 @@ namespace sw
             KartAiContext context;
             context._bHasItem        = kart._itemId.empty() ? SW_FALSE : SW_TRUE;
             context._itemHeldTime    = kart._itemHeldTime;
-            context._bShielded       = kart._shieldTime > 0.0f ? SW_TRUE : SW_FALSE;
+            context._bShielded       = kart._shieldTime.isActive() ? SW_TRUE : SW_FALSE;
             const KartItemDef* pItem = _pItemCatalog != nullptr && kart._itemId.empty() == false ? _pItemCatalog->findItem( kart._itemId ) : nullptr;
             if ( pItem != nullptr )
                 context._itemKind = pItem->_kind;
@@ -299,7 +296,7 @@ namespace sw
         // 역주행 — 트랙 방향 속도가 이어서 음수다.
         const float3& velocity   = kart._motor.getVelocity();
         const float32 alongSpeed = velocity._x * projection._tangent._x + velocity._z * projection._tangent._z;
-        if ( alongSpeed < -_settings._wrongWaySpeed && kart._spinTime <= 0.0f )
+        if ( alongSpeed < -_settings._wrongWaySpeed && kart._spinTime.isActive() == false )
         {
             kart._wrongWayTime += _settings._step;
             if ( kart._bWrongWay == SW_FALSE && kart._wrongWayTime >= _settings._wrongWayDelay )
@@ -381,9 +378,9 @@ namespace sw
         const vector<float3>& listBox = _pTrack->getItemBoxPositions();
         for ( size_t boxIndex = 0; boxIndex < _listItemBoxTimer.size(); ++boxIndex )
         {
-            if ( _listItemBoxTimer[boxIndex] > 0.0f )
+            if ( _listItemBoxTimer[boxIndex].isActive() )
             {
-                _listItemBoxTimer[boxIndex] = MathUtil::max( 0.0f, _listItemBoxTimer[boxIndex] - deltaTime );
+                _listItemBoxTimer[boxIndex].tick( deltaTime );
                 continue;
             }
             if ( _settings._bItems == SW_FALSE || _pItemCatalog == nullptr )
@@ -395,7 +392,7 @@ namespace sw
                 if ( kart._bFinished == SW_TRUE || KartRaceInternal::computeFlatDistanceSq( kart._motor.getPosition(), listBox[boxIndex] ) > reach * reach )
                     continue;
                 // 상자는 들고 있어도 깨진다 — 빈 손이면 순위 표로 굴린다.
-                _listItemBoxTimer[boxIndex] = _settings._itemBoxRespawn;
+                _listItemBoxTimer[boxIndex].start( _settings._itemBoxRespawn );
                 hashed_string itemId;
                 if ( kart._itemId.empty() )
                 {
@@ -408,7 +405,7 @@ namespace sw
                     }
                 }
                 pushEvent( KartRaceEvent::Kind::ItemBoxTaken, static_cast<int32>( racerIndex ), -1, static_cast<int32>( boxIndex ), _raceTime );
-                _listEvent.back()._itemId = itemId;
+                _eventBuffer.getLast()._itemId = itemId;
                 break;
             }
         }
@@ -434,7 +431,7 @@ namespace sw
         kart._itemId       = hashed_string{};
         kart._itemHeldTime = 0.0f;
         pushEvent( KartRaceEvent::Kind::ItemUsed, racer, -1, static_cast<int32>( pItem->_kind ), _raceTime );
-        _listEvent.back()._itemId = pItem->_id;
+        _eventBuffer.getLast()._itemId = pItem->_id;
 
         const float3   forward  = kart._motor.computeForward();
         const float3&  position = kart._motor.getPosition();
@@ -478,7 +475,7 @@ namespace sw
             }
             case KartItemKind::Shield:
             {
-                kart._shieldTime = pItem->_shieldTime;
+                kart._shieldTime.start( pItem->_shieldTime );
                 break;
             }
         }
@@ -598,20 +595,20 @@ namespace sw
         KartRacer& kart = _listRacer[static_cast<size_t>( victim )];
         if ( kart._bFinished == SW_TRUE )
             return false;
-        if ( kart._shieldTime > 0.0f && def._bIgnoresShield == SW_FALSE )
+        if ( kart._shieldTime.isActive() && def._bIgnoresShield == SW_FALSE )
         {
-            kart._shieldTime = 0.0f;
+            kart._shieldTime.clear();
             pushEvent( KartRaceEvent::Kind::ShieldBlocked, victim, attacker, 0, _raceTime );
-            _listEvent.back()._itemId = def._id;
+            _eventBuffer.getLast()._itemId = def._id;
             return false;
         }
         // 감속은 충격으로 — 차의 드리프트가 보상 없이 끊긴다.
         const float3& velocity = kart._motor.getVelocity();
         const float32 cut      = 1.0f - MathUtil::saturate( def._hitSpeedScale );
         kart._motor.addImpulse( float3{ -velocity._x * cut, 0.0f, -velocity._z * cut } );
-        kart._spinTime = MathUtil::max( kart._spinTime, def._spinTime );
+        kart._spinTime.extendTo( def._spinTime );
         pushEvent( KartRaceEvent::Kind::Hit, victim, attacker, static_cast<int32>( def._kind ), _raceTime );
-        _listEvent.back()._itemId = def._id;
+        _eventBuffer.getLast()._itemId = def._id;
         return true;
     }
 
@@ -722,7 +719,7 @@ namespace sw
 
     bool KartRace::isItemBoxActive( int32 boxIndex ) const
     {
-        return 0 <= boxIndex && boxIndex < static_cast<int32>( _listItemBoxTimer.size() ) && _listItemBoxTimer[static_cast<size_t>( boxIndex )] <= 0.0f;
+        return 0 <= boxIndex && boxIndex < static_cast<int32>( _listItemBoxTimer.size() ) && _listItemBoxTimer[static_cast<size_t>( boxIndex )].isActive() == false;
     }
 
     void KartRace::placeRacer( int32 racer, const float3& position, float32 yaw )
@@ -752,8 +749,7 @@ namespace sw
 
     void KartRace::drainEvents( vector<KartRaceEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void KartRace::pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time )
@@ -764,6 +760,6 @@ namespace sw
         event._other = other;
         event._value = value;
         event._time  = time;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

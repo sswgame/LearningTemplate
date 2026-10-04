@@ -3,6 +3,7 @@
 #include "GameFramework/Inventory/Equipment.h"
 
 #include "GameFramework/Data/GameDataXml.h"
+#include "GameFramework/Data/StatBlock.h"
 #include "GameFramework/Inventory/ItemCatalog.h"
 
 namespace sw

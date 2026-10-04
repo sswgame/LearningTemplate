@@ -63,6 +63,16 @@ namespace
         return false;
     }
 
+    /** @brief @p text 에서 처음 나오는 @p pFrom 을 @p pTo 로 바꿉니다. 없으면 false 입니다. */
+    bool replaceFirst( string& text, const utf8* pFrom, const utf8* pTo )
+    {
+        const size_t at = text.find( pFrom );
+        if ( at == string::npos )
+            return false;
+        text.replace( at, std::strlen( pFrom ), pTo );
+        return true;
+    }
+
     /** @brief 웨이브가 없는 카탈로그(부대 · 공성만 보는 시험)입니다. */
     void disableWaves( ConquestCatalog& catalog )
     {
@@ -378,4 +388,45 @@ SW_TEST_CASE( SideScrollConquestTest, SameInputsGiveTheSameBattle )
     SW_EXPECT_NEAR_EQUAL( first.getCommander()._health, second.getCommander()._health, 1.0e-6f );
     SW_EXPECT_EQUAL( first.getResource( "gold" ), second.getResource( "gold" ) );
     SW_EXPECT_NEAR_EQUAL( first.findSite( "keep" )->_gateHealth, second.findSite( "keep" )->_gateHealth, 1.0e-6f );
+}
+
+/**
+ * @brief [SideScrollConquestTest] 공격 빈도는 간격을 따른다 — 0.1 초 걸음에서 0.75 초 간격의 병사 · 지휘관이 60 초에 81 번(첫 타 포함, ±1) 친다
+ * @details 간격이 걸음의 배수가 아니면, 끝난 걸음에 간격으로 덮을 때 지나친 몫을 버려 8 걸음(0.8 초)마다 76 번이 된다.
+ */
+SW_TEST_CASE( SideScrollConquestTest, AttackRateFollowsTheIntervalNotTheStep )
+{
+    string xml = kConquestTestXml;
+    SW_ASSERT_TRUE( replaceFirst( xml, R"(damage="5" range="1" attackInterval="1")", R"(damage="5" range="1" attackInterval="0.75")" ) );
+    SW_ASSERT_TRUE( replaceFirst( xml, R"(<Unit id="guard" hp="50" damage="4")", R"(<Unit id="guard" hp="100000" damage="0")" ) );
+    ConquestCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( xml.c_str(), "SideScrollConquestTest" ) );
+    disableWaves( catalog );
+    ConquestRules rules            = catalog.getRules();
+    rules._moraleDamageBonus       = 0.0f;
+    rules._commanderAttackInterval = 0.75f;
+    catalog.setRules( rules );
+    const float32 seconds = 60.0f;
+    const float32 design  = seconds / 0.75f + 1.0f; // 0 초에 첫 타
+
+    // 병사 — 지휘관에게서 먼 곳에 세워 둔 과녁을 친다.
+    ConquestWorld unitWorld;
+    unitWorld.initialize( &catalog );
+    const int32 spear = unitWorld.spawnUnit( "spearman", ConquestTeam::Player, 20.0f, ConquestOrder::Hold );
+    (void)unitWorld.spawnUnit( "guard", ConquestTeam::Enemy, 20.5f, ConquestOrder::Hold );
+    runWorld( unitWorld, seconds );
+    SW_EXPECT_NEAR_EQUAL( design, unitWorld.findUnit( spear )->_damageDealt / 5.0f, 1.0f );
+
+    // 지휘관 — 바로 앞의 과녁을 친다(지휘관 피해 10). 요새의 수비대(60)는 세지 않는다.
+    ConquestWorld commanderWorld;
+    commanderWorld.initialize( &catalog );
+    (void)commanderWorld.spawnUnit( "guard", ConquestTeam::Enemy, commanderWorld.getCommander()._x + 1.0f, ConquestOrder::Hold );
+    runWorld( commanderWorld, seconds );
+    float32 guardLoss = 0.0f;
+    for ( const ConquestUnit& unit : commanderWorld.getUnits() )
+    {
+        if ( unit._team == ConquestTeam::Enemy && unit._x < 30.0f )
+            guardLoss = 100000.0f - unit._health;
+    }
+    SW_EXPECT_NEAR_EQUAL( design, guardLoss / 10.0f, 1.0f );
 }

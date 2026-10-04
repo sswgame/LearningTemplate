@@ -21,13 +21,14 @@ namespace sw
     namespace
     {
         /**
-         * @brief 이 스레드가 지금 틱하는 오브젝트입니다(`GameObjectManager::getTickingObject`). 오브젝트 그룹 틱이 항목을 도는 동안만 채웁니다.
+         * @brief 이 스레드가 지금 틱하는 오브젝트입니다(`GameObjectManager::getTickingObject`). 오브젝트 그룹 틱 · 선행 조건 스테이지가 항목을 도는 동안 채웁니다.
+         * @details 두 길 모두 한 오브젝트의 항목을 동시에 한 스레드만 돈다(스테이지는 오브젝트별로 갈린다) — 그래서 그 오브젝트의 대기 칸에 잠금 없이 쓴다.
          * @details 포인터라 초기화가 상수이고, TLS 접근에 감싸는 함수가 붙지 않습니다.
          */
         thread_local const GameObject* t_pTickingObject = nullptr;
         /**
          * @brief 이 스레드에서 지금 도는 틱의 주인 오브젝트입니다. 틱 밖에서는 nullptr 입니다. 두 틱 길(오브젝트 그룹 · 선행 조건 스테이지)이
-         *          모두 채웁니다. 다른 오브젝트에 쓴 건의 순서 키가 됩니다 — 대기 칸 길을 고르는 `t_pTickingObject` 와 달리 스테이지 길에서도 채웁니다.
+         *          모두 채웁니다. 다른 오브젝트에 쓴 건의 순서 키가 됩니다.
          */
         thread_local const GameObject* t_pTickWriter = nullptr;
 
@@ -93,7 +94,8 @@ namespace sw
             };
 
             /**
-             * @brief 선행 조건 스테이지 하나의 항목 [start, end) 를 도는 잡 본문입니다. 항목마다 오브젝트가 다르므로 소유자도 봅니다.
+             * @brief 선행 조건 스테이지 하나의 항목 [start, end) 를 도는 잡 본문입니다. 항목마다 오브젝트가 다르므로 소유자도 봅니다(항목이 적다).
+             * @details 한 스테이지에 한 오브젝트의 항목은 하나뿐이라 자기 오브젝트 쓰기는 보통 길처럼 대기 칸으로 간다.
              */
             struct StageTick
             {
@@ -111,10 +113,12 @@ namespace sw
                         GameObject* pOwner = pComp->getOwner();
                         if ( pOwner == nullptr || pOwner->isPendingDestroy() )
                             continue;
-                        t_pTickWriter = pOwner;
+                        t_pTickingObject = pOwner;
+                        t_pTickWriter    = pOwner;
                         runTickItem( _deltaTime, item );
                     }
-                    t_pTickWriter = nullptr;
+                    t_pTickingObject = nullptr;
+                    t_pTickWriter    = nullptr;
                 }
             };
         };
@@ -224,6 +228,8 @@ namespace sw
 
         // 틱 중의 세터가 쓸 대기 칸 목록 · 쓰기 큐를 슬롯 수만큼 미리 잡아 둔다(워커는 자기 칸만 만진다).
         _transformHierarchy.beginTickWrites();
+        // 지난 단계의 구조 변경 큐는 `applyTickResults` 가 비웠다 — 이번 단계의 계층 변경 미룸을 새로 센다.
+        _bDeferredHierarchyChange.store( SW_FALSE, std::memory_order_relaxed );
         _bTicking.store( true, std::memory_order_release );
 
         {
@@ -246,44 +252,62 @@ namespace sw
                 _tickStageBuildCount.fetch_add( 1, std::memory_order_relaxed );
         }
 
-        if ( _tickRegistry.hasPrerequisites() == false )
+        // 그룹마다: 보통 길(오브젝트 칸 목록을 한 번의 포크-조인) → 그 그룹의 선행 조건 스테이지. 한 오브젝트의 칸은 한 워커가 (순서 키 순으로)
+        // 돌므로 같은 오브젝트의 컴포넌트 둘이 동시에 돌지 않고, 스테이지는 보통 길이 끝난 뒤라 겹치지 않는다. 선행 조건을 가진 항목만
+        // 스테이지로 간다 — 사슬 밖 오브젝트는 선행 조건이 씬에 있든 없든 같은 길이다. 보통 길이 먼저라 선행 조건이 보통 길의 항목이어도 순서가 맞다.
+        const vector<TickStage>& listStage  = _tickRegistry.getStages();
+        size_t                   stageIndex = 0;
+        for ( uint32 group = firstGroup; group < endGroup && group < TickRegistry::kGroupCount; ++group )
         {
-            // 보통 경로다. 그룹마다 오브젝트 목록을 한 번의 포크-조인으로 나눈다. 한 오브젝트의 항목은 한 워커가 (순서 키 순으로)
-            // 돌므로 같은 오브젝트의 컴포넌트 둘이 동시에 돌지 않는다.
-            for ( uint32 group = firstGroup; group < endGroup && group < TickRegistry::kGroupCount; ++group )
+            const vector<TickObjectEntry>& listEntry = _tickRegistry.getEntries( group );
+            if ( listEntry.empty() == false )
             {
-                const vector<TickObjectEntry>& listEntry = _tickRegistry.getEntries( group );
-                if ( listEntry.empty() )
-                    continue;
                 GameObjectManagerTickInternal::ObjectGroupTick job{};
                 job._pEntry    = listEntry.data();
                 job._deltaTime = deltaTime;
                 engine::runParallel( static_cast<uint32>( listEntry.size() ), GameObjectManagerTickInternal::kParallelTickThreshold,
                                      SW_DELEGATE_METHOD( ParallelBlockDelegate, &GameObjectManagerTickInternal::ObjectGroupTick::tickRange, &job ) );
             }
+
+            // 스테이지는 그룹 순서로 지어진다(한 스테이지 = 한 그룹).
+            while ( stageIndex < listStage.size() && listStage[stageIndex]._group < group )
+                ++stageIndex;
+            for ( ; stageIndex < listStage.size() && listStage[stageIndex]._group == group; ++stageIndex )
+            {
+                const TickStage& stage = listStage[stageIndex];
+                // 앞에서 돈 선행 조건(앞 스테이지 · 보통 길)이 쓴 트랜스폼을 이 스테이지가 같은 프레임에 읽게 한다. 기다리는 스테이지 앞에서만.
+                if ( stage._bApplyBefore == SW_TRUE )
+                    applyStageTransforms();
+                GameObjectManagerTickInternal::StageTick job{};
+                job._pItem     = stage._listItem.data();
+                job._deltaTime = deltaTime;
+                engine::runParallel( static_cast<uint32>( stage._listItem.size() ), GameObjectManagerTickInternal::kParallelTickThreshold,
+                                     SW_DELEGATE_METHOD( ParallelBlockDelegate, &GameObjectManagerTickInternal::StageTick::tickRange, &job ) );
+            }
+        }
+    }
+
+    void GameObjectManager::applyStageTransforms()
+    {
+        // 부른 순서: 계층 변경(attach · detach)이 이번 단계에서 미뤄졌으면 그 뒤에 부른 쓰기는 그 변경 **뒤에** 적용돼야 한다(`KeepWorld` 는
+        // 붙이기 전 월드에서 로컬을 다시 구한다). 구조 변경은 단계 끝에서만 돌므로, 그때부터는 쓰기도 단계 끝까지 둔다.
+        if ( _bDeferredHierarchyChange.load( std::memory_order_relaxed ) != SW_FALSE )
             return;
-        }
+        SW_PROFILE_SCOPE( "GT.Scene.tick.stageTransforms" );
+        ++_stageTransformApplyCount;
+        // 스테이지 사이엔 워커가 돌지 않는다 — 틱 뒤 적용과 같은 길(대기 칸 → 쓰기 큐 → 잎 루트 합성 · 더티 루트)에 플러시까지 해서
+        // 다음 스테이지가 로컬 · 월드 값을 모두 읽게 한다. 동결은 그대로다(구조 변경 · 스폰은 여전히 단계 끝).
+        _transformHierarchy.applyTickWrites( *this, _primitiveRegistry );
+        if ( hasDirtySceneTransforms() )
+            flushSceneTransforms();
+    }
 
-        // 선행 조건이 있다. 계층을 넘는 순서는 오브젝트 단위로 표현할 수 없으므로 등록부가 지은 DAG 스테이지로 간다(드물다).
-        // 스테이지 캐시는 등록부 세대로 무효화한다. 항목은 등록부의 것이라 세대가 같은 동안 살아 있다.
-        if ( _lastStageGeneration != _tickRegistry.getGeneration() )
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.stages" );
-            _lastStageGeneration = _tickRegistry.getGeneration();
-            _tickRegistry.computePrerequisiteStages( _listCachedTickStage );
-        }
-
-        // 스테이지는 그룹 순서로 지어진다(한 스테이지 = 한 그룹) — 이번 단계의 그룹만 돈다.
-        for ( const TickStage& stage : _listCachedTickStage )
-        {
-            if ( stage.empty() || stage.front()._group < firstGroup || stage.front()._group >= endGroup )
-                continue;
-            GameObjectManagerTickInternal::StageTick job{};
-            job._pItem     = stage.data();
-            job._deltaTime = deltaTime;
-            engine::runParallel( static_cast<uint32>( stage.size() ), GameObjectManagerTickInternal::kParallelTickThreshold,
-                                 SW_DELEGATE_METHOD( ParallelBlockDelegate, &GameObjectManagerTickInternal::StageTick::tickRange, &job ) );
-        }
+    void GameObjectManager::deferHierarchyChange( StructuralChangeDelegate func )
+    {
+        // "하나라도" 플래그 — 이미 서 있으면 쓰지 않는다(워커가 공유 칸에 거듭 쓰지 않게).
+        if ( _bDeferredHierarchyChange.load( std::memory_order_relaxed ) == SW_FALSE )
+            _bDeferredHierarchyChange.store( SW_TRUE, std::memory_order_relaxed );
+        deferStructuralChange( std::move( func ) );
     }
 
     void GameObjectManager::registerCollider( BoxCollider2DComponent* pCollider )
@@ -378,7 +402,8 @@ namespace sw
             return;
 
         // 이 스레드가 스크래치 슬롯을 받지 못했다(도우미 칸이 다 찬 드문 경우). 계층 변경과 같은 지연 경로로 가서, 틱 뒤에 한 건짜리 배치로 적용한다.
-        deferStructuralChange( [this, write]()
+        // 그 건이 단계 끝에 적용되므로, 뒤에 부른 쓰기가 스테이지 경계에서 먼저 적용되어 이 건에 지지 않게 계층 변경으로 센다.
+        deferHierarchyChange( [this, write]()
         {
             _transformHierarchy.applyBatch( *this, &write, 1 );
         } );

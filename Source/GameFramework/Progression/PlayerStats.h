@@ -10,6 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -57,13 +58,13 @@ namespace sw
      * @class StatCatalog
      * @brief `<Stats><Stat id="enemies_killed" kind="Counter" name="Enemies" max="1000000"/>…</Stats>` 를 읽습니다. 모르는 `kind` 는 오류이고 그 정의는 뺍니다.
      */
-    class SW_GF_API StatCatalog
+    class SW_GF_API StatCatalog : public XmlCatalog<StatCatalog>
     {
+        friend class XmlCatalog<StatCatalog>;
+
     public:
         StatCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
         /** @brief 코드로 정의를 더합니다(같은 id 는 바꾼다). */
         void addStat( const StatDef& def );
 
@@ -71,7 +72,8 @@ namespace sw
         const vector<StatDef>& getStats() const { return _listStat; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "Stats"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         vector<StatDef>                      _listStat;
         unordered_map<hashed_string, uint32> _mapIndex;

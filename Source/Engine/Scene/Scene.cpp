@@ -28,7 +28,7 @@ namespace sw
      * @details 벤치 · 시각 검증용입니다(예: engine/materials/benchtextured.material 로 텍스처 샘플링 경로를 봅니다).
      *          비어 있으면 EngineDefaultAssets._defaultMaterial 을 씁니다.
      */
-    SW_GLOBAL_VARIABLE_STRING( gv_defaultMaterial, "", "씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineDefaultAssets)" );
+    SW_GLOBAL_VARIABLE( sw::string, gv_defaultMaterial, "", "씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineDefaultAssets)" );
 
     namespace
     {

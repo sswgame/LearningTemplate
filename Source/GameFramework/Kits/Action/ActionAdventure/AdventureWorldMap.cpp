@@ -38,16 +38,6 @@ namespace sw
     {
     }
 
-    bool AdventureWorldMap::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &AdventureWorldMap::loadRoot, path, "AdventureWorld" );
-    }
-
-    bool AdventureWorldMap::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &AdventureWorldMap::loadRoot, xmlText, sourceName, "AdventureWorld" );
-    }
-
     void AdventureWorldMap::readLandmarks( const XmlNode& root, const utf8* pNodeName, AdventureLandmarkKind kind, string_view sourceName, uint32& inoutCount )
     {
         for ( XmlNode node = root.findChild( pNodeName ); node; node = node.findNextSibling( pNodeName ) )

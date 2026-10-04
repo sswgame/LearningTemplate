@@ -113,16 +113,16 @@ namespace sw
      * @details 기사마다 무기(쇠뇌) · 망토 유닛이 자식으로 붙는다. 비용을 재려면 `-gv_benchRigEnabled=0` 과 짝으로 돌려
      *          `GT.Animation.evaluate` 차이를 기사 수로 나눈다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchRig, 0, "후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchRig, 0, "후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링)" );
 
     /** @brief `-gv_benchRigEnabled=0` — 리그 컴포넌트를 끈 채 세웁니다(리그 비용 대조군). */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchRigEnabled, 1, "리그 데모의 PoseModifierComponent 를 켤지 (0=대조군)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchRigEnabled, 1, "리그 데모의 PoseModifierComponent 를 켤지 (0=대조군)" );
 
     /** @brief `-gv_benchRigView=N` — 리그 데모 카메라(기사 한 명일 때): 0 왼쪽 앞(시선 · 왼손 · 발) · 1 정면 · 2 오른쪽 옆(쇠뇌 · 망토) · 3 오른쪽 뒤(망토 · 발). */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchRigView, 0, "리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchRigView, 0, "리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤)" );
 
     /** @brief 벤치 공통 스위치 — 0 이면 시간 구동 변화를 멈춘다(BenchScene.cpp 가 정의). */
-    SW_EXTERN_TEST_GLOBAL_VARIABLE_INT( gv_benchAnimate, SW_KEEP_IN_SHIPPING );
+    SW_EXTERN_GLOBAL_VARIABLE( int32, gv_benchAnimate );
 
     uint32 BenchScene::getRigCharacterCount()
     {

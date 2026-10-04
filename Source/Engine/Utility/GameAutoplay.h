@@ -64,7 +64,7 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief 게임의 자동 플레이를 그 전역 변수 바로 아래에서 등록합니다(`SW_TEST_GLOBAL_VARIABLE_INT( gv_x, 0, …, SW_KEEP_IN_SHIPPING )` 다음 줄).
+ * @brief 게임의 자동 플레이를 그 전역 변수 바로 아래에서 등록합니다(`SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_x, 0, … )` 다음 줄).
  * @param gvName       켜짐을 든 int32 전역 변수
  * @param pGameName    게임 이름(리터럴)
  * @param pDescription 무엇을 자동으로 하는가(리터럴)

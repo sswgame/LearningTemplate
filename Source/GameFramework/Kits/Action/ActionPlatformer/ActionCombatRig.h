@@ -15,6 +15,7 @@
 #include "GameFramework/Combat/FrameData.h"
 #include "GameFramework/Combat/Weapon.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -125,7 +126,7 @@ namespace sw
         MoveTimeline                   _timeline;
         WeaponState                    _gun;
         vector<ActionProjectile>       _listProjectile;
-        vector<ActionCombatEvent>      _listEvent;
+        EventBuffer<ActionCombatEvent> _eventBuffer;
         uint32                         _nextProjectileId;
         int32                          _comboIndex; ///< 지금 기술의 콤보 자리(−1 = 쉬는 중)
         int32                          _attackBufferFrames;

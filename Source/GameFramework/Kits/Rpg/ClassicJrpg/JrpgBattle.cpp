@@ -32,7 +32,7 @@ namespace sw
         : _listEnemy{}
         , _listCommand{}
         , _listDefending{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _turnOrder{}
         , _random{}
         , _settings{}
@@ -62,7 +62,7 @@ namespace sw
     {
         _pParty = pParty;
         _listEnemy.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _turnOrder.initialize( TurnOrderMode::Rounds, _random.nextUint() );
         _comboPoints  = 0;
         _round        = 0;
@@ -627,12 +627,11 @@ namespace sw
         event._target      = target;
         event._value       = value;
         event._id          = id;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     void JrpgBattle::drainEvents( vector<JrpgBattleEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

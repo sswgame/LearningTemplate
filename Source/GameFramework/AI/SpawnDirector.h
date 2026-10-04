@@ -10,7 +10,9 @@
 
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/GameCurve.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -39,13 +41,12 @@ namespace sw
      *        <Entry id="bracken" cost="3" weight="2" max="1" minTime="60" tags="Indoor"/>
      *        <Curve time="0" scale="0.5"/><Curve time="600" scale="2"/></SpawnTable>` 를 읽습니다.
      */
-    class SW_GF_API SpawnTable
+    class SW_GF_API SpawnTable : public XmlCatalog<SpawnTable>
     {
+        friend class XmlCatalog<SpawnTable>;
+
     public:
         SpawnTable();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         /** @brief @p time 의 예산 배율입니다 — 곡선 점 사이는 선형, 끝 밖은 끝 값, 곡선이 없으면 1 입니다. */
         float32 computeScale( float32 time ) const { return _curve.evaluate( time, 1.0f ); }
@@ -60,7 +61,8 @@ namespace sw
         bool                         isRefundOnDespawn() const { return _bRefundOnDespawn == SW_TRUE; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "SpawnTable"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<SpawnEntryDef> _catalog;
         GameCurve                  _curve;
@@ -142,17 +144,17 @@ namespace sw
         bool isEligible( int32 entryIndex ) const;
         void pickPending();
 
-        vector<SpawnAlive>    _listAlive;
-        vector<int32>         _listAliveCount; ///< 항목마다
-        vector<hashed_string> _listAllowedTag;
-        vector<SpawnEvent>    _listEvent;
-        const SpawnTable*     _pTable;
-        GameRandom            _random;
-        float32               _budget;
-        float32               _budgetScale;
-        float32               _time;
-        int32                 _pendingIndex; ///< −1 = 골라 둔 것 없음
-        uint32                _nextSpawnId;
-        uint8                 _bRefundOnDespawn;
+        vector<SpawnAlive>      _listAlive;
+        vector<int32>           _listAliveCount; ///< 항목마다
+        vector<hashed_string>   _listAllowedTag;
+        EventBuffer<SpawnEvent> _eventBuffer;
+        const SpawnTable*       _pTable;
+        GameRandom              _random;
+        float32                 _budget;
+        float32                 _budgetScale;
+        float32                 _time;
+        int32                   _pendingIndex; ///< −1 = 골라 둔 것 없음
+        uint32                  _nextSpawnId;
+        uint8                   _bRefundOnDespawn;
     };
 } // namespace sw

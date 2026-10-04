@@ -66,8 +66,8 @@ namespace sw
         : _settings{}
         , _listRide{}
         , _listGuest{}
-        , _arrivalAccumulator{ 0.0f }
-        , _costAccumulator{ 0.0f }
+        , _arrival{}
+        , _runningCost{}
         , _elapsedTime{ 0.0f }
         , _stepTimer{}
         , _random{ 12345u }
@@ -83,13 +83,13 @@ namespace sw
         _settings = settings;
         _listRide.clear();
         _listGuest.clear();
-        _arrivalAccumulator = 0.0f;
-        _costAccumulator    = 0.0f;
-        _elapsedTime        = 0.0f;
-        _stepTimer          = FixedStepTimer( settings._fixedStep, settings._maxFrameTime );
-        _cash               = startingCash;
-        _nextGuestId        = 1;
-        _totalVisitorCount  = 0;
+        _arrival.reset();
+        _runningCost.reset();
+        _elapsedTime       = 0.0f;
+        _stepTimer         = FixedStepTimer( settings._fixedStep, settings._maxFrameTime );
+        _cash              = startingCash;
+        _nextGuestId       = 1;
+        _totalVisitorCount = 0;
         _random.setSeed( settings._randomSeed != 0 ? settings._randomSeed : 12345u );
         updateParkRating();
     }
@@ -109,7 +109,7 @@ namespace sw
         ParkRide built = ride;
         built._listQueue.clear();
         built._listRider.clear();
-        built._cycleTimer  = 0.0f;
+        built._cycleTimer.clear();
         built._totalRiders = 0;
         built._totalIncome = 0;
         built._capacity    = MathUtil::max( 1, built._capacity );
@@ -242,10 +242,8 @@ namespace sw
             if ( ride._bOpen == SW_TRUE )
                 costPerSecond += static_cast<float32>( ride._runningCostPerMinute ) / 60.0f;
         }
-        _costAccumulator += costPerSecond * deltaTime;
-        const int32 wholeCost = static_cast<int32>( _costAccumulator );
-        _cash -= wholeCost;
-        _costAccumulator -= static_cast<float32>( wholeCost );
+        _runningCost.add( costPerSecond * deltaTime );
+        _cash -= _runningCost.takeWhole();
 
         // 떠난 손님을 지운다(놀이기구의 줄 · 탑승자에는 남아 있지 않다 — 떠나기 전에 뺐다). 한 번에 당겨 담아 순서(id 오름차순)를 지킨다 —
         // 손님마다 `erase` 하면 뒤를 매번 옮긴다.
@@ -260,10 +258,9 @@ namespace sw
         const float32 feeFactor    = MathUtil::max( 0.0f, 1.0f - static_cast<float32>( _settings._entryFee ) / 100.0f );
         const float32 ratingFactor = 0.4f + static_cast<float32>( _parkRating ) / 1000.0f;
         const float32 rideFactor   = _listRide.empty() ? 0.2f : 1.0f; // 놀이기구 없는 공원에는 거의 오지 않는다
-        _arrivalAccumulator += _settings._guestArrivalPerMinute / 60.0f * ratingFactor * feeFactor * rideFactor * deltaTime;
-        while ( _arrivalAccumulator >= 1.0f )
+        _arrival.add( _settings._guestArrivalPerMinute / 60.0f * ratingFactor * feeFactor * rideFactor * deltaTime );
+        while ( _arrival.takeOne() )
         {
-            _arrivalAccumulator -= 1.0f;
             const int32   cash            = _settings._guestCashMin + static_cast<int32>( nextRandom() * static_cast<float32>( _settings._guestCashMax - _settings._guestCashMin ) );
             const float32 minIntensity    = nextRandom() * _settings._guestMinIntensityMax;
             const float32 maxIntensity    = _random.nextRange( _settings._guestMaxIntensityMin, _settings._guestMaxIntensityMax );
@@ -282,8 +279,8 @@ namespace sw
             // 1) 도는 중이면 시간을 흘리고, 다 돌면 내린다.
             if ( ride._listRider.empty() == false )
             {
-                ride._cycleTimer -= deltaTime;
-                if ( ride._cycleTimer > 0.0f )
+                ride._cycleTimer.tick( deltaTime );
+                if ( ride._cycleTimer.isActive() )
                     continue;
 
                 const vector<uint32> listRider = ride._listRider;
@@ -341,7 +338,7 @@ namespace sw
                 ride._listRider.push_back( guestId );
             }
             if ( ride._listRider.empty() == false )
-                ride._cycleTimer = ride._cycleTime;
+                ride._cycleTimer.start( ride._cycleTime );
         }
     }
 
@@ -610,7 +607,7 @@ namespace sw
             outArchive << ride._bOpen;
             writeIdList( ride._listQueue );
             writeIdList( ride._listRider );
-            outArchive << ride._cycleTimer;
+            outArchive << ride._cycleTimer._remaining;
             outArchive << ride._totalRiders;
             outArchive << ride._totalIncome;
         }
@@ -638,8 +635,8 @@ namespace sw
         }
         StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
         StateArchiveUtil::writeRandom( outArchive, _random );
-        outArchive << _arrivalAccumulator;
-        outArchive << _costAccumulator;
+        outArchive << _arrival._fraction;
+        outArchive << _runningCost._fraction;
         outArchive << _elapsedTime;
         outArchive << _cash;
         outArchive << _parkRating;
@@ -681,7 +678,7 @@ namespace sw
             archive >> ride._bOpen;
             if ( readIdList( ride._listQueue ) == false || readIdList( ride._listRider ) == false )
                 return false;
-            archive >> ride._cycleTimer;
+            archive >> ride._cycleTimer._remaining;
             archive >> ride._totalRiders;
             archive >> ride._totalIncome;
             if ( archive.isError() )
@@ -741,18 +738,18 @@ namespace sw
         if ( archive.isError() )
             return false;
 
-        _settings._entryFee = entryFee;
-        _listRide           = std::move( listRide );
-        _listGuest          = std::move( listGuest );
-        _stepTimer          = stepTimer;
-        _random             = random;
-        _arrivalAccumulator = arrivalAccumulator;
-        _costAccumulator    = costAccumulator;
-        _elapsedTime        = elapsedTime;
-        _cash               = cash;
-        _parkRating         = parkRating;
-        _nextGuestId        = nextGuestId;
-        _totalVisitorCount  = totalVisitorCount;
+        _settings._entryFee    = entryFee;
+        _listRide              = std::move( listRide );
+        _listGuest             = std::move( listGuest );
+        _stepTimer             = stepTimer;
+        _random                = random;
+        _arrival._fraction     = arrivalAccumulator;
+        _runningCost._fraction = costAccumulator;
+        _elapsedTime           = elapsedTime;
+        _cash                  = cash;
+        _parkRating            = parkRating;
+        _nextGuestId           = nextGuestId;
+        _totalVisitorCount     = totalVisitorCount;
         return true;
     }
 } // namespace sw

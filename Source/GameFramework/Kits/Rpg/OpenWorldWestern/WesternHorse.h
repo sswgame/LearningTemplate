@@ -10,6 +10,7 @@
 
 #include "GameFramework/Combat/ResourceGauge.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -96,20 +97,20 @@ namespace sw
         void    applyBondLevel( int32 level );
         float32 computeFearResist() const;
 
-        vector<WesternHorseEvent> _listEvent;
-        vector<hashed_string>     _listAbility; ///< 지금 단계까지 열린 능력
-        ResourceGauge             _health;
-        ResourceGauge             _stamina;
-        GameRandom                _random;
-        const WesternCatalog*     _pCatalog;
-        const WesternHorseDef*    _pDef;
-        float32                   _healthCore;
-        float32                   _staminaCore;
-        float32                   _bondExperience;
-        float32                   _fear;
-        float32                   _hoursSinceBrush;
-        int32                     _bondLevel;
-        uint8                     _bRidden;
-        uint8                     _bGalloping; ///< 이번 `update` 앞에 질주했다(코어가 더 준다)
+        EventBuffer<WesternHorseEvent> _eventBuffer;
+        vector<hashed_string>          _listAbility; ///< 지금 단계까지 열린 능력
+        ResourceGauge                  _health;
+        ResourceGauge                  _stamina;
+        GameRandom                     _random;
+        const WesternCatalog*          _pCatalog;
+        const WesternHorseDef*         _pDef;
+        float32                        _healthCore;
+        float32                        _staminaCore;
+        float32                        _bondExperience;
+        float32                        _fear;
+        float32                        _hoursSinceBrush;
+        int32                          _bondLevel;
+        uint8                          _bRidden;
+        uint8                          _bGalloping; ///< 이번 `update` 앞에 질주했다(코어가 더 준다)
     };
 } // namespace sw
