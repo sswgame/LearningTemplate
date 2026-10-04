@@ -41,7 +41,7 @@ namespace sw
         IFracturePhysics( const IFracturePhysics& )            = delete;
         IFracturePhysics& operator=( const IFracturePhysics& ) = delete;
 
-        /** @brief 잎마다 껍질 셰이프를 미리 짓습니다(오브젝트 원점 기준, 배율 · 줄임을 건 점). */
+        /** @brief 잎마다 껍질 셰이프를 지금 모두 짓습니다(오브젝트 원점 기준, 배율 · 줄임을 건 점). 앞서 지은 것은 놓습니다. */
         virtual void               prepareLeafShapes( const FractureAsset& asset, float32 scale, float32 shrink, const hashed_string& material ) = 0;
         virtual void               releaseLeafShapes()                                                                                           = 0;
         virtual void               createStaticLeafBodies( vector_reference<const uint32> listLeaf, const float3& position, const quaternion& rotation, uint8 layer,
@@ -172,7 +172,10 @@ namespace sw
                 _listLeafPoint.assign( asset.getPieceCount(), vector<float3>{} );
                 _listLeafShape.assign( asset.getPieceCount(), PhysicsShapeHandle{} );
                 for ( uint32 leaf = 0; leaf < asset.getPieceCount(); ++leaf )
+                {
                     FractureComponentBaseInternal::makeLeafHull( asset, leaf, scale, shrink, _listLeafPoint[leaf] );
+                    (void)findLeafShape( leaf );
+                }
             }
 
             void releaseLeafShapes() override
@@ -216,16 +219,12 @@ namespace sw
                 }
                 else
                 {
-                    vector<PhysicsShapeDesc3D> listShape;
-                    listShape.reserve( listLeaf.size() );
+                    // 지어 둔 잎 껍질을 묶기만 한다(껍질을 다시 지으면 덩어리마다 잎 수 × 수십 us).
+                    vector<PhysicsShapeHandle> listChild;
+                    listChild.reserve( listLeaf.size() );
                     for ( const uint32 leaf : listLeaf )
-                    {
-                        PhysicsShapeDesc3D shape;
-                        shape._type      = PhysicsShapeType3D::ConvexHull;
-                        shape._listPoint = _listLeafPoint[leaf];
-                        listShape.push_back( std::move( shape ) );
-                    }
-                    outShape          = _scene.createShape( listShape, _material );
+                        listChild.push_back( findLeafShape( leaf ) );
+                    outShape          = _scene.createCompoundShape( listChild );
                     desc._sharedShape = outShape;
                 }
                 desc._position        = position;
@@ -319,6 +318,7 @@ namespace sw
                 {
                     FractureComponentBaseInternal::makeLeafHull( asset, leaf, scale, shrink, listPoint );
                     FractureComponentBaseInternal::makeConvexPolygon( listPoint, FractureComponentBaseInternal::kMaxPolygonPoint2D, _listLeafPolygon[leaf] );
+                    (void)findLeafShape( leaf );
                 }
             }
 
@@ -365,15 +365,11 @@ namespace sw
                 }
                 else
                 {
-                    vector<PhysicsShapeDesc2D> listShape;
+                    vector<PhysicsShapeHandle> listChild;
+                    listChild.reserve( listLeaf.size() );
                     for ( const uint32 leaf : listLeaf )
-                    {
-                        PhysicsShapeDesc2D shape;
-                        shape._type      = PhysicsShapeType2D::Polygon;
-                        shape._listPoint = _listLeafPolygon[leaf];
-                        listShape.push_back( std::move( shape ) );
-                    }
-                    outShape          = _scene.createShape( listShape, _material );
+                        listChild.push_back( findLeafShape( leaf ) );
+                    outShape          = _scene.createCompoundShape( listChild );
                     desc._sharedShape = outShape;
                 }
                 desc._position        = float2{ position._x, position._y };
@@ -493,6 +489,7 @@ namespace sw
         , _intactLinearVelocity{}
         , _intactAngularVelocity{}
         , _objectScale{ 1.0f }
+        , _leafShapeScale{ 0.0f }
         , _lastApplyMicroseconds{ 0.0f }
         , _lastPoseMicroseconds{ 0.0f }
         , _frameSimulatedTime{ 0.0f }
@@ -717,6 +714,7 @@ namespace sw
             _physics->destroyBodies( listDestroy );
         _physics->releaseLeafShapes();
         _physics.reset();
+        _leafShapeScale = 0.0f;
     }
 
     // --- 상태 -------------------------------------------------------------------------------------------------------------------
@@ -740,6 +738,12 @@ namespace sw
         _listLeafStaticBody.assign( _asset->getPieceCount(), PhysicsBodyHandle{} );
         _eventLog._seed = _seed;
         _bStateReady    = SW_TRUE;
+        float3     position{};
+        quaternion rotation{};
+        float32    scale = 1.0f;
+        readObjectPose( position, rotation, scale );
+        _leafShapeScale = 0.0f;
+        prepareLeafShapes( scale );
         return true;
     }
 
@@ -921,6 +925,14 @@ namespace sw
         }
     }
 
+    void FractureComponentBase::prepareLeafShapes( float32 scale )
+    {
+        if ( _physics == nullptr || _asset == nullptr || scale == _leafShapeScale )
+            return;
+        _physics->prepareLeafShapes( *_asset, scale, _profile._hullShrink, _profile._physicsMaterial );
+        _leafShapeScale = scale;
+    }
+
     void FractureComponentBase::activate( ScenePhysics& physics )
     {
         (void)physics;
@@ -967,7 +979,7 @@ namespace sw
             }
         }
 
-        _physics->prepareLeafShapes( *_asset, _objectScale, _profile._hullShrink, _profile._physicsMaterial );
+        prepareLeafShapes( _objectScale );
         createRenderUnits();
         _bFractured = SW_TRUE;
         _bPoseDirty = SW_TRUE;

@@ -197,6 +197,12 @@ namespace sw
         void processPendingEvents( ScenePhysics& physics );
         /** @brief 오브젝트의 지금 자세(월드)를 읽습니다. */
         void readObjectPose( float3& outPosition, quaternion& outRotation, float32& outScale ) const;
+        /**
+         * @brief 잎마다 충돌 셰이프(볼록 껍질)를 @p scale 로 모두 짓습니다. 같은 배율로 이미 지었으면 아무것도 하지 않습니다.
+         * @details 껍질 짓기가 깨지는 프레임 비용의 대부분이라(200 조각 벽 ≈ 8 ms) 상태를 시작할 때 미리 짓습니다 — 깨질 때는 정적 바디 · 떨어진
+         *          덩어리(`createCompoundShape`)가 지어 둔 잎 셰이프를 나눠 씁니다.
+         */
+        void prepareLeafShapes( float32 scale );
         /** @brief 처음 떨어진 것이 생겼다 — 오브젝트의 메시 · 강체를 넘겨받고 조각 그림 · 바디를 만듭니다. */
         void activate( ScenePhysics& physics );
         /** @brief 사건 하나의 결과로 그룹 바디를 고칩니다. */
@@ -273,7 +279,8 @@ namespace sw
         quaternion                      _objectRotation;
         float3                          _intactLinearVelocity;
         float3                          _intactAngularVelocity;
-        float32                         _objectScale; ///< 고른 배율(축 배율의 평균)
+        float32                         _objectScale;    ///< 고른 배율(축 배율의 평균)
+        float32                         _leafShapeScale; ///< 잎 셰이프를 지은 배율(0 = 아직 짓지 않았다)
         float32                         _lastApplyMicroseconds;
         float32                         _lastPoseMicroseconds;
         float32                         _frameSimulatedTime; ///< 이번 물리 프레임에 돈 고정 스텝 시간(수명 · 페이드 — 결정적)

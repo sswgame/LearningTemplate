@@ -355,6 +355,9 @@ cd build/Ninja-Debug/Bin
 
 - **DX12 · Vulkan Present 히치.** 큐브 100 · 600 프레임 중 40 프레임이 1~18 ms 다(DX11 은 없다). 다음 후보는 DXGI 대기 가능 스왑체인
   (`FRAME_LATENCY_WAITABLE_OBJECT` + `SetMaximumFrameLatency` + 대기). 함정: 플래그는 `ResizeBuffers` 에도 같게. 재기 전에 VSync 가 정말 꺼졌는지 보고 p99 로 본다.
+- **파괴 잎 셰이프를 플레이 시작에 짓는 비용.** 잎마다 Jolt 볼록 껍질 약 80 us(Release) — 쇼케이스(파괴물 여섯 · 잎 312)가 첫 프레임에 ≈ 25 ms 를 쓴다.
+  파괴물이 많은 맵이면 선형으로 는다. 후보: 쿠킹 때 Jolt 셰이프를 직렬화해 `.fracture` 에 싣기(Chaos 가 지오메트리 컬렉션에 충돌을 같이 굽는 자리) 또는
+  워커에서 `ShapeSettings::Create`(순수 계산) 후 게임 스레드에서 핸들만 등록. 지금 깨지는 프레임은 200 조각 벽 4 ~ 7 ms(그중 사건 처리 2 ~ 4 ms).
 - **DX12 `releaseOnlineBlocksDeferred` 의 `_onlineBlockMutex` 경합.** 병렬 기록 중 RT `mutex::lock` 의 79 % 였다. 후보는 워커별 대기 목록. 고치기 전에 다시 잴 것.
 - **에디터 모드 `GT.Editor.updateUi` ~5 ms(큐브 8000)를 쪼개 보지 않았다.** 창을 전면에 두고 잰다(가려지면 RT.BeginFrame 이 67 ms 를 기다려 5.8↔75 ms 로 흔들린다).
 - **8000 무버의 `components`(onTick) ~325 us.** 남은 비용은 오브젝트 → 틱 항목 → 컴포넌트 포인터 추적이다. 더 줄이려면 오브젝트 모델 밖 배치 경로

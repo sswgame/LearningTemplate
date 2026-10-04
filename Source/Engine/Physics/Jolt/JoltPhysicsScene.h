@@ -144,6 +144,7 @@ namespace sw
         void                                 drawDebug( IPhysicsDebugRenderer& renderer ) const override;
 
         PhysicsShapeHandle createShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& material ) override;
+        PhysicsShapeHandle createCompoundShape( span<const PhysicsShapeHandle> listChild ) override;
         void               destroyShape( PhysicsShapeHandle shape ) override;
 
         PhysicsBodyHandle createBody( const PhysicsBodyDesc3D& desc ) override;

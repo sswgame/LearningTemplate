@@ -356,6 +356,40 @@ namespace sw
         return PhysicsShapeHandle::fromSlot( _shapes.insert( std::move( record ) ) );
     }
 
+    PhysicsShapeHandle JoltPhysicsScene::createCompoundShape( span<const PhysicsShapeHandle> listChild )
+    {
+        if ( listChild.empty() )
+        {
+            SW_LOG_ERROR( "createCompoundShape: no child shapes" );
+            return PhysicsShapeHandle{};
+        }
+        JPH::StaticCompoundShapeSettings compound;
+        compound.SetEmbedded();
+        ShapeDescList listDesc; // 선 그리기용 — 자식 서술자를 이어 붙인다
+        for ( const PhysicsShapeHandle& child : listChild )
+        {
+            const ShapeRecord* pChild = _shapes.get( child.getSlot() );
+            if ( pChild == nullptr )
+            {
+                SW_LOG_ERROR( "createCompoundShape: a child shape handle is stale" );
+                return PhysicsShapeHandle{};
+            }
+            compound.AddShape( JPH::Vec3::sZero(), JPH::Quat::sIdentity(), pChild->_pShape.GetPtr() );
+            if ( pChild->_pListShape != nullptr )
+                listDesc.insert( listDesc.end(), pChild->_pListShape->begin(), pChild->_pListShape->end() );
+        }
+        JPH::Shape::ShapeResult result = compound.Create();
+        if ( result.HasError() )
+        {
+            SW_LOG_ERROR( "Jolt rejected a compound shape: %#", result.GetError().c_str() );
+            return PhysicsShapeHandle{};
+        }
+        ShapeRecord record;
+        record._pShape     = result.Get();
+        record._pListShape = make_shared<const ShapeDescList>( std::move( listDesc ) );
+        return PhysicsShapeHandle::fromSlot( _shapes.insert( std::move( record ) ) );
+    }
+
     void JoltPhysicsScene::destroyShape( PhysicsShapeHandle shape )
     {
         _shapes.erase( shape.getSlot() );
