@@ -1,0 +1,49 @@
+<Prefab formatVersion="0" name="ExplosiveBarrel">
+	<GameObject _schemaVersion="0" _name="ExplosiveBarrel" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerId="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="0.8,1.2"
+			                        _colliderType="0"
+			                        _bContinuous="false"
+			                        _bTrigger="false" />
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.8,1.2,0.8"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="BoxCollider2DComponent#0"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</GimmickSensorComponent>
+			<ExplosiveBarrelComponent _componentName="ExplosiveBarrelComponent"
+			                          _bActive="true"
+			                          _health="30"
+			                          _radius="4"
+			                          _damage="80"
+			                          _damageTaken="0"
+			                          _bExploded="false" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

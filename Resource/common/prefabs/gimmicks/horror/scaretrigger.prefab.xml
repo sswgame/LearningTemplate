@@ -1,0 +1,33 @@
+<Prefab formatVersion="0" name="ScareTrigger">
+	<GameObject _schemaVersion="0" _name="ScareTrigger" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerId="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="3,3"
+			                        _colliderType="0"
+			                        _bContinuous="false"
+			                        _bTrigger="true" />
+			<ScareTriggerComponent _componentName="ScareTriggerComponent"
+			                       _bActive="true"
+			                       _cue="Scare"
+			                       _sound=""
+			                       _bOnce="true"
+			                       _cooldown="10"
+			                       _cooldownLeft="0"
+			                       _fireCount="0">
+				<_requiredTags>
+					<_listTag>
+						<item>Player</item>
+					</_listTag>
+				</_requiredTags>
+			</ScareTriggerComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

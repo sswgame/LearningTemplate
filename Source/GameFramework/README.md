@@ -53,8 +53,16 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `ReputationState`), 로그라이트 지도(`RunMap`)
 - **Quest**: 퀘스트(`QuestCatalog` · `QuestLog` — 선행 · 레벨 · 단계 · 목표 · 선택 목표 · 분기 · 보상 알림 · 시간 제한 · 반복)
 - **World**: 시계(`WorldClock` — 시 · 때 · 날 · 계절 · 해 · 햇빛 · 잠), 날씨(`WeatherCatalog` · `WeatherSystem` — 계절 가중치 · 섞기 · 예보),
-  방 · 지역 그래프(`AreaGraph` — 잠금 조건 · 일방통행 · 발견 · 탐색률 · 막힌 경계 · 코드로 짓기 · 다른 XML 안에 적기), 진행형 상호작용(`InteractionProgress` — 여럿 · 끊김 · 퇴행 · 스킬 체크),
-  월드 플래그와 조건식(`GameFlags` — `a && !b || count>=3`)
+  방 · 지역 그래프(`AreaGraph` — 잠금 조건 · 일방통행 · 발견 · 탐색률 · 막힌 경계 · 코드로 짓기 · 다른 XML 안에 적기),
+  월드 플래그와 조건식(`GameFlags` — `a && !b || count>=3`), 광선 · 시야 질의(`WorldQuery` — 물리 백엔드 서비스 또는 `PhysicsWorld` 폴백)
+- **Interaction**: 상호작용 — 데이터 정의(`InteractionCatalog` — 누름 · 누르고 있기 · 연타 · 단계 · 거리 · 시야각 · 시야 · 쿨다운 · 태그 조건 · 맞춤 마커 · 강조 · 권한),
+  고르기(`InteractionSelector`) · 진행(`InteractionSession`, 진행형 `InteractionProgress` — 여럿 · 끊김 · 퇴행 · 스킬 체크), 컴포넌트(`InteractableComponent` ·
+  `InteractorComponent` · `SmartObjectComponent` · `GrabberComponent`), 권한 훅(`IInteractionAuthority`). 2D · 3D 공용. `Interaction/README.md`
+- **Gimmick**: 데이터로 배선하는 레벨 장치 — 센서 · 연산자(AND · OR · NOT · 카운터 · 래치 · 지연 · 시퀀스) · 액추에이터(문 · 무버 · 엘리베이터 · 회전 · 스포너 ·
+  위험 지대 · 빛 · 소리 · 켜기) 노드 등록부(`GimmickNodeRegistry`), 검증 · 고정 스텝 · 상태 바이트 회로(`GimmickCircuit`), 씬 컴포넌트(`GimmickCircuitComponent` ·
+  `GimmickSensorComponent`), 원소 상호작용 규칙표(`ElementRuleTable` · `ElementGrid` — 기본표 `common/data/elements/default.elements.xml`), 장르 기믹 세트(`Genre/` — 플랫포머 · 어드벤처 · 슈터 · 레이싱 · 공포 · 잠입 · 메트로배니아 · RPG, 프리팹 `common/prefabs/gimmicks`). 2D · 3D 공용. `Gimmick/README.md`
+- **Spline**: 곡선(`SplinePath` — Catmull-Rom · 3차 베지어 · 꺾은선, 호 길이 매개변수, 가장 가까운 점, 고른 간격 샘플)과 씬 컴포넌트(`SplineComponent`),
+  누적 거리 표 계산(`ArcLengthUtil` — 코스터 트랙도 쓴다). 기믹 무버 · 카메라 레일 · 길이 함께 쓴다. `Spline/README.md`
 - **UI**: 장르 무관 UI 컴포넌트 — `RuntimeHud`, `DialogueRunnerComponent`,
   `HealthBarComponent`, `DamageNumberComponent`. HP 바 · 데미지 숫자는 월드 공간 스프라이트(`SpriteInstanceBatch`)로 그린다 — 저장되는
   컴포넌트를 만들지 않는다. 입력은 `HealthBarComponent::setTargetRatio` · `DamageNumberComponent::setDamageValue` 하나씩이다.
@@ -69,7 +77,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       `UnitStatsComponent::takeDamage( 피해, 쏜 쪽 )` 을 부르며, HP 가 깎인 그 자리에서 컴포넌트 델리게이트(`registerDamageApplied`)가 불리고
       `DamageAppliedEvent`("game" 채널)가 나간다. 액션 룸은 시작 · 클리어 · 패배에 룸 이벤트를 낸다. 채널 이벤트는 `GameEventUtil::send` 하나로 낸다 —
       버스 스레드면 그 자리에서, 아니면 다음 `processEvents` 에.
-    - `ActionAdventure`: 액션 어드벤처(젤다 장르) — 던전 열쇠 · 조건 문 · 지도/나침반 · 장치(`AdventureDungeon`), 하트 조각 · 마법 · 스태미나 탈진(`AdventureVitals`), 주목 옆걸음 · 회피(`AdventureTargeting`), 불 번짐 · 전기 · 얼음 셀 자동자(`AdventureElementGrid`), 효과 합산 요리(`AdventureCooking`), 무기 내구도(`AdventureWeaponWear`), 탑 · 사당 · 증표(`AdventureWorldMap`).
+    - `ActionAdventure`: 액션 어드벤처(젤다 장르) — 던전 열쇠 · 조건 문 · 지도/나침반 · 장치(`AdventureDungeon`), 하트 조각 · 마법 · 스태미나 탈진(`AdventureVitals`), 주목 옆걸음 · 회피(`AdventureTargeting`), 불 번짐 · 전기 · 얼음 셀 자동자(`AdventureElementGrid` — 기반 원소 규칙표 `ElementGrid` 위), 효과 합산 요리(`AdventureCooking`), 무기 내구도(`AdventureWeaponWear`), 탑 · 사당 · 증표(`AdventureWorldMap`).
     - `ActionPlatformer`: 스테이지형 액션 플랫포머(검브렐라 · 페퍼 그라인더 · 어스블레이드 장르) — 체크포인트 · 목숨 · 비밀 수집 · 등급(`ActionStageRun`), 활공 · 갈고리 진자 · 드릴 이동(`ActionPlatformerBody`), 근접 콤보 · 총 · 패리 반사(`ActionCombatRig`), 데이터 적 패턴(`ActionEnemyBrain`).
     - `Metroidvania`: 메트로배니아 · 2D 소울라이크(블라스퍼머스 2 · 더 라스트 페이스 · 엠버베인 장르) — 능력 잠금(`MetroAbilitySet`), 탐색률 · 지도 구매(`MetroMapState`), 휴식 · 시체 · 물약(`MetroSoulsState`), 스태미나 · 패리 · 강인도(`MetroDuelist`), 부적 슬롯(`MetroCharmLoadout`).
     - `Fighting`: 3D 격투(철권 장르) — 캐릭터 데이터(커맨드 · 자세 · 조건 · 스트링, `FighterCatalog`), 60프레임 결정적 시뮬레이션(가드 높이 · 프레임 이득 · 저글 감쇠 · 스크류 · 벽꽝 · 잡기 풀기 · 횡이동 · 레이지 · 히트) · 라운드 · 롤백 상태 저장/복원(`FightingMatch`).

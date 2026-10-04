@@ -1,0 +1,45 @@
+<Prefab formatVersion="0" name="Turret">
+	<GameObject _schemaVersion="0" _name="Turret" _bActive="true">
+		<_listComponent>
+			<SceneComponent _componentName="SceneComponent"
+			                _bActive="true"
+			                _localPosition="0,0,0"
+			                _localRotation="0,0,0"
+			                _localScale="1,1,1"
+			                _attachOwner="None"
+			                _attachOwnerId="0"
+			                _attachComponent="None" />
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.8,0.8,0.8"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="SceneComponent#0"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<TurretComponent _componentName="TurretComponent"
+			                 _bActive="true"
+			                 _range="15"
+			                 _viewAngle="0"
+			                 _turnSpeed="3.1415927"
+			                 _aimTolerance="0.08726646"
+			                 _fireInterval="0.5"
+			                 _damage="10"
+			                 _target="0"
+			                 _cooldownSteps="0"
+			                 _shotCount="0">
+				<_targetTags>
+					<_listTag>
+						<item>Player</item>
+					</_listTag>
+				</_targetTags>
+			</TurretComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

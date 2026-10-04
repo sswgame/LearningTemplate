@@ -8,6 +8,7 @@
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "GameFramework/Data/GameDataXml.h"
+#include "GameFramework/Spline/ArcLengthUtil.h"
 
 namespace sw
 {
@@ -191,17 +192,7 @@ namespace sw
         }
     }
 
-    float32 CoasterTrack::wrapDistance( float32 distance ) const
-    {
-        if ( _length <= 0.0f )
-            return 0.0f;
-        if ( _bClosed == SW_FALSE )
-            return MathUtil::clamp( distance, 0.0f, _length );
-        float32 wrapped = MathUtil::fmod( distance, _length );
-        if ( wrapped < 0.0f )
-            wrapped += _length;
-        return wrapped;
-    }
+    float32 CoasterTrack::wrapDistance( float32 distance ) const { return ArcLengthUtil::wrapDistance( distance, _length, _bClosed == SW_TRUE ); }
 
     CoasterTrackFrame CoasterTrack::sample( float32 distance ) const
     {
@@ -214,26 +205,10 @@ namespace sw
             return frame;
         }
 
-        const float32 wrapped = wrapDistance( distance );
-        // 거리가 wrapped 이하인 마지막 점 — 그 점과 다음 점 사이를 보간한다.
-        size_t lowIndex  = 0;
-        size_t highIndex = pointCount - 1;
-        while ( lowIndex < highIndex )
-        {
-            const size_t middleIndex = ( lowIndex + highIndex + 1 ) / 2;
-            if ( _listPoint[middleIndex]._distance <= wrapped )
-                lowIndex = middleIndex;
-            else
-                highIndex = middleIndex - 1;
-        }
-
-        const bool    bWrapSegment = lowIndex + 1 == pointCount;
-        const size_t  nextIndex    = bWrapSegment ? ( _bClosed == SW_TRUE ? 0 : lowIndex ) : lowIndex + 1;
-        const Point&  from         = _listPoint[lowIndex];
-        const Point&  to           = _listPoint[nextIndex];
-        const float32 endDistance  = bWrapSegment ? _length : to._distance;
-        const float32 span         = endDistance - from._distance;
-        const float32 alpha        = span > 1.0e-6f ? MathUtil::clamp( ( wrapped - from._distance ) / span, 0.0f, 1.0f ) : 0.0f;
+        const ArcLengthSpan span  = ArcLengthUtil::findSpan( _listPoint, &Point::_distance, wrapDistance( distance ), _length, _bClosed == SW_TRUE );
+        const Point&        from  = _listPoint[span._index];
+        const Point&        to    = _listPoint[span._nextIndex];
+        const float32       alpha = span._alpha;
 
         frame._position = from._position + ( to._position - from._position ) * alpha;
         frame._forward  = CoasterTrackInternal::normalizeOr( from._tangent + ( to._tangent - from._tangent ) * alpha, from._tangent );

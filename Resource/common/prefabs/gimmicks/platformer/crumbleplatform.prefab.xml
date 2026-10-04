@@ -1,0 +1,48 @@
+<Prefab formatVersion="0" name="CrumblePlatform">
+	<GameObject _schemaVersion="0" _name="CrumblePlatform" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerId="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="2,0.6"
+			                        _colliderType="0"
+			                        _bContinuous="false"
+			                        _bTrigger="false" />
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,0.4,2"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="BoxCollider2DComponent#0"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</GimmickSensorComponent>
+			<CrumblePlatformComponent _componentName="CrumblePlatformComponent"
+			                          _bActive="true"
+			                          _crumbleDelay="0.5"
+			                          _respawnDelay="3"
+			                          _stepsInState="0"
+			                          _state="Solid" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

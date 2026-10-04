@@ -1,0 +1,38 @@
+<Prefab formatVersion="0" name="JumpPad">
+	<GameObject _schemaVersion="0" _name="JumpPad" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerId="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="2,0.5"
+			                        _colliderType="0"
+			                        _bContinuous="false"
+			                        _bTrigger="true" />
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,0.2,2"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="BoxCollider2DComponent#0"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<LaunchPadComponent _componentName="LaunchPadComponent" _bActive="true" _launchVelocity="0,18,6" _launchCount="0">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+			</LaunchPadComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

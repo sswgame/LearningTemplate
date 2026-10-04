@@ -1,0 +1,22 @@
+<Prefab formatVersion="0" name="FlickerLight">
+	<GameObject _schemaVersion="0" _name="FlickerLight" _bActive="true">
+		<_listComponent>
+			<PointLightComponent _componentName="PointLightComponent"
+			                     _bActive="true"
+			                     _localPosition="0,0,0"
+			                     _localRotation="0,0,0"
+			                     _localScale="1,1,1"
+			                     _attachOwner="None"
+			                     _attachOwnerId="0"
+			                     _attachComponent="None"
+			                     _color="0.55,0.75,1"
+			                     _intensity="2"
+			                     _radius="6" />
+			<FlickerLightComponent _componentName="FlickerLightComponent"
+			                       _bActive="true"
+			                       _pattern="mmamammmmammamamaaamammma"
+			                       _rate="10"
+			                       _step="0" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

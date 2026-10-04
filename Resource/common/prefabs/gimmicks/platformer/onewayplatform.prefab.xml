@@ -1,0 +1,37 @@
+<Prefab formatVersion="0" name="OneWayPlatform">
+	<GameObject _schemaVersion="0" _name="OneWayPlatform" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerId="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="3,0.2"
+			                        _colliderType="0"
+			                        _bContinuous="false"
+			                        _bTrigger="false" />
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="3,0.2,2"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="BoxCollider2DComponent#0"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<OneWayPlatformComponent _componentName="OneWayPlatformComponent"
+			                         _bActive="true"
+			                         _normal="0,1,0"
+			                         _bDropThrough="true" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

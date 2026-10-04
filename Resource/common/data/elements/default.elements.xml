@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 원소 상호작용 기본표 — 불은 탈 것으로 번지고(바람 쪽으로), 다 타면 맨땅, 열은 얼음을 녹이고, 물 · 냉기는 불을 끄고, 전기는 이어진 도체로 퍼진다.
+     키트는 이 표를 그대로 쓰거나 복사해 고친다(ElementRuleTable · ElementGrid). 이름은 이 파일 안에서 선언한 것만 쓴다. -->
+<ElementRules stepTime="0.25">
+  <Flag id="Flammable"/>
+  <Flag id="Conductive"/>
+  <Flag id="Updraft"/>
+  <Status id="Burning" kind="Age"/>
+  <Status id="Charged" kind="Countdown" steps="2"/>
+  <Material id="Empty"/>
+  <Material id="Grass" flags="Flammable,Updraft" burnSteps="4"/>
+  <Material id="Wood" flags="Flammable" burnSteps="12"/>
+  <Material id="Metal" flags="Conductive"/>
+  <Material id="Water" flags="Conductive"/>
+  <Material id="Ice"/>
+  <Material id="Torch" flags="Flammable"/>
+  <Stimulus id="Fire">
+    <On material="Ice" setMaterial="Water" event="Melted"/>
+    <On flag="Flammable" without="Burning" addStatus="Burning" event="Ignited"/>
+  </Stimulus>
+  <Stimulus id="Ice">
+    <On status="Burning" removeStatus="Burning" event="Extinguished"/>
+    <On material="Water" setMaterial="Ice" removeStatus="Charged" event="Frozen"/>
+  </Stimulus>
+  <Stimulus id="Water">
+    <On status="Burning" removeStatus="Burning" event="Extinguished"/>
+  </Stimulus>
+  <Stimulus id="Electric">
+    <On flag="Conductive" floodStatus="Charged" through="Conductive" event="Electrified"/>
+    <On addStatus="Charged" event="Electrified"/>
+  </Stimulus>
+  <Step>
+    <Expire status="Burning" stepsParam="burnSteps" setMaterial="Empty" event="BurnedOut"/>
+    <Convert status="Burning" neighbor="Ice" setMaterial="Water" event="Melted"/>
+    <Spread status="Burning" after="1" to="Flammable" pattern="Wind" event="Ignited"/>
+  </Step>
+</ElementRules>

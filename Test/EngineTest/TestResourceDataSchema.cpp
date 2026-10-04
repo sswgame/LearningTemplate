@@ -35,6 +35,8 @@
 #include "GameFramework/Camera/CameraPreset.h"
 #include "GameFramework/Combat/Weapon.h"
 #include "GameFramework/Data/GameSettings.h"
+#include "GameFramework/Gimmick/ElementRuleTable.h"
+#include "GameFramework/Interaction/InteractionCatalog.h"
 #include "GameFramework/Inventory/ItemCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
@@ -76,6 +78,8 @@ namespace
         static bool isPhysicsSettings( sw::string_view resourceId ) { return endsWith( resourceId, "physicssettings.xml" ); }
         static bool isPhysicsAsset( sw::string_view resourceId ) { return endsWith( resourceId, ".physics.xml" ); }
         static bool isSkeleton( sw::string_view resourceId ) { return endsWith( resourceId, sw::Skeleton::kExtension ); }
+        static bool isElementRules( sw::string_view resourceId ) { return endsWith( resourceId, ".elements.xml" ); }
+        static bool isInteractions( sw::string_view resourceId ) { return endsWith( resourceId, ".interactions.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -257,6 +261,8 @@ namespace
             {           "material",            &isMaterial,                           &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                         &loadSpriteClip},
             {      "camerapresets",       &isCameraPresets,   &loadCatalog<sw::CameraPresetCatalog>},
+            {       "elementrules",        &isElementRules,      &loadCatalog<sw::ElementRuleTable>},
+            {       "interactions",        &isInteractions,    &loadCatalog<sw::InteractionCatalog>},
             {    "physicssettings",     &isPhysicsSettings,                    &loadPhysicsSettings},
             {       "physicsasset",        &isPhysicsAsset,                       &loadPhysicsAsset},
             {          "schedules",           &isSchedules,       &loadCatalog<sw::ScheduleCatalog>},

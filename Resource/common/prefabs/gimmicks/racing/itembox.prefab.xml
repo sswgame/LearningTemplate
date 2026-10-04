@@ -1,0 +1,48 @@
+<Prefab formatVersion="0" name="ItemBox">
+	<GameObject _schemaVersion="0" _name="ItemBox" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerId="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="1,1"
+			                        _colliderType="0"
+			                        _bContinuous="false"
+			                        _bTrigger="true" />
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="1,1,1"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="BoxCollider2DComponent#0"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<ItemBoxComponent _componentName="ItemBoxComponent"
+			                  _bActive="true"
+			                  _respawnDelay="3"
+			                  _seed="1"
+			                  _openCount="0"
+			                  _respawnStepsLeft="0">
+				<_listChoice>
+					<GimmickItemChoice _item="Banana" _weight="3" _count="1" />
+					<GimmickItemChoice _item="Shell" _weight="2" _count="1" />
+					<GimmickItemChoice _item="Mushroom" _weight="1" _count="1" />
+				</_listChoice>
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+			</ItemBoxComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

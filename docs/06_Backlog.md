@@ -327,6 +327,21 @@ cd build/Ninja-Debug/Bin
   (`Transition` · `Control` 은 합침, `ItemBag` → `Inventory`, `GameFlags` → `World`), 키트를 `Kits/<장르 묶음>/<키트>` 로 옮겼다. 재구성(`cmake --preset`)으로
   GLOB · 리플렉션 헤더 목록을 다시 모아야 한다 — 낡은 빌드 폴더의 `generated/**/Base/*.gen.cpp` 가 남아 같은 타입이 두 번 등록되면 그 폴더를 지운다.
 
+- **상호작용 · 기믹(2026-10-04 들어감 — `GameFramework/Interaction` · `Gimmick` · `Spline`) 병합 뒤 남은 것.**
+  - 물리(Jolt · Box2D 병합 뒤): `IWorldQuery`(광선 — 상호작용 시야 · 레이저 · 포탑 · 밀기 블록) · `IGrabPhysics`(집기 · 던지기 — 강체를 키네마틱/관절로 손에 묶고
+    놓을 때 속도)를 백엔드가 게임 서비스로 건다(지금은 `PhysicsWorld` AABB · 트랜스폼 폴백). 3D 트리거 이벤트가 `Component::onOverlapBegin/End` 로 오면
+    `GimmickSensorComponent` 가 그대로 받는다 — 안 오면 센서에 붙인다. 눌림판 무게는 `RigidBodyComponent` 질량(지금 `GimmickWeightComponent`), 발사대 ·
+    컨베이어는 `CharacterControllerComponent` 가 `GimmickLaunchEvent` · `getSurfaceVelocity` 를 읽게, 기믹 프리팹의 `BoxCollider2DComponent` 는 3D 게임용
+    3D 트리거 · 강체 콜라이더 변형을 더한다(`Resource/common/prefabs/gimmicks`).
+  - 애니메이션 · 소켓: `InteractableComponent::computeAlignmentPoint` 가 정의의 `alignment` 마커 이름을 오브젝트 소켓 · 마커 표(`*.sockets.xml`)에서 찾게
+    하고(지금 로컬 오프셋 · 요), 모션 워핑이 그 자리를 목표로. 상호작용 단계에 몽타주 · 알림을 이름으로 잇기.
+  - 렌더러: `InteractableComponent::getHighlightRequest`(Outline · Sense)를 읽는 외곽선 · 감각 모드 패스.
+  - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
+  - 네트워크: 회로 상태 바이트(`GimmickCircuit::saveState`)를 `NetClientServer` 스냅샷 · `RollbackSession` 상태에 싣기(모양은 준비됨, 배선 없음).
+  - `InteractorComponent` 는 틱마다 씬의 `InteractableComponent` 를 모두 훑는다 — 하는 쪽이 많아지면 공간 등록부로. `InteractionCatalog` · `ElementRuleTable` 의
+    `findShared` 는 처음 읽은 표를 계속 쓴다(데이터 핫 리로드 없음).
+  - 카트 트랙(`KartTrack`)은 거리를 수평(XZ) 길이로 재서 공용 `SplinePath` 로 옮기지 않았다(옮기면 랩 · 고스트 값이 바뀐다 — 옮길지 정한다).
+
 ### 1-7. Core · 태스크
 
 - **Windows UDP 소켓 설정은 Windows 에서 돌려 보지 않았다**(2026-10-03 네트워크 정리). `PlatformSocketUtil` 의 `SIO_UDP_CONNRESET` 끄기(`_WSAIOW( IOC_VENDOR, 12 )`),
@@ -1225,6 +1240,11 @@ cd build/Ninja-Debug/Bin
   서버가 "정상" 이어도 화면에 없을 수 있다 — 최종 확인은 사람 눈이다. 창의 `isVisible()`(지금 화면에 있나)과 `isVisibleRequested()`(의도)는 다른 질문이다.
 - **데이터 이름 `None` 은 빈 이름이다** — `hashed_string( "None" )` 은 언리얼 `FName` 처럼 `empty()` 다. 고르기 항목 · id 를 `None` 으로 지으면 "이름 없음" 으로
   읽힌다(외형 스키마는 로드 오류로 막는다). 항목은 `Off` · `Bare` 처럼 짓는다.
+
+- **2D 콜라이더 바디는 깊이가 없다(Z 0 한 점)** — 3D 광선 · 상자 질의를 `PhysicsWorld` 에 그대로 던지면 Z 가 0 이 아닌 2D 씬에서 아무것도 맞지 않는다.
+  `PhysicsWorldQuery` 는 깊이 없는 바디를 Z 와 상관없이 맞힌다.
+- **병렬 틱에서 다른 오브젝트의 상태(센서 피해)를 바로 바꾸면 결정적이지 않다** — 받는 쪽이 이번 틱에 볼지가 스케줄에 달린다(사슬 폭발이 한 프레임에 번지거나 말거나).
+  `GimmickDamageUtil` 처럼 틱 뒤(`executeOrDeferPostTick`)로 미루면 늘 다음 틱이다. Windows 헤더는 `near` · `far` 를 빈 매크로로 둔다 — 지역 변수 이름으로 쓰지 말 것.
 
 ### 3-12. 기각한 것 — 숫자와 함께 (다시 제안하지 말 것)
 

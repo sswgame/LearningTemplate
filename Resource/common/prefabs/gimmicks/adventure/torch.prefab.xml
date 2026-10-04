@@ -1,0 +1,69 @@
+<Prefab formatVersion="0" name="Torch">
+	<GameObject _schemaVersion="0" _name="Torch" _bActive="true">
+		<_listComponent>
+			<SceneComponent _componentName="SceneComponent"
+			                _bActive="true"
+			                _localPosition="0,0,0"
+			                _localRotation="0,0,0"
+			                _localScale="1,1,1"
+			                _attachOwner="None"
+			                _attachOwnerId="0"
+			                _attachComponent="None" />
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.2,1.2,0.2"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="SceneComponent#0"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<GimmickSensorComponent _componentName="GimmickSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</GimmickSensorComponent>
+			<ElementStatusComponent _componentName="ElementStatusComponent"
+			                        _bActive="true"
+			                        _tablePath=""
+			                        _material="Torch"
+			                        _signalStatus="Burning"
+			                        _startStimulus="None" />
+			<PointLightComponent _componentName="PointLightComponent"
+			                     _bActive="true"
+			                     _localPosition="0,1.4,0"
+			                     _localRotation="0,0,0"
+			                     _localScale="1,1,1"
+			                     _attachOwner="None"
+			                     _attachOwnerId="0"
+			                     _attachComponent="SceneComponent#0"
+			                     _color="0.55,0.75,1"
+			                     _intensity="2"
+			                     _radius="6" />
+			<GimmickCircuitComponent _componentName="GimmickCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<GimmickNodeDesc _id="flame" _kind="Signal" _params="" />
+					<GimmickNodeDesc _id="light" _kind="Light" _params="intensity=1" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire>
+					<GimmickWireDesc _from="flame.Active" _to="light.On" _bInvert="false" />
+				</_listWire>
+				<_listRestPose />
+				<_stateBytes />
+			</GimmickCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>
