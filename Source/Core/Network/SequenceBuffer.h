@@ -28,7 +28,7 @@ namespace sw
         /** @brief 넣고 그 자리를 돌려줍니다. 지금 가장 새 것보다 크게 낡았으면 nullptr 입니다. */
         T* insert( uint16 sequence )
         {
-            if ( _bHasNewest && NetSequence::isLess( sequence, static_cast<uint16>( _newest - static_cast<uint16>( _listEntry.size() ) ) ) )
+            if ( isStale( sequence ) )
                 return nullptr;
             if ( _bHasNewest == false || NetSequence::isGreater( sequence, _newest ) )
             {
@@ -55,7 +55,12 @@ namespace sw
         }
         const T* find( uint16 sequence ) const { return const_cast<SequenceBuffer*>( this )->find( sequence ); }
         bool     exists( uint16 sequence ) const { return find( sequence ) != nullptr; }
-        void     remove( uint16 sequence )
+        /** @brief 넣으려 해도 너무 낡아(가장 새 것보다 크기만큼 넘게 뒤) `insert` 가 거절할 시퀀스면 true 입니다. */
+        bool isStale( uint16 sequence ) const
+        {
+            return _bHasNewest && NetSequence::isLess( sequence, static_cast<uint16>( _newest - static_cast<uint16>( _listEntry.size() ) ) );
+        }
+        void remove( uint16 sequence )
         {
             const size_t index = computeIndex( sequence );
             if ( _listSequence[index] == sequence )

@@ -156,7 +156,7 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
             while ( host.receiveMessage( connectionId, channel, buffer ) )
-                SW_EXPECT_TRUE( listSession[static_cast<size_t>( index )].handleMessage( connectionId, buffer ) );
+                SW_EXPECT_TRUE( NetHandleResult::Handled == listSession[static_cast<size_t>( index )].handleMessage( connectionId, buffer ) );
         }
         if ( frame % 2 != 0 || frame > 60 * 5 )
             continue; // 마지막 1 초는 입력 없이 남은 것을 비운다
@@ -237,7 +237,7 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
             while ( cluster._listHost[static_cast<size_t>( index )].receiveMessage( connectionId, channel, buffer ) )
-                SW_EXPECT_TRUE( arrSession[index].handleMessage( connectionId, buffer ) );
+                SW_EXPECT_TRUE( NetHandleResult::Handled == arrSession[index].handleMessage( connectionId, buffer ) );
             if ( arrSession[index].advanceFrame( scriptInput( index, arrLocalFrame[index] ) ) )
                 ++arrLocalFrame[index];
         }

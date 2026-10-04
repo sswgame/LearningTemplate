@@ -28,10 +28,16 @@
   얹어, 싱글 게임은 그 키트를 링크하지 않는다.
   - `BitStream`(`BitWriter` · `BitReader` — 범위 정수 · 양자화 실수 · 가변 정수, 넘침 감지. 비트를 바이트 덩어리로 쓰고 읽고, 경계에 맞은 바이트는 `memcpy` —
     선 위 배치는 비트 단위 시절과 같다), `SequenceBuffer`(16 비트 감김 시퀀스 고리), `NetTypes`(`NetAddress` ·
-    채널 · 연결 상태 · 메시지 첫 바이트 영역 `NetMessageRange`)
-  - `NetConnection` — 연결 하나의 신뢰성: 패킷 시퀀스 · ack + 32 비트 묶음, 채널(신뢰 순서 · 순서만 — 메시지 첫 바이트(종류)마다 가장 새 것 하나, 다른 종류끼리는 서로 지우지 않는다 · 비신뢰), 재전송(RTT × 1.5), RTT · 손실률 · 대역폭.
+    채널 · 연결 상태 · 메시지 첫 바이트 영역 `NetMessageRange` · 와이어 판 `NetWireVersion` · 프로토콜 id `NetProtocol`)
+  - `NetConnection` — 연결 하나의 신뢰성: 패킷 시퀀스 · ack + 32 비트 묶음, 채널(신뢰 순서 · 순서만 — 메시지 첫 바이트(종류)마다 가장 새 것 하나, 다른 종류끼리는 서로 지우지 않는다 · 비신뢰), 재전송(RTT + 50 ms, 그리고 뒤 패킷 셋이 확인됐는데 확인이 없는 패킷은 바로 — 빠른 재전송), RTT · 손실률 · 대역폭(최근 1 초).
+    받은 패킷은 몸을 다 읽은 뒤에야 시퀀스를 적는다 — 깨진 패킷을 확인하면 보낸 쪽이 그 안의 신뢰 메시지를 전달된 것으로 지운다.
     메시지 길이 칸 11 비트(0..1024). 패킷 끝 1 비트 "확인 요청" — 확인만 담은 답은 끄므로 한가할 때 답에 답이 꼬리를 물지 않는다(RTT · 손실률은 요청 패킷으로 잰다)
-  - `NetHost` — 서버 · 클라이언트 끝점: 요청 → 도전 → 응답 → 수락 핸드셰이크(위조 주소 방지), 프로토콜 id + 체크섬으로 남의 · 깨진 패킷 거르기, 유지 · 타임아웃 · 끊기.
+  - `NetHost` — 서버 · 클라이언트 끝점: 요청 → 도전 → 응답 → 수락 핸드셰이크(위조 주소 방지 — **상태 없는 도전**: 서버는 요청에 자리를 잡지 않고
+    비밀 키 · 주소 · 소금 · 5 초 칸으로 만든 도전 값만 돌려준다. 그 값을 되돌려 준 응답이 만든 칸 · 다음 칸 안에 와야 자리를 잡는다), 프로토콜 id + 체크섬으로 남의 · 깨진 패킷 거르기, 유지 · 타임아웃 · 끊기.
+    클라이언트는 `Accepted` 로만 연결된다 — 그것을 잃고 데이터 패킷이 먼저 와도 연결로 치지 않고 응답을 다시 보낸다(수락에만 서버가 준 번호가 있다).
+    **와이어 판**: 프로토콜 id = 게임 id(`_gameId`) + Core 판(`NetWireVersion::kCore`) + 게임 · 키트 판(`_wireVersion`, 키트 판은 `NetKitWireVersion`).
+    형식을 바꾸는 커밋은 그 층의 판을 올리고 옛 형식은 읽지 않는다. 판이 다르면 서버가 요청을 `VersionMismatch`(다른 게임이면 `Rejected`)로 거절하고 두 쪽 로그에
+    두 프로토콜 id 를 남긴다 — 요청 · 거절 패킷만 판과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로 싸서 판을 넘어 읽힌다(두 패킷 배치는 바꾸지 않는다).
     보낼 것이 없으면 `_sendInterval` 이 아니라 `_keepAliveInterval`(0.25 초)마다만 보낸다. 도전 소금 씨앗은 0 이면 OS 난수(`_saltSeed` 는 시험 재현용).
     주소 → 자리 해시(연결 수에 상관없이 받은 패킷 하나에 O(1)), 패킷 · 쓰기 버퍼는 다시 쓴다.
     **스레드 안전** — 공개 함수는 잠금 하나로 지켜져 아무 스레드에서나 보내고 꺼낸다. `update` 는 소켓 받기 · 보내기를 잠금 밖에서 묶어 하고(한 번에
@@ -41,14 +47,18 @@
     돌아 끊기지 않고 RTT 에 프레임 길이가 섞이지 않는다. 기다리는 일이라 TaskManager 워커가 아니라 전용 스레드(로그 · 파일 감시와 같은 규칙)
   - `NetParallel` — 서버 키트가 연결(관찰자)마다의 일을 `TaskManager::runParallel` 로 나누는 `NetParallelFor` 와 스레드마다의 작업 자리
     `NetParallelScratch<T>`. 매니저가 없으면 지금 스레드가 돈다(결과는 같다)
-  - `NetMessage` — `NetMessageWriter`(종류 바이트 + 몸, 버퍼 재사용), `INetMessageHandler`(영역 하나를 맡는 쪽 — `GF_Net*` 키트의 서버 · 클라이언트),
-    `NetMessageRouter`(첫 바이트 위 4 비트로 처리기를 바로 찾아 `pump( host )` 로 나눠 주고, 아무도 안 받은 것은 돌려준다)
+  - `NetMessage` — `NetMessageWriter`(종류 바이트 + 몸, 버퍼 재사용), `INetMessageHandler`(영역 하나 + 그 안의 **종류 마스크**를 맡는 쪽 — `GF_Net*` 키트의
+    서버 · 클라이언트. 몸은 종류 바이트 뒤의 `BitReader`, 결과는 `NetHandleResult`(Handled · Malformed), 연결 사건 `onConnectionOpened` · `onConnectionClosed`),
+    `NetMessageRouter`(종류 256 칸 표로 맡은 처리기 하나에게 준다. `pump( host )` 는 `NetHost::drainInbound` 로 사건 + 메시지를 잠금 한 번에 꺼내
+    **사건을 먼저** 모든 처리기에 알리고 메시지를 나눈다 — 같은 자리에 새로 온 연결이 옛 상태로 읽히지 않는다. 깨진 메시지는 세고(`getMalformedCount`) 버리고,
+    처리기 없는 것만 돌려준다). 키트는 수신 가드 · `onDisconnected` 같은 손 배선 없이 자기 종류만 읽는다. 손 배달은 `INetMessageHandler::handleMessage`
   - 전송: `INetTransport`(`send` 는 아무 스레드, `receive` · `waitForReceive` 는 `update` 스레드 하나), 실제 UDP(`UdpNetTransport` — 플랫폼 차이는 `PlatformSocketUtil` 한 곳, 송수신 버퍼 1 MB, Windows 는 ICMP 포트 닿지 않음으로
     `recvfrom` 이 실패하지 않게 `SIO_UDP_CONNRESET` 을 끈다), 한 프로세스 루프백 망(`LoopbackNetwork` — 잠금 하나로 끝점마다 다른 스레드가 돌아도 된다. 지연 · 흔들림 · 손실 ·
     중복 · 깨짐을 씨앗으로 흉내, 시험 · 리슨 서버), 네트워크 흉내(`NetEmulationTransport` — 어느 전송(UDP · 루프백)에나 씌워 보내는 쪽에서 지연 · 흔들림 ·
     손실 · 중복 · 순서 뒤바뀜 · 대역폭 상한(목적지마다 회선 줄 · 큐 넘침 버림)을 건다. 조건은 기본값 + 연결별 덮어쓰기, `-gv_netEmuLatencyMs` · `JitterMs` ·
     `LossPercent` · `DuplicatePercent` · `ReorderPercent` · `BandwidthKilobytesPerSecond` 로 `NetEmulationConditions::makeFromGlobalVariables` —
-    언리얼 PktLag · PktLoss · PktDup · PktOrder · 유니티 Network Simulator 의 자리. `NetHost` 는 그냥 전송으로 받는다)
+    언리얼 PktLag · PktLoss · PktDup · PktOrder · 유니티 Network Simulator 의 자리. `NetHost` 는 그냥 전송으로 받는다. 조건의 거르개
+    `_pDropFilter` 는 고른 패킷만 버린다 — `NetHost::peekPacketType` 과 함께 "`Accepted` 하나만 잃기" · "위조 주소로 간 답 전부 잃기" 같은 시험을 짓는다)
 - **Math/**: `VectorMath` · `MatrixMath` · `MathUtil` · `Frustum`
 - **Time/**: `MonotonicClock`(아래 "시간") · `GameTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE`)
 - **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.

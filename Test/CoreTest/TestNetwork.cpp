@@ -2,6 +2,7 @@
 
 #include "Core/Network/BitStream.h"
 #include "Core/Network/NetConnection.h"
+#include "Core/Network/NetEmulation.h"
 #include "Core/Network/NetHost.h"
 #include "Core/Network/NetMessage.h"
 #include "Core/Network/NetTransport.h"
@@ -49,7 +50,7 @@ namespace
         return buffer;
     }
 
-    /** @brief 시험용 처리기 — 맡은 영역에서 @p acceptedKind 만 받아들이고 받은 수를 셉니다. */
+    /** @brief 시험용 처리기 — 맡은 영역에서 @p acceptedKind 만 맡고(가변 정수 하나가 몸) 받은 수를 셉니다. */
     class CountingHandler : public INetMessageHandler
     {
     public:
@@ -61,14 +62,16 @@ namespace
         {
         }
 
-        uint8 getMessageRangeBase() const override { return _rangeBase; }
-        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override
+        uint8           getMessageRangeBase() const override { return _rangeBase; }
+        uint16          getMessageKindMask() const override { return static_cast<uint16>( 1u << ( _acceptedKind - _rangeBase ) ); }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
         {
-            if ( size <= 0 || pData[0] != _acceptedKind )
-                return false;
+            (void)body.readVarUint();
+            if ( body.hasOverflowed() )
+                return NetHandleResult::Malformed;
             ++_handledCount;
-            _lastConnectionId = connectionId;
-            return true;
+            _lastConnectionId = context._connectionId;
+            return NetHandleResult::Handled;
         }
 
         int32 getHandledCount() const { return _handledCount; }
@@ -88,6 +91,24 @@ namespace
         inOutState ^= inOutState >> 17;
         inOutState ^= inOutState << 5;
         return inOutState;
+    }
+
+    /** @brief 흉내 거르개 — 서버가 보내는 `Accepted` 를 @p _remaining 개만 버린다. */
+    struct AcceptedDropper
+    {
+        int32 _remaining{ 0 };
+        int32 _droppedCount{ 0 };
+    };
+
+    bool dropAccepted( const NetAddress& to, const uint8* pData, int32 size, void* pContext )
+    {
+        (void)to;
+        AcceptedDropper& dropper = *static_cast<AcceptedDropper*>( pContext );
+        if ( dropper._remaining <= 0 || NetHost::peekPacketType( pData, size ) != NetHost::PacketType::Accepted )
+            return false;
+        --dropper._remaining;
+        ++dropper._droppedCount;
+        return true;
     }
 
     int32 readMessageValue( const vector<uint8>& buffer )
@@ -410,7 +431,7 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     first.initialize( network.createEndpoint( 5001 ), settings );
     second.initialize( network.createEndpoint( 5002 ), settings );
     NetHostSettings otherGame = settings;
-    otherGame._protocolId     = 0xDEADBEEFu;
+    otherGame._gameId         = 0xDEADBEEFu;
     foreign.initialize( network.createEndpoint( 5003 ), otherGame );
     SW_EXPECT_TRUE( network.createEndpoint( 4000 ) == nullptr );
     SW_ASSERT_TRUE( server.listen() );
@@ -440,12 +461,12 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     second.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.size() == 1 );
     SW_EXPECT_TRUE( listEvent[0]._reason == NetDisconnectReason::ServerFull );
-    SW_EXPECT_TRUE( foreign.getConnectionState( 0 ) == NetConnectionState::Connecting ); // 서버는 남의 패킷에 답하지 않는다
-    SW_EXPECT_TRUE( server.getRejectedPacketCount() > 0 );
-    runAll( 5.0, true, true );
+    // 다른 게임의 요청은 이유를 붙여 거절한다(타임아웃을 기다리지 않는다). 그 게임의 다른 패킷은 체크섬부터 틀린다.
     listEvent.clear();
     foreign.drainEvents( listEvent );
-    SW_EXPECT_TRUE( listEvent.size() == 1 && listEvent[0]._reason == NetDisconnectReason::Timeout );
+    SW_EXPECT_TRUE( listEvent.size() == 1 && listEvent[0]._reason == NetDisconnectReason::Rejected );
+    SW_EXPECT_TRUE( foreign.getConnectionState( 0 ) == NetConnectionState::Disconnected );
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
 
     // 끊기 — 클라이언트가 끊으면 서버가 알고, 자리가 빈다.
     first.disconnect( 0 );
@@ -466,6 +487,260 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     first.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.empty() == false );
     SW_EXPECT_TRUE( listEvent.back()._reason == NetDisconnectReason::Timeout );
+}
+
+/**
+ * @brief [NetworkTest] 와이어 판이 다른 같은 게임의 클라이언트는 VersionMismatch 로 바로 거절된다 — 연결 요청 · 거절은 판과 상관없는 머리로 싸여 서로 읽힌다
+ * @details 판(`NetWireVersion` · 키트 판)은 프로토콜 id 에 섞인다. 다른 판의 패킷은 체크섬부터 틀려 버려지므로, 요청까지 버리면 클라이언트는 5 초 뒤
+ *          Timeout 만 알고 왜 안 되는지 모른다.
+ */
+SW_TEST_CASE( NetworkTest, WireVersionMismatchIsRefusedWithReason )
+{
+    static_assert( NetProtocol::makeProtocolId( 7u, 1u ) != NetProtocol::makeProtocolId( 7u, 2u ), "the wire version is part of the protocol id" );
+    static_assert( NetProtocol::makeProtocolId( 7u, 1u ) != NetProtocol::makeProtocolId( 8u, 1u ), "the game id is part of the protocol id" );
+    static_assert( NetWireVersion::combine( { 1u, 2u } ) != NetWireVersion::combine( { 2u, 1u } ), "layer order is part of the version" );
+
+    NetHostSettings serverSettings;
+    serverSettings._wireVersion = NetWireVersion::combine( { 1u, 4u } );
+    NetHostSettings oldSettings = serverSettings;
+    oldSettings._wireVersion    = NetWireVersion::combine( { 1u, 3u } );
+    LoopbackNetwork network( 9u );
+    NetHost         server;
+    NetHost         current;
+    NetHost         outdated;
+    server.initialize( network.createEndpoint( 4000 ), serverSettings );
+    current.initialize( network.createEndpoint( 5001 ), serverSettings );
+    outdated.initialize( network.createEndpoint( 5002 ), oldSettings );
+    SW_EXPECT_TRUE( current.getProtocolId() != outdated.getProtocolId() );
+    SW_ASSERT_TRUE( server.listen() );
+    SW_ASSERT_TRUE( current.connect( NetAddress::makeLoopback( 4000 ) ) );
+    SW_ASSERT_TRUE( outdated.connect( NetAddress::makeLoopback( 4000 ) ) );
+    float64 time = 0.0;
+    for ( int32 frame = 0; frame < 20; ++frame )
+    {
+        time += 1.0 / 60.0;
+        server.update( time );
+        current.update( time );
+        outdated.update( time );
+    }
+    SW_EXPECT_TRUE( current.getConnectionState( 0 ) == NetConnectionState::Connected );
+    vector<NetHostEvent> listEvent;
+    outdated.drainEvents( listEvent );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._kind == NetHostEvent::Kind::Disconnected );
+    SW_EXPECT_TRUE( listEvent[0]._reason == NetDisconnectReason::VersionMismatch );
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
+}
+
+/**
+ * @brief [NetworkTest] 서버의 `Accepted` 를 잃어도 클라이언트는 서버가 준 자기 번호를 안다 — 먼저 온 데이터 패킷으로는 연결로 치지 않고 응답을 다시 보내 수락을 받는다
+ * @details 첫 데이터 패킷이 수락을 대신하면 번호가 영구히 −1 로 남는다(수락은 다시 오지 않는다). 락스텝 · 롤백은 그 번호 + 1 을 플레이어 번호로 써서
+ *          서버가 그 클라이언트의 입력을 위조로 버리고 판이 멈춘다(`NetSimHarnessTest.LostAcceptedStillGivesLockstepPlayersTheirNumber`).
+ */
+SW_TEST_CASE( NetworkTest, LostAcceptedStillReportsClientIndex )
+{
+    LoopbackNetwork        network( 21u );
+    NetEmulationTransport  serverLink( network.createEndpoint( 4000 ) );
+    AcceptedDropper        dropper;
+    NetEmulationConditions conditions;
+    conditions._pDropFilter        = &dropAccepted;
+    conditions._pDropFilterContext = &dropper;
+    serverLink.setDefaultConditions( conditions );
+    NetHost server;
+    NetHost first;
+    NetHost second;
+    server.initialize( &serverLink, NetHostSettings{} );
+    first.initialize( network.createEndpoint( 5000 ), NetHostSettings{} );
+    second.initialize( network.createEndpoint( 5001 ), NetHostSettings{} );
+    SW_ASSERT_TRUE( server.listen() );
+    float64    time   = 0.0;
+    const auto runAll = [&]( float64 seconds )
+    {
+        for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
+        {
+            time += 1.0 / 60.0;
+            server.update( time );
+            first.update( time );
+            second.update( time );
+        }
+    };
+    // 첫째가 자리 0 을 가져가 둘째의 번호는 1 이다(기본값 0 과 갈린다).
+    SW_ASSERT_TRUE( first.connect( NetAddress::makeLoopback( 4000 ) ) );
+    runAll( 0.3 );
+    SW_ASSERT_EQUAL( 0, first.getClientIndex() );
+    dropper._remaining = 1;
+    SW_ASSERT_TRUE( second.connect( NetAddress::makeLoopback( 4000 ) ) );
+    runAll( 0.5 );
+    SW_EXPECT_EQUAL( 1, dropper._droppedCount );
+    SW_ASSERT_TRUE( second.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_EXPECT_EQUAL( 1, second.getClientIndex() );
+    SW_EXPECT_EQUAL( 2, server.getConnectedCount() );
+    // 수락 앞에 왔던 데이터 패킷의 신뢰 메시지는 재전송이 메운다.
+    SW_ASSERT_TRUE( server.sendMessage( 1, NetChannelType::ReliableOrdered, makeMessage( 4321 ) ) );
+    runAll( 0.5 );
+    int32          connectionId = -1;
+    NetChannelType channel      = NetChannelType::Unreliable;
+    vector<uint8>  buffer;
+    SW_ASSERT_TRUE( second.receiveMessage( connectionId, channel, buffer ) );
+    SW_EXPECT_EQUAL( 4321, readMessageValue( buffer ) );
+}
+
+/**
+ * @brief [NetworkTest] 몸이 깨진 패킷은 확인하지 않는다 — 그 안의 신뢰 메시지는 확인되지 않았으니 다시 보내져 도착한다
+ * @details 시퀀스를 받은 표에 먼저 넣고 몸을 읽으면, 읽기에 실패해도 다음 답의 확인에 그 시퀀스가 실린다. 보낸 쪽은 그 패킷의 신뢰 메시지를 전달된 것으로
+ *          지우고 다시 보내지 않는다 — 체크섬은 맞고 몸이 틀린 패킷(다른 빌드 · 악의) 하나가 메시지를 영영 없앤다.
+ */
+SW_TEST_CASE( NetworkTest, MalformedPayloadIsNotAcknowledged )
+{
+    NetConnection       sender;
+    NetConnection       receiver;
+    const vector<uint8> message = makeMessage( 777, 40 );
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
+    BitWriter packet;
+    sender.writePacket( 0.0, packet, 300 );
+    // 머리(시퀀스 · 확인)는 온전하고 메시지 몸이 잘렸다.
+    SW_ASSERT_TRUE( packet.getByteCount() > 40 );
+    BitReader truncated( packet.getBytes().data(), 20 );
+    SW_EXPECT_FALSE( receiver.readPacket( 0.05, truncated ) );
+
+    vector<uint8> buffer;
+    int32         receivedCount = 0;
+    float64       time          = 0.1;
+    for ( int32 round = 0; round < 40 && receivedCount == 0; ++round )
+    {
+        time += 0.05;
+        BitWriter reply;
+        receiver.writePacket( time, reply, 300 );
+        BitReader replyReader( reply.getBytes().data(), reply.getByteCount() );
+        (void)sender.readPacket( time + 0.01, replyReader );
+        BitWriter next;
+        sender.writePacket( time + 0.02, next, 300 );
+        BitReader nextReader( next.getBytes().data(), next.getByteCount() );
+        (void)receiver.readPacket( time + 0.03, nextReader );
+        while ( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) )
+            ++receivedCount;
+    }
+    SW_ASSERT_EQUAL( 1, receivedCount );
+    SW_EXPECT_EQUAL( 777, readMessageValue( buffer ) );
+    // 이번에는 온전한 패킷이 확인된다.
+    BitWriter finalReply;
+    receiver.writePacket( time + 0.05, finalReply, 300 );
+    BitReader finalReader( finalReply.getBytes().data(), finalReply.getByteCount() );
+    SW_ASSERT_TRUE( sender.readPacket( time + 0.06, finalReader ) );
+    SW_EXPECT_EQUAL( 0, sender.getPendingReliableCount() );
+}
+
+/**
+ * @brief [NetworkTest] 대역폭 통계는 최근 1 초에 보내고 받은 패킷을 모두 센다 — 보내기 간격이 짧아도(120 Hz) 덜 재지 않는다
+ * @details 최근 64 패킷만 보면 1/64 초보다 짧은 간격에서는 1 초 창의 일부만 센다(120 Hz 면 절반 남짓).
+ */
+SW_TEST_CASE( NetworkTest, BandwidthStatCountsEveryPacketInTheLastSecond )
+{
+    NetConnection       sender;
+    NetConnection       receiver;
+    const vector<uint8> payload     = makeMessage( 1, 100 );
+    int32               packetBytes = 0;
+    for ( int32 frame = 0; frame <= 240; ++frame )
+    {
+        const float64 time = static_cast<float64>( frame ) / 120.0;
+        SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::Unreliable, payload.data(), static_cast<int32>( payload.size() ) ) );
+        BitWriter packet;
+        sender.writePacket( time, packet, 1200 );
+        packetBytes = packet.getByteCount();
+        BitReader reader( packet.getBytes().data(), packet.getByteCount() );
+        SW_ASSERT_TRUE( receiver.readPacket( time + 0.01, reader ) );
+    }
+    // 120 패킷 × 바이트 × 8 비트 / 1000 = 초당 킬로비트.
+    const float32 expectedKilobits = 120.0f * static_cast<float32>( packetBytes ) * 8.0f / 1000.0f;
+    SW_EXPECT_NEAR_EQUAL( expectedKilobits, sender.getStats()._sentBandwidth, expectedKilobits * 0.05f );
+    SW_EXPECT_NEAR_EQUAL( expectedKilobits, receiver.getStats()._receivedBandwidth, expectedKilobits * 0.05f );
+}
+
+/**
+ * @brief [NetworkTest] 도전 값은 시간 칸에 묶여 있다 — 만든 칸과 다음 칸(5~10 초) 안에 돌아온 응답만 자리를 잡고, 그보다 늦게 온 응답(가로챈 응답의 재사용)은 버린다
+ * @details 서버는 도전을 기억하지 않으므로(상태 없는 도전) 값 자체가 만든 때를 담아야 한다. 올림 지연 12 초 클라이언트의 응답은 요청이 도착한 칸보다 두 칸 뒤에
+ *          닿아 끝내 연결되지 않고, 올림 지연 2 초 클라이언트는 연결된다.
+ */
+SW_TEST_CASE( NetworkTest, ExpiredChallengeIsRejected )
+{
+    NetHostSettings settings;
+    settings._connectTimeout = 60.0;
+    LoopbackNetwork        network( 31u );
+    NetEmulationTransport  slowLink( network.createEndpoint( 5000 ) );
+    NetEmulationTransport  fineLink( network.createEndpoint( 5001 ) );
+    NetEmulationConditions slow;
+    slow._latency = 12.0;
+    slowLink.setDefaultConditions( slow );
+    NetEmulationConditions fine;
+    fine._latency = 2.0;
+    fineLink.setDefaultConditions( fine );
+    NetHost server;
+    NetHost slowClient;
+    NetHost fineClient;
+    server.initialize( network.createEndpoint( 4000 ), settings );
+    slowClient.initialize( &slowLink, settings );
+    fineClient.initialize( &fineLink, settings );
+    SW_ASSERT_TRUE( server.listen() );
+    SW_ASSERT_TRUE( slowClient.connect( NetAddress::makeLoopback( 4000 ) ) );
+    SW_ASSERT_TRUE( fineClient.connect( NetAddress::makeLoopback( 4000 ) ) );
+    float64 time = 0.0;
+    for ( int32 frame = 0; frame < 60 * 40; ++frame )
+    {
+        time += 1.0 / 60.0;
+        server.update( time );
+        slowClient.update( time );
+        fineClient.update( time );
+    }
+    SW_EXPECT_TRUE( fineClient.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_EXPECT_TRUE( slowClient.getConnectionState( 0 ) == NetConnectionState::Connecting );
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
+}
+
+/**
+ * @brief [NetworkTest] 뒤에 보낸 패킷들이 확인됐는데 확인이 없는 패킷의 신뢰 메시지는 재전송 간격을 기다리지 않고 바로 다시 실린다(빠른 재전송)
+ * @details 재전송을 시계(RTT 기반)로만 하면 손실 많은 회선에서 신뢰 순서 채널의 꼬리가 길다 — 앞 메시지를 기다리는 머리 막힘이 그 지연을 뒤 메시지 모두에
+ *          옮긴다(250 ms · 손실 15 % 파괴 시나리오에서 사건 최대 지연 4.1 초). 여기서는 RTT 를 1 초로 익힌 뒤 회선이 빨라진 경우로, 시계라면 1 초 넘게
+ *          기다릴 메시지가 0.1 초 안에 다시 간다.
+ */
+SW_TEST_CASE( NetworkTest, LostPacketIsResentBeforeTheResendDelay )
+{
+    NetConnection sender;
+    NetConnection receiver;
+    const auto    sendTo = []( NetConnection& from, NetConnection& to, float64 sendTime, float64 receiveTime, bool bDeliver )
+    {
+        BitWriter packet;
+        from.writePacket( sendTime, packet, 300 );
+        if ( bDeliver == false )
+            return;
+        BitReader reader( packet.getBytes().data(), packet.getByteCount() );
+        (void)to.readPacket( receiveTime, reader );
+    };
+    // RTT 1 초를 익힌다 — 한쪽 0.5 초.
+    float64 time = 0.0;
+    for ( int32 round = 0; round < 30; ++round )
+    {
+        time += 1.0;
+        sendTo( sender, receiver, time, time + 0.5, true );
+        sendTo( receiver, sender, time + 0.5, time + 1.0, true );
+    }
+    SW_ASSERT_TRUE( sender.getStats()._rtt > 0.8f );
+
+    // 신뢰 메시지를 실은 패킷을 잃고, 뒤의 패킷 넷(비신뢰)은 빨라진 회선으로 간다.
+    time += 2.0;
+    const vector<uint8> message = makeMessage( 4242, 8 );
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::ReliableOrdered, message.data(), static_cast<int32>( message.size() ) ) );
+    sendTo( sender, receiver, time, time, false );
+    for ( int32 index = 1; index <= 4; ++index )
+    {
+        const vector<uint8> filler = makeMessage( index, 4 );
+        SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::Unreliable, filler.data(), static_cast<int32>( filler.size() ) ) );
+        sendTo( sender, receiver, time + 0.01 * index, time + 0.01 * index + 0.02, true );
+    }
+    sendTo( receiver, sender, time + 0.07, time + 0.09, true );
+    sendTo( sender, receiver, time + 0.1, time + 0.12, true );
+    vector<uint8> buffer;
+    SW_ASSERT_TRUE( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) );
+    SW_EXPECT_EQUAL( 4242, readMessageValue( buffer ) );
 }
 
 SW_TEST_CASE( NetworkTest, UdpTransportSendsDatagramsOverLocalhost )
@@ -492,6 +767,27 @@ SW_TEST_CASE( NetworkTest, UdpTransportSendsDatagramsOverLocalhost )
     SW_EXPECT_EQUAL( 5, buffer[4] );
     SW_EXPECT_EQUAL( static_cast<int32>( client.getLocalAddress()._port ), static_cast<int32>( from._port ) );
     SW_EXPECT_FALSE( server.receive( from, buffer ) );
+
+    // 닫힌 포트로 보낸 뒤에도 받기가 계속된다 — Windows 는 돌아온 ICMP "포트 닿지 않음" 을 다음 recvfrom 의 WSAECONNRESET 으로 알린다.
+    NetAddress closedAddress{};
+    {
+        UdpNetTransport closed;
+        SW_ASSERT_TRUE( closed.open( 0 ) );
+        closedAddress = closed.getLocalAddress();
+    }
+    SW_ASSERT_TRUE( client.send( closedAddress, arrData, 5 ) );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+    SW_ASSERT_TRUE( server.send( client.getLocalAddress(), arrData, 3 ) );
+    bReceived = false;
+    for ( int32 attempt = 0; attempt < 200 && bReceived == false; ++attempt )
+    {
+        bReceived = client.receive( from, buffer );
+        if ( bReceived == false )
+            std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    }
+    SW_ASSERT_TRUE( bReceived );
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( buffer.size() ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( serverAddress._port ), static_cast<int32>( from._port ) );
 
     NetAddress parsed{};
     SW_EXPECT_TRUE( NetAddress::parse( "10.0.0.7:7777", 1, parsed ) );
@@ -642,9 +938,88 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
 
     // 뺀 처리기는 더 묻지 않는다. 빈 메시지는 누구에게도 가지 않는다.
     router.removeHandler( &gameFirst );
-    SW_EXPECT_FALSE( router.dispatch( 0, messageWriter.begin( 0x81 ).getBytes().data(), 1 ) );
-    SW_EXPECT_FALSE( router.dispatch( 0, nullptr, 0 ) );
+    messageWriter.begin( 0x81 ).writeVarUint( 1 );
+    SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, messageWriter.getBytes().data(), messageWriter.getByteCount() ) );
+    SW_EXPECT_TRUE( NetHandleResult::NotMine == router.dispatch( NetMessageContext{}, nullptr, 0 ) );
     SW_EXPECT_EQUAL( 1, gameFirst.getHandledCount() );
+}
+
+/**
+ * @brief [NetworkTest] 맡은 종류인데 몸이 깨진 메시지는 라우터가 세고 버린다 — 다른 처리기 · "처리기 없음" 목록으로 가지 않는다
+ * @details `bool` 하나가 "내 것 아님" 과 "깨짐" 을 함께 뜻하던 때는 깨진 메시지가 다음 처리기로 넘어가 결국 처리기 없는 메시지 목록에 섞였다.
+ */
+SW_TEST_CASE( NetworkTest, MalformedMessageIsCountedNotForwarded )
+{
+    NetTestPair pair;
+    SW_ASSERT_TRUE( pair._server.listen() );
+    SW_ASSERT_TRUE( pair._client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    pair.run( 0.3 );
+    CountingHandler  handler( NetMessageRange::kGame, 0x81 );
+    NetMessageRouter router;
+    router.addHandler( &handler );
+    NetMessageWriter messageWriter;
+    (void)messageWriter.begin( 0x81 ); // 몸(가변 정수)이 없다
+    SW_ASSERT_TRUE( messageWriter.send( pair._client, 0, NetChannelType::ReliableOrdered ) );
+    messageWriter.begin( 0x81 ).writeVarUint( 5 );
+    SW_ASSERT_TRUE( messageWriter.send( pair._client, 0, NetChannelType::ReliableOrdered ) );
+    pair.run( 0.2 );
+    vector<NetReceivedMessage> listUnhandled;
+    SW_EXPECT_EQUAL( 2, router.pump( pair._server, &listUnhandled ) );
+    SW_EXPECT_EQUAL( 1, handler.getHandledCount() );
+    SW_EXPECT_EQUAL( uint64{ 1 }, router.getMalformedCount() );
+    SW_EXPECT_TRUE( listUnhandled.empty() );
+}
+
+/**
+ * @brief [NetworkTest] 라우터는 연결 사건을 메시지보다 먼저 모든 처리기에 알린다 — 연결 · 끊김이 한 번의 꺼내기 안에서 메시지와 순서를 지킨다
+ */
+SW_TEST_CASE( NetworkTest, RouterTellsHandlersAboutConnectionsBeforeTheirMessages )
+{
+    class ConnectionTracker final : public INetMessageHandler
+    {
+    public:
+        uint8           getMessageRangeBase() const override { return NetMessageRange::kGame; }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
+        {
+            (void)context;
+            (void)body;
+            _log.push_back( _bOpen ? 'M' : 'x' );
+            return NetHandleResult::Handled;
+        }
+        void onConnectionOpened( int32 connectionId ) override
+        {
+            (void)connectionId;
+            _bOpen = true;
+            _log.push_back( 'O' );
+        }
+        void onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override
+        {
+            (void)reason;
+            (void)connectionId;
+            _bOpen = false;
+            _log.push_back( 'C' );
+        }
+
+        string _log;
+        bool   _bOpen{ false };
+    };
+
+    NetTestPair pair;
+    SW_ASSERT_TRUE( pair._server.listen() );
+    SW_ASSERT_TRUE( pair._client.connect( NetAddress::makeLoopback( 4000 ) ) );
+    ConnectionTracker tracker;
+    NetMessageRouter  router;
+    router.addHandler( &tracker );
+    pair.run( 0.3 );
+    NetMessageWriter messageWriter;
+    messageWriter.begin( 0x80 ).writeVarUint( 1 );
+    SW_ASSERT_TRUE( messageWriter.send( pair._client, 0, NetChannelType::ReliableOrdered ) );
+    pair.run( 0.2 );
+    (void)router.pump( pair._server );
+    pair._client.disconnect( 0 );
+    pair.run( 0.2 );
+    (void)router.pump( pair._server );
+    SW_EXPECT_TRUE( tracker._log == "OMC" );
 }
 
 SW_TEST_CASE( NetworkTest, ServerTellsManyClientsApartByAddress )

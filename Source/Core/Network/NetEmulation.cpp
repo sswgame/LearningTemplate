@@ -106,6 +106,12 @@ namespace sw
         std::scoped_lock<mutex>       lock{ _mutex };
         LinkState&                    link       = findOrAddLink( to );
         const NetEmulationConditions& conditions = link._conditions;
+        if ( conditions._pDropFilter != nullptr && conditions._pDropFilter( to, pData, size, conditions._pDropFilterContext ) )
+        {
+            ++_stats._droppedCount;
+            ++_stats._filteredCount;
+            return true;
+        }
         // 나쁘게 할 것이 없고 줄도 비었으면 그대로 넘긴다(순서를 지킨다).
         if ( conditions.isActive() == false && link._queuedBytes == 0 )
         {

@@ -102,15 +102,14 @@ namespace sw
             broadcastRoom( room, writer.getBytes() );
     }
 
-    void TurnRelayServer::handleJoin( int32 connectionId, const uint8* pData, int32 size )
+    bool TurnRelayServer::handleJoin( int32 connectionId, BitReader& reader )
     {
-        BitReader    reader( pData + 1, size - 1 );
         const uint32 roomId     = static_cast<uint32>( reader.readVarUint() );
         const int64  wantedSeat = reader.readVarInt();
         const uint32 token      = reader.readUint32();
         const uint32 knownCount = static_cast<uint32>( reader.readVarUint() ); // 이미 가진 행동 수
         if ( reader.hasOverflowed() )
-            return;
+            return false;
         TurnRoom* pRoom = findRoomMutable( roomId );
         if ( pRoom == nullptr )
         {
@@ -144,7 +143,7 @@ namespace sw
             writer.writeVarUint( roomId );
             writer.writeBits( static_cast<uint32>( TurnRejectReason::RoomFull ), 8 );
             (void)_pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() );
-            return;
+            return true;
         }
         TurnSeat& seat     = pRoom->_listSeat[static_cast<size_t>( seatIndex )];
         seat._bTaken       = SW_TRUE;
@@ -188,16 +187,16 @@ namespace sw
             startEvent._seat   = pRoom->_currentSeat;
             _eventBuffer.push( startEvent );
         }
+        return true;
     }
 
-    void TurnRelayServer::handleAction( int32 connectionId, const uint8* pData, int32 size )
+    bool TurnRelayServer::handleAction( int32 connectionId, BitReader& reader )
     {
-        BitReader     reader( pData + 1, size - 1 );
         const uint32  roomId   = static_cast<uint32>( reader.readVarUint() );
         const int32   submitId = static_cast<int32>( reader.readVarUint() );
         vector<uint8> actionBuffer;
         if ( TurnRelayInternal::readBlob( reader, actionBuffer ) == false )
-            return;
+            return false;
         TurnRoom*        pRoom  = findRoomMutable( roomId );
         int32            seat   = -1;
         TurnRejectReason reason = TurnRejectReason::UnknownRoom;
@@ -227,7 +226,7 @@ namespace sw
                 event._index  = index;
                 event._buffer = actionBuffer;
                 _eventBuffer.push( event );
-                return;
+                return true;
             }
         }
         BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kRejected );
@@ -235,23 +234,21 @@ namespace sw
         writer.writeVarUint( static_cast<uint64>( submitId ) );
         writer.writeBits( static_cast<uint32>( reason ), 8 );
         (void)_pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() );
-    }
-
-    bool TurnRelayServer::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
-    {
-        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetKitMessageRange::kTurnRelay ) == false )
-            return false;
-        if ( _pHost == nullptr )
-            return true;
-        if ( pData[0] == NetTurnRelayMessage::kJoin )
-            handleJoin( connectionId, pData, size );
-        else if ( pData[0] == NetTurnRelayMessage::kAction )
-            handleAction( connectionId, pData, size );
         return true;
     }
 
-    void TurnRelayServer::onDisconnected( int32 connectionId )
+    NetHandleResult TurnRelayServer::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
+        if ( _pHost == nullptr )
+            return NetHandleResult::Handled;
+        const bool bWellFormed = context._kind == NetTurnRelayMessage::kJoin ? handleJoin( context._connectionId, body )
+                                                                             : handleAction( context._connectionId, body );
+        return bWellFormed ? NetHandleResult::Handled : NetHandleResult::Malformed;
+    }
+
+    void TurnRelayServer::onConnectionClosed( int32 connectionId, NetDisconnectReason reason )
+    {
+        (void)reason;
         for ( TurnRoom& room : _listRoom )
         {
             for ( size_t index = 0; index < room._listSeat.size(); ++index )
@@ -319,17 +316,16 @@ namespace sw
         return submitId;
     }
 
-    bool TurnRelayClient::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
+    NetHandleResult TurnRelayClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        (void)connectionId; // 클라이언트 — 받는 쪽은 서버 하나
-        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetKitMessageRange::kTurnRelay ) == false )
-            return false;
-        BitReader      reader( pData + 1, size - 1 );
+        BitReader&     reader = body;
         TurnRelayEvent event;
         event._roomId = static_cast<uint32>( reader.readVarUint() );
+        if ( reader.hasOverflowed() )
+            return NetHandleResult::Malformed;
         if ( event._roomId != _roomId )
-            return true;
-        switch ( pData[0] )
+            return NetHandleResult::Handled;
+        switch ( context._kind )
         {
             case NetTurnRelayMessage::kJoined:
             {
@@ -352,9 +348,9 @@ namespace sw
                 event._index = static_cast<int32>( reader.readVarUint() );
                 event._seat  = static_cast<int32>( reader.readVarUint() );
                 if ( TurnRelayInternal::readBlob( reader, event._buffer ) == false )
-                    return true;
+                    return NetHandleResult::Malformed;
                 if ( event._index != static_cast<int32>( _listAction.size() ) )
-                    return true; // 이미 가진 것(다시 들어올 때 겹친 것)
+                    return NetHandleResult::Handled; // 이미 가진 것(다시 들어올 때 겹친 것)
                 _listAction.push_back( TurnAction{ event._buffer, event._seat } );
                 break;
             }
@@ -373,12 +369,13 @@ namespace sw
             }
             default:
             {
-                return true;
+                return NetHandleResult::Handled;
             }
         }
-        if ( reader.hasOverflowed() == false )
-            _eventBuffer.push( event );
-        return true;
+        if ( reader.hasOverflowed() )
+            return NetHandleResult::Malformed;
+        _eventBuffer.push( event );
+        return NetHandleResult::Handled;
     }
 
     void TurnRelayClient::drainEvents( vector<TurnRelayEvent>& outListEvent )

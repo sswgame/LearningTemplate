@@ -142,21 +142,26 @@ namespace sw
 
         void  initialize( NetHost* pHost, int32 seatCount, const ITurnPolicy* pPolicy = nullptr, uint32 tokenSeed = 0x5EEDu );
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kTurnRelay; }
-        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
-        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
-        bool handleMessage( int32 connectionId, const vector<uint8>& buffer ) { return handleNetMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) ); }
-        void onDisconnected( int32 connectionId );
+        /** @brief 서버가 받는 종류 — 들어오기 · 행동. */
+        uint16 getMessageKindMask() const override
+        {
+            return static_cast<uint16>( ( 1u << ( NetTurnRelayMessage::kJoin - NetKitMessageRange::kTurnRelay ) ) |
+                                        ( 1u << ( NetTurnRelayMessage::kAction - NetKitMessageRange::kTurnRelay ) ) );
+        }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        /** @brief 끊긴 연결의 자리를 비운다(자리 · 표는 남아 같은 표로 돌아올 수 있다). */
+        void onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override;
         void drainEvents( vector<TurnRelayEvent>& outListEvent );
 
         const TurnRoom* findRoom( uint32 roomId ) const;
 
     private:
-        TurnRoom* findRoomMutable( uint32 roomId );
-        void      handleJoin( int32 connectionId, const uint8* pData, int32 size );
-        void      handleAction( int32 connectionId, const uint8* pData, int32 size );
-        void      sendApplied( const TurnRoom& room, int32 index, int32 connectionId );
-        void      broadcastRoom( const TurnRoom& room, const vector<uint8>& buffer );
-        uint32    nextToken();
+        TurnRoom*          findRoomMutable( uint32 roomId );
+        [[nodiscard]] bool handleJoin( int32 connectionId, BitReader& reader );
+        [[nodiscard]] bool handleAction( int32 connectionId, BitReader& reader );
+        void               sendApplied( const TurnRoom& room, int32 index, int32 connectionId );
+        void               broadcastRoom( const TurnRoom& room, const vector<uint8>& buffer );
+        uint32             nextToken();
 
         vector<TurnRoom>            _listRoom;
         EventBuffer<TurnRelayEvent> _eventBuffer;
@@ -183,10 +188,16 @@ namespace sw
         /** @brief 행동을 보냅니다. 행동 번호(거절 알림에 붙는다)입니다. */
         int32 submitAction( const vector<uint8>& buffer );
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kTurnRelay; }
-        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
-        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
-        bool handleMessage( const vector<uint8>& buffer ) { return handleNetMessage( -1, buffer.data(), static_cast<int32>( buffer.size() ) ); }
-        void drainEvents( vector<TurnRelayEvent>& outListEvent );
+        /** @brief 클라이언트가 받는 종류 — 들어옴 · 적용 · 거절 · 시작 · 거부. */
+        uint16 getMessageKindMask() const override
+        {
+            constexpr uint8 kBase = NetKitMessageRange::kTurnRelay;
+            return static_cast<uint16>( ( 1u << ( NetTurnRelayMessage::kJoined - kBase ) ) | ( 1u << ( NetTurnRelayMessage::kApplied - kBase ) ) |
+                                        ( 1u << ( NetTurnRelayMessage::kRejected - kBase ) ) | ( 1u << ( NetTurnRelayMessage::kStarted - kBase ) ) |
+                                        ( 1u << ( NetTurnRelayMessage::kDenied - kBase ) ) );
+        }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        void            drainEvents( vector<TurnRelayEvent>& outListEvent );
 
         int32                     getSeat() const { return _seat; }
         uint32                    getToken() const { return _token; }

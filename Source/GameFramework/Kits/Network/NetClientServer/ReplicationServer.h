@@ -71,7 +71,8 @@ namespace sw
      *     for ( each entity ) server.setEntity( id, typeId, bytes );
      *     server.endTick();
      *     server.sendSnapshots();
-     *     // 받은 메시지: router.addHandler( &server ) 뒤 매 틱 router.pump( host ) — 손으로는 server.handleMessage( connectionId, bytes )
+     *     // 받은 메시지 · 연결 사건: router.addHandler( &server ) 뒤 매 틱 router.pump( host ) — 손으로는 server.handleMessage( connectionId, bytes ),
+     *     //                        server.onConnectionOpened / onConnectionClosed
      *     // 시뮬레이션: server.popInput( connectionId, tick, inputBytes ); ... server.setLastProcessedInputTick( connectionId, tick );
      * @endcode
      */
@@ -90,13 +91,13 @@ namespace sw
          */
         void sendSnapshots();
         /** @brief 스냅샷 만들기를 나눌 작업 스레드 풀입니다(게임은 `&engine::getTaskManager()`). nullptr 이면 지금 스레드가 돈다. */
-        void setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold = NetParallelFor::kDefaultSerialThreshold );
-        /** @brief 이 키트의 메시지면 처리하고 true 입니다. */
-        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
-        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
-        /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
-        bool handleMessage( int32 connectionId, const vector<uint8>& buffer ) { return handleNetMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) ); }
-        void onDisconnected( int32 connectionId );
+        void            setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold = NetParallelFor::kDefaultSerialThreshold );
+        uint8           getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
+        uint16          getMessageKindMask() const override;
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
+        /** @brief 연결마다의 상태(확인 틱 · 입력 줄 · 처리한 입력 틱)를 새로 시작합니다 — 같은 자리에 새로 온 클라이언트가 옛 상태를 이어 쓰지 않게. */
+        void onConnectionOpened( int32 connectionId ) override;
+        void onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override;
 
         /**
          * @brief 그 틱의 입력을 꺼냅니다. 아직 안 왔으면 가장 최근 입력을 되풀이합니다(@p outbExact false). 받은 입력이 하나도 없으면 false 입니다.
@@ -137,10 +138,11 @@ namespace sw
             NetMessageWriter _messageWriter{};
         };
 
-        ClientState& acquireClient( int32 connectionId );
-        void         sendSnapshotRange( uint32 start, uint32 end );
-        void         sendSnapshot( int32 connectionId, ClientState& client, SnapshotScratch& scratch );
-        void         handleInput( ClientState& client, const uint8* pData, int32 size );
+        ClientState&       acquireClient( int32 connectionId );
+        void               sendSnapshotRange( uint32 start, uint32 end );
+        void               sendSnapshot( int32 connectionId, ClientState& client, SnapshotScratch& scratch );
+        [[nodiscard]] bool handleInput( ClientState& client, BitReader& reader );
+        void               resetClient( int32 connectionId );
 
         vector<ClientState>                 _listClient;
         NetSnapshot                         _world;

@@ -385,17 +385,13 @@ cd build/Ninja-Debug/Bin
 
 ### 1-7. Core · 태스크
 
-- **Windows UDP 소켓 설정은 Windows 에서 돌려 보지 않았다**(2026-10-03 네트워크 정리). `PlatformSocketUtil` 의 `SIO_UDP_CONNRESET` 끄기(`_WSAIOW( IOC_VENDOR, 12 )`),
-  `SO_RCVBUF` · `SO_SNDBUF` 1 MB, `waitReadable` 의 `WSAPoll` — Windows 빌드에서 `NetworkTest.UdpTransportSendsDatagramsOverLocalhost` 와
-  `NetworkThreadTest.UdpHostsRunOnThreadsOverLocalhost` 를 돌리고, 닫힌 포트로 보낸 뒤에도 `receive` 가 계속 되는지 본다.
-
-- **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 손실 많은 회선에서 신뢰 순서 채널이 몇 초 밀린다 —
-  250 ms · 손실 15 % 에서 파괴 사건 최대 지연 4.1 초(247 틱), 100 ms · 5 % 에서 0.8 초. 재전송이 RTT × 1.5 뒤이고 앞 메시지를 기다리는 머리 막힘이라서다.
-  사건을 비신뢰로 겹쳐 보내기(번호가 있어 받는 쪽은 이미 순서를 맞춘다) 또는 NACK 재전송으로 줄인다. ② 롤백(파괴 상태 저장 · 되돌리기, `RollbackSession` 에
+- **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 신뢰 순서 채널의 머리 막힘 — 재전송을 RTT + 50 ms · 빠른 재전송으로
+  바꿔 250 ms · 손실 15 % 의 파괴 사건 최대 지연이 4.1 → 1.3 초(247 → 79 틱)다. 남은 지연의 대부분(평균 0.57 초 중 약 0.3 초)은 앞 메시지를 기다리는 몫이라,
+  더 줄이려면 순서가 필요 없는 메시지(번호로 스스로 순서를 맞추는 파괴 사건)를 "신뢰 · 순서 없음" 채널로 보낸다(측정: 평균 0.88 → 0.44 초, 최대는 그대로 —
+  최대는 한 메시지가 거듭 잃는 몫). 종류마다 흐름을 나누는 것은 파괴 사건처럼 한 종류가 대부분이면 효과가 없다. ② 롤백(파괴 상태 저장 · 되돌리기, `RollbackSession` 에
   `makeNetworkSnapshot` 바이트 싣기)은 하지 않았다. ③ 부서지기 전 움직이는 파괴 오브젝트(상자 · 드럼통)의 자세는 파괴 키트가 보내지 않는다 — 게임이
   `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ 전용 서버 프로세스 모드(창 · 렌더러 없는 App 서버 +
-  UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다. ⑤ `NetHost` — `Accepted` 를 잃고
-  데이터 패킷으로 연결되면 클라이언트의 `getClientIndex()` 가 −1 로 남는다(네트워크 리팩토링 N2). ⑥ `NetSimDestructionMatrixTest`(나쁜 회선 둘)는 Debug 40 초라
+  UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다. ⑤ `NetSimDestructionMatrixTest`(나쁜 회선 둘)는 Debug 40 초라
   호스트 스위트로 두었다 — `EngineTest_NoGPU` 가 이미 100 초를 넘어(한도 180) `SHARDS` 와 `HOST_SPLIT` 을 함께 쓸 수 있게 되면 nogpu 로 옮긴다.
 
 - **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는
@@ -1297,6 +1293,10 @@ cd build/Ninja-Debug/Bin
 
 - **Debug 기동은 CRT 누수 보고를 stderr 로도 낸다**(`EngineBootstrap` 의 진단 갈래가 `MemoryProfiler::enableMemoryLeakChecks` 를 부른다 — 누수 덤프가 콘솔 · CI 로그에
   나온다, `MemoryTagTest.DiagnosticBootstrapEnablesPlatformLeakChecks`).
+- **Windows UDP 는 돈다**(2026-10-05, `NetworkTest.UdpTransportSendsDatagramsOverLocalhost` · `NetworkThreadTest.UdpHostsRunOnThreadsOverLocalhost`, 닫힌 포트로 보낸 뒤
+  받기 포함). `SIO_UDP_CONNRESET` 끄기와 받기 고리의 "오류는 건너뛰고 다음 것" 을 둘 다 빼도 시험은 통과한다 — 루프백 ICMP 리셋을 이 시험이 재현하지 못하니 두 방어를 지우지 말 것.
+- **신뢰 재전송 간격을 짧게 고정하면 꼬리는 줄지만 회선을 먹는다**(2026-10-05 측정). 0.1 초 고정은 250 ms · 15 % 에서 사건 최대 지연 1.0 초였지만 메시지당
+  재전송 3.5 번 · 서버 올림 3 배로 파괴 시험(덩어리 오차)이 졌다. RTT + 50 ms 와 빠른 재전송(뒤 패킷 셋 확인)이 재전송 1.9 배 · 올림 +9 % 로 4.1 → 1.3 초다.
 - **확인만 담은 패킷이 확인을 부르면 한가한 연결이 30 Hz 로 핑퐁한다**(`NetConnection` 확인 요청 비트의 이유). 요청을 끄면 거꾸로 두 쪽 유지 시각이 맞물려 한쪽은
   늘 답만 보내 RTT 표본이 0 이 된다 — 그래서 답이라도 마지막 요청에서 유지 간격이 지나면 요청한다. RTT 는 "요청 패킷이 가장 새 확인으로" 돌아올 때만 잰다(묶음으로 늦게
   확인된 것은 상대가 기다렸다 보낸 시간이 섞인다).

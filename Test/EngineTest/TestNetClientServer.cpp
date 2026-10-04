@@ -48,14 +48,14 @@ namespace
         {
         }
 
-        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
-        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override
+        uint8           getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
+        uint16          getMessageKindMask() const override { return static_cast<uint16>( 1u << ( _kind - NetKitMessageRange::kClientServer ) ); }
+        NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override
         {
-            (void)connectionId;
-            if ( size <= 0 || pData[0] != _kind )
-                return false;
+            (void)context;
+            (void)body;
             ++_count;
-            return true;
+            return NetHandleResult::Handled;
         }
 
         uint8 _kind;
@@ -151,13 +151,13 @@ SW_TEST_CASE( NetClientServerTest, RedundantInputsSkipKnownTicksAndKeepLaterPayl
     };
 
     // 틱 5 를 먼저 받는다. 다음 패킷은 6(새) · 5(이미 가짐) · 4(새) — 새 것부터.
-    SW_ASSERT_TRUE( server.handleMessage( 0, makeInputMessage( 5, {
-                                                                      { 5, 5, 5 }
+    SW_ASSERT_TRUE( NetHandleResult::Handled == server.handleMessage( 0, makeInputMessage( 5, {
+                                                                                                  { 5, 5, 5 }
     } ) ) );
-    SW_ASSERT_TRUE( server.handleMessage( 0, makeInputMessage( 6, {
-                                                                      { 6, 6 },
-                                                                      { 5, 5, 5 },
-                                                                      { 4 }
+    SW_ASSERT_TRUE( NetHandleResult::Handled == server.handleMessage( 0, makeInputMessage( 6, {
+                                                                                                  { 6, 6 },
+                                                                                                  { 5, 5, 5 },
+                                                                                                  { 4 }
     } ) ) );
 
     vector<uint8> input;
@@ -216,9 +216,9 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
         int32          connectionId = -1;
         NetChannelType channel      = NetChannelType::Unreliable;
         while ( serverHost.receiveMessage( connectionId, channel, buffer ) )
-            SW_EXPECT_TRUE( server.handleMessage( connectionId, buffer ) );
+            SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionId, buffer ) );
         while ( clientHost.receiveMessage( connectionId, channel, buffer ) )
-            SW_EXPECT_TRUE( client.handleMessage( buffer ) );
+            SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, buffer ) );
         if ( clientHost.getConnectionState( 0 ) != NetConnectionState::Connected )
             continue;
 
@@ -365,9 +365,9 @@ SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
         int32          connectionId = -1;
         NetChannelType channel      = NetChannelType::Unreliable;
         while ( serverHost.receiveMessage( connectionId, channel, buffer ) )
-            SW_EXPECT_TRUE( server.handleMessage( connectionId, buffer ) );
+            SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionId, buffer ) );
         while ( clientHost.receiveMessage( connectionId, channel, buffer ) )
-            SW_EXPECT_TRUE( client.handleMessage( buffer ) );
+            SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, buffer ) );
         if ( frame % 2 == 0 )
         {
             server.beginTick( serverTick );
@@ -435,10 +435,88 @@ SW_TEST_CASE( NetClientServerTest, EmulationConditionsComeFromGlobalVariables )
 }
 
 /**
- * @brief [NetClientServerTest] 복제 서버 · 클라이언트는 키트 영역 안에서도 자기 종류만 먹는다 — 같은 영역의 다른 종류는 라우터가 다음 처리기에 준다
+ * @brief [NetClientServerTest] 같은 자리에 새로 온 클라이언트는 옛 연결의 상태를 이어 쓰지 않는다 — 끊김 · 연결이 게임 프레임 사이에 일어나도
+ *        라우터가 닫힘 → 열림을 그 연결의 메시지보다 먼저 키트에 알린다
+ * @details 연결 id 는 자리 번호라 다시 쓰인다. 사건과 메시지를 따로 꺼내고 게임이 손으로 `onDisconnected` 를 넘기던 때는, 새 클라이언트의 틱 0 입력이
+ *          옛 클라이언트가 쓴 틱(100)보다 작아 "이미 씀" 으로 버려졌다.
+ */
+SW_TEST_CASE( NetClientServerTest, ReconnectOnSameSlotResetsHandlerState )
+{
+    NetHostSettings settings;
+    settings._maxConnections = 1;
+    LoopbackNetwork network( 41u );
+    NetHost         serverHost;
+    NetHost         first;
+    NetHost         second;
+    serverHost.initialize( network.createEndpoint( 4000 ), settings );
+    first.initialize( network.createEndpoint( 5001 ), settings );
+    second.initialize( network.createEndpoint( 5002 ), settings );
+    SW_ASSERT_TRUE( serverHost.listen() );
+    ReplicationServer server;
+    server.initialize( &serverHost, ReplicationServerSettings{}, nullptr );
+    NetMessageRouter router;
+    router.addHandler( &server );
+    float64    time   = 0.0;
+    const auto runAll = [&]( float64 seconds )
+    {
+        for ( float64 elapsed = 0.0; elapsed < seconds; elapsed += 1.0 / 60.0 )
+        {
+            time += 1.0 / 60.0;
+            serverHost.update( time );
+            first.update( time );
+            second.update( time );
+        }
+    };
+    const auto sendInput = []( NetHost& host, uint32 tick )
+    {
+        BitWriter writer;
+        writer.writeBits( NetClientServerMessage::kInput, 8 );
+        writer.writeVarUint( tick );
+        writer.writeVarUint( 0 );
+        writer.writeVarUint( 1 );
+        writer.writeVarUint( 1 );
+        const uint8 payload = static_cast<uint8>( tick + 1 );
+        writer.writeBytes( &payload, 1 );
+        return host.sendMessage( 0, NetChannelType::ReliableOrdered, writer.getBytes() );
+    };
+
+    // 첫 클라이언트가 자리 0 에서 틱 100 까지 썼다.
+    SW_ASSERT_TRUE( first.connect( NetAddress::makeLoopback( 4000 ) ) );
+    runAll( 0.3 );
+    SW_ASSERT_TRUE( sendInput( first, 100 ) );
+    runAll( 0.2 );
+    (void)router.pump( serverHost );
+    vector<uint8> input;
+    bool          bExact = false;
+    SW_ASSERT_TRUE( server.popInput( 0, 100, input, bExact ) && bExact );
+    server.setLastProcessedInputTick( 0, 100 );
+
+    // 게임 프레임 사이 — 첫째가 떠나고 둘째가 같은 자리에 들어와 틱 0 입력을 보낸다. 서버 게임은 그동안 라우터를 돌리지 않았다.
+    first.disconnect( 0 );
+    runAll( 0.1 );
+    SW_ASSERT_TRUE( second.connect( NetAddress::makeLoopback( 4000 ) ) );
+    runAll( 0.3 );
+    SW_ASSERT_TRUE( second.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_ASSERT_EQUAL( 0, second.getClientIndex() );
+    SW_ASSERT_TRUE( sendInput( second, 0 ) );
+    runAll( 0.2 );
+
+    vector<NetHostEvent> listEvent;
+    (void)router.pump( serverHost, nullptr, &listEvent );
+    SW_ASSERT_EQUAL( size_t{ 2 }, listEvent.size() ); // 닫힘 → 열림, 그 뒤에 둘째의 입력
+    SW_EXPECT_TRUE( listEvent[0]._kind == NetHostEvent::Kind::Disconnected );
+    SW_EXPECT_TRUE( listEvent[1]._kind == NetHostEvent::Kind::Connected );
+    SW_ASSERT_TRUE( server.popInput( 0, 0, input, bExact ) );
+    SW_EXPECT_TRUE( bExact );
+    SW_ASSERT_EQUAL( size_t{ 1 }, input.size() );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( input[0] ) );
+}
+
+/**
+ * @brief [NetClientServerTest] 복제 서버 · 클라이언트는 종류 마스크로 자기 종류만 맡는다 — 같은 영역의 다른 종류는 라우터가 그 종류를 맡은 처리기에 준다
  * @details 영역 전체를 받아 버리면 라우터 등록 순서에 따라 같은 영역을 나눠 쓰는 처리기가 메시지를 하나도 받지 못한다.
  */
-SW_TEST_CASE( NetClientServerTest, KitHandlersPassOnKindsOfTheRangeTheyDoNotOwn )
+SW_TEST_CASE( NetClientServerTest, KindMaskRoutesSharedRange )
 {
     ReplicationServer server;
     server.initialize( nullptr, ReplicationServerSettings{}, nullptr );
@@ -446,8 +524,8 @@ SW_TEST_CASE( NetClientServerTest, KitHandlersPassOnKindsOfTheRangeTheyDoNotOwn 
     client.initialize( nullptr, ReplicationClientSettings{} );
     const uint8         otherKind = NetKitMessageRange::kClientServer + 7;
     const vector<uint8> message{ otherKind, 1 };
-    SW_EXPECT_FALSE( server.handleMessage( 0, message ) );
-    SW_EXPECT_FALSE( client.handleMessage( message ) );
+    SW_EXPECT_TRUE( NetHandleResult::NotMine == server.handleMessage( 0, message ) );
+    SW_EXPECT_TRUE( NetHandleResult::NotMine == client.handleMessage( 0, message ) );
 
     KindCounter      serverSide{ otherKind };
     KindCounter      clientSide{ otherKind };
@@ -457,8 +535,8 @@ SW_TEST_CASE( NetClientServerTest, KitHandlersPassOnKindsOfTheRangeTheyDoNotOwn 
     serverRouter.addHandler( &serverSide );
     clientRouter.addHandler( &client );
     clientRouter.addHandler( &clientSide );
-    SW_EXPECT_TRUE( serverRouter.dispatch( 0, message.data(), static_cast<int32>( message.size() ) ) );
-    SW_EXPECT_TRUE( clientRouter.dispatch( -1, message.data(), static_cast<int32>( message.size() ) ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == serverRouter.dispatch( NetMessageContext{}, message.data(), static_cast<int32>( message.size() ) ) );
+    SW_EXPECT_TRUE( NetHandleResult::Handled == clientRouter.dispatch( NetMessageContext{}, message.data(), static_cast<int32>( message.size() ) ) );
     SW_EXPECT_EQUAL( 1, serverSide._count );
     SW_EXPECT_EQUAL( 1, clientSide._count );
 }
