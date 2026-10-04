@@ -5,6 +5,7 @@
 #include "pch.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
@@ -19,19 +20,62 @@
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
+    #include <thread>
+
 namespace sw
 {
     SW_LOG_CALLER( "D3D11" );
+
+    namespace
+    {
+        struct D3D11RHIDeviceSubmissionInternal
+        {
+            /** @brief GPU 시계 읽기가 기다리는 상한입니다. 큐에 프레임 몇 개가 쌓여 있어도 넉넉하다. */
+            static constexpr uint32 kClockReadTimeoutMilliseconds = 500;
+        };
+    } // namespace
 
     uint32 D3D11RHIDevice::getTimestampSlotCount() const
     {
         return ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE ) ? constant::kMaxGpuTimestampSlot : 0u;
     }
 
-    bool D3D11RHIDevice::readTimestampsMicros( vector<float32>& outListMicro )
+    bool D3D11RHIDevice::readTimestamps( RHIGpuTimestampFrame& outFrame )
     {
-        outListMicro = _listTimestampMicro;
-        return outListMicro.empty() == false;
+        outFrame = _timestampFrame;
+        return outFrame._listMicro.empty() == false;
+    }
+
+    bool D3D11RHIDevice::readGpuClockNanos( int64& outGpuNanos )
+    {
+        outGpuNanos = 0;
+        // 주파수는 프레임 disjoint 가 준다 — 아직 한 프레임도 읽지 않았으면 틱을 나노초로 바꿀 근거가 없다.
+        if ( _device == nullptr || _deviceContext == nullptr || _lastTimestampFrequency == 0 )
+            return false;
+
+        std::scoped_lock<mutex> lock{ _immediateContextMutex };
+        if ( _clockQuery == nullptr )
+        {
+            D3D11_QUERY_DESC stampDesc{};
+            stampDesc.Query = D3D11_QUERY_TIMESTAMP;
+            if ( FAILED( _device->CreateQuery( &stampDesc, &_clockQuery ) ) )
+                return false;
+        }
+
+        // D3D11 에는 "지금 GPU 시계" 를 묻는 API 가 없다. 타임스탬프 하나를 내고 GPU 가 그것을 지날 때까지 묻는다 — 돌아오는 순간의 값이 곧
+        // 지금이다(관찰 지연만큼 이르다). 큐에 쌓인 프레임만큼 기다리므로 컨텍스트를 열 때 한 번만 부른다(`isGpuClockReadCheap` false).
+        _deviceContext->End( _clockQuery.Get() );
+        _deviceContext->Flush();
+        const Deadline deadline = Deadline::afterMilliseconds( D3D11RHIDeviceSubmissionInternal::kClockReadTimeoutMilliseconds );
+        uint64         tick{ 0 };
+        while ( _deviceContext->GetData( _clockQuery.Get(), &tick, sizeof( tick ), 0 ) != S_OK )
+        {
+            if ( deadline.isExpired() )
+                return false;
+            std::this_thread::yield();
+        }
+        outGpuNanos = RHIGpuTimestamp::convertTickToNanos( tick, 1.0e9 / static_cast<float64>( _lastTimestampFrequency ) );
+        return true;
     }
 
     void D3D11RHIDevice::writeTimestampSlot( ID3D11DeviceContext* pContext, uint32 slotIndex )
@@ -75,7 +119,7 @@ namespace sw
 
     void D3D11RHIDevice::collectTimestampsForSlot()
     {
-        _listTimestampMicro.clear();
+        _timestampFrame._listMicro.clear();
         D3D11TimestampFrame& frame = _arrTimestampFrame[_timestampFrameIndex];
         if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || frame._bPending == SW_FALSE ||
              frame._writtenMask == 0 )
@@ -108,7 +152,8 @@ namespace sw
             arrTick[slotIndex] = tick;
             readyMask |= ( 1u << slotIndex );
         }
-        RHIGpuTimestamp::resolveMicro( arrTick, readyMask, 1000000.0 / static_cast<float64>( disjointData.Frequency ), _listTimestampMicro );
+        _lastTimestampFrequency = disjointData.Frequency;
+        RHIGpuTimestamp::resolve( arrTick, readyMask, 1.0e9 / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
     }
 
     void D3D11RHIDevice::beginFrame( const float4& clearColor )

@@ -2,6 +2,7 @@
 
 #include "Core/Network/NetHostThread.h"
 
+#include "Core/Concurrency/ThreadName.h"
 #include "Core/Network/NetHost.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -44,6 +45,7 @@ namespace sw
 
     void NetHostThread::run()
     {
+        ThreadName::setCurrentThreadName( "Net" );
         const float64 maxWait = _settings._maxWaitSeconds > 0.0f ? static_cast<float64>( _settings._maxWaitSeconds ) : 0.0;
         while ( _bStopRequested.load( std::memory_order_acquire ) == false )
         {

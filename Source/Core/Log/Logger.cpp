@@ -3,6 +3,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Log/ConsoleLogOutput.h"
@@ -406,6 +407,7 @@ namespace sw
         SW_MEMORY_SCOPE( EngineMisc );
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
         CrashHandler::initializeCurrentThread();
+        ThreadName::setCurrentThreadName( "Logger" );
         while ( _bIsRunning.load( std::memory_order_acquire ) || _queue.empty() == false )
         {
             LogRecord record;

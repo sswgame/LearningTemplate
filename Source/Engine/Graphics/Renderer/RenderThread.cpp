@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Renderer/RenderThread.h"
 
+#include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/MemoryProfiler.h"
@@ -15,6 +16,7 @@
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/ProfilerBackend.h"
 
 namespace sw
 {
@@ -257,6 +259,7 @@ namespace sw
         SW_MEMORY_SCOPE( RenderCpu );
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
         CrashHandler::initializeCurrentThread();
+        ThreadName::setCurrentThreadName( "RenderThread" );
         _bContextBound = false;
 
         for ( ;; )
@@ -426,6 +429,10 @@ namespace sw
             // `_window._bVSync` 와 CLI `-vsync` 가 둘 다 무시되고 프레임이 모니터 주사율에 붙는다.
             _pDevice->endFrame( _pDevice->isVSyncEnabled() );
         }
+        // 외부 프로파일러(Tracy)의 렌더 스레드 프레임 경계. 주 프레임(게임 스레드)과 박자가 달라 이름을 따로 둔다.
+        IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();
+        if ( pProfilerBackend != nullptr )
+            pProfilerBackend->markFrame( "Render" );
 
         {
             // 드라이버의 GPU 메모리 사용량 · 예산을 장부에 적는다. 첫 프레임에도 묻는다 — 보고가 "모름" 으로 시작하지 않게.

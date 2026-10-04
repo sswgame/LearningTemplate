@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/LockFreeObjectPool.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/FrameArenaAllocator.h"
 #include "Core/Memory/LinearAllocator.h"
@@ -547,6 +548,38 @@ namespace
     {
         float32 _arrValue[4]{ 1.f, 2.f, 3.f, 4.f };
     };
+
+    /**
+     * @brief 할당 관찰자 시험의 기록입니다. 다른 스레드(로거 등)도 같은 관찰자를 지나므로 **시험이 고른 크기**의 블록만 셉니다.
+     */
+    struct AllocationObserverRecordInternal
+    {
+        static constexpr size_t kProbeSize = 777773; ///< 다른 코드가 우연히 잡지 않을 크기
+
+        static sw::atomic<const void*> s_pLastAllocated;
+        static sw::atomic<uint32>      s_allocateCount;
+        static sw::atomic<uint32>      s_freeCount;
+        static sw::atomic<const void*> s_pWatchedFree; ///< 이 주소의 해제만 센다
+
+        static void onAllocate( const void* pPtr, size_t size, sw::MemoryTag )
+        {
+            if ( size != kProbeSize )
+                return;
+            s_pLastAllocated.store( pPtr );
+            s_allocateCount.fetch_add( 1 );
+        }
+
+        static void onFree( const void* pPtr, sw::MemoryTag )
+        {
+            if ( pPtr != nullptr && pPtr == s_pWatchedFree.load() )
+                s_freeCount.fetch_add( 1 );
+        }
+    };
+
+    sw::atomic<const void*> AllocationObserverRecordInternal::s_pLastAllocated{ nullptr };
+    sw::atomic<uint32>      AllocationObserverRecordInternal::s_allocateCount{ 0 };
+    sw::atomic<uint32>      AllocationObserverRecordInternal::s_freeCount{ 0 };
+    sw::atomic<const void*> AllocationObserverRecordInternal::s_pWatchedFree{ nullptr };
 } // namespace
 
 /**
@@ -599,4 +632,46 @@ SW_TEST_CASE( MemoryTest, NewArrayValueInitializesAndKeepsAlignment )
     {
         SW_EXPECT_EQUAL( 0ull, arrWord[index] );
     }
+}
+
+/**
+ * @brief [MemoryTest] 할당 관찰자는 관찰 중에 잡힌 블록의 해제만 알린다
+ * @details 외부 프로파일러(Tracy)는 짝 없는 해제를 받으면 기록을 멈춘다. 관찰자를 걸기 **전에** 잡은 블록을 나중에 풀 때 알리면 안 된다.
+ *          배포본은 헤더가 없어 관찰자를 지원하지 않는다(아무것도 알리지 않는다).
+ */
+SW_TEST_CASE( MemoryTest, AllocationObserverSeesOnlyBlocksAllocatedWhileAttached )
+{
+    using Record = AllocationObserverRecordInternal;
+    static constexpr sw::MemoryAllocationObserver kObserver{ &Record::onAllocate, &Record::onFree };
+
+    void* pBefore = sw::Memory::allocate( Record::kProbeSize );
+    SW_ASSERT_NOT_NULL( pBefore );
+
+    sw::Memory::setAllocationObserver( &kObserver );
+    Record::s_pWatchedFree.store( pBefore );
+    sw::Memory::free( pBefore );
+    [[maybe_unused]] const uint32 freeOfUnobserved = Record::s_freeCount.load();
+
+    void* pDuring = sw::Memory::allocate( Record::kProbeSize );
+    SW_ASSERT_NOT_NULL( pDuring );
+    Record::s_pWatchedFree.store( pDuring );
+    sw::Memory::free( pDuring );
+    sw::Memory::setAllocationObserver( nullptr );
+
+#if defined( SW_SHIPPING )
+    SW_EXPECT_EQUAL( 0u, Record::s_allocateCount.load() );
+    SW_EXPECT_EQUAL( 0u, Record::s_freeCount.load() );
+#else
+    SW_EXPECT_EQUAL( 0u, freeOfUnobserved );
+    SW_EXPECT_EQUAL( 1u, Record::s_allocateCount.load() );
+    SW_EXPECT_TRUE( Record::s_pLastAllocated.load() == pDuring );
+    SW_EXPECT_EQUAL( 1u, Record::s_freeCount.load() );
+#endif
+
+    // 뗀 뒤에는 아무것도 오지 않는다.
+    void* pAfter = sw::Memory::allocate( Record::kProbeSize );
+    sw::Memory::free( pAfter );
+#if !defined( SW_SHIPPING )
+    SW_EXPECT_EQUAL( 1u, Record::s_allocateCount.load() );
+#endif
 }

@@ -64,6 +64,7 @@ Tools/_deps/
 # vcpkg
 /vcpkg/
 Tools/vcpkg/
+Tools/Tracy/
 .vcpkg/
 vcpkg_installed/
 

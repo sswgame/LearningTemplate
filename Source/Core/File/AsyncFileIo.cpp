@@ -2,6 +2,7 @@
 
 #include "Core/File/AsyncFileIo.h"
 
+#include "Core/Concurrency/ThreadName.h"
 #include "Core/File/AsyncFileIoBackend.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Log/Logger.h"
@@ -524,6 +525,7 @@ namespace sw
         {
             const ScopedMemoryTag threadMemoryTag{ memoryTag };
             CrashHandler::initializeCurrentThread();
+            ThreadName::setCurrentThreadName( "IO" );
             while ( true )
             {
                 const shared_ptr<AsyncReadRequest> pRequest = _pQueue->waitPop();

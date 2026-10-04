@@ -12,6 +12,7 @@
 #include "Engine/Common/IRenderSurface.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 
 namespace sw
@@ -110,6 +111,13 @@ namespace sw
     }
 
     SW_LOG_CALLER( "RHI" );
+
+    bool IRHIDevice::readTimestamps( RHIGpuTimestampFrame& outFrame )
+    {
+        outFrame._listMicro.clear();
+        outFrame._originNanos = 0;
+        return false;
+    }
 
     void IRHIDevice::waitIdle()
     {

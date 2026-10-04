@@ -7,6 +7,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
+#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Window/IWindow.h"
@@ -1350,9 +1351,9 @@ SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
         // 엔진이 켜 주기 전에는 백엔드가 쿼리 자원조차 만들지 않는다 — 계측 비용을 안 내기 위해서다.
         device->setTimestampEnabled( true );
 
-        sw::vector<float32> listMicro;
-        bool                bGotSample{ false };
-        uint32              slotCount{ 0 };
+        sw::RHIGpuTimestampFrame frame;
+        bool                     bGotSample{ false };
+        uint32                   slotCount{ 0 };
         for ( uint32 frameIndex = 0; frameIndex < kFrameCount && bGotSample == false; ++frameIndex )
         {
             device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
@@ -1378,9 +1379,10 @@ SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
             // 앱에서는 Present 가 하던 일을 여기서는 이것이 대신한다.
             device->waitIdle();
 
-            if ( device->readTimestampsMicros( listMicro ) )
+            if ( device->readTimestamps( frame ) )
                 bGotSample = true;
         }
+        const sw::vector<float32>& listMicro = frame._listMicro;
 
         if ( bGotSample )
         {
@@ -1407,6 +1409,14 @@ SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
                                       sw::to_string( unwrittenCount ) + ")" )
                                         .c_str() );
             }
+
+            // GPU 시계(외부 프로파일러가 GPU 시각을 CPU 시계에 맞추는 값)는 타임스탬프와 같은 시계다 — 이미 끝난 프레임의 기준점보다 늦다.
+            int64 clockNanos{ 0 };
+            SW_EXPECT_TRUE_MSG( device->readGpuClockNanos( clockNanos ), ( sw::string( pName ) + ": GPU clock is not readable" ).c_str() );
+            SW_EXPECT_TRUE_MSG( clockNanos >= frame._originNanos && frame._originNanos > 0,
+                                ( sw::string( pName ) + ": GPU clock " + sw::to_string( clockNanos ) + " ns is not after the frame origin " +
+                                  sw::to_string( frame._originNanos ) + " ns (different clock domain?)" )
+                                    .c_str() );
         }
 
         device->waitIdle();
