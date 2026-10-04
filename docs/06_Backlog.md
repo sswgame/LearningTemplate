@@ -1229,6 +1229,8 @@ cd build/Ninja-Debug/Bin
 
 ### 3-10. Core · 태스크 · 메모리
 
+- **순서만 채널(`UnreliableSequenced`)은 메시지 종류(첫 바이트)마다 흐름이다** — 예전엔 연결 전체가 흐름 하나라 한 보내기 간격의 다른 종류 메시지가 서로 지웠다.
+  같은 종류로 여러 조각(오브젝트 · 부분)을 보내는 것은 여전히 서로 지우므로 비신뢰 + 받는 쪽 틱 정렬로 보낸다(`DestructionReplication` 의 자세).
 - **`quaternion::inverse()` · `conjugate()` 는 const 가 아닌 값에서 제자리 버전(void)이 골라진다** — 식 안에서는 const 참조로 받아 부를 것(`RigIkSolver::makeInverse`).
   **`quaternion::fromToRotation` 은 코사인 차 1e-6(약 0.08°) 안쪽을 단위 회전으로 버린다** — 반복 IK 의 마지막 몇 mm 가 그 안이라 CCD 가 멈춘다(`RigIkSolver::makeFromToRotation`).
 

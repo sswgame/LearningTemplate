@@ -255,17 +255,17 @@ SW_TEST_CASE( NetworkTest, ConnectionsResendReliableMessagesInOrderAndDropStaleS
     SW_EXPECT_EQUAL( 0, sender.getPendingReliableCount() );
     SW_EXPECT_NEAR_EQUAL( 0.04f, sender.getStats()._rtt, 0.01f );
 
-    // 순서만 — 한 패킷에는 가장 새 것 하나, 늦게 온 옛 패킷은 버린다.
+    // 순서만 — 같은 종류(첫 바이트 0)는 한 패킷에 가장 새 것 하나, 늦게 온 옛 패킷은 버린다.
     NetConnection fresh;
     NetConnection late;
     for ( int32 index = 0; index < 3; ++index )
     {
-        const vector<uint8> buffer = makeMessage( index );
+        const vector<uint8> buffer = makeMessage( index << 8 );
         SW_ASSERT_TRUE( fresh.sendMessage( NetChannelType::UnreliableSequenced, buffer.data(), 4 ) );
     }
     BitWriter firstPacket;
     fresh.writePacket( 0.0, firstPacket, 300 );
-    const vector<uint8> newer = makeMessage( 9 );
+    const vector<uint8> newer = makeMessage( 9 << 8 );
     SW_ASSERT_TRUE( fresh.sendMessage( NetChannelType::UnreliableSequenced, newer.data(), 4 ) );
     BitWriter secondPacket;
     fresh.writePacket( 0.1, secondPacket, 300 );
@@ -275,8 +275,54 @@ SW_TEST_CASE( NetworkTest, ConnectionsResendReliableMessagesInOrderAndDropStaleS
     SW_EXPECT_TRUE( late.readPacket( 0.3, firstReader ) ); // 패킷은 받지만 그 안의 옛 순서 메시지는 버린다
     vector<uint8> buffer;
     SW_ASSERT_TRUE( late.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) );
-    SW_EXPECT_EQUAL( 9, readMessageValue( buffer ) );
+    SW_EXPECT_EQUAL( 9 << 8, readMessageValue( buffer ) );
     SW_EXPECT_FALSE( late.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) );
+}
+
+/**
+ * @brief [NetworkTest] 순서만 채널은 메시지 종류(첫 바이트)마다 흐름이 따로다 — 한 보내기 간격에 두 종류를 보내면 둘 다 가고, 같은 종류는 새 것만 가고,
+ *        늦게 온 패킷의 다른 종류 메시지는 버리지 않는다
+ * @details 예전에는 채널 전체가 흐름 하나라 마지막 메시지 하나만 실렸다 — 복제 스냅샷과 파괴 덩어리 자세가 같은 간격에 나가면 하나가 조용히 사라졌다.
+ */
+SW_TEST_CASE( NetworkTest, SequencedChannelKeepsOneStreamPerMessageKind )
+{
+    NetConnection       sender;
+    NetConnection       receiver;
+    const vector<uint8> snapshotOld{ 0x10, 1 };
+    const vector<uint8> pose{ 0x15, 2 };
+    const vector<uint8> snapshotNew{ 0x10, 3 };
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, snapshotOld.data(), 2 ) );
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, pose.data(), 2 ) );
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, snapshotNew.data(), 2 ) );
+    BitWriter firstPacket;
+    sender.writePacket( 0.0, firstPacket, 300 );
+    // 한 패킷에 두 종류가 다 실린다(같은 종류의 옛 스냅샷만 빠졌다).
+    {
+        NetConnection direct;
+        BitReader     directReader( firstPacket.getBytes().data(), firstPacket.getByteCount() );
+        SW_ASSERT_TRUE( direct.readPacket( 0.05, directReader ) );
+        vector<uint8> directBuffer;
+        int32         directCount = 0;
+        while ( direct.receiveMessage( NetChannelType::UnreliableSequenced, directBuffer ) )
+            ++directCount;
+        SW_EXPECT_EQUAL( 2, directCount );
+    }
+    // 다음 간격 — 자세만 새로. 이 패킷이 먼저 도착해도 앞 패킷의 스냅샷(다른 종류)은 받는다.
+    const vector<uint8> poseNew{ 0x15, 4 };
+    SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, poseNew.data(), 2 ) );
+    BitWriter secondPacket;
+    sender.writePacket( 0.1, secondPacket, 300 );
+    BitReader secondReader( secondPacket.getBytes().data(), secondPacket.getByteCount() );
+    BitReader firstReader( firstPacket.getBytes().data(), firstPacket.getByteCount() );
+    SW_EXPECT_TRUE( receiver.readPacket( 0.2, secondReader ) );
+    SW_EXPECT_TRUE( receiver.readPacket( 0.3, firstReader ) );
+    vector<vector<uint8>> listReceived;
+    vector<uint8>         buffer;
+    while ( receiver.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) )
+        listReceived.push_back( buffer );
+    SW_ASSERT_EQUAL( size_t{ 2 }, listReceived.size() );
+    SW_EXPECT_TRUE( listReceived[0] == poseNew );     // 새 자세
+    SW_EXPECT_TRUE( listReceived[1] == snapshotNew ); // 옛 패킷이지만 스냅샷 흐름에서는 처음이자 가장 새 것 — 옛 자세(2)는 버렸다
 }
 
 SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
