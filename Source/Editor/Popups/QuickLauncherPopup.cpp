@@ -34,7 +34,7 @@ namespace sw::editor
             {
                 if ( item._category == "GameObject" )
                     return ImVec4( 0.95f, 0.85f, 0.30f, 1.0f );
-                const Color4 color = EditorThemeUtil::getAssetKindColor( item._kind );
+                const Color4 color = EditorThemeUtil::getAssetTypeColor( item._kind );
                 return ImVec4( color._r, color._g, color._b, color._a );
             }
         };

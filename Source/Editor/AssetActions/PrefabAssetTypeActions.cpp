@@ -19,7 +19,7 @@ namespace sw::editor
         class PrefabAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:
-            virtual EditorAssetKind getKind() const override { return EditorAssetKind::Prefab; }
+            virtual EditorAssetType getKind() const override { return EditorAssetType::Prefab; }
 
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override
             {

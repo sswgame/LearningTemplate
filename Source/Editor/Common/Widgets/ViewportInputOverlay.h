@@ -8,8 +8,8 @@
 
 namespace sw
 {
-    class ActionMap;
     class InputManager;
+    class InputMap;
 } // namespace sw
 
 struct ImDrawList;
@@ -65,9 +65,9 @@ namespace sw::editor
         static ViewportInputOverlayConfig& getConfig();
 
         /** @brief 뷰포트 영역 위에 오버레이를 렌더링합니다. */
-        static void draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const ActionMap* pActionMap, const ViewportInputOverlayConfig& config );
+        static void draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap, const ViewportInputOverlayConfig& config );
 
         /** @brief 현재 전역 설정을 바탕으로 뷰포트 위에 오버레이를 렌더링합니다. */
-        static void draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const ActionMap* pActionMap );
+        static void draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap );
     };
 } // namespace sw::editor

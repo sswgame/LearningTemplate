@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
@@ -250,7 +250,7 @@ SW_TEST_CASE( ResourceTest, AssetStreamingQueueLifecycleAndThrottling )
             ++deliveredCallCount;
         } ) );
     }
-    const sw::CpuDeadline waitDeadline = sw::CpuDeadline::afterMilliseconds( 10000 );
+    const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( 10000 );
     while ( queue.getPendingCount() != 0 && waitDeadline.isExpired() == false )
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
     SW_ASSERT_EQUAL( size_t( 0 ), queue.getPendingCount() );

@@ -2,7 +2,7 @@
 
 #include "Core/Common/Types.h"
 #include "Core/Log/Logger.h"
-#include "Core/Time/CpuTimer.h"
+#include "Core/Time/GameTimer.h"
 
 #include "ReflectionParser/AnnotationFields.h"
 #include "ReflectionParser/ParserDefines.h"
@@ -121,7 +121,7 @@ int32 main( int32 argc, utf8* argv[] )
     if ( bConfigLoaded == false || sw::ReflectionParserInternal::loadTables( options, session ) == false )
         return 1;
 
-    sw::CpuTimer timer;
+    sw::GameTimer timer;
     timer.resetTimer();
     timer.startTimer();
 

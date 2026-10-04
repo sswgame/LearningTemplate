@@ -319,7 +319,7 @@ namespace sw
                     typename TApi::BindDesc bindDesc{};
                     pReflection->GetResourceBindingDesc( resourceIndex, &bindDesc );
 
-                    ShaderResourceBinding resourceBinding{};
+                    ShaderReflectedBinding resourceBinding{};
                     resourceBinding._name          = bindDesc.Name != nullptr ? bindDesc.Name : "";
                     resourceBinding._registerSpace = TApi::getRegisterSpace( bindDesc );
                     resourceBinding._bindPoint     = bindDesc.BindPoint;

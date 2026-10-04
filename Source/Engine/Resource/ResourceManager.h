@@ -2,11 +2,11 @@
  * @file ResourceManager.h
  * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineOwnedServices` 로 소유합니다.
  * @note
- *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabManager, ResourcePackManager.
+ *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, ResourcePackManager.
  *   제외(수명이 다름):
  *   - ResourceUtil: Resource/ 경로 해석만 합니다(소유권 없음)
  *   - ShaderCache: 셰이더 컴파일 결과 캐시(RHI)
- *   - RenderPassManager: FrameRenderer 가 소유
+ *   - RenderPipelineAssetCache: FrameRenderer 가 소유
  *   - ConfigManager: Config/ 호스트 JSON(Resource/ 아님)
  *   - StringTable · SceneManager
  *   - 파일 감시 · 에셋 핫 리로드: **개발 기능이라 에디터가 소유**합니다(Editor/Common/Workspace).
@@ -17,7 +17,7 @@
 #include "Core/Container/RegistrationList.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleCodeHolder.h"
+#include "Core/Module/ModuleUnloadListener.h"
 
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
@@ -26,7 +26,7 @@ namespace sw
 {
     class IAssetCache;
     class MaterialCache;
-    class PrefabManager;
+    class PrefabCache;
     class ResourcePackManager;
     class SpriteClipCache;
     class TextureCache;
@@ -42,7 +42,7 @@ namespace sw
      * @class ResourceManager
      * @brief 에셋 식별 · 스키마 · 인스턴스 캐시와 VFS 팩 매니저를 한 객체로 소유합니다.
      */
-    class SW_API ResourceManager final : public IModuleCodeHolder
+    class SW_API ResourceManager final : public IModuleUnloadListener
     {
     public:
         /** @brief 빈 매니저로 만듭니다. initialize() 전에 바인딩해도 됩니다. */
@@ -137,13 +137,13 @@ namespace sw
          */
         void warnAboutRemainingModuleCaches() const;
 
-        /** @brief 보유자 목록의 이름입니다. */
-        const utf8* getModuleCodeHolderName() const override { return "asset caches"; }
+        /** @brief 언로드 리스너 목록의 이름입니다. */
+        const utf8* getModuleUnloadListenerName() const override { return "asset caches"; }
         /**
          * @brief 객체나 vtable 이 [@p pBegin, @p pEnd) 안인 캐시(모듈이 올리고 내리지 않은 것)를 등록부에서 내립니다. 비우지 않습니다 —
          *        캐시는 그것을 만든 모듈이 소유하고, 이미지가 아직 올라 있는 동안 모듈이 스스로 지웁니다. 내장 캐시는 보지 않습니다.
          */
-        uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
         /** @brief VFS 에 팩을 마운트하는 리소스 팩 매니저를 반환합니다. */
         ResourcePackManager&       getPackManager();
@@ -165,8 +165,8 @@ namespace sw
         const TextureCache& getTextureManager() const;
 
         /** @brief Prefab 로드 · 스폰 캐시를 반환합니다. */
-        PrefabManager&       getPrefabManager();
-        const PrefabManager& getPrefabManager() const;
+        PrefabCache&       getPrefabCache();
+        const PrefabCache& getPrefabCache() const;
 
     private:
         /** @brief 이 매니저가 소유한 내장 캐시(머티리얼 · 텍스처 · 프리팹 · 스프라이트 클립)인지 봅니다. 종료 경고 · 모듈 코드 걷기에서 뺍니다. */
@@ -176,7 +176,7 @@ namespace sw
         AssetFormatRegistry             _assetFormatRegistry;
         unique_ptr<MaterialCache>       _materialCache;
         unique_ptr<TextureCache>        _textureCache;
-        unique_ptr<PrefabManager>       _prefabManager;
+        unique_ptr<PrefabCache>         _prefabCache;
         unique_ptr<SpriteClipCache>     _spriteClipCache; ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<ResourcePackManager> _pPackManager;
         /**

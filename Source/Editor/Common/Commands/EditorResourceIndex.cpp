@@ -12,8 +12,8 @@ namespace sw::editor
 {
     bool EditorResourceIndex::classifyFile( string_view filePath, EditorResourceIndexEntry& outEntry )
     {
-        const EditorAssetKind      kind  = EditorAssetTypeRegistry::findKind( filePath );
-        const EditorAssetKindInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
+        const EditorAssetType      kind  = EditorAssetTypeRegistry::findKind( filePath );
+        const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
         if ( pInfo == nullptr )
             return false;
         const string resourceId = ResourceUtil::toResourceId( filePath );
@@ -51,7 +51,7 @@ namespace sw::editor
     void EditorResourceIndex::countFiles( const vector<string>& listFilePath, EditorResourceCatalogCounts& outCounts )
     {
         uint32                           kindCount{ 0 };
-        const EditorAssetKindInfo* const pInfo = EditorAssetTypeRegistry::getKindInfos( kindCount );
+        const EditorAssetTypeInfo* const pInfo = EditorAssetTypeRegistry::getKindInfos( kindCount );
         outCounts._listKindCount.clear();
         outCounts._listKindCount.reserve( kindCount );
         for ( uint32 index = 0; index < kindCount; ++index )
@@ -59,7 +59,7 @@ namespace sw::editor
 
         for ( const string& filePath : listFilePath )
         {
-            const EditorAssetKind kind = EditorAssetTypeRegistry::findKind( filePath );
+            const EditorAssetType kind = EditorAssetTypeRegistry::findKind( filePath );
             for ( EditorResourceCatalogCount& row : outCounts._listKindCount )
             {
                 if ( row._kind != kind )

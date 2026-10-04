@@ -9,7 +9,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Scene/GpuMeshMorphPool.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
@@ -220,9 +220,9 @@ namespace sw
                         }
                         if ( _listScratchCopyRegion.empty() == false )
                         {
-                            pDevice->getResource()->updateStructuredBufferRegions( _instances._buffer, pSource,
-                                                                                   _listScratchCopyRegion.data(),
-                                                                                   static_cast<uint32>( _listScratchCopyRegion.size() ) );
+                            pDevice->getResourceFactory()->updateStructuredBufferRegions( _instances._buffer, pSource,
+                                                                                          _listScratchCopyRegion.data(),
+                                                                                          static_cast<uint32>( _listScratchCopyRegion.size() ) );
                         }
                     }
                 }
@@ -292,12 +292,12 @@ namespace sw
         if ( _instanceSlotStreamCapacity < instanceCount || _instanceSlotStream == 0 )
         {
             if ( _instanceSlotStream != 0 )
-                pDevice->getResource()->destroyBuffer( _instanceSlotStream );
+                pDevice->getResourceFactory()->destroyBuffer( _instanceSlotStream );
             const uint32   capacity = MathUtil::max( instanceCount, 256u );
             vector<uint32> listSlot( capacity );
             for ( uint32 slotIndex = 0; slotIndex < capacity; ++slotIndex )
                 listSlot[slotIndex] = slotIndex;
-            _instanceSlotStream         = pDevice->getResource()->createVertexBuffer( listSlot.data(), capacity * static_cast<uint32>( sizeof( uint32 ) ) );
+            _instanceSlotStream         = pDevice->getResourceFactory()->createVertexBuffer( listSlot.data(), capacity * static_cast<uint32>( sizeof( uint32 ) ) );
             _instanceSlotStreamCapacity = ( _instanceSlotStream != 0 ) ? capacity : 0;
             if ( _instanceSlotStream == 0 )
                 SW_LOG_ERROR( "인스턴스 슬롯 스트림을 만들지 못했습니다(%# 인스턴스) — 씬 드로우가 인스턴스를 찾지 못합니다.", capacity );
@@ -368,8 +368,8 @@ namespace sw
         {
             if ( view._indirectArgs._buffer == 0 )
                 continue;
-            pDevice->getResource()->updateStructuredBuffer( view._indirectArgs._buffer, _listScratchIndirectCmd.data(),
-                                                            argsCount * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
+            pDevice->getResourceFactory()->updateStructuredBuffer( view._indirectArgs._buffer, _listScratchIndirectCmd.data(),
+                                                                   argsCount * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ) );
         }
     }
 
@@ -399,8 +399,8 @@ namespace sw
         _instances.release( pDevice );
         _batchInfo.release( pDevice );
         _vertexPool.release( pDevice );
-        if ( _instanceSlotStream != 0 && pDevice != nullptr && pDevice->getResource() != nullptr )
-            pDevice->getResource()->destroyBuffer( _instanceSlotStream );
+        if ( _instanceSlotStream != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
+            pDevice->getResourceFactory()->destroyBuffer( _instanceSlotStream );
         _instanceSlotStream         = 0;
         _instanceSlotStreamCapacity = 0;
         for ( GpuMeshBatch& batch : _snapshot._listAllBatch )

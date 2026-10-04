@@ -65,7 +65,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( AnimationGraphPanel, "animation_graph", EditorPanelCategory::Tool, 1100 );
 
     AnimationGraphPanel::AnimationGraphPanel()
-        : EditorGraphDocumentPanel{ EditorAssetKind::AnimationGraph, "Move Animation Graph Nodes", "anim-graph-layout" }
+        : EditorGraphDocumentPanel{ EditorAssetType::AnimationGraph, "Move Animation Graph Nodes", "anim-graph-layout" }
         , _previewPlayer{}
         , _listPreviewClip{}
     {

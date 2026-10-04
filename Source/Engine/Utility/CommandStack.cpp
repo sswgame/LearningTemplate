@@ -216,7 +216,7 @@ namespace sw
         return droppedCount;
     }
 
-    uint32 CommandStack::releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    uint32 CommandStack::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
     {
         (void)outKeepImageMapped;
         return releaseCodeWithin( pBegin, pEnd );

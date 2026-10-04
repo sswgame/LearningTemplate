@@ -80,8 +80,8 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
 
 ### 4. RenderPass vs Render Pipeline
 프레임이 그려지는 과정은 패스(Pass)와 파이프라인(Pipeline)으로 철저히 나뉩니다.
-- **RenderPass (`RenderPassResource`)**: "어떤 포맷의 텍스처에 그릴 것인가?", "그리기 전에 화면을 지울(Clear) 것인가?" 등 바인딩 템플릿 역할. (`renderpass/` 경로에 저장)
-- **Render Pipeline (`RenderPipelineResource`)**: "이번 프레임은 [그림자 패스] → [메인 패스] → [포스트 프로세스 패스] 순서로 그린다"를 정의하는 전체 프레임 그래프. (`pipeline/` 경로에 저장)
+- **RenderPass (`RenderPassAsset`)**: "어떤 포맷의 텍스처에 그릴 것인가?", "그리기 전에 화면을 지울(Clear) 것인가?" 등 바인딩 템플릿 역할. (`renderpass/` 경로에 저장)
+- **Render Pipeline (`RenderPipelineAsset`)**: "이번 프레임은 [그림자 패스] → [메인 패스] → [포스트 프로세스 패스] 순서로 그린다"를 정의하는 전체 프레임 그래프. (`pipeline/` 경로에 저장)
 - **RenderGraph**: 파이프라인 파일을 읽어들여 렌더링 순서와 자원 의존성(Read/Write)을 런타임에 자동으로 정렬해주는 시스템입니다.
 - **셰이더 굽기**: `App --bake-shaders` 는 파이프라인 XML 이 아니라 **패스 종류 표 전체 × 뷰 모드 enum** 에서 메시 패스 변형을 모아 굽고,
   구운 매니페스트가 그 요청을 모두 담는지 시험이 확인합니다. 빌드는 HLSL 을 다시 굽지 않으므로 셰이더를 고쳤으면 직접 굽습니다.
@@ -96,7 +96,7 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
 ### 6. Scene (씬)과 Prefab (프리팹)
 - **GameObject**: 씬을 구성하는 기본 단위.
 - **Component**: 게임 오브젝트에 붙어 동작하는 로직(예: `MeshComponent`, `CameraComponent`). C++ RTTI 대신 리플렉션 타입(`TypeInfo`)을 통해 관리됩니다.
-- **Prefab**: 미리 구성해 둔 오브젝트의 템플릿. `PrefabManager::spawn` 으로 짓고, 씬에 놓인 인스턴스는 **덮어쓴 값만** 저장해 로드가 프리팹 원형 위에 얹습니다(`PrefabOverrides`).
+- **Prefab**: 미리 구성해 둔 오브젝트의 템플릿. `PrefabCache::spawn` 으로 짓고, 씬에 놓인 인스턴스는 **덮어쓴 값만** 저장해 로드가 프리팹 원형 위에 얹습니다(`PrefabOverrides`).
 - **쿠킹**: `App --cook-scenes --cooked-dir=<폴더>` 는 소스 트리(`ContentSource::SourceTree`)를 올려 씬 · 프리팹을 바이너리로 굽습니다. 모르는 타입의 컴포넌트
   (`MissingComponent`)가 든 씬은 굽지 않고 실패로 셉니다. 확장자 · 백엔드 표는 `Config/Engine/CookContract.json` 하나입니다.
 

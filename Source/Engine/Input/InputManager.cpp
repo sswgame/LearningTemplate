@@ -6,10 +6,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 
-#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Window/IWindow.h"
 
 // 이 파일은 플랫폼 독립적이다. 플랫폼별 구현(게임패드 백엔드, 커서 잠금 · 표시,
@@ -31,10 +31,10 @@ namespace sw
         , _pKeyboard{ nullptr }
         , _pMouse{ nullptr }
         , _pGamepad{ nullptr }
-        , _pActionMap{ nullptr }
+        , _pInputMap{ nullptr }
         , _listDrainedEvent{}
         , _inputHistory{}
-        , _activeDeviceType{ InputDeviceType::KeyboardMouse }
+        , _activeGlyphStyle{ InputGlyphStyle::KeyboardMouse }
         , _onActiveDeviceChanged{}
         , _onGamepadConnectionChanged{}
         , _onTextInput{}
@@ -74,16 +74,16 @@ namespace sw
         // 3) 표준 게임패드 장치를 등록한다(플랫폼별 구현은 registerPlatformGamepads() 참고)
         registerPlatformGamepads();
 
-        // 4) 통합 ActionMap 인스턴스를 만들어 연결한다
-        _pActionMap = make_unique<ActionMap>();
-        _pActionMap->setInputManager( this );
+        // 4) 통합 InputMap 인스턴스를 만들어 연결한다
+        _pInputMap = make_unique<InputMap>();
+        _pInputMap->setInputManager( this );
 
         _bInitialized = SW_TRUE;
         SW_LOG_INFO( "InputManager initialized with %d devices.", static_cast<int32>( _listDevice.size() ) );
         return true;
     }
 
-    uint32 InputManager::releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    uint32 InputManager::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
     {
         (void)outKeepImageMapped;
         uint32 releasedCount{ 0 };
@@ -135,10 +135,10 @@ namespace sw
         resetAllDeviceState();
 
         _listDevice.clear();
-        _pKeyboard  = nullptr;
-        _pMouse     = nullptr;
-        _pGamepad   = nullptr;
-        _pActionMap = nullptr;
+        _pKeyboard = nullptr;
+        _pMouse    = nullptr;
+        _pGamepad  = nullptr;
+        _pInputMap = nullptr;
         _queueRawEvent.clear();
         _droppedRawEventCount.store( 0, std::memory_order_relaxed );
         _listDrainedEvent.clear();
@@ -292,23 +292,23 @@ namespace sw
             const float2 stick        = _pGamepad->getLeftStick();
             const bool   bStickActive = stick.getLengthSquared() > 0.04f;
             if ( bStickActive || _pGamepad->getLeftTrigger() > 0.1f || _pGamepad->getRightTrigger() > 0.1f || _pGamepad->wasAnyButtonPressed() )
-                setActiveDeviceType( InputDeviceType::GamepadXbox );
+                setActiveGlyphStyle( InputGlyphStyle::GamepadXbox );
         }
 
         if ( _pKeyboard != nullptr && _pKeyboard->wasAnyKeyPressed() )
-            setActiveDeviceType( InputDeviceType::KeyboardMouse );
+            setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
 
         if ( _pMouse != nullptr )
         {
             const int2 mouseDelta = _pMouse->getDelta();
             if ( _pMouse->wasAnyButtonPressed() || mouseDelta != int2{} || _pMouse->getMouseWheel() != 0.0f )
-                setActiveDeviceType( InputDeviceType::KeyboardMouse );
+                setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
         }
 
-        // 5) 통합 ActionMap 을 이번 프레임 입력으로 갱신한다(게임플레이가 읽는 맵). 갱신은 맵의 주인이 한다 — 엔진 루프 ·
+        // 5) 통합 InputMap 을 이번 프레임 입력으로 갱신한다(게임플레이가 읽는 맵). 갱신은 맵의 주인이 한다 — 엔진 루프 ·
         //    리플레이 재동기화 · 시험이 같은 길을 탄다.
-        if ( _pActionMap != nullptr )
-            _pActionMap->update( deltaSeconds );
+        if ( _pInputMap != nullptr )
+            _pInputMap->update( deltaSeconds );
     }
 
     void InputManager::dispatchRawEvent( const RawInputEvent& rawEvent )
@@ -319,7 +319,7 @@ namespace sw
             {
                 if ( _pKeyboard != nullptr )
                     _pKeyboard->setKeyDown( rawEvent._payload._keyData._key, true );
-                setActiveDeviceType( InputDeviceType::KeyboardMouse );
+                setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
                 break;
             }
 
@@ -337,7 +337,7 @@ namespace sw
                     _pMouse->setPosition( rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y );
                     _pMouse->addRawDelta( rawEvent._payload._mouseData._rawDelta._x, rawEvent._payload._mouseData._rawDelta._y );
                 }
-                setActiveDeviceType( InputDeviceType::KeyboardMouse );
+                setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
                 break;
             }
 
@@ -348,7 +348,7 @@ namespace sw
                     _pMouse->setPosition( rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y );
                     _pMouse->setButtonDown( rawEvent._payload._mouseData._button, true );
                 }
-                setActiveDeviceType( InputDeviceType::KeyboardMouse );
+                setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
                 break;
             }
 
@@ -369,7 +369,7 @@ namespace sw
                     _pMouse->setPosition( rawEvent._payload._mouseData._x, rawEvent._payload._mouseData._y );
                     _pMouse->setButtonDown( rawEvent._payload._mouseData._button, true );
                 }
-                setActiveDeviceType( InputDeviceType::KeyboardMouse );
+                setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
                 break;
             }
 
@@ -392,7 +392,7 @@ namespace sw
                 GamepadDevice* pPad = getGamepad( rawEvent._deviceIndex );
                 if ( pPad != nullptr )
                     pPad->setButtonDown( rawEvent._payload._gamepadData._button, true );
-                setActiveDeviceType( InputDeviceType::GamepadXbox );
+                setActiveGlyphStyle( InputGlyphStyle::GamepadXbox );
                 break;
             }
 
@@ -455,7 +455,7 @@ namespace sw
             {
                 if ( _pMouse != nullptr )
                     _pMouse->addRawDelta( rawEvent._payload._mouseData._rawDelta._x, rawEvent._payload._mouseData._rawDelta._y );
-                setActiveDeviceType( InputDeviceType::KeyboardMouse );
+                setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
                 break;
             }
 
@@ -495,11 +495,11 @@ namespace sw
         }
     }
 
-    void InputManager::setActiveDeviceType( InputDeviceType type )
+    void InputManager::setActiveGlyphStyle( InputGlyphStyle type )
     {
-        if ( _activeDeviceType != type )
+        if ( _activeGlyphStyle != type )
         {
-            _activeDeviceType = type;
+            _activeGlyphStyle = type;
             if ( _onActiveDeviceChanged.isBound() )
                 _onActiveDeviceChanged( type );
         }
@@ -617,13 +617,13 @@ namespace sw
         snapshot._tickNumber = tickNumber;
 
         // 1) 2D 축 벡터(Move · Look)
-        if ( _pActionMap != nullptr && _pActionMap->hasAction( "Move" ) )
-            snapshot._moveVector = _pActionMap->getVector2D( "Move" );
+        if ( _pInputMap != nullptr && _pInputMap->hasAction( "Move" ) )
+            snapshot._moveVector = _pInputMap->getVector2D( "Move" );
         else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
             snapshot._moveVector = _pGamepad->getLeftStick();
 
-        if ( _pActionMap != nullptr && _pActionMap->hasAction( "Look" ) )
-            snapshot._lookVector = _pActionMap->getVector2D( "Look" );
+        if ( _pInputMap != nullptr && _pInputMap->hasAction( "Look" ) )
+            snapshot._lookVector = _pInputMap->getVector2D( "Look" );
         else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
             snapshot._lookVector = _pGamepad->getRightStick();
 
@@ -651,13 +651,13 @@ namespace sw
             }
         }
 
-        if ( _pActionMap != nullptr )
+        if ( _pInputMap != nullptr )
         {
-            const vector<hashed_string>& listAction  = _pActionMap->getActionNames();
+            const vector<hashed_string>& listAction  = _pInputMap->getActionNames();
             const uint32                 actionCount = MathUtil::min( static_cast<uint32>( listAction.size() ), 32u );
             for ( uint32 actionIndex = 0; actionIndex < actionCount; ++actionIndex )
             {
-                if ( _pActionMap->isActionDown( listAction[actionIndex] ) )
+                if ( _pInputMap->isActionDown( listAction[actionIndex] ) )
                     mask |= ( 1ULL << ( 32 + actionIndex ) );
             }
         }

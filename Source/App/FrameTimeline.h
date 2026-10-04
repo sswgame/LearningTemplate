@@ -9,7 +9,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Time/CpuTimer.h"
+#include "Core/Time/GameTimer.h"
 
 namespace sw
 {
@@ -59,7 +59,7 @@ namespace sw
         FrameTime advance();
 
     private:
-        CpuTimer _timer;
+        GameTimer _timer;
         /** @brief 아직 고정 스텝으로 쓰지 못한 남은 시간(초)입니다. */
         float32 _accumulator;
         float32 _maxFrameDeltaTime;

@@ -7,7 +7,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
@@ -167,7 +167,7 @@ namespace sw
             desc._pixelShaderPath.clear();
             desc._pixelEntryPoint.clear();
         }
-        const RHIPipelineStateHandle handle = _pDevice->getResource()->createPipelineState( desc );
+        const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
         registerPsoLayout( handle, desc );
         return handle;
     }
@@ -229,7 +229,7 @@ namespace sw
         if ( bChanged == false )
             return entry;
 
-        const RHIPipelineStateHandle handle = _pDevice->getResource()->createPipelineState( desc );
+        const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
         if ( handle == 0 )
             return entry; // 컴파일 실패다. 패스 PSO 로 그린다(화면이 비는 것보다 낫다).
         registerPsoLayout( handle, desc );

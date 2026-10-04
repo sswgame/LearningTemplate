@@ -10,7 +10,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
@@ -21,8 +21,8 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/RenderThread.h"
-#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 #include "Engine/Window/IWindow.h"
@@ -70,7 +70,7 @@ namespace sw
 
     bool App::initialize( int32 argc, utf8* pArgv[] )
     {
-        _initializeStartMicro = CpuClock::nowMicroseconds();
+        _initializeStartMicro = MonotonicClock::nowMicroseconds();
         // 리소스 루트 탐색은 EngineLoop 가 로거를 세운 **뒤에** 한다. 여기서 먼저 부르면 실패했을 때 로거가 없어 진단이
         // 사라지고, 반환값도 여기서는 쓸 곳이 없다.
 
@@ -316,7 +316,7 @@ namespace sw
 
         // 시작 시간: `initialize` 첫 줄부터 여기까지의 경과 시간이다. 표준 출력 로그는 에러가 아니면 버퍼에 머물러 있어 밖에서는 시각을 잴 수 없다.
         [[maybe_unused]] const int64 startupMicro =
-            CpuClock::nowMicroseconds() - _initializeStartMicro;
+            MonotonicClock::nowMicroseconds() - _initializeStartMicro;
         SW_LOG_INFO( "Entering App Main Loop (Thin Launcher)... startup %# ms", startupMicro / 1000 );
 
         _frameTimeline.start();
@@ -388,18 +388,18 @@ namespace sw
         _engineLoop.updateShellActions( deltaTime );
 
         // 모듈을 다시 올리는 장치는 여기(App)에 있다. Engine 에는 "이 액션이 눌렸나" 만 묻는다.
-        if ( _engineLoop.wasDebugActionTriggered( ActionMapDefaults::kReloadGameAction ) )
+        if ( _engineLoop.wasDebugActionTriggered( InputMapDefaults::kReloadGameAction ) )
         {
             onForceReload( config::kTargetGameModule );
-            SW_LOG_INFO( "%#: force SWGame reload", ActionMapDefaults::kReloadGameAction );
+            SW_LOG_INFO( "%#: force SWGame reload", InputMapDefaults::kReloadGameAction );
         }
-        if ( _bEnableEditor == SW_TRUE && _engineLoop.wasDebugActionTriggered( ActionMapDefaults::kReloadEditorAction ) )
+        if ( _bEnableEditor == SW_TRUE && _engineLoop.wasDebugActionTriggered( InputMapDefaults::kReloadEditorAction ) )
         {
             onForceReload( config::kTargetEditorModule );
-            SW_LOG_INFO( "%#: force EditorModule reload", ActionMapDefaults::kReloadEditorAction );
+            SW_LOG_INFO( "%#: force EditorModule reload", InputMapDefaults::kReloadEditorAction );
         }
 #endif
-        // Shipping 에는 리로드할 모듈이 없다. 그 입력 상태를 묻는 코드가 없으므로 셸 ActionMap 도 올리지 않는다.
+        // Shipping 에는 리로드할 모듈이 없다. 그 입력 상태를 묻는 코드가 없으므로 셸 InputMap 도 올리지 않는다.
     }
 
     void App::onResize( const uint32 width, const uint32 height )

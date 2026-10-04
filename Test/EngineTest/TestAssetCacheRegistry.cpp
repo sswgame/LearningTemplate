@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/Module/ModuleCodeHolder.h"
 #include "Core/Module/ModuleImageUtil.h"
+#include "Core/Module/ModuleUnloadListener.h"
 
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -67,7 +67,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
     // 찾은 것이 실제로 그 캐시다 — 이름만 맞고 다른 것을 주면 진단이 거짓말을 한다.
     SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getMaterialManager() ) );
     SW_EXPECT_TRUE( resources.findAssetCache( "Texture" ) == static_cast<sw::IAssetCache*>( &resources.getTextureManager() ) );
-    SW_EXPECT_TRUE( resources.findAssetCache( "Prefab" ) == static_cast<sw::IAssetCache*>( &resources.getPrefabManager() ) );
+    SW_EXPECT_TRUE( resources.findAssetCache( "Prefab" ) == static_cast<sw::IAssetCache*>( &resources.getPrefabCache() ) );
 }
 
 /**
@@ -208,7 +208,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, ReleaseModuleCodeDropsCachesOfThatImage )
     resources.registerAssetCache( &probe );
     const size_t registeredCount = resources.getAllAssetCache().size();
 
-    const uint8* pVtable = static_cast<const uint8*>( sw::IModuleCodeHolder::findVtableAddress( static_cast<const sw::IAssetCache*>( &probe ) ) );
+    const uint8* pVtable = static_cast<const uint8*>( sw::IModuleUnloadListener::findVtableAddress( static_cast<const sw::IAssetCache*>( &probe ) ) );
     SW_ASSERT_NOT_NULL( pVtable );
     test::ScopedLogCollector logCollector;
     SW_EXPECT_TRUE( sw::ModuleImageUtil::releaseModuleCode( "ProbeModule", pVtable, pVtable + 1 ) >= 1u );

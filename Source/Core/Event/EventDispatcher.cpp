@@ -198,13 +198,13 @@ namespace sw
         std::scoped_lock<SpinLock> lock{ _busSpinLock };
         for ( const auto& [key, entry] : _mapChannelDispatchTable )
         {
-            if ( IModuleCodeHolder::isAddressWithin( reinterpret_cast<const void*>( reinterpret_cast<uintptr_t>( entry._pfnBroadcast ) ), pBegin, pEnd ) )
+            if ( IModuleUnloadListener::isAddressWithin( reinterpret_cast<const void*>( reinterpret_cast<uintptr_t>( entry._pfnBroadcast ) ), pBegin, pEnd ) )
                 ++count;
         }
         return count;
     }
 
-    uint32 EventDispatcher::releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    uint32 EventDispatcher::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
     {
         uint32       remainingEntryCount{ 0 };
         const uint32 releasedCount = releaseCodeWithin( pBegin, pEnd, remainingEntryCount );
@@ -226,7 +226,7 @@ namespace sw
             while ( pCurrent != nullptr )
             {
                 IEvent* pNext = pCurrent->_next.load( std::memory_order_relaxed );
-                if ( IModuleCodeHolder::isAddressWithin( IModuleCodeHolder::findVtableAddress( pCurrent ), pBegin, pEnd ) )
+                if ( IModuleUnloadListener::isAddressWithin( IModuleUnloadListener::findVtableAddress( pCurrent ), pBegin, pEnd ) )
                 {
                     pCurrent->~IEvent();
                     ++releasedCount;

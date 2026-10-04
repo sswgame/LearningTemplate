@@ -44,7 +44,7 @@ namespace sw::editor
             {
                 if ( bIsDirectory )
                     return "Folder";
-                const EditorAssetKindInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( EditorAssetTypeRegistry::findKind( path ) );
+                const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( EditorAssetTypeRegistry::findKind( path ) );
                 return pInfo != nullptr ? pInfo->_pBrowserLabel : "File";
             }
         };
@@ -300,7 +300,7 @@ namespace sw::editor
         const EditorAssetBrowserFilter& filter = pFilter[_filterIndex];
         if ( filter._bOther )
             return EditorAssetTypeRegistry::matchesOther( pPath );
-        if ( filter._kind == EditorAssetKind::Unknown )
+        if ( filter._kind == EditorAssetType::Unknown )
             return true;
         return EditorAssetTypeRegistry::matches( filter._kind, pPath );
     }

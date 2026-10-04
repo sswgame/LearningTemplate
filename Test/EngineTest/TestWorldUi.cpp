@@ -15,9 +15,9 @@
 
 #include "EngineTest/StateReloadTestUtil.h"
 
-#include "GameFramework/Base/EffectBaseComponent.h"
-#include "GameFramework/UI/DamageUIComponent.h"
-#include "GameFramework/UI/HPBarBaseComponent.h"
+#include "GameFramework/Base/FadeOutComponent.h"
+#include "GameFramework/UI/DamageNumberComponent.h"
+#include "GameFramework/UI/HealthBarComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -71,7 +71,7 @@ SW_TEST_CASE( WorldUiTest, HPBarDrawsFillTrailAndBackgroundWithoutOverlap )
     sw::GameObjectManager manager;
     sw::GameObject*       pHero = spawnAnchoredObject( manager, "Hero", sw::float3{ 2.0f, 3.0f, 0.5f } );
     SW_ASSERT_NOT_NULL( pHero );
-    sw::HPBarBaseComponent* pBar = pHero->addComponent<sw::HPBarBaseComponent>();
+    sw::HealthBarComponent* pBar = pHero->addComponent<sw::HealthBarComponent>();
     SW_ASSERT_NOT_NULL( pBar );
     SW_ASSERT_TRUE( setReflectedValue( pBar, "_offsetPos", sw::float2{ 0.0f, 0.8f } ) );
     pBar->resetRatio( 1.0f );
@@ -80,15 +80,15 @@ SW_TEST_CASE( WorldUiTest, HPBarDrawsFillTrailAndBackgroundWithoutOverlap )
 
     const sw::MeshInstanceBatch* pBatch = pBar->getSpriteBatch().getBatch();
     SW_ASSERT_NOT_NULL( pBatch );
-    SW_ASSERT_EQUAL( sw::HPBarBaseComponent::kEntryCount, pBatch->getCount() );
+    SW_ASSERT_EQUAL( sw::HealthBarComponent::kEntryCount, pBatch->getCount() );
     SW_EXPECT_TRUE( pBatch->isVisible() );
     // 가득 찬 바: 채움 하나가 바 전체(폭 1, 중심 = 소유자 + 오프셋), 흔적 · 바탕은 길이 0 이라 숨는다.
-    SW_EXPECT_TRUE( pBatch->isEntryVisible( sw::HPBarBaseComponent::kFillEntry ) );
-    SW_EXPECT_FALSE( pBatch->isEntryVisible( sw::HPBarBaseComponent::kTrailEntry ) );
-    SW_EXPECT_FALSE( pBatch->isEntryVisible( sw::HPBarBaseComponent::kBackgroundEntry ) );
-    SW_EXPECT_NEAR_EQUAL( 2.0f, getEntrySpan( *pBatch, sw::HPBarBaseComponent::kFillEntry )._x, 1e-5f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, getEntrySpan( *pBatch, sw::HPBarBaseComponent::kFillEntry )._y, 1e-5f );
-    const sw::float3 fillCenter = pBatch->getEntry( sw::HPBarBaseComponent::kFillEntry )._world.getTranslation();
+    SW_EXPECT_TRUE( pBatch->isEntryVisible( sw::HealthBarComponent::kFillEntry ) );
+    SW_EXPECT_FALSE( pBatch->isEntryVisible( sw::HealthBarComponent::kTrailEntry ) );
+    SW_EXPECT_FALSE( pBatch->isEntryVisible( sw::HealthBarComponent::kBackgroundEntry ) );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, getEntrySpan( *pBatch, sw::HealthBarComponent::kFillEntry )._x, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, getEntrySpan( *pBatch, sw::HealthBarComponent::kFillEntry )._y, 1e-5f );
+    const sw::float3 fillCenter = pBatch->getEntry( sw::HealthBarComponent::kFillEntry )._world.getTranslation();
     SW_EXPECT_NEAR_EQUAL( 3.8f, fillCenter._y, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, fillCenter._z, 1e-5f );
 
@@ -97,11 +97,11 @@ SW_TEST_CASE( WorldUiTest, HPBarDrawsFillTrailAndBackgroundWithoutOverlap )
     pBar->onTick( 0.016f );
     SW_EXPECT_NEAR_EQUAL( 0.4f, pBar->getHpRatio(), 1e-6f );
     SW_EXPECT_TRUE( 0.4f < pBar->getRemainRatio() && pBar->getRemainRatio() < 1.0f );
-    const sw::float2 fill  = getEntrySpan( *pBatch, sw::HPBarBaseComponent::kFillEntry );
-    const sw::float2 trail = getEntrySpan( *pBatch, sw::HPBarBaseComponent::kTrailEntry );
-    const sw::float2 back  = getEntrySpan( *pBatch, sw::HPBarBaseComponent::kBackgroundEntry );
-    SW_EXPECT_TRUE( pBatch->isEntryVisible( sw::HPBarBaseComponent::kTrailEntry ) );
-    SW_EXPECT_TRUE( pBatch->isEntryVisible( sw::HPBarBaseComponent::kBackgroundEntry ) );
+    const sw::float2 fill  = getEntrySpan( *pBatch, sw::HealthBarComponent::kFillEntry );
+    const sw::float2 trail = getEntrySpan( *pBatch, sw::HealthBarComponent::kTrailEntry );
+    const sw::float2 back  = getEntrySpan( *pBatch, sw::HealthBarComponent::kBackgroundEntry );
+    SW_EXPECT_TRUE( pBatch->isEntryVisible( sw::HealthBarComponent::kTrailEntry ) );
+    SW_EXPECT_TRUE( pBatch->isEntryVisible( sw::HealthBarComponent::kBackgroundEntry ) );
     SW_EXPECT_NEAR_EQUAL( 0.4f, fill._y, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 1.5f + 0.2f, fill._x, 1e-5f ); // 왼쪽 끝 1.5 에서 시작한다
     // 조각은 맞닿고 겹치지 않으며 셋을 합치면 바 전체다.
@@ -109,21 +109,21 @@ SW_TEST_CASE( WorldUiTest, HPBarDrawsFillTrailAndBackgroundWithoutOverlap )
     SW_EXPECT_NEAR_EQUAL( trail._x + trail._y * 0.5f, back._x - back._y * 0.5f, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, fill._y + trail._y + back._y, 1e-5f );
     // 색은 조각마다 다르고 인스턴스 칸에 실린다.
-    SW_EXPECT_FALSE( pBatch->getEntry( sw::HPBarBaseComponent::kFillEntry )._sprite == pBatch->getEntry( sw::HPBarBaseComponent::kTrailEntry )._sprite );
+    SW_EXPECT_FALSE( pBatch->getEntry( sw::HealthBarComponent::kFillEntry )._sprite == pBatch->getEntry( sw::HealthBarComponent::kTrailEntry )._sprite );
 
     // 시간이 지나면 흔적이 채움까지 줄어 사라진다 — 바는 채움 0.4 와 바탕 0.6.
     for ( uint32 step = 0; step < 100; ++step )
         pBar->onTick( 0.1f );
     SW_EXPECT_NEAR_EQUAL( 0.4f, pBar->getRemainRatio(), 1e-4f );
-    SW_EXPECT_FALSE( pBatch->isEntryVisible( sw::HPBarBaseComponent::kTrailEntry ) );
-    SW_EXPECT_NEAR_EQUAL( 0.6f, getEntrySpan( *pBatch, sw::HPBarBaseComponent::kBackgroundEntry )._y, 1e-3f );
+    SW_EXPECT_FALSE( pBatch->isEntryVisible( sw::HealthBarComponent::kTrailEntry ) );
+    SW_EXPECT_NEAR_EQUAL( 0.6f, getEntrySpan( *pBatch, sw::HealthBarComponent::kBackgroundEntry )._y, 1e-3f );
 
     // 회복(0.4 → 0.9)은 차오른다 — 흔적은 생기지 않는다.
     pBar->setTargetRatio( 0.9f );
     pBar->onTick( 0.1f );
     SW_EXPECT_TRUE( 0.4f < pBar->getHpRatio() && pBar->getHpRatio() < 0.9f );
     SW_EXPECT_NEAR_EQUAL( pBar->getHpRatio(), pBar->getRemainRatio(), 1e-6f );
-    SW_EXPECT_FALSE( pBatch->isEntryVisible( sw::HPBarBaseComponent::kTrailEntry ) );
+    SW_EXPECT_FALSE( pBatch->isEntryVisible( sw::HealthBarComponent::kTrailEntry ) );
 
     // 숨기면 조각이 모두 숨고, 소유 오브젝트를 꺼도 숨는다.
     pBar->setVisible( false );
@@ -154,7 +154,7 @@ SW_TEST_CASE( WorldUiTest, DamageNumberShowsItsDigitsFromTheGlyphAtlas )
     sw::GameObjectManager manager;
     sw::GameObject*       pHit = spawnAnchoredObject( manager, "Hit", sw::float3{ 0.0f, 1.0f, 0.0f } );
     SW_ASSERT_NOT_NULL( pHit );
-    sw::DamageUIComponent* pDamage = pHit->addComponent<sw::DamageUIComponent>();
+    sw::DamageNumberComponent* pDamage = pHit->addComponent<sw::DamageNumberComponent>();
     SW_ASSERT_NOT_NULL( pDamage );
     SW_ASSERT_TRUE( setReflectedValue( pDamage, "_lifeTime", 1.0f ) );
     pDamage->setDamageValue( 123 );
@@ -162,7 +162,7 @@ SW_TEST_CASE( WorldUiTest, DamageNumberShowsItsDigitsFromTheGlyphAtlas )
 
     const sw::MeshInstanceBatch* pBatch = pDamage->getSpriteBatch().getBatch();
     SW_ASSERT_NOT_NULL( pBatch );
-    SW_ASSERT_EQUAL( sw::DamageUIComponent::kMaxGlyphCount, pBatch->getCount() );
+    SW_ASSERT_EQUAL( sw::DamageNumberComponent::kMaxGlyphCount, pBatch->getCount() );
     const int32 arrExpected[] = { 1, 2, 3 };
     for ( uint32 glyphIndex = 0; glyphIndex < 3; ++glyphIndex )
     {
@@ -171,7 +171,7 @@ SW_TEST_CASE( WorldUiTest, DamageNumberShowsItsDigitsFromTheGlyphAtlas )
         SW_EXPECT_NEAR_EQUAL( glyphs->findFrame( arrExpected[glyphIndex] )->_uvRect._x, shown._x, 1e-4f );
         SW_EXPECT_NEAR_EQUAL( glyphs->findFrame( arrExpected[glyphIndex] )->_uvRect._z, shown._z, 1e-4f );
     }
-    for ( uint32 glyphIndex = 3; glyphIndex < sw::DamageUIComponent::kMaxGlyphCount; ++glyphIndex )
+    for ( uint32 glyphIndex = 3; glyphIndex < sw::DamageNumberComponent::kMaxGlyphCount; ++glyphIndex )
         SW_EXPECT_FALSE( pBatch->isEntryVisible( glyphIndex ) );
     // 가운데 정렬: 글자 폭 0.3 이라 -0.3 · 0 · 0.3, 높이는 소유자 자리.
     SW_EXPECT_NEAR_EQUAL( -0.3f, pBatch->getEntry( 0 )._world.getTranslation()._x, 1e-5f );
@@ -189,17 +189,17 @@ SW_TEST_CASE( WorldUiTest, DamageNumberShowsItsDigitsFromTheGlyphAtlas )
     SW_EXPECT_TRUE( pBatch->isEntryVisible( 0 ) );
     SW_EXPECT_TRUE( pBatch->isEntryVisible( 1 ) );
     SW_EXPECT_FALSE( pBatch->isEntryVisible( 2 ) );
-    SW_EXPECT_NEAR_EQUAL( glyphs->findFrame( sw::DamageUIComponent::kMinusGlyphFrame )->_uvRect._x, pBatch->getEntry( 0 )._sprite.getUvRect()._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( glyphs->findFrame( sw::DamageNumberComponent::kMinusGlyphFrame )->_uvRect._x, pBatch->getEntry( 0 )._sprite.getUvRect()._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( glyphs->findFrame( 7 )->_uvRect._x, pBatch->getEntry( 1 )._sprite.getUvRect()._x, 1e-4f );
 
     // 가장 긴 값(INT32_MIN)도 부호를 뒤집다 넘치지 않고 열한 글자다.
-    int32        arrFrame[sw::DamageUIComponent::kMaxGlyphCount] = {};
-    const uint32 glyphCount                                      = sw::DamageUIComponent::makeGlyphFrames( std::numeric_limits<int32>::min(), arrFrame );
+    int32        arrFrame[sw::DamageNumberComponent::kMaxGlyphCount] = {};
+    const uint32 glyphCount                                          = sw::DamageNumberComponent::makeGlyphFrames( std::numeric_limits<int32>::min(), arrFrame );
     SW_ASSERT_EQUAL( 11u, glyphCount );
-    const int32 arrMinDigits[] = { sw::DamageUIComponent::kMinusGlyphFrame, 2, 1, 4, 7, 4, 8, 3, 6, 4, 8 };
+    const int32 arrMinDigits[] = { sw::DamageNumberComponent::kMinusGlyphFrame, 2, 1, 4, 7, 4, 8, 3, 6, 4, 8 };
     for ( uint32 glyphIndex = 0; glyphIndex < glyphCount; ++glyphIndex )
         SW_EXPECT_EQUAL( arrMinDigits[glyphIndex], arrFrame[glyphIndex] );
-    SW_EXPECT_EQUAL( 1u, sw::DamageUIComponent::makeGlyphFrames( 0, arrFrame ) );
+    SW_EXPECT_EQUAL( 1u, sw::DamageNumberComponent::makeGlyphFrames( 0, arrFrame ) );
     SW_EXPECT_EQUAL( 0, arrFrame[0] );
 
     // 수명이 다하면 오브젝트를 지운다.
@@ -223,7 +223,7 @@ SW_TEST_CASE( WorldUiTest, EffectFadesTheSpritesOfItsObject )
     SW_ASSERT_NOT_NULL( pGlow );
     SW_ASSERT_NOT_NULL( pCore );
     pGlow->setTint( sw::float4{ 1.0f, 0.5f, 0.0f, 0.8f } );
-    sw::EffectBaseComponent* pEffect = pSpark->addComponent<sw::EffectBaseComponent>();
+    sw::FadeOutComponent* pEffect = pSpark->addComponent<sw::FadeOutComponent>();
     SW_ASSERT_NOT_NULL( pEffect );
     SW_ASSERT_TRUE( setReflectedValue( pEffect, "_duration", 1.0f ) );
     pEffect->dispatchBeginPlay();
@@ -255,7 +255,7 @@ SW_TEST_CASE( WorldUiTest, EffectResumesItsFadeAfterTheStateIsReadAgain )
     sw::SpriteComponent* pGlow = pSpark->addComponent<sw::SpriteComponent>();
     SW_ASSERT_NOT_NULL( pGlow );
     pGlow->setTint( sw::float4{ 1.0f, 0.5f, 0.0f, 0.8f } );
-    sw::EffectBaseComponent* pEffect = pSpark->addComponent<sw::EffectBaseComponent>();
+    sw::FadeOutComponent* pEffect = pSpark->addComponent<sw::FadeOutComponent>();
     SW_ASSERT_NOT_NULL( pEffect );
     SW_ASSERT_TRUE( setReflectedValue( pEffect, "_duration", 1.0f ) );
     manager.beginPlay();
@@ -265,7 +265,7 @@ SW_TEST_CASE( WorldUiTest, EffectResumesItsFadeAfterTheStateIsReadAgain )
     SW_EXPECT_NEAR_EQUAL( 0.4f, pGlow->getTint()._w, 1e-5f );
 
     SW_ASSERT_TRUE( sw::StateReloadTestUtil::reloadInPlace( pSpark ) );
-    pEffect = pSpark->getComponent<sw::EffectBaseComponent>();
+    pEffect = pSpark->getComponent<sw::FadeOutComponent>();
     pGlow   = pSpark->getComponent<sw::SpriteComponent>();
     SW_ASSERT_NOT_NULL( pEffect );
     SW_ASSERT_NOT_NULL( pGlow );
@@ -290,7 +290,7 @@ SW_TEST_CASE( WorldUiTest, DamageNumberKeepsItsLifeAfterTheStateIsReadAgain )
     sw::GameObjectManager manager;
     sw::GameObject*       pHit = spawnAnchoredObject( manager, "Hit", sw::float3{ 0.0f, 1.0f, 0.0f } );
     SW_ASSERT_NOT_NULL( pHit );
-    sw::DamageUIComponent* pDamage = pHit->addComponent<sw::DamageUIComponent>();
+    sw::DamageNumberComponent* pDamage = pHit->addComponent<sw::DamageNumberComponent>();
     SW_ASSERT_NOT_NULL( pDamage );
     SW_ASSERT_TRUE( setReflectedValue( pDamage, "_lifeTime", 1.0f ) );
     pDamage->setDamageValue( 42 );
@@ -299,7 +299,7 @@ SW_TEST_CASE( WorldUiTest, DamageNumberKeepsItsLifeAfterTheStateIsReadAgain )
     SW_EXPECT_NEAR_EQUAL( 0.5f, pDamage->getAlpha(), 1e-5f );
 
     SW_ASSERT_TRUE( sw::StateReloadTestUtil::reloadInPlace( pHit ) );
-    pDamage = pHit->getComponent<sw::DamageUIComponent>();
+    pDamage = pHit->getComponent<sw::DamageNumberComponent>();
     SW_ASSERT_NOT_NULL( pDamage );
     SW_ASSERT_TRUE( pDamage->hasBegunPlay() );
     SW_EXPECT_EQUAL( 42, pDamage->getDamageValue() );
@@ -331,7 +331,7 @@ SW_TEST_CASE( WorldUiTest, DamageNumberReopensItsGlyphClipWhenThePathChanges )
     sw::GameObjectManager manager;
     sw::GameObject*       pHit = spawnAnchoredObject( manager, "Hit", sw::float3{ 0.0f, 1.0f, 0.0f } );
     SW_ASSERT_NOT_NULL( pHit );
-    sw::DamageUIComponent* pDamage = pHit->addComponent<sw::DamageUIComponent>();
+    sw::DamageNumberComponent* pDamage = pHit->addComponent<sw::DamageNumberComponent>();
     SW_ASSERT_NOT_NULL( pDamage );
     pDamage->setDamageValue( 7 );
     pDamage->dispatchBeginPlay();

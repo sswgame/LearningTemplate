@@ -5,11 +5,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/GamepadButtons.h"
 #include "Engine/Input/InputKeyMap.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Input/Utils/VirtualJoystick.h"
 #include "Engine/Input/Windows/GamepadXInput.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -25,7 +25,7 @@ namespace
     // 모듈 코드 정리 시험이 다는 콜백들이다. 몸통을 서로 다르게 둔다 — 같으면 링커가 접어 스텁 주소가 겹칠 수 있다.
     int32 s_inputProbeValue{ 0 };
 
-    void onProbeActiveDeviceChanged( sw::InputDeviceType )
+    void onProbeActiveDeviceChanged( sw::InputGlyphStyle )
     {
         s_inputProbeValue += 1;
     }
@@ -92,7 +92,7 @@ namespace
         input.shutdown();
     }
 } // namespace
-// 액션 맵 자체의 규칙은 TestActionMap.cpp, 스트레스·리플레이·경계는 TestInputRobustness.cpp.
+// 액션 맵 자체의 규칙은 TestInputMap.cpp, 스트레스·리플레이·경계는 TestInputRobustness.cpp.
 
 SW_TEST_CASE( InputManagerTest, LifecycleAndDefaults )
 {
@@ -324,17 +324,17 @@ SW_TEST_CASE( InputManagerTest, NativeEventRightAndMiddleMouseButtons )
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS )
-SW_TEST_CASE( InputManagerTest, ActionMapVector2DMovement )
+SW_TEST_CASE( InputManagerTest, InputMapVector2DMovement )
 {
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
 
-    sw::ActionMap actionMap;
-    actionMap.setInputManager( &input );
-    actionMap.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D, 0.1f );
+    sw::InputMap inputMap;
+    inputMap.setInputManager( &input );
+    inputMap.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D, 0.1f );
 
     // 1) 아무 키도 안 눌렸을 때 -> (0, 0)
-    sw::float2 v0 = actionMap.getVector2D( "Move" );
+    sw::float2 v0 = inputMap.getVector2D( "Move" );
     SW_EXPECT_NEAR_EQUAL( 0.0f, v0._x, 0.0001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, v0._y, 0.0001f );
 
@@ -345,7 +345,7 @@ SW_TEST_CASE( InputManagerTest, ActionMapVector2DMovement )
     input.processNativeEvent( wDown );
     input.beginFrame( 0.016f );
 
-    sw::float2 vUp = actionMap.getVector2D( "Move" );
+    sw::float2 vUp = inputMap.getVector2D( "Move" );
     SW_EXPECT_NEAR_EQUAL( 0.0f, vUp._x, 0.0001f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, vUp._y, 0.0001f );
 
@@ -356,7 +356,7 @@ SW_TEST_CASE( InputManagerTest, ActionMapVector2DMovement )
     input.processNativeEvent( dDown );
     input.beginFrame( 0.016f );
 
-    sw::float2    vDiag        = actionMap.getVector2D( "Move" );
+    sw::float2    vDiag        = inputMap.getVector2D( "Move" );
     const float32 expectedDiag = 1.0f / sw::MathUtil::sqrt( 2.0f );
     SW_EXPECT_NEAR_EQUAL( expectedDiag, vDiag._x, 0.001f );
     SW_EXPECT_NEAR_EQUAL( expectedDiag, vDiag._y, 0.001f );
@@ -366,20 +366,20 @@ SW_TEST_CASE( InputManagerTest, ActionMapVector2DMovement )
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS )
-SW_TEST_CASE( InputManagerTest, ActionMapChordedActions )
+SW_TEST_CASE( InputManagerTest, InputMapChordedActions )
 {
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
 
-    sw::ActionMap actionMap;
-    actionMap.setInputManager( &input );
-    actionMap.bindChord( "QuickSave", sw::Key::LeftControl, sw::Key::S );
+    sw::InputMap inputMap;
+    inputMap.setInputManager( &input );
+    inputMap.bindChord( "QuickSave", sw::Key::LeftControl, sw::Key::S );
 
     input.endFrame();
 
     // 1) 초기 상태 -> false
-    SW_EXPECT_FALSE( actionMap.isChordDown( "QuickSave" ) );
-    SW_EXPECT_FALSE( actionMap.wasChordTriggered( "QuickSave" ) );
+    SW_EXPECT_FALSE( inputMap.isChordDown( "QuickSave" ) );
+    SW_EXPECT_FALSE( inputMap.wasChordTriggered( "QuickSave" ) );
 
     // 2) LeftControl만 눌림 -> false
     sw::NativeWindowEvent ctrlDown{};
@@ -388,8 +388,8 @@ SW_TEST_CASE( InputManagerTest, ActionMapChordedActions )
     input.processNativeEvent( ctrlDown );
     input.beginFrame( 0.016f );
 
-    SW_EXPECT_FALSE( actionMap.isChordDown( "QuickSave" ) );
-    SW_EXPECT_FALSE( actionMap.wasChordTriggered( "QuickSave" ) );
+    SW_EXPECT_FALSE( inputMap.isChordDown( "QuickSave" ) );
+    SW_EXPECT_FALSE( inputMap.wasChordTriggered( "QuickSave" ) );
 
     // 3) S 키 눌림 -> chord 발화!
     sw::NativeWindowEvent sDown{};
@@ -399,31 +399,31 @@ SW_TEST_CASE( InputManagerTest, ActionMapChordedActions )
     input.endFrame();
     input.beginFrame( 0.016f );
 
-    SW_EXPECT_TRUE( actionMap.isChordDown( "QuickSave" ) );
-    SW_EXPECT_TRUE( actionMap.wasChordTriggered( "QuickSave" ) );
+    SW_EXPECT_TRUE( inputMap.isChordDown( "QuickSave" ) );
+    SW_EXPECT_TRUE( inputMap.wasChordTriggered( "QuickSave" ) );
 
     // 4) 다음 프레임 -> isDown은 true, wasTriggered는 false
     input.endFrame();
     input.beginFrame( 0.016f );
-    SW_EXPECT_TRUE( actionMap.isChordDown( "QuickSave" ) );
-    SW_EXPECT_FALSE( actionMap.wasChordTriggered( "QuickSave" ) );
+    SW_EXPECT_TRUE( inputMap.isChordDown( "QuickSave" ) );
+    SW_EXPECT_FALSE( inputMap.wasChordTriggered( "QuickSave" ) );
 
     input.shutdown();
 }
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS )
-SW_TEST_CASE( InputManagerTest, ActionMapGamepadStick2D )
+SW_TEST_CASE( InputManagerTest, InputMapGamepadStick2D )
 {
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
 
-    sw::ActionMap actionMap;
-    actionMap.setInputManager( &input );
-    actionMap.bindGamepadStick2D( "Look", sw::GamepadStick::Right, 0.15f );
+    sw::InputMap inputMap;
+    inputMap.setInputManager( &input );
+    inputMap.bindGamepadStick2D( "Look", sw::GamepadStick::Right, 0.15f );
 
     // 기본 상태 -> (0, 0)
-    sw::float2 v0 = actionMap.getVector2D( "Look" );
+    sw::float2 v0 = inputMap.getVector2D( "Look" );
     SW_EXPECT_NEAR_EQUAL( 0.0f, v0._x, 0.0001f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, v0._y, 0.0001f );
 
@@ -1207,9 +1207,9 @@ SW_TEST_CASE( RawInputEventTest, TextPayloadTruncatesAtUtf8Boundary )
  */
 SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTheImage )
 {
-    const uint32     holderCountBefore = sw::IModuleCodeHolder::getHolderCount();
+    const uint32     listenerCountBefore = sw::IModuleUnloadListener::getListenerCount();
     sw::InputManager input;
-    SW_EXPECT_EQUAL( holderCountBefore + 1, sw::IModuleCodeHolder::getHolderCount() );
+    SW_EXPECT_EQUAL( listenerCountBefore + 1, sw::IModuleUnloadListener::getListenerCount() );
     SW_ASSERT_TRUE( input.initialize() );
     SW_ASSERT_NOT_NULL( input.getKeyboard() );
 
@@ -1223,7 +1223,7 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
     input.setTextCompositionCallback( onComposition );
     sw::unique_ptr<ProbeInputDevice> pProbe    = sw::make_unique<ProbeInputDevice>();
     ProbeInputDevice*                pProbeRaw = pProbe.get();
-    const uint8*                     pVtable   = static_cast<const uint8*>( sw::IModuleCodeHolder::findVtableAddress( static_cast<const sw::IInputDevice*>( pProbeRaw ) ) );
+    const uint8*                     pVtable   = static_cast<const uint8*>( sw::IModuleUnloadListener::findVtableAddress( static_cast<const sw::IInputDevice*>( pProbeRaw ) ) );
     input.registerDevice( std::move( pProbe ) );
     SW_EXPECT_TRUE( input.getDevice( sw::InputDeviceKind::Custom ) == pProbeRaw );
 
@@ -1232,9 +1232,9 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
     for ( const void* pCode : arrCode )
     {
         const uint8* pStub = static_cast<const uint8*>( pCode );
-        SW_EXPECT_EQUAL( 1u, input.releaseModuleCodeWithin( pStub, pStub + 1, bKeepImageMapped ) );
+        SW_EXPECT_EQUAL( 1u, input.onModuleUnloading( pStub, pStub + 1, bKeepImageMapped ) );
     }
-    SW_EXPECT_EQUAL( 1u, input.releaseModuleCodeWithin( pVtable, pVtable + 1, bKeepImageMapped ) );
+    SW_EXPECT_EQUAL( 1u, input.onModuleUnloading( pVtable, pVtable + 1, bKeepImageMapped ) );
     SW_EXPECT_FALSE( bKeepImageMapped );
     SW_EXPECT_TRUE( input.getDevice( sw::InputDeviceKind::Custom ) == nullptr );
     SW_EXPECT_TRUE( input.getKeyboard() != nullptr && input.getMouse() != nullptr ); // 엔진 장치는 그대로다
@@ -1243,12 +1243,12 @@ SW_TEST_CASE( InputManagerTest, ReleaseModuleCodeDropsTheCallbacksAndDevicesOfTh
     s_inputProbeValue = 0;
     input.onTextInput( "a" );
     input.onTextComposition( "b" );
-    input.setActiveDeviceType( sw::InputDeviceType::GamepadXbox );
+    input.setActiveGlyphStyle( sw::InputGlyphStyle::GamepadXbox );
     SW_EXPECT_EQUAL( 0, s_inputProbeValue );
     for ( const void* pCode : arrCode )
     {
         const uint8* pStub = static_cast<const uint8*>( pCode );
-        SW_EXPECT_EQUAL( 0u, input.releaseModuleCodeWithin( pStub, pStub + 1, bKeepImageMapped ) );
+        SW_EXPECT_EQUAL( 0u, input.onModuleUnloading( pStub, pStub + 1, bKeepImageMapped ) );
     }
     input.shutdown();
 }
@@ -1300,7 +1300,7 @@ SW_TEST_CASE( InputManagerTest, WmCharReachesTheTextInputCallback )
 /**
  * @brief [InputManagerTest] 장치를 등록에서 내리면 목록에서 빠지고, 대표 장치였으면 남은 같은 종류의 장치가 대표가 된다
  * @details 모듈이 꽂은 장치를 그 모듈이 스스로 내리는 창구다(유니티 `InputSystem.RemoveDevice`). 모듈 이미지를 내릴 때의 정리
- *          (`releaseModuleCodeWithin`)도 같은 함수를 지난다.
+ *          (`onModuleUnloading`)도 같은 함수를 지난다.
  */
 SW_TEST_CASE( InputManagerTest, UnregisterDeviceFallsBackToTheRemainingDeviceOfThatKind )
 {

@@ -11,7 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -180,7 +180,7 @@ namespace sw
 
         /**
          * @brief 파이프라인 XML 의 포맷 이름을 RHIFormat 으로 해석합니다. 이름표는 리플렉션된 열거자 이름 하나뿐입니다(대소문자 무시, ValueAlias 포함).
-         * @details 모르는 이름은 R8G8B8A8_UNORM 으로 물러납니다. 그 이름은 로드 때 `RenderPipelineResource::validate` 가 같은 이름표로 이미 오류로
+         * @details 모르는 이름은 R8G8B8A8_UNORM 으로 물러납니다. 그 이름은 로드 때 `RenderPipelineAsset::validate` 가 같은 이름표로 이미 오류로
          *          알렸고, 여기는 PSO · 트랜지언트를 만들 때마다 불리는 자리라 다시 말하지 않습니다. 이름표를 따로 두면 검증은 통과하는데 여기서는
          *          모르는 포맷이 생깁니다.
          */

@@ -443,7 +443,7 @@ namespace sw
         PrefabAssetInternal::collectPrefabRefsFromXml( doc.getRoot(), outListPath );
     }
 
-    void PrefabManager::reload( string_view assetRelativePath, IRHIDevice* )
+    void PrefabCache::reload( string_view assetRelativePath, IRHIDevice* )
     {
         if ( assetRelativePath.empty() )
             return;
@@ -454,7 +454,7 @@ namespace sw
         _mapCache.erase( cacheKey );
     }
 
-    bool PrefabManager::isCached( string_view assetRelativePath ) const
+    bool PrefabCache::isCached( string_view assetRelativePath ) const
     {
         if ( assetRelativePath.empty() )
             return false;
@@ -464,18 +464,18 @@ namespace sw
         return _mapCache.find( cacheKey ) != _mapCache.end();
     }
 
-    size_t PrefabManager::getCachedCount() const
+    size_t PrefabCache::getCachedCount() const
     {
         std::shared_lock<std::shared_mutex> readLock{ _mapCacheMutex };
         return _mapCache.size();
     }
 
-    void PrefabManager::clear()
+    void PrefabCache::clear()
     {
         std::unique_lock<std::shared_mutex> writeLock{ _mapCacheMutex };
         _mapCache.clear();
     }
-    PrefabAsset* PrefabManager::loadPrefab( string_view assetRelativePath )
+    PrefabAsset* PrefabCache::loadPrefab( string_view assetRelativePath )
     {
         SW_MEMORY_SCOPE( Scene );
         const string resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
@@ -532,7 +532,7 @@ namespace sw
         return pCached;
     }
 
-    bool PrefabManager::revertInstance( GameObject* pInstance, string_view assetRelativePath )
+    bool PrefabCache::revertInstance( GameObject* pInstance, string_view assetRelativePath )
     {
         if ( pInstance == nullptr )
             return false;
@@ -572,7 +572,7 @@ namespace sw
         return true;
     }
 
-    GameObject* PrefabManager::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName )
+    GameObject* PrefabCache::spawn( GameObjectManager* pGameObjectManager, string_view assetRelativePath, const utf8* pInstanceName )
     {
         SW_MEMORY_SCOPE( Scene );
         // 이 함수는 나머지 포인터를 모두 검사한다(`pAsset` · `pGameObject` · `pInstanceName`).
@@ -644,7 +644,7 @@ namespace sw
         return pGameObject;
     }
 
-    bool PrefabManager::applySpawnState( GameObject* pGameObject, const PrefabAsset& asset, string_view instanceName )
+    bool PrefabCache::applySpawnState( GameObject* pGameObject, const PrefabAsset& asset, string_view instanceName )
     {
         if ( StringUtil::trim( asset.getStateData() ).empty() == false )
         {
@@ -658,7 +658,7 @@ namespace sw
         return true;
     }
 
-    uint32 PrefabManager::cookAllPrefabs( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount )
+    uint32 PrefabCache::cookAllPrefabs( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( sourceRoot.empty() || cookedDir.empty() )

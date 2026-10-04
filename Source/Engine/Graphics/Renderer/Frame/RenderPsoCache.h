@@ -16,7 +16,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 
 namespace sw

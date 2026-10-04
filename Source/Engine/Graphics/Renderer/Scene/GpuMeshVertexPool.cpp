@@ -6,7 +6,7 @@
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
 
     bool GpuMeshVertexPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
     {
-        if ( pDevice == nullptr || pDevice->getResource() == nullptr )
+        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return false;
 
         // 집합 비교: 포인터를 정렬해 지난번과 같은지 본다. 배치 순서는 프레임마다 바뀔 수 있지만 메시 집합은 드물게 바뀐다.
@@ -68,7 +68,7 @@ namespace sw
             return true;
 
         const uint32 bytes = _vertexCount * static_cast<uint32>( sizeof( RHIVertex ) );
-        _vertexBuffer      = pDevice->getResource()->createVertexBuffer( listVertex.data(), bytes );
+        _vertexBuffer      = pDevice->getResourceFactory()->createVertexBuffer( listVertex.data(), bytes );
         if ( _vertexBuffer == 0 )
         {
             SW_LOG_ERROR( "정점 풀 버퍼를 만들지 못했습니다(%# 정점) — 배치는 자기 정점 버퍼로 그립니다.", _vertexCount );
@@ -80,8 +80,8 @@ namespace sw
 
     void GpuMeshVertexPool::release( IRHIDevice* pDevice )
     {
-        if ( _vertexBuffer != 0 && pDevice != nullptr && pDevice->getResource() != nullptr )
-            pDevice->getResource()->destroyBuffer( _vertexBuffer );
+        if ( _vertexBuffer != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
+            pDevice->getResourceFactory()->destroyBuffer( _vertexBuffer );
         _vertexBuffer = 0;
         _mapBase.clear();
         _listBuilt.clear();

@@ -31,27 +31,27 @@ namespace sw
         desc._usage        = usage;
         desc._pInitialData = pInitialData;
 
-        _buffer = pDevice->getResource()->createBuffer( desc );
+        _buffer = pDevice->getResourceFactory()->createBuffer( desc );
         if ( _buffer == 0 && bNeedsUav )
         {
             // UAV 를 거절하는 백엔드·드라이버가 있다. 그리기는 살리고 컴퓨트 경로만 포기한다.
             desc._usage = EnumUtil::clearFlag( usage, RHIBufferUsage::UnorderedAccess );
-            _buffer     = pDevice->getResource()->createBuffer( desc );
+            _buffer     = pDevice->getResourceFactory()->createBuffer( desc );
             bNeedsUav   = false;
         }
         if ( _buffer == 0 )
         {
-            _buffer = pDevice->getResource()->createStructuredBuffer( elementSize, elementCount );
+            _buffer = pDevice->getResourceFactory()->createStructuredBuffer( elementSize, elementCount );
             if ( _buffer != 0 && pInitialData != nullptr )
-                pDevice->getResource()->updateStructuredBuffer( _buffer, pInitialData, desc._sizeBytes );
+                pDevice->getResourceFactory()->updateStructuredBuffer( _buffer, pInitialData, desc._sizeBytes );
         }
         if ( _buffer == 0 )
             return false;
 
         if ( bNeedsSrv )
-            _srv = pDevice->getResource()->registerBindlessResource( _buffer );
+            _srv = pDevice->getResourceFactory()->registerBindlessResource( _buffer );
         if ( bNeedsUav )
-            _uav = pDevice->getResource()->registerBindlessUav( _buffer );
+            _uav = pDevice->getResourceFactory()->registerBindlessUav( _buffer );
         _capacityElements = elementCount;
         _elementSize      = elementSize;
         return true;
@@ -61,7 +61,7 @@ namespace sw
     {
         if ( pDevice == nullptr || _buffer == 0 || pData == nullptr || byteSize == 0 )
             return;
-        pDevice->getResource()->updateStructuredBufferRange( _buffer, pData, byteSize, byteOffset );
+        pDevice->getResourceFactory()->updateStructuredBufferRange( _buffer, pData, byteSize, byteOffset );
     }
 
     void RHIStructuredBufferSlot::release( IRHIDevice* pDevice )
@@ -74,10 +74,10 @@ namespace sw
 
         // **뷰를 먼저 놓는다.** 버퍼를 먼저 지우면 레지스트리에 죽은 핸들을 가리키는 항목이 남는다.
         if ( _srv != kInvalidDescriptorIndex )
-            pDevice->getResource()->unregisterBindlessResource( _srv );
+            pDevice->getResourceFactory()->unregisterBindlessResource( _srv );
         if ( _uav != kInvalidDescriptorIndex )
-            pDevice->getResource()->unregisterBindlessUav( _uav );
-        pDevice->getResource()->destroyBuffer( _buffer );
+            pDevice->getResourceFactory()->unregisterBindlessUav( _uav );
+        pDevice->getResourceFactory()->destroyBuffer( _buffer );
         *this = RHIStructuredBufferSlot{};
     }
 } // namespace sw

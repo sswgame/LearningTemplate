@@ -6,7 +6,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
@@ -481,7 +481,7 @@ namespace sw
                     // PSO 는 대상의 실제 포맷으로 고른다. 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과),
                     // GameView RT 는 텍스처가 기록한 포맷이다. 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
                     const RHIFormat              targetFormat = ( dstTarget == 0 ) ? _pDevice->getBackBufferFormat()
-                                                                                   : _pDevice->getResource()->getTextureFormat( dstTarget );
+                                                                                   : _pDevice->getResourceFactory()->getTextureFormat( dstTarget );
                     const RHIPipelineStateHandle psoBlit      = ensurePresentPso( targetFormat );
                     if ( src != 0 && psoBlit != 0 )
                     {

@@ -11,7 +11,7 @@
 #include "Core/Process/CrashHandler.h"
 #include "Core/Task/TaskNode.h"
 #include "Core/Task/TaskNodePool.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 namespace sw
 {
@@ -815,8 +815,8 @@ namespace sw
 
     bool TaskManager::waitAll( uint32 timeoutMs )
     {
-        const CpuStopwatch stopwatch;
-        uint32             spinCount = 0;
+        const Stopwatch stopwatch;
+        uint32          spinCount = 0;
         while ( _activeTaskCount.load( std::memory_order_acquire ) > 0 )
         {
             if ( helpOrSpin( spinCount ) )
@@ -1224,9 +1224,9 @@ namespace sw
 
             // **세대를 먼저 읽고 큐를 본다.** 그래야 그 사이에 들어온 일감이 세대를 올려 스핀이 알아챈다.
             // (읽은 뒤에 들어온 일감은 세대를 바꾸고, 읽기 전에 들어온 일감은 바로 아래 tryTakeItem 이 본다.)
-            bool               bFoundInSpin  = false;
-            uint32             observedEpoch = _workEpoch.load( std::memory_order_acquire );
-            const CpuStopwatch spinStopwatch;
+            bool            bFoundInSpin  = false;
+            uint32          observedEpoch = _workEpoch.load( std::memory_order_acquire );
+            const Stopwatch spinStopwatch;
             for ( ;; )
             {
                 if ( _workEpoch.load( std::memory_order_acquire ) != observedEpoch )

@@ -13,8 +13,8 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
-#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -106,8 +106,8 @@ namespace sw::editor
             InputManager* pInput = getService<InputManager>();
             if ( pInput != nullptr && ViewportInputOverlay::getConfig()._bEnabled == SW_TRUE )
             {
-                ActionMap* pActionMap = &pInput->getActionMap();
-                ViewportInputOverlay::draw( ImGui::GetWindowDrawList(), imagePos, size, pInput, pActionMap );
+                InputMap* pInputMap = &pInput->getInputMap();
+                ViewportInputOverlay::draw( ImGui::GetWindowDrawList(), imagePos, size, pInput, pInputMap );
             }
         }
     }

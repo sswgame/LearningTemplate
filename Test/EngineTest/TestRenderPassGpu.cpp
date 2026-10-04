@@ -23,9 +23,9 @@
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Graphics/Renderer/Scene/GpuMeshMorphPool.h"
 #include "Engine/Graphics/Renderer/Scene/GpuMeshVertexPool.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
@@ -2954,7 +2954,7 @@ SW_TEST_CASE( RenderPassGpuTest, StructuredBufferRejectsSizeThatOverflows32Bit )
     for ( test::RHITestDevice& device : sweep )
     {
         {
-            sw::IRHIResource* pResource = device->getResource();
+            sw::IRHIResourceFactory* pResource = device->getResourceFactory();
             SW_ASSERT_TRUE( pResource != nullptr );
 
             // 64 x 100'000'000 = 6.4e9 — uint32 로 곱하면 약 2.1e9 로 접혀 "성공" 한다.

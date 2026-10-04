@@ -5,7 +5,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
-#include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
+#include "Engine/Graphics/RHI/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

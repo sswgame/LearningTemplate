@@ -3,7 +3,7 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Resource/DdsLoader.h"
 
 namespace sw
@@ -96,13 +96,13 @@ namespace sw
         }
 
         RHITextureDesc desc{};
-        desc._width             = image._width;
-        desc._height            = image._height;
-        desc._mipLevels         = image._mipCount > 0 ? image._mipCount : 1;
-        desc._format            = format;
-        desc._bIsShaderResource = SW_TRUE;
-        IRHIResource* pResource = pDevice->getResource();
-        _handle                 = pResource->createTexture2D( desc );
+        desc._width                    = image._width;
+        desc._height                   = image._height;
+        desc._mipLevels                = image._mipCount > 0 ? image._mipCount : 1;
+        desc._format                   = format;
+        desc._bIsShaderResource        = SW_TRUE;
+        IRHIResourceFactory* pResource = pDevice->getResourceFactory();
+        _handle                        = pResource->createTexture2D( desc );
         if ( _handle == 0 )
         {
             SW_LOG_ERROR( "Texture2D: createTexture2D failed for '%#' (%#×%#, %# mips)", relativePath, desc._width, desc._height, desc._mipLevels );
@@ -173,7 +173,7 @@ namespace sw
 
         if ( pDevice != nullptr )
         {
-            IRHIResource* pResource = pDevice->getResource();
+            IRHIResourceFactory* pResource = pDevice->getResourceFactory();
             if ( _srv != kInvalidDescriptorIndex )
                 pResource->unregisterBindlessTexture( _srv );
             if ( _handle != 0 )

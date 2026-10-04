@@ -16,7 +16,7 @@ namespace sw::editor
         class SceneAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:
-            virtual EditorAssetKind getKind() const override { return EditorAssetKind::Scene; }
+            virtual EditorAssetType getKind() const override { return EditorAssetType::Scene; }
 
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override
             {

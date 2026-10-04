@@ -15,7 +15,7 @@ Asset (Material / Shader / Mesh)
         ↓
 RenderPass (pipeline XML → RenderGraph → FrameRenderer)
         ↓
-RHI (IRHIDevice / IRHICommandList / IRHIResource)
+RHI (IRHIDevice / IRHICommandList / IRHIResourceFactory)
         ↓
 DX11 · DX12 · OpenGL · Vulkan
 ```
@@ -64,7 +64,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | `RHINativeHandles` | RHI/IRHIDevice.h | 엔진 밖 모듈(에디터 ImGui 백엔드)에 넘기는 네이티브 핸들 POD — 판 번호로 대조(`queryNativeHandles`) |
 | `IRHICommandContext` (+ `*RHICommandContext`) | RHI/ | 프레임 스트림에 바로 기록하는 draw/dispatch/barrier/blit 면 |
 | `IRHICommandList` (+ 백엔드 `*RHICommandList`) | RHI/ | 독립 기록 단위 — `RHICommandListForwarder` 가 자기 컨텍스트로 즉시 넘긴다 |
-| `IRHIResource` | RHI/ | 리소스(버퍼·텍스처·PSO) 생성·파괴 |
+| `IRHIResourceFactory` | RHI/ | 리소스(버퍼·텍스처·PSO) 생성·파괴 |
 | `RHIHandleTable` · `FrameResourceRing` · `RHIReleaseQueue` | RHI/Support/ | 핸들·프레임링·지연 해제 |
 | `RHIShaderRequest` · `RHIGpuTimestamp` · `RHIBufferSize` | RHI/Support/ | 넷이 각자 갖던 규칙 하나 — 서술체 → 컴파일 요청 · 타임스탬프 칸 → 마이크로초 · 32비트 버퍼 크기 |
 | `RHIRenderResource` · `RHIResidentBuffer` | RHI/ | GPU 자원 소유자의 등록부(디바이스 수명 통보) · 핸들+디바이스 |
@@ -85,7 +85,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | `RenderThread` | Renderer/ | 렌더 스레드 루프 |
 | `GpuSceneBuilder` → `GpuSceneSnapshot` → `GpuScene` | Renderer/Scene/ | GT 가 씬을 훑어 스냅샷을 만들고 RT 가 받아 GPU 버퍼로 올린다 — 두 클래스는 스냅샷 타입으로만 만난다 |
 | `GpuMeshVertexPool` · `GpuMeshMorphPool` | Renderer/Scene/ | RT 소유 GPU 풀 — 씬 정점을 한 버퍼에(멀티 드로우) · 모프 결과 |
-| `RenderPassManager` · `RenderPassResource` · `RenderPipelineResource` | Renderer/Pipeline/ | XML/에셋 쪽 패스·파이프라인 |
+| `RenderPipelineAssetCache` · `RenderPassAsset` · `RenderPipelineAsset` | Renderer/Pipeline/ | XML/에셋 쪽 패스·파이프라인 |
 | `RenderFramePacket` | Renderer/Frame/ | 프레임 입력 패킷 |
 | `DebugDrawQueue` · `RenderTargetRegistry` | Renderer/Debug/ | 에디터가 읽는 디버그 통로 — 라인/스피어 큐 · 프레임 렌더타깃 목록 |
 
@@ -110,7 +110,7 @@ DX11 · DX12 · OpenGL · Vulkan
 - Vulkan: 리스트가 커맨드 풀 + 커맨드 버퍼 쌍을 디바이스 풀에서 빌리고 GPU 펜스를 지난 뒤 돌려준다(풀은 외부 동기화 대상이라 리스트마다 따로).
 - OpenGL: 커맨드 버퍼 개념이 없는 스레드 종속 상태 머신이라 리스트가 컨텍스트를 감싸 즉시 GL 을 부를 뿐이다(병렬 기록 없음).
 
-기록 중의 상수버퍼 갱신은 리스트로 갑니다(`IRHICommandList::updateConstantBuffer`). `IRHIResource::updateConstantBuffer` 는 기록 밖 전용입니다.
+기록 중의 상수버퍼 갱신은 리스트로 갑니다(`IRHICommandList::updateConstantBuffer`). `IRHIResourceFactory::updateConstantBuffer` 는 기록 밖 전용입니다.
 
 ---
 
@@ -210,7 +210,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 나머지 컬러는 SourceColor. 셰이더는 역할 이름으로 읽는다(`g_SourceColorIndex` · `g_AmbientOcclusionIndex` …).
 타깃은 선언한 출력 중 첫 번째로 존재하는 것이다.
 
-`RenderPassInputContract`(Pipeline/, 타입마다의 목록은 `RenderPassTypeTraits` 표의 칸)가 타입마다 읽는 역할의 필수/선택 목록이고, `RenderPipelineResource::validate` 4번
+`RenderPassInputContract`(Pipeline/, 타입마다의 목록은 `RenderPassTypeTraits` 표의 칸)가 타입마다 읽는 역할의 필수/선택 목록이고, `RenderPipelineAsset::validate` 4번
 검사가 로드 시점에 대조한다 — 계약에 없는 역할을 선언하면 "선언만 있고 바인딩되지 않는 입력", 필수 역할이 빠지면
 "셰이더가 kInvalidIndex 를 읽습니다", SourceColor 가 둘이면 오류. 새 역할이 필요하면 (1) enum 과
 이름표, (2) 패스 종류 표(`RenderPassTypeTraits`)의 계약 칸, (3) PassCB 의 `g_<Role>Index`, (4) 에뮬 슬롯 표(`swSampleIndex` · `commitBindlessTextureBindings`)
@@ -238,7 +238,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 | Vulkan | 슬롯 세트(set 0, binding 16+슬롯 STORAGE_BUFFER). 바인딩이 바뀐 드로우 직전 **커맨드 버퍼 자신의 풀 묶음**(`VulkanDescriptorPoolSet`, 언리얼 `FVulkanDescriptorPoolSetContainer`)에서 세트를 할당해 쓴다(`flushSlotSet`) — 락 없음, 버퍼가 펜스를 지나 재사용될 때 통째로 리셋. 텍스처 배열·immutable sampler 는 set 1 |
 
 - 드로우가 인스턴스를 찾는 길은 아래 "씬 드로우 경로" 절(인스턴스 슬롯 스트림 → 가시 목록 → 인스턴스 버퍼)이다.
-- **RHI ABI**: 기록 표면(`IRHIDevice` · `IRHIResource` · `IRHICommandList`)을 바꾸면 `RHIModuleAbi.h` 의 버전과 도장을 함께 올리고 Engine 과 `RHI_*` 를 함께 다시 짓는다.
+- **RHI ABI**: 기록 표면(`IRHIDevice` · `IRHIResourceFactory` · `IRHICommandList`)을 바꾸면 `RHIModuleAbi.h` 의 버전과 도장을 함께 올리고 Engine 과 `RHI_*` 를 함께 다시 짓는다.
 
 ---
 
@@ -253,7 +253,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 | `Material` | `Material::create()` (Engine) · `MaterialCache` 의 `shared_ptr` + 참조 수 | 스냅샷 배치·원소가 `shared_ptr` 로 함께 소유 |
 | `MaterialInstance` | `MaterialInstance::create()` (Engine) · `MeshComponent` 의 `shared_ptr` | 위와 같음. `updateRhi` 를 RT 가 부른다 |
 | `Texture2D` | `TextureCache` 의 `unique_ptr` + 참조 수 | 보지 않는다 — 머티리얼이 **SRV 인덱스(값)** 로 실어 준다 |
-| GPU 핸들(버퍼·텍스처) | `IRHIResource` | 파괴는 디바이스 해제 큐가 **펜스 뒤로 미룬다**(DX12·Vulkan). CPU 객체가 먼저 죽어도 된다 |
+| GPU 핸들(버퍼·텍스처) | `IRHIResourceFactory` | 파괴는 디바이스 해제 큐가 **펜스 뒤로 미룬다**(DX12·Vulkan). CPU 객체가 먼저 죽어도 된다 |
 | `GpuSceneSnapshot` | GT `GpuSceneBuilder::exportCpuSnapshot` 이 프레임마다 만들어 `RenderFramePacket` 에 싣는다 | RT `GpuScene::adoptCpuSnapshot` 이 통째로 받는다 |
 | GPU 슬롯·컬 뷰·간접 개수 | RT `GpuScene` 이 `upload()` 에서 만든다 | 스냅샷 타입에 없으므로 **옮겨질 수 없다** |
 
@@ -335,7 +335,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 
 **언리얼과 같은 자리:**
 
-- **Present PSO 는 대상 포맷마다 하나.** PSO 의 렌더 타깃 포맷은 바인딩된 타깃의 실제 포맷(`IRHIResource::getTextureFormat( handle )` ·
+- **Present PSO 는 대상 포맷마다 하나.** PSO 의 렌더 타깃 포맷은 바인딩된 타깃의 실제 포맷(`IRHIResourceFactory::getTextureFormat( handle )` ·
   `IRHIDevice::getBackBufferFormat()`)에서 뽑는다. `buildPresentPsoVariants` 가 셋업에서 백버퍼 · 오프스크린 포맷을 미리 만들고,
   기록 중의 `ensurePresentPso` 는 조회만 한다 — PSO 생성은 락 없는 핸들 표 · Vulkan 렌더패스 캐시를 건드리므로 태스크 워커에서 만들면 안 된다.
 - **Vulkan 슬롯 세트 풀은 커맨드 버퍼 쌍이 들고 다닌다**(`VulkanDescriptorPoolSet`, 언리얼 `FVulkanDescriptorPoolSetContainer`). 쌍이 GPU 펜스를

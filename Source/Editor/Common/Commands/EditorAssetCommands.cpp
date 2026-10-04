@@ -517,7 +517,7 @@ namespace sw::editor
         params._description        = "Scene";
         params._bEnableMultiselect = false;
         // 씬 이름은 쿠커의 규칙 하나다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 굽지 않는 이름이다.
-        EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind::Scene, params._listFilterExtension );
+        EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, params._listFilterExtension );
         const string mapsDir = ResourceUtil::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kMapsFolder );
         if ( FileUtil::directoryExists( mapsDir ) )
             params._initialDirectory = mapsDir;

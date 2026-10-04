@@ -80,7 +80,7 @@ namespace sw::editor
         if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
             return nullptr;
 
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath ) == false )
+        if ( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, pPath ) == false )
         {
             SW_LOG_TRACE( "Not a prefab path: %#", pPath );
             return nullptr;
@@ -94,7 +94,7 @@ namespace sw::editor
             return nullptr;
         }
 
-        GameObject* pSpawned = pResources->getPrefabManager().spawn( pManager, pPath );
+        GameObject* pSpawned = pResources->getPrefabCache().spawn( pManager, pPath );
         if ( pSpawned == nullptr )
         {
             SW_LOG_WARNING( "Failed to spawn prefab: %#", pPath );

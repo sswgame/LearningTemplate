@@ -109,7 +109,7 @@ namespace sw
             }
 
             // 2) 텍스처 · 샘플러 · 버퍼 바인딩
-            for ( const ShaderResourceBinding& res : pReflection->_listResource )
+            for ( const ShaderReflectedBinding& res : pReflection->_listResource )
             {
                 const ShaderBindingKind kind = shaderBindingKindFromTypeLabel( static_cast<string_view>( res._type ) );
                 if ( kind == ShaderBindingKind::Unknown )
@@ -155,7 +155,7 @@ namespace sw
     {
         _engineCbSize = 0;
         _listEngineCbMember.clear();
-        _listResourceBind.clear();
+        _listResourceBindOp.clear();
 
         const hashed_string materialCbName{ shaderslot::cbname::kMaterial };
 
@@ -189,11 +189,11 @@ namespace sw
 
             if ( slot._kind == ShaderBindingKind::Texture || slot._kind == ShaderBindingKind::StructuredBuffer )
             {
-                ShaderResourceBind planned{};
+                ShaderResourceBindOp planned{};
                 planned._lookupKey     = hashed_string( canonicalResourceView( slot._name.c_str(), false ) );
                 planned._registerIndex = slot._registerIndex;
                 planned._kind          = slot._kind;
-                _listResourceBind.push_back( planned );
+                _listResourceBindOp.push_back( planned );
             }
         }
     }
@@ -216,7 +216,7 @@ namespace sw
             _mapNameToSlot[slot._name] = index;
 
             // 셰이더가 선언한 이름(`g_SwMaterials`)과 엔진이 쓰는 canonical 이름(`SwMaterials`)을 둘 다 건다.
-            // 리소스 바인딩 표(_listResourceBind)와 리소스 레지스트리는 canonical 키로 굽는다. 주의: canonical 이름이 빠지면
+            // 리소스 바인딩 표(_listResourceBindOp)와 리소스 레지스트리는 canonical 키로 굽는다. 주의: canonical 이름이 빠지면
             // find( "SwMaterials" ) 가 **언제나** nullptr 이라 머티리얼 없는 배치가 폴백 버퍼를 못 찾아 t9 를 비운 채 드로우를 내고,
             // Vulkan 이 초기화되지 않은 디스크립터를 읽어 디바이스를 잃는다(GPU-AV: "binding 25 Descriptor index 0 is uninitialized").
             const hashed_string canonicalName{ canonicalResourceView( slot._name.c_str(), false ) };

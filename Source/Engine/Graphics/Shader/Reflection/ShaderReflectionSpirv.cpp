@@ -498,7 +498,7 @@ namespace sw
                 }
             }
 
-            ShaderResourceBinding res{};
+            ShaderReflectedBinding res{};
             res._name          = name;
             res._registerSpace = space;
             res._bindPoint     = bindPoint;

@@ -66,7 +66,7 @@
 
 종류별 분기를 쓰지 않습니다. 종류는 세 곳에서만 정의됩니다.
 
-1. `Common/Workspace/EditorAssetType.h` 의 `EditorAssetKind` 에 값을 하나 더합니다.
+1. `Common/Workspace/EditorAssetType.h` 의 `EditorAssetType` 에 값을 하나 더합니다.
 2. `Common/Workspace/EditorAssetType.cpp` 의 두 표에 줄을 더합니다 — `kArrAssetMatch`(어떤 경로가 그 종류인가, 핫 리로드
    캐시 · 임포터)와 `kArrKindInfo`(이름 · 브라우저 라벨 · 패널 제목 · 아이콘 · 색 · Other 제외 · 임포트). 줄이 빠지거나 이름 ·
    라벨 · 아이콘 칸이 비면 `static_assert` 가 컴파일을 멈춥니다. 아이콘 · 색 · 콘텐츠 브라우저 필터 · 퀵 런처 분류 ·

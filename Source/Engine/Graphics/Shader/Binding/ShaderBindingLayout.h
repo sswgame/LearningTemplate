@@ -70,10 +70,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct ShaderResourceBind
+     * @struct ShaderResourceBindOp
      * @brief 텍스처 · 구조버퍼 슬롯 하나의 바인딩에 필요한 것입니다. 마찬가지로 미리 구워 둡니다.
      */
-    struct ShaderResourceBind
+    struct ShaderResourceBindOp
     {
         hashed_string     _lookupKey; ///< 레지스트리 조회 키(canonical 이름)
         uint32            _registerIndex{ 0 };
@@ -112,7 +112,7 @@ namespace sw
         /** @brief 엔진 CB 를 채울 멤버 표입니다. 드로우마다 이름을 다시 해시하지 않기 위한 것입니다. */
         const vector<ShaderEngineCbMember>& getEngineCbMembers() const { return _listEngineCbMember; }
         /** @brief 텍스처 · 구조버퍼 슬롯 바인딩 표입니다. */
-        const vector<ShaderResourceBind>& getResourceBinds() const { return _listResourceBind; }
+        const vector<ShaderResourceBindOp>& getResourceBindOps() const { return _listResourceBindOp; }
 
     private:
         void rebuildIndex();
@@ -124,6 +124,6 @@ namespace sw
 
         uint32                       _engineCbSize{ 0 };
         vector<ShaderEngineCbMember> _listEngineCbMember;
-        vector<ShaderResourceBind>   _listResourceBind;
+        vector<ShaderResourceBindOp> _listResourceBindOp;
     };
 } // namespace sw

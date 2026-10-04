@@ -217,9 +217,9 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   The engine builds 64-bit only, so there are no 32-bit branches. The one file that reads built-ins is
   `Core/Common/TargetMacroCheck.h`, which fails the build when CMake's choice disagrees with the compiler.
   Enforced by `CheckTargetMacros.py`.
-- **Read time through `Core/Time/CpuClock.h`**, never a `std::chrono` clock (`steady_clock`, `high_resolution_clock`,
-  `system_clock` — aliases and `using namespace` included): `CpuClock::nowNanoseconds()`, `CpuStopwatch` for elapsed time,
-  `CpuDeadline::afterMilliseconds( ms )` + `isExpired()` for a bounded wait. Tests too. Duration values (`sleep_for`) are fine.
+- **Read time through `Core/Time/MonotonicClock.h`**, never a `std::chrono` clock (`steady_clock`, `high_resolution_clock`,
+  `system_clock` — aliases and `using namespace` included): `MonotonicClock::nowNanoseconds()`, `Stopwatch` for elapsed time,
+  `Deadline::afterMilliseconds( ms )` + `isExpired()` for a bounded wait. Tests too. Duration values (`sleep_for`) are fine.
   Exceptions live in one table with their reason. Enforced by `CheckClockReads.py`.
 - Construct into memory you already hold with `sw_placement_new( pMemory ) T( ... )`
   (`Core/Memory/Memory.h`), never a bare `new ( pMemory ) T( ... )`. Enforced by
@@ -283,8 +283,8 @@ namespace sw
   them collide: unity builds (`SW_ENABLE_UNITY_BUILD`, used by the `CI-*` presets) merge
   several `.cpp` files into one translation unit, and an anonymous namespace only hides a
   name *per translation unit* — so the second definition is a redefinition error. So
-  `VulkanRHIResourcePipeline.cpp` uses `VulkanRHIResourcePipelineInternal`, not
-  `VulkanRHIResourceInternal`. Enforced by `CheckCodeConventions.py`
+  `VulkanRHIResourceFactoryPipeline.cpp` uses `VulkanRHIResourceFactoryPipelineInternal`, not
+  `VulkanRHIResourceFactoryInternal`. Enforced by `CheckCodeConventions.py`
   (`Naming/DuplicateInternalHelper`, full-scan only).
 - The same holds for a constant declared directly in the anonymous namespace (`constexpr int32 kLimit = 4;`):
   two `.cpp` files with the same bare name collide in a unity build. Put it inside the TU's `XxxInternal`

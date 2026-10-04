@@ -12,8 +12,8 @@
 
 namespace sw
 {
-    class ActionMap;
     class InputManager;
+    class InputMap;
     class TileMap;
 
     // ------------------------------------------------------------------------------
@@ -37,8 +37,8 @@ namespace sw
 
         /** @brief 충돌 · 워프 조회에 쓸 타일맵을 설정합니다. */
         void setTileMap( TileMap* pTileMap ) { _pTileMap = pTileMap; }
-        /** @brief 이동 · 상호작용 액션을 읽을 ActionMap 을 설정합니다. */
-        void setActionMap( ActionMap* pActionMap ) { _pActionMap = pActionMap; }
+        /** @brief 이동 · 상호작용 액션을 읽을 InputMap 을 설정합니다. */
+        void setInputMap( InputMap* pInputMap ) { _pInputMap = pInputMap; }
         /**
          * @brief 조우 타일에서 전투가 날 확률을 설정합니다. **0 이면 나지 않습니다.**
          * @details 0 ~ 1 로 읽습니다. 0.33 이면 세 걸음마다 한 번꼴이고, 1 이상이면 매 걸음입니다.
@@ -75,7 +75,7 @@ namespace sw
 
     private:
         TileMap*               _pTileMap;
-        ActionMap*             _pActionMap;
+        InputMap*              _pInputMap;
         string                 _pendingWarpMap;
         PlayerLocomotion       _loco;
         int2                   _tile;             ///< 현재 타일 좌표

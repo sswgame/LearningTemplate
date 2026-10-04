@@ -9,13 +9,13 @@
 
 namespace sw::editor
 {
-    enum class EditorAssetKind : uint8;
+    enum class EditorAssetType : uint8;
 
     /** @brief Resource 폴더 스캔으로 만든 퀵 런처용 파일 항목 */
     struct EditorResourceIndexEntry
     {
-        EditorAssetKind _kind{};   ///< 애셋 종류(`EditorAssetTypeRegistry::findKind`)
-        string          _category; ///< 종류의 단수 이름(`EditorAssetKindInfo::_pDisplayName`)
+        EditorAssetType _kind{};   ///< 애셋 종류(`EditorAssetTypeRegistry::findKind`)
+        string          _category; ///< 종류의 단수 이름(`EditorAssetTypeInfo::_pDisplayName`)
         string          _title;
         string          _detail;
         string          _path; ///< 리소스 id(콘텐츠 브라우저 · 끌어 놓기와 같은 형태)
@@ -27,8 +27,8 @@ namespace sw::editor
     /** @brief 리소스 카탈로그의 종류 하나 */
     struct EditorResourceCatalogCount
     {
-        EditorAssetKind _kind{};
-        const utf8*     _pLabel{ nullptr }; ///< 종류의 브라우저 라벨(`EditorAssetKindInfo::_pBrowserLabel`)
+        EditorAssetType _kind{};
+        const utf8*     _pLabel{ nullptr }; ///< 종류의 브라우저 라벨(`EditorAssetTypeInfo::_pBrowserLabel`)
         size_t          _count{ 0 };
     };
 } // namespace sw::editor

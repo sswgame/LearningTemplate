@@ -106,7 +106,7 @@ namespace sw::editor
 
     ObjectSnapshot EditorTransaction::captureSnapshot( const GameObject* pObj )
     {
-        return ObjectSnapshotCommand::captureSnapshot( pObj );
+        return ObjectUndoUtil::captureSnapshot( pObj );
     }
 
     void EditorTransaction::recordModify( GameObject* pObj, const ObjectSnapshot& before, const ObjectSnapshot& after,
@@ -122,7 +122,7 @@ namespace sw::editor
             EditorTransactionInternal::markActiveSceneDirty();
             return;
         }
-        EditorTransactionInternal::pushCommand( pStack, ObjectSnapshotCommand::makeModify( *pStack, *pSceneManager, *pObj, before, after, label ) );
+        EditorTransactionInternal::pushCommand( pStack, ObjectUndoUtil::makeModify( *pStack, *pSceneManager, *pObj, before, after, label ) );
     }
 
     void EditorTransaction::recordObjectLifetime( GameObject* pObj, string_view label, ObjectLifetimeEdit edit )
@@ -137,7 +137,7 @@ namespace sw::editor
             EditorTransactionInternal::markActiveSceneDirty();
             return;
         }
-        EditorTransactionInternal::pushCommand( pStack, ObjectSnapshotCommand::makeLifetime( *pStack, *pSceneManager, pObj, edit, label ) );
+        EditorTransactionInternal::pushCommand( pStack, ObjectUndoUtil::makeLifetime( *pStack, *pSceneManager, pObj, edit, label ) );
     }
 
     void EditorTransaction::recordCreation( GameObject* pObj, string_view label )

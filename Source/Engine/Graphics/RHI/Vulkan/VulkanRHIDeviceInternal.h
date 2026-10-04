@@ -2,7 +2,7 @@
  * @file VulkanRHIDeviceInternal.h
  * @brief Vulkan 백엔드의 여러 TU 가 함께 쓰는 내부 도우미와 플랫폼 헤더 묶음입니다.
  * @details `VulkanRHIDevice.cpp` 하나가 2,700 줄이라 초기화 · 디스크립터 · 렌더패스로 나눴는데,
- *          그 조각들과 `VulkanRHIResource.cpp` 가 같은 도우미(`toVulkanTextureFormat`)와 같은 플랫폼 헤더 묶음을 씁니다.
+ *          그 조각들과 `VulkanRHIResourceFactory.cpp` 가 같은 도우미(`toVulkanTextureFormat`)와 같은 플랫폼 헤더 묶음을 씁니다.
  *          익명 네임스페이스에 두면 TU 마다 사본이 생겨 포맷을 더할 때 한쪽만 고치게 됩니다.
  * @note 백엔드 내부 전용입니다. RHI 경계 밖으로 나가면 안 됩니다.
  */
@@ -14,7 +14,7 @@
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIResource.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #include <vulkan/vulkan.h>

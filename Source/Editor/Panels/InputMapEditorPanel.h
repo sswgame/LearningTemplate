@@ -9,7 +9,7 @@
 
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-#include "Engine/Input/ActionMap.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputReplay.h"
 
 namespace sw::editor
@@ -24,7 +24,7 @@ namespace sw::editor
         InputMapEditorPanel();
         virtual ~InputMapEditorPanel() override = default;
 
-        const utf8* getPanelTitle() const override { return "Input & ActionMap Editor"; }
+        const utf8* getPanelTitle() const override { return "Input Map Editor"; }
         void        drawContent() override;
         bool        isToolPanel() const override { return true; }
 
@@ -36,7 +36,7 @@ namespace sw::editor
         void               revertDocument() override;
 
     private:
-        void drawActionMapTab();
+        void drawInputMapTab();
         void drawDeviceMonitorTab();
 
         /** @brief 키보드 실시간 상태를 그립니다. */
@@ -48,7 +48,7 @@ namespace sw::editor
         void drawConflictMatrixTab();
         /**
          * @brief 선택한 액션의 바인딩을 새 키로 바꿉니다. **바꾸기 전에 충돌을 확인합니다.**
-         * @details 키 감지 · 버튼 격자 모두 이것을 거칩니다. 이미 다른 액션이 쓰는 키면(`ActionMap::hasBindingConflict`) 되돌리지는 않고
+         * @details 키 감지 · 버튼 격자 모두 이것을 거칩니다. 이미 다른 액션이 쓰는 키면(`InputMap::hasBindingConflict`) 되돌리지는 않고
          *          (덮어쓰기를 원할 수 있습니다) 무엇과 부딪히는지 알립니다.
          */
         void rebindSelectedAction( sw::Key newKey );
@@ -71,7 +71,7 @@ namespace sw::editor
     private:
         static constexpr size_t kPlotSampleCount = 120;
 
-        ActionMap              _actionMap;
+        InputMap               _inputMap;
         InputReplay            _replay;
         string                 _inputMapPath;
         string                 _replayFilePath;

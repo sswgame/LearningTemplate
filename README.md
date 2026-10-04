@@ -68,7 +68,7 @@ CMake, Ninja, LLVM Clang-cl 및 sccache를 결합하여 **초고속 증분 빌�
    - [9. 오디오 및 물리 시스템](#59-오디오-및-물리-시스템)
    - [10. 비동기 에셋 스트리밍 큐 (AssetStreamingQueue)](#510-비동기-에셋-스트리밍-큐-assetstreamingqueue)
    - [11. GPU-Driven 간접 드로우 & 컴퓨트 디스패치](#511-gpu-driven-간접-드로우--컴퓨트-디스패치)
-   - [12. 바인드리스 리소스 인덱스 (IRHIResource)](#512-바인드리스-리소스-인덱스-irhiresource)
+   - [12. 바인드리스 리소스 인덱스 (IRHIResourceFactory)](#512-바인드리스-리소스-인덱스-irhiresource)
    - [13. RenderGraph 순차 쓰기/RMW 의존성 및 리소스 수명 주기 분석](#513-rendergraph-순차-쓰기rmw-의존성-및-리소스-수명-주기-분석)
    - [14. C++17 Fluent Task Continuation (TaskFuture / TaskPromise)](#514-c17-fluent-task-continuation-taskfuture--taskpromise)
    - [15. 트랜스폼 더티 루트 플러시 (SceneTransformHierarchy)](#515-트랜스폼-더티-루트-플러시-scenetransformhierarchy)
@@ -380,8 +380,8 @@ pObjectManager->findGameObjectsByTag( heroTag, listPlayer );
 실행 중 `gv_rhiBackend` 를 바꾸면 App 이 프레임 경계에서 디바이스를 교체합니다(`BackendSwapController`).
 
 - **백엔드 선택**: 명령줄(`-dx11` · `-dx12` · `-vk` · `-gl`, [4절](#실행-인자)) > `EngineConfig` 의 기본값. 백엔드 목록은 `Config/Engine/CookContract.json` 한 곳입니다.
-- **프레임 그래프는 데이터입니다.** 패스 순서는 `Resource/engine/pipeline/*.xml`(`RenderPipelineResource`)이, 패스의 바인딩 틀(포맷 · 클리어)은
-  `Resource/engine/renderpass/`(`RenderPassResource`)가 정하고, `FrameRenderer` 가 그것으로 `RenderGraph` 를 지어 위상 정렬합니다(코드 예는 5.13).
+- **프레임 그래프는 데이터입니다.** 패스 순서는 `Resource/engine/pipeline/*.xml`(`RenderPipelineAsset`)이, 패스의 바인딩 틀(포맷 · 클리어)은
+  `Resource/engine/renderpass/`(`RenderPassAsset`)가 정하고, `FrameRenderer` 가 그것으로 `RenderGraph` 를 지어 위상 정렬합니다(코드 예는 5.13).
 - **디바이스 종료**는 `IRHIDevice::shutdown` 템플릿 메서드가 공통 단계 순서를 갖고 백엔드는 단계 훅만 구현합니다.
 - **엔진 밖 모듈의 네이티브 자원**: 에디터 같은 모듈이 백엔드 네이티브 객체가 필요하면 백엔드 클래스로 캐스팅하지 않고
   판 번호 든 `RHINativeHandles` 를 디바이스에서 조회하고, 다 쓴 네이티브 자원은 `IRHIDevice::enqueueGpuRelease` 로 백엔드 해제 큐(GPU 펜스 뒤)에 넘깁니다.
@@ -434,7 +434,7 @@ public:
 sw::TaskFuture<sw::Scene*> sceneFuture = sw::engine::getSceneManager().requestLoadFuture( "game/empty/maps/editortest.scene.xml" );
 
 // 2. 프리팹 스폰 (Dev 는 XML/JSON 저작본, Shipping 은 쿠킹된 .prefab.bin 을 읽는다)
-sw::GameObject* pProp = sw::engine::getResourceManager().getPrefabManager().spawn(
+sw::GameObject* pProp = sw::engine::getResourceManager().getPrefabCache().spawn(
     pObjectManager, "game/empty/prefabs/testprop.prefab.xml" );
 ```
 
@@ -628,20 +628,20 @@ pCmd->drawIndexedIndirect( argBuffer );
 
 ---
 
-### 5.12 바인드리스 리소스 인덱스 (IRHIResource)
+### 5.12 바인드리스 리소스 인덱스 (IRHIResourceFactory)
 
 텍스처와 버퍼를 전역 인덱스로 셰이더에서 접근할 수 있도록 디스크립터 인덱스를 발급합니다. 백엔드마다 한계가 다릅니다 —
 DX12 · Vulkan 은 디스크립터 힙 · 세트 인덱싱이고, DX11(SM5.0) · OpenGL(SPIR-V)은 버퍼로 텍스처를 넘길 수 없어 머티리얼 텍스처를 고정 슬롯으로 겁니다.
 
-별도의 테이블 클래스는 없습니다 — **인덱스 발급은 `IRHIResource` 가 직접** 합니다
-(`Engine/Graphics/RHI/IRHIResource.h`). 백엔드마다 디스크립터 힙/디스크립터 세트 구현이 달라도
+별도의 테이블 클래스는 없습니다 — **인덱스 발급은 `IRHIResourceFactory` 가 직접** 합니다
+(`Engine/Graphics/RHI/IRHIResourceFactory.h`). 백엔드마다 디스크립터 힙/디스크립터 세트 구현이 달라도
 호출부는 인덱스 하나만 다룹니다.
 
 ```cpp
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
-sw::IRHIResource* pResource = pRhiDevice->getResource();
+sw::IRHIResourceFactory* pResource = pRhiDevice->getResourceFactory();
 
 // 텍스처 · 버퍼 · UAV 마다 발급 함수가 따로 있다 (해제도 짝을 맞춰야 한다).
 sw::RHIDescriptorIndex albedoIndex = pResource->registerBindlessTexture( textureHandle );

@@ -3,7 +3,7 @@
 #include "Engine/Graphics/Renderer/Frame/RenderPsoCache.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 
 namespace sw
@@ -117,7 +117,7 @@ namespace sw
 
     void RenderPsoCache::releaseAll( IRHIDevice* pDevice )
     {
-        if ( pDevice == nullptr || pDevice->getResource() == nullptr )
+        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
         {
             forgetAll();
             return;
@@ -130,7 +130,7 @@ namespace sw
             for ( auto& [key, entry] : _mapMaterialPso )
             {
                 if ( entry._bOwned != 0 && entry._pso != 0 )
-                    pDevice->getResource()->destroyPipelineState( entry._pso );
+                    pDevice->getResourceFactory()->destroyPipelineState( entry._pso );
             }
             _mapMaterialPso.clear();
         }
@@ -138,14 +138,14 @@ namespace sw
         for ( auto& [passType, pso] : _mapEnginePso )
         {
             if ( pso != 0 )
-                pDevice->getResource()->destroyPipelineState( pso );
+                pDevice->getResourceFactory()->destroyPipelineState( pso );
         }
         _mapEnginePso.clear();
 
         for ( auto& [format, pso] : _mapPresentPso )
         {
             if ( pso != 0 )
-                pDevice->getResource()->destroyPipelineState( pso );
+                pDevice->getResourceFactory()->destroyPipelineState( pso );
         }
         _mapPresentPso.clear();
 

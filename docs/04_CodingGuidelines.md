@@ -151,8 +151,8 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 - 내장 매크로를 읽는 곳은 `Source/Core/Common/TargetMacroCheck.h` 하나뿐입니다. CMake 판정이 실제 컴파일러와 어긋나거나 매크로가
   빠지면 그 헤더의 `#error` 로 빌드가 섭니다. `CheckTargetMacros.py` 가 Source · Test · Tools/ReflectionParser 에서 검사합니다.
 
-### 시계는 CpuClock 하나
-- 시각은 `Core/Time/CpuClock.h` 로만 읽습니다(`CpuClock::nowNanoseconds()` · 걸린 시간 `CpuStopwatch` · 기다림 기한 `CpuDeadline::afterMilliseconds( ms )` + `isExpired()`). `std::chrono` 의 `steady_clock` · `high_resolution_clock` · `system_clock` 은 시험 코드에서도 쓰지 않습니다(별칭 · `using namespace` 포함, `sleep_for` 같은 기간 값은 괜찮다). 예외는 이유와 함께 게이트의 표 한 곳에 두고, `CheckClockReads.py` 가 Source · Test · Tools/ReflectionParser 에서 검사합니다.
+### 시계는 MonotonicClock 하나
+- 시각은 `Core/Time/MonotonicClock.h` 로만 읽습니다(`MonotonicClock::nowNanoseconds()` · 걸린 시간 `Stopwatch` · 기다림 기한 `Deadline::afterMilliseconds( ms )` + `isExpired()`). `std::chrono` 의 `steady_clock` · `high_resolution_clock` · `system_clock` 은 시험 코드에서도 쓰지 않습니다(별칭 · `using namespace` 포함, `sleep_for` 같은 기간 값은 괜찮다). 예외는 이유와 함께 게이트의 표 한 곳에 두고, `CheckClockReads.py` 가 Source · Test · Tools/ReflectionParser 에서 검사합니다.
 
 ### 이미 잡아 둔 메모리에 객체 만들기
 - placement new 는 `sw_placement_new( pMemory ) T( ... )` 로 씁니다(`Core/Memory/Memory.h`). 맨 `new ( pMemory ) T( ... )` 는 쓰지 않습니다.
@@ -180,7 +180,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 2. 단일 `.cpp` 내에서만 사용하는 헬퍼는 클래스 구현과 분리된 별도 `namespace sw { namespace { struct FooInternal; } }` 블록에 배치합니다.
 3. `Internal` 헬퍼 이름은 **클래스가 아니라 번역 단위**를 따릅니다. 유니티 빌드(`SW_ENABLE_UNITY_BUILD`, `CI-*` 프리셋)는 `.cpp` 여럿을 한 번역 단위로
    묶고 익명 네임스페이스는 번역 단위마다만 이름을 숨기므로, 한 클래스를 여러 `.cpp` 로 나눈 뒤 헬퍼마다 클래스 이름을 붙이면 재정의 오류가 납니다
-   (`VulkanRHIResourcePipeline.cpp` 는 `VulkanRHIResourcePipelineInternal`). `CheckCodeConventions.py` 의 `Naming/DuplicateInternalHelper`(전체 스캔 전용)가 검사합니다.
+   (`VulkanRHIResourceFactoryPipeline.cpp` 는 `VulkanRHIResourceFactoryPipelineInternal`). `CheckCodeConventions.py` 의 `Naming/DuplicateInternalHelper`(전체 스캔 전용)가 검사합니다.
 
 ### 익명 네임스페이스는 파일당 하나, 스코프 최상단에
 

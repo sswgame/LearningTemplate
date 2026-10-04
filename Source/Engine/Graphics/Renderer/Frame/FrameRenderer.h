@@ -22,7 +22,7 @@
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
 #include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassInputContract.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Graphics/Renderer/Scene/GpuMeshMorphPool.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
@@ -37,7 +37,7 @@ namespace sw
     class IRHIDevice;
     class Material;
     class MaterialInstance;
-    class RenderPassManager;
+    class RenderPipelineAssetCache;
     class Scene;
     class ShaderBindingLayout;
     class TaskArgs;
@@ -538,19 +538,19 @@ namespace sw
          * @details 언리얼의 RHI 가 렌더 패스 *에셋*을 모르듯, 소유는 렌더러의 것입니다. 디바이스 추상(RHI)이 이것을
          *          들면 RHI 가 Renderer 를 include 하게 됩니다.
          */
-        unique_ptr<RenderPassManager> _renderPassManager;
-        IRHIDevice*                   _pCmdOwnerDevice;
-        unique_ptr<IRHICommandList>   _frameCmd;
-        IRHICommandList*              _pCmd;
-        Scene*                        _pScene;
-        TaskManager*                  _pTaskManager;
-        GpuScene                      _gpuScene;
+        unique_ptr<RenderPipelineAssetCache> _renderPipelineAssetCache;
+        IRHIDevice*                          _pCmdOwnerDevice;
+        unique_ptr<IRHICommandList>          _frameCmd;
+        IRHICommandList*                     _pCmd;
+        Scene*                               _pScene;
+        TaskManager*                         _pTaskManager;
+        GpuScene                             _gpuScene;
         /// @brief 씬 직접 경로(`execute( pScene )`, 에디터 · 테스트)가 쓰는 빌더입니다. 패킷 경로에서는 EngineLoop 의 것이 대신합니다.
-        GpuSceneBuilder        _sceneBuilder;
-        RenderPipelineResource _pipelineResource;
-        RenderGraph            _graph;
-        string                 _pipelinePath;
-        float4                 _clearColor;
+        GpuSceneBuilder     _sceneBuilder;
+        RenderPipelineAsset _pipelineResource;
+        RenderGraph         _graph;
+        string              _pipelinePath;
+        float4              _clearColor;
         /// @brief 파이프라인이 선언한 첨부들입니다. 창 크기로 만들고 구성이 바뀔 때만 다시 만듭니다.
         TransientAttachmentPool _transientPool;
         /**
@@ -685,7 +685,7 @@ namespace sw
          *          렌더러가 자기 시계를 갖습니다. 델타를 여기까지 실어 나르지 않아도 되고, 렌더 스레드에서
          *          게임 시간을 만지지 않습니다.
          */
-        CpuTimer _animTimer;
+        GameTimer _animTimer;
         /**
          * @brief 머티리얼 없는 배치에 거는 0 으로 채운 원소 하나짜리 구조버퍼입니다. **stride 마다 하나**입니다.
          * @details DX12 에서 아무것도 안 걸린 t9 를 읽으면 GPU 폴트(디바이스 제거)입니다. 어떤 드로우도 빈 슬롯으로

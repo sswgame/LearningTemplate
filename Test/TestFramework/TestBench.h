@@ -3,7 +3,7 @@
  * @brief 벤치 케이스(`XxxBenchTest`)가 함께 쓰는 시간 재기 · 표본 요약 · 한 줄 보고.
  */
 #pragma once
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/EngineMinimal.h"
 
@@ -30,7 +30,7 @@ namespace test
         int64 bestNanos = std::numeric_limits<int64>::max();
         for ( uint32 round = 0; round < roundCount; ++round )
         {
-            const sw::CpuStopwatch stopwatch;
+            const sw::Stopwatch stopwatch;
             body();
             const int64 nanos = stopwatch.getElapsedNanoseconds();
             bestNanos         = nanos < bestNanos ? nanos : bestNanos;

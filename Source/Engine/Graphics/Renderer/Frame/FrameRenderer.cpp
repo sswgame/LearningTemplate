@@ -10,10 +10,10 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
@@ -117,7 +117,7 @@ namespace sw
                                     string_view pipelineXmlPath )
     {
         _pDevice = pDevice;
-        // 인스턴스 애니메이션 시계는 여기서 한 번 돌린다(CpuTimer 는 만들면 멈춘 상태다).
+        // 인스턴스 애니메이션 시계는 여기서 한 번 돌린다(GameTimer 는 만들면 멈춘 상태다).
         _animTimer.resetTimer();
         _animTimer.startTimer();
         if ( pDevice == nullptr )
@@ -133,12 +133,12 @@ namespace sw
         else if ( engine::areEngineServicesBound() )
             bindServices( &engine::getTaskManager() );
 
-        _renderPassManager = make_unique<RenderPassManager>();
-        if ( _renderPassManager->initialize() == false )
+        _renderPipelineAssetCache = make_unique<RenderPipelineAssetCache>();
+        if ( _renderPipelineAssetCache->initialize() == false )
         {
-            _renderPassManager.reset();
+            _renderPipelineAssetCache.reset();
             _status        = FrameRendererStatus::Failed;
-            _statusMessage = "RenderPassManager initialize failed";
+            _statusMessage = "RenderPipelineAssetCache initialize failed";
             SW_LOG_ERROR( "initialize: %#", _statusMessage );
             return false;
         }
@@ -151,8 +151,8 @@ namespace sw
         // 동기 경로(execute)는 렌더러 자신의 빌더가 배치를 만든다. 패킷 경로의 빌더(EngineLoop)에는 EngineLoop 가 같은 값을 준다.
         _sceneBuilder.setMergeBatchesAcrossMaterials( pDevice->supportsNativeBindlessSampling() );
 
-        const EngineData&  engineData = engine::getEngineData();
-        RenderPassManager& rpm        = *_renderPassManager;
+        const EngineData&         engineData = engine::getEngineData();
+        RenderPipelineAssetCache& rpm        = *_renderPipelineAssetCache;
         if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
             rpm.loadRenderPass( engineData._defaultRenderPass );
 
@@ -283,10 +283,10 @@ namespace sw
         _graphContext.reset();
         _frameCmd.reset();
         // 패스 · 파이프라인 에셋은 위의 패스 자원 · 그래프가 놓은 **뒤에** 비운다. 그쪽이 이 캐시의 포인터를 든다.
-        if ( _renderPassManager != nullptr )
+        if ( _renderPipelineAssetCache != nullptr )
         {
-            _renderPassManager->shutdown();
-            _renderPassManager.reset();
+            _renderPipelineAssetCache->shutdown();
+            _renderPipelineAssetCache.reset();
         }
         _pCmdOwnerDevice = nullptr;
         _pCmd            = nullptr;
@@ -313,9 +313,9 @@ namespace sw
             return false;
         }
 
-        if ( _renderPassManager != nullptr )
+        if ( _renderPipelineAssetCache != nullptr )
         {
-            RenderPassManager& rpm = *_renderPassManager;
+            RenderPipelineAssetCache& rpm = *_renderPipelineAssetCache;
             rpm.loadPipeline( pipelineXmlPath );
             for ( const string& passRef : _pipelineResource.getDesc()._listRenderPassRef )
             {

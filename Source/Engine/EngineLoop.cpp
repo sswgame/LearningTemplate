@@ -42,8 +42,8 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
-#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
@@ -317,7 +317,7 @@ namespace sw
                 const uint32  sceneCount       = SceneCooker::cookAllScenes( resourceRoot, cookedDir, sceneFailedCount );
                 // 프리팹 · GUID 레지스트리도 여기서 만든다 — 형식과 규칙을 쓰는 곳이 엔진 하나여야 한다.
                 uint32                        prefabFailedCount   = 0;
-                [[maybe_unused]] const uint32 prefabCount         = PrefabManager::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );
+                [[maybe_unused]] const uint32 prefabCount         = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );
                 uint32                        registryFailedCount = 0;
                 [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
                 SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures).", sceneCount, sceneFailedCount, prefabCount,
@@ -902,22 +902,22 @@ namespace sw
 
         if ( _bShellActionsBound == false )
         {
-            _mapDebugAction     = createShellActionMap( engine::getEngineData()._shellInputMap );
+            _mapDebugAction     = createShellInputMap( engine::getEngineData()._shellInputMap );
             _bShellActionsBound = true;
         }
 
         // _mapDebugAction 은 위에서 처음 한 번 만든 뒤로 계속 있으므로 nullptr 일 수 없다.
 
-        if ( _mapDebugAction->hasLayer( ActionMapDefaults::kTitleLayerName ) )
-            _mapDebugAction->setLayerEnabled( ActionMapDefaults::kTitleLayerName, false );
+        if ( _mapDebugAction->hasLayer( InputMapDefaults::kTitleLayerName ) )
+            _mapDebugAction->setLayerEnabled( InputMapDefaults::kTitleLayerName, false );
         _mapDebugAction->setInputManager( _owned._pInputManager.get() );
         _mapDebugAction->update( deltaTime );
     }
 
-    unique_ptr<ActionMap> EngineLoop::createShellActionMap( string_view inputMapPath )
+    unique_ptr<InputMap> EngineLoop::createShellInputMap( string_view inputMapPath )
     {
         SW_MEMORY_SCOPE( EngineMisc );
-        unique_ptr<ActionMap> map = make_unique<ActionMap>();
+        unique_ptr<InputMap> map = make_unique<InputMap>();
         if ( inputMapPath.empty() || map->loadFromResource( inputMapPath ) == false )
         {
             map->clear();
@@ -933,12 +933,12 @@ namespace sw
         // 바깥에 콜백을 달라고 하지 않고 여기서 끝낸다. 모듈을 다시 올리는 일은 App 의 것이라 App 이 묻는다.
         if ( _mapDebugAction == nullptr || _rhi == nullptr )
             return;
-        if ( _mapDebugAction->wasActionTriggered( ActionMapDefaults::kReloadShadersAction ) == false )
+        if ( _mapDebugAction->wasActionTriggered( InputMapDefaults::kReloadShadersAction ) == false )
             return;
         if ( LiveShaderManager* pLiveShaderManager = getLiveShaderManager() )
         {
             pLiveShaderManager->triggerReloadAll();
-            SW_LOG_INFO( "%#: force shader reload", ActionMapDefaults::kReloadShadersAction );
+            SW_LOG_INFO( "%#: force shader reload", InputMapDefaults::kReloadShadersAction );
         }
 #endif
     }

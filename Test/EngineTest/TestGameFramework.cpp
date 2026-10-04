@@ -8,8 +8,8 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputSnapshot.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/ColliderTileComponent.h"
@@ -28,7 +28,7 @@
 #include "EngineTest/StateReloadTestUtil.h"
 
 #include "GameFramework/Base/DontDestroyOnLoadComponent.h"
-#include "GameFramework/Base/EffectBaseComponent.h"
+#include "GameFramework/Base/FadeOutComponent.h"
 #include "GameFramework/Base/GameEvents.h"
 #include "GameFramework/Base/GameInstanceBase.h"
 #include "GameFramework/Base/GameService.h"
@@ -37,7 +37,7 @@
 #include "GameFramework/Data/GameData.h"
 #include "GameFramework/Data/GameStrings.h"
 #include "GameFramework/Kits/ActionCombat/ActionRoom.h"
-#include "GameFramework/Kits/ActionCombat/AttackBaseComponent.h"
+#include "GameFramework/Kits/ActionCombat/MeleeHitboxComponent.h"
 #include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
 #include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
@@ -50,9 +50,9 @@
 #include "GameFramework/Kits/TurnBattle/SaveGame.h"
 #include "GameFramework/Kits/TurnBattle/SpeciesData.h"
 #include "GameFramework/Transition/ScreenTransitionManager.h"
-#include "GameFramework/UI/DamageUIComponent.h"
+#include "GameFramework/UI/DamageNumberComponent.h"
 #include "GameFramework/UI/DialogueRunnerComponent.h"
-#include "GameFramework/UI/HPBarBaseComponent.h"
+#include "GameFramework/UI/HealthBarComponent.h"
 #include "GameFramework/UI/RuntimeHud.h"
 
 #include "TestFramework/TestFramework.h"
@@ -1566,7 +1566,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_LIFOStack_ModalAndNonModal )
 {
     InputManager input;
     input.initialize();
-    ActionMap map;
+    InputMap map;
     map.setInputManager( &input );
 
     map.bind( "Move", Key::W, ActionTrigger::Down, "Gameplay" );
@@ -1606,7 +1606,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_DelegateAnd2DVector )
 {
     InputManager input;
     input.initialize();
-    ActionMap map;
+    InputMap map;
     map.setInputManager( &input );
 
     map.pushLayer( "Gameplay", false );
@@ -1638,7 +1638,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_Axis1DAndAnyInput )
 {
     InputManager input;
     input.initialize();
-    ActionMap map;
+    InputMap map;
     map.setInputManager( &input );
 
     map.pushLayer( "Gameplay", false );
@@ -1653,7 +1653,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_Axis1DAndAnyInput )
  */
 SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionBufferAndCommandSequence )
 {
-    ActionMap map;
+    InputMap map;
 
     // 1) 선입력 버퍼링 (0.2s)
     map.bufferAction( "Attack", 0.2f );
@@ -1862,29 +1862,29 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_PolymorphicDeviceRegistryAndInput
     SW_ASSERT_NOT_NULL( pFoundDevice );
     SW_EXPECT_EQUAL( sw::string_view( "VirtualStick" ), pFoundDevice->getDeviceName() );
 
-    // 3) 범용 InputSlot을 통한 ActionMap 바인딩 검증 (무분기 평가)
-    ActionMap& actionMap = inputManager.getActionMap();
-    actionMap.bind( "FireMissile", InputSlot::fromCustom( InputDeviceKind::Custom, 0 ) );
+    // 3) 범용 InputSlot을 통한 InputMap 바인딩 검증 (무분기 평가)
+    InputMap& inputMap = inputManager.getInputMap();
+    inputMap.bind( "FireMissile", InputSlot::fromCustom( InputDeviceKind::Custom, 0 ) );
 
     // 트리거 비활성 시
     pStickRaw->setTrigger( false );
     inputManager.beginFrame( 0.016f );
-    SW_EXPECT_FALSE( actionMap.isActionDown( "FireMissile" ) );
+    SW_EXPECT_FALSE( inputMap.isActionDown( "FireMissile" ) );
 
     // 트리거 활성 시
     pStickRaw->setTrigger( true );
     inputManager.beginFrame( 0.016f );
-    SW_EXPECT_TRUE( actionMap.isActionDown( "FireMissile" ) );
+    SW_EXPECT_TRUE( inputMap.isActionDown( "FireMissile" ) );
 
     // 4) 키보드 키로 슬롯 런타임 리매핑 검증
-    actionMap.rebindSlot( "FireMissile", InputSlot::fromKey( Key::F ) );
+    inputMap.rebindSlot( "FireMissile", InputSlot::fromKey( Key::F ) );
     pStickRaw->setTrigger( true ); // 커스텀 장치는 무시되어야 함
     inputManager.beginFrame( 0.016f );
-    SW_EXPECT_FALSE( actionMap.isActionDown( "FireMissile" ) );
+    SW_EXPECT_FALSE( inputMap.isActionDown( "FireMissile" ) );
 
     inputManager.getKeyboard()->setKeyDown( Key::F, true );
     inputManager.beginFrame( 0.016f );
-    SW_EXPECT_TRUE( actionMap.isActionDown( "FireMissile" ) );
+    SW_EXPECT_TRUE( inputMap.isActionDown( "FireMissile" ) );
 
     inputManager.shutdown();
 }
@@ -1897,50 +1897,50 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionPhaseStateMachineAndAdvance
     InputManager inputManager;
     SW_EXPECT_TRUE( inputManager.initialize() );
 
-    ActionMap& actionMap = inputManager.getActionMap();
-    actionMap.setHoldThreshold( 0.2f );
+    InputMap& inputMap = inputManager.getInputMap();
+    inputMap.setHoldThreshold( 0.2f );
 
     // 1) 일반 버튼 액션의 Started -> Ongoing -> Triggered -> Completed 생명주기 검증
-    actionMap.bind( "HeavySlash", Key::J, ActionTrigger::Pressed );
+    inputMap.bind( "HeavySlash", Key::J, ActionTrigger::Pressed );
 
     int32 startedCount   = 0;
     int32 triggeredCount = 0;
     int32 completedCount = 0;
-    actionMap.bindPhaseCallback( "HeavySlash", ActionPhase::Started, SW_DELEGATE_LAMBDA( Delegate<void()>, [&]
+    inputMap.bindPhaseCallback( "HeavySlash", ActionPhase::Started, SW_DELEGATE_LAMBDA( Delegate<void()>, [&]
     { ++startedCount; } ) );
-    actionMap.bindPhaseCallback( "HeavySlash", ActionPhase::Triggered, SW_DELEGATE_LAMBDA( Delegate<void()>, [&]
+    inputMap.bindPhaseCallback( "HeavySlash", ActionPhase::Triggered, SW_DELEGATE_LAMBDA( Delegate<void()>, [&]
     { ++triggeredCount; } ) );
-    actionMap.bindPhaseCallback( "HeavySlash", ActionPhase::Completed, SW_DELEGATE_LAMBDA( Delegate<void()>, [&]
+    inputMap.bindPhaseCallback( "HeavySlash", ActionPhase::Completed, SW_DELEGATE_LAMBDA( Delegate<void()>, [&]
     { ++completedCount; } ) );
 
     // Frame 1: Key Down 시작 -> Triggered (Pressed 트리거이므로 발화)
     inputManager.getKeyboard()->setKeyDown( Key::J, true );
     inputManager.beginFrame( 0.016f );
-    SW_EXPECT_TRUE( actionMap.getActionPhase( "HeavySlash" ) == ActionPhase::Triggered );
+    SW_EXPECT_TRUE( inputMap.getActionPhase( "HeavySlash" ) == ActionPhase::Triggered );
     SW_EXPECT_EQUAL( 1, triggeredCount );
 
     // Frame 2: Key 유지 -> Ongoing
     inputManager.beginFrame( 0.016f );
-    SW_EXPECT_TRUE( actionMap.getActionPhase( "HeavySlash" ) == ActionPhase::Ongoing );
+    SW_EXPECT_TRUE( inputMap.getActionPhase( "HeavySlash" ) == ActionPhase::Ongoing );
 
     // Frame 3: Key Release -> Completed
     inputManager.getKeyboard()->setKeyDown( Key::J, false );
     inputManager.beginFrame( 0.016f );
-    SW_EXPECT_TRUE( actionMap.getActionPhase( "HeavySlash" ) == ActionPhase::Completed );
+    SW_EXPECT_TRUE( inputMap.getActionPhase( "HeavySlash" ) == ActionPhase::Completed );
     SW_EXPECT_EQUAL( 1, completedCount );
 
     // 2) 차지 샷 (HoldAndRelease) 검증: 0.2초 미만 누르고 떼면 발화 취소, 0.2초 이상 누르고 떼면 발화
-    actionMap.bind( "ChargeShot", Key::K, ActionTrigger::HoldAndRelease );
+    inputMap.bind( "ChargeShot", Key::K, ActionTrigger::HoldAndRelease );
 
     // 2.1) 미달 취소 테스트: 0.05초 누르고 뗌
     inputManager.getKeyboard()->setKeyDown( Key::K, true );
     inputManager.beginFrame( 0.05f );
-    SW_EXPECT_FALSE( actionMap.wasActionTriggered( "ChargeShot" ) );
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "ChargeShot" ) );
 
     inputManager.getKeyboard()->setKeyDown( Key::K, false );
     inputManager.beginFrame( 0.016f );
-    SW_EXPECT_FALSE( actionMap.wasActionTriggered( "ChargeShot" ) );
-    SW_EXPECT_TRUE( actionMap.getActionPhase( "ChargeShot" ) == ActionPhase::Canceled );
+    SW_EXPECT_FALSE( inputMap.wasActionTriggered( "ChargeShot" ) );
+    SW_EXPECT_TRUE( inputMap.getActionPhase( "ChargeShot" ) == ActionPhase::Canceled );
 
     // 2.2) 정상 차지 테스트: 0.25초 누르고 뗌 -> 발화
     inputManager.getKeyboard()->setKeyDown( Key::K, true );
@@ -1949,7 +1949,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionPhaseStateMachineAndAdvance
 
     inputManager.getKeyboard()->setKeyDown( Key::K, false );
     inputManager.beginFrame( 0.016f );
-    SW_EXPECT_TRUE( actionMap.wasActionTriggered( "ChargeShot" ) );
+    SW_EXPECT_TRUE( inputMap.wasActionTriggered( "ChargeShot" ) );
 
     inputManager.shutdown();
 }
@@ -1962,38 +1962,38 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_UnifiedActionPipeline_Axis1DAndVe
     InputManager inputManager;
     SW_EXPECT_TRUE( inputManager.initialize() );
 
-    ActionMap& actionMap = inputManager.getActionMap();
+    InputMap& inputMap = inputManager.getInputMap();
 
     // 1) 1D 축 합성 및 쿼리 검증
-    actionMap.bindAxis1DComposite( "Throttle", Key::S, Key::W ); // S: -1.0, W: +1.0
+    inputMap.bindAxis1DComposite( "Throttle", Key::S, Key::W ); // S: -1.0, W: +1.0
 
     inputManager.getKeyboard()->setKeyDown( Key::W, true );
     inputManager.beginFrame( 0.016f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, actionMap.getAxis1D( "Throttle" ), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, inputMap.getAxis1D( "Throttle" ), 1e-4f );
 
     inputManager.getKeyboard()->setKeyDown( Key::W, false );
     inputManager.getKeyboard()->setKeyDown( Key::S, true );
     inputManager.beginFrame( 0.016f );
-    SW_EXPECT_NEAR_EQUAL( -1.0f, actionMap.getAxis1D( "Throttle" ), 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, inputMap.getAxis1D( "Throttle" ), 1e-4f );
 
     // 2) 2D 벡터 합성 및 축 반전(Invert) 모디파이어 검증
-    actionMap.bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
+    inputMap.bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
 
     inputManager.getKeyboard()->setKeyDown( Key::S, false );
     inputManager.getKeyboard()->setKeyDown( Key::D, true ); // 오른쪽 (+X)
     inputManager.getKeyboard()->setKeyDown( Key::W, true ); // 위쪽 (+Y)
     inputManager.beginFrame( 0.016f );
 
-    float2 moveVec = actionMap.getVector2D( "Move" );
+    float2 moveVec = inputMap.getVector2D( "Move" );
     SW_EXPECT_TRUE( moveVec._x > 0.5f );
     SW_EXPECT_TRUE( moveVec._y > 0.5f );
 
     // 축 반전 활성화
-    actionMap.setInvertX( true );
-    actionMap.setInvertY( true );
+    inputMap.setInvertX( true );
+    inputMap.setInvertY( true );
     inputManager.beginFrame( 0.016f );
 
-    moveVec = actionMap.getVector2D( "Move" );
+    moveVec = inputMap.getVector2D( "Move" );
     SW_EXPECT_TRUE( moveVec._x < -0.5f );
     SW_EXPECT_TRUE( moveVec._y < -0.5f );
 
@@ -2005,7 +2005,7 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_UnifiedActionPipeline_Axis1DAndVe
  * @details 만료 경로가 `markPendingDestroy()` 만 부르면 그것은 **무덤 표시일 뿐**이라
  *          파괴 목록에 들어가지 않는다 — 오브젝트는 틱과 조회에서 빠지지만 `_listGameObject`
  *          에 영원히 남아 풀로 돌아오지 않는다. `ProjectileComponent`(총알 수명) ·
- *          `DamageUIComponent`(데미지 숫자 페이드)의 만료도 같은 자리이고, 셋 다 게임에서 가장 자주
+ *          `DamageNumberComponent`(데미지 숫자 페이드)의 만료도 같은 자리이고, 셋 다 게임에서 가장 자주
  *          났다 사라지는 것들이라 새면 플레이할수록 프레임마다 훑는 양이 단조 증가한다.
  *
  *          컴포넌트의 `onTick` 을 직접 불러 만료만 떼어 본다 — 틱 스테이지 배선이 아니라
@@ -2019,7 +2019,7 @@ SW_TEST_CASE( GameFrameworkTest, ExpiredEffectObjectReturnsToThePool )
     SW_ASSERT_NOT_NULL( pObj );
     manager.mergePendingAdds();
 
-    sw::EffectBaseComponent* pEffect = pObj->addComponent<sw::EffectBaseComponent>();
+    sw::FadeOutComponent* pEffect = pObj->addComponent<sw::FadeOutComponent>();
     SW_ASSERT_NOT_NULL( pEffect );
 
     // `_duration` 은 공개 setter 가 없는 리플렉션 프로퍼티다.
@@ -2985,7 +2985,7 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameDataIsBoundAndApplied )
     SW_EXPECT_EQUAL( size_t( 3 ), party._listParty.size() );
 
     // 2) 입력 맵 — 통합 맵에 읽혔다
-    SW_EXPECT_TRUE( runState._input.getActionMap().hasAction( "Confirm" ) );
+    SW_EXPECT_TRUE( runState._input.getInputMap().hasAction( "Confirm" ) );
 
     // 3) 다국어 — 철자가 달라도 기본 · 폴백 언어를 찾는다
     SW_EXPECT_EQUAL( string( "ko_kr" ), GameStrings::getLanguage() );
@@ -3030,13 +3030,13 @@ SW_TEST_CASE( GameFrameworkTest, BeginPlayAddsNoOwnershipTags )
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<SpriteComponent>( manager, "Sprite" ) );
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<SpriteAnimatorComponent>( manager, "Animator" ) );
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<DontDestroyOnLoadComponent>( manager, "Persistent" ) );
-    SW_EXPECT_TRUE( spawnsWithoutTagComponent<EffectBaseComponent>( manager, "Effect" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<FadeOutComponent>( manager, "Effect" ) );
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<GravityComponent>( manager, "Gravity" ) );
-    SW_EXPECT_TRUE( spawnsWithoutTagComponent<AttackBaseComponent>( manager, "Attack" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<MeleeHitboxComponent>( manager, "Attack" ) );
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<ProjectileComponent>( manager, "Bullet" ) );
     SW_EXPECT_TRUE( spawnsWithoutTagComponent<UnitStatsComponent>( manager, "Stats" ) );
-    SW_EXPECT_TRUE( spawnsWithoutTagComponent<DamageUIComponent>( manager, "Damage" ) );
-    SW_EXPECT_TRUE( spawnsWithoutTagComponent<HPBarBaseComponent>( manager, "HPBar" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<DamageNumberComponent>( manager, "Damage" ) );
+    SW_EXPECT_TRUE( spawnsWithoutTagComponent<HealthBarComponent>( manager, "HPBar" ) );
 
     // 타입으로 찾는다 — 태그 없이도 투사체 오브젝트를 고른다.
     size_t projectileCount{ 0 };

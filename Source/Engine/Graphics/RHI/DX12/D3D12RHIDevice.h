@@ -28,7 +28,7 @@ namespace sw
 {
     class D3D12RHICommandContext;
     class D3D12RHICommandList;
-    class D3D12RHIResource;
+    class D3D12RHIResourceFactory;
 
     /**
      * @struct D3D12SlotTableState
@@ -140,7 +140,7 @@ namespace sw
     class D3D12RHIDevice : public IRHIDevice
     {
     public:
-        friend class D3D12RHIResource;
+        friend class D3D12RHIResourceFactory;
         friend class D3D12RHICommandContext;
         friend class D3D12RHICommandList;
         // ------------------------------------------------------------------------------
@@ -169,8 +169,8 @@ namespace sw
         /** @brief 이번 프레임이 Signal 할 펜스 값(`_fenceValue`)으로 해제 큐에 넣습니다. */
         void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
 
-        /** @brief 리소스 생성 · 파괴 인터페이스(D3D12RHIResource)를 반환합니다. */
-        IRHIResource* getResource() override;
+        /** @brief 리소스 생성 · 파괴 인터페이스(D3D12RHIResourceFactory)를 반환합니다. */
+        IRHIResourceFactory* getResourceFactory() override;
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스 · Present 가 여기에 기록합니다. */
         IRHICommandContext* getFrameStreamContext() override;
 
@@ -615,8 +615,8 @@ namespace sw
 
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스 · Present 가 여기에 기록합니다. */
         sw::unique_ptr<D3D12RHICommandContext> _frameStreamContext;
-        /** @brief 리소스 생성 · 파괴 구현입니다(getResource 가 반환하는 것). */
-        sw::unique_ptr<D3D12RHIResource> _resourceImpl;
+        /** @brief 리소스 생성 · 파괴 구현입니다(getResourceFactory 가 반환하는 것). */
+        sw::unique_ptr<D3D12RHIResourceFactory> _resourceImpl;
     };
 } // namespace sw
 

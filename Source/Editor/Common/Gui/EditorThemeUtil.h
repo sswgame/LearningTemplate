@@ -9,7 +9,7 @@
 
 namespace sw::editor
 {
-    enum class EditorAssetKind : uint8;
+    enum class EditorAssetType : uint8;
 
     /** @brief 에디터 테마 프리셋 */
     enum class EditorThemePreset : uint8
@@ -137,9 +137,9 @@ namespace sw::editor
         static const utf8* getFolderIcon( bool bOpened = false );
 
         /** @brief 종류의 Font Awesome 아이콘입니다(애셋 종류 표). `Unknown` 이면 일반 파일 아이콘입니다. */
-        static const utf8* getAssetKindIcon( EditorAssetKind kind );
+        static const utf8* getAssetTypeIcon( EditorAssetType kind );
         /** @brief 종류의 색입니다(애셋 종류 표, 액센트 종류는 테마 액센트). `Unknown` 이면 흐린 글자색입니다. */
-        static Color4 getAssetKindColor( EditorAssetKind kind );
+        static Color4 getAssetTypeColor( EditorAssetType kind );
 
         /** @brief 경로(확장자)에 맞는 Font Awesome 애셋 아이콘을 반환합니다. */
         static const utf8* getAssetIconForPath( string_view path, bool bIsDirectory = false );

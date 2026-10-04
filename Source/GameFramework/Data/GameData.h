@@ -52,7 +52,7 @@ namespace sw
         string _fallbackLanguage{ "en_us" }; ///< 대체(Fallback) 언어
 
         PROPERTY()
-        string _inputMap{}; ///< 게임플레이 InputMap 경로(통합 맵 `InputManager::getActionMap()` 에 읽힌다)
+        string _inputMap{}; ///< 게임플레이 InputMap 경로(통합 맵 `InputManager::getInputMap()` 에 읽힌다)
 
         PROPERTY()
         map<string, string> _mapCustomProperty{}; ///< 범용 커스텀 키-값 프로퍼티 저장소

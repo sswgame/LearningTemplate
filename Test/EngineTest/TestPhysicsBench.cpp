@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/PhysicsWorld.h"
@@ -70,7 +70,7 @@ namespace
             if ( bWithFarMover )
                 world.setAabb( farMover, makeBoxAt( ( stepIndex % 2 == 0 ) ? kFarMoverDistance : -50.0f, -50.0f ) );
 
-            const sw::CpuStopwatch stopwatch;
+            const sw::Stopwatch stopwatch;
             world.step( 0.016f );
             outListSample.push_back( stopwatch.getElapsedMicroseconds() );
         }

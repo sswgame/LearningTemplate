@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Module/ModuleCodeHolder.h"
+#include "Core/Module/ModuleUnloadListener.h"
 
 namespace sw
 {
@@ -25,11 +25,11 @@ namespace sw
      * @class CommandStack
      * @brief 변경에 대한 Push / Undo / Redo 스택입니다. 엔진(`EngineLoop`)이 소유해 모듈 핫 리로드를 넘어 삽니다.
      * @details 명령은 둘로 나뉩니다.
-     *          - **데이터 명령** — 코드가 엔진에 있고 나머지는 값(오브젝트 id · 직렬화한 상태)인 명령(`ObjectSnapshotCommand`). 모듈이 내려가도 남습니다.
+     *          - **데이터 명령** — 코드가 엔진에 있고 나머지는 값(오브젝트 id · 직렬화한 상태)인 명령(`ObjectUndoUtil`). 모듈이 내려가도 남습니다.
      *          - **모듈 명령** — undo · redo 가 모듈 이미지의 코드(람다 · 패널 메서드)인 명령. 그 모듈이 내려가기 전에 `releaseCodeWithin` 이 떼어 냅니다.
      *          UE `FTransaction`(오브젝트 상태를 직렬화해 기록) · Unity `Undo`(직렬화한 객체 상태)가 코드 리로드를 넘는 것과 같은 모양입니다.
      */
-    class SW_API CommandStack final : public IModuleCodeHolder
+    class SW_API CommandStack final : public IModuleUnloadListener
     {
     public:
         /**
@@ -58,7 +58,7 @@ namespace sw
         /** @brief 에디터가 다는 알림 처리기입니다(선택 갱신 · 씬 dirty). 모듈 코드라 그 모듈이 내려갈 때 떼어집니다. */
         using ObjectEditListener = Delegate<void( const ObjectEditNotice& )>;
 
-        /** @brief 빈 스택으로 시작합니다. 생성자를 .cpp 에 두는 이유는 `IModuleCodeHolder` 의 주의(vtable 의 집)입니다. */
+        /** @brief 빈 스택으로 시작합니다. 생성자를 .cpp 에 두는 이유는 `IModuleUnloadListener` 의 주의(vtable 의 집)입니다. */
         CommandStack();
 
         /** @brief 명령 스택에 새로운 명령을 추가합니다. undo · redo 가 비었거나(트랜잭션 묶음 제외) 실행 중이면 버립니다. */
@@ -111,10 +111,10 @@ namespace sw
          */
         uint32 releaseCodeWithin( const void* pBegin, const void* pEnd );
 
-        /** @brief 보유자 목록의 이름입니다. */
-        const utf8* getModuleCodeHolderName() const override { return "undo commands"; }
+        /** @brief 언로드 리스너 목록의 이름입니다. */
+        const utf8* getModuleUnloadListenerName() const override { return "undo commands"; }
         /** @brief `releaseCodeWithin` 입니다. 명령은 떼면 그만이라 이미지를 붙들지 않습니다. */
-        uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
     private:
         /** @brief undo · redo 하나를 실행합니다. 트랜잭션 묶음이면 안쪽 명령을 차례로(undo 는 거꾸로) 실행합니다. */

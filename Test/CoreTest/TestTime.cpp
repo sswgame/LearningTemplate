@@ -1,18 +1,18 @@
 #include "pch.h"
 
-#include "Core/Time/CpuTimer.h"
+#include "Core/Time/GameTimer.h"
 
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
-// 1) Core_Time — CPUTimer·스코프 타이머
+// 1) Core_Time — GameTimer·스코프 타이머
 // ------------------------------------------------------------------------------
 /**
- * @brief [TimeTest] CPUTimer 기본
+ * @brief [TimeTest] GameTimer 기본
  */
-SW_TEST_CASE( TimeTest, CPUTimerBasic )
+SW_TEST_CASE( TimeTest, GameTimerBasic )
 {
-    sw::CpuTimer timer;
+    sw::GameTimer timer;
     // 생성자는 중지 상태로 둔다(헤더의 계약).
     SW_EXPECT_TRUE( timer.isStopped() );
 
@@ -29,13 +29,13 @@ SW_TEST_CASE( TimeTest, CPUTimerBasic )
 }
 
 /**
- * @brief [TimeTest] ScopeCpuTimer 기본
+ * @brief [TimeTest] ScopedTimer 기본
  */
-SW_TEST_CASE( TimeTest, ScopeCpuTimerBasic )
+SW_TEST_CASE( TimeTest, ScopedTimerBasic )
 {
     float32 elapsedSec{ 0.0f };
     {
-        sw::ScopeCpuTimer timer( "TestScopeCpuTimer" );
+        sw::ScopedTimer timer( "TestScopedTimer" );
         std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
         elapsedSec = timer.getElapsedTimeInSeconds();
     }
@@ -50,7 +50,7 @@ SW_TEST_CASE( TimeTest, ScopeCpuTimerBasic )
  */
 SW_TEST_CASE( TimeTest, FreshTimerDoesNotReportTimeSinceBoot )
 {
-    sw::CpuTimer timer;
+    sw::GameTimer timer;
     SW_EXPECT_TRUE_MSG( timer.isStopped(), "생성자 주석은 중지 상태라고 말한다" );
 
     timer.startTimer();
@@ -65,11 +65,11 @@ SW_TEST_CASE( TimeTest, FreshTimerDoesNotReportTimeSinceBoot )
 }
 
 /**
- * @brief [TimeTest] CPUTimer 리셋과 일시정지
+ * @brief [TimeTest] GameTimer 리셋과 일시정지
  */
-SW_TEST_CASE( TimeTest, CPUTimerResetAndPause )
+SW_TEST_CASE( TimeTest, GameTimerResetAndPause )
 {
-    sw::CpuTimer timer;
+    sw::GameTimer timer;
     timer.resetTimer();
     timer.startTimer();
     std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
@@ -89,7 +89,7 @@ SW_TEST_CASE( TimeTest, CPUTimerResetAndPause )
  */
 SW_TEST_CASE( TimeTest, ContinuousFrameTicksAndTotalTime )
 {
-    sw::CpuTimer timer;
+    sw::GameTimer timer;
     timer.resetTimer();
     timer.startTimer();
 

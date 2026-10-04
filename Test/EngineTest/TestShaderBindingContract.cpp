@@ -36,9 +36,9 @@ namespace
         return cb;
     }
 
-    sw::ShaderResourceBinding makeRes( const utf8* pName, const utf8* pType, uint32 space, uint32 bindPoint, uint32 bindCount = 1 )
+    sw::ShaderReflectedBinding makeRes( const utf8* pName, const utf8* pType, uint32 space, uint32 bindPoint, uint32 bindCount = 1 )
     {
-        sw::ShaderResourceBinding res{};
+        sw::ShaderReflectedBinding res{};
         res._name          = pName;
         res._type          = pType;
         res._registerSpace = space;
@@ -86,7 +86,7 @@ namespace
                 for ( const sw::ShaderVariableInfo& variable : constantBuffer._listVariable )
                     outNameSet._uniqueMemberName.insert( variable._name );
             }
-            for ( const sw::ShaderResourceBinding& resource : reflection._listResource )
+            for ( const sw::ShaderReflectedBinding& resource : reflection._listResource )
                 outNameSet._uniqueBindingName.insert( resource._name );
             for ( const sw::ShaderBufferInfo& element : reflection._listStructuredElement )
                 outNameSet._uniqueBindingName.insert( element._name );

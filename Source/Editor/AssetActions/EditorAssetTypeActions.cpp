@@ -13,7 +13,7 @@ namespace sw::editor
     {
         struct EditorAssetTypeActionsInternal
         {
-            using ActionsTable = array<const IEditorAssetTypeActions*, static_cast<size_t>( EditorAssetKind::Count )>;
+            using ActionsTable = array<const IEditorAssetTypeActions*, static_cast<size_t>( EditorAssetType::Count )>;
 
             /** @brief 종류 값으로 찾는 표입니다. 함수 안 정적 변수라 다른 번역 단위의 등록자보다 늦게 만들어질 걱정이 없습니다. */
             static ActionsTable& getTable()
@@ -23,7 +23,7 @@ namespace sw::editor
             }
 
             /** @brief 표의 칸입니다. `Unknown` · 범위 밖이면 nullptr 입니다. */
-            static const IEditorAssetTypeActions** findSlot( EditorAssetKind kind )
+            static const IEditorAssetTypeActions** findSlot( EditorAssetType kind )
             {
                 const size_t index = static_cast<size_t>( kind );
                 if ( index == 0 || index >= getTable().size() )
@@ -73,7 +73,7 @@ namespace sw::editor
             *ppSlot = nullptr;
     }
 
-    const IEditorAssetTypeActions* EditorAssetTypeActionsRegistry::findActions( EditorAssetKind kind )
+    const IEditorAssetTypeActions* EditorAssetTypeActionsRegistry::findActions( EditorAssetType kind )
     {
         const IEditorAssetTypeActions** ppSlot = EditorAssetTypeActionsInternal::findSlot( kind );
         return ppSlot != nullptr ? *ppSlot : nullptr;

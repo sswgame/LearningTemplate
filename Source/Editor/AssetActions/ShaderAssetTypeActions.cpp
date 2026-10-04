@@ -15,7 +15,7 @@ namespace sw::editor
         class ShaderAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:
-            virtual EditorAssetKind getKind() const override { return EditorAssetKind::Shader; }
+            virtual EditorAssetType getKind() const override { return EditorAssetType::Shader; }
 
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override
             {

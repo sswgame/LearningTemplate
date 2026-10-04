@@ -152,8 +152,8 @@ namespace sw::editor
             /** @brief 스프라이트 클립 문서가 아닌 이미지인지입니다. 그런 경로는 문서로 읽지 않고 아틀라스로 씁니다. */
             static bool isAtlasImagePath( string_view path )
             {
-                return EditorAssetTypeRegistry::matches( EditorAssetKind::SpriteClip, path ) &&
-                       EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, path );
+                return EditorAssetTypeRegistry::matches( EditorAssetType::SpriteClip, path ) &&
+                       EditorAssetTypeRegistry::matches( EditorAssetType::Texture, path );
             }
         };
     } // namespace
@@ -240,7 +240,7 @@ namespace sw::editor
         if ( pResources == nullptr || outPrefabPath.empty() )
             return;
 
-        PrefabAsset* pLoaded = pResources->getPrefabManager().loadPrefab( outPrefabPath );
+        PrefabAsset* pLoaded = pResources->getPrefabCache().loadPrefab( outPrefabPath );
         if ( pLoaded == nullptr || pLoaded->isValid() == false )
             return;
 
@@ -304,7 +304,7 @@ namespace sw::editor
         ResourceManager* pResources = editor::getService<ResourceManager>();
         if ( pResources == nullptr )
             return;
-        PrefabAsset* pLoaded = pResources->getPrefabManager().loadPrefab( prefabPath );
+        PrefabAsset* pLoaded = pResources->getPrefabCache().loadPrefab( prefabPath );
         if ( pLoaded == nullptr )
             return;
 

@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
 namespace sw
 {
@@ -30,7 +30,7 @@ namespace sw
 
     bool PassConstantRing::initialize( IRHIDevice* pDevice )
     {
-        if ( pDevice == nullptr || pDevice->getResource() == nullptr )
+        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return false;
         if ( _listSlot.empty() == false )
             return true;
@@ -102,7 +102,7 @@ namespace sw
 
     void PassConstantRing::ensureCapacity( IRHIDevice* pDevice, uint32 needed )
     {
-        if ( pDevice == nullptr || pDevice->getResource() == nullptr )
+        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return;
         const uint32 target = MathUtil::min( needed, kMaxSlotCount );
         if ( static_cast<uint32>( _listSlot.size() ) >= target )

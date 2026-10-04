@@ -1,0 +1,54 @@
+#pragma once
+#include "Core/Common/Types.h"
+
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+
+struct ID3D11UnorderedAccessView;
+
+#if defined( SW_PLATFORM_WINDOWS )
+namespace sw
+{
+    class D3D11RHIDevice;
+
+    class D3D11RHIResourceFactory : public IRHIResourceFactory
+    {
+    public:
+        explicit D3D11RHIResourceFactory( D3D11RHIDevice* pDevice )
+            : _pDevice{ pDevice } {}
+        RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc ) override;
+        RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = "CSMain" ) override;
+        void                   destroyPipelineState( RHIPipelineStateHandle pso ) override;
+        RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& desc ) override;
+        void                   destroyRenderPass( RHIRenderPassHandle pass ) override;
+        RHIBufferHandle        createConstantBuffer( uint32 size ) override;
+        void                   updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        RHIBufferHandle        createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
+        RHIBufferHandle        createBuffer( const RHIBufferDesc& desc ) override;
+        void                   updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
+                                                              const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        RHIBufferHandle        createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
+        RHIBufferHandle        createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride ) override;
+        void                   destroyBuffer( RHIBufferHandle buffer ) override;
+        RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
+        void                   destroyTexture( RHITextureHandle texture ) override;
+        bool                   uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
+        bool                   readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) override;
+        RHIFormat              getTextureFormat( RHITextureHandle texture ) const override;
+        RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
+        void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
+        void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex     registerBindlessUav( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessTextureUav( RHITextureHandle texture ) override;
+        void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
+
+    private:
+        /** @brief 내용을 실어 바인드 용도 하나(정점 · 인덱스)의 기본 버퍼를 만듭니다. 정점 · 인덱스 버퍼가 같은 길입니다. */
+        RHIBufferHandle createFilledBuffer( const void* pData, uint32 sizeBytes, uint32 bindFlags );
+        /** @brief UAV 를 등록부에 넣고 인덱스를 반환합니다. 반납된 자리를 먼저 씁니다. 버퍼 · 텍스처 UAV 가 같은 길입니다. */
+        RHIDescriptorIndex registerUavView( ID3D11UnorderedAccessView* pUav, RHIBufferHandle sourceBuffer );
+
+        D3D11RHIDevice* _pDevice;
+    };
+} // namespace sw
+#endif

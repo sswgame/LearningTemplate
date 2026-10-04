@@ -48,7 +48,7 @@ namespace sw
          * @return 기록한 씬 파일 수입니다.
          *
          * @details 산출물을 소스 옆에 두지 않습니다 — 소스가 옮겨진 뒤 낡은 `.bin` 이 남아 Dev 런타임이 그것으로 물러나 실패를 가립니다.
-         *          프리팹은 같은 실행에서 `PrefabManager::cookAllPrefabs` 가 굽습니다. 실패를 세지 않으면 배포본이 그 씬을 열 때에야
+         *          프리팹은 같은 실행에서 `PrefabCache::cookAllPrefabs` 가 굽습니다. 실패를 세지 않으면 배포본이 그 씬을 열 때에야
          *          "Shipping requires cooked binary scene" 으로 멈춘다.
          */
         SW_API static uint32 cookAllScenes( string_view sourceRoot, string_view cookedDir, uint32& outFailedCount );

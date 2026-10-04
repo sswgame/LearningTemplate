@@ -3,7 +3,7 @@
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 
 #if defined( SW_PLATFORM_LINUX )
-    #include "Core/Time/CpuTimer.h"
+    #include "Core/Time/GameTimer.h"
 
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
@@ -452,10 +452,10 @@ namespace sw::editor
         }
 
     private:
-        Display* _pDisplay;
-        Window   _mainWindow;
-        Atom     _wmDelete;
-        CpuTimer _timer;
+        Display*  _pDisplay;
+        Window    _mainWindow;
+        Atom      _wmDelete;
+        GameTimer _timer;
 
         static ImGuiX11PlatformBackend* _s_active;
     };

@@ -3,7 +3,7 @@
  * @brief 리플렉션 desc 하나를 리소스 상대 경로의 XML 파일로 읽고 씁니다(렌더 패스 · 파이프라인 리소스가 씁니다).
  *
  * [왜 있는가]
- * 렌더 리소스 둘(`RenderPassResource` · `RenderPipelineResource`)이 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로 오간다" 는
+ * 렌더 리소스 둘(`RenderPassAsset` · `RenderPipelineAsset`)이 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로 오간다" 는
  * **같은 일**을 합니다: `findType<Desc>()` · 널 검사 · 경로 해석 · `XmlSerializer` 호출 · 실패 로그. 둘이 따로 들면 한쪽만 고쳐
  * 다른 쪽이 조용히 다르게 동작합니다.
  *

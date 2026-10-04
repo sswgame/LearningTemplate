@@ -101,10 +101,10 @@ namespace sw
 
         /**
          * @brief 기록 중에 상수 버퍼 내용을 갱신합니다 — 이 리스트의 드로우 · 디스패치가 이 값을 봅니다(언리얼 `RHIUpdateUniformBuffer( RHICmdList, … )`).
-         * @details 프레임 밖(에셋 로드 · 머티리얼 파라미터)에서 쓰는 것은 `IRHIResource::updateConstantBuffer` 이고, 기록 경로(패스 CB ·
+         * @details 프레임 밖(에셋 로드 · 머티리얼 파라미터)에서 쓰는 것은 `IRHIResourceFactory::updateConstantBuffer` 이고, 기록 경로(패스 CB ·
          *          컴퓨트 CB)는 이것을 씁니다. DX11 은 이 리스트의 Deferred Context 에 `Map(WRITE_DISCARD)` 해 런타임이 리스트 단위로 버퍼를
          *          버저닝하고, DX12 · Vulkan · GL 은 버퍼의 이번 프레임 칸에 씁니다. 그래서 **한 버퍼는 프레임에 한 번만** 씁니다
-         *          (드로우마다 다른 값이면 칸을 나눈다 — `PassConstantRing`). 크기 상한은 `IRHIResource::updateConstantBuffer` 와 같습니다.
+         *          (드로우마다 다른 값이면 칸을 나눈다 — `PassConstantRing`). 크기 상한은 `IRHIResourceFactory::updateConstantBuffer` 와 같습니다.
          */
         virtual void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
 

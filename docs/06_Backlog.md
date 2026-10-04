@@ -191,8 +191,8 @@ cd build/Ninja-Debug/Bin
   재시도는 오브젝트의 틱 부기 49 B 를 먼저 줄여야 한다. 측정해서 이기면 한다.
 - **Core 에서 미룬 결정.** 전역 소형 블록 할당자(프레임당 할당이 0 근처가 된 뒤 로드 시간으로 판단 — 지금 ~10 회/프레임), 비동기 파일 IO(오버랩드 · io_uring).
 - **필드 재배치로 8 B 이상 줄일 수 있는 타입이 남아 있다**(`RunPaddingReport.py` 로 보고만 함). 많이 만들어지는 것: GameObject 200→192, Mesh 112→104,
-  MaterialInstance · Material · ActionMap::ActionEntry 16, MaterialProperty · ShaderBindingSlot · InlineSuccessorList · GlobalVariableInfo/Registrar 8. 싱글턴(InputManager ·
-  Logger 64 등)은 이득이 작다. PROPERTY 필드는 직렬화 순서라 옮기지 않는다. 위치 초기화 표(EditorAssetKindInfo · AssetMatchRow · CommandRow)는 모든 행을 같이 바꿔야 한다.
+  MaterialInstance · Material · InputMap::ActionEntry 16, MaterialProperty · ShaderBindingSlot · InlineSuccessorList · GlobalVariableInfo/Registrar 8. 싱글턴(InputManager ·
+  Logger 64 등)은 이득이 작다. PROPERTY 필드는 직렬화 순서라 옮기지 않는다. 위치 초기화 표(EditorAssetTypeInfo · AssetMatchRow · CommandRow)는 모든 행을 같이 바꿔야 한다.
   FrameRenderer 진단 세터(`setMeshMorphDiag` · `setDrawMergeEnabled` · `setVertexPoolEnabled`)는 Shipping 제외 후보.
 - **ReflectionParser 강제 include PCH**(`CoreMinimal.h` 를 PCH 로 — 타깃당 ~0.4 s). 캐시 위치 · 무효화가 필요하다. 값이 작아 보류.
 
@@ -328,7 +328,7 @@ cd build/Ninja-Debug/Bin
 
 - **CoreTest 는 엔진을 쓰지 않는다** — include 경로로는 막을 수 없다(`TestFramework` 가 Engine 을 PUBLIC 링크, `TestFramework.h` → `EngineMinimal.h`).
   `CheckTestSuites` 규칙 6 이 CoreTest 파일의 직접 Engine · GameFramework · Editor include 와 `engine::` 호출을 막는다. 엔진 타입이 필요하면 지역 대역을 쓰거나 EngineTest 에.
-- **레이어 때문에 지금 자리가 가장 낮은 합법 자리인 파일 넷**(`SpriteClipCache` · `PackCompressionUtil` · `ObjectSnapshotCommand` · `GpuLight.h`)은 README 에
+- **레이어 때문에 지금 자리가 가장 낮은 합법 자리인 파일 넷**(`SpriteClipCache` · `PackCompressionUtil` · `ObjectUndoUtil` · `GpuLight.h`)은 README 에
   이유가 있다 — 다시 "잘못 놓였다" 로 옮기지 말 것.
 
 - **호스트 스위트 케이스는 예상 밖 `[Error]` 로그 하나로 진다** — 아직 못 고친 엔진 Error 는 `SW_TEST_KNOWN_ERROR_LOG( 스위트, 문구, 이유 )` 로만 허용하고, 고치면 그 줄을
@@ -589,12 +589,12 @@ cd build/Ninja-Debug/Bin
   그 자리에서 경로 · OS 이유를 알린다). 맵 키는 `normalizePath`(소문자), 여는 경로는 `normalizeSeparators`(`collectFiles` 는 대소문자를 보존한다). 배포 빌드는 `.meta` 를 쓰지도
   GUID 를 지어내지도 않는다 — 배포본 GUID 표는 쿠커가 도메인마다 넣는 `assetregistry.txt` 다. `ensureMeta` 는 루트 밖 절대 경로면 null GUID.
 - **쿠킹 이름은 `AssetCookPath`(`Engine/Resource/AssetFormat.h`) 표 하나** — `.scene.xml` → `.scene.bin`, `.prefab.xml` · `.prefab.json` → `.prefab.bin`, `toSourcePath` ·
-  `isCookableSource`. 로더 · 쿠커 · 에디터 판정 · `SceneManager::saveActiveScene` 이 모두 지난다. 쿠킹은 엔진이 한다(`PrefabManager::cookAllPrefabs` · `App --cook-scenes` ·
+  `isCookableSource`. 로더 · 쿠커 · 에디터 판정 · `SceneManager::saveActiveScene` 이 모두 지난다. 쿠킹은 엔진이 한다(`PrefabCache::cookAllPrefabs` · `App --cook-scenes` ·
   `AssetDatabase::writeRegistryFiles`), 파이썬 `CookAssets.py` 는 스테이징만. 쿠킹은 왕복 검증한 엔티티만 바이너리로 바꾸고 나머지는 XML 로 남기며 WARNING 을 낸다.
 - **압축** — 팩 enum `PackCompressionType` 과 스트림 enum `CompressionCodecType` 은 독립된 디스크 포맷이다(`static_cast` 로 잇지 말 것). `CompressionCodecRegistry` 는 `EngineLoop` 가 소유하고
   Core 에는 슬롯만 있다. 모듈이 등록한 코덱은 그 모듈 shutdown 에서 `unregisterCodec`. zlib 은 Windows 에서 4 GB, LZ4 는 2 GB 가 한계다.
 - **"헤더 혼자 빼도 선다" 는 "아무도 안 쓴다" 가 아니다** — `RunForwardDeclarationCandidates --verify-unused` 가 고른 120 건을 지우자 소비자 TU 에서 오류 2790 개가
-  났다(거쳐 받던 `RHIBackend` · `IRHIResource`, NOMINMAX 가 `windows.h` 보다 먼저 오던 순서가 깨져 `std::max` 가 매크로에 먹힘). 보고는 "후보" 로만 쓰고, 지울 때는
+  났다(거쳐 받던 `RHIBackend` · `IRHIResourceFactory`, NOMINMAX 가 `windows.h` 보다 먼저 오던 순서가 깨져 `std::max` 가 매크로에 먹힘). 보고는 "후보" 로만 쓰고, 지울 때는
   그 헤더를 include 하는 TU 전부를 다시 지어 본다.
 - **GPU 메모리는 `RHIMemoryLedger` 가 센다** — 생성은 핸들 표에 넣는 자리, 해제는 지연 해제 콜백에서만 적는다(destroy 요청 시점이 아니다). 새 자원 경로를
   더하면 거기서 `recordAllocation` / `recordFree` 를 부른다. Vulkan `heapUsage`(이 AMD 드라이버)는 `vkAllocateMemory` 합뿐이라 "엔진 밖" ≈ 0 — 스왑체인 몫은
@@ -689,7 +689,7 @@ cd build/Ninja-Debug/Bin
 
 - **텍스처 슬롯 샘플러의 정본은 `bindingslots.hlsli` 의 `SW_ENGINE_TEXTURE_SAMPLER`(t0..t3, 선형 · 클램프)와 `SW_MATERIAL_TEXTURE_SAMPLER`(t5..t8, 선형 · 랩)** —
   GL 은 유닛마다 샘플러 객체, DX11 은 정적 세트. 이로써 네 백엔드 벤치 프레임이 바이트까지 같다(골든 이미지 백엔드마다 같은 그림).
-- **기록 중의 CB 갱신은 `IRHICommandList::updateConstantBuffer`, 기록 밖(에셋)은 `IRHIResource::updateConstantBuffer`** — 한 버퍼는 프레임에 한 번만 쓴다.
+- **기록 중의 CB 갱신은 `IRHICommandList::updateConstantBuffer`, 기록 밖(에셋)은 `IRHIResourceFactory::updateConstantBuffer`** — 한 버퍼는 프레임에 한 번만 쓴다.
 - **배열 · 큐브 텍스처는 bindless 등록이 거부된다**(셰이더 테이블이 Texture2D 뿐). 면은 `_arrColorTargetSlice` · `_depthTargetSlice` 로 고른다.
 - **첨부 `_resolutionDivisor` 를 쓰면 패스는 출력 첨부 크기로 열린다** — 한 패스의 출력은 같은 나눗수여야 한다(검증이 본다). Vulkan PSO 는 셰이더가 읽는 정점 속성만 건다.
 - **머티리얼 · 인스턴스 형식 판정은 `AssetFormatRegistry::upgradeXmlWithActiveRegistry`**(씬 · 프리팹과 같다) — `ResourceManager` 없이 돈다. 본문의 enum 글은 `TypeRegistry` 가 필요하다.
@@ -797,7 +797,7 @@ cd build/Ninja-Debug/Bin
   다시 그리므로 UI 스레드에서 읽은 펜스 값으로는 모자란다. 그 스냅샷 번호 이상을 그리는 프레임에서 `IRHIDevice::enqueueGpuRelease`(렌더 스레드에서만)로 넘긴다.
   새 렌더 타깃은 그리기 전 패킷이 샘플링할 수 있어 만들 때 클리어 색으로 채운다(Vulkan UNDEFINED 레이아웃).
 
-- **Undo 의 오브젝트 편집은 엔진 데이터 명령(`ObjectSnapshotCommand` — 오브젝트 id · 이름 · 스냅샷)으로 기록한다** — 리로드를 넘어야 할 기록은 Engine 코드로 만든다.
+- **Undo 의 오브젝트 편집은 엔진 데이터 명령(`ObjectUndoUtil` — 오브젝트 id · 이름 · 스냅샷)으로 기록한다** — 리로드를 넘어야 할 기록은 Engine 코드로 만든다.
   모듈 람다 명령은 에디터 리로드 때 `CommandStack::releaseCodeWithin` 이 뗀다(묶음은 안쪽 하나라도 걸리면 통째로). 대상 조회는 id, 같은 프레임에 지우고 되살린
   오브젝트는 지연 파괴 때문에 새 id 를 받으므로 이름으로 다시 찾는다. 선택 · dirty 는 `ObjectEditListener` 로.
 - **에디터 동작 검증은 에디터 안 자체 시험** — `SW_EDITOR_SELF_TEST` 로 등록하고 `AppSmokeTest.EditorSelfTestsPassInsideTheEditor` 의 기대 목록에 한 줄 더한다
@@ -810,7 +810,7 @@ cd build/Ninja-Debug/Bin
   (`EditorRegistry<T>`, (order, id) 정렬, 같은 id 거절). 메뉴 배치는 커맨드 표 줄의 `_menuPath` · `_menuOrder`(백의 자리가 바뀌면 구분선). 매니저 · 메뉴바에
   손 목록을 다시 만들지 말 것. 시각화 마스크 비트는 등록 순서의 index 라 순서 키를 바꾸면 비트 자리도 바뀐다(지금은 저장하지 않아 무해).
 
-- **에셋 종류 하나 = `EditorAssetKind` 한 값 + `EditorAssetType.cpp` 의 `kArrAssetMatch`(판정 · 핫 리로드 칸) · `kArrKindInfo`(이름 · 라벨 · 패널 · 아이콘 · 색 ·
+- **에셋 종류 하나 = `EditorAssetType` 한 값 + `EditorAssetType.cpp` 의 `kArrAssetMatch`(판정 · 핫 리로드 칸) · `kArrKindInfo`(이름 · 라벨 · 패널 · 아이콘 · 색 ·
   임포트) 각 한 줄 + 필요하면 `Source/Editor/AssetActions/<Kind>AssetTypeActions.cpp`(썸네일 · 열기 · 드롭, 정적 등록).** 종류별 if-체인을 다시 만들지 말 것 —
   칸이 빠지면 static_assert 가 막는다. 도구 문서 IO 는 `loadToolDocument` / `saveToolDocument<TAsset>` + `ToolDocumentDesc` 하나.
 
@@ -865,7 +865,7 @@ cd build/Ninja-Debug/Bin
 - **리로드 거절 사유는 옛 이미지를 내리기 전에 본다** — `LiveReloadManager::setOnValidateImage`(ABI · API 표)와 배치 콜백(`OnBeforeCommitBatchDelegate` 가 false
   면 아무것도 내리지 않음, 게임 상태 찍기 실패 포함)이 적용 전 실패를 막아 옛 모듈이 계속 돈다. 적용 뒤 결함만 `markGraphBroken`(UE Live Coding 과 같다).
 
-- **모듈 코드를 쥘 수 있는 등록부는 `IModuleCodeHolder` 를 상속해 스스로 등록한다**(`releaseModuleCode` 에 손 목록을 다시 만들지 말 것). 보유자 객체는
+- **모듈 코드를 쥘 수 있는 등록부는 `IModuleUnloadListener` 를 상속해 스스로 등록한다**(`releaseModuleCode` 에 손 목록을 다시 만들지 말 것). 보유자 객체는
   엔진(또는 App) 코드가 만들고 생성자를 .cpp 에 둔다 — 모듈 안에서 만든 보유자가 모듈보다 오래 살면 훑기가 내려간 vtable 로 뛴다.
 
 - **에셋 핫 리로드의 경계: 임포트 · 감시 · 씬 알림은 에디터, 런타임 파일의 제자리 다시 읽기는 엔진 캐시.** `AssetHotReload` 에 종류별 코드를 넣지
@@ -965,7 +965,7 @@ cd build/Ninja-Debug/Bin
 - **언어 파일은 JSON(`StringTable::kFileExtension`) 하나뿐이다** — 쿠킹된 로컬라이제이션 형식은 없고, 다른 확장자는 표를 만들기 전에 거절한다. 셸 InputMap 을 못 읽으면
   오류를 알리고 빈 맵이다(손 바인딩으로 바꿔 끼우지 않는다). 입력 리플레이 파일은 `RawInputEvent` 를 통째로 적으므로 배치가 바뀌면 `kReplayVersion` 을 올린다(지금 3).
 
-- **통합 `ActionMap` 은 `InputManager::beginFrame` 이 갱신한다** — 게임 코드가 `update()` 를 다시 부르면 한 프레임에 두 번 흐른다(Input README 예제가 그랬다).
+- **통합 `InputMap` 은 `InputManager::beginFrame` 이 갱신한다** — 게임 코드가 `update()` 를 다시 부르면 한 프레임에 두 번 흐른다(Input README 예제가 그랬다).
 
 - **마우스 `getSmoothDelta` 는 프레임당 한 번 `IInputDevice::onEventsDispatched( dt )` 에서 정해진다** — `setSmoothing(f)` 는 1/60 초 동안 남기는 비율
   (τ = -(1/60)/ln f, 60 Hz 에서 옛 계수와 같다). 이벤트 처리기 안에서 스무딩을 다시 돌리면 폴링 레이트마다 감각이 달라진다. 프레임 이동은 `getMovementDelta()` 하나.
@@ -985,7 +985,7 @@ cd build/Ninja-Debug/Bin
 
 - **입력** — 창 메시지는 큐에만 넣고 장치 상태를 바꾸는 길은 `beginFrame` 의 재생 하나다(포커스 · 포인터 진입도 큐 순서 안). `RawInputEventType` 은 뒤에만 덧붙인다(리플레이 파일이 번호를
   담는다). 입력 시험은 메시지 → `beginFrame` → 조회 → `endFrame`. XInput 트리거도 `setAxis( 4 · 5 )` 로 넣어야 데드존이 먹는다. 리바인딩은 바인딩 종류를 지킨다(`getRebindSlotIndex`),
-  바인딩 종류는 `kArrBindingKindTraits` 표 하나(+ `static_assert`, 저장소는 `-Wswitch-default`). 통합 ActionMap 은 `InputManager::beginFrame` 이 갱신한다.
+  바인딩 종류는 `kArrBindingKindTraits` 표 하나(+ `static_assert`, 저장소는 `-Wswitch-default`). 통합 InputMap 은 `InputManager::beginFrame` 이 갱신한다.
 - **오디오** — 볼륨 · 음소거 상태는 `IAudioSystem` 이 들고 백엔드는 `applyVolume()` 통보만, 음소거는 마스터 보이스 한 곳, BGM 은 `_musicGeneration`. WAV 는 파서가 먼저(팩 안은 파서만).
   실제 보이스 동작은 장치 없이는 확인할 수 없다.
 - **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. 월드 UI(HP 바 ·

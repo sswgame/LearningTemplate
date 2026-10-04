@@ -3,10 +3,10 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Events/RawInputEvent.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputReplay.h"
 
 #include "TestFramework/TestFramework.h"
@@ -313,9 +313,9 @@ SW_TEST_CASE( InputStressTest, MultiThreadedRawEventConcurrentBurst )
 /**
  * @brief [InputStressTest] 대량 액션 등록 및 키 충돌 탐색/해결 스트레스 검증
  */
-SW_TEST_CASE( InputStressTest, ActionMapBulkConflictResolutionStress )
+SW_TEST_CASE( InputStressTest, InputMapBulkConflictResolutionStress )
 {
-    sw::ActionMap actionMap;
+    sw::InputMap inputMap;
 
     constexpr uint32 kActionCount = 100;
     for ( uint32 index = 0; index < kActionCount; ++index )
@@ -323,7 +323,7 @@ SW_TEST_CASE( InputStressTest, ActionMapBulkConflictResolutionStress )
         sw::StringBuilder<sw::constant::kMaxBuffer32> sbName;
         sbName.append( "StressAction_" ).append( index );
         const sw::string actionName( sbName.view() );
-        actionMap.bind( sw::hashed_string( actionName ), sw::Key::Space );
+        inputMap.bind( sw::hashed_string( actionName ), sw::Key::Space );
     }
 
     // 100개 액션 간 충돌 해결 (Override 전략)
@@ -332,10 +332,10 @@ SW_TEST_CASE( InputStressTest, ActionMapBulkConflictResolutionStress )
         sw::StringBuilder<sw::constant::kMaxBuffer32> sbName;
         sbName.append( "StressAction_" ).append( index );
         const sw::string actionName( sbName.view() );
-        actionMap.rebindWithResolution( sw::hashed_string( actionName ), sw::InputSlot::fromKey( sw::Key::Escape ), sw::ConflictResolution::Override );
+        inputMap.rebindWithResolution( sw::hashed_string( actionName ), sw::InputSlot::fromKey( sw::Key::Escape ), sw::ConflictResolution::Override );
     }
 
-    SW_EXPECT_TRUE( actionMap.hasAction( "StressAction_0" ) );
+    SW_EXPECT_TRUE( inputMap.hasAction( "StressAction_0" ) );
 }
 
 /**

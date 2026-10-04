@@ -33,7 +33,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 지금 자리는 이렇습니다.
 
 - 오브젝트 핸들(`GameObjectHandle` · `ComponentHandle`)은 자기를 만든 매니저에게 직접 풉니다 — Object 는 활성 씬(`SceneManager`)을 묻지 않습니다.
-- 렌더 패스 **에셋** 캐시(`RenderPassManager`)는 `FrameRenderer` 가 소유합니다(`IRHIDevice` 가 아니라).
+- 렌더 패스 **에셋** 캐시(`RenderPipelineAssetCache`)는 `FrameRenderer` 가 소유합니다(`IRHIDevice` 가 아니라).
 - RHI 와 렌더러는 창을 `Common/IRenderSurface` 로만 봅니다. `IWindow` 가 구현하고 `EngineLoop` 이 넘깁니다(`RHI::initialize( pSurface )`).
   렌더러의 첨부 크기는 창이 아니라 디바이스의 백버퍼 크기(`IRHIDevice::getBackBufferWidth`)입니다.
 - 렌더러는 호스트가 내주는 선택 서비스입니다(`EngineServiceList.xxx` 의 `_pFrameRenderer`) — Scene 이 `FrameRenderer*` 를 들지 않습니다.
@@ -58,11 +58,11 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 
 ## 주요 시스템 디렉터리 구조
 - **Object/**: GameObject · Component · Prefab. 틱/구조 동결·사용법은 [Object/README.md](Object/README.md)
-- **Scene/**: Scene · SceneManager · SceneDocument · SceneCooker · ObjectSnapshotCommand ([Scene/README.md](Scene/README.md))
+- **Scene/**: Scene · SceneManager · SceneDocument · SceneCooker · ObjectUndoUtil ([Scene/README.md](Scene/README.md))
 - **Spatial/**: 2D/3D 공간 분할 가속 구조체(BVHTree3D · SpatialHashGrid2D · SpatialQuadTree · SpatialOctree) ([Spatial/README.md](Spatial/README.md))
 - **Reflection/**: 매크로 · TypeRegistry · Builtins. [Reflection/README.md](Reflection/README.md) · 생성기 [ReflectionParser](../../Tools/ReflectionParser/README.md)
 - **Graphics/**: RHI · Material · Shader · FrameRenderer. [Graphics/README.md](Graphics/README.md)
-- **Input/**: InputManager · ActionMap · 장치(Keyboard/Mouse/Gamepad) 추상화. [Input/README.md](Input/README.md)
+- **Input/**: InputManager · InputMap · 장치(Keyboard/Mouse/Gamepad) 추상화. [Input/README.md](Input/README.md)
 - **Resource/**: AssetDatabase · ResourceManager · ResourceUtil · ResourcePackManager (VFS .pack) · AssetStreamingQueue
   - **에셋 종류를 늘리는 자리는 `IAssetCache` 다.** 경로를 키로 무언가를 들고 있는 캐시는 그 인터페이스를
     구현하고 `ResourceManager::registerAssetCache` 로 올린다. 그러면 종료·비우기·진단이 **등록부를 훑어**
@@ -90,7 +90,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Module/**: 모듈 DLL 쪽 계약만 둔다 — `ModuleTypeRegistry`(로드한 모듈의 타입 · 전역 변수 등록과 정리) · `ModuleHandleProvider`(지연 로드 훅이
   섀도 복사본을 묻는 창구) · `DelayLoadNotifyHook.cpp`(모듈 DLL 마다 컴파일되는 지연 로드 훅) · `EngineAbiStamp`(핫 리로드의 엔진 ABI 도장).
   감시 · 섀도 복사 · 다시 로드(`LiveReloadManager`)는 App 의 `App/Module`, 에셋 파일 감시(`ReloadFileManager`)는 에디터의
-  `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleCodeHolder`)은 `Core/Module` 이다.
+  `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleUnloadListener`)은 `Core/Module` 이다.
 - **Utility/**: Format (KeyValueFile), Json, Xml, CommandStack, Debug — 진짜 최하위 헬퍼만 둡니다.
 - **루트 파일 — 기동 · 종료**:
   - `EngineStartupStepList.xxx`: 기동 단계의 등록표(X-macro). 줄 순서가 초기화 순서이고, 줄마다 단계 이름 · 그 초기화에 거는 메모리 태그 ·

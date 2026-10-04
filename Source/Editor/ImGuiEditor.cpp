@@ -34,8 +34,8 @@
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -63,7 +63,7 @@ namespace sw::editor
 
             static void loadSplashDefaultRenderPass( const TaskArgs& args )
             {
-                shared_ptr<RenderPassResource> pPass = args.get<shared_ptr<RenderPassResource>>( 0 );
+                shared_ptr<RenderPassAsset> pPass = args.get<shared_ptr<RenderPassAsset>>( 0 );
                 if ( pPass == nullptr )
                     return;
                 // `getService<T>()` 는 nullptr 을 반환할 수 있다. 이 둘은 **워커 스레드**에서 도는 스플래시 로드라, 서비스 연결이 아직
@@ -78,7 +78,7 @@ namespace sw::editor
 
             static void loadSplashForwardPipeline( const TaskArgs& args )
             {
-                shared_ptr<RenderPipelineResource> pPipeline = args.get<shared_ptr<RenderPipelineResource>>( 0 );
+                shared_ptr<RenderPipelineAsset> pPipeline = args.get<shared_ptr<RenderPipelineAsset>>( 0 );
                 if ( pPipeline == nullptr )
                     return;
                 const EngineData* pEngineData = editor::getService<const EngineData>();
@@ -234,8 +234,8 @@ namespace sw::editor
         {
             SW_LOG_TRACE( "Splash: loading DefaultRenderPass / ForwardPipeline..." );
 
-            const shared_ptr<RenderPassResource>     defaultPass     = sw::make_shared<RenderPassResource>();
-            const shared_ptr<RenderPipelineResource> forwardPipeline = sw::make_shared<RenderPipelineResource>();
+            const shared_ptr<RenderPassAsset>     defaultPass     = sw::make_shared<RenderPassAsset>();
+            const shared_ptr<RenderPipelineAsset> forwardPipeline = sw::make_shared<RenderPipelineAsset>();
 
             TaskManager* pTaskManager = editor::getService<TaskManager>();
             if ( pTaskManager == nullptr )

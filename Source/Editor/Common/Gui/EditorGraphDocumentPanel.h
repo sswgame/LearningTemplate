@@ -46,7 +46,7 @@ namespace sw::editor
          * @param pNodeMoveCoalesceKey 연속 이동을 한 편집으로 합칠 키.
          * @details 패널마다 다른 것은 이 두 문자열뿐이고, 절차는 같습니다.
          */
-        EditorGraphDocumentPanel( EditorAssetKind kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey )
+        EditorGraphDocumentPanel( EditorAssetType kind, const utf8* pNodeMoveEditLabel, const utf8* pNodeMoveCoalesceKey )
             : EditorDocumentPanel{ kind, true }
             , _nodeGraph{}
             , _listNode{}

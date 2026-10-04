@@ -10,7 +10,7 @@
 #include "Engine/Graphics/RHI/Support/RHILiveCommandListUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIResource.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 #include <vulkan/vulkan.h>
@@ -117,7 +117,7 @@ namespace sw
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
     {
-        _resourceImpl = sw::make_unique<VulkanRHIResource>( this );
+        _resourceImpl = sw::make_unique<VulkanRHIResourceFactory>( this );
     }
 
     VulkanRHIDevice::~VulkanRHIDevice()
@@ -125,8 +125,8 @@ namespace sw
         shutdown();
     }
 
-    IRHIResource*       VulkanRHIDevice::getResource() { return _resourceImpl.get(); }
-    IRHICommandContext* VulkanRHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
+    IRHIResourceFactory* VulkanRHIDevice::getResourceFactory() { return _resourceImpl.get(); }
+    IRHICommandContext*  VulkanRHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 
     bool VulkanRHIDevice::initializeInternal( const RHISwapChainDesc& desc )
     {

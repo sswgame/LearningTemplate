@@ -11,10 +11,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryProfiler.h"
-#include "Core/Module/ModuleCodeHolder.h"
+#include "Core/Module/ModuleUnloadListener.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 namespace sw
 {
@@ -69,21 +69,21 @@ namespace sw
         thread_local uint32 t_broadcastDepth{ 0 };
 
         /**
-         * @struct GlobalLogListenerCodeHolder
-         * @brief 전역 로그 리스너(`Logger::addGlobalListener`)를 모듈 코드 보유자 목록에 올립니다. 리스너는 정적이라 보유자도 정적 하나입니다.
+         * @struct GlobalLogListenerUnloadListener
+         * @brief 전역 로그 리스너(`Logger::addGlobalListener`)를 모듈 언로드 리스너 목록에 올립니다. 리스너는 정적이라 리스너도 정적 하나입니다.
          */
-        struct GlobalLogListenerCodeHolder final : public IModuleCodeHolder
+        struct GlobalLogListenerUnloadListener final : public IModuleUnloadListener
         {
-            const utf8* getModuleCodeHolderName() const override { return "log listeners"; }
+            const utf8* getModuleUnloadListenerName() const override { return "log listeners"; }
 
-            uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override
+            uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override
             {
                 (void)outKeepImageMapped;
                 return Logger::releaseGlobalListenerCodeWithin( pBegin, pEnd );
             }
         };
 
-        GlobalLogListenerCodeHolder s_globalLogListenerCodeHolder;
+        GlobalLogListenerUnloadListener s_globalLogListenerUnloadListener;
 
     } // namespace
 
@@ -230,7 +230,7 @@ namespace sw
         if ( t_broadcastDepth > 0 )
             return;
 
-        const CpuDeadline deadline = CpuDeadline::afterMilliseconds( 2000 );
+        const Deadline deadline = Deadline::afterMilliseconds( 2000 );
         while ( _arrBroadcastInFlight[retiredSlot].load( std::memory_order_acquire ) != 0 )
         {
             if ( deadline.isExpired() )

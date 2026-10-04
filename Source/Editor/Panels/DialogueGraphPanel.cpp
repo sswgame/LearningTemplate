@@ -75,7 +75,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( DialogueGraphPanel, "dialogue_graph", EditorPanelCategory::Tool, 1200 );
 
     DialogueGraphPanel::DialogueGraphPanel()
-        : EditorGraphDocumentPanel{ EditorAssetKind::DialogueGraph, "Move Dialogue Nodes", "dialogue-graph-layout" }
+        : EditorGraphDocumentPanel{ EditorAssetType::DialogueGraph, "Move Dialogue Nodes", "dialogue-graph-layout" }
         , _selectedNodeId{ 0 }
         , _previewNodeId{ 0 }
     {

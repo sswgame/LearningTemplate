@@ -454,7 +454,7 @@ SW_TEST_CASE( MaterialTest, ShaderReflectionSlotChangeValidation )
     cb._listVariable.push_back( colorVar );
     reflection._listConstantBuffer.push_back( cb );
 
-    sw::ShaderResourceBinding texBinding{};
+    sw::ShaderReflectedBinding texBinding{};
     texBinding._name          = "mainTexture";
     texBinding._type          = "Texture2D";
     texBinding._bindPoint     = 2; // t2 슬롯으로 변경

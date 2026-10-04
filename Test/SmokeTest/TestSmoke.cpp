@@ -10,7 +10,7 @@
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -21,7 +21,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/ResourceManager.h"
-#include "Engine/Scene/ObjectSnapshotCommand.h"
+#include "Engine/Scene/ObjectUndoUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"
@@ -729,8 +729,8 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
 
 /**
  * @brief [ArchitectureTest] 에디터 모듈을 실제로 다시 올려도 오브젝트 편집의 Undo/Redo 가 남아 같은 결과를 낸다
- * @details 리로드는 옛 이미지를 내리기 전에 그 범위로 모든 코드 보유자를 훑는다(`ModuleImageUtil::releaseModuleCode` — Undo 스택 포함). 오브젝트 편집은 코드가
- *          Engine 에 있는 데이터 명령(`ObjectSnapshotCommand`)이라 그 훑기를 지나 남아야 하고, 리로드 뒤의 undo · redo 가 리로드 전과 같은 상태를 만들어야
+ * @details 리로드는 옛 이미지를 내리기 전에 그 범위로 모든 언로드 리스너를 훑는다(`ModuleImageUtil::releaseModuleCode` — Undo 스택 포함). 오브젝트 편집은 코드가
+ *          Engine 에 있는 데이터 명령(`ObjectUndoUtil`)이라 그 훑기를 지나 남아야 하고, 리로드 뒤의 undo · redo 가 리로드 전과 같은 상태를 만들어야
  *          한다. 모듈 코드를 쥔 명령이 떨어지는 쪽은 `EditorTransactionTest.ObjectEditsSurviveReleasingTheEditorCode` ·
  *          `ReleaseModuleCodeSweepsEveryRegistryTheEditorUses` 가 본다.
  */
@@ -749,11 +749,11 @@ SW_TEST_CASE( ArchitectureTest, ObjectUndoSurvivesAnEditorModuleReload )
     const uint64 targetId = pTarget->getObjectId();
 
     sw::CommandStack         stack;
-    const sw::ObjectSnapshot before = sw::ObjectSnapshotCommand::captureSnapshot( pTarget );
+    const sw::ObjectSnapshot before = sw::ObjectUndoUtil::captureSnapshot( pTarget );
     pTarget->setActive( false );
-    const sw::ObjectSnapshot after = sw::ObjectSnapshotCommand::captureSnapshot( pTarget );
+    const sw::ObjectSnapshot after = sw::ObjectUndoUtil::captureSnapshot( pTarget );
     SW_ASSERT_TRUE( before._xml != after._xml );
-    stack.push( sw::ObjectSnapshotCommand::makeModify( stack, sceneManager, *pTarget, before, after, "Deactivate" ) );
+    stack.push( sw::ObjectUndoUtil::makeModify( stack, sceneManager, *pTarget, before, after, "Deactivate" ) );
 
     sw::LiveReloadManager manager;
     SW_ASSERT_TRUE( manager.registerModule( "EditorModule" ) );
@@ -764,9 +764,9 @@ SW_TEST_CASE( ArchitectureTest, ObjectUndoSurvivesAnEditorModuleReload )
 
     SW_ASSERT_EQUAL( size_t( 1 ), stack.getCommandCount() );
     stack.undo();
-    SW_EXPECT_TRUE( sw::ObjectSnapshotCommand::captureSnapshot( pManager->findGameObjectById( targetId ) )._xml == before._xml );
+    SW_EXPECT_TRUE( sw::ObjectUndoUtil::captureSnapshot( pManager->findGameObjectById( targetId ) )._xml == before._xml );
     stack.redo();
-    SW_EXPECT_TRUE( sw::ObjectSnapshotCommand::captureSnapshot( pManager->findGameObjectById( targetId ) )._xml == after._xml );
+    SW_EXPECT_TRUE( sw::ObjectUndoUtil::captureSnapshot( pManager->findGameObjectById( targetId ) )._xml == after._xml );
     manager.shutdown();
 }
 
@@ -1246,7 +1246,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
     SW_EXPECT_TRUE( compiler.isCompiling() );
 
     // 3) 백그라운드 컴파일 완료 대기 (최대 60초)
-    const sw::CpuStopwatch compileStopwatch;
+    const sw::Stopwatch compileStopwatch;
     while ( compiler.isCompiling() )
     {
         std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );

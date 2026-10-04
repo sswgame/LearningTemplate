@@ -27,7 +27,7 @@ namespace sw
         void draw( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstanced( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;
-        /** @brief 버퍼의 이번 프레임 칸에 씁니다(`IRHIResource::updateConstantBuffer` 와 같은 일 — 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다). */
+        /** @brief 버퍼의 이번 프레임 칸에 씁니다(`IRHIResourceFactory::updateConstantBuffer` 와 같은 일 — 이 백엔드의 커맨드 스트림은 버퍼 버전을 갖지 않습니다). */
         void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
         void bindStructuredBuffer( RHIDescriptorIndex index, uint32 slot ) override;
         void bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override;

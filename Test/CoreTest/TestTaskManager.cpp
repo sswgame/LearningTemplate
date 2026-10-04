@@ -15,7 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -146,7 +146,7 @@ SW_TEST_CASE( TaskManagerTest, PrecedeAfterSubmitDoesNotRunTheTaskTwice )
     } ) );
     late.submit();
 
-    const sw::CpuDeadline waitDeadline = sw::CpuDeadline::afterMilliseconds( kWaitTimeoutMs );
+    const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
     while ( bLateStarted.load( std::memory_order_acquire ) == false )
     {
         const bool bTimedOut = waitDeadline.isExpired();
@@ -194,7 +194,7 @@ SW_TEST_CASE( TaskManagerTest, IsCompletedWaitsForTheBodyAndItsChildren )
     SW_EXPECT_FALSE( parent.isCompleted() );
     parent.submit();
 
-    const sw::CpuDeadline waitDeadline = sw::CpuDeadline::afterMilliseconds( kWaitTimeoutMs );
+    const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
     while ( bParentBodyDone.load( std::memory_order_acquire ) == false )
     {
         const bool bTimedOut = waitDeadline.isExpired();
@@ -654,8 +654,8 @@ SW_TEST_CASE( TaskManagerTest, ParallelParentWithMainAffinityCompletesOnMainOnly
 
     // 청크는 워커가 끝내지만 부모는 메인 큐에서 기다린다 — 여기서 스테이지가 끝나 있으면 워커가 부모를 집어간 것이다.
     {
-        const sw::CpuDeadline deadline = sw::CpuDeadline::afterMilliseconds( 200 );
-        bool                  bAllHit  = false;
+        const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 200 );
+        bool               bAllHit  = false;
         while ( bAllHit == false && deadline.isExpired() == false )
         {
             bAllHit = true;
@@ -695,9 +695,9 @@ SW_TEST_CASE( TaskManagerTest, WakeAllDoesNotChaseWorkersThatSleepAgain )
     sw::TaskManager manager;
     SW_ASSERT_TRUE( manager.initialize( kWakeProbeWorkerCount ) );
 
-    const sw::CpuStopwatch stopwatch;
-    int64                  elapsedMilli = 0;
-    uint32                 callCount    = 0;
+    const sw::Stopwatch stopwatch;
+    int64               elapsedMilli = 0;
+    uint32              callCount    = 0;
     for ( ; callCount < kWakeProbeCallCount && elapsedMilli < kWakeProbeLimitMilli; ++callCount )
     {
         manager.wakeSleepingWorkers();
@@ -919,7 +919,7 @@ SW_TEST_CASE( TaskManagerTest, TaskInheritsCreatorMemoryTag )
             if ( std::this_thread::get_id() == callerId )
             {
                 // 워커가 청크 하나를 실행할 때까지 호출 스레드를 붙든다 — 청크가 모두 호출 스레드에서 돌면 상속을 보지 못한다.
-                const sw::CpuDeadline deadline = sw::CpuDeadline::afterMilliseconds( kWaitTimeoutMs );
+                const sw::Deadline deadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
                 while ( workerChunkCount.load( std::memory_order_acquire ) == 0 && deadline.isExpired() == false )
                     std::this_thread::yield();
             }

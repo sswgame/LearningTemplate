@@ -1,0 +1,52 @@
+#pragma once
+#include "Core/Common/Types.h"
+
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
+
+namespace sw
+{
+    class VulkanRHIDevice;
+
+    class VulkanRHIResourceFactory : public IRHIResourceFactory
+    {
+    public:
+        explicit VulkanRHIResourceFactory( VulkanRHIDevice* pDevice )
+            : _pDevice{ pDevice } {}
+        RHIPipelineStateHandle createPipelineState( const RHIPipelineStateDesc& desc ) override;
+        RHIPipelineStateHandle createComputePipelineState( string_view shaderPath, string_view entryPoint = "CSMain" ) override;
+        void                   destroyPipelineState( RHIPipelineStateHandle pso ) override;
+        RHIRenderPassHandle    createRenderPass( const RHIRenderPassDesc& desc ) override;
+        void                   destroyRenderPass( RHIRenderPassHandle pass ) override;
+        RHIBufferHandle        createConstantBuffer( uint32 size ) override;
+        void                   updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override;
+        RHIBufferHandle        createStructuredBuffer( uint32 elementSize, uint32 elementCount ) override;
+        void                   updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource,
+                                                              const RHIBufferCopyRegion* pRegions, uint32 regionCount ) override;
+        RHIBufferHandle        createVertexBuffer( const void* pData, uint32 sizeBytes ) override;
+        RHIBufferHandle        createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride ) override;
+        void                   destroyBuffer( RHIBufferHandle buffer ) override;
+        RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
+        void                   destroyTexture( RHITextureHandle texture ) override;
+        bool                   uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
+        bool                   readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) override;
+        RHIFormat              getTextureFormat( RHITextureHandle texture ) const override;
+        RHIDescriptorIndex     registerBindlessTexture( RHITextureHandle texture ) override;
+        void                   unregisterBindlessTexture( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex     registerBindlessResource( RHIBufferHandle buffer ) override;
+        void                   unregisterBindlessResource( RHIDescriptorIndex index ) override;
+        RHIDescriptorIndex     registerBindlessUav( RHIBufferHandle buffer ) override;
+        RHIDescriptorIndex     registerBindlessTextureUav( RHITextureHandle texture ) override;
+        void                   unregisterBindlessUav( RHIDescriptorIndex index ) override;
+
+    private:
+        /** @brief 텍스처 레코드가 쥔 bindless 슬롯을 반납하고 레코드의 인덱스를 지웁니다(destroyTexture/unregisterBindlessTexture 공용). */
+        void releaseTextureBindlessSlot( VulkanRHIDevice::VulkanTextureRecord& record );
+        /** @brief 버퍼 인덱스(SRV/CB 또는 UAV)를 GPU 펜스 뒤에 프리리스트로 돌려보냅니다. 부르기 전에 원본 표는 비워 둡니다. */
+        void deferFreeBufferIndex( RHIDescriptorIndex index, bool bUav );
+        /** @brief 현재 프레임 슬롯의 스테이징에서 sizeBytes 를 bump 할당합니다(부족하면 키우고 옛 버퍼는 펜스 뒤 해제). */
+        bool acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer );
+
+        VulkanRHIDevice* _pDevice;
+    };
+} // namespace sw

@@ -6,7 +6,7 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-#include "GameFramework/UI/HPBarBaseComponent.h"
+#include "GameFramework/UI/HealthBarComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -64,7 +64,7 @@ namespace
 SW_TEST_CASE( PropertyUnitsTest, UnitsMatchHowValuesAreStored )
 {
     // GameFramework 타입이 등록부에 있어야 이 시험이 HP 바를 본다(EngineTest 는 GameFramework 를 링크한다).
-    SW_ASSERT_NOT_NULL( sw::HPBarBaseComponent::StaticType() );
+    SW_ASSERT_NOT_NULL( sw::HealthBarComponent::StaticType() );
 
     sw::vector<const sw::TypeInfo*> listType;
     sw::engine::getTypeRegistry().forEachType( [&listType]( const sw::TypeInfo& typeInfo )

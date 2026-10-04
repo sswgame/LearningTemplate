@@ -22,7 +22,7 @@ namespace sw::editor
         bool        isToolPanel() const override { return true; }
         const utf8* getPanelTitle() const override
         {
-            return EditorAssetTypeRegistry::getPanelTitle( EditorAssetKind::Prefab );
+            return EditorAssetTypeRegistry::getPanelTitle( EditorAssetType::Prefab );
         }
         void drawContent() override;
 

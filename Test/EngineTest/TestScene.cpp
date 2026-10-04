@@ -865,7 +865,7 @@ SW_TEST_CASE( SceneTest, SceneIsNotReadBeforeEveryModuleRegisteredItsTypes )
 /**
  * @brief [SceneTest] 씬 쿠킹은 모르는 타입의 컴포넌트가 든 씬을 굽지 않고 실패로 센다
  * @details 모르는 타입은 `MissingComponent` 가 원문을 맡아 바이너리 왕복 검증을 통과하므로, 경고 한 줄로 넘기면 배포본에 동작하지 않는
- *          컴포넌트가 실린다(GameFramework 타입 없이 구운 spriteui 의 `HPBarBaseComponent` · `DamageUIComponent` 등). 그 씬은 쓰지 않고, 실패가 빌드를 세운다.
+ *          컴포넌트가 실린다(GameFramework 타입 없이 구운 spriteui 의 `HealthBarComponent` · `DamageNumberComponent` 등). 그 씬은 쓰지 않고, 실패가 빌드를 세운다.
  */
 SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
 {

@@ -5,7 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Module/ModuleCodeHolder.h"
+#include "Core/Module/ModuleUnloadListener.h"
 
 SW_LOG_CALLER( "ModuleImageUtil" );
 namespace sw
@@ -17,19 +17,19 @@ namespace sw
 
         // 모듈은 자기가 단 것을 스스로 떼야 한다(에디터는 ImGuiEditor::shutdown · ~ConsolePanel 에서 뗀다). 여기서 뗀 것이 있으면
         // 그 정리가 빠졌다는 뜻이라 경고로 남긴다. 늘 0 이어야 한다.
-        vector<IModuleCodeHolder::ReleaseResult> listResult;
-        IModuleCodeHolder::releaseAllWithin( pBegin, pEnd, listResult );
+        vector<IModuleUnloadListener::ReleaseResult> listResult;
+        IModuleUnloadListener::releaseAllWithin( pBegin, pEnd, listResult );
 
         uint32 releasedCount{ 0 };
-        for ( const IModuleCodeHolder::ReleaseResult& result : listResult )
+        for ( const IModuleUnloadListener::ReleaseResult& result : listResult )
         {
             releasedCount += result._releasedCount;
             if ( result._releasedCount > 0 )
-                SW_LOG_WARNING( "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pHolderName );
+                SW_LOG_WARNING( "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pListenerName );
             // 떼어 낼 수 없는 것(다른 코드가 아직 구독하는 이 이미지의 이벤트 채널)이 남았다. 내리면 다음 발행 · 종료 때 내려간 코드로 뛴다.
             if ( result._bKeepImageMapped )
             {
-                SW_LOG_WARNING( "Module %# is still referenced by %# that other code uses — keeping its image mapped until exit", moduleName, result._pHolderName );
+                SW_LOG_WARNING( "Module %# is still referenced by %# that other code uses — keeping its image mapped until exit", moduleName, result._pListenerName );
                 if ( pOutKeepImageMapped != nullptr )
                     *pOutKeepImageMapped = true;
             }

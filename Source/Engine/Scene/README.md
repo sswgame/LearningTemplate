@@ -60,7 +60,7 @@ classDiagram
 2. **`SceneDocument`**: 씬 파일(`.scene.xml`, `.scene.bin`)의 데이터 모델. 씬 메타데이터와 엔티티 노드(`SceneDocument::EntityNode`) 목록을 담으며, XML 및 바이너리(SCN1) 포맷 직렬화/역직렬화를 담당합니다.
 3. **`SceneManager`**: 로드된 씬들의 수명주기, 활성 씬(`ActiveScene`) 추적 및 멀티스레드 비동기 씬 로딩/트랜지션을 제어하는 중앙 관리자입니다.
 4. **`SceneCooker`**: 씬 XML 을 SCN1 바이너리로 굽는 오프라인 단계(아래 4절).
-5. **`ObjectSnapshotCommand`**: 오브젝트 상태 스냅샷을 되돌리는 Undo 명령(`CommandStack` 의 명령)입니다. 되돌릴 때 씬과 그 매니저를 찾아야 하므로
+5. **`ObjectUndoUtil`**: 오브젝트 상태 스냅샷을 되돌리는 Undo 명령(`CommandStack` 의 명령)입니다. 되돌릴 때 씬과 그 매니저를 찾아야 하므로
    (`Scene.h` · `SceneManager.h`) `Utility/CommandStack` 옆(티어 1)이 아니라 씬(티어 7)에 둡니다.
 
 ---
@@ -134,7 +134,7 @@ classDiagram
 
 ## 4. 씬 쿠킹 (`SceneCooker`)
 
-`App.exe --cook-scenes [--cooked-dir <dir>]` 가 헤드리스 단계에서 `SceneCooker::cookAllScenes` 를 부릅니다(프리팹은 같은 실행에서 `PrefabManager::cookAllPrefabs`).
+`App.exe --cook-scenes [--cooked-dir <dir>]` 가 헤드리스 단계에서 `SceneCooker::cookAllScenes` 를 부릅니다(프리팹은 같은 실행에서 `PrefabCache::cookAllPrefabs`).
 
 - **입력은 소스 트리입니다.** 쿠킹이면 Resource 단계가 `ResourceManager::mountContent( …, ContentSource::SourceTree )` 로 섭니다 — 팩을 마운트하지 않고
   느슨한 파일을 읽으며, 배포 구성(Shipping)에서도 소스 프리팹(XML · JSON)을 읽습니다. 지난 빌드의 팩을 입력으로 삼지 않습니다

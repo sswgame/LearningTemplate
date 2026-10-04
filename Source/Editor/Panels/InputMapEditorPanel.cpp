@@ -13,12 +13,12 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
-#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/GamepadButtons.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputReplay.h"
 #include "Engine/Input/KeyCodes.h"
 
@@ -163,17 +163,17 @@ namespace sw::editor
              * @details 값을 먼저 넣고 switch 로 덮어쓰면 둘 중 하나는 늘 쓰이지 않는 저장이 됩니다(분석기가 열거자를 모두 알기
              *          때문에 default 도 쓰이지 않습니다). 값을 반환하는 함수로 두면 그런 곳이 생기지 않습니다.
              */
-            static const utf8* deviceTypeName( InputDeviceType type )
+            static const utf8* glyphStyleName( InputGlyphStyle type )
             {
                 switch ( type )
                 {
-                    case InputDeviceType::KeyboardMouse:
+                    case InputGlyphStyle::KeyboardMouse:
                         return "Keyboard & Mouse";
-                    case InputDeviceType::GamepadXbox:
+                    case InputGlyphStyle::GamepadXbox:
                         return "Xbox Gamepad";
-                    case InputDeviceType::GamepadPlayStation:
+                    case InputGlyphStyle::GamepadPlayStation:
                         return "PlayStation Gamepad";
-                    case InputDeviceType::GamepadSwitch:
+                    case InputGlyphStyle::GamepadSwitch:
                         return "Nintendo Switch Gamepad";
                 }
                 return "Unknown";
@@ -201,7 +201,7 @@ namespace sw::editor
     SW_LOG_CALLER( "InputMapEditorPanel" );
 
     InputMapEditorPanel::InputMapEditorPanel()
-        : _actionMap{}
+        : _inputMap{}
         , _replay{}
         , _inputMapPath{ "engine/input/default.input.xml" }
         , _replayFilePath{ "engine/replay/demo_01.swreplay" }
@@ -238,13 +238,13 @@ namespace sw::editor
         }
 
         InputManager* pInput = getService<InputManager>();
-        if ( pInput != nullptr && _actionMap.getInputManager() != pInput )
-            _actionMap.setInputManager( pInput );
+        if ( pInput != nullptr && _inputMap.getInputManager() != pInput )
+            _inputMap.setInputManager( pInput );
 
         // ActionPhase 상태 머신 · 커맨드 히스토리 · 버퍼 만료 타이머 등은 update() 안에서만 갱신되므로,
         // 프레임마다 불러야 액션 테이블 · 콤보 테스터 · 버퍼링 데모가 실제로 동작한다.
         if ( pInput != nullptr )
-            _actionMap.update( ImGui::GetIO().DeltaTime );
+            _inputMap.update( ImGui::GetIO().DeltaTime );
 
         // 실시간 시계열 샘플링
         if ( pInput != nullptr && _bPlotPaused == SW_FALSE )
@@ -283,7 +283,7 @@ namespace sw::editor
         {
             if ( ImGui::BeginTabItem( "Action Maps & Bindings" ) )
             {
-                drawActionMapTab();
+                drawInputMapTab();
                 ImGui::EndTabItem();
             }
 
@@ -339,7 +339,7 @@ namespace sw::editor
         }
     }
 
-    void InputMapEditorPanel::drawActionMapTab()
+    void InputMapEditorPanel::drawInputMapTab()
     {
         ImGui::Text( "InputMap Resource:" );
         ImGui::SameLine();
@@ -356,7 +356,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Revert All to Default" ) )
         {
-            _actionMap.resetAllBindingsToDefault();
+            _inputMap.resetAllBindingsToDefault();
             markDocumentDirty();
         }
 
@@ -378,7 +378,7 @@ namespace sw::editor
 
     void InputMapEditorPanel::drawLayerList()
     {
-        const vector<hashed_string>& listLayer = _actionMap.getLayerNames();
+        const vector<hashed_string>& listLayer = _inputMap.getLayerNames();
 
         if ( ImGui::CollapsingHeader( "Input Layers", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
@@ -394,19 +394,19 @@ namespace sw::editor
                 {
                     InputMapEditorPanelInternal::beginNamedRow( layerName );
                     ImGui::PushID( layerName.c_str() );
-                    bool bEnabled = _actionMap.isLayerEnabled( layerName );
+                    bool bEnabled = _inputMap.isLayerEnabled( layerName );
                     if ( ImGui::Checkbox( "##Enabled", &bEnabled ) )
                     {
-                        _actionMap.setLayerEnabled( sw::hashed_string( layerName.view() ), bEnabled );
+                        _inputMap.setLayerEnabled( sw::hashed_string( layerName.view() ), bEnabled );
                         markDocumentDirty();
                     }
                     ImGui::PopID();
 
                     ImGui::TableNextColumn();
-                    ImGui::Text( "%d", _actionMap.getLayerPriority( layerName ) );
+                    ImGui::Text( "%d", _inputMap.getLayerPriority( layerName ) );
 
                     ImGui::TableNextColumn();
-                    if ( _actionMap.getCurrentTopLayer() == layerName.view() )
+                    if ( _inputMap.getCurrentTopLayer() == layerName.view() )
                         EditorThemeUtil::textSuccess( "Top (Active)" );
                     else if ( bEnabled )
                         ImGui::Text( "Active" );
@@ -420,7 +420,7 @@ namespace sw::editor
 
     void InputMapEditorPanel::drawActionTable()
     {
-        const vector<hashed_string>& listAction = _actionMap.getActionNames();
+        const vector<hashed_string>& listAction = _inputMap.getActionNames();
 
         static constexpr InputMapEditorPanelInternal::TableColumn kArrActionColumn[] = {
             {       "Action",   0.0f},
@@ -437,18 +437,18 @@ namespace sw::editor
             for ( const hashed_string& actionName : listAction )
             {
                 InputMapEditorPanelInternal::beginNamedRow( actionName );
-                const ActionTrigger trigger      = _actionMap.getBindingTrigger( actionName, 0 );
-                const utf8*         pTriggerName = ActionMap::actionTriggerToName( trigger );
+                const ActionTrigger trigger      = _inputMap.getBindingTrigger( actionName, 0 );
+                const utf8*         pTriggerName = InputMap::actionTriggerToName( trigger );
                 ImGui::TextUnformatted( pTriggerName != nullptr ? pTriggerName : "Unknown" );
 
                 ImGui::TableNextColumn();
-                const string glyph = _actionMap.getGlyphForAction( sw::hashed_string( actionName.view() ) );
+                const string glyph = _inputMap.getGlyphForAction( sw::hashed_string( actionName.view() ) );
                 EditorThemeUtil::textInfo( glyph.c_str() );
 
                 ImGui::TableNextColumn();
-                const bool        bDown      = _actionMap.isActionDown( actionName );
-                const bool        bTriggered = _actionMap.wasActionTriggered( actionName );
-                const ActionPhase phase      = _actionMap.getActionPhase( actionName );
+                const bool        bDown      = _inputMap.isActionDown( actionName );
+                const bool        bTriggered = _inputMap.wasActionTriggered( actionName );
+                const ActionPhase phase      = _inputMap.getActionPhase( actionName );
                 if ( bTriggered )
                     EditorThemeUtil::textError( "TRIGGERED" );
                 else if ( bDown )
@@ -459,7 +459,7 @@ namespace sw::editor
                     ImGui::TextDisabled( "Idle" );
 
                 ImGui::TableNextColumn();
-                const float32 holdSec = _actionMap.getActionHoldDuration( actionName );
+                const float32 holdSec = _inputMap.getActionHoldDuration( actionName );
                 if ( holdSec > 0.0f )
                 {
                     EditorThemeUtil::pushTextColor( EditorThemeUtil::getWarningColor() );
@@ -483,7 +483,7 @@ namespace sw::editor
                 ImGui::PushID( ( string( actionName.c_str() ) + "_reset" ).c_str() );
                 if ( ImGui::Button( "Reset" ) )
                 {
-                    _actionMap.resetActionToDefault( sw::hashed_string( actionName.view() ) );
+                    _inputMap.resetActionToDefault( sw::hashed_string( actionName.view() ) );
                     markDocumentDirty();
                 }
                 ImGui::PopID();
@@ -508,7 +508,7 @@ namespace sw::editor
             {
                 static constexpr InputActionValueType kArrValueType[] = { InputActionValueType::Boolean, InputActionValueType::Axis1D, InputActionValueType::Axis2D };
                 const InputActionValueType            valueType       = kArrValueType[MathUtil::clamp( _newActionValueType, 0, 2 )];
-                _actionMap.createAction( sw::hashed_string( _newActionName.c_str() ), valueType );
+                _inputMap.createAction( sw::hashed_string( _newActionName.c_str() ), valueType );
                 _newActionName = "";
                 markDocumentDirty();
             }
@@ -570,18 +570,18 @@ namespace sw::editor
     void InputMapEditorPanel::rebindSelectedAction( sw::Key newKey )
     {
         // 어느 레이어에서 충돌을 따져야 하는지는 그 바인딩 자신이 안다.
-        const sw::ActionBinding* pBinding = _actionMap.getBinding( sw::hashed_string( _selectedAction.c_str() ), _capturingBindIndex );
+        const sw::ActionBinding* pBinding = _inputMap.getBinding( sw::hashed_string( _selectedAction.c_str() ), _capturingBindIndex );
         const string_view        layer    = ( pBinding != nullptr ) ? pBinding->_layer.view() : string_view{};
 
         sw::string conflictingAction;
-        if ( _actionMap.hasBindingConflict( sw::InputSlot::fromKey( newKey ), sw::hashed_string( layer ), conflictingAction ) && conflictingAction != _selectedAction )
+        if ( _inputMap.hasBindingConflict( sw::InputSlot::fromKey( newKey ), sw::hashed_string( layer ), conflictingAction ) && conflictingAction != _selectedAction )
         {
             SW_LOG_WARNING( "'%#' 을(를) %# 에 바인딩합니다 — 같은 레이어의 '%#' 과(와) 겹칩니다.",
                             _selectedAction.c_str(), sw::KeyCodes::toName( newKey ), conflictingAction.c_str() );
         }
 
-        // 키 하나로 바꿀 수 없는 바인딩(합성 축 · 스틱)이면 바뀌지 않는다 — 경고는 ActionMap 이 남긴다. 그때 문서를 더럽히지 않는다.
-        if ( _actionMap.rebindKey( sw::hashed_string( _selectedAction.c_str() ), newKey, _capturingBindIndex ) )
+        // 키 하나로 바꿀 수 없는 바인딩(합성 축 · 스틱)이면 바뀌지 않는다 — 경고는 InputMap 이 남긴다. 그때 문서를 더럽히지 않는다.
+        if ( _inputMap.rebindKey( sw::hashed_string( _selectedAction.c_str() ), newKey, _capturingBindIndex ) )
             markDocumentDirty();
     }
 
@@ -595,8 +595,8 @@ namespace sw::editor
         }
 
         // 1) 활성 장치 상태
-        const InputDeviceType devType   = pInput->getActiveDeviceType();
-        const utf8*           pTypeName = InputMapEditorPanelInternal::deviceTypeName( devType );
+        const InputGlyphStyle devType   = pInput->getActiveGlyphStyle();
+        const utf8*           pTypeName = InputMapEditorPanelInternal::glyphStyleName( devType );
 
         ImGui::Text( "Active Device:" );
 
@@ -767,7 +767,7 @@ namespace sw::editor
         ImGui::TextDisabled( "Detects duplicated key bindings across actions and provides instant collision resolution." );
         ImGui::Separator();
 
-        const vector<hashed_string>& listAction     = _actionMap.getActionNames();
+        const vector<hashed_string>& listAction     = _inputMap.getActionNames();
         bool                         bFoundConflict = false;
 
         static constexpr InputMapEditorPanelInternal::TableColumn kArrConflictColumn[] = {
@@ -783,14 +783,14 @@ namespace sw::editor
             for ( size_t idxA = 0; idxA < listAction.size(); ++idxA )
             {
                 const hashed_string& nameA  = listAction[idxA];
-                const string         glyphA = _actionMap.getGlyphForAction( sw::hashed_string( nameA.view() ) );
+                const string         glyphA = _inputMap.getGlyphForAction( sw::hashed_string( nameA.view() ) );
                 if ( glyphA == "[ Unbound ]" || glyphA.empty() )
                     continue;
 
                 for ( size_t idxB = idxA + 1; idxB < listAction.size(); ++idxB )
                 {
                     const hashed_string& nameB  = listAction[idxB];
-                    const string         glyphB = _actionMap.getGlyphForAction( sw::hashed_string( nameB.view() ) );
+                    const string         glyphB = _inputMap.getGlyphForAction( sw::hashed_string( nameB.view() ) );
 
                     if ( glyphA == glyphB )
                     {
@@ -819,7 +819,7 @@ namespace sw::editor
                         ImGui::PushID( static_cast<int32>( idxA * 1000 + idxB + 500 ) );
                         if ( ImGui::Button( "Unbind B" ) )
                         {
-                            _actionMap.rebindKey( sw::hashed_string( nameB.c_str() ), Key::Unknown, 0 );
+                            _inputMap.rebindKey( sw::hashed_string( nameB.c_str() ), Key::Unknown, 0 );
                             markDocumentDirty();
                         }
                         ImGui::PopID();
@@ -1037,14 +1037,14 @@ namespace sw::editor
         ImGui::Separator();
 
         const utf8*                      arrPlatforms[]      = { "Xbox Controller", "PlayStation DualSense", "Nintendo Switch Pro", "PC Keyboard / Mouse" };
-        static constexpr InputDeviceType kArrPreviewDevice[] = { InputDeviceType::GamepadXbox, InputDeviceType::GamepadPlayStation, InputDeviceType::GamepadSwitch, InputDeviceType::KeyboardMouse };
+        static constexpr InputGlyphStyle kArrPreviewDevice[] = { InputGlyphStyle::GamepadXbox, InputGlyphStyle::GamepadPlayStation, InputGlyphStyle::GamepadSwitch, InputGlyphStyle::KeyboardMouse };
         ImGui::Combo( "Target Platform", &_selectedGlyphPlatform, arrPlatforms, 4 );
         // 미리보기 장치와 아래 표의 플랫폼 이름이 같은 자리를 읽는다 — 범위 제한을 한 번만 한다.
         const int32           platformIndex = MathUtil::clamp( _selectedGlyphPlatform, 0, 3 );
-        const InputDeviceType previewDevice = kArrPreviewDevice[platformIndex];
+        const InputGlyphStyle previewDevice = kArrPreviewDevice[platformIndex];
         ImGui::Separator();
 
-        const vector<hashed_string>&                              listAction        = _actionMap.getActionNames();
+        const vector<hashed_string>&                              listAction        = _inputMap.getActionNames();
         static constexpr InputMapEditorPanelInternal::TableColumn kArrGlyphColumn[] = {
             {      "Action Name",   0.0f},
             {      "Key Binding", 120.0f},
@@ -1056,11 +1056,11 @@ namespace sw::editor
             for ( const hashed_string& actionName : listAction )
             {
                 InputMapEditorPanelInternal::beginNamedRow( actionName );
-                const string glyph = _actionMap.getGlyphForAction( sw::hashed_string( actionName.view() ) );
+                const string glyph = _inputMap.getGlyphForAction( sw::hashed_string( actionName.view() ) );
                 ImGui::TextUnformatted( glyph.c_str() );
 
                 ImGui::TableNextColumn();
-                const string previewGlyph = _actionMap.getGlyphForAction( sw::hashed_string( actionName.view() ), previewDevice );
+                const string previewGlyph = _inputMap.getGlyphForAction( sw::hashed_string( actionName.view() ), previewDevice );
                 if ( platformIndex == 0 )
                     ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.4f, 1.0f ), "[ Ⓨ Xbox ] %s", previewGlyph.c_str() );
                 else if ( platformIndex == 1 )
@@ -1122,7 +1122,7 @@ namespace sw::editor
         EditorWidgets::drawTextField( "Combo Pattern (Numpad Notation)", _testComboPattern, 150.0f );
 
         ImGui::SameLine();
-        const bool bPatternMatched = _actionMap.wasCommandPatternTriggered( sw::hashed_string( _testComboPattern.c_str() ), 0.8f );
+        const bool bPatternMatched = _inputMap.wasCommandPatternTriggered( sw::hashed_string( _testComboPattern.c_str() ), 0.8f );
         if ( bPatternMatched )
             EditorThemeUtil::textSuccess( "MATCHED! (Success)" );
         else
@@ -1133,15 +1133,15 @@ namespace sw::editor
 
         ImGui::Text( "Action Input Buffering:" );
         if ( ImGui::Button( "Buffer 'Attack' (0.3s)" ) )
-            _actionMap.bufferAction( "Attack", 0.3f );
+            _inputMap.bufferAction( "Attack", 0.3f );
         ImGui::SameLine();
         if ( ImGui::Button( "Buffer 'Jump' (0.3s)" ) )
-            _actionMap.bufferAction( "Jump", 0.3f );
+            _inputMap.bufferAction( "Jump", 0.3f );
 
         ImGui::SameLine();
         if ( ImGui::Button( "Consume 'Attack'" ) )
         {
-            if ( _actionMap.consumeBufferedAction( "Attack" ) )
+            if ( _inputMap.consumeBufferedAction( "Attack" ) )
                 SW_LOG_INFO( "Successfully consumed buffered 'Attack'!" );
         }
     }
@@ -1149,7 +1149,7 @@ namespace sw::editor
     void InputMapEditorPanel::reloadFromFile()
     {
         // 못 읽으면 편집 중인 바인딩과 dirty 를 그대로 둔다(dirty 를 지우고 "다시 읽었다" 고 하지 않는다).
-        if ( _actionMap.loadFromResource( _inputMapPath.c_str() ) == false )
+        if ( _inputMap.loadFromResource( _inputMapPath.c_str() ) == false )
         {
             SW_LOG_ERROR( "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
             return;
@@ -1160,7 +1160,7 @@ namespace sw::editor
 
     bool InputMapEditorPanel::saveToFile()
     {
-        if ( _actionMap.saveUserBindings( _inputMapPath.c_str() ) == false )
+        if ( _inputMap.saveUserBindings( _inputMapPath.c_str() ) == false )
         {
             SW_LOG_WARNING( "Failed to save InputMap to %#", _inputMapPath.c_str() );
             return false;

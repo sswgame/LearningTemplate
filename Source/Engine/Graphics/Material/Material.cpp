@@ -7,7 +7,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -109,15 +109,15 @@ namespace sw
         }
         ++_bufferGeneration; // 크기를 256 정렬로 맞췄다
 
-        _constantBuffer = pRhi->getResource()->createConstantBuffer( bufferSize );
+        _constantBuffer = pRhi->getResourceFactory()->createConstantBuffer( bufferSize );
         if ( _constantBuffer == 0 )
         {
             SW_LOG_ERROR( "Failed to create Constant Buffer!" );
             return false;
         }
 
-        pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), bufferSize );
-        _descriptorIndex = pRhi->getResource()->registerBindlessResource( _constantBuffer );
+        pRhi->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), bufferSize );
+        _descriptorIndex = pRhi->getResourceFactory()->registerBindlessResource( _constantBuffer );
 
         // 텍스처는 CB 가 생긴 뒤에 푼다. setTextureParameter 가 인덱스를 CB 에 바로 올리기 때문이다.
         resolveTextureAssets( pRhi );
@@ -274,9 +274,9 @@ namespace sw
         if ( pRhi != nullptr )
         {
             if ( _descriptorIndex != kInvalidDescriptorIndex )
-                pRhi->getResource()->unregisterBindlessResource( _descriptorIndex );
+                pRhi->getResourceFactory()->unregisterBindlessResource( _descriptorIndex );
             if ( _constantBuffer != 0 )
-                pRhi->getResource()->destroyBuffer( _constantBuffer );
+                pRhi->getResourceFactory()->destroyBuffer( _constantBuffer );
         }
         _constantBuffer  = 0;
         _descriptorIndex = kInvalidDescriptorIndex;
@@ -549,7 +549,7 @@ namespace sw
         }
         rebuildPackedBuffer();
         if ( pRhi != nullptr && _constantBuffer != 0 )
-            pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
+            pRhi->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
     }
 
     bool Material::packNamedValueIntoBuffer( hashed_string name, string_view value, vector<uint8>& inoutBuffer ) const
@@ -602,7 +602,7 @@ namespace sw
         Memory::copy( _data._bytes.data() + offset, pData, size );
 
         if ( pRhi != nullptr && _constantBuffer != 0 )
-            pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
+            pRhi->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
     }
 
     bool Material::setParameter( IRHIDevice* pRhi, hashed_string name, string_view value )
@@ -620,7 +620,7 @@ namespace sw
         }
         ++_bufferGeneration;
         if ( pRhi != nullptr && _constantBuffer != 0 )
-            pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
+            pRhi->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
         _desc._listProperty = _data._listProperty;
 
         if ( prop->_type == MaterialPropertyType::Keyword || prop->_type == MaterialPropertyType::Bool )
@@ -643,7 +643,7 @@ namespace sw
                 return false;
             ++_bufferGeneration;
             if ( pRhi != nullptr && _constantBuffer != 0 )
-                pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
+                pRhi->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
             _desc._listProperty = _data._listProperty;
             return true;
         }
@@ -734,7 +734,7 @@ namespace sw
                 return false;
             ++_bufferGeneration;
             if ( pRhi != nullptr && _constantBuffer != 0 )
-                pRhi->getResource()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
+                pRhi->getResourceFactory()->updateConstantBuffer( _constantBuffer, _data._bytes.data(), static_cast<uint32>( _data._bytes.size() ) );
             return true;
         }
         return false;

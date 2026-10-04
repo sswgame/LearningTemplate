@@ -524,7 +524,7 @@ SW_TEST_CASE( EditorTransactionTest, ObjectEditsSurviveReleasingTheEditorCode )
     const void* pEnd{ nullptr };
     SW_ASSERT_TRUE( FileUtil::findLoadedImageRange( reinterpret_cast<const void*>( &EditorTransaction::captureSnapshot ), pBegin, pEnd ) );
     // 배포 구성은 Engine 을 이 실행 파일에 정적으로 링크한다 — 모듈 경계가 없어 엔진 명령도 같은 범위에 든다.
-    const void* const pEngineCode = reinterpret_cast<const void*>( &ObjectSnapshotCommand::captureSnapshot );
+    const void* const pEngineCode = reinterpret_cast<const void*>( &ObjectUndoUtil::captureSnapshot );
     if ( pBegin <= pEngineCode && pEngineCode < pEnd )
         SW_TEST_SKIP( "Engine is linked into this executable - there is no module boundary to release" );
     SW_EXPECT_EQUAL( 1u, stack.releaseCodeWithin( pBegin, pEnd ) );

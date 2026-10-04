@@ -16,7 +16,7 @@ namespace
     class FakeAudioAssetTypeActions final : public IEditorAssetTypeActions
     {
     public:
-        virtual EditorAssetKind getKind() const override { return EditorAssetKind::Audio; }
+        virtual EditorAssetType getKind() const override { return EditorAssetType::Audio; }
         virtual bool            open( string_view /*relativePath*/ ) const override { return true; }
     };
 } // namespace
@@ -28,14 +28,14 @@ namespace
  */
 SW_TEST_CASE( EditorAssetTypeActionsTest, RegistrarRegistersByKindAndPathFindsIt )
 {
-    SW_ASSERT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetKind::Audio ) == nullptr );
+    SW_ASSERT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetType::Audio ) == nullptr );
     {
         const EditorAssetTypeActionsRegistrar<FakeAudioAssetTypeActions> registrar{};
         const IEditorAssetTypeActions* const                             pActions = &registrar.getActions();
-        SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetKind::Audio ) == pActions );
+        SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetType::Audio ) == pActions );
         SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActionsForPath( "game/empty/audio/hit.wav" ) == pActions );
         SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActionsForPath( "notes/todo.txt" ) == nullptr );
-        SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetKind::Unknown ) == nullptr );
+        SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetType::Unknown ) == nullptr );
 
         // 재정의하지 않은 동작은 "처리하지 않음" 이다 — 부르는 쪽이 일반 동작으로 넘어간다.
         SW_EXPECT_TRUE( pActions->open( "game/empty/audio/hit.wav" ) );
@@ -46,9 +46,9 @@ SW_TEST_CASE( EditorAssetTypeActionsTest, RegistrarRegistersByKindAndPathFindsIt
         {
             test::ScopedDefensiveTestLog                                     expected( "a second registration for one asset kind" );
             const EditorAssetTypeActionsRegistrar<FakeAudioAssetTypeActions> second{};
-            SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetKind::Audio ) == pActions );
+            SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetType::Audio ) == pActions );
         }
-        SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetKind::Audio ) == pActions );
+        SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetType::Audio ) == pActions );
     }
-    SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetKind::Audio ) == nullptr );
+    SW_EXPECT_TRUE( EditorAssetTypeActionsRegistry::findActions( EditorAssetType::Audio ) == nullptr );
 }

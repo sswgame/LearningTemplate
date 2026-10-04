@@ -52,7 +52,7 @@ namespace sw
             {
                 if ( asset.saveToXmlFile( path ) == false || asset.saveToBinaryFile( AssetCookPath::toCookedPath( path ) ) == false )
                     return false;
-                engine::getResourceManager().getPrefabManager().reload( path );
+                engine::getResourceManager().getPrefabCache().reload( path );
                 return true;
             }
 

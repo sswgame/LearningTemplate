@@ -8,10 +8,10 @@ namespace sw
     atomic<int32> MockPoolLifecycleComponent::s_ctorCount{ 0 };
     atomic<int32> MockPoolLifecycleComponent::s_dtorCount{ 0 };
 
-    PrefabManager* MockPostLoadSpawnerComponent::s_pPrefabs{ nullptr };
-    string         MockPostLoadSpawnerComponent::s_spawnPath{};
-    int32          MockPostLoadSpawnerComponent::s_spawnAttemptCount{ 0 };
-    int32          MockPostLoadSpawnerComponent::s_spawnedCount{ 0 };
+    PrefabCache* MockPostLoadSpawnerComponent::s_pPrefabs{ nullptr };
+    string       MockPostLoadSpawnerComponent::s_spawnPath{};
+    int32        MockPostLoadSpawnerComponent::s_spawnAttemptCount{ 0 };
+    int32        MockPostLoadSpawnerComponent::s_spawnedCount{ 0 };
 
     int32 MockPostLoadProbeComponent::s_postLoadCount{ 0 };
     int32 MockPostLoadProbeComponent::s_postLoadWithParentCount{ 0 };

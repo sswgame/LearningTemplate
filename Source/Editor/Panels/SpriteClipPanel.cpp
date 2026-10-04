@@ -20,7 +20,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( SpriteClipPanel, "sprite_clip", EditorPanelCategory::Tool, 1600 );
 
     SpriteClipPanel::SpriteClipPanel()
-        : EditorDocumentPanel{ EditorAssetKind::SpriteClip, false }
+        : EditorDocumentPanel{ EditorAssetType::SpriteClip, false }
         , _atlasPath{}
         , _status{}
         , _listFrame{}
@@ -159,7 +159,7 @@ namespace sw::editor
 
     ToolAssetLoadResult SpriteClipPanel::loadDocument()
     {
-        if ( EditorAssetTypeRegistry::matches( EditorAssetKind::Texture, getLoadedAssetPath().c_str() ) )
+        if ( EditorAssetTypeRegistry::matches( EditorAssetType::Texture, getLoadedAssetPath().c_str() ) )
         {
             _atlasPath = getLoadedAssetPath().c_str();
             return ToolAssetLoadResult::Loaded;

@@ -1,0 +1,124 @@
+#include "pch.h"
+
+#include "Engine/Input/InputMap.h"
+
+/**
+ * @file InputMapCombo.cpp
+ * @brief 선입력 버퍼링과 격투 게임식 커맨드 시퀀스 · 패턴 판정입니다.
+ *
+ *  - bufferAction/consumeBufferedAction : 공격 버튼을 살짝 일찍 눌러도 인정해 주는 선입력 유예 링 버퍼입니다.
+ *  - wasCommandSequenceTriggered : 최근 트리거된 액션 이력(_arrCommandHistory)에서 주어진 순서가 시간 창 안에 나왔는지 검사합니다.
+ *  - wasCommandPatternTriggered : "236P"(하-우하-우+펀치) 같은 넘패드 표기 문자열을 액션 이름 시퀀스로 바꾼 뒤 wasCommandSequenceTriggered 에 맡깁니다.
+ */
+
+namespace sw
+{
+    void InputMap::bufferAction( const hashed_string& action, float32 expirationSeconds )
+    {
+        if ( action.empty() )
+            return;
+
+        const uint32 insertIdx                       = ( _bufferedActionHead + _bufferedActionCount ) % kMaxBufferedActions;
+        _arrBufferedAction[insertIdx]._action        = action;
+        _arrBufferedAction[insertIdx]._remainingTime = expirationSeconds;
+        if ( _bufferedActionCount < kMaxBufferedActions )
+            ++_bufferedActionCount;
+        else
+            _bufferedActionHead = ( _bufferedActionHead + 1 ) % kMaxBufferedActions;
+    }
+
+    bool InputMap::consumeBufferedAction( const hashed_string& action )
+    {
+        for ( uint32 index = 0; index < _bufferedActionCount; ++index )
+        {
+            const uint32 idx = ( _bufferedActionHead + index ) % kMaxBufferedActions;
+            if ( _arrBufferedAction[idx]._action == action && _arrBufferedAction[idx]._remainingTime > 0.0f )
+            {
+                _arrBufferedAction[idx]._remainingTime = 0.0f;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool InputMap::wasCommandSequenceTriggered( const vector<hashed_string>& listSequence, float32 maxWindowSeconds ) const
+    {
+        if ( listSequence.empty() || _commandHistoryCount < listSequence.size() )
+            return false;
+
+        const size_t seqCount = listSequence.size();
+        size_t       matchIdx = seqCount;
+        float32      lastTime = 0.0f;
+
+        for ( int32 index = static_cast<int32>( _commandHistoryCount ) - 1; index >= 0; --index )
+        {
+            const uint32               historyIndex = ( _commandHistoryHead + static_cast<uint32>( index ) ) % kMaxCommandHistory;
+            const CommandHistoryEntry& historyEntry = _arrCommandHistory[historyIndex];
+
+            if ( matchIdx == seqCount )
+            {
+                if ( historyEntry._action == listSequence[seqCount - 1] )
+                {
+                    lastTime = historyEntry._timestamp;
+                    --matchIdx;
+                    if ( matchIdx == 0 )
+                        return true;
+                }
+            }
+            else
+            {
+                if ( ( lastTime - historyEntry._timestamp ) > maxWindowSeconds )
+                    return false;
+
+                if ( historyEntry._action == listSequence[matchIdx - 1] )
+                {
+                    --matchIdx;
+                    if ( matchIdx == 0 )
+                        return true;
+                }
+            }
+        }
+        return matchIdx == 0;
+    }
+
+    bool InputMap::wasCommandPatternTriggered( const hashed_string& pattern, float32 maxWindowSeconds ) const
+    {
+        string_view patternText = pattern.view();
+        if ( patternText.empty() || _commandHistoryCount == 0 )
+            return false;
+
+        vector<hashed_string> listExpected;
+        string                actionToken;
+
+        for ( size_t index = 0; index < patternText.size(); ++index )
+        {
+            const utf8 character = patternText[index];
+            if ( character == '2' )
+                listExpected.push_back( "Down" );
+            else if ( character == '3' )
+                listExpected.push_back( "DownRight" );
+            else if ( character == '6' )
+                listExpected.push_back( "Right" );
+            else if ( character == '4' )
+                listExpected.push_back( "Left" );
+            else if ( character == '1' )
+                listExpected.push_back( "DownLeft" );
+            else if ( character == '7' )
+                listExpected.push_back( "UpLeft" );
+            else if ( character == '8' )
+                listExpected.push_back( "Up" );
+            else if ( character == '9' )
+                listExpected.push_back( "UpRight" );
+            else
+                actionToken.push_back( character );
+        }
+
+        if ( actionToken.empty() == false )
+            listExpected.push_back( hashed_string( actionToken ) );
+
+        if ( listExpected.empty() )
+            return false;
+
+        return wasCommandSequenceTriggered( listExpected, maxWindowSeconds );
+    }
+} // namespace sw

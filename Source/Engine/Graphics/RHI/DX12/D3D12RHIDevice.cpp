@@ -6,7 +6,7 @@
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
-#include "Engine/Graphics/RHI/DX12/D3D12RHIResource.h"
+#include "Engine/Graphics/RHI/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResourcePreset.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -80,7 +80,7 @@ namespace sw
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
     {
-        _resourceImpl = sw::make_unique<D3D12RHIResource>( this );
+        _resourceImpl = sw::make_unique<D3D12RHIResourceFactory>( this );
     }
 
     D3D12RHIDevice::~D3D12RHIDevice()
@@ -94,7 +94,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 리소스 조회 · 디스크립터 힙 · 온라인 블록 (D3D12RHIResource 와 컨텍스트가 쓴다)
+    // 리소스 조회 · 디스크립터 힙 · 온라인 블록 (D3D12RHIResourceFactory 와 컨텍스트가 쓴다)
     // ------------------------------------------------------------------------------
 
     ID3D12Resource* D3D12RHIDevice::resolveBuffer( RHIBufferHandle handle ) const
@@ -369,8 +369,8 @@ namespace sw
         return queryDxgiMemoryBudget( _memoryAdapter.Get(), outBudget );
     }
 
-    IRHIResource*       D3D12RHIDevice::getResource() { return _resourceImpl.get(); }
-    IRHICommandContext* D3D12RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
+    IRHIResourceFactory* D3D12RHIDevice::getResourceFactory() { return _resourceImpl.get(); }
+    IRHICommandContext*  D3D12RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 
 } // namespace sw
 #endif

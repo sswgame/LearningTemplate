@@ -18,7 +18,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Concurrency/Futex.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Container/DynamicBitset.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Delegate/Delegate.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/Module/ModuleCodeHolder.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Module/ModuleUnloadListener.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Module/ModuleImageUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Event/EventDispatcher.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/FileUtil.cpp"
@@ -45,8 +45,8 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Task/TaskNode.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Task/TaskNodePool.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Task/TaskTypes.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/Time/CpuClock.cpp"
-	"${CMAKE_CURRENT_SOURCE_DIR}/Time/CpuTimer.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Time/MonotonicClock.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Time/GameTimer.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Uuid/Uuid.cpp"
 )
 

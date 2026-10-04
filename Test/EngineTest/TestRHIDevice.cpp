@@ -4,7 +4,7 @@
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
@@ -120,7 +120,7 @@ namespace
     {
         if ( pso == 0 || width == 0 || height == 0 )
             return false;
-        sw::IRHIResource* pResource = device.getResource();
+        sw::IRHIResourceFactory* pResource = device.getResourceFactory();
         if ( pResource == nullptr )
         {
             SW_LOG_WARNING( "executeOffscreenPipelineSmoke: missing resource" );
@@ -328,14 +328,14 @@ SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
         colorAtt._loadOp = sw::RHIRenderPassLoadOp::Clear;
         rpDesc._listColorAttachment.push_back( colorAtt );
 
-        sw::RHIRenderPassHandle pass = device->getResource()->createRenderPass( rpDesc );
+        sw::RHIRenderPassHandle pass = device->getResourceFactory()->createRenderPass( rpDesc );
         if ( pass == 0 )
         {
             SW_LOG_WARNING( "createRenderPass failed for backend %# — skip", static_cast<uint32>( device.getBackend() ) );
             continue;
         }
 
-        sw::RHIPipelineStateHandle pso = device->getResource()->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        sw::RHIPipelineStateHandle pso = device->getResourceFactory()->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         if ( pso != 0 )
         {
             // Present 없는 오프스크린 경로로 파이프라인 검증 (실패해도 RP/PSO create는 유효).
@@ -350,9 +350,9 @@ SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
             SW_EXPECT_TRUE_MSG( true, "PSO create failed (shader/compiler) — RenderPass path still counted" );
 
         if ( pass != 0 )
-            device->getResource()->destroyRenderPass( pass );
+            device->getResourceFactory()->destroyRenderPass( pass );
         if ( pso != 0 )
-            device->getResource()->destroyPipelineState( pso );
+            device->getResourceFactory()->destroyPipelineState( pso );
 
         ++okCount;
     }
@@ -376,12 +376,12 @@ SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
         float32 _arrColor[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
     } cbData;
 
-    sw::RHIBufferHandle buffer = rhiDevice->getResource()->createConstantBuffer( sizeof( DummyCB ) );
+    sw::RHIBufferHandle buffer = rhiDevice->getResourceFactory()->createConstantBuffer( sizeof( DummyCB ) );
     SW_EXPECT_TRUE( buffer != 0 );
 
-    rhiDevice->getResource()->updateConstantBuffer( buffer, &cbData, sizeof( DummyCB ) );
+    rhiDevice->getResourceFactory()->updateConstantBuffer( buffer, &cbData, sizeof( DummyCB ) );
 
-    sw::RHIDescriptorIndex descIdx = rhiDevice->getResource()->registerBindlessResource( buffer );
+    sw::RHIDescriptorIndex descIdx = rhiDevice->getResourceFactory()->registerBindlessResource( buffer );
     SW_EXPECT_TRUE( descIdx != sw::kInvalidDescriptorIndex );
 
     // Present(beginFrame/endFrame)는 DX12에서 soft-CL 드로우와 섞이면 Device Removed가 나기 쉬움.
@@ -389,17 +389,17 @@ SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
     SW_EXPECT_TRUE( rhiDevice->getCapabilities()._bOffscreenRT != SW_FALSE );
     SW_EXPECT_TRUE( executeOffscreenPipelineSmoke( *rhiDevice, 0 ) == false ); // pso==0 → false
     {
-        const sw::RHIPipelineStateHandle pso = rhiDevice->getResource()->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        const sw::RHIPipelineStateHandle pso = rhiDevice->getResourceFactory()->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         if ( pso != 0 )
         {
             const bool bSmoke = executeOffscreenPipelineSmoke( *rhiDevice, pso, descIdx );
             SW_EXPECT_TRUE_MSG( bSmoke, "Offscreen bindless smoke failed" );
-            rhiDevice->getResource()->destroyPipelineState( pso );
+            rhiDevice->getResourceFactory()->destroyPipelineState( pso );
         }
     }
 
-    rhiDevice->getResource()->unregisterBindlessResource( descIdx );
-    rhiDevice->getResource()->destroyBuffer( buffer );
+    rhiDevice->getResourceFactory()->unregisterBindlessResource( descIdx );
+    rhiDevice->getResourceFactory()->destroyBuffer( buffer );
 }
 
 /**
@@ -414,7 +414,7 @@ SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        sw::IRHIResource* pResource = device->getResource();
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
         // 버퍼 셋을 먼저 등록해 두고(살아 있는 패스 CB 슬롯 역할), 텍스처 하나를 등록/해제한 뒤
         // 새 버퍼를 등록하면 기존 버퍼 인덱스와 겹치면 안 된다.
@@ -478,7 +478,7 @@ SW_TEST_CASE( RHIDeviceTest, Dx12FailedCbvRegistrationReturnsItsIndex )
     test::RHITestDevice device( sw::RHIBackend::DirectX12 );
     if ( device.isReady() == false )
         SW_TEST_SKIP( "DX12 device unavailable" );
-    sw::IRHIResource* pResource = device->getResource();
+    sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
     const sw::RHIBufferHandle    firstBuffer  = pResource->createConstantBuffer( 64 );
     const sw::RHIBufferHandle    secondBuffer = pResource->createConstantBuffer( 64 );
@@ -530,7 +530,7 @@ SW_TEST_CASE( RHIDeviceTest, UploadTexture2DAllBackends )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        sw::IRHIResource* pResource = device->getResource();
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
         sw::RHITextureDesc texDesc{};
         texDesc._width                     = 4;
@@ -608,7 +608,7 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        sw::IRHIResource* pResource = device->getResource();
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
         for ( const Case& testCase : arrCase )
         {
@@ -670,7 +670,7 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        sw::IRHIResource* pResource = device->getResource();
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
         struct MaterialCb
         {
@@ -727,8 +727,8 @@ SW_TEST_CASE( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        sw::IRHIResource* pResource = device->getResource();
-        const sw::string  label     = sw::string( device->getBackendName() ) + ": ";
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
 
         const float32             arrBlue[4] = { 0.0f, 0.0f, 1.0f, 1.0f };
         const float32             arrRed[4]  = { 1.0f, 0.0f, 0.0f, 1.0f };
@@ -776,7 +776,7 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        sw::IRHIResource* pResource = device->getResource();
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
         if ( device->getCapabilities()._bOffscreenRT == SW_FALSE )
             continue;
 
@@ -852,7 +852,7 @@ SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        sw::IRHIResource* pResource = device->getResource();
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
         const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "common/shaders/provokingvertex.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
@@ -912,7 +912,7 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
         test::RHITestDevice device( expectation._backend );
         if ( device.isReady() == false )
             continue;
-        sw::IRHIResource* pResource = device->getResource();
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
         const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "common/shaders/provokingvertex.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
@@ -1004,7 +1004,7 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        sw::IRHIResource* pResource = device->getResource();
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
         const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "common/shaders/instanceslotprobe.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
@@ -1095,7 +1095,7 @@ SW_TEST_CASE( RHIDeviceTest, TextureFormatQueryAndBackBufferFormat )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        sw::IRHIResource* pResource = device->getResource();
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
         const sw::RHIFormat backBuffer = device->getBackBufferFormat();
         SW_EXPECT_TRUE_MSG( backBuffer == sw::RHIFormat::R8G8B8A8_UNORM || backBuffer == sw::RHIFormat::B8G8R8A8_UNORM, device->getBackendName() );
@@ -1159,7 +1159,7 @@ SW_TEST_CASE( RHIDeviceTest, CommandListCreationAndExecution )
  * @brief [RHIDeviceTest] 리스트를 연 스레드와 닫은 스레드가 달라도, 리스트가 사라진 뒤의 상수버퍼 갱신은 살아 있는 곳으로 간다 — 병렬 기록을 하는 세 백엔드
  * @details RenderGraph 의 병렬 레벨이 하는 일이다 — 렌더 스레드가 첫 패스 리스트를 열어 배리어를 적고 워커가 닫는다. 기록 중의 갱신은
  *          리스트 자신(`IRHICommandList::updateConstantBuffer`)으로 가므로 스레드에 남는 기록 상태가 없어야 한다 — 리스트가 사라진 뒤의
- *          `IRHIResource` 갱신은 DX11 에서 즉시 컨텍스트로 간다. DX12 · Vulkan 은 갱신이 컨텍스트가 아니라 버퍼 메모리(프레임 링 슬롯)로 가고 리스트가 자기 얼로케이터 · 풀을 들므로
+ *          `IRHIResourceFactory` 갱신은 DX11 에서 즉시 컨텍스트로 간다. DX12 · Vulkan 은 갱신이 컨텍스트가 아니라 버퍼 메모리(프레임 링 슬롯)로 가고 리스트가 자기 얼로케이터 · 풀을 들므로
  *          begin 과 end 가 스레드를 넘어도 되는 구조인데, 그 전제를 여기서 같이 못박는다. GL 은 병렬 기록이 없어(리스트가 스레드를
  *          넘지 않는다) 대상이 아니다.
  */
@@ -1181,12 +1181,12 @@ SW_TEST_CASE( RHIDeviceTest, CommandListHandedOffAcrossThreadsDoesNotLeakRecordi
             cmdList.reset(); // 리스트가 사라진다 — 연 스레드가 리스트를 기억하고 있으면 죽은 것을 가리킨다
 
             // 기록 밖의 갱신 — 살아 있는 곳(즉시 컨텍스트 · 버퍼 메모리)으로 가야 한다.
-            const sw::RHIBufferHandle cb = device->getResource()->createConstantBuffer( 64 );
+            const sw::RHIBufferHandle cb = device->getResourceFactory()->createConstantBuffer( 64 );
             SW_ASSERT_TRUE( cb != 0 );
             float32 arrValue[16]{};
             arrValue[0] = static_cast<float32>( round );
-            device->getResource()->updateConstantBuffer( cb, arrValue, sizeof( arrValue ) );
-            device->getResource()->destroyBuffer( cb );
+            device->getResourceFactory()->updateConstantBuffer( cb, arrValue, sizeof( arrValue ) );
+            device->getResourceFactory()->destroyBuffer( cb );
         }
         device->waitIdle();
     }
@@ -1215,14 +1215,14 @@ SW_TEST_CASE( RHIDeviceTest, ComputeShaderDispatchAndIndirectCommands )
     argDesc._elementCount      = 1;
     argDesc._usage             = sw::RHIBufferUsage::IndirectArgs | sw::RHIBufferUsage::UnorderedAccess | sw::RHIBufferUsage::Raw | sw::RHIBufferUsage::ShaderResource;
     argDesc._pInitialData      = &drawCmd;
-    sw::RHIBufferHandle argBuf = rhiDevice->getResource()->createBuffer( argDesc );
+    sw::RHIBufferHandle argBuf = rhiDevice->getResourceFactory()->createBuffer( argDesc );
     if ( argBuf == 0 )
-        argBuf = rhiDevice->getResource()->createStructuredBuffer( sizeof( sw::RHIDrawIndirectCommand ), 1 );
+        argBuf = rhiDevice->getResourceFactory()->createStructuredBuffer( sizeof( sw::RHIDrawIndirectCommand ), 1 );
     SW_EXPECT_TRUE( argBuf != 0 );
 
     if ( argBuf != 0 )
     {
-        rhiDevice->getResource()->updateStructuredBuffer( argBuf, &drawCmd, sizeof( sw::RHIDrawIndirectCommand ) );
+        rhiDevice->getResourceFactory()->updateStructuredBuffer( argBuf, &drawCmd, sizeof( sw::RHIDrawIndirectCommand ) );
 
         sw::unique_ptr<sw::IRHICommandList> cmdList = rhiDevice->createCommandList();
         if ( cmdList != nullptr )
@@ -1240,7 +1240,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeShaderDispatchAndIndirectCommands )
             rhiDevice->executeCommandList( cmdList.get() );
         }
 
-        rhiDevice->getResource()->destroyBuffer( argBuf );
+        rhiDevice->getResourceFactory()->destroyBuffer( argBuf );
     }
 }
 
@@ -1257,8 +1257,8 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        sw::IRHIResource* pResource = device->getResource();
-        const utf8*       pName     = device->getBackendName();
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const utf8*              pName     = device->getBackendName();
 
         sw::RHITextureDesc texDesc{};
         texDesc._width                     = kSize;
@@ -1453,8 +1453,8 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        sw::IRHIResource* pResource = device->getResource();
-        const sw::string  label     = sw::string( device->getBackendName() ) + ": ";
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
 
         // 모양이 틀린 서술은 만들어지지 않는다.
         {
@@ -1708,7 +1708,7 @@ SW_TEST_CASE( RHIDeviceTest, MemoryLedgerTracksCreateAndDeferredRelease )
     for ( test::RHITestDevice& device : sweep )
     {
         const sw::string           label     = sw::string( device->getBackendName() );
-        sw::IRHIResource*          pResource = device->getResource();
+        sw::IRHIResourceFactory*   pResource = device->getResourceFactory();
         const sw::RHIMemoryLedger& ledger    = device->getMemoryLedger();
 
         sw::RHITextureDesc sampledDesc{};
@@ -1822,12 +1822,12 @@ SW_TEST_CASE( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereTheDriverAnswers 
             largeDesc._height                 = 4096;
             largeDesc._format                 = sw::RHIFormat::R8G8B8A8_UNORM;
             constexpr uint64           kBytes = 4096ull * 4096ull * 4ull;
-            const sw::RHITextureHandle large  = device->getResource()->createTexture2D( largeDesc );
+            const sw::RHITextureHandle large  = device->getResourceFactory()->createTexture2D( largeDesc );
             SW_ASSERT_TRUE( large != 0 );
             device->refreshGpuMemoryBudget();
             const sw::RHIGpuMemoryBudget grown = ledger.getDriverBudget();
             SW_EXPECT_TRUE_MSG( grown._usageBytes >= budget._usageBytes + kBytes / 2, ( label + ": 64 MB 텍스처를 만들어도 드라이버 사용량이 따라 오르지 않았다" ).c_str() );
-            device->getResource()->destroyTexture( large );
+            device->getResourceFactory()->destroyTexture( large );
         }
         device->waitIdle();
     }

@@ -45,7 +45,7 @@
 					                 _attachOwner="None"
 					                 _attachComponent="None"
 					                 _textureName="engine/textures/test/checker.dds" />
-					<HPBarBaseComponent _hpRatio="0.4"
+					<HealthBarComponent _hpRatio="0.4"
 					                    _offsetPos="0,0.85"
 					                    _barSize="1.6,0.16"
 					                    _bVisible="true" />
@@ -60,7 +60,7 @@
 					                _localScale="1,1,1"
 					                _attachOwner="None"
 					                _attachComponent="None" />
-					<DamageUIComponent _damageValue="123"
+					<DamageNumberComponent _damageValue="123"
 					                   _lifeTime="0"
 					                   _floatSpeed="0"
 					                   _glyphSize="0.42,0.56" />
@@ -92,7 +92,7 @@
 					                 _textureName="engine/textures/test/quadrants.dds"
 					                 _uvRect="0.5,0.5,0.5,0.5"
 					                 _tint="1,0.55,0.1,1" />
-					<EffectBaseComponent _duration="3.6" />
+					<FadeOutComponent _duration="3.6" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -456,7 +456,7 @@ SW_TEST_CASE( EventTest, ReleaseQueuedEventsDestroysTheEventsTheImageDefined )
         kept._value = 4;
         dispatcher.push( kept );
 
-        const uint8* pVtable = static_cast<const uint8*>( sw::IModuleCodeHolder::findVtableAddress( &dropped ) );
+        const uint8* pVtable = static_cast<const uint8*>( sw::IModuleUnloadListener::findVtableAddress( &dropped ) );
         SW_EXPECT_EQUAL( 3, DestructorCountingEvent::s_liveCount );
         SW_EXPECT_EQUAL( 2u, dispatcher.releaseQueuedEventsWithin( pVtable, pVtable + 1 ) );
         SW_EXPECT_EQUAL( 1, DestructorCountingEvent::s_liveCount ); // 큐의 둘은 소멸자가 불렸다
@@ -494,7 +494,7 @@ SW_TEST_CASE( EventTest, ChannelCreatedByTheImageKeepsItMappedWhileOtherCodeSubs
     for ( uint32 rangeIndex = 0; rangeIndex < 2; ++rangeIndex )
     {
         bool bKeepImageMapped{ false };
-        SW_EXPECT_EQUAL( 0u, dispatcher.releaseModuleCodeWithin( arrRangeBegin[rangeIndex], arrRangeEnd[rangeIndex], bKeepImageMapped ) );
+        SW_EXPECT_EQUAL( 0u, dispatcher.onModuleUnloading( arrRangeBegin[rangeIndex], arrRangeEnd[rangeIndex], bKeepImageMapped ) );
         if ( bKeepImageMapped )
         {
             SW_EXPECT_EQUAL( 2u, keepIndex ); // 한쪽에서만
@@ -512,7 +512,7 @@ SW_TEST_CASE( EventTest, ChannelCreatedByTheImageKeepsItMappedWhileOtherCodeSubs
     // 구독이 빠지면 같은 범위가 채널을 치우고 이미지를 내려도 된다고 답한다. 다시 구독하면 새 채널로 돈다.
     dispatcher.unsubscribe( token );
     bool bKeepImageMapped{ false };
-    (void)dispatcher.releaseModuleCodeWithin( arrRangeBegin[keepIndex], arrRangeEnd[keepIndex], bKeepImageMapped );
+    (void)dispatcher.onModuleUnloading( arrRangeBegin[keepIndex], arrRangeEnd[keepIndex], bKeepImageMapped );
     SW_EXPECT_FALSE( bKeepImageMapped );
     dispatcher.subscribe<KeptProbeEvent>( subscriber );
     dispatcher.publish( event );

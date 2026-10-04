@@ -9,7 +9,7 @@
 #include "Core/Common/Types.h"
 
 #include "Engine/Common/Common.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 
 namespace sw
 {

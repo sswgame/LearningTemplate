@@ -28,7 +28,7 @@ namespace sw::editor
          * @param kind 이 패널이 다루는 애셋 종류
          * @param bLoadOnOpen true면 포커스가 없어도 첫 draw에서 로드를 요청합니다 (기본 문서).
          */
-        explicit EditorDocumentPanel( EditorAssetKind kind, bool bLoadOnOpen );
+        explicit EditorDocumentPanel( EditorAssetType kind, bool bLoadOnOpen );
 
         /** @brief 포커스가 이 종류이고 현재 로드 경로와 다르면 true입니다. */
         bool hasNewFocusedDocument() const;
@@ -87,7 +87,7 @@ namespace sw::editor
         /** @brief 읽지 못했다 — 다시 읽으려 하지 않고(`isDocumentLoaded`), **저장을 막습니다**(`canSaveDocument`). 다른 문서로 바꾸거나 다시 읽어 성공하면 풀린다. */
         void markDocumentLoadFailed( string_view reason );
 
-        EditorAssetKind        _kind;
+        EditorAssetType        _kind;
         string                 _loadedAssetPath;
         string                 _pendingFocusPath;
         string                 _documentUndoBaseline;

@@ -9,7 +9,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
@@ -122,9 +122,9 @@ namespace sw
         if ( pRhi != nullptr )
         {
             if ( _descriptorIndex != kInvalidDescriptorIndex )
-                pRhi->getResource()->unregisterBindlessResource( _descriptorIndex );
+                pRhi->getResourceFactory()->unregisterBindlessResource( _descriptorIndex );
             if ( _constant._buffer != 0 )
-                pRhi->getResource()->destroyBuffer( _constant._buffer );
+                pRhi->getResourceFactory()->destroyBuffer( _constant._buffer );
         }
         _constant.forget();
         _descriptorIndex  = kInvalidDescriptorIndex;
@@ -249,8 +249,8 @@ namespace sw
         if ( _constant._buffer != 0 && size > _constantByteSize )
         {
             if ( _descriptorIndex != kInvalidDescriptorIndex )
-                pRhi->getResource()->unregisterBindlessResource( _descriptorIndex );
-            pRhi->getResource()->destroyBuffer( _constant._buffer );
+                pRhi->getResourceFactory()->unregisterBindlessResource( _descriptorIndex );
+            pRhi->getResourceFactory()->destroyBuffer( _constant._buffer );
             _constant.forget();
             _descriptorIndex  = kInvalidDescriptorIndex;
             _constantByteSize = 0;
@@ -258,14 +258,14 @@ namespace sw
 
         if ( _constant._buffer == 0 )
         {
-            const RHIBufferHandle constantBuffer = pRhi->getResource()->createConstantBuffer( size );
+            const RHIBufferHandle constantBuffer = pRhi->getResourceFactory()->createConstantBuffer( size );
             if ( constantBuffer == 0 )
                 return false;
             _constant.adopt( pRhi, constantBuffer );
-            _descriptorIndex  = pRhi->getResource()->registerBindlessResource( constantBuffer );
+            _descriptorIndex  = pRhi->getResourceFactory()->registerBindlessResource( constantBuffer );
             _constantByteSize = size;
         }
-        pRhi->getResource()->updateConstantBuffer( _constant._buffer, _bytes.data(), size );
+        pRhi->getResourceFactory()->updateConstantBuffer( _constant._buffer, _bytes.data(), size );
         _bGpuDirty = SW_FALSE;
         return _descriptorIndex != kInvalidDescriptorIndex;
     }
@@ -668,7 +668,7 @@ namespace sw
                         return true;
                 }
             }
-            for ( const ShaderResourceBinding& resourceBinding : reflectionData._listResource )
+            for ( const ShaderReflectedBinding& resourceBinding : reflectionData._listResource )
             {
                 if ( hashed_string( resourceBinding._name.c_str() ) == paramName )
                     return true;

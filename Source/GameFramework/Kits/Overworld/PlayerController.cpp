@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Overworld/PlayerController.h"
 
-#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 
 #include "GameFramework/Kits/Overworld/TileMap.h"
 
@@ -27,7 +27,7 @@ namespace sw
 
     PlayerController::PlayerController()
         : _pTileMap{ nullptr }
-        , _pActionMap{ nullptr }
+        , _pInputMap{ nullptr }
         , _pendingWarpMap{}
         , _loco{}
         , _tile{ 1, 1 }
@@ -60,11 +60,11 @@ namespace sw
         if ( _loco.canAcceptMoveInput() == false )
             return;
 
-        ActionMap* pActionMap = _pActionMap != nullptr ? _pActionMap : &input.getActionMap();
-        if ( pActionMap->getInputManager() != &input )
-            pActionMap->setInputManager( &input );
+        InputMap* pInputMap = _pInputMap != nullptr ? _pInputMap : &input.getInputMap();
+        if ( pInputMap->getInputManager() != &input )
+            pInputMap->setInputManager( &input );
 
-        if ( pActionMap->wasActionTriggered( "Interact" ) )
+        if ( pInputMap->wasActionTriggered( "Interact" ) )
         {
             _loco.beginInteract();
             _bInteractPending = SW_TRUE;
@@ -73,7 +73,7 @@ namespace sw
 
         int32        deltaX{ 0 };
         int32        deltaY{ 0 };
-        const float2 moveVec = pActionMap->getVector2D( "Move" );
+        const float2 moveVec = pInputMap->getVector2D( "Move" );
         if ( moveVec._y > 0.5f )
             deltaY = -1;
         else if ( moveVec._y < -0.5f )

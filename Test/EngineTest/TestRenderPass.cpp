@@ -21,10 +21,10 @@
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Graphics/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassManager.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -40,9 +40,9 @@
 
 SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
 {
-    sw::RenderPassResource passRes;
-    sw::RenderPassDesc&    desc = passRes.getDesc();
-    desc._name                  = "UnitTestRenderPass";
+    sw::RenderPassAsset passRes;
+    sw::RenderPassDesc& desc = passRes.getDesc();
+    desc._name               = "UnitTestRenderPass";
 
     sw::RenderPassAttachment colorAtt{};
     colorAtt._name       = "Color0";
@@ -54,7 +54,7 @@ SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
     sw::string testPath = test::makeTempPath( "test_renderpass_roundtrip.xml" );
     SW_EXPECT_TRUE( passRes.saveToXmlFile( testPath ) );
 
-    sw::RenderPassResource loadedRes;
+    sw::RenderPassAsset loadedRes;
     SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
     SW_EXPECT_EQUAL( sw::string( "UnitTestRenderPass" ), loadedRes.getDesc()._name );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachment.size() );
@@ -103,10 +103,10 @@ SW_TEST_CASE( RenderPassTest, EditorAndGameCameras )
  */
 SW_TEST_CASE( RenderPassTest, PipelineXmlSerializationRoundtrip )
 {
-    sw::RenderPipelineResource pipeRes;
-    sw::RenderPipelineDesc&    desc = pipeRes.getDesc();
-    desc._name                      = "UnitTestPipeline";
-    desc._shadingModel              = "Forward";
+    sw::RenderPipelineAsset pipeRes;
+    sw::RenderPipelineDesc& desc = pipeRes.getDesc();
+    desc._name                   = "UnitTestPipeline";
+    desc._shadingModel           = "Forward";
 
     sw::RenderPassAttachment colorAtt{};
     colorAtt._name       = "SceneColor";
@@ -126,7 +126,7 @@ SW_TEST_CASE( RenderPassTest, PipelineXmlSerializationRoundtrip )
     sw::string testPath = test::makeTempPath( "test_renderpipeline_roundtrip.xml" );
     SW_EXPECT_TRUE( pipeRes.saveToXmlFile( testPath ) );
 
-    sw::RenderPipelineResource loadedRes;
+    sw::RenderPipelineAsset loadedRes;
     SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
     SW_EXPECT_EQUAL( sw::string( "UnitTestPipeline" ), loadedRes.getDesc()._name );
     SW_EXPECT_EQUAL( sw::string( "Forward" ), loadedRes.getDesc()._shadingModel );
@@ -158,7 +158,7 @@ SW_TEST_CASE( RenderPassTest, PipelineRejectsLegacyRenderPassDescRoot )
 )";
     }
 
-    sw::RenderPipelineResource loaded;
+    sw::RenderPipelineAsset loaded;
     SW_EXPECT_FALSE( loaded.loadFromXmlFile( testPath ) );
 }
 
@@ -392,7 +392,7 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
     };
     for ( std::string_view path : arrPipeline )
     {
-        sw::RenderPipelineResource res;
+        sw::RenderPipelineAsset res;
         SW_ASSERT_TRUE( res.loadFromXmlFile( path ) );
         SW_EXPECT_EQUAL( 0u, res.validate( path ) );
         // 모든 패스 타입이 해석돼야 한다 — Invalid 가 남아 있으면 PSO 가 기본 포맷으로 만들어진다.
@@ -460,9 +460,9 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
 {
     // 0) 같은 이름의 패스 두 번 — 이름은 패스의 열쇠라 뒤의 것이 조용히 버려진다(그래프는 하나만 받는다)
     {
-        sw::RenderPipelineResource res;
-        sw::RenderPipelineDesc&    desc = res.getDesc();
-        sw::RenderGraphPassDesc    pass{};
+        sw::RenderPipelineAsset res;
+        sw::RenderPipelineDesc& desc = res.getDesc();
+        sw::RenderGraphPassDesc pass{};
         pass._name = "Twice";
         pass._type = "Present";
         pass._listOutput.push_back( "Swapchain" );
@@ -473,9 +473,9 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
 
     // 1) 알 수 없는 패스 타입
     {
-        sw::RenderPipelineResource res;
-        sw::RenderPipelineDesc&    desc = res.getDesc();
-        sw::RenderGraphPassDesc    pass{};
+        sw::RenderPipelineAsset res;
+        sw::RenderPipelineDesc& desc = res.getDesc();
+        sw::RenderGraphPassDesc pass{};
         pass._name = "Bad";
         pass._type = "NoSuchPassType";
         desc._listPass.push_back( pass );
@@ -485,9 +485,9 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
 
     // 2) 선언되지 않은 첨부를 입출력으로 참조
     {
-        sw::RenderPipelineResource res;
-        sw::RenderPipelineDesc&    desc = res.getDesc();
-        sw::RenderGraphPassDesc    pass{};
+        sw::RenderPipelineAsset res;
+        sw::RenderPipelineDesc& desc = res.getDesc();
+        sw::RenderGraphPassDesc pass{};
         pass._name = "Dangling";
         pass._type = "ForwardOpaque";
         pass._listOutput.push_back( "NotDeclared" );
@@ -497,9 +497,9 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
 
     // 3) Swapchain 은 첨부로 선언하지 않는 예약어라 통과해야 한다
     {
-        sw::RenderPipelineResource res;
-        sw::RenderPipelineDesc&    desc = res.getDesc();
-        sw::RenderGraphPassDesc    pass{};
+        sw::RenderPipelineAsset res;
+        sw::RenderPipelineDesc& desc = res.getDesc();
+        sw::RenderGraphPassDesc pass{};
         pass._name = "Blit";
         pass._type = "Present";
         pass._listOutput.push_back( "Swapchain" );
@@ -509,9 +509,9 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
 
     // 4) 알 수 없는 첨부 포맷
     {
-        sw::RenderPipelineResource res;
-        sw::RenderPipelineDesc&    desc = res.getDesc();
-        sw::RenderPassAttachment   att{};
+        sw::RenderPipelineAsset  res;
+        sw::RenderPipelineDesc&  desc = res.getDesc();
+        sw::RenderPassAttachment att{};
         att._name   = "Weird";
         att._format = "R99G99_NOPE";
         desc._listAttachment.push_back( att );
@@ -529,11 +529,11 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         };
         for ( uint32 divisor : { 0u, 3u, 8u } )
         {
-            sw::RenderPipelineResource res;
+            sw::RenderPipelineAsset res;
             res.getDesc()._listAttachment.push_back( makeAttachment( "Odd", "R8G8B8A8_UNORM", divisor ) );
             SW_EXPECT_TRUE_MSG( res.validate( "unit-test" ) == 1u, sw::to_string( divisor ).c_str() );
         }
-        auto makeHalfPass = [&]( sw::RenderPipelineResource& res, uint32 depthDivisor )
+        auto makeHalfPass = [&]( sw::RenderPipelineAsset& res, uint32 depthDivisor )
         {
             res.getDesc()._listAttachment.push_back( makeAttachment( "HalfColor", "R8G8B8A8_UNORM", 2 ) );
             res.getDesc()._listAttachment.push_back( makeAttachment( "Depth", "D24_UNORM_S8_UINT", depthDivisor ) );
@@ -546,12 +546,12 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
             res.getDesc()._listPass.push_back( pass );
         };
         {
-            sw::RenderPipelineResource res;
+            sw::RenderPipelineAsset res;
             makeHalfPass( res, 2 );
             SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
         }
         {
-            sw::RenderPipelineResource res;
+            sw::RenderPipelineAsset res;
             makeHalfPass( res, 1 );
             SW_EXPECT_TRUE( res.validate( "unit-test" ) >= 1u );
         }
@@ -564,8 +564,8 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
     // 4-1) 이름은 RHIFormat 이지만 첨부가 될 수 없는 포맷 — 각각 오류 하나. 렌더 가능한 포맷은 통과한다.
     for ( const utf8* pFormat : { "Unknown", "BC1_UNORM", "BC7_UNORM", "R32G32B32_FLOAT" } )
     {
-        sw::RenderPipelineResource res;
-        sw::RenderPassAttachment   att{};
+        sw::RenderPipelineAsset  res;
+        sw::RenderPassAttachment att{};
         att._name   = "NotRenderable";
         att._format = pFormat;
         res.getDesc()._listAttachment.push_back( att );
@@ -573,8 +573,8 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
     }
     for ( const utf8* pFormat : { "R8G8B8A8_UNORM", "R16G16B16A16_FLOAT", "R32_FLOAT", "R32G32_FLOAT", "D24_UNORM_S8_UINT" } )
     {
-        sw::RenderPipelineResource res;
-        sw::RenderPassAttachment   att{};
+        sw::RenderPipelineAsset  res;
+        sw::RenderPassAttachment att{};
         att._name   = "Renderable";
         att._format = pFormat;
         res.getDesc()._listAttachment.push_back( att );
@@ -586,9 +586,9 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
     {
         auto removedTypeIsRejected = []( const utf8* pRemovedType ) -> bool
         {
-            sw::RenderPipelineResource res;
-            sw::RenderPipelineDesc&    desc = res.getDesc();
-            sw::RenderGraphPassDesc    pass{};
+            sw::RenderPipelineAsset res;
+            sw::RenderPipelineDesc& desc = res.getDesc();
+            sw::RenderGraphPassDesc pass{};
             pass._name = "Removed";
             pass._type = pRemovedType;
             desc._listPass.push_back( pass );
@@ -610,9 +610,9 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
     //    매 프레임 경고만 남기고 아무것도 그리지 않는다.
     for ( const utf8* pInternalType : { "GpuCull", "ForwardOpaqueNoDepthWrite" } )
     {
-        sw::RenderPipelineResource res;
-        sw::RenderPipelineDesc&    desc = res.getDesc();
-        sw::RenderGraphPassDesc    pass{};
+        sw::RenderPipelineAsset res;
+        sw::RenderPipelineDesc& desc = res.getDesc();
+        sw::RenderGraphPassDesc pass{};
         pass._name = "Internal";
         pass._type = pInternalType;
         desc._listPass.push_back( pass );
@@ -622,7 +622,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
     // 7) 풀스크린 패스의 입력은 그 타입의 계약과 맞아야 한다 — "선언만 있고 아무도 안 읽는 입력" 이 오류다.
     //    디퍼드 XML 이 Bloom 의 입력으로 AOColor 를 적어 두고도 Bloom 이 그것을 걸지 않는 것이 이 검사가 잡는 병이다.
     {
-        auto makeDesc = []( sw::RenderPipelineResource& res )
+        auto makeDesc = []( sw::RenderPipelineAsset& res )
         {
             sw::RenderPipelineDesc& desc          = res.getDesc();
             auto                    addAttachment = [&desc]( const utf8* pName, const utf8* pFormat )
@@ -638,7 +638,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
             addAttachment( "GBufferNormal", "R16G16B16A16_FLOAT" );
             addAttachment( "SceneDepth", "D24_UNORM_S8_UINT" );
         };
-        auto addPass = []( sw::RenderPipelineResource& res, const utf8* pType, std::initializer_list<const utf8*> listInput, const utf8* pOutput )
+        auto addPass = []( sw::RenderPipelineAsset& res, const utf8* pType, std::initializer_list<const utf8*> listInput, const utf8* pOutput )
         {
             sw::RenderGraphPassDesc pass{};
             pass._name = pType;
@@ -651,7 +651,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
 
         // 계약대로: Bloom 이 컬러 하나 + AO 를 읽는다. 역할은 로드 시점에 해석돼 있어야 한다.
         {
-            sw::RenderPipelineResource res;
+            sw::RenderPipelineAsset res;
             makeDesc( res );
             addPass( res, "Bloom", { "LitColor", "AOColor" }, "BloomColor" );
             SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
@@ -664,21 +664,21 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
         }
         // Tonemap 은 G버퍼 노멀을 읽지 않는다 — 선언만 있고 바인딩되지 않는 입력.
         {
-            sw::RenderPipelineResource res;
+            sw::RenderPipelineAsset res;
             makeDesc( res );
             addPass( res, "Tonemap", { "LitColor", "GBufferNormal" }, "BloomColor" );
             SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
         }
         // SSAO 는 깊이가 필수다.
         {
-            sw::RenderPipelineResource res;
+            sw::RenderPipelineAsset res;
             makeDesc( res );
             addPass( res, "SSAO", { "GBufferNormal" }, "AOColor" );
             SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
         }
         // 가공할 컬러가 둘이면 셰이더가 어느 것을 읽을지 정할 수 없다.
         {
-            sw::RenderPipelineResource res;
+            sw::RenderPipelineAsset res;
             makeDesc( res );
             addPass( res, "Bloom", { "LitColor", "BloomColor" }, "AOColor" );
             SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
@@ -757,10 +757,10 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecutionAndSerialFallback )
  */
 SW_TEST_CASE( RenderPassTest, PipelineExtendedStagesRoundtrip )
 {
-    sw::RenderPipelineResource pipeRes;
-    sw::RenderPipelineDesc&    desc = pipeRes.getDesc();
-    desc._name                      = "UnitTestAllStagesPipeline";
-    desc._shadingModel              = "Deferred";
+    sw::RenderPipelineAsset pipeRes;
+    sw::RenderPipelineDesc& desc = pipeRes.getDesc();
+    desc._name                   = "UnitTestAllStagesPipeline";
+    desc._shadingModel           = "Deferred";
 
     sw::RenderGraphPassDesc pass{};
     pass._name                    = "MegaShaderPass";
@@ -782,7 +782,7 @@ SW_TEST_CASE( RenderPassTest, PipelineExtendedStagesRoundtrip )
     const sw::string testPath = test::makeTempPath( "test_pipeline_all_stages.xml" );
     SW_EXPECT_TRUE( pipeRes.saveToXmlFile( testPath ) );
 
-    sw::RenderPipelineResource loadedRes;
+    sw::RenderPipelineAsset loadedRes;
     SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getGraphPass().size() );
 
@@ -807,10 +807,10 @@ SW_TEST_CASE( RenderPassTest, PipelineExtendedStagesRoundtrip )
  */
 SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
 {
-    sw::RenderPipelineResource pipeRes;
-    sw::RenderPipelineDesc&    desc = pipeRes.getDesc();
-    desc._name                      = "UnitTestCompactPipeline";
-    desc._shadingModel              = "Forward";
+    sw::RenderPipelineAsset pipeRes;
+    sw::RenderPipelineDesc& desc = pipeRes.getDesc();
+    desc._name                   = "UnitTestCompactPipeline";
+    desc._shadingModel           = "Forward";
 
     sw::RenderGraphPassDesc pass{};
     pass._name             = "CompactPass";
@@ -838,7 +838,7 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
     SW_EXPECT_TRUE( xmlContent.find( "_computeEntryPoint" ) == sw::string::npos );
 
     // 다시 로드했을 때 기본 빈 문자열 상태가 안전하게 유지되는지 검증
-    sw::RenderPipelineResource loadedRes;
+    sw::RenderPipelineAsset loadedRes;
     SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
     const sw::RenderGraphPassDesc& loadedPass = loadedRes.getGraphPass()[0];
     SW_EXPECT_TRUE( loadedPass._geometryEntryPoint.empty() );
@@ -859,7 +859,7 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
 {
     SW_TEST_SUPPRESS_LOGS();
 
-    auto makePipeline = []( sw::RenderPipelineResource& res, const utf8* pType, std::initializer_list<const utf8*> listOutput )
+    auto makePipeline = []( sw::RenderPipelineAsset& res, const utf8* pType, std::initializer_list<const utf8*> listOutput )
     {
         sw::RenderPipelineDesc& desc          = res.getDesc();
         auto                    addAttachment = [&desc]( const utf8* pName, const utf8* pFormat )
@@ -884,7 +884,7 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
 
     // 출력에 뎁스가 섞여 있어도 컬러만, 선언 순서대로 — 이름은 정본(GBufferAlbedo …)이 아니어도 된다.
     {
-        sw::RenderPipelineResource res;
+        sw::RenderPipelineAsset res;
         makePipeline( res, "GBuffer", { "MainDepth", "MainAlbedo", "MainNormal" } );
         SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
         const sw::vector<sw::RenderGraphPassDesc::ResolvedAttachment>& listColor = res.getGraphPass()[0]._listResolvedColorOutput;
@@ -894,20 +894,20 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
     }
     // G버퍼는 알베도 · 노멀 두 컬러를 한 MRT 패스로 쓴다 — 하나뿐이면 Lighting · SSAO 가 읽을 노멀이 없다(MRT 없는 단독 패스 경로는 없다).
     {
-        sw::RenderPipelineResource res;
+        sw::RenderPipelineAsset res;
         makePipeline( res, "GBuffer", { "MainAlbedo", "MainDepth" } );
         SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
     }
     // 뎁스만 내는 ForwardOpaque 는 그릴 컬러가 없다 — 검증 오류(SceneColor 를 짐작해 열지 않는다).
     {
-        sw::RenderPipelineResource res;
+        sw::RenderPipelineAsset res;
         makePipeline( res, "ForwardOpaque", { "MainDepth" } );
         SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
         SW_EXPECT_TRUE( res.getGraphPass()[0]._listResolvedColorOutput.empty() );
     }
     // 뎁스 전용 패스는 컬러가 없어도 된다.
     {
-        sw::RenderPipelineResource res;
+        sw::RenderPipelineAsset res;
         makePipeline( res, "DepthPrepass", { "MainDepth" } );
         SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
     }
@@ -923,7 +923,7 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
 {
     SW_TEST_SUPPRESS_LOGS();
 
-    auto addAttachment = []( sw::RenderPipelineResource& res, const utf8* pName, const utf8* pFormat, const utf8* pRole )
+    auto addAttachment = []( sw::RenderPipelineAsset& res, const utf8* pName, const utf8* pFormat, const utf8* pRole )
     {
         sw::RenderPassAttachment att{};
         att._name   = pName;
@@ -931,7 +931,7 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
         att._role   = pRole;
         res.getDesc()._listAttachment.push_back( att );
     };
-    auto makeDeferred = [&]( sw::RenderPipelineResource& res, const utf8* pAlbedoRole )
+    auto makeDeferred = [&]( sw::RenderPipelineAsset& res, const utf8* pAlbedoRole )
     {
         addAttachment( res, "MainAlbedo", "R8G8B8A8_UNORM", pAlbedoRole );
         addAttachment( res, "MainNormal", "R16G16B16A16_FLOAT", "GBufferNormal" );
@@ -957,7 +957,7 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
     };
 
     {
-        sw::RenderPipelineResource res;
+        sw::RenderPipelineAsset res;
         makeDeferred( res, "GBufferAlbedo" );
         SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
 
@@ -976,7 +976,7 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
     // 모르는 역할 글은 오류다 — 조용히 이름 규칙으로 넘기면 선언한 사람이 왜 안 걸리는지 모른다. 이름 규칙으로 떨어진 알베도는 SourceColor 라
     // Lighting 계약도 함께 깨진다(읽지 않는 SourceColor · 필수 GBufferAlbedo 없음) — 셋이다.
     {
-        sw::RenderPipelineResource res;
+        sw::RenderPipelineAsset res;
         makeDeferred( res, "Albedo" );
         SW_EXPECT_EQUAL( 3u, res.validate( "unit-test" ) );
     }

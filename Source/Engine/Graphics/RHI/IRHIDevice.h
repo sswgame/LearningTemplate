@@ -17,7 +17,7 @@ namespace sw
     class IRenderSurface;
     class IRHICommandContext;
     class IRHICommandList;
-    class IRHIResource;
+    class IRHIResourceFactory;
     class RHIMemoryLedger;
 
     /** @brief `RHINativeHandles` 의 판 번호입니다. 필드 · 순서 · 뜻이 바뀌면 올립니다. */
@@ -55,7 +55,7 @@ namespace sw
      * @class IRHIDevice
      * @brief DX11 · DX12 · Vulkan · OpenGL 하드웨어 디바이스 추상화입니다.
      * @details 프레임 수명주기(beginFrame/endFrame/resize), 커맨드 리스트 생성 · 제출, 능력 조회, 네이티브 핸들을
-     *          맡습니다. 리소스 생성 · 파괴는 `getResource()` 가 반환하는 `IRHIResource` 가 맡습니다.
+     *          맡습니다. 리소스 생성 · 파괴는 `getResourceFactory()` 가 반환하는 `IRHIResourceFactory` 가 맡습니다.
      *          기록 스트림은 둘입니다: 디바이스가 소유한 프레임 스트림(`getFrameStreamContext`)과, 패스마다 만드는
      *          커맨드 리스트(`createCommandList`)입니다.
      */
@@ -193,8 +193,8 @@ namespace sw
         /** @brief 백버퍼 너비입니다. initialize 때는 표면 크기이고, 그 뒤로는 마지막 `resize` 값입니다. */
         uint32 getBackBufferWidth() const { return _backBufferWidth; }
         /** @brief 백버퍼 높이입니다. initialize 때는 표면 크기이고, 그 뒤로는 마지막 `resize` 값입니다. */
-        uint32                getBackBufferHeight() const { return _backBufferHeight; }
-        virtual IRHIResource* getResource() { return nullptr; }
+        uint32                       getBackBufferHeight() const { return _backBufferHeight; }
+        virtual IRHIResourceFactory* getResourceFactory() { return nullptr; }
 
         /**
          * @brief 디바이스가 소유한 **프레임 스트림**에 기록하는 컨텍스트입니다.

@@ -30,7 +30,7 @@ namespace sw
                 (void)sw::FileUtil::writeTextFile( path, pXmlContent ); // 못 쓰면 뒤의 로드가 실패로 드러난다
             }
 
-            // 쿠킹본(.prefab.bin)도 같이 만들어 둔다. PrefabManager::getOrLoad 는 Shipping 에서
+            // 쿠킹본(.prefab.bin)도 같이 만들어 둔다. PrefabCache::getOrLoad 는 Shipping 에서
             // **바이너리만** 읽으므로(XML 은 Dev 전용 경로다), XML 만 두면 스폰 검증이 배포 빌드에서
             // 그냥 죽는다. 쿠커가 하는 일과 같은 변환을 테스트가 자기 손으로 해 둔다.
             sw::string binPath = path;
@@ -121,8 +121,8 @@ SW_TEST_CASE( PrefabTest, MissingSourceDoesNotFallBackToCookedBinaryInDev )
     SW_ASSERT_TRUE( src.saveToBinaryFile( sw::AssetCookPath::toCookedPath( orphanSourcePath ) ) );
     SW_ASSERT_FALSE( sw::FileUtil::fileExists( orphanSourcePath ) );
 
-    sw::PrefabManager manager;
-    sw::PrefabAsset*  pLoaded{ nullptr };
+    sw::PrefabCache  manager;
+    sw::PrefabAsset* pLoaded{ nullptr };
     {
         SW_TEST_DEFENSIVE_SCOPE( "prefab whose source is gone" );
         pLoaded = manager.loadPrefab( orphanSourcePath );
@@ -165,9 +165,9 @@ SW_TEST_CASE( PrefabTest, CacheKeyNormalizesPathAndExtension )
     SW_EXPECT_TRUE( src.saveToJsonFile( jsonPath ) );
     SW_EXPECT_TRUE( src.saveToBinaryFile( binPath ) );
 
-    sw::PrefabManager manager;
-    sw::PrefabAsset*  fromXml  = manager.loadPrefab( xmlPath );
-    sw::PrefabAsset*  fromJson = manager.loadPrefab( jsonPath );
+    sw::PrefabCache  manager;
+    sw::PrefabAsset* fromXml  = manager.loadPrefab( xmlPath );
+    sw::PrefabAsset* fromJson = manager.loadPrefab( jsonPath );
     SW_ASSERT_NOT_NULL( fromXml );
     SW_EXPECT_EQUAL( fromXml, fromJson );
 
@@ -190,7 +190,7 @@ SW_TEST_CASE( PrefabTest, SpawnCreatesGameObject )
 {
     const sw::string      srcXmlPath = sw::ensureSamplePrefabXml();
     sw::GameObjectManager objects;
-    sw::PrefabManager     prefabs;
+    sw::PrefabCache       prefabs;
     sw::GameObject*       spawned = prefabs.spawn( &objects, srcXmlPath, "SpawnedSample" );
     SW_ASSERT_NOT_NULL( spawned );
     SW_EXPECT_EQUAL( sw::string( "SpawnedSample" ), sw::string( spawned->getName().c_str() ) );
@@ -212,7 +212,7 @@ SW_TEST_CASE( PrefabTest, InMemoryJsonPrefabCreationAndSpawn )
     SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( tempPath, prefabJson ) );
 
     sw::GameObjectManager objects;
-    sw::PrefabManager     prefabs;
+    sw::PrefabCache       prefabs;
 
     sw::GameObject* spawned = prefabs.spawn( &objects, tempPath, "BossActor" );
     SW_ASSERT_NOT_NULL( spawned );
@@ -240,7 +240,7 @@ SW_TEST_CASE( PrefabTest, CircularReferenceSpawnProtection )
 
     sw::GameObjectManager objects;
     sw::RegisterMockComponents();
-    sw::PrefabManager prefabs;
+    sw::PrefabCache prefabs;
     sw::MockPostLoadSpawnerComponent::s_pPrefabs          = &prefabs;
     sw::MockPostLoadSpawnerComponent::s_spawnPath         = xmlPath;
     sw::MockPostLoadSpawnerComponent::s_spawnAttemptCount = 0;
@@ -300,7 +300,7 @@ SW_TEST_CASE( PrefabTest, SpawnDuringTickKeepsThePrefabsState )
 
     sw::GameObjectManager objects;
     sw::RegisterMockComponents();
-    sw::PrefabManager      prefabs;
+    sw::PrefabCache        prefabs;
     sw::GameObject*        pSpawner = objects.createGameObject( sw::hashed_string( "Spawner" ) );
     sw::MockMeshComponent* pMock    = pSpawner->addComponent<sw::MockMeshComponent>();
     SW_ASSERT_NOT_NULL( pMock );
@@ -329,7 +329,7 @@ SW_TEST_CASE( PrefabTest, JsonPrefabRevertKeepsComponents )
     SW_ASSERT_TRUE( sw::writeCookedBeside( jsonPath, true ) );
 
     sw::GameObjectManager objects;
-    sw::PrefabManager     prefabs;
+    sw::PrefabCache       prefabs;
     sw::GameObject*       pInstance = prefabs.spawn( &objects, jsonPath, "CrateA" );
     SW_ASSERT_NOT_NULL( pInstance );
     SW_ASSERT_NOT_NULL( pInstance->getPrimarySceneComponent() );
@@ -353,7 +353,7 @@ SW_TEST_CASE( PrefabTest, RevertKeepsTheInstancesPlaceAndParent )
     SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
 
     sw::GameObjectManager objects;
-    sw::PrefabManager     prefabs;
+    sw::PrefabCache       prefabs;
     sw::GameObject*       pTruck = objects.createGameObject( sw::hashed_string( "Truck" ) );
     SW_ASSERT_NOT_NULL( pTruck->addComponent<sw::SceneComponent>() );
     sw::GameObject* pInstance = prefabs.spawn( &objects, xmlPath, "CrateA" );
@@ -417,7 +417,7 @@ SW_TEST_CASE( PrefabTest, RevertKeepsTheSocketAndTheComponentIds )
     SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
 
     sw::GameObjectManager objects;
-    sw::PrefabManager     prefabs;
+    sw::PrefabCache       prefabs;
     sw::GameObject*       pTruck = objects.createGameObject( sw::hashed_string( "Truck" ) );
     sw::SceneComponent*   pBody  = pTruck->addComponent<sw::SceneComponent>();
     sw::SceneComponent*   pBed   = pTruck->addComponent<sw::SceneComponent>();
@@ -469,7 +469,7 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
     sw::GameObjectManager world;
     sw::GameObject*       pWorldPlayer = world.createGameObject( sw::hashed_string( "Player" ) );
     SW_ASSERT_NOT_NULL( pWorldPlayer->addComponent<sw::SceneComponent>() );
-    sw::PrefabManager prefabs;
+    sw::PrefabCache prefabs;
     for ( const sw::string& path : { xmlPath, parentedPath } )
     {
         uint32                   parentWarningCount = 0;
@@ -521,7 +521,7 @@ SW_TEST_CASE( PrefabTest, EngineCooksXmlAndJsonPrefabs )
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourceRoot + "/notes.xml", "<Notes/>" ) );
 
     uint32       failedCount  = 0;
-    const uint32 writtenCount = sw::PrefabManager::cookAllPrefabs( sourceRoot, cookedRoot, failedCount );
+    const uint32 writtenCount = sw::PrefabCache::cookAllPrefabs( sourceRoot, cookedRoot, failedCount );
     SW_EXPECT_EQUAL( 4u, writtenCount ); // crate · barrel · deep · twin 둘 중 하나
     SW_EXPECT_EQUAL( 2u, failedCount );  // broken · twin 의 나머지 하나
     SW_EXPECT_FALSE( sw::FileUtil::fileExists( cookedRoot + "/broken.prefab.bin" ) );

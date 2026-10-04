@@ -7,8 +7,8 @@
 
 #include "GameFramework/Base/GameEventUtil.h"
 #include "GameFramework/Kits/ActionCombat/MonsterDataCatalog.h"
-#include "GameFramework/UI/DamageUIComponent.h"
-#include "GameFramework/UI/HPBarBaseComponent.h"
+#include "GameFramework/UI/DamageNumberComponent.h"
+#include "GameFramework/UI/HealthBarComponent.h"
 
 namespace sw
 {
@@ -185,7 +185,7 @@ namespace sw
     void UnitStatsComponent::syncHealthBar( bool bReset )
     {
         GameObject*         pOwner = getOwner();
-        HPBarBaseComponent* pBar   = ( pOwner != nullptr ) ? pOwner->getComponent<HPBarBaseComponent>() : nullptr;
+        HealthBarComponent* pBar   = ( pOwner != nullptr ) ? pOwner->getComponent<HealthBarComponent>() : nullptr;
         if ( pBar == nullptr )
             return;
         const float32 ratio = ( _maxHp > 0 ) ? static_cast<float32>( _hp ) / static_cast<float32>( _maxHp ) : 0.0f;
@@ -211,7 +211,7 @@ namespace sw
         SceneComponent* pNumberRoot = pNumber->addComponent<SceneComponent>();
         if ( pNumberRoot != nullptr )
             pNumberRoot->setWorldPosition( position );
-        DamageUIComponent* pNumberUi = pNumber->addComponent<DamageUIComponent>();
+        DamageNumberComponent* pNumberUi = pNumber->addComponent<DamageNumberComponent>();
         if ( pNumberUi != nullptr )
             pNumberUi->setDamageValue( amount );
     }

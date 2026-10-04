@@ -38,7 +38,7 @@ namespace sw::editor
         // 캐시된 옛 내용으로 스폰하지 않게 다음 로드가 파일을 다시 읽도록 한다.
         ResourceManager* pResources = editor::getService<ResourceManager>();
         if ( pResources != nullptr )
-            pResources->getPrefabManager().reload( prefabPath, nullptr );
+            pResources->getPrefabCache().reload( prefabPath, nullptr );
         SW_LOG_INFO( "Saved prefab changes to %#", string{ prefabPath }.c_str() );
         return true;
     }
@@ -56,7 +56,7 @@ namespace sw::editor
 
         // 되돌리기는 엔진이 한다 — 형식(XML · JSON)과 인스턴스의 자리(부모 · 이름 · 루트 위치 · 회전)를 프리팹 쪽이 안다.
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
-        if ( pResources->getPrefabManager().revertInstance( pObj, prefabPath ) == false )
+        if ( pResources->getPrefabCache().revertInstance( pObj, prefabPath ) == false )
             return false;
         const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
         EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, "Revert to Prefab" );

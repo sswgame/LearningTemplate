@@ -2,7 +2,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include <algorithm>
 #include <mutex>
@@ -375,7 +375,7 @@ namespace test
             {
                 _bShuffle = true;
                 if ( _shuffleSeed == 0 )
-                    _shuffleSeed = static_cast<uint32>( sw::CpuClock::nowNanoseconds() % 100000 ) + 1;
+                    _shuffleSeed = static_cast<uint32>( sw::MonotonicClock::nowNanoseconds() % 100000 ) + 1;
                 continue;
             }
             if ( arg.substr( 0, kShufflePrefix.size() ) == kShufflePrefix || arg.substr( 0, kSeedPrefix.size() ) == kSeedPrefix )
@@ -552,7 +552,7 @@ namespace test
         std::fflush( stdout );
         SW_LOG_INFO( "%#", testInfo.fullName().c_str() );
 
-        const sw::CpuStopwatch stopwatch;
+        const sw::Stopwatch stopwatch;
 
         // 호스트 스위트(GPU · 창 · DXC)는 예상 밖 Error 로그를 실패로 친다 — 검증 레이어 오류가 단언 없이 지나가지 않게.
         const bool                 bHostSuite = _mapHostSuiteReason.find( testInfo._groupName ) != _mapHostSuiteReason.end();

@@ -9,7 +9,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
@@ -124,9 +124,9 @@ namespace sw
         historyDesc._bIsRenderTarget   = SW_TRUE;
         historyDesc._bIsShaderResource = SW_TRUE;
 
-        _taaHistory = _pDevice->getResource()->createTexture2D( historyDesc );
+        _taaHistory = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
         if ( _taaHistory != 0 )
-            _taaHistorySrv = _pDevice->getResource()->registerBindlessTexture( _taaHistory );
+            _taaHistorySrv = _pDevice->getResourceFactory()->registerBindlessTexture( _taaHistory );
     }
 
     void FrameRenderer::setPresentCaptureEnabled( bool bEnabled )
@@ -136,7 +136,7 @@ namespace sw
         {
             if ( _presentCapture != 0 && _pDevice != nullptr )
             {
-                _pDevice->getResource()->destroyTexture( _presentCapture );
+                _pDevice->getResourceFactory()->destroyTexture( _presentCapture );
                 _presentCapture = 0;
             }
             return;
@@ -159,7 +159,7 @@ namespace sw
         captureDesc._format            = constant::kBackBufferFormat;
         captureDesc._bIsRenderTarget   = SW_TRUE;
         captureDesc._bIsShaderResource = SW_TRUE;
-        _presentCapture                = _pDevice->getResource()->createTexture2D( captureDesc );
+        _presentCapture                = _pDevice->getResourceFactory()->createTexture2D( captureDesc );
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -181,18 +181,18 @@ namespace sw
         // 새 크기로 다시 잡히면 이것도 같이 버려야 ensureTaaHistory 가 새 크기로 다시 만든다.
         if ( _taaHistorySrv != kInvalidDescriptorIndex )
         {
-            _pDevice->getResource()->unregisterBindlessTexture( _taaHistorySrv );
+            _pDevice->getResourceFactory()->unregisterBindlessTexture( _taaHistorySrv );
             _taaHistorySrv = kInvalidDescriptorIndex;
         }
         if ( _taaHistory != 0 )
         {
-            _pDevice->getResource()->destroyTexture( _taaHistory );
+            _pDevice->getResourceFactory()->destroyTexture( _taaHistory );
             _taaHistory = 0;
         }
         // 캡처도 트랜지언트와 크기가 같아야 한다. 같이 버리고 ensurePresentCapture 가 새 크기로 만든다.
         if ( _presentCapture != 0 )
         {
-            _pDevice->getResource()->destroyTexture( _presentCapture );
+            _pDevice->getResourceFactory()->destroyTexture( _presentCapture );
             _presentCapture = 0;
         }
 

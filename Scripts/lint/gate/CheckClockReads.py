@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""엔진 코드 · 시험 코드가 `std::chrono` 시계를 직접 읽는 곳을 잡는다 — 시계는 `Source/Core/Time/CpuClock.h` 하나다.
+"""엔진 코드 · 시험 코드가 `std::chrono` 시계를 직접 읽는 곳을 잡는다 — 시계는 `Source/Core/Time/MonotonicClock.h` 하나다.
 
 시계가 하나여야 프로파일러 · 로그 · 기한 · 시험이 같은 시각을 본다. 대신 쓸 것(같은 헤더):
 
-    CpuClock::nowNanoseconds()                   지금 시각
-    CpuStopwatch · getElapsedMilliseconds()      걸린 시간
-    CpuDeadline::afterMilliseconds( ms ) · isExpired()   기다림 루프의 기한
+    MonotonicClock::nowNanoseconds()                   지금 시각
+    Stopwatch · getElapsedMilliseconds()      걸린 시간
+    Deadline::afterMilliseconds( ms ) · isExpired()   기다림 루프의 기한
 
 `steady_clock` · `high_resolution_clock` · `system_clock` 이라는 이름 자체를 막는다 — `::now()` 만 보면
 `using Clock = std::chrono::steady_clock; Clock::now()` 나 `using namespace std::chrono;` 뒤의 읽기를 놓친다.
@@ -36,7 +36,7 @@ _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 
 #: std 시계를 읽어도 되는 파일 → 이유.
 _kMapExemptFileToReason = {
-    "Source/Core/Process/CrashContext.cpp": "세션 ID 에 벽시계(epoch 기준) 값을 섞는다 — CpuClock 은 기준점이 없는 단조 시계라 대신할 수 없다",
+    "Source/Core/Process/CrashContext.cpp": "세션 ID 에 벽시계(epoch 기준) 값을 섞는다 — MonotonicClock 은 기준점이 없는 단조 시계라 대신할 수 없다",
 }
 
 _kClockNameRe = re.compile(r"(?<![\w$])(steady_clock|high_resolution_clock|system_clock)(?![\w$])")
@@ -67,17 +67,17 @@ def findClockReads(repositoryRoot: Path, listTargetFile: list[str] | None) -> li
 class CheckClockReadsGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    description = "엔진 · 시험 코드가 std::chrono 시계가 아니라 CpuClock · CpuStopwatch · CpuDeadline 을 읽는지 검사"
-    buildComment = "Checking that code reads time through CpuClock, not std::chrono clocks..."
+    description = "엔진 · 시험 코드가 std::chrono 시계가 아니라 MonotonicClock · Stopwatch · Deadline 을 읽는지 검사"
+    buildComment = "Checking that code reads time through MonotonicClock, not std::chrono clocks..."
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
     preCommitFileArgument = "--files"
     violationHeader = "std::chrono 시계 직접 읽기"
     hint = (
-        "  시계는 Source/Core/Time/CpuClock.h 하나입니다:\n"
-        "      지금 시각   CpuClock::nowNanoseconds()\n"
-        "      걸린 시간   CpuStopwatch stopwatch; ... stopwatch.getElapsedMilliseconds()\n"
-        "      기다림 기한 CpuDeadline::afterMilliseconds( ms ) · isExpired()\n"
+        "  시계는 Source/Core/Time/MonotonicClock.h 하나입니다:\n"
+        "      지금 시각   MonotonicClock::nowNanoseconds()\n"
+        "      걸린 시간   Stopwatch stopwatch; ... stopwatch.getElapsedMilliseconds()\n"
+        "      기다림 기한 Deadline::afterMilliseconds( ms ) · isExpired()\n"
         "  정말 std 시계가 필요하면 Scripts/lint/gate/CheckClockReads.py 의 _kMapExemptFileToReason 에 이유와 함께 적습니다."
     )
     selfTestCases = [

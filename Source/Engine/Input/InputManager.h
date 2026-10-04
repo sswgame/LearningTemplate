@@ -9,7 +9,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Module/ModuleCodeHolder.h"
+#include "Core/Module/ModuleUnloadListener.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
@@ -24,10 +24,10 @@ namespace sw
 {
     struct NativeWindowEvent;
 
-    class ActionMap;
+    class InputMap;
 
     /** @brief 지금 활성인 입력 장치 타입입니다(UI 글리프 자동 전환용). */
-    enum class InputDeviceType : uint8
+    enum class InputGlyphStyle : uint8
     {
         KeyboardMouse = 0,
         GamepadXbox,
@@ -38,13 +38,13 @@ namespace sw
     /**
      * @class InputManager
      * @brief 다형 IInputDevice 들을 등록 · 관리하고, 락프리 원시 이벤트 큐로 OS 메시지를 프레임에 맞추는 중앙 허브입니다.
-     * @details 모듈이 단 콜백(장치 변경 · 게임패드 연결 · 글자 입력 · 조합)과 모듈이 등록한 장치를 드므로 `IModuleCodeHolder` 입니다 — 모듈 이미지를
-     *          내리기 전에 그 범위의 콜백을 풀고 그 범위에 vtable 이 있는 장치를 내립니다(`releaseModuleCodeWithin`).
+     * @details 모듈이 단 콜백(장치 변경 · 게임패드 연결 · 글자 입력 · 조합)과 모듈이 등록한 장치를 드므로 `IModuleUnloadListener` 입니다 — 모듈 이미지를
+     *          내리기 전에 그 범위의 콜백을 풀고 그 범위에 vtable 이 있는 장치를 내립니다(`onModuleUnloading`).
      */
-    class SW_API InputManager final : public IModuleCodeHolder
+    class SW_API InputManager final : public IModuleUnloadListener
     {
     public:
-        using ActiveDeviceChangedDelegate = Delegate<void( InputDeviceType )>;
+        using ActiveDeviceChangedDelegate = Delegate<void( InputGlyphStyle )>;
         using GamepadConnectionDelegate   = Delegate<void( uint32, bool )>;
         using TextInputDelegate           = Delegate<void( string_view )>;
 
@@ -64,8 +64,8 @@ namespace sw
          * @brief 프레임을 시작합니다. 장치를 폴링하고, 락프리 큐를 비워 이벤트를 **들어온 순서대로** 적용하고, 프레임 엣지를 맞춥니다.
          * @details 창 메시지는 `processNativeEvent` 가 큐에 넣기만 합니다. 장치 상태를 바꾸는 길은 여기 하나입니다 — 메시지를 받을 때
          *          상태를 바로 바꾸면 여기서 엣지를 지운 뒤 재생할 때 이미 눌린 키라 "새로 눌림" 이 사라집니다. 끝에서 통합
-         *          ActionMap(`getActionMap()`)을 갱신합니다 —
-         *          그 맵을 따로 `update()` 하지 마십시오(한 프레임에 두 번 흐릅니다). 따로 만든 ActionMap 은 만든 쪽이 갱신합니다.
+         *          InputMap(`getInputMap()`)을 갱신합니다 —
+         *          그 맵을 따로 `update()` 하지 마십시오(한 프레임에 두 번 흐릅니다). 따로 만든 InputMap 은 만든 쪽이 갱신합니다.
          * @param deltaSeconds 지난 프레임의 실제 시간(초). 진동 타이머 · 재연결 주기가 이 값으로 흐릅니다.
          */
         void beginFrame( float32 deltaSeconds = 0.016f );
@@ -98,25 +98,25 @@ namespace sw
         GamepadDevice*  getGamepad( uint32 deviceIndex = 0 ) const;
 
         // ------------------------------------------------------------------------------
-        // 4) ActionMap · 장치 상태 조회
+        // 4) InputMap · 장치 상태 조회
         // ------------------------------------------------------------------------------
-        ActionMap&       getActionMap() { return *_pActionMap; }
-        const ActionMap& getActionMap() const { return *_pActionMap; }
+        InputMap&       getInputMap() { return *_pInputMap; }
+        const InputMap& getInputMap() const { return *_pInputMap; }
 
-        InputDeviceType getActiveDeviceType() const { return _activeDeviceType; }
-        void            setActiveDeviceType( InputDeviceType type );
+        InputGlyphStyle getActiveGlyphStyle() const { return _activeGlyphStyle; }
+        void            setActiveGlyphStyle( InputGlyphStyle type );
         void            setActiveDeviceChangedCallback( ActiveDeviceChangedDelegate callback ) { _onActiveDeviceChanged = std::move( callback ); }
         void            setGamepadConnectionCallback( GamepadConnectionDelegate callback ) { _onGamepadConnectionChanged = std::move( callback ); }
         void            setTextInputCallback( TextInputDelegate callback ) { _onTextInput = std::move( callback ); }
         void            setTextCompositionCallback( TextInputDelegate callback ) { _onTextComposition = std::move( callback ); }
 
-        /** @brief 보유자 목록의 이름입니다. */
-        const utf8* getModuleCodeHolderName() const override { return "input callbacks"; }
+        /** @brief 언로드 리스너 목록의 이름입니다. */
+        const utf8* getModuleUnloadListenerName() const override { return "input callbacks"; }
         /**
          * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안인 콜백(이 관리자의 넷 · 장치마다의 것)을 풀고, vtable 이 그 범위에 있는 장치를 등록에서 내립니다.
          * @details 장치 소멸자는 아직 올라와 있는 그 이미지의 코드라 지금 내려야 합니다. 뗀 것의 수(콜백 + 장치)를 반환합니다.
          */
-        uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
         bool wasAnyInputPressed() const;
         void onTextInput( string_view text );
@@ -146,7 +146,7 @@ namespace sw
 
         /**
          * @brief 포인터가 창 안에 있고 주어진 사각형(픽셀) 위에 있으면 true 입니다.
-         * @details 이것은 **액션이 아니라 장치 상태**라 ActionMap 이 아니라 여기 있습니다. 쓰는 값도 모두 여기 있습니다
+         * @details 이것은 **액션이 아니라 장치 상태**라 InputMap 이 아니라 여기 있습니다. 쓰는 값도 모두 여기 있습니다
          *          (isPointerInside · getMousePosition).
          */
         bool isPointerOverRect( int32 x, int32 y, int32 width, int32 height ) const;
@@ -240,10 +240,10 @@ namespace sw
         KeyboardDevice*                      _pKeyboard;            /**< 편의 API 용 캐시 포인터. 실제 소유는 _listDevice. */
         MouseDevice*                         _pMouse;               /**< 편의 API 용 캐시 포인터. */
         GamepadDevice*                       _pGamepad;             /**< 0번 게임패드 편의 API 용 캐시 포인터(1~3번은 getGamepad(index) 로 조회). */
-        unique_ptr<ActionMap>                _pActionMap;           /**< 이 InputManager 에 연결된 기본 ActionMap 인스턴스. */
+        unique_ptr<InputMap>                 _pInputMap;            /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스. */
         vector<RawInputEvent>                _listDrainedEvent;     /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼(매 프레임 재사용). */
         InputHistoryBuffer                   _inputHistory;         /**< 롤백 · 리플레이용 프레임별 입력 스냅샷 링 버퍼. */
-        InputDeviceType                      _activeDeviceType;     /**< 마지막으로 조작이 감지된 장치 종류(UI 글리프 자동 전환용). */
+        InputGlyphStyle                      _activeGlyphStyle;     /**< 마지막으로 조작이 감지된 장치 종류(UI 글리프 자동 전환용). */
         ActiveDeviceChangedDelegate          _onActiveDeviceChanged;
         GamepadConnectionDelegate            _onGamepadConnectionChanged;
         TextInputDelegate                    _onTextInput;

@@ -20,7 +20,7 @@ namespace
 // ------------------------------------------------------------------------------
 /**
  * @brief [RegistrationListTest] 같은 객체 · nullptr 는 한 번도 더 오르지 않고, 빼기는 남은 것의 등록 순서를 지킨다
- * @details 빛 · 카메라 · 모듈 코드 보유자가 이 모양이다. 빼기가 맨 뒤를 빈자리로 옮기면(swap-and-pop) "등록된 첫 빛" 이 빼기마다 바뀐다.
+ * @details 빛 · 카메라 · 모듈 언로드 리스너가 이 모양이다. 빼기가 맨 뒤를 빈자리로 옮기면(swap-and-pop) "등록된 첫 빛" 이 빼기마다 바뀐다.
  */
 SW_TEST_CASE( RegistrationListTest, RejectsDuplicatesAndKeepsInsertionOrderOnRemove )
 {

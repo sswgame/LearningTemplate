@@ -136,7 +136,7 @@ namespace sw
          * @details 리터럴은 컴파일 타임에 정해진 유한 집합이라 intern 이 계속 늘어날 수 없습니다. 포인터 · `string_view` · `string`
          *          에서의 변환은 그대로 explicit 입니다. 동적 텍스트를 이름으로 올리는 곳은 눈에 보여야 하기 때문입니다(StringTable
          *          처럼 조회만 하려는 텍스트를 intern 하면 그것이 곧 누수입니다). 같은 이름의 함수에 `string_view` 판과
-         *          `hashed_string` 판을 **둘 다** 두면 리터럴 호출이 모호해지므로, 그런 쌍은 두지 않습니다(ActionMap 의 쌍 37개를
+         *          `hashed_string` 판을 **둘 다** 두면 리터럴 호출이 모호해지므로, 그런 쌍은 두지 않습니다(InputMap 의 쌍 37개를
          *          이 규칙으로 걷어 냈습니다).
          */
         template <size_type U>

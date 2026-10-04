@@ -3,7 +3,7 @@
  * @brief 패스 종류(`RenderPassType`) 하나에 대한 사실을 한 줄에 모은 표입니다.
  * @details 기본 셰이더 · PSO 상태 · 패스 define · 그리는 대상(씬 메시 · 풀스크린 · 컴퓨트) · 입력 계약이 여기 있습니다.
  *          엔진 PSO 등록(`FrameRenderer::ensurePassResources`), 셰이더 베이크 요청(`ShaderBakeDriver`), 패스 실행
- *          (`FrameRenderer::executePass`), 파이프라인 검증(`RenderPipelineResource::validate`)이 모두 이 표를 enum 으로 읽습니다.
+ *          (`FrameRenderer::executePass`), 파이프라인 검증(`RenderPipelineAsset::validate`)이 모두 이 표를 enum 으로 읽습니다.
  *          패스 종류를 하나 더하는 일은 enum 한 줄 + 이 표의 case 하나입니다(전용 실행 코드가 필요한 패스만 executePass 에 case 를 더합니다).
  */
 #pragma once
@@ -15,8 +15,8 @@
 #include "Engine/Common/Common.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassInputContract.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
 
 namespace sw
 {

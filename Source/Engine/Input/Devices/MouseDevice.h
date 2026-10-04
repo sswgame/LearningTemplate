@@ -72,7 +72,7 @@ namespace sw
         float2 getRawDelta() const { return _rawDelta; }
         /**
          * @brief 이번 프레임의 이동량입니다. 원시 델타가 있으면 그것(화면 경계에 막히지 않는다), 없으면 위치 차이입니다.
-         * @details 스무딩과 ActionMap 의 마우스 델타 바인딩이 같은 규칙으로 읽습니다.
+         * @details 스무딩과 InputMap 의 마우스 델타 바인딩이 같은 규칙으로 읽습니다.
          */
         float2 getMovementDelta() const;
         /** @brief 가속 · 스무딩을 적용한 이번 프레임의 이동량입니다. 프레임당 한 번 갱신됩니다(`onEventsDispatched`). */

@@ -15,7 +15,7 @@ namespace sw::editor
         class MaterialAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:
-            virtual EditorAssetKind getKind() const override { return EditorAssetKind::Material; }
+            virtual EditorAssetType getKind() const override { return EditorAssetType::Material; }
 
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override
             {

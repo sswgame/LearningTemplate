@@ -22,7 +22,7 @@
 #include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
@@ -177,10 +177,10 @@ SW_TEST_CASE( ShaderBakeRequestTest, EveryPipelinePassShaderIsRequested )
                                         "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forwardpipelinestaged.xml" };
     constexpr uint32 kPipelineCount = static_cast<uint32>( sizeof( arrPipeline ) / sizeof( arrPipeline[0] ) );
 
-    sw::RenderPipelineResource arrProbe[kPipelineCount];
+    sw::RenderPipelineAsset arrProbe[kPipelineCount];
     for ( uint32 pipelineIndex = 0; pipelineIndex < kPipelineCount; ++pipelineIndex )
     {
-        sw::RenderPipelineResource& probe = arrProbe[pipelineIndex];
+        sw::RenderPipelineAsset& probe = arrProbe[pipelineIndex];
         SW_ASSERT_TRUE_MSG( probe.loadFromXmlFile( arrPipeline[pipelineIndex] ), arrPipeline[pipelineIndex] );
         for ( sw::RenderGraphPassDesc& pass : probe.getDesc()._listPass )
         {
@@ -196,7 +196,7 @@ SW_TEST_CASE( ShaderBakeRequestTest, EveryPipelinePassShaderIsRequested )
     SW_ASSERT_TRUE( listRequest.empty() == false );
 
     bool arrCovered[sw::kRenderPassTypeCount]{};
-    for ( const sw::RenderPipelineResource& probe : arrProbe )
+    for ( const sw::RenderPipelineAsset& probe : arrProbe )
     {
         for ( const sw::RenderGraphPassDesc& pass : probe.getGraphPass() )
         {

@@ -10,7 +10,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
@@ -56,7 +56,7 @@ namespace sw
                 // DX11 은 한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를 같이 못 걸어 _bGpuCulling 이 0 이지만 _bCompute 는 1 이다.
                 const bool bCapable = traits.hasFlag( RenderPassTraitFlag::kRequiresGpuCulling ) ? caps._bGpuCulling != SW_FALSE : caps._bCompute != SW_FALSE;
                 if ( bCapable )
-                    pso = _pDevice->getResource()->createComputePipelineState( ( engineData.*traits._pDefaultShader ).c_str(), FrameRendererUtil::Entry::kCSMain );
+                    pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineData.*traits._pDefaultShader ).c_str(), FrameRendererUtil::Entry::kCSMain );
             }
             else
             {
@@ -165,7 +165,7 @@ namespace sw
 
     void FrameRenderer::ensureMaterialFallbackBuffers()
     {
-        if ( _pDevice == nullptr || _pDevice->getResource() == nullptr )
+        if ( _pDevice == nullptr || _pDevice->getResourceFactory() == nullptr )
             return;
 
         // 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 를 모은다. 셰이더 타입마다 다를 수 있고, 레이아웃은

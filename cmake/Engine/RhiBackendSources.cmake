@@ -14,9 +14,9 @@ set(SW_RHI_DX11_DEVICE_SOURCES
     "${swRhiRoot}/DX11/D3D11RHIDevice.cpp"
     "${swRhiRoot}/DX11/D3D11RHIDeviceInit.cpp"
     "${swRhiRoot}/DX11/D3D11RHIDeviceSubmission.cpp"
-    "${swRhiRoot}/DX11/D3D11RHIResource.cpp"
-    "${swRhiRoot}/DX11/D3D11RHIResourceBindless.cpp"
-    "${swRhiRoot}/DX11/D3D11RHIResourcePipeline.cpp"
+    "${swRhiRoot}/DX11/D3D11RHIResourceFactory.cpp"
+    "${swRhiRoot}/DX11/D3D11RHIResourceFactoryBindless.cpp"
+    "${swRhiRoot}/DX11/D3D11RHIResourceFactoryPipeline.cpp"
     "${swRhiRoot}/DX11/D3D11RHISwapChain.cpp"
 )
 set(SW_RHI_DX12_DEVICE_SOURCES
@@ -26,9 +26,9 @@ set(SW_RHI_DX12_DEVICE_SOURCES
     "${swRhiRoot}/DX12/D3D12RHIDeviceDescriptor.cpp"
     "${swRhiRoot}/DX12/D3D12RHIDeviceInit.cpp"
     "${swRhiRoot}/DX12/D3D12RHIDeviceSubmission.cpp"
-    "${swRhiRoot}/DX12/D3D12RHIResource.cpp"
-    "${swRhiRoot}/DX12/D3D12RHIResourceBindless.cpp"
-    "${swRhiRoot}/DX12/D3D12RHIResourcePipeline.cpp"
+    "${swRhiRoot}/DX12/D3D12RHIResourceFactory.cpp"
+    "${swRhiRoot}/DX12/D3D12RHIResourceFactoryBindless.cpp"
+    "${swRhiRoot}/DX12/D3D12RHIResourceFactoryPipeline.cpp"
     "${swRhiRoot}/DX12/D3D12RHISwapChain.cpp"
 )
 set(SW_RHI_GL_DEVICE_SOURCES
@@ -36,9 +36,9 @@ set(SW_RHI_GL_DEVICE_SOURCES
     "${swRhiRoot}/GL/OpenGLRHIDevice.cpp"
     "${swRhiRoot}/GL/OpenGLRHIDeviceInit.cpp"
     "${swRhiRoot}/GL/OpenGLRHIDeviceSubmission.cpp"
-    "${swRhiRoot}/GL/OpenGLRHIResource.cpp"
-    "${swRhiRoot}/GL/OpenGLRHIResourceBindless.cpp"
-    "${swRhiRoot}/GL/OpenGLRHIResourcePipeline.cpp"
+    "${swRhiRoot}/GL/OpenGLRHIResourceFactory.cpp"
+    "${swRhiRoot}/GL/OpenGLRHIResourceFactoryBindless.cpp"
+    "${swRhiRoot}/GL/OpenGLRHIResourceFactoryPipeline.cpp"
     "${swRhiRoot}/GL/Platform/IOpenGLPlatformContext.cpp"
     "${swRhiRoot}/GL/Platform/WglPlatformContext.cpp"
     "${swRhiRoot}/GL/Platform/GlxPlatformContext.cpp"
@@ -52,9 +52,9 @@ set(SW_RHI_VULKAN_DEVICE_SOURCES
     "${swRhiRoot}/Vulkan/VulkanRHIDeviceRenderPass.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHIDeviceSubmission.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHIRenderPassCache.cpp"
-    "${swRhiRoot}/Vulkan/VulkanRHIResource.cpp"
-    "${swRhiRoot}/Vulkan/VulkanRHIResourceBindless.cpp"
-    "${swRhiRoot}/Vulkan/VulkanRHIResourcePipeline.cpp"
+    "${swRhiRoot}/Vulkan/VulkanRHIResourceFactory.cpp"
+    "${swRhiRoot}/Vulkan/VulkanRHIResourceFactoryBindless.cpp"
+    "${swRhiRoot}/Vulkan/VulkanRHIResourceFactoryPipeline.cpp"
     "${swRhiRoot}/Vulkan/VulkanRHISwapChain.cpp"
 )
 

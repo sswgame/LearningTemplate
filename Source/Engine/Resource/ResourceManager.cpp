@@ -25,7 +25,7 @@ namespace sw
         , _assetFormatRegistry{}
         , _materialCache{ make_unique<MaterialCache>() }
         , _textureCache{ make_unique<TextureCache>() }
-        , _prefabManager{ make_unique<PrefabManager>() }
+        , _prefabCache{ make_unique<PrefabCache>() }
         , _spriteClipCache{ make_unique<SpriteClipCache>() }
         , _pPackManager{ make_unique<ResourcePackManager>() }
         , _registeredAssetCache{}
@@ -34,7 +34,7 @@ namespace sw
         // 내장 캐시도 **등록부를 통해서만** 훑는다 — 이름으로 캐시를 적는 경로를 따로 두지 말 것.
         registerAssetCache( _materialCache.get() );
         registerAssetCache( _textureCache.get() );
-        registerAssetCache( _prefabManager.get() );
+        registerAssetCache( _prefabCache.get() );
         registerAssetCache( _spriteClipCache.get() );
     }
 
@@ -153,7 +153,7 @@ namespace sw
 
     bool ResourceManager::isBuiltInAssetCache( const IAssetCache* pCache ) const
     {
-        return pCache != nullptr && ( pCache == _materialCache.get() || pCache == _textureCache.get() || pCache == _prefabManager.get() ||
+        return pCache != nullptr && ( pCache == _materialCache.get() || pCache == _textureCache.get() || pCache == _prefabCache.get() ||
                                       pCache == _spriteClipCache.get() );
     }
 
@@ -193,7 +193,7 @@ namespace sw
         }
     }
 
-    uint32 ResourceManager::releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
+    uint32 ResourceManager::onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped )
     {
         (void)outKeepImageMapped;
         vector<IAssetCache*> listModuleCache;
@@ -202,8 +202,8 @@ namespace sw
             if ( isBuiltInAssetCache( pCache ) )
                 continue;
             // 캐시 객체가 모듈의 정적 데이터이거나, 모듈 쪽 클래스라 vtable 이 그 이미지에 있으면 이미지와 함께 사라진다.
-            const bool bObjectWithin = IModuleCodeHolder::isAddressWithin( pCache, pBegin, pEnd );
-            const bool bVtableWithin = IModuleCodeHolder::isAddressWithin( IModuleCodeHolder::findVtableAddress( pCache ), pBegin, pEnd );
+            const bool bObjectWithin = IModuleUnloadListener::isAddressWithin( pCache, pBegin, pEnd );
+            const bool bVtableWithin = IModuleUnloadListener::isAddressWithin( IModuleUnloadListener::findVtableAddress( pCache ), pBegin, pEnd );
             if ( bObjectWithin || bVtableWithin )
                 listModuleCache.push_back( pCache );
         }
@@ -236,14 +236,14 @@ namespace sw
         return *_textureCache;
     }
 
-    PrefabManager& ResourceManager::getPrefabManager()
+    PrefabCache& ResourceManager::getPrefabCache()
     {
-        return *_prefabManager;
+        return *_prefabCache;
     }
 
-    const PrefabManager& ResourceManager::getPrefabManager() const
+    const PrefabCache& ResourceManager::getPrefabCache() const
     {
-        return *_prefabManager;
+        return *_prefabCache;
     }
 
     ResourcePackManager& ResourceManager::getPackManager()

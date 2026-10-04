@@ -4,7 +4,7 @@
 
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
-#include "Engine/Graphics/RHI/DX11/D3D11RHIResource.h"
+#include "Engine/Graphics/RHI/DX11/D3D11RHIResourceFactory.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -92,7 +92,7 @@ namespace sw
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
     {
-        _resourceImpl = sw::make_unique<D3D11RHIResource>( this );
+        _resourceImpl = sw::make_unique<D3D11RHIResourceFactory>( this );
     }
 
     D3D11RHIDevice::~D3D11RHIDevice()
@@ -100,8 +100,8 @@ namespace sw
         shutdown();
     }
 
-    IRHIResource*       D3D11RHIDevice::getResource() { return _resourceImpl.get(); }
-    IRHICommandContext* D3D11RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
+    IRHIResourceFactory* D3D11RHIDevice::getResourceFactory() { return _resourceImpl.get(); }
+    IRHICommandContext*  D3D11RHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 
     void D3D11RHIDevice::bindStaticSamplers( ID3D11DeviceContext* pContext ) const
     {
@@ -169,7 +169,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 리소스 조회 · 저장 — 핸들 표와 bindless 목록 (D3D11RHIResource 와 컨텍스트가 쓴다)
+    // 리소스 조회 · 저장 — 핸들 표와 bindless 목록 (D3D11RHIResourceFactory 와 컨텍스트가 쓴다)
     // ------------------------------------------------------------------------------
 
     ID3D11Buffer* D3D11RHIDevice::resolveBuffer( RHIBufferHandle handle ) const

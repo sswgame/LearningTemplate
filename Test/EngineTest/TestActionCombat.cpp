@@ -17,11 +17,11 @@
 #include "GameFramework/Base/GameService.h"
 #include "GameFramework/Kits/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/ActionCombat/ActionRoom.h"
-#include "GameFramework/Kits/ActionCombat/AttackBaseComponent.h"
+#include "GameFramework/Kits/ActionCombat/MeleeHitboxComponent.h"
 #include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
-#include "GameFramework/UI/DamageUIComponent.h"
-#include "GameFramework/UI/HPBarBaseComponent.h"
+#include "GameFramework/UI/DamageNumberComponent.h"
+#include "GameFramework/UI/HealthBarComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -381,7 +381,7 @@ SW_TEST_CASE( ActionCombatTest, AttackHitsEachUnitInItsHitboxOncePerSwing )
     UnitStatsComponent* pWalker   = spawnUnit( manager, "Walker", 6.0f, 100, 0, 0.0f );
     SW_ASSERT_TRUE( pAttacker != nullptr && pHitbox != nullptr && pStanding != nullptr && pWalker != nullptr );
     SW_ASSERT_TRUE( pHitbox->attachToParent( pAttacker->getOwner(), AttachRule::KeepWorld ) );
-    AttackBaseComponent* pAttack = pHitbox->addComponent<AttackBaseComponent>();
+    MeleeHitboxComponent* pAttack = pHitbox->addComponent<MeleeHitboxComponent>();
     SW_ASSERT_NOT_NULL( pAttack );
     SceneComponent* pWalkerBody = pWalker->getOwner()->getPrimarySceneComponent();
     SW_ASSERT_NOT_NULL( pWalkerBody );
@@ -595,7 +595,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectileWithoutAColliderWarnsAtBeginPlay )
 
 /**
  * @brief [ActionCombatTest] 씬을 플레이 중에 저장했다 다시 열어도 핸들 PROPERTY 는 같은 오브젝트를 가리킨다 — 파일에 없는 것은 없음이 된다
- * @details 핸들 PROPERTY(`ProjectileComponent::_instigator` · `AttackBaseComponent::_listHitTarget`)에 런타임 id 를 그대로 파일에 넣으면, 다시 연
+ * @details 핸들 PROPERTY(`ProjectileComponent::_instigator` · `MeleeHitboxComponent::_listHitTarget`)에 런타임 id 를 그대로 파일에 넣으면, 다시 연
  *          씬의 오브젝트는 새 id 를 받으므로 그 값은 아무것도 아니거나 우연히 같은 값을 받은 **다른 오브젝트**다. 그래서 부모 부착과 같은 규칙이다 —
  *          쓸 때 그 오브젝트의 파일 id 로(파일에 없으면 0), 읽을 때 묶음이 이 실행의 오브젝트로 옮긴다(`ObjectStateBatch`). 언리얼의 Instigator 처럼
  *          파일 밖을 가리키는 런타임 참조는 남지 않는다.
@@ -615,7 +615,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveASceneRoundTripAsTheSameO
     ProjectileComponent* pOrphan  = spawnBullet( *pObjects, 20.0f, 20.0f, 0.0f, 10 );
     GameObject*          pGone    = pObjects->createGameObject( hashed_string( "Gone" ) );
     SW_ASSERT_TRUE( pShooter != nullptr && pVictim != nullptr && pHitbox != nullptr && pLive != nullptr && pOrphan != nullptr && pGone != nullptr );
-    AttackBaseComponent* pAttack = pHitbox->addComponent<AttackBaseComponent>();
+    MeleeHitboxComponent* pAttack = pHitbox->addComponent<MeleeHitboxComponent>();
     SW_ASSERT_NOT_NULL( pAttack );
     pLive->getOwner()->setName( hashed_string( "LiveShot" ) );
     pOrphan->getOwner()->setName( hashed_string( "OrphanShot" ) );
@@ -651,7 +651,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveASceneRoundTripAsTheSameO
     UnitStatsComponent* pNewVictimStats = pNewVictim->getComponent<UnitStatsComponent>();
     SW_ASSERT_NOT_NULL( pNewVictimStats );
     SW_ASSERT_EQUAL( 90, pNewVictimStats->getHp() );
-    SW_ASSERT_TRUE( pNewHitbox->getComponent<AttackBaseComponent>()->isAttackActive() );
+    SW_ASSERT_TRUE( pNewHitbox->getComponent<MeleeHitboxComponent>()->isAttackActive() );
     pReloadedObjects->beginPlay();
     pReloadedObjects->tick( 0.1f );
     SW_EXPECT_EQUAL( 90, pNewVictimStats->getHp() );
@@ -741,7 +741,7 @@ SW_TEST_CASE( ActionCombatTest, AttackTracksEachContactAndForgetsUnitsThatDieIns
     UnitStatsComponent* pSensed = spawnUnit( manager, "Sensed", 0.0f, 100, 0, 0.0f );
     UnitStatsComponent* pLate   = spawnUnit( manager, "Late", 8.0f, 100, 0, 0.0f );
     SW_ASSERT_TRUE( pHitbox != nullptr && pDoomed != nullptr && pTwin != nullptr && pSensed != nullptr && pLate != nullptr );
-    AttackBaseComponent* pAttack = pHitbox->addComponent<AttackBaseComponent>();
+    MeleeHitboxComponent* pAttack = pHitbox->addComponent<MeleeHitboxComponent>();
     SW_ASSERT_NOT_NULL( pAttack );
     // 쌍둥이는 몸 콜라이더가 둘이다 — 둘 다 판정 안에 있다.
     BoxCollider2DComponent* pTwinSecond = pTwin->getOwner()->addComponent<BoxCollider2DComponent>();
@@ -857,7 +857,7 @@ SW_TEST_CASE( ActionCombatTest, UnitDrivesItsHealthBar )
     SW_ASSERT_NOT_NULL( pUnit );
     pUnit->setStats( 50, 100, 0, 0, 0.0f, 0.0f );
     // 바는 스탯 뒤에 단다 — 씬에서 읽은 유닛처럼 시작할 때만 맞출 수 있다.
-    HPBarBaseComponent* pBar = pUnit->getOwner()->addComponent<HPBarBaseComponent>();
+    HealthBarComponent* pBar = pUnit->getOwner()->addComponent<HealthBarComponent>();
     SW_ASSERT_NOT_NULL( pBar );
     manager.beginPlay();
     SW_EXPECT_NEAR_EQUAL( 0.5f, pBar->getTargetRatio(), 1e-4f );
@@ -888,10 +888,10 @@ SW_TEST_CASE( ActionCombatTest, UnitSpawnsDamageNumbersWhenAsked )
     pSilent->takeDamage( 25 );
     pShown->takeDamage( 25 );
 
-    sw::vector<DamageUIComponent*> listNumber;
+    sw::vector<DamageNumberComponent*> listNumber;
     manager.forEachGameObject( [&listNumber]( GameObject* pObject )
     {
-        if ( DamageUIComponent* pNumber = pObject->getComponent<DamageUIComponent>() )
+        if ( DamageNumberComponent* pNumber = pObject->getComponent<DamageNumberComponent>() )
             listNumber.push_back( pNumber );
     } );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listNumber.size() );

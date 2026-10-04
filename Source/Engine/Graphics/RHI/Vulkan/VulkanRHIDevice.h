@@ -19,7 +19,7 @@
 namespace sw
 {
     class VulkanRHICommandContext;
-    class VulkanRHIResource;
+    class VulkanRHIResourceFactory;
 
     /**
      * @struct VulkanDescriptorPoolSet
@@ -154,7 +154,7 @@ namespace sw
         friend class VulkanRHICommandList;
 
     public:
-        friend class VulkanRHIResource;
+        friend class VulkanRHIResourceFactory;
         /** @brief 빈 Vulkan 디바이스를 만듭니다. */
         VulkanRHIDevice();
         /** @brief 인스턴스 · 디바이스 · 스왑체인을 정리합니다. */
@@ -206,8 +206,8 @@ namespace sw
         void collectTimestampsForSlot();
 
     public:
-        /** @brief 리소스 생성 · 파괴 인터페이스(VulkanRHIResource)를 반환합니다. */
-        IRHIResource* getResource() override;
+        /** @brief 리소스 생성 · 파괴 인터페이스(VulkanRHIResourceFactory)를 반환합니다. */
+        IRHIResourceFactory* getResourceFactory() override;
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스 · Present 가 여기에 기록합니다. */
         IRHICommandContext* getFrameStreamContext() override;
 
@@ -665,7 +665,7 @@ namespace sw
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
         VkPipelineCache                           _pipelineCache;
 
-        sw::unique_ptr<VulkanRHICommandContext> _frameStreamContext;
-        sw::unique_ptr<VulkanRHIResource>       _resourceImpl;
+        sw::unique_ptr<VulkanRHICommandContext>  _frameStreamContext;
+        sw::unique_ptr<VulkanRHIResourceFactory> _resourceImpl;
     };
 } // namespace sw

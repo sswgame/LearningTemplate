@@ -10,11 +10,11 @@ namespace sw
 {
     /**
      * @brief 게임패드 슬롯 수입니다. XInput 규격이 넷이고, 조이스틱도 `js0`~`js3` 로 맞춰 둡니다.
-     * @details 패드 번호의 범위는 이것 하나가 정합니다 — 슬롯을 만드는 `InputManager` 와 파일의 `pad` 속성을 읽는 `ActionMap` 이 같이 씁니다.
+     * @details 패드 번호의 범위는 이것 하나가 정합니다 — 슬롯을 만드는 `InputManager` 와 파일의 `pad` 속성을 읽는 `InputMap` 이 같이 씁니다.
      */
     inline constexpr uint32 kMaxGamepadSlot = 4;
 
-    /** @brief ActionMap 이 쓰는 디지털 게임패드 버튼입니다. */
+    /** @brief InputMap 이 쓰는 디지털 게임패드 버튼입니다. */
     enum class GamepadButton : uint8
     {
         A = 0,

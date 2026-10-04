@@ -27,7 +27,7 @@ namespace sw
 {
     class D3D11RHICommandContext;
     class D3D11RHICommandList;
-    class D3D11RHIResource;
+    class D3D11RHIResourceFactory;
 
     /** @brief 루트 상수 에뮬레이션 버퍼의 dword 수입니다. `D3D11RHIDevice::kMaxComputeRootConstantDwords` 의 기준입니다. */
     inline constexpr uint32 kRootConstantDwordCount = 64;
@@ -89,7 +89,7 @@ namespace sw
         friend class D3D11RHICommandList;
 
     public:
-        friend class D3D11RHIResource;
+        friend class D3D11RHIResourceFactory;
         // ------------------------------------------------------------------------------
         // 1) 수명 — 디바이스 · 스왑체인 · 프레임
         // ------------------------------------------------------------------------------
@@ -128,7 +128,7 @@ namespace sw
         /** @brief D3D11 디버그 레이어의 CORRUPTION/ERROR 메시지를 로그로 비웁니다 (SW_DEBUG, 프레임 끝). */
         void flushDebugMessages( const utf8* pStage );
 
-        IRHIResource* getResource() override;
+        IRHIResourceFactory* getResourceFactory() override;
         /** @brief 프레임 스트림 컨텍스트(즉시 컨텍스트)입니다. 백버퍼 패스 · Present 가 여기에 기록합니다. */
         IRHICommandContext* getFrameStreamContext() override;
 
@@ -341,7 +341,7 @@ namespace sw
 
         /// @brief **즉시 컨텍스트(`_deviceContext`)를 만지는 모든 코드가 잡아야 하는 자물쇠입니다.**
         /// @details `ID3D11DeviceContext` 는 스레드 안전하지 않습니다. 안전한 것은 `ID3D11Device` 뿐입니다.
-        ///          기록은 리스트마다 Deferred Context 라 안전하지만, `IRHIResource` 의 갱신(`updateConstantBuffer` 의
+        ///          기록은 리스트마다 Deferred Context 라 안전하지만, `IRHIResourceFactory` 의 갱신(`updateConstantBuffer` 의
         ///          `Map(WRITE_DISCARD)` 등)과 프레임 스트림 컨텍스트는 즉시 컨텍스트로 나가므로 여기서 잠급니다. 기록 중의
         ///          상수버퍼 갱신은 `IRHICommandList::updateConstantBuffer` 로 리스트의 Deferred Context 에 갑니다 — 드로우마다
         ///          불리는 그 경로가 즉시 컨텍스트로 오면 병렬 기록의 워커들이 한 버퍼를 덮어 패스 CB 가 옆 패스 값으로 바뀝니다.
@@ -403,8 +403,8 @@ namespace sw
 
         RHIReleaseQueue _releaseQueue;
 
-        sw::unique_ptr<D3D11RHICommandContext> _frameStreamContext;
-        sw::unique_ptr<D3D11RHIResource>       _resourceImpl;
+        sw::unique_ptr<D3D11RHICommandContext>  _frameStreamContext;
+        sw::unique_ptr<D3D11RHIResourceFactory> _resourceImpl;
     };
 } // namespace sw
 

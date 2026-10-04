@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandList.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
-#include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
+#include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -480,7 +480,7 @@ namespace sw
 
         // 렌더 워커가 프레임 끝마다 놓는다. 조용히 다시 집는다. 시도마다 로그를 남기면 정상
         // 경합이 오류로 보인다(-gl -EnableEditor 의 ERROR_BUSY 가 그런 정상 경합이다).
-        const CpuDeadline deadline = CpuDeadline::afterMilliseconds( timeoutMs );
+        const Deadline deadline = Deadline::afterMilliseconds( timeoutMs );
         while ( deadline.isExpired() == false )
         {
             std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );

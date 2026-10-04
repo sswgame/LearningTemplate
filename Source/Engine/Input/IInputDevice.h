@@ -124,7 +124,7 @@ namespace sw
 
         /**
          * @brief 호출 스텁이 [@p pBegin, @p pEnd) 안에 있는 콜백을 풉니다. 푼 수를 반환합니다.
-         * @details 모듈 이미지를 내리기 전에 `InputManager` 가 장치마다 부릅니다(`IModuleCodeHolder`). 콜백을 드는 장치만 재정의합니다.
+         * @details 모듈 이미지를 내리기 전에 `InputManager` 가 장치마다 부릅니다(`IModuleUnloadListener`). 콜백을 드는 장치만 재정의합니다.
          */
         virtual uint32 releaseCodeWithin( const void* pBegin, const void* pEnd )
         {

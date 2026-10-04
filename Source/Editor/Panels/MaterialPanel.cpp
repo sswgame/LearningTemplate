@@ -202,7 +202,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( MaterialPanel, "material", EditorPanelCategory::Tool, 1300 );
 
     MaterialPanel::MaterialPanel()
-        : EditorDocumentPanel{ EditorAssetKind::Material, false }
+        : EditorDocumentPanel{ EditorAssetType::Material, false }
         , _material{ Material::create() }
         , _name{}
         , _shaderPath{}

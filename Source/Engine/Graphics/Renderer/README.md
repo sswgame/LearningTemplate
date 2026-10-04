@@ -20,13 +20,13 @@ Renderer/
 
 ### Pipeline/ — 무엇을 그릴지 기술한다
 
-- `RenderPassResource` — **바인드 템플릿**. 첨부(attachment)의 포맷·클리어 값.
+- `RenderPassAsset` — **바인드 템플릿**. 첨부(attachment)의 포맷·클리어 값.
   `Resource/engine/renderpass/*.xml`
-- `RenderPipelineResource` — **패스 그래프**. 어떤 패스가 무엇을 입력받아 무엇을 출력하는지.
+- `RenderPipelineAsset` — **패스 그래프**. 어떤 패스가 무엇을 입력받아 무엇을 출력하는지.
   `Resource/engine/pipeline/*.xml`
-- `RenderPassManager` — 위 둘의 로드·캐시
-- `RenderPassType` (RenderPassResource.h) — 패스 타입 이름. XML 의 `_type` 이 이 열거형으로
-  해석되고, 해석되지 않으면 `RenderPipelineResource::validate` 가 잡습니다.
+- `RenderPipelineAssetCache` — 위 둘의 로드·캐시
+- `RenderPassType` (RenderPassAsset.h) — 패스 타입 이름. XML 의 `_type` 이 이 열거형으로
+  해석되고, 해석되지 않으면 `RenderPipelineAsset::validate` 가 잡습니다.
 - `RenderPassTypeTraits` — 패스 종류 하나의 사실을 **enum 값마다 한 줄**로 모은 표입니다. 기본 셰이더(EngineData 칸) ·
   PSO 기본 상태 · 패스 define · 컬러 RT 수 · 그리는 대상(씬 메시 · 일반 풀스크린 · 컴퓨트) · 대신할 PSO · 입력 계약.
   엔진 PSO 등록(`ensurePassResources`) · 셰이더 베이크 요청 · `executePass` 디스패치 · 파이프라인 검증이 모두 이 표를
@@ -99,7 +99,7 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
 ## 읽는 순서 (처음이라면)
 
 1. `Resource/engine/pipeline/forwardpipeline.xml` — 패스가 어떻게 기술되는지
-2. `Pipeline/RenderPipelineResource.h` — 그 XML 이 무엇으로 읽히는지
+2. `Pipeline/RenderPipelineAsset.h` — 그 XML 이 무엇으로 읽히는지
 3. `Graph/RenderGraph.h` — 순서가 어떻게 정해지는지
 4. `Frame/FrameRenderer.h` → `FrameRendererPassExecute.cpp` — 패스 하나가 어떻게 실행되는지
 5. `Frame/FrameRendererDraw.cpp` — 드로우 한 번이 어떻게 나가는지

@@ -1,0 +1,297 @@
+/**
+ * @file RenderPassAsset.h
+ * @brief 렌더 패스 XML 에셋(어태치먼트 템플릿)과 파이프라인 패스 서술 타입입니다.
+ */
+#pragma once
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
+#include "Core/Task/TaskTypes.h"
+
+#include "Engine/Common/Common.h"
+#include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /**
+     * @enum RenderPassType
+     * @brief 파이프라인 XML 의 `_type` 이 가리키는 패스 종류입니다.
+     * @details 디스패치와 PSO 생성이 같은 값을 봅니다. 주의: 두 곳이 각자 문자열을 비교하면 받아 주는 표기가 갈려,
+     *          디스패치는 되는데 PSO 는 desc 를 못 찾고 기본 포맷으로 만들어집니다. 리플렉션이
+     *          문자열 ↔ 값 변환을 제공하므로 파서도 검증도 이 표만 보면 됩니다.
+     * @note 이름은 널리 쓰이는 표기 하나로 통일합니다. 아직 개발 중이라 여러 표기를
+     *       받아 줄 이유가 없고, 표기가 갈리는 순간 "어느 쪽으로 적었나" 를 매번 확인해야 합니다.
+     *       XML 에 적히는 철자가 곧 열거자 이름이고, 여기에 없는 표기는 Invalid 로 파싱되어
+     *       RenderPipelineAsset::validate 가 잡습니다.
+     * @note 이름을 바꾸면 XML 을 새 이름으로 다시 씁니다. `ENUM( ValueAlias = "Old:New" )` 는 실제 게임 데이터가 생겨
+     *       다시 쓸 수 없게 된 뒤의 창구입니다.
+     */
+    ENUM()
+    enum class RenderPassType : uint32
+    {
+        Invalid = 0, ///< 알 수 없는 표기 (검증에서 오류로 보고)
+
+        Shadow,
+        DepthPrepass,
+        ForwardOpaque,
+        GBuffer,
+        Lighting,
+        Transparent,
+        SSAO,
+        Bloom,
+        Outline,
+        TAA,
+        Tonemap,
+        Present,
+
+        // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
+        ForwardOpaqueNoDepthWrite,
+        GpuCull,
+        /// @brief GPUScene 인스턴스 애니메이션 컴퓨트(instanceanim.hlsl)입니다. 인스턴스마다 다른 각속도로 회전시킵니다.
+        InstanceAnim,
+        /// @brief 배치 안의 가시 인스턴스를 깊이순으로 정렬하는 컴퓨트(instancesort.hlsl)입니다. 투명 블렌딩 순서를 맞춥니다.
+        InstanceSort,
+        /// @brief 레스트 정점을 읽어 변형 결과를 쓰는 컴퓨트(meshmorph.hlsl)입니다. 정점 셰이더가 그 결과를 풀링합니다.
+        MeshMorph,
+    };
+
+    /**
+     * @brief 파이프라인 출력에 쓰는 예약어입니다. 디바이스가 주는 백버퍼를 가리킵니다.
+     * @details `_attachments` 에 선언되지 않는 유일한 출력이라 검증에서 예외로 다룹니다.
+     */
+    inline constexpr const utf8* kSwapchainOutputName = "Swapchain";
+
+    /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯 · Invalid 제외). */
+    constexpr bool isPipelinePassType( RenderPassType type )
+    {
+        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Present );
+    }
+
+    /// @brief 렌더 패스 어태치먼트 하나(이름 · 포맷 · 클리어 색 · 클리어 여부)입니다.
+
+    REFLECT()
+    struct RenderPassAttachment
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        string _name = "ColorAttachment0";
+
+        PROPERTY()
+        string _format = "R8G8B8A8_UNORM";
+
+        PROPERTY()
+        float4 _clearColor = { 0.1f, 0.2f, 0.3f, 1.0f };
+
+        PROPERTY()
+        bool _bClear{ true };
+
+        /**
+         * @brief 이 첨부가 패스에 걸릴 때의 역할입니다(`RenderPassInputRole` 이름 — GBufferAlbedo · GBufferNormal · ShadowMap · AmbientOcclusion ·
+         *        SceneDepth · SourceColor). 비어 있으면 정본 이름(GBufferAlbedo …)과 포맷으로 정합니다.
+         * @details 역할을 **이름으로만** 정하면 G버퍼 · 그림자 맵 · AO 첨부의 이름을 바꿀 때 Lighting 의 입력 계약이 깨진다(역할 없는 컬러는
+         *          모두 SourceColor). 언리얼 RDG 는 패스 파라미터 구조체의 멤버로, 유니티 RenderGraph 는 셰이더 프로퍼티 이름으로 텍스처를 건다 —
+         *          어느 쪽도 텍스처의 이름이 바인딩을 정하지 않는다. 여기서는 첨부가 자기 역할을 선언하고, 이름은 파이프라인이 자유롭게 짓는다.
+         */
+        PROPERTY( SkipIfEmpty )
+        string _role;
+
+        /**
+         * @brief 첨부 크기 = 프레임 크기 / 이 값(올림)입니다. 1(기본) · 2 · 4 만 받습니다(`RenderPipelineAsset::validate`).
+         * @details 반해상도 후처리(블룸 · SSAO)처럼 프레임보다 작게 그려도 되는 타깃용입니다(언리얼 RDG 의 텍스처 Extent 를 뷰 크기의
+         *          분수로 잡는 자리). 한 패스의 출력(컬러 · 깊이)은 모두 같은 나눗수여야 합니다 — 렌더 패스의 타깃은 크기가 같아야 합니다.
+         *          패스는 출력 첨부의 크기로 뷰포트를 잡고, 입력은 UV 로 읽으므로 크기가 달라도 됩니다(선형 샘플러가 늘리고 줄인다).
+         */
+        PROPERTY()
+        uint32 _resolutionDivisor{ 1 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 첨부 나눗수(`RenderPassAttachment::_resolutionDivisor`)가 받는 값인지 반환합니다(1 · 2 · 4). */
+    constexpr bool isSupportedResolutionDivisor( uint32 divisor )
+    {
+        return divisor == 1u || divisor == 2u || divisor == 4u;
+    }
+
+    /**
+     * @brief 렌더 파이프라인 그래프 안의 패스 노드 하나입니다.
+     * @details 그래프 연결(입력 · 출력)과 선택적인 PSO 설정(셰이더 · 엔트리 · 상태 · 퍼뮤테이션)을 담습니다.
+     *          RenderPass XML 은 어태치먼트만 다루고, 이 필드들은 파이프라인의 패스에 둡니다.
+     */
+    REFLECT()
+    struct RenderGraphPassDesc
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        string _name = "Pass";
+
+        PROPERTY()
+        string _type = "Opaque";
+
+        PROPERTY()
+        vector<string> _listInput;
+
+        PROPERTY()
+        vector<string> _listOutput;
+
+        /**
+         * @brief 이 패스가 바인딩할 뎁스 첨부 이름입니다. **비어 있으면 뎁스 없이 엽니다.**
+         * @details 패스 타입마다 코드에 박으면("GBuffer 면 SceneDepth") "이 패스는 일부러 뎁스를 쓰지 않는다" 를
+         *          표현할 방법이 없어, DepthPrepass 를 넣거나 빼는 구성을 바꾸려면 엔진 코드를 고쳐야 합니다.
+         *          선언으로 두면 파이프라인 XML 만으로 바뀝니다.
+         * @note 읽기 · 쓰기 여부는 `_listInput` / `_listOutput` 이 따로 말합니다. Transparent 는 SceneDepth 를
+         *       **입력으로 읽으면서** 뎁스로 바인딩합니다(테스트만 하고 쓰지 않습니다). 그래서 출력에서
+         *       유추하지 않고 별도 필드로 둡니다.
+         */
+        PROPERTY( SkipIfEmpty )
+        string _depthAttachment;
+
+        /**
+         * @brief `_depthAttachment` 를 intern 해 둔 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
+         * @details 직렬화 대상이 아닙니다(원본 철자는 `_depthAttachment` 가 갖고 있습니다). `_resolvedType` 과
+         *          같은 이유로 한 번만 해석해 둡니다. 이 이름은 패스마다 어태치먼트 클리어 여부를
+         *          판정하는 데 쓰이는데, 매 프레임 다시 intern 하면 그때마다 전역 문자열 레지스트리의
+         *          샤드 뮤텍스를 잡게 됩니다.
+         */
+        hashed_string _resolvedDepthAttachment;
+
+        /**
+         * @brief 해석한 첨부 하나(이름, 역할)입니다. 입력 목록과 컬러 출력 목록이 같은 모양을 씁니다.
+         * @details 역할 값은 `RenderPassInputRole` 인데 이 헤더가 그 enum 을 모르므로(계약 헤더가 이 헤더를 포함합니다) 정수로 둡니다.
+         *          역할은 첨부의 `_role` 선언 → 정본 이름 → 포맷 순으로 정합니다(`resolveRenderPassInputRole`).
+         */
+        struct ResolvedAttachment
+        {
+            hashed_string _attachment;
+            uint8         _role{ 0 };
+        };
+
+        /**
+         * @brief `_listInput` 하나하나의 (첨부 이름, 역할)입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
+         * @details 직렬화 대상이 아닙니다. 실행은 이 목록을 그대로 걸고(역할 이름 = 셰이더의 `g_<Role>Index`),
+         *          검증은 패스 타입의 계약(RenderPassInputContract)과 대조합니다. 둘이 같은 해석을 봅니다.
+         */
+        vector<ResolvedAttachment> _listResolvedInput;
+
+        /** @brief `_listOutput` 을 intern 해 둔 값입니다. 풀스크린 패스가 "첫 번째로 존재하는 출력" 을 타깃으로 고릅니다. */
+        vector<hashed_string> _listResolvedOutput;
+
+        /**
+         * @brief `_listOutput` 중 **컬러 첨부**만 선언 순서대로 둔 것입니다(뎁스 포맷 · 스왑체인 · 선언되지 않은 이름은 빠집니다). 역할도 함께 듭니다.
+         *        XML 로드 시 RenderPipelineAsset 가 채웁니다.
+         * @details 지오메트리 패스(ForwardOpaque · GBuffer · Transparent)는 이 목록에서 컬러 타깃을 고릅니다 — GBuffer 는 역할(GBufferAlbedo ·
+         *          GBufferNormal)로, 역할이 없으면 선언 순서([0] 알베도, [1] 노멀)로. 주의: 첨부 이름(SceneColor · GBufferAlbedo …)을 코드에
+         *          박으면 다른 이름을 쓰는 파이프라인에서 없는 첨부를 열고, 없는 첨부의 핸들 0 은 백버퍼라 화면에 그립니다.
+         */
+        vector<ResolvedAttachment> _listResolvedColorOutput;
+
+        /** @brief HLSL 경로(engine/... 또는 common/...)입니다. 비면 FrameRenderer 가 패스 타입의 기본 셰이더를 씁니다. */
+        PROPERTY( SkipIfEmpty )
+        string _shaderPath;
+
+        PROPERTY()
+        string _vertexEntryPoint = "VSMain";
+
+        PROPERTY()
+        string _pixelEntryPoint = "PSMain";
+
+        PROPERTY( SkipIfEmpty )
+        string _computeEntryPoint;
+
+        PROPERTY( SkipIfEmpty )
+        string _geometryEntryPoint;
+
+        PROPERTY( SkipIfEmpty )
+        string _hullEntryPoint;
+
+        PROPERTY( SkipIfEmpty )
+        string _domainEntryPoint;
+
+        PROPERTY( SkipIfEmpty )
+        string _meshEntryPoint;
+
+        PROPERTY( SkipIfEmpty )
+        string _amplificationEntryPoint;
+
+        /** @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 꼴로 적습니다. */
+        PROPERTY()
+        vector<string> _listPermutation;
+
+        PROPERTY()
+        string _cullMode = "Back"; ///< None / Front / Back
+
+        /**
+         * @brief `_type` 을 해석한 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
+         * @details 직렬화 대상이 아닙니다(원본 철자는 `_type` 이 그대로 갖고 있습니다). 디스패치와 PSO
+         *          생성이 같은 값을 보게 하려고 한 번만 해석해 둡니다(두 곳이 각자 문자열을 비교하면 받아 주는
+         *          표기가 갈려 어긋납니다).
+         */
+        RenderPassType _resolvedType{ RenderPassType::Invalid };
+
+        PROPERTY()
+        bool _bEnableDepthTest{ true };
+
+        PROPERTY()
+        bool _bEnableDepthWrite{ true };
+
+        PROPERTY()
+        bool _bEnableBlend{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief RHI 렌더 패스 템플릿의 어태치먼트 묶음 서술입니다.
+     * 프레임 구성(패스 그래프)은 RenderPipelineDesc 의 몫입니다(RenderPipelineAsset.h).
+     */
+    REFLECT()
+    struct RenderPassDesc
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        string _name = "DefaultMainPass";
+
+        PROPERTY()
+        vector<RenderPassAttachment> _listAttachment;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /// @brief RenderPass XML 에셋(어태치먼트 템플릿)입니다.
+    class SW_API RenderPassAsset
+    {
+    public:
+        /** @brief 빈 렌더 패스 서술로 만듭니다. */
+        RenderPassAsset() = default;
+        /** @brief 가상 소멸자입니다. */
+        virtual ~RenderPassAsset() = default;
+
+        /** @brief 복사를 금지합니다. */
+        RenderPassAsset( const RenderPassAsset& ) = delete;
+        /** @brief 대입을 금지합니다. */
+        RenderPassAsset& operator=( const RenderPassAsset& ) = delete;
+
+        /** @brief XML 파일에서 렌더 패스 디스크립터를 로드합니다. */
+        [[nodiscard]] bool loadFromXmlFile( string_view assetRelativePath );
+
+        /** @brief 렌더 패스 디스크립터를 XML 파일로 저장합니다. */
+        [[nodiscard]] bool saveToXmlFile( string_view assetRelativePath ) const;
+
+        /** @brief XML 로드를 비동기 작업으로 예약합니다. */
+        TaskHandle loadFromXmlFileAsync( string_view assetRelativePath );
+
+        const RenderPassDesc& getDesc() const { return _desc; }
+        RenderPassDesc&       getDesc() { return _desc; }
+
+    private:
+        /** @brief 비동기 로드 태스크 본문입니다. TaskArgs 는 this · 경로 문자열입니다. */
+        static void loadFromXmlFileAsyncJob( const TaskArgs& args );
+
+    private:
+        RenderPassDesc _desc;
+    };
+} // namespace sw

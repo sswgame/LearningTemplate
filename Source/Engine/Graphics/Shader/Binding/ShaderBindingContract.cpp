@@ -229,7 +229,7 @@ namespace sw
                 };
                 // 리소스 목록이 바인딩 위치의 1차 출처다(cbuffer 도 여기 들어 있다). CB 목록은 그 다음이다. 리플렉터가
                 // CB 쪽 bindPoint 를 못 채우는 경우가 있다(DXIL, move 뒤 이름 비교).
-                for ( const ShaderResourceBinding& res : reflection._listResource )
+                for ( const ShaderReflectedBinding& res : reflection._listResource )
                 {
                     const ShaderBindingKind kind = ShaderBindingLayout::kindFromTypeLabel( static_cast<string_view>( res._type ) );
                     push( res._name, kind, res._registerSpace, res._bindPoint, res._bindCount );

@@ -13,7 +13,7 @@
 4. 게임 루프(`App::run`)를 돌립니다.
 
 윈도우 메시지는 `NativeWindowEvent`로만 받고, 키/마우스 해석은 `InputManager`가 합니다.
-셸 단축키는 `EngineLoop` 가 든 셸 전용 `ActionMap` 의 `Debug` 레이어(`alwaysOn`, `Resource/engine/input/default.input.xml`)로 묻습니다 —
+셸 단축키는 `EngineLoop` 가 든 셸 전용 `InputMap` 의 `Debug` 레이어(`alwaysOn`, `Resource/engine/input/default.input.xml`)로 묻습니다 —
 ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F7(`App::pollReloadHotkeys` 가 `EngineLoop::wasDebugActionTriggered` 로 묻는다).
 이 리로드 단축키는 **Dev 전용**입니다 — Shipping 에는 리로드할 모듈이 없어 `App::pollReloadHotkeys` 가 통째로 비어 있습니다.
 

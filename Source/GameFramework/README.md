@@ -2,27 +2,27 @@
 
 여러 게임에서 반복적으로 사용되는 장르별 공통 로직이나 키트(Kits)가 모여있는 곳입니다.
 
-App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력은 `Engine/Input/ActionMap.h`의 인스턴스를 사용합니다.
+App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력은 `Engine/Input/InputMap.h`의 인스턴스를 사용합니다.
 
 ## 하위 폴더 구성
 
 `GameFramework` 타겟(= 모든 키트가 깔고 앉는 기반):
 
 - **Base**: 키트 공통 수명(`IGame`, `GameInstanceBase`, `GameService`), 세이브 베이스(`SaveGame`),
-  장르 무관 컴포넌트(`EffectBaseComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`).
+  장르 무관 컴포넌트(`FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`).
   공유 타입은 `GameFrameworkMinimal.h`. "game" 채널의 수명주기 이벤트(`GameEvents.h`)는 프레임워크가 그 자리에서 낸다 —
   `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료, `GameModeStateMachine` 이 일시정지 진입 · 해제
 - **Data**: `GameData`, `GameStrings`
 - **Transition**: `GameModeStateMachine`(일시정지 모드 전이에 `GamePausedEvent` · `GameResumedEvent`), `ScreenTransitionManager`
 - **UI**: 장르 무관 UI 컴포넌트 — `RuntimeHud`, `DialogueRunnerComponent`,
-  `HPBarBaseComponent`, `DamageUIComponent`. HP 바 · 데미지 숫자는 월드 공간 스프라이트(`SpriteInstanceBatch`)로 그린다 — 저장되는
-  컴포넌트를 만들지 않는다. 입력은 `HPBarBaseComponent::setTargetRatio` · `DamageUIComponent::setDamageValue` 하나씩이다.
-  `EffectBaseComponent` 의 흐림은 같은 오브젝트 스프라이트들의 색 알파에 곱해진다.
+  `HealthBarComponent`, `DamageNumberComponent`. HP 바 · 데미지 숫자는 월드 공간 스프라이트(`SpriteInstanceBatch`)로 그린다 — 저장되는
+  컴포넌트를 만들지 않는다. 입력은 `HealthBarComponent::setTargetRatio` · `DamageNumberComponent::setDamageValue` 하나씩이다.
+  `FadeOutComponent` 의 흐림은 같은 오브젝트 스프라이트들의 색 알파에 곱해진다.
 
 별도 타겟:
 
 - **Kits**: 키트끼리 링크하지 않음. 공유 타입은 Base/UI 로.
-  - `ActionCombat`: 공격 히트박스(`AttackBaseComponent`), 투사체, 유닛 스탯, 액션 룸.
+  - `ActionCombat`: 공격 히트박스(`MeleeHitboxComponent`), 투사체, 유닛 스탯, 액션 룸.
     피해는 한 길이다 — 투사체(`ProjectileComponent`)와 공격 판정은 같은 오브젝트의 `BoxCollider2DComponent` 겹침으로 맞음을 알고
     `UnitStatsComponent::takeDamage( 피해, 쏜 쪽 )` 을 부르며, HP 가 깎인 그 자리에서 컴포넌트 델리게이트(`registerDamageApplied`)가 불리고
     `DamageAppliedEvent`("game" 채널)가 나간다. 액션 룸은 시작 · 클리어 · 패배에 룸 이벤트를 낸다. 채널 이벤트는 `GameEventUtil::send` 하나로 낸다 —

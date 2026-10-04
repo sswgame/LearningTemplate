@@ -6,8 +6,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"
@@ -110,7 +110,7 @@ namespace sw
             InputManager* pInput = game::getService<InputManager>();
             if ( pInput == nullptr )
                 SW_LOG_WARNING( "GameData input map '%#' is not loaded - no InputManager service", data._inputMap.c_str() );
-            else if ( pInput->getActionMap().loadFromResource( data._inputMap ) == false )
+            else if ( pInput->getInputMap().loadFromResource( data._inputMap ) == false )
                 SW_LOG_WARNING( "GameData input map '%#' could not be loaded - gameplay actions keep their current bindings", data._inputMap.c_str() );
         }
     }

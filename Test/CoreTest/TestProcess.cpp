@@ -3,7 +3,7 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -185,7 +185,7 @@ SW_TEST_CASE( ProcessTest, ChildInheritsOnlyItsOwnPipe )
     SW_ASSERT_TRUE( child.launch( longCommand ) );
 
     // 흉내 낸 "남의 파이프" 의 쓰기 끝을 닫고 읽는다. 아무도 물려받지 않았다면 바로 끝(EOF)이다.
-    const sw::CpuStopwatch stopwatch;
+    const sw::Stopwatch stopwatch;
 #if defined( SW_PLATFORM_WINDOWS )
     CloseHandle( hForeignWrite );
     utf8       byte      = 0;
@@ -229,7 +229,7 @@ SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
     const sw::string command = "sleep 1; echo done > '" + markerPath + "'";
 #endif
 
-    const sw::CpuStopwatch stopwatch;
+    const sw::Stopwatch stopwatch;
     SW_ASSERT_TRUE( sw::Process::launchDetached( command ) );
     const int64 launchMilli = stopwatch.getElapsedMilliseconds();
     SW_EXPECT_TRUE_MSG( launchMilli < 700, "분리 실행이 명령이 끝나기를 기다렸다" );

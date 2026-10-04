@@ -96,7 +96,7 @@ SW_TEST_CASE( FrameTimelineTest, NonPositiveConfigurationFallsBackToDefaults )
  * @brief [FrameTimelineTest] 만들어 두고 한참 뒤에 start 해도 첫 델타는 "방금" 부터다
  * @details `App` 은 이 객체를 멤버로 만들어 두고 창·RHI·모듈을 다 세운 뒤에야 `start()` 를
  *          부른다. 그 사이의 시간이 첫 델타에 섞이면 첫 프레임이 상한 가득한 고정 스텝을 돌아
- *          **시작하자마자 한 박자 건너뛴 것처럼** 보인다. `CpuTimer` 의 "첫 델타가 부팅 이후
+ *          **시작하자마자 한 박자 건너뛴 것처럼** 보인다. `GameTimer` 의 "첫 델타가 부팅 이후
  *          시간" 함정과 같은 자리를 이 층에서도 막아 둔다.
  */
 SW_TEST_CASE( FrameTimelineTest, StartRewindsTheTimerBeforeTheFirstFrame )

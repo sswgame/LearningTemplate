@@ -20,7 +20,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestBench.h"
 #include "TestFramework/TestFramework.h"
@@ -135,7 +135,7 @@ SW_TEST_CASE( TaskManagerBenchTest, ForkJoinLatency )
     for ( uint32 round = 0; round < kColdRound; ++round )
     {
         std::this_thread::sleep_for( std::chrono::microseconds( kSleepGapMicro ) );
-        const sw::CpuStopwatch stopwatch;
+        const sw::Stopwatch stopwatch;
         manager.runParallel( kCount, 1, body );
         listCold.push_back( stopwatch.getElapsedMicroseconds() );
     }
@@ -145,7 +145,7 @@ SW_TEST_CASE( TaskManagerBenchTest, ForkJoinLatency )
     listHot.reserve( kHotRound );
     for ( uint32 round = 0; round < kHotRound; ++round )
     {
-        const sw::CpuStopwatch stopwatch;
+        const sw::Stopwatch stopwatch;
         manager.runParallel( kCount, 1, body );
         listHot.push_back( stopwatch.getElapsedMicroseconds() );
     }
@@ -170,7 +170,7 @@ SW_TEST_CASE( TaskManagerBenchTest, StageLikeRenderGraphLevel )
     sw::vector<int64> listSerialPass;
     for ( uint32 round = 0; round < 20; ++round )
     {
-        const sw::CpuStopwatch stopwatch;
+        const sw::Stopwatch stopwatch;
         BenchBody::recordPass();
         listSerialPass.push_back( stopwatch.getElapsedMicroseconds() );
     }
@@ -198,7 +198,7 @@ SW_TEST_CASE( TaskManagerBenchTest, StageLikeRenderGraphLevel )
     for ( uint32 round = 0; round < kRound; ++round )
     {
         std::this_thread::sleep_for( std::chrono::microseconds( kSleepGapMicro ) );
-        const sw::CpuStopwatch stopwatch;
+        const sw::Stopwatch stopwatch;
         levelOnce();
         listCold.push_back( stopwatch.getElapsedMicroseconds() );
     }
@@ -207,7 +207,7 @@ SW_TEST_CASE( TaskManagerBenchTest, StageLikeRenderGraphLevel )
     sw::vector<int64> listHot;
     for ( uint32 round = 0; round < kRound; ++round )
     {
-        const sw::CpuStopwatch stopwatch;
+        const sw::Stopwatch stopwatch;
         levelOnce();
         listHot.push_back( stopwatch.getElapsedMicroseconds() );
     }
@@ -233,7 +233,7 @@ SW_TEST_CASE( TaskManagerBenchTest, SmallTaskThroughput )
     for ( uint32 round = 0; round < kRound; ++round )
     {
         s_ranCount.store( 0, std::memory_order_relaxed );
-        const sw::CpuStopwatch stopwatch;
+        const sw::Stopwatch stopwatch;
         for ( uint32 index = 0; index < kTaskCount; ++index )
         {
             sw::TaskHandle handle = manager.emplaceTask( "Tiny", tiny );
@@ -265,7 +265,7 @@ SW_TEST_CASE( TaskManagerBenchTest, CpuBoundSpeedup )
     sw::vector<int64> listSerial;
     for ( uint32 round = 0; round < kRound; ++round )
     {
-        const sw::CpuStopwatch stopwatch;
+        const sw::Stopwatch stopwatch;
         BenchBody::computeRange( 0, kCount );
         listSerial.push_back( stopwatch.getElapsedMicroseconds() );
     }
@@ -276,7 +276,7 @@ SW_TEST_CASE( TaskManagerBenchTest, CpuBoundSpeedup )
     sw::vector<int64> listParallel;
     for ( uint32 round = 0; round < kRound; ++round )
     {
-        const sw::CpuStopwatch stopwatch;
+        const sw::Stopwatch stopwatch;
         manager.runParallel( kCount, 1, body );
         listParallel.push_back( stopwatch.getElapsedMicroseconds() );
     }

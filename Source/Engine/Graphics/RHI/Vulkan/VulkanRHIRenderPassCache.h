@@ -98,7 +98,7 @@ namespace sw
             size_t operator()( const PipelineKey& key ) const;
         };
 
-        /// @brief `IRHIResource::createRenderPass( desc )` 가 만든 렌더패스와 소유권입니다(스왑체인 RP 별칭은 파괴하지 않습니다).
+        /// @brief `IRHIResourceFactory::createRenderPass( desc )` 가 만든 렌더패스와 소유권입니다(스왑체인 RP 별칭은 파괴하지 않습니다).
         struct RenderPassRecord
         {
             VkRenderPass _renderPass{ nullptr };

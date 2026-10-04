@@ -658,15 +658,15 @@ namespace sw::editor
         return bOpened ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER;
     }
 
-    const utf8* EditorThemeUtil::getAssetKindIcon( EditorAssetKind kind )
+    const utf8* EditorThemeUtil::getAssetTypeIcon( EditorAssetType kind )
     {
-        const EditorAssetKindInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
+        const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
         return pInfo != nullptr ? pInfo->_pIcon : ICON_FA_FILE;
     }
 
-    Color4 EditorThemeUtil::getAssetKindColor( EditorAssetKind kind )
+    Color4 EditorThemeUtil::getAssetTypeColor( EditorAssetType kind )
     {
-        const EditorAssetKindInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
+        const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
         if ( pInfo == nullptr )
             return getTextMutedColor();
         return pInfo->_bAccentColor ? getAccentColor() : pInfo->_color;
@@ -676,13 +676,13 @@ namespace sw::editor
     {
         if ( bIsDirectory )
             return ICON_FA_FOLDER;
-        return getAssetKindIcon( EditorAssetTypeRegistry::findKind( path ) );
+        return getAssetTypeIcon( EditorAssetTypeRegistry::findKind( path ) );
     }
 
     Color4 EditorThemeUtil::getAssetColorForPath( string_view path, bool bIsDirectory )
     {
         if ( bIsDirectory )
             return getFolderColor();
-        return getAssetKindColor( EditorAssetTypeRegistry::findKind( path ) );
+        return getAssetTypeColor( EditorAssetTypeRegistry::findKind( path ) );
     }
 } // namespace sw::editor

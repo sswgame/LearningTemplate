@@ -28,7 +28,7 @@
 | 에셋 | `AssetRegistry` · `FStreamableManager` · 패키지 | `Resources` · `ResourceLoader` | `Engine/Resource` (AssetDatabase · 팩 · `IAssetCache` 등록부 · 스트리밍 큐) | **같다.** 종류를 늘리는 자리가 인터페이스 하나다. |
 | 디바이스 | `RHI` — `void*` 창 핸들로 `FRHIViewport` 를 만든다. 창 시스템(Slate)은 RHI 위 | Godot `RenderingDevice` | `Graphics/RHI` (4 백엔드) | **같다.** RHI 는 창을 모른다 — `Common/IRenderSurface` 를 `IWindow` 가 구현하고 `EngineLoop` 이 넘긴다. |
 | GPU 에셋 | `Engine` 의 `UMaterialInterface` · `UStaticMesh` — 컴포넌트가 든다 | Unity `Material` · `Mesh` | `Graphics/Material` · `Mesh` · `Texture` · `Shader` | **같다.** 컴포넌트가 머티리얼·메시를 드는 것은 상용 엔진의 모양이다 — 이 엣지는 결함이 아니다. |
-| 렌더러 | `Renderer` — `Engine` 을 보고(프록시·씬) 그린다. `Engine` 은 `RendererInterface` 만 안다 | Unity SRP · Godot `RenderingServer` | `Graphics/Renderer` (FrameRenderer · RenderGraph · GpuScene · RenderThread) | **같다.** (1) 렌더 패스 *에셋* 캐시(`RenderPassManager`)는 `FrameRenderer` 가 소유한다 — RHI 는 Renderer 를 모른다. (2) "무엇을 구울지" 의 정책은 `Renderer/Bake/ShaderBakeDriver` 에 있고 `Shader/Compile` 은 렌더러를 모른다. |
+| 렌더러 | `Renderer` — `Engine` 을 보고(프록시·씬) 그린다. `Engine` 은 `RendererInterface` 만 안다 | Unity SRP · Godot `RenderingServer` | `Graphics/Renderer` (FrameRenderer · RenderGraph · GpuScene · RenderThread) | **같다.** (1) 렌더 패스 *에셋* 캐시(`RenderPipelineAssetCache`)는 `FrameRenderer` 가 소유한다 — RHI 는 Renderer 를 모른다. (2) "무엇을 구울지" 의 정책은 `Renderer/Bake/ShaderBakeDriver` 에 있고 `Shader/Compile` 은 렌더러를 모른다. |
 | 월드 | `UWorld` → `AActor` → `UActorComponent`. 액터는 `GWorld` 전역으로 월드를 찾는다 | Godot `SceneTree` → `Node` | `Scene` → `Object`(GameObject · Component) | **더 좁다.** Object 는 Scene 을 모른다. 활성 월드 전역(`GWorld`)도 없다 — 핸들은 그것을 푸는 쪽이 든 `GameObjectManager` 가 푼다(`resolveGameObject` · `resolveComponent`). |
 | 월드 ↔ 렌더러 | `UWorld` 는 `FScene`(렌더 씬 인터페이스)만 안다. 렌더러 본체를 모른다 | Godot 노드는 `RenderingServer` 에 RID 로만 말한다 | `SceneManager` | **같다.** 씬은 렌더러를 모른다 — 렌더러는 호스트가 내주는 선택 서비스(`EngineServiceList.xxx`)다. |
 | 기능 모듈 | `LevelSequence` · `MovieScene` 은 `Engine` 위의 모듈 — 액터를 알고, 액터는 모른다 | Godot `AnimationPlayer` 는 `scene/` 안의 노드 | `Sequencer` | **같다.** `SequencePlayerComponent` 는 `Sequencer/` 에 있다 — Sequencer 가 Object 를 알고, Object 는 Sequencer 를 모른다. |
@@ -45,7 +45,7 @@
 1. **Object 는 Scene 을 모른다.** 언리얼 액터는 `GWorld`, Godot 노드는 `SceneTree::get_singleton()` 으로 월드를 찾는다.
    → 여기는 그런 전역 슬롯도 없다. 핸들(`GameObjectHandle` · `ComponentHandle`)은 그것을 푸는 쪽이 든
    `GameObjectManager` 의 `resolveGameObject` / `resolveComponent` 로 푼다.
-2. **RHI 는 Renderer 를 모른다.** 디바이스 추상은 렌더 패스 *에셋* 을 모른다. → `RenderPassManager` 는 `FrameRenderer` 가
+2. **RHI 는 Renderer 를 모른다.** 디바이스 추상은 렌더 패스 *에셋* 을 모른다. → `RenderPipelineAssetCache` 는 `FrameRenderer` 가
    소유하고 `initialize/shutdown` 에서 만들고 비운다(패스 자원 · 그래프가 놓은 **뒤에** 비운다 — 그쪽이 캐시의 포인터를 든다).
 3. **Graphics 는 Window 를 모른다.** 언리얼 RHI 는 `void*` 핸들과 크기만 받는다(`FRHIViewport`). → `Common/IRenderSurface`
    (핸들 · 디스플레이 · 크기 · 재생성 훅)를 `IWindow` 가 구현하고, `RHI::initialize( IRenderSurface* )` ·

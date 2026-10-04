@@ -344,7 +344,7 @@ _kIncludePathRe = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]')
 # 용도: 유니티 빌드(SW_ENABLE_UNITY_BUILD, CI-Debug/CI-Shipping)는 .cpp 여러 개를 한 TU 로 묶는다.
 #       익명 네임스페이스라도 같은 TU 안에서는 같은 이름이 재정의로 충돌한다 — 같은 클래스를 여러 .cpp 로
 #       나눠 구현할 때 헬퍼를 클래스 이름으로 지으면 부딪힌다 — 헬퍼는 파일 이름으로 짓는다
-#       (`VulkanRHIResourcePipeline.cpp` → `VulkanRHIResourcePipelineInternal`).
+#       (`VulkanRHIResourceFactoryPipeline.cpp` → `VulkanRHIResourceFactoryPipelineInternal`).
 _kAnonHelperStructRe = re.compile(r'^\s*struct\s+(\w+Internal)\s*$', re.MULTILINE)
 # 익명 네임스페이스 바로 안(구조체 · 함수 안이 아닌 곳)의 상수 선언 — `constexpr int32 kLimit = 4;` · `const string s_empty{};` · 배열.
 _kBareConstantDeclRe = re.compile(r'^\s*(?:static\s+)?(?:inline\s+)?(?:constexpr|const)\b[^;(]*?\b([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)?(?:=|\{)')
@@ -1560,7 +1560,7 @@ def checkDuplicateHelperNamesInternal(filesToScan: list[Path], projectRoot: Path
                 message=(f"'{helperName}' 이 다른 .cpp 와 이름이 겹칩니다 ({', '.join(others)}). "
                          "유니티 빌드는 .cpp 를 한 TU 로 묶으므로 익명 네임스페이스라도 재정의로 충돌합니다."),
                 snippet=f"struct {helperName}",
-                suggested_fix="헬퍼 이름을 클래스가 아니라 **이 TU(파일)** 기준으로 지으세요 (예: VulkanRHIResourcePipelineInternal).",
+                suggested_fix="헬퍼 이름을 클래스가 아니라 **이 TU(파일)** 기준으로 지으세요 (예: VulkanRHIResourceFactoryPipelineInternal).",
             ))
     return violations
 

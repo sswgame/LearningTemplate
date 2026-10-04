@@ -6,7 +6,7 @@
 
 namespace sw::editor
 {
-    string_view EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetKind kind )
+    string_view EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType kind )
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )

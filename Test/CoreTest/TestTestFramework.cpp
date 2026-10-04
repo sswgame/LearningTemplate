@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"
@@ -452,7 +452,7 @@ SW_TEST_CASE( TestFrameworkTest, HangingChildIsKilledAtTheDeadline )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_TEST_CHILD_MODE", "hang" }
     };
-    const sw::CpuStopwatch     stopwatch;
+    const sw::Stopwatch        stopwatch;
     const test::ChildRunResult child = test::runThisExecutableAsChild( "TestFrameworkTest.ChildRoleEchoesOrHangs", arrEnvironment, 1 );
 
     const int64 elapsedSeconds = stopwatch.getElapsedMilliseconds() / 1000;

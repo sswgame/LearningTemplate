@@ -2,7 +2,7 @@
  * @file RHIModuleAbi.h
  * @brief RHI MODULE 의 C ABI 버전과 스탬프입니다(Engine 과 RHI_* 가 일치해야 합니다).
  *
- * IRHIDevice / IRHIResource / IRHICommandList / IRHICommandContext 의 public 기록 표면이나
+ * IRHIDevice / IRHIResourceFactory / IRHICommandList / IRHICommandContext 의 public 기록 표면이나
  * 레이아웃(멤버 · 가상 함수)이 바이너리 비호환으로 바뀌면 kRHIModuleAbiVersion 과 kRHIModuleAbiStamp 를
  * **함께** 올립니다(둘이 어긋나면 컴파일되지 않습니다). Engine 과 함께 모든 RHI_* 모듈을 다시 빌드하십시오.
  */
@@ -18,7 +18,7 @@ namespace sw
     /**
      * @brief 불투명 표면 지문입니다. 커맨드 리스트 · 디바이스 ABI 가 바뀌면 `v<N>` 을 올리고 문자열을 바꿉니다.
      * @details 올려야 하는 변경 — 어느 것이든 vtable 이나 레이아웃이 바뀝니다:
-     *          - IRHIDevice · IRHIResource · IRHICommandList · IRHICommandContext 의 가상 함수를 더하거나 빼거나 시그니처를 바꿀 때
+     *          - IRHIDevice · IRHIResourceFactory · IRHICommandList · IRHICommandContext 의 가상 함수를 더하거나 빼거나 시그니처를 바꿀 때
      *          - 가상 ↔ 비가상 전환(`waitIdle` · `shutdown` 은 비가상 템플릿 메서드이고 백엔드는 `...Internal` 훅만 채웁니다)
      *          - 경계를 넘는 구조체(RHITextureDesc · RHITextureUploadDesc · RHIRenderPassBeginInfo · RHINativeHandles 등)의 필드가 바뀔 때
      *          - 백엔드 디바이스가 멤버로 품는 공유 타입(RHI/Support 의 FrameResourceRing 등)의 레이아웃이 바뀔 때

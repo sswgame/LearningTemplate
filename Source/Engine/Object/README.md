@@ -53,7 +53,7 @@ Object/
 │  ├─ ComponentStableKey.*  # `이름(없으면 타입)#n` 키 — 씬 파일의 부착 대상과 에디터 선택 복원이 같은 키
 │  ├─ TagSystem.*       # TagContainer · TagQuery (`TagID` 자체는 Core/String/TagID.h)
 │  └─ 2D/ · 3D/         # Sprite, Mesh, Collider, 빛(`LightComponent` 기반 — 색 · 세기 · 방향 규약 · 등록) 등
-└─ Prefab/             # PrefabAsset(로드 · 저장 · 스폰) · PrefabManager(프리팹 에셋 캐시, `PrefabAsset.h`) · PrefabOverrides(인스턴스 차이 뽑기 · 다시 얹기)
+└─ Prefab/             # PrefabAsset(로드 · 저장 · 스폰) · PrefabCache(프리팹 에셋 캐시, `PrefabAsset.h`) · PrefabOverrides(인스턴스 차이 뽑기 · 다시 얹기)
 ```
 
 게임 코드(`Source/Games`)는 항상 **`GameObject` / `GameObjectManager` API**를 통해 컴포넌트를 부착하고 수명을 관리합니다.
@@ -278,7 +278,7 @@ Games / GameFramework 에서는 `EngineServices` 대신 **`GameService`** 를 �
 #include "GameFramework/Base/GameService.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
-GameObject* go = game::getService<ResourceManager>()->getPrefabManager().spawn(
+GameObject* go = game::getService<ResourceManager>()->getPrefabCache().spawn(
     mgr,
     "game/<pack>/prefabs/bullet.prefab.json",
     "Projectile" );

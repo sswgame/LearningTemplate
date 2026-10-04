@@ -8,7 +8,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 
 namespace sw
@@ -82,8 +82,8 @@ namespace sw
             return true;
         _vertex.forget();
 
-        const uint32  bytes     = static_cast<uint32>( _listVertex.size() * sizeof( RHIVertex ) );
-        IRHIResource* pResource = pDevice->getResource();
+        const uint32         bytes     = static_cast<uint32>( _listVertex.size() * sizeof( RHIVertex ) );
+        IRHIResourceFactory* pResource = pDevice->getResourceFactory();
         if ( pResource == nullptr )
             return false;
         const RHIBufferHandle vertexBuffer = pResource->createVertexBuffer( _listVertex.data(), bytes );
@@ -119,7 +119,7 @@ namespace sw
         // getLiveDevice() 는 널을 반환하고 destroy 로 뛰어들지 않는다.
         if ( IRHIDevice* pLiveDevice = _vertex.getLiveDevice() )
         {
-            IRHIResource* pResource = pLiveDevice->getResource();
+            IRHIResourceFactory* pResource = pLiveDevice->getResourceFactory();
             if ( pResource != nullptr )
                 pResource->destroyBuffer( _vertex._buffer );
         }

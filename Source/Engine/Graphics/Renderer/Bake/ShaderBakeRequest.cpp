@@ -16,7 +16,7 @@
 #include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPassTypeTraits.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -128,7 +128,7 @@ namespace sw
                     if ( normXml.find( "pipeline/" ) == string::npos && normXml.find( "pipeline.xml" ) == string::npos )
                         continue;
 
-                    RenderPipelineResource pipelineResource;
+                    RenderPipelineAsset pipelineResource;
                     if ( pipelineResource.loadFromXmlFile( xmlPath ) == false )
                         continue;
 

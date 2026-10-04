@@ -18,7 +18,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/Time/CpuTimer.h"
+#include "Core/Time/GameTimer.h"
 
 #include "Engine/Common/Common.h"
 #include "Engine/Module/ModuleHandleProvider.h"
@@ -416,7 +416,7 @@ namespace sw
             void*                   _pLibraryModule;
             uint64                  _loadedSourceMtime;
             uint64                  _debounceMtime;
-            CpuTimer                _debounceTimer;
+            GameTimer               _debounceTimer;
             atomic<bool>            _bPendingReload;
             atomic<bool>            _bMtimeDebouncing;
             atomic<bool>            _bForceReload;

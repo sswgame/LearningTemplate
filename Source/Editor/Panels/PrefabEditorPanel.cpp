@@ -66,7 +66,7 @@ namespace sw::editor
         {
             GameObject* pPrimary       = pContext->getSelectionManager().getPrimaryObject();
             objectId                   = pPrimary != nullptr ? pPrimary->getObjectId() : 0;
-            const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetKind::Prefab );
+            const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType::Prefab );
             if ( matching.empty() == false )
                 pScanPath = matching.data();
         }

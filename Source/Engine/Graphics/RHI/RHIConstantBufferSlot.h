@@ -15,7 +15,7 @@
  *       것인가" 를 함께 알아야 하고(디바이스 수명 통보를 받습니다) 여기는 소유자가 해제 시점을 이미 압니다.
  */
 #pragma once
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw

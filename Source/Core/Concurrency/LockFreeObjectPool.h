@@ -20,7 +20,7 @@
 #include "Core/Container/array.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 namespace sw
 {
@@ -159,8 +159,8 @@ namespace sw
             //
             // 여기까지 온 포인터는 이 풀의 블록이므로, 이미 반납된 것만 아니라면 자리는 반드시 난다. 그 하나를 가르는 기준이
             // 시간(kReleaseWaitMilli)이다.
-            const CpuDeadline deadline     = CpuDeadline::afterMilliseconds( kReleaseWaitMilli );
-            uint32            attemptCount = 0;
+            const Deadline deadline     = Deadline::afterMilliseconds( kReleaseWaitMilli );
+            uint32         attemptCount = 0;
             while ( _freeQueue.enqueue( pPtr ) == false )
             {
                 ++attemptCount;

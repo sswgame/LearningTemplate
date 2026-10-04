@@ -9,15 +9,15 @@ namespace sw
 {
     bool RHIConstantBufferSlot::create( IRHIDevice* pDevice, uint32 byteSize )
     {
-        if ( pDevice == nullptr || pDevice->getResource() == nullptr || byteSize == 0 )
+        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr || byteSize == 0 )
             return false;
         if ( _buffer != 0 )
             return isValid();
 
-        _buffer = pDevice->getResource()->createConstantBuffer( byteSize );
+        _buffer = pDevice->getResourceFactory()->createConstantBuffer( byteSize );
         if ( _buffer == 0 )
             return false;
-        _index = pDevice->getResource()->registerBindlessResource( _buffer );
+        _index = pDevice->getResourceFactory()->registerBindlessResource( _buffer );
         return isValid();
     }
 
@@ -30,7 +30,7 @@ namespace sw
 
     void RHIConstantBufferSlot::release( IRHIDevice* pDevice )
     {
-        if ( pDevice == nullptr || pDevice->getResource() == nullptr )
+        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
         {
             forget();
             return;
@@ -38,9 +38,9 @@ namespace sw
 
         // **인덱스를 먼저 놓는다.** 버퍼를 먼저 지우면 레지스트리에 죽은 핸들을 가리키는 항목이 남는다.
         if ( _index != kInvalidDescriptorIndex )
-            pDevice->getResource()->unregisterBindlessResource( _index );
+            pDevice->getResourceFactory()->unregisterBindlessResource( _index );
         if ( _buffer != 0 )
-            pDevice->getResource()->destroyBuffer( _buffer );
+            pDevice->getResourceFactory()->destroyBuffer( _buffer );
         forget();
     }
 } // namespace sw

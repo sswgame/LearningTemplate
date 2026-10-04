@@ -15,7 +15,7 @@ namespace sw::editor
         class AudioAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:
-            virtual EditorAssetKind getKind() const override { return EditorAssetKind::Audio; }
+            virtual EditorAssetType getKind() const override { return EditorAssetType::Audio; }
 
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override
             {

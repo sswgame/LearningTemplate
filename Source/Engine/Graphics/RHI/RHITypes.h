@@ -650,7 +650,7 @@ namespace sw
 
     /**
      * @struct RHITextureUploadDesc
-     * @brief IRHIResource::uploadTexture2D 입력입니다. 밉 0 부터 차례로, 각 밉의 행이 빈틈없이 이어진 바이트 블록입니다.
+     * @brief IRHIResourceFactory::uploadTexture2D 입력입니다. 밉 0 부터 차례로, 각 밉의 행이 빈틈없이 이어진 바이트 블록입니다.
      * @details DDS 파일의 픽셀 배치 그대로입니다(DdsImageData::_bytes 를 그대로 넘길 수 있습니다). 행 패딩은
      *          백엔드가 필요하면 스스로 맞춥니다(DX12 는 256 정렬 풋프린트로 다시 배치, GL 은 UNPACK_ALIGNMENT 1).
      */

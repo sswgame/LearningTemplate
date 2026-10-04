@@ -5,7 +5,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandList.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
-#include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
+#include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"

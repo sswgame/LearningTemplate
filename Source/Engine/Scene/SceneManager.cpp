@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Time/CpuTimer.h"
+#include "Core/Time/GameTimer.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -252,19 +252,19 @@ namespace sw
         // **로드는 프레임 밖에서 한 번 일어난다.** 그래서 `SW_PROFILE_SCOPE` 의 프레임 집계에는
         // 잡히지 않으므로 여기서 따로 잰다.
         //
-        // 재는 것은 `ScopeCpuTimer` 가 한다. 스코프 동안 재고 소멸할 때 남긴다. 로그가
+        // 재는 것은 `ScopedTimer` 가 한다. 스코프 동안 재고 소멸할 때 남긴다. 로그가
         // 사라지는 빌드에서는 경과 계산도 함께 사라지므로 따로 가려 줄 것이 없다.
         SceneDocument doc{};
         bool          ok = false;
         {
-            ScopeCpuTimer parseTimer{ "Scene.load.parse" };
+            ScopedTimer parseTimer{ "Scene.load.parse" };
             ok = doc.load( pathStr );
         }
 
         sw::unique_ptr<Scene> newScene;
         if ( ok )
         {
-            ScopeCpuTimer instantiateTimer{ "Scene.load.instantiate" };
+            ScopedTimer instantiateTimer{ "Scene.load.instantiate" };
             newScene = sw::make_unique<Scene>( doc._name.empty() ? "LoadedScene" : doc._name );
             newScene->setSourcePath( pathStr );
             if ( newScene->instantiate( doc ) == false )

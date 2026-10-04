@@ -293,7 +293,7 @@ tm.releaseCurrentThreadHelperSlot(); // 태스크를 기다리던 비워커 스�
 
 ## 시간
 
-대기 시한(`waitAll( timeoutMs )`)과 워커의 스핀 구간은 `CpuStopwatch`(`Core/Time/CpuClock.h`)로 잽니다 — 엔진의 단조 시계 하나입니다.
+대기 시한(`waitAll( timeoutMs )`)과 워커의 스핀 구간은 `Stopwatch`(`Core/Time/MonotonicClock.h`)로 잽니다 — 엔진의 단조 시계 하나입니다.
 기다림의 상한은 횟수가 아니라 시간으로 둡니다.
 
 ---
@@ -363,7 +363,7 @@ Games에서 `EngineServices` 를 include 하지 않는 규칙은 [Object README]
 - **Object / GameObject**: 컴포넌트 tick 스테이지를 `engine::runParallel`(합류까지 호출 스레드가 함께 돎)  
 - **SceneManager** · **AssetStreamingQueue**: 씬 비동기 로드 · 에셋 스트리밍(`TaskFuture`)  
 - **RenderGraph**: 병렬 패스 기록(`High` + 스테이지 `waitStage`) · **GpuUploadQueue**: 메시 업로드(`emplaceParallel` + 스테이지)  
-- **RenderPassResource / RenderPipelineResource**: 에셋 비동기 로드  
+- **RenderPassAsset / RenderPipelineAsset**: 에셋 비동기 로드  
 - **LiveReload / ModuleHost**: 언로드 전 `waitAll`
 
 ---

@@ -50,7 +50,7 @@ namespace sw::editor
          */
         struct AssetMatchRow
         {
-            EditorAssetKind         _kind;
+            EditorAssetType         _kind;
             MatchMode               _mode;
             const string_view*      _pSuffix;
             uint32                  _suffixCount;
@@ -66,45 +66,45 @@ namespace sw::editor
 
         // 줄 순서가 곧 **판정 우선순위**다 — 처음 맞는 줄이 이긴다(`findKind` · `findReloadRoute`).
         constexpr AssetMatchRow kArrAssetMatch[] = {
-            {         EditorAssetKind::Scene, MatchMode::CookableSource,             nullptr,                              0,      nullptr,                                 nullptr},
-            {        EditorAssetKind::Prefab, MatchMode::CookableSource,             nullptr,                              0,     "Prefab",                                 nullptr},
-            {       EditorAssetKind::Texture,      MatchMode::Extension,      kArrTextureExt,      countOf( kArrTextureExt ),    "Texture", &TextureBaker::importChangedSourceImage},
-            {        EditorAssetKind::Shader,      MatchMode::Extension,       kArrShaderExt,       countOf( kArrShaderExt ),      nullptr,                                 nullptr},
-            {      EditorAssetKind::Material,      MatchMode::Extension,     kArrMaterialExt,     countOf( kArrMaterialExt ),   "Material",                                 nullptr},
-            {         EditorAssetKind::Audio,      MatchMode::Extension,        kArrAudioExt,        countOf( kArrAudioExt ),      nullptr,                                 nullptr},
-            {EditorAssetKind::AnimationGraph,       MatchMode::EndsWith,      kArrAnimSuffix,      countOf( kArrAnimSuffix ),      nullptr,                                 nullptr},
-            { EditorAssetKind::DialogueGraph,       MatchMode::EndsWith,  kArrDialogueSuffix,  countOf( kArrDialogueSuffix ),      nullptr,                                 nullptr},
-            {    EditorAssetKind::SpriteClip,       MatchMode::EndsWith, kArrSpriteDocSuffix, countOf( kArrSpriteDocSuffix ), "SpriteClip",                                 nullptr},
-            {    EditorAssetKind::SpriteClip,      MatchMode::Extension,  kArrSpriteImageExt,  countOf( kArrSpriteImageExt ),      nullptr,                                 nullptr},
-            {       EditorAssetKind::TileMap,       MatchMode::EndsWith,   kArrTileMapSuffix,   countOf( kArrTileMapSuffix ),      nullptr,                                 nullptr},
-            {      EditorAssetKind::Sequence,       MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),      nullptr,                                 nullptr},
-            {          EditorAssetKind::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),      nullptr,                                 nullptr},
+            {         EditorAssetType::Scene, MatchMode::CookableSource,             nullptr,                              0,      nullptr,                                 nullptr},
+            {        EditorAssetType::Prefab, MatchMode::CookableSource,             nullptr,                              0,     "Prefab",                                 nullptr},
+            {       EditorAssetType::Texture,      MatchMode::Extension,      kArrTextureExt,      countOf( kArrTextureExt ),    "Texture", &TextureBaker::importChangedSourceImage},
+            {        EditorAssetType::Shader,      MatchMode::Extension,       kArrShaderExt,       countOf( kArrShaderExt ),      nullptr,                                 nullptr},
+            {      EditorAssetType::Material,      MatchMode::Extension,     kArrMaterialExt,     countOf( kArrMaterialExt ),   "Material",                                 nullptr},
+            {         EditorAssetType::Audio,      MatchMode::Extension,        kArrAudioExt,        countOf( kArrAudioExt ),      nullptr,                                 nullptr},
+            {EditorAssetType::AnimationGraph,       MatchMode::EndsWith,      kArrAnimSuffix,      countOf( kArrAnimSuffix ),      nullptr,                                 nullptr},
+            { EditorAssetType::DialogueGraph,       MatchMode::EndsWith,  kArrDialogueSuffix,  countOf( kArrDialogueSuffix ),      nullptr,                                 nullptr},
+            {    EditorAssetType::SpriteClip,       MatchMode::EndsWith, kArrSpriteDocSuffix, countOf( kArrSpriteDocSuffix ), "SpriteClip",                                 nullptr},
+            {    EditorAssetType::SpriteClip,      MatchMode::Extension,  kArrSpriteImageExt,  countOf( kArrSpriteImageExt ),      nullptr,                                 nullptr},
+            {       EditorAssetType::TileMap,       MatchMode::EndsWith,   kArrTileMapSuffix,   countOf( kArrTileMapSuffix ),      nullptr,                                 nullptr},
+            {      EditorAssetType::Sequence,       MatchMode::EndsWith,  kArrSequenceSuffix,  countOf( kArrSequenceSuffix ),      nullptr,                                 nullptr},
+            {          EditorAssetType::Data,      MatchMode::Extension,         kArrDataExt,         countOf( kArrDataExt ),      nullptr,                                 nullptr},
         };
 
         // 종류마다 한 줄. 줄 순서가 곧 **브라우저 필터 · 도구 패널 · 리소스 카탈로그의 표시 순서**다.
         // 칸: 종류 · 이름(단수) · 브라우저 라벨 · 패널 제목 · 아이콘 · 색 · 액센트 색 · Other 제외 · 임포트
-        constexpr EditorAssetKindInfo kArrKindInfo[] = {
-            {         EditorAssetKind::Scene,      "Scene",    "Scenes",           nullptr,   ICON_FA_CLAPPERBOARD,                style::kAccent,  true,  true, false},
-            {        EditorAssetKind::Prefab,     "Prefab",   "Prefabs",   "Prefab Editor",          ICON_FA_CUBES, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
-            {       EditorAssetKind::Texture,    "Texture",  "Textures",           nullptr,          ICON_FA_IMAGE, { 0.35f, 0.85f, 0.45f, 1.0f }, false,  true,  true},
-            {        EditorAssetKind::Shader,     "Shader",   "Shaders",           nullptr,           ICON_FA_CODE, { 0.95f, 0.45f, 0.35f, 1.0f }, false,  true,  true},
-            {      EditorAssetKind::Material,   "Material", "Materials",        "Material",        ICON_FA_DROPLET, { 0.80f, 0.45f, 0.95f, 1.0f }, false,  true,  true},
-            {         EditorAssetKind::Audio,      "Audio",     "Audio",           nullptr,          ICON_FA_MUSIC, { 0.95f, 0.85f, 0.25f, 1.0f }, false,  true,  true},
-            {EditorAssetKind::AnimationGraph,  "AnimGraph",      "Anim", "Animation Graph", ICON_FA_PERSON_RUNNING, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
-            { EditorAssetKind::DialogueGraph,   "Dialogue",  "Dialogue",  "Dialogue Graph",       ICON_FA_COMMENTS, { 0.40f, 0.75f, 1.00f, 1.0f }, false,  true,  true},
-            {    EditorAssetKind::SpriteClip, "SpriteClip",    "Sprite",     "Sprite Clip", ICON_FA_PERSON_RUNNING, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
-            {       EditorAssetKind::TileMap,    "TileMap",  "Tile Map",   "Tile Map Tool",     ICON_FA_BORDER_ALL, { 0.45f, 0.85f, 0.50f, 1.0f }, false,  true,  true},
-            {      EditorAssetKind::Sequence,   "Sequence",       "Seq",       "Sequencer",           ICON_FA_FILM, { 0.85f, 0.55f, 0.85f, 1.0f }, false,  true,  true},
-            {          EditorAssetKind::Data,       "Data",      "Data",           nullptr,          ICON_FA_TABLE, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
+        constexpr EditorAssetTypeInfo kArrKindInfo[] = {
+            {         EditorAssetType::Scene,      "Scene",    "Scenes",           nullptr,   ICON_FA_CLAPPERBOARD,                style::kAccent,  true,  true, false},
+            {        EditorAssetType::Prefab,     "Prefab",   "Prefabs",   "Prefab Editor",          ICON_FA_CUBES, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
+            {       EditorAssetType::Texture,    "Texture",  "Textures",           nullptr,          ICON_FA_IMAGE, { 0.35f, 0.85f, 0.45f, 1.0f }, false,  true,  true},
+            {        EditorAssetType::Shader,     "Shader",   "Shaders",           nullptr,           ICON_FA_CODE, { 0.95f, 0.45f, 0.35f, 1.0f }, false,  true,  true},
+            {      EditorAssetType::Material,   "Material", "Materials",        "Material",        ICON_FA_DROPLET, { 0.80f, 0.45f, 0.95f, 1.0f }, false,  true,  true},
+            {         EditorAssetType::Audio,      "Audio",     "Audio",           nullptr,          ICON_FA_MUSIC, { 0.95f, 0.85f, 0.25f, 1.0f }, false,  true,  true},
+            {EditorAssetType::AnimationGraph,  "AnimGraph",      "Anim", "Animation Graph", ICON_FA_PERSON_RUNNING, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
+            { EditorAssetType::DialogueGraph,   "Dialogue",  "Dialogue",  "Dialogue Graph",       ICON_FA_COMMENTS, { 0.40f, 0.75f, 1.00f, 1.0f }, false,  true,  true},
+            {    EditorAssetType::SpriteClip, "SpriteClip",    "Sprite",     "Sprite Clip", ICON_FA_PERSON_RUNNING, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
+            {       EditorAssetType::TileMap,    "TileMap",  "Tile Map",   "Tile Map Tool",     ICON_FA_BORDER_ALL, { 0.45f, 0.85f, 0.50f, 1.0f }, false,  true,  true},
+            {      EditorAssetType::Sequence,   "Sequence",       "Seq",       "Sequencer",           ICON_FA_FILM, { 0.85f, 0.55f, 0.85f, 1.0f }, false,  true,  true},
+            {          EditorAssetType::Data,       "Data",      "Data",           nullptr,          ICON_FA_TABLE, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
         };
 
         /** @brief 종류 표가 `Unknown` 을 뺀 모든 종류를 꼭 한 번씩 담고, 이름 · 라벨 · 아이콘 칸이 비지 않았는지입니다. */
         constexpr bool isKindTableComplete()
         {
-            for ( uint32 kindValue = 1; kindValue < static_cast<uint32>( EditorAssetKind::Count ); ++kindValue )
+            for ( uint32 kindValue = 1; kindValue < static_cast<uint32>( EditorAssetType::Count ); ++kindValue )
             {
                 uint32 rowCount{ 0 };
-                for ( const EditorAssetKindInfo& info : kArrKindInfo )
+                for ( const EditorAssetTypeInfo& info : kArrKindInfo )
                 {
                     if ( static_cast<uint32>( info._kind ) != kindValue )
                         continue;
@@ -122,7 +122,7 @@ namespace sw::editor
         /** @brief 모든 종류가 판정 줄을 하나 이상 가졌는지입니다. 줄이 없는 종류는 어떤 경로에도 걸리지 않습니다. */
         constexpr bool isEveryKindMatchable()
         {
-            for ( uint32 kindValue = 1; kindValue < static_cast<uint32>( EditorAssetKind::Count ); ++kindValue )
+            for ( uint32 kindValue = 1; kindValue < static_cast<uint32>( EditorAssetType::Count ); ++kindValue )
             {
                 bool bFound{ false };
                 for ( const AssetMatchRow& row : kArrAssetMatch )
@@ -136,10 +136,10 @@ namespace sw::editor
             return true;
         }
 
-        static_assert( sizeof( kArrKindInfo ) / sizeof( kArrKindInfo[0] ) + 1 == static_cast<size_t>( EditorAssetKind::Count ),
-                       "kArrKindInfo needs exactly one row per EditorAssetKind" );
-        static_assert( isKindTableComplete(), "every EditorAssetKind needs one kArrKindInfo row with a name, a browser label and an icon" );
-        static_assert( isEveryKindMatchable(), "every EditorAssetKind needs at least one kArrAssetMatch row" );
+        static_assert( sizeof( kArrKindInfo ) / sizeof( kArrKindInfo[0] ) + 1 == static_cast<size_t>( EditorAssetType::Count ),
+                       "kArrKindInfo needs exactly one row per EditorAssetType" );
+        static_assert( isKindTableComplete(), "every EditorAssetType needs one kArrKindInfo row with a name, a browser label and an icon" );
+        static_assert( isEveryKindMatchable(), "every EditorAssetType needs at least one kArrAssetMatch row" );
 
         struct EditorAssetTypeInternal
         {
@@ -166,11 +166,11 @@ namespace sw::editor
             }
 
             /** @brief 엔진 쿠킹 규칙의 종류입니다. 씬 · 프리팹이 아니면 `AssetKind::Count` 입니다. */
-            static AssetKind getCookKind( EditorAssetKind kind )
+            static AssetKind getCookKind( EditorAssetType kind )
             {
-                if ( kind == EditorAssetKind::Scene )
+                if ( kind == EditorAssetType::Scene )
                     return AssetKind::Scene;
-                if ( kind == EditorAssetKind::Prefab )
+                if ( kind == EditorAssetType::Prefab )
                     return AssetKind::Prefab;
                 return AssetKind::Count;
             }
@@ -214,10 +214,10 @@ namespace sw::editor
             }
 
             /** @brief 전용 패널이 있는 종류를 종류 표 순서대로 모읍니다. */
-            static vector<EditorAssetKind> buildToolPanelKinds()
+            static vector<EditorAssetType> buildToolPanelKinds()
             {
-                vector<EditorAssetKind> listKind{};
-                for ( const EditorAssetKindInfo& info : kArrKindInfo )
+                vector<EditorAssetType> listKind{};
+                for ( const EditorAssetTypeInfo& info : kArrKindInfo )
                 {
                     if ( info._pPanelTitle != nullptr )
                         listKind.push_back( info._kind );
@@ -229,31 +229,31 @@ namespace sw::editor
             static vector<EditorAssetBrowserFilter> buildBrowserFilters()
             {
                 vector<EditorAssetBrowserFilter> listFilter{};
-                listFilter.push_back( EditorAssetBrowserFilter{ "All", EditorAssetKind::Unknown, false } );
-                for ( const EditorAssetKindInfo& info : kArrKindInfo )
+                listFilter.push_back( EditorAssetBrowserFilter{ "All", EditorAssetType::Unknown, false } );
+                for ( const EditorAssetTypeInfo& info : kArrKindInfo )
                     listFilter.push_back( EditorAssetBrowserFilter{ info._pBrowserLabel, info._kind, false } );
-                listFilter.push_back( EditorAssetBrowserFilter{ "Other", EditorAssetKind::Unknown, true } );
+                listFilter.push_back( EditorAssetBrowserFilter{ "Other", EditorAssetType::Unknown, true } );
                 return listFilter;
             }
 
             /** @brief 종류의 패널 제목입니다. 없으면 nullptr 이고, `getPanelTitle` 의 빈 문자열과 구분됩니다. */
-            static const utf8* getPanelTitleOf( EditorAssetKind kind )
+            static const utf8* getPanelTitleOf( EditorAssetType kind )
             {
-                const EditorAssetKindInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
+                const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
                 return pInfo != nullptr ? pInfo->_pPanelTitle : nullptr;
             }
 
             /** @brief 종류가 브라우저 "Other" 필터에서 빠지는지입니다. */
-            static bool isOtherExcluded( EditorAssetKind kind )
+            static bool isOtherExcluded( EditorAssetType kind )
             {
-                const EditorAssetKindInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
+                const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
                 return pInfo != nullptr && pInfo->_bOtherExcluded;
             }
 
             /** @brief 종류의 접미사가 임포트 대화상자에 들어가는지입니다. */
-            static bool isImportable( EditorAssetKind kind )
+            static bool isImportable( EditorAssetType kind )
             {
-                const EditorAssetKindInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
+                const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
                 return pInfo != nullptr && pInfo->_bImportable;
             }
 
@@ -285,9 +285,9 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool EditorAssetTypeRegistry::matches( EditorAssetKind kind, string_view path )
+    bool EditorAssetTypeRegistry::matches( EditorAssetType kind, string_view path )
     {
-        if ( kind == EditorAssetKind::Unknown || path.empty() )
+        if ( kind == EditorAssetType::Unknown || path.empty() )
             return false;
 
         for ( const AssetMatchRow& row : kArrAssetMatch )
@@ -300,7 +300,7 @@ namespace sw::editor
         return false;
     }
 
-    bool EditorAssetTypeRegistry::matches( EditorAssetKind kind, const utf8* pPath )
+    bool EditorAssetTypeRegistry::matches( EditorAssetType kind, const utf8* pPath )
     {
         if ( pPath == nullptr )
             return false;
@@ -331,21 +331,21 @@ namespace sw::editor
         return true;
     }
 
-    EditorAssetKind EditorAssetTypeRegistry::findKind( string_view path )
+    EditorAssetType EditorAssetTypeRegistry::findKind( string_view path )
     {
         if ( path.empty() )
-            return EditorAssetKind::Unknown;
+            return EditorAssetType::Unknown;
         for ( const AssetMatchRow& row : kArrAssetMatch )
         {
             if ( EditorAssetTypeInternal::matchRow( row, path ) )
                 return row._kind;
         }
-        return EditorAssetKind::Unknown;
+        return EditorAssetType::Unknown;
     }
 
-    const EditorAssetKindInfo* EditorAssetTypeRegistry::findKindInfo( EditorAssetKind kind )
+    const EditorAssetTypeInfo* EditorAssetTypeRegistry::findKindInfo( EditorAssetType kind )
     {
-        for ( const EditorAssetKindInfo& info : kArrKindInfo )
+        for ( const EditorAssetTypeInfo& info : kArrKindInfo )
         {
             if ( info._kind == kind )
                 return &info;
@@ -353,13 +353,13 @@ namespace sw::editor
         return nullptr;
     }
 
-    const EditorAssetKindInfo* EditorAssetTypeRegistry::getKindInfos( uint32& outCount )
+    const EditorAssetTypeInfo* EditorAssetTypeRegistry::getKindInfos( uint32& outCount )
     {
         outCount = static_cast<uint32>( sizeof( kArrKindInfo ) / sizeof( kArrKindInfo[0] ) );
         return kArrKindInfo;
     }
 
-    const utf8* EditorAssetTypeRegistry::getPanelTitle( EditorAssetKind kind )
+    const utf8* EditorAssetTypeRegistry::getPanelTitle( EditorAssetType kind )
     {
         const utf8* pTitle = EditorAssetTypeInternal::getPanelTitleOf( kind );
         return pTitle != nullptr ? pTitle : "";
@@ -372,7 +372,7 @@ namespace sw::editor
 
         // 가장 긴 접미사가 이긴다. `.anim.json` 이 `.json` 보다 구체적이다.
         size_t                               bestLen{ 0 };
-        EditorAssetKind                      bestKind{ EditorAssetKind::Unknown };
+        EditorAssetType                      bestKind{ EditorAssetType::Unknown };
         uint32                               mappingCount{ 0 };
         const EditorAssetPanelMapping* const pMapping = getPanelMappings( mappingCount );
         for ( uint32 index = 0; index < mappingCount; ++index )
@@ -385,7 +385,7 @@ namespace sw::editor
             bestLen  = mapping._suffix.size();
             bestKind = mapping._kind;
         }
-        if ( bestKind == EditorAssetKind::Unknown )
+        if ( bestKind == EditorAssetType::Unknown )
             return {};
         return getPanelTitle( bestKind );
     }
@@ -398,9 +398,9 @@ namespace sw::editor
         return s_listMapping.data();
     }
 
-    const EditorAssetKind* EditorAssetTypeRegistry::getToolPanelKinds( uint32& outCount )
+    const EditorAssetType* EditorAssetTypeRegistry::getToolPanelKinds( uint32& outCount )
     {
-        static const vector<EditorAssetKind> s_listKind = EditorAssetTypeInternal::buildToolPanelKinds();
+        static const vector<EditorAssetType> s_listKind = EditorAssetTypeInternal::buildToolPanelKinds();
         outCount                                        = static_cast<uint32>( s_listKind.size() );
         return s_listKind.data();
     }
@@ -447,7 +447,7 @@ namespace sw::editor
         }
     }
 
-    void EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind kind, vector<string>& outListSuffix )
+    void EditorAssetTypeRegistry::appendSuffixes( EditorAssetType kind, vector<string>& outListSuffix )
     {
         for ( const AssetMatchRow& row : kArrAssetMatch )
         {
@@ -456,7 +456,7 @@ namespace sw::editor
         }
     }
 
-    bool EditorAssetTypeRegistry::collectFiles( EditorAssetKind kind, string_view directory, vector<string>& outListFilePath )
+    bool EditorAssetTypeRegistry::collectFiles( EditorAssetType kind, string_view directory, vector<string>& outListFilePath )
     {
         vector<string> listFile{};
         if ( FileUtil::collectFiles( directory, "", listFile, true ) == false )

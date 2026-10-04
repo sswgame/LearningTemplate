@@ -3,11 +3,11 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/Renderer/Bake/ShaderBakeDriver.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBaker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -427,7 +427,7 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
         }
     } );
 
-    const sw::CpuDeadline waitDeadline = sw::CpuDeadline::afterMilliseconds( 10000 );
+    const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( 10000 );
     while ( clearsDone.load() == 0 && waitDeadline.isExpired() == false )
         std::this_thread::yield();
     SW_EXPECT_TRUE_MSG( clearsDone.load() > 0, "지우는 스레드가 10 초 안에 돌지 않았다" );
@@ -481,7 +481,7 @@ SW_TEST_CASE( ShaderBakerTest, DepthOnlyPassesHaveNoPixelStage )
         if ( absPath.empty() )
             continue;
 
-        sw::RenderPipelineResource pipelineRes;
+        sw::RenderPipelineAsset pipelineRes;
         SW_EXPECT_TRUE_MSG( pipelineRes.loadFromXmlFile( absPath ), pPipeline );
 
         uint32 depthOnlyCount{ 0 };
@@ -548,7 +548,7 @@ SW_TEST_CASE( ShaderBakerTest, DepthOnlyPassesHaveNoPixelStage )
 
 /**
  * @brief [ShaderBakerTest] 파이프라인 XML 의 첨부 포맷 이름은 RHIFormat 의 모든 열거자를 그 이름 그대로 읽는다
- * @details 로드 검증(`RenderPipelineResource::validate`)과 실제 생성(`parseAttachmentFormat`)이 같은 이름표를 봐야 한다. 이름표가 둘이면
+ * @details 로드 검증(`RenderPipelineAsset::validate`)과 실제 생성(`parseAttachmentFormat`)이 같은 이름표를 봐야 한다. 이름표가 둘이면
  *          검증은 통과하는 "R32_FLOAT" 가 생성에서 조용히 R8G8B8A8_UNORM 이 된다. 이름 → 값 → 이름이 열거자마다 제자리로 돌아오는지 본다.
  */
 SW_TEST_CASE( ShaderBakerTest, AttachmentFormatNameRoundTripsEveryRHIFormat )

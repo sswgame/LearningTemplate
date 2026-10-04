@@ -9,7 +9,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/String/string_splitter.h"
-#include "Core/Time/CpuTimer.h"
+#include "Core/Time/GameTimer.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Resource/ResourceUtil.h"

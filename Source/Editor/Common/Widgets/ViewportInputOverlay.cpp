@@ -2,10 +2,10 @@
 
 #include "Editor/Common/Widgets/ViewportInputOverlay.h"
 
-#include "Engine/Input/ActionMap.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/GamepadButtons.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Input/KeyCodes.h"
 
 #include <imgui.h>
@@ -22,12 +22,12 @@ namespace sw::editor
         return s_overlayConfig;
     }
 
-    void ViewportInputOverlay::draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const ActionMap* pActionMap )
+    void ViewportInputOverlay::draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap )
     {
-        draw( pDrawList, viewportScreenPos, viewportSize, pInput, pActionMap, s_overlayConfig );
+        draw( pDrawList, viewportScreenPos, viewportSize, pInput, pInputMap, s_overlayConfig );
     }
 
-    void ViewportInputOverlay::draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const ActionMap* pActionMap, const ViewportInputOverlayConfig& config )
+    void ViewportInputOverlay::draw( ImDrawList* pDrawList, const ImVec2& viewportScreenPos, const ImVec2& viewportSize, const InputManager* pInput, const InputMap* pInputMap, const ViewportInputOverlayConfig& config )
     {
         if ( pDrawList == nullptr || config._bEnabled == SW_FALSE || pInput == nullptr )
             return;
@@ -150,15 +150,15 @@ namespace sw::editor
         }
 
         // 5) 활성 액션 표시
-        if ( pActionMap != nullptr && config._bShowCommandHistory == SW_TRUE )
+        if ( pInputMap != nullptr && config._bShowCommandHistory == SW_TRUE )
         {
-            const vector<hashed_string>& listAction = pActionMap->getActionNames();
+            const vector<hashed_string>& listAction = pInputMap->getActionNames();
             float32                      offsetY    = 100.0f * config._scale;
             for ( const hashed_string& act : listAction )
             {
-                if ( pActionMap->isActionDown( act ) )
+                if ( pInputMap->isActionDown( act ) )
                 {
-                    const string text = pActionMap->getGlyphForAction( sw::hashed_string( act.view() ) ) + " " + string( act.c_str() );
+                    const string text = pInputMap->getGlyphForAction( sw::hashed_string( act.view() ) ) + " " + string( act.c_str() );
                     pDrawList->AddText( ImVec2( boxMin.x + 150.0f * config._scale, boxMin.y + offsetY ), IM_COL32( 255, 220, 100, alphaByte ), text.c_str() );
                     offsetY += 14.0f;
                     if ( offsetY > boxH - 10.0f )

@@ -1,6 +1,6 @@
 """엔진이 들고 다니는 작은 스프라이트 텍스처 셋과 그 클립을 만듭니다(DDS, RGBA8, 밉 하나).
 
-  - `engine/textures/ui/digits.dds` + `digits.sprite.json` — 데미지 숫자(`DamageUIComponent`)의 글리프 아틀라스입니다.
+  - `engine/textures/ui/digits.dds` + `digits.sprite.json` — 데미지 숫자(`DamageNumberComponent`)의 글리프 아틀라스입니다.
     프레임 0..9 가 숫자, 10 이 '-' 입니다. 5x7 비트맵 글꼴을 세 배로 키우고 검은 테두리를 둘렀습니다(흰 글자라 색은 스프라이트 색이 정합니다).
     **배치 규칙(칸 크기 · 순서)은 이 파일에만 있습니다** — 컴포넌트는 클립의 프레임 번호만 압니다.
   - `engine/textures/test/quadrants.dds` + `quadrants.sprite.json` — 네 칸(왼쪽 위 빨강 · 오른쪽 위 초록 · 왼쪽 아래 파랑 · 오른쪽 아래 흰색)
@@ -16,7 +16,7 @@ import os
 import struct
 import sys
 
-# 5x7 비트맵 글꼴. 프레임 순서가 곧 글리프 번호다(DamageUIComponent::kMinusGlyphFrame = 10).
+# 5x7 비트맵 글꼴. 프레임 순서가 곧 글리프 번호다(DamageNumberComponent::kMinusGlyphFrame = 10).
 kGlyphRows = (
     (".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."),  # 0
     ("..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."),  # 1
@@ -35,7 +35,7 @@ kOutlineTexels = 2       # 글자 둘레의 검은 테두리 두께
 kCellWidth = 32          # 아틀라스의 칸(텍셀). 칸 사이에 빈 텍셀이 있어 선형 필터가 이웃 칸을 끌어오지 않는다
 kCellHeight = 32
 kAtlasColumns = 16       # 512 x 32 — 2 의 거듭제곱
-kFrameWidthTexels = 24   # 프레임(UV 사각형) 폭. 칸 가운데 24 텍셀 — 글자 비율 3:4 가 DamageUIComponent 의 기본 글자 크기(0.3, 0.4)와 같다
+kFrameWidthTexels = 24   # 프레임(UV 사각형) 폭. 칸 가운데 24 텍셀 — 글자 비율 3:4 가 DamageNumberComponent 의 기본 글자 크기(0.3, 0.4)와 같다
 
 kQuadrantSize = 64       # 시험 텍스처 한 변(텍셀). 칸 하나가 32x32 — 선형 필터가 이웃 칸을 끌어오는 띠가 프레임 폭의 1/32 에 그친다
 kQuadrantColors = ((255, 0, 0, 255), (0, 255, 0, 255), (0, 0, 255, 255), (255, 255, 255, 255))  # 왼위 · 오위 · 왼아래 · 오아래

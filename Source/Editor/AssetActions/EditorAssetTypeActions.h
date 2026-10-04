@@ -18,12 +18,12 @@ namespace sw
 
 namespace sw::editor
 {
-    enum class EditorAssetKind : uint8;
+    enum class EditorAssetType : uint8;
 
     /**
      * @class IEditorAssetTypeActions
      * @brief 애셋 종류 하나가 에디터에서 **하는 일**입니다 — 언리얼 `FAssetTypeActions` 의 자리입니다.
-     * @details 보여 주는 정보(이름 · 아이콘 · 색)는 종류 표(`EditorAssetKindInfo`)에 있고, 여기에는 동작만 둔다. 종류의 코드 파일이
+     * @details 보여 주는 정보(이름 · 아이콘 · 색)는 종류 표(`EditorAssetTypeInfo`)에 있고, 여기에는 동작만 둔다. 종류의 코드 파일이
      *          `EditorAssetTypeActionsRegistrar` 로 등록하므로 콘텐츠 브라우저 · `EditorAssetCommands` 에는 종류별 분기가 없다.
      *          모든 동작은 선택이다. false 를 돌려주면 부르는 쪽이 일반 동작(일반 문서 썸네일 · 열기)으로 넘어간다.
      */
@@ -33,7 +33,7 @@ namespace sw::editor
         virtual ~IEditorAssetTypeActions() = default;
 
         /** @brief 이 동작이 맡는 종류입니다. 종류마다 하나만 등록됩니다. */
-        virtual EditorAssetKind getKind() const = 0;
+        virtual EditorAssetType getKind() const = 0;
         /** @brief 콘텐츠 브라우저 카드 썸네일을 그립니다(배경 · 테두리는 브라우저가 그린다). 그리지 않으면 false 입니다. */
         virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const;
         /** @brief 전용 도구 패널이 없는 종류를 엽니다. 이 종류가 열기를 하지 않거나 열지 못했으면 false 입니다. */
@@ -58,7 +58,7 @@ namespace sw::editor
         /** @brief 등록을 지웁니다. 그 종류에 다른 동작이 등록돼 있으면 건드리지 않습니다. */
         static void unregisterActions( const IEditorAssetTypeActions& actions );
         /** @brief 종류의 동작입니다. 등록되지 않았으면 nullptr 입니다. */
-        static const IEditorAssetTypeActions* findActions( EditorAssetKind kind );
+        static const IEditorAssetTypeActions* findActions( EditorAssetType kind );
         /** @brief 경로가 속한 종류(`EditorAssetTypeRegistry::findKind`)의 동작입니다. 없으면 nullptr 입니다. */
         static const IEditorAssetTypeActions* findActionsForPath( string_view path );
     };

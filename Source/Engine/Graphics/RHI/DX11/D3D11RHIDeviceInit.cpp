@@ -7,7 +7,7 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
-#include "Engine/Graphics/RHI/DX11/D3D11RHIResource.h"
+#include "Engine/Graphics/RHI/DX11/D3D11RHIResourceFactory.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

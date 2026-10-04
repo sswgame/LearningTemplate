@@ -14,14 +14,14 @@
 
 SW_TEST_CASE( EditorAssetTypeTest, MatchesKnownSuffixes )
 {
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Scene, "maps/town.scene.xml" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Prefab, "prefabs/hero.prefab.xml" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::AnimationGraph, "anim/idle.anim.json" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::TileMap, "maps/overworld.tilemap.xml" ) );
-    SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::TileMap, "maps/town.scene.xml" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Scene, "maps/town.scene.xml" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Prefab, "prefabs/hero.prefab.xml" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "anim/idle.anim.json" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::TileMap, "maps/overworld.tilemap.xml" ) );
+    SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::TileMap, "maps/town.scene.xml" ) );
     // 죽은 확장자는 **음성으로** 못 박는다. 되살아나면 여기서 걸린다.
-    SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Material, "mats/hero.mat" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Material, "mats/hero.material" ) );
+    SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Material, "mats/hero.mat" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Material, "mats/hero.material" ) );
 }
 
 /**
@@ -33,7 +33,7 @@ SW_TEST_CASE( EditorAssetTypeTest, MatchesKnownSuffixes )
  */
 SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
 {
-    using sw::editor::EditorAssetKind;
+    using sw::editor::EditorAssetType;
     using sw::editor::EditorAssetTypeRegistry;
 
     const utf8* const arrPath[] = {
@@ -54,31 +54,31 @@ SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
     {
         const bool bCookedScene  = sw::AssetCookPath::isCookableSource( pPath, sw::AssetKind::Scene );
         const bool bCookedPrefab = sw::AssetCookPath::isCookableSource( pPath, sw::AssetKind::Prefab );
-        SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, pPath ) == bCookedScene, pPath );
-        SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, pPath ) == bCookedPrefab, pPath );
+        SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::matches( EditorAssetType::Scene, pPath ) == bCookedScene, pPath );
+        SW_EXPECT_TRUE_MSG( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, pPath ) == bCookedPrefab, pPath );
     }
 
     // 규칙 자체가 비어 있으면 위의 대조는 아무것도 지키지 않는다 — 소스는 맞고, 쿠커가 굽지 않는 이름은 아니다.
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, "maps/TOWN.SCENE.XML" ) );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, "prefabs/hero.prefab.json" ) );
-    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, "maps/forest.scenery.xml" ) );
-    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, "maps/level_scene.xml" ) );
-    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetKind::Scene, "maps/a.scene" ) );
-    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, "prefabs/hero.prefab.bin" ) );
-    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetKind::Prefab, "prefabs/hero.prefab" ) );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetType::Scene, "maps/TOWN.SCENE.XML" ) );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, "prefabs/hero.prefab.json" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Scene, "maps/forest.scenery.xml" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Scene, "maps/level_scene.xml" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Scene, "maps/a.scene" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, "prefabs/hero.prefab.bin" ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::matches( EditorAssetType::Prefab, "prefabs/hero.prefab" ) );
     SW_EXPECT_TRUE( EditorAssetTypeRegistry::findPanelTitleForPath( "prefabs/hero.prefab.bin" ).empty() );
     SW_EXPECT_STREQ( "Prefab Editor", sw::string{ EditorAssetTypeRegistry::findPanelTitleForPath( "prefabs/hero.prefab.json" ) }.c_str() );
 
     // 접미사를 펼치는 쪽(핫 리로드 감시 · 대화상자 필터)도 같은 표다.
     sw::vector<sw::string> listPrefabSuffix;
-    EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind::Prefab, listPrefabSuffix );
+    EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Prefab, listPrefabSuffix );
     sw::vector<sw::string_view> listCookSuffix;
     sw::AssetCookPath::appendSourceSuffixes( sw::AssetKind::Prefab, listCookSuffix );
     SW_ASSERT_EQUAL( listCookSuffix.size(), listPrefabSuffix.size() );
     for ( size_t index = 0; index < listCookSuffix.size(); ++index )
         SW_EXPECT_TRUE( listPrefabSuffix[index] == listCookSuffix[index] );
     sw::vector<sw::string> listSceneSuffix;
-    EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind::Scene, listSceneSuffix );
+    EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, listSceneSuffix );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listSceneSuffix.size() );
     SW_EXPECT_STREQ( ".scene.xml", listSceneSuffix[0].c_str() );
 
@@ -88,25 +88,25 @@ SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
         SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( folder + "/" + pName, "<x/>" ) );
     sw::vector<sw::string> listPrefabFile;
     sw::vector<sw::string> listSceneFile;
-    SW_ASSERT_TRUE( EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Prefab, folder, listPrefabFile ) );
-    SW_ASSERT_TRUE( EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Scene, folder, listSceneFile ) );
+    SW_ASSERT_TRUE( EditorAssetTypeRegistry::collectFiles( EditorAssetType::Prefab, folder, listPrefabFile ) );
+    SW_ASSERT_TRUE( EditorAssetTypeRegistry::collectFiles( EditorAssetType::Scene, folder, listSceneFile ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listPrefabFile.size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listSceneFile.size() );
     sw::vector<sw::string> listMissing;
-    SW_EXPECT_FALSE( EditorAssetTypeRegistry::collectFiles( EditorAssetKind::Prefab, folder + "/nope", listMissing ) );
+    SW_EXPECT_FALSE( EditorAssetTypeRegistry::collectFiles( EditorAssetType::Prefab, folder + "/nope", listMissing ) );
 }
 
 SW_TEST_CASE( EditorAssetTypeTest, PanelTitlesAndToolKinds )
 {
-    SW_EXPECT_STREQ( "Prefab Editor", sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetKind::Prefab ) );
+    SW_EXPECT_STREQ( "Prefab Editor", sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::Prefab ) );
     SW_EXPECT_STREQ( "Animation Graph",
-                     sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetKind::AnimationGraph ) );
+                     sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::AnimationGraph ) );
 
-    SW_EXPECT_STREQ( "Sequencer", sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetKind::Sequence ) );
-    SW_EXPECT_STREQ( "Material", sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetKind::Material ) );
+    SW_EXPECT_STREQ( "Sequencer", sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::Sequence ) );
+    SW_EXPECT_STREQ( "Material", sw::editor::EditorAssetTypeRegistry::getPanelTitle( sw::editor::EditorAssetType::Material ) );
 
     uint32                             kindCount{ 0 };
-    const sw::editor::EditorAssetKind* pKind = sw::editor::EditorAssetTypeRegistry::getToolPanelKinds( kindCount );
+    const sw::editor::EditorAssetType* pKind = sw::editor::EditorAssetTypeRegistry::getToolPanelKinds( kindCount );
     SW_ASSERT_NOT_NULL( pKind );
     SW_EXPECT_TRUE( kindCount >= 7 );
 
@@ -114,9 +114,9 @@ SW_TEST_CASE( EditorAssetTypeTest, PanelTitlesAndToolKinds )
     bool bHasMaterial{ false };
     for ( uint32 index = 0; index < kindCount; ++index )
     {
-        if ( pKind[index] == sw::editor::EditorAssetKind::AnimationGraph )
+        if ( pKind[index] == sw::editor::EditorAssetType::AnimationGraph )
             bHasAnim = true;
-        if ( pKind[index] == sw::editor::EditorAssetKind::Material )
+        if ( pKind[index] == sw::editor::EditorAssetType::Material )
             bHasMaterial = true;
     }
     SW_EXPECT_TRUE( bHasAnim );
@@ -137,23 +137,23 @@ SW_TEST_CASE( EditorAssetTypeTest, FindPanelTitleLongestSuffix )
 
 SW_TEST_CASE( EditorAssetTypeTest, DataDoesNotStealAnimJson )
 {
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::AnimationGraph, "a.anim.json" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Data, "a.anim.json" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimationGraph, "a.anim.json" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Data, "a.anim.json" ) );
 }
 
 SW_TEST_CASE( EditorAssetTypeTest, AllAssetKindsAndMatchesAny )
 {
     // 1) Texture, Shader, Audio, DialogueGraph, SpriteClip 매칭 검증
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Texture, "textures/albedo.png" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Texture, "textures/normal.dds" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Shader, "shaders/pbr.hlsl" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Shader, "shaders/common.hlsli" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Texture, "textures/albedo.png" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Texture, "textures/normal.dds" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Shader, "shaders/pbr.hlsl" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Shader, "shaders/common.hlsli" ) );
     // 구운 산출물은 셰이더 소스가 아니다.
-    SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Shader, "shaders/bin/opengl/pbr_ps.spv" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Audio, "audio/bgm.wav" ) );
-    SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::Audio, "audio/sfx.ogg" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::DialogueGraph, "dialogue/intro.dialogue.json" ) );
-    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetKind::SpriteClip, "sprites/run.sprite.json" ) );
+    SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Shader, "shaders/bin/opengl/pbr_ps.spv" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Audio, "audio/bgm.wav" ) );
+    SW_EXPECT_FALSE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Audio, "audio/sfx.ogg" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::DialogueGraph, "dialogue/intro.dialogue.json" ) );
+    SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::SpriteClip, "sprites/run.sprite.json" ) );
 
     // 2) matchesAny 및 matchesOther 검증
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matchesAny( "maps/town.scene.xml" ) );
@@ -311,18 +311,18 @@ SW_TEST_CASE( EditorAssetTypeTest, EveryReloadCacheNameIsRegisteredInTheEngine )
  */
 SW_TEST_CASE( EditorAssetTypeTest, EveryKindHasIconColorAndCategory )
 {
-    using sw::editor::EditorAssetKind;
-    using sw::editor::EditorAssetKindInfo;
+    using sw::editor::EditorAssetType;
+    using sw::editor::EditorAssetTypeInfo;
     using sw::editor::EditorAssetTypeRegistry;
 
     uint32                           infoCount{ 0 };
-    const EditorAssetKindInfo* const pInfo = EditorAssetTypeRegistry::getKindInfos( infoCount );
+    const EditorAssetTypeInfo* const pInfo = EditorAssetTypeRegistry::getKindInfos( infoCount );
     SW_ASSERT_NOT_NULL( pInfo );
-    SW_EXPECT_EQUAL( static_cast<uint32>( EditorAssetKind::Count ) - 1, infoCount );
+    SW_EXPECT_EQUAL( static_cast<uint32>( EditorAssetType::Count ) - 1, infoCount );
 
-    for ( uint32 kindValue = 1; kindValue < static_cast<uint32>( EditorAssetKind::Count ); ++kindValue )
+    for ( uint32 kindValue = 1; kindValue < static_cast<uint32>( EditorAssetType::Count ); ++kindValue )
     {
-        const EditorAssetKindInfo* pKindInfo = EditorAssetTypeRegistry::findKindInfo( static_cast<EditorAssetKind>( kindValue ) );
+        const EditorAssetTypeInfo* pKindInfo = EditorAssetTypeRegistry::findKindInfo( static_cast<EditorAssetType>( kindValue ) );
         SW_ASSERT_NOT_NULL( pKindInfo );
         SW_EXPECT_TRUE( sw::StringUtil::isNullOrEmpty( pKindInfo->_pDisplayName ) == false );
         SW_EXPECT_TRUE( sw::StringUtil::isNullOrEmpty( pKindInfo->_pBrowserLabel ) == false );
@@ -330,7 +330,7 @@ SW_TEST_CASE( EditorAssetTypeTest, EveryKindHasIconColorAndCategory )
         const bool bHasColor = pKindInfo->_bAccentColor || pKindInfo->_color._a > 0.0f;
         SW_EXPECT_TRUE_MSG( bHasColor, pKindInfo->_pDisplayName );
     }
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKindInfo( EditorAssetKind::Unknown ) == nullptr );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKindInfo( EditorAssetType::Unknown ) == nullptr );
 }
 
 /**
@@ -340,18 +340,18 @@ SW_TEST_CASE( EditorAssetTypeTest, EveryKindHasIconColorAndCategory )
  */
 SW_TEST_CASE( EditorAssetTypeTest, FindKindTakesTheFirstMatchingRow )
 {
-    using sw::editor::EditorAssetKind;
+    using sw::editor::EditorAssetType;
     using sw::editor::EditorAssetTypeRegistry;
 
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/town.scene.xml" ) == EditorAssetKind::Scene );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "prefabs/hero.prefab.json" ) == EditorAssetKind::Prefab );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "sprites/hero.png" ) == EditorAssetKind::Texture );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "anim/idle.anim.json" ) == EditorAssetKind::AnimationGraph );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "cut/intro.seq.json" ) == EditorAssetKind::Sequence );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/overworld.tilemap.xml" ) == EditorAssetKind::TileMap );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "config/input.ini" ) == EditorAssetKind::Data );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "notes/todo.txt" ) == EditorAssetKind::Unknown );
-    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "" ) == EditorAssetKind::Unknown );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/town.scene.xml" ) == EditorAssetType::Scene );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "prefabs/hero.prefab.json" ) == EditorAssetType::Prefab );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "sprites/hero.png" ) == EditorAssetType::Texture );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "anim/idle.anim.json" ) == EditorAssetType::AnimationGraph );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "cut/intro.seq.json" ) == EditorAssetType::Sequence );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "maps/overworld.tilemap.xml" ) == EditorAssetType::TileMap );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "config/input.ini" ) == EditorAssetType::Data );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "notes/todo.txt" ) == EditorAssetType::Unknown );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findKind( "" ) == EditorAssetType::Unknown );
 }
 
 /**

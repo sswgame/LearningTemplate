@@ -93,18 +93,18 @@ namespace sw
 namespace sw
 {
     /// @brief 프리팹을 로드하고 스폰하는 캐시입니다.
-    class SW_API PrefabManager final : public IAssetCache
+    class SW_API PrefabCache final : public IAssetCache
     {
     public:
         /** @brief 빈 프리팹 캐시로 만듭니다. */
-        PrefabManager() = default;
+        PrefabCache() = default;
         /** @brief 캐시된 프리팹을 정리합니다. */
-        ~PrefabManager() override = default;
+        ~PrefabCache() override = default;
 
         /** @brief 복사를 금지합니다. */
-        PrefabManager( const PrefabManager& ) = delete;
+        PrefabCache( const PrefabCache& ) = delete;
         /** @brief 대입을 금지합니다. */
-        PrefabManager& operator=( const PrefabManager& ) = delete;
+        PrefabCache& operator=( const PrefabCache& ) = delete;
 
         /** @brief 프리팹을 로드합니다. Dev 는 XML/JSON 저작본을, Shipping 은 쿠킹된 .prefab.bin 만 읽습니다. 캐시 키는 확장자를 뺀 정규화 경로입니다. */
         PrefabAsset* loadPrefab( string_view assetRelativePath );

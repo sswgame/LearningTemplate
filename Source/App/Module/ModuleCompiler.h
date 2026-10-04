@@ -10,7 +10,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Time/CpuTimer.h"
+#include "Core/Time/GameTimer.h"
 
 #include "RuntimeAPI/Service/IModuleCompiler.h"
 
@@ -87,7 +87,7 @@ namespace sw
         [[maybe_unused]] LiveReloadManager* _pLiveReloadManager;
         unique_ptr<Process>                 _pCurrentProcess;
         std::thread                         _workerThread;
-        CpuTimer                            _buildTimer;
+        GameTimer                           _buildTimer;
         string                              _targetName;
         mutable mutex                       _mutex;
         atomic<BuildState>                  _buildState;

@@ -19,7 +19,7 @@
 - **String/**: `StringUtil` · `StringBuilder` · `fixed_string` · `hashed_string` · `formatString` · `string_splitter` · `TagID`
 - **Delegate/**: `Delegate`
 - **Event/**: `EventDispatcher` · `EventType`(엔진 예약 이벤트 ID — 이벤트 타입은 그 개념이 사는 층에 둔다)
-- **Module/**: `IModuleCodeHolder`(`ModuleCodeHolder.h`) — 모듈 이미지를 내리기 전에 그 코드(델리게이트 스텁 · vtable)를 떼야 하는 등록부의 공통 계약과 목록.
+- **Module/**: `IModuleUnloadListener`(`ModuleUnloadListener.h`) — 모듈 이미지를 내리기 전에 그 코드(델리게이트 스텁 · vtable)를 떼야 하는 등록부의 공통 계약과 목록.
   같은 수명 계약의 Engine 쪽은 `Engine/Module`, App 쪽(라이브 리로드)은 `App/Module` 이다.
 - **File/**: `FileUtil` · `PlatformFileUtil` · `IFileWatcher` + 플랫폼 폴더(`Windows/` · `Linux/` — 파일 다이얼로그 · 워처)
 - **Process/**: `Process` · `CallStackCapture` · `CrashContext` · `CrashHandler` + 플랫폼 폴더(`Windows/` · `Posix/`).
@@ -27,7 +27,7 @@
 - **Compression/**: `ICompressionCodec` · `CompressionCodecRegistry` · `CompressionStream` · `NullCompressionCodec` · `RleCompressionCodec`
   (zlib · zstd · LZ4 코덱은 외부 라이브러리를 쓰므로 `Engine/Compression` 에 있다)
 - **Math/**: `VectorMath` · `MatrixMath` · `MathUtil` · `Frustum`
-- **Time/**: `CpuClock`(아래 "시간") · `CpuTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE_*`)
+- **Time/**: `MonotonicClock`(아래 "시간") · `GameTimer` · **Uuid/**: `Uuid` · **CommandLine/**: `CommandLineManager` · **GlobalVariable/**: `GlobalVariableManager`(`SW_GLOBAL_VARIABLE_*`)
 - **Log/**: 층이 둘이다 — **파사드**와 **장치**를 섞지 않는다.
   - `ILogSink` / `Logger` — 매크로가 말을 거는 파사드. 포맷 · 타임스탬프 · 리스너 · 비동기 큐 · 상세도 ·
     Caller 표를 맡는다. 테스트 프레임워크는 이 인터페이스를 구현해 기존 싱크를 **감싼다**(로그 가로채기).
@@ -81,11 +81,11 @@
 - 새 태그를 더하면 `MemoryProfiler::getMemoryTagName` 의 이름 표에도 한 줄을 더한다(줄 수는 static_assert 가 본다).
 
 ## 시간
-- 엔진의 단조 시계는 `Time/CpuClock.h` 하나다 — 지금 시각 `CpuClock::nowNanoseconds` / `nowMicroseconds`, 경과 시간 `CpuStopwatch`,
-  기한 `CpuDeadline::afterMilliseconds( ms )`(`isExpired` · `getRemainingMilliseconds`). 엔진 코드에서 `std::chrono::steady_clock::now()` 를
+- 엔진의 단조 시계는 `Time/MonotonicClock.h` 하나다 — 지금 시각 `MonotonicClock::nowNanoseconds` / `nowMicroseconds`, 경과 시간 `Stopwatch`,
+  기한 `Deadline::afterMilliseconds( ms )`(`isExpired` · `getRemainingMilliseconds`). 엔진 코드에서 `std::chrono::steady_clock::now()` 를
   직접 읽지 않는다(시험 코드 포함) — 프로파일러 · 로그 · 기한이 같은 시각을 봐야 한다. `Scripts/lint/gate/CheckClockReads.py` 가 막는다.
-- 기다리는 루프는 횟수가 아니라 시간(`CpuDeadline`)으로 묶는다. 횟수 상한은 느린 머신에서 정상을 실패로 만든다.
-- 프레임 델타 · 일시정지가 필요하면 `CpuTimer`(같은 OS 카운터)를 쓴다.
+- 기다리는 루프는 횟수가 아니라 시간(`Deadline`)으로 묶는다. 횟수 상한은 느린 머신에서 정상을 실패로 만든다.
+- 프레임 델타 · 일시정지가 필요하면 `GameTimer`(같은 OS 카운터)를 쓴다.
 
 ## 빌드 모델
 - 소스는 `Core_objects`(OBJECT)에서 **한 번만** 컴파일됩니다.

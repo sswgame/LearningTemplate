@@ -6,9 +6,9 @@
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Config/EngineData.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassResource.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineResource.h"
-#include "Engine/Input/ActionMap.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
+#include "Engine/Input/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -67,13 +67,13 @@ namespace
 
         static bool loadPipeline( const sw::string& resourceId )
         {
-            sw::RenderPipelineResource pipeline;
+            sw::RenderPipelineAsset pipeline;
             return pipeline.loadFromXmlFile( resourceId );
         }
 
         static bool loadRenderPass( const sw::string& resourceId )
         {
-            sw::RenderPassResource pass;
+            sw::RenderPassAsset pass;
             return pass.loadFromXmlFile( resourceId );
         }
 
@@ -85,7 +85,7 @@ namespace
 
         static bool loadInputMap( const sw::string& resourceId )
         {
-            sw::ActionMap map;
+            sw::InputMap map;
             return map.loadFromResource( resourceId );
         }
 

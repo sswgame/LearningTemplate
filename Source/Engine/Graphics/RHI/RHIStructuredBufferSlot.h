@@ -3,7 +3,7 @@
  * @brief 구조버퍼 하나와 그 뷰(SRV/UAV) · 용량을 함께 들고 다니는 자리입니다.
  */
 #pragma once
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw

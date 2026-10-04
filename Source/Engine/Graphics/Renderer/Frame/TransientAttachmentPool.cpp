@@ -3,7 +3,7 @@
 #include "Engine/Graphics/Renderer/Frame/TransientAttachmentPool.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
 namespace sw
 {
@@ -27,7 +27,7 @@ namespace sw
     bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
                                             uint32 resolutionDivisor )
     {
-        if ( pDevice == nullptr || pDevice->getResource() == nullptr )
+        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return false;
         if ( _mapAttachment.find( name ) != _mapAttachment.end() )
             return true;
@@ -42,13 +42,13 @@ namespace sw
         desc._bIsTransient            = SW_TRUE;
         desc._clearDepth              = clearColor._x;
         desc._clearColor              = clearColor;
-        const RHITextureHandle handle = pDevice->getResource()->createTexture2D( desc );
+        const RHITextureHandle handle = pDevice->getResourceFactory()->createTexture2D( desc );
         if ( handle == 0 )
         {
             SW_LOG_WARNING( "Failed to allocate transient '%#'", name );
             return false;
         }
-        const RHIDescriptorIndex srv = pDevice->getResource()->registerBindlessTexture( handle );
+        const RHIDescriptorIndex srv = pDevice->getResourceFactory()->registerBindlessTexture( handle );
         _mapAttachment.emplace( name, Attachment{ handle, srv, desc._width, desc._height } );
         return true;
     }
@@ -67,16 +67,16 @@ namespace sw
 
     void TransientAttachmentPool::release( IRHIDevice* pDevice )
     {
-        if ( pDevice != nullptr && pDevice->getResource() != nullptr )
+        if ( pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
         {
             for ( auto& [name, attachment] : _mapAttachment )
             {
                 // 텍스처 SRV 인덱스다. 주의: 버퍼용 해제로 넘기면 버퍼 프리리스트가 오염되고, 그 자리를 다른 구조버퍼가
                 // 차지해 살아 있는 패스 CB 슬롯이 STORAGE 세트로 바뀐다(Vulkan 검증 에러).
                 if ( attachment._srv != kInvalidDescriptorIndex )
-                    pDevice->getResource()->unregisterBindlessTexture( attachment._srv );
+                    pDevice->getResourceFactory()->unregisterBindlessTexture( attachment._srv );
                 if ( attachment._texture != 0 )
-                    pDevice->getResource()->destroyTexture( attachment._texture );
+                    pDevice->getResourceFactory()->destroyTexture( attachment._texture );
             }
         }
         forget();

@@ -6,7 +6,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandList.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
-#include "Engine/Graphics/RHI/GL/OpenGLRHIResource.h"
+#include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
@@ -56,7 +56,7 @@ namespace sw
         , _bAtiMemInfo{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
-        _resourceImpl = sw::make_unique<OpenGLRHIResource>( this );
+        _resourceImpl = sw::make_unique<OpenGLRHIResourceFactory>( this );
     }
 
     OpenGLRHIDevice::~OpenGLRHIDevice()
@@ -64,8 +64,8 @@ namespace sw
         shutdown();
     }
 
-    IRHIResource*       OpenGLRHIDevice::getResource() { return _resourceImpl.get(); }
-    IRHICommandContext* OpenGLRHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
+    IRHIResourceFactory* OpenGLRHIDevice::getResourceFactory() { return _resourceImpl.get(); }
+    IRHICommandContext*  OpenGLRHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 
     bool OpenGLRHIDevice::queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget )
     {

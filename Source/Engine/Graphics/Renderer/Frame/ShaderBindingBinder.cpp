@@ -6,7 +6,7 @@
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/IRHIResource.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameResourceRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/PassConstantValues.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
@@ -180,7 +180,7 @@ namespace sw
                 case ShaderBindingKind::Texture:
                 case ShaderBindingKind::StructuredBuffer:
                 {
-                    break; // 아래 getResourceBinds() 표에서 한 번에 처리한다
+                    break; // 아래 getResourceBindOps() 표에서 한 번에 처리한다
                 }
                 case ShaderBindingKind::Sampler:
                 case ShaderBindingKind::RwStructuredBuffer:
@@ -210,7 +210,7 @@ namespace sw
         if ( bEngineCbUpToDate )
             return;
 
-        for ( const ShaderResourceBind& bind : layout.getResourceBinds() )
+        for ( const ShaderResourceBindOp& bind : layout.getResourceBindOps() )
         {
             if ( bind._kind == ShaderBindingKind::Texture )
             {

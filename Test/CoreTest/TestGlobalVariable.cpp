@@ -2,7 +2,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -270,7 +270,7 @@ SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
     } );
 
     // 읽는 쪽이 돌기 시작한 뒤에 쓴다(위 설명).
-    const sw::CpuDeadline waitDeadline = sw::CpuDeadline::afterMilliseconds( 10000 );
+    const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( 10000 );
     while ( readCount.load() == 0 && waitDeadline.isExpired() == false )
         std::this_thread::yield();
     const uint32 readBeforeWrite = readCount.load();

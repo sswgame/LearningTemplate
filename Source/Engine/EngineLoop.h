@@ -21,7 +21,6 @@ namespace sw
     struct EngineData;
     struct RenderFramePacket;
 
-    class ActionMap;
     class AssetStreamingQueue;
     class CameraComponent;
     class CommandLineManager;
@@ -37,6 +36,7 @@ namespace sw
     class GpuUploadQueue;
     class IAudioSystem;
     class InputManager;
+    class InputMap;
     class IRHIDevice;
     class LiveShaderManager;
     class RenderTargetRegistry;
@@ -130,7 +130,7 @@ namespace sw
          * @details 경로가 비었거나 읽지 못하면 오류를 남기고 **빈 맵**을 돌려줍니다. 손으로 적은 바인딩으로 바꿔 끼우지 않습니다 —
          *          그 내용은 리소스와 따로 낡고, 실패를 가립니다.
          */
-        static unique_ptr<ActionMap> createShellActionMap( string_view inputMapPath );
+        static unique_ptr<InputMap> createShellInputMap( string_view inputMapPath );
 
         /**
          * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채운 경우).
@@ -139,7 +139,7 @@ namespace sw
         bool isQuitRequested() const { return _profileSession.isQuitRequested(); }
 
         /**
-         * @brief 셸 디버그 ActionMap 에서 해당 액션이 이번 프레임에 발동했는지 반환합니다.
+         * @brief 셸 디버그 InputMap 에서 해당 액션이 이번 프레임에 발동했는지 반환합니다.
          * @details Engine 이 내주는 것은 **입력 사실**뿐입니다. 그 액션이 무엇을 뜻하는지(모듈을 다시 올린다,
          *          에디터를 다시 올린다)는 그 장치를 가진 쪽이 정합니다 — Engine 이 리로드 콜백을 들면 Shipping 헤더에도
          *          리로드 델리게이트가 남습니다.
@@ -185,7 +185,7 @@ namespace sw
         EngineBootstrap           _bootstrap;
         unique_ptr<ConfigManager> _configManager;
         unique_ptr<RHI>           _rhi;
-        unique_ptr<ActionMap>     _mapDebugAction;
+        unique_ptr<InputMap>      _mapDebugAction;
         unique_ptr<IAudioSystem>  _audioSystem;
         unique_ptr<FrameRenderer> _frameRenderer;
         unique_ptr<RenderThread>  _renderThread;

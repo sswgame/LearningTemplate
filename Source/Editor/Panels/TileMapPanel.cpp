@@ -23,7 +23,7 @@ namespace sw::editor
     SW_EDITOR_PANEL( TileMapPanel, "tile_map", EditorPanelCategory::Tool, 1500 );
 
     TileMapPanel::TileMapPanel()
-        : EditorDocumentPanel{ EditorAssetKind::TileMap, false }
+        : EditorDocumentPanel{ EditorAssetType::TileMap, false }
         , _pathBuffer{}
         , _nameBuffer{ "Untitled" }
         , _edgeTargetN{}

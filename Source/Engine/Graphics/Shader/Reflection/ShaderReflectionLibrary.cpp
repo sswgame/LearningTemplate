@@ -48,7 +48,7 @@ namespace sw
             }
 
             archive << static_cast<uint32>( reflection._listResource.size() );
-            for ( const ShaderResourceBinding& resource : reflection._listResource )
+            for ( const ShaderReflectedBinding& resource : reflection._listResource )
             {
                 archive << string_view( resource._name );
                 archive << string_view( resource._type );
@@ -111,7 +111,7 @@ namespace sw
                 return false;
 
             outReflection._listResource.resize( resourceCount );
-            for ( ShaderResourceBinding& resource : outReflection._listResource )
+            for ( ShaderReflectedBinding& resource : outReflection._listResource )
             {
                 archive >> resource._name;
                 archive >> resource._type;

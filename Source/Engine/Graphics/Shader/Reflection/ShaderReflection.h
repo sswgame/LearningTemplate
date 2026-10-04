@@ -36,7 +36,7 @@ namespace sw
 namespace sw
 {
     /// @brief 텍스처 · 샘플러 · UAV 바인딩 슬롯입니다.
-    struct ShaderResourceBinding
+    struct ShaderReflectedBinding
     {
         string _name;
         string _type;
@@ -67,8 +67,8 @@ namespace sw
     /// @brief 한 셰이더의 리플렉션 결과입니다(버퍼 + 바인딩).
     struct ShaderReflectionData
     {
-        vector<ShaderBufferInfo>      _listConstantBuffer;
-        vector<ShaderResourceBinding> _listResource;
+        vector<ShaderBufferInfo>       _listConstantBuffer;
+        vector<ShaderReflectedBinding> _listResource;
         /// @brief 정점 스테이지의 사용자 입력(시맨틱 · location)입니다. 다른 스테이지는 비어 있습니다.
         vector<ShaderVertexInputInfo> _listVertexInput;
         /**

@@ -97,7 +97,7 @@ namespace sw
 
             /**
              * @brief 프리팹의 원형 상태(`PrefabOverrides::makeBaseState`)입니다. 한 번의 로드 · 저장 안에서 프리팹마다 한 번 짓습니다. 읽지 못하면 nullptr 입니다.
-             * @details 프리팹 캐시(`PrefabManager`)가 아니라 부른 쪽의 표에 둔다 — 원형은 지금 올라온 컴포넌트 타입으로 짓는 것이라 모듈 리로드를 넘겨
+             * @details 프리팹 캐시(`PrefabCache`)가 아니라 부른 쪽의 표에 둔다 — 원형은 지금 올라온 컴포넌트 타입으로 짓는 것이라 모듈 리로드를 넘겨
              *          들고 있으면 낡는다.
              */
             static const string* findPrefabBaseState( unordered_map<string, string>& inoutMapBaseState, const string& prefabPath )
@@ -107,7 +107,7 @@ namespace sw
                     return cachedIt->second.empty() ? nullptr : &cachedIt->second;
 
                 string             baseState;
-                const PrefabAsset* pPrefab = engine::getResourceManager().getPrefabManager().loadPrefab( prefabPath );
+                const PrefabAsset* pPrefab = engine::getResourceManager().getPrefabCache().loadPrefab( prefabPath );
                 if ( pPrefab != nullptr && PrefabOverrides::makeBaseState( *pPrefab, baseState ) == false )
                 {
                     SW_LOG_WARNING( "Prefab '%#' could not be built as a base state", prefabPath );
@@ -193,7 +193,7 @@ namespace sw
                 bool       bStateMade     = false;
                 if ( bHasSavedState )
                 {
-                    bStateMade = engine::getResourceManager().getPrefabManager().loadPrefab( entity._prefab ) != nullptr;
+                    bStateMade = engine::getResourceManager().getPrefabCache().loadPrefab( entity._prefab ) != nullptr;
                 }
                 else
                 {

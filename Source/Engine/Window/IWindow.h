@@ -3,7 +3,7 @@
  * @brief 플랫폼 독립적인 창(OS 디스플레이 창) 생성과 메시지 처리 인터페이스입니다.
  */
 #pragma once
-#include "Core/Module/ModuleCodeHolder.h"
+#include "Core/Module/ModuleUnloadListener.h"
 
 #include "Engine/Common/IRenderSurface.h"
 #include "Engine/EngineMinimal.h"
@@ -23,7 +23,7 @@ namespace sw
      *          `IRenderSurface` 를 구현하므로 RHI 는 창을 **표면으로만** 봅니다. `Graphics` 가 `Window` 를
      *          include 하지 않는 이유입니다(Engine/Common/IRenderSurface.h).
      */
-    class SW_API IWindow : public IRenderSurface, public IModuleCodeHolder
+    class SW_API IWindow : public IRenderSurface, public IModuleUnloadListener
     {
     public:
         /** @brief 빈 창 인터페이스로 만듭니다. */
@@ -131,10 +131,10 @@ namespace sw
          */
         uint32 releaseCodeWithin( const void* pBegin, const void* pEnd );
 
-        /** @brief 보유자 목록의 이름입니다. */
-        const utf8* getModuleCodeHolderName() const override { return "window handlers"; }
+        /** @brief 언로드 리스너 목록의 이름입니다. */
+        const utf8* getModuleUnloadListenerName() const override { return "window handlers"; }
         /** @brief `releaseCodeWithin` 입니다. 활성 창만이 아니라 살아 있는 모든 창이 훑깁니다. */
-        uint32 releaseModuleCodeWithin( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
+        uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
         /** @brief 현재 플랫폼에 맞는 IWindow 인스턴스를 만들어 반환합니다. */
         static unique_ptr<IWindow> createPlatformWindow();

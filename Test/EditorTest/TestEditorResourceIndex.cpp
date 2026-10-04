@@ -16,14 +16,14 @@ using namespace sw::editor;
 SW_TEST_CASE( EditorResourceIndexTest, CategoryComesFromTheKindTable )
 {
     vector<string> listDataSuffix{};
-    EditorAssetTypeRegistry::appendSuffixes( EditorAssetKind::Data, listDataSuffix );
+    EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Data, listDataSuffix );
     SW_ASSERT_TRUE( listDataSuffix.empty() == false );
     for ( const string& suffix : listDataSuffix )
     {
         const string             path = "Resource/game/empty/data/table" + suffix;
         EditorResourceIndexEntry entry{};
         SW_EXPECT_TRUE_MSG( EditorResourceIndex::classifyFile( path, entry ), path.c_str() );
-        SW_EXPECT_TRUE_MSG( entry._kind == EditorAssetKind::Data, path.c_str() );
+        SW_EXPECT_TRUE_MSG( entry._kind == EditorAssetType::Data, path.c_str() );
         SW_EXPECT_STREQ( "Data", entry._category.c_str() );
         SW_EXPECT_STREQ( ( "game/empty/data/table" + suffix ).c_str(), entry._path.c_str() );
     }
@@ -31,22 +31,22 @@ SW_TEST_CASE( EditorResourceIndexTest, CategoryComesFromTheKindTable )
     struct Expectation
     {
         const utf8*     _pPath;
-        EditorAssetKind _kind;
+        EditorAssetType _kind;
     };
     const Expectation arrExpectation[] = {
-        {       "Resource/game/empty/maps/town.scene.xml",          EditorAssetKind::Scene},
-        {       "Resource/game/empty/anim/idle.anim.json", EditorAssetKind::AnimationGraph},
-        {"Resource/game/empty/maps/overworld.tilemap.xml",        EditorAssetKind::TileMap},
-        {       "Resource/engine/materials/hero.material",       EditorAssetKind::Material},
-        {             "Resource/game/empty/audio/hit.wav",          EditorAssetKind::Audio},
-        {        "Resource/game/empty/cut/intro.seq.json",       EditorAssetKind::Sequence},
+        {       "Resource/game/empty/maps/town.scene.xml",          EditorAssetType::Scene},
+        {       "Resource/game/empty/anim/idle.anim.json", EditorAssetType::AnimationGraph},
+        {"Resource/game/empty/maps/overworld.tilemap.xml",        EditorAssetType::TileMap},
+        {       "Resource/engine/materials/hero.material",       EditorAssetType::Material},
+        {             "Resource/game/empty/audio/hit.wav",          EditorAssetType::Audio},
+        {        "Resource/game/empty/cut/intro.seq.json",       EditorAssetType::Sequence},
     };
     for ( const Expectation& expectation : arrExpectation )
     {
         EditorResourceIndexEntry entry{};
         SW_EXPECT_TRUE_MSG( EditorResourceIndex::classifyFile( expectation._pPath, entry ), expectation._pPath );
         SW_EXPECT_TRUE_MSG( entry._kind == expectation._kind, expectation._pPath );
-        const EditorAssetKindInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( expectation._kind );
+        const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( expectation._kind );
         SW_ASSERT_NOT_NULL( pInfo );
         SW_EXPECT_STREQ( pInfo->_pDisplayName, entry._category.c_str() );
     }
@@ -87,10 +87,10 @@ SW_TEST_CASE( EditorResourceIndexTest, CatalogCountsEveryKindOfTheTable )
         SW_EXPECT_NOT_NULL( row._pLabel );
         total += row._count;
         size_t expected{ 0 };
-        if ( row._kind == EditorAssetKind::Scene || row._kind == EditorAssetKind::Shader || row._kind == EditorAssetKind::Data ||
-             row._kind == EditorAssetKind::AnimationGraph )
+        if ( row._kind == EditorAssetType::Scene || row._kind == EditorAssetType::Shader || row._kind == EditorAssetType::Data ||
+             row._kind == EditorAssetType::AnimationGraph )
             expected = 1;
-        else if ( row._kind == EditorAssetKind::Prefab || row._kind == EditorAssetKind::Texture )
+        else if ( row._kind == EditorAssetType::Prefab || row._kind == EditorAssetType::Texture )
             expected = 2;
         SW_EXPECT_TRUE_MSG( expected == row._count, row._pLabel );
     }

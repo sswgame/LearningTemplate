@@ -72,7 +72,7 @@ namespace sw
         GameObject*        _pTickAdoptParent{ nullptr };
         TagComponent*      _pTickTagComponent{ nullptr };   ///< 설정되면 틱이 그 컴포넌트에 태그 "TickAdded" 를 더한다
         bool               _bTickTagVisibleInTick{ false }; ///< 더한 **직후**(아직 틱 안) 그 태그가 보였는지 — 미뤘으면 아직 안 보인다
-        PrefabManager*     _pTickPrefabs{ nullptr };        ///< 설정되면 틱이 `_tickSpawnPath` 프리팹을 `_pTickSpawnManager` 에 스폰한다
+        PrefabCache*       _pTickPrefabs{ nullptr };        ///< 설정되면 틱이 `_tickSpawnPath` 프리팹을 `_pTickSpawnManager` 에 스폰한다
         GameObjectManager* _pTickSpawnManager{ nullptr };
         string             _tickSpawnPath;
         GameObject*        _pTickSpawned{ nullptr };           ///< 스폰이 돌려준 오브젝트
@@ -181,7 +181,10 @@ namespace sw
             }
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief MockMeshComponent 의 정적 TypeInfo 를 반환합니다. */
     inline const TypeInfo* MockMeshComponent::StaticType()
     {
@@ -210,7 +213,10 @@ namespace sw
             _playCount++;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief MockAudioComponent 의 정적 TypeInfo 를 반환합니다. */
     inline const TypeInfo* MockAudioComponent::StaticType()
     {
@@ -263,7 +269,10 @@ namespace sw
             Component::onDestroy();
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief MockCallbackComponent 의 정적 TypeInfo 를 반환합니다. */
     inline const TypeInfo* MockCallbackComponent::StaticType()
     {
@@ -359,7 +368,10 @@ namespace sw
                 _bAttachAcceptedInTick = getOwner()->attachToParent( _pTryParentOnTick ) ? SW_TRUE : SW_FALSE;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief MockTickSceneComponent 의 정적 TypeInfo 를 반환합니다. */
     inline const TypeInfo* MockTickSceneComponent::StaticType()
     {
@@ -410,7 +422,10 @@ namespace sw
             }
         }
     };
+} // namespace sw
 
+namespace sw
+{
     inline const TypeInfo* MockRootComponent::StaticType()
     {
         return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockRootComponent>, hashed_string( "MockRootComponent" ),
@@ -443,7 +458,10 @@ namespace sw
             ++_pawnTickCount;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     inline const TypeInfo* MockBasePawnComponent::StaticType()
     {
         return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockBasePawnComponent>, hashed_string( "MockBasePawnComponent" ),
@@ -471,7 +489,10 @@ namespace sw
             ++_vehicleTickCount;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     inline const TypeInfo* MockVehicleComponent::StaticType()
     {
         return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockVehicleComponent>, hashed_string( "MockVehicleComponent" ),
@@ -499,7 +520,10 @@ namespace sw
             ++_flyingTickCount;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     inline const TypeInfo* MockFlyingVehicleComponent::StaticType()
     {
         return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockFlyingVehicleComponent>, hashed_string( "MockFlyingVehicleComponent" ),
@@ -555,7 +579,10 @@ namespace sw
                 unregisterSubTick( _selfSubTickToUnregister );
         }
     };
+} // namespace sw
 
+namespace sw
+{
     inline const TypeInfo* MockMidTickDeactivatorComponent::StaticType()
     {
         return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockMidTickDeactivatorComponent>, hashed_string( "MockMidTickDeactivatorComponent" ),
@@ -608,7 +635,10 @@ namespace sw
             }
         }
     };
+} // namespace sw
 
+namespace sw
+{
     inline const TypeInfo* MockSubTickStressComponent::StaticType()
     {
         return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockSubTickStressComponent>, hashed_string( "MockSubTickStressComponent" ),
@@ -642,7 +672,10 @@ namespace sw
             return StaticType();
         }
     };
+} // namespace sw
 
+namespace sw
+{
     // 정의는 TestGameObjectMocks.cpp 에 **한 번만** 둔다. 헤더에서 `inline` 으로 정의하면 이 헤더를
     // 포함하는 TU 마다 사본이 생길 수 있고(EngineTest 는 Engine.dll 과 링크한다), 그러면 생성자가
     // 올린 수를 소멸자가 다른 사본에서 내리게 된다 — clang 이 `-Wunique-object-duplication` 으로 짚는다.
@@ -682,7 +715,10 @@ namespace sw
             ++_tickCount;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     inline const TypeInfo* MockSelfTickSceneComponent::StaticType()
     {
         return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockSelfTickSceneComponent>, hashed_string( "MockSelfTickSceneComponent" ),
@@ -704,7 +740,10 @@ namespace sw
             return StaticType();
         }
     };
+} // namespace sw
 
+namespace sw
+{
     inline const TypeInfo* MockNoTickComponent::StaticType()
     {
         return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockNoTickComponent>, hashed_string( "MockNoTickComponent" ),
@@ -723,7 +762,7 @@ namespace sw
         REFLECT_BODY();
 
         static constexpr int32 kMaxNestedSpawn = 4;
-        static PrefabManager*  s_pPrefabs; ///< 설정되면 `onPostLoad` 가 `s_spawnPath` 를 같은 매니저에 스폰한다
+        static PrefabCache*    s_pPrefabs; ///< 설정되면 `onPostLoad` 가 `s_spawnPath` 를 같은 매니저에 스폰한다
         static string          s_spawnPath;
         static int32           s_spawnAttemptCount; ///< `onPostLoad` 가 스폰을 시도한 횟수
         static int32           s_spawnedCount;      ///< 그 스폰이 오브젝트를 돌려준 횟수
@@ -743,7 +782,10 @@ namespace sw
                 ++s_spawnedCount;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     inline const TypeInfo* MockPostLoadSpawnerComponent::StaticType()
     {
         return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockPostLoadSpawnerComponent>, hashed_string( "MockPostLoadSpawnerComponent" ),

@@ -19,7 +19,7 @@ namespace sw
 {
     class IOpenGLPlatformContext;
     class OpenGLRHICommandContext;
-    class OpenGLRHIResource;
+    class OpenGLRHIResourceFactory;
 
     /**
      * @struct OpenGLRecordingState
@@ -63,7 +63,7 @@ namespace sw
     public:
         RHIBufferHandle createBuffer( const RHIBufferDesc& desc );
         RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes, uint32 indexStride );
-        friend class OpenGLRHIResource;
+        friend class OpenGLRHIResourceFactory;
         /** @brief 빈 OpenGL 디바이스를 만듭니다. */
         OpenGLRHIDevice();
         /** @brief 컨텍스트와 GL 객체를 정리합니다. */
@@ -96,7 +96,7 @@ namespace sw
          */
         void writeTimestampSlot( uint32 slotIndex );
 
-        IRHIResource* getResource() override;
+        IRHIResourceFactory* getResourceFactory() override;
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스 · Present 가 여기에 기록합니다. */
         IRHICommandContext* getFrameStreamContext() override;
 
@@ -357,8 +357,8 @@ namespace sw
 
         RHIReleaseQueue _releaseQueue;
 
-        sw::unique_ptr<OpenGLRHICommandContext> _frameStreamContext;
-        sw::unique_ptr<OpenGLRHIResource>       _resourceImpl;
+        sw::unique_ptr<OpenGLRHICommandContext>  _frameStreamContext;
+        sw::unique_ptr<OpenGLRHIResourceFactory> _resourceImpl;
 
         // 8 바이트보다 작은 필드는 끝에 모은다 — 큰 필드 사이에 끼면 칸마다 패딩이 생긴다.
         uint32                 _computeRootConstantUbo;

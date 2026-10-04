@@ -3,7 +3,7 @@
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/RleCompressionCodec.h"
-#include "Core/Time/CpuClock.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Compression/Lz4CompressionCodec.h"
@@ -63,11 +63,11 @@ namespace
         sw::vector<uint8> listCompressed;
         listCompressed.resize( codec.compressBound( listOriginal.size() ) );
 
-        size_t           compressedSize{ 0 };
-        sw::CpuStopwatch stopwatch;
-        const bool       bCompressed   = codec.compress( listOriginal.data(), listOriginal.size(), listCompressed.data(),
-                                                         listCompressed.size(), compressedSize, level );
-        const int64      compressNanos = stopwatch.getElapsedNanoseconds();
+        size_t        compressedSize{ 0 };
+        sw::Stopwatch stopwatch;
+        const bool    bCompressed   = codec.compress( listOriginal.data(), listOriginal.size(), listCompressed.data(),
+                                                      listCompressed.size(), compressedSize, level );
+        const int64   compressNanos = stopwatch.getElapsedNanoseconds();
         if ( bCompressed == false )
             return measure;
 

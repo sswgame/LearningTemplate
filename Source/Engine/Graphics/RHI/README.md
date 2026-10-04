@@ -40,7 +40,7 @@ RHI/
 ## 백엔드 폴더의 파일 구성
 
 한 클래스를 여러 파일로 나눌 때는 **소유 클래스 이름을 접두어로 남깁니다.**
-`D3D12RHIResourcePipeline.cpp` 는 "`D3D12RHIResource` 의 파이프라인 부분" 이라는 뜻입니다.
+`D3D12RHIResourceFactoryPipeline.cpp` 는 "`D3D12RHIResourceFactory` 의 파이프라인 부분" 이라는 뜻입니다.
 인터페이스는 한 덩어리인데 파일만 쪼갠 것이라, 접두어가 없으면 어느 클래스의 일부인지 사라집니다.
 
 | 파일 | 무엇을 하는가 | DX11 | DX12 | GL | Vulkan |
@@ -89,7 +89,7 @@ RHI/
   메커니즘만 갖는 형태로 넘깁니다(`IRHIDevice::setImmediateSubmit` 참고).
 - **기록 중의 상수버퍼 갱신은 커맨드 리스트로 갑니다**(`IRHICommandList::updateConstantBuffer`, 언리얼 `RHIUpdateUniformBuffer` 와 같은 자리).
   리스트가 자기 컨텍스트로 넘기므로 DX11 은 그 리스트의 Deferred Context 에 `Map` 하고, DX12 · Vulkan · GL 은 버퍼의 이번 프레임 칸에 씁니다.
-  `IRHIResource::updateConstantBuffer` 는 기록 **밖**(에셋 · 머티리얼 파라미터) 전용입니다 — DX11 은 즉시 컨텍스트 + 잠금.
+  `IRHIResourceFactory::updateConstantBuffer` 는 기록 **밖**(에셋 · 머티리얼 파라미터) 전용입니다 — DX11 은 즉시 컨텍스트 + 잠금.
   리스트는 begin 과 end 가 다른 스레드여도 됩니다(RenderGraph 병렬 레벨의 첫 리스트) —
   `RHIDeviceTest.CommandListHandedOffAcrossThreadsDoesNotLeakRecordingContext` · `CommandListConstantBufferUpdateReachesItsDraws` 가 못박습니다.
 
