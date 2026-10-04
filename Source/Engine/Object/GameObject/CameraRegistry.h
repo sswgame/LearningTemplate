@@ -50,7 +50,7 @@ namespace sw
          * @brief 역할 @p role 의 켜진 카메라 중 우선순위가 가장 높은 것입니다. 같으면 컴포넌트 id 가 큰(나중에 만든) 것이 이깁니다 — 되돌리기 ·
          *        플레이 종료 복원이 id 를 되살리므로 편집 이력과 무관합니다. 없으면 nullptr 입니다.
          * @details 게임 카메라(`Scene::ensureDefaultCameras`)와 에디터 카메라(`EditorCamera::find`)가 함께 쓰는 **하나의** 규칙입니다.
-         *          켜짐은 `isUsableCamera` 입니다.
+         *          켜짐은 `isUsableCamera` 입니다. 출력이 주 시점이 아닌 카메라(화면 사각형 · 렌더 텍스처)는 고르지 않습니다 — 그것들은 자기 출력의 추가 뷰다.
          */
         CameraComponent* selectCamera( CameraRole role ) const;
 

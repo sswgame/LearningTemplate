@@ -994,5 +994,35 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<entity id="52" name="ViewCamera">
+			<GameObject _schemaVersion="0" _name="ViewCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,1.6,-16"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerId="0"
+					                 _attachComponent="None"
+					                 _fovY="1.3089969"
+					                 _nearZ="0.05"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="10"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+					<CameraDirectorComponent _componentName="CameraDirectorComponent"
+					                         _bActive="true"
+					                         _catalogPath="game/shooter3d/data/shooter.cameras.xml"
+					                         _initialPreset="firstperson"
+					                         _target="50"
+					                         _cyclePresetKey="C"
+					                         _bReadInput="true">
+						<_listGroupTarget />
+					</CameraDirectorComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

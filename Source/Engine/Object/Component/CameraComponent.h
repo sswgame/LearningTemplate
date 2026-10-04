@@ -3,6 +3,9 @@
  * @brief 렌더용 뷰/투영 행렬을 만드는 SceneComponent 입니다.
  */
 #pragma once
+#include "Core/Container/GameObjectHandle.h"
+#include "Core/Container/string.h"
+
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -10,15 +13,67 @@ namespace sw
 {
     class GameObjectManager;
 
-    /// @brief 카메라 역할입니다.
+    /**
+     * @brief 카메라 역할(용도)입니다. 플레이어 시점 후보(`Game`) · 보조(`Custom` — 직접 고르거나 뷰 타깃으로 바꿀 때만) · 캡처(`Capture` — 자기 출력
+     *        (렌더 텍스처 · 화면 사각형)으로만 그리고 플레이어 시점으로 뽑히지 않는다) · 에디터 뷰포트입니다.
+     */
     ENUM()
     enum class CameraRole : uint8
     {
-        Game   = 0, ///< 플레이 중에 활성
-        Editor = 1, ///< 에디터 뷰포트에서 활성
-        Custom = 2, ///< 직접 골라야만 쓰임
+        Game    = 0, ///< 플레이 중에 활성(플레이어 시점 후보)
+        Editor  = 1, ///< 에디터 뷰포트에서 활성
+        Custom  = 2, ///< 보조 — 직접 고르거나 뷰 타깃으로 바꿀 때만 쓰임
+        Capture = 3, ///< 캡처 — 자기 출력(`CameraRenderOutput`)으로만 그린다(CCTV · 백미러 · 미니맵)
     };
 
+    /** @brief 카메라가 그린 그림이 가는 곳입니다. */
+    ENUM()
+    enum class CameraOutputTarget : uint8
+    {
+        MainView = 0,  ///< 주 시점 — 활성 게임 카메라면 화면 전체(사각형을 주면 그 안)에 그린다. 아니면 그리지 않는다
+        ScreenRect,    ///< 화면의 사각형(분할 화면 · PiP) — 주 시점 위에 겹쳐 그린다
+        RenderTexture, ///< 렌더 텍스처(`rendertarget/<이름>`) — 머티리얼이 텍스처로 읽는다(CCTV 모니터 · 백미러 · 미니맵)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 카메라의 출력 설정입니다 — 어디로(화면 사각형 · 렌더 텍스처), 얼마나 자주(갱신 주기), 얼마나 크게(해상도 배율), 무엇을 끄고(그림자 · 후처리),
+     *        언제만(보일 때) 그릴지입니다. 언리얼 SceneCapture2D · 유니티 `Camera.targetTexture` · `Camera.rect` 의 자리입니다.
+     * @details 렌더 텍스처 경로는 `rendertarget/` 로 시작합니다(`TextureCache` 가 그 경로를 렌더 타깃으로 만든다). 머티리얼의 텍스처 프로퍼티 ·
+     *          `MaterialInstance::setTextureParameter` 에 같은 경로를 적으면 그 그림을 읽는다.
+     */
+    REFLECT()
+    struct SW_API CameraRenderOutput
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Screen rectangle (x, y, width, height as 0..1 of the output, top-left origin) for MainView / ScreenRect" )
+        float4 _screenRect{ 0.0f, 0.0f, 1.0f, 1.0f };
+        PROPERTY( Tooltip = "Render texture path (rendertarget/<name>) for RenderTexture" )
+        string _renderTexture{};
+        PROPERTY( Min = 1, Max = 8192, Tooltip = "Render texture width", Meta = "Units=px" )
+        uint32 _renderTextureWidth{ 256 };
+        PROPERTY( Min = 1, Max = 8192, Tooltip = "Render texture height", Meta = "Units=px" )
+        uint32 _renderTextureHeight{ 256 };
+        PROPERTY( Min = 0.1, Max = 2.0, Tooltip = "Internal resolution as a multiple of the output size" )
+        float32 _resolutionScale{ 1.0f };
+        PROPERTY( Min = 0.0, Tooltip = "Renders per second; 0 renders every frame", Meta = "Units=Hz" )
+        float32 _updateRate{ 0.0f };
+        PROPERTY( Tooltip = "Object whose bounds must be in the main view for this view to render (a CCTV monitor); empty always renders" )
+        GameObjectHandle _visibilityObject{};
+        PROPERTY( Tooltip = "Where the picture goes" )
+        CameraOutputTarget _target{ CameraOutputTarget::MainView };
+        PROPERTY( Tooltip = "Draw shadows in this view" )
+        bool _bShadows{ true };
+        PROPERTY( Tooltip = "Apply post effects (bloom, outline, tonemap, TAA) in this view" )
+        bool _bPostProcess{ true };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class CameraComponent
      * @brief GameObject 에 붙는 카메라입니다. 트랜스폼은 SceneComponent 에서 옵니다.
@@ -101,6 +156,23 @@ namespace sw
         /** @brief 카메라 월드 위치를 반환합니다. */
         float3 getCameraPosition() const { return getWorldPosition(); }
 
+        /** @brief 출력 설정(렌더 텍스처 · 화면 사각형 · 갱신 주기 · 끌 기능)입니다. */
+        const CameraRenderOutput& getRenderOutput() const { return _renderOutput; }
+        void                      setRenderOutput( const CameraRenderOutput& output ) { _renderOutput = output; }
+
+        /**
+         * @brief 이 카메라의 화면이 이번 프레임에 **끊어** 바뀌었다고 표시합니다(언리얼 `bCameraCut`). 렌더러가 시간 누적(TAA 기록)을 버린다.
+         * @details 블렌드 없는 프리셋 · 뷰 타깃 전환이 부릅니다. 게임 스레드에서 쓰고 패킷을 만드는 쪽이 `consumeCut` 으로 한 번 읽어 지웁니다.
+         */
+        void markCut() { _bCutPending = SW_TRUE; }
+        /** @brief 컷 표시를 읽고 지웁니다. */
+        bool consumeCut()
+        {
+            const bool bCut = _bCutPending == SW_TRUE;
+            _bCutPending    = SW_FALSE;
+            return bCut;
+        }
+
     private:
         PROPERTY( Category = "Projection", DisplayName = "Field Of View", Tooltip = "Vertical FOV (radians)", Min = 0.1, Max = 3.14, Meta = "Units=rad" )
         float32 _fovY;
@@ -114,7 +186,10 @@ namespace sw
         int32 _priority;
         PROPERTY( Category = "General", DisplayName = "Role", Tooltip = "Camera usage role" )
         CameraRole _role;
+        PROPERTY( Category = "Output", DisplayName = "Render Output", Tooltip = "Render texture / screen rectangle, update rate and feature switches" )
+        CameraRenderOutput _renderOutput;
         PROPERTY( Category = "Projection", DisplayName = "Orthographic", Tooltip = "Toggle orthographic projection" )
-        bool _bOrthographic;
+        bool  _bOrthographic;
+        uint8 _bCutPending; ///< `markCut` 이 세우고 `consumeCut` 이 지운다(저장하지 않는다)
     };
 } // namespace sw

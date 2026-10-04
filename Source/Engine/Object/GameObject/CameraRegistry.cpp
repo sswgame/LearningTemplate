@@ -44,6 +44,9 @@ namespace sw
         {
             if ( isUsableCamera( pCamera ) == false || pCamera->getRole() != role )
                 continue;
+            // 화면 사각형 · 렌더 텍스처로 가는 카메라는 주 시점이 아니다(분할 화면의 둘째 플레이어 · PiP · CCTV) — 자기 출력으로만 그린다.
+            if ( pCamera->getRenderOutput()._target != CameraOutputTarget::MainView )
+                continue;
             const int32 priority = pCamera->getPriority();
             if ( pBest != nullptr )
             {

@@ -10,6 +10,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Camera/CameraMode.h"
+#include "GameFramework/Camera/CameraPoseUtil.h"
 #include "GameFramework/Framework/GameService.h"
 
 namespace sw
@@ -142,12 +144,18 @@ namespace sw
         CameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
         if ( pCamera != nullptr )
         {
-            pCamera->setOrthographic( false );
-            pCamera->setFieldOfViewY( _fieldOfViewY );
-            pCamera->setNearPlane( _nearPlane );
-            pCamera->setFarPlane( _farPlane );
-            pCamera->setLocalPosition( _eyePosition );
-            pCamera->setLocalRotation( _look.computeCameraEuler() );
+            // 1인칭은 카메라 모드(`CameraPresetMode::FirstPerson`)다 — 눈 자리와 시점을 대상으로 넣어 디렉터 · 데이터 프리셋과 같은 계산으로 푼다.
+            // 시점의 피치는 위가 + 이고 모드의 피치는 아래가 + 다.
+            CameraPresetDef def;
+            def._view._mode         = CameraPresetMode::FirstPerson;
+            def._lens._fieldOfViewY = _fieldOfViewY;
+            def._lens._nearPlane    = _nearPlane;
+            def._lens._farPlane     = _farPlane;
+            CameraTarget target;
+            target._focus = _eyePosition;
+            target._yaw   = _look.getYaw();
+            target._pitch = -_look.getPitch();
+            CameraPoseUtil::applyToCamera( *pCamera, evaluatePreset( def, target ) );
         }
         MeshComponent* pViewModel = findViewModel();
         if ( pViewModel == nullptr || pCamera == nullptr )

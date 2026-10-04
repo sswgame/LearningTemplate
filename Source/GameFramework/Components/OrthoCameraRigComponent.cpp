@@ -8,6 +8,8 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
+#include "GameFramework/Camera/CameraMode.h"
+#include "GameFramework/Camera/CameraPoseUtil.h"
 #include "GameFramework/Framework/GameService.h"
 
 namespace sw
@@ -16,7 +18,9 @@ namespace sw
     {
         struct OrthoCameraRigComponentInternal
         {
-            static constexpr float32 kOverrideNearPlane = 0.05f; ///< 탑승 시점은 차 바로 앞까지 보인다
+            static constexpr float32     kOverrideNearPlane = 0.05f; ///< 탑승 시점은 차 바로 앞까지 보인다
+            static constexpr const utf8* kOrthoPresetId     = "rig.ortho";
+            static constexpr const utf8* kOverridePresetId  = "rig.override";
         };
     } // namespace
 } // namespace sw
@@ -91,13 +95,19 @@ namespace sw
         , _bInputEnabled{ true }
         , _bWasdPan{ true }
         , _bClampFocus{ false }
+        , _rotateTime{ 0.15f }
+        , _overrideBlend{}
         , _overridePosition{ 0.0f, 0.0f, 0.0f }
         , _overrideEuler{ 0.0f, 0.0f, 0.0f }
         , _overrideFieldOfViewY{ CameraComponent::kDefaultFovY }
         , _overrideFarPlane{ CameraComponent::kDefaultFarZ }
+        , _director{}
         , _bOverride{ SW_FALSE }
+        , _bOverrideApplied{ SW_FALSE }
         , _reserved{ 0 }
     {
+        _overrideBlend._curve    = CameraBlendCurve::EaseInOut;
+        _overrideBlend._duration = 0.6f;
         setCanEverTick( true );
     }
 
@@ -114,7 +124,7 @@ namespace sw
         Component::onTick( deltaTime );
         if ( _bOverride == SW_FALSE && _bInputEnabled )
             applyInput( deltaTime );
-        applyToCamera();
+        updateCamera( deltaTime );
     }
 
     void OrthoCameraRigComponent::setViewOverride( const float3& position, const float3& euler, float32 fieldOfViewY, float32 farPlane )
@@ -162,7 +172,7 @@ namespace sw
 
     bool OrthoCameraRigComponent::findGroundPoint( const float2& mouseNormalized, float32 aspect, float32 groundHeight, float3& outPoint ) const
     {
-        const GameRay ray      = OrthoCameraRigMath::computeScreenRay( _focus, _yaw, _pitch, _distance, _orthoHeight, aspect, mouseNormalized );
+        const GameRay ray      = OrthoCameraRigMath::computeScreenRay( _focus, getShownYaw(), _pitch, _distance, _orthoHeight, aspect, mouseNormalized );
         float32       distance = 0.0f;
         if ( RayMath::intersectHorizontalPlane( ray, groundHeight, _distance * 3.0f, distance ) == false )
             return false;
@@ -170,28 +180,74 @@ namespace sw
         return true;
     }
 
-    void OrthoCameraRigComponent::applyToCamera()
+    float32 OrthoCameraRigComponent::getShownYaw() const
     {
-        GameObject*      pOwner  = getOwner();
-        CameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
+        // 직교 시점이 켜져 있지 않으면(덮어쓰기 중 · 시작 전) 리그의 요가 곧 보이는 요다.
+        if ( _director.hasActivePreset() == false || _bOverrideApplied == SW_TRUE )
+            return _yaw;
+        return _director.getModeState()._rotateYawShown;
+    }
+
+    CameraPresetDef OrthoCameraRigComponent::makeOrthoPreset() const
+    {
+        CameraPresetDef def;
+        def._id                = hashed_string( OrthoCameraRigComponentInternal::kOrthoPresetId );
+        def._view._mode        = CameraPresetMode::OrthoTopDown;
+        def._view._yaw         = 0.0f; // 요는 모드 상태의 회전 요(`_rotateYaw` = 리그의 요)가 준다 — 그래야 Q/E 가 부드럽게 돈다
+        def._view._pitch       = _pitch;
+        def._view._distance    = _distance;
+        def._lens._orthoHeight = _orthoHeight;
+        def._lens._nearPlane   = CameraComponent::kDefaultNearZ;
+        def._lens._farPlane    = _distance * _farPlaneScale;
+        def._input._rotateTime = _rotateTime;
+        return def;
+    }
+
+    CameraPresetDef OrthoCameraRigComponent::makeOverridePreset() const
+    {
+        CameraPresetDef def;
+        def._id                 = hashed_string( OrthoCameraRigComponentInternal::kOverridePresetId );
+        def._view._mode         = CameraPresetMode::Fixed;
+        def._view._offset       = _overridePosition;
+        def._view._pitch        = _overrideEuler._x;
+        def._view._yaw          = _overrideEuler._y;
+        def._lens._fieldOfViewY = _overrideFieldOfViewY;
+        def._lens._nearPlane    = OrthoCameraRigComponentInternal::kOverrideNearPlane;
+        def._lens._farPlane     = _overrideFarPlane;
+        return def;
+    }
+
+    void OrthoCameraRigComponent::updateCamera( float32 deltaTime )
+    {
+        // 덮어쓰기를 켜고 끌 때만 블렌드를 시작한다. 그 사이에는 켠 프리셋의 값만 바꾼다(탑승 시점은 매 프레임 움직인다).
+        const bool bWantOverride = _bOverride == SW_TRUE;
+        if ( _director.hasActivePreset() == false || bWantOverride != ( _bOverrideApplied == SW_TRUE ) )
+        {
+            _director.activatePreset( bWantOverride ? makeOverridePreset() : makeOrthoPreset(), _overrideBlend );
+            _bOverrideApplied = bWantOverride ? SW_TRUE : SW_FALSE;
+            // 새로 켠 직교 시점은 지금 요에서 시작한다(0 에서 돌아 들어오지 않게).
+            if ( bWantOverride == false )
+            {
+                _director.getModeState()._rotateYaw      = _yaw;
+                _director.getModeState()._rotateYawShown = _yaw;
+            }
+        }
+        else
+        {
+            _director.refreshActivePreset( bWantOverride ? makeOverridePreset() : makeOrthoPreset() );
+        }
+        if ( bWantOverride == false )
+            _director.getModeState()._rotateYaw = _yaw;
+
+        CameraTarget target;
+        target._focus             = _focus;
+        const CameraPose& pose    = _director.step( deltaTime, target );
+        GameObject*       pOwner  = getOwner();
+        CameraComponent*  pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
         if ( pCamera == nullptr )
             return;
-        if ( _bOverride == SW_TRUE )
-        {
-            pCamera->setOrthographic( false );
-            pCamera->setFieldOfViewY( _overrideFieldOfViewY );
-            pCamera->setNearPlane( OrthoCameraRigComponentInternal::kOverrideNearPlane );
-            pCamera->setFarPlane( _overrideFarPlane );
-            pCamera->setLocalPosition( _overridePosition );
-            pCamera->setLocalRotation( _overrideEuler );
-            return;
-        }
-        const OrthoCameraView view = OrthoCameraRigMath::computeView( _focus, _yaw, _pitch, _distance );
-        pCamera->setOrthographic( true );
-        pCamera->setOrthoHeight( _orthoHeight );
-        pCamera->setNearPlane( CameraComponent::kDefaultNearZ );
-        pCamera->setFarPlane( _distance * _farPlaneScale );
-        pCamera->setLocalPosition( view._position );
-        pCamera->setLocalRotation( view._euler );
+        CameraPoseUtil::applyToCamera( *pCamera, pose );
+        if ( _director.consumeCut() )
+            pCamera->markCut();
     }
 } // namespace sw

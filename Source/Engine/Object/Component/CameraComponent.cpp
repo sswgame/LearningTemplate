@@ -17,7 +17,9 @@ namespace sw
         , _orthoHeight{ kDefaultOrthoHeight }
         , _priority{ 0 }
         , _role{ CameraRole::Game }
+        , _renderOutput{}
         , _bOrthographic{ false }
+        , _bCutPending{ SW_FALSE }
     {
     }
 

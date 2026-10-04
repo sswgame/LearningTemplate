@@ -10,6 +10,9 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Camera/CameraBlend.h"
+#include "GameFramework/Camera/CameraDirector.h"
+#include "GameFramework/Camera/CameraPreset.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Utility/RayMath.h"
 
@@ -56,8 +59,11 @@ namespace sw
     /**
      * @class OrthoCameraRigComponent
      * @brief 같은 오브젝트의 `CameraComponent` 를 롤러코스터 타이쿤 · 도시 건설처럼 비스듬히 내려다보는 직교 시점으로 둡니다.
-     * @details `TickGroup::PostUpdate` 에서 자기 오브젝트의 카메라만 씁니다. 입력은 `_bInputEnabled` 일 때만 읽습니다.
-     *          다른 컴포넌트(게임 디렉터)가 앞선 그룹에서 `setViewOverride` 로 시점을 넣으면 그 프레임은 그 원근 시점을 씁니다(코스터 탑승 · 컷신).
+     * @details **직교 시점은 카메라 모드(`CameraPresetMode::OrthoTopDown`)이고 리그는 그 입력 앞단입니다.** 리그의 값(초점 · 요 · 피치 · 거리 · 화면
+     *          높이)으로 프리셋을 지어 `CameraDirector` 가 풀고 블렌드하므로, 데이터 프리셋과 같은 계산 · 같은 블렌드를 탑니다.
+     *          `TickGroup::PostUpdate` 에서 자기 오브젝트의 카메라만 씁니다. 입력은 `_bInputEnabled` 일 때만 읽습니다.
+     *          다른 컴포넌트(게임 디렉터)가 앞선 그룹에서 `setViewOverride` 로 시점을 넣으면 그 원근 시점(`Fixed` 모드)으로 `_overrideBlend` 를 따라
+     *          블렌드해 들어가고(코스터 탑승 · 컷신), 풀면 같은 블렌드로 직교 시점에 돌아옵니다. Q/E 회전은 `_rotateTime` 으로 부드럽게 돈다.
      *          덮어쓰기는 틱 그룹 순서로만 안전합니다 — 리그와 같은 그룹(PostUpdate)에서 부르면 리그가 도는 워커와 겹칩니다.
      */
     REFLECT( Category = "Camera", DisplayName = "Ortho Camera Rig", Tooltip = "Isometric orthographic camera rig: pan, zoom, 90-degree rotate, external view override" )
@@ -74,14 +80,16 @@ namespace sw
 
         /** @brief 다음 틱부터 이 원근 시점을 씁니다(직교 · 입력을 쉰다). @p euler 는 피치 · 요 · 롤(라디안)입니다. */
         void setViewOverride( const float3& position, const float3& euler, float32 fieldOfViewY, float32 farPlane );
-        /** @brief 덮어쓴 시점을 풀고 직교 시점으로 돌아갑니다. */
+        /** @brief 덮어쓴 시점을 풀고 직교 시점으로 돌아갑니다(`_overrideBlend` 로). */
         void clearViewOverride() { _bOverride = SW_FALSE; }
         bool isViewOverridden() const { return _bOverride == SW_TRUE; }
 
         const float3& getFocus() const { return _focus; }
         void          setFocus( const float3& focus ) { _focus = focus; }
         float32       getYaw() const { return _yaw; }
-        float32       getOrthoHeight() const { return _orthoHeight; }
+        /** @brief 화면에 보이는 요입니다 — Q/E 로 돈 요를 `_rotateTime` 으로 따라간다(마우스 고르기는 이 요로 쏜다). */
+        float32 getShownYaw() const;
+        float32 getOrthoHeight() const { return _orthoHeight; }
         /** @brief 직교 화면 높이를 바꿉니다(확대 범위 안으로 묶는다 — 휠과 같은 규칙). */
         void setOrthoHeight( float32 orthoHeight );
         /** @brief WASD 로도 움직일지 정합니다(끄면 방향키만 — 게임이 WASD 를 단축키로 쓸 때). */
@@ -91,11 +99,19 @@ namespace sw
          * @details 다른 오브젝트가 읽어도 됩니다 — 리그는 PostUpdate 에서 쓰므로 앞 그룹(PrePhysics)에서 부르면 지난 프레임의 시점입니다.
          */
         [[nodiscard]] bool findGroundPoint( const float2& mouseNormalized, float32 aspect, float32 groundHeight, float3& outPoint ) const;
-        /** @brief 지금 값으로 같은 오브젝트의 카메라를 둡니다(틱 밖에서 부르면 바로 보인다). */
-        void applyToCamera();
+        /** @brief 지금 값으로 같은 오브젝트의 카메라를 둡니다(시간을 흘리지 않는다 — 틱 밖에서 부르면 바로 보인다). */
+        void applyToCamera() { updateCamera( 0.0f ); }
+        /** @brief 시간을 흘려 블렌드 · 회전 따라가기를 진행하고 카메라를 둡니다. */
+        void updateCamera( float32 deltaTime );
+        /** @brief 덮어쓰기 · 직교로 오가는 블렌드입니다. */
+        void setOverrideBlend( const CameraBlendSpec& blend ) { _overrideBlend = blend; }
 
     private:
         void applyInput( float32 deltaTime );
+        /** @brief 리그 값으로 직교 프리셋(`OrthoTopDown`)을 짓습니다. 요는 모드 상태의 회전 요가 준다. */
+        CameraPresetDef makeOrthoPreset() const;
+        /** @brief 덮어쓴 시점으로 고정 프리셋(`Fixed`)을 짓습니다. */
+        CameraPresetDef makeOverridePreset() const;
 
     private:
         PROPERTY( Category = "Rig", DisplayName = "Focus", Tooltip = "Ground point the camera orbits and looks at", Meta = "Units=m" )
@@ -132,12 +148,18 @@ namespace sw
         bool _bWasdPan;
         PROPERTY( Category = "Rig", DisplayName = "Clamp Focus", Tooltip = "Keep the panned focus inside Focus Min / Max (X and Z)" )
         bool _bClampFocus;
+        PROPERTY( Category = "Rig", DisplayName = "Rotate Time", Tooltip = "Time constant the shown yaw follows a Q/E step with", Min = 0.0, Meta = "Units=s" )
+        float32 _rotateTime;
+        PROPERTY( Category = "Rig", DisplayName = "Override Blend", Tooltip = "Blend into and out of a view override (ride camera)" )
+        CameraBlendSpec _overrideBlend;
 
-        float3  _overridePosition;
-        float3  _overrideEuler;
-        float32 _overrideFieldOfViewY;
-        float32 _overrideFarPlane;
-        uint8   _bOverride : 1;
-        uint8   _reserved  : 7;
+        float3         _overridePosition;
+        float3         _overrideEuler;
+        float32        _overrideFieldOfViewY;
+        float32        _overrideFarPlane;
+        CameraDirector _director;
+        uint8          _bOverride        : 1;
+        uint8          _bOverrideApplied : 1; ///< 디렉터가 지금 덮어쓴 시점 프리셋을 켜 두었다
+        uint8          _reserved         : 6;
     };
 } // namespace sw

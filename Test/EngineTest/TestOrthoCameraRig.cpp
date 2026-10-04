@@ -111,15 +111,18 @@ SW_TEST_CASE( OrthoCameraRigTest, RigDrivesItsCameraAndHonoursTheOverride )
     SW_EXPECT_NEAR_EQUAL( expected._position._y, pCamera->getLocalPosition()._y, 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( expected._position._z, pCamera->getLocalPosition()._z, 1.0e-3f );
 
+    // 덮어쓰기는 블렌드로 들어간다 — 켠 순간은 아직 직교 시점이고, 블렌드 길이가 지나면 덮어쓴 시점이다.
     pRig->setViewOverride( float3{ 1.0f, 2.0f, 3.0f }, float3{ 0.0f, 0.5f, 0.25f }, 1.2f, 600.0f );
     pRig->applyToCamera();
+    SW_EXPECT_TRUE( pCamera->isOrthographic() );
+    pRig->updateCamera( 1.0f );
     SW_EXPECT_FALSE( pCamera->isOrthographic() );
     SW_EXPECT_NEAR_EQUAL( 1.2f, pCamera->getFieldOfViewY(), 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 600.0f, pCamera->getFarPlane(), 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pCamera->getLocalPosition()._y, 1.0e-5f );
 
     pRig->clearViewOverride();
-    pRig->applyToCamera();
+    pRig->updateCamera( 1.0f );
     SW_EXPECT_TRUE( pCamera->isOrthographic() );
     SW_EXPECT_NEAR_EQUAL( expected._position._y, pCamera->getLocalPosition()._y, 1.0e-3f );
 }

@@ -1,6 +1,6 @@
 /**
  * @file ArenaCameraComponent.h
- * @brief 플레이어를 비스듬히 위에서 따라가는 카메라 — 디렉터가 적은 플레이어 자리에 오프셋을 더하고 그 자리를 봅니다.
+ * @brief 플레이어를 비스듬히 위에서 따라가는 카메라 — 디렉터가 적은 플레이어 자리를 궤도 모드(오프셋 = 요 · 피치 · 거리)로 봅니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

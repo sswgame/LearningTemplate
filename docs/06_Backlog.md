@@ -174,15 +174,10 @@ cd build/Ninja-Debug/Bin
     `GameFlags` 와 `IFlagStore` 하나로 · TurnBattle 키트 정리.
   - 동작이 바뀌는 것(시험 먼저): `NetPrioritizer` 공유 · 아이템/효과 처리기 등록부 · `TimedModifierSet`.
 
-- **카메라 — 프리셋 데이터 · 블렌드 · 시퀀서(사용자 승인 로드맵).** 1 단계(프리셋 XML · 블렌드 곡선 · `CameraDirector` · `CameraDirectorComponent`)는 들어갔다
-  (`Source/GameFramework/README.md` "카메라" 절). 남은 것 —
-  - 2 단계: `OrthoCameraRigComponent` · `FirstPersonCameraComponent` 를 카메라 모드(포즈 계산 + 입력)로 바꾸고 디렉터가 블렌드한다; 일곱 시험 게임의 카메라를
-    프리셋 데이터로; 시점이 바뀌는 곳에 블렌드(ThemePark 코스터 탑승 V, 직교 Q/E 회전). 카메라 매니저 — 씬의 카메라를 용도(플레이어 시점 · 보조 · 캡처)로
-    관리하고, 로컬 플레이어마다 "보는 카메라(뷰 타깃)" 를 블렌드로 바꾼다(언리얼 `SetViewTargetWithBlend` · Cinemachine Brain). 지금 `CameraRegistry::selectCamera` 는
-    역할마다 우선순위 1 등 하나만 고른다.
-  - 3 단계(게임에 바로 보이는 것): 흔들림 · 노이즈(펄린 손떨림, 충격 진폭 · 감쇠 · 거리 감쇠 — Cinemachine Noise/Impulse · 언리얼 CameraShake), 제약(피치 · 줌 한계,
-    맵 경계 — Confiner), 프레이밍(대상의 화면 위치, 데드존 · 소프트존, look-ahead, 여러 대상 담기 — Composer · Group Framing), 충돌 · 가림 피하기(Deoccluder ·
-    SpringArm). Overworld 의 `CameraControllerComponent::shake` 는 이것으로 합친다.
+- **카메라 — 프리셋 데이터 · 블렌드 · 시퀀서(사용자 승인 로드맵).** 1~3 단계(프리셋 XML · 블렌드 · 디렉터, 모드(직교 · 궤도 · 따라가기 · 1인칭 · 3인칭 ·
+  CCTV) · 입력 · 카메라 매니저(뷰 타깃 블렌드), 흔들림 · 제약 · 프레이밍 · 스프링 암)는 들어갔다(`Source/GameFramework/README.md` "카메라" 절). 남은 것 —
+  - 2 단계에서 남은 것: 직교 리그 네 게임(ThemePark · Harvest · Nile · StarSkirmish)은 리그 값이 곧 데이터다(모드 · 블렌드는 공유) — 리그를 지우고 디렉터 + 프리셋
+    XML 로 옮기려면 게임 디렉터의 `setViewOverride` · `findGroundPoint` 를 디렉터 창구로 바꿔야 한다. 프레이밍의 가로 존은 16:9 로 센다(모드가 화면 비율을 모른다).
   - 4 단계(렌더러, 큰 일) — 다중 뷰 렌더: 지금 `FrameRenderer` 의 `RenderViewType` 은 Main · Shadow 고정 두 개이고 출력도 하나다. 뷰를 목록으로 바꿔 카메라마다
     출력 대상(화면 전체 · 화면 사각형 = 분할 화면 · PiP, 또는 렌더 텍스처 = CCTV 모니터 · 백미러 · 미니맵)을 고르게 한다. 뷰마다 갱신 주기(CCTV 10 Hz), 해상도
     배율, 끌 기능(그림자 · 후처리), 보일 때만 그리기(예산). 렌더 텍스처는 머티리얼에서 텍스처로 읽힌다(언리얼 SceneCapture2D · 유니티 `Camera.targetTexture`).
