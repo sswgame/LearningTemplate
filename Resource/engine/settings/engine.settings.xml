@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 사용자 설정 스키마 — 플레이어 옵션 메뉴의 카테고리 · 설정 · 그래픽 품질 프리셋이다. UserSettingsManager 가 읽고 검사한다(Source/Engine/UserSettings/README.md).
+  게임은 게임 프리셋(Config/Game/<Game>.json)의 _userSettingsSchema 로 설정을 덧붙이고, _mapUserSettingDefault 로 기본값을 바꾼다.
+
+  <Setting> 속성
+    id          category.name — 사용자 파일(usersettings.json)의 키. 바꾸면 <Upgrade op="rename"> 을 더하고 version 을 올린다(배포된 플레이어 데이터).
+    type        bool · int · float · enum · keyBinding · string
+    default     기본값. 품질 묶음에 묶인 설정은 묶음 기본 프리셋의 값이 기본값이다.
+    apply       immediate(보류 즉시 미리 적용) · confirm(적용 버튼, 기본) · restart(다음 실행)
+    target      gv:<전역 변수> · applier:<적용기 이름> · 없음(게임 코드가 값을 읽는다)
+    param       적용기 인자(버스 이름 · 액션 이름)
+    min max step  숫자 범위와 눈금(벗어난 값은 맞춰 넣는다)
+    enabledWhen   다른 설정 조건 `id=value` · `id!=value`, 여럿은 `;`
+    platforms     windows · linux (없으면 전부)
+    confirmSeconds  바꾼 뒤 이 시간 안에 확인하지 않으면 되돌린다(화면 방식)
+    optionsFrom   런타임 선택지 공급자(localization.languages)
+    text · description  메뉴 글의 로컬라이제이션 키
+-->
+<UserSettingsSchema version="1">
+	<Category id="display" text="settings.category.display"/>
+	<Category id="graphics" text="settings.category.graphics"/>
+	<Category id="audio" text="settings.category.audio"/>
+	<Category id="controls" text="settings.category.controls"/>
+	<Category id="gameplay" text="settings.category.gameplay"/>
+	<Category id="accessibility" text="settings.category.accessibility"/>
+	<Category id="language" text="settings.category.language"/>
+
+	<!-- 화면 — 창 · 스왑체인은 호스트가 프레임 맨 앞에서 바꾼다(렌더 스레드를 기다린 뒤). 방식 · 해상도는 15 초 안에 확인하지 않으면 되돌린다. -->
+	<Setting id="display.windowMode" category="display" type="enum" default="windowed" confirmSeconds="15" target="applier:display.windowMode" text="settings.display.windowMode">
+		<Option value="windowed" text="settings.display.windowMode.windowed"/>
+		<Option value="borderless" text="settings.display.windowMode.borderless"/>
+	</Setting>
+	<Setting id="display.resolution" category="display" type="enum" default="1280x720" confirmSeconds="15" target="applier:display.resolution"
+	         enabledWhen="display.windowMode=windowed" text="settings.display.resolution">
+		<Option value="1280x720"/>
+		<Option value="1600x900"/>
+		<Option value="1920x1080"/>
+		<Option value="2560x1440"/>
+		<Option value="3840x2160"/>
+	</Setting>
+	<Setting id="display.vsync" category="display" type="bool" default="false" target="applier:display.vsync" text="settings.display.vsync"/>
+
+	<!-- 그래픽 — graphics.quality 가 아래 일곱을 프리셋으로 묶는다(아래 <Scalability>). -->
+	<Setting id="graphics.quality" category="graphics" type="enum" default="high" text="settings.graphics.quality">
+		<Option value="low" text="settings.graphics.quality.low"/>
+		<Option value="medium" text="settings.graphics.quality.medium"/>
+		<Option value="high" text="settings.graphics.quality.high"/>
+		<Option value="ultra" text="settings.graphics.quality.ultra"/>
+		<Option value="custom" text="settings.graphics.quality.custom"/>
+	</Setting>
+	<Setting id="graphics.upscaler" category="graphics" type="enum" default="off" target="gv:gv_upscaler" text="settings.graphics.upscaler">
+		<Option value="off" text="settings.common.off"/>
+		<Option value="spatial" text="settings.graphics.upscaler.spatial"/>
+	</Setting>
+	<Setting id="graphics.renderScale" category="graphics" type="float" default="1" min="0.5" max="1" step="0.05" target="gv:gv_renderScale"
+	         enabledWhen="graphics.upscaler=off" text="settings.graphics.renderScale"/>
+	<Setting id="graphics.shadowQuality" category="graphics" type="enum" default="high" target="gv:gv_shadowQuality" text="settings.graphics.shadowQuality">
+		<Option value="low"/>
+		<Option value="medium"/>
+		<Option value="high"/>
+		<Option value="ultra"/>
+	</Setting>
+	<Setting id="graphics.viewDistance" category="graphics" type="float" default="1" min="0.25" max="2" step="0.25" target="gv:gv_viewDistanceScale" text="settings.graphics.viewDistance"/>
+	<Setting id="graphics.foliageDensity" category="graphics" type="float" default="1" min="0" max="1.5" step="0.25" target="gv:gv_foliageDensity" text="settings.graphics.foliageDensity"/>
+	<Setting id="graphics.postQuality" category="graphics" type="enum" default="high" target="gv:gv_postQuality" text="settings.graphics.postQuality">
+		<Option value="low"/>
+		<Option value="medium"/>
+		<Option value="high"/>
+		<Option value="ultra"/>
+	</Setting>
+	<Setting id="graphics.textureQuality" category="graphics" type="enum" default="high" apply="restart" target="gv:gv_textureQuality" text="settings.graphics.textureQuality">
+		<Option value="low"/>
+		<Option value="medium"/>
+		<Option value="high"/>
+		<Option value="ultra"/>
+	</Setting>
+	<Setting id="graphics.effectsQuality" category="graphics" type="enum" default="high" target="gv:gv_effectsQuality" text="settings.graphics.effectsQuality">
+		<Option value="low"/>
+		<Option value="medium"/>
+		<Option value="high"/>
+		<Option value="ultra"/>
+	</Setting>
+	<Setting id="graphics.motionBlur" category="graphics" type="bool" default="true" target="gv:gv_motionBlur" text="settings.graphics.motionBlur"/>
+
+	<Scalability setting="graphics.quality" custom="custom" autoDetectFallback="medium">
+		<Preset name="low">
+			<Value setting="graphics.renderScale" value="0.75"/>
+			<Value setting="graphics.shadowQuality" value="low"/>
+			<Value setting="graphics.viewDistance" value="0.5"/>
+			<Value setting="graphics.foliageDensity" value="0.25"/>
+			<Value setting="graphics.postQuality" value="low"/>
+			<Value setting="graphics.textureQuality" value="low"/>
+			<Value setting="graphics.effectsQuality" value="low"/>
+		</Preset>
+		<Preset name="medium">
+			<Value setting="graphics.renderScale" value="0.85"/>
+			<Value setting="graphics.shadowQuality" value="medium"/>
+			<Value setting="graphics.viewDistance" value="0.75"/>
+			<Value setting="graphics.foliageDensity" value="0.5"/>
+			<Value setting="graphics.postQuality" value="medium"/>
+			<Value setting="graphics.textureQuality" value="medium"/>
+			<Value setting="graphics.effectsQuality" value="medium"/>
+		</Preset>
+		<Preset name="high">
+			<Value setting="graphics.renderScale" value="1"/>
+			<Value setting="graphics.shadowQuality" value="high"/>
+			<Value setting="graphics.viewDistance" value="1"/>
+			<Value setting="graphics.foliageDensity" value="1"/>
+			<Value setting="graphics.postQuality" value="high"/>
+			<Value setting="graphics.textureQuality" value="high"/>
+			<Value setting="graphics.effectsQuality" value="high"/>
+		</Preset>
+		<Preset name="ultra">
+			<Value setting="graphics.renderScale" value="1"/>
+			<Value setting="graphics.shadowQuality" value="ultra"/>
+			<Value setting="graphics.viewDistance" value="1.5"/>
+			<Value setting="graphics.foliageDensity" value="1.5"/>
+			<Value setting="graphics.postQuality" value="ultra"/>
+			<Value setting="graphics.textureQuality" value="ultra"/>
+			<Value setting="graphics.effectsQuality" value="ultra"/>
+		</Preset>
+		<!-- 첫 실행 자동 선택 — 위에서부터 조건을 모두 넘는 첫 줄. GPU 를 묻는 창구가 아직 없어 CPU 논리 코어 · 시스템 메모리만 본다. -->
+		<AutoDetect preset="ultra" minCores="16" minMemoryMb="30000"/>
+		<AutoDetect preset="high" minCores="8" minMemoryMb="15000"/>
+		<AutoDetect preset="medium" minCores="4" minMemoryMb="7500"/>
+		<AutoDetect preset="low"/>
+	</Scalability>
+
+	<!-- 오디오 — 버스 이름은 IAudioSystem::setBusVolume 의 이름이다. voice · ambient · ui 는 재생 API 가 버스를 받기 전까지 값만 기억된다. -->
+	<Setting id="audio.masterVolume" category="audio" type="float" default="1" min="0" max="1" step="0.05" apply="immediate" target="applier:audio.busVolume" param="master" text="settings.audio.masterVolume"/>
+	<Setting id="audio.musicVolume" category="audio" type="float" default="0.8" min="0" max="1" step="0.05" apply="immediate" target="applier:audio.busVolume" param="music" text="settings.audio.musicVolume"/>
+	<Setting id="audio.sfxVolume" category="audio" type="float" default="1" min="0" max="1" step="0.05" apply="immediate" target="applier:audio.busVolume" param="sfx" text="settings.audio.sfxVolume"/>
+	<Setting id="audio.voiceVolume" category="audio" type="float" default="1" min="0" max="1" step="0.05" apply="immediate" target="applier:audio.busVolume" param="voice" text="settings.audio.voiceVolume"/>
+	<Setting id="audio.ambientVolume" category="audio" type="float" default="1" min="0" max="1" step="0.05" apply="immediate" target="applier:audio.busVolume" param="ambient" text="settings.audio.ambientVolume"/>
+	<Setting id="audio.uiVolume" category="audio" type="float" default="1" min="0" max="1" step="0.05" apply="immediate" target="applier:audio.busVolume" param="ui" text="settings.audio.uiVolume"/>
+	<Setting id="audio.mute" category="audio" type="bool" default="false" apply="immediate" target="applier:audio.mute" text="settings.audio.mute"/>
+
+	<!-- 조작 — 키 바인딩은 게임 입력 맵의 액션이라 게임 스키마가 더한다(type="keyBinding" action="Jump"). -->
+	<Setting id="controls.mouseSensitivity" category="controls" type="float" default="1" min="0.1" max="5" step="0.05" target="applier:input.mouseSensitivity" text="settings.controls.mouseSensitivity"/>
+	<Setting id="controls.gamepadSensitivity" category="controls" type="float" default="1" min="0.1" max="5" step="0.05" target="applier:input.gamepadSensitivity" text="settings.controls.gamepadSensitivity"/>
+	<Setting id="controls.invertY" category="controls" type="bool" default="false" target="applier:input.invertY" text="settings.controls.invertY"/>
+	<Setting id="controls.stickDeadzone" category="controls" type="float" default="0.15" min="0" max="0.5" step="0.01" target="applier:input.stickDeadzone" text="settings.controls.stickDeadzone"/>
+	<Setting id="controls.aimMode" category="controls" type="enum" default="hold" target="applier:input.toggleMode" param="Aim" text="settings.controls.aimMode">
+		<Option value="hold" text="settings.controls.hold"/>
+		<Option value="toggle" text="settings.controls.toggle"/>
+	</Setting>
+	<Setting id="controls.crouchMode" category="controls" type="enum" default="hold" target="applier:input.toggleMode" param="Crouch" text="settings.controls.crouchMode">
+		<Option value="hold" text="settings.controls.hold"/>
+		<Option value="toggle" text="settings.controls.toggle"/>
+	</Setting>
+	<Setting id="controls.sprintMode" category="controls" type="enum" default="hold" target="applier:input.toggleMode" param="Sprint" text="settings.controls.sprintMode">
+		<Option value="hold" text="settings.controls.hold"/>
+		<Option value="toggle" text="settings.controls.toggle"/>
+	</Setting>
+
+	<!-- 게임플레이 — 난이도처럼 게임마다 다른 것은 게임 스키마가 더한다. -->
+	<Setting id="gameplay.fieldOfView" category="gameplay" type="float" default="70" min="60" max="110" step="1" target="gv:gv_cameraFieldOfView" text="settings.gameplay.fieldOfView"/>
+	<Setting id="gameplay.cameraShake" category="gameplay" type="float" default="1" min="0" max="1" step="0.1" target="gv:gv_cameraShakeScale" text="settings.gameplay.cameraShake"/>
+	<Setting id="gameplay.headBob" category="gameplay" type="bool" default="true" target="gv:gv_cameraHeadBob" text="settings.gameplay.headBob"/>
+
+	<!-- 접근성 -->
+	<Setting id="accessibility.colorVision" category="accessibility" type="enum" default="off" target="gv:gv_colorVisionMode" text="settings.accessibility.colorVision">
+		<Option value="off" text="settings.common.off"/>
+		<Option value="protanopia" text="settings.accessibility.colorVision.protanopia"/>
+		<Option value="deuteranopia" text="settings.accessibility.colorVision.deuteranopia"/>
+		<Option value="tritanopia" text="settings.accessibility.colorVision.tritanopia"/>
+	</Setting>
+	<Setting id="accessibility.uiScale" category="accessibility" type="float" default="1" min="0.75" max="1.5" step="0.05" target="gv:gv_uiScale" text="settings.accessibility.uiScale"/>
+	<Setting id="accessibility.textSize" category="accessibility" type="float" default="1" min="0.75" max="2" step="0.05" target="gv:gv_uiTextScale" text="settings.accessibility.textSize"/>
+	<Setting id="accessibility.reduceFlashing" category="accessibility" type="bool" default="false" target="gv:gv_reduceFlashing" text="settings.accessibility.reduceFlashing"/>
+	<Setting id="accessibility.subtitles" category="accessibility" type="bool" default="true" target="gv:gv_subtitles" text="settings.accessibility.subtitles"/>
+	<Setting id="accessibility.subtitleSize" category="accessibility" type="enum" default="medium" target="gv:gv_subtitleSize" enabledWhen="accessibility.subtitles=true" text="settings.accessibility.subtitleSize">
+		<Option value="small"/>
+		<Option value="medium"/>
+		<Option value="large"/>
+	</Setting>
+	<Setting id="accessibility.subtitleBackground" category="accessibility" type="float" default="0.5" min="0" max="1" step="0.1" target="gv:gv_subtitleBackgroundOpacity"
+	         enabledWhen="accessibility.subtitles=true" text="settings.accessibility.subtitleBackground"/>
+
+	<!-- 언어 — 빈 값은 게임 기본 언어(gamesettings.xml 의 defaultLanguage)다. 선택지는 게임이 읽은 언어 팩. -->
+	<Setting id="language.text" category="language" type="enum" default="" optionsFrom="localization.languages" apply="immediate" target="applier:localization.language" text="settings.language.text"/>
+</UserSettingsSchema>

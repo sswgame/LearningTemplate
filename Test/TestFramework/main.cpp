@@ -208,6 +208,7 @@ namespace
         // 하네스가 세우지 않는 단계다(모듈 이미지 · 헤드리스 작업 · 창 · RHI · 렌더러).
         using ModuleImagesStartupStep  = Defaults;
         using HeadlessStartupStep      = Defaults;
+        using UserSettingsStartupStep  = Defaults;
         using RHIStartupStep           = Defaults;
         using FrameRendererStartupStep = Defaults;
         using RenderThreadStartupStep  = Defaults;

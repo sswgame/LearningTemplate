@@ -13,6 +13,7 @@ Scripts/lint/gate/CheckGamePresets.py
 - 프리셋에는 게임 폴더가 있어야 한다(지운 게임의 프리셋이 남지 않게).
 - `_packRoot` 는 `game/<폴더>` 이고 `Resource/<_packRoot>/` 가 있어야 한다.
 - `_startupScene` 이 있으면 그 파일이 `Resource/` 아래에 있어야 한다.
+- `_userSettingsSchema` 가 있으면 그 파일이 팩(`Resource/<_packRoot>/`) 아래에 있어야 한다.
 - Empty 가 아닌 게임마다 CMake 프리셋 `Ninja-Debug-<게임>`(configure · build)이 있고 `SW_ACTIVE_GAME` 이 그 게임이다 — 게임은 프리셋으로 바꾼다
   (빌드 폴더가 게임마다 따로라 두 작업이 서로의 활성 게임을 바꾸지 않는다). Empty 는 `Ninja-Debug` 다.
 """
@@ -99,6 +100,9 @@ def findGamePresetViolations(repositoryRoot: Path) -> tuple[list[str], int]:
         startupScene = str(data.get("_startupScene", ""))
         if startupScene and (resourceRoot / startupScene).is_file() is False:
             violations.append(f"[Game Preset] `_startupScene` 파일이 없습니다: {presetPath} → Resource/{startupScene}")
+        userSettingsSchema = str(data.get("_userSettingsSchema", ""))
+        if userSettingsSchema and (resourceRoot / packRoot / userSettingsSchema).is_file() is False:
+            violations.append(f"[Game Preset] `_userSettingsSchema` 파일이 없습니다: {presetPath} → Resource/{packRoot}/{userSettingsSchema}")
     violations.extend(findCMakePresetViolations(repositoryRoot, listGame))
     return violations, len(listGame)
 
@@ -136,6 +140,14 @@ class CheckGamePresetsGate(LintGate):
                 "Config/Game/Probe.json": '{ "_packRoot": "game/probe" }',
                 "Resource/game/probe/readme.md": "probe",
                 "CMakePresets.json": '{ "configurePresets": [], "buildPresets": [] }',
+            },
+        },
+        {
+            "name": "없는 사용자 설정 스키마를 가리키는 프리셋",
+            "files": {
+                "Source/Games/Probe/CMakeLists.txt": "sw_addGameModule(SWGame)",
+                "Config/Game/Probe.json": '{ "_packRoot": "game/probe", "_userSettingsSchema": "data/missing.settings.xml" }',
+                "Resource/game/probe/readme.md": "probe",
             },
         },
         {

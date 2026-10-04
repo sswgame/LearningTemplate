@@ -54,7 +54,7 @@ namespace
 
     /** @brief 표의 줄을 거꾸로 적은 단계 이름입니다 — 해제는 기동이 어디서 멈췄든 이 순서로 모든 단계를 돈다. */
     constexpr const utf8* kFullDestroyOrder =
-        "SceneRhi LiveShader RenderThread FrameRenderer RHI Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+        "SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
         "Config Reflection Compression";
 
     string joinStepNames( const vector<EngineInitStep>& listStep )
@@ -176,7 +176,7 @@ SW_TEST_CASE( EngineInitSequenceTest, ShutdownRunsInReverseOfInitialization )
 
     sequence.shutdownAll();
     SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
-    SW_EXPECT_STREQ( "SceneRhi LiveShader RenderThread FrameRenderer RHI Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+    SW_EXPECT_STREQ( "SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
                      "Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 
@@ -347,7 +347,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies 
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "SceneRhi LiveShader RenderThread FrameRenderer RHI Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+    SW_EXPECT_STREQ( "SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
                      "Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 }
@@ -368,7 +368,7 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "FrameRenderer RHI Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
+    SW_EXPECT_STREQ( "FrameRenderer RHI UserSettings Headless Scene ModuleTypes Input Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 }
 
