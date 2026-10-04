@@ -45,7 +45,10 @@ namespace sw
             return _hp;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief REFLECT() 가 없는 순수 인터페이스. 다중 상속 시 프로퍼티가 없으므로 리플렉션 부모
      *        선택에서 조용히 무시되어야 합니다 (경고 없음). GameFramework::IFlagStore 축소판.
@@ -56,7 +59,10 @@ namespace sw
         virtual ~IPlainMixinTestActor() = default;
         virtual void mixinHook()        = 0;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief REFLECT() 는 있지만 PROPERTY() 가 없는 베이스. GameFramework::SaveGame 축소판
      *        (프로퍼티 없는 리플렉션 베이스 — 파생 클래스가 직접 프로퍼티를 선언).
@@ -67,7 +73,10 @@ namespace sw
         REFLECT_BODY();
         virtual ~EmptyReflectedBaseTestActor() = default;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief REFLECT() 베이스(EmptyReflectedBaseTestActor)가 선언 순서상 첫 번째이고, REFLECT() 가
      *        없는 순수 인터페이스가 두 번째인 다중 상속 조합 검증용 액터. GameFramework::
@@ -84,7 +93,10 @@ namespace sw
         PROPERTY()
         int32 _ownValue = 7;
     };
+} // namespace sw
 
+namespace sw
+{
     REFLECT()
     struct AliasAndReorderTestActor
     {
@@ -95,7 +107,10 @@ namespace sw
         PROPERTY()
         int32 _score = 50;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 타입 개명 호환 — 옛 FQN `sw::LegacyRenameActor` 로 findType / 컴포넌트 키 조회.
      */
@@ -106,7 +121,10 @@ namespace sw
         PROPERTY()
         int32 _hp = 100;
     };
+} // namespace sw
 
+namespace sw
+{
     REFLECT()
     struct DefaultValueTestActor
     {
@@ -118,7 +136,10 @@ namespace sw
         PROPERTY( Default = "Apprentice", XmlAttribute )
         string _title = "unset";
     };
+} // namespace sw
 
+namespace sw
+{
     REFLECT()
     struct NestedInner
     {
@@ -126,7 +147,10 @@ namespace sw
         PROPERTY()
         int32 _x{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     REFLECT()
     struct NestedContainerActor
     {
@@ -152,7 +176,10 @@ namespace sw
         PROPERTY()
         NestedInner _inner;
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) FUNCTION / RPC / Abstract / Static / 생성자
     // ------------------------------------------------------------------------------
@@ -171,7 +198,10 @@ namespace sw
             _hp -= amount;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief Unreal UCLASS(Abstract) 스타일 — 등록되지만 생성할 수 없습니다. */
     REFLECT( Abstract )
     struct AbstractDemoBase
@@ -185,7 +215,10 @@ namespace sw
         /** @brief 추상 틱 훅. */
         virtual void tickAbstract() = 0;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief BlueprintFunctionLibrary 스타일의 static 헬퍼. */
     REFLECT( Static )
     struct StaticDemoLibrary
@@ -198,7 +231,10 @@ namespace sw
             return value * 2;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     REFLECT()
     struct PolyPayloadA
     {
@@ -206,7 +242,10 @@ namespace sw
         PROPERTY()
         int32 _a{ 1 };
     };
+} // namespace sw
 
+namespace sw
+{
     REFLECT()
     struct AssetPathActor
     {
@@ -217,7 +256,10 @@ namespace sw
         PROPERTY( Polymorphic )
         ReflectAny _payload;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief `Abstract = true` — 단독 토큰이 아니라 대입 형태로 적은 표본입니다.
      * @details AnnotationMeta.txt 의 `flag` 줄이 단독 토큰과 `X = true` 를 함께 등록하지 않으면 이 형태가
@@ -235,7 +277,10 @@ namespace sw
         /** @brief 추상 훅. */
         virtual void tickAssigned() = 0;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief `Static = true` 대입 형태 표본입니다. */
     REFLECT( Static = true )
     struct AssignedStaticLibrary
@@ -248,7 +293,10 @@ namespace sw
             return value + 1;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 프로퍼티·함수 플래그를 전부 `X = true` 로 적은 표본입니다. */
     REFLECT()
     struct AssignedFlagActor
@@ -272,7 +320,10 @@ namespace sw
             _tag = value;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 명시적 생성자로 ReflectionParser 가 `$ctor` / `$ctor(int32)` 를 출력하게 합니다. */
     REFLECT()
     struct CtorDemoActor
@@ -293,7 +344,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 코드젠이 출력하는 PROPERTY 어노테이션 메타데이터. */
     REFLECT()
     struct MetadataDemoActor
@@ -302,7 +356,10 @@ namespace sw
         PROPERTY( Category = "Stats", DisplayName = "Hit Points", Tooltip = "Current HP", ReadOnly )
         int32 _hp = 10;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 비트필드(uint8 : 1) 리플렉션 테스트 액터 */
     REFLECT()
     struct BitfieldTestActor
@@ -330,7 +387,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief uint8, uint16, uint32, uint64 비트필드 플래그(: 1) 종합 리플렉션 테스트 액터 */
     REFLECT()
     struct WideBitfieldTestActor
@@ -374,7 +434,10 @@ namespace sw
         {
         }
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 3) ENUM — 별칭·Flags·중첩 네임스페이스
     // ------------------------------------------------------------------------------
@@ -467,7 +530,10 @@ namespace sw
             _endedPlay = true;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     REFLECT()
     struct TestDerivedScriptComponent : public TestScriptComponent
     {
@@ -482,7 +548,10 @@ namespace sw
             _derivedTickCount += 2;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     REFLECT( Alias = LegacyGrandChildScriptComponent )
     struct TestGrandChildScriptComponent : public TestDerivedScriptComponent
     {
@@ -500,7 +569,10 @@ namespace sw
             _grandChildTickCount += 3;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 오브젝트 상태 묶음이 핸들을 옮기는 자리와 옮기지 못하는 자리를 한 컴포넌트에 둔 샘플입니다(`ObjectStateBatch::finish`). */
     REFLECT()
     struct TestHandleHolderComponent : public Component
@@ -519,6 +591,10 @@ namespace sw
         PROPERTY()
         ComponentHandle _targetComponent; ///< 옮기지 못한다 — 파일 상태면 비운다
     };
+} // namespace sw
+
+namespace sw
+{
     REFLECT( Category = "Gameplay", DisplayName = "Meta Test Actor", Tooltip = "Actor for testing rich metadata", HideInMenu, Meta = "CustomTag=ActorVal, Priority=10" )
     struct MetaTestActor
     {
@@ -536,7 +612,10 @@ namespace sw
             _health = 100;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 값이 객체 밖에 있는 프로퍼티(접근자 프로퍼티) 샘플입니다. 씬 컴포넌트의 로컬 TRS 가 트랜스폼 저장소의 칸에 사는 모양의 축소판입니다.
      * @details `_position` 은 필드처럼 붙인 프로퍼티 이름일 뿐이고, 값은 바깥 배열 `s_arrExternalPosition` 의 이 객체 칸(`_storageIndex`)에 있습니다.
@@ -560,7 +639,10 @@ namespace sw
         /** @brief `s_arrExternalPosition` 에서 이 객체가 쓰는 칸입니다. 리플렉션 대상이 아닙니다. */
         uint32 _storageIndex{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /// @brief 별칭으로 적은 컨테이너 — 파서가 벗겨서 컨테이너로 알아봐야 한다(`AliasContainerActor`).
     using TestAliasScoreList = sw::vector<int32>;
     /// @brief 별칭으로 적은 스칼라 — 이름(int32 의 별칭)이 그대로여야 한다.
@@ -581,7 +663,10 @@ namespace sw
         PROPERTY()
         TestAliasCount _aliasCount{ 0 };
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 고정 배열 프로퍼티 샘플입니다(`ReflectionSerializationTest.FixedArrayPropertyRoundTripsInEveryFormat`). */
     REFLECT()
     struct FixedArrayActor
@@ -593,6 +678,60 @@ namespace sw
 
         PROPERTY()
         int32 _after{ 0 }; ///< 배열 뒤의 칸 — 배열을 읽다 스트림이 어긋나면 여기가 틀린다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 이름으로 부르기 · 기본 인자 · 이벤트 샘플입니다(`ReflectionInvokeTest`). */
+    REFLECT()
+    struct InvokeDemoActor
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _hp = 100;
+
+        PROPERTY()
+        SampleStatus _status = SampleStatus::Idle;
+
+        PROPERTY()
+        int32 _lastReported = 0;
+
+        PROPERTY( Category = "Events", Tooltip = "HP changed" )
+        MulticastDelegate<void( int32 newHp, const string& reason )> _onHpChanged;
+
+        PROPERTY()
+        MulticastDelegate<void()> _onDied;
+
+        /** @brief 회복량에 배율을 곱해 더하고 지금 HP 를 돌려줍니다. */
+        FUNCTION()
+        int32 heal( int32 amount, float32 multiplier = 1.5f )
+        {
+            _hp += static_cast<int32>( static_cast<float32>( amount ) * multiplier );
+            return _hp;
+        }
+
+        /** @brief 상태를 바꿉니다. 인자를 빼면 Moving 입니다. */
+        FUNCTION()
+        void setStatus( SampleStatus status = SampleStatus::Moving )
+        {
+            _status = status;
+        }
+
+        /** @brief `접두어:HP` 글을 돌려줍니다. */
+        FUNCTION()
+        string describe( const string& prefix = "hp" ) const
+        {
+            return prefix + ":" + to_string( _hp );
+        }
+
+        /** @brief 이벤트에 묶이는 받는 쪽입니다. */
+        FUNCTION()
+        void reportHp( int32 value )
+        {
+            _lastReported = value;
+        }
     };
 } // namespace sw
 

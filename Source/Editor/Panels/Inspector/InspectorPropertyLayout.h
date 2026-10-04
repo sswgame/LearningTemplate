@@ -10,6 +10,7 @@
 
 namespace sw
 {
+    struct FunctionParameterInfo;
     struct PropertyInfo;
     struct TypeInfo;
 } // namespace sw
@@ -87,5 +88,8 @@ namespace sw::editor
          *          (UCRT 는 조용히 버린다) 다음 인자를 읽는다.
          */
         static string appendUnitSuffix( const utf8* pNumberFormat, const string& suffix );
+
+        /** @brief 함수 · 이벤트의 인자 목록을 `int32 amount, float32 scale = 1.5f` 꼴로 씁니다(이름 · 기본 인자가 없으면 뺀다). */
+        static string formatParameterList( const vector<FunctionParameterInfo>& listParameter );
     };
 } // namespace sw::editor

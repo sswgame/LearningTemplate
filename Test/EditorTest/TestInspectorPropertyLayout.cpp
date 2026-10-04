@@ -170,4 +170,17 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, RatiosAreShownAsPercent )
     SW_EXPECT_EQUAL( string( "%d" ), InspectorPropertyLayout::appendUnitSuffix( "%d", "" ) );
 }
 
+/**
+ * @brief [InspectorPropertyLayoutTest] 함수 · 이벤트의 인자 목록 글 — 이름 · 기본 인자가 있을 때만 붙는다
+ */
+SW_TEST_CASE( InspectorPropertyLayoutTest, ParameterListShowsNamesAndDefaults )
+{
+    vector<FunctionParameterInfo> listParameter;
+    SW_EXPECT_EQUAL( string(), InspectorPropertyLayout::formatParameterList( listParameter ) );
+    listParameter.push_back( FunctionParameterInfo( "amount", "int32", "", nullptr ) );
+    listParameter.push_back( FunctionParameterInfo( "", "uint8", "", nullptr ) );
+    listParameter.push_back( FunctionParameterInfo( "scale", "float32", "1.5f", nullptr ) );
+    SW_EXPECT_EQUAL( string( "int32 amount, uint8, float32 scale = 1.5f" ), InspectorPropertyLayout::formatParameterList( listParameter ) );
+}
+
 #endif // !SW_SHIPPING

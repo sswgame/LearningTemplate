@@ -52,6 +52,13 @@ namespace sw
         inline constexpr const utf8* kVoidTypeName          = "void";
         inline constexpr const utf8* kDefaultMethodCategory = "General";
         inline constexpr const utf8* kConstructorCategory   = "Constructor";
+
+        /**
+         * @brief 리플렉션 이벤트가 되는 필드 타입입니다 — `PROPERTY()` 가 붙은 멀티캐스트 델리게이트는 값이 아니라 이벤트로 수집합니다.
+         * @details 판정은 정규 타입 철자의 머리(`kEventTemplatePrefix`)로, 인자 이름은 소스 토큰의 템플릿 이름(`kEventTemplateLeaf`)부터 읽습니다.
+         */
+        inline constexpr const utf8* kEventTemplatePrefix = "sw::MulticastDelegate<";
+        inline constexpr const utf8* kEventTemplateLeaf   = "MulticastDelegate";
     } // namespace annotation
 
     // ------------------------------------------------------------------------------

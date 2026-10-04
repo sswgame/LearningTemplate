@@ -48,6 +48,8 @@ flowchart LR
 | `ReflectionEnumNames.h` | `ContainerKind` · `FunctionNetRole` ↔ 식별자 문자열(정본은 `Core/Predefined/*.xxx`) |
 | `ReflectGenerated.h` | `*.gen.cpp` preamble |
 | `ReflectAny.*` | 타입 소거 값 상자 |
+| `ReflectValue.*` | 타입 이름이 붙은 값(`ReflectValue`)과 인자 타입마다의 변환 표(`ReflectTypeOpsOf<T>`) |
+| `ReflectionInvoke.*` | 이름으로 부르기 · 이벤트 묶기/부르기(`ReflectionInvoke`) — 콘솔 · 비주얼 스크립팅 · 기믹 배선 · 에디터가 쓴다 |
 | `Rpc/` | RPC용 리플렉션 보조(`ReflectionRpc.h`) |
 
 보통은 `#include "Engine/Reflection/ReflectionCore.h"` 또는 컴포넌트 헤더가 끌어오는 매크로만 쓰면 됩니다.
@@ -150,6 +152,38 @@ float3& getLocalPositionRef() { return _pTransformPage->_arrLocalPosition[getPag
 - 값으로 돌려주거나(쓸 자리가 없다) 인자가 있거나 정적이면 코드젠이 멈춥니다. 컨테이너 · 비트필드는 받지 않습니다.
 - 이런 프로퍼티가 하나라도 있는 타입은 객체 통째 복사(`TypeInfo::usesPodCopyFastPath`)를 쓰지 않습니다.
 
+### 6) 함수 인자 · 이벤트 · 이름으로 부르기
+
+```cpp
+REFLECT()
+struct DoorComponent : public Component
+{
+    REFLECT_BODY();
+
+    PROPERTY( Category = "Events" )                        // 멀티캐스트 델리게이트 PROPERTY = 이벤트
+    MulticastDelegate<void( int32 openCount, const string& reason )> _onOpened;
+
+    FUNCTION()
+    void open( float32 speed = 1.5f, DoorMode mode = DoorMode::Swing );
+};
+```
+
+- `FUNCTION` 의 인자는 `FunctionInfo::_listParameter` 에 **이름 · 정규 타입 · 기본 인자(C++ 식 그대로)** 로 남고, 반환 타입은 `_pReturnType` 입니다.
+- `PROPERTY()` 를 붙인 `MulticastDelegate<void( ... )>` 필드는 프로퍼티가 아니라 **이벤트**(`TypeInfo::_listEvent`)입니다 — 직렬화 · 인스펙터 값
+  편집에 들지 않고, 표시 메타(`Category` · `DisplayName` · `Tooltip` · `Meta` · `HideInInspector` · `Name`)만 받습니다(그 밖의 토큰 · void 가 아닌 반환은 파서 오류).
+- 타입을 모르는 쪽은 `ReflectionInvoke` 로 부릅니다. 인자는 `ReflectValue`(타입 이름이 붙은 값) 목록이고, 자리마다 그 타입으로 바꿉니다 —
+  같은 타입은 그대로, 숫자끼리(범위 밖 · 소수→정수는 거절), 글 → 값(`"35"` · `"1, 2, 3"` · 열거자 이름), 빠진 뒤쪽 인자는 기본 인자.
+
+```cpp
+ReflectValue result;
+ReflectionInvoke::callWithText( *pType->findMethodInHierarchy( "open" ), pDoor, { "2" }, &result );      // 콘솔
+const EventInfo* pEvent = pType->findEventInHierarchy( "_onOpened" );
+DelegateHandle   handle = ReflectionInvoke::bindEvent( *pEvent, pDoor, ReflectEventHandler::create( onOpened ) ); // 받는 쪽은 vector<ReflectValue>
+ReflectionInvoke::bindEventToFunction( *pEvent, pDoor, *pLampType, "turnOn", pLamp );                    // 기믹 배선: 이벤트 → 함수
+```
+
+`_invoker` 를 직접 부르면 인자를 **그 C++ 타입 그대로** 넣어야 합니다(`TaskValue` 는 타입을 모른다). 결과 코드는 `ReflectCallResult` 입니다.
+
 ---
 
 ## 런타임에서 쓰기
@@ -200,7 +234,8 @@ CMake 헬퍼: `cmake/Engine/ReflectionCodeGen.cmake` (`sw_addReflectionStep`)
 | `REFLECT(...)` | 타입 노출. `Abstract`, `Alias=…`(4절 — 지금은 쓰지 않는다) |
 | `REFLECT_BODY()` | `StaticType()` + gen 정의 요청 |
 | `PROPERTY(...)` | 필드. `ReadOnly`, `Min`/`Max`, `Category`, `Name`(접근자 프로퍼티), `Alias`(4절) … |
-| `FUNCTION(...)` | 함수. RPC용 `Server`/`Client`/`Multicast` 등 |
+| `FUNCTION(...)` | 함수. RPC용 `Server`/`Client`/`Multicast` 등. 인자 이름 · 기본 인자는 선언에서 읽는다 |
+| `PROPERTY()` + `MulticastDelegate<void(…)>` | 이벤트(6절) |
 | `ENUM(...)` | 열거형. `Flags`, `Invalid=`, `Count=` |
 | `REFLECT_CONTAINER(...)` | 커스텀 컨테이너를 Sequence/Map으로 |
 

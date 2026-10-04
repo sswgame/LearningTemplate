@@ -45,6 +45,8 @@ namespace sw
         void emitPropertyMetadata( CodeEmit& emit, const ParsedPropertyInfo& prop ) const;
         /** @brief 중첩 컨테이너 트리를 출력합니다. */
         void emitNestedContainerTree( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
+        /** @brief 이벤트(멀티캐스트 델리게이트 PROPERTY) 목록을 출력합니다. */
+        void emitEventList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const;
         /** @brief 메서드 목록을 출력합니다. */
         void emitMethodList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const;
         /** @brief 메서드 호출용 invoker 람다를 출력합니다. */

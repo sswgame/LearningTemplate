@@ -13,6 +13,9 @@
 
 namespace sw
 {
+    struct ReflectEventOps;
+    struct ReflectTypeOps;
+
     class Component;
     class GameObject;
 
@@ -739,21 +742,80 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 함수 · 이벤트의 인자 하나입니다. 순서는 선언 순서입니다. */
+    struct SW_API FunctionParameterInfo
+    {
+        string _name;     ///< 선언에 적힌 이름. 이름 없이 적었으면 비어 있다
+        string _typeName; ///< 정규 타입 이름(`int32` · `string` · `DamageEvent`) — const · 참조는 벗겼다
+        /** @brief 기본 인자의 C++ 식 그대로(`1.0f` · `"idle"` · `Mode::Fast`). 없으면 비어 있다. `ReflectionInvoke` 가 인자를 빼먹은 호출에 이것을 읽어 넣는다. */
+        string _defaultValue;
+        /** @brief 이 인자 타입의 이름 · 값 변환(`ReflectTypeOpsOf<T>::kOps`)입니다. 이벤트는 `EventInfo::setOps` 가 채웁니다. */
+        const ReflectTypeOps* _pType;
+
+        FunctionParameterInfo() noexcept;
+        FunctionParameterInfo( string name, string typeName, string defaultValue, const ReflectTypeOps* pType );
+
+        /** @brief 기본 인자가 있으면 true 입니다. */
+        bool hasDefaultValue() const noexcept { return _defaultValue.empty() == false; }
+    };
+} // namespace sw
+
+namespace sw
+{
     /// @brief 리플렉션 메서드: 이름, 시그니처, invoker
     struct SW_API FunctionInfo
     {
-        string                                        _name;
-        hashed_string                                 _hashName;
-        string                                        _returnTypeName;        ///< clang 표기(예: void, int32)
-        vector<string>                                _listParameterTypeName; ///< 선언 순서대로의 clang 표기
-        FunctionMetadata                              _metadata;
-        Delegate<TaskValue( void*, const TaskArgs& )> _invoker; ///< instance + args → TaskValue
+        string                        _name;
+        hashed_string                 _hashName;
+        string                        _returnTypeName; ///< 정규 타입 이름(예: void, int32)
+        vector<FunctionParameterInfo> _listParameter;  ///< 선언 순서대로의 인자(이름 · 타입 · 기본 인자)
+        FunctionMetadata              _metadata;
+        /**
+         * @brief 인자 묶음을 받아 부르는 함수입니다. 인자는 **그 C++ 타입 그대로**(`args.get<T>`) 넣어야 합니다 — 타입이 다르면 Debug 는 단언,
+         *        Release 는 잘못 읽습니다. 타입을 모르는 쪽(콘솔 · 비주얼 스크립팅)은 `ReflectionInvoke::call` 로 부릅니다(인자를 바꿔 넣는다).
+         */
+        Delegate<TaskValue( void*, const TaskArgs& )> _invoker;
+        /** @brief 반환 타입의 이름 · 값 변환입니다. void · 생성자면 nullptr 입니다. */
+        const ReflectTypeOps* _pReturnType = nullptr;
+
+        /** @brief 인자 개수입니다. */
+        uint32 getParameterCount() const noexcept { return static_cast<uint32>( _listParameter.size() ); }
 
         /** @brief 커스텀 메타데이터 태그를 조회합니다. */
         const string* findCustomMeta( const hashed_string& key ) const noexcept
         {
             return _metadata.findCustomMeta( key );
         }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 리플렉션 이벤트 — `PROPERTY()` 를 붙인 멀티캐스트 델리게이트 필드(`MulticastDelegate<void( Args... )>`)입니다.
+     * @details 값이 아니라 구독 목록이라 직렬화 · 인스펙터 값 편집에 들지 않습니다. 이름으로 찾아(`TypeInfo::findEventInHierarchy`) 타입을 모른 채
+     *          묶고 · 풀고 · 부릅니다(`ReflectionInvoke::bindEvent` · `broadcastEvent`). 에디터 · 비주얼 스크립팅 · 기믹 배선이 쓰는 자리입니다.
+     */
+    struct SW_API EventInfo
+    {
+        hashed_string                 _name;
+        vector<FunctionParameterInfo> _listParameter; ///< 이름은 선언에서, 변환 표는 `setOps` 가 템플릿 인자에서
+        PropertyMetadata              _metadata;      ///< 표시 메타(Category · DisplayName · Tooltip · Meta · HideInInspector)만 쓴다
+        /** @brief 묶기 · 풀기 · 부르기 · 인자 변환 표입니다(`ReflectEventOpsOf<필드 타입>::kOps`). */
+        const ReflectEventOps* _pOps;
+        size_t                 _offset; ///< 인스턴스 안 델리게이트 필드의 자리
+
+        EventInfo() noexcept;
+
+        /** @brief 표를 걸고, 인자 변환 표를 템플릿 인자에서 채웁니다. 선언에서 이름을 못 읽은 인자도 자리는 채웁니다. */
+        void setOps( const ReflectEventOps* pOps );
+
+        /** @brief 인스턴스 안 델리게이트 필드의 자리입니다. */
+        void* getEventPtr( void* pInstance ) const noexcept { return reinterpret_cast<utf8*>( pInstance ) + _offset; }
+        /** @brief 인스턴스 안 델리게이트 필드의 자리입니다. */
+        const void* getEventPtr( const void* pInstance ) const noexcept { return reinterpret_cast<const utf8*>( pInstance ) + _offset; }
+        /** @brief 인자 개수입니다. */
+        uint32 getParameterCount() const noexcept { return static_cast<uint32>( _listParameter.size() ); }
     };
 } // namespace sw
 
@@ -778,6 +840,7 @@ namespace sw
         hashed_string                                             _moduleName;
         vector<PropertyInfo>                                      _listProperty;
         vector<FunctionInfo>                                      _listMethod;
+        vector<EventInfo>                                         _listEvent; ///< 이 타입이 선언한 이벤트(기반의 것은 `findEventInHierarchy` 가 걷는다)
         TypeMetadata                                              _metadata;
         mutable vector<PropertyInfo>                              _listPropertyWithBase;
         mutable unordered_map<hashed_string, const PropertyInfo*> _mapNameToPropertyWithBase; ///< 계층 병합 목록의 이름 · 별칭 → 항목. 목록과 함께 만듭니다
@@ -1108,6 +1171,39 @@ namespace sw
                 func( method );
             }
         }
+
+        /** @brief 이 타입이 선언한 이벤트를 이름으로 찾습니다. */
+        const EventInfo* findEvent( const hashed_string& eventName ) const
+        {
+            for ( const EventInfo& event : _listEvent )
+            {
+                if ( event._name == eventName )
+                    return &event;
+            }
+            return nullptr;
+        }
+
+        /** @brief 자기부터 기반으로 올라가며 이벤트를 이름으로 찾습니다(파생이 이긴다). */
+        const EventInfo* findEventInHierarchy( const hashed_string& eventName ) const;
+        /** @brief 자기부터 기반으로 올라가며 메서드를 이름으로 찾습니다(파생이 이긴다). */
+        const FunctionInfo* findMethodInHierarchy( const hashed_string& methodName ) const;
+
+        /** @brief 기반부터 파생 순서로 이벤트를 순회합니다. */
+        template <typename Func>
+        void forEachEventWithBase( Func&& func ) const
+        {
+            const TypeInfo* arrChain[constants::reflection::kMaxParentChainDepth];
+            uint32          depth = collectTypeChain( arrChain );
+            while ( depth > 0 )
+            {
+                --depth;
+                for ( const EventInfo& event : arrChain[depth]->_listEvent )
+                    func( event );
+            }
+        }
+
+        /** @brief 자기부터 기반까지의 사슬을 @p outArrType 에 담고 길이를 돌려줍니다(풀리지 않는 부모에서 끝나고, 순환이면 상한에서 멈춘다). */
+        uint32 collectTypeChain( const TypeInfo* ( &outArrType )[constants::reflection::kMaxParentChainDepth] ) const;
     };
 
 } // namespace sw

@@ -201,6 +201,14 @@ ReflectionParser/
 **손으로 gen을 고치지 마세요.** 다음 파서 실행에 덮어씁니다.  
 고칠 곳: 헤더 매크로 / `Templates/` / `AnnotationMeta.txt` / `PredefinedAnnotationField.xxx`.
 
+**타입에 남지 않는 것은 소스 토큰에서 읽는다** (`AstVisitor` D 절의 토큰 도우미). 함수 인자의 이름은 인자 커서에서, **기본 인자**(`= 1.5f`)는
+인자 커서 범위의 토큰에서 괄호 밖 첫 `=` 뒤를 C++ 글 그대로 읽어 `FunctionParameterInfo::_defaultValue` 에 싣는다(런타임이 글로 읽어 인자 타입으로
+바꾼다). 범위의 시작이 애노테이션 매크로 안이면 매크로 정의 쪽 위치라 토큰이 나오지 않으므로 양 끝을 **전개 위치**로 옮겨 읽는다.
+
+**이벤트** — `PROPERTY()` 가 붙은 필드의 정규 타입이 `sw::MulticastDelegate<` 로 시작하면 프로퍼티가 아니라 `ParsedEventInfo` 로 모은다. 인자 타입은
+**적힌 꼴의** 템플릿 인자에서(정규 타입에서 꺼내면 `basic_string<char>` 처럼 펼쳐진다), 인자 이름은 필드 선언 토큰에서 — 별칭(`using X = MulticastDelegate<…>`)
+이면 그 별칭 선언에서 — 읽는다. 생성 코드는 오프셋 · 이름 · 인자 표만 적고, 묶기 · 부르기는 `ReflectEventOpsOf<decltype(필드)>` 템플릿이 만든다.
+
 ---
 
 ## parser_config.defaults.json

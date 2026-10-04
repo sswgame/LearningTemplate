@@ -1446,3 +1446,90 @@ SW_TEST_CASE( ReflectionParserTest, LocalConfigCannotOverrideCommittedDefaults )
     SW_EXPECT_TRUE_MSG( log.find( "emit.flag_ops_marker" ) != sw::string::npos, log.c_str() );
     SW_EXPECT_TRUE_MSG( log.find( "default_parser_args" ) != sw::string::npos, log.c_str() );
 }
+
+/**
+ * @brief [ReflectionParserTest] 함수 인자의 이름 · 기본 인자, 이벤트(멀티캐스트 델리게이트 PROPERTY)의 인자 이름을 코드젠한다 — 이벤트에 맞지 않는 애노테이션은 멈춘다
+ * @details 인자 이름 · 기본 인자는 타입에 남지 않아 소스 토큰에서 읽는다. 이벤트 인자 이름은 별칭(`using ScoreEvent = …`)으로 적어도
+ *          그 별칭 선언에서 읽는다. 한 번의 실행에 성한 헤더 하나와 깨진 헤더 둘을 넣는다(깨진 것은 그 헤더만 실패).
+ */
+SW_TEST_CASE( ReflectionParserTest, FunctionParametersAndEventsAreGenerated )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const sw::string       kHeaderHead = "#pragma once\n"
+                                         "#include \"Core/Common/Types.h\"\n"
+                                         "#include \"Core/Delegate/Delegate.h\"\n"
+                                         "#include \"Engine/Reflection/ReflectionMacros.h\"\n";
+    sw::vector<TempHeader> listHeader;
+    listHeader.push_back( TempHeader{ "ParamEventSample", kHeaderHead +
+                                                              "namespace sw\n"
+                                                              "{\n"
+                                                              "\tusing ScoreEvent = MulticastDelegate<void( int32 score, bool bBest )>;\n"
+                                                              "\tREFLECT()\n"
+                                                              "\tstruct ParamEventSampleActor\n"
+                                                              "\t{\n"
+                                                              "\t\tREFLECT_BODY();\n"
+                                                              "\t\tPROPERTY( Category = \"Signals\" )\n"
+                                                              "\t\tMulticastDelegate<void( const string& label, uint8 )> _onLabel;\n"
+                                                              "\t\tPROPERTY()\n"
+                                                              "\t\tScoreEvent _onScored;\n"
+                                                              "\t\tFUNCTION()\n"
+                                                              "\t\tvoid configure( int32 count, float32 scale = 2.0f, const string& label = \"a, b\" ) {}\n"
+                                                              "\t};\n"
+                                                              "}\n" } );
+    listHeader.push_back( TempHeader{ "EventFlagSample", kHeaderHead +
+                                                             "namespace sw\n"
+                                                             "{\n"
+                                                             "\tREFLECT()\n"
+                                                             "\tstruct EventFlagSampleActor\n"
+                                                             "\t{\n"
+                                                             "\t\tREFLECT_BODY();\n"
+                                                             "\t\tPROPERTY( Default = \"1\" )\n"
+                                                             "\t\tMulticastDelegate<void()> _onFlagged;\n"
+                                                             "\t};\n"
+                                                             "}\n" } );
+    listHeader.push_back( TempHeader{ "EventReturnSample", kHeaderHead +
+                                                               "namespace sw\n"
+                                                               "{\n"
+                                                               "\tREFLECT()\n"
+                                                               "\tstruct EventReturnSampleActor\n"
+                                                               "\t{\n"
+                                                               "\t\tREFLECT_BODY();\n"
+                                                               "\t\tPROPERTY()\n"
+                                                               "\t\tMulticastDelegate<int32()> _onAsked;\n"
+                                                               "\t};\n"
+                                                               "}\n" } );
+    const ParserRunResult run = runParserOnTempHeaders( parserExe, listHeader, "--dump" );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 3 ), run._listGeneratedCpp.size() );
+    const sw::string& generated = run._listGeneratedCpp[0];
+
+    // 함수 인자: 이름 · 정규 타입 · 기본 인자 글(쉼표가 든 문자열 그대로) · 변환 표
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"count\", \"int32\", \"\", &::sw::ReflectTypeOpsOf<int32>::kOps )" ) != sw::string::npos,
+                        generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"scale\", \"float32\", \"2.0f\", &::sw::ReflectTypeOpsOf<float32>::kOps )" ) != sw::string::npos,
+                        generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "\"label\", \"string\", \"\\\"a, b\\\"\"" ) != sw::string::npos, generated.c_str() );
+
+    // 이벤트: 프로퍼티 목록이 아니라 이벤트 목록, 인자 이름은 필드 선언 · 별칭 선언에서, 이름 없는 인자는 빈 이름
+    SW_EXPECT_TRUE_MSG( generated.find( "ReflectEventOpsOf<decltype(sw::ParamEventSampleActor::_onLabel)>" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"label\", \"string\", \"\", nullptr )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"\", \"uint8\", \"\", nullptr )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"score\", \"int32\", \"\", nullptr )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "::sw::FunctionParameterInfo( \"bBest\", \"bool\", \"\", nullptr )" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "e._offset = offsetof(sw::ParamEventSampleActor, _onLabel);" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "info._listProperty" ) == sw::string::npos, generated.c_str() );
+
+    // 깨진 헤더 둘은 그 헤더만 실패한다
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[1].find( "EventFlagSampleActor" ) == sw::string::npos, run._listGeneratedCpp[1].c_str() );
+    SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[2].find( "EventReturnSampleActor" ) == sw::string::npos, run._listGeneratedCpp[2].c_str() );
+#if defined( SW_DEBUG )
+    SW_EXPECT_TRUE_MSG( run._log.find( "takes display metadata only" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "must be MulticastDelegate<void( ... )>" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "FUNCTION configure(int32 count, float32 scale = 2.0f, string label = \"a, b\")" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "EVENT _onScored(int32 score, bool bBest)" ) != sw::string::npos, run._log.c_str() );
+#endif
+}

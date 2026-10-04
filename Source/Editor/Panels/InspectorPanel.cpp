@@ -447,6 +447,7 @@ namespace sw::editor
         drawTypeProperties( pComp, pTypeInfo, "Properties", listDrawnName );
         ImGui::SeparatorText( "Methods" );
         drawTypeMethods( pComp, pTypeInfo );
+        drawTypeEvents( pComp, pTypeInfo );
         _pEditTargetComponent = nullptr;
 
         for ( IInspectorComponent* pInspector : listInspector )
@@ -1011,7 +1012,7 @@ namespace sw::editor
             if ( method._metadata._displayName.empty() == false )
                 pLabelName = method._metadata._displayName.c_str();
 
-            const uint32 paramCount = static_cast<uint32>( method._listParameterTypeName.size() );
+            const uint32 paramCount = method.getParameterCount();
 
             if ( method._metadata._bCallInEditor != SW_FALSE && paramCount == 0 )
             {
@@ -1047,8 +1048,13 @@ namespace sw::editor
             for ( uint32 paramIndex = 0; paramIndex < static_cast<uint32>( listSlot.size() ); ++paramIndex )
             {
                 ImGui::PushID( static_cast<int32>( paramIndex ) );
+                // 선언의 인자 이름이 있으면 그것, 없으면 순번이다.
+                const FunctionParameterInfo&         parameter = method._listParameter[paramIndex];
                 fixed_string<constant::kMaxBuffer64> label;
-                formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, method._listParameterTypeName[paramIndex].c_str() );
+                if ( parameter._name.empty() )
+                    formatstring( label.data(), label.capacity(), "arg%# (%#)", paramIndex, parameter._typeName.c_str() );
+                else
+                    formatstring( label.data(), label.capacity(), "%# (%#)", parameter._name.c_str(), parameter._typeName.c_str() );
                 InspectorPropertyManager::drawMethodArg( label.c_str(), listSlot[paramIndex] );
                 ImGui::PopID();
             }
@@ -1070,6 +1076,33 @@ namespace sw::editor
 
             ImGui::PopID();
         }
+    }
+
+    void InspectorPanel::drawTypeEvents( void* pInstance, const TypeInfo* pTypeInfo )
+    {
+        bool bHasEvent = false;
+        pTypeInfo->forEachEventWithBase( [&bHasEvent]( const EventInfo& )
+        { bHasEvent = true; } );
+        if ( bHasEvent == false )
+            return;
+
+        ImGui::SeparatorText( "Events" );
+        pTypeInfo->forEachEventWithBase( [pInstance]( const EventInfo& event )
+        {
+            ImGui::PushID( event._name.c_str() );
+            const string signature = InspectorPropertyLayout::formatParameterList( event._listParameter );
+            ImGui::BulletText( "%s(%s)", event._name.c_str(), signature.c_str() );
+            EditorWidgets::drawTooltip( event._metadata._tooltip.c_str() );
+            ImGui::SameLine();
+            ImGui::TextDisabled( "%s", ReflectionInvoke::isEventBound( event, pInstance ) ? "(bound)" : "(unbound)" );
+            if ( event.getParameterCount() == 0 )
+            {
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( "Broadcast" ) )
+                    (void)ReflectionInvoke::broadcastEvent( event, pInstance, {} );
+            }
+            ImGui::PopID();
+        } );
     }
 
     void InspectorPanel::invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method,

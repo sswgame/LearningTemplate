@@ -126,12 +126,24 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 함수 · 이벤트의 인자 하나입니다. */
+    struct ParsedParameterInfo
+    {
+        string _name;     ///< 선언에 적힌 인자 이름. 이름 없이 적었으면 비어 있다
+        string _typeName; ///< 정규 타입 이름(`int32` · `string` · `DamageEvent`) — const · 참조는 벗긴다
+        /** @brief 기본 인자의 C++ 식 그대로(`1.0f` · `"idle"` · `Mode::Fast`). 없으면 비어 있다. 런타임이 글로 읽어 인자 타입으로 바꾼다. */
+        string _defaultValue;
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief FUNCTION(...) 가 붙은 메서드(또는 자동 등록 생성자) */
     struct ParsedFunctionInfo
     {
         string                       _name;
         string                       _returnTypeName;
-        vector<string>               _listParameterTypeName;
+        vector<ParsedParameterInfo>  _listParameter;
         string                       _category;
         string                       _displayName;
         string                       _tooltip;
@@ -150,7 +162,7 @@ namespace sw
         ParsedFunctionInfo() noexcept
             : _name{}
             , _returnTypeName{}
-            , _listParameterTypeName{}
+            , _listParameter{}
             , _category{ annotation::kDefaultMethodCategory }
             , _displayName{}
             , _tooltip{}
@@ -172,6 +184,21 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief `PROPERTY()` 가 붙은 멀티캐스트 델리게이트 필드 — 이름으로 찾아 묶을 수 있는 이벤트입니다.
+     * @details 값이 아니라 구독 목록이라 직렬화하지 않습니다. 애노테이션은 프로퍼티 표 그대로 읽고(`_annotation`), 표시 메타
+     *          (`Category` · `DisplayName` · `Tooltip` · `Meta` · `HideInInspector`)만 받습니다 — 나머지는 오류입니다.
+     */
+    struct ParsedEventInfo
+    {
+        string                      _memberName; ///< C++ 필드 이름. 리플렉션 이름은 `_annotation._name`(기본은 이 이름)
+        vector<ParsedParameterInfo> _listParameter;
+        ParsedPropertyInfo          _annotation; ///< 프로퍼티 표로 읽은 애노테이션(표시 메타만 쓴다)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief REFLECT 가 붙은 클래스·구조체 */
     struct ParsedTypeInfo
     {
@@ -185,6 +212,7 @@ namespace sw
         vector<pair<string, string>> _listCustomMeta;
         vector<ParsedPropertyInfo>   _listProperty;
         vector<ParsedFunctionInfo>   _listMethod;
+        vector<ParsedEventInfo>      _listEvent;
         uint8                        _bAbstract         : 1;
         uint8                        _bStatic           : 1;
         uint8                        _bReflectBody      : 1;
@@ -203,6 +231,7 @@ namespace sw
             , _listCustomMeta{}
             , _listProperty{}
             , _listMethod{}
+            , _listEvent{}
             , _bAbstract{ SW_FALSE }
             , _bStatic{ SW_FALSE }
             , _bReflectBody{ SW_FALSE }

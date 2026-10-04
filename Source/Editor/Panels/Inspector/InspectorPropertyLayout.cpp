@@ -116,6 +116,29 @@ namespace sw::editor
         }
         return format;
     }
+
+    string InspectorPropertyLayout::formatParameterList( const vector<FunctionParameterInfo>& listParameter )
+    {
+        string text;
+        for ( size_t paramIndex = 0; paramIndex < listParameter.size(); ++paramIndex )
+        {
+            const FunctionParameterInfo& parameter = listParameter[paramIndex];
+            if ( paramIndex > 0 )
+                text += ", ";
+            text += parameter._typeName;
+            if ( parameter._name.empty() == false )
+            {
+                text += " ";
+                text += parameter._name;
+            }
+            if ( parameter.hasDefaultValue() )
+            {
+                text += " = ";
+                text += parameter._defaultValue;
+            }
+        }
+        return text;
+    }
 } // namespace sw::editor
 
 #endif // !SW_SHIPPING

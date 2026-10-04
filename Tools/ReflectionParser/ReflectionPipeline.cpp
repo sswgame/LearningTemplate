@@ -30,6 +30,20 @@ namespace sw
              *          타입(부모 · 팩토리 · 추상), 프로퍼티(타입 · 값 자리 · 컨테이너 · 범위 ·
              *          플래그), 함수, enum 값까지 적는다. 헤더 여럿을 동시에 쓸 수 있어 한 덩어리로 내보낸다.
              */
+            /** @brief `타입 이름 = 기본값` 꼴로 인자 목록을 씁니다. */
+            static void appendParameterList( StringBuilder<constant::kMaxBuffer8192>& out, const vector<ParsedParameterInfo>& listParameter )
+            {
+                for ( size_t paramIndex = 0; paramIndex < listParameter.size(); ++paramIndex )
+                {
+                    const ParsedParameterInfo& parameter = listParameter[paramIndex];
+                    out.appendFormat( "%#%#", paramIndex == 0 ? "" : ", ", parameter._typeName );
+                    if ( parameter._name.empty() == false )
+                        out.appendFormat( " %#", parameter._name );
+                    if ( parameter._defaultValue.empty() == false )
+                        out.appendFormat( " = %#", parameter._defaultValue );
+                }
+            }
+
             static void printParsedHeader( const string& inputFile, const ParsedHeader& parsed )
             {
                 StringBuilder<constant::kMaxBuffer8192> out;
@@ -90,8 +104,7 @@ namespace sw
                     for ( const ParsedFunctionInfo& method : type._listMethod )
                     {
                         out.appendFormat( "  FUNCTION %#(", method._name );
-                        for ( size_t paramIndex = 0; paramIndex < method._listParameterTypeName.size(); ++paramIndex )
-                            out.appendFormat( "%#%#", paramIndex == 0 ? "" : ", ", method._listParameterTypeName[paramIndex] );
+                        appendParameterList( out, method._listParameter );
                         out.appendFormat( ") -> %#", method._returnTypeName.empty() ? "void" : method._returnTypeName.c_str() );
                         if ( method._bStatic == SW_TRUE )
                             out.append( "  [static]" );
@@ -102,6 +115,12 @@ namespace sw
                         if ( method._bConstructor == SW_TRUE )
                             out.append( "  [constructor]" );
                         out.append( "\n" );
+                    }
+                    for ( const ParsedEventInfo& event : type._listEvent )
+                    {
+                        out.appendFormat( "  EVENT %#(", event._annotation._name );
+                        appendParameterList( out, event._listParameter );
+                        out.append( ")\n" );
                     }
                 }
                 for ( const ParsedEnumInfo& enumInfo : parsed._listEnum )
