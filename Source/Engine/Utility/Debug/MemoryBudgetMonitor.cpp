@@ -58,12 +58,12 @@ namespace sw
      * @brief `-gv_memoryReport=1`: 다음 프레임 끝에 태그 표(살아 있는 · 최고치 · 예산)를 한 번 남깁니다. 남긴 뒤 0 으로 돌아갑니다.
      * @details 에디터 · 스크립트가 값을 1 로 바꾸면 그 프레임에 다시 남깁니다(언리얼 `stat llm` · 콘솔 명령 자리).
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_memoryReport, 0, "다음 프레임에 메모리 태그 표(살아 있는 · 최고치 · 예산)를 한 번 남김 (1=남기기)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_memoryReport, 0, "다음 프레임에 메모리 태그 표(살아 있는 · 최고치 · 예산)를 한 번 남김 (1=남기기)" );
     /**
      * @brief `-gv_memoryTracking=0|1`: 메모리 태그 추적을 끄거나 켭니다. -1 이면 구성 기본값(Debug 켜짐 · Release 꺼짐)입니다.
      * @details 꺼져 있으면 할당마다 분기 하나만 남습니다. 켜면 태그 · 최고치 · 예산 경고가 돕니다. 배포본에는 프로파일러가 없습니다.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_memoryTracking, -1, "메모리 태그 추적 (-1=구성 기본, 0=끄기, 1=켜기)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_memoryTracking, -1, "메모리 태그 추적 (-1=구성 기본, 0=끄기, 1=켜기)" );
 
     MemoryBudgetMonitor::MemoryBudgetMonitor()
         : _arrTagCounterSlot{}

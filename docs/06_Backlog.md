@@ -671,6 +671,11 @@ cd build/Ninja-Debug/Bin
 - **`wsl.exe -- bash -c "cd X && …"` 의 `cd` 실패는 조용하다** — 뒤의 `cmake -B` 가 저장소 루트에서 돌아 `toolchain_config.json` 과 공유 vcpkg 를 덮는다. `set -e` 나
   절대 `-S`/`-B`. 중단 뒤 `waiting to take filesystem lock…` 이 끝없으면: 남은 vcpkg · cmake · ninja 프로세스 종료 → `vcpkg-running.lock` 셋 삭제
   (`build/vcpkg_installed/vcpkg/`, `Tools/vcpkg/buildtrees/`, `Tools/vcpkg/packages/`) → `toolchain_config.json` 복원 → Windows 프리셋 재구성.
+- **vcpkg 설치 폴더 · 스탬프는 워크트리 모두가 나눠 쓴다**(`build/vcpkg_installed` junction). 해시만 보고 설치하던 때는 옛 vcpkg.json 의 워크트리가
+  configure(빌드 중 GLOB 로 도는 재구성 포함)하면 다른 워크트리가 쓰는 포트를 지웠다(recast · tracy). 지금 게이트(`Vcpkg.cmake` 5 절)는 스탬프가 다르면
+  `vcpkg install --dry-run` 계획을 보고 — 지을 것이 없으면 skip, 지우게 되면 멈추고 경고(스탬프도 덮지 않는다), 빠진 포트가 있을 때만 install. 재현:
+  `git show <옛 커밋>:vcpkg.json > vcpkg.json` → `cmake --preset Ninja-Debug` → "Install skipped … would remove" 경고 · 포트가 남는지 · `VCPKG_MANIFEST_INSTALL=OFF`
+  → vcpkg.json 되돌림. 스탬프가 다를 때만 dry-run 이 돈다(약 20 초).
 - **sccache 서버 포트(4226)를 Windows 와 WSL 이 나눠 쓴다.** 동시에 빌드하면 모든 컴파일이 `failed to fill whole buffer` 로 깨진다(코드 오류처럼 보인다). WSL 은
   `export SCCACHE_SERVER_PORT=4227`, 아니면 상대 서버를 `sccache --stop-server`.
 - **WSL 에는 GPU 가 없다**(Vulkan 은 `llvmpipe` 하나, GL 은 `ARB_gl_spirv` 가 없어 빠진다) — API 오용은 잡지만 드라이버 거동은 못 본다. `libwayland-dev` 가 필요하다.
@@ -1337,8 +1342,8 @@ cd build/Ninja-Debug/Bin
 - **락을 잡은 getter 는 자기 멤버의 뷰 · 참조를 돌려주면 안 된다**(값으로). 콜백을 부르는 순회는 인덱스로 돌고 부르기 전에 델리게이트를 복사한다. `MulticastDelegate` 는 복사 · 이동 넷을 직접
   적는다. `Delegate` 의 인라인 람다를 옮기면 원본 소멸자를 부른다.
 - **`EventDispatcher`** — 큐(`push`)는 아무 스레드나, 버스(`subscribe` · `publish`)는 `processEvents` 를 부르는 스레드만. 큐에 남은 이벤트는 `destroyQueuedEvents()`.
-- **명령줄** — 미등록 `gv_` 키는 `_mapPendingGlobal` 에 남았다가 모듈이 변수를 올릴 때 적용된다. gv_ 선언은 읽는 파일에, `extern` 재선언 금지(`SW_EXTERN_GLOBAL_VARIABLE_*` 은 정의 파일 밖에서
-  읽을 때만 — `CheckGlobalVariableKinds`). 시험용 전역 변수는 `SW_TEST_GLOBAL_VARIABLE_*`(Shipping 에서 빠진다), 배포본을 스크립트가 조종할 것만 `SW_KEEP_IN_SHIPPING`. bool 이 아닌 `-gv_*` 에
+- **명령줄** — 미등록 `gv_` 키는 `_mapPendingGlobal` 에 남았다가 모듈이 변수를 올릴 때 적용된다. gv_ 선언은 읽는 파일에, `extern` 재선언 금지(`SW_EXTERN_GLOBAL_VARIABLE` 은 정의 파일 밖에서
+  읽을 때만 — `CheckGlobalVariableKinds`). 시험용 전역 변수는 `SW_TEST_GLOBAL_VARIABLE`(Shipping 에서 빠진다), 배포본을 스크립트가 조종할 것만 `SW_TEST_GLOBAL_VARIABLE_SHIPPED`. bool 이 아닌 `-gv_*` 에
   값을 빠뜨리면 경고 + 기본값.
 - **싱글턴을 옮기지 않는 자리**: `CrashContextStore`(시그널 핸들러가 읽는다), 등록자 헤드 · `TestRegistry`(main 이전 자기 등록), `TagID` · `hashed_string` 인터닝(프로세스 전역이어야 뜻이 있다).
   Core 에 인스턴스가 필요하면 Logger 모양 — 인스턴스는 `EngineLoop`, Core 에는 포인터 슬롯.

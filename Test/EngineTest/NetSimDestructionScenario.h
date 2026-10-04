@@ -473,7 +473,7 @@ namespace test
         return result;
     }
 
-    inline void logResult( const utf8* pName, const ScenarioResult& result )
+    inline void logResult( [[maybe_unused]] const utf8* pName, [[maybe_unused]] const ScenarioResult& result ) // 로그만 — Shipping 에서는 빈 함수
     {
         SW_LOG_INFO( "[NetSimDestruction] %#: events %#, last server change tick %#, converge %# ticks after it, max event lag %# ticks, chunk error max %# m p99 %# m (%# samples), "
                      "rest error %# m, chunks %# debris %# violations %#, server up %# B/s (peak %# B/s), client down %# B/s, destruction payload %# B/s, pose messages %#, "

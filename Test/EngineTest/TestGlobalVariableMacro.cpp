@@ -7,38 +7,32 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 정의 매크로(`SW_GLOBAL_VARIABLE_*` · `SW_TEST_GLOBAL_VARIABLE_*`)는 정적 등록자를 전역 리스트에 매달고, 기동(테스트 main · `EngineLoop`)이
+// 정의 매크로(`SW_GLOBAL_VARIABLE` · `SW_TEST_GLOBAL_VARIABLE`)는 정적 등록자를 전역 리스트에 매달고, 기동(테스트 main · `EngineLoop`)이
 // 그 리스트를 프로세스 매니저(`engine::getGlobalVariableManager`)에 "Engine" 으로 등록한다. 매니저 자체의 동작은 CoreTest 의 `GlobalVariableTest` 가
 // 지역 매니저로 본다.
 
-SW_GLOBAL_VARIABLE_BOOL( gv_testBool, true, "Unit Test Bool Global Variable" );
-SW_GLOBAL_VARIABLE_INT( gv_testInt, 60, "Unit Test Int32 Global Variable" );
-SW_GLOBAL_VARIABLE_FLOAT( gv_testFloat, 45.0f, "Unit Test Float Global Variable" );
-SW_GLOBAL_VARIABLE_STRING( gv_testString, "InitialValue", "Unit Test String Global Variable" );
-
-SW_EXTERN_GLOBAL_VARIABLE_BOOL( gv_testBool );
-SW_EXTERN_GLOBAL_VARIABLE_INT( gv_testInt );
-SW_EXTERN_GLOBAL_VARIABLE_FLOAT( gv_testFloat );
-SW_EXTERN_GLOBAL_VARIABLE_STRING( gv_testString );
-
-// 테스트용 매크로 — 다섯 종류에 "Shipping 에서 빠짐 · 남음" 을 섞어 정의 · 참조의 두 선택 경로를 모두 컴파일한다.
 enum class TestGlobalVariableMode : uint8
 {
     First,
     Second
 };
 
-SW_TEST_GLOBAL_VARIABLE_BOOL( gv_testOnlyBool, true, "Test-only Bool (dropped in Shipping)" );
-SW_TEST_GLOBAL_VARIABLE_INT( gv_testOnlyInt, 7, "Test-only Int32 (kept in Shipping)", SW_KEEP_IN_SHIPPING );
-SW_TEST_GLOBAL_VARIABLE_FLOAT( gv_testOnlyFloat, 1.5f, "Test-only Float (dropped in Shipping)" );
-SW_TEST_GLOBAL_VARIABLE_STRING( gv_testOnlyString, "Probe", "Test-only String (kept in Shipping)", SW_KEEP_IN_SHIPPING );
-SW_TEST_GLOBAL_VARIABLE_ENUM( gv_testOnlyEnum, TestGlobalVariableMode, TestGlobalVariableMode::Second, "Test-only Enum (dropped in Shipping)" );
+SW_GLOBAL_VARIABLE( bool, gv_testBool, true, "Unit Test Bool Global Variable" );
+SW_GLOBAL_VARIABLE( int32, gv_testInt, 60, "Unit Test Int32 Global Variable" );
+SW_GLOBAL_VARIABLE( float32, gv_testFloat, 45.0f, "Unit Test Float Global Variable" );
+SW_GLOBAL_VARIABLE( sw::string, gv_testString, "InitialValue", "Unit Test String Global Variable" );
+SW_GLOBAL_VARIABLE( TestGlobalVariableMode, gv_testEnum, TestGlobalVariableMode::Second, "Unit Test Enum Global Variable" );
 
-SW_EXTERN_TEST_GLOBAL_VARIABLE_BOOL( gv_testOnlyBool );
-SW_EXTERN_TEST_GLOBAL_VARIABLE_INT( gv_testOnlyInt, SW_KEEP_IN_SHIPPING );
-SW_EXTERN_TEST_GLOBAL_VARIABLE_FLOAT( gv_testOnlyFloat );
-SW_EXTERN_TEST_GLOBAL_VARIABLE_STRING( gv_testOnlyString, SW_KEEP_IN_SHIPPING );
-SW_EXTERN_TEST_GLOBAL_VARIABLE_ENUM( gv_testOnlyEnum, TestGlobalVariableMode );
+// 참조 매크로는 정의의 종류와 상관없이 같은 `extern` 이다 — 일반 · 테스트용 하나씩 컴파일한다.
+SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_testString );
+SW_EXTERN_GLOBAL_VARIABLE( TestGlobalVariableMode, gv_testOnlyEnum );
+
+// 테스트용 매크로 — 다섯 종류에 "Shipping 에서 빠짐 · 남음" 을 섞는다.
+SW_TEST_GLOBAL_VARIABLE( bool, gv_testOnlyBool, true, "Test-only Bool (dropped in Shipping)" );
+SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_testOnlyInt, 7, "Test-only Int32 (kept in Shipping)" );
+SW_TEST_GLOBAL_VARIABLE( float32, gv_testOnlyFloat, 1.5f, "Test-only Float (dropped in Shipping)" );
+SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_testOnlyString, "Probe", "Test-only String (kept in Shipping)" );
+SW_TEST_GLOBAL_VARIABLE( TestGlobalVariableMode, gv_testOnlyEnum, TestGlobalVariableMode::Second, "Test-only Enum (dropped in Shipping)" );
 
 // ------------------------------------------------------------------------------
 // 1) GlobalVariableMacroTest — 정의 매크로 → 기동 등록 · 테스트용 표시 · Shipping 에서 빠짐
@@ -82,8 +76,45 @@ SW_TEST_CASE( GlobalVariableMacroTest, DefinedVariablesAreRegisteredAtStartup )
 }
 
 /**
+ * @brief [GlobalVariableMacroTest] 정의 매크로는 첫 인자(타입)에서 저장 타입 · enum 이름 · 크기를, 변수에서 기본값을 얻는다
+ * @details enum 이름은 `#type` 이라 에디터 · 명령줄이 리플렉션 enum 표를 찾는 열쇠가 되고, 크기는 `writeEnumValue` 가 쓰는 바이트 수다.
+ *          스칼라는 enum 이름을 남기지 않는다.
+ */
+SW_TEST_CASE( GlobalVariableMacroTest, DefinitionTakesStorageFromTypeAndDefaultFromVariable )
+{
+    sw::GlobalVariableManager& manager = sw::engine::getGlobalVariableManager();
+
+    sw::GlobalVariableInfo* pEnumInfo = manager.findVariable( "gv_testEnum" );
+    SW_ASSERT_NOT_NULL( pEnumInfo );
+    SW_EXPECT_TRUE( pEnumInfo->_type == sw::GlobalVariableType::Enum );
+    SW_EXPECT_EQUAL( sw::string( "TestGlobalVariableMode" ), pEnumInfo->_enumType );
+    SW_EXPECT_EQUAL( 1u, pEnumInfo->_typeSize );
+    SW_EXPECT_TRUE( pEnumInfo->_pData == &gv_testEnum );
+    SW_EXPECT_TRUE( std::holds_alternative<int32>( pEnumInfo->_defaultValue ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( TestGlobalVariableMode::Second ), std::get<int32>( pEnumInfo->_defaultValue ) );
+
+    // 쓰고 되돌리면 등록 때 변수에서 읽은 기본값으로 돌아온다. 1 바이트 enum 에 1 바이트만 쓴다.
+    SW_EXPECT_TRUE( pEnumInfo->setValueAsInt( static_cast<int32>( TestGlobalVariableMode::First ) ) );
+    SW_EXPECT_TRUE( gv_testEnum == TestGlobalVariableMode::First );
+    pEnumInfo->resetToDefault();
+    SW_EXPECT_TRUE( gv_testEnum == TestGlobalVariableMode::Second );
+
+    sw::GlobalVariableInfo* pStringInfo = manager.findVariable( "gv_testString" );
+    SW_ASSERT_NOT_NULL( pStringInfo );
+    SW_EXPECT_TRUE( pStringInfo->_enumType.empty() );
+    SW_EXPECT_TRUE( std::holds_alternative<sw::string>( pStringInfo->_defaultValue ) );
+    SW_EXPECT_EQUAL( sw::string( "InitialValue" ), std::get<sw::string>( pStringInfo->_defaultValue ) );
+
+    sw::GlobalVariableInfo* pFloatInfo = manager.findVariable( "gv_testFloat" );
+    SW_ASSERT_NOT_NULL( pFloatInfo );
+    SW_EXPECT_TRUE( pFloatInfo->_type == sw::GlobalVariableType::Float );
+    SW_EXPECT_TRUE( pFloatInfo->_enumType.empty() );
+    SW_EXPECT_TRUE( std::holds_alternative<float32>( pFloatInfo->_defaultValue ) );
+}
+
+/**
  * @brief [GlobalVariableMacroTest] 테스트용 매크로는 등록 정보에 표시를 남기고, Shipping 에서는 등록되지 않는다
- * @details 에디터 목록 · 프리셋이 이 표시(`_bTestOnly`)로 거른다. `SW_KEEP_IN_SHIPPING` 을 준 것만 배포 빌드에도 등록되고,
+ * @details 에디터 목록 · 프리셋이 이 표시(`_bTestOnly`)로 거른다. `SW_TEST_GLOBAL_VARIABLE_SHIPPED` 로 정의한 것만 배포 빌드에도 등록되고,
  *          나머지는 등록되지 않은 채 기본값으로 읽힌다.
  */
 SW_TEST_CASE( GlobalVariableMacroTest, TestOnlyVariablesAreMarkedAndDroppedInShipping )

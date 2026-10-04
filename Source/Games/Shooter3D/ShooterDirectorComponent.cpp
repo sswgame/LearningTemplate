@@ -77,10 +77,10 @@ namespace sw
     } // namespace
 
     /** @brief `-gv_shooterAutoPlay=1` — 디렉터의 자동 플레이를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도). 조준 · 사격 · 이동을 AI 가 한다. */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_shooterAutoPlay, 0, "Shooter3D: 조준 · 사격도 AI 가 (1=켜기)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_shooterAutoPlay, 0, "Shooter3D: 조준 · 사격도 AI 가 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_shooterAutoPlay, "Shooter3D", "Aim, shoot and move by AI" );
     /** @brief `-gv_shooterMotionTrace=<경로>` — 프레임마다 플레이어 몸 · 본 · 카메라 · 적의 그려진 자리를 CSV 로 남깁니다(튐 진단, 끝날 때 쓴다). */
-    SW_TEST_GLOBAL_VARIABLE_STRING( gv_shooterMotionTrace, "", "Shooter3D: 프레임마다 몸 · 본 · 카메라 · 적 자리를 CSV 로 (경로, 비면 끔)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_shooterMotionTrace, "", "Shooter3D: 프레임마다 몸 · 본 · 카메라 · 적 자리를 CSV 로 (경로, 비면 끔)" );
 } // namespace sw
 
 namespace sw

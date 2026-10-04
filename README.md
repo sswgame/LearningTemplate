@@ -336,7 +336,7 @@ cmake --build --preset Ninja-Debug
 | `-gv_<이름>=<값>` | 전역 변수(`gv_*`)를 정합니다. 예: `-gv_rhiBackend=Vulkan` · `-gv_editorStartupScene=<씬 경로>` · `-gv_benchMeshes=8000 -gv_profileFrames=600` |
 
 헤드리스 작업(`--cook-shaders` · `--import-textures` · `--import-models` · `--cook-scenes` · `--check-textures` · `--check-models`)이 실패하면 `App.exe` 는 0 이 아닌 종료 코드로 끝납니다 — 쿠커 스크립트가 그것을 봅니다.
-`SW_TEST_GLOBAL_VARIABLE_*` 로 선언한 진단 · 벤치 변수는 에디터 패널에 보이지 않고, `SW_KEEP_IN_SHIPPING` 을 준 것만 배포본에 남습니다.
+`SW_TEST_GLOBAL_VARIABLE` 로 선언한 진단 · 벤치 변수는 에디터 패널에 보이지 않고, `SW_TEST_GLOBAL_VARIABLE_SHIPPED` 로 선언한 것만 배포본에 남습니다.
 
 ---
 

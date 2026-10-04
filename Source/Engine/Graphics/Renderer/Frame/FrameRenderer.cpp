@@ -28,24 +28,24 @@ namespace sw
      * @details `initialize` 에 파이프라인 경로를 주지 않을 때 디퍼드를 고르는 길입니다.
      *          디퍼드는 레벨이 갈려(레벨 0 = Shadow + GBuffer) 병렬 기록이 실제로 도는 유일한 경로이기도 합니다.
      */
-    SW_GLOBAL_VARIABLE_BOOL( gv_deferred, false, "기본 파이프라인을 디퍼드로 (기본 포워드)" );
+    SW_GLOBAL_VARIABLE( bool, gv_deferred, false, "기본 파이프라인을 디퍼드로 (기본 포워드)" );
     /**
      * @brief `-gv_renderPipeline=<파이프라인 XML>` 이면 그 파이프라인으로 그립니다(기본 · 디퍼드 선택보다 먼저).
      * @details 2D 게임은 `engine/pipeline/forward2dpipeline.xml`(그림자 맵 · 톤맵 없음)을 고릅니다 — 톤맵은 흰색을 0.5 로 누릅니다.
      */
-    SW_GLOBAL_VARIABLE_STRING( gv_renderPipeline, "", "이 파이프라인 XML 로 그린다 (비우면 기본 포워드 · gv_deferred)" );
+    SW_GLOBAL_VARIABLE( sw::string, gv_renderPipeline, "", "이 파이프라인 XML 로 그린다 (비우면 기본 포워드 · gv_deferred)" );
 
     /**
      * @brief `-gv_drawMerge=0` 이면 같은 PSO · 머티리얼의 연속 배치를 멀티 드로우 하나로 묶지 않고 배치마다 한 번씩 부릅니다.
      * @details 묶은 그림과 안 묶은 그림이 같아야 합니다. 다르면 배치 표(g_SwBatches)나 드로우 ID 가 틀린 것입니다. 기본은 묶음입니다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_drawMerge, 1, "씬 배치 멀티 드로우 묶기 (0=배치마다 호출, 진단용)" );
+    SW_GLOBAL_VARIABLE( int32, gv_drawMerge, 1, "씬 배치 멀티 드로우 묶기 (0=배치마다 호출, 진단용)" );
 
     /**
      * @brief `-gv_vertexPool=0` 이면 씬 메시 정점을 한 풀 버퍼에 모으지 않고 메시마다 자기 정점 버퍼로 그립니다.
      * @details 풀을 켠 그림과 끈 그림은 같아야 합니다. 다르면 간접 인자의 startVertex 나 SV_VertexID 의 API 차이를 잘못 다룬 것입니다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_vertexPool, 1, "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)" );
+    SW_GLOBAL_VARIABLE( int32, gv_vertexPool, 1, "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)" );
 
     /**
      * @brief `-gv_viewMode=<0|1|2>` 는 씬 지오메트리 보기 방식입니다(0 Lit / 1 Unlit / 2 Wireframe).
@@ -53,7 +53,7 @@ namespace sw
      *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
      *          모드를 고를 수 있어야 합니다. 없으면 이 기능은 사람 눈으로만 확인되는 기능이 됩니다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_viewMode, 0, "씬 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe)" );
+    SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "씬 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe)" );
 
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }

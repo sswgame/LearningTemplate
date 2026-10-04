@@ -71,7 +71,7 @@ namespace sw::editor
      *          그 패널만 열립니다.
      *          id 는 패널의 `SW_EDITOR_PANEL` 이 준 것입니다(예: `render_targets` · `profiler` · `material`).
      */
-    SW_TEST_GLOBAL_VARIABLE_STRING( gv_editorOpenPanel, "", "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorOpenPanel, "", "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)" );
 
     bool EditorDockLayout::isPanelOverrideActive()
     {
