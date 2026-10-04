@@ -54,8 +54,8 @@ namespace sw::editor
         void drawAutoplayButton();
         /** @brief 세션을 시작합니다. 카메라에서 시작이 켜져 있으면 에디터 카메라 위치를 시작 위치로 넘깁니다. */
         void startSession( PendingSession session );
-        /** @brief 캔버스 왼쪽 위에 `DebugOverlayState` 의 값을 그립니다. */
-        void drawDebugOverlay( const float2& canvasPos );
+        /** @brief 캔버스 왼쪽 아래에 `DebugOverlayState` 의 값을 그립니다. */
+        void drawDebugOverlay( const float2& canvasPos, const float2& canvasSize );
 
     private:
         EditorViewportClient    _viewportClient;

@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Core/Math/MatrixMath.h"
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -12,10 +13,14 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Viewport/EditorCamera.h"
 
+#include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Console/DevCommandRegistry.h"
+#include "Engine/Utility/Debug/DebugOverlayState.h"
 
 namespace sw::editor
 {
@@ -128,6 +133,33 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 그리는 카메라 앞 6 m 에 디버그 도형 넷(상자 · 화살표 · 구 · 글자)과 오버레이 값 하나를 둡니다 — 시각화 · HUD 가 도는지 눈으로 보는 용도.
+             */
+            static bool runDebugDrawDemo( const vector<string>& listArgument, string& outReply )
+            {
+                uint32 seconds = 10;
+                if ( listArgument.size() > 1 || ( listArgument.size() == 1 && parseCount( listArgument[0], seconds ) == false ) )
+                    return false;
+                const CameraComponent* pCamera = EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlayerActive() );
+                DebugDrawQueue*        pQueue  = editor::getService<DebugDrawQueue>();
+                if ( pCamera == nullptr || pQueue == nullptr )
+                    return false;
+                const float4x4 world    = pCamera->getWorldMatrix();
+                const float3   forward  = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world ).normalize();
+                const float3   right    = float3::transformVector( float3{ 1.0f, 0.0f, 0.0f }, world ).normalize();
+                const float3   center   = pCamera->getWorldPosition() + forward * 6.0f;
+                const float32  duration = static_cast<float32>( seconds );
+                pQueue->drawBox( center - right * 1.5f, float3{ 0.5f, 0.5f, 0.5f }, float4{ 1.0f, 0.4f, 0.1f, 1.0f }, duration, "Demo" );
+                pQueue->drawSphere( center + right * 1.5f, 0.6f, float4{ 0.2f, 0.8f, 1.0f, 1.0f }, duration, "Demo" );
+                pQueue->drawArrow( center - right * 0.6f, center + right * 0.6f, float4{ 0.3f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
+                pQueue->drawText( center + float3{ 0.0f, 1.0f, 0.0f }, "DebugDrawQueue demo", float4{ 1.0f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
+                if ( DebugOverlayState* pOverlay = editor::getService<DebugOverlayState>() )
+                    pOverlay->setFloat( hashed_string( "debugdraw.demo.seconds" ), duration );
+                outReply = "debug draw demo for " + to_string( seconds ) + " s";
+                return true;
+            }
+
             static bool runLayoutSave( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext*    pContext = EditorContext::get();
@@ -161,6 +193,8 @@ namespace sw::editor
     SW_DEV_COMMAND( SelectType, "select.type", "select.type <ComponentType>", "Select every object with that component type (or a derived one)",
                     &EditorDevCommandsInternal::runSelectType );
     SW_DEV_COMMAND( SelectTag, "select.tag", "select.tag <Tag>", "Select every object with that tag (or a child tag)", &EditorDevCommandsInternal::runSelectTag );
+    SW_DEV_COMMAND( DebugDrawDemo, "debugdraw.demo", "debugdraw.demo [seconds]", "Draw a box, sphere, arrow and text in front of the viewport camera",
+                    &EditorDevCommandsInternal::runDebugDrawDemo );
     SW_DEV_COMMAND( LayoutSave, "layout.save", "layout.save <name>", "Save the dock layout and panel visibility under a name",
                     &EditorDevCommandsInternal::runLayoutSave );
     SW_DEV_COMMAND( LayoutLoad, "layout.load", "layout.load <name>", "Load a named layout on the next frame", &EditorDevCommandsInternal::runLayoutLoad );

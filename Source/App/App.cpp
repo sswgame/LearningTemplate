@@ -25,6 +25,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 #include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Window/DevConsoleOverlay.h"
@@ -57,8 +58,8 @@ namespace sw
     SW_LOG_CALLER( "App" );
 
 #if !defined( SW_SHIPPING )
-    /** @brief `-gv_devConsoleExec="timescale 0.5;gv_viewMode 2"`: 첫 프레임에 개발 콘솔로 돌릴 명령(`;` 로 나눈다). 자동화 · 재현용입니다. */
-    SW_TEST_GLOBAL_VARIABLE_STRING( gv_devConsoleExec, "", "첫 프레임에 개발 콘솔로 돌릴 명령 (; 로 나눔)" );
+    /** @brief `-gv_devConsoleExec="timescale 0.5;gv_viewMode 2"`: 시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령(`;` 로 나눈다). 자동화 · 재현용입니다. */
+    SW_TEST_GLOBAL_VARIABLE_STRING( gv_devConsoleExec, "", "시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔)" );
     /** @brief `-gv_devConsoleOpen=1`: 에디터 없이 띄울 때 게임 창의 개발 콘솔을 연 채로 시작합니다(화면 확인용). */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_devConsoleOpen, 0, "게임 창 개발 콘솔을 연 채로 시작 (1=열기)" );
 #endif
@@ -72,6 +73,7 @@ namespace sw
         , _viewCameraProvider{}
         , _initializeStartMicro{ 0 }
         , _bEnableEditor{ SW_FALSE }
+        , _bDevConsoleExecPending{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -348,6 +350,7 @@ namespace sw
         while ( _window->processMessages() )
         {
 #if !defined( SW_SHIPPING )
+            runPendingDevConsoleExec();
             if ( _devConsoleOverlay != nullptr )
                 _devConsoleOverlay->update();
 #endif
@@ -462,16 +465,27 @@ namespace sw
         _devConsoleOverlay = make_unique<DevConsoleOverlay>();
         if ( _bEnableEditor == SW_FALSE )
             (void)_devConsoleOverlay->initialize( _window.get() ); // 창을 만들지 못해도 시작 명령은 돈다(경고는 그쪽이 남긴다)
-        if ( gv_devConsoleExec.empty() == false )
-        {
-            const string_splitter commands( string_view{ gv_devConsoleExec.c_str(), gv_devConsoleExec.size() }, { ";" } );
-            for ( const string_view command : commands.getSplitList() )
-            {
-                (void)_devConsoleOverlay->getConsole().submit( command ); // 답 · 실패는 로그에 남는다
-            }
-        }
+        _bDevConsoleExecPending = gv_devConsoleExec.empty() ? SW_FALSE : SW_TRUE;
         if ( gv_devConsoleOpen != 0 && _bEnableEditor == SW_FALSE )
             _devConsoleOverlay->setOpen( true );
+#endif
+    }
+
+    void App::runPendingDevConsoleExec()
+    {
+#if !defined( SW_SHIPPING )
+        // 시작 씬이 다 열린 뒤에 돌린다 — 씬을 보는 명령(teleport · select · debugdraw.demo)이 빈 씬에 닿지 않게.
+        if ( _bDevConsoleExecPending == SW_FALSE || _devConsoleOverlay == nullptr || engine::areEngineServicesBound() == false )
+            return;
+        const SceneManager& sceneManager = engine::getSceneManager();
+        if ( sceneManager.isTransitioning() || sceneManager.getActiveScene() == nullptr )
+            return;
+        _bDevConsoleExecPending = SW_FALSE;
+        const string_splitter commands( string_view{ gv_devConsoleExec.c_str(), gv_devConsoleExec.size() }, { ";" } );
+        for ( const string_view command : commands.getSplitList() )
+        {
+            (void)_devConsoleOverlay->getConsole().submit( command ); // 답 · 실패는 로그에 남는다
+        }
 #endif
     }
 

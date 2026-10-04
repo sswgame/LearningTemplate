@@ -118,7 +118,7 @@ namespace sw::editor
         {
             const float2 barAnchor{ imagePos.x + size.x * 0.5f, imagePos.y + 8.0f };
             _viewportClient.drawTransformBar( barAnchor );
-            drawDebugOverlay( float2{ imagePos.x, imagePos.y } );
+            drawDebugOverlay( float2{ imagePos.x, imagePos.y }, float2{ size.x, size.y } );
 
             InputManager* pInput = getService<InputManager>();
             if ( pInput != nullptr && ViewportInputOverlay::getConfig()._bEnabled == SW_TRUE )
@@ -234,7 +234,7 @@ namespace sw::editor
 
         ImGui::SameLine();
         ImGui::Checkbox( "HUD", &_bShowOverlay );
-        EditorWidgets::drawTooltip( "게임이 DebugOverlayState 에 쓴 값을 캔버스 왼쪽 위에 표시합니다" );
+        EditorWidgets::drawTooltip( "게임이 DebugOverlayState 에 쓴 값을 캔버스 왼쪽 아래에 표시합니다" );
 
         drawAutoplayButton();
     }
@@ -293,7 +293,7 @@ namespace sw::editor
             EditorPlaySession::play();
     }
 
-    void GameViewPanel::drawDebugOverlay( const float2& canvasPos )
+    void GameViewPanel::drawDebugOverlay( const float2& canvasPos, const float2& canvasSize )
     {
         _lastOverlayRowCount              = 0;
         const DebugOverlayState* pOverlay = getService<DebugOverlayState>();
@@ -312,13 +312,14 @@ namespace sw::editor
             valueWidth = MathUtil::max( valueWidth, ImGui::CalcTextSize( row._value.c_str() ).x );
         }
 
+        // 왼쪽 아래 — 위쪽은 트랜스폼 바 · 통계 오버레이 자리다.
         constexpr float32 kPadding   = 6.0f;
         constexpr float32 kColumnGap = 12.0f;
-        constexpr float32 kTopOffset = 36.0f; // 트랜스폼 바 아래
+        constexpr float32 kMargin    = 8.0f;
         const float32     lineHeight = ImGui::GetTextLineHeight();
-        const ImVec2      boxMin{ canvasPos._x + 8.0f, canvasPos._y + kTopOffset };
-        const ImVec2      boxMax{ boxMin.x + kPadding * 2.0f + keyWidth + kColumnGap + valueWidth,
-                             boxMin.y + kPadding * 2.0f + lineHeight * static_cast<float32>( _listOverlayRow.size() ) };
+        const float32     boxHeight  = kPadding * 2.0f + lineHeight * static_cast<float32>( _listOverlayRow.size() );
+        const ImVec2      boxMin{ canvasPos._x + kMargin, canvasPos._y + canvasSize._y - kMargin - boxHeight };
+        const ImVec2      boxMax{ boxMin.x + kPadding * 2.0f + keyWidth + kColumnGap + valueWidth, boxMin.y + boxHeight };
         ImDrawList*       pDrawList = ImGui::GetWindowDrawList();
         pDrawList->AddRectFilled( boxMin, boxMax, IM_COL32( 0, 0, 0, 150 ), 4.0f );
 

@@ -261,7 +261,7 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
   오버레이(시각화 · 피킹 · 기즈모)는 호스트가 그리는 것과 같은 카메라로 투영한다 — Play 중에는 게임 카메라다.
 - **Auto**(자동 플레이): 게임이 `SW_GAME_AUTOPLAY` 로 등록했으면 툴바에 서고, 누르면 그 게임의 자동 플레이 전역 변수를 켜고 끈다
   (`GameAutoplay::setOn` — 전역 변수 표를 거쳐 써서 패널 · 콘솔과 같은 값이다). 자체 시험 `gameView.autoplayButton`.
-- **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값(`RuntimeHud::publishSnapshot` 등)을 캔버스 왼쪽 위에 키 순서로 그린다.
+- **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값(`RuntimeHud::publishSnapshot` 등)을 캔버스 왼쪽 아래에 키 순서로 그린다.
 - 시험: `EditorPlaySessionTest`(Simulate · Step N · 카메라에서 시작), `DebugDrawQueueTest`, `DebugOverlayStateTest`, `FixedTimestepTest.TimeScale…`,
   에디터 자체 시험 `gameView.debugDraw` · `gameView.debugOverlay`.
 
@@ -289,7 +289,7 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
 Output Log 아래 입력 줄이 개발 콘솔(`Engine/Utility/Console/DevConsole`)입니다 — `help`, `gv_이름 [값]` · `get` · `set`, 개발 명령(`SW_DEV_COMMAND`),
 Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기록. 답은 로그(`DevConsole`)로 남아 같은 패널에 보입니다. 에디터가 등록하는 명령은
 `Common/Commands/EditorDevCommands.cpp` — `editor <커맨드 id>`(커맨드 팔레트의 id) · `play` · `simulate` · `pause` · `stop` · `step [N]` ·
-`select.type <컴포넌트 타입>` · `select.tag <태그>` · `layout.save <이름>` · `layout.load <이름>`. 엔진 명령(`timescale` · `teleport` ·
+`select.type <컴포넌트 타입>` · `select.tag <태그>` · `layout.save <이름>` · `layout.load <이름>` · `debugdraw.demo [초]`(뷰포트 카메라 앞에 상자 · 구 · 화살표 · 글자와 HUD 값 하나 — 시각화가 도는지 보는 용도). 엔진 명령(`timescale` · `teleport` ·
 `debugdraw.category`)은 `Engine/EngineDevCommands.cpp`. 에디터 없이 띄운 게임 창에서는 `~` 오버레이가 같은 콘솔입니다(`Source/App/README.md`).
 시험: `DevConsoleTest` · `DevCommandRegistryTest` · `DevConsoleOverlayTest`(EngineTest), `DevCommandShippingTest`(AppTest), 자체 시험 `console.devCommands`.
 
