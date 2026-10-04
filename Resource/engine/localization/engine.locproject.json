@@ -1,11 +1,11 @@
 {
     "name": "engine",
     "sourceCulture": "en",
-    "cultures": [
-        "ko",
-        "ja"
-    ],
-    "stringTables": [
-        "engine.strings.json"
+    "cultures": [ "ko", "ja" ],
+    "stringTables": [ "engine.strings.json" ],
+    "codeRoots": [ "Source/Engine", "Source/GameFramework" ],
+    "assetRoots": [ "engine/settings", "engine/data" ],
+    "assetRules": [
+        { "files": ".settings.xml", "elements": [ "Category", "Setting", "Option" ], "attribute": "text", "kind": "key" }
     ]
 }

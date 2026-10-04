@@ -1,0 +1,109 @@
+msgid ""
+msgstr ""
+"Language: ko\n"
+"X-Localization-Project: shooter3d\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Message-Format: ICU\n"
+"X-Generator: SWEngine LocalizationTools\n"
+
+#. Context: Weapon name
+#: game/shooter3d/data/weapons.xml
+msgctxt "Assault Rifle"
+msgid "Assault Rifle"
+msgstr "돌격 소총"
+
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "Combat Helmet"
+msgid "Combat Helmet"
+msgstr "전투 헬멧"
+
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "Fatigues"
+msgid "Fatigues"
+msgstr "전투복"
+
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "Field Pack"
+msgid "Field Pack"
+msgstr "야전 배낭"
+
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "M4 Rifle"
+msgid "M4 Rifle"
+msgstr "M4 소총"
+
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "M9 Pistol"
+msgid "M9 Pistol"
+msgstr "M9 권총"
+
+#. Context: Weapon name
+#: game/shooter3d/data/weapons.xml
+msgctxt "Pistol"
+msgid "Pistol"
+msgstr "권총"
+
+#. Context: Weapon name
+#: game/shooter3d/data/weapons.xml
+msgctxt "Pump Shotgun"
+msgid "Pump Shotgun"
+msgstr "펌프 산탄총"
+
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "Recon Boots"
+msgid "Recon Boots"
+msgstr "정찰 부츠"
+
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "Recon Helmet"
+msgid "Recon Helmet"
+msgstr "정찰 헬멧"
+
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "Recon Patch"
+msgid "Recon Patch"
+msgstr "정찰 패치"
+
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "Recon Vest"
+msgid "Recon Vest"
+msgstr "정찰 조끼"
+
+#. Context: Options menu label
+#. Max length: 32
+#: game/shooter3d/data/shooter3d.settings.xml
+msgctxt "settings.gameplay.difficulty"
+msgid "Difficulty"
+msgstr "난이도"
+
+#. Context: Options menu label
+#. Max length: 32
+#: game/shooter3d/data/shooter3d.settings.xml
+msgctxt "settings.gameplay.difficulty.easy"
+msgid "Easy"
+msgstr "쉬움"
+
+#. Context: Options menu label
+#. Max length: 32
+#: game/shooter3d/data/shooter3d.settings.xml
+msgctxt "settings.gameplay.difficulty.hard"
+msgid "Hard"
+msgstr "어려움"
+
+#. Context: Options menu label
+#. Max length: 32
+#: game/shooter3d/data/shooter3d.settings.xml
+msgctxt "settings.gameplay.difficulty.normal"
+msgid "Normal"
+msgstr "보통"

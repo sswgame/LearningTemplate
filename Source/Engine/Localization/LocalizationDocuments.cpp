@@ -101,7 +101,7 @@ namespace sw
             {
                 // 내용이 같으면 쓰지 않는다 — 파일 시간이 바뀌면 핫 리로드 · 빌드 스탬프가 헛돈다.
                 string existing;
-                if ( FileUtil::readTextFile( absolutePath, existing ) && existing == text )
+                if ( FileUtil::fileExists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text )
                     return true;
                 return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, text );
             }
@@ -385,7 +385,7 @@ namespace sw
         if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
             error = document.getLastError();
         const JsonValue              root            = document.getRoot();
-        static constexpr const utf8* kArrRootField[] = { "name", "sourceCulture", "cultures", "stringTables", "codeRoots", "assetRoots" };
+        static constexpr const utf8* kArrRootField[] = { "name", "sourceCulture", "cultures", "stringTables", "codeRoots", "assetRoots", "assetRules" };
         string                       unknown;
         if ( error.empty() && ( root.isObject() == false || LocalizationDocumentsInternal::hasOnlyKnownFields( root, kArrRootField, unknown ) == false ) )
             error = string( sourceName ) + ": " + ( unknown.empty() ? "root must be an object" : "unknown field '" + unknown + "'" );
@@ -399,6 +399,30 @@ namespace sw
                                     LocalizationDocumentsInternal::readStringList( root.get( "stringTables", false ), loaded._listStringTable ) &&
                                     LocalizationDocumentsInternal::readStringList( root.get( "codeRoots", false ), loaded._listCodeRoot ) &&
                                     LocalizationDocumentsInternal::readStringList( root.get( "assetRoots", false ), loaded._listAssetRoot );
+            const JsonValue rules = root.get( "assetRules", false );
+            if ( rules.isValid() && rules.isArray() == false )
+                error = string( sourceName ) + ": assetRules must be an array";
+            static constexpr const utf8* kArrRuleField[] = { "files", "elements", "attribute", "kind", "context" };
+            for ( size_t ruleIndex = 0; error.empty() && rules.isArray() && ruleIndex < rules.size(); ++ruleIndex )
+            {
+                const JsonValue       ruleValue = rules.at( ruleIndex );
+                LocalizationAssetRule rule;
+                const bool            bShape = ruleValue.isObject() && LocalizationDocumentsInternal::hasOnlyKnownFields( ruleValue, kArrRuleField, unknown ) &&
+                                    LocalizationDocumentsInternal::readStringList( ruleValue.get( "elements", false ), rule._listElement );
+                rule._fileSuffix      = ruleValue.get( "files", false ).asString();
+                rule._attribute       = ruleValue.get( "attribute", false ).asString();
+                rule._context         = ruleValue.get( "context", false ).asString();
+                const string kind     = ruleValue.get( "kind", false ).asString();
+                rule._bKeyReference   = kind == "key";
+                const bool bKnownKind = kind == "key" || kind == "text";
+                if ( bShape == false || bKnownKind == false || rule._fileSuffix.empty() || rule._attribute.empty() || rule._listElement.empty() )
+                {
+                    error = string( sourceName ) + ": assetRules[" + to_string( static_cast<uint64>( ruleIndex ) ) + "] needs files, elements, attribute and kind (text | key)" +
+                            ( unknown.empty() ? string{} : " - unknown field '" + unknown + "'" );
+                    break;
+                }
+                loaded._listAssetRule.push_back( std::move( rule ) );
+            }
             const bool bMissingField = loaded._name.empty() || loaded._sourceCulture.empty() || loaded._listStringTable.empty() || bListsRead == false;
             if ( error.empty() && bMissingField )
                 error = string( sourceName ) + ": needs \"name\", \"sourceCulture\", \"stringTables\" and string lists";

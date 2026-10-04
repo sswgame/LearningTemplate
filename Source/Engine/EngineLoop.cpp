@@ -47,6 +47,7 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/StringTable.h"
+#include "Engine/LocalizationTools.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -356,6 +357,34 @@ namespace sw
                 SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures).", sceneCount, sceneFailedCount, prefabCount,
                              prefabFailedCount, registryCount, registryFailedCount );
                 loop._bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0;
+                return EngineInitResult::SkipDependents;
+            }
+
+            // 로컬라이제이션 글 수집도 같은 자리다 — 리플렉션 프로퍼티(`Meta = "Localizable"`)를 보려면 모든 타입이 올라와 있어야 한다.
+            // 번역 교환(PO)은 수집 뒤에 할 수 있도록 같은 실행에서 수집 → 가져오기 → 내보내기 순으로 돈다.
+            bool   bGatherText = false;
+            bool   bCheckText  = false;
+            bool   bExportPo   = false;
+            string importPoPath;
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::GATHER_TEXT, bGatherText );
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXT, bCheckText );
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
+            loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
+            if ( bGatherText || bCheckText || bExportPo || importPoPath.empty() == false )
+            {
+                MemoryProfiler::captureMemoryLeakBaseline();
+                loop._bHeadless = true;
+                string projectPath;
+                loop._owned._pCommandLineManager->getArgument( CommandLineArgument::LOC_PROJECT, projectPath );
+                SW_LOG_INFO( "Starting Headless (localization tools)..." );
+                bool bSucceeded = true;
+                if ( bGatherText || bCheckText )
+                    bSucceeded = LocalizationTools::runGatherCommand( bCheckText, projectPath ) && bSucceeded;
+                if ( importPoPath.empty() == false )
+                    bSucceeded = LocalizationTools::runImportCommand( importPoPath, projectPath ) && bSucceeded;
+                if ( bExportPo )
+                    bSucceeded = LocalizationTools::runExportCommand( projectPath ) && bSucceeded;
+                loop._bHeadlessTaskFailed = bSucceeded == false;
                 return EngineInitResult::SkipDependents;
             }
 

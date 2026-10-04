@@ -19,6 +19,7 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationDocuments.h"
+#include "Engine/Localization/TranslationMemory.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -80,6 +81,7 @@ namespace
         static bool isLocalizationProject( sw::string_view resourceId ) { return endsWith( resourceId, sw::LocalizationProject::kFileSuffix ); }
         static bool isSourceStringTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::SourceStringTable::kFileSuffix ); }
         static bool isTranslationTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationTable::kFileSuffix ); }
+        static bool isTranslationMemory( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationMemory::kFileSuffix ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -295,6 +297,7 @@ namespace
             {"localizationproject", &isLocalizationProject, &loadLocalizationDocument<sw::LocalizationProject>},
             {        "stringtable",   &isSourceStringTable,   &loadLocalizationDocument<sw::SourceStringTable>},
             {   "translationtable",    &isTranslationTable,    &loadLocalizationDocument<sw::TranslationTable>},
+            {  "translationmemory",   &isTranslationMemory,   &loadLocalizationDocument<sw::TranslationMemory>},
         };
 
         /**

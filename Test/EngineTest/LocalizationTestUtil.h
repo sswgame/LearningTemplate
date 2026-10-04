@@ -21,6 +21,7 @@ namespace sw::test
         /** @brief 프로젝트 파일을 쓰고 그 경로를 돌려줍니다. @p culturesJson 은 `[ "ko", "ja" ]` 같은 JSON 배열 글입니다. */
         static string writeProject( const string& folder, string_view sourceCulture, string_view culturesJson, string_view extraFields = {} )
         {
+            (void)FileUtil::ensureDirectoryExists( folder );
             const string projectPath = FileUtil::joinPath( folder, "test.locproject.json" );
             string       text        = "{ \"name\": \"test\", \"sourceCulture\": \"" + string( sourceCulture ) + "\", \"cultures\": " + string( culturesJson ) +
                           ", \"stringTables\": [ \"test.strings.json\" ]";

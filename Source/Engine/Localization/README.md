@@ -12,6 +12,11 @@ culture fallback · ICU 포맷 · 의사 로컬라이즈)와 유니티 Localizat
 | `PseudoLocalizer.*` | 의사 로컬라이제이션(악센트 · 40 % 늘림 · 괄호, 거울 방식은 RLO) — 구문은 지키고 글자 조각만 바꾼다 |
 | `LocText.*` | `SW_LOCTEXT( "Namespace", "Key", "Source" )` · `SW_LOCFORMAT( …, arguments )` — 코드의 글 |
 | `StringTable.*` | 문화권 하나의 실행 표(키 해시 → 글). 글은 추가 전용 저장소에 있어 돌려준 포인터가 영구히 유효하다 |
+| `TextGatherer.*` | 글 수집 — 코드 스캐너(`SW_LOCTEXT` · `SW_LOCFORMAT`) · 리플렉션 XML(`Meta = "Localizable"`) · 하드코딩 의심 경고 · 원문 표 합치기 |
+| `TranslationMemory.*` | 번역 메모리(`tm/<culture>.tm.json`) — 같은 원문 · 정규화 · 편집 거리 근사 일치 |
+| `PortableObjectFile.*` | gettext PO 읽기 · 쓰기(msgctxt 키 · `#.` · `#:` · `#` 번역가 메모 · `#, fuzzy` · `#|` 옛 원문) |
+
+수집 · 교환 명령의 본문은 엔진 루트의 `LocalizationTools.*` 다(대화 에셋 · 소스 트리를 함께 보므로 티어 맨 위).
 
 ## 데이터
 
@@ -34,6 +39,32 @@ Resource/engine/localization/
 - **문화권 표** — `parent` 에서 적지 않은 칸을 물려받는다. `pluralRule` 은 등록부 이름(`none` · `english` · `french` · `russian` · `polish` · `czech` ·
   `arabic`), `digits` 는 `latn` · `arab`, `pseudo` 는 `accented` · `mirrored`. 모르는 칸 · 이름 · 없는 부모 · 순환 · 정본이 아닌 코드(`ko-KR`)는 로드 오류.
 - 모든 키 · 칸 이름은 대소문자를 구분해 저장하지만 실행 조회는 `hashed_string` 해시라 대소문자를 무시한다 — 대소문자만 다른 두 키를 두지 말 것.
+
+## 도구 — 수집 · 교환 (`App` 헤드리스, Dev · 소스 트리 필요)
+
+```powershell
+cd build/Ninja-Debug/Bin
+./App.exe --gather-text                     # 엔진 + 활성 게임 프로젝트: 코드 · 데이터 → 원문 표, 번역 표 해시 · 메모리 채우기 · 검사
+./App.exe --check-text                      # 쓰지 않고 표가 최신인지만(종료 코드) — CI
+./App.exe --gather-text -loc-project=game/shooter3d/data/localization/shooter3d.locproject.json
+./App.exe --gather-text -loc-project=all    # 엔진 + 모든 게임 팩
+./App.exe --export-po                       # 문화권마다 <프로젝트 폴더>/po/<culture>.po
+./App.exe -import-po=<번역가가 돌려준 .po>    # 머리의 X-Localization-Project 로 프로젝트를 고른다(-loc-project 로 지정 가능)
+```
+
+- **코드**: `SW_LOCTEXT( "Namespace", "Key", "Source" )` 의 세 인자는 문자열 리터럴(이어 붙이기 · 이스케이프 · 날 문자열 가능). 리터럴이 아니면 `파일:줄` 오류.
+  주석 · 문자열 · `#define` 줄 안의 것은 건너뛴다. 같은 키에 원문이 둘이면 오류.
+- **리플렉션 데이터**: `PROPERTY( Meta = "Localizable" )`(최대 길이는 `Meta = "Localizable, MaxLength=24"`) 문자열 프로퍼티의 값이 **키이거나 글 그대로**다 —
+  어느 표에 그 키가 있으면 참조, 없으면 글 자체가 키가 된다(gettext 와 같다. 글을 고치면 새 키가 되고 옛 번역은 번역 메모리가 근사 일치로 넘긴다).
+  실행에서는 `LocalizationManager::getStringByText( value, value )` 로 찾는다(대화가 그렇게 한다). 표시 없는 문자열 프로퍼티에 낱말 둘 이상의 문장이 있으면
+  하드코딩 의심 경고 — 사람이 읽는 글이 아니면 `Meta = "NotLocalizable"`.
+- **손으로 읽는 XML**(아이템 카탈로그 · 설정 스키마): 프로젝트의 `assetRules` — `{ "files": "items.xml", "elements": [ "Item" ], "attribute": "name", "kind": "text", "context": "Item name" }`,
+  `kind: "key"` 는 키 참조(어느 표에 있어야 한다 — 없으면 오류). 대화(`.dialogue.json`)의 화자 · 대사 · 선택지는 늘 모은다.
+- **합치기**: 첫 원문 표(`stringTables[0]`)에 더해짐 · 바뀜 · 지워짐. 지우는 것은 수집기가 넣었던 줄(`origins` 가 있는 줄)뿐이다.
+- **번역 표**: 해시 없는 번역에 지금 원문 해시를 찍고(손으로 쓴 번역을 받아들인다), 지금 번역을 번역 메모리에 쌓고, 원문이 사라진 키의 번역을 빼고, 없는 번역은 메모리의
+  같은 원문(그대로) · 비슷한 원문(검토 표시)으로, 낡은 번역은 같은 원문일 때만 채운다. 자리표시자 이름 차이 · 최대 길이 초과 · 구문 오류를 보고한다.
+- **PO**: 가져온 번역의 해시는 그 msgid(번역가가 본 원문)의 해시다 — 그 사이 원문이 바뀌었으면 낡은 번역으로 남는다. `#, fuzzy` 는 검토 표시, `# ` 줄은 번역가 메모(왕복 유지).
+- `TextGathererTest.RepositoryProjectsAreUpToDate` 가 저장소의 프로젝트가 최신인지 본다 — 글을 고치면 `--gather-text` 결과를 같이 커밋한다.
 
 ## 실행
 

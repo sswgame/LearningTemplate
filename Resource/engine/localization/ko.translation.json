@@ -1,6 +1,47 @@
 {
     "culture": "ko",
     "entries": {
+        "battle.foe_fainted": {
+            "text": "{name}(이)가 쓰러졌다! 승리!",
+            "sourceHash": "7bba5b1d63796244"
+        },
+        "battle.got_away": {
+            "text": "무사히 도망쳤다!",
+            "sourceHash": "f0ec967e31fa5b5c"
+        },
+        "battle.no_move": {
+            "text": "{name}에게는 쓸 수 있는 기술이 없다!",
+            "sourceHash": "eba2c565c9b73c05"
+        },
+        "battle.no_pp": {
+            "text": "{name}의 PP가 없다!",
+            "sourceHash": "37f13c2e5f1e7190"
+        },
+        "battle.player_fainted": {
+            "text": "{name}(이)가 쓰러졌다...",
+            "sourceHash": "46ac7890499b68e3"
+        },
+        "battle.prompt_fight": {
+            "text": "싸운다: 1/2 기술, Enter=기술0, Esc=도망",
+            "sourceHash": "829fb02ec0c30690",
+            "translatorComment": "키 이름(Enter · Esc)은 번역하지 않음"
+        },
+        "battle.used_move": {
+            "text": "{name}의 {move}!",
+            "sourceHash": "75ffbd2c23a14e93"
+        },
+        "battle.used_move_dmg": {
+            "text": "{name}의 {move}! ({damage} 피해)",
+            "sourceHash": "41f9c0e03af5f43b"
+        },
+        "battle.what_will": {
+            "text": "{name}은(는) 무엇을 할까?",
+            "sourceHash": "25f6ce858fe4deb0"
+        },
+        "battle.wild_appeared": {
+            "text": "야생의 {name}(이)가 나타났다!",
+            "sourceHash": "3686468284400326"
+        },
         "settings.accessibility.colorVision": {
             "text": "색각 보정",
             "sourceHash": "dbb8616605f92363"

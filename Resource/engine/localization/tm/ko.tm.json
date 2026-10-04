@@ -1,0 +1,289 @@
+{
+    "culture": "ko",
+    "entries": [
+        {
+            "source": "A wild {name} appeared!",
+            "text": "야생의 {name}(이)가 나타났다!"
+        },
+        {
+            "source": "Accessibility",
+            "text": "접근성"
+        },
+        {
+            "source": "Aim",
+            "text": "조준"
+        },
+        {
+            "source": "Ambient Volume",
+            "text": "환경음 음량"
+        },
+        {
+            "source": "Audio",
+            "text": "오디오"
+        },
+        {
+            "source": "Borderless",
+            "text": "테두리 없음"
+        },
+        {
+            "source": "Camera Shake",
+            "text": "카메라 흔들림"
+        },
+        {
+            "source": "Color Vision Mode",
+            "text": "색각 보정"
+        },
+        {
+            "source": "Controls",
+            "text": "조작"
+        },
+        {
+            "source": "Crouch",
+            "text": "앉기"
+        },
+        {
+            "source": "Custom",
+            "text": "사용자 지정"
+        },
+        {
+            "source": "Deuteranopia",
+            "text": "녹색약"
+        },
+        {
+            "source": "Display",
+            "text": "화면"
+        },
+        {
+            "source": "Effects Quality",
+            "text": "효과 품질"
+        },
+        {
+            "source": "Effects Volume",
+            "text": "효과음 음량"
+        },
+        {
+            "source": "Field of View",
+            "text": "시야각"
+        },
+        {
+            "source": "Fight: 1/2 moves, Enter=Move0, Esc=Run",
+            "text": "싸운다: 1/2 기술, Enter=기술0, Esc=도망"
+        },
+        {
+            "source": "Foliage Density",
+            "text": "초목 밀도"
+        },
+        {
+            "source": "Gamepad Sensitivity",
+            "text": "게임패드 감도"
+        },
+        {
+            "source": "Gameplay",
+            "text": "게임플레이"
+        },
+        {
+            "source": "Got away safely!",
+            "text": "무사히 도망쳤다!"
+        },
+        {
+            "source": "Graphics",
+            "text": "그래픽"
+        },
+        {
+            "source": "Graphics Quality",
+            "text": "그래픽 품질"
+        },
+        {
+            "source": "Head Bob",
+            "text": "걸음 흔들림"
+        },
+        {
+            "source": "High",
+            "text": "높음"
+        },
+        {
+            "source": "Hold",
+            "text": "누르고 있기"
+        },
+        {
+            "source": "Interface Volume",
+            "text": "인터페이스 음량"
+        },
+        {
+            "source": "Invert Vertical Look",
+            "text": "상하 시점 반전"
+        },
+        {
+            "source": "Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}.",
+            "text": "이 설정을 유지할까요? {seconds}초 뒤에 되돌립니다."
+        },
+        {
+            "source": "Language",
+            "text": "언어"
+        },
+        {
+            "source": "Low",
+            "text": "낮음"
+        },
+        {
+            "source": "Master Volume",
+            "text": "전체 음량"
+        },
+        {
+            "source": "Medium",
+            "text": "중간"
+        },
+        {
+            "source": "Motion Blur",
+            "text": "모션 블러"
+        },
+        {
+            "source": "Mouse Sensitivity",
+            "text": "마우스 감도"
+        },
+        {
+            "source": "Music Volume",
+            "text": "음악 음량"
+        },
+        {
+            "source": "Mute All",
+            "text": "음소거"
+        },
+        {
+            "source": "Off",
+            "text": "끔"
+        },
+        {
+            "source": "Post-Processing Quality",
+            "text": "후처리 품질"
+        },
+        {
+            "source": "Protanopia",
+            "text": "적색약"
+        },
+        {
+            "source": "Reduce Flashing",
+            "text": "번쩍임 줄이기"
+        },
+        {
+            "source": "Render Scale",
+            "text": "렌더 배율"
+        },
+        {
+            "source": "Resolution",
+            "text": "해상도"
+        },
+        {
+            "source": "Shadow Quality",
+            "text": "그림자 품질"
+        },
+        {
+            "source": "Spatial",
+            "text": "공간"
+        },
+        {
+            "source": "Sprint",
+            "text": "달리기"
+        },
+        {
+            "source": "Stick Dead Zone",
+            "text": "스틱 데드존"
+        },
+        {
+            "source": "Subtitle Background",
+            "text": "자막 배경"
+        },
+        {
+            "source": "Subtitle Size",
+            "text": "자막 크기"
+        },
+        {
+            "source": "Subtitles",
+            "text": "자막"
+        },
+        {
+            "source": "Text Language",
+            "text": "표시 언어"
+        },
+        {
+            "source": "Text Size",
+            "text": "글자 크기"
+        },
+        {
+            "source": "Texture Quality",
+            "text": "텍스처 품질"
+        },
+        {
+            "source": "Toggle",
+            "text": "전환"
+        },
+        {
+            "source": "Tritanopia",
+            "text": "청색약"
+        },
+        {
+            "source": "UI Scale",
+            "text": "UI 배율"
+        },
+        {
+            "source": "Ultra",
+            "text": "최고"
+        },
+        {
+            "source": "Upscaler",
+            "text": "업스케일러"
+        },
+        {
+            "source": "Vertical Sync",
+            "text": "수직 동기화"
+        },
+        {
+            "source": "View Distance",
+            "text": "시야 거리"
+        },
+        {
+            "source": "Voice Volume",
+            "text": "음성 음량"
+        },
+        {
+            "source": "What will {name} do?",
+            "text": "{name}은(는) 무엇을 할까?"
+        },
+        {
+            "source": "Window Mode",
+            "text": "창 모드"
+        },
+        {
+            "source": "Windowed",
+            "text": "창"
+        },
+        {
+            "source": "{count, plural, one {# setting takes} other {# settings take}} effect after a restart.",
+            "text": "설정 {count}개는 다시 시작한 뒤에 적용됩니다."
+        },
+        {
+            "source": "{name} fainted! You won!",
+            "text": "{name}(이)가 쓰러졌다! 승리!"
+        },
+        {
+            "source": "{name} fainted...",
+            "text": "{name}(이)가 쓰러졌다..."
+        },
+        {
+            "source": "{name} has no PP!",
+            "text": "{name}의 PP가 없다!"
+        },
+        {
+            "source": "{name} has no usable move!",
+            "text": "{name}에게는 쓸 수 있는 기술이 없다!"
+        },
+        {
+            "source": "{name} used {move}!",
+            "text": "{name}의 {move}!"
+        },
+        {
+            "source": "{name} used {move}! ({damage} dmg)",
+            "text": "{name}의 {move}! ({damage} 피해)"
+        }
+    ]
+}

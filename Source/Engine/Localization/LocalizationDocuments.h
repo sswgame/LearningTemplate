@@ -139,6 +139,24 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct LocalizationAssetRule
+     * @brief 리플렉션으로 읽지 않는 데이터(손으로 읽는 XML 카탈로그 · 스키마)에서 글을 모으는 규칙 한 줄입니다(프로젝트의 `assetRules`).
+     * @details `{ "files": "items.xml", "elements": [ "Item" ], "attribute": "name", "kind": "text", "context": "Item name" }` — 파일 이름이 `files` 로
+     *          끝나는 XML 에서 그 원소들의 속성 값을 모읍니다. `kind` 는 `text`(키이거나 글 그대로) · `key`(키 참조 — 표에 있어야 한다).
+     */
+    struct LocalizationAssetRule
+    {
+        string         _fileSuffix;
+        vector<string> _listElement;
+        string         _attribute;
+        string         _context;
+        bool           _bKeyReference{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class LocalizationProject
      * @brief 로컬라이제이션 프로젝트 파일(`*.locproject.json`) — 원문 문화권 · 대상 문화권 · 수집 설정입니다(언리얼 Localization Dashboard 의 타깃 하나).
      * @details `{ "name": "engine", "sourceCulture": "en", "cultures": [ "ko", "ja" ], "stringTables": [ "engine.strings.json" ],
@@ -159,11 +177,12 @@ namespace sw
         /** @brief 문화권 번역 표 경로(`<폴더>/<culture>.translation.json`)입니다. */
         static string makeTranslationPath( string_view projectPath, string_view culture );
 
-        string         _name;
-        string         _sourceCulture;
-        vector<string> _listCulture;
-        vector<string> _listStringTable;
-        vector<string> _listCodeRoot;
-        vector<string> _listAssetRoot;
+        string                        _name;
+        string                        _sourceCulture;
+        vector<string>                _listCulture;
+        vector<string>                _listStringTable;
+        vector<string>                _listCodeRoot;
+        vector<string>                _listAssetRoot;
+        vector<LocalizationAssetRule> _listAssetRule;
     };
 } // namespace sw

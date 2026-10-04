@@ -1,130 +1,265 @@
 {
     "culture": "en",
     "entries": {
+        "battle.foe_fainted": {
+            "source": "{name} fainted! You won!",
+            "origins": [
+                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
+            ]
+        },
+        "battle.got_away": {
+            "source": "Got away safely!",
+            "origins": [
+                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
+            ]
+        },
+        "battle.no_move": {
+            "source": "{name} has no usable move!",
+            "origins": [
+                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
+            ]
+        },
+        "battle.no_pp": {
+            "source": "{name} has no PP!",
+            "origins": [
+                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
+            ]
+        },
+        "battle.player_fainted": {
+            "source": "{name} fainted...",
+            "origins": [
+                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
+            ]
+        },
+        "battle.prompt_fight": {
+            "source": "Fight: 1/2 moves, Enter=Move0, Esc=Run",
+            "origins": [
+                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
+            ]
+        },
+        "battle.used_move": {
+            "source": "{name} used {move}!",
+            "origins": [
+                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
+            ]
+        },
+        "battle.used_move_dmg": {
+            "source": "{name} used {move}! ({damage} dmg)",
+            "origins": [
+                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
+            ]
+        },
+        "battle.what_will": {
+            "source": "What will {name} do?",
+            "origins": [
+                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
+            ]
+        },
+        "battle.wild_appeared": {
+            "source": "A wild {name} appeared!",
+            "origins": [
+                "Source/GameFramework/Kits/Rpg/TurnBattle/BattleState.cpp"
+            ]
+        },
         "settings.accessibility.colorVision": {
             "source": "Color Vision Mode",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.accessibility.colorVision.deuteranopia": {
             "source": "Deuteranopia",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.accessibility.colorVision.protanopia": {
             "source": "Protanopia",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.accessibility.colorVision.tritanopia": {
             "source": "Tritanopia",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.accessibility.reduceFlashing": {
             "source": "Reduce Flashing",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.accessibility.subtitleBackground": {
             "source": "Subtitle Background",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.accessibility.subtitleSize": {
             "source": "Subtitle Size",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.accessibility.subtitles": {
             "source": "Subtitles",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.accessibility.textSize": {
             "source": "Text Size",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.accessibility.uiScale": {
             "source": "UI Scale",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.audio.ambientVolume": {
             "source": "Ambient Volume",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.audio.masterVolume": {
             "source": "Master Volume",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.audio.musicVolume": {
             "source": "Music Volume",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.audio.mute": {
             "source": "Mute All",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.audio.sfxVolume": {
             "source": "Effects Volume",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.audio.uiVolume": {
             "source": "Interface Volume",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.audio.voiceVolume": {
             "source": "Voice Volume",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.category.accessibility": {
             "source": "Accessibility",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.category.audio": {
             "source": "Audio",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.category.controls": {
             "source": "Controls",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.category.display": {
             "source": "Display",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.category.gameplay": {
             "source": "Gameplay",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.category.graphics": {
             "source": "Graphics",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.category.language": {
             "source": "Language",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.common.off": {
             "source": "Off",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.confirm.keepChanges": {
             "source": "Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}.",
@@ -134,172 +269,274 @@
         "settings.controls.aimMode": {
             "source": "Aim",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.controls.crouchMode": {
             "source": "Crouch",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.controls.gamepadSensitivity": {
             "source": "Gamepad Sensitivity",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.controls.hold": {
             "source": "Hold",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.controls.invertY": {
             "source": "Invert Vertical Look",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.controls.mouseSensitivity": {
             "source": "Mouse Sensitivity",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.controls.sprintMode": {
             "source": "Sprint",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.controls.stickDeadzone": {
             "source": "Stick Dead Zone",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.controls.toggle": {
             "source": "Toggle",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.display.resolution": {
             "source": "Resolution",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.display.vsync": {
             "source": "Vertical Sync",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.display.windowMode": {
             "source": "Window Mode",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.display.windowMode.borderless": {
             "source": "Borderless",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.display.windowMode.windowed": {
             "source": "Windowed",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.gameplay.cameraShake": {
             "source": "Camera Shake",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.gameplay.fieldOfView": {
             "source": "Field of View",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.gameplay.headBob": {
             "source": "Head Bob",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.effectsQuality": {
             "source": "Effects Quality",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.foliageDensity": {
             "source": "Foliage Density",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.motionBlur": {
             "source": "Motion Blur",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.postQuality": {
             "source": "Post-Processing Quality",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.quality": {
             "source": "Graphics Quality",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.quality.custom": {
             "source": "Custom",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.quality.high": {
             "source": "High",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.quality.low": {
             "source": "Low",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.quality.medium": {
             "source": "Medium",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.quality.ultra": {
             "source": "Ultra",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.renderScale": {
             "source": "Render Scale",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.shadowQuality": {
             "source": "Shadow Quality",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.textureQuality": {
             "source": "Texture Quality",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.upscaler": {
             "source": "Upscaler",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.upscaler.spatial": {
             "source": "Spatial",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.graphics.viewDistance": {
             "source": "View Distance",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.language.text": {
             "source": "Text Language",
             "context": "Options menu label",
-            "maxLength": 32
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
         },
         "settings.restartRequired": {
             "source": "{count, plural, one {# setting takes} other {# settings take}} effect after a restart.",
