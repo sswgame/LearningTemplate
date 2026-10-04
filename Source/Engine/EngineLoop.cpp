@@ -79,6 +79,7 @@
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneCooker.h"
+#include "Engine/Scene/SceneNavigationCooker.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/UserSettings/HardwareProbe.h"
@@ -427,11 +428,15 @@ namespace sw
                 uint32                        vertexAnimationFailedCount = 0;
                 [[maybe_unused]] const uint32 vertexAnimationCount =
                     VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, vertexAnimationFailedCount );
-                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures).",
+                // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
+                uint32                        navMeshFailedCount = 0;
+                [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( resourceRoot, cookedDir, navMeshFailedCount );
+                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures), "
+                             "%# navmeshes (%# failures).",
                              sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,
-                             vertexAnimationFailedCount );
-                loop._bHeadlessTaskFailed =
-                    sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 || vertexAnimationFailedCount > 0;
+                             vertexAnimationFailedCount, navMeshCount, navMeshFailedCount );
+                loop._bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 ||
+                                            vertexAnimationFailedCount > 0 || navMeshFailedCount > 0;
                 return EngineInitResult::SkipDependents;
             }
 

@@ -152,6 +152,13 @@ namespace sw
             tickComponentsPhase( deltaTime, 0, kPostPhysicsGroup );
         applyTickResults();
 
+        // 내비게이션 — 틱이 건 목적지를 군중에 넣고 한 번에 진행해 오브젝트 자리 · 컨트롤러 속도를 쓴다(그 속도가 아래 물리 프레임에 든다).
+        // 끝난 타일 재베이크를 끼우는 것도 여기다 — 컴포넌트 틱이 질의하지 않는 구간이다.
+        {
+            SW_PROFILE_SCOPE( "GT.Scene.tick.navigation" );
+            _sceneNavigation.tick( deltaTime );
+        }
+
         // 애니메이션 — 틱이 정한 파라미터로 포즈 · 스킨 팔레트를 만들고, 루트 모션을 트랜스폼(또는 캐릭터 컨트롤러)에 쓴다. 물리 **앞**이다 —
         // 키네마틱 히트박스(래그돌)가 이번 프레임 포즈를 쫓고, 래그돌의 바디 자세는 물리 뒤에 읽혀 다음 포즈에 섞인다.
         _animationSystem.evaluate( deltaTime );

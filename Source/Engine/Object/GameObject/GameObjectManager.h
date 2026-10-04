@@ -27,6 +27,7 @@
 #include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/SceneAudio.h"
+#include "Engine/Object/GameObject/SceneNavigation.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Object/GameObject/TickRegistry.h"
 #include "Engine/Physics/PhysicsWorld.h"
@@ -317,6 +318,13 @@ namespace sw
         SceneAudio& getSceneAudio() { return _sceneAudio; }
         /** @brief 이 씬의 강체 물리입니다. */
         const ScenePhysics& getScenePhysics() const { return _scenePhysics; }
+        /**
+         * @brief 이 씬의 내비게이션(에이전트 종류마다 내비메시 · 군중, 베이크 · 재베이크, 에이전트 갱신)입니다. 물리처럼 소유만 하고 `tick` 의 한 줄만 정합니다 —
+         *        물리 앞 틱 결과를 적용한 뒤, 애니메이션 · 물리 앞(에이전트가 캐릭터 컨트롤러에 넘긴 속도가 이번 물리 프레임에 든다).
+         */
+        SceneNavigation& getSceneNavigation() { return _sceneNavigation; }
+        /** @brief 이 씬의 내비게이션입니다. */
+        const SceneNavigation& getSceneNavigation() const { return _sceneNavigation; }
 
         /** @brief 이 씬의 AABB 질의 월드입니다. */
         PhysicsWorld& getPhysicsWorld() { return _physicsWorld; }
@@ -569,6 +577,8 @@ namespace sw
         ScenePhysics _scenePhysics;
         /** @brief 오디오 컴포넌트 등록부와 엔진 묶기입니다. 물리처럼 소유만 합니다. */
         SceneAudio _sceneAudio;
+        /** @brief 내비게이션입니다. 컴포넌트(에이전트 · 장애물 · 표면)보다 늦게 사라진다 — 그들의 해제가 등록을 뺀다. */
+        SceneNavigation _sceneNavigation;
         /**
          * @brief 콜라이더 바디를 맞추고 물리를 step 한 뒤 겹침 이벤트를 두 오브젝트의 켜진 컴포넌트에 나눠 줍니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
          * @details 유니티는 물리 갱신 뒤 OnTrigger 를, 언리얼은 움직임이 끝난 뒤 Begin/EndOverlap 을 부른다. 여기서는 그 프레임에 적용된 월드 자리로 잰다.

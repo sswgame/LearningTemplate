@@ -89,3 +89,33 @@ Recast 순서(`RecastNavMesh::bakeTile`):
 
 시험: `NavMeshBakeTest`(`Test/EngineTest/TestNavMeshBake.cpp` — 바닥 · 계단 · 경사 · 구멍 · 쿠킹본 왕복 · 표), `NavMeshQueryTest`(돌아가는 경로 · 닿을 수
 없는 섬 · 레이캐스트 · 영역 비용), `NavMeshCrowdTest`(복도에서 마주 오는 둘이 비켜 감).
+
+## 7. 씬의 내비게이션 — `SceneNavigation`(Object, 티어 6)
+
+`GameObjectManager` 가 `ScenePhysics` 처럼 소유만 하고 틱의 한 줄(`GT.Scene.tick.navigation` — 물리 앞 틱 결과 적용 뒤, 애니메이션 · 물리 앞)을 정합니다.
+에이전트 종류마다 내비메시 · 군중 · 베이크 입력 사본을 듭니다(언리얼 `UNavigationSystemV1` + `ARecastNavMesh` + `UCrowdManager` 를 씬 단위로).
+
+| 컴포넌트 | 하는 일 |
+|---|---|
+| `NavMeshSurfaceComponent` | 어느 에이전트 종류를 · 어떤 기하(`RenderMeshes` · `PhysicsColliders` · `Both`)로 · 어디까지(`_boundsHalfExtents`) 베이크하는지. 빼는 태그(`_listExcludeTag`). 유니티 `NavMeshSurface` 자리 |
+| `NavMeshModifierComponent` | 이 오브젝트와 자식을 베이크에서 빼거나(`_bIgnoreFromBuild`) 영역을 준다(`_areaName`). 가장 가까운 조상이 이긴다. 유니티 `NavMeshModifier` |
+| `NavMeshAgentComponent` | 목적지 → 경로 → 군중 조향. 오브젝트를 옮기거나 같은 오브젝트의 `CharacterControllerComponent` 에 원하는 속도를 넘긴다. 공통 이동 창구 `getMover()` |
+| `NavMeshObstacleComponent` | 움직이는 장애물(상자 · 원기둥 발자국)을 몸 반지름만큼 넓혀 뚫는다. 움직이면 닿은 타일만 재베이크 |
+
+**기하 모으기**(`SceneNavigation::collectGeometry` — 런타임 베이크 · 쿠킹이 같은 함수): 켜진 오브젝트의 보이는 `MeshComponent`(스킨드 제외) · Static
+`RigidBodyComponent` 셰이프(물리와 같은 배율 · 자세). 움직이는 것이 든 계층(에이전트 · 캐릭터 컨트롤러 · 스킨드 메시 · Static 이 아닌 강체)은 통째로 뺀다 —
+베이크하는 순간 그 자리에 있던 캐릭터 · 손에 든 무기가 바닥을 뚫지 않게. 메시 · 강체로 모양을 알 수 없는 오브젝트(파괴 — 붙어 있는 조각만)는 `INavGeometrySource`
+를 등록해 기하를 직접 낸다.
+
+**처음 쓸 때.** 플레이 중인 첫 갱신이 표면이 맡은 종류를 마련합니다 — 쿠킹본(`<씬>.navmesh`)이 있고 베이크 값 해시 · 입력 해시가 맞으면 끼우고(쇼케이스
+16 타일 0.03 ms), 아니면 모든 타일을 워커로 베이크합니다(같은 씬 Debug 8 ms). 에이전트가 처음 등록될 때 그 종류가 없으면 그때 마련합니다. 시험 · 도구는
+`ensureNavMesh` 로 지금 마련합니다. 질의(`findPath` · `findNearestPoint` · `raycast`)는 구운 종류에 대해 아무 틱에서나 부를 수 있습니다.
+
+**에이전트 갱신 순서**(게임 스레드): 요청(목적지 · 멈춤 · 순간이동 — 에이전트의 틱이 적어 둔 것)과 자리(컨트롤러가 옮긴 자리, 또는 바깥이 0.5 m 넘게 옮긴
+자리 = 순간이동)를 군중에 넣는다 → 종류마다 군중 `update` → 결과를 쓴다(컨트롤러면 `setMoveVelocity`, 아니면 자리 · 진행 방향 요). 목적지에서
+`_stoppingDistance` 안이면 `Arrived` 이고 군중의 목표를 지운다.
+
+**쿠킹.** `App --cook-scenes` 가 표면이 놓인 씬마다(글에 `NavMeshSurfaceComponent` 가 든 씬만 세운다) 플레이를 시작하지 않은 채 세워 `makeCookedEntry` 로
+베이크하고 `<cooked-dir>/<씬 경로의 .navmesh>` 를 씁니다(`SceneNavigationCooker`). 팩 쿠커가 스테이징 폴더째 팩에 싣습니다. 장애물 · 플레이가 세운 것은 들지 않습니다.
+
+시험: `NavMeshAgentTest`(상자 더미를 돌아 도착 · 캐릭터 컨트롤러로 · 수정자 빼기 · 영역), `NavMeshCookTest`(쇼케이스 — 쿠킹 타일 = 런타임 타일, 쿠킹본 끼우기, 낡은 것 버리기).
