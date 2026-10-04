@@ -1075,7 +1075,8 @@ namespace sw
 
     void FightingMatch::saveState( vector<uint8>& outBuffer ) const
     {
-        BitWriter writer;
+        // 롤백은 프레임마다 · 되감아 다시 돌 때마다 저장한다 — 링 슬롯의 버퍼를 이어받아 쓰고 돌려준다(새로 잡지 않는다).
+        BitWriter writer{ std::move( outBuffer ) };
         writer.writeUint32( FightingMatchInternal::kStateMagic );
         writer.writeVarInt( FightingMatchInternal::kStateVersion );
         FightingMatchInternal::writeCounter( writer, _frame );
@@ -1116,7 +1117,7 @@ namespace sw
             for ( int32 framesAgo = fighter._inputBuffer.getFrameCount() - 1; framesAgo >= 0; --framesAgo )
                 writer.writeBits( encodeInput( fighter._inputBuffer.getFrame( framesAgo ) ), 8 );
         }
-        outBuffer = writer.getBytes();
+        outBuffer = writer.releaseBytes();
     }
 
     bool FightingMatch::loadState( const vector<uint8>& buffer )

@@ -98,7 +98,7 @@ namespace sw
 
     void KartGhost::serialize( vector<uint8>& outBuffer ) const
     {
-        BitWriter writer;
+        BitWriter writer{ std::move( outBuffer ) };
         writer.writeUint32( KartGhostInternal::kMagic );
         writer.writeBits( kFormatVersion, 8 );
         writer.writeFloat( _startPosition._x );
@@ -110,7 +110,7 @@ namespace sw
         writer.writeVarUint( static_cast<uint64>( _listFrame.size() ) );
         for ( const KartGhostFrame& frame : _listFrame )
             writeFrame( writer, frame );
-        outBuffer = writer.getBytes();
+        outBuffer = writer.releaseBytes();
     }
 
     bool KartGhost::deserialize( const uint8* pData, int32 byteCount )

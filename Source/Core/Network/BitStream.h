@@ -40,6 +40,12 @@ namespace sw
     {
     public:
         BitWriter();
+        /**
+         * @brief @p reuseBuffer 의 잡힌 용량을 이어받아 빈 상태로 시작합니다(내용은 버린다).
+         * @details 매 프레임 상태를 같은 자리(롤백 링 슬롯 등)에 쓰는 쪽이 `BitWriter writer{ std::move( outBuffer ) }; … outBuffer = writer.releaseBytes();`
+         *          로 쓰면, 그 자리의 버퍼가 돌아다닐 뿐 새로 잡지 않는다.
+         */
+        explicit BitWriter( vector<uint8>&& reuseBuffer );
 
         void writeBits( uint32 value, int32 bitCount );
         void writeBool( bool bValue ) { writeBits( bValue ? 1u : 0u, 1 ); }
@@ -64,6 +70,8 @@ namespace sw
         int32 getByteCount() const { return ( _bitCount + 7 ) / 8; }
         /** @brief 마지막 바이트의 남은 비트는 0 입니다. */
         const vector<uint8>& getBytes() const { return _buffer; }
+        /** @brief 쓴 바이트를 복사 없이 넘겨주고 비웁니다(버퍼째 옮긴다). */
+        [[nodiscard]] vector<uint8> releaseBytes();
 
     private:
         vector<uint8> _buffer;

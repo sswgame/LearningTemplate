@@ -167,6 +167,32 @@ SW_TEST_CASE( NetworkTest, SkippedBytesLeaveTheFollowingFieldsInPlace )
     SW_EXPECT_TRUE( shortReader.hasOverflowed() );
 }
 
+/**
+ * @brief [NetworkTest] 받은 버퍼를 이어받아 쓴 BitWriter 는 그 버퍼를 새로 잡지 않고 돌려준다 — 같은 자리에 매 프레임 써도 할당이 없다
+ * @details 롤백 넷코드는 프레임마다 · 되감아 다시 돌 때마다 상태를 링 슬롯에 저장한다. 지역 BitWriter 로 써서 복사해 넘기면 저장마다
+ *          버퍼 하나가 새로 잡히고 하나가 복사된다(`FightingMatch::saveState`).
+ */
+SW_TEST_CASE( NetworkTest, WriterReusesTheGivenBufferAndReleasesItWithoutCopying )
+{
+    vector<uint8> slot;
+    slot.reserve( 256 );
+    slot.assign( 10, uint8{ 0xEE } );
+    const uint8* pStorage = slot.data();
+
+    BitWriter writer{ std::move( slot ) };
+    SW_EXPECT_EQUAL( 0, writer.getByteCount() ); // 이어받은 내용은 버린다
+    writer.writeVarUint( 77 );
+    writer.writeUint32( 0xA5A5A5A5u );
+    slot = writer.releaseBytes();
+    SW_EXPECT_TRUE( slot.data() == pStorage ); // 같은 저장소 — 새로 잡지 않았다
+    SW_EXPECT_EQUAL( 0, writer.getByteCount() );
+
+    BitReader reader( slot.data(), static_cast<int32>( slot.size() ) );
+    SW_EXPECT_EQUAL( 77, static_cast<int32>( reader.readVarUint() ) );
+    SW_EXPECT_EQUAL( 0xA5A5A5A5u, reader.readUint32() );
+    SW_EXPECT_FALSE( reader.hasOverflowed() );
+}
+
 SW_TEST_CASE( NetworkTest, SequencesWrapAndSequenceBufferForgetsStaleEntries )
 {
     SW_EXPECT_TRUE( NetSequence::isGreater( 1, 65535 ) );

@@ -17,6 +17,21 @@ namespace sw
     {
     }
 
+    BitWriter::BitWriter( vector<uint8>&& reuseBuffer )
+        : _buffer{ std::move( reuseBuffer ) }
+        , _bitCount{ 0 }
+    {
+        _buffer.clear();
+    }
+
+    vector<uint8> BitWriter::releaseBytes()
+    {
+        vector<uint8> bytes = std::move( _buffer );
+        _buffer.clear();
+        _bitCount = 0;
+        return bytes;
+    }
+
     void BitWriter::writeBits( uint32 value, int32 bitCount )
     {
         if ( bitCount <= 0 )
