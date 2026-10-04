@@ -158,7 +158,7 @@ namespace sw
             return;
         if ( _cyclePresetKey != Key::Unknown && pInput->wasKeyPressed( _cyclePresetKey ) )
         {
-            const hashed_string nextId = activateNextPreset();
+            [[maybe_unused]] const hashed_string nextId = activateNextPreset(); // 로그는 Shipping 에서 빠진다
             SW_LOG_INFO( "Camera preset -> '%#'", nextId.c_str() );
         }
         const CameraInputDef& inputDef = _director.getActivePreset()._input;
