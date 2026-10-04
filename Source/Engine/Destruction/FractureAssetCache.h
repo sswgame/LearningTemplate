@@ -1,8 +1,9 @@
 /**
  * @file FractureAssetCache.h
  * @brief `.fracture` 를 경로로 나눠 주는 표(약한 참조 — 마지막 사용자가 놓으면 사라짐)와, 그 표를 에셋 캐시 등록부에 보이는 창구입니다.
- * @details `SkeletonCache` · `AnimClipCache` 와 같은 모양입니다. 핫 리로드는 표의 항목을 **새 객체로 바꿉니다**(쓰던 쪽의 조각 바디 · 메시가 옛 형상을
- *          가리키는 채로 내용만 바뀌지 않게) — 쓰는 쪽은 `getReloadGeneration` 이 바뀌면 다시 받아 다시 짓습니다.
+ * @details `SkeletonCache` · `AnimClipCache` 와 같은 `SharedAssetTable` 위에 섭니다. 다만 핫 리로드는 제자리로 바꾸지 않고 표에서 **떼어 냅니다**
+ *          (`detachShared` — 쓰던 쪽의 조각 바디 · 메시가 옛 형상을 가리키는 채로 내용만 바뀌지 않게). 쓰는 쪽은 `getReloadGeneration` 이 바뀌면
+ *          다시 받아 다시 짓습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

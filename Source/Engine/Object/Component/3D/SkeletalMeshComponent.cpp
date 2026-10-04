@@ -129,7 +129,8 @@ namespace sw
 
     void SkeletalMeshComponent::setSkeleton( shared_ptr<const Skeleton> skeleton )
     {
-        _bRuntimeSkeleton = skeleton != nullptr ? SW_TRUE : SW_FALSE;
+        // 코드가 정한 스켈레톤은 경로가 빈 동안 렌더 에셋을 다시 풀어도(시작 · 메시 교체) 암묵 스켈레톤으로 돌아가지 않는다.
+        _bRuntimeSkeleton = ( skeleton != nullptr ) ? SW_TRUE : SW_FALSE;
         assignSkeleton( std::move( skeleton ) );
     }
 

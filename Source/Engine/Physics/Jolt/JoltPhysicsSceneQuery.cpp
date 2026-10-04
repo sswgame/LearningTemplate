@@ -41,22 +41,32 @@ namespace sw
                 uint32 _layerMask;
             };
 
-            /** @brief 쏘는 쪽 바디와(원하면) 트리거를 뺍니다. */
+            /** @brief 쏘는 쪽 바디 · 쏘는 오브젝트의 바디 모두(사용자 값)와(원하면) 트리거를 뺍니다. */
             class QueryBodyFilter final : public JPH::BodyFilter
             {
             public:
-                QueryBodyFilter( JPH::BodyID ignoreBody, bool bIncludeTriggers )
-                    : _ignoreBody{ ignoreBody }
-                    , _bIncludeTriggers{ bIncludeTriggers }
+                QueryBodyFilter( const JoltPhysicsScene& scene, JPH::BodyID ignoreBody, const PhysicsQueryFilter& filter )
+                    : _scene{ scene }
+                    , _ignoreBody{ ignoreBody }
+                    , _ignoreUserData{ filter._ignoreUserData }
+                    , _bIncludeTriggers{ filter._bIncludeTriggers }
                 {
                 }
 
                 bool ShouldCollide( const JPH::BodyID& bodyId ) const override { return bodyId != _ignoreBody; }
-                bool ShouldCollideLocked( const JPH::Body& body ) const override { return _bIncludeTriggers || body.IsSensor() == false; }
+                bool ShouldCollideLocked( const JPH::Body& body ) const override
+                {
+                    if ( _bIncludeTriggers == false && body.IsSensor() )
+                        return false;
+                    // 바디의 Jolt 사용자 값은 엔진 핸들이다 — 엔진 사용자 값(오브젝트 id)은 씬의 기록에 있다.
+                    return _ignoreUserData == 0 || _scene.getBodyUserData( PhysicsBodyHandle::fromPacked( body.GetUserData() ) ) != _ignoreUserData;
+                }
 
             private:
-                JPH::BodyID _ignoreBody;
-                bool        _bIncludeTriggers;
+                const JoltPhysicsScene& _scene;
+                JPH::BodyID             _ignoreBody;
+                uint64                  _ignoreUserData;
+                bool                    _bIncludeTriggers;
             };
 
             /** @brief 캐릭터는 트리거에 막히지 않습니다. */
@@ -405,7 +415,7 @@ namespace sw
     {
         const BodyRecord*                                    pIgnore = findBody( filter._ignoreBody );
         const JoltPhysicsSceneQueryInternal::LayerMaskFilter layerFilter{ filter._layerMask };
-        const JoltPhysicsSceneQueryInternal::QueryBodyFilter bodyFilter{ pIgnore != nullptr ? pIgnore->_bodyId : JPH::BodyID{}, filter._bIncludeTriggers };
+        const JoltPhysicsSceneQueryInternal::QueryBodyFilter bodyFilter{ *this, pIgnore != nullptr ? pIgnore->_bodyId : JPH::BodyID{}, filter };
         const JPH::RRayCast                                  ray{ JoltUtil::toJolt( origin ), JoltUtil::toJolt( direction ) * maxDistance };
         JPH::RayCastResult                                   hit;
         if ( _system.GetNarrowPhaseQuery().CastRay( ray, hit, JPH::BroadPhaseLayerFilter{}, layerFilter, bodyFilter ) == false )
@@ -418,7 +428,13 @@ namespace sw
         outHit._distance       = hit.mFraction * maxDistance;
         const JPH::BodyLockRead lock{ _system.GetBodyLockInterface(), hit.mBodyID };
         if ( lock.Succeeded() )
+        {
             outHit._normal = JoltUtil::toEngine( lock.GetBody().GetWorldSpaceSurfaceNormal( hit.mSubShapeID2, point ) );
+            // 이 씬이 짓는 셰이프는 모두 `JoltPhysicsMaterial` 을 단다(기본 재질만 예외 — 그때는 이름이 비었다).
+            const JPH::PhysicsMaterial* pMaterial = lock.GetBody().GetShape()->GetMaterial( hit.mSubShapeID2 );
+            if ( pMaterial != nullptr && pMaterial != JPH::PhysicsMaterial::sDefault.GetPtr() )
+                outHit._material = static_cast<const JoltPhysicsMaterial*>( pMaterial )->getName();
+        }
         return true;
     }
 
@@ -430,7 +446,7 @@ namespace sw
             return false;
         const BodyRecord*                                          pIgnore = findBody( filter._ignoreBody );
         const JoltPhysicsSceneQueryInternal::LayerMaskFilter       layerFilter{ filter._layerMask };
-        const JoltPhysicsSceneQueryInternal::QueryBodyFilter       bodyFilter{ pIgnore != nullptr ? pIgnore->_bodyId : JPH::BodyID{}, filter._bIncludeTriggers };
+        const JoltPhysicsSceneQueryInternal::QueryBodyFilter       bodyFilter{ *this, pIgnore != nullptr ? pIgnore->_bodyId : JPH::BodyID{}, filter };
         const JPH::RMat44                                          start = JPH::RMat44::sRotationTranslation( JoltUtil::toJolt( rotation ), JoltUtil::toJolt( position ) );
         const JPH::RShapeCast                                      cast  = JPH::RShapeCast::sFromWorldTransform( pShape.GetPtr(), JPH::Vec3::sReplicate( 1.0f ), start, JoltUtil::toJolt( direction ) * maxDistance );
         JPH::ShapeCastSettings                                     settings;
@@ -456,7 +472,7 @@ namespace sw
             return 0;
         const BodyRecord*                                    pIgnore = findBody( filter._ignoreBody );
         const JoltPhysicsSceneQueryInternal::LayerMaskFilter layerFilter{ filter._layerMask };
-        const JoltPhysicsSceneQueryInternal::QueryBodyFilter bodyFilter{ pIgnore != nullptr ? pIgnore->_bodyId : JPH::BodyID{}, filter._bIncludeTriggers };
+        const JoltPhysicsSceneQueryInternal::QueryBodyFilter bodyFilter{ *this, pIgnore != nullptr ? pIgnore->_bodyId : JPH::BodyID{}, filter };
         const JPH::RMat44                                    transform = JPH::RMat44::sRotationTranslation( JoltUtil::toJolt( rotation ), JoltUtil::toJolt( position ) ) *
                                       JPH::Mat44::sTranslation( pShape->GetCenterOfMass() );
         JPH::CollideShapeSettings                                 settings;

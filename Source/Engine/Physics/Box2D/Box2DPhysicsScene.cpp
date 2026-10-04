@@ -164,6 +164,23 @@ namespace sw
         }
     }
 
+    int32 Box2DPhysicsScene::findMaterialIndex( const hashed_string& name ) const
+    {
+        for ( size_t materialIndex = 0; materialIndex < _settings._listMaterial.size(); ++materialIndex )
+        {
+            if ( _settings._listMaterial[materialIndex]._name == name )
+                return static_cast<int32>( materialIndex );
+        }
+        return 0;
+    }
+
+    hashed_string Box2DPhysicsScene::findMaterialName( int32 materialIndex ) const
+    {
+        if ( materialIndex < 0 || static_cast<size_t>( materialIndex ) >= _settings._listMaterial.size() )
+            return hashed_string{};
+        return _settings._listMaterial[static_cast<size_t>( materialIndex )]._name;
+    }
+
     bool Box2DPhysicsScene::attachShape( BodyRecord& record, const PhysicsShapeDesc2D& shape, const hashed_string& defaultMaterial, PhysicsBodyHandle handle )
     {
         const PhysicsMaterialDef& material  = resolveMaterial( shape._material, defaultMaterial );
@@ -185,6 +202,7 @@ namespace sw
             b2SurfaceMaterial surface   = b2DefaultSurfaceMaterial();
             surface.friction            = material._friction;
             surface.restitution         = material._restitution;
+            surface.userMaterialId      = findMaterialIndex( material._name );
             b2ChainDef chainDef         = b2DefaultChainDef();
             chainDef.points             = listPoint.data();
             chainDef.count              = static_cast<int32>( listPoint.size() );
@@ -207,16 +225,17 @@ namespace sw
             return true;
         }
 
-        b2ShapeDef shapeDef           = b2DefaultShapeDef();
-        shapeDef.userData             = pUserData;
-        shapeDef.material.friction    = material._friction;
-        shapeDef.material.restitution = material._restitution;
-        shapeDef.density              = material._density;
-        shapeDef.filter               = makeFilter( record._layer );
-        shapeDef.isSensor             = record._bTrigger;
-        shapeDef.enableSensorEvents   = true;
-        shapeDef.enableContactEvents  = true;
-        shapeDef.enableHitEvents      = true;
+        b2ShapeDef shapeDef              = b2DefaultShapeDef();
+        shapeDef.userData                = pUserData;
+        shapeDef.material.friction       = material._friction;
+        shapeDef.material.restitution    = material._restitution;
+        shapeDef.material.userMaterialId = findMaterialIndex( material._name );
+        shapeDef.density                 = material._density;
+        shapeDef.filter                  = makeFilter( record._layer );
+        shapeDef.isSensor                = record._bTrigger;
+        shapeDef.enableSensorEvents      = true;
+        shapeDef.enableContactEvents     = true;
+        shapeDef.enableHitEvents         = true;
 
         b2ShapeId shapeId = b2_nullShapeId;
         switch ( shape._type )

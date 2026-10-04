@@ -1,0 +1,8 @@
+<!-- KayKit 스켈레톤 전사의 알림 표 — 클립의 알림 이름(곁 데이터 models_raw/kaykit/skeleton_warrior.clips.json) → 처리기 + 인자.
+     AnimNotifyComponent 가 읽는다. 처리기 이름 · 인자는 Engine/Character/AnimNotifyHandlers.h 의 표. -->
+<AnimNotifies>
+    <Notify name="FootL" handler="Footstep" socket="foot.l" distance="0.5"/>
+    <Notify name="FootR" handler="Footstep" socket="foot.r" distance="0.5"/>
+    <Notify name="Swing" handler="HitWindow" socketA="handslot.r" socketB="SwordTip" radius="0.05" damage="25" impulse="60"/>
+    <Notify name="Impact" handler="CameraShake" amplitude="0.05" duration="0.25" frequency="35" socket="SwordTip"/>
+</AnimNotifies>

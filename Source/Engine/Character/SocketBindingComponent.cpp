@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/CharacterGeometry.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -96,6 +97,16 @@ namespace sw
         pScene->setWorldTransform( CharacterGeometryUtil::blendTransforms( _returnFrom, target, weight ) );
     }
 
+    void SocketBindingComponent::onBeginPlay()
+    {
+        Component::onBeginPlay();
+        // 같은 오브젝트의 강체가 물리 바디다 — 코드가 따로 정했으면 그것을 둔다.
+        GameObject*         pOwner = getOwner();
+        RigidBodyComponent* pBody  = pOwner != nullptr ? pOwner->getComponent<RigidBodyComponent>() : nullptr;
+        if ( pBody != nullptr && resolvePhysicsBody() == nullptr )
+            setPhysicsBody( pBody, &pBody->getSocketPhysicsBody() );
+    }
+
     void SocketBindingComponent::onEndPlay()
     {
         endPhysicsIfRunning();
@@ -148,6 +159,10 @@ namespace sw
         }
         SocketBindingComponentInternal::setLocalTransform( *pScene, _socketInHolder );
         enterState( SocketBindingState::Bound );
+        // 붙은 동안 강체는 손을 따르는 키네마틱이다(동적으로 남으면 계층과 싸운다).
+        ISocketPhysicsBody* pBody = resolvePhysicsBody();
+        if ( pBody != nullptr )
+            pBody->endPhysics();
         return true;
     }
 

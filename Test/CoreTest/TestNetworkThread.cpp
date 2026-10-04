@@ -275,6 +275,10 @@ SW_TEST_CASE( NetworkThreadTest, ConnectionsSurviveStalledGameThread )
     settings._timeout = 0.5;
     ThreadedCluster cluster( 1, settings );
     SW_ASSERT_TRUE( cluster._listClient[0].connectAsync( NetAddress::makeLoopback( 4000 ) ).waitFor( kFutureWaitMilli ) );
+    // 멈추기 전에 보낸 순서 보장 메시지는 멈춘 동안 네트워크 스레드가 실어 나르고, 깨어난 게임 스레드가 순서대로 받는다.
+    constexpr int32 kStallMessageCount = 10;
+    for ( int32 index = 0; index < kStallMessageCount; ++index )
+        SW_ASSERT_TRUE( cluster._listClient[0].sendMessage( 0, NetChannelType::ReliableOrdered, makeTaggedMessage( 9, index ) ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     SW_EXPECT_EQUAL( 1, cluster._server.getConnectedCount() );
     SW_EXPECT_TRUE( cluster._listClient[0].getConnectionState( 0 ) == NetConnectionState::Connected );
@@ -284,7 +288,20 @@ SW_TEST_CASE( NetworkThreadTest, ConnectionsSurviveStalledGameThread )
     SW_EXPECT_TRUE( listEvent[0]._kind == NetHostEvent::Kind::Connected );
     NetConnectionStats stats;
     SW_ASSERT_TRUE( cluster._listClient[0].getConnectionStats( 0, stats ) );
-    SW_EXPECT_TRUE( stats._rtt > 0.0f && stats._rtt < 0.05f ); // 확인이 게임 프레임을 기다리지 않는다
+    // 확인이 게임 프레임을 기다리지 않는다 — 기다렸다면 왕복 시간이 멈춘 길이(1 초)에 닿는다. 상한은 절대 지연이 아니라 멈춤과 가르는 선이라
+    // 부하 아래의 루프백 지연(수십 ms)에 넉넉하게 연결 타임아웃(0.5 초)으로 둔다.
+    SW_EXPECT_TRUE( stats._rtt > 0.0f && stats._rtt < static_cast<float32>( settings._timeout ) );
+    int32          received     = 0;
+    int32          connectionId = -1;
+    NetChannelType channel      = NetChannelType::Unreliable;
+    vector<uint8>  buffer;
+    SW_EXPECT_TRUE( waitUntil( [&]()
+    {
+        while ( cluster._server.receiveMessage( connectionId, channel, buffer ) )
+            received += readInt( buffer, 4 ) == received ? 1 : 0;
+        return received == kStallMessageCount;
+    } ) );
+    SW_EXPECT_EQUAL( kStallMessageCount, received );
 
     // 스레드는 두 번 띄울 수 없고, 멈춤은 여러 번 불러도 된다.
     SW_EXPECT_FALSE( cluster._listThread[0].start( &cluster._server ) );

@@ -1,8 +1,9 @@
 /**
  * @file GrabberComponent.h
  * @brief 집기 · 던지기 · 붙이기 — 물리 백엔드를 모르는 창구(`IGrabPhysics`)와 그것을 쓰는 컴포넌트입니다.
- * @details 게임이 `IGrabPhysics` 를 게임 서비스로 걸면(Jolt: 강체를 키네마틱 · 관절로 손에 묶고, 놓을 때 속도를 준다) 그것을 쓰고, 없으면 트랜스폼 폴백
- *          (`TransformGrabPhysics` — 들고 있는 쪽 씬 컴포넌트에 월드 자리를 지켜 붙이고, 놓으면 떼며 속도는 대상의 `GravityComponent` 수직 속도로만 준다)입니다.
+ * @details 게임이 `IGrabPhysics` 를 게임 서비스로 걸면 그것을 쓰고, 없으면 강체 백엔드(`RigidBodyGrabPhysics` — 강체를 키네마틱으로 손에 묶고 놓을 때
+ *          동적 + 속도)입니다. 강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics` — 들고 있는 쪽 씬 컴포넌트에 월드 자리를 지켜 붙이고, 놓으면 떼며
+ *          속도는 대상의 `GravityComponent` 수직 속도로만 준다)입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -47,9 +48,27 @@ namespace sw
 namespace sw
 {
     /**
+     * @class RigidBodyGrabPhysics
+     * @brief 강체를 키네마틱으로 손에 묶고(트랜스폼을 따른다 — 밀린 것이 속도를 받는다), 놓을 때 동적으로 되돌려 속도를 줍니다(3D · 2D 강체).
+     *        강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`)과 같습니다. 서비스가 없을 때 `GrabberComponent` 의 기본 백엔드입니다.
+     */
+    class SW_GF_API RigidBodyGrabPhysics final : public IGrabPhysics
+    {
+    public:
+        [[nodiscard]] bool attach( GameObject& holder, GameObject& target, const float3& localOffset ) override;
+        void               release( GameObject& holder, GameObject& target, const float3& velocity ) override;
+
+    private:
+        TransformGrabPhysics _transform;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class GrabberComponent
      * @brief 하나를 집어 들고(`grab`) 던지거나(`throwHeld`) 내려놓습니다(`dropHeld`). 소켓에 붙이기(무기를 등에)는 `grab` 에 그 소켓 자리를 오프셋으로 줍니다.
-     * @details 든 것은 핸들로 저장합니다(`_held`). 백엔드는 게임 서비스 `IGrabPhysics`, 없으면 `TransformGrabPhysics`.
+     * @details 든 것은 핸들로 저장합니다(`_held`). 백엔드는 게임 서비스 `IGrabPhysics`, 없으면 `RigidBodyGrabPhysics`.
      */
     REFLECT( Category = "Interaction", DisplayName = "Grabber", Tooltip = "Grab, carry, throw or attach one object through the grab physics interface" )
     class SW_GF_API GrabberComponent : public Component
@@ -80,6 +99,6 @@ namespace sw
         PROPERTY( Category = "Grab", DisplayName = "Held", Tooltip = "Object held now (runtime)" )
         GameObjectHandle _held;
 
-        TransformGrabPhysics _fallback;
+        RigidBodyGrabPhysics _fallback;
     };
 } // namespace sw

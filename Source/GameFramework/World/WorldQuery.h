@@ -1,9 +1,10 @@
 /**
  * @file WorldQuery.h
  * @brief 게임플레이가 월드에 묻는 기하 질의(광선 · 시야)의 좁은 창구 — 물리 백엔드를 모르고 씁니다.
- * @details 상호작용 시야(line of sight) · 기믹 레이저 · 포탑 조준이 이것만 부릅니다. 게임이 `IWorldQuery` 를 게임 서비스로 걸면(Jolt 백엔드의
- *          광선 질의) 그것을 쓰고, 없으면 엔진 `PhysicsWorld` 의 AABB 바디를 훑는 폴백(`PhysicsWorldQuery`)을 씁니다. 폴백은 트리거 바디를
- *          막는 것으로 치지 않고 레이어 0 의 충돌 행렬로 거릅니다. 2D 콜라이더의 바디는 깊이가 없으므로(Z 0 한 점) 광선의 Z 와 상관없이 맞힙니다.
+ * @details 상호작용 시야(line of sight) · 기믹 레이저 · 포탑 조준이 이것만 부릅니다. 게임이 `IWorldQuery` 를 게임 서비스로 걸면 그것을 쓰고, 없으면
+ *          씬의 강체 물리(`ScenePhysicsWorldQuery` — Jolt 3D · Box2D 2D 씬의 광선, 트리거 제외)와 엔진 `PhysicsWorld` 의 AABB 바디(`PhysicsWorldQuery` —
+ *          `BoxCollider2DComponent` 만 있는 씬의 폴백) 중 **가까운 것**입니다. AABB 폴백은 트리거 바디를 막는 것으로 치지 않고 레이어 0 의 충돌 행렬로
+ *          거릅니다. 2D 콜라이더의 바디는 깊이가 없으므로(Z 0 한 점) 광선의 Z 와 상관없이 맞힙니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -61,8 +62,26 @@ namespace sw
 namespace sw
 {
     /**
+     * @class ScenePhysicsWorldQuery
+     * @brief 씬의 강체 물리(3D · 2D 씬)에 대한 광선 질의입니다. 무시할 오브젝트의 바디는 모두 건너뜁니다(래그돌 뼈 · 든 무기). 3D 가 먼저, 2D 는 XY 평면입니다.
+     */
+    class SW_GF_API ScenePhysicsWorldQuery final : public IWorldQuery
+    {
+    public:
+        explicit ScenePhysicsWorldQuery( const GameObjectManager& manager );
+
+        bool raycast( const float3& from, const float3& to, uint64 ignoreObjectId, WorldRayHit& outHit ) const override;
+
+    private:
+        const GameObjectManager& _manager;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct WorldQuery
-     * @brief 걸린 서비스(`IWorldQuery`)가 있으면 그것, 없으면 매니저의 `PhysicsWorld` 폴백으로 묻습니다.
+     * @brief 걸린 서비스(`IWorldQuery`)가 있으면 그것, 없으면 씬의 강체 물리와 `PhysicsWorld` 폴백 중 가까운 것으로 묻습니다.
      */
     struct SW_GF_API WorldQuery
     {

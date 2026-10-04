@@ -53,6 +53,8 @@ Jolt 의 대상 기능 옵션(AVX2)과 정의는 Jolt 백엔드 소스에만 붙
   버려 느려진다). 같은 입력 · 같은 순서면 같은 결과입니다(`StepIsDeterministic`).
 - **재질**은 셰이프마다입니다. 마찰은 기하 평균, 반발은 큰 쪽(두 백엔드 같다). 밀도로 질량을 정하거나 `_mass` 로 덮습니다.
 - **레이어**는 설정 표의 이름 순서가 번호입니다(최대 32). 충돌 목록은 대칭으로 읽습니다. 질의는 레이어 마스크로 거릅니다.
+  쏘는 오브젝트의 바디를 모두 빼려면 `PhysicsQueryFilter::_ignoreUserData`(래그돌 뼈 · 든 무기 — 사용자 값이 오브젝트 id). 레이캐스트 결과의 `_material` 은
+  맞은 셰이프의 재질 이름입니다(발소리 · 탄흔 — Jolt 는 셰이프 재질, Box2D 는 셰이프의 `userMaterialId` 에 재질 표 번호를 싣는다).
   두 바디만 예외로 끄려면 `setPairCollision`(관절로 이은 바디는 `_bDisableCollision`).
 - **이벤트**는 바디 쌍마다 시작 · 유지 · 끝입니다(셰이프가 여럿이어도 한 번). 한 스텝 안에 닿았다 떨어진 쌍은 시작과 끝을 둘 다 냅니다. 바디를
   지우거나 끄면 그 접촉은 다음 이벤트 묶음에서 끝납니다. 충격량 — 시작은 부딪힌 충격(다가온 속도 × 유효 질량 × (1 + 반발)), 유지는 그 스텝의
@@ -65,14 +67,14 @@ Jolt 의 대상 기능 옵션(AVX2)과 정의는 Jolt 백엔드 소스에만 붙
 
 ### 0.3 씬의 물리와 컴포넌트
 
-`GameObjectManager` 가 `ScenePhysics` 를 소유하고 `stepPhysics` 에서 겹침 월드 다음에 한 번 진행합니다(`Engine/Object/GameObject/ScenePhysics.h`).
+`GameObjectManager` 가 `ScenePhysics` 를 소유하고 `stepPhysics` 에서 겹침 월드 다음에 한 번 진행합니다 — DuringPhysics 틱 · 애니메이션 뒤, PostPhysics 틱 앞(`Engine/Object/GameObject/ScenePhysics.h`).
 3D · 2D 씬은 처음 쓸 때 만듭니다. 컴포넌트(`Engine/Object/Component/Physics/`)는 틱하지 않고 단계(바디 → 관절 → 캐릭터)마다 불립니다:
 
 | 컴포넌트 | 하는 일 |
 |---|---|
-| `RigidBodyComponent` · `RigidBody2DComponent` | 바디 하나. 종류 · 셰이프(둘 이상이면 컴파운드) · 레이어 · 재질 · 질량 · 트리거 · 연속을 속성으로 든다. Dynamic 은 보간한 자세를 트랜스폼에 쓰고, Kinematic 은 트랜스폼을 따라 스텝마다 나눠 움직이고, 코드가 옮기면(`teleportTo` 포함) 순간이동 |
+| `RigidBodyComponent` · `RigidBody2DComponent` | 바디 하나(무기 판정의 히트 존 `_hitZone`, 3D 는 소켓 부착의 물리 창구 `getSocketPhysicsBody` 도 든다). 종류 · 셰이프(둘 이상이면 컴파운드) · 레이어 · 재질 · 질량 · 트리거 · 연속을 속성으로 든다. Dynamic 은 보간한 자세를 트랜스폼에 쓰고, Kinematic 은 트랜스폼을 따라 스텝마다 나눠 움직이고, 코드가 옮기면(`teleportTo` 포함) 순간이동 |
 | `JointComponent` · `Joint2DComponent` | 이 오브젝트의 강체를 부모 사슬에서 가장 가까운 강체(또는 월드)에 잇는다. 자리 · 축은 컴포넌트의 월드 자세 |
-| `CharacterControllerComponent` · `CharacterController2DComponent` | 캡슐 무버. `setMoveVelocity` · `jump`, 중력은 컴포넌트가 쌓는다. 자리는 발 |
+| `CharacterControllerComponent` · `CharacterController2DComponent` | 캡슐 무버. `setMoveVelocity` · `jump`, 중력은 컴포넌트가 쌓는다. 자리는 발. 3D 는 애니메이션 루트 모션(`addRootMotionDisplacement` — 프레임의 스텝들이 나눠 간다)도 받는다 |
 
 이벤트는 두 오브젝트의 켜진 컴포넌트에 갑니다 — 막는 접촉은 `onCollisionBegin/Stay/End( CollisionInfo )`, 트리거는 `onOverlapBegin/Stay/End( OverlapInfo )`
 (`_selfBody` · `_otherBody` 로 어느 바디였는지 — 래그돌 뼈 · 히트 존). 바디의 사용자 값이 오브젝트 id 라서, 컴포넌트가 아닌 코드(래그돌 빌더)가
@@ -97,6 +99,7 @@ PhysicsRagdollBuilder::setBodyType( scene, ragdoll, PhysicsBodyType::Dynamic ); 
 PhysicsRagdollBuilder::readBoneTransforms( scene, ragdoll, skeleton, worldFromModel, outPose ); // 포즈를 받는다
 ```
 
+컴포넌트로 쓰는 길(에셋 캐시 · 포즈 따르기 · 래그돌 · 맞음 반응 · 부분 · 기상)은 `Engine/Character/RagdollComponent`(`Source/Engine/Character/README.md`)입니다.
 셰이프 · 관절 축은 뼈 로컬입니다. 관절은 그 뼈의 바디와 부모 사슬에서 가장 가까운 바디가 있는 뼈를 Cone(스윙 원뿔 + 비틀림) · Hinge 등으로 잇고,
 이은 바디끼리 · `_listDisabledPair` 의 쌍은 부딪히지 않습니다. 바디 없는 뼈(손가락 · 모자)는 되읽을 때 입력 포즈의 부모 상대 변환으로 따라갑니다.
 에셋의 뼈가 스켈레톤에 없으면 오류이고 아무것도 만들지 않습니다. 견본: `Resource/engine/physics/samples/chain.physics.xml`.

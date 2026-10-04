@@ -106,18 +106,21 @@ namespace sw
     class JoltPhysicsMaterial final : public JPH::PhysicsMaterial
     {
     public:
-        JoltPhysicsMaterial( float32 friction, float32 restitution )
-            : _friction{ friction }
+        JoltPhysicsMaterial( const hashed_string& name, float32 friction, float32 restitution )
+            : _name{ name }
+            , _friction{ friction }
             , _restitution{ restitution }
         {
         }
 
-        float32 getFriction() const { return _friction; }
-        float32 getRestitution() const { return _restitution; }
+        const hashed_string& getName() const { return _name; }
+        float32              getFriction() const { return _friction; }
+        float32              getRestitution() const { return _restitution; }
 
     private:
-        float32 _friction;
-        float32 _restitution;
+        hashed_string _name;
+        float32       _friction;
+        float32       _restitution;
     };
 } // namespace sw
 

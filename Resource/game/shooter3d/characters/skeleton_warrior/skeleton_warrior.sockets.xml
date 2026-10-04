@@ -1,0 +1,5 @@
+<!-- KayKit 스켈레톤 전사의 소켓 — 칼끝(오른손 손잡이 자리에서 칼날 +Y 로 1.1 m, KayKit 무기 메시는 +Y 가 칼날). 알림의 칼 궤적 판정 · 흔들림 자리가 쓴다. -->
+<SocketSet>
+    <Socket name="SwordTip" parent="handslot.r" kind="TrailEnd" translation="0 1.1 0"/>
+    <Socket name="SwordGrip" parent="handslot.r" kind="Attach"/>
+</SocketSet>

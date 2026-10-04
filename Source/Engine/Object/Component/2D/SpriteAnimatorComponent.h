@@ -16,6 +16,7 @@
 
 namespace sw
 {
+    class IAnimNotifyListener;
     class SpriteAnimatorComponent;
     class SpriteClipAsset;
     class SpriteComponent;
@@ -104,6 +105,12 @@ namespace sw
         int32 getCurrentFrame() const;
         bool  isPlaying() const;
         bool  isPaused() const;
+        /**
+         * @brief 알림을 받는 쪽을 겁니다(빌립니다, nullptr 이면 뗍니다). 틱(워커)마다 지나간 구간 알림을 넘깁니다(`AnimNotifyFrame::_bFromTick`).
+         * @details 스프라이트는 재생할 것 하나를 구간마다 다시 쓰므로, 구간이 바뀐 틱에는 `_bRestarted` 를 세웁니다(받는 쪽이 옛 구간의 열린 알림을 닫는다).
+         */
+        void                 setNotifyListener( IAnimNotifyListener* pListener ) { _pNotifyListener = pListener; }
+        IAnimNotifyListener* getNotifyListener() const { return _pNotifyListener; }
 
     private:
         void tryLoadAnimGraph();
@@ -137,9 +144,11 @@ namespace sw
         PROPERTY( Category = "Playback", DisplayName = "Frame Rate", Tooltip = "Playback speed in FPS for frames without their own duration", Min = 1.0, Max = 120.0,
                   Meta = "Units=fps" )
         float32                  _frameRate;
-        SpriteAnimatorClipSource _clipSource;  ///< 상태 이름 → `_playable` 풀이
-        SpriteClipPlayable       _playable;    ///< 지금 구간(재생할 것). 스프라이트는 섞지 않으므로 하나면 된다
-        AnimGraphPlayer          _graphPlayer; ///< 시간 · 반복 · 끝 · 다음 상태 — 스켈레탈 애니메이터와 같은 코드다
+        SpriteAnimatorClipSource _clipSource;      ///< 상태 이름 → `_playable` 풀이
+        SpriteClipPlayable       _playable;        ///< 지금 구간(재생할 것). 스프라이트는 섞지 않으므로 하나면 된다
+        AnimGraphPlayer          _graphPlayer;     ///< 시간 · 반복 · 끝 · 다음 상태 — 스켈레탈 애니메이터와 같은 코드다
+        vector<AnimFiredNotify>  _listFiredNotify; ///< 이번 틱에 울린 알림(받는 쪽이 있을 때만 모은다)
+        IAnimNotifyListener*     _pNotifyListener;
         PROPERTY( Category = "Playback", DisplayName = "Current Frame", Tooltip = "Current playback frame index within the animation", Min = 0.0 )
         int32 _currentFrame;
         PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Frame count of the active animation, taken from the sprite clip", ReadOnly )
@@ -148,11 +157,12 @@ namespace sw
         const SpriteClipAsset* _pRangeClip;
         int32                  _firstClipFrame; ///< 지금 구간이 시작하는 클립 프레임입니다(저장하지 않습니다 — 클립에서 다시 잡습니다)
         PROPERTY( Category = "Playback", DisplayName = "Loop", Tooltip = "Loop playback when reaching the end" )
-        uint8                  _bRepeat      : 1;
-        uint8                  _bPlaying     : 1;
-        uint8                  _bPaused      : 1;
-        uint8                  _bGraphLoaded : 1;
-        uint8                  _bRootWarned  : 1; ///< 이번 재생에서 "루트 스프라이트에는 키를 적용하지 않는다" 를 알렸다
-        [[maybe_unused]] uint8 _reserved     : 3;
+        uint8                  _bRepeat       : 1;
+        uint8                  _bPlaying      : 1;
+        uint8                  _bPaused       : 1;
+        uint8                  _bGraphLoaded  : 1;
+        uint8                  _bRootWarned   : 1; ///< 이번 재생에서 "루트 스프라이트에는 키를 적용하지 않는다" 를 알렸다
+        uint8                  _bRangeChanged : 1; ///< 구간을 다시 잡았다 — 다음에 받는 쪽에 넘길 때 `_bRestarted`
+        [[maybe_unused]] uint8 _reserved      : 2;
     };
 } // namespace sw

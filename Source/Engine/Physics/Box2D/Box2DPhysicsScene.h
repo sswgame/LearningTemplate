@@ -141,11 +141,15 @@ namespace sw
         /** @brief 셰이프 하나를 바디에 붙입니다. 셰이프 id(체인이면 선분들)를 기록에 더합니다. */
         [[nodiscard]] bool        attachShape( BodyRecord& record, const PhysicsShapeDesc2D& shape, const hashed_string& defaultMaterial, PhysicsBodyHandle handle );
         const PhysicsMaterialDef& resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const;
-        b2Filter                  makeFilter( uint8 layer ) const;
-        void                      applyFilter( const BodyRecord& record );
-        const BodyRecord*         findBody( PhysicsBodyHandle body ) const;
-        BodyRecord*               findBody( PhysicsBodyHandle body );
-        PhysicsBodyHandle         findHandleOfShape( b2ShapeId shapeId ) const;
+        /** @brief 재질 이름의 설정 표 번호입니다(셰이프의 `userMaterialId` — 질의가 이름으로 되돌린다). 없으면 0 입니다. */
+        int32 findMaterialIndex( const hashed_string& name ) const;
+        /** @brief 설정 표 번호의 재질 이름입니다. 범위 밖이면 빈 이름입니다. */
+        hashed_string     findMaterialName( int32 materialIndex ) const;
+        b2Filter          makeFilter( uint8 layer ) const;
+        void              applyFilter( const BodyRecord& record );
+        const BodyRecord* findBody( PhysicsBodyHandle body ) const;
+        BodyRecord*       findBody( PhysicsBodyHandle body );
+        PhysicsBodyHandle findHandleOfShape( b2ShapeId shapeId ) const;
         /** @brief 쌍 예외 필터 관절 표에서 @p body 가 낀 것을 지웁니다(바디를 지우면 Box2D 가 관절도 지운다). */
         void forgetPairJointsOf( PhysicsBodyHandle body );
         /** @brief 스텝이 낸 Box2D 이벤트를 추적기에 넣고 충격량을 채웁니다. */
