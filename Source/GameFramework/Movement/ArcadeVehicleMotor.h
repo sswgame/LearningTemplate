@@ -12,6 +12,7 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -165,8 +166,8 @@ namespace sw
         int32                        getDriftDirection() const { return _driftDirection; }
         float32                      getDriftCharge() const { return _driftCharge; }
         int32                        getDriftTier() const;
-        float32                      getBoostTime() const { return _boostTime; }
-        bool                         isBoosting() const { return _boostTime > 0.0f; }
+        float32                      getBoostTime() const { return _boost.getRemaining(); }
+        bool                         isBoosting() const { return _boost.isActive(); }
         bool                         isAirborne() const { return _bAirborne != SW_FALSE; }
         float32                      getNitroGauge() const { return _nitroGauge; }
         int32                        getNitroCount() const { return _nitroCount; }
@@ -190,7 +191,7 @@ namespace sw
         float3                     _velocity; ///< 월드 속도(_y 는 위아래)
         float32                    _yaw;
         float32                    _driftCharge; ///< 이번 드리프트의 시간
-        float32                    _boostTime;
+        Countdown                  _boost;
         float32                    _nitroGauge; ///< 0..1
         int32                      _nitroCount;
         int32                      _driftDirection; ///< −1 왼쪽 · 1 오른쪽 · 0 드리프트 아님

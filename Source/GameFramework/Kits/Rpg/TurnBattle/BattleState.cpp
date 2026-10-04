@@ -19,7 +19,7 @@ namespace sw
     BattleState::BattleState()
         : _player{}
         , _foe{}
-        , _phaseTimer{ 0.0f }
+        , _phaseTimer{}
         , _statusText{}
         , _phase{ BattlePhase::Inactive }
         , _bPlayerWon{ SW_FALSE }
@@ -40,8 +40,8 @@ namespace sw
         const SpeciesCatalog* pCatalog = game::getService<SpeciesCatalog>();
         _foe                           = pCatalog != nullptr ? pCatalog->makeWild( pFoeSpeciesId, playerLead._level ) : PartyMember{};
         _phase                         = BattlePhase::Intro;
-        _phaseTimer                    = 0.55f;
-        _bPlayerWon                    = SW_FALSE;
+        _phaseTimer.start( 0.55f );
+        _bPlayerWon = SW_FALSE;
         setStatusText( SW_LOCFORMAT( "battle", "wild_appeared", "A wild {name} appeared!", TextArgumentList().addText( "name", _foe._nickname ) ) );
         SW_LOG_TRACE( "%#", _statusText.c_str() );
         const GameSettings* pGameSettings = game::getService<GameSettings>();
@@ -61,8 +61,8 @@ namespace sw
         if ( _phase == BattlePhase::Inactive )
             return;
 
-        _phaseTimer -= deltaTime;
-        if ( _phaseTimer > 0.0f )
+        _phaseTimer.tick( deltaTime );
+        if ( _phaseTimer.isActive() )
             return;
 
         if ( _phase == BattlePhase::Intro )
@@ -78,14 +78,14 @@ namespace sw
                 _bPlayerWon = SW_TRUE;
                 _player._exp += 10;
                 setStatusText( SW_LOCFORMAT( "battle", "foe_fainted", "{name} fainted! You won!", TextArgumentList().addText( "name", _foe._nickname ) ) );
-                _phase      = BattlePhase::Ended;
-                _phaseTimer = 0.4f;
+                _phase = BattlePhase::Ended;
+                _phaseTimer.start( 0.4f );
                 SW_LOG_TRACE( "%#", _statusText.c_str() );
                 return;
             }
             applyMove( _foe, _player, pickFoeMoveSlot(), false );
-            _phase      = BattlePhase::ResolveFoe;
-            _phaseTimer = 0.45f;
+            _phase = BattlePhase::ResolveFoe;
+            _phaseTimer.start( 0.45f );
         }
         else if ( _phase == BattlePhase::ResolveFoe )
         {
@@ -93,8 +93,8 @@ namespace sw
             {
                 _bPlayerWon = SW_FALSE;
                 setStatusText( SW_LOCFORMAT( "battle", "player_fainted", "{name} fainted...", TextArgumentList().addText( "name", _player._nickname ) ) );
-                _phase      = BattlePhase::Ended;
-                _phaseTimer = 0.4f;
+                _phase = BattlePhase::Ended;
+                _phaseTimer.start( 0.4f );
                 SW_LOG_TRACE( "%#", _statusText.c_str() );
                 return;
             }
@@ -113,8 +113,8 @@ namespace sw
         if ( _phase != BattlePhase::PlayerChoice )
             return;
         applyMove( _player, _foe, moveSlot, true );
-        _phase      = BattlePhase::ResolvePlayer;
-        _phaseTimer = 0.45f;
+        _phase = BattlePhase::ResolvePlayer;
+        _phaseTimer.start( 0.45f );
     }
 
     void BattleState::selectRun()
@@ -125,7 +125,7 @@ namespace sw
         SW_LOG_TRACE( "%#", _statusText.c_str() );
         _bPlayerWon = SW_FALSE;
         _phase      = BattlePhase::Ended;
-        _phaseTimer = 0.3f;
+        _phaseTimer.start( 0.3f );
     }
 
     void BattleState::setStatusText( string_view text )

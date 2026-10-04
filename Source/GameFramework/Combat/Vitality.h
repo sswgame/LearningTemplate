@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -156,9 +157,9 @@ namespace sw
         int32                   getReviverId() const { return _reviverId; }
         /** @brief 부활 진행 0..1 입니다. */
         float32 getReviveProgress() const;
-        bool    isInvulnerable() const { return _invulnerableRemaining > 0.0f; }
+        bool    isInvulnerable() const { return _invulnerable.isActive(); }
         float32 getPoise() const { return _poise; }
-        bool    isPoiseBroken() const { return _poiseBreakRemaining > 0.0f; }
+        bool    isPoiseBroken() const { return _poiseBreak.isActive(); }
 
     private:
         void enterDowned( int32 instigatorId );
@@ -174,8 +175,8 @@ namespace sw
         float32               _poise;
         float32               _sinceDamage;      ///< 마지막 피해 뒤 지난 시간(재생 지연)
         float32               _sincePoiseDamage; ///< 마지막 경직 피해 뒤 지난 시간
-        float32               _poiseBreakRemaining;
-        float32               _invulnerableRemaining;
+        Countdown             _poiseBreak;
+        Countdown             _invulnerable;
         float32               _reviveElapsed; ///< 배율을 곱해 쌓인 부활 시간
         float32               _reviveSpeedScale;
         int32                 _reviverId;

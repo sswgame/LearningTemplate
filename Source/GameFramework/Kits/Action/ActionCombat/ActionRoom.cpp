@@ -52,9 +52,9 @@ namespace sw
         , _layers{}
         , _listActor{}
         , _listProjectile{}
-        , _attackCooldown{ 0.0f }
-        , _dashCooldown{ 0.0f }
-        , _invulnTimer{ 0.0f }
+        , _attackCooldown{}
+        , _dashCooldown{}
+        , _invulnerable{}
         , _bossMaxHp{ 1.0f }
         , _bCleared{ SW_FALSE }
         , _reserved{ 0 }
@@ -72,11 +72,11 @@ namespace sw
         _kind = ActionRoomKind::None;
         _listActor.clear();
         _listProjectile.clear();
-        _attackCooldown = 0.0f;
-        _dashCooldown   = 0.0f;
-        _invulnTimer    = 0.0f;
-        _bossMaxHp      = 1.0f;
-        _bCleared       = SW_FALSE;
+        _attackCooldown.clear();
+        _dashCooldown.clear();
+        _invulnerable.clear();
+        _bossMaxHp = 1.0f;
+        _bCleared  = SW_FALSE;
     }
 
     void ActionRoom::beginEntrance()
@@ -131,9 +131,9 @@ namespace sw
 
     float32 ActionRoom::getDashFill() const
     {
-        if ( _dashCooldown <= 0.0f )
+        if ( _dashCooldown.isActive() == false )
             return 1.0f;
-        return MathUtil::saturate( 1.0f - ( _dashCooldown / ActionRoomTuning::kDashCooldown ) );
+        return MathUtil::saturate( 1.0f - ( _dashCooldown.getRemaining() / ActionRoomTuning::kDashCooldown ) );
     }
 
     float32 ActionRoom::getBossHpFill() const
@@ -165,16 +165,16 @@ namespace sw
         if ( _kind == ActionRoomKind::None )
             return result;
 
-        _attackCooldown = MathUtil::max( 0.0f, _attackCooldown - deltaTime );
-        _dashCooldown   = MathUtil::max( 0.0f, _dashCooldown - deltaTime );
-        _invulnTimer    = MathUtil::max( 0.0f, _invulnTimer - deltaTime );
+        _attackCooldown.tick( deltaTime );
+        _dashCooldown.tick( deltaTime );
+        _invulnerable.tick( deltaTime );
 
-        if ( input._bDashPressed == SW_TRUE && _dashCooldown <= 0.0f )
+        if ( input._bDashPressed == SW_TRUE && _dashCooldown.isActive() == false )
         {
-            _dashCooldown = ActionRoomTuning::kDashCooldown;
+            _dashCooldown.start( ActionRoomTuning::kDashCooldown );
             // **줄이지 않는다.** 그냥 대입하면 맞고 얻은 0.7 초짜리 무적이 대시 한 번에
             // 0.22 초로 **깎인다.** 대시가 피해를 덜 보게 해야 하는데 오히려 더 보게 된다.
-            _invulnTimer         = MathUtil::max( _invulnTimer, ActionRoomTuning::kDashInvulnerable );
+            _invulnerable.extendTo( ActionRoomTuning::kDashInvulnerable );
             result._bDashStarted = SW_TRUE;
         }
 
@@ -252,21 +252,21 @@ namespace sw
         a._hp          = a._hpMax;
         a._radius      = 0.7f;
         a._speed       = 0.9f;
-        a._attackTimer = ActionRoomTuning::kBossFirstFireDelay;
-        a._bAlive      = SW_TRUE;
-        _bossMaxHp     = a._hpMax;
+        a._attackTimer.start( ActionRoomTuning::kBossFirstFireDelay );
+        a._bAlive  = SW_TRUE;
+        _bossMaxHp = a._hpMax;
         _listActor.push_back( a );
     }
 
     void ActionRoom::tryPlayerAttack( const ActionRoomFrameInput& input )
     {
-        if ( _attackCooldown > 0.0f )
+        if ( _attackCooldown.isActive() )
             return;
         if ( input._bAttackPressed == SW_FALSE )
             return;
 
-        _attackCooldown = ActionRoomTuning::kAttackCooldown;
-        const AABB atk  = playerAttackBox( input._playerPos._x, input._playerPos._y, input._facing );
+        _attackCooldown.start( ActionRoomTuning::kAttackCooldown );
+        const AABB atk = playerAttackBox( input._playerPos._x, input._playerPos._y, input._facing );
         for ( Actor& actor : _listActor )
         {
             if ( actor._bAlive == SW_FALSE )
@@ -298,10 +298,10 @@ namespace sw
             if ( actor._kind != ActorKind::Boss )
                 continue;
 
-            actor._attackTimer -= deltaTime;
-            if ( actor._attackTimer > 0.0f )
+            actor._attackTimer.tick( deltaTime );
+            if ( actor._attackTimer.isActive() )
                 continue;
-            actor._attackTimer = ActionRoomTuning::kBossFireInterval;
+            actor._attackTimer.start( ActionRoomTuning::kBossFireInterval );
 
             const float2 projDir = float2{ playerX - actor._position._x, playerY - actor._position._y }.normalize();
 
@@ -310,15 +310,15 @@ namespace sw
             projectile._position._y = actor._position._y;
             projectile._velocity._x = projDir._x * 4.5f;
             projectile._velocity._y = projDir._y * 4.5f;
-            projectile._life        = 2.5f;
-            projectile._radius      = 0.22f;
-            projectile._bAlive      = SW_TRUE;
+            projectile._life.start( 2.5f );
+            projectile._radius = 0.22f;
+            projectile._bAlive = SW_TRUE;
             _listProjectile.push_back( projectile );
 
             Projectile projectile2   = projectile;
             projectile2._velocity._x = -projDir._y * 3.2f;
             projectile2._velocity._y = projDir._x * 3.2f;
-            projectile2._life        = 1.8f;
+            projectile2._life.start( 1.8f );
             _listProjectile.push_back( projectile2 );
         }
     }
@@ -331,8 +331,8 @@ namespace sw
                 continue;
             projectile._position._x += projectile._velocity._x * deltaTime;
             projectile._position._y += projectile._velocity._y * deltaTime;
-            projectile._life -= deltaTime;
-            if ( projectile._life <= 0.0f )
+            projectile._life.tick( deltaTime );
+            if ( projectile._life.isActive() == false )
                 projectile._bAlive = SW_FALSE;
         }
 
@@ -345,7 +345,7 @@ namespace sw
 
     void ActionRoom::resolvePlayerHits( float32 playerX, float32 playerY, ActionRoomFrameResult& out )
     {
-        if ( _invulnTimer > 0.0f )
+        if ( _invulnerable.isActive() )
             return;
 
         const AABB hurt = playerHurtBox( playerX, playerY );
@@ -357,7 +357,7 @@ namespace sw
                 continue;
             out._damageToPlayer +=
                 ( actor._kind == ActorKind::Boss ) ? ActionRoomTuning::kDamageFromBoss : ActionRoomTuning::kDamageFromGrunt;
-            _invulnTimer = ActionRoomTuning::kHitInvulnerable;
+            _invulnerable.start( ActionRoomTuning::kHitInvulnerable );
             return;
         }
         for ( Projectile& projectile : _listProjectile )
@@ -368,7 +368,7 @@ namespace sw
                 continue;
             out._damageToPlayer += ActionRoomTuning::kDamageFromProjectile;
             projectile._bAlive = SW_FALSE;
-            _invulnTimer       = ActionRoomTuning::kHitInvulnerable;
+            _invulnerable.start( ActionRoomTuning::kHitInvulnerable );
             return;
         }
     }

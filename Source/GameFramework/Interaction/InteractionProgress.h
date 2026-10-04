@@ -12,6 +12,7 @@
 
 #include "GameFramework/Data/StatBlock.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -121,7 +122,7 @@ namespace sw
         uint32                   _skillCheckActor;
         float32                  _progress;
         float32                  _time;
-        float32                  _skillCheckCountdown; ///< 다음 체크까지(참가자가 있는 동안만 준다)
+        Countdown                _skillCheckCountdown; ///< 다음 체크까지(참가자가 있는 동안만 준다)
         float32                  _skillCheckTarget;
         uint8                    _bCompleted;
         uint8                    _bSkillCheckPending;

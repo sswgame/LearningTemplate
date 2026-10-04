@@ -11,6 +11,7 @@
 
 #include "GameFramework/AI/AiPerception.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -164,7 +165,7 @@ namespace sw
             hashed_string _regionId{};
             uint64        _witnessId{ 0 };
             uint32        _incidentId{ 0 };
-            float32       _remaining{ 0.0f };
+            Countdown     _remaining{};
             uint8         _bMasked{ SW_FALSE };
         };
 

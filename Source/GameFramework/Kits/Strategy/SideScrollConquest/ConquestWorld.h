@@ -15,6 +15,7 @@
 #include "GameFramework/Data/StatBlock.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/SideScrollConquest/ConquestCatalog.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -77,7 +78,7 @@ namespace sw
         const ConquestUnitDef* _pDef{ nullptr };
         float32                _x{ 0.0f };
         float32                _health{ 0.0f };
-        float32                _attackCooldown{ 0.0f };
+        Countdown              _attackCooldown{};
         float32                _holdX{ 0.0f }; ///< 대기 명령의 자기 자리
         float32                _damageDealt{ 0.0f };
         int32                  _unitId{ -1 };
@@ -94,13 +95,13 @@ namespace sw
     /** @brief 지휘관(플레이어)입니다. */
     struct ConquestCommander
     {
-        float32 _x{ 0.0f };
-        float32 _health{ 0.0f };
-        float32 _attackCooldown{ 0.0f };
-        float32 _respawnTimer{ 0.0f };
-        float32 _moveAxis{ 0.0f };
-        float32 _facing{ 1.0f }; ///< +1 = 오른쪽
-        uint8   _bAlive{ SW_TRUE };
+        float32   _x{ 0.0f };
+        float32   _health{ 0.0f };
+        Countdown _attackCooldown{};
+        Countdown _respawnTimer{};
+        float32   _moveAxis{ 0.0f };
+        float32   _facing{ 1.0f }; ///< +1 = 오른쪽
+        uint8     _bAlive{ SW_TRUE };
     };
 } // namespace sw
 

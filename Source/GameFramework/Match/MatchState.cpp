@@ -92,8 +92,8 @@ namespace sw
             MatchParticipant& participant = _listParticipant[index];
             if ( participant._bAlive || participant._bEliminated )
                 continue;
-            participant._respawnTimer -= deltaTime;
-            if ( participant._respawnTimer <= 0.0f )
+            participant._respawnTimer.tick( deltaTime );
+            if ( participant._respawnTimer.isActive() == false )
             {
                 participant._bAlive = SW_TRUE;
                 pushEvent( MatchEvent::Kind::Respawned, static_cast<int32>( index ), -1, participant._team, 0 );
@@ -163,7 +163,7 @@ namespace sw
         }
         else
         {
-            dead._respawnTimer = _settings._respawnDelay;
+            dead._respawnTimer.start( _settings._respawnDelay );
             if ( team._bUnlimitedCost == SW_FALSE && team._costPool <= 0 )
                 eliminateTeam( dead._team ); // 전력 게이지가 바닥났다
         }

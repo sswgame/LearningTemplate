@@ -15,6 +15,7 @@
 #include "GameFramework/Inventory/ItemBag.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostEncounter.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -58,7 +59,7 @@ namespace sw
         hashed_string _room{};
         hashed_string _furniture{};
         float32       _hp{ 0.0f };
-        float32       _timer{ 0.0f };
+        Countdown     _timer{};
         GhostBooState _state{ GhostBooState::Hiding };
     };
 } // namespace sw

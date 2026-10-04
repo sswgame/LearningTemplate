@@ -213,7 +213,7 @@ SW_TEST_CASE( PartyArenaTest, AirAttackRingsOutOpponentAndCreditsAttacker )
     for ( int32 frame = 0; frame < 70; ++frame )
         arena.step();
     SW_EXPECT_TRUE( arena.findPlayer( 1 )->_state != TrampolinePlayerState::Respawning );
-    SW_EXPECT_TRUE( arena.findPlayer( 1 )->_invulnerableTimer > 0.0f );
+    SW_EXPECT_TRUE( arena.findPlayer( 1 )->_invulnerableTimer.isActive() );
 }
 
 SW_TEST_CASE( PartyArenaTest, GroundPoundOnlyPushesLowOpponents )
@@ -246,7 +246,7 @@ SW_TEST_CASE( PartyArenaTest, GroundPoundOnlyPushesLowOpponents )
                 pushedRuns += event._value > 0 ? 1 : 0;
                 // 밀렸다면 그때 상대는 낮았고 기절했다.
                 if ( event._value > 0 )
-                    SW_EXPECT_TRUE( arena.findPlayer( 1 )->_stunTimer > 0.0f );
+                    SW_EXPECT_TRUE( arena.findPlayer( 1 )->_stunTimer.isActive() );
             }
         }
     }

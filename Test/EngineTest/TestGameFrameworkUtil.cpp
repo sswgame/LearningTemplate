@@ -10,13 +10,15 @@
 #include "GameFramework/Input/FirstPersonLook.h"
 #include "GameFramework/Input/TimingJudge.h"
 #include "GameFramework/Inventory/ItemBag.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 #include "GameFramework/Utility/GameRandom.h"
 #include "GameFramework/Utility/RayMath.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 장르를 가리지 않는 게임 프레임워크 도구 — 결정적 난수 · 좌표 해시, 고정 스텝, 광선 판정, 1인칭 시점, 데이터 XML 읽기, id 카탈로그, 아이템 봉투.
+// 장르를 가리지 않는 게임 프레임워크 도구 — 결정적 난수 · 좌표 해시, 고정 스텝, 남은 시간 · 비율 누적, 광선 판정, 1인칭 시점, 데이터 XML 읽기,
+// id 카탈로그, 아이템 봉투.
 
 using namespace sw;
 
@@ -27,6 +29,24 @@ namespace
         hashed_string _id{};
         int32         _value{ 0 };
     };
+
+    /** @brief 고정 dt 로 @p seconds 동안 끝날 때마다 다시 걸어 낸 횟수입니다(게임 루프 순서 — 흘리고, 끝났으면 내고 다시 건다). */
+    int32 countRepeatsFor( float32 interval, float32 framesPerSecond, float32 seconds )
+    {
+        Countdown     cooldown;
+        const float32 deltaTime  = 1.0f / framesPerSecond;
+        const int32   frameCount = static_cast<int32>( seconds * framesPerSecond + 0.5f );
+        int32         count      = 0;
+        for ( int32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
+            cooldown.tick( deltaTime );
+            if ( cooldown.isActive() )
+                continue;
+            ++count;
+            cooldown.restart( interval );
+        }
+        return count;
+    }
 } // namespace
 
 /**
@@ -89,6 +109,93 @@ SW_TEST_CASE( GameFrameworkUtilTest, FixedStepTimerCarriesRemainderAndClampsFram
     for ( int32 frameIndex = 0; frameIndex < 144; ++frameIndex )
         fineSteps += fine.consume( 1.0f / 144.0f );
     SW_EXPECT_TRUE( MathUtil::abs( coarseSteps - fineSteps ) <= 1 );
+}
+
+/**
+ * @brief [GameFrameworkUtilTest] 남은 시간은 끝난 걸음에 한 번 알리고, 그 걸음에 다시 걸면 지나친 몫(늦음)을 한 간격까지 다음 간격에서 뺀다
+ * @details 쉬다가 다시 걸면 늦음을 잇지 않는다(다음 `tick` 이 지운다). 0 이하 걸음은 아무것도 하지 않는다. `extendTo` 는 더 길 때만 늘린다.
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, CountdownEndsOnceAndRestartCarriesOneIntervalOfLateness )
+{
+    Countdown countdown;
+    SW_EXPECT_FALSE( countdown.isActive() );
+    SW_EXPECT_FALSE( countdown.tick( 0.1f ) ); // 꺼진 채 흘려도 끝나지 않는다
+    countdown.start( 1.0f );
+    SW_EXPECT_FALSE( countdown.tick( 0.6f ) );
+    SW_EXPECT_TRUE( countdown.isActive() );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, countdown.getRemaining(), 1.0e-5f );
+    SW_EXPECT_FALSE( countdown.tick( 0.0f ) ); // 0 걸음은 그대로
+    SW_EXPECT_TRUE( countdown.tick( 0.6f ) );  // 이번 걸음에 끝났다 — 0.2 지나쳤다
+    SW_EXPECT_FALSE( countdown.isActive() );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, countdown.getRemaining(), 1.0e-6f );
+    countdown.restart( 1.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.8f, countdown.getRemaining(), 1.0e-5f ); // 늦은 0.2 를 뺐다
+    SW_EXPECT_FALSE( countdown.tick( 0.7f ) );
+    SW_EXPECT_TRUE( countdown.tick( 0.7f ) );
+    SW_EXPECT_FALSE( countdown.tick( 0.1f ) ); // 다시 걸지 않았다 — 늦음이 지워지고 다시 알리지 않는다
+    countdown.restart( 1.0f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, countdown.getRemaining(), 1.0e-6f ); // 쉰 시간은 잇지 않는다
+
+    // 걸음이 간격보다 길면 잇는 몫은 한 간격까지 — 결과가 0 이어도 걸음마다 한 번이지 몰아 내지 않는다.
+    countdown.start( 0.1f );
+    SW_EXPECT_TRUE( countdown.tick( 0.5f ) );
+    countdown.restart( 0.25f );
+    SW_EXPECT_FALSE( countdown.isActive() );
+    SW_EXPECT_FALSE( countdown.tick( 0.5f ) );
+    SW_EXPECT_FALSE( countdown.isActive() );
+
+    // 아직 남아 있을 때 다시 걸면 새로 거는 것과 같다.
+    countdown.start( 0.5f );
+    countdown.restart( 2.0f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, countdown.getRemaining(), 1.0e-6f );
+    countdown.extendTo( 1.0f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, countdown.getRemaining(), 1.0e-6f );
+    countdown.extendTo( 3.0f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, countdown.getRemaining(), 1.0e-6f );
+    countdown.clear();
+    SW_EXPECT_FALSE( countdown.isActive() );
+}
+
+/**
+ * @brief [GameFrameworkUtilTest] 끝난 걸음에 `restart` 로 다시 거는 반복은 프레임률과 상관없이 설계 빈도(시간 / 간격)를 낸다
+ * @details 0.095 초 간격을 30 · 60 · 144 fps 로 10 초 — 설계 105.26 회 ±1. 늦음을 버리면(`start`) 간격이 `ceil( 간격 / dt ) × dt` 로 늘어
+ *          30 · 60 fps 에서 100 회가 된다. 간격보다 긴 프레임(5 fps)은 프레임마다 한 번 — 50 회이고 몰아 내지 않는다.
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, CountdownRepeatRateDoesNotDependOnFrameRate )
+{
+    const float32 interval = 0.095f;
+    const float32 seconds  = 10.0f;
+    for ( const float32 framesPerSecond : { 30.0f, 60.0f, 144.0f } )
+        SW_EXPECT_NEAR_EQUAL( seconds / interval, static_cast<float32>( countRepeatsFor( interval, framesPerSecond, seconds ) ), 1.0f );
+    SW_EXPECT_EQUAL( 50, countRepeatsFor( interval, 5.0f, seconds ) );
+}
+
+/**
+ * @brief [GameFrameworkUtilTest] 비율 누적기는 분수 몫을 다음 걸음으로 넘겨 긴 시간의 합이 비율 × 시간이 된다 — 하나씩 · 정수 부분 통째로
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, RateAccumulatorCarriesTheFractionAcrossSteps )
+{
+    RateAccumulator arrival;
+    int32           arrivalCount = 0;
+    for ( int32 stepIndex = 0; stepIndex < 100; ++stepIndex )
+    {
+        arrival.add( 0.25f ); // 2 진수로 정확한 몫 — 합이 정확히 25
+        while ( arrival.takeOne() )
+            ++arrivalCount;
+    }
+    SW_EXPECT_EQUAL( 25, arrivalCount );
+    SW_EXPECT_TRUE( 0.0f <= arrival.getFraction() && arrival.getFraction() < 1.0f );
+
+    RateAccumulator cost;
+    int32           costTotal = 0;
+    for ( int32 stepIndex = 0; stepIndex < 60; ++stepIndex )
+    {
+        cost.add( 2.5f / 60.0f * 7.0f ); // 초당 2.5 를 7 초짜리 걸음 60 번
+        costTotal += cost.takeWhole();
+    }
+    SW_EXPECT_TRUE( MathUtil::abs( costTotal - 17 ) <= 1 );
+    cost.reset();
+    SW_EXPECT_NEAR_EQUAL( 0.0f, cost.getFraction(), 1.0e-6f );
 }
 
 /**

@@ -136,8 +136,8 @@ namespace sw
             GhostBooRuntime& boo = _listBoo[booIndex];
             if ( boo._state != GhostBooState::Revealed )
                 continue;
-            boo._timer -= deltaTime;
-            if ( boo._timer <= 0.0f )
+            boo._timer.tick( deltaTime );
+            if ( boo._timer.isActive() == false )
                 moveBooAway( booIndex );
         }
     }
@@ -276,7 +276,7 @@ namespace sw
     {
         GhostBooRuntime& boo = _listBoo[booIndex];
         boo._state           = GhostBooState::Revealed;
-        boo._timer           = _pCatalog->getBoos()[booIndex]._escapeTime;
+        boo._timer.start( _pCatalog->getBoos()[booIndex]._escapeTime );
         pushEvent( GhostMansionEventType::BooRevealed, _pCatalog->getBoos()[booIndex]._id, boo._room );
     }
 
@@ -320,7 +320,7 @@ namespace sw
         boo._furniture = listHideout.empty() ? hashed_string{}
                                              : listHideout[static_cast<size_t>( _random.nextInt( 0, static_cast<int32>( listHideout.size() ) - 1 ) )];
         boo._state     = GhostBooState::Hiding;
-        boo._timer     = 0.0f;
+        boo._timer.clear();
         pushEvent( GhostMansionEventType::BooEscaped, _pCatalog->getBoos()[booIndex]._id, boo._room );
     }
 

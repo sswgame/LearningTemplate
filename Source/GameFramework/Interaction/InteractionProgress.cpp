@@ -28,7 +28,7 @@ namespace sw
         , _skillCheckActor{ 0 }
         , _progress{ 0.0f }
         , _time{ 0.0f }
-        , _skillCheckCountdown{ 0.0f }
+        , _skillCheckCountdown{}
         , _skillCheckTarget{ 0.0f }
         , _bCompleted{ SW_FALSE }
         , _bSkillCheckPending{ SW_FALSE }
@@ -51,20 +51,20 @@ namespace sw
         _listParticipant.clear();
         _listEvent.clear();
         _random.setSeed( _seed );
-        _skillCheckActor     = 0;
-        _progress            = 0.0f;
-        _time                = 0.0f;
-        _skillCheckTarget    = 0.0f;
-        _bCompleted          = SW_FALSE;
-        _bSkillCheckPending  = SW_FALSE;
-        _bRegressing         = SW_FALSE;
-        _skillCheckCountdown = 0.0f;
+        _skillCheckActor    = 0;
+        _progress           = 0.0f;
+        _time               = 0.0f;
+        _skillCheckTarget   = 0.0f;
+        _bCompleted         = SW_FALSE;
+        _bSkillCheckPending = SW_FALSE;
+        _bRegressing        = SW_FALSE;
+        _skillCheckCountdown.clear();
         scheduleSkillCheck();
     }
 
     void InteractionProgress::scheduleSkillCheck()
     {
-        _skillCheckCountdown = _config._skillCheckInterval > 0.0f ? _config._skillCheckInterval * _random.nextRange( 0.5f, 1.5f ) : 0.0f;
+        _skillCheckCountdown.start( _config._skillCheckInterval > 0.0f ? _config._skillCheckInterval * _random.nextRange( 0.5f, 1.5f ) : 0.0f );
     }
 
     void InteractionProgress::pushEvent( InteractionEvent::Kind kind, uint32 actorId, float32 value )
@@ -167,8 +167,8 @@ namespace sw
         const bool bSkillChecks = _pJudge != nullptr && _config._skillCheckInterval > 0.0f;
         if ( bSkillChecks && _bSkillCheckPending == SW_FALSE )
         {
-            _skillCheckCountdown -= deltaTime;
-            if ( _skillCheckCountdown <= 0.0f )
+            _skillCheckCountdown.tick( deltaTime );
+            if ( _skillCheckCountdown.isActive() == false )
             {
                 const int32 pick    = _random.nextInt( 0, participantCount - 1 );
                 _skillCheckActor    = _listParticipant[static_cast<size_t>( pick )];

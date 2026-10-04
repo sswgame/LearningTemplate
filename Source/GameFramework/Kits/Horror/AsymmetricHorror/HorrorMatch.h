@@ -23,6 +23,7 @@
 #include "GameFramework/Interaction/InteractionProgress.h"
 #include "GameFramework/Kits/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Match/MatchState.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -80,13 +81,13 @@ namespace sw
         StatBlock           _score{};   ///< 블러드포인트 범주 → 점수
         float3              _position{};
         float32             _lastMoveSpeed{ 0.0f }; ///< 이번 프레임에 움직인 속도(빠른 넘기 판정)
-        float32             _hasteRemaining{ 0.0f };
+        Countdown           _hasteRemaining{};
         float32             _hookTimer{ 0.0f };
         float32             _struggleIdle{ 0.0f }; ///< 2 단계에서 몸부림을 멈춘 시간
         float32             _wiggleProgress{ 0.0f };
-        float32             _vaultRemaining{ 0.0f };
+        Countdown           _vaultRemaining{};
         float32             _noiseRadius{ 0.0f }; ///< 지금 내고 있는 소음(살인마 자극)
-        float32             _noiseRemaining{ 0.0f };
+        Countdown           _noiseRemaining{};
         float3              _vaultExit{};
         int32               _hookStage{ 0 }; ///< 걸린 횟수(이번 걸림의 단계)
         int32               _activityTarget{ -1 };
@@ -112,16 +113,16 @@ namespace sw
         float3                 _forward{ 0.0f, 0.0f, 1.0f };
         float3                 _busyExit{}; ///< 넘기가 끝나면 설 자리
         const HorrorKillerDef* _pDef{ nullptr };
-        float32                _attackCooldown{ 0.0f };
-        float32                _stunRemaining{ 0.0f };
-        float32                _busyRemaining{ 0.0f }; ///< 판자 부수기 · 넘기 · 사물함 뒤지기
-        float32                _abilityCooldown{ 0.0f };
+        Countdown              _attackCooldown{};
+        Countdown              _stunRemaining{};
+        Countdown              _busyRemaining{}; ///< 판자 부수기 · 넘기 · 사물함 뒤지기
+        Countdown              _abilityCooldown{};
         int32                  _carrying{ -1 };
         int32                  _breakingPallet{ -1 };
         int32                  _participant{ -1 };
         uint8                  _bVaulting{ SW_FALSE };
 
-        bool canAct() const { return _stunRemaining <= 0.0f && _busyRemaining <= 0.0f; }
+        bool canAct() const { return _stunRemaining.isActive() == false && _busyRemaining.isActive() == false; }
     };
 } // namespace sw
 
@@ -298,7 +299,7 @@ namespace sw
         bool                   areGatesPowered() const { return _bGatesPowered == SW_TRUE; }
         bool                   isHatchOpen() const { return _bHatchOpen == SW_TRUE; }
         bool                   isCollapseStarted() const { return _bCollapseStarted == SW_TRUE; }
-        float32                getCollapseRemaining() const { return _collapseRemaining; }
+        float32                getCollapseRemaining() const { return _collapseRemaining.getRemaining(); }
         const MatchState&      getMatch() const { return _match; }
         bool                   isEnded() const { return _match.getPhase() == MatchPhase::Ended; }
         int32                  countStandingSurvivors() const;
@@ -350,7 +351,7 @@ namespace sw
         FixedStepTimer                      _timer;
         float3                              _hatchPosition;
         const AsymmetricHorrorRulesCatalog* _pCatalog;
-        float32                             _collapseRemaining;
+        Countdown                           _collapseRemaining;
         int32                               _completedGeneratorCount;
         int32                               _survivorTeam;
         int32                               _killerTeam;

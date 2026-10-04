@@ -79,7 +79,7 @@ namespace sw
         , _pShopCatalog{ nullptr }
         , _pStaffCurve{ nullptr }
         , _minutes{ 0.0f }
-        , _arrivalAccumulator{ 0.0f }
+        , _arrival{}
         , _pendingSpoilageCost{ 0 }
         , _day{ 0 }
         , _nextCustomerId{ 1 }
@@ -116,9 +116,9 @@ namespace sw
             for ( const DishDef& dish : pCatalog->getDishes() )
                 _listMenu.push_back( MenuEntry{ dish._id, dish._basePrice, SW_TRUE } );
         }
-        _today               = RestaurantDaySummary{};
-        _minutes             = 0.0f;
-        _arrivalAccumulator  = 0.0f;
+        _today   = RestaurantDaySummary{};
+        _minutes = 0.0f;
+        _arrival.reset();
         _pendingSpoilageCost = 0;
         _day                 = 0;
         _nextCustomerId      = 1;
@@ -219,10 +219,10 @@ namespace sw
 
     void RestaurantSimulation::openDay( const hashed_string& weatherId )
     {
-        _bOpen               = SW_TRUE;
-        _weatherId           = weatherId;
-        _minutes             = 0.0f;
-        _arrivalAccumulator  = 0.0f;
+        _bOpen     = SW_TRUE;
+        _weatherId = weatherId;
+        _minutes   = 0.0f;
+        _arrival.reset();
         _today               = RestaurantDaySummary{};
         _today._spoilageCost = _pendingSpoilageCost;
         _pendingSpoilageCost = 0;
@@ -500,10 +500,9 @@ namespace sw
         const vector<CustomerTypeDef>& listType  = _pCatalog->getCustomerTypes();
         auto                           getWeight = []( const CustomerTypeDef& customerType )
         { return customerType._weight; };
-        _arrivalAccumulator += computeArrivalRate() * kStepMinutes / RestaurantSimulationInternal::kMinutesPerHour;
-        while ( _arrivalAccumulator >= 1.0f )
+        _arrival.add( computeArrivalRate() * kStepMinutes / RestaurantSimulationInternal::kMinutesPerHour );
+        while ( _arrival.takeOne() )
         {
-            _arrivalAccumulator -= 1.0f;
             const int32 typeIndex = _random.pickWeightedIndex( listType, getWeight );
             if ( typeIndex < 0 )
                 return;

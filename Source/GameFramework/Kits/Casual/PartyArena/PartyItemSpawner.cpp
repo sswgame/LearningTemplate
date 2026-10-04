@@ -21,7 +21,7 @@ namespace sw
         , _listEvent{}
         , _settings{}
         , _random{}
-        , _spawnTimer{ 0.0f }
+        , _spawnTimer{}
         , _nextSerial{ 1 }
     {
     }
@@ -33,7 +33,7 @@ namespace sw
         _listInstance.clear();
         _listEvent.clear();
         _nextSerial = 1;
-        _spawnTimer = MathUtil::max( 0.0f, settings._minInterval );
+        _spawnTimer.start( MathUtil::max( 0.0f, settings._minInterval ) );
     }
 
     float32 PartyItemSpawner::rollInterval()
@@ -70,11 +70,11 @@ namespace sw
         // 2) 새로 놓기 — 자리가 차 있으면 시계는 멈춰 있다(빈 자리가 나면 곧 나온다).
         if ( _catalog.isEmpty() || static_cast<int32>( _listInstance.size() ) >= _settings._maxActive )
             return;
-        _spawnTimer -= deltaTime;
-        if ( _spawnTimer > 0.0f )
+        _spawnTimer.tick( deltaTime );
+        if ( _spawnTimer.isActive() )
             return;
         spawnOne();
-        _spawnTimer = rollInterval();
+        _spawnTimer.start( rollInterval() );
     }
 
     const PartyItemDef* PartyItemSpawner::pickWeighted()

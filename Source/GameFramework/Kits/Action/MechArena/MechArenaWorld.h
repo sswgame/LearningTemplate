@@ -24,6 +24,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Action/MechArena/MechCatalog.h"
 #include "GameFramework/Match/MatchState.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -139,11 +140,11 @@ namespace sw
         vector<const MechDef*>      _listDeckMech{};
         vector<int32>               _listParticipant{}; ///< 덱 칸마다 `MatchState` 참가자
         vector<const MechSkillDef*> _listSkill{};
-        vector<float32>             _listSkillRemaining{}; ///< 켜져 있는 남은 시간(0 = 꺼짐)
-        vector<float32>             _listSkillCooldown{};
+        vector<Countdown>           _listSkillRemaining{}; ///< 켜져 있는 남은 시간(0 = 꺼짐)
+        vector<Countdown>           _listSkillCooldown{};
         vector<uint8>               _listSkillSpent{};  ///< 이번 목숨에 이미 켰다(HealthBelow)
         vector<WeaponState>         _listWeaponState{}; ///< 기체의 모든 형태 · 칸(형태마다 탄창이 따로)
-        vector<float32>             _listSpecialCooldown{};
+        vector<Countdown>           _listSpecialCooldown{};
         MechInput                   _input{};
         MechInput                   _previousInput{};
         float3                      _position{};
@@ -151,9 +152,9 @@ namespace sw
         float3                      _forward{ 0.0f, 0.0f, 1.0f };
         float3                      _dashDirection{};
         float3                      _spawnPosition{};
-        float32                     _dashRemaining{ 0.0f };
-        float32                     _staggerRemaining{ 0.0f };
-        float32                     _transformCooldown{ 0.0f };
+        Countdown                   _dashRemaining{};
+        Countdown                   _staggerRemaining{};
+        Countdown                   _transformCooldown{};
         int32                       _team{ 0 };
         int32                       _deckIndex{ 0 };  ///< 지금 타는 덱 칸
         int32                       _deathSlot{ -1 }; ///< 격추된 덱 칸(그 참가자의 부활을 기다린다)
@@ -170,7 +171,7 @@ namespace sw
 
         const MechDef*     getMech() const { return _listDeckMech.empty() ? nullptr : _listDeckMech[static_cast<size_t>( _deckIndex )]; }
         const MechModeDef* getMode() const;
-        bool               canAct() const { return _state == MechPilotState::Active && _staggerRemaining <= 0.0f; }
+        bool               canAct() const { return _state == MechPilotState::Active && _staggerRemaining.isActive() == false; }
     };
 } // namespace sw
 

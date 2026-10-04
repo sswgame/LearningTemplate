@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -41,7 +42,7 @@ namespace sw
         float3          _position{};
         float3          _fleeDirection{}; ///< 흡입 중 도망치는 쪽(XZ 단위 벡터)
         float32         _hp{ 0.0f };
-        float32         _timer{ 0.0f }; ///< 지금 상태의 남은 시간
+        Countdown       _timer{}; ///< 지금 상태의 남은 시간
         uint32          _id{ 0 };
         GhostState      _state{ GhostState::Hidden };
     };

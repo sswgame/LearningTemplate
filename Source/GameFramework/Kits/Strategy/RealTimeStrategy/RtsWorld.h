@@ -17,6 +17,7 @@
 #include "GameFramework/Navigation/GridPathfinder.h"
 #include "GameFramework/Navigation/NavAgent.h"
 #include "GameFramework/Navigation/NavGrid.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -115,11 +116,11 @@ namespace sw
         RtsUnitId            _builder{};        ///< 짓는 중인 건물 — 짓는 일꾼
         RtsUnitId            _linkedResource{}; ///< 정제소 — 아래 간헐천
         float32              _hp{ 0.0f };
-        float32              _cooldown{ 0.0f };
+        Countdown            _cooldown{};            ///< 다음 공격까지
         float32              _buildProgress{ 1.0f }; ///< 0..1 — 1 이면 다 지었다
         float32              _productionTimer{ 0.0f };
         float32              _gatherTimer{ 0.0f };
-        float32              _repathTimer{ 0.0f };
+        Countdown            _repathTimer{};
         int32                _owner{ -1 }; ///< −1 = 주인 없음(자원)
         int32                _resourceLeft{ 0 };
         int32                _cargoAmount{ 0 };
@@ -376,7 +377,7 @@ namespace sw
         RtsSettings           _settings;
         FixedStepTimer        _stepTimer;
         float32               _time;
-        float32               _visionTimer;
+        Countdown             _visionTimer;
         int32                 _bucketWidth;
         int32                 _bucketHeight;
         int32                 _teamCount;

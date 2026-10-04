@@ -34,8 +34,8 @@ namespace sw
         : _settings{}
         , _selector{}
         , _targetPosition{}
-        , _evadeRemaining{ 0.0f }
-        , _invulnerableRemaining{ 0.0f }
+        , _evade{}
+        , _invulnerable{}
         , _state{ AdventureTargetingState::Free }
         , _bHeld{ SW_FALSE }
     {
@@ -64,10 +64,10 @@ namespace sw
     void AdventureTargeting::release()
     {
         _selector.release();
-        _bHeld                 = SW_FALSE;
-        _evadeRemaining        = 0.0f;
-        _invulnerableRemaining = 0.0f;
-        _state                 = AdventureTargetingState::Free;
+        _bHeld = SW_FALSE;
+        _evade.clear();
+        _invulnerable.clear();
+        _state = AdventureTargetingState::Free;
     }
 
     uint64 AdventureTargeting::cycleTarget( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate, int32 direction )
@@ -82,7 +82,7 @@ namespace sw
     AdventureTargetingState AdventureTargeting::update( const float3& eye, const vector<LockOnCandidate>& listCandidate, const float2& moveInput, bool bJumpPressed,
                                                         float32 deltaTime )
     {
-        _invulnerableRemaining = MathUtil::max( 0.0f, _invulnerableRemaining - deltaTime );
+        _invulnerable.tick( deltaTime );
         if ( _bHeld == SW_FALSE )
         {
             _state = AdventureTargetingState::Free;
@@ -91,13 +91,8 @@ namespace sw
         if ( _selector.hasTarget() && _selector.update( eye, listCandidate, deltaTime ) )
             refreshTargetPosition( listCandidate );
         // 회피 동작은 끝날 때까지 입력을 받지 않는다(공중에서 방향을 바꾸지 못한다).
-        if ( _evadeRemaining > 0.0f )
-        {
-            _evadeRemaining -= deltaTime;
-            if ( _evadeRemaining > 0.0f )
-                return _state;
-            _evadeRemaining = 0.0f;
-        }
+        if ( _evade.isActive() && _evade.tick( deltaTime ) == false )
+            return _state;
         const bool bLocked  = _selector.hasTarget();
         const bool bBack    = moveInput._y < -_settings._deadZone && MathUtil::abs( moveInput._y ) >= MathUtil::abs( moveInput._x );
         const bool bSide    = MathUtil::abs( moveInput._x ) > _settings._deadZone && MathUtil::abs( moveInput._x ) > MathUtil::abs( moveInput._y );
@@ -106,15 +101,15 @@ namespace sw
         {
             if ( bBack )
             {
-                _state          = AdventureTargetingState::Backflip;
-                _evadeRemaining = _settings._backflipDuration;
+                _state = AdventureTargetingState::Backflip;
+                _evade.start( _settings._backflipDuration );
             }
             else
             {
-                _state          = bToRight ? AdventureTargetingState::SideHopRight : AdventureTargetingState::SideHopLeft;
-                _evadeRemaining = _settings._sideHopDuration;
+                _state = bToRight ? AdventureTargetingState::SideHopRight : AdventureTargetingState::SideHopLeft;
+                _evade.start( _settings._sideHopDuration );
             }
-            _invulnerableRemaining = _settings._evadeInvulnerable;
+            _invulnerable.start( _settings._evadeInvulnerable );
             return _state;
         }
         if ( bSide )

@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -63,7 +64,7 @@ namespace sw
 
         hashed_string        _role{}; ///< "Killer" · "Survivor" · "Striker" — 게임이 정한다
         vector<DamageRecord> _listDamage{};
-        float32              _respawnTimer{ 0.0f };
+        Countdown            _respawnTimer{};
         float32              _damageDealt{ 0.0f };
         int32                _team{ -1 };
         int32                _kills{ 0 };

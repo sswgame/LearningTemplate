@@ -83,7 +83,7 @@ namespace sw
         , _settings{}
         , _stepTimer{}
         , _time{ 0.0f }
-        , _visionTimer{ 0.0f }
+        , _visionTimer{}
         , _bucketWidth{ 0 }
         , _bucketHeight{ 0 }
         , _teamCount{ 0 }
@@ -110,9 +110,9 @@ namespace sw
         _bucketHeight = ( _grid.getHeight() + _settings._bucketSize - 1 ) / _settings._bucketSize;
         _listBucketHead.assign( static_cast<size_t>( _bucketWidth * _bucketHeight ), -1 );
         _listBucketNext.clear();
-        _stepTimer   = FixedStepTimer{ _settings._fixedStep, 0.25f };
-        _time        = 0.0f;
-        _visionTimer = 0.0f;
+        _stepTimer = FixedStepTimer{ _settings._fixedStep, 0.25f };
+        _time      = 0.0f;
+        _visionTimer.clear();
         _teamCount   = 0;
         _winningTeam = -1;
     }
@@ -296,7 +296,7 @@ namespace sw
     {
         unit._bOrderStarted = SW_FALSE;
         unit._attackTarget  = RtsUnitId{};
-        unit._repathTimer   = 0.0f;
+        unit._repathTimer.clear();
         if ( unit._listOrder.empty() )
         {
             unit._agent.stop();
@@ -608,10 +608,10 @@ namespace sw
             if ( unit._bAlive )
                 updateUnit( unit, deltaTime );
         }
-        _visionTimer -= deltaTime;
-        if ( _visionTimer <= 0.0f )
+        _visionTimer.tick( deltaTime );
+        if ( _visionTimer.isActive() == false )
         {
-            _visionTimer = _settings._visionInterval;
+            _visionTimer.start( _settings._visionInterval );
             updateVision();
         }
         updateDefeat();
@@ -719,8 +719,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     void RtsWorld::updateUnit( RtsUnit& unit, float32 deltaTime )
     {
-        unit._cooldown    = MathUtil::max( 0.0f, unit._cooldown - deltaTime );
-        unit._repathTimer = MathUtil::max( 0.0f, unit._repathTimer - deltaTime );
+        unit._cooldown.tick( deltaTime );
+        unit._repathTimer.tick( deltaTime );
         if ( unit.isResource() )
             return;
         if ( unit.isBuilding() )
@@ -757,12 +757,12 @@ namespace sw
             return;
         }
         const bool bGoalMoved = RtsWorldInternal::computeFlatDistance( unit._moveGoal, target ) > 1.0f;
-        if ( bForce == false && unit._repathTimer > 0.0f )
+        if ( bForce == false && unit._repathTimer.isActive() )
             return;
         if ( bForce == false && unit._agent.isMoving() && bGoalMoved == false )
             return;
-        unit._moveGoal    = target;
-        unit._repathTimer = _settings._repathInterval;
+        unit._moveGoal = target;
+        unit._repathTimer.start( _settings._repathInterval );
         if ( unit._agent.moveTo( _grid, _pathfinder, target ) == false )
             nudgeToWalkable( unit );
     }
@@ -906,7 +906,7 @@ namespace sw
             unit._cargoAmount = 0;
             unit._cargoType   = RtsResourceType::None;
             unit._gatherPhase = RtsGatherPhase::ToResource;
-            unit._repathTimer = 0.0f;
+            unit._repathTimer.clear();
             return;
         }
 
@@ -940,10 +940,10 @@ namespace sw
                 return;
             const int32 amount = MathUtil::min( unit._pDef->_cargo, pSource->_resourceLeft );
             pSource->_resourceLeft -= amount;
-            unit._cargoAmount   = amount;
-            unit._cargoType     = pSource->_pDef->_resourceType;
-            unit._gatherPhase   = RtsGatherPhase::Returning;
-            unit._repathTimer   = 0.0f;
+            unit._cargoAmount = amount;
+            unit._cargoType   = pSource->_pDef->_resourceType;
+            unit._gatherPhase = RtsGatherPhase::Returning;
+            unit._repathTimer.clear();
             pTarget->_harvester = RtsUnitId{};
             if ( pSource->_resourceLeft <= 0 )
             {
@@ -1234,9 +1234,9 @@ namespace sw
         {
             if ( unit.isMobile() && unit._agent.isMoving() )
                 unit._agent.stop();
-            if ( unit._cooldown <= 0.0f )
+            if ( unit._cooldown.isActive() == false )
             {
-                unit._cooldown = unit._pDef->_cooldown;
+                unit._cooldown.start( unit._pDef->_cooldown );
                 dealDamage( unit, *pTarget );
             }
             return;
@@ -1651,7 +1651,7 @@ namespace sw
             outArchive << unit._builder.packed();
             outArchive << unit._linkedResource.packed();
             outArchive << unit._hp;
-            outArchive << unit._cooldown;
+            outArchive << unit._cooldown._remaining;
             outArchive << unit._buildProgress;
             outArchive << unit._productionTimer;
             outArchive << unit._gatherTimer;
@@ -1686,7 +1686,7 @@ namespace sw
             outArchive << listVisibility;
         StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
         outArchive << _time;
-        outArchive << _visionTimer;
+        outArchive << _visionTimer._remaining;
         outArchive << _teamCount;
         outArchive << _winningTeam;
     }
@@ -1773,7 +1773,7 @@ namespace sw
             archive >> builder;
             archive >> linkedResource;
             archive >> unit._hp;
-            archive >> unit._cooldown;
+            archive >> unit._cooldown._remaining;
             archive >> unit._buildProgress;
             archive >> unit._productionTimer;
             archive >> unit._gatherTimer;
@@ -1800,7 +1800,7 @@ namespace sw
             unit._gatherPhase    = static_cast<RtsGatherPhase>( gatherPhase );
             // 길(경로 · 흐름장)은 싣지 않는다 — 앞 명령을 처음부터 다시 걷게 해 이 격자에서 길을 다시 구한다.
             unit._bOrderStarted = SW_FALSE;
-            unit._repathTimer   = 0.0f;
+            unit._repathTimer.clear();
         }
 
         uint32 freeSlotCount = 0;
@@ -1861,11 +1861,11 @@ namespace sw
         _listTeamVisibility = std::move( listTeamVisibility );
         _listEvent.clear();
         _listFlowField.clear();
-        _stepTimer   = stepTimer;
-        _time        = time;
-        _visionTimer = visionTimer;
-        _teamCount   = teams;
-        _winningTeam = winningTeam;
+        _stepTimer              = stepTimer;
+        _time                   = time;
+        _visionTimer._remaining = visionTimer;
+        _teamCount              = teams;
+        _winningTeam            = winningTeam;
 
         // 격자는 땅 + 서 있는 건물 · 자원의 발자국으로 다시 칠한다(저장하지 않는다 — 같은 것에서 나온다).
         const float32 cellSize = _grid.getCellSize();

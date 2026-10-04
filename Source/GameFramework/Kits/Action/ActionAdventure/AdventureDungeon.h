@@ -15,6 +15,7 @@
 
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -216,9 +217,9 @@ namespace sw
         /** @brief 장치 하나의 지금 상태입니다. */
         struct DeviceRuntime
         {
-            float32 _timer{ 0.0f }; ///< 시간제 스위치 · 횃불 묶음의 남은 시간
-            int32   _litCount{ 0 };
-            uint8   _bActive{ SW_FALSE };
+            Countdown _timer{}; ///< 시간제 스위치 · 횃불 묶음의 남은 시간
+            int32     _litCount{ 0 };
+            uint8     _bActive{ SW_FALSE };
         };
 
         /** @brief 던전 하나의 지금 상태입니다. */

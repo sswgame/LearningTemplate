@@ -14,6 +14,7 @@
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/StatBlock.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -103,7 +104,7 @@ namespace sw
         const PartyItemDef*              findItem( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<PartyItemInstance>& getInstances() const { return _listInstance; }
         const PartyItemSpawnSettings&    getSettings() const { return _settings; }
-        float32                          getSpawnTimer() const { return _spawnTimer; }
+        float32                          getSpawnTimer() const { return _spawnTimer.getRemaining(); }
 
     private:
         uint32              loadRoot( const XmlNode& root, string_view sourceName );
@@ -116,7 +117,7 @@ namespace sw
         vector<PartyItemEvent>    _listEvent;
         PartyItemSpawnSettings    _settings;
         GameRandom                _random;
-        float32                   _spawnTimer;
+        Countdown                 _spawnTimer;
         int32                     _nextSerial;
     };
 } // namespace sw

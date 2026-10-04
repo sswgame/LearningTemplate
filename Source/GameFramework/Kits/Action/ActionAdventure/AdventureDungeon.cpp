@@ -352,7 +352,7 @@ namespace sw
             return false;
         const AdventureDeviceDef& def = pDungeon->_listDevice[static_cast<size_t>( index )];
         if ( def._kind == AdventureDeviceKind::TimedSwitch )
-            pRuntime->_listDevice[static_cast<size_t>( index )]._timer = def._duration;
+            pRuntime->_listDevice[static_cast<size_t>( index )]._timer.start( def._duration );
         else if ( def._kind != AdventureDeviceKind::Switch )
             return false;
         setDeviceActive( *pDungeon, index, true, flags );
@@ -387,7 +387,7 @@ namespace sw
         if ( def._kind != AdventureDeviceKind::TorchGroup || device._bActive == SW_TRUE || device._litCount >= def._torchCount )
             return false;
         if ( device._litCount == 0 )
-            device._timer = def._duration;
+            device._timer.start( def._duration );
         ++device._litCount;
         if ( device._litCount >= def._torchCount )
             setDeviceActive( *pDungeon, index, true, flags );
@@ -409,19 +409,15 @@ namespace sw
                 DeviceRuntime&            device = runtime._listDevice[deviceIndex];
                 if ( def._kind == AdventureDeviceKind::TimedSwitch && device._bActive == SW_TRUE )
                 {
-                    device._timer -= deltaTime;
-                    if ( device._timer <= 0.0f )
-                    {
-                        device._timer = 0.0f;
+                    device._timer.tick( deltaTime );
+                    if ( device._timer.isActive() == false )
                         setDeviceActive( dungeon, static_cast<int32>( deviceIndex ), false, flags );
-                    }
                 }
                 else if ( def._kind == AdventureDeviceKind::TorchGroup && device._bActive == SW_FALSE && device._litCount > 0 && def._duration > 0.0f )
                 {
-                    device._timer -= deltaTime;
-                    if ( device._timer <= 0.0f )
+                    device._timer.tick( deltaTime );
+                    if ( device._timer.isActive() == false )
                     {
-                        device._timer    = 0.0f;
                         device._litCount = 0;
                         pushEvent( AdventureDungeonEventType::TorchesFailed, dungeon._id, def._id );
                     }

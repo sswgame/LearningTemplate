@@ -17,6 +17,7 @@
 #include "GameFramework/Kits/Simulation/RestaurantSim/IngredientStock.h"
 #include "GameFramework/Progression/LevelProgress.h"
 #include "GameFramework/Progression/Reputation.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
@@ -310,7 +311,7 @@ namespace sw
         const ShopCatalog*         _pShopCatalog;
         const ExperienceCurve*     _pStaffCurve;
         float32                    _minutes; ///< 문을 연 뒤 지난 분
-        float32                    _arrivalAccumulator;
+        RateAccumulator            _arrival; ///< 손님 도착(명)
         int64                      _pendingSpoilageCost;
         int32                      _day;
         int32                      _nextCustomerId;

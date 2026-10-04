@@ -13,6 +13,7 @@
 #include "GameFramework/Combat/WeaponMath.h"
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -126,14 +127,14 @@ namespace sw
         int32            getMagazineAmmo() const { return _magazineAmmo; }
         int32            getReserveAmmo() const { return _reserveAmmo; }
         float32          getCurrentSpread() const { return _currentSpread; }
-        bool             isReloading() const { return _reloadRemaining > 0.0f; }
-        float32          getReloadRemaining() const { return _reloadRemaining; }
+        bool             isReloading() const { return _reload.isActive(); }
+        float32          getReloadRemaining() const { return _reload.getRemaining(); }
 
     private:
         WeaponDef  _def;
         GameRandom _random;
-        float32    _cooldown; ///< 다음 발까지 남은 시간(s). 음수는 이번 프레임 안에서 준비된 뒤 지난 시간(늦음 — 다음 간격에서 뺀다)
-        float32    _reloadRemaining;
+        Countdown  _cooldown; ///< 다음 발까지 — 발사는 `restart` 로 걸어 늦음을 다음 간격에서 뺀다
+        Countdown  _reload;
         float32    _currentSpread;
         int32      _magazineAmmo;
         int32      _reserveAmmo;

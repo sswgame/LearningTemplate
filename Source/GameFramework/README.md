@@ -37,7 +37,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (`CameraDirector`), 그것을 카메라에 쓰는 `CameraDirectorComponent`, 플레이어마다 뷰 타깃을 바꾸는 `CameraManagerComponent`. 아래 "카메라" 절
 - **Utility**: 장르 무관 계산 도구 — 씨앗 고정 난수 · 좌표 해시(`GameRandom` · `GameHash` — 가중치 고르기 `pickWeightedIndex` · 섞기 `shuffle`), 값 노이즈(`ValueNoise`),
   광선 판정(`RayMath` — 구 · 상자 · 캡슐 · 바닥 평면 · 원뿔), 앞 · 위 → 오일러(`OrientationUtil` — 롤이 있는 차량 · 카메라), 2D 네 방향(`FacingDir`),
-  고정 스텝 누적기(`FixedStepTimer`), 게임 시간 타이머(`TimerQueue`), 시뮬레이션 상태 바이트의 공통 모양(`StateArchiveUtil` — 머리(표 · 버전) · 이름 ·
+  고정 스텝 누적기(`FixedStepTimer`), 게임 시간 타이머(`TimerQueue`), 쿨다운 · 지속 시간 · 반복 간격 값(`Countdown` — `tick` 이 끝난 걸음에 한 번 true,
+  반복은 그 걸음에 `restart` 로 다시 걸어 지나친 몫을 한 간격까지 잇는다), 초당 비율 → 정수 발생(`RateAccumulator` — 손님 도착 · 운영비),
+  시뮬레이션 상태 바이트의 공통 모양(`StateArchiveUtil` — 머리(표 · 버전) · 이름 ·
   남은 바이트로 상한을 둔 개수 · 난수 · 걸음 타이머). 셋 이상의 키트에 같은 것이 따로 있던 것을 모았다(아래 "새 장르 키트").
   키트 시뮬레이션의 `writeState` · `readState`(`FarmField` · `CitySimulation` · `RtsWorld` · `ThemeParkSimulation` · `VoxelWorld` …)는 임시에 읽어 끝까지 맞을 때만
   바꾸고, 정의는 카탈로그 id 로, 유닛 참조는 세대 든 id 로 적으며, 다시 만들 수 있는 것(길 · 격자 발자국 · 흐름장)은 적지 않는다
