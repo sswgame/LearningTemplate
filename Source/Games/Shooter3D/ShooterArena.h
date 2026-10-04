@@ -90,8 +90,10 @@ namespace sw
         void    updateOverlay();
         void    spawnWave();
         void    spawnEffect( const float3& position, float32 size, const float4& color, float32 lifetime );
-        void    switchWeapon( int32 weaponIndex );
-        void    damagePlayer( float32 amount );
+        /** @brief 엄폐물 상자(AABB) 하나를 나무 상자 모델 더미로 채웁니다(충돌은 AABB 그대로). */
+        void spawnCrateStack( const ArenaBox& box );
+        void switchWeapon( int32 weaponIndex );
+        void damagePlayer( float32 amount );
         /** @brief 원(XZ)을 상자 밖으로 밀어냅니다. */
         float3 resolveCircle( const float3& position, float32 radius ) const;
         float3 getEyePosition() const;
@@ -115,6 +117,7 @@ namespace sw
         float32              _statusTimer;
         GameObjectHandle     _crosshair;
         GameObjectHandle     _hitMarker;
+        GameObjectHandle     _viewWeapon; ///< 손에 든 총(1인칭)
         int32                _weaponIndex;
         uint32               _wave;
         uint32               _killCount;

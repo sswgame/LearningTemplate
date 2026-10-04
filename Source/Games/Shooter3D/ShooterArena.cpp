@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/UI/HealthBarComponent.h"
 
 namespace sw
@@ -43,6 +44,28 @@ namespace sw
             static constexpr float32 kRegenPerSecond      = 6.0f;
             static constexpr float32 kWaveDelay           = 3.0f;
             static constexpr float32 kCrosshairDistance   = 0.6f;
+
+            /**
+             * @brief Kenney Blaster Kit 모델의 크기입니다. 키트 총은 길이 0.65 ~ 0.9 라 눈앞 0.4 m 에 그대로 두면 화면 절반을 가려 손에 든 총은 0.5 배,
+             *        상자 · 과녁은 충돌 모양(상자 AABB · 드론 구)에 맞춰 늘린다 — 그래서 배율 대신 모델 원래 크기를 상수로 둔다.
+             */
+            static constexpr float3      kCrateModelSize{ 0.55f, 0.37f, 1.0f }; ///< `crate_medium` — 긴 쪽이 Z
+            static constexpr float32     kTargetModelSize = 0.2f;               ///< `target_small` 지름 — 판의 앞이 +X
+            static constexpr float32     kViewWeaponScale = 0.5f;
+            static constexpr float3      kViewWeaponOffset{ 0.16f, -0.15f, 0.42f }; ///< 눈에서 오른쪽 · 아래 · 앞(m)
+            static constexpr const utf8* kPaletteTexture                             = "game/shooter3d/textures/blaster_colormap.dds";
+            static constexpr const utf8* kArrWeaponModel[ShooterArena::kWeaponCount] = { "blaster_d", "blaster_h", "blaster_a" };
+            static constexpr float4      kDroneTint{ 1.0f, 1.0f, 1.0f, 1.0f };
+            static constexpr float4      kDroneFlashTint{ 1.0f, 0.35f, 0.3f, 1.0f };
+
+            static string makeModelPath( const utf8* pName ) { return string( "game/shooter3d/models/" ) + pName + ".mesh"; }
+
+            static PrimitiveLook makeModelLook( const float4& tint )
+            {
+                PrimitiveLook look = PrimitiveLook::makeColor( tint );
+                look._texturePath  = kPaletteTexture;
+                return look;
+            }
 
             /** @brief 엄폐물 상자(가운데 · 반 크기)입니다. 높이는 바닥(y = 0)부터. */
             struct CrateLayout
@@ -101,6 +124,7 @@ namespace sw
         , _statusTimer{ 0.0f }
         , _crosshair{}
         , _hitMarker{}
+        , _viewWeapon{}
         , _weaponIndex{ 0 }
         , _wave{ 0 }
         , _killCount{ 0 }
@@ -140,11 +164,14 @@ namespace sw
                                             float3{ ShooterArenaInternal::kArenaHalfSize * 2.0f, 1.0f, ShooterArenaInternal::kArenaHalfSize * 2.0f } );
         for ( size_t boxIndex = 0; boxIndex < _listBox.size(); ++boxIndex )
         {
-            const ArenaBox& box   = _listBox[boxIndex];
-            const bool      bWall = boxIndex < 4;
-            const float4    color = bWall ? float4{ 0.62f, 0.64f, 0.70f, 1.0f } : float4{ 0.72f, 0.52f, 0.30f, 1.0f };
-            (void)_stage.createPrimitiveObject( bWall ? "ArenaWall" : "ArenaCrate", "Cube", PrimitiveLook::makeColor( color ), ( box._min + box._max ) * 0.5f,
-                                                box._max - box._min );
+            const ArenaBox& box = _listBox[boxIndex];
+            if ( boxIndex < 4 )
+            {
+                (void)_stage.createPrimitiveObject( "ArenaWall", "Cube", PrimitiveLook::makeColor( float4{ 0.62f, 0.64f, 0.70f, 1.0f } ), ( box._min + box._max ) * 0.5f,
+                                                    box._max - box._min );
+                continue;
+            }
+            spawnCrateStack( box );
         }
         (void)_stage.createSun( float3{ 0.95f, 0.7f, 0.0f }, 1.5f, ShooterArenaInternal::kArenaHalfSize * 1.2f );
 
@@ -167,6 +194,12 @@ namespace sw
             _stage.adoptObject( *pObject );
             *arrHandle[spriteIndex] = pObject->getHandle();
         }
+
+        // 손에 든 총 — 카메라를 따라 updateOverlay 가 옮긴다. 그림자는 드리우지 않게 눈앞 가까이 둔다.
+        GameObject* pWeapon = _stage.createModelObject( "ViewWeapon", ShooterArenaInternal::makeModelPath( ShooterArenaInternal::kArrWeaponModel[_weaponIndex] ),
+                                                        ShooterArenaInternal::makeModelLook( float4{ 1.0f, 1.0f, 1.0f, 1.0f } ), getEyePosition(),
+                                                        float3{ ShooterArenaInternal::kViewWeaponScale } );
+        _viewWeapon         = pWeapon != nullptr ? pWeapon->getHandle() : GameObjectHandle{};
 
         InputManager* pInput = game::getService<InputManager>();
         if ( pInput != nullptr && gv_shooterAutoPlay == 0 )
@@ -396,6 +429,8 @@ namespace sw
         next._y += _verticalSpeed * deltaTime;
         if ( next._y <= 0.0f )
         {
+            if ( _bOnGround == SW_FALSE )
+                (void)GameSound::play( "game/shooter3d/sounds/footstep_concrete_000.ogg" );
             next._y        = 0.0f;
             _verticalSpeed = 0.0f;
             _bOnGround     = SW_TRUE;
@@ -420,7 +455,8 @@ namespace sw
             return;
 
         ++_shotCount;
-        bool bAnyHit = false;
+        bool bAnyHit   = false;
+        bool bHitCover = false;
         for ( const GameRay& ray : shot._listRay )
         {
             bool          bHitDrone = false;
@@ -432,13 +468,20 @@ namespace sw
                 end, 0.06f
             } );
             if ( distance < weapon.getDef()._range )
+            {
                 spawnEffect( end, bHitDrone ? 0.18f : 0.1f, bHitDrone ? float4{ 1.0f, 0.4f, 0.2f, 1.0f } : float4{ 0.9f, 0.85f, 0.6f, 1.0f }, 0.12f );
+                bHitCover = bHitCover || ( bHitDrone == false && end._y > 0.05f );
+            }
         }
+        // 한 발(산탄 여럿)에 소리는 하나 — 드론을 맞혔으면 쇳소리, 아니고 상자 · 벽을 맞혔으면 나무 소리.
         if ( bAnyHit )
         {
             ++_hitCount;
             _hitMarkerTimer = 0.15f;
+            (void)GameSound::play( "game/shooter3d/sounds/impact_metal_light_001.ogg" );
         }
+        else if ( bHitCover )
+            (void)GameSound::play( "game/shooter3d/sounds/impact_plank_medium_000.ogg" );
         // 반동 — 위로 튀고 옆으로 살짝.
         const float32 kick = weapon.getDef()._recoilPitch * ShooterArenaInternal::kDegToRad;
         _look.addRecoil( kick, kick * 0.25f * ( ( _shotCount % 2u ) == 0u ? 1.0f : -1.0f ) );
@@ -484,7 +527,10 @@ namespace sw
     {
         if ( weaponIndex == _weaponIndex || weaponIndex < 0 || weaponIndex >= kWeaponCount )
             return;
-        _weaponIndex = weaponIndex;
+        _weaponIndex               = weaponIndex;
+        MeshComponent* pWeaponMesh = _stage.findMesh( _viewWeapon );
+        if ( pWeaponMesh != nullptr )
+            pWeaponMesh->setMeshId( ShooterArenaInternal::makeModelPath( ShooterArenaInternal::kArrWeaponModel[weaponIndex] ) );
         SW_LOG_INFO( "[Shooter] %# - %#/%#", _arrWeapon[weaponIndex].getDef()._name.c_str(), _arrWeapon[weaponIndex].getMagazineAmmo(),
                      _arrWeapon[weaponIndex].getReserveAmmo() );
     }
@@ -567,9 +613,10 @@ namespace sw
             const float3 base     = _listSpawnPoint[droneIndex % _listSpawnPoint.size()];
             const float3 position = base + float3{ 0.0f, ShooterArenaInternal::kDroneHeight, 0.0f } +
                                     float3{ static_cast<float32>( droneIndex / _listSpawnPoint.size() ) * 1.2f, 0.0f, 0.0f };
-            GameObject* pObject =
-                _stage.createPrimitiveObject( "Drone", "Sphere", PrimitiveLook::makeColor( float4{ 0.85f, 0.15f, 0.2f, 1.0f } ), position,
-                                              float3{ ShooterArenaInternal::kDroneRadius * 2.0f } );
+            // 드론은 떠다니는 과녁 — 판 지름이 맞음 구 지름이고, 모델 가운데가 원점이라 구 가운데에 그대로 둔다.
+            GameObject* pObject = _stage.createModelObject(
+                "Drone", ShooterArenaInternal::makeModelPath( "target_small" ), ShooterArenaInternal::makeModelLook( ShooterArenaInternal::kDroneTint ),
+                position, float3{ ShooterArenaInternal::kDroneRadius * 2.0f / ShooterArenaInternal::kTargetModelSize } );
             if ( pObject == nullptr )
                 continue;
             (void)pObject->addComponent<HealthBarComponent>();
@@ -599,6 +646,7 @@ namespace sw
             {
                 ++_killCount;
                 spawnEffect( drone._position, 1.4f, float4{ 1.0f, 0.6f, 0.15f, 1.0f }, 0.2f );
+                (void)GameSound::play( "game/shooter3d/sounds/impact_metal_medium_000.ogg" );
                 _stage.destroyObject( drone._object );
                 _listDrone[droneIndex] = _listDrone.back();
                 _listDrone.pop_back();
@@ -639,18 +687,45 @@ namespace sw
             {
                 if ( MeshComponent* pMesh = pObject->getComponent<MeshComponent>() )
                 {
+                    // 판의 앞(+X)이 플레이어를 보게 돈다.
                     pMesh->setLocalPosition( drone._position );
+                    pMesh->setLocalRotation( float3{ 0.0f, MathUtil::atan2( toTarget._x, toTarget._z ) - ShooterArenaInternal::kPi * 0.5f, 0.0f } );
                     const uint8 bFlashing = drone._flashTimer > 0.0f ? SW_TRUE : SW_FALSE;
                     if ( bFlashing != drone._bFlashing )
                     {
                         drone._bFlashing = bFlashing;
-                        _stage.setLook( *pMesh, PrimitiveLook::makeColor( bFlashing != SW_FALSE ? float4{ 1.0f, 1.0f, 1.0f, 1.0f } : float4{ 0.85f, 0.15f, 0.2f, 1.0f } ) );
+                        _stage.setLook( *pMesh, ShooterArenaInternal::makeModelLook( bFlashing != SW_FALSE ? ShooterArenaInternal::kDroneFlashTint
+                                                                                                           : ShooterArenaInternal::kDroneTint ) );
                     }
                 }
                 if ( HealthBarComponent* pBar = pObject->getComponent<HealthBarComponent>() )
                     pBar->setTargetRatio( MathUtil::max( 0.0f, drone._health / drone._maxHealth ) );
             }
             ++droneIndex;
+        }
+    }
+
+    void ShooterArena::spawnCrateStack( const ArenaBox& box )
+    {
+        // 엄폐물 상자 하나(AABB)를 나무 상자 더미로 채운다 — 긴 쪽이 X 면 모델(긴 쪽 Z)을 90° 돌리고, 위로는 모델 비율에 가까운 높이로 쌓는다.
+        // 충돌은 AABB 그대로라 모양만 바뀐다.
+        using Internal           = ShooterArenaInternal;
+        const float3  size       = box._max - box._min;
+        const bool    bAlongX    = size._x > size._z;
+        const float32 width      = bAlongX ? size._z : size._x;
+        const float32 length     = bAlongX ? size._x : size._z;
+        const float32 across     = width / Internal::kCrateModelSize._x;
+        const float32 along      = length / Internal::kCrateModelSize._z;
+        const float32 natural    = Internal::kCrateModelSize._y * MathUtil::min( across, along );
+        const int32   layerCount = MathUtil::max( 1, static_cast<int32>( MathUtil::floor( size._y / natural + 0.5f ) ) );
+        const float32 layer      = size._y / static_cast<float32>( layerCount );
+        const float3  center     = ( box._min + box._max ) * 0.5f;
+        for ( int32 layerIndex = 0; layerIndex < layerCount; ++layerIndex )
+        {
+            (void)_stage.createModelObject( "ArenaCrate", Internal::makeModelPath( "crate_medium" ), Internal::makeModelLook( float4{ 1.0f, 1.0f, 1.0f, 1.0f } ),
+                                            float3{ center._x, box._min._y + layer * static_cast<float32>( layerIndex ), center._z },
+                                            float3{ across, layer / Internal::kCrateModelSize._y, along },
+                                            float3{ 0.0f, bAlongX ? Internal::kPi * 0.5f : 0.0f, 0.0f } );
         }
     }
 
@@ -715,6 +790,17 @@ namespace sw
             pSprite->setLocalScale( float3{ size, size, 1.0f } );
             if ( spriteIndex == 1 )
                 pSprite->setVisible( _hitMarkerTimer > 0.0f );
+        }
+
+        // 손에 든 총 — 눈 기준 오른쪽 · 아래 · 앞에 두고 시점과 같이 돌린다(총구가 모델의 -Z 라 반 바퀴 더).
+        MeshComponent* pWeapon = _stage.findMesh( _viewWeapon );
+        if ( pWeapon != nullptr )
+        {
+            const float3 right  = _look.getFlatRight();
+            const float3 up     = forward.cross( right );
+            const float3 offset = ShooterArenaInternal::kViewWeaponOffset;
+            pWeapon->setLocalPosition( eye + right * offset._x + up * offset._y + forward * offset._z );
+            pWeapon->setLocalRotation( float3{ euler._x, euler._y + ShooterArenaInternal::kPi, euler._z } );
         }
     }
 
