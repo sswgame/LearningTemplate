@@ -2,139 +2,124 @@
 
 #include "Engine/Animation/AnimGraphPlayer.h"
 
-#include "Engine/Animation/AnimClip.h"
-
 namespace sw
 {
     AnimGraphPlayer::AnimGraphPlayer()
-        : _graph{}
-        , _player{}
-        , _listClip{}
-        , _currentNodeName{}
+        : _player{}
+        , _currentStateName{}
+        , _pGraph{ nullptr }
+        , _pSource{ nullptr }
         , _currentNodeId{ 0 }
-        , _crossfadeSeconds{ 0.15f }
+        , _defaultBlendSeconds{ 0.15f }
     {
     }
 
-    bool AnimGraphPlayer::loadGraph( string_view path )
+    void AnimGraphPlayer::setGraph( const AnimGraphAsset* pGraph )
     {
         stop();
-        return _graph.loadFromFile( path );
+        _pGraph = pGraph;
     }
 
-    void AnimGraphPlayer::setGraph( const AnimGraphAsset& graph )
+    bool AnimGraphPlayer::play( const hashed_string& stateName, bool bLoop, float32 blendSeconds )
     {
-        stop();
-        _graph = graph;
-    }
-
-    void AnimGraphPlayer::registerClip( string_view nodeName, const AnimClip* pClip )
-    {
-        if ( nodeName.empty() )
-            return;
-        for ( ClipBinding& binding : _listClip )
+        if ( _pGraph != nullptr )
         {
-            if ( binding._nodeName != nodeName )
-                continue;
-            binding._pClip = pClip;
-            return;
+            // 이름이 비었으면 진입 노드, 그래프에 없는 이름이면 그래프 밖에서 그 이름을 바로 재생한다(전이 없음).
+            const AnimGraphNode* pNode = stateName.empty() ? _pGraph->findEntryNode() : _pGraph->findNodeByName( stateName.c_str() );
+            if ( pNode != nullptr )
+                return enterNode( *pNode, bLoop ? kLoopYes : kLoopNo, blendSeconds );
         }
-        ClipBinding binding{};
-        binding._nodeName = string{ nodeName };
-        binding._pClip    = pClip;
-        _listClip.push_back( std::move( binding ) );
+        _currentNodeId    = 0;
+        _currentStateName = stateName;
+        return startPlayable( stateName, bLoop, blendSeconds );
     }
 
-    void AnimGraphPlayer::clearClips()
+    void AnimGraphPlayer::playPlayable( const hashed_string& stateName, const IAnimPlayable* pPlayable, bool bLoop )
     {
-        _listClip.clear();
-    }
-
-    bool AnimGraphPlayer::play( string_view nodeName, bool bLoopClip )
-    {
-        const AnimGraphNode* pNode = nullptr;
-        if ( nodeName.empty() == false )
-            pNode = _graph.findNodeByName( nodeName );
-        if ( pNode == nullptr )
-            pNode = _graph.findEntryNode();
-        if ( pNode == nullptr )
-            return false;
-        return playNode( pNode->_id, bLoopClip, false );
+        const AnimGraphNode* pNode = ( _pGraph != nullptr && stateName.empty() == false ) ? _pGraph->findNodeByName( stateName.c_str() ) : nullptr;
+        _currentNodeId             = pNode != nullptr ? pNode->_id : 0;
+        _currentStateName          = stateName;
+        _player.play( pPlayable, bLoop );
     }
 
     void AnimGraphPlayer::stop()
     {
-        _player.play( nullptr, false );
-        _currentNodeId = 0;
-        _currentNodeName.clear();
+        _player.stop();
+        _currentNodeId    = 0;
+        _currentStateName = hashed_string{};
+    }
+
+    void AnimGraphPlayer::update( float32 deltaSeconds, AnimParameterSet* pParameter, vector<AnimFiredNotify>* pOutListFired )
+    {
+        if ( _pGraph != nullptr && _currentNodeId > 0 && pParameter != nullptr )
+        {
+            for ( const AnimGraphLink& link : _pGraph->_listLink )
+            {
+                if ( link._fromNode != _currentNodeId || link._op == AnimConditionOp::None )
+                    continue;
+                if ( link.isConditionMet( pParameter->getFloat( link._parameter ) ) == false )
+                    continue;
+                if ( link._op == AnimConditionOp::Trigger )
+                    pParameter->consumeTrigger( link._parameter );
+                const AnimGraphNode* pTarget = _pGraph->findNode( link._toNode );
+                if ( pTarget != nullptr )
+                    (void)enterNode( *pTarget, kLoopFromPlayable, link._blendSeconds );
+                break;
+            }
+        }
+
+        _player.update( deltaSeconds, pOutListFired );
+
+        if ( _pGraph == nullptr || _currentNodeId <= 0 || _player.hasFinished() == false )
+            return;
+        // 재생할 것이 없는 상태는 길이 0 이라 곧 "끝났다" — 그래도 다음으로 바로 넘어가지 않고 머문다(다음 advance · play 까지).
+        if ( _player.getCurrentPlayable() == nullptr )
+            return;
+        const AnimGraphLink* pFinish = _pGraph->findFinishLink( _currentNodeId );
+        const AnimGraphNode* pNext   = pFinish != nullptr ? _pGraph->findNode( pFinish->_toNode ) : nullptr;
+        if ( pNext != nullptr )
+            (void)enterNode( *pNext, kLoopNo, pFinish->_blendSeconds );
     }
 
     bool AnimGraphPlayer::advance()
     {
-        if ( _currentNodeId <= 0 )
-            return play( {}, false );
-        const int32 nextId = _graph.findFirstOutgoingNodeId( _currentNodeId );
-        if ( nextId <= 0 )
+        if ( _pGraph == nullptr )
             return false;
-        return playNode( nextId, false, true );
-    }
-
-    void AnimGraphPlayer::update( float32 deltaSeconds )
-    {
-        _player.update( deltaSeconds );
-        if ( _player.hasFinished() == false )
-            return;
         if ( _currentNodeId <= 0 )
-            return;
-
-        const int32 nextId = _graph.findFirstOutgoingNodeId( _currentNodeId );
-        if ( nextId <= 0 )
-            return;
-        playNode( nextId, false, true );
-    }
-
-    AnimSample AnimGraphPlayer::evaluate() const
-    {
-        return _player.evaluate();
-    }
-
-    void AnimGraphPlayer::setCrossfadeSeconds( float32 seconds )
-    {
-        _crossfadeSeconds = ( seconds > 0.0f ) ? seconds : 0.0f;
-    }
-
-    const AnimClip* AnimGraphPlayer::findClip( string_view nodeName ) const
-    {
-        for ( const ClipBinding& binding : _listClip )
-        {
-            if ( binding._nodeName == nodeName )
-                return binding._pClip;
-        }
-        return nullptr;
-    }
-
-    bool AnimGraphPlayer::playNode( int32 nodeId, bool bLoopClip, bool bCrossfade )
-    {
-        const AnimGraphNode* pNode = _graph.findNode( nodeId );
-        if ( pNode == nullptr )
+            return play( hashed_string{}, false, 0.0f );
+        const AnimGraphLink* pFinish = _pGraph->findFinishLink( _currentNodeId );
+        const AnimGraphNode* pNext   = pFinish != nullptr ? _pGraph->findNode( pFinish->_toNode ) : nullptr;
+        if ( pNext == nullptr )
             return false;
+        (void)enterNode( *pNext, kLoopNo, pFinish->_blendSeconds );
+        return true;
+    }
 
-        _currentNodeId        = nodeId;
-        _currentNodeName      = pNode->_name;
-        const AnimClip* pClip = findClip( pNode->_name );
-        if ( pClip == nullptr )
+    bool AnimGraphPlayer::enterNode( const AnimGraphNode& node, int8 loopWhenUnspecified, float32 blendSeconds )
+    {
+        _currentNodeId    = node._id;
+        _currentStateName = hashed_string( node._name );
+        int8 loop         = node._loopOverride >= 0 ? node._loopOverride : loopWhenUnspecified;
+        if ( loop == kLoopFromPlayable )
         {
-            // 클립이 없는 노드로 넘어가면서 플레이어를 그대로 두면, getCurrentNodeName() 은 새
-            // 노드를 말하는데 evaluate() 는 이전 노드의 포즈를 계속 반환한다. 둘이 다른 말을
-            // 하게 두지 않는다. 클립이 없는 노드는 길이 0 이므로 재생을 비운다.
-            _player.play( nullptr, false );
-            return true;
+            const IAnimPlayable* pPlayable = ( _pSource != nullptr ) ? _pSource->findPlayable( _currentStateName ) : nullptr;
+            loop                           = ( pPlayable != nullptr && pPlayable->isLoopingByDefault() ) ? kLoopYes : kLoopNo;
         }
+        return startPlayable( _currentStateName, loop == kLoopYes, blendSeconds < 0.0f ? _defaultBlendSeconds : blendSeconds );
+    }
 
-        if ( bCrossfade )
-            _player.crossfade( pClip, _crossfadeSeconds, bLoopClip );
+    bool AnimGraphPlayer::startPlayable( const hashed_string& name, bool bLoop, float32 blendSeconds )
+    {
+        const IAnimPlayable* pPlayable = ( _pSource != nullptr && name.empty() == false ) ? _pSource->findPlayable( name ) : nullptr;
+        if ( pPlayable == nullptr )
+        {
+            _player.stop();
+            return false;
+        }
+        if ( blendSeconds > 0.0f )
+            _player.crossfade( pPlayable, blendSeconds, bLoop );
         else
-            _player.play( pClip, bLoopClip );
+            _player.play( pPlayable, bLoop );
         return true;
     }
 } // namespace sw

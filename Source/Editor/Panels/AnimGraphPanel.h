@@ -5,7 +5,6 @@
 
 #include "Editor/Common/Gui/EditorGraphDocumentPanel.h"
 
-#include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimGraphAsset.h"
 #include "Engine/Animation/AnimGraphPlayer.h"
 
@@ -53,7 +52,7 @@ namespace sw::editor
         void tickPreview( float32 deltaSeconds );
 
     private:
-        AnimGraphPlayer  _previewPlayer;
-        vector<AnimClip> _listPreviewClip;
+        AnimGraphAsset  _previewGraph;  ///< 미리보기 플레이어가 빌려 쓰는 그래프 사본입니다
+        AnimGraphPlayer _previewPlayer; ///< 노드 이름만 넘깁니다 — 클립 없이 "끝나면 다음" 을 손으로 진행합니다
     };
 } // namespace sw::editor

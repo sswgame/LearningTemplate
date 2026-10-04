@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Animation/Skeleton.h"
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -56,6 +57,7 @@ namespace
         static bool isMaterial( sw::string_view resourceId ) { return endsWith( resourceId, ".material" ); }
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
+        static bool isSkeleton( sw::string_view resourceId ) { return endsWith( resourceId, sw::Skeleton::kExtension ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -113,6 +115,13 @@ namespace
             return clip.loadFromFile( resourceId );
         }
 
+        /** @brief 임포트가 쓴 스켈레톤(본 · 부착 표) — 모르는 키 · 없는 본 이름은 로드 오류다. */
+        static bool loadSkeleton( const sw::string& resourceId )
+        {
+            sw::Skeleton skeleton;
+            return skeleton.loadFromResource( resourceId );
+        }
+
         // 게임 데이터 — 키트 카탈로그가 읽는다(게임 모듈은 읽은 정의를 조립만 한다). 파일 이름은 게임이 여는 그대로다.
         template <typename TCatalog>
         static bool loadCatalog( const sw::string& resourceId )
@@ -156,6 +165,7 @@ namespace
             {           "inputmap",            &isInputMap,                          &loadInputMap},
             {           "material",            &isMaterial,                          &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                        &loadSpriteClip},
+            {           "skeleton",            &isSkeleton,                          &loadSkeleton},
             {      "camerapresets",       &isCameraPresets,  &loadCatalog<sw::CameraPresetCatalog>},
             {          "abilities",           &isAbilities,       &loadCatalog<sw::AbilityCatalog>},
             {              "crops",               &isCrops,          &loadCatalog<sw::CropCatalog>},

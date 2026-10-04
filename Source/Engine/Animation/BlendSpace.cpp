@@ -6,7 +6,7 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Animation/DualQuaternion.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Pose.h"
 
 namespace sw
 {
@@ -90,14 +90,10 @@ namespace sw
         return _listSample.back()._pose;
     }
 
-    void BlendSpace1D::evaluateSkeleton( float32 parameter, Skeleton& inoutSkeleton ) const
+    void BlendSpace1D::evaluateRootPose( float32 parameter, Pose& inoutPose ) const
     {
-        const float4x4 rootTransform = evaluate( parameter );
-        if ( inoutSkeleton.getBoneCount() > 0 )
-        {
-            inoutSkeleton.setBoneSpaceTransform( 0, rootTransform );
-            inoutSkeleton.updateCharacterSpaceTransforms();
-        }
+        if ( inoutPose.getBoneCount() > 0 )
+            inoutPose.setBoneTransform( 0, BoneTransform::makeFromMatrix( evaluate( parameter ) ) );
     }
 
     void BlendSpace2D::addSample( float32 paramX, float32 paramY, string_view clipName, const float4x4& pose )

@@ -6,103 +6,155 @@
 
 namespace sw
 {
-    void AnimPlayer::play( const AnimClip* pClip, bool bLooping )
+    AnimPlayer::AnimPlayer()
+        : _arrSlot{}
+        , _fadeDuration{ 0.0f }
+        , _fadeElapsed{ 0.0f }
+        , _speed{ 1.0f }
     {
-        _pCurrent     = pClip;
-        _pNext        = nullptr;
-        _currentTime  = 0.0f;
-        _nextTime     = 0.0f;
+    }
+
+    void AnimPlayer::play( const IAnimPlayable* pPlayable, bool bLoop )
+    {
+        _arrSlot[0]            = Slot{};
+        _arrSlot[0]._pPlayable = pPlayable;
+        _arrSlot[0]._bLoop     = bLoop ? SW_TRUE : SW_FALSE;
+        _arrSlot[1]            = Slot{};
+        _fadeDuration          = 0.0f;
+        _fadeElapsed           = 0.0f;
+    }
+
+    void AnimPlayer::crossfade( const IAnimPlayable* pPlayable, float32 fadeSeconds, bool bLoop )
+    {
+        if ( pPlayable == nullptr || _arrSlot[0]._pPlayable == nullptr || fadeSeconds <= 0.0f )
+        {
+            play( pPlayable, bLoop );
+            return;
+        }
+        // 페이드 중에 또 넘어가면 지금 섞이던 다음 칸이 새 출발점이다(가중치가 더 큰 쪽을 남긴다).
+        if ( _arrSlot[1]._pPlayable != nullptr && getBlendAlpha() >= 0.5f )
+            _arrSlot[0] = _arrSlot[1];
+        _arrSlot[1]            = Slot{};
+        _arrSlot[1]._pPlayable = pPlayable;
+        _arrSlot[1]._bLoop     = bLoop ? SW_TRUE : SW_FALSE;
+        _fadeDuration          = fadeSeconds;
+        _fadeElapsed           = 0.0f;
+    }
+
+    void AnimPlayer::update( float32 deltaSeconds, vector<AnimFiredNotify>* pOutListFired )
+    {
+        const float32 delta = MathUtil::max( deltaSeconds, 0.0f ) * _speed;
+        const float32 alpha = getBlendAlpha();
+        for ( uint32 slotIndex = 0; slotIndex < 2; ++slotIndex )
+        {
+            Slot& slot = _arrSlot[slotIndex];
+            if ( slot._pPlayable == nullptr )
+                continue;
+            const float32 playLength      = slot._pPlayable->getPlayLength();
+            slot._lastStep                = slot._cursor.advance( delta, playLength, slot._bLoop == SW_TRUE );
+            const AnimNotifyTrack* pTrack = slot._pPlayable->findNotifyTrack();
+            if ( pTrack != nullptr && pOutListFired != nullptr )
+                pTrack->collectFired( slot._lastStep, playLength, slotIndex == 0 ? 1.0f - alpha : alpha, *pOutListFired );
+        }
+
+        if ( _arrSlot[1]._pPlayable == nullptr )
+            return;
+        _fadeElapsed += delta;
+        if ( _fadeElapsed < _fadeDuration )
+            return;
+        _arrSlot[0]   = _arrSlot[1];
+        _arrSlot[1]   = Slot{};
         _fadeDuration = 0.0f;
         _fadeElapsed  = 0.0f;
-        _bCurrentLoop = bLooping;
-        _bNextLoop    = true;
-    }
-
-    void AnimPlayer::crossfade( const AnimClip* pClip, float32 fadeSeconds, bool bLooping )
-    {
-        if ( pClip == nullptr )
-            return;
-
-        if ( _pCurrent == nullptr || fadeSeconds <= 0.0f )
-        {
-            play( pClip, bLooping );
-            return;
-        }
-
-        _pNext        = pClip;
-        _nextTime     = 0.0f;
-        _fadeDuration = fadeSeconds;
-        _fadeElapsed  = 0.0f;
-        _bNextLoop    = bLooping;
-    }
-
-    void AnimPlayer::update( float32 deltaSeconds )
-    {
-        if ( deltaSeconds < 0.0f )
-            deltaSeconds = 0.0f;
-
-        const float32 effectiveDelta = deltaSeconds * _playSpeed;
-
-        // 반복 클립의 시간은 한 바퀴 안으로 감는다. 끝없이 키우면 오래 켜 둔 루프(대기 · 배경)의 float32 정밀도가 무너진다 — 10^6 초
-        // 근처에서는 한 프레임(0.016 초)을 더해도 값이 거의 움직이지 않아 애니메이션이 떨리거나 멈춘다. 샘플은 어차피 한 바퀴 안으로 접어 읽는다.
-        const auto advance = []( float32& time, float32 delta, const AnimClip* pClip, bool bLooping )
-        {
-            time += delta;
-            const float32 duration = pClip->getDuration();
-            if ( bLooping && duration > 0.0f && time >= duration ) // 속도는 0 이상이다(`setSpeed`)
-                time = std::fmod( time, duration );
-        };
-        if ( _pCurrent != nullptr )
-            advance( _currentTime, effectiveDelta, _pCurrent, _bCurrentLoop );
-        if ( _pNext != nullptr )
-            advance( _nextTime, effectiveDelta, _pNext, _bNextLoop );
-
-        if ( _pNext != nullptr && _fadeDuration > 0.0f )
-        {
-            _fadeElapsed += effectiveDelta;
-            if ( _fadeElapsed >= _fadeDuration )
-            {
-                _pCurrent     = _pNext;
-                _currentTime  = _nextTime;
-                _bCurrentLoop = _bNextLoop;
-                _pNext        = nullptr;
-                _nextTime     = 0.0f;
-                _fadeDuration = 0.0f;
-                _fadeElapsed  = 0.0f;
-            }
-        }
-    }
-
-    AnimSample AnimPlayer::evaluate() const
-    {
-        if ( _pCurrent == nullptr )
-        {
-            AnimSample empty{};
-            empty._transform = float4x4::Identity;
-            return empty;
-        }
-
-        AnimSample result = _pCurrent->sample( _currentTime, _bCurrentLoop );
-        if ( _pNext == nullptr || _fadeDuration <= 0.0f )
-            return result;
-
-        const AnimSample next  = _pNext->sample( _nextTime, _bNextLoop );
-        const float32    alpha = MathUtil::clamp( _fadeElapsed / _fadeDuration, 0.0f, 1.0f );
-        // 두 클립의 정규화 시간을 섞은 값은 길이가 다르면 어느 쪽 위상도 아니다. 스텁 클립이
-        // 항등 변환만 반환하는 동안의 임시 값이며, 실제 포즈가 생기면 `_transform` 만 남는다.
-        result._normalizedTime = result._normalizedTime * ( 1.0f - alpha ) + next._normalizedTime * alpha;
-        result._transform      = float4x4::lerp( result._transform, next._transform, alpha );
-        return result;
     }
 
     bool AnimPlayer::hasFinished() const
     {
-        if ( _pCurrent == nullptr )
+        const Slot& current = _arrSlot[0];
+        if ( current._pPlayable == nullptr )
             return true;
-        if ( _bCurrentLoop )
+        if ( current._bLoop == SW_TRUE || _arrSlot[1]._pPlayable != nullptr )
             return false;
-        if ( _pNext != nullptr )
-            return false;
-        return _currentTime >= _pCurrent->getDuration();
+        return current._cursor.getTime() >= current._pPlayable->getPlayLength();
+    }
+
+    float32 AnimPlayer::getBlendAlpha() const
+    {
+        if ( _arrSlot[1]._pPlayable == nullptr || _fadeDuration <= 0.0f )
+            return 0.0f;
+        return MathUtil::clamp( _fadeElapsed / _fadeDuration, 0.0f, 1.0f );
+    }
+
+    void AnimPlayer::setCurrentTime( float32 time )
+    {
+        const float32 playLength = _arrSlot[0]._pPlayable != nullptr ? _arrSlot[0]._pPlayable->getPlayLength() : 0.0f;
+        _arrSlot[0]._cursor.reset( MathUtil::clamp( time, 0.0f, MathUtil::max( playLength, 0.0f ) ) );
+    }
+
+    float32 AnimPlayer::getCurrentNormalizedTime() const
+    {
+        const Slot& current = _arrSlot[0];
+        return current._pPlayable != nullptr ? current._cursor.computeNormalizedTime( current._pPlayable->getPlayLength() ) : 0.0f;
+    }
+
+    void AnimPlayer::setNormalizedTime( float32 normalizedTime )
+    {
+        for ( Slot& slot : _arrSlot )
+        {
+            if ( slot._pPlayable != nullptr )
+                slot._cursor.setNormalizedTime( normalizedTime, slot._pPlayable->getPlayLength() );
+        }
+    }
+
+    int32 AnimSyncGroup::synchronize( AnimPlayer* const* ppPlayer, const float32* pWeight, uint32 count )
+    {
+        int32   leaderIndex  = -1;
+        float32 leaderWeight = -1.0f;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            if ( ppPlayer[index] == nullptr || ppPlayer[index]->getCurrentPlayable() == nullptr )
+                continue;
+            if ( pWeight[index] > leaderWeight )
+            {
+                leaderWeight = pWeight[index];
+                leaderIndex  = static_cast<int32>( index );
+            }
+        }
+        if ( leaderIndex < 0 )
+            return leaderIndex;
+
+        const float32 phase = ppPlayer[leaderIndex]->getCurrentNormalizedTime();
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            if ( static_cast<int32>( index ) != leaderIndex && ppPlayer[index] != nullptr )
+                ppPlayer[index]->setNormalizedTime( phase );
+        }
+        return leaderIndex;
+    }
+
+    void AnimParameterSet::setFloat( const hashed_string& name, float32 value )
+    {
+        for ( Entry& entry : _listEntry )
+        {
+            if ( entry._name == name )
+            {
+                entry._value = value;
+                return;
+            }
+        }
+        Entry entry{};
+        entry._name  = name;
+        entry._value = value;
+        _listEntry.push_back( entry );
+    }
+
+    float32 AnimParameterSet::getFloat( const hashed_string& name ) const
+    {
+        for ( const Entry& entry : _listEntry )
+        {
+            if ( entry._name == name )
+                return entry._value;
+        }
+        return 0.0f;
     }
 } // namespace sw

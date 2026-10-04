@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    class Skeleton;
+    class Pose;
 
     /**
      * @brief 1D 파라미터 표본 하나입니다.
@@ -61,8 +61,8 @@ namespace sw
          *          DLB(회전 · 이동) + 선형 보간(스케일)으로 섞습니다.
          */
         float4x4 evaluate( float32 parameter ) const;
-        /** @brief 합성한 포즈를 스켈레톤 루트 본에 얹고 캐릭터 공간 변환을 갱신합니다. */
-        void evaluateSkeleton( float32 parameter, Skeleton& inoutSkeleton ) const;
+        /** @brief 합성한 변환을 포즈의 루트 본(0 번)에 씁니다. 본이 없으면 아무것도 하지 않습니다. */
+        void evaluateRootPose( float32 parameter, Pose& inoutPose ) const;
 
         /** @brief 표본 개수입니다. */
         size_t getSampleCount() const { return _listSample.size(); }

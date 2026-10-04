@@ -66,8 +66,8 @@ namespace sw::editor
 
     AnimGraphPanel::AnimGraphPanel()
         : EditorGraphDocumentPanel{ EditorAssetType::AnimGraph, "Move Animation Graph Nodes", "anim-graph-layout" }
+        , _previewGraph{}
         , _previewPlayer{}
-        , _listPreviewClip{}
     {
     }
 
@@ -129,10 +129,10 @@ namespace sw::editor
             if ( ImGui::Button( "Play" ) )
             {
                 syncPreviewGraph();
-                _previewPlayer.play();
+                (void)_previewPlayer.play( hashed_string{}, false, 0.0f ); // 클립이 없어 재생은 비고 상태 이름만 옮긴다
                 _bPreviewPlaying    = SW_TRUE;
                 _previewHoldSeconds = 0.0f;
-                EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName(), getLoadedAssetPath() );
+                EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), getLoadedAssetPath() );
             }
             ImGui::SameLine();
             if ( ImGui::Button( "Advance" ) )
@@ -141,7 +141,7 @@ namespace sw::editor
                 if ( _previewPlayer.advance() == false )
                     _bPreviewPlaying = SW_FALSE;
                 else
-                    EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName(), getLoadedAssetPath() );
+                    EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), getLoadedAssetPath() );
             }
             ImGui::SameLine();
             if ( ImGui::Button( "Stop" ) )
@@ -151,8 +151,8 @@ namespace sw::editor
             }
 
             ImGui::SameLine();
-            if ( _previewPlayer.getCurrentNodeName().empty() == false )
-                ImGui::TextDisabled( "Preview: %s  Nodes: %zu  Links: %zu", _previewPlayer.getCurrentNodeName().c_str(),
+            if ( _previewPlayer.getCurrentStateName().empty() == false )
+                ImGui::TextDisabled( "Preview: %s  Nodes: %zu  Links: %zu", _previewPlayer.getCurrentStateName().c_str(),
                                      _listNode.size(), _listLink.size() );
             else
                 ImGui::TextDisabled( "Nodes: %zu  Links: %zu  (%s)", _listNode.size(), _listLink.size(),
@@ -174,7 +174,7 @@ namespace sw::editor
         {
             const ed::NodeId nodeId = toNodeId( node._id );
             ed::BeginNode( nodeId );
-            if ( _previewPlayer.getCurrentNodeName() == node._name && _previewPlayer.getCurrentNodeName().empty() == false )
+            if ( _previewPlayer.getCurrentStateName().c_str() == node._name && _previewPlayer.getCurrentStateName().empty() == false )
                 ImGui::TextColored( ImVec4( 0.4f, 0.9f, 0.5f, 1.0f ), "%s", node._name.c_str() );
             else
                 ImGui::TextUnformatted( node._name.c_str() );
@@ -246,7 +246,11 @@ namespace sw::editor
         _listNode.push_back( GraphNode{
             "Walk", 2, float2{ 280.0f, 80.0f }
         } );
-        _listLink.push_back( GraphLink{ 100, 1, 2 } );
+        GraphLink link{};
+        link._id       = 100;
+        link._fromNode = 1;
+        link._toNode   = 2;
+        _listLink.push_back( link );
     }
 
     ToolAssetLoadResult AnimGraphPanel::loadDocument()
@@ -289,15 +293,8 @@ namespace sw::editor
 
     void AnimGraphPanel::syncPreviewGraph()
     {
-        AnimGraphAsset asset = captureGraphData();
-        _previewPlayer.setGraph( asset );
-        _previewPlayer.clearClips();
-        _listPreviewClip.clear();
-        _listPreviewClip.reserve( _listNode.size() );
-        for ( const GraphNode& node : _listNode )
-            _listPreviewClip.push_back( AnimClip( node._name, 0.75f ) );
-        for ( AnimClip& clip : _listPreviewClip )
-            _previewPlayer.registerClip( clip.getName(), &clip );
+        _previewGraph = captureGraphData();
+        _previewPlayer.setGraph( &_previewGraph );
     }
 
     void AnimGraphPanel::tickPreview( float32 deltaSeconds )
@@ -311,7 +308,7 @@ namespace sw::editor
         if ( _previewPlayer.advance() == false )
             _bPreviewPlaying = SW_FALSE;
         else
-            EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentNodeName(), getLoadedAssetPath() );
+            EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), getLoadedAssetPath() );
     }
 
     void AnimGraphPanel::addNamedNode( const utf8* pName )
