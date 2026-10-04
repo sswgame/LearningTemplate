@@ -2,6 +2,8 @@
 
 #include "GameFramework/Interaction/GrabberComponent.h"
 
+#include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -31,6 +33,46 @@ namespace sw
         GravityComponent* pGravity = target.getComponent<GravityComponent>();
         if ( pGravity != nullptr && velocity._y != 0.0f )
             pGravity->jump( velocity._y );
+    }
+
+    bool RigidBodyGrabPhysics::attach( GameObject& holder, GameObject& target, const float3& localOffset )
+    {
+        if ( _transform.attach( holder, target, localOffset ) == false )
+            return false;
+        // 강체는 손을 따르는 키네마틱 — 동적으로 남으면 중력 · 접촉이 계층과 싸운다.
+        RigidBodyComponent* pBody3D = target.getComponent<RigidBodyComponent>();
+        if ( pBody3D != nullptr )
+            pBody3D->setBodyType( PhysicsBodyType::Kinematic );
+        RigidBody2DComponent* pBody2D = target.getComponent<RigidBody2DComponent>();
+        if ( pBody2D != nullptr )
+            pBody2D->setBodyType( PhysicsBodyType::Kinematic );
+        return true;
+    }
+
+    void RigidBodyGrabPhysics::release( GameObject& holder, GameObject& target, const float3& velocity )
+    {
+        RigidBodyComponent*   pBody3D = target.getComponent<RigidBodyComponent>();
+        RigidBody2DComponent* pBody2D = target.getComponent<RigidBody2DComponent>();
+        if ( pBody3D == nullptr && pBody2D == nullptr )
+        {
+            _transform.release( holder, target, velocity );
+            return;
+        }
+        SceneComponent* pTargetScene = target.getPrimarySceneComponent();
+        if ( pTargetScene != nullptr )
+            pTargetScene->detachFromComponent( AttachRule::KeepWorld );
+        if ( pBody3D != nullptr )
+        {
+            pBody3D->setBodyType( PhysicsBodyType::Dynamic );
+            pBody3D->setLinearVelocity( velocity );
+            pBody3D->wake();
+        }
+        if ( pBody2D != nullptr )
+        {
+            pBody2D->setBodyType( PhysicsBodyType::Dynamic );
+            pBody2D->setLinearVelocity( float2{ velocity._x, velocity._y } );
+            pBody2D->wake();
+        }
     }
 
     GrabberComponent::GrabberComponent()

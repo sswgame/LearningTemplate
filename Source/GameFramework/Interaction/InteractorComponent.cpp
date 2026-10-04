@@ -2,6 +2,7 @@
 
 #include "GameFramework/Interaction/InteractorComponent.h"
 
+#include "Engine/Character/MotionWarpingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -18,6 +19,22 @@ namespace sw
         {
             /** @brief 진행 중 대상이 이 배율 거리 밖으로 나가면 취소합니다(경계에서 깜빡이지 않게 고를 때보다 넓다). */
             static constexpr float32 kKeepDistanceScale = 1.25f;
+
+            /**
+             * @brief 하는 쪽에 모션 워핑이 있으면 대상의 맞춤 지점을 마커 이름(없으면 "Interaction")의 워프 목표로 넣습니다 — 상호작용 클립의
+             *        `MotionWarp` 창이 그 자리 · 방향에 닿게 휩니다.
+             */
+            static void setAlignmentWarpTarget( GameObject& interactor, const InteractableComponent& target, const InteractionDef& def )
+            {
+                MotionWarpingComponent* pWarping = interactor.getComponent<MotionWarpingComponent>();
+                if ( pWarping == nullptr )
+                    return;
+                static const hashed_string s_defaultTarget( "Interaction" );
+                float3                     position{};
+                float32                    yaw{ 0.0f };
+                (void)target.computeAlignmentPoint( position, yaw );
+                pWarping->setWarpTarget( def._alignmentMarker.empty() ? s_defaultTarget : def._alignmentMarker, position, yaw );
+            }
         };
     } // namespace
 } // namespace sw
@@ -188,8 +205,8 @@ namespace sw
                 request._interactable = _focus;
                 request._interaction  = pDef->_id;
                 const bool bAllowed   = pAuthority == nullptr || pAuthority->canBeginInteraction( request );
-                if ( bAllowed )
-                    (void)_session.begin( pDef, static_cast<uint32>( pOwner->getObjectId() ) );
+                if ( bAllowed && _session.begin( pDef, static_cast<uint32>( pOwner->getObjectId() ) ) )
+                    InteractorComponentInternal::setAlignmentWarpTarget( *pOwner, *pTarget, *pDef );
             }
         }
 

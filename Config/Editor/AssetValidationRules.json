@@ -42,7 +42,7 @@
       "check": "naming",
       "severity": "error",
       "include_patterns": ["*/models_raw/*"],
-      "allowed_suffixes": [".glb", ".gltf", ".bin", "import.stamp"]
+      "allowed_suffixes": [".glb", ".gltf", ".bin", ".clips.json", "import.stamp"]
     },
     {
       "name": "texture-limits",

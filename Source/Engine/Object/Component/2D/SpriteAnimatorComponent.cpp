@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Object/Animation/AnimNotifyListener.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 
 namespace sw
@@ -14,7 +15,8 @@ namespace sw
     // 컴포넌트는 오브젝트마다 만들어진다. 필드 크기 합(베이스 + 필드 + 비트필드 한 바이트)을 정렬로 올린 값을 넘으면 필드 사이에 구멍이 생긴 것이다.
     static_assert( sizeof( SpriteAnimatorComponent ) <=
                        ( sizeof( SceneComponent ) + sizeof( string ) * 2 + sizeof( AnimGraphAsset ) + sizeof( vector<string> ) + sizeof( float32 ) +
-                         sizeof( SpriteAnimatorClipSource ) + sizeof( SpriteClipPlayable ) + sizeof( AnimGraphPlayer ) + sizeof( int32 ) * 3 +
+                         sizeof( SpriteAnimatorClipSource ) + sizeof( SpriteClipPlayable ) + sizeof( AnimGraphPlayer ) + sizeof( vector<AnimFiredNotify> ) +
+                         sizeof( IAnimNotifyListener* ) + sizeof( int32 ) * 3 +
                          sizeof( const SpriteClipAsset* ) + sizeof( uint8 ) + alignof( SpriteAnimatorComponent ) - 1 ) /
                            alignof( SpriteAnimatorComponent ) * alignof( SpriteAnimatorComponent ),
                    "SpriteAnimatorComponent has padding between fields (or a field was added without adding its size here)" );
@@ -40,6 +42,8 @@ namespace sw
         , _clipSource{ *this }
         , _playable{}
         , _graphPlayer{}
+        , _listFiredNotify{}
+        , _pNotifyListener{ nullptr }
         , _currentFrame{ 0 }
         , _totalFrames{ 1 }
         , _pRangeClip{ nullptr }
@@ -49,6 +53,7 @@ namespace sw
         , _bPaused{ SW_FALSE }
         , _bGraphLoaded{ SW_FALSE }
         , _bRootWarned{ SW_FALSE }
+        , _bRangeChanged{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -93,8 +98,22 @@ namespace sw
             (void)configurePlayable( _currentAnimation );
 
         // 시간 · 반복 · 끝 · "끝나면 다음" 은 상태 기계가 한다(스켈레탈 애니메이터와 같은 `AnimGraphPlayer`).
-        _graphPlayer.update( deltaTime, nullptr, nullptr );
+        _listFiredNotify.clear();
+        _graphPlayer.update( deltaTime, nullptr, _pNotifyListener != nullptr ? &_listFiredNotify : nullptr );
         syncStateFromPlayer();
+        if ( _pNotifyListener != nullptr )
+        {
+            // 워커다 — 받는 쪽(알림 디스패치)이 베껴 두고 틱 뒤 게임 스레드에서 처리한다.
+            const IAnimPlayable* const arrActive[1] = { &_playable };
+            AnimNotifyFrame            frame{};
+            frame._listFired          = vector_reference<const AnimFiredNotify>{ _listFiredNotify.data(), _listFiredNotify.size() };
+            frame._listActivePlayable = vector_reference<const IAnimPlayable* const>{ arrActive, 1 };
+            frame._deltaSeconds       = deltaTime;
+            frame._bFromTick          = SW_TRUE;
+            frame._bRestarted         = _bRangeChanged;
+            _bRangeChanged            = SW_FALSE;
+            _pNotifyListener->onAnimNotifiesFired( frame );
+        }
 
         const AnimPlayer& player    = _graphPlayer.getPlayer();
         const int32       prevFrame = _currentFrame;
@@ -303,7 +322,8 @@ namespace sw
             }
         }
         _playable.configure( pClip, _firstClipFrame, _totalFrames, bLoop, getFallbackFrameSeconds() );
-        _currentFrame = MathUtil::clamp( _currentFrame, 0, _totalFrames - 1 );
+        _currentFrame  = MathUtil::clamp( _currentFrame, 0, _totalFrames - 1 );
+        _bRangeChanged = SW_TRUE;
         return bLoop;
     }
 

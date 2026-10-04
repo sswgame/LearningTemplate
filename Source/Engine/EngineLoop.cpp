@@ -20,6 +20,7 @@
 #include "Core/String/string_splitter.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
@@ -378,6 +379,22 @@ namespace sw
             {
                 loop._bHeadless           = true;
                 loop._bHeadlessTaskFailed = ReflectionDocWriter::writeMarkdown( engine::getTypeRegistry(), reflectionDocsDir ) == 0;
+                return EngineInitResult::SkipDependents;
+            }
+
+            // 리타깃 굽기(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다.
+            string bakeRetarget;
+            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::BAKE_RETARGET, bakeRetarget ) && bakeRetarget.empty() == false )
+            {
+                MemoryProfiler::captureMemoryLeakBaseline();
+                loop._bHeadless = true;
+                const string_splitter      parts( bakeRetarget, { "," } );
+                const vector<string_view>& listArgument = parts.getSplitList();
+                const bool                 bWellFormed  = listArgument.size() == 3;
+                if ( bWellFormed == false )
+                    SW_LOG_ERROR( "--bake-retarget expects <profile>,<source clip>,<output clip>" );
+                loop._bHeadlessTaskFailed = bWellFormed == false ||
+                                            RetargetBakeUtil::bakeClipFile( StringUtil::trim( listArgument[0] ), StringUtil::trim( listArgument[1] ), StringUtil::trim( listArgument[2] ) ) == false;
                 return EngineInitResult::SkipDependents;
             }
 

@@ -9,7 +9,8 @@
 namespace sw
 {
     SpriteClipPlayable::SpriteClipPlayable()
-        : _pClip{ nullptr }
+        : _notifyTrack{}
+        , _pClip{ nullptr }
         , _fallbackSeconds{ 1.0f / 12.0f }
         , _playLength{ 1.0f / 12.0f }
         , _rangeStartSeconds{ 0.0f }
@@ -28,6 +29,17 @@ namespace sw
         _bLoop             = bLoop ? SW_TRUE : SW_FALSE;
         _rangeStartSeconds = ( _pClip != nullptr ) ? _pClip->computeFrameStartSeconds( _firstFrame, _fallbackSeconds ) : 0.0f;
         _playLength        = computeFrameStart( _frameCount );
+        // 구간의 알림 — 같은 첫 프레임 · 프레임 수의 이름 붙은 구간에서 베낀다.
+        _notifyTrack.clear();
+        for ( size_t animationIndex = 0; _pClip != nullptr && animationIndex < _pClip->_listAnimation.size(); ++animationIndex )
+        {
+            const SpriteClipAnimation& animation = _pClip->_listAnimation[animationIndex];
+            if ( animation._firstFrame != _firstFrame || animation._frameCount != _frameCount )
+                continue;
+            for ( const AnimNotifyEvent& event : animation._listNotify )
+                _notifyTrack.addEvent( event );
+            break;
+        }
     }
 
     float32 SpriteClipPlayable::getFrameDuration( int32 frameInRange ) const

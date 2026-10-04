@@ -22,6 +22,8 @@
 | `SpriteClipAsset` · `SpriteClipPlayable` | 스프라이트 클립(`.sprite.json`)과 그 이름 붙은 구간을 `IAnimPlayable` 로 보이는 다리(2D 가 같은 재생 코드를 탄다) |
 | `BlendSpace` · `DualQuaternion` | 1D/2D 파라메트릭 블렌딩(행렬 하나), DQ 스키닝 수학(아래 2 · 3 절) |
 | `AnimJsonUtil` | 모르는 키를 오류로 보는 JSON 검사 · 본 변환 읽기 · 쓰기(스켈레톤 · 임포트 규칙 · 클립 곁 데이터가 함께 쓴다) |
+| `Retarget/` | 리타깃 — 프로필(`*.retarget.json`) · 런타임 리타기터(`PoseRetargeter`) · 오프라인 굽기(`RetargetBakeUtil`). 아래 6 절 |
+| `Rig/` | 후처리 리그 — 작업 포즈(`RigPoseBuffer`) · IK 풀이(`RigIkSolver`) · 스프링 사슬 · 리그 에셋(`*.rig.json`, 노드 등록부) · 실행기(`RigInstance`). 아래 5 절 |
 
 ## 0.1 파일 형식
 
@@ -40,7 +42,7 @@ GameObjectManager::tick
   ├─ 컴포넌트 틱(게임 코드가 애니메이터 파라미터를 쓴다)
   ├─ AnimationSystem::evaluate( dt )            ← 틱 뒤, 트랜스폼 플러시 앞
   │    0) 의존이 바뀌었으면 레벨을 다시 짓는다(위상 정렬, 고리는 오류)
-  │    1) 유닛마다 할 일 · LOD — 쉬는 유닛은 여기서 빠진다(비용 0)
+  │    1) 유닛마다 할 일 · LOD — 쉬는 유닛은 여기서 빠진다(비용 0). 일하는 유닛은 일들의 prepareAnimationFrame(게임 스레드 — 월드 행렬 · 물리 질의)
   │    2) 단계마다 레벨 순서로 engine::runParallel:
   │         Time(상태 기계 · 알림 · 루트 모션 · 커브) → [동기 그룹] → BasePose(샘플 · 크로스페이드 · 레이어 · 리더 포즈) →
   │         Attachment(부착 자리) → PostProcess(PoseModifier 자리) → SkinPalette
@@ -52,8 +54,9 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
 
 - **유닛**(`SkeletalMeshComponent`) = 장비 부품 하나 = 오브젝트 하나. 스켈레톤이 없으면 본 하나("root")짜리 암묵 스켈레톤입니다. 스킨드 메시는 컴포넌트마다
   메시 객체를 따로 둡니다(모프 풀 구간이 메시마다 하나라서) — 군중 공유는 다음 일입니다.
-- **일**(`IAnimationPhaseTask`)은 유닛에 걸립니다: 애니메이터(`SkeletalAnimatorBinding`)가 Time · BasePose 를 맡고, 나중의 PoseModifier · 소켓 부착이
-  Attachment · PostProcess 에 끼어듭니다. 단계 함수는 워커에서 돌므로 자기 유닛과 의존으로 선언한 위 유닛만 읽습니다(`addAnimationDependency`).
+- **일**(`IAnimationPhaseTask`)은 유닛에 걸립니다: 애니메이터(`SkeletalAnimatorBinding`)가 Time · BasePose 를, 후처리 리그(`PoseModifierBinding`,
+  `Engine/Character`)가 PostProcess 를 맡고, 소켓 부착이 Attachment 에 끼어듭니다. 단계 앞의 게임 스레드 준비는 `prepareAnimationFrame` 입니다. 단계 함수는 워커에서 돌므로 자기 유닛과 의존으로 선언한 위 유닛만 읽습니다(`addAnimationDependency`).
+- **거리 LOD 기준**: `AnimationSystem::setLodViewPosition`(카메라를 가진 쪽이 넣는다) — 스프링 본의 `lod_distance` 가 읽는다.
 - **LOD 훅**: `setUpdateRateDivisor(N)`(포즈를 N 프레임에 한 번, 시간 · 알림은 매 프레임), `setVisibleHint(false)` + `_bAnimateWhenOffscreen` 아님 →
   포즈를 건너뜀. 가시성 판정(카메라 절두체 · 중요도 예산)은 이 훅을 부르는 쪽의 일입니다(아직 없음).
 - **리더 포즈**: `setLeaderPose( 몸 )` 또는 `_bFollowParentPose` — 팔로워는 리더의 로컬 포즈를 본 이름으로 옮겨 받고 리더는 의존이 됩니다.
@@ -65,7 +68,8 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
 | 재생할 것 | `SpriteClipPlayable`(구간 = 프레임 시간의 합) | `AnimClip` |
 | 시간 · 반복 · 끝 | `AnimClipCursor` · `AnimPlayer` | 같음 |
 | 상태 기계 · "끝나면 다음" · 조건 전이 | `AnimGraphPlayer` + `AnimGraphAsset` | 같음 |
-| 알림 · 동기 그룹 | `AnimNotifyTrack` · `AnimSyncGroup`(스프라이트 클립에 알림 형식은 아직 없음) | 같음 |
+| 알림 · 동기 그룹 | `AnimNotifyTrack`(구간마다 `animations[].notifies` — 구간 시작 기준 초) · `AnimSyncGroup` | 같음 |
+| 알림 디스패치 | `SpriteAnimatorComponent::setNotifyListener` — 틱(워커)에서 넘기고 받는 쪽이 틱 뒤로, 구간이 바뀐 틱은 `_bRestarted` | `setNotifyListener` — 게임 스레드 마무리 |
 | 샘플 | 재생 시각 → 구간 안 프레임 · 트랜스폼 키 시각 | 재생 시각 → 코덱 → 본 포즈 |
 
 ## 0.4 함정
@@ -74,6 +78,9 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
   그대로 이 규약이고, 엔진 공간(왼손)으로는 S·M·S(S = diag(-1,1,1,1))로, 회전은 (x, -y, -z, w) 로 옮깁니다.
 - **가산 포즈의 회전은 `inverse(ref) * pose`**(로컬에서 먼저 적용), 얹을 때 `base * delta` 입니다. 순서를 바꾸면 부모 공간에서 돌아 팔이 엉뚱한 축으로 돈다.
 - **알림은 반 열린 구간 (이전, 지금]** 이고, 재생 직후 첫 걸음만 시작 시각을 포함합니다. 반복 경계는 (이전, 끝] + [0, 지금] — 한 시각의 알림이 한 바퀴에 한 번.
+  길이가 있는 알림(구간 · NotifyState)은 시작에서 `Begin`, 끝(시작 + 길이, 한 바퀴 끝을 넘지 않음)에서 `End` 가 울리고 같은 시각이면 `End` 가 먼저입니다.
+  `AnimFiredNotify::_pSource` · `_eventIndex` 가 구간 하나를 가립니다. 처리(이름 → 처리기)는 `Engine/Character/AnimNotifyComponent` — 애니메이터는 받는 쪽
+  (`IAnimNotifyListener`, `Object/Animation/AnimNotifyListener.h`)에 프레임마다 한 번 넘깁니다.
 - **크로스페이드가 다른 크로스페이드로 끊기면 플레이어는 섞이던 한 칸을 버린다**(`AnimPlayer::getInterruptCount` 가 오른다). 스켈레탈 애니메이터는 끊긴 순간의
   기본 포즈를 새 페이드 길이 동안 섞어 사라지게 해 이어 붙인다 — 포즈를 직접 섞는 다른 소비자(스프라이트는 프레임이라 해당 없음)도 같은 일을 해야 튀지 않는다.
 - **끝 자세로 끝나는 클립(겨누기 · 들어 올리기)을 반복 레이어로 돌리면 끝 → 처음에서 튄다** — 레이어 `_bLoop = SW_FALSE` 로 끝 자세를 쥔다.
@@ -177,3 +184,74 @@ pAnimator->play( sw::hashed_string( "Walking_A" ), true, 0.2f );
 pAnimator->addLayer( sw::AnimLayerDesc{ sw::hashed_string( "1H_Ranged_Aiming" ), sw::hashed_string( "spine" ), 1.0f } );
 for ( const sw::AnimFiredNotify& fired : pAnimator->getFiredNotifies() ) { /* 발소리 · 이펙트 */ }
 ```
+
+---
+
+## 5. 후처리 리그 (`Rig/`) — IK · 제약 · 스프링 본
+
+그래프가 만든 포즈 위에서 **순서 있는 노드 목록**(데이터)이 돕니다 — `AnimationPhase::PostProcess`, 캐릭터마다 잡 병렬, 스키닝 앞.
+붙이는 컴포넌트는 `PoseModifierComponent`(`Engine/Character`)이고, 이 폴더는 오브젝트를 모르는 순수 계산이라 오브젝트 없이 시험합니다.
+
+| 파일 | 무엇 |
+|------|------|
+| `RigPoseBuffer` | 로컬(원본) + 지연 갱신 모델 공간(위치 · 회전 · 스케일). 모델 공간에 쓰면 로컬을 고치고 자손을 더럽힌다 — 다음 읽기가 더러운 첫 본부터 한 번 훑는다 |
+| `RigIkSolver` | 2 본(해석해 · 극점) · FABRIK · CCD · 조준(상한) · 관절 제한(원뿔 = 흔들림 + 비틀림, 경첩 = 한 축 [최소, 최대]) · 흔들림/비틀림 분해 |
+| `RigSpringChain` | 베를레 입자 사슬 — 강성 · 감쇠 · 중력 · 구/캡슐 충돌체, 고정 스텝(누적기, 프레임당 상한), 순간이동 감지 |
+| `RigNode` | 대상 서술(`RigTargetDef`) · 문맥(준비 · 평가 · 묶기) · 엄격한 JSON 리더(`RigJsonReader` — 읽은 키를 적고 모르는 키는 오류) · 노드 기반 |
+| `RigAsset` | `*.rig.json` — 대상 · 노드(원형) + 노드 등록부(`RigNodeRegistry`, 이름 → 만들기; 모르는 종류는 로드 오류) |
+| `RigInstance` | 에셋을 스켈레톤에 묶은 실행 상태 — 노드 복제 · 바깥 대상 값 · 가중치(커브 · 시퀀서 칸) · 모프 출력 · 공유 충돌체 |
+| `RigIkNodes` · `RigConstraintNodes` · `RigSecondaryNodes` | 엔진 노드(아래 표) |
+
+**한 번 평가**: 게임 스레드 `prepare`(땅 광선 · 거리 LOD · 시간 모으기) → 워커 `evaluate`: 로컬 포즈로 작업 포즈를 열고 노드를 파일 순서대로 돈다.
+노드 가중치 = `weight` × (`weight_curve` 가 있으면 그 클립 커브 값, 없는 커브는 0) × (`weight_slot` 에 시퀀서가 넣은 값, 안 넣었으면 1).
+가중치가 1 보다 작으면 노드가 쓴 본의 로컬을 노드 앞 값과 섞고, 0 이면 노드를 돌리지 않는다. **순서가 결과다** — "위치 복사 → 거리 제한" 과 그 반대는 다르다.
+
+**대상**은 `bone` · `socket` · `object` 중 하나 + 선택 `unit` · `space` · `translation` · `rotation`(도). 자기 유닛의 본 · 소켓은 그 자리의 **지금 작업 포즈**를
+읽고(앞 노드의 결과가 보인다), `unit` 이 있으면 다른 유닛의 이번 프레임 포즈(그 유닛이 먼저 평가되도록 의존을 건다, 고리면 로드 오류), `object` 는 프레임 시작의
+월드 변환이다. `space: "<자기 본>"` 은 대상을 프레임 시작에 그 본 기준으로 찍어 두었다가 지금 그 본에 얹는다 — 손에 쥔 무기의 손잡이처럼 본에 딱 붙어 다니는 것을
+늦지 않게 따르고, 무기 유닛에 의존을 걸지 않는다(손 → 무기 → 손 고리).
+
+| 종류 | 키(공통: `type` · `name` · `weight` · `weight_curve` · `weight_slot`) |
+|------|------|
+| `TwoBoneIk` | `root` · `mid` · `end` · `target` · `pole` · `match_rotation`(끝 회전 = 대상 회전 — 손잡이 쥐기) · `keep_end_rotation`(기본 true) |
+| `FabrikChain` · `CcdChain` | `bones`(뿌리 → 끝, 사이에 본이 끼어도 됨) · `target` · `iterations` · `tolerance` · `max_step_degrees`(CCD) · `match_rotation` · `limits`(`[{ "bone", "type": "Cone"/"Hinge", "swing_degrees", "twist_degrees", "axis", "min_degrees", "max_degrees" }]`) |
+| `Aim` | `bone` · `target` · `aim_axis`(본 로컬, 기본 +Z) · `max_degrees`(애니메이션 방향 기준 상한) · `chain`(`[{ "bone", "weight" }]` — 척추 · 목이 나눠 받음) |
+| `FootPlacement` | `pelvis` · `feet`(`[{ "root", "mid", "end" }]`) · `trace_up` · `trace_down` · `max_pelvis_drop` · `max_raise` · `interp_speed` · `align_to_normal` · `max_align_degrees` |
+| `CopyTransform` · `Position` · `Rotation` | `bone` · `target` · `maintain_offset`(처음 평가의 상대 자리), `CopyTransform` 만 `position` · `rotation` |
+| `ParentSwitch` | `bone` · `parents`(대상들) · `initial` · `settle_seconds` — 조절 `parent`. 바꾸는 프레임은 지난 출력 자리 그대로(튀지 않음), 정착 시간 동안 새 부모 자리로 |
+| `Distance` | `bone` · `target` · `min` · `max` |
+| `LimitRotation` | `bone` · `min_degrees` · `max_degrees`([피치, 요, 롤], 레퍼런스 기준) |
+| `TwistDistribution` | `source` · `axis` · `bones`(`[{ "bone", "weight" }]`) — 조상 비틀림 본이 받은 만큼 소스에서 뺀다(손의 모델 방향 유지) |
+| `PoseDriver` | `driver` · `radius_degrees` · `poses`(`[{ "name", "rotation", "morphs": [{ "morph", "weight" }], "bones": [{ "bone", "rotation", "translation" }] }]`) — 가우스 RBF, 보간 행렬을 묶을 때 푼다 |
+| `SpringChain` | `bones` · `stiffness` · `damping` · `gravity` · `particle_radius` · `fixed_step` · `max_substeps` · `teleport_distance` · `lod_distance` · `colliders`(`[{ "bone", "shape": "Sphere"/"Capsule", "a", "b", "radius" }]`) · `use_shared_colliders` |
+
+**데모.** `App -gv_benchRig=1`(Empty 게임 벤치, `Source/Games/Empty/BenchSceneRig.cpp`) — KayKit 기사가 기울기(정적 강체) 위에서 쇠뇌를 겨눈다:
+발 디딤(`FootPlacement`) · 움직이는 구를 보는 머리(`Aim` + 가슴 나눔) · 쇠뇌 `Grip` 소켓을 잡는 왼손(`TwoBoneIk`, `space: handslot.r`) · 팔뚝 비틀림
+(`TwistDistribution`). 쇠뇌는 오른손 소켓을 따르는 유닛(`CopyTransform`), 망토는 가슴을 따르는 뿌리 + 스프링 사슬 유닛이다. 데이터는
+`game/shooter3d/rigs/`(`knight.rig.json` · `knight_weapon.rig.json` · `knight_cape.rig.json` · `knight_cape.skeleton.json` · `crossbow_2h.sockets.xml`).
+`-gv_benchRigView=0..3` 카메라, `-gv_benchRigEnabled=0` 리그 끔(비용 대조군), `-gv_benchRig=N` 이면 N 명.
+
+**2D.** `"planar": true` 인 리그는 모든 풀이를 XY 평면 · Z 축 회전으로 돕니다(`RigSolveSpace`) — 위치를 평면에 투영하고, 스프링 입자도 평면에 남깁니다. 같은 노드 · 같은 데이터 형식입니다.
+
+**함정.**
+- `quaternion::fromToRotation` 은 코사인 차 1e-6(약 0.08°) 안쪽을 단위 회전으로 버린다 — 사슬 IK 의 마지막 몇 mm 가 그 안이라 CCD 가 멈춘다. 리그는
+  `RigIkSolver::makeFromToRotation` 을 쓴다.
+- `quaternion::inverse()` 는 const 가 아닌 값에서 **제자리 버전(void)** 이 골라진다 — 식 안에서는 `RigIkSolver::makeInverse` 를 쓴다.
+- 트위스트 본이 소스의 조상이면 소스에서 그 몫을 **부모 쪽(왼쪽)** 에서 빼야 손의 모델 방향이 남는다(흔들림과 비틀림은 교환되지 않는다).
+
+---
+
+## 6. 리타깃 (`Retarget/`) — 비율이 다른 스켈레톤 사이
+
+| 무엇 | 자리 |
+|------|------|
+| 프로필(데이터) | `RetargetProfile` · `*.retarget.json` — 원본 · 대상 스켈레톤 경로, `root` · `pelvis` 짝, `translation`(`ScaleByPelvisHeight` · `Copy` · `None`), `chains`(`name` · `source` · `target` 본 목록 · `ik_goal`). 본 수가 다른 사슬은 사슬 길이 비율로 짝짓는다 |
+| 런타임 | `PoseRetargeter`(순수) · `PoseRetargetComponent`(`Object/Component/3D` — 원본 유닛을 의존으로 걸고 기본 포즈 단계에서 옮긴다) |
+| 오프라인 굽기 | `RetargetBakeUtil::bakeClip` — 원본 클립을 표본율로 샘플 · 리타깃 · 코덱으로 압축, 알림 · 커브 · 반복 · 루트 모션 트랙을 옮긴다(저장은 `AnimClip::saveToFile`) |
+| 비율 | 대상 레퍼런스 덮어쓰기 — `BoneProportion::applyToPose`(`Engine/Character`)로 본 비율을 건 레퍼런스를 넘긴다 |
+
+한 번 옮기기: (1) 짝지은 본은 **모델 공간 회전 차이**(원본 × 원본 레퍼런스⁻¹ × 대상 레퍼런스)를 옮긴다 — 두 스켈레톤의 로컬 축 약속이 달라도 맞다.
+(2) 뿌리 · 골반 이동은 레퍼런스에서 움직인 만큼 × 골반 높이 비. (3) IK 목표 사슬(다리)의 끝을 "대상 끝 레퍼런스 + 원본 끝 움직임 × 비" 에 두고 2 본 IK(본 셋)
+또는 FABRIK — 보폭이 골반 이동과 같은 비라 발이 미끄러지지 않는다. 다 펴도 닿지 않는 목표(늘린 다리의 보폭 끝)면 골반을 그만큼 내린다(그러지 않으면 KayKit
+걷기에서 발이 4 cm 뜬다). 끝 본의 모델 회전은 (1) 의 값을 지킨다. KayKit 기사 · 해골은 같은 리그라, 시험은 해골 하수인의 다리를 본 비율로 1.25 배 늘려 보인다
+(`RetargetTest.KnightWalkOnProportionedMinion`, 프로필은 `game/shooter3d/rigs/knight_to_minion.retarget.json`).

@@ -2,7 +2,7 @@
  * @file AssetManager.h
  * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab · Mesh)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 로 소유합니다.
  * @note
- *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, SpriteClipCache, MeshCache, SkeletonCache, AnimClipCache, ResourcePackManager.
+ *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, SpriteClipCache, MeshCache, SkeletonCache, AnimClipCache, RigAssetCache, ResourcePackManager.
  *   제외(수명이 다름):
  *   - ResourceUtil: Resource/ 경로 해석만 합니다(소유권 없음)
  *   - ShaderCache: 셰이더 컴파일 결과 캐시(RHI)
@@ -25,13 +25,17 @@
 namespace sw
 {
     class AnimClipCache;
+    class AnimNotifyTableCache;
     class IAssetCache;
     class LocalizationReloadCache;
     class MaterialCache;
     class MeshCache;
+    class PhysicsAssetCache;
     class PrefabCache;
     class ResourcePackManager;
+    class RigAssetCache;
     class SkeletonCache;
+    class SocketSetCache;
     class SpriteClipCache;
     class TextureCache;
 
@@ -177,7 +181,7 @@ namespace sw
         const PrefabCache& getPrefabCache() const;
 
     private:
-        /** @brief 이 매니저가 소유한 내장 캐시(머티리얼 · 텍스처 · 프리팹 · 스프라이트 클립 · 메시 · 스켈레톤 · 애니메이션 클립 · 로컬라이제이션)인지 봅니다. 종료 경고 · 모듈 코드 걷기에서 뺍니다. */
+        /** @brief 이 매니저가 소유한 내장 캐시(머티리얼 · 텍스처 · 프리팹 · 스프라이트 클립 · 메시 · 스켈레톤 · 애니메이션 클립 · 리그 · 로컬라이제이션)인지 봅니다. 종료 경고 · 모듈 코드 걷기에서 뺍니다. */
         bool isBuiltInAssetCache( const IAssetCache* pCache ) const;
 
         AssetDatabase                       _assetDatabase;
@@ -189,6 +193,10 @@ namespace sw
         unique_ptr<MeshCache>               _meshCache;               ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<SkeletonCache>           _skeletonCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<AnimClipCache>           _animClipCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
+        unique_ptr<SocketSetCache>          _socketSetCache;          ///< 캐릭터 데이터(소켓 에셋) — 등록부에 보이는 창구
+        unique_ptr<AnimNotifyTableCache>    _notifyTableCache;        ///< 캐릭터 데이터(알림 표)
+        unique_ptr<PhysicsAssetCache>       _physicsAssetCache;       ///< 물리 에셋(래그돌 · 히트박스)
+        unique_ptr<RigAssetCache>           _rigAssetCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<LocalizationReloadCache> _localizationReloadCache; ///< 로컬라이제이션 파일의 핫 리로드 창구 — 글은 `LocalizationManager` 가 갖는다
         unique_ptr<ResourcePackManager>     _pPackManager;
         /**

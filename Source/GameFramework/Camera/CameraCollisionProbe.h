@@ -16,6 +16,7 @@
 
 namespace sw
 {
+    class GameObjectManager;
     class PhysicsWorld;
 
     /**
@@ -77,5 +78,25 @@ namespace sw
         const PhysicsWorld* _pWorld;
         uint64              _ignoredObjectId;
         uint8               _layer;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class SceneCameraProbe
+     * @brief 씬의 강체 물리(Jolt 3D 씬 — 레이어 `Default` · `Static`, 대상의 바디는 모두 건너뜀)와 겹침 월드(`PhysicsWorld` 콜라이더) 중 가까운 것입니다.
+     *        카메라 디렉터의 기본 암 충돌 질의입니다 — 강체 벽 · 바닥(RigidBody)과 2D 콜라이더만 있는 씬 모두 막습니다.
+     */
+    class SW_GF_API SceneCameraProbe final : public ICameraCollisionProbe
+    {
+    public:
+        SceneCameraProbe( const GameObjectManager& manager, uint64 ignoredObjectId );
+
+        bool sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const override;
+
+    private:
+        const GameObjectManager& _manager;
+        uint64                   _ignoredObjectId;
     };
 } // namespace sw

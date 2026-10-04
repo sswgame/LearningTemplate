@@ -4,11 +4,16 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/AnimGraphAsset.h"
+#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/Retarget/PoseRetargeter.h"
+#include "Engine/Animation/Retarget/RetargetProfile.h"
+#include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioMusic.h"
+#include "Engine/Character/AnimNotifyTable.h"
 #include "Engine/Character/BodyShape.h"
 #include "Engine/Character/FitPartData.h"
 #include "Engine/Character/FitSolver.h"
@@ -37,6 +42,7 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
+#include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/TileMap/TileSetAsset.h"
 #include "Engine/Utility/Xml/TileMapXml.h"
 
@@ -248,7 +254,42 @@ namespace
         static bool                  isFitTables( sw::string_view resourceId ) { return endsWith( resourceId, ".fit.xml" ); }
         static bool                  isPartFit( sw::string_view resourceId ) { return endsWith( resourceId, ".partfit.xml" ); }
         static bool                  isSurfaceChannels( sw::string_view resourceId ) { return endsWith( resourceId, ".surfacechannels.xml" ); }
-        static bool                  loadSockets( const sw::string& resourceId )
+        static bool                  isNotifyTable( sw::string_view resourceId ) { return endsWith( resourceId, ".notifies.xml" ); }
+        static bool                  isClipData( sw::string_view resourceId ) { return endsWith( resourceId, ".clips.json" ); }
+        /** @brief 모델 임포트 곁 데이터(`<모델>.clips.json`) — 임포터(`ModelImporter::readClipData`)와 같은 키 규칙(모르는 키는 오류)으로 본다. */
+        static bool loadClipData( const sw::string& resourceId )
+        {
+            sw::JsonDocument document;
+            // models_raw/ 는 팩에 실리지 않아 Shipping 에서는 리소스 id 로 못 찾는다 — 임포터처럼 원본 트리에서 파일로 읽는다.
+            if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), resourceId ) ) == false )
+                return false;
+            const sw::JsonValue root = document.getRoot();
+            if ( sw::AnimJsonUtil::hasOnlyKnownKeys( root, { "clips" }, resourceId ) == false || root.get( "clips" ).isObject() == false )
+                return false;
+            const sw::JsonValue clips = root.get( "clips" );
+            for ( const sw::string& clipName : clips.getMemberNames() )
+            {
+                const sw::JsonValue clip = clips.get( clipName, false );
+                if ( sw::AnimJsonUtil::hasOnlyKnownKeys( clip, { "loop", "notifies", "curves" }, resourceId ) == false )
+                    return false;
+                const sw::JsonValue notifies = clip.get( "notifies" );
+                for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
+                {
+                    const sw::JsonValue notify = notifies.at( notifyIndex );
+                    if ( sw::AnimJsonUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, resourceId ) == false || notify.get( "name" ).isString() == false ||
+                         notify.get( "time" ).isNumber() == false )
+                        return false;
+                }
+            }
+            return true;
+        }
+        /** @brief 알림 표 — 처리기 이름 · 인자를 엔진 기본 처리기 등록부에 대조한다. */
+        static bool loadNotifyTable( const sw::string& resourceId )
+        {
+            sw::AnimNotifyTable table;
+            return table.loadFromResource( resourceId, sw::AnimNotifyHandlerRegistry::getDefault() );
+        }
+        static bool loadSockets( const sw::string& resourceId )
         {
             sw::SocketKindTable kinds;
             sw::SocketSet       sockets;
@@ -266,6 +307,29 @@ namespace
             sw::FitTables       tables;
             sw::FitPartData     data;
             return tables.loadFromResource( kDefaultFitTables, solver.getOperatorRegistry() ) && data.loadFromResource( resourceId, tables );
+        }
+
+        /** @brief 후처리 리그(대상 · 노드) — 모르는 노드 종류 · 키 · 겹친 이름은 로드 오류다. */
+        static bool isRig( sw::string_view resourceId ) { return endsWith( resourceId, sw::RigAsset::kExtension ); }
+        static bool loadRig( const sw::string& resourceId )
+        {
+            sw::RigAsset rig;
+            return rig.loadFromResource( resourceId );
+        }
+
+        /** @brief 리타깃 프로필 — 모르는 키 · 이동 방법 · 겹친 사슬은 로드 오류이고, 적힌 두 스켈레톤에 프로필의 본이 모두 있어야 한다. */
+        static bool isRetargetProfile( sw::string_view resourceId ) { return endsWith( resourceId, sw::RetargetProfile::kExtension ); }
+        static bool loadRetargetProfile( const sw::string& resourceId )
+        {
+            sw::RetargetProfile profile;
+            if ( profile.loadFromResource( resourceId ) == false )
+                return false;
+            sw::Skeleton source;
+            sw::Skeleton target;
+            if ( source.loadFromResource( profile.getSourceSkeletonPath() ) == false || target.loadFromResource( profile.getTargetSkeletonPath() ) == false )
+                return false;
+            sw::PoseRetargeter retargeter;
+            return retargeter.initialize( profile, source, target, nullptr );
         }
 
         /** @brief 임포트가 쓴 스켈레톤(본 · 부착 표) — 모르는 키 · 없는 본 이름은 로드 오류다. */
@@ -375,6 +439,10 @@ namespace
             {        "stringtable",   &isSourceStringTable,   &loadLocalizationDocument<sw::SourceStringTable>},
             {   "translationtable",    &isTranslationTable,    &loadLocalizationDocument<sw::TranslationTable>},
             {  "translationmemory",   &isTranslationMemory,   &loadLocalizationDocument<sw::TranslationMemory>},
+            {                "rig",                 &isRig,                                           &loadRig},
+            {    "retargetprofile",     &isRetargetProfile,                               &loadRetargetProfile},
+            {        "notifytable",         &isNotifyTable,                                   &loadNotifyTable},
+            {           "clipdata",            &isClipData,                                      &loadClipData},
         };
 
         /**

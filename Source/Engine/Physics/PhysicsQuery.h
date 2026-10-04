@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Physics/PhysicsDesc.h"
 #include "Engine/Physics/PhysicsTypes.h"
@@ -18,7 +19,8 @@ namespace sw
      */
     struct PhysicsQueryFilter
     {
-        PhysicsBodyHandle _ignoreBody{}; ///< 이 바디는 보지 않는다(쏘는 쪽 자신)
+        PhysicsBodyHandle _ignoreBody{};        ///< 이 바디는 보지 않는다(쏘는 쪽 자신)
+        uint64            _ignoreUserData{ 0 }; ///< 0 이 아니면 사용자 값이 이것인 바디는 모두 보지 않는다(쏘는 오브젝트의 래그돌 뼈 · 무기 전부)
         uint32            _layerMask{ MathUtil::MaxUInt32 };
         bool              _bIncludeTriggers{ false };
 
@@ -41,6 +43,7 @@ namespace sw
         Vector            _normal{};         ///< 닿은 면의 법선(월드, 쏜 쪽을 향한다)
         float32           _fraction{ 0.0f }; ///< 쏜 길이에 대한 비(0..1)
         float32           _distance{ 0.0f }; ///< 출발점에서 닿은 곳까지(미터)
+        hashed_string     _material{};       ///< 닿은 셰이프의 물리 재질 이름(발소리 · 탄흔 — 레이캐스트만 채운다)
     };
 
     using PhysicsCastHit3D = PhysicsCastHit<PhysicsDimension3D>;

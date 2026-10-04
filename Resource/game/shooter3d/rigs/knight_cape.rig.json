@@ -1,0 +1,11 @@
+{
+  "targets": [
+    { "name": "Shoulders", "bone": "chest", "unit": "Body", "translation": [0.0, 0.2433, 0.0] }
+  ],
+  "nodes": [
+    { "type": "CopyTransform", "name": "Pin", "bone": "cape0", "target": "Shoulders" },
+    { "type": "SpringChain", "name": "Cape", "bones": ["cape0", "cape1", "cape2", "cape3"], "stiffness": 0.06, "damping": 0.12,
+      "gravity": [0, -9.8, 0], "particle_radius": 0.03, "lod_distance": 25,
+      "colliders": [ { "bone": "cape0", "shape": "Capsule", "a": [0, -0.15, 0.16], "b": [0, -0.75, 0.16], "radius": 0.2 } ] }
+  ]
+}

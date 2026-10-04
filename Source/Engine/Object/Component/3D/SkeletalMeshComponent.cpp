@@ -63,6 +63,7 @@ namespace sw
         , _bAnimateWhenOffscreen{ SW_FALSE }
         , _bVisibleHint{ SW_TRUE }
         , _bPoseDirty{ SW_TRUE }
+        , _bRuntimeSkeleton{ SW_FALSE }
         , _reserved{ 0 }
     {
         resetPoseBuffers();
@@ -121,11 +122,19 @@ namespace sw
 
     void SkeletalMeshComponent::setSkeletonPath( string_view path )
     {
-        _skeletonPath = string{ path };
+        _skeletonPath     = string{ path };
+        _bRuntimeSkeleton = SW_FALSE;
         resolveSkeleton();
     }
 
     void SkeletalMeshComponent::setSkeleton( shared_ptr<const Skeleton> skeleton )
+    {
+        // 코드가 정한 스켈레톤은 경로가 빈 동안 렌더 에셋을 다시 풀어도(시작 · 메시 교체) 암묵 스켈레톤으로 돌아가지 않는다.
+        _bRuntimeSkeleton = ( skeleton != nullptr ) ? SW_TRUE : SW_FALSE;
+        assignSkeleton( std::move( skeleton ) );
+    }
+
+    void SkeletalMeshComponent::assignSkeleton( shared_ptr<const Skeleton> skeleton )
     {
         _skeleton = ( skeleton != nullptr ) ? std::move( skeleton ) : SkeletalMeshComponentInternal::getImplicitSkeleton();
         resetPoseBuffers();
@@ -138,6 +147,8 @@ namespace sw
 
     void SkeletalMeshComponent::resolveSkeleton()
     {
+        if ( _skeletonPath.empty() && _bRuntimeSkeleton == SW_TRUE )
+            return;
         shared_ptr<const Skeleton> skeleton;
         if ( _skeletonPath.empty() == false )
         {
@@ -149,7 +160,7 @@ namespace sw
             skeleton = SkeletalMeshComponentInternal::getImplicitSkeleton();
         if ( skeleton == _skeleton )
             return;
-        setSkeleton( std::move( skeleton ) );
+        assignSkeleton( std::move( skeleton ) );
     }
 
     void SkeletalMeshComponent::resolveSkinInstanceMesh()
@@ -286,6 +297,8 @@ namespace sw
         _frameContext._deltaSeconds = deltaSeconds;
         _frameContext._frameIndex   = frameIndex;
         _frameContext._bPoseNeeded  = ( bPoseDirty || ( bOnRate && bOnScreen ) ) ? SW_TRUE : SW_FALSE;
+        for ( IAnimationPhaseTask* pTask : _listTask )
+            pTask->prepareAnimationFrame( *this, _frameContext );
         return true;
     }
 
