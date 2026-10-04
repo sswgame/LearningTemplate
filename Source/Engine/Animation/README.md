@@ -22,6 +22,7 @@
 | `SpriteClipAsset` · `SpriteClipPlayable` | 스프라이트 클립(`.sprite.json`)과 그 이름 붙은 구간을 `IAnimPlayable` 로 보이는 다리(2D 가 같은 재생 코드를 탄다) |
 | `BlendSpace` · `DualQuaternion` | 1D/2D 파라메트릭 블렌딩(행렬 하나), DQ 스키닝 수학(아래 2 · 3 절) |
 | `AnimJsonUtil` | 모르는 키를 오류로 보는 JSON 검사 · 본 변환 읽기 · 쓰기(스켈레톤 · 임포트 규칙 · 클립 곁 데이터가 함께 쓴다) |
+| `Rig/` | 후처리 리그 — 작업 포즈(`RigPoseBuffer`) · IK 풀이(`RigIkSolver`) · 스프링 사슬 · 리그 에셋(`*.rig.json`, 노드 등록부) · 실행기(`RigInstance`). 아래 5 절 |
 
 ## 0.1 파일 형식
 
@@ -174,3 +175,51 @@ pAnimator->play( sw::hashed_string( "Walking_A" ), true, 0.2f );
 pAnimator->addLayer( sw::AnimLayerDesc{ sw::hashed_string( "1H_Ranged_Aiming" ), sw::hashed_string( "spine" ), 1.0f } );
 for ( const sw::AnimFiredNotify& fired : pAnimator->getFiredNotifies() ) { /* 발소리 · 이펙트 */ }
 ```
+
+---
+
+## 5. 후처리 리그 (`Rig/`) — IK · 제약 · 스프링 본
+
+그래프가 만든 포즈 위에서 **순서 있는 노드 목록**(데이터)이 돕니다 — `AnimationPhase::PostProcess`, 캐릭터마다 잡 병렬, 스키닝 앞.
+붙이는 컴포넌트는 `PoseModifierComponent`(`Engine/Character`)이고, 이 폴더는 오브젝트를 모르는 순수 계산이라 오브젝트 없이 시험합니다.
+
+| 파일 | 무엇 |
+|------|------|
+| `RigPoseBuffer` | 로컬(원본) + 지연 갱신 모델 공간(위치 · 회전 · 스케일). 모델 공간에 쓰면 로컬을 고치고 자손을 더럽힌다 — 다음 읽기가 더러운 첫 본부터 한 번 훑는다 |
+| `RigIkSolver` | 2 본(해석해 · 극점) · FABRIK · CCD · 조준(상한) · 관절 제한(원뿔 = 흔들림 + 비틀림, 경첩 = 한 축 [최소, 최대]) · 흔들림/비틀림 분해 |
+| `RigSpringChain` | 베를레 입자 사슬 — 강성 · 감쇠 · 중력 · 구/캡슐 충돌체, 고정 스텝(누적기, 프레임당 상한), 순간이동 감지 |
+| `RigNode` | 대상 서술(`RigTargetDef`) · 문맥(준비 · 평가 · 묶기) · 엄격한 JSON 리더(`RigJsonReader` — 읽은 키를 적고 모르는 키는 오류) · 노드 기반 |
+| `RigAsset` | `*.rig.json` — 대상 · 노드(원형) + 노드 등록부(`RigNodeRegistry`, 이름 → 만들기; 모르는 종류는 로드 오류) |
+| `RigInstance` | 에셋을 스켈레톤에 묶은 실행 상태 — 노드 복제 · 바깥 대상 값 · 가중치(커브 · 시퀀서 칸) · 모프 출력 · 공유 충돌체 |
+| `RigIkNodes` · `RigConstraintNodes` · `RigSecondaryNodes` | 엔진 노드(아래 표) |
+
+**한 번 평가**: 게임 스레드 `prepare`(땅 광선 · 거리 LOD · 시간 모으기) → 워커 `evaluate`: 로컬 포즈로 작업 포즈를 열고 노드를 파일 순서대로 돈다.
+노드 가중치 = `weight` × (`weight_curve` 가 있으면 그 클립 커브 값, 없는 커브는 0) × (`weight_slot` 에 시퀀서가 넣은 값, 안 넣었으면 1).
+가중치가 1 보다 작으면 노드가 쓴 본의 로컬을 노드 앞 값과 섞고, 0 이면 노드를 돌리지 않는다. **순서가 결과다** — "위치 복사 → 거리 제한" 과 그 반대는 다르다.
+
+**대상**은 `bone` · `socket` · `object` 중 하나 + 선택 `unit` · `space` · `translation` · `rotation`(도). 자기 유닛의 본 · 소켓은 그 자리의 **지금 작업 포즈**를
+읽고(앞 노드의 결과가 보인다), `unit` 이 있으면 다른 유닛의 이번 프레임 포즈(그 유닛이 먼저 평가되도록 의존을 건다, 고리면 로드 오류), `object` 는 프레임 시작의
+월드 변환이다. `space: "<자기 본>"` 은 대상을 프레임 시작에 그 본 기준으로 찍어 두었다가 지금 그 본에 얹는다 — 손에 쥔 무기의 손잡이처럼 본에 딱 붙어 다니는 것을
+늦지 않게 따르고, 무기 유닛에 의존을 걸지 않는다(손 → 무기 → 손 고리).
+
+| 종류 | 키(공통: `type` · `name` · `weight` · `weight_curve` · `weight_slot`) |
+|------|------|
+| `TwoBoneIk` | `root` · `mid` · `end` · `target` · `pole` · `match_rotation`(끝 회전 = 대상 회전 — 손잡이 쥐기) · `keep_end_rotation`(기본 true) |
+| `FabrikChain` · `CcdChain` | `bones`(뿌리 → 끝, 사이에 본이 끼어도 됨) · `target` · `iterations` · `tolerance` · `max_step_degrees`(CCD) · `match_rotation` · `limits`(`[{ "bone", "type": "Cone"/"Hinge", "swing_degrees", "twist_degrees", "axis", "min_degrees", "max_degrees" }]`) |
+| `Aim` | `bone` · `target` · `aim_axis`(본 로컬, 기본 +Z) · `max_degrees`(애니메이션 방향 기준 상한) · `chain`(`[{ "bone", "weight" }]` — 척추 · 목이 나눠 받음) |
+| `FootPlacement` | `pelvis` · `feet`(`[{ "root", "mid", "end" }]`) · `trace_up` · `trace_down` · `max_pelvis_drop` · `max_raise` · `interp_speed` · `align_to_normal` · `max_align_degrees` |
+| `CopyTransform` · `Position` · `Rotation` | `bone` · `target` · `maintain_offset`(처음 평가의 상대 자리), `CopyTransform` 만 `position` · `rotation` |
+| `ParentSwitch` | `bone` · `parents`(대상들) · `initial` · `settle_seconds` — 조절 `parent`. 바꾸는 프레임은 지난 출력 자리 그대로(튀지 않음), 정착 시간 동안 새 부모 자리로 |
+| `Distance` | `bone` · `target` · `min` · `max` |
+| `LimitRotation` | `bone` · `min_degrees` · `max_degrees`([피치, 요, 롤], 레퍼런스 기준) |
+| `TwistDistribution` | `source` · `axis` · `bones`(`[{ "bone", "weight" }]`) — 조상 비틀림 본이 받은 만큼 소스에서 뺀다(손의 모델 방향 유지) |
+| `PoseDriver` | `driver` · `radius_degrees` · `poses`(`[{ "name", "rotation", "morphs": [{ "morph", "weight" }], "bones": [{ "bone", "rotation", "translation" }] }]`) — 가우스 RBF, 보간 행렬을 묶을 때 푼다 |
+| `SpringChain` | `bones` · `stiffness` · `damping` · `gravity` · `particle_radius` · `fixed_step` · `max_substeps` · `teleport_distance` · `lod_distance` · `colliders`(`[{ "bone", "shape": "Sphere"/"Capsule", "a", "b", "radius" }]`) · `use_shared_colliders` |
+
+**2D.** `"planar": true` 인 리그는 모든 풀이를 XY 평면 · Z 축 회전으로 돕니다(`RigSolveSpace`) — 위치를 평면에 투영하고, 스프링 입자도 평면에 남깁니다. 같은 노드 · 같은 데이터 형식입니다.
+
+**함정.**
+- `quaternion::fromToRotation` 은 코사인 차 1e-6(약 0.08°) 안쪽을 단위 회전으로 버린다 — 사슬 IK 의 마지막 몇 mm 가 그 안이라 CCD 가 멈춘다. 리그는
+  `RigIkSolver::makeFromToRotation` 을 쓴다.
+- `quaternion::inverse()` 는 const 가 아닌 값에서 **제자리 버전(void)** 이 골라진다 — 식 안에서는 `RigIkSolver::makeInverse` 를 쓴다.
+- 트위스트 본이 소스의 조상이면 소스에서 그 몫을 **부모 쪽(왼쪽)** 에서 빼야 손의 모델 방향이 남는다(흔들림과 비틀림은 교환되지 않는다).
