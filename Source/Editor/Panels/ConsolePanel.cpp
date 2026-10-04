@@ -37,6 +37,45 @@ namespace sw::editor
                 }
             }
 
+            /** @brief 입력 줄의 Tab(자동완성) · ↑↓(기록)을 개발 콘솔로 처리합니다. */
+            static int32 onCommandLineEdit( ImGuiInputTextCallbackData* pData )
+            {
+                DevConsole* pConsole = static_cast<DevConsole*>( pData->UserData );
+                if ( pConsole == nullptr )
+                    return 0;
+                if ( pData->EventFlag == ImGuiInputTextFlags_CallbackCompletion )
+                {
+                    string         line( pData->Buf, static_cast<size_t>( pData->BufTextLen ) );
+                    vector<string> listCandidate;
+                    if ( pConsole->complete( line, listCandidate ) )
+                    {
+                        pData->DeleteChars( 0, pData->BufTextLen );
+                        pData->InsertChars( 0, line.c_str() );
+                    }
+                    if ( listCandidate.size() > 1 )
+                    {
+                        string candidates;
+                        for ( const string& candidate : listCandidate )
+                        {
+                            candidates += candidate;
+                            candidates += "  ";
+                        }
+                        SW_LOG_INFO( "%#", candidates.c_str() );
+                    }
+                    return 0;
+                }
+                if ( pData->EventFlag == ImGuiInputTextFlags_CallbackHistory )
+                {
+                    const string* pLine = pData->EventKey == ImGuiKey_UpArrow ? pConsole->moveHistoryBack() : pConsole->moveHistoryForward();
+                    if ( pLine != nullptr )
+                    {
+                        pData->DeleteChars( 0, pData->BufTextLen );
+                        pData->InsertChars( 0, pLine->c_str() );
+                    }
+                }
+                return 0;
+            }
+
             static const utf8* levelName( LogLevel level )
             {
                 static constexpr const utf8* kArrNames[] = { "Error", "Warning", "Info", "Trace" };
@@ -63,6 +102,8 @@ namespace sw::editor
         , _entriesMutex{}
         , _logListenerHandle{}
         , _filterBuffer{}
+        , _devConsole{}
+        , _commandBuffer{}
         , _arrLevelEnabled{ true, true, true, true }
         , _arrCachedLevelEnabled{ true, true, true, true }
         , _bAutoScroll{ true }
@@ -346,6 +387,23 @@ namespace sw::editor
 
         EditorWidgets::drawCountLabel( static_cast<uint32>( _listVisible.size() ), static_cast<uint32>( _listDrawSnapshot.size() ),
                                        "lines" );
+        ImGui::SameLine();
+        drawCommandLine();
+    }
+
+    void ConsolePanel::drawCommandLine()
+    {
+        ImGui::SetNextItemWidth( -1.0f );
+        constexpr ImGuiInputTextFlags kFlags     = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackCompletion;
+        const bool                    bSubmitted = ImGui::InputTextWithHint( "##ConsoleCommand", "> command or gv_name [value] (Tab completes, Up/Down history, help)", _commandBuffer.data(),
+                                                                             _commandBuffer.capacity(), kFlags, &ConsolePanelInternal::onCommandLineEdit, &_devConsole );
+        if ( bSubmitted )
+        {
+            (void)_devConsole.submit( _commandBuffer.c_str() ); // 답 · 실패는 로그로 남아 이 패널에 보인다
+            _commandBuffer.clear();
+            _bAutoScroll = true;
+            ImGui::SetKeyboardFocusHere( -1 ); // 이어서 칠 수 있게 입력 줄에 머문다
+        }
     }
 
     const string& ConsolePanel::getEntryCategory( const LogEntry& entry )

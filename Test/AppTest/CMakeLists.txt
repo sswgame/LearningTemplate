@@ -18,6 +18,7 @@ sw_addTestExecutable(AppTest
 		AppTestUtil.cpp
 		TestAppCook.cpp
 		TestAppSmoke.cpp
+		TestDevCommandShipping.cpp
 		TestFixedTimestep.cpp
 		${CMAKE_SOURCE_DIR}/Source/App/FixedTimestep.cpp
 	LIBS

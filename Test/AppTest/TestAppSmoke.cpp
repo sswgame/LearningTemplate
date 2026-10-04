@@ -634,6 +634,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|gameView.debugDraw",
         "EditorSelfTest|PASS|gameView.debugOverlay",
         "EditorSelfTest|PASS|console.tagFilter",
+        "EditorSelfTest|PASS|console.devCommands",
         "EditorSelfTest|PASS|hierarchy.selectAllWith",
         "EditorSelfTest|PASS|layout.namedRoundTrip",
         "EditorSelfTest|PASS|profiler.gpuMemoryTab",

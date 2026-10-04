@@ -22,6 +22,7 @@ namespace sw
     struct NativeWindowEvent;
 
     class CommandLineManager;
+    class DevConsoleOverlay;
     class IWindow;
     class LiveReloadManager;
     class ModuleHost;
@@ -119,6 +120,9 @@ namespace sw
         /** @brief 셸 액션을 갱신하고 리로드 단축키를 처리합니다. Shipping 에서는 아무것도 하지 않습니다. */
         void pollReloadHotkeys( float32 deltaTime );
 
+        /** @brief 개발 콘솔 오버레이를 만들고 시작 명령(`-gv_devConsoleExec`)을 돌립니다. Shipping 에서는 아무것도 하지 않습니다. */
+        void startDevConsole();
+
         /** @brief 창 크기 변경 콜백입니다. */
         void onResize( const uint32 width, const uint32 height );
         /** @brief 설정 파일을 다시 읽었습니다. EngineConfig 면 프레임 시간 정책(최대 델타 · 고정 스텝)을 다시 정합니다. */
@@ -142,6 +146,11 @@ namespace sw
          */
 #if !defined( SW_SHIPPING )
         unique_ptr<LiveReloadManager> _liveReloadManager;
+        /**
+         * @brief 게임 창의 개발 콘솔(`~`)입니다. **Shipping 에는 없습니다.** 에디터가 없을 때만 키를 받습니다(에디터는 Output Log 입력 줄이 있다).
+         * @details `-gv_devConsoleExec` 의 명령을 첫 프레임에 이 콘솔로 돌립니다(에디터가 있어도).
+         */
+        unique_ptr<DevConsoleOverlay> _devConsoleOverlay;
 #endif
         unique_ptr<ModuleHost> _moduleHost;
         unique_ptr<IWindow>    _window;

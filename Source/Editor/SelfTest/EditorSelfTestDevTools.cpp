@@ -26,7 +26,10 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Utility/Console/DevCommandRegistry.h"
+#include "Engine/Utility/Console/DevConsole.h"
 #include "Engine/Utility/Debug/DebugOverlayState.h"
+#include "Engine/Utility/GameTimeScale.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -154,6 +157,36 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
+            // console.devCommands — Output Log 의 입력 줄 콘솔이 개발 명령을 돌리고, 에디터가 등록한 명령이 등록부에 있으며, 답이 로그에 보인다
+            // ------------------------------------------------------------------------------
+            static EditorSelfTestStep runConsoleDevCommands( EditorSelfTestContext& context )
+            {
+                constexpr const utf8* kEcho    = "> timescale 0.75 : time scale = 0.75";
+                EditorContext*        pContext = EditorContext::get();
+                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
+                    return EditorSelfTestStep::Done;
+                (void)pContext->getPanelManager().setPanelOpen( "console", true );
+                ConsolePanel* pConsole = static_cast<ConsolePanel*>( pContext->getPanelManager().findPanel( "console" ) );
+                if ( context.expect( pConsole != nullptr, "no console panel" ) == false )
+                    return EditorSelfTestStep::Done;
+
+                const uint32 stepIndex = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    (void)context.expect( DevCommandRegistry::get().findCommand( "select.tag" ) != nullptr, "the editor module did not register its dev commands" );
+                    (void)context.expect( pConsole->getDevConsole().submit( "timescale 0.75" ) == DevConsoleResult::Ok, "timescale failed in the editor console" );
+                    (void)context.expect( GameTimeScale::get() == 0.75f, "the console command did not change the time scale" );
+                    GameTimeScale::set( 1.0f );
+                    return EditorSelfTestStep::Continue;
+                }
+                const bool bShown = pConsole->isMessageInSnapshot( kEcho );
+                if ( bShown == false && stepIndex < kMaxWaitFrame )
+                    return EditorSelfTestStep::Continue;
+                (void)context.expect( bShown, "the console reply never reached the Output Log" );
+                return EditorSelfTestStep::Done;
+            }
+
+            // ------------------------------------------------------------------------------
             // hierarchy.selectAllWith — 같은 태그를 단 오브젝트를 모두 고르면 에디터 선택이 그 수가 된다
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runSelectAllWithTag( EditorSelfTestContext& context )
@@ -230,6 +263,7 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( GameViewDebugDraw, "gameView.debugDraw", 710, &EditorSelfTestDevToolsInternal::runDebugDrawReachesTheGameView );
     SW_EDITOR_SELF_TEST( GameViewDebugOverlay, "gameView.debugOverlay", 720, &EditorSelfTestDevToolsInternal::runDebugOverlayIsDrawn );
     SW_EDITOR_SELF_TEST( ConsoleTagFilter, "console.tagFilter", 730, &EditorSelfTestDevToolsInternal::runConsoleTagFilter );
+    SW_EDITOR_SELF_TEST( ConsoleDevCommands, "console.devCommands", 735, &EditorSelfTestDevToolsInternal::runConsoleDevCommands );
     SW_EDITOR_SELF_TEST( HierarchySelectAllWith, "hierarchy.selectAllWith", 740, &EditorSelfTestDevToolsInternal::runSelectAllWithTag );
     SW_EDITOR_SELF_TEST( NamedLayout, "layout.namedRoundTrip", 750, &EditorSelfTestDevToolsInternal::runNamedLayoutRoundTrip );
 } // namespace sw::editor
