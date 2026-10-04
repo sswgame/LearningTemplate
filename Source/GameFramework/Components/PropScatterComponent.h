@@ -1,6 +1,7 @@
 /**
  * @file PropScatterComponent.h
- * @brief 장식(나무 · 꽃 · 바위) 흩뿌리기 — 씨앗 고정 배치를 영역 가장자리 또는 안쪽에 두고, 제외 원은 비웁니다.
+ * @brief 장식(나무 · 꽃 · 바위) 흩뿌리기 — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(밀도 · 최소 거리 · 경사 · 높이 · 레이어 필터)으로 두고,
+ *        제외 원은 비웁니다. 규칙 모드는 Engine 의 배치 코어(`PlacementScatter`)를 쓰고 영역 아래 지형(`TerrainComponent`)을 표면으로 읽습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -9,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Environment/Placement/PlacementRule.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -22,6 +24,7 @@ namespace sw
     {
         Edge = 0, ///< 영역 네 변을 따라 한 줄(잔디 가장자리의 나무)
         Fill,     ///< 영역 안쪽 격자(숲 · 꽃밭)
+        Rules,    ///< 배치 규칙(`_rule`) — 밀도 · 최소 거리 · 경사 · 높이 · 레이어 필터, 영역 아래 지형 위에
     };
 } // namespace sw
 
@@ -71,6 +74,7 @@ namespace sw
         float32                      _scaleMax{ 1.0f };
         uint32                       _seed{ 1u };
         PropScatterMode              _mode{ PropScatterMode::Edge };
+        PlacementRule                _rule{}; ///< 규칙 모드의 규칙 — 씨앗은 `_seed` 가 아니라 이 안의 것이다
     };
 } // namespace sw
 
@@ -95,7 +99,13 @@ namespace sw
      */
     struct SW_GF_API PropScatterMath
     {
+        /** @brief 배치를 계산합니다. 규칙 모드는 평평한 표면(높이 = 영역 최소 y)입니다 — 지형 위는 `computeRulePlacements` 입니다. */
         static void computePlacements( const PropScatterParams& params, vector<PropScatterPlacement>& outListPlacement );
+        /**
+         * @brief 규칙 모드 배치를 표면 @p pSurface 위에 계산합니다(평면 좌표 = 월드 x · z). nullptr 이면 높이 = 영역 최소 y 인 평면입니다.
+         * @details 제외 원은 원 제외 영역으로, 모델 비중은 항목 비중으로 옮겨 `PlacementScatter::scatter` 에 넘깁니다. 노멀 맞춤은 오브젝트 회전이 요뿐이라 쓰지 않습니다.
+         */
+        static void computeRulePlacements( const PropScatterParams& params, const IPlacementSurface* pSurface, vector<PropScatterPlacement>& outListPlacement );
         /** @brief [0, 1] 하나를 꺼내고 상태를 나아가게 합니다. */
         static float32 nextUnit( uint32& inoutState );
         /** @brief 비중대로 고른 모델 번호입니다. @p unit 은 [0, 1] 입니다. 모델이 없거나 비중 합이 0 이면 −1 입니다. */
@@ -164,8 +174,10 @@ namespace sw
         float32 _scaleMax;
         PROPERTY( Category = "Scatter", DisplayName = "Seed", Tooltip = "Same seed, same layout" )
         uint32 _seed;
-        PROPERTY( Category = "Scatter", DisplayName = "Mode", Tooltip = "Edge rows or a filled grid" )
+        PROPERTY( Category = "Scatter", DisplayName = "Mode", Tooltip = "Edge rows, a filled grid or placement rules" )
         PropScatterMode _mode;
+        PROPERTY( Category = "Scatter", DisplayName = "Rule", Tooltip = "Density, spacing and filters used in Rules mode (on the terrain below the region)" )
+        PlacementRule _rule;
 
         PROPERTY( Category = "Scatter", DisplayName = "Spawned", Tooltip = "Props spawned at play start (runtime)" )
         vector<GameObjectHandle> _listSpawned;

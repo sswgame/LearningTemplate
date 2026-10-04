@@ -14,12 +14,14 @@ namespace sw::editor
 {
     class AssetHotReload;
     class ConfigHotReload;
+    class EditorAssetValidation;
     class EditorCommandRegistry;
     class EditorDockLayout;
     class EditorNotificationManager;
     class EditorPanelManager;
     class EditorPopupManager;
     class EditorSelection;
+    class EditorSourceControl;
     class EditorWorkspace;
     class IImGuiRendererBackend;
     class InspectorComponentManager;
@@ -69,7 +71,11 @@ namespace sw::editor
         /** @brief 에디터 셸의 도킹 레이아웃입니다(소유는 `ImGuiEditor`). 셸이 서기 전이면 nullptr 입니다. */
         EditorDockLayout* findDockLayout() const { return _pDockLayout; }
         /** @brief 셸이 도킹 레이아웃을 알립니다(내릴 때 nullptr). */
-        void                       setDockLayout( EditorDockLayout* pDockLayout ) { _pDockLayout = pDockLayout; }
+        void setDockLayout( EditorDockLayout* pDockLayout ) { _pDockLayout = pDockLayout; }
+        /** @brief 저장 · 임포트 직후 에셋 검증입니다. */
+        EditorAssetValidation& getAssetValidation() { return *_pAssetValidation; }
+        /** @brief 버전 관리 잠금(체크아웃) 창구입니다. */
+        EditorSourceControl&       getSourceControl() { return *_pSourceControl; }
         InspectorComponentManager& getInspectorComponentManager() { return *_pInspectorComponentManager; }
         InspectorPropertyManager&  getInspectorPropertyManager() { return *_pInspectorPropertyManager; }
 
@@ -102,6 +108,8 @@ namespace sw::editor
         unique_ptr<EditorPopupManager>        _pPopupManager;
         unique_ptr<AssetHotReload>            _pAssetHotReload;
         unique_ptr<ConfigHotReload>           _pConfigHotReload;
+        unique_ptr<EditorAssetValidation>     _pAssetValidation;
+        unique_ptr<EditorSourceControl>       _pSourceControl;
         unique_ptr<InspectorComponentManager> _pInspectorComponentManager;
         unique_ptr<InspectorPropertyManager>  _pInspectorPropertyManager;
         IRHIDevice*                           _pRhiDevice;

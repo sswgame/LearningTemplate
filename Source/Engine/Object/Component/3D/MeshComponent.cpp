@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/AABB.h"
@@ -31,6 +32,7 @@ namespace sw
         , _gpuSpinSeed{ 0 }
         , _spriteInstanceData{}
         , _vertexAnimationPhase{ 0.0f }
+        , _sortKey{ 0 }
         , _pPrimitiveRegistry{ nullptr }
         , _primitiveIndex{ kInvalidPrimitiveIndex }
         , _bVisible{ SW_TRUE }
@@ -100,6 +102,8 @@ namespace sw
         SceneComponent::onRegister( manager );
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         _pPrimitiveRegistry->add( this );
+        // 픽셀 퍼펙트 카메라가 이미 정한 스냅 단위를 이어받는다(정한 뒤에 생긴 스프라이트도 격자에 붙는다).
+        setPixelSnapUnit( manager.getCameraRegistry().getPixelSnapUnit() );
     }
 
     void MeshComponent::onUnregister( GameObjectManager& manager )
@@ -176,9 +180,30 @@ namespace sw
 
     void MeshComponent::setSpriteInstanceData( const GpuSpriteInstanceData& data )
     {
-        if ( _spriteInstanceData == data )
+        // 프레임 · 색을 바꾸는 쪽은 스냅 단위를 모른다 — 지금 값을 지킨다.
+        GpuSpriteInstanceData merged = data;
+        merged._pixelSnap            = _spriteInstanceData._pixelSnap;
+        if ( _spriteInstanceData == merged )
             return;
-        _spriteInstanceData = data;
+        _spriteInstanceData = merged;
+        markRenderStateDirty();
+    }
+
+    void MeshComponent::setPixelSnapUnit( float32 unit )
+    {
+        GpuSpriteInstanceData snapped = _spriteInstanceData;
+        snapped._pixelSnap            = MathUtil::max( unit, 0.0f );
+        if ( _spriteInstanceData == snapped )
+            return;
+        _spriteInstanceData = snapped;
+        markRenderStateDirty();
+    }
+
+    void MeshComponent::setSortKey( uint32 sortKey )
+    {
+        if ( _sortKey == sortKey )
+            return;
+        _sortKey = sortKey;
         markRenderStateDirty();
     }
 

@@ -72,11 +72,17 @@ namespace sw
         static shared_ptr<Mesh> createCapsule( uint32 stackCount = 6, uint32 sliceCount = 16 );
         /** @brief 원점 중심 원뿔입니다(밑지름 1 · 높이 1). 옆면 + 밑면. */
         static shared_ptr<Mesh> createCone( uint32 sliceCount = 16 );
+        /**
+         * @brief 풀 한 포기입니다 — 뿌리가 원점(y = 0)이고 끝으로 갈수록 가는 잎 @p bladeCount 장(반지름 약 0.25 · 높이 약 0.5..0.8).
+         * @details 잎은 **양면**(두 감김)입니다 — 패스의 후면 컬링 아래에서도 어느 쪽에서나 보입니다. 노멀은 잎 면보다 위쪽으로 기울여(풀밭이 하늘
+         *          빛을 받는 흔한 근사) 양면이 같은 빛을 받습니다. 잎 자리는 고정 씨앗이라 늘 같은 포기입니다. 식생의 내장 메시(`GrassClump`)입니다.
+         */
+        static shared_ptr<Mesh> createGrassClump( uint32 bladeCount = 8 );
 
         /**
          * @brief 프리미티브 id 로 내장 도형을 새로 만듭니다.
          * @details 비었거나 "Cube" 면 큐브, "Quad"/"Rect" 면 쿼드, "Sprite" 면 양면 스프라이트 사각형, "Plane"/"Ground" 면 바닥 평면,
-         *          "Sphere" · "Cylinder" · "Capsule" · "Cone" 은 각각의 곡면 도형입니다. 모르면 nullptr 입니다.
+         *          "Sphere" · "Cylinder" · "Capsule" · "Cone" 은 각각의 곡면 도형, "GrassClump" 는 풀 한 포기입니다. 모르면 nullptr 입니다.
          *          씬 XML 의 `_meshId` 와 벤치의 도형 섞기가 같은 이름을 씁니다. 정점 색은 @p vertexColor 입니다(기본 흰색 — 게임이 쓰는 색).
          */
         static shared_ptr<Mesh> createPrimitive( string_view meshId, PrimitiveVertexColor vertexColor = PrimitiveVertexColor::White );

@@ -12,6 +12,7 @@
 namespace sw
 {
     class JsonValue;
+    class TextGatherer;
 
     /**
      * @brief 대화 노드 타입입니다.
@@ -196,6 +197,8 @@ namespace sw
         int32 findBranchNextNodeId( int32 fromNodeId, bool bTrue ) const;
         /** @brief text 필드를 로컬라이즈 키로 해석합니다. 키가 없으면 원문을 반환합니다. */
         static string resolveLocalizedText( string_view textOrKey );
+        /** @brief 화자 · 대사 · 선택지를 로컬라이제이션 수집기에 넣습니다(키이거나 글 그대로 — `resolveLocalizedText` 가 같은 규칙으로 찾는다). */
+        void collectLocalizableText( TextGatherer& gatherer, string_view origin ) const;
 
         vector<DialogueAssetNode> _listNode; /**< 노드 목록입니다. */
         vector<DialogueAssetLink> _listLink; /**< 링크 목록입니다. */

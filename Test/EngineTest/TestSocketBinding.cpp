@@ -149,6 +149,7 @@ SW_TEST_CASE( SocketBindingTest, PhysicsReleaseStartsBodyAtBoundTransform )
     Internal::FakePhysicsBody body;
     rig._pBinding->setPhysicsBody( rig._pUnitScene, &body );
     SW_ASSERT_TRUE( rig._pBinding->bindToSocket( rig._pHolder, hashed_string( "HandR" ), Internal::makeSocket() ) );
+    SW_EXPECT_EQUAL( 1, body._endCount ); // 붙으면 바디는 손을 따른다(물리를 끈다)
     const float4x4 boundWorld = rig._pUnitScene->getWorldMatrix();
     SW_ASSERT_TRUE( rig._pBinding->release( SocketReleaseMode::Physics, float3( 0.0f, -2.0f, 0.0f ) ) );
     SW_EXPECT_EQUAL( 1, body._beginCount );
@@ -163,7 +164,7 @@ SW_TEST_CASE( SocketBindingTest, PhysicsReleaseStartsBodyAtBoundTransform )
 
     // 되돌아가면 바디를 끝낸다.
     SW_ASSERT_TRUE( rig._pBinding->returnToSocket() );
-    SW_EXPECT_EQUAL( 1, body._endCount );
+    SW_EXPECT_EQUAL( 2, body._endCount );
 }
 
 /**

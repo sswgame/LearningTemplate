@@ -2,11 +2,51 @@
 
 #include "GameFramework/Inventory/ItemBag.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Utility/StateArchiveUtil.h"
+
+#include <algorithm>
+
 namespace sw
 {
     ItemBag::ItemBag()
         : _mapItem{}
     {
+    }
+
+    void ItemBag::writeState( Archive& outArchive ) const
+    {
+        vector<hashed_string> listItem;
+        getItemIds( listItem );
+        std::sort( listItem.begin(), listItem.end(), HashedStringLexicalLess{} );
+        outArchive << static_cast<uint32>( listItem.size() );
+        for ( const hashed_string& itemId : listItem )
+        {
+            StateArchiveUtil::writeName( outArchive, itemId );
+            outArchive << getItemCount( itemId );
+        }
+    }
+
+    bool ItemBag::readState( Archive& archive )
+    {
+        uint32 count = 0;
+        if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ) + sizeof( int32 ), count ) == false )
+            return false;
+        unordered_map<hashed_string, int32> mapItem;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            hashed_string itemId;
+            int32         itemCount = 0;
+            if ( StateArchiveUtil::readName( archive, itemId ) == false )
+                return false;
+            archive >> itemCount;
+            if ( archive.isError() || itemId.empty() || itemCount <= 0 )
+                return false;
+            mapItem[itemId] += itemCount;
+        }
+        _mapItem = std::move( mapItem );
+        return true;
     }
 
     void ItemBag::addItem( const hashed_string& itemId, int32 count )

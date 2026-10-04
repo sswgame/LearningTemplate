@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 도시 규칙의 수치입니다. 시간은 게임 초입니다. */
     struct CitySettings
     {
@@ -198,6 +200,17 @@ namespace sw
         /** @brief 이 칸의 집이 그 서비스를 지금 받고 있는가입니다. */
         bool    isHouseServed( const CityBuilding& house, CityService service ) const;
         float32 getTime() const { return _time; }
+
+        /**
+         * @brief 칸 · 건물 · 일꾼 · 돈 · 달력 · 난수를 씁니다(핫 리로드 · 세이브). 설정 · 카탈로그는 쓰지 않습니다 — 읽는 쪽이 같은 것으로 `initialize` 합니다.
+         * @details 건물 · 물자는 카탈로그 id 로 적습니다(포인터는 실행마다 다르다).
+         */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 바꿉니다. `initialize` 한 뒤에 부릅니다(같은 크기 · 카탈로그).
+         * @return 크기가 다르거나, 카탈로그에 없는 건물이 있거나, 깨졌으면 false 이고 그대로입니다.
+         */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         void stepFixed( float32 deltaTime );

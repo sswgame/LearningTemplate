@@ -11,11 +11,19 @@
 
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
+#include "Engine/Utility/TileMap/TileSetAsset.h"
 #include "Engine/Utility/Xml/TileMapXml.h"
+
+struct ImDrawList;
+struct ImVec2;
 
 namespace sw::editor
 {
-    /** @brief Game TileMap XML의 Visual / Walkable / Encounter / Warp / PassThrough 레이어를 페인트합니다 */
+    /**
+     * @brief Game TileMap XML의 Visual / Warp / Tile / 플래그 레이어를 페인트합니다.
+     * @details Tile 레이어는 타일셋(`.tileset.xml`)의 브러시(그냥 타일 · 규칙 타일)를 칠합니다. 칸에는 브러시만 적고, 보일 아틀라스 칸은 규칙으로
+     *          고른 값을 칸 위에 숫자로 보입니다 — 이웃을 칠하면 그 숫자가 따라 바뀝니다(런타임 `TileMapRendererComponent` 와 같은 `resolveVisual`).
+     */
     class TileMapPanel : public EditorDocumentPanel
     {
     public:
@@ -49,10 +57,11 @@ namespace sw::editor
         {
             Visual = 0,
             Warp,
+            Tile,
             Flag
         };
-        /** @brief 레이어 목록에서 플래그 레이어보다 앞에 오는 항목 수(Visual · Warp)입니다. */
-        static constexpr int32 kFixedPaintLayerCount = 2;
+        /** @brief 레이어 목록에서 플래그 레이어보다 앞에 오는 항목 수(Visual · Warp · Tile)입니다. */
+        static constexpr int32 kFixedPaintLayerCount = 3;
 
         // ------------------------------------------------------------------------------
         // 3) XML 로드/저장 · 페인트
@@ -73,6 +82,10 @@ namespace sw::editor
         int32 getPaintLayerIndex() const;
         /** @brief 레이어 목록의 순번으로 레이어를 고릅니다. */
         void selectPaintLayer( int32 layerIndex );
+        /** @brief 맵이 가리키는 타일셋을 읽습니다(이미 그 경로를 읽었으면 그대로). 못 읽으면 상태 줄에 알립니다. */
+        void refreshTileSet();
+        /** @brief Tile 레이어 칸을 그립니다 — 브러시 색과 규칙이 고른 아틀라스 칸 번호. */
+        void drawTileLayerCell( ImDrawList* pDrawList, const ImVec2& cellMin, const ImVec2& cellMax, int32 x, int32 y ) const;
         /** @brief 좌표가 맵 범위 안인지 여부를 반환합니다. */
         bool isInBounds( int32 x, int32 y ) const;
         /** @brief (x, y)의 1차원 인덱스를 반환합니다. */
@@ -87,7 +100,12 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer128> _edgeTargetW;
         fixed_string<constant::kMaxBuffer128> _warpTarget;
         string                                _status;
-        TileMapXmlData                        _map; ///< 편집 중인 맵(파일 스키마 그대로). 이름은 `_nameBuffer` 가 들고 저장 때 옮긴다.
+        TileMapXmlData                        _map;            ///< 편집 중인 맵(파일 스키마 그대로). 이름은 `_nameBuffer` 가 들고 저장 때 옮긴다.
+        fixed_string<constant::kMaxBuffer256> _tileSetBuffer;  ///< Tile 레이어의 타일셋 경로 칸
+        TileSetAsset                          _tileSet;        ///< 읽은 타일셋
+        string                                _loadedTileSet;  ///< `_tileSet` 이 어느 경로의 것인지(실패한 경로도 — 같은 실패를 되풀이해 읽지 않는다)
+        vector<uint16>                        _listBrushIndex; ///< 그릴 때마다 맵에서 옮긴 칸마다 브러시 번호 + 1
+        int32                                 _brushIndex;     ///< 칠할 브러시(타일셋 순번)
         int32                                 _arrEdgeTx[4];
         int32                                 _arrEdgeTy[4];
         float32                               _arrTint[3];

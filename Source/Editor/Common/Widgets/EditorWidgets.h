@@ -122,6 +122,8 @@ namespace sw::editor
          * @param width  0 이면 ImGui 기본, 음수면 남는 자리 전부, 양수면 그 폭
          */
         static bool drawTextField( const utf8* pLabel, string& text, float32 width = 0.0f );
+        /** @brief `drawTextField` 의 여러 줄 판입니다(`PROPERTY( Multiline )`). 높이는 글 줄 수 @p lineCount 만큼, 폭은 남는 자리 전부입니다. */
+        static bool drawTextFieldMultiline( const utf8* pLabel, string& text, uint32 lineCount = 4 );
 
         /**
          * @brief 애셋 경로 표시, 드래그앤드롭 수신(Payload), 클리어/찾아보기 버튼을 지원하는 애셋 슬롯을 그립니다.

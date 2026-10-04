@@ -31,6 +31,8 @@ namespace sw
 
         float32 getPlayLength() const override { return _playLength; }
         bool    isLoopingByDefault() const override { return _bLoop == SW_TRUE; }
+        /** @brief (IAnimPlayable) 지금 구간의 알림 트랙입니다(클립의 구간 `notifies`). 없으면 nullptr 입니다. */
+        const AnimNotifyTrack* findNotifyTrack() const override { return _notifyTrack.isEmpty() ? nullptr : &_notifyTrack; }
 
         const SpriteClipAsset* getClip() const { return _pClip; }
         int32                  getFirstFrame() const { return _firstFrame; }
@@ -45,6 +47,7 @@ namespace sw
         float32 computeClipTime( float32 time ) const;
 
     private:
+        AnimNotifyTrack        _notifyTrack; ///< 지금 구간의 알림(구간을 정할 때 클립에서 베낀다)
         const SpriteClipAsset* _pClip;
         float32                _fallbackSeconds;
         float32                _playLength;

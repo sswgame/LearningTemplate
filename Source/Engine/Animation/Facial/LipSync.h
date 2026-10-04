@@ -13,8 +13,6 @@
 
 namespace sw
 {
-    struct AudioPcm;
-
     class JsonValue;
 
     /**
@@ -66,7 +64,7 @@ namespace sw
 {
     /**
      * @struct VisemeTrack
-     * @brief 비즘 가중치 트랙(곡선 묶음) — 프레임 × 비즘 가중치입니다. `<음성>.visemes.json` 으로 저장합니다(`App --import-lipsync`).
+     * @brief 비즘 가중치 트랙(곡선 묶음) — 프레임 × 비즘 가중치입니다. `<음성>.visemes.json` 으로 저장합니다(`App --import-lipsync` — `LipSyncImport`).
      * @details 형식: `{ "frame_rate", "visemes": [ 이름 ... ], "frames": [ [ 가중치 ... ] ... ] }`.
      */
     struct SW_API VisemeTrack
@@ -98,21 +96,16 @@ namespace sw
     /**
      * @struct LipSyncAnalyzer
      * @brief 음성 분석입니다 — 프레임마다 RMS 와 세 대역(바이쿼드 대역 통과) 에너지를 재고, 대역 모양을 비즘 표와 견줘 가중치를 냅니다.
+     * @details 입력은 모노 float 표본입니다. 소리 파일을 푸는 일(`AudioClipData::copyMonoSamples`)과 일괄 임포트(`LipSyncImport`)는 Audio 쪽입니다 —
+     *          Animation 은 Audio 아래 티어입니다.
      */
     struct SW_API LipSyncAnalyzer
     {
-        /** @brief PCM 을 모노 float 로 풉니다(16/24/32 비트 정수 · float). 지원하지 않는 형식이면 false 입니다. */
-        [[nodiscard]] static bool decodeMono( const AudioPcm& pcm, vector<float32>& outListSample );
         /** @brief 모노 표본을 트랙으로 분석합니다. */
         static void analyze( const vector<float32>& listSample, uint32 sampleRate, const LipSyncSettings& settings, VisemeTrack& outTrack );
         /** @brief 시각 @p time 근처(한 프레임 창)의 RMS 입니다 — 트랙이 없을 때 런타임 진폭 립싱크가 씁니다. */
         static float32 computeRms( const vector<float32>& listSample, uint32 sampleRate, float32 time, float32 windowSeconds );
         /** @brief RMS 를 입 벌림 [0, 1] 로 바꿉니다(무음 아래 0, full 위 1). */
         static float32 computeOpenness( float32 rms, const LipSyncSettings& settings );
-        /**
-         * @brief `Resource/` 아래 `voice/` 폴더의 음성(.wav · .ogg)마다 트랙(`.visemes.json`)을 씁니다(`App --import-lipsync`).
-         * @return 쓴 트랙 수입니다. 읽지 못한 음성은 @p outFailedCount 에 셉니다.
-         */
-        static uint32 importAll( const string& resourceRoot, const LipSyncSettings& settings, uint32& outFailedCount );
     };
 } // namespace sw

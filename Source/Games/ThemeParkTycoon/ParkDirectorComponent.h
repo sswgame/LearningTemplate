@@ -27,6 +27,7 @@
 
 namespace sw
 {
+    class Archive;
     class GameObject;
     class GameObjectManager;
     class InputManager;
@@ -37,7 +38,8 @@ namespace sw
     /**
      * @class ParkDirectorComponent
      * @brief 공원 한 판입니다. 플레이가 시작되면 데이터를 읽고 시뮬레이션을 열어 처음 둘(가장 싼 평지 · 코스터)을 짓습니다.
-     * @details 시뮬레이션은 핫 리로드에서 처음부터 다시 섭니다(PROPERTY 가 아닌 런타임 상태). 세운 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
+     * @details 시뮬레이션 · 지은 것 · 열차 자리는 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드 · 세이브를
+     *          넘깁니다(`ThemeParkTycoonGame`). 코스터 트랙은 배치 데이터에서 다시 짓습니다. 세운 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
      */
     REFLECT( Category = "ThemePark", DisplayName = "Park Director", Tooltip = "Runs the park simulation, building, input and the runtime spawns" )
     class ParkDirectorComponent : public Component
@@ -54,6 +56,13 @@ namespace sw
 
         /** @brief 세운 런타임 오브젝트를 모두 지웁니다(상태 저장 전). 시뮬레이션은 그대로이고 다음 틱이 그 상태대로 다시 세운다. */
         void despawnViews();
+        /** @brief 공원 상태(시뮬레이션 · 지은 배치 · 열차 자리 · 타이머 · 고른 배치)를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
+        void writeState( Archive& outArchive ) const;
+        /**
+         * @brief `writeState` 의 바이트로 공원을 되살립니다 — `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.
+         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 가 데이터를 읽은 뒤 적용합니다. 읽지 못하면 알리고 새 공원으로 시작합니다.
+         */
+        void restoreState( vector<uint8>&& bytes );
 
         // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
         const ThemeParkSimulation& getSimulation() const { return _simulation; }
@@ -93,6 +102,15 @@ namespace sw
 
     private:
         [[nodiscard]] bool loadData();
+        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
+        /** @brief 들고 있던 복원 바이트를 적용하고 모습을 다시 세우게 합니다. */
+        void applyPendingState();
+        /**
+         * @brief 배치의 코스터(트랙 · 열차)를 짓고 시험 운행 결과를 @p outStats 에 냅니다. 배치 · 설계가 없으면 nullptr 입니다.
+         * @details 짓기(`buildPlacement`)와 복원이 같은 트랙을 짓습니다 — 열차는 트랙을 가리키므로 트랙째 힙에 있다.
+         */
+        unique_ptr<CoasterRuntime> createCoaster( int32 placementIndex, CoasterRideStats& outStats ) const;
         /** @brief 설계도 하나를 짓습니다(돈이 모자라면 false). 모습은 틱 뒤에 세운다. */
         bool buildPlacement( int32 placementIndex );
         /** @brief 아직 안 지은 것 중 가장 싼 것을 짓습니다. */
@@ -172,7 +190,8 @@ namespace sw
         float32                            _autoBuildTimer;
         int32                              _startingCash;
         int32                              _selectedPlacement;
-        int32                              _ridingCoaster; ///< 0 이상이면 그 코스터에 타고 있다
+        int32                              _ridingCoaster;     ///< 0 이상이면 그 코스터에 타고 있다
+        vector<uint8>                      _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
         uint8                              _bLoaded         : 1;
         uint8                              _bViewsSpawned   : 1; ///< 손님 풀과 지은 것의 모습이 서 있다(걷으면 다음 틱이 다시 세운다)
         uint8                              _bFlushScheduled : 1;

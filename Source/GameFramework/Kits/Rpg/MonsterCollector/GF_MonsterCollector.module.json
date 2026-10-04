@@ -1,0 +1,20 @@
+{
+    "_name": "GF_MonsterCollector",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "몬스터 수집 키트(포켓몬 장르) — 종 · 기술 · 성격 · 날씨 카탈로그, 개체값 · 노력치 · 능력치 공식 · 경험치 그룹 · 진화",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

@@ -28,6 +28,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | **Mesh/** | CPU 메시 에셋(`Mesh`)과 기본 도형 생성기(`MeshUtil`), 메시 에셋 파일(`.mesh` — `MeshAssetFormat`)과 경로 캐시(`MeshCache`). GPU 풀은 여기 없다 — Renderer/Scene/ |
 | **Texture/** | `Texture2D` 에셋과 `TextureCache`(참조 수 + unique_ptr) |
 | **Upload/** | `GpuUploadQueue` — 게임 스레드가 스냅샷을 내보내기 **전에** 워커가 GPU 리소스를 만든다 |
+| **2D/** | [2D/README.md](2D/README.md). 2D 렌더 데이터 — `Render2DSettings`(`render2d.xml` 정렬 레이어 표 · 정렬 키 · 투명 정렬 축) |
 | **Renderer/** | [Renderer/README.md](Renderer/README.md). `Frame/` FrameRenderer 와 그 소유물 셋(PassConstantRing · RenderPsoCache · TransientAttachmentPool) · `Graph/` RenderGraph · `Pipeline/` 패스·파이프라인 리소스·입력 계약 · `Scene/` GpuSceneBuilder(GT) → GpuSceneSnapshot → GpuScene(RT) + GPU 정점/모프 풀 · `Light/` 라이트 버퍼 · `Debug/` 에디터가 읽는 통로(RenderTargetRegistry · DebugDrawQueue) · `Capture/` 격리 스튜디오 렌더(PortraitRenderer) · RenderThread |
 
 ---
@@ -199,6 +200,12 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 쓴다. 새 엔진 텍스처가 필요하면 `binding.hlsli` PassCB 에 `uint g_<Name>Index;` 추가 + 엔진이
 `FrameResourceRegistry` 에 `"<Name>"` 등록. `#if VULKAN/OPENGL` 분기 금지 — `binding.hlsli` 가 처리한다.
 
+**머티리얼은 한 스테이지에서만 읽는다.** GL(ARB_gl_spirv)은 구조버퍼(`g_SwMaterials`)를 정점 · 픽셀 두 단계에서 읽으면 링크를 거절한다. 보통은 픽셀이 읽고,
+정점을 옮기는 셰이더(식생 `foliage.hlsl` · 물 `water.hlsl`)는 정점이 읽어 픽셀이 쓸 값을 보간 칸으로 넘긴다 — 머티리얼 스키마는 픽셀에서 못 찾으면 정점
+스테이지에서 찾는다(`Material::ensureShaderLayout`, `RenderPassGpuTest.VertexStageMaterialSchemaIsUsed`). 그림자 · 깊이 프리패스는 머티리얼 셰이더가 아니라
+`shadowdepth.hlsl` 이 그리므로 정점 변형을 모른다 — 머티리얼 define `MATERIAL_SHADOW_CAST_OFF` 는 그림자에서, `MATERIAL_VERTEX_DEFORM` 은 깊이 프리패스에서 그 드로우를
+뺀다(클립 밖 한 점으로 모은다).
+
 **정점을 받는 셰이더는 `SwVertexInput`(common.hlsli) 하나만 쓴다.** DX 는 시맨틱 이름으로 묶지만 Vulkan·GL 은
 **선언 순서로 location** 을 매긴다 — `struct VSInput { pos; col }` 처럼 중간 속성을 빼면 col 이 노멀을 읽는다.
 리플렉션이 정점 입력(시맨틱·location)을 읽고
@@ -226,7 +233,7 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
 ### GPUScene 인스턴스드 드로우 (언리얼 방식)
 
 메시 드로우는 per-instance world/material 을 **영속 구조버퍼**(`SwInstanceData` — 정의는 `instancedata.hlsli` 하나로 그래픽스와 컴퓨트
-셋이 함께 쓴다, C++ `GpuInstance` 와 112 바이트 레이아웃 일치)에서 읽고, 배치당 간접 드로우 하나로 그린다(같은 PSO 의 배치들은 멀티 드로우 하나). VS 는 입력 어셈블러가 주는
+셋이 함께 쓴다, C++ `GpuInstance` 와 128 바이트 레이아웃 일치)에서 읽고, 배치당 간접 드로우 하나로 그린다(같은 PSO 의 배치들은 멀티 드로우 하나). VS 는 입력 어셈블러가 주는
 인스턴스 슬롯(`SW_INSTANCESLOT` — 간접 인자의 startInstance(배치 시작) + 서수)으로 `swLoadInstance( input.instanceSlot )`
 를 불러 월드 행렬과 `materialIndex` 를 얻어 PS 에 넘기고, PS 는 `SW_MATERIAL( materialIndex )` 로 셰이더 타입별 머티리얼
 버퍼 `g_SwMaterials`(t9) 의 원소를 읽는다.
@@ -353,7 +360,12 @@ FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/.
   셰이더 선언과 같아야 한다(RDG 더미 버퍼와 같은 규칙).
 - **인스턴스 원소 레이아웃은 시험이 대조한다.** `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 쿠킹된 바이너리의
   stride · 필드 오프셋을 `GpuInstance` 와, 컴퓨트 쪽 이름(`g_Instances` · `g_InstancesRW`)까지 같은 표로 본다.
-- **스프라이트 프레임 · 색은 인스턴스 칸**(`GpuInstance::_sprite` = `GpuSpriteInstanceData` 12 바이트, Custom Primitive Data 자리). 배치 키를
+- **투명 순서의 정본은 CPU 한 곳**(`GpuSceneBuilder::sortTransparent` — 정렬 레이어 키 → 깊이 → 후보 번호). GPU 컬링이 투명 배치를 압축한 뒤
+  `instancesort.hlsl` 은 깊이를 다시 재지 않고 **인스턴스 번호 오름차순**으로 되돌린다(배치 안의 인스턴스가 CPU 순서로 놓이므로). 깊이는 직교 카메라에서
+  시선 축, 원근에서 거리다(`Render2DSettings::computeTransparentSortAxis`) — [2D/README.md](2D/README.md).
+- **2D 빛은 3D 와 같은 빛 목록(t12)이다**(`SW_LIGHT_TYPE_POINT2D` · `GLOBAL2D` · 그 뒤의 `SHADOW2D` 가림막 토막). 빛 받는 스프라이트(`sprite2dlit.hlsl` + `lighting2d.hlsli`)만
+  읽고 3D 조명 식(`swShadeLights`)은 건너뛴다 — 3D 빛이 하나도 없으면 키라이트로 폴백한다. 2D 게임은 `forward2dpipeline.xml`(그림자 맵 · 톤맵 없음, `-gv_renderPipeline`).
+- **스프라이트 프레임 · 색은 인스턴스 칸**(`GpuInstance::_sprite` = `GpuSpriteInstanceData` 16 바이트 — 프레임 · 색 · 픽셀 스냅, Custom Primitive Data 자리). 배치 키를
   건드리지 않아 같은 텍스처의 스프라이트는 한 드로우다. 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)이고 UV 는 메시의 것이다
   (`RenderPassGpuTest.SpriteFramesAndTintsArePerInstance`).
 - **값이 실제로 바뀔 때만 일한다.** 상수버퍼 · 바인딩 상태(DX12 슬롯 테이블 · Vulkan 슬롯 세트)는 내용이 달라질 때만 버전을 올리고 다시 만든다 —

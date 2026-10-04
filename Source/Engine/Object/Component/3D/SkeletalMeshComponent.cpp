@@ -105,7 +105,6 @@ namespace sw
         , _soloMesh{}
         , _pVertexAnimationClip{ nullptr }
         , _crowdMode{ AnimationCrowdMode::Own }
-        , _bRuntimeSkeleton{ SW_FALSE }
         , _bFollowParentPose{ SW_FALSE }
         , _bAnimateWhenOffscreen{ SW_FALSE }
         , _bVisibleHint{ SW_TRUE }
@@ -114,6 +113,8 @@ namespace sw
         , _bInterpolationReady{ SW_FALSE }
         , _bShareCrowdPose{ SW_FALSE }
         , _bHasDependents{ SW_FALSE }
+        , _bRuntimeSkeleton{ SW_FALSE }
+        , _reserved{ 0 }
     {
         resetPoseBuffers();
     }
@@ -186,11 +187,12 @@ namespace sw
 
     void SkeletalMeshComponent::setSkeleton( shared_ptr<const Skeleton> skeleton )
     {
+        // 코드가 정한 스켈레톤은 경로가 빈 동안 렌더 에셋을 다시 풀어도(시작 · 메시 교체) 암묵 스켈레톤으로 돌아가지 않는다.
         _bRuntimeSkeleton = ( skeleton != nullptr ) ? SW_TRUE : SW_FALSE;
-        applySkeleton( std::move( skeleton ) );
+        assignSkeleton( std::move( skeleton ) );
     }
 
-    void SkeletalMeshComponent::applySkeleton( shared_ptr<const Skeleton> skeleton )
+    void SkeletalMeshComponent::assignSkeleton( shared_ptr<const Skeleton> skeleton )
     {
         _skeleton = ( skeleton != nullptr ) ? std::move( skeleton ) : SkeletalMeshComponentInternal::getImplicitSkeleton();
         resetPoseBuffers();
@@ -219,7 +221,7 @@ namespace sw
         if ( skeleton == nullptr )
             skeleton = SkeletalMeshComponentInternal::getImplicitSkeleton();
         if ( skeleton != _skeleton )
-            applySkeleton( std::move( skeleton ) );
+            assignSkeleton( std::move( skeleton ) );
         // 본 LOD 는 이 스켈레톤에 맞춰 마스크를 짓는다 — 스켈레톤을 정한 뒤다.
         resolveBoneLod();
     }
@@ -601,6 +603,8 @@ namespace sw
         if ( bInterpolationOn == false )
             _bInterpolationReady = SW_FALSE;
         _bInterpolateFrame = ( _frameContext._bPoseNeeded == SW_FALSE && bInterpolationOn && _bInterpolationReady == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+        for ( IAnimationPhaseTask* pTask : _listTask )
+            pTask->prepareAnimationFrame( *this, _frameContext );
         return true;
     }
 

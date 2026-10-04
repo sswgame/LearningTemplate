@@ -9,6 +9,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
+#include "Core/Process/ModuleBuildId.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -43,11 +44,21 @@ namespace sw
         // 메모리 프로파일러가 맨 먼저 선다. 그 앞에서 잡은 sw 블록(로거의 큐 · 이름 풀)은 태그에 세이지 않고 "sw 할당자 밖" 몫으로 보인다.
         // 플랫폼 누수 추적은 그보다도 먼저 켠다(Windows Debug CRT: 할당 추적 + 보고를 stderr 로). `EngineLoop` 가 기동 뒤 기준선을 찍고
         // 종료 뒤 `reportMemoryLeaks` 로 비교한다 — 켜지 않으면 누수 덤프가 디버거 출력으로만 나가 콘솔 · CI 에서 보이지 않는다.
+        // 메모리 프로파일러는 배포본이 아닌 모든 구성에 선다(태그 · 최고치 · 예산 · 보고). 추적은 진단 구성(Debug · 시험)에서 켜 두고, Release 는 꺼 둔 채
+        // `-gv_memoryTracking=1` 로 켠다 — 꺼져 있으면 할당마다 분기 하나다. 플랫폼 누수 검사는 진단 구성만.
         if ( bDiagnostics )
-        {
             MemoryProfiler::enableMemoryLeakChecks();
+        // 배포본에는 할당 헤더가 없어 셀 것이 없다 — 시험 하네스(진단 구성)만 같은 API 를 쓰려고 세운다.
+#if defined( SW_SHIPPING )
+        const bool bCreateMemoryProfiler = bDiagnostics;
+#else
+        const bool bCreateMemoryProfiler = true;
+#endif
+        if ( bCreateMemoryProfiler )
+        {
             _memoryProfiler = make_unique<MemoryProfiler>();
             _memoryProfiler->initialize();
+            _memoryProfiler->setTrackingEnabled( bDiagnostics );
         }
         HashedStringPool::initialize();
 
@@ -67,6 +78,12 @@ namespace sw
         // 크래시 리포트에 함께 나갈 값들이다. 덤프만으로는 알 수 없는 것들이다. 백엔드는 RHI 단계가 덮어쓴다.
         CrashHandler::setContextValue( "Build", build::kConfigName );
         CrashHandler::setContextValue( "Platform", build::kPlatformName );
+        // 심볼과 짝짓는 열쇠 — 실행 파일과(다르면) 엔진 모듈의 빌드 id. 덤프의 모듈 목록에도 같은 값이 있다.
+        const ModuleBuildId executableId = ModuleBuildId::find( nullptr );
+        const ModuleBuildId engineId     = ModuleBuildId::find( reinterpret_cast<const void*>( &CrashHandler::setContextValue ) );
+        CrashHandler::setContextValue( "BuildId", executableId._id );
+        if ( engineId._id != executableId._id )
+            CrashHandler::setContextValue( "EngineBuildId", engineId._id );
 
         if ( bDiagnostics )
         {
@@ -119,9 +136,6 @@ namespace sw
         // 로거 객체는 맨 마지막에 놓는다 — 그 사이의 로그는 출력에 바로 쓰인다.
         if ( _logger != nullptr )
             _logger->shutdown();
-        if ( _memoryProfiler != nullptr )
-            _memoryProfiler->shutdown();
-        _memoryProfiler.reset();
         if ( _deadlockDetector != nullptr )
             _deadlockDetector->shutdown();
         _deadlockDetector.reset();
@@ -130,5 +144,16 @@ namespace sw
         HashedStringPool::shutdown();
         CrashHandler::shutdown();
         _logger.reset();
+
+        // 프로파일러는 맨 끝이다 — 위의 해제가 모두 태그 줄에서 빠진 뒤에 기동 뒤 기준선과 견준다(어느 용도가 남았나, Debug). 플랫폼 누수 검사(CRT)는
+        // 바이트만 말하고, 이 보고는 그 바이트가 어느 하위 시스템의 것인지 말한다.
+        if ( _memoryProfiler != nullptr )
+        {
+#if defined( SW_DEBUG )
+            (void)_memoryProfiler->reportTagGrowthSinceBaseline( "shutdown" );
+#endif
+            _memoryProfiler->shutdown();
+        }
+        _memoryProfiler.reset();
     }
 } // namespace sw

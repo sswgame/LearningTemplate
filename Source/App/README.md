@@ -6,7 +6,8 @@
 1. `App::initialize` 가 `EngineLoop::initialize` 를 부릅니다. 엔진 기동은 표(`Engine/EngineInitStepList.xxx`) 순서로 돌고, 창 · RHI 디바이스도
    그 표의 `RHI` 단계가 만듭니다. App 은 그 뒤 활성 창의 소유권을 넘겨받습니다(`acquireMainWindow`).
 2. **모듈 이미지는 기동 단계 `ModuleTypes` 에서 올립니다.** App 이 `EngineLoop::setModuleTypeLoader` 로 건 `App::loadModuleImages` 가
-   (Dev) `LiveReloadManager` 를 만들고 `ModuleHost::loadModuleImages` 로 GameFramework → 키트 → `SWGame` 이미지를 올려 타입만 등록합니다
+   (Dev) 실행 파일 옆 `Modules/` 의 모듈 매니페스트를 읽어 해석하고(`ModuleCatalog` — 켜짐 · 플랫폼 · 구성 · 의존 · 순환, 꺼진 모듈은 이유와 함께 로그 한 줄),
+   `LiveReloadManager` 를 만들고 `ModuleHost::loadModuleImages` 로 그 적재 순서대로 GameFramework → 키트 → `SWGame` 이미지를 올려 타입만 등록합니다
    (인스턴스는 아직 없음). 씬은 이 단계 뒤에만 읽힙니다. Shipping 은 정적 링크라 올릴 이미지가 없습니다.
 3. 기동이 끝나면 `ModuleHost::initialize` 가 **게임 인스턴스 → 에디터 인스턴스** 순으로 만듭니다. 씬 매니저는 마지막 요청을 남기므로
    에디터의 시작 씬(`-gv_editorStartupScene`)이 게임의 첫 씬 요청보다 이깁니다. 에디터는 `-EnableEditor` 일 때만 올라옵니다.
@@ -33,10 +34,7 @@ ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F
 - **main.cpp**: `App` 을 만들고 `initialize` → `run` → `shutdown`. 초기화가 실패해도 `shutdown` 을 불러 일부만 선 서브시스템을 정해진 순서로 내린다.
 - **App.cpp / App.h**: 앱 생명주기. App 이 직접 아는 것은 **모듈 로더 배선·창 소유·프레임 순서·콜백 배선** 네 가지뿐입니다(엔진 기동 · 종료 순서는 `EngineLoop` 의 기동 표).
   같은 파일에 `RHIBackendSwitcher` — `gv_rhiBackend` 변경을 받아 프레임 경계에서 백엔드를 교체합니다(App 만 쓴다).
-- **AppConfig.h**: 부팅 때 읽는 설정(올릴 게임플레이 키트). 리플렉션 대상이라 따로 둡니다.
-- **UserSettingsHost.cpp / .h**: 사용자 설정(옵션 메뉴)의 호스트 쪽 — 확인 카운트다운 진행, 화면 요청(창 방식 · 해상도 · VSync)을 렌더 스레드를 기다린 뒤 적용,
-  `-gv_userSettingsApply="id=value;…"`(`-gv_userSettingsApplyFrame` 째 프레임, 메뉴와 같은 보류 → 적용 길, `-gv_userSettingsAutoConfirm=0` 이면 카운트다운이 되돌린다).
-- **FixedTimestep.cpp / .h**: 실시간 경과를 가변 델타와 고정 스텝 수로 나눕니다. AppTest 가 이 파일만 따로 컴파일합니다.
+-- **FixedTimestep.cpp / .h**: 실시간 경과를 가변 델타와 고정 스텝 수로 나눕니다. AppTest 가 이 파일만 따로 컴파일합니다.
 - **Module/**: 모듈의 수명과 빌드.
   - `ModuleHost` — 모듈 이미지 로드(`loadModuleImages`), 에디터 · 게임 인스턴스의 만들기 · 내리기 · API 표 받기(두 모듈이 같은 템플릿 한 벌),
     직렬화를 통한 상태 보존, 태스크 · 렌더 워커 비우기(`drainRenderWorkers`).

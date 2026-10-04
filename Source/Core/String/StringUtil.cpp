@@ -1141,6 +1141,20 @@ namespace sw
         outColumn = column;
     }
 
+    uint32 StringUtil::decodeUtf8( string_view text, size_t& inoutOffset )
+    {
+        if ( inoutOffset >= text.size() )
+            return 0;
+        const StringUtilInternal::DecodedCodepoint decoded = StringUtilInternal::decodeUtf8Sequence( text.data() + inoutOffset, text.size() - inoutOffset );
+        inoutOffset += decoded._byteCount;
+        return decoded._codepoint;
+    }
+
+    void StringUtil::appendUtf8( string& inoutText, uint32 codepoint )
+    {
+        StringUtilInternal::appendUtf8( inoutText, codepoint );
+    }
+
     string StringUtil::escapeInvalidUtf8( string_view text )
     {
         constexpr utf8 kHexDigit[] = "0123456789ABCDEF";

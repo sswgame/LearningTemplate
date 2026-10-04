@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Skeleton.h"
+#include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
@@ -258,13 +259,15 @@ namespace sw
         }
         else
         {
-            vector<uint8>   bytes;
-            AudioPcm        pcm;
-            vector<float32> listSample;
+            vector<uint8> bytes;
+            AudioPcm      pcm;
+            AudioClipData clip;
             if ( ResourceUtil::readBinaryResource( audioPath, bytes ) && AudioClipDecoder::decode( audioPath, bytes.data(), bytes.size(), pcm ) &&
-                 LipSyncAnalyzer::decodeMono( pcm, listSample ) )
+                 AudioClipData::convertPcm( pcm, clip ) )
             {
-                speakSamples( std::move( listSample ), pcm._sampleRate );
+                vector<float32> listSample;
+                clip.copyMonoSamples( listSample );
+                speakSamples( std::move( listSample ), clip._sampleRate );
                 bStarted = true;
             }
         }

@@ -18,6 +18,7 @@ namespace sw
         , _nearZ{ kDefaultNearZ }
         , _farZ{ kDefaultFarZ }
         , _orthoHeight{ kDefaultOrthoHeight }
+        , _viewOffset{ 0.0f, 0.0f, 0.0f }
         , _priority{ 0 }
         , _role{ CameraRole::Game }
         , _renderOutput{}
@@ -106,11 +107,20 @@ namespace sw
     float4x4 CameraComponent::getViewMatrix() const
     {
         const float4x4 worldMat = getWorldMatrix();
-        const float3   eye      = worldMat.getTranslation();
+        const float3   eye      = worldMat.getTranslation() + _viewOffset;
         const float3   forward  = float3::transformVector( float3( 0.0f, 0.0f, 1.0f ), worldMat );
         const float3   up       = float3::transformVector( float3( 0.0f, 1.0f, 0.0f ), worldMat );
         const float3   target   = eye + forward;
         return float4x4::createLookAt( eye, target, up );
+    }
+
+    float3 CameraComponent::getCameraForward() const
+    {
+        float3 forward = float3::transformVector( float3( 0.0f, 0.0f, 1.0f ), getWorldMatrix() );
+        if ( forward.getLengthSquared() <= MathUtil::Epsilon )
+            return float3( 0.0f, 0.0f, 1.0f );
+        forward.normalize();
+        return forward;
     }
 
     float4x4 CameraComponent::getProjectionMatrix( float32 aspectRatio ) const

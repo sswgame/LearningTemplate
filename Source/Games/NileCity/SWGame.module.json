@@ -1,0 +1,24 @@
+{
+    "_name": "SWGame",
+    "_version": "1.0.0",
+    "_kind": "Game",
+    "_description": "NileCity — 나일 강가 도시 건설 시험 게임(파라오 장르) — GF_CityBuilder 키트를 쓴다",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_CityBuilder"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true,
+    "_listModuleOverride": []
+}

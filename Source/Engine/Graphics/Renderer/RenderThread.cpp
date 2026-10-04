@@ -198,6 +198,8 @@ namespace sw
                 return;
 
             // 바꿔치기다. 부르는 쪽은 이 자리에 있던 지난 패킷의 저장소를 받아 다음 프레임에 그대로 쓴다.
+            // 끝날 때까지 다른 스레드가 내리는 자원 핸들은 미뤄진다(`IRHIDevice::releaseHandle` — 이 프레임을 병렬로 기록하는 동안 표를 바꾸지 않게).
+            _pDevice->notifyRenderFrameQueued();
             std::swap( _arrRingBuffer[currentHead], packet );
             _head.store( nextHead, std::memory_order_release );
         }
@@ -269,6 +271,12 @@ namespace sw
             // 링 자리에서 그대로 처리한다. 옮겨 오면 링 자리의 저장소가 비어 GT 가 다음에 다시 할당한다. 생산자는
             // tail 이 앞으로 갈 때까지 이 자리를 덮어쓰지 않는다.
             executePacket( _arrRingBuffer[currentTail] );
+            // 기록 · 제출이 끝났다(병렬 기록 밖) — 그동안 다른 스레드가 미룬 핸들을 여기서 내린다.
+            if ( _pDevice != nullptr )
+            {
+                _pDevice->flushDeferredHandleReleases();
+                _pDevice->notifyRenderFrameRetired();
+            }
 
             {
                 std::scoped_lock<mutex> lock{ _mutex };

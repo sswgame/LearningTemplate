@@ -15,6 +15,7 @@
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/EngineLoop.h"
+#include "Engine/Module/ModuleCatalog.h"
 
 namespace sw
 {
@@ -156,7 +157,10 @@ namespace sw
         unique_ptr<DevConsoleOverlay> _devConsoleOverlay;
 #endif
         unique_ptr<ModuleHost> _moduleHost;
-        unique_ptr<IWindow>    _window;
+        /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석 — 무엇을 어떤 순서로 올릴지(Dev). */
+        ModuleCatalog       _moduleCatalog;
+        ModuleResolution    _moduleResolution;
+        unique_ptr<IWindow> _window;
 
         FixedTimestep      _fixedTimestep;
         RHIBackendSwitcher _backendSwap;
@@ -169,7 +173,7 @@ namespace sw
         int64 _initializeStartMicro;
 
         uint8                  _bEnableEditor          : 1;
-        uint8                  _bDevConsoleExecPending : 1; ///< `-gv_devConsoleExec` 를 아직 돌리지 않았다
+        [[maybe_unused]] uint8 _bDevConsoleExecPending : 1; ///< `-gv_devConsoleExec` 를 아직 돌리지 않았다(개발 콘솔은 Shipping 에 없어 거기서는 읽지 않는다)
         uint8                  _bQuitAfterInitialize   : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다 — 루프에 들어가지 않는다
         [[maybe_unused]] uint8 _reserved               : 5;
     };

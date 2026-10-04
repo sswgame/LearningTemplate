@@ -30,17 +30,12 @@ namespace sw
 
     bool BrCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "BattleRoyaleCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &BrCatalog::loadRoot, path, "BattleRoyaleCatalog" );
     }
 
     bool BrCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "BattleRoyaleCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &BrCatalog::loadRoot, xmlText, sourceName, "BattleRoyaleCatalog" );
     }
 
     uint32 BrCatalog::loadRoot( const XmlNode& root, string_view sourceName )

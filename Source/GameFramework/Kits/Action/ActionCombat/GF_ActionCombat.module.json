@@ -1,0 +1,23 @@
+{
+    "_name": "GF_ActionCombat",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "액션 컴뱃 키트 — GameFramework.dll delay-load",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Overworld"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

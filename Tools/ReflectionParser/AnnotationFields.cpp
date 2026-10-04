@@ -162,6 +162,27 @@ namespace sw
                 target._bAssetPath = SW_TRUE;
             }
 
+            /** @brief 받은 값의 알림 함수를 적으면 복제 대상이기도 합니다. */
+            static void applyRepNotify( ParsedPropertyInfo& target, const string_view value )
+            {
+                target._repNotify   = string( value );
+                target._bReplicated = SW_TRUE;
+            }
+
+            /** @brief 설정 섹션을 적으면 설정 프로퍼티이기도 합니다. */
+            static void applyConfigSection( ParsedPropertyInfo& target, const string_view value )
+            {
+                target._configSection = string( value );
+                target._bConfig       = SW_TRUE;
+            }
+
+            /** @brief 설정 키를 적으면 설정 프로퍼티이기도 합니다. */
+            static void applyConfigKey( ParsedPropertyInfo& target, const string_view value )
+            {
+                target._configKey = string( value );
+                target._bConfig   = SW_TRUE;
+            }
+
             /** @brief 아래 경계만 적는다 — 위 경계는 따로다(한쪽만 적은 범위는 그쪽만 막는다). 숫자가 아니면 `AnnotationApply` 가 이미 거절했다. */
             static void applyMinRange( ParsedPropertyInfo& target, const string_view value )
             {
@@ -179,6 +200,25 @@ namespace sw
                     return;
                 target._maxRange     = parsed;
                 target._bHasMaxRange = SW_TRUE;
+            }
+
+            /** @brief 슬라이더 아래 경계입니다(허용 범위 `Min` 과 따로). */
+            static void applyUiMinRange( ParsedPropertyInfo& target, const string_view value )
+            {
+                float32 parsed{ 0.0f };
+                if ( StringUtil::parseFloat( value, parsed ) == false )
+                    return;
+                target._uiMinRange     = parsed;
+                target._bHasUiMinRange = SW_TRUE;
+            }
+
+            static void applyUiMaxRange( ParsedPropertyInfo& target, const string_view value )
+            {
+                float32 parsed{ 0.0f };
+                if ( StringUtil::parseFloat( value, parsed ) == false )
+                    return;
+                target._uiMaxRange     = parsed;
+                target._bHasUiMaxRange = SW_TRUE;
             }
 
             /** @brief 넷 역할은 토큰 자체가 값입니다(`FUNCTION( Server )` → "Server"). */

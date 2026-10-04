@@ -10,6 +10,7 @@
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"
+#include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -63,14 +64,16 @@ namespace sw
         *this       = {};
         _sourcePath = path;
 
-        XmlDocument doc;
-        string      absPath;
+        AssetLoadScope loadScope( "Scene", path );
+        XmlDocument    doc;
+        string         absPath;
         if ( doc.loadPath( path, &absPath ) == false )
         {
             // 없는 파일과 깨진 파일을 가른다(구문 오류를 "File not found" 로 알리지 않는다).
             SW_LOG_ERROR( "Scene not loaded - %#", doc.getLastError() );
             return false;
         }
+        loadScope.beginPhase( AssetLoadPhase::Decode );
 
         XmlNode root = doc.getRoot( SceneDocumentInternal::kRoot );
         if ( root.isValid() == false )
@@ -143,6 +146,7 @@ namespace sw
         }
 
         _bValid = true;
+        loadScope.setSucceeded();
         SW_LOG_INFO( "Loaded '%#' (%# entities) from %#",
                      _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath );
         return true;

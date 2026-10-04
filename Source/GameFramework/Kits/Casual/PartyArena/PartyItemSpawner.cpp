@@ -142,17 +142,12 @@ namespace sw
 
     bool PartyItemSpawner::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "PartyItems", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &PartyItemSpawner::loadRoot, path, "PartyItems" );
     }
 
     bool PartyItemSpawner::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "PartyItems", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &PartyItemSpawner::loadRoot, xmlText, sourceName, "PartyItems" );
     }
 
     uint32 PartyItemSpawner::loadRoot( const XmlNode& root, string_view sourceName )

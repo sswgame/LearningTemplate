@@ -3,6 +3,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/File/AsyncFileIo.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
@@ -473,6 +474,30 @@ namespace sw
         { return FileUtil::readFile( absPath, outBytes ); },
             [&outBytes]( string_view key, string& )
         { return getPackManager().readFile( key, outBytes ); } );
+    }
+
+    AsyncReadHandle ResourceUtil::readBinaryResourceAsync( string_view relativePath, AsyncIoPriority priority, const ResourceReadCompleteDelegate& onComplete )
+    {
+        AsyncFileIo&    io = engine::getAsyncFileIo();
+        AsyncReadHandle handle;
+        // 찾는 순서는 동기 읽기와 같은 함수 하나다 — 두 벌이면 한쪽만 고쳐 동기와 비동기가 다른 파일을 읽는다.
+        (void)readResourceCommon(
+            relativePath, nullptr,
+            [&io, &handle, priority, &onComplete]( string_view absPath )
+        {
+            handle = io.readFile( absPath, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [onComplete]( AsyncReadResult& result )
+            {
+                if ( onComplete.isBound() )
+                    onComplete( result.isSucceeded(), result._bytes );
+            } ) );
+            return handle.isValid();
+        },
+            [&io, &handle, priority, &onComplete]( string_view key, string& )
+        {
+            handle = getPackManager().readFileAsync( io, key, priority, onComplete );
+            return handle.isValid();
+        } );
+        return handle;
     }
 
     bool ResourceUtil::hasResource( string_view relativePath )

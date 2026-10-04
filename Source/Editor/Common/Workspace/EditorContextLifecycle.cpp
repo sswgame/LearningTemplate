@@ -8,10 +8,13 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/Asset/EditorAssetValidation.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
+#include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -82,6 +85,8 @@ namespace sw::editor
         _pPopupManager              = make_unique<EditorPopupManager>();
         _pAssetHotReload            = make_unique<AssetHotReload>();
         _pConfigHotReload           = make_unique<ConfigHotReload>();
+        _pAssetValidation           = make_unique<EditorAssetValidation>();
+        _pSourceControl             = sw::make_unique<EditorSourceControl>( EditorUtil::getProjectRootPath() );
         _pInspectorComponentManager = make_unique<InspectorComponentManager>();
         _pInspectorPropertyManager  = make_unique<InspectorPropertyManager>();
 
@@ -97,6 +102,8 @@ namespace sw::editor
         _pAssetHotReload->initialize();
         // 설정 파일(EngineConfig · GameConfig · editortooldefaults)도 같은 방식으로 감시한다.
         _pConfigHotReload->initialize();
+        // 버전 관리는 git LFS 를 쓸 수 있는지 비동기로 묻는다 — 없으면 읽기 전용 표시만 한다.
+        _pSourceControl->initialize();
     }
 
     void EditorContext::shutdown()
@@ -109,6 +116,8 @@ namespace sw::editor
         _pInspectorPropertyManager.reset();
         _pInspectorComponentManager.reset();
         _pConfigHotReload.reset();
+        _pSourceControl.reset();
+        _pAssetValidation.reset();
         _pAssetHotReload.reset();
         _pPopupManager.reset();
         _pPanelManager.reset();

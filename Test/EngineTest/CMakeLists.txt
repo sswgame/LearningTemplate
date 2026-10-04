@@ -11,45 +11,20 @@
 # `ctest -L "nogpu|lint" -j 4` 의 끝을 이 둘(EngineTest_NoGPU · SmokeTest)이 혼자 돌아 전체가 거의 두 배로 늘어난다.
 # GPU 를 잡는 `_HostOnly` 는 직렬이다(`sw_addTestExecutable`).
 # ------------------------------------------------------------------------------
+# 키트 목록을 적지 않는다 — 켜진 키트는 레지스트리가 답하고, 꺼진 키트의 헤더를 include 하는 시험 파일은 빠진다
+# (`sw_excludeSourcesOfInactiveKits`, 프로젝트 매니페스트가 키트를 끄면 그 키트의 시험도 짓지 않는다).
+file(GLOB_RECURSE swEngineTestSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+sw_excludeSourcesOfInactiveKits(swEngineTestSource)
+sw_getDynamicModules(swEngineTestKit KINDS kit)
+
 sw_addTestExecutable(EngineTest
 	HOST_SPLIT
+	SOURCES
+		${swEngineTestSource}
 	LIBS
 		Engine
 		GameFramework
-		GF_Overworld
-		GF_TurnBattle
-		GF_ActionCombat
-		GF_Farming
-		GF_ThemePark
-		GF_Voxel
-		GF_CityBuilder
-		GF_RealTimeStrategy
-		GF_NetClientServer
-		GF_NetLockstep
-		GF_NetTurnRelay
-		GF_NetMmo
-		GF_Rhythm
-		GF_TacticsSrpg
-		GF_CardGame
-		GF_OpenWorldWestern
-		GF_WitcherRpg
-		GF_CreatureLife
-		GF_RestaurantSim
-		GF_SurvivalHorror
-		GF_SideScrollConquest
-		GF_Fighting
-		GF_ActionAdventure
-		GF_GhostHunt
-		GF_BattleRoyale
-		GF_CoopScavenger
-		GF_MonsterCollector
-		GF_ClassicJrpg
-		GF_Metroidvania
-		GF_ActionPlatformer
-		GF_KartRacing
-		GF_MechArena
-		GF_AsymmetricHorror
-		GF_PartyArena
+		${swEngineTestKit}
 	LABELS
 		"unit;engine"
 	TIMEOUT

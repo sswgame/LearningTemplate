@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 
 namespace sw
@@ -46,6 +48,26 @@ namespace sw
         , _skippedCount{ 0 }
     {
         reset();
+    }
+
+    void NileCityPlanner::writeState( Archive& outArchive ) const
+    {
+        outArchive << _nextStep;
+        outArchive << _skippedCount;
+    }
+
+    bool NileCityPlanner::readState( Archive& archive )
+    {
+        int32 nextStep     = 0;
+        int32 skippedCount = 0;
+        archive >> nextStep;
+        archive >> skippedCount;
+        const bool bStepValid = 0 <= nextStep && nextStep <= static_cast<int32>( _listStep.size() );
+        if ( archive.isError() || bStepValid == false || skippedCount < 0 )
+            return false;
+        _nextStep     = nextStep;
+        _skippedCount = skippedCount;
+        return true;
     }
 
     float32 NileCityPlanner::computeRiverCenter( int32 y )

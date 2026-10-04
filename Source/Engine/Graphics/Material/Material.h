@@ -87,6 +87,8 @@ namespace sw
         [[nodiscard]] bool loadFromXml( string_view xmlText );
         /** @brief 셰이더 리플렉션에 맞춰 프로퍼티 목록을 맞춥니다. */
         bool syncPropertiesFromReflection( const ShaderReflectionData& reflectionData );
+        /** @brief 리플렉션에 머티리얼 스키마(`g_SwMaterials` 원소 또는 MaterialCB)가 있으면 true 입니다. */
+        static bool hasMaterialSchema( const ShaderReflectionData& reflectionData );
         /**
          * @brief 이 디바이스 백엔드의 셰이더 리플렉션(g_SwMaterials 원소 레이아웃)으로 프로퍼티 오프셋과 원소 stride 를 맞춥니다.
          * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않습니다. GpuScene 과 인스턴스(`MaterialInstance::updateRhi`)가 바이트를

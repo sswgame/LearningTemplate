@@ -4,12 +4,45 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 namespace sw
 {
     VoxelHotbar::VoxelHotbar()
         : _arrSlot{}
         , _selectedIndex{ 0 }
     {
+    }
+
+    void VoxelHotbar::writeState( Archive& outArchive ) const
+    {
+        for ( const VoxelHotbarSlot& slot : _arrSlot )
+        {
+            outArchive << slot._block;
+            outArchive << slot._count;
+        }
+        outArchive << _selectedIndex;
+    }
+
+    bool VoxelHotbar::readState( Archive& archive )
+    {
+        VoxelHotbarSlot arrSlot[kSlotCount];
+        for ( VoxelHotbarSlot& slot : arrSlot )
+        {
+            archive >> slot._block;
+            archive >> slot._count;
+            if ( slot._count < 0 || slot._count > kMaxStack )
+                archive.setError();
+        }
+        int32 selectedIndex = 0;
+        archive >> selectedIndex;
+        const bool bSelectedValid = 0 <= selectedIndex && selectedIndex < kSlotCount;
+        if ( archive.isError() || bSelectedValid == false )
+            return false;
+        for ( int32 slotIndex = 0; slotIndex < kSlotCount; ++slotIndex )
+            _arrSlot[slotIndex] = arrSlot[slotIndex];
+        _selectedIndex = selectedIndex;
+        return true;
     }
 
     int32 VoxelHotbar::addBlock( VoxelBlockIndex block, int32 count )

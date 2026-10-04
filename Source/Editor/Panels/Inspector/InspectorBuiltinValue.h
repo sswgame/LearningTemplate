@@ -12,6 +12,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskTypes.h"
 
+#include "Engine/Reflection/ReflectValue.h"
+
 namespace sw
 {
     struct float2;
@@ -88,29 +90,13 @@ namespace sw::editor
     template <> struct InspectorWidgetFor<GameObjectHandle> : InspectorWidgetKind<InspectorValueWidget::Handle> {};
     template <> struct InspectorWidgetFor<TagID>            : InspectorWidgetKind<InspectorValueWidget::Tag> {};
     // clang-format on
-
-    /**
-     * @brief `ReflectBuiltins.xxx` 의 C++ 타입 칸을 값이 실제로 쓰는 타입으로 바꿉니다.
-     * @details 문자열 줄의 칸은 `std::string` 이지만 프로퍼티와 생성 호출기(`args.get<string>`)는 `sw::string` 입니다
-     *          (STL 컨테이너 빌드가 아니면 둘은 다른 타입이고 크기도 다릅니다).
-     */
-    template <typename T>
-    struct InspectorBuiltinCppType
-    {
-        using Type = T;
-    };
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    template <>
-    struct InspectorBuiltinCppType<std::string>
-    {
-        using Type = string;
-    };
-
+    /** @brief `ReflectBuiltins.xxx` 의 C++ 타입 칸 → 값이 실제로 쓰는 타입(`std::string` → `sw::string`). 엔진의 표와 같은 것입니다. */
     template <typename T>
-    using InspectorBuiltinCppTypeT = typename InspectorBuiltinCppType<T>::Type;
+    using InspectorBuiltinCppTypeT = ReflectBuiltinCppTypeT<T>;
 
     /** @brief 내장 값 타입 하나의 표 한 줄입니다. 줄 순서는 `ReflectBuiltins.xxx` 의 순서입니다. */
     struct InspectorBuiltinValue

@@ -1,0 +1,10 @@
+<!-- KayKit 스켈레톤 리그(41 뼈)의 몸 영역 — 본 가중치로 정한다(칠한 정점 그룹이 없다). 절단(DismembermentComponent)이 잘라 낼 영역 이름을 이 표에서 고르고,
+     표면 상태(피)가 영역마다 값을 든다. 앞 줄이 먼저 맞으므로 손 · 발 같은 끝 영역을 팔 · 다리 앞에 두지 않고 한 덩어리로 묶었다. -->
+<FitTables>
+    <Region name="Head" bones="head" minWeight="0.5"/>
+    <Region name="Arm_L" bones="upperarm.l lowerarm.l wrist.l hand.l handslot.l" minWeight="0.5"/>
+    <Region name="Arm_R" bones="upperarm.r lowerarm.r wrist.r hand.r handslot.r" minWeight="0.5"/>
+    <Region name="Leg_L" bones="upperleg.l lowerleg.l foot.l toes.l" minWeight="0.5"/>
+    <Region name="Leg_R" bones="upperleg.r lowerleg.r foot.r toes.r" minWeight="0.5"/>
+    <Region name="Torso" bones="root hips spine chest" minWeight="0.5"/>
+</FitTables>

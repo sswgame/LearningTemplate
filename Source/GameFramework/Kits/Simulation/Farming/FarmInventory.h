@@ -13,6 +13,7 @@
 
 namespace sw
 {
+    class Archive;
     class CropCatalog;
 
     /**
@@ -50,6 +51,11 @@ namespace sw
 
         /** @brief 가방입니다(아이템 개수 — 장르 공통 `ItemBag`). */
         const ItemBag& getBag() const { return _bag; }
+
+        /** @brief 가방 · 출하함 · 돈을 씁니다(핫 리로드 · 세이브). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         ItemBag _bag;

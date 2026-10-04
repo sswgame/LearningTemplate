@@ -5,11 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/Memory.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/AnimJsonUtil.h"
-#include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 
@@ -59,13 +56,6 @@ namespace sw
                     return output;
                 }
             };
-
-            /** @brief 음성 폴더 안의 소리 파일인지입니다(`.../voice/...`). */
-            static bool isVoiceAudio( string_view relativePath )
-            {
-                const bool bAudio = StringUtil::endsWith( relativePath, ".wav", true ) || StringUtil::endsWith( relativePath, ".ogg", true );
-                return bAudio && ( relativePath.find( "/voice/" ) != string_view::npos || StringUtil::startsWith( relativePath, "voice/", true ) );
-            }
         };
     } // namespace
 } // namespace sw
@@ -273,56 +263,6 @@ namespace sw
         return path;
     }
 
-    bool LipSyncAnalyzer::decodeMono( const AudioPcm& pcm, vector<float32>& outListSample )
-    {
-        outListSample.clear();
-        const uint32 bytesPerSample = pcm._bitsPerSample / 8u;
-        const uint32 channelCount   = pcm._channelCount;
-        if ( channelCount == 0 || bytesPerSample == 0 || pcm._sampleRate == 0 )
-            return false;
-        const bool bSupported = ( pcm._bFloat == SW_TRUE && bytesPerSample == 4 ) || ( pcm._bFloat == SW_FALSE && ( bytesPerSample == 2 || bytesPerSample == 3 || bytesPerSample == 4 ) );
-        if ( bSupported == false )
-            return false;
-        const size_t frameBytes = static_cast<size_t>( bytesPerSample ) * channelCount;
-        const size_t frameCount = pcm._listData.size() / frameBytes;
-        outListSample.resize( frameCount );
-        for ( size_t frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-        {
-            float32 sum = 0.0f;
-            for ( uint32 channel = 0; channel < channelCount; ++channel )
-            {
-                const uint8* pSample = pcm._listData.data() + frameIndex * frameBytes + channel * bytesPerSample;
-                float32      value   = 0.0f;
-                if ( pcm._bFloat == SW_TRUE )
-                {
-                    Memory::copy( &value, pSample, sizeof( value ) );
-                }
-                else if ( bytesPerSample == 2 )
-                {
-                    int16 integer = 0;
-                    Memory::copy( &integer, pSample, sizeof( integer ) );
-                    value = static_cast<float32>( integer ) / 32768.0f;
-                }
-                else if ( bytesPerSample == 3 )
-                {
-                    const int32 integer = static_cast<int32>( static_cast<uint32>( pSample[0] ) << 8 | static_cast<uint32>( pSample[1] ) << 16 |
-                                                              static_cast<uint32>( pSample[2] ) << 24 ) >>
-                                          8;
-                    value = static_cast<float32>( integer ) / 8388608.0f;
-                }
-                else
-                {
-                    int32 integer = 0;
-                    Memory::copy( &integer, pSample, sizeof( integer ) );
-                    value = static_cast<float32>( integer ) / 2147483648.0f;
-                }
-                sum += value;
-            }
-            outListSample[frameIndex] = sum / static_cast<float32>( channelCount );
-        }
-        return true;
-    }
-
     float32 LipSyncAnalyzer::computeOpenness( float32 rms, const LipSyncSettings& settings )
     {
         return MathUtil::saturate( ( rms - settings._silenceRms ) / MathUtil::max( settings._fullRms - settings._silenceRms, 1e-6f ) );
@@ -410,42 +350,5 @@ namespace sw
             for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )
                 pWeight[visemeIndex] = openness * listScore[visemeIndex] / sum;
         }
-    }
-
-    uint32 LipSyncAnalyzer::importAll( const string& resourceRoot, const LipSyncSettings& settings, uint32& outFailedCount )
-    {
-        vector<string> listFile;
-        FileUtil::collectFiles( resourceRoot, "", listFile, true );
-        const string normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
-        uint32       writtenCount   = 0;
-        for ( const string& filePath : listFile )
-        {
-            const string normalized = FileUtil::normalizeSeparators( filePath );
-            const string relative   = normalized.substr( std::min( normalizedRoot.size() + 1, normalized.size() ) );
-            if ( LipSyncInternal::isVoiceAudio( relative ) == false )
-                continue;
-            vector<uint8>   bytes;
-            AudioPcm        pcm;
-            vector<float32> listSample;
-            if ( ResourceUtil::readBinaryResource( relative, bytes ) == false || AudioClipDecoder::decode( relative, bytes.data(), bytes.size(), pcm ) == false ||
-                 decodeMono( pcm, listSample ) == false )
-            {
-                SW_LOG_ERROR( "Lip sync import could not decode '%#'", relative.c_str() );
-                ++outFailedCount;
-                continue;
-            }
-            VisemeTrack track;
-            analyze( listSample, pcm._sampleRate, settings, track );
-            const string trackPath = VisemeTrack::makePathForAudio( normalized );
-            if ( track.saveToFile( trackPath ) == false )
-            {
-                SW_LOG_ERROR( "Lip sync import could not write '%#'", trackPath.c_str() );
-                ++outFailedCount;
-                continue;
-            }
-            SW_LOG_INFO( "Lip sync: '%#' -> %# frames", relative.c_str(), track.getFrameCount() );
-            ++writtenCount;
-        }
-        return writtenCount;
     }
 } // namespace sw

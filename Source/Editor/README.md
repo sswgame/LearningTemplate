@@ -29,10 +29,11 @@
   플레이(PIE) 세션(`EditorPlaySession`, `EditorSessionPolicy`) · 에디터 확장 등록부의 공통 모양(`EditorRegistry<T>` · `EditorRegistrar<T>`) ·
   에셋 파일 감시(`AssetHotReload` · `FileWatchDispatcher`)
 - **Commands/**: 패널이 쓰는 **ImGui 없는 로직** — 애셋/씬/트랜스폼/데이터테이블 변이와 파일 IO,
-  그리고 커맨드 정의를 담는 `EditorCommandRegistry`.
+  그리고 커맨드 정의를 담는 `EditorCommandRegistry`. 외부 도구(파이썬 검증 · git)를 전용 스레드에서 띄우는 잡은 `EditorExternalToolJob`.
   패널은 UI 만, 실제 동작은 여기입니다 (그래서 테스트가 붙습니다)
 - **Asset/**: 원본 임포트 — 텍스처(`TextureImporter`, `TextureImportConfig`, `ImageUtil`) · 모델(`ModelImporter`, `ModelImportConfig`)과 둘이 쓰는
-  스탬프 절차(`AssetImportStamp`) · 규칙의 경로 조건(`AssetImportPathFilter`), 헤드리스 임포트 진입점(`AssetImportEntry.cpp` — 아래 "텍스처는 들일 때 임포트한다" · "모델도 들일 때 임포트한다"). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
+  스탬프 절차(`AssetImportStamp`) · 규칙의 경로 조건(`AssetImportPathFilter`), 헤드리스 임포트 진입점(`AssetImportEntry.cpp` — 아래 "텍스처는 들일 때 임포트한다" · "모델도 들일 때 임포트한다"), 저장 · 임포트 직후 검증(`EditorAssetValidation` — 아래 "저장 · 임포트 직후 에셋 검증"). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
+- **SourceControl/**: 버전 관리 잠금(체크아웃) — 공급자 추상(`ISourceControlProvider`: git LFS · 없음)과 창구(`EditorSourceControl`). 아래 "버전 관리 잠금"
 - **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorToolDefaults`)
 
 ### 기능
@@ -232,6 +233,13 @@ glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로�
 - 시험: `ModelImporterTest`(좌표계 · 감김 · 노드 변환 · 색 · 스탬프 · 비표준 씬 뿌리 · 규칙 · 스킨드 모델(KayKit 기사 41 본 · 클립 76 · 부착 · 곁 데이터),
   저장소 원본 ↔ 결과 대조), 엔진 쪽은 `MeshAssetTest` · `SkeletalAnimationTest`.
 
+## 높이장도 들일 때 임포트한다
+
+지형 높이장 원본(16 비트 회색 PNG · 작은 엔디언 `.r16`)은 `heightfields_raw/` 에 두고 같은 상대 경로의 `heightfields/<이름>.heightfield` 로 임포트합니다
+(`HeightfieldImporter`, 형식은 Engine `Environment/Terrain/HeightfieldData.h`). 원본 옆 `<이름>_holes.png`(128 미만 = 구멍 칸)는 곁 파일이라 원본으로 세지 않고
+그 원본의 구멍 마스크가 되며 원본 해시에 섞입니다. 헤드리스: `App --import-heightfields` · `--check-heightfields`(같은 `import.stamp` 절차). 임포트 동작을 바꾸면
+`HeightfieldImporterInternal::kImporterVersion` 을 올립니다. 시험: `HeightfieldImporterTest`(16 비트 PNG · `.r16` 값, 구멍, 스탬프, 저장소 원본 ↔ 에셋 대조).
+
 ## UI 스레드가 놓은 GPU 자원
 
 ImGui 텍스처 · 게임 뷰 렌더 타깃은 UI 스레드가 놓지만 그리는 것은 렌더 스레드이고, 렌더 스레드는 UI 가 다음 스냅샷을 내기 전까지 **같은 draw
@@ -317,3 +325,28 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **Dev 모드 전용**: 이 폴더의 코드는 개발(Dev) 모드에서만 `MODULE DLL`로 빌드되고 동작합니다. 배포(Shipping) 빌드를 할 때는 **코드가 통째로 날아갑니다.**
 - **게임 로직 분리**: **절대 게임(Game) 로직이 이 폴더의 코드에 의존해서는 안 됩니다.** 게임 코드에서 `#include "Editor/"` 등을 호출하면 Shipping 빌드가 100% 터집니다.
 에디터에서만 써야 할 기능이라면 매크로를 신중하게 사용하세요.
+
+
+## 저장 · 임포트 직후 에셋 검증
+
+언리얼 Data Validation 의 "저장할 때 검증" 자리다. 규칙은 `Config/Editor/AssetValidationRules.json`(이름 · 텍스처 형식 · 밉 · 메시 예산 · 없는 참조 ·
+고아 파일 · 머티리얼 퍼뮤테이션 · 컴포넌트 타입 · 엔티티 id · 프리팹 guid · 팩별 카탈로그 참조)이고 검사는 파이썬 한 곳(`Scripts/common/AssetValidation.py`)이다 —
+커밋 훅 게이트(`CheckAssetRules`, 오류만), `py -3 -m Scripts validate-assets`(경고까지), 에디터가 같은 코드를 부른다.
+
+- **언제**: 핫 리로드 감시가 받은 `Resource/` 의 쓰기(에디터 저장 · 임포트 산출물 · 바깥 도구)마다, 그리고 씬을 저장한 뒤(`EditorAssetCommands::saveActiveScene` —
+  씬은 감시 확장자가 아니다). 경로를 모았다가 한 번에 `Scripts/qa/ValidateAssets.py --files …` 를 띄운다(`EditorAssetValidation::update`, 에디터 프레임마다).
+- **결과**: 오류는 Error 로그, 경고는 Warning 로그(`[AssetValidation]`). 저장을 막지 않는다 — 고치는 것은 사람이다.
+- **꺼지는 경우**: 저장소 밖(스크립트가 없다) · 파이썬을 못 띄운다 — 한 번 알리고 그 세션 동안 꺼진다.
+- 시험: `EditorAssetValidationTest`(결과 줄 나누기 · 명령), 규칙 자체는 `PythonTest_TestAssetValidation`.
+
+## 버전 관리 잠금(체크아웃)
+
+언리얼 에디터의 Source Control(Perforce 체크아웃 · 잠금)을 작게 한 것이다. 공급자는 명령을 만들고 출력을 읽기만 하고(`ISourceControlProvider`),
+띄우기 · 기다리기는 `EditorSourceControl` 이 전용 스레드(`EditorExternalToolJob`)로 한다 — UI 가 git 을 기다리지 않는다.
+
+- **공급자**: 에디터가 뜰 때 `git lfs version` 을 묻는다. 되면 git LFS(`git lfs locks --json` · `lock` · `unlock`), 안 되면 아무것도 안 하는 공급자.
+- **보이는 것**: 콘텐츠 브라우저의 자물쇠 — 주황은 잠김(도구 설명에 소유자), 회색은 읽기 전용 파일(git LFS `lockable` 파일은 잠그기 전까지 읽기 전용이다).
+  읽기 전용 여부는 폴더 목록을 만드는 워커가 잰다(`EditorFolderListingEntry::_bReadOnly`, `FileUtil::isReadOnlyFile`).
+- **하는 것**: 오른쪽 클릭 메뉴의 Check Out (Lock) · Release Lock · Refresh Source Control. **스스로 잠그지 않는다** — 저장 · 열기가 자동으로 체크아웃하지 않는다
+  (잠금 서버 없는 저장소에서 저장마다 실패가 쌓이는 것을 피했다). 읽기 전용 씬 파일에는 저장하지 않고 이유를 알린다.
+- 시험: `EditorSourceControlTest`(잠금 목록 읽기 · 명령 · 경로 · 상태 글), `FileTest.ReadOnlyFileIsReported`.

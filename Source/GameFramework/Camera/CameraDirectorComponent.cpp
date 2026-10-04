@@ -158,7 +158,7 @@ namespace sw
             return;
         if ( _cyclePresetKey != Key::Unknown && pInput->wasKeyPressed( _cyclePresetKey ) )
         {
-            const hashed_string nextId = activateNextPreset();
+            [[maybe_unused]] const hashed_string nextId = activateNextPreset(); // 로그는 Shipping 에서 빠진다
             SW_LOG_INFO( "Camera preset -> '%#'", nextId.c_str() );
         }
         const CameraInputDef& inputDef = _director.getActivePreset()._input;
@@ -200,12 +200,12 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         CameraComponent*   pCamera  = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
 
-        // 암 충돌: 따로 준 질의가 없으면 매니저의 물리 바디에 쓸어 본다(대상 자신은 뺀다 — 피벗이 그 안에 있다).
+        // 암 충돌: 따로 준 질의가 없으면 씬의 강체 물리 · 겹침 월드에 쓸어 본다(대상 자신의 바디는 모두 뺀다 — 피벗이 그 안에 있다).
         const CameraTarget target = computeTarget();
         if ( _pExternalProbe == nullptr && pManager != nullptr )
         {
-            const GameObject*             pTarget = pManager->resolveGameObject( _target );
-            const PhysicsWorldCameraProbe physicsProbe( pManager->getPhysicsWorld(), 0, pTarget != nullptr ? pTarget->getObjectId() : 0 );
+            const GameObject*      pTarget = pManager->resolveGameObject( _target );
+            const SceneCameraProbe physicsProbe( *pManager, pTarget != nullptr ? pTarget->getObjectId() : 0 );
             _director.setCollisionProbe( &physicsProbe );
             (void)_director.step( deltaTime, target );
         }

@@ -68,6 +68,7 @@ namespace sw
         , _bRewindApplied{ SW_FALSE }
 #endif
         , _pManager{ nullptr }
+        , _lodViewPosition{}
         , _frameIndex{ 0 }
         , _deltaSeconds{ 0.0f }
         , _averageEvaluationMicroseconds{ 0.0f }
@@ -80,7 +81,22 @@ namespace sw
         , _bLodSettingsReady{ SW_FALSE }
         , _bLodApplied{ SW_FALSE }
         , _bCrowdSettingsReady{ SW_FALSE }
+        , _bHasLodViewPosition{ SW_FALSE }
     {
+    }
+
+    void AnimationSystem::setLodViewPosition( const float3& position )
+    {
+        _lodViewPosition     = position;
+        _bHasLodViewPosition = SW_TRUE;
+    }
+
+    bool AnimationSystem::findLodViewPosition( float3& outPosition ) const
+    {
+        if ( _bHasLodViewPosition == SW_FALSE )
+            return false;
+        outPosition = _lodViewPosition;
+        return true;
     }
 
     void AnimationSystem::setCrowdSettings( const AnimationCrowdSettings& settings )
@@ -138,6 +154,9 @@ namespace sw
     {
         _listLodView  = listView;
         _bLodViewsSet = SW_TRUE;
+        // 거리 LOD(스프링 본 `lod_distance`)의 기준점도 주 시점이다 — 뷰를 넣는 쪽이 따로 넣지 않아도 같은 카메라를 본다.
+        if ( listView.empty() == false )
+            setLodViewPosition( listView.front()._position );
     }
 
     void AnimationSystem::clearLodViews()

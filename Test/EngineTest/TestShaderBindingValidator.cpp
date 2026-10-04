@@ -544,6 +544,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCpuStruct 
         { "uvStart", static_cast<uint32>( offsetof( sw::GpuInstance, _sprite ) + offsetof( sw::GpuSpriteInstanceData, _uvStart ) ) },
         { "uvEnd", static_cast<uint32>( offsetof( sw::GpuInstance, _sprite ) + offsetof( sw::GpuSpriteInstanceData, _uvEnd ) ) },
         { "tint", static_cast<uint32>( offsetof( sw::GpuInstance, _sprite ) + offsetof( sw::GpuSpriteInstanceData, _tint ) ) },
+        { "pixelSnap", static_cast<uint32>( offsetof( sw::GpuInstance, _sprite ) + offsetof( sw::GpuSpriteInstanceData, _pixelSnap ) ) },
         { "vertexAnimationPhase", static_cast<uint32>( offsetof( sw::GpuInstance, _vertexAnimationPhase ) ) },
     };
     // 인스턴스 원소를 담는 버퍼 이름 — 그래픽스(t4)와 컴퓨트 셋(읽기 g_Instances · 고쳐 쓰기 g_InstancesRW).

@@ -7,6 +7,7 @@
 #include "TestFramework/TestFramework.h"
 
 #include <atomic>
+#include <filesystem>
 #include <thread>
 
 namespace
@@ -488,4 +489,28 @@ SW_TEST_CASE( FileTest, ReadersNeverObserveHalfWrittenFile )
     SW_EXPECT_EQUAL( 0u, tornReadCount.load() );
     SW_EXPECT_TRUE_MSG( overlappedRead >= kMinOverlappedRead, "읽기가 쓰기와 거의 겹치지 않았다 — 아무것도 시험하지 않은 것이다" );
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dir ) );
+}
+
+/**
+ * @brief [FileTest] 읽기 전용 파일을 읽기 전용이라고 답한다 — 없는 파일 · 폴더는 false
+ * @details 에디터는 git LFS 잠금(잠그기 전까지 읽기 전용)을 이 답으로 보여 준다. 쓰기를 다시 허락하면 false 로 돌아온다.
+ */
+SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
+{
+    const sw::string root     = test::makeTempPath( "SwReadOnlyTest" );
+    const sw::string filePath = root + "/locked.txt";
+    SW_ASSERT_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( filePath, "locked" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( filePath ) );
+
+    std::filesystem::permissions( std::filesystem::path( filePath.c_str() ), std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write,
+                                  std::filesystem::perm_options::remove );
+    SW_EXPECT_TRUE( sw::FileUtil::isReadOnlyFile( filePath ) );
+
+    std::filesystem::permissions( std::filesystem::path( filePath.c_str() ), std::filesystem::perms::owner_write, std::filesystem::perm_options::add );
+    SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( filePath ) );
+
+    SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( root + "/missing.txt" ) );
+    SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( root ) );
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
 }

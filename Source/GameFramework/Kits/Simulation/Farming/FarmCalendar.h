@@ -11,6 +11,8 @@
 
 namespace sw
 {
+    class Archive;
+
     /** @brief 계절입니다. 데이터(XML)는 이름 그대로 적습니다(대소문자 무시). */
     enum class FarmSeason : uint8
     {
@@ -72,6 +74,11 @@ namespace sw
         bool isDayOver() const { return _minuteOfDay >= kDayEndMinute; }
         /** @brief 1 년 봄 1 일부터 지난 날 수(0 부터)입니다. */
         int32 getElapsedDays() const;
+
+        /** @brief 날짜 · 시각을 씁니다(핫 리로드 · 세이브). */
+        void writeState( Archive& outArchive ) const;
+        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌거나 범위 밖이면 false 이고 그대로입니다. */
+        [[nodiscard]] bool readState( Archive& archive );
 
     private:
         float32    _minuteOfDay;

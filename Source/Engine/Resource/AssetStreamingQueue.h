@@ -1,6 +1,7 @@
 #pragma once
-#include "Core/Concurrency/ConcurrentQueue.h"
+#include "Core/Container/deque.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/File/AsyncFileIo.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "Engine/EngineMinimal.h"
@@ -28,8 +29,11 @@ namespace sw
 
     /**
      * @class AssetStreamingQueue
-     * @brief 에셋을 워커 스레드에서 미리 읽는 스트리밍 큐입니다.
+     * @brief 에셋을 백그라운드에서 미리 읽는 스트리밍 큐입니다.
      * @details 씬 로드나 런타임 이동 중에 메인 스레드를 멈추지 않고 텍스처 · 오디오 · 머티리얼 파일을 비동기로 미리 읽습니다.
+     *          바이트를 읽는 요청(`requestAssetData`)은 워커가 찾고(낱개 파일 존재 확인은 느리다) 비동기 IO(`ResourceUtil::readBinaryResourceAsync` → `AsyncFileIo`)로 읽어 워커를 막지 않고,
+     *          팩 항목의 압축 해제 · CRC 는 완료를 받은 태스크 워커가 합니다 — 여러 요청의 해제가 나란히 돈다. 있는지만 보는 요청(`requestAsset`)은
+     *          태스크 하나입니다. 완료 콜백은 `update` 를 부른 스레드에서 돕니다.
      */
     class SW_API AssetStreamingQueue
     {
@@ -75,6 +79,8 @@ namespace sw
 
         /** @brief 스트리밍 우선순위가 싣는 태스크 우선순위입니다(`StreamingPriority` 설명의 표). */
         static TaskPriority toTaskPriority( StreamingPriority priority );
+        /** @brief 스트리밍 우선순위가 싣는 IO 우선순위입니다(Immediate 는 Critical). */
+        static AsyncIoPriority toIoPriority( StreamingPriority priority );
 
     private:
         struct CompletedItem
@@ -94,8 +100,17 @@ namespace sw
          *          데이터 콜백만 비우기).
          */
         void startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData, StreamingPriority priority );
-        /** @brief 결과를 적고 진행 표를 지운 뒤 두 콜백 목록을 완료 큐로 옮깁니다. 태스크 완료와 동기 폴백이 같은 길을 씁니다. `_mutex` 를 쥔 채 부릅니다. */
-        void completeRequestLocked( const string& pathStr, bool bSuccess, const vector<uint8>& bytes );
+        /**
+         * @brief 결과를 적고 진행 표를 지운 뒤 두 콜백 목록을 완료 큐로 옮깁니다. 태스크 완료 · IO 완료 · 동기 폴백이 같은 길을 씁니다. `_mutex` 를 쥔 채 부릅니다.
+         * @param bytes 데이터 콜백에 넘길 바이트. 마지막 콜백이 옮겨 가고 나머지는 사본을 받습니다.
+         */
+        void completeRequestLocked( const string& pathStr, bool bSuccess, vector<uint8>&& bytes );
+        /** @brief 리소스를 찾아 바이트 읽기를 비동기 IO 에 겁니다(찾기 태스크 · 워커). **`_mutex` 를 쥐지 않고** 부릅니다(IO 가 내려간 뒤에는 완료가 이 스레드에서 바로 온다). */
+        void issueDataRead( const string& pathStr, uint64 generation, StreamingPriority priority );
+        /** @brief 비동기 IO 가 끝났습니다(태스크 워커). 세대가 맞으면 요청을 끝냅니다. */
+        void onDataRead( const string& pathStr, uint64 generation, bool bSuccess, vector<uint8>& bytes );
+        /** @brief 완료 항목을 `update` 가 꺼내 갈 줄에 넣습니다. `_mutex` 를 쥔 채 불러도 됩니다(다른 잠금이다). */
+        void pushCompleted( CompletedItem&& item );
 
     private:
         mutable mutex _mutex;
@@ -123,8 +138,15 @@ namespace sw
          * @details 취소해도 이미 큐에 들어간 워커 태스크는 계속 실행됩니다. 세대가 없으면
          *          그 오래된 태스크가 완료되면서 새 요청의 콜백을 대신 소비해 버립니다.
          */
-        unordered_map<string, uint64>        _mapRequestGeneration;
-        ConcurrentQueue<CompletedItem, 1024> _queueCompleted;
-        bool                                 _bInitialized;
+        unordered_map<string, uint64> _mapRequestGeneration;
+        /** @brief 진행 중인 바이트 읽기의 IO 핸들입니다(경로당 하나). 취소 · 종료가 OS 에 걸린 읽기를 멈추고 기다리는 데 씁니다. */
+        unordered_map<string, AsyncReadHandle> _mapInFlightIo;
+        /**
+         * @brief `update` 가 부를 완료입니다. **크기 상한이 없다** — 고정 용량 큐는 같은 경로에 콜백이 몰리면(편승 1024 개 초과) 넘친 완료를
+         *        말없이 버린다.
+         */
+        mutable mutex        _completedMutex;
+        deque<CompletedItem> _listCompleted;
+        bool                 _bInitialized;
     };
 } // namespace sw

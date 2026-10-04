@@ -26,17 +26,12 @@ namespace sw
 
     bool PartyRoundSeries::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "PartySeries", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &PartyRoundSeries::loadRoot, path, "PartySeries" );
     }
 
     bool PartyRoundSeries::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "PartySeries", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &PartyRoundSeries::loadRoot, xmlText, sourceName, "PartySeries" );
     }
 
     bool PartyRoundSeries::start( int32 playerCount )

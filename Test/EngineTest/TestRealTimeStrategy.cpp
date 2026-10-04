@@ -1,6 +1,9 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiController.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
@@ -493,4 +496,100 @@ SW_TEST_CASE( RealTimeStrategyTest, AiGrowsEconomyBuildsArmyAndWinsByRazingBuild
     SW_EXPECT_EQUAL( 1, scene._world.getWinningTeam() );
     SW_EXPECT_EQUAL( 1, scene.countEvents( RtsEvent::Kind::GameOver ) );
     SW_EXPECT_TRUE( scene._world.findPlayer( human )->_bDefeated != SW_FALSE );
+}
+
+/**
+ * @brief [RealTimeStrategyTest] 판의 상태를 쓰고 같은 카탈로그 · 크기로 시작한 새 월드에 읽으면 같은 판이 이어진다
+ * @details 핫 리로드 · 세이브가 디렉터의 판을 이 바이트로 옮긴다. 길(경로 · 흐름장)은 싣지 않으므로 읽은 쪽은 앞 명령의 길을 다시 구한다 —
+ *          그래서 움직이던 무리가 "멈춰 있다 = 다 왔다" 로 명령을 끝내지 않고 목표까지 가야 하고, 흐름장을 쓰던 무리는 하나를 다시 나눠 쓴다.
+ *          건물 발자국은 격자에 다시 칠해지고, 일꾼은 계속 캔다. 고름 · 부대도 같은 id 로 돌아온다.
+ */
+SW_TEST_CASE( RealTimeStrategyTest, StateRoundTripContinuesTheSameMatch )
+{
+    RtsTestScene original;
+    SW_ASSERT_TRUE( original.initialize() );
+    RtsWorld& world = original._world;
+    for ( int32 y = 0; y < 34; ++y )
+        world.setTerrainBlocked( 20, y, true ); // 위쪽 끝만 열린 벽
+    const int32     player = world.addPlayer( 0, 0, 0, float3{ 6.0f, 0.0f, 6.0f } );
+    const RtsUnitId baseId = original.spawn( "base", player, 4.5f, 4.5f );
+    const RtsUnitId oreId  = original.spawn( "minerals", RtsWorld::kNoOwner, 6.5f, 12.5f );
+    const RtsUnitId worker = original.spawn( "worker", player, 10.5f, 10.5f );
+    SW_ASSERT_TRUE( baseId.isValid() && oreId.isValid() && worker.isValid() );
+    SW_ASSERT_TRUE( world.issueGather( worker, oreId ) == RtsCommandResult::Ok );
+    vector<RtsUnitId> listMarine;
+    for ( int32 index = 0; index < 8; ++index )
+        listMarine.push_back( original.spawn( "marine", player, 8.5f + static_cast<float32>( index % 4 ), 16.5f + static_cast<float32>( index / 4 ) ) );
+    const float3 goal{ 30.5f, 0.0f, 10.5f };
+    SW_ASSERT_EQUAL( 8, world.issueGroupMove( listMarine, goal, false ) );
+    RtsSelection selection;
+    selection.setPlayer( player );
+    selection.selectUnit( world, listMarine[2], false );
+    selection.assignGroup( 3 );
+    original.run( 3.0f );
+    SW_ASSERT_TRUE( original.computeDistance( listMarine[0], goal ) > 10.0f ); // 아직 가는 중
+    const int32 mineralsAtSave = world.findPlayer( player )->_minerals;
+
+    Archive written;
+    world.writeState( written );
+    selection.writeState( written );
+
+    RtsTestScene restored;
+    SW_ASSERT_TRUE( restored.initialize() );
+    RtsSelection restoredSelection;
+    Archive      reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored._world.readState( reader ) );
+    SW_ASSERT_TRUE( restoredSelection.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64( 0 ), reader.getRemainingBytes() );
+    RtsWorld& restoredWorld = restored._world;
+
+    BLOCK( "같은 id · 자리 · 자원 · 격자 · 고름이 돌아온다" )
+    {
+        Archive rewritten;
+        restoredWorld.writeState( rewritten );
+        Archive worldOnly;
+        world.writeState( worldOnly );
+        SW_ASSERT_EQUAL( worldOnly.getSize(), rewritten.getSize() );
+        SW_EXPECT_TRUE( Memory::compare( worldOnly.getData(), rewritten.getData(), worldOnly.getSize() ) == 0 );
+        SW_EXPECT_EQUAL( mineralsAtSave, restoredWorld.findPlayer( player )->_minerals );
+        SW_EXPECT_TRUE( restoredWorld.getGrid().isWalkable( 5, 5 ) == false );   // 본진 발자국
+        SW_EXPECT_TRUE( restoredWorld.getGrid().isWalkable( 20, 10 ) == false ); // 땅
+        SW_EXPECT_TRUE( restoredWorld.getGrid().isWalkable( 12, 12 ) );
+        SW_ASSERT_EQUAL( size_t( 1 ), restoredSelection.getSelected().size() );
+        SW_EXPECT_TRUE( restoredSelection.getSelected()[0] == listMarine[2] );
+        SW_EXPECT_TRUE( restoredSelection.getGroup( 3 ).size() == 1 );
+        const FlowField* pShared = restoredWorld.findUnit( listMarine[0] )->findOrder()->_pFlowField;
+        SW_ASSERT_NOT_NULL( pShared );
+        for ( const RtsUnitId marineId : listMarine )
+            SW_EXPECT_TRUE( restoredWorld.findUnit( marineId )->findOrder()->_pFlowField == pShared );
+    }
+
+    BLOCK( "움직이던 무리는 목표까지 가고 일꾼은 계속 캔다" )
+    {
+        restored.run( 0.2f );
+        for ( const RtsUnitId marineId : listMarine )
+            SW_EXPECT_FALSE( restoredWorld.findUnit( marineId )->isIdle() ); // 멈춰 있다고 명령을 끝내지 않는다
+        restored.run( 50.0f );
+        for ( const RtsUnitId marineId : listMarine )
+        {
+            SW_EXPECT_TRUE( restored.computeDistance( marineId, goal ) < 3.5f );
+            SW_EXPECT_TRUE( restoredWorld.findUnit( marineId )->isIdle() );
+        }
+        SW_EXPECT_TRUE( restoredWorld.findPlayer( player )->_minerals > mineralsAtSave + 20 );
+    }
+
+    BLOCK( "크기가 다른 월드 · 잘린 바이트는 거절하고 그대로 둔다" )
+    {
+        RtsTestScene smallScene;
+        SW_ASSERT_TRUE( smallScene.initialize( 16, 16 ) );
+        Archive smallReader( written.getData(), written.getSize() );
+        SW_EXPECT_FALSE( smallScene._world.readState( smallReader ) );
+        SW_EXPECT_EQUAL( 0, smallScene._world.getPlayerCount() );
+
+        RtsTestScene cutScene;
+        SW_ASSERT_TRUE( cutScene.initialize() );
+        Archive cut( written.getData(), 200 );
+        SW_EXPECT_FALSE( cutScene._world.readState( cut ) );
+        SW_EXPECT_EQUAL( 0, cutScene._world.getPlayerCount() );
+    }
 }

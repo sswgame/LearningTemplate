@@ -7,6 +7,8 @@
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Skeleton.h"
+#include "Engine/Audio/AudioClip.h"
+#include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
@@ -250,6 +252,21 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
     for ( size_t index = 0; index < track._listWeight.size(); ++index )
         SW_EXPECT_NEAR_EQUAL( track._listWeight[index], copy._listWeight[index], 0.0006f );
     SW_EXPECT_TRUE( VisemeTrack::makePathForAudio( "game/empty/voice/line.wav" ) == "game/empty/voice/line.visemes.json" );
+    SW_EXPECT_TRUE( LipSyncImport::isVoiceAudio( "game/empty/voice/line.wav" ) );
+    SW_EXPECT_TRUE( LipSyncImport::isVoiceAudio( "voice/line.ogg" ) );
+    SW_EXPECT_FALSE( LipSyncImport::isVoiceAudio( "game/empty/sounds/click.ogg" ) );
+    SW_EXPECT_FALSE( LipSyncImport::isVoiceAudio( "game/empty/voice/line.visemes.json" ) );
+    // 스테레오는 채널 평균으로 모노가 된다(분석 입력).
+    AudioClipData stereo{};
+    stereo._channelCount = 2;
+    stereo._frameCount   = 2;
+    stereo._sampleRate   = 16000;
+    stereo._listSample   = { 1.0f, 0.0f, -0.5f, 0.5f };
+    vector<float32> listMono;
+    stereo.copyMonoSamples( listMono );
+    SW_ASSERT_EQUAL( size_t( 2 ), listMono.size() );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, listMono[0], 0.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, listMono[1], 0.0f );
 
     test::ScopedDefensiveTestLog expected( "unknown keys in lip sync data are rejected" );
     LipSyncSettings              broken;

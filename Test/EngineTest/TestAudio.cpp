@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
@@ -488,4 +489,54 @@ SW_TEST_CASE( AudioSystemTest, OggVorbisDecodesToPcm )
     SW_ASSERT_TRUE( pAudioSystem->initialize() );
     SW_EXPECT_TRUE( pAudioSystem->preload( "game/empty/sounds/click.ogg" ) );
     pAudioSystem->shutdown();
+}
+
+/**
+ * @brief [AudioSystemTest] 주석 헤더의 길이 칸이 패킷 밖을 가리키는 OGG 는 죽지 않고 거절한다
+ * @details `LoaderFuzzTest` 가 찾은 결함이다 — stb_vorbis 1.22 는 주석 수 · 길이를 패킷과 대조하지 않아, 큰 값이면 할당이 실패한 뒤 채우지 않은 칸을
+ *          `free` 해 프로세스가 죽었다. 실제 리소스의 OGG 하나를 읽어 주석 수 · 공급자 길이만 바꾼다(페이지 CRC 는 stb 가 보지 않는다).
+ */
+SW_TEST_CASE( AudioSystemTest, OggWithOutOfPacketCommentLengthsIsRejected )
+{
+    const sw::string  path = sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), "game/shooter3d/sounds/footstep_concrete_000.ogg" );
+    sw::vector<uint8> originalBytes;
+    SW_ASSERT_TRUE_MSG( sw::FileUtil::readFile( path, originalBytes ), path.c_str() );
+
+    sw::AudioPcm pcm;
+    SW_ASSERT_TRUE( sw::AudioClipDecoder::decodeOgg( originalBytes.data(), originalBytes.size(), pcm ) );
+
+    // 주석 헤더: 0x03 "vorbis" · 공급자 길이(4) · 공급자 · 주석 수(4)
+    size_t headerOffset = 0;
+    for ( size_t index = 0; index + 7 <= originalBytes.size(); ++index )
+    {
+        if ( originalBytes[index] == 3 && std::memcmp( originalBytes.data() + index + 1, "vorbis", 6 ) == 0 )
+        {
+            headerOffset = index;
+            break;
+        }
+    }
+    SW_ASSERT_TRUE( headerOffset != 0 );
+    const size_t vendorLengthOffset = headerOffset + 7;
+    const uint32 vendorLength       = static_cast<uint32>( originalBytes[vendorLengthOffset] ) | ( static_cast<uint32>( originalBytes[vendorLengthOffset + 1] ) << 8 );
+    const size_t commentCountOffset = vendorLengthOffset + 4 + vendorLength;
+
+    struct Corruption
+    {
+        size_t _offset;
+        uint32 _value;
+    };
+    const Corruption kArrCorruption[] = {
+        {commentCountOffset, 0x20000000u}, // 주석 수 × 8 바이트가 int 를 넘친다 → 0 바이트 할당 → 정리가 빈 목록을 훑는다
+        {commentCountOffset, 0x00FFFFFFu}, // 패킷보다 훨씬 많은 주석
+        {vendorLengthOffset, 0xFFFFFFFFu}, // 공급자 길이 + 1 이 0 이 된다
+        {vendorLengthOffset, 0x7FFFFFF0u}, // 할당이 실패할 만큼 큰 공급자 길이
+    };
+    for ( const Corruption& corruption : kArrCorruption )
+    {
+        sw::vector<uint8> bytes = originalBytes;
+        for ( size_t byteIndex = 0; byteIndex < 4; ++byteIndex )
+            bytes[corruption._offset + byteIndex] = static_cast<uint8>( corruption._value >> ( 8 * byteIndex ) );
+        sw::AudioPcm corruptPcm;
+        SW_EXPECT_FALSE( sw::AudioClipDecoder::decodeOgg( bytes.data(), bytes.size(), corruptPcm ) );
+    }
 }

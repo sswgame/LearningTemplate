@@ -1,6 +1,6 @@
 /**
  * @file TestGameObjectMocks.h
- * @brief GameObject·Component 테스트가 함께 쓰는 모의 컴포넌트 열한 개.
+ * @brief GameObject·Component 테스트가 함께 쓰는 모의 컴포넌트들.
  * @details 목을 이 헤더에 두므로 GameObject·Component 시험 파일을 주제별로 나눌 수 있다.
  *
  *          **이 목들은 코드젠을 쓰지 않는다.** `REFLECT_BODY()` 가 선언만 하고 `StaticType()` 은 아래에서 손으로
@@ -20,6 +20,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Serialization/Format/Archive.h"
 
 namespace sw
 {
@@ -819,12 +820,52 @@ namespace sw
                 ++s_postLoadWithParentCount;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     inline const TypeInfo* MockPostLoadProbeComponent::StaticType()
     {
         return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockPostLoadProbeComponent>, hashed_string( "MockPostLoadProbeComponent" ),
                                           hashed_string( "sw::MockPostLoadProbeComponent" ),
                                           sizeof( MockPostLoadProbeComponent ) );
+    }
+
+    /**
+     * @brief PROPERTY 가 아닌 런타임 상태 하나(`_counter`)를 `writeState` · `restoreState` 로 내는 컴포넌트입니다(`ComponentStateStore` 의 약속).
+     * @details 디렉터 컴포넌트의 모양을 줄인 것입니다 — 상태는 스냅샷의 씬 섹션이 아니라 컴포넌트 섹션으로만 옮겨집니다.
+     */
+    class MockRuntimeStateComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        int32 _counter{ 0 };      ///< PROPERTY 가 아닌 상태
+        int32 _restoreCount{ 0 }; ///< `restoreState` 가 받아 적용한 횟수
+
+        const TypeInfo* getTypeInfo() const override
+        {
+            return StaticType();
+        }
+
+        void writeState( Archive& outArchive ) const { outArchive << _counter; }
+
+        void restoreState( vector<uint8>&& bytes )
+        {
+            Archive archive( bytes.data(), bytes.size() );
+            int32   counter = 0;
+            archive >> counter;
+            if ( archive.isError() )
+                return;
+            _counter = counter;
+            ++_restoreCount;
+        }
+    };
+
+    inline const TypeInfo* MockRuntimeStateComponent::StaticType()
+    {
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockRuntimeStateComponent>, hashed_string( "MockRuntimeStateComponent" ),
+                                          hashed_string( "sw::MockRuntimeStateComponent" ), sizeof( MockRuntimeStateComponent ) );
     }
 
 } // namespace sw

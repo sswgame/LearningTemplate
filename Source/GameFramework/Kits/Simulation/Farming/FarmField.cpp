@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
+#include "GameFramework/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -51,6 +54,47 @@ namespace sw
         _pCatalog = pCatalog;
         _listTile.clear();
         _listTile.resize( static_cast<size_t>( _width ) * static_cast<size_t>( _height ) );
+    }
+
+    void FarmField::writeState( Archive& outArchive ) const
+    {
+        outArchive << _width;
+        outArchive << _height;
+        for ( const FarmTile& tile : _listTile )
+        {
+            StateArchiveUtil::writeName( outArchive, tile._cropId );
+            outArchive << tile._growth;
+            const uint8 flags = static_cast<uint8>( ( tile._bTilled != SW_FALSE ? 1u : 0u ) | ( tile._bWatered != SW_FALSE ? 2u : 0u ) |
+                                                    ( tile._bReady != SW_FALSE ? 4u : 0u ) | ( tile._bWithered != SW_FALSE ? 8u : 0u ) );
+            outArchive << flags;
+        }
+    }
+
+    bool FarmField::readState( Archive& archive )
+    {
+        int32 width  = 0;
+        int32 height = 0;
+        archive >> width;
+        archive >> height;
+        if ( archive.isError() || width != _width || height != _height )
+            return false;
+        vector<FarmTile> listTile( _listTile.size() );
+        for ( FarmTile& tile : listTile )
+        {
+            uint8 flags = 0;
+            if ( StateArchiveUtil::readName( archive, tile._cropId ) == false )
+                return false;
+            archive >> tile._growth;
+            archive >> flags;
+            if ( archive.isError() || tile._growth < 0 )
+                return false;
+            tile._bTilled   = ( flags & 1u ) != 0 ? SW_TRUE : SW_FALSE;
+            tile._bWatered  = ( flags & 2u ) != 0 ? SW_TRUE : SW_FALSE;
+            tile._bReady    = ( flags & 4u ) != 0 ? SW_TRUE : SW_FALSE;
+            tile._bWithered = ( flags & 8u ) != 0 ? SW_TRUE : SW_FALSE;
+        }
+        _listTile = std::move( listTile );
+        return true;
     }
 
     FarmActionResult FarmField::till( int32 x, int32 y )

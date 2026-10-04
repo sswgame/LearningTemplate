@@ -1,7 +1,7 @@
 # Shooter3D — 1인칭 슈터 시험 게임
 
-기반의 무기 규칙(`GameFramework/Combat` — 무기 카탈로그 · 무기 상태, 히트스캔은 `RayMath` · 1인칭 시점은 `FirstPersonLook`)를 실제로 쓰는 아레나 슈터입니다. 나무 상자 더미가 놓인 아레나로 드론(떠다니는 과녁)이 웨이브로
-몰려옵니다. 손에 든 총 · 상자 · 과녁은 Kenney Blaster Kit 모델(`Resource/game/shooter3d/credits.md`)이고 벽 · 바닥은 내장 도형입니다.
+기반의 무기 규칙(`GameFramework/Combat` — 무기 카탈로그 · 무기 상태, 히트스캔은 `RayMath` · 1인칭 시점은 `FirstPersonLook`)를 실제로 쓰는 아레나 슈터입니다. 나무 상자 더미가 놓인 아레나로 드론(떠다니는 과녁)이
+몰려옵니다. 언제 · 얼마나 오는지는 페이싱 감독(`GameFramework/AI/Director`)이 정합니다. 손에 든 총 · 상자 · 과녁은 Kenney Blaster Kit 모델(`Resource/game/shooter3d/credits.md`)이고 벽 · 바닥은 내장 도형입니다.
 
 ## 빌드 · 실행
 
@@ -27,7 +27,13 @@ cd build/Ninja-Debug-Shooter3D/Bin
 | C | 카메라 프리셋 돌리기 — 1인칭 → 3인칭(어깨 너머, 스프링 암) → 궤도(오른쪽 버튼 끌기 · 휠) → CCTV(모서리에서 따라 보기) |
 
 드론(과녁, 늘 플레이어 쪽을 본다)은 다가와 부딪히며 체력을 깎습니다. 맞으면 잠깐 붉게 번쩍이고 HP 바(`HealthBarComponent`)가 줄어듭니다. 체력은 맞지 않고 4 초가 지나면 다시
-차고, 바닥나면 웨이브 1 부터 다시 시작합니다. 웨이브마다 드론 수 · 체력 · 속도가 오르고 탄이 조금 채워집니다. 탄도선은 디버그 선이라 에디터 게임 뷰에서만 보입니다.
+차고, 바닥나면 웨이브 1 부터 다시 시작합니다. 탄도선은 디버그 선이라 에디터 게임 뷰에서만 보입니다.
+
+**페이싱.** 감독(`data/drones.director.xml` · 스폰 예산 `data/drones.spawns.xml`)이 쌓기 → 절정 → 쉼을 돕니다. 쌓기는 드론이 예산만큼 조금씩(단계 곡선으로 늘며),
+긴장도(맞은 피해 · 쓰러뜨린 드론 · 7 m 안 드론 수 · 탄 부족)가 0.7 을 넘거나 45 초가 지나면 절정 — 들어서며 무리(`swarm` 4 기, 두 번째 순환부터 가끔 체력 2.5 배
+`elite` 2 기)가 한꺼번에 오고 8 초 동안 예산이 1.5 배, 쉼은 드론을 내지 않고 탄을 채우며(`ammo`) 식으면 다시 쌓기 — 그때가 다음 웨이브입니다(웨이브 = 순환 + 1, 웨이브마다
+체력 · 속도가 오른다). 탄이 모자라면 쌓기 · 쉼에서 수리(`repair`, 체력 +20)가 더 자주 옵니다. 씨앗은 디렉터의 `_pacingSeed` 입니다.
+새 웨이브와 쓰러짐은 텔레메트리 진행 사건(`data/shooter3d.telemetry.xml` — `progression.waveReached` · `progression.roundEnded`)으로 남습니다(플레이어가 동의했을 때만).
 
 ## 구조 — 씬 · 프리팹 · 컴포넌트
 
@@ -37,8 +43,8 @@ cd build/Ninja-Debug-Shooter3D/Bin
 |------|------|
 | 바닥 · 벽 넷 · 엄폐물 열(나무 상자 더미는 엄폐물의 자식) · 해 · 드론 스폰 자리 여덟 · 플레이어 · 디렉터 | 씬(엔티티) — 에디터에서 옮긴다 |
 | 벽 · 엄폐물의 충돌 상자 | `ShooterBlockerComponent`(오브젝트 자리 ± 반 크기) — 디렉터가 플레이 시작에 모은다. 옮기면 충돌도 따라온다 |
-| 드론 · 탄착/터짐 구 | 프리팹 `prefabs/drone.prefab.xml` · `effect.prefab.xml` — 드론은 웨이브마다 스폰, 효과 구는 풀(디렉터가 미리 세워 숨겨 두고 꺼내 쓴다) |
-| 웨이브 · 쓰러뜨린 수 · 효과 풀 · 로그 | `ShooterDirectorComponent`(씬에 하나 — 언리얼 GameMode/GameState 자리) |
+| 드론 · 탄착/터짐 구 | 프리팹 `prefabs/drone.prefab.xml` · `effect.prefab.xml` — 드론은 감독의 사건마다 스폰(스폰 자리를 차례로 돈다), 효과 구는 풀(디렉터가 미리 세워 숨겨 두고 꺼내 쓴다) |
+| 페이싱 · 쓰러뜨린 수 · 효과 풀 · 로그 | `ShooterDirectorComponent`(씬에 하나 — 언리얼 GameMode/GameState 자리). 감독 `AiDirector` 를 들고 신호를 넣고 사건을 드론 · 탄 · 체력으로 바꾼다 |
 | 이동 · 점프 · 무기 셋 · 히트스캔 · 체력 · 조준선 · 탄도선 | `ShooterPlayerComponent` — 플레이어 오브젝트(카메라 · 손에 든 총 · 조준선 스프라이트와 같은 오브젝트) |
 | 1인칭 시점 · 마우스 잠금 · 손에 든 총 자리 | GameFramework `FirstPersonCameraComponent`(같은 오브젝트) — 손에 든 총(`ViewWeapon`) · 조준선은 카메라의 자식이라 시점을 따라간다 |
 | 화면에 나가는 시점 | `ViewCamera` 오브젝트(우선순위 10)의 `CameraDirectorComponent` — 프리셋 `data/shooter.cameras.xml`, 대상은 플레이어(카메라가 루트라 대상 = 눈 · 시점). 1인칭 프리셋은 플레이어 카메라와 정확히 겹친다 |
@@ -49,14 +55,18 @@ cd build/Ninja-Debug-Shooter3D/Bin
 **틱.** 디렉터는 `TickGroup::PrePhysics` 에서 쓰러진 드론을 걷고(쓰러뜨린 수 · 터짐 효과 · 효과음) 이번 프레임의 드론 자리 · 플레이어 눈 자리를 적습니다.
 1인칭 카메라도 `PrePhysics` 에서 마우스로 시점을 돌립니다(자기 오브젝트). 플레이어 · 드론은 기본 그룹(`DuringPhysics`)에서 그것을 **읽기만** 하고(목록은
 `data()` 로) 자기 오브젝트에만 씁니다. 다른 오브젝트에 쓰는 일 — 드론에 피해, 플레이어에 피해, 탄착 효과 꺼내기, 효과음, 손에 든 총 모델 바꾸기, 탄도선(디버그
-선 큐) — 은 쌓아 두고 `executeOrDeferPostTick` 으로 틱 뒤 게임 스레드에서 합니다. 플레이어가 쓰러지면 그 자리에서 디렉터가 드론을 걷고 웨이브 1 부터 다시 기다립니다.
+선 큐) — 은 쌓아 두고 `executeOrDeferPostTick` 으로 틱 뒤 게임 스레드에서 합니다. 플레이어가 쓰러지면 그 자리에서 디렉터가 드론을 걷고 감독을 처음부터 다시 돌립니다.
+감독은 디렉터의 틱(`PrePhysics`)에서 돌고, 맞은 피해 신호는 틱 뒤(`takeDamage`)에 넣습니다 — 둘이 겹치지 않습니다.
 
-**핫 리로드 · 상태 저장.** 판은 런타임 상태라 리로드에서 처음부터 다시 섭니다. 상태를 쓰기 전에 게임(`onBeforeStateSerialize`)이 디렉터가 세운 드론 · 효과 풀을
-걷고, 디렉터는 다음 틱에 풀을 다시 세운다. 무기 카탈로그는 게임 서비스이고 플레이어가 플레이 시작에 무기를 다시 든다.
+**핫 리로드 · 상태 저장.** 판의 진행(웨이브 · 쓰러뜨린 수)은 디렉터의 `writeState` 로 상태 스냅샷의 컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`).
+상태를 쓰기 전에 게임(`onBeforeStateSerialize`)이 진행을 싣고 디렉터가 세운 드론 · 효과 풀을 걷으며, 다시 만든 디렉터는 웨이브 대기 뒤 **같은 웨이브**를 새로 세운다
+(드론은 새 판). 무기 카탈로그는 게임 서비스이고 플레이어가 플레이 시작에 무기를 다시 든다.
 
 ## 파일 · 에셋
 
-- `Shooter3DGame` — 무기 카탈로그(`Resource/game/shooter3d/data/weapons.xml`)를 게임 서비스로 걸고, 첫 씬을 열고, 상태 저장 전에 디렉터가 세운 것을 걷습니다.
+- `Shooter3DGame` — 무기 카탈로그(`Resource/game/shooter3d/data/weapons.xml`)를 게임 서비스로 걸고, 사운드 이벤트(`audio/shooter3d.audioevents.xml`)를 올리고,
+  첫 씬을 열고, 상태 저장 전에 디렉터가 세운 것을 걷습니다. 소리는 이벤트 이름으로 냅니다 — 착지 · 명중음은 2D(`Land` · `HitDrone` · `HitCover`), 드론 격추는
+  그 자리 3D(`DroneDown` — 레이어 둘, 벽 뒤면 가림). 클립 · 범위 · 쿨다운 · 상한은 이벤트 파일에 있습니다.
 - `ShooterDirectorComponent` · `ShooterPlayerComponent` · `ShooterDroneComponent` · `ShooterEffectComponent` · `ShooterBlockerComponent` — 위 표.
 - `Resource/game/shooter3d/maps/arena.scene.xml` · `prefabs/` — 엔진 직렬화기가 쓴 파일입니다(손으로 고치면 씬 · 프리팹 형식을 깨기 쉽다 — 에디터로).
 - `textures_raw/crosshair.png` · `hitmarker.png` — Kenney "Starter Kit FPS" 의 스프라이트(CC0), `App --import-textures` 가 DDS 로 굽는다.

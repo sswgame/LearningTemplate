@@ -2,6 +2,8 @@
 
 #include "GameFramework/Gimmick/GimmickSensorComponent.h"
 
+#include "Engine/Object/Component/Physics/RigidBody2DComponent.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -109,8 +111,18 @@ namespace sw
             const GameObject* pOccupant = pManager->resolveGameObject( handle );
             if ( pOccupant == nullptr )
                 continue;
+            // 데이터가 적은 무게가 먼저, 다음은 강체의 질량(바디가 있으면 바디의 것), 없으면 센서의 기본 무게.
             const GimmickWeightComponent* pWeight = pOccupant->getComponent<GimmickWeightComponent>();
-            total += pWeight != nullptr ? pWeight->getWeight() : _defaultWeight;
+            const RigidBodyComponent*     pBody3D = pOccupant->getComponent<RigidBodyComponent>();
+            const RigidBody2DComponent*   pBody2D = pOccupant->getComponent<RigidBody2DComponent>();
+            if ( pWeight != nullptr )
+                total += pWeight->getWeight();
+            else if ( pBody3D != nullptr )
+                total += pBody3D->getBodyMass() > 0.0f ? pBody3D->getBodyMass() : pBody3D->getMass();
+            else if ( pBody2D != nullptr )
+                total += pBody2D->getBodyMass() > 0.0f ? pBody2D->getBodyMass() : pBody2D->getMass();
+            else
+                total += _defaultWeight;
         }
         return total;
     }

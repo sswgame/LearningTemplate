@@ -56,12 +56,13 @@ namespace sw
          *          그 캐릭터의 클립 시각에 맞춰 한 번 적고, 그 뒤로는 바뀌지 않아 인스턴스를 다시 올리지 않습니다. 셰이더의 `vertexAnimationPhase` 입니다.
          */
         float32 _vertexAnimationPhase{ 0.0f };
+        uint32  _arrReserved[3]{}; ///< 원소를 128 바이트(16 의 배수)로 맞춘다 — 셰이더의 `reserved0..2`
     };
 } // namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GpuInstance ) == 112, "GpuInstance must match SwInstanceData (instancedata.hlsli) byte for byte" );
+    static_assert( sizeof( GpuInstance ) == 128, "GpuInstance must match SwInstanceData (instancedata.hlsli) byte for byte" );
 
     /// @brief 같은 메시 · 머티리얼 · 퍼뮤테이션으로 그리는 인스턴스 배치입니다.
     struct GpuMeshBatch

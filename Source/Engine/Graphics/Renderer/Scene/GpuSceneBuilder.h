@@ -70,6 +70,14 @@ namespace sw
          */
         void buildFromScene( Scene* pScene, const float3& cameraPos );
         /**
+         * @brief 투명 정렬의 깊이를 잴 축입니다. 영벡터(기본)면 카메라까지의 거리, 아니면 카메라에서 그 축으로 잰 깊이입니다.
+         * @details 직교 2D 카메라에서 거리로 재면 같은 Z 의 두 스프라이트가 카메라의 XY 위치에 따라 앞뒤가 바뀝니다. `EngineLoop` 가
+         *          `Render2DSettings::computeTransparentSortAxis` 로 정해 넘깁니다(유니티 Transparency Sort Mode). 바뀌면 다음 빌드가 다시 정렬합니다.
+         */
+        void setTransparentSortAxis( const float3& axis );
+        /** @brief 투명 정렬의 깊이 축입니다(영벡터 = 거리). */
+        const float3& getTransparentSortAxis() const { return _transparentSortAxis; }
+        /**
          * @brief 스냅샷(GT → RT 로 옮겨지는 전부)을 outSnapshot 으로 복사합니다. GPU 쪽은 타입상 실릴 수 없습니다.
          * @details GT 가 프레임마다 RenderFramePacket 에 담을 때 씁니다. 부른 뒤 dirty 플래그는 소비된 것으로 보고
          *          0 으로 되돌립니다(GpuScene::upload 의 재업로드 생략과 대칭되는 GT 쪽 소비 시점).
@@ -244,6 +252,11 @@ namespace sw
             /// @brief GPU 회전 애니메이션 시드입니다(0 = 없음). MeshComponent 가 주고 GpuInstance::_spinSeed 로 갑니다.
             uint32 _spinSeed{ 0 };
             /**
+             * @brief 투명 큐의 정렬 키입니다(`Render2DSettings::makeSortKey` — 정렬 레이어 · 레이어 안 순서, 0 = 기본). **내용**이고 배치 키가 아닙니다.
+             * @details 투명 정렬(`sortTransparent`)의 첫 키입니다. 바뀌면 그 프레임의 정렬이 순서를 바꾸고 투명 꼬리를 다시 방출합니다.
+             */
+            uint32 _sortKey{ 0 };
+            /**
              * @brief 스프라이트 프레임 · 색입니다(GpuInstance::_sprite 로 갑니다). **내용**이고 배치 키가 아닙니다.
              * @details `operator==` 에는 들고 `hasSameBatchKey` 에는 들지 않습니다 — 프레임만 넘긴 스프라이트는 배치를 다시 나누지 않고
              *          제자리 갱신(더티 구간 하나)으로 끝납니다. 키에 넣으면 프레임마다 정렬 · 나누기를 다시 했을 것입니다.
@@ -283,7 +296,7 @@ namespace sw
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
                        _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite &&
                        Memory::compare( &_vertexAnimationPhase, &other._vertexAnimationPhase, sizeof( _vertexAnimationPhase ) ) == 0 &&
-                       _permutationHash == other._permutationHash && _bReverseCulling == other._bReverseCulling &&
+                       _permutationHash == other._permutationHash && _sortKey == other._sortKey && _bReverseCulling == other._bReverseCulling &&
                        Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
                        Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
                        Memory::compare( &_boundsRadius, &other._boundsRadius, sizeof( _boundsRadius ) ) == 0;
@@ -305,7 +318,7 @@ namespace sw
             }
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역입니다. 필드 크기 합을 정렬로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 멈춥니다.
-        static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 2 +
+        static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 3 +
                                                     sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GpuSpriteInstanceData ) + sizeof( uint64 ) +
                                                     sizeof( uint8 ) + sizeof( float32 ) + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
@@ -508,12 +521,21 @@ namespace sw
         /// @brief 마지막으로 본 `TextureCache::getReloadGeneration()` 입니다. 다르면 머티리얼의 텍스처 인덱스를 새로 받게 합니다.
         uint32 _lastTextureReloadGeneration{ 0 };
 
-        /** @brief 투명 정렬 키(카메라 거리², 후보 인덱스)입니다. 정렬 전에 한 번 계산해 둡니다. */
+        /**
+         * @brief 투명 정렬 키(정렬 레이어 키, 깊이, 후보 인덱스)입니다. 정렬 전에 한 번 계산해 둡니다.
+         * @details 깊이는 정렬 축이 영벡터면 카메라까지의 거리², 아니면 그 축 위의 깊이(카메라 기준)입니다 — 둘 다 클수록 먼저 그립니다.
+         */
         struct TransparentSortKey
         {
-            float32 _distanceSquared{ 0.0f };
+            uint32  _sortKey{ 0 };
+            float32 _depth{ 0.0f };
             uint32  _candidateIndex{ 0 };
         };
+        /**
+         * @brief 투명 정렬 순서입니다 — 정렬 레이어 키가 작은 것, 깊이가 큰 것(먼 것), 후보 인덱스가 작은 것 순입니다. 전순서입니다.
+         * @details 깊이가 같으면 후보 인덱스(등록 순서)로 가르므로 같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 뒤집히지 않습니다.
+         */
+        static bool isDrawnBefore( const TransparentSortKey& keyA, const TransparentSortKey& keyB );
         /**
          * @brief 투명 정렬의 작업 배열입니다.
          * @details 비교 함수가 원소마다 raw 에서 바운드를 읽어 거리를 **다시** 구하면 투명 2000 개에 비교 22000 번 ·
@@ -532,6 +554,10 @@ namespace sw
         /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 달라졌으면 등록부가 바뀐 것입니다. */
         uint64 _lastPrimitiveSetGeneration{ 0 };
         float3 _lastCameraPos{};
+        /** @brief 투명 정렬의 깊이 축입니다(영벡터 = 카메라까지의 거리). `setTransparentSortAxis`. */
+        float3 _transparentSortAxis{};
+        /** @brief 마지막 빌드가 쓴 깊이 축입니다. 다르면 정렬을 다시 합니다. */
+        float3 _lastTransparentSortAxis{};
         uint8  _bMergeAcrossMaterials{ SW_FALSE };
         /// @brief 꼬리 재방출 중이면 true 입니다. `emitBatch` 가 원소를 표에서 다시 묻지 않고 `_listCandidateMaterialElement` 를 읽습니다.
         uint8 _bReuseMaterialElement{ SW_FALSE };

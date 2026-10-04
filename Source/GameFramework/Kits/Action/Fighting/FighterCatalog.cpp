@@ -89,17 +89,12 @@ namespace sw
 
     bool FighterCatalog::loadFromResource( string_view path, const MoveCatalog& moveCatalog )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "FighterCatalog", root, sourceName ) && loadRoot( root, moveCatalog, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &FighterCatalog::loadRoot, moveCatalog, path, "FighterCatalog" );
     }
 
     bool FighterCatalog::loadFromXmlText( string_view xmlText, const MoveCatalog& moveCatalog, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "FighterCatalog", root ) && loadRoot( root, moveCatalog, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &FighterCatalog::loadRoot, moveCatalog, xmlText, sourceName, "FighterCatalog" );
     }
 
     void FighterCatalog::addFighter( const FighterDef& fighter )

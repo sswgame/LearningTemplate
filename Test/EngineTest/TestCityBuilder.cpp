@@ -1,6 +1,9 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+
+#include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
@@ -268,4 +271,72 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
     const int32 before = city.getMoney();
     scene.run( 20.0f );
     SW_EXPECT_TRUE( city.getMoney() <= before );
+}
+
+/**
+ * @brief [CityBuilderTest] 도시 상태를 쓰고 같은 카탈로그 · 크기로 시작한 새 시뮬레이션에 읽으면 바이트가 같고, 같은 시간을 더 돌려도 같다
+ * @details 핫 리로드 · 세이브가 디렉터의 도시를 이 바이트로 옮긴다. 더 돌린 뒤까지 같아야 숨은 상태(일꾼 길 · 난수 · 걸음 타이머)도 옮겨졌다.
+ *          크기가 다르거나 잘린 바이트는 거절하고 그대로 둔다.
+ */
+SW_TEST_CASE( CityBuilderTest, StateRoundTripContinuesTheSameCity )
+{
+    CityTestScene original;
+    SW_ASSERT_TRUE( original.initialize() );
+    CitySimulation& city = original._city;
+    city.fillTerrain( 12, 11, 15, 14, CityTerrain::Floodplain );
+    original.buildRoadLoop();
+    SW_ASSERT_TRUE( city.placeBuilding( "farm", 12, 11 ) == CityPlaceResult::Ok );
+    SW_ASSERT_TRUE( city.placeBuilding( "granary", 20, 8 ) == CityPlaceResult::Ok );
+    SW_ASSERT_TRUE( city.placeBuilding( "bazaar", 8, 9 ) == CityPlaceResult::Ok );
+    SW_ASSERT_TRUE( city.placeBuilding( "shrine", 9, 9 ) == CityPlaceResult::Ok );
+    SW_ASSERT_TRUE( city.placeBuilding( "well", 6, 12 ) == CityPlaceResult::Ok );
+    for ( int32 x = 3; x <= 7; ++x )
+        SW_ASSERT_TRUE( city.placeBuilding( "house", x, 11 ) == CityPlaceResult::Ok );
+    original.run( 37.3f );
+    SW_ASSERT_TRUE( city.getWalkers().empty() == false );
+
+    Archive written;
+    city.writeState( written );
+
+    CityTestScene restored;
+    SW_ASSERT_TRUE( restored.initialize( 1 ) );
+    Archive reader( written.getData(), written.getSize() );
+    SW_ASSERT_TRUE( restored._city.readState( reader ) );
+    SW_EXPECT_EQUAL( uint64( 0 ), reader.getRemainingBytes() );
+    SW_EXPECT_EQUAL( city.getMoney(), restored._city.getMoney() );
+    SW_EXPECT_EQUAL( city.getPopulation(), restored._city.getPopulation() );
+    SW_EXPECT_EQUAL( city.getWalkers().size(), restored._city.getWalkers().size() );
+
+    Archive rewritten;
+    restored._city.writeState( rewritten );
+    SW_ASSERT_EQUAL( written.getSize(), rewritten.getSize() );
+    SW_EXPECT_TRUE( Memory::compare( written.getData(), rewritten.getData(), written.getSize() ) == 0 );
+
+    original.run( 41.0f );
+    restored.run( 41.0f );
+    Archive laterOriginal;
+    Archive laterRestored;
+    city.writeState( laterOriginal );
+    restored._city.writeState( laterRestored );
+    SW_ASSERT_EQUAL( laterOriginal.getSize(), laterRestored.getSize() );
+    SW_EXPECT_TRUE( Memory::compare( laterOriginal.getData(), laterRestored.getData(), laterOriginal.getSize() ) == 0 );
+    SW_EXPECT_EQUAL( city.computeAverageHouseLevel(), restored._city.computeAverageHouseLevel() );
+
+    BLOCK( "크기가 다른 도시 · 잘린 바이트는 거절하고 그대로 둔다" )
+    {
+        CityCatalog    catalog;
+        CitySimulation smallCity;
+        SW_ASSERT_TRUE( catalog.loadFromXmlText( kCityTestXml, "CityBuilderTest" ) );
+        smallCity.initialize( &catalog, 8, 8, CitySettings{}, 77 );
+        Archive smallReader( written.getData(), written.getSize() );
+        SW_EXPECT_FALSE( smallCity.readState( smallReader ) );
+        SW_EXPECT_EQUAL( 77, smallCity.getMoney() );
+
+        CityTestScene cutScene;
+        SW_ASSERT_TRUE( cutScene.initialize( 55 ) );
+        Archive cut( written.getData(), written.getSize() - 3 );
+        SW_EXPECT_FALSE( cutScene._city.readState( cut ) );
+        SW_EXPECT_EQUAL( 55, cutScene._city.getMoney() );
+        SW_EXPECT_TRUE( cutScene._city.getBuildings().empty() );
+    }
 }

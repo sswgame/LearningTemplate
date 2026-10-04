@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/String/fixed_string.h"
@@ -40,6 +41,32 @@ namespace sw
         /** @brief 키를 넣거나 덮어씁니다. 자리가 없으면 조용히 버립니다(크래시 경로에서 실패를 키우지 않기 위해서입니다). */
         void set( string_view key, string_view value );
     };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct CrashBreadcrumbStore
+     * @brief 크래시 직전의 최근 사건(빵부스러기 — 텔레메트리 사건 · 게임 표지)을 고정 버퍼 고리에 들고 있습니다. 크래시 때 할당 없이 파일로 씁니다.
+     * @details 쓰는 쪽은 자리를 원자 카운터로 받아 서로 다른 칸에 씁니다(한 바퀴 — 32 개 — 안에서 겹치지 않는다). 크래시 경로는 잠그지 않고 읽으므로
+     *          그 순간 쓰던 한 줄은 잘려 있을 수 있습니다(진단용이라 받아들인다). Sentry 의 breadcrumbs 와 같은 자리입니다.
+     */
+    struct SW_API CrashBreadcrumbStore
+    {
+        static constexpr uint32 kMaxBreadcrumb = 32;
+        static constexpr uint32 kMaxLength     = 160;
+
+        fixed_string<kMaxLength> _arrEntry[kMaxBreadcrumb];
+        atomic<uint32>           _pushedCount{ 0 }; ///< 지금까지 넣은 수 — 다음 칸은 `% kMaxBreadcrumb`
+
+        /** @brief 프로세스 전역 저장소입니다. */
+        static CrashBreadcrumbStore& get();
+
+        /** @brief 한 줄을 넣습니다(길면 잘린다). 가장 오래된 것을 덮습니다. */
+        void add( string_view text );
+        /** @brief 들어 있는 줄을 오래된 것부터 @p pOutText 에 줄바꿈으로 이어 씁니다. **할당하지 않습니다.** 쓴 길이입니다. */
+        uint32 writeText( utf8* pOutText, uint32 capacity ) const;
+    };
 
     /** @brief 이 실행을 식별하는 세션 ID 입니다(처음 부를 때 정해집니다). */
     SW_API const utf8* getCrashSessionId();
@@ -72,6 +99,9 @@ namespace sw
      * @details 배포 환경에서는 아무도 stderr 를 보지 않습니다. 파일로 남겨야 사용자가 보내 줄 수 있습니다.
      */
     SW_API void writeCrashStackFile( const utf8* pStackText );
+
+    /** @brief 빵부스러기(`CrashBreadcrumbStore`)를 `crash_<세션>.breadcrumbs.txt` 로 씁니다. 비어 있으면 쓰지 않습니다. **할당하지 않습니다.** */
+    SW_API void writeCrashBreadcrumbFile();
 
     /**
      * @brief 크래시 리포트 본문을 만들어 stderr · 파일 · 로그에 남깁니다.

@@ -20,38 +20,24 @@
 
 고르지 않은 게임은 빌드되지 않습니다(CI 는 `Empty` 만 짓습니다). 다른 게임을 바꿨으면 그 게임을 골라 한 번 지어 확인합니다.
 
-## 자동 플레이(입력 없이 AI 가 조종)
-
-자동 플레이가 있는 게임은 그 스위치 전역 변수 바로 아래에 한 줄로 등록합니다 — `Engine/Utility/GameAutoplay`.
-
-```cpp
-SW_TEST_GLOBAL_VARIABLE_INT( gv_shooterAutoPlay, 0, "Shooter3D: 조준 · 사격도 AI 가 (1=켜기)", SW_KEEP_IN_SHIPPING );
-SW_GAME_AUTOPLAY( gv_shooterAutoPlay, "Shooter3D", "Aim, shoot and move by AI" );
-```
-
-게임 코드는 `GameAutoplay::isOn()` 하나만 묻습니다(씬의 `_bAutoPlay` 같은 데이터 스위치와 OR). 켜짐은 그 전역 변수 하나에 있어 명령줄
-(`-gv_shooterAutoPlay=1`) · 전역 변수 패널 · 콘솔(`autoplay on|off`) · 에디터 Game View 툴바의 `Auto` 버튼이 모두 같은 값을 바꿉니다. 일곱 게임
-(AbilityArena · HarvestValley · NileCity · Shooter3D · StarSkirmish · VoxelCraft · ThemeParkTycoon — 이것만 `gv_parkAutoBuild`)이 등록돼 있습니다.
-
-## 핫리로드 대상 모듈은 어디서 정하는가
-
-`Config/App/AppConfig.json` 의 `_listGameKitModule` 이 정본입니다. 엔진 기동 단계 `ModuleTypes` 에서 App 이 이 목록을
-읽어 `LiveReloadManager` 에 키트를 등록하고 이미지를 올립니다(`App::loadModuleImages` → `ModuleHost::loadModuleImages`,
-GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `SWGame` 인스턴스는 기동이 끝난 뒤 에디터보다 먼저 만듭니다(`ModuleHost::initialize`).
+#
+모듈마다 소스 폴더에 매니페스트 `<모듈>.module.json` 이 있습니다(언리얼 `.uplugin` · 유니티 `package.json` 자리). 게임의 것은
+`Source/Games/<게임>/SWGame.module.json` 이고, 이것이 **프로젝트**입니다 — 의존(링크하는 키트)과 다른 모듈의 켜기/끄기 표를 듭니다.
 
 ```json
 {
-    "_listGameKitModule": [
-        { "_name": "GF_Overworld",   "_listDependencyModule": [ "GameFramework" ] },
-        { "_name": "GF_ActionCombat", "_listDependencyModule": [ "GameFramework", "GF_Overworld" ] }
-    ]
+    "_name": "SWGame", "_version": "1.0.0", "_kind": "Game",
+    "_listDependency": [ { "_name": "GameFramework" }, { "_name": "GF_Voxel" } ],
+    "_listPlatform": [ "Windows", "Linux" ], "_listConfiguration": [ "Dev", "Shipping" ],
+    "_listModuleOverride": [ { "_name": "GF_Fighting", "_bEnabled": false } ]
 }
 ```
 
-- `_name` 은 CMake 타깃 이름과 같아야 합니다(= DLL 파일 이름).
-- `_listDependencyModule` 이 비어 있으면 `GameFramework` 하나로 채웁니다.
-- `GameFramework` 와 `SWGame` 은 이 목록에 적지 않습니다 — 항상 등록됩니다.
-- **Shipping 은 이 파일을 읽지 않습니다.** 모든 모듈이 정적 링크라 리로드할 대상이 없습니다.
+- 게임이 링크하는 키트는 `_listDependency` 가 정합니다(`sw_addGameModule` 이 읽는다 — CMake 에 다시 적지 않는다).
+- `_listModuleOverride` 로 끈 모듈은 **짓지 않고**(CMake), 시험 실행 파일에서도 그 키트를 include 하는 시험이 빠지며, App 도 올리지 않습니다.
+  Shipping 은 켜진 키트만 정적 링크합니다. 켜진 모듈이 꺼진 모듈에 기대면 구성이 서고 무엇이 왜 꺼졌는지 말합니다.
+- 키트의 리로드 의존(그 키트가 다시 올라오면 같이 다시 올라올 것)도 키트 매니페스트의 `_listDependency` 입니다.
+- 규칙은 `cmake/Engine/ModuleManifest.cmake` 와 `Engine/Module/ModuleCatalog` 가 같고, `ModuleCatalogTest.BuildAndRuntimeAgree` 가 둘의 답을 견줍니다.
 
 ## 새로운 게임 추가하는 방법
 
@@ -59,15 +45,12 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 2. **벤치 하네스 지우기**: `BenchScene.*` · `BenchMoverComponent.*` 를 지우고, `EmptyGame` 의
    `_benchScene` 멤버와 그것을 쓰는 곳(초기화 · 업데이트 · 상태 직렬화 전후)을 지웁니다. 이건 측정용이고 게임 코드가 아닙니다
    (아래 "Empty 는 왜 비어 있지 않은가" 참고).
-3. **필요한 키트 연결하기**: `MyGame/CMakeLists.txt` 의 `sw_addGameModule(SWGame KITS ...)` 에
-   필요한 키트를 적습니다.
+3. **필요한 키트 연결하기**: `MyGame/SWGame.module.json` 의 `_listDependency` 에 필요한 키트를 적습니다(`_kind` 는 `Game`).
 4. **게임 리소스 폴더 · 프리셋 만들기**: `Resource/game/mygame/` 을 만들고, 게임 프리셋 `Config/Game/MyGame.json`(파일 이름 = 게임 폴더 이름)에
    `_packRoot` 를 `"game/mygame"` 로 적습니다. 시작 씬은 프리셋의 `_startupScene` 또는 팩의 `data/gamesettings.xml` `startMap` 입니다.
    프리셋이 없으면 configure 가 멈춥니다.
 5. **CMake 활성화**: `-DSW_ACTIVE_GAME=MyGame`.
-6. **키트를 추가했다면**: 3번에서 새 키트를 링크했다면 `Config/App/AppConfig.json` 의
-   `_listGameKitModule` 에도 넣어야 그 키트가 핫리로드됩니다. 안 넣으면 빌드·실행은 되고
-   **그 키트만 리로드되지 않습니다** — 증상이 조용하니 기억해 두세요.
+6. **쓰지 않는 키트 끄기(선택)**: `_listModuleOverride` 에 `{ "_name": "GF_…", "_bEnabled": false }` 를 적으면 그 키트는 이 게임의 빌드 · 실행에서 빠집니다.
 
 ## 새 게임 = 씬 + 프리팹 + 디렉터 · 뷰 컴포넌트
 
@@ -86,10 +69,13 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 | 엔티티의 모습 | 뷰 컴포넌트 — 디렉터를 읽기만 하고 자기 오브젝트에만 쓴다, `TickGroup::PostUpdate` |
 | 엔티티 하나의 입력 · AI | 컨트롤러 컴포넌트 — 뷰와 같은 규칙(디렉터를 읽기만, 자기 오브젝트에만 쓴다), 기본 그룹 `DuringPhysics` |
 | 장르 무관 카메라 · 장식 | GameFramework `Components/`(`OrthoCameraRigComponent` · `FirstPersonCameraComponent` · `PropScatterComponent` …) |
-| 게임 클래스 | `requestFirstScene()` 과, 상태 저장 전에 디렉터가 세운 것을 걷는 일 |
+| 게임 클래스 | `requestFirstScene()` 과, 상태 저장 전에 디렉터의 시뮬레이션을 싣고(`getComponentStateStore().capture<디렉터>`) 디렉터가 세운 것을 걷는 일, 복원 뒤 돌려주는 일(`restore<디렉터>`) |
 
 지킬 것:
 
+- **디렉터의 시뮬레이션은 `writeState` · `restoreState` 로 넘긴다.** 키트의 보통 클래스는 PROPERTY 가 아니라 핫 리로드 · 세이브에서 사라진다 — 디렉터가
+  `writeState( Archive& )`(첫 값은 `StateArchiveUtil::writeHeader` 의 표 · 버전)와 `restoreState( vector<uint8>&& )`(시작 전이면 들고 있다가 `onBeginPlay` 가
+  데이터를 읽은 뒤 적용, 읽지 못하면 새 판)를 두고, 게임 클래스가 실어 돌려준다(`GameFramework/README.md` Framework 절). 형식을 바꾸면 디렉터의 버전을 올린다.
 - **틱 안에서는 구조를 바꾸지 않는다.** 디렉터는 스폰 요청을 쌓고 `executeOrDeferPostTick` 한 번으로 틱 뒤에 세운다(틱 안의 `addComponent` 는 nullptr).
 - **같은 그룹은 병렬이다.** 뷰는 자기 오브젝트에만 쓰고, 남의 컨테이너는 첨자(`operator[]` — Debug 경합 검출기가 쓰기로 센다) 대신 `data()` · const 참조로 읽는다.
   다른 오브젝트에 값을 넣어야 하면(디렉터 → 카메라 리그) 읽는 쪽보다 **앞 그룹**에서 넣는다.
@@ -111,5 +97,6 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 플래그에 기대고 있어 타깃·플래그 이름은 바꾸지 않습니다.
 
 그래서 파일을 나눠 두었습니다 — `EmptyGame` 은 작은 템플릿이고, 벤치는 `BenchScene`(+ 틱 안에서 위치를 쓰는
-`BenchMoverComponent`, `-gv_benchTickMovers=N`)에 전부 들어 있습니다. 새 게임을 시작할 때 지울 경계가 파일 경계와 같아야 하기 때문입니다.
+`BenchMoverComponent`, `-gv_benchTickMovers=N`) · 전투 연출(`BenchCombatComponent`, `-gv_benchCombat=1` — KayKit 스켈레톤이 걸으며 발소리 알림 →
+머리 · 가슴 맞음(히트 존 · 움찔) → 180 프레임 치명적 맞음(래그돌 · 손 소켓의 칼이 물리로 떨어짐) → 900 프레임 기상, 로그 `[BenchCombat]`)에 전부 들어 있습니다. 새 게임을 시작할 때 지울 경계가 파일 경계와 같아야 하기 때문입니다.
 벤치가 아니면 `EmptyGame` 은 첫 씬을 요청합니다(`requestFirstScene`). 에디터가 뜨면 에디터의 시작 씬 요청이 나중이라 그쪽이 열립니다.

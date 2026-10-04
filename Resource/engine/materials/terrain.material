@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 지형(TerrainComponent). 레이어 색 · 디테일 · 3 축 투영 · 스플랫 · 디테일 맵은 컴포넌트가 인스턴스에 싣는다 — 여기 값은 기본값이다.
+     프로퍼티 이름 · 타입은 terrain.hlsl 의 SW_MATERIAL 구조체와 같다. -->
+<MaterialDesc formatVersion="0" name="Terrain" shaderPath="engine/shaders/terrain.hlsl" blendMode="Opaque">
+	<_properties>
+		<item name="layer0Color" type="Vector4" shaderType="Float4" defaultValue="0.30 0.45 0.18 1.0" displayName="Layer 0 Color" group="Layers"/>
+		<item name="layer1Color" type="Vector4" shaderType="Float4" defaultValue="0.42 0.33 0.22 1.0" displayName="Layer 1 Color" group="Layers"/>
+		<item name="layer2Color" type="Vector4" shaderType="Float4" defaultValue="0.45 0.44 0.42 1.0" displayName="Layer 2 Color" group="Layers"/>
+		<item name="layer3Color" type="Vector4" shaderType="Float4" defaultValue="0.76 0.70 0.52 1.0" displayName="Layer 3 Color" group="Layers"/>
+		<item name="layerDetail" type="Vector4" shaderType="Float4" defaultValue="0.5 0.5 0.5 0.5" displayName="Layer Detail Strength" group="Layers"/>
+		<item name="layerTriplanar" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 1.0 0.0" displayName="Layer Triplanar" group="Layers"/>
+		<item name="terrainParams" type="Vector4" shaderType="Float4" defaultValue="0.0 0.25 0.7 -1.0" displayName="Splat Width, Detail Tiling, Cliff Start, Cliff Layer" group="Terrain"/>
+		<item name="splatMap" type="Texture2D" displayName="Splat Map" group="Terrain" bSrgb="0"/>
+		<item name="detailMap" type="Texture2D" displayName="Detail Map" group="Terrain" bSrgb="0"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDesc>

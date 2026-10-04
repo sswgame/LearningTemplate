@@ -39,14 +39,17 @@ def collectTypeDefinitions(path: Path, relativePath: str, mapDefinition: dict[st
     stackNamespace: list[tuple[str, int]] = []
     pendingNamespace: str | None = None
     for line in lines:
-        namespaceMatch = _kNamespaceRe.match(line)
+        # 정규식 · 글자 루프는 그것이 반드시 품는 글자가 줄에 있을 때만 돈다 — 결과는 같다.
+        namespaceMatch = _kNamespaceRe.match(line) if "namespace" in line else None
         if namespaceMatch is not None:
             pendingNamespace = namespaceMatch.group(1) or ""
-        typeMatch = _kTypeRe.match(line)
+        typeMatch = _kTypeRe.match(line) if ("class" in line or "struct" in line) else None
         bInNamedNamespace = bool(stackNamespace) and all(name != "" for name, _ in stackNamespace)
         if typeMatch is not None and bInNamedNamespace and depth == stackNamespace[-1][1]:
             key = "::".join(name for name, _ in stackNamespace) + "::" + typeMatch.group(1)
             mapDefinition[key].add(relativePath)
+        if "{" not in line and "}" not in line:
+            continue
         for character in line:
             if character == "{":
                 depth += 1

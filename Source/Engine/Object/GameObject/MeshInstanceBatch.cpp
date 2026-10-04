@@ -16,6 +16,7 @@ namespace sw
         , _instance{ std::move( instance ) }
         , _pRegistry{ nullptr }
         , _firstEntry{ 0 }
+        , _sortKey{ 0 }
         , _bVisible{ SW_TRUE }
     {
     }
@@ -40,6 +41,15 @@ namespace sw
             return;
         _listEntry[index]._boundsRadius = radius;
         markDirty( index );
+    }
+
+    void MeshInstanceBatch::setMesh( shared_ptr<Mesh> mesh )
+    {
+        if ( mesh == _mesh )
+            return;
+        _mesh = std::move( mesh );
+        for ( uint32 index = 0; index < _listEntry.size(); ++index )
+            markDirty( index );
     }
 
     void MeshInstanceBatch::setSpinSeed( uint32 index, uint32 seed )
@@ -73,6 +83,15 @@ namespace sw
         if ( _bVisible == newValue )
             return;
         _bVisible = newValue;
+        for ( uint32 index = 0; index < _listEntry.size(); ++index )
+            markDirty( index );
+    }
+
+    void MeshInstanceBatch::setSortKey( uint32 sortKey )
+    {
+        if ( _sortKey == sortKey )
+            return;
+        _sortKey = sortKey;
         for ( uint32 index = 0; index < _listEntry.size(); ++index )
             markDirty( index );
     }

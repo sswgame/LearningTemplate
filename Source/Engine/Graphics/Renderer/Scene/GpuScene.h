@@ -41,15 +41,15 @@ namespace sw
     /**
      * @brief 배치의 가시 목록 정렬 방식입니다.
      * @details 컬링이 압축을 하면 자리 번호가 원자 연산의 완료 순서로 정해집니다. 불투명은 상관없지만
-     *          투명은 그 순서가 곧 블렌딩 순서입니다. 그래서 투명은 컬링 뒤에 **GPU 에서 깊이순으로 다시
-     *          정렬**합니다(instancesort.hlsl). 한 워크그룹에 안 담기는 큰 배치만 압축을 포기하고 CPU 가
+     *          투명은 그 순서가 곧 블렌딩 순서입니다. 그래서 투명은 컬링 뒤에 **GPU 에서 CPU 정렬 순서로 되돌립니다**
+     *          (instancesort.hlsl — 인스턴스 번호가 곧 CPU 가 정한 그리는 순서입니다). 한 워크그룹에 안 담기는 큰 배치만 압축을 포기하고 CPU 가
      *          정렬해 둔 제자리 매핑을 씁니다.
      */
     enum class GpuBatchSortMode : uint32
     {
         None     = 0, ///< 불투명. 압축만 하고 순서는 상관없음
         Preserve = 1, ///< 압축하지 않고 CPU 정렬 순서를 그대로 (GPU 정렬 한계를 넘는 투명 배치)
-        DepthGpu = 2, ///< 압축한 뒤 GPU 가 깊이순으로 정렬 (투명 기본)
+        DepthGpu = 2, ///< 압축한 뒤 GPU 가 CPU 정렬 순서(인스턴스 번호)로 되돌림 (투명 기본, instancesort.hlsl)
     };
 
     /// @brief 한 배치에서 GPU 정렬로 다룰 수 있는 최대 인스턴스 수입니다(instancesort.hlsl 의 SW_SORT_MAX_ELEMENTS).

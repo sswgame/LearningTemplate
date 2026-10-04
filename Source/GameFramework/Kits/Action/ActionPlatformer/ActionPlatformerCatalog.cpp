@@ -68,17 +68,12 @@ namespace sw
 
     bool ActionPlatformerCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "ActionPlatformer", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &ActionPlatformerCatalog::loadRoot, path, "ActionPlatformer" );
     }
 
     bool ActionPlatformerCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "ActionPlatformer", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &ActionPlatformerCatalog::loadRoot, xmlText, sourceName, "ActionPlatformer" );
     }
 
     uint32 ActionPlatformerCatalog::loadRoot( const XmlNode& root, string_view sourceName )

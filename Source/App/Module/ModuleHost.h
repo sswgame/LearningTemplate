@@ -6,8 +6,6 @@
  *       GameAPI 의 세부 사항을 모릅니다. Dev 모드에서는 LiveReloadManager 와 함께 핫 리로드 전후 콜백을 처리합니다.
  */
 #pragma once
-#include "App/AppConfig.h"
-
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -17,13 +15,14 @@
 
 namespace sw
 {
-    struct GameKitConfig;
+    struct ModuleResolution;
     struct NativeWindowEvent;
 
     class CameraComponent;
     class IRHIDevice;
     class IWindow;
     class LiveReloadManager;
+    class ModuleCatalog;
     class ModuleCompiler;
     class RenderThread;
     class RHI;
@@ -102,10 +101,13 @@ namespace sw
          * @brief 타입 공급자 모듈(GameFramework · 키트 · SWGame)의 이미지를 올려 그 타입을 등록합니다. 인스턴스는 만들지 않습니다.
          * @details 기동 단계 `ModuleTypes` 의 호스트 로더(`App`)가 부릅니다 — 이것이 끝나야 엔진이 씬을 읽습니다. 게임 인스턴스는 RHI 가 선 뒤
          *          `initialize` 가 만듭니다. Shipping 은 모듈이 정적 링크라 올릴 것이 없습니다.
+         *          무엇을 어떤 순서로 올릴지는 모듈 매니페스트의 해석 결과(@p resolution)가 정합니다 — 켜진 GameFramework · 키트 · SWGame 을 적재 순서대로
+         *          (의존이 먼저). 키트의 리로드 의존은 매니페스트의 `_listDependency` 입니다.
          * @param pLiveReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
-         * @param listGameKitModule 함께 올릴 GameFramework 키트 모듈 목록
+         * @param catalog 매니페스트 묶음(`Bin/Modules/<모듈>.module.json`)
+         * @param resolution `catalog.resolve` 결과
          */
-        [[nodiscard]] bool loadModuleImages( LiveReloadManager* pLiveReloadManager, const vector<GameKitConfig>& listGameKitModule );
+        [[nodiscard]] bool loadModuleImages( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
         /**
          * @brief LiveReloadManager 에 콜백을 등록하고 게임 · 에디터 인스턴스를 만듭니다(게임 모듈 이미지는 `loadModuleImages` 가 이미 올렸다).
          * @details **게임이 먼저, 에디터가 나중**입니다 — 게임이 처음 여는 씬(실행 설정의 시작 씬 · 타이틀 · 시작 맵)을 요청한 뒤에 에디터가 제 시작 씬
@@ -315,7 +317,8 @@ namespace sw
         /** @brief 이번 프레임에 고정한 모듈 상태입니다. */
         ModuleFrameState _frameState;
 
-        uint8                  _bEnableEditor : 1;
-        [[maybe_unused]] uint8 _reserved      : 7;
+        uint8                  _bEnableEditor       : 1;
+        uint8                  _bEditorModuleActive : 1; ///< 매니페스트가 에디터 모듈을 켰는가(`loadModuleImages` 가 정한다)
+        [[maybe_unused]] uint8 _reserved            : 6;
     };
 } // namespace sw

@@ -57,6 +57,33 @@ namespace sw
             ++_overlapEndCount;
         }
     };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 정해진 틱 그룹에서 다른 오브젝트의 월드 높이를 적는 컴포넌트입니다. */
+    class MockPoseReaderComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        SceneComponent* _pWatched{ nullptr };
+        vector<float32> _listSeenY;
+
+        const TypeInfo* getTypeInfo() const override { return StaticType(); }
+        void            onTick( float32 deltaTime ) override
+        {
+            (void)deltaTime;
+            if ( _pWatched != nullptr )
+                _listSeenY.push_back( _pWatched->getWorldPosition()._y );
+        }
+    };
+
+    inline const TypeInfo* MockPoseReaderComponent::StaticType()
+    {
+        return makeMockComponentTypeInfo( &GameObject::addComponentTo<MockPoseReaderComponent>, hashed_string( "MockPoseReaderComponent" ),
+                                          hashed_string( "sw::MockPoseReaderComponent" ), sizeof( MockPoseReaderComponent ) );
+    }
 
     inline const TypeInfo* MockCollisionListenerComponent::StaticType()
     {
@@ -262,5 +289,46 @@ SW_TEST_CASE( PhysicsComponentTest, Components2DLandAndWalk )
     pHero->setMoveVelocity( 2.0f );
     tickFor( manager, 60 );
     SW_EXPECT_NEAR_EQUAL( -1.0f, pHero->getWorldPosition()._x, 0.2f );
+    manager.endPlay();
+}
+
+/**
+ * @brief [PhysicsComponentTest] 물리는 DuringPhysics 와 PostPhysics 사이에 돈다 — PostPhysics 컴포넌트는 이번 프레임의 바디 자세를, PrePhysics 는 지난 프레임의 것을 본다
+ * @details 떨어지는 상자의 높이를 두 그룹의 컴포넌트가 틱에서 적는다. 프레임이 끝난 뒤의 높이와 PostPhysics 가 적은 값이 같고(같은 프레임), PrePhysics 가 적은 값은
+ *          지난 프레임의 높이다.
+ */
+SW_TEST_CASE( PhysicsComponentTest, PostPhysicsTickSeesThisFramesBodyPose )
+{
+    sw::GameObjectManager   manager;
+    sw::RigidBodyComponent* pCrate = spawnBody( manager, "Crate", sw::float3{ 0.0f, 10.0f, 0.0f }, sw::float3{ 0.5f, 0.5f, 0.5f }, sw::PhysicsBodyType::Dynamic );
+    SW_ASSERT_NOT_NULL( pCrate );
+    sw::GameObject*              pWatcher = manager.createGameObject( sw::hashed_string( "Watcher" ) );
+    sw::MockPoseReaderComponent* pLate    = pWatcher->addComponent<sw::MockPoseReaderComponent>();
+    sw::MockPoseReaderComponent* pEarly   = pWatcher->addComponent<sw::MockPoseReaderComponent>();
+    SW_ASSERT_TRUE( pLate != nullptr && pEarly != nullptr );
+    pLate->_pWatched  = pCrate;
+    pEarly->_pWatched = pCrate;
+    pLate->setCanEverTick( true );
+    pEarly->setCanEverTick( true );
+    pLate->setTickGroup( sw::TickGroup::PostPhysics );
+    pEarly->setTickGroup( sw::TickGroup::PrePhysics );
+
+    manager.beginPlay();
+    tickFor( manager, 10 );
+    sw::vector<float32> listEndY;
+    for ( uint32 frameIndex = 0; frameIndex < 5; ++frameIndex )
+    {
+        manager.tick( kFrame );
+        listEndY.push_back( pCrate->getWorldPosition()._y );
+    }
+    SW_ASSERT_TRUE( pLate->_listSeenY.size() >= 5 && pEarly->_listSeenY.size() >= 5 );
+    const size_t lateBase  = pLate->_listSeenY.size() - 5;
+    const size_t earlyBase = pEarly->_listSeenY.size() - 5;
+    for ( size_t frameIndex = 1; frameIndex < 5; ++frameIndex )
+    {
+        SW_EXPECT_NEAR_EQUAL( listEndY[frameIndex], pLate->_listSeenY[lateBase + frameIndex], 1e-5f );
+        SW_EXPECT_NEAR_EQUAL( listEndY[frameIndex - 1], pEarly->_listSeenY[earlyBase + frameIndex], 1e-5f );
+    }
+    SW_EXPECT_TRUE( listEndY[4] < listEndY[0] ); // 떨어지고 있다
     manager.endPlay();
 }

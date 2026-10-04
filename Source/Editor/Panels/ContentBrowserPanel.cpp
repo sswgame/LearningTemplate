@@ -11,6 +11,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
@@ -150,6 +151,29 @@ namespace sw::editor
         pDrawList->AddRect( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), IM_COL32( 15, 25, 45, 120 ), 3.0f );
     }
 
+    string ContentBrowserPanel::describeSourceControlStatus( const AssetEntry& entry )
+    {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr || entry._bIsDirectory )
+            return {};
+        return pContext->getSourceControl().describeStatus( entry._absolutePath, entry._bReadOnly );
+    }
+
+    void ContentBrowserPanel::drawSourceControlBadge( ImDrawList* pDrawList, const float2& topRight, const AssetEntry& entry )
+    {
+        const string statusText = describeSourceControlStatus( entry );
+        if ( statusText.empty() )
+            return;
+        // 잠금(남이든 나든)은 주황, 읽기 전용(잠그기 전)은 회색 자물쇠 — 바로 아래 버튼의 도구 설명이 이유를 말한다.
+        EditorContext* pContext = EditorContext::get();
+        const bool     bLocked  = pContext != nullptr && pContext->getSourceControl().findLock( entry._absolutePath ) != nullptr;
+        const ImU32    color    = bLocked ? IM_COL32( 255, 160, 40, 255 ) : IM_COL32( 170, 170, 170, 255 );
+        const ImVec2   textSize = ImGui::CalcTextSize( ICON_FA_LOCK );
+        pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, ICON_FA_LOCK );
+        if ( ImGui::IsItemHovered() )
+            ImGui::SetTooltip( "%s", statusText.c_str() );
+    }
+
     void ContentBrowserPanel::drawAssetContextMenu( const AssetEntry& entry )
     {
         if ( ImGui::BeginPopupContextItem( "AssetCtx" ) )
@@ -162,6 +186,22 @@ namespace sw::editor
 
             if ( ImGui::MenuItem( "Copy Absolute Path" ) )
                 ImGui::SetClipboardText( entry._absolutePath.c_str() );
+
+            // 버전 관리 — 사용자가 고른 파일만 잠그고 푼다(공급자가 없으면 메뉴가 꺼져 있다).
+            EditorContext* pContext = EditorContext::get();
+            if ( pContext != nullptr && entry._bIsDirectory == false )
+            {
+                EditorSourceControl& sourceControl = pContext->getSourceControl();
+                const bool           bCanLock      = sourceControl.getProvider().canLock();
+                const bool           bLocked       = sourceControl.findLock( entry._absolutePath ) != nullptr;
+                ImGui::Separator();
+                if ( ImGui::MenuItem( ICON_FA_LOCK "  Check Out (Lock)", nullptr, false, bCanLock && bLocked == false ) )
+                    (void)sourceControl.requestLock( entry._absolutePath );
+                if ( ImGui::MenuItem( ICON_FA_LOCK_OPEN "  Release Lock", nullptr, false, bCanLock && bLocked ) )
+                    (void)sourceControl.requestUnlock( entry._absolutePath );
+                if ( ImGui::MenuItem( "Refresh Source Control", nullptr, false, bCanLock ) )
+                    sourceControl.requestRefresh();
+            }
 
             ImGui::Separator();
             // 실패는 deleteAsset 이 알린다(파일과 .meta 를 그대로 둔다).
@@ -715,6 +755,8 @@ namespace sw::editor
                     drawAssetThumbnail( pDrawList, float2{ cursor.x + inset, cursor.y + inset },
                                         float2{ cursor.x + cell - inset, cursor.y + cell * 0.65f }, entry );
 
+                    drawSourceControlBadge( pDrawList, float2{ cursor.x + cell - inset, cursor.y + inset }, entry );
+
                     ImGui::PushTextWrapPos( ImGui::GetCursorPos().x + cell );
                     ImGui::TextUnformatted( entry._name.c_str() );
                     ImGui::PopTextWrapPos();
@@ -753,7 +795,8 @@ namespace sw::editor
                     ImGui::TableSetColumnIndex( 0 );
                     const utf8*  pAssetIcon   = EditorThemeUtil::getAssetIconForPath( entry._name, entry._bIsDirectory );
                     const Color4 assetColor   = EditorThemeUtil::getAssetColorForPath( entry._name, entry._bIsDirectory );
-                    const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name;
+                    const string statusText   = describeSourceControlStatus( entry );
+                    const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name + ( statusText.empty() ? "" : "  " ICON_FA_LOCK );
                     ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( assetColor._r, assetColor._g, assetColor._b, assetColor._a ) );
                     const bool bSelected = ImGui::Selectable( nameWithIcon.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
                     ImGui::PopStyleColor();
@@ -763,6 +806,8 @@ namespace sw::editor
                         if ( ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
                             openAsset( entry );
                     }
+                    if ( statusText.empty() == false && ImGui::IsItemHovered() )
+                        ImGui::SetTooltip( "%s", statusText.c_str() );
                     drawAssetContextMenu( entry );
                     if ( entry._bIsDirectory == false )
                         EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );

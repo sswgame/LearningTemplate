@@ -12,12 +12,14 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Window/IWindow.h"
 
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
+#include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
 
@@ -29,13 +31,16 @@ namespace sw
     {
         struct SkirmishDirectorComponentInternal
         {
-            static constexpr float32 kClickSlop        = 0.6f; ///< 이보다 짧게 끌면 클릭
-            static constexpr int32   kUnitLookCategory = 5;    ///< 0 번 · 1 번 · 주인 없음 · 광물 · 가스
+            static constexpr float32 kClickSlop        = 0.6f;        ///< 이보다 짧게 끌면 클릭
+            static constexpr int32   kUnitLookCategory = 5;           ///< 0 번 · 1 번 · 주인 없음 · 광물 · 가스
+            static constexpr uint32  kStateTag         = 0x534D5452u; ///< 'RTMS'
+            static constexpr uint32  kStateVersion     = 1;
 
-            static constexpr const utf8* kSoundSelect   = "game/starskirmish/sounds/select_004.ogg";
-            static constexpr const utf8* kSoundBuilt    = "game/starskirmish/sounds/confirmation_003.ogg";
-            static constexpr const utf8* kSoundBlocked  = "game/starskirmish/sounds/error_003.ogg";
-            static constexpr const utf8* kSoundUnitDied = "game/starskirmish/sounds/impact_metal_heavy_000.ogg";
+            // 사운드 이벤트 이름(starskirmish.audioevents.xml).
+            static constexpr const utf8* kSoundSelect   = "Select";
+            static constexpr const utf8* kSoundBuilt    = "Built";
+            static constexpr const utf8* kSoundBlocked  = "Blocked";
+            static constexpr const utf8* kSoundUnitDied = "UnitDied";
 
             /** @brief 모습 칸 — 편(0 · 1 · 그 밖)이거나 자원(광물 · 가스)입니다. */
             static int32 computeLookCategory( const RtsUnit& unit )
@@ -96,6 +101,7 @@ namespace sw
         , _listPendingSound{}
         , _listColorLook{}
         , _listUnitLook{}
+        , _pendingStateBytes{}
         , _dragStart{}
         , _dragPoint{}
         , _timeScale{ 1.0f }
@@ -124,6 +130,8 @@ namespace sw
             SW_LOG_WARNING( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
             return;
         }
+        if ( _pendingStateBytes.empty() == false )
+            applyPendingState();
         // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만. 둘 다 AI 면 맵 전체가 보이게 물러서고 WASD 도 카메라다.
         OrthoCameraRigComponent* pRig = findCameraRig();
         if ( pRig != nullptr )
@@ -221,6 +229,57 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 데이터
     // ------------------------------------------------------------------------------
+    void SkirmishDirectorComponent::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeHeader( outArchive, SkirmishDirectorComponentInternal::kStateTag, SkirmishDirectorComponentInternal::kStateVersion );
+        _match.writeState( outArchive );
+        _selection.writeState( outArchive );
+        outArchive << _timeScale;
+        outArchive << static_cast<uint8>( _bPaused );
+    }
+
+    void SkirmishDirectorComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( _bLoaded == SW_TRUE )
+            applyPendingState();
+    }
+
+    bool SkirmishDirectorComponent::readState( Archive& archive )
+    {
+        if ( StateArchiveUtil::readHeader( archive, SkirmishDirectorComponentInternal::kStateTag, SkirmishDirectorComponentInternal::kStateVersion ) == false )
+            return false;
+        if ( _match.readState( archive ) == false || _selection.readState( archive ) == false )
+            return false;
+        float32 timeScale = 1.0f;
+        uint8   bPaused   = SW_FALSE;
+        archive >> timeScale;
+        archive >> bPaused;
+        if ( archive.isError() || archive.getRemainingBytes() != 0 || timeScale <= 0.0f )
+            return false;
+        _timeScale = timeScale;
+        _bPaused   = bPaused != SW_FALSE ? SW_TRUE : SW_FALSE;
+        _listEvent.clear();
+        return true;
+    }
+
+    void SkirmishDirectorComponent::applyPendingState()
+    {
+        Archive archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
+        if ( readState( archive ) )
+        {
+            SW_LOG_INFO( "[Skirmish] match state restored - %#s in", static_cast<int32>( _match.getWorld().getTime() ) );
+        }
+        else
+        {
+            // 판이 반쯤 바뀌었을 수 있다 — 새 판으로 되돌린다.
+            SW_LOG_WARNING( "[Skirmish] the saved match state does not match this build - starting a new match" );
+            (void)loadData();
+        }
+        _pendingStateBytes.clear();
+        despawnViews(); // 지금 상태대로 다시 세운다(다음 틱)
+    }
+
     bool SkirmishDirectorComponent::loadData()
     {
         if ( _catalog.loadFromResource( _unitDataPath ) == false )
@@ -278,8 +337,13 @@ namespace sw
                 spawnUnit( *pManager, slotIndex );
         }
         _listPendingUnit.clear();
-        for ( const utf8* pPath : _listPendingSound )
-            (void)GameSound::play( pPath );
+        for ( const PendingSound& sound : _listPendingSound )
+        {
+            if ( sound._bSpatial )
+                (void)GameSound::postEventAt( hashed_string( sound._pEvent ), sound._position );
+            else
+                (void)GameSound::postEvent( hashed_string( sound._pEvent ) );
+        }
         _listPendingSound.clear();
     }
 
@@ -381,9 +445,14 @@ namespace sw
         return look._instance;
     }
 
-    void SkirmishDirectorComponent::playSound( const utf8* pPath )
+    void SkirmishDirectorComponent::playSound( const utf8* pEvent, const float3* pPosition )
     {
-        _listPendingSound.push_back( pPath );
+        PendingSound sound;
+        sound._pEvent   = pEvent;
+        sound._bSpatial = pPosition != nullptr;
+        if ( pPosition != nullptr )
+            sound._position = *pPosition;
+        _listPendingSound.push_back( sound );
     }
 
     // ------------------------------------------------------------------------------
@@ -560,7 +629,7 @@ namespace sw
         if ( pPrimary != nullptr )
         {
             SW_LOG_INFO( "[Skirmish] selected %# (%# units)", pPrimary->_pDef->_name.c_str(), static_cast<int32>( _selection.getSelected().size() ) );
-            playSound( SkirmishDirectorComponentInternal::kSoundSelect );
+            playSound( SkirmishDirectorComponentInternal::kSoundSelect, nullptr );
         }
     }
 
@@ -656,12 +725,12 @@ namespace sw
         using Internal = SkirmishDirectorComponentInternal;
         _listEvent.clear(); // drainEvents 는 뒤에 붙인다
         _match.drainEvents( _listEvent );
-        // 유닛이 부서지면 누구 것이든 쇳소리 — 한 프레임에 여럿이어도 한 번(구경하는 AI 대 AI 판에서도 들린다).
+        // 유닛이 부서지면 누구 것이든 그 자리에서 쇳소리 — 한 프레임에 여럿이어도 한 번(구경하는 AI 대 AI 판에서도 들린다). 동시 재생 상한은 이벤트 데이터가 정한다.
         for ( const RtsEvent& event : _listEvent )
         {
             if ( event._kind == RtsEvent::Kind::UnitDied )
             {
-                playSound( Internal::kSoundUnitDied );
+                playSound( Internal::kSoundUnitDied, &event._position );
                 break;
             }
         }
@@ -679,7 +748,7 @@ namespace sw
                 case RtsEvent::Kind::ConstructionComplete:
                 {
                     SW_LOG_INFO( "[Skirmish] %# complete", pName );
-                    playSound( Internal::kSoundBuilt );
+                    playSound( Internal::kSoundBuilt, nullptr );
                     break;
                 }
                 case RtsEvent::Kind::ProductionComplete:
@@ -690,7 +759,7 @@ namespace sw
                 case RtsEvent::Kind::SupplyBlocked:
                 {
                     SW_LOG_INFO( "[Skirmish] not enough supply - build a Supply Depot (B)" );
-                    playSound( Internal::kSoundBlocked );
+                    playSound( Internal::kSoundBlocked, nullptr );
                     break;
                 }
                 case RtsEvent::Kind::UnderAttack:

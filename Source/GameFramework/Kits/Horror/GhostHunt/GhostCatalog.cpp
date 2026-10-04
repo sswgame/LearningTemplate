@@ -44,17 +44,12 @@ namespace sw
 
     bool GhostCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "GhostHunt", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &GhostCatalog::loadRoot, path, "GhostHunt" );
     }
 
     bool GhostCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "GhostHunt", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &GhostCatalog::loadRoot, xmlText, sourceName, "GhostHunt" );
     }
 
     uint32 GhostCatalog::loadRoot( const XmlNode& root, string_view sourceName )

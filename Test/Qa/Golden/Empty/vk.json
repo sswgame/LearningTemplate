@@ -1,0 +1,76 @@
+{
+  "game": "Empty",
+  "backend": "vk",
+  "runs": 3,
+  "capture": {
+    "width": 320,
+    "height": 180,
+    "frame": 30,
+    "arguments": [
+      "-gv_benchMeshes=8",
+      "-gv_benchAnimate=0"
+    ]
+  },
+  "metrics": {
+    "background": [
+      28.0,
+      33.0,
+      39.0
+    ],
+    "foregroundFraction": 0.01722,
+    "foregroundMean": [
+      78.3,
+      76.71,
+      63.6
+    ],
+    "meanColor": [
+      29.93,
+      34.53,
+      40.09
+    ],
+    "redMinusBlue": 14.69,
+    "edgeDensity": 0.00622,
+    "gridLuma": [
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.27,
+      37.8,
+      40.11,
+      36.18,
+      40.52,
+      32.62,
+      32.19,
+      32.19,
+      32.36,
+      36.41,
+      38.96,
+      36.4,
+      40.74,
+      33.14,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.19,
+      32.19
+    ]
+  },
+  "tolerance": {
+    "foregroundFraction": 0.04,
+    "foregroundMean": 10.0,
+    "meanColor": 8.0,
+    "redMinusBlue": 10.0,
+    "edgeDensity": 0.04,
+    "gridLuma": 24.0
+  }
+}

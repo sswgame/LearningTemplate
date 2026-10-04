@@ -28,7 +28,7 @@ namespace sw
          */
         static constexpr uint64 kWarmupFrames = 60;
 
-        /** @brief `-gv_profileFrames` 를 읽어 계측을 시작합니다. 0 이하면 아무것도 하지 않습니다. */
+        /** @brief `-gv_profileFrames` · `-gv_profileSeconds` 를 읽어 계측을 시작합니다. 둘 다 0 이하면 아무것도 하지 않습니다. */
         void begin();
 
         /** @brief 프레임 마감 뒤 한 번 부릅니다. 목표를 채우면 보고하고 종료를 요청합니다. */
@@ -43,12 +43,23 @@ namespace sw
          */
         bool hasReported() const { return _bReported == SW_TRUE; }
 
+        /**
+         * @brief 측정 창을 닫을 때인가입니다. 프레임 목표와 시간 목표 가운데 먼저 닿는 쪽이 닫습니다(0 인 목표는 보지 않습니다).
+         * @details 프레임 상한이 없는 실행은 초당 프레임 수가 장면마다 수십 배 달라 "N 프레임" 이 몇 초인지 모릅니다 — 오래 도는 시험(soak)은
+         *          시간으로 끊습니다(`-gv_profileSeconds`).
+         */
+        static bool isMeasureWindowDone( uint64 frames, uint64 frameTarget, int64 elapsedMicro, int64 secondsTarget );
+
     private:
         /** @brief 측정 창의 프레임당 할당 수와(켰다면) 콜스택별 상위 자리를 로그로 남깁니다. */
         void reportAllocations( uint64 frames );
 
-        /** @brief 잴 프레임 수입니다. 0 이면 계측하지 않습니다. */
+        /** @brief 잴 프레임 수입니다. 0 이면 프레임 수로 끊지 않습니다(시간 목표만 있을 때). */
         uint64 _frameTarget{ 0 };
+        /** @brief 잴 시간(초)입니다. 0 이면 시간으로 끊지 않습니다. */
+        int64 _secondsTarget{ 0 };
+        /** @brief 계측을 시작했으면 true 입니다(프레임 · 시간 목표 가운데 하나라도 있었다). */
+        uint8 _bActive{ SW_FALSE };
         /** @brief 보고를 이미 냈으면 true 입니다. 프레임마다 다시 찍지 않습니다. */
         uint8 _bReported{ SW_FALSE };
         /** @brief 목표 프레임을 채워 종료하려 하면 true 입니다. */

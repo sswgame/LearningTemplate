@@ -1,0 +1,20 @@
+{
+    "_name": "GF_KartRacing",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "카트 레이싱(카트라이더 · 마리오카트) 키트 — Catmull-Rom 트랙 · 체크포인트 순서 랩 · 실시간 순위 · 역주행 · 순위 가중 아이템 · AI 레이싱 라인과 러버밴딩 · 고스트",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

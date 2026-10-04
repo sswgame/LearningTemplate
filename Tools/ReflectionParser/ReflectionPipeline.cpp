@@ -24,6 +24,20 @@ namespace sw
     {
         struct ReflectionPipelineInternal
         {
+            /** @brief `타입 이름 = 기본값` 꼴로 인자 목록을 씁니다. */
+            static void appendParameterList( StringBuilder<constant::kMaxBuffer8192>& out, const vector<ParsedParameterInfo>& listParameter )
+            {
+                for ( size_t paramIndex = 0; paramIndex < listParameter.size(); ++paramIndex )
+                {
+                    const ParsedParameterInfo& parameter = listParameter[paramIndex];
+                    out.appendFormat( "%#%#", paramIndex == 0 ? "" : ", ", parameter._typeName );
+                    if ( parameter._name.empty() == false )
+                        out.appendFormat( " %#", parameter._name );
+                    if ( parameter._defaultValue.empty() == false )
+                        out.appendFormat( " = %#", parameter._defaultValue );
+                }
+            }
+
             /**
              * @brief `--dump` — 헤더 하나에서 뽑은 것을 사람이 읽는 꼴로 표준 출력에 한 번에 씁니다.
              * @details "왜 이 프로퍼티가 인스펙터에 없나 · 왜 이 컴포넌트를 씬이 못 찾나" 를 묻는 자리다 — 파서가 무엇을 봤는지 보여 준다.
@@ -45,6 +59,8 @@ namespace sw
                         out.append( "  [abstract]" );
                     if ( type._bStatic == SW_TRUE )
                         out.append( "  [static]" );
+                    if ( type._validate.empty() == false )
+                        out.appendFormat( "  Validate=%#", type._validate );
                     out.append( "\n" );
                     for ( const ParsedPropertyInfo& prop : type._listProperty )
                     {
@@ -77,12 +93,34 @@ namespace sw
                             {    prop._bPolymorphic,     "Polymorphic"},
                             {    prop._bSkipIfEmpty,     "SkipIfEmpty"},
                             {prop._bHideInInspector, "HideInInspector"},
+                            {     prop._bReplicated,      "Replicated"},
+                            {       prop._bSaveGame,        "SaveGame"},
+                            {         prop._bInterp,          "Interp"},
+                            {         prop._bConfig,          "Config"},
+                            {       prop._bColorHdr,        "ColorHdr"},
+                            {      prop._bMultiline,       "Multiline"},
                         };
                         for ( const auto& [bSet, pFlagName] : arrFlag )
                         {
                             if ( bSet == SW_TRUE )
                                 out.appendFormat( "  [%#]", pFlagName );
                         }
+                        if ( prop._bHasUiMinRange == SW_TRUE )
+                            out.appendFormat( "  UiMin=%#", prop._uiMinRange );
+                        if ( prop._bHasUiMaxRange == SW_TRUE )
+                            out.appendFormat( "  UiMax=%#", prop._uiMaxRange );
+                        if ( prop._units.empty() == false )
+                            out.appendFormat( "  Units=%#", prop._units );
+                        if ( prop._editCondition.empty() == false )
+                            out.appendFormat( "  EditCondition=\"%#\"%#", prop._editCondition, prop._bEditConditionHides == SW_TRUE ? "(hides)" : "" );
+                        if ( prop._fileFilter.empty() == false )
+                            out.appendFormat( "  FileFilter=\"%#\"", prop._fileFilter );
+                        if ( prop._validate.empty() == false )
+                            out.appendFormat( "  Validate=%#", prop._validate );
+                        if ( prop._repNotify.empty() == false )
+                            out.appendFormat( "  RepNotify=%#%#", prop._repNotify, prop._bRepNotifyTakesOldValue == SW_TRUE ? "(old)" : "()" );
+                        if ( prop._configSection.empty() == false || prop._configKey.empty() == false )
+                            out.appendFormat( "  Config=%#.%#", prop._configSection, prop._configKey );
                         for ( const string& alias : prop._listAlias )
                             out.appendFormat( "  alias=%#", alias );
                         out.append( "\n" );
@@ -90,8 +128,7 @@ namespace sw
                     for ( const ParsedFunctionInfo& method : type._listMethod )
                     {
                         out.appendFormat( "  FUNCTION %#(", method._name );
-                        for ( size_t paramIndex = 0; paramIndex < method._listParameterTypeName.size(); ++paramIndex )
-                            out.appendFormat( "%#%#", paramIndex == 0 ? "" : ", ", method._listParameterTypeName[paramIndex] );
+                        appendParameterList( out, method._listParameter );
                         out.appendFormat( ") -> %#", method._returnTypeName.empty() ? "void" : method._returnTypeName.c_str() );
                         if ( method._bStatic == SW_TRUE )
                             out.append( "  [static]" );
@@ -102,6 +139,12 @@ namespace sw
                         if ( method._bConstructor == SW_TRUE )
                             out.append( "  [constructor]" );
                         out.append( "\n" );
+                    }
+                    for ( const ParsedEventInfo& event : type._listEvent )
+                    {
+                        out.appendFormat( "  EVENT %#(", event._annotation._name );
+                        appendParameterList( out, event._listParameter );
+                        out.append( ")\n" );
                     }
                 }
                 for ( const ParsedEnumInfo& enumInfo : parsed._listEnum )

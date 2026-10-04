@@ -1,0 +1,20 @@
+{
+    "_name": "GF_ActionPlatformer",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "스테이지형 액션 플랫포머 키트 — 체크포인트 · 목숨 · 비밀 수집 · 클리어 시간 · 등급, 활공 · 갈고리 진자 · 드릴 이동 모드, 근접 콤보 · 총 · 패리 반사 · 히트스톱 · 적 패턴",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

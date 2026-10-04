@@ -13,12 +13,14 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Window/IWindow.h"
 
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
+#include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/NileCity/NileBuildingComponent.h"
 #include "Games/NileCity/NileWalkerComponent.h"
@@ -33,7 +35,9 @@ namespace sw
         {
             static constexpr int32   kWalkerLookStride = 16; ///< 일꾼 모습 번호 = 종류 × 16 + 서비스
             static constexpr int32   kWalkerKindCount  = 3;
-            static constexpr float32 kRoadTileScale    = 4.8f; ///< 보도 조각(`path_short`, 0.2) × 4.8 = 0.96 m(칸 사이 틈은 옛 상자와 같다)
+            static constexpr float32 kRoadTileScale    = 4.8f;        ///< 보도 조각(`path_short`, 0.2) × 4.8 = 0.96 m(칸 사이 틈은 옛 상자와 같다)
+            static constexpr uint32  kStateTag         = 0x454C494Eu; ///< 'NILE'
+            static constexpr uint32  kStateVersion     = 1;
 
             static constexpr const utf8* kSoundSelect  = "game/nilecity/sounds/select_003.ogg";
             static constexpr const utf8* kSoundBuilt   = "game/nilecity/sounds/confirmation_002.ogg";
@@ -191,6 +195,7 @@ namespace sw
         , _listColorLook{}
         , _listWalkerLook{}
         , _listModelMesh{}
+        , _pendingStateBytes{}
         , _wantedWalkerCount{ 0 }
         , _cursorTile{ -1, -1 }
         , _timeScale{ 1.0f }
@@ -220,6 +225,8 @@ namespace sw
             SW_LOG_WARNING( "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
             return;
         }
+        if ( _pendingStateBytes.empty() == false )
+            applyPendingState();
         scheduleFlush();
         SW_LOG_INFO( "[Nile] the city is founded on the Nile - WASD pan, wheel zoom, Q/E pick building, R road, left click build, right click demolish, "
                      "P auto plan, Space pause, - = speed, F1 status" );
@@ -314,10 +321,7 @@ namespace sw
     {
         if ( _catalog.loadFromResource( _cityDataPath ) == false )
             return false;
-        // 순회 서비스가 남는 시간을 키트 기본(30 초)보다 길게 — 이 도시의 도로망에서 일꾼 하나가 고리를 다 도는 데 그만큼 걸린다.
-        CitySettings settings;
-        settings._serviceDuration = _serviceDuration;
-        _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, settings, _startingMoney );
+        _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), _startingMoney );
         NileCityPlanner::paintTerrain( _city );
         _planner.reset();
         _listEvent.clear();
@@ -330,6 +334,83 @@ namespace sw
         _selectedTool = 0;
         _bLoaded      = SW_TRUE;
         return true;
+    }
+
+    CitySettings NileDirectorComponent::makeCitySettings() const
+    {
+        // 순회 서비스가 남는 시간을 키트 기본(30 초)보다 길게 — 이 도시의 도로망에서 일꾼 하나가 고리를 다 도는 데 그만큼 걸린다.
+        CitySettings settings;
+        settings._serviceDuration = _serviceDuration;
+        return settings;
+    }
+
+    // ------------------------------------------------------------------------------
+    // 상태 쓰기 · 되살리기(핫 리로드 · 세이브)
+    // ------------------------------------------------------------------------------
+    void NileDirectorComponent::writeState( Archive& outArchive ) const
+    {
+        StateArchiveUtil::writeHeader( outArchive, NileDirectorComponentInternal::kStateTag, NileDirectorComponentInternal::kStateVersion );
+        _city.writeState( outArchive );
+        _planner.writeState( outArchive );
+        outArchive << _timeScale;
+        outArchive << _selectedTool;
+        outArchive << _monthCount;
+        outArchive << _evolvedCount;
+        outArchive << static_cast<uint8>( _bPaused );
+        outArchive << static_cast<uint8>( _bAutoPlanToggle );
+    }
+
+    void NileDirectorComponent::restoreState( vector<uint8>&& bytes )
+    {
+        _pendingStateBytes = std::move( bytes );
+        if ( _bLoaded == SW_TRUE )
+            applyPendingState();
+    }
+
+    bool NileDirectorComponent::readState( Archive& archive )
+    {
+        if ( StateArchiveUtil::readHeader( archive, NileDirectorComponentInternal::kStateTag, NileDirectorComponentInternal::kStateVersion ) == false )
+            return false;
+        CitySimulation  city;
+        NileCityPlanner planner;
+        city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), _startingMoney );
+        if ( city.readState( archive ) == false || planner.readState( archive ) == false )
+            return false;
+        float32 timeScale       = 1.0f;
+        int32   selectedTool    = 0;
+        int32   monthCount      = 0;
+        int32   evolvedCount    = 0;
+        uint8   bPaused         = SW_FALSE;
+        uint8   bAutoPlanToggle = SW_FALSE;
+        archive >> timeScale;
+        archive >> selectedTool;
+        archive >> monthCount;
+        archive >> evolvedCount;
+        archive >> bPaused;
+        archive >> bAutoPlanToggle;
+        if ( archive.isError() || archive.getRemainingBytes() != 0 || timeScale <= 0.0f )
+            return false;
+        _city            = std::move( city );
+        _planner         = std::move( planner );
+        _timeScale       = timeScale;
+        _selectedTool    = _listTool.empty() ? 0 : MathUtil::clamp( selectedTool, 0, static_cast<int32>( _listTool.size() ) - 1 );
+        _monthCount      = monthCount;
+        _evolvedCount    = evolvedCount;
+        _bPaused         = bPaused != SW_FALSE ? SW_TRUE : SW_FALSE;
+        _bAutoPlanToggle = bAutoPlanToggle != SW_FALSE ? SW_TRUE : SW_FALSE;
+        _listEvent.clear();
+        return true;
+    }
+
+    void NileDirectorComponent::applyPendingState()
+    {
+        Archive archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
+        if ( readState( archive ) )
+            SW_LOG_INFO( "[Nile] city state restored - month %#, population %#, money %#", _monthCount, _city.getPopulation(), _city.getMoney() );
+        else
+            SW_LOG_WARNING( "[Nile] the saved city state does not match this build - founding a new city" );
+        _pendingStateBytes.clear();
+        despawnViews(); // 지금 상태대로 다시 세운다(다음 틱)
     }
 
     // ------------------------------------------------------------------------------

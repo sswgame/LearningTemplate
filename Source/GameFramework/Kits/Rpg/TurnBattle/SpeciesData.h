@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    class XmlNode;
+
     // ------------------------------------------------------------------------------
     // 1) 데이터 — 기술 정의, 종족 정의, 런타임 파티 멤버
     //    _name 기본값은 XML 폴백 리터럴 (번역하지 않음)
@@ -125,6 +127,8 @@ namespace sw
 
     private:
         void seedFallback();
+        /** @brief `<SpeciesCatalog>` 루트의 기술 · 종족 표를 읽습니다(`GameDataXml::loadFile`). 둘 중 하나라도 비면 false 입니다. */
+        [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );
         /** @brief _listMove / _listSpecies 로 id 조회 맵을 다시 만듭니다. */
         void rebuildLookup();
 
