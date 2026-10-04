@@ -403,6 +403,9 @@ shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shading
 - **양면은 머티리얼의 성질이다**(언리얼 Two Sided): 머티리얼 변형 PSO(`createMaterialPsoVariant`)가 퍼뮤테이션의 `MATERIAL_TWO_SIDED` 를 보고 후면 컬링을 끈다(후면 컬링
   패스만 — 그림자 패스도 양면으로 드리운다). 셰이더는 뒷면의 노멀을 `SV_IsFrontFace` 로 뒤집는다(`RenderPassGpuTest.TwoSidedMaterialDrawsBackFaces`).
 - **디퍼드에서는 램버트다** — G버퍼 패스는 표면(기본색 · 노멀)만 적고 계단 셰이딩은 포워드 경로의 것이다.
+- **톤맵 · 블룸 없는 파이프라인 `engine/pipeline/forwardtoonpipeline.xml`** — 툰은 빛 쪽이 기본색 그대로가 목표인데, 기본 포워드의 톤맵(Reinhard)은 흰색을 0.5 로 누르고
+  블룸은 장면색(R8G8B8A8)에서 잘린 밝은 면을 번지게 해 계단을 지운다(2D 의 `forward2dpipeline.xml` 과 같은 이유). `-gv_renderPipeline` 으로 고른다.
+  장면색이 LDR 이라 빛 세기 + 환경광이 1 을 넘으면 기본색이 잘린다 — 툰 장면은 주광 세기 1 근처로 둔다(쇼케이스 `game/empty/maps/toonshowcase.scene.xml`).
 
 **메시 외곽선 — 뒤집은 껍질(inverted hull), 파이프라인 패스 `MeshOutline`.** 같은 `toon.hlsl` 의 다른 퍼뮤테이션(`SW_PASS_MESH_OUTLINE`)이 정점을 노멀 방향으로
 밀고 앞면을 컬링해 외곽선 색 하나를 낸다. 불투명 패스 뒤 · 반투명 앞에 선언한다(깊이를 써서 뒤의 반투명을 가린다).
