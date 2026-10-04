@@ -171,8 +171,11 @@ cd build/Ninja-Debug/Bin
     있지 않다, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
   - **F 카탈로그 편집기** — 카탈로그 계약 하나(ResourceDataSchemaTest 의 종류 표를 대체) · enum 이름 표(`CityCatalog.cpp` 의 하드코딩 개수 포함
     25 곳) · DataTablePanel 확장 편집기 · 저장 시 검증 · "어디서 쓰이나" 역색인 → 이름 바꾸기 시 참조 고침.
-  - **G 프로파일링 · 캡처** — 에디터 안 `FrameProfiler` 스코프 표(p50 · p99) · 네 백엔드 GPU 타임스탬프(지금 GL 만) · RenderDoc 캡처 버튼 ·
-    스크린샷 버튼 · 오버드로 · 노멀 · 깊이 보기.
+  - **G 프로파일링 · 캡처** — 구조는 섰다: 자체 패널(`ProfilerPanel` — CPU 구간 · GPU 패스 · 카운터 표(최근 N 프레임 p50 · p99 · 최대, 정렬 · 검색) +
+    GT · RT · GPU 프레임 그래프, 집계는 ImGui 없는 `ProfilerScopeHistory`) + 시간축 분석은 외부 Tracy 뷰어(패널의 "Open Tracy" 가 같은 판 0.13.1 을 띄워
+    localhost 에 붙인다 — 언리얼 에디터 → Insights 방식. 뷰어를 도킹 창으로 넣지 않은 이유는 `Source/Engine/Utility/Profiling/README.md`). GPU 타임스탬프는 네
+    백엔드 모두 엔진이 모은다. 남은 것: RenderDoc 캡처 버튼 · 스크린샷 버튼 · 오버드로 · 노멀 · 깊이 보기, 패널에 스레드별 미니 타임라인(지금은 표 · 그래프뿐 —
+    타임라인은 Tracy).
   - **H 품질 · 작업 흐름** — assert 무시 대화상자(이번만 / 계속) · 버그 리포트 한 방(스크린샷 + 로그 + InputReplay + 씬) · 시험 패널.
 
 - **에디터 자체 시험(`SW_EDITOR_SELF_TEST`)이 입력을 흉내 내지 못한다** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 툴팁 호버 · 드래그 드롭은
@@ -295,7 +298,7 @@ cd build/Ninja-Debug/Bin
   - **작음(S)**: 에디터 H(assert 대화상자 ·
     버그 리포트 · 시험 패널) · 단축키 편집기 · 환경설정 창 · 모듈 켜고 끄기 · DPI 실물 확인.
   - **중간(M)**: 메모리 태깅 · 예산 · 대역폭 프로파일러 · 비동기 파일 IO · 게임플레이 디버거 · 비주얼 로거 · 모듈 패키지 관리 · 점광/스폿 그림자 · SSAO ·
-    HZB 가림 컬링 · 메시 LOD(meshopt) · PSO 미리 만들기 · 에디터 G(프로파일러 표 · GPU 타임스탬프 · RenderDoc · 보기 모드) · 에디터 C(확장 지점) · 에디터 F
+    HZB 가림 컬링 · 메시 LOD(meshopt) · PSO 미리 만들기 · 에디터 G(RenderDoc · 보기 모드 — 프로파일러 표 · GPU 타임스탬프 · Tracy 는 들어갔다) · 에디터 C(확장 지점) · 에디터 F
     (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · UI 시험 입력 흉내 · 패키징 UI · 에디터 자동화 ·
     로딩 흐름 · 입력 확장 · 에셋 공정(검증 · XML 비교/병합 · 잠금 · DCC 내보내기) · QA 자동화(봇 · 내구 · 골든 이미지 · 성능 CI ·
     퍼징) · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 [대기: cam-views] · 하늘/시간대/높이

@@ -82,6 +82,19 @@ build/Ninja-Release/Bin/App.exe -gv_tracy=1 -gv_tracyMemory=1  # + 할당 · 해
 - **백엔드 교체**: 디바이스가 바뀌면 새 컨텍스트(새 번호)를 엽니다. Tracy 의 컨텍스트 번호는 1 바이트라 교체 255 번까지입니다.
 - 칸 배치(패스 14 개 + 컴퓨트 · 프레임 칸)는 `FrameRendererUtil` 의 타임스탬프 칸 배치를 따릅니다. 넘는 패스는 엔진 표와 같이 Tracy 에도 없습니다.
 
+## 에디터 — 자체 패널 + 외부 뷰어
+
+- **에디터 프로파일러 패널**(`Source/Editor/Panels/ProfilerPanel`): 엔진 표만 읽어 CPU 구간 · GPU 패스 · 카운터를 최근 N 프레임(기본 240)의 마지막 · 평균 ·
+  p50 · p99 · 최대로 보여 주고(머리줄 정렬 · 검색), GT.Frame · RT.Frame · GPU.Frame 그래프를 그립니다. 집계는 ImGui 없는 `ProfilerScopeHistory`(EditorTest).
+  Tracy 가 없는 빌드에서도 같습니다.
+- **"Open Tracy"**: Tracy 출력을 켜고(`ProfilerBackend::startTracy`) 뷰어를 `-a 127.0.0.1 -p <포트>` 로 띄웁니다(`EditorTracyLauncher`). 뷰어는
+  `-gv_tracyViewerPath=<파일 또는 폴더>` → `Tools/Tracy/tracy-profiler.exe` 순서로 찾습니다.
+- **뷰어를 에디터 도킹 창으로 넣지 않은 이유**(2026-10-05 조사): Tracy 뷰어(`profiler/` + `server/`, 0.13.1 기준 약 23 만 줄)는 vcpkg 포트가 라이브러리로
+  설치하지 않고(GUI 도구는 실행 파일만), 빌드에 capstone · freetype · zstd · nfd · PPQSort · md4c · base64 · tidy-html5 · usearch · pugixml · libcurl · glfw 와
+  **자기가 고정하고 패치한 ImGui**(CPM 으로 받는 판 + `cmake/imgui-loader.patch` + freetype 렌더러 + 자체 백엔드)를 씁니다. 우리 ImGui(vcpkg 1.92 docking) 하나로 맞추려면 뷰어 소스를
+  저장소에 들여와 판 차이를 손으로 맞춰야 하고, 의존 열 개 남짓이 vcpkg 에 더해집니다 — 한 프로세스에 ImGui 두 벌은 금지라 그대로 넣을 수도 없습니다.
+  언리얼 에디터가 Insights 를 따로 띄우는 것과 같은 방식(별도 프로세스 + localhost 연결)을 골랐습니다.
+
 ## 함정
 
 - **지점 문자열은 프로세스 수명 사본이다.** Tracy 는 소스 위치를 포인터로 보내고 문자열은 뷰어가 물을 때 읽습니다. 모듈 상수(핫 리로드로 사라짐)나 이름 풀
