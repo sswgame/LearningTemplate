@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -206,16 +207,16 @@ namespace sw
      *          `<Learn level="1" move="scratch"/><Evolve to="charmeleon" level="16"/></Species>`
      *          `<Encounter id="route1_night" area="route1" time="Night"><Slot species="hoothoot" min="2" max="4" weight="30"/></Encounter>`
      */
-    class SW_GF_API MonsterCollectorCatalog
+    class SW_GF_API MonsterCollectorCatalog : public XmlCatalog<MonsterCollectorCatalog>
     {
+        friend class XmlCatalog<MonsterCollectorCatalog>;
+
     public:
         static constexpr int32 kMaxLevel = 100;
 
         MonsterCollectorCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               clear();
+        void clear();
 
         /** @brief 레벨 @p level 이 되기까지의 총 경험치입니다(레벨 1 = 0). */
         static int64 computeTotalExp( MonsterExpGroup group, int32 level );
@@ -250,10 +251,11 @@ namespace sw
             vector<hashed_string> _listType{};
         };
 
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
-        void   loadMove( const XmlNode& node, const utf8* pId, string_view sourceName );
-        void   loadSpecies( const XmlNode& node, const utf8* pId, string_view sourceName );
-        void   loadEncounter( const XmlNode& node, const utf8* pId );
+        static constexpr const utf8* kXmlRootName = "MonsterCollectorCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        void                         loadMove( const XmlNode& node, const utf8* pId, string_view sourceName );
+        void                         loadSpecies( const XmlNode& node, const utf8* pId, string_view sourceName );
+        void                         loadEncounter( const XmlNode& node, const utf8* pId );
 
         GameCatalog<MonsterSpeciesDef>   _speciesCatalog;
         GameCatalog<MonsterMoveDef>      _moveCatalog;

@@ -72,7 +72,7 @@ namespace sw
         , _mapDialAttempt{}
         , _mapSequenceProgress{}
         , _listClueLink{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _currentArea{}
         , _pCatalog{ nullptr }
         , _pAreaGraph{ nullptr }
@@ -101,7 +101,7 @@ namespace sw
         _mapDialAttempt.clear();
         _mapSequenceProgress.clear();
         _listClueLink.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _health              = rules._maxHealth;
         _saveCount           = 0;
         _wrongDeductionCount = 0;
@@ -447,8 +447,7 @@ namespace sw
 
     void HorrorSession::drainEvents( vector<SurvivalHorrorEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void HorrorSession::pushEvent( SurvivalHorrorEvent::Kind kind, const hashed_string& id, float32 value )
@@ -457,7 +456,7 @@ namespace sw
         event._kind  = kind;
         event._id    = id;
         event._value = value;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     void HorrorSession::refreshHallucination()

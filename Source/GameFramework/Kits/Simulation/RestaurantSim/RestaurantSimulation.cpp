@@ -60,7 +60,7 @@ namespace sw
         , _listMenu{}
         , _listStation{}
         , _listSatisfaction{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listReputationScratch{}
         , _listSpoilageScratch{}
         , _inventory{}
@@ -79,7 +79,7 @@ namespace sw
         , _pShopCatalog{ nullptr }
         , _pStaffCurve{ nullptr }
         , _minutes{ 0.0f }
-        , _arrivalAccumulator{ 0.0f }
+        , _arrival{}
         , _pendingSpoilageCost{ 0 }
         , _day{ 0 }
         , _nextCustomerId{ 1 }
@@ -109,16 +109,16 @@ namespace sw
         _listOrder.clear();
         _listStation.clear();
         _listSatisfaction.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _listMenu.clear();
         if ( pCatalog != nullptr )
         {
             for ( const DishDef& dish : pCatalog->getDishes() )
                 _listMenu.push_back( MenuEntry{ dish._id, dish._basePrice, SW_TRUE } );
         }
-        _today               = RestaurantDaySummary{};
-        _minutes             = 0.0f;
-        _arrivalAccumulator  = 0.0f;
+        _today   = RestaurantDaySummary{};
+        _minutes = 0.0f;
+        _arrival.reset();
         _pendingSpoilageCost = 0;
         _day                 = 0;
         _nextCustomerId      = 1;
@@ -219,10 +219,10 @@ namespace sw
 
     void RestaurantSimulation::openDay( const hashed_string& weatherId )
     {
-        _bOpen               = SW_TRUE;
-        _weatherId           = weatherId;
-        _minutes             = 0.0f;
-        _arrivalAccumulator  = 0.0f;
+        _bOpen     = SW_TRUE;
+        _weatherId = weatherId;
+        _minutes   = 0.0f;
+        _arrival.reset();
         _today               = RestaurantDaySummary{};
         _today._spoilageCost = _pendingSpoilageCost;
         _pendingSpoilageCost = 0;
@@ -256,7 +256,7 @@ namespace sw
         customer._patience = pType->_patience;
         _listCustomer.push_back( customer );
         ++_today._arrivals;
-        _listEvent.push_back( RestaurantEvent{ typeId, 0, customer._id, RestaurantEvent::Kind::CustomerArrived } );
+        _eventBuffer.push( RestaurantEvent{ typeId, 0, customer._id, RestaurantEvent::Kind::CustomerArrived } );
         return customer._id;
     }
 
@@ -306,7 +306,7 @@ namespace sw
         for ( const IngredientSpoilage& spoilage : _listSpoilageScratch )
         {
             _pendingSpoilageCost += spoilage._cost;
-            _listEvent.push_back( RestaurantEvent{ spoilage._itemId, spoilage._count, -1, RestaurantEvent::Kind::IngredientSpoiled } );
+            _eventBuffer.push( RestaurantEvent{ spoilage._itemId, spoilage._count, -1, RestaurantEvent::Kind::IngredientSpoiled } );
         }
         _market.advanceDay();
         rollMarketPrices();
@@ -317,8 +317,7 @@ namespace sw
 
     void RestaurantSimulation::drainEvents( vector<RestaurantEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     bool RestaurantSimulation::canServe( const hashed_string& dishId ) const
@@ -427,7 +426,7 @@ namespace sw
                 continue;
             order._bReady      = SW_TRUE;
             cook._taskCustomer = -1;
-            _listEvent.push_back( RestaurantEvent{ order._dishId, order._quality, order._customerId, RestaurantEvent::Kind::DishCooked } );
+            _eventBuffer.push( RestaurantEvent{ order._dishId, order._quality, order._customerId, RestaurantEvent::Kind::DishCooked } );
             grantXp( cook, _settings._cookXp );
             order._cook = -1;
         }
@@ -500,10 +499,9 @@ namespace sw
         const vector<CustomerTypeDef>& listType  = _pCatalog->getCustomerTypes();
         auto                           getWeight = []( const CustomerTypeDef& customerType )
         { return customerType._weight; };
-        _arrivalAccumulator += computeArrivalRate() * kStepMinutes / RestaurantSimulationInternal::kMinutesPerHour;
-        while ( _arrivalAccumulator >= 1.0f )
+        _arrival.add( computeArrivalRate() * kStepMinutes / RestaurantSimulationInternal::kMinutesPerHour );
+        while ( _arrival.takeOne() )
         {
-            _arrivalAccumulator -= 1.0f;
             const int32 typeIndex = _random.pickWeightedIndex( listType, getWeight );
             if ( typeIndex < 0 )
                 return;
@@ -644,7 +642,7 @@ namespace sw
         order._station    = pRecipe->_station;
         order._customerId = customer._id;
         _listOrder.push_back( order );
-        _listEvent.push_back( RestaurantEvent{ pDish->_id, customer._price, customer._id, RestaurantEvent::Kind::OrderPlaced } );
+        _eventBuffer.push( RestaurantEvent{ pDish->_id, customer._price, customer._id, RestaurantEvent::Kind::OrderPlaced } );
         return true;
     }
 
@@ -667,7 +665,7 @@ namespace sw
         const int32 reputationDelta = static_cast<int32>( MathUtil::round( ( satisfaction * 2.0f - 1.0f ) * static_cast<float32>( _settings._reputationPerServe ) ) );
         if ( reputationDelta != 0 )
             (void)_reputation.changeValue( _settings._reputationFaction, reputationDelta );
-        _listEvent.push_back( RestaurantEvent{ customer._dishId, customer._price + tip, customer._id, RestaurantEvent::Kind::CustomerPaid } );
+        _eventBuffer.push( RestaurantEvent{ customer._dishId, customer._price + tip, customer._id, RestaurantEvent::Kind::CustomerPaid } );
     }
 
     void RestaurantSimulation::leaveCustomer( RestaurantCustomer& customer, bool bWalkout )
@@ -699,7 +697,7 @@ namespace sw
         }
         customer._state = CustomerState::Left;
         customer._seat  = -1;
-        _listEvent.push_back( RestaurantEvent{ customer._typeId, bWalkout ? 1 : 0, customer._id, RestaurantEvent::Kind::CustomerLeft } );
+        _eventBuffer.push( RestaurantEvent{ customer._typeId, bWalkout ? 1 : 0, customer._id, RestaurantEvent::Kind::CustomerLeft } );
     }
 
     void RestaurantSimulation::pushSatisfaction( float32 satisfaction )
@@ -717,7 +715,7 @@ namespace sw
         if ( _pStaffCurve == nullptr || amount <= 0 )
             return;
         if ( staff._level.addXp( *_pStaffCurve, amount ) > 0 )
-            _listEvent.push_back( RestaurantEvent{ staff._name, staff._level.getLevel(), -1, RestaurantEvent::Kind::StaffLevelUp } );
+            _eventBuffer.push( RestaurantEvent{ staff._name, staff._level.getLevel(), -1, RestaurantEvent::Kind::StaffLevelUp } );
     }
 
     void RestaurantSimulation::rollMarketPrices()

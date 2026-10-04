@@ -80,15 +80,6 @@ namespace sw
     // ------------------------------------------------------------------------------
     // RecipeCatalog
     // ------------------------------------------------------------------------------
-    bool RecipeCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &RecipeCatalog::loadRoot, path, "RecipeCatalog" );
-    }
-
-    bool RecipeCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &RecipeCatalog::loadRoot, xmlText, sourceName, "RecipeCatalog" );
-    }
 
     uint32 RecipeCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {

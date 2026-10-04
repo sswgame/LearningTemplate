@@ -12,6 +12,7 @@
 
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Input/TimingJudge.h"
 
@@ -108,13 +109,12 @@ namespace sw
      *          행동 이름은 "Repair" · "SkillCheck" · "Heal" · "Unhook" · "Escape" · "PalletStun" · "Vault" · "Hit" · "Hook" · "Sacrifice" · "Kick" ·
      *          "BreakPallet" · "LockerGrab" 입니다 — 없는 행동은 점수가 없습니다.
      */
-    class SW_GF_API AsymmetricHorrorRulesCatalog
+    class SW_GF_API AsymmetricHorrorRulesCatalog : public XmlCatalog<AsymmetricHorrorRulesCatalog>
     {
+        friend class XmlCatalog<AsymmetricHorrorRulesCatalog>;
+
     public:
         AsymmetricHorrorRulesCatalog();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         const AsymmetricHorrorRules&   getRules() const { return _rules; }
         const TimingJudge&             getJudge() const { return _judge; }
@@ -125,7 +125,8 @@ namespace sw
         float32 getCategoryCap( const hashed_string& category ) const { return _categoryCap.getValue( category, 0.0f ); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "AsymmetricHorrorRules"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         AsymmetricHorrorRules        _rules;
         TimingJudge                  _judge;

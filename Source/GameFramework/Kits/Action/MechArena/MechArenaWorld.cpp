@@ -116,7 +116,7 @@ namespace sw
         , _listPilot{}
         , _listProjectile{}
         , _listTeamName{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listVitalityScratch{}
         , _listMatchScratch{}
         , _listCandidateScratch{}
@@ -144,7 +144,7 @@ namespace sw
         _listPilot.clear();
         _listProjectile.clear();
         _listTeamName.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _match.initialize( MatchSettings{} );
         _timer        = FixedStepTimer( _settings._fixedStep, 0.25f );
         _tick         = 0;
@@ -181,8 +181,8 @@ namespace sw
             if ( pSkill != nullptr )
                 pilot._listSkill.push_back( pSkill );
         }
-        pilot._listSkillRemaining.resize( pilot._listSkill.size(), 0.0f );
-        pilot._listSkillCooldown.resize( pilot._listSkill.size(), 0.0f );
+        pilot._listSkillRemaining.resize( pilot._listSkill.size() );
+        pilot._listSkillCooldown.resize( pilot._listSkill.size() );
         pilot._listSkillSpent.resize( pilot._listSkill.size(), SW_FALSE );
         pilot._team          = config._team;
         pilot._spawnPosition = config._spawnPosition;
@@ -290,7 +290,7 @@ namespace sw
         const int32      count  = countActiveSkills( target );
         for ( int32 index = 0; index < count; ++index )
         {
-            if ( target._listSkillRemaining[static_cast<size_t>( index )] > 0.0f )
+            if ( target._listSkillRemaining[static_cast<size_t>( index )].isActive() )
                 scale *= target._listSkill[static_cast<size_t>( index )]->_modifier.getValue( name, 1.0f );
         }
         return scale;
@@ -298,8 +298,7 @@ namespace sw
 
     void MechArenaWorld::drainEvents( vector<MechArenaEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     // --- 걸음 -------------------------------------------------------------------------------------
@@ -338,12 +337,12 @@ namespace sw
             pilot._vitality.setInvulnerable( pMech->_wakeInvulnerable );
             pushEvent( MechArenaEvent::Kind::WokeUp, pilotIndex, -1, pMech->_wakeInvulnerable, hashed_string{} );
         }
-        pilot._staggerRemaining  = MathUtil::max( 0.0f, pilot._staggerRemaining - deltaTime );
-        pilot._transformCooldown = MathUtil::max( 0.0f, pilot._transformCooldown - deltaTime );
+        pilot._staggerRemaining.tick( deltaTime );
+        pilot._transformCooldown.tick( deltaTime );
         for ( WeaponState& weapon : pilot._listWeaponState )
             weapon.update( deltaTime );
-        for ( float32& cooldown : pilot._listSpecialCooldown )
-            cooldown = MathUtil::max( 0.0f, cooldown - deltaTime );
+        for ( Countdown& cooldown : pilot._listSpecialCooldown )
+            cooldown.tick( deltaTime );
         stepSkills( pilotIndex, deltaTime );
 
         bool bControl = false;
@@ -354,11 +353,11 @@ namespace sw
             if ( bControl )
             {
                 const bool bPressedTransform = MechArenaWorldInternal::isPressed( input._bTransform, previous._bTransform );
-                if ( bPressedTransform && pilot._transformCooldown <= 0.0f && pilot._comboStage < 0 && pMech->_listMode.size() > 1 )
+                if ( bPressedTransform && pilot._transformCooldown.isActive() == false && pilot._comboStage < 0 && pMech->_listMode.size() > 1 )
                 {
-                    pilot._mode              = ( pilot._mode + 1 ) % static_cast<int32>( pMech->_listMode.size() );
-                    pilot._transformCooldown = pMech->_transformTime;
-                    pilot._dashRemaining     = 0.0f;
+                    pilot._mode = ( pilot._mode + 1 ) % static_cast<int32>( pMech->_listMode.size() );
+                    pilot._transformCooldown.start( pMech->_transformTime );
+                    pilot._dashRemaining.clear();
                     pushEvent( MechArenaEvent::Kind::Transformed, pilotIndex, -1, static_cast<float32>( pilot._mode ), pilot.getMode()->_id );
                 }
                 stepMelee( pilotIndex, MechArenaWorldInternal::isPressed( input._bMelee, previous._bMelee ) );
@@ -396,7 +395,7 @@ namespace sw
                 move = move / moveLength;
             if ( bPressedDash && pilot._boost.trySpend( pMech->_dashCost * costScale ) )
             {
-                pilot._dashRemaining = pMech->_dashTime;
+                pilot._dashRemaining.start( pMech->_dashTime );
                 pilot._dashDirection = Internal::flattenDirection( move, pilot._forward );
             }
             if ( bPressedJump && pilot._bGrounded == SW_TRUE && pilot._boost.trySpend( pMech->_jumpCost * costScale ) )
@@ -404,10 +403,10 @@ namespace sw
                 pilot._velocity._y = pMech->_jumpSpeed;
                 pilot._bGrounded   = SW_FALSE;
             }
-            if ( pilot._dashRemaining > 0.0f )
+            if ( pilot._dashRemaining.isActive() )
             {
                 horizontal = pilot._dashDirection * pMech->_dashSpeed;
-                pilot._dashRemaining -= deltaTime;
+                pilot._dashRemaining.tick( deltaTime );
             }
             else
             {
@@ -421,7 +420,7 @@ namespace sw
         }
         else
         {
-            pilot._dashRemaining = 0.0f;
+            pilot._dashRemaining.clear();
         }
 
         pilot._velocity._x = horizontal._x;
@@ -575,18 +574,10 @@ namespace sw
         const int32 count = countActiveSkills( pilot );
         for ( int32 index = 0; index < count; ++index )
         {
-            float32& remaining = pilot._listSkillRemaining[static_cast<size_t>( index )];
-            float32& cooldown  = pilot._listSkillCooldown[static_cast<size_t>( index )];
-            cooldown           = MathUtil::max( 0.0f, cooldown - deltaTime );
-            if ( remaining > 0.0f )
-            {
-                remaining -= deltaTime;
-                if ( remaining <= 0.0f )
-                {
-                    remaining = 0.0f;
-                    pushEvent( MechArenaEvent::Kind::SkillEnded, pilotIndex, -1, 0.0f, pilot._listSkill[static_cast<size_t>( index )]->_id );
-                }
-            }
+            Countdown& remaining = pilot._listSkillRemaining[static_cast<size_t>( index )];
+            pilot._listSkillCooldown[static_cast<size_t>( index )].tick( deltaTime );
+            if ( remaining.tick( deltaTime ) )
+                pushEvent( MechArenaEvent::Kind::SkillEnded, pilotIndex, -1, 0.0f, pilot._listSkill[static_cast<size_t>( index )]->_id );
         }
         const int32 slot           = pilot._input._skillSlot;
         const bool  bPressedManual = slot >= 0 && slot < count && slot != pilot._previousInput._skillSlot;
@@ -699,10 +690,10 @@ namespace sw
     void MechArenaWorld::fireSpecial( int32 pilotIndex, int32 slotIndex, const MechWeaponSlotDef& slot )
     {
         MechPilot& pilot    = _listPilot[static_cast<size_t>( pilotIndex )];
-        float32&   cooldown = pilot._listSpecialCooldown[static_cast<size_t>( slotIndex )];
-        if ( cooldown > 0.0f )
+        Countdown& cooldown = pilot._listSpecialCooldown[static_cast<size_t>( slotIndex )];
+        if ( cooldown.isActive() )
             return;
-        cooldown               = slot._cooldown;
+        cooldown.start( slot._cooldown );
         const int32  target    = findLockTarget( pilotIndex );
         const float3 origin    = computeCenter( pilot );
         const float3 direction = target >= 0 ? MechArenaWorldInternal::normalizeOr( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin, pilot._forward )
@@ -791,18 +782,18 @@ namespace sw
 
         if ( result._bDied == SW_TRUE )
         {
-            target._state            = MechPilotState::Destroyed;
-            target._deathSlot        = target._deckIndex;
-            target._comboStage       = -1;
-            target._meleeSlot        = -1;
-            target._bMeleeQueued     = SW_FALSE;
-            target._velocity         = float3{};
-            target._dashRemaining    = 0.0f;
-            target._staggerRemaining = 0.0f;
+            target._state        = MechPilotState::Destroyed;
+            target._deathSlot    = target._deckIndex;
+            target._comboStage   = -1;
+            target._meleeSlot    = -1;
+            target._bMeleeQueued = SW_FALSE;
+            target._velocity     = float3{};
+            target._dashRemaining.clear();
+            target._staggerRemaining.clear();
             target._melee.cancel();
             target._lockOn.release();
-            for ( float32& remaining : target._listSkillRemaining )
-                remaining = 0.0f;
+            for ( Countdown& remaining : target._listSkillRemaining )
+                remaining.clear();
             ++target._deaths;
             if ( bAttacker && _listPilot[static_cast<size_t>( attacker )]._team != target._team )
                 ++_listPilot[static_cast<size_t>( attacker )]._kills;
@@ -816,8 +807,8 @@ namespace sw
             if ( staggerTime > 0.0f )
             {
                 // 경직 — 하던 근접 · 대시가 끊긴다.
-                target._staggerRemaining = MathUtil::max( target._staggerRemaining, staggerTime );
-                target._dashRemaining    = 0.0f;
+                target._staggerRemaining.extendTo( staggerTime );
+                target._dashRemaining.clear();
                 target._melee.cancel();
                 target._comboStage   = -1;
                 target._meleeSlot    = -1;
@@ -833,8 +824,8 @@ namespace sw
             }
             if ( result._bPoiseBroken == SW_TRUE )
             {
-                target._state         = MechPilotState::Down;
-                target._dashRemaining = 0.0f;
+                target._state = MechPilotState::Down;
+                target._dashRemaining.clear();
                 target._melee.cancel();
                 target._comboStage   = -1;
                 target._meleeSlot    = -1;
@@ -853,11 +844,11 @@ namespace sw
         MechPilot&          pilot  = _listPilot[static_cast<size_t>( pilotIndex )];
         const size_t        index  = static_cast<size_t>( skillIndex );
         const MechSkillDef* pSkill = pilot._listSkill[index];
-        if ( pilot._listSkillRemaining[index] > 0.0f || pilot._listSkillCooldown[index] > 0.0f || pSkill->_duration <= 0.0f )
+        if ( pilot._listSkillRemaining[index].isActive() || pilot._listSkillCooldown[index].isActive() || pSkill->_duration <= 0.0f )
             return;
-        pilot._listSkillRemaining[index] = pSkill->_duration;
-        pilot._listSkillCooldown[index]  = pSkill->_cooldown;
-        pilot._listSkillSpent[index]     = SW_TRUE;
+        pilot._listSkillRemaining[index].start( pSkill->_duration );
+        pilot._listSkillCooldown[index].start( pSkill->_cooldown );
+        pilot._listSkillSpent[index] = SW_TRUE;
         pushEvent( MechArenaEvent::Kind::SkillStarted, pilotIndex, -1, pSkill->_duration, pSkill->_id );
     }
 
@@ -915,7 +906,7 @@ namespace sw
         const int32 slotCount = pMech->computeSlotCount();
         pilot._listWeaponState.clear();
         pilot._listWeaponState.resize( static_cast<size_t>( slotCount ) );
-        pilot._listSpecialCooldown.assign( static_cast<size_t>( slotCount ), 0.0f );
+        pilot._listSpecialCooldown.assign( static_cast<size_t>( slotCount ), Countdown{} );
         int32 slotIndex = 0;
         for ( const MechModeDef& mode : pMech->_listMode )
         {
@@ -931,8 +922,8 @@ namespace sw
         pilot._mode = 0;
         for ( size_t index = 0; index < pilot._listSkill.size(); ++index )
         {
-            pilot._listSkillRemaining[index] = 0.0f;
-            pilot._listSkillSpent[index]     = SW_FALSE;
+            pilot._listSkillRemaining[index].clear();
+            pilot._listSkillSpent[index] = SW_FALSE;
         }
     }
 
@@ -940,17 +931,17 @@ namespace sw
     {
         MechPilot& pilot = _listPilot[static_cast<size_t>( pilotIndex )];
         equipMech( pilot, pilotIndex );
-        pilot._position          = pilot._spawnPosition;
-        pilot._velocity          = float3{};
-        pilot._forward           = float3{ 0.0f, 0.0f, 1.0f };
-        pilot._dashRemaining     = 0.0f;
-        pilot._staggerRemaining  = 0.0f;
-        pilot._transformCooldown = 0.0f;
-        pilot._comboStage        = -1;
-        pilot._meleeSlot         = -1;
-        pilot._deathSlot         = -1;
-        pilot._bMeleeQueued      = SW_FALSE;
-        pilot._bGrounded         = pilot._position._y <= 0.0f ? SW_TRUE : SW_FALSE;
+        pilot._position = pilot._spawnPosition;
+        pilot._velocity = float3{};
+        pilot._forward  = float3{ 0.0f, 0.0f, 1.0f };
+        pilot._dashRemaining.clear();
+        pilot._staggerRemaining.clear();
+        pilot._transformCooldown.clear();
+        pilot._comboStage   = -1;
+        pilot._meleeSlot    = -1;
+        pilot._deathSlot    = -1;
+        pilot._bMeleeQueued = SW_FALSE;
+        pilot._bGrounded    = pilot._position._y <= 0.0f ? SW_TRUE : SW_FALSE;
         pilot._melee.cancel();
         pilot._state = MechPilotState::Active;
         if ( bRespawn == false )
@@ -1040,7 +1031,7 @@ namespace sw
         event._other = other;
         event._value = value;
         event._id    = id;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     // --- 직렬화 -----------------------------------------------------------------------------------
@@ -1081,7 +1072,7 @@ namespace sw
             }
             const int32 skillCount = MathUtil::min( countActiveSkills( pilot ), 32 );
             for ( int32 skill = 0; skill < skillCount; ++skill )
-                entry._activeSkillMask |= pilot._listSkillRemaining[static_cast<size_t>( skill )] > 0.0f ? ( 1u << static_cast<uint32>( skill ) ) : 0u;
+                entry._activeSkillMask |= pilot._listSkillRemaining[static_cast<size_t>( skill )].isActive() ? ( 1u << static_cast<uint32>( skill ) ) : 0u;
             outSnapshot._listPilot.push_back( entry );
         }
         for ( const MechProjectile& projectile : _listProjectile )

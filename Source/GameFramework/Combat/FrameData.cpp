@@ -46,16 +46,6 @@ namespace sw
     {
     }
 
-    bool MoveCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &MoveCatalog::loadRoot, path, "MoveCatalog" );
-    }
-
-    bool MoveCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &MoveCatalog::loadRoot, xmlText, sourceName, "MoveCatalog" );
-    }
-
     void MoveCatalog::addMove( const MoveFrameData& move )
     {
         (void)_catalog.add( move ); // 빈 id 는 카탈로그가 거른다

@@ -17,21 +17,11 @@ namespace sw
         : _listRound{}
         , _listPlacementPoint{ 3, 2, 1, 0 }
         , _listTotal{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _winScore{ 5 }
         , _roundNumber{ 0 }
         , _winner{ -1 }
     {
-    }
-
-    bool PartyRoundSeries::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &PartyRoundSeries::loadRoot, path, "PartySeries" );
-    }
-
-    bool PartyRoundSeries::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &PartyRoundSeries::loadRoot, xmlText, sourceName, "PartySeries" );
     }
 
     bool PartyRoundSeries::start( int32 playerCount )
@@ -39,7 +29,7 @@ namespace sw
         if ( playerCount < 2 || _listRound.empty() )
             return false;
         _listTotal.assign( static_cast<size_t>( playerCount ), 0 );
-        _listEvent.clear();
+        _eventBuffer.clear();
         _roundNumber = 0;
         _winner      = -1;
         pushEvent( PartySeriesEvent::Kind::RoundStarted, -1, 0, 0 );
@@ -109,8 +99,7 @@ namespace sw
 
     void PartyRoundSeries::drainEvents( vector<PartySeriesEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     uint32 PartyRoundSeries::loadRoot( const XmlNode& root, string_view sourceName )
@@ -155,6 +144,6 @@ namespace sw
         event._points               = points;
         const PartyRoundDef* pRound = getCurrentRound();
         event._roundId              = pRound != nullptr ? pRound->_id : hashed_string{};
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

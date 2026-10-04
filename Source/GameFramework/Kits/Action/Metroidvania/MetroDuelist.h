@@ -13,6 +13,7 @@
 #include "GameFramework/Combat/ResourceGauge.h"
 #include "GameFramework/Combat/Vitality.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -74,7 +75,7 @@ namespace sw
          */
         float32 computeAttackDamage( float32 baseDamage, const MetroDuelist& target );
 
-        bool                 isRiposteReady() const { return _riposteRemaining > 0.0f; }
+        bool                 isRiposteReady() const { return _riposteWindow.isActive(); }
         bool                 isGuarding() const { return _bGuarding == SW_TRUE; }
         float32              getTime() const { return _time; }
         const Vitality&      getVitality() const { return _vitality; }
@@ -88,7 +89,7 @@ namespace sw
         ResourceGauge              _stamina;
         float32                    _time;
         float32                    _parryPressTime; ///< 마지막으로 패리를 누른 시각(쓰면 아주 먼 과거로)
-        float32                    _riposteRemaining;
+        Countdown                  _riposteWindow;
         float32                    _damageTakenScale;
         uint8                      _bGuarding;
     };

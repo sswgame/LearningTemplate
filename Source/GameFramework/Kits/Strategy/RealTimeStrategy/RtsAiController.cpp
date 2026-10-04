@@ -36,7 +36,7 @@ namespace sw
         , _blackboard{}
         , _settings{}
         , _pWorld{ nullptr }
-        , _thinkTimer{ 0.0f }
+        , _thinkTimer{}
         , _player{ -1 }
         , _attackWaveCount{ 0 }
     {
@@ -44,10 +44,10 @@ namespace sw
 
     void RtsAiController::initialize( RtsWorld* pWorld, int32 player, const RtsAiSettings& settings )
     {
-        _pWorld          = pWorld;
-        _player          = player;
-        _settings        = settings;
-        _thinkTimer      = 0.0f;
+        _pWorld   = pWorld;
+        _player   = player;
+        _settings = settings;
+        _thinkTimer.clear();
         _attackWaveCount = 0;
         _blackboard.clear();
         makeTree();
@@ -76,11 +76,11 @@ namespace sw
         const RtsPlayer* pPlayer = _pWorld->findPlayer( _player );
         if ( pPlayer == nullptr || pPlayer->_bDefeated )
             return;
-        _thinkTimer -= deltaTime;
-        if ( _thinkTimer > 0.0f )
+        _thinkTimer.tick( deltaTime );
+        if ( _thinkTimer.isActive() )
             return;
-        _thinkTimer = _settings._thinkInterval;
-        (void)_runner.tick( _blackboard, this, _settings._thinkInterval );
+        _thinkTimer.start( _settings._thinkInterval );
+        _runner.tick( _blackboard, this, _settings._thinkInterval );
     }
 
     void RtsAiController::notify( const RtsEvent& event )
@@ -95,7 +95,7 @@ namespace sw
 
     void RtsAiController::writeState( Archive& outArchive ) const
     {
-        outArchive << _thinkTimer;
+        outArchive << _thinkTimer._remaining;
         outArchive << _attackWaveCount;
     }
 
@@ -107,8 +107,8 @@ namespace sw
         archive >> attackWaveCount;
         if ( archive.isError() || attackWaveCount < 0 )
             return false;
-        _thinkTimer      = thinkTimer;
-        _attackWaveCount = attackWaveCount;
+        _thinkTimer._remaining = thinkTimer;
+        _attackWaveCount       = attackWaveCount;
         return true;
     }
 

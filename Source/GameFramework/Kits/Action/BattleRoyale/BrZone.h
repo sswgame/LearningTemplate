@@ -10,6 +10,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -109,19 +110,19 @@ namespace sw
         const BrZonePhaseDef* findPhase() const;
         void                  pushEvent( BrZoneEvent::Kind kind );
 
-        BrZoneSettings        _settings;
-        vector<BrZoneEvent>   _listEvent;
-        const IBrZoneTerrain* _pTerrain;
-        GameRandom            _random;
-        float2                _center;
-        float2                _fromCenter; ///< 줄기 시작할 때의 원
-        float2                _nextCenter;
-        float32               _radius;
-        float32               _fromRadius;
-        float32               _nextRadius;
-        float32               _mapSize;
-        float32               _stageRemaining;
-        int32                 _phaseIndex;
-        BrZoneStage           _stage;
+        BrZoneSettings           _settings;
+        EventBuffer<BrZoneEvent> _eventBuffer;
+        const IBrZoneTerrain*    _pTerrain;
+        GameRandom               _random;
+        float2                   _center;
+        float2                   _fromCenter; ///< 줄기 시작할 때의 원
+        float2                   _nextCenter;
+        float32                  _radius;
+        float32                  _fromRadius;
+        float32                  _nextRadius;
+        float32                  _mapSize;
+        float32                  _stageRemaining;
+        int32                    _phaseIndex;
+        BrZoneStage              _stage;
     };
 } // namespace sw

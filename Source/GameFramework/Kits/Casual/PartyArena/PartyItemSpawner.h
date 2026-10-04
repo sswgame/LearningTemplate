@@ -13,7 +13,10 @@
 
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -82,41 +85,42 @@ namespace sw
      * @brief `<PartyItems minInterval="4" maxInterval="8" lifetime="10" radius="6" height="1.5" maxActive="2"><Item id="spring" effect="SuperBounce" weight="3"/>
      *        <Item id="anvil" effect="Heavy" weight="2" duration="8" knockbackTaken="0.5" knockbackDealt="1.5"/></PartyItems>` 를 읽습니다.
      */
-    class SW_GF_API PartyItemSpawner
+    class SW_GF_API PartyItemSpawner : public XmlCatalog<PartyItemSpawner>
     {
+        friend class XmlCatalog<PartyItemSpawner>;
+
     public:
         PartyItemSpawner();
 
         /** @brief 규칙과 씨앗을 두고 놓인 것을 비웁니다(정의는 남긴다). 첫 아이템은 최소 간격 뒤입니다. */
-        void               initialize( const PartyItemSpawnSettings& settings, uint32 seed );
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addItem( const PartyItemDef& def ) { (void)_catalog.add( def ); }
+        void initialize( const PartyItemSpawnSettings& settings, uint32 seed );
+        void addItem( const PartyItemDef& def ) { (void)_catalog.add( def ); }
 
         void update( float32 deltaTime );
         /** @brief @p position 에서 @p radius 안의 가장 가까운 아이템을 @p player 가 줍습니다. 없으면 false 입니다. */
         [[nodiscard]] bool tryPickUp( const float3& position, float32 radius, int32 player, PartyItemInstance& outItem );
         void               drainEvents( vector<PartyItemEvent>& outListEvent );
         /** @brief 쌓인 알림을 꺼내지 않고 버립니다(쓰지 않는 쪽 — 받을 목록을 만들어 복사하지 않는다). */
-        void discardEvents() { _listEvent.clear(); }
+        void discardEvents() { _eventBuffer.clear(); }
 
         const PartyItemDef*              findItem( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<PartyItemInstance>& getInstances() const { return _listInstance; }
         const PartyItemSpawnSettings&    getSettings() const { return _settings; }
-        float32                          getSpawnTimer() const { return _spawnTimer; }
+        float32                          getSpawnTimer() const { return _spawnTimer.getRemaining(); }
 
     private:
-        uint32              loadRoot( const XmlNode& root, string_view sourceName );
-        const PartyItemDef* pickWeighted();
-        void                spawnOne();
-        float32             rollInterval();
+        static constexpr const utf8* kXmlRootName = "PartyItems"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        const PartyItemDef*          pickWeighted();
+        void                         spawnOne();
+        float32                      rollInterval();
 
-        GameCatalog<PartyItemDef> _catalog;
-        vector<PartyItemInstance> _listInstance;
-        vector<PartyItemEvent>    _listEvent;
-        PartyItemSpawnSettings    _settings;
-        GameRandom                _random;
-        float32                   _spawnTimer;
-        int32                     _nextSerial;
+        GameCatalog<PartyItemDef>   _catalog;
+        vector<PartyItemInstance>   _listInstance;
+        EventBuffer<PartyItemEvent> _eventBuffer;
+        PartyItemSpawnSettings      _settings;
+        GameRandom                  _random;
+        Countdown                   _spawnTimer;
+        int32                       _nextSerial;
     };
 } // namespace sw

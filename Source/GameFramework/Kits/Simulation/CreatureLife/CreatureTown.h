@@ -13,6 +13,7 @@
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Progression/Reputation.h"
 #include "GameFramework/Quest/QuestLog.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/World/WorldClock.h"
 
 namespace sw
@@ -232,22 +233,22 @@ namespace sw
         void  updateAppealTier();
         int2  computeCreatureAnchor( const TownCreature& creature ) const;
 
-        vector<hashed_string>      _listObject; ///< 행 우선(y × width + x) — 빈 id 는 빈 칸
-        vector<HabitatInstance>    _listHabitat;
-        vector<TownCreature>       _listCreature; ///< 온 순서
-        vector<CreatureHouse>      _listHouse;
-        vector<CreatureTownEvent>  _listEvent;
-        vector<ReputationEvent>    _listReputationScratch;
-        vector<QuestEvent>         _listQuestScratch;
-        ReputationState            _friendship;
-        QuestLog                   _questLog;
-        CreatureTownSettings       _settings;
-        const CreatureLifeCatalog* _pCatalog;
-        int32                      _width;
-        int32                      _height;
-        int32                      _day;
-        int32                      _nextHabitatId;
-        int32                      _lastAttractKey; ///< 마지막으로 방문을 굴린 날 × 24 + 시
-        int32                      _appealTier;
+        vector<hashed_string>          _listObject; ///< 행 우선(y × width + x) — 빈 id 는 빈 칸
+        vector<HabitatInstance>        _listHabitat;
+        vector<TownCreature>           _listCreature; ///< 온 순서
+        vector<CreatureHouse>          _listHouse;
+        EventBuffer<CreatureTownEvent> _eventBuffer;
+        vector<ReputationEvent>        _listReputationScratch;
+        vector<QuestEvent>             _listQuestScratch;
+        ReputationState                _friendship;
+        QuestLog                       _questLog;
+        CreatureTownSettings           _settings;
+        const CreatureLifeCatalog*     _pCatalog;
+        int32                          _width;
+        int32                          _height;
+        int32                          _day;
+        int32                          _nextHabitatId;
+        int32                          _lastAttractKey; ///< 마지막으로 방문을 굴린 날 × 24 + 시
+        int32                          _appealTier;
     };
 } // namespace sw

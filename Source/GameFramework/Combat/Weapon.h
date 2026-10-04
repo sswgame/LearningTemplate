@@ -12,7 +12,9 @@
 
 #include "GameFramework/Combat/WeaponMath.h"
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -53,20 +55,21 @@ namespace sw
 namespace sw
 {
     /** @brief `<WeaponCatalog><Weapon id="rifle" name="Rifle" fireInterval="0.1" .../></WeaponCatalog>` 를 읽습니다(속성 이름 = 필드 이름에서 `_` 를 뺀 것). */
-    class SW_GF_API WeaponCatalog
+    class SW_GF_API WeaponCatalog : public XmlCatalog<WeaponCatalog>
     {
+        friend class XmlCatalog<WeaponCatalog>;
+
     public:
         WeaponCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addWeapon( const WeaponDef& weapon );
+        void addWeapon( const WeaponDef& weapon );
 
         const WeaponDef*         findWeapon( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<WeaponDef>& getWeapons() const { return _catalog.getAll(); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "WeaponCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<WeaponDef> _catalog; ///< 읽은 순서(무기 바꾸기 순환)
     };
@@ -126,14 +129,14 @@ namespace sw
         int32            getMagazineAmmo() const { return _magazineAmmo; }
         int32            getReserveAmmo() const { return _reserveAmmo; }
         float32          getCurrentSpread() const { return _currentSpread; }
-        bool             isReloading() const { return _reloadRemaining > 0.0f; }
-        float32          getReloadRemaining() const { return _reloadRemaining; }
+        bool             isReloading() const { return _reload.isActive(); }
+        float32          getReloadRemaining() const { return _reload.getRemaining(); }
 
     private:
         WeaponDef  _def;
         GameRandom _random;
-        float32    _cooldown; ///< 다음 발까지 남은 시간(s). 음수는 이번 프레임 안에서 준비된 뒤 지난 시간(늦음 — 다음 간격에서 뺀다)
-        float32    _reloadRemaining;
+        Countdown  _cooldown; ///< 다음 발까지 — 발사는 `restart` 로 걸어 늦음을 다음 간격에서 뺀다
+        Countdown  _reload;
         float32    _currentSpread;
         int32      _magazineAmmo;
         int32      _reserveAmmo;

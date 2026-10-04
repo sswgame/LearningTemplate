@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -82,13 +83,13 @@ namespace sw
      *        color="1 1 1 1" solid="true" opaque="true" breakable="true"/></BlockCatalog>` 를 읽습니다.
      * @details 블록 번호는 읽은 순서로 1 부터 붙습니다(최대 255). `tile` 은 여섯 면의 기본, `top` · `bottom` · `side` 가 그 면을 덮어씁니다.
      */
-    class SW_GF_API VoxelBlockCatalog
+    class SW_GF_API VoxelBlockCatalog : public XmlCatalog<VoxelBlockCatalog>
     {
+        friend class XmlCatalog<VoxelBlockCatalog>;
+
     public:
         VoxelBlockCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
         /** @brief 블록을 더하고 번호를 돌려줍니다. 같은 id 는 바꾸고 번호를 유지합니다. 255 개가 넘으면 공기(0)입니다. */
         VoxelBlockIndex addBlock( const VoxelBlockDef& block );
 
@@ -110,7 +111,8 @@ namespace sw
         int32 getTileTexels() const { return _tileTexels; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "BlockCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<VoxelBlockDef> _catalog; ///< 번호 - 1 자리(id 조회는 해시 한 번)
         int32                      _atlasColumns;

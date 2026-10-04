@@ -51,7 +51,7 @@ namespace sw
 
     JrpgParty::JrpgParty()
         : _listMember{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _wallet{}
         , _inventory{}
         , _equipLayout{}
@@ -66,7 +66,7 @@ namespace sw
         _pItemCatalog = pItemCatalog;
         _equipLayout  = string( equipLayout );
         _listMember.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _wallet.clear();
         _inventory.initialize( pItemCatalog, inventorySlotCount );
     }
@@ -98,7 +98,7 @@ namespace sw
         JrpgMember& added = _listMember.back();
         added._hp         = added.getStat( JrpgStat::MaxHp );
         added._mp         = added.getStat( JrpgStat::MaxMp );
-        _listEvent.clear(); // 처음 만든 멤버의 성장은 알리지 않는다
+        _eventBuffer.clear(); // 처음 만든 멤버의 성장은 알리지 않는다
         return memberIndex;
     }
 
@@ -236,8 +236,7 @@ namespace sw
 
     void JrpgParty::drainEvents( vector<JrpgPartyEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     bool JrpgParty::canUseSpell( int32 memberIndex, const hashed_string& spellId ) const
@@ -336,6 +335,6 @@ namespace sw
         event._memberIndex = memberIndex;
         event._value       = value;
         event._id          = id;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

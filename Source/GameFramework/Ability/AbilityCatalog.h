@@ -16,6 +16,7 @@
 #include "GameFramework/Ability/AttributeSet.h"
 #include "GameFramework/Ability/GameplayAbility.h"
 #include "GameFramework/Ability/GameplayEffect.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -120,8 +121,10 @@ namespace sw
      *          파일 안의 순서와 상관없이 이펙트 → 어빌리티 → 세트 순으로 읽어, 참조(비용 · 쿨다운 이펙트)가 앞에 와야 할 필요가 없습니다. 여러 파일을
      *          차례로 읽으면 합쳐지고 같은 id 는 뒤의 것이 이깁니다. 형식은 `Source/GameFramework/Ability/README.md` 에 있습니다.
      */
-    class SW_GF_API AbilityCatalog
+    class SW_GF_API AbilityCatalog : public XmlCatalog<AbilityCatalog>
     {
+        friend class XmlCatalog<AbilityCatalog>;
+
     public:
         AbilityCatalog();
         ~AbilityCatalog();
@@ -161,10 +164,6 @@ namespace sw
         // --------------------------------------------------------------------------
         // 데이터 — XML
         // --------------------------------------------------------------------------
-        /** @brief 에셋 상대 경로 또는 실제 경로의 카탈로그 XML 을 읽어 더합니다. 하나라도 읽었으면 true 입니다. */
-        [[nodiscard]] bool loadFromResource( string_view path );
-        /** @brief XML 텍스트를 읽어 더합니다(시험 · 도구). 하나라도 읽었으면 true 입니다. */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
         /** @brief 정의를 모두 지웁니다. 클래스 등록은 남깁니다. */
         void clearDefinitions();
 
@@ -193,7 +192,8 @@ namespace sw
         }
 
         /** @brief `<AbilityCatalog>` 루트 하나를 읽습니다. 읽은 정의 수를 돌려줍니다. */
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "AbilityCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
         /** @brief `<GameplayEffect>` 하나를 읽습니다. */
         [[nodiscard]] bool readEffect( const XmlNode& node, string_view sourceName, GameplayEffectDef& outDef ) const;
         /** @brief `<Ability>` 하나를 읽습니다. */

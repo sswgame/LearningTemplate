@@ -28,16 +28,6 @@ namespace sw
     {
     }
 
-    bool BrCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &BrCatalog::loadRoot, path, "BattleRoyaleCatalog" );
-    }
-
-    bool BrCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &BrCatalog::loadRoot, xmlText, sourceName, "BattleRoyaleCatalog" );
-    }
-
     uint32 BrCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         _mapSize = MathUtil::max( 1.0f, root.getAttributeFloat( "mapSize", _mapSize ) );

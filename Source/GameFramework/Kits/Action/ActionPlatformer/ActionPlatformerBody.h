@@ -15,6 +15,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 #include "GameFramework/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -135,7 +136,7 @@ namespace sw
         float2             _velocity; ///< 갈고리 · 드릴 모드의 속도
         float2             _anchor;
         float32            _ropeLength;
-        float32            _drillSearchTimer;
+        Countdown          _drillSearchTimer;
         uint32             _events;
         ActionMoveMode     _mode;
         uint8              _bInsideDirt;

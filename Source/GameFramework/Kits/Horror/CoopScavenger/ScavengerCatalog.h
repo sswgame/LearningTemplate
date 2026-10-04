@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -130,13 +131,12 @@ namespace sw
      *        <Scrap id="bolt" min="20" max="40" weight="5" spawnWeight="5" twoHanded="false"/>
      *        <Moon id="experimentation" risk="1" cost="0" scrap="8" scrapMax="12" valueMin="0.9" valueMax="1.1" scraps="bolt,bell" company="false"/></ScavengerCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ScavengerCatalog
+    class SW_GF_API ScavengerCatalog : public XmlCatalog<ScavengerCatalog>
     {
+        friend class XmlCatalog<ScavengerCatalog>;
+
     public:
         ScavengerCatalog();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         const ScavengerMoonDef*          findMoon( const hashed_string& id ) const { return _moonCatalog.find( id ); }
         const vector<ScavengerMoonDef>&  getMoons() const { return _moonCatalog.getAll(); }
@@ -154,7 +154,8 @@ namespace sw
         float32                          getCrewHealth() const { return _crewHealth; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "ScavengerCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<ScavengerMoonDef>  _moonCatalog;
         GameCatalog<ScavengerScrapDef> _scrapCatalog;

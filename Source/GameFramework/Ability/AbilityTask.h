@@ -10,6 +10,7 @@
 
 #include "GameFramework/Ability/AbilitySystemEvents.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -75,11 +76,11 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 콜백까지 남은 시간입니다. */
-        float32 getRemainingTime() const { return _remainingTime; }
+        float32 getRemainingTime() const { return _delay.getRemaining(); }
 
     private:
         Delegate<void()> _onFinished;
-        float32          _remainingTime;
+        Countdown        _delay;
     };
 } // namespace sw
 

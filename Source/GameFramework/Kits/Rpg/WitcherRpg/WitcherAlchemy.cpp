@@ -93,8 +93,8 @@ namespace sw
         const WitcherAlchemyDef* pDef = findDef( itemId );
         spendCharge( itemId );
         WitcherActiveEffect effect;
-        effect._itemId    = itemId;
-        effect._remaining = pDef->_duration;
+        effect._itemId = itemId;
+        effect._remaining.start( pDef->_duration );
         if ( pDef->_kind == WitcherAlchemyKind::Decoction )
             effect._lockedToxicity = pDef->_toxicity;
         else
@@ -104,7 +104,7 @@ namespace sw
         {
             if ( active._itemId == itemId )
             {
-                active._remaining = MathUtil::max( active._remaining, effect._remaining );
+                active._remaining.extendTo( effect._remaining.getRemaining() );
                 return WitcherUseResult::Ok;
             }
         }
@@ -176,8 +176,8 @@ namespace sw
         for ( size_t index = _listEffect.size(); index > 0; --index )
         {
             WitcherActiveEffect& effect = _listEffect[index - 1];
-            effect._remaining -= deltaTime;
-            if ( effect._remaining <= 0.0f )
+            effect._remaining.tick( deltaTime );
+            if ( effect._remaining.isActive() == false )
                 _listEffect.erase( _listEffect.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
     }

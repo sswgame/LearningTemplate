@@ -21,14 +21,14 @@ namespace sw
     InteractionProgress::InteractionProgress()
         : _config{}
         , _listParticipant{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pJudge{ nullptr }
         , _random{}
         , _seed{ GameRandom::kDefaultSeed }
         , _skillCheckActor{ 0 }
         , _progress{ 0.0f }
         , _time{ 0.0f }
-        , _skillCheckCountdown{ 0.0f }
+        , _skillCheckCountdown{}
         , _skillCheckTarget{ 0.0f }
         , _bCompleted{ SW_FALSE }
         , _bSkillCheckPending{ SW_FALSE }
@@ -49,22 +49,22 @@ namespace sw
     void InteractionProgress::reset()
     {
         _listParticipant.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _random.setSeed( _seed );
-        _skillCheckActor     = 0;
-        _progress            = 0.0f;
-        _time                = 0.0f;
-        _skillCheckTarget    = 0.0f;
-        _bCompleted          = SW_FALSE;
-        _bSkillCheckPending  = SW_FALSE;
-        _bRegressing         = SW_FALSE;
-        _skillCheckCountdown = 0.0f;
+        _skillCheckActor    = 0;
+        _progress           = 0.0f;
+        _time               = 0.0f;
+        _skillCheckTarget   = 0.0f;
+        _bCompleted         = SW_FALSE;
+        _bSkillCheckPending = SW_FALSE;
+        _bRegressing        = SW_FALSE;
+        _skillCheckCountdown.clear();
         scheduleSkillCheck();
     }
 
     void InteractionProgress::scheduleSkillCheck()
     {
-        _skillCheckCountdown = _config._skillCheckInterval > 0.0f ? _config._skillCheckInterval * _random.nextRange( 0.5f, 1.5f ) : 0.0f;
+        _skillCheckCountdown.start( _config._skillCheckInterval > 0.0f ? _config._skillCheckInterval * _random.nextRange( 0.5f, 1.5f ) : 0.0f );
     }
 
     void InteractionProgress::pushEvent( InteractionEvent::Kind kind, uint32 actorId, float32 value )
@@ -73,7 +73,7 @@ namespace sw
         event._kind    = kind;
         event._actorId = actorId;
         event._value   = value;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     bool InteractionProgress::hasParticipant( uint32 actorId ) const
@@ -167,8 +167,8 @@ namespace sw
         const bool bSkillChecks = _pJudge != nullptr && _config._skillCheckInterval > 0.0f;
         if ( bSkillChecks && _bSkillCheckPending == SW_FALSE )
         {
-            _skillCheckCountdown -= deltaTime;
-            if ( _skillCheckCountdown <= 0.0f )
+            _skillCheckCountdown.tick( deltaTime );
+            if ( _skillCheckCountdown.isActive() == false )
             {
                 const int32 pick    = _random.nextInt( 0, participantCount - 1 );
                 _skillCheckActor    = _listParticipant[static_cast<size_t>( pick )];
@@ -201,7 +201,7 @@ namespace sw
             event._actorId = actorId;
             event._grade   = grade;
             event._value   = bonus;
-            _listEvent.push_back( event );
+            _eventBuffer.push( event );
             addProgress( bonus );
             return;
         }
@@ -210,13 +210,12 @@ namespace sw
         event._actorId = actorId;
         event._value   = -_config._skillCheckPenalty;
         event._bNoise  = _config._bSkillCheckFailNoise;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
         addProgress( -_config._skillCheckPenalty );
     }
 
     void InteractionProgress::drainEvents( vector<InteractionEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

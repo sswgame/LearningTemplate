@@ -16,6 +16,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -119,14 +120,14 @@ namespace sw
      *        height="Mid" launcher="false" knockdown="false" wallSplat="false" unblockable="false">
      *        <Hitbox from="10" to="11" x=".." y=".." w=".." h=".." shape="Box"/><Cancel from="12" to="20" moves="a,b" onHit="true"/></Move></MoveCatalog>` 를 읽습니다.
      */
-    class SW_GF_API MoveCatalog
+    class SW_GF_API MoveCatalog : public XmlCatalog<MoveCatalog>
     {
+        friend class XmlCatalog<MoveCatalog>;
+
     public:
         MoveCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addMove( const MoveFrameData& move );
+        void addMove( const MoveFrameData& move );
 
         const MoveFrameData*         findMove( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<MoveFrameData>& getMoves() const { return _catalog.getAll(); }
@@ -135,7 +136,8 @@ namespace sw
         static AttackHeight parseAttackHeight( string_view text, AttackHeight fallback );
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "MoveCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<MoveFrameData> _catalog;
     };

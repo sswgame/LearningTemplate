@@ -18,6 +18,7 @@
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerCatalog.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerFacility.h"
 #include "GameFramework/Kits/Horror/CoopScavenger/ScavengerQuota.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 #include "GameFramework/World/WeatherSystem.h"
 #include "GameFramework/World/WorldClock.h"
@@ -192,7 +193,7 @@ namespace sw
 
         vector<ScavengerCrewMember> _listCrew;
         vector<ScavengerScrap>      _listShipScrap;
-        vector<ScavengerEvent>      _listEvent;
+        EventBuffer<ScavengerEvent> _eventBuffer;
         vector<SpawnEvent>          _listSpawnScratch;
         ScavengerExpeditionData     _data;
         ScavengerQuota              _quota;

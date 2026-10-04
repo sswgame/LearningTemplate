@@ -21,6 +21,8 @@
 #include "GameFramework/Input/TimingJudge.h"
 #include "GameFramework/Kits/Casual/PartyArena/PartyItemSpawner.h"
 #include "GameFramework/Match/MatchState.h"
+#include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
@@ -97,13 +99,13 @@ namespace sw
         TrampolineInput       _input{};
         float32               _landTime{ 0.0f };
         float32               _jumpPressTime{ -1000.0f };
-        float32               _contactTimer{ 0.0f };
-        float32               _attackTimer{ 0.0f };
-        float32               _attackCooldown{ 0.0f };
-        float32               _stunTimer{ 0.0f };
-        float32               _invulnerableTimer{ 0.0f };
+        Countdown             _contactTimer{};
+        Countdown             _attackTimer{};
+        Countdown             _attackCooldown{};
+        Countdown             _stunTimer{};
+        Countdown             _invulnerableTimer{};
         float32               _lastHitTime{ -1000.0f };
-        float32               _heavyTimer{ 0.0f };
+        Countdown             _heavyTimer{};
         float32               _knockbackTaken{ 1.0f }; ///< Heavy 동안 받는 밀림 배율
         float32               _knockbackDealt{ 1.0f };
         int32                 _combo{ 0 };
@@ -198,14 +200,14 @@ namespace sw
         void   applyItem( int32 player, const PartyItemDef& def );
         void   pushEvent( TrampolineEvent::Kind kind, int32 player, int32 other, int32 value );
 
-        vector<TrampolinePlayer> _listPlayer;
-        vector<TrampolineEvent>  _listEvent;
-        vector<MatchEvent>       _listMatchEvent; ///< 걸음마다 다시 쓰는 경기 알림 자리
-        TrampolineSettings       _settings;
-        TimingJudge              _judge;
-        PartyItemSpawner         _itemSpawner;
-        MatchState               _match;
-        FixedStepTimer           _timer;
-        float32                  _time;
+        vector<TrampolinePlayer>     _listPlayer;
+        EventBuffer<TrampolineEvent> _eventBuffer;
+        vector<MatchEvent>           _listMatchEvent; ///< 걸음마다 다시 쓰는 경기 알림 자리
+        TrampolineSettings           _settings;
+        TimingJudge                  _judge;
+        PartyItemSpawner             _itemSpawner;
+        MatchState                   _match;
+        FixedStepTimer               _timer;
+        float32                      _time;
     };
 } // namespace sw

@@ -7,47 +7,44 @@ namespace sw
     PlayerLocomotion::PlayerLocomotion()
         : _state{ LocomotionState::Idle }
         , _facing{ FacingDir::Down }
-        , _stateTimer{ 0.0f }
+        , _stateTimer{}
     {
     }
 
     void PlayerLocomotion::setState( LocomotionState state )
     {
-        _state      = state;
-        _stateTimer = 0.0f;
+        _state = state;
+        _stateTimer.clear();
     }
 
     void PlayerLocomotion::update( float32 deltaTime )
     {
-        if ( _stateTimer <= 0.0f )
+        if ( _stateTimer.isActive() == false )
+            return;
+        if ( _stateTimer.tick( deltaTime ) == false )
             return;
 
-        _stateTimer -= deltaTime;
-        if ( _stateTimer > 0.0f )
-            return;
-
-        _stateTimer = 0.0f;
         if ( _state == LocomotionState::Walk || _state == LocomotionState::Interact )
             _state = LocomotionState::Idle;
     }
 
     void PlayerLocomotion::notifyStepStarted()
     {
-        _state      = LocomotionState::Walk;
-        _stateTimer = kStepDuration;
+        _state = LocomotionState::Walk;
+        _stateTimer.start( kStepDuration );
     }
 
     void PlayerLocomotion::notifyStepFinished()
     {
         if ( _state == LocomotionState::Walk )
             _state = LocomotionState::Idle;
-        _stateTimer = 0.0f;
+        _stateTimer.clear();
     }
 
     void PlayerLocomotion::beginInteract( float32 duration )
     {
-        _state      = LocomotionState::Interact;
-        _stateTimer = duration;
+        _state = LocomotionState::Interact;
+        _stateTimer.start( duration );
     }
 
     void PlayerLocomotion::setFacingFromDelta( int32 dx, int32 dy )

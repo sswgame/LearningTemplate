@@ -20,6 +20,7 @@
 #include "GameFramework/Camera/CameraBlend.h"
 #include "GameFramework/Camera/CameraPose.h"
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -354,16 +355,16 @@ namespace sw
      * @endcode
      * @details 모르는 속성 · 원소 · 열거자 이름은 경고하고 넘깁니다(`ResourceDataSchemaTest` 가 그 경고를 잡는다).
      */
-    class SW_GF_API CameraPresetCatalog
+    class SW_GF_API CameraPresetCatalog : public XmlCatalog<CameraPresetCatalog>
     {
+        friend class XmlCatalog<CameraPresetCatalog>;
+
     public:
         CameraPresetCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addPreset( const CameraPresetDef& def );
-        void               addBlendRule( const CameraBlendRule& rule );
-        void               clear();
+        void addPreset( const CameraPresetDef& def );
+        void addBlendRule( const CameraBlendRule& rule );
+        void clear();
 
         const CameraPresetDef*         findPreset( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<CameraPresetDef>& getPresets() const { return _catalog.getAll(); }
@@ -376,7 +377,8 @@ namespace sw
         void                  setDefaultBlend( const BlendCurveSpec& blend ) { _defaultBlend = blend; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "CameraPresets"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
     private:
         GameCatalog<CameraPresetDef> _catalog;

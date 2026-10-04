@@ -16,6 +16,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
@@ -46,7 +47,7 @@ namespace sw
         // ---- 운행 상태(시뮬레이션이 쓴다) ----
         vector<uint32> _listQueue{}; ///< 줄 선 손님 id(앞부터)
         vector<uint32> _listRider{}; ///< 지금 탄 손님 id
-        float32        _cycleTimer{ 0.0f };
+        Countdown      _cycleTimer{};
         uint32         _totalRiders{ 0 };
         int32          _totalIncome{ 0 };
     };
@@ -218,8 +219,8 @@ namespace sw
         ThemeParkSettings _settings;
         vector<ParkRide>  _listRide;
         vector<ParkGuest> _listGuest;
-        float32           _arrivalAccumulator;
-        float32           _costAccumulator;
+        RateAccumulator   _arrival;     ///< 손님 도착(명)
+        RateAccumulator   _runningCost; ///< 운영비(돈)
         float32           _elapsedTime;
         FixedStepTimer    _stepTimer;
         GameRandom        _random;

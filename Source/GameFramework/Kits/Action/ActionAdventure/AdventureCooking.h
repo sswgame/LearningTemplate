@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -81,13 +82,12 @@ namespace sw
      *        dubious="dubiousFood" dubiousHearts="4"><Effect id="Chilly" tier2="4" tier3="7" maxDuration="1800"/>
      *        <Ingredient id="hydromelon" effect="Chilly" potency="1" duration="150" hearts="2"/></AdventureCooking>` 를 읽습니다.
      */
-    class SW_GF_API AdventureCooking
+    class SW_GF_API AdventureCooking : public XmlCatalog<AdventureCooking>
     {
+        friend class XmlCatalog<AdventureCooking>;
+
     public:
         AdventureCooking();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         /** @brief 재료 목록(같은 재료 여러 번 가능)만 보고 요리 결과를 정합니다(인벤토리는 보지 않는다 — 미리 보기). */
         AdventureCookResult evaluate( const vector<hashed_string>& listIngredient, AdventureDish& outDish ) const;
@@ -104,7 +104,8 @@ namespace sw
         int32                         getMaxIngredientCount() const { return _maxIngredientCount; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "AdventureCooking"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<AdventureIngredientDef> _ingredientCatalog;
         GameCatalog<AdventureCookEffectDef> _effectCatalog;

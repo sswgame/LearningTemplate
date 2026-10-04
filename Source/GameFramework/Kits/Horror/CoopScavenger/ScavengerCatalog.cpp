@@ -29,16 +29,6 @@ namespace sw
     {
     }
 
-    bool ScavengerCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &ScavengerCatalog::loadRoot, path, "ScavengerCatalog" );
-    }
-
-    bool ScavengerCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &ScavengerCatalog::loadRoot, xmlText, sourceName, "ScavengerCatalog" );
-    }
-
     float32 ScavengerCatalog::computeBuyRate( int32 daysLeft ) const
     {
         if ( _listBuyRate.empty() )

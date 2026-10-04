@@ -16,6 +16,7 @@
 #include "GameFramework/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/AI/SpawnDirector.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -180,25 +181,25 @@ namespace sw
         void                       pushEvent( const AiDirectorEvent& event );
         uint32                     computeChanceKey( int32 poolIndex, int32 encounterIndex ) const;
 
-        AiDirectorContext          _context;
-        AiDirectorIntensityModel   _builtinModel;
-        SpawnDirector              _spawnDirector;
-        vector<PoolState>          _listPoolState;
-        vector<AiDirectorEvent>    _listEvent;
-        vector<AiDirectorEvent>    _listTrace; ///< 고리 — `_traceHead` 가 가장 오래된 자리
-        vector<float32>            _listScratchWeight;
-        vector<SpawnEvent>         _listScratchSpawnEvent;
-        const AiDirectorProfile*   _pProfile;
-        const SpawnTable*          _pSpawnTable;
-        IAiDirectorIntensityModel* _pCustomModel;
-        GameRandom                 _random;
-        float32                    _time;
-        float32                    _phaseTime;
-        float32                    _intensity;
-        uint32                     _seed;
-        uint32                     _pickSerial; ///< 고른 횟수(확률 절의 열쇠)
-        int32                      _phaseIndex;
-        int32                      _cycle;
-        int32                      _traceHead;
+        AiDirectorContext            _context;
+        AiDirectorIntensityModel     _builtinModel;
+        SpawnDirector                _spawnDirector;
+        vector<PoolState>            _listPoolState;
+        EventBuffer<AiDirectorEvent> _eventBuffer;
+        vector<AiDirectorEvent>      _listTrace; ///< 고리 — `_traceHead` 가 가장 오래된 자리
+        vector<float32>              _listScratchWeight;
+        vector<SpawnEvent>           _listScratchSpawnEvent;
+        const AiDirectorProfile*     _pProfile;
+        const SpawnTable*            _pSpawnTable;
+        IAiDirectorIntensityModel*   _pCustomModel;
+        GameRandom                   _random;
+        float32                      _time;
+        float32                      _phaseTime;
+        float32                      _intensity;
+        uint32                       _seed;
+        uint32                       _pickSerial; ///< 고른 횟수(확률 절의 열쇠)
+        int32                        _phaseIndex;
+        int32                        _cycle;
+        int32                        _traceHead;
     };
 } // namespace sw

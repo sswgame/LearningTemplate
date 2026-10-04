@@ -94,16 +94,6 @@ namespace sw
     {
     }
 
-    bool SrpgCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &SrpgCatalog::loadRoot, path, "SrpgCatalog" );
-    }
-
-    bool SrpgCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &SrpgCatalog::loadRoot, xmlText, sourceName, "SrpgCatalog" );
-    }
-
     int32 SrpgCatalog::parseAptitude( string_view token, int32 fallback )
     {
         if ( StringUtil::equals( token, string_view( "S" ), true ) )

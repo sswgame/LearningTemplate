@@ -37,16 +37,6 @@ namespace sw
 
 namespace sw
 {
-    bool LootCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &LootCatalog::loadRoot, path, "LootCatalog" );
-    }
-
-    bool LootCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &LootCatalog::loadRoot, xmlText, sourceName, "LootCatalog" );
-    }
-
     uint32 LootCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;

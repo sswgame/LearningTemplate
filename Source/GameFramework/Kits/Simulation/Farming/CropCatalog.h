@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmCalendar.h"
 
@@ -48,13 +49,13 @@ namespace sw
      * @brief `<CropCatalog><Crop id="turnip" name="Turnip" seed="turnip_seed" produce="turnip" days="4" regrow="0" seasons="Spring,Fall"
      *        seedPrice="20" sellPrice="60" harvest="1"/></CropCatalog>` 를 읽습니다. 씨앗 · 수확물 아이템으로도 찾습니다.
      */
-    class SW_GF_API CropCatalog
+    class SW_GF_API CropCatalog : public XmlCatalog<CropCatalog>
     {
+        friend class XmlCatalog<CropCatalog>;
+
     public:
         CropCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
         /** @brief 작물을 더합니다(같은 id 는 바꾼다). */
         void addCrop( const CropDef& crop );
 
@@ -68,7 +69,8 @@ namespace sw
         const vector<CropDef>& getCrops() const { return _catalog.getAll(); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "CropCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
         /** @brief 씨앗 · 수확물 → 작물 자리 맵을 다시 짓습니다(작물이 더해질 때). */
         void rebuildItemIndex();
 

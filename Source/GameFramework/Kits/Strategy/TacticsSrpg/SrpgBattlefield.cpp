@@ -46,7 +46,8 @@ namespace sw
     SrpgBattlefield::SrpgBattlefield()
         : _listTerrain{}
         , _listUnit{}
-        , _listEvent{}
+        , _eventBuffer{}
+        , _cellMarks{}
         , _settings{}
         , _turnOrder{}
         , _random{}
@@ -72,7 +73,7 @@ namespace sw
             SW_LOG_WARNING( "unknown default terrain '%#' - cells are impassable until painted", defaultTerrain.c_str() );
         _listTerrain.assign( static_cast<size_t>( _width * _height ), pTerrain );
         _listUnit.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _turn       = 0;
         _activeUnit = -1;
         _phaseTeam  = SrpgTeam::Player;
@@ -381,8 +382,9 @@ namespace sw
             computeMoveRange( unitIndex, reach );
             reach.collectReachable( listStand );
         }
-        vector<uint8> listMarked( static_cast<size_t>( _width * _height ), SW_FALSE );
-        vector<int2>  listRange;
+        // 한 칸을 한 번만 — 표시는 재사용 스크래치에(호출마다 W × H 를 잡지 않는다).
+        _cellMarks.begin( _width * _height );
+        vector<int2> listRange;
         for ( int32 weaponIndex = 0; weaponIndex < static_cast<int32>( pUnit->_listWeapon.size() ); ++weaponIndex )
         {
             const SrpgWeaponDef& weapon     = *pUnit->_listWeapon[static_cast<size_t>( weaponIndex )];
@@ -397,12 +399,8 @@ namespace sw
                 GridReachability::collectRangeCells( stand, weapon._minRange, weapon._maxRange, _width, _height, listRange );
                 for ( const int2& cell : listRange )
                 {
-                    uint8& bMarked = listMarked[static_cast<size_t>( cell._y * _width + cell._x )];
-                    if ( bMarked == SW_FALSE )
-                    {
-                        bMarked = SW_TRUE;
+                    if ( _cellMarks.visit( cell._y * _width + cell._x, -1 ) )
                         outListCell.push_back( cell );
-                    }
                 }
             }
         }
@@ -519,8 +517,7 @@ namespace sw
 
     void SrpgBattlefield::drainEvents( vector<SrpgEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     void SrpgBattlefield::collectDevelopOptions( int32 unitIndex, vector<hashed_string>& outListUnitId ) const

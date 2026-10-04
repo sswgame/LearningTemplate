@@ -45,16 +45,6 @@ namespace sw
     {
     }
 
-    bool AsymmetricHorrorRulesCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &AsymmetricHorrorRulesCatalog::loadRoot, path, "AsymmetricHorrorRules" );
-    }
-
-    bool AsymmetricHorrorRulesCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &AsymmetricHorrorRulesCatalog::loadRoot, xmlText, sourceName, "AsymmetricHorrorRules" );
-    }
-
     const HorrorScoreRule* AsymmetricHorrorRulesCatalog::findScoreRule( const hashed_string& action ) const
     {
         for ( const HorrorScoreRule& rule : _listScoreRule )

@@ -23,16 +23,6 @@ namespace sw
         return 0.0f;
     }
 
-    bool WeatherCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &WeatherCatalog::loadRoot, path, "WeatherCatalog" );
-    }
-
-    bool WeatherCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &WeatherCatalog::loadRoot, xmlText, sourceName, "WeatherCatalog" );
-    }
-
     uint32 WeatherCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         _transitionTime    = MathUtil::max( 0.0f, root.getAttributeFloat( "transition", _transitionTime ) );

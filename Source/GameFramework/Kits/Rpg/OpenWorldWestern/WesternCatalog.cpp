@@ -83,16 +83,6 @@ namespace sw
         _listGradeScale = { 0.0f, 0.3f, 0.6f, 1.0f };
     }
 
-    bool WesternCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &WesternCatalog::loadRoot, path, "WesternCatalog" );
-    }
-
-    bool WesternCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &WesternCatalog::loadRoot, xmlText, sourceName, "WesternCatalog" );
-    }
-
     const WesternHonorTierDef* WesternCatalog::findHonorTier( const hashed_string& name ) const
     {
         for ( const WesternHonorTierDef& tier : _listHonorTier )

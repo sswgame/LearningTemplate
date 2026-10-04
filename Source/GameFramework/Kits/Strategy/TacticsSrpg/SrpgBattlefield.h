@@ -14,7 +14,9 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"
 #include "GameFramework/Progression/LevelProgress.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
+#include "GameFramework/Utility/GridTopology.h"
 
 namespace sw
 {
@@ -204,7 +206,7 @@ namespace sw
         void               addMorale( int32 unitIndex, int32 delta );
         /** @brief 파일럿과 기체에 경험치를 줍니다. */
         void grantXp( int32 unitIndex, int64 amount );
-        void pushEvent( const SrpgEvent& event ) { _listEvent.push_back( event ); }
+        void pushEvent( const SrpgEvent& event ) { _eventBuffer.push( event ); }
         void drainEvents( vector<SrpgEvent>& outListEvent );
 
         // --- 개발 ---
@@ -244,7 +246,8 @@ namespace sw
 
         vector<const SrpgTerrainDef*> _listTerrain; ///< 칸 → 지형
         vector<SrpgUnit>              _listUnit;
-        vector<SrpgEvent>             _listEvent;
+        EventBuffer<SrpgEvent>        _eventBuffer;
+        mutable GridSearchScratch     _cellMarks; ///< `collectThreatCells` 의 "한 칸 한 번" 표시
         SrpgSettings                  _settings;
         TurnOrder                     _turnOrder;
         GameRandom                    _random;

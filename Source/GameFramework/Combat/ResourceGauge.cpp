@@ -12,7 +12,7 @@ namespace sw
         , _maxBonus{ 0.0f }
         , _regenScale{ 1.0f }
         , _sinceUse{ 0.0f }
-        , _overheatPenaltyRemaining{ 0.0f }
+        , _overheatPenalty{}
         , _bLocked{ SW_FALSE }
     {
         initialize( _settings );
@@ -50,8 +50,8 @@ namespace sw
             markUsed();
             if ( _value >= getMax() )
             {
-                _bLocked                  = SW_TRUE;
-                _overheatPenaltyRemaining = _settings._overheatCooldown;
+                _bLocked = SW_TRUE;
+                _overheatPenalty.start( _settings._overheatCooldown );
             }
             return true;
         }
@@ -78,8 +78,8 @@ namespace sw
             markUsed();
             if ( _value >= getMax() )
             {
-                _bLocked                  = SW_TRUE;
-                _overheatPenaltyRemaining = _settings._overheatCooldown;
+                _bLocked = SW_TRUE;
+                _overheatPenalty.start( _settings._overheatCooldown );
                 return false;
             }
             return true;
@@ -112,8 +112,8 @@ namespace sw
             _value               = MathUtil::min( getMax(), _value + amount );
             if ( _value >= getMax() && _bLocked == SW_FALSE )
             {
-                _bLocked                  = SW_TRUE;
-                _overheatPenaltyRemaining = _settings._overheatCooldown;
+                _bLocked = SW_TRUE;
+                _overheatPenalty.start( _settings._overheatCooldown );
             }
             return _value - before;
         }
@@ -131,10 +131,10 @@ namespace sw
     {
         if ( deltaTime <= 0.0f )
             return;
-        if ( _overheatPenaltyRemaining > 0.0f )
+        if ( _overheatPenalty.isActive() )
         {
             // 과열 벌칙 — 이 시간 동안은 식지도 않는다. 벌칙이 끝난 걸음의 남은 몫은 버린다.
-            _overheatPenaltyRemaining = MathUtil::max( 0.0f, _overheatPenaltyRemaining - deltaTime );
+            _overheatPenalty.tick( deltaTime );
             return;
         }
         _sinceUse += deltaTime;
@@ -163,10 +163,10 @@ namespace sw
 
     void ResourceGauge::refill()
     {
-        _value                    = _settings._bOverheatMode == SW_TRUE ? 0.0f : getMax();
-        _sinceUse                 = _settings._regenDelay;
-        _overheatPenaltyRemaining = 0.0f;
-        _bLocked                  = SW_FALSE;
+        _value    = _settings._bOverheatMode == SW_TRUE ? 0.0f : getMax();
+        _sinceUse = _settings._regenDelay;
+        _overheatPenalty.clear();
+        _bLocked = SW_FALSE;
     }
 
     void ResourceGauge::setMaxBonus( float32 bonus )
@@ -192,7 +192,7 @@ namespace sw
 
     void ResourceGauge::releaseLockIfRecovered()
     {
-        if ( _bLocked == SW_FALSE || _overheatPenaltyRemaining > 0.0f )
+        if ( _bLocked == SW_FALSE || _overheatPenalty.isActive() )
             return;
         const bool bRecovered = _settings._bOverheatMode == SW_TRUE ? _value <= _settings._overheatRecoverLevel : _value >= _settings._exhaustThreshold;
         if ( bRecovered )
