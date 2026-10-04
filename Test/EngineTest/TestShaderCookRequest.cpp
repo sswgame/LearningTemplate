@@ -458,7 +458,7 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsReques
         sw::vector<sw::string> listRuntimeSwitch;
         for ( const sw::MaterialStaticSwitch& entry : material->getPermutations()._listStaticSwitch )
         {
-            if ( entry._bShaderFeature == 0 )
+            if ( entry._bShaderFeature == SW_FALSE )
                 listRuntimeSwitch.push_back( entry._name );
         }
         if ( listRuntimeSwitch.empty() )

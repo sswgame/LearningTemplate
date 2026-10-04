@@ -250,6 +250,7 @@ namespace test
         int32           _lastServerChangeTick{ -1 };
         int32           _convergedTick{ -1 }; ///< 그 뒤 모든 클라이언트 해시가 서버와 같아진 틱(끝까지 유지)
         int32           _maxEventLagTicks{ 0 };
+        float32         _minRenderLagTicks{ 1.0e9f }; ///< 클라이언트가 덩어리를 그리는 틱이 서버 틱보다 가장 덜 뒤처졌을 때(틱)
         int32           _lateJoinMatchTicks{ -1 };
         int32           _desyncRecoverTicks{ -1 };
         uint32          _hashMismatchCount{ 0 };
@@ -372,6 +373,8 @@ namespace test
                         result._maxEventLagTicks = MathUtil::max( result._maxEventLagTicks, static_cast<int32>( tick - listCountTick[entry] ) );
                 }
                 const float32 renderTick = session._replication.getRenderTick();
+                if ( renderTick >= 0.0f )
+                    result._minRenderLagTicks = MathUtil::min( result._minRenderLagTicks, static_cast<float32>( serverTick ) - renderTick );
                 for ( uint32 object = 0; object < objectCount; ++object )
                 {
                     session._objects._listFracture[object]->collectGroupPoses( listPose );
@@ -475,11 +478,12 @@ namespace test
 
     inline void logResult( [[maybe_unused]] const utf8* pName, [[maybe_unused]] const ScenarioResult& result ) // 로그만 — Shipping 에서는 빈 함수
     {
-        SW_LOG_INFO( "[NetSimDestruction] %#: events %#, last server change tick %#, converge %# ticks after it, max event lag %# ticks, chunk error max %# m p99 %# m (%# samples), "
+        SW_LOG_INFO( "[NetSimDestruction] %#: events %#, last server change tick %#, converge %# ticks after it, max event lag %# ticks, chunk error max %# m p99 %# m (%# samples), render lag min %# ticks, "
                      "rest error %# m, chunks %# debris %# violations %#, server up %# B/s (peak %# B/s), client down %# B/s, destruction payload %# B/s, pose messages %#, "
                      "mismatch %# snapshots %# late-join %# ticks desync-recover %# ticks",
                      pName, result._serverEventCount, result._lastServerChangeTick, result._convergedTick >= 0 ? result._convergedTick - result._lastServerChangeTick : -1, result._maxEventLagTicks,
-                     computePercentile( result._listChunkError, 1.0f ), computePercentile( result._listChunkError, 0.99f ), result._listChunkError.size(), result._maxRestError,
+                     computePercentile( result._listChunkError, 1.0f ), computePercentile( result._listChunkError, 0.99f ), result._listChunkError.size(), result._minRenderLagTicks,
+                     result._maxRestError,
                      result._chunkCount, result._debrisCount, result._debrisViolationCount, result._serverUploadBytesPerSecond, result._peakServerUploadBytesPerSecond, result._clientDownloadBytesPerSecond,
                      result._destructionBytesPerSecond, result._poseMessageCount, result._hashMismatchCount, result._snapshotAppliedCount, result._lateJoinMatchTicks,
                      result._desyncRecoverTicks );
@@ -512,5 +516,8 @@ namespace test
         SW_EXPECT_TRUE( result._chunkCount > 0 );
         SW_EXPECT_TRUE( result._maxRestError < 1.0e-4f );
         SW_EXPECT_TRUE( computePercentile( result._listChunkError, 0.99f ) < maxChunkP99 );
+        // 덩어리는 자세 간격(쇼케이스 10 Hz = 6 틱)의 두 배 이상 과거로 그린다 — 하나뿐이면 자세 하나를 잃거나 늦을 때마다 뒤 자세가 없어 멈춰 선다
+        // (Shipping 물리에서 손실 회선의 덩어리 오차 p99 가 1 m 를 넘었다).
+        SW_EXPECT_TRUE_MSG( result._minRenderLagTicks >= 12.0f, "chunks are drawn at least two pose intervals in the past" );
     }
 } // namespace test

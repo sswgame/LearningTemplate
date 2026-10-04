@@ -126,7 +126,7 @@ namespace sw
                 vector<string> listRuntimeSwitch;
                 for ( const MaterialStaticSwitch& entry : material.getPermutations()._listStaticSwitch )
                 {
-                    if ( entry._bShaderFeature == 0 )
+                    if ( entry._bShaderFeature == SW_FALSE )
                         listRuntimeSwitch.push_back( entry._name );
                 }
                 if ( listRuntimeSwitch.size() > kMaxRuntimeSwitchCount )
