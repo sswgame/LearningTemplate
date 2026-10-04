@@ -662,6 +662,8 @@ cd build/Ninja-Debug/Bin
 - **명령줄 철자는 인자마다 하나다** — `ArgumentList.xxx` 의 줄에 적은 것만 키이고 열거자 이름(`WIDTH` · `COOK_SHADERS`)은 키가 아니다(`CommandLineTest.EnumeratorNameIsNotACommandLineKey`). RHI 백엔드 줄만 쿠킹 표(`CookContract.json`)의 별칭 여럿을 받는다.
 
 - **`git mv` 로 옮긴 시험 파일은 pre-commit 의 `CheckIncludeOrder` · `CheckTestSuites` 가 "변경 없음" 으로 건너뛴다** — 옮긴 뒤에는 `ctest -L lint` 로 확인할 것.
+- **병합 커밋의 훅은 어느 부모와도 내용이 다른 파일만 파일 단위로 본다**(한쪽 부모와 같은 파일은 그 부모 커밋 때 검사됐다) — 부모 둘에서 따로 온 파일끼리의 관계는
+  병합 뒤 `ctest -L lint` 로 확인할 것.
 
 - **같은 클래스가 `#if` / `#else` 로 헤더에 두 번 있으면 `CheckCodeConventions` 의 헤더 기본값 검사가 그 클래스를 건너뛴다** — D3D11 · D3D12 비Windows 스텁을 지우자
   숨어 있던 위반 9 건이 드러났다. 다른 플랫폼 스텁이 있는 헤더도 같은 사각일 수 있다.

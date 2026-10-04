@@ -61,6 +61,7 @@ Scripts/
   │     ├── LintGate.py · LintFixer.py # 게이트 하나 = 클래스 하나, 픽서 하나 = 클래스 하나 (껍데기는 기반이 든다)
   │     ├── LintCatalog.py            # gate/ · selftest/ 를 훑어 "무엇이 있고 어떻게 돌리는가" (CMake · 훅이 읽는다)
   │     ├── PreCommitLint.py          # Git Staged 대상 사전 커밋 종합 검사 (넷을 조율하므로 여기 남는다)
+  │     │                             #   병합 커밋은 어느 부모와도 내용이 다른 파일만 파일 단위로 본다 (아래 "커밋 훅과 병합 커밋")
   │     ├── gate/                     # 위반이 있으면 **실패한다** — 빌드와 커밋을 막는 건 이 폴더뿐
   │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 (줄 단위 규칙 하나 = 클래스 하나)
   │     │     ├── CheckFunctionVocabulary.py  # 함수 이름 어휘 (한 개념 한 동사 · 약어는 단어)
@@ -102,7 +103,8 @@ Scripts/
   │     └── selftest/                 # 코드가 아니라 **린트** 를 본다
   │           ├── CheckLintsAreAlive.py       # gate/ 를 훑어 각 게이트가 아직 무는지 확인
   │           ├── CheckFixersAreAlive.py      # fixer/ 가 아직 고치는지, 고치면 안 되는 것은 안 고치는지
-  │           └── CheckCodeConventionsSelfTest.py # CheckCodeConventions 의 규칙마다 아직 무는지 확인
+  │           ├── CheckCodeConventionsSelfTest.py # CheckCodeConventions 의 규칙마다 아직 무는지 확인
+  │           └── CheckMergeCommitScope.py    # 병합 커밋에서 훅이 새 내용 파일을 빠뜨리지 않고 줄이는지 (임시 git 저장소)
   │
   ├── dev/                            # [개발 실험] 사람이 가끔 손으로 돌린다 — 빌드 · CI 가 부르지 않는다
   │     ├── BackendSmoke.py           # 네 백엔드로 같은 씬을 그려 SceneColor 를 비교
@@ -127,6 +129,15 @@ py -3 -m Scripts lint                 # Staged 파일 대상 사전 커밋 린�
 py -3 -m Scripts docs                 # Doxygen API 레퍼런스 문서 생성 (GenerateDocs)
 py -3 -m Scripts test SceneTest.*     # 스위트 · 케이스 이름으로 테스트 실행 (RunTests)
 ```
+
+## 커밋 훅과 병합 커밋
+
+`PreCommitLint.py` 는 staged 파일만 본다. 병합 커밋(`MERGE_HEAD` 가 있다)에서는 병합으로 바뀐 파일이 전부 staged 로 잡히지만,
+그 대부분은 한쪽 부모와 바이트가 같고 그 부모 커밋을 만들 때 훅이 이미 검사했다. 그래서 파일 단위 검사(`--files` · 위치 인자를 받는
+게이트, 픽서, clang-format)에는 **staged 내용이 어느 부모의 같은 경로 blob 과도 다른 파일** — 충돌 해결 · 자동 병합으로 내용이 새로 생긴
+파일 — 만 넘긴다. 트리 전체 게이트(파일 인자 없음)와 셰이더 쿠킹 검증은 그대로 돈다. 부모 둘에서 따로 온 파일끼리의 관계는 파일 단위
+검사가 원래 못 보므로 **병합 뒤 `ctest -L lint`(CI 도 같다)가 트리 전체로 다시 본다.** 최근 병합 여덟 개에서 파일 단위 대상은
+staged 67 → 4, 73 → 18, 759 → 0, 442 → 40 개였다. 이 줄이기는 `selftest/CheckMergeCommitScope.py` 가 지킨다.
 
 ## 개별 스크립트 실행
 
