@@ -2,6 +2,7 @@
 
 #include "Engine/Object/GameObject/SceneNavigation.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
@@ -498,6 +499,12 @@ namespace sw
         NavMeshRuntime* pExisting = findRuntime( pType->_name );
         if ( pExisting != nullptr )
             return pExisting;
+        // 마련하다 실패한 종류는 다시 해 보지 않는다 — 갱신마다 기하를 모으고 오류를 남기게 된다.
+        for ( const hashed_string& failed : _listFailedAgentType )
+        {
+            if ( failed == pType->_name )
+                return nullptr;
+        }
 
         unique_ptr<NavMeshRuntime> pRuntime = make_unique<NavMeshRuntime>();
         pRuntime->_agentType                = pType->_name;
@@ -533,7 +540,10 @@ namespace sw
                 SW_LOG_WARNING( "Navmesh '%#' has no geometry to bake (no visible static meshes or static bodies)", pType->_name.c_str() );
             const AABB bounds = computeBakeBounds( pRuntime->_pSurface, *pGeometry );
             if ( pRuntime->_pNavMesh->initialize( *pType, _settings, bounds ) == false )
+            {
+                _listFailedAgentType.push_back( pType->_name );
                 return nullptr;
+            }
             pRuntime->_bounds = bounds;
             (void)NavMeshBakeUtil::bakeAllTiles( *pRuntime->_pNavMesh, *pGeometry, pVolume.get(), &pRuntime->_bakeStats );
             SW_LOG_INFO( "Navmesh '%#' baked: %# of %# tiles, %# polygons, %# triangles in, %# ms", pType->_name.c_str(), pRuntime->_bakeStats._filledTileCount,

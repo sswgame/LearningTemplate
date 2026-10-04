@@ -109,7 +109,7 @@ Recast 순서(`RecastNavMesh::bakeTile`):
 
 **처음 쓸 때.** 플레이 중인 첫 갱신이 표면이 맡은 종류를 마련합니다 — 쿠킹본(`<씬>.navmesh`)이 있고 베이크 값 해시 · 입력 해시가 맞으면 끼우고(쇼케이스
 16 타일 0.03 ms), 아니면 모든 타일을 워커로 베이크합니다(같은 씬 Debug 8 ms). 에이전트가 처음 등록될 때 그 종류가 없으면 그때 마련합니다. 시험 · 도구는
-`ensureNavMesh` 로 지금 마련합니다. 질의(`findPath` · `findNearestPoint` · `raycast`)는 구운 종류에 대해 아무 틱에서나 부를 수 있습니다.
+`ensureNavMesh` 로 지금 마련합니다. 질의(`findPath` · `findNearestPoint` · `raycast`)는 베이크한 종류에 대해 아무 틱에서나 부를 수 있습니다.
 
 **에이전트 갱신 순서**(게임 스레드): 요청(목적지 · 멈춤 · 순간이동 — 에이전트의 틱이 적어 둔 것)과 자리(컨트롤러가 옮긴 자리, 또는 바깥이 0.5 m 넘게 옮긴
 자리 = 순간이동)를 군중에 넣는다 → 종류마다 군중 `update` → 결과를 쓴다(컨트롤러면 `setMoveVelocity`, 아니면 자리 · 진행 방향 요). 목적지에서
@@ -119,3 +119,43 @@ Recast 순서(`RecastNavMesh::bakeTile`):
 베이크하고 `<cooked-dir>/<씬 경로의 .navmesh>` 를 씁니다(`SceneNavigationCooker`). 팩 쿠커가 스테이징 폴더째 팩에 싣습니다. 장애물 · 플레이가 세운 것은 들지 않습니다.
 
 시험: `NavMeshAgentTest`(상자 더미를 돌아 도착 · 캐릭터 컨트롤러로 · 수정자 빼기 · 영역), `NavMeshCookTest`(쇼케이스 — 쿠킹 타일 = 런타임 타일, 쿠킹본 끼우기, 낡은 것 버리기).
+
+## 8. 동적 변경 — 장애물 · 파괴의 타일 재베이크
+
+언리얼의 동적 내비메시(타일 재생성)와 같은 방식입니다 — TileCache(압축 층) 대신 닿은 타일만 처음부터 다시 베이크합니다. 타일 하나(48 셀)는 수 ms 라
+워커에 넘기면 게임 스레드가 서지 않습니다.
+
+1. **알림.** `NavMeshObstacleComponent` 는 갱신마다 자세를 보고 생김 · 사라짐 · 문턱(`_obstacleMoveThreshold`, 기본 0.25 m)보다 큰 이동 · 0.1 rad 넘는 회전이면 옛 ·
+   새 발자국을 알립니다. 파괴(`FractureComponent`)는 붙어 있는 조각이 바뀔 때(처음 쪼갬 · 붙은 그룹이 갈라지거나 떨어짐 — `onAnchoredShapeChanged`) 자기 경계를
+   알립니다. 수정자 속성을 바꿔도 알립니다. `invalidateArea` 는 아무 스레드에서 부를 수 있습니다(스핀 잠금 아래 쌓는다).
+2. **입력 사본.** 정적 기하가 바뀐 알림이면 기하를 다시 모아 새 사본을 만들고, 장애물만 바뀌었으면 장애물 부피 목록만 새로 만듭니다. 둘 다 `shared_ptr<const>`
+   라 베이크하는 중인 일은 옛 사본을 끝까지 읽습니다.
+3. **줄 → 워커.** 알린 상자에 닿는 타일(베이크 테두리만큼 넓혀)을 줄에 넣고, 갱신마다 `_maxConcurrentTileBakeCount` 개까지 태스크로 넘깁니다(같은 타일은 하나씩 —
+   베이크하는 중에 또 바뀐 타일은 줄에 남아 끝난 뒤 새 입력으로 다시 간다).
+4. **끼우기.** 다음 갱신의 시작에 끝난 결과를 `replaceTile` 합니다(컴포넌트 틱이 질의하지 않는 구간). 군중은 다음 `update` 에서 통로가 지나는 폴리곤이 사라졌는지
+   보고 경로를 다시 구합니다. 그 사이 에이전트는 옛 타일 위를 걷습니다.
+
+파괴된 벽은 `FractureNavGeometrySource`(`INavGeometrySource`)가 기하를 냅니다 — 온전하면 보통 규칙(메시 · 강체)으로 모으게 두고, 쪼갠 뒤에는 붙어 있는 조각의
+삼각형만(쪼갤 때의 오브젝트 자세에 선 정적 바디와 같은 자리). 떨어진 덩어리 · 파편은 움직이는 것이라 들지 않습니다. 시험 · 도구는 `flushTileBakes` 로 줄을
+지금 비웁니다.
+
+## 9. 디버그 그리기 — `gv_navDebugDraw`
+
+`-gv_navDebugDraw=<비트>`: 1 폴리곤 테두리(바깥 경계는 진하게, 안쪽 이음은 옅게) · 2 에이전트 경로(모퉁이) · 4 에이전트 실제 속도(초록) · 원한 속도(파랑) ·
+8 장애물 발자국. 15 면 모두. 활성 씬의 것을 `DebugDrawQueue` 로 냅니다(물리 디버그와 같은 어댑터 — `EngineLoop`).
+
+## 10. 공통 이동 창구 — `INavMover`
+
+`NavMeshAgentComponent::getMover()`(3D 내비메시 + 군중)와 `GameFramework/Navigation/NavGridMover`(격자 A* 행위자)가 같이 구현합니다 — `moveTo` · `stopMoving` ·
+상태(`Idle` · `Moving` · `Arrived` · `Failed`) · 속도 · 자리. 행동 트리의 이동 노드 · 감독이 이것만 보면 격자 게임과 3D 게임에서 같은 코드로 걷습니다.
+
+시험: `NavMeshDynamicTest`(장애물 — 닿은 타일만 재베이크 · 문턱 아래 그대로 · 비키면 곧은 길, 기하 소스 바꿈, 파괴 쇼케이스의 벽), `NavigationTest.GridMoverSpeaksTheCommonMoverInterface`,
+`NavMeshBenchTest`(베이크 · 질의 1000 · 군중 100/500 — Release 로 읽는다).
+
+## 11. 상용 엔진과 다른 곳 · 남은 것
+
+- 오프 메시 링크(사다리 · 점프 · 문)와 그 애니메이션이 없습니다(Detour 는 지원 — 베이크 입력과 군중의 오프 메시 상태를 열어야 한다).
+- 지형(`Environment` 높이장) · 식생은 아직 베이크 기하가 아닙니다 — 높이장을 삼각형으로 내는 `INavGeometrySource` 가 필요하다.
+- 타일 하나를 통째로 다시 베이크합니다. 장애물이 아주 많이 자주 움직이면 TileCache(압축 층 + 장애물 칠하기)가 더 쌉니다.
+- 경로 다듬기는 줄 당기기(모퉁이)까지입니다 — 곡선 다듬기 · 경로 비용 미리보기(언리얼 `FNavPathPoint` 의 영역 표시)는 없습니다.
+- 에디터의 내비메시 보기 · 베이크 버튼은 없습니다(`gv_navDebugDraw` 로 본다).

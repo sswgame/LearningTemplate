@@ -4,8 +4,10 @@
 
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/FractureAssetCache.h"
+#include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw
@@ -15,8 +17,34 @@ namespace sw
     FractureComponent::FractureComponent()
         : FractureComponentBase()
         , _fracturePath{}
+        , _navGeometrySource{ *this }
+        , _pSceneNavigation{ nullptr }
         , _acquiredGeneration{ 0 }
     {
+    }
+
+    void FractureComponent::onRegister( GameObjectManager& manager )
+    {
+        FractureComponentBase::onRegister( manager );
+        _pSceneNavigation = &manager.getSceneNavigation();
+        _pSceneNavigation->registerGeometrySource( &_navGeometrySource );
+    }
+
+    void FractureComponent::onUnregister( GameObjectManager& manager )
+    {
+        if ( _pSceneNavigation != nullptr )
+            _pSceneNavigation->unregisterGeometrySource( &_navGeometrySource );
+        _pSceneNavigation = nullptr;
+        FractureComponentBase::onUnregister( manager );
+    }
+
+    void FractureComponent::onAnchoredShapeChanged()
+    {
+        const FractureAsset* pAsset = findAsset();
+        if ( _pSceneNavigation == nullptr || pAsset == nullptr )
+            return;
+        const AABB meshBounds{ pAsset->_boundsMin, pAsset->_boundsMax };
+        _pSceneNavigation->invalidateArea( meshBounds.transformedBy( makeFracturedObjectMatrix() ), true );
     }
 
     void FractureComponent::setFracturePath( string_view path )
@@ -55,5 +83,36 @@ namespace sw
     bool FractureComponent::isFractureStale() const
     {
         return _acquiredGeneration != FractureAssetCache::getReloadGeneration();
+    }
+} // namespace sw
+
+namespace sw
+{
+    const GameObject* FractureNavGeometrySource::getNavGeometryOwner() const
+    {
+        return _fracture.getOwner();
+    }
+
+    bool FractureNavGeometrySource::overridesOwnerGeometry() const
+    {
+        return _fracture.isFractured();
+    }
+
+    void FractureNavGeometrySource::collectNavGeometry( NavMeshGeometry& outGeometry, uint8 area ) const
+    {
+        const FractureAsset* pAsset = _fracture.findAsset();
+        if ( pAsset == nullptr || _fracture.isFractured() == false )
+            return;
+        // 붙어 있는 조각은 쪼갤 때의 오브젝트 자세에 정적 바디로 서 있다 — 그 자세로 조각 삼각형(메시 공간)을 옮긴다.
+        const float4x4 world = _fracture.makeFracturedObjectMatrix();
+        for ( uint32 leaf = 0; leaf < pAsset->getPieceCount(); ++leaf )
+        {
+            if ( _fracture.isLeafInAnchoredGroup( leaf ) == false )
+                continue;
+            const vector_reference<const RHIVertex> listVertex = pAsset->getPieceVertices( leaf );
+            if ( listVertex.size() < 3 )
+                continue;
+            outGeometry.addTriangleList( &listVertex.data()->_arrPosition[0], static_cast<uint32>( listVertex.size() ), sizeof( RHIVertex ), world, area );
+        }
     }
 } // namespace sw
