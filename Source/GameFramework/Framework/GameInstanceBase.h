@@ -4,12 +4,14 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "GameFramework/Data/GameSettings.h"
+#include "GameFramework/Framework/ComponentStateStore.h"
 #include "GameFramework/Framework/IGame.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -17,7 +19,6 @@ namespace sw
 {
     struct TypeInfo;
 
-    class ComponentStateStore;
     class GameObjectManager;
     class Scene;
 
@@ -114,19 +115,56 @@ namespace sw
 
         /**
          * @brief 상태 스냅샷 직렬화 직전에 부르는 준비 훅입니다.
-         * @details 부르기 전에 `getComponentStateStore()` 를 비웁니다. PROPERTY 가 아닌 컴포넌트 상태(디렉터의 시뮬레이션)는 여기서
+         * @details 부르기 전에 `getComponentStateStore()` 를 비우고, `register*` 로 올린 타입의 상태를 싣고 세운 것을 걷습니다. 그 밖의 상태는 여기서
          *          `getComponentStateStore().capture<T>( manager )` 로 싣습니다. 한 번의 캡처에 두 번 불릴 수 있습니다(크기 묻기 + 채우기).
          */
         virtual void onBeforeStateSerialize() {}
         /**
          * @brief 상태 스냅샷 역직렬화 직후에 부르는 복원 훅입니다.
-         * @details 씬 오브젝트가 다시 선 뒤입니다. 실어 둔 컴포넌트 상태는 `getComponentStateStore().restore<T>( manager )` 로 다시 만든 컴포넌트에
-         *          넘깁니다(이 훅이 끝나면 저장소를 비웁니다).
+         * @details 씬 오브젝트가 다시 서고 `register*` 로 올린 타입이 상태를 돌려받은 뒤입니다. 그 밖에 실어 둔 상태는
+         *          `getComponentStateStore().restore<T>( manager )` 로 넘깁니다(이 훅이 끝나면 저장소를 비웁니다).
          */
         virtual void onAfterStateDeserialize() {}
 
         /** @brief 상태 스냅샷 봉투의 컴포넌트 상태 섹션입니다(`ComponentStateStore`). */
         ComponentStateStore& getComponentStateStore() { return *_pComponentStateStore; }
+
+        /**
+         * @brief PROPERTY 가 아닌 상태를 가진 컴포넌트 타입 하나를 상태 스냅샷에 올립니다 — 파생 생성자에서 한 줄로 부릅니다.
+         * @details 상태 저장 전에 그 타입마다 `writeState` 를 싣고(`ComponentStateStore::capture`), 복원 뒤 `restoreState` 로 돌려줍니다(`restore`).
+         *          등록은 함수 포인터라 게임 모듈과 수명이 같다 — 핫 리로드가 새 인스턴스를 만들면 새 생성자가 다시 등록한다.
+         *          부르는 .cpp 는 `GameObjectManager.h` 를 include 합니다(순회 템플릿이 그때 만들어진다).
+         */
+        template <typename TComponent>
+        void registerStatefulComponent()
+        {
+            StatefulComponentType type;
+            type._pCapture = &GameInstanceBase::captureStateOf<TComponent>;
+            type._pRestore = &GameInstanceBase::restoreStateOf<TComponent>;
+            _listStatefulType.push_back( type );
+        }
+        /**
+         * @brief 상태 저장 전에 세운 런타임 오브젝트를 걷을 컴포넌트 타입 하나를 올립니다(`despawnViews()` 를 부른다).
+         * @details 세운 것은 상태의 모습일 뿐이다 — 스냅샷에 실으면 복원된 것이 다시 세운 것과 겹친다. 걷어 두면(삭제 대기는 스냅샷이 건너뛴다)
+         *          다시 만든 컴포넌트가 시작하며 세우고, 남은 컴포넌트는 다음 틱에 다시 세운다. 걷기는 모든 타입을 실은 뒤에 돈다.
+         */
+        template <typename TComponent>
+        void registerViewOwner()
+        {
+            StatefulComponentType type;
+            type._pDespawn = &GameInstanceBase::despawnViewsOf<TComponent>;
+            _listStatefulType.push_back( type );
+        }
+        /** @brief 디렉터(`GameDirectorComponent` 파생) 하나를 올립니다 — 상태를 싣고 돌려주며, 저장 전에 세운 것을 걷습니다. */
+        template <typename TDirector>
+        void registerDirector()
+        {
+            StatefulComponentType type;
+            type._pCapture = &GameInstanceBase::captureStateOf<TDirector>;
+            type._pRestore = &GameInstanceBase::restoreStateOf<TDirector>;
+            type._pDespawn = &GameInstanceBase::despawnViewsOf<TDirector>;
+            _listStatefulType.push_back( type );
+        }
         /** @brief 활성 씬의 오브젝트 매니저입니다. 게임 서비스가 묶이지 않았거나 활성 씬이 없으면 nullptr 입니다. */
         static GameObjectManager* findActiveObjectManager();
 
@@ -151,6 +189,14 @@ namespace sw
         IRHIDevice*     _pRhiDevice; ///< 활성 RHI 디바이스
 
     private:
+        /** @brief 상태 스냅샷에 오른 컴포넌트 타입 하나의 일입니다(`register*`). 없는 일은 nullptr 입니다. */
+        struct StatefulComponentType
+        {
+            void ( *_pCapture )( ComponentStateStore& store, GameObjectManager& manager ){ nullptr };
+            void ( *_pRestore )( const ComponentStateStore& store, GameObjectManager& manager ){ nullptr };
+            void ( *_pDespawn )( GameObjectManager& manager ){ nullptr };
+        };
+
         /** @brief 맡긴 씬 로드 하나입니다. 끝나면 `update` 가 `SceneLoadCompletedEvent` 를 내고 목록에서 뺍니다. */
         struct PendingSceneLoad
         {
@@ -167,8 +213,39 @@ namespace sw
         [[nodiscard]] bool requestSceneLoad( const string& scenePath, const utf8* pWhich );
         /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 냅니다(요청 순서). */
         void publishFinishedSceneLoads();
+        /** @brief 올린 타입의 상태를 모두 싣고, 그다음 세운 것을 모두 걷습니다(`onBeforeStateSerialize` 앞). */
+        void captureStatefulComponents();
+        /** @brief 올린 타입마다 실어 둔 상태를 돌려줍니다(`onAfterStateDeserialize` 앞). */
+        void restoreStatefulComponents();
+
+        // 매니저 타입은 템플릿 매개변수로 둔다 — 이 헤더는 오브젝트 매니저를 include 하지 않고, 등록하는 .cpp 에서 만들어진다.
+        template <typename TComponent, typename TManager = GameObjectManager>
+        static void captureStateOf( ComponentStateStore& store, TManager& manager )
+        {
+            (void)store.capture<TComponent>( manager );
+        }
+        template <typename TComponent, typename TManager = GameObjectManager>
+        static void restoreStateOf( const ComponentStateStore& store, TManager& manager )
+        {
+            (void)store.restore<TComponent>( manager );
+        }
+        template <typename TComponent, typename TManager = GameObjectManager>
+        static void despawnViewsOf( TManager& manager )
+        {
+            // 순회 콜백 안에서는 오브젝트를 지울 수 없다(매니저 잠금 안) — 핸들을 모은 뒤 걷는다.
+            vector<ComponentHandle> listComponent;
+            manager.template forEachComponentOfType<TComponent>( [&listComponent]( TComponent* pComponent )
+            { listComponent.push_back( pComponent->getHandle() ); } );
+            for ( const ComponentHandle& handle : listComponent )
+            {
+                TComponent* pComponent = static_cast<TComponent*>( manager.resolveComponent( handle ) );
+                if ( pComponent != nullptr )
+                    pComponent->despawnViews();
+            }
+        }
 
         vector<PendingSceneLoad>        _listPendingSceneLoad; ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
+        vector<StatefulComponentType>   _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
         unique_ptr<ComponentStateStore> _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
         uint8                           _bResumingWorld;       ///< `initialize` 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };

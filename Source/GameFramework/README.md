@@ -17,10 +17,15 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   "game" 채널 이벤트(`GameEvents.h` · 내는 길 `GameEventUtil`), 화면 전환(`ScreenTransitionManager`), 소리(`GameSound` — 이벤트 라이브러리 올리기 · 내리기, 2D 이벤트 `postEvent`, 월드 자리 원샷 `postEventAt`(한 번 쓰는 에미터), 클립 `play( path, bus )`;
   따라 움직이는 · 루프 소리는 엔진의 `AudioEmitterComponent`, 자세한 것은 `Source/Engine/Audio/README.md`). `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료를 그 자리에서 낸다. `onInitialize` 뒤에 사용자 설정을 다시 넣는다(`UserSettingsManager::reapplyAll` — 언어 · 입력 맵이 그때 선다). 공유 타입은 루트의 `GameFrameworkMinimal.h`.
   PROPERTY 가 아닌 컴포넌트 상태(디렉터가 든 키트 시뮬레이션)는 `ComponentStateStore` 가 상태 봉투의 세 번째 섹션으로 실어 핫 리로드 · 세이브를 넘긴다 —
-  게임이 `onBeforeStateSerialize` 에서 `getComponentStateStore().capture<T>( manager )`, `onAfterStateDeserialize` 에서 `restore<T>( manager )` 를 부르고,
+  게임 인스턴스가 생성자에서 `registerDirector<T>()`(상태 + 걷기) · `registerStatefulComponent<T>()`(상태만) · `registerViewOwner<T>()`(걷기만) 한 줄로 올리면
+  저장 전에 모두 싣고 세운 것을 걷으며 복원 뒤 돌려준다(그 뒤에 `onBeforeStateSerialize` · `onAfterStateDeserialize` 훅이 돈다).
   컴포넌트는 `writeState( Archive& )` · `restoreState( vector<uint8>&& )`(시작 전이면 들고 있다가 `onBeginPlay` 에서 적용)를 둔다. 같은 실행은 컴포넌트 id,
   다른 실행의 세이브는 타입 안 순서로 짝짓는다(언리얼 `UObject::Serialize` · 유니티 `ISerializationCallbackReceiver` 의 자리). 살아 있는 씬 위에 다시 선
   인스턴스(핫 리로드 · 백엔드 교체)는 `requestFirstScene` 이 아무것도 하지 않는다 — 되살린 씬을 첫 씬이 덮지 않게.
+  디렉터 베이스(`GameDirectorComponent` — 언리얼 `AGameModeBase` · `AGameStateBase` 자리): 틱 그룹(PrePhysics) · 상태 바이트 보류와 적용 · 틱 뒤 플러시
+  (`executeOrDeferPostTick` 한 번 → `onFlush`) · 세운 것 걷기(`spawnPrefab` · `trackSpawned` · `despawnViews`) · 자동 플레이(`_bAutoPlay` · `GameAutoplay`) ·
+  디렉터 찾기(`resolve<T>`)를 들고, 게임은 `startGame` · `readState` · `tickGame` · `onFlush` 만 적는다(쓰는 법은 `Source/Games/README.md`). 틱 안에서 쌓아
+  틱 뒤에 내는 소리는 `GameSoundQueue`, 색만 다른 모습은 `MaterialTintCache`(색 하나에 머티리얼 인스턴스 하나).
   자동 저장 정책(`AutosaveManager` · `AutosaveSettings` — `<Autosave>` XML): 간격 · 지역 이동 · 체크포인트 · 보스 앞 · 종료 까닭, 요청을 한 update 에 하나로 합치고
   더 중요한 까닭을 남김, 최소 간격 · 막기(전투 · 연출 — 기다렸다 저장, 종료만 무시), 돌림 칸(가장 새 칸을 건드리지 않고 다음 칸에 쓴 뒤 `.info` 기록 —
   파일 쓰기는 `FileUtil::writeFile` 이 원자적), 다른 실행의 칸 기록을 읽어 순번을 잇기, `restoreLatest` · `restoreCheckpoint`. 저장 · 불러오기는 게임이

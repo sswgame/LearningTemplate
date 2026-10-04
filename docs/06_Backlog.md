@@ -1357,6 +1357,9 @@ cd build/Ninja-Debug/Bin
   남의 `applyGameplayEffectSpecToSelf` 를 틱 안에서 직접 부르면 미루지 않는다). 활성 이펙트 · 스펙은 `unique_ptr` 목록이고 콜백 도중 지우기는 표시만 한다
   (`ScopedListLock` 이 풀릴 때 지운다) — 콜백이 목록을 늘리거나 줄여도 도는 포인터가 산다. 게임 모듈의 어빌리티는 컴포넌트의 `IModuleUnloadListener` 가 모듈을
   내리기 전에 거둔다. 카탈로그는 컴포넌트에 박지 말고 게임 서비스로 건다(리로드 뒤 옛 카탈로그를 가리킨다).
+- **게임 디렉터는 `GameDirectorComponent` 를 상속한다** — 상태 바이트 보류 · 틱 뒤 플러시 · 대기 소리 · 세운 것 걷기 · 자동 플레이는 베이스에 있고, 게임 인스턴스는
+  생성자에서 `registerDirector<T>()` 한 줄로 스냅샷에 올린다(`Source/Games/README.md`). 디렉터의 시뮬레이션은 PROPERTY 가 아니라 `writeState` · `readState` 로만 넘는다.
+  뷰 · 컨트롤러를 템플릿 베이스(`DirectorViewComponent<T>`)로 묶지 않는다 — 리플렉션 부모는 등록된 타입이어야 해서 템플릿 중간 층을 둘 수 없다.
 - **키트 소속은 의존 관계로 판별되지 않는다**(전부 Engine 만 include). 다른 장르도 쓰는 것(HP 바 · 데미지 숫자 · 중력)은 `UI/` · `Components/`. 리플렉션 대상 헤더는 소스와 같은 재귀 규칙으로
   모은다(다르면 새 폴더의 `REFLECT` 타입이 컴파일되고 등록만 안 된다).
 - **설정 표의 열쇠는 타입이다**(`ensureConfig<T>( path, generated )`). Shipping 은 디스크의 `Config/` 를 보지 않는다. 고정 스텝 상한은 `EngineConfig::_fixedDeltaTime` · `_maxFixedStepPerFrame`

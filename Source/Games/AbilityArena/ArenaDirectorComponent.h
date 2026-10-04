@@ -19,10 +19,11 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Ability/GameplayEffect.h"
+#include "GameFramework/Framework/GameDirectorComponent.h"
+#include "GameFramework/Framework/MaterialTintCache.h"
 
 #include "Games/AbilityArena/ArenaControllerComponent.h"
 
@@ -53,10 +54,10 @@ namespace sw
      * @class ArenaDirectorComponent
      * @brief 아레나 한 판입니다. 플레이가 시작되면 플레이어와 첫 웨이브를 세웁니다.
      * @details 판의 상태(웨이브 · 쓰러뜨린 수)는 핫 리로드에서 처음부터 다시 섭니다(PROPERTY 가 아닌 런타임 상태). 세운 유닛 · 투사체는 핸들로 들고,
-     *          상태 저장 전에 걷습니다(`despawnRuntime`) — 남은 디렉터는 다음 틱에 플레이어와 지금 웨이브를 다시 세웁니다.
+     *          상태 저장 전에 걷습니다(`despawnViews`) — 남은 디렉터는 다음 틱에 플레이어와 지금 웨이브를 다시 세웁니다.
      */
     REFLECT( Category = "AbilityArena", DisplayName = "Arena Director", Tooltip = "Runs the arena waves, kills, respawns and the runtime spawns" )
-    class ArenaDirectorComponent : public Component
+    class ArenaDirectorComponent : public GameDirectorComponent
     {
     public:
         REFLECT_BODY();
@@ -72,19 +73,8 @@ namespace sw
         ArenaDirectorComponent();
         virtual ~ArenaDirectorComponent() override;
 
-        void onBeginPlay() override;
-        void onEndPlay() override;
-        void onTick( float32 deltaTime ) override;
-
-        /** @brief 세운 유닛 · 투사체를 모두 지웁니다(상태 저장 전). 다음 틱이 플레이어와 지금 웨이브를 다시 세운다. */
-        void despawnRuntime();
         /** @brief 판의 진행(웨이브 · 처치 수)을 씁니다 — `ComponentStateStore::capture` 가 부릅니다. 유닛 · 투사체는 모습이라 걷고 다시 세운다. */
-        void writeState( Archive& outArchive ) const;
-        /**
-         * @brief `writeState` 의 바이트로 진행을 되살립니다 — 다시 만든 디렉터는 같은 웨이브를 새로 세웁니다(상태 저장 전에 걷은 판과 같다).
-         * @details 플레이 시작 전이면 들고 있다가 `onBeginPlay` 끝에 적용합니다. 읽지 못하면 알리고 웨이브 1 부터 시작합니다.
-         */
-        void restoreState( vector<uint8>&& bytes );
+        void writeState( Archive& outArchive ) const override;
 
         // ---- 다른 컴포넌트가 읽는 것(PrePhysics 뒤의 그룹) ----
         /** @brief 이번 프레임의 유닛 모습입니다. 워커에서는 첨자 대신 `data()` 로 읽는다. */
@@ -104,21 +94,25 @@ namespace sw
         /** @brief 플레이어의 자리(없으면 아레나 가운데)입니다 — 카메라가 따라간다. */
         const float3& getPlayerFocus() const { return _playerFocus; }
         float32       getArenaHalfSize() const { return _arenaHalfSize; }
-        /** @brief 플레이어도 AI 가 움직이면 true 입니다(`_bAutoPlay` 또는 `-gv_arenaAutoPlay=1`). */
-        bool   isAutoPlayOn() const;
-        uint32 getWave() const { return _wave; }
-        uint32 getKillCount() const { return _killCount; }
+        uint32        getWave() const { return _wave; }
+        uint32        getKillCount() const { return _killCount; }
 
-        /**
-         * @brief 핸들의 오브젝트에 붙은 디렉터입니다. 없으면 nullptr 입니다.
-         * @details 컨트롤러 · 투사체 · 카메라는 이것을 매 프레임 부르고 포인터를 들지 않습니다. 매니저 조회는 잠그지 않습니다.
-         */
-        static const ArenaDirectorComponent* resolveDirector( const GameObjectManager& manager, GameObjectHandle director );
         /**
          * @brief 유닛(어빌리티 시스템)이 따르는 디렉터입니다 — 같은 오브젝트의 컨트롤러가 든 핸들로 씬에서 찾습니다. 없으면 nullptr 입니다.
          * @details 어빌리티가 디렉터를 찾는 길입니다. 게임 모듈의 정적 서비스 포인터에 기대지 않으므로 핫 리로드가 디렉터를 다시 만들어도 이어집니다.
          */
         static const ArenaDirectorComponent* findForUnit( const AbilitySystemComponent& unit );
+
+    protected:
+        /** @brief 어빌리티 카탈로그가 올라와 있으면 판을 엽니다(웨이브 0 — 첫 틱이 플레이어와 웨이브 1 을 세운다). */
+        [[nodiscard]] bool startGame() override;
+        [[nodiscard]] bool readState( Archive& archive ) override;
+        void               onStateRestored( bool bRestored ) override;
+        void               onGameStarted() override;
+        void               tickGame( float32 deltaTime ) override;
+        void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
+        void               onViewsDespawned() override;
+        bool               hasPendingSpawn() const override { return _listPendingUnit.empty() == false; }
 
     private:
         /** @brief 세울 유닛 하나 — 틱 뒤에 프리팹으로 선다. */
@@ -149,17 +143,10 @@ namespace sw
         };
 
     private:
-        /** @brief 들고 있던 복원 바이트를 적용합니다. */
-        void applyPendingState();
-        void requestWave( bool bAdvance );
-        void requestUnit( ArenaUnitKind kind, const float3& position, int32 level );
-        /** @brief 쌓인 스폰 · 효과음을 틱 뒤 한 번으로 미룹니다(틱 밖이면 바로). */
-        void scheduleFlush();
-        /** @brief 쌓인 요청을 세웁니다. 틱 밖(게임 스레드)에서만 불린다. */
-        void               flushPending();
+        void               requestWave( bool bAdvance );
+        void               requestUnit( ArenaUnitKind kind, const float3& position, int32 level );
         [[nodiscard]] bool spawnUnit( GameObjectManager& manager, const SpawnRequest& request );
         void               spawnProjectile( const ProjectileRequest& request );
-        void               playSound( const utf8* pPath );
         /**
          * @brief 편 색 하나를 메시에 입힙니다 — 메시의 머티리얼(씬이 늘 들고 있는 팔레트 · 기본 머티리얼)에서 만든 인스턴스를 모두가 나눠 쓴다.
          * @details 색마다 머티리얼 에셋을 두면 그 머티리얼은 처음 스폰할 때 게임 스레드에서 올라가고 마지막 것이 사라질 때 내려간다 —
@@ -167,13 +154,12 @@ namespace sw
          */
         void applyTint( MeshComponent& mesh, int32 tintIndex );
 
-        void               updateUnits( float32 deltaTime );
-        void               updateUnitViews();
-        void               updatePlayerRespawn( float32 deltaTime );
-        void               logStatus( float32 deltaTime );
-        void               pruneProjectiles();
-        bool               hasPendingUnit( ArenaUnitKind kind ) const;
-        GameObjectManager* getObjectManager() const;
+        void updateUnits( float32 deltaTime );
+        void updateUnitViews();
+        void updatePlayerRespawn( float32 deltaTime );
+        void logStatus( float32 deltaTime );
+        void pruneProjectiles();
+        bool hasPendingUnit( ArenaUnitKind kind ) const;
 
     private:
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
@@ -198,24 +184,18 @@ namespace sw
         float4 _casterTint;
         PROPERTY( Category = "Look", DisplayName = "Projectile Color", Meta = "Color", Tooltip = "Colour of the projectile sphere" )
         float4 _projectileTint;
-        PROPERTY( Category = "Arena", DisplayName = "Auto Play", Tooltip = "The player is driven by the AI too (-gv_arenaAutoPlay=1 also turns it on)" )
-        bool _bAutoPlay;
 
-        vector<ArenaUnit>            _listUnit;
-        vector<ArenaUnitView>        _listUnitView;
-        vector<GameObjectHandle>     _listProjectile;
-        vector<SpawnRequest>         _listPendingUnit;
-        vector<const utf8*>          _listPendingSound;  ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
-        vector<uint8>                _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
-        shared_ptr<MaterialInstance> _arrTint[4];        ///< 플레이어 · Grunt · Caster(`ArenaUnitKind` 순) · 투사체
-        float3                       _playerFocus;
-        float32                      _playerRespawnTimer; ///< 0 이상이면 플레이어가 다시 서기까지 남은 시간
-        float32                      _statusLogTimer;
-        uint32                       _wave;
-        uint32                       _killCount;
-        uint8                        _bStarted        : 1;
-        uint8                        _bRuntimeSpawned : 1; ///< 플레이어 · 웨이브가 서 있다(걷으면 다음 틱이 다시 세운다)
-        uint8                        _bFlushScheduled : 1;
-        uint8                        _reserved        : 5;
+        vector<ArenaUnit>        _listUnit;
+        vector<ArenaUnitView>    _listUnitView;
+        vector<GameObjectHandle> _listProjectile;
+        vector<SpawnRequest>     _listPendingUnit;
+        MaterialTintCache        _tintCache; ///< 플레이어 · Grunt · Caster · 투사체 색
+        float3                   _playerFocus;
+        float32                  _playerRespawnTimer; ///< 0 이상이면 플레이어가 다시 서기까지 남은 시간
+        float32                  _statusLogTimer;
+        uint32                   _wave;
+        uint32                   _killCount;
+        uint8                    _bUnitsRequested : 1; ///< 플레이어 · 웨이브를 세우라고 했다(걷으면 다음 틱이 다시 청한다)
+        uint8                    _reserved        : 7;
     };
 } // namespace sw

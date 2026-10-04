@@ -42,7 +42,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const ParkDirectorComponent* pDirector = ParkDirectorComponent::resolveDirector( *pManager, _director );
+        const ParkDirectorComponent* pDirector = GameDirectorComponent::resolve<ParkDirectorComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
 

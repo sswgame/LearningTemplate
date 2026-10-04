@@ -59,7 +59,7 @@ namespace sw
         , _hotbar{}
         , _target{}
         , _listPendingEdit{}
-        , _listPendingSound{}
+        , _soundQueue{}
         , _pendingStateBytes{}
         , _breakProgress{ 0.0f }
         , _placeCooldown{ 0.0f }
@@ -93,7 +93,7 @@ namespace sw
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const VoxelDirectorComponent* pDirector = pManager != nullptr ? VoxelDirectorComponent::resolveDirector( *pManager, _director ) : nullptr;
+        const VoxelDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
         if ( pCamera != nullptr )
         {
             // 자동 플레이는 마우스를 잠그지 않는다 — 시점은 AI 가 정한다.
@@ -101,7 +101,7 @@ namespace sw
                 pCamera->setMouseLookEnabled( false );
             pCamera->setAngles( _startYaw, _startPitch );
         }
-        if ( pDirector != nullptr && pDirector->isWorldReady() )
+        if ( pDirector != nullptr && pDirector->isStarted() )
             initializeBody( *pDirector );
         if ( _pendingStateBytes.empty() == false )
             applyPendingState();
@@ -161,9 +161,9 @@ namespace sw
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const VoxelDirectorComponent* pDirector = pManager != nullptr ? VoxelDirectorComponent::resolveDirector( *pManager, _director ) : nullptr;
+        const VoxelDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
         const VoxelBlockCatalog*      pCatalog  = game::getService<VoxelBlockCatalog>();
-        if ( pCamera == nullptr || pDirector == nullptr || pCatalog == nullptr || pDirector->isWorldReady() == false || deltaTime <= 0.0f )
+        if ( pCamera == nullptr || pDirector == nullptr || pCatalog == nullptr || pDirector->isStarted() == false || deltaTime <= 0.0f )
             return;
         if ( _bBodyPlaced == SW_FALSE )
             initializeBody( *pDirector );
@@ -183,7 +183,7 @@ namespace sw
         const bool bWasOnGround = _body.isOnGround();
         _body.step( pDirector->getWorld(), wish, bJump, bSprint, step );
         if ( bWasOnGround == false && _body.isOnGround() )
-            _listPendingSound.push_back( VoxelPlayerComponentInternal::kSoundLand );
+            _soundQueue.queueClip( VoxelPlayerComponentInternal::kSoundLand );
         // 월드 밖으로 떨어지면 처음 자리로.
         if ( _body.getPosition()._y < -10.0f )
             _body.setPosition( pDirector->findSpawnPosition() );
@@ -197,7 +197,7 @@ namespace sw
             placeBlock( *pDirector, *pCatalog );
             _placeCooldown = _placeInterval;
         }
-        if ( _listPendingEdit.empty() == false || _listPendingSound.empty() == false )
+        if ( _listPendingEdit.empty() == false || _soundQueue.isEmpty() == false )
             scheduleFlush();
     }
 
@@ -307,7 +307,7 @@ namespace sw
         // 월드는 틱 뒤에 바뀐다(디렉터) — 여기서는 손에 든 것과 셈만 바로 바꾼다.
         const VoxelBlockIndex drop = VoxelPlayerComponentInternal::findDrop( catalog, _target._blockIndex );
         _listPendingEdit.push_back( BlockEdit{ _target._block, kVoxelAirBlock } );
-        _listPendingSound.push_back( VoxelPlayerComponentInternal::kSoundBreak );
+        _soundQueue.queueClip( VoxelPlayerComponentInternal::kSoundBreak );
         ++_brokenCount;
         _breakProgress = 0.0f;
         if ( drop != kVoxelAirBlock && _hotbar.addBlock( drop, 1 ) > 0 )
@@ -330,7 +330,7 @@ namespace sw
         if ( _hotbar.consumeSelected( block ) == false )
             return;
         _listPendingEdit.push_back( BlockEdit{ cell, block } );
-        _listPendingSound.push_back( VoxelPlayerComponentInternal::kSoundPlace );
+        _soundQueue.queueClip( VoxelPlayerComponentInternal::kSoundPlace );
         ++_placedCount;
     }
 
@@ -366,8 +366,6 @@ namespace sw
                 (void)pDirector->applyBlockEdit( edit._coord, edit._block ); // 월드 밖은 이미 걸렀다
         }
         _listPendingEdit.clear();
-        for ( const utf8* pPath : _listPendingSound )
-            (void)GameSound::play( pPath );
-        _listPendingSound.clear();
+        _soundQueue.playAll();
     }
 } // namespace sw

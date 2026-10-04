@@ -41,7 +41,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr || _tileIndex < 0 )
             return;
-        const FarmDirectorComponent* pDirector = FarmDirectorComponent::resolveDirector( *pManager, _director );
+        const FarmDirectorComponent* pDirector = GameDirectorComponent::resolve<FarmDirectorComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
         const FarmField& field = pDirector->getField();

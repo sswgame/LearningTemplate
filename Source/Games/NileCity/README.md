@@ -59,7 +59,7 @@ cd build/Ninja-Debug-NileCity/Bin
 리그가 그 프레임에 움직인 만큼은 한 프레임 늦습니다.
 
 **핫 리로드 · 상태 저장.** 도시(칸 · 건물 · 일꾼 · 돈 · 달력 · 난수)와 자동 계획 진행 · 속도 · 고른 도구는 PROPERTY 가 아니라 디렉터의 `writeState` 로 상태
-스냅샷의 컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`). 상태를 쓰기 전에 게임(`onBeforeStateSerialize`)이 도시를 싣고 디렉터가 세운 오브젝트를 걷으며,
+스냅샷의 컴포넌트 섹션에 실려 넘어갑니다(`ComponentStateStore`). 상태를 쓰기 전에 게임 인스턴스(생성자의 `registerDirector` 한 줄 — `GameInstanceBase`)가 도시를 싣고 디렉터가 세운 오브젝트를 걷으며,
 다시 만든 디렉터가 데이터를 읽은 뒤 도시를 되살리고 모습을 다시 세웁니다. 카탈로그에서 빠진 건물이 있으면 알리고 새 도시로 시작합니다.
 
 ## 파일 · 데이터

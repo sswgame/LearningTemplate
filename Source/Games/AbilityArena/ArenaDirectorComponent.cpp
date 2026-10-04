@@ -9,8 +9,6 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
@@ -18,7 +16,6 @@
 #include "GameFramework/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Ability/CombatAttributeSet.h"
 #include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/AbilityArena/ArenaProjectileComponent.h"
@@ -36,7 +33,7 @@ namespace sw
             static constexpr uint32  kStateVersion      = 1;
             static constexpr float32 kUnitRadius        = 0.5f; ///< 투사체가 쏜 쪽 몸 밖에서 나오는 거리
             static constexpr float32 kProjectileRadius  = 0.25f;
-            static constexpr int32   kProjectileTint    = 3; ///< `_arrTint` 의 투사체 칸(앞 셋은 `ArenaUnitKind` 순)
+            static constexpr int32   kProjectileTint    = 3; ///< `applyTint` 의 투사체 번호(앞 셋은 `ArenaUnitKind` 순)
 
             static constexpr const utf8* kSoundWave       = "game/abilityarena/sounds/maximize_001.ogg";
             static constexpr const utf8* kSoundPlayerFell = "game/abilityarena/sounds/error_004.ogg";
@@ -81,44 +78,37 @@ namespace sw
         , _gruntTint{ 1.0f, 0.5f, 0.45f, 1.0f }
         , _casterTint{ 0.8f, 0.55f, 1.0f, 1.0f }
         , _projectileTint{ 1.0f, 0.6f, 0.1f, 1.0f }
-        , _bAutoPlay{ false }
         , _listUnit{}
         , _listUnitView{}
         , _listProjectile{}
         , _listPendingUnit{}
-        , _listPendingSound{}
-        , _pendingStateBytes{}
-        , _arrTint{}
+        , _tintCache{}
         , _playerFocus{ 0.0f, 0.0f, 0.0f }
         , _playerRespawnTimer{ -1.0f }
         , _statusLogTimer{ 0.0f }
         , _wave{ 0 }
         , _killCount{ 0 }
-        , _bStarted{ SW_FALSE }
-        , _bRuntimeSpawned{ SW_FALSE }
-        , _bFlushScheduled{ SW_FALSE }
+        , _bUnitsRequested{ SW_FALSE }
         , _reserved{ 0 }
     {
-        setCanEverTick( true );
     }
 
     ArenaDirectorComponent::~ArenaDirectorComponent() = default;
 
-    void ArenaDirectorComponent::onBeginPlay()
+    bool ArenaDirectorComponent::startGame()
     {
-        Component::onBeginPlay();
-        // 판의 규칙은 앞 그룹 — 컨트롤러 · 투사체 · 카메라가 같은 프레임에 이 결과를 읽는다.
-        setTickGroup( TickGroup::PrePhysics );
         const AbilityCatalog* pCatalog = game::getService<AbilityCatalog>();
         if ( pCatalog == nullptr || pCatalog->getAbilitySetCount() == 0 )
         {
             SW_LOG_WARNING( "[Arena] the ability catalog is not loaded - the arena cannot start" );
-            return;
+            return false;
         }
-        _bStarted = SW_TRUE;
-        _wave     = 0;
-        if ( _pendingStateBytes.empty() == false )
-            applyPendingState();
+        _wave = 0;
+        return true;
+    }
+
+    void ArenaDirectorComponent::onGameStarted()
+    {
         SW_LOG_INFO( "[Arena] arena is ready - WASD move, J/Space melee, K/2 fireball, L/3 heal, LeftShift/4 dash" );
     }
 
@@ -129,49 +119,36 @@ namespace sw
         outArchive << _killCount;
     }
 
-    void ArenaDirectorComponent::restoreState( vector<uint8>&& bytes )
+    bool ArenaDirectorComponent::readState( Archive& archive )
     {
-        _pendingStateBytes = std::move( bytes );
-        if ( _bStarted == SW_TRUE )
-            applyPendingState();
-    }
-
-    void ArenaDirectorComponent::applyPendingState()
-    {
-        Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        uint32     wave      = 0;
-        uint32     killCount = 0;
-        const bool bHeader   = StateArchiveUtil::readHeader( archive, ArenaDirectorComponentInternal::kStateTag, ArenaDirectorComponentInternal::kStateVersion );
+        uint32 wave      = 0;
+        uint32 killCount = 0;
+        if ( StateArchiveUtil::readHeader( archive, ArenaDirectorComponentInternal::kStateTag, ArenaDirectorComponentInternal::kStateVersion ) == false )
+            return false;
         archive >> wave;
         archive >> killCount;
-        _pendingStateBytes.clear();
-        if ( bHeader == false || archive.isError() || archive.getRemainingBytes() != 0 )
-        {
-            SW_LOG_WARNING( "[Arena] the saved arena state does not match this build - starting from wave 1" );
-            return;
-        }
+        if ( archive.isError() || archive.getRemainingBytes() != 0 )
+            return false;
         _wave      = wave;
         _killCount = killCount;
-        despawnRuntime(); // 다음 틱이 플레이어와 이 웨이브를 다시 세운다
-        SW_LOG_INFO( "[Arena] arena state restored - wave %#, %# kills", _wave, _killCount );
+        return true;
     }
 
-    void ArenaDirectorComponent::onEndPlay()
+    void ArenaDirectorComponent::onStateRestored( bool bRestored )
     {
-        despawnRuntime();
-        _bStarted = SW_FALSE;
-        Component::onEndPlay();
+        // 어느 쪽이든 걷힌다 — 다음 틱이 플레이어와 지금 웨이브를 다시 세운다.
+        if ( bRestored )
+            SW_LOG_INFO( "[Arena] arena state restored - wave %#, %# kills", _wave, _killCount );
+        else
+            SW_LOG_WARNING( "[Arena] the saved arena state does not match this build - starting from wave 1" );
     }
 
-    void ArenaDirectorComponent::onTick( float32 deltaTime )
+    void ArenaDirectorComponent::tickGame( float32 deltaTime )
     {
-        Component::onTick( deltaTime );
-        if ( _bStarted == SW_FALSE )
-            return;
-        if ( _bRuntimeSpawned == SW_FALSE )
+        if ( _bUnitsRequested == SW_FALSE )
         {
             // 처음(또는 상태 저장 전에 걷은 뒤) — 플레이어와 지금 웨이브를 세운다.
-            _bRuntimeSpawned = SW_TRUE;
+            _bUnitsRequested = SW_TRUE;
             requestUnit( ArenaUnitKind::Player, float3{ 0.0f, 0.0f, 0.0f }, 1 );
             requestWave( _wave == 0 );
         }
@@ -183,34 +160,16 @@ namespace sw
             logStatus( deltaTime );
         }
         updateUnitViews();
-        if ( _listPendingUnit.empty() == false || _listPendingSound.empty() == false )
-            scheduleFlush();
     }
 
-    void ArenaDirectorComponent::despawnRuntime()
+    void ArenaDirectorComponent::onViewsDespawned()
     {
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager != nullptr )
-        {
-            for ( const ArenaUnit& unit : _listUnit )
-            {
-                GameObject* pObject = pManager->resolveGameObject( unit._object );
-                if ( pObject != nullptr )
-                    pManager->destroyObject( pObject );
-            }
-            for ( const GameObjectHandle& handle : _listProjectile )
-            {
-                GameObject* pObject = pManager->resolveGameObject( handle );
-                if ( pObject != nullptr )
-                    pManager->destroyObject( pObject );
-            }
-        }
         _listUnit.clear();
         _listUnitView.clear();
         _listProjectile.clear();
         _listPendingUnit.clear();
         _playerRespawnTimer = -1.0f;
-        _bRuntimeSpawned    = SW_FALSE;
+        _bUnitsRequested    = SW_FALSE;
     }
 
     // ------------------------------------------------------------------------------
@@ -288,17 +247,6 @@ namespace sw
         } ) );
     }
 
-    bool ArenaDirectorComponent::isAutoPlayOn() const
-    {
-        return _bAutoPlay || GameAutoplay::isOn();
-    }
-
-    const ArenaDirectorComponent* ArenaDirectorComponent::resolveDirector( const GameObjectManager& manager, GameObjectHandle director )
-    {
-        const GameObject* pObject = manager.resolveGameObject( director );
-        return pObject != nullptr ? pObject->getComponent<ArenaDirectorComponent>() : nullptr;
-    }
-
     const ArenaDirectorComponent* ArenaDirectorComponent::findForUnit( const AbilitySystemComponent& unit )
     {
         const GameObject*               pOwner      = unit.getOwner();
@@ -306,7 +254,7 @@ namespace sw
         const ArenaControllerComponent* pController = pOwner != nullptr ? pOwner->getComponent<ArenaControllerComponent>() : nullptr;
         if ( pManager == nullptr || pController == nullptr )
             return nullptr;
-        return resolveDirector( *pManager, pController->getDirector() );
+        return resolve<ArenaDirectorComponent>( *pManager, pController->getDirector() );
     }
 
     // ------------------------------------------------------------------------------
@@ -316,7 +264,7 @@ namespace sw
     {
         if ( bAdvance || _wave == 0 )
             ++_wave;
-        playSound( ArenaDirectorComponentInternal::kSoundWave );
+        getSoundQueue().queueClip( ArenaDirectorComponentInternal::kSoundWave );
         const uint32 gruntCount  = 2u + _wave;
         const uint32 casterCount = _wave / 2u;
         const uint32 totalCount  = gruntCount + casterCount;
@@ -340,47 +288,20 @@ namespace sw
         _listPendingUnit.push_back( request );
     }
 
-    void ArenaDirectorComponent::scheduleFlush()
+    void ArenaDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
-        if ( _bFlushScheduled == SW_TRUE )
-            return;
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr )
-            return;
-        _bFlushScheduled = SW_TRUE;
-        // 틱 안이면 틱 뒤로 미뤄진다. 그 사이에 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
-        {
-            ArenaDirectorComponent* pDirector = static_cast<ArenaDirectorComponent*>( pManager->resolveComponent( self ) );
-            if ( pDirector != nullptr )
-                pDirector->flushPending();
-        } );
-    }
-
-    void ArenaDirectorComponent::flushPending()
-    {
-        _bFlushScheduled            = SW_FALSE;
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr || _bStarted == SW_FALSE )
-            return;
+        (void)bRespawnViews; // 플레이어 · 웨이브는 틱이 청한다(`_bUnitsRequested`) — 여기는 쌓인 것만 세운다
         for ( const SpawnRequest& request : _listPendingUnit )
-            (void)spawnUnit( *pManager, request ); // 하나가 실패해도 나머지는 선다 — 실패한 플레이어는 다시 서기 시간이 지나 다시 세운다
+            (void)spawnUnit( manager, request ); // 하나가 실패해도 나머지는 선다 — 실패한 플레이어는 다시 서기 시간이 지나 다시 세운다
         _listPendingUnit.clear();
-        for ( const utf8* pPath : _listPendingSound )
-            (void)GameSound::play( pPath );
-        _listPendingSound.clear();
     }
 
     bool ArenaDirectorComponent::spawnUnit( GameObjectManager& manager, const SpawnRequest& request )
     {
-        AssetManager* pAssetManager = game::getService<AssetManager>();
-        const bool    bPlayer       = request._kind == ArenaUnitKind::Player;
-        const string& prefabPath    = bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab );
-        const utf8*   pName         = bPlayer ? "ArenaPlayer" : ( request._kind == ArenaUnitKind::Caster ? "ArenaCaster" : "ArenaGrunt" );
-        if ( pAssetManager == nullptr || prefabPath.empty() )
-            return false;
-        GameObject*               pObject        = pAssetManager->getPrefabCache().spawn( &manager, prefabPath, pName );
+        const bool                bPlayer        = request._kind == ArenaUnitKind::Player;
+        const string&             prefabPath     = bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab );
+        const utf8*               pName          = bPlayer ? "ArenaPlayer" : ( request._kind == ArenaUnitKind::Caster ? "ArenaCaster" : "ArenaGrunt" );
+        GameObject*               pObject        = spawnPrefab( manager, prefabPath, pName );
         MeshComponent*            pMesh          = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
         AbilitySystemComponent*   pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
         ArenaControllerComponent* pController    = pObject != nullptr ? pObject->getComponent<ArenaControllerComponent>() : nullptr;
@@ -423,11 +344,10 @@ namespace sw
 
     void ArenaDirectorComponent::spawnProjectile( const ProjectileRequest& request )
     {
-        GameObjectManager* pManager      = getObjectManager();
-        AssetManager*      pAssetManager = game::getService<AssetManager>();
-        if ( pManager == nullptr || pAssetManager == nullptr || _projectilePrefab.empty() || _bStarted == SW_FALSE )
+        GameObjectManager* pManager = getObjectManager();
+        if ( pManager == nullptr || isStarted() == false )
             return;
-        GameObject*               pObject     = pAssetManager->getPrefabCache().spawn( pManager, _projectilePrefab, "ArenaProjectile" );
+        GameObject*               pObject     = spawnPrefab( *pManager, _projectilePrefab, "ArenaProjectile" );
         ArenaProjectileComponent* pProjectile = pObject != nullptr ? pObject->getComponent<ArenaProjectileComponent>() : nullptr;
         if ( pProjectile == nullptr )
         {
@@ -444,23 +364,10 @@ namespace sw
         _listProjectile.push_back( pObject->getHandle() );
     }
 
-    void ArenaDirectorComponent::playSound( const utf8* pPath )
-    {
-        _listPendingSound.push_back( pPath );
-    }
-
     void ArenaDirectorComponent::applyTint( MeshComponent& mesh, int32 tintIndex )
     {
-        shared_ptr<MaterialInstance>& tint = _arrTint[MathUtil::clamp( tintIndex, 0, ArenaDirectorComponentInternal::kProjectileTint )];
-        if ( tint == nullptr && mesh.getMaterial() != nullptr )
-        {
-            const float4 arrColor[4] = { _playerTint, _gruntTint, _casterTint, _projectileTint };
-            tint                     = MaterialInstance::create( mesh.getMaterial() );
-            if ( tint != nullptr )
-                tint->setVectorParameter( hashed_string( "color" ), arrColor[MathUtil::clamp( tintIndex, 0, 3 )] );
-        }
-        if ( tint != nullptr )
-            mesh.setMaterialInstance( tint );
+        const float4 arrColor[4] = { _playerTint, _gruntTint, _casterTint, _projectileTint };
+        _tintCache.apply( mesh, arrColor[MathUtil::clamp( tintIndex, 0, ArenaDirectorComponentInternal::kProjectileTint )] );
     }
 
     // ------------------------------------------------------------------------------
@@ -489,12 +396,12 @@ namespace sw
                 if ( unit._kind == ArenaUnitKind::Player )
                 {
                     SW_LOG_INFO( "[Arena] the player fell on wave %# after %# kills", _wave, _killCount );
-                    playSound( ArenaDirectorComponentInternal::kSoundPlayerFell );
+                    getSoundQueue().queueClip( ArenaDirectorComponentInternal::kSoundPlayerFell );
                 }
                 else
                 {
                     ++_killCount;
-                    playSound( ArenaDirectorComponentInternal::kSoundEnemyFell );
+                    getSoundQueue().queueClip( ArenaDirectorComponentInternal::kSoundEnemyFell );
                 }
             }
             if ( unit._deathTimer >= 0.0f )
@@ -618,9 +525,4 @@ namespace sw
         }
     }
 
-    GameObjectManager* ArenaDirectorComponent::getObjectManager() const
-    {
-        GameObject* pOwner = getOwner();
-        return pOwner != nullptr ? pOwner->getManager() : nullptr;
-    }
 } // namespace sw

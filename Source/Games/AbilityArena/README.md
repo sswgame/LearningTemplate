@@ -58,7 +58,7 @@ HP 바 · 피해 숫자는 어빌리티 시스템이 같은 오브젝트의 `Hea
 때마다 다시 겁니다.
 
 **핫 리로드 · 상태 저장.** 판의 진행(웨이브 · 쓰러뜨린 수)은 PROPERTY 가 아니라 디렉터의 `writeState` 로 상태 스냅샷의 컴포넌트 섹션에 실려 넘어갑니다
-(`ComponentStateStore`). 상태를 쓰기 전에 게임(`onBeforeStateSerialize`)이 진행을 싣고 디렉터가 세운 유닛 · 투사체를 걷으며, 다시 만든 디렉터는 진행을 받아
+(`ComponentStateStore`). 상태를 쓰기 전에 게임 인스턴스(생성자의 `registerDirector` 한 줄 — `GameInstanceBase`)가 진행을 싣고 디렉터가 세운 유닛 · 투사체를 걷으며, 다시 만든 디렉터는 진행을 받아
 플레이어와 **같은 웨이브**를 새로 세웁니다(유닛의 체력 · 쿨다운은 새 판). 손으로는 `-gv_reloadGameAtFrame=N` 으로 리로드를 걸어 본다.
 
 ## 파일

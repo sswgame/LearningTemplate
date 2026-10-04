@@ -12,6 +12,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBody.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelHotbar.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelRaycast.h"
@@ -90,20 +91,20 @@ namespace sw
         PROPERTY( Category = "Player", DisplayName = "Start Pitch", Meta = "Units=rad" )
         float32 _startPitch;
 
-        VoxelBody           _body;
-        VoxelHotbar         _hotbar;
-        VoxelRayHit         _target;
-        vector<BlockEdit>   _listPendingEdit;
-        vector<const utf8*> _listPendingSound;
-        vector<uint8>       _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
-        float32             _breakProgress;
-        float32             _placeCooldown;
-        float32             _autoTimer;
-        uint32              _brokenCount;
-        uint32              _placedCount;
-        uint8               _bHasTarget      : 1;
-        uint8               _bBodyPlaced     : 1; ///< 월드가 선 뒤 첫 땅에 몸을 두었다
-        uint8               _bFlushScheduled : 1;
-        uint8               _reserved        : 5;
+        VoxelBody         _body;
+        VoxelHotbar       _hotbar;
+        VoxelRayHit       _target;
+        vector<BlockEdit> _listPendingEdit;
+        GameSoundQueue    _soundQueue;        ///< 낼 소리(틱 뒤 — 오디오는 게임 스레드에서)
+        vector<uint8>     _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
+        float32           _breakProgress;
+        float32           _placeCooldown;
+        float32           _autoTimer;
+        uint32            _brokenCount;
+        uint32            _placedCount;
+        uint8             _bHasTarget      : 1;
+        uint8             _bBodyPlaced     : 1; ///< 월드가 선 뒤 첫 땅에 몸을 두었다
+        uint8             _bFlushScheduled : 1;
+        uint8             _reserved        : 5;
     };
 } // namespace sw

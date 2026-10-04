@@ -133,7 +133,7 @@ namespace sw
             return;
         GameObject*                     pOwner    = getOwner();
         GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ShooterDirectorComponent* pDirector = pManager != nullptr ? ShooterDirectorComponent::resolveDirector( *pManager, _director ) : nullptr;
+        const ShooterDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, _director ) : nullptr;
         if ( pDirector == nullptr )
             return;
         const float32 step = MathUtil::min( deltaTime, 0.1f );

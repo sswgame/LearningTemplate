@@ -18,7 +18,6 @@
 
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
@@ -90,18 +89,14 @@ namespace sw
         , _cameraRig{}
         , _watchFocus{ 32.0f, 0.0f, 30.0f }
         , _watchOrthoHeight{ 70.0f }
-        , _bAutoPlay{ false }
         , _catalog{}
         , _match{}
         , _selection{}
         , _listEvent{}
         , _listUnitSlot{}
-        , _listCliffObject{}
         , _listPendingUnit{}
-        , _listPendingSound{}
-        , _listColorLook{}
+        , _tintCache{}
         , _listUnitLook{}
-        , _pendingStateBytes{}
         , _dragStart{}
         , _dragPoint{}
         , _timeScale{ 1.0f }
@@ -111,27 +106,14 @@ namespace sw
         , _bDragPointValid{ SW_FALSE }
         , _bAttackMovePending{ SW_FALSE }
         , _bPaused{ SW_FALSE }
-        , _bLoaded{ SW_FALSE }
-        , _bViewsSpawned{ SW_FALSE }
-        , _bFlushScheduled{ SW_FALSE }
+        , _reserved{ 0 }
     {
-        setCanEverTick( true );
     }
 
     SkirmishDirectorComponent::~SkirmishDirectorComponent() = default;
 
-    void SkirmishDirectorComponent::onBeginPlay()
+    void SkirmishDirectorComponent::onGameStarted()
     {
-        Component::onBeginPlay();
-        // 판 · 입력은 앞 그룹 — 뷰 · 카메라 리그(PostUpdate)가 같은 프레임에 이 결과를 읽는다.
-        setTickGroup( TickGroup::PrePhysics );
-        if ( loadData() == false )
-        {
-            SW_LOG_WARNING( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
-            return;
-        }
-        if ( _pendingStateBytes.empty() == false )
-            applyPendingState();
         // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만. 둘 다 AI 면 맵 전체가 보이게 물러서고 WASD 도 카메라다.
         OrthoCameraRigComponent* pRig = findCameraRig();
         if ( pRig != nullptr )
@@ -144,7 +126,6 @@ namespace sw
                 pRig->applyToCamera();
             }
         }
-        scheduleFlush();
         if ( _bHuman == SW_TRUE )
         {
             SW_LOG_INFO( "[Skirmish] you are blue - drag to select, right click to move/attack/gather, A attack-move, S stop, H hold, Q/W/E train, "
@@ -155,19 +136,8 @@ namespace sw
             SW_LOG_INFO( "[Skirmish] watching computer vs computer - arrows/WASD pan, wheel zoom, - = speed, P pause, F1 status" );
     }
 
-    void SkirmishDirectorComponent::onEndPlay()
+    void SkirmishDirectorComponent::tickGame( float32 deltaTime )
     {
-        despawnViews();
-        Component::onEndPlay();
-    }
-
-    void SkirmishDirectorComponent::onTick( float32 deltaTime )
-    {
-        Component::onTick( deltaTime );
-        if ( _bLoaded == SW_FALSE )
-            return;
-        if ( _bViewsSpawned == SW_FALSE )
-            scheduleFlush(); // 상태 저장 전에 걷었다 — 지금 상태대로 다시 세운다
         if ( deltaTime <= 0.0f )
             return;
 
@@ -178,27 +148,15 @@ namespace sw
             _match.update( deltaTime * _timeScale );
         handleEvents();
         _selection.prune( _match.getWorld() );
-        if ( _bViewsSpawned == SW_TRUE )
+        if ( areViewsSpawned() )
             collectUnitChanges();
-        if ( _listPendingUnit.empty() == false || _listPendingSound.empty() == false )
-            scheduleFlush();
     }
 
-    void SkirmishDirectorComponent::despawnViews()
+    void SkirmishDirectorComponent::onViewsDespawned()
     {
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager != nullptr )
-        {
-            for ( GameObjectHandle& handle : _listCliffObject )
-                destroySpawned( *pManager, handle );
-            for ( UnitSlot& slot : _listUnitSlot )
-                destroySpawned( *pManager, slot._object );
-        }
-        _listCliffObject.clear();
         _listUnitSlot.clear();
         _listPendingUnit.clear();
-        _bDragging     = SW_FALSE;
-        _bViewsSpawned = SW_FALSE;
+        _bDragging = SW_FALSE;
     }
 
     const shared_ptr<MaterialInstance>& SkirmishDirectorComponent::findUnitLook( const RtsUnit& unit, bool bSelected ) const
@@ -220,12 +178,6 @@ namespace sw
         return true;
     }
 
-    const SkirmishDirectorComponent* SkirmishDirectorComponent::resolveDirector( const GameObjectManager& manager, GameObjectHandle director )
-    {
-        const GameObject* pObject = manager.resolveGameObject( director );
-        return pObject != nullptr ? pObject->getComponent<SkirmishDirectorComponent>() : nullptr;
-    }
-
     // ------------------------------------------------------------------------------
     // 데이터
     // ------------------------------------------------------------------------------
@@ -236,13 +188,6 @@ namespace sw
         _selection.writeState( outArchive );
         outArchive << _timeScale;
         outArchive << static_cast<uint8>( _bPaused );
-    }
-
-    void SkirmishDirectorComponent::restoreState( vector<uint8>&& bytes )
-    {
-        _pendingStateBytes = std::move( bytes );
-        if ( _bLoaded == SW_TRUE )
-            applyPendingState();
     }
 
     bool SkirmishDirectorComponent::readState( Archive& archive )
@@ -263,10 +208,9 @@ namespace sw
         return true;
     }
 
-    void SkirmishDirectorComponent::applyPendingState()
+    void SkirmishDirectorComponent::onStateRestored( bool bRestored )
     {
-        Archive archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        if ( readState( archive ) )
+        if ( bRestored )
         {
             SW_LOG_INFO( "[Skirmish] match state restored - %#s in", static_cast<int32>( _match.getWorld().getTime() ) );
         }
@@ -274,85 +218,51 @@ namespace sw
         {
             // 판이 반쯤 바뀌었을 수 있다 — 새 판으로 되돌린다.
             SW_LOG_WARNING( "[Skirmish] the saved match state does not match this build - starting a new match" );
-            (void)loadData();
+            (void)startGame();
         }
-        _pendingStateBytes.clear();
-        despawnViews(); // 지금 상태대로 다시 세운다(다음 틱)
     }
 
-    bool SkirmishDirectorComponent::loadData()
+    bool SkirmishDirectorComponent::startGame()
     {
         if ( _catalog.loadFromResource( _unitDataPath ) == false )
+        {
+            SW_LOG_WARNING( "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
             return false;
+        }
         _bHuman = isAutoPlayOn() ? SW_FALSE : SW_TRUE;
         _match.initialize( &_catalog, _bHuman == SW_TRUE );
         _selection.clear();
         _selection.setPlayer( 0 );
         _selection.setMaxCount( 12 );
         _listEvent.clear();
-        _bLoaded = SW_TRUE;
         return true;
     }
 
     // ------------------------------------------------------------------------------
     // 스폰(틱 뒤 · 게임 스레드)
     // ------------------------------------------------------------------------------
-    void SkirmishDirectorComponent::scheduleFlush()
+    void SkirmishDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
-        if ( _bFlushScheduled == SW_TRUE )
-            return;
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr )
-            return;
-        _bFlushScheduled = SW_TRUE;
-        // 틱 안이면 틱 뒤로 미뤄진다. 그 사이에 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
-        {
-            SkirmishDirectorComponent* pDirector = static_cast<SkirmishDirectorComponent*>( pManager->resolveComponent( self ) );
-            if ( pDirector != nullptr )
-                pDirector->flushPending();
-        } );
-    }
-
-    void SkirmishDirectorComponent::flushPending()
-    {
-        _bFlushScheduled            = SW_FALSE;
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr || _bLoaded == SW_FALSE )
-            return;
-        if ( _bViewsSpawned == SW_FALSE )
+        if ( bRespawnViews )
         {
             // 처음(또는 걷은 뒤) — 절벽과 지금 보이는 유닛 모두.
-            spawnCliffs( *pManager );
-            _bViewsSpawned = SW_TRUE;
+            spawnCliffs( manager );
             _listPendingUnit.clear();
             collectUnitChanges();
         }
         for ( const int32 slotIndex : _listPendingUnit )
         {
             UnitSlot& slot = _listUnitSlot[static_cast<size_t>( slotIndex )];
-            destroySpawned( *pManager, slot._object );
+            destroySpawned( manager, slot._object );
             if ( slot._shownId.isValid() )
-                spawnUnit( *pManager, slotIndex );
+                spawnUnit( manager, slotIndex );
         }
         _listPendingUnit.clear();
-        for ( const PendingSound& sound : _listPendingSound )
-        {
-            if ( sound._bSpatial )
-                (void)GameSound::postEventAt( hashed_string( sound._pEvent ), sound._position );
-            else
-                (void)GameSound::postEvent( hashed_string( sound._pEvent ) );
-        }
-        _listPendingSound.clear();
     }
 
     void SkirmishDirectorComponent::spawnCliffs( GameObjectManager& manager )
     {
         // 절벽 — 줄마다 이어진 칸을 상자 하나로.
-        AssetManager* pAssetManager = game::getService<AssetManager>();
-        if ( pAssetManager == nullptr || _cliffPrefab.empty() )
-            return;
         const int32 size = SkirmishMatch::kMapSize;
         for ( int32 y = 0; y < size; ++y )
         {
@@ -365,15 +275,13 @@ namespace sw
                 if ( bCliff || runStart < 0 )
                     continue;
                 const float32  length = static_cast<float32>( x - runStart );
-                GameObject*    pCliff = pAssetManager->getPrefabCache().spawn( &manager, _cliffPrefab, "SkirmishCliff" );
+                GameObject*    pCliff = spawnPrefab( manager, _cliffPrefab, "SkirmishCliff" );
                 MeshComponent* pMesh  = pCliff != nullptr ? pCliff->getComponent<MeshComponent>() : nullptr;
                 if ( pMesh != nullptr )
                 {
                     pMesh->setLocalPosition( float3{ static_cast<float32>( runStart ) + length * 0.5f, pMesh->getLocalScale()._y * 0.5f, static_cast<float32>( y ) + 0.5f } );
                     pMesh->setLocalScale( float3{ length, pMesh->getLocalScale()._y, 1.0f } );
                 }
-                if ( pCliff != nullptr )
-                    _listCliffObject.push_back( pCliff->getHandle() );
                 runStart = -1;
             }
         }
@@ -385,11 +293,10 @@ namespace sw
         const RtsUnit* pUnit = _match.getWorld().findUnit( slot._shownId );
         if ( pUnit == nullptr )
             return;
-        const SkirmishUnitModel* pModel        = SkirmishUnitComponent::findUnitModel( pUnit->_pDef->_id );
-        AssetManager*            pAssetManager = game::getService<AssetManager>();
-        if ( pModel == nullptr || pAssetManager == nullptr || _unitPrefab.empty() )
+        const SkirmishUnitModel* pModel = SkirmishUnitComponent::findUnitModel( pUnit->_pDef->_id );
+        if ( pModel == nullptr )
             return;
-        GameObject* pObject = pAssetManager->getPrefabCache().spawn( &manager, _unitPrefab, "SkirmishUnit" );
+        GameObject* pObject = spawnPrefab( manager, _unitPrefab, "SkirmishUnit" );
         if ( pObject == nullptr )
             return;
         slot._object         = pObject->getHandle();
@@ -406,14 +313,6 @@ namespace sw
             pView->assignUnit( getOwner()->getHandle(), slot._shownId, pModel->_width );
     }
 
-    void SkirmishDirectorComponent::destroySpawned( GameObjectManager& manager, GameObjectHandle& inoutHandle )
-    {
-        GameObject* pObject = manager.resolveGameObject( inoutHandle );
-        if ( pObject != nullptr )
-            manager.destroyObject( pObject );
-        inoutHandle = GameObjectHandle{};
-    }
-
     void SkirmishDirectorComponent::prepareUnitLooks( Material* pMaterial )
     {
         using Internal = SkirmishDirectorComponentInternal;
@@ -421,38 +320,8 @@ namespace sw
         for ( int32 category = 0; category < Internal::kUnitLookCategory; ++category )
         {
             for ( int32 selected = 0; selected < 2; ++selected )
-                _listUnitLook[static_cast<size_t>( category * 2 + selected )] = acquireColorLook( pMaterial, Internal::computeLookColor( category, selected == 1 ) );
+                _listUnitLook[static_cast<size_t>( category * 2 + selected )] = _tintCache.acquire( pMaterial, Internal::computeLookColor( category, selected == 1 ) );
         }
-    }
-
-    shared_ptr<MaterialInstance> SkirmishDirectorComponent::acquireColorLook( Material* pMaterial, const float4& color )
-    {
-        if ( pMaterial == nullptr )
-            return nullptr;
-        for ( const ColorLook& look : _listColorLook )
-        {
-            const bool bSameColor = look._color._x == color._x && look._color._y == color._y && look._color._z == color._z && look._color._w == color._w;
-            if ( bSameColor && look._instance->getParent() == pMaterial )
-                return look._instance;
-        }
-        ColorLook look;
-        look._instance = MaterialInstance::create( pMaterial );
-        if ( look._instance == nullptr )
-            return nullptr;
-        look._instance->setVectorParameter( hashed_string( "color" ), color );
-        look._color = color;
-        _listColorLook.push_back( look );
-        return look._instance;
-    }
-
-    void SkirmishDirectorComponent::playSound( const utf8* pEvent, const float3* pPosition )
-    {
-        PendingSound sound;
-        sound._pEvent   = pEvent;
-        sound._bSpatial = pPosition != nullptr;
-        if ( pPosition != nullptr )
-            sound._position = *pPosition;
-        _listPendingSound.push_back( sound );
     }
 
     // ------------------------------------------------------------------------------
@@ -629,7 +498,7 @@ namespace sw
         if ( pPrimary != nullptr )
         {
             SW_LOG_INFO( "[Skirmish] selected %# (%# units)", pPrimary->_pDef->_name.c_str(), static_cast<int32>( _selection.getSelected().size() ) );
-            playSound( SkirmishDirectorComponentInternal::kSoundSelect, nullptr );
+            getSoundQueue().queueEvent( SkirmishDirectorComponentInternal::kSoundSelect );
         }
     }
 
@@ -730,7 +599,7 @@ namespace sw
         {
             if ( event._kind == RtsEvent::Kind::UnitDied )
             {
-                playSound( Internal::kSoundUnitDied, &event._position );
+                getSoundQueue().queueEventAt( Internal::kSoundUnitDied, event._position );
                 break;
             }
         }
@@ -748,7 +617,7 @@ namespace sw
                 case RtsEvent::Kind::ConstructionComplete:
                 {
                     SW_LOG_INFO( "[Skirmish] %# complete", pName );
-                    playSound( Internal::kSoundBuilt, nullptr );
+                    getSoundQueue().queueEvent( Internal::kSoundBuilt );
                     break;
                 }
                 case RtsEvent::Kind::ProductionComplete:
@@ -759,7 +628,7 @@ namespace sw
                 case RtsEvent::Kind::SupplyBlocked:
                 {
                     SW_LOG_INFO( "[Skirmish] not enough supply - build a Supply Depot (B)" );
-                    playSound( Internal::kSoundBlocked, nullptr );
+                    getSoundQueue().queueEvent( Internal::kSoundBlocked );
                     break;
                 }
                 case RtsEvent::Kind::UnderAttack:
@@ -787,14 +656,4 @@ namespace sw
         return pRigObject != nullptr ? pRigObject->getComponent<OrthoCameraRigComponent>() : nullptr;
     }
 
-    bool SkirmishDirectorComponent::isAutoPlayOn() const
-    {
-        return _bAutoPlay || GameAutoplay::isOn();
-    }
-
-    GameObjectManager* SkirmishDirectorComponent::getObjectManager() const
-    {
-        GameObject* pOwner = getOwner();
-        return pOwner != nullptr ? pOwner->getManager() : nullptr;
-    }
 } // namespace sw

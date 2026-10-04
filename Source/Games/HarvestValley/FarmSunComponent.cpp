@@ -35,7 +35,7 @@ namespace sw
         DirectionalLightComponent* pSun     = pOwner != nullptr ? pOwner->getComponent<DirectionalLightComponent>() : nullptr;
         if ( pManager == nullptr || pSun == nullptr )
             return;
-        const FarmDirectorComponent* pDirector = FarmDirectorComponent::resolveDirector( *pManager, _director );
+        const FarmDirectorComponent* pDirector = GameDirectorComponent::resolve<FarmDirectorComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
         const float32 hour     = pDirector->getCalendar().getMinuteOfDay() / 60.0f;

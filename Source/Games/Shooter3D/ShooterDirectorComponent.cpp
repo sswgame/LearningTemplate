@@ -15,8 +15,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -25,7 +23,6 @@
 #include "GameFramework/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/Shooter3D/ShooterEffectComponent.h"
@@ -56,11 +53,6 @@ namespace sw
             static float3 closestPointXz( const float3& point, const float3& boxMin, const float3& boxMax )
             {
                 return float3{ MathUtil::clamp( point._x, boxMin._x, boxMax._x ), point._y, MathUtil::clamp( point._z, boxMin._z, boxMax._z ) };
-            }
-
-            static bool isSameColor( const float4& lhs, const float4& rhs )
-            {
-                return lhs._x == rhs._x && lhs._y == rhs._y && lhs._z == rhs._z && lhs._w == rhs._w;
             }
 
             template <size_t Count>
@@ -138,7 +130,6 @@ namespace sw
         , _pacingSeed{ 1 }
         , _effectPoolSize{ 32 }
         , _tracerPoolSize{ 24 }
-        , _bAutoPlay{ false }
         , _listBox{}
         , _listEnemyView{}
         , _profile{}
@@ -150,9 +141,7 @@ namespace sw
         , _tracerPool{}
         , _listPendingEnemy{}
         , _listPendingEffect{}
-        , _listPendingEnemyDown{}
-        , _listColorLook{}
-        , _pendingStateBytes{}
+        , _tintCache{}
         , _motionTrace{}
         , _playerEye{ 0.0f, 1.6f, -16.0f }
         , _playerFeet{ 0.0f, 0.0f, -16.0f }
@@ -161,33 +150,27 @@ namespace sw
         , _spawnCursor{ 0 }
         , _killCount{ 0 }
         , _traceFrame{ 0 }
-        , _bStarted{ SW_FALSE }
-        , _bPoolSpawned{ SW_FALSE }
-        , _bFlushScheduled{ SW_FALSE }
         , _bAmmoPending{ SW_FALSE }
         , _bPacingReady{ SW_FALSE }
         , _bPacingRestart{ SW_FALSE }
         , _bPlayerAlive{ SW_TRUE }
         , _reserved{ 0 }
     {
-        setCanEverTick( true );
     }
 
     ShooterDirectorComponent::~ShooterDirectorComponent() = default;
 
-    void ShooterDirectorComponent::onBeginPlay()
+    bool ShooterDirectorComponent::startGame()
     {
-        Component::onBeginPlay();
-        // 판의 규칙은 앞 그룹 — 플레이어 · 적이 같은 프레임에 이 결과를 읽는다.
-        setTickGroup( TickGroup::PrePhysics );
         collectBoxes();
         startPacing();
-        _bStarted  = SW_TRUE;
         _killCount = 0;
-        if ( _pendingStateBytes.empty() == false )
-            applyPendingState();
+        return true;
+    }
+
+    void ShooterDirectorComponent::onGameStarted()
+    {
         updatePlayerView();
-        scheduleFlush();
     }
 
     void ShooterDirectorComponent::writeState( Archive& outArchive ) const
@@ -196,47 +179,36 @@ namespace sw
         outArchive << _killCount;
     }
 
-    void ShooterDirectorComponent::restoreState( vector<uint8>&& bytes )
+    bool ShooterDirectorComponent::readState( Archive& archive )
     {
-        _pendingStateBytes = std::move( bytes );
-        if ( _bStarted == SW_TRUE )
-            applyPendingState();
+        uint32 killCount = 0;
+        if ( StateArchiveUtil::readHeader( archive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion ) == false )
+            return false;
+        archive >> killCount;
+        if ( archive.isError() || archive.getRemainingBytes() != 0 )
+            return false;
+        // 적은 걷히고(`onViewsDespawned` 가 다음 틱에 감독도 처음부터 돌리게 한다) 처치 수만 잇는다 — 감독의 주기 · 시간 · 풀은 싣지 않는다.
+        _killCount = killCount;
+        return true;
     }
 
-    void ShooterDirectorComponent::applyPendingState()
+    void ShooterDirectorComponent::onStateRestored( bool bRestored )
     {
-        Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        uint32     killCount = 0;
-        const bool bHeader   = StateArchiveUtil::readHeader( archive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion );
-        archive >> killCount;
-        _pendingStateBytes.clear();
-        if ( bHeader == false || archive.isError() || archive.getRemainingBytes() != 0 )
-        {
+        if ( bRestored )
+            SW_LOG_INFO( "[Shooter] arena state restored - %# kills", _killCount );
+        else
             SW_LOG_WARNING( "[Shooter] the saved arena state does not match this build - starting a new round" );
-            return;
-        }
-        // 적은 걷고(`despawnRuntime` 이 다음 틱에 감독도 처음부터 돌리게 한다) 처치 수만 잇는다 — 감독의 주기 · 시간 · 풀은 싣지 않는다.
-        _killCount = killCount;
-        despawnRuntime();
-        SW_LOG_INFO( "[Shooter] arena state restored - %# kills", _killCount );
     }
 
     void ShooterDirectorComponent::onEndPlay()
     {
         if ( _motionTrace.empty() == false && FileUtil::writeTextFile( gv_shooterMotionTrace, _motionTrace ) == false )
             SW_LOG_WARNING( "[Shooter] motion trace '%#' could not be written", gv_shooterMotionTrace.c_str() );
-        despawnRuntime();
-        _bStarted = SW_FALSE;
-        Component::onEndPlay();
+        GameDirectorComponent::onEndPlay();
     }
 
-    void ShooterDirectorComponent::onTick( float32 deltaTime )
+    void ShooterDirectorComponent::tickGame( float32 deltaTime )
     {
-        Component::onTick( deltaTime );
-        if ( _bStarted == SW_FALSE )
-            return;
-        if ( _bPoolSpawned == SW_FALSE )
-            scheduleFlush(); // 상태 저장 전에 걷었다 — 효과 풀을 다시 세운다
         const float32 step = MathUtil::min( deltaTime, 0.1f );
         if ( gv_shooterMotionTrace.empty() == false )
             appendMotionTrace( deltaTime );
@@ -256,33 +228,21 @@ namespace sw
             }
             logStatus( step );
         }
-        const bool bPending = _listPendingEnemy.empty() == false || _listPendingEffect.empty() == false || _listPendingEnemyDown.empty() == false || _bAmmoPending == SW_TRUE ||
-                              _pendingHeal > 0.0f;
-        if ( bPending )
-            scheduleFlush();
     }
 
-    void ShooterDirectorComponent::despawnRuntime()
+    bool ShooterDirectorComponent::hasPendingSpawn() const
     {
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager != nullptr )
-        {
-            for ( const EnemyRecord& enemy : _listEnemy )
-            {
-                GameObject* pObject = pManager->resolveGameObject( enemy._object );
-                if ( pObject != nullptr )
-                    pManager->destroyObject( pObject );
-            }
-            despawnPool( *pManager, _effectPool );
-            despawnPool( *pManager, _tracerPool );
-        }
+        return _listPendingEnemy.empty() == false || _listPendingEffect.empty() == false || _bAmmoPending == SW_TRUE || _pendingHeal > 0.0f;
+    }
+
+    void ShooterDirectorComponent::onViewsDespawned()
+    {
         _listEnemy.clear();
         _effectPool = EffectPool{};
         _tracerPool = EffectPool{};
         _listEnemyView.clear();
         _listPendingEnemy.clear();
         _listPendingEffect.clear();
-        _bPoolSpawned   = SW_FALSE;
         _bPacingRestart = SW_TRUE; // 걷은 적의 스폰 id 를 돌려줄 수 없다 — 다음 틱에 감독도 처음부터
     }
 
@@ -299,11 +259,10 @@ namespace sw
     void ShooterDirectorComponent::clearEnemies()
     {
         GameObjectManager* pManager = getObjectManager();
-        for ( const EnemyRecord& enemy : _listEnemy )
+        for ( EnemyRecord& enemy : _listEnemy )
         {
-            GameObject* pObject = pManager != nullptr ? pManager->resolveGameObject( enemy._object ) : nullptr;
-            if ( pObject != nullptr )
-                pManager->destroyObject( pObject );
+            if ( pManager != nullptr )
+                destroySpawned( *pManager, enemy._object );
         }
         _listEnemy.clear();
         _listEnemyView.clear();
@@ -325,9 +284,7 @@ namespace sw
         pMesh->setLocalPosition( position );
         pMesh->setLocalRotation( float3{ 0.0f, 0.0f, 0.0f } );
         pMesh->setLocalScale( float3{ size } );
-        const shared_ptr<MaterialInstance> look = acquireColorLook( *pMesh, color );
-        if ( look != nullptr )
-            pMesh->setMaterialInstance( look );
+        _tintCache.apply( *pMesh, color );
         pMesh->setVisible( true );
     }
 
@@ -348,21 +305,8 @@ namespace sw
         pMesh->setLocalPosition( from + span * 0.5f );
         pMesh->setLocalRotation( float3{ pitch, yaw, 0.0f } );
         pMesh->setLocalScale( float3{ width, width, length } );
-        const shared_ptr<MaterialInstance> look = acquireColorLook( *pMesh, color );
-        if ( look != nullptr )
-            pMesh->setMaterialInstance( look );
+        _tintCache.apply( *pMesh, color );
         pMesh->setVisible( true );
-    }
-
-    bool ShooterDirectorComponent::isAutoPlayOn() const
-    {
-        return _bAutoPlay || GameAutoplay::isOn();
-    }
-
-    const ShooterDirectorComponent* ShooterDirectorComponent::resolveDirector( const GameObjectManager& manager, GameObjectHandle director )
-    {
-        const GameObject* pObject = manager.resolveGameObject( director );
-        return pObject != nullptr ? pObject->getComponent<ShooterDirectorComponent>() : nullptr;
     }
 
     // ------------------------------------------------------------------------------
@@ -477,34 +421,12 @@ namespace sw
         }
     }
 
-    void ShooterDirectorComponent::scheduleFlush()
+    void ShooterDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
-        if ( _bFlushScheduled == SW_TRUE )
-            return;
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr )
-            return;
-        _bFlushScheduled = SW_TRUE;
-        // 틱 안이면 틱 뒤로 미뤄진다. 그 사이에 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
-        {
-            ShooterDirectorComponent* pDirector = static_cast<ShooterDirectorComponent*>( pManager->resolveComponent( self ) );
-            if ( pDirector != nullptr )
-                pDirector->flushPending();
-        } );
-    }
-
-    void ShooterDirectorComponent::flushPending()
-    {
-        _bFlushScheduled            = SW_FALSE;
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr || _bStarted == SW_FALSE )
-            return;
-        if ( _bPoolSpawned == SW_FALSE )
-            spawnEffectPools( *pManager );
+        if ( bRespawnViews )
+            spawnEffectPools( manager );
         for ( const EnemyRequest& request : _listPendingEnemy )
-            spawnEnemy( *pManager, request );
+            spawnEnemy( manager, request );
         _listPendingEnemy.clear();
         for ( const EffectRequest& effect : _listPendingEffect )
             spawnEffect( effect._position, effect._size, effect._color, effect._lifetime );
@@ -512,7 +434,7 @@ namespace sw
         const bool bPlayerPending = _bAmmoPending == SW_TRUE || _pendingHeal > 0.0f;
         if ( bPlayerPending )
         {
-            const GameObject*       pObject = pManager->resolveGameObject( _player );
+            const GameObject*       pObject = manager.resolveGameObject( _player );
             ShooterPlayerComponent* pPlayer = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
             if ( pPlayer != nullptr && _bAmmoPending == SW_TRUE )
                 pPlayer->addWaveAmmo();
@@ -521,14 +443,10 @@ namespace sw
             _bAmmoPending = SW_FALSE;
             _pendingHeal  = 0.0f;
         }
-        for ( const float3& position : _listPendingEnemyDown )
-            (void)GameSound::postEventAt( hashed_string( ShooterDirectorComponentInternal::kEventEnemyDown ), position );
-        _listPendingEnemyDown.clear();
     }
 
     void ShooterDirectorComponent::spawnEffectPools( GameObjectManager& manager )
     {
-        _bPoolSpawned = SW_TRUE;
         // 탄착 · 섬광 구와 탄도선 상자를 미리 세우고 숨긴다(오브젝트를 매 발 만들고 지우지 않는다).
         spawnPool( manager, _effectPrefab, _effectPoolSize, "ShotEffect", _effectPool );
         spawnPool( manager, _tracerPrefab, _tracerPoolSize, "Tracer", _tracerPool );
@@ -536,30 +454,16 @@ namespace sw
 
     void ShooterDirectorComponent::spawnPool( GameObjectManager& manager, const string& prefab, int32 count, const utf8* pName, EffectPool& outPool )
     {
-        outPool                     = EffectPool{};
-        AssetManager* pAssetManager = game::getService<AssetManager>();
-        if ( pAssetManager == nullptr || prefab.empty() )
-            return;
+        outPool = EffectPool{};
         for ( int32 effectIndex = 0; effectIndex < count; ++effectIndex )
         {
-            GameObject*    pObject = pAssetManager->getPrefabCache().spawn( &manager, prefab, pName );
+            GameObject*    pObject = spawnPrefab( manager, prefab, pName );
             MeshComponent* pMesh   = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
             if ( pMesh == nullptr )
                 continue;
             pMesh->setVisible( false );
             outPool._listObject.push_back( pObject->getHandle() );
         }
-    }
-
-    void ShooterDirectorComponent::despawnPool( GameObjectManager& manager, EffectPool& inoutPool )
-    {
-        for ( const GameObjectHandle& handle : inoutPool._listObject )
-        {
-            GameObject* pObject = manager.resolveGameObject( handle );
-            if ( pObject != nullptr )
-                manager.destroyObject( pObject );
-        }
-        inoutPool = EffectPool{};
     }
 
     MeshComponent* ShooterDirectorComponent::acquirePooledMesh( GameObjectManager& manager, EffectPool& inoutPool, float32 lifetime )
@@ -592,10 +496,7 @@ namespace sw
 
     void ShooterDirectorComponent::spawnEnemy( GameObjectManager& manager, const EnemyRequest& request )
     {
-        AssetManager* pAssetManager = game::getService<AssetManager>();
-        if ( pAssetManager == nullptr || _enemyPrefab.empty() )
-            return;
-        GameObject*                   pObject     = pAssetManager->getPrefabCache().spawn( &manager, _enemyPrefab, "Skeleton" );
+        GameObject*                   pObject     = spawnPrefab( manager, _enemyPrefab, "Skeleton" );
         ShooterEnemyComponent*        pEnemy      = pObject != nullptr ? pObject->getComponent<ShooterEnemyComponent>() : nullptr;
         CharacterAppearanceComponent* pAppearance = pObject != nullptr ? pObject->getComponent<CharacterAppearanceComponent>() : nullptr;
         if ( pEnemy == nullptr )
@@ -633,26 +534,6 @@ namespace sw
         _listEnemy.push_back( record );
     }
 
-    shared_ptr<MaterialInstance> ShooterDirectorComponent::acquireColorLook( MeshComponent& mesh, const float4& color )
-    {
-        Material* pMaterial = mesh.getMaterial();
-        if ( pMaterial == nullptr )
-            return nullptr;
-        for ( const ColorLook& look : _listColorLook )
-        {
-            if ( ShooterDirectorComponentInternal::isSameColor( look._color, color ) )
-                return look._instance;
-        }
-        ColorLook look;
-        look._instance = MaterialInstance::create( pMaterial );
-        if ( look._instance == nullptr )
-            return nullptr;
-        look._instance->setVectorParameter( hashed_string( "color" ), color );
-        look._color = color;
-        _listColorLook.push_back( look );
-        return look._instance;
-    }
-
     // ------------------------------------------------------------------------------
     // 갱신(PrePhysics — 플레이어 · 적이 쓰지 않는 그룹)
     // ------------------------------------------------------------------------------
@@ -680,7 +561,7 @@ namespace sw
                     if ( record._spawnId != 0 )
                         (void)_director.notifyDespawned( record._spawnId );
                 }
-                _listPendingEnemyDown.push_back( pEnemy->getPosition() );
+                getSoundQueue().queueEventAt( ShooterDirectorComponentInternal::kEventEnemyDown, pEnemy->getPosition() );
             }
             const bool bGone = pEnemy == nullptr || pEnemy->isRemovable();
             if ( bGone )
@@ -815,9 +696,4 @@ namespace sw
         ++_traceFrame;
     }
 
-    GameObjectManager* ShooterDirectorComponent::getObjectManager() const
-    {
-        GameObject* pOwner = getOwner();
-        return pOwner != nullptr ? pOwner->getManager() : nullptr;
-    }
 } // namespace sw

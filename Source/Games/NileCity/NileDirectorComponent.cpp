@@ -11,7 +11,6 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
@@ -19,7 +18,6 @@
 
 #include "GameFramework/Components/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
-#include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Utility/StateArchiveUtil.h"
 
 #include "Games/NileCity/NileBuildingComponent.h"
@@ -178,24 +176,20 @@ namespace sw
         , _cameraRig{}
         , _startingMoney{ 1500 }
         , _serviceDuration{ 60.0f }
-        , _bAutoPlay{ false }
         , _catalog{}
         , _city{}
         , _planner{}
         , _listEvent{}
         , _listTool{}
-        , _listTerrainObject{}
         , _listRoadObject{}
         , _listRoadShown{}
         , _listBuildingSlot{}
         , _listWalkerObject{}
         , _listPendingRoad{}
         , _listPendingBuilding{}
-        , _listPendingSound{}
-        , _listColorLook{}
+        , _tintCache{}
         , _listWalkerLook{}
         , _listModelMesh{}
-        , _pendingStateBytes{}
         , _wantedWalkerCount{ 0 }
         , _cursorTile{ -1, -1 }
         , _timeScale{ 1.0f }
@@ -205,46 +199,20 @@ namespace sw
         , _bCursorValid{ SW_FALSE }
         , _bPaused{ SW_FALSE }
         , _bAutoPlanToggle{ SW_FALSE }
-        , _bLoaded{ SW_FALSE }
-        , _bViewsSpawned{ SW_FALSE }
-        , _bFlushScheduled{ SW_FALSE }
         , _reserved{ 0 }
     {
-        setCanEverTick( true );
     }
 
     NileDirectorComponent::~NileDirectorComponent() = default;
 
-    void NileDirectorComponent::onBeginPlay()
+    void NileDirectorComponent::onGameStarted()
     {
-        Component::onBeginPlay();
-        // 규칙 · 입력 · 짓기는 앞 그룹 — 뷰 · 카메라 리그(PostUpdate)가 같은 프레임에 이 결과를 읽는다.
-        setTickGroup( TickGroup::PrePhysics );
-        if ( loadData() == false )
-        {
-            SW_LOG_WARNING( "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
-            return;
-        }
-        if ( _pendingStateBytes.empty() == false )
-            applyPendingState();
-        scheduleFlush();
         SW_LOG_INFO( "[Nile] the city is founded on the Nile - WASD pan, wheel zoom, Q/E pick building, R road, left click build, right click demolish, "
                      "P auto plan, Space pause, - = speed, F1 status" );
     }
 
-    void NileDirectorComponent::onEndPlay()
+    void NileDirectorComponent::tickGame( float32 deltaTime )
     {
-        despawnViews();
-        Component::onEndPlay();
-    }
-
-    void NileDirectorComponent::onTick( float32 deltaTime )
-    {
-        Component::onTick( deltaTime );
-        if ( _bLoaded == SW_FALSE )
-            return;
-        if ( _bViewsSpawned == SW_FALSE )
-            scheduleFlush(); // 상태 저장 전에 걷었다 — 지금 상태대로 다시 세운다
         if ( deltaTime <= 0.0f )
             return;
 
@@ -256,36 +224,23 @@ namespace sw
         if ( _bPaused == SW_FALSE )
             _city.update( deltaTime * _timeScale );
         drainEvents();
-        if ( _bViewsSpawned == SW_TRUE )
+        if ( areViewsSpawned() )
             collectViewChanges();
-        const bool bPending = _listPendingRoad.empty() == false || _listPendingBuilding.empty() == false || _listPendingSound.empty() == false ||
-                              _wantedWalkerCount > _listWalkerObject.size();
-        if ( bPending )
-            scheduleFlush();
     }
 
-    void NileDirectorComponent::despawnViews()
+    bool NileDirectorComponent::hasPendingSpawn() const
     {
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager != nullptr )
-        {
-            for ( GameObjectHandle& handle : _listTerrainObject )
-                destroySpawned( *pManager, handle );
-            for ( GameObjectHandle& handle : _listRoadObject )
-                destroySpawned( *pManager, handle );
-            for ( BuildingSlot& slot : _listBuildingSlot )
-                destroySpawned( *pManager, slot._object );
-            for ( GameObjectHandle& handle : _listWalkerObject )
-                destroySpawned( *pManager, handle );
-        }
-        _listTerrainObject.clear();
+        return _listPendingRoad.empty() == false || _listPendingBuilding.empty() == false || _wantedWalkerCount > _listWalkerObject.size();
+    }
+
+    void NileDirectorComponent::onViewsDespawned()
+    {
         _listRoadObject.clear();
         _listRoadShown.clear();
         _listBuildingSlot.clear();
         _listWalkerObject.clear();
         _listPendingRoad.clear();
         _listPendingBuilding.clear();
-        _bViewsSpawned = SW_FALSE;
     }
 
     bool NileDirectorComponent::findCursor( int2& outTile, int32& outSize ) const
@@ -308,19 +263,16 @@ namespace sw
         return _listWalkerLook.data()[key];
     }
 
-    const NileDirectorComponent* NileDirectorComponent::resolveDirector( const GameObjectManager& manager, GameObjectHandle director )
-    {
-        const GameObject* pObject = manager.resolveGameObject( director );
-        return pObject != nullptr ? pObject->getComponent<NileDirectorComponent>() : nullptr;
-    }
-
     // ------------------------------------------------------------------------------
     // 데이터
     // ------------------------------------------------------------------------------
-    bool NileDirectorComponent::loadData()
+    bool NileDirectorComponent::startGame()
     {
         if ( _catalog.loadFromResource( _cityDataPath ) == false )
+        {
+            SW_LOG_WARNING( "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
             return false;
+        }
         _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), _startingMoney );
         NileCityPlanner::paintTerrain( _city );
         _planner.reset();
@@ -332,7 +284,6 @@ namespace sw
         for ( const CityBuildingDef& def : _catalog.getBuildings() )
             _listTool.push_back( &def );
         _selectedTool = 0;
-        _bLoaded      = SW_TRUE;
         return true;
     }
 
@@ -358,13 +309,6 @@ namespace sw
         outArchive << _evolvedCount;
         outArchive << static_cast<uint8>( _bPaused );
         outArchive << static_cast<uint8>( _bAutoPlanToggle );
-    }
-
-    void NileDirectorComponent::restoreState( vector<uint8>&& bytes )
-    {
-        _pendingStateBytes = std::move( bytes );
-        if ( _bLoaded == SW_TRUE )
-            applyPendingState();
     }
 
     bool NileDirectorComponent::readState( Archive& archive )
@@ -402,70 +346,41 @@ namespace sw
         return true;
     }
 
-    void NileDirectorComponent::applyPendingState()
+    void NileDirectorComponent::onStateRestored( bool bRestored )
     {
-        Archive archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
-        if ( readState( archive ) )
+        if ( bRestored )
             SW_LOG_INFO( "[Nile] city state restored - month %#, population %#, money %#", _monthCount, _city.getPopulation(), _city.getMoney() );
         else
             SW_LOG_WARNING( "[Nile] the saved city state does not match this build - founding a new city" );
-        _pendingStateBytes.clear();
-        despawnViews(); // 지금 상태대로 다시 세운다(다음 틱)
     }
 
     // ------------------------------------------------------------------------------
     // 스폰(틱 뒤 · 게임 스레드)
     // ------------------------------------------------------------------------------
-    void NileDirectorComponent::scheduleFlush()
+    void NileDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
-        if ( _bFlushScheduled == SW_TRUE )
-            return;
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr )
-            return;
-        _bFlushScheduled = SW_TRUE;
-        // 틱 안이면 틱 뒤로 미뤄진다. 그 사이에 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
+        if ( bRespawnViews )
         {
-            NileDirectorComponent* pDirector = static_cast<NileDirectorComponent*>( pManager->resolveComponent( self ) );
-            if ( pDirector != nullptr )
-                pDirector->flushPending();
-        } );
-    }
-
-    void NileDirectorComponent::flushPending()
-    {
-        _bFlushScheduled            = SW_FALSE;
-        GameObjectManager* pManager = getObjectManager();
-        if ( pManager == nullptr || _bLoaded == SW_FALSE )
-            return;
-        if ( _bViewsSpawned == SW_FALSE )
-        {
-            spawnAll( *pManager );
-            _bViewsSpawned = SW_TRUE;
+            spawnAll( manager );
         }
         else
         {
             for ( const int32 tileIndex : _listPendingRoad )
             {
                 GameObjectHandle& handle = _listRoadObject[static_cast<size_t>( tileIndex )];
-                destroySpawned( *pManager, handle );
+                destroySpawned( manager, handle );
                 if ( _listRoadShown[static_cast<size_t>( tileIndex )] == SW_TRUE )
-                    spawnRoad( *pManager, tileIndex );
+                    spawnRoad( manager, tileIndex );
             }
             for ( const int32 buildingIndex : _listPendingBuilding )
             {
-                destroySpawned( *pManager, _listBuildingSlot[static_cast<size_t>( buildingIndex )]._object );
-                spawnBuilding( *pManager, buildingIndex );
+                destroySpawned( manager, _listBuildingSlot[static_cast<size_t>( buildingIndex )]._object );
+                spawnBuilding( manager, buildingIndex );
             }
-            spawnWalkers( *pManager, _wantedWalkerCount );
+            spawnWalkers( manager, _wantedWalkerCount );
         }
         _listPendingRoad.clear();
         _listPendingBuilding.clear();
-        for ( const utf8* pPath : _listPendingSound )
-            (void)GameSound::play( pPath );
-        _listPendingSound.clear();
     }
 
     void NileDirectorComponent::spawnAll( GameObjectManager& manager )
@@ -512,9 +427,7 @@ namespace sw
                 MeshComponent* pMesh  = Internal::placeMesh( pRun, float3{ static_cast<float32>( runStart ) + length * 0.5f, top - 0.1f, static_cast<float32>( y ) + 0.5f },
                                                              float3{ length, 0.2f, 1.0f } );
                 if ( pMesh != nullptr )
-                    applyColorLook( *pMesh, Internal::computeTerrainColor( runTerrain ) );
-                if ( pRun != nullptr )
-                    _listTerrainObject.push_back( pRun->getHandle() );
+                    _tintCache.apply( *pMesh, Internal::computeTerrainColor( runTerrain ) );
                 if ( runTerrain == CityTerrain::Rock )
                 {
                     for ( int32 rockX = runStart; rockX < x; ++rockX )
@@ -523,9 +436,7 @@ namespace sw
                         MeshComponent* pRockMesh = Internal::placeMesh( pRock, float3{ static_cast<float32>( rockX ) + 0.5f, 0.4f, static_cast<float32>( y ) + 0.5f },
                                                                         float3{ 0.9f, 0.8f, 0.9f } );
                         if ( pRockMesh != nullptr )
-                            applyColorLook( *pRockMesh, Internal::computeTerrainColor( CityTerrain::Rock ) );
-                        if ( pRock != nullptr )
-                            _listTerrainObject.push_back( pRock->getHandle() );
+                            _tintCache.apply( *pRockMesh, Internal::computeTerrainColor( CityTerrain::Rock ) );
                     }
                 }
                 runStart = x;
@@ -560,7 +471,7 @@ namespace sw
         if ( pMesh != nullptr )
         {
             using Internal = NileDirectorComponentInternal;
-            applyColorLook( *pMesh, bModel ? Internal::computeModelTint( *pDef ) : Internal::computeBlockColor( *pDef ) );
+            _tintCache.apply( *pMesh, bModel ? Internal::computeModelTint( *pDef ) : Internal::computeBlockColor( *pDef ) );
         }
         NileBuildingComponent* pView = pBuilding->getComponent<NileBuildingComponent>();
         if ( pView != nullptr )
@@ -586,22 +497,6 @@ namespace sw
         }
     }
 
-    void NileDirectorComponent::destroySpawned( GameObjectManager& manager, GameObjectHandle& inoutHandle )
-    {
-        GameObject* pObject = manager.resolveGameObject( inoutHandle );
-        if ( pObject != nullptr )
-            manager.destroyObject( pObject );
-        inoutHandle = GameObjectHandle{};
-    }
-
-    GameObject* NileDirectorComponent::spawnPrefab( GameObjectManager& manager, const string& prefabPath, const utf8* pName )
-    {
-        AssetManager* pAssetManager = game::getService<AssetManager>();
-        if ( pAssetManager == nullptr || prefabPath.empty() )
-            return nullptr;
-        return pAssetManager->getPrefabCache().spawn( &manager, prefabPath, pName );
-    }
-
     void NileDirectorComponent::prepareWalkerLooks( Material* pMaterial )
     {
         using Internal = NileDirectorComponentInternal;
@@ -613,7 +508,7 @@ namespace sw
                 const CityWalkerKind walkerKind    = static_cast<CityWalkerKind>( kind );
                 const CityService    walkerService = static_cast<CityService>( service );
                 _listWalkerLook[static_cast<size_t>( Internal::makeWalkerLookKey( walkerKind, walkerService ) )] =
-                    acquireColorLook( pMaterial, Internal::computeWalkerColor( walkerKind, walkerService ) );
+                    _tintCache.acquire( pMaterial, Internal::computeWalkerColor( walkerKind, walkerService ) );
             }
         }
     }
@@ -630,38 +525,6 @@ namespace sw
             if ( mesh != nullptr )
                 _listModelMesh.push_back( std::move( mesh ) );
         }
-    }
-
-    void NileDirectorComponent::applyColorLook( MeshComponent& mesh, const float4& color )
-    {
-        const shared_ptr<MaterialInstance> look = acquireColorLook( mesh.getMaterial(), color );
-        if ( look != nullptr )
-            mesh.setMaterialInstance( look );
-    }
-
-    shared_ptr<MaterialInstance> NileDirectorComponent::acquireColorLook( Material* pMaterial, const float4& color )
-    {
-        if ( pMaterial == nullptr )
-            return nullptr;
-        for ( const ColorLook& look : _listColorLook )
-        {
-            const bool bSameColor = look._color._x == color._x && look._color._y == color._y && look._color._z == color._z && look._color._w == color._w;
-            if ( bSameColor && look._instance->getParent() == pMaterial )
-                return look._instance;
-        }
-        ColorLook look;
-        look._instance = MaterialInstance::create( pMaterial );
-        if ( look._instance == nullptr )
-            return nullptr;
-        look._instance->setVectorParameter( hashed_string( "color" ), color );
-        look._color = color;
-        _listColorLook.push_back( look );
-        return look._instance;
-    }
-
-    void NileDirectorComponent::playSound( const utf8* pPath )
-    {
-        _listPendingSound.push_back( pPath );
     }
 
     // ------------------------------------------------------------------------------
@@ -711,7 +574,7 @@ namespace sw
         {
             [[maybe_unused]] const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
             SW_LOG_INFO( "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _catalog.getRoadCost() );
-            playSound( NileDirectorComponentInternal::kSoundSelect );
+            getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundSelect );
         }
         if ( input.wasKeyPressed( Key::Space ) )
         {
@@ -775,12 +638,12 @@ namespace sw
         if ( result == CityPlaceResult::Ok )
         {
             SW_LOG_INFO( "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _city.getMoney() );
-            playSound( NileDirectorComponentInternal::kSoundBuilt );
+            getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundBuilt );
         }
         else
         {
             SW_LOG_INFO( "[Nile] cannot build %# at (%#, %#): %#", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, toString( result ) );
-            playSound( NileDirectorComponentInternal::kSoundError );
+            getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundError );
         }
     }
 
@@ -822,7 +685,7 @@ namespace sw
         }
         // 한 프레임에 여럿이 올라도 소리는 한 번.
         if ( bHouseEvolved )
-            playSound( NileDirectorComponentInternal::kSoundEvolved );
+            getSoundQueue().queueClip( NileDirectorComponentInternal::kSoundEvolved );
     }
 
     void NileDirectorComponent::logStatus() const
@@ -841,12 +704,7 @@ namespace sw
 
     bool NileDirectorComponent::isAutoPlanOn() const
     {
-        return _bAutoPlay || _bAutoPlanToggle == SW_TRUE || GameAutoplay::isOn();
+        return isAutoPlayOn() || _bAutoPlanToggle == SW_TRUE;
     }
 
-    GameObjectManager* NileDirectorComponent::getObjectManager() const
-    {
-        GameObject* pOwner = getOwner();
-        return pOwner != nullptr ? pOwner->getManager() : nullptr;
-    }
 } // namespace sw

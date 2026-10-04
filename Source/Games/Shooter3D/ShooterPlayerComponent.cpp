@@ -124,7 +124,7 @@ namespace sw
         , _listPendingHit{}
         , _listPendingEffect{}
         , _listPendingTracer{}
-        , _listPendingSound{}
+        , _soundQueue{}
         , _body{}
         , _position{ 0.0f, 0.0f, -16.0f }
         , _moveVelocity{ 0.0f, 0.0f, 0.0f }
@@ -168,7 +168,7 @@ namespace sw
         GameObject*                     pOwner    = getOwner();
         GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*     pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const ShooterDirectorComponent* pDirector = pManager != nullptr ? ShooterDirectorComponent::resolveDirector( *pManager, _director ) : nullptr;
+        const ShooterDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, _director ) : nullptr;
         if ( pCamera != nullptr )
         {
             // 자동 플레이는 마우스를 잠그지 않는다 — 시점은 조준 AI 가 정한다.
@@ -187,11 +187,11 @@ namespace sw
 
     void ShooterPlayerComponent::onEndPlay()
     {
-        despawnRuntime();
+        despawnViews();
         Component::onEndPlay();
     }
 
-    void ShooterPlayerComponent::despawnRuntime()
+    void ShooterPlayerComponent::despawnViews()
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -216,7 +216,7 @@ namespace sw
         GameObject*                     pOwner    = getOwner();
         GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*     pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const ShooterDirectorComponent* pDirector = pManager != nullptr ? ShooterDirectorComponent::resolveDirector( *pManager, _director ) : nullptr;
+        const ShooterDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, _director ) : nullptr;
         if ( pCamera == nullptr || pDirector == nullptr || deltaTime <= 0.0f )
             return;
         const float32 step = MathUtil::min( deltaTime, 0.1f );
@@ -447,7 +447,7 @@ namespace sw
         if ( next._y <= 0.0f )
         {
             if ( _bOnGround == SW_FALSE )
-                _listPendingSound.push_back( ShooterPlayerComponentInternal::kSoundLand );
+                _soundQueue.queueEvent( ShooterPlayerComponentInternal::kSoundLand );
             next._y        = 0.0f;
             _verticalSpeed = 0.0f;
             _bOnGround     = SW_TRUE;
@@ -507,11 +507,11 @@ namespace sw
         {
             ++_hitCount;
             _hitMarkerTimer = 0.15f;
-            _listPendingSound.push_back( Internal::kSoundHitEnemy );
+            _soundQueue.queueEvent( Internal::kSoundHitEnemy );
         }
         else if ( bHitCover )
         {
-            _listPendingSound.push_back( Internal::kSoundHitCover );
+            _soundQueue.queueEvent( Internal::kSoundHitCover );
         }
         // 반동 — 위로 튀고 옆으로 살짝.
         const float32 kick = weapon.getDef()._recoilPitch * MathUtil::DegreeToRadian;
@@ -664,7 +664,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool ShooterPlayerComponent::hasPending() const
     {
-        return _listPendingHit.empty() == false || _listPendingEffect.empty() == false || _listPendingTracer.empty() == false || _listPendingSound.empty() == false ||
+        return _listPendingHit.empty() == false || _listPendingEffect.empty() == false || _listPendingTracer.empty() == false || _soundQueue.isEmpty() == false ||
                _bWeaponModelDirty == SW_TRUE || _bViewModeDirty == SW_TRUE || _bBodyRequested == SW_TRUE;
     }
 
@@ -714,9 +714,7 @@ namespace sw
         }
         _listPendingEffect.clear();
         _listPendingTracer.clear();
-        for ( const utf8* pEvent : _listPendingSound )
-            (void)GameSound::postEvent( hashed_string( pEvent ) );
-        _listPendingSound.clear();
+        _soundQueue.playAll();
         if ( _bWeaponModelDirty == SW_TRUE )
         {
             _bWeaponModelDirty    = SW_FALSE;
