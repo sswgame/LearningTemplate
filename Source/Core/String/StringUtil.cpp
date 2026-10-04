@@ -942,16 +942,8 @@ namespace sw
 
     bool StringUtil::parseBool( string_view token, bool bFallback )
     {
-        const string_view trimmed = trim( token );
-        if ( trimmed.empty() )
-            return bFallback;
-        if ( trimmed == "1" || equals( trimmed, "true", true ) || equals( trimmed, "yes", true ) ||
-             equals( trimmed, "on", true ) )
-            return true;
-        if ( trimmed == "0" || equals( trimmed, "false", true ) || equals( trimmed, "no", true ) ||
-             equals( trimmed, "off", true ) )
-            return false;
-        return bFallback;
+        bool value{ bFallback };
+        return tryParseBool( token, value ) ? value : bFallback;
     }
 
     bool StringUtil::tryParseBool( string_view token, bool& outValue )

@@ -85,9 +85,8 @@ namespace sw
                     return false;
                 if ( listArgument.size() == 1 )
                 {
-                    const bool bOn  = StringUtil::equals( listArgument[0], "on", true ) || listArgument[0] == "1";
-                    const bool bOff = StringUtil::equals( listArgument[0], "off", true ) || listArgument[0] == "0";
-                    if ( bOn == bOff )
+                    bool bOn{ false };
+                    if ( StringUtil::tryParseBool( listArgument[0], bOn ) == false )
                         return false;
                     (void)GameAutoplay::setOn( bOn ); // 위에서 등록을 확인했다
                 }
@@ -115,9 +114,8 @@ namespace sw
                 }
                 if ( listArgument.size() != 2 )
                     return false;
-                const bool bOn  = StringUtil::equals( listArgument[1], "on", true ) || listArgument[1] == "1";
-                const bool bOff = StringUtil::equals( listArgument[1], "off", true ) || listArgument[1] == "0";
-                if ( bOn == bOff )
+                bool bOn{ false };
+                if ( StringUtil::tryParseBool( listArgument[1], bOn ) == false )
                     return false;
                 queue.setCategoryEnabled( hashed_string( listArgument[0] ), bOn );
                 outReply = listArgument[0] + ( bOn ? " on" : " off" );
