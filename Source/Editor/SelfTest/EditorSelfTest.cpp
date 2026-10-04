@@ -94,9 +94,9 @@ namespace sw::editor
 
     // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
     /** @brief `-gv_editorSelfTest=<패턴>`: 에디터가 뜬 뒤 이름이 맞는 에디터 자체 시험을 돌리고 앱을 닫습니다(`*` 와 쉼표). */
-    SW_TEST_GLOBAL_VARIABLE_STRING( gv_editorSelfTest, "", "에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 시험을 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorSelfTest, "", "에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 시험을 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함)" );
     /** @brief `-gv_editorSelfTestReport=<파일>`: 에디터 자체 시험의 결과 줄을 이 파일에 씁니다. */
-    SW_TEST_GLOBAL_VARIABLE_STRING( gv_editorSelfTestReport, "", "에디터 자체 시험 결과를 쓸 파일 (비우면 로그에만)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorSelfTestReport, "", "에디터 자체 시험 결과를 쓸 파일 (비우면 로그에만)" );
 
     EditorSelfTestContext::EditorSelfTestContext()
         : _failure{}

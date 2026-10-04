@@ -16,7 +16,7 @@ using namespace sw::editor;
 
 // 전역 변수 프리셋 — **테스트용 변수는 저장하지도 적용하지도 않는다.**
 //
-// 테스트용(`SW_TEST_GLOBAL_VARIABLE_*`)은 벤치 · 자동화 스위치다. 프리셋에 `gv_profileFrames` 가 들어가면 불러온 에디터가
+// 테스트용(`SW_TEST_GLOBAL_VARIABLE`)은 벤치 · 자동화 스위치다. 프리셋에 `gv_profileFrames` 가 들어가면 불러온 에디터가
 // N 프레임 뒤 스스로 꺼지고, `gv_crashTest` 가 들어가면 일부러 죽는다. 실행 한 번에만 줄 값이다.
 
 /**

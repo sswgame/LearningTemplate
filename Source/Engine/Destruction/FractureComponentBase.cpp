@@ -25,7 +25,7 @@
 
 namespace sw
 {
-    SW_GLOBAL_VARIABLE_INT( gv_destructionMaxDebrisBodies, 512, "한 씬(월드)의 모든 파괴 오브젝트가 함께 드는 떨어진 덩어리 바디의 상한(넘으면 오래된 작은 것부터 사라진다)" );
+    SW_GLOBAL_VARIABLE( int32, gv_destructionMaxDebrisBodies, 512, "한 씬(월드)의 모든 파괴 오브젝트가 함께 드는 떨어진 덩어리 바디의 상한(넘으면 오래된 작은 것부터 사라진다)" );
 } // namespace sw
 
 namespace sw

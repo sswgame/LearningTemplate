@@ -44,6 +44,8 @@ namespace sw
         TAA,
         Tonemap,
         Present,
+        /// @brief 뒤집은 껍질(inverted hull) 외곽선입니다. 씬 메시 중 퍼뮤테이션에 `MATERIAL_OUTLINE` 이 있는 배치만 노멀 방향으로 부풀려 앞면을 컬링해 그립니다(toon.hlsl).
+        MeshOutline,
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
@@ -67,7 +69,7 @@ namespace sw
     /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯 · Invalid 제외). */
     constexpr bool isPipelinePassType( RenderPassType type )
     {
-        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Present );
+        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::MeshOutline );
     }
 
     /// @brief 렌더 패스 어태치먼트 하나(이름 · 포맷 · 클리어 색 · 클리어 여부)입니다.

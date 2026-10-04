@@ -22,4 +22,5 @@
                      _shaderFullscreenTriangle="engine/shaders/fullscreentriangle.hlsl"
                      _shaderSsao="engine/shaders/ssao.hlsl"
                      _shaderTaa="engine/shaders/taa.hlsl"
-                     _shaderTonemap="engine/shaders/tonemap.hlsl" />
+                     _shaderTonemap="engine/shaders/tonemap.hlsl"
+                     _shaderToon="engine/shaders/toon.hlsl" />

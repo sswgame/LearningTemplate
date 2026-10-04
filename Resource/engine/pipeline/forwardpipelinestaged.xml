@@ -52,6 +52,27 @@
 				<item>SW_FORWARD=1</item>
 			</_listPermutation>
 		</RenderGraphPassDesc>
+		<!-- 뒤집은 껍질 외곽선(toon.hlsl 의 외곽선 퍼뮤테이션) — 외곽선을 켠 머티리얼(MATERIAL_OUTLINE)의 배치만 앞면을 컬링해 그린다.
+		     불투명 깊이를 읽는 패스보다 뒤, 반투명보다 앞이다(외곽선이 깊이를 써서 뒤의 반투명을 가린다). -->
+		<RenderGraphPassDesc _name="MeshOutline"
+		                     _type="MeshOutline"
+		                     _depthAttachment="SceneDepth"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="Front"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="true"
+		                     _bEnableBlend="false">
+			<_listInput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Transparent"
 		                     _type="Transparent"
 		                     _depthAttachment="SceneDepth"

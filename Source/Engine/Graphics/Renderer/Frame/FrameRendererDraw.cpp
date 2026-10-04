@@ -276,9 +276,11 @@ namespace sw
             return false;
         };
 
-        auto sameDrawGroup = [this, pso, &layoutBindsMaterialCb]( const GpuMeshBatch& head, const GpuMeshBatch& other ) -> bool
+        // 패스가 머티리얼로 배치를 거르면(메시 외곽선 — 외곽선을 켠 머티리얼만) 그 밖의 배치는 그리지도 묶지도 않는다.
+        const RenderPassType passType      = ctx._passType;
+        auto                 sameDrawGroup = [this, pso, passType, &layoutBindsMaterialCb]( const GpuMeshBatch& head, const GpuMeshBatch& other ) -> bool
         {
-            if ( other._vertexBuffer == 0 || other._instanceCount == 0 )
+            if ( other._vertexBuffer == 0 || other._instanceCount == 0 || drawsBatchInPass( passType, other ) == false )
                 return false;
             if ( other._vertexBuffer != head._vertexBuffer || psoForBatch( pso, other ) != psoForBatch( pso, head ) )
                 return false;
@@ -306,7 +308,7 @@ namespace sw
         while ( batchIndex < batchCount )
         {
             const GpuMeshBatch& head = batches[batchIndex];
-            if ( head._vertexBuffer == 0 || head._instanceCount == 0 )
+            if ( head._vertexBuffer == 0 || head._instanceCount == 0 || drawsBatchInPass( passType, head ) == false )
             {
                 ++batchIndex;
                 continue;

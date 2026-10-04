@@ -21,7 +21,7 @@ namespace sw
      * @brief `-gv_dumpRenderGraph=1`: 파이프라인을 묶을 때마다(시작 · 파이프라인 교체) 컴파일된 레벨 순서를 로그로 남깁니다.
      * @details 레벨 · 패스 · 읽고 쓰는 자원 · 컬링된 패스(`RenderGraph::describeCompiledOrder`). "왜 이 패스가 저것보다 먼저 도나 · 왜 안 도나" 의 답이다.
      */
-    SW_TEST_GLOBAL_VARIABLE_BOOL( gv_dumpRenderGraph, false, "렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다" );
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_dumpRenderGraph, false, "렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다" );
 
     void FrameRenderer::bindPassCallbacks()
     {
@@ -240,6 +240,7 @@ namespace sw
             ctx._pCmd->beginEventMarker( arrPassName );
         }
         ctx._resourceRegistry.reset();
+        ctx._passType = passType;
         // 라이트는 **패스 종류를 가리지 않는다.** 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
         // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 건다.
         registerLightBuffer( ctx );
@@ -455,6 +456,21 @@ namespace sw
                     if ( beginColorPass( ctx, colorTarget.view(), passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) )
                     {
                         drawSceneMeshes( ctx, findPassPso( RenderPassType::Transparent ), passCb, bTransparentBatch );
+                        ctx._pCmd->endRenderPass();
+                    }
+                    break;
+                }
+                case RenderPassType::MeshOutline:
+                {
+                    // 뒤집은 껍질 외곽선 — 불투명 패스가 그린 색 · 깊이 위에, 외곽선을 켠 머티리얼의 배치만 앞면을 컬링해 그린다(drawsBatchInPass).
+                    // 와이어프레임 보기에서는 빠진다(껍질이 선 위를 덮는다). 타깃은 선언한 컬러 출력이다(불투명 패스와 같은 규칙).
+                    if ( getViewMode() == RenderViewMode::Wireframe )
+                        break;
+                    const hashed_string& colorTarget = pDeclaredColor != nullptr ? ( *pDeclaredColor )[0]._attachment : attachmentNames()._sceneColor;
+                    const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
+                    if ( beginColorPass( ctx, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
+                    {
+                        drawSceneMeshes( ctx, getEnginePso( RenderPassType::MeshOutline ), passCb, bTransparentBatch );
                         ctx._pCmd->endRenderPass();
                     }
                     break;

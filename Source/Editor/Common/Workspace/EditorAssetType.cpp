@@ -49,8 +49,8 @@ namespace sw::editor
         constexpr string_view kArrRigSuffix[]          = { ".rig.json" };
         constexpr string_view kArrAnimClipExt[]        = { ".animclip" };
         constexpr string_view kArrFractureExt[]        = { ".fracture" };
-        constexpr string_view kArrModelSourceExt[]     = { ".glb", ".gltf" }; ///< `models_raw/` 의 원본 — 임포트하는 것이 리로드다
-        constexpr string_view kArrHeightfieldRawExt[]  = { ".png", ".r16" };  ///< `heightfields_raw/` 의 원본 · 구멍 마스크 — 임포트하는 것이 리로드다
+        constexpr string_view kArrModelSourceExt[]     = { ".glb", ".gltf", ".vrm" }; ///< `models_raw/` 의 원본 — 임포트하는 것이 리로드다
+        constexpr string_view kArrHeightfieldRawExt[]  = { ".png", ".r16" };          ///< `heightfields_raw/` 의 원본 · 구멍 마스크 — 임포트하는 것이 리로드다
         constexpr string_view kArrHeightfieldExt[]     = { ".heightfield" };
         constexpr string_view kArrLocalizationSuffix[] = { ".strings.json", ".translation.json", ".locproject.json" }; ///< 올린 프로젝트를 다시 읽는다(`LocalizationManager`)
         constexpr string_view kArrModuleDataSuffix[]   = { ".interactions.xml", ".elements.xml" };                     ///< 모듈이 올린 데이터 표 캐시(GameFramework 상호작용 · 원소 규칙 표)

@@ -60,7 +60,7 @@ namespace sw
      * @brief `-gv_arenaAutoPlay=1` — 디렉터의 자동 전투를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도). 플레이어도 AI 가 움직인다.
      * @details 배포본 실행 파일로도 돌릴 수 있게 남긴다: `App -gv_arenaAutoPlay=1 -gv_profileFrames=1200`.
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_arenaAutoPlay, 0, "AbilityArena: 플레이어도 AI 가 조종 (1=켜기)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_arenaAutoPlay, 0, "AbilityArena: 플레이어도 AI 가 조종 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_arenaAutoPlay, "AbilityArena", "The player is driven by the AI too" );
 } // namespace sw
 

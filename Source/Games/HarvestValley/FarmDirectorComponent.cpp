@@ -131,7 +131,7 @@ namespace sw
      * @brief `-gv_farmAutoPlay=1` — 디렉터의 자동 농부를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도). 입력 없이 계절을 넘겨 보는 확인용입니다.
      * @details 배포본으로도 돌린다: `App -gv_farmAutoPlay=1 -gv_profileFrames=36000`(약 10 분 = 하루 다섯).
      */
-    SW_TEST_GLOBAL_VARIABLE_INT( gv_farmAutoPlay, 0, "HarvestValley: 농부도 AI 가 조종 (1=켜기)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_farmAutoPlay, 0, "HarvestValley: 농부도 AI 가 조종 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_farmAutoPlay, "HarvestValley", "The farmer is driven by the AI" );
 } // namespace sw
 

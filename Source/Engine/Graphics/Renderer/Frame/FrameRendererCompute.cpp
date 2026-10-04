@@ -28,7 +28,7 @@ namespace sw
      * @details 간접 인자는 GpuScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
      *          망치는가" 를 백엔드별로 가를 수 있습니다. 기본은 켬입니다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_gpuCulling, 1, "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)" );
+    SW_GLOBAL_VARIABLE( int32, gv_gpuCulling, 1, "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)" );
 
     /**
      * @brief `-gv_morphDiag=<0|1|2|3>` 는 GPU 메시 모프 경로를 백엔드 능력표와 **상관없이** 돌려 봅니다.
@@ -41,7 +41,7 @@ namespace sw
      *          3 은 거기서 한 걸음 더 갑니다. 번호표를 읽으면 "제 원소를 짚었는가" 를 위치 값과 **따로**
      *          볼 수 있어서, 인덱싱이 틀린 것인지 내용이 틀린 것인지 한 장으로 갈립니다.
      */
-    SW_GLOBAL_VARIABLE_INT( gv_morphDiag, 0, "메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표)" );
+    SW_GLOBAL_VARIABLE( int32, gv_morphDiag, 0, "메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표)" );
 
     bool FrameRenderer::usesGpuGeneratedCommands() const
     {

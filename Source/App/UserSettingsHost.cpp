@@ -13,9 +13,9 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/IWindow.h"
 
-SW_TEST_GLOBAL_VARIABLE_STRING( gv_userSettingsApply, "", "사용자 설정을 메뉴와 같은 길로 바꾼다: \"id=value;id=value\" (자동화)", SW_KEEP_IN_SHIPPING );
-SW_TEST_GLOBAL_VARIABLE_INT( gv_userSettingsApplyFrame, 30, "gv_userSettingsApply 를 적용할 프레임", SW_KEEP_IN_SHIPPING );
-SW_TEST_GLOBAL_VARIABLE_BOOL( gv_userSettingsAutoConfirm, true, "gv_userSettingsApply 의 화면 변경을 바로 확인한다 (false 면 카운트다운이 되돌린다)", SW_KEEP_IN_SHIPPING );
+SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_userSettingsApply, "", "사용자 설정을 메뉴와 같은 길로 바꾼다: \"id=value;id=value\" (자동화)" );
+SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_userSettingsApplyFrame, 30, "gv_userSettingsApply 를 적용할 프레임" );
+SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_userSettingsAutoConfirm, true, "gv_userSettingsApply 의 화면 변경을 바로 확인한다 (false 면 카운트다운이 되돌린다)" );
 
 namespace sw
 {
