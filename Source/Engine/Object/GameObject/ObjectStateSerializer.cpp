@@ -240,24 +240,34 @@ namespace sw
             }
 
             /**
-             * @brief 저장할 때 `GameObjectHandle` 값을 저장할 id 로 옮겨 적는 글 처리기입니다 — 부착과 같은 규칙(`ObjectSaveOptions::getSavedObjectId`).
-             * @details 세 형식이 모두 이 글 처리기를 지납니다(바이너리도 핸들은 글로 싣는다 — `SerializerUtil::serializeValueBinary`). 런타임 id 를
-             *          그대로 적으면 씬 파일을 다시 열 때 같은 값을 받은 다른 오브젝트를 가리킬 수 있다.
+             * @brief 저장할 때 `GameObjectHandle` 값을 저장할 id 로 옮겨 적는 글 · 바이너리 처리기입니다 — 부착과 같은 규칙(`ObjectSaveOptions::getSavedObjectId`).
+             * @details 세 형식이 모두 이 처리기를 지납니다. 런타임 id 를 그대로 적으면 씬 파일을 다시 열 때 같은 값을 받은 다른 오브젝트를 가리킬 수 있다.
+             *          주의: 핸들은 내장 타입이라 기본 문맥에 8 바이트 바이너리 처리기가 있다 — 글 처리기만 바꾸면 바이너리(쿠킹한 씬 · 세이브)는 런타임
+             *          id 를 그대로 싣고, 읽는 묶음이 그 id 를 파일 id 로 찾지 못해 핸들이 비게 된다. 바이너리도 같은 8 바이트 모양으로 바꿔 적는다.
              */
             struct ReferenceWriter
             {
                 const ObjectSaveOptions* _pOptions{ nullptr };
 
-                string write( const void* pValue ) const
+                uint64 computeSavedId( const void* pValue ) const
                 {
-                    const GameObjectHandle& handle  = *static_cast<const GameObjectHandle*>( pValue );
-                    const bool              bOmit   = handle.isValid() == false || _pOptions->_bOmitExternalParent;
-                    const uint64            savedId = bOmit ? 0 : _pOptions->getSavedObjectId( handle.objectId() );
-                    return sw::to_string( savedId );
+                    const GameObjectHandle& handle = *static_cast<const GameObjectHandle*>( pValue );
+                    const bool              bOmit  = handle.isValid() == false || _pOptions->_bOmitExternalParent;
+                    return bOmit ? 0 : _pOptions->getSavedObjectId( handle.objectId() );
+                }
+
+                string write( const void* pValue ) const { return sw::to_string( computeSavedId( pValue ) ); }
+
+                /** @brief 기본 바이너리 처리기와 같은 모양(핸들 하나의 바이트)으로 저장할 id 를 적습니다 — 읽기는 기본 처리기 그대로다. */
+                void writeBinary( const void* pValue, vector<uint8>& outListBuffer ) const
+                {
+                    const GameObjectHandle savedHandle = GameObjectHandle::make( computeSavedId( pValue ) );
+                    const uint8*           pByte       = reinterpret_cast<const uint8*>( &savedHandle );
+                    outListBuffer.insert( outListBuffer.end(), pByte, pByte + sizeof( GameObjectHandle ) );
                 }
             };
 
-            /** @brief 오브젝트 상태를 쓰는 문맥에 핸들 글 처리기를 겁니다. 읽기는 기본 그대로다 — 옮기는 일은 묶음이 모두 읽은 뒤 한다(`ObjectStateBatch::finish`). */
+            /** @brief 오브젝트 상태를 쓰는 문맥에 핸들 글 · 바이너리 처리기를 겁니다. 읽기는 기본 그대로다 — 옮기는 일은 묶음이 모두 읽은 뒤 한다(`ObjectStateBatch::finish`). */
             static void registerReferenceWriter( SerializeContext& ctx, const ReferenceWriter& writer )
             {
                 const SerializeContext::TextReadFn* pReader = SerializeContext::getDefault().findTextReader( getObjectHandleTypeName() );
@@ -265,6 +275,10 @@ namespace sw
                     return;
                 ctx.registerTextHandler( getObjectHandleTypeName(), SW_DELEGATE_METHOD( SerializeContext::TextWriteFn, &ReferenceWriter::write, &writer ),
                                          *pReader );
+                const SerializeContext::BinaryReadFn* pBinaryReader = SerializeContext::getDefault().findBinaryReader( getObjectHandleTypeName() );
+                if ( pBinaryReader != nullptr )
+                    ctx.registerBinaryHandler( getObjectHandleTypeName(),
+                                               SW_DELEGATE_METHOD( SerializeContext::BinaryWriteFn, &ReferenceWriter::writeBinary, &writer ), *pBinaryReader );
             }
         };
     } // namespace

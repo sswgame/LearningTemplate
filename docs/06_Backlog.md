@@ -645,6 +645,9 @@ cd build/Ninja-Debug/Bin
 
 - **저장된 상태는 이름으로 다른 오브젝트를 가리키지 않는다**(`AGENTS.md`). 부모는 `_attachOwnerId`, 핸들 PROPERTY 는 `ObjectSaveOptions::getSavedObjectId`(프리팹은 0). 상태를 읽는
   길 아홉은 모두 `ObjectStateBatch` 를 지나고 `finish()` 가 이름 되찾기와 부착을 한 번에 한다. 못 푼 참조는 `keepUnresolvedAttach` 로 보존한다. 표는 `Source/Engine/Object/README.md`.
+- **핸들 PROPERTY 는 바이너리에서도 파일 id 로 적는다.** `GameObjectHandle` 은 내장 타입이라 기본 문맥에 8 바이트 처리기가 있다 — 글 처리기만 바꾸면 XML 은 맞고 바이너리
+  (쿠킹한 씬 · 세이브)는 런타임 id 를 실어, 쿠커 왕복 검증이 그 엔티티를 XML 로 남겼다. `ObjectStateSerializer` 가 글 · 바이너리 처리기를 함께 덮는다
+  (`ActionCombatTest.ObjectReferencesSurviveBinaryFileState`).
 - **빌리기는 포인터(이번 호출 · 프레임), 보관은 `GameObjectHandle` · `ComponentHandle` + `resolve*`.** 이름 기반 `GameObjectPtr` · `ComponentPtr` 를 되살리지 말 것. 게임 모듈은
   컴포넌트를 생포인터로 들지 않는다(상태 복원이 씬을 갈아엎는다). 되살릴 때 id 보존: `createGameObjectWithId`, `ComponentIdRestoreScope` 는 `onRegister` **전에**, 프로세스 토큰이
   다르면 id 를 버린다. 오브젝트 id 는 프로세스 전역이다 — 시험에서 "다음 = +1" 을 가정하지 말 것.

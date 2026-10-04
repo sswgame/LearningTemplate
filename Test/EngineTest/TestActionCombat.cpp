@@ -685,6 +685,45 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesKeepTheirTargetWhenReloadedInPla
 }
 
 /**
+ * @brief [ActionCombatTest] 바이너리 파일 상태(쿠킹한 씬)도 핸들을 파일 id 로 싣고, 읽는 묶음이 그 id 의 새 오브젝트로 잇는다
+ * @details 핸들은 내장 타입이라 기본 문맥에 바이트 처리기가 있다. 글 처리기만 파일 id 로 바꾸면 XML 은 맞고 바이너리는 런타임 id 를 싣는다 —
+ *          쿠킹한 씬에서 핸들 PROPERTY 가 비고, 쿠커는 왕복 검증에서 그 엔티티를 XML 로 남긴다.
+ */
+SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveBinaryFileState )
+{
+    GameObjectManager    manager;
+    UnitStatsComponent*  pShooter = spawnUnit( manager, "Shooter", -20.0f, 100, 0, 0.0f );
+    ProjectileComponent* pShot    = spawnBullet( manager, 0.0f, 0.0f, 0.0f, 10 );
+    SW_ASSERT_TRUE( pShooter != nullptr && pShot != nullptr );
+    pShot->setInstigator( pShooter->getOwner()->getHandle() );
+
+    // 파일 id 로 적는다 — 쏜 쪽 7, 총알 8.
+    ObjectSavedIdMap mapSavedId;
+    mapSavedId.emplace( pShooter->getOwner()->getHandle().objectId(), 7u );
+    mapSavedId.emplace( pShot->getOwner()->getHandle().objectId(), 8u );
+    ObjectSaveOptions options{};
+    options._pSavedIdMap = &mapSavedId;
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pShot->getOwner(), bytes, options ) );
+
+    GameObject* pNewShooter = manager.createGameObject( hashed_string( "NewShooter" ) );
+    GameObject* pNewShot    = manager.createGameObject( hashed_string( "NewShot" ) );
+    SW_ASSERT_TRUE( pNewShooter != nullptr && pNewShot != nullptr );
+    {
+        ObjectStateBatch batch( ObjectIdSpace::Saved );
+        batch.add( pNewShooter, 7u, hashed_string( "Shooter" ), false );
+        ObjectLoadContext context{};
+        context._pBatch  = &batch;
+        context._savedId = 8u;
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pNewShot, bytes.data(), bytes.size(), context ) > 0 );
+        batch.finish();
+    }
+    const ProjectileComponent* pFromFile = pNewShot->getComponent<ProjectileComponent>();
+    SW_ASSERT_NOT_NULL( pFromFile );
+    SW_EXPECT_TRUE( pFromFile->getInstigator() == pNewShooter->getHandle() );
+}
+
+/**
  * @brief [ActionCombatTest] 파일 상태의 핸들이 묶음에 없는 id 를 가리키면 없음이 되고, 프리팹은 핸들을 싣지 않는다
  * @details 파일 id 는 그 파일(묶음) 안에서만 뜻이 있다 — 묶음에 없는 값을 그대로 두면 이 실행에서 우연히 같은 값을 받은 오브젝트를 가리킨다(부모
  *          부착과 같은 함정). 프리팹은 여러 번 스폰되므로 다른 오브젝트를 가리키는 것을 싣지 않는다 — 실으면 스폰한 인스턴스가
