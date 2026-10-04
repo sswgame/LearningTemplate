@@ -637,6 +637,8 @@ namespace sw::editor
             else if ( name == "TwoSided" )
                 bEnabled = desc._bTwoSided == SW_TRUE;
             item.setAttribute( "bEnabled", bEnabled ? "1" : "0" );
+            // 임포트한 머티리얼의 스위치는 에셋이 정한 값이다 — 틀(engine toon)이 런타임 스위치로 둔 것도 그 상태만 쿠킹한다.
+            item.setAttribute( "bShaderFeature", "1" );
         }
         if ( desc._alphaMode == ToonAlphaMode::Transparent )
             permutations.findChild( "_alwaysDefines" ).appendChild( "item" ).setValue( "MATERIAL_BLEND_TRANSLUCENT" );

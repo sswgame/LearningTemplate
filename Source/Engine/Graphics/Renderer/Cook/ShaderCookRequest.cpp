@@ -110,6 +110,42 @@ namespace sw
                 return listMerged;
             }
 
+            /** @brief 쿠킹하는 런타임 스위치 수의 상한입니다. 조합이 2^n 이라 넘으면 에셋 상태만 쿠킹하고 오류로 알린다. */
+            static constexpr uint32 kMaxRuntimeSwitchCount = 4;
+
+            /**
+             * @brief 머티리얼이 런타임에 낼 수 있는 define 목록 전부입니다 — 에셋 상태 하나 + 런타임에 바꿀 수 있는 정적 스위치(`bShaderFeature="0"`)의 켬/끔 조합.
+             * @details 유니티의 shader_feature(쓰는 변형만) · multi_compile(모든 변형) 구분과 같다. 런타임 스위치를 쿠킹하지 않으면 코드가
+             *          `Material::setStaticSwitch` 로 켠 변형이 Dev 에서는 실시간 컴파일로 그려지고 Shipping 에서만 바이너리가 없다.
+             *          조합은 런타임과 **같은 함수**(`setStaticSwitch` → `getCachedShaderDefines`)로 만든다 — 손으로 define 을 끼우면 정렬 · 꺼짐 키워드가 어긋난다.
+             */
+            static void collectMaterialRuntimeDefines( Material& material, string_view materialPath, vector<vector<string>>& outListDefine )
+            {
+                outListDefine.clear();
+                outListDefine.push_back( material.getCachedShaderDefines() );
+                vector<string> listRuntimeSwitch;
+                for ( const MaterialStaticSwitch& entry : material.getPermutations()._listStaticSwitch )
+                {
+                    if ( entry._bShaderFeature == 0 )
+                        listRuntimeSwitch.push_back( entry._name );
+                }
+                if ( listRuntimeSwitch.size() > kMaxRuntimeSwitchCount )
+                {
+                    SW_LOG_ERROR( "Material '%#' has %# runtime static switches (bShaderFeature=\"0\") - only %# are cooked in every combination; the asset state is cooked alone",
+                                  materialPath, listRuntimeSwitch.size(), kMaxRuntimeSwitchCount );
+                    return;
+                }
+                const uint32 comboCount = 1u << static_cast<uint32>( listRuntimeSwitch.size() );
+                for ( uint32 combo = 0; combo < comboCount; ++combo )
+                {
+                    for ( size_t switchIndex = 0; switchIndex < listRuntimeSwitch.size(); ++switchIndex )
+                        material.setStaticSwitch( hashed_string( listRuntimeSwitch[switchIndex] ), ( combo & ( 1u << switchIndex ) ) != 0 );
+                    const vector<string>& listDefine = material.getCachedShaderDefines();
+                    if ( std::find( outListDefine.begin(), outListDefine.end(), listDefine ) == outListDefine.end() )
+                        outListDefine.push_back( listDefine );
+                }
+            }
+
             static void collectAllRequests( string_view rootDir, vector<ShaderCookRequest>& outListRequest )
             {
                 EngineDefaultAssets engineDefaultAssets;
@@ -272,13 +308,18 @@ namespace sw
                     if ( material->getShaderPath().empty() )
                         continue;
 
+                    // 에셋 상태 + 런타임에 바꿀 수 있는 정적 스위치의 조합(collectMaterialRuntimeDefines).
+                    vector<vector<string>> listRuntimeDefine;
+                    collectMaterialRuntimeDefines( *material, matPath, listRuntimeDefine );
                     MaterialVariantInfo variant;
                     variant._shaderPath = material->getShaderPath();
-                    variant._listDefine = material->getCachedShaderDefines();
-                    listMaterialVariant.push_back( variant );
-
-                    appendRequestUnique( outListRequest, variant._shaderPath, "VSMain", ShaderStage::Vertex, variant._listDefine );
-                    appendRequestUnique( outListRequest, variant._shaderPath, "PSMain", ShaderStage::Pixel, variant._listDefine );
+                    for ( vector<string>& listDefine : listRuntimeDefine )
+                    {
+                        variant._listDefine = std::move( listDefine );
+                        listMaterialVariant.push_back( variant );
+                        appendRequestUnique( outListRequest, variant._shaderPath, "VSMain", ShaderStage::Vertex, variant._listDefine );
+                        appendRequestUnique( outListRequest, variant._shaderPath, "PSMain", ShaderStage::Pixel, variant._listDefine );
+                    }
                     // 정의 없는 변형도 — 머티리얼이 원소 레이아웃을 읽는 자리다(`Material::ensureShaderLayout` 은 define 없이 리플렉션한다). 패스 기본
                     // 셰이더(forwardlit)는 위 1) 에서 이미 쿠킹되지만, 머티리얼만 쓰는 셰이더(지형 · 식생 · 물)는 여기서 쿠킹하지 않으면 Shipping 에서
                     // 매니페스트를 못 찾아 XML 순서 패킹으로 남는다.

@@ -169,7 +169,11 @@ namespace sw
         void setQualityLevel( MaterialQualityLevel level );
         /** @brief 사용 플래그를 설정합니다. */
         void setUsageFlags( MaterialUsageFlags flags );
-        /** @brief 정적 스위치를 켜거나 끕니다. */
+        /**
+         * @brief 정적 스위치를 켜거나 끕니다.
+         * @note Shipping 에서 런타임에 바꿔도 되는 것은 `bShaderFeature="0"` 인 스위치뿐이다(켬 · 끔 둘 다 쿠킹된다). 나머지는 에셋 상태만 쿠킹되어
+         *       바꾼 변형의 바이너리가 없다 — Dev 는 실시간 컴파일이 가린다(`ShaderCookRequestTest.EveryRuntimeStaticSwitchCombinationIsRequested`).
+         */
         void setStaticSwitch( hashed_string name, bool bEnabled );
         /** @brief 멀티컴파일 옵션을 고릅니다. */
         void setMultiCompile( hashed_string name, string_view selectedOption );
