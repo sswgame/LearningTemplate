@@ -398,7 +398,7 @@ shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shading
   (조명 식은 둘이어도 "빛이 어디서 얼마나 오는가" 는 한 벌). 그림자 맵은 그림자를 드리우는 빛 하나에만 곱한다.
 - **카메라 위치는 PassCB 에 없다** — 시선은 그 화면 점의 가까운 · 먼 평면 두 점을 `g_InvViewProj` 로 되짚어 구한다(원근 · 직교 모두 맞다).
 - 텍스처 칸은 넷(기본 · 그림자 · 발광 · 맷캡 — 머티리얼 텍스처 슬롯 t5..t8 이 넷이다). 맷캡은 텍스처가 있을 때만 더한다(없으면 흰색이라 화면이 바랜다).
-- 정적 스위치: `Outline`(`MATERIAL_OUTLINE` — 아래 메시 외곽선 패스가 그린다) · `AlphaCutoff`(`MATERIAL_ALPHA_CUTOFF` — `alphaCutoff` 아래를 버린다) · `TwoSided`(`MATERIAL_TWO_SIDED`). 반투명은 다른 머티리얼처럼 `blendMode="Transparent"` +
+- 정적 스위치: `Outline` · `TwoSided` 는 런타임에 바꿀 수 있다(`bShaderFeature="0"` — 켬 · 끔 둘 다 쿠킹, `AlphaCutoff` 는 에셋 상태만). `Outline`(`MATERIAL_OUTLINE` — 아래 메시 외곽선 패스가 그린다) · `AlphaCutoff`(`MATERIAL_ALPHA_CUTOFF` — `alphaCutoff` 아래를 버린다) · `TwoSided`(`MATERIAL_TWO_SIDED`). 반투명은 다른 머티리얼처럼 `blendMode="Transparent"` +
   `MATERIAL_BLEND_TRANSLUCENT`.
 - **양면은 머티리얼의 성질이다**(언리얼 Two Sided): 머티리얼 변형 PSO(`createMaterialPsoVariant`)가 퍼뮤테이션의 `MATERIAL_TWO_SIDED` 를 보고 후면 컬링을 끈다(후면 컬링
   패스만 — 그림자 패스도 양면으로 드리운다). 셰이더는 뒷면의 노멀을 `SV_IsFrontFace` 로 뒤집는다(`RenderPassGpuTest.TwoSidedMaterialDrawsBackFaces`).

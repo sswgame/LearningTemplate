@@ -258,7 +258,7 @@ namespace
             (void)deltaTime;
             if ( _bStarted == false )
                 return;
-            _session.submitLocalInput( vector<uint8>{ static_cast<uint8>( world.getLocalTick() ) } );
+            (void)_session.submitLocalInput( vector<uint8>{ static_cast<uint8>( world.getLocalTick() ) } );
             vector<vector<uint8>> listInput;
             while ( _session.tryAdvance( listInput ) )
                 ++_advancedCount;
