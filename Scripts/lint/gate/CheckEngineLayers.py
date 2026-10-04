@@ -19,6 +19,7 @@ Tarjan SCC 로 줄이고 위상 순서를 티어로 쓰며, 위반은 경고가 
 from __future__ import annotations
 
 import argparse
+import functools
 import re
 import sys
 from pathlib import Path
@@ -40,9 +41,15 @@ from LintGate import GateError, GateResult, LintGate  # noqa: E402
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
 
 
+@functools.lru_cache(maxsize=None)
+def splitNormalizedPathInternal(pathText: str) -> tuple[str, ...]:
+    """`normalizePath` 한 경로를 `/` 로 나눈 조각. include 마다 금지 패턴 수만큼 불리므로 같은 글자는 한 번만 푼다."""
+    return tuple(normalizePath(pathText).split("/"))
+
+
 def includeHitsBanInternal(includePath: str, bannedPattern: str) -> bool:
-    normalizedParts = normalizePath(includePath).split("/")
-    bannedParts = [part for part in normalizePath(bannedPattern).split("/") if part]
+    normalizedParts = list(splitNormalizedPathInternal(includePath))
+    bannedParts = [part for part in splitNormalizedPathInternal(bannedPattern) if part]
     if not bannedParts:
         return False
     for partIndex in range(len(normalizedParts) - len(bannedParts) + 1):
