@@ -7,6 +7,7 @@
 | `SpriteComponent` | 텍스처를 입힌 사각형(아틀라스 프레임 · 색 · 정렬 레이어 · 레이어 안 순서 · 그리기 방식 Simple/Sliced/Tiled) |
 | `SpriteAnimatorComponent` | 클립(`.sprite.json`)의 프레임을 넘김 |
 | `PixelPerfectCameraComponent` | 픽셀 아트 카메라 — 정수 배율 · 직교 높이 · 그리는 눈의 화면 픽셀 스냅 · 스프라이트의 자산 픽셀 스냅 · 레터박스 띠 |
+| `TileMapRendererComponent` | 타일 레이어(맵 XML `<tileLayer>` + `.tileset.xml`) — 칸마다 스프라이트 · 규칙 · 애니메이션 타일 · 병합 바디 · 외곽선 · 이동 비용 |
 | `ParallaxLayerComponent` | 시차 레이어 — 게임 카메라에 대한 배율로 오브젝트(자식 포함)를 옮기고 되풀이 길이로 감는다 |
 | `SpriteRenderUtil` | 스프라이트 머티리얼 경로 · (머티리얼, 텍스처) 인스턴스 공유 · 정렬 키 풀기 |
 | `BoxCollider2DComponent` · `TileColliderComponent` | 2D 충돌 |
@@ -44,6 +45,21 @@
 
 뷰포트 크기는 엔진 루프가 틱 전에 카메라 등록부에 적는다(`CameraRegistry::setViewportSize`). 틱 그룹은 PostPhysics(카메라를 따라가게 하는 컴포넌트 뒤, 시차 레이어 앞)입니다.
 스냅 단위가 바뀌면 씬의 메시 모두에 틱 뒤로 미뤄 알리고, 나중에 등록되는 메시는 등록부에서 읽습니다.
+
+## 타일맵
+
+| 기능 | 유니티 | Godot | 여기 |
+|------|--------|-------|------|
+| 타일셋 | Tile Palette · Tile asset | TileSet(atlas source) | `.tileset.xml` — 아틀라스 칸 격자 · `<Tile>` · `<RuleTile>` (`Utility/TileMap/TileSetAsset`) |
+| 자동 타일 | Rule Tile(이웃 This/NotThis, 첫 규칙이 이김) | terrain set(peering bits) | `<Rule pattern=".x. xoo .o." cell="n"/>` — 이웃 여덟 칸 `o` 같음 · `x` 다름 · `.` 상관없음, 첫 규칙이 이김, `outside="same"` 으로 맵 밖을 같은 타일로 |
+| 애니메이션 타일 | Animated Tile | 타일 animation frames | `frames="12 13 14 15" fps="4"` |
+| 칠하기 | Tile Palette 브러시 | TileMap 에디터 | 에디터 TileMapPanel 의 Tile 레이어 — 칸에 브러시 이름을 칠하고 규칙이 고른 칸 번호를 보인다. 런타임 `setTileBrush` |
+| 맵 저장 | 칸마다 타일 참조 | 칸마다 (source, atlas coords) | 맵 XML `<tileLayer tileSet=...>` 팔레트(브러시 이름) + 칸 번호 — 모습은 저장하지 않고 읽을 때 규칙으로 고른다 |
+| 충돌 | TilemapCollider2D + CompositeCollider2D | physics layer | 단단한 브러시 → 줄 병합 사각형 바디(`PhysicsWorld`) + 바깥쪽 방향이 있는 외곽선(2D 그림자 가림막) |
+| 내비게이션 | NavMeshPlus 등 외부 | navigation layer | `computeNavCosts` — GameFramework `NavGrid` 와 같은 값(10 보통 · 255 막힘 · 브러시 `navCost`) |
+
+빠진 것: 청크(한 레이어 65536 칸 상한 — 넘으면 레이어를 나눈다), 편집 중(플레이 전) 미리보기(배치는 `onBeginPlay` 에서 만든다), 에디터 칸에 아틀라스 그림
+대신 칸 번호, 회전 · 뒤집기 규칙, 다각형(비사각) 충돌 모양.
 
 ## 시차 레이어
 

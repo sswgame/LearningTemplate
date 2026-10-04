@@ -17,6 +17,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Utility/TileMap/TileSetAsset.h"
 
 #include "GameFramework/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Ability/AbilityCatalog.h"
@@ -59,6 +60,7 @@ namespace
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
         static bool isSchedules( sw::string_view resourceId ) { return endsWith( resourceId, ".schedules.xml" ); }
+        static bool isTileSet( sw::string_view resourceId ) { return endsWith( resourceId, ".tileset.xml" ); }
         static bool isRender2DSettings( sw::string_view resourceId ) { return endsWith( resourceId, "/data/render2d.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
@@ -109,6 +111,12 @@ namespace
         {
             const sw::shared_ptr<sw::Material> material = sw::Material::create();
             return material != nullptr && material->loadFromFile( resourceId );
+        }
+
+        static bool loadTileSet( const sw::string& resourceId )
+        {
+            sw::TileSetAsset tileSet;
+            return tileSet.loadFromResource( resourceId );
         }
 
         static bool loadRender2DSettings( const sw::string& resourceId )
@@ -167,6 +175,7 @@ namespace
             {           "material",            &isMaterial,                          &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                        &loadSpriteClip},
             {           "render2d",    &isRender2DSettings,                  &loadRender2DSettings},
+            {            "tileset",             &isTileSet,                           &loadTileSet},
             {      "camerapresets",       &isCameraPresets,  &loadCatalog<sw::CameraPresetCatalog>},
             {          "schedules",           &isSchedules,      &loadCatalog<sw::ScheduleCatalog>},
             {          "abilities",           &isAbilities,       &loadCatalog<sw::AbilityCatalog>},

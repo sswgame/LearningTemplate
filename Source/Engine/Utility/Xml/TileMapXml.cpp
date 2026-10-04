@@ -3,8 +3,10 @@
 #include "Engine/Utility/Xml/TileMapXml.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Utility/TileMap/TileSetAsset.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -216,6 +218,54 @@ namespace sw
             }
         }
 
+        // 타일 레이어 — 팔레트(브러시 이름)와 칸마다 팔레트 번호. 칸 수가 맞지 않거나 팔레트 밖 번호는 읽기 오류다.
+        XmlNode tileLayer = root.findChild( "tileLayer" );
+        if ( tileLayer.isValid() )
+        {
+            _tileSetPath    = string( tileLayer.getAttributeText( "tileSet" ) );
+            XmlNode palette = tileLayer.findChild( "palette" );
+            for ( XmlNode entry = palette.isValid() ? palette.findChild( "b" ) : XmlNode{}; entry; entry = entry.findNextSibling( "b" ) )
+                _listPaletteName.push_back( string( entry.getAttributeText( "name" ) ) );
+            const utf8*       pCells = tileLayer.findChildText( "cells" );
+            const string_view cells  = ( pCells != nullptr ) ? string_view( pCells ) : string_view{};
+            _listTileCell.reserve( count );
+            size_t cursor = 0;
+            while ( cursor < cells.size() )
+            {
+                while ( cursor < cells.size() && ( cells[cursor] == ' ' || cells[cursor] == '\n' || cells[cursor] == '\r' || cells[cursor] == '\t' ) )
+                    ++cursor;
+                const size_t start = cursor;
+                while ( cursor < cells.size() && cells[cursor] >= '0' && cells[cursor] <= '9' )
+                    ++cursor;
+                if ( cursor == start )
+                {
+                    if ( cursor < cells.size() )
+                    {
+                        SW_LOG_ERROR( "TileMap '%#': <cells> holds something that is not a number", _name );
+                        *this = {};
+                        return false;
+                    }
+                    break;
+                }
+                int32 value = 0;
+                if ( StringUtil::parseInt( cells.substr( start, cursor - start ), value ) == false || value < 0 ||
+                     static_cast<size_t>( value ) > _listPaletteName.size() )
+                {
+                    SW_LOG_ERROR( "TileMap '%#': tile cell %# is outside the palette (%# names)", _name, value, static_cast<uint32>( _listPaletteName.size() ) );
+                    *this = {};
+                    return false;
+                }
+                _listTileCell.push_back( static_cast<uint16>( value ) );
+            }
+            if ( _listTileCell.size() != count )
+            {
+                SW_LOG_ERROR( "TileMap '%#': <cells> has %# values, the map has %# cells", _name, static_cast<uint32>( _listTileCell.size() ),
+                              static_cast<uint32>( count ) );
+                *this = {};
+                return false;
+            }
+        }
+
         SW_LOG_INFO( "Loaded '%#' (%#×%#) scene=%# role=%# encounters=%#",
                      _name, _width, _height, _scenePath, _role,
                      static_cast<uint32>( _listEncounterEntry.size() ) );
@@ -234,6 +284,65 @@ namespace sw
             getFlagLayer( info._layer ).assign( count, info._defaultValue );
         _listVisual.assign( count, Visual{} );
         _listWarp.clear();
+        if ( _tileSetPath.empty() == false || _listTileCell.empty() == false )
+            _listTileCell.assign( count, 0 );
+        return true;
+    }
+
+    string_view TileMapXmlData::getTileBrushName( int32 x, int32 y ) const
+    {
+        if ( x < 0 || y < 0 || x >= _width || y >= _height )
+            return {};
+        const size_t cellIndex = static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
+        if ( cellIndex >= _listTileCell.size() )
+            return {};
+        const uint16 value = _listTileCell[cellIndex];
+        if ( value == 0 || value > _listPaletteName.size() )
+            return {};
+        return _listPaletteName[value - 1u];
+    }
+
+    bool TileMapXmlData::mapTileCells( const TileSetAsset& tileSet, vector<uint16>& outListBrushIndex ) const
+    {
+        vector<int32> listPaletteToBrush( _listPaletteName.size(), -1 );
+        bool          bAllKnown = true;
+        for ( size_t paletteIndex = 0; paletteIndex < _listPaletteName.size(); ++paletteIndex )
+        {
+            listPaletteToBrush[paletteIndex] = tileSet.findBrush( hashed_string( string_view( _listPaletteName[paletteIndex] ) ) );
+            bAllKnown                        = bAllKnown && listPaletteToBrush[paletteIndex] >= 0;
+        }
+        const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
+        outListBrushIndex.assign( count, 0 );
+        for ( size_t cellIndex = 0; cellIndex < count && cellIndex < _listTileCell.size(); ++cellIndex )
+        {
+            const uint16 paletteValue = _listTileCell[cellIndex];
+            if ( paletteValue == 0 || paletteValue > listPaletteToBrush.size() )
+                continue;
+            const int32 brush = listPaletteToBrush[paletteValue - 1u];
+            if ( brush >= 0 )
+                outListBrushIndex[cellIndex] = static_cast<uint16>( brush + 1 );
+        }
+        return bAllKnown;
+    }
+
+    bool TileMapXmlData::setTileBrush( int32 x, int32 y, string_view brushName )
+    {
+        if ( x < 0 || y < 0 || x >= _width || y >= _height )
+            return false;
+        const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
+        if ( _listTileCell.size() != count )
+            _listTileCell.assign( count, 0 );
+        uint16 value = 0;
+        if ( brushName.empty() == false )
+        {
+            size_t paletteIndex = 0;
+            while ( paletteIndex < _listPaletteName.size() && _listPaletteName[paletteIndex] != brushName )
+                ++paletteIndex;
+            if ( paletteIndex == _listPaletteName.size() )
+                _listPaletteName.push_back( string( brushName ) );
+            value = static_cast<uint16>( paletteIndex + 1 );
+        }
+        _listTileCell[static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x )] = value;
         return true;
     }
 
@@ -333,6 +442,28 @@ namespace sw
                 encounterNode.appendAttribute( "id", entry._speciesId );
                 encounterNode.appendAttribute( "weight", entry._weight );
             }
+        }
+
+        // 타일 레이어는 타일셋이 있을 때만 쓴다 — 없는 맵은 예전과 바이트까지 같다. 칸은 한 행씩 줄을 바꿔 적는다(사람이 읽고 비교할 수 있게).
+        if ( _tileSetPath.empty() == false )
+        {
+            XmlNode tileLayer = root.appendChild( "tileLayer" );
+            tileLayer.appendAttribute( "tileSet", _tileSetPath );
+            XmlNode palette = tileLayer.appendChild( "palette" );
+            for ( const string& name : _listPaletteName )
+                palette.appendChild( "b" ).appendAttribute( "name", name );
+            string cells = "\n";
+            for ( int32 y = 0; y < _height; ++y )
+            {
+                for ( int32 x = 0; x < _width; ++x )
+                {
+                    const size_t cellIndex = static_cast<size_t>( y ) * static_cast<size_t>( _width ) + static_cast<size_t>( x );
+                    const uint16 value     = ( cellIndex < _listTileCell.size() ) ? _listTileCell[cellIndex] : 0;
+                    cells += to_string( static_cast<uint32>( value ) );
+                    cells += ( x + 1 < _width ) ? " " : "\n";
+                }
+            }
+            tileLayer.appendChild( "cells", string_view{ cells } );
         }
 
         return doc.saveToString();

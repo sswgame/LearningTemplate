@@ -31,7 +31,7 @@ namespace sw
         shutdown();
     }
 
-    bool SpriteInstanceBatch::initialize( GameObjectManager& manager, string_view texturePath, uint32 count )
+    bool SpriteInstanceBatch::initialize( GameObjectManager& manager, string_view texturePath, uint32 count, string_view materialPath )
     {
         shutdown();
         if ( count == 0 )
@@ -40,17 +40,17 @@ namespace sw
         Material* pMaterial = nullptr;
         if ( engine::areEngineServicesBound() )
         {
-            const hashed_string materialPath = SpriteRenderUtil::getSpriteMaterialPath();
+            const hashed_string resolvedPath = materialPath.empty() ? SpriteRenderUtil::getSpriteMaterialPath() : hashed_string( materialPath );
             MaterialCache&      cache        = engine::getAssetManager().getMaterialManager();
-            pMaterial                        = cache.acquire( materialPath.c_str(), nullptr );
+            pMaterial                        = cache.acquire( resolvedPath.c_str(), nullptr );
             if ( pMaterial != nullptr )
             {
-                cache.requestInitialize( materialPath.c_str() );
-                _acquiredMaterialPath = materialPath;
+                cache.requestInitialize( resolvedPath.c_str() );
+                _acquiredMaterialPath = resolvedPath;
             }
             else
             {
-                SW_LOG_WARNING( "Sprite material '%#' could not be acquired - the sprites use the scene default material", materialPath.c_str() );
+                SW_LOG_WARNING( "Sprite material '%#' could not be acquired - the sprites use the scene default material", resolvedPath.c_str() );
             }
         }
 

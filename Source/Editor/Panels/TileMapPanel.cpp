@@ -33,6 +33,11 @@ namespace sw::editor
         , _warpTarget{}
         , _status{}
         , _map{}
+        , _tileSetBuffer{}
+        , _tileSet{}
+        , _loadedTileSet{}
+        , _listBrushIndex{}
+        , _brushIndex{ 0 }
         , _arrEdgeTx{ 1, 1, 1, 1 }
         , _arrEdgeTy{ 1, 1, 1, 1 }
         , _arrTint{ 180.0f / 255.0f, 200.0f / 255.0f, 160.0f / 255.0f }
@@ -72,6 +77,9 @@ namespace sw::editor
         ImDrawList*       pDl    = ImGui::GetWindowDrawList();
         const ImVec2      origin = ImGui::GetCursorScreenPos();
 
+        if ( _layer == PaintLayer::Tile )
+            (void)_map.mapTileCells( _tileSet, _listBrushIndex ); // 모르는 브러시는 빈 칸으로 보인다 — 읽을 때 이미 알렸다
+
         unordered_set<uint64> uniqueWarpCells;
         if ( _layer == PaintLayer::Warp )
         {
@@ -103,6 +111,10 @@ namespace sw::editor
                         color            = uniqueWarpCells.count( key ) ? IM_COL32( 200, 120, 80, 255 ) : IM_COL32( 50, 50, 55, 255 );
                         break;
                     }
+                    case PaintLayer::Tile:
+                    {
+                        break; // 아래에서 칸마다 그린다(브러시 색 + 규칙이 고른 칸 번호)
+                    }
                     case PaintLayer::Flag:
                     {
                         const TileFlagLayerInfo& info = kArrTileFlagLayerInfo[static_cast<size_t>( _flagLayer )];
@@ -117,6 +129,8 @@ namespace sw::editor
                 const ImVec2  p0( origin.x + fx * cell, origin.y + fy * cell );
                 const ImVec2  p1( p0.x + cell - 1.0f, p0.y + cell - 1.0f );
                 pDl->AddRectFilled( p0, p1, color );
+                if ( _layer == PaintLayer::Tile )
+                    drawTileLayerCell( pDl, p0, p1, tileX, tileY );
                 pDl->AddRect( p0, p1, IM_COL32( 20, 20, 24, 255 ) );
             }
         }
@@ -182,7 +196,7 @@ namespace sw::editor
     void TileMapPanel::drawLayerControls()
     {
         // 목록은 Visual · Warp 다음에 플래그 레이어 표 순서다. 순번 ↔ 레이어는 getPaintLayerIndex / selectPaintLayer 가 정한다.
-        const utf8* arrLayerName[kFixedPaintLayerCount + kTileFlagLayerCount] = { "Visual", "Warp" };
+        const utf8* arrLayerName[kFixedPaintLayerCount + kTileFlagLayerCount] = { "Visual", "Warp", "Tile" };
         for ( size_t flagIndex = 0; flagIndex < kTileFlagLayerCount; ++flagIndex )
             arrLayerName[kFixedPaintLayerCount + flagIndex] = kArrTileFlagLayerInfo[flagIndex]._pName;
         int32 layerIndex = getPaintLayerIndex();
@@ -200,6 +214,27 @@ namespace sw::editor
             ImGui::InputText( "Warp Target", _warpTarget.data(), _warpTarget.capacity() );
             ImGui::InputInt( "Target TX", &_warpTx );
             ImGui::InputInt( "Target TY", &_warpTy );
+        }
+        else if ( _layer == PaintLayer::Tile )
+        {
+            ImGui::InputText( "Tile Set", _tileSetBuffer.data(), _tileSetBuffer.capacity() );
+            ImGui::SameLine();
+            if ( ImGui::Button( "Use" ) )
+            {
+                _map._tileSetPath = _tileSetBuffer.c_str();
+                refreshTileSet();
+                notifyDocumentEdited( "Set Tile Set", "tilemap-tileset" );
+            }
+            const vector<TileBrush>& listBrush = _tileSet.getBrushes();
+            if ( listBrush.empty() )
+                ImGui::TextDisabled( "No tile set loaded" );
+            for ( int32 brushIndex = 0; brushIndex < static_cast<int32>( listBrush.size() ); ++brushIndex )
+            {
+                const TileBrush& brush = listBrush[static_cast<size_t>( brushIndex )];
+                const string     label = string( brush._name.c_str() ) + ( brush.isRuleTile() ? " (rule)" : "" ) + ( brush._defaultVisual.isAnimated() ? " (animated)" : "" );
+                if ( ImGui::RadioButton( label.c_str(), _brushIndex == brushIndex ) )
+                    _brushIndex = brushIndex;
+            }
         }
 
         ImGui::Separator();
@@ -289,6 +324,33 @@ namespace sw::editor
         _nameBuffer  = data._name.c_str();
         _inputWidth  = data._width;
         _inputHeight = data._height;
+        refreshTileSet();
+    }
+
+    void TileMapPanel::refreshTileSet()
+    {
+        if ( _map._tileSetPath == _loadedTileSet )
+            return;
+        _loadedTileSet = _map._tileSetPath;
+        _tileSetBuffer = _map._tileSetPath.c_str();
+        _tileSet       = TileSetAsset{};
+        _brushIndex    = 0;
+        if ( _map._tileSetPath.empty() == false && _tileSet.loadFromResource( _map._tileSetPath ) == false )
+            _status = string( "Tile set could not be read: " ) + _map._tileSetPath;
+    }
+
+    void TileMapPanel::drawTileLayerCell( ImDrawList* pDrawList, const ImVec2& cellMin, const ImVec2& cellMax, int32 x, int32 y ) const
+    {
+        const TileVisual* pVisual = _tileSet.resolveVisual( _listBrushIndex, _map._width, _map._height, x, y );
+        if ( pVisual == nullptr )
+            return;
+        // 브러시마다 다른 색(이름 해시) + 규칙이 고른 아틀라스 칸 번호 — 이웃을 칠하면 번호가 바뀌는 것이 규칙 타일이 일하는 모습이다.
+        const uint16 brushValue = _listBrushIndex[indexOf( x, y )];
+        const uint32 hash       = static_cast<uint32>( _tileSet.getBrushes()[brushValue - 1u]._name.getHash() );
+        const ImU32  color      = IM_COL32( 80 + ( hash & 0x7Fu ), 80 + ( ( hash >> 8 ) & 0x7Fu ), 80 + ( ( hash >> 16 ) & 0x7Fu ), 255 );
+        pDrawList->AddRectFilled( cellMin, cellMax, color );
+        const string number = to_string( pVisual->computeCellAt( 0.0f ) );
+        pDrawList->AddText( ImVec2( cellMin.x + 2.0f, cellMin.y + 1.0f ), IM_COL32( 255, 255, 255, 255 ), number.c_str() );
     }
 
     string TileMapPanel::captureDocumentText() const
@@ -328,6 +390,17 @@ namespace sw::editor
             case PaintLayer::Flag:
             {
                 _map.getFlagLayer( _flagLayer )[tileIndex] = _bErase ? 0 : 1;
+                break;
+            }
+            case PaintLayer::Tile:
+            {
+                const vector<TileBrush>& listBrush = _tileSet.getBrushes();
+                if ( _bErase == false && ( _brushIndex < 0 || _brushIndex >= static_cast<int32>( listBrush.size() ) ) )
+                    return;
+                const string_view brushName = _bErase ? string_view{} : string_view( listBrush[static_cast<size_t>( _brushIndex )]._name.c_str() );
+                if ( _map.getTileBrushName( x, y ) == brushName )
+                    return;                                 // 끌어 칠할 때 같은 칸을 프레임마다 되돌리기 기록에 넣지 않는다
+                (void)_map.setTileBrush( x, y, brushName ); // 범위는 위에서 봤다
                 break;
             }
             case PaintLayer::Warp:
