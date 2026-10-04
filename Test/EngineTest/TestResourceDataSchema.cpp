@@ -183,7 +183,8 @@ namespace
         static bool loadClipData( const sw::string& resourceId )
         {
             sw::JsonDocument document;
-            if ( document.loadResource( resourceId ) == false )
+            // models_raw/ 는 팩에 실리지 않아 Shipping 에서는 리소스 id 로 못 찾는다 — 임포터처럼 원본 트리에서 파일로 읽는다.
+            if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), resourceId ) ) == false )
                 return false;
             const sw::JsonValue root = document.getRoot();
             if ( sw::AnimJsonUtil::hasOnlyKnownKeys( root, { "clips" }, resourceId ) == false || root.get( "clips" ).isObject() == false )

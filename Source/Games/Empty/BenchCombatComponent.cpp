@@ -237,9 +237,10 @@ namespace sw
         const uint32 second = static_cast<uint32>( _elapsed );
         if ( second != _loggedSecond )
         {
-            _loggedSecond                    = second;
-            const RagdollComponent* pRagdoll = pEnemy->getComponent<RagdollComponent>();
-            const float3            sword    = pSword->getPrimarySceneComponent() != nullptr ? pSword->getPrimarySceneComponent()->getWorldPosition() : float3{};
+            _loggedSecond = second;
+            // `[[maybe_unused]]` — 아래 SW_LOG_INFO 에만 쓰이고 그 매크로는 Shipping 에서 사라진다.
+            [[maybe_unused]] const RagdollComponent* pRagdoll = pEnemy->getComponent<RagdollComponent>();
+            [[maybe_unused]] const float3            sword    = pSword->getPrimarySceneComponent() != nullptr ? pSword->getPrimarySceneComponent()->getWorldPosition() : float3{};
             SW_LOG_INFO( "[BenchCombat] t=%# footsteps %# ragdoll state %# sword (%#, %#, %#)", second, _footstepCount,
                          pRagdoll != nullptr ? static_cast<uint32>( pRagdoll->getState() ) : 0u, sword._x, sword._y, sword._z );
         }
