@@ -71,6 +71,32 @@ namespace sw
                 static const hashed_string name( "down" );
                 return name;
             }
+
+            static const hashed_string& getBoostRegenName()
+            {
+                static const hashed_string name( "boostRegen" );
+                return name;
+            }
+            static const hashed_string& getSpeedName()
+            {
+                static const hashed_string name( "speed" );
+                return name;
+            }
+            static const hashed_string& getAttackName()
+            {
+                static const hashed_string name( "attack" );
+                return name;
+            }
+            static const hashed_string& getDefenseName()
+            {
+                static const hashed_string name( "defense" );
+                return name;
+            }
+            static const hashed_string& getDownResistName()
+            {
+                static const hashed_string name( "downResist" );
+                return name;
+            }
         };
     } // namespace
 } // namespace sw
@@ -343,7 +369,7 @@ namespace sw
         stepMovement( pilotIndex, bControl, MechArenaWorldInternal::isPressed( input._bDash, previous._bDash ),
                       MechArenaWorldInternal::isPressed( input._bJump, previous._bJump ), deltaTime );
 
-        pilot._boost.setRegenScale( computeModifier( pilotIndex, hashed_string( "boostRegen" ) ) );
+        pilot._boost.setRegenScale( computeModifier( pilotIndex, MechArenaWorldInternal::getBoostRegenName() ) );
         pilot._boost.update( deltaTime );
         const bool bOverheated = pilot._boost.isOverheated();
         if ( bOverheated && pilot._bWasOverheated == SW_FALSE )
@@ -385,7 +411,7 @@ namespace sw
             }
             else
             {
-                horizontal = move * ( pMode->_speed * computeModifier( pilotIndex, hashed_string( "speed" ) ) );
+                horizontal = move * ( pMode->_speed * computeModifier( pilotIndex, MechArenaWorldInternal::getSpeedName() ) );
             }
             if ( pilot._lockOn.hasTarget() == false && moveLength > Internal::kTiny )
                 pilot._forward = Internal::flattenDirection( move, pilot._forward );
@@ -743,11 +769,11 @@ namespace sw
             const MechDef*       pAttackerMech = _listPilot[static_cast<size_t>( attacker )].getMech();
             const hashed_string& kindName      = kind == MechWeaponKind::Melee ? Internal::getMeleeName() : Internal::getShotName();
             scale                              = _pMechCatalog->getClassModifier( pAttackerMech->_rangeClass ).getValue( kindName, 1.0f );
-            scale *= computeModifier( attacker, hashed_string( "attack" ) );
+            scale *= computeModifier( attacker, MechArenaWorldInternal::getAttackName() );
         }
-        const float32 finalDamage = damage * scale / MathUtil::max( 0.01f, computeModifier( victim, hashed_string( "defense" ) ) );
+        const float32 finalDamage = damage * scale / MathUtil::max( 0.01f, computeModifier( victim, MechArenaWorldInternal::getDefenseName() ) );
         float32       finalDown   = downValue * _pMechCatalog->getClassModifier( pVictimMech->_rangeClass ).getValue( Internal::getDownName(), 1.0f ) /
-                            MathUtil::max( 0.01f, computeModifier( victim, hashed_string( "downResist" ) ) );
+                            MathUtil::max( 0.01f, computeModifier( victim, MechArenaWorldInternal::getDownResistName() ) );
         if ( bKnockdown )
             finalDown = MathUtil::max( finalDown, pVictimMech->_downMax ); // 눕히는 기술은 다운치를 한 번에 채운다
 

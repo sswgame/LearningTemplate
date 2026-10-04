@@ -9,6 +9,22 @@
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 틱마다 쓰는 이름 — 리터럴을 매번 intern 하지 않게 한 번만 만든다. */
+        struct WesternSurvivalInternal
+        {
+            static const hashed_string& getTemperatureName()
+            {
+                static const hashed_string name( "temperature" );
+                return name;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     WesternSurvival::WesternSurvival()
         : _listClothing{}
         , _listMark{}
@@ -86,7 +102,7 @@ namespace sw
 
     float32 WesternSurvival::computeAirTemperature( const WeatherSystem& weather, float32 regionBaseTemperature )
     {
-        return regionBaseTemperature + weather.computeValue( hashed_string( "temperature" ) );
+        return regionBaseTemperature + weather.computeValue( WesternSurvivalInternal::getTemperatureName() );
     }
 
     bool WesternSurvival::eat( const hashed_string& foodId )

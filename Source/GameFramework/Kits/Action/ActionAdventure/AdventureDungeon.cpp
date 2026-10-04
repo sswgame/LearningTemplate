@@ -53,6 +53,27 @@ namespace sw
                 SW_LOG_WARNING( "%#: device '%#' has an unknown kind '%#' - read as Switch", sourceName, pId, text );
                 return AdventureDeviceKind::Switch;
             }
+
+            static const hashed_string& getSmallKeyName()
+            {
+                static const hashed_string name( "SmallKey" );
+                return name;
+            }
+            static const hashed_string& getBossKeyName()
+            {
+                static const hashed_string name( "BossKey" );
+                return name;
+            }
+            static const hashed_string& getMapName()
+            {
+                static const hashed_string name( "Map" );
+                return name;
+            }
+            static const hashed_string& getCompassName()
+            {
+                static const hashed_string name( "Compass" );
+                return name;
+            }
         };
     } // namespace
 } // namespace sw
@@ -276,13 +297,13 @@ namespace sw
         flags.setFlag( pTreasure->_flag, 1 );
         AdventureDungeonProgress& progress = pRuntime->_progress;
         const hashed_string&      item     = pTreasure->_item;
-        if ( item == hashed_string( "SmallKey" ) )
+        if ( item == AdventureDungeonInternal::getSmallKeyName() )
             progress._smallKeyCount += pTreasure->_count;
-        else if ( item == hashed_string( "BossKey" ) )
+        else if ( item == AdventureDungeonInternal::getBossKeyName() )
             progress._bBossKey = SW_TRUE;
-        else if ( item == hashed_string( "Map" ) )
+        else if ( item == AdventureDungeonInternal::getMapName() )
             progress._bMap = SW_TRUE;
-        else if ( item == hashed_string( "Compass" ) )
+        else if ( item == AdventureDungeonInternal::getCompassName() )
             progress._bCompass = SW_TRUE;
         else
             outReward.addItem( item, pTreasure->_count );

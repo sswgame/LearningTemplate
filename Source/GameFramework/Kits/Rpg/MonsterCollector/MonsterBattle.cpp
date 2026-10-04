@@ -26,6 +26,22 @@ namespace sw
                 const MonsterSpeciesDef*           pSpecies = catalog.findSpecies( monster._speciesId );
                 return pSpecies != nullptr ? pSpecies->_listType : s_listEmpty;
             }
+
+            static const hashed_string& getPoisonName()
+            {
+                static const hashed_string name( "Poison" );
+                return name;
+            }
+            static const hashed_string& getBurnName()
+            {
+                static const hashed_string name( "Burn" );
+                return name;
+            }
+            static const hashed_string& getToxicName()
+            {
+                static const hashed_string name( "Toxic" );
+                return name;
+            }
         };
     } // namespace
 } // namespace sw
@@ -504,17 +520,17 @@ namespace sw
             {
                 if ( monster._status == MonsterStatus::Poison )
                 {
-                    applyDamage( side, MathUtil::max( 1, maxHp / 8 ), MonsterBattleEvent::Kind::StatusDamage, hashed_string( "Poison" ) );
+                    applyDamage( side, MathUtil::max( 1, maxHp / 8 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getPoisonName() );
                 }
                 else if ( monster._status == MonsterStatus::Burn )
                 {
-                    applyDamage( side, MathUtil::max( 1, maxHp / 16 ), MonsterBattleEvent::Kind::StatusDamage, hashed_string( "Burn" ) );
+                    applyDamage( side, MathUtil::max( 1, maxHp / 16 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getBurnName() );
                 }
                 else if ( monster._status == MonsterStatus::Toxic )
                 {
                     const int32 counter  = MathUtil::clamp( monster._statusTurns, 1, 15 );
                     monster._statusTurns = counter + 1;
-                    applyDamage( side, MathUtil::max( 1, maxHp * counter / 16 ), MonsterBattleEvent::Kind::StatusDamage, hashed_string( "Toxic" ) );
+                    applyDamage( side, MathUtil::max( 1, maxHp * counter / 16 ), MonsterBattleEvent::Kind::StatusDamage, MonsterBattleInternal::getToxicName() );
                 }
             }
             if ( getActive( side ).isFainted() )

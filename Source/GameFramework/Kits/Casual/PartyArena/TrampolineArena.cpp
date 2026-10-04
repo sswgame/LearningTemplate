@@ -36,6 +36,37 @@ namespace sw
                                                                      hashed_string( "Player4" ) };
                 return kArrName[static_cast<size_t>( MathUtil::clamp( player, 0, kMaxPlayers - 1 ) )];
             }
+
+            static const hashed_string& getSuperBounceName()
+            {
+                static const hashed_string name( "SuperBounce" );
+                return name;
+            }
+            static const hashed_string& getHeavyName()
+            {
+                static const hashed_string name( "Heavy" );
+                return name;
+            }
+            static const hashed_string& getDurationName()
+            {
+                static const hashed_string name( "duration" );
+                return name;
+            }
+            static const hashed_string& getKnockbackTakenName()
+            {
+                static const hashed_string name( "knockbackTaken" );
+                return name;
+            }
+            static const hashed_string& getKnockbackDealtName()
+            {
+                static const hashed_string name( "knockbackDealt" );
+                return name;
+            }
+            static const hashed_string& getShieldName()
+            {
+                static const hashed_string name( "Shield" );
+                return name;
+            }
         };
     } // namespace
 } // namespace sw
@@ -523,17 +554,17 @@ namespace sw
     void TrampolineArena::applyItem( int32 player, const PartyItemDef& def )
     {
         TrampolinePlayer& body = _listPlayer[static_cast<size_t>( player )];
-        if ( def._effect == hashed_string( "SuperBounce" ) )
+        if ( def._effect == TrampolineArenaInternal::getSuperBounceName() )
         {
             body._bSuperBounce = SW_TRUE;
         }
-        else if ( def._effect == hashed_string( "Heavy" ) )
+        else if ( def._effect == TrampolineArenaInternal::getHeavyName() )
         {
-            body._heavyTimer     = def._stats.getValue( hashed_string( "duration" ), 8.0f );
-            body._knockbackTaken = def._stats.getValue( hashed_string( "knockbackTaken" ), 0.5f );
-            body._knockbackDealt = def._stats.getValue( hashed_string( "knockbackDealt" ), 1.5f );
+            body._heavyTimer     = def._stats.getValue( TrampolineArenaInternal::getDurationName(), 8.0f );
+            body._knockbackTaken = def._stats.getValue( TrampolineArenaInternal::getKnockbackTakenName(), 0.5f );
+            body._knockbackDealt = def._stats.getValue( TrampolineArenaInternal::getKnockbackDealtName(), 1.5f );
         }
-        else if ( def._effect == hashed_string( "Shield" ) )
+        else if ( def._effect == TrampolineArenaInternal::getShieldName() )
         {
             body._bShield = SW_TRUE;
         }

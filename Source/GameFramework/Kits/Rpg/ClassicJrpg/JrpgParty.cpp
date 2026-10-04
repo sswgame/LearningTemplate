@@ -6,6 +6,27 @@
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 틱마다 쓰는 이름 — 리터럴을 매번 intern 하지 않게 한 번만 만든다. */
+        struct JrpgPartyInternal
+        {
+            static const hashed_string& getAttackName()
+            {
+                static const hashed_string name( "attack" );
+                return name;
+            }
+            static const hashed_string& getDefenseName()
+            {
+                static const hashed_string name( "defense" );
+                return name;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     bool JrpgMember::knowsSpell( const hashed_string& spellId ) const
     {
         for ( const hashed_string& entry : _listSpell )
@@ -250,7 +271,7 @@ namespace sw
         const JrpgMember& member = _listMember[static_cast<size_t>( memberIndex )];
         StatBlock         stats;
         member._equipment.computeStats( stats );
-        return member.getStat( JrpgStat::Strength ) + static_cast<int32>( stats.getValue( hashed_string( "attack" ) ) );
+        return member.getStat( JrpgStat::Strength ) + static_cast<int32>( stats.getValue( JrpgPartyInternal::getAttackName() ) );
     }
 
     int32 JrpgParty::computeDefense( int32 memberIndex ) const
@@ -260,7 +281,7 @@ namespace sw
         const JrpgMember& member = _listMember[static_cast<size_t>( memberIndex )];
         StatBlock         stats;
         member._equipment.computeStats( stats );
-        return member.getStat( JrpgStat::Vitality ) / 2 + static_cast<int32>( stats.getValue( hashed_string( "defense" ) ) );
+        return member.getStat( JrpgStat::Vitality ) / 2 + static_cast<int32>( stats.getValue( JrpgPartyInternal::getDefenseName() ) );
     }
 
     int32 JrpgParty::countAlive() const

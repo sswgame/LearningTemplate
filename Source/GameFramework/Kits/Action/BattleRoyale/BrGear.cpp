@@ -10,6 +10,22 @@
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 틱마다 쓰는 이름 — 리터럴을 매번 intern 하지 않게 한 번만 만든다. */
+        struct BrGearInternal
+        {
+            static const hashed_string& getHelmetName()
+            {
+                static const hashed_string name( "Helmet" );
+                return name;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     BrLoadout::BrLoadout()
         : _pCatalog{ nullptr }
         , _helmet{}
@@ -31,7 +47,7 @@ namespace sw
         const BrArmorDef* pDef = _pCatalog != nullptr ? _pCatalog->findArmor( itemId ) : nullptr;
         if ( pDef == nullptr )
             return false;
-        BrArmorSlot& slot = pDef->_slot == hashed_string( "Helmet" ) ? _helmet : _vest;
+        BrArmorSlot& slot = pDef->_slot == BrGearInternal::getHelmetName() ? _helmet : _vest;
         slot._pDef        = pDef;
         slot._durability  = durability < 0.0f ? pDef->_durability : MathUtil::min( durability, pDef->_durability );
         return true;
