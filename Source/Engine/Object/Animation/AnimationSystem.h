@@ -8,12 +8,16 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Animation/Pose.h"
 #include "Engine/Object/Animation/AnimationCrowd.h"
+#include "Engine/Object/Animation/AnimationDebugState.h"
 #include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Object/Animation/AnimationRewind.h"
 
 namespace sw
 {
     class AnimPlayer;
+    class Component;
     class GameObjectManager;
     class SkeletalMeshComponent;
     class SkeletonBoneLod;
@@ -93,6 +97,8 @@ namespace sw
         }
         /** @brief 유닛이 사라지거나 일을 뗐습니다. 들고 있던 유닛 포인터를 놓습니다. */
         virtual void onAnimationUnitDetached( SkeletalMeshComponent& unit ) { (void)unit; }
+        /** @brief 진단 상태(그래프 상태 · 알림 · 커브 · 루트 모션)를 채웁니다 — 되감기 기록 · 패널이 읽습니다(게임 스레드, 평가 뒤). */
+        virtual void collectDebugState( AnimationDebugState& inoutState ) const { (void)inoutState; }
     };
 } // namespace sw
 
@@ -196,6 +202,14 @@ namespace sw
         uint64 getFrameIndex() const { return _frameIndex; }
         /** @brief 지난 프레임에 일한(쉬지 않은) 유닛 수입니다. */
         uint32 getActiveUnitCount() const { return _activeUnitCount; }
+#if SW_ANIMATION_REWIND_ENABLED
+        // --- 되감기 (AnimationRewind.h, Shipping 에는 없다) ---
+        /** @brief 되감기 기록기입니다. 켜져 있으면 평가 뒤 일한 유닛을 기록하고, 되감는 동안에는 평가 대신 기록된 포즈를 겁니다. */
+        AnimationRewindRecorder&       getRewind() { return _rewind; }
+        const AnimationRewindRecorder& getRewind() const { return _rewind; }
+        /** @brief 포즈 없이 상태만 기록하는 대상(스프라이트 애니메이터)이 평가 뒤에 부릅니다. */
+        void recordRewindState( const Component& target, AnimationRewindKind kind, const AnimationDebugState& state );
+#endif
 
     private:
         /** @brief LOD 판정(가시성 · 화면 크기 · 주기 · 본 LOD · 예산)을 하고 클라이언트에 알립니다. */
@@ -208,6 +222,10 @@ namespace sw
         void synchronizeGroups();
         /** @brief 군중 공유를 켠 유닛의 묶음 · 사본 · VAT 를 정하고 묶음을 평가합니다(시간 단계 뒤). */
         void updateCrowd();
+#if SW_ANIMATION_REWIND_ENABLED
+        /** @brief 되감는 동안 — 기록된 포즈를 유닛마다 겁니다(평가하지 않는다). */
+        void applyRewindScrub();
+#endif
 
         vector<SkeletalMeshComponent*>         _listUnit;
         vector<vector<SkeletalMeshComponent*>> _listLevel;
@@ -219,18 +237,23 @@ namespace sw
         vector<AnimationBudgetItem>            _listScratchBudgetItem; ///< 예산 배분 입력(재사용)
         AnimationLodSettings                   _lodSettings;
         AnimationCrowd                         _crowd;
-        GameObjectManager*                     _pManager;
-        uint64                                 _frameIndex;
-        float32                                _deltaSeconds;
-        float32                                _averageEvaluationMicroseconds;
-        float32                                _expectedEvaluationMicroseconds;
-        uint32                                 _activeUnitCount;
-        uint32                                 _poseEvaluatedUnitCount;
-        uint8                                  _bOrderDirty;
-        uint8                                  _bCycle;
-        uint8                                  _bLodViewsSet;        ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
-        uint8                                  _bLodSettingsReady;   ///< 표를 정했거나 읽었다
-        uint8                                  _bLodApplied;         ///< 지난 프레임에 판정을 넣었다(꺼질 때 한 번 되돌린다)
-        uint8                                  _bCrowdSettingsReady; ///< 군중 표를 정했거나 읽었다
+#if SW_ANIMATION_REWIND_ENABLED
+        AnimationRewindRecorder _rewind;
+        Pose                    _rewindScratchPose; ///< 되감기 포즈를 풀 자리(재사용)
+        uint8                   _bRewindApplied;    ///< 지난 프레임에 되감기 포즈를 걸었다(끝나면 다시 평가하게 한다)
+#endif
+        GameObjectManager* _pManager;
+        uint64             _frameIndex;
+        float32            _deltaSeconds;
+        float32            _averageEvaluationMicroseconds;
+        float32            _expectedEvaluationMicroseconds;
+        uint32             _activeUnitCount;
+        uint32             _poseEvaluatedUnitCount;
+        uint8              _bOrderDirty;
+        uint8              _bCycle;
+        uint8              _bLodViewsSet;        ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
+        uint8              _bLodSettingsReady;   ///< 표를 정했거나 읽었다
+        uint8              _bLodApplied;         ///< 지난 프레임에 판정을 넣었다(꺼질 때 한 번 되돌린다)
+        uint8              _bCrowdSettingsReady; ///< 군중 표를 정했거나 읽었다
     };
 } // namespace sw

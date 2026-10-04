@@ -97,6 +97,11 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
   - 멤버 · 참조가 없는 묶음은 `bucket_keep_seconds` 뒤 지웁니다(상태가 오가며 메시를 다시 만들지 않게). 진단: `GT.Animation.crowd*` 카운터 · `RT.Skin.*` 카운터,
     `-gv_animationForceVertexAnimation=1`(모든 공유 유닛을 VAT 로).
 - **리더 포즈**: `setLeaderPose( 몸 )` 또는 `_bFollowParentPose` — 팔로워는 리더의 로컬 포즈를 본 이름으로 옮겨 받고 리더는 의존이 됩니다.
+- **되감기**(`Object/Animation/AnimationRewind` — 언리얼 Rewind Debugger 의 자리, Shipping 에는 없다): 기록을 켜면(`-gv_animationRewind=1` · 콘솔
+  `anim.rewind on` · 에디터 Animation Rewind 패널) 평가 뒤 일한 유닛마다 창(`-gv_animationRewindSeconds`, 기본 10 초)만큼 고리 버퍼에 남긴다 — 포즈(본마다
+  회전 int16 넷 · 이동 int16 셋(프레임 최대 크기로 나눔), 스케일이 1 이 아닐 때만 셋 더 = 14/20 바이트, 원래 40) · 월드 행렬 · 그래프 상태 · 상태 시각 ·
+  이번 프레임 알림 · 커브 · 루트 모션(`IAnimationPhaseTask::collectDebugState`). 되감는 동안(`setScrubTime` · `anim.rewind.scrub <초 전>` · 패널의 시간 막대)
+  평가가 멈추고 기록된 포즈가 유닛에 걸리며, 풀면 모든 유닛을 다시 평가한다. 유닛이 사라져도 기록은 창을 벗어날 때까지 남는다.
 - **모프 가중치**: 유닛이 그리는 메시의 타깃 수만큼 든다(`getMorphWeights`). 기본 포즈 단계가 포즈와 함께 0 으로 비우고, 일들이 더한다 — 애니메이터는 이름이
   타깃과 같은 커브를 그대로(BasePose 끝), 얼굴은 후처리에서. 렌더 빌더가 [0, 1] 로 묶어 팔레트 뒤에 싣고 스키닝 컴퓨트가 **스키닝 앞에** 레스트에 더한다.
   가중치가 0 이 아닌 유닛은 군중 묶음과 나누지 않는다(묶음은 가중치를 나누지 않는다).

@@ -69,6 +69,7 @@ namespace sw
         bool                       describeSharedPose( AnimSharedPoseRequest& outRequest ) const override;
         shared_ptr<const AnimClip> findSharedPoseClip( const AnimClip* pClip ) const override;
         const IAnimPlayable*       findPlayable( const hashed_string& name ) const override;
+        void                       collectDebugState( AnimationDebugState& inoutState ) const override;
 
     private:
         SkeletalAnimatorComponent& _owner;

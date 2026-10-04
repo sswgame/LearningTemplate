@@ -718,6 +718,22 @@ namespace sw
         }
     }
 
+    bool SkeletalMeshComponent::applyRewindPose( const Pose& pose )
+    {
+        if ( _pCrowdBucket != nullptr || pose.getBoneCount() != _skeleton->getBoneCount() )
+            return false;
+        _localPose = pose;
+        _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
+        Pose::computeSkinPalette( *_skeleton, _listModelSpace, _listSkinPalette );
+        return true;
+    }
+
+    void SkeletalMeshComponent::collectDebugState( AnimationDebugState& inoutState ) const
+    {
+        for ( const IAnimationPhaseTask* pTask : _listTask )
+            pTask->collectDebugState( inoutState );
+    }
+
     void SkeletalMeshComponent::finishAnimationFrame()
     {
         for ( IAnimationPhaseTask* pTask : _listTask )

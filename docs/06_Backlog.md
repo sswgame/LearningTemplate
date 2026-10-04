@@ -221,7 +221,7 @@ cd build/Ninja-Debug/Bin
   클립 커브 · 시퀀서 키로 움직인다(샷 중간에 무기를 넘겨 쥐기). 대상은 본 · 소켓 · 다른 오브젝트. glTF 는 제약을 싣지 않으니 엔진에서 저작한다 —
   언리얼 Control Rig · IK Rig, 유니티 Animation Rigging, Maya 제약 ③ 애니메이션 LOD(가시성 · URO · 보간 · 본 LOD · 예산은 들어갔다 —
   `AnimationLod.h`) — 남은 것: 거리별 IK/물리 끔(PoseModifier · 래그돌이 `AnimationLodState` 를 읽게) · 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기 ④ 군중 공유(묶음 · 사본 풀 · VAT 쿠킹은
-  들어갔다 — `AnimationCrowd.h`) — 남은 것: 섞기 묶음(언리얼 Animation Sharing 의 블렌드 액터 — 지금 섞는 유닛은 사본으로 혼자 평가), Shooter3D 군중이 켜기 · 되감기 디버거 · 리타기팅(본 이름 표 · 비율) ·
+  들어갔다 — `AnimationCrowd.h`) — 남은 것: 섞기 묶음(언리얼 Animation Sharing 의 블렌드 액터 — 지금 섞는 유닛은 사본으로 혼자 평가), Shooter3D 군중이 켜기 · 리타기팅(본 이름 표 · 비율) ·
   얼굴(모프 타깃 임포트 · 표정 커브 · 립싱크 · 깜빡임 · 시선은 들어갔다 — `FacialAnimationComponent`) — 남은 것: 음소 인식 립싱크(지금은 세 대역 모양
   분류 — 모음 넷 · 치찰음 정도만 가른다) · 실제 얼굴 에셋(KayKit 은 모프가 없다 — 합성 테스트 머리뿐) · 스킨 없는 메시의 모프(GPU 모프 풀이 스키닝 컴퓨트 안에서만
   가중치를 건다) · 실시간 얼굴 입력(Live Link Face 자리) ⑤ Jolt 래그돌(전신 · 부분 · 파워드, 래그돌 에셋은 데이터, 포즈 블렌드 · 기상) ·
@@ -277,7 +277,7 @@ cd build/Ninja-Debug/Bin
     (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · UI 시험 입력 흉내 · 패키징 UI · 에디터 자동화 ·
     타일맵 확장 · 2D 조명/그림자 · 로딩 흐름 · 입력 확장 · 에셋 공정(검증 · XML 비교/병합 · 잠금 · DCC 내보내기) · QA 자동화(봇 · 내구 · 골든 이미지 · 성능 CI ·
     퍼징) · AI 디렉터 · 텔레메트리 · 크래시 보고 업로드 · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 [대기: cam-views] · 하늘/시간대/높이
-    안개 [대기: cam-views] · 2D 스켈레탈 · 리타게팅 · 모션 워핑/이동 보정 · 래그돌 + 히트박스 · 절단 런타임 · 군중 포즈 공유 · 되감기 디버거 [넷 다: char-anim,
+    안개 [대기: cam-views] · 2D 스켈레탈 · 리타게팅 · 모션 워핑/이동 보정 · 래그돌 + 히트박스 · 절단 런타임 [셋 다: char-anim,
     래그돌은 char-phys 도] · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서 — reflect-ext 의 문서 생성 뒤) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
     [넷 다: 런타임 UI].
   - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 현지화 공정 · PoseModifierComponent(IK · 제약 ·
@@ -889,6 +889,9 @@ cd build/Ninja-Debug/Bin
   스냅샷 → `GpuMeshMorphPool::uploadSkinPalettes`(풀 순서) → meshskin.hlsl. 팔레트 행은 행벡터 4x4 의 **열** 셋이다(행을 넣으면 전치된 회전).
   모프 타깃은 같은 컴퓨트에서 **스키닝 앞에** 더한다(가중치는 팔레트 행 뒤) — 스키닝 뒤에 더하면 민 방향이 본과 같이 돌지 않는다
   (`RenderPassGpuTest.MorphWeightsDeformBeforeSkinningLikeCpu`).
+- **애니메이션 되감기는 평가를 멈추고 기록된 포즈를 건다**(`AnimationRewind.h`, Shipping 에 없음) — 기록 요청은 프로세스 전역(`-gv_animationRewind` ·
+  콘솔 `anim.rewind` · 에디터 Animation Rewind 패널)이고 씬마다의 기록기가 평가 앞에서 따른다. 시험은 요청을 바꾸면 되돌릴 것(`ScopedRecording`).
+  군중 묶음과 나누는 유닛에는 포즈를 걸지 않는다(포즈가 묶음의 것) — 기록 · 뼈대 그리기만 된다.
 - **다중 뷰(`FrameRendererViews.cpp`)의 함정 셋.** ① 디스패치마다 쓰는 상수버퍼(컬링 · 정렬)는 뷰마다 따로다 — 정렬 CB 하나를 주 뷰 · 추가 뷰가 나눠 쓰면 마지막
   기록만 남는다(`RenderView::_sortCb`). ② 직렬 경로의 패스는 `_frameCtx._pCmd` 리스트에 기록한다 — 프리패스 리스트가 이미 닫힌 뒤라 그 자리를 뷰의 리스트로 바꿔
   두지 않으면 Vulkan 이 죽고 나머지는 0 을 그린다. ③ D3D 의 `CopyResource` 는 같은 포맷 · 크기만 받는다 — 컷 프레임은 원본을 기록에 복사하지 않고 기록 자리에

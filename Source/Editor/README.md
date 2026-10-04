@@ -38,7 +38,8 @@
 ### 기능
 
 - **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler,
-  Sequencer, Animation Graph, Dialogue Graph, Prefab Editor, Tile Map, Sprite Clip, User Settings(플레이어 옵션을 메뉴 바인딩 API 로 바꿔 보는 창 —
+  Sequencer, Animation Graph, Animation Rewind(기록된 포즈 · 상태를 시간 막대로 훑기 — 훑으면 PIE 를 멈춘다), Dialogue Graph, Prefab Editor, Tile Map,
+  Sprite Clip, User Settings(플레이어 옵션을 메뉴 바인딩 API 로 바꿔 보는 창 —
   셀프 시험 `userSettings.panelDrawsEveryTab`)
   - `Panels/Inspector/`: 프로퍼티·컴포넌트 인스펙터 확장 — 컴포넌트 확장은 `<Component>Inspector.cpp` 하나씩
 - **Viewport/**: 뷰포트 클라이언트, 툴바, 에디터 카메라(`EditorCamera`),

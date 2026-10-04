@@ -94,6 +94,13 @@ namespace sw
         bool findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const;
         /** @brief 포즈를 다시 만들게 합니다(쉬던 유닛도 다음 프레임 한 번 돕니다). */
         void markPoseDirty() { _bPoseDirty = SW_TRUE; }
+        /**
+         * @brief 기록된 포즈를 그대로 겁니다(되감기 — 평가가 멈춘 동안, 게임 스레드). 모델 공간 · 팔레트까지 다시 구합니다.
+         * @return 군중 묶음과 나누는 유닛(포즈가 묶음의 것)이거나 본 수가 다르면 false 입니다.
+         */
+        [[nodiscard]] bool applyRewindPose( const Pose& pose );
+        /** @brief 걸린 일들의 진단 상태(그래프 상태 · 알림 · 커브 · 루트 모션)를 모읍니다(게임 스레드, 평가 뒤). */
+        void collectDebugState( AnimationDebugState& inoutState ) const;
 
         /** @brief 리더를 정합니다(nullptr 이면 뗍니다). 리더는 의존이 됩니다. */
         void setLeaderPose( SkeletalMeshComponent* pLeader );

@@ -62,6 +62,11 @@ namespace sw
         , _listScratchBudgetItem{}
         , _lodSettings{}
         , _crowd{}
+#if SW_ANIMATION_REWIND_ENABLED
+        , _rewind{}
+        , _rewindScratchPose{}
+        , _bRewindApplied{ SW_FALSE }
+#endif
         , _pManager{ nullptr }
         , _frameIndex{ 0 }
         , _deltaSeconds{ 0.0f }
@@ -316,6 +321,22 @@ namespace sw
     void AnimationSystem::evaluate( float32 deltaSeconds )
     {
         SW_PROFILE_SCOPE( "GT.Animation.evaluate" );
+#if SW_ANIMATION_REWIND_ENABLED
+        // 되감기: 요청(콘솔 · 패널 · -gv_animationRewind)을 따르고, 되감는 동안에는 평가 대신 기록된 포즈를 건다.
+        _rewind.syncWithRequest();
+        if ( _rewind.isScrubbing() )
+        {
+            applyRewindScrub();
+            return;
+        }
+        if ( _bRewindApplied == SW_TRUE )
+        {
+            // 되감기가 끝났다 — 걸어 둔 포즈를 지금 상태로 다시 만든다(쉬던 유닛도).
+            _bRewindApplied = SW_FALSE;
+            for ( SkeletalMeshComponent* pUnit : _listUnit )
+                pUnit->markPoseDirty();
+        }
+#endif
         updateLod();
         if ( _bOrderDirty == SW_TRUE || ( _listLevel.empty() && _listUnit.empty() == false ) )
             rebuildLevels();
@@ -341,6 +362,9 @@ namespace sw
         if ( _listActive.empty() )
         {
             _crowd.endFrame();
+#if SW_ANIMATION_REWIND_ENABLED
+            _rewind.endFrame( deltaSeconds );
+#endif
             return;
         }
 
@@ -369,7 +393,38 @@ namespace sw
         for ( SkeletalMeshComponent* pUnit : _listActive )
             pUnit->finishAnimationFrame();
         _crowd.endFrame();
+#if SW_ANIMATION_REWIND_ENABLED
+        if ( _rewind.isEnabled() )
+        {
+            SW_PROFILE_SCOPE( "GT.Animation.rewindRecord" );
+            for ( const SkeletalMeshComponent* pUnit : _listActive )
+                _rewind.recordUnit( *pUnit, _frameIndex );
+        }
+        _rewind.endFrame( deltaSeconds );
+#endif
     }
+
+#if SW_ANIMATION_REWIND_ENABLED
+    void AnimationSystem::recordRewindState( const Component& target, AnimationRewindKind kind, const AnimationDebugState& state )
+    {
+        _rewind.recordState( target, kind, state, _frameIndex );
+    }
+
+    void AnimationSystem::applyRewindScrub()
+    {
+        const float64 scrubTime = _rewind.getScrubTime();
+        for ( SkeletalMeshComponent* pUnit : _listUnit )
+        {
+            const AnimationRewindTrack* pTrack = _rewind.findTrack( pUnit->getHandle() );
+            const AnimationRewindFrame* pFrame = ( pTrack != nullptr ) ? pTrack->findFrame( scrubTime ) : nullptr;
+            if ( pFrame == nullptr || pFrame->_boneCount == 0 )
+                continue;
+            AnimationRewindRecorder::decodePose( *pFrame, _rewindScratchPose );
+            if ( pUnit->applyRewindPose( _rewindScratchPose ) )
+                _bRewindApplied = SW_TRUE;
+        }
+    }
+#endif
 
     void AnimationSystem::runPhase( AnimationPhase phase )
     {

@@ -85,6 +85,18 @@ namespace sw
         return nullptr;
     }
 
+    void SkeletalAnimatorBinding::collectDebugState( AnimationDebugState& inoutState ) const
+    {
+        inoutState._stateName = _owner._graphPlayer.getCurrentStateName();
+        inoutState._stateTime = _owner._stateTime;
+        for ( const AnimFiredNotify& notify : _owner._listFiredNotify )
+            inoutState._listNotify.push_back( notify._name );
+        inoutState._listCurveName.insert( inoutState._listCurveName.end(), _owner._listCurveName.begin(), _owner._listCurveName.end() );
+        inoutState._listCurveValue.insert( inoutState._listCurveValue.end(), _owner._listCurveValue.begin(), _owner._listCurveValue.end() );
+        inoutState._rootMotionTranslation = _owner._rootMotionDelta._translation;
+        inoutState._rootMotionRotation    = _owner._rootMotionDelta._rotation;
+    }
+
     const IAnimPlayable* SkeletalAnimatorBinding::findPlayable( const hashed_string& name ) const
     {
         return _owner.findClip( name );
