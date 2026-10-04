@@ -121,7 +121,7 @@ namespace sw
 
             /**
              * @brief 바인딩 하나를 `<InputMap>` 의 액션 노드 아래에 `loadFromResource` 가 읽는 모양으로 씁니다.
-             * @return `<InputMap>` 형식에 자리가 없는 종류(마우스 델타 · 가상 조이스틱 · 단축키 · 아무 키)면 오류를 남기고 false 입니다 —
+             * @return `<InputMap>` 형식에 자리가 없는 종류(가상 조이스틱 · 단축키 · 아무 키)면 오류를 남기고 false 입니다 —
              *         빼고 쓰면 다시 읽을 때 그 바인딩이 조용히 사라진다.
              */
             [[nodiscard]] static bool writeDefinitionBinding( XmlNode actionNode, const utf8* pActionName, const ActionBinding& binding )
@@ -200,6 +200,12 @@ namespace sw
                         return true;
                     }
                     case BindingKind::MouseDelta2D:
+                    {
+                        XmlNode deltaNode = actionNode.appendChild( "mouseDelta" );
+                        deltaNode.appendAttribute( "scale", binding._scale );
+                        deltaNode.appendAttribute( InputMapXml::kAttrLayer, binding._layer.c_str() );
+                        return true;
+                    }
                     case BindingKind::VirtualJoystick2D:
                     case BindingKind::Shortcut:
                     case BindingKind::AnyKey:

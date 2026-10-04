@@ -504,6 +504,7 @@ namespace
                 SW_EXPECT_NEAR_EQUAL( pExpected->_deadzone, pActual->_deadzone, 1.0e-5f );
                 SW_EXPECT_NEAR_EQUAL( pExpected->_outerDeadzone, pActual->_outerDeadzone, 1.0e-5f );
                 SW_EXPECT_NEAR_EQUAL( pExpected->_responseExponent, pActual->_responseExponent, 1.0e-5f );
+                SW_EXPECT_NEAR_EQUAL( pExpected->_scale, pActual->_scale, 1.0e-5f );
                 for ( uint32 slotIndex = 0; slotIndex < 4; ++slotIndex )
                 {
                     SW_EXPECT_TRUE_MSG( pExpected->_arrSlot[slotIndex]._deviceKind == pActual->_arrSlot[slotIndex]._deviceKind, action.c_str() );
@@ -535,6 +536,7 @@ SW_TEST_CASE( InputMapTest, EditorSavedDefinitionReloadsWithTheSameBindings )
     edited.bindVector2D( "Move", sw::Key::W, sw::Key::S, sw::Key::A, sw::Key::D, 0.2f, "Gameplay" );
     edited.bindGamepadStick2D( "Look", sw::GamepadStick::Right, 0.2f, "Gameplay", 1, 0.9f, 1.5f );
     edited.bindChord( "QuickSave", sw::Key::LeftControl, sw::Key::S, sw::ActionTrigger::Released, "Debug" );
+    edited.bindMouseDelta( "Look", 2.5f, "Gameplay" );
     edited.createAction( "Steer", sw::InputActionValueType::Axis1D ); // 바인딩 없이 이름만 만든 액션(패널의 "Add Action")
 
     const sw::string savedPath = test::makeTempPath( "edited.input.xml" );
@@ -561,6 +563,24 @@ SW_TEST_CASE( InputMapTest, EditorSavedDefinitionReloadsWithTheSameBindings )
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( savedPath, savedText ) );
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( resavedPath, resavedText ) );
     SW_EXPECT_TRUE( savedText == resavedText );
+}
+
+/**
+ * @brief [InputMapTest] 저장소의 InputMap 리소스는 모두 패널 저장(`saveToResource`)을 거쳐도 같은 바인딩으로 다시 읽힌다
+ * @details 형식에 자리가 없는 바인딩 종류를 데이터가 쓰기 시작하면 저장이 false 를 돌려 여기서 드러난다.
+ */
+SW_TEST_CASE( InputMapTest, ShippedInputMapsSurviveTheEditorSave )
+{
+    for ( const sw::string_view resourceId : { "engine/input/default.input.xml", "game/shooter3d/data/shooter.input.xml" } )
+    {
+        sw::InputMap original;
+        SW_ASSERT_TRUE( original.loadFromResource( resourceId ) );
+        const sw::string savedPath = test::makeTempPath( "shipped.input.xml" );
+        SW_ASSERT_TRUE( original.saveToResource( savedPath ) );
+        sw::InputMap reloaded;
+        SW_ASSERT_TRUE( reloaded.loadFromResource( savedPath ) );
+        expectSameBindings( original, reloaded );
+    }
 }
 
 /**
