@@ -1,7 +1,7 @@
 # Character — 캐릭터 외형의 형상 · 소켓
 
 캐릭터 외형 로드맵(`docs/06_Backlog.md` 1-6 "캐릭터 외형 편집")의 형상 쪽입니다 — 소켓 · 레퍼런스 포즈 덮어쓰기 · 체형 · 장비 피팅 ·
-병합 · 절단 · 표면 상태, 그리고 단위를 소켓에 붙이는 `SocketBindingComponent`. 슬롯 · 아이템 외형 · 외형 규칙 · 프리셋(해석)은 GameFramework,
+병합 · 절단 · 표면 상태, 단위를 소켓에 붙이는 `SocketBindingComponent`, 그래프 뒤에 IK · 제약 · 스프링 본을 돌리는 `PoseModifierComponent`. 슬롯 · 아이템 외형 · 외형 규칙 · 프리셋(해석)은 GameFramework,
 스켈레톤 · 클립 · 포즈 · 스키닝은 `Animation`, 강체는 `Physics` 의 몫입니다.
 
 **티어 7(Scene · Sequencer 와 같은 자리).** `SocketBindingComponent` 가 컴포넌트(Object, 6)이고 공간 질의(Spatial, 1) · 블렌드 곡선(Animation, 2) ·
@@ -52,9 +52,31 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
 되돌아가기는 지금 월드에서 소켓까지 `BlendCurveSpec`(카메라 블렌드와 같은 구현, `Engine/Animation/BlendCurve.h`)으로 섞습니다. `transferTo` 는 다시 스폰하지 않고
 주인을 바꿉니다(땅의 줍기 오브젝트 · 다른 캐릭터). 2D 도 같습니다 — 2D 오브젝트도 씬 컴포넌트(X · Y, Z 축 회전)입니다.
 
+## 후처리 리그 — `PoseModifierComponent`
+
+리그 에셋(`*.rig.json`, 노드 표 · 대상 규칙은 `Source/Engine/Animation/README.md` 5 절)을 유닛에 붙여 `AnimationPhase::PostProcess` 에서 돌립니다(그래프 뒤 ·
+스키닝 앞, 레벨 안 병렬). 같은 오브젝트의 `SkeletalMeshComponent` 에 단계 일(`PoseModifierBinding`)로 붙고, 애니메이터가 있으면 그 커브가 노드 가중치를 움직입니다.
+
+| 단계 | 스레드 | 하는 일 |
+|---|---|---|
+| `onBeginPlay` → `bindRig` | 게임 | 에셋(`RigAssetCache`) · 소켓(`_socketSetPath` 또는 `setOwnSockets`)으로 `RigInstance` 를 묶고, 바깥 대상(오브젝트 · 다른 유닛)을 잇는다. 다른 유닛 대상은 의존을 건다 — 고리가 생기면 오류를 남기고 그 대상을 끈다 |
+| `prepareAnimationFrame` | 게임 | 내 유닛 · 대상 오브젝트 · 대상 유닛의 월드 행렬을 찍고, `space` 대상을 지난 프레임의 그 본 기준으로 바꾸고, 발 디딤의 땅 광선(씬 물리 `IPhysicsScene3D` — 평면 리그면 2D)을 쏜다. 리그가 핫 리로드됐으면(내용 번호) 다시 묶는다 |
+| `PostProcess` | 워커 | 의존을 건 유닛의 이번 프레임 본을 읽어 대상 값을 채우고 노드를 돈다. 유닛이 모델 공간을 다시 구하고 스킨 팔레트로 간다 |
+
+- **대상 잇기**: `bindUnit( 이름, 유닛, 소켓 에셋 )` · `bindObject( 이름, 오브젝트 )` 가 먼저, 없으면 같은 이름의 자식 → 매니저 전체. 외형 통합은 `setSocketTable( 해석된 표,
+  유닛 번호 → 유닛 )` 로 `MainHand.Grip` 같은 이름을 그 표에서 풉니다(부모 본 + 소켓 로컬 — 표면 기준 소켓의 체형 보정은 따르지 않는다).
+- **무기 손잡이(왼손 IK)**: 무기 유닛은 오른손 소켓에 붙어 몸을 따르고, 왼손 IK 는 무기의 `Grip` 소켓을 `"space": "handslot.r"` 대상으로 잡습니다 — 몸 → 무기 →
+  몸 고리 없이, 이번 프레임의 오른손에 늦지 않게 붙습니다.
+- **가중치**: `setSlotWeight( 칸, 값 )` 이 시퀀서 칸(샷 중간에 무기를 넘겨 쥐기), 클립 커브는 애니메이터의 `getCurveValue`. `setNodeControl( 노드, "parent", 번호 )` 이 부모 바꾸기.
+- **모프 출력**: 포즈 구동(RBF)의 보정 모프 가중치는 `getMorphWeights()` 로 나옵니다. GPU 모프 풀은 아직 이름 붙은 모프 타깃을 받지 않으므로(glTF `weights` 를 버린다)
+  거기에 잇는 것은 얼굴 · 모프 임포트와 같은 다음 일입니다. 보정 본은 지금 바로 포즈에 듭니다.
+- **비용 0**: `setRigEnabled( false )` 면 쉬는 유닛처럼 빠집니다. 스프링 사슬은 `AnimationSystem::setLodViewPosition` 기준 `lod_distance` 밖에서 꺼지고 다시 켜지면
+  애니메이션 자세에서 시작합니다.
+
 ## 체형
 
-`BodyShapeSet::evaluate( 축 값들 )` → 모프 가중치(GPU 모프 풀에 걸 것) + `BoneProportion`. 본 비율은 **애니메이션 위의 가산 층**입니다 — 매 프레임 애니메이션이 로컬을
+`BodyShapeSet::evaluate( 축 값들 )` → 모프 가중치(GPU 모프 풀에 걸 것) + `BoneProportion`. `BoneProportion::applyToPose` 는 같은 보정을 애니메이션 포즈에
+겹칩니다 — 레퍼런스 포즈에 걸어 리타기터의 대상 레퍼런스(비율이 다른 스켈레톤)로 넘깁니다(`Source/Engine/Animation/README.md` 6 절). 본 비율은 **애니메이션 위의 가산 층**입니다 — 매 프레임 애니메이션이 로컬을
 정한 뒤 `BoneProportion::apply`(스케일은 곱, 오프셋은 더함) → 스키닝. `BodyShapeUtil` 은 같은 일을 CPU 형상에 해(모프 · 선형 블렌드 스키닝) 피팅 · 소켓 보정이
 체형을 건 바인드 형상을 보게 합니다.
 

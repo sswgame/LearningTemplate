@@ -58,7 +58,7 @@ Object/
 │  ├─ TagSystem.*       # TagContainer · TagQuery (`TagID` 자체는 Core/String/TagID.h)
 │  ├─ Audio/            # 리스너 · 에미터 · 앰비언트(점 · 상자 · 구) · 리버브 존 컴포넌트, 물리 레이캐스트 가림 질의(틱하지 않고 SceneAudio 에 등록)
 │  └─ 2D/ · 3D/         # Sprite, Mesh, Collider, 빛(`LightComponent` 기반 — 색 · 세기 · 방향 규약 · 등록),
-│                       #   SkeletalMeshComponent(유닛 — 스켈레톤 · 포즈 · 팔레트 · 스킨드 메시) · SkeletalAnimatorComponent(그래프 · 레이어 · 루트 모션) 등
+│                       #   SkeletalMeshComponent(유닛 — 스켈레톤 · 포즈 · 팔레트 · 스킨드 메시) · SkeletalAnimatorComponent(그래프 · 레이어 · 루트 모션) · PoseRetargetComponent(다른 유닛 포즈를 리타깃) 등
 └─ Prefab/             # PrefabAsset(로드 · 저장 · 스폰) · PrefabCache(프리팹 에셋 캐시, `PrefabAsset.h`) · PrefabOverrides(인스턴스 차이 뽑기 · 다시 얹기)
 ```
 

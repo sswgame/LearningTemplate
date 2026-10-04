@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw
@@ -61,6 +62,15 @@ namespace sw
 
         /** @brief 이번 프레임에 할 일이 있는지입니다. 모든 일이 거짓이고 포즈가 깨끗한 유닛은 쉬고 비용이 없습니다. */
         virtual bool isAnimationActive() const = 0;
+        /**
+         * @brief 단계들 앞의 게임 스레드 준비입니다(일하는 유닛만, LOD 로 포즈를 건너뛰는 프레임도). 다른 오브젝트의 월드 변환 · 물리 질의처럼
+         *        워커에서 읽을 수 없는 것을 여기서 찍어 둡니다.
+         */
+        virtual void prepareAnimationFrame( SkeletalMeshComponent& unit, const AnimationFrameContext& context )
+        {
+            (void)unit;
+            (void)context;
+        }
         /** @brief 단계 하나를 합니다(워커). */
         virtual void runAnimationPhase( AnimationPhase phase, SkeletalMeshComponent& unit, const AnimationFrameContext& context ) = 0;
         /** @brief 동기 그룹에 들면 그룹 이름 · 가중치와 맞출 플레이어를 줍니다. 아니면 nullptr 입니다(시간 단계 뒤, 게임 스레드). */
@@ -121,6 +131,12 @@ namespace sw
         uint64 getFrameIndex() const { return _frameIndex; }
         /** @brief 지난 프레임에 일한(쉬지 않은) 유닛 수입니다. */
         uint32 getActiveUnitCount() const { return _activeUnitCount; }
+        /** @brief 거리 LOD 의 기준점(보통 카메라 월드 위치)을 정합니다. 카메라 · 뷰를 가진 쪽이 프레임마다 넣습니다. */
+        void setLodViewPosition( const float3& position );
+        /** @brief 거리 LOD 기준점을 지웁니다(거리 LOD 가 꺼진다). */
+        void clearLodViewPosition() { _bHasLodViewPosition = SW_FALSE; }
+        /** @brief 거리 LOD 기준점입니다. 정하지 않았으면 false 입니다. */
+        bool findLodViewPosition( float3& outPosition ) const;
 
     private:
         /** @brief 의존을 풀어 레벨을 다시 짓습니다. */
@@ -135,10 +151,12 @@ namespace sw
         vector<SkeletalMeshComponent*>         _listActive;     ///< 이번 프레임 단계를 도는 유닛(레벨 순서). 재사용합니다
         vector<uint32>                         _listLevelStart; ///< `_listActive` 안의 레벨 시작 위치(끝 하나 더)
         GameObjectManager*                     _pManager;
+        float3                                 _lodViewPosition;
         uint64                                 _frameIndex;
         float32                                _deltaSeconds;
         uint32                                 _activeUnitCount;
         uint8                                  _bOrderDirty;
         uint8                                  _bCycle;
+        uint8                                  _bHasLodViewPosition;
     };
 } // namespace sw

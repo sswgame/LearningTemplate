@@ -231,6 +231,8 @@ namespace sw
         , _benchElapsed{ 0.0f }
         , _benchGridSide{ 0 }
         , _bRefreshedCameras{ SW_FALSE }
+        , _listRigBody{}
+        , _rigLookTarget{}
         , _bCharacterFraming{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -243,13 +245,15 @@ namespace sw
         // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는
         // **이 모듈이 선언한다**(이 파일 위). 그래서 이름으로 조회하지 않고 그대로 읽는다 —
         // 주의: 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽힌다.
-        if ( gv_benchMeshes <= 0 && gv_benchCharacters <= 0 )
+        if ( gv_benchMeshes <= 0 && gv_benchCharacters <= 0 && getRigCharacterCount() == 0 )
             return false;
 
         if ( gv_benchMeshes > 0 )
             spawn( static_cast<uint32>( gv_benchMeshes ) );
         if ( gv_benchCharacters > 0 )
             spawnCharacters( static_cast<uint32>( gv_benchCharacters ) );
+        if ( getRigCharacterCount() > 0 )
+            spawnRigCharacters( getRigCharacterCount() );
         return isActive();
     }
 
@@ -299,6 +303,8 @@ namespace sw
         _instanceCubeCount = 0;
         _listBenchExtra.clear();
         _bCharacterFraming = SW_FALSE;
+        _listRigBody.clear();
+        _rigLookTarget = {};
         _listChurnInstance.clear();
         _keyLight = {};
     }
@@ -817,7 +823,9 @@ namespace sw
             {
                 if ( Scene* pScene = pSceneManager->getActiveScene() )
                 {
-                    if ( _bCharacterFraming == SW_TRUE )
+                    if ( _listRigBody.empty() == false )
+                        frameRigCameras( pScene );
+                    else if ( _bCharacterFraming == SW_TRUE )
                         frameCharacterCameras( pScene, MathUtil::max( 2.0f, 0.5f * static_cast<float32>( gv_benchCharacters ) * kBenchCharacterSpacing ) );
                     else
                         frameCameras( pScene, _benchGridSide, kBenchSpacing );
@@ -835,6 +843,7 @@ namespace sw
 
         updateMaterialChurn( pObjects );
         updateSpawnChurn( pObjects, pScene );
+        updateRigCharacters( deltaTime );
 
         // 멈춰 세운 격자는 프레임마다 같은 그림을 낸다 — 픽셀 비교 검증의 전제다.
         // 회전(컴퓨트)만 끄고 이 사인파를 남기면 여전히 흔들린다.

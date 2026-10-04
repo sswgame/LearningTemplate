@@ -1,6 +1,6 @@
 /**
  * @file AnimationAssetCache.h
- * @brief 스켈레톤(`.skeleton.json`) · 애니메이션 클립(`.animclip`)을 경로로 나눠 주는 표와, 그 표를 에셋 캐시 등록부에 보이는 창구 둘입니다.
+ * @brief 스켈레톤(`.skeleton.json`) · 애니메이션 클립(`.animclip`) · 후처리 리그(`.rig.json`)를 경로로 나눠 주는 표와, 그 표를 에셋 캐시 등록부에 보이는 창구들입니다.
  * @details `SpriteClipCache` · `MeshCache` 와 같은 모양입니다 — 표는 프로세스에 하나(Engine.dll 안)이고 약한 참조라 마지막 사용자가 놓으면 사라집니다.
  *          Animation(티어 2)이 아니라 Resource(티어 4)에 있는 것은 `IAssetCache` 를 구현하기 때문입니다.
  */
@@ -14,6 +14,7 @@
 namespace sw
 {
     class AnimClip;
+    class RigAsset;
     class Skeleton;
 
     /**
@@ -51,6 +52,29 @@ namespace sw
         [[nodiscard]] static bool reloadShared( string_view path );
 
         const utf8* getAssetKindName() const override { return "AnimClip"; }
+        bool        isCached( string_view relativePath ) const override;
+        void        reload( string_view relativePath, IRHIDevice* pDevice ) override;
+        size_t      getCachedCount() const override;
+        void        clear() override;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class RigAssetCache
+     * @brief 후처리 리그(`.rig.json`)를 경로로 나눠 줍니다. 다시 읽으면 제자리로 바꾸고 내용 번호(`RigAsset::getContentId`)가 바뀌어, 쓰는
+     *        `PoseModifierComponent` 가 다음 프레임에 다시 묶습니다.
+     */
+    class SW_API RigAssetCache final : public IAssetCache
+    {
+    public:
+        /** @brief 경로의 리그를 나눠 받습니다. 처음이면 읽고, 읽을 수 없으면 nullptr 입니다. */
+        static shared_ptr<const RigAsset> acquire( string_view path );
+        /** @brief 사용 중이면 제자리로 다시 읽습니다(틱 밖, 게임 스레드). 읽지 못하면 옛 내용 그대로이고 false 입니다. */
+        [[nodiscard]] static bool reloadShared( string_view path );
+
+        const utf8* getAssetKindName() const override { return "Rig"; }
         bool        isCached( string_view relativePath ) const override;
         void        reload( string_view relativePath, IRHIDevice* pDevice ) override;
         size_t      getCachedCount() const override;

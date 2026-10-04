@@ -3,6 +3,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Animation/Retarget/PoseRetargeter.h"
+#include "Engine/Animation/Retarget/RetargetProfile.h"
+#include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Audio/AudioEvent.h"
@@ -260,6 +263,29 @@ namespace
             return tables.loadFromResource( kDefaultFitTables, solver.getOperatorRegistry() ) && data.loadFromResource( resourceId, tables );
         }
 
+        /** @brief 후처리 리그(대상 · 노드) — 모르는 노드 종류 · 키 · 겹친 이름은 로드 오류다. */
+        static bool isRig( sw::string_view resourceId ) { return endsWith( resourceId, sw::RigAsset::kExtension ); }
+        static bool loadRig( const sw::string& resourceId )
+        {
+            sw::RigAsset rig;
+            return rig.loadFromResource( resourceId );
+        }
+
+        /** @brief 리타깃 프로필 — 모르는 키 · 이동 방법 · 겹친 사슬은 로드 오류이고, 적힌 두 스켈레톤에 프로필의 본이 모두 있어야 한다. */
+        static bool isRetargetProfile( sw::string_view resourceId ) { return endsWith( resourceId, sw::RetargetProfile::kExtension ); }
+        static bool loadRetargetProfile( const sw::string& resourceId )
+        {
+            sw::RetargetProfile profile;
+            if ( profile.loadFromResource( resourceId ) == false )
+                return false;
+            sw::Skeleton source;
+            sw::Skeleton target;
+            if ( source.loadFromResource( profile.getSourceSkeletonPath() ) == false || target.loadFromResource( profile.getTargetSkeletonPath() ) == false )
+                return false;
+            sw::PoseRetargeter retargeter;
+            return retargeter.initialize( profile, source, target, nullptr );
+        }
+
         /** @brief 임포트가 쓴 스켈레톤(본 · 부착 표) — 모르는 키 · 없는 본 이름은 로드 오류다. */
         static bool loadSkeleton( const sw::string& resourceId )
         {
@@ -366,6 +392,8 @@ namespace
             {        "stringtable",   &isSourceStringTable,   &loadLocalizationDocument<sw::SourceStringTable>},
             {   "translationtable",    &isTranslationTable,    &loadLocalizationDocument<sw::TranslationTable>},
             {  "translationmemory",   &isTranslationMemory,   &loadLocalizationDocument<sw::TranslationMemory>},
+            {                "rig",                 &isRig,                                           &loadRig},
+            {    "retargetprofile",     &isRetargetProfile,                               &loadRetargetProfile},
         };
 
         /**

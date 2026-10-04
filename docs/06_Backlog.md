@@ -233,16 +233,13 @@ cd build/Ninja-Debug/Bin
 - **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/README.md`(임포트 · 코덱 · 재생 · 상태 기계 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생).
   남은 것 — ① 알림 디스패치(이름 → 처리기 등록부 · 데이터로 고름, 지금은 `getFiredNotifies()` 목록만) · 그래프의 블렌드 스페이스 노드(지금 `BlendSpace` 는 행렬 하나라
   포즈 블렌드 스페이스로 다시 짓는다) · 그래프에 레이어 · 동기 그룹을 데이터로(지금 레이어는 `addLayer` 코드) · 에디터 그래프 패널이 조건 · 블렌드를 편집
-  ② 후처리 리그 — IK 와 제약을 한 줄의 노드
-  목록(데이터, 순서가 결과를 바꾸므로 순서를 적는다)으로 그래프 뒤 · 스키닝 전에 돈다(`PoseModifierComponent` — `AnimationPhase::PostProcess` 자리가 비어 있다), 캐릭터마다 잡 병렬. IK: 2 본 · FABRIK/CCD · 조준/시선 · 발 디딤 ·
-  손 IK(사슬 · 목표 · 가중치 · 관절 제한). 제약: 부모 바꾸기(무기를 손 ↔ 등으로 — 공간 전환, 바뀔 때 튀지 않게 오프셋 유지) · 위치 · 회전 · 조준 ·
-  변환 복사 · 거리/범위 제한 · 트위스트 본 분배(팔뚝 비틀림) · 포즈 구동(RBF 포즈 드라이버 — 팔꿈치를 굽히면 보정 모프 · 보정 본). 노드 가중치는
-  클립 커브 · 시퀀서 키로 움직인다(샷 중간에 무기를 넘겨 쥐기). 대상은 본 · 소켓 · 다른 오브젝트. glTF 는 제약을 싣지 않으니 엔진에서 저작한다 —
-  언리얼 Control Rig · IK Rig, 유니티 Animation Rigging, Maya 제약 ③ 애니메이션 LOD — 훅(`setUpdateRateDivisor` · `setVisibleHint`)은 있다, 부르는 쪽이 없다:
+  ② 후처리 리그 — 들어갔다(`PoseModifierComponent`, `Source/Engine/Animation/README.md` 5 절 · `Source/Engine/Character/README.md`). 남은 것: 포즈 구동의
+  보정 모프 가중치를 GPU 모프 풀로(이름 붙은 모프 타깃 임포트가 먼저 — 지금은 `getMorphWeights()` 로만 나온다), 시퀀서 트랙이 `setSlotWeight` 를 쓰기(칸은 있다),
+  해석된 소켓 표의 표면 기준 소켓 체형 보정을 리그 대상에도, 에디터 리그 패널(노드 목록 · 대상 · 기즈모) ③ 애니메이션 LOD — 훅(`setUpdateRateDivisor` · `setVisibleHint`)은 있다, 부르는 쪽이 없다:
   카메라 절두체 가시성 · 거리별 주기(URO) · 본 LOD · 거리별 IK/물리 끔 · 중요도 매니저 예산 → 스켈레톤 LOD(본 감소) ④ 군중 공유 — 스킨드 메시는 컴포넌트마다
-  메시 객체(정점 사본 · 모프 풀 구간 하나)라 같은 포즈 · 같은 메시를 나누는 캐시가 없다(언리얼 Animation Sharing) · 되감기 디버거 · 리타기팅(본 이름 표 · 비율) ·
+  메시 객체(정점 사본 · 모프 풀 구간 하나)라 같은 포즈 · 같은 메시를 나누는 캐시가 없다(언리얼 Animation Sharing) · 되감기 디버거 ·
   얼굴(모프 타깃 임포트 — glTF `weights` 채널은 지금 버린다) ⑤ Jolt 래그돌(전신 · 부분 · 파워드, 래그돌 에셋은 데이터, 포즈 블렌드 · 기상) ·
-  2 차 움직임(스프링 본) → 헤어 카드 · 천(Jolt 소프트 바디), 가닥 헤어(TressFX)는 나중 ⑥ KayKit 텍스처(원본 GLB 에 든 `knight_texture` 등)를 `textures_raw/` 로
+  2 차 움직임: 스프링 본은 들어갔다(리그 노드 `SpringChain`) → 헤어 카드 · 천(Jolt 소프트 바디), 가닥 헤어(TressFX)는 나중 ⑥ KayKit 텍스처(원본 GLB 에 든 `knight_texture` 등)를 `textures_raw/` 로
   옮겨 머티리얼을 만들 것 — 지금 캐릭터는 씬 기본 머티리얼(흰색)로 그려진다. Shooter3D 통합은 다음 웨이브.
 - **프리로딩 · LOD · 사전 준비(로드맵).** ① 프리로드 세트(미리 올릴 에셋 + 미리 만들 프리팹 · 우선순위, 쿠킹 때 레벨 · 시퀀스 · 샷의 참조를 따라 자동 수집 —
   `collectReferencedPrefabPaths` 가 있다), `requestPreload` 가 진행률 · 완료를 준다, 프레임 예산(IO · 업로드 · PSO · 인스턴스 수), 참조 수 · LRU 로 내림(지금 캐시는
@@ -291,11 +288,11 @@ cd build/Ninja-Debug/Bin
     (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · UI 시험 입력 흉내 · 패키징 UI · 에디터 자동화 ·
     로딩 흐름 · 입력 확장 · 에셋 공정(검증 · XML 비교/병합 · 잠금 · DCC 내보내기) · QA 자동화(봇 · 내구 · 골든 이미지 · 성능 CI ·
     퍼징) · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 [대기: cam-views] · 하늘/시간대/높이
-    안개 [대기: cam-views] · 2D 스켈레탈 · 리타게팅 · 모션 워핑/이동 보정 · 래그돌 + 히트박스 · 절단 런타임 · 군중 포즈 공유 · 되감기 디버거 [넷 다: char-anim,
+    안개 [대기: cam-views] · 2D 스켈레탈 · 모션 워핑/이동 보정 · 래그돌 + 히트박스 · 절단 런타임 · 군중 포즈 공유 · 되감기 디버거 [넷 다: char-anim,
     래그돌은 char-phys 도] · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서 — reflect-ext 의 문서 생성 뒤) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
     [넷 다: 런타임 UI].
-  - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 현지화 공정 · PoseModifierComponent(IK · 제약 ·
-    스프링 본) · 얼굴(표정 커브 · 립싱크 · 깜빡임/시선) [넷 다: char-anim] · 파괴 시스템 [대기: char-phys · char-geom] · 파티클/VFX [대기: cam-views] · 텍스처
+  - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 현지화 공정 · 제약 ·
+    얼굴(표정 커브 · 립싱크 · 깜빡임/시선) [넷 다: char-anim] · 파괴 시스템 [대기: char-phys · char-geom] · 파티클/VFX [대기: cam-views] · 텍스처
     밉 스트리밍 · 3D 내비메시 + 군중 회피 · 카메라 5 · 6 단계 · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 · 탈것/말 ·
     천/머리카락 · 전술 AI · 볼류메트릭 안개/빛/구름 · 캐릭터 셰이딩 · 모션 캡처 공정 · 대규모 좌표 · PCG 저작 그래프 · GI/반사 프로브 · 플랫폼 서비스 ·
     패치/DLC · 모드/UGC.
@@ -1212,6 +1209,9 @@ cd build/Ninja-Debug/Bin
   (리플렉션 등록 → 설정 → AssetManager).
 
 ### 3-10. Core · 태스크 · 메모리
+
+- **`quaternion::inverse()` · `conjugate()` 는 const 가 아닌 값에서 제자리 버전(void)이 골라진다** — 식 안에서는 const 참조로 받아 부를 것(`RigIkSolver::makeInverse`).
+  **`quaternion::fromToRotation` 은 코사인 차 1e-6(약 0.08°) 안쪽을 단위 회전으로 버린다** — 반복 IK 의 마지막 몇 mm 가 그 안이라 CCD 가 멈춘다(`RigIkSolver::makeFromToRotation`).
 
 - **Debug 기동은 CRT 누수 보고를 stderr 로도 낸다**(`EngineBootstrap` 의 진단 갈래가 `MemoryProfiler::enableMemoryLeakChecks` 를 부른다 — 누수 덤프가 콘솔 · CI 로그에
   나온다, `MemoryTagTest.DiagnosticBootstrapEnablesPlatformLeakChecks`).

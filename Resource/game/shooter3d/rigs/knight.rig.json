@@ -1,0 +1,15 @@
+{
+  "targets": [
+    { "name": "LookTarget", "object": "RigLookTarget" },
+    { "name": "Grip", "socket": "Grip", "unit": "Weapon", "space": "handslot.r" }
+  ],
+  "nodes": [
+    { "type": "FootPlacement", "name": "Feet", "pelvis": "hips", "trace_up": 0.5, "trace_down": 0.6, "max_pelvis_drop": 0.3, "interp_speed": 12,
+      "max_align_degrees": 30,
+      "feet": [ { "root": "upperleg.l", "mid": "lowerleg.l", "end": "foot.l" }, { "root": "upperleg.r", "mid": "lowerleg.r", "end": "foot.r" } ] },
+    { "type": "Aim", "name": "LookAt", "bone": "head", "target": "LookTarget", "aim_axis": [0, 0, 1], "max_degrees": 60,
+      "chain": [ { "bone": "chest", "weight": 0.25 } ] },
+    { "type": "TwoBoneIk", "name": "LeftHandGrip", "root": "upperarm.l", "mid": "lowerarm.l", "end": "hand.l", "target": "Grip" },
+    { "type": "TwistDistribution", "name": "ForearmTwist", "source": "hand.l", "axis": [0, 1, 0], "bones": [ { "bone": "wrist.l", "weight": 0.5 } ] }
+  ]
+}
