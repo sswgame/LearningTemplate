@@ -14,6 +14,7 @@
 | `GimmickCircuitComponent` | 씬 · 프리팹에 저장되는 회로. 노드마다 대상 오브젝트(핸들, 비면 소유자)에서 센서를 읽고 액추에이터를 건다 |
 | `GimmickSensorComponent` · `GimmickWeightComponent` | 대상 쪽 상태 — 겹친 것(태그 거르기) · 무게 · 피해 · 사용 · 신호 |
 | `GimmickDamageUtil` · `GimmickDamageEvent` | 기믹이 주는 피해의 한 길("game" 채널 + 대상 센서의 Damage — 폭발 사슬) |
+| `ElementRuleTable` · `ElementGrid` | 원소 상호작용 표(재질 깃발 · 상태 · 자극 · 걸음 규칙)와 그 표를 따르는 결정적 셀 자동자. 오브젝트 하나는 1 × 1 격자 |
 | `WorldQuery`(`World/`) | 광선 · 시야. Jolt 서비스가 걸리면 그것, 없으면 `PhysicsWorld` AABB 폴백 |
 
 ## 내장 노드 종류
@@ -74,3 +75,17 @@ XML(시험 · 도구):
 - **쉬는 자세는 처음 플레이에 한 번 잡아 저장**(`_listRestPose`) — 핫 리로드 · 세이브 로드가 움직이던 문 자리를 쉬는 자세로 착각하지 않습니다.
 - 회로는 `PrePhysics` 에서 틱합니다. 겹침은 물리 step 뒤에 오므라 센서 변화는 다음 틱에 보입니다(한 프레임). 다른 오브젝트의 자리는 세터(틱 쓰기 큐)로,
   켜기 · 빛 · 스폰 · 소리는 틱 뒤(`executeOrDeferPostTick`)로 겁니다.
+
+## 원소 규칙표
+
+"불은 풀로 번지고, 물은 불을 끄고, 바람이 불을 민다" 를 데이터로 적습니다 — 기본표 `Resource/common/data/elements/default.elements.xml`.
+코드에는 규칙의 **종류**만 있습니다: 자극 줄(`<On>` — 조건 material · flag · status · without, 동작 setMaterial · addStatus · removeStatus ·
+floodStatus + through), 걸음 규칙(`Expire` — 상태가 재질 수치만큼 오래되면 칸을 비움, `Convert` — 상태 칸의 네 이웃 재질을 바꿈, `Spread` — 상태를
+`to` 깃발 이웃으로 옮김, 모양 `Neighbors4` · `Wind`). 상태 종류는 `Age`(오른다) · `Countdown`(내려가 사라진다). 이름은 표 안에서 선언한 것만 쓰고, 모르는 이름 ·
+규칙 · 모양 · 원소는 읽기 오류입니다(`ResourceDataSchemaTest` 의 `.elements.xml`).
+
+- 한 걸음 = 상태 시간 흘리기 → 걸음 규칙을 **같은 상태에서** 모으기(규칙 순서 → 행 우선) → 같은 순서로 적용. 적용 때 다시 확인하므로(이미 녹은 얼음 · 이미 붙은 불)
+  두 규칙이 같은 칸을 겨눠도 결과가 칸 순서에 달리지 않습니다.
+- 자극은 위에서부터 **처음 맞는 한 줄만** 적용합니다(불: 얼음이면 녹이고, 아니면 탈 것에 붙인다).
+- 액션 어드벤처 키트의 `AdventureElementGrid` 는 이 격자 위에 키트의 재질 열거 · 설정을 얹은 것입니다 — 설정 값으로 기본표와 같은 모양의 표를 코드로 짓습니다
+  (`ElementRuleTest.AdventureGridMatchesDefaultTable` 이 걸음마다 같은지 본다).

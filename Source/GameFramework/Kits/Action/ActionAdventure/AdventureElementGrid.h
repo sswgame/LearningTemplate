@@ -1,7 +1,9 @@
 /**
  * @file AdventureElementGrid.h
  * @brief 야생의 숨결의 화학 엔진 — 격자 셀(풀 · 나무 · 금속 · 물 · 얼음)과 불 · 전기 · 얼음의 결정적 셀 자동자입니다.
- * @details 규칙(한 걸음마다, 걸음 시작의 상태만 보고 정한 뒤 한꺼번에 바꾼다 — 셀을 도는 순서가 결과를 바꾸지 않는다):
+ * @details 기반의 원소 규칙표(`ElementRuleTable`) · 격자(`ElementGrid`) 위에 이 키트의 재질 열거와 설정을 얹은 것입니다 — 규칙표는 설정 값으로 지은
+ *          `Resource/common/data/elements/default.elements.xml` 과 같은 모양입니다(`ElementRuleTest.AdventureGridMatchesDefaultTable`).
+ *          규칙(한 걸음마다, 걸음 시작의 상태만 보고 정한 뒤 한꺼번에 바꾼다 — 셀을 도는 순서가 결과를 바꾸지 않는다):
  *          - 불은 풀 · 나무를 태운다. 탄 지 `_spreadDelaySteps` 걸음이 지나면 바람이 부는 쪽 이웃(대각 포함 한 칸)으로 옮겨 붙는다.
  *            바람이 없으면 네 이웃 모두로 붙는다. 바람을 거슬러서는 붙지 않는다(`_bCrosswindSpread` 면 바람의 옆 두 칸도).
  *          - 풀은 `_grassBurnSteps`, 나무는 `_woodBurnSteps` 걸음 타고 사라진다(빈 칸). 타는 풀은 위로 오르는 기류를 만든다(활공).
@@ -16,7 +18,8 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Utility/FixedStepTimer.h"
+#include "GameFramework/Gimmick/ElementGrid.h"
+#include "GameFramework/Gimmick/ElementRuleTable.h"
 
 namespace sw
 {
@@ -74,6 +77,9 @@ namespace sw
     {
     public:
         AdventureElementGrid();
+        /** @brief 격자는 규칙표를 가리키므로 복사하면 새 규칙표를 가리키게 다시 잇습니다. */
+        AdventureElementGrid( const AdventureElementGrid& other );
+        AdventureElementGrid& operator=( const AdventureElementGrid& other );
 
         void initialize( int32 width, int32 height, const AdventureElementSettings& settings );
 
@@ -81,7 +87,7 @@ namespace sw
         AdventureMaterial getMaterial( const int2& cell ) const;
         /** @brief 바람 방향입니다. 성분은 −1..1 로 자릅니다. (0, 0) 은 바람 없음입니다. */
         void        setWind( const int2& wind );
-        const int2& getWind() const { return _wind; }
+        const int2& getWind() const { return _grid.getWind(); }
 
         /** @brief 불을 댑니다(불화살 · 부싯돌). 풀 · 나무는 붙고 얼음은 녹습니다. 무언가 바뀌었으면 true 입니다. */
         [[nodiscard]] bool applyFire( const int2& cell );
@@ -97,7 +103,7 @@ namespace sw
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<AdventureElementEvent>& outListEvent );
 
-        bool isInside( const int2& cell ) const { return 0 <= cell._x && cell._x < _width && 0 <= cell._y && cell._y < _height; }
+        bool isInside( const int2& cell ) const { return _grid.isInside( cell ); }
         bool isBurning( const int2& cell ) const;
         bool isCharged( const int2& cell ) const;
         /** @brief 위로 오르는 기류가 있는가(타는 풀)입니다. */
@@ -107,33 +113,24 @@ namespace sw
         int32 countBurning() const;
         /** @brief 모든 셀 상태의 해시입니다(결정성 · 리플레이 비교). */
         uint32 computeStateHash() const;
-        int32  getWidth() const { return _width; }
-        int32  getHeight() const { return _height; }
-        uint32 getStepCount() const { return _stepCount; }
+        int32  getWidth() const { return _grid.getWidth(); }
+        int32  getHeight() const { return _grid.getHeight(); }
+        uint32 getStepCount() const { return _grid.getStepCount(); }
 
     private:
-        /** @brief 셀 하나입니다. */
-        struct Cell
-        {
-            AdventureMaterial _material{ AdventureMaterial::Empty };
-            uint8             _bBurning{ SW_FALSE };
-            uint8             _burnStep{ 0 };        ///< 붙은 뒤 지난 걸음
-            uint8             _chargeRemaining{ 0 }; ///< 남은 대전 걸음
-        };
-
-        int32 toIndex( const int2& cell ) const { return cell._y * _width + cell._x; }
-        bool  isFlammable( AdventureMaterial material ) const { return material == AdventureMaterial::Grass || material == AdventureMaterial::Wood; }
-        bool  isConductive( AdventureMaterial material ) const { return material == AdventureMaterial::Metal || material == AdventureMaterial::Water; }
-        void  ignite( Cell& cell, const int2& position );
-        void  pushEvent( AdventureElementEventType type, const int2& cell );
+        /** @brief 설정 값으로 규칙표를 짓습니다(`default.elements.xml` 과 같은 모양 — 재질 번호 = `AdventureMaterial`). */
+        void buildRuleTable();
 
         AdventureElementSettings      _settings;
-        FixedStepTimer                _timer;
-        vector<Cell>                  _listCell;
+        ElementRuleTable              _table;
+        ElementGrid                   _grid;
+        vector<ElementEvent>          _listGridEvent; ///< 격자 알림을 옮기는 자리(재사용)
         vector<AdventureElementEvent> _listEvent;
-        int2                          _wind;
-        int32                         _width;
-        int32                         _height;
-        uint32                        _stepCount;
+        int32                         _burningStatus;
+        int32                         _chargedStatus;
+        int32                         _updraftFlag;
+        int32                         _fireStimulus;
+        int32                         _iceStimulus;
+        int32                         _electricStimulus;
     };
 } // namespace sw
