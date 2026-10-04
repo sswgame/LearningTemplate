@@ -710,8 +710,15 @@ namespace sw
         }
 
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).
+        // 올리기는 bindless 표에 등록하므로 렌더 스레드가 지난 프레임을 병렬로 기록하는 동안 하면 안 된다 — 올릴 것이 있는 프레임(씬 로드 ·
+        // 처음 쓰는 머티리얼의 스폰)만 렌더 스레드를 기다린다.
         if ( _rhi != nullptr && _rhi->hasDevice() )
-            _owned._pAssetManager->getMaterialManager().initializePending( &_rhi->getDevice() );
+        {
+            MaterialCache& materials = _owned._pAssetManager->getMaterialManager();
+            if ( materials.hasPendingInitialize() && _renderThread != nullptr )
+                _renderThread->waitIdle();
+            materials.initializePending( &_rhi->getDevice() );
+        }
 
         // 패킷 · 씬 스냅샷은 FrameRenderer 단계가 만든다. 그 단계가 서지 않았으면(헤드리스 작업) 낼 패킷이 없다.
         if ( _packetScratch == nullptr || _gpuSceneBuilder == nullptr )

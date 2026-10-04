@@ -109,6 +109,11 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
+- **머티리얼 해제가 렌더 스레드의 병렬 기록과 겹친다.** 마지막 참조가 게임 스레드에서 놓이면(`GpuSceneBuilder::buildFromScene` 의 후보 교체 →
+  `~Material` → `releaseRhi`) `unregisterBindlessResource` 가 렌더 스레드의 병렬 기록 중에 돌 수 있다(`assertRegistryMutableNow` — 플래그 읽기가 경합이라 단언이
+  늘 서지는 않는다). 올리기 쪽은 `EngineLoop` 가 기다린다(3-7). 해제도 렌더 스레드 · 펜스 뒤로 미루거나 같은 자리에서 기다려야 한다. 지금 피하는 법: 런타임에
+  쓰는 머티리얼은 씬의 오브젝트가 늘 들고 있게 하고, 색만 다른 것은 머티리얼 인스턴스로(`AbilityArena` 의 편 색).
+
 - **`.hdr` 원본 임포트가 없다** — 지금 임포트는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
 - **창(백버퍼)을 읽는 창구가 없어 창 쪽 반전을 시험이 못 본다.** `-gv_screenshot` 은 오프스크린 텍스처를 읽으므로 창으로 옮기는 단계(GL 캡처 블릿)의
@@ -704,6 +709,11 @@ cd build/Ninja-Debug/Bin
   태그 ID 를 만들고, 계층 비교(`Faction` → `Faction.Player`)에는 문자열이 같이 필요하다.
 
 ### 3-7. 그래픽스 · RHI · 셰이더
+
+- **bindless 표를 바꾸는 일은 렌더 스레드의 병렬 기록과 겹치면 안 된다**(`IRHIDevice::setParallelRecording`). 게임 스레드의 `MaterialCache::initializePending`
+  (씬 로드 · 처음 쓰는 머티리얼의 스폰)은 렌더 스레드가 지난 프레임을 기록하는 동안 돈다 — `EngineLoop` 는 올릴 것이 있는 프레임(`hasPendingInitialize`)만
+  `RenderThread::waitIdle` 로 기다린다. 증상은 `registerBindlessResource 이(가) 병렬 패스 기록 중에…` 단언 · 크래시이고, 단언은 플래그를 경합으로 읽어 재현율이
+  바이너리마다 다르다(같은 실행이 0 · 100 %). 의심되면 `assertRegistryMutableNow` 에 콜스택을 파일로 남겨 본다(로거는 크래시 직전 줄을 잃는다).
 
 - **주의: DX12 `enqueueGpuRelease`(`_fenceValue`)** — 다른 스레드의 `waitForQueueDrain` 이 같은 값을 먼저 Signal 하면 기록 중인 프레임이 제출되기 전에 해제가 돌 수 있다.
   기존 DX12 해제 경로 전부에 해당한다(열린 일).
