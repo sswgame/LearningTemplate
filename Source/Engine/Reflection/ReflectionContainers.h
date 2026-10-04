@@ -162,6 +162,16 @@ namespace sw
         virtual void destroyKey( void* pPtr ) const = 0;
         /** @brief 값을 파괴합니다. */
         virtual void destroyValue( void* pPtr ) const = 0;
+        /**
+         * @brief @p pSrc 의 값을 @p pDst(만들어 둔 값)에 복사합니다. 복사할 줄 모르는 래퍼면 false 입니다.
+         * @details 키를 바꿔 다시 넣어야 하는 일(로드 묶음이 맵 키의 저장 id 를 이 실행의 id 로 옮긴다)이 값을 잠시 밖에 들고 있을 때 씁니다.
+         */
+        [[nodiscard]] virtual bool copyValue( void* pDst, const void* pSrc ) const
+        {
+            (void)pDst;
+            (void)pSrc;
+            return false;
+        }
     };
 } // namespace sw
 
@@ -576,7 +586,12 @@ namespace sw
         void defaultConstructValue( void* pPtr ) const override { sw_placement_new( pPtr ) ValueType{}; }
         void destroyKey( void* pPtr ) const override { static_cast<KeyType*>( pPtr )->~KeyType(); }
         /** @brief 값을 파괴합니다. */
-        void destroyValue( void* pPtr ) const override { static_cast<ValueType*>( pPtr )->~ValueType(); }
+        void               destroyValue( void* pPtr ) const override { static_cast<ValueType*>( pPtr )->~ValueType(); }
+        [[nodiscard]] bool copyValue( void* pDst, const void* pSrc ) const override
+        {
+            *static_cast<ValueType*>( pDst ) = *static_cast<const ValueType*>( pSrc );
+            return true;
+        }
     };
 } // namespace sw
 
@@ -661,7 +676,12 @@ namespace sw
         void defaultConstructValue( void* pPtr ) const override { sw_placement_new( pPtr ) ValueType{}; }
         void destroyKey( void* pPtr ) const override { static_cast<KeyType*>( pPtr )->~KeyType(); }
         /** @brief 값을 파괴합니다. */
-        void destroyValue( void* pPtr ) const override { static_cast<ValueType*>( pPtr )->~ValueType(); }
+        void               destroyValue( void* pPtr ) const override { static_cast<ValueType*>( pPtr )->~ValueType(); }
+        [[nodiscard]] bool copyValue( void* pDst, const void* pSrc ) const override
+        {
+            *static_cast<ValueType*>( pDst ) = *static_cast<const ValueType*>( pSrc );
+            return true;
+        }
     };
 
 } // namespace sw

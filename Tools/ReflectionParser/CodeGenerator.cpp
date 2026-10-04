@@ -296,9 +296,8 @@ namespace sw
                 const utf8* elementTypeMember = containerElementTypeMember( prevKind );
                 emit.linef( "using NestC%# = typename NestC%#::%#;", depth, depth - 1, elementTypeMember );
 
+                // 단계마다 블록으로 감싸지 않는다 — 다음 단계가 앞 단계의 `nested<n>` 에 자기를 잇는다(세 겹이면 블록 밖의 이름을 본다).
                 const string wrapperType = CodeGeneratorInternal::makeNestedWrapperType( node->_containerType, depth );
-                emit.line( "{" );
-                emit.push();
                 emit.linef( "auto nested%# = sw::make_shared<sw::NestedContainerInfo>();", depth );
                 emit.linef( "nested%#->_kind = %#;", depth, kind );
                 emit.linef( "nested%#->_typeName = %#;", depth, CodeEmit::hs( node->_typeName ) );
@@ -307,8 +306,6 @@ namespace sw
                 emit.linef( "nested%#->_keyTypeName = %#;", depth, CodeEmit::hs( node->_keyTypeName ) );
                 emit.linef( "nested%#->_wrapper = sw::make_shared<%#>();", depth, wrapperType );
                 emit.linef( "nested%#->_elementNested = nested%#;", depth - 1, depth );
-                emit.pop();
-                emit.line( "}" );
 
                 prevKind = node->_containerKind;
                 node     = ( node->_elementNested != nullptr ) ? node->_elementNested.get() : nullptr;

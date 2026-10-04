@@ -8,7 +8,10 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/array.h"
 #include "Core/Container/map.h"
+#include "Core/Container/set.h"
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
@@ -587,10 +590,56 @@ namespace sw
         vector<GameObjectHandle> _listTarget; ///< 옮긴다
 
         PROPERTY()
-        map<int32, GameObjectHandle> _mapSlotToTarget; ///< 옮기지 못한다 — 파일 상태면 비운다
+        map<int32, GameObjectHandle> _mapSlotToTarget; ///< 옮긴다(맵 값 — 제자리)
+
+        PROPERTY()
+        set<GameObjectHandle> _uniqueTarget; ///< 옮긴다(set — 빼고 다시 넣는다)
+
+        PROPERTY()
+        map<GameObjectHandle, int32> _mapTargetToScore; ///< 옮긴다(맵 키 — 값을 밖에 두고 다시 넣는다)
+
+        PROPERTY()
+        vector<vector<GameObjectHandle>> _listTargetRow; ///< 옮긴다(중첩 시퀀스)
+
+        PROPERTY()
+        map<string, vector<GameObjectHandle>> _mapGroupToTarget; ///< 옮긴다(맵 값의 시퀀스)
 
         PROPERTY()
         ComponentHandle _targetComponent; ///< 옮기지 못한다 — 파일 상태면 비운다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 직렬화가 덜 다루던 컨테이너 모양 — set · 정수 · 열거형 키 맵 · 맵 안의 set · 시퀀스 안의 맵 · 세 겹(`ReflectionSerializationTest`). */
+    REFLECT()
+    struct ContainerShapeActor
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        set<string> _uniqueTag;
+
+        PROPERTY()
+        unordered_set<int32> _uniqueId;
+
+        PROPERTY()
+        unordered_map<int32, string> _mapIdToName;
+
+        PROPERTY()
+        map<SampleStatus, int32> _mapStatusToCount;
+
+        PROPERTY()
+        map<string, set<int32>> _mapGroupToId;
+
+        PROPERTY()
+        vector<map<string, int32>> _listScoreTable;
+
+        PROPERTY()
+        unordered_map<string, vector<vector<int32>>> _mapNameToGrid;
+
+        PROPERTY()
+        int32 _after = 0; ///< 컨테이너 뒤의 칸 — 컨테이너를 읽다 스트림이 어긋나면 여기가 틀린다
     };
 } // namespace sw
 

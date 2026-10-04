@@ -308,6 +308,9 @@ if ( pTarget != nullptr ) { ... }
 - 에디터 되돌리기 · 플레이 세션 복원 · 핫 리로드는 오브젝트를 다시 만들 때 **같은 id 를 되살립니다**
   (`GameObjectManager::createGameObjectWithId`, `ObjectStateSerializer` 의 `ObjectIdentity`). 그래서 그 너머로도 핸들이 이어집니다.
 - objectId 는 프로세스 전체에서 하나로 셉니다(영속 이월이 같은 id 로 옮겨 심는다). 핸들은 자기를 만든 매니저(씬)에게 풉니다.
+- 저장한 상태를 읽는 묶음(`ObjectStateBatch`)은 `GameObjectHandle` 을 **어디에 들었든** 이 실행의 오브젝트로 옮깁니다 — 단일 값 · 시퀀스 원소(제자리) ·
+  set 원소 · 맵 키(빼고 다시 넣는다) · 맵 값 · 중첩 컨테이너(`remapContainerHandles`). 묶음에 없는 대상을 가리키던 핸들은 없음이 됩니다. `ComponentHandle` 은
+  옮길 표가 없어 파일 상태면 비우고 경고합니다(컨테이너를 원소로 든 set 도 같다).
 - 씬 파일의 엔티티는 **파일 id**(`<entity id="…">`, 유니티의 fileID 자리)를 듭니다. 런타임 objectId 와 다른 공간이고, 씬이
   런타임 id ↔ 파일 id 표를 들고 저장할 때마다 같은 값을 다시 씁니다. 프리팹 파일은 오브젝트 하나라 id 가 없습니다.
 
