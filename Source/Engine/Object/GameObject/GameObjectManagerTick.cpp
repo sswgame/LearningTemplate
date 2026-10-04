@@ -19,18 +19,6 @@ namespace sw
 {
     namespace
     {
-        /**
-         * @brief 이 스레드가 지금 틱하는 오브젝트입니다(`GameObjectManager::getTickingObject`). 오브젝트 그룹 틱 · 선행 조건 스테이지가 항목을 도는 동안 채웁니다.
-         * @details 두 길 모두 한 오브젝트의 항목을 동시에 한 스레드만 돈다(스테이지는 오브젝트별로 갈린다) — 그래서 그 오브젝트의 대기 칸에 잠금 없이 쓴다.
-         * @details 포인터라 초기화가 상수이고, TLS 접근에 감싸는 함수가 붙지 않습니다.
-         */
-        thread_local const GameObject* t_pTickingObject = nullptr;
-        /**
-         * @brief 이 스레드에서 지금 도는 틱의 주인 오브젝트입니다. 틱 밖에서는 nullptr 입니다. 두 틱 길(오브젝트 그룹 · 선행 조건 스테이지)이
-         *          모두 채웁니다. 다른 오브젝트에 쓴 건의 순서 키가 됩니다.
-         */
-        thread_local const GameObject* t_pTickWriter = nullptr;
-
         struct GameObjectManagerTickInternal
         {
             /** @brief 항목(오브젝트)이 이 수보다 적으면 나누지 않고 이 스레드가 돕니다. 디스패치 바닥보다 작은 일입니다. */
@@ -67,11 +55,11 @@ namespace sw
              *          뒤로 미뤄지며, 파괴는 컴포넌트마다 삭제 표시를 세웁니다 — 그래서 컴포넌트의 표시만 보면 됩니다. 언리얼 틱 함수가 대상
              *          컴포넌트만 보고 액터는 보지 않는 것과 같습니다(오브젝트를 읽으면 큐브 8000 개 프로파일에서 틱 CPU 의 절반이 이 루프다).
              */
-            static void tickEntry( float32 deltaTime, const TickObjectEntry& entry )
+            static void tickEntry( TickThreadState& threadState, float32 deltaTime, const TickObjectEntry& entry )
             {
                 // 이 오브젝트의 항목은 이 스레드만 돈다. 그동안 그 씬 컴포넌트의 세터는 칸에 바로 쓴다(`SceneComponent::writeTickTransform`).
-                t_pTickingObject = entry._pObject;
-                t_pTickWriter    = entry._pObject;
+                threadState._pTickingObject = entry._pObject;
+                threadState._pTickWriter    = entry._pObject;
                 runTickItemIfLive( deltaTime, entry._firstItem );
                 for ( uint32 index = 1; index < entry._itemCount; ++index )
                     runTickItemIfLive( deltaTime, entry._pItem[index] );
@@ -85,10 +73,11 @@ namespace sw
 
                 void tickRange( uint32 start, uint32 end )
                 {
+                    TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
                     for ( uint32 index = start; index < end; ++index )
-                        tickEntry( _deltaTime, _pEntry[index] );
-                    t_pTickingObject = nullptr;
-                    t_pTickWriter    = nullptr;
+                        tickEntry( threadState, _deltaTime, _pEntry[index] );
+                    threadState._pTickingObject = nullptr;
+                    threadState._pTickWriter    = nullptr;
                 }
             };
 
@@ -103,6 +92,7 @@ namespace sw
 
                 void tickRange( uint32 start, uint32 end )
                 {
+                    TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
                     for ( uint32 index = start; index < end; ++index )
                     {
                         const TickItem& item  = _pItem[index];
@@ -112,12 +102,12 @@ namespace sw
                         GameObject* pOwner = pComp->getOwner();
                         if ( pOwner == nullptr || pOwner->isPendingDestroy() )
                             continue;
-                        t_pTickingObject = pOwner;
-                        t_pTickWriter    = pOwner;
+                        threadState._pTickingObject = pOwner;
+                        threadState._pTickWriter    = pOwner;
                         runTickItem( _deltaTime, item );
                     }
-                    t_pTickingObject = nullptr;
-                    t_pTickWriter    = nullptr;
+                    threadState._pTickingObject = nullptr;
+                    threadState._pTickWriter    = nullptr;
                 }
             };
         };
@@ -153,7 +143,7 @@ namespace sw
         constexpr uint32 kPostPhysicsGroup = static_cast<uint32>( TickGroup::PostPhysics );
         if ( _listGameObject.empty() == false )
             tickComponentsPhase( deltaTime, 0, kPostPhysicsGroup );
-        applyTickResults();
+        _structuralChangeBuffer.drain( *this );
 
         // 애니메이션 — 틱이 정한 파라미터로 포즈 · 스킨 팔레트를 만들고, 루트 모션을 트랜스폼(또는 캐릭터 컨트롤러)에 쓴다. 물리 **앞**이다 —
         // 키네마틱 히트박스(래그돌)가 이번 프레임 포즈를 쫓고, 래그돌의 바디 자세는 물리 뒤에 읽혀 다음 포즈에 섞인다.
@@ -173,7 +163,7 @@ namespace sw
 
         if ( _listGameObject.empty() == false )
             tickComponentsPhase( deltaTime, kPostPhysicsGroup, TickRegistry::kGroupCount );
-        applyTickResults();
+        _structuralChangeBuffer.drain( *this );
         if ( hasDirtySceneTransforms() )
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.flushTransformsEnd" );
@@ -187,30 +177,6 @@ namespace sw
         }
     }
 
-    void GameObjectManager::applyTickResults()
-    {
-        // 지연된 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성)을 **부른 순서대로** 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.deferredTransforms" );
-            _deferredStructuralQueue.drain();
-        }
-
-        // 틱 중의 세터가 쓴 것(대기 칸 · 쓰기 큐)을 적용한다. 구조 변경(위의 지연 attach · detach)이 끝난 뒤라 부모 사슬이 안정됐다.
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.queuedTransforms" );
-            _transformHierarchy.applyTickWrites( *this, _primitiveRegistry );
-        }
-
-        // 병렬 onTick 이 미룬 스폰 · 데미지 · 태그, 그리고 그것이 만든 오브젝트의 병합.
-        {
-            SW_PROFILE_SCOPE( "GT.Scene.tick.postTick" );
-            _deferredPostTickQueue.drain();
-            mergePendingAdds();
-            // 틱이 만든 것(스폰)은 같은 프레임 안에 시작한다.
-            dispatchPendingBeginPlay();
-        }
-    }
-
     void GameObjectManager::tickComponentsPhase( float32 deltaTime, uint32 firstGroup, uint32 endGroup )
     {
         {
@@ -220,9 +186,7 @@ namespace sw
 
         // 틱 중의 세터가 쓸 대기 칸 목록 · 쓰기 큐를 슬롯 수만큼 미리 잡아 둔다(워커는 자기 칸만 만진다).
         _transformHierarchy.beginTickWrites();
-        // 지난 단계의 구조 변경 큐는 `applyTickResults` 가 비웠다 — 이번 단계의 계층 변경 미룸을 새로 센다.
-        _bDeferredHierarchyChange.store( SW_FALSE, std::memory_order_relaxed );
-        _bTicking.store( true, std::memory_order_release );
+        _structuralChangeBuffer.freeze();
 
         {
             // **씬 틱은 자기가 낸 일만 기다린다.** 틱의 병렬 일은 `runParallel` 이 합류까지 기다린다. 주의: `TaskManager::waitAll()` 은
@@ -232,7 +196,7 @@ namespace sw
             tickComponents( deltaTime, firstGroup, endGroup );
         }
 
-        _bTicking.store( false, std::memory_order_release );
+        _structuralChangeBuffer.thaw();
     }
 
     void GameObjectManager::tickComponents( float32 deltaTime, uint32 firstGroup, uint32 endGroup )
@@ -283,7 +247,7 @@ namespace sw
     {
         // 부른 순서: 계층 변경(attach · detach)이 이번 단계에서 미뤄졌으면 그 뒤에 부른 쓰기는 그 변경 **뒤에** 적용돼야 한다(`KeepWorld` 는
         // 붙이기 전 월드에서 로컬을 다시 구한다). 구조 변경은 단계 끝에서만 돌므로, 그때부터는 쓰기도 단계 끝까지 둔다.
-        if ( _bDeferredHierarchyChange.load( std::memory_order_relaxed ) != SW_FALSE )
+        if ( _structuralChangeBuffer.hasDeferredHierarchyChange() )
             return;
         SW_PROFILE_SCOPE( "GT.Scene.tick.stageTransforms" );
         ++_stageTransformApplyCount;
@@ -292,14 +256,6 @@ namespace sw
         _transformHierarchy.applyTickWrites( *this, _primitiveRegistry );
         if ( hasDirtySceneTransforms() )
             flushSceneTransforms();
-    }
-
-    void GameObjectManager::deferHierarchyChange( StructuralChangeDelegate func )
-    {
-        // "하나라도" 플래그 — 이미 서 있으면 쓰지 않는다(워커가 공유 칸에 거듭 쓰지 않게).
-        if ( _bDeferredHierarchyChange.load( std::memory_order_relaxed ) == SW_FALSE )
-            _bDeferredHierarchyChange.store( SW_TRUE, std::memory_order_relaxed );
-        deferStructuralChange( std::move( func ) );
     }
 
     void GameObjectManager::stepPhysics( float32 deltaTime )
@@ -317,15 +273,11 @@ namespace sw
         return _transformHierarchy.applyBatch( *this, pWrite, count );
     }
 
-    const GameObject* GameObjectManager::getTickingObject()
-    {
-        return t_pTickingObject;
-    }
-
     void GameObjectManager::queueTransformWrite( const SceneTransformWrite& write )
     {
-        // 순서 키는 이 쓰기를 낸 틱의 주인 오브젝트다(`t_pTickWriter`) — 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 id 가 큰 쪽이 이긴다.
-        const uint64 writerId = ( t_pTickWriter != nullptr ) ? t_pTickWriter->getObjectId() : 0;
+        // 순서 키는 이 쓰기를 낸 틱의 주인 오브젝트다 — 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 id 가 큰 쪽이 이긴다.
+        const GameObject* pTickWriter = StructuralChangeBuffer::getTickWriter();
+        const uint64      writerId    = ( pTickWriter != nullptr ) ? pTickWriter->getObjectId() : 0;
         if ( _transformHierarchy.queueWriteParallel( write, writerId ) )
             return;
 
@@ -335,26 +287,6 @@ namespace sw
         {
             _transformHierarchy.applyBatch( *this, &write, 1 );
         } );
-    }
-
-    void GameObjectManager::deferStructuralChange( StructuralChangeDelegate func )
-    {
-        _deferredStructuralQueue.push( std::move( func ) );
-    }
-
-    void GameObjectManager::deferPostTick( PostTickDelegate func )
-    {
-        _deferredPostTickQueue.push( std::move( func ) );
-    }
-
-    void GameObjectManager::executeOrDeferPostTick( PostTickDelegate func )
-    {
-        if ( func.isBound() == false )
-            return;
-        if ( isStructuralMutationFrozen() )
-            deferPostTick( std::move( func ) );
-        else
-            func();
     }
 
     void GameObjectManager::registerRootSceneComponent( SceneComponent* pComp )

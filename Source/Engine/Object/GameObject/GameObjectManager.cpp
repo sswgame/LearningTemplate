@@ -116,9 +116,7 @@ namespace sw
         , _listProcessingDestroyComponent{}
         , _mutex{}
         , _overlapWorld2D{}
-        , _bTicking{ false }
         , _bProcessingDestruction{ false }
-        , _bDeferredHierarchyChange{ SW_FALSE }
         , _stageTransformApplyCount{ 0 }
         , _tickStageBuildCount{ 0 }
         , _listPlayWalk{}
@@ -126,8 +124,7 @@ namespace sw
         , _beginPlayMutex{}
         , _listPendingBeginPlay{}
         , _listProcessingBeginPlay{}
-        , _deferredStructuralQueue{}
-        , _deferredPostTickQueue{}
+        , _structuralChangeBuffer{}
         , _transformHierarchy{}
         , _primitiveRegistry{}
         , _lightRegistry{}
@@ -638,8 +635,7 @@ namespace sw
                 _listPendingBeginPlay.clear();
             }
 
-            _deferredStructuralQueue.clear();
-            _deferredPostTickQueue.clear();
+            _structuralChangeBuffer.clear();
 
             _listGameObject.clear();
             _listPendingAdd.clear();

@@ -22,13 +22,13 @@
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
-#include "Engine/Object/GameObject/DeferredDelegateQueue.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/SceneAudio.h"
 #include "Engine/Object/GameObject/SceneOverlapWorld2D.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
+#include "Engine/Object/GameObject/StructuralChangeBuffer.h"
 #include "Engine/Object/GameObject/TickRegistry.h"
 
 namespace sw
@@ -41,6 +41,7 @@ namespace sw
     class SW_API GameObjectManager
     {
         friend class GameObject;
+        friend class StructuralChangeBuffer; ///< `drain` 이 틱 뒤 시작 줄(`dispatchPendingBeginPlay`)을 돌린다
 
     public:
         /** @brief 엔진과 모듈의 컴포넌트 팩토리를 등록하며 만듭니다. 오브젝트는 없는 채로 시작합니다. */
@@ -210,25 +211,23 @@ namespace sw
         /**
          * @brief 컴포넌트 틱 중이면 true 입니다. 이때 구조 변경(GameObject 생성 · addComponent · attach · detach)은 미뤄지고,
          *        트랜스폼은 읽기 전용이라 세터가 쓰기 큐로 갑니다.
-         * @details 구조 동결과 트랜스폼 읽기 전용은 같은 구간이라 플래그 하나(`_bTicking`)가 둘 다 답합니다.
+         * @details 구조 동결과 트랜스폼 읽기 전용은 같은 구간이라 플래그 하나가 둘 다 답합니다(`StructuralChangeBuffer::isFrozen`).
          */
-        bool isStructuralMutationFrozen() const { return _bTicking.load( std::memory_order_acquire ); }
+        bool isStructuralMutationFrozen() const { return _structuralChangeBuffer.isFrozen(); }
 
-        using StructuralChangeDelegate = DeferredDelegateQueue::Callback;
-        using PostTickDelegate         = DeferredDelegateQueue::Callback;
+        using StructuralChangeDelegate = StructuralChangeBuffer::Callback;
+        using PostTickDelegate         = StructuralChangeBuffer::Callback;
 
         /**
          * @brief 틱 중의 구조 변경(컴포넌트 추가 · 부착 · 떼기 · 태그 · 활성)을 **부른 순서대로** 지연 큐에 넣습니다. 틱 직후 가장 먼저 돕니다.
-         * @details 구조 변경은 이 큐 하나다. 주의: 종류마다 큐를 나누면 틱 안에서 씬 컴포넌트를 붙이고(미뤄짐) 이어 부모에 붙일 때 부착이
-         *          먼저 돌아 붙일 씬 컴포넌트가 없고, 오브젝트는 루트로 남는다.
+         * @details 구조 변경은 이 큐 하나다(`StructuralChangeBuffer` 머리말의 주의).
          */
-        void deferStructuralChange( StructuralChangeDelegate func );
+        void deferStructuralChange( StructuralChangeDelegate func ) { _structuralChangeBuffer.deferStructuralChange( std::move( func ) ); }
         /**
          * @brief 틱 중의 계층 변경(attach · detach)을 구조 변경 큐에 넣고, 이번 단계에 계층 변경이 미뤄졌다고 적습니다.
-         * @details 그 뒤로는 스테이지 경계의 트랜스폼 적용(`applyStageTransforms`)을 하지 않습니다 — 미룬 계층 변경보다 뒤에 부른 쓰기가
-         *          그 변경보다 먼저 적용되면 `KeepWorld` 부착이 쓴 로컬 값을 다시 구해 덮는다(규칙: 구조 변경 뒤에 쓰기).
+         * @details 그 뒤로는 스테이지 경계의 트랜스폼 적용(`applyStageTransforms`)을 하지 않습니다(`StructuralChangeBuffer::deferHierarchyChange`).
          */
-        void deferHierarchyChange( StructuralChangeDelegate func );
+        void deferHierarchyChange( StructuralChangeDelegate func ) { _structuralChangeBuffer.deferHierarchyChange( std::move( func ) ); }
 
         /**
          * @brief 병렬 틱 중의 트랜스폼 쓰기 한 건을 슬롯 큐에 올립니다. 세터가 `isStructuralMutationFrozen()` 일 때 부릅니다.
@@ -242,19 +241,19 @@ namespace sw
          * @details 씬 컴포넌트의 세터가 "내 오브젝트를 틱하는 스레드인가" 를 묻습니다. 그렇다면 한 오브젝트의 항목은 동시에 한 워커만 도므로
          *          칸의 대기 자리에 잠금 없이 바로 쓰고, 아니면(다른 오브젝트의 컴포넌트) 쓰기 큐로 갑니다.
          */
-        static const GameObject* getTickingObject();
+        static const GameObject* getTickingObject() { return StructuralChangeBuffer::getTickingObject(); }
 
         /**
          * @brief 병렬 틱이 끝난 뒤 메인 스레드에서 실행할 작업을 넣습니다.
          * @details GameObject 생성 · addComponent · 데미지 · 태그 변경 같은 구조 · 공유 상태 변경에 씁니다.
          */
-        void deferPostTick( PostTickDelegate func );
+        void deferPostTick( PostTickDelegate func ) { _structuralChangeBuffer.deferPostTick( std::move( func ) ); }
 
         /**
          * @brief 구조 변경이 얼어 있으면 deferPostTick 으로 미루고, 아니면 바로 실행합니다.
          * @details createGameObject + addComponent + 초기화를 한 람다로 묶을 때 씁니다.
          */
-        void executeOrDeferPostTick( PostTickDelegate func );
+        void executeOrDeferPostTick( PostTickDelegate func ) { _structuralChangeBuffer.executeOrDeferPostTick( std::move( func ) ); }
 
         /** @brief SceneComponent 가 루트가 됐음을 트랜스폼 계층에 알립니다(더티면 플러시 목록에 오릅니다). */
         void registerRootSceneComponent( SceneComponent* pComp );
@@ -428,8 +427,6 @@ namespace sw
          *        오브젝트가 있을 때만 돕니다. 물리 앞(PrePhysics · DuringPhysics)과 뒤(PostPhysics · PostUpdate)에 한 번씩 불립니다.
          */
         void tickComponentsPhase( float32 deltaTime, uint32 firstGroup, uint32 endGroup );
-        /** @brief 틱이 남긴 것을 적용합니다 — 지연 구조 변경 → 틱 쓰기 → 틱 뒤 큐 · 병합 · 시작(게임 스레드, 틱 밖). 물리 앞 · 프레임 끝에 한 번씩. */
-        void applyTickResults();
         /**
          * @brief 선행 조건 스테이지 사이(게임 스레드, 동결 중)에서 그때까지 쌓인 틱 중 트랜스폼 쓰기를 적용하고 플러시합니다.
          * @details 기다리는 항목이 있는 스테이지 앞에서만 불립니다(`TickStage::_bApplyBefore`). 구조 변경 · 틱 뒤 큐는 그대로 단계 끝이고,
@@ -576,9 +573,7 @@ namespace sw
          */
         void stepPhysics( float32 deltaTime );
 
-        atomic<bool>            _bTicking;                 ///< 컴포넌트 틱 중(`isStructuralMutationFrozen`)
         bool                    _bProcessingDestruction;   ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다
-        atomic<uint8>           _bDeferredHierarchyChange; ///< 이번 단계에 계층 변경이 미뤄졌는지 — 그 뒤로는 스테이지 경계 적용을 하지 않는다
         uint32                  _stageTransformApplyCount; ///< 스테이지 경계 적용 횟수(진단)
         atomic<uint32>          _tickStageBuildCount;      ///< 등록부가 항목을 다시 지은 틱의 수(진단)
         vector<GameObject*>     _listPlayWalk;             ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)
@@ -586,8 +581,8 @@ namespace sw
         mutex                   _beginPlayMutex;           ///< 시작 줄을 지킵니다(비동기 씬 로드는 워커에서 붙입니다)
         vector<ComponentHandle> _listPendingBeginPlay;     ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
         vector<ComponentHandle> _listProcessingBeginPlay;  ///< 도는 중인 시작 줄(할당 재사용)
-        DeferredDelegateQueue   _deferredStructuralQueue;  ///< 틱이 미룬 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성), 부른 순서. 틱 직후 가장 먼저 돈다
-        DeferredDelegateQueue   _deferredPostTickQueue;    ///< 틱이 미룬 스폰 · 데미지 · 태그(`deferPostTick`)
+        /** @brief 틱 중 규칙(동결 플래그 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
+        StructuralChangeBuffer _structuralChangeBuffer;
 
         /** @brief 트랜스폼 계층입니다. PhysicsWorld 처럼 매니저가 소유만 합니다. */
         SceneTransformHierarchy _transformHierarchy;

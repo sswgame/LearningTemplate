@@ -955,7 +955,7 @@ cd build/Ninja-Debug/Bin
   `getAllGameObjects( out )`. 컴포넌트 목록을 범위 for 로 도는 중에 붙이면 반복자가 풀린다 — 인덱스로. 콜백이 형제를 지울 수 있는 걷기는 핸들로 모으고 매번 다시 푼다.
   소멸자에서 미루는 경로를 타지 말 것(`~SceneComponent` 는 `detachFromParentImmediate()`).
 - **`tick()` 에서 `TaskManager::waitAll()` 을 부르지 말 것** — 렌더 기록 · 스트리밍 · 오디오까지 기다린다. 자기 스테이지를 `waitStage` 로.
-- **`finishTick` 순서**: 병렬 읽기 해제 → `_bTicking=false` → 지연 트랜스폼 → 지연 포스트틱 → `mergePendingAdds` → dirty 면 재 flush → 지연 파괴.
+- **틱 뒤 적용 순서는 `StructuralChangeBuffer::drain` 하나가 갖는다**: 동결 해제 → 구조 변경(부른 순서) → 틱 중 트랜스폼 쓰기 → 틱 뒤 큐 → `mergePendingAdds` → 시작 줄. 그 뒤 dirty 면 재 flush → 지연 파괴. 큐마다 자기 시점에 비우게 나누지 말 것.
 - **컴포넌트 해체는 `destroyComponentInstance` 한 곳이고 `removeComponent` 는 순서를 지킨다**(swap-remove 금지 — 첫 일치 · primary · 안정 키가 순서에 기댄다). 컴포넌트는 `_pPool`
   (나온 풀)과 `_pTypeInfo` 를 든다 — 이름표 `_componentName` 은 런타임 라벨일 뿐이라 조회 키로 쓰면 안 된다(Shipping 에서만 힙이 깨졌다). 풀 키는 FQN 이다. 컴포넌트는 풀에서
   제자리에 생기므로 이동 연산을 되살리지 말 것. 멤버 없는 파생 컴포넌트도 `REFLECT_BODY` 가 필요하다.

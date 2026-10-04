@@ -40,6 +40,7 @@ Object/
 │  ├─ GameObjectManager.cpp     # 수명: 생성 · 이름 · id 표 · 조회 · 파괴 · 이름으로 컴포넌트 만들기(TypeInfo 의 생성 함수)
 │  ├─ GameObjectManagerTick.cpp # 프레임: tick 의 단계 · 병렬 틱 디스패치 · 트랜스폼 배치/큐 · 지연 큐
 │  ├─ TickRegistry.*            # 틱 등록부 — 오브젝트별 항목 · 그룹 목록 · 선행 종속성 스테이지
+│  ├─ StructuralChangeBuffer.*  # 틱 중 규칙(DOTS ECB 자리) — 동결 플래그 하나 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서(`drain`) · 스레드별 틱 상태
 │  ├─ DeferredDelegateQueue.*   # 틱이 미룬 일(계층 변경 · 틱 뒤 작업)의 큐 — 넣기는 아무 스레드, 비우기는 게임 스레드
 │  ├─ PrimitiveRegistry.* · LightRegistry.*  # 빛 등록부는 종류(방향광 · 점광 · 스포트)마다 칸 하나
 │  ├─ CameraRegistry.*          # 카메라 등록부 + 역할 · 우선순위 선택 규칙 하나(게임 · 에디터 카메라가 같이 쓴다)
@@ -81,9 +82,9 @@ Object/
 ```mermaid
 flowchart TD
   A[메인 스레드 작업 처리<br/>지연 삭제 병합] --> B[씬 트랜스폼 flush<br/>월드 좌표 스냅샷]
-  B --> C[_bTicking = true<br/>구조 변경 동결]
+  B --> C[StructuralChangeBuffer::freeze<br/>구조 변경 동결]
   C --> D[컴포넌트 onTick<br/>병렬 실행]
-  D --> E[_bTicking = false<br/>동결 해제]
+  D --> E[StructuralChangeBuffer::thaw<br/>동결 해제]
   E --> E2[구조 변경 큐 실행 — 부른 순서<br/>addComponent·attach·detach·태그·활성]
   E2 --> F[틱 중 쓰기 큐 적용<br/>슬롯별 트랜스폼 쓰기 배치]
   F --> G[deferPostTick 실행<br/>스폰·데미지 등]
