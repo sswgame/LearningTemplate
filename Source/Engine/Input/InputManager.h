@@ -36,6 +36,18 @@ namespace sw
     };
 
     /**
+     * @brief 키보드(키 조회 · 글자 입력)를 지금 누가 받는지입니다.
+     * @details `Game` 이 아니면 게임 쪽 조회(`InputManager::isKeyDown` · 통합 InputMap 의 키보드 바인딩)는 "안 눌림" 이고, 글자는 그 주인의
+     *          콜백에만 갑니다. 장치 상태는 계속 갱신됩니다.
+     */
+    enum class InputKeyboardFocus : uint8
+    {
+        Game = 0,   ///< 게임 코드 · 통합 InputMap
+        DevConsole, ///< 게임 창의 개발 콘솔(열려 있는 동안)
+        Count
+    };
+
+    /**
      * @class InputManager
      * @brief 다형 IInputDevice 들을 등록 · 관리하고, 락프리 원시 이벤트 큐로 OS 메시지를 프레임에 맞추는 중앙 허브입니다.
      * @details 모듈이 단 콜백(장치 변경 · 게임패드 연결 · 글자 입력 · 조합)과 모듈이 등록한 장치를 드므로 `IModuleUnloadListener` 입니다 — 모듈 이미지를
@@ -107,8 +119,20 @@ namespace sw
         void            setActiveGlyphStyle( InputGlyphStyle type );
         void            setActiveDeviceChangedCallback( ActiveDeviceChangedDelegate callback ) { _onActiveDeviceChanged = std::move( callback ); }
         void            setGamepadConnectionCallback( GamepadConnectionDelegate callback ) { _onGamepadConnectionChanged = std::move( callback ); }
-        void            setTextInputCallback( TextInputDelegate callback ) { _onTextInput = std::move( callback ); }
-        void            setTextCompositionCallback( TextInputDelegate callback ) { _onTextComposition = std::move( callback ); }
+        /** @brief 키보드 포커스가 @p owner 일 때 오는 글자(UTF-8)를 받을 콜백을 겁니다. 주인마다 하나입니다(다시 걸면 덮어씁니다). */
+        void setTextInputCallback( TextInputDelegate callback, InputKeyboardFocus owner = InputKeyboardFocus::Game );
+        /** @brief 키보드 포커스가 @p owner 일 때 오는 조합 중 글자(IME)를 받을 콜백을 겁니다. */
+        void setTextCompositionCallback( TextInputDelegate callback, InputKeyboardFocus owner = InputKeyboardFocus::Game );
+
+        /**
+         * @brief 키보드를 받을 쪽을 바꿉니다(개발 콘솔이 열고 닫을 때).
+         * @details 포커스가 `Game` 이 아닌 동안 눌린 키는 포커스가 돌아온 뒤에도 뗄 때까지 게임에 보이지 않습니다 — 콘솔을 닫은 Esc 가 다음 프레임
+         *          게임의 "일시정지" 로 새지 않게 합니다. 포커스를 넘기기 전부터 눌려 있던 키(달리던 W)는 돌아오면 다시 보입니다.
+         */
+        void               setKeyboardFocus( InputKeyboardFocus focus );
+        InputKeyboardFocus getKeyboardFocus() const { return _keyboardFocus; }
+        /** @brief 게임 쪽 조회가 이 키를 볼 수 있으면 true 입니다 — 포커스가 `Game` 이고, 다른 포커스 동안 눌려 아직 떼지 않은 키가 아닙니다. */
+        bool isKeyVisibleToGame( Key key ) const;
 
         /** @brief 언로드 리스너 목록의 이름입니다. */
         const utf8* getModuleUnloadListenerName() const override { return "input callbacks"; }
@@ -131,9 +155,10 @@ namespace sw
         //    가로 휠, 원시 델타, 잠금 모드 읽기)는 장치가 답한다: `getMouse()->setSmoothing()`.
         //    같은 답을 두 이름으로 내지 않는다(마우스 API 를 여기 복제하지 않는다).
         // ------------------------------------------------------------------------------
-        bool isKeyDown( Key key ) const { return _pKeyboard != nullptr ? _pKeyboard->isKeyDown( key ) : false; }
-        bool wasKeyPressed( Key key ) const { return _pKeyboard != nullptr ? _pKeyboard->wasKeyPressed( key ) : false; }
-        bool wasKeyReleased( Key key ) const { return _pKeyboard != nullptr ? _pKeyboard->wasKeyReleased( key ) : false; }
+        // 키 셋은 키보드 포커스를 따른다(`isKeyVisibleToGame`). 포커스와 상관없는 장치 상태는 `getKeyboard()` 가 답한다.
+        bool isKeyDown( Key key ) const { return _pKeyboard != nullptr && isKeyVisibleToGame( key ) && _pKeyboard->isKeyDown( key ); }
+        bool wasKeyPressed( Key key ) const { return _pKeyboard != nullptr && isKeyVisibleToGame( key ) && _pKeyboard->wasKeyPressed( key ); }
+        bool wasKeyReleased( Key key ) const { return _pKeyboard != nullptr && isKeyVisibleToGame( key ) && _pKeyboard->wasKeyReleased( key ); }
 
         bool isMouseButtonDown( MouseButton button ) const { return _pMouse != nullptr ? _pMouse->isButtonDown( button ) : false; }
         bool wasMouseButtonPressed( MouseButton button ) const { return _pMouse != nullptr ? _pMouse->wasButtonPressed( button ) : false; }
@@ -232,8 +257,13 @@ namespace sw
         void recenterLockedCursorPlatform();
         /** @brief 음소거와 상관없이 큐에 넣습니다. 포커스 · 포인터 진입 같은 **창 상태** 알림용입니다(입력이 아니다). */
         bool postWindowStateEvent( const RawInputEvent& rawEvent );
+        /** @brief 포커스가 `Game` 이 아닐 때 눌려 지금은 떼어진 키를 가림에서 풉니다(프레임 시작, 이벤트 적용 전). */
+        void releaseCapturedKeys();
 
     private:
+        static constexpr size_t kKeyboardFocusCount = static_cast<size_t>( InputKeyboardFocus::Count );
+        static constexpr size_t kKeyMaskWordCount   = ( static_cast<size_t>( Key::Count ) + 63 ) / 64;
+
         ConcurrentQueue<RawInputEvent, 2048> _queueRawEvent;        /**< OS · 폴러 스레드가 postRawEvent() 로 넣는 락프리 원시 이벤트 큐. beginFrame() 이 매 프레임 비움. */
         atomic<uint32>                       _droppedRawEventCount; /**< 큐가 가득 차 버린 원시 이벤트 수 누적. beginFrame() 에서 요약 로그를 남기고 0 으로 리셋. */
         vector<unique_ptr<IInputDevice>>     _listDevice;           /**< 등록된 모든 장치(키보드 · 마우스 · 게임패드 등)의 소유 목록. */
@@ -246,8 +276,11 @@ namespace sw
         InputGlyphStyle                      _activeGlyphStyle;     /**< 마지막으로 조작이 감지된 장치 종류(UI 글리프 자동 전환용). */
         ActiveDeviceChangedDelegate          _onActiveDeviceChanged;
         GamepadConnectionDelegate            _onGamepadConnectionChanged;
-        TextInputDelegate                    _onTextInput;
-        TextInputDelegate                    _onTextComposition;
+        TextInputDelegate                    _arrOnTextInput[kKeyboardFocusCount];       /**< 키보드 포커스 주인마다 글자 콜백. */
+        TextInputDelegate                    _arrOnTextComposition[kKeyboardFocusCount]; /**< 키보드 포커스 주인마다 조합 중 글자 콜백. */
+        uint64                               _arrCapturedKeyMask[kKeyMaskWordCount];     /**< 포커스가 `Game` 이 아닐 때 눌려 게임에 가린 키(뗀 다음 프레임에 풀린다). */
+        InputKeyboardFocus                   _keyboardFocus;                             /**< 지금 키보드를 받는 쪽. */
+        [[maybe_unused]] uint16              _pendingHighSurrogate;                      /**< 짝을 기다리는 서로게이트 앞 반쪽(Win32 WM_CHAR). 0 이면 없음. */
         uint8                                _bInitialized : 1;
         uint8                                _bInputMuted  : 1;
         [[maybe_unused]] uint8               _reserved     : 6;

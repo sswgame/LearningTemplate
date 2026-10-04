@@ -43,8 +43,15 @@ namespace sw
         , _listFrameEvent3D{}
         , _listFrameEvent2D{}
         , _stepCount{ 0 }
+        , _debrisBodyCount{ 0 }
         , _bConfigured{ false }
     {
+    }
+
+    void ScenePhysics::changeDebrisBodyCount( int32 delta )
+    {
+        const int64 count = static_cast<int64>( _debrisBodyCount ) + delta;
+        _debrisBodyCount  = count > 0 ? static_cast<uint32>( count ) : 0u;
     }
 
     ScenePhysics::~ScenePhysics()

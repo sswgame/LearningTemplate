@@ -19,7 +19,7 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 	SwInstanceData instance = swLoadInstance(input.instanceSlot);
 	float3 localPosition;
 	float3 localNormal;
-	swLoadMorphedVertex(instance.meshBatchIndex, vertexId, input.position, input.normal, localPosition, localNormal);
+	swLoadAnimatedVertex(instance, vertexId, input.position, input.normal, localPosition, localNormal);
 	float4x4 world = instance.world;
 	// 위치는 깊이 프리패스와 **같은 함수**로 만든다(binding.hlsli swComputeWorldPosition).
 	float4 worldPosition = swComputeWorldPosition(localPosition, world);

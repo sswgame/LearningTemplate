@@ -7,6 +7,7 @@
 
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Utility/Xml/XmlNameCheck.h"
 
 #include "GameFramework/Data/GameDataXml.h"
 
@@ -40,26 +41,11 @@ namespace sw
                 bool operator()( const BlendCurveKey& lhs, const BlendCurveKey& rhs ) const { return lhs._time < rhs._time; }
             };
 
-            template <size_t Count>
-            static bool isKnownName( const utf8* pName, const utf8* const ( &arrKnown )[Count] )
-            {
-                for ( const utf8* pKnown : arrKnown )
-                {
-                    if ( StringUtil::equals( pName, pKnown, true ) )
-                        return true;
-                }
-                return false;
-            }
-
             /** @brief 표에 없는 속성마다 경고합니다 — 이름을 바꾸고 데이터를 빠뜨리면 조용히 기본값이 되는 것을 막는다. */
             template <size_t Count>
             static void warnUnknownAttributes( const XmlNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
             {
-                for ( XmlAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-                {
-                    if ( isKnownName( attribute.getName(), arrKnown ) == false )
-                        SW_LOG_WARNING( "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), attribute.getName() );
-                }
+                (void)XmlNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning ); // 경고만 하고 읽기를 잇는다
             }
 
             static float32 readDegrees( const XmlNode& node, const utf8* pName, float32 fallbackRadians )

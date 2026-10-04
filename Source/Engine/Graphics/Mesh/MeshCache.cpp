@@ -3,7 +3,6 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
@@ -12,6 +11,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
+#include "Engine/Resource/WeakInternTable.h"
 
 namespace sw
 {
@@ -21,40 +21,38 @@ namespace sw
     {
         struct MeshCacheInternal
         {
-            /** @brief 공유 표 하나입니다. 경로 → 약한 참조, 그리고 이미 경고한 경로. 잠금과 함께 둡니다. */
-            struct SharedTable
+            /** @brief 이미 경고한 경로입니다. 잠금과 함께 둡니다. */
+            struct WarnedPathSet
             {
-                mutex                                 _mutex;
-                unordered_map<string, weak_ptr<Mesh>> _mapMesh;
-                unordered_set<string>                 _uniqueWarnedPath;
+                mutex                 _mutex;
+                unordered_set<string> _uniquePath;
             };
 
-            /** @brief 프로세스에 하나인 공유 표입니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않습니다). */
-            static SharedTable& getSharedTable()
+            /** @brief 프로세스에 하나인 공유 표입니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않습니다). 경로 → 약한 참조. */
+            static WeakInternTable<string, Mesh>& getSharedTable()
             {
-                static SharedTable s_table;
+                static WeakInternTable<string, Mesh> s_table;
                 return s_table;
+            }
+
+            static WarnedPathSet& getWarnedPathSet()
+            {
+                static WarnedPathSet s_set;
+                return s_set;
             }
 
             /** @brief 표의 키입니다. 리소스 id 는 소문자로 찾으므로(`normalizePath`) 핫 리로드가 넘긴 철자도 같은 칸에 닿습니다. */
             static string makeKey( string_view path ) { return FileUtil::normalizePath( path ); }
 
             /** @brief 그 경로를 지금 쥔 메시입니다. 없으면 nullptr 입니다. */
-            static shared_ptr<Mesh> findLive( string_view path )
-            {
-                SharedTable&            table = getSharedTable();
-                const string            key   = makeKey( path );
-                std::scoped_lock<mutex> lock{ table._mutex };
-                const auto              it = table._mapMesh.find( key );
-                return ( it != table._mapMesh.end() ) ? it->second.lock() : nullptr;
-            }
+            static shared_ptr<Mesh> findLive( string_view path ) { return getSharedTable().findLive( makeKey( path ) ); }
 
             /** @brief 읽지 못한 경로를 처음 한 번만 경고합니다. */
             static void warnLoadFailureOnce( string_view path )
             {
-                SharedTable&            table = getSharedTable();
-                std::scoped_lock<mutex> lock{ table._mutex };
-                if ( table._uniqueWarnedPath.insert( makeKey( path ) ).second )
+                WarnedPathSet&          warned = getWarnedPathSet();
+                std::scoped_lock<mutex> lock{ warned._mutex };
+                if ( warned._uniquePath.insert( makeKey( path ) ).second )
                     SW_LOG_WARNING( "Mesh asset '%#' could not be loaded - nothing is drawn for it", path );
             }
         };
@@ -87,22 +85,10 @@ namespace sw
         loaded->setVertices( std::move( data._listVertex ) );
         if ( data._skinBoneCount > 0 )
             loaded->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
+        if ( data._listMorphTarget.empty() == false )
+            loaded->setMorphTargets( std::move( data._listMorphTarget ) );
 
-        MeshCacheInternal::SharedTable& table = MeshCacheInternal::getSharedTable();
-        std::scoped_lock<mutex>         lock{ table._mutex };
-        for ( auto iter = table._mapMesh.begin(); iter != table._mapMesh.end(); )
-        {
-            if ( iter->second.expired() )
-                iter = table._mapMesh.erase( iter );
-            else
-                ++iter;
-        }
-        weak_ptr<Mesh>&  slot   = table._mapMesh[MeshCacheInternal::makeKey( path )];
-        shared_ptr<Mesh> winner = slot.lock();
-        if ( winner != nullptr )
-            return winner;
-        slot = loaded;
-        return loaded;
+        return MeshCacheInternal::getSharedTable().insertOrGetLive( MeshCacheInternal::makeKey( path ), std::move( loaded ) );
     }
 
     bool MeshCache::reloadShared( string_view path, IRHIDevice* pDevice )
@@ -126,6 +112,7 @@ namespace sw
             pDevice->waitIdle();
         live->setVertices( std::move( data._listVertex ) );
         live->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
+        live->setMorphTargets( std::move( data._listMorphTarget ) );
         return true;
     }
 
@@ -141,22 +128,14 @@ namespace sw
 
     size_t MeshCache::getCachedCount() const
     {
-        MeshCacheInternal::SharedTable& table = MeshCacheInternal::getSharedTable();
-        std::scoped_lock<mutex>         lock{ table._mutex };
-        size_t                          liveCount{ 0 };
-        for ( const auto& [key, mesh] : table._mapMesh )
-        {
-            if ( mesh.expired() == false )
-                ++liveCount;
-        }
-        return liveCount;
+        return MeshCacheInternal::getSharedTable().countLive();
     }
 
     void MeshCache::clear()
     {
-        MeshCacheInternal::SharedTable& table = MeshCacheInternal::getSharedTable();
-        std::scoped_lock<mutex>         lock{ table._mutex };
-        table._mapMesh.clear();
-        table._uniqueWarnedPath.clear();
+        MeshCacheInternal::getSharedTable().clear();
+        MeshCacheInternal::WarnedPathSet& warned = MeshCacheInternal::getWarnedPathSet();
+        std::scoped_lock<mutex>           lock{ warned._mutex };
+        warned._uniquePath = unordered_set<string>{};
     }
 } // namespace sw

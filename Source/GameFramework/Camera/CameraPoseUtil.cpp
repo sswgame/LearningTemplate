@@ -8,13 +8,25 @@
 
 namespace sw
 {
-    void CameraPoseUtil::applyToCamera( CameraComponent& camera, const CameraPose& pose )
+    void CameraPoseUtil::applyLensToCamera( CameraComponent& camera, const CameraPose& pose )
     {
         camera.setOrthographic( pose._bOrthographic == SW_TRUE );
         camera.setFieldOfViewY( pose._fieldOfViewY );
         camera.setOrthoHeight( pose._orthoHeight );
         camera.setNearPlane( pose._nearPlane );
         camera.setFarPlane( pose._farPlane );
+    }
+
+    void CameraPoseUtil::applyToCameraLocal( CameraComponent& camera, const CameraPose& pose )
+    {
+        applyLensToCamera( camera, pose );
+        camera.setLocalPosition( pose._position );
+        camera.setLocalRotation( pose._rotation.getEulerAngles() );
+    }
+
+    void CameraPoseUtil::applyToCamera( CameraComponent& camera, const CameraPose& pose )
+    {
+        applyLensToCamera( camera, pose );
         float3     worldScale{};
         quaternion worldRotation{};
         float3     worldTranslation{};

@@ -111,6 +111,13 @@ namespace sw
         void setGpuSpinSeed( uint32 seed );
         /** @brief setGpuSpinSeed 로 정한 값입니다(0 이면 GPU 회전 없음). */
         uint32 getGpuSpinSeed() const { return _gpuSpinSeed; }
+        /**
+         * @brief 정점 애니메이션(VAT) 시각 오프셋(초)을 정합니다. 메시에 VAT 가 걸려 있을 때만 셰이더가 읽습니다(`GpuInstance::_vertexAnimationPhase`).
+         * @details 셰이더는 VAT 시계 + 이 값의 프레임을 그립니다. 군중 시스템이 VAT 로 넘길 때 한 번 적습니다(저장하지 않는 런타임 값).
+         */
+        void setVertexAnimationPhase( float32 phaseSeconds );
+        /** @brief setVertexAnimationPhase 로 정한 값입니다. */
+        float32 getVertexAnimationPhase() const { return _vertexAnimationPhase; }
 
         /**
          * @brief GPU 인스턴스에 실을 스프라이트 프레임(UV 사각형) · 색입니다. 빌더가 `GpuInstance::_sprite` 로 옮깁니다.
@@ -203,6 +210,8 @@ namespace sw
         uint32 _gpuSpinSeed;
         /** @brief GPU 인스턴스의 스프라이트 칸입니다. 저장하지 않습니다 — 파생의 저장되는 값(프레임 · 색)에서 만듭니다. */
         GpuSpriteInstanceData _spriteInstanceData;
+        /** @brief 정점 애니메이션 시각 오프셋(초)입니다. 저장하지 않습니다(setVertexAnimationPhase). */
+        float32 _vertexAnimationPhase;
         /** @brief 투명 큐의 정렬 키입니다(0 = 기본). 저장하지 않습니다. */
         uint32 _sortKey;
         /** @brief 등록 시점에 받은 등록부입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */

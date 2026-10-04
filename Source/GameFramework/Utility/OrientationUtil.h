@@ -20,5 +20,9 @@ namespace sw
     struct SW_GF_API OrientationUtil
     {
         static float3 computeEulerFromForwardUp( const float3& forward, const float3& up );
+        /** @brief 각(라디안)을 [-π, π] 로 맞춥니다. */
+        static float32 wrapAngle( float32 angle );
+        /** @brief @p current 를 @p target 쪽으로 짧은 길로 최대 @p maxStep(라디안, 0 이상)만큼 돌린 각입니다 — 요가 한 프레임에 튀지 않게 돌릴 때. */
+        static float32 turnTowardAngle( float32 current, float32 target, float32 maxStep );
     };
 } // namespace sw

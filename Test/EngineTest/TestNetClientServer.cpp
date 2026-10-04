@@ -5,6 +5,7 @@
 #include "Core/Network/BitStream.h"
 #include "Core/Network/NetEmulation.h"
 #include "Core/Network/NetHost.h"
+#include "Core/Network/NetMessage.h"
 #include "Core/Network/NetTransport.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -36,6 +37,30 @@ namespace
         BitReader reader( buffer.data(), static_cast<int32>( buffer.size() ) );
         return reader.readFloat();
     }
+
+    /** @brief 권위 서버 키트 영역에서 종류 하나만 받아 세는 처리기입니다(같은 영역을 나눠 쓰는 다른 처리기 — 게임이 키트 영역 끝을 빌리는 자리). */
+    class KindCounter final : public INetMessageHandler
+    {
+    public:
+        explicit KindCounter( uint8 kind )
+            : _kind{ kind }
+            , _count{ 0 }
+        {
+        }
+
+        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
+        bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override
+        {
+            (void)connectionId;
+            if ( size <= 0 || pData[0] != _kind )
+                return false;
+            ++_count;
+            return true;
+        }
+
+        uint8 _kind;
+        int32 _count;
+    };
 
     /** @brief 엔티티 셋을 보이지 않게 하는 정책입니다. */
     class HideThreePolicy final : public IReplicationPolicy
@@ -407,4 +432,33 @@ SW_TEST_CASE( NetClientServerTest, EmulationConditionsComeFromGlobalVariables )
     SW_EXPECT_NEAR_EQUAL( 1.0f, conditions._reorderRate, 1.0e-6f );
     SW_EXPECT_EQUAL( 64 * 1024, conditions._bandwidthBytesPerSecond );
     SW_EXPECT_TRUE( conditions.isActive() );
+}
+
+/**
+ * @brief [NetClientServerTest] 복제 서버 · 클라이언트는 키트 영역 안에서도 자기 종류만 먹는다 — 같은 영역의 다른 종류는 라우터가 다음 처리기에 준다
+ * @details 영역 전체를 받아 버리면 라우터 등록 순서에 따라 같은 영역을 나눠 쓰는 처리기가 메시지를 하나도 받지 못한다.
+ */
+SW_TEST_CASE( NetClientServerTest, KitHandlersPassOnKindsOfTheRangeTheyDoNotOwn )
+{
+    ReplicationServer server;
+    server.initialize( nullptr, ReplicationServerSettings{}, nullptr );
+    ReplicationClient client;
+    client.initialize( nullptr, ReplicationClientSettings{} );
+    const uint8         otherKind = NetKitMessageRange::kClientServer + 7;
+    const vector<uint8> message{ otherKind, 1 };
+    SW_EXPECT_FALSE( server.handleMessage( 0, message ) );
+    SW_EXPECT_FALSE( client.handleMessage( message ) );
+
+    KindCounter      serverSide{ otherKind };
+    KindCounter      clientSide{ otherKind };
+    NetMessageRouter serverRouter;
+    NetMessageRouter clientRouter;
+    serverRouter.addHandler( &server ); // 먼저 등록된 쪽이 넘겨야 뒤가 받는다
+    serverRouter.addHandler( &serverSide );
+    clientRouter.addHandler( &client );
+    clientRouter.addHandler( &clientSide );
+    SW_EXPECT_TRUE( serverRouter.dispatch( 0, message.data(), static_cast<int32>( message.size() ) ) );
+    SW_EXPECT_TRUE( clientRouter.dispatch( -1, message.data(), static_cast<int32>( message.size() ) ) );
+    SW_EXPECT_EQUAL( 1, serverSide._count );
+    SW_EXPECT_EQUAL( 1, clientSide._count );
 }

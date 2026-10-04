@@ -2,12 +2,11 @@
 
 #include "Engine/Graphics/2D/SpriteMeshBuilder.h"
 
-#include "Core/Concurrency/mutex.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Resource/WeakInternCache.h"
 
 namespace sw
 {
@@ -127,6 +126,27 @@ namespace sw
                     return static_cast<size_t>( hash );
                 }
             };
+
+            using SlicedMeshCache = WeakInternCache<SlicedSpriteDesc, Mesh, DescHash>;
+
+            /** @brief 값의 정점을 지어 메시 하나로 만듭니다. 정점이 없으면(크기 0) nullptr 입니다. */
+            static shared_ptr<Mesh> createSlicedMesh( const SlicedSpriteDesc& desc )
+            {
+                vector<RHIVertex> listVertex;
+                SpriteMeshBuilder::buildSlicedVertices( desc, listVertex );
+                if ( listVertex.empty() )
+                    return {};
+                shared_ptr<Mesh> mesh = Mesh::create();
+                mesh->setVertices( std::move( listVertex ) );
+                return mesh;
+            }
+
+            /** @brief 9-슬라이스 · 타일 메시 표입니다. 사라진 칸은 새 칸을 넣을 때 걷는다 — 크기를 끌어 바꾸는 편집은 크기마다 칸을 남긴다. */
+            static SlicedMeshCache& getSlicedMeshCache()
+            {
+                static SlicedMeshCache s_cache{ "SlicedSpriteMesh" };
+                return s_cache;
+            }
         };
     } // namespace
 } // namespace sw
@@ -187,32 +207,11 @@ namespace sw
     shared_ptr<Mesh> SpriteMeshBuilder::acquireSlicedMesh( const SlicedSpriteDesc& desc )
     {
         SW_MEMORY_SCOPE( Mesh );
-        static mutex                                                                                s_mutexMesh;
-        static unordered_map<SlicedSpriteDesc, weak_ptr<Mesh>, SpriteMeshBuilderInternal::DescHash> s_mapMesh;
+        return SpriteMeshBuilderInternal::getSlicedMeshCache().acquire( desc, &SpriteMeshBuilderInternal::createSlicedMesh );
+    }
 
-        std::scoped_lock<mutex> lock{ s_mutexMesh };
-        const auto              iter = s_mapMesh.find( desc );
-        if ( iter != s_mapMesh.end() )
-        {
-            if ( shared_ptr<Mesh> pShared = iter->second.lock() )
-                return pShared;
-        }
-        // 사라진 칸을 걷는다 — 크기를 끌어 바꾸는 편집은 크기마다 칸을 남긴다.
-        for ( auto it = s_mapMesh.begin(); it != s_mapMesh.end(); )
-        {
-            if ( it->second.expired() )
-                it = s_mapMesh.erase( it );
-            else
-                ++it;
-        }
-
-        vector<RHIVertex> listVertex;
-        buildSlicedVertices( desc, listVertex );
-        if ( listVertex.empty() )
-            return {};
-        shared_ptr<Mesh> mesh = Mesh::create();
-        mesh->setVertices( std::move( listVertex ) );
-        s_mapMesh[desc] = mesh;
-        return mesh;
+    IAssetCache& SpriteMeshBuilder::getSlicedMeshCache()
+    {
+        return SpriteMeshBuilderInternal::getSlicedMeshCache();
     }
 } // namespace sw

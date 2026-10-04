@@ -30,11 +30,7 @@ namespace sw
             template <size_t Count>
             static bool reportUnknownNames( const XmlNode& node, const utf8* const ( &arrAttribute )[Count], string_view sourceName )
             {
-                const utf8* pUnknown = XmlNameCheck::findUnknownAttribute( node, arrAttribute );
-                if ( pUnknown == nullptr )
-                    return true;
-                SW_LOG_WARNING( "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), pUnknown );
-                return false;
+                return XmlNameCheck::reportUnknownAttributes( node, arrAttribute, sourceName, LogLevel::Warning );
             }
 
             [[nodiscard]] static bool parseFieldType( string_view text, TelemetryFieldType& outType )
@@ -136,15 +132,10 @@ namespace sw
             return false;
         }
         // 파일 하나는 통째로 받거나 통째로 버린다 — 반쯤 읽힌 스키마는 어느 사건이 빠졌는지 보이지 않는다.
-        bool                      bValid       = Internal::reportUnknownNames( root, Internal::kArrRootAttribute, sourceName );
-        const utf8*               pUnknownNode = XmlNameCheck::findUnknownChild( root, Internal::kArrRootChild );
-        vector<TelemetryEventDef> listEvent    = _listEvent;
-        TelemetryPipelineSettings settings     = _settings;
-        if ( pUnknownNode != nullptr )
-        {
-            SW_LOG_WARNING( "%#: unknown element <%#>", sourceName, pUnknownNode );
-            bValid = false;
-        }
+        bool                      bValid    = Internal::reportUnknownNames( root, Internal::kArrRootAttribute, sourceName );
+        vector<TelemetryEventDef> listEvent = _listEvent;
+        TelemetryPipelineSettings settings  = _settings;
+        bValid                              = XmlNameCheck::reportUnknownChildren( root, Internal::kArrRootChild, sourceName, LogLevel::Warning ) && bValid;
         for ( XmlNode node = root.findChild( "Pipeline" ); node; node = node.findNextSibling( "Pipeline" ) )
         {
             bValid                      = Internal::reportUnknownNames( node, Internal::kArrPipelineAttribute, sourceName ) && bValid;
@@ -158,13 +149,8 @@ namespace sw
         }
         for ( XmlNode node = root.findChild( "Event" ); node; node = node.findNextSibling( "Event" ) )
         {
-            bValid                    = Internal::reportUnknownNames( node, Internal::kArrEventAttribute, sourceName ) && bValid;
-            const utf8* pUnknownChild = XmlNameCheck::findUnknownChild( node, Internal::kArrEventChild );
-            if ( pUnknownChild != nullptr )
-            {
-                SW_LOG_WARNING( "%#: <Event> has unknown element <%#>", sourceName, pUnknownChild );
-                bValid = false;
-            }
+            bValid = Internal::reportUnknownNames( node, Internal::kArrEventAttribute, sourceName ) && bValid;
+            bValid = XmlNameCheck::reportUnknownChildren( node, Internal::kArrEventChild, sourceName, LogLevel::Warning ) && bValid;
             TelemetryEventDef event;
             event._id                = hashed_string( node.getAttributeText( "id" ) );
             event._category          = hashed_string( node.getAttributeText( "category" ) );

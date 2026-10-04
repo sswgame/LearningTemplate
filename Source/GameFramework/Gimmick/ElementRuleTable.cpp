@@ -2,11 +2,11 @@
 
 #include "GameFramework/Gimmick/ElementRuleTable.h"
 
-#include "Core/Container/unordered_map.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
+#include "GameFramework/Data/GameDataCache.h"
 #include "GameFramework/Data/GameDataXml.h"
 
 namespace sw
@@ -22,8 +22,12 @@ namespace sw
             static bool isNamed( const XmlNode& node, const utf8* pName ) { return StringUtil::equals( node.getName(), pName, true ); }
         };
 
-        std::mutex                                          s_sharedTableMutex{};
-        unordered_map<string, unique_ptr<ElementRuleTable>> s_mapSharedTable{};
+        /** @brief 경로마다 한 번 읽어 나눠 쓰는 표입니다(GameFramework 모듈 정적 — 등록부는 `GameDataCacheRegistry` 가 맞춘다). */
+        GameDataCache<ElementRuleTable>& getSharedTableCache()
+        {
+            static GameDataCache<ElementRuleTable> s_cache{ "ElementRuleTable" };
+            return s_cache;
+        }
     } // namespace
 } // namespace sw
 
@@ -362,16 +366,11 @@ namespace sw
 
     const ElementRuleTable* ElementRuleTable::findShared( string_view path )
     {
-        std::lock_guard<std::mutex> lock( s_sharedTableMutex );
-        const string                key( path );
-        const auto                  mapIter = s_mapSharedTable.find( key );
-        if ( mapIter != s_mapSharedTable.end() )
-            return mapIter->second.get();
-        unique_ptr<ElementRuleTable> table = make_unique<ElementRuleTable>();
-        if ( table->loadFromResource( path ) == false )
-            table.reset();
-        const ElementRuleTable* pTable = table.get();
-        s_mapSharedTable[key]          = std::move( table );
-        return pTable;
+        return getSharedTableCache().find( path );
+    }
+
+    uint32 ElementRuleTable::getSharedReloadCount()
+    {
+        return getSharedTableCache().getReloadCount();
     }
 } // namespace sw

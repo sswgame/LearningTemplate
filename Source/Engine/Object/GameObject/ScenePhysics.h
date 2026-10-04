@@ -80,6 +80,14 @@ namespace sw
         /** @brief 등록된 물리 컴포넌트 수입니다(진단 · 시험). */
         uint32 getComponentCount() const;
 
+        /**
+         * @brief 이 씬의 파괴 오브젝트들이 든 떨어진 덩어리 바디 수입니다(`gv_destructionMaxDebrisBodies` 예산).
+         * @details 씬마다 따로 센다 — 한 프로세스에 월드가 여럿이면(가상 서버 하니스) 한 월드의 파편이 다른 월드의 예산을 먹지 않게.
+         */
+        uint32 getDebrisBodyCount() const { return _debrisBodyCount; }
+        /** @brief 위 수를 @p delta 만큼 바꿉니다(파괴 컴포넌트가 바디를 만들고 지울 때). 0 아래로 내려가지 않는다. */
+        void changeDebrisBodyCount( int32 delta );
+
     private:
         /** @brief 3D · 2D 이벤트를 두 오브젝트의 켜진 컴포넌트에 나눠 줍니다. */
         void dispatchEvents( GameObjectManager& manager );
@@ -97,6 +105,7 @@ namespace sw
         vector<PhysicsContactEvent3D> _listFrameEvent3D;
         vector<PhysicsContactEvent2D> _listFrameEvent2D;
         uint64                        _stepCount;
+        uint32                        _debrisBodyCount;
         bool                          _bConfigured;
     };
 } // namespace sw

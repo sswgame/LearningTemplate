@@ -4,6 +4,7 @@
 #include "Core/Module/ModuleUnloadListener.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 
@@ -853,35 +854,45 @@ SW_TEST_CASE( AbilitySystemTest, ModuleCodeReleaseRetiresOnlyAbilitiesFromThatMo
 }
 
 /**
- * @brief [AbilitySystemTest] 데이터가 쓰는 열거자 이름은 모두 왕복한다 — 표에 빠진 열거자가 없다
+ * @brief [AbilitySystemTest] 데이터가 쓰는 열거자 이름은 리플렉션 이름표로 모두 왕복한다 — 손으로 쓴 표가 따로 없다
+ * @details 카탈로그 XML 의 `op` · `source` · `duration` · `stacking` · `stackExpiration` 은 `ENUM()` 이름표(`TypeRegistry::enumFromString`)로 읽는다.
+ *          열거자를 더하면 이름표도 함께 생긴다. 대소문자는 가리지 않고, 모르는 이름은 false 다.
  */
 SW_TEST_CASE( AbilitySystemTest, EnumNamesRoundTrip )
 {
+    const TypeRegistry&  registry   = engine::getTypeRegistry();
     const AttributeModOp arrModOp[] = { AttributeModOp::Add, AttributeModOp::Multiply, AttributeModOp::Divide, AttributeModOp::Override };
     for ( const AttributeModOp value : arrModOp )
     {
         AttributeModOp parsed{ AttributeModOp::Add };
-        SW_EXPECT_TRUE( AbilitySystemEnumUtil::parseModOp( AbilitySystemEnumUtil::toString( value ), parsed ) && parsed == value );
+        const utf8*    pName = registry.enumToString( value );
+        SW_ASSERT_NOT_NULL( pName );
+        SW_EXPECT_TRUE( registry.enumFromString( pName, parsed ) && parsed == value );
     }
     const EffectDurationPolicy arrDuration[] = { EffectDurationPolicy::Instant, EffectDurationPolicy::HasDuration, EffectDurationPolicy::Infinite };
     for ( const EffectDurationPolicy value : arrDuration )
     {
         EffectDurationPolicy parsed{ EffectDurationPolicy::Instant };
-        SW_EXPECT_TRUE( AbilitySystemEnumUtil::parseDurationPolicy( AbilitySystemEnumUtil::toString( value ), parsed ) && parsed == value );
+        const utf8*          pName = registry.enumToString( value );
+        SW_ASSERT_NOT_NULL( pName );
+        SW_EXPECT_TRUE( registry.enumFromString( pName, parsed ) && parsed == value );
     }
     const EffectMagnitudeSource arrSource[] = { EffectMagnitudeSource::ScalableFloat, EffectMagnitudeSource::AttributeBased, EffectMagnitudeSource::SetByCaller };
     for ( const EffectMagnitudeSource value : arrSource )
     {
         EffectMagnitudeSource parsed{ EffectMagnitudeSource::ScalableFloat };
-        SW_EXPECT_TRUE( AbilitySystemEnumUtil::parseMagnitudeSource( AbilitySystemEnumUtil::toString( value ), parsed ) && parsed == value );
+        const utf8*           pName = registry.enumToString( value );
+        SW_ASSERT_NOT_NULL( pName );
+        SW_EXPECT_TRUE( registry.enumFromString( pName, parsed ) && parsed == value );
     }
     EffectStackingPolicy stacking{ EffectStackingPolicy::None };
-    SW_EXPECT_TRUE( AbilitySystemEnumUtil::parseStackingPolicy( "aggregatebytarget", stacking ) && stacking == EffectStackingPolicy::AggregateByTarget );
+    SW_EXPECT_TRUE( registry.enumFromString( "aggregatebytarget", stacking ) && stacking == EffectStackingPolicy::AggregateByTarget );
     EffectStackExpirationPolicy expiration{ EffectStackExpirationPolicy::ClearEntireStack };
-    SW_EXPECT_TRUE( AbilitySystemEnumUtil::parseStackExpirationPolicy( "RemoveSingleStackAndRefreshDuration", expiration ) );
+    SW_EXPECT_TRUE( registry.enumFromString( "RemoveSingleStackAndRefreshDuration", expiration ) &&
+                    expiration == EffectStackExpirationPolicy::RemoveSingleStackAndRefreshDuration );
+    SW_EXPECT_STREQ( "OnCooldown", registry.enumToString( AbilityActivationResult::OnCooldown ) );
 
-    // 모르는 이름은 false 이고 값을 건드리지 않는다.
+    // 모르는 이름은 false 다.
     AttributeModOp unknown{ AttributeModOp::Divide };
-    SW_EXPECT_FALSE( AbilitySystemEnumUtil::parseModOp( "Subtract", unknown ) );
-    SW_EXPECT_TRUE( unknown == AttributeModOp::Divide );
+    SW_EXPECT_FALSE( registry.enumFromString( "Subtract", unknown ) );
 }

@@ -100,12 +100,24 @@ namespace sw
          */
         [[nodiscard]] bool compressFrom( const AnimRawClip& rawClip, const IAnimCodec& codec, const AnimCodecSettings& settings, AnimCodecStats* pOutStats );
 
-        /** @brief @p time 초의 트랙 포즈(트랙 순서)를 @p outTrackPose 에 씁니다. 코덱이 없거나 블롭이 깨졌으면 false 입니다. */
-        [[nodiscard]] bool sampleTracks( float32 time, Pose& outTrackPose ) const;
+        /**
+         * @brief @p time 초의 트랙 포즈(트랙 순서)를 @p outTrackPose 에 씁니다. 코덱이 없거나 블롭이 깨졌으면 false 입니다.
+         * @param pTrackMask 트랙마다 0 이면 풀지 않습니다(본 LOD). nullptr 이면 모든 트랙입니다.
+         */
+        [[nodiscard]] bool sampleTracks( float32 time, Pose& outTrackPose, const uint8* pTrackMask = nullptr ) const;
         /** @brief 트랙 → 스켈레톤 본 인덱스 표를 만듭니다(없는 본은 -1). 클립 · 스켈레톤 짝마다 한 번 만들어 둡니다. */
         void makeTrackToBoneMap( const Skeleton& skeleton, vector<int32>& outListBone ) const;
-        /** @brief 트랙 포즈를 표대로 본 포즈에 옮깁니다. 표에 없는 본은 그대로 둡니다. */
-        static void copyTracksToPose( const Pose& trackPose, const vector<int32>& listTrackToBone, Pose& inoutPose );
+        /**
+         * @brief 클립을 @p time 에 샘플해 본 포즈(레퍼런스 · 리더 포즈로 채워 둔 @p inoutPose)에 씁니다. 애니메이터 · 군중 공유 · VAT 굽기가 함께 쓰는 한 길입니다.
+         * @param listTrackToBone   `makeTrackToBoneMap` 의 표입니다.
+         * @param scratchTrackPose  트랙 순서 포즈를 담을 재사용 자리입니다.
+         * @param bAnchorRootMotion 루트 모션 트랙의 본을 클립 시작 자리에 묶습니다(움직임은 오브젝트가 맡는다).
+         * @param pTrackMask        트랙마다 0 이면 풀지도 옮기지도 않습니다(본 LOD).
+         */
+        [[nodiscard]] bool samplePose( float32 time, const vector<int32>& listTrackToBone, Pose& inoutPose, Pose& scratchTrackPose, bool bAnchorRootMotion,
+                                       const uint8* pTrackMask = nullptr ) const;
+        /** @brief 트랙 포즈를 표대로 본 포즈에 옮깁니다. 표에 없는 본과 @p pTrackMask 가 0 인 트랙은 그대로 둡니다. */
+        static void copyTracksToPose( const Pose& trackPose, const vector<int32>& listTrackToBone, Pose& inoutPose, const uint8* pTrackMask = nullptr );
         /**
          * @brief 루트 모션 트랙이 @p step 동안 움직인 양입니다(부모 공간 이동 차이 · 회전 차이 `inverse( 이전 ) * 지금`).
          * @details 반복을 넘으면 (끝 - 이전) + 온 바퀴 × (끝 - 시작) + (지금 - 시작) 입니다. 루트 모션 트랙이 없으면 단위 변환입니다.

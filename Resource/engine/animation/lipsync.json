@@ -1,0 +1,17 @@
+{
+    "frame_rate": 30.0,
+    "silence_rms": 0.02,
+    "full_rms": 0.25,
+    "sharpness": 8.0,
+    "fallback_viseme": "AA",
+    "bands": [ [ 150.0, 600.0 ], [ 600.0, 1600.0 ], [ 1600.0, 7000.0 ] ],
+    "visemes": [
+        { "name": "sil", "bands": [ 0.0, 0.0, 0.0 ] },
+        { "name": "AA", "bands": [ 0.10, 0.80, 0.10 ] },
+        { "name": "EE", "bands": [ 0.50, 0.05, 0.45 ] },
+        { "name": "OO", "bands": [ 0.55, 0.43, 0.02 ] },
+        { "name": "SS", "bands": [ 0.02, 0.03, 0.95 ] },
+        { "name": "FF", "bands": [ 0.25, 0.25, 0.50 ] },
+        { "name": "PP", "bands": [ 0.75, 0.15, 0.10 ] }
+    ]
+}

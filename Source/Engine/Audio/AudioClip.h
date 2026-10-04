@@ -39,6 +39,8 @@ namespace sw
          * @return 형식이 비었거나(채널 · 샘플레이트 0) 비트 수를 모르면 false 입니다.
          */
         [[nodiscard]] static bool convertPcm( const AudioPcm& pcm, AudioClipData& outClip );
+        /** @brief 채널을 평균해 모노 표본으로 옮깁니다(분석 — 립싱크). */
+        void copyMonoSamples( vector<float32>& outListSample ) const;
     };
 } // namespace sw
 

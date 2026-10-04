@@ -347,7 +347,7 @@ namespace sw
         if ( _pSettings == nullptr )
             return;
         const string_view value = _pSettings->getAppliedValue( hashed_string( kConsentSettingId ) );
-        setConsent( StringUtil::equals( value, "true", true ) || value == "1" );
+        setConsent( StringUtil::parseBool( value, false ) );
     }
 
     void TelemetryService::setUploader( ITelemetryUploader* pUploader )

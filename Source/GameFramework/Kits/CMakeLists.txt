@@ -63,6 +63,8 @@ add_subdirectory(Casual/Rhythm)
 # 7) 네트워크 방식 — 장르 키트는 이것들을 include 하지 않는다(게임이 둘을 잇는다)
 # ------------------------------------------------------------------------------
 add_subdirectory(Network/NetClientServer)
+add_subdirectory(Network/NetDestruction)
 add_subdirectory(Network/NetLockstep)
 add_subdirectory(Network/NetMmo)
+add_subdirectory(Network/NetSimulation)
 add_subdirectory(Network/NetTurnRelay)

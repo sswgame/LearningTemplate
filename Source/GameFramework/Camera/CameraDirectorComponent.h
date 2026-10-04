@@ -34,7 +34,7 @@ namespace sw
      *
      *          대상은 오브젝트 하나(`_target`) 또는 묶음(`_listGroupTarget` — 프레이밍의 그룹 맞추기)이고 초점 = 월드 자리, 요 · 피치 = 그 오브젝트가 보는 쪽입니다.
      *          입력(`<Input>` 이 있는 프리셋)은 `InputManager` 에서 읽고, 암 충돌(`<Collision>`)은 따로 준 질의(`setCollisionProbe`)가 없으면 매니저의
-     *          `PhysicsWorld` 바디에 쓸어 봅니다(대상 자신은 뺀다). `_cyclePresetKey` 를 누르면 카탈로그 순서로 다음 프리셋을 켭니다.
+     *          `PhysicsWorld` 바디에 쓸어 봅니다(대상 자신은 뺀다). `_cyclePresetKey` 를 누르거나 입력 맵 액션 `_cycleAction` 이 발동하면 카탈로그 순서로 다음 프리셋을 켭니다.
      *          블렌드 없는 전환(컷)은 카메라에 컷 표시를 넣어 렌더러가 TAA 기록을 버리게 합니다. 켠 프리셋 · 블렌드 진행은 저장하지 않습니다.
      */
     REFLECT( Category = "Camera", DisplayName = "Camera Director", Tooltip = "Drives the camera on this object from data presets with blends, damping, framing and shake" )
@@ -59,6 +59,8 @@ namespace sw
         /** @brief 카메라가 따라갈 오브젝트입니다. 비우면 초점은 원점 · 요 · 피치 0 입니다. */
         void                    setTarget( const GameObjectHandle& target ) { _target = target; }
         const GameObjectHandle& getTarget() const { return _target; }
+        /** @brief 다음 프리셋으로 돌리는 입력 맵 액션입니다(비우면 키만). */
+        void setCycleAction( const hashed_string& action ) { _cycleAction = action; }
         /** @brief 함께 담을 오브젝트 묶음입니다(프레이밍의 그룹 맞추기). 비어 있지 않으면 대상(`_target`) 대신 묶음을 따라간다. */
         void setGroupTargets( const vector<GameObjectHandle>& listTarget ) { _listGroupTarget = listTarget; }
         /** @brief 암 충돌 질의를 정합니다(부르는 쪽이 수명을 쥔다). nullptr 이면 매니저의 `PhysicsWorld` 를 쓴다. */
@@ -100,6 +102,8 @@ namespace sw
         vector<GameObjectHandle> _listGroupTarget;
         PROPERTY( Category = "Camera", DisplayName = "Cycle Preset Key", Tooltip = "Key that switches to the next preset in catalog order (Unknown: none)" )
         Key _cyclePresetKey;
+        PROPERTY( Category = "Camera", DisplayName = "Cycle Preset Action", Tooltip = "InputMap action that switches to the next preset (empty: none) - read as well as the key" )
+        hashed_string _cycleAction;
         PROPERTY( Category = "Camera", DisplayName = "Read Input", Tooltip = "Feed mouse, wheel and keys to presets with an <Input> section" )
         bool _bReadInput;
 
