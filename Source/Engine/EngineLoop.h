@@ -150,6 +150,11 @@ namespace sw
          *          리로드 델리게이트가 남습니다.
          */
         bool wasDebugActionTriggered( string_view actionName ) const;
+        /**
+         * @brief 셸 InputMap 입니다(`updateShellActions` 가 처음 부를 때 만든다 — 그 전과 Shipping 에서는 nullptr).
+         * @details 개발 콘솔(`DevConsoleController`)이 자기 액션을 읽고 자기 레이어를 켜고 끕니다. 이 맵은 키보드 포커스와 상관없이 키를 읽습니다.
+         */
+        InputMap* getShellInputMap() const { return _mapDebugAction.get(); }
 
         // ----------------------------------------------------------------------
         // Getter (App 이 ModuleHost 등과 연동하는 데 필요)

@@ -19,7 +19,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 | 4 | `Resource` · `Spatial` | 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. 공간 분할은 물리의 `AABB` 위에 선다. |
 | 5 | `Graphics`(Renderer 제외) · `Window` | RHI · 셰이더 · 머티리얼 · 메시 · 텍스처 — **디바이스와 GPU 에셋**. 창은 표면(`Common/IRenderSurface`)으로만 RHI 에 보인다. |
 | 6 | `Input` · `Object` | 컴포넌트 모델. 컴포넌트가 머티리얼·메시(5)를 든다 — 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 드는 것과 같은 자리. |
-| 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` · `Environment` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트 · 지형 · 식생 · 물). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. |
+| 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` · `Environment` · `DevTools` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트 · 지형 · 식생 · 물). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. 개발 도구(`DevTools` — 게임 창 개발 콘솔의 판단)는 입력(6) · 창(5) 위에 선다. |
 | 8 | `Graphics/Renderer` · `Module` · `Telemetry` · `Destruction` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Cook)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. 텔레메트리 · 크래시 보고는 동의를 사용자 설정(7)에서 읽는다. 파괴(`Destruction`)는 캐릭터 형상의 자르기 도구(7) 위에 서는 기능 모듈이라 여기다(렌더러는 모른다). |
 | 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
 
@@ -118,8 +118,14 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **개발 콘솔 · 개발 명령(Shipping 에는 없다 — `SW_DEV_COMMANDS_ENABLED`)**: `Utility/Console/DevCommandRegistry` 가 명령 등록부(Engine 하나, 모듈을 내리면
   그 모듈의 명령이 빠진다)이고, 명령은 자기 .cpp 에 `SW_DEV_COMMAND( 변수, "이름", "사용법", "설명", &본문 )` 한 줄로 등록합니다 — 본문은
   `#if SW_DEV_COMMANDS_ENABLED` 안에 둡니다. 게임 · 키트의 치트(무적 · 아이템 주기 …)도 그렇게 그 게임 · 키트에 둡니다. `Utility/Console/DevConsole`
-  은 한 줄 해석(`help` · `get`/`set` · 명령 · `gv_이름 [값]`) · 자동완성 · 기록이고, 에디터 Output Log 입력 줄과 게임 창 오버레이
-  (`Window/DevConsoleOverlay` + 플랫폼 창 `Window/Windows/Win32DevConsoleWindow` · `Window/Linux/X11DevConsoleWindow`)가 같이 씁니다. 엔진 명령은
+  은 한 줄 해석(`help` · `get`/`set` · 명령 · `gv_이름 [값]`) · 자동완성 · 기록이고, 에디터 Output Log 입력 줄과 게임 창 콘솔이 같이 씁니다.
+  게임 창 콘솔은 셋으로 나뉩니다 — 판단 `DevTools/DevConsoleController`(티어 7), 그리기 `Window/DevConsoleWindow.h` 의 `IDevConsoleWindow`
+  (`Window/Windows/Win32DevConsoleWindow` · `Window/Linux/X11DevConsoleWindow`, 입력을 모른다), 입력은 `InputManager` 하나입니다.
+  여는 키 · 편집 키는 셸 InputMap(`Resource/engine/input/default.input.xml`)의 액션이라 데이터로 바꾸고 패드로도 씁니다
+  (`DevConsoleToggle` 은 늘 켜진 `Debug` 레이어, 닫기 · 실행 · 완성 · 기록 ↑↓ · 지우기는 열려 있는 동안만 켜는 `DevConsole` 레이어). 글자는 액션이 아니라
+  글자 입력(`InputManager::setTextInputCallback( …, InputKeyboardFocus::DevConsole )`)이고, 여닫는 액션이 발화한 프레임의 글자는 버립니다.
+  열려 있는 동안 콘솔이 `InputManager` 키보드 포커스를 쥐어 게임 쪽 키 조회와 통합 InputMap 의 키보드 바인딩이 "안 눌림" 입니다(셸 맵만 포커스를 무시합니다).
+  패드는 포커스 밖이라 콘솔이 열린 동안에도 게임이 받습니다. 엔진 명령은
   루트의 `EngineDevCommands.cpp`(`timescale` · `teleport` · `debugdraw.category`). Shipping 실행 파일에 등록부가 없는지는
   `DevCommandShippingTest`(AppTest)가 바이너리를 훑어 봅니다.
 - **루트 파일 — 기동 · 종료**:
