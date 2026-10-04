@@ -15,7 +15,7 @@ CMake는 빌드만 담당하고, 도구 탐색·설정·보조 생성 및 코드
 
 **폴더가 곧 성격이다.** 새 스크립트는 "무엇을 하는가" 로 자리를 고른다 — 도구를 찾아 설치하면 `setup/`, 파일을 만들어 내면 `generate/`,
 검사 · 수정이면 `lint/` 의 네 폴더 중 하나, 사람이 가끔 돌리는 실험 도구면 `dev/`, 에셋을 규칙으로 훑으면
-`qa/`. 모두 `common/` 만 import 하고 서로는 부르지 않는다
+`qa/`, 사람과 git 이 부르는 에셋 비교 · 병합이면 `asset/`. 모두 `common/` 만 import 하고 서로는 부르지 않는다
 (`common` 은 위층을 부르지 않는다).
 
 ```
@@ -33,6 +33,7 @@ Scripts/
   │     ├── TranslationUnits.py       # 컴파일 DB 를 읽어 TU 를 골라 하나씩 돌리는 자리 (clang-tidy · 경고 스윕)
   │     ├── AppBinary.py              # 빌드된 App 을 찾고 헤드리스로 셰이더를 쿠킹하는 자리
   │     ├── AssetValidation.py        # 에셋 검증 규칙 — 규칙 표(Config/Editor/AssetValidationRules.json)의 `check` 이름이 고르는 연산자들
+  │     ├── XmlAssetMerge.py          # XML 에셋 의미 비교 · 3-way 병합(엔티티 id · 컴포넌트 · 속성 단위), 엔진 저장기와 같은 서식으로 쓰기
   │     ├── AssetPipeline.py          # 쿠커의 기본 출력 폴더 찾기 — 가장 최근에 구성된 build/*/Bin/<subDir>
   │     ├── CookContract.py           # 쿠킹 표(`Config/Engine/CookContract.json`)를 읽은 결과 — 헤더 생성기 · 쿠커 · 게이트가 같은 객체를 쓴다
   │     └── PackFormat.py             # `.pack` 바이너리 계약(Config/Engine/PackFormat.json)을 읽은 결과
@@ -115,6 +116,9 @@ Scripts/
   ├── qa/                             # [QA] 에셋을 규칙으로 훑는다
   │     └── ValidateAssets.py         # 에셋 검증 표(파일 · 규칙 · 심각도 · 메시지) — 게이트와 같은 코드, 경고까지 · JSON 출력
   │
+  ├── asset/                          # [에셋 도구] 사람과 git 이 부르는 에셋 비교 · 병합
+  │     └── AssetMerge.py             # XML 에셋 의미 diff · 3-way merge, git 병합 · 비교 드라이버(아래 절)
+  │
   └── __main__.py                     # ★ 통합 CLI 오케스트레이터 (`py -3 -m Scripts <cmd>`)
 ```
 
@@ -133,6 +137,7 @@ py -3 -m Scripts lint                 # Staged 파일 대상 사전 커밋 린�
 py -3 -m Scripts docs                 # Doxygen API 레퍼런스 문서 생성 (GenerateDocs)
 py -3 -m Scripts test SceneTest.*     # 스위트 · 케이스 이름으로 테스트 실행 (RunTests)
 py -3 -m Scripts validate-assets      # 에셋 검증 표 (ValidateAssets) — `--severity error` 는 게이트와 같은 판정
+py -3 -m Scripts asset-merge diff a.scene.xml b.scene.xml   # XML 에셋 의미 비교 (AssetMerge)
 ```
 
 ## 개별 스크립트 실행
@@ -146,3 +151,30 @@ py -3 Scripts/generate/GenerateShippingHostDefaults.py build/Ninja-Shipping/gene
 ```
 
 `SetupLlvm` / `SetupEnvironment` 는 최소 LLVM 키트에 `clang-format` 을 포함·보완합니다 (기존 키트에 없으면 캐시된 LLVM tar에서 bin만 추출).
+
+## XML 에셋 병합 · 비교 드라이버 (git)
+
+`Scripts/asset/AssetMerge.py` 는 씬 · 프리팹 · 머티리얼 · 카탈로그 XML 을 **엔티티 id · 컴포넌트(`_componentName`) · 속성** 단위로 비교하고
+3-way 병합한다(유니티 Smart Merge 와 같은 자리). 줄 단위 병합이 충돌하는 두 갈래 — 같은 목록 끝에 서로 엔티티를 더한 것, 한 요소의 다른 속성을
+고친 것 — 가 충돌 없이 합쳐진다. 같은 속성을 다르게 고치면 충돌이고, 결과 파일에 우리 쪽 값을 둔 채 `<!-- MERGE CONFLICT … -->` 주석을 남기고
+1 로 끝난다(XML 은 그대로 읽힌다 — 줄 충돌 표식처럼 파일을 깨지 않는다). 출력은 엔진 저장기와 같은 서식이라 엔진이 다시 저장해도 줄이 바뀌지 않는다
+(엔진이 쓴 파일은 읽고 다시 쓰면 바이트까지 같다 — `PythonTest_TestXmlAssetMerge`).
+
+git 에 붙이는 것은 강제하지 않는다(PC 마다 한 번):
+
+```bash
+git config merge.swasset.name   "SW XML asset merge"
+git config merge.swasset.driver "py -3 Scripts/asset/AssetMerge.py git-merge %O %A %B %P"
+git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
+```
+
+그리고 `.gitattributes`(또는 저장소에 남기지 않으려면 `.git/info/attributes`)에:
+
+```
+*.scene.xml   merge=swasset diff=swasset
+*.prefab.xml  merge=swasset diff=swasset
+*.material    merge=swasset diff=swasset
+```
+
+리눅스는 `py -3` 대신 `python3`. 병합기가 XML 로 읽지 못하면(2) git 은 그 파일을 충돌로 남긴다. `--prefer ours|theirs` 는 충돌을 그쪽으로 푼다
+(`py -3 -m Scripts asset-merge merge base ours theirs --prefer theirs`).

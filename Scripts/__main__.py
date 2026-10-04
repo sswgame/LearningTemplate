@@ -56,6 +56,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("docs", "generate.GenerateDocs", "Doxygen API 레퍼런스 문서 생성"),
     Subcommand("test", "dev.RunTests", "스위트 · 케이스 이름으로 테스트 실행 (실행 파일 · 작업 폴더를 대신 찾는다)"),
     Subcommand("validate-assets", "qa.ValidateAssets", "에셋 검증 규칙(Config/Editor/AssetValidationRules.json)을 Resource/ 에 돌린다"),
+    Subcommand("asset-merge", "asset.AssetMerge", "XML 에셋 의미 비교 · 3-way 병합 (git 드라이버로도 쓴다)"),
     Subcommand("defender", "setup.AddDefenderExclusions", "Windows Defender 빌드 디렉터리 제외 등록",
                bForwardArgs=False),
 )
