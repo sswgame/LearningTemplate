@@ -1,0 +1,20 @@
+{
+    "_name": "GF_NetDestruction",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "파괴 네트워킹 — 권한 쪽 피해 사건을 번호 붙여 신뢰 순서로, 덩어리 자세를 낮은 빈도로(클라이언트 보간), 늦은 참가 · 어긋남은 상태 스냅숏으로. 권위 방식과 상관없이 NetHost 위에 얹는다",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

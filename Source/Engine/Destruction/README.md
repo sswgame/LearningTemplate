@@ -70,7 +70,8 @@
 덩어리마다(가장 작은 노드 순) 생깁니다 — `DestructionChange`(사라진 · 새 그룹, 갈라진 노드 · 끊긴 연결 · 무게로 끊긴 연결 수). 모든 순서가 노드 ·
 연결 · 그룹 번호 순이라 같은 그래프 · 표 · 앵커 · 같은 순서의 조작이면 같은 상태이고 `computeStateHash` 가 같습니다.
 
-**파괴 재질 표**(`*.destruction.xml`, `DestructionProfile`): 깊이별 변형 문턱 · 연결 세기 · 지지 세기 · 밀도 · 물리 재질 · 충격 → 변형 · 파편 예산.
+**파괴 재질 표**(`*.destruction.xml`, `DestructionProfile`): 깊이별 변형 문턱 · 연결 세기 · 지지 세기 · 밀도 · 물리 재질 · 충격 → 변형 · 파편 예산 ·
+네트워크(`<Network poseRate>` — 서버가 움직이는 덩어리 자세를 보내는 빈도, 선택, 기본 10 Hz).
 기본은 `Resource/engine/destruction/default.destruction.xml`(돌), `wood.destruction.xml`(나무). 모르는 원소 · 속성 · 틀린 수 · 같은 원소 두 번은 로드
 오류이고(`CharacterDataReader`), `ResourceDataSchemaTest` 가 저장소의 모든 표를 읽습니다. 같은 `.fracture` 를 표만 바꿔 다르게 부숩니다(다시 쿠킹하지 않는다).
 
@@ -95,6 +96,10 @@
 `getEventCount`). 그래서 보내는 것은 변환이 아니라 `DestructionEventLog`(씨앗 + 사건열, `SWDE` 바이트)이고 받는 쪽이 같은 순서로 `applyDamage` 합니다.
 순서를 바꾸면 다른 상태입니다(계약의 일부). 부딪힘 사건은 물리에서 나오므로 기계마다 다를 수 있습니다 — 권한 쪽이 만든 사건만 기록에 싣습니다.
 
+**스냅숏**(`DestructionState::writeSnapshot` · `readSnapshot`): 끊긴 노드 · 연결 · 앵커 잎 비트, 0 이 아닌 노드 · 연결 변형(비트 그대로), 그룹(번호 ·
+부모 · 앵커 · 활성 노드), 다음 그룹 번호, 사건 수. 읽은 쪽의 `computeStateHash` 가 쓴 쪽과 같고 뒤따르는 사건도 같은 결과를 냅니다(쌓인 변형까지 넘어간다) —
+늦은 참가 · 어긋남 바로잡기가 사건열을 처음부터 다시 돌리지 않습니다. 다른 그래프 · 잘린 바이트는 거절하고 상태를 그대로 둡니다. 시험: `DestructionSnapshotTest`.
+
 시험: `DestructionDamageTest`(`Test/EngineTest/TestDestructionDamage.cpp`).
 
 ## 4. 런타임 — `FractureComponent`(3D) · `FractureComponentBase`
@@ -116,13 +121,22 @@
 - **매 물리 프레임**: 동적 바디 자세를 읽어 잎마다 본 로컬(오브젝트 메시 공간: 회전 = 오브젝트⁻¹ × 그룹, 옮김)을 쓰고 `applyExternalPose`(물리가 애니메이션
   평가보다 늦으므로 그 자리에서 팔레트를 다시 구한다). 수명 · 잠 · 페이드는 이번 프레임에 돈 고정 스텝 시간으로 센다.
 - **정리**: 잠들어 `sleepRemoveTime` 쉰 그룹은 바디를 뺀다(`keepCollisionVolume` 이상은 잠든 바디를 남겨 충돌을 지킨다) · 작은 파편은 `lifetime` 뒤
-  `fadeTime` 동안 본 배율이 0 으로 줄며 사라진다 · 떨어진 그룹 바디가 `maxBodies` 또는 `gv_destructionMaxDebrisBodies`(전역, 기본 512)를 넘으면 오래된
+  `fadeTime` 동안 본 배율이 0 으로 줄며 사라진다 · 떨어진 그룹 바디가 `maxBodies` 또는 `gv_destructionMaxDebrisBodies`(씬마다 — `ScenePhysics::getDebrisBodyCount`,
+  기본 512. 한 프로세스에 월드가 여럿이어도 서로의 예산을 먹지 않는다)를 넘으면 오래된
   것(작은 것 먼저)부터 사라지게 한다 · 30 프레임 동안 움직인 것이 없으면 지금 자세를 **정적 메시 둘에 구워** 스킨드 메시를 숨긴다(프레임 비용 0).
   다시 움직이면 스킨드로 돌아온다.
 - **피해 입구**(어느 틱에서든 — 잠금 아래 쌓였다가 다음 물리 프레임에 게임 스레드에서): `applyDamage`(메시 공간 — 네트워크로 받은 사건),
   `applyPointDamageAtWorld`(무기, 맞은 바디가 떨어진 덩어리면 그 그룹만), `applyRadialDamageAtWorld`(폭발 — 붙은 구조와 반경 안의 덩어리마다 그 자세로
   사건 하나), `applyRaycastDamage`(광선 → 바디 사용자 값 → 오브젝트), 부딪힘(시작 충격량 > `minImpulse`, 권한일 때). 적용한 사건은 `getEventLog()` 에
-  쌓인다 — 받는 쪽(`setAuthority( false )`)은 그것을 같은 순서로 `applyDamage` 하면 같은 구조 상태다(조각의 물리 자세는 각자 — 꾸밈이다).
+  쌓인다 — 받는 쪽(`setAuthority( false )`)은 그것을 같은 순서로 `applyDamage` 하면 같은 구조 상태다(조각의 물리 자세는 각자 — 꾸밈이다). 흩기 씨앗의
+  번호는 상태의 사건 수다(스냅숏을 받은 쪽도 서버와 같은 번호). 떨어진 덩어리를 맞힌 사건은 맞기 직전 그 덩어리 자세를 `getEventGroupPoses()` 에 적고,
+  받는 쪽은 `applyDamage( event, groupPose )` 로 그 자리로 옮긴 뒤 가른다.
+- **네트워크 창구**(`GF_NetDestruction` 이 쓴다): `collectGroupPoses`(떨어진 그룹의 원점 · 질량 중심 · 회전 · 부피 · 멈춤 · 사라짐 · 몰림 · 레이어),
+  `makeNetworkSnapshot` · `applyNetworkSnapshot`(상태 스냅숏 + 떨어진 그룹 자세 — 받으면 그룹 바디 · 그림을 다시 짓는다, 받는 쪽의 덩어리는 그 자세에
+  키네마틱), `driveGroup( 그룹, 질량 중심, 회전 )`(받는 쪽 덩어리 — 바디를 키네마틱으로 바꾸고 스텝마다 그 자세로 옮긴다), `isChunkVolume`(표의
+  `keepCollisionVolume` 이상이면 덩어리 — 서버가 자세를 보내고 플레이어와 부딪힌다, 아래는 파편 — Debris 레이어 · 클라이언트 꾸밈),
+  `findRecentStateHash`(받는 쪽이 사건마다 적어 둔 최근 64 개 (사건 수, 해시) — 사건이 프레임마다 묶여 적용돼도 서버의 해시와 같은 순간을 비교한다),
+  `hasPendingDamage`.
 - `SkeletalMeshComponent` 에 둘을 더했다: `setSkeleton` 은 런타임 지정이라 경로가 바뀔 때까지 유지(시작의 렌더 에셋 해석이 덮지 않는다),
   `applyExternalPose`(평가 밖에서 고친 로컬 포즈로 팔레트를 그 자리에서).
 

@@ -17,9 +17,11 @@ namespace sw
         static constexpr uint8 kLockstep     = NetMessageRange::kFramework + 1 * NetMessageRange::kSize; ///< GF_NetLockstep
         static constexpr uint8 kTurnRelay    = NetMessageRange::kFramework + 2 * NetMessageRange::kSize; ///< GF_NetTurnRelay
         static constexpr uint8 kMmo          = NetMessageRange::kFramework + 3 * NetMessageRange::kSize; ///< GF_NetMmo
+        static constexpr uint8 kDestruction  = NetMessageRange::kFramework + 4 * NetMessageRange::kSize; ///< GF_NetDestruction
 
-        static_assert( kMmo + NetMessageRange::kSize <= NetMessageRange::kGame, "network kit message ranges must stay below the game range" );
+        static_assert( kDestruction + NetMessageRange::kSize <= NetMessageRange::kGame, "network kit message ranges must stay below the game range" );
         // 첫 바이트는 선(wire) 형식이다 — 값이 바뀌면 다른 빌드와 말이 안 통한다. 바꾸려면 프로토콜 판을 올린다.
-        static_assert( kClientServer == 0x10 && kLockstep == 0x20 && kTurnRelay == 0x30 && kMmo == 0x40, "network kit message ranges are wire format" );
+        static_assert( kClientServer == 0x10 && kLockstep == 0x20 && kTurnRelay == 0x30 && kMmo == 0x40 && kDestruction == 0x50,
+                       "network kit message ranges are wire format" );
     };
 } // namespace sw

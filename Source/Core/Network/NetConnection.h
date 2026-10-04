@@ -102,6 +102,13 @@ namespace sw
             vector<uint8> _buffer{};
         };
 
+        /** @brief 순서만 채널의 흐름 하나(메시지 첫 바이트 = 종류)에서 마지막으로 건넨 메시지 번호입니다. */
+        struct SequencedStream
+        {
+            uint16 _lastId{ 0 };
+            uint8  _kind{ 0 };
+        };
+
         struct ParsedMessage
         {
             vector<uint8>  _buffer{};
@@ -119,9 +126,10 @@ namespace sw
         SequenceBuffer<OutgoingReliable> _outgoingReliable;
         SequenceBuffer<IncomingReliable> _incomingReliable;
         deque<vector<uint8>>             _arrIncoming[static_cast<int32>( NetChannelType::Count )];
-        deque<vector<uint8>>             _listOutgoingSequenced;
+        vector<vector<uint8>>            _listOutgoingSequenced; ///< 종류(첫 바이트)마다 가장 새 것 하나 — 쌓인 순서
         deque<vector<uint8>>             _listOutgoingUnreliable;
-        vector<ParsedMessage>            _listParsedScratch; ///< 받은 패킷을 먼저 다 읽어 두는 자리(용량을 다시 쓴다)
+        vector<ParsedMessage>            _listParsedScratch;    ///< 받은 패킷을 먼저 다 읽어 두는 자리(용량을 다시 쓴다)
+        vector<SequencedStream>          _listSequencedReceive; ///< 순서만 — 종류마다 마지막으로 건넨 번호
         NetConnectionStats               _stats;
         float64                          _lastStatsTime;
         float64                          _lastAckRequestTime; ///< 확인을 바란 패킷을 마지막으로 보낸 때
@@ -130,8 +138,6 @@ namespace sw
         uint16                           _oldestUnackedReliableId;
         uint16                           _nextReliableReceiveId;
         uint16                           _nextSequencedSendId;
-        uint16                           _lastSequencedReceiveId;
-        uint8                            _bHasSequencedReceive;
         uint8                            _bAckPending; ///< 받은 패킷이 있어 확인을 돌려줘야 한다
     };
 } // namespace sw

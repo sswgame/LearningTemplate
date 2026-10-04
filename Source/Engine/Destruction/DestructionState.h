@@ -122,6 +122,19 @@ namespace sw
         /** @brief 적용한 피해 사건 수입니다. */
         uint32 getEventCount() const { return _eventCount; }
 
+        /**
+         * @brief 지금 상태를 바이트로 씁니다(늦은 참가 · 어긋남 바로잡기 — 사건열을 처음부터 다시 돌리지 않는다).
+         * @details 끊긴 노드 · 연결 · 앵커 잎 비트, 0 이 아닌 노드 · 연결 변형(비트 그대로), 그룹(번호 · 부모 · 앵커 · 활성 노드), 다음 그룹 번호,
+         *          사건 수. 잎 → 활성 노드 · 그룹 표는 그룹에서 다시 짓는다. 그래서 읽은 쪽의 `computeStateHash` 가 쓴 쪽과 같고, 뒤따르는 사건도
+         *          같은 결과를 낸다(변형이 쌓인 채 넘어간다).
+         */
+        void writeSnapshot( vector<uint8>& outBytes ) const;
+        /**
+         * @brief `writeSnapshot` 의 바이트로 상태를 바꿉니다. 같은 그래프로 시작한(`initialize`) 상태여야 합니다.
+         * @return 매직 · 판 · 노드 · 연결 · 잎 수가 맞지 않거나 잘렸거나 그룹이 잎을 다 덮지 않으면 false 이고 상태는 그대로입니다.
+         */
+        [[nodiscard]] bool readSnapshot( const uint8* pData, size_t size );
+
     private:
         /** @brief 잎의 연결 번호들입니다. */
         vector_reference<const uint32> getLeafLinks( uint32 leaf ) const;

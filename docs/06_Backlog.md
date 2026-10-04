@@ -376,6 +376,15 @@ cd build/Ninja-Debug/Bin
   `SO_RCVBUF` · `SO_SNDBUF` 1 MB, `waitReadable` 의 `WSAPoll` — Windows 빌드에서 `NetworkTest.UdpTransportSendsDatagramsOverLocalhost` 와
   `NetworkThreadTest.UdpHostsRunOnThreadsOverLocalhost` 를 돌리고, 닫힌 포트로 보낸 뒤에도 `receive` 가 계속 되는지 본다.
 
+- **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 손실 많은 회선에서 신뢰 순서 채널이 몇 초 밀린다 —
+  250 ms · 손실 15 % 에서 파괴 사건 최대 지연 4.1 초(247 틱), 100 ms · 5 % 에서 0.8 초. 재전송이 RTT × 1.5 뒤이고 앞 메시지를 기다리는 머리 막힘이라서다.
+  사건을 비신뢰로 겹쳐 보내기(번호가 있어 받는 쪽은 이미 순서를 맞춘다) 또는 NACK 재전송으로 줄인다. ② 롤백(파괴 상태 저장 · 되돌리기, `RollbackSession` 에
+  `makeNetworkSnapshot` 바이트 싣기)은 하지 않았다. ③ 부서지기 전 움직이는 파괴 오브젝트(상자 · 드럼통)의 자세는 파괴 키트가 보내지 않는다 — 게임이
+  `ReplicationServer` 엔티티로 보낸다(아니면 클라이언트 조각이 클라이언트의 그 자리에서 태어난다). ④ 전용 서버 프로세스 모드(창 · 렌더러 없는 App 서버 +
+  UDP 클라이언트, WSL 리눅스 서버 ↔ Windows 클라이언트로 파괴 해시가 컴파일러 · 플랫폼을 넘어 같은지)는 하지 않았다. ⑤ `NetHost` — `Accepted` 를 잃고
+  데이터 패킷으로 연결되면 클라이언트의 `getClientIndex()` 가 −1 로 남는다(네트워크 리팩토링 N2). ⑥ `NetSimDestructionMatrixTest`(나쁜 회선 둘)는 Debug 40 초라
+  호스트 스위트로 두었다 — `EngineTest_NoGPU` 가 이미 100 초를 넘어(한도 180) `SHARDS` 와 `HOST_SPLIT` 을 함께 쓸 수 있게 되면 nogpu 로 옮긴다.
+
 - **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는
   표준 API 라 줄이려면 Win32 · POSIX 순회로 바꾼다. 상주량은 1 KB 미만이라 전역 operator new 교체는 하지 않는다(사용자 결정).
 
@@ -1254,6 +1263,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-10. Core · 태스크 · 메모리
 
+- **순서만 채널(`UnreliableSequenced`)은 메시지 종류(첫 바이트)마다 흐름이다** — 예전엔 연결 전체가 흐름 하나라 한 보내기 간격의 다른 종류 메시지가 서로 지웠다.
+  같은 종류로 여러 조각(오브젝트 · 부분)을 보내는 것은 여전히 서로 지우므로 비신뢰 + 받는 쪽 틱 정렬로 보낸다(`DestructionReplication` 의 자세).
+- **도는 덩어리는 질량 중심으로 보간한다** — 그룹 원점(오브젝트 원점)은 덩어리에서 수 미터 떨어질 수 있어 원점을 직선으로 이으면 오차가 1 m 를 넘는다(p99 0.44 → 0.07 m).
 - **`quaternion::inverse()` · `conjugate()` 는 const 가 아닌 값에서 제자리 버전(void)이 골라진다** — 식 안에서는 const 참조로 받아 부를 것(`RigIkSolver::makeInverse`).
   **`quaternion::fromToRotation` 은 코사인 차 1e-6(약 0.08°) 안쪽을 단위 회전으로 버린다** — 반복 IK 의 마지막 몇 mm 가 그 안이라 CCD 가 멈춘다(`RigIkSolver::makeFromToRotation`).
 
