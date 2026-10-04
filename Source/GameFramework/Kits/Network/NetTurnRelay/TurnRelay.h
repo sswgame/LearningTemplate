@@ -3,6 +3,10 @@
  * @brief 턴제 중계 — 서버가 방마다 자리 · 차례 · 행동 기록을 들고, 정책이 허락한 행동만 번호를 붙여 방 모두에게 보내며, 끊겼다 돌아온 사람에게 놓친 행동을 다시 보냅니다.
  * @details 고스톱 · 포커 · 우노 · SRPG 처럼 "누가 무엇을 했나" 의 순서만 맞으면 되는 게임용입니다. 서버는 규칙을 몰라도 됩니다 — 차례 · 허락은 `ITurnPolicy` 로 게임이 정합니다
  *          (숨겨진 패가 있는 게임은 서버 정책이 행동을 검증하고, 패를 나눠 주는 것은 서버가 자리별 메시지로).
+ *          - **보낼 줄**: 서버는 자리마다 "보낸 행동 수" 만 들고 방의 행동 기록에서 이어 보낸다. 연결의 신뢰 창이 차면 멈췄다가 `update` 에서 이어 간다 —
+ *            돌아온 사람이 놓친 행동이 창(255)보다 많아도 빠지지 않는다. 다른 알림도 창이 차면 연결마다 줄을 서 순서대로 나간다.
+ *          - **자리 표**: 운영체제 난수 비밀에서 섞어 만든다(실행마다 · 서버마다 다르고, 받은 표로 남의 표를 셈할 수 없다). 표가 맞아도 그 자리 연결이
+ *            살아 있으면 거절한다(`SeatInUse`). 한 연결은 자리 하나만 갖는다 — 같은 방에 다시 들어오면 같은 자리를, 다른 방이면 `AlreadySeated` 로 거절한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -41,14 +45,17 @@ namespace sw
         NotStarted,
         InvalidAction, ///< 정책이 거절했다(규칙 위반)
         RoomFull,
-        UnknownRoom
+        UnknownRoom,
+        SeatInUse,    ///< 표는 맞지만 그 자리 연결이 살아 있다(옛 연결이 끊긴 것을 서버가 알기 전이면 잠시 뒤 다시)
+        AlreadySeated ///< 이 연결은 다른 방에 자리가 있다
     };
 
     /** @brief 방의 자리 하나입니다. */
     struct TurnSeat
     {
-        uint32 _token{ 0 };         ///< 다시 들어올 때 내는 값(서버가 정한다)
-        int32  _connectionId{ -1 }; ///< −1 = 끊겼다(자리는 남는다)
+        uint32 _token{ 0 };           ///< 다시 들어올 때 내는 값(서버가 정한다)
+        int32  _connectionId{ -1 };   ///< −1 = 끊겼다(자리는 남는다)
+        int32  _sentActionCount{ 0 }; ///< 서버 — 이 자리 연결에 보낸 행동 수(그 뒤부터 이어 보낸다)
         uint8  _bTaken{ SW_FALSE };
     };
 } // namespace sw
@@ -138,9 +145,15 @@ namespace sw
     class SW_GF_API TurnRelayServer : public INetMessageHandler
     {
     public:
+        /** @brief 연결 하나에 줄 세울 수 있는 알림 수입니다. 넘치면 그 연결은 받지 않는 것이다 — 끊는다(표로 돌아와 다시 받는다). */
+        static constexpr int32 kMaxPendingPerConnection = 64;
+
         TurnRelayServer();
 
-        void  initialize( NetHost* pHost, int32 seatCount, const ITurnPolicy* pPolicy = nullptr, uint32 tokenSeed = 0x5EEDu );
+        /** @param tokenSeed 자리 표 비밀 — 0 이면 운영체제 난수. 시험은 고정해도 된다. */
+        void initialize( NetHost* pHost, int32 seatCount, const ITurnPolicy* pPolicy = nullptr, uint64 tokenSeed = 0 );
+        /** @brief 매 틱(호스트 `update` 뒤) — 신뢰 창이 차서 못 보낸 행동 · 알림을 이어 보냅니다. */
+        void  update();
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kTurnRelay; }
         /** @brief 서버가 받는 종류 — 들어오기 · 행동. */
         uint16 getMessageKindMask() const override
@@ -156,20 +169,37 @@ namespace sw
         const TurnRoom* findRoom( uint32 roomId ) const;
 
     private:
+        /** @brief 신뢰 창이 차서 줄 선 알림입니다(연결마다 들어온 순서). */
+        struct PendingMessage
+        {
+            vector<uint8> _buffer{};
+            int32         _connectionId{ -1 };
+        };
+
         TurnRoom*          findRoomMutable( uint32 roomId );
+        TurnRoom*          findRoomOfConnection( int32 connectionId );
         [[nodiscard]] bool handleJoin( int32 connectionId, BitReader& reader );
         [[nodiscard]] bool handleAction( int32 connectionId, BitReader& reader );
-        void               sendApplied( const TurnRoom& room, int32 index, int32 connectionId );
-        void               broadcastRoom( const TurnRoom& room, const vector<uint8>& buffer );
-        uint32             nextToken();
+        void               sendJoined( int32 connectionId, uint32 roomId, int32 seat, uint32 token );
+        void               sendDenied( int32 connectionId, uint32 roomId, TurnRejectReason reason );
+        /** @brief 그 연결에 줄 선 것이 없으면 바로 보내고, 있거나 창이 찼으면 줄 끝에 둡니다. */
+        void sendOrQueue( int32 connectionId );
+        /** @brief 자리 연결에 아직 안 보낸 행동을 창이 허락하는 만큼 보냅니다. */
+        void   flushSeat( const TurnRoom& room, TurnSeat& seat );
+        void   flushPending();
+        int32  countPending( int32 connectionId ) const;
+        uint32 nextToken();
 
         vector<TurnRoom>            _listRoom;
+        vector<PendingMessage>      _listPending;
+        vector<int32>               _listBlockedScratch; ///< `flushPending` 이 이번에 막힌 연결 — 다시 쓴다
         EventBuffer<TurnRelayEvent> _eventBuffer;
         ITurnPolicy                 _defaultPolicy;
         NetHost*                    _pHost;
         const ITurnPolicy*          _pPolicy;
+        uint64                      _tokenSecret;
+        uint64                      _tokenCount;
         int32                       _seatCount;
-        uint32                      _tokenState;
         NetMessageWriter            _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };
 } // namespace sw
