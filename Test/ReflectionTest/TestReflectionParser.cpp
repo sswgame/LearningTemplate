@@ -1533,3 +1533,55 @@ SW_TEST_CASE( ReflectionParserTest, FunctionParametersAndEventsAreGenerated )
     SW_EXPECT_TRUE_MSG( run._log.find( "EVENT _onScored(int32 score, bool bBest)" ) != sw::string::npos, run._log.c_str() );
 #endif
 }
+
+/**
+ * @brief [ReflectionParserTest] 역할 애노테이션 — `RepNotify` 는 같은 타입의 `void fn()` · `void fn( const T& )` 만, `Interp` 는 섞을 수 있는 타입만. 다른 모양은 그 헤더만 실패한다
+ */
+SW_TEST_CASE( ReflectionParserTest, PropertyRoleAnnotationsAreValidated )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    // 성한 헤더 하나(RepNotify 두 모양 · SaveGame · Config) + 깨진 헤더 셋(없는 함수 · 다른 인자 타입 · 섞을 수 없는 Interp)을 한 번에 돌린다.
+    const sw::string kHeaderHead = "#pragma once\n"
+                                   "#include \"Core/Common/Types.h\"\n"
+                                   "#include \"Core/Container/string.h\"\n"
+                                   "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                   "namespace sw\n"
+                                   "{\n"
+                                   "\tREFLECT()\n";
+    const auto       makeHeader  = [&kHeaderHead]( const sw::string& typeName, const sw::string& body )
+    {
+        return kHeaderHead + "\tstruct " + typeName + "\n\t{\n\t\tREFLECT_BODY();\n" + body + "\t};\n}\n";
+    };
+    sw::vector<TempHeader> listHeader;
+    listHeader.push_back( TempHeader{ "RoleGoodSample", makeHeader( "RoleGoodSampleActor", "\t\tPROPERTY( RepNotify = onHp, SaveGame )\n\t\tint32 _hp;\n"
+                                                                                           "\t\tPROPERTY( RepNotify = onMp, ConfigSection = \"Stats\" )\n\t\tint32 _mp;\n"
+                                                                                           "\t\tvoid onHp( const int32& oldValue ) {}\n"
+                                                                                           "\t\tvoid onMp() {}\n" ) } );
+    listHeader.push_back( TempHeader{ "RoleMissingSample", makeHeader( "RoleMissingSampleActor", "\t\tPROPERTY( RepNotify = onNothing )\n\t\tint32 _hp;\n" ) } );
+    listHeader.push_back( TempHeader{ "RoleShapeSample", makeHeader( "RoleShapeSampleActor", "\t\tPROPERTY( RepNotify = onHp )\n\t\tint32 _hp;\n"
+                                                                                             "\t\tvoid onHp( float32 oldValue ) {}\n" ) } );
+    listHeader.push_back( TempHeader{ "RoleInterpSample", makeHeader( "RoleInterpSampleActor", "\t\tPROPERTY( Interp )\n\t\tstring _label;\n" ) } );
+    const ParserRunResult run = runParserOnTempHeaders( parserExe, listHeader );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 4 ), run._listGeneratedCpp.size() );
+
+    const sw::string& generated = run._listGeneratedCpp[0];
+    SW_EXPECT_TRUE_MSG( generated.find( "->onHp( *static_cast<const PropDecl*>( pOldValue ) );" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "->onMp(); };" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bReplicated = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bSaveGame = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._configSection = \"Stats\";" ) != sw::string::npos, generated.c_str() );
+    SW_EXPECT_TRUE_MSG( generated.find( "p._metadata._bConfig = SW_TRUE;" ) != sw::string::npos, generated.c_str() );
+
+    SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
+    for ( size_t brokenIndex = 1; brokenIndex < 4; ++brokenIndex )
+        SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[brokenIndex].find( "struct Registrar" ) == sw::string::npos, run._listGeneratedCpp[brokenIndex].c_str() );
+#if defined( SW_DEBUG )
+    SW_EXPECT_TRUE_MSG( run._log.find( "RoleMissingSampleActor::_hp" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "RoleShapeSampleActor::_hp" ) != sw::string::npos, run._log.c_str() );
+    SW_EXPECT_TRUE_MSG( run._log.find( "PROPERTY( Interp ) on 'sw::RoleInterpSampleActor::_label'" ) != sw::string::npos, run._log.c_str() );
+#endif
+}

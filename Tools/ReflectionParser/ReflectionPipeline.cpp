@@ -24,12 +24,6 @@ namespace sw
     {
         struct ReflectionPipelineInternal
         {
-            /**
-             * @brief `--dump` — 헤더 하나에서 뽑은 것을 사람이 읽는 꼴로 표준 출력에 한 번에 씁니다.
-             * @details "왜 이 프로퍼티가 인스펙터에 없나 · 왜 이 컴포넌트를 씬이 못 찾나" 를 묻는 자리다 — 파서가 무엇을 봤는지 보여 준다.
-             *          타입(부모 · 팩토리 · 추상), 프로퍼티(타입 · 값 자리 · 컨테이너 · 범위 ·
-             *          플래그), 함수, enum 값까지 적는다. 헤더 여럿을 동시에 쓸 수 있어 한 덩어리로 내보낸다.
-             */
             /** @brief `타입 이름 = 기본값` 꼴로 인자 목록을 씁니다. */
             static void appendParameterList( StringBuilder<constant::kMaxBuffer8192>& out, const vector<ParsedParameterInfo>& listParameter )
             {
@@ -44,6 +38,12 @@ namespace sw
                 }
             }
 
+            /**
+             * @brief `--dump` — 헤더 하나에서 뽑은 것을 사람이 읽는 꼴로 표준 출력에 한 번에 씁니다.
+             * @details "왜 이 프로퍼티가 인스펙터에 없나 · 왜 이 컴포넌트를 씬이 못 찾나" 를 묻는 자리다 — 파서가 무엇을 봤는지 보여 준다.
+             *          타입(부모 · 팩토리 · 추상), 프로퍼티(타입 · 값 자리 · 컨테이너 · 범위 ·
+             *          플래그), 함수, enum 값까지 적는다. 헤더 여럿을 동시에 쓸 수 있어 한 덩어리로 내보낸다.
+             */
             static void printParsedHeader( const string& inputFile, const ParsedHeader& parsed )
             {
                 StringBuilder<constant::kMaxBuffer8192> out;
@@ -91,12 +91,20 @@ namespace sw
                             {    prop._bPolymorphic,     "Polymorphic"},
                             {    prop._bSkipIfEmpty,     "SkipIfEmpty"},
                             {prop._bHideInInspector, "HideInInspector"},
+                            {     prop._bReplicated,      "Replicated"},
+                            {       prop._bSaveGame,        "SaveGame"},
+                            {         prop._bInterp,          "Interp"},
+                            {         prop._bConfig,          "Config"},
                         };
                         for ( const auto& [bSet, pFlagName] : arrFlag )
                         {
                             if ( bSet == SW_TRUE )
                                 out.appendFormat( "  [%#]", pFlagName );
                         }
+                        if ( prop._repNotify.empty() == false )
+                            out.appendFormat( "  RepNotify=%#%#", prop._repNotify, prop._bRepNotifyTakesOldValue == SW_TRUE ? "(old)" : "()" );
+                        if ( prop._configSection.empty() == false || prop._configKey.empty() == false )
+                            out.appendFormat( "  Config=%#.%#", prop._configSection, prop._configKey );
                         for ( const string& alias : prop._listAlias )
                             out.appendFormat( "  alias=%#", alias );
                         out.append( "\n" );

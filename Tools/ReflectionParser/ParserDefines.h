@@ -59,6 +59,10 @@ namespace sw
          */
         inline constexpr const utf8* kEventTemplatePrefix = "sw::MulticastDelegate<";
         inline constexpr const utf8* kEventTemplateLeaf   = "MulticastDelegate";
+
+        /** @brief `PROPERTY( Interp )` 를 받는 정규 타입 이름입니다 — 시퀀서 값 트랙이 섞을 수 있는 것(`PropertyRoleUtil::isInterpolatable` 과 같은 목록). */
+        inline constexpr const utf8* kArrInterpTypeName[] = { "int8", "int16", "int32", "int64", "uint8", "uint16", "uint32",
+                                                              "uint64", "float32", "float64", "float2", "float3", "float4", "quaternion" };
     } // namespace annotation
 
     // ------------------------------------------------------------------------------

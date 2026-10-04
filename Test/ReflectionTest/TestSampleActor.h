@@ -10,6 +10,7 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -732,6 +733,60 @@ namespace sw
         {
             _lastReported = value;
         }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 역할 플래그(복제 · 세이브 · 보간 · 설정) 샘플입니다(`ReflectionPropertyRoleTest`). */
+    REFLECT()
+    struct PropertyRoleActor
+    {
+        REFLECT_BODY();
+
+        PROPERTY( RepNotify = onHealthReplicated )
+        int32 _health = 100;
+
+        PROPERTY( Replicated, RepNotify = onTeamReplicated )
+        int32 _team = 0;
+
+        PROPERTY( SaveGame )
+        int32 _gold = 0;
+
+        PROPERTY( SaveGame )
+        string _heroName = "nobody";
+
+        /** @brief 세이브 대상이 아니다 — 세이브 읽기는 이 값을 덮지도 기본값으로 되돌리지도 않는다. */
+        PROPERTY( Default = "7" )
+        int32 _sessionScore = 0;
+
+        PROPERTY( Interp )
+        float32 _opacity = 1.0f;
+
+        PROPERTY( Interp )
+        float3 _offset{};
+
+        /** @brief 직렬화기는 quaternion 을 싣지 않는다 — 런타임에 섞기만 하는 값이다. */
+        PROPERTY( Interp, Transient )
+        quaternion _rotation = quaternion::Identity;
+
+        PROPERTY( Interp )
+        int32 _step = 0;
+
+        PROPERTY( Config )
+        float32 _volume = 0.5f;
+
+        PROPERTY( ConfigSection = "Audio", ConfigKey = "master" )
+        float32 _masterVolume = 1.0f;
+
+        int32 _oldHealthSeen   = -1;
+        int32 _teamNotifyCount = 0;
+
+        /** @brief 체력이 복제로 바뀐 뒤 불립니다. 이전 값을 받습니다. */
+        void onHealthReplicated( const int32& oldHealth ) { _oldHealthSeen = oldHealth; }
+
+        /** @brief 팀이 복제로 바뀐 뒤 불립니다. */
+        void onTeamReplicated() { ++_teamNotifyCount; }
     };
 } // namespace sw
 

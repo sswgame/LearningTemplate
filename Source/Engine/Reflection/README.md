@@ -50,6 +50,7 @@ flowchart LR
 | `ReflectAny.*` | 타입 소거 값 상자 |
 | `ReflectValue.*` | 타입 이름이 붙은 값(`ReflectValue`)과 인자 타입마다의 변환 표(`ReflectTypeOpsOf<T>`) |
 | `ReflectionInvoke.*` | 이름으로 부르기 · 이벤트 묶기/부르기(`ReflectionInvoke`) — 콘솔 · 비주얼 스크립팅 · 기믹 배선 · 에디터가 쓴다 |
+| `PropertyRoleUtil.*` | 역할 플래그(`Replicated` · `RepNotify` · `SaveGame` · `Interp` · `Config`)를 읽는 쪽의 도우미 — 모으기 · RepNotify 부르기 · 값 섞기 · 설정 묶음 |
 | `Rpc/` | RPC용 리플렉션 보조(`ReflectionRpc.h`) |
 
 보통은 `#include "Engine/Reflection/ReflectionCore.h"` 또는 컴포넌트 헤더가 끌어오는 매크로만 쓰면 됩니다.
@@ -184,6 +185,26 @@ ReflectionInvoke::bindEventToFunction( *pEvent, pDoor, *pLampType, "turnOn", pLa
 
 `_invoker` 를 직접 부르면 인자를 **그 C++ 타입 그대로** 넣어야 합니다(`TaskValue` 는 타입을 모른다). 결과 코드는 `ReflectCallResult` 입니다.
 
+### 7) 역할 플래그 — 네트워크 · 세이브 · 시퀀서 · 설정
+
+```cpp
+PROPERTY( RepNotify = onHealthReplicated )        // Replicated 이기도 하다. void fn() 또는 void fn( const T& oldValue ) — 파서가 모양을 본다
+int32 _health = 100;
+PROPERTY( SaveGame )                              // 타입에 하나라도 있으면 세이브는 이것만 쓴다(옵트인)
+int32 _gold = 0;
+PROPERTY( Interp )                                // 시퀀서 값 트랙이 섞는다 — 숫자 · float2/3/4 · quaternion 만(그 밖은 파서 오류)
+float32 _opacity = 1.0f;
+PROPERTY( ConfigSection = "Audio", ConfigKey = "master" )   // Config 이기도 하다. 섹션 기본 = 선언 타입 이름, 키 기본 = 프로퍼티 이름
+float32 _masterVolume = 1.0f;
+```
+
+| 쓰는 쪽 | 부를 것 |
+|---------|---------|
+| 네트워크 | `PropertyRoleUtil::collectReplicatedProperties( type, out )` 로 복제할 칸을 모으고, 받은 값을 쓴 **뒤** `callRepNotify( prop, pInstance, &oldValue )` |
+| 세이브 | `SerializeContext::setSaveGameOnly( true )` 로 직렬화(`SaveGameSerializer::makeSaveContext`). 옵트인 타입(`TypeInfo::hasSaveGameProperty`)은 `SaveGame` 만 쓰고 읽으며, 읽을 때 나머지는 지금 값 그대로(기본값으로도 되돌리지 않는다). 지금은 태그 바이너리(`Archive::serializeObject`) 길이 이것을 본다 |
+| 시퀀서 | `collectInterpProperties` · `isInterpolatable` · `applyInterpolated( prop, pInstance, &from, &to, alpha )`(정수 반올림 · quaternion slerp) |
+| 설정 | `collectConfigBindings( type, out )` → (섹션 · 키 · 프로퍼티). 값은 `SerializerUtil::applyPropertyText` · `valueToText` 로 글과 오간다 |
+
 ---
 
 ## 런타임에서 쓰기
@@ -236,6 +257,7 @@ CMake 헬퍼: `cmake/Engine/ReflectionCodeGen.cmake` (`sw_addReflectionStep`)
 | `PROPERTY(...)` | 필드. `ReadOnly`, `Min`/`Max`, `Category`, `Name`(접근자 프로퍼티), `Alias`(4절) … |
 | `FUNCTION(...)` | 함수. RPC용 `Server`/`Client`/`Multicast` 등. 인자 이름 · 기본 인자는 선언에서 읽는다 |
 | `PROPERTY()` + `MulticastDelegate<void(…)>` | 이벤트(6절) |
+| `PROPERTY( Replicated · RepNotify · SaveGame · Interp · Config … )` | 역할 플래그(7절) |
 | `ENUM(...)` | 열거형. `Flags`, `Invalid=`, `Count=` |
 | `REFLECT_CONTAINER(...)` | 커스텀 컨테이너를 Sequence/Map으로 |
 

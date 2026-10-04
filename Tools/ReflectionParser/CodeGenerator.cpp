@@ -375,6 +375,16 @@ namespace sw
             emit.linef( "p.resolveBitField( sizeof( %# ), []( void* pInstance ) { static_cast<%#*>( pInstance )->%# = static_cast<PropDecl>( 1 ); } );",
                         typeInfo._fullyQualifiedName, typeInfo._fullyQualifiedName, prop._memberName );
         }
+        if ( prop._repNotify.empty() == false )
+        {
+            // 파서가 모양을 확인했다(`validateMemberFunctions`) — 이전 값을 받는 함수면 그 타입 그대로 넘긴다.
+            if ( prop._bRepNotifyTakesOldValue == SW_TRUE )
+                emit.linef( "p._pRepNotify = []( void* pInstance, const void* pOldValue ) { static_cast<%#*>( pInstance )->%#( *static_cast<const PropDecl*>( pOldValue ) ); };",
+                            typeInfo._fullyQualifiedName, prop._repNotify );
+            else
+                emit.linef( "p._pRepNotify = []( void* pInstance, const void* ) { static_cast<%#*>( pInstance )->%#(); };", typeInfo._fullyQualifiedName,
+                            prop._repNotify );
+        }
         if ( prop._listAlias.empty() == false )
         {
             emit.line( "p._listAlias = {" );

@@ -61,6 +61,18 @@ string.AssetType = AssetType
 string.Meta = Meta, meta, CustomMeta
 float.MinRange = Min
 float.MaxRange = Max
+# 네트워크 복제 대상(`PropertyRoleUtil::collectReplicatedProperties`). RepNotify 를 적으면 Replicated 이기도 하다
+flag.Replicated = Replicated
+# 받은 값으로 바꾼 뒤 부를 같은 타입의 메서드 — void fn() 또는 void fn( const T& oldValue ). 없거나 모양이 다르면 파서 오류
+string.RepNotify = RepNotify
+# 타입(기반 포함)에 하나라도 있으면 세이브(`SerializeContext::setSaveGameOnly`)가 이것만 쓴다. 하나도 없는 타입은 전부 쓴다
+flag.SaveGame = SaveGame
+# 시퀀서 값 트랙이 섞을 수 있다 — 실수 · 정수 · float2/3/4 · quaternion 만(그 밖의 타입은 파서 오류)
+flag.Interp = Interp
+# 설정 파일과 묶는다(`PropertyRoleUtil::collectConfigBindings`). 섹션 기본은 선언한 타입 이름, 키 기본은 프로퍼티 이름. 섹션 · 키를 적으면 Config 이기도 하다
+flag.Config = Config
+string.ConfigSection = ConfigSection
+string.ConfigKey = ConfigKey
 
 [FUNCTION]
 netrole.Server = Server

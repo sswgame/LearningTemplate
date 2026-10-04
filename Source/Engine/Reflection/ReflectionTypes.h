@@ -75,9 +75,15 @@ namespace sw
          */
         string _defaultValue;
         /** @brief 소프트 에셋 힌트 (PROPERTY(AssetPath) / AssetType="Texture"). */
-        string  _assetType;
-        float32 _minRange;
-        float32 _maxRange;
+        string _assetType;
+        /** @brief `RepNotify = fn` — 받은 값으로 바꾼 뒤 부르는 같은 타입의 메서드 이름입니다. 부르는 길은 `PropertyInfo::_pRepNotify` 입니다. */
+        hashed_string _repNotify;
+        /** @brief `ConfigSection = "…"` — 비면 선언한 타입의 이름입니다(`PropertyRoleUtil::collectConfigBindings`). */
+        hashed_string _configSection;
+        /** @brief `ConfigKey = "…"` — 비면 프로퍼티 이름입니다. */
+        hashed_string _configKey;
+        float32       _minRange;
+        float32       _maxRange;
         /**
          * @brief 아래 · 위 경계가 각각 적혀 있는가(`PROPERTY( Min = … )` · `Max = …`). 적힌 쪽만 막는다.
          * @details 표시가 하나면 `Min = 0` 만 적은 프로퍼티의 위 경계가 기본값 1 로 남아 인스펙터가 그 값을 1 에서 막는다.
@@ -109,6 +115,18 @@ namespace sw
 #else
         [[maybe_unused]] uint8 _reservedFlags : 1;
 #endif
+        /** @brief 네트워크 복제 대상입니다(`Replicated` · `RepNotify`). 네트워크 계층이 `PropertyRoleUtil::collectReplicatedProperties` 로 모읍니다. */
+        uint8 _bReplicated : 1;
+        /**
+         * @brief 세이브 대상입니다(`SaveGame`). 타입(기반 포함)에 이것이 하나라도 있으면 세이브 직렬화(`SerializeContext::setSaveGameOnly`)가
+         *        이것만 씁니다 — 하나도 없는 타입은 전부 씁니다(`TypeInfo::hasSaveGameProperty`).
+         */
+        uint8 _bSaveGame : 1;
+        /** @brief 시퀀서 값 트랙이 섞을 수 있습니다(`Interp` — 숫자 · float2/3/4 · quaternion 만, 파서가 막는다). */
+        uint8 _bInterp : 1;
+        /** @brief 설정 파일의 (섹션 · 키) 칸과 묶습니다(`Config` · `ConfigSection` · `ConfigKey`). */
+        uint8                  _bConfig       : 1;
+        [[maybe_unused]] uint8 _reservedRoles : 4;
 
         /** @brief 범위 · 플래그를 끈 기본값으로 만듭니다. */
         PropertyMetadata() noexcept;
@@ -201,6 +219,11 @@ namespace sw
          *          직렬화기 · 인스펙터 · 비교 도구가 바뀐 것 없이 그 자리를 읽고 씁니다.
          */
         using ValueAccessor = void* (*)( void* pInstance );
+        /**
+         * @brief `RepNotify` 함수를 부릅니다(생성 코드가 만든다). @p pOldValue 는 바뀌기 전 값의 자리(프로퍼티의 선언 타입)이고,
+         *        함수가 이전 값을 받지 않으면 쓰지 않습니다.
+         */
+        using RepNotifyFunction = void ( * )( void* pInstance, const void* pOldValue );
 
         shared_ptr<IContainerWrapper>   _containerWrapper;
         shared_ptr<NestedContainerInfo> _nestedContainer; ///< 컨테이너일 때 전체 중첩 사슬
@@ -208,7 +231,9 @@ namespace sw
 
         /** @brief 값이 객체 밖에 있으면 그 자리를 찾는 함수입니다. nullptr 이면 값은 `인스턴스 + _offset` 에 있습니다. */
         ValueAccessor _pValueAccessor;
-        size_t        _offset;
+        /** @brief `RepNotify` 를 부르는 함수입니다. 없으면 nullptr 입니다(`PropertyRoleUtil::callRepNotify`). */
+        RepNotifyFunction _pRepNotify;
+        size_t            _offset;
 
         hashed_string         _name;
         hashed_string         _typeName;
@@ -902,8 +927,12 @@ namespace sw
          *          `registerClass` 는 공개 API 이고 그 값을 검사하지 않으며, 모듈이 따로따로
          *          등록되는 핫 리로드에서는 A→B→A 가 만들어질 수 있습니다.
          */
-        mutable uint8          _bBuildingPropertyWithBase : 1;
-        [[maybe_unused]] uint8 _reservedPadding[3];
+        mutable uint8 _bBuildingPropertyWithBase : 1;
+        /** @brief `hasSaveGameProperty` 의 답과 그것을 구했는지입니다. 상속 목록 캐시와 함께 비웁니다. */
+        mutable uint8          _bHasSaveGameProperty : 1;
+        mutable uint8          _bSaveGameCalculated  : 1;
+        [[maybe_unused]] uint8 _reservedCacheFlags   : 6;
+        [[maybe_unused]] uint8 _reservedPadding[2];
 
         /** @brief 빈 TypeInfo 를 만듭니다. */
         TypeInfo() noexcept;
@@ -969,6 +998,11 @@ namespace sw
 
         /** @brief 직렬화/복사 시 memcpy POD 경로를 쓸 수 있으면 true. */
         bool usesPodCopyFastPath() const;
+        /**
+         * @brief 상속분까지 `SaveGame` 프로퍼티가 하나라도 있으면 true 입니다 — 세이브 직렬화가 그것만 쓰는 타입(옵트인)인가.
+         * @details 상속 목록 캐시와 같이 비우고 다시 구합니다(`clearInheritedProperties`).
+         */
+        bool hasSaveGameProperty() const;
         /** @brief 이 타입이 targetFqn이거나 그 파생이면 true. 부모가 미등록이어도 `_parentFQN` 이 같으면 true. */
         bool isDerivedFrom( const hashed_string& targetFqn ) const;
         /**

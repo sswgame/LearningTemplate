@@ -59,6 +59,9 @@ namespace sw
         string                          _tooltip;
         string                          _defaultValue;
         string                          _assetType;
+        string                          _repNotify;     ///< `RepNotify = fn` — 같은 타입의 메서드 이름(모양은 `validateMemberFunctions` 가 본다)
+        string                          _configSection; ///< `ConfigSection = "…"`
+        string                          _configKey;     ///< `ConfigKey = "…"`
         vector<pair<string, string>>    _listCustomMeta;
         string                          _containerType;
         string                          _elementTypeName;
@@ -83,8 +86,14 @@ namespace sw
          * @brief 값이 객체 밖에 있습니다 — `PROPERTY` 가 필드가 아니라 값 참조(`T&`)를 돌려주는 인자 없는 메서드에 붙었습니다.
          * @details 코드젠은 오프셋 대신 그 메서드를 부르는 `PropertyInfo::_pValueAccessor` 를 냅니다(`_memberName` 이 메서드 이름).
          */
-        uint8                   _bIsAccessor : 1;
-        [[maybe_unused]] uint8  _reserved    : 6;
+        uint8 _bIsAccessor : 1;
+        uint8 _bReplicated : 1;
+        uint8 _bSaveGame   : 1;
+        uint8 _bInterp     : 1;
+        uint8 _bConfig     : 1;
+        /** @brief `RepNotify` 함수가 이전 값을 받는다(`void fn( const T& )`). 선언에서 온 사실이다(애노테이션 줄이 아니다). */
+        uint8                   _bRepNotifyTakesOldValue : 1;
+        [[maybe_unused]] uint8  _reserved                : 1;
         [[maybe_unused]] uint16 _padding;
 
         ParsedPropertyInfo() noexcept
@@ -97,6 +106,9 @@ namespace sw
             , _tooltip{}
             , _defaultValue{}
             , _assetType{}
+            , _repNotify{}
+            , _configSection{}
+            , _configKey{}
             , _listCustomMeta{}
             , _containerType{}
             , _elementTypeName{}
@@ -117,10 +129,27 @@ namespace sw
             , _bSkipIfEmpty{ SW_FALSE }
             , _bHideInInspector{ SW_FALSE }
             , _bIsAccessor{ SW_FALSE }
+            , _bReplicated{ SW_FALSE }
+            , _bSaveGame{ SW_FALSE }
+            , _bInterp{ SW_FALSE }
+            , _bConfig{ SW_FALSE }
+            , _bRepNotifyTakesOldValue{ SW_FALSE }
             , _reserved{ 0 }
             , _padding{ 0 }
         {
         }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief REFLECT 타입이 선언한 메서드 하나의 모양입니다(FUNCTION 이 없어도). 애노테이션이 메서드 이름을 가리킬 때(`RepNotify` 등) 대조합니다.
+     */
+    struct ParsedMethodSignature
+    {
+        string         _name;
+        vector<string> _listParameterTypeName; ///< 정규 타입 이름 — const · 참조는 벗겼다
     };
 } // namespace sw
 

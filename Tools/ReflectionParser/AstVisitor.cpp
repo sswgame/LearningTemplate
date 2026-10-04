@@ -556,17 +556,19 @@ namespace sw
             /** @brief REFLECT 타입 하나의 멤버를 한 번의 자식 순회로 모으는 상태입니다. */
             struct MemberCollector
             {
-                ParsedTypeInfo*        _pType;
-                const ParserSession*   _pSession;
-                uint32                 _baseCount;
-                uint8                  _bSkipConstructors : 1; ///< Abstract / Static 타입은 생성할 수 없다(Unreal UCLASS(Abstract))
-                uint8                  _bBodyFound        : 1;
-                uint8                  _bHasError         : 1;
-                [[maybe_unused]] uint8 _reserved          : 5;
+                ParsedTypeInfo*               _pType;
+                const ParserSession*          _pSession;
+                vector<ParsedMethodSignature> _listMethodSignature; ///< FUNCTION 여부와 무관하게 이 타입이 선언한 메서드(애노테이션이 이름으로 가리킬 때 대조)
+                uint32                        _baseCount;
+                uint8                         _bSkipConstructors : 1; ///< Abstract / Static 타입은 생성할 수 없다(Unreal UCLASS(Abstract))
+                uint8                         _bBodyFound        : 1;
+                uint8                         _bHasError         : 1;
+                [[maybe_unused]] uint8        _reserved          : 5;
 
                 MemberCollector( ParsedTypeInfo& type, const ParserSession& session )
                     : _pType{ &type }
                     , _pSession{ &session }
+                    , _listMethodSignature{}
                     , _baseCount{ 0 }
                     , _bSkipConstructors{ SW_FALSE }
                     , _bBodyFound{ SW_FALSE }
@@ -958,6 +960,11 @@ namespace sw
                     return;
                 }
                 fillContainerDetails( prop, fieldType, session );
+                if ( isInterpAllowed( prop, owner ) == false )
+                {
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
                 collector._pType->_listProperty.push_back( std::move( prop ) );
             }
 
@@ -1004,6 +1011,11 @@ namespace sw
                 if ( prop._bIsContainer == SW_TRUE )
                 {
                     SW_LOG_ERROR( "ERROR: PROPERTY() on method '%#' returns a container. Accessor properties support single values only.", owner );
+                    collector._bHasError = SW_TRUE;
+                    return;
+                }
+                if ( isInterpAllowed( prop, owner ) == false )
+                {
                     collector._bHasError = SW_TRUE;
                     return;
                 }
@@ -1109,6 +1121,76 @@ namespace sw
                 collector._pType->_listMethod.push_back( std::move( method ) );
             }
 
+            /** @brief 메서드의 이름 · 인자 타입을 적어 둡니다. FUNCTION 이 없어도 — `RepNotify` 처럼 애노테이션이 이름으로 가리킬 수 있다. */
+            static void recordMethodSignature( const CXCursor cursor, const string& name, MemberCollector& collector )
+            {
+                ParsedMethodSignature signature;
+                signature._name     = name;
+                const int32 numArgs = clang_Cursor_getNumArguments( cursor );
+                for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
+                {
+                    const CXCursor argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
+                    signature._listParameterTypeName.push_back(
+                        collector._pSession->_typeNameMap.normalize( takeString( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) ) );
+                }
+                collector._listMethodSignature.push_back( std::move( signature ) );
+            }
+
+            /** @brief 이름이 같은 메서드 중 인자 수가 @p maxParameterCount 이하인 첫 것입니다. 없으면 nullptr 입니다. */
+            static const ParsedMethodSignature* findMethodSignature( const MemberCollector& collector, const string_view name, const size_t maxParameterCount )
+            {
+                for ( const ParsedMethodSignature& signature : collector._listMethodSignature )
+                {
+                    if ( signature._name == name && signature._listParameterTypeName.size() <= maxParameterCount )
+                        return &signature;
+                }
+                return nullptr;
+            }
+
+            /**
+             * @brief 프로퍼티 애노테이션이 이름으로 가리키는 메서드가 있고 모양이 맞는지 봅니다(`RepNotify`).
+             * @details 같은 타입이 선언한 메서드만 찾는다 — 생성 코드는 그 메서드를 직접 부르므로 이름이 틀리면 컴파일 오류가 엉뚱한 .gen.cpp 에서 난다.
+             *          여기서 그 헤더의 이름으로 멈춘다. `RepNotify` 는 `void fn()` 또는 `void fn( const T& )`(T = 프로퍼티 타입)이다.
+             */
+            static void validateMemberFunctions( MemberCollector& collector )
+            {
+                for ( ParsedPropertyInfo& prop : collector._pType->_listProperty )
+                {
+                    if ( prop._repNotify.empty() )
+                        continue;
+                    const string                 owner      = makeMemberOwnerName( collector._pType->_fullyQualifiedName, prop._name );
+                    const ParsedMethodSignature* pSignature = findMethodSignature( collector, prop._repNotify, 1 );
+                    const bool                   bTakesOld  = pSignature != nullptr && pSignature->_listParameterTypeName.size() == 1;
+                    if ( pSignature == nullptr || ( bTakesOld && pSignature->_listParameterTypeName[0] != prop._typeName ) )
+                    {
+                        SW_LOG_ERROR( "ERROR: PROPERTY( RepNotify = %# ) on '%#' needs a method of the same type named '%#' taking nothing or the old "
+                                      "value (const %#&).",
+                                      prop._repNotify, owner, prop._repNotify, prop._typeName );
+                        collector._bHasError = SW_TRUE;
+                        continue;
+                    }
+                    prop._bRepNotifyTakesOldValue = bTakesOld ? SW_TRUE : SW_FALSE;
+                }
+            }
+
+            /** @brief `Interp` 는 시퀀서가 섞을 수 있는 타입에만 — 컨테이너 · 비트필드 · 그 밖의 타입은 그 헤더를 멈춥니다. */
+            static bool isInterpAllowed( const ParsedPropertyInfo& prop, const string_view owner )
+            {
+                if ( prop._bInterp == SW_FALSE )
+                    return true;
+                bool bKnownType = false;
+                for ( const utf8* pTypeName : annotation::kArrInterpTypeName )
+                {
+                    if ( prop._typeName == pTypeName )
+                        bKnownType = true;
+                }
+                if ( bKnownType && prop._bIsContainer == SW_FALSE && prop._bIsBitField == SW_FALSE )
+                    return true;
+                SW_LOG_ERROR( "ERROR: PROPERTY( Interp ) on '%#' (%#) - only a single number, float2/3/4 or quaternion can be animated by a value track.",
+                              owner, prop._typeName );
+                return false;
+            }
+
             /** @brief 함수 꼴 멤버 하나 — 마커 · 생성자 · 메서드로 나눕니다. */
             static void collectFunctionMember( const CXCursor cursor, const CXCursorKind kind, MemberCollector& collector )
             {
@@ -1132,6 +1214,7 @@ namespace sw
                 }
                 if ( kind == CXCursor_CXXMethod )
                 {
+                    recordMethodSignature( cursor, spelling, collector );
                     if ( annotation._propertySpelling.empty() == false )
                     {
                         if ( annotation._functionSpelling.empty() == false )
@@ -1445,6 +1528,8 @@ namespace sw
         {
             AstVisitorInternal::MemberCollector collector( typeInfo, *_pSession );
             clang_visitChildren( cursor, AstVisitorInternal::memberCollectVisitor, &collector );
+            // 메서드는 프로퍼티 뒤에 선언될 수 있다 — 이름으로 가리키는 애노테이션은 멤버를 다 모은 뒤에 대조한다.
+            AstVisitorInternal::validateMemberFunctions( collector );
             if ( collector._bHasError == SW_TRUE )
             {
                 markHeaderError( outHeader );

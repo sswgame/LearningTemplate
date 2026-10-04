@@ -145,6 +145,9 @@ namespace sw
         : _defaultValue{}
 #endif
         , _assetType{}
+        , _repNotify{}
+        , _configSection{}
+        , _configKey{}
         , _minRange{ 0.0f }
         , _maxRange{ 1.0f }
         , _bHasMinRange{ SW_FALSE }
@@ -160,6 +163,11 @@ namespace sw
 #else
         , _reservedFlags{ 0 }
 #endif
+        , _bReplicated{ SW_FALSE }
+        , _bSaveGame{ SW_FALSE }
+        , _bInterp{ SW_FALSE }
+        , _bConfig{ SW_FALSE }
+        , _reservedRoles{ 0 }
     {
     }
 
@@ -193,6 +201,7 @@ namespace sw
         , _nestedContainer{ nullptr }
         , _onPropertyBoundChanged{}
         , _pValueAccessor{ nullptr }
+        , _pRepNotify{ nullptr }
         , _offset{ 0 }
         , _name{}
         , _typeName{}
@@ -274,6 +283,7 @@ namespace sw
         , _nestedContainer{ nullptr }
         , _onPropertyBoundChanged{}
         , _pValueAccessor{ nullptr }
+        , _pRepNotify{ nullptr }
         , _offset{ offset }
         , _name{ name }
         , _typeName{ typeName }
@@ -368,7 +378,10 @@ namespace sw
         , _bIsPODCalculated{ SW_FALSE }
         , _bListPropertyWithBaseBuilt{ SW_FALSE }
         , _bBuildingPropertyWithBase{ SW_FALSE }
-        , _reservedPadding{ 0, 0, 0 } {}
+        , _bHasSaveGameProperty{ SW_FALSE }
+        , _bSaveGameCalculated{ SW_FALSE }
+        , _reservedCacheFlags{ 0 }
+        , _reservedPadding{ 0, 0 } {}
 
     TypeInfo::TypeInfo( const TypeInfo& other )
         : TypeInfo()
@@ -393,6 +406,7 @@ namespace sw
         _bIsPODCalculated           = SW_FALSE;
         _bListPropertyWithBaseBuilt = SW_FALSE;
         _bBuildingPropertyWithBase  = SW_FALSE;
+        _bSaveGameCalculated        = SW_FALSE;
     }
 
     void TypeInfo::invalidateDerivedCaches()
@@ -461,6 +475,24 @@ namespace sw
         other._bIsCacheBuilt   = SW_FALSE;
 
         return *this;
+    }
+
+    bool TypeInfo::hasSaveGameProperty() const
+    {
+        if ( _bSaveGameCalculated == SW_TRUE )
+            return _bHasSaveGameProperty == SW_TRUE;
+        bool bHasSaveGame = false;
+        for ( const PropertyInfo& prop : getPropertiesWithBase() )
+        {
+            if ( prop._metadata._bSaveGame == SW_TRUE )
+            {
+                bHasSaveGame = true;
+                break;
+            }
+        }
+        _bHasSaveGameProperty = bHasSaveGame ? SW_TRUE : SW_FALSE;
+        _bSaveGameCalculated  = SW_TRUE;
+        return bHasSaveGame;
     }
 
     bool TypeInfo::usesPodCopyFastPath() const
@@ -1254,6 +1286,7 @@ namespace sw
         _bIsPODCalculated           = SW_FALSE;
         _bIsPODFastPath             = SW_FALSE;
         _bListPropertyWithBaseBuilt = SW_FALSE;
+        _bSaveGameCalculated        = SW_FALSE;
     }
 
     bool TypeInfo::buildAncestorDisplay() const
