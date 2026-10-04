@@ -52,6 +52,39 @@ XML(Utility) 위에 섭니다. 씬은 모르고 렌더러도 모릅니다 — "�
 되돌아가기는 지금 월드에서 소켓까지 `BlendCurveSpec`(카메라 블렌드와 같은 구현, `Engine/Animation/BlendCurve.h`)으로 섞습니다. `transferTo` 는 다시 스폰하지 않고
 주인을 바꿉니다(땅의 줍기 오브젝트 · 다른 캐릭터). 2D 도 같습니다 — 2D 오브젝트도 씬 컴포넌트(X · Y, Z 축 회전)입니다.
 
+## 소켓 표 컴포넌트 · 찾기 — `SocketSetComponent` · `SocketLookupUtil`
+
+오브젝트 하나의 소켓 · 마커 표(`*.sockets.xml`, 공유 캐시 `SocketSetCache`)를 듭니다. 소켓은 같은 오브젝트의 유닛(`SkeletalMeshComponent`)의 지금 본을 따르고, 유닛이 없으면
+(문 · 레버) 오브젝트 루트 기준입니다. `SocketLookupUtil::findSocketWorldTransform( 오브젝트, 이름 )` 은 표에서 먼저, 없으면 유닛의 본 이름으로 찾습니다(`foot.l`) —
+알림 처리기 · 상호작용 맞춤 마커 · 무기 총구가 같은 길입니다. 부모 본은 시작할 때 유닛 스켈레톤과 대조합니다(모르는 본은 오류).
+
+## 애니메이션 알림 디스패치 — `AnimNotifyComponent` · `AnimNotifyTable`(`*.notifies.xml`)
+
+클립은 알림의 이름 · 시각 · 길이만 듭니다(임포트 곁 데이터 `<모델>.clips.json`). 이름이 무엇을 하는지는 캐릭터마다 알림 표 한 줄이고, 코드에는 처리기 **종류**만
+있습니다(`AnimNotifyHandlerRegistry` — 모르는 처리기 · 인자 · 빠진 필수 인자는 읽기 오류). 표는 공유 캐시(`AnimNotifyTableCache`)에서 받고 파일을 고치면 열린 구간을
+닫고 새 표로 잇습니다.
+
+| 처리기 | 하는 일 | 인자 |
+|---|---|---|
+| `PlaySound` | 소켓 자리에서 소리 | sound · socket |
+| `SpawnPrefab` | 소켓 변환에 프리팹(이펙트) | prefab · socket · offset · attach |
+| `Footstep` | 발 소켓 아래 광선이 맞은 **물리 재질** = 바닥 종류, 소리 경로의 `{surface}` 를 그 이름으로 | socket · distance · sound |
+| `HitWindow` | 구간 — 두 소켓 사이 칼날을 프레임마다(지난 자리 → 지금 + 지금 칼날) 쓸어 맞은 오브젝트에 구간당 한 번 `onHitReceived` | socketA · socketB · radius · damage · impulse · samples |
+| `CameraShake` | 카메라 충격 요청(`AnimNotifyHandlerUtil::getCameraShakeRequested` — 게임프레임워크의 `CameraManagerComponent` 가 듣는다) | amplitude · duration · frequency · radius · socket |
+| `GameplayEvent` | 같은 오브젝트의 컴포넌트에 `onAnimNotify`(구간이면 시작 · 끝) | event |
+
+- **한 번씩**: 트랙의 의미 그대로(지나간 것을 정확히 한 번, 반복 경계 포함). 구간 알림은 `Begin` → 프레임마다 틱 → `End` 이고, 클립이 재생에서 빠지면(전이 · 정지)
+  `End` 를 대신 냅니다. 처리 순서는 (1) 끊긴 구간 닫기 (2) 지난 프레임부터 열린 구간의 틱 (3) 이번 알림을 시각 순서로 — 끝나는 구간도 마지막 움직임을 잰다.
+- **스레드**: 3D 는 애니메이션 시스템의 게임 스레드 마무리(`finishAnimationFrame`, 루트 모션 적용 **전**)에서, 2D 는 스프라이트 틱(워커)에서 베껴 틱 뒤 게임 스레드로.
+  처리기는 늘 게임 스레드입니다(스폰 · 물리 질의 · 맞음 알림).
+- 처리기가 한 일은 `getActions()` 에 남습니다(진단 · 시험).
+
+## 맞힘 — `CharacterHitUtil`
+
+광선(3D · 2D) → 맞은 바디 → 오브젝트(바디 사용자 값) → 히트 존(래그돌의 물리 에셋 바디 → 강체 컴포넌트의 `_hitZone`) → `Component::onHitReceived( HitInfo )`.
+쏘는 오브젝트의 바디는 모두 건너뜁니다(`PhysicsQueryFilter::_ignoreUserData` — 래그돌 뼈 · 든 무기). 무기 한 발은 `traceWeaponHit`. 엔진은 체력을 모릅니다 —
+피해 × 배율을 어떻게 쓸지는 받는 컴포넌트가 정합니다.
+
 ## 체형
 
 `BodyShapeSet::evaluate( 축 값들 )` → 모프 가중치(GPU 모프 풀에 걸 것) + `BoneProportion`. 본 비율은 **애니메이션 위의 가산 층**입니다 — 매 프레임 애니메이션이 로컬을

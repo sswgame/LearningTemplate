@@ -74,6 +74,9 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
   그대로 이 규약이고, 엔진 공간(왼손)으로는 S·M·S(S = diag(-1,1,1,1))로, 회전은 (x, -y, -z, w) 로 옮깁니다.
 - **가산 포즈의 회전은 `inverse(ref) * pose`**(로컬에서 먼저 적용), 얹을 때 `base * delta` 입니다. 순서를 바꾸면 부모 공간에서 돌아 팔이 엉뚱한 축으로 돈다.
 - **알림은 반 열린 구간 (이전, 지금]** 이고, 재생 직후 첫 걸음만 시작 시각을 포함합니다. 반복 경계는 (이전, 끝] + [0, 지금] — 한 시각의 알림이 한 바퀴에 한 번.
+  길이가 있는 알림(구간 · NotifyState)은 시작에서 `Begin`, 끝(시작 + 길이, 한 바퀴 끝을 넘지 않음)에서 `End` 가 울리고 같은 시각이면 `End` 가 먼저입니다.
+  `AnimFiredNotify::_pSource` · `_eventIndex` 가 구간 하나를 가립니다. 처리(이름 → 처리기)는 `Engine/Character/AnimNotifyComponent` — 애니메이터는 받는 쪽
+  (`IAnimNotifyListener`, `Object/Animation/AnimNotifyListener.h`)에 프레임마다 한 번 넘깁니다.
 - **ACL 블롭은 16 바이트 정렬이어야 한다** — `AnimClip` 은 `AnimCodecBlock` 배열로 보관하고, 바이트 배열에서 재는 곳(`measureMaxError`)은 정렬된 사본을 만든다.
 - **ACL 의 정밀도 · shell 거리 기본값은 센티미터 단위**다(0.01 · 3.0). 엔진은 미터라 규칙의 `animation_precision` 0.0001 · `animation_shell_distance` 0.1 이 기본이다.
 | `BlendCurve` | 전환 곡선 · 길이(`BlendCurveSpec`)와 시간 → 가중치(`evaluateBlendWeight`). 카메라 디렉터 · 시퀀서 · 소켓 부착의 되돌아가기가 같은 구현을 쓴다 |

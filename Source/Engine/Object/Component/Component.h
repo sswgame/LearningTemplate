@@ -9,6 +9,7 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Animation/AnimPlayback.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -230,6 +231,47 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct HitInfo
+     * @brief 이 오브젝트가 맞았습니다 — 근접 판정(애니메이션 알림의 칼 궤적) · 무기 레이캐스트가 냅니다(언리얼 `FHitResult` + `TakeDamage` 인자).
+     * @details 엔진은 체력을 모릅니다 — 피해(`_damage` × `_damageMultiplier`)를 어떻게 쓸지는 받는 컴포넌트(게임의 체력 · 래그돌의 움찔)가 정합니다.
+     *          히트 존은 맞은 바디로 고릅니다(래그돌 · 히트박스의 물리 에셋, 강체의 히트 존 속성). 2D 맞음은 Z = 0 입니다.
+     */
+    struct HitInfo
+    {
+        GameObject*       _pInstigator{ nullptr };   ///< 때린 오브젝트(없으면 nullptr)
+        PhysicsBodyHandle _body{};                   ///< 맞은 바디
+        hashed_string     _zone{};                   ///< 히트 존 이름(없으면 빈 이름)
+        hashed_string     _kind{};                   ///< 때린 것의 이름(알림 이름 · 무기 종류)
+        float3            _point{};                  ///< 맞은 점(월드)
+        float3            _normal{};                 ///< 맞은 면의 법선(월드)
+        float3            _direction{};              ///< 때린 방향(월드, 단위)
+        float32           _damage{ 0.0f };           ///< 기본 피해
+        float32           _damageMultiplier{ 1.0f }; ///< 히트 존 배율
+        float32           _impulse{ 0.0f };          ///< 맞은 바디에 줄 충격량 크기(뉴턴초)
+        int32             _bodyIndex{ -1 };          ///< 래그돌 · 히트박스의 바디 번호(물리 에셋 순서). 없으면 -1
+        bool              _bIs2D{ false };           ///< 2D 물리 씬의 맞음이면 true
+        bool              _bFatal{ false };          ///< 때린 쪽이 이 맞음으로 죽는다고 판정했다(절단 · 래그돌 전환의 신호)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct AnimNotifyInfo
+     * @brief 애니메이션 알림이 이 오브젝트의 컴포넌트에 보내는 게임플레이 이벤트입니다(알림 표의 `GameplayEvent` 처리기 — 언리얼 AnimNotify 의 이벤트).
+     */
+    struct AnimNotifyInfo
+    {
+        hashed_string   _notify{};                          ///< 클립의 알림 이름
+        hashed_string   _event{};                           ///< 알림 표가 정한 이벤트 이름
+        float32         _weight{ 1.0f };                    ///< 울린 클립의 섞임 가중치
+        AnimNotifyPhase _phase{ AnimNotifyPhase::Instant }; ///< 구간 알림이면 시작 · 끝
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class Component
      * @brief GameObject 에 기능과 데이터를 덧붙이는 컴포넌트의 기반 클래스입니다.
      * @details 리플렉션에는 **만들 수 없는 기반**(`Abstract`)으로 등록한다 — 팩토리가 없어 이름으로 붙일 수 없다. 주의: 등록하지 않으면
@@ -312,6 +354,13 @@ namespace sw
         virtual void onCollisionStay( const CollisionInfo& collision ) { (void)collision; }
         /** @brief 막는 접촉이 끝났습니다(떨어짐 · 바디 사라짐). */
         virtual void onCollisionEnd( const CollisionInfo& collision ) { (void)collision; }
+        /**
+         * @brief 이 오브젝트가 맞았습니다(근접 판정 · 무기 레이캐스트 — `CharacterHitUtil::deliverHit`). 게임 스레드에서 켜진 컴포넌트마다 불립니다.
+         * @details 스폰 · 파괴 · 구조 변경을 해도 됩니다(틱 밖이거나, 틱 중이면 틱 뒤로 미뤄 부릅니다).
+         */
+        virtual void onHitReceived( const HitInfo& hit ) { (void)hit; }
+        /** @brief 이 오브젝트의 애니메이션이 게임플레이 이벤트 알림을 울렸습니다(알림 표의 `GameplayEvent`). 게임 스레드에서 켜진 컴포넌트마다 불립니다. */
+        virtual void onAnimNotify( const AnimNotifyInfo& notify ) { (void)notify; }
         /**
          * @brief 소유 GameObject 에 붙은 직후 불립니다.
          * @details 자기가 어떤 등록부에 들어가야 하는지는 자기가 압니다. GameObject 가 `castTo` 로

@@ -25,12 +25,15 @@
 namespace sw
 {
     class AnimClipCache;
+    class AnimNotifyTableCache;
     class IAssetCache;
     class MaterialCache;
     class MeshCache;
+    class PhysicsAssetCache;
     class PrefabCache;
     class ResourcePackManager;
     class SkeletonCache;
+    class SocketSetCache;
     class SpriteClipCache;
     class TextureCache;
 
@@ -179,16 +182,19 @@ namespace sw
         /** @brief 이 매니저가 소유한 내장 캐시(머티리얼 · 텍스처 · 프리팹 · 스프라이트 클립 · 메시 · 스켈레톤 · 애니메이션 클립)인지 봅니다. 종료 경고 · 모듈 코드 걷기에서 뺍니다. */
         bool isBuiltInAssetCache( const IAssetCache* pCache ) const;
 
-        AssetDatabase                   _assetDatabase;
-        AssetFormatRegistry             _assetFormatRegistry;
-        unique_ptr<MaterialCache>       _materialCache;
-        unique_ptr<TextureCache>        _textureCache;
-        unique_ptr<PrefabCache>         _prefabCache;
-        unique_ptr<SpriteClipCache>     _spriteClipCache; ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<MeshCache>           _meshCache;       ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<SkeletonCache>       _skeletonCache;   ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<AnimClipCache>       _animClipCache;   ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<ResourcePackManager> _pPackManager;
+        AssetDatabase                    _assetDatabase;
+        AssetFormatRegistry              _assetFormatRegistry;
+        unique_ptr<MaterialCache>        _materialCache;
+        unique_ptr<TextureCache>         _textureCache;
+        unique_ptr<PrefabCache>          _prefabCache;
+        unique_ptr<SpriteClipCache>      _spriteClipCache;   ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
+        unique_ptr<MeshCache>            _meshCache;         ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
+        unique_ptr<SkeletonCache>        _skeletonCache;     ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
+        unique_ptr<AnimClipCache>        _animClipCache;     ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
+        unique_ptr<SocketSetCache>       _socketSetCache;    ///< 캐릭터 데이터(소켓 에셋) — 등록부에 보이는 창구
+        unique_ptr<AnimNotifyTableCache> _notifyTableCache;  ///< 캐릭터 데이터(알림 표)
+        unique_ptr<PhysicsAssetCache>    _physicsAssetCache; ///< 물리 에셋(래그돌 · 히트박스)
+        unique_ptr<ResourcePackManager>  _pPackManager;
         /**
          * @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 캐시는 위 멤버가, 모듈이 올린 것은 그 모듈이 소유합니다).
          * @details 종류 이름(`getAssetKindName`)은 **올릴 때** 복사합니다. 모듈이 자기 캐시를 내리지 않고 사라지면 그 포인터의 가상 함수 표도

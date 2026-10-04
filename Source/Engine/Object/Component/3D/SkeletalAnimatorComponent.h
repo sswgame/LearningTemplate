@@ -20,6 +20,7 @@
 namespace sw
 {
     class AnimClip;
+    class IAnimNotifyListener;
     class SkeletalAnimatorComponent;
 
     /**
@@ -135,8 +136,14 @@ namespace sw
          */
         void setSequencerOverride( shared_ptr<const AnimClip> clip, float32 time, float32 weight );
 
-        /** @brief 이번 프레임에 울린 알림입니다(다음 평가까지 유효). 디스패치(이름 → 처리기)는 이 목록을 읽습니다. */
+        /** @brief 이번 프레임에 울린 알림입니다(다음 평가까지 유효). 디스패치(이름 → 처리기)는 받는 쪽(`setNotifyListener`)으로 받습니다. */
         const vector<AnimFiredNotify>& getFiredNotifies() const { return _listFiredNotify; }
+        /** @brief 알림을 받는 쪽을 겁니다(빌립니다, nullptr 이면 뗍니다). 매 평가 프레임의 게임 스레드 마무리에서 루트 모션 적용 전에 불립니다. */
+        void setNotifyListener( IAnimNotifyListener* pListener ) { _pNotifyListener = pListener; }
+        /** @brief 걸린 받는 쪽입니다. */
+        IAnimNotifyListener* getNotifyListener() const { return _pNotifyListener; }
+        /** @brief 지금 재생 중인 재생할 것(지금 · 다음 칸, 레이어)을 @p outListPlayable 에 채웁니다(비우고 채움). */
+        void collectActivePlayables( vector<const IAnimPlayable*>& outListPlayable ) const;
         /** @brief 이번 프레임의 커브 값입니다. 없는 커브는 0 입니다. */
         float32 getCurveValue( const hashed_string& curveName ) const;
         /** @brief 마지막 프레임의 루트 모션(부모 공간 이동 · 회전 차이)입니다. */
@@ -183,6 +190,10 @@ namespace sw
         void buildBasePose( SkeletalMeshComponent& unit );
         /** @brief 이름 → 파일 경로입니다(`_clipFolder/<소문자>.animclip`). */
         string makeClipPath( const hashed_string& clipName ) const;
+        /** @brief 이번 프레임의 알림을 받는 쪽에 넘깁니다(게임 스레드). */
+        void dispatchNotifies();
+        /** @brief 루트 모션을 오브젝트에 옮깁니다(게임 스레드). */
+        void applyRootMotion( SkeletalMeshComponent& unit );
 
         PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimGraph", Tooltip = "State machine graph; nodes name clips" )
         string _animGraphPath;
@@ -212,14 +223,17 @@ namespace sw
         const Skeleton*                                          _pTrackMapSkeleton;
         vector<LayerState>                                       _listLayer;
         vector<AnimFiredNotify>                                  _listFiredNotify;
-        vector<hashed_string>                                    _listCurveName;  ///< 이번 프레임 커브 이름
-        vector<float32>                                          _listCurveValue; ///< `_listCurveName` 과 나란한 값
+        vector<const IAnimPlayable*>                             _listActivePlayable; ///< 받는 쪽에 넘길 재생 중인 것(재사용)
+        vector<hashed_string>                                    _listCurveName;      ///< 이번 프레임 커브 이름
+        vector<float32>                                          _listCurveValue;     ///< `_listCurveName` 과 나란한 값
         Pose                                                     _scratchPose;
         Pose                                                     _scratchTrackPose;
         Pose                                                     _scratchLayerPose;
         shared_ptr<const AnimClip>                               _sequencerClip;
         BoneTransform                                            _rootMotionDelta;
         SkeletalMeshComponent*                                   _pUnit;
+        IAnimNotifyListener*                                     _pNotifyListener;
+        float32                                                  _lastDeltaSeconds; ///< 마지막 시간 단계의 걸음(배율 적용)
         float32                                                  _sequencerTime;
         float32                                                  _sequencerWeight;
         PROPERTY( Category = "Animation", DisplayName = "Extract Root Motion", Tooltip = "Move the object by the clip's root motion track" )

@@ -9,6 +9,7 @@
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Skeleton.h"
+#include "Engine/Object/Animation/AnimNotifyListener.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Resource/AnimationAssetCache.h"
@@ -46,22 +47,9 @@ namespace sw
 
     void SkeletalAnimatorBinding::finishAnimationFrame( SkeletalMeshComponent& unit )
     {
-        // 루트 모션은 오브젝트 트랜스폼에 쓴다 — 게임 스레드에서, 모든 단계가 끝난 뒤다(아래 트랜스폼 플러시가 반영한다).
-        if ( _owner._bExtractRootMotion == SW_FALSE || unit.getOwner() == nullptr )
-            return;
-        const BoneTransform& delta = _owner._rootMotionDelta;
-        if ( delta._translation.getLengthSquared() <= 0.0f && delta._rotation == quaternion::Identity )
-            return;
-        SceneComponent* pRoot = unit.getOwner()->getPrimarySceneComponent();
-        if ( pRoot == nullptr )
-            return;
-        // 움직임은 캐릭터 공간(루트 본의 부모 = 모델 공간)의 값이다 — 오브젝트의 로컬 회전 · 스케일로 돌려 부모 공간 이동으로 바꾼다.
-        const float3     localRotation = pRoot->getLocalRotation();
-        const float4x4   orientation   = float4x4::createTrs( float3{}, localRotation, pRoot->getLocalScale() );
-        const float3     parentMove    = float3::transformVector( delta._translation, orientation );
-        const quaternion turned        = ( quaternion::createFromYawPitchRoll( localRotation ) * delta._rotation ).normalize();
-        pRoot->setLocalPosition( pRoot->getLocalPosition() + parentMove );
-        pRoot->setLocalRotation( turned.getEulerAngles() );
+        // 알림이 먼저다 — 받는 쪽(모션 워핑 창)이 이번 프레임의 루트 모션을 바꿀 수 있다.
+        _owner.dispatchNotifies();
+        _owner.applyRootMotion( unit );
     }
 
     void SkeletalAnimatorBinding::onAnimationUnitDetached( SkeletalMeshComponent& unit )
@@ -94,6 +82,7 @@ namespace sw
         , _pTrackMapSkeleton{ nullptr }
         , _listLayer{}
         , _listFiredNotify{}
+        , _listActivePlayable{}
         , _listCurveName{}
         , _listCurveValue{}
         , _scratchPose{}
@@ -102,6 +91,8 @@ namespace sw
         , _sequencerClip{}
         , _rootMotionDelta{}
         , _pUnit{ nullptr }
+        , _pNotifyListener{ nullptr }
+        , _lastDeltaSeconds{ 0.0f }
         , _sequencerTime{ 0.0f }
         , _sequencerWeight{ 0.0f }
         , _bExtractRootMotion{ SW_FALSE }
@@ -306,9 +297,58 @@ namespace sw
         return bPlaying || _listLayer.empty() == false || _sequencerWeight > 0.0f;
     }
 
+    void SkeletalAnimatorComponent::collectActivePlayables( vector<const IAnimPlayable*>& outListPlayable ) const
+    {
+        outListPlayable.clear();
+        const AnimPlayer& player = _graphPlayer.getPlayer();
+        if ( player.getCurrentPlayable() != nullptr )
+            outListPlayable.push_back( player.getCurrentPlayable() );
+        if ( player.getNextPlayable() != nullptr )
+            outListPlayable.push_back( player.getNextPlayable() );
+        for ( const LayerState& layer : _listLayer )
+        {
+            if ( layer._clip != nullptr )
+                outListPlayable.push_back( layer._clip.get() );
+        }
+    }
+
+    void SkeletalAnimatorComponent::dispatchNotifies()
+    {
+        if ( _pNotifyListener == nullptr )
+            return;
+        collectActivePlayables( _listActivePlayable );
+        AnimNotifyFrame frame{};
+        frame._listFired          = vector_reference<const AnimFiredNotify>{ _listFiredNotify.data(), _listFiredNotify.size() };
+        frame._listActivePlayable = vector_reference<const IAnimPlayable* const>{ _listActivePlayable.data(), _listActivePlayable.size() };
+        frame._deltaSeconds       = _lastDeltaSeconds;
+        frame._bFromTick          = SW_FALSE;
+        _pNotifyListener->onAnimNotifiesFired( frame );
+    }
+
+    void SkeletalAnimatorComponent::applyRootMotion( SkeletalMeshComponent& unit )
+    {
+        // 루트 모션은 오브젝트 트랜스폼에 쓴다 — 게임 스레드에서, 모든 단계가 끝난 뒤다(아래 트랜스폼 플러시가 반영한다).
+        if ( _bExtractRootMotion == SW_FALSE || unit.getOwner() == nullptr )
+            return;
+        const BoneTransform& delta = _rootMotionDelta;
+        if ( delta._translation.getLengthSquared() <= 0.0f && delta._rotation == quaternion::Identity )
+            return;
+        SceneComponent* pRoot = unit.getOwner()->getPrimarySceneComponent();
+        if ( pRoot == nullptr )
+            return;
+        // 움직임은 캐릭터 공간(루트 본의 부모 = 모델 공간)의 값이다 — 오브젝트의 로컬 회전 · 스케일로 돌려 부모 공간 이동으로 바꾼다.
+        const float3     localRotation = pRoot->getLocalRotation();
+        const float4x4   orientation   = float4x4::createTrs( float3{}, localRotation, pRoot->getLocalScale() );
+        const float3     parentMove    = float3::transformVector( delta._translation, orientation );
+        const quaternion turned        = ( quaternion::createFromYawPitchRoll( localRotation ) * delta._rotation ).normalize();
+        pRoot->setLocalPosition( pRoot->getLocalPosition() + parentMove );
+        pRoot->setLocalRotation( turned.getEulerAngles() );
+    }
+
     void SkeletalAnimatorComponent::advanceTime( const AnimationFrameContext& context )
     {
         const float32 deltaSeconds = context._deltaSeconds * _playRate;
+        _lastDeltaSeconds          = deltaSeconds;
         _listFiredNotify.clear();
         _graphPlayer.update( deltaSeconds, &_parameters, &_listFiredNotify );
         for ( LayerState& layer : _listLayer )

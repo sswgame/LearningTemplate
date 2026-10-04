@@ -110,7 +110,7 @@ namespace sw
 
         _listJoltMaterial.reserve( _settings._listMaterial.size() );
         for ( const PhysicsMaterialDef& material : _settings._listMaterial )
-            _listJoltMaterial.push_back( JPH::Ref<JoltPhysicsMaterial>{ JoltUtil::createObject<JoltPhysicsMaterial>( material._friction, material._restitution ) } );
+            _listJoltMaterial.push_back( JPH::Ref<JoltPhysicsMaterial>{ JoltUtil::createObject<JoltPhysicsMaterial>( material._name, material._friction, material._restitution ) } );
     }
 
     JoltPhysicsScene::~JoltPhysicsScene()

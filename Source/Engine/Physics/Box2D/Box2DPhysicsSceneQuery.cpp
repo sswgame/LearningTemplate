@@ -41,6 +41,7 @@ namespace sw
 
             struct OverlapContext
             {
+                const Box2DPhysicsScene*   _pScene{ nullptr };
                 const PhysicsQueryFilter*  _pFilter{ nullptr };
                 vector<PhysicsBodyHandle>* _pListBody{ nullptr };
             };
@@ -51,18 +52,20 @@ namespace sw
                 int32             _planeCount{ 0 };
             };
 
-            static bool acceptsShape( b2ShapeId shapeId, const PhysicsQueryFilter& filter )
+            static bool acceptsShape( const Box2DPhysicsScene& scene, b2ShapeId shapeId, const PhysicsQueryFilter& filter )
             {
                 if ( filter._bIncludeTriggers == false && b2Shape_IsSensor( shapeId ) )
                     return false;
                 const PhysicsBodyHandle body = Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( shapeId ) ) );
-                return body != filter._ignoreBody;
+                if ( body == filter._ignoreBody )
+                    return false;
+                return filter._ignoreUserData == 0 || scene.getBodyUserData( body ) != filter._ignoreUserData;
             }
 
             static float32 castResult( b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float32 fraction, void* pContext )
             {
                 CastContext& context = *static_cast<CastContext*>( pContext );
-                if ( acceptsShape( shapeId, *context._pFilter ) == false )
+                if ( acceptsShape( *context._pScene, shapeId, *context._pFilter ) == false )
                     return -1.0f; // 이 셰이프는 없는 것으로 친다
                 context._shapeId  = shapeId;
                 context._point    = point;
@@ -75,7 +78,7 @@ namespace sw
             static bool overlapResult( b2ShapeId shapeId, void* pContext )
             {
                 OverlapContext& context = *static_cast<OverlapContext*>( pContext );
-                if ( acceptsShape( shapeId, *context._pFilter ) )
+                if ( acceptsShape( *context._pScene, shapeId, *context._pFilter ) )
                     context._pListBody->push_back( Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( shapeId ) ) ) );
                 return true;
             }
@@ -460,6 +463,7 @@ namespace sw
         outHit._normal   = Box2DUtil::toEngine( context._normal );
         outHit._fraction = context._fraction;
         outHit._distance = context._fraction * maxDistance;
+        outHit._material = findMaterialName( b2Shape_GetMaterial( context._shapeId ) );
         return true;
     }
 
@@ -500,7 +504,7 @@ namespace sw
         queryFilter.categoryBits  = ~static_cast<uint64_t>( 0 );
         queryFilter.maskBits      = static_cast<uint64_t>( filter._layerMask );
         vector<PhysicsBodyHandle>                      listFound;
-        Box2DPhysicsSceneQueryInternal::OverlapContext context{ &filter, &listFound };
+        Box2DPhysicsSceneQueryInternal::OverlapContext context{ this, &filter, &listFound };
         b2World_OverlapShape( _worldId, &proxy, queryFilter, &Box2DPhysicsSceneQueryInternal::overlapResult, &context );
         std::sort( listFound.begin(), listFound.end() );
         listFound.erase( std::unique( listFound.begin(), listFound.end() ), listFound.end() );

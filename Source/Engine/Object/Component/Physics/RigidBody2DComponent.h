@@ -12,6 +12,7 @@
 
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/PhysicsAsset.h"
 #include "Engine/Physics/PhysicsDesc.h"
 #include "Engine/Physics/PhysicsShape.h"
 #include "Engine/Physics/PhysicsTypes.h"
@@ -60,7 +61,10 @@ namespace sw
         void                 setLayer( const hashed_string& layer );
         const hashed_string& getMaterial() const { return _material; }
         void                 setMaterial( const hashed_string& material );
-        float32              getMass() const { return _mass; }
+        /** @brief 무기 판정이 이 바디를 맞혔을 때의 히트 존(이름 · 피해 배율)입니다(`CharacterHitUtil::resolveHitZone`). */
+        const PhysicsHitZoneDef& getHitZone() const { return _hitZone; }
+        void                     setHitZone( const PhysicsHitZoneDef& hitZone ) { _hitZone = hitZone; }
+        float32                  getMass() const { return _mass; }
         /** @brief 질량(kg)입니다. 0 이면 셰이프 부피 × 재질 밀도입니다. */
         void    setMass( float32 mass );
         bool    isTrigger() const { return _bTrigger; }
@@ -110,6 +114,8 @@ namespace sw
         hashed_string _layer;
         PROPERTY( Category = "Body", Tooltip = "Physics material name (empty: the first material)" )
         hashed_string _material;
+        PROPERTY( Category = "Body", Tooltip = "Hit zone of this body for weapon traces (name and damage multiplier); empty name is no zone" )
+        PhysicsHitZoneDef _hitZone;
         PROPERTY( Category = "Body", Min = 0.0, Tooltip = "Mass in kg; 0 computes it from the shapes and material density", Meta = "Units=kg" )
         float32 _mass;
         PROPERTY( Category = "Body", Min = 0.0, Tooltip = "Linear velocity damping" )

@@ -14,6 +14,7 @@ namespace sw
         , _listShape{ PhysicsShapeDesc3D{} }
         , _layer{ "Default" }
         , _material{}
+        , _hitZone{}
         , _mass{ 0.0f }
         , _linearDamping{ 0.05f }
         , _angularDamping{ 0.05f }

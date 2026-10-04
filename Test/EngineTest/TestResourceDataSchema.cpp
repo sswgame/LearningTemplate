@@ -5,6 +5,7 @@
 
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Character/AnimNotifyTable.h"
 #include "Engine/Character/BodyShape.h"
 #include "Engine/Character/FitPartData.h"
 #include "Engine/Character/FitSolver.h"
@@ -174,7 +175,14 @@ namespace
         static bool                  isFitTables( sw::string_view resourceId ) { return endsWith( resourceId, ".fit.xml" ); }
         static bool                  isPartFit( sw::string_view resourceId ) { return endsWith( resourceId, ".partfit.xml" ); }
         static bool                  isSurfaceChannels( sw::string_view resourceId ) { return endsWith( resourceId, ".surfacechannels.xml" ); }
-        static bool                  loadSockets( const sw::string& resourceId )
+        static bool                  isNotifyTable( sw::string_view resourceId ) { return endsWith( resourceId, ".notifies.xml" ); }
+        /** @brief 알림 표 — 처리기 이름 · 인자를 엔진 기본 처리기 등록부에 대조한다. */
+        static bool loadNotifyTable( const sw::string& resourceId )
+        {
+            sw::AnimNotifyTable table;
+            return table.loadFromResource( resourceId, sw::AnimNotifyHandlerRegistry::getDefault() );
+        }
+        static bool loadSockets( const sw::string& resourceId )
         {
             sw::SocketKindTable kinds;
             sw::SocketSet       sockets;
@@ -278,6 +286,7 @@ namespace
             {       "gamesettings",        &isGameSettings,                       &loadGameSettings},
             {        "socketkinds",         &isSocketKinds,       &loadCatalog<sw::SocketKindTable>},
             {            "sockets",             &isSockets,                            &loadSockets},
+            {        "notifytable",         &isNotifyTable,                        &loadNotifyTable},
             {      "referencepose",       &isReferencePose, &loadCatalog<sw::ReferencePoseOverride>},
             {          "bodyshape",           &isBodyShape,          &loadCatalog<sw::BodyShapeSet>},
             {          "fittables",           &isFitTables,                          &loadFitTables},

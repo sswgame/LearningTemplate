@@ -8,6 +8,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Character/AnimNotifyHandlers.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
@@ -41,6 +42,7 @@ namespace sw
         virtual ~CameraManagerComponent() override = default;
 
         void onBeginPlay() override;
+        void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
 
         /** @brief 뷰 타깃을 @p blend 로 바꿉니다. 같은 타깃이면 아무것도 하지 않습니다. */
@@ -70,6 +72,8 @@ namespace sw
         void resolveCamera();
         /** @brief 핸들의 오브젝트에 있는 카메라입니다. 없거나 자기 오브젝트면 nullptr 입니다. */
         CameraComponent* findTargetCamera( const GameObjectHandle& target ) const;
+        /** @brief 애니메이션 알림(`CameraShake` 처리기)이 카메라 충격을 요청했습니다 — 충격으로 더합니다. */
+        void onCameraShakeRequested( const CameraShakeRequest& request );
 
     private:
         PROPERTY( Category = "Camera", DisplayName = "View Target", Tooltip = "Object whose camera this player looks through" )
@@ -86,6 +90,7 @@ namespace sw
         GameObjectHandle      _previousTarget; ///< 살아 있는 나가는 쪽(블렌드가 없던 때 바꿨을 때)
         CameraPoseBlender     _blender;
         CameraImpulseListener _impulseListener;
+        DelegateHandle        _shakeSubscription; ///< 알림의 카메라 흔들림 요청 구독(플레이 동안)
         float32               _pendingDeltaTime;
     };
 } // namespace sw
