@@ -95,6 +95,20 @@
 입력(프리셋 교체 · 형상 변경 · 외형 상태 · 꾸미기)이 바뀔 때만 다시 해석한다. 떨어져 나감 이벤트(`takeDetachEvents`)는 지난 해석에 붙어 있던 부품이
 떨어질 때 한 번만 나온다(부품 · 아이템 · 떨어지기 전 자리 · 충격 힌트) — 이미 부서진 채 스폰된 NPC 는 이벤트가 없다.
 
+## 선택 · 공유 코드 · 플레이어 프리셋 · 네트워크
+
+- `AppearanceSelection` = 기준 프리셋 + 씨앗 + 몸 종류 · 체형 · 얼굴 + 꾸미기 값 + 칸(아이템 · 형상 변경 · 상태 · 피해 · 떨어진 부품 · 아이템 꾸미기).
+  `_listCategory` 가 있으면 부분 프리셋(스키마 `category` — 머리 · 얼굴 · 염색, 장비 구성은 `Loadout`).
+- `AppearanceSelectionUtil::applySelection` 은 지금 콘텐츠에 맞춰 펼친다 — 지워진 매개변수 · 항목은 버리고 보고, 새 매개변수는 기본값, 지워졌거나
+  잠긴(`IAppearanceUnlockQuery`) 아이템은 칸 기본(기준 프리셋의 것)으로 되돌리고 보고(`AppearanceSelectionReport`). 실패하지 않는다.
+  `previewSelection` 은 입혀 보기(해석만, 바꾸지 않음).
+- `AppearanceSelectionCodec` — 비트 형식(`BitWriter`). 이름은 32 비트 내용 해시(로드가 해시 충돌을 막는다), 값마다 종류 2 비트라 모르는 매개변수도
+  건너뛴다. 받는 쪽이 모르는 해시는 `#xxxxxxxx` 자리 이름이 되어 펼칠 때 "지워진 콘텐츠" 로 보고된다. 네트워크 외형 동기화가 이것을 그대로 보낸다
+  — 받는 쪽은 `readSelection` → `applySelection` → `resolve` 로 보낸 쪽과 같은 해시를 얻는다(캐릭터 태그는 게임플레이가 따로 복제한다).
+- `AppearanceShareCode` — 판 1 바이트 + 선택 + CRC32 를 base64url 로. 체크섬 · 판 · 잘림을 거절한다.
+- `UserAppearancePresetStore`(`SaveGame`) — 이름 칸 · 즐겨찾기 · 썸네일 경로 · 내용(공유 코드 한 줄)을 `key=value` 로. **플레이어 세이브는 배포된
+  데이터라 옛 판을 읽는다**(엔진 데이터의 "옛 형식 리더 없음" 규칙과 다르다) — `formatVersion` 마다 다음 판으로 올리는 단계가 있다(판 1 → 2).
+
 ## 형상 쪽(`Engine/Character`) · 웨이브 3 이 쓰는 것
 
 - `ResolvedAppearance::_listPart` — 부품마다 주인 · 아이템 · 에셋(변형 · 규칙 반영) · 머티리얼 · 스켈레톤 · 소켓 에셋 · 배치(소켓 후보 + 오프셋 · 회전) ·
