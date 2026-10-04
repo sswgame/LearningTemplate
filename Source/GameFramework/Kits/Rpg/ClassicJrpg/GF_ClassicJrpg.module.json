@@ -1,0 +1,20 @@
+{
+    "_name": "GF_ClassicJrpg",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "클래식 JRPG 키트(드래곤 퀘스트 3 HD-2D · 씨 오브 스타즈 · 완다링 소드 장르) — 직업 · 전직 · 주문 · 장비 · 여관 · 교회",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

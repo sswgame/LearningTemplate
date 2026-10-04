@@ -1,0 +1,20 @@
+{
+    "_name": "GF_NetLockstep",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "결정적 네트워크 키트 — 락스텝(입력 지연 · 체크섬 비동기 감지, RTS) · 롤백(예측 · 되감기 · 재시뮬레이션, 격투)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_bEnabledByDefault": true
+}

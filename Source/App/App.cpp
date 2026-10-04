@@ -2,7 +2,6 @@
 
 #include "App/App.h"
 
-#include "App/AppConfig.h"
 #include "App/Module/LiveReloadManager.h"
 #include "App/Module/ModuleHost.h"
 
@@ -212,12 +211,26 @@ namespace sw
     {
         // 모듈 호스트 · 감시자 · 앱 설정은 엔진 기반 몫이다. 모듈 본체의 로드는 ModuleHost 가 에디터 · 게임 태그를 건다.
         SW_MEMORY_SCOPE( EngineMisc );
-        vector<GameKitConfig> listGameKitModule{};
 #if !defined( SW_SHIPPING )
-        const AppConfig* pAppConfig = _engineLoop.getConfigManager()->ensureConfig<AppConfig>(
-            config::kFileRuntimeAppConfig, nullptr );
-        if ( pAppConfig != nullptr )
-            listGameKitModule = pAppConfig->_listGameKitModule;
+        // 무엇을 올릴지는 모듈 매니페스트가 정한다 — 빌드가 실행 파일 옆 `Modules/` 에 복사해 둔 것을 CMake 와 같은 규칙으로 해석한다.
+        const string catalogDirectory = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), ModuleCatalog::kCatalogFolder );
+        string       moduleError;
+        if ( _moduleCatalog.loadDirectory( catalogDirectory, moduleError ) == false )
+        {
+            SW_LOG_ERROR( "Module catalog: %#", moduleError.c_str() );
+            return false;
+        }
+        ModuleResolveContext resolveContext{};
+        resolveContext._platform      = ModuleCatalog::getCurrentPlatform();
+        resolveContext._configuration = ModuleCatalog::getCurrentConfiguration();
+        if ( _moduleCatalog.resolve( resolveContext, _moduleResolution, moduleError ) == false )
+        {
+            SW_LOG_ERROR( "Module manifests: %#", moduleError.c_str() );
+            return false;
+        }
+        SW_LOG_INFO( "Modules: %# active, %# off", _moduleResolution._listLoadOrder.size(), _moduleResolution._listInactive.size() );
+        for ( const ModuleInactiveEntry& inactive : _moduleResolution._listInactive )
+            SW_LOG_INFO( "Module %# is off — %#", inactive._name.c_str(), inactive._reason.c_str() );
 
         // 모듈 감시자는 모듈을 올리는 ModuleHost 보다 먼저 있어야 한다. ModuleHost 가 이 포인터로 모듈을 올리고 리로드 콜백을 건다.
         _liveReloadManager = make_unique<LiveReloadManager>();
@@ -230,7 +243,7 @@ namespace sw
 #endif
 
         _moduleHost = make_unique<ModuleHost>();
-        return _moduleHost->loadModuleImages( getLiveReloadManager(), listGameKitModule );
+        return _moduleHost->loadModuleImages( getLiveReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
     bool App::startModules()
