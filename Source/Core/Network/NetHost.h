@@ -6,6 +6,9 @@
  *          싸고, 나머지 패킷은 프로토콜 id 로 싸서 다른 판의 패킷은 체크섬부터 틀린다.
  *          장르별 네트워크 방식(클라이언트-서버 복제 · 락스텝 · 턴 중계 · MMO)은 이 위에 키트로 얹습니다. 여기는 "누가 연결됐고 어느 채널로 무엇이 왔는가" 까지입니다.
  *          도전(challenge) 단계는 위조한 주소로 서버에 연결 자리를 잡는 것을 막습니다 — 도전 값은 실제 그 주소로 간 패킷에만 들어 있습니다.
+ *          서버는 요청에 상태를 남기지 않습니다(netcode.io connect token · QUIC Retry · 언리얼 StatelessConnectHandlerComponent): 도전 값은
+ *          비밀 키 · 주소 · 클라이언트 소금 · 시간 칸에서 만들어 돌려주기만 하고, 그 값을 되돌려 준 응답이 와야 자리를 잡는다. 응답은 값을 만든 칸과
+ *          다음 칸 안(`kChallengeWindowSeconds` 의 1~2 배)에만 통한다. 값은 키 섞기(splitmix)라 암호학적 MAC 은 아니다 — 위조 주소의 자리 채우기를 막는 데까지다.
  *
  *          **스레드**: 공개 함수는 모두 잠금 하나로 지켜져 아무 스레드에서나 부를 수 있습니다(게임 스레드가 보내고, 작업 스레드가 꺼내고, 네트워크
  *          스레드가 `update` 한다). `update` 는 소켓 받기 · 보내기를 **잠금 밖에서** 묶어 하고 잠금 안에서는 패킷 처리만 하므로, 시스템 호출이
@@ -89,7 +92,8 @@ namespace sw
     class SW_API NetHost
     {
     public:
-        static constexpr int32 kMaxDatagramPerUpdate = 512; ///< `update` 한 번에 받는 데이터그램 한도 — 나머지는 다음 번에(소켓 버퍼에 남는다)
+        static constexpr int32   kMaxDatagramPerUpdate   = 512; ///< `update` 한 번에 받는 데이터그램 한도 — 나머지는 다음 번에(소켓 버퍼에 남는다)
+        static constexpr float64 kChallengeWindowSeconds = 5.0; ///< 도전 값의 시간 칸 — 만든 칸과 다음 칸 동안 통한다
 
         NetHost();
 
@@ -171,8 +175,7 @@ namespace sw
             float64            _lastReceiveTime{ 0.0 };
             float64            _lastSendTime{ -1.0 };
             float64            _connectStartTime{ 0.0 };
-            NetConnectionState _state{ NetConnectionState::Disconnected };
-            uint8              _bPendingChallenge{ SW_FALSE }; ///< 서버 — 도전을 보냈고 응답을 기다린다
+            NetConnectionState _state{ NetConnectionState::Disconnected }; ///< 서버의 자리는 Connecting 을 거치지 않는다(응답이 맞아야 잡는다)
         };
 
         /** @brief 보낼 데이터그램 하나 — 바이트는 `OutgoingBatch::_bytes` 의 [_offset, _offset + _size) 입니다. */
@@ -234,7 +237,10 @@ namespace sw
         void   unbindAddress( int32 slotIndex );
         int32  findFreeSlot() const;
         uint64 nextSalt();
-        bool   isValidSlot( int32 slotIndex ) const { return slotIndex >= 0 && slotIndex < static_cast<int32>( _listSlot.size() ); }
+        /** @brief 상태 없는 도전 값 — 비밀 키 · 주소 · 클라이언트 소금 · 시간 칸을 섞는다. 0 이 아니다. */
+        uint64       makeChallengeToken( const NetAddress& address, uint64 clientSalt, int64 window ) const;
+        static int64 computeChallengeWindow( float64 time );
+        bool         isValidSlot( int32 slotIndex ) const { return slotIndex >= 0 && slotIndex < static_cast<int32>( _listSlot.size() ); }
 
         mutable mutex                 _mutex; ///< 아래 상태 모두(잠금 밖 전용이라고 적은 것은 빼고)
         vector<Slot>                  _listSlot;
@@ -251,7 +257,8 @@ namespace sw
         INetTransport*                _pTransport;
         uint64                        _saltState;
         uint64                        _rejectedPacketCount;
-        uint64                        _mismatchLogCount; ///< 판 · 게임이 다른 요청 수 — 로그는 1 · 2 · 4 · 8 … 번째에만(요청 폭주가 로그를 메우지 않게)
+        uint64                        _mismatchLogCount;
+        uint64                        _challengeSecret; ///< 서버 — 도전 값의 비밀 키(소금 씨앗에서) ///< 판 · 게임이 다른 요청 수 — 로그는 1 · 2 · 4 · 8 … 번째에만(요청 폭주가 로그를 메우지 않게)
         uint32                        _protocolId;
         atomic<uint32>                _updateDepth; ///< `update` 를 동시에 두 스레드가 부르는 실수를 잡는다
         int32                         _clientIndex;

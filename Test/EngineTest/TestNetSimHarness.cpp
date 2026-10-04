@@ -308,6 +308,16 @@ namespace
         return true;
     }
 
+    /** @brief 흉내 거르개 — 모두 버린다(위조한 주소로 보낸 요청의 답은 공격자에게 오지 않는다). */
+    bool dropEverything( const NetAddress& to, const uint8* pData, int32 size, void* pContext )
+    {
+        (void)to;
+        (void)pData;
+        (void)size;
+        (void)pContext;
+        return true;
+    }
+
     NetSimRunResult runLossyScenario( uint32 seed )
     {
         CrateGame      game;
@@ -467,6 +477,32 @@ SW_TEST_CASE( NetSimHarnessTest, LostAcceptedStillGivesLockstepPlayersTheirNumbe
     // 연결된 뒤(몇 틱)부터 매 틱 한 칸씩 — 입력 지연만큼 뒤처질 수 있다.
     SW_EXPECT_TRUE_MSG( server.getAdvancedCount() > 150, "the server keeps advancing" );
     SW_EXPECT_TRUE_MSG( unlucky.getAdvancedCount() > 150, "the client that lost Accepted keeps advancing" );
+}
+
+/**
+ * @brief [NetSimHarnessTest] 위조한 주소의 연결 요청은 서버 자리를 잡지 않는다 — 답을 받지 못하는 요청자가 자리 수만큼 있어도 진짜 클라이언트가 들어온다
+ * @details 요청 하나로 자리를 잡던 때는 답(도전)을 받지 못하는 요청 넷이 4 자리 서버를 연결 제한 시간(5 초) 동안 채워 진짜 클라이언트가 ServerFull 로 거절됐다.
+ *          서버는 도전 값을 주소 · 클라이언트 소금 · 시간 칸에서 비밀 키로 만들어 돌려주기만 하고, 그 값을 되돌려 준 응답이 와야 자리를 잡는다.
+ */
+SW_TEST_CASE( NetSimHarnessTest, SpoofedConnectRequestsDoNotFillTheServer )
+{
+    CrateGame      game;
+    NetSimHarness  harness;
+    NetSimSettings settings;
+    settings._hostSettings._maxConnections = 4;
+    SW_ASSERT_TRUE( harness.initialize( settings, &game ) );
+    NetSimLinkConditions spoofed;
+    spoofed._downstream._pDropFilter = &dropEverything;
+    for ( int32 index = 0; index < 4; ++index )
+        SW_ASSERT_TRUE( harness.addClient( spoofed ) > 0 );
+    harness.stepTicks( 30 );
+    SW_EXPECT_EQUAL( 0, harness.getServer().getHost().getConnectedCount() );
+
+    const int32 realClient = harness.addClient( NetSimLinkConditions{} );
+    harness.stepTicks( 30 );
+    SW_ASSERT_NOT_NULL( harness.findClient( realClient ) );
+    SW_EXPECT_TRUE( harness.findClient( realClient )->isConnected() );
+    SW_EXPECT_EQUAL( 1, harness.getServer().getHost().getConnectedCount() );
 }
 
 /**

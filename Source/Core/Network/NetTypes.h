@@ -38,7 +38,7 @@ namespace sw
      */
     struct NetWireVersion
     {
-        static constexpr uint32 kCore = 1;
+        static constexpr uint32 kCore = 2;
 
         /** @brief 층들의 판을 값 하나로 섞습니다(FNV-1a — 순서도 섞인다). */
         static constexpr uint32 combine( std::initializer_list<uint32> listVersion )

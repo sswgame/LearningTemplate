@@ -654,6 +654,46 @@ SW_TEST_CASE( NetworkTest, BandwidthStatCountsEveryPacketInTheLastSecond )
     SW_EXPECT_NEAR_EQUAL( expectedKilobits, receiver.getStats()._receivedBandwidth, expectedKilobits * 0.05f );
 }
 
+/**
+ * @brief [NetworkTest] 도전 값은 시간 칸에 묶여 있다 — 만든 칸과 다음 칸(5~10 초) 안에 돌아온 응답만 자리를 잡고, 그보다 늦게 온 응답(가로챈 응답의 재사용)은 버린다
+ * @details 서버는 도전을 기억하지 않으므로(상태 없는 도전) 값 자체가 만든 때를 담아야 한다. 올림 지연 12 초 클라이언트의 응답은 요청이 도착한 칸보다 두 칸 뒤에
+ *          닿아 끝내 연결되지 않고, 올림 지연 2 초 클라이언트는 연결된다.
+ */
+SW_TEST_CASE( NetworkTest, ExpiredChallengeIsRejected )
+{
+    NetHostSettings settings;
+    settings._connectTimeout = 60.0;
+    LoopbackNetwork        network( 31u );
+    NetEmulationTransport  slowLink( network.createEndpoint( 5000 ) );
+    NetEmulationTransport  fineLink( network.createEndpoint( 5001 ) );
+    NetEmulationConditions slow;
+    slow._latency = 12.0;
+    slowLink.setDefaultConditions( slow );
+    NetEmulationConditions fine;
+    fine._latency = 2.0;
+    fineLink.setDefaultConditions( fine );
+    NetHost server;
+    NetHost slowClient;
+    NetHost fineClient;
+    server.initialize( network.createEndpoint( 4000 ), settings );
+    slowClient.initialize( &slowLink, settings );
+    fineClient.initialize( &fineLink, settings );
+    SW_ASSERT_TRUE( server.listen() );
+    SW_ASSERT_TRUE( slowClient.connect( NetAddress::makeLoopback( 4000 ) ) );
+    SW_ASSERT_TRUE( fineClient.connect( NetAddress::makeLoopback( 4000 ) ) );
+    float64 time = 0.0;
+    for ( int32 frame = 0; frame < 60 * 40; ++frame )
+    {
+        time += 1.0 / 60.0;
+        server.update( time );
+        slowClient.update( time );
+        fineClient.update( time );
+    }
+    SW_EXPECT_TRUE( fineClient.getConnectionState( 0 ) == NetConnectionState::Connected );
+    SW_EXPECT_TRUE( slowClient.getConnectionState( 0 ) == NetConnectionState::Connecting );
+    SW_EXPECT_EQUAL( 1, server.getConnectedCount() );
+}
+
 SW_TEST_CASE( NetworkTest, UdpTransportSendsDatagramsOverLocalhost )
 {
     UdpNetTransport server;
