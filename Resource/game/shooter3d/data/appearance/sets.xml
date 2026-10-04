@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 장비 세트. Piece 의 items 는 그 칸에서 조각으로 치는 아이템(첫 것을 프리셋이 입힌다), Variant 는 몸 종류별로 칸의 조각을 바꾼다.
+     Complete 는 세트를 다 갖추면 그 칸들을 한 외형으로 바꾸는 "세트 완성 표현" 이다. 세트 효과(수치)는 어빌리티 데이터 몫이다. -->
+<EquipSetCatalog>
+  <Set id="Recon">
+    <Piece slot="Head" items="helmet_recon"/>
+    <Piece slot="Body" items="vest_recon"/>
+    <Piece slot="Feet" items="boots_recon"/>
+    <Variant bodyType="Female">
+      <Piece slot="Body" items="vest_recon_f"/>
+    </Variant>
+    <Complete visual="recon_ghillie" slots="Body,Feet"/>
+  </Set>
+</EquipSetCatalog>

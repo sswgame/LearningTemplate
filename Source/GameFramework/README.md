@@ -40,8 +40,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   프레임 데이터(`MoveCatalog` · `MoveTimeline` — 발생 · 지속 · 경직 · 캔슬 · 히트스톱 · 가드 높이 · 상태 복원), 속성 상성(`ElementChart` — 복합 속성 곱 · 면역 · 상태이상 확률)
   슈터 · 배틀로얄 · 서부극 · 기체 대전 · JRPG · 포켓몬 · 젤다가 함께 쓴다(예전 `GF_Shooter` 키트의 무기는 여기로 옮겼다)
 - **Inventory**: 아이템 봉투(`ItemBag` — id → 개수), 아이템 카탈로그(`ItemCatalog` — 분류 · 겹침 · 무게 · 희귀도 · 장비 칸 · 내구도 · 태그 · 능력치), 칸 인벤토리(`Inventory`), 격자 가방(`GridInventory` — w × h · 돌리기 · 빈자리 찾기 · 겹침, 모양은 연결 함수), 장비(`Equipment` — 칸 배치는
-  데이터), 전리품 표(`LootCatalog` — 가중치 · 없음 · 늘 주기 · 표 안의 표 · 행운), 제작(`RecipeCatalog` · `Crafter` — 작업대 · 레벨 · 도구 · 배우기 · 대기열 · 재료를 거두는 쪽 바꾸기),
+  데이터, 장착 조건 `<Requires>` 와 깨질 때의 정책 · 아이템 인스턴스 상태 — 꾸미기 값 · 피해 · 떨어진 부품), 전리품 표(`LootCatalog` — 가중치 · 없음 · 늘 주기 · 표 안의 표 · 행운), 제작(`RecipeCatalog` · `Crafter` — 작업대 · 레벨 · 도구 · 배우기 · 대기열 · 재료를 거두는 쪽 바꾸기),
   지갑 · 가게(`Wallet` · `ShopCatalog` · `ShopState` — 여러 통화 · 재고 · 재입고 · 매입 시세 하락과 회복 · 조건은 `IShopConditionEvaluator`)
+- **Appearance**: 캐릭터 외형 데이터와 해석 — 슬롯 표 · 장비 세트 · 아이템 외형(부품 · 상태 · 피해 단계) · 꾸미기 스키마(캐릭터 · 아이템 공용) ·
+  외형 규칙 · 프리셋(`CharacterAppearance`), 순수 해석기(`AppearanceResolver` — 결과 해시가 캐시 키), 외형 상태(`CharacterAppearanceState`),
+  공유 코드 · 플레이어 프리셋 세이브 · 네트워크 동기화(`AppearanceSelection`). 2D 스프라이트와 3D 메시가 같은 길이다. 자세한 것은 `Appearance/README.md`
 - **Match**: 판 규칙(`MatchState` — 팀 · 역할 · 점수 · 도움 · 부활 대기 · 코스트 게이지 · 탈락 순위 · 시간 제한 · 목표로 끝내기)
 - **Movement**: 2D 플랫포머 몸(`PlatformerMotor2D` · `PlatformTileMap` — 점프 높이 · 짧은 점프 · 코요테 · 미리 누르기 · 벽 점프 · 대시 · 다단 점프 · 한쪽 발판 · 사다리),
   아케이드 차량(`ArcadeVehicleMotor` — 속도에 따른 조향 · 드리프트 미니터보 단계 · 니트로 · 오프로드 · 점프, 지면은 `IVehicleGround`)

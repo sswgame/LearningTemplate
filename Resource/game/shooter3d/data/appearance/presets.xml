@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 캐릭터 외형 프리셋(CharacterAppearance). parent 위에 다른 값만 적는다 — 값은 매개변수별, 칸은 칸별, 소켓은 이름별로 아래가 덮고 세트는 쌓인다.
+     쉼표 목록(bodyShape="Average,Heavy" · items · options) · 범위(min/max) · 색 목록(colors, ; 로 나눔)은 씨앗으로 뽑는다(무작위 NPC).
+     Equip 는 set 하나 또는 slot 하나 — item="" 은 칸을 비우고, visible 은 보이는 외형만 바꾼다(형상 변경), 안의 Value 는 그 아이템 인스턴스의 꾸미기 값이다. -->
+<CharacterAppearanceCatalog>
+  <CharacterAppearance id="HumanBase" schema="Human" bodyType="Male" bodyShape="Average" face="face_a" body="body_soldier" tags="Race.Human"/>
+
+  <CharacterAppearance id="Soldier" parent="HumanBase" bodyShape="Average,Heavy" tags="Faction.Army">
+    <Value name="Height" min="0.35" max="0.75"/>
+    <Value name="Hair" options="Short,Buzz"/>
+    <Value name="SkinTone" colors="0.86 0.67 0.53 1; 0.62 0.45 0.33 1; 0.40 0.28 0.20 1"/>
+    <Equip slot="Head" item="helmet_combat"/>
+    <Equip slot="Body" item="fatigues"/>
+    <Equip slot="MainHand" item="rifle_m4">
+      <Value name="Optic" option="RedDot"/>
+      <Value name="Muzzle" option="Suppressor"/>
+    </Equip>
+    <Equip slot="Holster" item="pistol_m9"/>
+  </CharacterAppearance>
+
+  <CharacterAppearance id="ReconSoldier" parent="Soldier">
+    <Equip set="Recon"/>
+    <Equip slot="Shoulder" item="recon_patch"/>
+    <Equip slot="Back" item="backpack"/>
+    <Equip slot="MainHand" item="rifle_m4" state="Slung">
+      <Value name="Optic" option="Scope4x"/>
+      <Value name="Finish" option="Woodland"/>
+    </Equip>
+  </CharacterAppearance>
+</CharacterAppearanceCatalog>

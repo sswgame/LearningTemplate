@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 꾸미기 스키마. 캐릭터(Human)와 아이템(Rifle)이 같은 형식이다.
+     Slider → Drive(Morph · BoneProportion · MaterialScalar), Color → Drive(MaterialColor · DyeChannel · PaletteSwap), Choice → Option(visual · variant ·
+     materialVariant), Attachment → Option(prefab · sprite) 를 주인의 socket 에 단다. category 는 부분 프리셋(머리만 · 얼굴만 · 염색만)이 고르는 묶음,
+     symmetry 는 함께 바뀌는 묶음, Condition 은 앞에 선언한 매개변수에만 걸 수 있다. -->
+<CustomizationSchemaCatalog>
+  <Schema id="Human">
+    <Slider name="Height" category="Body" min="0" max="1" default="0.5"><Drive kind="BoneProportion" target="Height" from="0.92" to="1.08"/></Slider>
+    <Slider name="Build" category="Body" min="0" max="1" default="0.3"><Drive kind="Morph" target="Build"/></Slider>
+    <Color name="SkinTone" category="Skin" default="0.86 0.67 0.53 1"><Drive kind="MaterialColor" target="SkinTint"/></Color>
+    <Slider name="EarSize.L" category="Face" symmetry="EarSize" min="0" max="1" default="0"><Drive kind="Morph" target="EarSize.L"/></Slider>
+    <Slider name="EarSize.R" category="Face" symmetry="EarSize" min="0" max="1" default="0"><Drive kind="Morph" target="EarSize.R"/></Slider>
+    <Choice name="Hair" category="Hair" default="Short">
+      <Option name="Short" visual="hair_short"/>
+      <Option name="Buzz" visual="hair_buzz"/>
+      <Option name="Bald"/>
+    </Choice>
+    <Color name="HairColor" category="Hair" default="0.22 0.15 0.09 1"><Drive kind="DyeChannel" target="Hair" channel="0"/></Color>
+    <Choice name="Beard" category="Hair" default="CleanShaven">
+      <Option name="CleanShaven"/>
+      <Option name="Stubble" visual="beard_stubble"/>
+    </Choice>
+    <Slider name="BeardLength" category="Hair" min="0" max="1" default="0.2">
+      <Condition parameter="Beard" options="Stubble"/>
+      <Drive kind="Morph" target="BeardLength"/>
+    </Slider>
+    <Color name="UniformDye" category="Dye" default="0.33 0.38 0.24 1"><Drive kind="DyeChannel" target="Uniform" channel="1"/></Color>
+  </Schema>
+  <Schema id="Rifle">
+    <Attachment name="Optic" category="Attachments" socket="Rail" default="IronSights">
+      <Option name="IronSights"/>
+      <Option name="RedDot" prefab="game/shooter3d/prefabs/optic_reddot.prefab.xml"/>
+      <Option name="Scope4x" prefab="game/shooter3d/prefabs/optic_scope4x.prefab.xml" offset="0 0.01 0"/>
+    </Attachment>
+    <Attachment name="Muzzle" category="Attachments" socket="Muzzle" default="Bare">
+      <Option name="Bare"/>
+      <Option name="Suppressor" prefab="game/shooter3d/prefabs/muzzle_suppressor.prefab.xml"/>
+    </Attachment>
+    <Choice name="Finish" category="Dye" default="Standard">
+      <Option name="Standard"/>
+      <Option name="Desert" materialVariant="Desert"/>
+      <Option name="Woodland" materialVariant="Woodland"/>
+    </Choice>
+    <Color name="GripWrap" category="Dye" default="0.1 0.1 0.1 1"><Drive kind="DyeChannel" target="Grip" channel="0"/></Color>
+  </Schema>
+</CustomizationSchemaCatalog>

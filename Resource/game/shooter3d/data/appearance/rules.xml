@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 규칙. 조건(When — 칸의 보이는 외형 태그 · 아무 외형의 태그 · 캐릭터 태그 · 칸 점유 · 체형 · 몸 종류, not="true" 로 뒤집음)이 모두 맞으면 동작
+     (Hide · Variant · SwapMesh · SwapMaterial · Morph · OverrideSocket)을 건다. 조건은 점유 · 세트 뒤의 요청된 목록만 본다 — 규칙끼리 사슬을 만들지 않는다.
+     같은 대상을 다르게 바꾸는 두 규칙은 priority 가 높은 쪽이 이기고, 같으면 로드 오류다. -->
+<AppearanceRuleTable>
+  <Rule id="FullFaceHelmetHidesHair" priority="10">
+    <When target="Head" tag="Helmet.FullFace"/>
+    <Hide target="Hair"/>
+    <Hide target="Beard"/>
+    <Hide region="Scalp"/>
+  </Rule>
+  <Rule id="OpenHelmetFlattensHair" priority="5">
+    <When target="Head" tag="Helmet.Open"/>
+    <Variant target="Hair" name="UnderHelmet"/>
+  </Rule>
+  <Rule id="HotClimateRollsSleeves" priority="0">
+    <When characterTag="Climate.Hot"/>
+    <When target="Body" tag="Sleeve.Long"/>
+    <Variant target="Body" name="RolledSleeves"/>
+  </Rule>
+  <Rule id="BackpackMovesRifleSling" priority="0">
+    <When occupied="Back"/>
+    <OverrideSocket name="RifleSling" parent="Back.Strap,chest" offset="0.1 0 -0.3"/>
+  </Rule>
+</AppearanceRuleTable>
