@@ -15,7 +15,6 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
-#include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
@@ -25,6 +24,8 @@
 
 namespace sw
 {
+    struct RHIGpuMemoryBudget;
+
     class D3D11RHICommandContext;
     class D3D11RHICommandList;
     class D3D11RHIResourceFactory;

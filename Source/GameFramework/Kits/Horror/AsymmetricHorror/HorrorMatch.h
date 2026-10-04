@@ -21,15 +21,16 @@
 #include "GameFramework/Data/StatBlock.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Interaction/InteractionProgress.h"
-#include "GameFramework/Kits/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Match/MatchState.h"
 #include "GameFramework/Utility/FixedStepTimer.h"
 
 namespace sw
 {
     struct AiStimulus;
+    struct HorrorKillerDef;
     struct HorrorSnapshot;
 
+    class AsymmetricHorrorRulesCatalog;
     class BitWriter;
 
     /** @brief 생존자의 상태입니다. */

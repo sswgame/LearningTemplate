@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Quest/QuestCatalog.h"
+
 namespace sw
 {
     const utf8* toString( QuestStartResult result )

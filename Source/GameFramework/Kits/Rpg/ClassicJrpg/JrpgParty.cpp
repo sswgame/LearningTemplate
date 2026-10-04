@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Data/StatBlock.h"
+
 namespace sw
 {
     namespace
