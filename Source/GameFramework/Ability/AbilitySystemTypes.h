@@ -16,6 +16,8 @@
 #include "Core/Container/string.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -60,7 +62,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) 이펙트 열거 — 데이터(XML)는 열거자 이름을 그대로 적는다(대소문자 무시)
+    // 2) 이펙트 열거 — 데이터(XML)는 열거자 이름을 그대로 적는다(대소문자 무시 — 리플렉션 이름표 `TypeRegistry::enumFromString` 이 읽는다)
     // ------------------------------------------------------------------------------
     /**
      * @brief 모디파이어가 어트리뷰트를 바꾸는 방식입니다(언리얼 `EGameplayModOp`).
@@ -68,6 +70,7 @@ namespace sw
      *          `((base + ΣAdd) × (1 + Σ(Multiply − 1))) ÷ (1 + Σ(Divide − 1))`, `Override` 가 있으면 마지막 것이 이깁니다.
      *          곱은 **보너스를 더합니다** — ×1.2 와 ×1.3 이 함께 걸리면 ×1.5 입니다(×1.56 이 아닙니다). 즉시 이펙트는 base 에 그 자리에서 씁니다.
      */
+    ENUM()
     enum class AttributeModOp : uint8
     {
         Add = 0,  ///< 더하기(음수면 빼기)
@@ -77,6 +80,7 @@ namespace sw
     };
 
     /** @brief 이펙트가 얼마나 걸려 있는지입니다(언리얼 `EGameplayEffectDurationType`). */
+    ENUM()
     enum class EffectDurationPolicy : uint8
     {
         Instant = 0, ///< 그 자리에서 base 를 바꾸고 끝난다(피해 · 회복 · 비용)
@@ -85,6 +89,7 @@ namespace sw
     };
 
     /** @brief 같은 이펙트가 다시 걸릴 때 어떻게 쌓을지입니다(언리얼 `EGameplayEffectStackingType`). */
+    ENUM()
     enum class EffectStackingPolicy : uint8
     {
         None = 0,         ///< 걸 때마다 새 인스턴스(서로 독립)
@@ -92,6 +97,7 @@ namespace sw
     };
 
     /** @brief 쌓인 이펙트의 시간이 다 됐을 때 무엇을 지울지입니다(언리얼 `EGameplayEffectStackingExpirationPolicy`). */
+    ENUM()
     enum class EffectStackExpirationPolicy : uint8
     {
         ClearEntireStack = 0,               ///< 스택을 통째로 지운다
@@ -102,6 +108,7 @@ namespace sw
      * @brief 모디파이어 크기를 어디서 얻는지입니다(언리얼 `EGameplayEffectMagnitudeCalculation`).
      * @details `AttributeBased` 는 적용하는 순간의 값을 씁니다(스냅샷) — 걸린 뒤 그 어트리뷰트가 바뀌어도 이미 걸린 이펙트는 다시 계산하지 않습니다.
      */
+    ENUM()
     enum class EffectMagnitudeSource : uint8
     {
         ScalableFloat = 0, ///< 데이터에 적은 수(레벨마다 늘 수 있다)
@@ -122,8 +129,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 어빌리티 발동이 왜 실패했는지입니다. `AbilitySystemComponent::tryActivateAbility` 가 돌려줍니다.
-     * @details 언리얼은 실패 이유를 태그로 돌려줍니다. 여기서는 UI · 시험이 바로 읽게 열거로 둡니다.
+     * @details 언리얼은 실패 이유를 태그로 돌려줍니다. 여기서는 UI · 시험이 바로 읽게 열거로 둡니다(이름은 `TypeRegistry::enumToString`).
      */
+    ENUM()
     enum class AbilityActivationResult : uint8
     {
         Activated = 0,      ///< 발동했다
@@ -134,33 +142,6 @@ namespace sw
         MissingRequiredTag, ///< 주인에게 필요한 태그가 없다
         BlockedByTag,       ///< 주인의 태그 · 다른 어빌리티가 막았다
         RejectedByAbility   ///< 어빌리티의 `canActivateAbility` 가 거절했다
-    };
-
-    /** @brief 발동 결과를 로그 · UI 에 쓸 이름으로 바꿉니다. */
-    SW_GF_API const utf8* toString( AbilityActivationResult result );
-
-    // ------------------------------------------------------------------------------
-    // 4) 이름 ↔ 열거 — 데이터(XML)를 읽는 자리 하나(대소문자 무시)
-    // ------------------------------------------------------------------------------
-    /**
-     * @struct AbilitySystemEnumUtil
-     * @brief 열거자 이름을 열거로 읽습니다. 모르는 이름이면 false 이고 @p outValue 는 그대로입니다.
-     * @details 리플렉션 `ENUM()` 을 쓰지 않는 이유: 이 열거들은 컴포넌트 PROPERTY 가 아니라 카탈로그 XML 에만 나옵니다. 읽는 자리가
-     *          카탈로그 하나라 이름표를 여기 같이 둡니다 — 열거자를 더하면 이 표에도 한 줄 더합니다(시험이 왕복을 확인한다).
-     */
-    struct SW_GF_API AbilitySystemEnumUtil
-    {
-        [[nodiscard]] static bool parseModOp( string_view text, AttributeModOp& outValue );
-        [[nodiscard]] static bool parseDurationPolicy( string_view text, EffectDurationPolicy& outValue );
-        [[nodiscard]] static bool parseStackingPolicy( string_view text, EffectStackingPolicy& outValue );
-        [[nodiscard]] static bool parseStackExpirationPolicy( string_view text, EffectStackExpirationPolicy& outValue );
-        [[nodiscard]] static bool parseMagnitudeSource( string_view text, EffectMagnitudeSource& outValue );
-
-        static const utf8* toString( AttributeModOp value );
-        static const utf8* toString( EffectDurationPolicy value );
-        static const utf8* toString( EffectStackingPolicy value );
-        static const utf8* toString( EffectStackExpirationPolicy value );
-        static const utf8* toString( EffectMagnitudeSource value );
     };
 } // namespace sw
 
