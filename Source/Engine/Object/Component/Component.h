@@ -7,9 +7,11 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/ComponentHandle.h"
+#include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/AnimPlayback.h"
+#include "Engine/Animation/AnimNotifyPhase.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
