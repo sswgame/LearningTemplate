@@ -20,6 +20,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/UserSettings/UserSettingsManager.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -431,6 +432,43 @@ namespace sw::editor
                 (void)pContext->getPanelManager().setPanelOpen( kProfilerPanelId, false );
                 return EditorSelfTestStep::Done;
             }
+
+            /**
+             * @brief 사용자 설정 창이 카테고리 탭마다 설정 표를 그린다 — 탭을 하나씩 골라 다음 프레임에 표가 그려졌는지 본다.
+             * @details 창은 게임 메뉴 UI 가 부를 바인딩 API 만 쓰므로, 모든 종류의 위젯(체크 · 슬라이더 · 콤보 · 키)이 엔진 스키마로 한 번씩 그려진다.
+             */
+            static EditorSelfTestStep runUserSettingsPanelDrawsEveryTab( EditorSelfTestContext& context )
+            {
+                constexpr const utf8* kPanelId  = "user_settings";
+                EditorContext*        pContext  = EditorContext::get();
+                UserSettingsManager*  pSettings = editor::getService<UserSettingsManager>();
+                const bool            bReady    = pContext != nullptr && pSettings != nullptr && pSettings->getCategories().empty() == false;
+                if ( context.expect( bReady, "no editor context or no user settings categories" ) == false )
+                    return EditorSelfTestStep::Done;
+
+                const uint32 stepIndex = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    (void)pContext->getPanelManager().setPanelOpen( kPanelId, true );
+                    return EditorSelfTestStep::Continue;
+                }
+
+                // 홀수 단계는 탭을 고르고, 짝수 단계는 그 탭의 표가 이 프레임에 그려졌는지 본다.
+                const vector<UserSettingCategoryDef>& listCategory  = pSettings->getCategories();
+                const uint32                          categoryIndex = ( stepIndex - 1 ) / 2;
+                if ( categoryIndex >= static_cast<uint32>( listCategory.size() ) )
+                {
+                    (void)pContext->getPanelManager().setPanelOpen( kPanelId, false );
+                    return EditorSelfTestStep::Done;
+                }
+                if ( ( stepIndex % 2 ) == 1 )
+                {
+                    (void)context.expect( queueTabFocus( listCategory[categoryIndex]._id.c_str() ), "a user settings category tab is missing" );
+                    return EditorSelfTestStep::Continue;
+                }
+                (void)context.expect( findActiveTable( "Setting", "Value", 2 ) != nullptr, "a user settings tab did not draw its table" );
+                return EditorSelfTestStep::Continue;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -446,4 +484,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &EditorSelfTestCasesInternal::runHierarchyTagFilter );
     SW_EDITOR_SELF_TEST( GameViewResize, "gameView.resizeEveryFrame", 700, &EditorSelfTestCasesInternal::runGameViewResizeEveryFrame );
     SW_EDITOR_SELF_TEST( ProfilerGpuMemory, "profiler.gpuMemoryTab", 800, &EditorSelfTestCasesInternal::runProfilerGpuMemoryTabDrawsTheLedger );
+    SW_EDITOR_SELF_TEST( UserSettingsPanel, "userSettings.panelDrawsEveryTab", 900, &EditorSelfTestCasesInternal::runUserSettingsPanelDrawsEveryTab );
 } // namespace sw::editor
