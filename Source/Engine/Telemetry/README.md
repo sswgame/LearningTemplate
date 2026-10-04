@@ -103,6 +103,7 @@ Shooter3D 는 새 웨이브(`progression.waveReached`)와 쓰러짐(`progression
   묶음의 `buildId` 로 "어느 빌드의 PDB 가 필요한가" 를 덤프를 열지 않고 안다.
 - 배포할 때 할 일: 빌드마다 `Bin/*.pdb` 를 심볼 저장소에 넣는다(`symstore add /r /f build\Ninja-Shipping\Bin\*.pdb /s <저장소> /t SWEngine /v <버전>` 또는
   Sentry `sentry-cli debug-files upload`). 배포물에는 PDB 를 싣지 않는다. Dev 는 모듈(DLL)마다 PDB 가 따로라 `EngineBuildId` 도 적는다.
+  **주의: 지금 Shipping 프리셋은 /DEBUG 없이 링크해 PDB 도 RSDS 서명도 없다 — 배포본 묶음의 `buildId` 가 빈다(백로그 1-9).**
 - 리눅스: ELF `NT_GNU_BUILD_ID` 노트(16진). 링커가 노트를 적어야 한다(`-Wl,--build-id` — 배포판 clang 은 기본으로 켠다, 없으면 `buildId` 가 빈다).
   디버그 정보는 `objcopy --only-keep-debug` 로 떼어 `.build-id/<앞 2 자리>/<나머지>.debug` 배치로 저장한다(gdb · Sentry 가 이 배치를 읽는다).
 

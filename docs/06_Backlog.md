@@ -359,6 +359,11 @@ cd build/Ninja-Debug/Bin
 
 ### 1-9. 빌드 · 린트 · CI · 테스트
 
+- **Shipping 은 심볼 없이 링크한다(/DEBUG · PDB 없음).** 그래서 배포본 크래시 묶음의 `buildId` 가 비고(덤프의 모듈에 RSDS 서명이 없다) 덤프를 심볼과 짝지을
+  수 없다. 상용 엔진처럼 Shipping 도 `/Z7`(또는 `/Zi`) + `/DEBUG:FULL` 로 PDB 를 만들고 패키지에서는 빼서 심볼 저장소에 넣는 단계가 필요하다
+  (`Source/Engine/Telemetry/README.md` "심볼 · 빌드 id 짝짓기"). 빌드 시간 · 캐시에 닿는 결정이라 미뤘다 — 정하면 `ModuleBuildIdTest` · `CrashBundleTest` 의
+  `SW_SHIPPING` 예외를 지운다.
+
 
 - **시험 공백 목록** — `StringBuilder` 할당 실패(주입 창구 없음), 팩과 낱개 파일의 우선순위, 컴포넌트 풀 키, `syncAfterSceneGenerationChange`,
   `RenderGraph::executeParallel` 의 제출 실패 경로, `_materialCb` 병합 키(그래픽스).

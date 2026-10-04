@@ -346,8 +346,10 @@ SW_TEST_CASE( CrashBundleTest, RealCrashLeavesABundle )
     SW_EXPECT_TRUE( report._sessionId != CrashHandler::getSessionId() );
     SW_EXPECT_FALSE( report._reason.empty() );
 #if defined( SW_PLATFORM_WINDOWS )
-    // 테스트 실행 파일은 /DEBUG 로 링크된다 — 부트스트랩이 올린 빌드 id 가 컨텍스트에 있다.
+    #if !defined( SW_SHIPPING )
+    // Dev 시험 실행 파일은 /DEBUG 로 링크된다 — 부트스트랩이 올린 빌드 id 가 컨텍스트에 있다(지금 Shipping 은 PDB 가 없어 빈다).
     SW_EXPECT_FALSE( report._buildId.empty() );
+    #endif
     SW_EXPECT_TRUE( FileUtil::getFileSize( FileUtil::joinPath( report._folder, "crash.dmp" ) ) > 0u );
 #endif
     string breadcrumbs;

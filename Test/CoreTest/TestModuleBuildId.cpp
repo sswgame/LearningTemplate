@@ -37,13 +37,13 @@ SW_TEST_CASE( ModuleBuildIdTest, ExecutableHasAStableSymbolKey )
 {
     const sw::ModuleBuildId executable = sw::ModuleBuildId::find( nullptr );
     SW_EXPECT_FALSE( executable._modulePath.empty() );
-#if defined( SW_PLATFORM_WINDOWS )
-    SW_ASSERT_TRUE_MSG( executable.isValid(), "the test executable is linked with /DEBUG and must carry an RSDS record" );
+#if defined( SW_PLATFORM_WINDOWS ) && !defined( SW_SHIPPING )
+    SW_ASSERT_TRUE_MSG( executable.isValid(), "the Dev test executable is linked with /DEBUG and must carry an RSDS record" );
     SW_EXPECT_TRUE( executable._id.size() >= 33 );
     SW_EXPECT_TRUE_MSG( ModuleBuildIdTestInternal::isHex( executable._id ), executable._id.c_str() );
     SW_EXPECT_TRUE_MSG( sw::StringUtil::endsWith( executable._debugFile, ".pdb", true ), executable._debugFile.c_str() );
 #else
-    // 링커가 build-id 를 적지 않았으면 빈 값이다(그때 크래시 보고는 파일 해시로 대신한다).
+    // 링커가 서명 · build-id 를 적지 않았으면 빈 값이다(지금 Shipping 은 /DEBUG 없이 링크한다 — PDB 가 없다).
     if ( executable.isValid() )
         SW_EXPECT_TRUE_MSG( ModuleBuildIdTestInternal::isHex( executable._id ), executable._id.c_str() );
 #endif
