@@ -120,3 +120,10 @@
   `applyExternalPose`(평가 밖에서 고친 로컬 포즈로 팔레트를 그 자리에서).
 
 시험: `FractureComponentTest`(`Test/EngineTest/TestFractureComponent.cpp`).
+
+## 5. 기믹과 잇기(GameFramework)
+
+`ExplosiveBarrelComponent` 의 폭발은 반경이 경계 구에 닿은(`isReachedBy`) 파괴 오브젝트에 `applyRadialDamageAtWorld`(중심 변형 `_fractureStrain`, 충격량
+`_blastImpulse`)를 주고, 자기에게 파쇄 데이터가 있으면 몸을 끄지 않고 스스로 부서집니다 — 사슬 폭발이 근처 벽 · 상자를 그 자리에서 깹니다.
+`DestructibleComponent` 는 단계마다 중심에 변형을 주어 깎고 마지막 단계에 통째로 부숩니다(파쇄 데이터가 없으면 예전처럼 몸을 끈다).
+`GameFramework/Gimmick/README.md` 참고. 시험: `GimmickFractureTest`.
