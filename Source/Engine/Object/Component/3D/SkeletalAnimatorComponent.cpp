@@ -488,5 +488,15 @@ namespace sw
             sampleClipIntoPose( *_sequencerClip, _sequencerTime, skeleton, _scratchPose, pMask );
             Pose::blend( pose, _scratchPose, _sequencerWeight, pose );
         }
+
+        // 모프 타깃 커브 — 이름이 그리는 메시의 모프 타깃과 같은 커브는 그 가중치가 된다(임포트가 glTF weights 채널을 타깃 이름의 커브로 싣는다).
+        if ( unit.getMorphTargetCount() == 0 )
+            return;
+        for ( size_t curveIndex = 0; curveIndex < _listCurveName.size(); ++curveIndex )
+        {
+            const int32 targetIndex = unit.findMorphTargetIndex( _listCurveName[curveIndex] );
+            if ( targetIndex >= 0 )
+                unit.addMorphWeight( static_cast<uint32>( targetIndex ), _listCurveValue[curveIndex] );
+        }
     }
 } // namespace sw

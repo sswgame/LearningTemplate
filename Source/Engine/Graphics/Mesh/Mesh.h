@@ -6,7 +6,9 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHIResidentBuffer.h"
@@ -32,7 +34,33 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @struct MeshMorphDelta
+     * @brief 모프 타깃 하나가 정점 하나를 옮기는 양(위치 · 노멀 차이)입니다. 가중치 1 에서 레스트 + 차이가 됩니다.
+     */
+    struct MeshMorphDelta
+    {
+        uint32 _vertexIndex{ 0 };
+        float3 _position{};
+        float3 _normal{};
+    };
+} // namespace sw
 
+namespace sw
+{
+    /**
+     * @struct MeshMorphTarget
+     * @brief 이름 붙은 모프 타깃(블렌드 셰이프)입니다. 움직이는 정점만 담습니다(얼굴 타깃은 메시의 작은 일부만 옮긴다).
+     */
+    struct MeshMorphTarget
+    {
+        hashed_string          _name;
+        vector<MeshMorphDelta> _listDelta;
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class Mesh
      * @brief 삼각형 리스트 메시입니다(정점 = 위치 · 노멀 · UV · 색). initRhi() 로 올린 GPU 정점 버퍼를 소유합니다.
@@ -115,6 +143,18 @@ namespace sw
         /** @brief 스켈레톤 본 수(팔레트 길이)입니다. 스킨이 없으면 0 입니다. */
         uint32 getSkinBoneCount() const { return _skinBoneCount; }
         /**
+         * @brief 모프 타깃(블렌드 셰이프)을 겁니다. 정점 번호가 범위 밖인 차이는 버립니다. 내용 번호가 바뀝니다.
+         * @details 타깃은 GPU 스키닝 컴퓨트가 스키닝 앞에 가중치만큼 더합니다(모프 풀의 원본 데이터 — 사본은 나눈다). 가중치는 메시가 아니라 그리는 유닛이 냅니다
+         *          (`SkeletalMeshComponent::setMorphWeight`). 그래서 모프 타깃이 있는 메시는 스킨 구간으로 갑니다(스킨이 없으면 임포트가 고정 본 하나를 준다).
+         */
+        void setMorphTargets( vector<MeshMorphTarget> listTarget );
+        /** @brief 모프 타깃들입니다. */
+        const vector<MeshMorphTarget>& getMorphTargets() const { return _listMorphTarget; }
+        /** @brief 모프 타깃 수입니다. */
+        uint32 getMorphTargetCount() const { return static_cast<uint32>( _listMorphTarget.size() ); }
+        /** @brief 이름의 모프 타깃 번호입니다. 없으면 -1 입니다. */
+        int32 findMorphTargetIndex( const hashed_string& name ) const;
+        /**
          * @brief 스킨 데이터(레스트 정점 · 가중치)의 정체성입니다. 보통은 내용 번호이고, `createSkinInstance` 의 사본은 원본의 번호를 나눕니다.
          * @details 모프 풀이 같은 번호의 메시들을 한 원본 구간으로 묶습니다(언리얼 스킨 캐시가 같은 스켈레탈 메시의 정점 팩토리를 나누는 자리).
          */
@@ -171,6 +211,8 @@ namespace sw
         vector<MeshSkinVertex> _listSkinVertex;
         /// @brief 스켈레톤 본 수입니다. 0 이면 스킨이 없습니다.
         uint32 _skinBoneCount{ 0 };
+        /// @brief setMorphTargets 참고.
+        vector<MeshMorphTarget> _listMorphTarget;
         /// @brief `createSkinInstance` 사본이 나눈 원본의 스킨 데이터 번호입니다. 0 이면 자기 내용 번호입니다(정점 · 스킨을 바꾸면 0 으로 돌아간다).
         uint64 _sharedSkinDataId{ 0 };
         /// @brief setVertexAnimation 참고.

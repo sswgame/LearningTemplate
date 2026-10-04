@@ -100,6 +100,7 @@ namespace sw
         , _updatePhase{ 0 }
         , _framesSinceEvaluation{ 0 }
         , _effectiveDivisor{ 1 }
+        , _listMorphWeight{}
         , _pCrowdBucket{ nullptr }
         , _soloMesh{}
         , _pVertexAnimationClip{ nullptr }
@@ -428,10 +429,40 @@ namespace sw
         _bPoseDirty = SW_TRUE;
     }
 
+    uint32 SkeletalMeshComponent::getMorphTargetCount() const
+    {
+        const Mesh* pMesh = getRawMesh();
+        return ( pMesh != nullptr ) ? pMesh->getMorphTargetCount() : 0u;
+    }
+
+    int32 SkeletalMeshComponent::findMorphTargetIndex( const hashed_string& targetName ) const
+    {
+        const Mesh* pMesh = getRawMesh();
+        return ( pMesh != nullptr ) ? pMesh->findMorphTargetIndex( targetName ) : -1;
+    }
+
+    void SkeletalMeshComponent::setMorphWeight( uint32 targetIndex, float32 weight )
+    {
+        if ( targetIndex < _listMorphWeight.size() )
+            _listMorphWeight[targetIndex] = weight;
+    }
+
+    void SkeletalMeshComponent::addMorphWeight( uint32 targetIndex, float32 weight )
+    {
+        if ( targetIndex < _listMorphWeight.size() )
+            _listMorphWeight[targetIndex] += weight;
+    }
+
+    bool SkeletalMeshComponent::hasActiveMorphWeights() const
+    {
+        return std::any_of( _listMorphWeight.begin(), _listMorphWeight.end(), []( float32 weight )
+        { return weight != 0.0f; } );
+    }
+
     bool SkeletalMeshComponent::describeSharedPose( AnimSharedPoseRequest& outRequest ) const
     {
-        // 리더를 따르거나 후처리 일이 있으면 유닛마다 포즈가 다르다 — 나눌 수 없다.
-        if ( _listTask.size() != 1 || _leader.isValid() )
+        // 리더를 따르거나 후처리 일이 있으면 유닛마다 포즈가 다르다 — 나눌 수 없다. 모프 가중치(얼굴 · 커브)도 묶음이 나누지 않는다.
+        if ( _listTask.size() != 1 || _leader.isValid() || hasActiveMorphWeights() )
             return false;
         return _listTask[0]->describeSharedPose( outRequest );
     }
@@ -543,6 +574,10 @@ namespace sw
         // 스켈레톤이 제자리에서 다시 읽혔으면(에셋 핫 리로드) 본 수가 달라질 수 있다 — 포즈 버퍼를 다시 맞춘다.
         if ( _localPose.getBoneCount() != _skeleton->getBoneCount() )
             resetPoseBuffers();
+        // 그리는 메시의 모프 타깃 수에 가중치 칸을 맞춘다(메시가 바뀌었을 수 있다 — 핫 리로드 · 군중 묶음 · 사본).
+        const uint32 morphTargetCount = getMorphTargetCount();
+        if ( _listMorphWeight.size() != morphTargetCount )
+            _listMorphWeight.assign( morphTargetCount, 0.0f );
         // 본 LOD 표가 제자리에서 다시 읽혔으면(핫 리로드) 마스크를 다시 짓는다.
         if ( _boneLod != nullptr && _boneLodRevision != _boneLod->getRevision() )
             refreshBoneLodMasks();
@@ -639,6 +674,8 @@ namespace sw
                 if ( _lodState._bInterpolate == SW_TRUE && _effectiveDivisor > 1 )
                     _interpolationFrom = _localPose;
                 _localPose.setToReference( *_skeleton );
+                // 모프 가중치도 포즈와 같이 새로 만든다 — 일들(커브 · 얼굴)이 이 단계와 후처리 단계에서 더한다.
+                std::fill( _listMorphWeight.begin(), _listMorphWeight.end(), 0.0f );
                 // 리더는 의존이라 이 레벨보다 먼저 평가됐다 — 그 로컬 포즈를 읽는다.
                 const SkeletalMeshComponent* pLeader = findLeaderPose();
                 if ( pLeader != nullptr )

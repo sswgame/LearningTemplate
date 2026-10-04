@@ -146,6 +146,8 @@ namespace sw
         const vector<GpuSkinPalette>& getSkinPalettes() const { return _snapshot._listSkinPalette; }
         /** @brief 이번 프레임 스킨 팔레트 행입니다(없으면 nullptr). */
         const vector<float4>* findSkinPaletteRows() const { return _snapshot._pListSkinPaletteRow.get(); }
+        /** @brief 이번 프레임 모프 가중치입니다(없으면 nullptr). */
+        const vector<float32>* findMorphWeights() const { return _snapshot._pListMorphWeight.get(); }
         /** @brief 모든 배치(불투명 다음 투명)를 반환합니다. 간접 슬롯 순서와 같습니다. 모프 풀 구성이 이 목록을 봅니다. */
         const vector<GpuMeshBatch>& getAllBatches() const { return _snapshot._listAllBatch; }
         /** @brief 불투명 배치를 반환합니다. */

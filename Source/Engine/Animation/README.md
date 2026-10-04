@@ -23,6 +23,8 @@
 | `SpriteClipAsset` · `SpriteClipPlayable` | 스프라이트 클립(`.sprite.json`)과 그 이름 붙은 구간을 `IAnimPlayable` 로 보이는 다리(2D 가 같은 재생 코드를 탄다) |
 | `BlendSpace` · `DualQuaternion` | 1D/2D 파라메트릭 블렌딩(행렬 하나), DQ 스키닝 수학(아래 2 · 3 절) |
 | `Graphics/Mesh/MeshVertexAnimation` | VAT 표(프레임 × 정점, 위치 + 팔면체 노멀)와 굽기(`AnimClip::samplePose` → 팔레트 → CPU 스키닝 — meshskin.hlsl 과 같은 식) |
+| `Facial/FacialRig` | 얼굴 리그(`.facial.json`) — 표정 · 비즘 = 모프 타깃 가중치 묶음, 깜빡임(타깃 · 간격 · 길이) · 시선(눈 본 · 앞 축 · 최대 각 · 사카드) |
+| `Facial/LipSync` | 립싱크 분석 표(`engine/animation/lipsync.json`) · 비즘 트랙(`<음성>.visemes.json`) · 분석기(RMS + 세 대역 바이쿼드 → 비즘 가중치) |
 | `AnimJsonUtil` | 모르는 키를 오류로 보는 JSON 검사 · 본 변환 읽기 · 쓰기(스켈레톤 · 임포트 규칙 · 클립 곁 데이터가 함께 쓴다) |
 
 ## 0.1 파일 형식
@@ -36,8 +38,15 @@
 - **`engine/animation/animationlod.json`**: 애니메이션 LOD 표 — 화면 크기 단계(`min_screen_size` · `update_rate_divisor` · `interpolate`), 화면 밖 주기(0 = 포즈를
   만들지 않음), 예산(ms), 주기 상한, VAT 로 넘길 화면 크기(`Object/Animation/AnimationLod.h`).
 - **`.mesh` 스킨 스트림**: `Graphics/Mesh/MeshAssetFormat`(판 2) — 정점마다 본 번호 넷(uint16) · 가중치 넷(float32), 머리의 스킨 본 수.
+- **`.mesh` 모프 덩어리**(선택, 끝에 붙는 `MRPH` · 길이): 타깃 수 · [이름 · 정점 수 · (정점 번호 · 위치 차이 · 노멀 차이)]. 움직이는 정점만 싣는다. 모프가 없는
+  메시는 덩어리가 없어 이전과 같은 바이트다(판을 올리지 않는다). 모르는 덩어리 · 범위 밖 정점 · 길이 어긋남은 로드 오류.
+- **`.facial.json`**(메시 곁 — `models/<이름>.facial.json`, 임포트 곁 폴더 밖): `FacialRig.h` 의 형식. 표정 이름은 타깃 이름과 겹치면 안 된다(이름은 대소문자를
+  무시하고, 같은 이름 커브가 타깃과 표정을 둘 다 움직인다 — 묶을 때 오류).
+- **`engine/animation/lipsync.json`**: 분석 프레임율 · 무음/최대 RMS · 날카로움 · 대체 비즘 · 세 대역(Hz) · 비즘마다 대역 모양. 첫 비즘이 무음(sil).
+  **`<음성>.visemes.json`**: `{ "frame_rate", "visemes": [ 이름 ], "frames": [ [ 가중치 ] ] }` — `App --import-lipsync` 가 `voice/` 폴더의 .wav · .ogg 곁에 쓴다.
 - 만드는 쪽은 에디터의 `ModelImporter`(`Source/Editor/README.md` "모델도 들일 때 임포트한다") — 규칙(`Config/Editor/ModelImportConfig.json`)이 코덱 ·
-  표본율 · 정밀도 · 가져올 클립을 고르고, 원본 옆 `<이름>.clips.json` 이 클립의 반복 · 알림 · 커브를 정합니다.
+  표본율 · 정밀도 · 가져올 클립을 고르고, 원본 옆 `<이름>.clips.json` 이 클립의 반복 · 알림 · 커브를 정합니다. glTF 모프 타깃은 `.mesh` 의 모프 덩어리로
+  (이름은 `extras.targetNames`), `weights` 채널은 타깃 이름의 커브로 클립에 실립니다.
 
 ## 0.2 한 프레임 — 누가 무엇을 하나
 
@@ -88,6 +97,14 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
   - 멤버 · 참조가 없는 묶음은 `bucket_keep_seconds` 뒤 지웁니다(상태가 오가며 메시를 다시 만들지 않게). 진단: `GT.Animation.crowd*` 카운터 · `RT.Skin.*` 카운터,
     `-gv_animationForceVertexAnimation=1`(모든 공유 유닛을 VAT 로).
 - **리더 포즈**: `setLeaderPose( 몸 )` 또는 `_bFollowParentPose` — 팔로워는 리더의 로컬 포즈를 본 이름으로 옮겨 받고 리더는 의존이 됩니다.
+- **모프 가중치**: 유닛이 그리는 메시의 타깃 수만큼 든다(`getMorphWeights`). 기본 포즈 단계가 포즈와 함께 0 으로 비우고, 일들이 더한다 — 애니메이터는 이름이
+  타깃과 같은 커브를 그대로(BasePose 끝), 얼굴은 후처리에서. 렌더 빌더가 [0, 1] 로 묶어 팔레트 뒤에 싣고 스키닝 컴퓨트가 **스키닝 앞에** 레스트에 더한다.
+  가중치가 0 이 아닌 유닛은 군중 묶음과 나누지 않는다(묶음은 가중치를 나누지 않는다).
+- **얼굴**(`Object/Component/3D/FacialAnimationComponent` — 언리얼 MetaHuman 커브 · 포즈 에셋 · 립싱크 플러그인의 자리): 같은 오브젝트 유닛의 일로 돈다.
+  시간 단계에 깜빡임 · 사카드 타이머 · 말하기 시각(결정적 난수 — 컴포넌트 id 씨앗), 후처리 단계에 표정(`setExpressionWeight` + 애니메이터의 같은 이름 커브) ·
+  비즘(트랙, 없으면 PCM 진폭이 대체 비즘을 연다) · 깜빡임을 가중치로 더하고, 눈 본을 시선 목표 쪽으로 돌린다(부모 공간 최소 회전 · 최대 각으로 자름 ·
+  로컬 회전 뒤에 붙임). 시선 목표는 게임 스레드가 모델 공간으로 옮겨 둔다(`finishAnimationFrame` — 한 프레임 늦다). `speak( 음성 )` 은 곁 트랙을 먼저 찾고,
+  오디오가 있으면 소리도 낸다. 시험 머리는 `game/empty/models/testhead.*`(합성 — 타깃 일곱 · 눈 본 둘, KayKit 은 모프가 없다).
 
 ## 0.3 2D · 3D 가 함께 쓰는 것
 

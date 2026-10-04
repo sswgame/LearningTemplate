@@ -2934,6 +2934,217 @@ SW_TEST_CASE( RenderPassGpuTest, SkinnedMeshFollowsPaletteLikeCpuSkinning )
 }
 
 /**
+ * @brief [RenderPassGpuTest] GPU 모프 타깃 — 유닛의 모프 가중치가 스키닝 앞에 레스트를 밀고, 그 그림이 CPU 에서 (레스트 + 가중치 × 차이) 를 스키닝한 정적 큐브와 같다(네 백엔드)
+ * @details 큐브의 위쪽 정점(본 1)을 +X 로 0.8 미는 타깃 `push` 와 아무것도 안 하는 타깃 `idle` 을 둔다. 가중치 0.6 · 본 1 을 Z 축 50° — 순서가
+ *          "모프 → 스킨" 이 아니면(스킨 뒤에 더하면) 민 방향이 회전하지 않아 CPU 그림과 갈린다. 가중치 0 이면 모프 없는 굽힘과 같아야 한다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MorphWeightsDeformBeforeSkinningLikeCpu )
+{
+    struct Snapshot
+    {
+        uint32             _drawnCount{ 0 };
+        bool               _bOk{ false };
+        test::RHITestImage _image;
+    };
+    auto countDifferentPixels = []( const Snapshot& a, const Snapshot& b ) -> uint32
+    {
+        if ( a._image.getWidth() != b._image.getWidth() || a._image.getHeight() != b._image.getHeight() )
+            return 0xFFFFFFFFu;
+        uint32 count{ 0 };
+        for ( uint32 y = 0; y < a._image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < a._image.getWidth(); ++x )
+            {
+                const test::Rgba8 pixelA = a._image.getPixel( x, y );
+                const test::Rgba8 pixelB = b._image.getPixel( x, y );
+                const auto        isFar  = []( uint8 lhs, uint8 rhs )
+                { return lhs > rhs + 12 || rhs > lhs + 12; };
+                if ( isFar( pixelA._r, pixelB._r ) || isFar( pixelA._g, pixelB._g ) || isFar( pixelA._b, pixelB._b ) )
+                    ++count;
+            }
+        }
+        return count;
+    };
+    auto snapshot = []( sw::FrameRenderer& renderer, sw::IRHIDevice& device, sw::Scene& scene ) -> Snapshot
+    {
+        Snapshot         result{};
+        const sw::float4 clear{ 0.02f, 0.02f, 0.05f, 1.0f };
+        for ( uint32 frame = 0; frame < 4; ++frame )
+        {
+            scene.getObjectManager()->getAnimationSystem().evaluate( 0.0f );
+            device.beginFrame( clear );
+            if ( renderer.execute( &device, &scene ) == false )
+                return result;
+            device.endFrame( false, false );
+            device.waitIdle();
+        }
+        if ( result._image.readTransient( renderer, "SceneColor" ) == false )
+            return result;
+        for ( uint32 y = 0; y < result._image.getHeight(); ++y )
+        {
+            for ( uint32 x = 0; x < result._image.getWidth(); ++x )
+            {
+                if ( test::RHITestImage::isDefaultClearBackground( result._image.getPixel( x, y ) ) == false )
+                    ++result._drawnCount;
+            }
+        }
+        result._bOk = result._drawnCount > 0;
+        return result;
+    };
+
+    /**
+     * @class MorphBendTask
+     * @brief 기본 포즈 단계에서 본 1 을 돌리고 타깃 0(`push`)의 가중치를 정하는 일입니다.
+     */
+    class MorphBendTask final : public sw::IAnimationPhaseTask
+    {
+    public:
+        MorphBendTask( float32 angle, float32 weight )
+            : _angle{ angle }
+            , _weight{ weight }
+        {
+        }
+        bool isAnimationActive() const override { return true; }
+        void runAnimationPhase( sw::AnimationPhase phase, sw::SkeletalMeshComponent& unit, const sw::AnimationFrameContext& context ) override
+        {
+            (void)context;
+            if ( phase != sw::AnimationPhase::BasePose )
+                return;
+            sw::BoneTransform bone = unit.getLocalPose().getBoneTransform( 1 );
+            bone._rotation         = sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, _angle );
+            unit.getLocalPose().setBoneTransform( 1, bone );
+            unit.setMorphWeight( 0, _weight );
+        }
+        float32 _angle;
+        float32 _weight;
+    };
+
+    constexpr float32            kBendAngle   = 0.87f;
+    constexpr float32            kMorphWeight = 0.6f;
+    const sw::float3             pushDelta{ 0.8f, 0.0f, 0.0f };
+    sw::shared_ptr<sw::Skeleton> skeleton = sw::make_shared<sw::Skeleton>();
+    (void)skeleton->addBone( sw::hashed_string( "base" ), -1, sw::BoneTransform{}, sw::float4x4::Identity );
+    (void)skeleton->addBone( sw::hashed_string( "top" ), 0, sw::BoneTransform{}, sw::float4x4::Identity );
+    skeleton->computeInverseBindFromReference();
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( "backend " ) + sw::to_string( static_cast<uint32>( device.getBackend() ) );
+        sw::FrameRenderer renderer;
+        sw::FrameRenderer staticRenderer;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && staticRenderer.initialize( device.get() ) && staticRenderer.isReady();
+        if ( bOk && device->getCapabilities()._bGpuMeshMorph == SW_FALSE )
+            continue;
+
+        // 스킨 + 모프 큐브와, (레스트 + 가중치 × 차이) 를 CPU 에서 굽혀 둔 정적 큐브 · 모프 없이 굽힌 정적 큐브.
+        sw::shared_ptr<sw::Mesh> bindCube = sw::MeshUtil::createUnitCube();
+        SW_ASSERT_NOT_NULL( bindCube.get() );
+        const sw::float4x4             bend = sw::float4x4::createFromQuaternion( sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, kBendAngle ) );
+        sw::vector<sw::MeshSkinVertex> listSkin;
+        sw::MeshMorphTarget            push{};
+        push._name = sw::hashed_string( "push" );
+        sw::MeshMorphTarget idle{};
+        idle._name                                = sw::hashed_string( "idle" );
+        sw::vector<sw::RHIVertex> listMorphedBent = bindCube->getVertices();
+        sw::vector<sw::RHIVertex> listPlainBent   = bindCube->getVertices();
+        for ( uint32 vertexIndex = 0; vertexIndex < listMorphedBent.size(); ++vertexIndex )
+        {
+            sw::MeshSkinVertex skin{};
+            const bool         bTop = listMorphedBent[vertexIndex]._arrPosition[1] > 0.0f;
+            skin._arrJoint[0]       = bTop ? 1u : 0u;
+            listSkin.push_back( skin );
+            if ( bTop == false )
+                continue;
+            push._listDelta.push_back( sw::MeshMorphDelta{ vertexIndex, pushDelta, sw::float3{} } );
+            sw::RHIVertex* arrVertex[2] = { &listMorphedBent[vertexIndex], &listPlainBent[vertexIndex] };
+            for ( uint32 variant = 0; variant < 2; ++variant )
+            {
+                sw::RHIVertex&   vertex   = *arrVertex[variant];
+                const sw::float3 rest     = sw::float3{ vertex._arrPosition } + ( variant == 0 ? pushDelta * kMorphWeight : sw::float3{} );
+                const sw::float3 position = sw::float3::transform( rest, bend );
+                const sw::float3 normal   = sw::float3::transformVector( sw::float3{ vertex._arrNormal }, bend );
+                vertex._arrPosition[0]    = position._x;
+                vertex._arrPosition[1]    = position._y;
+                vertex._arrPosition[2]    = position._z;
+                vertex._arrNormal[0]      = normal._x;
+                vertex._arrNormal[1]      = normal._y;
+                vertex._arrNormal[2]      = normal._z;
+            }
+        }
+        sw::shared_ptr<sw::Mesh> morphCube = sw::Mesh::create();
+        morphCube->setVertices( bindCube->getVertices() );
+        morphCube->setSkin( listSkin, 2 );
+        morphCube->setMorphTargets( { push, idle } );
+        sw::shared_ptr<sw::Mesh> cpuMorphed = sw::Mesh::create();
+        cpuMorphed->setVertices( listMorphedBent );
+        sw::shared_ptr<sw::Mesh> cpuPlain = sw::Mesh::create();
+        cpuPlain->setVertices( listPlainBent );
+
+        sw::Scene morphScene( "MorphCubeScene" );
+        sw::Scene staticScene( "CpuMorphCubeScene" );
+        bOk                                 = bOk && morphScene.ensureDefaultCameras() && staticScene.ensureDefaultCameras();
+        sw::SkeletalMeshComponent* pSkinned = nullptr;
+        sw::MeshComponent*         pStatic  = nullptr;
+        if ( bOk )
+        {
+            sw::GameObject* pSkinnedObject = morphScene.getObjectManager()->createGameObject( sw::hashed_string( "Morph" ) );
+            sw::GameObject* pStaticObject  = staticScene.getObjectManager()->createGameObject( sw::hashed_string( "Static" ) );
+            bOk                            = pSkinnedObject != nullptr && pStaticObject != nullptr;
+            if ( bOk )
+            {
+                pSkinned = pSkinnedObject->addComponent<sw::SkeletalMeshComponent>();
+                pStatic  = pStaticObject->addComponent<sw::MeshComponent>();
+                bOk      = pSkinned != nullptr && pStatic != nullptr;
+            }
+        }
+        if ( bOk )
+        {
+            pSkinned->setSkeleton( skeleton );
+            pSkinned->setMesh( morphCube );
+            pSkinned->setBoundsRadius( 2.5f );
+            pSkinned->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+            pStatic->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + ": 씬·렌더러 준비 실패" ).c_str() );
+        if ( bOk == false )
+            continue;
+        SW_EXPECT_EQUAL( 2u, pSkinned->getMorphTargetCount() );
+
+        // (A) 가중치 0 — 모프 없이 굽힌 큐브와 같다.
+        MorphBendTask task( kBendAngle, 0.0f );
+        pSkinned->addAnimationPhaseTask( &task );
+        pStatic->setMesh( cpuPlain );
+        const Snapshot plainSkinned = snapshot( renderer, *device, morphScene );
+        const Snapshot plainStatic  = snapshot( staticRenderer, *device, staticScene );
+        SW_EXPECT_TRUE_MSG( plainSkinned._bOk && plainStatic._bOk, ( label + ": 가중치 0 그림을 못 읽었다" ).c_str() );
+        const uint32 plainDiff = countDifferentPixels( plainSkinned, plainStatic );
+        SW_EXPECT_TRUE_MSG( plainDiff <= plainStatic._drawnCount / 50 + 8,
+                            ( label + ": 가중치 0 인데 모프 큐브가 굽힌 큐브와 다르다 (달라진 픽셀 " + sw::to_string( plainDiff ) + ")" ).c_str() );
+
+        // (B) 가중치 0.6 — CPU 에서 민 뒤 굽힌 큐브와 같고, 가중치 0 과는 다르다.
+        task._weight = kMorphWeight;
+        pSkinned->markPoseDirty();
+        pStatic->setMesh( cpuMorphed );
+        const Snapshot morphSkinned = snapshot( renderer, *device, morphScene );
+        const Snapshot morphStatic  = snapshot( staticRenderer, *device, staticScene );
+        SW_EXPECT_TRUE_MSG( morphSkinned._bOk && morphStatic._bOk, ( label + ": 모프 그림을 못 읽었다" ).c_str() );
+        const uint32 weightDiff = countDifferentPixels( plainSkinned, morphSkinned );
+        SW_EXPECT_TRUE_MSG( weightDiff > plainStatic._drawnCount / 10,
+                            ( label + ": 가중치를 올렸는데 그림이 그대로다 (달라진 픽셀 " + sw::to_string( weightDiff ) + ") — 가중치가 GPU 에 닿지 않는다" ).c_str() );
+        const uint32 cpuDiff = countDifferentPixels( morphSkinned, morphStatic );
+        SW_EXPECT_TRUE_MSG( cpuDiff <= morphStatic._drawnCount / 50 + 8,
+                            ( label + ": GPU 모프가 CPU 모프 · 스키닝과 다르다 (달라진 픽셀 " + sw::to_string( cpuDiff ) + " / 그려진 " +
+                              sw::to_string( morphStatic._drawnCount ) + ")" )
+                                .c_str() );
+        pSkinned->removeAnimationPhaseTask( &task );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the GPU morph target test" );
+}
+
+/**
  * @brief [RenderPassGpuTest] 정점 · 모프 풀은 메시 **내용**이 바뀌면 다시 만든다 — 포인터가 같아도
  * @details 메시 집합이 그대로인지를 포인터로만 보면, 메시가 지워진 자리에 새 메시가 생기거나(할당기는 같은 크기의 자리를 곧바로
  *          다시 준다) 같은 메시의 정점을 바꿀 때(`setVertices`) "같은 집합" 으로 보여 옛 정점을 그리고, 정점 수가 줄었으면 배치의 정점 구간이

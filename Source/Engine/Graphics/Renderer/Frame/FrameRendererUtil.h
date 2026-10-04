@@ -148,6 +148,8 @@ namespace sw
             uint32 _skinVertexCount{ 0 };
             uint32 _skinBoneCount{ 0 };
             uint32 _skinInstanceCount{ 0 };
+            uint32 _skinDeltaBase{ 0 }; ///< 원본 레스트 버퍼 안에서 모프 차이가 시작하는 원소(meshskin.hlsl g_SkinDeltaBase)
+            uint32 _arrPad[3]{ 0, 0, 0 };
         };
         /** @brief 인스턴스 정렬 디스패치 상수(instancesort.hlsl `SortParams`, b0)입니다. */
         struct GpuSortParams

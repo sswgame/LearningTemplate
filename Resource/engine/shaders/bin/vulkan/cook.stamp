@@ -20,7 +20,7 @@ SWCOOK 3
 ad7f7ab786b4a1ce bindingslots.hlsli
 b54c618d8734fa38 tonemap.hlsl
 bfc1abf7672a9a07 ssao.hlsl
+d25f0374474eb953 meshskin.hlsl
 d38de88a21415ca3 postbloom.hlsl
 df99ce7308ca1787 fullscreentriangle.hlsl
-f45be58421eba45d meshskin.hlsl
 faf1cca12bf42573 forwardlit.hlsl

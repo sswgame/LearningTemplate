@@ -822,14 +822,22 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.GpuScene.build.skinPalettes" );
 
         _snapshot._listSkinPalette.clear();
-        shared_ptr<vector<float4>> listRow = make_shared<vector<float4>>();
-        // 행벡터 4x4 의 0 · 1 · 2 열 — 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl).
-        auto appendPalette = [this, &listRow]( const Mesh* pMesh, const vector<float4x4>& listPalette )
+        shared_ptr<vector<float4>>  listRow    = make_shared<vector<float4>>();
+        shared_ptr<vector<float32>> listWeight = make_shared<vector<float32>>();
+        // 행벡터 4x4 의 0 · 1 · 2 열 — 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl). 모프 가중치는 [0, 1] 로 묶어 싣는다.
+        auto appendPalette = [this, &listRow, &listWeight]( const Mesh* pMesh, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight )
         {
             GpuSkinPalette entry{};
             entry._pMesh     = pMesh;
             entry._firstRow  = static_cast<uint32>( listRow->size() );
             entry._boneCount = static_cast<uint32>( listPalette.size() );
+            if ( pListMorphWeight != nullptr && pListMorphWeight->empty() == false )
+            {
+                entry._firstMorphWeight = static_cast<uint32>( listWeight->size() );
+                entry._morphWeightCount = static_cast<uint32>( pListMorphWeight->size() );
+                for ( const float32 weight : *pListMorphWeight )
+                    listWeight->push_back( MathUtil::clamp( weight, 0.0f, 1.0f ) );
+            }
             for ( const float4x4& matrix : listPalette )
             {
                 listRow->push_back( float4{ matrix._11, matrix._21, matrix._31, matrix._41 } );
@@ -850,17 +858,18 @@ namespace sw
                 const Mesh* pMesh = pUnit->getRawMesh();
                 if ( pMesh == nullptr || pMesh->hasSkin() == false )
                     continue;
-                appendPalette( pMesh, pUnit->getSkinPalette() );
+                appendPalette( pMesh, pUnit->getSkinPalette(), &pUnit->getMorphWeights() );
             }
         }
         // 군중 묶음 — 묶음 하나 = 메시 하나 = 결과 구간 하나 = 팔레트 하나(멤버가 몇이든). 가리키는 유닛이 있는 묶음만 그려진다.
         for ( const unique_ptr<AnimationCrowdBucket>& bucket : animation.getCrowd().getBuckets() )
         {
             if ( bucket->getReferenceCount() > 0 && bucket->getMesh() != nullptr )
-                appendPalette( bucket->getMesh().get(), bucket->getSkinPalette() );
+                appendPalette( bucket->getMesh().get(), bucket->getSkinPalette(), nullptr );
         }
         _paletteRowCountHint           = listRow->size();
         _snapshot._pListSkinPaletteRow = std::move( listRow );
+        _snapshot._pListMorphWeight    = std::move( listWeight );
         // VAT 시계 — 군중 시계 그대로(인스턴스 시각 오프셋이 이 시계 기준이다).
         _snapshot._vertexAnimationTime = static_cast<float32>( animation.getCrowd().getClock() );
     }

@@ -108,20 +108,59 @@ namespace sw
         _skinSourceVertexCount = 0;
         vector<GpuMorphVertex> listRest;
         vector<float4>         listWeight;
+        vector<GpuMorphVertex> listDelta;
+        vector<uint32>         listVertexDeltaStart;
+        vector<uint32>         listVertexDeltaCount;
         for ( const Mesh* pSource : listSource )
         {
             _listSourceBase.push_back( _skinSourceVertexCount );
             for ( const RHIVertex& vertex : pSource->getVertices() )
                 listRest.push_back( GpuMeshMorphPoolInternal::makeRestVertex( vertex ) );
-            // 본 번호는 원본 스켈레톤의 번호 그대로다 — 팔레트 시작은 인스턴스 표가 더한다(사본마다 다르다).
-            for ( const MeshSkinVertex& skin : pSource->getSkinVertices() )
+            // 모프 차이를 정점별로 모은다 — 컴퓨트는 정점 하나의 차이 구간(시작 · 수)을 돌며 (위치 · 노멀 차이, 타깃 번호)를 가중치만큼 더한다.
+            const uint32                   vertexCount = pSource->getVertexCount();
+            vector<vector<uint32>>         listVertexTarget( vertexCount );
+            vector<vector<uint32>>         listVertexDelta( vertexCount );
+            const vector<MeshMorphTarget>& listTarget = pSource->getMorphTargets();
+            for ( uint32 targetIndex = 0; targetIndex < static_cast<uint32>( listTarget.size() ); ++targetIndex )
             {
+                for ( uint32 deltaIndex = 0; deltaIndex < static_cast<uint32>( listTarget[targetIndex]._listDelta.size() ); ++deltaIndex )
+                {
+                    const uint32 vertexIndex = listTarget[targetIndex]._listDelta[deltaIndex]._vertexIndex;
+                    listVertexTarget[vertexIndex].push_back( targetIndex );
+                    listVertexDelta[vertexIndex].push_back( deltaIndex );
+                }
+            }
+            listVertexDeltaStart.clear();
+            listVertexDeltaCount.clear();
+            for ( uint32 vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
+            {
+                listVertexDeltaStart.push_back( static_cast<uint32>( listDelta.size() ) );
+                listVertexDeltaCount.push_back( static_cast<uint32>( listVertexTarget[vertexIndex].size() ) );
+                for ( size_t entry = 0; entry < listVertexTarget[vertexIndex].size(); ++entry )
+                {
+                    const uint32          targetIndex = listVertexTarget[vertexIndex][entry];
+                    const MeshMorphDelta& delta       = listTarget[targetIndex]._listDelta[listVertexDelta[vertexIndex][entry]];
+                    GpuMorphVertex        packed{};
+                    packed._position = float4{ delta._position._x, delta._position._y, delta._position._z, static_cast<float32>( targetIndex ) };
+                    packed._normal   = float4{ delta._normal._x, delta._normal._y, delta._normal._z, 0.0f };
+                    listDelta.push_back( packed );
+                }
+            }
+            // 본 번호는 원본 스켈레톤의 번호 그대로다 — 팔레트 시작은 인스턴스 표가 더한다(사본마다 다르다).
+            const vector<MeshSkinVertex>& listSkin = pSource->getSkinVertices();
+            for ( uint32 vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
+            {
+                const MeshSkinVertex& skin = listSkin[vertexIndex];
                 listWeight.push_back( float4{ skin._arrWeight[0], skin._arrWeight[1], skin._arrWeight[2], skin._arrWeight[3] } );
                 listWeight.push_back( float4{ static_cast<float32>( skin._arrJoint[0] ), static_cast<float32>( skin._arrJoint[1] ), static_cast<float32>( skin._arrJoint[2] ),
                                               static_cast<float32>( skin._arrJoint[3] ) } );
+                listWeight.push_back( float4{ static_cast<float32>( listVertexDeltaStart[vertexIndex] ), static_cast<float32>( listVertexDeltaCount[vertexIndex] ), 0.0f, 0.0f } );
             }
-            _skinSourceVertexCount += pSource->getVertexCount();
+            _skinSourceVertexCount += vertexCount;
         }
+        // 레스트 버퍼 = [원본 레스트 정점][모프 차이] — 둘 다 float4 둘이라 한 버퍼에 잇는다(컴퓨트 SRV 슬롯은 넷뿐이다).
+        _skinDeltaBase = static_cast<uint32>( listRest.size() ) * kMorphFloat4PerVertex;
+        listRest.insert( listRest.end(), listDelta.begin(), listDelta.end() );
         GpuMeshMorphPoolInternal::uploadAll( pDevice, _skinRest, listRest.data(), static_cast<uint32>( listRest.size() ) * kMorphFloat4PerVertex );
         GpuMeshMorphPoolInternal::uploadAll( pDevice, _skinWeight, listWeight.data(), static_cast<uint32>( listWeight.size() ) );
     }
@@ -179,8 +218,9 @@ namespace sw
         rebuildSkinSources( pDevice, listSkinMesh );
         _listSkinMesh.clear();
         _listSkinRow.clear();
-        _skinBoneCount      = 0;
-        uint32 resultOffset = 0;
+        _skinBoneCount        = 0;
+        _skinMorphWeightCount = 0;
+        uint32 resultOffset   = 0;
         for ( Mesh* pMesh : listSkinMesh )
         {
             if ( pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0 || _mapBase.find( pMesh ) != _mapBase.end() )
@@ -195,16 +235,22 @@ namespace sw
                 continue;
             }
             GpuSkinInstanceRow row{};
-            row._resultOffset = resultOffset;
-            row._sourceBase   = _listSourceBase[static_cast<size_t>( sourceIt - _listSourceDataId.begin() )];
-            row._vertexCount  = count;
-            row._paletteBase  = _skinBoneCount;
+            row._resultOffset     = resultOffset;
+            row._sourceBase       = _listSourceBase[static_cast<size_t>( sourceIt - _listSourceDataId.begin() )];
+            row._vertexCount      = count;
+            row._paletteBase      = _skinBoneCount;
+            row._morphTargetCount = pMesh->getMorphTargetCount();
+            row._morphWeightBase  = _skinMorphWeightCount; // 팔레트 뒤 구간 기준 — 팔레트 본 수가 정해진 뒤 아래에서 절대 위치로 옮긴다
             _mapBase.emplace( pMesh, _skinVertexBase + resultOffset );
             _listSkinMesh.push_back( pMesh );
             _listSkinRow.push_back( row );
             _skinBoneCount += pMesh->getSkinBoneCount();
+            _skinMorphWeightCount += row._morphTargetCount;
             resultOffset += count;
         }
+        // 모프 가중치는 팔레트 버퍼의 본 행 뒤에 float4 로 싣는다 — 셰이더는 그 버퍼를 float 배열로 본다(float4 셋 × 본 수 = float 열둘 × 본 수).
+        for ( GpuSkinInstanceRow& row : _listSkinRow )
+            row._morphWeightBase += _skinBoneCount * kSkinFloat4PerBone * 4u;
         _vertexCount = _skinVertexBase + resultOffset;
 
         if ( _vertexCount == 0 )
@@ -220,8 +266,8 @@ namespace sw
                                true, nullptr );
         GpuMeshMorphPoolInternal::uploadAll( pDevice, _skinInstance, _listSkinRow.data(), static_cast<uint32>( _listSkinRow.size() ) * kSkinUint4PerInstance );
         if ( _skinBoneCount > 0 )
-            _skinPalette.ensureCapacity( pDevice, GpuMeshMorphPoolInternal::kElementStride, _skinBoneCount * kSkinFloat4PerBone, GpuMeshMorphPoolInternal::kReadUsage,
-                                         true, false, nullptr );
+            _skinPalette.ensureCapacity( pDevice, GpuMeshMorphPoolInternal::kElementStride, _skinBoneCount * kSkinFloat4PerBone + ( _skinMorphWeightCount + 3u ) / 4u,
+                                         GpuMeshMorphPoolInternal::kReadUsage, true, false, nullptr );
         else
             _skinPalette.release( pDevice );
 
@@ -230,7 +276,8 @@ namespace sw
             SW_LOG_WARNING( "모프 결과 버퍼에 UAV 를 걸지 못했습니다 — 이 백엔드에서는 모프가 꺼집니다." );
     }
 
-    void GpuMeshMorphPool::uploadSkinPalettes( IRHIDevice* pDevice, const vector<GpuSkinPalette>& listPalette, const vector<float4>* pListRow )
+    void GpuMeshMorphPool::uploadSkinPalettes( IRHIDevice* pDevice, const vector<GpuSkinPalette>& listPalette, const vector<float4>* pListRow,
+                                               const vector<float32>* pListMorphWeight )
     {
         if ( pDevice == nullptr || _skinBoneCount == 0 || _skinPalette.isValid() == false )
             return;
@@ -241,7 +288,8 @@ namespace sw
             _mapScratchPaletteIndex.emplace( listPalette[paletteIndex]._pMesh, paletteIndex );
 
         // 풀 순서로 다시 모은다. 팔레트가 없는(아직 평가되지 않은) 메시는 단위 행렬 — 바인드 포즈다.
-        _listScratchPaletteRow.resize( static_cast<size_t>( _skinBoneCount ) * kSkinFloat4PerBone );
+        const size_t paletteElementCount = static_cast<size_t>( _skinBoneCount ) * kSkinFloat4PerBone;
+        _listScratchPaletteRow.assign( paletteElementCount + ( _skinMorphWeightCount + 3u ) / 4u, float4{} );
         for ( size_t skinIndex = 0; skinIndex < _listSkinMesh.size(); ++skinIndex )
         {
             const Mesh*           pMesh     = _listSkinMesh[skinIndex];
@@ -263,6 +311,17 @@ namespace sw
                 pRow[0] = float4{ 1.0f, 0.0f, 0.0f, 0.0f };
                 pRow[1] = float4{ 0.0f, 1.0f, 0.0f, 0.0f };
                 pRow[2] = float4{ 0.0f, 0.0f, 1.0f, 0.0f };
+            }
+            // 모프 가중치 — 팔레트 뒤 구간에 이 인스턴스 몫(타깃 수)만큼. 없으면 0(레스트).
+            const GpuSkinInstanceRow& row = _listSkinRow[skinIndex];
+            if ( row._morphTargetCount == 0 || pFound == nullptr || pListMorphWeight == nullptr )
+                continue;
+            float32* pWeight = reinterpret_cast<float32*>( _listScratchPaletteRow.data() ) + row._morphWeightBase;
+            for ( uint32 targetIndex = 0; targetIndex < row._morphTargetCount && targetIndex < pFound->_morphWeightCount; ++targetIndex )
+            {
+                const size_t source = static_cast<size_t>( pFound->_firstMorphWeight ) + targetIndex;
+                if ( source < pListMorphWeight->size() )
+                    pWeight[targetIndex] = ( *pListMorphWeight )[source];
             }
         }
         _skinPalette.upload( pDevice, _listScratchPaletteRow.data(), static_cast<uint32>( _listScratchPaletteRow.size() * sizeof( float4 ) ) );
@@ -289,5 +348,7 @@ namespace sw
         _skinVertexBase        = 0;
         _skinBoneCount         = 0;
         _skinSourceVertexCount = 0;
+        _skinDeltaBase         = 0;
+        _skinMorphWeightCount  = 0;
     }
 } // namespace sw

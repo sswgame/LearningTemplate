@@ -140,7 +140,7 @@ namespace sw
         }
 
         _meshMorphPool.build( _pDevice, _listScratchMorphMesh, _listScratchSkinMesh );
-        _meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows() );
+        _meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows(), _gpuScene.findMorphWeights() );
 
         // 배치에 구간을 적어 둔다. upload() 가 배치 표(g_SwBatches)에 싣는다. 풀에 못 들어간 메시는 kInvalidBase 라
         // 셰이더가 레스트 포즈로 그린다.
@@ -241,6 +241,7 @@ namespace sw
         skinParams._skinVertexCount   = _meshMorphPool.getSkinVertexCount();
         skinParams._skinBoneCount     = _meshMorphPool.getSkinBoneCount();
         skinParams._skinInstanceCount = _meshMorphPool.getSkinInstanceCount();
+        skinParams._skinDeltaBase     = _meshMorphPool.getSkinDeltaBase();
         _meshSkinCb.update( *_pCmd, &skinParams, sizeof( skinParams ) );
 
         // 모프와 같은 결과 버퍼의 뒤 구간에 쓴다. 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로(배리어가 빠지면 DX12 · Vulkan 에서 예전 값이 나온다).

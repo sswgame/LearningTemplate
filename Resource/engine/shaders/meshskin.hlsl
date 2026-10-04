@@ -3,25 +3,28 @@
 /**
  * meshskin.hlsl — GPU 스키닝 (컴퓨트). 언리얼 GPU Skin Cache 의 자리다.
  *
- * 모프 풀(GpuMeshMorphPool)의 **스킨 구간**을 맡는다. 스킨 데이터는 원본(스킨 데이터 번호가 같은 메시들)마다 한 벌(레스트 · 가중치)이고,
- * 그리는 메시마다의 인스턴스 표(결과 시작 · 원본 시작 · 정점 수 · 팔레트 시작)가 둘을 잇는다. 스레드 하나 = 스킨 구간의 결과 정점 하나 —
- * 인스턴스를 이분 탐색으로 찾아 원본 레스트 정점을 본 넷의 팔레트 행렬로 섞고 결과 버퍼에 쓴다. 정점 셰이더는 모프와 같은 길
- * (swLoadMorphedVertex)로 결과를 읽으므로 그리기 쪽에는 새 코드가 없다.
+ * 모프 풀(GpuMeshMorphPool)의 **스킨 구간**을 맡는다. 스킨 데이터는 원본(스킨 데이터 번호가 같은 메시들)마다 한 벌(레스트 · 가중치 · 모프 차이)이고,
+ * 그리는 메시마다의 인스턴스 표(결과 시작 · 원본 시작 · 정점 수 · 팔레트 시작 · 모프 가중치 시작 · 타깃 수)가 둘을 잇는다. 스레드 하나 = 스킨 구간의
+ * 결과 정점 하나 — 인스턴스를 이분 탐색으로 찾아 원본 레스트 정점에 모프 차이를 가중치만큼 더하고(블렌드 셰이프 — 언리얼 모프 타깃과 같은 순서:
+ * 모프 다음 스키닝), 본 넷의 팔레트 행렬로 섞어 결과 버퍼에 쓴다. 정점 셰이더는 모프와 같은 길(swLoadMorphedVertex)로 결과를 읽는다.
  *
  * 바인딩 계약(bindingslots.hlsli): 컴퓨트 CB 는 b0, 읽기 t0..t3, 쓰기 u0.
  * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( rest, 0 ) / ( weights, 1 ) / ( palette, 2 ) / ( instances, 3 ) / bindComputeUav( morph, 0 ).
  */
 
-// 결과 · 레스트 버퍼의 원소 배치는 meshmorph.hlsl 과 같다 — 정점 하나 = float4 둘([2i] 위치, [2i+1] 노멀).
+// 결과 · 레스트 버퍼의 원소 배치는 meshmorph.hlsl 과 같다 — 정점 하나 = float4 둘([2i] 위치, [2i+1] 노멀). 레스트 버퍼 뒤쪽(g_SkinDeltaBase 부터)은
+// 모프 차이 하나 = float4 둘([0] 위치 차이 + w 에 타깃 번호, [1] 노멀 차이).
 #define SW_MORPH_FLOAT4_PER_VERTEX 2u
-// 가중치 버퍼 — 원본 정점 하나 = float4 둘([2i] 가중치 넷, [2i+1] 원본 스켈레톤 본 번호 넷을 float 로). 팔레트 시작은 인스턴스 표가 더한다.
-#define SW_SKIN_FLOAT4_PER_VERTEX 2u
-// 팔레트 — 본 하나 = float4 셋(행벡터 규약 4x4 행렬의 0 · 1 · 2 열). 위치 = dot( float4( p, 1 ), 열 ).
+// 가중치 버퍼 — 원본 정점 하나 = float4 셋([3i] 가중치 넷, [3i+1] 원본 스켈레톤 본 번호 넷, [3i+2] 모프 차이 구간(시작 · 수)). 팔레트 시작은 인스턴스 표가 더한다.
+#define SW_SKIN_FLOAT4_PER_VERTEX 3u
+// 팔레트 — 본 하나 = float4 셋(행벡터 규약 4x4 행렬의 0 · 1 · 2 열). 위치 = dot( float4( p, 1 ), 열 ). 본 행 뒤에 모프 가중치가 float4 로 이어진다.
 #define SW_SKIN_FLOAT4_PER_BONE 3u
-// 인스턴스 표 — 인스턴스 하나 = uint4 둘([2i] 결과 시작(스킨 구간 기준) · 원본 시작 · 정점 수 · 팔레트 시작, [2i+1] 예약). C++ GpuSkinInstanceRow.
+// 인스턴스 표 — 인스턴스 하나 = uint4 둘([2i] 결과 시작(스킨 구간 기준) · 원본 시작 · 정점 수 · 팔레트 시작, [2i+1] 모프 가중치 시작(팔레트를 float 배열로 볼 때) · 타깃 수).
 #define SW_SKIN_UINT4_PER_INSTANCE 2u
 // 이분 탐색 걸음 상한 — 인스턴스 2^16 개까지. 고정 횟수라 루프가 셰이더 컴파일러에 펼쳐진다.
 #define SW_SKIN_SEARCH_STEPS 16u
+// 정점 하나에 걸리는 모프 차이 상한 — 데이터가 깨져도 루프가 끝나게.
+#define SW_SKIN_MAX_DELTAS_PER_VERTEX 64u
 
 SW_DECLARE_CBUFFER( SkinParams, SW_SLOT_COMPUTE_CB )
 {
@@ -29,6 +32,10 @@ SW_DECLARE_CBUFFER( SkinParams, SW_SLOT_COMPUTE_CB )
 	uint g_SkinVertexCount;   // 스킨 구간의 정점 수(모든 인스턴스의 합)
 	uint g_SkinBoneCount;     // 팔레트의 본 수 — 범위 밖 번호를 막는다
 	uint g_SkinInstanceCount; // 인스턴스 표의 줄 수
+	uint g_SkinDeltaBase;     // 레스트 버퍼에서 모프 차이가 시작하는 원소(float4)
+	uint g_SkinPad0;
+	uint g_SkinPad1;
+	uint g_SkinPad2;
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_RestVertices, 0 );
@@ -52,6 +59,14 @@ float3 transformDirection( uint bone, float3 direction )
 	return float3( dot( direction, g_SkinPalette[row].xyz ), dot( direction, g_SkinPalette[row + 1u].xyz ), dot( direction, g_SkinPalette[row + 2u].xyz ) );
 }
 
+/** @brief 팔레트 버퍼를 float 배열로 볼 때 @p index 번째 값 — 모프 가중치가 본 행 뒤에 float4 로 담겨 있다. */
+float loadMorphWeight( uint index )
+{
+	const float4 packed    = g_SkinPalette[index / 4u];
+	const uint   component = index % 4u;
+	return component == 0u ? packed.x : ( component == 1u ? packed.y : ( component == 2u ? packed.z : packed.w ) );
+}
+
 /** @brief 스킨 구간의 결과 번호가 속한 인스턴스 — 결과 시작이 그 번호 이하인 마지막 줄(줄은 결과 시작 순이다). */
 uint findInstance( uint skinIndex )
 {
@@ -63,8 +78,8 @@ uint findInstance( uint skinIndex )
 		const uint halfCount = count / 2u;
 		const uint middle    = low + halfCount;
 		const bool bRight    = ( halfCount > 0u ) && ( g_SkinInstances[middle * SW_SKIN_UINT4_PER_INSTANCE].x <= skinIndex );
-		low                 = bRight ? middle : low;
-		count               = ( halfCount > 0u ) ? ( bRight ? count - halfCount : halfCount ) : count;
+		low                  = bRight ? middle : low;
+		count                = ( halfCount > 0u ) ? ( bRight ? count - halfCount : halfCount ) : count;
 	}
 	return low;
 }
@@ -78,14 +93,30 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
 	const uint  instanceIndex = findInstance( skinIndex );
 	const uint4 instance      = g_SkinInstances[instanceIndex * SW_SKIN_UINT4_PER_INSTANCE];
+	const uint4 morph         = g_SkinInstances[instanceIndex * SW_SKIN_UINT4_PER_INSTANCE + 1u];
 	const uint  local         = min( skinIndex - instance.x, instance.z - 1u );
 	const uint  source        = instance.y + local;
 	const uint  paletteBase   = instance.w;
 
-	const float3 position = g_RestVertices[source * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
-	const float3 normal   = g_RestVertices[source * SW_MORPH_FLOAT4_PER_VERTEX + 1u].xyz;
-	const float4 weights  = g_SkinWeights[source * SW_SKIN_FLOAT4_PER_VERTEX];
-	const float4 joints   = g_SkinWeights[source * SW_SKIN_FLOAT4_PER_VERTEX + 1u];
+	float3       position   = g_RestVertices[source * SW_MORPH_FLOAT4_PER_VERTEX].xyz;
+	float3       normal     = g_RestVertices[source * SW_MORPH_FLOAT4_PER_VERTEX + 1u].xyz;
+	const float4 weights    = g_SkinWeights[source * SW_SKIN_FLOAT4_PER_VERTEX];
+	const float4 joints     = g_SkinWeights[source * SW_SKIN_FLOAT4_PER_VERTEX + 1u];
+	const float4 deltaRange = g_SkinWeights[source * SW_SKIN_FLOAT4_PER_VERTEX + 2u];
+
+	// 모프 타깃 — 이 정점을 옮기는 차이마다 그 타깃의 가중치만큼 더한다(가중치가 0 이면 레스트 그대로).
+	const uint deltaStart = (uint)deltaRange.x;
+	const uint deltaCount = ( morph.y > 0u ) ? min( (uint)deltaRange.y, SW_SKIN_MAX_DELTAS_PER_VERTEX ) : 0u;
+	for ( uint deltaIndex = 0u; deltaIndex < deltaCount; ++deltaIndex )
+	{
+		const uint   element  = g_SkinDeltaBase + ( deltaStart + deltaIndex ) * SW_MORPH_FLOAT4_PER_VERTEX;
+		const float4 delta    = g_RestVertices[element];
+		const float3 deltaNormal = g_RestVertices[element + 1u].xyz;
+		const uint   target   = (uint)delta.w;
+		const float  weight   = ( target < morph.y ) ? loadMorphWeight( morph.x + target ) : 0.0f;
+		position += delta.xyz * weight;
+		normal   += deltaNormal * weight;
+	}
 
 	float3 skinnedPosition = float3( 0.0f, 0.0f, 0.0f );
 	float3 skinnedNormal   = float3( 0.0f, 0.0f, 0.0f );

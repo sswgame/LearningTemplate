@@ -60,7 +60,10 @@ namespace sw
         void update( float32 deltaTime );
 
         /** @brief 벤치가 씬을 만들어 두었으면 true. */
-        bool isActive() const { return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false || _bCharacterFraming == SW_TRUE; }
+        bool isActive() const
+        {
+            return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false || _bCharacterFraming == SW_TRUE || _bFaceFraming == SW_TRUE;
+        }
 
     private:
         /** @brief 씬을 확보하고 큐브 meshCount 개를 격자로 채웁니다. */
@@ -71,6 +74,12 @@ namespace sw
         void frameCharacterCameras( Scene* pScene, float32 halfExtent );
         /** @brief 캐릭터 줄(격자면 한 행)의 반폭입니다. */
         static float32 computeCharacterHalfExtent( uint32 characterCount );
+        /** @brief `-gv_benchFaces=N` — 시험 머리 N 개를 한 줄로 세웁니다(표정 · 립싱크 · 깜빡임 · 시선). */
+        void spawnFaces( uint32 faceCount );
+        /** @brief 머리 줄을 정면에서 보도록 카메라를 맞춥니다. */
+        void frameFaceCameras( Scene* pScene );
+        /** @brief 머리 줄이 화면 폭에 차는 카메라 거리(m)입니다. */
+        static float32 computeFaceCameraDistance( uint32 faceCount );
 
         /** @brief 인덱스로부터 결정적인 밝은 색을 만듭니다. */
         static float4 makeBenchColor( uint32 index );
@@ -169,6 +178,7 @@ namespace sw
         uint8 _bRefreshedCameras : 1;
         /** @brief 캐릭터 벤치를 세웠으면 1 — 카메라를 캐릭터 기준으로 맞춥니다. */
         uint8                  _bCharacterFraming : 1;
-        [[maybe_unused]] uint8 _reserved          : 6;
+        uint8                  _bFaceFraming      : 1; ///< 시험 머리 줄을 세웠다(카메라를 머리 높이로 맞춘다)
+        [[maybe_unused]] uint8 _reserved          : 5;
     };
 } // namespace sw

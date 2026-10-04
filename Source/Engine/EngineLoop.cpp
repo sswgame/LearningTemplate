@@ -16,6 +16,7 @@
 #include "Core/String/string_splitter.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
@@ -364,6 +365,25 @@ namespace sw
                              vertexAnimationFailedCount );
                 loop._bHeadlessTaskFailed =
                     sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 || vertexAnimationFailedCount > 0;
+                return EngineInitResult::SkipDependents;
+            }
+
+            // 립싱크 분석 — 음성마다 비즘 트랙을 곁에 쓴다. 분석 표가 엔진 데이터라 엔진이 한다.
+            bool bImportLipSync = false;
+            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_LIPSYNC, bImportLipSync ) && bImportLipSync )
+            {
+                MemoryProfiler::captureMemoryLeakBaseline();
+                loop._bHeadless = true;
+                SW_LOG_INFO( "Starting Headless (ImportLipSync)..." );
+                LipSyncSettings lipSyncSettings{};
+                uint32          lipSyncFailedCount = 0;
+                uint32          lipSyncCount       = 0;
+                if ( lipSyncSettings.loadFromResource( LipSyncSettings::kResourcePath ) )
+                    lipSyncCount = LipSyncAnalyzer::importAll( ResourceUtil::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
+                else
+                    ++lipSyncFailedCount;
+                SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );
+                loop._bHeadlessTaskFailed = lipSyncFailedCount > 0;
                 return EngineInitResult::SkipDependents;
             }
 

@@ -24,6 +24,10 @@ namespace sw
             static constexpr uint8 kArrMagic[4] = { 'S', 'W', 'M', 'S' };
             /** @brief 정점 하나의 float32 개수입니다(위치 3 · 노멀 3 · UV 2 · 색 4). */
             static constexpr uint32 kFloatPerVertex = 12;
+            /** @brief 모프 타깃 덩어리의 이름입니다. */
+            static constexpr uint8 kArrMorphChunk[4] = { 'M', 'R', 'P', 'H' };
+            /** @brief 모프 차이 하나의 바이트 수입니다(정점 번호 uint32 + float32 여섯). */
+            static constexpr uint32 kMorphDeltaSize = 4 + 6 * 4;
 
             static_assert( MeshAssetFormat::kVertexSize == kFloatPerVertex * sizeof( float32 ), "kVertexSize must match the float layout" );
             static_assert( sizeof( RHIVertex ) == MeshAssetFormat::kVertexSize, "RHIVertex changed - bump MeshAssetFormat::kVersion and re-import models" );
@@ -115,15 +119,42 @@ namespace sw
             for ( const float32 value : vertex._arrColor )
                 MeshAssetFormatInternal::appendFloat32( outBytes, value );
         }
-        if ( bSkin == false )
-            return;
-        for ( const MeshSkinVertex& skin : data._listSkinVertex )
+        if ( bSkin )
         {
-            for ( const uint16 joint : skin._arrJoint )
-                MeshAssetFormatInternal::appendUint16( outBytes, joint );
-            for ( const float32 weight : skin._arrWeight )
-                MeshAssetFormatInternal::appendFloat32( outBytes, weight );
+            for ( const MeshSkinVertex& skin : data._listSkinVertex )
+            {
+                for ( const uint16 joint : skin._arrJoint )
+                    MeshAssetFormatInternal::appendUint16( outBytes, joint );
+                for ( const float32 weight : skin._arrWeight )
+                    MeshAssetFormatInternal::appendFloat32( outBytes, weight );
+            }
         }
+        if ( data._listMorphTarget.empty() )
+            return;
+        // 선택 덩어리 — 모프 타깃. 길이는 내용을 다 쓴 뒤 채운다.
+        for ( const uint8 letter : MeshAssetFormatInternal::kArrMorphChunk )
+            outBytes.push_back( letter );
+        const size_t lengthOffset = outBytes.size();
+        MeshAssetFormatInternal::appendUint32( outBytes, 0u );
+        const size_t contentStart = outBytes.size();
+        MeshAssetFormatInternal::appendUint32( outBytes, static_cast<uint32>( data._listMorphTarget.size() ) );
+        for ( const MeshMorphTarget& target : data._listMorphTarget )
+        {
+            const string_view name = target._name.c_str();
+            MeshAssetFormatInternal::appendUint32( outBytes, static_cast<uint32>( name.size() ) );
+            outBytes.insert( outBytes.end(), name.begin(), name.end() );
+            MeshAssetFormatInternal::appendUint32( outBytes, static_cast<uint32>( target._listDelta.size() ) );
+            for ( const MeshMorphDelta& delta : target._listDelta )
+            {
+                MeshAssetFormatInternal::appendUint32( outBytes, delta._vertexIndex );
+                const float32 arrValue[6] = { delta._position._x, delta._position._y, delta._position._z, delta._normal._x, delta._normal._y, delta._normal._z };
+                for ( const float32 value : arrValue )
+                    MeshAssetFormatInternal::appendFloat32( outBytes, value );
+            }
+        }
+        const uint32 contentLength = static_cast<uint32>( outBytes.size() - contentStart );
+        for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
+            outBytes[lengthOffset + byteIndex] = static_cast<uint8>( ( contentLength >> ( byteIndex * 8 ) ) & 0xFFu );
     }
 
     void MeshAssetFormat::makeBytes( const vector<RHIVertex>& listVertex, vector<uint8>& outBytes )
@@ -162,7 +193,8 @@ namespace sw
         // 정점 수 × 크기를 64 비트로 셈한다 — 깨진 머리의 큰 정점 수가 32 비트로 넘쳐 작은 파일과 "맞아" 보이지 않게 한다.
         const uint64 skinSize     = skinBoneCount > 0 ? static_cast<uint64>( vertexCount ) * kSkinVertexSize : 0u;
         const uint64 expectedSize = static_cast<uint64>( kHeaderSize ) + static_cast<uint64>( vertexCount ) * kVertexSize + skinSize;
-        if ( bWholeTriangles == false || expectedSize != static_cast<uint64>( size ) )
+        // 정점 · 스킨 뒤의 남은 바이트는 선택 덩어리다(아래에서 하나씩 읽는다). 모자라면 깨진 파일이다.
+        if ( bWholeTriangles == false || expectedSize > static_cast<uint64>( size ) )
         {
             SW_LOG_WARNING( "Mesh asset declares %# vertices but holds %# bytes (expected %#)", vertexCount, size, expectedSize );
             return false;
@@ -211,6 +243,65 @@ namespace sw
                 }
             }
             outData._skinBoneCount = skinBoneCount;
+        }
+        // 선택 덩어리 — 모르는 이름 · 길이가 맞지 않는 덩어리는 깨진 파일로 본다.
+        const uint8* pEnd = pData + size;
+        while ( pCursor < pEnd )
+        {
+            if ( static_cast<size_t>( pEnd - pCursor ) < 8 )
+            {
+                SW_LOG_WARNING( "Mesh asset has a truncated chunk header" );
+                outData = MeshAssetData{};
+                return false;
+            }
+            const bool   bMorph      = Memory::compare( pCursor, MeshAssetFormatInternal::kArrMorphChunk, 4 ) == 0;
+            const uint32 chunkLength = MeshAssetFormatInternal::readUint32( pCursor + 4 );
+            const uint8* pChunk      = pCursor + 8;
+            const uint8* pChunkEnd   = pChunk + chunkLength;
+            if ( bMorph == false || chunkLength > static_cast<size_t>( pEnd - pChunk ) )
+            {
+                SW_LOG_WARNING( "Mesh asset has an unknown or truncated chunk" );
+                outData = MeshAssetData{};
+                return false;
+            }
+            bool   bValid      = chunkLength >= 4;
+            uint32 targetCount = bValid ? MeshAssetFormatInternal::readUint32( pChunk ) : 0u;
+            pChunk += 4;
+            for ( uint32 targetIndex = 0; bValid && targetIndex < targetCount; ++targetIndex )
+            {
+                bValid                  = pChunkEnd - pChunk >= 4;
+                const uint32 nameLength = bValid ? MeshAssetFormatInternal::readUint32( pChunk ) : 0u;
+                bValid                  = bValid && static_cast<size_t>( pChunkEnd - pChunk ) >= 8u + nameLength;
+                if ( bValid == false )
+                    break;
+                MeshMorphTarget target{};
+                target._name = hashed_string( string( reinterpret_cast<const utf8*>( pChunk + 4 ), nameLength ) );
+                pChunk += 4 + nameLength;
+                const uint32 deltaCount = MeshAssetFormatInternal::readUint32( pChunk );
+                pChunk += 4;
+                bValid = static_cast<uint64>( pChunkEnd - pChunk ) >= static_cast<uint64>( deltaCount ) * MeshAssetFormatInternal::kMorphDeltaSize;
+                for ( uint32 deltaIndex = 0; bValid && deltaIndex < deltaCount; ++deltaIndex )
+                {
+                    MeshMorphDelta delta{};
+                    delta._vertexIndex = MeshAssetFormatInternal::readUint32( pChunk );
+                    float32 arrValue[6]{};
+                    for ( uint32 valueIndex = 0; valueIndex < 6; ++valueIndex )
+                        arrValue[valueIndex] = MeshAssetFormatInternal::readFloat32( pChunk + 4 + valueIndex * 4 );
+                    delta._position = float3{ arrValue[0], arrValue[1], arrValue[2] };
+                    delta._normal   = float3{ arrValue[3], arrValue[4], arrValue[5] };
+                    pChunk += MeshAssetFormatInternal::kMorphDeltaSize;
+                    bValid = delta._vertexIndex < vertexCount;
+                    target._listDelta.push_back( delta );
+                }
+                outData._listMorphTarget.push_back( std::move( target ) );
+            }
+            if ( bValid == false || pChunk != pChunkEnd )
+            {
+                SW_LOG_WARNING( "Mesh asset has a malformed morph target chunk" );
+                outData = MeshAssetData{};
+                return false;
+            }
+            pCursor = pChunkEnd;
         }
         if ( pOutBoundingRadius != nullptr )
             *pOutBoundingRadius = boundingRadius;

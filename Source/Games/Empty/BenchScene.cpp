@@ -12,6 +12,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
+#include "Engine/Object/Component/3D/FacialAnimationComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
@@ -59,6 +60,15 @@ namespace sw
         constexpr const utf8* kArrBenchCharacterClip[] = { "Idle", "Walking_A" };
         /** @brief 캐릭터 사이 간격(미터)입니다. */
         constexpr float32 kBenchCharacterSpacing = 1.6f;
+        /// @brief 얼굴 벤치의 시험 머리(합성 — 모프 타깃 일곱 · 눈 본 둘)와 그 리그 · 클립 · 음성입니다.
+        constexpr const utf8* kBenchFaceMesh     = "game/empty/models/testhead.mesh";
+        constexpr const utf8* kBenchFaceSkeleton = "game/empty/models/testhead/testhead.skeleton.json";
+        constexpr const utf8* kBenchFaceClips    = "game/empty/models/testhead/clips";
+        constexpr const utf8* kBenchFaceRig      = "game/empty/models/testhead.facial.json";
+        constexpr const utf8* kBenchFaceVoice    = "game/empty/voice/testline.wav";
+        /// @brief 머리 사이 간격(m)과 머리 중심 높이(m)입니다.
+        constexpr float32 kBenchFaceSpacing = 0.45f;
+        constexpr float32 kBenchFaceHeight  = 1.635f;
     } // namespace
 
     // ------------------------------------------------------------------------------
@@ -93,6 +103,12 @@ namespace sw
      * @brief `-gv_benchCharacterStagger=1` — 벤치 캐릭터의 시작 시각을 인덱스 해시로 흩습니다(군중이 한 프레임으로 맞춰 움직이지 않게).
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_benchCharacterStagger, 0, "벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초)" );
+
+    /**
+     * @brief `-gv_benchFaces=N` — 시험 머리 N 개를 한 줄로 세웁니다(얼굴 애니메이션 확인). 모두 카메라를 보고(시선) 깜빡이며, 짝수는 Talk 클립
+     *        (모프 가중치 커브)을 재생하고 Happy 표정 0.6, 홀수는 시험 음성을 말합니다(비즘 트랙).
+     */
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_benchFaces, 0, "벤치 시험 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선)" );
 
     /**
      * @brief `-gv_benchMaterialInstances=1` — 벤치 큐브마다 개별 MaterialInstance 를 줍니다.
@@ -249,6 +265,7 @@ namespace sw
         , _benchGridSide{ 0 }
         , _bRefreshedCameras{ SW_FALSE }
         , _bCharacterFraming{ SW_FALSE }
+        , _bFaceFraming{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -260,13 +277,15 @@ namespace sw
         // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는
         // **이 모듈이 선언한다**(이 파일 위). 그래서 이름으로 조회하지 않고 그대로 읽는다 —
         // 주의: 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽힌다.
-        if ( gv_benchMeshes <= 0 && gv_benchCharacters <= 0 )
+        if ( gv_benchMeshes <= 0 && gv_benchCharacters <= 0 && gv_benchFaces <= 0 )
             return false;
 
         if ( gv_benchMeshes > 0 )
             spawn( static_cast<uint32>( gv_benchMeshes ) );
         if ( gv_benchCharacters > 0 )
             spawnCharacters( static_cast<uint32>( gv_benchCharacters ) );
+        if ( gv_benchFaces > 0 )
+            spawnFaces( static_cast<uint32>( gv_benchFaces ) );
         return isActive();
     }
 
@@ -316,6 +335,7 @@ namespace sw
         _instanceCubeCount = 0;
         _listBenchExtra.clear();
         _bCharacterFraming = SW_FALSE;
+        _bFaceFraming      = SW_FALSE;
         _listChurnInstance.clear();
         _keyLight = {};
     }
@@ -557,6 +577,86 @@ namespace sw
         _bCharacterFraming = SW_TRUE;
         frameCharacterCameras( pScene, halfExtent );
         SW_LOG_INFO( "[Bench] 씬 '%#' 에 스킨드 캐릭터 %#명을 세웠습니다(%#).", pScene->getName(), characterCount, kBenchCharacterMesh );
+    }
+
+    void BenchScene::spawnFaces( uint32 faceCount )
+    {
+        SceneManager* pSceneManager = game::getService<SceneManager>();
+        if ( pSceneManager == nullptr )
+            return;
+        Scene* pScene = pSceneManager->getActiveScene();
+        if ( pScene == nullptr )
+            pScene = pSceneManager->createEmptyActiveScene( "BenchScene" );
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+        {
+            SW_LOG_ERROR( "[Bench] 씬을 만들지 못했습니다." );
+            return;
+        }
+        pScene->ensureDefaultCameras();
+        GameObjectManager* pObjects = pScene->getObjectManager();
+        // 머리는 원점에 서서 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌리고, 눈은 카메라 높이의 앞 지점을 본다.
+        const float32 origin = -0.5f * static_cast<float32>( faceCount - 1 ) * kBenchFaceSpacing;
+        const float3  lookAt{ 0.0f, kBenchFaceHeight, -computeFaceCameraDistance( faceCount ) };
+        for ( uint32 index = 0; index < faceCount; ++index )
+        {
+            StringBuilder<constant::kMaxBuffer64> nameBuilder;
+            nameBuilder.append( "BenchFace_" ).append( index );
+            GameObject* pObject = pObjects->createGameObject( hashed_string( nameBuilder.c_str(), nameBuilder.size() ) );
+            if ( pObject == nullptr )
+                continue;
+            SkeletalMeshComponent* pMesh = pObject->addComponent<SkeletalMeshComponent>();
+            if ( pMesh == nullptr )
+                continue;
+            pMesh->setMeshId( kBenchFaceMesh );
+            pMesh->setSkeletonPath( kBenchFaceSkeleton );
+            pMesh->resolveRenderAssets();
+            pMesh->setLocalPosition( float3{ origin + static_cast<float32>( index ) * kBenchFaceSpacing, 0.0f, 0.0f } );
+            pMesh->setLocalRotation( float3{ 0.0f, MathUtil::Pi, 0.0f } );
+            const bool bTalkClip = ( index % 2 ) == 0;
+            if ( bTalkClip )
+            {
+                SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
+                if ( pAnimator != nullptr )
+                {
+                    pAnimator->setClipFolder( kBenchFaceClips );
+                    pAnimator->setInitialState( "Talk" );
+                }
+            }
+            FacialAnimationComponent* pFace = pObject->addComponent<FacialAnimationComponent>();
+            if ( pFace == nullptr )
+                continue;
+            pFace->setFacialRigPath( kBenchFaceRig );
+            pFace->setLookAtTarget( lookAt );
+            if ( bTalkClip )
+                (void)pFace->setExpressionWeight( hashed_string( "Happy" ), 0.6f );
+            else
+                (void)pFace->speak( kBenchFaceVoice );
+            _listBenchExtra.push_back( pMesh->getHandle() );
+        }
+
+        spawnLight( pScene, 2.0f );
+        _bFaceFraming = SW_TRUE;
+        frameFaceCameras( pScene );
+        SW_LOG_INFO( "[Bench] 씬 '%#' 에 시험 머리 %#개를 세웠습니다(%#).", pScene->getName(), faceCount, kBenchFaceMesh );
+    }
+
+    float32 BenchScene::computeFaceCameraDistance( uint32 faceCount )
+    {
+        // 머리 줄(폭 + 여유)이 화면 폭에 차는 거리 — 기본 카메라 시야 · 16:9 에서 잰 근사다.
+        const float32 rowWidth = static_cast<float32>( MathUtil::max( faceCount, 1u ) ) * kBenchFaceSpacing;
+        return MathUtil::max( 0.6f, rowWidth * 1.1f );
+    }
+
+    void BenchScene::frameFaceCameras( Scene* pScene )
+    {
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+        const float32 distance = computeFaceCameraDistance( static_cast<uint32>( MathUtil::max( gv_benchFaces, 1 ) ) );
+        for ( CameraComponent* pCamera : pScene->getObjectManager()->getCameraRegistry().getAll() )
+        {
+            pCamera->setLocalPosition( float3{ 0.0f, kBenchFaceHeight, -distance } );
+            pCamera->lookAt( float3{ 0.0f, kBenchFaceHeight, 0.0f } );
+        }
     }
 
     float32 BenchScene::computeCharacterHalfExtent( uint32 characterCount )
@@ -861,7 +961,9 @@ namespace sw
             {
                 if ( Scene* pScene = pSceneManager->getActiveScene() )
                 {
-                    if ( _bCharacterFraming == SW_TRUE )
+                    if ( _bFaceFraming == SW_TRUE )
+                        frameFaceCameras( pScene );
+                    else if ( _bCharacterFraming == SW_TRUE )
                         frameCharacterCameras( pScene, computeCharacterHalfExtent( static_cast<uint32>( MathUtil::max( gv_benchCharacters, 1 ) ) ) );
                     else
                         frameCameras( pScene, _benchGridSide, kBenchSpacing );

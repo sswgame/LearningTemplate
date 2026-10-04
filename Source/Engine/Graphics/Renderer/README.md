@@ -68,6 +68,9 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
   정점마다 이분 탐색으로 인스턴스를 찾는다. 집합이 바뀌면 다시 올리는 것은 바뀐 쪽뿐이다(모프 레스트 · 원본 · 인스턴스 표). 팔레트(본 하나 = float4 셋 —
   행벡터 4x4 의 0 · 1 · 2 열)는 프레임마다 올라간다(`uploadSkinPalettes`, 메시 → 항목 표로 한 번에). 팔레트는 GT 의 `AnimationSystem` 이 만들고
   `GpuSceneBuilder::collectSkinPalettes` 가 매 프레임(수집 건너뛰기와 무관하게) 스냅샷으로 옮긴다 — 군중 묶음과 나누는 유닛은 건너뛰고 묶음이 한 번 싣는다.
+  **모프 타깃**(스킨드 메시): 원본의 타깃 차이(움직이는 정점만)는 레스트 버퍼 뒤(`g_SkinDeltaBase` 부터)에 원본마다 한 벌, 정점마다 차이 구간(가중치 버퍼의
+  셋째 float4)을 둔다. 유닛의 가중치는 팔레트 행 뒤에 붙고 인스턴스 줄이 그 시작 · 타깃 수를 든다 — 컴퓨트가 **스키닝 앞에** 레스트에 Σ 가중치 × 차이를
+  더한다. 스킨 없는 메시의 모프는 이 길을 타지 않는다(남은 일).
 - `GpuVertexAnimationPool` — RT 소유. VAT 가 걸린 메시(`Mesh::setVertexAnimation`)의 표를 t14 버퍼 하나에 잇는다. 표는 굽고 나면 변하지 않아 집합이 바뀔 때만 올린다.
 
 언리얼의 GPUScene 과 같은 발상으로, per-instance 월드 행렬을 구조버퍼에 올려 VS 가 직접 읽습니다.

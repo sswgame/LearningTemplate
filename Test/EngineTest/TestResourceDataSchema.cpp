@@ -3,6 +3,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Animation/Facial/FacialRig.h"
+#include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Animation/SkeletonBoneLod.h"
 #include "Engine/Animation/SpriteClipAsset.h"
@@ -225,6 +227,10 @@ namespace
         static bool isAnimationCrowd( sw::string_view resourceId ) { return resourceId == sw::AnimationCrowdSettings::kResourcePath; }
         /** @brief VAT 쿠킹 목록 — 가리키는 메시 · 스켈레톤 · 클립 파일이 모두 있어야 한다. */
         static bool isVertexAnimationList( sw::string_view resourceId ) { return endsWith( resourceId, sw::VertexAnimationCookList::kExtension ); }
+        /** @brief 립싱크 분석 표 · 비즘 트랙 · 얼굴 리그 — 모르는 키는 읽기 오류다(리그의 타깃 · 본 이름은 메시를 묶을 때 본다). */
+        static bool isLipSync( sw::string_view resourceId ) { return resourceId == sw::LipSyncSettings::kResourcePath; }
+        static bool isVisemeTrack( sw::string_view resourceId ) { return endsWith( resourceId, sw::VisemeTrack::kExtension ); }
+        static bool isFacialRig( sw::string_view resourceId ) { return endsWith( resourceId, sw::FacialRig::kExtension ); }
 
         // 게임 데이터 — 키트 카탈로그가 읽는다(게임 모듈은 읽은 정의를 조립만 한다). 파일 이름은 게임이 여는 그대로다.
         template <typename TCatalog>
@@ -315,6 +321,9 @@ namespace
             {       "animationlod",        &isAnimationLod,    &loadCatalog<sw::AnimationLodSettings>},
             {     "animationcrowd",      &isAnimationCrowd,  &loadCatalog<sw::AnimationCrowdSettings>},
             {    "vertexanimation", &isVertexAnimationList, &loadCatalog<sw::VertexAnimationCookList>},
+            {            "lipsync",             &isLipSync,         &loadCatalog<sw::LipSyncSettings>},
+            {            "visemes",         &isVisemeTrack,             &loadCatalog<sw::VisemeTrack>},
+            {             "facial",           &isFacialRig,               &loadCatalog<sw::FacialRig>},
         };
 
         /**

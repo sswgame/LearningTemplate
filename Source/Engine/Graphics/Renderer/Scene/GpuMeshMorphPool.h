@@ -71,6 +71,8 @@ namespace sw
     inline constexpr uint32 kSkinFloat4PerBone = 3;
     /// @brief 스킨 인스턴스 표의 한 줄이 차지하는 원소(uint4) 수입니다. 셰이더의 `SW_SKIN_UINT4_PER_INSTANCE` 와 같아야 합니다.
     inline constexpr uint32 kSkinUint4PerInstance = 2;
+    /// @brief 스킨 원본 정점 하나의 가중치 버퍼 원소(float4) 수입니다(가중치 · 본 번호 · 모프 차이 구간). 셰이더의 `SW_SKIN_FLOAT4_PER_VERTEX` 와 같아야 합니다.
+    inline constexpr uint32 kSkinFloat4PerVertex = 3;
 } // namespace sw
 
 namespace sw
@@ -81,11 +83,13 @@ namespace sw
      */
     struct GpuSkinInstanceRow
     {
-        uint32 _resultOffset{ 0 };            ///< 스킨 구간 안에서 이 인스턴스의 결과 시작(정점)
-        uint32 _sourceBase{ 0 };              ///< 원본 레스트 · 가중치 버퍼에서의 시작(정점)
-        uint32 _vertexCount{ 0 };             ///< 정점 수
-        uint32 _paletteBase{ 0 };             ///< 팔레트에서의 시작 본
-        uint32 _arrReserved[4]{ 0, 0, 0, 0 }; ///< 둘째 uint4 — 모프 타깃 가중치 자리(지금은 0)
+        uint32 _resultOffset{ 0 };     ///< 스킨 구간 안에서 이 인스턴스의 결과 시작(정점)
+        uint32 _sourceBase{ 0 };       ///< 원본 레스트 · 가중치 버퍼에서의 시작(정점)
+        uint32 _vertexCount{ 0 };      ///< 정점 수
+        uint32 _paletteBase{ 0 };      ///< 팔레트에서의 시작 본
+        uint32 _morphWeightBase{ 0 };  ///< 둘째 uint4 — 팔레트 버퍼를 float 배열로 볼 때 이 인스턴스 모프 가중치의 시작
+        uint32 _morphTargetCount{ 0 }; ///< 모프 타깃 수
+        uint32 _arrReserved[2]{ 0, 0 };
     };
 } // namespace sw
 
@@ -126,7 +130,8 @@ namespace sw
          * @brief 이번 프레임 팔레트를 풀의 스킨 인스턴스 순서로 올립니다. 팔레트가 없는 메시는 단위 행렬(바인드 포즈)입니다.
          * @param pListRow 스냅샷의 팔레트 행(본 하나 = float4 셋). nullptr 이면 모두 단위입니다.
          */
-        void uploadSkinPalettes( IRHIDevice* pDevice, const vector<GpuSkinPalette>& listPalette, const vector<float4>* pListRow );
+        void uploadSkinPalettes( IRHIDevice* pDevice, const vector<GpuSkinPalette>& listPalette, const vector<float4>* pListRow,
+                                 const vector<float32>* pListMorphWeight = nullptr );
 
         /** @brief 메시의 풀 시작 오프셋(정점 단위)을 반환합니다. 풀에 없으면 `kInvalidBase` 입니다. */
         uint32 baseOf( const Mesh* pMesh ) const;
@@ -151,9 +156,11 @@ namespace sw
         uint32 getSkinSourceCount() const { return static_cast<uint32>( _listSourceDataId.size() ); }
         /** @brief 올린 스킨 원본의 정점 수 합입니다. */
         uint32 getSkinSourceVertexCount() const { return _skinSourceVertexCount; }
-        /** @brief 스킨 원본의 레스트 정점 버퍼입니다(정점 하나 = float4 둘). */
+        /** @brief 스킨 원본의 레스트 정점 버퍼입니다(정점 하나 = float4 둘, 그 뒤에 모프 차이 하나 = float4 둘). */
         const RHIStructuredBufferSlot& getSkinRestBuffer() const { return _skinRest; }
-        /** @brief 스킨 원본의 가중치 버퍼입니다(정점 하나 = float4 둘 — 가중치 넷, 원본 본 번호 넷). */
+        /** @brief 레스트 버퍼에서 모프 차이가 시작하는 원소(float4)입니다. */
+        uint32 getSkinDeltaBase() const { return _skinDeltaBase; }
+        /** @brief 스킨 원본의 가중치 버퍼입니다(정점 하나 = float4 셋 — 가중치 넷, 원본 본 번호 넷, 모프 차이 구간(시작 · 수)). */
         const RHIStructuredBufferSlot& getSkinWeightBuffer() const { return _skinWeight; }
         /** @brief 스킨 인스턴스 표입니다(인스턴스 하나 = uint4 둘, `GpuSkinInstanceRow`). */
         const RHIStructuredBufferSlot& getSkinInstanceBuffer() const { return _skinInstance; }
@@ -204,5 +211,7 @@ namespace sw
         uint32         _skinVertexBase{ 0 };
         uint32         _skinBoneCount{ 0 };
         uint32         _skinSourceVertexCount{ 0 };
+        uint32         _skinDeltaBase{ 0 };
+        uint32         _skinMorphWeightCount{ 0 }; ///< 인스턴스 모프 가중치의 합(팔레트 뒤에 float4 로 싣는다)
     };
 } // namespace sw

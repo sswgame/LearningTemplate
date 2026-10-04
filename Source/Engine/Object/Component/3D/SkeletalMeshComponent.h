@@ -141,6 +141,24 @@ namespace sw
         /** @brief LOD 판정을 받는 얼굴입니다. */
         SkeletalMeshLodClient& getLodClient() { return _lodClient; }
 
+        // --- 모프 타깃(블렌드 셰이프) 가중치 ---
+        /**
+         * @brief 그리는 메시의 모프 타깃 가중치입니다(타깃 순서). 기본 포즈 단계 시작에 0 으로 비우고, 일들(애니메이터의 같은 이름 커브 · 얼굴)이 더합니다.
+         * @details 렌더 빌더가 팔레트와 함께 스냅샷으로 옮기고, 스키닝 컴퓨트가 레스트에 차이를 가중치만큼 더한 뒤 스키닝합니다. 군중 묶음은 가중치를
+         *          나누지 않으므로 가중치가 0 이 아닌 유닛은 혼자 평가합니다.
+         */
+        const vector<float32>& getMorphWeights() const { return _listMorphWeight; }
+        /** @brief 그리는 메시의 모프 타깃 수입니다. */
+        uint32 getMorphTargetCount() const;
+        /** @brief 이름의 모프 타깃 번호입니다(그리는 메시 기준). 없으면 -1 입니다. */
+        int32 findMorphTargetIndex( const hashed_string& targetName ) const;
+        /** @brief 가중치를 정합니다(범위 밖 번호는 무시). 단계 함수 안(워커)에서 자기 유닛에만 씁니다. */
+        void setMorphWeight( uint32 targetIndex, float32 weight );
+        /** @brief 가중치를 더합니다(여러 일이 한 타깃을 움직일 때 — 그릴 때 [0, 1] 로 묶는다). */
+        void addMorphWeight( uint32 targetIndex, float32 weight );
+        /** @brief 0 이 아닌 가중치가 있는지입니다. */
+        bool hasActiveMorphWeights() const;
+
         // --- 군중 공유 (AnimationCrowd.h) ---
         /**
          * @brief 군중 공유를 켭니다. 켜면 컴포넌트마다 스킨 사본을 두지 않고, 같은 상태 · 같은 위상의 캐릭터와 포즈 하나 · 결과 구간 하나를 나눕니다.
@@ -225,6 +243,7 @@ namespace sw
         uint32                            _updatePhase;
         uint32                            _framesSinceEvaluation; ///< 마지막 평가 뒤 지난 프레임
         uint32                            _effectiveDivisor;      ///< 이번 프레임의 주기(하한 PROPERTY 와 LOD 중 큰 쪽)
+        vector<float32>                   _listMorphWeight;       ///< 그리는 메시의 모프 타깃 가중치(타깃 순서)
         AnimationCrowdBucket*             _pCrowdBucket;          ///< 나누는 묶음(군중 소유 — 참조 수로 지켜진다)
         shared_ptr<Mesh>                  _soloMesh;              ///< 혼자 평가할 때 빌린 사본
         const AnimClip*                   _pVertexAnimationClip;  ///< VAT 로 그리는 클립(바뀌면 시각 오프셋을 다시 적는다)

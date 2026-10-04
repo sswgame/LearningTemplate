@@ -33,6 +33,7 @@ namespace sw
         shared_ptr<Mesh> instance = create();
         instance->setVertices( source._listVertex );
         instance->setSkin( source._listSkinVertex, source._skinBoneCount );
+        instance->setMorphTargets( source._listMorphTarget );
         // 정점 · 스킨이 원본과 같다 — 모프 풀이 원본 데이터를 한 번만 올리게 번호를 나눈다(setVertices · setSkin 이 지운 뒤에 적는다).
         instance->_sharedSkinDataId = source.getSkinDataId();
         return instance;
@@ -63,6 +64,31 @@ namespace sw
         _skinBoneCount      = bMatches ? boneCount : 0u;
         _contentId          = allocateContentId();
         _sharedSkinDataId   = 0;
+    }
+
+    void Mesh::setMorphTargets( vector<MeshMorphTarget> listTarget )
+    {
+        const uint32 vertexCount = static_cast<uint32>( _listVertex.size() );
+        for ( MeshMorphTarget& target : listTarget )
+        {
+            target._listDelta.erase( std::remove_if( target._listDelta.begin(), target._listDelta.end(),
+                                                     [vertexCount]( const MeshMorphDelta& delta )
+            { return delta._vertexIndex >= vertexCount; } ),
+                                     target._listDelta.end() );
+        }
+        _listMorphTarget  = std::move( listTarget );
+        _contentId        = allocateContentId();
+        _sharedSkinDataId = 0;
+    }
+
+    int32 Mesh::findMorphTargetIndex( const hashed_string& name ) const
+    {
+        for ( size_t targetIndex = 0; targetIndex < _listMorphTarget.size(); ++targetIndex )
+        {
+            if ( _listMorphTarget[targetIndex]._name == name )
+                return static_cast<int32>( targetIndex );
+        }
+        return -1;
     }
 
     void Mesh::setVertexAnimation( shared_ptr<const MeshVertexAnimation> animation )

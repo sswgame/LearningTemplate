@@ -83,6 +83,8 @@ namespace sw
         loaded->setVertices( std::move( data._listVertex ) );
         if ( data._skinBoneCount > 0 )
             loaded->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
+        if ( data._listMorphTarget.empty() == false )
+            loaded->setMorphTargets( std::move( data._listMorphTarget ) );
 
         MeshCacheInternal::SharedTable& table = MeshCacheInternal::getSharedTable();
         std::scoped_lock<mutex>         lock{ table._mutex };
@@ -122,6 +124,7 @@ namespace sw
             pDevice->waitIdle();
         live->setVertices( std::move( data._listVertex ) );
         live->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
+        live->setMorphTargets( std::move( data._listMorphTarget ) );
         return true;
     }
 

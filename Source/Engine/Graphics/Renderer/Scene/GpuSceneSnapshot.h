@@ -243,6 +243,8 @@ namespace sw
         const Mesh* _pMesh{ nullptr };
         uint32      _firstRow{ 0 };
         uint32      _boneCount{ 0 };
+        uint32      _firstMorphWeight{ 0 }; ///< `GpuSceneSnapshot::_pListMorphWeight` 안의 이 메시 모프 가중치 시작
+        uint32      _morphWeightCount{ 0 }; ///< 모프 가중치 수(0 이면 모프 없음)
     };
 } // namespace sw
 
@@ -293,6 +295,11 @@ namespace sw
          * @details 팔레트는 애니메이션 시스템이 틱 뒤에 만들고 빌더가 여기로 옮깁니다. RT 가 모프 풀의 스킨 구간 순서로 다시 올립니다(`GpuMeshMorphPool::uploadSkinPalettes`).
          */
         shared_ptr<const vector<float4>> _pListSkinPaletteRow;
+        /**
+         * @brief 이번 프레임의 모프 타깃 가중치 전부입니다(스킨드 메시마다 `GpuSkinPalette::_firstMorphWeight` 부터). **공유합니다** — 팔레트 행과 같은 규칙입니다.
+         * @details 유닛(`SkeletalMeshComponent::getMorphWeights`)이 내고, RT 가 팔레트 버퍼 뒤에 실어 스키닝 컴퓨트가 레스트에 차이를 더합니다.
+         */
+        shared_ptr<const vector<float32>> _pListMorphWeight;
         /// @brief GPU 회전을 요청한 인스턴스 수입니다(0 이면 애니메이션 디스패치를 건너뜁니다).
         uint32 _spinInstanceCount{ 0 };
         /**
