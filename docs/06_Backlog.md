@@ -111,6 +111,8 @@ cd build/Ninja-Debug/Bin
 
 - **`.hdr` 원본 임포트가 없다** — 지금 임포트는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
+- **창(백버퍼)을 읽는 창구가 없어 창 쪽 반전을 시험이 못 본다.** `-gv_screenshot` 은 오프스크린 텍스처를 읽으므로 창으로 옮기는 단계(GL 캡처 블릿)의
+  상하 반전은 캡처로 보이지 않는다(`3b9a6bdc`). 지금은 `Scripts/dev/CompareWindowToCapture.py` 로 손으로 잰다. 스왑체인에 백버퍼 읽기를 두면 hostgpu 시험으로 바꿀 수 있다.
 - **2D 정렬 레이어가 없다.** 깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다.
 - **점광 · 스폿 그림자** — RHI 텍스처 차원(배열 · 큐브, 면 단위 타깃 · 올리기 · 읽기)은 있다. 남은 것: 그림자 패스 다중 뷰(면 여섯) → 셰이더 쪽(DX12 · Vulkan
   큐브 · 배열 bindless 테이블, DX11 · GL TextureCube 슬롯) + `swSampleShadowAtWorld`. 3 단계 전에 큐브 대신 2D 아틀라스(Unity URP · Godot — RHI 변경 없음)로 갈지 먼저 정한다.
