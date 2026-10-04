@@ -26,17 +26,12 @@ namespace sw
 {
     bool ReputationCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "ReputationCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &ReputationCatalog::loadRoot, path, "ReputationCatalog" );
     }
 
     bool ReputationCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "ReputationCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &ReputationCatalog::loadRoot, xmlText, sourceName, "ReputationCatalog" );
     }
 
     uint32 ReputationCatalog::loadRoot( const XmlNode& root, string_view sourceName )

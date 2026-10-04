@@ -242,17 +242,12 @@ namespace sw
 
     bool CameraPresetCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "CameraPresets", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &CameraPresetCatalog::loadRoot, path, "CameraPresets" );
     }
 
     bool CameraPresetCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "CameraPresets", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &CameraPresetCatalog::loadRoot, xmlText, sourceName, "CameraPresets" );
     }
 
     void CameraPresetCatalog::addPreset( const CameraPresetDef& def )

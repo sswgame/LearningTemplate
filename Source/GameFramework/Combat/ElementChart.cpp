@@ -22,17 +22,12 @@ namespace sw
 
     bool ElementChart::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "ElementChart", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &ElementChart::loadRoot, path, "ElementChart" );
     }
 
     bool ElementChart::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "ElementChart", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &ElementChart::loadRoot, xmlText, sourceName, "ElementChart" );
     }
 
     void ElementChart::clear()

@@ -7,6 +7,8 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
+#include "GameFramework/Data/GameDataXml.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "MonsterCatalog" );
@@ -47,24 +49,16 @@ namespace sw
     bool MonsterCatalog::loadFromResource( string_view assetRelativePath )
     {
         clear();
+        if ( GameDataXml::loadFile( *this, &MonsterCatalog::loadRoot, assetRelativePath, "MonsterCatalog" ) )
+            return true;
+        // 파일 · 루트가 없거나 `<Monster>` 가 하나도 없다(읽기 쪽이 이미 까닭을 알렸다) — 폴백을 심는다.
+        SW_LOG_WARNING( "%# gave no monster definitions — using fallback monster definitions.", assetRelativePath );
+        seedFallback();
+        return false;
+    }
 
-        XmlDocument doc;
-        string      absPath;
-        if ( doc.loadPath( assetRelativePath, &absPath ) == false )
-        {
-            SW_LOG_WARNING( "Failed to read %# — using fallback monster definitions.", assetRelativePath );
-            seedFallback();
-            return false;
-        }
-
-        XmlNode root = doc.getRoot( "MonsterCatalog" );
-        if ( root.isValid() == false )
-        {
-            SW_LOG_WARNING( "Missing <MonsterCatalog> root in %# — using fallback.", absPath );
-            seedFallback();
-            return false;
-        }
-
+    uint32 MonsterCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    {
         for ( XmlNode node = root.findChild( "Monster" ); node; node = node.findNextSibling( "Monster" ) )
         {
             const utf8* pIdStr = node.findAttribute( "id" );
@@ -132,18 +126,16 @@ namespace sw
             _mapMonster[hashed_string( monsterDef._id.c_str() )] = monsterDef;
         }
 
-        // **읽었는데 하나도 없으면 실패다.** 위의 두 실패 길(파일 없음 · 루트 없음)처럼 폴백을
-        // 심는다. 주의: 여기서 성공으로 넘기면 `<Monster>` 를 `<monster>` 로 적은 오타 하나가
+        // **읽었는데 하나도 없으면 실패다**(0 — 부르는 쪽이 폴백을 심는다). 주의: 성공으로 넘기면 `<Monster>` 를 `<monster>` 로 적은 오타 하나가
         // **텅 빈 카탈로그**가 되고, 모든 `findMonster` 가 nullptr 이라 그 널을 다루는 쪽이 조용히 아무것도 안 한다.
         if ( _mapMonster.empty() )
         {
-            SW_LOG_WARNING( "No <Monster> entries in %# — using fallback monster definitions.", absPath );
-            seedFallback();
-            return false;
+            SW_LOG_WARNING( "No <Monster> entries in %#", sourceName );
+            return 0;
         }
 
-        SW_LOG_INFO( "Loaded %# monster definitions from %#", static_cast<int32>( _mapMonster.size() ), absPath );
-        return true;
+        SW_LOG_INFO( "Loaded %# monster definitions from %#", static_cast<int32>( _mapMonster.size() ), sourceName );
+        return static_cast<uint32>( _mapMonster.size() );
     }
 
     const MonsterDef* MonsterCatalog::findMonster( const hashed_string& id ) const

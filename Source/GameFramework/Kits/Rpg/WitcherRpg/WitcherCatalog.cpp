@@ -52,17 +52,12 @@ namespace sw
 
     bool WitcherCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "WitcherCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &WitcherCatalog::loadRoot, path, "WitcherCatalog" );
     }
 
     bool WitcherCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "WitcherCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &WitcherCatalog::loadRoot, xmlText, sourceName, "WitcherCatalog" );
     }
 
     hashed_string WitcherCatalog::getSkillColor( const hashed_string& skillId ) const

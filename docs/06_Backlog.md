@@ -167,9 +167,7 @@ cd build/Ninja-Debug/Bin
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
 - **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
-  - 작은 것: 카탈로그 로더 `GameDataXml::loadFile/loadText` 템플릿(약 50 쌍의 `loadFromResource` · `loadFromXmlText` 래퍼, 우회하던 넷 —
-    MonsterCatalog 의 `loadPath` · SpeciesData 의 ERROR · AbilityCatalog · GameSettings). 시험 게임 전환이 같은 카탈로그를 쓰므로 그 병합 뒤에 한다.
-    `RestaurantSimulation::placeOrder` 의 후보 목록 둘(가중치가 모두 0 일 때 결과가 달라져 손대지 않았다).
+  - 작은 것: `RestaurantSimulation::placeOrder` 의 후보 목록 둘(가중치가 모두 0 일 때 결과가 달라져 손대지 않았다).
   - 중간: `EventBuffer<T>`(drainEvents 27 곳) · `SpatialHashGrid2D` · `GridTopology` + 재사용 스크래치 BFS · NetConnection 메시지 버퍼 재사용 ·
     `GameFlags` 와 `IFlagStore` 하나로 · TurnBattle 키트 정리.
   - 동작이 바뀌는 것(시험 먼저): `NetPrioritizer` 공유 · 아이템/효과 처리기 등록부 · `TimedModifierSet`.
@@ -300,7 +298,7 @@ cd build/Ninja-Debug/Bin
   예외: **Shooter3D 통합**(KayKit CC0 캐릭터 · 스켈레톤 적 · 장비 · 프리셋 · 카메라 프리셋을 바꿔 가며 4 백엔드 스크린샷 → 사용자 보고)은 사용자에게
   약속한 결과라 char-anim · char-appear · char-geom · cam-views 가 병합되면 순서와 상관없이 먼저 띄운다.
   - **작음(S)**: 2D 정렬 레이어 · 9-슬라이스 · 시차 레이어 · 픽셀 퍼펙트 카메라 · 로컬 통계 · 자동 저장/체크포인트 정책 · 에셋 로딩 프로파일러 · 네트워크
-    에뮬레이션(지연 · 손실 · 순서) · GameFramework 작은 정리(카탈로그 로더 템플릿 등, 1-6) · 에디터 H(assert 대화상자 ·
+    에뮬레이션(지연 · 손실 · 순서) · 에디터 H(assert 대화상자 ·
     버그 리포트 · 시험 패널) · 단축키 편집기 · 환경설정 창 · 모듈 켜고 끄기 · DPI 실물 확인 · 알림 전달(애니메이션 알림 → 소켓 이펙트/사운드) [대기: char-anim].
   - **중간(M)**: 메모리 태깅 · 예산 · 대역폭 프로파일러 · 비동기 파일 IO · 게임플레이 디버거 · 비주얼 로거 · 모듈 패키지 관리 · 점광/스폿 그림자 · SSAO ·
     HZB 가림 컬링 · 메시 LOD(meshopt) · PSO 미리 만들기 · 에디터 G(프로파일러 표 · GPU 타임스탬프 · RenderDoc · 보기 모드) · 에디터 C(확장 지점) · 에디터 F

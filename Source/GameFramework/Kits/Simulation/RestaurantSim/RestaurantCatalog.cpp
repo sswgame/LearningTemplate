@@ -53,17 +53,12 @@ namespace sw
 
     bool RestaurantCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "RestaurantCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &RestaurantCatalog::loadRoot, path, "RestaurantCatalog" );
     }
 
     bool RestaurantCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "RestaurantCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &RestaurantCatalog::loadRoot, xmlText, sourceName, "RestaurantCatalog" );
     }
 
     float32 RestaurantCatalog::getArrivalRate( int32 hour ) const

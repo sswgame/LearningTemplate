@@ -25,17 +25,12 @@ namespace sw
 
     bool WeatherCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "WeatherCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &WeatherCatalog::loadRoot, path, "WeatherCatalog" );
     }
 
     bool WeatherCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "WeatherCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &WeatherCatalog::loadRoot, xmlText, sourceName, "WeatherCatalog" );
     }
 
     uint32 WeatherCatalog::loadRoot( const XmlNode& root, string_view sourceName )

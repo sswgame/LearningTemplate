@@ -493,17 +493,12 @@ namespace sw
 
     bool CoasterLayoutCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "CoasterCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &CoasterLayoutCatalog::loadRoot, path, "CoasterCatalog" );
     }
 
     bool CoasterLayoutCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "CoasterCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &CoasterLayoutCatalog::loadRoot, xmlText, sourceName, "CoasterCatalog" );
     }
 
     void CoasterLayoutCatalog::addLayout( const CoasterLayoutDef& layout )

@@ -31,17 +31,12 @@ namespace sw
 
     bool ScavengerCatalog::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "ScavengerCatalog", root, sourceName ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadFile( *this, &ScavengerCatalog::loadRoot, path, "ScavengerCatalog" );
     }
 
     bool ScavengerCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "ScavengerCatalog", root ) && loadRoot( root, sourceName ) > 0;
+        return GameDataXml::loadText( *this, &ScavengerCatalog::loadRoot, xmlText, sourceName, "ScavengerCatalog" );
     }
 
     float32 ScavengerCatalog::computeBuyRate( int32 daysLeft ) const
