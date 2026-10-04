@@ -2,6 +2,7 @@
 // 상호작용 완료가 기믹 회로를 움직인다(2D 와 3D 같은 코드).
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/MotionWarpingComponent.h"
@@ -9,8 +10,11 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/IAssetCache.h"
 #include "Engine/Resource/ResourceUtil.h"
 
+#include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Gimmick/GimmickCircuitComponent.h"
 #include "GameFramework/Gimmick/GimmickSensorComponent.h"
 #include "GameFramework/Interaction/GrabberComponent.h"
@@ -393,4 +397,51 @@ SW_TEST_CASE( InteractionTest, BeginningInteractionSetsAlignmentWarpTarget )
     SW_EXPECT_NEAR_EQUAL( 0.5f, pTarget->_position._x, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pTarget->_position._z, 1.0e-4f );
     manager.endPlay();
+}
+
+/**
+ * @brief [InteractionTest] 상호작용 표 파일을 고치면 핫 리로드가 등록부의 캐시로 새 표를 읽고, 컴포넌트가 다음 틱에 새 정의를 쓴다
+ * @details 표 캐시가 모듈 정적 맵이라 등록부 밖에 있으면 에디터 핫 리로드가 찾을 이름이 없어, 고친 파일이 다시 시작할 때까지 반영되지 않는다.
+ *          게임 서비스가 묶이면(`bindGameService` — `AssetManager` 포함) 캐시가 등록부에 오르고, 다시 읽은 뒤에도 옛 정의를 든 쪽은 죽은 메모리를 읽지 않는다.
+ */
+SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCacheRegistry )
+{
+    SW_ASSERT_TRUE( ResourceUtil::initialize() );
+    const string path = FileUtil::joinPath( test::makeTempPath( "catalogreload" ), "edited.interactions.xml" );
+    FileUtil::ensureParentDirectoryExists( path );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><Interaction id="Open" mode="Press" maxDistance="2"/></Interactions>)" ) );
+
+    AssetManager  resources;
+    ModuleService service{};
+    service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::AssetManager )] = &resources;
+    game::bindGameService( service );
+
+    GameObjectManager      manager;
+    GameObject*            pDoor         = manager.createGameObject( hashed_string( "Door" ) );
+    InteractableComponent* pInteractable = pDoor != nullptr ? pDoor->addComponent<InteractableComponent>() : nullptr;
+    if ( pInteractable != nullptr )
+    {
+        pInteractable->setCatalogPath( path );
+        pInteractable->setInteractionId( "Open" );
+    }
+    IAssetCache*          pCache  = resources.findAssetCache( "InteractionCatalog" ); // 표 캐시는 처음 읽을 때 생겨 묶인 등록부에 오른다
+    const InteractionDef* pBefore = pInteractable != nullptr ? pInteractable->getDefinition() : nullptr;
+
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><Interaction id="Open" mode="Press" maxDistance="5"/></Interactions>)" ) );
+    const bool bCached = pCache != nullptr && pCache->isCached( path );
+    if ( pCache != nullptr )
+        pCache->reload( path, nullptr );
+    if ( pInteractable != nullptr )
+        pInteractable->onTick( 0.0f );
+    const InteractionDef* pAfter = pInteractable != nullptr ? pInteractable->getDefinition() : nullptr;
+    game::unbindGameService();
+
+    SW_EXPECT_NULL( resources.findAssetCache( "InteractionCatalog" ) ); // 서비스가 풀리면 등록부에서 내려간다
+    SW_ASSERT_NOT_NULL( pInteractable );
+    SW_ASSERT_TRUE_MSG( pCache != nullptr, "상호작용 표 캐시가 에셋 캐시 등록부에 없다 — 에디터 핫 리로드가 고친 표를 다시 읽을 길이 없다" );
+    SW_EXPECT_TRUE( bCached );
+    SW_ASSERT_NOT_NULL( pBefore );
+    SW_ASSERT_NOT_NULL( pAfter );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, pBefore->_maxDistance, 1e-4f ); // 옛 정의는 아직 산다
+    SW_EXPECT_NEAR_EQUAL( 5.0f, pAfter->_maxDistance, 1e-4f );
 }

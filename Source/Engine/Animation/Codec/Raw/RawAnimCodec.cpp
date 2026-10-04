@@ -76,7 +76,7 @@ namespace sw
         return true;
     }
 
-    bool RawAnimCodec::sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose ) const
+    bool RawAnimCodec::sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask ) const
     {
         if ( pBytes == nullptr || byteCount < RawAnimCodecInternal::kHeaderSize )
             return false;
@@ -92,6 +92,8 @@ namespace sw
             return false;
 
         outPose.resize( trackCount );
+        if ( pTrackMask != nullptr )
+            outPose.setToIdentity();
         const float32 frame        = MathUtil::clamp( time * sampleRate, 0.0f, static_cast<float32>( sampleCount - 1 ) );
         const uint32  firstSample  = static_cast<uint32>( frame );
         const uint32  secondSample = MathUtil::min( firstSample + 1, sampleCount - 1 );
@@ -100,6 +102,8 @@ namespace sw
         const uint8*  pSecond      = pBytes + RawAnimCodecInternal::kHeaderSize + static_cast<size_t>( secondSample ) * trackCount * transformSize;
         for ( uint32 trackIndex = 0; trackIndex < trackCount; ++trackIndex )
         {
+            if ( pTrackMask != nullptr && pTrackMask[trackIndex] == 0 )
+                continue;
             const BoneTransform first  = RawAnimCodecInternal::readTransform( pFirst + trackIndex * transformSize );
             const BoneTransform second = RawAnimCodecInternal::readTransform( pSecond + trackIndex * transformSize );
             outPose.setBoneTransform( trackIndex, BoneTransform::blend( first, second, alpha ) );

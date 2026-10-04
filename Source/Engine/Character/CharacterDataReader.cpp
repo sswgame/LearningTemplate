@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Utility/Xml/XmlNameCheck.h"
+
 namespace sw
 {
     SW_LOG_CALLER( "CharacterData" );
@@ -70,20 +72,10 @@ namespace sw
 
     void CharacterDataReader::reportUnknownAttributes( const XmlNode& node, const utf8* const* ppKnown, size_t knownCount )
     {
-        for ( XmlAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-        {
-            bool bKnown = false;
-            for ( size_t knownIndex = 0; knownIndex < knownCount; ++knownIndex )
-            {
-                if ( StringUtil::equals( attribute.getName(), ppKnown[knownIndex], true ) )
-                {
-                    bKnown = true;
-                    break;
-                }
-            }
-            if ( bKnown == false )
-                addError( node, string( "has unknown attribute '" ) + attribute.getName() + "'" );
-        }
+        vector<const utf8*> listUnknown;
+        (void)XmlNameCheck::collectUnknownAttributes( node, ppKnown, static_cast<uint32>( knownCount ), listUnknown ); // 수는 목록이 말한다
+        for ( const utf8* pName : listUnknown )
+            addError( node, string( "has unknown attribute '" ) + pName + "'" );
     }
 
     void CharacterDataReader::reportUnknownElement( const XmlNode& node )

@@ -64,10 +64,16 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
   재구축 판단 캐시와 머티리얼 원소의 영속 ID 가 여기 산다. GPU 핸들은 하나도 없다.
 - `GpuSceneSnapshot` — GT → RT 로 옮겨지는 **전부**. 여기 없는 값은 옮겨질 수 없다(소유 규칙은 Graphics/README "소유와 수명").
 - `GpuScene` (렌더 스레드) — 스냅샷을 받아 인스턴스 구조버퍼·배치 표·간접 인자·머티리얼 버퍼로 올린다. 씬을 볼 수 없다.
-- `GpuMeshVertexPool` · `GpuMeshMorphPool` — RT 소유 GPU 풀. 씬 메시 정점을 한 버퍼에 잇고(멀티 드로우), 모프 · 스키닝 결과를 담는다. 모프 풀은 두 구간
-  [모프 메시][스킨드 메시]이고, 스킨 구간에는 정점마다 가중치 · 팔레트 행 번호(팔레트 시작을 미리 더함)가 한 번, 팔레트(본 하나 = float4 셋 —
-  행벡터 4x4 의 0 · 1 · 2 열)가 프레임마다 올라간다(`uploadSkinPalettes`, 스냅샷의 `GpuSkinPalette` 를 풀 순서로). 팔레트는 GT 의 `AnimationSystem` 이 만들고
-  `GpuSceneBuilder::collectSkinPalettes` 가 매 프레임(수집 건너뛰기와 무관하게) 스냅샷으로 옮긴다.
+- `GpuMeshVertexPool` · `GpuMeshMorphPool` — RT 소유 GPU 풀. 씬 메시 정점을 한 버퍼에 잇고(멀티 드로우), 모프 · 스키닝 결과를 담는다. 모프 풀의 결과는 두 구간
+  [모프 메시][스킨 인스턴스]이다. 스킨 데이터는 **원본**(`Mesh::getSkinDataId` — `Mesh::createSkinInstance` 사본은 원본의 번호를 나눈다)마다 한 벌(레스트 ·
+  가중치)만 올라가고, 그리는 메시마다 인스턴스 표 한 줄(결과 시작 · 원본 시작 · 정점 수 · 팔레트 시작)이 둘을 잇는다 — 컴퓨트(meshskin.hlsl)는 디스패치 하나에
+  정점마다 이분 탐색으로 인스턴스를 찾는다. 집합이 바뀌면 다시 올리는 것은 바뀐 쪽뿐이다(모프 레스트 · 원본 · 인스턴스 표). 팔레트(본 하나 = float4 셋 —
+  행벡터 4x4 의 0 · 1 · 2 열)는 프레임마다 올라간다(`uploadSkinPalettes`, 메시 → 항목 표로 한 번에). 팔레트는 GT 의 `AnimationSystem` 이 만들고
+  `GpuSceneBuilder::collectSkinPalettes` 가 매 프레임(수집 건너뛰기와 무관하게) 스냅샷으로 옮긴다 — 군중 묶음과 나누는 유닛은 건너뛰고 묶음이 한 번 싣는다.
+  **모프 타깃**(스킨드 메시): 원본의 타깃 차이(움직이는 정점만)는 레스트 버퍼 뒤(`g_SkinDeltaBase` 부터)에 원본마다 한 벌, 정점마다 차이 구간(가중치 버퍼의
+  셋째 float4)을 둔다. 유닛의 가중치는 팔레트 행 뒤에 붙고 인스턴스 줄이 그 시작 · 타깃 수를 든다 — 컴퓨트가 **스키닝 앞에** 레스트에 Σ 가중치 × 차이를
+  더한다. 스킨 없는 메시의 모프는 이 길을 타지 않는다(남은 일).
+- `GpuVertexAnimationPool` — RT 소유. VAT 가 걸린 메시(`Mesh::setVertexAnimation`)의 표를 t14 버퍼 하나에 잇는다. 표는 굽고 나면 변하지 않아 집합이 바뀔 때만 올린다.
 
 언리얼의 GPUScene 과 같은 발상으로, per-instance 월드 행렬을 구조버퍼에 올려 VS 가 직접 읽습니다.
 `FrameRenderer::execute( pScene )`(에디터·테스트의 직접 경로)도 자기 빌더로 스냅샷을 만들어 **같은 길**로 올립니다.

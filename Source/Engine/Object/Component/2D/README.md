@@ -12,7 +12,7 @@
 | `SpriteRenderUtil` | 스프라이트 머티리얼 경로 · (머티리얼, 텍스처) 인스턴스 공유 · 정렬 키 풀기 |
 | `PointLight2DComponent` · `GlobalLight2DComponent` (`Light2DComponent.h`) | 2D 빛 — 점 · 스폿(안/바깥 반경 · 각 · 감쇠 지수 · 노멀 맵 높이 · 그림자) · 전역 바탕 빛 |
 | `ShadowCaster2DComponent` | 2D 그림자 가림막 — 상자, 또는 같은 오브젝트의 타일맵 외곽선 |
-| `BoxCollider2DComponent` · `TileColliderComponent` | 2D 충돌 |
+| `BoxCollider2DComponent` | 2D 충돌 |
 
 ## 정렬 — 유니티 · Godot 와 견줘
 

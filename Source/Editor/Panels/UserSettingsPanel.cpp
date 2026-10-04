@@ -127,7 +127,7 @@ namespace sw::editor
         {
             case UserSettingType::Bool:
             {
-                bool bValue = value == "true";
+                bool bValue = settings.getBoolValue( def._id );
                 if ( ImGui::Checkbox( "##value", &bValue ) )
                     (void)settings.setPendingBoolValue( def._id, bValue );
                 break;

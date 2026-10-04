@@ -80,7 +80,18 @@ namespace sw
         if ( morphBuffer._buffer != 0 && morphBuffer._srv != kInvalidDescriptorIndex )
         {
             ctx._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
-            ctx._passValues.setUint( passConstantNames()._swMorphVertexCount, _meshMorphPool.getVertexCount() );
+            // 진단(레스트를 그대로 물림)이면 레스트 버퍼는 모프 구간만 담는다 — 스킨 구간 번호는 범위 밖으로 걸러 입력 스트림을 쓴다.
+            const uint32 morphElementCount = ( _bMorphBindsRest != SW_FALSE ) ? _meshMorphPool.getMorphVertexCount() : _meshMorphPool.getVertexCount();
+            ctx._passValues.setUint( passConstantNames()._swMorphVertexCount, morphElementCount );
+        }
+
+        // 정점 애니메이션(VAT) 표 — 패스당 한 번. 시계는 게임 스레드의 군중 시계(스냅샷)라 인스턴스 시각 오프셋과 더하면 CPU 의 클립 시각이다.
+        const RHIStructuredBufferSlot& vertexAnimationBuffer = _vertexAnimationPool.getBuffer();
+        if ( vertexAnimationBuffer._buffer != 0 && vertexAnimationBuffer._srv != kInvalidDescriptorIndex )
+        {
+            ctx._resourceRegistry.registerBuffer( passConstantNames()._swVertexAnimation, vertexAnimationBuffer._buffer, vertexAnimationBuffer._srv );
+            ctx._passValues.setUint( passConstantNames()._swVertexAnimationCount, _vertexAnimationPool.getElementCount() );
+            ctx._passValues.setFloat( passConstantNames()._swVertexAnimationTime, _gpuScene.getVertexAnimationTime() );
         }
 
         // 컬링이 실제로 목록을 만들었을 때만 건다. 안 걸리면 셰이더가 g_SwVisibleInstanceIdsIndex 로 알아채고

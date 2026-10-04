@@ -15,5 +15,5 @@
   모델은 모두 한 장의 팔레트 텍스처(`blaster_colormap`)에서 색을 읽는다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).
 - KayKit 캐릭터는 스킨드 모델이라 `App --import-models` 가 `models/kaykit/<이름>.mesh` 와 옆 폴더 `models/kaykit/<이름>/`(스켈레톤 `<이름>.skeleton.json` ·
-  본에 붙은 무기 · 투구 · 망토 `parts/*.mesh` · 클립 `clips/*.animclip`)를 만든다. 파일 이름은 원본의 `kaykit_` 접두어를 뗀 것이다. 텍스처(원본에 든
-  `knight_texture` 등)는 아직 옮기지 않았다 — 머티리얼은 통합할 때 정한다. CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kay Lousberg.
+  본에 붙은 무기 · 투구 · 망토 `parts/*.mesh` · 클립 `clips/*.animclip`)를 만든다. 파일 이름은 원본의 `kaykit_` 접두어를 뗀 것이다. 원본 GLB 에 든 아틀라스
+  텍스처(`knight_texture` · `rogue_texture` · `skeleton_texture`)는 `textures_raw/kaykit_knight.png` · `kaykit_rogue.png` · `kaykit_skeleton.png` 로 꺼냈다(바이트 그대로). CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kay Lousberg.

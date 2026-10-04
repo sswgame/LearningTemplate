@@ -11,7 +11,9 @@
 
 namespace sw
 {
+    class AssetManager;
     class GameObjectManager;
+    class IRHIDevice;
 } // namespace sw
 
 namespace sw::editor
@@ -51,6 +53,12 @@ namespace sw::editor
          * @return 핫 리로드 대상이고 처리했으면 true. 대상이 아니거나 그 이름의 캐시가 등록되지 않았으면 false 입니다.
          */
         [[nodiscard]] static bool reloadChangedAsset( string_view relativePath );
+
+        /**
+         * @brief @p resources 의 등록부에서 그 경로를 든 캐시(`IAssetCache::isCached`)마다 `reload` 를 부릅니다 — 이름을 모르는 모듈 캐시의 길입니다.
+         * @return 다시 읽게 한 캐시 수입니다.
+         */
+        static uint32 reloadInCachesHolding( AssetManager& resources, string_view relativePath, IRHIDevice* pDevice );
 
         /**
          * @brief @p objects 에서 그 에셋을 쓰는 컴포넌트를 찾아, 인스펙터에서 그 프로퍼티를 고쳤을 때처럼 `onPropertyChanged` 를 부릅니다(언리얼의 PostEditChange).

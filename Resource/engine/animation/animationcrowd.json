@@ -1,0 +1,5 @@
+{
+    "variations_per_clip": 4,
+    "bucket_keep_seconds": 2.0,
+    "vertex_animation_frames_per_second": 15.0
+}

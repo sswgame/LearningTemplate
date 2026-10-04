@@ -71,7 +71,13 @@ namespace sw
          *          바디는 그대로 삽니다(백엔드가 참조를 센다). @p material 은 셰이프가 재질을 적지 않았을 때의 재질 이름입니다.
          */
         virtual PhysicsShapeHandle createShape( span<const ShapeDesc> listShape, const hashed_string& material ) = 0;
-        virtual void               destroyShape( PhysicsShapeHandle shape )                                      = 0;
+        /**
+         * @brief 이미 지은 셰이프 여럿을 바디 원점에 그대로 묶은 컴파운드를 만듭니다(자식의 로컬 자리 · 재질은 자식 것).
+         * @details 자식의 볼록 껍질을 다시 짓지 않습니다 — 파괴 조각처럼 잎 셰이프를 미리 지어 두고 갈라지는 덩어리마다 묶을 때 씁니다.
+         *          무효 · 지운 자식이 있으면 오류를 남기고 무효 핸들입니다. 자식을 지워도 컴파운드는 그대로 삽니다.
+         */
+        virtual PhysicsShapeHandle createCompoundShape( span<const PhysicsShapeHandle> listChild ) = 0;
+        virtual void               destroyShape( PhysicsShapeHandle shape )                        = 0;
 
         // --- 바디 -------------------------------------------------------------------------------------------------------
 

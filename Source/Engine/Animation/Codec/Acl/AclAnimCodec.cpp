@@ -39,12 +39,18 @@ namespace sw
          */
         struct AclPoseWriter final : public acl::track_writer
         {
-            explicit AclPoseWriter( Pose& inoutPose )
+            AclPoseWriter( Pose& inoutPose, const uint8* pTrackMask )
                 : _pTranslation{ inoutPose.getTranslationData() }
                 , _pRotation{ inoutPose.getRotationData() }
                 , _pScale{ inoutPose.getScaleData() }
+                , _pTrackMask{ pTrackMask }
             {
             }
+
+            // 본 LOD — 마스크가 0 인 트랙은 ACL 이 풀지 않는다(언리얼 본 LOD 가 쓰는 같은 자리).
+            bool skip_track_rotation( uint32_t trackIndex ) const { return _pTrackMask != nullptr && _pTrackMask[trackIndex] == 0; }
+            bool skip_track_translation( uint32_t trackIndex ) const { return _pTrackMask != nullptr && _pTrackMask[trackIndex] == 0; }
+            bool skip_track_scale( uint32_t trackIndex ) const { return _pTrackMask != nullptr && _pTrackMask[trackIndex] == 0; }
 
             void RTM_SIMD_CALL write_rotation( uint32_t trackIndex, rtm::quatf_arg0 rotation )
             {
@@ -61,9 +67,10 @@ namespace sw
                 _pScale[trackIndex] = float3{ rtm::vector_get_x( scale ), rtm::vector_get_y( scale ), rtm::vector_get_z( scale ) };
             }
 
-            float3*     _pTranslation;
-            quaternion* _pRotation;
-            float3*     _pScale;
+            float3*      _pTranslation;
+            quaternion*  _pRotation;
+            float3*      _pScale;
+            const uint8* _pTrackMask;
         };
     } // namespace
 } // namespace sw
@@ -126,7 +133,7 @@ namespace sw
         return true;
     }
 
-    bool AclAnimCodec::sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose ) const
+    bool AclAnimCodec::sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask ) const
     {
         if ( pBytes == nullptr || byteCount == 0 || ( reinterpret_cast<uintptr_t>( pBytes ) & 15u ) != 0 )
             return false;
@@ -140,7 +147,7 @@ namespace sw
         outPose.resize( pTracks->get_num_tracks() );
         outPose.setToIdentity();
         context.seek( time, acl::sample_rounding_policy::none );
-        AclPoseWriter writer{ outPose };
+        AclPoseWriter writer{ outPose, pTrackMask };
         context.decompress_tracks( writer );
         return true;
     }

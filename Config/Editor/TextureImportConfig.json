@@ -64,6 +64,12 @@
       "generate_mips": false
     },
     {
+      "name": "Character_Atlases",
+      "inherits": "Base_Default",
+      "include_patterns": ["*/shooter3d/textures_raw/kaykit_*"],
+      "format": "BC1_UNORM"
+    },
+    {
       "name": "Terrain_Weights",
       "inherits": "Base_Uncompressed",
       "include_patterns": ["*_splat.*"],

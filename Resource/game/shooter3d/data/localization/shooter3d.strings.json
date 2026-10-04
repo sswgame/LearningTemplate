@@ -1,6 +1,13 @@
 {
     "culture": "en",
     "entries": {
+        "Assault Blaster": {
+            "source": "Assault Blaster",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
         "Assault Rifle": {
             "source": "Assault Rifle",
             "context": "Weapon name",
@@ -8,36 +15,29 @@
                 "game/shooter3d/data/weapons.xml"
             ]
         },
-        "Combat Helmet": {
-            "source": "Combat Helmet",
+        "Bone Axe": {
+            "source": "Bone Axe",
             "context": "Item name",
             "origins": [
                 "game/shooter3d/data/items.xml"
             ]
         },
-        "Fatigues": {
-            "source": "Fatigues",
+        "Bone Shield": {
+            "source": "Bone Shield",
             "context": "Item name",
             "origins": [
                 "game/shooter3d/data/items.xml"
             ]
         },
-        "Field Pack": {
-            "source": "Field Pack",
+        "Knight Helmet": {
+            "source": "Knight Helmet",
             "context": "Item name",
             "origins": [
                 "game/shooter3d/data/items.xml"
             ]
         },
-        "M4 Rifle": {
-            "source": "M4 Rifle",
-            "context": "Item name",
-            "origins": [
-                "game/shooter3d/data/items.xml"
-            ]
-        },
-        "M9 Pistol": {
-            "source": "M9 Pistol",
+        "Notched Blade": {
+            "source": "Notched Blade",
             "context": "Item name",
             "origins": [
                 "game/shooter3d/data/items.xml"
@@ -57,29 +57,43 @@
                 "game/shooter3d/data/weapons.xml"
             ]
         },
-        "Recon Boots": {
-            "source": "Recon Boots",
+        "Round Shield": {
+            "source": "Round Shield",
             "context": "Item name",
             "origins": [
                 "game/shooter3d/data/items.xml"
             ]
         },
-        "Recon Helmet": {
-            "source": "Recon Helmet",
+        "Rusted Helm": {
+            "source": "Rusted Helm",
             "context": "Item name",
             "origins": [
                 "game/shooter3d/data/items.xml"
             ]
         },
-        "Recon Patch": {
-            "source": "Recon Patch",
+        "Scatter Blaster": {
+            "source": "Scatter Blaster",
             "context": "Item name",
             "origins": [
                 "game/shooter3d/data/items.xml"
             ]
         },
-        "Recon Vest": {
-            "source": "Recon Vest",
+        "Sidearm Blaster": {
+            "source": "Sidearm Blaster",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Tattered Cape": {
+            "source": "Tattered Cape",
+            "context": "Item name",
+            "origins": [
+                "game/shooter3d/data/items.xml"
+            ]
+        },
+        "Travel Cape": {
+            "source": "Travel Cape",
             "context": "Item name",
             "origins": [
                 "game/shooter3d/data/items.xml"

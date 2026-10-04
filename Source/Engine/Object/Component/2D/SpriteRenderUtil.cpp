@@ -2,11 +2,9 @@
 
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 
-#include "Core/Concurrency/mutex.h"
-#include "Core/Container/unordered_map.h"
-
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Resource/WeakInternCache.h"
 
 namespace sw
 {
@@ -17,9 +15,9 @@ namespace sw
             /** @brief 텍스처 인스턴스 표의 키입니다 — 부모 머티리얼과 텍스처. */
             struct TextureInstanceKey
             {
-                const Material* _pParent{ nullptr };
-                hashed_string   _texture{};
-                hashed_string   _normalMap{};
+                Material*     _pParent{ nullptr };
+                hashed_string _texture{};
+                hashed_string _normalMap{};
 
                 bool operator==( const TextureInstanceKey& other ) const
                 {
@@ -35,6 +33,25 @@ namespace sw
                            ( static_cast<size_t>( key._normalMap.getHash() ) * 0xC2B2AE3D27D4EB4Full );
                 }
             };
+
+            using TextureInstanceCache = WeakInternCache<TextureInstanceKey, MaterialInstance, TextureInstanceKeyHash>;
+
+            /** @brief 부모 머티리얼에 텍스처(와 노멀 맵)만 덮어쓴 인스턴스를 만듭니다. */
+            static shared_ptr<MaterialInstance> createTextureInstance( const TextureInstanceKey& key )
+            {
+                shared_ptr<MaterialInstance> instance = MaterialInstance::create( key._pParent );
+                instance->setTextureParameter( hashed_string( "albedoMap" ), key._texture.c_str() );
+                if ( key._normalMap.empty() == false )
+                    instance->setTextureParameter( hashed_string( "normalMap" ), key._normalMap.c_str() );
+                return instance;
+            }
+
+            /** @brief (머티리얼, 텍스처) 인스턴스 표입니다. */
+            static TextureInstanceCache& getTextureInstanceCache()
+            {
+                static TextureInstanceCache s_cache{ "SpriteTextureInstance" };
+                return s_cache;
+            }
         };
     } // namespace
 } // namespace sw
@@ -51,33 +68,13 @@ namespace sw
 
     shared_ptr<MaterialInstance> SpriteRenderUtil::acquireTextureInstance( Material* pParent, hashed_string texture, hashed_string normalMap )
     {
-        using Key     = SpriteRenderUtilInternal::TextureInstanceKey;
-        using KeyHash = SpriteRenderUtilInternal::TextureInstanceKeyHash;
-        static mutex                                                   s_mutexInstance;
-        static unordered_map<Key, weak_ptr<MaterialInstance>, KeyHash> s_mapInstance;
+        const SpriteRenderUtilInternal::TextureInstanceKey key{ pParent, texture, normalMap };
+        return SpriteRenderUtilInternal::getTextureInstanceCache().acquire( key, &SpriteRenderUtilInternal::createTextureInstance );
+    }
 
-        const Key               key{ pParent, texture, normalMap };
-        std::scoped_lock<mutex> lock{ s_mutexInstance };
-        const auto              it = s_mapInstance.find( key );
-        if ( it != s_mapInstance.end() )
-        {
-            if ( shared_ptr<MaterialInstance> instance = it->second.lock() )
-                return instance;
-        }
-
-        for ( auto iter = s_mapInstance.begin(); iter != s_mapInstance.end(); )
-        {
-            if ( iter->second.expired() )
-                iter = s_mapInstance.erase( iter );
-            else
-                ++iter;
-        }
-        shared_ptr<MaterialInstance> instance = MaterialInstance::create( pParent );
-        instance->setTextureParameter( hashed_string( "albedoMap" ), texture.c_str() );
-        if ( normalMap.empty() == false )
-            instance->setTextureParameter( hashed_string( "normalMap" ), normalMap.c_str() );
-        s_mapInstance[key] = instance;
-        return instance;
+    IAssetCache& SpriteRenderUtil::getTextureInstanceCache()
+    {
+        return SpriteRenderUtilInternal::getTextureInstanceCache();
     }
 
     uint32 SpriteRenderUtil::resolveSortKey( const hashed_string& layerName, int32 orderInLayer, string_view ownerLabel )

@@ -21,6 +21,8 @@
 
 #include "Engine/Animation/AnimJsonUtil.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
+#include "Engine/Destruction/FractureAsset.h"
+#include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -49,7 +51,7 @@ namespace sw::editor
             /** @brief 스탬프 머리 줄입니다. */
             static constexpr string_view kImportStampHeader = "SWMODELIMPORT 1";
             /** @brief 같은 원본에서 다른 결과를 내게 임포트를 바꾸면 올립니다. 원본 해시에 섞입니다. */
-            static constexpr uint32 kImporterVersion = 2;
+            static constexpr uint32 kImporterVersion = 3;
             /** @brief 원본 옆 곁 데이터(클립 반복 · 알림 · 커브)의 접미사입니다. */
             static constexpr string_view kClipDataSuffix = ".clips.json";
             /** @brief 스킨드 모델 옆 폴더 안의 부착 메시 · 클립 폴더 이름입니다. */
@@ -82,11 +84,14 @@ namespace sw::editor
                 bool    _bHasNormal{ false };
             };
 
-            /** @brief 여러 프리미티브를 합친 인덱스 메시입니다. */
+            /** @brief 여러 프리미티브를 합친 인덱스 메시입니다. 모프 타깃은 이름으로 합치고, 타깃마다 정점마다의 차이(없으면 0)를 듭니다. */
             struct MergedMesh
             {
-                vector<ImportVertex> _listVertex;
-                vector<uint32>       _listIndex;
+                vector<ImportVertex>   _listVertex;
+                vector<uint32>         _listIndex;
+                vector<hashed_string>  _listMorphName;
+                vector<vector<float3>> _listMorphPosition; ///< [타깃][정점] 위치 차이(엔진 공간)
+                vector<vector<float3>> _listMorphNormal;   ///< [타깃][정점] 노멀 차이(엔진 공간)
                 /** @brief 삼각형마다 그 프리미티브의 머티리얼입니다(머티리얼 구간을 나눌 때 쓴다). */
                 vector<const cgltf_material*> _listTriangleMaterial;
                 uint32                        _skippedPrimitiveCount{ 0 };
@@ -190,6 +195,72 @@ namespace sw::editor
                 return normalizeOrZero( transformed );
             }
 
+            /** @brief 방향(차이)을 옮깁니다 — 3x3 만 곱하고 정규화하지 않습니다(모프 위치 차이). */
+            static float3 transformDirection( const float32 ( &arrMatrix )[16], const float3& direction )
+            {
+                return float3{ arrMatrix[0] * direction._x + arrMatrix[4] * direction._y + arrMatrix[8] * direction._z,
+                               arrMatrix[1] * direction._x + arrMatrix[5] * direction._y + arrMatrix[9] * direction._z,
+                               arrMatrix[2] * direction._x + arrMatrix[6] * direction._y + arrMatrix[10] * direction._z };
+            }
+
+            /** @brief 메시의 @p targetIndex 번째 모프 타깃 이름입니다(`extras.targetNames` — cgltf 가 `target_names` 로 읽는다). 없으면 "target<번호>" 입니다. */
+            static hashed_string makeMorphTargetName( const cgltf_mesh* pMesh, cgltf_size targetIndex )
+            {
+                if ( pMesh != nullptr && targetIndex < pMesh->target_names_count && pMesh->target_names[targetIndex] != nullptr )
+                    return hashed_string( pMesh->target_names[targetIndex] );
+                return hashed_string( "target" + to_string( static_cast<uint64>( targetIndex ) ) );
+            }
+
+            /**
+             * @brief 프리미티브의 모프 타깃(POSITION · NORMAL 차이)을 @p inoutMesh 의 이름 붙은 타깃에 더합니다. 모든 타깃 배열은 지금 정점 수로 맞춥니다(없는 정점은 0).
+             * @details 차이는 방향이라 노드 변환의 3x3 만 곱하고 엔진 공간(X 뒤집기)으로 옮깁니다.
+             */
+            static void appendMorphTargets( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], uint32 baseVertex,
+                                            cgltf_size vertexCount, MergedMesh& inoutMesh )
+            {
+                const size_t totalCount = inoutMesh._listVertex.size();
+                for ( cgltf_size targetIndex = 0; targetIndex < primitive.targets_count; ++targetIndex )
+                {
+                    const hashed_string name    = makeMorphTargetName( pSourceMesh, targetIndex );
+                    const auto          found   = std::find( inoutMesh._listMorphName.begin(), inoutMesh._listMorphName.end(), name );
+                    const size_t        indexOf = static_cast<size_t>( found - inoutMesh._listMorphName.begin() );
+                    if ( found == inoutMesh._listMorphName.end() )
+                    {
+                        inoutMesh._listMorphName.push_back( name );
+                        inoutMesh._listMorphPosition.emplace_back( totalCount, float3{} );
+                        inoutMesh._listMorphNormal.emplace_back( totalCount, float3{} );
+                    }
+                    const cgltf_morph_target& target    = primitive.targets[targetIndex];
+                    const cgltf_accessor*     pPosition = nullptr;
+                    const cgltf_accessor*     pNormal   = nullptr;
+                    for ( cgltf_size attributeIndex = 0; attributeIndex < target.attributes_count; ++attributeIndex )
+                    {
+                        if ( target.attributes[attributeIndex].type == cgltf_attribute_type_position )
+                            pPosition = target.attributes[attributeIndex].data;
+                        else if ( target.attributes[attributeIndex].type == cgltf_attribute_type_normal )
+                            pNormal = target.attributes[attributeIndex].data;
+                    }
+                    vector<float3>& listPosition = inoutMesh._listMorphPosition[indexOf];
+                    vector<float3>& listNormal   = inoutMesh._listMorphNormal[indexOf];
+                    listPosition.resize( totalCount );
+                    listNormal.resize( totalCount );
+                    for ( cgltf_size vertexIndex = 0; vertexIndex < vertexCount; ++vertexIndex )
+                    {
+                        float32 arrValue[3]{};
+                        if ( readFloats( pPosition, vertexIndex, arrValue, 3 ) )
+                            listPosition[baseVertex + vertexIndex] = convertToEngineSpace( transformDirection( arrWorld, float3{ arrValue } ) );
+                        if ( readFloats( pNormal, vertexIndex, arrValue, 3 ) )
+                            listNormal[baseVertex + vertexIndex] = convertToEngineSpace( transformDirection( arrWorld, float3{ arrValue } ) );
+                    }
+                }
+                // 이 프리미티브에 없는 타깃도 정점 수를 맞춘다(차이 0).
+                for ( size_t targetIndex = 0; targetIndex < inoutMesh._listMorphName.size(); ++targetIndex )
+                {
+                    inoutMesh._listMorphPosition[targetIndex].resize( totalCount );
+                    inoutMesh._listMorphNormal[targetIndex].resize( totalCount );
+                }
+            }
+
             static float3 normalizeOrZero( const float3& value )
             {
                 const float32 length = value.getLength();
@@ -243,7 +314,8 @@ namespace sw::editor
              * @brief 프리미티브 하나를 월드 변환 · 좌표계 변환과 함께 @p inoutMesh 에 더합니다.
              * @param pSkin 스킨드 메시를 만드는 중이면 본 풀이(스킨드 프리미티브는 JOINTS_0 · WEIGHTS_0, 아니면 고정 본에 가중치 1). nullptr 이면 스킨을 보지 않습니다.
              */
-            static void appendPrimitive( const cgltf_primitive& primitive, const float32 ( &arrWorld )[16], const SkinBinding* pSkin, MergedMesh& inoutMesh )
+            static void appendPrimitive( const cgltf_primitive& primitive, const cgltf_mesh* pSourceMesh, const float32 ( &arrWorld )[16], const SkinBinding* pSkin,
+                                         MergedMesh& inoutMesh )
             {
                 if ( primitive.type != cgltf_primitive_type_triangles )
                 {
@@ -328,6 +400,7 @@ namespace sw::editor
                         vertex._arrJoint[0] = pSkin->_rigidBone;
                     inoutMesh._listVertex.push_back( vertex );
                 }
+                appendMorphTargets( primitive, pSourceMesh, arrWorld, baseVertex, pPosition->count, inoutMesh );
 
                 const cgltf_size indexCount = primitive.indices != nullptr ? primitive.indices->count : pPosition->count;
                 // X 를 뒤집은 거울상이 감김을 한 번 뒤집고, 노드 변환이 거울상(행렬식 < 0)이면 한 번 더 뒤집는다(glTF 규약).
@@ -542,7 +615,7 @@ namespace sw::editor
                     float32 arrWorld[16]{};
                     cgltf_node_transform_world( &node, arrWorld );
                     for ( cgltf_size primitiveIndex = 0; primitiveIndex < node.mesh->primitives_count; ++primitiveIndex )
-                        appendPrimitive( node.mesh->primitives[primitiveIndex], arrWorld, nullptr, inoutMesh );
+                        appendPrimitive( node.mesh->primitives[primitiveIndex], node.mesh, arrWorld, nullptr, inoutMesh );
                 }
                 for ( cgltf_size childIndex = 0; childIndex < node.children_count; ++childIndex )
                 {
@@ -635,6 +708,23 @@ namespace sw::editor
                     }
                 }
                 outData._skinBoneCount = skinBoneCount;
+
+                // 모프 타깃 — 풀어 쓴 정점마다(삼각형 꼭짓점 순서) 차이가 있는 것만 싣는다. 얼굴 타깃은 메시의 작은 일부만 옮긴다.
+                constexpr float32 kMinimumDelta = 1e-7f;
+                for ( size_t targetIndex = 0; targetIndex < inoutMesh._listMorphName.size(); ++targetIndex )
+                {
+                    MeshMorphTarget target{};
+                    target._name = inoutMesh._listMorphName[targetIndex];
+                    for ( size_t corner = 0; corner < listIndex.size(); ++corner )
+                    {
+                        const float3& position = inoutMesh._listMorphPosition[targetIndex][listIndex[corner]];
+                        const float3& normal   = inoutMesh._listMorphNormal[targetIndex][listIndex[corner]];
+                        if ( position.getLengthSquared() <= kMinimumDelta && normal.getLengthSquared() <= kMinimumDelta )
+                            continue;
+                        target._listDelta.push_back( MeshMorphDelta{ static_cast<uint32>( corner ), position, normal } );
+                    }
+                    outData._listMorphTarget.push_back( std::move( target ) );
+                }
             }
 
             /** @brief 노드 이름(없으면 "node<번호>")입니다. */
@@ -906,17 +996,18 @@ namespace sw::editor
              * @brief glTF 애니메이션 하나를 관절마다 균일 표본으로 다시 뽑습니다. 표본율은 길이를 정확히 나누도록 조금 맞춥니다(마지막 표본 = 끝 시각).
              */
             static void resampleAnimation( const cgltf_animation& animation, const Skeleton& skeleton, const unordered_map<const cgltf_node*, int32>& mapJointBone,
-                                           const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, AnimRawClip& outRawClip )
+                                           const vector<BoneTransform>& listRest, const vector<float4x4>& listRootParent, float32 sampleRate, float32 minimumDuration,
+                                           AnimRawClip& outRawClip )
             {
                 const uint32          boneCount = skeleton.getBoneCount();
                 vector<JointChannels> listChannel( boneCount );
-                float32               duration = 0.0f;
+                float32               duration = minimumDuration;
                 for ( cgltf_size channelIndex = 0; channelIndex < animation.channels_count; ++channelIndex )
                 {
                     const cgltf_animation_channel& channel = animation.channels[channelIndex];
                     const auto                     it      = channel.target_node != nullptr ? mapJointBone.find( channel.target_node ) : mapJointBone.end();
                     if ( it == mapJointBone.end() || channel.sampler == nullptr )
-                        continue; // 관절이 아닌 노드 · 모프 가중치는 클립에 싣지 않는다
+                        continue; // 관절이 아닌 노드 · 모프 가중치(커브로 따로 싣는다 — readMorphWeightCurves)
                     JointChannels& joint = listChannel[static_cast<uint32>( it->second )];
                     if ( channel.target_path == cgltf_animation_path_type_translation )
                         readChannel( *channel.sampler, 3, joint._translation );
@@ -949,6 +1040,66 @@ namespace sw::editor
                         outRawClip._listSample[static_cast<size_t>( sampleIndex ) * boneCount + boneIndex] = sample;
                     }
                 }
+            }
+
+            /**
+             * @brief 애니메이션의 모프 가중치 채널(`weights`)을 타깃 이름의 커브로 읽습니다. 커브 이름 = 모프 타깃 이름이고, 런타임이 이름으로 유닛의 모프 가중치에 겁니다.
+             * @details 출력은 키마다 타깃 수만큼의 스칼라입니다(CUBICSPLINE 은 접선 · 값 · 접선 셋). 키 시각에서 그대로 읽고(선형 · 계단), 큐빅은 표본율로 다시 뽑습니다.
+             * @return 가중치 채널의 마지막 키 시각(클립 길이의 하한)입니다.
+             */
+            static float32 readMorphWeightCurves( const cgltf_animation& animation, float32 sampleRate, vector<AnimCurve>& outListCurve )
+            {
+                outListCurve.clear();
+                float32 duration = 0.0f;
+                for ( cgltf_size channelIndex = 0; channelIndex < animation.channels_count; ++channelIndex )
+                {
+                    const cgltf_animation_channel& channel = animation.channels[channelIndex];
+                    if ( channel.target_path != cgltf_animation_path_type_weights || channel.sampler == nullptr || channel.target_node == nullptr ||
+                         channel.target_node->mesh == nullptr || channel.sampler->input == nullptr || channel.sampler->output == nullptr )
+                        continue;
+                    const cgltf_mesh& mesh        = *channel.target_node->mesh;
+                    const cgltf_size  targetCount = mesh.primitives_count > 0 ? mesh.primitives[0].targets_count : 0;
+                    if ( targetCount == 0 )
+                        continue;
+                    ChannelData data{};
+                    data._componentCount = static_cast<uint32>( targetCount );
+                    data._interpolation  = channel.sampler->interpolation;
+                    data._listTime.resize( channel.sampler->input->count );
+                    for ( cgltf_size keyIndex = 0; keyIndex < channel.sampler->input->count; ++keyIndex )
+                        (void)readFloats( channel.sampler->input, keyIndex, &data._listTime[keyIndex], 1 );
+                    data._listValue.resize( channel.sampler->output->count );
+                    for ( cgltf_size valueIndex = 0; valueIndex < channel.sampler->output->count; ++valueIndex )
+                        (void)readFloats( channel.sampler->output, valueIndex, &data._listValue[valueIndex], 1 );
+                    const float32 lastTime = findLastTime( data );
+                    duration               = MathUtil::max( duration, lastTime );
+                    // 키 시각(선형 · 계단) 또는 표본율 격자(큐빅)에서 값을 뽑는다.
+                    vector<float32> listTime = data._listTime;
+                    if ( data._interpolation == cgltf_interpolation_type_cubic_spline && sampleRate > 0.0f )
+                    {
+                        listTime.clear();
+                        const uint32 intervalCount = MathUtil::max( 1u, static_cast<uint32>( MathUtil::ceil( lastTime * sampleRate ) ) );
+                        for ( uint32 sampleIndex = 0; sampleIndex <= intervalCount; ++sampleIndex )
+                            listTime.push_back( lastTime * static_cast<float32>( sampleIndex ) / static_cast<float32>( intervalCount ) );
+                    }
+                    vector<float32> listValue( targetCount );
+                    for ( cgltf_size targetIndex = 0; targetIndex < targetCount; ++targetIndex )
+                    {
+                        const hashed_string name       = makeMorphTargetName( &mesh, targetIndex );
+                        const bool          bDuplicate = std::any_of( outListCurve.begin(), outListCurve.end(), [&name]( const AnimCurve& curve )
+                                 { return curve._name == name; } );
+                        if ( bDuplicate )
+                            continue;
+                        AnimCurve curve{};
+                        curve._name = name;
+                        for ( const float32 time : listTime )
+                        {
+                            if ( evaluateChannel( data, time, false, listValue.data() ) )
+                                curve._listKey.push_back( AnimCurveKey{ time, listValue[targetIndex] } );
+                        }
+                        outListCurve.push_back( std::move( curve ) );
+                    }
+                }
+                return duration;
             }
 
             /** @brief 곁 데이터(`<y>.clips.json`)를 읽습니다. 파일이 없으면 빈 표로 true, 모르는 키 · 틀린 값이면 false 입니다. */
@@ -1105,6 +1256,26 @@ namespace sw::editor
                     }
                     if ( section._listIndex.empty() )
                         continue;
+                    // 모프 타깃(표정)은 이 구간의 정점에 차이가 있는 것만 옮긴다 — 얼굴 타깃이 몸 · 옷 구간에 빈 채로 남으면 그 구간도 모프 풀을 탄다.
+                    for ( size_t targetIndex = 0; targetIndex < merged._listMorphName.size(); ++targetIndex )
+                    {
+                        vector<float3> listPosition( section._listVertex.size() );
+                        vector<float3> listNormal( section._listVertex.size() );
+                        bool           bMoves = false;
+                        for ( size_t source = 0; source < listRemap.size(); ++source )
+                        {
+                            if ( listRemap[source] == 0xFFFFFFFFu )
+                                continue;
+                            listPosition[listRemap[source]] = merged._listMorphPosition[targetIndex][source];
+                            listNormal[listRemap[source]]   = merged._listMorphNormal[targetIndex][source];
+                            bMoves                          = bMoves || listPosition[listRemap[source]].getLengthSquared() > 1e-7f || listNormal[listRemap[source]].getLengthSquared() > 1e-7f;
+                        }
+                        if ( bMoves == false )
+                            continue;
+                        section._listMorphName.push_back( merged._listMorphName[targetIndex] );
+                        section._listMorphPosition.push_back( std::move( listPosition ) );
+                        section._listMorphNormal.push_back( std::move( listNormal ) );
+                    }
                     ModelImportSection output{};
                     output._material      = listToon[materialIndex];
                     const string baseStem = makeFileStem( output._material._name );
@@ -1324,7 +1495,7 @@ namespace sw::editor
                         // glTF 규약: 스킨드 메시는 노드 변환을 쓰지 않는다 — 정점은 바인드 공간이다.
                         const SkinBinding& binding = listBinding[static_cast<size_t>( pNode->skin - data.skins )];
                         for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
-                            appendPrimitive( pNode->mesh->primitives[primitiveIndex], arrIdentity, &binding, body );
+                            appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrIdentity, &binding, body );
                         continue;
                     }
                     const cgltf_node* pJoint = findJointAncestor( *pNode, mapJointBone );
@@ -1333,7 +1504,7 @@ namespace sw::editor
                         float32 arrWorld[16]{};
                         cgltf_node_transform_world( pNode, arrWorld );
                         for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
-                            appendPrimitive( pNode->mesh->primitives[primitiveIndex], arrWorld, &rigidBinding, body );
+                            appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrWorld, &rigidBinding, body );
                         continue;
                     }
 
@@ -1354,7 +1525,7 @@ namespace sw::editor
                     attachment._fileStem       = makeNumberedStem( baseStem, useCount );
                     MergedMesh part;
                     for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
-                        appendPrimitive( pNode->mesh->primitives[primitiveIndex], arrIdentity, nullptr, part );
+                        appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrIdentity, nullptr, part );
                     expandTriangles( part, 0, attachment._mesh );
                     if ( attachment._mesh._listVertex.empty() == false )
                         outResult._listAttachment.push_back( std::move( attachment ) );
@@ -1423,11 +1594,16 @@ namespace sw::editor
                         listRequestedFound[static_cast<size_t>( itRequested - rule._listClipName.begin() )] = SW_TRUE;
                     }
 
-                    AnimRawClip rawClip;
-                    resampleAnimation( animation, skeleton, mapJointBone, listRest, listRootParent, rule._animationSampleRate, rawClip );
+                    // 모프 가중치 채널은 타깃 이름의 커브가 된다 — 가중치만 움직이는 클립(말하기)도 그 길이를 갖는다.
+                    vector<AnimCurve> listMorphCurve;
+                    const float32     morphDuration = readMorphWeightCurves( animation, rule._animationSampleRate, listMorphCurve );
+                    AnimRawClip       rawClip;
+                    resampleAnimation( animation, skeleton, mapJointBone, listRest, listRootParent, rule._animationSampleRate, morphDuration, rawClip );
                     ModelImportClip imported{};
                     imported._clip.setName( hashed_string( clipName ) );
                     imported._clip.setRootMotionTrack( rootMotionBone );
+                    for ( const AnimCurve& curve : listMorphCurve )
+                        imported._clip.addCurve( curve );
                     const auto itExtra = mapExtra.find( clipName );
                     if ( itExtra != mapExtra.end() )
                     {
@@ -1618,6 +1794,35 @@ namespace sw::editor
         }
         if ( ModelImporterInternal::writeMaterialSections( result, sourcePath, sideFolder ) == false )
             return false;
+        // 파쇄 — 규칙에 `fracture` 가 있으면 `.mesh` 옆에 `.fracture` 를 쓰고, 없으면 옛 것을 지운다(규칙에서 빠진 파쇄가 남지 않게).
+        const string fracturePath = FractureAsset::makePathForMesh( outputPath );
+        if ( rule._bFracture == SW_TRUE )
+        {
+            if ( result._bSkinned == SW_TRUE )
+            {
+                SW_LOG_ERROR( "Fracture rule '%#' matched skinned model %# - only static meshes fracture", rule._name.c_str(), sourcePath );
+                return false;
+            }
+            FractureAsset fracture;
+            string        error;
+            if ( MeshFractureUtil::fracture( result._mesh._listVertex, rule._fracture, fracture, error ) == false )
+            {
+                SW_LOG_ERROR( "Fracture of %# failed: %#", sourcePath, error.c_str() );
+                return false;
+            }
+            if ( fracture.saveToFile( fracturePath ) == false )
+            {
+                SW_LOG_ERROR( "Failed to write fracture asset %#", fracturePath.c_str() );
+                return false;
+            }
+            SW_LOG_INFO( "Fractured %# -> %# (%# pieces, %# links, %# levels, %# interior triangles)", sourcePath, fracturePath.c_str(), fracture.getPieceCount(),
+                         fracture._graph._listLink.size(), fracture._graph.getDepthCount(), fracture.countTriangles( FractureSurfaceSlot::Interior ) );
+        }
+        else if ( FileUtil::fileExists( fracturePath ) && FileUtil::removeFile( fracturePath ) == false )
+        {
+            SW_LOG_ERROR( "Failed to remove stale fracture asset %#", fracturePath.c_str() );
+            return false;
+        }
         if ( result._bSkinned == SW_FALSE )
         {
             SW_LOG_INFO( "Imported model: %# -> %# (%# triangles)", sourcePath, outputPath, result._mesh._listVertex.size() / 3 );
@@ -1730,6 +1935,12 @@ namespace sw::editor
         hash                       = StringUtil::computeHash64( reinterpret_cast<const utf8*>( rule._arrTranslation ), sizeof( rule._arrTranslation ), false, hash );
         const string animationText = rule.makeAnimationHashText();
         hash                       = StringUtil::computeHash64( animationText.c_str(), animationText.size(), false, hash );
+        const string fractureText  = rule.makeFractureHashText();
+        if ( fractureText.empty() == false )
+        {
+            const string fractureVersion = fractureText + ";format=" + to_string( FractureAsset::kVersion ) + ";algorithm=" + to_string( MeshFractureUtil::kAlgorithmVersion );
+            hash                         = StringUtil::computeHash64( fractureVersion.c_str(), fractureVersion.size(), false, hash );
+        }
         // 곁 데이터(클립 반복 · 알림 · 커브)를 고쳐도 다시 임포트해야 한다.
         vector<uint8> clipDataBytes;
         const string  clipDataPath = makeClipDataPath( sourcePath );
@@ -1766,6 +1977,13 @@ namespace sw::editor
         uint64 hash = AssetImportStampUtil::computeFileHash( importedMeshPath );
         if ( hash == 0 )
             return 0;
+        // 옆의 `.fracture` 도 결과다 — 지워지거나 바뀌면 어긋남이다.
+        const string fracturePath = FractureAsset::makePathForMesh( importedMeshPath );
+        if ( FileUtil::fileExists( fracturePath ) )
+        {
+            const uint64 fractureHash = AssetImportStampUtil::computeFileHash( fracturePath );
+            hash                      = StringUtil::computeHash64( reinterpret_cast<const utf8*>( &fractureHash ), sizeof( fractureHash ), false, hash );
+        }
         // 옆 폴더의 파일을 이름순으로 섞는다 — 이름도 섞어 파일이 사라지거나 바뀌면 다른 값이 된다.
         const string sideFolder = FileUtil::normalizeSeparators( makeImportedSideFolder( importedMeshPath ) );
         if ( FileUtil::directoryExists( sideFolder ) == false )

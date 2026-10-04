@@ -19,6 +19,7 @@
 namespace sw
 {
     class GpuMeshMorphPool;
+    class GpuVertexAnimationPool;
     class IRHIDevice;
     class Mesh;
 
@@ -76,7 +77,8 @@ namespace sw
         uint32 _morphVertexBase{ 0xFFFFFFFFu };
         /// @brief 정점 풀(GpuMeshVertexPool)에서 이 배치 메시의 시작(정점 단위)입니다. 풀 밖 메시는 0 입니다.
         uint32 _firstVertex{ 0 };
-        uint32 _pad0{ 0 };
+        /// @brief 정점 애니메이션(VAT) 표에서 이 배치 메시의 머리 원소입니다. 0xFFFFFFFF = VAT 없음(binding.hlsli `vertexAnimationBase`).
+        uint32 _vertexAnimationBase{ 0xFFFFFFFFu };
         uint32 _pad1{ 0 };
         uint32 _pad2{ 0 };
     };
@@ -144,6 +146,8 @@ namespace sw
         const vector<GpuSkinPalette>& getSkinPalettes() const { return _snapshot._listSkinPalette; }
         /** @brief 이번 프레임 스킨 팔레트 행입니다(없으면 nullptr). */
         const vector<float4>* findSkinPaletteRows() const { return _snapshot._pListSkinPaletteRow.get(); }
+        /** @brief 이번 프레임 모프 가중치입니다(없으면 nullptr). */
+        const vector<float32>* findMorphWeights() const { return _snapshot._pListMorphWeight.get(); }
         /** @brief 모든 배치(불투명 다음 투명)를 반환합니다. 간접 슬롯 순서와 같습니다. 모프 풀 구성이 이 목록을 봅니다. */
         const vector<GpuMeshBatch>& getAllBatches() const { return _snapshot._listAllBatch; }
         /** @brief 불투명 배치를 반환합니다. */
@@ -164,6 +168,10 @@ namespace sw
          *          세 목록(불투명 · 투명 · 전체)이 같은 배치를 따로 들고 있으므로 모두 채워야 합니다.
          */
         void assignMorphBases( const GpuMeshMorphPool& pool );
+        /** @brief 배치마다 정점 애니메이션(VAT) 표의 머리 원소를 적습니다(`assignMorphBases` 와 같은 길 — 세 목록 모두). */
+        void assignVertexAnimationBases( const GpuVertexAnimationPool& pool );
+        /** @brief 이번 프레임 VAT 시계(초)입니다(스냅샷 — 게임 스레드의 군중 시계). */
+        float32 getVertexAnimationTime() const { return _snapshot._vertexAnimationTime; }
 
         /** @brief 인스턴스 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getInstanceBuffer() const { return _instances._buffer; }

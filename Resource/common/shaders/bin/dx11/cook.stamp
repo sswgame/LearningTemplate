@@ -7,9 +7,9 @@ SWCOOK 3
 22c00eae8dfcf116 samplecompute.hlsl
 2376b38d79149448 provokingvertex.hlsl
 434550571f0a2425 computetexturewrite.hlsl
+7c6498976789c8d9 engine:bindingslots.hlsli
 980c18c4c174d3fb engine:postoutline.hlsli
 9ee00d8a59ae021e engine:common.hlsli
-b9de24734b800ea0 engine:instancedata.hlsli
-d5d7a19813e3369f engine:bindingslots.hlsli
-eb6a530e19e44085 engine:binding.hlsli
+ca30875b2b46a36c engine:binding.hlsli
+d43a994c10ab331e engine:instancedata.hlsli
 f653f249d0845efc engine:lighting2d.hlsli

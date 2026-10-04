@@ -1,29 +1,29 @@
 {
     "culture": "ko",
     "entries": {
+        "Assault Blaster": {
+            "text": "돌격 블래스터",
+            "sourceHash": "9064a88c950f19f1"
+        },
         "Assault Rifle": {
             "text": "돌격 소총",
             "sourceHash": "67220abc0f738d9a"
         },
-        "Combat Helmet": {
-            "text": "전투 헬멧",
-            "sourceHash": "2303b7804f9dfe66"
+        "Bone Axe": {
+            "text": "뼈 도끼",
+            "sourceHash": "9e2cdbf7cb3d6953"
         },
-        "Fatigues": {
-            "text": "전투복",
-            "sourceHash": "728d81eb958c7a97"
+        "Bone Shield": {
+            "text": "뼈 방패",
+            "sourceHash": "0201be6b95ece038"
         },
-        "Field Pack": {
-            "text": "야전 배낭",
-            "sourceHash": "87f6d035c0554860"
+        "Knight Helmet": {
+            "text": "기사 투구",
+            "sourceHash": "4733227ae193d121"
         },
-        "M4 Rifle": {
-            "text": "M4 소총",
-            "sourceHash": "6b94badaba2bc352"
-        },
-        "M9 Pistol": {
-            "text": "M9 권총",
-            "sourceHash": "8925941681912d42"
+        "Notched Blade": {
+            "text": "이 빠진 칼",
+            "sourceHash": "0bda544f4c061f1a"
         },
         "Pistol": {
             "text": "권총",
@@ -33,21 +33,29 @@
             "text": "펌프 산탄총",
             "sourceHash": "91f761c37c27a1e1"
         },
-        "Recon Boots": {
-            "text": "정찰 부츠",
-            "sourceHash": "e17ce5e4e40da5bd"
+        "Round Shield": {
+            "text": "둥근 방패",
+            "sourceHash": "b63752b781a90fd4"
         },
-        "Recon Helmet": {
-            "text": "정찰 헬멧",
-            "sourceHash": "aa322a7503e1b319"
+        "Rusted Helm": {
+            "text": "녹슨 투구",
+            "sourceHash": "e74fbfb19151f99e"
         },
-        "Recon Patch": {
-            "text": "정찰 패치",
-            "sourceHash": "3d9d11178db5593a"
+        "Scatter Blaster": {
+            "text": "산탄 블래스터",
+            "sourceHash": "39e9e7704ab22440"
         },
-        "Recon Vest": {
-            "text": "정찰 조끼",
-            "sourceHash": "f24c27b3472a97e6"
+        "Sidearm Blaster": {
+            "text": "보조 블래스터",
+            "sourceHash": "7a752ad1e408f25d"
+        },
+        "Tattered Cape": {
+            "text": "해진 망토",
+            "sourceHash": "add8e4bee185648f"
+        },
+        "Travel Cape": {
+            "text": "여행 망토",
+            "sourceHash": "9b537522d0556b6c"
         },
         "settings.gameplay.difficulty": {
             "text": "난이도",

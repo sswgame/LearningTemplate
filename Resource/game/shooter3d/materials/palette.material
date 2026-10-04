@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Kenney Blaster Kit 모델의 팔레트 머티리얼 — albedoMap 이 키트의 색 칸 텍스처다(모델 UV 가 칸을 고른다). 상자 · 손에 든 총 · 드론이 이 하나를 나눠 쓴다. -->
+<!-- Kenney Blaster Kit 모델의 팔레트 머티리얼 — albedoMap 이 키트의 색 칸 텍스처다(모델 UV 가 칸을 고른다). 상자 · 블래스터 · 과녁이 이 하나를 나눠 쓴다. -->
 <MaterialDesc formatVersion="0" name="ShooterPalette" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
 	<_properties>
 		<item name="color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
