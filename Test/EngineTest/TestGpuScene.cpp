@@ -1227,6 +1227,94 @@ SW_TEST_CASE( GpuSceneTest, PartialCollectUpdatesOnlyTheMovedPrimitive )
 }
 
 /**
+ * @brief [GpuSceneTest] 실행 중 메시를 새 것으로 갈아 끼우고 보이기를 토글해도, 배치는 살아 있는 메시만 가리킨다
+ * @details 복셀 청크 · 농장 타일처럼 게임이 프레임마다 일부 컴포넌트에 새 `Mesh` 를 걸고(옛 메시는 그때 놓인다) 일부를 숨기면,
+ *          부분 수집 · 전체 수집이 번갈아 돈다. 배치가 놓인 메시를 들고 있으면 여기서 해제된 메모리를 읽는다.
+ */
+SW_TEST_CASE( GpuSceneTest, SwappedMeshesAndVisibilityTogglesKeepBatchesValid )
+{
+    sw::Scene scene( "MeshSwapScene" );
+    SW_ASSERT_TRUE( scene.ensureDefaultCameras() );
+
+    const sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
+    SW_ASSERT_NOT_NULL( cube.get() );
+    const auto makeMesh = [&cube]( uint32 vertexCount )
+    {
+        sw::shared_ptr<sw::Mesh>  mesh = sw::Mesh::create();
+        sw::vector<sw::RHIVertex> listVertex;
+        for ( uint32 index = 0; index < vertexCount; ++index )
+            listVertex.push_back( cube->getVertices()[index % cube->getVertices().size()] );
+        mesh->setVertices( std::move( listVertex ) );
+        return mesh;
+    };
+
+    constexpr uint32               kObjectCount = 40;
+    sw::vector<sw::MeshComponent*> listComp;
+    for ( uint32 index = 0; index < kObjectCount; ++index )
+    {
+        sw::GameObject* pObj = scene.getObjectManager()->createGameObject( sw::hashed_string( ( "Chunk" + sw::to_string( index ) ).c_str() ) );
+        SW_ASSERT_NOT_NULL( pObj );
+        sw::MeshComponent* pComp = pObj->addComponent<sw::MeshComponent>();
+        SW_ASSERT_NOT_NULL( pComp );
+        pComp->setMesh( makeMesh( 36 ) );
+        pComp->setLocalPosition( sw::float3{ static_cast<float32>( index ) * 2.0f, 0.0f, 0.0f } );
+        listComp.push_back( pComp );
+    }
+    scene.getObjectManager()->flushSceneTransforms();
+
+    sw::GpuSceneBuilder builder;
+    const sw::float3    cameraPos{ 0.0f, 0.0f, -40.0f };
+    uint32              seed       = 12345u;
+    const auto          nextRandom = [&seed]()
+    {
+        seed = seed * 1664525u + 1013904223u;
+        return seed >> 8;
+    };
+
+    for ( uint32 frame = 0; frame < 200; ++frame )
+    {
+        // 프레임마다 바꾸는 수를 부분 수집 문턱(1/4) 아래 · 위로 오간다.
+        const uint32 changeCount = ( frame % 3 == 0 ) ? 15u : 2u;
+        for ( uint32 change = 0; change < changeCount; ++change )
+        {
+            sw::MeshComponent* pComp = listComp[nextRandom() % kObjectCount];
+            switch ( nextRandom() % 3 )
+            {
+                case 0:
+                {
+                    pComp->setMesh( makeMesh( 12u + ( nextRandom() % 4u ) * 6u ) );
+                    break;
+                }
+                case 1:
+                {
+                    pComp->setVisible( pComp->isVisible() == false );
+                    break;
+                }
+                default:
+                {
+                    pComp->setLocalPosition( sw::float3{ static_cast<float32>( nextRandom() % 80u ), 0.0f, 0.0f } );
+                    break;
+                }
+            }
+        }
+        scene.getObjectManager()->flushSceneTransforms();
+        builder.buildFromScene( &scene, cameraPos );
+
+        sw::GpuSceneSnapshot snapshot;
+        builder.exportCpuSnapshot( snapshot );
+        uint32 visibleCount = 0;
+        for ( const sw::MeshComponent* pComp : listComp )
+            visibleCount += pComp->isVisible() ? 1u : 0u;
+        SW_ASSERT_EQUAL( visibleCount, static_cast<uint32>( snapshot.getInstances().size() ) );
+        for ( const sw::GpuMeshBatch& batch : snapshot._listAllBatch )
+        {
+            SW_ASSERT_NOT_NULL( batch._mesh.get() );
+            SW_ASSERT_EQUAL( batch._vertexCount, batch._mesh->getVertexCount() );
+        }
+    }
+}
+
+/**
  * @brief [GpuSceneTest] 인스턴스 배열을 발행(공유)한 뒤에도 제자리 갱신이 움직임을 반영하는지 검증
  *
  * @details 인스턴스 배열은 값이 아니라 `shared_ptr` 로 **공유**된다 — RT 는 읽기만 하므로 안 바뀐

@@ -137,10 +137,8 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
-- **병합된 장르 키트 · 시험 게임의 실행 확인(2026-10-04 병합 뒤)** — 빌드 · 시험은 끝났다(Debug · Shipping ctest 전체, 키트 시험 · 네트워크 시험 3 회 통과).
-  남은 것: 시험 게임(`AbilityArena` · `HarvestValley` · `Shooter3D` · `ThemeParkTycoon` · `VoxelCraft` · `NileCity` · `StarSkirmish`)을 `-DSW_ACTIVE_GAME=<이름>` 으로
-  짓고 자동 플레이 스위치(`-gv_arenaAutoPlay=1` 등)와 `-gv_profileFrames=3600` 으로 네 백엔드에서 — 종료 코드 0, `[Error]` 0, 게임 로그가 오르는지.
-  눈으로 볼 것: 스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
+- **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
+  스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
 - **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** (1) `CameraControllerComponent`(Overworld) · `UnitStatsComponent`(ActionCombat)는 장르 무관이라
   기반으로 옮길 감 — 리플렉션 컴포넌트가 DLL 을 옮기면 등록 모듈이 바뀌므로 씬 로드 · 핫 리로드를 돌려 보며 옮긴다. (2) `ZoneTracker` 의 `ZoneRole` 열거(센터 · 마트 ·
   체육관…)와 클리어 게이트 역할을 데이터(태그 + 맵 칸)로 — 태그 미러는 이미 있다, 열거를 쓰는 곳 · 시험을 함께 바꾼다. (3) `ActionRoom` 의 방 배치 · 적 스탯 ·

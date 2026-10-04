@@ -676,6 +676,10 @@ namespace sw
 
         if ( bContentSame && bCamSame )
         {
+            // 부분 수집은 시작할 때 두 배열을 맞바꿨다 — 최신 후보는 scratch 쪽이다. 기준으로 돌려놓지 않으면 다음 프레임이
+            // 두 프레임 전 후보와 견주고, 그 위의 분할 표가 실제 후보와 어긋난다.
+            if ( bPartialDone )
+                _listBuiltCandidate.swap( _listScratchCandidate );
             _lastPrimitiveSetGeneration = setGeneration;
             _lastPermutationGeneration  = permutationGeneration;
             return;
