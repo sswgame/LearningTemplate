@@ -50,12 +50,19 @@ namespace sw
          *          않아 같은 텍스처의 스프라이트가 프레임 · 색이 달라도 한 배치이고, 바뀌면 그 인스턴스만 더티 구간으로 올라갑니다.
          */
         GpuSpriteInstanceData _sprite{};
+        /**
+         * @brief 정점 애니메이션(VAT) 시각 오프셋(초)입니다. VAT 가 걸린 메시만 읽습니다(binding.hlsli `swLoadAnimatedVertex`).
+         * @details 셰이더는 VAT 시계(`GpuSceneSnapshot::_vertexAnimationTime`)에 이것을 더한 시각의 프레임을 그립니다 — 군중 시스템이 VAT 로 넘길 때
+         *          그 캐릭터의 클립 시각에 맞춰 한 번 적고, 그 뒤로는 바뀌지 않아 인스턴스를 다시 올리지 않습니다. 셰이더의 `vertexAnimationPhase` 입니다.
+         */
+        float32 _vertexAnimationPhase{ 0.0f };
+        uint32  _arrReserved[3]{}; ///< 원소를 128 바이트(16 의 배수)로 맞춘다 — 셰이더의 `reserved0..2`
     };
 } // namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GpuInstance ) == 112, "GpuInstance must match SwInstanceData (instancedata.hlsli) byte for byte" );
+    static_assert( sizeof( GpuInstance ) == 128, "GpuInstance must match SwInstanceData (instancedata.hlsli) byte for byte" );
 
     /// @brief 같은 메시 · 머티리얼 · 퍼뮤테이션으로 그리는 인스턴스 배치입니다.
     struct GpuMeshBatch
@@ -76,7 +83,12 @@ namespace sw
          * @details RT 가 `GpuScene::assignMorphBases` 로 채웁니다. GT 는 GPU 풀을 모릅니다(스냅샷 소유 규칙). upload 가 이 값을
          *          배치 표(`GpuBatchInfo`, g_SwBatches t13)에 옮겨 적고, 정점 셰이더가 자기 배치 번호로 읽습니다(binding.hlsli swComputeMorphElement).
          */
-        uint32       _morphVertexBase{ 0xFFFFFFFFu };
+        uint32 _morphVertexBase{ 0xFFFFFFFFu };
+        /**
+         * @brief 정점 애니메이션(VAT) 표에서 이 배치 메시의 머리 원소입니다. 0xFFFFFFFF = VAT 없음.
+         * @details RT 가 `GpuScene::assignVertexAnimationBases` 로 채웁니다(모프 시작과 같은 길 — 배치 표 `GpuBatchInfo` 에 실린다).
+         */
+        uint32       _vertexAnimationBase{ 0xFFFFFFFFu };
         RHIBlendMode _blendMode = RHIBlendMode::Opaque;
         /**
          * @brief 인스턴스의 월드 행렬식이 음수(거울 변환)인 배치입니다. 이 배치는 컬 모드를 뒤집은 PSO 로 그립니다(언리얼 `bReverseCulling`).
@@ -232,6 +244,8 @@ namespace sw
         const Mesh* _pMesh{ nullptr };
         uint32      _firstRow{ 0 };
         uint32      _boneCount{ 0 };
+        uint32      _firstMorphWeight{ 0 }; ///< `GpuSceneSnapshot::_pListMorphWeight` 안의 이 메시 모프 가중치 시작
+        uint32      _morphWeightCount{ 0 }; ///< 모프 가중치 수(0 이면 모프 없음)
     };
 } // namespace sw
 
@@ -282,8 +296,18 @@ namespace sw
          * @details 팔레트는 애니메이션 시스템이 틱 뒤에 만들고 빌더가 여기로 옮깁니다. RT 가 모프 풀의 스킨 구간 순서로 다시 올립니다(`GpuMeshMorphPool::uploadSkinPalettes`).
          */
         shared_ptr<const vector<float4>> _pListSkinPaletteRow;
+        /**
+         * @brief 이번 프레임의 모프 타깃 가중치 전부입니다(스킨드 메시마다 `GpuSkinPalette::_firstMorphWeight` 부터). **공유합니다** — 팔레트 행과 같은 규칙입니다.
+         * @details 유닛(`SkeletalMeshComponent::getMorphWeights`)이 내고, RT 가 팔레트 버퍼 뒤에 실어 스키닝 컴퓨트가 레스트에 차이를 더합니다.
+         */
+        shared_ptr<const vector<float32>> _pListMorphWeight;
         /// @brief GPU 회전을 요청한 인스턴스 수입니다(0 이면 애니메이션 디스패치를 건너뜁니다).
         uint32 _spinInstanceCount{ 0 };
+        /**
+         * @brief 정점 애니메이션(VAT) 시계(초)입니다. 게임 스레드의 군중 시계(`AnimationCrowd::getClock`)를 그대로 옮겨, 인스턴스 시각 오프셋과 더하면 CPU 가
+         *        본 클립 시각과 같습니다. 패스마다 PassCB `g_SwVertexAnimationTime` 으로 갑니다.
+         */
+        float32 _vertexAnimationTime{ 0.0f };
         /// @brief 마지막 buildFromScene 이 내용을 바꿨는지입니다. RT 는 0 이면 인스턴스 재업로드를 생략합니다.
         uint8 _bCpuDirty{ SW_TRUE };
         /**

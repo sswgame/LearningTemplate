@@ -39,7 +39,8 @@
 ### 기능
 
 - **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler,
-  Sequencer, Animation Graph, Dialogue Graph, Prefab Editor, Tile Map, Sprite Clip, User Settings(플레이어 옵션을 메뉴 바인딩 API 로 바꿔 보는 창 —
+  Sequencer, Animation Graph, Animation Rewind(기록된 포즈 · 상태를 시간 막대로 훑기 — 훑으면 PIE 를 멈춘다), Dialogue Graph, Prefab Editor, Tile Map,
+  Sprite Clip, User Settings(플레이어 옵션을 메뉴 바인딩 API 로 바꿔 보는 창 —
   셀프 시험 `userSettings.panelDrawsEveryTab`)
   - `Panels/Inspector/`: 프로퍼티·컴포넌트 인스펙터 확장 — 컴포넌트 확장은 `<Component>Inspector.cpp` 하나씩
 - **Viewport/**: 뷰포트 클라이언트, 툴바, 에디터 카메라(`EditorCamera`),
@@ -219,6 +220,10 @@ glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로�
   남아 나중에 소켓 파일을 만들 근거가 된다 — 소켓 자체는 따로 둔 원본 에셋이다) · `clips/<클립>.animclip`(애니메이션마다 하나 — 관절마다 균일 표본으로
   다시 뽑아 규칙의 코덱으로 압축, 클립마다 압축률 · 최대 오차(mm)를 로그로 보고). 옆 폴더는 임포트마다 지우고 다시 쓰며, 스탬프의 결과 해시는
   `.mesh` 와 옆 폴더 파일 전부를 섞습니다(`IRawAssetImporter::computeImportedHash`). 스킨드 모델에 `translation` · `recenter` 는 오류입니다(바인드 행렬이 어긋난다).
+- **모프 타깃**: 프리미티브의 `targets`(POSITION · NORMAL 차이)를 합친 메시의 정점 번호로 옮겨 `.mesh` 의 모프 덩어리(`MRPH`)에 싣습니다 — 움직이는 정점만,
+  이름은 메시의 `extras.targetNames`(없으면 `target<n>`), 같은 이름의 타깃은 프리미티브를 건너 하나로 묶입니다. 노드 변환 · X 거울상은 위치 · 노멀과 같이
+  겁니다. 애니메이션의 `weights` 채널은 타깃 이름의 커브로 클립에 실리고(표본은 클립과 같은 율), 런타임 애니메이터가 이름이 같은 타깃의 가중치로 겁니다.
+  저장소의 시험 머리는 `game/empty/models_raw/testhead.gltf`(합성 — 타깃 일곱 · Talk 가중치 클립).
 - **애니메이션 규칙 키**: `animations`(기본 참) · `clips`(가져올 클립 이름, 비면 모두 — 원본에 없는 이름은 임포트 오류) · `animation_codec`(`raw` · `acl`,
   모르는 이름은 설정 오류) · `animation_sample_rate` · `animation_precision` · `animation_shell_distance`(미터) · `root_motion_bone`(루트 모션 트랙) ·
   `attachments`(기본 참). 모르는 키는 설정 전체를 거부합니다.

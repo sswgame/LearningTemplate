@@ -62,7 +62,8 @@ namespace sw
         /** @brief 벤치가 씬을 만들어 두었으면 true. */
         bool isActive() const
         {
-            return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false || _bCharacterFraming == SW_TRUE || _listRigBody.empty() == false;
+            return _listBenchMesh.empty() == false || _listInstanceBatch.empty() == false || _bCharacterFraming == SW_TRUE || _bFaceFraming == SW_TRUE ||
+                   _listRigBody.empty() == false;
         }
 
     private:
@@ -72,8 +73,16 @@ namespace sw
         void spawnCharacters( uint32 characterCount );
         /** @brief `-gv_benchCombat=1` — 전투 연출(KayKit 스켈레톤 적 · 칼 · 강체 바닥 · 연출 컴포넌트)을 세웁니다. */
         void spawnCombat();
-        /** @brief 캐릭터 줄이 화면에 차도록 씬의 카메라를 맞춥니다(허리 높이를 봅니다). */
+        /** @brief 캐릭터 줄이 화면에 차도록 씬의 카메라를 맞춥니다(허리 높이를 봅니다). 격자면 앞 위에서 내려다봅니다. */
         void frameCharacterCameras( Scene* pScene, float32 halfExtent );
+        /** @brief 캐릭터 줄(격자면 한 행)의 반폭입니다. */
+        static float32 computeCharacterHalfExtent( uint32 characterCount );
+        /** @brief `-gv_benchFaces=N` — 시험 머리 N 개를 한 줄로 세웁니다(표정 · 립싱크 · 깜빡임 · 시선). */
+        void spawnFaces( uint32 faceCount );
+        /** @brief 머리 줄을 정면에서 보도록 카메라를 맞춥니다. */
+        void frameFaceCameras( Scene* pScene );
+        /** @brief 머리 줄이 화면 폭에 차는 카메라 거리(m)입니다. */
+        static float32 computeFaceCameraDistance( uint32 faceCount );
         /**
          * @brief `-gv_benchRig=N` — 후처리 리그를 건 KayKit 기사 N 명을 기울기 위에 세웁니다(BenchSceneRig.cpp): 발 디딤 · 머리 시선 ·
          *        무기 손잡이 왼손 IK · 망토 스프링 본. 무기 · 망토는 각자 유닛(자식 오브젝트)이고 리그가 몸의 본을 따릅니다.
@@ -187,6 +196,7 @@ namespace sw
         ComponentHandle _rigLookTarget;
         /** @brief 캐릭터 벤치를 세웠으면 1 — 카메라를 캐릭터 기준으로 맞춥니다. */
         uint8                  _bCharacterFraming : 1;
-        [[maybe_unused]] uint8 _reserved          : 6;
+        uint8                  _bFaceFraming      : 1; ///< 시험 머리 줄을 세웠다(카메라를 머리 높이로 맞춘다)
+        [[maybe_unused]] uint8 _reserved          : 5;
     };
 } // namespace sw

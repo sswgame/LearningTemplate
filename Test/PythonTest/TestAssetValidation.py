@@ -104,6 +104,15 @@ class HeaderReaderTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             readMeshInfo(skinned[:-24])
 
+    def testMeshMorphChunkIsCounted(self) -> None:
+        # 정점 뒤 선택 덩어리(MRPH)는 태그 · 길이로 건너뛴다 — 길이가 파일을 넘거나 모르는 태그면 오류.
+        base = b"SWMS" + struct.pack("<IIIfI", 2, 3, 48, 1.0, 0) + bytes(3 * 48)
+        self.assertEqual(1, readMeshInfo(base + b"MRPH" + struct.pack("<I", 4) + bytes(4)).triangleCount)
+        with self.assertRaises(ValueError):
+            readMeshInfo(base + b"MRPH" + struct.pack("<I", 8) + bytes(4))
+        with self.assertRaises(ValueError):
+            readMeshInfo(base + b"XXXX" + struct.pack("<I", 0))
+
     def testOldMeshVersionIsRejected(self) -> None:
         with self.assertRaises(ValueError):
             readMeshInfo(b"SWMS" + struct.pack("<IIIfI", 1, 3, 48, 1.0, 0) + bytes(3 * 48))

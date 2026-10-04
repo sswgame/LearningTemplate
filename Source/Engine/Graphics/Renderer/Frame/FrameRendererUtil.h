@@ -147,7 +147,9 @@ namespace sw
             uint32 _skinVertexBase{ 0 };
             uint32 _skinVertexCount{ 0 };
             uint32 _skinBoneCount{ 0 };
-            uint32 _pad{ 0 };
+            uint32 _skinInstanceCount{ 0 };
+            uint32 _skinDeltaBase{ 0 }; ///< 원본 레스트 버퍼 안에서 모프 차이가 시작하는 원소(meshskin.hlsl g_SkinDeltaBase)
+            uint32 _arrPad[3]{ 0, 0, 0 };
         };
         /** @brief 인스턴스 정렬 디스패치 상수(instancesort.hlsl `SortParams`, b0)입니다. */
         struct GpuSortParams
@@ -446,6 +448,12 @@ namespace sw
         hashed_string _swBatchCount{ "g_SwBatchCount" };
         /// @brief 씬 라이트 버퍼의 원소 수 ↔ PassCB g_SwLightCount 입니다. 0 이면 셰이더가 키라이트로 폴백합니다.
         hashed_string _swLightCount{ "g_SwLightCount" };
+        /// @brief 정점 애니메이션(VAT) 표입니다(binding.hlsli g_SwVertexAnimation ↔ "SwVertexAnimation"). 패스당 한 번 겁니다.
+        hashed_string _swVertexAnimation{ "SwVertexAnimation" };
+        /// @brief 그 표의 원소 수 ↔ PassCB g_SwVertexAnimationCount 입니다.
+        hashed_string _swVertexAnimationCount{ "g_SwVertexAnimationCount" };
+        /// @brief VAT 시계(초) ↔ PassCB g_SwVertexAnimationTime 입니다.
+        hashed_string _swVertexAnimationTime{ "g_SwVertexAnimationTime" };
     };
 
     /**

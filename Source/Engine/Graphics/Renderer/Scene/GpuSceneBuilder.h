@@ -275,6 +275,9 @@ namespace sw
              * @details 월드 행렬에서 나오는 값이라 트랜스폼만 바뀐 프레임도 다시 구합니다(`copyCandidateTransforms`). 부호가 바뀌면 배치를 다시 나눕니다.
              */
             uint8 _bReverseCulling{ SW_FALSE };
+            /// @brief 정점 애니메이션 시각 오프셋(초)입니다. MeshComponent 가 주고 GpuInstance::_vertexAnimationPhase 로 갑니다(배치 키가 아니라 내용).
+            /// 컬 반전(1 바이트) 뒤 정렬 빈자리에 둔다 — 앞에 두면 구멍이 생긴다(아래 static_assert).
+            float32 _vertexAnimationPhase{ 0.0f };
 
             /**
              * @brief 재구축이 필요한지 판단하기 위한 필드 단위 비교입니다.
@@ -292,6 +295,7 @@ namespace sw
             {
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
                        _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite &&
+                       Memory::compare( &_vertexAnimationPhase, &other._vertexAnimationPhase, sizeof( _vertexAnimationPhase ) ) == 0 &&
                        _permutationHash == other._permutationHash && _sortKey == other._sortKey && _bReverseCulling == other._bReverseCulling &&
                        Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
                        Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
@@ -316,7 +320,7 @@ namespace sw
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역입니다. 필드 크기 합을 정렬로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 멈춥니다.
         static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 3 +
                                                     sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GpuSpriteInstanceData ) + sizeof( uint64 ) +
-                                                    sizeof( uint8 ) + alignof( DrawCandidate ) - 1 ) /
+                                                    sizeof( uint8 ) + sizeof( float32 ) + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
                        "DrawCandidate has padding between fields (or a field was added without adding its size here)" );
 
@@ -491,6 +495,8 @@ namespace sw
          *          · `publishInstances()`(스냅샷에 포인터 넘기기). 이전 값은 `getPublished()` 로 읽습니다. 규칙과 이유는 그 타입의 주석에 있습니다.
          */
         GpuInstanceRing _instanceRing;
+        /** @brief 지난 프레임 팔레트 행 수입니다. 이번 프레임 배열을 그만큼 미리 잡는다(캐릭터 천 명이면 행 십만 개 — 자라며 옮기지 않게). */
+        size_t _paletteRowCountHint{ 0 };
 
         /** @brief 이번 프레임의 쓰기 슬롯을 반환합니다(`GpuInstanceRing::acquireWrite`). */
         vector<GpuInstance>& instanceWork() { return _instanceRing.acquireWrite(); }

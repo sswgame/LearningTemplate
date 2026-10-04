@@ -13,6 +13,7 @@
 |------|------|
 | `Pose` | 본 로컬 변환(이동 · 회전 · 스케일)을 SoA 로 든 포즈 — 섞기(`blend`) · 본 마스크(`blendMasked`) · 가산(`makeAdditive` · `applyAdditive`) · 모델 공간 · 스킨 팔레트 |
 | `Skeleton` | 스켈레톤 에셋(`.skeleton.json`) — 본 이름 · 부모(앞에 있음) · 레퍼런스 포즈 · 역 바인드, 임포트가 적은 본 부착 메시 표(읽기 전용) |
+| `SkeletonBoneLod` | 스켈레톤 곁 본 LOD 표(`.bonelod.json`) — 화면 크기 단계마다 풀지 않을 본(자손 포함). 임포트가 지우지 않게 스켈레톤과 따로 둔다 |
 | `AnimClip` | 클립 에셋(`.animclip`) — 트랙(본 이름) 코덱 블롭 · 실수 커브 · 알림 · 루트 모션 트랙. `IAnimPlayable` |
 | `Codec/AnimCodec` | 코덱 인터페이스(압축 → 코덱 id + 불투명 블롭, 런타임 샘플) · 등록부(이름 → 코덱) · 오차 측정(모델 공간 가상 정점) |
 | `Codec/Raw` · `Codec/Acl` | 기준 코덱(float 그대로) · ACL 2.1 백엔드. **ACL · RTM 헤더는 `Codec/Acl/` 의 .cpp 에서만 include 한다**(게이트가 막는다) |
@@ -21,6 +22,9 @@
 | `AnimGraphAsset` · `AnimGraphPlayer` | 그래프 JSON(노드 = 상태, 링크 = 전이: 조건 `>` `<` `>=` `<=` `==` `!=` `trigger` · 블렌드 · 노드 반복)과 그것을 돌리는 상태 기계 |
 | `SpriteClipAsset` · `SpriteClipPlayable` | 스프라이트 클립(`.sprite.json`)과 그 이름 붙은 구간을 `IAnimPlayable` 로 보이는 다리(2D 가 같은 재생 코드를 탄다) |
 | `BlendSpace` · `DualQuaternion` | 1D/2D 파라메트릭 블렌딩(행렬 하나), DQ 스키닝 수학(아래 2 · 3 절) |
+| `Graphics/Mesh/MeshVertexAnimation` | VAT 표(프레임 × 정점, 위치 + 팔면체 노멀)와 굽기(`AnimClip::samplePose` → 팔레트 → CPU 스키닝 — meshskin.hlsl 과 같은 식) |
+| `Facial/FacialRig` | 얼굴 리그(`.facial.json`) — 표정 · 비즘 = 모프 타깃 가중치 묶음, 깜빡임(타깃 · 간격 · 길이) · 시선(눈 본 · 앞 축 · 최대 각 · 사카드) |
+| `Facial/LipSync` | 립싱크 분석 표(`engine/animation/lipsync.json`) · 비즘 트랙(`<음성>.visemes.json`) · 분석기(RMS + 세 대역 바이쿼드 → 비즘 가중치) |
 | `AnimJsonUtil` | 모르는 키를 오류로 보는 JSON 검사 · 본 변환 읽기 · 쓰기(스켈레톤 · 임포트 규칙 · 클립 곁 데이터가 함께 쓴다) |
 | `Retarget/` | 리타깃 — 프로필(`*.retarget.json`) · 런타임 리타기터(`PoseRetargeter`) · 오프라인 굽기(`RetargetBakeUtil`). 아래 6 절 |
 | `Rig/` | 후처리 리그 — 작업 포즈(`RigPoseBuffer`) · IK 풀이(`RigIkSolver`) · 스프링 사슬 · 리그 에셋(`*.rig.json`, 노드 등록부) · 실행기(`RigInstance`). 아래 5 절 |
@@ -31,9 +35,20 @@
   키는 모두 필수, 모르는 키 · 앞에 없는 부모 · 없는 본을 가리키는 부착은 로드 오류입니다.
 - **`.animclip`**(리틀 엔디언): `SWAC` · 버전 1 · 플래그(반복) · 길이 · 이름 · 트랙 이름들 · 루트 모션 트랙(-1 없음) · 코덱 번호 · 블롭 · 알림(이름 · 시각 · 구간) ·
   커브(이름 · [시각, 값]). 지금 판만 읽습니다(옛 판은 원본에서 다시 임포트).
+- **`.bonelod.json`**(스켈레톤 곁, 선택): `{ "levels": [ { "max_screen_size": 0.15, "remove": [ 본 이름 ... ] }, ... ] }`. 단계는 화면 크기가 줄어드는 순이고 뒤 단계는
+  앞 단계가 뺀 본을 이어받는다. 없는 본 이름은 오류(`ResourceDataSchemaTest` 가 곁 스켈레톤으로 확인한다). KayKit 다섯 스켈레톤에 있다(IK 조종 본 → 발가락 · 손).
+- **`engine/animation/animationlod.json`**: 애니메이션 LOD 표 — 화면 크기 단계(`min_screen_size` · `update_rate_divisor` · `interpolate`), 화면 밖 주기(0 = 포즈를
+  만들지 않음), 예산(ms), 주기 상한, VAT 로 넘길 화면 크기(`Object/Animation/AnimationLod.h`).
 - **`.mesh` 스킨 스트림**: `Graphics/Mesh/MeshAssetFormat`(판 2) — 정점마다 본 번호 넷(uint16) · 가중치 넷(float32), 머리의 스킨 본 수.
+- **`.mesh` 모프 덩어리**(선택, 끝에 붙는 `MRPH` · 길이): 타깃 수 · [이름 · 정점 수 · (정점 번호 · 위치 차이 · 노멀 차이)]. 움직이는 정점만 싣는다. 모프가 없는
+  메시는 덩어리가 없어 이전과 같은 바이트다(판을 올리지 않는다). 모르는 덩어리 · 범위 밖 정점 · 길이 어긋남은 로드 오류.
+- **`.facial.json`**(메시 곁 — `models/<이름>.facial.json`, 임포트 곁 폴더 밖): `FacialRig.h` 의 형식. 표정 이름은 타깃 이름과 겹치면 안 된다(이름은 대소문자를
+  무시하고, 같은 이름 커브가 타깃과 표정을 둘 다 움직인다 — 묶을 때 오류).
+- **`engine/animation/lipsync.json`**: 분석 프레임율 · 무음/최대 RMS · 날카로움 · 대체 비즘 · 세 대역(Hz) · 비즘마다 대역 모양. 첫 비즘이 무음(sil).
+  **`<음성>.visemes.json`**: `{ "frame_rate", "visemes": [ 이름 ], "frames": [ [ 가중치 ] ] }` — `App --import-lipsync` 가 `voice/` 폴더의 .wav · .ogg 곁에 쓴다.
 - 만드는 쪽은 에디터의 `ModelImporter`(`Source/Editor/README.md` "모델도 들일 때 임포트한다") — 규칙(`Config/Editor/ModelImportConfig.json`)이 코덱 ·
-  표본율 · 정밀도 · 가져올 클립을 고르고, 원본 옆 `<이름>.clips.json` 이 클립의 반복 · 알림 · 커브를 정합니다.
+  표본율 · 정밀도 · 가져올 클립을 고르고, 원본 옆 `<이름>.clips.json` 이 클립의 반복 · 알림 · 커브를 정합니다. glTF 모프 타깃은 `.mesh` 의 모프 덩어리로
+  (이름은 `extras.targetNames`), `weights` 채널은 타깃 이름의 커브로 클립에 실립니다.
 
 ## 0.2 한 프레임 — 누가 무엇을 하나
 
@@ -41,6 +56,7 @@
 GameObjectManager::tick
   ├─ 컴포넌트 틱(게임 코드가 애니메이터 파라미터를 쓴다)
   ├─ AnimationSystem::evaluate( dt )            ← 틱 뒤, 트랜스폼 플러시 앞
+  │    LOD) 뷰(엔진 루프가 넣은 주 시점 + 그리는 추가 뷰)로 클라이언트마다 가시성 · 화면 크기 → 주기 · 보간 · 본 LOD, 예산 배분
   │    0) 의존이 바뀌었으면 레벨을 다시 짓는다(위상 정렬, 고리는 오류)
   │    1) 유닛마다 할 일 · LOD — 쉬는 유닛은 여기서 빠진다(비용 0). 일하는 유닛은 일들의 prepareAnimationFrame(게임 스레드 — 월드 행렬 · 물리 질의)
   │    2) 단계마다 레벨 순서로 engine::runParallel:
@@ -52,14 +68,51 @@ GpuSceneBuilder::buildFromScene → 유닛의 팔레트를 스냅샷으로(`coll
 FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin.hlsl 디스패치 한 번 → 정점 셰이더는 모프와 같은 길로 읽는다
 ```
 
-- **유닛**(`SkeletalMeshComponent`) = 장비 부품 하나 = 오브젝트 하나. 스켈레톤이 없으면 본 하나("root")짜리 암묵 스켈레톤입니다. 스킨드 메시는 컴포넌트마다
-  메시 객체를 따로 둡니다(모프 풀 구간이 메시마다 하나라서) — 군중 공유는 다음 일입니다.
+- **유닛**(`SkeletalMeshComponent`) = 장비 부품 하나 = 오브젝트 하나. 스켈레톤이 없으면 본 하나("root")짜리 암묵 스켈레톤입니다(런타임에 `setSkeleton` 으로
+  정한 스켈레톤은 경로가 비어도 덮지 않는다). 스킨드 메시는 컴포넌트마다 사본(`Mesh::createSkinInstance` — 원본의 스킨 데이터를 나눠 GPU 레스트 · 가중치는
+  한 벌)을 둡니다. 군중 공유를 켜면(`setShareCrowdPose`) 사본 대신 묶음의 메시를 그립니다(아래 "군중 공유").
 - **일**(`IAnimationPhaseTask`)은 유닛에 걸립니다: 애니메이터(`SkeletalAnimatorBinding`)가 Time · BasePose 를, 후처리 리그(`PoseModifierBinding`,
   `Engine/Character`)가 PostProcess 를 맡고, 소켓 부착이 Attachment 에 끼어듭니다. 단계 앞의 게임 스레드 준비는 `prepareAnimationFrame` 입니다. 단계 함수는 워커에서 돌므로 자기 유닛과 의존으로 선언한 위 유닛만 읽습니다(`addAnimationDependency`).
-- **거리 LOD 기준**: `AnimationSystem::setLodViewPosition`(카메라를 가진 쪽이 넣는다) — 스프링 본의 `lod_distance` 가 읽는다.
-- **LOD 훅**: `setUpdateRateDivisor(N)`(포즈를 N 프레임에 한 번, 시간 · 알림은 매 프레임), `setVisibleHint(false)` + `_bAnimateWhenOffscreen` 아님 →
-  포즈를 건너뜀. 가시성 판정(카메라 절두체 · 중요도 예산)은 이 훅을 부르는 쪽의 일입니다(아직 없음).
+- **거리 LOD 기준**: `AnimationSystem::setLodViewPosition`(엔진 루프가 넣는 LOD 뷰의 첫 시점 — `setLodViews` 가 함께 정한다, 벤치는 직접 넣는다) — 스프링 본의 `lod_distance` 가 읽는다.
+- **LOD**(`Object/Animation/AnimationLod` — 언리얼 URO · Significance Manager · Animation Budget Allocator 의 자리): 엔진 루프가 프레임마다 뷰를 넣고
+  (`AnimationSystem::setLodViews` — 주 시점 + 이번 프레임에 그리는 화면 사각형 · 렌더 텍스처 뷰), 평가 앞에서 클라이언트(`IAnimationLodClient` — 유닛 ·
+  스프라이트 애니메이터)마다 경계 구로 판정합니다:
+  - **가시성**: 어느 뷰의 절두체에도 없으면 `setVisibleHint(false)` — 포즈를 건너뜁니다(`_bAnimateWhenOffscreen` 아니면, 시간 · 알림은 흐른다).
+    쉬는 추가 뷰는 넣지 않으므로 CCTV 에만 보이는 캐릭터는 그 뷰가 그리는 프레임에만 포즈를 만듭니다.
+  - **화면 크기 → 주기(URO)**: 화면 크기 = 경계 구 지름 / 화면 높이(뷰-투영 행렬 하나에서 — `AnimationLodUtil::computeScreenSize`). 표의 단계가 주기와
+    보간을 고릅니다. 같은 주기의 유닛은 위상(핸들 해시)이 달라 한 프레임에 몰리지 않습니다. `_updateRateDivisor`(PROPERTY)는 하한입니다.
+  - **보간**: 건너뛴 프레임은 "평가 때 보이던 포즈 → 새 포즈" 를 1/주기씩 갑니다 — 한 주기 늦습니다(언리얼 URO 보간과 같다). 비용은 섞기 · 모델 공간 ·
+    팔레트(샘플이 빠진다).
+  - **본 LOD**: 스켈레톤 곁 `.bonelod.json` 의 단계가 고른 본은 코덱이 풀지 않고(ACL `skip_track_*` · Raw 는 건너뜀) 레퍼런스 포즈로 부모를 따릅니다.
+  - **예산**: 포즈 단계의 벽시계 시간 / 평가한 유닛 수(지수 이동 평균)를 유닛 하나의 비용으로 보고, `Σ 비용 / 주기` 가 예산을 넘으면 화면이 작은 것부터
+    주기를 두 배씩(상한까지) 늘리고 보간을 켭니다(`AnimationLodUtil::allocateBudget`).
+  - 뷰를 한 번도 받지 않은 시스템(시험 · 서버 · 헤드리스)은 판정하지 않습니다 — 가시성 훅 · 주기를 직접 부르는 쪽을 덮지 않습니다. `-gv_animationLod=0` 이 끕니다.
+- **군중 공유**(`Object/Animation/AnimationCrowd` — 언리얼 Animation Sharing 의 자리, 표 `engine/animation/animationcrowd.json`): `_bShareCrowdPose` 를 켠 유닛은
+  시간 단계 뒤(게임 스레드) 묶음 · 혼자 · VAT 중 하나가 됩니다(`updateCrowdMembership`).
+  - **묶음**: 열쇠 = (스켈레톤, 스킨 원본, 클립, 재생 속도, 루트 묶기, 변형 칸). 칸은 클립 한 바퀴를 `variations_per_clip` 으로 나눈 위상이고 묶음 시각 =
+    군중 시계 × 속도 + 칸 × 폭이라 유닛 시각과 반 칸 안이며 어긋나지 않습니다(같은 상태면 칸을 바꾸지 않는다). 묶음 하나 = 포즈 하나 · 메시(사본) 하나 =
+    결과 구간 하나 · 팔레트 하나 · 배치 하나(멤버 수와 무관). 보이는 멤버가 있는 묶음만 평가합니다(병렬). 멤버는 포즈 단계를 돌지 않고, 포즈 읽기
+    (`getLocalPose` · `getModelSpaceTransforms` · `getSkinPalette`)는 묶음의 것을 돌려줍니다. 시간 · 상태 기계 · 알림 · 루트 모션 · 커브는 유닛마다 그대로입니다.
+  - **혼자**: 섞는 중 · 레이어 · 시퀀서 덮어쓰기 · 반복하지 않는 클립 · 후처리 일 · 리더 따르기면 나눌 수 없어 사본 풀(`acquireSoloMesh`)의 메시로 평가합니다
+    (묶음의 마지막 포즈에서 이어 섞기가 튀지 않는다). 끝나면 사본을 풀에 돌려줍니다.
+  - **VAT**: LOD 가 `vertex_animation_screen_size` 아래로 본 유닛(따르는 유닛 없음 · 속도 1)은 (원본, 클립)의 VAT 메시 하나로 넘어갑니다 — 처음 쓸 때
+    `MeshVertexAnimationBaker` 가 굽고(15 fps, 반복 클립은 한 바퀴가 클립 길이와 같게), 넘어갈 때 한 번 인스턴스 시각 오프셋(유닛 시각 - 군중 시계)을 적습니다.
+  - 멤버 · 참조가 없는 묶음은 `bucket_keep_seconds` 뒤 지웁니다(상태가 오가며 메시를 다시 만들지 않게). 진단: `GT.Animation.crowd*` 카운터 · `RT.Skin.*` 카운터,
+    `-gv_animationForceVertexAnimation=1`(모든 공유 유닛을 VAT 로).
 - **리더 포즈**: `setLeaderPose( 몸 )` 또는 `_bFollowParentPose` — 팔로워는 리더의 로컬 포즈를 본 이름으로 옮겨 받고 리더는 의존이 됩니다.
+- **되감기**(`Object/Animation/AnimationRewind` — 언리얼 Rewind Debugger 의 자리, Shipping 에는 없다): 기록을 켜면(`-gv_animationRewind=1` · 콘솔
+  `anim.rewind on` · 에디터 Animation Rewind 패널) 평가 뒤 일한 유닛마다 창(`-gv_animationRewindSeconds`, 기본 10 초)만큼 고리 버퍼에 남긴다 — 포즈(본마다
+  회전 int16 넷 · 이동 int16 셋(프레임 최대 크기로 나눔), 스케일이 1 이 아닐 때만 셋 더 = 14/20 바이트, 원래 40) · 월드 행렬 · 그래프 상태 · 상태 시각 ·
+  이번 프레임 알림 · 커브 · 루트 모션(`IAnimationPhaseTask::collectDebugState`). 되감는 동안(`setScrubTime` · `anim.rewind.scrub <초 전>` · 패널의 시간 막대)
+  평가가 멈추고 기록된 포즈가 유닛에 걸리며, 풀면 모든 유닛을 다시 평가한다. 유닛이 사라져도 기록은 창을 벗어날 때까지 남는다.
+- **모프 가중치**: 유닛이 그리는 메시의 타깃 수만큼 든다(`getMorphWeights`). 기본 포즈 단계가 포즈와 함께 0 으로 비우고, 일들이 더한다 — 애니메이터는 이름이
+  타깃과 같은 커브를 그대로(BasePose 끝), 얼굴은 후처리에서. 렌더 빌더가 [0, 1] 로 묶어 팔레트 뒤에 싣고 스키닝 컴퓨트가 **스키닝 앞에** 레스트에 더한다.
+  가중치가 0 이 아닌 유닛은 군중 묶음과 나누지 않는다(묶음은 가중치를 나누지 않는다).
+- **얼굴**(`Object/Component/3D/FacialAnimationComponent` — 언리얼 MetaHuman 커브 · 포즈 에셋 · 립싱크 플러그인의 자리): 같은 오브젝트 유닛의 일로 돈다.
+  시간 단계에 깜빡임 · 사카드 타이머 · 말하기 시각(결정적 난수 — 컴포넌트 id 씨앗), 후처리 단계에 표정(`setExpressionWeight` + 애니메이터의 같은 이름 커브) ·
+  비즘(트랙, 없으면 PCM 진폭이 대체 비즘을 연다) · 깜빡임을 가중치로 더하고, 눈 본을 시선 목표 쪽으로 돌린다(부모 공간 최소 회전 · 최대 각으로 자름 ·
+  로컬 회전 뒤에 붙임). 시선 목표는 게임 스레드가 모델 공간으로 옮겨 둔다(`finishAnimationFrame` — 한 프레임 늦다). `speak( 음성 )` 은 곁 트랙을 먼저 찾고,
+  오디오가 있으면 소리도 낸다. 시험 머리는 `game/empty/models/testhead.*`(합성 — 타깃 일곱 · 눈 본 둘, KayKit 은 모프가 없다).
 
 ## 0.3 2D · 3D 가 함께 쓰는 것
 
@@ -71,6 +124,8 @@ FrameRenderer → 모프 풀의 스킨 구간에 팔레트를 올리고 meshskin
 | 알림 · 동기 그룹 | `AnimNotifyTrack`(구간마다 `animations[].notifies` — 구간 시작 기준 초) · `AnimSyncGroup` | 같음 |
 | 알림 디스패치 | `SpriteAnimatorComponent::setNotifyListener` — 틱(워커)에서 넘기고 받는 쪽이 틱 뒤로, 구간이 바뀐 틱은 `_bRestarted` | `setNotifyListener` — 게임 스레드 마무리 |
 | 샘플 | 재생 시각 → 구간 안 프레임 · 트랜스폼 키 시각 | 재생 시각 → 코덱 → 본 포즈 |
+| LOD | `SpriteAnimatorLodClient` — 안 보이면 · 주기 밖이면 스프라이트 프레임 · 키를 넘기지 않음(시간 · 상태는 매 틱), 보이면 그 틱에 맞춤 | `SkeletalMeshLodClient` — 포즈 건너뛰기 · 보간 · 본 LOD · 예산 |
+| 되감기 | 상태만(구간 이름 · 시각 · 프레임) — 되감는 동안 기록된 프레임을 걸고 흐르지 않음 | 압축 포즈 + 상태(그래프 · 알림 · 커브 · 루트 모션) |
 
 ## 0.4 함정
 

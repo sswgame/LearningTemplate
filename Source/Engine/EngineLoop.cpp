@@ -20,8 +20,10 @@
 #include "Core/String/string_splitter.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Audio/IAudioSystem.h"
+#include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Config/ConfigManager.h"
@@ -59,6 +61,8 @@
 #include "Engine/Localization/StringTable.h"
 #include "Engine/LocalizationTools.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
+#include "Engine/Object/Animation/AnimationCrowd.h"
+#include "Engine/Object/Animation/VertexAnimationCooker.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
@@ -416,9 +420,37 @@ namespace sw
                 [[maybe_unused]] const uint32 prefabCount         = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, prefabFailedCount );
                 uint32                        registryFailedCount = 0;
                 [[maybe_unused]] const uint32 registryCount       = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, registryFailedCount );
-                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures).", sceneCount, sceneFailedCount, prefabCount,
-                             prefabFailedCount, registryCount, registryFailedCount );
-                loop._bHeadlessTaskFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0;
+                // 정점 애니메이션(VAT) — 데이터가 고른 (메시, 클립)을 굽는다. 프레임율은 군중 표의 것이라 런타임 굽기와 같다.
+                AnimationCrowdSettings crowdSettings{};
+                if ( ResourceUtil::hasResource( AnimationCrowdSettings::kResourcePath ) )
+                    (void)crowdSettings.loadFromResource( AnimationCrowdSettings::kResourcePath );
+                uint32                        vertexAnimationFailedCount = 0;
+                [[maybe_unused]] const uint32 vertexAnimationCount =
+                    VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, vertexAnimationFailedCount );
+                SW_LOG_INFO( "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures).",
+                             sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,
+                             vertexAnimationFailedCount );
+                loop._bHeadlessTaskFailed =
+                    sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 || vertexAnimationFailedCount > 0;
+                return EngineInitResult::SkipDependents;
+            }
+
+            // 립싱크 분석 — 음성마다 비즘 트랙을 곁에 쓴다. 분석 표가 엔진 데이터라 엔진이 한다.
+            bool bImportLipSync = false;
+            if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_LIPSYNC, bImportLipSync ) && bImportLipSync )
+            {
+                MemoryProfiler::captureMemoryLeakBaseline();
+                loop._bHeadless = true;
+                SW_LOG_INFO( "Starting Headless (ImportLipSync)..." );
+                LipSyncSettings lipSyncSettings{};
+                uint32          lipSyncFailedCount = 0;
+                uint32          lipSyncCount       = 0;
+                if ( lipSyncSettings.loadFromResource( LipSyncSettings::kResourcePath ) )
+                    lipSyncCount = LipSyncImport::importAll( ResourceUtil::getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
+                else
+                    ++lipSyncFailedCount;
+                SW_LOG_INFO( "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );
+                loop._bHeadlessTaskFailed = lipSyncFailedCount > 0;
                 return EngineInitResult::SkipDependents;
             }
 
@@ -761,6 +793,7 @@ namespace sw
         , _gpuUploadQueue{ nullptr }
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
+        , _listAnimationLodView{}
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
@@ -1099,6 +1132,20 @@ namespace sw
                 {
                     RenderViewCollector::collectExtraViews( *pActiveScene->getObjectManager(), pCam, packet._viewProj, outputWidth, outputHeight,
                                                             _renderViewClock, RenderViewCollector::getDefaultBudget(), *_renderViewScheduler, packet._listView );
+                }
+                // 애니메이션 LOD 의 뷰 — 주 시점과 이번 프레임에 그리는 추가 뷰(CCTV · 분할 화면). 다음 프레임 평가가 이것으로 가시성 · 화면 크기를 본다.
+                // 갱신 주기로 쉬는 추가 뷰는 넣지 않는다 — 그 뷰에만 보이는 캐릭터는 그 뷰가 그리는 프레임에만 포즈를 만든다.
+                if ( pActiveScene->getObjectManager() != nullptr )
+                {
+                    _listAnimationLodView.clear();
+                    if ( packet._bHasViewProj == SW_TRUE )
+                        _listAnimationLodView.push_back( AnimationLodView::make( packet._viewProj, packet._cameraPos ) );
+                    for ( const RenderViewRequest& view : packet._listView )
+                    {
+                        if ( view._bRender == SW_TRUE )
+                            _listAnimationLodView.push_back( AnimationLodView::make( view._viewProj, view._position ) );
+                    }
+                    pActiveScene->getObjectManager()->getAnimationSystem().setLodViews( _listAnimationLodView );
                 }
                 _gpuSceneBuilder->buildFromScene( pActiveScene, packet._cameraPos );
 

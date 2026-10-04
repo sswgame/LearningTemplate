@@ -38,6 +38,7 @@ namespace sw
         , _meshCache{ make_unique<MeshCache>() }
         , _skeletonCache{ make_unique<SkeletonCache>() }
         , _animClipCache{ make_unique<AnimClipCache>() }
+        , _boneLodCache{ make_unique<SkeletonBoneLodCache>() }
         , _socketSetCache{ make_unique<SocketSetCache>() }
         , _notifyTableCache{ make_unique<AnimNotifyTableCache>() }
         , _physicsAssetCache{ make_unique<PhysicsAssetCache>() }
@@ -58,6 +59,7 @@ namespace sw
                                    _meshCache.get(),
                                    _skeletonCache.get(),
                                    _animClipCache.get(),
+                                   _boneLodCache.get(),
                                    _socketSetCache.get(),
                                    _notifyTableCache.get(),
                                    _physicsAssetCache.get(),

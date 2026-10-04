@@ -333,6 +333,9 @@ namespace sw
                 // 씬 배치 표: 그래픽스 t13 (네 백엔드 공통). 정점 셰이더가 자기 배치 번호로 읽는다.
                 add( shaderslot::resname::kBatches, ShaderBindingKind::StructuredBuffer,
                      slotB( shaderslot::kBatchBuffer ), slotB( shaderslot::kBatchBuffer ), vkT( shaderslot::kBatchBuffer ), slotB( shaderslot::kBatchBuffer ) );
+                // 정점 애니메이션(VAT) 표: 그래픽스 t14 (네 백엔드 공통). 먼 군중의 정점 셰이더가 인스턴스 시각으로 읽는다.
+                add( shaderslot::resname::kVertexAnimation, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kVertexAnimationBuffer ),
+                     slotB( shaderslot::kVertexAnimationBuffer ), vkT( shaderslot::kVertexAnimationBuffer ), slotB( shaderslot::kVertexAnimationBuffer ) );
                 // gpucull 컴퓨트: t0/t1 읽기, u0/u1 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
                 add( shaderslot::resname::kCullInstances, ShaderBindingKind::StructuredBuffer, slotB( 0 ), slotB( 0 ), vkT( 0 ), slotB( 0 ) );
                 add( shaderslot::resname::kCullBatchInfo, ShaderBindingKind::StructuredBuffer, slotB( 1 ), slotB( 1 ), vkT( 1 ), slotB( 1 ) );

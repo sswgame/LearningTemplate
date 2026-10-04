@@ -7,6 +7,7 @@
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/SkeletonBoneLod.h"
 #include "Engine/Resource/SharedAssetTable.h"
 
 namespace sw
@@ -18,6 +19,7 @@ namespace sw
             [[nodiscard]] static bool loadSkeleton( string_view path, Skeleton& outSkeleton ) { return outSkeleton.loadFromResource( path ); }
             [[nodiscard]] static bool loadClip( string_view path, AnimClip& outClip ) { return outClip.loadFromResource( path ); }
             [[nodiscard]] static bool loadRig( string_view path, RigAsset& outRig ) { return outRig.loadFromResource( path ); }
+            [[nodiscard]] static bool loadBoneLod( string_view path, SkeletonBoneLod& outBoneLod ) { return outBoneLod.loadFromResource( path ); }
 
             static SharedAssetTable<Skeleton>& getSkeletonTable()
             {
@@ -34,6 +36,12 @@ namespace sw
             static SharedAssetTable<RigAsset>& getRigTable()
             {
                 static SharedAssetTable<RigAsset> s_table;
+                return s_table;
+            }
+
+            static SharedAssetTable<SkeletonBoneLod>& getBoneLodTable()
+            {
+                static SharedAssetTable<SkeletonBoneLod> s_table;
                 return s_table;
             }
         };
@@ -106,6 +114,27 @@ namespace sw
         AnimationAssetCacheInternal::getClipTable().clear();
     }
 
+    shared_ptr<const SkeletonBoneLod> SkeletonBoneLodCache::acquire( string_view path )
+    {
+        return AnimationAssetCacheInternal::getBoneLodTable().acquire( path, &AnimationAssetCacheInternal::loadBoneLod );
+    }
+
+    bool SkeletonBoneLodCache::reloadShared( string_view path )
+    {
+        return AnimationAssetCacheInternal::getBoneLodTable().reloadShared( path, &AnimationAssetCacheInternal::loadBoneLod );
+    }
+
+    bool SkeletonBoneLodCache::isCached( string_view relativePath ) const
+    {
+        return AnimationAssetCacheInternal::getBoneLodTable().findLive( relativePath ) != nullptr;
+    }
+
+    void SkeletonBoneLodCache::reload( string_view relativePath, IRHIDevice* pDevice )
+    {
+        (void)pDevice;
+        (void)reloadShared( relativePath );
+    }
+
     shared_ptr<const RigAsset> RigAssetCache::acquire( string_view path )
     {
         return AnimationAssetCacheInternal::getRigTable().acquire( path, &AnimationAssetCacheInternal::loadRig );
@@ -125,6 +154,16 @@ namespace sw
     {
         (void)pDevice;
         (void)reloadShared( relativePath );
+    }
+
+    size_t SkeletonBoneLodCache::getCachedCount() const
+    {
+        return AnimationAssetCacheInternal::getBoneLodTable().countLive();
+    }
+
+    void SkeletonBoneLodCache::clear()
+    {
+        AnimationAssetCacheInternal::getBoneLodTable().clear();
     }
 
     size_t RigAssetCache::getCachedCount() const

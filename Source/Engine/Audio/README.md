@@ -12,6 +12,7 @@
 | 보이스(재생 위치 · 피치 리샘플 · 팬 · 페이드 · 가상 진행) | `AudioVoice` |
 | 클립(float 샘플)과 경로 → 클립 캐시 · 비동기 디코드 | `AudioClip` |
 | WAV · OGG 디코드(stb_vorbis) | `AudioClipDecoder` · `AudioVorbisDecode.cpp` |
+| 립싱크 일괄 임포트(`voice/` 음성 → `.visemes.json`, `App --import-lipsync`) — 분석기 · 트랙 형식은 `Animation/Facial/LipSync` | `LipSyncImport` · `AudioClipData::copyMonoSamples` |
 | 버스 이펙트(바이쿼드 · 컴프레서 · 리미터 · 리버브 · 딜레이)와 이름 → 종류 등록부 | `Dsp/AudioEffect` |
 | 바이쿼드 계수(RBJ cookbook) · 스테레오 상태 · 크기 응답 | `Dsp/AudioBiquad` |
 | 공간화 — 리스너 · 에미터 · 감쇠 프리셋 · 팬 · 도플러 · 가림 · 가림 질의 창구 | `AudioSpatial` |
