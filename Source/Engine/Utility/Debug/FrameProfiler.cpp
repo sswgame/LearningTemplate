@@ -13,6 +13,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Utility/Profiling/ProfilerBackend.h"
 
 #include <chrono>
 
@@ -107,6 +108,47 @@ namespace sw
         return slot;
     }
 
+    ProfileScopeId FrameProfiler::registerScopeSite( const utf8* pName, [[maybe_unused]] const utf8* pFunction,
+                                                     [[maybe_unused]] const utf8* pFile, [[maybe_unused]] uint32 line )
+    {
+        ProfileScopeId scopeId{};
+        scopeId._slot = registerScope( pName );
+#if SW_PROFILER_BACKEND_COMPILED
+        scopeId._pSite = ProfilerBackend::registerZoneSite( pName, pFunction, pFile, line );
+#endif
+        return scopeId;
+    }
+
+    uint32 FrameProfiler::getScopeCount() const { return MathUtil::min( _scopeCount.load( std::memory_order_acquire ), kMaxScope ); }
+
+    const utf8* FrameProfiler::findScopeName( uint32 slot ) const
+    {
+        if ( slot >= getScopeCount() )
+            return nullptr;
+        return _arrScope[slot]._pName.load( std::memory_order_acquire );
+    }
+
+    bool FrameProfiler::isCounterScope( uint32 slot ) const
+    {
+        if ( slot >= kMaxScope )
+            return false;
+        return _arrScope[slot]._bCounter.load( std::memory_order_relaxed );
+    }
+
+    uint64 FrameProfiler::getLastFrameNanos( uint32 slot ) const
+    {
+        if ( slot >= kMaxScope )
+            return 0;
+        return _arrScope[slot]._lastNanos.load( std::memory_order_relaxed );
+    }
+
+    uint64 FrameProfiler::getLastFrameCount( uint32 slot ) const
+    {
+        if ( slot >= kMaxScope )
+            return 0;
+        return _arrScope[slot]._lastCalls.load( std::memory_order_relaxed );
+    }
+
     void FrameProfiler::addSample( uint32 slot, uint64 nanos )
     {
         if ( slot >= kMaxScope )
@@ -119,6 +161,9 @@ namespace sw
     {
         if ( slot >= kMaxScope || isEnabled() == false )
             return;
+        // 표시만 한 번 세운다. 매번 store 하면 워커 여럿이 같은 캐시 줄을 두드린다.
+        if ( _arrScope[slot]._bCounter.load( std::memory_order_relaxed ) == false )
+            _arrScope[slot]._bCounter.store( true, std::memory_order_relaxed );
         _arrScope[slot]._frameCalls.fetch_add( count, std::memory_order_relaxed );
     }
 
@@ -137,6 +182,10 @@ namespace sw
         if ( isEnabled() == false )
             return;
 
+#if SW_PROFILER_BACKEND_COMPILED
+        // 카운터는 외부 출력에 프레임당 합의 그래프로 나간다(시간 구간은 스코프가 직접 남긴다).
+        IProfilerBackend* pBackend = ProfilerBackend::getActiveBackend();
+#endif
         const uint32 count = _scopeCount.load( std::memory_order_acquire );
         for ( uint32 index = 0; index < count && index < kMaxScope; ++index )
         {
@@ -144,6 +193,12 @@ namespace sw
             // 읽기와 비우기가 한 연산이어야 한다. 그 사이에 렌더 스레드가 더한 값이 사라지면 안 된다.
             const uint64 calls = scope._frameCalls.exchange( 0, std::memory_order_relaxed );
             const uint64 nanos = scope._frameNanos.exchange( 0, std::memory_order_relaxed );
+            scope._lastCalls.store( calls, std::memory_order_relaxed );
+            scope._lastNanos.store( nanos, std::memory_order_relaxed );
+#if SW_PROFILER_BACKEND_COMPILED
+            if ( pBackend != nullptr && scope._bCounter.load( std::memory_order_relaxed ) )
+                plotCounter( *pBackend, scope, calls );
+#endif
             if ( calls == 0 )
                 continue;
 
@@ -229,6 +284,8 @@ namespace sw
             Scope& scope = _arrScope[index];
             scope._frameNanos.store( 0, std::memory_order_relaxed );
             scope._frameCalls.store( 0, std::memory_order_relaxed );
+            scope._lastNanos.store( 0, std::memory_order_relaxed );
+            scope._lastCalls.store( 0, std::memory_order_relaxed );
             scope._totalNanos    = 0;
             scope._totalCalls    = 0;
             scope._minNanos      = 0;
@@ -239,11 +296,38 @@ namespace sw
         _frameCount.store( 0, std::memory_order_relaxed );
     }
 
-    ScopedFrameProfile::ScopedFrameProfile( uint32 slot ) noexcept
-        : _startNanos{ 0 }
-        , _slot{ slot }
+    void FrameProfiler::plotCounter( IProfilerBackend& backend, Scope& scope, uint64 value )
     {
-        if ( slot < FrameProfiler::kMaxScope && engine::getFrameProfiler().isEnabled() )
+        // 그래프 이름은 프로세스 수명 사본이어야 한다 — 뷰어는 이름을 나중에 묻고, 구간 이름 intern 풀은 엔진 종료 때 내린다.
+        const utf8* pPlotName = scope._pPlotName.load( std::memory_order_acquire );
+        if ( pPlotName == nullptr )
+        {
+            pPlotName = ProfilerBackend::internName( scope._pName.load( std::memory_order_acquire ) );
+            if ( pPlotName == nullptr )
+                return;
+            scope._pPlotName.store( pPlotName, std::memory_order_release );
+        }
+        backend.plotValue( pPlotName, static_cast<float64>( value ) );
+    }
+
+    ScopedFrameProfile::ScopedFrameProfile( const ProfileScopeId& scopeId ) noexcept
+        : _startNanos{ 0 }
+#if SW_PROFILER_BACKEND_COMPILED
+        , _pBackend{ nullptr }
+        , _zoneToken{ 0 }
+#endif
+        , _slot{ scopeId._slot }
+    {
+#if SW_PROFILER_BACKEND_COMPILED
+        // 외부 구간을 먼저 연다 — 닫을 때는 역순(시간 누적 뒤)이라 외부 구간이 이 표의 측정을 감싼다.
+        IProfilerBackend* pBackend = ProfilerBackend::getActiveBackend();
+        if ( pBackend != nullptr && scopeId._pSite != nullptr )
+        {
+            _pBackend  = pBackend;
+            _zoneToken = pBackend->beginZone( *scopeId._pSite );
+        }
+#endif
+        if ( _slot < FrameProfiler::kMaxScope && engine::getFrameProfiler().isEnabled() )
             _startNanos = nowNanos();
         else
             _slot = FrameProfiler::kInvalidSlot;
@@ -251,8 +335,11 @@ namespace sw
 
     ScopedFrameProfile::~ScopedFrameProfile() noexcept
     {
-        if ( _slot >= FrameProfiler::kMaxScope )
-            return;
-        engine::getFrameProfiler().addSample( _slot, nowNanos() - _startNanos );
+        if ( _slot < FrameProfiler::kMaxScope )
+            engine::getFrameProfiler().addSample( _slot, nowNanos() - _startNanos );
+#if SW_PROFILER_BACKEND_COMPILED
+        if ( _pBackend != nullptr )
+            _pBackend->endZone( _zoneToken );
+#endif
     }
 } // namespace sw

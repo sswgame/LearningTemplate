@@ -70,6 +70,16 @@ option(SW_ENABLE_LTO "Shipping 배포 빌드 시 ThinLTO(링크 타임 최적화
 option(SW_ENABLE_STL_CONTAINER "엔진 커스텀 할당자 대신 std::allocator를 사용하도록 설정" OFF)
 option(SW_ENABLE_TIME_TRACE "Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력)" OFF)
 
+# Tracy 프로파일러 클라이언트(엔진 프로파일러의 두 번째 출력, Source/Engine/Utility/Profiling). Shipping 은 언제나 뺀다.
+# Windows 는 TracyClient.dll 을 지연 로드한다 — `-gv_tracy` 로 켜기 전에는 DLL 도, 수집 스레드도 없다.
+# 리눅스(vcpkg 정적 라이브러리)는 지연 로드가 없어 링크하면 기동부터 수집 스레드 · 리슨 소켓이 선다 — 그래서 기본 꺼짐이다.
+if(WIN32 AND NOT SW_SHIPPING_BUILD)
+	set(swTracyDefault ON)
+else()
+	set(swTracyDefault OFF)
+endif()
+option(SW_ENABLE_TRACY "Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시)" ${swTracyDefault})
+
 # 활성화할 대상 게임 팩 선택 (Source/Games/ 하위 디렉터리 이름)
 set(SW_ACTIVE_GAME "Empty" CACHE STRING "활성화할 Source/Games 게임 팩 (Empty)")
 set_property(CACHE SW_ACTIVE_GAME PROPERTY STRINGS Empty)

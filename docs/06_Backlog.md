@@ -234,8 +234,11 @@ cd build/Ninja-Debug/Bin
   아닐 때** — 설치 폴더를 나눠 써서, 옛 매니페스트의 워크트리가 configure 하면 새 패키지를 지운다. Jolt 소프트 바디(천 · 헤어 카드)는 아직 감싸지 않았다.
   2026-10-05 사용자 결정으로 **Recast & Detour**(zlib, 정적 — `RecastNavigation::Recast` · `Detour` · `DetourCrowd` · `DetourTileCache`)와
   **Tracy**(BSD-3, 클라이언트만 · 기능 끔 — `Tracy::TracyClient`, Windows 는 공유 TracyClient.dll)를 vcpkg 로 들였다(`ThirdParty/{recastnavigation,tracy}`).
-  Tracy 는 clang-cl 트리플릿의 C++14 기본값에 서지 못해 C++17 오버레이 포트(`ThirdParty/tracy/vcpkg-port/tracy`)를 둔다. 남은 것: 배포물에 넣을
-  서드파티 고지 목록이 저장소에 없다 — Tracy(BSD-3)는 고지가 필요하니 Shipping 패키지에 `THIRD_PARTY_NOTICES` 를 만들어 vcpkg `share/*/copyright` 를 모은다.
+  Tracy 는 clang-cl 트리플릿의 C++14 기본값에 서지 못해 C++17 오버레이 포트(`ThirdParty/tracy/vcpkg-port/tracy`)를 둔다. Tracy 는 엔진 프로파일러의 두 번째
+  출력으로 감쌌다(`Source/Engine/Utility/Profiling/README.md` — 헤더 경계는 같은 게이트, Shipping 은 링크하지 않는다). 남은 것: 배포물에 넣을
+  서드파티 고지 목록이 저장소에 없다 — Shipping 패키지에 `THIRD_PARTY_NOTICES` 를 만들어 vcpkg `share/*/copyright` 를 모은다. Tracy(BSD-3)는 Shipping 에
+  들어가지 않지만 **개발 빌드(TracyClient.dll)를 남에게 줄 때** 고지가 필요하다: "Tracy Profiler (https://github.com/wolfpld/tracy) is licensed under the
+  3-clause BSD license. Copyright (c) 2017-2025, Bartosz Taudul <wolf@nereid.pl>" + BSD-3 본문(`share/tracy/copyright`) — 뷰어(tracy-profiler.exe)는 저장소에 넣지 않는다.
 - **애니메이션(로드맵).** 지금 있는 것은 `Source/Engine/Animation/README.md`(임포트 · 코덱 · 재생 · 상태 기계 · AnimationSystem · GPU 스키닝 · 2D/3D 공용 재생).
   알림 디스패치(구간 알림 · 처리기 등록부 · `*.notifies.xml`)는 `Source/Engine/Character/README.md`.
   남은 것 — ① 그래프의 블렌드 스페이스 노드(지금 `BlendSpace` 는 행렬 하나라
@@ -571,6 +574,8 @@ cd build/Ninja-Debug/Bin
 - **`RT.Frame` = `RT.BeginFrame`(펜스 대기 = GPU 백프레셔) + `RT.ExecutePacket` + `RT.Present`.** `GT.Packet.submit` 이 크면 GT 가 RT 를 기다린다. `GT.Frame` 은
   `EngineLoop::tick` 만 재고 게임 모듈은 `App::run` 의 `GT.Game.update` · `GT.Game.fixedUpdate` · `GT.Editor.updateUi` 다. 2026-09-13 이전 RT 수치는 실제보다 작다.
 - **병목은 씬 크기에 따라 뒤집힌다.** 큐브 2000 은 GPU 대기, 8000 은 게임 스레드다. 어느 쪽을 깎을지는 재고 나서 정한다. GT 가 병목이면 RT 구간이 늘어 보여도 경합일 뿐이다.
+- **타임라인은 Tracy 로 본다**(`-gv_tracy=1` + 같은 판 0.13.1 뷰어, `Source/Engine/Utility/Profiling/README.md`). 표(`-gv_profileFrames`)는 구간마다 접은 숫자라
+  "어느 스레드가 무엇을 기다렸나" 는 Tracy 의 스레드 타임라인으로 본다. 계측은 `SW_PROFILE_SCOPE` 하나가 둘 다에 남긴다.
 - **GPU 비용은 `GPU.<패스>` 타임스탬프로 나눈다.** 패스를 지워서 나누면 타깃 사슬이 바뀌어 답이 뒤집힌다(추정 38 us, 실측 123 us). `RT.BeginFrame` 은 GPU 시간의 대리값이 아니다.
 - **재기 전에 VSync 가 꺼졌는지 본다** — 1/RT.Frame 이 주사율과 같으면 VSync 다. DXGI 는 스왑체인 생성과 `ResizeBuffers` **둘 다**에 `ALLOW_TEARING` +
   `Present( 0, DXGI_PRESENT_ALLOW_TEARING )`(짝이 안 맞으면 `INVALID_CALL`, `RHI/DX/RHIDxgiTearing.h`). Vulkan 은 present 모드. CLI 는 `-vsync`.
