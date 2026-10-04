@@ -123,7 +123,11 @@ namespace sw
         string _keyword;
         string _keywordOff;
 
-        uint8 _bEnabled       : 1;
+        uint8 _bEnabled : 1;
+        /**
+         * @brief 1 이면 에셋이 정한 상태만 쿠킹합니다(유니티 shader_feature). 0 이면 런타임에 바꿀 수 있는 스위치라 켬 · 끔 둘 다 쿠킹합니다(multi_compile).
+         * @details Shipping 에는 실시간 컴파일이 없다 — 1 인 스위치를 코드가 `setStaticSwitch` 로 바꾸면 그 변형은 Dev 에서만 그려진다.
+         */
         uint8 _bShaderFeature : 1;
         uint8 _reserved       : 6;
 

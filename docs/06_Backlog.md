@@ -1052,6 +1052,7 @@ cd build/Ninja-Debug/Bin
 - **주의: DX12 `enqueueGpuRelease`(`_fenceValue`)** — 다른 스레드의 `waitForQueueDrain` 이 같은 값을 먼저 Signal 하면 기록 중인 프레임이 제출되기 전에 해제가 돌 수 있다.
   기존 DX12 해제 경로 전부에 해당한다(열린 일).
 
+- **런타임에 바꾸는 정적 스위치는 `bShaderFeature="0"` 이어야 Shipping 에 바이너리가 있다** — 쿠커는 에셋 상태 + `bShaderFeature="0"` 스위치의 켬/끔 조합만 쿠킹한다(유니티 shader_feature / multi_compile, 런타임 스위치 넷까지). 코드가 `setStaticSwitch` 로 바꾸는 변형은 Dev 의 실시간 컴파일이 가려 Shipping hostgpu 에서만 진다 — `ShaderCookRequestTest.EveryRuntimeStaticSwitchCombinationIsRequested` 가 조합을 패스마다 대조한다. 멀티 컴파일(`_multiCompiles`)은 아직 고른 값만 쿠킹한다.
 - **셰이더 쿠킹은 패스 종류 표 전체 × (머티리얼 없음 + 머티리얼) × `RenderViewMode` 를 쿠킹한다** — 파이프라인 XML 에 나오는 패스만 곱하면 런타임
   (`ensurePassResources`)이 만드는 변형이 빠진다. 뷰 모드 define 의 정본은 `FrameRendererUtil::findViewModeDefine`, `ShaderCookRequestTest.CookedManifestHoldsEveryRequest` 가
   커밋된 매니페스트를 대조한다. Vulkan 최소 판과 쿠킹 타깃(`-fspv-target-env`)은 `VulkanRHIApiVersion.h` 하나 — 1.3 미만 디바이스는 고르지 않는다(SPIR-V 1.6).
