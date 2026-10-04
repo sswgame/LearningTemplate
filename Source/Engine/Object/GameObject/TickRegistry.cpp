@@ -55,8 +55,10 @@ namespace sw
              * @brief 한 레벨을 오브젝트별 스테이지로 가릅니다. 같은 오브젝트의 항목은 0 번부터 차례로 찹니다.
              * @details 오브젝트마다 "이미 든 스테이지 수" 하나면 됩니다. 같은 오브젝트의 항목이 붙어 있으면(보통) 그 수는
              *          이어지는 동안 하나씩 오르고 오브젝트가 바뀌면 0 입니다. 맵 없이 한 번에 됩니다.
+             *          @p bWaits 면 레벨의 첫 스테이지에만 "돌기 전에 적용" 을 세웁니다 — 같은 레벨의 항목은 서로 기다리지 않으므로 둘째부터는
+             *          이미 적용된 값을 봅니다.
              */
-            static void splitByObject( const vector<size_t>& listLevel, const vector<StageCandidate>& listCandidate, vector<TickStage>& outListStage )
+            static void splitByObject( const vector<size_t>& listLevel, const vector<StageCandidate>& listCandidate, bool bWaits, vector<TickStage>& outListStage )
             {
                 unordered_map<uint64, uint32> mapNextSlot;
                 mapNextSlot.reserve( listLevel.size() );
@@ -66,8 +68,12 @@ namespace sw
                     const StageCandidate& candidate = listCandidate[candidateIndex];
                     uint32&               slot      = mapNextSlot[candidate._objectId];
                     if ( firstStage + slot == outListStage.size() )
-                        outListStage.emplace_back();
-                    outListStage[firstStage + slot].push_back( candidate._item );
+                    {
+                        TickStage& stage    = outListStage.emplace_back();
+                        stage._group        = candidate._item._group;
+                        stage._bApplyBefore = ( bWaits && slot == 0 ) ? SW_TRUE : SW_FALSE;
+                    }
+                    outListStage[firstStage + slot]._listItem.push_back( candidate._item );
                     ++slot;
                 }
             }
@@ -173,6 +179,7 @@ namespace sw
 
                 vector<bool> listVisited( count, false );
                 size_t       processedCount = 0;
+                bool         bWaits         = false; // 레벨 0 은 기다리는 것이 없다 — 그 뒤 레벨은 모두 앞 레벨의 선행 조건을 기다린다
                 while ( listCurrentLevel.empty() == false )
                 {
                     sortLevel( listCurrentLevel );
@@ -187,7 +194,8 @@ namespace sw
                                 listNextLevel.push_back( next );
                         }
                     }
-                    splitByObject( listCurrentLevel, listCandidate, outListStage );
+                    splitByObject( listCurrentLevel, listCandidate, bWaits, outListStage );
+                    bWaits           = true;
                     listCurrentLevel = std::move( listNextLevel );
                 }
 
@@ -201,7 +209,7 @@ namespace sw
                             listRemaining.push_back( index );
                     }
                     sortLevel( listRemaining );
-                    splitByObject( listRemaining, listCandidate, outListStage );
+                    splitByObject( listRemaining, listCandidate, true, outListStage );
                 }
             }
         };

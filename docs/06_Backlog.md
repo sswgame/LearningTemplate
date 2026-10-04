@@ -894,7 +894,8 @@ cd build/Ninja-Debug/Bin
   지난다. 틱 중 `addComponent` 는 `nullptr` — `executeOrDeferPostTick`. 시험은 틱 **안에서** 본 값을 목 훅으로 기록한다(`getComponentCount` 는 미룸과 해제를 가르지 못한다).
 - **틱 중 트랜스폼 쓰기** — 자기 오브젝트를 틱하는 스레드면 칸의 대기 자리에, 남의 오브젝트면 쓰기 큐로(`SceneComponent::queueTickWrite` 하나). 남의 값은 늘 틱 전 값을 읽는다.
   큐는 (대상, 쓴 오브젝트 id, 순번)으로 정렬해 적용하므로 결과가 스레드 배정에 달리지 않는다. 워커가 쓰는 더티 플래그는 바이트 · `atomic<uint8>` relaxed(비트필드는 이웃
-  비트를 덮고, 같은 값을 겹쳐 쓰는 것도 데이터 경쟁이다).
+  비트를 덮고, 같은 값을 겹쳐 쓰는 것도 데이터 경쟁이다). 예외는 서브틱 선행 조건의 스테이지 경계다 — 기다리는 스테이지 앞에서 그때까지의 쓰기를 적용 · 플러시한다
+  (`applyStageTransforms`). 그 단계에 attach · detach 가 미뤄졌으면(`deferHierarchyChange`) 그 뒤로는 앞당기지 않는다 — `KeepWorld` 부착이 먼저 적용된 쓰기를 덮는다.
 - **월드 합성은 `updateWorldTransformFromParent` 한 곳이고, 렌더 더티를 찍는 곳은 `onWorldTransformUpdated` 하나다.** 합성 경로를 하나 더 만들면 메시가 화면에서 얼어붙는다.
   트랜스폼 값은 전역 `SceneTransformStorage`(256 칸 페이지, 옮기지 않는다)에 있고 컴포넌트는 칸 번호만 든다. 쓰기 알고리즘은 `SceneTransformHierarchy` 가 갖는다.
 - **부착** — 오브젝트의 루트 씬 컴포넌트는 하나(둘째는 primary 아래로), `AttachRule { KeepRelative, KeepWorld }`, `canAttachTo`(다른 매니저 · 소켓을 거친 순환 · 파괴 대기 부모)는

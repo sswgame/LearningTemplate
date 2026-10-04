@@ -118,6 +118,8 @@ namespace sw
         , _physicsWorld{}
         , _bTicking{ false }
         , _bProcessingDestruction{ false }
+        , _bDeferredHierarchyChange{ SW_FALSE }
+        , _stageTransformApplyCount{ 0 }
         , _lastStageGeneration{ 0 }
         , _tickStageBuildCount{ 0 }
         , _listCachedTickStage{}

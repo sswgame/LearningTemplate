@@ -217,6 +217,8 @@ namespace sw
 
         // 틱 중의 세터가 쓸 대기 칸 목록 · 쓰기 큐를 슬롯 수만큼 미리 잡아 둔다(워커는 자기 칸만 만진다).
         _transformHierarchy.beginTickWrites();
+        // 지난 단계의 구조 변경 큐는 `applyTickResults` 가 비웠다 — 이번 단계의 계층 변경 미룸을 새로 센다.
+        _bDeferredHierarchyChange.store( SW_FALSE, std::memory_order_relaxed );
         _bTicking.store( true, std::memory_order_release );
 
         {
@@ -269,14 +271,40 @@ namespace sw
         // 스테이지는 그룹 순서로 지어진다(한 스테이지 = 한 그룹) — 이번 단계의 그룹만 돈다.
         for ( const TickStage& stage : _listCachedTickStage )
         {
-            if ( stage.empty() || stage.front()._group < firstGroup || stage.front()._group >= endGroup )
+            if ( stage._listItem.empty() || stage._group < firstGroup || stage._group >= endGroup )
                 continue;
+            // 앞 스테이지(선행 조건)가 쓴 트랜스폼을 이 스테이지가 같은 프레임에 읽게 한다. 기다리는 항목이 있는 스테이지 앞에서만.
+            if ( stage._bApplyBefore == SW_TRUE )
+                applyStageTransforms();
             GameObjectManagerTickInternal::StageTick job{};
-            job._pItem     = stage.data();
+            job._pItem     = stage._listItem.data();
             job._deltaTime = deltaTime;
-            engine::runParallel( static_cast<uint32>( stage.size() ), GameObjectManagerTickInternal::kParallelTickThreshold,
+            engine::runParallel( static_cast<uint32>( stage._listItem.size() ), GameObjectManagerTickInternal::kParallelTickThreshold,
                                  SW_DELEGATE_METHOD( ParallelBlockDelegate, &GameObjectManagerTickInternal::StageTick::tickRange, &job ) );
         }
+    }
+
+    void GameObjectManager::applyStageTransforms()
+    {
+        // 부른 순서: 계층 변경(attach · detach)이 이번 단계에서 미뤄졌으면 그 뒤에 부른 쓰기는 그 변경 **뒤에** 적용돼야 한다(`KeepWorld` 는
+        // 붙이기 전 월드에서 로컬을 다시 구한다). 구조 변경은 단계 끝에서만 돌므로, 그때부터는 쓰기도 단계 끝까지 둔다.
+        if ( _bDeferredHierarchyChange.load( std::memory_order_relaxed ) != SW_FALSE )
+            return;
+        SW_PROFILE_SCOPE( "GT.Scene.tick.stageTransforms" );
+        ++_stageTransformApplyCount;
+        // 스테이지 사이엔 워커가 돌지 않는다 — 틱 뒤 적용과 같은 길(대기 칸 → 쓰기 큐 → 잎 루트 합성 · 더티 루트)에 플러시까지 해서
+        // 다음 스테이지가 로컬 · 월드 값을 모두 읽게 한다. 동결은 그대로다(구조 변경 · 스폰은 여전히 단계 끝).
+        _transformHierarchy.applyTickWrites( *this, _primitiveRegistry );
+        if ( hasDirtySceneTransforms() )
+            flushSceneTransforms();
+    }
+
+    void GameObjectManager::deferHierarchyChange( StructuralChangeDelegate func )
+    {
+        // "하나라도" 플래그 — 이미 서 있으면 쓰지 않는다(워커가 공유 칸에 거듭 쓰지 않게).
+        if ( _bDeferredHierarchyChange.load( std::memory_order_relaxed ) == SW_FALSE )
+            _bDeferredHierarchyChange.store( SW_TRUE, std::memory_order_relaxed );
+        deferStructuralChange( std::move( func ) );
     }
 
     void GameObjectManager::registerCollider( BoxCollider2DComponent* pCollider )
@@ -371,7 +399,8 @@ namespace sw
             return;
 
         // 이 스레드가 스크래치 슬롯을 받지 못했다(도우미 칸이 다 찬 드문 경우). 계층 변경과 같은 지연 경로로 가서, 틱 뒤에 한 건짜리 배치로 적용한다.
-        deferStructuralChange( [this, write]()
+        // 그 건이 단계 끝에 적용되므로, 뒤에 부른 쓰기가 스테이지 경계에서 먼저 적용되어 이 건에 지지 않게 계층 변경으로 센다.
+        deferHierarchyChange( [this, write]()
         {
             _transformHierarchy.applyBatch( *this, &write, 1 );
         } );
