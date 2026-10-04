@@ -19,6 +19,37 @@ sw_addTestExecutable(EngineTest
 		GF_Overworld
 		GF_TurnBattle
 		GF_ActionCombat
+		GF_Farming
+		GF_ThemePark
+		GF_Voxel
+		GF_CityBuilder
+		GF_RealTimeStrategy
+		GF_NetClientServer
+		GF_NetLockstep
+		GF_NetTurnRelay
+		GF_NetMmo
+		GF_Rhythm
+		GF_TacticsSrpg
+		GF_CardGame
+		GF_OpenWorldWestern
+		GF_WitcherRpg
+		GF_CreatureLife
+		GF_RestaurantSim
+		GF_SurvivalHorror
+		GF_SideScrollConquest
+		GF_Fighting
+		GF_ActionAdventure
+		GF_GhostHunt
+		GF_BattleRoyale
+		GF_CoopScavenger
+		GF_MonsterCollector
+		GF_ClassicJrpg
+		GF_Metroidvania
+		GF_ActionPlatformer
+		GF_KartRacing
+		GF_MechArena
+		GF_AsymmetricHorror
+		GF_PartyArena
 	LABELS
 		"unit;engine"
 	TIMEOUT

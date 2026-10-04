@@ -20,6 +20,15 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Delegate/Delegate.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Module/ModuleUnloadListener.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Module/ModuleImageUtil.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/BitStream.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetConnection.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetHost.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetHostThread.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetMessage.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetTransport.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/NetTypes.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/PlatformSocketUtil.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Network/UdpNetTransport.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Event/EventDispatcher.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/FileUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/IFileWatcher.cpp"
@@ -100,7 +109,7 @@ if(NOT SW_SHIPPING_BUILD)
 endif()
 
 if(WIN32)
-	target_link_libraries(Core_objects PUBLIC comdlg32 ole32 shell32 dbghelp synchronization)
+	target_link_libraries(Core_objects PUBLIC comdlg32 ole32 shell32 dbghelp synchronization ws2_32)
 endif()
 
 target_compile_definitions(Core_objects PRIVATE "SW_LOG_TAG=\"Engine\"")
@@ -122,7 +131,7 @@ target_link_libraries(Core PUBLIC sw_public_source_includes)
 target_link_libraries(Core PUBLIC sw_third_party_includes)
 
 if(WIN32)
-	target_link_libraries(Core PUBLIC comdlg32 ole32 shell32 dbghelp synchronization)
+	target_link_libraries(Core PUBLIC comdlg32 ole32 shell32 dbghelp synchronization ws2_32)
 endif()
 
 # Engine 이 $<TARGET_OBJECTS:Core_objects> 를 가져갈 수 있도록 의존성을 드러낸다

@@ -17,6 +17,15 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
+#include "GameFramework/Ability/AbilityCatalog.h"
+#include "GameFramework/Combat/Weapon.h"
+#include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
+#include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
+#include "GameFramework/Kits/Simulation/ThemePark/ParkLayout.h"
+#include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
+#include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
+
 #include "TestFramework/TestFramework.h"
 
 // Resource/ 아래 데이터가 지금 코드의 이름만 쓰는지 — 모르는 키 · 타입 · 열거자가 하나도 없는지.
@@ -101,16 +110,51 @@ namespace
             return clip.loadFromFile( resourceId );
         }
 
+        // 게임 데이터 — 키트 카탈로그가 읽는다(게임 모듈은 읽은 정의를 조립만 한다). 파일 이름은 게임이 여는 그대로다.
+        template <typename TCatalog>
+        static bool loadCatalog( const sw::string& resourceId )
+        {
+            TCatalog catalog;
+            return catalog.loadFromResource( resourceId );
+        }
+        static bool isGameData( sw::string_view resourceId, sw::string_view fileName ) { return startsWith( resourceId, "game/" ) && endsWith( resourceId, fileName ); }
+        static bool isAbilities( sw::string_view resourceId ) { return isGameData( resourceId, "/data/abilities.xml" ); }
+        static bool isCrops( sw::string_view resourceId ) { return isGameData( resourceId, "/data/crops.xml" ); }
+        static bool isCity( sw::string_view resourceId ) { return isGameData( resourceId, "/data/city.xml" ); }
+        static bool isWeapons( sw::string_view resourceId ) { return isGameData( resourceId, "/data/weapons.xml" ); }
+        static bool isRtsUnits( sw::string_view resourceId ) { return isGameData( resourceId, "/data/units.xml" ); }
+        static bool isVoxelBlocks( sw::string_view resourceId ) { return isGameData( resourceId, "/data/blocks.xml" ); }
+        static bool isCoasters( sw::string_view resourceId ) { return isGameData( resourceId, "/data/coasters.xml" ); }
+        static bool isParkLayout( sw::string_view resourceId ) { return isGameData( resourceId, "/data/rides.xml" ); }
+        /** @brief 공원 배치는 같은 폴더의 코스터 레이아웃(`coasters.xml`)을 가리킨다 — 그것을 먼저 읽는다. */
+        static bool loadParkLayout( const sw::string& resourceId )
+        {
+            const sw::string         folder = sw::FileUtil::getDirectoryPart( resourceId );
+            sw::CoasterLayoutCatalog layouts;
+            if ( layouts.loadFromResource( sw::FileUtil::joinPath( folder, "coasters.xml" ) ) == false )
+                return false;
+            sw::ParkLayout layout;
+            return layout.loadFromResource( resourceId, layouts );
+        }
+
         /** @brief 데이터 종류 표입니다. 앞의 줄이 먼저 맞습니다. */
         static constexpr DataKind kArrDataKind[] = {
-            {              "scene",               &isScene,               &loadScene},
-            {             "prefab",              &isPrefab,              &loadPrefab},
-            {           "pipeline",            &isPipeline,            &loadPipeline},
-            {         "renderpass",          &isRenderPass,          &loadRenderPass},
-            {"enginedefaultassets", &isEngineDefaultAssets, &loadEngineDefaultAssets},
-            {           "inputmap",            &isInputMap,            &loadInputMap},
-            {           "material",            &isMaterial,            &loadMaterial},
-            {         "spriteclip",          &isSpriteClip,          &loadSpriteClip},
+            {              "scene",               &isScene,                             &loadScene},
+            {             "prefab",              &isPrefab,                            &loadPrefab},
+            {           "pipeline",            &isPipeline,                          &loadPipeline},
+            {         "renderpass",          &isRenderPass,                        &loadRenderPass},
+            {"enginedefaultassets", &isEngineDefaultAssets,               &loadEngineDefaultAssets},
+            {           "inputmap",            &isInputMap,                          &loadInputMap},
+            {           "material",            &isMaterial,                          &loadMaterial},
+            {         "spriteclip",          &isSpriteClip,                        &loadSpriteClip},
+            {          "abilities",           &isAbilities,       &loadCatalog<sw::AbilityCatalog>},
+            {              "crops",               &isCrops,          &loadCatalog<sw::CropCatalog>},
+            {               "city",                &isCity,          &loadCatalog<sw::CityCatalog>},
+            {            "weapons",             &isWeapons,        &loadCatalog<sw::WeaponCatalog>},
+            {           "rtsunits",            &isRtsUnits,           &loadCatalog<sw::RtsCatalog>},
+            {        "voxelblocks",         &isVoxelBlocks,    &loadCatalog<sw::VoxelBlockCatalog>},
+            {           "coasters",            &isCoasters, &loadCatalog<sw::CoasterLayoutCatalog>},
+            {         "parklayout",          &isParkLayout,                        &loadParkLayout},
         };
 
         /** @brief 데이터로 보는 확장자입니다. 이 확장자인데 표의 어느 줄에도 맞지 않는 파일은 시험이 집니다(새 종류가 검사를 비켜 가지 않게). */

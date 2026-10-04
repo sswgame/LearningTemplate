@@ -13,7 +13,7 @@
 | 폴더명 | 테스트 성격 | 주요 특징 |
 |---|---|---|
 | **`CoreTest`** | 순수 코어 유닛 테스트 | `Source/Core` 만 시험합니다 — `Math`, `String`, `DataStructure`, `Delegate`, `Event`, `GlobalVariable` 등. 시험 파일은 Engine · GameFramework · Editor · Games · App 헤더를 include 하지 않고 `engine::` 서비스를 부르지 않습니다(`CheckTestSuites` 규칙 6 — 공용 `TestFramework` 가 Engine 을 링크하므로 include 경로로는 막을 수 없어 게이트가 지킵니다). 엔진 타입이 필요하면 지역 대역(이벤트 · `GlobalVariableManager`)을 쓰거나 `EngineTest` 에 둡니다. |
-| **`EngineTest`** | 엔진 · 게임 프레임워크 유닛 테스트 | `GameObject`, `Scene`, `RHI`, `Material` 등 실제 엔진 객체들과, `GameFramework` · 장르 킷(`GF_Overworld` · `GF_TurnBattle` · `GF_ActionCombat`)을 함께 검증합니다 — 그 라이브러리들을 링크하는 실행 파일이 이것 하나라서입니다. 게임 서비스 바인딩 가드는 `EngineTest/GameTestUtil.h`. GPU 가 필요한 스위트는 `_HostOnly` 로 갈립니다(아래). |
+| **`EngineTest`** | 엔진 · 게임 프레임워크 유닛 테스트 | `GameObject`, `Scene`, `RHI`, `Material` 등 실제 엔진 객체들과, `GameFramework` · 장르 킷(`GF_Overworld` · `GF_TurnBattle` · `GF_ActionCombat` · `GF_Farming` · `GF_ThemePark` · `GF_Voxel`)을 함께 검증합니다 — 그 라이브러리들을 링크하는 실행 파일이 이것 하나라서입니다. 게임 서비스 바인딩 가드는 `EngineTest/GameTestUtil.h`. GPU 가 필요한 스위트는 `_HostOnly` 로 갈립니다(아래). |
 | **`ReflectionTest`** | 빌드 파이프라인(툴체인) 테스트 | 런타임 코드가 아닌, C++ 헤더를 분석하여 `*.gen.cpp`를 올바르게 자동 생성해 내는지 `ReflectionParser` 툴의 기능을 검증합니다. |
 | **`SmokeTest`** | 런타임 모듈 통합 스모크 테스트 | 게임 DLL 핫 리로드(`LiveReloadManager`)나 RHI 모듈 동적 로드 등 시스템 전체가 런타임에 제대로 맞물려 돌아가는지를 검증합니다. |
 | **`EditorTest`** | 에디터 로직 유닛 테스트 | 커맨드 스택·선택·뷰포트 수학·문서 dirty 계약 등 `EditorModule` 의 UI 없는 부분을 검증합니다. ImGui 렌더링은 타지 않습니다. |

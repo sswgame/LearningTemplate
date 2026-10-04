@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AbilityArena 의 어빌리티 카탈로그 — 이펙트 · 어빌리티 · 어빌리티 세트.
+  형식은 Source/GameFramework/Ability/README.md 에 있다. 클래스 이름(class="...")은 게임이 등록한다(ArenaAbilities::registerClasses).
+  "ApplyEffects" 는 프레임워크 기본 클래스라 코드 없이 데이터만으로 돈다(회복 · 가시).
+-->
+<AbilityCatalog>
+
+  <!-- ===================================================================== -->
+  <!-- 이펙트                                                                 -->
+  <!-- ===================================================================== -->
+
+  <!-- 피해 — 원피해는 SetByCaller "Damage"(어빌리티의 damage 매개변수) + 공격력. 방어로 감쇠한다. 무적 중이면 걸리지 않는다. -->
+  <GameplayEffect id="GE_Damage_Melee" duration="Instant">
+    <Execution class="Damage" setByCaller="Damage" attackPowerCoefficient="1" base="0"/>
+    <AssetTag tag="Effect.Damage.Physical"/>
+    <BlockedTag tag="State.Invulnerable"/>
+    <Cue tag="GameplayCue.Hit.Physical"/>
+  </GameplayEffect>
+
+  <GameplayEffect id="GE_Damage_Fireball" duration="Instant">
+    <Execution class="Damage" setByCaller="Damage" attackPowerCoefficient="0.5" base="0"/>
+    <AssetTag tag="Effect.Damage.Fire"/>
+    <BlockedTag tag="State.Invulnerable"/>
+    <Cue tag="GameplayCue.Hit.Fire"/>
+  </GameplayEffect>
+
+  <!-- 화상 — 맞은 뒤 3 초 동안 1 초마다 체력 −3, 세 번까지 쌓인다(쌓일 때 시간을 다시 채운다). -->
+  <GameplayEffect id="GE_Burn" duration="HasDuration" seconds="3" period="1" executeOnApplication="false"
+                  stacking="AggregateByTarget" stackLimit="3" refreshOnStack="true">
+    <Modifier attribute="IncomingDamage" op="Add" magnitude="3"/>
+    <GrantedTag tag="State.Burning"/>
+    <BlockedTag tag="State.Invulnerable"/>
+    <Cue tag="GameplayCue.Burning"/>
+  </GameplayEffect>
+
+  <!-- 가시 — 맞으면 때린 쪽에 고정 피해 2(방어 무시: 메타 어트리뷰트에 바로 더한다). -->
+  <GameplayEffect id="GE_Thorns" duration="Instant">
+    <Modifier attribute="IncomingDamage" op="Add" magnitude="2"/>
+    <BlockedTag tag="State.Invulnerable"/>
+  </GameplayEffect>
+
+  <!-- 회복 — 레벨 1 에 25, 레벨마다 +5. 화상을 지운다(정화). -->
+  <GameplayEffect id="GE_Heal" duration="Instant">
+    <Modifier attribute="IncomingHealing" op="Add" magnitude="25" perLevel="5"/>
+    <RemoveEffectsWithTag tag="State.Burning"/>
+    <Cue tag="GameplayCue.Heal"/>
+  </GameplayEffect>
+
+  <!-- 대시 — 0.25 초 동안 이동 속도 ×3, 그동안 무적(피해 이펙트의 BlockedTag). -->
+  <GameplayEffect id="GE_Dash" duration="HasDuration" seconds="0.25">
+    <Modifier attribute="MoveSpeed" op="Multiply" magnitude="3"/>
+    <GrantedTag tag="State.Invulnerable"/>
+    <GrantedTag tag="State.Dashing"/>
+  </GameplayEffect>
+
+  <!-- 마나 재생 — 지울 때까지 1 초마다 마나 +4. -->
+  <GameplayEffect id="GE_ManaRegen" duration="Infinite" period="1" executeOnApplication="false">
+    <Modifier attribute="Mana" op="Add" magnitude="4"/>
+    <AssetTag tag="Effect.Regen.Mana"/>
+  </GameplayEffect>
+
+  <!-- 비용 · 쿨다운 -->
+  <GameplayEffect id="GE_Cost_Fireball" duration="Instant">
+    <Modifier attribute="Mana" op="Add" magnitude="-15"/>
+  </GameplayEffect>
+  <GameplayEffect id="GE_Cost_Heal" duration="Instant">
+    <Modifier attribute="Mana" op="Add" magnitude="-30"/>
+  </GameplayEffect>
+  <GameplayEffect id="GE_Cooldown_Melee" duration="HasDuration" seconds="0.45">
+    <GrantedTag tag="Cooldown.Melee"/>
+  </GameplayEffect>
+  <GameplayEffect id="GE_Cooldown_Fireball" duration="HasDuration" seconds="0.8">
+    <GrantedTag tag="Cooldown.Skill.Fireball"/>
+  </GameplayEffect>
+  <GameplayEffect id="GE_Cooldown_Heal" duration="HasDuration" seconds="6">
+    <GrantedTag tag="Cooldown.Skill.Heal"/>
+  </GameplayEffect>
+  <GameplayEffect id="GE_Cooldown_Dash" duration="HasDuration" seconds="1.5">
+    <GrantedTag tag="Cooldown.Skill.Dash"/>
+  </GameplayEffect>
+  <GameplayEffect id="GE_Cooldown_EnemyMelee" duration="HasDuration" seconds="1.2">
+    <GrantedTag tag="Cooldown.Melee"/>
+  </GameplayEffect>
+  <GameplayEffect id="GE_Cooldown_EnemyBolt" duration="HasDuration" seconds="2.5">
+    <GrantedTag tag="Cooldown.Skill.Fireball"/>
+  </GameplayEffect>
+
+  <!-- ===================================================================== -->
+  <!-- 어빌리티                                                               -->
+  <!-- ===================================================================== -->
+
+  <!-- 근접 — 사거리 안의 가장 가까운 적 하나. 대시 중에는 쓰지 않는다. -->
+  <Ability id="GA_Melee" class="MeleeStrike" cooldown="GE_Cooldown_Melee">
+    <AbilityTag tag="Ability.Attack.Melee"/>
+    <BlockedTag tag="State.Dead"/>
+    <BlockedTag tag="State.Dashing"/>
+    <Param name="range" value="2.2"/>
+    <Param name="damage" value="12"/>
+    <Param name="damageEffect" text="GE_Damage_Melee"/>
+  </Ability>
+
+  <!-- 화염구 — 바라보는 쪽으로 날아가 처음 맞은 적에게 피해 + 화상. -->
+  <Ability id="GA_Fireball" class="Projectile" cost="GE_Cost_Fireball" cooldown="GE_Cooldown_Fireball">
+    <AbilityTag tag="Ability.Skill.Fireball"/>
+    <BlockedTag tag="State.Dead"/>
+    <Param name="speed" value="14"/>
+    <Param name="range" value="16"/>
+    <Param name="damage" value="18"/>
+    <Param name="damageEffect" text="GE_Damage_Fireball"/>
+    <Param name="extraEffect" text="GE_Burn"/>
+  </Ability>
+
+  <!-- 회복 — 코드 없이 데이터만(ApplyEffects). -->
+  <Ability id="GA_Heal" class="ApplyEffects" cost="GE_Cost_Heal" cooldown="GE_Cooldown_Heal">
+    <AbilityTag tag="Ability.Skill.Heal"/>
+    <BlockedTag tag="State.Dead"/>
+    <Param name="selfEffect" text="GE_Heal"/>
+  </Ability>
+
+  <!-- 대시 — 도는 동안 공격을 막는다(BlockTag). -->
+  <Ability id="GA_Dash" class="Dash" cooldown="GE_Cooldown_Dash">
+    <AbilityTag tag="Ability.Movement.Dash"/>
+    <BlockTag tag="Ability.Attack"/>
+    <BlockedTag tag="State.Dead"/>
+    <Param name="duration" value="0.25"/>
+    <Param name="dashEffect" text="GE_Dash"/>
+  </Ability>
+
+  <!-- 가시 — 맞으면(Event.Hit) 스스로 발동해 때린 쪽에 GE_Thorns. 데이터만(ApplyEffects). -->
+  <Ability id="GA_Thorns" class="ApplyEffects">
+    <AbilityTag tag="Ability.Passive.Thorns"/>
+    <TriggerTag tag="Event.Hit"/>
+    <BlockedTag tag="State.Dead"/>
+    <Param name="targetEffect" text="GE_Thorns"/>
+  </Ability>
+
+  <!-- 적 근접 · 적 화염탄 — 같은 클래스, 다른 데이터. -->
+  <Ability id="GA_EnemyMelee" class="MeleeStrike" cooldown="GE_Cooldown_EnemyMelee">
+    <AbilityTag tag="Ability.Attack.Melee"/>
+    <BlockedTag tag="State.Dead"/>
+    <Param name="range" value="1.8"/>
+    <Param name="damage" value="6"/>
+    <Param name="damageEffect" text="GE_Damage_Melee"/>
+  </Ability>
+
+  <Ability id="GA_EnemyBolt" class="Projectile" cooldown="GE_Cooldown_EnemyBolt">
+    <AbilityTag tag="Ability.Skill.Fireball"/>
+    <BlockedTag tag="State.Dead"/>
+    <Param name="speed" value="8"/>
+    <Param name="range" value="14"/>
+    <Param name="damage" value="8"/>
+    <Param name="damageEffect" text="GE_Damage_Fireball"/>
+  </Ability>
+
+  <!-- ===================================================================== -->
+  <!-- 어빌리티 세트 — 입력 번호: 1 근접 · 2 화염구 · 3 회복 · 4 대시           -->
+  <!-- ===================================================================== -->
+
+  <AbilitySet id="Player">
+    <AttributeSet class="Combat">
+      <Attribute name="Health" base="120"/>
+      <Attribute name="MaxHealth" base="120"/>
+      <Attribute name="Mana" base="100"/>
+      <Attribute name="MaxMana" base="100"/>
+      <Attribute name="AttackPower" base="8"/>
+      <Attribute name="Armor" base="10"/>
+      <Attribute name="MoveSpeed" base="6"/>
+    </AttributeSet>
+    <Ability id="GA_Melee" input="1"/>
+    <Ability id="GA_Fireball" input="2"/>
+    <Ability id="GA_Heal" input="3"/>
+    <Ability id="GA_Dash" input="4"/>
+    <Effect id="GE_ManaRegen"/>
+    <Tag tag="Team.Player"/>
+  </AbilitySet>
+
+  <AbilitySet id="Grunt">
+    <AttributeSet class="Combat">
+      <Attribute name="Health" base="40"/>
+      <Attribute name="MaxHealth" base="40"/>
+      <Attribute name="AttackPower" base="4"/>
+      <Attribute name="Armor" base="20"/>
+      <Attribute name="MoveSpeed" base="3"/>
+    </AttributeSet>
+    <Ability id="GA_EnemyMelee" input="1"/>
+    <Ability id="GA_Thorns"/>
+    <Tag tag="Team.Enemy"/>
+  </AbilitySet>
+
+  <AbilitySet id="Caster">
+    <AttributeSet class="Combat">
+      <Attribute name="Health" base="25"/>
+      <Attribute name="MaxHealth" base="25"/>
+      <Attribute name="AttackPower" base="6"/>
+      <Attribute name="Armor" base="0"/>
+      <Attribute name="MoveSpeed" base="2.2"/>
+    </AttributeSet>
+    <Ability id="GA_EnemyBolt" input="2"/>
+    <Tag tag="Team.Enemy"/>
+  </AbilitySet>
+
+</AbilityCatalog>

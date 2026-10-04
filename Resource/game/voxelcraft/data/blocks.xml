@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VoxelCraft 의 블록. 블록 번호는 이 순서로 1 부터 붙는다(0 은 공기) — 순서를 바꾸면 저장된 월드의 블록이 바뀐다.
+     tile · top · bottom · side 는 textures/blocks.dds 아틀라스(4 x 4 칸, 칸 64 텍셀)의 칸 번호다(Scripts/generate/GenerateGameTextures.py 의 kTilePainters).
+     hardness 는 맨손으로 부수는 데 걸리는 초, color 는 정점 색으로 곱해지는 틴트(알파 < 1 이면 반투명 메시로 간다). -->
+<BlockCatalog atlasColumns="4" atlasRows="4" tileTexels="64">
+  <Block id="grass" name="Grass" tile="2" top="0" side="1" hardness="0.6"/>
+  <Block id="dirt" name="Dirt" tile="2" hardness="0.5"/>
+  <Block id="stone" name="Stone" tile="3" hardness="1.5"/>
+  <Block id="sand" name="Sand" tile="4" hardness="0.5"/>
+  <Block id="water" name="Water" tile="5" solid="false" opaque="false" breakable="false" color="1 1 1 0.7"/>
+  <Block id="bedrock" name="Bedrock" tile="6" breakable="false"/>
+  <Block id="log" name="Oak Log" tile="7" top="8" bottom="8" hardness="1.0"/>
+  <Block id="leaves" name="Leaves" tile="9" hardness="0.2"/>
+  <Block id="planks" name="Planks" tile="10" hardness="1.0"/>
+  <Block id="cobblestone" name="Cobblestone" tile="11" hardness="1.6"/>
+  <Block id="brick" name="Bricks" tile="12" hardness="1.8"/>
+  <Block id="snow" name="Snow" tile="13" hardness="0.3"/>
+  <Block id="coal_ore" name="Coal Ore" tile="14" hardness="2.0"/>
+  <Block id="iron_ore" name="Iron Ore" tile="15" hardness="2.5"/>
+</BlockCatalog>

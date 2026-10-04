@@ -6,7 +6,7 @@
 
 #include "Engine/Localization/LocalizationManager.h"
 
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameService.h"
 
 namespace sw
 {

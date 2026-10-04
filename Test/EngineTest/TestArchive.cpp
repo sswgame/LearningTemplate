@@ -17,8 +17,8 @@
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
-#include "GameFramework/Base/SaveGame.h"
-#include "GameFramework/Kits/TurnBattle/SaveGame.h"
+#include "GameFramework/Framework/SaveGame.h"
+#include "GameFramework/Kits/Rpg/TurnBattle/SaveGame.h"
 
 #include "TestFramework/TestFramework.h"
 

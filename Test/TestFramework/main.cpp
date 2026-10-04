@@ -33,7 +33,7 @@
 #include "Engine/Utility/Debug/DebugOverlayState.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 

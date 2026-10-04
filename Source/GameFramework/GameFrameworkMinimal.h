@@ -5,10 +5,10 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 
-#include "GameFramework/Base/GameInstanceBase.h"
-#include "GameFramework/Base/GameService.h"
-#include "GameFramework/Base/IGame.h"
-#include "GameFramework/Base/SaveGame.h"
 #include "GameFramework/Data/GameSettings.h"
 #include "GameFramework/Data/GameStrings.h"
+#include "GameFramework/Framework/GameInstanceBase.h"
+#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Framework/IGame.h"
+#include "GameFramework/Framework/SaveGame.h"
 #include "GameFramework/GameFrameworkExports.h"

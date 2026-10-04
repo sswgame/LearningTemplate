@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- StarSkirmish 의 유닛 · 건물 · 자원(GF_RealTimeStrategy 의 RtsCatalog 형식).
+     kind = Unit(기본) · Building · Resource. producedBy = 만드는 건물(건물이면 짓는 일꾼), requires = 다 지어진 이 건물이 있어야 한다(테크).
+     hp · armor · speed(칸/초) · radius · sight(칸) · damage · range(몸 가장자리 사이 칸) · cooldown(초) · targets(Ground,Air).
+     minerals · gas = 값, supply = 쓰는 보급, provides = 주는 보급(상한 supplyMax), buildTime(초).
+     worker = 일꾼(gatherTime · cargo), depot = 자원을 내려놓는 본진, extractor = 가스 간헐천 위에 짓는 정제소, footprint = 건물 · 자원이 막는 칸(한 변).
+     AI 는 worker · command_center · supply_depot · barracks · marine 을 쓴다(SkirmishMatch). -->
+<RtsCatalog supplyMax="200">
+  <!-- 자원 -->
+  <Unit id="minerals" name="Mineral Field" kind="Resource" resource="Minerals" amount="1500" footprint="1"/>
+  <Unit id="rich_minerals" name="Rich Mineral Field" kind="Resource" resource="Minerals" amount="900" footprint="1"/>
+  <Unit id="geyser" name="Vespene Geyser" kind="Resource" resource="Gas" amount="2500" footprint="2"/>
+
+  <!-- 건물 -->
+  <Unit id="command_center" name="Command Center" kind="Building" hp="1500" armor="1" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="75" sight="10"/>
+  <Unit id="supply_depot" name="Supply Depot" kind="Building" hp="500" armor="1" footprint="2" provides="8" producedBy="worker" minerals="100" buildTime="25" sight="6"/>
+  <Unit id="refinery" name="Refinery" kind="Building" extractor="true" hp="750" armor="1" footprint="2" producedBy="worker" minerals="75" buildTime="25"/>
+  <Unit id="barracks" name="Barracks" kind="Building" hp="1000" armor="1" footprint="3" producedBy="worker" minerals="150" buildTime="50" requires="command_center"/>
+  <Unit id="academy" name="Academy" kind="Building" hp="600" armor="1" footprint="3" producedBy="worker" minerals="150" buildTime="50" requires="barracks"/>
+  <Unit id="factory" name="Factory" kind="Building" hp="1250" armor="1" footprint="3" producedBy="worker" minerals="200" gas="100" buildTime="60" requires="barracks"/>
+  <Unit id="starport" name="Starport" kind="Building" hp="1300" armor="1" footprint="3" producedBy="worker" minerals="150" gas="100" buildTime="55" requires="factory"/>
+  <Unit id="bunker" name="Bunker" kind="Building" hp="350" armor="1" footprint="2" damage="12" range="5" cooldown="1" targets="Ground,Air" producedBy="worker" minerals="100" buildTime="25" requires="barracks" sight="8"/>
+  <Unit id="missile_turret" name="Missile Turret" kind="Building" hp="200" footprint="2" damage="20" range="7" cooldown="1.2" targets="Air" producedBy="worker" minerals="75" buildTime="25" requires="academy" sight="11"/>
+
+  <!-- 유닛 -->
+  <Unit id="worker" name="Worker" hp="60" speed="2.8" radius="0.35" damage="5" range="0.2" cooldown="1.1" worker="true" producedBy="command_center" minerals="50" supply="1" buildTime="13" gatherTime="2.8" cargo="8" sight="7"/>
+  <Unit id="marine" name="Marine" hp="40" speed="2.25" radius="0.35" damage="6" range="4" cooldown="0.86" targets="Ground,Air" producedBy="barracks" minerals="50" supply="1" buildTime="18" sight="7"/>
+  <Unit id="firebat" name="Firebat" hp="50" armor="1" speed="2.25" radius="0.4" damage="16" range="0.6" cooldown="1.2" producedBy="barracks" minerals="50" gas="25" supply="1" buildTime="18" requires="academy" sight="7"/>
+  <Unit id="vulture" name="Vulture" hp="80" speed="4.4" radius="0.45" damage="20" range="4" cooldown="1.3" producedBy="factory" minerals="75" supply="2" buildTime="20" sight="8"/>
+  <Unit id="tank" name="Siege Tank" hp="150" armor="1" speed="2.0" radius="0.6" damage="30" range="7" cooldown="2.2" producedBy="factory" minerals="150" gas="100" supply="2" buildTime="38" sight="10"/>
+  <Unit id="goliath" name="Goliath" hp="125" armor="1" speed="2.2" radius="0.55" damage="12" range="5" cooldown="1.0" targets="Ground,Air" producedBy="factory" minerals="100" gas="50" supply="2" buildTime="30" requires="academy" sight="8"/>
+  <Unit id="wraith" name="Wraith" air="true" hp="120" speed="4" radius="0.5" damage="8" range="5" cooldown="1.5" targets="Ground,Air" producedBy="starport" minerals="150" gas="100" supply="2" buildTime="40" sight="7"/>
+</RtsCatalog>

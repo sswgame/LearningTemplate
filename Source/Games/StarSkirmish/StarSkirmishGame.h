@@ -1,0 +1,35 @@
+/**
+ * @file StarSkirmishGame.h
+ * @brief 실시간 전략 키트(GF_RealTimeStrategy)를 실제로 쓰는 시험 게임 — 일꾼으로 광물 · 가스를 캐고 보급고 · 병영을 지어 병력으로 상대 건물을 모두 부수는 1 대 1 입니다.
+ *
+ * @details 빌드: `cmake --preset <preset> -DSW_ACTIVE_GAME=StarSkirmish`. 조작은 `Source/Games/StarSkirmish/README.md`.
+ *          기본은 사람(파랑) 대 `RtsAiController`(빨강), `-gv_skirmishAutoPlay=1` 이면 AI 대 AI 로 승패까지 돌린다(입력 없이 한 판을 끝내는 확인).
+ */
+#pragma once
+#include "GameFramework/Framework/GameInstanceBase.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
+
+#include "Games/StarSkirmish/SkirmishWorld.h"
+
+namespace sw
+{
+    /** @brief 유닛 데이터(`units.xml`)를 읽어 게임 서비스로 걸고 한 판을 듭니다. */
+    class StarSkirmishGame : public GameInstanceBase
+    {
+    public:
+        StarSkirmishGame();
+        ~StarSkirmishGame() override;
+
+    protected:
+        void configureBootstrap( BootstrapConfig& outConfig ) override;
+        bool onInitialize() override;
+        void onShutdown() override;
+        void onUpdate( float32 deltaTime ) override;
+        void onBeforeStateSerialize() override;
+        void onAfterStateDeserialize() override;
+
+    private:
+        RtsCatalog    _unitCatalog;
+        SkirmishWorld _skirmishWorld;
+    };
+} // namespace sw

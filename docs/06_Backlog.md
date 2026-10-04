@@ -137,11 +137,46 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
+- **병합된 장르 키트 · 시험 게임의 실행 확인(2026-10-04 병합 뒤)** — 빌드 · 시험은 끝났다(Debug · Shipping ctest 전체, 키트 시험 · 네트워크 시험 3 회 통과).
+  남은 것: 시험 게임(`AbilityArena` · `HarvestValley` · `Shooter3D` · `ThemeParkTycoon` · `VoxelCraft` · `NileCity` · `StarSkirmish`)을 `-DSW_ACTIVE_GAME=<이름>` 으로
+  짓고 자동 플레이 스위치(`-gv_arenaAutoPlay=1` 등)와 `-gv_profileFrames=3600` 으로 네 백엔드에서 — 종료 코드 0, `[Error]` 0, 게임 로그가 오르는지.
+  눈으로 볼 것: 스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
+- **GameFramework 리뷰에서 미룬 것(빌드가 있어야 안전하다).** (1) `CameraControllerComponent`(Overworld) · `UnitStatsComponent`(ActionCombat)는 장르 무관이라
+  기반으로 옮길 감 — 리플렉션 컴포넌트가 DLL 을 옮기면 등록 모듈이 바뀌므로 씬 로드 · 핫 리로드를 돌려 보며 옮긴다. (2) `ZoneTracker` 의 `ZoneRole` 열거(센터 · 마트 ·
+  체육관…)와 클리어 게이트 역할을 데이터(태그 + 맵 칸)로 — 태그 미러는 이미 있다, 열거를 쓰는 곳 · 시험을 함께 바꾼다. (3) `ActionRoom` 의 방 배치 · 적 스탯 ·
+  투사체 값을 `MonsterCatalog` 로, 피해를 `UnitStatsComponent` 한 길로. (4) `BattleState` 의 단계 시간 · 피해식 · 경험치를 설정 구조체로, `_expNext` 로
+  레벨 업, 두 기술 가정(`FightMove0/1`) 걷기. (5) 세이브 키 조립(`"party" + i + ".pp0"`) 도우미, 수명 → 지우기 타이머 셋(`EffectBase` · `DamageUI` ·
+  `Projectile`) 하나로. **하지 않기로 한 것:** HP 바 · 피해 숫자의 매 틱 배치 예약을 "바뀔 때만" 으로 줄이는 것 — 월드 변환이 틱 **뒤에** 적용되므로 틱 안에서
+  자리 변화를 보면 움직이는 막대가 한 프레임씩 건너 늦는다. 줄이려면 변환 적용 뒤의 훅이 필요하다.
+- **어빌리티 시스템의 다음 조각(쓰는 게임이 생기면).** 언리얼 GAS 에 있고 여기 없는 것: 이펙트가 주는 어빌리티(장비가 스킬을 준다), 걸린 동안의 태그 조건
+  (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
+  어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.
 - **강체 · 고정 스텝 누적기가 없다.** `PhysicsWorld::step` 은 겹침 이벤트만 낸다. 강체가 생기면 적분과 누적기를 넣는다.
 - **리눅스에서 yad 만 깔린 기계에는 "All files" 필터가 없다**(`LinuxFileDialog.cpp`). `yad --file --file-filter='A | *.txt' --file-filter='All files | *'`
   가 뜨는지 확인한 뒤에만 `buildGtkStyleCommand( ..., true )` 로 바꾼다 — yad 가 인자를 거부하면 다이얼로그가 아예 안 뜬다.
 
+- **장르 공통 기반 · 새 키트의 첫 엔진 빌드(2026-10-03).** 위 두 항목과 같은 이유로 하네스로만 돌렸다. 기반의 새 폴더 —
+  `AI/` · `Navigation/` · `Combat/`(Shooter 키트에서 옮긴 무기 포함) · `Input/`(예전 `Control/`) · `Inventory/` · `Match/` · `Movement/` · `Progression/` · `Quest/` · `World/`,
+  `Input/TimingJudge` · `Utility/TimerQueue` · `Data/StatBlock` — 와 키트 `GF_CityBuilder` · `GF_RealTimeStrategy`. 하네스 통과: `NavigationTest` · `AiTest` ·
+  `CityBuilderTest` · `RealTimeStrategyTest` · `CombatTest` · `InventoryTest` · `ProgressionTest` · `QuestTest` · `WorldTest` · `MatchTest` · `ControlTest` · `PlatformerTest` ·
+  `GameFrameworkUtilTest`, 네트워크 — `Core/Network`(`NetworkTest` 6, 실제 UDP 로컬 송수신 포함) · 키트 `GF_NetClientServer` · `GF_NetLockstep` · `GF_NetTurnRelay` · `GF_NetMmo`
+  (`NetClientServerTest` · `NetLockstepTest` · `NetTurnRelayTest` · `NetMmoTest`). Windows 소켓 경로(`PlatformSocketUtil` 의 winsock 분기)는 **구문 검사도 못 했다**(리눅스뿐). 할 일: 재구성(새 폴더는 GLOB 이라 CMake 수정 없음 — `GF_Shooter` 가 빠졌으니 낡은 빌드의 `GF_Shooter.dll` 을 지운다) → Debug · Shipping →
+  `EngineTest --test_filter=` 위 스위트들. `GameFramework.dll` 이 커졌으니 `SW_GF_API` 내보내기 누락(링크 오류)부터 본다.
+- **새 장르 키트 22 개 · 시험 게임 둘의 첫 엔진 빌드(2026-10-03, 대기열은 모두 만들었다).** 하네스로만 돌렸다 — `GF_TacticsSrpg` · `GF_CardGame` · `GF_OpenWorldWestern` ·
+  `GF_WitcherRpg` · `GF_CreatureLife` · `GF_RestaurantSim` · `GF_SurvivalHorror` · `GF_SideScrollConquest` · `GF_Fighting` · `GF_ActionAdventure` · `GF_GhostHunt` ·
+  `GF_BattleRoyale` · `GF_CoopScavenger` · `GF_MonsterCollector` · `GF_ClassicJrpg` · `GF_Metroidvania` · `GF_ActionPlatformer` · `GF_KartRacing` · `GF_MechArena` ·
+  `GF_AsymmetricHorror` · `GF_PartyArena` · `GF_Rhythm`, 시험 게임 `NileCity` · `StarSkirmish`(화면 · 마우스 집기 · 카메라는 본 적이 없다 — 에디터 게임 뷰에서는
+  창 크기를 써서 커서가 어긋날 수 있다). 할 일: 재구성 → Debug · Shipping → 각 `<Kit>Test`, `SW_ACTIVE_GAME=NileCity` · `StarSkirmish` 로 한 번씩 띄워 보기.
+  키트가 많아져 `AppConfig.json` 의 `_listGameKitModule` 이 길다 — 게임이 쓰는 키트만 올리는 쪽으로 바꿀지 그때 본다.
+  **같은 빌드에서 GameFramework 폴더 재배치(2026-10-03)도 처음 확인한다** — `Base/` 를 `Framework` · `Components` · `Stage` · `Utility` · `Input` 으로 쪼개고
+  (`Transition` · `Control` 은 합침, `ItemBag` → `Inventory`, `GameFlags` → `World`), 키트를 `Kits/<장르 묶음>/<키트>` 로 옮겼다. 재구성(`cmake --preset`)으로
+  GLOB · 리플렉션 헤더 목록을 다시 모아야 한다 — 낡은 빌드 폴더의 `generated/**/Base/*.gen.cpp` 가 남아 같은 타입이 두 번 등록되면 그 폴더를 지운다.
+
 ### 1-7. Core · 태스크
+
+- **Windows UDP 소켓 설정은 Windows 에서 돌려 보지 않았다**(2026-10-03 네트워크 정리). `PlatformSocketUtil` 의 `SIO_UDP_CONNRESET` 끄기(`_WSAIOW( IOC_VENDOR, 12 )`),
+  `SO_RCVBUF` · `SO_SNDBUF` 1 MB, `waitReadable` 의 `WSAPoll` — Windows 빌드에서 `NetworkTest.UdpTransportSendsDatagramsOverLocalhost` 와
+  `NetworkThreadTest.UdpHostsRunOnThreadsOverLocalhost` 를 돌리고, 닫힌 포트로 보낸 뒤에도 `receive` 가 계속 되는지 본다.
 
 - **sw 할당자 밖 누적 할당의 85 % 는 `FileUtil` 의 `std::filesystem` 이다**(기동 ~670 KB / 1 만 회 — collectFiles · fileExists · 디렉터리 순회). 할당자 인자가 없는
   표준 API 라 줄이려면 Win32 · POSIX 순회로 바꾼다. 상주량은 1 KB 미만이라 전역 operator new 교체는 하지 않는다(사용자 결정).
@@ -259,7 +294,12 @@ cd build/Ninja-Debug/Bin
 ## 3. 참고 — 다음 작업에 필요한 것
 
 끝낸 일에서 남긴 교훈만 모았다. 사연은 `git log` 에 있다 — 여기에는 다시 물릴 함정, 지켜야 할 계약, 되돌리면 안 되는 결정, 재는 법만 적는다.
+
 같은 내용이 `AGENTS.md` · 폴더 `README.md` · 코드 주석에 정본으로 있으면 그쪽을 가리킨다.
+
+- **`drainEvents` 는 붙이고 비운다(2026-10-03 통일).** 바꿔치기(`swap` · `std::move`) 하던 18 곳을 맞췄다 — 바꿔치기는 받는 쪽 목록의 앞 내용을 지우고, 붙이기에
+  익숙한 호출부는 같은 알림을 매 프레임 다시 받는다(StarSkirmish 에서 패배 로그가 두 번). 매 프레임 같은 목록을 쓰는 쪽이 먼저 `clear()` 한다.
+- **키트 커밋은 저장소가 고정한 clang-format(`Tools/LLVM/bin/clang-format`, 20)으로.** 시스템의 18 은 멤버 포인터(`float32 Foo::*_pMember`) 줄을 다르게 맞춰 린트가 막는다.
 
 ### 3-1. 측정 · 프로파일
 
@@ -298,6 +338,9 @@ cd build/Ninja-Debug/Bin
   오프스크린 · 한 프레임 도우미(`makeSingleTargetPsoDesc` · `beginOffscreenRenderPass` · `countPrimaryColorPixels` · `renderSceneFrame`)를 먼저 볼 것.
 - **macOS 는 지원 대상이 아니다** — 코드는 10-04 에 지웠고 `CheckTargetMacros` 가 `SW_PLATFORM_MACOS` 를 막는다. 되살리려면 그 전 git 기록에서. `Vcpkg.cmake` 의 APPLE 갈래 ·
   레거시 스탬프 이관과 `arm64-osx` · `x64-osx` 트리플릿은 손대지 않는 파일이라 사용자가 정리한다.
+- **ThreadSanitizer 는 이 리눅스 환경의 clang 18 에 런타임이 없다** — clang 으로 `-fsanitize=thread` 컴파일하고 링크만 gcc 의
+  `/usr/lib/x86_64-linux-gnu/libtsan.so.2` 를 직접 붙이면 돈다(`setarch -R` 으로 ASLR 을 끈다). 일부러 만든 경합을 잡는 것까지 확인했다(2026-10-03,
+  `NetworkThreadTest`). 잠금 · 스레드를 바꾼 뒤 그 시험만 이렇게 돌린다.
 
 - **CoreTest 는 엔진을 쓰지 않는다** — include 경로로는 막을 수 없다(`TestFramework` 가 Engine 을 PUBLIC 링크, `TestFramework.h` → `EngineMinimal.h`).
   `CheckTestSuites` 규칙 6 이 CoreTest 파일의 직접 Engine · GameFramework · Editor include 와 `engine::` 호출을 막는다. 엔진 타입이 필요하면 지역 대역을 쓰거나 EngineTest 에.
@@ -571,6 +614,9 @@ cd build/Ninja-Debug/Bin
 - **"헤더 혼자 빼도 선다" 는 "아무도 안 쓴다" 가 아니다** — `RunForwardDeclarationCandidates --verify-unused` 가 고른 120 건을 지우자 소비자 TU 에서 오류 2790 개가
   났다(거쳐 받던 `RHIBackend` · `IRHIResourceFactory`, NOMINMAX 가 `windows.h` 보다 먼저 오던 순서가 깨져 `std::max` 가 매크로에 먹힘). 보고는 "후보" 로만 쓰고, 지울 때는
   그 헤더를 include 하는 TU 전부를 다시 지어 본다.
+- **리눅스에서만 지은 코드를 들일 때** — 윈도우 매크로 `near` · `far` · `small` 와 겹치는 이름, DLL 이 내보내지 않은 타입(`SW_GF_API` — 리눅스 .so 는 다 내보낸다),
+  같은 이름의 타입이 두 모듈에 있는 ODR 위반(`CheckDuplicateTypeNames` 가 막는다)을 먼저 본다. 병렬 본문은 컨테이너를 만지지 않고 나누기 전에 받은 포인터로만
+  접근한다(`NetParallelScratch` · `engine::runParallel` — 컨테이너 `operator[]` 는 경합 검출기에 쓰기로 세어진다).
 - **GPU 메모리는 `RHIMemoryLedger` 가 센다** — 생성은 핸들 표에 넣는 자리, 해제는 지연 해제 콜백에서만 적는다(destroy 요청 시점이 아니다). 새 자원 경로를
   더하면 거기서 `recordAllocation` / `recordFree` 를 부른다. Vulkan `heapUsage`(이 AMD 드라이버)는 `vkAllocateMemory` 합뿐이라 "엔진 밖" ≈ 0 — 스왑체인 몫은
   DX12 · DX11 수치로 본다. GL 은 벤더 확장이 없으면 사용량이 "모름" 이다. DX11 · GL 은 할당 크기 API 가 없어 논리 크기다.
@@ -878,6 +924,9 @@ cd build/Ninja-Debug/Bin
 
 - **Debug 기동은 CRT 누수 보고를 stderr 로도 낸다**(`EngineBootstrap` 의 진단 갈래가 `MemoryProfiler::enableMemoryLeakChecks` 를 부른다 — 누수 덤프가 콘솔 · CI 로그에
   나온다, `MemoryTagTest.DiagnosticBootstrapEnablesPlatformLeakChecks`).
+- **확인만 담은 패킷이 확인을 부르면 한가한 연결이 30 Hz 로 핑퐁한다**(`NetConnection` 확인 요청 비트의 이유). 요청을 끄면 거꾸로 두 쪽 유지 시각이 맞물려 한쪽은
+  늘 답만 보내 RTT 표본이 0 이 된다 — 그래서 답이라도 마지막 요청에서 유지 간격이 지나면 요청한다. RTT 는 "요청 패킷이 가장 새 확인으로" 돌아올 때만 잰다(묶음으로 늦게
+  확인된 것은 상대가 기다렸다 보낸 시간이 섞인다).
 
 - **보고의 "(sw 할당자 밖)" 은 CRT 합 − 태그 합**이라 프로파일러보다 먼저 잡힌 sw 블록도 들어간다 — MemoryProfiler 는 부트스트랩 맨 앞에서 선다. 새 스레드는 Unknown
   에서 시작하므로 띄운 쪽의 태그를 인자로 넘겨 첫 줄에서 건다. 배열은 `sw_new_array` · `make_unique<T[]>`(맨 `new` 는 `Style/RawNew` 가 막는다). 외부 라이브러리는
@@ -968,7 +1017,11 @@ cd build/Ninja-Debug/Bin
   한 배치). 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`, 글리프 · 클립은 `Scripts/generate/GenerateSpriteTextures.py`.
 - **GameSettings** 는 `GameInstanceBase::initialize` 가 서비스로 묶는다. 언어 코드는 `LocalizationManager::normalizeLanguageCode` 의 철자 하나. 로컬라이제이션 조회의 `const utf8*` 는 추가 전용
   `LocalizedTextArena` 에 있어 영구 유효하다. 대화 핀 번호(`nodeId * 100 + offset`)는 디스크 포맷이고 주인은 `DialogueGraphAsset` 하나다.
-- **키트 소속은 의존 관계로 판별되지 않는다**(전부 Engine 만 include). 다른 장르도 쓰는 것(HP 바 · 데미지 숫자 · 중력)은 `UI/` · `Base/`. 리플렉션 대상 헤더는 소스와 같은 재귀 규칙으로
+- **어빌리티 시스템** — 다른 오브젝트로 가는 적용 · 이벤트는 `applyGameplayEffectSpecToTarget` · `sendGameplayEventToTarget` 로만(틱 중이면 틱 직후로 미룬다 —
+  남의 `applyGameplayEffectSpecToSelf` 를 틱 안에서 직접 부르면 미루지 않는다). 활성 이펙트 · 스펙은 `unique_ptr` 목록이고 콜백 도중 지우기는 표시만 한다
+  (`ScopedListLock` 이 풀릴 때 지운다) — 콜백이 목록을 늘리거나 줄여도 도는 포인터가 산다. 게임 모듈의 어빌리티는 컴포넌트의 `IModuleUnloadListener` 가 모듈을
+  내리기 전에 거둔다. 카탈로그는 컴포넌트에 박지 말고 게임 서비스로 건다(리로드 뒤 옛 카탈로그를 가리킨다).
+- **키트 소속은 의존 관계로 판별되지 않는다**(전부 Engine 만 include). 다른 장르도 쓰는 것(HP 바 · 데미지 숫자 · 중력)은 `UI/` · `Components/`. 리플렉션 대상 헤더는 소스와 같은 재귀 규칙으로
   모은다(다르면 새 폴더의 `REFLECT` 타입이 컴파일되고 등록만 안 된다).
 - **설정 표의 열쇠는 타입이다**(`ensureConfig<T>( path, generated )`). Shipping 은 디스크의 `Config/` 를 보지 않는다. 고정 스텝 상한은 `EngineConfig::_fixedDeltaTime` · `_maxFixedStepPerFrame`
   (넘친 잔액은 버린다). `ModuleFrameState` 래치 지점이 둘인 것은 의도다(옮기면 에디터 Step 한 칸이 틱 없이 소비된다).

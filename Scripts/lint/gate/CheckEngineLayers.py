@@ -6,7 +6,7 @@ Engine 레이어 금지 include 검사.
 강제 규칙:
   1) Source/Engine/** 에서 Editor / GameFramework / Games 경로 include 금지.
   2) Source/Games/**, Source/GameFramework/** 에서 Engine/Common/EngineServices.h 금지
-     (게임 쪽은 GameFramework/Base/GameService.h 의 game:: 만 사용).
+     (게임 쪽은 GameFramework/Framework/GameService.h 의 game:: 만 사용).
   3) Engine 내부 티어: 아래 티어가 위 티어를 include 하지 못한다 (_kEngineTier).
      `Graphics/Renderer` 만 최상위 폴더보다 잘게 본다 — 그리는 쪽은 씬 위, 나머지 Graphics 는 컴포넌트 아래.
 

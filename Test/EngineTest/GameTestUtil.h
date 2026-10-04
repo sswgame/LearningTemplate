@@ -3,7 +3,7 @@
  * @brief GameFramework 단위 테스트 격리를 위한 테스트 유틸리티.
  */
 #pragma once
-#include "GameFramework/Base/GameService.h"
+#include "GameFramework/Framework/GameService.h"
 
 namespace sw::test
 {
@@ -26,7 +26,10 @@ namespace sw::test
         ScopedGameServiceBinding( ScopedGameServiceBinding&& )                 = delete;
         ScopedGameServiceBinding& operator=( ScopedGameServiceBinding&& )      = delete;
     };
+} // namespace sw::test
 
+namespace sw::test
+{
     /** @brief 게임 로컬 서비스 하나(`game::bindLocalService<T>`)를 스코프 동안 묶는 RAII 가드입니다 — 어서션이 빠져나가도 풀립니다. */
     template <typename T>
     class ScopedLocalServiceBinding

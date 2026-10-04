@@ -1,11 +1,68 @@
 # ==============================================================================
 # @file Source/GameFramework/Kits/CMakeLists.txt
-# @brief GameFramework 장르 키트 (Overworld / TurnBattle / ActionCombat)
+# @brief GameFramework 장르 키트 (장르별 — 목록은 README)
 # ==============================================================================
 
+# 키트는 서로 독립이고 모두 GameFramework 를 링크한다. 폴더는 `<장르 묶음>/<키트>`, 타겟은 `GF_<키트>`(묶음 이름은 타겟에 들지 않는다).
+
 # ------------------------------------------------------------------------------
-# 1) 장르 키트 — 서로 독립, 모두 GameFramework를 링크
+# 1) 액션 · 대전
 # ------------------------------------------------------------------------------
-add_subdirectory(Overworld)
-add_subdirectory(TurnBattle)
-add_subdirectory(ActionCombat)
+add_subdirectory(Action/ActionAdventure)
+add_subdirectory(Action/ActionCombat)
+add_subdirectory(Action/ActionPlatformer)
+add_subdirectory(Action/BattleRoyale)
+add_subdirectory(Action/Fighting)
+add_subdirectory(Action/MechArena)
+add_subdirectory(Action/Metroidvania)
+
+# ------------------------------------------------------------------------------
+# 2) 공포 · 조사
+# ------------------------------------------------------------------------------
+add_subdirectory(Horror/AsymmetricHorror)
+add_subdirectory(Horror/CoopScavenger)
+add_subdirectory(Horror/GhostHunt)
+add_subdirectory(Horror/SurvivalHorror)
+
+# ------------------------------------------------------------------------------
+# 3) RPG
+# ------------------------------------------------------------------------------
+add_subdirectory(Rpg/ClassicJrpg)
+add_subdirectory(Rpg/MonsterCollector)
+add_subdirectory(Rpg/OpenWorldWestern)
+add_subdirectory(Rpg/Overworld)
+add_subdirectory(Rpg/TurnBattle)
+add_subdirectory(Rpg/WitcherRpg)
+
+# ------------------------------------------------------------------------------
+# 4) 전략
+# ------------------------------------------------------------------------------
+add_subdirectory(Strategy/CityBuilder)
+add_subdirectory(Strategy/RealTimeStrategy)
+add_subdirectory(Strategy/SideScrollConquest)
+add_subdirectory(Strategy/TacticsSrpg)
+
+# ------------------------------------------------------------------------------
+# 5) 시뮬레이션 · 생활
+# ------------------------------------------------------------------------------
+add_subdirectory(Simulation/CreatureLife)
+add_subdirectory(Simulation/Farming)
+add_subdirectory(Simulation/RestaurantSim)
+add_subdirectory(Simulation/ThemePark)
+add_subdirectory(Simulation/Voxel)
+
+# ------------------------------------------------------------------------------
+# 6) 캐주얼 · 파티
+# ------------------------------------------------------------------------------
+add_subdirectory(Casual/CardGame)
+add_subdirectory(Casual/KartRacing)
+add_subdirectory(Casual/PartyArena)
+add_subdirectory(Casual/Rhythm)
+
+# ------------------------------------------------------------------------------
+# 7) 네트워크 방식 — 장르 키트는 이것들을 include 하지 않는다(게임이 둘을 잇는다)
+# ------------------------------------------------------------------------------
+add_subdirectory(Network/NetClientServer)
+add_subdirectory(Network/NetLockstep)
+add_subdirectory(Network/NetMmo)
+add_subdirectory(Network/NetTurnRelay)

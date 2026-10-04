@@ -13,13 +13,13 @@
 
 #include "EngineTest/TestGameObjectMocks.h"
 
-#include "GameFramework/Base/GameEvents.h"
-#include "GameFramework/Base/GameService.h"
-#include "GameFramework/Kits/ActionCombat/ActionCombatEvents.h"
-#include "GameFramework/Kits/ActionCombat/ActionRoom.h"
-#include "GameFramework/Kits/ActionCombat/MeleeHitboxComponent.h"
-#include "GameFramework/Kits/ActionCombat/ProjectileComponent.h"
-#include "GameFramework/Kits/ActionCombat/UnitStatsComponent.h"
+#include "GameFramework/Framework/GameEvents.h"
+#include "GameFramework/Framework/GameService.h"
+#include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
+#include "GameFramework/Kits/Action/ActionCombat/ActionRoom.h"
+#include "GameFramework/Kits/Action/ActionCombat/MeleeHitboxComponent.h"
+#include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
+#include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
 #include "GameFramework/UI/DamageNumberComponent.h"
 #include "GameFramework/UI/HealthBarComponent.h"
 
@@ -896,6 +896,7 @@ SW_TEST_CASE( ActionCombatTest, UnitSpawnsDamageNumbersWhenAsked )
     } );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listNumber.size() );
     SW_EXPECT_EQUAL( 20, listNumber[0]->getDamageValue() );
+    SW_EXPECT_TRUE( listNumber[0]->getLifeTime() > 0.0f ); // 떠오르다 사라진다 — 예전에는 수명이 0 이라 영영 남았다
     const SceneComponent* pNumberRoot = listNumber[0]->getOwner()->getPrimarySceneComponent();
     SW_ASSERT_NOT_NULL( pNumberRoot );
     const float3 expected = float3( 2.0f, 0.0f, 0.0f ) + pShown->getDamageNumberOffset();
