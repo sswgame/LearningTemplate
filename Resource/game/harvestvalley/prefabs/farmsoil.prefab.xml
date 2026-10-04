@@ -1,0 +1,21 @@
+<Prefab formatVersion="0" name="FarmSoil">
+	<GameObject _schemaVersion="0" _name="FarmSoil" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="0.96,0.08,0.96"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="None"
+			               _meshId="Cube"
+			               _materialPath="engine/materials/defaultmaterial.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<FarmSoilComponent _componentName="FarmSoilComponent" _bActive="true" _director="0" _tileIndex="-1" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

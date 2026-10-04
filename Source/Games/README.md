@@ -59,7 +59,7 @@ GameFramework → 키트 → `SWGame` 순). 이때는 타입만 등록하고, `S
 ## 새 게임 = 씬 + 프리팹 + 디렉터 · 뷰 컴포넌트
 
 게임 클래스(`XxxWorld`)가 코드로 오브젝트를 만들고 매 프레임 밀어 넣는 대신, 상용 엔진처럼 나눕니다. `ThemeParkTycoon` 이 이 모양입니다
-(`ThemeParkTycoon/README.md`). 다른 시험 게임(`PrimitiveStage` 를 쓰는 다섯)은 아직 옛 모양입니다.
+(`ThemeParkTycoon/README.md`), `HarvestValley` 도 같은 모양입니다. 다른 시험 게임(`PrimitiveStage` 를 쓰는 넷)은 아직 옛 모양입니다.
 
 | 무엇 | 어디 |
 |------|------|
