@@ -717,6 +717,31 @@ SW_TEST_CASE( AppSmokeTest, TextureCheckRunsHeadlessThroughTheEditorModule )
 #endif
 }
 
+#if defined( SW_DEBUG ) && !defined( SW_SHIPPING )
+/**
+ * @brief [AppSmokeTest] 헤드리스 작업도 종료 때 누수를 기준선과 견준다(기준선 없는 통째 덤프가 아니다)
+ * @details 보통 실행은 기동 끝에서 CRT 누수 기준선을 잡는다. 헤드리스 작업(셰이더 · 씬 쿠킹, 텍스처 임포트 · 대조)은 그 자리에 닿지 않고 끝나,
+ *          기준선이 없으면 종료 때 살아 있는 블록 전부(수백 개)를 누수로 찍는다 — 진짜 누수가 그 소음에 묻힌다. 작업 직전에 기준선을 잡는다.
+ */
+SW_TEST_CASE( AppSmokeTest, HeadlessRunReportsLeaksAgainstABaseline )
+{
+    const AppRunResult result = runApp( "--check-textures", "[MemoryLeak]" );
+    SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다" );
+    SW_EXPECT_TRUE_MSG( result._exitCode == 0, result._firstErrorLine.c_str() );
+
+    bool bBaselineCaptured = false;
+    bool bComparedClean    = false;
+    for ( const string& line : result._listMarkedLine )
+    {
+        SW_EXPECT_TRUE_MSG( line.find( "no baseline" ) == string::npos, line.c_str() );
+        bBaselineCaptured = bBaselineCaptured || line.find( "baseline captured" ) != string::npos;
+        bComparedClean    = bComparedClean || line.find( "no CRT leaks" ) != string::npos;
+    }
+    SW_EXPECT_TRUE_MSG( bBaselineCaptured, "헤드리스 실행이 누수 기준선을 잡지 않았다" );
+    SW_EXPECT_TRUE_MSG( bComparedClean, "헤드리스 실행의 종료 누수 보고가 기준선 대비 깨끗하지 않다" );
+}
+#endif
+
 /**
  * @brief [AppSmokeTest] 벤치 큐브 한 장면이 백엔드마다 골든 이미지와 같다(`Test/AppTest/Golden`)
  * @details `-gv_benchAnimate=0` 이면 프레임이 결정적이라 기준 이미지를 둘 수 있다. 기준은 **백엔드마다** 하나다 — 백엔드끼리 래스터 결과가

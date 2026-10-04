@@ -97,7 +97,7 @@ def runHeadlessTask(
     cwd: Path | None = None,
     bCapture: bool = False,
 ) -> subprocess.CompletedProcess:
-    """App.exe 를 헤드리스 작업 인자로 돌립니다 (쿠킹·쿠킹이 같은 모양이라 한 자리에 둡니다)."""
+    """App.exe 를 헤드리스 작업 인자로 돌립니다 (셰이더 · 씬 쿠킹과 텍스처 임포트가 같은 모양이라 한 자리에 둡니다)."""
     return subprocess.run(
         [str(appExe), *arguments],
         cwd=str(cwd) if cwd else None,

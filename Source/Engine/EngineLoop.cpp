@@ -293,9 +293,12 @@ namespace sw
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
+            // 헤드리스 작업은 보통 실행이 누수 기준선을 잡는 자리(`initialize` 끝)에 닿지 않는다. 기준선이 없으면 종료 때 살아 있는 블록을 모두
+            // 누수로 찍으므로, 작업 직전에 같은 기준선을 잡는다 — 작업이 만든 것을 종료까지 놓지 않을 때만 누수로 보인다.
             bool bCookShaders = false;
             if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SHADERS, bCookShaders ) && bCookShaders )
             {
+                MemoryProfiler::captureMemoryLeakBaseline();
                 loop._bHeadless = true;
                 SW_LOG_INFO( "Starting Headless (CookShaders)..." );
                 const ShaderCookSummary summary = ShaderCookDriver::cookAllShaders();
@@ -308,6 +311,7 @@ namespace sw
             bool bCookScenes = false;
             if ( loop._owned._pCommandLineManager->getArgument( CommandLineArgument::COOK_SCENES, bCookScenes ) && bCookScenes )
             {
+                MemoryProfiler::captureMemoryLeakBaseline();
                 loop._bHeadless = true;
                 string cookedDir;
                 loop._owned._pCommandLineManager->getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
@@ -334,6 +338,7 @@ namespace sw
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
             if ( bImportTextures || bCheckTextures )
             {
+                MemoryProfiler::captureMemoryLeakBaseline();
                 loop._bHeadless = true;
                 SW_LOG_INFO( "Starting Headless (%#Textures)...", bCheckTextures ? "Check" : "Import" );
                 return EngineInitResult::SkipDependents;
@@ -590,7 +595,7 @@ namespace sw
         const bool bStarted = _startup.initializeAll( *this );
         if ( bStarted == false )
             return false;
-        // 헤드리스 작업(쿠킹 · 쿠킹)은 RHI 이후 단계를 건너뛰고 여기서 끝난다.
+        // 헤드리스 작업(셰이더 · 씬 쿠킹, 텍스처 임포트)은 RHI 이후 단계를 건너뛰고 여기서 끝난다. 누수 기준선은 그 작업 직전에 잡았다.
         if ( _bHeadless )
             return true;
 
