@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Data/CustomizationValueSet.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -15,14 +16,23 @@ namespace sw
     class ItemBag;
     class ItemCatalog;
 
-    /** @brief 칸 하나에 든 것입니다. */
+    /**
+     * @brief 칸 하나에 든 것입니다.
+     * @details 인스턴스 상태(꾸미기 값 · 피해 · 떨어져 나간 부품)는 그 아이템 하나를 따라다닙니다 — 세이브 · 네트워크도 이 칸을 그대로 싣습니다.
+     *          인스턴스 상태가 있는 것은 같은 id 와 겹치지 않습니다(`hasInstanceState`).
+     */
     struct ItemStack
     {
-        hashed_string _itemId{};
-        int32         _count{ 0 };
-        float32       _durability{ 0.0f }; ///< 닳는 아이템만(겹치지 않는다)
+        CustomizationValueSet _customization{};    ///< 아이템 인스턴스의 꾸미기 값(염색 · 부착물 · 변형 — 외형 스키마가 뜻을 정한다)
+        vector<hashed_string> _listDetachedPart{}; ///< 맞아서 떨어져 나간 외형 부품 이름(모자가 날아감 · 갑옷 판이 깨짐)
+        hashed_string         _itemId{};
+        int32                 _count{ 0 };
+        float32               _durability{ 0.0f }; ///< 닳는 아이템만(겹치지 않는다)
+        float32               _damage{ 0.0f };     ///< 맞아서 입은 외형 피해 0..1(내구도와 별개로 쌓는다 — 외형 피해 단계는 둘 중 큰 쪽)
 
         bool isEmpty() const { return _count <= 0; }
+        /** @brief 겹치면 잃는 인스턴스 상태가 있는가입니다. */
+        bool hasInstanceState() const { return _customization.isEmpty() == false || _listDetachedPart.empty() == false || _damage > 0.0f; }
     };
 } // namespace sw
 

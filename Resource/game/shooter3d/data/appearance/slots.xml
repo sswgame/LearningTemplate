@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shooter3D 의 장비 칸. 표 순서가 해석 순서다. accept 는 받는 아이템 종류(ItemDef 의 slot) — 생략하면 칸 이름과 같다.
+     Equipment::initialize 의 칸 문자열은 SlotTable::makeEquipmentLayout 이 이 표에서 만든다. 양손 무기는 보조 손을 가린다. -->
+<SlotTable>
+  <Slot name="Head"/>
+  <Slot name="Body"/>
+  <Slot name="Feet"/>
+  <Slot name="Shoulder"/>
+  <Slot name="Back"/>
+  <Slot name="MainHand" accept="Weapon"/>
+  <Slot name="OffHand" accept="Weapon"/>
+  <Slot name="Holster" accept="Sidearm"/>
+  <Occupancy id="TwoHanded" slots="MainHand,OffHand"/>
+</SlotTable>

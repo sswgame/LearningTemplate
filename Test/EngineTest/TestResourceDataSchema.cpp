@@ -18,9 +18,11 @@
 #include "Engine/Scene/SceneDocument.h"
 
 #include "GameFramework/Ability/AbilityCatalog.h"
+#include "GameFramework/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Camera/CameraPreset.h"
 #include "GameFramework/Combat/Weapon.h"
 #include "GameFramework/Data/GameSettings.h"
+#include "GameFramework/Inventory/ItemCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Simulation/ThemePark/ParkLayout.h"
@@ -130,6 +132,22 @@ namespace
         static bool isCoasters( sw::string_view resourceId ) { return isGameData( resourceId, "/data/coasters.xml" ); }
         static bool isParkLayout( sw::string_view resourceId ) { return isGameData( resourceId, "/data/rides.xml" ); }
         static bool isGameSettings( sw::string_view resourceId ) { return isGameData( resourceId, "/data/gamesettings.xml" ); }
+        static bool isItems( sw::string_view resourceId ) { return isGameData( resourceId, "/data/items.xml" ); }
+        static bool isAppearanceData( sw::string_view resourceId )
+        {
+            return startsWith( resourceId, "game/" ) && resourceId.find( "/data/appearance/" ) != sw::string_view::npos && endsWith( resourceId, ".xml" );
+        }
+        /** @brief 외형 데이터는 폴더 한 벌로 읽고 서로 대조한다 — 아이템은 같은 게임의 `data/items.xml` 이다. 파일마다 폴더 전체를 읽는다(작다). */
+        static bool loadAppearanceData( const sw::string& resourceId )
+        {
+            const sw::string folder    = sw::FileUtil::getDirectoryPart( resourceId );
+            const sw::string itemsPath = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( sw::FileUtil::trimTrailingSlashes( folder ) ), "items.xml" );
+            sw::ItemCatalog  items;
+            if ( items.loadFromResource( itemsPath ) == false )
+                return false;
+            sw::AppearanceDatabase database;
+            return database.loadFromFolder( folder, &items );
+        }
         static bool loadGameSettings( const sw::string& resourceId )
         {
             sw::GameSettings settings;
@@ -166,6 +184,8 @@ namespace
             {           "coasters",            &isCoasters, &loadCatalog<sw::CoasterLayoutCatalog>},
             {         "parklayout",          &isParkLayout,                        &loadParkLayout},
             {       "gamesettings",        &isGameSettings,                      &loadGameSettings},
+            {              "items",               &isItems,          &loadCatalog<sw::ItemCatalog>},
+            {         "appearance",      &isAppearanceData,                    &loadAppearanceData},
         };
 
         /**

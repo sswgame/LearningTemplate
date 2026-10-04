@@ -117,13 +117,13 @@ namespace sw
         if ( stack.isEmpty() )
             return true;
         const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( stack._itemId ) : nullptr;
-        if ( pDef == nullptr || pDef->_maxDurability <= 0.0f )
+        if ( ( pDef == nullptr || pDef->_maxDurability <= 0.0f ) && stack.hasInstanceState() == false )
         {
             if ( hasRoomFor( stack._itemId, stack._count ) == false )
                 return false;
             return addItem( stack._itemId, stack._count ) == stack._count;
         }
-        // 닳는 아이템은 내구도를 지닌 채 빈 칸 하나에.
+        // 닳는 아이템 · 인스턴스 상태가 있는 아이템은 그것을 지닌 채 빈 칸 하나에.
         if ( computeWeightRoom( stack._itemId, 1 ) < 1 )
             return false;
         for ( ItemStack& slot : _listSlot )
