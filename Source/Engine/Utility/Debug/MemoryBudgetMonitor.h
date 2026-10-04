@@ -40,6 +40,12 @@ namespace sw
         [[nodiscard]] bool loadBudgetFile( string_view absolutePath );
 
         /**
+         * @brief `-gv_memoryTracking` 을 프로파일러에 겁니다. 명령줄을 읽은 바로 뒤(`EngineLoop::initialize`)에 불러야 기동의 할당부터 셉니다 — 첫 프레임까지
+         *        기다리면 기동 중에 잡은 블록이 태그 줄에 없다. 프레임 끝(`onFrameEnd`)도 값이 바뀌었으면 다시 겁니다.
+         */
+        void applyTrackingSetting();
+
+        /**
          * @brief 프레임 끝에 한 번 부릅니다 — `-gv_memoryTracking` 적용, 예산 검사(새로 넘은 태그 경고), `-gv_memoryReport` 보고, FrameProfiler 카운터.
          * @details 프로파일러가 없으면(배포본) 바로 돌아옵니다. 추적이 꺼져 있으면 예산 검사도 하지 않습니다(값이 움직이지 않는다).
          */

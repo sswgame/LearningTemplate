@@ -162,14 +162,14 @@ namespace
 #if !defined( SW_SHIPPING )
     /**
      * @brief `-gv_profileFrames` 보고의 태그 줄에서 @p tagName 줄의 KB 정수부를 읽습니다. 줄이 없으면(그 태그가 0 바이트) 0 입니다.
-     * @details 줄 모양: `[Profile]   Editor  15538.7 KB  77.6%  2383 blocks`. `runApp` 에 표식 `"[Profile]   "` 을 주고 돌린 결과를 넘깁니다.
+     * @details 줄 모양: `[Memory]   Editor  15538.7 KB  77.6%  2383 blocks | peak …`. `runApp` 에 표식 `"[Memory]   "` 을 주고 돌린 결과를 넘깁니다.
      */
     uint64 findMemoryTagKilobytes( const AppRunResult& result, string_view tagName )
     {
         for ( const string& line : result._listMarkedLine )
         {
             const string_view text{ line };
-            const size_t      nameStart = text.find_first_not_of( ' ', string_view{ "[Profile]" }.size() );
+            const size_t      nameStart = text.find_first_not_of( ' ', string_view{ "[Memory]" }.size() );
             const size_t      nameEnd   = nameStart == string_view::npos ? string_view::npos : text.find( ' ', nameStart );
             if ( nameEnd == string_view::npos || text.substr( nameStart, nameEnd - nameStart ) != tagName )
                 continue;
@@ -183,13 +183,13 @@ namespace
     constexpr uint64 kMaxUnknownTagKilobytes = 8;
 
     /**
-     * @brief 보고의 "sw 할당자 밖" 줄(`[Profile]   (sw 할당자 밖 — …)  19.8 KB`)의 KB 정수부입니다. 줄이 없으면(CRT 힙을 잴 수 없는 구성) 0 입니다.
+     * @brief 보고의 "sw 할당자 밖" 줄(`[Memory]   (outside the sw allocator — …)  19.8 KB`)의 KB 정수부입니다. 줄이 없으면(CRT 힙을 잴 수 없는 구성) 0 입니다.
      */
     uint64 findOutsideAllocatorKilobytes( const AppRunResult& result )
     {
         for ( const string& line : result._listMarkedLine )
         {
-            if ( line.find( "(sw " ) == string::npos )
+            if ( line.find( "(outside the sw allocator" ) == string::npos )
                 continue;
             const size_t closeIndex = line.rfind( ')' );
             if ( closeIndex == string::npos )
@@ -399,7 +399,7 @@ SW_TEST_CASE( AppSmokeTest, EditorStartupSceneIsTheSceneThatOpens )
 
 /**
  * @brief [AppSmokeTest] 에디터를 켠 기동의 메모리가 용도 태그로 나뉘어 보고되는가
- * @details `-gv_profileFrames` 보고의 태그 줄(`[Profile]   <태그>  <KB> KB  <몫>%  <블록> blocks`)을 읽는다. ImGui 의 할당(폰트 아틀라스 · 드로 리스트 ·
+ * @details `-gv_profileFrames` 보고의 태그 줄(`[Memory]   <태그>  <KB> KB  <몫>%  <블록> blocks | …`)을 읽는다. ImGui 의 할당(폰트 아틀라스 · 드로 리스트 ·
  *          도킹 상태)은 에디터 모듈이 sw 할당자로 보내야 Editor 줄로 세이고, 진입점이 빠진 몫인 Unknown 은 작아야 한다. 태그 스코프가 컴파일되는
  *          구성(Debug)에서만 본다.
  */
@@ -408,7 +408,7 @@ SW_TEST_CASE( AppSmokeTest, EditorMemoryIsAttributedByTag )
     if constexpr ( kMemoryTagScopesEnabled == false )
         SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
 
-    const AppRunResult result = runApp( "-gv_profileFrames=5 -EnableEditor -dx12", "[Profile]   " );
+    const AppRunResult result = runApp( "-gv_profileFrames=5 -gv_memoryTracking=1 -EnableEditor -dx12", "[Memory]   " );
     SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
     if ( result._bBackendUnusableHere )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );
@@ -431,7 +431,7 @@ SW_TEST_CASE( AppSmokeTest, RuntimeMemoryIsAttributedByTag )
     if constexpr ( kMemoryTagScopesEnabled == false )
         SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
 
-    const AppRunResult result = runApp( "-gv_profileFrames=5 -dx12", "[Profile]   " );
+    const AppRunResult result = runApp( "-gv_profileFrames=5 -gv_memoryTracking=1 -dx12", "[Memory]   " );
     SW_ASSERT_TRUE_MSG( result._bLaunched, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)나 테스트 바이너리 옆에 실행 파일이 있습니까?" );
     if ( result._bBackendUnusableHere )
         SW_TEST_SKIP( "DX12 is not usable on this machine" );

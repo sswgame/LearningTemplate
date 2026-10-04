@@ -578,6 +578,8 @@ namespace sw
         if ( _bootstrap.initialize( _owned, kDiagnostics ) == false )
             return false;
         _bootstrap.parseCommandLine( argc, pArgv );
+        // `-gv_memoryTracking=1` 은 기동의 할당부터 센다(Release 는 추적이 꺼진 채 선다).
+        _memoryBudgetMonitor.applyTrackingSetting();
 
         BLOCK( "Core Services 생성 및 바인딩" )
         {

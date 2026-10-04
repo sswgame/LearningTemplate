@@ -158,19 +158,27 @@ namespace sw
         return true;
     }
 
-    void MemoryBudgetMonitor::onFrameEnd()
+    void MemoryBudgetMonitor::applyTrackingSetting()
     {
         MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        if ( pProfiler == nullptr )
+        if ( pProfiler == nullptr || gv_memoryTracking == _appliedTrackingSetting )
             return;
-
-        if ( gv_memoryTracking != _appliedTrackingSetting && gv_memoryTracking >= 0 )
+        if ( gv_memoryTracking >= 0 )
         {
             pProfiler->setTrackingEnabled( gv_memoryTracking != 0 );
             // 꺼져 있는 동안의 할당은 세지 않았다 — 최고치는 켠 순간부터 다시 잰다.
             pProfiler->resetPeaks();
         }
         _appliedTrackingSetting = gv_memoryTracking;
+    }
+
+    void MemoryBudgetMonitor::onFrameEnd()
+    {
+        MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+        if ( pProfiler == nullptr )
+            return;
+
+        applyTrackingSetting();
 
         if ( pProfiler->isTrackingEnabled() == false )
             return;
@@ -186,6 +194,8 @@ namespace sw
 
     void MemoryBudgetMonitor::addFrameProfilerCounters( const MemoryProfiler& profiler )
     {
+        // 카운터 이름을 처음 등록할 때 이름 풀이 자란다 — 메인 루프에는 태그가 없으므로 여기서 건다(아니면 Unknown 줄로 간다).
+        SW_MEMORY_SCOPE( EngineMisc );
         if ( engine::areEngineServicesBound() == false )
             return;
         FrameProfiler& frameProfiler = engine::getFrameProfiler();
