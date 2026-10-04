@@ -2,13 +2,20 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Input/Events/RawInputEvent.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/InputMap.h"
+
 #include "GameFramework/Combat/Weapon.h"
 #include "GameFramework/Combat/WeaponMath.h"
 #include "GameFramework/Input/FirstPersonLook.h"
+#include "GameFramework/Movement/LocomotionMath.h"
+#include "GameFramework/Utility/OrientationUtil.h"
+#include "GameFramework/Utility/RayMath.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 슈터 키트 — 히트스캔(구 · 상자), 1인칭 시점, 무기의 연사 간격 · 탄창 · 재장전 · 반자동 · 산탄 · 탄 퍼짐(씨앗이 같으면 같은 탄).
+// 슈터 키트 — 히트스캔(구 · 상자 · 캡슐), 1인칭 시점, 이동 방향 가르기, Shooter3D 입력 맵, 무기의 연사 간격 · 탄창 · 재장전 · 반자동 · 산탄 · 탄 퍼짐(씨앗이 같으면 같은 탄).
 
 using namespace sw;
 
@@ -195,4 +202,137 @@ SW_TEST_CASE( ShooterTest, WeaponCatalogReadsXml )
     SW_EXPECT_TRUE( pShotgun->_bAutomatic == SW_FALSE );
     SW_EXPECT_NEAR_EQUAL( 0.8f, pShotgun->_fireInterval, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 80.0f, pShotgun->_range, 1.0e-5f );
+}
+
+/**
+ * @brief [ShooterTest] 캡슐 히트박스 — 옆면은 반지름만큼 앞에서, 끝 반구는 구처럼 맞고, 머리 위 · 뒤 · 사거리 밖은 놓친다 · 안에서 쏘면 거리 0
+ */
+SW_TEST_CASE( ShooterTest, RaysHitCapsulesOnTheSideAndTheCaps )
+{
+    const float3  bottom{ 0.0f, 0.45f, 5.0f };
+    const float3  top{ 0.0f, 1.55f, 5.0f };
+    const float32 radius   = 0.45f;
+    float32       distance = 0.0f;
+    GameRay       ray      = makeForwardRay();
+
+    ray._origin = float3{ 0.0f, 1.0f, 0.0f }; // 몸통 높이 — 옆면
+    SW_ASSERT_TRUE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+    SW_EXPECT_NEAR_EQUAL( 5.0f - radius, distance, 1.0e-4f );
+
+    ray._origin = float3{ 0.0f, 1.9f, 0.0f }; // 머리 — 위 반구(가운데에서 0.35 위)
+    SW_ASSERT_TRUE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+    SW_EXPECT_NEAR_EQUAL( 5.0f - MathUtil::sqrt( radius * radius - 0.35f * 0.35f ), distance, 1.0e-4f );
+
+    ray._origin = float3{ 0.0f, 2.2f, 0.0f }; // 머리 위 — 캡슐 꼭대기(2.0)보다 높다
+    SW_EXPECT_FALSE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+
+    ray._origin    = float3{ 0.0f, 5.0f, 5.0f }; // 위에서 축을 따라 — 옆면 판정이 없고 위 반구에서 맞는다
+    ray._direction = float3{ 0.0f, -1.0f, 0.0f };
+    SW_ASSERT_TRUE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+    SW_EXPECT_NEAR_EQUAL( 5.0f - ( 1.55f + radius ), distance, 1.0e-4f );
+
+    ray         = makeForwardRay();
+    ray._origin = float3{ 0.0f, 1.0f, 5.1f }; // 안
+    SW_ASSERT_TRUE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, distance, 1.0e-6f );
+
+    ray._origin = float3{ 0.0f, 1.0f, 10.0f }; // 뒤에 있다
+    SW_EXPECT_FALSE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+    ray._origin = float3{ 0.0f, 1.0f, 0.0f }; // 사거리 4 — 닿지 않는다
+    SW_EXPECT_FALSE( RayMath::intersectCapsule( ray, bottom, top, radius, 4.0f, distance ) );
+    ray._origin = float3{ 0.6f, 1.0f, 0.0f }; // 옆으로 비켜 간다
+    SW_EXPECT_FALSE( RayMath::intersectCapsule( ray, bottom, top, radius, 100.0f, distance ) );
+}
+
+/**
+ * @brief [ShooterTest] 이동 방향은 보는 쪽 기준이다 — 요 0 이면 +Z 앞 · +X 오른쪽, 요 90° 면 +X 앞 · +Z 왼쪽, 대각선은 앞뒤, 느리면 서기, 공중은 공중
+ */
+SW_TEST_CASE( ShooterTest, LocomotionDirectionFollowsTheFacing )
+{
+    const float32 idle = 0.4f;
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.0f, 0.0f, 3.0f }, 0.0f, true, idle ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.0f, 0.0f, -2.0f }, 0.0f, true, idle ) == LocomotionDirection::Backward );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 2.0f, 0.0f, 0.0f }, 0.0f, true, idle ) == LocomotionDirection::Right );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ -2.0f, 0.0f, 0.0f }, 0.0f, true, idle ) == LocomotionDirection::Left );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 2.0f, 0.0f, 2.0f }, 0.0f, true, idle ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.1f, 0.0f, 0.2f }, 0.0f, true, idle ) == LocomotionDirection::Idle );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.0f, 0.0f, 3.0f }, 0.0f, false, idle ) == LocomotionDirection::Airborne );
+
+    const float32 facingRight = MathUtil::HalfPi;
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 3.0f, 0.0f, 0.0f }, facingRight, true, idle ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.0f, 0.0f, 3.0f }, facingRight, true, idle ) == LocomotionDirection::Left );
+    SW_EXPECT_TRUE( LocomotionMath::classify( float3{ 0.0f, 0.0f, -3.0f }, facingRight, true, idle ) == LocomotionDirection::Right );
+    const float2 local = LocomotionMath::computeLocalVelocity( float3{ 3.0f, 0.0f, 1.0f }, facingRight );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, local._x, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, local._y, 1.0e-5f );
+}
+
+/**
+ * @brief [ShooterTest] Shooter3D 입력 맵(gamesettings 의 inputMap)은 게임이 묻는 액션을 모두 묶고, Look 은 마우스 이동량(`<mouseDelta>`)이다
+ */
+SW_TEST_CASE( ShooterTest, InputMapBindsEveryGameplayAction )
+{
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    InputMap& inputMap = input.getInputMap();
+    SW_ASSERT_TRUE( inputMap.loadFromResource( "game/shooter3d/data/shooter.input.xml" ) );
+    const utf8* const arrAction[] = { "Move", "Look", "Fire", "Jump", "Sprint", "Reload", "CycleCamera", "SwitchWeapon", "Weapon1", "Weapon2", "Weapon3" };
+    for ( const utf8* pAction : arrAction )
+    {
+        SW_EXPECT_TRUE_MSG( inputMap.hasAction( hashed_string( pAction ) ), pAction );
+    }
+    const ActionBinding* pLook = inputMap.getBinding( "Look", 0 );
+    SW_ASSERT_NOT_NULL( pLook );
+    SW_EXPECT_TRUE( pLook->_kind == BindingKind::MouseDelta2D );
+
+    // 마우스를 움직인 프레임에 Look 이 그 이동량(배율 1)을 낸다.
+    input.postRawEvent( RawInputEvent::makeMouseMove( 12, -4 ) );
+    input.beginFrame( 0.016f );
+    const float2 look = inputMap.getVector2D( "Look" );
+    SW_EXPECT_TRUE( look._x > 0.0f );
+    input.shutdown();
+}
+
+/**
+ * @brief [ShooterTest] 이동 방향 거르기 — 대각선 근처는 지금 방향을 지키고(히스테리시스), 바뀐 방향은 유지 시간만큼 이어져야 받아들이며, 공중은 바로다
+ */
+SW_TEST_CASE( ShooterTest, LocomotionFilterHoldsTheDirectionThroughFlicker )
+{
+    const float32 idle = 0.4f;
+    // 오른쪽 성분이 앞 성분의 1.25 배 — 앞으로 가던 중이면 앞(1.3 배를 넘어야 옆), 옆으로 가던 중이면 옆(1/1.3 아래로 내려가야 앞).
+    const float3 diagonal{ 2.5f, 0.0f, 2.0f };
+    SW_EXPECT_TRUE( LocomotionMath::classifyFrom( LocomotionDirection::Forward, diagonal, 0.0f, true, idle ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( LocomotionMath::classifyFrom( LocomotionDirection::Right, diagonal, 0.0f, true, idle ) == LocomotionDirection::Right );
+
+    LocomotionDirectionFilter filter( 0.25f );
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Forward, 0.3f ) == LocomotionDirection::Forward );
+    // 한 프레임씩 오가는 깜빡임은 받아들이지 않는다.
+    for ( uint32 frameIndex = 0; frameIndex < 20; ++frameIndex )
+    {
+        const LocomotionDirection candidate = ( frameIndex % 2u ) == 0u ? LocomotionDirection::Right : LocomotionDirection::Forward;
+        SW_EXPECT_TRUE( filter.update( candidate, 0.05f ) == LocomotionDirection::Forward );
+    }
+    // 이어지면 유지 시간 뒤에 바뀐다.
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Right, 0.1f ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Right, 0.1f ) == LocomotionDirection::Forward );
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Right, 0.1f ) == LocomotionDirection::Right );
+    // 공중은 바로, 내려와도 바로.
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Airborne, 0.01f ) == LocomotionDirection::Airborne );
+    SW_EXPECT_TRUE( filter.update( LocomotionDirection::Idle, 0.01f ) == LocomotionDirection::Idle );
+}
+
+/**
+ * @brief [ShooterTest] 요 돌리기는 짧은 길로 최대 걸음만큼만 간다 — ±π 를 건너는 쪽, 걸음보다 가까우면 목표, 걸음 0 이면 그대로
+ */
+SW_TEST_CASE( ShooterTest, TurnTowardAngleTakesTheShortWayAndCapsTheStep )
+{
+    SW_EXPECT_NEAR_EQUAL( 0.5f, OrientationUtil::turnTowardAngle( 0.0f, 2.0f, 0.5f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.2f, OrientationUtil::turnTowardAngle( 0.0f, 0.2f, 0.5f ), 1.0e-6f );
+    // 3.0 → -3.0 은 +쪽으로 0.283 rad 가 짧다 — π 를 넘어 -π 근처로 감긴다.
+    const float32 crossed = OrientationUtil::turnTowardAngle( 3.0f, -3.0f, 0.1f );
+    SW_EXPECT_NEAR_EQUAL( 3.1f, crossed, 1.0e-5f );
+    const float32 wrapped = OrientationUtil::turnTowardAngle( 3.1f, -3.1f, 0.2f );
+    SW_EXPECT_NEAR_EQUAL( -3.1f, wrapped, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, OrientationUtil::turnTowardAngle( 1.0f, -2.0f, 0.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( -MathUtil::HalfPi, OrientationUtil::wrapAngle( 3.0f * MathUtil::HalfPi ), 1.0e-5f );
 }

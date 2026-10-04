@@ -1,0 +1,282 @@
+{
+  "nodes": [
+    {
+      "id": 1,
+      "name": "Spawn_Ground_Skeletons",
+      "x": 40.0,
+      "y": 40.0,
+      "loop": false
+    },
+    {
+      "id": 2,
+      "name": "Idle_Combat",
+      "x": 260.0,
+      "y": 40.0,
+      "loop": true
+    },
+    {
+      "id": 3,
+      "name": "Walking_D_Skeletons",
+      "x": 480.0,
+      "y": 40.0,
+      "loop": true
+    },
+    {
+      "id": 4,
+      "name": "Running_C",
+      "x": 700.0,
+      "y": 40.0,
+      "loop": true
+    },
+    {
+      "id": 5,
+      "name": "1H_Melee_Attack_Chop",
+      "x": 40.0,
+      "y": 200.0,
+      "loop": false
+    },
+    {
+      "id": 6,
+      "name": "Hit_B",
+      "x": 260.0,
+      "y": 200.0,
+      "loop": false
+    },
+    {
+      "id": 7,
+      "name": "Death_C_Skeletons",
+      "x": 480.0,
+      "y": 200.0,
+      "loop": false
+    }
+  ],
+  "links": [
+    {
+      "id": 1,
+      "from": 1,
+      "to": 7,
+      "blend": 0.1,
+      "condition": {
+        "param": "Dead",
+        "op": ">=",
+        "value": 0.5
+      }
+    },
+    {
+      "id": 2,
+      "from": 2,
+      "to": 7,
+      "blend": 0.1,
+      "condition": {
+        "param": "Dead",
+        "op": ">=",
+        "value": 0.5
+      }
+    },
+    {
+      "id": 3,
+      "from": 3,
+      "to": 7,
+      "blend": 0.1,
+      "condition": {
+        "param": "Dead",
+        "op": ">=",
+        "value": 0.5
+      }
+    },
+    {
+      "id": 4,
+      "from": 4,
+      "to": 7,
+      "blend": 0.1,
+      "condition": {
+        "param": "Dead",
+        "op": ">=",
+        "value": 0.5
+      }
+    },
+    {
+      "id": 5,
+      "from": 5,
+      "to": 7,
+      "blend": 0.1,
+      "condition": {
+        "param": "Dead",
+        "op": ">=",
+        "value": 0.5
+      }
+    },
+    {
+      "id": 6,
+      "from": 6,
+      "to": 7,
+      "blend": 0.1,
+      "condition": {
+        "param": "Dead",
+        "op": ">=",
+        "value": 0.5
+      }
+    },
+    {
+      "id": 7,
+      "from": 1,
+      "to": 2,
+      "blend": 0.2
+    },
+    {
+      "id": 8,
+      "from": 2,
+      "to": 6,
+      "blend": 0.08,
+      "condition": {
+        "param": "Hit",
+        "op": "trigger",
+        "value": 1.0
+      }
+    },
+    {
+      "id": 9,
+      "from": 3,
+      "to": 6,
+      "blend": 0.08,
+      "condition": {
+        "param": "Hit",
+        "op": "trigger",
+        "value": 1.0
+      }
+    },
+    {
+      "id": 10,
+      "from": 4,
+      "to": 6,
+      "blend": 0.08,
+      "condition": {
+        "param": "Hit",
+        "op": "trigger",
+        "value": 1.0
+      }
+    },
+    {
+      "id": 11,
+      "from": 5,
+      "to": 6,
+      "blend": 0.08,
+      "condition": {
+        "param": "Hit",
+        "op": "trigger",
+        "value": 1.0
+      }
+    },
+    {
+      "id": 12,
+      "from": 2,
+      "to": 5,
+      "blend": 0.12,
+      "condition": {
+        "param": "Attack",
+        "op": "trigger",
+        "value": 1.0
+      }
+    },
+    {
+      "id": 13,
+      "from": 3,
+      "to": 5,
+      "blend": 0.12,
+      "condition": {
+        "param": "Attack",
+        "op": "trigger",
+        "value": 1.0
+      }
+    },
+    {
+      "id": 14,
+      "from": 4,
+      "to": 5,
+      "blend": 0.12,
+      "condition": {
+        "param": "Attack",
+        "op": "trigger",
+        "value": 1.0
+      }
+    },
+    {
+      "id": 15,
+      "from": 5,
+      "to": 2,
+      "blend": 0.2
+    },
+    {
+      "id": 16,
+      "from": 6,
+      "to": 2,
+      "blend": 0.2
+    },
+    {
+      "id": 17,
+      "from": 2,
+      "to": 3,
+      "blend": 0.25,
+      "condition": {
+        "param": "Move",
+        "op": "==",
+        "value": 1.0
+      }
+    },
+    {
+      "id": 18,
+      "from": 2,
+      "to": 4,
+      "blend": 0.25,
+      "condition": {
+        "param": "Move",
+        "op": "==",
+        "value": 2.0
+      }
+    },
+    {
+      "id": 19,
+      "from": 3,
+      "to": 2,
+      "blend": 0.25,
+      "condition": {
+        "param": "Move",
+        "op": "==",
+        "value": 0.0
+      }
+    },
+    {
+      "id": 20,
+      "from": 3,
+      "to": 4,
+      "blend": 0.25,
+      "condition": {
+        "param": "Move",
+        "op": "==",
+        "value": 2.0
+      }
+    },
+    {
+      "id": 21,
+      "from": 4,
+      "to": 2,
+      "blend": 0.25,
+      "condition": {
+        "param": "Move",
+        "op": "==",
+        "value": 0.0
+      }
+    },
+    {
+      "id": 22,
+      "from": 4,
+      "to": 3,
+      "blend": 0.25,
+      "condition": {
+        "param": "Move",
+        "op": "==",
+        "value": 1.0
+      }
+    }
+  ]
+}

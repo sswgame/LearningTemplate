@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -39,6 +40,13 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE_INT( gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)", SW_KEEP_IN_SHIPPING );
 
+    /**
+     * @brief `-gv_screenshotCount=<N>` · `-gv_screenshotInterval=<K>` — 첫 장(`-gv_screenshotFrame`)부터 K 프레임마다 N 장을 찍습니다(움직임 · 튐 확인).
+     * @details 두 장 이상이면 파일 이름의 확장자 앞에 `_000` · `_001` … 이 붙습니다. 장마다 GPU 되읽기라 그 프레임은 느려집니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_screenshotCount, 1, "연속으로 찍을 스크린샷 수 (기본 1)", SW_KEEP_IN_SHIPPING );
+    SW_TEST_GLOBAL_VARIABLE_INT( gv_screenshotInterval, 1, "연속 스크린샷 사이 프레임 수 (기본 1)", SW_KEEP_IN_SHIPPING );
+
     // 커맨드 리스트를 프레임 끝에 모아 한 번에 제출할지(기본), 잘릴 때마다 바로 제출할지. 이 파일이 프레임마다 디바이스로 밀어 넣는다.
     // 두 모드 모두 기록 순서 = 실행 순서다. 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고
     // 제출 '시점'만 달라진다. 즉시 모드는 제출 횟수가 늘어 오버헤드가 크지만, GPU 오류(DEVICE_HUNG,
@@ -60,6 +68,7 @@ namespace sw
         , _bLastImmediateSubmit{ false }
         , _bScreenshotTaken{ SW_FALSE }
         , _screenshotFrameCounter{ 0 }
+        , _screenshotShotCount{ 0 }
         , _budgetFrameCounter{ 0 }
         , _arrRingBuffer{}
         , _head{ 0 }
@@ -430,7 +439,7 @@ namespace sw
             }
         }
 
-        // -gv_screenshot=<path> : 한 장만 찍는다.
+        // -gv_screenshot=<path> : 한 장(또는 -gv_screenshotCount 장)을 찍는다.
         //  - **endFrame 뒤여야 한다.** 그 전에는 커맨드 리스트가 기록만 됐고 아직 큐에 나가지 않아,
         //    읽어 보면 클리어 색만 나온다.
         //  - **몇 프레임 기다려야 한다.** 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 게 없다.
@@ -442,25 +451,39 @@ namespace sw
             const uint32     targetFrame                = ( gv_screenshotFrame > static_cast<int32>( kScreenshotMinWarmupFrames ) )
                                                             ? static_cast<uint32>( gv_screenshotFrame )
                                                             : kScreenshotMinWarmupFrames;
-            if ( ++_screenshotFrameCounter >= targetFrame )
+            const uint32     shotCount                  = gv_screenshotCount > 1 ? static_cast<uint32>( gv_screenshotCount ) : 1u;
+            const uint32     interval                   = gv_screenshotInterval > 1 ? static_cast<uint32>( gv_screenshotInterval ) : 1u;
+            const uint32     frame                      = ++_screenshotFrameCounter;
+            const bool       bShotDue                   = frame >= targetFrame && ( frame - targetFrame ) % interval == 0u;
+            if ( bShotDue )
             {
-                _bScreenshotTaken = SW_TRUE;
+                // 연속 촬영이면 장 번호를 확장자 앞에 붙인다.
+                string path{ gv_screenshot };
+                if ( shotCount > 1u )
+                {
+                    const size_t                          dot = path.find_last_of( '.' );
+                    StringBuilder<constant::kMaxBuffer16> suffix;
+                    suffix.appendFormat( "_%03u", _screenshotShotCount );
+                    path.insert( dot == string::npos ? path.size() : dot, suffix.c_str() );
+                }
+                ++_screenshotShotCount;
+                _bScreenshotTaken = _screenshotShotCount >= shotCount ? SW_TRUE : SW_FALSE;
                 // 기본은 **Present 결과 캡처**, 곧 화면에 나간 그림이다. 캡처가 없으면 Present 가 읽는 첨부로 물러난다.
                 // 첨부 이름을 리터럴로 박지 말 것 — 그 이름이 없는 파이프라인(디퍼드)에서는 한 장도 안 찍힌다.
                 const string_view attachment{ gv_screenshotAttachment };
                 if ( attachment.empty() == false )
                 {
                     // 중간 단계를 보고 싶다고 이름을 찍어 준 경우. 그 첨부를 그대로 덤프한다.
-                    _pFrameRenderer->dumpTransientToPpm( attachment, gv_screenshot );
+                    _pFrameRenderer->dumpTransientToPpm( attachment, path );
                 }
-                else if ( _pFrameRenderer->dumpPresentCaptureToPpm( gv_screenshot ) == false )
+                else if ( _pFrameRenderer->dumpPresentCaptureToPpm( path ) == false )
                 {
                     // 캡처가 없으면(오프스크린 출력 등) Present 가 **읽는** 첨부를 찍는다.
                     // 그 그림에는 Present 패스가 한 일(톤맵 등)이 들어 있지 않다.
                     string_view fallback = _pFrameRenderer->getPresentedAttachmentName();
                     if ( fallback.empty() )
                         fallback = string_view{ FrameRendererUtil::Attachment::kSceneColor };
-                    _pFrameRenderer->dumpTransientToPpm( fallback, gv_screenshot );
+                    _pFrameRenderer->dumpTransientToPpm( fallback, path );
                 }
             }
         }

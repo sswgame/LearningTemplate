@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Animation/AnimGraphAsset.h"
 #include "Engine/Animation/AnimJsonUtil.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
@@ -99,6 +100,13 @@ namespace
         static bool isPhysicsSettings( sw::string_view resourceId ) { return endsWith( resourceId, "physicssettings.xml" ); }
         static bool isPhysicsAsset( sw::string_view resourceId ) { return endsWith( resourceId, ".physics.xml" ); }
         static bool isSkeleton( sw::string_view resourceId ) { return endsWith( resourceId, sw::Skeleton::kExtension ); }
+        static bool isAnimGraph( sw::string_view resourceId ) { return endsWith( resourceId, ".animgraph.json" ); }
+        /** @brief 애니메이션 그래프(상태 기계) — 모르는 조건 표기는 로드 오류, 노드가 하나도 없으면 빈 그래프다. */
+        static bool loadAnimGraph( const sw::string& resourceId )
+        {
+            sw::AnimGraphAsset graph;
+            return graph.loadFromFile( resourceId ) && graph._listNode.empty() == false;
+        }
         static bool isElementRules( sw::string_view resourceId ) { return endsWith( resourceId, ".elements.xml" ); }
         static bool isInteractions( sw::string_view resourceId ) { return endsWith( resourceId, ".interactions.xml" ); }
         static bool isTileSet( sw::string_view resourceId ) { return endsWith( resourceId, ".tileset.xml" ); }
@@ -422,6 +430,7 @@ namespace
             {              "items",               &isItems,                      &loadCatalog<sw::ItemCatalog>},
             {         "appearance",      &isAppearanceData,                                &loadAppearanceData},
             {           "skeleton",            &isSkeleton,                                      &loadSkeleton},
+            {          "animgraph",           &isAnimGraph,                                     &loadAnimGraph},
             {         "audiomixer",          &isAudioMixer,                   &loadCatalog<sw::AudioMixerDesc>},
             {        "audioevents",         &isAudioEvents,                &loadCatalog<sw::AudioEventLibrary>},
             {         "audiomusic",          &isAudioMusic,                   &loadCatalog<sw::AudioMusicDesc>},

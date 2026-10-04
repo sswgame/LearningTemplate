@@ -8,6 +8,12 @@ msgstr ""
 "X-Message-Format: ICU\n"
 "X-Generator: SWEngine LocalizationTools\n"
 
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "Assault Blaster"
+msgid "Assault Blaster"
+msgstr "돌격 블래스터"
+
 #. Context: Weapon name
 #: game/shooter3d/data/weapons.xml
 msgctxt "Assault Rifle"
@@ -16,33 +22,27 @@ msgstr "돌격 소총"
 
 #. Context: Item name
 #: game/shooter3d/data/items.xml
-msgctxt "Combat Helmet"
-msgid "Combat Helmet"
-msgstr "전투 헬멧"
+msgctxt "Bone Axe"
+msgid "Bone Axe"
+msgstr "뼈 도끼"
 
 #. Context: Item name
 #: game/shooter3d/data/items.xml
-msgctxt "Fatigues"
-msgid "Fatigues"
-msgstr "전투복"
+msgctxt "Bone Shield"
+msgid "Bone Shield"
+msgstr "뼈 방패"
 
 #. Context: Item name
 #: game/shooter3d/data/items.xml
-msgctxt "Field Pack"
-msgid "Field Pack"
-msgstr "야전 배낭"
+msgctxt "Knight Helmet"
+msgid "Knight Helmet"
+msgstr "기사 투구"
 
 #. Context: Item name
 #: game/shooter3d/data/items.xml
-msgctxt "M4 Rifle"
-msgid "M4 Rifle"
-msgstr "M4 소총"
-
-#. Context: Item name
-#: game/shooter3d/data/items.xml
-msgctxt "M9 Pistol"
-msgid "M9 Pistol"
-msgstr "M9 권총"
+msgctxt "Notched Blade"
+msgid "Notched Blade"
+msgstr "이 빠진 칼"
 
 #. Context: Weapon name
 #: game/shooter3d/data/weapons.xml
@@ -58,27 +58,39 @@ msgstr "펌프 산탄총"
 
 #. Context: Item name
 #: game/shooter3d/data/items.xml
-msgctxt "Recon Boots"
-msgid "Recon Boots"
-msgstr "정찰 부츠"
+msgctxt "Round Shield"
+msgid "Round Shield"
+msgstr "둥근 방패"
 
 #. Context: Item name
 #: game/shooter3d/data/items.xml
-msgctxt "Recon Helmet"
-msgid "Recon Helmet"
-msgstr "정찰 헬멧"
+msgctxt "Rusted Helm"
+msgid "Rusted Helm"
+msgstr "녹슨 투구"
 
 #. Context: Item name
 #: game/shooter3d/data/items.xml
-msgctxt "Recon Patch"
-msgid "Recon Patch"
-msgstr "정찰 패치"
+msgctxt "Scatter Blaster"
+msgid "Scatter Blaster"
+msgstr "산탄 블래스터"
 
 #. Context: Item name
 #: game/shooter3d/data/items.xml
-msgctxt "Recon Vest"
-msgid "Recon Vest"
-msgstr "정찰 조끼"
+msgctxt "Sidearm Blaster"
+msgid "Sidearm Blaster"
+msgstr "보조 블래스터"
+
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "Tattered Cape"
+msgid "Tattered Cape"
+msgstr "해진 망토"
+
+#. Context: Item name
+#: game/shooter3d/data/items.xml
+msgctxt "Travel Cape"
+msgid "Travel Cape"
+msgstr "여행 망토"
 
 #. Context: Options menu label
 #. Max length: 32

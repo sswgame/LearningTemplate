@@ -1,0 +1,47 @@
+<Prefab formatVersion="0" name="PlayerBody">
+	<GameObject _schemaVersion="0" _name="PlayerBody" _bActive="true">
+		<_listComponent>
+			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+			                       _bActive="true"
+			                       _localPosition="0,0,0"
+			                       _localRotation="0,0,0"
+			                       _localScale="1,1,1"
+			                       _attachOwner="None"
+			                       _attachOwnerId="0"
+			                       _attachComponent="None"
+			                       _meshId=""
+			                       _materialPath="None"
+			                       _boundsRadius="2"
+			                       _blendMode="Opaque"
+			                       _gpuSpinSeed="0"
+			                       _bVisible="true"
+			                       _skeletonPath=""
+			                       _updateRateDivisor="1"
+			                       _bFollowParentPose="false"
+			                       _bAnimateWhenOffscreen="false" />
+			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+			                           _bActive="true"
+			                           _animGraphPath="game/shooter3d/data/anim/adventurer.animgraph.json"
+			                           _clipFolder="game/shooter3d/models/kaykit/knight/clips"
+			                           _initialState="Idle"
+			                           _currentState=""
+			                           _stateTime="0"
+			                           _playRate="1"
+			                           _blendSeconds="0.2"
+			                           _syncGroup=""
+			                           _syncWeight="1"
+			                           _bExtractRootMotion="false"
+			                           _bPlayOnBegin="true" />
+			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetId="ShooterPlayer" _seed="0" />
+			<ShooterAvatarComponent _componentName="ShooterAvatarComponent"
+			                        _bActive="true"
+			                        _player="0"
+			                        _aimLayerClip="1H_Ranged_Aiming"
+			                        _shootLayerClip="1H_Ranged_Shooting"
+			                        _upperBodyBone="spine"
+			                        _walkThreshold="0.4"
+			                        _runThreshold="3"
+			                        _hitPause="0.45" />
+		</_listComponent>
+	</GameObject>
+</Prefab>
