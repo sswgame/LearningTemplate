@@ -116,6 +116,8 @@ cd build/Ninja-Debug/Bin
 - **2D 정렬 레이어가 없다.** 깊이가 같으면 거리로 정렬해, 같은 Z 의 월드 UI 와 월드 스프라이트 순서가 뒤집힐 수 있다.
 - **점광 · 스폿 그림자** — RHI 텍스처 차원(배열 · 큐브, 면 단위 타깃 · 올리기 · 읽기)은 있다. 남은 것: 그림자 패스 다중 뷰(면 여섯) → 셰이더 쪽(DX12 · Vulkan
   큐브 · 배열 bindless 테이블, DX11 · GL TextureCube 슬롯) + `swSampleShadowAtWorld`. 3 단계 전에 큐브 대신 2D 아틀라스(Unity URP · Godot — RHI 변경 없음)로 갈지 먼저 정한다.
+- **컷 준비(프리웜)의 선행 조건 셋**(1-6 카메라 항목의 5 단계가 기다린다) — LOD 시스템이 없다, 밉 단위 텍스처 스트리밍이 없다(`AssetStreamingQueue` 는 에셋
+  단위 비동기 읽기), PSO 를 미리 만드는 창구가 없다(DX12 PSO 생성 히치).
 - **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것: 반해상도 패스가 읽는 입력의 텍셀 크기(`g_OutlineParams.yz` 는 프레임 텍셀),
   `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
 
@@ -162,6 +164,33 @@ cd build/Ninja-Debug/Bin
   - 중간: `EventBuffer<T>`(drainEvents 27 곳) · `SpatialHashGrid2D` · `GridTopology` + 재사용 스크래치 BFS · NetConnection 메시지 버퍼 재사용 ·
     `GameFlags` 와 `IFlagStore` 하나로 · TurnBattle 키트 정리.
   - 동작이 바뀌는 것(시험 먼저): `NetPrioritizer` 공유 · 아이템/효과 처리기 등록부 · `TimedModifierSet`.
+
+- **카메라 — 프리셋 데이터 · 블렌드 · 시퀀서(사용자 승인 로드맵).** 1 단계(프리셋 XML · 블렌드 곡선 · `CameraDirector` · `CameraDirectorComponent`)는 들어갔다
+  (`Source/GameFramework/README.md` "카메라" 절). 남은 것 —
+  - 2 단계: `OrthoCameraRigComponent` · `FirstPersonCameraComponent` 를 카메라 모드(포즈 계산 + 입력)로 바꾸고 디렉터가 블렌드한다; 일곱 시험 게임의 카메라를
+    프리셋 데이터로; 시점이 바뀌는 곳에 블렌드(ThemePark 코스터 탑승 V, 직교 Q/E 회전). 카메라 매니저 — 씬의 카메라를 용도(플레이어 시점 · 보조 · 캡처)로
+    관리하고, 로컬 플레이어마다 "보는 카메라(뷰 타깃)" 를 블렌드로 바꾼다(언리얼 `SetViewTargetWithBlend` · Cinemachine Brain). 지금 `CameraRegistry::selectCamera` 는
+    역할마다 우선순위 1 등 하나만 고른다.
+  - 3 단계(게임에 바로 보이는 것): 흔들림 · 노이즈(펄린 손떨림, 충격 진폭 · 감쇠 · 거리 감쇠 — Cinemachine Noise/Impulse · 언리얼 CameraShake), 제약(피치 · 줌 한계,
+    맵 경계 — Confiner), 프레이밍(대상의 화면 위치, 데드존 · 소프트존, look-ahead, 여러 대상 담기 — Composer · Group Framing), 충돌 · 가림 피하기(Deoccluder ·
+    SpringArm). Overworld 의 `CameraControllerComponent::shake` 는 이것으로 합친다.
+  - 4 단계(렌더러, 큰 일) — 다중 뷰 렌더: 지금 `FrameRenderer` 의 `RenderViewType` 은 Main · Shadow 고정 두 개이고 출력도 하나다. 뷰를 목록으로 바꿔 카메라마다
+    출력 대상(화면 전체 · 화면 사각형 = 분할 화면 · PiP, 또는 렌더 텍스처 = CCTV 모니터 · 백미러 · 미니맵)을 고르게 한다. 뷰마다 갱신 주기(CCTV 10 Hz), 해상도
+    배율, 끌 기능(그림자 · 후처리), 보일 때만 그리기(예산). 렌더 텍스처는 머티리얼에서 텍스처로 읽힌다(언리얼 SceneCapture2D · 유니티 `Camera.targetTexture`).
+    GpuScene 컬링 · 뷰 상수버퍼 · 트랜지언트 풀이 뷰 단위가 된다.
+  - 5 단계(시퀀서): 값 커브 트랙(시야각 · 초점 · 노출 — 블렌드 곡선과 같은 보간 함수), 카메라 컷 트랙(구간마다 프리셋 · 카메라, 프리셋의 블렌드로 전환 — 언리얼
+    Camera Cut Track), 흔들림 트랙, 게임 ↔ 시네마틱 블렌드(시퀀스 시작 · 끝). 지금 시퀀서는 Clip(트랜스폼 보간) · Event 두 종류뿐이다.
+    - 컷 준비(프리웜) — 컷 순간 LOD · 텍스처 · 셰이더가 바뀌는 게 보이지 않게. 컷 트랙은 다음 컷을 미리 안다 → 컷 N 초(또는 프레임) 전에 카메라 매니저에
+      "곧 볼 시점(대기 뷰)" 을 등록한다(컷마다 · 시퀀스마다 프리롤 값, 언리얼 Sequencer 의 preroll frames). 게임 쪽 뷰 타깃 전환도 같은 창구를 쓴다.
+      대기 뷰를 듣는 쪽(시스템이 생기면 붙는다): LOD 선택은 대기 뷰 기준 LOD 도 구해 컷 첫 프레임부터 그 LOD(컷을 넘는 LOD 크로스페이드는 끈다), 스트리밍은
+      대기 뷰에서 보일 메시 · 텍스처 밉을 먼저 요청(언리얼 streaming source · AddViewLocation), 셰이더 · PSO 는 대기 뷰 절두체 안 머티리얼의 PSO 를 미리 만든다,
+      그림자는 대기 뷰 기준 캐스케이드를 미리 맞춘다. 컷 프레임 신호(언리얼 `bCameraCut`): 뷰에 "컷" 표시 → TAA 기록 리셋, 모션 벡터 0, 자동 노출 즉시 맞춤,
+      모션 블러 · 시간 누적 효과 끔 — 지금 `FrameRenderer` 의 `_taaHistory` 는 컷에서 리셋하는 신호가 없다. 다중 뷰 렌더(4 단계)가 생기면 컷 1~2 프레임 전에
+      대기 뷰를 저해상도로 숨겨 그려 업로드 · PSO 를 강제로 데운다. 선행 조건은 1-3 에 있다(LOD · 밉 스트리밍 · PSO 미리 만들기).
+  - 6 단계: 렌즈 물리값(초점거리 · 센서 · 초점 거리 · 조리개 · 렌즈 시프트 · 더치) + 피사계 심도 패스(렌더러에 없다), 카메라별 후처리 덮어쓰기(노출 · 블룸 ·
+    비네트 · 색 보정 · 레터박스 — 지금은 카메라별로 덮을 길이 없다), FOV kick · 줌 펀치, 돌리 레일(스플라인 — Spline Dolly · Rig Rail).
+  - 1 단계에서 미룬 것: 디렉터의 켠 프리셋 · 블렌드 진행은 저장하지 않는다(다시 읽으면 시작 프리셋부터). 블렌드 도중 재활성은 섞인 포즈를 **고정**해 출발한다 —
+    Cinemachine 처럼 나가는 블렌드를 살려 둔 채 겹쳐 섞으려면 블렌드 스택이 필요하다.
 
 - **나머지 시험 게임을 씬 · 프리팹 · 디렉터/뷰 컴포넌트로** — `ThemeParkTycoon` 이 본보기다(`Source/Games/README.md` 레시피). `PrimitiveStage` 를 쓰는 다섯
   (HarvestValley · NileCity · Shooter3D · StarSkirmish · VoxelCraft)과 AbilityArena. 그대로 쓰는 것: `OrthoCameraRigComponent`(HarvestValley · NileCity · StarSkirmish 의

@@ -20,6 +20,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (`OrthoCameraRigComponent` — WASD · 방향키 이동 · 휠 확대 · Q/E 90° 회전, 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기), 장식 흩뿌리기
   (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽에, 제외 원, 플레이 시작에 세우고 끝에 걷는다). 계산은 `OrthoCameraRigMath` · `PropScatterMath` 로
   떼어 씬 없이 시험한다
+- **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 블렌드 곡선 · 포즈 섞기(`evaluateBlendWeight` · `blendPoses`), 블렌드 · 감쇠
+  상태 기계(`CameraDirector`), 그것을 카메라에 쓰는 `CameraDirectorComponent`. 아래 "카메라" 절
 - **Stage**: 절차로 무대를 세우는 도우미(`PrimitiveStage` — 활성 씬 잡기 · 세운 오브젝트 추적 · 색 · 텍스처 머티리얼 인스턴스 캐시 · 해 · 카메라). 시험 게임이 쓴다
 - **Utility**: 장르 무관 계산 도구 — 씨앗 고정 난수 · 좌표 해시(`GameRandom` · `GameHash` — 가중치 고르기 `pickWeightedIndex` · 섞기 `shuffle`), 값 노이즈(`ValueNoise`),
   광선 판정(`RayMath` — 구 · 상자 · 바닥 평면 · 원뿔), 앞 · 위 → 오일러(`OrientationUtil` — 롤이 있는 차량 · 카메라), 2D 네 방향(`FacingDir`),
@@ -116,6 +118,23 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       - `NetLockstep`: 결정적 — 락스텝(`LockstepSession` — 입력 지연 · 체크섬 비동기 감지, RTS), 롤백(`RollbackSession` · `IRollbackGame` — 예측 · 되감기 · 재시뮬레이션, 격투).
       - `NetTurnRelay`: 턴제 중계(카드 · 보드 · SRPG) — 방 · 자리 · 표, `ITurnPolicy`(차례 · 허락 · 방향), 행동 기록 방송, 재접속 시 놓친 행동.
       - `NetMmo`: MMO — 관심 영역 격자(`InterestGrid`, 들어옴 · 나감 히스테리시스), 우선도 누적 대역폭 예산, `IInterestPolicy`(늘 보이기 · 우선도).
+
+## 카메라: 프리셋 데이터 + 블렌드 + 디렉터
+
+카메라 시점은 코드가 아니라 `<CameraPresets>` XML 이다(Cinemachine 가상 카메라 + Custom Blends, 언리얼 카메라 모드의 자리). 예시는
+`Resource/engine/cameras/default.cameras.xml`.
+
+- **프리셋 하나 = 섹션 원소 몇 개.** `<View>`(모드 `Fixed` · `OrthoTopDown` · `Orbit` · `Follow` · `FirstPerson`, 피치 · 요 · 거리 · 오프셋) · `<Lens>`(시야각 ·
+  직교 높이 · 투영 · 근/원평면) · `<Damping>`(자리 · 회전 시간 상수) · `<BlendIn>`. 섹션마다 구조체 하나(`CameraViewDef` …)라 프레이밍 · 제약 · 충돌 · 흔들림 같은
+  다음 섹션은 구조체 하나와 원소 하나를 더하면 된다. XML 의 각은 도, 정의는 라디안이다. 모르는 속성 · 원소 · 열거자는 경고한다.
+- **블렌드 고르기**: `<Blend from to>` 표(정확히 → `from="*"` → `to="*"`) → 들어가는 프리셋의 `<BlendIn>` → `<DefaultBlend>`. 곡선은 `CameraBlendCurve`
+  (Cut · Linear · EaseIn/Out/InOut · SmoothStep · Cubic · Exponential · Spring · Custom 키). `evaluateBlendWeight` · `blendPoses` 는 컴포넌트를 모르는 함수라
+  시퀀서도 같은 곡선을 쓴다. 직교 ↔ 원근은 섞지 않고 가중치 0.5 에서 바꾼다.
+- **블렌드는 지금 화면에서 출발한다**(`CameraDirector`): 나가는 프리셋은 블렌드 동안 대상을 계속 따라가고, 블렌드 도중 다시 켜면 그 순간의 섞인 포즈를 고정해 출발점으로
+  둔다 — 어느 쪽이든 켠 순간 튀지 않는다. 감쇠는 지수 감쇠(1 − e^(−dt/τ))라 프레임 수와 상관없다.
+- **컴포넌트**: `CameraDirectorComponent` 를 `CameraComponent` 와 같은 오브젝트에 붙이고 프리셋 경로 · 시작 프리셋 · 대상(`GameObjectHandle`)을 준다.
+  `TickGroup::PostUpdate` 에서 자기 카메라만 월드 값으로 쓰고 대상은 읽기만 한다. 게임은 `activatePreset( id )` 로 바꾼다.
+- 기존 `OrthoCameraRigComponent` · 1인칭 카메라는 아직 따로 돈다 — 모드로 옮기는 것은 `docs/06_Backlog.md` 1-6 의 카메라 항목.
 
 ## 새 장르 키트를 만들 때
 
