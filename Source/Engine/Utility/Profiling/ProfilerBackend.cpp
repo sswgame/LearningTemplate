@@ -132,6 +132,12 @@ namespace sw
 
     void ProfilerBackend::shutdown()
     {
+        // 무엇이 나갔는지 한 줄로 남긴다 — 뷰어 없이 돌린 실행에서도 경로가 살아 있었는지 로그로 보인다.
+        if ( getActiveBackend() == &ProfilerBackendInternal::s_tracy )
+        {
+            SW_LOG_INFO( "Tracy profiler: %# CPU zones, %# GPU zones emitted (viewer %#)", ProfilerBackendInternal::s_tracy.getZoneCount(),
+                         ProfilerBackendInternal::s_tracy.getGpuZoneCount(), ProfilerBackendInternal::s_tracy.isViewerConnected() ? "connected" : "not connected" );
+        }
         Memory::setAllocationObserver( nullptr );
         setActiveBackend( nullptr );
     }

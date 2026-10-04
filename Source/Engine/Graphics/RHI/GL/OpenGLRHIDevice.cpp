@@ -40,7 +40,7 @@ namespace sw
         , _arrTimestampQuery{}
         , _arrTimestampMask{}
         , _timestampFrameIndex{ 0 }
-        , _listTimestampMicro{}
+        , _timestampFrame{}
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
         , _listRenderPass{}

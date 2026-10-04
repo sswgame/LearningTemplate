@@ -75,6 +75,9 @@ namespace sw
         , _bTimestampReady{ SW_FALSE }
         , _bTimestampFrameOpen{ SW_FALSE }
         , _bDriverCommandLists{ SW_FALSE }
+        , _timestampFrame{}
+        , _clockQuery{}
+        , _lastTimestampFrequency{ 0 }
         , _listRegisteredBindless{}
         , _listBindlessFree{}
         , _listRegisteredTexture{}

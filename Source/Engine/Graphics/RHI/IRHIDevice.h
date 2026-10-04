@@ -14,6 +14,7 @@ namespace sw
 
     struct RHIDeferredHandleQueue;
     struct RHIGpuMemoryBudget;
+    struct RHIGpuTimestampFrame;
 
     class IRenderSurface;
     class IRHICommandContext;
@@ -204,19 +205,34 @@ namespace sw
         virtual uint32 getTimestampSlotCount() const { return 0; }
 
         /**
-         * @brief **이미 끝난 프레임**의 타임스탬프를 마이크로초로 읽습니다(프레임 시작 기준 누적).
+         * @brief **이미 끝난 프레임**의 타임스탬프를 읽습니다(칸마다 기준점 뒤 마이크로초 + 기준점의 GPU 시계 나노초).
          * @return 읽을 것이 있으면 true. GPU 가 아직 안 끝냈으면 false 이고, 다음 프레임에 다시 물으면 됩니다.
          * @details 결과는 몇 프레임 늦습니다. **기다리지 않습니다.** 기다리면 재려던 그 파이프라인을
          *          멈춰 세워 숫자가 거짓이 됩니다.
          *          이번 프레임에 적히지 않은 슬롯은 **음수**로 옵니다. 백엔드마다 안 적은 칸에 남는
          *          것이 다르기 때문입니다(DX12 · DX11 은 지난 사이클 값, Vulkan · GL 은 미가용).
          *          부르는 쪽은 음수가 하나라도 낀 구간을 통째로 버려야 합니다.
+         *          같은 값이 엔진 표(`GPU.<패스>`)와 외부 프로파일러(Tracy GPU 타임라인)로 갑니다 — 쿼리는 한 벌입니다.
          */
-        [[nodiscard]] virtual bool readTimestampsMicros( vector<float32>& outListMicro )
+        [[nodiscard]] virtual bool readTimestamps( RHIGpuTimestampFrame& outFrame );
+
+        /**
+         * @brief GPU 시계의 **지금** 값을 타임스탬프와 같은 영역의 나노초로 읽습니다. 외부 프로파일러가 GPU 시각을 CPU 시계에 맞출 때 씁니다.
+         * @return 읽지 못하면 false 입니다(타임스탬프를 지원하지 않는 디바이스).
+         * @details 값은 이 함수가 돌아오는 순간의 GPU 시계입니다. 백엔드마다 비용이 다릅니다 — `isGpuClockReadCheap` 참고.
+         *          렌더 스레드(GL 은 컨텍스트를 쥔 스레드)에서 부릅니다.
+         */
+        [[nodiscard]] virtual bool readGpuClockNanos( int64& outGpuNanos )
         {
-            outListMicro.clear();
+            outGpuNanos = 0;
             return false;
         }
+        /**
+         * @brief `readGpuClockNanos` 가 기다리지 않으면 true 입니다(DX12 `GetClockCalibration` · GL `GL_TIMESTAMP`).
+         * @details false 인 백엔드(DX11 · Vulkan)는 타임스탬프 하나를 내고 GPU 가 그것을 지날 때까지 기다립니다 — 컨텍스트를 열 때 한 번만 부르고
+         *          주기적으로 다시 맞추지 않습니다.
+         */
+        virtual bool isGpuClockReadCheap() const { return false; }
         /**
          * @brief 백버퍼 크기를 바꿉니다. 채택된 크기는 `getBackBufferWidth/Height` 가 답합니다.
          * @details 크기를 여기 적어 두는 이유: 렌더러가 첨부 크기를 정할 때 **창에 묻지 않고 디바이스에 묻게**

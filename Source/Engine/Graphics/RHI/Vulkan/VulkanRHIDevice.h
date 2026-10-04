@@ -6,6 +6,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
+#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
@@ -194,7 +195,9 @@ namespace sw
 
         void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         uint32             getTimestampSlotCount() const override;
-        [[nodiscard]] bool readTimestampsMicros( vector<float32>& outListMicro ) override;
+        [[nodiscard]] bool readTimestamps( RHIGpuTimestampFrame& outFrame ) override;
+        [[nodiscard]] bool readGpuClockNanos( int64& outGpuNanos ) override;
+        bool               isGpuClockReadCheap() const override { return false; }
 
         /** @brief 타임스탬프 쿼리 풀입니다. 준비되지 않았으면 VK_NULL_HANDLE 입니다. */
         VkQueryPool getTimestampPool() const { return _timestampPool; }
@@ -575,8 +578,9 @@ namespace sw
          * @details 읽기는 `vkWaitForFences` 를 통과한 **직후**에 합니다. 그 슬롯의 GPU 작업이 이미
          *          끝났음이 보장된 유일한 자리라, 재려고 파이프라인을 멈춰 세우지 않습니다.
          */
-        VkQueryPool     _timestampPool; ///< 없으면 VK_NULL_HANDLE (이 헤더는 vulkan.h 를 들이지 않는다)
-        vector<float32> _listTimestampMicro;
+        VkQueryPool          _timestampPool;  ///< 없으면 VK_NULL_HANDLE (이 헤더는 vulkan.h 를 들이지 않는다)
+        VkQueryPool          _clockQueryPool; ///< GPU 시계 읽기(`readGpuClockNanos`)용 한 칸. 처음 읽을 때 만든다
+        RHIGpuTimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
 
         vector<VkCommandBuffer> _listCommandBuffer;
         vector<VkFence>         _listInFlightFence;

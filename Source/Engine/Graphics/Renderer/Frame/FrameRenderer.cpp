@@ -18,10 +18,34 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
+#include "Engine/Utility/Profiling/ProfilerBackend.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "FrameRenderer" );
+
+    namespace
+    {
+        struct FrameRendererInternal
+        {
+            /** @brief RHI 백엔드를 외부 프로파일러의 GPU API 종류로 바꿉니다(뷰어가 큐 이름 옆에 보여 준다). */
+            static ProfilerGpuApi toProfilerGpuApi( RHIBackend backend )
+            {
+                switch ( backend )
+                {
+                    case RHIBackend::DirectX11:
+                        return ProfilerGpuApi::Direct3D11;
+                    case RHIBackend::DirectX12:
+                        return ProfilerGpuApi::Direct3D12;
+                    case RHIBackend::Vulkan:
+                        return ProfilerGpuApi::Vulkan;
+                    case RHIBackend::OpenGL:
+                        return ProfilerGpuApi::OpenGl;
+                }
+                return ProfilerGpuApi::Direct3D12;
+            }
+        };
+    } // namespace
 
     /**
      * @brief `-gv_deferred=1` 이면 기본 파이프라인을 디퍼드로 고릅니다(기본은 포워드).
@@ -86,6 +110,9 @@ namespace sw
         , _indirectDrawCallCount{ 0 }
         , _gpuComputeScopeSlot{ FrameProfiler::kInvalidSlot }
         , _gpuFrameScopeSlot{ FrameProfiler::kInvalidSlot }
+        , _gpuTimeline{}
+        , _listGpuPassSite{}
+        , _pGpuTimelineFailedDevice{ nullptr }
         , _lastIndirectDrawCallCount{ 0 }
         , _disabledInputRoleMask{ 0 }
         , _mapMaterialFallback{}
@@ -217,6 +244,10 @@ namespace sw
         const hashed_string scopeName{ string_view( scopeText ) };
         scope._passName     = passName;
         scope._profilerSlot = engine::getFrameProfiler().registerScope( scopeName.c_str() );
+#if SW_PROFILER_BACKEND_COMPILED
+        // Tracy GPU 타임라인에는 패스 이름 그대로 보인다(GPU 줄이라 `GPU.` 접두어가 필요 없다). 줄 번호 칸은 패스 번호다.
+        scope._pZoneSite = ProfilerBackend::registerZoneSite( passName.c_str(), "GPU pass", "Engine/Graphics/Renderer", static_cast<uint32>( passIndex ) );
+#endif
         return scope._profilerSlot;
     }
 
@@ -233,17 +264,18 @@ namespace sw
         pDevice->setTimestampEnabled( engine::getFrameProfiler().isEnabled() );
         if ( pDevice->getTimestampSlotCount() == 0 )
             return;
-        if ( pDevice->readTimestampsMicros( _listGpuTimestampMicro ) == false )
+        if ( pDevice->readTimestamps( _gpuTimestampFrame ) == false )
             return;
+        const vector<float32>& listGpuTimestampMicro = _gpuTimestampFrame._listMicro;
 
         // 한 구간을 프로파일러에 넣는다. 음수는 그 칸이 이번 프레임에 안 적혔다는 표시다(패스를
         // 건너뛰었거나 첫 사이클). 한쪽만 음수여도 구간이 성립하지 않으므로 둘 다 본다.
         auto reportSpan = [&]( uint32 profilerSlot, size_t beginSlot, size_t endSlot ) -> float32
         {
-            if ( endSlot >= _listGpuTimestampMicro.size() )
+            if ( endSlot >= listGpuTimestampMicro.size() )
                 return -1.0f;
-            const float32 beginMicro = _listGpuTimestampMicro[beginSlot];
-            const float32 endMicro   = _listGpuTimestampMicro[endSlot];
+            const float32 beginMicro = listGpuTimestampMicro[beginSlot];
+            const float32 endMicro   = listGpuTimestampMicro[endSlot];
             if ( beginMicro < 0.0f || endMicro < 0.0f || endMicro < beginMicro )
                 return -1.0f;
             const float32 micro = endMicro - beginMicro;
@@ -271,12 +303,59 @@ namespace sw
         if ( _gpuFrameScopeSlot == FrameProfiler::kInvalidSlot )
             _gpuFrameScopeSlot = engine::getFrameProfiler().registerScope( "GPU.Frame" );
         reportSpan( _gpuComputeScopeSlot, FrameRendererUtil::kGpuTimestampSlotComputeBegin, FrameRendererUtil::kGpuTimestampSlotComputeEnd );
-        if ( lastEndMicro >= 0.0f && FrameRendererUtil::kGpuTimestampSlotFrameBegin < _listGpuTimestampMicro.size() )
+        if ( lastEndMicro >= 0.0f && FrameRendererUtil::kGpuTimestampSlotFrameBegin < listGpuTimestampMicro.size() )
         {
-            const float32 frameBegin = _listGpuTimestampMicro[FrameRendererUtil::kGpuTimestampSlotFrameBegin];
+            const float32 frameBegin = listGpuTimestampMicro[FrameRendererUtil::kGpuTimestampSlotFrameBegin];
             if ( frameBegin >= 0.0f && lastEndMicro >= frameBegin )
                 engine::getFrameProfiler().addSample( _gpuFrameScopeSlot, static_cast<uint64>( ( lastEndMicro - frameBegin ) * 1000.0f ) );
         }
+
+        // 같은 값을 Tracy GPU 타임라인으로도 낸다 — 쿼리를 따로 만들지 않는다.
+        exportGpuTimeline( pDevice );
+#endif
+    }
+
+    void FrameRenderer::exportGpuTimeline( [[maybe_unused]] IRHIDevice* pDevice )
+    {
+#if SW_PROFILER_BACKEND_COMPILED
+        IProfilerBackend* pBackend = ProfilerBackend::getActiveBackend();
+        if ( pBackend == nullptr || pDevice == nullptr )
+            return;
+
+        if ( _gpuTimeline.isContextOpenFor( pDevice, pBackend ) == false )
+        {
+            // GPU 시계를 못 읽는 디바이스는 다시 묻지 않는다(DX11 · Vulkan 의 읽기는 큐를 기다린다).
+            if ( _pGpuTimelineFailedDevice == pDevice )
+                return;
+            int64      gpuNow{ 0 };
+            const bool bClockRead = pDevice->readGpuClockNanos( gpuNow );
+            const bool bOpened    = bClockRead && _gpuTimeline.openContext( *pBackend, FrameRendererInternal::toProfilerGpuApi( pDevice->getBackendType() ),
+                                                                            pDevice->getBackendName(), pDevice, gpuNow );
+            if ( bOpened == false )
+            {
+                _pGpuTimelineFailedDevice = pDevice;
+                SW_LOG_WARNING( "GPU timeline for the external profiler is unavailable on %# (GPU clock read %#)", pDevice->getBackendName(),
+                                bClockRead ? "ok" : "failed" );
+                return;
+            }
+            SW_LOG_INFO( "GPU timeline for the external profiler opened on %#", pDevice->getBackendName() );
+        }
+        else if ( pDevice->isGpuClockReadCheap() && _gpuTimeline.advanceAndCheckResync() )
+        {
+            int64 gpuNow{ 0 };
+            if ( pDevice->readGpuClockNanos( gpuNow ) )
+                _gpuTimeline.resyncClock( *pBackend, gpuNow );
+        }
+
+        static const ProfileZoneSite* s_pFrameSite   = ProfilerBackend::registerZoneSite( "GPU Frame", "GPU frame", "Engine/Graphics/Renderer", 0u );
+        static const ProfileZoneSite* s_pComputeSite = ProfilerBackend::registerZoneSite( "Compute prepass", "GPU frame", "Engine/Graphics/Renderer", 1u );
+        if ( s_pFrameSite == nullptr || s_pComputeSite == nullptr )
+            return;
+
+        _listGpuPassSite.clear();
+        for ( const GpuPassScope& scope : _listGpuPassScope )
+            _listGpuPassSite.push_back( scope._pZoneSite );
+        std::ignore = _gpuTimeline.exportFrame( *pBackend, _gpuTimestampFrame, *s_pFrameSite, *s_pComputeSite, _listGpuPassSite );
 #endif
     }
 
@@ -317,8 +396,11 @@ namespace sw
         _pCmd            = nullptr;
         _frameCtx._pCmd  = nullptr;
         _pDevice         = nullptr;
-        _pTaskManager    = nullptr;
-        _status          = FrameRendererStatus::Uninitialized;
+        // 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 연다. 같은 주소에 새 디바이스가 서도 옛 시계 기준을 쓰지 않게 잊는다.
+        _gpuTimeline.forgetContext();
+        _pGpuTimelineFailedDevice = nullptr;
+        _pTaskManager             = nullptr;
+        _status                   = FrameRendererStatus::Uninitialized;
         _statusMessage.clear();
         _bCallbacksBound = SW_FALSE;
         _pipelinePath.clear();

@@ -56,7 +56,31 @@ build/Ninja-Release/Bin/App.exe -gv_tracy=1 -gv_tracyMemory=1  # + 할당 · 해
 | 스레드 이름 | OS 이름(`ThreadName` — `GameThread` · `RenderThread` · `Worker N` · `IO` · `IO.Iocp` · `Logger` · `Net`). Tracy 가 OS 에서 읽는다 |
 | 프레임 | 주 프레임 = 게임 스레드(`EngineLoop::endFrame`), 보조 프레임 `Render` = 렌더 스레드 Present 뒤 |
 | 그래프 | `SW_PROFILE_COUNT` 의 프레임 합(드로우 수 · `Mem.LiveKB` · 에셋 바이트 …) |
+| GPU 타임라인 | 네 백엔드(DX12 · DX11 · Vulkan · GL) 모두. 패스마다 `GPU Frame` ⊃ `Compute prepass` · 패스 이름. 아래 "GPU 구간" |
 | 메모리 | `-gv_tracyMemory=1` 일 때 `Memory::allocate`/`free` 를 메모리 태그 이름의 풀로. Tracy 를 켜기 전에 잡힌 블록의 해제는 보내지 않는다(짝 없는 해제는 뷰어가 기록을 멈춘다) |
+
+## GPU 구간 — 쿼리는 한 벌
+
+엔진은 이미 네 백엔드에서 패스마다 타임스탬프를 적고 몇 프레임 뒤에 읽습니다(`IRHIDevice::readTimestamps` — 엔진 표의 `GPU.<패스>` · `GPU.Frame` 줄,
+성능 회귀 `PerfRegression.py` 의 `GPU.Frame`). **같은 값**을 `Graphics/Renderer/Frame/GpuTimelineExporter` 가 Tracy 의 "수동 GPU 컨텍스트"(C API
+`___tracy_emit_gpu_*`)로 넘깁니다. TracyD3D12 · TracyVulkan 같은 API 별 헤더는 쓰지 않습니다 — 쿼리를 두 번째로 만들고(서로를 잰다) RHI 백엔드 DLL 마다
+클라이언트를 링크하게 됩니다.
+
+- **언제 내는가**: 렌더 스레드가 이미 끝난 프레임을 읽은 자리에서 열고 닫기 짝을 맞춰 한 번에 냅니다. 병렬 기록 워커가 구간을 내지 않으므로 컨텍스트를 워커마다
+  나눌 일이 없고, 읽기를 놓친 프레임의 구간이 뷰어에 열린 채 남지 않습니다. 대가: 뷰어의 GPU 구간 "CPU 쪽 발행 시각"(지연 표시)은 기록 시각이 아니라 읽은
+  시각입니다. GPU 타임라인 위의 위치 · 길이는 정확합니다.
+- **시계 맞추기**: 컨텍스트를 열 때 `IRHIDevice::readGpuClockNanos` 로 "지금 GPU 시계" 를 읽어 Tracy 가 찍는 CPU 시각과 짝짓습니다.
+
+  | 백엔드 | 읽는 법 | 다시 맞추기 |
+  |---|---|---|
+  | DX12 | `ID3D12CommandQueue::GetClockCalibration`(기다리지 않음) | 240 프레임마다 |
+  | GL | `glGetInteger64v( GL_TIMESTAMP )`(기다리지 않음) | 240 프레임마다 |
+  | DX11 | 타임스탬프 쿼리 하나를 내고 끝날 때까지 `GetData`(큐에 쌓인 프레임만큼 기다림) | 열 때 한 번 |
+  | Vulkan | 일회성 버퍼에 `vkCmdWriteTimestamp` → 큐 대기(보정 확장 `VK_EXT_calibrated_timestamps` 없이) | 열 때 한 번 |
+
+  DX11 · Vulkan 은 긴 실행에서 GPU · CPU 시계가 서로 흐르는 만큼(드라이버 · 기계에 따라 분당 수 us) GPU 줄이 조금씩 밀립니다.
+- **백엔드 교체**: 디바이스가 바뀌면 새 컨텍스트(새 번호)를 엽니다. Tracy 의 컨텍스트 번호는 1 바이트라 교체 255 번까지입니다.
+- 칸 배치(패스 14 개 + 컴퓨트 · 프레임 칸)는 `FrameRendererUtil` 의 타임스탬프 칸 배치를 따릅니다. 넘는 패스는 엔진 표와 같이 Tracy 에도 없습니다.
 
 ## 함정
 

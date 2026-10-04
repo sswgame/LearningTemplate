@@ -23,7 +23,8 @@ RHI/
                      RHIHandleTable(핸들→객체), RHIIndexFreeList(인덱스 재사용),
                      RHIReleaseQueue(GPU 가 다 쓴 뒤 해제), FrameResourceRing(프레임 슬롯),
                      RHIShaderRequest(파이프라인 서술체 → 컴파일 요청 해석 · 그래픽스 스테이지 쌍 컴파일 — 넷이 각자 갖던 규칙 하나),
-                     RHIGpuTimestamp(타임스탬프 칸 → 마이크로초 — 기준점 · 미기록 칸 규칙 하나),
+                     RHIGpuTimestamp(타임스탬프 칸 → 마이크로초 + 기준점의 GPU 시계 나노초 — 기준점 · 미기록 칸 · 틱 환산 규칙 하나.
+                     엔진 표 `GPU.<패스>` 와 Tracy GPU 타임라인이 같은 값을 쓴다. `readGpuClockNanos` 는 지금 GPU 시계 — Tracy 가 CPU 시계와 맞춘다),
                      RHIBufferSize(32비트 API 의 버퍼 크기 — 넘치면 만들지 않는다),
                      RHIConstantBufferMirror(링 상수버퍼의 모든 칸이 마지막 값을 갖게 — DX12 · Vulkan),
                      RHILiveCommandListUtil(종료 때 살아 있는 커맨드 리스트를 디바이스에서 떼는 도우미)
