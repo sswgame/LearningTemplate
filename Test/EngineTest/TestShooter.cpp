@@ -10,6 +10,7 @@
 #include "GameFramework/Combat/WeaponMath.h"
 #include "GameFramework/Input/FirstPersonLook.h"
 #include "GameFramework/Movement/LocomotionMath.h"
+#include "GameFramework/Utility/OrientationUtil.h"
 #include "GameFramework/Utility/RayMath.h"
 
 #include "TestFramework/TestFramework.h"
@@ -318,4 +319,20 @@ SW_TEST_CASE( ShooterTest, LocomotionFilterHoldsTheDirectionThroughFlicker )
     // 공중은 바로, 내려와도 바로.
     SW_EXPECT_TRUE( filter.update( LocomotionDirection::Airborne, 0.01f ) == LocomotionDirection::Airborne );
     SW_EXPECT_TRUE( filter.update( LocomotionDirection::Idle, 0.01f ) == LocomotionDirection::Idle );
+}
+
+/**
+ * @brief [ShooterTest] 요 돌리기는 짧은 길로 최대 걸음만큼만 간다 — ±π 를 건너는 쪽, 걸음보다 가까우면 목표, 걸음 0 이면 그대로
+ */
+SW_TEST_CASE( ShooterTest, TurnTowardAngleTakesTheShortWayAndCapsTheStep )
+{
+    SW_EXPECT_NEAR_EQUAL( 0.5f, OrientationUtil::turnTowardAngle( 0.0f, 2.0f, 0.5f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.2f, OrientationUtil::turnTowardAngle( 0.0f, 0.2f, 0.5f ), 1.0e-6f );
+    // 3.0 → -3.0 은 +쪽으로 0.283 rad 가 짧다 — π 를 넘어 -π 근처로 감긴다.
+    const float32 crossed = OrientationUtil::turnTowardAngle( 3.0f, -3.0f, 0.1f );
+    SW_EXPECT_NEAR_EQUAL( 3.1f, crossed, 1.0e-5f );
+    const float32 wrapped = OrientationUtil::turnTowardAngle( 3.1f, -3.1f, 0.2f );
+    SW_EXPECT_NEAR_EQUAL( -3.1f, wrapped, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, OrientationUtil::turnTowardAngle( 1.0f, -2.0f, 0.0f ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( -MathUtil::HalfPi, OrientationUtil::wrapAngle( 3.0f * MathUtil::HalfPi ), 1.0e-5f );
 }

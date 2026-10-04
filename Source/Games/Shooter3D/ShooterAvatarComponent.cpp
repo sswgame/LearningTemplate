@@ -9,6 +9,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Utility/OrientationUtil.h"
+
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
 namespace sw
@@ -66,14 +68,17 @@ namespace sw
         , _walkThreshold{ 0.4f }
         , _runThreshold{ 3.0f }
         , _hitPause{ 0.45f }
+        , _turnRate{ 10.0f }
         , _locomotion{ 0.25f }
         , _aimWeight{ 0.0f }
         , _shootWeight{ 0.0f }
         , _hitTimer{ 0.0f }
+        , _bodyYaw{ 0.0f }
         , _lastHitReaction{ 0 }
         , _aimLayer{ -1 }
         , _shootLayer{ -1 }
         , _bLayersReady{ SW_FALSE }
+        , _bYawReady{ SW_FALSE }
         , _reserved{ 0 }
     {
         setCanEverTick( true );
@@ -121,8 +126,11 @@ namespace sw
         const float32 step = MathUtil::min( deltaTime, 0.1f );
 
         // 몸은 발 자리에 서서 보는 쪽을 본다(KayKit 은 +Z 가 앞).
+        // 시점이 한 프레임에 크게 돌아도(마우스 휙 · 표적 바꾸기) 몸은 각속도 상한으로 따라간다.
+        _bodyYaw   = _bYawReady == SW_TRUE ? OrientationUtil::turnTowardAngle( _bodyYaw, pPlayer->getLookYaw(), _turnRate * step ) : pPlayer->getLookYaw();
+        _bYawReady = SW_TRUE;
         pScene->setLocalPosition( pPlayer->getFeetPosition() );
-        pScene->setLocalRotation( float3{ 0.0f, pPlayer->getLookYaw(), 0.0f } );
+        pScene->setLocalRotation( float3{ 0.0f, _bodyYaw, 0.0f } );
         if ( pAnimator == nullptr )
             return;
         ensureLayers();
@@ -140,10 +148,10 @@ namespace sw
         _hitTimer -= step;
         AnimParameterSet& parameters = pAnimator->getParameters();
         // 대각선 · 문턱 근처에서 상태가 오가면 클립이 매번 처음부터 다시 돈다 — 히스테리시스로 고르고 바뀐 것은 잠깐 이어져야 받아들인다.
-        const LocomotionDirection candidate = LocomotionMath::classifyFrom( _locomotion.getDirection(), pPlayer->getMoveVelocity(), pPlayer->getLookYaw(),
+        const LocomotionDirection candidate = LocomotionMath::classifyFrom( _locomotion.getDirection(), pPlayer->getMoveVelocity(), _bodyYaw,
                                                                             pPlayer->isOnGround(), _walkThreshold );
         const LocomotionDirection direction = _locomotion.update( candidate, step );
-        const float32             forward   = LocomotionMath::computeLocalVelocity( pPlayer->getMoveVelocity(), pPlayer->getLookYaw() )._x;
+        const float32             forward   = LocomotionMath::computeLocalVelocity( pPlayer->getMoveVelocity(), _bodyYaw )._x;
         parameters.setFloat( hashed_string( "Move" ), Internal::computeMoveCode( direction, forward, _runThreshold ) );
         parameters.setBool( hashed_string( "Dead" ), bAlive == false );
 

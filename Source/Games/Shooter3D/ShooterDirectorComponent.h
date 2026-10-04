@@ -181,7 +181,9 @@ namespace sw
         void                         updatePlayerView();
         void                         clearEnemies();
         void                         logStatus( float32 deltaTime );
-        GameObjectManager*           getObjectManager() const;
+        /** @brief `-gv_shooterMotionTrace=<경로>` — 지난 프레임에 그려진 플레이어 몸 · 본 · 카메라 · 적 하나의 자리를 CSV 한 줄로 쌓습니다. */
+        void               appendMotionTrace( float32 deltaTime );
+        GameObjectManager* getObjectManager() const;
 
     private:
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "Skeleton enemy (skeletal mesh, animator, appearance, ShooterEnemyComponent)" )
@@ -227,12 +229,14 @@ namespace sw
         vector<const utf8*>      _listPendingSound; ///< 낼 효과음(틱 뒤 — 오디오는 게임 스레드에서)
         vector<ColorLook>        _listColorLook;
         vector<uint8>            _pendingStateBytes; ///< 플레이 시작 전에 받은 복원 바이트(`restoreState`)
+        string                   _motionTrace;       ///< 움직임 기록 CSV(진단 — 끝날 때 파일로)
         float3                   _playerEye;
         float3                   _playerFeet;
         float32                  _statusTimer;
         float32                  _pendingHeal; ///< 감독의 수리 보상 — 틱 뒤에 플레이어 체력으로
         uint32                   _spawnCursor; ///< 다음 적의 스폰 자리 순번
         uint32                   _killCount;
+        uint32                   _traceFrame; ///< 움직임 기록의 프레임 번호
         uint8                    _bStarted        : 1;
         uint8                    _bPoolSpawned    : 1; ///< 효과 풀이 서 있다(걷으면 다음 틱이 다시 세운다)
         uint8                    _bFlushScheduled : 1;

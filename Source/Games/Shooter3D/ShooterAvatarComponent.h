@@ -59,16 +59,20 @@ namespace sw
         float32 _runThreshold;
         PROPERTY( Category = "Avatar", DisplayName = "Hit Pause", Tooltip = "Seconds the upper-body layers step aside for the hit reaction", Min = 0.0, Meta = "Units=s" )
         float32 _hitPause;
+        PROPERTY( Category = "Avatar", DisplayName = "Turn Rate", Tooltip = "Fastest the body turns to the view direction", Min = 0.0, Meta = "Units=rad/s" )
+        float32 _turnRate;
 
         LocomotionDirectionFilter _locomotion;
 
         float32 _aimWeight;
         float32 _shootWeight;
         float32 _hitTimer;
+        float32 _bodyYaw; ///< 몸이 보는 요 — 시점을 각속도 상한으로 따라간다
         uint32  _lastHitReaction;
         int32   _aimLayer;
         int32   _shootLayer;
         uint8   _bLayersReady : 1;
-        uint8   _reserved     : 7;
+        uint8   _bYawReady    : 1;
+        uint8   _reserved     : 6;
     };
 } // namespace sw

@@ -87,7 +87,9 @@ namespace sw
         /** @brief 지금 무기의 탄(탄창 + 예비)이 탄창 네 개에 얼마나 모자란가 — 0(넉넉) .. 1(없음). 디렉터의 "탄 부족" 신호입니다. */
         float32 computeAmmoShortage() const;
         uint32  getShotCount() const { return _shotCount; }
-        uint32  getHitCount() const { return _hitCount; }
+        /** @brief 세워 둔 몸 오브젝트입니다. 없으면 nullptr 입니다. */
+        GameObject* findBodyObject() const;
+        uint32      getHitCount() const { return _hitCount; }
 
     private:
         /** @brief 이번 발의 탄도선 하나 — 틱 뒤에 디렉터의 풀에서 꺼낸다. */
@@ -147,8 +149,7 @@ namespace sw
         /** @brief 몸을 세웁니다(게임 스레드, 틱 밖). */
         void spawnBody();
         /** @brief 1인칭 / 그 밖 — 손에 든 총 · 조준선 · 몸 보임을 맞춥니다(게임 스레드). */
-        void        applyViewMode();
-        GameObject* findBodyObject() const;
+        void applyViewMode();
 
     private:
         PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the ShooterDirectorComponent" )

@@ -23,6 +23,7 @@
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Inventory/ItemCatalog.h"
+#include "GameFramework/Utility/OrientationUtil.h"
 
 #include "Games/Shooter3D/ShooterAvatarComponent.h"
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
@@ -57,10 +58,12 @@ namespace sw
             static constexpr float32 kTracerLifetime = 0.07f;
             static constexpr float32 kTracerWidth    = 0.025f;
             /** @brief 자동 플레이가 쏘기 시작하는 거리(m) — 사람처럼 다가온 적을 쏜다(멀리서 다 잡으면 아레나가 비어 보인다). */
-            static constexpr float32     kAutoEngageDistance = 7.0f;
-            static constexpr const utf8* kSoundLand          = "game/shooter3d/sounds/footstep_concrete_000.ogg";
-            static constexpr const utf8* kSoundHitEnemy      = "game/shooter3d/sounds/impact_metal_light_001.ogg";
-            static constexpr const utf8* kSoundHitCover      = "game/shooter3d/sounds/impact_plank_medium_000.ogg";
+            static constexpr float32 kAutoEngageDistance = 7.0f;
+            /** @brief 자동 조준의 최대 각속도(rad/s) — 약 170°/s. */
+            static constexpr float32     kAutoTurnRate  = 3.0f;
+            static constexpr const utf8* kSoundLand     = "game/shooter3d/sounds/footstep_concrete_000.ogg";
+            static constexpr const utf8* kSoundHitEnemy = "game/shooter3d/sounds/impact_metal_light_001.ogg";
+            static constexpr const utf8* kSoundHitCover = "game/shooter3d/sounds/impact_plank_medium_000.ogg";
 
             static float3 flatten( const float3& value ) { return float3{ value._x, 0.0f, value._z }; }
 
@@ -408,13 +411,13 @@ namespace sw
         const float3           toTarget    = ( aimPoint - eye ).normalize();
         const float32          targetYaw   = MathUtil::atan2( toTarget._x, toTarget._z );
         const float32          targetPitch = MathUtil::asin( MathUtil::clamp( toTarget._y, -1.0f, 1.0f ) );
-        float32                yawError    = targetYaw - look.getYaw();
-        while ( yawError > MathUtil::Pi )
-            yawError -= 2.0f * MathUtil::Pi;
-        while ( yawError < -MathUtil::Pi )
-            yawError += 2.0f * MathUtil::Pi;
-        const float32 blend = MathUtil::min( 1.0f, deltaTime * 8.0f );
-        camera.setAngles( look.getYaw() + yawError * blend, look.getPitch() + ( targetPitch - look.getPitch() ) * blend );
+        const float32          yawError    = OrientationUtil::wrapAngle( targetYaw - look.getYaw() );
+        // 사람처럼 돈다 — 오차에 비례해 돌되 각속도 상한을 둔다. 상한이 없으면 표적이 바뀔 때 한 프레임에 수십 도 돌아 3인칭 몸 · 카메라가 튄다.
+        const float32 blend   = MathUtil::min( 1.0f, deltaTime * 8.0f );
+        const float32 maxTurn = ShooterPlayerComponentInternal::kAutoTurnRate * deltaTime;
+        const float32 yaw     = OrientationUtil::turnTowardAngle( look.getYaw(), look.getYaw() + yawError * blend, maxTurn );
+        const float32 pitch   = look.getPitch() + MathUtil::clamp( ( targetPitch - look.getPitch() ) * blend, -maxTurn, maxTurn );
+        camera.setAngles( yaw, pitch );
         const bool bAimed       = MathUtil::abs( yawError ) < 3.0f * MathUtil::DegreeToRadian && bestDistance < ShooterPlayerComponentInternal::kAutoEngageDistance;
         outIntent._bTrigger     = bAimed ? SW_TRUE : SW_FALSE;
         outIntent._bJustPressed = bAimed ? SW_TRUE : SW_FALSE;

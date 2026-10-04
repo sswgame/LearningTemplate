@@ -15,7 +15,13 @@ cd build/Ninja-Debug-Shooter3D/Bin
 ./App.exe -dx12 -gv_shooterAutoPlay=1   # 조준 · 사격 · 이동도 AI(가까우면 산탄총, 멀면 소총 — 8 m 안의 적부터 쏜다)
 ./App.exe -dx12 -gv_cameraPreset=thirdperson   # 시작 카메라 프리셋(firstperson · thirdperson · orbit · cctv) — 프리셋마다 스크린샷을 찍을 때
 ./App.exe -dx12 -EnableEditor "-gv_editorStartupScene=game/shooter3d/maps/arena.scene.xml"
+# 튐 진단 — 프레임마다 dt · 발 · 몸 자리와 요 · 루트/골반/머리/손 본 · 카메라 · 적 하나를 CSV 로(끝날 때 쓴다). 연속 스크린샷과 같이 본다.
+./App.exe -dx11 -gv_shooterAutoPlay=1 -gv_cameraPreset=thirdperson -gv_profileFrames=2700 "-gv_shooterMotionTrace=trace.csv" `
+          -gv_screenshotFrame=2500 -gv_screenshotCount=30 -gv_screenshotInterval=2 "-gv_screenshot=tp.ppm"
 ```
+
+몸은 시점 요를 각속도 상한(`ShooterAvatarComponent._turnRate`, 10 rad/s)으로 따라가고, 자동 조준도 3 rad/s 로 돈다 — 상한이 없으면 표적을 바꿀 때 한 프레임에
+수십 도 돌아 3인칭 몸 · 카메라가 튄다.
 
 ## 조작 — 입력 맵 `data/shooter.input.xml`
 

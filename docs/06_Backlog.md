@@ -550,6 +550,7 @@ cd build/Ninja-Debug/Bin
 - **픽셀 지표는 튼튼하게.** "특정 색 픽셀 수" 는 클리어 색 · 톤맵에 무너진다 — 모서리 기준 배경 제거 + 평균(R−B) 대소, 또는 "고유 색 ≥ 2". sin(시간) 구동
   지표는 "달라진 픽셀 수" 로. define 이 GPU 에 닿았는지는 PSO 디스크립터가 아니라 픽셀로 본다. 막히면 PPM 을 덤프한다.
 - **`-gv_screenshot` 은 PrintWindow 가 아니다** — PPM 이 정본이다. `-gv_screenshotFrame=N` 으로 프레임을, `-gv_screenshotAttachment=<이름>` 으로 첨부를 고른다.
+  "가끔 튄다" 는 한 장으로 안 잡힌다 — `-gv_screenshotCount=30 -gv_screenshotInterval=2` 로 연속으로 찍어(`_000` … 이 붙는다) 장을 나란히 본다.
 - **"조용한 프레임" 버그는 벤치가 가린다**(회전 큐브라 매 프레임 dirty). 에디터 정지 화면으로 본다: `-EnableEditor -gv_benchMeshes=1 -gv_screenshot -gv_screenshotFrame=60`.
   그리는 것이 의심스러우면 `-gv_gpuCulling=0` · `-gv_drawMerge=0` · `-gv_vertexPool=0` 으로 경로를 하나씩 뗀다.
 - **백엔드 교체는 헤드리스로 재현한다**: `-gv_rhiSwapAtFrame=N -gv_rhiSwapTo=<backend>`. 투명 큐브가 카나리아다. 텍스처 경로는 `-gv_defaultMaterial=engine/materials/benchtextured.material`.
@@ -894,6 +895,10 @@ cd build/Ninja-Debug/Bin
   드라이버 안에서 죽는다 — `RenderPassGpuTest.PartialStructuredBufferUploadReadsOnlyTheSourceRange` 가 가드 페이지로 지킨다).
 - **애니메이션이 튀면 본 하나의 프레임 사이 이동량을 재 본다** — Shooter3D 의 튐은 셋이 겹친 것이었다: 반복으로 돌린 겨누기 레이어의 끝 → 처음(1 초마다 32 cm),
   대각선에서 상태가 오가며 클립을 처음부터 다시 틀기, 끊긴 크로스페이드가 한 칸을 버리기. 튐의 간격이 클립 길이와 맞는지부터 본다.
+  몸 전체가 튀면 프레임별 CSV(Shooter3D `-gv_shooterMotionTrace=<경로>`)로 몸 = 발 자리 · 루트 본 · 요 각속도 · 카메라 이동을 나눠 본다 — 자동 조준이 표적을 바꿀 때
+  20 rad/s 로 돌던 요 스냅이 원인이었다(각속도 상한 `OrientationUtil::turnTowardAngle`).
+- **스킨 팔레트는 `AnimationSystem::getUnits()` 에서 모은다, 레벨이 아니다** — `unregisterUnit` 은 레벨을 다음 평가까지 비운다. 레벨로 모으면 시체 하나를 걷는 프레임에
+  모든 스킨드 메시가 팔레트 없이(바인드 포즈 = T 포즈) 한 번 그려진다(`GpuSceneTest.SkinPalettesSurviveAUnitLeavingTheFrame`).
 - **스킨드 메시는 모프 풀의 뒤 구간이다** — 팔레트는 GT 의 `AnimationSystem` → `GpuSceneBuilder::collectSkinPalettes`(수집 건너뛰기와 무관하게 매 프레임) →
   스냅샷 → `GpuMeshMorphPool::uploadSkinPalettes`(풀 순서) → meshskin.hlsl. 팔레트 행은 행벡터 4x4 의 **열** 셋이다(행을 넣으면 전치된 회전).
 - **다중 뷰(`FrameRendererViews.cpp`)의 함정 셋.** ① 디스패치마다 쓰는 상수버퍼(컬링 · 정렬)는 뷰마다 따로다 — 정렬 CB 하나를 주 뷰 · 추가 뷰가 나눠 쓰면 마지막

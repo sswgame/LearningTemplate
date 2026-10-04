@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/UI/HealthBarComponent.h"
+#include "GameFramework/Utility/OrientationUtil.h"
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
@@ -23,16 +24,6 @@ namespace sw
             static constexpr float32 kMoveIdle = 0.0f;
             static constexpr float32 kMoveWalk = 1.0f;
             static constexpr float32 kMoveRun  = 2.0f;
-
-            /** @brief 두 요의 차이를 [-π, π] 로 맞춥니다. */
-            static float32 wrapAngle( float32 angle )
-            {
-                while ( angle > MathUtil::Pi )
-                    angle -= 2.0f * MathUtil::Pi;
-                while ( angle < -MathUtil::Pi )
-                    angle += 2.0f * MathUtil::Pi;
-                return angle;
-            }
         };
     } // namespace
 } // namespace sw
@@ -224,11 +215,7 @@ namespace sw
         // 몸을 진행 방향 쪽으로 돌린다(일어나는 중 · 쓰러지는 중은 그대로).
         const bool bTurning = _phase == ShooterEnemyPhase::Chasing || _phase == ShooterEnemyPhase::Attacking;
         if ( bTurning )
-        {
-            const float32 yawError = Internal::wrapAngle( wantYaw - _yaw );
-            const float32 maxTurn  = _turnRate * step;
-            _yaw                   = Internal::wrapAngle( _yaw + MathUtil::clamp( yawError, -maxTurn, maxTurn ) );
-        }
+            _yaw = OrientationUtil::turnTowardAngle( _yaw, wantYaw, _turnRate * step );
         SceneComponent* pScene = pOwner->getPrimarySceneComponent();
         if ( pScene != nullptr )
         {
