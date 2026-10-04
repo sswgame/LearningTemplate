@@ -536,6 +536,27 @@ SW_TEST_CASE( NetworkTest, UdpTransportSendsDatagramsOverLocalhost )
     SW_EXPECT_EQUAL( static_cast<int32>( client.getLocalAddress()._port ), static_cast<int32>( from._port ) );
     SW_EXPECT_FALSE( server.receive( from, buffer ) );
 
+    // 닫힌 포트로 보낸 뒤에도 받기가 계속된다 — Windows 는 돌아온 ICMP "포트 닿지 않음" 을 다음 recvfrom 의 WSAECONNRESET 으로 알린다.
+    NetAddress closedAddress{};
+    {
+        UdpNetTransport closed;
+        SW_ASSERT_TRUE( closed.open( 0 ) );
+        closedAddress = closed.getLocalAddress();
+    }
+    SW_ASSERT_TRUE( client.send( closedAddress, arrData, 5 ) );
+    std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) );
+    SW_ASSERT_TRUE( server.send( client.getLocalAddress(), arrData, 3 ) );
+    bReceived = false;
+    for ( int32 attempt = 0; attempt < 200 && bReceived == false; ++attempt )
+    {
+        bReceived = client.receive( from, buffer );
+        if ( bReceived == false )
+            std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
+    }
+    SW_ASSERT_TRUE( bReceived );
+    SW_EXPECT_EQUAL( 3, static_cast<int32>( buffer.size() ) );
+    SW_EXPECT_EQUAL( static_cast<int32>( serverAddress._port ), static_cast<int32>( from._port ) );
+
     NetAddress parsed{};
     SW_EXPECT_TRUE( NetAddress::parse( "10.0.0.7:7777", 1, parsed ) );
     SW_EXPECT_TRUE( parsed == NetAddress::make( 10, 0, 0, 7, 7777 ) );
