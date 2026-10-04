@@ -63,6 +63,18 @@
 			                       _corpseTime="3"
 			                       _runSpeed="3.2"
 			                       _turnRate="6" />
+			<NavMeshAgentComponent _componentName="NavMeshAgentComponent"
+			                       _bActive="true"
+			                       _agentType="Humanoid"
+			                       _maxSpeed="3"
+			                       _maxAcceleration="12"
+			                       _stoppingDistance="1.45"
+			                       _radius="0.45"
+			                       _separationWeight="2"
+			                       _avoidanceQuality="Medium"
+			                       _turnRate="8"
+			                       _bUpdatePosition="true"
+			                       _bUpdateRotation="false" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

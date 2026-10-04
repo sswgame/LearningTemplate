@@ -26,7 +26,7 @@ ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F
 | 인자 | 하는 일 | 누가 |
 |---|---|---|
 | `--cook-shaders` | 셰이더 쿠킹(`ShaderCookDriver::cookAllShaders`) | 엔진(`Headless` 단계) |
-| `--cook-scenes --cooked-dir=<폴더>` | 씬 · 프리팹 · GUID 레지스트리 쿠킹. 입력은 소스 트리(`ContentSource::SourceTree` — 팩을 마운트하지 않는다). 모르는 타입의 컴포넌트(`MissingComponent`)가 든 씬은 실패로 센다 | 엔진(`Headless` 단계) — 모든 타입 공급자가 오른 `ModuleTypes` 뒤라야 쿠킹한다 |
+| `--cook-scenes --cooked-dir=<폴더>` | 씬 · 프리팹 · GUID 레지스트리 · VAT · 내비메시(`.navmesh` — 내비 표면이 놓인 씬마다, `SceneNavigationCooker`) 쿠킹. 입력은 소스 트리(`ContentSource::SourceTree` — 팩을 마운트하지 않는다). 모르는 타입의 컴포넌트(`MissingComponent`)가 든 씬은 실패로 센다 | 엔진(`Headless` 단계) — 모든 타입 공급자가 오른 `ModuleTypes` 뒤라야 쿠킹한다 |
 | `--import-textures` / `--check-textures` | 텍스처 임포트 / 원본 · DDS 스탬프 대조만 | App 이 `ModuleHost::importAssetsWithEditorModule( EditorImportKind::Texture, … )` 로 에디터 모듈을 인스턴스 없이 올려 부른다. Dev 전용(Shipping 은 에디터가 없어 실패) |
 | `--import-models` / `--check-models` | glTF 모델 임포트 / 원본 · `.mesh` 스탬프 대조만 | 위와 같은 길(`EditorImportKind::Model`) |
 

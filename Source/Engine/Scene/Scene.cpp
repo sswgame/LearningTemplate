@@ -170,6 +170,8 @@ namespace sw
     {
         if ( _objectManager == nullptr )
             return false;
+        // 내비게이션이 쿠킹한 내비메시(`<씬>.navmesh`)를 찾는 이름이다.
+        _objectManager->getSceneNavigation().setSourcePath( doc._sourcePath.empty() ? string_view{ _sourcePath } : string_view{ doc._sourcePath } );
 
         // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 풀 수 있다 — 엔티티를 모두 하나의 묶음으로 읽고 끝에서 잇는다. 부착은 부모를
         // 그 엔티티의 **파일 id** 로 가리킨다(파일 안에서만 뜻이 있는 값이라 묶음 안에서만 푼다). 이름으로 찾으면 이름이 겹친

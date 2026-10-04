@@ -7,6 +7,7 @@
 #include "GameFramework/Navigation/GridReachability.h"
 #include "GameFramework/Navigation/NavAgent.h"
 #include "GameFramework/Navigation/NavGrid.h"
+#include "GameFramework/Navigation/NavGridMover.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -319,6 +320,36 @@ SW_TEST_CASE( NavigationTest, AgentsFollowPathsAndFlowFieldsWithoutOverlapping )
         pushed.update( grid, listNoNeighbor, 1.0f / 60.0f );
     SW_EXPECT_TRUE( pushed.getState() == NavAgentState::Stuck );
     SW_EXPECT_TRUE( grid.isWalkable( grid.computeCell( pushed.getPosition() ) ) );
+}
+
+/**
+ * @brief [NavigationTest] 격자 행위자를 공통 이동 창구(`INavMover`)로 — 내비메시 에이전트와 같은 호출로 걷고, 도착 · 길 없음(막힌 칸에서 출발)을 같은 상태로 알린다
+ */
+SW_TEST_CASE( NavigationTest, GridMoverSpeaksTheCommonMoverInterface )
+{
+    NavGrid grid;
+    makeWallGrid( grid );
+    GridPathfinder pathfinder;
+    NavAgent       agent;
+    agent.setPosition( float3{ 2.5f, 0.0f, 2.5f } );
+    NavGridMover gridMover{ agent, grid, pathfinder };
+    INavMover&   mover = gridMover;
+    SW_ASSERT_TRUE( mover.moveTo( float3{ 17.3f, 0.0f, 2.7f } ) );
+    SW_EXPECT_TRUE( mover.getMoveStatus() == NavMoveStatus::Moving );
+    const vector<float3> listNoNeighbor;
+    for ( int32 frameIndex = 0; frameIndex < 600 && mover.getMoveStatus() == NavMoveStatus::Moving; ++frameIndex )
+        agent.update( grid, listNoNeighbor, 1.0f / 60.0f );
+    SW_EXPECT_TRUE( mover.getMoveStatus() == NavMoveStatus::Arrived );
+    SW_EXPECT_TRUE( float3::getDistance( mover.getMovePosition(), float3{ 17.3f, 0.0f, 2.7f } ) < 0.3f );
+
+    // 막힌 칸(벽 속)에서는 길이 없다 — 실패로 알린다.
+    NavAgent walled;
+    walled.setPosition( float3{ 10.5f, 0.0f, 5.5f } );
+    NavGridMover walledMover{ walled, grid, pathfinder };
+    SW_EXPECT_FALSE( walledMover.moveTo( float3{ 17.3f, 0.0f, 2.7f } ) );
+    SW_EXPECT_TRUE( walledMover.getMoveStatus() == NavMoveStatus::Failed );
+    walledMover.stopMoving();
+    SW_EXPECT_TRUE( walledMover.getMoveStatus() == NavMoveStatus::Idle );
 }
 
 SW_TEST_CASE( NavigationTest, ReachabilityHonoursTerrainCostsAlliesAndAttackRange )

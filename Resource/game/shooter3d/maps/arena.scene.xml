@@ -936,6 +936,10 @@
 					                 _clipFrame="0"
 					                 _uvRect="0,0,1,1"
 					                 _tint="1,0.35,0.3,1" />
+					<NavMeshModifierComponent _componentName="NavMeshModifierComponent"
+					                          _bActive="true"
+					                          _areaName=""
+					                          _bIgnoreFromBuild="true" />
 					<FirstPersonCameraComponent _componentName="FirstPersonCameraComponent"
 					                            _bActive="true"
 					                            _yaw="0"
@@ -1086,6 +1090,21 @@
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
 					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="55" name="NavigationSurface">
+			<GameObject _schemaVersion="0" _name="NavigationSurface" _bActive="true">
+				<_listComponent>
+					<NavMeshSurfaceComponent _componentName="NavMeshSurfaceComponent"
+					                         _bActive="true"
+					                         _geometrySource="RenderMeshes"
+					                         _boundsHalfExtents="0,0,0">
+						<_listAgentType>
+							<item>Humanoid</item>
+						</_listAgentType>
+						<_listExcludeTag />
+					</NavMeshSurfaceComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

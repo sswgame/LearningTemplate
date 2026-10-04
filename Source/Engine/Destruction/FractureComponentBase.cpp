@@ -1154,6 +1154,30 @@ namespace sw
             _physics->destroyBodies( listDestroy );
         rebuildLeafRuntimeMap();
         _bPoseDirty = SW_TRUE;
+        // 붙어 있던 것이 갈라지거나 떨어졌으면 그 모양에 기대는 것(내비메시)에 알린다. 떨어진 덩어리끼리의 갈라짐은 알리지 않는다.
+        bool bAnchoredChanged = bFirst;
+        for ( const FractureGroupRuntime& removed : listRemoved )
+            bAnchoredChanged = bAnchoredChanged || removed._bAnchored == SW_TRUE;
+        for ( const uint32 groupId : listCreated )
+        {
+            const DestructionGroup* pGroup = _state.findGroup( groupId );
+            bAnchoredChanged               = bAnchoredChanged || ( pGroup != nullptr && pGroup->_bAnchored == SW_TRUE );
+        }
+        if ( bAnchoredChanged )
+            onAnchoredShapeChanged();
+    }
+
+    bool FractureComponentBase::isLeafInAnchoredGroup( uint32 leaf ) const
+    {
+        if ( _bFractured == SW_FALSE || _asset == nullptr || leaf >= _asset->getPieceCount() )
+            return false;
+        const DestructionGroup* pGroup = _state.findGroup( _state.getGroupOfLeaf( leaf ) );
+        return pGroup != nullptr && pGroup->_bAnchored == SW_TRUE;
+    }
+
+    float4x4 FractureComponentBase::makeFracturedObjectMatrix() const
+    {
+        return float4x4::createTrs( _objectPosition, _objectRotation, float3{ _objectScale, _objectScale, _objectScale } );
     }
 
     void FractureComponentBase::spawnGroup( FractureGroupRuntime& inoutRuntime, const DestructionGroup& group, const float3& linearVelocity, const float3& angularVelocity )

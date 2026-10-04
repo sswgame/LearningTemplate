@@ -182,6 +182,10 @@ namespace sw
         bool isReachedBy( const float3& worldCenter, float32 radius ) const;
         /** @brief 쪼갠 상태로 바뀌었는지입니다(처음 떨어진 것이 생긴 뒤). */
         bool isFractured() const { return _bFractured == SW_TRUE; }
+        /** @brief 잎이 붙어 있는(앵커까지 이어진) 그룹에 들었으면 true 입니다 — 쪼갠 뒤 그 자리에 정적 바디로 선 조각. 쪼개기 전이면 false 입니다. */
+        bool isLeafInAnchoredGroup( uint32 leaf ) const;
+        /** @brief 쪼갤 때의 오브젝트 자세(메시 공간 → 월드, 고른 배율)입니다 — 붙어 있는 조각의 정적 바디가 이 자세에 선다. */
+        float4x4 makeFracturedObjectMatrix() const;
         /** @brief 쉬는 자세를 정적 메시에 구워 스킨드 메시를 숨긴 상태인지입니다. */
         bool isBaked() const { return _bBaked == SW_TRUE; }
         /** @brief 파쇄 데이터를 읽었는지입니다. */
@@ -247,6 +251,8 @@ namespace sw
         virtual shared_ptr<const FractureAsset> acquireFracture() = 0;
         /** @brief 파쇄 데이터를 다시 받아야 하는지입니다(핫 리로드). 쪼갠 뒤에는 묻지 않습니다. */
         virtual bool isFractureStale() const { return false; }
+        /** @brief 붙어 있는 조각의 모양이 바뀌었습니다(처음 쪼갬 · 붙은 그룹이 갈라짐 · 떨어짐). 게임 스레드 · 물리 프레임 안에서 불립니다. */
+        virtual void onAnchoredShapeChanged() {}
 
         void beginPhysicsFrame( ScenePhysics& physics ) override;
         void prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount ) override;
