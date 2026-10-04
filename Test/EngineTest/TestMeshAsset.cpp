@@ -189,3 +189,47 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     }
     SW_EXPECT_NULL( pMesh->getRawMesh() );
 }
+
+/**
+ * @brief [MeshAssetTest] 스킨 스트림 왕복 — 본 번호 · 가중치 · 본 수가 남고, 캐시가 메시에 스킨을 건다. 본 수를 넘는 본 번호는 거절한다
+ */
+SW_TEST_CASE( MeshAssetTest, SkinStreamRoundTripsAndRejectsOutOfRangeJoints )
+{
+    sw::MeshAssetData written{};
+    written._listVertex    = makeTestTriangles( 2, 0.5f );
+    written._skinBoneCount = 3;
+    for ( size_t vertexIndex = 0; vertexIndex < written._listVertex.size(); ++vertexIndex )
+    {
+        sw::MeshSkinVertex skin{};
+        skin._arrJoint[0]  = static_cast<uint16>( vertexIndex % 3 );
+        skin._arrJoint[1]  = 2;
+        skin._arrWeight[0] = 0.75f;
+        skin._arrWeight[1] = 0.25f;
+        written._listSkinVertex.push_back( skin );
+    }
+    sw::vector<uint8> bytes;
+    sw::MeshAssetFormat::makeBytes( written, bytes );
+    SW_ASSERT_EQUAL( size_t( sw::MeshAssetFormat::kHeaderSize + written._listVertex.size() * ( sw::MeshAssetFormat::kVertexSize + sw::MeshAssetFormat::kSkinVertexSize ) ),
+                     bytes.size() );
+
+    sw::MeshAssetData read{};
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), read ) );
+    SW_ASSERT_TRUE( read.hasSkin() );
+    SW_EXPECT_EQUAL( 3u, read._skinBoneCount );
+    SW_EXPECT_EQUAL( uint16( 1 ), read._listSkinVertex[1]._arrJoint[0] );
+    SW_EXPECT_EQUAL( uint16( 2 ), read._listSkinVertex[4]._arrJoint[1] );
+    SW_EXPECT_NEAR_EQUAL( 0.25f, read._listSkinVertex[4]._arrWeight[1], 0.0f );
+
+    const sw::string path = test::makeTempPath( "skinned.mesh" );
+    SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, written ) );
+    sw::shared_ptr<sw::Mesh> mesh = sw::MeshCache::acquire( path );
+    SW_ASSERT_NOT_NULL( mesh.get() );
+    SW_EXPECT_TRUE( mesh->hasSkin() );
+    SW_EXPECT_EQUAL( 3u, mesh->getSkinBoneCount() );
+
+    test::ScopedDefensiveTestLog expected( "a skin joint beyond the bone count is rejected" );
+    written._listSkinVertex[2]._arrJoint[3] = 3;
+    sw::MeshAssetFormat::makeBytes( written, bytes );
+    SW_EXPECT_FALSE( sw::MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), read ) );
+    SW_EXPECT_FALSE( read.hasSkin() );
+}

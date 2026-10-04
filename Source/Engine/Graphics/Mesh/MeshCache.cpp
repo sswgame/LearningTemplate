@@ -73,14 +73,16 @@ namespace sw
             return live;
 
         // 읽기는 잠금 밖에서 한다(파일 IO). 둘이 같은 경로를 동시에 읽으면 먼저 넣은 쪽이 남고 다른 쪽은 그것을 받는다.
-        vector<RHIVertex> listVertex;
-        if ( MeshAssetFormat::loadFromResource( path, listVertex ) == false )
+        MeshAssetData data{};
+        if ( MeshAssetFormat::loadFromResource( path, data ) == false )
         {
             MeshCacheInternal::warnLoadFailureOnce( path );
             return nullptr;
         }
         shared_ptr<Mesh> loaded = Mesh::create();
-        loaded->setVertices( std::move( listVertex ) );
+        loaded->setVertices( std::move( data._listVertex ) );
+        if ( data._skinBoneCount > 0 )
+            loaded->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
 
         MeshCacheInternal::SharedTable& table = MeshCacheInternal::getSharedTable();
         std::scoped_lock<mutex>         lock{ table._mutex };
@@ -108,8 +110,8 @@ namespace sw
             return false;
 
         // 읽기에 실패하면 옛 정점을 지킨다(반쯤 쓴 파일을 저장 중에 본 경우 — 다음 감시 이벤트가 다시 읽는다).
-        vector<RHIVertex> listVertex;
-        if ( MeshAssetFormat::loadFromResource( path, listVertex ) == false )
+        MeshAssetData data{};
+        if ( MeshAssetFormat::loadFromResource( path, data ) == false )
         {
             SW_LOG_ERROR( "Hot-Reload failed for Mesh %#", path );
             return false;
@@ -118,7 +120,8 @@ namespace sw
         // 지난 프레임이 아직 옛 정점 버퍼로 그리고 있을 수 있다. setVertices 는 버퍼를 곧바로 돌려주므로 먼저 기다린다(TextureCache::reload 와 같은 이유).
         if ( pDevice != nullptr )
             pDevice->waitIdle();
-        live->setVertices( std::move( listVertex ) );
+        live->setVertices( std::move( data._listVertex ) );
+        live->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
         return true;
     }
 

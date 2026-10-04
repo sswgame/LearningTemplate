@@ -43,6 +43,14 @@ namespace sw
         refreshBoundingRadius();
     }
 
+    void Mesh::setSkin( vector<MeshSkinVertex> listSkinVertex, uint32 boneCount )
+    {
+        const bool bMatches = boneCount > 0 && listSkinVertex.size() == _listVertex.size();
+        _listSkinVertex     = bMatches ? std::move( listSkinVertex ) : vector<MeshSkinVertex>{};
+        _skinBoneCount      = bMatches ? boneCount : 0u;
+        _contentId          = allocateContentId();
+    }
+
     void Mesh::refreshBoundingRadius()
     {
         float32 maxLengthSquared = 0.0f;

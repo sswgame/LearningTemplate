@@ -17,6 +17,21 @@ namespace sw
     class IRHIDevice;
 
     /**
+     * @struct MeshSkinVertex
+     * @brief 스킨드 메시 정점 하나의 본 영향(본 번호 넷 · 가중치 넷)입니다. 가중치 합은 1 이고, 쓰지 않는 칸은 가중치 0 입니다.
+     * @details 본 번호는 메시가 따르는 스켈레톤의 본 순서입니다(`Skeleton`). 정점과 같은 순서 · 같은 길이로 `Mesh` 가 듭니다.
+     */
+    struct MeshSkinVertex
+    {
+        uint16  _arrJoint[4]{ 0, 0, 0, 0 };
+        float32 _arrWeight[4]{ 1.0f, 0.0f, 0.0f, 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+
+    /**
      * @class Mesh
      * @brief 삼각형 리스트 메시입니다(정점 = 위치 · 노멀 · UV · 색). initRhi() 로 올린 GPU 정점 버퍼를 소유합니다.
      */
@@ -77,6 +92,20 @@ namespace sw
         void setGpuMorphEnabled( bool bEnabled ) { _bGpuMorph = bEnabled ? SW_TRUE : SW_FALSE; }
         /** @brief GPU 모프를 요청했는지 반환합니다. */
         bool isGpuMorphEnabled() const { return _bGpuMorph != SW_FALSE; }
+
+        /**
+         * @brief 스킨(정점마다 본 영향)을 겁니다. 길이는 정점 수와 같아야 하고, 아니면 스킨을 지웁니다. 내용 번호가 바뀝니다.
+         * @details 스킨이 있는 메시는 GPU 스키닝 풀(모프 풀의 스킨 구간)에 들어가 정점 셰이더가 변형된 정점을 읽습니다. 팔레트(본 행렬)는
+         *          메시가 아니라 그것을 그리는 컴포넌트가 프레임마다 냅니다(`SkeletalMeshComponent`). 그래서 포즈가 다른 캐릭터는 메시 객체를 따로 둡니다.
+         * @param boneCount 메시가 따르는 스켈레톤의 본 수입니다(팔레트 길이).
+         */
+        void setSkin( vector<MeshSkinVertex> listSkinVertex, uint32 boneCount );
+        /** @brief 정점마다의 본 영향입니다. 스킨이 없으면 비었습니다. */
+        const vector<MeshSkinVertex>& getSkinVertices() const { return _listSkinVertex; }
+        /** @brief 스킨이 있으면 true 입니다. */
+        bool hasSkin() const { return _skinBoneCount > 0 && _listSkinVertex.size() == _listVertex.size(); }
+        /** @brief 스켈레톤 본 수(팔레트 길이)입니다. 스킨이 없으면 0 입니다. */
+        uint32 getSkinBoneCount() const { return _skinBoneCount; }
         /** @brief 정점 개수를 반환합니다. */
         uint32 getVertexCount() const { return static_cast<uint32>( _listVertex.size() ); }
         /**
@@ -117,6 +146,10 @@ namespace sw
         void refreshBoundingRadius();
 
         vector<RHIVertex> _listVertex;
+        /// @brief setSkin 참고. 비었거나 `_listVertex` 와 같은 길이입니다.
+        vector<MeshSkinVertex> _listSkinVertex;
+        /// @brief 스켈레톤 본 수입니다. 0 이면 스킨이 없습니다.
+        uint32 _skinBoneCount{ 0 };
         /// @brief getBoundingRadius 참고. setVertices 가 구합니다.
         float32 _boundingRadius{ 0.0f };
         float3  _localBoundsMin{};

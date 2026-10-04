@@ -132,8 +132,10 @@ namespace sw
         , _primitiveRegistry{}
         , _lightRegistry{}
         , _cameraRegistry{}
+        , _animationSystem{}
         , _tickRegistry{}
     {
+        _animationSystem.setObjectManager( this );
     }
 
     GameObjectManager::~GameObjectManager()

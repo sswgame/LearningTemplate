@@ -195,10 +195,11 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 
 ## 모델도 들일 때 임포트한다
 
-glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로의 `models/<이름>.mesh` 로 임포트합니다(`ModelImporter`, cgltf + meshoptimizer).
+glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로의 `models/<이름>.mesh`(스킨드 모델이면 옆 폴더의 스켈레톤 · 부착 메시 · 클립까지)로
+임포트합니다(`ModelImporter`, cgltf + meshoptimizer).
 런타임은 `.mesh` 만 읽고(`MeshCache`), `MeshComponent::_meshId` 에 그 경로를 적거나 `PrimitiveStage::createModelObject` 로 세웁니다.
 
-- **변환**: 기본 씬의 노드 계층을 월드 변환째 한 메시로 합칩니다. glTF(오른손 · +Y 위 · 앞 +Z)를 엔진(왼손 · +Y 위 · 앞 +Z, 앞면 = 시계 방향)으로
+- **변환**: (스킨 없는 모델) 기본 씬의 노드 계층을 월드 변환째 한 메시로 합칩니다. glTF(오른손 · +Y 위 · 앞 +Z)를 엔진(왼손 · +Y 위 · 앞 +Z, 앞면 = 시계 방향)으로
   옮기려고 **X 를 뒤집고 삼각형마다 감김을 뒤집습니다**(노드가 거울상이면 한 번 더). 노멀이 없으면 면 노멀, 색은 baseColorFactor × COLOR_0.
   삼각형이 아닌 프리미티브는 경고하고 건너뜁니다. 텍스처는 로그로만 알리고, 머티리얼은 게임이 `PrimitiveLook` 으로 고릅니다.
 - **원본은 고치지 않습니다**: 씬 뿌리 목록에 부모가 있는 노드를 적은 비표준 파일(UniGLTF — Kenney 키트)은 cgltf 가 파싱에서 거부하므로, 임포터가 넘기기
@@ -209,8 +210,21 @@ glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로�
   해시에 섞여 바꾸면 스탬프가 어긋남이 됩니다. 모르는 값은 설정 전체를 거부합니다.
 - **헤드리스 · 스탬프**: `App --import-models` · `--check-models`. `models_raw/import.stamp` 는 텍스처와 같은 형식이고 원본 해시에 임포터 버전 ·
   `.mesh` 형식 버전 · 적용한 규칙 · `.gltf` 의 외부 버퍼가 섞입니다. 임포트 동작을 바꾸면 `ModelImporterInternal::kImporterVersion` 을 올립니다.
+- **스킨드 모델**(스킨이 있는 glTF — 모든 스킨의 관절 노드가 한 스켈레톤): `models/<이름>.mesh` 는 스킨드 메시들을 합친 바인드 포즈 메시 +
+  정점마다 본 넷 · 가중치(`.mesh` 2 판의 스킨 스트림)이고, 관절이 아닌 노드의 스킨 없는 메시는 뿌리 본에 가중치 1 로 합칩니다. 나머지는 옆 폴더
+  `models/<이름>/` 에 씁니다 — `<이름>.skeleton.json`(본 = 관절, 부모가 앞, 관절 위 비관절 노드의 변환은 뿌리 본에 접음 · 역 바인드 · 부착 표) ·
+  `parts/<노드>.mesh`(관절 아래 스킨 없는 메시 — 무기 · 투구, 노드 로컬 공간. 부모 본 · 로컬 변환은 스켈레톤의 부착 표에 **읽기 전용 임포트 데이터**로
+  남아 나중에 소켓 파일을 만들 근거가 된다 — 소켓 자체는 따로 둔 원본 에셋이다) · `clips/<클립>.animclip`(애니메이션마다 하나 — 관절마다 균일 표본으로
+  다시 뽑아 규칙의 코덱으로 압축, 클립마다 압축률 · 최대 오차(mm)를 로그로 보고). 옆 폴더는 임포트마다 지우고 다시 쓰며, 스탬프의 결과 해시는
+  `.mesh` 와 옆 폴더 파일 전부를 섞습니다(`IRawAssetImporter::computeImportedHash`). 스킨드 모델에 `translation` · `recenter` 는 오류입니다(바인드 행렬이 어긋난다).
+- **애니메이션 규칙 키**: `animations`(기본 참) · `clips`(가져올 클립 이름, 비면 모두 — 원본에 없는 이름은 임포트 오류) · `animation_codec`(`raw` · `acl`,
+  모르는 이름은 설정 오류) · `animation_sample_rate` · `animation_precision` · `animation_shell_distance`(미터) · `root_motion_bone`(루트 모션 트랙) ·
+  `attachments`(기본 참). 모르는 키는 설정 전체를 거부합니다.
+- **곁 데이터**: 원본 옆 `<이름>.clips.json` — `{ "clips": { "<클립>": { "loop", "notifies": [ { "name", "time", "duration" } ], "curves": { "<이름>": [ [시각, 값] ] } } } }`.
+  클립의 반복 · 알림 · 커브는 glTF 에 없으므로 사람이 여기 적습니다. 원본 해시에 섞이고, 모르는 키 · 원본에 없는 클립 이름은 임포트 오류입니다.
 - **핫 리로드**: `models_raw/` 원본이 바뀌면 일괄 임포트하고, 쓰인 `.mesh` 를 메시 캐시가 같은 `Mesh` 에 제자리로 다시 읽습니다.
-- 시험: `ModelImporterTest`(좌표계 · 감김 · 노드 변환 · 색 · 스탬프 · 비표준 씬 뿌리 · 규칙, 저장소 원본 ↔ `.mesh` 대조), 엔진 쪽은 `MeshAssetTest`.
+- 시험: `ModelImporterTest`(좌표계 · 감김 · 노드 변환 · 색 · 스탬프 · 비표준 씬 뿌리 · 규칙 · 스킨드 모델(KayKit 기사 41 본 · 클립 76 · 부착 · 곁 데이터),
+  저장소 원본 ↔ 결과 대조), 엔진 쪽은 `MeshAssetTest` · `SkeletalAnimationTest`.
 
 ## UI 스레드가 놓은 GPU 자원
 

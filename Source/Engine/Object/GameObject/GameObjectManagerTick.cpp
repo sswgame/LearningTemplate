@@ -169,6 +169,9 @@ namespace sw
             dispatchPendingBeginPlay();
         }
 
+        // 애니메이션 — 틱이 정한 파라미터로 포즈 · 스킨 팔레트를 만들고, 루트 모션을 트랜스폼에 쓴다(아래 플러시가 반영한다).
+        _animationSystem.evaluate( deltaTime );
+
         if ( hasDirtySceneTransforms() )
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.flushTransformsPost" );

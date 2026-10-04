@@ -18,6 +18,7 @@
 #include "Core/Memory/PoolAllocator.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
@@ -265,6 +266,13 @@ namespace sw
         PrimitiveRegistry& getPrimitiveRegistry() { return _primitiveRegistry; }
         /** @brief 그릴 수 있는 컴포넌트의 등록부입니다. */
         const PrimitiveRegistry& getPrimitiveRegistry() const { return _primitiveRegistry; }
+
+        /**
+         * @brief 애니메이션 유닛(`SkeletalMeshComponent`)을 평가하는 시스템입니다.
+         * @details PrimitiveRegistry 와 같은 자리입니다 — 유닛은 등록 때 이것을 받고, 매니저는 tick 의 단계(틱 뒤 · 트랜스폼 플러시 앞)만 정합니다.
+         */
+        AnimationSystem&       getAnimationSystem() { return _animationSystem; }
+        const AnimationSystem& getAnimationSystem() const { return _animationSystem; }
 
         /**
          * @brief 빛 컴포넌트의 등록부입니다.
@@ -568,6 +576,8 @@ namespace sw
         LightRegistry _lightRegistry;
         /** @brief 카메라 컴포넌트의 등록부입니다. 같은 규칙으로 소유만 합니다. */
         CameraRegistry _cameraRegistry;
+        /** @brief 애니메이션 시스템입니다. 같은 규칙으로 소유만 합니다. */
+        AnimationSystem _animationSystem;
         /** @brief 틱에 참여하는 오브젝트의 등록부입니다. 같은 규칙으로 소유만 합니다. */
         TickRegistry _tickRegistry;
     };
