@@ -19,7 +19,7 @@
 #include "GameFramework/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Components/FirstPersonCameraComponent.h"
+#include "GameFramework/Camera/FirstPersonCameraComponent.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Inventory/ItemCatalog.h"

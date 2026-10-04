@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Components/FirstPersonCameraComponent.h"
+#include "GameFramework/Camera/FirstPersonCameraComponent.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Framework/GameSound.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"

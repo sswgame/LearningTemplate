@@ -29,12 +29,14 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   자동 저장 정책(`AutosaveManager` · `AutosaveSettings` — `<Autosave>` XML): 간격 · 지역 이동 · 체크포인트 · 보스 앞 · 종료 까닭, 요청을 한 update 에 하나로 합치고
   더 중요한 까닭을 남김, 최소 간격 · 막기(전투 · 연출 — 기다렸다 저장, 종료만 무시), 돌림 칸(가장 새 칸을 건드리지 않고 다음 칸에 쓴 뒤 `.info` 기록 —
   파일 쓰기는 `FileUtil::writeFile` 이 원자적), 다른 실행의 칸 기록을 읽어 순번을 잇기, `restoreLatest` · `restoreCheckpoint`. 저장 · 불러오기는 게임이
-  넘긴 델리게이트(보통 `saveStateToFile` · `loadStateFromFile`)이고 UI 는 없다. 씬에는 `AutosaveTriggerComponent`(Components)를 놓는다
-- **Components**: 장르 무관 씬 컴포넌트 — `FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`, 체크포인트 · 보스 앞 · 지역 경계 볼륨
-  (`AutosaveTriggerComponent` — 태그가 맞는 활성자가 트리거에 들면 게임 서비스 `AutosaveManager` 에 까닭과 이름을 넘긴다, 한 번), 비스듬히 내려다보는 직교 카메라
-  (`OrthoCameraRigComponent` — WASD · 방향키 이동(WASD 끄기 · 초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), Q/E 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)), 장식 흩뿌리기
+  넘긴 델리게이트(보통 `saveStateToFile` · `loadStateFromFile`)이고 UI 는 없다. 씬에는 체크포인트 · 보스 앞 · 지역 경계 볼륨
+  `AutosaveTriggerComponent`(태그가 맞는 활성자가 트리거에 들면 게임 서비스 `AutosaveManager` 에 까닭과 이름을 넘긴다, 한 번)를 놓는다
+- **World**(씬 컴포넌트): 장르 무관 씬 컴포넌트 — `FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`, 장식 흩뿌리기
   (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(`Rules` 모드 — Engine `Environment/Placement` 의 `PlacementRule`: 밀도 · 최소 거리 ·
-  경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`). 계산은 `OrthoCameraRigMath` · `PropScatterMath` 로
+  경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`, 계산은 `PropScatterMath`).
+  아래 **World** 절의 시계 · 날씨 · 지역 그래프 · 플래그 · 질의와 같은 폴더다
+- **Camera**(카메라 컴포넌트): 비스듬히 내려다보는 직교 카메라
+  (`OrthoCameraRigComponent` — WASD · 방향키 이동(WASD 끄기 · 초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), Q/E 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)). 계산은 `OrthoCameraRigMath` 로
   떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스(또는 입력 맵 액션 `_lookAction`) 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리(카메라의 부모 공간) · 손에 든 뷰 모델 자리, 계산은
   `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다
 - **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 모드 계산(`CameraMode` — 입력 · 제약 · 프레이밍 · 스프링 암 · 훑기),
@@ -99,7 +101,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 
 별도 타겟:
 
-- **Kits**: 키트끼리 링크하지 않음. 공유 타입은 기반(`Framework` · `Components` · `Utility` · `UI` …)으로. 장르 묶음 폴더 아래 키트 하나씩입니다(`Kits/<묶음>/<키트>`, 타겟은 `GF_<키트>`).
+- **Kits**: 키트끼리 링크하지 않음. 공유 타입은 기반(`Framework` · `World` · `Utility` · `UI` …)으로. 장르 묶음 폴더 아래 키트 하나씩입니다(`Kits/<묶음>/<키트>`, 타겟은 `GF_<키트>`).
   - **액션 · 대전** (`Kits/Action/`)
     - `ActionCombat`: 공격 히트박스(`MeleeHitboxComponent`), 투사체, 유닛 스탯, 액션 룸.
       피해는 한 길이다 — 투사체(`ProjectileComponent`)와 공격 판정은 같은 오브젝트의 `BoxCollider2DComponent` 겹침으로 맞음을 알고
@@ -251,9 +253,28 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 
 기준: **다른 장르의 게임이 이 타입을 그대로 쓰겠는가?**
 
-- 쓴다 → 기반의 알맞은 폴더 — 수명 · 배선은 `Framework`, 씬 컴포넌트는 `Components`, 계산 도구는 `Utility`, 화면에 뜨는 것은 `UI`.
+- 쓴다 → 기반의 알맞은 폴더 — 수명 · 배선은 `Framework`, 씬 컴포넌트는 그 기능의 폴더(월드 · 장식은 `World`, 카메라는 `Camera`), 계산 도구는 `Utility`, 화면에 뜨는 것은 `UI`.
+  형식(컴포넌트냐)으로 묶은 폴더는 두지 않는다 — 의존 방향을 숨긴다(옛 `Components/` 가 카메라 시스템 위에 서 있었다).
   HP 바와 데미지 숫자는 턴제도 쓴다. 중력은 플랫포머도, 탄막도 쓴다.
 - 안 쓴다 → 그 키트. 공격 히트박스·투사체·액션 룸처럼 **장르의 규칙을 담은 것**이 여기 해당한다.
+
+## 기반 폴더의 층 — `CheckGameFrameworkLayers`
+
+기반 폴더는 층(DAG)이다. 폴더는 **자기보다 낮은 층**만 include 하고, 같은 층끼리도 서로 모른다. 기반은 키트를, 키트는 다른 키트를 include 하지 않는다
+(묶음 공용 헤더 `Kits/<묶음>/x.h` 는 그 묶음 키트만). GameFramework 는 `Games/` · `Editor/` 를 모른다. 표는 `Scripts/lint/gate/CheckGameFrameworkLayers.py` 의
+`_kBaseTier` 이고 새 폴더는 층을 정해 넣는다(없으면 실패).
+
+| 층 | 폴더 |
+|----|------|
+| 0 | `Utility` |
+| 1 | `Data` · `Match` · `Navigation` · `Spline` |
+| 2 | `Framework` |
+| 3 | `Combat` · `Input` · `Inventory` · `Movement` · `Progression` · `World` |
+| 4 | `AI` · `Appearance` · `Camera` · `Interaction` · `Quest` · `UI` |
+| 5 | `Ability` · `Gimmick` |
+
+위층이 알리는 길은 신호다 — 체력 시스템 → HP 바는 `Combat/HealthListenerComponent`, 상호작용 → 기믹 센서는 센서가 완료 수를 끌어 읽는다. 기반을 DLL 여럿으로
+나누지는 않는다(층은 폴더로만 지킨다).
 
 ## 리플렉션 — 폴더를 늘릴 때
 

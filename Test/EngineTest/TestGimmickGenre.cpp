@@ -13,7 +13,6 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/ResourceUtil.h"
 
-#include "GameFramework/Components/GravityComponent.h"
 #include "GameFramework/Gimmick/Genre/AdventureGimmicks.h"
 #include "GameFramework/Gimmick/Genre/HorrorStealthGimmicks.h"
 #include "GameFramework/Gimmick/Genre/PlatformerGimmicks.h"
@@ -25,6 +24,7 @@
 #include "GameFramework/Interaction/InteractableComponent.h"
 #include "GameFramework/Interaction/InteractionCatalog.h"
 #include "GameFramework/Interaction/SmartObjectComponent.h"
+#include "GameFramework/World/GravityComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

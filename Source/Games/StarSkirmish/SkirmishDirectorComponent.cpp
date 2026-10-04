@@ -16,7 +16,7 @@
 #include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Window/IWindow.h"
 
-#include "GameFramework/Components/OrthoCameraRigComponent.h"
+#include "GameFramework/Camera/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
 #include "GameFramework/Utility/StateArchiveUtil.h"
 

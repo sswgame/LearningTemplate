@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Components/GravityComponent.h"
+#include "GameFramework/World/GravityComponent.h"
 
 namespace sw
 {

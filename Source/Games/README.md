@@ -68,7 +68,7 @@
 | 규칙을 돌리고 스폰을 지시 | 디렉터 컴포넌트 하나(언리얼 GameMode/GameState) — GameFramework `GameDirectorComponent` 를 상속한다(아래) |
 | 엔티티의 모습 | 뷰 컴포넌트 — 디렉터를 읽기만 하고 자기 오브젝트에만 쓴다, `TickGroup::PostUpdate` |
 | 엔티티 하나의 입력 · AI | 컨트롤러 컴포넌트 — 뷰와 같은 규칙(디렉터를 읽기만, 자기 오브젝트에만 쓴다), 기본 그룹 `DuringPhysics` |
-| 장르 무관 카메라 · 장식 | GameFramework `Components/`(`OrthoCameraRigComponent` · `FirstPersonCameraComponent` · `PropScatterComponent` …) |
+| 장르 무관 카메라 · 장식 | GameFramework `Camera/`(`OrthoCameraRigComponent` · `FirstPersonCameraComponent`) · `World/`(`PropScatterComponent` · `GravityComponent` …) |
 | 게임 클래스 | `requestFirstScene()` 과, 생성자의 `registerDirector<디렉터>()` 한 줄 — 상태 저장 전에 시뮬레이션을 싣고 디렉터가 세운 것을 걷으며, 복원 뒤 돌려준다 |
 
 **디렉터는 베이스를 쓴다** — `GameFramework/Framework/GameDirectorComponent`(언리얼 `AGameModeBase` · `AGameStateBase` 의 자리, Lyra 처럼 게임 상태를 한 컴포넌트에).

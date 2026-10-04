@@ -8,8 +8,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Components/GravityComponent.h"
 #include "GameFramework/Framework/GameService.h"
+#include "GameFramework/World/GravityComponent.h"
 
 namespace sw
 {

@@ -15,7 +15,7 @@
 #include "GameFramework/Camera/CameraDirector.h"
 #include "GameFramework/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Camera/CameraPreset.h"
-#include "GameFramework/Components/OrthoCameraRigComponent.h"
+#include "GameFramework/Camera/OrthoCameraRigComponent.h"
 #include "GameFramework/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"

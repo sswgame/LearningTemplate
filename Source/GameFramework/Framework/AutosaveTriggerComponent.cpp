@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Components/AutosaveTriggerComponent.h"
+#include "GameFramework/Framework/AutosaveTriggerComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 

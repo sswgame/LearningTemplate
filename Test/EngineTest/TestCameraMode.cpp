@@ -13,7 +13,7 @@
 #include "GameFramework/Camera/CameraMode.h"
 #include "GameFramework/Camera/CameraPreset.h"
 #include "GameFramework/Camera/CameraShake.h"
-#include "GameFramework/Components/OrthoCameraRigComponent.h"
+#include "GameFramework/Camera/OrthoCameraRigComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

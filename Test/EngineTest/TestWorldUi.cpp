@@ -16,9 +16,9 @@
 #include "EngineTest/StateReloadTestUtil.h"
 
 #include "GameFramework/Combat/HealthListenerComponent.h"
-#include "GameFramework/Components/FadeOutComponent.h"
 #include "GameFramework/UI/DamageNumberComponent.h"
 #include "GameFramework/UI/HealthBarComponent.h"
+#include "GameFramework/World/FadeOutComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
