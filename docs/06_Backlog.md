@@ -109,6 +109,11 @@ cd build/Ninja-Debug/Bin
 
 ### 1-3. 그래픽스 · RHI · 셰이더
 
+- **머티리얼 해제가 렌더 스레드의 병렬 기록과 겹친다.** 마지막 참조가 게임 스레드에서 놓이면(`GpuSceneBuilder::buildFromScene` 의 후보 교체 →
+  `~Material` → `releaseRhi`) `unregisterBindlessResource` 가 렌더 스레드의 병렬 기록 중에 돌 수 있다(`assertRegistryMutableNow` — 플래그 읽기가 경합이라 단언이
+  늘 서지는 않는다). 올리기 쪽은 `EngineLoop` 가 기다린다(3-7). 해제도 렌더 스레드 · 펜스 뒤로 미루거나 같은 자리에서 기다려야 한다. 지금 피하는 법: 런타임에
+  쓰는 머티리얼은 씬의 오브젝트가 늘 들고 있게 하고, 색만 다른 것은 머티리얼 인스턴스로(`AbilityArena` 의 편 색).
+
 - **`.hdr` 원본 임포트가 없다** — 지금 임포트는 `.hdr` 을 만나면 8 비트로 자르지 않고 실패로 알린다. HDR 원본이 필요해지면 DirectXTex `LoadFromHDRFile` → BC6H.
 
 - **창(백버퍼)을 읽는 창구가 없어 창 쪽 반전을 시험이 못 본다.** `-gv_screenshot` 은 오프스크린 텍스처를 읽으므로 창으로 옮기는 단계(GL 캡처 블릿)의
@@ -192,13 +197,6 @@ cd build/Ninja-Debug/Bin
   - 1 단계에서 미룬 것: 디렉터의 켠 프리셋 · 블렌드 진행은 저장하지 않는다(다시 읽으면 시작 프리셋부터). 블렌드 도중 재활성은 섞인 포즈를 **고정**해 출발한다 —
     Cinemachine 처럼 나가는 블렌드를 살려 둔 채 겹쳐 섞으려면 블렌드 스택이 필요하다.
 
-- **나머지 시험 게임을 씬 · 프리팹 · 디렉터/뷰 컴포넌트로** — `ThemeParkTycoon` · `HarvestValley` · `NileCity` · `StarSkirmish` 가 본보기다
-  (`Source/Games/README.md` 레시피). `PrimitiveStage` 를 쓰는 둘(Shooter3D · VoxelCraft)과 AbilityArena. 그대로 쓰는 것: `PropScatterComponent`(나무 · 바위),
-  디렉터의 "요청을 쌓고 `executeOrDeferPostTick` 한 번" 모양, 뷰의 PostUpdate · `data()` 읽기. 함정: 씬 · 프리팹은 엔진
-  직렬화기로 쓴다(오브젝트를 지어 `saveActiveScene` · `PrefabAsset::saveToXmlFile` — ThemePark 는 한 번 돌리고 지운 작성 코드로 썼다), 씬의 다른 엔티티는
-  `GameObjectHandle` PROPERTY 로 가리킨다, 1인칭 · 복셀 청크처럼 매 프레임 메시를 다시 짓는 것은 프리팹 스폰이 아니라 컴포넌트 안의 메시다.
-  측정할 것: 프리팹 스폰은 오브젝트마다 상태 XML 을 읽는다 — 코스터 하나(레일 ~90 · 기둥 · 승강장)는 지을 때 한 번이라 괜찮지만 수천 개를 프레임마다 세우는 게임
-  (RTS 탄 · 슈터 탄피)은 풀로 들 것.
 
 - **병합된 시험 게임 일곱의 눈 확인** — 일곱 게임 × 네 백엔드 자동 플레이(1200 프레임)는 종료 0 · `[Error]` 0 이다. 남은 것은 스크린샷으로 볼 것:
   스프라이트 조준선 · 복셀 청크 · 코스터 레일 방향 · 직교 카메라 그림자 범위. 복셀 청크가 프레임마다 GPU 버퍼를 새로 잡는지(`Mesh` 재사용).
@@ -692,6 +690,10 @@ cd build/Ninja-Debug/Bin
 
 ### 3-6. 오브젝트 · 씬 · 틱
 
+- **한 오브젝트의 두 번째 씬 컴포넌트는 첫 씬 컴포넌트(루트)에 붙는다** — 저장하면 `_attachComponent="CameraComponent#0"` 처럼 남는다. 카메라와 같은 오브젝트의 뷰 모델 ·
+  조준선은 로컬 자리(카메라 기준)로 다룬다 — 월드 자리를 `setLocalPosition` 에 넣으면 카메라 자리만큼 두 번 밀린다(`FirstPersonCameraComponent`).
+- **씬 작성 코드의 `createEmptyActiveScene` 은 `GameCamera` 엔티티를 둔다.** 자기 카메라를 들고 오는 씬(1인칭 플레이어)은 저장 전에 지운다 — 같은 역할 · 우선순위의
+  카메라가 둘이면 어느 쪽이 활성일지가 등록 순서에 걸린다.
 - **이름으로 컴포넌트를 만드는 길은 `TypeInfo::_addComponent` 하나다**(팩토리 표 없음 — UE `UClass`). 코드젠이 구체 컴포넌트마다 채우고 모듈 해제가 비운다.
   손으로 만든 시험 TypeInfo 는 이 칸을 채워야 `addComponentByName` · 씬 로드가 만든다. 스레드별 이름 캐시는 `TypeRegistry::getGeneration` 으로 무효화된다.
   전체 상태가 실린 옛 프리팹 엔티티는 원형을 짓지 않는다(프리팹이 있는지만 본다).
@@ -761,6 +763,11 @@ cd build/Ninja-Debug/Bin
   태그 ID 를 만들고, 계층 비교(`Faction` → `Faction.Player`)에는 문자열이 같이 필요하다.
 
 ### 3-7. 그래픽스 · RHI · 셰이더
+
+- **bindless 표를 바꾸는 일은 렌더 스레드의 병렬 기록과 겹치면 안 된다**(`IRHIDevice::setParallelRecording`). 게임 스레드의 `MaterialCache::initializePending`
+  (씬 로드 · 처음 쓰는 머티리얼의 스폰)은 렌더 스레드가 지난 프레임을 기록하는 동안 돈다 — `EngineLoop` 는 올릴 것이 있는 프레임(`hasPendingInitialize`)만
+  `RenderThread::waitIdle` 로 기다린다. 증상은 `registerBindlessResource 이(가) 병렬 패스 기록 중에…` 단언 · 크래시이고, 단언은 플래그를 경합으로 읽어 재현율이
+  바이너리마다 다르다(같은 실행이 0 · 100 %). 의심되면 `assertRegistryMutableNow` 에 콜스택을 파일로 남겨 본다(로거는 크래시 직전 줄을 잃는다).
 
 - **주의: DX12 `enqueueGpuRelease`(`_fenceValue`)** — 다른 스레드의 `waitForQueueDrain` 이 같은 값을 먼저 Signal 하면 기록 중인 프레임이 제출되기 전에 해제가 돌 수 있다.
   기존 DX12 해제 경로 전부에 해당한다(열린 일).

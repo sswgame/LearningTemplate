@@ -1,0 +1,40 @@
+<Prefab formatVersion="0" name="ArenaPlayer">
+	<GameObject _schemaVersion="0" _name="ArenaPlayer" _bActive="true">
+		<_listComponent>
+			<MeshComponent _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,2,2"
+			               _attachOwner="None"
+			               _attachOwnerId="0"
+			               _attachComponent="None"
+			               _meshId="game/abilityarena/models/character_human.mesh"
+			               _materialPath="game/abilityarena/materials/palette.material"
+			               _boundsRadius="0.866"
+			               _blendMode="Opaque"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<AbilitySystemComponent _componentName="AbilitySystemComponent"
+			                        _bActive="true"
+			                        _abilitySetId="None"
+			                        _healthAttribute="Health"
+			                        _maxHealthAttribute="MaxHealth"
+			                        _damageNumberOffset="0,0.6,0"
+			                        _bShowDamageNumbers="true" />
+			<HealthBarComponent _componentName="HealthBarComponent"
+			                    _bActive="true"
+			                    _hpRatio="0"
+			                    _remainRatio="0"
+			                    _targetRatio="0"
+			                    _lerpSpeed="5"
+			                    _offsetPos="0,0"
+			                    _barSize="1,0.12"
+			                    _fillColor="0.25,0.85,0.3,1"
+			                    _trailColor="0.95,0.8,0.25,1"
+			                    _backgroundColor="0.08,0.08,0.1,0.8"
+			                    _bVisible="false" />
+			<ArenaPlayerControllerComponent _componentName="ArenaPlayerControllerComponent" _bActive="true" _director="0" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

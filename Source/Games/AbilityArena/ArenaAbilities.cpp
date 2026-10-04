@@ -2,11 +2,13 @@
 
 #include "Games/AbilityArena/ArenaAbilities.h"
 
+#include "Engine/Object/GameObject/GameObject.h"
+
 #include "GameFramework/Ability/AbilityCatalog.h"
 #include "GameFramework/Ability/AbilitySystemComponent.h"
-#include "GameFramework/Framework/GameService.h"
 
-#include "Games/AbilityArena/ArenaWorld.h"
+#include "Games/AbilityArena/ArenaControllerComponent.h"
+#include "Games/AbilityArena/ArenaDirectorComponent.h"
 
 namespace sw
 {
@@ -19,11 +21,11 @@ namespace sw
             return;
         }
 
-        ArenaWorld*             pWorld         = game::getService<ArenaWorld>();
-        AbilitySystemComponent* pAbilitySystem = getAbilitySystem();
-        if ( pWorld != nullptr && pAbilitySystem != nullptr )
+        AbilitySystemComponent*       pAbilitySystem = getAbilitySystem();
+        const ArenaDirectorComponent* pDirector      = pAbilitySystem != nullptr ? ArenaDirectorComponent::findForUnit( *pAbilitySystem ) : nullptr;
+        if ( pDirector != nullptr )
         {
-            AbilitySystemComponent* pTarget = pWorld->findNearestHostile( *pAbilitySystem, getParameter( "range", 2.0f ) );
+            AbilitySystemComponent* pTarget = pDirector->findNearestHostile( *pAbilitySystem, getParameter( "range", 2.0f ) );
             GameplayEffectSpec      spec    = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
             if ( pTarget != nullptr && spec.isValid() )
             {
@@ -43,16 +45,18 @@ namespace sw
             return;
         }
 
-        ArenaWorld*             pWorld         = game::getService<ArenaWorld>();
-        AbilitySystemComponent* pAbilitySystem = getAbilitySystem();
-        if ( pWorld != nullptr && pAbilitySystem != nullptr )
+        AbilitySystemComponent*         pAbilitySystem = getAbilitySystem();
+        const ArenaDirectorComponent*   pDirector      = pAbilitySystem != nullptr ? ArenaDirectorComponent::findForUnit( *pAbilitySystem ) : nullptr;
+        const GameObject*               pOwner         = pAbilitySystem != nullptr ? pAbilitySystem->getOwner() : nullptr;
+        const ArenaControllerComponent* pController    = pOwner != nullptr ? pOwner->getComponent<ArenaControllerComponent>() : nullptr;
+        if ( pDirector != nullptr && pController != nullptr )
         {
             GameplayEffectSpec spec = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
             if ( spec.isValid() )
                 spec.setSetByCallerMagnitude( "Damage", getParameter( "damage", 0.0f ) );
             const hashed_string      extraEffect = getNameParameter( "extraEffect" );
             const GameplayEffectSpec extraSpec   = extraEffect.empty() ? GameplayEffectSpec{} : makeOutgoingSpec( extraEffect );
-            pWorld->launchProjectile( *pAbilitySystem, spec, extraSpec, getParameter( "speed", 10.0f ), getParameter( "range", 12.0f ) );
+            pDirector->launchProjectile( *pAbilitySystem, pController->getFacing(), spec, extraSpec, getParameter( "speed", 10.0f ), getParameter( "range", 12.0f ) );
         }
         endAbility();
     }

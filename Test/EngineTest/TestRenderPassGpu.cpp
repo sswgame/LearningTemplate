@@ -2710,7 +2710,8 @@ SW_TEST_CASE( RenderPassGpuTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
 }
 
 /**
- * @brief [RenderPassGpuTest] 디바이스 없이 경로로 잡은 머티리얼(메시의 저장된 참조)을 `initializePending` 이 올린다 — 미리보기로 잡은 것은 올리지 않는다
+ * @brief [RenderPassGpuTest] 디바이스 없이 경로로 잡은 머티리얼(메시의 저장된 참조)을 `initializePending` 이 올린다 — 미리보기로 잡은 것은 올리지 않고,
+ *        올릴 것이 남은 동안만 `hasPendingInitialize` 가 선다
  * @details 컴포넌트는 디바이스를 모른다(Object 는 Scene 을 include 하지 않는다). 메시가 `acquire( path, nullptr )` 로 잡고 `requestInitialize` 로
  *          표시하면, 엔진 루프가 패킷을 내기 전 · 씬 초기화가 디바이스로 올린다. 표시하지 않은 것(머티리얼 편집기 미리보기 — 편집 중인 내용을
  *          넣는다)은 파일 내용으로 덮이면 안 되므로 그대로 둔다.
@@ -2729,12 +2730,17 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialRequestedWithoutADeviceIsUploadedLater 
         // 표시 전에는 올리지 않는다(미리보기 길).
         cache.initializePending( device.get() );
         SW_EXPECT_FALSE( pMaterial->isRhiValid() );
+        SW_EXPECT_FALSE( cache.hasPendingInitialize() );
 
+        // 올릴 것이 있는 동안만 표시가 선다 — 엔진 루프는 이것이 true 인 프레임에만 렌더 스레드를 기다린다(병렬 기록 중에 bindless 표를 바꾸지 않게).
         cache.requestInitialize( kPath );
+        SW_EXPECT_TRUE( cache.hasPendingInitialize() );
         cache.initializePending( nullptr ); // 디바이스가 없으면 표시를 그대로 둔다
         SW_EXPECT_FALSE( pMaterial->isRhiValid() );
+        SW_EXPECT_TRUE( cache.hasPendingInitialize() );
         cache.initializePending( device.get() );
         SW_EXPECT_TRUE_MSG( pMaterial->isRhiValid(), device->getBackendName() );
+        SW_EXPECT_FALSE( cache.hasPendingInitialize() );
 
         pMaterial->releaseRhi( device.get() );
         cache.release( kPath );

@@ -2,9 +2,14 @@
 
 #include "Games/AbilityArena/AbilityArenaGame.h"
 
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+
 #include "GameFramework/Framework/GameService.h"
 
 #include "Games/AbilityArena/ArenaAbilities.h"
+#include "Games/AbilityArena/ArenaDirectorComponent.h"
 
 #include "RuntimeAPI/Export/GameModuleExports.h"
 
@@ -14,7 +19,6 @@ namespace sw
 
     AbilityArenaGame::AbilityArenaGame()
         : _abilityCatalog{}
-        , _arenaWorld{}
     {
     }
 
@@ -27,39 +31,39 @@ namespace sw
         if ( _abilityCatalog.loadFromResource( "game/abilityarena/data/abilities.xml" ) == false )
         {
             SW_LOG_WARNING( "[Arena] abilities.xml could not be loaded - the arena cannot start" );
-            return true; // 모듈은 뜬다(에디터에서 데이터를 고칠 수 있게) — 아레나만 서지 않는다
+            return true; // 모듈은 뜬다(에디터에서 데이터를 고칠 수 있게) — 디렉터만 서지 않는다
         }
-
-        // 컴포넌트 · 어빌리티가 찾는 자리. 모듈이 다시 올라오면 새 인스턴스가 다시 건다.
+        // 어빌리티 시스템이 찾는 자리. 모듈이 다시 올라오면 새 인스턴스가 다시 건다.
         game::bindLocalService<AbilityCatalog>( &_abilityCatalog );
-        game::bindLocalService<ArenaWorld>( &_arenaWorld );
-        (void)_arenaWorld.spawn( &_abilityCatalog ); // 씬 서비스가 아직 없으면 첫 update 가 다시 세운다
+        // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
+        (void)requestFirstScene();
         return true;
     }
 
     void AbilityArenaGame::onShutdown()
     {
-        _arenaWorld.despawn();
-        game::unbindLocalService<ArenaWorld>();
         game::unbindLocalService<AbilityCatalog>();
-    }
-
-    void AbilityArenaGame::onUpdate( float32 deltaTime )
-    {
-        GameInstanceBase::onUpdate( deltaTime );
-        if ( _abilityCatalog.getAbilitySetCount() > 0 )
-            _arenaWorld.update( deltaTime );
     }
 
     void AbilityArenaGame::onBeforeStateSerialize()
     {
-        _arenaWorld.despawn();
-    }
-
-    void AbilityArenaGame::onAfterStateDeserialize()
-    {
-        // 복원은 씬을 스냅샷대로 다시 만든다 — 아레나는 스냅샷에 없으므로 그 씬에 다시 세운다.
-        (void)_arenaWorld.spawn( &_abilityCatalog );
+        // 디렉터가 세운 유닛 · 투사체는 판의 모습일 뿐이다 — 스냅샷에 실으면 복원된 것이 다시 세운 것과 겹친다.
+        // 걷어 두면(삭제 대기는 스냅샷이 건너뛴다) 다시 만든 디렉터가 시작하며 세우고, 남은 디렉터는 다음 틱에 다시 세운다.
+        SceneManager*      pSceneManager = game::getService<SceneManager>();
+        Scene*             pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
+        GameObjectManager* pManager      = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        if ( pManager == nullptr )
+            return;
+        // 순회 콜백 안에서는 오브젝트를 지울 수 없다(매니저 잠금 안) — 디렉터를 모은 뒤 걷는다.
+        vector<ComponentHandle> listDirector;
+        pManager->forEachComponentOfType<ArenaDirectorComponent>( [&listDirector]( ArenaDirectorComponent* pDirector )
+        { listDirector.push_back( pDirector->getHandle() ); } );
+        for ( const ComponentHandle& handle : listDirector )
+        {
+            ArenaDirectorComponent* pDirector = static_cast<ArenaDirectorComponent*>( pManager->resolveComponent( handle ) );
+            if ( pDirector != nullptr )
+                pDirector->despawnRuntime();
+        }
     }
 } // namespace sw
 

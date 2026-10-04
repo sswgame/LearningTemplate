@@ -62,6 +62,12 @@ namespace sw
         void requestInitialize( string_view relativePath );
         /** @brief 표시된 머티리얼 중 아직 GPU 에 없는 것을 @p pDevice 로 올립니다(파일에서 읽고 버퍼를 만든다). 디바이스가 없으면 표시를 그대로 둡니다. */
         void initializePending( IRHIDevice* pDevice );
+        /**
+         * @brief 다음 `initializePending` 이 올릴 머티리얼이 있으면 true 입니다(잠그지 않는다).
+         * @details 올리기는 bindless 표에 등록한다. 렌더 스레드가 지난 프레임을 병렬로 기록하는 동안에는 표를 바꿀 수 없으므로
+         *          (`IRHIDevice::setParallelRecording`), 부르는 쪽은 이것이 true 인 프레임에만 렌더 스레드를 기다린다.
+         */
+        bool hasPendingInitialize() const;
         /** @brief 지금 들고 있는 항목 수입니다. */
         size_t getCachedCount() const override;
         /**

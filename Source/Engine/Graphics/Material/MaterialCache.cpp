@@ -166,6 +166,11 @@ namespace sw
         }
     }
 
+    bool MaterialCache::hasPendingInitialize() const
+    {
+        return _impl != nullptr && _impl->_pendingCount.load( std::memory_order_acquire ) != 0;
+    }
+
     bool MaterialCache::isCached( string_view relativePath ) const
     {
         if ( relativePath.empty() || _impl == nullptr )

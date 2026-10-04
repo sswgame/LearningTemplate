@@ -2,7 +2,13 @@
 
 #include "Games/Shooter3D/Shooter3DGame.h"
 
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+
 #include "GameFramework/Framework/GameService.h"
+
+#include "Games/Shooter3D/ShooterDirectorComponent.h"
 
 #include "RuntimeAPI/Export/GameModuleExports.h"
 
@@ -12,7 +18,6 @@ namespace sw
 
     Shooter3DGame::Shooter3DGame()
         : _weaponCatalog{}
-        , _arena{}
     {
     }
 
@@ -25,33 +30,36 @@ namespace sw
             SW_LOG_WARNING( "[Shooter] weapons.xml could not be loaded - the arena cannot start" );
             return true;
         }
+        // 플레이어 컴포넌트가 찾는 자리. 모듈이 다시 올라오면 새 인스턴스가 다시 건다.
         game::bindLocalService<WeaponCatalog>( &_weaponCatalog );
-        _arena.initialize( &_weaponCatalog );
-        (void)_arena.spawn();
+        // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
+        (void)requestFirstScene();
         return true;
     }
 
     void Shooter3DGame::onShutdown()
     {
-        _arena.despawn();
         game::unbindLocalService<WeaponCatalog>();
-    }
-
-    void Shooter3DGame::onUpdate( float32 deltaTime )
-    {
-        GameInstanceBase::onUpdate( deltaTime );
-        if ( _weaponCatalog.getWeapons().empty() == false )
-            _arena.update( deltaTime );
     }
 
     void Shooter3DGame::onBeforeStateSerialize()
     {
-        _arena.despawn();
-    }
-
-    void Shooter3DGame::onAfterStateDeserialize()
-    {
-        (void)_arena.spawn();
+        // 디렉터가 세운 드론 · 효과는 판의 모습일 뿐이다 — 스냅샷에 실으면 복원된 것이 다시 세운 것과 겹친다.
+        SceneManager*      pSceneManager = game::getService<SceneManager>();
+        Scene*             pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
+        GameObjectManager* pManager      = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        if ( pManager == nullptr )
+            return;
+        // 순회 콜백 안에서는 오브젝트를 지울 수 없다(매니저 잠금 안) — 디렉터를 모은 뒤 걷는다.
+        vector<ComponentHandle> listDirector;
+        pManager->forEachComponentOfType<ShooterDirectorComponent>( [&listDirector]( ShooterDirectorComponent* pDirector )
+        { listDirector.push_back( pDirector->getHandle() ); } );
+        for ( const ComponentHandle& handle : listDirector )
+        {
+            ShooterDirectorComponent* pDirector = static_cast<ShooterDirectorComponent*>( pManager->resolveComponent( handle ) );
+            if ( pDirector != nullptr )
+                pDirector->despawnRuntime();
+        }
     }
 } // namespace sw
 

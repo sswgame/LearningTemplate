@@ -1,0 +1,100 @@
+<Scene formatVersion="1" name="VoxelCraft">
+	<entities>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,0,0"
+					                           _localRotation="0.85,0.5,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerId="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.4"
+					                           _ambient="0.28"
+					                           _shadowExtent="60"
+					                           _shadowDistance="120"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Player">
+			<GameObject _schemaVersion="0" _name="Player" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="64.5,40,64.5"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerId="0"
+					                 _attachComponent="None"
+					                 _fovY="1.3089969"
+					                 _nearZ="0.05"
+					                 _farZ="220"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+					<FirstPersonCameraComponent _componentName="FirstPersonCameraComponent"
+					                            _bActive="true"
+					                            _yaw="0.6"
+					                            _pitch="-0.2"
+					                            _maxPitch="1.4835298"
+					                            _mouseSensitivity="0.0022"
+					                            _bMouseLook="true"
+					                            _bLockMouse="true"
+					                            _fieldOfViewY="1.3089969"
+					                            _nearPlane="0.05"
+					                            _farPlane="220"
+					                            _viewModelName="None"
+					                            _viewModelOffset="0,0,0"
+					                            _viewModelYawOffset="0" />
+					<VoxelPlayerComponent _componentName="VoxelPlayerComponent"
+					                      _bActive="true"
+					                      _director="5"
+					                      _reachDistance="6"
+					                      _placeInterval="0.25"
+					                      _startYaw="0.6"
+					                      _startPitch="-0.2" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="BlockHighlight">
+			<GameObject _schemaVersion="0" _name="BlockHighlight" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1.02,1.02,1.02"
+					               _attachOwner="None"
+					               _attachOwnerId="0"
+					               _attachComponent="None"
+					               _meshId="Cube"
+					               _materialPath="engine/materials/glassmaterial.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="false" />
+					<VoxelHighlightComponent _componentName="VoxelHighlightComponent" _bActive="true" _player="3" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="VoxelDirector">
+			<GameObject _schemaVersion="0" _name="VoxelDirector" _bActive="true">
+				<_listComponent>
+					<VoxelDirectorComponent _componentName="VoxelDirectorComponent"
+					                        _bActive="true"
+					                        _chunkPrefab="game/voxelcraft/prefabs/chunk.prefab.xml"
+					                        _player="3"
+					                        _terrainSeed="20261003"
+					                        _chunkBuildsPerFrame="4"
+					                        _bAutoPlay="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

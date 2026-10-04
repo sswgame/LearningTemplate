@@ -6,11 +6,12 @@
 ## 빌드 · 실행
 
 ```powershell
-cmake --preset Ninja-Debug -DSW_ACTIVE_GAME=VoxelCraft
-cmake --build --preset Ninja-Debug
-cd build/Ninja-Debug/Bin
+cmake --preset Ninja-Debug-VoxelCraft
+cmake --build --preset Ninja-Debug-VoxelCraft
+cd build/Ninja-Debug-VoxelCraft/Bin
 ./App.exe -dx12
 ./App.exe -dx12 -gv_voxelAutoPlay=1     # 걷고 뛰고 부수고 놓기도 AI
+./App.exe -dx12 -EnableEditor "-gv_editorStartupScene=game/voxelcraft/maps/island.scene.xml"
 ```
 
 ## 조작
@@ -26,9 +27,32 @@ cd build/Ninja-Debug/Bin
 월드는 128 × 64 × 128 블록(16 × 16 청크 8 × 8)이고 씨앗이 고정이라 매번 같은 섬입니다. 블록이 바뀐 청크(경계면 이웃 청크도)는 한 프레임에 네 개씩,
 몸에서 가까운 것부터 다시 짓습니다. 물은 반투명 메시로 따로 그립니다.
 
+## 구조 — 씬 · 프리팹 · 컴포넌트
+
+섬은 씬 하나(`Resource/game/voxelcraft/maps/island.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)입니다. 레시피는 `Source/Games/README.md` 입니다.
+씬에 놓인 것은 해 · 플레이어 · 블록 표시 · 디렉터 넷이고, 지형은 씨앗으로 절차 생성합니다.
+
+| 무엇 | 어디 |
+|------|------|
+| 블록 월드 · 지형 짓기 · 꾸미기(광석 · 눈) · 블록 바꾸기 · 청크 다시 짓기 지시 · 로그 | `VoxelDirectorComponent`(씬에 하나) — 월드(`VoxelWorld`)를 든다 |
+| 청크 하나의 불투명 · 물 메시 | 프리팹 `prefabs/chunk.prefab.xml` 의 `VoxelChunkComponent` — 디렉터가 청크마다(8 × 8) 세우고, 메시는 컴포넌트가 절차로 짓는다 |
+| 몸 · 걷기 · 헤엄 · 부수기 · 놓기 · 핫바 · 자동 플레이 | `VoxelPlayerComponent` — 플레이어 오브젝트(카메라와 같은 오브젝트) |
+| 1인칭 시점 · 마우스 잠금 | GameFramework `FirstPersonCameraComponent`(같은 오브젝트) |
+| 바라보는 블록 표시(반투명 큐브 · 부수는 동안 네 단계로 진해짐 · 에디터 게임 뷰 테두리) | `VoxelHighlightComponent`(`BlockHighlight` 오브젝트) |
+| 모습 | `materials/blocks.material`(블록 아틀라스) · `water.material`(유리와 같은 블렌드 + 아틀라스). 블록 표시는 엔진 유리 머티리얼의 단계별 인스턴스 |
+
+**틱.** 디렉터는 `TickGroup::PrePhysics` 에서 블록이 바뀐 청크(경계면 이웃 청크도) 중 몸에서 가까운 것 네 개에 다시 짓기를 맡기고 표시를 지웁니다. 청크는 기본
+그룹(`DuringPhysics`)에서 월드를 **읽기만** 하며 나란히 메싱하고, 엔진 메시로 옮기는 것은 틱 뒤 게임 스레드에서 합니다(새 메시를 만들어 건다 — 그리는 중인 정점
+버퍼를 덮어쓰지 않는다). 플레이어도 같은 그룹에서 월드를 읽기만 하고(몸 충돌 · 광선), 블록 바꾸기 · 효과음은 쌓아 두었다가 틱 뒤에 디렉터에 건넵니다 — 월드는
+틱 뒤에만 바뀐다. 블록 표시는 `PostUpdate` 에서 플레이어의 겨눔을 읽습니다.
+
+**핫 리로드 · 상태 저장.** 블록 상태는 런타임 상태라 리로드에서 씨앗대로 다시 섭니다. 상태를 쓰기 전에 게임(`onBeforeStateSerialize`)이 디렉터가 세운 청크
+오브젝트를 걷고, 디렉터는 다음 틱에 청크를 다시 세워 모두 다시 짓습니다(그 사이 블록은 그대로).
+
 ## 파일 · 에셋
 
-- `VoxelCraftGame` — 블록 카탈로그(`Resource/game/voxelcraft/data/blocks.xml`)를 읽고 월드를 둡니다.
-- `VoxelCraftWorld` — 지형 꾸미기(광석 · 눈), 청크 메시 → 엔진 메시, 몸 · 시점, 부수기 · 놓기, 핫바, 블록 표시.
+- `VoxelCraftGame` — 블록 카탈로그(`Resource/game/voxelcraft/data/blocks.xml`)를 게임 서비스로 걸고, 첫 씬을 열고, 상태 저장 전에 청크를 걷습니다.
+- `VoxelDirectorComponent` · `VoxelChunkComponent` · `VoxelPlayerComponent` · `VoxelHighlightComponent` — 위 표.
+- `Resource/game/voxelcraft/maps/island.scene.xml` · `prefabs/chunk.prefab.xml` — 엔진 직렬화기가 쓴 파일입니다.
 - `textures_raw/blocks.png` → `textures/blocks.dds` — Kenney Voxel Pack 타일(128 px) 4 × 4 아틀라스(`App --import-textures`, 출처는 `credits.md`).
 - `sounds/` — 부수기 · 놓기 · 착지 효과음.
