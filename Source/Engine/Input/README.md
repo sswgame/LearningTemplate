@@ -42,7 +42,7 @@ Input/
 ├─ InputMap.h             # InputMap의 선언 전부 (구현은 아래 5개 .cpp에 나뉨)
 ├─ InputMap.cpp           #   핵심: 생성자, bind*() 등록, 레이어 스택, 리바인드, is/wasActionXxx() 조회
 ├─ InputMapEvaluate.cpp   #   매 프레임 상태 머신: update() / evaluateBindingDown() / evaluateTrigger()
-├─ InputMapSerialization.cpp # InputMap XML 로드 + 유저 키 리매핑 저장/로드
+├─ InputMapSerialization.cpp # `<InputMap>` 정의 로드 · 저장(에디터 InputMap 패널의 저장 = `saveToResource`) + 유저 바인딩 XML
 ├─ InputMapCombo.cpp      #   선입력 버퍼링 + 격투 게임식 커맨드 시퀀스/패턴 판정
 ├─ InputMapGlyph.cpp      #   액션 -> UI 프롬프트 문자열("[ E ]" 등) 변환
 ├─ InputSnapshot.*         # 롤백 넷코드/리플레이용 프레임 스냅샷 링버퍼
@@ -173,6 +173,8 @@ inputMap.bindVirtualJoystick2D( "Move", sw::MouseButton::Left, /*radius*/ 100.0f
 | 바인딩 종류를 하나 더할 때 | `bind*` 는 `beginBinding`(레이어 · 액션 등록 · 레이어 인덱스 캐시)으로 시작해 종류별 필드만 채우고 `commitBinding`(현재 · 기본값 · 상태 세 목록에 함께)으로 끝냅니다. 세 목록은 같은 인덱스로 짝지어지므로 직접 `push_back` 하지 마세요. |
 | PlayStation/Switch 글리프 | 실제 하드웨어 자동 감지는 없습니다 — `getGlyphForAction(action, previewDevice)`로 원하는 플랫폼을 강제 지정해야 그 표기가 나옵니다. |
 | 플레이어 설정(감도 · 축 반전 · 스틱 데드존 · 토글 · 키 바인딩) | `UserSettingsManager`(Engine/UserSettings)가 넣습니다. 감도 · 반전 · `setStickDeadzoneOverride` 는 `clear` · 맵 다시 읽기를 넘어 남지만, 키 바인딩 · 토글은 맵을 다시 세우면 사라지므로 맵을 세운 쪽이 `UserSettingsManager::reapplyAll` 을 부릅니다(`GameInstanceBase::initialize` 가 `onInitialize` 뒤에 부릅니다). |
+| 키보드 포커스(`setKeyboardFocus`) | `Game`(기본) · `DevConsole`. `Game` 이 아니면 게임 쪽 키 조회(`isKeyDown` · `wasKeyPressed` · `wasKeyReleased` · `wasAnyInputPressed` 의 키보드 몫)와 InputMap 의 키보드 바인딩이 "안 눌림" 입니다 — 게임 코드가 `isKeyDown` 을 직접 불러도 막힙니다. 장치 상태(`getKeyboard()`)는 그대로 갱신됩니다. 포커스를 넘긴 동안 눌린 키는 돌아온 뒤에도 **뗄 때까지** 가립니다(콘솔을 닫은 Esc 가 게임의 일시정지로 새지 않게) — 넘기기 전부터 눌려 있던 키는 다시 보입니다. 포커스와 상관없이 읽어야 하는 맵(셸 맵)만 `InputMap::setKeyboardFocusIgnored( true )` 입니다. 패드 · 마우스는 포커스 밖입니다. |
+| 글자 입력(`setTextInputCallback( 콜백, 주인 )`) | 키보드 포커스를 가진 쪽의 콜백에만 갑니다(주인마다 하나 — 다시 걸면 덮어씁니다). 콜백은 UTF-8 한 글자씩 받습니다. Win32 는 BMP 밖 글자(이모지 · 확장 한자)를 서로게이트 `WM_CHAR` 두 개로 보내므로 `InputManager` 가 앞 반쪽을 들고 있다가 합칩니다(`_pendingHighSurrogate`). 짝 없는 반쪽은 U+FFFD 입니다. X11 은 `Xutf8LookupString` 이 UTF-8 을 바로 줍니다. |
 | `InputReplay::seek()` | 인덱스만 옮길 뿐 실제 장치 상태를 재현하지 않습니다. 상태까지 되돌리려면 `stepBackward()`/`stepForward()`를 쓰세요. |
 | 병렬 tick 중 입력 조회 | `InputMap`/`InputManager` 자체는 스레드 세이프하지 않습니다. 게임 오브젝트 틱(병렬 구간)에서 직접 읽지 말고, 메인 스레드에서 한 번 평가한 결과를 넘겨주는 방식을 권장합니다. |
 

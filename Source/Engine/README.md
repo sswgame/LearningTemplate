@@ -19,7 +19,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 | 4 | `Resource` · `Spatial` | 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. 공간 분할은 물리의 `AABB` 위에 선다. |
 | 5 | `Graphics`(Renderer 제외) · `Window` | RHI · 셰이더 · 머티리얼 · 메시 · 텍스처 — **디바이스와 GPU 에셋**. 창은 표면(`Common/IRenderSurface`)으로만 RHI 에 보인다. |
 | 6 | `Input` · `Object` | 컴포넌트 모델. 컴포넌트가 머티리얼·메시(5)를 든다 — 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 드는 것과 같은 자리. |
-| 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` · `Environment` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트 · 지형 · 식생 · 물). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. |
+| 7 | `Scene` · `Sequencer` · `Character` · `UserSettings` · `Environment` · `DevTools` | 월드(씬·씬 매니저)와, 오브젝트 위에서 도는 기능 모듈(시퀀서 · 캐릭터 외형의 소켓 · 피팅 · 소켓 부착 컴포넌트 · 지형 · 식생 · 물). **월드는 액터를 알고 액터는 월드를 모른다.** 플레이어 옵션(`UserSettings`)은 입력 · 오디오 · 언어 · 창 값을 넣는 자리라 그 위다. 개발 도구(`DevTools` — 게임 창 개발 콘솔의 판단)는 입력(6) · 창(5) 위에 선다. |
 | 8 | `Graphics/Renderer` · `Module` · `Telemetry` · `Destruction` | **그리는 쪽**(FrameRenderer · RenderGraph · GpuScene · RenderThread · Cook)과 핫리로드. 씬·컴포넌트를 읽어 그린다 — 언리얼의 Renderer 가 Engine 을 보는 방향. 텔레메트리 · 크래시 보고는 동의를 사용자 설정(7)에서 읽는다. 파괴(`Destruction`)는 캐릭터 형상의 자르기 도구(7) 위에 서는 기능 모듈이라 여기다(렌더러는 모른다). |
 | 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 자리. |
 
@@ -96,7 +96,11 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
     등록부는 **포인터만** 든다. 모듈 DLL 이 내려가면 그 포인터도 가상 함수 표도 같이 사라지므로,
     내리지 않고 사라지면 다음 비우기가 죽은 코드로 뛴다(엔진 쪽 "Statics die on hot reload" 와 같은 함정).
     두고 가면 종료가 **이름으로** 경고한다 — 등록 시점에 이름을 복사해 두므로 그 진단은 죽은
-    포인터를 건드리지 않는다.
+    포인터를 건드리지 않는다. GameFramework 의 데이터 표 캐시(`GameDataCache` — 상호작용 · 원소 규칙 표)는 게임 서비스가 묶이고 풀릴 때 이 짝을 부른다.
+  - **"같은 키면 같은 객체, 마지막 사용자가 놓으면 사라짐" 표는 `WeakInternTable` 하나다.** 경로로 읽는 에셋(`SharedAssetTable` — 스켈레톤 · 클립 · 리그 ·
+    스프라이트 클립 · 캐릭터 데이터)도, 코드로 짓는 값(`WeakInternCache` — 내장 도형 `MeshUtil::acquirePrimitive` · 9-슬라이스 메시 · 스프라이트 텍스처 인스턴스)도
+    이것 위에 선다. 함수 정적 표를 등록부 밖에 따로 두지 않는다 — `WeakInternCache` 는 `IAssetCache` 라 `AssetManager` 가 생성자에서 내장 캐시로 올리고(목록
+    `_listBuiltInAssetCache` 하나), 종료의 비우기가 그 표의 약한 칸까지 지운다.
   - **티어 때문에 Resource 에 사는 것 셋**: `SpriteClipCache` · `AnimationAssetCache`(스켈레톤 · 애니메이션 클립)는 `IAssetCache` 를 구현하므로 Animation(티어 2)이 아니라 Resource(티어 4)에,
     `LocalizationReloadCache`(로컬라이제이션 파일의 핫 리로드 창구 — 글은 `LocalizationManager` 가 갖고 `clear()` 는 아무것도 지우지 않는다)도 같은 이유로 여기에,
     `PackCompressionUtil` 은 팩 타입(`ResourcePackTypes.h`)을 쓰므로 Compression(티어 0)이 아니라 Resource 에 둔다.
@@ -106,7 +110,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   감시 · 섀도 복사 · 다시 로드(`LiveReloadManager`)는 App 의 `App/Module`, 에셋 파일 감시(`FileWatchDispatcher`)는 에디터의
   `Editor/Common/Workspace` 에 있다. 모듈 이미지 수명 계약의 Core 쪽(`IModuleUnloadListener`)은 `Core/Module` 이다.
 - **Module/** 의 `ModuleCatalog` 는 모듈 매니페스트(`<모듈>.module.json`)를 읽고 켜짐 · 플랫폼 · 구성 · 의존 · 버전 · 순환을 보고 적재 순서를 정한다(App 이 쓴다 — CMake 와 같은 규칙).
-- **Utility/**: Format (KeyValueFile), Json, Xml, CommandStack, Debug, `GameTimeScale`(게임 시간 배율 `gv_timeScale` — 호스트의 프레임 시간이
+- **Utility/**: Format (KeyValueFile), Json, Xml(데이터 XML 의 "모르는 이름" 검사는 `XmlNameCheck` 하나 — 판정 · 문구 `<원소> has unknown attribute 'x'` 가 같고, 데이터 오류면 Error · 읽기를 잇는 로더면 Warning 을 고른다), CommandStack, Debug, `GameTimeScale`(게임 시간 배율 `gv_timeScale` — 호스트의 프레임 시간이
   곱한다), `GameAutoplay`(게임의 자동 플레이 스위치 계약 — `SW_GAME_AUTOPLAY`, `Source/Games/README.md`), Console(개발 콘솔 — 아래), TileMap(타일셋 · 규칙 타일 해석 · 충돌 사각형 병합 · 외곽선 · 이동 비용) — 진짜 최하위
   헬퍼만 둡니다.
   `Debug/MemoryBudgetMonitor` 는 메모리 태그 예산(`Config/Engine/MemoryBudget.json`, 모르는 태그 · 키는 오류) · 프레임 끝 예산 검사 · `-gv_memoryReport` 표 ·
@@ -114,8 +118,14 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **개발 콘솔 · 개발 명령(Shipping 에는 없다 — `SW_DEV_COMMANDS_ENABLED`)**: `Utility/Console/DevCommandRegistry` 가 명령 등록부(Engine 하나, 모듈을 내리면
   그 모듈의 명령이 빠진다)이고, 명령은 자기 .cpp 에 `SW_DEV_COMMAND( 변수, "이름", "사용법", "설명", &본문 )` 한 줄로 등록합니다 — 본문은
   `#if SW_DEV_COMMANDS_ENABLED` 안에 둡니다. 게임 · 키트의 치트(무적 · 아이템 주기 …)도 그렇게 그 게임 · 키트에 둡니다. `Utility/Console/DevConsole`
-  은 한 줄 해석(`help` · `get`/`set` · 명령 · `gv_이름 [값]`) · 자동완성 · 기록이고, 에디터 Output Log 입력 줄과 게임 창 오버레이
-  (`Window/DevConsoleOverlay` + 플랫폼 창 `Window/Windows/Win32DevConsoleWindow` · `Window/Linux/X11DevConsoleWindow`)가 같이 씁니다. 엔진 명령은
+  은 한 줄 해석(`help` · `get`/`set` · 명령 · `gv_이름 [값]`) · 자동완성 · 기록이고, 에디터 Output Log 입력 줄과 게임 창 콘솔이 같이 씁니다.
+  게임 창 콘솔은 셋으로 나뉩니다 — 판단 `DevTools/DevConsoleController`(티어 7), 그리기 `Window/DevConsoleWindow.h` 의 `IDevConsoleWindow`
+  (`Window/Windows/Win32DevConsoleWindow` · `Window/Linux/X11DevConsoleWindow`, 입력을 모른다), 입력은 `InputManager` 하나입니다.
+  여는 키 · 편집 키는 셸 InputMap(`Resource/engine/input/default.input.xml`)의 액션이라 데이터로 바꾸고 패드로도 씁니다
+  (`DevConsoleToggle` 은 늘 켜진 `Debug` 레이어, 닫기 · 실행 · 완성 · 기록 ↑↓ · 지우기는 열려 있는 동안만 켜는 `DevConsole` 레이어). 글자는 액션이 아니라
+  글자 입력(`InputManager::setTextInputCallback( …, InputKeyboardFocus::DevConsole )`)이고, 여닫는 액션이 발화한 프레임의 글자는 버립니다.
+  열려 있는 동안 콘솔이 `InputManager` 키보드 포커스를 쥐어 게임 쪽 키 조회와 통합 InputMap 의 키보드 바인딩이 "안 눌림" 입니다(셸 맵만 포커스를 무시합니다).
+  패드는 포커스 밖이라 콘솔이 열린 동안에도 게임이 받습니다. 엔진 명령은
   루트의 `EngineDevCommands.cpp`(`timescale` · `teleport` · `debugdraw.category`). Shipping 실행 파일에 등록부가 없는지는
   `DevCommandShippingTest`(AppTest)가 바이너리를 훑어 봅니다.
 - **루트 파일 — 기동 · 종료**:

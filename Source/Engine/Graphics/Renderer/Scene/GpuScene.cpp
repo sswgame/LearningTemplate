@@ -11,6 +11,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Scene/GpuMeshMorphPool.h"
+#include "Engine/Graphics/Renderer/Scene/GpuVertexAnimationPool.h"
 #include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
@@ -95,6 +96,23 @@ namespace sw
                 if ( batch._morphVertexBase != base )
                     _bBatchTablesDirty = SW_TRUE; // 표가 이 값을 든다. 바뀌면 다시 올린다
                 batch._morphVertexBase = base;
+            }
+        };
+        assign( _snapshot._listOpaqueBatch );
+        assign( _snapshot._listTransparentBatch );
+        assign( _snapshot._listAllBatch );
+    }
+
+    void GpuScene::assignVertexAnimationBases( const GpuVertexAnimationPool& pool )
+    {
+        auto assign = [this, &pool]( vector<GpuMeshBatch>& listBatch )
+        {
+            for ( GpuMeshBatch& batch : listBatch )
+            {
+                const uint32 base = pool.baseOf( batch._mesh.get() );
+                if ( batch._vertexAnimationBase != base )
+                    _bBatchTablesDirty = SW_TRUE; // 표가 이 값을 든다. 바뀌면 다시 올린다
+                batch._vertexAnimationBase = base;
             }
         };
         assign( _snapshot._listOpaqueBatch );
@@ -247,12 +265,13 @@ namespace sw
         _listScratchBatchInfo.resize( argsCount );
         for ( uint32 argIndex = 0; argIndex < argsCount; ++argIndex )
         {
-            const GpuMeshBatch& infoBatch                    = _snapshot._listAllBatch[argIndex];
-            _listScratchBatchInfo[argIndex]._instanceBase    = infoBatch._instanceBase;
-            _listScratchBatchInfo[argIndex]._instanceCount   = infoBatch._instanceCount;
-            _listScratchBatchInfo[argIndex]._morphVertexBase = infoBatch._morphVertexBase;
-            _listScratchBatchInfo[argIndex]._firstVertex     = infoBatch._firstVertex;
-            // 투명은 압축한 뒤 GPU 가 CPU 정렬 순서로 되돌린다. 한 워크그룹에 안 담기는 큰 배치만
+            const GpuMeshBatch& infoBatch                        = _snapshot._listAllBatch[argIndex];
+            _listScratchBatchInfo[argIndex]._instanceBase        = infoBatch._instanceBase;
+            _listScratchBatchInfo[argIndex]._instanceCount       = infoBatch._instanceCount;
+            _listScratchBatchInfo[argIndex]._morphVertexBase     = infoBatch._morphVertexBase;
+            _listScratchBatchInfo[argIndex]._firstVertex         = infoBatch._firstVertex;
+            _listScratchBatchInfo[argIndex]._vertexAnimationBase = infoBatch._vertexAnimationBase;
+            // 투명은 압축한 뒤 GPU 가 깊이순으로 다시 정렬한다. 한 워크그룹에 안 담기는 큰 배치만
             // 압축을 포기하고 CPU 가 정렬해 둔 순서를 그대로 쓴다.
             GpuBatchSortMode sortMode = GpuBatchSortMode::None;
             if ( infoBatch._blendMode == RHIBlendMode::Transparent )

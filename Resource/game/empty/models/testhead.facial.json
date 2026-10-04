@@ -1,0 +1,29 @@
+{
+    "expressions": {
+        "Happy": { "smile": 1.0, "mouthWide": 0.3 },
+        "Surprised": { "jawOpen": 0.6, "mouthRound": 0.4 }
+    },
+    "visemes": {
+        "sil": {},
+        "AA": { "jawOpen": 1.0 },
+        "EE": { "mouthWide": 0.8, "jawOpen": 0.3 },
+        "OO": { "mouthRound": 1.0, "jawOpen": 0.3 },
+        "SS": { "mouthWide": 0.5, "jawOpen": 0.1 },
+        "FF": { "mouthClose": 0.6, "jawOpen": 0.1 },
+        "PP": { "mouthClose": 1.0 }
+    },
+    "blink": {
+        "targets": [ "blinkLeft", "blinkRight" ],
+        "min_interval": 2.0,
+        "max_interval": 5.0,
+        "duration": 0.15
+    },
+    "gaze": {
+        "eye_bones": [ "eye.l", "eye.r" ],
+        "forward_axis": [ 0.0, 0.0, 1.0 ],
+        "max_angle_degrees": 30.0,
+        "saccade_min_interval": 0.4,
+        "saccade_max_interval": 1.6,
+        "saccade_amplitude_degrees": 2.0
+    }
+}

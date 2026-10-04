@@ -19,9 +19,10 @@ namespace sw
      */
     struct MeshAssetData
     {
-        vector<RHIVertex>      _listVertex;
-        vector<MeshSkinVertex> _listSkinVertex;     ///< 비었거나 `_listVertex` 와 같은 길이입니다.
-        uint32                 _skinBoneCount{ 0 }; ///< 0 이면 스킨이 없습니다.
+        vector<RHIVertex>       _listVertex;
+        vector<MeshSkinVertex>  _listSkinVertex;     ///< 비었거나 `_listVertex` 와 같은 길이입니다.
+        vector<MeshMorphTarget> _listMorphTarget;    ///< 모프 타깃(블렌드 셰이프). 없으면 비었습니다
+        uint32                  _skinBoneCount{ 0 }; ///< 0 이면 스킨이 없습니다.
 
         /** @brief 스킨이 있으면 true 입니다. */
         bool hasSkin() const { return _skinBoneCount > 0 && _listSkinVertex.size() == _listVertex.size(); }
@@ -36,7 +37,10 @@ namespace sw
      * @details 머리: 매직 `SWMS`(4) · 버전(uint32) · 정점 수(uint32, 3 의 배수이고 0 이 아님) · 정점 크기(uint32, `RHIVertex` 의 바이트 수) ·
      *          경계 반지름(float32, 원점에서 가장 먼 정점까지) · 스킨 본 수(uint32, 0 = 스킨 없음). 그 뒤에 정점마다 위치 3 · 노멀 3 · UV 2 · 색 4 개의
      *          float32 가 오고, 스킨 본 수가 0 이 아니면 정점마다 본 번호 4 개(uint16) · 가중치 4 개(float32)가 옵니다(본 번호는 스켈레톤 본 순서이고 본 수보다 작습니다).
-     *          읽기는 지금 형식만 받습니다 — 버전 · 정점 크기가 다르거나 파일 길이가 머리와 맞지 않으면 거절합니다(옛 형식 리더는 두지 않고,
+     *          그 뒤에 선택 덩어리가 0 개 이상 옵니다 — 덩어리 = 이름(4 바이트) · 길이(uint32) · 내용. 지금 아는 덩어리는 `MRPH`(모프 타깃: 타깃 수,
+     *          타깃마다 이름 길이 · 이름 · 차이 수 · 차이(정점 번호 uint32, 위치 차이 3 · 노멀 차이 3 개의 float32)) 하나이고, 모르는 덩어리는 거절합니다.
+     *          모프 타깃이 없는 메시는 덩어리가 없어 예전 파일과 바이트까지 같습니다(판을 올리지 않았다).
+     *          읽기는 지금 형식만 받습니다 — 버전 · 정점 크기가 다르거나 파일 길이가 머리 · 덩어리와 맞지 않으면 거절합니다(옛 형식 리더는 두지 않고,
      *          형식을 바꾸면 원본에서 다시 임포트합니다).
      */
     struct SW_API MeshAssetFormat

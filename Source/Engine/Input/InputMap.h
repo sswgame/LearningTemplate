@@ -140,23 +140,32 @@ namespace sw
 
     namespace InputMapDefaults
     {
-        inline constexpr utf8    kDefaultLayerName[]     = "Gameplay";
-        inline constexpr utf8    kTitleLayerName[]       = "Title";
-        inline constexpr utf8    kReloadShadersAction[]  = "ReloadShaders";
-        inline constexpr utf8    kReloadEditorAction[]   = "ReloadEditor";
-        inline constexpr utf8    kReloadGameAction[]     = "ReloadGame";
-        inline constexpr float32 kDoubleClickTime        = 0.35f;
-        inline constexpr float32 kDoubleClickMaxDistance = 6.0f;
-        inline constexpr float32 kDoubleTapTime          = 0.22f;
-        inline constexpr float32 kHoldThreshold          = 0.4f;
-        inline constexpr float32 kTapMaxTime             = 0.2f;
-        inline constexpr float32 kPulseInterval          = 0.1f;
-        inline constexpr float32 kDoubleClickTimeMin     = 0.05f;
-        inline constexpr float32 kDoubleClickTimeMax     = 2.0f;
-        inline constexpr float32 kDoubleClickDistanceMax = 64.0f;
-        inline constexpr float32 kHoldThresholdMin       = 0.05f;
-        inline constexpr float32 kHoldThresholdMax       = 10.0f;
-        inline constexpr float32 kNeverPressedSentinel   = 1.0e9f;
+        inline constexpr utf8 kDefaultLayerName[]    = "Gameplay";
+        inline constexpr utf8 kTitleLayerName[]      = "Title";
+        inline constexpr utf8 kReloadShadersAction[] = "ReloadShaders";
+        inline constexpr utf8 kReloadEditorAction[]  = "ReloadEditor";
+        inline constexpr utf8 kReloadGameAction[]    = "ReloadGame";
+        // 개발 콘솔(셸 맵 `default.input.xml`). 여는 키는 늘 켜진 Debug 레이어에, 나머지는 열려 있는 동안만 켜는 DevConsole 레이어에 있다.
+        inline constexpr utf8    kDevConsoleLayerName[]            = "DevConsole";
+        inline constexpr utf8    kDevConsoleToggleAction[]         = "DevConsoleToggle";
+        inline constexpr utf8    kDevConsoleCloseAction[]          = "DevConsoleClose";
+        inline constexpr utf8    kDevConsoleSubmitAction[]         = "DevConsoleSubmit";
+        inline constexpr utf8    kDevConsoleCompleteAction[]       = "DevConsoleComplete";
+        inline constexpr utf8    kDevConsoleHistoryBackAction[]    = "DevConsoleHistoryBack";
+        inline constexpr utf8    kDevConsoleHistoryForwardAction[] = "DevConsoleHistoryForward";
+        inline constexpr utf8    kDevConsoleDeleteBackwardAction[] = "DevConsoleDeleteBackward";
+        inline constexpr float32 kDoubleClickTime                  = 0.35f;
+        inline constexpr float32 kDoubleClickMaxDistance           = 6.0f;
+        inline constexpr float32 kDoubleTapTime                    = 0.22f;
+        inline constexpr float32 kHoldThreshold                    = 0.4f;
+        inline constexpr float32 kTapMaxTime                       = 0.2f;
+        inline constexpr float32 kPulseInterval                    = 0.1f;
+        inline constexpr float32 kDoubleClickTimeMin               = 0.05f;
+        inline constexpr float32 kDoubleClickTimeMax               = 2.0f;
+        inline constexpr float32 kDoubleClickDistanceMax           = 64.0f;
+        inline constexpr float32 kHoldThresholdMin                 = 0.05f;
+        inline constexpr float32 kHoldThresholdMax                 = 10.0f;
+        inline constexpr float32 kNeverPressedSentinel             = 1.0e9f;
     } // namespace InputMapDefaults
 
     /// @brief XML 레이어 정의입니다(우선순위, enabled, blockLower, alwaysOn).
@@ -275,6 +284,13 @@ namespace sw
         void clear();
         /** @brief 리소스 상대 경로에서 InputMap XML 을 로드합니다. */
         [[nodiscard]] bool loadFromResource( string_view relativePath );
+        /**
+         * @brief 레이어 · 액션 · 현재 바인딩을 `loadFromResource` 가 읽는 `<InputMap>` 정의로 씁니다(에디터 InputMap 패널의 저장).
+         * @param relativePath 리소스 id · 절대 경로(`ResourceUtil::getWritePath` 로 쓸 자리를 정한다 — 작업 폴더 기준이 아니다).
+         * @return 형식에 자리가 없는 바인딩(가상 조이스틱 · 단축키 · 아무 키)이 있거나 쓰지 못하면 false 이고 파일을 건드리지 않습니다.
+         * @details 플레이어 리매핑은 여기가 아니라 UserSettings 의 `keyBinding` 설정(사용자 파일)입니다.
+         */
+        [[nodiscard]] bool saveToResource( string_view relativePath ) const;
         /** @brief 한 프레임의 입력 상태를 평가하고 델리게이트를 디스패치합니다. */
         void update( float32 deltaSeconds );
 
@@ -414,6 +430,12 @@ namespace sw
         // 8) 입력 장치 연결 · 임계값 · 디버그
         // ------------------------------------------------------------------------------
         void setInputManager( InputManager* pInput ) { _pInput = pInput; }
+        /**
+         * @brief true 면 이 맵은 키보드 포커스(`InputManager::setKeyboardFocus`)와 상관없이 키를 읽습니다. 기본은 false — 게임 쪽 맵입니다.
+         * @details 셸 맵(개발 콘솔 · 리로드 단축키)만 켭니다. 콘솔이 키보드를 쥔 동안에도 닫는 키 · 편집 키를 받아야 하기 때문입니다.
+         */
+        void setKeyboardFocusIgnored( bool bIgnored ) { _bKeyboardFocusIgnored = bIgnored ? SW_TRUE : SW_FALSE; }
+        bool isKeyboardFocusIgnored() const { return _bKeyboardFocusIgnored == SW_TRUE; }
         void setDoubleClickTime( float32 seconds );
         void setDoubleClickMaxDistance( float32 pixels );
         void setDoubleTapTime( float32 seconds ) { _doubleTapTime = seconds; }
@@ -576,6 +598,12 @@ namespace sw
 
         string getGlyphForActionInternal( const hashed_string& action, InputGlyphStyle device ) const;
         bool   evaluateBindingDown( const ActionBinding& binding, float2& outValue ) const;
+        /** @brief 이 맵이 보는 키 하나의 눌림입니다 — 키보드 포커스를 따르거나(`isKeyboardFocusIgnored` 면) 장치 그대로입니다. */
+        bool isKeyboardKeyDown( Key key ) const;
+        bool wasKeyboardKeyPressed( Key key ) const;
+        /** @brief 슬롯 하나의 눌림입니다. 키보드 슬롯은 `isKeyboardKeyDown` 과 같은 규칙을 따릅니다. */
+        bool isSlotDown( const InputSlot& slot ) const;
+        bool wasSlotPressed( const InputSlot& slot ) const;
         /**
          * @brief 바인딩 값의 합으로 액션 값을 냅니다. 축 · 버튼 · 스틱 몫(@p bounded)은 축 반전 뒤 [-1, 1](또는 원)에 묶고, 마우스 이동량 몫(@p relative)은
          *        묶지 않고 더합니다 — 이동량은 픽셀 단위 상대값이고 반전은 바인딩 평가가 이미 걸었습니다.
@@ -638,6 +666,7 @@ namespace sw
         uint8                                _bInvertX                   : 1;
         uint8                                _bInvertY                   : 1;
         uint8                                _bSuppressBaseActionOnChord : 1;
-        [[maybe_unused]] uint8               _reservedFlags              : 5;
+        uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽는다(셸 맵). */
+        [[maybe_unused]] uint8               _reservedFlags              : 4;
     };
 } // namespace sw

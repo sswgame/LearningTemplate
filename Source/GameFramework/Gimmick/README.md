@@ -16,7 +16,7 @@
 | `GimmickCircuitComponent` | 씬 · 프리팹에 저장되는 회로. 노드마다 대상 오브젝트(핸들, 비면 소유자)에서 센서를 읽고 액추에이터를 건다 |
 | `GimmickSensorComponent` · `GimmickWeightComponent` | 대상 쪽 상태 — 겹친 것(태그 거르기) · 무게 · 피해 · 사용 · 신호 |
 | `GimmickDamageUtil` · `GimmickDamageEvent` | 기믹이 주는 피해의 한 길("game" 채널 + 대상 센서의 Damage — 폭발 사슬) |
-| `ElementRuleTable` · `ElementGrid` | 원소 상호작용 표(재질 깃발 · 상태 · 자극 · 걸음 규칙)와 그 표를 따르는 결정적 셀 자동자. 오브젝트 하나는 1 × 1 격자 |
+| `ElementRuleTable` · `ElementGrid` | 원소 상호작용 표(재질 깃발 · 상태 · 자극 · 걸음 규칙)와 그 표를 따르는 결정적 셀 자동자. 오브젝트 하나는 1 × 1 격자. 공유 표는 `findShared`(`GameDataCache` "ElementRuleTable" — 파일을 고치면 `ElementStatusComponent` 가 다음 틱에 새 표로 다시 짓는다) |
 | `WorldQuery`(`World/`) | 광선 · 시야. 서비스가 걸리면 그것, 없으면 씬의 강체 물리(Jolt · Box2D)와 `PhysicsWorld` AABB 폴백 중 가까운 것 |
 
 ## 내장 노드 종류

@@ -10,6 +10,7 @@
 
 namespace sw
 {
+    class IAssetCache;
     class Material;
     class MaterialInstance;
 
@@ -32,6 +33,9 @@ namespace sw
          *          @p normalMap 이 있으면(빛 받는 스프라이트) `normalMap` 도 덮어쓰고 키에 든다.
          */
         static shared_ptr<MaterialInstance> acquireTextureInstance( Material* pParent, hashed_string texture, hashed_string normalMap = {} );
+
+        /** @brief `acquireTextureInstance` 의 표를 에셋 캐시 등록부에 보이는 창구입니다("SpriteTextureInstance" — 진단 · 비우기). `AssetManager` 가 올립니다. */
+        static IAssetCache& getTextureInstanceCache();
 
         /**
          * @brief 정렬 레이어 이름 · 레이어 안 순서를 활성 표(`Render2DSettings::getActive`)로 정렬 키로 풉니다.

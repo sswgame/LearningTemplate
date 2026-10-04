@@ -23,6 +23,6 @@ namespace sw
         AnimCodecId        getId() const override { return AnimCodecId::Acl; }
         const utf8*        getName() const override { return "acl"; }
         [[nodiscard]] bool compress( const AnimRawClip& rawClip, const AnimCodecSettings& settings, vector<uint8>& outBytes ) const override;
-        [[nodiscard]] bool sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose ) const override;
+        [[nodiscard]] bool sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask = nullptr ) const override;
     };
 } // namespace sw

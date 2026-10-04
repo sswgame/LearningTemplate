@@ -5,7 +5,7 @@
 
 | 타입 | 하는 일 |
 |------|--------|
-| `InteractionCatalog` | `<Interactions>` XML — 상호작용 정의(`InteractionDef` — 단계 · 거리 · 시야각 · 시야 · 쿨다운 · 필요/금지 태그 · 맞춤 마커 · 강조 · 권한)와 스마트 오브젝트 자리(`SmartObjectDef`). `findShared` 가 경로마다 한 번 읽는다 |
+| `InteractionCatalog` | `<Interactions>` XML — 상호작용 정의(`InteractionDef` — 단계 · 거리 · 시야각 · 시야 · 쿨다운 · 필요/금지 태그 · 맞춤 마커 · 강조 · 권한)와 스마트 오브젝트 자리(`SmartObjectDef`). `findShared` 가 경로마다 한 번 읽는다(`GameDataCache` "InteractionCatalog" — 파일을 고치면 핫 리로드가 새 표를 읽고, `InteractableComponent` 는 다음 틱에 정의를 다시 찾는다) |
 | `InteractionSelector` | 후보 고르기 — 거리 · 시야각 안, 우선도 → 가까운 순, 시야(가림)는 가까운 순으로 묻는다. 2D 는 XY 평면 |
 | `InteractionSession` | 한 번의 진행 — `Press` · `Hold`(떼면 취소, 진행은 처음부터 — `InteractionProgress`) · `Mash`(누를 때마다 오르고 쉬면 준다), 여러 단계 |
 | `InteractionProgress` | 진행형 상호작용(여럿이 붙기 · 끊김 · 퇴행 · 스킬 체크 — 발전기 수리 · 동료 부활). 예전 `World/` 에서 옮겼다 |

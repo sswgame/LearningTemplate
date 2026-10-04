@@ -342,7 +342,7 @@ namespace sw
             {
                 case UserSettingType::Bool:
                 {
-                    field.setBool( value == "true" );
+                    field.setBool( StringUtil::parseBool( value, false ) );
                     break;
                 }
                 case UserSettingType::Int:

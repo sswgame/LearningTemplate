@@ -100,11 +100,13 @@ namespace sw
         , _signalStatus{ "Burning" }
         , _startStimulus{}
         , _grid{}
+        , _seenTableReloadCount{ 0 }
     {
     }
 
     void ElementStatusComponent::rebuild()
     {
+        _seenTableReloadCount          = ElementRuleTable::getSharedReloadCount();
         const ElementRuleTable* pTable = ElementRuleTable::findShared( _tablePath.empty() ? string_view( ElementRuleTable::kDefaultPath ) : string_view( _tablePath ) );
         if ( pTable == nullptr )
         {
@@ -137,6 +139,8 @@ namespace sw
     void ElementStatusComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
+        if ( _seenTableReloadCount != ElementRuleTable::getSharedReloadCount() )
+            rebuild(); // 규칙 표 파일을 고쳤다 — 새 표로 다시 짓는다(상태는 처음부터)
         if ( _grid.update( deltaTime ) > 0 )
             publishSignal();
     }

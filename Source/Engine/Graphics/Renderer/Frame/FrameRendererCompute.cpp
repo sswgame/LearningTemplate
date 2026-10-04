@@ -12,12 +12,14 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Utility/Debug/FrameProfiler.h"
 
 namespace sw
 {
@@ -115,11 +117,19 @@ namespace sw
         // 스킨드 메시는 스킨 구간(뒤)으로, 모프를 켠 메시는 모프 구간(앞)으로 간다.
         _listScratchMorphMesh.clear();
         _listScratchSkinMesh.clear();
+        _listScratchVertexAnimationMesh.clear();
         for ( const GpuMeshBatch& batch : _gpuScene.getAllBatches() )
         {
             Mesh* pMesh = batch._mesh.get();
             if ( pMesh == nullptr )
                 continue;
+            // 정점 애니메이션(VAT) 메시는 컴퓨트 없이 정점 셰이더가 표를 읽는다 — 표 풀로 간다.
+            if ( pMesh->findVertexAnimation() != nullptr )
+            {
+                if ( std::find( _listScratchVertexAnimationMesh.begin(), _listScratchVertexAnimationMesh.end(), pMesh ) == _listScratchVertexAnimationMesh.end() )
+                    _listScratchVertexAnimationMesh.push_back( pMesh );
+                continue;
+            }
             const bool bSkin = pMesh->hasSkin();
             if ( bSkin == false && pMesh->isGpuMorphEnabled() == false )
                 continue;
@@ -130,11 +140,16 @@ namespace sw
         }
 
         _meshMorphPool.build( _pDevice, _listScratchMorphMesh, _listScratchSkinMesh );
-        _meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows() );
+        _meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows(), _gpuScene.findMorphWeights() );
 
         // 배치에 구간을 적어 둔다. upload() 가 배치 표(g_SwBatches)에 싣는다. 풀에 못 들어간 메시는 kInvalidBase 라
         // 셰이더가 레스트 포즈로 그린다.
         _gpuScene.assignMorphBases( _meshMorphPool );
+        _vertexAnimationPool.build( _pDevice, _listScratchVertexAnimationMesh );
+        _gpuScene.assignVertexAnimationBases( _vertexAnimationPool );
+        SW_PROFILE_COUNT( "RT.Skin.instances", _meshMorphPool.getSkinInstanceCount() );
+        SW_PROFILE_COUNT( "RT.Skin.vertices", _meshMorphPool.getSkinVertexCount() );
+        SW_PROFILE_COUNT( "RT.Skin.sourceVertices", _meshMorphPool.getSkinSourceVertexCount() );
     }
 
     void FrameRenderer::dispatchMeshMorph()
@@ -222,19 +237,23 @@ namespace sw
             return;
 
         FrameRendererUtil::GpuSkinParams skinParams{};
-        skinParams._skinVertexBase  = _meshMorphPool.getSkinVertexBase();
-        skinParams._skinVertexCount = _meshMorphPool.getSkinVertexCount();
-        skinParams._skinBoneCount   = _meshMorphPool.getSkinBoneCount();
+        skinParams._skinVertexBase    = _meshMorphPool.getSkinVertexBase();
+        skinParams._skinVertexCount   = _meshMorphPool.getSkinVertexCount();
+        skinParams._skinBoneCount     = _meshMorphPool.getSkinBoneCount();
+        skinParams._skinInstanceCount = _meshMorphPool.getSkinInstanceCount();
+        skinParams._skinDeltaBase     = _meshMorphPool.getSkinDeltaBase();
         _meshSkinCb.update( *_pCmd, &skinParams, sizeof( skinParams ) );
 
         // 모프와 같은 결과 버퍼의 뒤 구간에 쓴다. 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로(배리어가 빠지면 DX12 · Vulkan 에서 예전 값이 나온다).
         _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( skinPso );
-        // SkinParams(b0) / g_RestVertices(t0) / g_SkinWeights(t1) / g_SkinPalette(t2) / g_MorphVerticesRW(u0). meshskin.hlsl 레지스터와 1:1 대응.
+        // SkinParams(b0) / g_RestVertices(t0, 원본 레스트) / g_SkinWeights(t1) / g_SkinPalette(t2) / g_SkinInstances(t3) / g_MorphVerticesRW(u0).
+        // meshskin.hlsl 레지스터와 1:1 대응.
         _pCmd->bindComputeConstantBuffer( _meshSkinCb._index, 0 );
-        _pCmd->bindComputeShaderResource( _meshMorphPool.getRestBuffer()._srv, 0 );
+        _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinRestBuffer()._srv, 0 );
         _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinWeightBuffer()._srv, 1 );
         _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinPaletteBuffer()._srv, 2 );
+        _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinInstanceBuffer()._srv, 3 );
         _pCmd->bindComputeUav( _meshMorphPool.getMorphBuffer()._uav, 0 );
         const uint32 skinGroups = ( skinParams._skinVertexCount + 63u ) / 64u;
         if ( skinGroups > 0 )

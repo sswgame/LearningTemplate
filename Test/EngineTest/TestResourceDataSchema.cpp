@@ -5,10 +5,13 @@
 
 #include "Engine/Animation/AnimGraphAsset.h"
 #include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/Facial/FacialRig.h"
+#include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/SkeletonBoneLod.h"
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
@@ -32,6 +35,9 @@
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TranslationMemory.h"
+#include "Engine/Object/Animation/AnimationCrowd.h"
+#include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Object/Animation/VertexAnimationCooker.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -341,6 +347,31 @@ namespace
             return skeleton.loadFromResource( resourceId );
         }
 
+        /** @brief 스켈레톤 곁 본 LOD 표 — 모르는 키 · 곁 스켈레톤에 없는 본 이름은 오류다. */
+        static bool isBoneLod( sw::string_view resourceId ) { return endsWith( resourceId, sw::SkeletonBoneLod::kExtension ); }
+        static bool loadBoneLod( const sw::string& resourceId )
+        {
+            sw::string importedPath;
+            sw::string siblingPath;
+            sw::SkeletonBoneLod::makeSkeletonCandidatePaths( resourceId, importedPath, siblingPath );
+            const sw::string&             skeletonPath = sw::ResourceUtil::hasResource( importedPath ) ? importedPath : siblingPath;
+            sw::SkeletonBoneLod           boneLod;
+            sw::Skeleton                  skeleton;
+            sw::vector<sw::vector<uint8>> listMask;
+            return boneLod.loadFromResource( resourceId ) && skeleton.loadFromResource( skeletonPath ) && boneLod.buildMasks( skeleton, listMask, resourceId );
+        }
+
+        /** @brief 애니메이션 LOD 표(주기 단계 · 예산). */
+        static bool isAnimationLod( sw::string_view resourceId ) { return resourceId == sw::AnimationLodSettings::kResourcePath; }
+        /** @brief 군중 공유 표(변형 칸 수 · 묶음 유지 · VAT 프레임율). */
+        static bool isAnimationCrowd( sw::string_view resourceId ) { return resourceId == sw::AnimationCrowdSettings::kResourcePath; }
+        /** @brief VAT 쿠킹 목록 — 가리키는 메시 · 스켈레톤 · 클립 파일이 모두 있어야 한다. */
+        static bool isVertexAnimationList( sw::string_view resourceId ) { return endsWith( resourceId, sw::VertexAnimationCookList::kExtension ); }
+        /** @brief 립싱크 분석 표 · 비즘 트랙 · 얼굴 리그 — 모르는 키는 읽기 오류다(리그의 타깃 · 본 이름은 메시를 묶을 때 본다). */
+        static bool isLipSync( sw::string_view resourceId ) { return resourceId == sw::LipSyncSettings::kResourcePath; }
+        static bool isVisemeTrack( sw::string_view resourceId ) { return endsWith( resourceId, sw::VisemeTrack::kExtension ); }
+        static bool isFacialRig( sw::string_view resourceId ) { return endsWith( resourceId, sw::FacialRig::kExtension ); }
+
         // 게임 데이터 — 키트 카탈로그가 읽는다(게임 모듈은 읽은 정의를 조립만 한다). 파일 이름은 게임이 여는 그대로다.
         template <typename TCatalog>
         static bool loadCatalog( const sw::string& resourceId )
@@ -446,6 +477,13 @@ namespace
             {    "retargetprofile",     &isRetargetProfile,                               &loadRetargetProfile},
             {        "notifytable",         &isNotifyTable,                                   &loadNotifyTable},
             {           "clipdata",            &isClipData,                                      &loadClipData},
+            {            "bonelod",             &isBoneLod,                                       &loadBoneLod},
+            {       "animationlod",        &isAnimationLod,             &loadCatalog<sw::AnimationLodSettings>},
+            {     "animationcrowd",      &isAnimationCrowd,           &loadCatalog<sw::AnimationCrowdSettings>},
+            {    "vertexanimation", &isVertexAnimationList,          &loadCatalog<sw::VertexAnimationCookList>},
+            {            "lipsync",             &isLipSync,                  &loadCatalog<sw::LipSyncSettings>},
+            {            "visemes",         &isVisemeTrack,                      &loadCatalog<sw::VisemeTrack>},
+            {             "facial",           &isFacialRig,                        &loadCatalog<sw::FacialRig>},
         };
 
         /**

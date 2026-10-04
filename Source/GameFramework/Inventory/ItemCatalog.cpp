@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Utility/Xml/XmlNameCheck.h"
 
 #include "GameFramework/Data/GameDataXml.h"
 
@@ -17,6 +18,8 @@ namespace sw
     {
         struct ItemCatalogInternal
         {
+            static constexpr const utf8* kArrRequiresAttribute[] = { "set", "pieces", "equippedTag", "characterTag", "bodyShape" };
+
             /** @brief `<Requires>` 하나를 읽습니다. 조건 속성이 없거나 둘 이상이면 경고하고 false 입니다. */
             [[nodiscard]] static bool readRequires( const XmlNode& node, EquipCondition& outCondition, string_view sourceName, const utf8* pItemId )
             {
@@ -30,15 +33,12 @@ namespace sw
                     SW_LOG_WARNING( "%#: item '%#' <Requires> needs exactly one of set / equippedTag / characterTag / bodyShape", sourceName, pItemId );
                     return false;
                 }
-                for ( XmlAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+                vector<const utf8*> listUnknown;
+                if ( XmlNameCheck::collectUnknownAttributes( node, kArrRequiresAttribute, listUnknown ) > 0 )
                 {
-                    const utf8* pName  = attribute.getName();
-                    const bool  bKnown = StringUtil::equals( pName, "set", true ) || StringUtil::equals( pName, "pieces", true ) || StringUtil::equals( pName, "equippedTag", true ) || StringUtil::equals( pName, "characterTag", true ) || StringUtil::equals( pName, "bodyShape", true );
-                    if ( bKnown == false )
-                    {
+                    for ( const utf8* pName : listUnknown )
                         SW_LOG_WARNING( "%#: item '%#' <Requires> has unknown attribute '%#'", sourceName, pItemId, pName );
-                        return false;
-                    }
+                    return false;
                 }
                 if ( pSet != nullptr )
                 {

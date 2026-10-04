@@ -2,7 +2,8 @@
  * @file AssetManager.h
  * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab · Mesh)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 로 소유합니다.
  * @note
- *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, SpriteClipCache, MeshCache, SkeletonCache, AnimClipCache, RigAssetCache, FractureAssetCache, ResourcePackManager.
+ *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, SpriteClipCache, MeshCache, SkeletonCache, AnimClipCache, SkeletonBoneLodCache, RigAssetCache, FractureAssetCache, ResourcePackManager.
+ *   등록부에는 코드로 짓는 값 표 셋(`MeshUtil` 내장 도형 · `SpriteMeshBuilder` 9-슬라이스 메시 · `SpriteRenderUtil` 텍스처 인스턴스 — `WeakInternCache`)도 오릅니다.
  *   제외(수명이 다름):
  *   - ResourceUtil: Resource/ 경로 해석만 합니다(소유권 없음)
  *   - ShaderCache: 셰이더 컴파일 결과 캐시(RHI)
@@ -35,6 +36,7 @@ namespace sw
     class PrefabCache;
     class ResourcePackManager;
     class RigAssetCache;
+    class SkeletonBoneLodCache;
     class SkeletonCache;
     class SocketSetCache;
     class SpriteClipCache;
@@ -182,7 +184,7 @@ namespace sw
         const PrefabCache& getPrefabCache() const;
 
     private:
-        /** @brief 이 매니저가 소유한 내장 캐시(머티리얼 · 텍스처 · 프리팹 · 스프라이트 클립 · 메시 · 스켈레톤 · 애니메이션 클립 · 리그 · 로컬라이제이션)인지 봅니다. 종료 경고 · 모듈 코드 걷기에서 뺍니다. */
+        /** @brief 내장 캐시(`_listBuiltInAssetCache`)인지 봅니다. 종료 경고 · 모듈 코드 걷기에서 뺍니다. */
         bool isBuiltInAssetCache( const IAssetCache* pCache ) const;
 
         AssetDatabase                       _assetDatabase;
@@ -194,6 +196,7 @@ namespace sw
         unique_ptr<MeshCache>               _meshCache;               ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<SkeletonCache>           _skeletonCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<AnimClipCache>           _animClipCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
+        unique_ptr<SkeletonBoneLodCache>    _boneLodCache;            ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<SocketSetCache>          _socketSetCache;          ///< 캐릭터 데이터(소켓 에셋) — 등록부에 보이는 창구
         unique_ptr<AnimNotifyTableCache>    _notifyTableCache;        ///< 캐릭터 데이터(알림 표)
         unique_ptr<PhysicsAssetCache>       _physicsAssetCache;       ///< 물리 에셋(래그돌 · 히트박스)
@@ -201,6 +204,7 @@ namespace sw
         unique_ptr<LocalizationReloadCache> _localizationReloadCache; ///< 로컬라이제이션 파일의 핫 리로드 창구 — 글은 `LocalizationManager` 가 갖는다
         unique_ptr<FractureAssetCache>      _fractureCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<ResourcePackManager>     _pPackManager;
+        vector<IAssetCache*>                _listBuiltInAssetCache; ///< 내장 캐시 전부 — 위 멤버와 Engine.dll 의 정적 값 표(`MeshUtil::getPrimitiveCache` 등). 생성자가 이 순서로 올린다
         /**
          * @brief 등록된 캐시 목록입니다. 소유하지 않습니다(내장 캐시는 위 멤버가, 모듈이 올린 것은 그 모듈이 소유합니다).
          * @details 종류 이름(`getAssetKindName`)은 **올릴 때** 복사합니다. 모듈이 자기 캐시를 내리지 않고 사라지면 그 포인터의 가상 함수 표도

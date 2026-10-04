@@ -1,10 +1,10 @@
 /**
  * @file Win32DevConsoleWindow.cpp
- * @brief 개발 콘솔 오버레이의 Win32 창입니다 — 게임 창이 소유한 반투명 GDI 팝업(포커스를 빼앗지 않는다).
+ * @brief 개발 콘솔의 Win32 창입니다 — 게임 창이 소유한 반투명 GDI 팝업(포커스를 빼앗지 않는다).
  */
 #include "pch.h"
 
-#include "Engine/Window/DevConsoleOverlay.h"
+#include "Engine/Window/DevConsoleWindow.h"
 
 #if SW_DEV_COMMANDS_ENABLED && defined( SW_PLATFORM_WINDOWS )
 
@@ -12,7 +12,6 @@
     #include "Core/String/StringUtil.h"
 
     #include "Engine/Window/IWindow.h"
-    #include "Engine/Window/NativeWindowEvent.h"
 
     #include "Engine/Common/EnginePlatformHeaders.h"
 
@@ -22,7 +21,7 @@ namespace sw
     {
         struct Win32DevConsoleWindowInternal
         {
-            static constexpr const utf16* kClassName  = L"SwDevConsoleOverlay";
+            static constexpr const utf16* kClassName  = L"SwDevConsoleWindow";
             static constexpr int32        kFontHeight = 16;
             static constexpr int32        kPadding    = 6;
             static constexpr BYTE         kAlpha      = 225;
@@ -34,7 +33,7 @@ namespace sw
 {
     /**
      * @class Win32DevConsoleWindow
-     * @brief 게임 창 클라이언트 영역의 위쪽에 겹쳐 그리는 팝업입니다. 키보드는 게임 창이 받고(`decodeKey`), 이 창은 그리기만 합니다.
+     * @brief 게임 창 클라이언트 영역의 위쪽에 겹쳐 그리는 팝업입니다. 키보드는 게임 창이 받아 `InputManager` 로 가고, 이 창은 그리기만 합니다.
      */
     class Win32DevConsoleWindow final : public IDevConsoleWindow
     {
@@ -78,68 +77,6 @@ namespace sw
             _hFont = CreateFontW( Win32DevConsoleWindowInternal::kFontHeight, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                                   CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH | FF_MODERN, L"Consolas" );
             return true;
-        }
-
-        bool decodeKey( const NativeWindowEvent& event, DevConsoleKey& outKey ) const override
-        {
-            outKey = DevConsoleKey{};
-            if ( event._message == WM_KEYDOWN || event._message == WM_SYSKEYDOWN )
-            {
-                switch ( event._wParam )
-                {
-                    case VK_OEM_3:
-                    {
-                        outKey._kind = DevConsoleKey::Kind::Toggle;
-                        break;
-                    }
-                    case VK_ESCAPE:
-                    {
-                        outKey._kind = DevConsoleKey::Kind::Close;
-                        break;
-                    }
-                    case VK_BACK:
-                    {
-                        outKey._kind = DevConsoleKey::Kind::Backspace;
-                        break;
-                    }
-                    case VK_RETURN:
-                    {
-                        outKey._kind = DevConsoleKey::Kind::Enter;
-                        break;
-                    }
-                    case VK_TAB:
-                    {
-                        outKey._kind = DevConsoleKey::Kind::Tab;
-                        break;
-                    }
-                    case VK_UP:
-                    {
-                        outKey._kind = DevConsoleKey::Kind::HistoryBack;
-                        break;
-                    }
-                    case VK_DOWN:
-                    {
-                        outKey._kind = DevConsoleKey::Kind::HistoryForward;
-                        break;
-                    }
-                    default:
-                    {
-                        return false;
-                    }
-                }
-                return true;
-            }
-            if ( event._message == WM_CHAR )
-            {
-                // 여는 키(` · ~)와 제어 문자(백스페이스 · 엔터 · 탭은 WM_KEYDOWN 이 이미 처리했다)는 글자가 아니다.
-                const uint32 codepoint = static_cast<uint32>( event._wParam );
-                if ( codepoint < 0x20 || codepoint == '`' || codepoint == '~' || codepoint == 0x7F || ( 0xD800 <= codepoint && codepoint <= 0xDFFF ) )
-                    return false;
-                outKey._kind      = DevConsoleKey::Kind::Character;
-                outKey._codepoint = codepoint;
-                return true;
-            }
-            return false;
         }
 
         void setVisible( bool bVisible ) override
@@ -262,7 +199,7 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "DevConsoleOverlay" );
+    SW_LOG_CALLER( "DevConsole" );
 
     unique_ptr<IDevConsoleWindow> IDevConsoleWindow::createPlatform( IWindow& owner )
     {
@@ -272,7 +209,7 @@ namespace sw
         unique_ptr<Win32DevConsoleWindow> pWindow = make_unique<Win32DevConsoleWindow>( hOwner );
         if ( pWindow->initialize() == false )
         {
-            SW_LOG_WARNING( "Dev console overlay: could not create the overlay window" );
+            SW_LOG_WARNING( "Dev console: could not create the console window" );
             return nullptr;
         }
         return pWindow;

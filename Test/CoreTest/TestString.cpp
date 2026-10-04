@@ -1775,3 +1775,34 @@ SW_TEST_CASE( StringTest, Utf8DecodeAndAppendRoundTrip )
     SW_EXPECT_TRUE( brokenOffset >= 1u );
     SW_EXPECT_EQUAL( uint32( 'x' ), sw::StringUtil::decodeUtf8( kBroken, brokenOffset ) );
 }
+
+/**
+ * @brief [StringTest] 불리언 글은 한 표로 읽는다 — `parseBool` 은 `tryParseBool` 이 읽은 값, 읽지 못하면 폴백이다
+ * @details 설정 · 텔레메트리 동의 · 개발 명령이 저마다 `== "true"` · `"on"` · `"1"` 을 비교해 같은 값이 길마다 다르게 읽혔다. 철자 표는 `tryParseBool` 하나다.
+ */
+SW_TEST_CASE( StringTest, BoolTextIsReadByOneTable )
+{
+    const utf8* const arrTrue[]    = { "true", "TRUE", "True", "1", "yes", "Yes", "on", "ON", "  true  " };
+    const utf8* const arrFalse[]   = { "false", "FALSE", "0", "no", "No", "off", "OFF", " 0 " };
+    const utf8* const arrUnknown[] = { "", "ture", "2", "-1", "y", "n", "enabled", "truex" };
+    for ( const utf8* pText : arrTrue )
+    {
+        bool bValue{ false };
+        SW_EXPECT_TRUE_MSG( sw::StringUtil::tryParseBool( pText, bValue ) && bValue, pText );
+        SW_EXPECT_TRUE_MSG( sw::StringUtil::parseBool( pText, false ), pText );
+    }
+    for ( const utf8* pText : arrFalse )
+    {
+        bool bValue{ true };
+        SW_EXPECT_TRUE_MSG( sw::StringUtil::tryParseBool( pText, bValue ) && bValue == false, pText );
+        SW_EXPECT_FALSE_MSG( sw::StringUtil::parseBool( pText, true ), pText );
+    }
+    for ( const utf8* pText : arrUnknown )
+    {
+        bool bValue{ true };
+        SW_EXPECT_FALSE_MSG( sw::StringUtil::tryParseBool( pText, bValue ), pText );
+        SW_EXPECT_TRUE_MSG( bValue, pText ); // 읽지 못하면 값은 그대로
+        SW_EXPECT_TRUE_MSG( sw::StringUtil::parseBool( pText, true ), pText );
+        SW_EXPECT_FALSE_MSG( sw::StringUtil::parseBool( pText, false ), pText );
+    }
+}

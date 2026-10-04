@@ -32,7 +32,10 @@
 			                           _syncWeight="1"
 			                           _bExtractRootMotion="false"
 			                           _bPlayOnBegin="true" />
-			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetId="SkeletonMinion" _seed="0" />
+			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
+			                              _bActive="true"
+			                              _presetId="SkeletonMinion"
+			                              _seed="0" />
 			<HealthBarComponent _componentName="HealthBarComponent"
 			                    _bActive="true"
 			                    _hpRatio="1"

@@ -130,6 +130,7 @@ namespace sw
             pView->_cullInput._sortCb.release( _pDevice );
         }
         _meshMorphPool.release( _pDevice );
+        _vertexAnimationPool.release( _pDevice );
         _lightBuffer.release( _pDevice );
         for ( auto& [fallbackStride, fallbackSlot] : _mapMaterialFallback )
             fallbackSlot.release( _pDevice );

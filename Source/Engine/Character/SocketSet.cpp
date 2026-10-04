@@ -6,6 +6,7 @@
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/CharacterGeometry.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -17,23 +18,6 @@ namespace sw
             static constexpr const utf8* kArrKindAttribute[]        = { "name" };
             static constexpr const utf8* kArrSocketAttribute[]      = { "name", "parent", "kind", "translation", "rotation", "scale", "preview", "fallback", "anchor" };
             static constexpr const utf8* kArrVirtualBoneAttribute[] = { "name", "from", "to", "weight" };
-
-            [[nodiscard]] static bool parseAnchor( string_view text, SocketAnchor& outAnchor )
-            {
-                if ( StringUtil::equals( text, "Bone", true ) )
-                {
-                    outAnchor = SocketAnchor::Bone;
-                    return true;
-                }
-                if ( StringUtil::equals( text, "Surface", true ) )
-                {
-                    outAnchor = SocketAnchor::Surface;
-                    return true;
-                }
-                return false;
-            }
-
-            static const utf8* getAnchorName( SocketAnchor anchor ) { return anchor == SocketAnchor::Surface ? "Surface" : "Bone"; }
 
             /** @brief 위층 항목의 적은 칸만 아래층 항목에 옮긴다. */
             static void mergeSocket( SocketDef& inoutLower, const SocketDef& upper )
@@ -235,7 +219,7 @@ namespace sw
         if ( CharacterDataReader::hasAttribute( node, "anchor" ) )
         {
             const string_view anchorText = StringUtil::trim( node.getAttributeText( "anchor" ) );
-            if ( SocketSetInternal::parseAnchor( anchorText, socket._anchor ) == false )
+            if ( engine::getTypeRegistry().enumFromString( anchorText, socket._anchor ) == false )
                 reader.addError( node, string( "has unknown anchor '" ) + string( anchorText ) + "' (Bone, Surface)" );
             socket._fieldMask |= SocketFieldBit::kAnchor;
         }
@@ -292,7 +276,7 @@ namespace sw
             if ( ( mask & SocketFieldBit::kFallback ) != 0 && socket._listFallback.empty() == false )
                 node.appendAttribute( "fallback", CharacterDataReader::formatNameList( socket._listFallback ).c_str() );
             if ( ( mask & SocketFieldBit::kAnchor ) != 0 )
-                node.appendAttribute( "anchor", SocketSetInternal::getAnchorName( socket._anchor ) );
+                node.appendAttribute( "anchor", engine::getTypeRegistry().enumToString( socket._anchor ) );
         }
         return document.saveToString();
     }

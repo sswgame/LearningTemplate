@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
@@ -13,6 +14,7 @@
 #include "Engine/EngineInitSequence.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
+#include "Engine/Object/Animation/AnimationLod.h"
 #include "Engine/Utility/Debug/FrameProfileSession.h"
 #include "Engine/Utility/Debug/MemoryBudgetMonitor.h"
 
@@ -148,6 +150,11 @@ namespace sw
          *          리로드 델리게이트가 남습니다.
          */
         bool wasDebugActionTriggered( string_view actionName ) const;
+        /**
+         * @brief 셸 InputMap 입니다(`updateShellActions` 가 처음 부를 때 만든다 — 그 전과 Shipping 에서는 nullptr).
+         * @details 개발 콘솔(`DevConsoleController`)이 자기 액션을 읽고 자기 레이어를 켜고 끕니다. 이 맵은 키보드 포커스와 상관없이 키를 읽습니다.
+         */
+        InputMap* getShellInputMap() const { return _mapDebugAction.get(); }
 
         // ----------------------------------------------------------------------
         // Getter (App 이 ModuleHost 등과 연동하는 데 필요)
@@ -229,6 +236,8 @@ namespace sw
         unique_ptr<RenderViewScheduler> _renderViewScheduler;
         /** @brief 스케줄러의 시각(초) — 프레임 델타의 누적입니다. */
         float64 _renderViewClock;
+        /** @brief 애니메이션 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
+        vector<AnimationLodView> _listAnimationLodView;
 
         bool _bShellActionsBound;
         bool _bHeadless;

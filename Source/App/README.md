@@ -72,8 +72,10 @@ ReloadShaders=Ctrl+F8(엔진이 처리), ReloadEditor=Ctrl+F6, ReloadGame=Ctrl+F
 
 ## 게임 창 개발 콘솔(Dev 전용)
 
-에디터 없이 띄우면 `~` 로 게임 창 위의 개발 콘솔(`DevConsoleOverlay`)을 엽니다 — 명령 · `gv_이름 [값]` 을 치고 Enter, Tab 자동완성, ↑↓ 기록,
-Esc · `~` 로 닫습니다. 열려 있는 동안 키보드는 게임 입력으로 넘기지 않습니다(`App::onWindowMessage` 가 먼저 묻는다). 에디터가 있으면 Output Log 의
+에디터 없이 띄우면 `~` 로 게임 창 위의 개발 콘솔(`Engine/DevTools/DevConsoleController`)을 엽니다 — 명령 · `gv_이름 [값]` 을 치고 Enter, Tab 자동완성, ↑↓ 기록,
+Esc · `~` 로 닫습니다. 키는 셸 InputMap 의 콘솔 액션(`Resource/engine/input/default.input.xml` — 재배치 · 패드 `Back`/`A`/`B`/십자키)이고, `App::run` 이
+`pollReloadHotkeys`(셸 맵 갱신) 바로 뒤에 `updateDevConsole` 로 넘깁니다. 열려 있는 동안 콘솔이 `InputManager` 키보드 포커스를 쥐어 게임은 키를 보지
+않습니다 — 창 메시지를 가로채지 않습니다(InputReplay · 시험의 `RawInputEvent` 주입도 콘솔에 닿습니다). 에디터가 있으면 Output Log 의
 입력 줄이 같은 콘솔입니다. `-gv_devConsoleExec="timescale 0.5;gv_viewMode 2"` 는 시작 씬이 열린 뒤 명령을 돌리고(에디터가 있어도),
 `-gv_devConsoleOpen=1` 은 연 채로 시작합니다. Shipping 에는 없습니다.
 
