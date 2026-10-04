@@ -13,6 +13,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Physics/PhysicsAsset.h"
+#include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -56,6 +58,8 @@ namespace
         static bool isMaterial( sw::string_view resourceId ) { return endsWith( resourceId, ".material" ); }
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
+        static bool isPhysicsSettings( sw::string_view resourceId ) { return endsWith( resourceId, "physicssettings.xml" ); }
+        static bool isPhysicsAsset( sw::string_view resourceId ) { return endsWith( resourceId, ".physics.xml" ); }
 
         static bool loadScene( const sw::string& resourceId )
         {
@@ -105,6 +109,18 @@ namespace
         {
             const sw::shared_ptr<sw::Material> material = sw::Material::create();
             return material != nullptr && material->loadFromFile( resourceId );
+        }
+
+        static bool loadPhysicsSettings( const sw::string& resourceId )
+        {
+            sw::PhysicsSettings settings;
+            return settings.loadFromResource( resourceId );
+        }
+
+        static bool loadPhysicsAsset( const sw::string& resourceId )
+        {
+            sw::PhysicsAsset asset;
+            return asset.loadFromResource( resourceId );
         }
 
         static bool loadSpriteClip( const sw::string& resourceId )
@@ -157,6 +173,8 @@ namespace
             {           "material",            &isMaterial,                          &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                        &loadSpriteClip},
             {      "camerapresets",       &isCameraPresets,  &loadCatalog<sw::CameraPresetCatalog>},
+            {    "physicssettings",     &isPhysicsSettings,                   &loadPhysicsSettings},
+            {       "physicsasset",        &isPhysicsAsset,                      &loadPhysicsAsset},
             {          "abilities",           &isAbilities,       &loadCatalog<sw::AbilityCatalog>},
             {              "crops",               &isCrops,          &loadCatalog<sw::CropCatalog>},
             {               "city",                &isCity,          &loadCatalog<sw::CityCatalog>},

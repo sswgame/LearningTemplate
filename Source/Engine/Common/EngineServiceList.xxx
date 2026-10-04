@@ -54,6 +54,7 @@ SW_ENGINE_SERVICE( _pCompressionCodecRegistry, class, CompressionCodecRegistry, 
 SW_ENGINE_SERVICE( _pShaderCache, class, ShaderCache, getShaderCache, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pComponentDefaults, class, ComponentDefaults, getComponentDefaults, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pFrameProfiler, class, FrameProfiler, getFrameProfiler, Required, GameVisible, EngineCreated )
+SW_ENGINE_SERVICE( _pPhysicsSystem, class, PhysicsSystem, getPhysicsSystem, Required, GameVisible, EngineCreated )
 
 
 SW_ENGINE_SERVICE_CONST( _pEngineDefaultAssets, struct, EngineDefaultAssets, getEngineDefaultAssets, Required, HostOnly, EngineCreated )

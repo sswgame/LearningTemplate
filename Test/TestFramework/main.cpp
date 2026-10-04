@@ -25,6 +25,7 @@
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
@@ -187,6 +188,15 @@ namespace
                 host._pOwned->_pTypeRegistry->markAllModuleTypesRegistered();
                 return sw::EngineInitResult::Succeeded;
             }
+        };
+
+        struct PhysicsStartupStep : Defaults
+        {
+            static sw::EngineInitResult initialize( TestHost& host )
+            {
+                return host._pOwned->_pPhysicsSystem->initialize() ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+            }
+            static void shutdown( TestHost& host ) { host._pOwned->_pPhysicsSystem->shutdown(); }
         };
 
         struct SceneStartupStep : Defaults

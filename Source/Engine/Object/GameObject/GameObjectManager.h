@@ -25,6 +25,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/LightRegistry.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Object/GameObject/TickRegistry.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
@@ -298,6 +299,14 @@ namespace sw
         /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr 입니다. 락을 잡지 않습니다(`findGameObjectById`). */
         GameObject* resolveGameObject( GameObjectHandle handle ) const { return findGameObjectById( handle.objectId() ); }
 
+        /**
+         * @brief 이 씬의 강체 물리입니다(3D · 2D 물리 씬 · 고정 스텝 · 물리 컴포넌트 · 접촉 이벤트). 처음 쓸 때 씬을 만듭니다.
+         * @details 겹침 월드(`getPhysicsWorld`)와 따로 돕니다 — 둘 다 `stepPhysics` 에서 이 순서(겹침 → 강체)로 한 번씩 진행합니다.
+         */
+        ScenePhysics& getScenePhysics() { return _scenePhysics; }
+        /** @brief 이 씬의 강체 물리입니다. */
+        const ScenePhysics& getScenePhysics() const { return _scenePhysics; }
+
         /** @brief 이 씬의 AABB 질의 월드입니다. */
         PhysicsWorld& getPhysicsWorld() { return _physicsWorld; }
         /** @brief 이 씬의 AABB 질의 월드입니다. */
@@ -540,11 +549,15 @@ namespace sw
         static atomic<uint64> _s_nextObjectId;
 
         PhysicsWorld _physicsWorld;
+        /** @brief 강체 물리입니다. 컴포넌트보다 늦게 사라지도록 등록부들과 함께 둔다(컴포넌트의 해제가 바디를 놓는다). */
+        ScenePhysics _scenePhysics;
         /**
          * @brief 콜라이더 바디를 맞추고 물리를 step 한 뒤 겹침 이벤트를 두 오브젝트의 켜진 컴포넌트에 나눠 줍니다. 틱 · 트랜스폼 적용 뒤, 게임 스레드에서.
          * @details 유니티는 물리 갱신 뒤 OnTrigger 를, 언리얼은 움직임이 끝난 뒤 Begin/EndOverlap 을 부른다. 여기서는 그 프레임에 적용된 월드 자리로 잰다.
          */
-        void                            stepPhysics( float32 deltaTime );
+        void stepPhysics( float32 deltaTime );
+        /** @brief 겹침 월드(`PhysicsWorld`)만 진행하고 겹침 이벤트를 나눠 줍니다(`stepPhysics` 의 앞 절반). */
+        void                            stepOverlapWorld( float32 deltaTime );
         vector<BoxCollider2DComponent*> _listCollider; ///< `registerCollider` 한 콜라이더. 콜라이더가 자기 자리(`_colliderIndex`)를 든다
 
         atomic<bool>            _bTicking;                ///< 컴포넌트 틱 중(`isStructuralMutationFrozen`)

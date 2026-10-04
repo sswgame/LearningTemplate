@@ -100,21 +100,21 @@ _kEngineTier: dict[str, int] = {
     # 외부 압축 라이브러리(lz4·zstd) 코덱. Core 의 ICompressionCodec 만 구현하고 Engine 것은 안 본다
     # — Core 를 압축 라이브러리에 종속시키지 않으려고 여기 둔다(Source/Engine/CMakeLists.txt 주석 참고).
     "Compression": 0,
-    "Physics": 0,
     # 1: 리플렉션과, 토대 위의 잎 서브시스템·헬퍼.
     "Audio": 1,
     "Reflection": 1,
-    "Spatial": 1,
     "Utility": 1,
     # 2: 리플렉션 위에 올라가는 직렬화와 에셋형 잎.
     "Animation": 2,
     "Localization": 2,
     "Serialization": 2,
-    # 3: 설정 — 리플렉션·직렬화로 읽힌다.
+    # 3: 설정 — 리플렉션·직렬화로 읽힌다. 물리도 같은 자리다 — 설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터다.
     "Config": 3,
     "Dialogue": 3,
-    # 4: 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다.
+    "Physics": 3,
+    # 4: 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. 공간 분할은 물리의 AABB 위에 선다.
     "Resource": 4,
+    "Spatial": 4,
     # 5: 디바이스와 GPU 에셋(RHI·Shader·Material·Mesh·Texture·Upload) · 창. 창은 IRenderSurface 로만 RHI 에 보인다.
     "Graphics": 5,
     "Window": 5,

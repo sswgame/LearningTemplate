@@ -1,0 +1,61 @@
+<!--
+	물리 설정 표 — 충돌 레이어(순서가 번호 0..31) · 레이어끼리의 충돌 · 물리 재질 · 중력 · 고정 스텝.
+	코드는 이름으로만 고른다(PhysicsSettings::findLayerIndex · findMaterial). 모르는 이름 · 겹친 이름은 읽을 때 오류다.
+	충돌 목록은 대칭으로 읽는다 — 한쪽에만 적어도 둘이 부딪힌다.
+-->
+<PhysicsSettings _gravity="0,-9.81,0" _gravity2D="0,-9.81" _fixedTimeStep="0.016666668" _maxStepsPerFrame="4" _subStepCount2D="4">
+	<_listLayer>
+		<PhysicsLayerDef _name="Default">
+			<_listCollidesWith>
+				<item>Default</item>
+				<item>Static</item>
+				<item>Character</item>
+				<item>Ragdoll</item>
+				<item>Debris</item>
+				<item>Trigger</item>
+				<item>Projectile</item>
+			</_listCollidesWith>
+		</PhysicsLayerDef>
+		<PhysicsLayerDef _name="Static">
+			<_listCollidesWith>
+				<item>Character</item>
+				<item>Ragdoll</item>
+				<item>Debris</item>
+				<item>Projectile</item>
+			</_listCollidesWith>
+		</PhysicsLayerDef>
+		<PhysicsLayerDef _name="Character">
+			<_listCollidesWith>
+				<item>Character</item>
+				<item>Trigger</item>
+			</_listCollidesWith>
+		</PhysicsLayerDef>
+		<PhysicsLayerDef _name="Ragdoll">
+			<_listCollidesWith>
+				<item>Ragdoll</item>
+				<item>Debris</item>
+				<item>Projectile</item>
+			</_listCollidesWith>
+		</PhysicsLayerDef>
+		<PhysicsLayerDef _name="Debris">
+			<_listCollidesWith>
+				<item>Debris</item>
+			</_listCollidesWith>
+		</PhysicsLayerDef>
+		<PhysicsLayerDef _name="Trigger">
+			<_listCollidesWith />
+		</PhysicsLayerDef>
+		<PhysicsLayerDef _name="Projectile">
+			<_listCollidesWith />
+		</PhysicsLayerDef>
+	</_listLayer>
+	<_listMaterial>
+		<PhysicsMaterialDef _name="Default" _friction="0.5" _restitution="0" _density="1000" />
+		<PhysicsMaterialDef _name="Stone" _friction="0.7" _restitution="0.05" _density="2400" />
+		<PhysicsMaterialDef _name="Wood" _friction="0.6" _restitution="0.15" _density="700" />
+		<PhysicsMaterialDef _name="Metal" _friction="0.4" _restitution="0.1" _density="7800" />
+		<PhysicsMaterialDef _name="Ice" _friction="0.02" _restitution="0.05" _density="917" />
+		<PhysicsMaterialDef _name="Rubber" _friction="0.9" _restitution="0.8" _density="1100" />
+		<PhysicsMaterialDef _name="Flesh" _friction="0.6" _restitution="0" _density="1000" />
+	</_listMaterial>
+</PhysicsSettings>

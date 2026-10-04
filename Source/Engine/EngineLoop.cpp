@@ -32,6 +32,7 @@
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Graphics/Renderer/Debug/DebugDrawQueue.h"
+#include "Engine/Graphics/Renderer/Debug/PhysicsDebugDrawAdapter.h"
 #include "Engine/Graphics/Renderer/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Graphics/Renderer/Frame/RenderFramePacket.h"
@@ -50,7 +51,9 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
@@ -87,6 +90,8 @@ namespace sw
      * @details 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다. 한 번 찍고 비운다.
      */
     SW_TEST_GLOBAL_VARIABLE_STRING( gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
+    /** @brief 활성 씬의 강체 물리(바디 셰이프 · 캐릭터 캡슐)를 디버그 선으로 그립니다(`ScenePhysics::drawDebug` → `DebugDrawQueue`). */
+    SW_GLOBAL_VARIABLE_BOOL( gv_physicsDebugDraw, false, "강체 물리 바디 · 캐릭터를 디버그 선으로 그린다" );
 
 } // namespace sw
 
@@ -270,6 +275,16 @@ namespace sw
             loop._owned._pTypeRegistry->markAllModuleTypesRegistered();
             return EngineInitResult::Succeeded;
         }
+    };
+
+    struct EngineLoop::PhysicsStartupStep : EngineInitStepDefaults<EngineLoop>
+    {
+        static EngineInitResult initialize( EngineLoop& loop )
+        {
+            return loop._owned._pPhysicsSystem->initialize() ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+        }
+        // 씬(과 그 물리 씬)은 Scene 단계 종료에서 이미 사라졌다 — 백엔드를 내린다.
+        static void shutdown( EngineLoop& loop ) { loop._owned._pPhysicsSystem->shutdown(); }
     };
 
     struct EngineLoop::SceneStartupStep : EngineInitStepDefaults<EngineLoop>
@@ -707,6 +722,16 @@ namespace sw
             SW_PROFILE_SCOPE( "GT.Scene.tick" );
             if ( _owned._pSceneManager != nullptr && bTickScene )
                 _owned._pSceneManager->tick( deltaTime );
+        }
+
+        if ( gv_physicsDebugDraw && _owned._pSceneManager != nullptr )
+        {
+            const Scene* pDebugScene = _owned._pSceneManager->getActiveScene();
+            if ( pDebugScene != nullptr && pDebugScene->getObjectManager() != nullptr )
+            {
+                PhysicsDebugDrawAdapter adapter{ engine::getDebugDrawQueue() };
+                pDebugScene->getObjectManager()->getScenePhysics().drawDebug( adapter );
+            }
         }
 
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).

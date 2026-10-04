@@ -7,7 +7,9 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/ComponentHandle.h"
+#include "Core/Math/Math.h"
 
+#include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -190,6 +192,8 @@ namespace sw
     struct OverlapInfo
     {
         GameObject*            _pOther{ nullptr }; ///< 상대 오브젝트. 끝 이벤트에서 상대가 이미 사라졌으면 nullptr
+        PhysicsBodyHandle      _selfBody{};        ///< 강체 물리의 트리거면 이 오브젝트 쪽 바디(히트 존 · 래그돌 뼈를 가린다). 겹침 월드(`PhysicsWorld`)면 무효
+        PhysicsBodyHandle      _otherBody{};       ///< 강체 물리의 트리거면 상대 쪽 바디
         float32                _time{ 1.0f };      ///< 이번 물리 step 안에서 닿은 때(0..1). 연속 바디가 쓸려서 닿은 시작만 1 보다 작다
         uint8                  _bSelfTrigger  : 1; ///< 이 오브젝트 쪽 콜라이더가 트리거인지
         uint8                  _bOtherTrigger : 1; ///< 상대 쪽 콜라이더가 트리거인지
@@ -200,6 +204,26 @@ namespace sw
             : _bSelfTrigger{ SW_FALSE }
             , _bOtherTrigger{ SW_FALSE }
             , _reserved{ 0 } {}
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct CollisionInfo
+     * @brief 강체 물리의 막는 접촉 하나입니다(유니티 `Collision` · 언리얼 `FHitResult` 의 자리). 2D 접촉은 Z = 0 입니다.
+     * @details 접촉은 바디 쌍마다 납니다 — 래그돌 · 컴파운드처럼 한 오브젝트에 바디가 여럿이면 `_selfBody` 로 어느 바디(뼈 · 파편)였는지 가립니다.
+     *          `_impulse` 는 충격량 크기(뉴턴초)입니다: 시작은 부딪힌 충격, 유지는 그 스텝의 충격량, 끝은 0 — 피해 · 파괴 · 소리 세기에 씁니다.
+     */
+    struct CollisionInfo
+    {
+        GameObject*       _pOther{ nullptr }; ///< 상대 오브젝트. 상대가 오브젝트에 속하지 않거나 사라졌으면 nullptr
+        PhysicsBodyHandle _selfBody{};        ///< 이 오브젝트 쪽 바디
+        PhysicsBodyHandle _otherBody{};       ///< 상대 쪽 바디
+        float3            _point{};           ///< 대표 접촉점(월드)
+        float3            _normal{};          ///< 이 오브젝트에서 상대를 향하는 법선(월드)
+        float32           _impulse{ 0.0f };   ///< 접촉 충격량 크기(뉴턴초)
+        bool              _bIs2D{ false };    ///< 2D 물리 씬의 접촉이면 true
     };
 } // namespace sw
 
@@ -276,6 +300,18 @@ namespace sw
         virtual void onOverlapBegin( const OverlapInfo& overlap ) { (void)overlap; }
         /** @brief 겹침이 끝났습니다(떨어짐 · 꺼짐 · 사라짐). 상대가 이미 사라졌으면 `OverlapInfo::_pOther` 는 nullptr 입니다. */
         virtual void onOverlapEnd( const OverlapInfo& overlap ) { (void)overlap; }
+        /** @brief 트리거와 겹친 채로 물리 스텝 하나가 지났습니다(유니티 `OnTriggerStay`). 강체 물리의 트리거만 냅니다 — 겹침 월드는 내지 않는다. */
+        virtual void onOverlapStay( const OverlapInfo& overlap ) { (void)overlap; }
+        /**
+         * @brief 이 오브젝트의 강체가 다른 바디와 막는 접촉을 시작했습니다(유니티 `OnCollisionEnter` · 언리얼 `OnComponentHit`).
+         * @details 물리 스텝들이 끝나고 보간한 자리를 적은 뒤 게임 스레드에서 켜진 컴포넌트마다 불립니다 — 스폰 · 파괴 · 구조 변경을 해도 됩니다.
+         *          한 프레임에 스텝이 여럿이면 스텝 순서대로 옵니다.
+         */
+        virtual void onCollisionBegin( const CollisionInfo& collision ) { (void)collision; }
+        /** @brief 막는 접촉이 물리 스텝 하나 동안 이어졌습니다(유니티 `OnCollisionStay`). */
+        virtual void onCollisionStay( const CollisionInfo& collision ) { (void)collision; }
+        /** @brief 막는 접촉이 끝났습니다(떨어짐 · 바디 사라짐). */
+        virtual void onCollisionEnd( const CollisionInfo& collision ) { (void)collision; }
         /**
          * @brief 소유 GameObject 에 붙은 직후 불립니다.
          * @details 자기가 어떤 등록부에 들어가야 하는지는 자기가 압니다. GameObject 가 `castTo` 로

@@ -669,6 +669,8 @@ namespace sw
         _listCachedTickStage.clear();
         _tickRegistry.clear();
         markTickStagesDirty();
+        // 컴포넌트가 바디를 놓았다 — 빈 물리 씬과 쌓인 시간을 버린다(다음 씬은 처음 쓸 때 새로 만든다).
+        _scenePhysics.shutdown();
     }
 
     void GameObjectManager::mergePendingAdds()

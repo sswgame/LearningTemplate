@@ -150,6 +150,23 @@ if(TARGET sw_third_party_includes)
 endif()
 
 # ------------------------------------------------------------------------------
+# 2-1) 물리 백엔드 — Jolt(3D) · Box2D(2D). 헤더는 Physics/Jolt · Physics/Box2D 에서만 include 한다(CheckThirdPartyIsolation.py).
+# 서드파티 물리 · 애니메이션 라이브러리를 링크하는 곳은 이 파일 하나다 — 다른 타깃은 엔진 인터페이스(IPhysicsScene)만 본다.
+#
+# Jolt 임포트 타깃은 사용 요건으로 AVX2 같은 대상 기능(-mavx2 ...)과 JPH_* 정의를 싣는다. 그대로 링크하면 **Engine 의 모든 TU**
+# 가 AVX2 로 컴파일된다. 링크만 받고($<LINK_ONLY:>), 정의 · 옵션은 Jolt 백엔드 소스에만 붙인다. 그 소스는 PCH 를 쓰지 않는다
+# (대상 기능이 다른 PCH 는 clang 이 거부한다). 소스 속성이 있는 파일은 CMake 가 유니티 묶음에서 저절로 뺀다.
+# Box2D 는 BOX2D_DLL 정의 하나뿐이라 그대로 PRIVATE 로 링크한다. 둘 다 DLL 이고(x64-windows) Bin 에는 vcpkg applocal 이 옮긴다.
+# ------------------------------------------------------------------------------
+target_link_libraries(Engine PRIVATE $<LINK_ONLY:joltphysics> box2d)
+file(GLOB swJoltBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/*.cpp")
+set_source_files_properties(${swJoltBackendSources} PROPERTIES
+    COMPILE_DEFINITIONS "$<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_DEFINITIONS>"
+    COMPILE_OPTIONS "$<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_OPTIONS>"
+    SKIP_PRECOMPILE_HEADERS ON
+)
+
+# ------------------------------------------------------------------------------
 # 3) RHI 링크 — Shipping 은 백엔드 하나를 Engine 에 정적 링크, Dev 는 RHI_* MODULE 을 런타임에 로드
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD)

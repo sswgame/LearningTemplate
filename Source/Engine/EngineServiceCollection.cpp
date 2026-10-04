@@ -17,6 +17,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
