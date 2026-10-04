@@ -245,6 +245,11 @@ namespace sw
             /// @brief GPU 회전 애니메이션 시드입니다(0 = 없음). MeshComponent 가 주고 GpuInstance::_spinSeed 로 갑니다.
             uint32 _spinSeed{ 0 };
             /**
+             * @brief 투명 큐의 정렬 키입니다(`Render2DSettings::makeSortKey` — 정렬 레이어 · 레이어 안 순서, 0 = 기본). **내용**이고 배치 키가 아닙니다.
+             * @details 투명 정렬(`sortTransparent`)의 첫 키입니다. 바뀌면 그 프레임의 정렬이 순서를 바꾸고 투명 꼬리를 다시 방출합니다.
+             */
+            uint32 _sortKey{ 0 };
+            /**
              * @brief 스프라이트 프레임 · 색입니다(GpuInstance::_sprite 로 갑니다). **내용**이고 배치 키가 아닙니다.
              * @details `operator==` 에는 들고 `hasSameBatchKey` 에는 들지 않습니다 — 프레임만 넘긴 스프라이트는 배치를 다시 나누지 않고
              *          제자리 갱신(더티 구간 하나)으로 끝납니다. 키에 넣으면 프레임마다 정렬 · 나누기를 다시 했을 것입니다.
@@ -258,11 +263,6 @@ namespace sw
              *          **바뀐 퍼뮤테이션이 화면에 반영되지 않습니다**(런타임에 정적 스위치를 바꾸는 길이 조용히 죽습니다). 수집에서 한 번 구해 두면 나누기 · 정렬도 다시 구하지 않습니다.
              */
             uint64 _permutationHash{ 0 };
-            /**
-             * @brief 투명 큐의 정렬 키입니다(`Render2DSettings::makeSortKey` — 정렬 레이어 · 레이어 안 순서, 0 = 기본). **내용**이고 배치 키가 아닙니다.
-             * @details 투명 정렬(`sortTransparent`)의 첫 키입니다. 바뀌면 그 프레임의 정렬이 순서를 바꾸고 투명 꼬리를 다시 방출합니다.
-             */
-            uint32 _sortKey{ 0 };
             /**
              * @brief 월드 행렬식이 음수(거울 변환)인가입니다. 배치 키이고 `GpuMeshBatch::_bReverseCulling` 으로 갑니다.
              * @details 월드 행렬에서 나오는 값이라 트랜스폼만 바뀐 프레임도 다시 구합니다(`copyCandidateTransforms`). 부호가 바뀌면 배치를 다시 나눕니다.

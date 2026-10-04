@@ -6,6 +6,7 @@
 |------|------|
 | `SpriteComponent` | 텍스처를 입힌 사각형(아틀라스 프레임 · 색 · 정렬 레이어 · 레이어 안 순서 · 그리기 방식 Simple/Sliced/Tiled) |
 | `SpriteAnimatorComponent` | 클립(`.sprite.json`)의 프레임을 넘김 |
+| `PixelPerfectCameraComponent` | 픽셀 아트 카메라 — 정수 배율 · 직교 높이 · 그리는 눈의 화면 픽셀 스냅 · 스프라이트의 자산 픽셀 스냅 · 레터박스 띠 |
 | `ParallaxLayerComponent` | 시차 레이어 — 게임 카메라에 대한 배율로 오브젝트(자식 포함)를 옮기고 되풀이 길이로 감는다 |
 | `SpriteRenderUtil` | 스프라이트 머티리얼 경로 · (머티리얼, 텍스처) 인스턴스 공유 · 정렬 키 풀기 |
 | `BoxCollider2DComponent` · `TileColliderComponent` | 2D 충돌 |
@@ -29,6 +30,20 @@
 | 타일 방식 | Continuous · Adaptive | Stretch · Tile · Tile Fit | 자연 크기 칸 되풀이 + 마지막 칸 자르기(Continuous) |
 
 빠진 것: 테두리를 픽셀로 적는 길(아틀라스 픽셀 크기를 런타임이 모른다), 유니티의 Adaptive 타일, 가운데를 비우는 Fill Center 끄기.
+
+## 픽셀 퍼펙트 카메라
+
+| 기능 | 유니티 Pixel Perfect Camera | Godot | 여기 |
+|------|-----------------------------|-------|------|
+| 정수 배율 · 직교 크기 | Assets PPU · Reference Resolution | stretch mode `viewport` + integer scale | `_pixelsPerUnit` · `_referenceResolution` → 배율 = 두 축이 들어가는 가장 큰 정수, 직교 높이 = 뷰포트 높이 / (배율 × PPU) |
+| 카메라 스냅 | 렌더 직전 반올림 | `snap_2d_transforms_to_pixel` | 그리는 눈만(`CameraComponent::setViewOffset`) 화면 픽셀 격자에 — 트랜스폼은 그대로 |
+| 스프라이트 스냅 | Pixel Snapping(자산 픽셀 격자) | `snap_2d_vertices_to_pixel` | `_bPixelSnapping` → 인스턴스 칸 `_pixelSnap` = 1 / PPU, sprite2d.hlsl 이 원점을 붙인다 |
+| 점 필터 | 텍스처 Filter Mode Point | `TEXTURE_FILTER_NEAREST` | `sprite2dpixel.material`(`pointFilter`) — UV 를 텍셀 중심에 붙인다(GL 결합 샘플러 때문에 샘플러가 아니라 UV) |
+| 자르기 | Crop Frame X/Y | — | `_bCropX` · `_bCropY` → 검은 띠 넷(`Overlay` 레이어 맨 위) |
+| 저해상도로 그린 뒤 키우기 | Upscale Render Texture | viewport stretch | **없음** — 렌더러에 저해상도 타깃 · 업스케일 패스가 필요하다 |
+
+뷰포트 크기는 엔진 루프가 틱 전에 카메라 등록부에 적는다(`CameraRegistry::setViewportSize`). 틱 그룹은 PostPhysics(카메라를 따라가게 하는 컴포넌트 뒤, 시차 레이어 앞)입니다.
+스냅 단위가 바뀌면 씬의 메시 모두에 틱 뒤로 미뤄 알리고, 나중에 등록되는 메시는 등록부에서 읽습니다.
 
 ## 시차 레이어
 

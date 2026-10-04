@@ -98,8 +98,16 @@ namespace sw
         /** @brief 뷰-투영 행렬을 반환합니다. */
         float4x4 getViewProjectionMatrix( float32 aspectRatio ) const;
 
-        /** @brief 카메라 월드 위치를 반환합니다. */
-        float3 getCameraPosition() const { return getWorldPosition(); }
+        /** @brief 카메라가 그리는 눈의 월드 위치입니다 — 월드 위치에 그리기 전용 오프셋(`setViewOffset`)을 더한 것입니다. 뷰 행렬이 이 점을 씁니다. */
+        float3 getCameraPosition() const { return getWorldPosition() + _viewOffset; }
+        /**
+         * @brief 그리기에만 쓰는 눈 위치 오프셋(월드)입니다. 트랜스폼은 그대로 둡니다. 저장하지 않습니다.
+         * @details 픽셀 퍼펙트 카메라가 눈을 화면 픽셀 격자에 붙일 때 씁니다(`PixelPerfectCameraComponent`). 트랜스폼을 반올림하면 감쇠로 따라가는
+         *          카메라가 반 픽셀 아래의 움직임을 영영 잃어 멈춥니다 — 그래서 그리는 눈만 옮깁니다(유니티도 렌더 직전에만 붙입니다).
+         */
+        void setViewOffset( const float3& offset ) { _viewOffset = offset; }
+        /** @brief 그리기 전용 눈 위치 오프셋입니다. */
+        const float3& getViewOffset() const { return _viewOffset; }
         /** @brief 카메라가 보는 방향(월드, 정규화)입니다 — 로컬 +Z 를 월드 회전으로 돌린 것으로 뷰 행렬과 같은 축입니다. */
         float3 getCameraForward() const;
 
@@ -112,6 +120,7 @@ namespace sw
         float32 _farZ;
         PROPERTY( Category = "Projection", DisplayName = "Ortho Height", Tooltip = "Orthographic view height", Min = 0.1, Max = 1000.0 )
         float32 _orthoHeight;
+        float3  _viewOffset; ///< 그리기 전용 눈 위치 오프셋(월드). 저장하지 않습니다
         PROPERTY( Category = "General", DisplayName = "Priority", Tooltip = "Camera selection priority" )
         int32 _priority;
         PROPERTY( Category = "General", DisplayName = "Role", Tooltip = "Camera usage role" )

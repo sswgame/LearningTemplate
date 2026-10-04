@@ -51,6 +51,8 @@
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
+#include "Engine/Object/GameObject/CameraRegistry.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetManager.h"
@@ -706,6 +708,10 @@ namespace sw
         BLOCK( "Scene update" )
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick" );
+            // 게임 카메라가 그리는 뷰포트 크기를 틱 전에 적는다 — 픽셀 퍼펙트 카메라가 배율을 고른다(`CameraRegistry::getViewportWidth`).
+            Scene* pTickScene = ( _owned._pSceneManager != nullptr ) ? _owned._pSceneManager->getActiveScene() : nullptr;
+            if ( pTickScene != nullptr && pTickScene->getObjectManager() != nullptr )
+                pTickScene->getObjectManager()->getCameraRegistry().setViewportSize( vpWidth, vpHeight );
             if ( _owned._pSceneManager != nullptr && bTickScene )
                 _owned._pSceneManager->tick( deltaTime );
         }

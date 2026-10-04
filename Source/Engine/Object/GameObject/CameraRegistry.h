@@ -54,6 +54,24 @@ namespace sw
          */
         CameraComponent* selectCamera( CameraRole role ) const;
 
+        /** @brief 이 씬의 게임 카메라가 그리는 뷰포트의 픽셀 크기를 적습니다(`EngineLoop` 가 틱 전에). 모르면 0 입니다. */
+        void setViewportSize( uint32 width, uint32 height )
+        {
+            _viewportWidth  = width;
+            _viewportHeight = height;
+        }
+        /** @brief 게임 뷰포트의 픽셀 폭입니다(모르면 0). */
+        uint32 getViewportWidth() const { return _viewportWidth; }
+        /** @brief 게임 뷰포트의 픽셀 높이입니다(모르면 0). */
+        uint32 getViewportHeight() const { return _viewportHeight; }
+        /**
+         * @brief 2D 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU)입니다. 0 이면 끕니다.
+         * @details 픽셀 퍼펙트 카메라가 정하고, 새로 등록되는 메시 컴포넌트가 읽습니다(`MeshComponent::onRegister`). 바뀔 때 이미 있는 메시에 알리는
+         *          것은 정하는 쪽의 일입니다(`PixelPerfectCameraComponent`).
+         */
+        float32 getPixelSnapUnit() const { return _pixelSnapUnit; }
+        void    setPixelSnapUnit( float32 unit ) { _pixelSnapUnit = unit; }
+
         /** @brief 선택 대상이 될 수 있는 카메라인지 봅니다 — 켜져 있고(소유 오브젝트의 계층 활성 포함) 컴포넌트 · 소유자 모두 삭제 대기가 아닙니다. */
         static bool isUsableCamera( const CameraComponent* pCamera );
 
@@ -62,5 +80,8 @@ namespace sw
         RegistrationList<CameraComponent> _registeredCamera;
         /** @brief 목록을 지킵니다. 등록/해제는 드물고(비동기 씬 로드는 워커에서 등록합니다), 조회는 게임 스레드입니다. */
         mutable mutex _mutex;
+        uint32        _viewportWidth{ 0 };    ///< 게임 뷰포트 픽셀 폭(게임 스레드가 틱 전에 적고 틱이 읽습니다)
+        uint32        _viewportHeight{ 0 };   ///< 게임 뷰포트 픽셀 높이
+        float32       _pixelSnapUnit{ 0.0f }; ///< 2D 픽셀 스냅 단위(0 = 끔)
     };
 } // namespace sw

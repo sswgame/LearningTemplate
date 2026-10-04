@@ -50,7 +50,6 @@ namespace sw
          *          않아 같은 텍스처의 스프라이트가 프레임 · 색이 달라도 한 배치이고, 바뀌면 그 인스턴스만 더티 구간으로 올라갑니다.
          */
         GpuSpriteInstanceData _sprite{};
-        uint32                _reserved{ 0 }; ///< 16 바이트 정렬을 채웁니다(112 바이트). 셰이더의 `reserved` 입니다
     };
 } // namespace sw
 

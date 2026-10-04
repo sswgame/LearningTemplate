@@ -15,6 +15,7 @@ namespace sw
         , _nearZ{ kDefaultNearZ }
         , _farZ{ kDefaultFarZ }
         , _orthoHeight{ kDefaultOrthoHeight }
+        , _viewOffset{ 0.0f, 0.0f, 0.0f }
         , _priority{ 0 }
         , _role{ CameraRole::Game }
         , _bOrthographic{ false }
@@ -85,7 +86,7 @@ namespace sw
     float4x4 CameraComponent::getViewMatrix() const
     {
         const float4x4 worldMat = getWorldMatrix();
-        const float3   eye      = worldMat.getTranslation();
+        const float3   eye      = worldMat.getTranslation() + _viewOffset;
         const float3   forward  = float3::transformVector( float3( 0.0f, 0.0f, 1.0f ), worldMat );
         const float3   up       = float3::transformVector( float3( 0.0f, 1.0f, 0.0f ), worldMat );
         const float3   target   = eye + forward;

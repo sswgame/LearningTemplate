@@ -118,6 +118,11 @@ namespace sw
          *          (`SpriteComponent`)입니다 — 그래서 세터는 protected 입니다(읽는 셰이더가 없는 메시에 색을 줄 수 있는 것처럼 보이지 않게).
          */
         const GpuSpriteInstanceData& getSpriteInstanceData() const { return _spriteInstanceData; }
+        /**
+         * @brief 2D 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU, 0 = 끔)를 정합니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시합니다.
+         * @details 픽셀 퍼펙트 카메라가 줌이 바뀔 때 씬의 메시 모두에 알리고, 새로 등록되는 메시는 카메라 등록부의 값을 읽습니다. 읽는 셰이더는 sprite2d 입니다.
+         */
+        void setPixelSnapUnit( float32 unit );
 
         /**
          * @brief 투명 큐의 정렬 키입니다(`Render2DSettings::makeSortKey` — 정렬 레이어 · 레이어 안 순서). 0 은 `Default` 레이어 · 순서 0 입니다.
