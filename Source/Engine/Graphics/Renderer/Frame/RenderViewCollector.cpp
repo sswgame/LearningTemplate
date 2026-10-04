@@ -19,7 +19,7 @@ namespace sw
      * @brief `-gv_renderViewBudget=<n>` — 한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수입니다(0 = 제한 없음).
      * @details 넘치면 가장 오래 기다린 뷰부터 그리고 나머지는 다음 프레임으로 미룬다(굶지 않는다 — `RenderViewScheduler`).
      */
-    SW_GLOBAL_VARIABLE_INT( gv_renderViewBudget, 4, "한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음)" );
+    SW_GLOBAL_VARIABLE( int32, gv_renderViewBudget, 4, "한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음)" );
 
     namespace
     {

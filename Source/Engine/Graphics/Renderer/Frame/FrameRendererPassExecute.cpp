@@ -21,7 +21,7 @@ namespace sw
      * @brief `-gv_dumpRenderGraph=1`: 파이프라인을 묶을 때마다(시작 · 파이프라인 교체) 컴파일된 레벨 순서를 로그로 남깁니다.
      * @details 레벨 · 패스 · 읽고 쓰는 자원 · 컬링된 패스(`RenderGraph::describeCompiledOrder`). "왜 이 패스가 저것보다 먼저 도나 · 왜 안 도나" 의 답이다.
      */
-    SW_TEST_GLOBAL_VARIABLE_BOOL( gv_dumpRenderGraph, false, "렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다" );
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_dumpRenderGraph, false, "렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다" );
 
     void FrameRenderer::bindPassCallbacks()
     {
