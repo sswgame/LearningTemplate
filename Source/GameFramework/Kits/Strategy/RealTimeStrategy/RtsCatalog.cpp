@@ -19,16 +19,6 @@ namespace sw
     {
     }
 
-    bool RtsCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &RtsCatalog::loadRoot, path, "RtsCatalog" );
-    }
-
-    bool RtsCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &RtsCatalog::loadRoot, xmlText, sourceName, "RtsCatalog" );
-    }
-
     void RtsCatalog::findProducts( const hashed_string& producerId, vector<const RtsUnitDef*>& outListDef ) const
     {
         outListDef.clear();

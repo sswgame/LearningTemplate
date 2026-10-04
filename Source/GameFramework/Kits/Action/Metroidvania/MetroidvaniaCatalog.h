@@ -16,6 +16,7 @@
 #include "GameFramework/Combat/Vitality.h"
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Input/TimingJudge.h"
 
@@ -131,13 +132,12 @@ namespace sw
      *        <Charm id="strength" cost="3"><Stats damage="0.5"/></Charm><Map region="crossroads" price="30"/><Site id="bench1" area="dirtmouth" rest="true"/>
      *        <Pickup id="mask1" area="hall"/><Enemy id="husk" currency="5" loot="husk"/><Enemy id="hornet" boss="true" currency="300"/></Metroidvania>` 를 읽습니다.
      */
-    class SW_GF_API MetroidvaniaCatalog
+    class SW_GF_API MetroidvaniaCatalog : public XmlCatalog<MetroidvaniaCatalog>
     {
+        friend class XmlCatalog<MetroidvaniaCatalog>;
+
     public:
         MetroidvaniaCatalog();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         const MetroAbilityDef*   findAbility( const hashed_string& id ) const { return _abilityCatalog.find( id ); }
         const MetroCharmDef*     findCharm( const hashed_string& id ) const { return _charmCatalog.find( id ); }
@@ -155,8 +155,9 @@ namespace sw
         MetroRules&                      getRules() { return _rules; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
-        void   loadRules( const XmlNode& root );
+        static constexpr const utf8* kXmlRootName = "Metroidvania"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        void                         loadRules( const XmlNode& root );
 
         GameCatalog<MetroAbilityDef>   _abilityCatalog;
         GameCatalog<MetroCharmDef>     _charmCatalog;

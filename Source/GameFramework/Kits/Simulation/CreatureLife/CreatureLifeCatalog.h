@@ -11,6 +11,7 @@
 
 #include "GameFramework/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/World/WorldClock.h"
 
@@ -138,17 +139,17 @@ namespace sw
      * @endcode
      *          `.` 은 무엇이든 되는 칸, `empty` 오브젝트는 빈 칸입니다. 행 길이가 다르거나 모르는 기호가 있는 서식지는 경고하고 뺍니다.
      */
-    class SW_GF_API CreatureLifeCatalog
+    class SW_GF_API CreatureLifeCatalog : public XmlCatalog<CreatureLifeCatalog>
     {
+        friend class XmlCatalog<CreatureLifeCatalog>;
+
     public:
         CreatureLifeCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addHabitat( const HabitatDef& habitat );
-        void               addSpecies( const CreatureSpeciesDef& species ) { (void)_speciesCatalog.add( species ); }
-        void               addAbility( const CreatureAbilityDef& ability ) { (void)_abilityCatalog.add( ability ); }
-        void               setAppeal( const TownAppealDef& appeal ) { _appeal = appeal; }
+        void addHabitat( const HabitatDef& habitat );
+        void addSpecies( const CreatureSpeciesDef& species ) { (void)_speciesCatalog.add( species ); }
+        void addAbility( const CreatureAbilityDef& ability ) { (void)_abilityCatalog.add( ability ); }
+        void setAppeal( const TownAppealDef& appeal ) { _appeal = appeal; }
 
         const HabitatDef*                 findHabitat( const hashed_string& id ) const { return _habitatCatalog.find( id ); }
         const CreatureSpeciesDef*         findSpecies( const hashed_string& id ) const { return _speciesCatalog.find( id ); }
@@ -160,8 +161,9 @@ namespace sw
         const vector<int32>& getHabitatMatchOrder() const { return _listHabitatOrder; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
-        void   rebuildHabitatOrder();
+        static constexpr const utf8* kXmlRootName = "CreatureLifeCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        void                         rebuildHabitatOrder();
 
         GameCatalog<HabitatDef>         _habitatCatalog;
         GameCatalog<CreatureSpeciesDef> _speciesCatalog;

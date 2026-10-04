@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Ability/AbilityCatalog.h"
+#include "GameFramework/Ability/AbilitySystemEvents.h"
 #include "GameFramework/Ability/GameplayAbility.h"
 #include "GameFramework/Combat/HealthListenerComponent.h"
 #include "GameFramework/Framework/GameEventUtil.h"

@@ -15,6 +15,7 @@
 
 namespace sw
 {
+    struct NestedContainerInfo;
     struct ObjectIdentity;
 
     class GameObject;

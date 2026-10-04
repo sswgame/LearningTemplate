@@ -16,6 +16,7 @@
 #include "GameFramework/Inventory/Shop.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgCatalog.h"
 #include "GameFramework/Progression/LevelProgress.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -152,12 +153,12 @@ namespace sw
         void learnSpellsAtLevel( int32 memberIndex, const JrpgClassDef& classDef, int32 level );
         void pushEvent( JrpgPartyEvent::Kind kind, int32 memberIndex, int32 value, const hashed_string& id = hashed_string{} );
 
-        vector<JrpgMember>     _listMember;
-        vector<JrpgPartyEvent> _listEvent;
-        Wallet                 _wallet;
-        Inventory              _inventory;
-        string                 _equipLayout;
-        const JrpgCatalog*     _pCatalog;
-        const ItemCatalog*     _pItemCatalog;
+        vector<JrpgMember>          _listMember;
+        EventBuffer<JrpgPartyEvent> _eventBuffer;
+        Wallet                      _wallet;
+        Inventory                   _inventory;
+        string                      _equipLayout;
+        const JrpgCatalog*          _pCatalog;
+        const ItemCatalog*          _pItemCatalog;
     };
 } // namespace sw

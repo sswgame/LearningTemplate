@@ -18,10 +18,10 @@ namespace sw
     PartyItemSpawner::PartyItemSpawner()
         : _catalog{}
         , _listInstance{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _settings{}
         , _random{}
-        , _spawnTimer{ 0.0f }
+        , _spawnTimer{}
         , _nextSerial{ 1 }
     {
     }
@@ -31,9 +31,9 @@ namespace sw
         _settings = settings;
         _random.setSeed( seed );
         _listInstance.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _nextSerial = 1;
-        _spawnTimer = MathUtil::max( 0.0f, settings._minInterval );
+        _spawnTimer.start( MathUtil::max( 0.0f, settings._minInterval ) );
     }
 
     float32 PartyItemSpawner::rollInterval()
@@ -60,7 +60,7 @@ namespace sw
                 event._kind   = PartyItemEvent::Kind::Expired;
                 event._itemId = instance._itemId;
                 event._serial = instance._serial;
-                _listEvent.push_back( event );
+                _eventBuffer.push( event );
                 continue;
             }
             _listInstance[writeIndex++] = instance;
@@ -70,11 +70,11 @@ namespace sw
         // 2) 새로 놓기 — 자리가 차 있으면 시계는 멈춰 있다(빈 자리가 나면 곧 나온다).
         if ( _catalog.isEmpty() || static_cast<int32>( _listInstance.size() ) >= _settings._maxActive )
             return;
-        _spawnTimer -= deltaTime;
-        if ( _spawnTimer > 0.0f )
+        _spawnTimer.tick( deltaTime );
+        if ( _spawnTimer.isActive() )
             return;
         spawnOne();
-        _spawnTimer = rollInterval();
+        _spawnTimer.restart( rollInterval() ); // 늦음을 잇는다 — 스폰 빈도가 fps 에 매이지 않는다
     }
 
     const PartyItemDef* PartyItemSpawner::pickWeighted()
@@ -104,7 +104,7 @@ namespace sw
         event._kind   = PartyItemEvent::Kind::Spawned;
         event._itemId = instance._itemId;
         event._serial = instance._serial;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     bool PartyItemSpawner::tryPickUp( const float3& position, float32 radius, int32 player, PartyItemInstance& outItem )
@@ -130,24 +130,13 @@ namespace sw
         event._itemId = outItem._itemId;
         event._serial = outItem._serial;
         event._player = player;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
         return true;
     }
 
     void PartyItemSpawner::drainEvents( vector<PartyItemEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
-    }
-
-    bool PartyItemSpawner::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &PartyItemSpawner::loadRoot, path, "PartyItems" );
-    }
-
-    bool PartyItemSpawner::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &PartyItemSpawner::loadRoot, xmlText, sourceName, "PartyItems" );
+        _eventBuffer.drainTo( outListEvent );
     }
 
     uint32 PartyItemSpawner::loadRoot( const XmlNode& root, string_view sourceName )

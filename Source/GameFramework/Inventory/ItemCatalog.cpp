@@ -73,16 +73,6 @@ namespace sw
         return false;
     }
 
-    bool ItemCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &ItemCatalog::loadRoot, path, "ItemCatalog" );
-    }
-
-    bool ItemCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &ItemCatalog::loadRoot, xmlText, sourceName, "ItemCatalog" );
-    }
-
     bool ItemDef::hasTagUnder( TagID parentTag ) const
     {
         for ( const hashed_string& ownTag : _listTag )

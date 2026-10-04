@@ -12,6 +12,7 @@
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherContract.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherMutagens.h"
 #include "GameFramework/Progression/SkillTree.h"
+#include "GameFramework/Quest/QuestCatalog.h"
 #include "GameFramework/Quest/QuestLog.h"
 
 #include "TestFramework/TestFramework.h"

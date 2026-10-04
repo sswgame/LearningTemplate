@@ -7,10 +7,10 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
 
 namespace sw
 {
+    struct DamageAppliedEvent;
     struct MonsterDef;
 
     REFLECT( Category = "Gameplay", DisplayName = "Unit Stats Component", Tooltip = "Manages HP, Attack, Defense, Movement Speed, and Invincibility" )

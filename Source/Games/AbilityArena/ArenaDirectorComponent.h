@@ -91,11 +91,13 @@ namespace sw
          */
         void launchProjectile( const AbilitySystemComponent& from, const float3& facing, const GameplayEffectSpec& spec, const GameplayEffectSpec& extraSpec,
                                float32 speed, float32 range ) const;
-        /** @brief 플레이어의 자리(없으면 아레나 가운데)입니다 — 카메라가 따라간다. */
+        /** @brief 이번 프레임 모습의 플레이어 자리(틱 전, 없으면 아레나 가운데)입니다. */
         const float3& getPlayerFocus() const { return _playerFocus; }
-        float32       getArenaHalfSize() const { return _arenaHalfSize; }
-        uint32        getWave() const { return _wave; }
-        uint32        getKillCount() const { return _killCount; }
+        /** @brief 이번 프레임 모습의 플레이어 오브젝트입니다(없으면 빈 핸들). 뒤 단계(PostPhysics 이후)는 이것의 트랜스폼으로 이번 프레임 자리를 읽는다. */
+        GameObjectHandle getPlayerObject() const { return _playerObject; }
+        float32          getArenaHalfSize() const { return _arenaHalfSize; }
+        uint32           getWave() const { return _wave; }
+        uint32           getKillCount() const { return _killCount; }
 
         /**
          * @brief 유닛(어빌리티 시스템)이 따르는 디렉터입니다 — 같은 오브젝트의 컨트롤러가 든 핸들로 씬에서 찾습니다. 없으면 nullptr 입니다.
@@ -191,6 +193,7 @@ namespace sw
         vector<SpawnRequest>     _listPendingUnit;
         MaterialTintCache        _tintCache; ///< 플레이어 · Grunt · Caster · 투사체 색
         float3                   _playerFocus;
+        GameObjectHandle         _playerObject;       ///< 이번 프레임 모습의 플레이어(`getPlayerObject`)
         float32                  _playerRespawnTimer; ///< 0 이상이면 플레이어가 다시 서기까지 남은 시간
         float32                  _statusLogTimer;
         uint32                   _wave;

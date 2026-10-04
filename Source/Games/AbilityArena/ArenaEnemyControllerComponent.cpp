@@ -2,6 +2,10 @@
 
 #include "Games/AbilityArena/ArenaEnemyControllerComponent.h"
 
+#include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
 #include "GameFramework/Ability/AbilitySystemComponent.h"
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
@@ -15,7 +19,48 @@ namespace sw
         , _preferredMax{ 9.0f }
         , _fireRange{ 12.0f }
         , _unitRadius{ 0.5f }
+        , _targetTick{}
     {
+    }
+
+    void ArenaEnemyControllerComponent::onBeginPlay()
+    {
+        ArenaControllerComponent::onBeginPlay();
+        // 플레이어 컨트롤러(주 틱) 뒤에 돌 수 있게 AI 는 서브틱에서 돈다. 선행 조건은 대상을 처음 볼 때 건다(`resolveTargetPosition`).
+        setCanEverTick( false );
+        _targetTick = SubTickHandle{};
+        (void)registerSubTick( TickGroup::DuringPhysics, kChaseSubTick );
+    }
+
+    void ArenaEnemyControllerComponent::onSubTick( uint32 subTickId, float32 deltaTime )
+    {
+        ArenaControllerComponent::onSubTick( subTickId, deltaTime );
+        if ( subTickId == kChaseSubTick )
+            ArenaControllerComponent::onTick( deltaTime );
+    }
+
+    float3 ArenaEnemyControllerComponent::resolveTargetPosition( const ArenaUnitView& target )
+    {
+        GameObject*                     pOwner            = getOwner();
+        GameObjectManager*              pManager          = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObject*                     pTargetObject     = pManager != nullptr ? pManager->resolveGameObject( target._object ) : nullptr;
+        const ArenaControllerComponent* pTargetController = pTargetObject != nullptr ? pTargetObject->getComponent<ArenaControllerComponent>() : nullptr;
+        const MeshComponent*            pTargetMesh       = pTargetObject != nullptr ? pTargetObject->getComponent<MeshComponent>() : nullptr;
+        if ( pTargetController == nullptr || pTargetMesh == nullptr )
+            return target._position;
+
+        const SubTickHandle targetTick = pTargetController->getTickHandle();
+        if ( targetTick != _targetTick )
+        {
+            // 틱 중이라 갈아 거는 것은 틱 뒤에 적용된다 — 이번 프레임은 아직 대상과 나란히 돌 수 있으니 디렉터 모습(틱 전 자리)을 쓴다.
+            if ( _targetTick.isValid() )
+                (void)removeSubTickPrerequisite( kChaseSubTick, _targetTick );
+            (void)addSubTickPrerequisite( kChaseSubTick, targetTick );
+            _targetTick = targetTick;
+            return target._position;
+        }
+        // 대상 컨트롤러가 이번 프레임에 옮긴 자리는 이 스테이지 앞에서 적용됐다.
+        return pTargetMesh->getWorldPosition();
     }
 
     void ArenaEnemyControllerComponent::tickController( float32 deltaTime, const ArenaDirectorComponent& director, AbilitySystemComponent& abilitySystem,
@@ -24,8 +69,9 @@ namespace sw
         const ArenaUnitView* pTarget = director.findNearestHostileView( getOwner()->getHandle(), 100.0f );
         if ( pTarget != nullptr )
         {
-            const float3  toTarget = pTarget->_position - inoutPosition;
-            const float32 distance = toTarget.getLength();
+            const float3  targetPosition = resolveTargetPosition( *pTarget );
+            const float3  toTarget       = targetPosition - inoutPosition;
+            const float32 distance       = toTarget.getLength();
             setFacing( flattenDirection( toTarget, getFacing() ) );
             if ( _kind == ArenaUnitKind::Caster )
             {

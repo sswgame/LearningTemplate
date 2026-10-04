@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -216,13 +217,12 @@ namespace sw
      *     </WitcherCatalog>
      * @endcode
      */
-    class SW_GF_API WitcherCatalog
+    class SW_GF_API WitcherCatalog : public XmlCatalog<WitcherCatalog>
     {
+        friend class XmlCatalog<WitcherCatalog>;
+
     public:
         WitcherCatalog();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         const WitcherMonsterDef*  findMonster( const hashed_string& id ) const { return _monsterCatalog.find( id ); }
         const WitcherAlchemyDef*  findAlchemy( const hashed_string& id ) const { return _alchemyCatalog.find( id ); }
@@ -238,9 +238,10 @@ namespace sw
         const WitcherAlchemySettings&      getAlchemy() const { return _alchemy; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
-        void   loadMonster( const XmlNode& node, const hashed_string& id, string_view sourceName );
-        void   loadContract( const XmlNode& node, const hashed_string& id );
+        static constexpr const utf8* kXmlRootName = "WitcherCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        void                         loadMonster( const XmlNode& node, const hashed_string& id, string_view sourceName );
+        void                         loadContract( const XmlNode& node, const hashed_string& id );
 
         GameCatalog<WitcherMonsterDef>    _monsterCatalog;
         GameCatalog<WitcherAlchemyDef>    _alchemyCatalog;

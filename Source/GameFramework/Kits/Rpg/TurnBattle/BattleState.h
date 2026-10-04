@@ -9,6 +9,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Rpg/TurnBattle/SpeciesData.h"
+#include "GameFramework/Utility/Countdown.h"
 
 namespace sw
 {
@@ -84,7 +85,7 @@ namespace sw
 
         PartyMember                           _player;
         PartyMember                           _foe;
-        float32                               _phaseTimer; ///< 현재 페이즈 남은 시간
+        Countdown                             _phaseTimer; ///< 현재 페이즈 남은 시간
         fixed_string<constant::kMaxBuffer256> _statusText; ///< HUD 한 줄
         BattlePhase                           _phase;
         uint8                                 _bPlayerWon : 1;

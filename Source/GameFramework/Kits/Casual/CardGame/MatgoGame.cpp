@@ -50,7 +50,7 @@ namespace sw
 {
     MatgoGame::MatgoGame()
         : _listPlayer{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _listSettlement{}
         , _floor{}
         , _drawPile{}
@@ -98,7 +98,7 @@ namespace sw
         _phase         = MatgoPhase::Play;
         _listSettlement.clear();
         _listSettlement.resize( _listPlayer.size(), 0 );
-        _listEvent.clear();
+        _eventBuffer.clear();
     }
 
     bool MatgoGame::playCard( int32 player, uint16 cardId, uint16 targetId )
@@ -108,7 +108,7 @@ namespace sw
         Card played;
         if ( _listPlayer[static_cast<size_t>( player )]._hand.takeById( cardId, played ) == false )
             return false;
-        _listEvent.push_back( MatgoEvent{ player, 0, played._id, MatgoEvent::Kind::Played } );
+        _eventBuffer.push( MatgoEvent{ player, 0, played._id, MatgoEvent::Kind::Played } );
 
         const uint8    month = HwatuDeck::getMonth( played );
         vector<uint16> listSameMonth;
@@ -118,7 +118,7 @@ namespace sw
         Card       flipped;
         const bool bFlipped = _drawPile.draw( flipped );
         if ( bFlipped )
-            _listEvent.push_back( MatgoEvent{ player, 0, flipped._id, MatgoEvent::Kind::Flipped } );
+            _eventBuffer.push( MatgoEvent{ player, 0, flipped._id, MatgoEvent::Kind::Flipped } );
 
         if ( bFlipped && HwatuDeck::getMonth( flipped ) == month )
         {
@@ -127,7 +127,7 @@ namespace sw
                 // 뻑 — 셋이 바닥에 남는다.
                 _floor.push( played );
                 _floor.push( flipped );
-                _listEvent.push_back( MatgoEvent{ player, 0, played._id, MatgoEvent::Kind::Ppeok } );
+                _eventBuffer.push( MatgoEvent{ player, 0, played._id, MatgoEvent::Kind::Ppeok } );
             }
             else
             {
@@ -136,7 +136,7 @@ namespace sw
                     captureFloorCard( player, floorCardId );
                 captureCard( player, played );
                 captureCard( player, flipped );
-                _listEvent.push_back( MatgoEvent{ player, 0, played._id, matchCount == 0 ? MatgoEvent::Kind::Jjok : MatgoEvent::Kind::Ttadak } );
+                _eventBuffer.push( MatgoEvent{ player, 0, played._id, matchCount == 0 ? MatgoEvent::Kind::Jjok : MatgoEvent::Kind::Ttadak } );
                 stealPi( player );
             }
         }
@@ -188,7 +188,7 @@ namespace sw
         captureCard( player, card );
         if ( matchCount >= 3 )
         {
-            _listEvent.push_back( MatgoEvent{ player, 0, card._id, MatgoEvent::Kind::PpeokEaten } );
+            _eventBuffer.push( MatgoEvent{ player, 0, card._id, MatgoEvent::Kind::PpeokEaten } );
             stealPi( player );
         }
     }
@@ -196,7 +196,7 @@ namespace sw
     void MatgoGame::captureCard( int32 player, const Card& card )
     {
         _listPlayer[static_cast<size_t>( player )]._captured.push( card );
-        _listEvent.push_back( MatgoEvent{ player, 0, card._id, MatgoEvent::Kind::Captured } );
+        _eventBuffer.push( MatgoEvent{ player, 0, card._id, MatgoEvent::Kind::Captured } );
     }
 
     void MatgoGame::captureFloorCard( int32 player, uint16 cardId )
@@ -227,7 +227,7 @@ namespace sw
                 continue;
             const Card stolen = captured.removeAt( bestIndex );
             _listPlayer[static_cast<size_t>( player )]._captured.push( stolen );
-            _listEvent.push_back( MatgoEvent{ player, other, stolen._id, MatgoEvent::Kind::PiStolen } );
+            _eventBuffer.push( MatgoEvent{ player, other, stolen._id, MatgoEvent::Kind::PiStolen } );
         }
     }
 
@@ -245,7 +245,7 @@ namespace sw
     {
         if ( _floor.isEmpty() )
         {
-            _listEvent.push_back( MatgoEvent{ player, 0, Card::kNoCard, MatgoEvent::Kind::Sweep } );
+            _eventBuffer.push( MatgoEvent{ player, 0, Card::kNoCard, MatgoEvent::Kind::Sweep } );
             stealPi( player );
         }
         const MatgoPlayer& matgoPlayer = _listPlayer[static_cast<size_t>( player )];
@@ -259,14 +259,14 @@ namespace sw
                 return;
             }
             _phase = MatgoPhase::GoStopChoice;
-            _listEvent.push_back( MatgoEvent{ player, score, Card::kNoCard, MatgoEvent::Kind::GoStopChoice } );
+            _eventBuffer.push( MatgoEvent{ player, score, Card::kNoCard, MatgoEvent::Kind::GoStopChoice } );
             return;
         }
         if ( areHandsEmpty() )
         {
             _phase  = MatgoPhase::Finished;
             _winner = -1;
-            _listEvent.push_back( MatgoEvent{ -1, 0, Card::kNoCard, MatgoEvent::Kind::Nagari } );
+            _eventBuffer.push( MatgoEvent{ -1, 0, Card::kNoCard, MatgoEvent::Kind::Nagari } );
             return;
         }
         _currentPlayer = ( player + 1 ) % getPlayerCount();
@@ -279,7 +279,7 @@ namespace sw
         MatgoPlayer& matgoPlayer   = _listPlayer[static_cast<size_t>( player )];
         matgoPlayer._scoreAtLastGo = computePlayerScore( player )._total;
         ++matgoPlayer._goCount;
-        _listEvent.push_back( MatgoEvent{ player, matgoPlayer._goCount, Card::kNoCard, MatgoEvent::Kind::Go } );
+        _eventBuffer.push( MatgoEvent{ player, matgoPlayer._goCount, Card::kNoCard, MatgoEvent::Kind::Go } );
         _phase         = MatgoPhase::Play;
         _currentPlayer = ( player + 1 ) % getPlayerCount();
         return true;
@@ -309,7 +309,7 @@ namespace sw
         }
         _winner = winner;
         _phase  = MatgoPhase::Finished;
-        _listEvent.push_back( MatgoEvent{ winner, firstTotal, Card::kNoCard, MatgoEvent::Kind::Stop } );
+        _eventBuffer.push( MatgoEvent{ winner, firstTotal, Card::kNoCard, MatgoEvent::Kind::Stop } );
     }
 
     bool MatgoGame::applyAction( int32 player, const CardAction& action )
@@ -403,7 +403,6 @@ namespace sw
 
     void MatgoGame::drainEvents( vector<MatgoEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

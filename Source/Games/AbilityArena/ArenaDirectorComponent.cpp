@@ -84,6 +84,7 @@ namespace sw
         , _listPendingUnit{}
         , _tintCache{}
         , _playerFocus{ 0.0f, 0.0f, 0.0f }
+        , _playerObject{}
         , _playerRespawnTimer{ -1.0f }
         , _statusLogTimer{ 0.0f }
         , _wave{ 0 }
@@ -428,9 +429,11 @@ namespace sw
 
     void ArenaDirectorComponent::updateUnitViews()
     {
-        // 이번 프레임의 모습 — 컨트롤러 · 투사체 · 카메라가 뒤 그룹에서 읽는다. 틱 전 자리다(틱 안의 쓰기는 틱 뒤에 보인다).
+        // 이번 프레임의 모습 — 컨트롤러 · 투사체가 뒤 그룹에서 읽는다. 틱 전 자리다(틱 안의 쓰기는 틱 뒤에 보인다). 이번 프레임 자리가 필요한 쪽은
+        // 트랜스폼을 읽는다 — 적은 플레이어 컨트롤러 뒤의 서브틱에서, 카메라는 물리 뒤 단계에서.
         _listUnitView.clear();
         _playerFocus                = float3{ 0.0f, 0.0f, 0.0f };
+        _playerObject               = GameObjectHandle{};
         GameObjectManager* pManager = getObjectManager();
         if ( pManager == nullptr )
             return;
@@ -452,8 +455,9 @@ namespace sw
             _listUnitView.push_back( view );
             if ( unit._kind == ArenaUnitKind::Player && bFocusSet == false )
             {
-                _playerFocus = view._position;
-                bFocusSet    = true;
+                _playerFocus  = view._position;
+                _playerObject = view._object;
+                bFocusSet     = true;
             }
         }
     }

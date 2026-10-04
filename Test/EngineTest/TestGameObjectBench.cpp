@@ -71,6 +71,66 @@ namespace
         pOutLeaf = pPrev;
         return pRoot;
     }
+
+    /**
+     * @brief 무버 8000 개를 만들고 30 번 틱해 시간을 찍습니다. @p bWithPrerequisite 면 서브틱 선행 조건 한 쌍(A→B)을 더합니다.
+     * @details 선행 조건이 씬에 하나 있어도 사슬 밖 오브젝트 8000 개의 틱 비용은 그대로여야 합니다 — 두 경우를 같은 모양으로 재 비교합니다.
+     */
+    void runMoverTicks( bool bWithPrerequisite, const utf8* pLabel )
+    {
+        sw::GameObjectManager manager;
+        sw::RegisterMockComponents();
+
+        sw::vector<sw::MockTickSceneComponent*> listMover;
+        listMover.reserve( kObjectCount );
+        for ( uint32 index = 0; index < kObjectCount; ++index )
+        {
+            sw::GameObject* pObj = spawnMoverObject( manager, true );
+            listMover.push_back( pObj != nullptr ? pObj->getComponent<sw::MockTickSceneComponent>() : nullptr );
+        }
+
+        sw::MockSubTickMoverComponent* pFollower = nullptr;
+        if ( bWithPrerequisite )
+        {
+            sw::GameObject*                pLeaderObj   = manager.createGameObject( sw::hashed_string( "BenchLeader" ) );
+            sw::GameObject*                pFollowerObj = manager.createGameObject( sw::hashed_string( "BenchFollower" ) );
+            sw::MockSubTickMoverComponent* pLeader      = pLeaderObj->addComponent<sw::MockSubTickMoverComponent>();
+            pFollower                                   = pFollowerObj->addComponent<sw::MockSubTickMoverComponent>();
+            pLeader->_offset                            = sw::float3{ 3.0f, 0.0f, 0.0f };
+            pFollower->_pWatched                        = pLeader;
+            pFollower->_offset                          = sw::float3{ 0.0f, 1.0f, 0.0f };
+            const sw::SubTickHandle leaderTick          = pLeader->registerSubTick( sw::TickGroup::DuringPhysics, sw::MockSubTickMoverComponent::kMoveSubTick );
+            pFollower->registerSubTick( sw::TickGroup::DuringPhysics, sw::MockSubTickMoverComponent::kMoveSubTick );
+            SW_EXPECT_TRUE( pFollower->addSubTickPrerequisite( sw::MockSubTickMoverComponent::kMoveSubTick, leaderTick ) );
+        }
+        manager.tick( 0.016f );
+
+        sw::vector<int64> listTick;
+        for ( uint32 round = 0; round < 30; ++round )
+        {
+            // 값이 매 틱 달라야 세터가 실제로 쓴다 — 같은 값은 건너뛴다.
+            const float32 height = static_cast<float32>( round + 1 ) * 0.25f;
+            for ( sw::MockTickSceneComponent* pMover : listMover )
+            {
+                if ( pMover != nullptr )
+                    pMover->_tickLocalPos._y = height;
+            }
+            const sw::Stopwatch stopwatch;
+            manager.tick( 0.016f );
+            listTick.push_back( stopwatch.getElapsedMicroseconds() );
+        }
+        test::logBenchSamples( pLabel, listTick );
+
+        uint32 wrongCount = 0;
+        for ( sw::MockTickSceneComponent* pMover : listMover )
+        {
+            if ( pMover == nullptr || sw::float3::getDistanceSquared( pMover->getWorldPosition(), pMover->_tickLocalPos ) > 1e-6f )
+                ++wrongCount;
+        }
+        SW_EXPECT_EQUAL( 0u, wrongCount );
+        if ( pFollower != nullptr )
+            SW_EXPECT_EQUAL( 31u, pFollower->_subTickCount );
+    }
 } // namespace
 
 /**
@@ -126,41 +186,15 @@ SW_TEST_CASE( GameObjectBenchTest, SpawnTickDestroy )
  */
 SW_TEST_CASE( GameObjectBenchTest, TickMovers )
 {
-    sw::GameObjectManager manager;
-    sw::RegisterMockComponents();
+    runMoverTicks( false, "tick, 8000 movers writing position + scale" );
+}
 
-    sw::vector<sw::MockTickSceneComponent*> listMover;
-    listMover.reserve( kObjectCount );
-    for ( uint32 index = 0; index < kObjectCount; ++index )
-    {
-        sw::GameObject* pObj = spawnMoverObject( manager, true );
-        listMover.push_back( pObj != nullptr ? pObj->getComponent<sw::MockTickSceneComponent>() : nullptr );
-    }
-    manager.tick( 0.016f );
-
-    sw::vector<int64> listTick;
-    for ( uint32 round = 0; round < 30; ++round )
-    {
-        // 값이 매 틱 달라야 세터가 실제로 쓴다 — 같은 값은 건너뛴다.
-        const float32 height = static_cast<float32>( round + 1 ) * 0.25f;
-        for ( sw::MockTickSceneComponent* pMover : listMover )
-        {
-            if ( pMover != nullptr )
-                pMover->_tickLocalPos._y = height;
-        }
-        const sw::Stopwatch stopwatch;
-        manager.tick( 0.016f );
-        listTick.push_back( stopwatch.getElapsedMicroseconds() );
-    }
-    test::logBenchSamples( "tick, 8000 movers writing position + scale", listTick );
-
-    uint32 wrongCount = 0;
-    for ( sw::MockTickSceneComponent* pMover : listMover )
-    {
-        if ( pMover == nullptr || sw::float3::getDistanceSquared( pMover->getWorldPosition(), pMover->_tickLocalPos ) > 1e-6f )
-            ++wrongCount;
-    }
-    SW_EXPECT_EQUAL( 0u, wrongCount );
+/**
+ * @brief [GameObjectBenchTest] 위와 같은 무버 8000 개 + 서브틱 선행 조건 한 쌍 — 선행 조건 하나가 사슬 밖 오브젝트의 틱 비용을 바꾸지 않는지 본다
+ */
+SW_TEST_CASE( GameObjectBenchTest, TickMoversWithPrerequisite )
+{
+    runMoverTicks( true, "tick, 8000 movers + one sub-tick prerequisite pair" );
 }
 
 /**

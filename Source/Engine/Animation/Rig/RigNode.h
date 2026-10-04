@@ -13,11 +13,12 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Pose.h"
-#include "Engine/Animation/Rig/RigIkSolver.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw
 {
+    struct RigSolveSpace;
+
     class RigInstance;
     class RigPoseBuffer;
     class Skeleton;

@@ -7,6 +7,7 @@
 
 #include "GameFramework/Combat/HealthListenerComponent.h"
 #include "GameFramework/Framework/GameEventUtil.h"
+#include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/UI/DamageNumberComponent.h"
 

@@ -45,16 +45,6 @@ namespace sw
     {
     }
 
-    bool CropCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &CropCatalog::loadRoot, path, "CropCatalog" );
-    }
-
-    bool CropCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &CropCatalog::loadRoot, xmlText, sourceName, "CropCatalog" );
-    }
-
     void CropCatalog::addCrop( const CropDef& crop )
     {
         if ( _catalog.add( crop ) >= 0 )

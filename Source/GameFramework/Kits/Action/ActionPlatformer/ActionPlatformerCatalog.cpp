@@ -66,16 +66,6 @@ namespace sw
     {
     }
 
-    bool ActionPlatformerCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &ActionPlatformerCatalog::loadRoot, path, "ActionPlatformer" );
-    }
-
-    bool ActionPlatformerCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &ActionPlatformerCatalog::loadRoot, xmlText, sourceName, "ActionPlatformer" );
-    }
-
     uint32 ActionPlatformerCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         const XmlNode grading = root.findChild( "Grading" );

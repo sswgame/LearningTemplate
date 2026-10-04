@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Quest/QuestCatalog.h"
+
 namespace sw
 {
     const utf8* toString( QuestStartResult result )
@@ -28,7 +30,7 @@ namespace sw
 
     QuestLog::QuestLog()
         : _listProgress{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pCatalog{ nullptr }
     {
     }
@@ -37,7 +39,7 @@ namespace sw
     {
         _pCatalog = pCatalog;
         _listProgress.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
     }
 
     QuestProgress* QuestLog::findProgressMutable( const hashed_string& questId )
@@ -287,12 +289,11 @@ namespace sw
         event._objective = objective;
         event._value     = value;
         event._pReward   = pReward;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 
     void QuestLog::drainEvents( vector<QuestEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 } // namespace sw

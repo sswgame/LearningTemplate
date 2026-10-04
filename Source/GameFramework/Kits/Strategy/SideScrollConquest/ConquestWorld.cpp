@@ -67,7 +67,7 @@ namespace sw
         : _listSite{}
         , _listBuilding{}
         , _listUnit{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _resource{}
         , _commander{}
         , _timer{}
@@ -87,7 +87,7 @@ namespace sw
         _listSite.clear();
         _listBuilding.clear();
         _listUnit.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _resource.clear();
         _elapsed     = 0.0f;
         _incomeTimer = 0.0f;
@@ -242,8 +242,7 @@ namespace sw
 
     void ConquestWorld::drainEvents( vector<ConquestEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     int32 ConquestWorld::getResource( const hashed_string& resource ) const
@@ -376,14 +375,14 @@ namespace sw
         const ConquestRules& rules = _pCatalog->getRules();
         if ( _commander._bAlive == SW_FALSE )
         {
-            _commander._respawnTimer -= deltaTime;
+            _commander._respawnTimer.tick( deltaTime );
             const int32 home = findHomeSiteIndex();
-            if ( _commander._respawnTimer > 0.0f || home < 0 )
+            if ( _commander._respawnTimer.isActive() || home < 0 )
                 return;
-            _commander._bAlive         = SW_TRUE;
-            _commander._health         = rules._commanderHealth;
-            _commander._x              = _listSite[static_cast<size_t>( home )]._pDef->_x;
-            _commander._attackCooldown = 0.0f;
+            _commander._bAlive = SW_TRUE;
+            _commander._health = rules._commanderHealth;
+            _commander._x      = _listSite[static_cast<size_t>( home )]._pDef->_x;
+            _commander._attackCooldown.clear();
             pushEvent( ConquestEvent::Kind::CommanderRespawned, hashed_string(), 0, ConquestTeam::Player );
             return;
         }
@@ -392,15 +391,15 @@ namespace sw
             _commander._facing = _commander._moveAxis > 0.0f ? 1.0f : -1.0f;
             _commander._x      = clampMove( ConquestTeam::Player, _commander._x, _commander._x + _commander._moveAxis * rules._commanderSpeed * deltaTime );
         }
-        _commander._attackCooldown = MathUtil::max( 0.0f, _commander._attackCooldown - deltaTime );
-        if ( _commander._attackCooldown > 0.0f )
+        _commander._attackCooldown.tick( deltaTime );
+        if ( _commander._attackCooldown.isActive() )
             return;
         const Target target = findNearestTarget( ConquestTeam::Player, _commander._x, rules._commanderRange, true, true );
         if ( target.isValid() == false )
             return;
         float32 dealt = 0.0f;
         applyAttack( ConquestTeam::Player, rules._commanderDamage, ConquestWorldInternal::kCommanderStructureRate, target, dealt );
-        _commander._attackCooldown = rules._commanderAttackInterval;
+        _commander._attackCooldown.restart( rules._commanderAttackInterval ); // 늦음을 잇는다 — 빈도가 걸음 크기에 매이지 않는다
     }
 
     void ConquestWorld::stepUnit( int32 unitIndex, float32 deltaTime )
@@ -412,8 +411,8 @@ namespace sw
         const ConquestUnitDef& def       = *unit._pDef;
         const float32          direction = ConquestWorldInternal::computeDirection( unit._team );
         const float32          stepSize  = def._speed * deltaTime;
-        unit._attackCooldown             = MathUtil::max( 0.0f, unit._attackCooldown - deltaTime );
-        const auto moveToward            = [&]( float32 goalX )
+        unit._attackCooldown.tick( deltaTime );
+        const auto moveToward = [&]( float32 goalX )
         {
             const float32 delta = MathUtil::clamp( goalX - unit._x, -stepSize, stepSize );
             unit._x             = clampMove( unit._team, unit._x, unit._x + delta );
@@ -489,11 +488,11 @@ namespace sw
             moveToward( ConquestWorldInternal::computeApproachX( unit._x, target._x, def._range ) );
             return;
         }
-        if ( unit._attackCooldown > 0.0f )
+        if ( unit._attackCooldown.isActive() )
             return;
         const float32 damage = def._damage * computeMoraleScale( unit._team, unit._x );
         applyAttack( unit._team, damage, def._structureScale, target, unit._damageDealt );
-        unit._attackCooldown = def._attackInterval;
+        unit._attackCooldown.restart( def._attackInterval ); // 늦음을 잇는다 — 빈도가 걸음 크기에 매이지 않는다
     }
 
     void ConquestWorld::stepCapture( float32 deltaTime )
@@ -799,9 +798,9 @@ namespace sw
             inoutDealt += baseDamage;
             if ( _commander._health <= 0.0f && _commander._bAlive == SW_TRUE )
             {
-                _commander._bAlive       = SW_FALSE;
-                _commander._health       = 0.0f;
-                _commander._respawnTimer = rules._commanderRespawnTime;
+                _commander._bAlive = SW_FALSE;
+                _commander._health = 0.0f;
+                _commander._respawnTimer.start( rules._commanderRespawnTime );
                 pushEvent( ConquestEvent::Kind::CommanderDied, hashed_string(), 0, ConquestTeam::Player );
             }
             return;
@@ -851,6 +850,6 @@ namespace sw
         event._id    = id;
         event._value = value;
         event._team  = team;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

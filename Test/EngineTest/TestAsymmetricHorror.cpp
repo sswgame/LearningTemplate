@@ -232,7 +232,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, KillerHitsInjureThenDownAndDyingBleedsOut )
     // 뒤에서 보지 않으면 헛방 — 헛방 쿨다운.
     match.moveKiller( float3{ 0.0f, 0.0f, -1.0f }, 0.0f );
     SW_EXPECT_TRUE( match.killerAttack() == KillerAttackResult::Missed );
-    SW_EXPECT_NEAR_EQUAL( match.getKiller()._attackCooldown, 1.5f, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( match.getKiller()._attackCooldown.getRemaining(), 1.5f, 0.001f );
     runSeconds( match, 2.0f );
     SW_EXPECT_TRUE( swingAt( match, float3{ 0.0f, 0.0f, 5.0f } ) == KillerAttackResult::Downed );
     SW_EXPECT_TRUE( match.findSurvivor( survivor )->_state == SurvivorState::Dying );
@@ -387,7 +387,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, PalletsStunAndWiggleFreesCarriedSurvivor )
     // 들고 있는 살인마 옆에 판자를 내리면 기절하고 생존자를 떨어뜨린다.
     SW_ASSERT_TRUE( match.dropPallet( savior, pallet ) );
     SW_EXPECT_TRUE( match.getPalletState( pallet ) == PalletState::Dropped );
-    SW_EXPECT_NEAR_EQUAL( match.getKiller()._stunRemaining, 2.0f, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( match.getKiller()._stunRemaining.getRemaining(), 2.0f, 0.001f );
     SW_EXPECT_EQUAL( match.getKiller()._carrying, -1 );
     SW_EXPECT_TRUE( match.findSurvivor( victim )->_state == SurvivorState::Injured );
     SW_EXPECT_FALSE( match.dropPallet( savior, pallet ) ); // 이미 내렸다
@@ -412,7 +412,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, PalletsStunAndWiggleFreesCarriedSurvivor )
     SW_EXPECT_TRUE( match.findSurvivor( victim )->_state == SurvivorState::Carried );
     runSeconds( match, 0.6f );
     SW_EXPECT_TRUE( match.findSurvivor( victim )->_state == SurvivorState::Injured );
-    SW_EXPECT_TRUE( match.getKiller()._stunRemaining > 2.5f );
+    SW_EXPECT_TRUE( match.getKiller()._stunRemaining.getRemaining() > 2.5f );
 
     vector<AsymmetricHorrorEvent> listEvent;
     match.drainEvents( listEvent );
@@ -443,7 +443,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, VaultSpeedWindowBlockAndLockerGrab )
     SW_ASSERT_NOT_NULL( pVault );
     SW_EXPECT_NEAR_EQUAL( pVault->_value, 1.0f, 0.001f );
     SW_EXPECT_EQUAL( countEvents( listEvent, AsymmetricHorrorEvent::Kind::Noise ), 1 );
-    SW_EXPECT_NEAR_EQUAL( match.findSurvivor( runner )->_vaultRemaining, 0.5f, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( match.findSurvivor( runner )->_vaultRemaining.getRemaining(), 0.5f, 0.001f );
     runSeconds( match, 0.6f );
     SW_EXPECT_TRUE( match.findSurvivor( runner )->_activity == SurvivorActivity::None );
     SW_EXPECT_TRUE( match.findSurvivor( runner )->_position._z > 0.5f ); // 건너편
@@ -452,7 +452,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, VaultSpeedWindowBlockAndLockerGrab )
     listEvent.clear();
     match.drainEvents( listEvent );
     SW_EXPECT_NEAR_EQUAL( findEvent( listEvent, AsymmetricHorrorEvent::Kind::Vaulted )->_value, 0.0f, 0.001f );
-    SW_EXPECT_NEAR_EQUAL( match.findSurvivor( runner )->_vaultRemaining, 1.2f, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( match.findSurvivor( runner )->_vaultRemaining.getRemaining(), 1.2f, 0.001f );
     runSeconds( match, 1.3f );
 
     // 추격 중 세 번째 넘기에 창이 막힌다.

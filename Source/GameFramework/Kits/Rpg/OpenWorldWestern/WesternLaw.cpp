@@ -42,7 +42,7 @@ namespace sw
     WesternLawState::WesternLawState()
         : _listRecord{}
         , _listPending{}
-        , _listEvent{}
+        , _eventBuffer{}
         , _pCatalog{ nullptr }
         , _nextIncidentId{ 1 }
         , _bDisguised{ SW_FALSE }
@@ -54,7 +54,7 @@ namespace sw
         _pCatalog = pCatalog;
         _listRecord.clear();
         _listPending.clear();
-        _listEvent.clear();
+        _eventBuffer.clear();
         _nextIncidentId = 1;
         _bDisguised     = SW_FALSE;
     }
@@ -79,8 +79,8 @@ namespace sw
             report._regionId   = regionId;
             report._witnessId  = witness._id;
             report._incidentId = incidentId;
-            report._remaining  = witness._bLawman != SW_FALSE ? 0.0f : pCrime->_reportTime;
-            report._bMasked    = bMasked ? SW_TRUE : SW_FALSE;
+            report._remaining.start( witness._bLawman != SW_FALSE ? 0.0f : pCrime->_reportTime );
+            report._bMasked = bMasked ? SW_TRUE : SW_FALSE;
             if ( witness._bLawman != SW_FALSE )
             {
                 // 보안관은 그 자리에서 — 같은 사건의 다른 신고 대기는 필요 없다.
@@ -133,10 +133,10 @@ namespace sw
             return;
         // 신고 — 먼저 다다른 목격자가 신고하면 같은 사건의 나머지는 지운다. 넣은 순서로 보아 결과가 늘 같다.
         for ( PendingReport& report : _listPending )
-            report._remaining -= deltaTime;
+            report._remaining.tick( deltaTime );
         for ( size_t index = 0; index < _listPending.size(); )
         {
-            if ( _listPending[index]._remaining > 0.0f )
+            if ( _listPending[index]._remaining.isActive() )
             {
                 ++index;
                 continue;
@@ -219,8 +219,7 @@ namespace sw
 
     void WesternLawState::drainEvents( vector<WesternLawEvent>& outListEvent )
     {
-        outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
-        _listEvent.clear();
+        _eventBuffer.drainTo( outListEvent );
     }
 
     WesternLawState::RegionRecord* WesternLawState::findRecordMutable( const hashed_string& regionId )
@@ -291,6 +290,6 @@ namespace sw
         event._incidentId = incidentId;
         event._crimeId    = crimeId;
         event._witnessId  = witnessId;
-        _listEvent.push_back( event );
+        _eventBuffer.push( event );
     }
 } // namespace sw

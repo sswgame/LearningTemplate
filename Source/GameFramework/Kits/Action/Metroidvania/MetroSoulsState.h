@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -131,15 +132,15 @@ namespace sw
         void refreshWorld( Vitality& vitality );
         void pushEvent( MetroSoulsEventType type, const hashed_string& id, int32 amount );
 
-        const MetroidvaniaCatalog* _pCatalog;
-        vector<MetroKillRecord>    _listKill;
-        vector<MetroSoulsEvent>    _listEvent;
-        MetroCorpse                _corpse;
-        hashed_string              _respawnSite;
-        int32                      _currency;
-        int32                      _lostCurrency; ///< 영영 잃은 통화의 합(통계)
-        int32                      _flaskCharges;
-        int32                      _flaskMaxCharges;
-        int32                      _flaskPotencyLevel;
+        const MetroidvaniaCatalog*   _pCatalog;
+        vector<MetroKillRecord>      _listKill;
+        EventBuffer<MetroSoulsEvent> _eventBuffer;
+        MetroCorpse                  _corpse;
+        hashed_string                _respawnSite;
+        int32                        _currency;
+        int32                        _lostCurrency; ///< 영영 잃은 통화의 합(통계)
+        int32                        _flaskCharges;
+        int32                        _flaskMaxCharges;
+        int32                        _flaskPotencyLevel;
     };
 } // namespace sw

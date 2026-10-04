@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -133,13 +134,12 @@ namespace sw
      *        <Armor id="helmet1" slot="Helmet" tier="1" reduction="0.3" durability="80"/><Backpack id="bag1" tier="1" capacity="150"/>
      *        <LootSpot id="house" table="house" chance="0.8" rolls="1" rollsMax="3"/><SupplyDrop table="airdrop" times="90,180"/></BattleRoyaleCatalog>` 를 읽습니다.
      */
-    class SW_GF_API BrCatalog
+    class SW_GF_API BrCatalog : public XmlCatalog<BrCatalog>
     {
+        friend class XmlCatalog<BrCatalog>;
+
     public:
         BrCatalog();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         const BrArmorDef*           findArmor( const hashed_string& id ) const { return _armorCatalog.find( id ); }
         const BrBackpackDef*        findBackpack( const hashed_string& id ) const { return _backpackCatalog.find( id ); }
@@ -152,7 +152,8 @@ namespace sw
         float32                     getMapSize() const { return _mapSize; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "BattleRoyaleCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<BrArmorDef>    _armorCatalog;
         GameCatalog<BrBackpackDef> _backpackCatalog;

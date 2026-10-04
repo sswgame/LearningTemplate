@@ -134,16 +134,6 @@ namespace sw
     {
     }
 
-    bool ConquestCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &ConquestCatalog::loadRoot, path, "ConquestCatalog" );
-    }
-
-    bool ConquestCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &ConquestCatalog::loadRoot, xmlText, sourceName, "ConquestCatalog" );
-    }
-
     uint32 ConquestCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;

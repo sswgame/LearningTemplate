@@ -109,12 +109,12 @@ namespace sw
         : _settings{}
         , _position{}
         , _velocity{}
-        , _coyoteTimer{ 0.0f }
-        , _jumpBufferTimer{ 0.0f }
-        , _wallLockTimer{ 0.0f }
-        , _dashTimer{ 0.0f }
-        , _dashCooldownTimer{ 0.0f }
-        , _dropTimer{ 0.0f }
+        , _coyote{}
+        , _jumpBuffer{}
+        , _wallLock{}
+        , _dash{}
+        , _dashCooldown{}
+        , _dropThrough{}
         , _extraJumpsLeft{ 0 }
         , _airDashesLeft{ 0 }
         , _wallSide{ 0 }
@@ -135,16 +135,16 @@ namespace sw
 
     void PlatformerMotor2D::setPosition( const float2& position )
     {
-        _position  = position;
-        _velocity  = float2{ 0.0f, 0.0f };
-        _dashTimer = 0.0f;
+        _position = position;
+        _velocity = float2{ 0.0f, 0.0f };
+        _dash.clear();
     }
 
     void PlatformerMotor2D::addImpulse( const float2& impulse )
     {
-        _velocity  = _velocity + impulse;
-        _dashTimer = 0.0f;
-        _bRising   = SW_FALSE;
+        _velocity = _velocity + impulse;
+        _dash.clear();
+        _bRising = SW_FALSE;
     }
 
     float32 PlatformerMotor2D::getGravity() const
@@ -170,7 +170,7 @@ namespace sw
                 if ( tile == PlatformTile::Solid )
                     return true;
                 // 한쪽 발판 — 내려오며, 지난 틱 발이 발판 윗면보다 위였고, 내려가기 중이 아닐 때만.
-                if ( tile == PlatformTile::OneWay && bFromAbove && _dropTimer <= 0.0f && previousBottom >= map.getTileBottom( y + 1 ) - 1.0e-3f )
+                if ( tile == PlatformTile::OneWay && bFromAbove && _dropThrough.isActive() == false && previousBottom >= map.getTileBottom( y + 1 ) - 1.0e-3f )
                     return true;
             }
         }
@@ -242,7 +242,7 @@ namespace sw
                     const int32 tileX = map.computeTileX( next._x - _settings._halfExtents._x );
                     _position._x      = map.getTileLeft( tileX + 1 ) + _settings._halfExtents._x + PlatformerMotor2DInternal::kSkin;
                 }
-                if ( _dashTimer <= 0.0f )
+                if ( _dash.isActive() == false )
                     _velocity._x = 0.0f;
             }
             return;
@@ -251,12 +251,12 @@ namespace sw
 
     void PlatformerMotor2D::startJump( float32 speed, uint32 event )
     {
-        _velocity._y     = speed;
-        _bRising         = SW_TRUE;
-        _bGrounded       = SW_FALSE;
-        _bClimbing       = SW_FALSE;
-        _coyoteTimer     = 0.0f;
-        _jumpBufferTimer = 0.0f;
+        _velocity._y = speed;
+        _bRising     = SW_TRUE;
+        _bGrounded   = SW_FALSE;
+        _bClimbing   = SW_FALSE;
+        _coyote.clear();
+        _jumpBuffer.clear();
         _events |= event;
     }
 
@@ -266,11 +266,17 @@ namespace sw
         if ( deltaTime <= 0.0f )
             return;
         const bool bWasGrounded = _bGrounded != SW_FALSE;
-        _coyoteTimer            = bWasGrounded ? _settings._coyoteTime : MathUtil::max( 0.0f, _coyoteTimer - deltaTime );
-        _jumpBufferTimer        = input._bJumpPressed ? _settings._jumpBufferTime : MathUtil::max( 0.0f, _jumpBufferTimer - deltaTime );
-        _wallLockTimer          = MathUtil::max( 0.0f, _wallLockTimer - deltaTime );
-        _dashCooldownTimer      = MathUtil::max( 0.0f, _dashCooldownTimer - deltaTime );
-        _dropTimer              = MathUtil::max( 0.0f, _dropTimer - deltaTime );
+        if ( bWasGrounded )
+            _coyote.start( _settings._coyoteTime );
+        else
+            _coyote.tick( deltaTime );
+        if ( input._bJumpPressed )
+            _jumpBuffer.start( _settings._jumpBufferTime );
+        else
+            _jumpBuffer.tick( deltaTime );
+        _wallLock.tick( deltaTime );
+        _dashCooldown.tick( deltaTime );
+        _dropThrough.tick( deltaTime );
         if ( bWasGrounded )
         {
             _extraJumpsLeft = _settings._extraJumpCount;
@@ -284,17 +290,18 @@ namespace sw
             _facing = -1;
 
         // 대시 — 입력 방향(없으면 바라보는 쪽)으로 곧게, 중력 없이.
-        if ( input._bDashPressed && _dashCooldownTimer <= 0.0f && _dashTimer <= 0.0f && ( bWasGrounded || _airDashesLeft > 0 ) )
+        const bool bCanDash = _dashCooldown.isActive() == false && _dash.isActive() == false && ( bWasGrounded || _airDashesLeft > 0 );
+        if ( input._bDashPressed && bCanDash )
         {
             float2 direction{ moveX, moveY };
             if ( direction.getLengthSquared() < 0.01f )
                 direction = float2{ static_cast<float32>( _facing ), 0.0f };
-            direction          = direction * ( 1.0f / direction.getLength() );
-            _velocity          = direction * _settings._dashSpeed;
-            _dashTimer         = _settings._dashDuration;
-            _dashCooldownTimer = _settings._dashDuration + _settings._dashCooldown;
-            _bClimbing         = SW_FALSE;
-            _bRising           = SW_FALSE;
+            direction = direction * ( 1.0f / direction.getLength() );
+            _velocity = direction * _settings._dashSpeed;
+            _dash.start( _settings._dashDuration );
+            _dashCooldown.start( _settings._dashDuration + _settings._dashCooldown );
+            _bClimbing = SW_FALSE;
+            _bRising   = SW_FALSE;
             if ( bWasGrounded == false )
                 --_airDashesLeft;
             _events |= PlatformerEvent::kDashed;
@@ -304,32 +311,31 @@ namespace sw
         const bool bOnLadder = isTouching( map, PlatformTile::Ladder );
         if ( bOnLadder == false )
             _bClimbing = SW_FALSE;
-        else if ( MathUtil::abs( moveY ) > 0.5f && _dashTimer <= 0.0f )
+        else if ( MathUtil::abs( moveY ) > 0.5f && _dash.isActive() == false )
             _bClimbing = SW_TRUE;
 
         // 발판 아래로 — 아래 + 점프.
         if ( bWasGrounded && moveY < -0.5f && input._bJumpPressed )
         {
-            _dropTimer       = _settings._dropThroughTime;
-            _jumpBufferTimer = 0.0f;
+            _dropThrough.start( _settings._dropThroughTime );
+            _jumpBuffer.clear();
         }
 
-        if ( _dashTimer > 0.0f )
+        if ( _dash.isActive() )
         {
-            _dashTimer -= deltaTime;
-            if ( _dashTimer <= 0.0f )
+            if ( _dash.tick( deltaTime ) )
                 _velocity = _velocity * 0.4f; // 대시 끝에 속도를 꺾는다
         }
         else if ( _bClimbing )
         {
             _velocity = float2{ moveX * _settings._climbSpeed * 0.5f, moveY * _settings._climbSpeed };
-            if ( _jumpBufferTimer > 0.0f )
+            if ( _jumpBuffer.isActive() )
                 startJump( getJumpSpeed() * 0.8f, PlatformerEvent::kJumped );
         }
         else
         {
             // 좌우 — 벽 점프 직후에는 입력을 약하게.
-            const float32 control      = _wallLockTimer > 0.0f ? 0.2f : 1.0f;
+            const float32 control      = _wallLock.isActive() ? 0.2f : 1.0f;
             const float32 acceleration = ( bWasGrounded ? _settings._groundAcceleration : _settings._airAcceleration ) * control;
             _velocity._x               = PlatformerMotor2DInternal::approach( _velocity._x, moveX * _settings._runSpeed, acceleration * deltaTime );
 
@@ -346,9 +352,9 @@ namespace sw
             }
 
             // 점프 — 땅(코요테 포함) → 벽 → 공중 점프 순.
-            if ( _jumpBufferTimer > 0.0f && _dropTimer <= 0.0f )
+            if ( _jumpBuffer.isActive() && _dropThrough.isActive() == false )
             {
-                if ( _coyoteTimer > 0.0f )
+                if ( _coyote.isActive() )
                 {
                     startJump( getJumpSpeed(), PlatformerEvent::kJumped );
                 }
@@ -358,9 +364,9 @@ namespace sw
                 {
                     const int32 side = _wallSide != 0 ? _wallSide : ( isBlocked( map, float2{ _position._x - 0.05f, _position._y }, false, 0.0f ) ? -1 : 1 );
                     startJump( _settings._wallJumpSpeedY, PlatformerEvent::kWallJumped );
-                    _velocity._x   = static_cast<float32>( -side ) * _settings._wallJumpSpeedX;
-                    _facing        = -side;
-                    _wallLockTimer = _settings._wallJumpLockTime;
+                    _velocity._x = static_cast<float32>( -side ) * _settings._wallJumpSpeedX;
+                    _facing      = -side;
+                    _wallLock.start( _settings._wallJumpLockTime );
                     _airDashesLeft = _settings._airDashCount;
                     _wallSide      = 0;
                 }

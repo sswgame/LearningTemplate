@@ -12,6 +12,7 @@
 
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -148,13 +149,12 @@ namespace sw
      *        <Site id="home" x="0" kind="Village" owner="Player" workers="4" slots="3" housing="5"><Income gold="2"/></Site>
      *        <Site id="keep" x="60" kind="Fortress" owner="Enemy" gate="200" wall="300" garrison="spearman:3"/></ConquestCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ConquestCatalog
+    class SW_GF_API ConquestCatalog : public XmlCatalog<ConquestCatalog>
     {
+        friend class XmlCatalog<ConquestCatalog>;
+
     public:
         ConquestCatalog();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         const ConquestBuildingDef*         findBuilding( const hashed_string& id ) const { return _buildingCatalog.find( id ); }
         const ConquestUnitDef*             findUnit( const hashed_string& id ) const { return _unitCatalog.find( id ); }
@@ -166,7 +166,8 @@ namespace sw
         void                               setRules( const ConquestRules& rules ) { _rules = rules; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "ConquestCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<ConquestBuildingDef> _buildingCatalog;
         GameCatalog<ConquestUnitDef>     _unitCatalog;

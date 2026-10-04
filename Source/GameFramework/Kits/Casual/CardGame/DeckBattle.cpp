@@ -42,16 +42,6 @@ namespace sw
     {
     }
 
-    bool DeckBattleCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &DeckBattleCatalog::loadRoot, path, "DeckBattleCatalog" );
-    }
-
-    bool DeckBattleCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &DeckBattleCatalog::loadRoot, xmlText, sourceName, "DeckBattleCatalog" );
-    }
-
     uint32 DeckBattleCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;

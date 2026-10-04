@@ -2,6 +2,8 @@
 
 #include "Engine/Animation/AnimGraphPlayer.h"
 
+#include "Engine/Animation/AnimGraphAsset.h"
+
 namespace sw
 {
     AnimGraphPlayer::AnimGraphPlayer()

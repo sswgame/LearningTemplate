@@ -54,21 +54,18 @@ namespace sw
     void GridReachability::collectAttackCells( int32 minRange, int32 maxRange, vector<int2>& outListCell ) const
     {
         outListCell.clear();
-        vector<uint8> listMarked( static_cast<size_t>( _width * _height ), SW_FALSE );
-        vector<int2>  listStand;
-        vector<int2>  listRange;
+        // 한 칸을 한 번만 — 표시는 재사용 스크래치에(호출마다 W × H 를 잡지 않는다).
+        _cellMarks.begin( _width * _height );
+        vector<int2> listStand;
+        vector<int2> listRange;
         collectReachable( listStand );
         for ( const int2& stand : listStand )
         {
             collectRangeCells( stand, minRange, maxRange, _width, _height, listRange );
             for ( const int2& cell : listRange )
             {
-                uint8& bMarked = listMarked[static_cast<size_t>( computeIndex( cell ) )];
-                if ( bMarked == SW_FALSE )
-                {
-                    bMarked = SW_TRUE;
+                if ( _cellMarks.visit( computeIndex( cell ), -1 ) )
                     outListCell.push_back( cell );
-                }
             }
         }
     }

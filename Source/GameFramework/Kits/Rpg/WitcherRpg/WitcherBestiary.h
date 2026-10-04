@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -72,9 +73,9 @@ namespace sw
         const Entry* findEntry( const hashed_string& monsterId ) const;
         bool         raiseKnowledge( const hashed_string& monsterId, int32 level );
 
-        vector<Entry>                _listEntry;
-        vector<WitcherBestiaryEvent> _listEvent;
-        const WitcherCatalog*        _pCatalog;
-        const ElementChart*          _pChart;
+        vector<Entry>                     _listEntry;
+        EventBuffer<WitcherBestiaryEvent> _eventBuffer;
+        const WitcherCatalog*             _pCatalog;
+        const ElementChart*               _pChart;
     };
 } // namespace sw

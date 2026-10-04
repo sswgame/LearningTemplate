@@ -13,6 +13,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/Countdown.h"
+#include "GameFramework/Utility/EventBuffer.h"
 #include "GameFramework/Utility/GameRandom.h"
 
 namespace sw
@@ -41,7 +43,7 @@ namespace sw
         float3          _position{};
         float3          _fleeDirection{}; ///< 흡입 중 도망치는 쪽(XZ 단위 벡터)
         float32         _hp{ 0.0f };
-        float32         _timer{ 0.0f }; ///< 지금 상태의 남은 시간
+        Countdown       _timer{}; ///< 지금 상태의 남은 시간
         uint32          _id{ 0 };
         GhostState      _state{ GhostState::Hidden };
     };
@@ -144,14 +146,14 @@ namespace sw
         void           applySuctionDamage( GhostInstance& ghost, float32 damage );
         void           pushEvent( GhostEventType type, uint32 ghostId, float32 amount = 0.0f, int32 coins = 0 );
 
-        const GhostCatalog*   _pCatalog;
-        GameRandom            _random;
-        vector<GhostInstance> _listGhost;
-        vector<GhostEvent>    _listEvent;
-        float32               _strobeCharge;
-        float32               _surgeGauge; ///< 0..1
-        uint32                _suctionTarget;
-        uint32                _nextGhostId;
-        int32                 _vacuumStage;
+        const GhostCatalog*     _pCatalog;
+        GameRandom              _random;
+        vector<GhostInstance>   _listGhost;
+        EventBuffer<GhostEvent> _eventBuffer;
+        float32                 _strobeCharge;
+        float32                 _surgeGauge; ///< 0..1
+        uint32                  _suctionTarget;
+        uint32                  _nextGhostId;
+        int32                   _vacuumStage;
     };
 } // namespace sw

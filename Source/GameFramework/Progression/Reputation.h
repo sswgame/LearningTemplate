@@ -10,7 +10,9 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Utility/EventBuffer.h"
 
 namespace sw
 {
@@ -57,18 +59,19 @@ namespace sw
      * @brief `<ReputationCatalog><Faction id="town" min="-1000" max="1000" start="0" decay="0"><Tier name="Hated" min="-1000"/>
      *        <Tier name="Neutral" min="-100"/><Link faction="bandits" ratio="-0.5"/></Faction></ReputationCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ReputationCatalog
+    class SW_GF_API ReputationCatalog : public XmlCatalog<ReputationCatalog>
     {
+        friend class XmlCatalog<ReputationCatalog>;
+
     public:
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addFaction( const FactionDef& faction ) { (void)_catalog.add( faction ); }
+        void addFaction( const FactionDef& faction ) { (void)_catalog.add( faction ); }
 
         const FactionDef*         findFaction( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<FactionDef>& getFactions() const { return _catalog.getAll(); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "ReputationCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<FactionDef> _catalog{};
     };
@@ -125,8 +128,8 @@ namespace sw
         /** @brief `getTierIndex` 의 계산 — 값 이하인 마지막 단계, 그런 단계가 없으면 0(가장 낮은 단계), 단계가 없으면 −1. */
         static int32 computeTierIndex( const FactionDef* pFaction, int32 value );
 
-        vector<Entry>            _listEntry;
-        vector<ReputationEvent>  _listEvent;
-        const ReputationCatalog* _pCatalog;
+        vector<Entry>                _listEntry;
+        EventBuffer<ReputationEvent> _eventBuffer;
+        const ReputationCatalog*     _pCatalog;
     };
 } // namespace sw

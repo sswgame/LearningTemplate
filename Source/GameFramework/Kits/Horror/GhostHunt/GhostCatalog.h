@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -127,13 +128,12 @@ namespace sw
      *        <Furniture id="dresser" room="foyer" loot="dresserLoot" search="Shake"/><Boo id="booA" room="foyer" furniture="dresser" hp="30" escapeTime="5"/></GhostHunt>`
      *        를 읽습니다.
      */
-    class SW_GF_API GhostCatalog
+    class SW_GF_API GhostCatalog : public XmlCatalog<GhostCatalog>
     {
+        friend class XmlCatalog<GhostCatalog>;
+
     public:
         GhostCatalog();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         const GhostFlashlightSettings&   getFlashlight() const { return _flashlight; }
         const GhostVacuumSettings&       getVacuum() const { return _vacuum; }
@@ -146,7 +146,8 @@ namespace sw
         int32                            findBooIndex( const hashed_string& id ) const { return _booCatalog.findIndex( id ); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "GhostHunt"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GhostFlashlightSettings        _flashlight;
         GhostVacuumSettings            _vacuum;

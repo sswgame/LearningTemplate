@@ -1560,7 +1560,7 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
     manager.tick( 0.016f );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( registry.getEntries( kPost ).size() ) );
 
-    // (3) 선행 종속성 — 있으면 DAG 경로, 떼면 다시 오브젝트 경로.
+    // (3) 선행 종속성 — 가진 항목만 스테이지로 가고(그 오브젝트의 칸에서 빠진다), 떼면 다시 오브젝트 경로.
     SW_EXPECT_FALSE( registry.hasPrerequisites() );
     const sw::SubTickHandle handleA = pRoot->registerSubTick( sw::TickGroup::PostPhysics, 9, sw::TickPhase::Normal );
     sw::MockRootComponent*  pOther  = pQuiet->addComponent<sw::MockRootComponent>();
@@ -1569,10 +1569,13 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
     pOther->addSubTickPrerequisite( 10, handleA );
     manager.tick( 0.016f );
     SW_EXPECT_TRUE( registry.hasPrerequisites() );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( registry.getEntries( kPost ).size() ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( registry.getEntries( kPost ).size() ) );
+    SW_EXPECT_EQUAL( pSub, registry.getEntries( kPost )[0]._pObject );
+    SW_EXPECT_EQUAL( 1u, registry.getStageItemCount() );
     pOther->unregisterSubTick( 10 );
     manager.tick( 0.016f );
     SW_EXPECT_FALSE( registry.hasPrerequisites() );
+    SW_EXPECT_EQUAL( 0u, registry.getStageItemCount() );
 
     // (4) 파괴 — 목록에서 빠지고 남은 오브젝트가 계속 틱한다.
     sw::GameObject*        pTicker2 = manager.createGameObject( sw::hashed_string( "RegTicker2" ) );

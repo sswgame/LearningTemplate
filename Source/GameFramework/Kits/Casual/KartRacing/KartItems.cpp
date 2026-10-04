@@ -139,16 +139,6 @@ namespace sw
         return pRank != nullptr ? _lootCatalog.computeDropChance( pRank->_tableId, itemId ) : 0.0f;
     }
 
-    bool KartItemCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &KartItemCatalog::loadRoot, path, "KartItemCatalog" );
-    }
-
-    bool KartItemCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &KartItemCatalog::loadRoot, xmlText, sourceName, "KartItemCatalog" );
-    }
-
     uint32 KartItemCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         _referencePlaceCount = root.getAttributeInt( "places", _referencePlaceCount );
