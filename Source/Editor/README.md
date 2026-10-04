@@ -314,7 +314,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 `Common/Commands/EditorDevCommands.cpp` — `editor <커맨드 id>`(커맨드 팔레트의 id) · `play` · `simulate` · `pause` · `stop` · `step [N]` ·
 `select.type <컴포넌트 타입>` · `select.tag <태그>` · `layout.save <이름>` · `layout.load <이름>` · `debugdraw.demo [초]`(뷰포트 카메라 앞에 상자 · 구 · 화살표 · 글자와 HUD 값 하나 — 시각화가 도는지 보는 용도). 엔진 명령(`timescale` · `teleport` ·
 `debugdraw.category`)은 `Engine/EngineDevCommands.cpp`. 에디터 없이 띄운 게임 창에서는 `~` 오버레이가 같은 콘솔입니다(`Source/App/README.md`).
-시험: `DevConsoleTest` · `DevCommandRegistryTest` · `DevConsoleOverlayTest`(EngineTest), `DevCommandShippingTest`(AppTest), 자체 시험 `console.devCommands`.
+시험: `DevConsoleTest` · `DevCommandRegistryTest` · `DevConsoleControllerTest`(EngineTest), `DevCommandShippingTest`(AppTest), 자체 시험 `console.devCommands`.
 
 ## ⚠️ 핵심 특징 및 규칙
 - **Dev 모드 전용**: 이 폴더의 코드는 개발(Dev) 모드에서만 `MODULE DLL`로 빌드되고 동작합니다. 배포(Shipping) 빌드를 할 때는 **코드가 통째로 날아갑니다.**

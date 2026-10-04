@@ -37,8 +37,10 @@ namespace sw
         , _activeGlyphStyle{ InputGlyphStyle::KeyboardMouse }
         , _onActiveDeviceChanged{}
         , _onGamepadConnectionChanged{}
-        , _onTextInput{}
-        , _onTextComposition{}
+        , _arrOnTextInput{}
+        , _arrOnTextComposition{}
+        , _arrCapturedKeyMask{}
+        , _keyboardFocus{ InputKeyboardFocus::Game }
         , _pendingHighSurrogate{ 0 }
         , _bInitialized{ SW_FALSE }
         , _bInputMuted{ SW_FALSE }
@@ -98,15 +100,18 @@ namespace sw
             _onGamepadConnectionChanged = {};
             ++releasedCount;
         }
-        if ( _onTextInput.isCodeWithin( pBegin, pEnd ) )
+        for ( size_t focusIndex = 0; focusIndex < kKeyboardFocusCount; ++focusIndex )
         {
-            _onTextInput = {};
-            ++releasedCount;
-        }
-        if ( _onTextComposition.isCodeWithin( pBegin, pEnd ) )
-        {
-            _onTextComposition = {};
-            ++releasedCount;
+            if ( _arrOnTextInput[focusIndex].isCodeWithin( pBegin, pEnd ) )
+            {
+                _arrOnTextInput[focusIndex] = {};
+                ++releasedCount;
+            }
+            if ( _arrOnTextComposition[focusIndex].isCodeWithin( pBegin, pEnd ) )
+            {
+                _arrOnTextComposition[focusIndex] = {};
+                ++releasedCount;
+            }
         }
 
         // 모듈이 등록한 장치는 vtable 이 그 이미지에 있다 — 내린 뒤 폴링하면 내려간 코드로 뛴다. 소멸자가 아직 있는 지금 내린다.
@@ -265,6 +270,9 @@ namespace sw
             }
         }
 
+        // 지난 프레임까지 뗀 가린 키를 푼다. 뗀 프레임에는 아직 가린다 — 게임이 누른 적 없는 키의 "뗌" 을 보지 않게.
+        releaseCapturedKeys();
+
         // 2) 락프리 큐에 비동기로 들어온 이번 프레임 원시 이벤트를 한꺼번에 꺼낸다
         _listDrainedEvent.clear();
         _queueRawEvent.drain( _listDrainedEvent );
@@ -318,8 +326,19 @@ namespace sw
         {
             case RawInputEventType::KeyDown:
             {
+                const Key    key      = rawEvent._payload._keyData._key;
+                const size_t keyIndex = static_cast<size_t>( key );
+                const uint64 keyBit   = uint64{ 1 } << ( keyIndex % 64 );
+                if ( keyIndex < static_cast<size_t>( Key::Count ) )
+                {
+                    // 게임이 아닌 쪽이 키보드를 쥔 동안 눌린 키는 뗄 때까지 게임에 가린다. 게임이 쥔 동안 새로 누르면 가림을 푼다.
+                    if ( _keyboardFocus != InputKeyboardFocus::Game )
+                        _arrCapturedKeyMask[keyIndex / 64] |= keyBit;
+                    else
+                        _arrCapturedKeyMask[keyIndex / 64] &= ~keyBit;
+                }
                 if ( _pKeyboard != nullptr )
-                    _pKeyboard->setKeyDown( rawEvent._payload._keyData._key, true );
+                    _pKeyboard->setKeyDown( key, true );
                 setActiveGlyphStyle( InputGlyphStyle::KeyboardMouse );
                 break;
             }
@@ -494,6 +513,58 @@ namespace sw
             if ( pDev != nullptr )
                 pDev->resetState();
         }
+        // 키가 모두 떼어졌으니 가릴 키도 없다.
+        for ( uint64& word : _arrCapturedKeyMask )
+        {
+            word = 0;
+        }
+    }
+
+    void InputManager::setKeyboardFocus( InputKeyboardFocus focus )
+    {
+        if ( focus == InputKeyboardFocus::Count )
+            return;
+        _keyboardFocus = focus;
+    }
+
+    bool InputManager::isKeyVisibleToGame( Key key ) const
+    {
+        if ( _keyboardFocus != InputKeyboardFocus::Game )
+            return false;
+        const size_t keyIndex = static_cast<size_t>( key );
+        if ( keyIndex >= static_cast<size_t>( Key::Count ) )
+            return true;
+        return ( _arrCapturedKeyMask[keyIndex / 64] & ( uint64{ 1 } << ( keyIndex % 64 ) ) ) == 0;
+    }
+
+    void InputManager::releaseCapturedKeys()
+    {
+        if ( _pKeyboard == nullptr )
+            return;
+        for ( size_t wordIndex = 0; wordIndex < kKeyMaskWordCount; ++wordIndex )
+        {
+            uint64 remaining = _arrCapturedKeyMask[wordIndex];
+            while ( remaining != 0 )
+            {
+                const uint32 bitIndex = MathUtil::countTrailingZeros( remaining );
+                remaining &= remaining - 1;
+                const Key key = static_cast<Key>( wordIndex * 64 + bitIndex );
+                if ( _pKeyboard->isKeyDown( key ) == false )
+                    _arrCapturedKeyMask[wordIndex] &= ~( uint64{ 1 } << bitIndex );
+            }
+        }
+    }
+
+    void InputManager::setTextInputCallback( TextInputDelegate callback, InputKeyboardFocus owner )
+    {
+        if ( owner != InputKeyboardFocus::Count )
+            _arrOnTextInput[static_cast<size_t>( owner )] = std::move( callback );
+    }
+
+    void InputManager::setTextCompositionCallback( TextInputDelegate callback, InputKeyboardFocus owner )
+    {
+        if ( owner != InputKeyboardFocus::Count )
+            _arrOnTextComposition[static_cast<size_t>( owner )] = std::move( callback );
     }
 
     void InputManager::setActiveGlyphStyle( InputGlyphStyle type )
@@ -508,7 +579,8 @@ namespace sw
 
     bool InputManager::wasAnyInputPressed() const
     {
-        if ( _pKeyboard != nullptr && _pKeyboard->wasAnyKeyPressed() )
+        // 키보드는 게임이 포커스를 쥘 때만 "아무 키" 다 — 콘솔에 치는 글자가 "Press Any Key" 를 넘기지 않게.
+        if ( _pKeyboard != nullptr && _keyboardFocus == InputKeyboardFocus::Game && _pKeyboard->wasAnyKeyPressed() )
             return true;
 
         if ( _pMouse != nullptr && _pMouse->wasAnyButtonPressed() )
@@ -522,14 +594,16 @@ namespace sw
 
     void InputManager::onTextInput( string_view text )
     {
-        if ( text.empty() == false && _onTextInput.isBound() )
-            _onTextInput( text );
+        TextInputDelegate& onTextInput = _arrOnTextInput[static_cast<size_t>( _keyboardFocus )];
+        if ( text.empty() == false && onTextInput.isBound() )
+            onTextInput( text );
     }
 
     void InputManager::onTextComposition( string_view text )
     {
-        if ( text.empty() == false && _onTextComposition.isBound() )
-            _onTextComposition( text );
+        TextInputDelegate& onTextComposition = _arrOnTextComposition[static_cast<size_t>( _keyboardFocus )];
+        if ( text.empty() == false && onTextComposition.isBound() )
+            onTextComposition( text );
     }
 
     float2 InputManager::getMousePositionNormalized() const

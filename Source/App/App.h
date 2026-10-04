@@ -24,7 +24,7 @@ namespace sw
     struct NativeWindowEvent;
 
     class CommandLineManager;
-    class DevConsoleOverlay;
+    class DevConsoleController;
     class IWindow;
     class LiveReloadManager;
     class ModuleHost;
@@ -126,6 +126,8 @@ namespace sw
         void startDevConsole();
         /** @brief 시작 씬이 열렸으면 걸어 둔 시작 명령을 한 번 돌립니다. 프레임마다 부릅니다. */
         void runPendingDevConsoleExec();
+        /** @brief 셸 InputMap 의 이번 프레임 액션으로 개발 콘솔을 갱신합니다(에디터가 없을 때). `pollReloadHotkeys` 뒤에 부릅니다. Shipping 에서는 아무것도 하지 않습니다. */
+        void updateDevConsole();
 
         /** @brief 창 크기 변경 콜백입니다. */
         void onResize( const uint32 width, const uint32 height );
@@ -151,10 +153,11 @@ namespace sw
 #if !defined( SW_SHIPPING )
         unique_ptr<LiveReloadManager> _liveReloadManager;
         /**
-         * @brief 게임 창의 개발 콘솔(`~`)입니다. **Shipping 에는 없습니다.** 에디터가 없을 때만 키를 받습니다(에디터는 Output Log 입력 줄이 있다).
-         * @details `-gv_devConsoleExec` 의 명령을 시작 씬이 열린 뒤 이 콘솔로 돌립니다(에디터가 있어도).
+         * @brief 게임 창의 개발 콘솔(`~`)입니다. **Shipping 에는 없습니다.** 에디터가 없을 때만 입력을 받습니다(에디터는 Output Log 입력 줄이 있다).
+         * @details 키는 셸 InputMap 의 콘솔 액션으로 받습니다(`pollReloadHotkeys` 뒤 `updateDevConsole`). `-gv_devConsoleExec` 의 명령을 시작 씬이 열린 뒤
+         *          이 콘솔로 돌립니다(에디터가 있어도).
          */
-        unique_ptr<DevConsoleOverlay> _devConsoleOverlay;
+        unique_ptr<DevConsoleController> _devConsoleController;
 #endif
         unique_ptr<ModuleHost> _moduleHost;
         /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석 — 무엇을 어떤 순서로 올릴지(Dev). */

@@ -153,6 +153,7 @@ namespace sw
         , _bInvertX{ SW_FALSE }
         , _bInvertY{ SW_FALSE }
         , _bSuppressBaseActionOnChord{ SW_TRUE }
+        , _bKeyboardFocusIgnored{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
     }
@@ -390,8 +391,8 @@ namespace sw
             {
                 const Key  modifierKey = static_cast<Key>( binding._arrSlot[0]._controlIndex );
                 const Key  triggerKey  = static_cast<Key>( binding._arrSlot[1]._controlIndex );
-                const bool bTriggerOk  = bTriggerJustPressed ? _pInput->wasKeyPressed( triggerKey ) : _pInput->isKeyDown( triggerKey );
-                if ( _pInput->isKeyDown( modifierKey ) && bTriggerOk )
+                const bool bTriggerOk  = bTriggerJustPressed ? wasKeyboardKeyPressed( triggerKey ) : isKeyboardKeyDown( triggerKey );
+                if ( isKeyboardKeyDown( modifierKey ) && bTriggerOk )
                     return true;
             }
         }
