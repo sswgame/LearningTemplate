@@ -76,6 +76,8 @@ namespace sw
         string _shaderTaa{ "engine/shaders/taa.hlsl" };
         PROPERTY()
         string _shaderTonemap{ "engine/shaders/tonemap.hlsl" };
+        PROPERTY()
+        string _shaderToon{ "engine/shaders/toon.hlsl" }; ///< 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다
 
         /** @brief 리소스 경로(XML)에서 엔진 테이블을 로드합니다. 빈 경로면 path::kEngineDefaultAssets 를 씁니다. */
 
