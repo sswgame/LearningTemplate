@@ -9,6 +9,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/ModelImportConfig.h"
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
 #include "Editor/Common/Asset/TextureImporter.h"
@@ -48,7 +49,14 @@ namespace sw::editor
                     }
                     case EditorImportKind::Model:
                     {
-                        summary    = ModelImporter::importAllModels( ResourceUtil::getRootFolderPath(), mode );
+                        const string      configPath = ModelImportConfig::makeDefaultConfigPath();
+                        ModelImportConfig config;
+                        if ( config.loadFromFile( configPath ) == false )
+                        {
+                            SW_LOG_ERROR( "Cannot import models without the import config: %#", configPath.c_str() );
+                            return -1;
+                        }
+                        summary    = ModelImporter::importAllModels( ResourceUtil::getRootFolderPath(), config, mode );
                         pKindLabel = "Model";
                         break;
                     }

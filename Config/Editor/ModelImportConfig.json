@@ -1,0 +1,9 @@
+{
+  "rules": [
+    {
+      "name": "StarSkirmish_KitLayoutOffset",
+      "include_patterns": ["*/starskirmish/models_raw/*"],
+      "translation": [-2.0, 0.0, -1.5]
+    }
+  ]
+}

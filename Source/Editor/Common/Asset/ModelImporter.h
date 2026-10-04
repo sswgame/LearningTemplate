@@ -18,6 +18,9 @@ namespace sw::editor
     enum class AssetImportMode : uint8;
 
     struct AssetImportSummary;
+    struct ModelImportRule;
+
+    class ModelImportConfig;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -28,6 +31,8 @@ namespace sw::editor
      *        인덱스 없는 삼각형 목록(`RHIVertex`)으로 풀어 `.mesh` 로 씁니다.
      * @details 정점: 위치 · 노멀(없으면 면 노멀) · TEXCOORD_0(없으면 0) · 색 = 머티리얼 baseColorFactor × COLOR_0(있으면).
      *          삼각형이 아닌 프리미티브는 경고하고 건너뜁니다. 첫 baseColorTexture 의 이미지는 로그로만 알립니다 — 머티리얼은 게임이 고릅니다.
+     *          씬 뿌리 목록에 부모가 있는 노드가 들어 있으면(표준 위반, UniGLTF 내보내기) 그 노드의 맨 위 조상으로 바꾸고 경고합니다 — 월드 변환은
+     *          실제 계층에서 나옵니다. 규칙(`ModelImportConfig`)의 `recenter` 는 합친 메시의 경계 상자를 기준으로 옮깁니다.
      */
     struct ModelImporter
     {
@@ -35,10 +40,10 @@ namespace sw::editor
          * @brief glTF 파일 하나를 엔진 좌표계의 삼각형 목록으로 읽습니다. 삼각형이 하나도 없으면 false 입니다.
          * @details 시험과 `importModel` 이 같은 길을 씁니다(파일을 쓰지 않습니다).
          */
-        [[nodiscard]] static bool readModel( string_view sourcePath, vector<RHIVertex>& outListVertex );
+        [[nodiscard]] static bool readModel( string_view sourcePath, const ModelImportRule& rule, vector<RHIVertex>& outListVertex );
 
-        /** @brief glTF 파일 하나를 `.mesh` 로 임포트합니다. */
-        [[nodiscard]] static bool importModel( string_view sourcePath, string_view outputPath );
+        /** @brief glTF 파일 하나를 @p rule 로 `.mesh` 로 임포트합니다. */
+        [[nodiscard]] static bool importModel( string_view sourcePath, const ModelImportRule& rule, string_view outputPath );
 
         /**
          * @brief 핫 리로드가 넘긴 파일이 모델 원본이면 임포트합니다(`models_raw/` 아래 → 옆 `models/` 의 `.mesh`).
@@ -49,16 +54,16 @@ namespace sw::editor
 
         /**
          * @brief 리소스 루트 아래 모든 `models_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조하고, @p mode 가 ImportStale 이면 어긋난 것을 임포트합니다.
-         * @details 절차는 `AssetImportStampUtil::importAll` 입니다(텍스처와 같은 스탬프 형식 · 판정).
+         * @details 절차는 `AssetImportStampUtil::importAll` 입니다(텍스처와 같은 스탬프 형식 · 판정). 원본마다 @p config 에서 규칙을 고릅니다.
          */
-        [[nodiscard]] static AssetImportSummary importAllModels( string_view resourceRoot, AssetImportMode mode );
+        [[nodiscard]] static AssetImportSummary importAllModels( string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode );
 
         /** @brief 원본 경로에 대응하는 메시 경로입니다(`<x>/models_raw/<y>.glb` → `<x>/models/<y>.mesh`). `models_raw/` 구간이 없으면 빈 문자열입니다. */
         static string makeImportedModelPath( string_view rawModelPath );
 
         /**
-         * @brief 원본 바이트(`.gltf` 면 그것이 가리키는 외부 버퍼 파일까지)와 임포터 버전을 섞은 FNV-1a 64 입니다. 읽지 못하면 0 입니다.
+         * @brief 원본 바이트(`.gltf` 면 그것이 가리키는 외부 버퍼 파일까지) · 적용한 규칙 · 임포터 버전을 섞은 FNV-1a 64 입니다. 읽지 못하면 0 입니다.
          */
-        static uint64 computeSourceHash( string_view sourcePath );
+        static uint64 computeSourceHash( string_view sourcePath, const ModelImportRule& rule );
     };
 } // namespace sw::editor

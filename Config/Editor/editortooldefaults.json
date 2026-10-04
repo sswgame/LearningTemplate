@@ -15,6 +15,7 @@
     "_dialogueGraphDataFile": "DialogueGraphData.json",
     "_spriteClipFile": "SpriteClip.json",
     "_textureImportConfigFile": "TextureImportConfig.json",
+    "_modelImportConfigFile": "ModelImportConfig.json",
     "_listBaseFont": [
         "consola.ttf",
         "Consolas.ttf",

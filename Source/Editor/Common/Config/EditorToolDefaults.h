@@ -93,6 +93,8 @@ namespace sw::editor
         string _spriteClipFile{ "SpriteClip.json" };
         PROPERTY()
         string _textureImportConfigFile{ "TextureImportConfig.json" };
+        PROPERTY()
+        string _modelImportConfigFile{ "ModelImportConfig.json" };
 
         /**
          * @brief 실행 중에 다시 읽을 애셋 확장자입니다. **비우면 처리기가 있는 확장자 전부**를 봅니다.

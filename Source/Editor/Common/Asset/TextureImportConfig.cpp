@@ -2,10 +2,8 @@
 
 #include "Editor/Common/Asset/TextureImportConfig.h"
 
-#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Json/JsonDocument.h"
 
@@ -13,46 +11,6 @@ namespace sw::editor
 {
     namespace
     {
-        bool matchWildcardInternal( string_view pattern, string_view text )
-        {
-            const utf8* pPat    = pattern.data();
-            const utf8* pStr    = text.data();
-            const utf8* pPatEnd = pPat + pattern.size();
-            const utf8* pStrEnd = pStr + text.size();
-            const utf8* pStar   = nullptr;
-            const utf8* pMatch  = nullptr;
-
-            while ( pStr < pStrEnd )
-            {
-                if ( pPat < pPatEnd && ( *pPat == '?' || std::tolower( static_cast<uint8>( *pPat ) ) == std::tolower( static_cast<uint8>( *pStr ) ) ) )
-                {
-                    ++pPat;
-                    ++pStr;
-                }
-                else if ( pPat < pPatEnd && *pPat == '*' )
-                {
-                    pStar  = pPat++;
-                    pMatch = pStr;
-                }
-                else if ( pStar != nullptr )
-                {
-                    pPat = pStar + 1;
-                    pStr = ++pMatch;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            while ( pPat < pPatEnd && *pPat == '*' )
-            {
-                ++pPat;
-            }
-
-            return pPat == pPatEnd;
-        }
-
         TextureSwizzle parseSwizzleInternal( string_view swizzleStr )
         {
             if ( swizzleStr == "BGRA" || swizzleStr == "bgra" )
@@ -63,21 +21,6 @@ namespace sw::editor
                 return TextureSwizzle::RGB1;
 
             return TextureSwizzle::RGBA;
-        }
-
-        void parseStringListInternal( const sw::JsonValue& arrValue, vector<string>& outListItem )
-        {
-            outListItem.clear();
-            if ( arrValue.isArray() == false )
-                return;
-
-            const size_t count = arrValue.size();
-            for ( size_t index = 0; index < count; ++index )
-            {
-                const JsonValue item = arrValue.at( index );
-                if ( item.isString() )
-                    outListItem.push_back( item.asString() );
-            }
         }
     } // namespace
 
@@ -226,23 +169,12 @@ namespace sw::editor
         if ( jsonValue.has( "invert_green" ) )
             inoutRule._bInvertGreen = jsonValue.get( "invert_green" ).asBool() ? SW_TRUE : SW_FALSE;
 
-        if ( jsonValue.has( "include_patterns" ) )
-            parseStringListInternal( jsonValue.get( "include_patterns" ), inoutRule._listIncludePattern );
-
-        if ( jsonValue.has( "exclude_patterns" ) )
-            parseStringListInternal( jsonValue.get( "exclude_patterns" ), inoutRule._listExcludePattern );
-
-        if ( jsonValue.has( "include_paths" ) )
-            parseStringListInternal( jsonValue.get( "include_paths" ), inoutRule._listIncludePath );
-
-        if ( jsonValue.has( "exclude_paths" ) )
-            parseStringListInternal( jsonValue.get( "exclude_paths" ), inoutRule._listExcludePath );
+        inoutRule._filter.parse( jsonValue );
     }
 
     bool TextureImportConfig::isCatchAllRule( const TextureImportRule& rule )
     {
-        return rule._listIncludePattern.empty() && rule._listIncludePath.empty() &&
-               rule._listExcludePattern.empty() && rule._listExcludePath.empty();
+        return rule._filter.isCatchAll();
     }
 
     size_t TextureImportConfig::findShadowingRuleIndex() const
@@ -261,75 +193,14 @@ namespace sw::editor
 
     bool TextureImportConfig::findMatchingRule( string_view relativePath, TextureImportRule& outRule ) const
     {
-        const string normalized = FileUtil::normalizeSeparators( relativePath );
-        const string fileName   = FileUtil::getFileNamePart( normalized );
-        const string dirName    = FileUtil::getDirectoryPart( normalized );
-
-        for ( const auto& rule : _listRule )
+        // 첫 매칭이 이긴다.
+        for ( const TextureImportRule& rule : _listRule )
         {
-            // 1) 제외 경로 검사
-            bool bExcludedPath = false;
-            for ( const auto& exPath : rule._listExcludePath )
-            {
-                if ( dirName.find( exPath ) != string::npos || normalized.find( exPath ) != string::npos )
-                {
-                    bExcludedPath = true;
-                    break;
-                }
-            }
-            if ( bExcludedPath )
+            if ( rule._filter.matchesPath( relativePath ) == false )
                 continue;
-
-            // 2) 제외 패턴 검사
-            bool bExcludedPattern = false;
-            for ( const auto& exPattern : rule._listExcludePattern )
-            {
-                if ( matchWildcardInternal( exPattern, fileName ) || matchWildcardInternal( exPattern, normalized ) )
-                {
-                    bExcludedPattern = true;
-                    break;
-                }
-            }
-            if ( bExcludedPattern )
-                continue;
-
-            // 3) 포함 경로 검사
-            if ( rule._listIncludePath.empty() == false )
-            {
-                bool bPathMatched = false;
-                for ( const auto& inPath : rule._listIncludePath )
-                {
-                    if ( dirName.find( inPath ) != string::npos || normalized.find( inPath ) != string::npos )
-                    {
-                        bPathMatched = true;
-                        break;
-                    }
-                }
-                if ( bPathMatched == false )
-                    continue;
-            }
-
-            // 4) 포함 패턴 검사
-            if ( rule._listIncludePattern.empty() == false )
-            {
-                bool bPatternMatched = false;
-                for ( const auto& inPattern : rule._listIncludePattern )
-                {
-                    if ( matchWildcardInternal( inPattern, fileName ) || matchWildcardInternal( inPattern, normalized ) )
-                    {
-                        bPatternMatched = true;
-                        break;
-                    }
-                }
-                if ( bPatternMatched == false )
-                    continue;
-            }
-
-            // 모든 조건을 만족했다(첫 매칭이 이긴다)
             outRule = rule;
             return true;
         }
-
         return false;
     }
 } // namespace sw::editor

@@ -11,7 +11,7 @@
 | `Config/Engine/PackConfig.json` · `PackFormat.json` | 리소스 팩 쿠킹 설정(코덱 · 제외 폴더 — `textures_raw` 등)과 `.pack` 바이너리 포맷의 단일 출처(C++ 는 `PackFormat.gen.h`, Python 쿠커는 JSON 을 직접 읽는다) | 빌드 · 쿠킹 전용, 미포함 |
 | `Config/Game/GameConfig.json` | 팩 루트·gamesettings 파일명 | 생성 |
 | `Config/App/AppConfig.json` | Dev 게임킷 모듈 목록 | 미포함 (정적 링크) |
-| `Config/Editor/` | `EditorConfig.json` + `editortooldefaults.json` + `TextureImportConfig.json`(텍스처 임포트 규칙: 포맷 · sRGB · 밉) + 유저 레이아웃 | 미포함 |
+| `Config/Editor/` | `EditorConfig.json` + `editortooldefaults.json` + `TextureImportConfig.json`(텍스처 임포트 규칙: 포맷 · sRGB · 밉) + `ModelImportConfig.json`(모델 임포트 규칙: 이동 · 원점 맞추기) + 유저 레이아웃 | 미포함 |
 | `Config/Environment/` | 머신 로컬 툴체인·파서 | **절대 미포함** |
 
 ## Environment (툴체인)

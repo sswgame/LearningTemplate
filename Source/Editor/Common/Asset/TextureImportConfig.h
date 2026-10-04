@@ -6,6 +6,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/Asset/AssetImportPathFilter.h"
+
 namespace sw
 {
     class JsonValue;
@@ -33,10 +35,7 @@ namespace sw::editor
     {
         string                 _name;
         string                 _inherits;
-        vector<string>         _listIncludePattern;
-        vector<string>         _listExcludePattern;
-        vector<string>         _listIncludePath;
-        vector<string>         _listExcludePath;
+        AssetImportPathFilter  _filter;
         string                 _format;
         TextureSwizzle         _swizzle;
         uint8                  _bGenerateMips : 1;
@@ -47,10 +46,7 @@ namespace sw::editor
         TextureImportRule()
             : _name{}
             , _inherits{}
-            , _listIncludePattern{}
-            , _listExcludePattern{}
-            , _listIncludePath{}
-            , _listExcludePath{}
+            , _filter{}
             , _format{ "BC7_UNORM" }
             , _swizzle{ TextureSwizzle::RGBA }
             , _bGenerateMips{ SW_TRUE }

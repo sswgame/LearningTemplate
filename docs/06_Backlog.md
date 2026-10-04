@@ -705,6 +705,8 @@ cd build/Ninja-Debug/Bin
 - **모델도 같은 스탬프 절차다** — `models_raw/` 의 glTF → `models/*.mesh`(`App --import-models` · `--check-models`, `AssetImportStampUtil` + 종류마다
   `IRawAssetImporter`). glTF → 엔진은 X 반전 + 삼각형 감김 뒤집기(노드 행렬식 < 0 이면 한 번 더). `.mesh` 는 지금 형식만 읽는다 — `RHIVertex` 를 바꾸면
   `MeshAssetFormat::kVersion` 을 올리고 다시 임포트. 메시 캐시는 약한 참조라 쓰는 쪽이 없으면 리로드할 것도 없다(다음 `acquire` 가 새로 읽는다).
+  원본 glb 는 내려받은 그대로 둔다 — 비표준 씬 뿌리는 임포터가 받고, 배치 오프셋은 `ModelImportConfig.json` 규칙으로 지운다. 경계 상자 중심
+  (`recenter: xz`)은 모양이 치우친 모델을 옮기므로 원점이 정해진 키트에는 `translation` 이 맞다.
 
 - **디바이스 종료 순서는 `IRHIDevice::shutdown`(비가상 템플릿 메서드) 하나가 정한다** — releaseAllFor → `waitIdleInternal` → `detachCommandRecordingInternal` →
   `shutdownInternal`. 백엔드는 훅만 채우고 앞부분을 다시 적지 않는다(네 벌일 때 DX12 · DX11 이 이미 어긋나 있었다). 리스트 떼기는 `RHILiveCommandListUtil::detachAll`.

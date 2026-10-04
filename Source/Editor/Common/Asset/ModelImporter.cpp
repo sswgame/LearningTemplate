@@ -11,10 +11,15 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/ModelImportConfig.h"
+#include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Utility/Json/JsonDocument.h"
 
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
@@ -40,6 +45,11 @@ namespace sw::editor
             static constexpr string_view kImportStampHeader = "SWMODELIMPORT 1";
             /** @brief 같은 원본에서 다른 `.mesh` 를 내게 임포트를 바꾸면 올립니다. 원본 해시에 섞입니다. */
             static constexpr uint32 kImporterVersion = 1;
+            /** @brief GLB 머리 · 청크 머리 크기와 표식("glTF" · "JSON")입니다. */
+            static constexpr uint32 kGlbMagic           = 0x46546C67u;
+            static constexpr uint32 kGlbJsonChunkType   = 0x4E4F534Au;
+            static constexpr size_t kGlbHeaderSize      = 12;
+            static constexpr size_t kGlbChunkHeaderSize = 8;
             /** @brief meshopt_optimizeOverdraw 가 정점 캐시 효율을 얼마나 잃어도 되는지입니다(라이브러리 권장값). */
             static constexpr float32 kOverdrawThreshold = 1.05f;
 
@@ -235,6 +245,162 @@ namespace sw::editor
                 }
             }
 
+            /** @brief 리틀 엔디언 uint32 를 읽습니다. */
+            static uint32 readUint32( const vector<uint8>& bytes, size_t offset )
+            {
+                return static_cast<uint32>( bytes[offset] ) | ( static_cast<uint32>( bytes[offset + 1] ) << 8 ) |
+                       ( static_cast<uint32>( bytes[offset + 2] ) << 16 ) | ( static_cast<uint32>( bytes[offset + 3] ) << 24 );
+            }
+
+            /** @brief 리틀 엔디언 uint32 를 덧붙입니다. */
+            static void appendUint32( uint32 value, vector<uint8>& inoutBytes )
+            {
+                for ( uint32 shift = 0; shift < 32; shift += 8 )
+                {
+                    inoutBytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
+                }
+            }
+
+            /**
+             * @brief 씬 뿌리 목록의, 부모가 있는 노드를 그 맨 위 조상으로 바꾸고 겹친 것을 지웁니다(원본 바이트의 JSON 을 고칩니다). 바꾼 항목 수입니다.
+             * @details glTF 2.0 은 씬 뿌리가 부모 없는 노드여야 하고 cgltf 는 파싱에서 그것을 거부하지만, UniGLTF 가 내보낸 파일은 항등 변환인
+             *          부모(`tmpParent`) 아래 자식을 뿌리로 적습니다. 맨 위 조상에서 내려가면 월드 변환은 실제 계층에서 나옵니다. 그래서 cgltf 에
+             *          넘기기 전에 JSON 의 `scenes[].nodes` 만 바꿉니다 — 다른 값은 그대로 다시 씁니다(숫자는 왕복해도 같은 값입니다).
+             *          부모 고리가 있으면 위로 오르는 걸음을 노드 수로 끊습니다(고리는 cgltf 가 거부합니다). 고칠 것이 없으면 바이트를 건드리지 않습니다.
+             */
+            static uint32 promoteSceneRootsToTopAncestor( vector<uint8>& inoutBytes )
+            {
+                const bool bGlb       = inoutBytes.size() >= kGlbHeaderSize + kGlbChunkHeaderSize && readUint32( inoutBytes, 0 ) == kGlbMagic;
+                size_t     jsonOffset = 0;
+                size_t     jsonSize   = inoutBytes.size();
+                if ( bGlb )
+                {
+                    if ( readUint32( inoutBytes, kGlbHeaderSize + 4 ) != kGlbJsonChunkType )
+                        return 0;
+                    jsonOffset = kGlbHeaderSize + kGlbChunkHeaderSize;
+                    jsonSize   = readUint32( inoutBytes, kGlbHeaderSize );
+                    if ( jsonOffset + jsonSize > inoutBytes.size() )
+                        return 0;
+                }
+
+                // 읽지 못하는 JSON 은 그대로 두고 cgltf 가 알리게 한다.
+                JsonDocument document;
+                if ( document.parse( string_view( reinterpret_cast<const utf8*>( inoutBytes.data() ) + jsonOffset, jsonSize ) ) == false )
+                    return 0;
+                const JsonValue root = document.getRoot();
+                if ( root.isObject() == false )
+                    return 0;
+
+                const JsonValue nodes     = root.get( "nodes", false );
+                const size_t    nodeCount = nodes.isArray() ? nodes.size() : 0;
+                vector<size_t>  listParent( nodeCount, nodeCount ); // nodeCount = 부모 없음
+                for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
+                {
+                    const JsonValue children   = nodes.at( nodeIndex ).get( "children", false );
+                    const size_t    childCount = children.isArray() ? children.size() : 0;
+                    for ( size_t childSlot = 0; childSlot < childCount; ++childSlot )
+                    {
+                        const uint64 childIndex = children.at( childSlot ).asUint( nodeCount );
+                        if ( childIndex < nodeCount )
+                            listParent[childIndex] = nodeIndex;
+                    }
+                }
+
+                uint32          promotedCount = 0;
+                const JsonValue scenes        = root.get( "scenes", false );
+                const size_t    sceneCount    = scenes.isArray() ? scenes.size() : 0;
+                for ( size_t sceneIndex = 0; sceneIndex < sceneCount; ++sceneIndex )
+                {
+                    const JsonValue sceneNodes = scenes.at( sceneIndex ).get( "nodes", false );
+                    if ( sceneNodes.isArray() == false )
+                        continue;
+
+                    vector<uint64> listRoot;
+                    bool           bPromoted = false;
+                    for ( size_t slot = 0; slot < sceneNodes.size(); ++slot )
+                    {
+                        const uint64 listedIndex = sceneNodes.at( slot ).asUint( nodeCount );
+                        uint64       rootIndex   = listedIndex;
+                        for ( size_t step = 0; rootIndex < nodeCount && listParent[rootIndex] != nodeCount && step < nodeCount; ++step )
+                        {
+                            rootIndex = listParent[rootIndex];
+                        }
+                        if ( rootIndex != listedIndex )
+                        {
+                            ++promotedCount;
+                            bPromoted = true;
+                        }
+                        if ( std::find( listRoot.begin(), listRoot.end(), rootIndex ) == listRoot.end() )
+                            listRoot.push_back( rootIndex );
+                    }
+                    if ( bPromoted == false )
+                        continue;
+                    sceneNodes.setArray();
+                    for ( const uint64 rootIndex : listRoot )
+                    {
+                        sceneNodes.pushBack().setUint( rootIndex );
+                    }
+                }
+                if ( promotedCount == 0 )
+                    return promotedCount;
+
+                const string  json = document.dump();
+                vector<uint8> rewrittenBytes;
+                if ( bGlb == false )
+                {
+                    rewrittenBytes.assign( reinterpret_cast<const uint8*>( json.data() ), reinterpret_cast<const uint8*>( json.data() ) + json.size() );
+                }
+                else
+                {
+                    // GLB 청크는 4 바이트 정렬이고 JSON 청크는 공백으로 채운다. BIN 청크 이하는 그대로 옮긴다.
+                    const size_t paddedJsonSize = ( json.size() + 3 ) & ~size_t( 3 );
+                    const size_t tailOffset     = jsonOffset + jsonSize;
+                    const size_t totalSize      = jsonOffset + paddedJsonSize + ( inoutBytes.size() - tailOffset );
+                    rewrittenBytes.reserve( totalSize );
+                    appendUint32( kGlbMagic, rewrittenBytes );
+                    appendUint32( readUint32( inoutBytes, 4 ), rewrittenBytes );
+                    appendUint32( static_cast<uint32>( totalSize ), rewrittenBytes );
+                    appendUint32( static_cast<uint32>( paddedJsonSize ), rewrittenBytes );
+                    appendUint32( kGlbJsonChunkType, rewrittenBytes );
+                    rewrittenBytes.insert( rewrittenBytes.end(), reinterpret_cast<const uint8*>( json.data() ), reinterpret_cast<const uint8*>( json.data() ) + json.size() );
+                    rewrittenBytes.resize( jsonOffset + paddedJsonSize, static_cast<uint8>( ' ' ) );
+                    rewrittenBytes.insert( rewrittenBytes.end(), inoutBytes.begin() + static_cast<ptrdiff_t>( tailOffset ), inoutBytes.end() );
+                }
+                inoutBytes.swap( rewrittenBytes );
+                return promotedCount;
+            }
+
+            /** @brief 규칙대로 메시를 옮깁니다 — `translation`(원본 공간) 다음 `recenter`. 경계 상자는 삼각형이 쓰는 정점만으로 잽니다(엔진 공간). */
+            static void applyRule( const ModelImportRule& rule, MergedMesh& inoutMesh )
+            {
+                const float3 translation = convertToEngineSpace( float3{ rule._arrTranslation } );
+                if ( translation.getLength() > 0.0f )
+                {
+                    for ( ImportVertex& vertex : inoutMesh._listVertex )
+                    {
+                        vertex._position = vertex._position + translation;
+                    }
+                }
+
+                const ModelRecenter recenter = rule._recenter;
+                if ( recenter == ModelRecenter::None || inoutMesh._listIndex.empty() )
+                    return;
+
+                float3 minimum = inoutMesh._listVertex[inoutMesh._listIndex[0]]._position;
+                float3 maximum = minimum;
+                for ( const uint32 index : inoutMesh._listIndex )
+                {
+                    minimum = float3::min( minimum, inoutMesh._listVertex[index]._position );
+                    maximum = float3::max( maximum, inoutMesh._listVertex[index]._position );
+                }
+                const float32 offsetY = recenter == ModelRecenter::BottomCenter ? -minimum._y : 0.0f;
+                const float3  offset{ -( minimum._x + maximum._x ) * 0.5f, offsetY, -( minimum._z + maximum._z ) * 0.5f };
+                for ( ImportVertex& vertex : inoutMesh._listVertex )
+                {
+                    vertex._position = vertex._position + offset;
+                }
+            }
+
             /** @brief 노드와 그 자식을 따라 메시를 더합니다. */
             static void appendNode( const cgltf_node& node, MergedMesh& inoutMesh )
             {
@@ -323,6 +489,11 @@ namespace sw::editor
         class ModelRawImporter final : public IRawAssetImporter
         {
         public:
+            explicit ModelRawImporter( const ModelImportConfig& config )
+                : _config{ config }
+            {
+            }
+
             string_view getRawFolderName() const override { return ModelImporterInternal::kRawModelFolder; }
             string_view getStampHeader() const override { return ModelImporterInternal::kImportStampHeader; }
             string_view getImportedLabel() const override { return "메시"; }
@@ -330,8 +501,7 @@ namespace sw::editor
             string      makeImportedPath( string_view sourcePath ) const override { return ModelImporter::makeImportedModelPath( sourcePath ); }
             uint64      computeSourceHash( string_view sourcePath, string_view resourcePath ) const override
             {
-                (void)resourcePath;
-                return ModelImporter::computeSourceHash( sourcePath );
+                return ModelImporter::computeSourceHash( sourcePath, _config.findMatchingRule( resourcePath ) );
             }
             const utf8* findUnsupportedReason( string_view sourcePath ) const override
             {
@@ -340,22 +510,36 @@ namespace sw::editor
             }
             [[nodiscard]] bool importSource( string_view sourcePath, string_view importedPath, string_view resourcePath ) const override
             {
-                (void)resourcePath;
-                return ModelImporter::importModel( sourcePath, importedPath );
+                return ModelImporter::importModel( sourcePath, _config.findMatchingRule( resourcePath ), importedPath );
             }
+
+        private:
+            const ModelImportConfig& _config;
         };
     } // namespace
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    bool ModelImporter::readModel( string_view sourcePath, vector<RHIVertex>& outListVertex )
+    bool ModelImporter::readModel( string_view sourcePath, const ModelImportRule& rule, vector<RHIVertex>& outListVertex )
     {
         outListVertex.clear();
+        vector<uint8> bytes;
+        if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
+        {
+            SW_LOG_ERROR( "Failed to read glTF '%#'", sourcePath );
+            return false;
+        }
+        const uint32 promotedCount = ModelImporterInternal::promoteSceneRootsToTopAncestor( bytes );
+        if ( promotedCount > 0 )
+            SW_LOG_WARNING( "glTF '%#': %# scene root node(s) have a parent (non-conforming exporter) - using their top-most ancestor instead", sourcePath,
+                            promotedCount );
+
+        // cgltf 는 GLB 의 JSON · BIN 청크를 @p bytes 안에서 가리킨다 — cgltf_free 까지 bytes 가 살아 있어야 한다.
         const string        path    = string( sourcePath );
         const cgltf_options options = ModelImporterInternal::makeOptions();
         cgltf_data*         pData   = nullptr;
-        cgltf_result        result  = cgltf_parse_file( &options, path.c_str(), &pData );
+        cgltf_result        result  = cgltf_parse( &options, bytes.data(), bytes.size(), &pData );
         if ( result == cgltf_result_success )
             result = cgltf_load_buffers( &options, pData, path.c_str() );
         if ( result == cgltf_result_success )
@@ -379,14 +563,15 @@ namespace sw::editor
         if ( merged._baseColorTextureUri.empty() == false )
             SW_LOG_INFO( "glTF '%#' uses base color texture '%#' - assign it through the material (PrimitiveLook)", sourcePath, merged._baseColorTextureUri.c_str() );
 
+        ModelImporterInternal::applyRule( rule, merged );
         ModelImporterInternal::expandTriangles( merged, outListVertex );
         return true;
     }
 
-    bool ModelImporter::importModel( string_view sourcePath, string_view outputPath )
+    bool ModelImporter::importModel( string_view sourcePath, const ModelImportRule& rule, string_view outputPath )
     {
         vector<RHIVertex> listVertex;
-        if ( readModel( sourcePath, listVertex ) == false )
+        if ( readModel( sourcePath, rule, listVertex ) == false )
             return false;
         if ( MeshAssetFormat::saveToFile( outputPath, listVertex ) == false )
         {
@@ -411,7 +596,10 @@ namespace sw::editor
         }
 
         // 스탬프를 적는 길이 하나여야 에디터에서 임포트된 것과 `App --import-models` 로 임포트된 것이 같은 판정을 받는다.
-        const AssetImportSummary summary = importAllModels( resourceRoot, AssetImportMode::ImportStale );
+        // 설정 파일이 없으면 규칙 없이 임포트한다. 깨졌으면 로드가 알린다.
+        ModelImportConfig config{};
+        (void)config.loadFromFile( EditorUtil::resolveEditorConfigFile( getEditorToolDefaults()._modelImportConfigFile.c_str() ) );
+        const AssetImportSummary summary = importAllModels( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
             SW_LOG_ERROR( "모델 임포트 실패: %#", problem.c_str() );
@@ -420,9 +608,9 @@ namespace sw::editor
         return true;
     }
 
-    AssetImportSummary ModelImporter::importAllModels( string_view resourceRoot, AssetImportMode mode )
+    AssetImportSummary ModelImporter::importAllModels( string_view resourceRoot, const ModelImportConfig& config, AssetImportMode mode )
     {
-        const ModelRawImporter importer;
+        const ModelRawImporter importer{ config };
         return AssetImportStampUtil::importAll( resourceRoot, importer, mode );
     }
 
@@ -432,16 +620,19 @@ namespace sw::editor
                                                        MeshAssetFormat::kExtension );
     }
 
-    uint64 ModelImporter::computeSourceHash( string_view sourcePath )
+    uint64 ModelImporter::computeSourceHash( string_view sourcePath, const ModelImportRule& rule )
     {
         vector<uint8> bytes;
         if ( FileUtil::readFile( sourcePath, bytes ) == false || bytes.empty() )
             return 0;
 
         StringBuilder<constant::kMaxBuffer64> versionText;
-        versionText.appendFormat( "importer=%#;format=%#", ModelImporterInternal::kImporterVersion, MeshAssetFormat::kVersion );
+        versionText.appendFormat( "importer=%#;format=%#;recenter=%#", ModelImporterInternal::kImporterVersion, MeshAssetFormat::kVersion,
+                                  static_cast<uint32>( rule._recenter ) );
         uint64 hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
         hash        = StringUtil::computeHash64( versionText.c_str(), versionText.size(), false, hash );
+        // 이동은 비트 그대로 섞는다 — 글자로 반올림하면 작은 변경이 같은 해시가 된다.
+        hash = StringUtil::computeHash64( reinterpret_cast<const utf8*>( rule._arrTranslation ), sizeof( rule._arrTranslation ), false, hash );
 
         // `.gltf` 는 버퍼를 옆 파일로 둘 수 있다 — 그 바이트가 바뀌어도 어긋남이어야 한다. data URI 는 이미 본문에 있다.
         if ( FileUtil::hasExtension( sourcePath, ".gltf" ) == false )

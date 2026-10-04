@@ -31,8 +31,8 @@
 - **Commands/**: 패널이 쓰는 **ImGui 없는 로직** — 애셋/씬/트랜스폼/데이터테이블 변이와 파일 IO,
   그리고 커맨드 정의를 담는 `EditorCommandRegistry`.
   패널은 UI 만, 실제 동작은 여기입니다 (그래서 테스트가 붙습니다)
-- **Asset/**: 원본 임포트 — 텍스처(`TextureImporter`, `TextureImportConfig`, `ImageUtil`) · 모델(`ModelImporter`)과 둘이 쓰는 스탬프 절차
-  (`AssetImportStamp`), 헤드리스 임포트 진입점(`AssetImportEntry.cpp` — 아래 "텍스처는 들일 때 임포트한다" · "모델도 들일 때 임포트한다"). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
+- **Asset/**: 원본 임포트 — 텍스처(`TextureImporter`, `TextureImportConfig`, `ImageUtil`) · 모델(`ModelImporter`, `ModelImportConfig`)과 둘이 쓰는
+  스탬프 절차(`AssetImportStamp`) · 규칙의 경로 조건(`AssetImportPathFilter`), 헤드리스 임포트 진입점(`AssetImportEntry.cpp` — 아래 "텍스처는 들일 때 임포트한다" · "모델도 들일 때 임포트한다"). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
 - **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorToolDefaults`)
 
 ### 기능
@@ -201,10 +201,16 @@ glTF 원본(`.glb` · `.gltf`)은 `models_raw/` 에 두고 같은 상대 경로�
 - **변환**: 기본 씬의 노드 계층을 월드 변환째 한 메시로 합칩니다. glTF(오른손 · +Y 위 · 앞 +Z)를 엔진(왼손 · +Y 위 · 앞 +Z, 앞면 = 시계 방향)으로
   옮기려고 **X 를 뒤집고 삼각형마다 감김을 뒤집습니다**(노드가 거울상이면 한 번 더). 노멀이 없으면 면 노멀, 색은 baseColorFactor × COLOR_0.
   삼각형이 아닌 프리미티브는 경고하고 건너뜁니다. 텍스처는 로그로만 알리고, 머티리얼은 게임이 `PrimitiveLook` 으로 고릅니다.
+- **원본은 고치지 않습니다**: 씬 뿌리 목록에 부모가 있는 노드를 적은 비표준 파일(UniGLTF — Kenney 키트)은 cgltf 가 파싱에서 거부하므로, 임포터가 넘기기
+  전에 JSON 의 `scenes[].nodes` 만 맨 위 조상으로 바꾸고 경고합니다(GLB 는 BIN 청크를 그대로 옮깁니다).
+- **임포트 규칙**: `Config/Editor/ModelImportConfig.json` 의 `rules` — 경로 조건은 텍스처 규칙과 같고(`include_patterns` · `exclude_patterns` ·
+  `include_paths` · `exclude_paths`, 첫 매칭이 이김), 옵션은 `translation`(glTF 원본 공간에서 더하는 이동 — 원본의 배치 오프셋 지우기)과
+  `recenter`(`none` 기본 · `xz` 경계의 XZ 중심을 원점으로 · `bottom-center` 거기에 더해 가장 낮은 Y 를 0 으로), 적용은 그 순서입니다. 규칙은 원본
+  해시에 섞여 바꾸면 스탬프가 어긋남이 됩니다. 모르는 값은 설정 전체를 거부합니다.
 - **헤드리스 · 스탬프**: `App --import-models` · `--check-models`. `models_raw/import.stamp` 는 텍스처와 같은 형식이고 원본 해시에 임포터 버전 ·
-  `.mesh` 형식 버전 · `.gltf` 의 외부 버퍼가 섞입니다. 임포트 동작을 바꾸면 `ModelImporterInternal::kImporterVersion` 을 올립니다.
+  `.mesh` 형식 버전 · 적용한 규칙 · `.gltf` 의 외부 버퍼가 섞입니다. 임포트 동작을 바꾸면 `ModelImporterInternal::kImporterVersion` 을 올립니다.
 - **핫 리로드**: `models_raw/` 원본이 바뀌면 일괄 임포트하고, 쓰인 `.mesh` 를 메시 캐시가 같은 `Mesh` 에 제자리로 다시 읽습니다.
-- 시험: `ModelImporterTest`(좌표계 · 감김 · 노드 변환 · 색 · 스탬프), 엔진 쪽은 `MeshAssetTest`.
+- 시험: `ModelImporterTest`(좌표계 · 감김 · 노드 변환 · 색 · 스탬프 · 비표준 씬 뿌리 · 규칙, 저장소 원본 ↔ `.mesh` 대조), 엔진 쪽은 `MeshAssetTest`.
 
 ## UI 스레드가 놓은 GPU 자원
 
