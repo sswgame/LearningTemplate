@@ -682,6 +682,9 @@ cd build/Ninja-Debug/Bin
   순서로 가르면 되돌리기마다 뒤집힌다), 그림자 빛은 `Scene::findShadowCastingDirectionalLight`. 프리미티브 등록부에 섞지 않는다(그릴 수 있는 것만 담는 계약).
 - **씬 로드** — `SceneManager` 대기열은 한 자리다. 밀려난 요청 · `shutdown` · 취소도 약속에 `nullptr` 을 채워야 `future.get()` 이 영원히 멈추지 않는다. 로드 중 모듈 팩토리가 바뀌면
   (`getFactoryHeadSerial`) 다시 짓는다. `SceneManager::shutdown` 은 씬을 내리기 **전에** 활성을 비운다.
+- **씬 쿠킹은 활성 게임 팩만 엄격하다.** 다른 게임 팩(`game/<다른 게임>/`)의 씬이 이 빌드에 없는 게임 모듈의 컴포넌트를 쓰면 건너뛴다(정보 줄) — 실패로 세면 다른
+  게임을 고른 빌드의 쿠킹이 모두 선다. 엔진 · 공용 타입만 쓰는 다른 팩의 씬은 그대로 쿠킹한다(`AppCookTest` 가 `game/empty` 를 본다). 활성 팩의 모르는 타입은 여전히 실패다
+  (`SceneTest.SceneCookFailsOnAComponentOfUnknownType`).
 - **물리** — `stepPhysics` 는 틱과 트랜스폼 적용 뒤에 한 번 돈다. 콜라이더는 틱하지 않고 틱 안의 질의는 지난 step 을 본다. `onOverlapBegin( const OverlapInfo& )` 안에서는 스폰 ·
   파괴해도 된다. 순간이동은 `teleportTo` · `BodyMoveType::Teleport`(아니면 연속 바디가 그 길을 쓴다). 셀 범위는 `CellRange` 하나, 셀 순회 변수는 int64(`MaxInt32` 로 접히면 안 끝난다),
   `toCellCoord` 는 float64 로 나눈 뒤 접는다. 공간 색인 규약은 `Source/Engine/Spatial/README.md`.
