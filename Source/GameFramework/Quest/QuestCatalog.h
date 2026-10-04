@@ -11,6 +11,7 @@
 
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Inventory/ItemBag.h"
 
@@ -101,17 +102,17 @@ namespace sw
      *     </QuestCatalog>
      * @endcode
      */
-    class SW_GF_API QuestCatalog
+    class SW_GF_API QuestCatalog : public XmlCatalog<QuestCatalog>
     {
-    public:
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
+        friend class XmlCatalog<QuestCatalog>;
 
+    public:
         const QuestDef*         findQuest( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<QuestDef>& getQuests() const { return _catalog.getAll(); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "QuestCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<QuestDef> _catalog{};
     };

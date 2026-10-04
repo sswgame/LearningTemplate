@@ -139,16 +139,6 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    bool PartyItemSpawner::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &PartyItemSpawner::loadRoot, path, "PartyItems" );
-    }
-
-    bool PartyItemSpawner::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &PartyItemSpawner::loadRoot, xmlText, sourceName, "PartyItems" );
-    }
-
     uint32 PartyItemSpawner::loadRoot( const XmlNode& root, string_view sourceName )
     {
         _settings._minInterval = root.getAttributeFloat( "minInterval", _settings._minInterval );

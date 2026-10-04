@@ -50,8 +50,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   타이밍 판정(`TimingJudge` — 리듬 · 타이밍 공격 · 스킬 체크 · 저스트 프레임), 1인칭 시점(`FirstPersonLook`)
 - **Data**: 데이터를 읽고 담는 틀 — `GameSettings`, `GameStrings`, 경로마다 한 번 읽어 나눠 쓰는 표의 캐시(`GameDataCache<T>` — 게임 서비스가 묶이면
   에셋 캐시 등록부에 올라 에디터 핫 리로드가 새 표로 바꾸고 `getReloadCount` 를 올린다, 옛 표는 모듈이 내릴 때까지 산다), 데이터 XML 읽기(`GameDataXml` — 문서 · 루트 · id 확인 · 숫자 목록 · 토큰 목록,
-  카탈로그 로더 템플릿 `loadFile` · `loadText` — 카탈로그의 `loadFromResource` · `loadFromXmlText` 는 `GameDataXml::loadFile( *this, &X::loadRoot, path, "Root" )`
-  한 줄이고 루트 읽기는 비공개로 둔다, 읽은 수 0 · false 는 실패), id 카탈로그(`GameCatalog<T>` —
+  다른 카탈로그를 함께 받는 루트 읽기용 로더 템플릿 `loadFile` · `loadText`), 카탈로그 베이스(`XmlCatalog<T>` — 물려받으면 `loadFromResource` ·
+  `loadFromXmlText` 가 생기고 카탈로그는 `kXmlRootName` 과 비공개 `loadRoot` 만 둔다, 읽은 수 0 · false 는 실패), id 카탈로그(`GameCatalog<T>` —
   읽은 순서 + 해시 조회), 이름 → 수치(`StatBlock` — 여러 자원 비용 `canAfford` · `trySpend`), 시간 → 값 꺾은선(`GameCurve` — 스폰 · 페이싱 곡선)
 - **AI**: 블랙보드(`Blackboard`), 행동 트리(`BehaviorTree` 정의 · `BehaviorTreeRunner` 실행 — 반응형 셀렉터 · 관찰 중단 · 데코레이터), 감각(`AiPerception` — 시야 각 ·
   거리 · 가림 · 소리 · 기억), 스폰 감독(`SpawnDirector` — 시간에 따라 쌓이는 예산 · 곡선 · 종류 상한 · 태그), NPC 하루 일정(`AI/Schedule` — `*.schedules.xml` 루틴 ·

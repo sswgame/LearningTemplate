@@ -12,6 +12,7 @@
 
 #include "GameFramework/Combat/WeaponMath.h"
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Utility/Countdown.h"
 
@@ -54,20 +55,21 @@ namespace sw
 namespace sw
 {
     /** @brief `<WeaponCatalog><Weapon id="rifle" name="Rifle" fireInterval="0.1" .../></WeaponCatalog>` 를 읽습니다(속성 이름 = 필드 이름에서 `_` 를 뺀 것). */
-    class SW_GF_API WeaponCatalog
+    class SW_GF_API WeaponCatalog : public XmlCatalog<WeaponCatalog>
     {
+        friend class XmlCatalog<WeaponCatalog>;
+
     public:
         WeaponCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addWeapon( const WeaponDef& weapon );
+        void addWeapon( const WeaponDef& weapon );
 
         const WeaponDef*         findWeapon( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<WeaponDef>& getWeapons() const { return _catalog.getAll(); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "WeaponCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<WeaponDef> _catalog; ///< 읽은 순서(무기 바꾸기 순환)
     };

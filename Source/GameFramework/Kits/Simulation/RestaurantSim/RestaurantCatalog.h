@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -86,17 +87,17 @@ namespace sw
      * @endcode
      *          `Arrival` 은 그 시의 시간당 손님 수(적지 않은 시는 0)입니다. `window` 는 별점 이동 평균의 손님 수입니다.
      */
-    class SW_GF_API RestaurantCatalog
+    class SW_GF_API RestaurantCatalog : public XmlCatalog<RestaurantCatalog>
     {
+        friend class XmlCatalog<RestaurantCatalog>;
+
     public:
         static constexpr int32 kHoursPerDay = 24;
 
         RestaurantCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addDish( const DishDef& dish ) { (void)_dishCatalog.add( dish ); }
-        void               addCustomerType( const CustomerTypeDef& customerType ) { (void)_customerCatalog.add( customerType ); }
+        void addDish( const DishDef& dish ) { (void)_dishCatalog.add( dish ); }
+        void addCustomerType( const CustomerTypeDef& customerType ) { (void)_customerCatalog.add( customerType ); }
 
         const DishDef*                 findDish( const hashed_string& id ) const { return _dishCatalog.find( id ); }
         const CustomerTypeDef*         findCustomerType( const hashed_string& id ) const { return _customerCatalog.find( id ); }
@@ -114,7 +115,8 @@ namespace sw
         int32 getRatingWindow() const { return _ratingWindow; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "RestaurantCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<DishDef>              _dishCatalog;
         GameCatalog<IngredientDef>        _ingredientCatalog;

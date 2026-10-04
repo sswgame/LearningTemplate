@@ -7,6 +7,7 @@
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/GameDataXml.h"
 #include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/Input/FirstPersonLook.h"
 #include "GameFramework/Input/TimingJudge.h"
 #include "GameFramework/Inventory/ItemBag.h"
@@ -30,6 +31,28 @@ namespace
     {
         hashed_string _id{};
         int32         _value{ 0 };
+    };
+
+    /** @brief `XmlCatalog` 를 물려받아 루트 이름 · 비공개 루트 읽기만 둔 카탈로그입니다. */
+    class GameFrameworkUtilTestCatalog : public XmlCatalog<GameFrameworkUtilTestCatalog>
+    {
+        friend class XmlCatalog<GameFrameworkUtilTestCatalog>;
+
+    public:
+        int32 getItemCount() const { return _itemCount; }
+
+    private:
+        static constexpr const utf8* kXmlRootName = "Catalog";
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName )
+        {
+            (void)sourceName;
+            _itemCount = 0;
+            for ( XmlNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+                ++_itemCount;
+            return static_cast<uint32>( _itemCount );
+        }
+
+        int32 _itemCount{ 0 };
     };
 
     /** @brief 고정 dt 로 @p seconds 동안 끝날 때마다 다시 걸어 낸 횟수입니다(게임 루프 순서 — 흘리고, 끝났으면 내고 다시 건다). */
@@ -396,6 +419,22 @@ SW_TEST_CASE( GameFrameworkUtilTest, CatalogLoaderTemplateHandsTheRootToThePriva
     }
     SW_EXPECT_TRUE( catalog.loadWithBonus( "<Catalog><Item/></Catalog>", 10 ) );
     SW_EXPECT_EQUAL( 11, catalog._itemCount );
+}
+
+/**
+ * @brief [GameFrameworkUtilTest] `XmlCatalog` 를 물려받은 카탈로그는 루트 이름 · 비공개 루트 읽기만으로 두 공개 창구를 얻고, 실패 규칙은 로더 템플릿과 같다
+ */
+SW_TEST_CASE( GameFrameworkUtilTest, XmlCatalogBaseGivesBothLoadEntryPoints )
+{
+    GameFrameworkUtilTestCatalog catalog;
+    SW_EXPECT_TRUE( catalog.loadFromXmlText( "<Catalog><Item/><Item/><Item/></Catalog>", "GameFrameworkUtilTest" ) );
+    SW_EXPECT_EQUAL( 3, catalog.getItemCount() );
+    {
+        test::ScopedDefensiveTestLog expected( "catalog base: empty catalog, wrong root and missing file" );
+        SW_EXPECT_FALSE( catalog.loadFromXmlText( "<Catalog><Thing/></Catalog>" ) );
+        SW_EXPECT_FALSE( catalog.loadFromXmlText( "<Other><Item/></Other>" ) );
+        SW_EXPECT_FALSE( catalog.loadFromResource( "game/none/no_such_catalog.xml" ) );
+    }
 }
 
 /**

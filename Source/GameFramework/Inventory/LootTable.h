@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -52,14 +53,14 @@ namespace sw
      * @details 결과는 `ItemBag` 에 더합니다(같은 아이템은 합친다). 표 안의 표는 8 단계까지만 따라갑니다(서로 부르는 표가 멈추게).
      *          난수는 부르는 쪽이 넘깁니다 — 씨앗이 같으면 같은 전리품입니다(리플레이 · 시험).
      */
-    class SW_GF_API LootCatalog
+    class SW_GF_API LootCatalog : public XmlCatalog<LootCatalog>
     {
+        friend class XmlCatalog<LootCatalog>;
+
     public:
         static constexpr int32 kMaxDepth = 8;
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addTable( const LootTableDef& table ) { (void)_catalog.add( table ); }
+        void addTable( const LootTableDef& table ) { (void)_catalog.add( table ); }
 
         /**
          * @brief 표를 굴려 @p outBag 에 더합니다. 표가 없으면 false 입니다.
@@ -72,11 +73,12 @@ namespace sw
         const LootTableDef* findTable( const hashed_string& id ) const { return _catalog.find( id ); }
 
     private:
-        uint32  loadRoot( const XmlNode& root, string_view sourceName );
-        void    rollTable( const LootTableDef& table, GameRandom& random, ItemBag& outBag, float32 luck, int32 depth ) const;
-        void    giveEntry( const LootEntry& entry, GameRandom& random, ItemBag& outBag, float32 luck, int32 depth ) const;
-        float32 computeEntryChance( const LootEntry& entry, const hashed_string& itemId, int32 depth ) const;
-        float32 computeTableChance( const LootTableDef& table, const hashed_string& itemId, int32 depth ) const;
+        static constexpr const utf8* kXmlRootName = "LootCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        void                         rollTable( const LootTableDef& table, GameRandom& random, ItemBag& outBag, float32 luck, int32 depth ) const;
+        void                         giveEntry( const LootEntry& entry, GameRandom& random, ItemBag& outBag, float32 luck, int32 depth ) const;
+        float32                      computeEntryChance( const LootEntry& entry, const hashed_string& itemId, int32 depth ) const;
+        float32                      computeTableChance( const LootTableDef& table, const hashed_string& itemId, int32 depth ) const;
 
         GameCatalog<LootTableDef> _catalog{};
     };

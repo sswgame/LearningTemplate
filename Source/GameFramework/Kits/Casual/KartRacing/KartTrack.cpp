@@ -375,15 +375,6 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 카탈로그
     // ------------------------------------------------------------------------------
-    bool KartTrackCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &KartTrackCatalog::loadRoot, path, "KartTrackCatalog" );
-    }
-
-    bool KartTrackCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &KartTrackCatalog::loadRoot, xmlText, sourceName, "KartTrackCatalog" );
-    }
 
     uint32 KartTrackCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {

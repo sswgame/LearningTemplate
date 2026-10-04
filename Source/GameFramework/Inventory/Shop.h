@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Utility/EventBuffer.h"
 
@@ -119,18 +120,19 @@ namespace sw
      *        minSellFactor="0.3" recovery="0.1" refuses="Quest,Key"><Stock item="potion" price="20" count="10" restock="10" requires="flagExpr"/>
      *        </Shop></ShopCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ShopCatalog
+    class SW_GF_API ShopCatalog : public XmlCatalog<ShopCatalog>
     {
+        friend class XmlCatalog<ShopCatalog>;
+
     public:
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addShop( const ShopDef& def ) { (void)_catalog.add( def ); }
+        void addShop( const ShopDef& def ) { (void)_catalog.add( def ); }
 
         const ShopDef*         findShop( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<ShopDef>& getShops() const { return _catalog.getAll(); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "ShopCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<ShopDef> _catalog{};
     };

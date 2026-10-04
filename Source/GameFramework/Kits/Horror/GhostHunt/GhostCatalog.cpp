@@ -42,16 +42,6 @@ namespace sw
         _vacuum._listStagePower.push_back( 10.0f );
     }
 
-    bool GhostCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &GhostCatalog::loadRoot, path, "GhostHunt" );
-    }
-
-    bool GhostCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &GhostCatalog::loadRoot, xmlText, sourceName, "GhostHunt" );
-    }
-
     uint32 GhostCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         const XmlNode flashlight = root.findChild( "Flashlight" );

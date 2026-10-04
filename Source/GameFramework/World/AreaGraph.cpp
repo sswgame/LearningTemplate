@@ -40,16 +40,6 @@ namespace sw
     {
     }
 
-    bool AreaGraph::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &AreaGraph::loadRoot, path, "AreaGraph" );
-    }
-
-    bool AreaGraph::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &AreaGraph::loadRoot, xmlText, sourceName, "AreaGraph" );
-    }
-
     uint32 AreaGraph::loadRoot( const XmlNode& root, string_view sourceName )
     {
         clear();

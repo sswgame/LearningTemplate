@@ -20,16 +20,6 @@ namespace sw
     {
     }
 
-    bool ElementChart::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &ElementChart::loadRoot, path, "ElementChart" );
-    }
-
-    bool ElementChart::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &ElementChart::loadRoot, xmlText, sourceName, "ElementChart" );
-    }
-
     void ElementChart::clear()
     {
         _listElement.clear();

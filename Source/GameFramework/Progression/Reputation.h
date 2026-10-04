@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Utility/EventBuffer.h"
 
@@ -58,18 +59,19 @@ namespace sw
      * @brief `<ReputationCatalog><Faction id="town" min="-1000" max="1000" start="0" decay="0"><Tier name="Hated" min="-1000"/>
      *        <Tier name="Neutral" min="-100"/><Link faction="bandits" ratio="-0.5"/></Faction></ReputationCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ReputationCatalog
+    class SW_GF_API ReputationCatalog : public XmlCatalog<ReputationCatalog>
     {
+        friend class XmlCatalog<ReputationCatalog>;
+
     public:
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addFaction( const FactionDef& faction ) { (void)_catalog.add( faction ); }
+        void addFaction( const FactionDef& faction ) { (void)_catalog.add( faction ); }
 
         const FactionDef*         findFaction( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<FactionDef>& getFactions() const { return _catalog.getAll(); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "ReputationCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<FactionDef> _catalog{};
     };

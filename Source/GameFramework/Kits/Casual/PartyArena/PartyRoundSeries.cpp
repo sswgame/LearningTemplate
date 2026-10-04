@@ -24,16 +24,6 @@ namespace sw
     {
     }
 
-    bool PartyRoundSeries::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &PartyRoundSeries::loadRoot, path, "PartySeries" );
-    }
-
-    bool PartyRoundSeries::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &PartyRoundSeries::loadRoot, xmlText, sourceName, "PartySeries" );
-    }
-
     bool PartyRoundSeries::start( int32 playerCount )
     {
         if ( playerCount < 2 || _listRound.empty() )

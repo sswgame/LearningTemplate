@@ -165,16 +165,6 @@ namespace sw
         return "Unknown";
     }
 
-    bool ShopCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &ShopCatalog::loadRoot, path, "ShopCatalog" );
-    }
-
-    bool ShopCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &ShopCatalog::loadRoot, xmlText, sourceName, "ShopCatalog" );
-    }
-
     uint32 ShopCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;

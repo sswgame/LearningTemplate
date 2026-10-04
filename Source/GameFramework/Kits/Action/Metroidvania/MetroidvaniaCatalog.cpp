@@ -50,16 +50,6 @@ namespace sw
     {
     }
 
-    bool MetroidvaniaCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &MetroidvaniaCatalog::loadRoot, path, "Metroidvania" );
-    }
-
-    bool MetroidvaniaCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &MetroidvaniaCatalog::loadRoot, xmlText, sourceName, "Metroidvania" );
-    }
-
     void MetroidvaniaCatalog::loadRules( const XmlNode& root )
     {
         const utf8* pCurrency = root.findAttribute( "currency" );

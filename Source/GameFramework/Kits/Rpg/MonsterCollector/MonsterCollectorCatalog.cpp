@@ -112,16 +112,6 @@ namespace sw
     {
     }
 
-    bool MonsterCollectorCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &MonsterCollectorCatalog::loadRoot, path, "MonsterCollectorCatalog" );
-    }
-
-    bool MonsterCollectorCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &MonsterCollectorCatalog::loadRoot, xmlText, sourceName, "MonsterCollectorCatalog" );
-    }
-
     void MonsterCollectorCatalog::clear()
     {
         _speciesCatalog.clear();

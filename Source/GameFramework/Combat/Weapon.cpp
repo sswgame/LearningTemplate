@@ -31,16 +31,6 @@ namespace sw
     {
     }
 
-    bool WeaponCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &WeaponCatalog::loadRoot, path, "WeaponCatalog" );
-    }
-
-    bool WeaponCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &WeaponCatalog::loadRoot, xmlText, sourceName, "WeaponCatalog" );
-    }
-
     void WeaponCatalog::addWeapon( const WeaponDef& weapon )
     {
         (void)_catalog.add( weapon ); // 빈 id 는 카탈로그가 거른다

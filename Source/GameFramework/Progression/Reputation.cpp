@@ -24,16 +24,6 @@ namespace sw
 
 namespace sw
 {
-    bool ReputationCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &ReputationCatalog::loadRoot, path, "ReputationCatalog" );
-    }
-
-    bool ReputationCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &ReputationCatalog::loadRoot, xmlText, sourceName, "ReputationCatalog" );
-    }
-
     uint32 ReputationCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;

@@ -13,6 +13,7 @@
 
 #include "GameFramework/Data/GameCatalog.h"
 #include "GameFramework/Data/StatBlock.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -139,13 +140,12 @@ namespace sw
      *        <Weapon id="saber" kind="Melee" moves="slash1,slash2,slash3" range="4"/></Mode></Mech><Skill id=".." trigger="HealthBelow" attack="1.2"/></MechCatalog>` 를 읽습니다.
      * @details `<Mode>` 없이 `<Weapon>` 이 `<Mech>` 바로 아래에 있으면 형태 하나("default")로 읽습니다. 분류 보정 이름은 "melee" · "shot" · "down"(받는 다운치 배율)입니다.
      */
-    class SW_GF_API MechCatalog
+    class SW_GF_API MechCatalog : public XmlCatalog<MechCatalog>
     {
+        friend class XmlCatalog<MechCatalog>;
+
     public:
         MechCatalog();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         const MechDef*              findMech( const hashed_string& id ) const { return _catalogMech.find( id ); }
         int32                       findMechIndex( const hashed_string& id ) const { return _catalogMech.findIndex( id ); }
@@ -161,7 +161,8 @@ namespace sw
         static MechRangeClass parseRangeClass( string_view text, MechRangeClass fallback );
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "MechCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<MechDef>      _catalogMech;
         GameCatalog<MechSkillDef> _catalogSkill;

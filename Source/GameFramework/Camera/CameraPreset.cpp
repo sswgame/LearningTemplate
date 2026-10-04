@@ -286,16 +286,6 @@ namespace sw
     {
     }
 
-    bool CameraPresetCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &CameraPresetCatalog::loadRoot, path, "CameraPresets" );
-    }
-
-    bool CameraPresetCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &CameraPresetCatalog::loadRoot, xmlText, sourceName, "CameraPresets" );
-    }
-
     void CameraPresetCatalog::addPreset( const CameraPresetDef& def )
     {
         (void)_catalog.add( def ); // 빈 id 는 카탈로그가 거른다

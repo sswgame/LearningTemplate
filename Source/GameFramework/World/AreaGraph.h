@@ -12,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -70,13 +71,12 @@ namespace sw
      * @details 방에 들어가면 방문 · 발견이 되고, 그 방에서 나가는 연결의 반대편 방도 발견됩니다(문 너머가 지도에 보인다 — 잠겨 있어도).
      *          길 찾기는 너비 우선이라 지나는 문 수가 가장 적은 길이며, 같은 길이면 연결을 읽은 순서로 정해져 늘 같은 답입니다.
      */
-    class SW_GF_API AreaGraph
+    class SW_GF_API AreaGraph : public XmlCatalog<AreaGraph>
     {
+        friend class XmlCatalog<AreaGraph>;
+
     public:
         AreaGraph();
-
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
         /** @brief 방문 · 발견을 모두 지웁니다(새 게임). */
         void resetState();
@@ -137,7 +137,8 @@ namespace sw
         int32                   getVisitedCount() const { return _visitedCount; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "AreaGraph"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
         /** @brief 연결을 @p fromIndex 쪽에서 지나면 닿는 방입니다. 그 방향으로 지날 수 없으면 −1 입니다(잠금은 보지 않는다). */
         int32 findOtherSide( const AreaLink& link, int32 fromIndex ) const;
         bool  isUnlocked( const AreaLink& link, const GameFlags& flags ) const;

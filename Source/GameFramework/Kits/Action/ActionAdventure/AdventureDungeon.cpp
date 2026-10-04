@@ -130,16 +130,6 @@ namespace sw
         return -1;
     }
 
-    bool AdventureDungeonCatalog::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &AdventureDungeonCatalog::loadRoot, path, "AdventureDungeons" );
-    }
-
-    bool AdventureDungeonCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &AdventureDungeonCatalog::loadRoot, xmlText, sourceName, "AdventureDungeons" );
-    }
-
     uint32 AdventureDungeonCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;

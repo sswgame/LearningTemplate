@@ -14,6 +14,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Data/GameCatalog.h"
+#include "GameFramework/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Movement/ArcadeVehicleMotor.h"
 
@@ -207,18 +208,19 @@ namespace sw
      *        <Offroad from="0.6" to="0.65" minOffset="-6" maxOffset="0" scale="0.4"/></Track></KartTrackCatalog>` 를 읽습니다.
      * @details 점이 셋보다 적은 트랙은 경고하고 건너뜁니다. 같은 id 는 뒤의 것이 이깁니다.
      */
-    class SW_GF_API KartTrackCatalog
+    class SW_GF_API KartTrackCatalog : public XmlCatalog<KartTrackCatalog>
     {
+        friend class XmlCatalog<KartTrackCatalog>;
+
     public:
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addTrack( const KartTrackDef& def ) { (void)_catalog.add( def ); }
+        void addTrack( const KartTrackDef& def ) { (void)_catalog.add( def ); }
 
         const KartTrackDef*              findTrack( const hashed_string& id ) const { return _catalog.find( id ); }
         const GameCatalog<KartTrackDef>& getCatalog() const { return _catalog; }
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXmlRootName = "KartTrackCatalog"; ///< 루트 원소(`XmlCatalog`)
+        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
 
         GameCatalog<KartTrackDef> _catalog{};
     };

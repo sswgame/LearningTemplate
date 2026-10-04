@@ -33,16 +33,6 @@ namespace sw
     {
     }
 
-    bool SpawnTable::loadFromResource( string_view path )
-    {
-        return GameDataXml::loadFile( *this, &SpawnTable::loadRoot, path, "SpawnTable" );
-    }
-
-    bool SpawnTable::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        return GameDataXml::loadText( *this, &SpawnTable::loadRoot, xmlText, sourceName, "SpawnTable" );
-    }
-
     uint32 SpawnTable::loadRoot( const XmlNode& root, string_view sourceName )
     {
         _catalog.clear();
