@@ -565,7 +565,7 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     SW_ASSERT_TRUE( pair._client.getConnectionState( 0 ) == NetConnectionState::Connected );
 
     // 한 영역에 처리기 둘 — 등록 순서대로 묻고 처음 받아들인 쪽에서 멈춘다.
-    CountingHandler  lockstep( NetMessageRange::kLockstep, 0x21 );
+    CountingHandler  lockstep( NetMessageRange::kFramework + NetMessageRange::kSize, 0x21 );
     CountingHandler  gameFirst( NetMessageRange::kGame, 0x81 );
     CountingHandler  gameSecond( NetMessageRange::kGame, 0x82 );
     NetMessageRouter router;

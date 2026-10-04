@@ -154,7 +154,7 @@ namespace sw
 
     bool ReplicationServer::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
-        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetMessageRange::kClientServer ) == false || connectionId < 0 )
+        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetKitMessageRange::kClientServer ) == false || connectionId < 0 )
             return false;
         ClientState& client = acquireClient( connectionId );
         BitReader    reader( pData + 1, size - 1 );

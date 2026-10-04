@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Network/NetKitMessageRange.h"
 
 namespace sw
 {
@@ -17,9 +18,10 @@ namespace sw
     /** @brief 메시지 종류(첫 바이트)입니다. */
     struct NetClientServerMessage
     {
-        static constexpr uint8 kSnapshot    = 0x10;
-        static constexpr uint8 kSnapshotAck = 0x11;
-        static constexpr uint8 kInput       = 0x12;
+        static constexpr uint8 kSnapshot    = NetKitMessageRange::kClientServer + 0;
+        static constexpr uint8 kSnapshotAck = NetKitMessageRange::kClientServer + 1;
+        static constexpr uint8 kInput       = NetKitMessageRange::kClientServer + 2;
+        static_assert( NetMessageRange::isInRange( kInput, NetKitMessageRange::kClientServer ), "message kinds must stay inside the kit's range" );
     };
 } // namespace sw
 

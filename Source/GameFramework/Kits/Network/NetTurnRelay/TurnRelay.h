@@ -11,6 +11,7 @@
 #include "Core/Network/NetMessage.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Network/NetKitMessageRange.h"
 
 namespace sw
 {
@@ -19,13 +20,14 @@ namespace sw
     /** @brief 메시지 종류(첫 바이트)입니다. */
     struct NetTurnRelayMessage
     {
-        static constexpr uint8 kJoin     = 0x30;
-        static constexpr uint8 kJoined   = 0x31;
-        static constexpr uint8 kAction   = 0x32;
-        static constexpr uint8 kApplied  = 0x33;
-        static constexpr uint8 kRejected = 0x34;
-        static constexpr uint8 kStarted  = 0x35;
-        static constexpr uint8 kDenied   = 0x36;
+        static constexpr uint8 kJoin     = NetKitMessageRange::kTurnRelay + 0;
+        static constexpr uint8 kJoined   = NetKitMessageRange::kTurnRelay + 1;
+        static constexpr uint8 kAction   = NetKitMessageRange::kTurnRelay + 2;
+        static constexpr uint8 kApplied  = NetKitMessageRange::kTurnRelay + 3;
+        static constexpr uint8 kRejected = NetKitMessageRange::kTurnRelay + 4;
+        static constexpr uint8 kStarted  = NetKitMessageRange::kTurnRelay + 5;
+        static constexpr uint8 kDenied   = NetKitMessageRange::kTurnRelay + 6;
+        static_assert( NetMessageRange::isInRange( kDenied, NetKitMessageRange::kTurnRelay ), "message kinds must stay inside the kit's range" );
     };
 } // namespace sw
 
@@ -138,7 +140,7 @@ namespace sw
         TurnRelayServer();
 
         void  initialize( NetHost* pHost, int32 seatCount, const ITurnPolicy* pPolicy = nullptr, uint32 tokenSeed = 0x5EEDu );
-        uint8 getMessageRangeBase() const override { return NetMessageRange::kTurnRelay; }
+        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kTurnRelay; }
         bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
         /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
         bool handleMessage( int32 connectionId, const vector<uint8>& buffer ) { return handleNetMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) ); }
@@ -179,7 +181,7 @@ namespace sw
         void join( uint32 roomId, int32 seat = -1 );
         /** @brief 행동을 보냅니다. 행동 번호(거절 알림에 붙는다)입니다. */
         int32 submitAction( const vector<uint8>& buffer );
-        uint8 getMessageRangeBase() const override { return NetMessageRange::kTurnRelay; }
+        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kTurnRelay; }
         bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
         /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
         bool handleMessage( const vector<uint8>& buffer ) { return handleNetMessage( -1, buffer.data(), static_cast<int32>( buffer.size() ) ); }

@@ -59,7 +59,7 @@ namespace sw
         INetMessageHandler( const INetMessageHandler& )            = default;
         INetMessageHandler& operator=( const INetMessageHandler& ) = default;
 
-        /** @brief 맡은 영역의 첫 값입니다(`NetMessageRange::kClientServer` …). 게임 영역(0x80..)은 16 개씩 나눠 여럿이 맡을 수 있다. */
+        /** @brief 맡은 영역의 첫 값입니다(키트는 `NetKitMessageRange::kClientServer` …). 게임 영역(0x80..)은 16 개씩 나눠 여럿이 맡을 수 있다. */
         virtual uint8 getMessageRangeBase() const = 0;
         /** @brief @p pData[0] 이 종류 바이트입니다. 내 메시지가 아니거나 깨졌으면 false 입니다. 클라이언트 쪽은 @p connectionId 를 쓰지 않는다. */
         virtual bool handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) = 0;

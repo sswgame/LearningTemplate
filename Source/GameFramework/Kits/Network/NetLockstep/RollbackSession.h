@@ -11,6 +11,7 @@
 #include "Core/Network/NetMessage.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Network/NetKitMessageRange.h"
 
 namespace sw
 {
@@ -63,7 +64,7 @@ namespace sw
         void initialize( NetHost* pHost, IRollbackGame* pGame, int32 playerCount, int32 localPlayer, const RollbackSettings& settings );
         /** @brief 이번 프레임의 내 입력을 넣고 한 프레임 진행합니다(필요하면 먼저 되감는다). 너무 앞서 멈췄으면 false 입니다. */
         bool  advanceFrame( uint8 localInput );
-        uint8 getMessageRangeBase() const override { return NetMessageRange::kLockstep; }
+        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kLockstep; }
         bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
         /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
         bool handleMessage( int32 connectionId, const vector<uint8>& buffer ) { return handleNetMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) ); }

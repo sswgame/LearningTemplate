@@ -11,6 +11,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetClientServer/NetSnapshot.h"
+#include "GameFramework/Kits/Network/NetKitMessageRange.h"
 
 namespace sw
 {
@@ -40,7 +41,7 @@ namespace sw
 
         void initialize( NetHost* pHost, const ReplicationClientSettings& settings );
         /** @brief 이 키트의 메시지면 처리하고 true 입니다. */
-        uint8 getMessageRangeBase() const override { return NetMessageRange::kClientServer; }
+        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
         bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
         /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
         bool handleMessage( const vector<uint8>& buffer ) { return handleNetMessage( -1, buffer.data(), static_cast<int32>( buffer.size() ) ); }

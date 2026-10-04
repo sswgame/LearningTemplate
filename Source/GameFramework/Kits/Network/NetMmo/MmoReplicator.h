@@ -17,6 +17,7 @@
 #include "Core/Network/NetParallel.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Network/NetKitMessageRange.h"
 
 namespace sw
 {
@@ -25,9 +26,10 @@ namespace sw
     /** @brief 메시지 종류(첫 바이트)입니다. */
     struct NetMmoMessage
     {
-        static constexpr uint8 kEnter  = 0x40;
-        static constexpr uint8 kLeave  = 0x41;
-        static constexpr uint8 kUpdate = 0x42;
+        static constexpr uint8 kEnter  = NetKitMessageRange::kMmo + 0;
+        static constexpr uint8 kLeave  = NetKitMessageRange::kMmo + 1;
+        static constexpr uint8 kUpdate = NetKitMessageRange::kMmo + 2;
+        static_assert( NetMessageRange::isInRange( kUpdate, NetKitMessageRange::kMmo ), "message kinds must stay inside the kit's range" );
     };
 } // namespace sw
 
@@ -212,7 +214,7 @@ namespace sw
     class SW_GF_API MmoClientView : public INetMessageHandler
     {
     public:
-        uint8 getMessageRangeBase() const override { return NetMessageRange::kMmo; }
+        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kMmo; }
         bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
         /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
         bool handleMessage( const vector<uint8>& buffer ) { return handleNetMessage( -1, buffer.data(), static_cast<int32>( buffer.size() ) ); }

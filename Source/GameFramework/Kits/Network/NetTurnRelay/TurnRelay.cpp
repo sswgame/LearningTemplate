@@ -239,7 +239,7 @@ namespace sw
 
     bool TurnRelayServer::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
-        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetMessageRange::kTurnRelay ) == false )
+        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetKitMessageRange::kTurnRelay ) == false )
             return false;
         if ( _pHost == nullptr )
             return true;
@@ -323,7 +323,7 @@ namespace sw
     bool TurnRelayClient::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
         (void)connectionId; // 클라이언트 — 받는 쪽은 서버 하나
-        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetMessageRange::kTurnRelay ) == false )
+        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetKitMessageRange::kTurnRelay ) == false )
             return false;
         BitReader      reader( pData + 1, size - 1 );
         TurnRelayEvent event;

@@ -18,13 +18,11 @@ namespace sw
      */
     struct NetMessageRange
     {
-        static constexpr uint8 kClientServer = 0x10; ///< GF_NetClientServer 0x10..0x1F
-        static constexpr uint8 kLockstep     = 0x20; ///< GF_NetLockstep 0x20..0x2F
-        static constexpr uint8 kTurnRelay    = 0x30; ///< GF_NetTurnRelay 0x30..0x3F
-        static constexpr uint8 kMmo          = 0x40; ///< GF_NetMmo 0x40..0x4F
-        static constexpr uint8 kGame         = 0x80; ///< 게임이 쓰는 메시지 0x80..0xFF
+        static constexpr uint8 kSize      = 0x10; ///< 영역 하나의 메시지 수
+        static constexpr uint8 kFramework = 0x10; ///< 프레임워크(네트워크 키트)의 몫 0x10..0x7F — 키트마다의 영역은 GameFramework 의 `NetKitMessageRange`
+        static constexpr uint8 kGame      = 0x80; ///< 게임이 쓰는 메시지 0x80..0xFF
 
-        static constexpr bool isInRange( uint8 kind, uint8 rangeBase ) { return kind >= rangeBase && kind < rangeBase + 0x10; }
+        static constexpr bool isInRange( uint8 kind, uint8 rangeBase ) { return kind >= rangeBase && kind < rangeBase + kSize; }
     };
 } // namespace sw
 

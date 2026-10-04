@@ -47,7 +47,7 @@ namespace sw
     bool ReplicationClient::handleNetMessage( int32 connectionId, const uint8* pData, int32 size )
     {
         (void)connectionId; // 클라이언트 — 받는 쪽은 서버 하나
-        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetMessageRange::kClientServer ) == false )
+        if ( size <= 0 || NetMessageRange::isInRange( pData[0], NetKitMessageRange::kClientServer ) == false )
             return false;
         if ( pData[0] != NetClientServerMessage::kSnapshot )
             return true;

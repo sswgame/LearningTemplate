@@ -13,6 +13,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetClientServer/NetSnapshot.h"
+#include "GameFramework/Kits/Network/NetKitMessageRange.h"
 
 namespace sw
 {
@@ -91,7 +92,7 @@ namespace sw
         /** @brief 스냅샷 만들기를 나눌 작업 스레드 풀입니다(게임은 `&engine::getTaskManager()`). nullptr 이면 지금 스레드가 돈다. */
         void setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold = NetParallelFor::kDefaultSerialThreshold );
         /** @brief 이 키트의 메시지면 처리하고 true 입니다. */
-        uint8 getMessageRangeBase() const override { return NetMessageRange::kClientServer; }
+        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kClientServer; }
         bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
         /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
         bool handleMessage( int32 connectionId, const vector<uint8>& buffer ) { return handleNetMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) ); }

@@ -12,6 +12,7 @@
 #include "Core/Network/NetMessage.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Network/NetKitMessageRange.h"
 
 namespace sw
 {
@@ -20,9 +21,10 @@ namespace sw
     /** @brief 메시지 종류(첫 바이트)입니다. */
     struct NetLockstepMessage
     {
-        static constexpr uint8 kInput         = 0x20;
-        static constexpr uint8 kChecksum      = 0x21;
-        static constexpr uint8 kRollbackInput = 0x22;
+        static constexpr uint8 kInput         = NetKitMessageRange::kLockstep + 0;
+        static constexpr uint8 kChecksum      = NetKitMessageRange::kLockstep + 1;
+        static constexpr uint8 kRollbackInput = NetKitMessageRange::kLockstep + 2;
+        static_assert( NetMessageRange::isInRange( kRollbackInput, NetKitMessageRange::kLockstep ), "message kinds must stay inside the kit's range" );
     };
 } // namespace sw
 
@@ -49,7 +51,7 @@ namespace sw
         [[nodiscard]] bool tryAdvance( vector<vector<uint8>>& outListInput );
         /** @brief 그 틱을 시뮬레이션한 뒤의 상태 체크섬을 알립니다. */
         void  reportChecksum( uint32 tick, uint32 checksum );
-        uint8 getMessageRangeBase() const override { return NetMessageRange::kLockstep; }
+        uint8 getMessageRangeBase() const override { return NetKitMessageRange::kLockstep; }
         bool  handleNetMessage( int32 connectionId, const uint8* pData, int32 size ) override;
         /** @brief 받은 메시지 하나 — 내 영역이 아니면 false(`NetMessageRouter` 를 쓰지 않는 게임의 손 배달). */
         bool handleMessage( int32 connectionId, const vector<uint8>& buffer ) { return handleNetMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) ); }
